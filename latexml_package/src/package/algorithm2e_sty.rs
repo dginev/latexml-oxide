@@ -408,11 +408,16 @@ LoadDefinitions!({
   // `#1(#2)#3@`; a caption with no `(` is all name.
   DefMacro!("\\lx@algocf@proccaption[]{}",
     r"\@ifnextchar\label{\lx@algocf@proccaption@postlabel{#2}}{\lx@algocf@proccaption@{#2}}");
-  // cleveref's `\label[type]{key}` after a procedure's caption: the optional type is read and dropped, the key is the
-  // label — as `\@caption@postlabel` does (the mechanism of 2404.11739; OXIDIZED_DESIGN #552). Guard
+  // cleveref's `\label[type]{key}` after a procedure's caption: the optional type is read (`\lx@label@type`), the key
+  // is the label — as `\@caption@postlabel` does (the mechanism of 2404.11739; OXIDIZED_DESIGN #552). Guard
   // `perfect_kernel_batch65m::cleveref_label_type_after_caption`.
-  DefMacro!("\\lx@algocf@proccaption@postlabel{} SkipMatch:\\label [] Semiverbatim",
-    r"\lx@algocf@proccaption@{#1\label{#3}}");
+  DefMacro!("\\lx@algocf@proccaption@postlabel{} SkipMatch:\\label [] Semiverbatim", sub[(caption, ty, key)] {
+    let mut tokens = vec![T_CS!("\\lx@algocf@proccaption@"), T_BEGIN!()];
+    tokens.extend(caption.unlist());
+    tokens.extend(engine::latex_constructs::typed_label(T_CS!("\\label"), ty, key));
+    tokens.push(T_END!());
+    Tokens::new(tokens)
+  });
   DefMacro!("\\lx@algocf@proccaption@{}", sub[(long)] {
     let toks = long.unlist();
     let mut labels = Vec::new();
@@ -424,7 +429,8 @@ LoadDefinitions!({
     let mut depth = 0i32;
     for t in toks {
       let cc = t.get_catcode();
-      // A `\label` goes to the caption's end, out of the name and arguments.
+      // A `\label` (and the type cleveref's `\label[type]` gave it, `\lx@label@type`) goes to the caption's end, out
+      // of the name and arguments.
       if in_label > 0 {
         labels.push(t);
         if cc == Catcode::BEGIN {
@@ -437,7 +443,7 @@ LoadDefinitions!({
         }
         continue;
       }
-      if depth == 0 && t == T_CS!("\\label") {
+      if depth == 0 && (t == T_CS!("\\label") || t == T_CS!("\\lx@label@type")) {
         labels.push(t);
         in_label = 1;
         continue;

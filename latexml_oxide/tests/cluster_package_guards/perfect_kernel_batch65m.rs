@@ -266,7 +266,8 @@ fn raw_class_doi_is_a_string() {
 }
 
 /// 65m: cleveref's `\label[appendixtable]{tab:a_b}` right after `\caption` (2404.11739): the type is the optional, the
-/// key the label — not `labels="LABEL:["` and "appendixtable]tab:a_b" typeset (Perl pool:3172 the same). Repro
+/// key the label — not `labels="LABEL:["` and "appendixtable]tab:a_b" typeset (Perl pool:3172 the same). Since 77s the
+/// type names the table's cleveref tags ("Appendix Table", as `\cref` prints it; KNOWN_PERL_ERRORS #998). Repro
 /// captions-floats/cleveref_label_type_after_caption.
 #[test]
 fn cleveref_label_type_after_caption() {
@@ -281,7 +282,7 @@ fn cleveref_label_type_after_caption() {
     &xml,
     "table",
     &[],
-    r#"<table inlist="lot" labels="LABEL:tab:a_b" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="creftype">table</tag><tag role="creftypecap">Table</tag><tag role="creftypeplural">tables</tag><tag role="creftypepluralcap">Tables</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>T</toccaption><caption><tag close=": ">Table 1</tag>T</caption></table>"#,
+    r#"<table inlist="lot" labels="LABEL:tab:a_b" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="creftype">Appendix Table</tag><tag role="creftypecap">Appendix Table</tag><tag role="creftypeplural">Appendix Tables</tag><tag role="creftypepluralcap">Appendix Tables</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>T</toccaption><caption><tag close=": ">Table 1</tag>T</caption></table>"#,
   );
   // The same move after algorithm2e's procedure caption and after caption.sty's `\captionof`. Repros
   // captions-floats/cleveref_label_type_after_procedure_caption, captions-floats/cleveref_label_type_after_captionof.
@@ -310,7 +311,7 @@ fn cleveref_label_type_after_caption() {
     &xml,
     "table",
     &[],
-    r#"<table align="center" inlist="lot" labels="LABEL:tab:a_b" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="creftype">table</tag><tag role="creftypecap">Table</tag><tag role="creftypeplural">tables</tag><tag role="creftypepluralcap">Tables</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>T</toccaption><caption><tag close=": ">Table 1</tag>T</caption></table>"#,
+    r#"<table align="center" inlist="lot" labels="LABEL:tab:a_b" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="creftype">Appendix Table</tag><tag role="creftypecap">Appendix Table</tag><tag role="creftypeplural">Appendix Tables</tag><tag role="creftypepluralcap">Appendix Tables</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>T</toccaption><caption><tag close=": ">Table 1</tag>T</caption></table>"#,
   );
   assert!(!xml.contains("appendixtable]"), "{xml}");
 }

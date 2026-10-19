@@ -111,7 +111,7 @@ LoadDefinitions!({
   });
   DefMacro!(
     "\\lx@toc@copy@neutralize",
-    r"\lx@written@copy\let\lx@note\lx@note@gobble\let\lx@notemark\lx@notemark@gobble\let\lx@notetext\lx@notetext@gobble\let\lx@current@footnote\lx@note@standard\let\lx@current@footnotetext\lx@notetext@standard\let\label\lx@gobble@om\let\lx@caption@postlabel\@gobble\let\index\lx@gobble@som\let\glossary\lx@gobble@om"
+    r"\lx@written@copy\let\lx@note\lx@note@gobble\let\lx@notemark\lx@notemark@gobble\let\lx@notetext\lx@notetext@gobble\let\lx@current@footnote\lx@note@standard\let\lx@current@footnotetext\lx@notetext@standard\let\label\lx@gobble@om\let\lx@caption@postlabel\@gobble\let\lx@label@type\@gobble\let\index\lx@gobble@som\let\glossary\lx@gobble@om"
   );
 
   //======================================================================
@@ -866,11 +866,20 @@ LoadDefinitions!({
     // latex.ltx:18956-18967 `\filec@ntents@opt`: the bracket is a comma list
     // and each key is matched EXACTLY (`\filec@ntents@noheader`), never by
     // substring.
-    let noheader = header_star
-      || opts
+    let has_option = |key: &str| {
+      opts
         .as_ref()
-        .map(|o| o.to_string().split(',').any(|k| k.trim() == "noheader"))
-        .unwrap_or(false);
+        .is_some_and(|o| o.to_string().split(',').any(|k| k.trim() == key))
+    };
+    let noheader = header_star || has_option("noheader");
+    // latex.ltx:18990-19004 `\filec@ntents`: unless `force`/`overwrite` (`\@fileswfalse`, :18967-18968), a file
+    // `\openin` finds — anywhere on the search path, or in the current directory only under `nosearch` (:18970) —
+    // is kept: "File `name' already exists on the system. Not generating it from this source", the environment's
+    // lines read and dropped. Writing it shadowed the `name.tex` a paper ships beside the document (KNOWN_PERL_ERRORS
+    // #279 residual). Guard `perfect_kernel_batch77s::filecontents_keeps_a_file_on_disk`.
+    let keep_existing = !has_option("force")
+      && !has_option("overwrite")
+      && filecontents_target_exists(&filename, has_option("nosearch"));
     let mut lines: Vec<String> = Vec::new();
     if !noheader {
       lines.push(format!("%% LaTeX2e file `{filename}'"));
@@ -910,6 +919,19 @@ LoadDefinitions!({
       }
       break;
     }
+    if keep_existing {
+      let place = if has_option("nosearch") {
+        "in current directory"
+      } else {
+        "exists on the system"
+      };
+      Info!(
+        "note",
+        "filecontents",
+        s!("File `{filename}' already {place}. Not generating it from this source")
+      );
+      return Ok(());
+    }
     let n = lines.len();
     Info!(
       "note",
@@ -923,6 +945,17 @@ LoadDefinitions!({
     // given, as LaTeX's `\@curr@file` does.
     vfs_store(&output_file_name(&filename), &lines.join("\n"));
     Ok(())
+  }
+  /// Does `\openin` find the file a `{filecontents}` names (latex.ltx:18993-18995 `\openin\@inputcheck\q@curr@file`)?
+  /// A file `\openin` can read: a virtual one an earlier `{filecontents}`/`\openout` wrote, or one on disk — not a
+  /// binding answering for an absent file. `nosearch` looks in the document's own directories only.
+  fn filecontents_target_exists(filename: &str, nosearch: bool) -> bool {
+    let options = FindFileOptions {
+      search_paths_only: nosearch,
+      ..FindFileOptions::default()
+    };
+    find_file(filename, Some(options))
+      .is_some_and(|path| vfs_exists(&path) || std::path::Path::new(&path).is_file())
   }
   // The \filecontents primitive reads filename + raw lines until
   // `\end{<current environment>}`. The `\begin` of that environment (its own

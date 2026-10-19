@@ -337,7 +337,9 @@ pub(crate) fn load() -> Result<()> {
     // with `decode` silently dropped the second character: T2B slot 128 came
     // out as `Ӷ` (U+04F6) instead of `Ӷ̶` (U+04F6 U+0336), i.e. a DIFFERENT
     // letter with its stroke removed, where Perl keeps the pair.
-    if let Some(replacement_value) = decode_slot(code.value_of(), &encoding_str) {
+    if let Some(replacement_value) = decode_slot(code.value_of(), &encoding_str)
+      .map(|decoded| cyrillic_letter_in_latin_slot(&cs_str, decoded))
+    {
       // Encoding-specific carries the actual glyph.
       def_primitive(ecs, None, Some(PrimitiveBody::String(replacement_value)),
         PrimitiveOptions::default())?;
@@ -1977,6 +1979,37 @@ fn nullable_store(target: &Token) -> bool {
     None => true,
     Some(Stored::Expandable(ref m)) => matches!(m.get_expansion(), Some(ExpansionBody::Tokens(_))),
     Some(_) => !is_defined_token(target) && !target.with_str(|s| s == "\\relax"),
+  }
+}
+
+/// The Cyrillic letter a text symbol names, where its encoding sets it in a Latin letter's slot. T2A, T2B and T2C
+/// (t2aenc.def:230-237; t2benc.def:230-239, t2cenc.def alike) put І і Ј ј Ԛ ԛ Ԝ ԝ, and T2B/T2C also Ѕ ѕ, in the
+/// slots of I i J j Q q W w S s, whose glyphs they share. The fontmap reads such a slot as the Latin letter — a Latin
+/// `i` typed in T2A text is that slot, and pdftotext reads the PDF's `і` as `i` too — so the symbol `\cyrii` (which a
+/// UTF-8 `і` becomes, t2aenc.dfu) decoded as Latin `i`: Ukrainian "Іван", Serbian "ј" spelled with Latin letters
+/// (Perl the same, latex_constructs.pool.ltxml:2614-2625; OXIDIZED_DESIGN_DIVERGENCES #776). The named symbol is its
+/// letter; a slot that is no Latin letter keeps its decoding. Guard
+/// `perfect_kernel_batch77s::t2a_cyrillic_i_and_je_are_cyrillic`.
+fn cyrillic_letter_in_latin_slot(cs: &str, decoded: SymStr) -> SymStr {
+  let letter = match cs {
+    "\\CYRII" => '\u{0406}',
+    "\\cyrii" => '\u{0456}',
+    "\\CYRJE" => '\u{0408}',
+    "\\cyrje" => '\u{0458}',
+    "\\CYRQ" => '\u{051A}',
+    "\\cyrq" => '\u{051B}',
+    "\\CYRW" => '\u{051C}',
+    "\\cyrw" => '\u{051D}',
+    "\\CYRDZE" => '\u{0405}',
+    "\\cyrdze" => '\u{0455}',
+    _ => return decoded,
+  };
+  if with(decoded, |text| {
+    text.len() == 1 && text.bytes().all(|b| b.is_ascii_alphabetic())
+  }) {
+    pin_char(letter)
+  } else {
+    decoded
   }
 }
 

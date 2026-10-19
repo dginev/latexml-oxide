@@ -80,6 +80,10 @@ pub(crate) fn load() -> Result<()> {
   // in eqnarray/ams rearrangeable bindings prevents an infinite
   // \lx@eqnarray@save@label recursion under nested align/gather (2008.13358).
   let_i(&T_CS!("\\label"), &T_CS!("\\lx@label"), Some(Scope::Global));
+  // The type a `\label[type]{key}` gives its object's references (cleveref.sty `\label[type]`), where a site that moves
+  // a trailing `\label` reads the optional itself (`typed_label`). The kernel's `\label` has no type: nothing;
+  // cleveref's binding reads it.
+  DefMacro!("\\lx@label@type{}", "");
 
   // A reference shows its target's tags as its `show` names them: a held tag (`\lx@tag@intags@held`) it prints has
   // its deferred diagnostics replayed once the document is read (logger.rs `replay_shown_deferred`, ruling 7e).
@@ -2193,4 +2197,25 @@ fn cite_prints_keys(bibrefs: &str) -> Result<()> {
     resolve_deferred_prints(Some(&cite_list(key)))?;
   }
   Ok(())
+}
+
+/// The tokens of a trailing `\label[type]{key}` a site moves into a caption (`\@caption@postlabel`, sect09.rs; caption's
+/// `\@captionof@postlabel`; algorithm2e's procedure caption), which read the optional type themselves: `<label>{<key>}`,
+/// after `\lx@label@type{<type>}` when a type was given (cleveref.sty `\label[type]`, KNOWN_PERL_ERRORS #998). An absent
+/// or blank type adds no token to the caption's text, which other code re-reads and scans.
+pub fn typed_label(label: Token, ty: Option<Tokens>, key: Tokens) -> Vec<Token> {
+  let mut tokens = Vec::new();
+  if let Some(ty) = ty.filter(|ty| {
+    ty.unlist_ref()
+      .iter()
+      .any(|t| t.get_catcode() != Catcode::SPACE)
+  }) {
+    tokens.extend([T_CS!("\\lx@label@type"), T_BEGIN!()]);
+    tokens.extend(ty.unlist());
+    tokens.push(T_END!());
+  }
+  tokens.extend([label, T_BEGIN!()]);
+  tokens.extend(key.unlist());
+  tokens.push(T_END!());
+  tokens
 }

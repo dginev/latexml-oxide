@@ -138,6 +138,7 @@ do not block the E/F rerun.
 | — | aistats: a marked first row followed by an unmarked row leaks the second row's address upward (review probe `r_secondrow_marked`: Ann gets "Univ C" before "Univ A"; her marked affiliation is attached later, so `annotate=run` still counts her new) | open, 0 of 2,843 aistats papers (77o r2 review finding 7) |
 | — | aistats `in_place` residuals: a macro with parameters defined inside the `\twocolumn[…]` block (`\def\Uni#1{…}`, probe `g_args`: Error undefined, pdflatex "Univ of Here") or a local `\let` of a primitive (`\let\Uni\relax`, probe `g_letprim`: Error) is not read in place | open (77o r2 review finding 4); no corpus witness |
 | — | aistats renamed copies: ~100 papers ship a renamed aistats style the versioned fallback and the registrations do not reach (`aistats2022_arxiv.sty` 9, `aistats_arxiv.sty` 7, `*_preprint`, `*_mod`, `*_old`, …): no title, no creators | open (77o r2 review finding 10) |
+| — | renamed natbib copies read raw: a shipped natbib copy under a name the versioned fallback does not reduce to `natbib` (`natbib_vw.sty` 16 papers, `modnatbib` 21, `hbnatbib` 16, `ctextemp_natbib` 13, `natbib_jrm` 12, `NAR-natbib` 9, `natbib_padeu` 8, `rnatbib` 7, `wsnatbib`/`natbibsty`/`igsnatbib` 6 each, … — census of 1,677 corpus papers shipping a `*natbib*.sty`, `~/data/pk_wt/scratch_77s/natbib_copies_all.tsv`; `natbib2`/`natbib209`/`natbib1`/`natbib_mod` already fall back to the binding, "Interpreted as versioned package"; NJDnatbib/bmvc2k_natbib/ws-rv-har are 72a stand-ins) is read raw: its `\citet`/`\citep` read `\b@<key>`, which no `\bibitem` of ours writes (no `\bibcite`), so every citation prints "?" with a "Citation undefined" Warning, and a labelled `\bibitem` keeps no refnum, so the kernel `\cite` shows no label (1003.3017: 62 Warnings, 0802.4100: 142, astro-ph0512042; pdflatex "Schneider et al. (2010), Smith (2001), (Smith, 2001)."; RED `index-bib/mn2e_natbib_copy/natbib_renamed_copy_citations_resolve`). Not the brief label route of 70c (g): the copy's whole citation layer is missing | open (77s), **ruling asked** — the same hole as the aistats row above and 72a's per-copy stand-ins (a 3rd/4th recurrence): one rule, a shipped package or class whose `\Provides…` names a bound file (natbib_vw/modnatbib/natbib_jrm/natbibsty/tsnatbib … all `\ProvidesPackage{natbib}`) loads that binding with the options given and the copy read after it as a stand-in copy (OD #731), instead of a per-name stand-in list |
 | — | 1802.07182 (aistats): the affiliations written as a second `\aistatsauthor` row become creators "University of Cambridge1", "Invenia Labs2", "Cambridge", "UK" (the author's misuse of the setter; its e-mail list is the block's, one contact an address since 77o r3) | open, author misuse (77o r2 review finding 3) |
 | — | 1202.1568 (aistats2eM): an e-mail list with the domain after the braces (`{seungyeon.kim@, fli@cc., …}gatech.edu`) is not read as an e-mail list and stays inside the affiliation (content kept) | open (77o r2 report) |
 | — | 2203.06997 (aistats, paired): a `~\\` spacer line before a column's e-mail line makes the kernel `\author` line reading take the e-mail for an affiliation ("Richard E. Turner: University of Cambridge; ret26@cam.ac.uk" both affiliations) | open (77o r3 A/B; content kept) |
@@ -281,8 +282,7 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
     `captions-floats/continuedfloat_minipage_subcaption_continues_the_letters` (no `\caption@subtypehook` pre-step,
     caption.sty:642); under subfig a third continued part keeps the first continuation's sub-float id suffix (`S0.F1a.sf4`
     under `S0.F1b`); `[caption=false]{subfig}` still gets `\caption@ContinuedFloat`'s check; caption's
-    `continuedfloat`/`continued<type>` option sets (caption.sty:526-528) unapplied; RED
-    `captions-floats/longtable_starred_caption_keeps_its_text` (KPE #363); longtable ignores `\LTcaptype`; floatfig/JHEP
+    `continuedfloat`/`continued<type>` option sets (caption.sty:526-528) unapplied; longtable ignores `\LTcaptype`; floatfig/JHEP
     `floatingfigure`/`floatingtable` and elsart `algorithm` typed without a source; RED `captions-floats/subref_prints_the_letter`;
     `subfloat_sty.rs:29-30` `\fnum@sub…` = `(\thesub…)` gives "((a))" under `labelformat=simple|empty` (2605.01267,
     2605.10017, 2605.05371; `subfig_sty.rs:128` moved to `\lx@subfig@fnum` in Gemini Q8 — re-verify which still
@@ -331,7 +331,6 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
 - **`\shipout`/`\setbox` residuals** (batch 56jk, DIVERGENCES #314): `read_box_operand` invokes a non-box operand (`\shipout A` typesets "A", `\shipout\hrule` a rule) where TeX §1084 reports "A <box> was supposed to be here" and backs the token up; a shipped `\hbox` in horizontal mode runs into the surrounding text (emit it as its own unit, as a `\vbox` yields an inline-block); `box_prefix_tokens` (`tex_box.rs`) reads `\everyhbox` before the `\afterassignment` token, where TeX reads the after-token first (§1083 then §1269 back_input; TeXbook p.279) — Perl the same (TeX_Box.pool.ltxml:170-174), a KNOWN_PERL_ERRORS candidate once a pdflatex probe pins it; `repros.sh:63` parses `% status: RED (…) -> GREEN (…)` as RED (98 repros use that form), so their regression check is off.
 - **doc.sty's code-line index and the index-list residuals** (batch 56js, DIVERGENCES #318): a dtx manual's index lists only its `\index`-level (usage) entries — doc.sty's `\codeline@wrindex` (doc.sty:855-862), hypdoc's `\HD@codeline@wrindex` (hypdoc.sty:332-343) and l3doc's `\__codedoc_index_page_hc:nn`/`_codeline_hc:nn` (l3doc.cls:1899-1914) write `\indexentry{…}{…}` to `\@indexfile` themselves, which is allocated but never opened, so the text goes to the log (source2e: 44,246 `\indexentry` lines). A `\write` to an index stream could become an `ltx:indexmark` read by the same makeindex reader. Also open: imakeidx documents get no index at all (imakeidx.sty:147-156 redefines `\index` to write the file itself; e.g. assoccnt_doc, atableau); robustglossary's `&`-column `\glossary` entries raise `Stray alignment "&"` at the mark (robustindex/robustsample, 2 errors; pdflatex prints them through its own `\glossaryentry` table; RED repro `tools/perfect_kernel/repros/index/glossary_ampersand_robustglossary.tex`); xindy styles' separators are read as text (makeglos.xdy `:`); `\@SpecialIndexHelper@` keys of control symbols stay garbled (amsldoc `\cn{\\}`). The re-read of the written entry (a `\` plus letters make a control word when `\printindex` inputs the `.ind`) is modelled only for `\string\verb`: amsldoc.cls:99-103's `\string\texttt{#2}` prints `“texttt…` — RED repro `tools/perfect_kernel/repros/index/index_string_command_amsldoc.tex`; one re-read step after the entry's expansion (skipping the absorbed `\@internal@text@verb` arguments) would also fix doc.sty's `\LeftBraceIndex`/`\RightBraceIndex` displays. `\verb*` in an entry shows no visible spaces; under hypdoc the encap style is `hdpindex`/`hdclindex` rather than doc's `usage`/`main`. A list-of-figures entry loses the space after its number (`1Cap`; Perl and pdflatex `1 Cap`): Scan stores `caption`/`toccaption` as text (scan.rs `captioned_handler`), which drops the tag's `close`; storing the `cleanNode` copy as a node, as Perl does, would keep it (repro `index/indexmark_cleaned_from_titles_captions.tex`).
 - **FIXED int27 (silent-loss #20) — a `\gls`/`\glsadd` inside display math lists nothing** (batch 56jt residual, DIVERGENCES #320; the location-only reference now goes in an `ltx:text` of the `ltx:equation`, after the formula): the location-only `ltx:glossaryref` of a formula goes to the nearest enclosing level that admits it, after the formula; inline math has its `p`, but `ltx:equation` admits no inline element, so an entry named only in display math (`\begin{equation} \gls{E}=mc^2 \end{equation}`) is missing from the list. `\aftergroup` carries tokens past `$…$`/`\[…\]` (probed), but not safely out of an alignment cell.
-- **`{filecontents}{name}` overrides a `name.tex` on disk** (batch 56jt residual, KNOWN_PERL_ERRORS #279): since `\openout`/`{filecontents}` name the file `name.tex`, the source's contents shadow a `name.tex` beside the document, where LaTeX's default (no `[overwrite]`) keeps the disk file ("File `name' already exists on the system. Not generating it from this source.", latex.ltx:19004). Probe: `democode.tex` = "Disk version." + `\begin{filecontents}{democode}Source version.\end{filecontents}` + `\input{democode}` — pdflatex and the pre-56jt binary print "Disk version.", now "Source version.". No fix yet: the store must consult the disk before a non-`[overwrite]` write.
 - **Fixture exception to the 0-warning rule** (batch 56jt): `stream_a_recall::a_citation_of_another_lists_item_is_missing_here` asserts its one warning, "Missing bibkeys: supp" — the faithful diagnostic (Perl MakeBibliography.pm:342-343; bibtex warns "I didn't find a database entry"), since the key it guards is cited and absent from that bibliography's files by construction.
 - **biblatex refsections share one citation list** (batch 56jt residual, KNOWN_PERL_ERRORS #277): each bibliography now reads its own `@files`, but every `\printbibliography` fallback lists every cited key its files hold and warns "Missing bibkeys" for the rest, where biber lists and checks only its refsection's citations (RED repro `index-bib/biblatex_refsections_share_citations.tex`: 2 warnings, Globalentry in the first list); `\printbibliography[section=N]` after the refsections reads the pooled resources (biblatex-apa6-test).
 - **babel language tags are lost under the `luatex` profile** (batch 56ji residual): babel loads `luababel.def`, so `xml:lang` is not set; `babel_support_sty.rs:243-254` also forces LGR for Greek (latent). Red repro `tools/perfect_kernel/repros/babel-lang/luababel_language_tag_luatex.tex`.
@@ -364,8 +363,7 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
   - *floats/captions*: RED `captions-floats/{two_captions_in_one_float_are_numbered_apart (KPE #396),
     subfig_subfloats_restart_in_each_figure, float_in_a_subfloat_row_keeps_the_parent_number (KPE #395 part),
     captionsetup_type_in_a_figure_minipage, captionless_longtable_is_not_listed, label_after_a_continued_caption,
-    label_after_a_caption_with_a_note_names_the_float (SHARED), cleveref_optional_label_type_names_the_label (2605.13648),
-    filecontents_graphic_has_its_size}`, RED `boxes-groups/caption_minipage_in_a_table_cell`; text a `\refstepcounter`
+    label_after_a_caption_with_a_note_names_the_float (SHARED), filecontents_graphic_has_its_size}`, RED `boxes-groups/caption_minipage_in_a_table_cell`; text a `\refstepcounter`
     rebinding typesets is dropped; floatrow — a footnote ignores `\def\@mpfn{mpfootnote}` (floatrow.sty:476-478); a
     `\floatfoot` in a plain `figure`/`table` or a `\DeclareNewFloatType` float is FIXED int27 (the float's end sets the
     pending foot, floatrow_sty.rs `\lx@flrow@plainfoot`; guards `perfect_kernel_batch58::floatrow_floatfoot_in_{plain_figure,
@@ -380,8 +378,7 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
     reledmac — `\patchcmd{\endminipage}` fails (reledmac.sty:7643-7654), `\footnote` in `\pstart` splits the line.
   - *fonts* (58f, 58g, 58k, 59d): a raw font's `\fontdimen` reads cmr10's, `\fontcharwd`/`\fontcharht` the undecoded char;
     the lcircle map is unchecked; `\ding` 7.5pt vs 5.71pt; a standard-metric font's missing char (KPE #408); `\f@encoding`
-    inside a raw font's group; RED `fonts-nfss/math_char_without_glyph_keeps_its_box` (`t1_guillemet_ligatures` GREEN 60s); T2A ј/і as
-    Latin j/i (surpass candidate); a redefined `\everymath` is not run (latex.ltx:10580).
+    inside a raw font's group; RED `fonts-nfss/math_char_without_glyph_keeps_its_box` (`t1_guillemet_ligatures` GREEN 60s); a redefined `\everymath` is not run (latex.ltx:10580).
   - *lists*: RED `list-structure/stale_list_counter_reset_gives_I0_ids` (Perl-origin; 2605.04012); a `\list` on the
     enclosing counter inside `\lx@trivlist@setup` gets `i0`; RED `block-model/noindent_paragraph_in_minipage_numbers_inside`
     (2605.21713; same defect as the K13 row's `noindent_paragraph_in_a_minipage_takes_its_id`).
@@ -581,14 +578,6 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   2-3): the inner formula of an unwrapped pstricks box keeps `tex="\textstyle{…}"` (KPE #989's inserted style);
   REVTeX 3 prints every `\preprint` where aps.sty v3.0:961-965 / v3.1:965-968 keep only the last
   (`\def\@preprint` each call; cond-mat9601115, 2 of 305 preprint-style papers, base the same).
-- **`\captionof{subfigure}` in a TikZ `\node` loses the figure and the text after it** (RUST-ONLY content loss, honest
-  Error status; 77k witness 2008.05535, +30 Errors there on int32a, int31a the same shape): caption.sty refuses the
-  subtype ("Should not be used with subtype `subfigure'") and pdflatex goes on — 2 errors, the figure, its caption and
-  the following text printed. We raise 25-28 errors ("You can't use } after \the", "Attempt to end mode
-  restricted_horizontal" at `\lx@tag`, "Attempt to end mode internal_vertical" at `\@@toccaption`) and keep an empty
-  `<figure>`: the `\caption{Whole.}` and "Text after." are gone. Fix: the refused `\captionof` digests its caption as
-  caption.sty's error path does (no tag inside the node's box), and the node's box closes cleanly. Repro
-  `~/.claude/jobs/356a0c47/tmp/cap77k/m1.tex` (to move into `captions-floats/`).
 - **A document-level `\def\@abstract{…}` read only by a refused class `\maketitle` is no `ltx:abstract`** (residual by
   user ruling 2026-10-19; HF14, 2609.12818): the document sets the class's store itself, so no setter call reaches K11
   (class setters only) or OD #767's off-table rule (a setter the document calls); the text survives inside the
@@ -617,7 +606,7 @@ Each class is a silent content or markup loss unless marked otherwise; each land
 | 5 | IEEE `and~Name` keeps "and" in the last name | 2011.10474, 2408.09035 | **DONE 63j** (KPE #528) | — |
 | 6 | `\fnmsep` leaves a stray comma in the name | astro-ph0001054, astro-ph0611016 | **DONE 63l** (KPE #533) | — |
 | 7 | PoS/JHEP `\author` calls accumulate, only the last kept | astro-ph0611258 | **DONE 63k** (KPE #529) | — |
-| 8 | algorithmic `\REQUIRE`/`\ENSURE` labels replaced by "0:" | 2201.01230 | **DONE 63j** (KPE #527; algpseudocode too) | residuals: algpseudocodex drops the label (RED `list-structure/algpseudocodex_require_shows_its_label`); `\ref` to a labelled line prints the label |
+| 8 | algorithmic `\REQUIRE`/`\ENSURE` labels replaced by "0:" | 2201.01230 | **DONE 63j** (KPE #527; algpseudocode too) | residuals: `\ref` to a labelled line prints the label (algpseudocodex's label FIXED 77s) |
 | 9 | raw class `\abstract{…}` (an.cls) a plain paragraph, no `ltx:abstract` | astro-ph0611016 | **FIXED 77b** (silent-loss #23) | an.cls binding or a raw-class `\abstract{}` command form → the abstract frontmatter |
 | 10 | entics.cls (raw) `\thanksref{ALL}` prints its key in the name | 2212.08177 | **OPEN** | entics `\thanks[key]`/`\thanksref` → the frontmatter annotation API (elsart-style) |
 | 11 | sectsty `\subsectionfont{…\textit}` applies the font to the first letter only (presentation) | 1508.01140 | **OPEN**, low | sectsty font hooks take the whole title |
@@ -771,7 +760,6 @@ says otherwise.
   - kotex U+02D9;
   - ctex `\draw_linewidth:n`;
   - montex ₮;
-  - algpseudocodex statex;
   - picture_direct_tcolorbox;
   - examdesign "True".
 - **5 RED repros meet their line:**
@@ -1022,8 +1010,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
     labels (`labels="LABEL:["` before), 1803.03591's e-mails are the authors' contacts.
   - **Open**: aastex's `\tablenotetext{^a}` digests its mark as text (deluxetable_sty.rs:128; aastex631.cls:5382 sets
     it `$^{…$#1$}$`: 2303.02355's 6 left); a `.bbl` call of a raw class's `\doi` adds a second DOI pubnote
-    (1710.01977); cleveref's `[type]` is dropped, so `\cref` says "table" where the PDF says "Appendix Table"
-    (2404.11739). Guards `perfect_kernel_batch65m::*`; repros index-bib/natbib_bibitem_label_is_aux_only,
+    (1710.01977); cleveref's `[type]` (dropped, `\cref` saying "table" where the PDF says "Appendix Table", 2404.11739)
+    FIXED 77s (KPE #998). Guards `perfect_kernel_batch65m::*`; repros index-bib/natbib_bibitem_label_is_aux_only,
     index-bib/natbib_authoryear_label_is_aux_only, captions-floats/caption_short_form_is_lof_only,
     captions-floats/cleveref_label_type_after_caption, captions-floats/cleveref_label_type_after_procedure_caption,
     captions-floats/cleveref_label_type_after_captionof, macro-state/counter_name_with_underscore,
@@ -4071,9 +4059,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\centering` `\\` (`\@centercr`) stays in the cell — 1511.05496 12 → 0 (repro
   `alignment/multicolumn_centering_then_row_end`; a whole `\begingroup` also ends the alignment state the cell reads at
   its close, setting a centered cell right). Open: (g) under a raw natbib copy a labelled `\bibitem` keeps no refnum, so
-  its `\cite` shows no label text (pdflatex "Schneider et al. (2010)"; as 67int23b): the copy's delimited
-  `\citeauthoryear` (natbib_vw.sty:622) runs to the end of the label's private mouth; route a copy's labelled `\bibitem`
-  through the natbib binding's `\lx@NAT@parselabel` (natbib_sty.rs:1333).
+  its `\cite` shows no label text (pdflatex "Schneider et al. (2010)"; as 67int23b) — not a label route: the copy's own
+  citation commands find no `\b@key` at all (silent-loss row "renamed natbib copies read raw", 77s).
   **Integration (int24, 71b2a9b485, binary 67int24b):** 73a r1-r4 (+ review fixes c64e948812) and 73b r1-r2
   (6253aecd5d) cherry-picked onto int23 8fad3f852f, then 70c (conflicts: SYNC/OD entry-wise, sigma_cls.rs keeps both
   fleqn hooks); a joint review of 73b r2 + 70c (agent_reports/2026-10-18_73b_r2_70c_review.md: SHIP both); main-session
@@ -4442,6 +4429,34 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   REVTeX 3 papers are byte-identical to int31a again (pubnotes, hep-ph0001309 and hep-ph9801334 5 + 4 Errors of r1
   gone), and pstricks `tex` attributes show the source (0707.0546, 1010.2311, 1106.2128, 1106.3964, 2603.19804,
   math0602047, quant-ph0308170).
+- **77s** (quality batch 1: brief silent content losses outside the frontmatter, quality inventory
+  agent_reports/2026-10-19_quality_inventory.md rows LT-CAPTION-STAR, ALGPSEUDOCODEX, CLEVEREF-TYPE, NATBIB-COPY-LABEL,
+  T2A-CYRILLIC, FILECONTENTS-OVERRIDE, CAPTIONOF-TIKZ; guards `perfect_kernel_batch77s::*`, 6). (1) longtable's
+  `\caption*{text}` is the text alone (longtable.sty:471-474 `\LT@capti@n`), no "Table N: *" (KPE #363; 2401.16093,
+  2401.10535, 2101.04168, 2401.16364 now keep their continued-table captions). (2) algpseudocodex adds its box check
+  through the algorithmicx binding's line hook (`\lx@algorithmicx@item@hook`), so `\Require`/`\Ensure`/a document's
+  `\item[\algorithmicinput]` keep their labels and `\Statex` steps no number (2408.09313, 2602.08027, 2108.09101,
+  2202.00232's substates). (3) cleveref's `\label[type]{key}` gives the labelled object that type's cleveref tags, from
+  any `\label` and from the three sites that move a trailing one (`typed_label`, a type token only when a type is
+  given), and `\crefname`/`\Crefname` derive the other variant as cleveref.sty:1296-1325 does (KPE #998; 2404.11739
+  "Appendix Table", 2605.13648; a derived empty name, `\crefname{equation}{}{}`, now shows no word as in the PDF:
+  2409.02896, 2202.13659, 2508.14995). (4) T2A/T2B/T2C `\cyrii`/`\cyrje`/… are Cyrillic і/ј/… (OD #776; 1501.05933).
+  (5) a `{filecontents}` keeps a file `\openin` finds unless `[force]`/`[overwrite]` (KPE #279; 2311.02007's shipped
+  main_paper.tex/main_supp.tex now read, its Acknowledgement section back). (6) `\captionof` of a caption sub-type is
+  refused as caption.sty:346-352 refuses it, then made by `\caption` (KPE #999; 2008.05535 197 → 10 Errors, +5,651
+  words, the figure, its captions and the following text kept; 2002.04564 77 → 6, 1801.09806 42 → 8, each a
+  pdflatex error per refused `\captionof`). (7) NATBIB-COPY-LABEL is not a label route: the silent-loss row "renamed
+  natbib copies read raw" (ruling asked). A/B vs int34a over 349 papers (41 witnesses, 30 per item from a 10-month
+  and a 14-month corpus scan, 99 pop67int23 controls): E 1,729 → 1,439, F 10 → 10, W 5,893 → 5,845, words +4,874; one
+  paper with more errors, 2508.00020 52 → 54, its own `\Crefname{section}{Section\!}{Sections.\!}` under `capitalise`
+  now also the derived `\cref@section@name` (faithful; `\!` in text errs in pdflatex too); every other XML change is a
+  kept caption/label, a cleveref tag following the given type or derivation, a Cyrillic letter, or the disk file of a
+  `{filecontents}`. Residuals: a `\crefformat` for a type with no `\crefname` is not modelled, so `\label[prob]` with
+  only `\crefformat{prob}{prob.~(#2#1#3)}` shows the bare number where pdflatex prints "prob. (P)" (2609.28438; it
+  showed the equation's "eq." before); an undefined `\label[type]` shows the number without cleveref's "??"
+  (2502.00149); the type is the object's, not the label's (two labels of one object with different types share the
+  last); `\captionof{subfigure}` inside a `{subfigure}` reports caption.sty's subtype message where pdflatex's is
+  "subfigure inside subfigure" (caption.sty:655-656, one error either way).
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;
@@ -5024,8 +5039,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   - algorithmic's `\REQUIRE`/`\ENSURE` show their labels (Require:/Input:, Ensure:) rather than "0:", and
     algpseudocode's `\Require`/`\Ensure` theirs rather than line numbers 1, 2; `\Statex`/`\item[]` lines go
     unnumbered as pdflatex prints them (KPE #527; 2201.01230, 1406.5162, 1811.08330, 2507.12875, 2602.10387,
-    2309.03769, 1606.06256). Open: algpseudocodex's contrib binding still drops the label (RED repro
-    list-structure/algpseudocodex_require_shows_its_label).
+    2309.03769, 1606.06256). algpseudocodex's contrib binding, which dropped the label, takes it since 77s (repro
+    list-structure/algpseudocodex_require_shows_its_label GREEN).
   - " and~" separates authors (KPE #528; 2011.10474, 2408.09035, 1406.6147).
 
   A/B 388 papers vs 63i: 19 change, each one of these, with 0 more errors or warnings. Guards

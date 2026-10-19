@@ -5702,6 +5702,7 @@ mod sect13;
 pub use sect04::toc_select;
 pub use sect08::declare_bound_text_symbols;
 pub use sect10::math_array_bindings;
+pub use sect11::typed_label;
 pub use sect13::nfss_selected_font;
 
 LoadDefinitions!({

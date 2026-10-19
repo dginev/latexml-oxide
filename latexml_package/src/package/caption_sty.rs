@@ -617,8 +617,18 @@ LoadDefinitions!({
     out.extend([T_END!(), T_END!()]);
     Ok(Tokens::new(out))
   });
+  // A sub-type is refused (caption.sty:346-352 `\caption@checktype`, through `\caption@@settype`): "Should not be used
+  // with subtype `subfigure'", the type left as it was, and the caption made by `\caption` (`\caption*` for the starred
+  // form, caption.sty:389-391) — of the enclosing float's type, or a sub-caption in a `{subfigure}`. Wrapped in the
+  // sub-type's own environment, the caption's internals were read as that environment's width and, in a TikZ
+  // `\node`, cascaded mode errors that emptied the figure and lost the text after it (2008.05535: 30 errors, pdflatex
+  // 2). The `\caption@settype` caption.sty runs inside a sub-float, "<type> inside <subtype>" (caption.sty:655-656), is
+  // not modelled: a refused sub-type there gives this message, one error as there. Guard
+  // `perfect_kernel_batch77s::captionof_subtype_is_refused`.
   RawTeX!(r"\def\lx@caption@of#1#2{\edef\lx@caption@of@type{#2}\expandafter\lx@caption@of@\expandafter{\lx@caption@of@type}#1}
-\def\lx@caption@of@#1#2{\lx@caption@of@set@after{#1}\lx@caption@settype{#1}#2{#1}}
+\def\lx@caption@of@#1#2{\caption@ifdefined@subtype{#1}{\caption@Error{Should not be used with subtype `#1'}\lx@caption@of@refused#2}{\lx@caption@of@set@after{#1}\lx@caption@settype{#1}#2{#1}}}
+\def\lx@caption@of@refused#1{\ifx#1\@scaptionof\expandafter\lx@caption@of@refused@star\else\expandafter\caption\fi}
+\def\lx@caption@of@refused@star{\caption*}
 \let\lx@caption@of@after\relax");
   // caption.sty:288-298 `\setcaptiontype[*]{type}[options]`: `\caption@settype`, in the group it
   // stands in (the options are typographic, `\caption@setoptions` a no-op here). 2605.20199's
@@ -635,10 +645,22 @@ LoadDefinitions!({
     assign_value("lx@float@captionof", false, Some(Scope::Global));
   });
   DefMacro!("\\@captionof{}[]{}", r"\@ifnextchar\label{\@captionof@postlabel{#1}{#2}{#3}}{\@captionof@{#1}{#2}{#3}}");
-  // cleveref's `\label[type]{key}` after `\captionof`: the optional type is read and dropped, the key is the label — as
-  // `\@caption@postlabel` does (the mechanism of 2404.11739; OXIDIZED_DESIGN #552). Guard
+  // cleveref's `\label[type]{key}` after `\captionof`: the optional type is read and goes on as `\lx@label@type`, the
+  // key is the label — as `\@caption@postlabel` does (the mechanism of 2404.11739; OXIDIZED_DESIGN #552). Guard
   // `perfect_kernel_batch65m::cleveref_label_type_after_caption`.
-  DefMacro!("\\@captionof@postlabel{}{}{} SkipMatch:\\label [] Semiverbatim", r"\@captionof@{#1}{#2}{#3\label{#5}}");
+  DefMacro!("\\@captionof@postlabel{}{}{} SkipMatch:\\label [] Semiverbatim", sub[(captype, short, caption, ty, key)] {
+    let mut tokens = vec![T_CS!("\\@captionof@")];
+    for arg in [captype, short] {
+      tokens.push(T_BEGIN!());
+      tokens.extend(arg.unlist());
+      tokens.push(T_END!());
+    }
+    tokens.push(T_BEGIN!());
+    tokens.extend(caption.unlist());
+    tokens.extend(engine::latex_constructs::typed_label(T_CS!("\\label"), ty, key));
+    tokens.push(T_END!());
+    Tokens::new(tokens)
+  });
   // Perl wraps the caption in the named environment — "it isn't necessarily IN
   // a figure or any float, so we'll wrap it in an otherwise empty one!"
   // (`caption.sty.ltxml` L124-125) — and that is FATAL when the environment
@@ -1055,8 +1077,12 @@ fn caption_labels_only(text: Tokens) -> Tokens {
   let mut kept = Vec::new();
   let mut i = 0;
   while i < tokens.len() {
-    // (`\lx@caption@postlabel`: the kernel's `\label` after the caption, sect09.rs)
-    if tokens[i] == T_CS!("\\label") || tokens[i] == T_CS!("\\lx@caption@postlabel") {
+    // (`\lx@caption@postlabel`: the kernel's `\label` after the caption, sect09.rs; `\lx@label@type`: its
+    // cleveref type)
+    if tokens[i] == T_CS!("\\label")
+      || tokens[i] == T_CS!("\\lx@caption@postlabel")
+      || tokens[i] == T_CS!("\\lx@label@type")
+    {
       kept.push(tokens[i]);
       i += 1;
       let mut depth = 0;
@@ -1108,6 +1134,7 @@ fn caption_text_is_empty(text: &Tokens) -> bool {
     }
     if *token == T_CS!("\\label")
       || *token == T_CS!("\\lx@caption@postlabel")
+      || *token == T_CS!("\\lx@label@type")
       || *token == T_CS!("\\index")
       || *token == T_CS!("\\glossary")
     {

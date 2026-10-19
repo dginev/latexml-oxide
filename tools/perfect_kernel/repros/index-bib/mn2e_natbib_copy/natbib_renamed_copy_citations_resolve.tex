@@ -1,0 +1,19 @@
+% witness: 1003.3017 (62 "Citation undefined" Warnings), 0802.4100 (142), astro-ph0512042 (natbib_vw.sty, a natbib copy
+%          `\ProvidesPackage{natbib}` under a name the loader's fallback does not reduce to natbib: 16 papers ship it;
+%          census in SYNC 77s row: modnatbib 21, hbnatbib 16, ctextemp_natbib 13, natbib_jrm 12, NAR-natbib 9, …)
+% oracle:  pdflatex (2 passes, a shipped mn2e.cls beside it) 0 errors: "Schneider et al. (2010), Smith (2001),
+%          (Smith, 2001)."
+% engines: rust int34a = the copy read raw: its \citet/\citep find no `\b@key` (our \bibitem writes no \bibcite):
+%          "?" and "Citation undefined" Warnings; the kernel \cite a bare [bibref] with no label text
+% expect:  0 errors, 0 warnings; the natbib binding's author-year citations with their label text
+% status:  RED (int34a; SYNC 77s row: a renamed natbib copy is not the natbib binding — rule pending)
+% preload: ar5iv.sty
+\documentclass{mn2e}
+\usepackage{natbib_vw}
+\begin{document}
+\cite{s10}, \citet{a}, \citep{a}.
+\begin{thebibliography}{}
+\bibitem[\protect\citeauthoryear{Schneider et al.}{2010}]{s10} Schneider D.~P., et al., 2010, AJ, in press
+\bibitem[\protect\citeauthoryear{Smith}{2001}]{a} J. Smith. A paper. 2001.
+\end{thebibliography}
+\end{document}

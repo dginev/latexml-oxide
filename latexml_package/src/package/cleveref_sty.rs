@@ -6,7 +6,80 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Save original \label
   Let!("\\lx@cleverref@save@label", "\\label");
-  DefMacro!("\\lx@cleverref@label[]", "\\lx@cleverref@save@label");
+  // cleveref.sty `\label[type]{key}`: the optional type is the label's reference type, `\cref` naming the object by it
+  // (`\label[appendixtable]{tab:a}`, "Appendix Table 1" where the table's own type says "table 1"; 2404.11739,
+  // 2605.13648). Perl's binding (cleveref.sty.ltxml:20-22) reads and drops it. The type goes on as `\lx@label@type`, as
+  // the sites that move a trailing `\label` give it (sect09.rs `\@caption@postlabel`, OXIDIZED_DESIGN #552). Guard
+  // `perfect_kernel_batch77s::cleveref_label_type_names_the_reference`.
+  DefMacro!("\\lx@cleverref@label[]", sub[(ty)] {
+    let mut tokens = Vec::new();
+    if let Some(ty) = ty {
+      tokens.extend([T_CS!("\\lx@label@type"), T_BEGIN!()]);
+      tokens.extend(ty.unlist());
+      tokens.push(T_END!());
+    }
+    tokens.push(T_CS!("\\lx@cleverref@save@label"));
+    Tokens::new(tokens)
+  });
+  DefMacro!("\\lx@label@type{}", sub[(ty)] {
+    if ty.unlist_ref().iter().all(|t| t.get_catcode() == Catcode::SPACE) {
+      return Ok(Tokens!());
+    }
+    let mut out = vec![T_CS!("\\lx@cleverref@labeltype"), T_BEGIN!()];
+    out.extend(ty.unlist());
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  });
+  // The object the label names takes the type in its cleveref tags (`creftype`, …, the forms `\cref` prints), the
+  // object found as `\lx@label` finds it. cleveref keeps the type per label (its `\newlabel{<key>@cref}`); here it is
+  // the object's, which one label names. The other forms (`refnum`, `typerefnum`) are the kernel's, unchanged.
+  DefConstructor!("\\lx@cleverref@labeltype{}", sub[document, _args, props] {
+    let Some(Stored::VecDigested(tags)) = props.get("cref_tags") else {
+      return Ok(());
+    };
+    if let Some(savenode) = document.float_to_label() {
+      let target = document.get_node().clone();
+      for ((role, _), tag) in CREF_TAG_ROLES.iter().zip(tags.iter()) {
+        let xpath = s!("ltx:tags/ltx:tag[@role='{role}']");
+        for mut old in document.findnodes(&xpath, Some(&target)) {
+          let Some(tags_node) = old.get_parent() else {
+            continue;
+          };
+          // The new tag in the old one's place; a form the type has no name for (an empty tag, removed) leaves none.
+          let before = tags_node.get_child_nodes();
+          document.set_node(&tags_node);
+          document.absorb(tag, None)?;
+          for mut new in tags_node.get_child_nodes() {
+            if !before.contains(&new) {
+              new.unlink_node();
+              old.add_prev_sibling(&mut new).ok();
+            }
+          }
+          document.remove_node(old);
+        }
+      }
+      document.set_node(&savenode);
+    }
+  },
+  reversion => "",
+  properties => sub[args] {
+    let ty = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    let ty = Tokens::new(ExplodeText!(ty.trim()));
+    // Each built as `\lx@make@tags` builds the target's (base_utilities.rs `tag_forms`): a text-mode tag in the
+    // neutral font, wherever the label stands (an equation, a theorem's italic body).
+    let mut tags = Vec::new();
+    for (role, formatter) in CREF_TAG_ROLES {
+      let mut tokens = TokenizeInternal!(r"\begingroup\let~\lx@tag@texttilde\lx@tag@intags").unlist();
+      tokens.push(T_OTHER!("["));
+      tokens.extend(ExplodeText!(role));
+      tokens.extend([T_OTHER!("]"), T_BEGIN!(), T_CS!(formatter), T_BEGIN!()]);
+      tokens.extend(ty.clone().unlist());
+      tokens.extend([T_END!(), T_END!(), T_CS!("\\endgroup")]);
+      tags.push(Digest!(Tokens::new(tokens))?);
+    }
+    Ok(stored_map!("cref_tags" => Stored::VecDigested(tags),
+      "alignmentSkippable" => true, "alignmentPreserve" => true))
+  });
 
   // Load the raw cleveref.sty (for language-dependent definitions)
   // Pretend amsmath is loaded to avoid errors. Per OXIDIZED_DESIGN
@@ -150,11 +223,18 @@ LoadDefinitions!({
   });
 
   // Register type_tag_formatter mappings
-  AssignMapping!("type_tag_formatter", "creftype" => "\\lx@cleverrefnum@@");
-  AssignMapping!("type_tag_formatter", "creftypeplural" => "\\lx@cleverrefnumplural@@");
-  AssignMapping!("type_tag_formatter", "creftypecap" => "\\lx@cleverrefnumcap@@");
-  AssignMapping!("type_tag_formatter", "creftypepluralcap" => "\\lx@cleverrefnumpluralcap@@");
+  for (role, formatter) in CREF_TAG_ROLES {
+    AssignMapping!("type_tag_formatter", role => formatter);
+  }
 });
+
+/// cleveref's tag roles (`type_tag_formatter`) and their formatters: the forms of a target's type `\cref` prints.
+const CREF_TAG_ROLES: [(&str, &str); 4] = [
+  ("creftype", "\\lx@cleverrefnum@@"),
+  ("creftypeplural", "\\lx@cleverrefnumplural@@"),
+  ("creftypecap", "\\lx@cleverrefnumcap@@"),
+  ("creftypepluralcap", "\\lx@cleverrefnumpluralcap@@"),
+];
 
 /// Port of raw cleveref's `\@crefname` core (`\newcommand\crefname[3]` →
 /// `\@crefname{cref}{type}{sg}{pl}{}`): define `\<prefix>@<type>@name` and
@@ -163,9 +243,11 @@ LoadDefinitions!({
 /// **raw** token bodies (never expanded), so markup such as `\textsc{lemma}` survives,
 /// matching cleveref's `\def`. The raw macro's `\toksdef`/`\expandafter` chains are not
 /// reproduced — the same clean approach `thmtools_sty.rs` uses for
-/// `\declaretheorem[refname=]`. Like that precedent, the cross-variant `\MakeUppercase`
-/// derivation (deriving `\Cref@…` from a lone `\crefname`) is not reproduced; provide
-/// `\Crefname` explicitly for the capitalised form.
+/// `\declaretheorem[refname=]`. The other variant, when undefined, is derived as
+/// cleveref.sty:1296-1325 derives it (`\cref@othervariant`, :1283-1295): `\Cref@<type>@name` is
+/// `\MakeUppercase` before the `\crefname` singular (its first token), and `\cref@…` from a lone
+/// `\Crefname` is `\MakeLowercase` before it, or the name itself under `capitalise`
+/// (`\crefname{appendixtable}{Appendix Table}{…}`: `\Cref` printed no name; 2404.11739).
 fn cref_define_name(
   prefix: &str,
   type_arg: Tokens,
@@ -177,15 +259,51 @@ fn cref_define_name(
   def_macro(
     T_CS!(s!("\\{}@{}@name", prefix, ctype)),
     None,
-    singular,
+    singular.clone(),
     None,
   )?;
   def_macro(
     T_CS!(s!("\\{}@{}@name@plural", prefix, ctype)),
     None,
-    plural,
+    plural.clone(),
     None,
   )?;
+  let other = if prefix == "cref" { "Cref" } else { "cref" };
+  if !has_meaning(&T_CS!(s!("\\{}@{}@name", other, ctype))) {
+    let change_case = if prefix == "cref" {
+      Some(T_CS!("\\MakeUppercase"))
+    } else if Expand!(TokenizeInternal!(r"\if@cref@capitalise1\else0\fi"))
+      .to_string()
+      .trim()
+      == "1"
+    {
+      None
+    } else {
+      Some(T_CS!("\\MakeLowercase"))
+    };
+    let derive = |name: Tokens| -> Tokens {
+      match change_case {
+        Some(cs) if !name.unlist_ref().is_empty() => {
+          let mut tokens = vec![cs];
+          tokens.extend(name.unlist());
+          Tokens::new(tokens)
+        },
+        _ => name,
+      }
+    };
+    def_macro(
+      T_CS!(s!("\\{}@{}@name", other, ctype)),
+      None,
+      derive(singular),
+      None,
+    )?;
+    def_macro(
+      T_CS!(s!("\\{}@{}@name@plural", other, ctype)),
+      None,
+      derive(plural),
+      None,
+    )?;
+  }
   Ok(())
 }
 

@@ -7302,8 +7302,12 @@ names read back by `\input`, unchanged) write an extension-less name. Guards
 wrapped_filecontents_prints_the_code_and_its_result}`,
 `virtual_files::tests::output_file_name_completes_as_openout_does`; repros
 `tools/perfect_kernel/repros/string-mouth/openout_completes_tex_extension.tex`,
-`openout_wrapped_filecontents.tex`, `openout_latexdemo_printdemo.tex`. Residual: a `{filecontents}`
-without `[overwrite]` now shadows a `name.tex` already on disk, which LaTeX keeps (SYNC_STATUS).
+`openout_wrapped_filecontents.tex`, `openout_latexdemo_printdemo.tex`. The naming left a `{filecontents}` without
+`[overwrite]` shadowing a `name.tex` already on disk, which LaTeX keeps; since 77s a file `\openin` finds (on disk, or
+written by an earlier `{filecontents}`; in the document's own directories under `nosearch`) is kept unless
+`[force]`/`[overwrite]`, as latex.ltx:18990-19004 `\filec@ntents` keeps it ("File `name' already exists on the system.
+Not generating it from this source", an Info). Repro `string-mouth/filecontents_disk_file/`; guard
+`perfect_kernel_batch77s::filecontents_keeps_a_file_on_disk`.
 
 ## 280. A bibliography entry's fields run together with no separator (FIXED in Rust)
 
@@ -8183,11 +8187,17 @@ Rust fix (57ad): `\continuedfloat[*]` counts the parts in `continuedfloat` (rest
 
 **Guard**: `perfect_kernel_batch56::{continuedfloat_keeps_the_number_and_the_letters, continuedfloat_suppresses_one_step_per_real_float, continuedfloat_counts_only_the_main_floats_steps, continuedfloat_scope_opens_where_caption_sets_the_type, continuedfloat_captionof_wrapper_does_not_leak}` (repro `captions-floats/continuedfloat_keeps_the_number_and_the_letters`).
 
-## 363. A longtable's `\caption*` loses its text
+## 363. A longtable's `\caption*` loses its text (FIXED in Rust)
 
-longtable.sty.ltxml:127-129 defines the longtable `\caption` as `\lx@longtable@caption[]{}`, with no star: `\caption*{Text}` reads `*` as the caption and leaves `{Text}` as a stray group, so the table's caption is `Table N: *` and the text is gone. longtable.sty's `\LT@c@ption` takes the star (an unnumbered caption, the counter still stepped at the table's begin). Trigger: `\begin{longtable}{l}\caption*{LT star}\\ x\\\end{longtable}`. The Rust binding copies Perl's definition (`longtable_sty.rs`).
+longtable.sty.ltxml:127-129 defines the longtable `\caption` as `\lx@longtable@caption[]{}`, with no star:
+`\caption*{Text}` reads `*` as the caption and leaves `{Text}` as a stray group, so the table's caption is `Table N: *`
+and the text is gone. longtable.sty's `\LT@c@ption` takes the star (an unnumbered caption, the counter still stepped at
+the table's begin). Trigger: `\begin{longtable}{l}\caption*{LT star}\\ x\\\end{longtable}`.
 
-**Repro**: `captions-floats/longtable_starred_caption_keeps_its_text` (RED).
+Rust (77s): `\lx@longtable@caption` reads the star as longtable.sty:471-474 `\LT@capti@n` does
+(`\LT@c@ption\@gobble[]{text}`): the caption is the text alone, no "Table N:" and no List of Tables line; the table
+keeps the number its begin stepped. **Repro**: `captions-floats/longtable_starred_caption_keeps_its_text` (GREEN 77s);
+guard `perfect_kernel_batch77s::longtable_starred_caption_keeps_its_text`.
 
 ## 364. Leading digits keep `\mathrm` letters from joining
 
@@ -16021,3 +16031,32 @@ the reference keeps hyperref's form where pdflatex prints the document's ("Sec. 
 controls is unchanged. Repros `class-bindings/revtex_preloaded_hyperref_loads_again`,
 `class-bindings/revtex_hyperref_loaded_twice_cleveref`; guards `perfect_kernel_batch77r::{
 revtex_preloaded_hyperref_loads_again, revtex_hyperref_loaded_twice_keeps_cleveref}`.
+
+## 998. cleveref's `\label[type]{key}` drops the type, so `\cref` names the object by its own type
+
+cleveref.sty's `\label[<type>]{<key>}` overrides the reference type of that label (its `\newlabel{<key>@cref}` records
+`[<type>]`), and `\cref` prints the type's name: `\crefname{appendixtable}{Appendix Table}{…}` +
+`\begin{table}\caption{A}\label[appendixtable]{tab:a}\end{table}` + `\cref{tab:a}` — pdflatex "Appendix Table 1". Perl's
+binding reads the optional and drops it ("We won't yet support the optional arg to the redefined \label",
+cleveref.sty.ltxml:20-22), so the reference says "table 1" (2404.11739, 2605.13648). Rust (77s): the type goes on as
+`\lx@label@type` (also from the sites that move a trailing `\label` into a caption, sect09.rs `\@caption@postlabel`,
+caption's `\@captionof@postlabel`, algorithm2e's procedure caption) and replaces the labelled object's cleveref tags
+(`creftype`, `creftypecap`, `creftypeplural`, `creftypepluralcap`) with the type's names, the object found as
+`\lx@label` finds it. The type is the object's, not the label's: two labels of one object with different types share the
+last. With it, the capitalised (or lower-case) variant of a `\crefname` is derived as cleveref.sty:1296-1325 derives it,
+which our clean `\crefname` port had dropped (Perl loads the raw macro). Repro
+`package-bindings/cleveref_label_type_names_the_reference`; guard
+`perfect_kernel_batch77s::cleveref_label_type_names_the_reference`.
+
+## 999. `\captionof{subfigure}` is wrapped in a `{subfigure}` that reads the caption as its width
+
+caption.sty refuses a sub-type in `\captionof` (caption.sty:346-352 `\caption@checktype`: "Package caption Error: Should
+not be used with subtype `subfigure'"), leaves the type as it was and makes the caption with `\caption` — a caption of
+the enclosing figure, or a sub-caption inside a `{subfigure}`. Perl's `\@captionof@` wraps every `\captionof` in the
+named environment (caption.sty.ltxml:124-125 `\begin{#1}\@caption@{#1}{#2}{#3}\end{#1}`), so `{subfigure}` reads
+`\@caption@` as its width and the caption's pieces are typeset loose; inside a TikZ `\node` the tag and the list copy
+fall into the node's box (mode errors, the figure emptied and the text after it lost: 2008.05535, 30 errors; pdflatex
+2). Minimal trigger: `\usepackage{caption,subcaption}` +
+`\begin{figure}\begin{minipage}{.4\textwidth}A\captionof{subfigure}{First}\end{minipage}\end{figure}` — pdflatex "Figure
+1: First" and 1 error. Rust (77s): the refusal, `\caption` (`\caption*` for the starred form) after it. Repro
+`captions-floats/captionof_subfigure_in_a_tikz_node`; guard `perfect_kernel_batch77s::captionof_subtype_is_refused`.

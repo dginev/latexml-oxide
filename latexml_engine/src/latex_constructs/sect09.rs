@@ -69,9 +69,11 @@ pub(crate) fn load() -> Result<()> {
     locked=>true
   );
   // Check for trailing \label, move it into the caption
-  // cleveref's `\label[type]{key}` (cleveref.sty `\label` takes an optional type; our `\lx@cleverref@label[]` drops it)
-  // gives its `[type]` here too: read as the key, `[` became the label and the key was typeset (2404.11739; OXIDIZED_DESIGN
-  // #552). Guard `perfect_kernel_batch65m::cleveref_label_type_after_caption`.
+  // cleveref's `\label[type]{key}` (cleveref.sty `\label` takes an optional type) gives its `[type]` here too: read as
+  // the key, `[` became the label and the key was typeset (2404.11739; OXIDIZED_DESIGN #552). The type goes on as
+  // `\lx@label@type` (sect11.rs `typed_label`), which cleveref's binding makes the labelled object's reference type
+  // (77s). Guards `perfect_kernel_batch65m::cleveref_label_type_after_caption`,
+  // `perfect_kernel_batch77s::cleveref_label_type_names_the_reference`.
   // The label goes in front of the caption's material: a `\label` after `\caption` names what the caption's
   // `\refstepcounter` stepped (latex.ltx:17391-17393), the float, and an unnumbered display in the caption steps
   // nothing; the caption's paragraph (`PBoxContents`) ends with that display's `ltx:equation` open, which a `\label`
@@ -79,10 +81,21 @@ pub(crate) fn load() -> Result<()> {
   // OXIDIZED_DESIGN_DIVERGENCES #769). It is `\lx@caption@postlabel`, not `\label`, so the scan below for the
   // caption's own labels does not take the caption's text as its argument, where a stray `\fi` in it would close
   // that scan's `\ifx` (KNOWN_PERL_ERRORS #641); the toc copy drops it.
-  DefMacro!(
-    r"\@caption@postlabel{}{}{} SkipMatch:\label [] Semiverbatim",
-    r"\lx@note@caption@label{#5}\@caption@{#1}{#2}{\lx@caption@postlabel{#5}#3}"
-  );
+  DefMacro!(r"\@caption@postlabel{}{}{} SkipMatch:\label [] Semiverbatim", sub[(captype, short, caption, ty, key)] {
+    let mut tokens = vec![T_CS!("\\lx@note@caption@label"), T_BEGIN!()];
+    tokens.extend(key.clone().unlist());
+    tokens.extend([T_END!(), T_CS!("\\@caption@")]);
+    for arg in [captype, short] {
+      tokens.push(T_BEGIN!());
+      tokens.extend(arg.unlist());
+      tokens.push(T_END!());
+    }
+    tokens.push(T_BEGIN!());
+    tokens.extend(typed_label(T_CS!("\\lx@caption@postlabel"), ty, key));
+    tokens.extend(caption.unlist());
+    tokens.push(T_END!());
+    Tokens::new(tokens)
+  });
   DefMacro!("\\lx@caption@postlabel", "\\lx@label");
   DefMacro!(
     r"\@caption@{}{}{}",

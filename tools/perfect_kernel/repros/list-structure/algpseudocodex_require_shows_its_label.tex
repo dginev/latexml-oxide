@@ -4,7 +4,8 @@
 % engines: rust 63j = "1: data", "2: x [Phase one] begins", "4: y" (the label lost, the \Statex line merged into the
 %          open line box, the count skipping 3)
 % expect:  0 errors; "Require:" tags the first line, x and y numbered 1 and 2
-% status:  RED (63j)
+% status:  RED (63j) -> GREEN (77s: the binding adds its box check through `\lx@algorithmicx@item@hook`; the
+%          `\Statex` text is a line break in the open line box, as 54 has it)
 \documentclass{article}
 \usepackage{algorithm}
 \usepackage{algpseudocodex}

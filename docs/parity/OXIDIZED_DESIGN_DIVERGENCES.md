@@ -16987,16 +16987,17 @@ latex_constructs.pool.ltxml:3172), reading the label's key as the next argument.
 type, `\label[appendixtable]{tab:a_b}`, so the key read was `[`: `labels="LABEL:["`, the rest `appendixtable]tab:a_b`
 typeset in the float, and a `_` in the key an Error (Perl the same). **Rust** (batch 65m): `\@caption@postlabel` reads
 the optional and passes only the key on, as our cleveref binding's `\lx@cleverref@label[]` drops the type anyway.
-**Witness**: 2404.11739 8 → 0 (`labels="LABEL:tab:_app_sim_baranov_binM"`). Open: the type itself is lost, so `\cref`
-shows "table 1" where pdflatex shows "Appendix Table 1" (the binding's `[type]`, not this site); likewise a procedure's
-`\cref` shows our refnum `Proc` where pdflatex shows "Procedure -" (predates 65m). The two other sites that
-move a trailing `\label` the same way read the optional too: algorithm2e's procedure caption
-(`\lx@algocf@proccaption@postlabel`, algorithm2e_sty.rs) and caption.sty's `\captionof` (`\@captionof@postlabel`,
-caption_sty.rs; Perl caption.sty.ltxml:122 the same as pool:3172). subeqn's `\@lab@subeqnarray` (subeqn.sty:57 `[2]`, so
-pdflatex reads `[` too) is left as TeX has it. The label-mapping peek `maybe_peek_label` (counter/dialect.rs; Perl
-Package.pm:819ff the same) also reads `[` as the key, but runs only under a label-mapping hook, which only the test
-helper `labelled_tex.rs` sets. **Guard**: `perfect_kernel_batch65m::cleveref_label_type_after_caption`
-(repros captions-floats/cleveref_label_type_after_{caption,procedure_caption,captionof}).
+**Witness**: 2404.11739 8 → 0 (`labels="LABEL:tab:_app_sim_baranov_binM"`). The type itself goes on as `\lx@label@type`,
+which the cleveref binding makes the object's reference type (77s, KNOWN_PERL_ERRORS #998): `\cref` shows "Appendix
+Table 1" as pdflatex. Open: a procedure's `\cref` shows our refnum `Proc` where pdflatex shows "Procedure -" (predates
+65m). The two other sites that move a trailing `\label` the same way read the optional too: algorithm2e's procedure
+caption (`\lx@algocf@proccaption@postlabel`, algorithm2e_sty.rs) and caption.sty's `\captionof`
+(`\@captionof@postlabel`, caption_sty.rs; Perl caption.sty.ltxml:122 the same as pool:3172). subeqn's
+`\@lab@subeqnarray` (subeqn.sty:57 `[2]`, so pdflatex reads `[` too) is left as TeX has it. The label-mapping peek
+`maybe_peek_label` (counter/dialect.rs; Perl Package.pm:819ff the same) also reads `[` as the key, but runs only under a
+label-mapping hook, which only the test helper `labelled_tex.rs` sets. **Guard**:
+`perfect_kernel_batch65m::cleveref_label_type_after_caption` (repros
+captions-floats/cleveref_label_type_after_{caption,procedure_caption,captionof}).
 
 ### 553. TeX's math-group recovery for an inline formula outside alignments: a math shift closes the groups opened in it, `\par` ends it unless the math after it goes on (then it is kept open, as Perl's), an environment's end ends it, a `}` at its math shift ends it when it closes a construct digested as a unit, else is deleted (Perl: none of the three)
 
@@ -21202,3 +21203,18 @@ binding applies them (`six_begin_processing_for_units`), and an explicit empty v
 `true`: 2504.05919's `\DeclareSIUnit[number-unit-product={}]\%{\char`\%}` prints "85%" as pdflatex does; 1501.03532's
 per-unit `number-unit-product = \ ` puts its interword space before nm/dBm. 77r r2; repro
 `package-bindings/siunitx_unit_named_by_its_own_char_code`; guard `perfect_kernel_batch77r::siunitx_*`.
+
+### 776. A T2A/T2B/T2C text symbol for a Cyrillic letter set in a Latin letter's slot is that Cyrillic letter (Perl: the Latin letter)
+
+**TeX**: t2aenc.def:230-237 (t2benc.def:230-239, t2cenc.def alike) declares `\CYRII`/`\cyrii`, `\CYRJE`/`\cyrje`,
+`\CYRQ`/`\cyrq`, `\CYRW`/`\cyrw` — and in T2B/T2C `\CYRDZE`/`\cyrdze` — at the slots of I i J j Q q W w (S s): the LH
+fonts draw the shared glyph, so the PDF shows the letter, while its text layer reads Latin (pdftotext "Iван").
+
+**Perl**: `\DeclareTextSymbol` decodes the slot through the encoding's fontmap (latex_constructs.pool.ltxml:2614-2625, a
+`CharDef` of the slot; t2a.fontmap.ltxml), so `\cyrii` — which a UTF-8 `і` becomes (t2aenc.dfu) — is Latin `i`:
+Ukrainian "Іван" and Serbian "ј" come out spelled with Latin letters, wrong for search, hyphenation and speech.
+
+**Rust** (77s): a text symbol naming one of those letters is the letter when its slot decodes to an ASCII letter
+(`cyrillic_letter_in_latin_slot`, latex_constructs/sect08.rs); the slot still decodes as Latin, so a Latin `i` typed in
+T2A text stays Latin, and a letter with a slot of its own (`\cyrdze` at T2A 175) is unchanged. Repro
+`fonts-nfss/t2a_cyrillic_i_and_je_are_cyrillic`; guard `perfect_kernel_batch77s::t2a_cyrillic_i_and_je_are_cyrillic`.

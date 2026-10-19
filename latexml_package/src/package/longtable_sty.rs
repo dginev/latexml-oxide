@@ -196,8 +196,16 @@ LoadDefinitions!({
   // The caption's text, `\lx@longtable@caption@text{<short>}{<caption>}`, is apart from the row the caption ends
   // (`\lx@longtable@caption@row`): a class whose own longtable makes its caption a `\noalign` takes the text without
   // the row (pasj00.cls `\@lt@setcaption`, latexml_contrib `pasj00_cls::pasj_class`).
-  DefMacro!("\\lx@longtable@caption[]{}",
+  // longtable.sty:471-474 `\LT@capti@n`: `\caption*{text}` is `\LT@c@ption\@gobble[]{text}`, the text alone — no
+  // "Table n:" (the `\@gobble` eats `\fnum@table`), no List of Tables line (`[]` empty); the table keeps the number its
+  // begin stepped. Perl's `\lx@longtable@caption[]{}` (longtable.sty.ltxml:127) has no star and took `*` as the caption
+  // ("Table 2: *", the text lost; KNOWN_PERL_ERRORS #363). Guard
+  // `perfect_kernel_batch77s::longtable_starred_caption_keeps_its_text`.
+  DefMacro!("\\lx@longtable@caption",
+    r"\@ifstar\lx@longtable@scaption\lx@longtable@caption@nostar");
+  DefMacro!("\\lx@longtable@caption@nostar[]{}",
     r"\lx@longtable@caption@text{#1}{#2}\lx@longtable@caption@row");
+  DefMacro!("\\lx@longtable@scaption{}", r"\lx@longtable@caption@{}{#1}\lx@longtable@caption@row");
   DefMacro!("\\lx@longtable@caption@text{}{}",
     r"\lx@longtable@caption@{\lx@format@toctitle@@{table}{\lx@toc@copy@text{#1}{#2}}}{\lx@format@caption@@{table}{#2}}");
   DefPrimitive!("\\lx@longtable@caption@{}{}", sub[(toccap, cap)] {

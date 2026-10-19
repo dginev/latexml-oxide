@@ -6,7 +6,7 @@
 %          still steps the counter), "Table 3: B", "Table 4: C"
 % engines: rust 57ad numbers alike but `<caption>Table 2: *</caption>`; "LT star" nowhere
 % expect:  0 errors; the longtable's caption reads "LT star", unnumbered; tables 1, 3, 4
-% status:  RED (57ad)
+% status:  RED (57ad) -> GREEN (77s: `\lx@longtable@caption` reads the star, longtable.sty:471-474)
 \documentclass{article}
 \usepackage{longtable}
 \begin{document}
