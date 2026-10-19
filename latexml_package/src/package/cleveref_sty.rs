@@ -12,8 +12,9 @@ LoadDefinitions!({
   // Pretend amsmath is loaded to avoid errors. Per OXIDIZED_DESIGN
   // #23, "amsmath is loaded" means EITHER `amsmath.sty_loaded` OR
   // `amsmath.sty_raw_loaded` is set.
-  let ams_loaded = with_value("amsmath.sty_loaded", |v| v.is_some())
-    || with_value("amsmath.sty_raw_loaded", |v| v.is_some());
+  // (a flag set `false`, `latexml_core::state::mark_unloaded`'s — amsmath loaded beyond a class's original,
+  // `amsmath_sty::require_amsmath_beyond_original` — is not loaded)
+  let ams_loaded = lookup_bool("amsmath.sty_loaded") || lookup_bool("amsmath.sty_raw_loaded");
   assign_value("amsmath.sty_loaded", true, Some(Scope::Local));
   // The pretense includes amsmath's `parentequation` counter (amsmath.sty:1127), which cleveref's amsmath branch reads
   // for every equation label (cleveref.sty:700-707): "\c@parentequation is not a register" otherwise.

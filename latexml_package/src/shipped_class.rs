@@ -233,6 +233,20 @@ pub fn shipped_class_loads_or(binding: &str, package: &str, default: bool) -> Re
   )
 }
 
+/// Does the paper's copy of the file a stand-in binding answers ([`shipped_copy_text`]) load `package`
+/// ([`class_text_loads`])? `false` when the source has no copy: versions of one class differ (sn-jnl.cls, ws-procs9x6.cls
+/// load amsmath in some copies, not in others; `amsmath_sty::require_amsmath_beyond_original`).
+pub fn shipped_copy_loads(ext: &str, package: &str) -> Result<bool> {
+  Ok(shipped_copy_text(ext)?.is_some_and(|text| class_text_loads(&text, package)))
+}
+
+/// Does the paper's own `file` of type `ext` (not a binding) load `package` ([`class_text_loads`])? `false` when the
+/// source has none: for a file read by `\input`, which has no `\@currname` of its own ([`shipped_copy_loads`]):
+/// Scientific Word 5.x's tcilatex.tex loads amsmath (2212.12000's :851), 2.5's does not (0805.4522's).
+pub fn shipped_file_loads(file: &str, ext: &str, package: &str) -> bool {
+  shipped_file_text(file, ext).is_some_and(|text| class_text_loads(&text, package))
+}
+
 /// Does the document's class option list (`\@classoptionslist`) name `option`? For a class option a binding that
 /// does not process its options reads (ieeeaccess's `jtehm`).
 pub fn class_option_given(option: &str) -> Result<bool> {

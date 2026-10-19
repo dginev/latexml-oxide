@@ -4,7 +4,13 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
-  RequirePackage!("amsmath");
+  // spie.cls (TeX Live's) and spieman.cls (39 copies in a 1/20 arXiv sample) load no amsmath: amsmath's commands for
+  // papers that use them unloaded, its "Old form" error only once the paper loads it (1003.3524's `\pmatrix{…}`, no
+  // error in pdflatex; `amsmath_sty::require_amsmath_beyond_original`, KNOWN_PERL_ERRORS #993).
+  amsmath_sty::require_amsmath_beyond_original(
+    latexml_package::shipped_class::shipped_copy_loads("cls", "amsmath")?,
+    &[],
+  )?;
   RequirePackage!("amsthm");
   // Pre-load xcolor with [dvipsnames, table] so a paper's later
   // `\usepackage[table]{xcolor}` doesn't silently option-clash and

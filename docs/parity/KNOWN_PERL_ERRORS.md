@@ -10744,7 +10744,8 @@ E=\begin{cases}1, & x>0,\\ 0, & \text{otherwise}.\end{cases}
 ```
 
 pdflatex: the cases. Perl: 3 errors (`\lx@end@gen@cases Attempt to close boxing group`, stray `&`). Rust (62zb): the
-override dispatches on `\@currenvir` as `\matrix@check` does (aa_cls.rs). Witnesses 2609.02726, 2609.04318. Guard
+override dispatches on `\@currenvir` as `\matrix@check` does (aa_cls.rs; since 77q amsmath's binding for every class,
+amsmath_sty.rs `\lx@ams@matrix@check`, #993). Witnesses 2609.02726, 2609.04318. Guard
 `perfect_kernel_batch61::aa_cases_and_pmatrix_take_the_environment_form`.
 
 ## 499. `\pdfstartlink`'s link spec falls into the text
@@ -12533,7 +12534,8 @@ but not `\matrix`, which aa_support's amsmath (aa_support.sty.ltxml:55) makes th
 `\left(\matrix{a&b\cr c&d\cr}\right)` opens an alignment nothing closes, and the display runs into the next section.
 Trigger `\documentclass{aa}\begin{document}\begin{equation}x=\left(\matrix{a & b\cr c & d\cr}\right).\end{equation}
 \section{Next}Text $a_1$.\end{document}` → 15 errors (`\@startsection Attempt to end mode display_math`, then `_`).
-Fixed in Rust (65e): aa_cls.rs gives `\matrix` the same `\@currenvir` dispatch as `\pmatrix`; the l-aa binding, which
+Fixed in Rust (65e): aa_cls.rs gives `\matrix` the same `\@currenvir` dispatch as `\pmatrix` (since 77q amsmath_sty.rs
+`\lx@ams@matrix@check` for every class, #993); the l-aa binding, which
 loads aa, regressed on it in 64u (astro-ph9609122, astro-ph9809009; repro class-bindings/laa_plain_matrix_in_display).
 
 ## 609. The OmniBus theorem set replaces the author's macros and environments of the same names
@@ -15914,3 +15916,66 @@ and Cat Cole only; pdflatex prints all three. The Rust port adds such a list aft
 list (AIAA new-aiaa.cls papers 2610.21324, 2008.05535 kept 1 of 3 authors when a note's comma sent them there). Repro
 `sectioning-frontmatter/author_authblk_and_list_after_author`; guard
 `perfect_kernel_batch77n::authblk_and_list_adds_to_earlier_authors`.
+
+## 993. amsmath's old-form `\pmatrix{…}`, `\matrix{…}`, `\cases{…}` open an alignment
+
+amsmath.sty:1068-1093, :1116-1118: `{matrix}`, `{pmatrix}` and `{cases}` start with `\matrix@check`, which takes the
+environment form only when `\@currenvir` names the command; Plain TeX's `\pmatrix{t\cr b}` (plain.tex:1091-1097) raises
+"Package amsmath Error: Old form `\pmatrix' should be \begin{pmatrix}" instead. Perl's amsmath.sty.ltxml:727, :802, :804
+define `\matrix`, `\pmatrix` and `\cases` as the environment's alignment opener only, so the old form's braced argument
+lands in a cell: `\usepackage{amsmath}` … `\begin{equation} x=\pmatrix{t\cr b} \end{equation}` → 4 errors ("Attempt to
+end mode display_math"), the matrix lost; pdflatex 4 errors, the first the amsmath one. The Rust port dispatches as
+`\matrix@check` does (amsmath_sty.rs `\lx@ams@matrix@check`): the environment, or amsmath's error once and Plain TeX's
+matrix with its rows (`\lx@gen@plain@matrix`, `\lx@gen@plain@cases`). AMS-TeX's `\matrix…\endmatrix`
+(amstex.tex:512-552) keeps the environment form (amstex.rs). The error is amsmath's, so only where the real amsmath.sty
+loads: a binding that loads amsmath where its original does not (spie.cls, the old ws-procs9x6/ws-ijmpb copies,
+Scientific Word 2.5's tcilatex.tex, OmniBus's autoload, the old aa.cls, and the audited sn-jnl, imsart, svproc, jfm,
+autart, ecai, … classes, whose copies load none) goes through `amsmath_sty::require_amsmath_beyond_original`: amsmath's
+definitions in force, its old-form error off, `\@ifpackageloaded{amsmath}` false, until the document's
+`\usepackage{amsmath}`, a raw class or package (ptptex.cls:362 `\if@ams`), a paper's copy or a binding whose original
+loads it runs the binding again (Perl's aa.cls.ltxml:57 reload, generalised). Papers of run 367: the 7 that load
+amsmath, by ptptex.cls:362 (hep-ph0110005, hep-ph9509392, hep-ph9511429, hep-ph9702336, hep-th9908038, nucl-th0305048,
+hep-th9910005), keep the error, as pdflatex gives it (hep-ph9511429 4 = 4, nucl-th0305048 2 = 2); the 4 where pdflatex
+loads no amsmath — 0805.4522 (tcilatex 2.5), 1003.3524 (spie), nucl-th0206027 (ws-procs9x6), quant-ph0607049 (ws-ijmpb)
+— have none. An old form reached through an alias (`\let\bpm\pmatrix … \bpm a&b\\c&d\epm`,
+`\newenvironment{mymat}{\left(\matrix}{\endmatrix\right)}`) is not `\@currenvir`'s command, so it errs as in pdflatex
+(12 errors there; here the old-form error and the stray `&`s, its tokens kept). Repros
+`ams-internals/amsmath_old_form_matrices_keep_their_rows`,
+`ams-internals/old_form_matrix_is_plain_tex_where_amsmath_is_not_loaded`; guards
+`perfect_kernel_batch77q::{amsmath_old_form_matrices_keep_their_rows,
+aa_old_form_matrix_errs_under_the_documents_amsmath, amstex_matrix_reads_to_endmatrix,
+old_form_matrix_is_plain_tex_where_amsmath_is_not_loaded, old_form_matrix_errs_once_the_document_loads_amsmath}`.
+
+## 994. amsmath's `\binom` uses the document's `\atop`
+
+amsmath.sty:239-241 defines `\binom`, `\dbinom` and `\tbinom` with `\genfrac`; Perl's amsmath.sty.ltxml:1020-1025 with
+the user-level `\atop` (`{\left({{#1}\atop{#2}}\right)}`), which a document may redefine: `\renewcommand{\atop}[2]{…}`
+makes `\binom{n}{k}` read the closing brace as `\atop`'s second argument. Minimal trigger: `\usepackage{amsmath}`
+`\renewcommand{\atop}[2]{\genfrac{}{}{0pt}{}{#1}{#2}}` … `$\binom{n}{k}$` → Perl 0 errors with the fraction built from
+the wrong arguments; with a `split` around it the Rust port raised "Missing { inserted" (tex.web §1127; 1010.0429,
+1209.4365, 1308.4325, 1806.09142, 1904.01263, a Fatal each). pdflatex 0 errors. The Rust port builds them on the
+kernel's `\atop` body (`\lx@generalized@over{\atop}{thickness=0pt}`, tex_math.rs; the fraction `\genfrac` gives,
+byte-identical where `\atop` is untouched), which no document's `\atop` reaches — also one renewed BEFORE amsmath loads,
+which pdflatex reports as amsgen's "Unable to properly define \@@atop; primitive \atop no longer primitive"
+(amsgen.sty:27-38 `\@saveprimitive`) with its binomials intact; the Rust port keeps Perl's `\let` there
+(amsgen.sty.ltxml:19; SYNC_STATUS 77q) and gives the binomials, 0 errors. Repros
+`ams-internals/binom_ignores_a_redefined_atop`, `ams-internals/binom_ignores_an_atop_redefined_before_amsmath`; guards
+`perfect_kernel_batch77q::{binom_ignores_a_redefined_atop, binom_ignores_an_atop_redefined_before_amsmath}`.
+
+## 995. proof.sty's premises split only at a catcode-4 `&`; a `\\` among them ends the display's row
+
+proof.sty:164-167 sets the premises in its own `\halign` (`$##$&&…$##$\cr #3\cr`): an `&` separates premises whatever
+its catcode, and a row end — `\cr`, or the `\\` amsmath's displays let to `\math@cr` — ends a row of premises. Perl's
+`\lx@proof@split@and` (proof.sty.ltxml:20-28) splits at the catcode-4 `&` alone. Minimal triggers:
+`\begin{align*}\infer[r]{C}{A & \\ B}\end{align*}` → Perl 0 errors and the display dropped, the `\\` closing the align
+row inside the inference; in a tikz-cd cell (`&` active, `\pgfmatrixnextcell`, tikz.code.tex:4064-4068)
+`\vcenter{\infer{C}{a & b}}` → Perl 2 errors ("Stray alignment &"), the premises one product. pdflatex 0 errors each.
+The Rust port splits at an active `&` too and puts each row of premises (after `\\` or `\cr`) in a row of an `XMArray`
+(`\lx@proof@premise@rows`, proof_sty.rs): `infer@(C, Array[[A], [B]])`. A `\\`'s own `*` and `[<skip>]` are dropped only
+right after it (`drop_row_skips`): amsmath's `\math@cr` reads them with amsgen's `\@ifstar` and `\new@ifnextchar`
+(amsgen.sty:54-63), which skip no space, so `\infer{E}{s \\ [t] u}` keeps `[t]` (pdflatex: "[t]u", 0 errors). Witnesses
+2011.13396, 2205.02142, 1709.05725 (`\\[1pt]` between premise rows). Repros
+`package-bindings/proof_premise_rows_stay_in_the_inference`,
+`package-bindings/proof_premises_split_on_an_active_ampersand`,
+`package-bindings/proof_premise_bracket_after_a_space_is_text`; guards `perfect_kernel_batch77q::{
+proof_premise_rows_stay_in_the_inference, proof_premises_split_on_an_active_ampersand}`.

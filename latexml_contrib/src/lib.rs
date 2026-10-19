@@ -315,6 +315,7 @@ pub mod scrlayer_scrpage_sty;
 pub mod scrlayer_sty;
 pub mod selfevolagent_cls;
 pub mod semantic_sty;
+pub mod setstack_sty;
 pub mod siamart_cls;
 pub mod siamltex_cls;
 pub mod sigma_cls;
@@ -552,6 +553,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("pst-plot", "sty", pst_plot_sty::load_definitions),
   ("savetrees", "sty", savetrees_sty::load_definitions),
   ("scicite", "sty", scicite_sty::load_definitions),
+  ("setstack", "sty", setstack_sty::load_definitions),
   // NOTE: extsizes classes (extarticle / extbook / extreport / extletter /
   // extproc) are intentionally NOT bound. Perl LaTeXML ships no binding for
   // them, so `\documentclass{extbook}` falls through to OmniBus.cls.ltxml —

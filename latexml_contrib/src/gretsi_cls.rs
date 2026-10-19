@@ -271,7 +271,13 @@ LoadDefinitions!({
     .as_deref()
     .is_some_and(|text| class_code_contains(text, "\\newcommand{\\auteur}{\\author}"));
   LoadClass!("OmniBus");
-  RequirePackage!("amsmath");
+  // gretsi.cls loads no amsmath (2 copies in a 1/20 arXiv sample): amsmath's commands for papers that use them
+  // unloaded, its "Old form" error once the paper loads it; the paper's copy decides
+  // (`amsmath_sty::require_amsmath_beyond_original`, KNOWN_PERL_ERRORS #993).
+  amsmath_sty::require_amsmath_beyond_original(
+    latexml_package::shipped_class::shipped_copy_loads("cls", "amsmath")?,
+    &[],
+  )?;
   RequirePackage!("amsthm");
   // Eager xcolor preload removed for Perl parity: it makes a later document
   // xcolor[table] load a no-op, so colortbl/array never load and array m{}/b{}

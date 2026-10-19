@@ -5,7 +5,13 @@ use crate::shipped_class::{class_code_argument, class_code_contains, shipped_cla
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
-  RequirePackage!("amsmath");
+  // sn-jnl.cls loads amsmath in some versions only (140 of 799 copies in a 1/20 arXiv sample; 2509.03559's none):
+  // amsmath's commands for papers that use them unloaded, its "Old form" error once the paper loads it; the paper's
+  // copy decides (`amsmath_sty::require_amsmath_beyond_original`, KNOWN_PERL_ERRORS #993).
+  amsmath_sty::require_amsmath_beyond_original(
+    latexml_package::shipped_class::shipped_copy_loads("cls", "amsmath")?,
+    &[],
+  )?;
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");
   // xcolor is not preloaded here: it comes from the class's own

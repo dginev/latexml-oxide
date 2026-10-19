@@ -34,28 +34,19 @@ LoadDefinitions!({
   RequirePackage!("natbib");
   // Perl overrides \pmatrix and \cases with the plain TeX versions (TeX.pool), for the old aa.cls that loaded no amsmath
   // (astro-ph/0002145 `\pmatrix{…}`). Today's aa.cls loads it (v9.4, :205 `\RequirePackage[tbtags,fleqn]{amsmath}`),
-  // whose {pmatrix}/{cases} start with `\matrix@check` (amsmath.sty:1077-1082): the environment when `\@currenvir` names
-  // it, the old Plain-TeX form otherwise. Perl's plain-only override read `\begin{cases}`'s first cell as its argument,
-  // and the `&`s after it went stray (2609.02726, 2609.04318: Perl errors the same way).
-  // amsmath's {matrix} checks alike (amsmath.sty:1068-1071 `\matrix@check\matrix`): the old aa.cls and l-aa.sty (the
-  // `l-aa` binding loads this class) give plain TeX's `\matrix{…\cr}` (plain.tex:1093, latex.ltx:15634), whose
-  // amsmath reading opened an alignment that nothing closed, the display running into the next section
-  // (astro-ph9609122, astro-ph9809009, astro-ph9503122).
-  DefMacro!("\\matrix",
-    r"\expandafter\ifx\csname\@currenvir\endcsname\matrix\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi
-{\lx@ams@matrix{name=matrix,datameaning=matrix}}
-{\lx@gen@plain@matrix{name=matrix,datameaning=matrix}}");
-  DefMacro!("\\pmatrix",
-    r"\expandafter\ifx\csname\@currenvir\endcsname\pmatrix\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi
-{\lx@ams@matrix{name=pmatrix,datameaning=matrix,left=\lx@left(,right=\lx@right)}}
-{\lx@gen@plain@matrix{name=pmatrix,datameaning=matrix,left=\lx@left(,right=\lx@right)}}");
-  DefMacro!("\\cases",
-    r"\expandafter\ifx\csname\@currenvir\endcsname\cases\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi
-{\lx@ams@cases{name=cases,meaning=cases,left=\lx@left\{}}
-{\lx@gen@plain@cases{meaning=cases,left=\lx@left\{,conditionmode=text,style=\textstyle}}");
+  // whose {matrix}/{pmatrix}/{cases} start with `\matrix@check` (amsmath.sty:1068-1082): the environment when
+  // `\@currenvir` names it, the old Plain-TeX form otherwise — amsmath's binding does both (amsmath_sty.rs
+  // `\lx@ams@matrix@check`; the environment forms 2609.02726, 2609.04318; the old `\matrix{…\cr}` of l-aa.sty and the
+  // old aa.cls, astro-ph9609122, astro-ph9809009, astro-ph9503122). Only amsmath's "Old form `\pmatrix'" error belongs
+  // to the class that loads amsmath: the old aa.cls has none, and its Plain-TeX `\pmatrix{…}` is no error there; a
+  // paper's own copy of aa.cls decides, an old one assumed without a copy — aa_support's amsmath is then one loaded
+  // beyond the original (`amsmath_sty::amsmath_loaded_beyond_original`, the rule of every such binding). A document's
+  // own `\usepackage{amsmath}` restores the error, as pdflatex gives it.
+  if !shipped_class_loads_or("aa", "amsmath", false)? {
+    amsmath_sty::amsmath_loaded_beyond_original();
+  }
   // Perl aa.cls.ltxml L57 resets the amsmath loaded-flag so a document's own `\usepackage{amsmath}` runs the binding
-  // again (arXiv:astro-ph/0203101, for its {cases}); kept for Perl parity — the environment forms above no longer
-  // need it, and a reload replaces the old-form `\pmatrix{…}`/`\cases{…}` fallback with amsmath's.
+  // again (arXiv:astro-ph/0203101, for its {cases}); kept for Perl parity where the copy loads amsmath too.
   AssignValue!("amsmath.sty_loaded" => Stored::None, Some(Scope::Global));
 
   // aa.cls L1651-1664: \tablebib{...} / \tablefoot{...} emit a labeled

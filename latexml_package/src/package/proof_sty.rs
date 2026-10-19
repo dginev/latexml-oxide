@@ -19,6 +19,54 @@ fn in_hbox_math(tokens: Tokens) -> Tokens {
   }
 }
 
+/// One row of proof.sty's premises split at its `&`s, catcode 4 or active (`\lx@proof@split@and`): one premise as
+/// itself, several as the n-ary AND of `\lx@proof@logical@and`.
+fn split_premises(tokens: Tokens) -> Tokens {
+  let clauses: Vec<Tokens> = split_tokens(tokens, vec![T_ALIGN!().into(), T_ACTIVE!('&').into()])
+    .into_iter()
+    .map(in_hbox_math)
+    .collect();
+  match clauses.len() {
+    0 => Tokens!(),
+    1 => clauses.into_iter().next().unwrap(),
+    _ => i_apply(&[], Tokens!(T_CS!("\\lx@proof@logical@and")), clauses),
+  }
+}
+
+/// The premises without each row end's own `*` and `[<skip>]` (the `\\[1pt]` between 1709.05725's premise rows):
+/// amsmath's `\math@cr` reads them with `\@ifstar` and `\new@ifnextchar[` (amsmath.sty:1174-1180), and amsgen's
+/// `\@ifstar` is a `\new@ifnextchar` too (amsgen.sty:54-63), which skips no space: only a `*` right after the `\\` and
+/// a `[` right after that are the row end's. After a space (a token after the control symbol `\\`) they are the
+/// premise's own text: pdflatex prints `\infer{E}{s \\ [t] u}` and `{s \\ *[t] u}` in `{align*}` with their `[t]`,
+/// 0 errors. Read before the premises split into rows, whose pieces lose their leading spaces (`split_tokens`).
+fn drop_row_skips(tokens: Tokens) -> Tokens {
+  let tokens = tokens.unlist();
+  let mut out = Vec::with_capacity(tokens.len());
+  let mut level = 0usize;
+  let mut index = 0;
+  while index < tokens.len() {
+    let token = tokens[index];
+    index += 1;
+    match token.get_catcode() {
+      Catcode::BEGIN => level += 1,
+      Catcode::END => level = level.saturating_sub(1),
+      _ => {},
+    }
+    out.push(token);
+    if level == 0 && token == T_CS!("\\\\") {
+      if tokens.get(index) == Some(&T_OTHER!("*")) {
+        index += 1;
+      }
+      if tokens.get(index) == Some(&T_OTHER!("["))
+        && let Some(close) = tokens[index..].iter().position(|t| *t == T_OTHER!("]"))
+      {
+        index += close + 1;
+      }
+    }
+  }
+  Tokens::new(out)
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: proof.sty.ltxml
@@ -29,17 +77,36 @@ LoadDefinitions!({
   // which in proof.sty separates premises (not for column alignment).
   // Single clause → pass through; multiple → wrap with I_apply around
   // \lx@proof@logical@and so the semantic structure is an n-ary AND.
+  // The premises are proof.sty's own `\halign` (proof.sty:164-167, `#3\cr` in its preamble `$##$&&…$##$\cr`): an
+  // `&` that is active is a premise separator there too — tikz-cd's cells make it `\pgfmatrixnextcell`
+  // (tikz.code.tex:4064-4068), a `\vcenter{\infer{C}{a & b}}` cell (2205.02142) — and a row end, `\cr` or the `\\` an
+  // amsmath display lets to it (`\infer[r]{C}{A & \\ B}` in `{align*}`, 2011.13396), ends a row of premises, not the
+  // display's: each row is one of `\lx@proof@premise@rows`. Perl splits on the catcode-4 `&` alone, its `\\` reaching
+  // the display's alignment. Guards `perfect_kernel_batch77q::{proof_premise_rows_stay_in_the_inference,
+  // proof_premises_split_on_an_active_ampersand}`.
   DefMacro!("\\lx@proof@split@and {}", sub[(tokens)] {
-    let clauses: Vec<Tokens> =
-      split_tokens(tokens, vec![T_ALIGN!().into()]).into_iter().map(in_hbox_math).collect();
-    if clauses.is_empty() {
-      Ok(Tokens!())
-    } else if clauses.len() == 1 {
-      Ok(clauses.into_iter().next().unwrap())
+    let rows = split_tokens(drop_row_skips(tokens), vec![T_CS!("\\\\").into(), T_CS!("\\cr").into()]);
+    if rows.len() <= 1 {
+      Ok(split_premises(rows.into_iter().next().unwrap_or_default()))
     } else {
-      Ok(i_apply(&[], Tokens!(T_CS!("\\lx@proof@logical@and")), clauses))
+      let mut out = vec![T_CS!("\\lx@proof@premise@rows"), T_BEGIN!()];
+      for (index, row) in rows.into_iter().enumerate() {
+        if index > 0 {
+          out.push(T_CS!("\\lx@proof@premise@rowsep"));
+        }
+        out.extend([T_CS!("\\lx@proof@premise@row"), T_BEGIN!()]);
+        out.extend(split_premises(row).unlist());
+        out.push(T_END!());
+      }
+      out.push(T_END!());
+      Ok(Tokens::new(out))
     }
   });
+  DefConstructor!("\\lx@proof@premise@rows{}", "<ltx:XMArray>#1</ltx:XMArray>", reversion => "#1");
+  DefConstructor!("\\lx@proof@premise@row{}",
+    "<ltx:XMRow><ltx:XMCell><ltx:XMArg>#1</ltx:XMArg></ltx:XMCell></ltx:XMRow>",
+    reversion => "#1");
+  DefConstructor!("\\lx@proof@premise@rowsep", "", reversion => "\\\\");
 
   // \lx@proof@stack{}{}{}{}:
   // An extremely contrived stack of premises and conclusion.

@@ -12,7 +12,15 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
-  RequirePackage!("amsmath");
+  // Some copies load amsmath (ws-procs9x6.cls 78 of 90 copies in a 1/20 arXiv sample, ws-ijmpa.cls :1087
+  // `\usepackage{amsfonts,amssymb,amsmath}` in 1912.08245's), the older ones none (nucl-th0206027's ws-procs9x6,
+  // quant-ph0607049's ws-ijmpb: their `\pmatrix{…}` is Plain TeX's in pdflatex, no "Old form" error). The paper's copy
+  // decides; without one, no amsmath of the class's (`amsmath_sty::require_amsmath_beyond_original`; KNOWN_PERL_ERRORS
+  // #993).
+  amsmath_sty::require_amsmath_beyond_original(
+    latexml_package::shipped_class::shipped_copy_loads("cls", "amsmath")?,
+    &[],
+  )?;
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");
   RequirePackage!("graphicx");

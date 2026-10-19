@@ -25,30 +25,30 @@ LoadDefinitions!({
   DefMacro!("\\gmatrix []", sub[args] {
     let delim = args.first().filter(|a| !a.is_none()).map(|d| d.to_string()).unwrap_or_default();
     let env = if delim.is_empty() { "matrix".to_string() } else { format!("{delim}matrix") };
-    let mut toks = Vec::new();
-    toks.push(T_CS!("\\let"));
-    toks.push(T_CS!("\\lx@gauss@matrix@open"));
-    toks.push(T_CS!("\\relax"));
-    toks.push(T_CS!(&format!("\\{env}")));
-    Ok(Tokens::new(toks))
+    // The matrix is the environment, `\begin{pmatrix}`, as gmatrix's `[p]` stands for it: amsmath's `\pmatrix` and
+    // `\matrix` called inside another environment are their Plain-TeX old forms (amsmath.sty:1077-1082
+    // `\matrix@check`, amsmath_sty.rs `\lx@ams@matrix@check`).
+    Ok(TokenizeInternal!(TeXString::assembled(format!(
+      "\\def\\lx@gauss@env{{{env}}}\\let\\lx@gauss@matrix@open\\relax\\begin{{{env}}}"
+    ))))
   });
   DefMacro!("\\rowops",
     "\\ifx\\lx@gauss@matrix@open\\relax\
-       \\lx@end@ams@matrix\
+       \\expandafter\\end\\expandafter{\\lx@gauss@env}\
        \\let\\lx@gauss@matrix@open\\undefined\
      \\fi\
      \\def\\lx@gauss@RC{R}"
   );
   DefMacro!("\\colops",
     "\\ifx\\lx@gauss@matrix@open\\relax\
-       \\lx@end@ams@matrix\
+       \\expandafter\\end\\expandafter{\\lx@gauss@env}\
        \\let\\lx@gauss@matrix@open\\undefined\
      \\fi\
      \\def\\lx@gauss@RC{C}"
   );
   DefMacro!("\\endgmatrix",
     "\\ifx\\lx@gauss@matrix@open\\relax\
-       \\lx@end@ams@matrix\
+       \\expandafter\\end\\expandafter{\\lx@gauss@env}\
        \\let\\lx@gauss@matrix@open\\undefined\
      \\fi"
   );

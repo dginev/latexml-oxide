@@ -259,6 +259,11 @@ LoadDefinitions!({
   // here — the AmSTeX pattern is `\foo … \endfoo`. The amsmath et al.
   // bindings work in either context, so we load them (Perl L220-225).
   RequirePackage!("amsmath");
+  // AMS-TeX's `\matrix`, `\pmatrix`, `\cases`, … read their rows to `\endmatrix`, `\endpmatrix`, `\endcases`
+  // (amstex.tex:512-552): the amsmath binding's environment forms, always — its `\matrix@check` old-form branch
+  // (amsmath_sty.rs `\lx@ams@matrix@check`, for LaTeX's `\@currenvir`) is LaTeX's, not AMS-TeX's
+  // (1411.5748 `\left(\matrix \format … \endmatrix\right)`).
+  RawTeX!(r"\long\def\lx@ams@matrix@check#1#2#3{#2}");
   RequirePackage!("amssymb");
   RequirePackage!("amsfonts");
   RequirePackage!("amsopn");

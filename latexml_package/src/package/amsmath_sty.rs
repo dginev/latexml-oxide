@@ -502,23 +502,36 @@ LoadDefinitions!({
   //======================================================================
   // Perl: amsmath.sty.ltxml lines 769-812
   // Matrix environments
-  DefMacro!(
-    "\\lx@ams@matrix {}",
-    "\\lx@gen@matrix@bindings{#1}\\lx@ams@cr@binding\\lx@ams@matrix@{#1}\\lx@begin@alignment"
-  );
-  DefMacro!(
-    "\\lx@end@ams@matrix",
-    "\\lx@end@alignment\\lx@end@gen@matrix"
-  );
+  define_ams_matrix_base()?;
 
+  // amsmath.sty:1068-1093 `{matrix}`/`{pmatrix}` (and :1116-1118 `{cases}`) start with `\matrix@check`: the
+  // environment when `\@currenvir` names the command, else `\matrix@error` — "Old form `\pmatrix' should be
+  // \begin{pmatrix}" — for Plain TeX's `\pmatrix{…\cr…}` (plain.tex:1091-1097). The old form keeps its content as
+  // Plain TeX's matrix (`\lx@gen@plain@matrix`, plain_constructs.rs) after the error; Perl's
+  // amsmath.sty.ltxml:727, :802, :804 always open an alignment, whose cells then hold the `\cr`s (tex.web §1127,
+  // KNOWN_PERL_ERRORS #993; 11 papers of run 367. The 7 that load amsmath keep the error, by ptptex's raw class
+  // (ptptex.cls:362): hep-ph0110005, hep-ph9509392, hep-ph9511429, hep-ph9702336, hep-th9908038, nucl-th0305048,
+  // hep-th9910005. In 0805.4522 (tcilatex), 1003.3524 (spie), nucl-th0206027 (ws-procs9x6) and quant-ph0607049
+  // (ws-ijmpb) only our binding loads amsmath, and the error stays off: `require_amsmath_beyond_original` below.) The
+  // dispatch was aa's own (`aa_cls.rs`: astro-ph/0002145, astro-ph9609122, astro-ph9809009, astro-ph9503122,
+  // 2609.02726, 2609.04318). Guard `perfect_kernel_batch77q::amsmath_old_form_matrices_keep_their_rows`.
+  RawTeX!(
+    r"\def\matrix@check#1{\expandafter\ifx\csname\@currenvir\endcsname#1\else\matrix@error#1\expandafter\@gobble\fi}
+\def\matrix@error#1{\@amsmath@err{Old form `\string#1' should be \string\begin{\expandafter\@gobble\string#1}}{`\string#1{...}' is old Plain-TeX syntax whose use is ill-advised in LaTeX.}}
+\def\lx@ams@matrix@check#1{\expandafter\ifx\csname\@currenvir\endcsname#1\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}"
+  );
   DefMacro!(
     "\\matrix",
-    "\\lx@ams@matrix{name=matrix,datameaning=matrix}"
+    r"\lx@ams@matrix@check\matrix
+{\lx@ams@matrix{name=matrix,datameaning=matrix}}
+{\matrix@error\matrix\lx@gen@plain@matrix{name=matrix,datameaning=matrix}}"
   );
   DefMacro!("\\endmatrix", "\\lx@end@ams@matrix");
   DefMacro!(
     "\\pmatrix",
-    "\\lx@ams@matrix{name=pmatrix,datameaning=matrix,left=\\lx@left(,right=\\lx@right)}"
+    r"\lx@ams@matrix@check\pmatrix
+{\lx@ams@matrix{name=pmatrix,datameaning=matrix,left=\lx@left(,right=\lx@right)}}
+{\matrix@error\pmatrix\lx@gen@plain@matrix{name=pmatrix,datameaning=matrix,left=\lx@left(,right=\lx@right)}}"
   );
   DefMacro!("\\endpmatrix", "\\lx@end@ams@matrix");
   DefMacro!(
@@ -547,7 +560,6 @@ LoadDefinitions!({
     "\\lx@ams@matrix{name=smallmatrix,atameaning=matrix,style=\\scriptsize}"
   );
   DefMacro!("\\endsmallmatrix", "\\lx@end@ams@matrix");
-  def_macro_noop("\\matrix@check{}")?;
 
   //======================================================================
   // Perl: amsmath.sty.ltxml lines 687-721 — cases environments
@@ -562,7 +574,9 @@ LoadDefinitions!({
 
   DefMacro!(
     "\\cases",
-    "\\lx@ams@cases{name=cases,meaning=cases,left=\\lx@left\\{}"
+    r"\lx@ams@matrix@check\cases
+{\lx@ams@cases{name=cases,meaning=cases,left=\lx@left\{}}
+{\matrix@error\cases\lx@gen@plain@cases{meaning=cases,left=\lx@left\{,conditionmode=text,style=\textstyle}}"
   );
   DefMacro!("\\endcases", "\\lx@end@ams@cases");
 
@@ -786,15 +800,9 @@ LoadDefinitions!({
     operator_role => "OVERACCENT", operator_stretchy => true);
   DefMath!("\\underleftrightarrow{}", "\u{2194}",
     operator_role => "UNDERACCENT", operator_stretchy => true);
-  // Perl: amsmath.sty.ltxml Section 4.10 — Affixing symbols to other symbols
-  DefConstructor!(
-    "\\overset InScriptStyle {}",
-    r###"<ltx:XMApp><ltx:XMWrap role='OVERACCENT'>#1</ltx:XMWrap><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>"###
-  );
-  DefConstructor!(
-    "\\underset InScriptStyle {}",
-    r###"<ltx:XMApp><ltx:XMWrap role='UNDERACCENT'>#1</ltx:XMWrap><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>"###
-  );
+  // Section 4.10 `\overset`/`\underset`, 4.5 `\dddot`/`\ddddot`, 4.6 `\leftroot`/`\uproot`, 4.13 `\smash`, 7.1
+  // `{subarray}`/`\substack`, 7.2 `\sideset` and `\boxed`: the commands setstack.sty copies from amsmath.
+  define_ams_setstack_commands()?;
   DefConstructor!(
     "\\overunderset InScriptStyle InScriptStyle {}",
     r###"<ltx:XMApp><ltx:XMWrap role='OVERACCENT'>#1</ltx:XMWrap><ltx:XMApp><ltx:XMWrap role='UNDERACCENT'>#2</ltx:XMWrap><ltx:XMArg>#3</ltx:XMArg></ltx:XMApp></ltx:XMApp>"###
@@ -815,9 +823,19 @@ LoadDefinitions!({
 
   //======================================================================
   // Section 4.11.2 The \binom, \dbinom, and \tbinom commands
-  DefMath!("\\binom{}{}", r"{\left({{#1}\atop{#2}}\right)}", meaning => "binomial");
-  DefMath!("\\tbinom{}{}", r"{\textstyle\left({{#1}\atop{#2}}\right)}", meaning => "binomial");
-  DefMath!("\\dbinom{}{}", r"{\displaystyle\left({{#1}\atop{#2}}\right)}", meaning => "binomial");
+  // amsmath.sty:239-241 builds them on `\genfrac`, never on the user-level `\atop`; Perl's amsmath.sty.ltxml:1020-1025
+  // uses `\atop`, which a document may redefine (`\renewcommand{\atop}[2]{…}`: its second argument is then the
+  // closing brace, KNOWN_PERL_ERRORS #994; 1010.0429, 1209.4365, 1308.4325, 1806.09142, 1904.01263). Here they are the
+  // kernel's `\atop` body itself (tex_math.rs), the fraction `\genfrac` gives, which no document's `\atop` reaches —
+  // not even one redefined before amsmath loads, which `\@@atop` (:212) then saves (pdflatex: amsgen.sty:27-38's
+  // "Unable to properly define \@@atop", not raised here, amsgen_sty.rs; its binomials intact). Guards
+  // `perfect_kernel_batch77q::{binom_ignores_a_redefined_atop, binom_ignores_an_atop_redefined_before_amsmath}`.
+  DefMath!("\\binom{}{}", r"{\left({{#1}\lx@generalized@over{\atop}{thickness=0pt}{#2}}\right)}",
+    meaning => "binomial");
+  DefMath!("\\tbinom{}{}", r"{\textstyle\left({{#1}\lx@generalized@over{\atop}{thickness=0pt}{#2}}\right)}",
+    meaning => "binomial");
+  DefMath!("\\dbinom{}{}", r"{\displaystyle\left({{#1}\lx@generalized@over{\atop}{thickness=0pt}{#2}}\right)}",
+    meaning => "binomial");
 
   //======================================================================
   // amsmath.sty:211-216 saves the six generalized-fraction primitives under
@@ -1083,16 +1101,6 @@ LoadDefinitions!({
   // and restructure into equationgroup/equation/MathFork.
   Tag!("ltx:equation", after_close => sub[document, node] {
     rearrange_lone_ams_aligned(document, node)?;
-  });
-
-  //======================================================================
-  // Perl: amsmath.sty.ltxml lines 153-161
-  DefPrimitive!("\\lx@ams@cr@binding", {
-    let_i(
-      &T_CS!("\\\\"),
-      &T_CS!("\\lx@alignment@newline@noskip"),
-      None,
-    );
   });
 
   //======================================================================
@@ -1746,15 +1754,6 @@ LoadDefinitions!({
     reversion => "\\begin{aligned} #1\\end{aligned}");
 
   //======================================================================
-  // Perl: amsmath.sty.ltxml lines 1170-1175 — subarray/substack
-  DefMacro!("\\substack{}", "\\begin{subarray}{c}#1\\end{subarray}");
-  DefMacro!(
-    "\\subarray{}",
-    "\\lx@ams@matrix{name=subarray,style=\\scriptsize,datameaning=list,rowsep=0pt,alignment=#1,alignment-required=true}"
-  );
-  DefMacro!("\\endsubarray", "\\lx@end@ams@matrix");
-
-  //======================================================================
   // amsmath.sty:1127 `\newcounter{parentequation}`: cleveref reads `\c@parentequation` for an equation label
   // (cleveref.sty:700-707), which errored "not a register".
   NewCounter!("parentequation");
@@ -1768,16 +1767,6 @@ LoadDefinitions!({
   def_macro_noop("\\DOTSB")?;
   def_macro_noop("\\DOTSI")?;
   def_macro_noop("\\DOTSX")?;
-
-  //======================================================================
-  // Section 7.2 \sideset command
-  // Perl: amsmath.sty.ltxml L1183-1234
-  DefConstructor!("\\sideset{}{}{}", sub[document, args, props] {
-    sideset_construct(document, args, props)?;
-  },
-  properties => {
-    Ok(stored_map!("scriptlevel" => get_script_level()))
-  });
 
   // \calc@shift@gather — amsmath.sty L1632 layout calculation for
   // gather environment's tag positioning (dimen manipulation:
@@ -1856,30 +1845,6 @@ LoadDefinitions!({
 
   ams_author_called_internals()?;
 
-  // Perl: amsmath.sty.ltxml L882-896 — `robust => 1` keeps the mmode
-  // dispatch frozen under \write/\edef (moving formulas in toc etc.).
-  // amsmath.sty:399 `\boxed` is `\fbox{\m@th$\displaystyle#1$}`: its argument is a math TeX sets in a box of its own,
-  // where an author's `$` ends that math and the next begins it again (`\boxed{$u$\mbox{-}$S$\mbox{-Artinian rings}}`,
-  // u and S set as text; arXiv 2207.12569), so its argument is digested after tex_math.rs `\lx@math@in@hbox`, in math
-  // and in text (`\boxed@text` is math too). The constructor's argument has no group of its own, so a semi-simple one
-  // keeps the `$` meaning local without a boxing level (a script in the box keeps its `scriptpos`, math/sampler
-  // `\boxed{x^2}`). Perl errs "Missing $ closing display math" at each such `$` (KNOWN_PERL_ERRORS #907). Guard
-  // `perfect_kernel_batchint19::dollar_in_boxed_is_text`.
-  DefMacro!(
-    "\\boxed{}",
-    "\\ifmmode\\boxed@math{\\begingroup\\lx@math@in@hbox #1\\endgroup}\\else\\boxed@text{\\begingroup\\lx@math@in@hbox #1\\endgroup}\\fi",
-    robust => true
-  );
-  DefConstructor!("\\boxed@math{}",
-    "<ltx:XMArg enclose='box'>#1</ltx:XMArg>",
-    alias => "\\boxed");
-  DefConstructor!("\\boxed@text{}",
-    "<ltx:Math mode='display' framed='rectangle'><ltx:XMath>#1</ltx:XMath></ltx:Math>",
-    mode => "math",
-    bounded => true,
-    before_digest => { Let!("\\\\", "\\lx@newline"); },
-    alias => "\\boxed");
-
   // Perl: amsmath.sty.ltxml L899-900
   DefMath!("\\implies", "\u{27F9}", role => "ARROW", meaning => "implies");
   DefMath!("\\impliedby", "\u{27F8}", role => "ARROW", meaning => "implied-by");
@@ -1947,19 +1912,6 @@ LoadDefinitions!({
   //======================================================================
   // Additions from Perl amsmath audit (session 38)
   //======================================================================
-
-  // Section 4.5: Additional math accents (triple/quadruple dots)
-  DefMath!("\\dddot{}", "\u{02D9}\u{02D9}\u{02D9}",
-    operator_role => "OVERACCENT", reversion => "\\dddot{#1}");
-  DefMath!("\\ddddot{}", "\u{02D9}\u{02D9}\u{02D9}\u{02D9}",
-    operator_role => "OVERACCENT", reversion => "\\ddddot{#1}");
-
-  // Section 4.6: Root adjustment (no-ops — cosmetic only)
-  def_macro_noop("\\leftroot{}")?;
-  def_macro_noop("\\uproot{}")?;
-
-  // Section 4.13: Smash with optional direction (pass through body)
-  DefConstructor!("\\smash[]{}", "#2");
 
   // Section 4.4: Nonbreaking dashes (no-op)
   def_macro_noop("\\nobreakdash")?;
@@ -3413,6 +3365,101 @@ pub fn rearrange_ams_align(document: &mut Document, equationgroup: &mut Node) ->
   Ok(())
 }
 
+/// The matrix machinery of amsmath's binding (Perl amsmath.sty.ltxml:152-153 `\lx@ams@cr@binding`, :786-789
+/// `\lx@ams@matrix`/`\lx@end@ams@matrix`, over Base_XMath's `\lx@ams@matrix@`): its matrix environments and the
+/// `{subarray}` of [`define_ams_setstack_commands`] (amsmath's, and setstack's without amsmath).
+pub fn define_ams_matrix_base() -> Result<()> {
+  DefPrimitive!("\\lx@ams@cr@binding", {
+    let_i(
+      &T_CS!("\\\\"),
+      &T_CS!("\\lx@alignment@newline@noskip"),
+      None,
+    );
+  });
+  DefMacro!(
+    "\\lx@ams@matrix {}",
+    "\\lx@gen@matrix@bindings{#1}\\lx@ams@cr@binding\\lx@ams@matrix@{#1}\\lx@begin@alignment"
+  );
+  DefMacro!(
+    "\\lx@end@ams@matrix",
+    "\\lx@end@alignment\\lx@end@gen@matrix"
+  );
+  Ok(())
+}
+
+/// The amsmath commands setstack.sty (VIK 1998, IOP's bundle) copies "thus avoiding the need to load the entire
+/// amsmath.sty": `\overset`, `\underset`, `{subarray}`, `\substack`, `\sideset`, `\boxed`, `\dddot`, `\ddddot`,
+/// `\leftroot`, `\uproot` and the optional-argument `\smash` (setstack.sty:34-116, the copy 0803.1550 ships).
+/// amsmath's binding defines them here, and the `setstack` stand-in (latexml_contrib) with the same definitions
+/// (1008.1543, 1306.6377, 2206.02651).
+pub fn define_ams_setstack_commands() -> Result<()> {
+  // Perl: amsmath.sty.ltxml Section 4.10 — Affixing symbols to other symbols
+  DefConstructor!(
+    "\\overset InScriptStyle {}",
+    r###"<ltx:XMApp><ltx:XMWrap role='OVERACCENT'>#1</ltx:XMWrap><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>"###
+  );
+  DefConstructor!(
+    "\\underset InScriptStyle {}",
+    r###"<ltx:XMApp><ltx:XMWrap role='UNDERACCENT'>#1</ltx:XMWrap><ltx:XMArg>#2</ltx:XMArg></ltx:XMApp>"###
+  );
+  //======================================================================
+  // Perl: amsmath.sty.ltxml lines 1170-1175 — subarray/substack
+  DefMacro!("\\substack{}", "\\begin{subarray}{c}#1\\end{subarray}");
+  DefMacro!(
+    "\\subarray{}",
+    "\\lx@ams@matrix{name=subarray,style=\\scriptsize,datameaning=list,rowsep=0pt,alignment=#1,alignment-required=true}"
+  );
+  DefMacro!("\\endsubarray", "\\lx@end@ams@matrix");
+
+  //======================================================================
+  // Section 7.2 \sideset command
+  // Perl: amsmath.sty.ltxml L1183-1234
+  DefConstructor!("\\sideset{}{}{}", sub[document, args, props] {
+    sideset_construct(document, args, props)?;
+  },
+  properties => {
+    Ok(stored_map!("scriptlevel" => get_script_level()))
+  });
+
+  // Perl: amsmath.sty.ltxml L882-896 — `robust => 1` keeps the mmode
+  // dispatch frozen under \write/\edef (moving formulas in toc etc.).
+  // amsmath.sty:399 `\boxed` is `\fbox{\m@th$\displaystyle#1$}`: its argument is a math TeX sets in a box of its own,
+  // where an author's `$` ends that math and the next begins it again (`\boxed{$u$\mbox{-}$S$\mbox{-Artinian rings}}`,
+  // u and S set as text; arXiv 2207.12569), so its argument is digested after tex_math.rs `\lx@math@in@hbox`, in math
+  // and in text (`\boxed@text` is math too). The constructor's argument has no group of its own, so a semi-simple one
+  // keeps the `$` meaning local without a boxing level (a script in the box keeps its `scriptpos`, math/sampler
+  // `\boxed{x^2}`). Perl errs "Missing $ closing display math" at each such `$` (KNOWN_PERL_ERRORS #907). Guard
+  // `perfect_kernel_batchint19::dollar_in_boxed_is_text`.
+  DefMacro!(
+    "\\boxed{}",
+    "\\ifmmode\\boxed@math{\\begingroup\\lx@math@in@hbox #1\\endgroup}\\else\\boxed@text{\\begingroup\\lx@math@in@hbox #1\\endgroup}\\fi",
+    robust => true
+  );
+  DefConstructor!("\\boxed@math{}",
+    "<ltx:XMArg enclose='box'>#1</ltx:XMArg>",
+    alias => "\\boxed");
+  DefConstructor!("\\boxed@text{}",
+    "<ltx:Math mode='display' framed='rectangle'><ltx:XMath>#1</ltx:XMath></ltx:Math>",
+    mode => "math",
+    bounded => true,
+    before_digest => { Let!("\\\\", "\\lx@newline"); },
+    alias => "\\boxed");
+
+  // Section 4.5: Additional math accents (triple/quadruple dots)
+  DefMath!("\\dddot{}", "\u{02D9}\u{02D9}\u{02D9}",
+    operator_role => "OVERACCENT", reversion => "\\dddot{#1}");
+  DefMath!("\\ddddot{}", "\u{02D9}\u{02D9}\u{02D9}\u{02D9}",
+    operator_role => "OVERACCENT", reversion => "\\ddddot{#1}");
+
+  // Section 4.6: Root adjustment (no-ops — cosmetic only)
+  def_macro_noop("\\leftroot{}")?;
+  def_macro_noop("\\uproot{}")?;
+
+  // Section 4.13: Smash with optional direction (pass through body)
+  DefConstructor!("\\smash[]{}", "#2");
+  Ok(())
+}
+
 /// Perl: \sideset constructor body (amsmath.sty.ltxml L1183-1225)
 fn sideset_construct(
   document: &mut Document,
@@ -3565,3 +3612,49 @@ fn sideset_wrap_impl(
 }
 
 // Additional amsmath definitions are added inline in the LoadDefinitions block above.
+
+/// amsmath for a binding whose original file does not load it — spie.cls (TeX Live's; spieman.cls), the old
+/// ws-procs9x6.cls and ws-ijmpb.cls copies, Scientific Word 2.5's tcilatex.tex, OmniBus's autoload, the old aa.cls —
+/// so that a paper using amsmath's commands without loading it still gets them (`original_loads`: the original does
+/// load it, as the paper's copy reads, [`crate::shipped_class::shipped_copy_loads`]; then this is the plain load), with
+/// the `options` the original passes to it (imsart.cls:84-118 `\PassOptionsToPackage{leqno}{amsmath}`).
+/// In pdflatex amsmath is not loaded there: a `\pmatrix{…}`, `\matrix{…}` or `\cases{…}` is Plain TeX's, with no
+/// "Old form `\pmatrix'" error (amsmath.sty:1077-1090 `\matrix@check`), and `\@ifpackageloaded{amsmath}` is false
+/// (0805.4522 tcilatex, 1003.3524 spie, nucl-th0206027 ws-procs9x6, quant-ph0607049 ws-ijmpb: no error in pdflatex).
+/// So the old-form error is off ([`amsmath_loaded_beyond_original`]) until the real amsmath.sty loads: the document's
+/// own `\usepackage{amsmath}`, a raw class or package that loads it (ptptex.cls:362 `\if@ams`; a copy's own load, read
+/// as the stand-in's copy, `binding::author_files`), or a binding whose original does (mathtools, physics). That
+/// load runs the binding again, its `\matrix@error` the error again, as Perl's aa.cls.ltxml:57 reload does for aa. A
+/// second such binding finds amsmath's definitions in force and loads nothing. Guards
+/// `perfect_kernel_batch77q::{old_form_matrix_is_plain_tex_where_amsmath_is_not_loaded,
+/// old_form_matrix_errs_once_the_document_loads_amsmath}`.
+pub fn require_amsmath_beyond_original(original_loads: bool, options: &[&str]) -> Result<()> {
+  if lookup_bool("amsmath.sty_loaded")
+    || lookup_bool("amsmath.sty_raw_loaded")
+    || lookup_bool("amsmath.sty:beyond_original")
+  {
+    return Ok(());
+  }
+  require_package("amsmath", RequireOptions {
+    options: options.iter().map(|option| option.to_string()).collect(),
+    ..RequireOptions::default()
+  })?;
+  if !original_loads {
+    amsmath_loaded_beyond_original();
+  }
+  Ok(())
+}
+
+/// The state after amsmath's binding was loaded where the original file does not load amsmath
+/// ([`require_amsmath_beyond_original`]; aa.cls's aa_support): amsmath's definitions stay in force, its old-form
+/// error is off (`\matrix@error` gobbles the command), and amsmath counts as not loaded
+/// ([`latexml_core::state::mark_unloaded`]), so the next request for it runs its binding again.
+pub fn amsmath_loaded_beyond_original() {
+  let_i(
+    &T_CS!("\\matrix@error"),
+    &T_CS!("\\@gobble"),
+    Some(Scope::Global),
+  );
+  mark_unloaded("amsmath.sty");
+  assign_value("amsmath.sty:beyond_original", true, Some(Scope::Global));
+}

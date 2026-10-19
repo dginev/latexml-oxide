@@ -827,6 +827,10 @@ LoadDefinitions!({
           if is_cls {
             load_class(
               &name_str, Vec::new(), Tokens::default())?;
+          } else if name_str == "amsmath" {
+            // A guess for a class we do not know: amsmath's environments, not its "Old form" error, which waits for a
+            // real load (`amsmath_sty::require_amsmath_beyond_original`; KNOWN_PERL_ERRORS #993).
+            amsmath_sty::require_amsmath_beyond_original(false, &[])?;
           } else {
             require_package(&name_str, RequireOptions::default())?;
           }

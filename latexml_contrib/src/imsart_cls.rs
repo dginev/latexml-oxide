@@ -16,11 +16,13 @@ LoadDefinitions!({
         .any(|o| ["aap", "aop", "aos", "aoas", "sts", "aihp"].contains(&o.to_string().as_str()))
     })
     .unwrap_or(false);
-  if journal_leqno {
-    RequirePackage!("amsmath", options => vec!["leqno".to_string()]);
-  } else {
-    RequirePackage!("amsmath");
-  }
+  // imsart.cls loads no amsmath itself (244 copies in a 1/20 arXiv sample): amsmath's commands for papers that use them
+  // unloaded, its "Old form" error once the paper loads it; the paper's copy decides
+  // (`amsmath_sty::require_amsmath_beyond_original`, KNOWN_PERL_ERRORS #993).
+  amsmath_sty::require_amsmath_beyond_original(
+    latexml_package::shipped_class::shipped_copy_loads("cls", "amsmath")?,
+    if journal_leqno { &["leqno"] } else { &[] },
+  )?;
   // NOTE: do NOT eagerly `RequirePackage!("amsthm")` here. OmniBus already
   // provides lazy amsthm autoload (theorem-env stubs), and pre-loading it
   // broke the common `\let\proof\relax` + `\usepackage{amsthm}` idiom: the

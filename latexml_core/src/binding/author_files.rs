@@ -273,6 +273,7 @@ pub const AUTHOR_FILE_STAND_INS: &[&str] = &[
   "sagej.cls",
   "scicite.sty",
   "selfevolagent.cls",
+  "setstack.sty",
   "siamart.cls",
   "siamltex.cls",
   "siamonline.cls",

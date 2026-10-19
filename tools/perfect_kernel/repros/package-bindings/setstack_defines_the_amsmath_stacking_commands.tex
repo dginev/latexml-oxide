@@ -1,0 +1,16 @@
+% witness: run-367 E->F C4: 1008.1543, 1306.6377, 2206.02651 (setstack.sty, IOP 1998, in neither TeX Live nor these
+%          papers; 0803.1550 ships a copy)
+% oracle:  pdflatex with 0803.1550's setstack.sty: 0 errors (`\substack`, `\text`, `\boxed` of amsmath's)
+% engines: rust int32a = 17 errors (missing file, `\substack` undefined, its `\cr` in the display's alignment),
+%          perl = 3 errors (`\text`, `\boxed`, `\substack` undefined)
+% expect:  0 errors, 0 warnings; the sum's subscript a `list@(Array[[a], [b]])`, `\text{and}`, the boxed formula
+% status:  RED (int32a) -> GREEN (77q: latexml_contrib setstack_sty.rs)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsthm,setstack}
+\begin{document}
+\begin{eqnarray}
+Z=\sum_{\substack{a\cr b}} x \quad \text{and} \quad \boxed{E=mc^2}
+\end{eqnarray}
+After.
+\end{document}

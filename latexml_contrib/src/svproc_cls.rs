@@ -22,7 +22,13 @@ LoadDefinitions!({
   // OmniBus outcome. Witness 2004.07524 (svproc proceedings with `\includegraphics`).
   RequirePackage!("graphicx");
   RequirePackage!("sv_support");
-  RequirePackage!("amsmath");
+  // svproc.cls loads no amsmath (103 copies in a 1/20 arXiv sample): amsmath's commands for papers that use them
+  // unloaded, its "Old form" error once the paper loads it; the paper's copy decides
+  // (`amsmath_sty::require_amsmath_beyond_original`, KNOWN_PERL_ERRORS #993).
+  amsmath_sty::require_amsmath_beyond_original(
+    latexml_package::shipped_class::shipped_copy_loads("cls", "amsmath")?,
+    &[],
+  )?;
   // Pre-load xcolor with [dvipsnames, table] so a paper's later
   // `\usepackage[table]{xcolor}` doesn't silently option-clash and
   // leave colortbl unloaded → `\cellcolor` undefined. svproc.cls

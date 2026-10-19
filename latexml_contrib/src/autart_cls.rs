@@ -52,7 +52,13 @@ fn class_theorem_declarations(text: &str) -> Vec<(String, String)> {
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
-  RequirePackage!("amsmath");
+  // autart.cls loads no amsmath (110 copies in a 1/20 arXiv sample): amsmath's commands for papers that use them
+  // unloaded, its "Old form" error once the paper loads it; the paper's copy decides
+  // (`amsmath_sty::require_amsmath_beyond_original`, KNOWN_PERL_ERRORS #993).
+  amsmath_sty::require_amsmath_beyond_original(
+    latexml_package::shipped_class::shipped_copy_loads("cls", "amsmath")?,
+    &[],
+  )?;
   // Do NOT eager-load amsthm here. Perl ships no autart binding (→ OmniBus,
   // no amsthm preload), and OmniBus already installs LAZY theorem-env
   // autoload stubs (`\begin{theorem}`/`\begin{proof}`/… each `require`

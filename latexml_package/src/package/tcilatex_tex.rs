@@ -588,8 +588,18 @@ freely copied and distributed.}
     {\def\AmS{{\protect\usefont{OMS}{cmsy}{m}{n}%
                 A\kern-.1667em\lower.5ex\hbox{M}\kern-.125emS}}}{}%
 \@ifundefined{AmSTeX}{\def\AmSTeX{\protect\AmS-\protect\TeX\@}}{}%
-%
-\RequirePackage{amsmath}
+\makeatother
+"##);
+  // Scientific Word 2.5's tcilatex.tex loads no amsmath (0805.4522's copy, whose `\pmatrix{…}` is Plain TeX's in
+  // pdflatex, no "Old form" error); 5.x's does (2212.12000's :851 "Always load amsmath in LaTeX2e mode"): the paper's
+  // copy decides. amsmath's `\tag`, `\iint`… for the definitions below either way
+  // (`amsmath_sty::require_amsmath_beyond_original`; KNOWN_PERL_ERRORS #993).
+  amsmath_sty::require_amsmath_beyond_original(
+    crate::shipped_class::shipped_file_loads("tcilatex", "tex", "amsmath"),
+    &[],
+  )?;
+  RawTeX!(r##"
+\makeatletter
 
 % \TCItag{n} / \TCItag*{text}: the equation tag of Scientific Word 3.0 and later, which writes it in eqnarray rows
 % (tcilatex.tex 3.0 <19 May 1997> :676-683, the copy 0906.0198 ships; 4.0 :750-757, 0802.0560; 5.0 :776-783,

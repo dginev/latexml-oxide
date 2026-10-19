@@ -7,7 +7,13 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("article");
-  RequirePackage!("amsmath");
+  // tac.cls loads no amsmath (7 copies in a 1/20 arXiv sample): amsmath's commands for papers that use them unloaded,
+  // its "Old form" error once the paper loads it; the paper's copy decides
+  // (`amsmath_sty::require_amsmath_beyond_original`, KNOWN_PERL_ERRORS #993).
+  amsmath_sty::require_amsmath_beyond_original(
+    latexml_package::shipped_class::shipped_copy_loads("cls", "amsmath")?,
+    &[],
+  )?;
   RequirePackage!("amssymb");
   RequirePackage!("amsthm");
   // Eager xcolor preload removed for Perl parity: it makes a later document

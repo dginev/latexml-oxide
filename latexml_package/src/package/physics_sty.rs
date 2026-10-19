@@ -1637,10 +1637,12 @@ LoadDefinitions!({
       return Ok(Tokenize!("()"));
     };
 
-    // Wrap body in matrix environment tokens
-    let mut matrix_tks = vec![T_CS!(&format!("\\{env_str}"))];
+    // The body in its matrix environment, `\begin{matrix}…\end{matrix}` as physics.sty:70-102 writes it (`\mdet{…}` is
+    // `\vmqty{…}`): amsmath's `\matrix` called outside `{matrix}` is its Plain-TeX old form (amsmath.sty:1068-1082
+    // `\matrix@check`, amsmath_sty.rs `\lx@ams@matrix@check`).
+    let mut matrix_tks = TokenizeInternal!(TeXString::assembled(format!("\\begin{{{env_str}}}"))).unlist();
     matrix_tks.extend(body.unlist_ref().iter().copied());
-    matrix_tks.push(T_CS!(&format!("\\end{env_str}")));
+    matrix_tks.extend(TokenizeInternal!(TeXString::assembled(format!("\\end{{{env_str}}}"))).unlist());
     let matrix = Tokens::new(matrix_tks);
 
     let a1 = Tokens::new(vec![i_arg("1")]);

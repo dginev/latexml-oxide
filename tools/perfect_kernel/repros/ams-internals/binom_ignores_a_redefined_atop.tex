@@ -1,0 +1,20 @@
+% witness: run-367 E->F C2: 1010.0429, 1209.4365, 1308.4325, 1806.09142, 1904.01263
+% oracle:  pdflatex 0 errors: amsmath's `\binom` is `\genfrac()\z@{}` (amsmath.sty:239-241), never the user's `\atop`
+% engines: rust int32a = 6 errors ("Missing { inserted": the redefined `\atop` took `}` as its second argument), perl = 0
+%          errors with the binomials wrong (KNOWN_PERL_ERRORS #994)
+% expect:  0 errors; binomial@(n, k), binomial@(a, b), binomial@(c, d), and the document's own `\atop{x}{y}`
+% status:  RED (int32a) -> GREEN (77q: amsmath_sty.rs `\binom` on `\@@atop`)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\renewcommand{\atop}[2]{\genfrac{}{}{0pt}{}{#1}{#2}}
+\begin{document}
+\begin{equation}
+\begin{split}
+q&=\binom{n}{k}^2 \\
+p&=\tbinom{a}{b} \\
+r&=\dbinom{c}{d}+\atop{x}{y}.
+\end{split}
+\end{equation}
+After.
+\end{document}

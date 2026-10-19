@@ -4229,10 +4229,13 @@ LoadDefinitions!({
     Tokens!()
   });
 
-  // texcl handler
+  // texcl handler; Perl listings.sty.ltxml:1047-1056 sets the comment classes' `eval` on `true` and deletes it
+  // otherwise, so `texcl=false` turns an inherited `texcl` off (minted's bodies, minted_sty.rs).
   DefMacro!("\\lst@@texcl Until:\\end", sub [args] {
     if args[0].eq_text("true") {
       assign_value("LST_CLASSES@comments@eval", Stored::Bool(true), None);
+    } else {
+      assign_value("LST_CLASSES@comments@eval", Stored::None, None);
     }
     Tokens!()
   });

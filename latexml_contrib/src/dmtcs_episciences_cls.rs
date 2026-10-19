@@ -16,7 +16,13 @@ LoadDefinitions!({
   // dmtcs-specific setters below are defined AFTER and override OmniBus.
   // Witness 1904.12329 (`\received{}`/`\revised{}`/`\acknowledgements`).
   LoadClass!("OmniBus");
-  RequirePackage!("amsmath");
+  // dmtcs-episciences.cls loads no amsmath (1904.05533's, 2209.09223's copies): amsmath's commands for papers that use
+  // them unloaded, its "Old form" error once the paper loads it; the paper's copy decides
+  // (`amsmath_sty::require_amsmath_beyond_original`, KNOWN_PERL_ERRORS #993).
+  amsmath_sty::require_amsmath_beyond_original(
+    latexml_package::shipped_class::shipped_copy_loads("cls", "amsmath")?,
+    &[],
+  )?;
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");
   RequirePackage!("graphicx");
