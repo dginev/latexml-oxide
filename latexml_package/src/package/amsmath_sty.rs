@@ -821,7 +821,8 @@ LoadDefinitions!({
 
   //======================================================================
   // amsmath.sty:211-216 saves the six generalized-fraction primitives under
-  // `\@@over` … `\@@abovewithdelims` (`\@saveprimitive` = `\let#2#1`,
+  // `\@@over` … `\@@abovewithdelims`, and :397 `\overline` under `\@@overline` (no witness of its own; the kernel's
+  // `\meaning` of them is the primitive, KNOWN_PERL_ERRORS #985) (`\@saveprimitive` = `\let#2#1`,
   // amsgen.sty.ltxml:19) BEFORE its `\primfrac` wrappers; a document that
   // restores them (abntexto.tex:187 `\let\over=\@@over`) otherwise unsets
   // `\over`. Perl's amsmath.sty.ltxml omits the block (SHARED); the :227

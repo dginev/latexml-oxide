@@ -14,8 +14,9 @@ static EXCEPTION_MACRO_NAMES_FOR_MEANING: Lazy<Regex> = Lazy::new(|| {
 static EXPANDABLE_PRIMITIVE_NAMES_FOR_MEANING: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^\\(?:expandafter|noexpand|string|meaning)$").unwrap());
 /// TeX primitives the kernel implements as macros of its own (tex_math.rs `\over` family, `\overline`,
-/// `\underline`): `\meaning` prints the primitive's name, as tex.web §296 `print_meaning` does, while the definition is
-/// still LaTeXML's (its origin survives a `\let`, so `\let\@@over\over` reads `\over`; a document's or file's
+/// `\underline`): `\meaning` prints the primitive's name, as tex.web §296 `print_meaning` does for the primitive (and
+/// LaTeX leaves these primitive, but `\underline`, whose `\@@underline` copy is), while the definition is still
+/// LaTeXML's (its origin survives a `\let`, so `\let\@@over\over` reads `\over`; a document's or file's
 /// redefinition is a macro again). amsgen's `\@saveprimitive` (amsgen.sty:27, amsmath.sty:397, and the copies classes
 /// embed: asl.cls:327 — 1005.4193, 1803.03483, 1111.1504) compares `\meaning\over` with `\string\over`; a macro meaning
 /// failed it with "Unable to properly define \@@over; primitive \over no longer primitive", and the class's `\frac`
@@ -274,8 +275,11 @@ LoadDefinitions!({
             EXCEPTION_MACRO_NAMES_FOR_MEANING.is_match(name)
               || (kernel_closure && EXPANDABLE_PRIMITIVE_NAMES_FOR_MEANING.is_match(name))
           };
+          // (LaTeX's own `\underline` is a robust macro, latex.ltx:16369, and only its `\@@underline` copy, :16368, is
+          // the primitive: the name itself keeps its macro meaning)
           if expandable.origin.is_latexml_owned()
             && KERNEL_PRIMITIVE_STANDINS_FOR_MEANING.is_match(&cs)
+            && !(cs == "\\underline" && cs_token == "\\underline")
           {
             return Ok(Tokens::new(ExplodeChars!(cs)));
           }

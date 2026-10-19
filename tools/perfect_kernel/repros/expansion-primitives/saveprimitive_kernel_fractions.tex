@@ -7,7 +7,8 @@
 % witness: 1005.4193, 1803.03483 (7 Errors each, nothing else); 1111.1504
 % oracle:  pdflatex 0 errors, a/b typeset as a fraction, x overlined
 % engines: rust 67int33 = 3 errors (two GenericError, \@@over undefined), no fraction; perl = the same 3 errors
-% expect:  0 errors, 0 warnings; the formula holds an XMApp whose operator is XMTok meaning="divide"
+% expect:  0 errors, 0 warnings; the formula holds an XMApp whose operator is XMTok meaning="divide"; the saved
+%          `\@@overline` overlines x
 % status:  RED (67int33) -> GREEN (77g)
 \documentclass{article}
 \makeatletter
@@ -20,7 +21,7 @@
   \fi\endgroup}
 \@saveprimitive\over\@@over \@saveprimitive\overline\@@overline
 \newcommand\fr[2]{{\begingroup#1\endgroup\@@over#2}}
-\makeatother
 \begin{document}
-$\fr{a}{b}$ and $\overline{x}$
+$\fr{a}{b}$ and $\@@overline{x}$
+\makeatother
 \end{document}
