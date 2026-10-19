@@ -556,6 +556,18 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   2-3): the inner formula of an unwrapped pstricks box keeps `tex="\textstyle{…}"` (KPE #989's inserted style);
   REVTeX 3 prints every `\preprint` where aps.sty v3.0:961-965 / v3.1:965-968 keep only the last
   (`\def\@preprint` each call; cond-mat9601115, 2 of 305 preprint-style papers, base the same).
+- **`\captionof{subfigure}` in a TikZ `\node` loses the figure and the text after it** (RUST-ONLY content loss, honest
+  Error status; 77k witness 2008.05535, +30 Errors there on int32a, int31a the same shape): caption.sty refuses the
+  subtype ("Should not be used with subtype `subfigure'") and pdflatex goes on — 2 errors, the figure, its caption and
+  the following text printed. We raise 25-28 errors ("You can't use } after \the", "Attempt to end mode
+  restricted_horizontal" at `\lx@tag`, "Attempt to end mode internal_vertical" at `\@@toccaption`) and keep an empty
+  `<figure>`: the `\caption{Whole.}` and "Text after." are gone. Fix: the refused `\captionof` digests its caption as
+  caption.sty's error path does (no tag inside the node's box), and the node's box closes cleanly. Repro
+  `~/.claude/jobs/356a0c47/tmp/cap77k/m1.tex` (to move into `captions-floats/`).
+- **A document-level `\def\@abstract{…}` read only by a refused class `\maketitle` is no `ltx:abstract`** (residual by
+  user ruling 2026-10-19; HF14, 2609.12818): the document sets the class's store itself, so no setter call reaches K11
+  (class setters only) or OD #767's off-table rule (a setter the document calls); the text survives inside the
+  title page's tcolorbox picture (Perl drops it). Not rerouted — K11 stays class-setters only.
 - **blkarray side labels dropped** (RUST-ONLY binding gap, base too; 77k review probe b3): `\Left{label}{delim}` and
   `\Right{delim}{label}` in a block's preamble (blkarray.sty:1998-2003) print their label beside the block's bracket;
   the binding drops delimiters and labels alike (OD #771), so "M" and "N" are lost with 0 errors. Needs a place for a
@@ -1563,8 +1575,28 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   F→warning 696, F→E 230. E→F re-converted locally (67int9 = run 365's code vs int31a, cores 64-127): 49 are Fatal on
   int31a and not on 67int9 — real regressions introduced between 026cf18f87 and 5059484050 (TooManyErrors 31, most
   from a handful of errors to >100; Timeout:Convert 6; PushbackLimit 5; IfLimit 2; Recursion 3; Mouth:EoF 1;
-  Document:Malformed 2207.09187; a crash 2504.05919), triage + bisection running
-  (`~/.claude/jobs/356a0c47/tmp/ef367/triage.tsv`); 17 are non-Fatal on both binaries (fleet artifacts), 1 Fatal on both.
+  Document:Malformed 2207.09187; a crash 2504.05919); 17 are non-Fatal on both binaries (fleet artifacts), 1 Fatal on
+  both. Bisected over the 39 integration binaries 67int9…int31a (all deterministic; scratch
+  `~/.claude/jobs/356a0c47/tmp/rc_ef367/`, `bis/<id>/steps.tsv`, pdflatex verdicts `pdf.tsv`): 21 first fail at 70b A1
+  (int20, tex.web §1127 `align_error`: faithful itself, it turns brace-ledger mistakes upstream into "Missing { / }
+  inserted" cascades). Mechanisms, papers: **C1** old-form `\pmatrix`/`\matrix`/`\cases` under amsmath (11; ptptex read
+  raw since 67v loads amsmath, ptptex.cls:362), **C2** `\binom` through the document's `\atop` (5), **C3** revtex
+  binding preloads hyperref, phfnote's deferred `\hypersetup` loops (5, int29b), **C4** `setstack.sty` in neither TL nor
+  the papers (3), **C5** proof.sty premises not proof's own `\halign` (2), **C6** emulateapj deluxetable nested in an open
+  one + `\label`, IfLimit (2, int18), **C7** easybmat `\lastbox` (2; RED
+  `boxes-groups/easybmat_lastbox_alignment_rows`, kernel), **C8** siunitx `\DeclareSIUnit\%{\char`\%}` stack overflow
+  (2504.05919), **C9** wds10 abstract replay vs `\pickup` (0910.4848), **C10** crckapb bibitem label autoloads natbib in
+  the tag (astro-ph0007279), **C11** 9-argument `\p@equation` tag forms recurse (1902.09345), **C12** T4 encoding without
+  fontmap loops NFSS (2405.01972), **C13** a second `\documentstyle` reloads the class (astro-ph9812142), **C14** minted
+  bodies through listings take the document's `mathescape` (1812.09490), **C15** VisionStyle speculative title-page run
+  (astro-ph0203021; pdflatex hangs too — ruled: the runaway is discarded with the speculative run), **C16**
+  `\renewcommand\thesection{\chapter…}` in article (2209.15365; pdflatex 244 errors; no change). Not regressions (11):
+  2207.09187 empty before (282 errors, now honestly Malformed); pdflatex fails too — siunitx S column holding a nested
+  tabular (2011.09784, 2103.15543, 2105.10358), TL 2025 now defining `\clap` (1011.2267, 1308.3100), `\Ref`
+  (math0204358, 1603.09649), `\robustify` (2003.07558) that the document `\newcommand`s (ruled: LaTeX's
+  `\@notdefinable` stays, only our Rust-only loops there are fixed), pst `\of` taking a `}` (1512.03873, 731 errors),
+  `vanilla.sty` missing (math9209216). Fixes: C1, C2, C4, C5, C14 in batch 77q; C3, C6, C8-C13, C15 and the
+  redefinition loops in 77r.
   Side finding (fleet harness, upstream): pericortex 0.2.8 `harness.rs:642-670`'s unresponsive-worker watchdog SIGKILLs
   IDLE workers — a 60 s idle poll uses under one clock tick of CPU, so the tick count never advances (seen
   2026-10-19 09:41Z) — respawn churn only while the fleet is idle; fix upstream: arm the watchdog only while a task is
