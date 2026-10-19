@@ -255,6 +255,7 @@ pub const AUTHOR_FILE_STAND_INS: &[&str] = &[
   "optica-article.cls",
   "osajnl.sty",
   "osajnl2.sty",
+  "pasa.cls",
   "pasj00.cls",
   "pasj01.cls",
   "pasj02.cls",

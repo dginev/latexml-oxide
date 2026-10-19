@@ -101,6 +101,7 @@ present, semantic element) — `feedback_three_metrics_honest_tests`.
 | 22 | an empty `{titlepage}` hiding the document title in HTML (XSLT) | FIXED int27 (OD #761: only a titlepage with ink hides the title) |
 | 20 | `\gls` only in display math: entry left out of the glossary | FIXED int27 (glossaries_sty.rs: the location-only reference goes in an `ltx:text` of the `ltx:equation`, after the formula; OD #320 updated) |
 | 21 | biblatex `type=`/`check=` filters | open |
+| — | pasa.cls (shipped) redefines `\@pushfilename` with the pre-2020 kernel body: "Extra \PopDefaultHookLabel" per package load, every Error of 13 projection-sample papers (~215 corpus) | FIXED 77c (pasa_cls.rs reads the class with the pop of its era, OD #764; 13/13 witnesses → 0 Errors, words unchanged; TL 2025 pdflatex stops on the same) |
 | 25, 26, 27 | `--splitindex`/`--splitbibliography` (non-default), alignment open at `\end{document}`, lstlisting in `\parbox` | open (low reach) |
 
 ## Current status

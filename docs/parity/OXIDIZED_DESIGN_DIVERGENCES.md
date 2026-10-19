@@ -20274,3 +20274,22 @@ blank page and then the title — builds an empty `<ltx:titlepage/>`, so the HTM
 titlepage with ink: text, or a graphic, picture, formula or SVG. A cover that prints the title keeps hiding the
 duplicate, as before. Repro `sectioning-frontmatter/empty_titlepage_keeps_the_title`; guard
 `perfect_kernel_batch74b::empty_titlepage_keeps_the_title`.
+
+### 764. A shipped class's pre-2020 `\@pushfilename` is read with the pop of its era (TL 2025 pdflatex: errors; Perl: OmniBus)
+
+pasa.cls (2013/04/01 v1.0, Publications of the Astronomical Society of Australia; shipped, not in TeX Live) redefines
+`\@pushfilename` at :45-52 with the LaTeX2e kernel's body before 2020-10 and calls it once, bare. latex.ltx's 2020-10
+`\@pushfilename` also pushes the default hook label and the file path (`\@expl@push@filename@@`,
+`\@kernel@currpathstack`; its last token, `\@expl@push@filename@aux@@`, reads the three tokens that follow — the
+`\xdef\@currname{…}` of `\@onefilewithoptions`) and its `\@popfilename` pops both, so every package loaded after the
+class — its own `\usepackage{graphicx}` at :1339 first — popped a hook label nobody pushed: "LaTeX hooks Error: Extra
+\PopDefaultHookLabel" once per load, 13-39 Errors per paper and nothing else (pdflatex on TL 2025 stops with the same
+and "File ended while scanning use of \@p@pfilepath@aux"; the class compiled cleanly on the LaTeX of its era). The
+kernel's push cannot stand in for the class's copy, because the bare call at :52 would feed its last token
+`\newlength\trimwidth`. The pasa binding (pasa_cls.rs, an author-file stand-in) therefore reads the class with the pop
+of the same era (`\expandafter\@p@pfilename\@currnamestack\@nil`, locked while the class is read) and restores the
+kernel's push and pop after it, so every load balances: the 13 sample papers (1307.3127, 1501.02922, 1510.05346,
+1703.06635, 1802.01188, 1407.1937, 1607.08620, 1602.04538, 1401.2223, 1705.02067, 1609.00634, 1511.02959, 1703.03169)
+go from 13-39 Errors to 0, word counts unchanged. Packages the class loads get the class's hook label rather than their
+own (no hook label is pushed for them, as on the LaTeX of the era). Repro `loader/pasa_era_pushfilename_balanced`
+(with a pasa.cls stub); guard `perfect_kernel_batch77c::pasa_era_pushfilename_balances_package_loads`.

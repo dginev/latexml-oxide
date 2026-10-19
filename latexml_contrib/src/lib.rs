@@ -243,6 +243,7 @@ pub mod openmoss_cls;
 pub mod optica_article_cls;
 pub mod osa_journal_sty;
 pub mod oup_authoring_template_cls;
+pub mod pasa_cls;
 pub mod pasj00_cls;
 pub mod pasj01_cls;
 pub mod pasj02_cls;
@@ -536,6 +537,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("stwol", "sty", ws_procl_sty::stwol_sty::load_definitions),
   ("jhrs", "cls", jhrs_cls::load_definitions),
   ("jcm", "cls", jcm_cls::load_definitions),
+  ("pasa", "cls", pasa_cls::load_definitions),
   ("pasj00", "cls", pasj00_cls::load_definitions),
   ("pasj01", "cls", pasj01_cls::load_definitions),
   ("pasj02", "cls", pasj02_cls::load_definitions),
