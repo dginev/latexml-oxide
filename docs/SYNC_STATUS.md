@@ -4321,6 +4321,22 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\KwIn` line nesting after a caption, 2606.11926; whitespace), and three timeout flips that are load noise
   (1805.03313, 2005.02474, 2410.03281 re-run alone: identical status; 2410.03281 times out at 200 s on both).
   Binding nets (int32a) 136/136, 0 documents worse than int31a.
+  **Integration (int33, 62fa5906f1 + 52cbccb1db + fd41958ae4 + ca74d03ac4, binary int33a):** 77n merged_creators S4
+  (names split inside layout wrappers) + S5 (around note commands), reviews r1-r6 NO-SHIP → r7 SHIP with main-session
+  follow-ups (a glued symbol mark is asked for by its label too; a symbol legend's run extent recorded as a SYNC row; OD
+  #765, KPE #992); 77q run-367 regressions part 1 (C1 old-form matrices, C2 `\binom`, C4 setstack, C5 proof premises, C14
+  minted; KPE #993-995), r1 NO-SHIP → r2 + main-session follow-ups (a real amsmath load after a binding's beyond-original
+  one; optica-article/bytedance_seed/fairmeta/selfevolagent load amsmath through a package). Gates int33a: nextest
+  6265/6265 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int32a empty; `tools/lint.sh` all checks
+  passed. Witness A/B (130 arXiv ids the two batches name) vs int32a: E 3,373 → 933, F 25 → 0, 0 worse; 3 papers lose
+  words that were sentences swallowed into math (0705.3096: text outside math 985 → 3,723 words; 1008.1366,
+  hep-ph9509392). Population A/B (1,428) vs int32a: E 5,577 → 5,569, F 15 → 15, 8 XML changes — gains: affiliations by
+  the authors' marks instead of every affiliation on every author (1809.02949), a junk creator gone (2404.16541), IEEE
+  member notes kept (2204.00514, 2303.01876), setstack markup (1303.5499), proof premise rows (1709.05725), 1008.1366
+  (C1); math9911253 17 → 22 Errors: AMS-TeX `\pmatrix … \endpmatrix` under LaTeX amsmath (gtart, not in TL; minimal
+  repro: pdflatex 6 errors, int32a 0, int33a 3 — the honest old-form diagnostic). Binding nets (int33a) 136/136, 0
+  documents worse than int32a but neurips_2024's 2406.09417 (0 → 1 `merged_creators`: four names int32a merged silently
+  are now flagged — their separators are spacing runs, batch 77p's ruling, as 2603.20775).
 
 - **77k** (sole-cause `unexpected:_` shapes, part 2, of the same study): a float caption is a paragraph of a vertical
   box, Perl's `\@@caption PBoxContents` (tex_box.rs `PBoxContents`, `\lx@enterhorizontal`; OD #769), so `$$…$$` in it is
