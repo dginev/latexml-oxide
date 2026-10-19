@@ -1,0 +1,15 @@
+% witness: the r6 re-review of batch 77p (finding 1, probes y8, x7); user ruling R12 2026-10-20
+% oracle:  pdflatex 0 errors: the row of names, the two symbol-labelled institutions on one line, "Department of Physics"
+%          centred under the row
+% engines: rust 77p r9 = 0 errors; "Department of Physics" an affiliation of Bob Baker alone
+% expect:  0 errors, 0 warnings; Univ A on Ann Able and Cat Cole, Univ B on Bob Baker; "Department of Physics", an unmarked
+%          institution under the marked row, an affiliation of every name of the row
+% status:  RED (77p r9) -> GREEN (77p r10)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able$^{\dagger}$ \ \ \ \ Bob Baker$^{\ddagger}$ \ \ \ \ Cat Cole$^{\dagger}$ \\ $^\dagger$ Univ A \ \ \ \ $^\ddagger$ Univ B \\ Department of Physics}
+\begin{document}
+\maketitle
+Text.
+\end{document}

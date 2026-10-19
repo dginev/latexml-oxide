@@ -1,0 +1,20 @@
+% witness: 2602.23777 (an address between two spelled owners with authors between them spelled on another line; the
+%          77p r5 re-review's probe q4), 2303.11225 (`xuta@`, `musclewu@` between spelled owners, one author between
+%          each: kept)
+% oracle:  pdflatex 0 errors: the lines as written, under the affiliations
+% engines: rust 77p r5 = 0 errors; nnwang@ Dongsheng Li's (only he was left between Zhipeng Xu and De Cheng once the
+%          other line spelled Zilong Wang and Xinyang Jiang), then dongsli@ Nannan Wang's; int34a one contact each line
+% expect:  0 errors, 0 warnings; xu_zhipeng@, dcheng@, wangzilong@, xinyangjiang@ on their owners; nnwang@ and
+%          dongsli@ on no one by elimination: contacts of the last author, Nannan Wang
+% status:  RED (77p r5) -> GREEN (77p r6)
+\documentclass{article}
+\title{T}
+\author{Zhipeng Xu\textsuperscript{\rm 1}, Zilong Wang\textsuperscript{\rm 2}, Xinyang Jiang\textsuperscript{\rm 2},
+Dongsheng Li\textsuperscript{\rm 2}, De Cheng\textsuperscript{\rm 1,3}, Nannan Wang\textsuperscript{\rm 1} \\
+\textsuperscript{1}Xidian University,\; \textsuperscript{2}Microsoft Research Asia\; \\ \textsuperscript{3}NEL\; \\
+\tt \small xu\_zhipeng@stu.xidian.edu.cn,  \{nnwang,dcheng\}@xidian.edu.cn \\
+\tt \small \{wangzilong, xinyangjiang, dongsli\}@microsoft.com}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,27 @@
+% witness: 2607.07318 (`Yuan Chen\thanks{…} ~~Zhenyu Hu\footnotemark[1] ~~Mengge Xue … ~~{\bf Liqun Liu}\thanks{…} \\
+%          ~~{\bf Peng Shu} ~~{\bf Huan Yu} ~~{\bf Jie Jiang} \\ Tencent`: five names over three, the second row in
+%          another markup), 2603.16856 (`Tianzhu Ye\thanks{…}~~~~~~~~Li Dong\footnotemark[1] \\ \bf Qingxiu Dong~~~~~Xun
+%          Wu~~~~~Shaohan Huang~~~~~Furu Wei \\ ~Microsoft Research`: two over four), 2603.07624; 2605.24414 (`\\[0.2em]`
+%          rows of six over six over three, then `\textit{JIUTIAN Research}`), 2608.21409 (three over three over the
+%          e-mail line), 2607.09029 (`… Yan Xie \;\;\; \vspace{2mm}\\ LiAuto Inc.`: five over five over the institution)
+% oracle:  pdflatex 0 errors: the rows of names, the institution under them
+% engines: rust 77p r3 the same (it joined any such row, institutions too); an r4 draft that joined a row of as many
+%          names only when it shared a note with the names line lost 2605.24414's and 2608.21409's second rows (read as
+%          affiliation lines); requiring the names line's markup (the re-review's proposal) would read the `{\bf` row
+%          (Fay Fox, Gil Gray, Hal Hunt) as an affiliation line; int34a every row one creator; Perl the same as int34a
+% expect:  0 errors, 0 warnings; sixteen authors, each with the institution under its rows
+% status:  GREEN (77p r3) -> GREEN (77p r4), a control of the row rule
+\documentclass{article}
+\title{T}
+\author{Ann Able\thanks{Equal.} ~~Bob Baker ~~Cat Cole ~~Dan Dorn ~~{\bf Eve Eads} \\
+~~{\bf Fay Fox} ~~{\bf Gil Gray} ~~{\bf Hal Hunt} \\
+Tencent
+\and Ivy Ives\;\;\; Jon Jay\;\;\; Kim Key \\[0.2em]
+Lou Lee\;\;\; Max Moss\;\;\; Ned Nash \\[0.2em]
+Oli Ott\;\;\; Pat Poe \\
+\vspace{2mm} \\
+LiAuto Inc.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

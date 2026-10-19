@@ -1,0 +1,14 @@
+% witness: the user ruling of 2026-10-20 on 77p r6's question 3 (a link line in an author block is a URL contact);
+%          a marked block's `\and` columns, one author each
+% oracle:  pdflatex 0 errors: two columns, the link in Ann Able's
+% engines: rust 77p r6 = 0 errors; the link an affiliation of Ann Able ("Affiliation: https://…")
+% expect:  0 errors, 0 warnings; the link a URL contact of Ann Able, whose column prints it, not of the whole block
+% status:  RED (77p r6) -> GREEN (77p r7)
+\documentclass{article}
+\usepackage{url}
+\title{T}
+\author{Ann Able$^{*}$ \\ Univ A \\ \url{https://ann.example.org} \and Bob Baker \\ Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

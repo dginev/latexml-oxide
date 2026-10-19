@@ -1,0 +1,16 @@
+% witness: 2607.16926 (its author block, shortened); the r6 re-review of batch 77p (finding 1)
+% oracle:  pdflatex 0 errors: one row of three names marked dagger and ast, the two institutions on one line, the address
+%          list "{aable; bbaker; ccole}@x.edu" centred under the whole row
+% engines: rust 77p r9 = 0 errors; the address line an affiliation of Ann Able and Cat Cole, the names carrying ast
+% expect:  0 errors, 0 warnings; Univ A an affiliation of all three names, Lab B of Ann Able and Cat Cole; each address of
+%          the ;-separated brace list the e-mail of the name it spells
+% status:  RED (77p r9) -> GREEN (77p r10)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^\dagger$$^\ast$ ~ ~ Bob Baker$^\dagger$ ~ ~ Cat Cole$^\dagger$$^\ast$\\
+$^\dagger$\,Univ A ~ ~ ~ ~ ~ ~ ~ $^\ast$\,Lab B\\
+{\tt\small \{aable; bbaker; ccole\}@x.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

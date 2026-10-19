@@ -3292,7 +3292,8 @@ byte-for-byte (upstream parity, not a Rust divergence).
 
 **Rust now surpasses Perl here.** `\lx@add@authors` / `\lx@add@affiliations`
 (`base_utilities.rs`) gained `strip_linebreak_options` (consume the `*`/`[len]`
-after a `\\` row-break token before splitting — so no `[1em]` leak, and the
+after a `\\` row-break token, and the spaces before the `[len]` that `\@ifnextchar`
+skips — `\\ [0.5em]`, 2604.20841, batch 77p r11 — before splitting — so no `[1em]` leak, and the
 following `\textsuperscript` stays at the line front, keeping the comma-bearing
 address one affiliation instead of phantom authors) and `line_is_email_list` + a
 3-way line kind (a marker-less pure-address line becomes its own `role=email`

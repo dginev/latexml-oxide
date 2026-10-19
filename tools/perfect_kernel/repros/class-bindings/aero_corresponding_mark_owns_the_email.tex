@@ -1,0 +1,22 @@
+% witness: 2609.23496 (aero.cls `\ADsetup`: `author = {A. K. de Almeida Jr$^{1,2}$\cor{}, T. Vaillant$^{2}$, …}`, the
+%          e-mail `allan.junior@uc.pt` spelling no surname)
+% oracle:  pdflatex 0 errors: "A. K. de Almeida Jr1,2 (✉), T. Vaillant2", the two addresses, "✉ allan.junior@uc.pt"
+% engines: rust 77p r2 = 0 errors; the e-mail on a nameless creator (placed by spelling only), "(✉)" inside the first
+%          personname; Perl `\ADsetup` undefined (no binding)
+% expect:  0 errors, 0 warnings; the e-mail on A. K. de Almeida Jr, whom the class's `\cor` marks (as elsarticle's
+%          `\corref` asks for its `\cortext`); no "(✉)" in a personname; no nameless creator
+% status:  RED (77p r2) -> GREEN (77p r3)
+\documentclass{aero}
+\ADsetup{
+title    = {Designing 3D Transfers},
+author   = {A. K. de Almeida Jr$^{1,2}$\cor{}, T. Vaillant$^{2}$},
+address  = {1. University of the Azores, Ponta Delgada, Portugal \sep 2. Universidade de Coimbra, Coimbra, Portugal},
+email    = {allan.junior@uc.pt},
+abstract = {This is the abstract.},
+keywords = {Alpha \sep Beta},
+}
+\begin{document}
+\maketitle
+\section{Intro}
+Body.
+\end{document}

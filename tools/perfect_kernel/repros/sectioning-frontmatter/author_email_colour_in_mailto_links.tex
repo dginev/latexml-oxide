@@ -1,0 +1,31 @@
+% witness: 2604.19440 (its author block, shortened); the r5 re-review of batch 77p (finding 1, probes c5, c6)
+% oracle:  pdflatex 0 errors: the four names, the institution, "{xinhao.zhang, maxime.peyrard}@univ-grenoble-alpes.fr"
+%          with each local part a mailto link, then "Project Website: github.io/traj_evo_search"
+% engines: rust 77p r8 = 0 errors; "blackxinhao.zhang@…" on Xinhao Zhang and "blackmaxime.peyrard@…" on Maxime
+%          Peyrard, the links lost; int34a welded the address line into the institution of Maxime Peyrard
+% expect:  0 errors, 0 warnings; each address the e-mail of the name it spells, kept a mailto link; the institution
+%          on the last name, as the line under the names is placed; the project line a URL contact of the block
+% status:  RED (77p r8) -> GREEN (77p r9)
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\title{T}
+\author{
+\textbf{Xinhao Zhang},
+\textbf{Xi Chen},
+\textbf{Fran\c{c}ois Portet},
+\textbf{Maxime Peyrard}
+\\
+\textsuperscript{}Univ. Grenoble Alpes, CNRS, Grenoble INP, LIG, 38000 Grenoble, France
+\\
+\texttt{\{}%
+\href{mailto:Xinhao.Zhang@univ-grenoble-alpes.fr}{\color{black}\texttt{{xinhao.zhang}},} %
+\href{mailto:maxime.peyrard@univ-grenoble-alpes.fr}{\color{black}\texttt{{maxime.peyrard}}}%
+\texttt{\}@univ-grenoble-alpes.fr}
+\\
+\\
+Project Website: \href{https://xinhao-zhang.github.io/traj_evo_search/}{\color{blue}github.io/traj\_evo\_search}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

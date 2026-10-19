@@ -1,0 +1,16 @@
+% witness: 2609.24299, 2603.06578 (their author blocks, shortened); the r6 re-review of batch 77p (finding 7); user ruling R12
+%          2026-10-20
+% oracle:  pdflatex 0 errors: a row of two names, the second starred, the two-line institution and the starred e-mail
+%          legend centred under the row
+% engines: rust 77p r9 = 0 errors; the institution on Bob Baker alone
+% expect:  0 errors, 0 warnings; both institution lines on both names; bbaker@ the e-mail of Bob Baker
+% status:  RED (77p r9) -> GREEN (77p r10)
+\documentclass{article}
+\title{T}
+\author{Ann Able~~Bob Baker\textsuperscript{*} \\
+\small Department of X,\\ \small Univ A, City\\
+\small \textsuperscript{*}Corresponding author: bbaker@x.edu}
+\begin{document}
+\maketitle
+Text.
+\end{document}

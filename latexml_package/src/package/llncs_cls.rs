@@ -97,8 +97,8 @@ LoadDefinitions!({
   DefMacro!("\\lx@llncs@institute@sup{}",   "\\lx@add@affiliations[labelseq={affiliation}]{#1}");
   DefMacro!("\\lx@llncs@institute@dispatch{}", sub[(body)] {
     let has_and = position_of(&body, &[T_CS!("\\and")]).is_some();
-    // Same markers \lx@add@affiliations keys its superscript-label branch on.
-    let has_sup = position_of(&body, &[T_SUPER!(), T_CS!("\\textsuperscript")]).is_some();
+    // The markers \lx@add@affiliations keys its superscript-label branch on (a `\let` alias of one too).
+    let has_sup = author_mark_position(&body).is_some();
     let target = if !has_and && has_sup {
       T_CS!("\\lx@llncs@institute@sup")     // shape (c): lazy superscript-labeled block
     } else {

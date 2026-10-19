@@ -1,0 +1,19 @@
+% witness: 2603.24730 (`\{yuqihu,~ahna,~vasha\}@berkeley.edu \ \ \ \{vasha,~j8675309\}@mit.edu` under four marked
+%          names: the given names, then j8675309@ by elimination), 2603.20851 (`{nlp2ct.shanshan@gmail.com,
+%          \{derekfw,lidiasc\}@um.edu.mo}`: lidiasc@ is Lidia S. Chao's)
+% oracle:  pdflatex 0 errors: the rows as written
+% engines: rust 77p r2 = 0 errors; ahna@ on Vasha DuTell, vasha@ on Ahna R. Girshick, vasha@mit on Jen Corbett,
+%          j8675309@ on a nameless creator (in order, the run parting the line); int34a the line merged into the MIT
+%          affiliation
+% expect:  0 errors, 0 warnings; yuqihu@ to Yuqi Hu, vasha@ (both) to Vasha DuTell, ahna@ to Ahna R. Girshick,
+%          j8675309@ to Jen E. Corbett; no nameless creator
+% status:  RED (77p r2) -> GREEN (77p r3)
+\documentclass{article}
+\title{T}
+\author{Yuqi Hu$^1$\qquad Vasha DuTell$^{1,2}$\qquad Ahna R. Girshick$^1$\qquad Jen E. Corbett$^2$\qquad \\[0.5em]
+$^1$Univ B \ \ \ $^2$MIT \ \ \ \\
+\normalsize \{yuqihu,~ahna,~vasha\}@berkeley.edu \ \ \ \{vasha,~j8675309\}@mit.edu}
+\begin{document}
+\maketitle
+Text.
+\end{document}

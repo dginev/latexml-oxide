@@ -1,0 +1,17 @@
+% witness: 2509.20748 (aero.cls `\ADsetup{author = {Sofia McLeod$^{1}$\textsuperscript{*}\cor{}, …, and Tat-Jun
+%          Chin$^{1}$\textsuperscript{$\dagger$}\\ \textsuperscript{*}\textit{Equal contribution.}\\
+%          \textsuperscript{$\dagger$}\textit{SmartSat CRC Professorial Chair of Sentient Satellites.}}}`; the article
+%          `\author` the same): a legend line, a footnote symbol and its text, after the names
+% oracle:  pdflatex 0 errors: "Ann Able1* , Cat Cole1* , and Bob Baker1† / *Equal contribution. / †Chair of Things."
+% engines: rust 77p r3 = 0 errors; the legend welded into the last name, "Bob Baker*Equal contribution.1"; int34a the
+%          same; Perl the same (the marker-less line continues the entry before it, Base_Utility.pool.ltxml:701-703)
+% expect:  0 errors, 0 warnings; three names without the legend in any; the legend its own entry (it lands as an
+%          affiliation of the last name, Bob Baker: the symbol-mark SYNC_STATUS residual; † answers Bob Baker's mark)
+% status:  RED (77p r3) -> GREEN (77p r4)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1}$\textsuperscript{*}, Cat Cole$^{1}$\textsuperscript{*}, and Bob Baker$^{1}$\textsuperscript{$\dagger$}\\ \textsuperscript{*}\textit{Equal contribution.}\\ \textsuperscript{$\dagger$}\textit{Chair of Things.}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

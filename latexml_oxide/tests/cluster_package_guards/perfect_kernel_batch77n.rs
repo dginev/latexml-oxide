@@ -1378,12 +1378,14 @@ fn authblk_glued_braced_symbol_mark() {
 }
 
 /// E-mail lines piled on the last of two creators whose affiliations are mark-picked (2605.30274's ACL block): the
-/// pending contacts are affiliations, no e-mail, so the contact grid redistributor still deals the e-mails out one per
-/// creator, as int32a does (the 77n r6 candidate left both on the last). The names parted by spacing alone stay one
-/// creator each: the SYNC row of spacing-parted names (batch 77p).
+/// pending contacts are affiliations, no e-mail, so the contact grid redistributor still deals the e-mails out, as
+/// int32a does (the 77n r6 candidate left both on the last). Since batch 77p the names parted by spacing alone (`~~`)
+/// are each their own creator, so the e-mail lines' brace lists go to the names they spell (`{ann,bob}@x.edu`) and the
+/// next author in line (`{cat}@y.com`), each affiliation by its mark.
 #[test]
 fn email_pile_beside_marked_affiliations_is_dealt() {
   let xml = convert_repro!("author_email_pile_beside_marked_affiliations.tex");
+  assert_no_merged_names(&xml);
   let email = |id: &str, address: &str| {
     format!(
       r#"<contact name="Email: " role="email"><text font="typewriter" xml:id="{id}">{address}</text></contact>"#
@@ -1392,19 +1394,20 @@ fn email_pile_beside_marked_affiliations_is_dealt() {
   assert_eq!(creators(&xml), [
     creator(
       true,
-      "Ann Able Bob Baker",
-      &[email("id1", "{ann,bob}@x.edu"), affiliation("Univ X")].join(" ")
+      "Ann Able",
+      &[affiliation("Univ X"), email("id1", "ann@x.edu")].join(" ")
     ),
     creator(
       false,
-      r#"<text font="bold" xml:id="id2">Cat Cole</text> <text font="bold" xml:id="id3">Dan Dorn</text>"#,
-      &[
-        email("id4", "{cat}@y.com"),
-        affiliation("Univ X"),
-        affiliation("Univ Y")
-      ]
-      .join(" ")
+      "Bob Baker",
+      &[affiliation("Univ X"), email("id2", "bob@x.edu")].join(" ")
     ),
+    creator(
+      false,
+      "Cat Cole",
+      &[affiliation("Univ Y"), email("id3", "{cat}@y.com")].join(" ")
+    ),
+    creator(false, "Dan Dorn", &affiliation("Univ X")),
   ]);
 }
 

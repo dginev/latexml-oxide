@@ -115,6 +115,7 @@ pub const AUTHOR_FILE_STAND_INS: &[&str] = &[
   "aaspptwo.sty",
   "aastex7.cls",
   "aastex70.cls",
+  "aero.cls",
   "agujournal2019.cls",
   "agutexSI2019.cls",
   "aipcheck.tex",

@@ -1,0 +1,14 @@
+% witness: 2604.22129 (its author block, shortened); batch 77p r10 A/B (user ruling R11's empty mark, dropped in a
+%          block other marks make a marked one, had welded the names it ends)
+% oracle:  pdflatex 0 errors: three names on one row, the first marked 1, the others with an empty superscript, the
+%          institution under them
+% engines: rust 77p r9 = 0 errors, three authors; 77p r10 w4 = 0 errors, one creator "Ann Able Bob Baker Cat Cole"
+% expect:  0 errors, 0 warnings; three authors, Univ A Ann Able's (the mark 1 names her alone)
+% status:  RED (77p r10 w4) -> GREEN (77p r10)
+\documentclass{article}
+\title{T}
+\author{Ann Able\textsuperscript{1}~~~Bob Baker\textsuperscript{}~~~Cat Cole\textsuperscript{}\\\textsuperscript{1}Univ A}
+\begin{document}
+\maketitle
+Text.
+\end{document}

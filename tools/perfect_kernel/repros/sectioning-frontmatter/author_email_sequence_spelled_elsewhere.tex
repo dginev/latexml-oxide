@@ -1,0 +1,19 @@
+% witness: 2609.34459 (`\texttt{yandazhu@smail.nju.edu.cn}~~~~\texttt{mayhhu@szu.edu.cn} \\
+%          \texttt{yuanyangzhu@nju.edu.cn}~~~~\texttt{clchen@nju.edu.cn}`: one address for each of six authors, rows of
+%          two by institution)
+% oracle:  pdflatex 0 errors: the rows as written
+% engines: rust 77p r4 = 0 errors; mayhhu@ Yuanyang Zhu's by order (his own address on the next line), Yaohua Hu none;
+%          int34a every row one contact
+% expect:  0 errors, 0 warnings; every address on its author, mayhhu@ Yaohua Hu's (the one name no address spells)
+% status:  RED (77p r4) -> GREEN (77p r5)
+\documentclass{article}
+\title{T}
+\author{Yijie Sun$^1$, Sanquan Sun$^2$, Yanda Zhu$^1$, Yuanyang Zhu$^1$, \textbf{Yaohua Hu}$^3$, \textbf{Chunlin Chen}$^{1}$ \\
+$^1$ Nanjing University~~~~$^2$ Hong Kong Polytechnic University~~~~ $^3$ Shenzhen University \\
+\texttt{2796624556qw@gmail.com}~~~~\texttt{sanquan.sun@connect.polyu.hk} \\
+\texttt{yandazhu@smail.nju.edu.cn}~~~~\texttt{mayhhu@szu.edu.cn} \\
+\texttt{yuanyangzhu@nju.edu.cn}~~~~\texttt{clchen@nju.edu.cn}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

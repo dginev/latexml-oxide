@@ -1,0 +1,14 @@
+% witness: 2602.03328, 2609.11716; the r7 re-review of batch 77p (finding 9)
+% oracle:  pdflatex 0 errors: four names (two Zhus, two Chens), the institution, two addresses truncated family-first
+%          (zhuzhenh22@, chenyuxi22@)
+% engines: rust 77p r10 = 0 errors; both addresses on the shared creator (each surname ties between two names)
+% expect:  0 errors, 0 warnings; zhuzhenh22@ on Zhenhao Zhu, chenyuxi22@ on Yuxiang Chen
+% status:  RED (77p r10) -> GREEN (77p r11)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Zhenhao Zhu$^{1}$\ \ Yuxiang Chen$^{1}$\ \ Xinzhong Zhu$^{1}$\ \ Jianfei Chen$^{1}$ \\ $^1$Univ A \\ \texttt{zhuzhenh22@x.edu}, \texttt{chenyuxi22@x.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

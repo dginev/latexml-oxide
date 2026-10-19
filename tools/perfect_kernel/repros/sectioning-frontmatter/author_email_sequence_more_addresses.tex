@@ -1,0 +1,15 @@
+% witness: the 77p r4 re-review's probe y1: a marked block listing more addresses than authors, `\{xx,yy\}@x.edu` in
+%          author order and Ann Able's second address on the next line
+% oracle:  pdflatex 0 errors: the lines as written
+% engines: rust 77p r4 = 0 errors, xx@ Ann Able's and yy@ Bob Baker's by order; an r5 draft that kept the order path
+%          off every spelled author made the line one contact of Bob Baker
+% expect:  0 errors, 0 warnings; xx@ and ann.able@ Ann Able's, yy@ Bob Baker's (an author may have two addresses where
+%          the block lists more than one each)
+% status:  GREEN (77p r4) -> GREEN (77p r5), a control of the order path
+\documentclass{article}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$ \\ $^1$Univ A \\ $^2$Univ B \\ \texttt{\{xx,yy\}@x.edu} \\ \texttt{ann.able@gmail.com}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

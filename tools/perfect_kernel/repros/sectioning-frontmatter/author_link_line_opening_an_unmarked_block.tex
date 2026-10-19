@@ -1,0 +1,13 @@
+% witness: the r5 re-review of batch 77p (finding 7, probe u17)
+% oracle:  pdflatex 0 errors: the URL, the name, the institution
+% engines: rust 77p r8 = 0 errors; a creator named "https://x.org" with Ann Able and Univ A its affiliations
+% expect:  0 errors, 0 warnings; Ann Able the author, the URL and then Univ A her contacts, in the order printed
+% status:  RED (77p r8) -> GREEN (77p r9)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{\url{https://x.org} \\ Ann Able \\ Univ A}
+\begin{document}
+\maketitle
+Text.
+\end{document}

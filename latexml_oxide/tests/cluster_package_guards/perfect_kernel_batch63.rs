@@ -2405,7 +2405,7 @@ fn author_email_line_label_is_its_name() {
       "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@a.edu</text></contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact><contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@b.edu</text></contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ C</contact><contact name=\"Emails: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">cat@c.edu</text></contact><contact name=\"Emails: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id4\">cc@c.edu</text></contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan Doe</personname><contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id5\">dan.doe@d.edu</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ D</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan Doe</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ D</contact><contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id5\">dan.doe@d.edu</text></contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Eve Eng</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ D</contact><contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id6\">eve.eng@d.edu</text></contact></creator>",
     ],
   );
@@ -2578,7 +2578,7 @@ fn author_group_affiliation_goes_to_each_name() {
     ),
     &[
       "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">bob.baker@a.edu</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact><contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">bob.baker@a.edu</text></contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan Doe</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. B</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Eve Elm</personname></creator>",
@@ -2627,7 +2627,8 @@ fn ieee_grade_comma_before_a_break_continues_names() {
 }
 
 /// 63m: a second line of two or more names under the names is more names (2308.07107), and a line of bare addresses
-/// is their emails, each to the name it spells, else the last (2401.15897, 2402.02746). Repro
+/// is their emails, each to the name it spells (2401.15897, 2402.02746), else the block's, on the shared creator (user
+/// ruling R10 2026-10-20; 63m-77p r9 gave `staff@` to the last name). Repro
 /// sectioning-frontmatter/author_names_line_and_address_line.
 #[test]
 fn author_names_line_and_address_line() {
@@ -2636,11 +2637,12 @@ fn author_names_line_and_address_line() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_names_line_and_address_line.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann.able@a.edu</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann.able@a.edu</text></contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan Doe</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">dan.doe@a.edu</text></contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Eve Elm</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. B</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">eve@b.edu</text></contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id4\">staff@b.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Eve Elm</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. B</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">eve@b.edu</text></contact></creator>",
+      "<creator role=\"author\"><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id4\">staff@b.edu</text></contact></creator>",
     ],
   );
 }
@@ -2689,16 +2691,18 @@ fn author_brace_email_groups_on_one_line() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_brace_email_groups_on_one_line.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">able@a.edu</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of CS</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">baker@a.edu</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of CS</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">cole@b.edu</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of CS</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of CS</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">able@a.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of CS</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">baker@a.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of CS</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">cole@b.edu</text></contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan Doe</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of CS</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id4\">dan.doe@b.edu</text></contact></creator>",
     ],
   );
 }
 
-/// 63m: a marked block's address line in another order than the authors is the block's, not the authors' in order
-/// (2509.10377 lists one address for each author, by institution; 2406.06326). Repro
+/// 63m: a marked block's address line in another order than the authors is not the authors' in order (2509.10377
+/// lists one address for each author, by institution; 2406.06326): each address goes to the author it spells (77p r3,
+/// `owners_by_elimination`; was the whole line one contact of the last author), and a line that spells no one is the
+/// block's, on the shared creator (user ruling R10 2026-10-20; was one contact of the last author). Repro
 /// sectioning-frontmatter/author_email_list_out_of_author_order.
 #[test]
 fn author_email_list_out_of_author_order() {
@@ -2707,9 +2711,10 @@ fn author_email_list_out_of_author_order() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_email_list_out_of_author_order.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. B</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">{able, cole}@a.edu, baker@b.edu</text></contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">zed@z.edu</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">able@a.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. B</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">baker@b.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">cole@a.edu</text></contact></creator>",
+      "<creator role=\"author\"><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id4\">zed@z.edu</text></contact></creator>",
     ],
   );
 }
@@ -2738,7 +2743,7 @@ fn author_email_underscore_kept() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_email_underscore_kept.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann_able@x.edu</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann_able@x.edu</text></contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@y.edu</text></contact></creator>",
     ],
   );

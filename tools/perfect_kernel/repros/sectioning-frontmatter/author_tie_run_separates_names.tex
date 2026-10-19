@@ -1,0 +1,15 @@
+% witness: names parted by ties alone in an ACL `\author` (`Shanshan Wang$^1$~~~~ Derek F. Wong$^1$~~~~ …`,
+%          2603.20851; `~~`, 2605.30274), the affiliations so too (`$^1$The University of Hong Kong~~~~~~$^2$Zhejiang
+%          Lab`, 2310.15160)
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker2 Cat Cole1 / 1Univ A 2Univ B"
+% engines: rust int33a = one creator "Ann Able Bob Baker Cat Cole²" with one affiliation "Univ A ²Univ B"; Perl the same
+% expect:  0 errors, 0 warnings; creators "Ann Able" (Univ A), "Bob Baker" (Univ B), "Cat Cole" (Univ A)
+% status:  RED (int33a) -> GREEN (77p)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^1$~~~~ Bob Baker$^2$~~~~ Cat Cole$^1$\\
+$^1$Univ A~~~~$^2$Univ B}
+\begin{document}
+\maketitle
+Body.
+\end{document}

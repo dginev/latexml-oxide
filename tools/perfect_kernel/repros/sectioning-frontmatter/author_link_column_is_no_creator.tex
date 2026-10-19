@@ -1,0 +1,13 @@
+% witness: the r6 re-review of batch 77p (finding 2 nit, probe w22)
+% oracle:  pdflatex 0 errors: three columns, two names and a "Project Page" link
+% engines: rust 77p r9 = 0 errors; a creator named "Project Page"
+% expect:  0 errors, 0 warnings; two authors; the link a URL contact of the block
+% status:  RED (77p r9) -> GREEN (77p r10)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able \and Bob Baker \and \href{https://x.org}{Project Page}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

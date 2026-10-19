@@ -2032,7 +2032,7 @@ fn marked_block_email_line_owner() {
     "<creator role=\"author\">\n    <personname>X.\u{a0}Wang</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A,<break/>City A</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Y.\u{a0}Wang</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id2\"/>Lab A,<break/>City A</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Z.\u{a0}Li</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id3\">Corresponding author.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id4\"/>Lab B,<break/>City B<break/><text font=\"bold\" xml:id=\"id5\">Proceedings of a workshop</text></contact>\n  </creator>",
-    "<creator role=\"author\">\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id6\">ywang@x.org</text></contact>\n  </creator>",
+    "<creator role=\"author\">\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id6\">wang@x.org</text></contact>\n  </creator>",
   ];
   let v_killed: Vec<&str> = vec![
     "<creator role=\"author\">\n    <personname>A.\u{a0}Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A,<break/>City A</contact>\n  </creator>",
@@ -2073,7 +2073,7 @@ fn marked_block_email_line_owner() {
     "<creator role=\"author\">\n    <personname>X.\u{a0}Wang</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id1\"/>Lab A,<break/>City A</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Y.\u{a0}Wang</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id2\"/>Lab A,<break/>City A</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Z.\u{a0}Li</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text width=\"0.0pt\" xml:id=\"id3\"/>Lab B,<break/>City B</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Corresponding author<break/><text font=\"bold\" xml:id=\"id4\">Proceedings of a workshop</text></contact>\n  </creator>",
-    "<creator role=\"author\">\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id5\">xwang@x.org</text></contact>\n  </creator>",
+    "<creator role=\"author\">\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id5\">wang@x.org</text></contact>\n  </creator>",
   ];
   // the address spells C. Cole: theirs, not the corresponding author's
   assert_eq!(
@@ -2098,7 +2098,8 @@ fn marked_block_email_line_owner() {
     )),
     v_shared
   );
-  // spelling several (two Wangs) of whom the corresponding author is not one: the block's
+  // spelling several (two Wangs) of whom the corresponding author is not one: the block's (`wang@`: an initial and the
+  // surname spell one since 77p r4, `ywang@` Y. Wang's)
   assert_eq!(
     creators(&convert_clean(
       &tex
@@ -2106,7 +2107,7 @@ fn marked_block_email_line_owner() {
           "A.~Able$^a$, B.~Muna$^b$\\thanks{Corresponding author.}, C.~Cole$^a$",
           "X.~Wang$^a$, Y.~Wang$^a$, Z.~Li$^b$\\thanks{Corresponding author.}"
         )
-        .replace("bob.muna@x.org", "ywang@x.org")
+        .replace("bob.muna@x.org", "wang@x.org")
     )),
     v_wang
   );
@@ -2213,7 +2214,7 @@ fn marked_block_email_line_owner() {
         )
         .replace(
           email_line,
-          "$^\\spadesuit$ Corresponding author\\\\\nE-mail: \\texttt{xwang@x.org}"
+          "$^\\spadesuit$ Corresponding author\\\\\nE-mail: \\texttt{wang@x.org}"
         )
     )),
     v_wang2

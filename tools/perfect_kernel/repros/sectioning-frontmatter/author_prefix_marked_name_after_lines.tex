@@ -1,0 +1,13 @@
+% witness: the negative of the r7 re-review's g2 rule (batch 77p r11): a name led by its mark is no institution
+% oracle:  pdflatex 0 errors: Ann Able, then "†Univ A  Bob Baker‡" on one line, then "‡Univ B  ‡Cat Cole"
+% engines: rust 77p r10 = 0 errors; the same as expected (guards the r11 rule)
+% expect:  0 errors, 0 warnings; three creators: Ann Able (†Univ A), Bob Baker (‡Univ B), Cat Cole
+% status:  GREEN (77p r10) -> GREEN (77p r11)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able$^\dagger$ \\ $^\dagger$Univ A \quad Bob Baker$^\ddagger$ \\ $^\ddagger$Univ B \quad $^\ddagger$Cat Cole}
+\begin{document}
+\maketitle
+Text.
+\end{document}

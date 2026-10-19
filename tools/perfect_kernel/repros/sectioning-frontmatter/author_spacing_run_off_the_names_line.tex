@@ -1,0 +1,28 @@
+% witness: 2604.10005 (`Shaw Dalen\footnote{…}\\ \raisebox{-0.3ex}{\includegraphics[height=1.1em]{daedalus.jpg}}\;\;
+%          Daedalus Research Team`), 2605.28131 (`\url{https://ling.cuhk.edu.hk}~~~ \url{https://www.cs.ubc.ca}`
+%          under the names), 2605.12398 (`Jamshid Mozafari\thanks{…}~~\JMorcid, Bhawna Piryani`), 2605.06250
+%          (`~~\mbox{\orcidlink{…}}`), and the review's address probes (`Department of Physics~~~~University of X`,
+%          `Dept.~~~~X`, an e-mail row): a spacing run parts names on the names line only, and only before a name
+% oracle:  pdflatex 0 errors: "Ann Able / Department of Physics University of X", "Bob Baker / Univ B / Dept. Lab Y /
+%          bob@y.edu", "Cat Cole* ■ Dan Dorn", "Eve Eads / ■ Eads Research Team / https://a.org https://b.org",
+%          "Gil Gray Hal Hunt Ian Ives / Univ G"
+% engines: rust 77p r2 = 0 errors; creators "University of X", "Lab Y", an empty one before the icon, "Eads Research
+%          Team", "https://b.org"; int34a and Perl no spacing-run rule (the names the run parts merged)
+% expect:  0 errors, 0 warnings; creators Ann Able, Bob Baker, Cat Cole, Dan Dorn, Eve Eads, Gil Gray, Hal Hunt, Ian
+%          Ives only — every address, link and icon line their affiliation text, no empty or invented creator; a name
+%          in a group of its own after a run that is already a separator still parts (2605.30545)
+% status:  RED (77p r2) -> GREEN (77p r3)
+\documentclass{article}
+\usepackage{url}
+\newcommand{\icon}{\rule{1ex}{1ex}}
+\title{T}
+\author{Ann Able \\ Department of Physics~~~~University of X
+\and Bob Baker \\ Univ B \\ Dept.~~~~Lab Y \\ \texttt{bob@y.edu}
+\and Cat Cole\thanks{Note C.}~~\icon~~~Dan Dorn
+\and Eve Eads \\ \raisebox{-0.3ex}{\rule[0.1ex]{1em}{1ex}}\;\;Eads Research Team \\
+\url{https://a.org}~~~ \url{https://b.org}
+\and {Gil Gray}~~ {Hal Hunt}~~ {Ian Ives} \\ Univ G}
+\begin{document}
+\maketitle
+Text.
+\end{document}

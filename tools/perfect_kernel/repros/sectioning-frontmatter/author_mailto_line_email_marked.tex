@@ -1,0 +1,21 @@
+% witness: the user ruling of 2026-10-20 on 77p r7's question 1 (a mailto line is an e-mail line); the ACL template's
+%          `\textbf{Correspondence:} \href{mailto:…}{…}` under a marked block: 2601.00240, 2601.07974 (placeholder
+%          target), 2604.23002, 2606.03014
+% oracle:  pdflatex 0 errors: the names, the marked affiliations, then "Correspondence: bbaker@uni-b.edu"
+% engines: rust 77p r7 = 0 errors; the line an affiliation of the last author, Cat Cole ("Correspondence: …")
+% expect:  0 errors, 0 warnings; the address an e-mail contact of Bob Baker, the name it spells, named
+%          "Correspondence:" and kept a link; Cat Cole has no contact of it
+% status:  RED (77p r7) -> GREEN (77p r8)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able\textsuperscript{1} \quad Bob Baker\textsuperscript{1} \quad Cat Cole\textsuperscript{2} \\
+\textsuperscript{1}Univ A \quad \textsuperscript{2}Univ B \\
+\small{
+  \textbf{Correspondence:} \href{mailto:email@domain}{bbaker@uni-b.edu}
+}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

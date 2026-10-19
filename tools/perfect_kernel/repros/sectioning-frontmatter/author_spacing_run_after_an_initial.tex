@@ -1,0 +1,18 @@
+% witness: 2603.17646 (`\author{R.~~Beyer}`), 2604.25437 (`\author{L.~~Caballero-Ontanaya}`), 2603.20914
+%          (`\author[R.R. Suszek]{\vspace{45pt}Rafa\l ~R.\ ~Suszek}`): a run of two spacing commands after an initial
+%          is inside one person's name
+% oracle:  pdflatex 0 errors: "R. Beyer", "L. Caballero-Ontanaya", "Rafał R. Suszek", "Ann Able" — four names; the
+%          last row "M. Gil Ann Able / Univ A"
+% engines: rust 77p r2 = 0 errors; "R." | "Beyer", "L." | "Caballero-Ontanaya", "Rafał R." | "Suszek" (one person
+%          split in two); int34a and Perl one creator each (no spacing-run rule)
+% expect:  0 errors, 0 warnings; creators "R. Beyer", "L. Caballero-Ontanaya", "Rafał R. Suszek", "Jo M.~~Gil" one
+%          name ("Jo M. Gil"), "Ann Able" — no name split after an initial, a run after a whole name still parts
+% status:  RED (77p r2) -> GREEN (77p r3)
+\documentclass{article}
+\title{T}
+\author{R.~~Beyer \and L.~~Caballero-Ontanaya \and \vspace{45pt}Rafa\l ~R.\ ~Suszek
+\and Jo M.~~Gil~~~Ann Able \\ Univ A}
+\begin{document}
+\maketitle
+Text.
+\end{document}

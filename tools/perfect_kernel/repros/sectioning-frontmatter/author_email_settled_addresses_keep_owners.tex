@@ -1,0 +1,19 @@
+% witness: 2609.15028 (`\texttt{zihanxue@ucla.edu}, $\:\:$ \texttt{d09944015@csie.ntu.edu.tw}, $\:\:$
+%          \texttt{serhii@tamu.edu}, \\ \texttt{ihung@arena.ai}, $\:\:$ \texttt{khhuang@tamu.edu}`; the 77p r4 re-review's
+%          probe z2), 2609.05913, 2609.37829, 2609.38070: a marked e-mail line some of whose addresses spell their
+%          owners and one spells no one
+% oracle:  pdflatex 0 errors: the lines as written
+% engines: rust 77p r4 = 0 errors; the whole first line one contact of the last author, Dan Dorn (all or nothing);
+%          int34a the same, the second line one contact too
+% expect:  0 errors, 0 warnings; aable@ Ann Able's, bbaker@ Bob Baker's, ccole@ Cat Cole's, ddorn@ Dan Dorn's, and
+%          the address no name settles, qq@, one contact of the last author, Dan Dorn (main-session decision
+%          2026-10-20, 77p r5)
+% status:  RED (77p r4) -> GREEN (77p r5)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$, Cat Cole$^1$, Dan Dorn$^2$ \\ $^1$Univ A \\ $^2$Univ B \\
+\texttt{aable@x.edu}, $\:\:$ \texttt{qq@x.edu}, $\:\:$ \texttt{bbaker@x.edu}, \\ \texttt{ccole@x.edu}, $\:\:$ \texttt{ddorn@x.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

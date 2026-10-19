@@ -1,0 +1,21 @@
+% witness: 2605.30545 (`{Jungyeul Park}$^{1\dagger}$\thanks{…}~~ {Kyungtae Lim}$^{1}$$^{\dagger}$~~ {Wonjun Oh}$^{1}$`: a
+%          name in a group of its own after a run that is already a separator), 2603.27970 (`{\footnotesize
+%          $^{1}$University of Liverpool, UK} \ \ \ {\footnotesize $^{2}$AIOZ Ltd., Singapore}`), 2308.10525
+%          (`\normalsize{$^1$I3A - Universidad de Zaragoza} ~~~~~~ \normalsize{$^2$École …}`), 2605.24043, 2605.22036
+%          (marked entries that open with their size or font), 2603.04592, 2603.12193, 2605.06264
+%          (`\texttt{jl-tong@sjtu.edu.cn}~~~~~\texttt{xyshen@eitech.edu.cn}`: an e-mail row parted by a run)
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker2 Cat Cole1", "1Univ A 2Univ B", "able@a.edu baker@b.edu cole@a.edu"
+% engines: rust 77p r2 = 0 errors, as expected (its run rule then applied on every line); 77p r3 draft (the rule kept
+%          to the names line) = "Bob Baker Cat Cole" one creator, "Univ A 2Univ B" one affiliation, the e-mail row one
+%          contact; int34a and Perl merged the same
+% expect:  0 errors, 0 warnings; three authors, each with the affiliation its mark names and its own e-mail
+% status:  GREEN (77p r2) -> RED (77p r3 draft) -> GREEN (77p r3)
+\documentclass{article}
+\title{T}
+\author{{Ann Able}$^{1}$\thanks{Note A.}~~ {Bob Baker}$^{2}$~~ {Cat Cole}$^{1}$\\
+{\footnotesize $^{1}$Univ A} \ \ \ \small $^{2}$Univ B\\
+\texttt{able@a.edu}~~~~\texttt{baker@b.edu}~~~~\texttt{cole@a.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

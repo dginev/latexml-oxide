@@ -1,0 +1,13 @@
+% witness: the r5 re-review of batch 77p (finding 7, probes u4, u16)
+% oracle:  pdflatex 0 errors: the URL over the names, the institutions, then a column with a second URL
+% engines: rust 77p r8 = 0 errors; creators named "https://x.org" and "https://y.org"
+% expect:  0 errors, 0 warnings; two authors, each with its institution; both URLs contacts of the block
+% status:  RED (77p r8) -> GREEN (77p r9)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{\url{https://x.org} \\ Ann Able$^1$, Bob Baker$^2$ \\ $^1$Univ A \\ $^2$Univ B \and \url{https://y.org}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1737,6 +1737,380 @@ of alternating plain lines lost a name:
   ambiguous and a noted affiliation name-shaped line opens an author (RED `author_footnote_everywhere_ambiguous`).
 Residual: `$^{a}$Sahng-kyoon.Yoo and $^{b}$D.K.Park` (hep-th9707026; a surname glued at a period) stays one creator.
 
+**(o) Spacing runs part names; a `\let` alias of a mark is the mark; spacing in a mark parts its labels (77p, user
+ruling 2026-10-19).** Three readings of an author block Perl gets wrong (it merges, or loses the affiliations):
+- A run of two or more spacing commands — `\ `, `\:`, `\>`, `\;`, `~`, `\enspace`, mixed, spaces between them; the
+  control return a line ending in `\ ` leaves (`\^^M`, latex.ltx `\ `) — between two names at the block's top level,
+  outside math, is a separator, rewritten to `\quad` with (i)'s `\hspace`/`\hfill` (`normalize_hspace_separators`,
+  `spacing_run_separator`): `\textbf{Ann Able}\textsuperscript{1}\;\;\textbf{Bob Baker}` (2610.20409), `\ \ \ \ \ `
+  (2310.10873, 1202.3179), ACL's `~~`/`~~~~` (2603.20851, 2605.30274), `\:\:` (1503.08895, 1811.10830), 1702.05821,
+  1508.00093, 2009.12421, 1005.1466, 1009.3124, cs0207008 (its runs end their lines). What the code tests, in order:
+  the run is at the top level outside math, and a name letter came since the last separator on its line — a letter
+  outside math, a mark's argument and an optional argument, at the top level or in a plain or font group (`{\scshape
+  …}`, `\textbf{…}`), not in another command's argument (`\raisebox{-0.3ex}{\includegraphics[height=1.1em]{…}}\;\;
+  Daedalus Research Team`, 2604.10005); the token before it, a blank line's `\par` aside, is no separator (`\\`,
+  `\and`, `\quad`, `\hspace`, a comma, `;`, `\&`) and no initial (one letter and its period after no letter: `R.~~Beyer`,
+  2603.17646; `L.~~Caballero-Ontanaya`, 2604.25437; `Rafa\l ~R.\ ~Suszek`, 2603.20914 — one person); the word before it
+  is not "and" nor a byline's "by", in any case (`By~~{\scshape Vitaly~Bergelson}~~and~~…`, 2603.25922, 2604.12864,
+  2603.27258, 2604.07186; the leading "By", "BY" is dropped from the names as "and" is); a run before the word "and" —
+  in any case, alone or the only word of one wrapper, a group or a font command's argument (`and_word_end`:
+  `Cat Cole~~and~~Dan Dorn`, `~~AND~~`, `~~And~~`, `~~{and}~~`, `~~\textrm{and}~~`, 2606.27261's
+  `\;\;\textnormal{AND}\;\;`, 2607.03677's `~~ {and}~~`) — parts with the word and the spacing after it, written as
+  the plain word between spaces every author split reads (`RunSeparator`; 77p r4: the r3 rule read the word only
+  lowercase and bare, so "AND" and "And" became creators and a wrapped "and" an affiliation of the name before it),
+  and a piece that prints only that word (`\quad \textnormal{and} \quad`, 2608.24427; `is_and_piece`) is skipped as
+  a separator in both branches, never a name or an affiliation; on a line of a marked block that opens with a mark,
+  the next mark parts the entries (`$^1$The University of Hong Kong~~~~~~$^2$Zhejiang Lab`, 2310.15160), "and" in the
+  run too (`$^1$Univ A~~and~~$^2$Univ B`, 77p r5) — a mark being what the branch choice reads as one, so in a block
+  marked only with footnote symbols (`rewrite_symbol_superscripts`: no mark) a symbol-led line is read as any line off
+  the names line (2609.35807's `$^{*}$\daplablogo\ Columbia University\ \ \ $^{\dagger}$University at Buffalo` had
+  made a creator "†University at Buffalo", 77p r4; the re-review's probes h1-h3); else the next token opens a name — a letter, a group, a command that is no
+  mark, note or separator (`Gus Gray~~\thanks{…}`, `Hal Hunt\ \ $^{1}$` keep their note and mark) — and the piece up to
+  the next separator (a comma, `;`, a line separator, another run) holds a name letter (not `~~\JMorcid,`, 2605.12398;
+  `~~\mbox{\orcidlink{…}}`, 2605.06250). Only the names line — the block's first line, or the first after an `\and`; a
+  line break ends it (`beside_prefix_marked_names`'s concept) — is parted so; on a later line both sides must read as
+  names (`name_count`; a name's notes aside, the piece after it read up to the mark that ends its name: `Rui
+  Wang$^{*, 2}$ <blank line> \vspace{2pt} $^1$Ant Group`, 2603.19223; `Xinlei He\textsuperscript{1}\thanks{…\href{…}{…}}`,
+  2605.30366), not as an affiliation (`reads_as_affiliation`), an address (`@`) or a link (`\url`, `\href`,
+  `\texttt`): `Ann Able \\ Department of Physics~~~~University of X` and 2605.28131's `\url{…}~~~ \url{…}` part
+  nothing. In an unmarked block a run off the names line parts only the line right after it, and only when that line is
+  a row of names going on with the names line (`row_of_names`, 77p r4): it lists another number of names than the
+  names line, which holds two or more (2603.09835's rows of five, four and two; 2607.07318 five over three, 2603.07624,
+  2603.16856 two over four), or a line follows it that is no row of as many entries — the address under all the rows
+  (2605.24414's `\\[0.2em]` rows of six over six over three, then `\textit{JIUTIAN Research}`; 2608.21409 three over
+  three over its e-mail line, split over two lines; 2607.09029 five over five over `LiAuto Inc.`) — but over a line of
+  e-mail addresses only when an address spells one of the row's pieces (`row_spelled_by_addresses`) or the addresses
+  number the names of both rows together (77p r5: `Ann Able~~~~Bob Baker \\ Carnegie Mellon~~~~Johns Hopkins \\
+  \texttt{\{aa,bb\}@x.edu}` had made the institutions creators, the re-review's probes v1, v3); the break between them becomes a `\quad`
+  (2603.09835's `\textbf{Pratham Grover}\\ \textbf{Ramakrishna B.~Bairi}\ \ \textbf{Ritabrata Maiti}`: Ramakrishna B.
+  Bairi had read as Pratham Grover's address line). A row of institutions under the names, one under each name (`Ann
+  Able~~~~Bob Baker \\ Carnegie Mellon~~~~Johns Hopkins`; `\textbf` names over `\textit` institutions; one name over
+  two institutions: the r3 re-review's probes, which had made them creators) — which ends the block or has a row of as
+  many entries under it, their e-mails — is not parted, nor is a row of names under
+  an affiliation line (`Ann Able \\ Univ A \\ Bob Baker~~~~Cat Cole`, read as int34a reads it, a SYNC_STATUS residual):
+  the line is the names' shared address line. Markup does not tell the two apart — 2607.07318's and 2603.16856's second
+  rows open with `{\bf`/`\bf` under plain first rows. Off the names line a piece that opens with a
+  mark after its size or font, `$^1$` or `\(^1\)` (`{\footnotesize $^{1}$Univ A} \ \ \ \small $^{2}$Univ B`, 2603.27970,
+  2308.10525, 2605.24043, 2605.22036; `\(^{1}\)Huawei Technologies, Canada~~\(^2\)University of Alberta`, 2604.12896;
+  `after_leading_markup`, `starts_with_mark`) parts at a run as a mark-led line does, and an e-mail row parted by a
+  run is read as its addresses, not parted (2603.04592, 2603.12193, 2605.06264). A name in a group of its own after a
+  run already parted stays a name (`~~ {Kyungtae Lim}`, 2605.30545). One spacing command stays inside a name (`J.~Smith`, `Ann\ Able`, `van~der~Berg`), and a run after a
+  line-leading mark is the mark's space (`$\ast$~~Department of Physics`, hep-ph9708397). A blank line's `\par` is no
+  separator: the block is set in a `c` column (latex.ltx's `\@maketitle`), restricted horizontal mode, where `\par` ends
+  no paragraph (tex.web §1094, §1096 `end_graf` acts only when `mode=hmode`): 2009.12421's `Ehsan
+  Shareghi$^\spadesuit$$^\clubsuit$ <blank line> \ \ Nigel Collier` is one row of two names.
+- Names parted by horizontal space alone — a spacing run, `\quad`, `\qquad`, (i)'s `\hspace`/`\hfill` — share the
+  address lines under them in the unmarked branch, as comma-parted names of one group do (user ruling 2026-10-19,
+  77p r2): pdflatex prints the lines under the whole row. Perl's `@authorsplits` parts the names at `\quad` as at the
+  comma and hands the lines to the last name (Base_Utility.pool.ltxml:676, 720-725), as the Rust splitter did. The
+  `\quad`-parted blocks of `author_group_splits` are joined into one group (`add_authors_calls_sectioned`, the
+  `blocks` pass) when only horizontal space parts them and the earlier block's last names have no lines of their own;
+  a space before the line break ends no list, so the next row of names joins too (`Zhiyuan Zhu\quad \\
+  \textbf{Ruiqi Li} \quad … \\ Zhejiang University`, 2507.06670). The group's e-mails go to the names they spell
+  (`\texttt{\{say,abuzer\}@boun.edu.tr}`, 1009.3124). Witnesses 1508.00093 (`Yuxi Fu \ \ \  Han Zhu \\ BASICS, …`),
+  1009.3124, 1202.3179 (`\alignauthor Ke Wang \ \ … Chao Han`), 1503.08895 (`\:`-runs under `\And`); 2304.13998
+  waits on the user-macro mark row below.
+- A line's e-mail addresses go to the names they spell best (`spelled_owners`, `NameKeys`): each name scores the
+  letters of its keys the local part holds — a surname, or its first six letters; the given name the local part opens
+  with, or holds when it has four letters or more; a joined spelling it opens with, the first word's initial and a later
+  word (`psingh1_be22@…` Prathamjyot Singh's among three Singhs and `kbatra_be22@…` Karamvir Singh Batra's, 2608.10670;
+  `tli104@…` Tianjian Li's, 2606.23525) or a later word and the first (`wufei@…` Fei Wu's, `chengyu@…` Yu Cheng's,
+  2509.10377); the initials when the local part is only they (`aa@…` Ann Able's; also the first and last, `jw2423@…`
+  Joseph G. Wallwork's, 2407.00382) — a name scoring the better of its words apart and a joined spelling, never their
+  sum (77p r6: `khan.muhammad@` had scored 24 for Muhammad Haris Khan, "khan", "muhammad" and "khanmuhammad", over 12
+  for Khan Muhammad, 2602.07835) — and the highest score owns the address, a tie going to the surname's spelling (`fucheng.fuc@…` is Cheng Fu's, not Jiawei Chen's, 2403.00801;
+  `wangchiew@…` Wang-Chiew Tan's, 2104.01371; `yipengzhang97@…` Yipeng Zhang's, 2406.06326). The ones no name spells go
+  by elimination only where the order confirms it, one rule for both branches (`owners_by_elimination`; main-session
+  decision 2026-10-20, 77p r4, superseding r3's elimination by order whenever as many addresses as names were left):
+  the pool is the names no address spells on any e-mail line of the block (2605.06223's `kyle.min@…` on the next line
+  leaves `treejhk@…` Junhyuk Kwon's); exactly one address and one name left, the address is that name's (`lzhang@…`
+  Li Zhang's, then `zhangw@…` Wei Zhang's); else the addresses the names spell must stand in name order (one at least),
+  and the addresses left go in order to the names left when there are as many (2605.26032's `jzxchen@`, `billf@`,
+  `soljacic@`), else those between two of them, or before the first or after the last, go in order to the names
+  between their owners when there are as many, every author there counted, spelled on another line or not, and none
+  of them spelled or given an address — never a run before the first or after the last, which only the list's end
+  bounds (user ruling R10 2026-10-20, 77p r10: no position placement at a list's end; 77p r9 had waited on the other
+  lines, the r5 re-review's probe q7; 2509.10377's `12421181@`, `230249457@` are the block's, on the shared creator,
+  neither Yixiao Zhou's and Dongzhou Cheng's by their places, as r6 had them, nor the last name's, as r9) (77p r6: 2602.23777's `nnwang@` between `xu_zhipeng@` and `dcheng@` had gone to
+  Dongsheng Li, the one name left of three, and `dongsli@` then to Nannan Wang; 1503.08895's `\{aszlam,jase,robfergus\}@fb.com`: "jase" to Jason Weston;
+  2603.24730's `j8675309@mit.edu` to Jennifer E. Corbett; 2303.11225's `xuta@…`, `musclewu@…` between `tianyuhe@…`,
+  `tabaltru@…`, `runnan.li@…`). The one-left and as-many-left rules wait on the other e-mail lines: while one holds
+  an address no name spells and no rule placed, no name is free to give (77p r6, the r5 re-review's probe q6:
+  `\{aable,q77,ddorn\}@x.edu \\ \{bbaker,z99\}@y.edu` had given `q77@` to Cat Cole; in the unmarked branch the
+  group's other lines, or the block's when the line holds more addresses than its group has names; 2609.02349's
+  `xiahou@` now stays on the last name, as 2605.30274's `zhangmin186@` does, the five authors spelled on other lines
+  before Shimin Tao counted in its run). A
+  list not in name order (by institution: 2509.10377, 2406.06326) or with none spelled
+  (`\{bb,aa\}@x.edu` — the initials decide, not the order) places no address by its place, and a role mailbox (RFC
+  2142's `info@`, `support@`, …, and `contact@`, `office@`, `admin@`; `is_role_mailbox`) is no person's. An address no
+  rule settles is the block's, on the shared nameless creator below the authors (#159, `label=addresses:block`), in
+  both branches (user ruling R10 2026-10-20, 77p r10; it had gone to the unmarked group's last name, and stayed one
+  contact of a marked block's last author) — an unmarked group of one name, its column, keeps an address printed
+  under it, and a sole author is the block; a marked block's e-mail line not in the authors' order gives every address
+  a name settles to that name and each other to the block, its ties and spacing printed as spaces (main-session decision
+  2026-10-20, 77p r5, refining r4's all-or-nothing line: 2609.15028's `zihanxue@`, `serhii@` beside `d09944015@`;
+  2609.05913's `x.chen@`, `shu.yang@`; 2609.37829's `fengbohao.fbh@`; 2609.38070's `wangyile@`; 2605.06264's
+  `yangle26@`, `caoxiaochun@` beside `cryexplorer@`, four names between its neighbours' owners; 2303.11225's
+  `zenghaochai@`, `yuanc@` beside `ztk21@`; 2603.00717's `{\tt\small D250201011@stu.cqupt.edu.cn ~~~
+  boliu@cqupt.edu.cn}` had shown "~~~"; `AddressPlacement::Settled`). The order path (`addresses_in_order`, the
+  `labelseq` count) takes a line only when every address spells the author at its place (77p r10, user ruling R10: an
+  address no name spells is never placed by its place — a single shared `contact@lab.org` had gone to the lead author,
+  `06_cluster_frontmatter::frontmatter_shared_email_distribution`); else elimination places what the order confirms
+  (2609.34459's `mayhhu@…` had gone to Yuanyang Zhu, his own address on the next line, and r5-r9 gave it to Yaohua Hu
+  by elimination after `2796624556qw@…` went to Yijie Sun by its place: both are the block's since r10, as probe y1's
+  `\{xx,yy\}@x.edu` over `ann.able@gmail.com` is).
+  2603.24730's `\{yuqihu,~ahna,~vasha\}@berkeley.edu \ \ \ \{vasha,~j8675309\}@mit.edu` (a brace list's domain ends at
+  a space; addresses a run, `\hspace` or `\quad` parts are items each, a skip's length no part of them); 2603.20851's
+  `lidiasc@` to Lidia S. Chao; 2406.06326, 2509.11625, 2403.00801 by spelling. A contact placed by `label=author:N`
+  answers no mark (`answered_labels`; 2403.00801's `jiawei2020@…` on the second author had hidden every unanswered mark
+  "2"). An argument that prints no letter is no letter of an address, a label or a link's text — one table,
+  `NON_PRINTING_ARGUMENTS` (`without_non_printing_arguments`, `non_printing_end`), for `email_addresses`,
+  `address_text`, `printed_words`, `link_line_link` and `mailto_line`'s label: the colour commands (`\color`,
+  `\textcolor`, `\colorbox`, `\fcolorbox`, `\pagecolor`, `\colorlet`, `\definecolor`), the font selection
+  (`\fontfamily`, `\fontseries`, `\fontshape`, `\fontencoding`, `\fontsize`, `\usefont`), graphicx's boxes
+  (`\scalebox`, `\rotatebox`, `\raisebox`, `\resizebox`; `\includegraphics` whole) and the skips (`\hspace`,
+  `\vspace`, a space), each by its xparse-style signature (77p r10, the r6 re-review's finding 5: 2609.25669's
+  `\texttt{\fontfamily{pcr}\selectfont xw109@…}` had read `pcrxw109@`, 2609.35216 `pcrliyuanzi0313@`, probes w14's
+  `0.9aable@`, w15's `911aable@`; the colours since 77p r9: 2604.19440's `\texttt{\{}\href{mailto:…}{\color{black}\texttt{xinhao.zhang},}
+  …\texttt{\}@univ-grenoble-alpes.fr}` had read `blackxinhao.zhang@…`, the r5 re-review's probes c1-c6), and each
+  address of a line keeps the mailto link the line gives it (`address_tokens`). A labelled list of addresses or links
+  (`Emails: \href{mailto:a}{a}, \href{mailto:b}{b}`, probe u22), a footnote symbol before the label (`$^*$Corresponding
+  author: \href{mailto:…}{…}`, probe u23; 2605.01567, 2605.30150) and a size, font or group around the whole line (`\tt\small
+  {Email Address: songyuxinbb@outlook.com}`, 2603.19228: was an affiliation of the last name) are e-mail lines too
+  (77p r9). In a marked block a line under an e-mail line that is not addresses is its own entry, welded into neither the
+  e-mail line nor an entry above it (a labelled e-mail line is still skipped, the line after it going on with the
+  affiliation above: 1503.08624's proceedings line, batch 64k), and so is a line that is only a link anywhere — `\href{…}{…}`, `\url{…}`, in the
+  groups, sizes and fonts it is set in, after a label ending in a colon (`is_link_line`; 77p r6: 2602.22394's
+  `{\footnotesize \url{…}}`, 2602.23802's `{\tt{\small{\url{…}}}}`, 2602.09509's `Demo Code:~\url{…}` had welded into
+  the e-mail line, which then placed no address; a bare `\url` line had skipped it into "Univ B"; 2403.08629,
+  2605.06223). Such a link line, in either branch, is a URL contact (`\lx@add@contact[role=url]`, as a class's
+  `\homepage` is), not an affiliation: the line is its content, a "Label:" before the link its text (`Demo Code:`,
+  `\textbf{Code}:`), the link an `ltx:ref` (user ruling 2026-10-20, 77p r7; `is_url_line`, `url_contact_call`). It is
+  the whole block's — the shared creator below the authors (#159, `label=addresses:block`; a sole author's) — when the
+  call makes the document's whole author list: the project pages of 2605.06223, 2602.08439, 2604.12896, 2602.22394,
+  2602.23802, 2602.09509, 2403.08629, 2607.18110's `https://aka.ms/GeneralAI` (r6 had given it to the last author as an
+  affiliation, the unmarked branch to every name of the group: 2603.16856, 2604.15215, 2605.25477). In an `\and`
+  column it is the column's: a marked block's column of one author while other columns hold authors gives it to that
+  author, who the PDF prints it under; an unmarked group's to its one name, or to its names as the group's lines
+  (`annotate=N`) when the block has other groups; a per-author class's call (`replace` false) to its author. A link to a
+  mailbox (`\textbf{Correspondence:} \href{mailto:…}{…}`, `Email: \href{mailto:…}{…}`) is no URL but an e-mail line
+  (user ruling 2026-10-20, 77p r8; `mailto_line`, read by `labelled_emails` in both branches): the text before the
+  link, as printed without its font, names the e-mail contact (`name="Correspondence: "`, as a labelled e-mail line's
+  "E-mail:" does, batch 64k), the link stays an `ltx:ref`, and its address — the one it prints, its target's when it
+  prints none (`address_text`; 2601.07974's placeholder target `mailto:email@domain`) — goes to the name it spells
+  (2601.00240's `gaomin@` to Min Gao, 2601.07974, 2604.23002, 2606.03014; 2605.18563's `thclark@` to Thomas Hikaru
+  Clark alone, no longer on every name of the group; r7 had kept it an affiliation of the last author or of every
+  name); one no name spells is placed as an unsettled address is — the block's, or the `\thanks`-named corresponding
+  author's —, never on every name. So is a link to a bare address without `mailto:`, target or printed text — a local
+  part, an `@` and a dotted domain, no web page's target (`is_bare_address`, `links_a_mailbox`; 77p r10: a handle,
+  `\href{https://x.com/aable}{@aable}`, is a URL, the r6 re-review's w21): the ACL template's `\textbf{Correspondence:}
+  \href{binzhu@smu.edu.sg}{binzhu@smu.edu.sg}`, 2604.04847, 2605.29064, 2605.29893, 2606.01600, which r7-r8 had made a
+  URL contact; 77p r9). A link is a URL contact by what it says and where it goes, not by the shape of its words
+  (`is_url_line`, 77p r10, the r6 re-review's finding 2): a `\url`, an `\href` printing a web address, or a link word
+  in its text or the label before it (`LINK_WORDS`, `link_words`: page, website, homepage, code, repository, GitHub,
+  demo, dataset, article, blog, video, model, project, … — 2602.22227's and 2604.24697's `Project Page`, 2601.18810's
+  and 2604.15404's `Substack Article`, which 77p r9's name-shape test had made affiliations of the shared creator);
+  else one printing an institution or a name is that linked, and one to a page below a site's root (or printing no
+  word, an icon) a URL, one to a bare domain the institution it prints (`target_has_path`,
+  `link_prints_an_institution`: `\href{https://www.google.com}{Google}`, `\href{https://x.ai}{xAI}`, probes x10, w8),
+  what prints no word aside (`printed_words`); a column that is a "Project Page" link alone is no author (`prints_a_url`,
+  probe w22). One printing an institution is that institution linked, an affiliation placed as a link line is
+  (2606.26479's `\href{https://launchsafe.com}{\textbf{LaunchSafe Research}}` on all four names, a URL contact of the
+  shared creator since r7; the r5 re-review's probes u32, u33, u35, u38), one printing a name its author; a link that
+  prints nothing (`\url{}`, 2601.02680) is none. A link line opening an author block or an `\and` column is no name when
+  it prints a URL (`prints_a_url`; probes u4, u16, u17 had made creators named by their URLs; an ORCID-linked name there
+  stays its author, 2608.24427, 2602.15968, 2603.04124), and a marked column of several names takes its link line as its
+  names', as its institution (ruling 9; probe u6m). A name's contacts follow the order its column prints them (77p r9,
+  probe u14): a marked block's link line and an unmarked group's address of a name before its last — after a line the
+  group shares, digested under its last name — are given by a label of the name's own (`placed_label`,
+  `\lx@author@placed@label`, `author:placed<N>`) once those lines are placed, an address row right under the names
+  keeping its place (2602.05084); a name that makes its own creator (PoS's `\speaker`, 1307.5080) keeps its contacts in its
+  content (`makes_its_creator`). Guards
+  `perfect_kernel_batch77p::{link_line_under_an_email_line_is_its_own_entry,
+  link_line_of_an_unmarked_block_is_the_blocks_url, link_line_of_an_and_column_is_its_names_url,
+  link_line_of_a_marked_column_is_its_authors_url, email_owner_by_confirmed_order_marked,
+  mailto_line_of_a_marked_block_is_the_spelled_names_email, mailto_line_of_an_unmarked_block_leaves_the_other_names,
+  mailto_line_spelling_no_name_is_one_contact}`; r9 `{colour_in_an_address_list_is_no_letter,
+  colour_in_mailto_links_is_no_letter, linked_institution_is_an_affiliation,
+  linked_institutions_per_column_are_affiliations, correspondence_link_to_a_bare_address_is_an_email,
+  link_line_of_a_marked_column_of_names_is_their_url, email_gap_at_the_list_end_waits_on_the_other_lines,
+  symbol_marked_row_lines_go_by_their_marks, link_line_opening_a_group_is_no_name,
+  link_line_opening_an_unmarked_block_is_no_name, link_line_after_a_marked_affiliation_keeps_the_order,
+  labelled_list_of_linked_addresses_is_an_email_line, symbol_led_email_label_is_an_email_line,
+  email_line_in_a_sized_group_is_an_email_line}` and the unit tests `base_utilities::author_split_tests::{
+  email_addresses_skip_colour_arguments, is_url_line_not_a_mailbox, mailto_line_is_a_labelled_email_line}`. A line that only finishes an address the line above leaves open (`{\tt yoshikawa.masashi.yh8@}\\{\tt
+  is.naist.jp}`, 1906.01834) still continues it, and a line that prints nothing (`\large{~~}`, a blank line's `\par`)
+  is no entry (`prints_nothing`). A legend line — a footnote symbol and its text, `\\
+  \textsuperscript{*}\textit{Equal contribution.}` (2509.20748; `is_legend_line`) — continues no name (it is its own entry,
+  which lands on the last author: the symbol-mark SYNC_STATUS residual; under an affiliation a note, `$^\dagger$
+  Deceased`, still goes on with it, batch 64k), and one that reads as an affiliation, its symbol one an author carries,
+  is its own entry under an affiliation too, labelled by that symbol as a numbered affiliation by its number
+  (`symbol_labelled_affiliation`; 77p r6: 2601.05633's `$^{\diamond}$ National University of Singapore` under its
+  `$^{\heartsuit}$` line had welded into it, NUS on the ♡ authors; 2401.16553's `$^\ddagger$University of Minnesota`
+  now on Ritik Sachin Parkar). Perl gives a shared address line to the last name.
+- A command LaTeX's own footnote marks print — in `\@fnsymbol`'s body (latex.ltx: `\TextOrMath \textsection
+  \mathsection`, `\textparagraph`/`\mathparagraph`, `\textbardbl`, …) and printing a symbol, or a macro of such
+  commands — is a footnote symbol as `\dagger` is (`is_symbol_command`; 77p r6, main-session decision 2026-10-20 to
+  generalise the set: 2601.02680's `$^\mathsection$` had read as an affiliation mark nothing answers, the § dropped and
+  "Xibin Zhao Pengfei Su† Dong Li†" one creator). A math symbol outside `\@fnsymbol` (`\clubsuit`, `\heartsuit`)
+  stays an affiliation mark: taken as a footnote symbol it moves a comma-parted block (2601.05633) to the unmarked
+  branch, where every address line goes to every name.
+- A run of distinct symbol commands in a mark is a label each, as `$^{1,2}$` is two (`SYMBOL_COMMAND_RUN` in
+  `clean_frontmatter_labels`): 1811.10830's `Ali Farhadi$^{\spadesuit\heartsuit}$` reaches both `$^\spadesuit$` and
+  `$^\heartsuit$` lines (was a nameless creator holding the Allen Institute); a font switch inside a mark is no part of
+  its label (`FONT_SWITCH` with `\normalfont`, `\textnormal`, `\upshape`, …): 2604.24532's
+  `\textbf{Ying-Tu Chen\textsuperscript{\normalfont{1},}…}` reaches the `\textsuperscript{1}` line.
+  Unchanged: names with lines of their own (`Ann Able \\ Univ A \quad Bob Baker \\ Univ B`), names an `\and` parts,
+  marked authors (the marks decide), and a row of addresses parted by space too (`Cat Cole \quad Dan Dorn \\ Univ C
+  \quad Univ D`, set under the names by position, whose pieces take no names after them either: 2609.25833's e-mail
+  row; a SYNC_STATUS residual, Perl the same). Lines labelled by the footnote symbols the row's names carry — a group
+  the names before it do not join for its lines' marks, one of its lines an institution a symbol labels
+  (`labelled_institution`: not a note, `classify_thanks`) — go by the marks across the block (`apart_line_calls`; 77p
+  r9, the r5 re-review's finding 6): each such institution, every one of a line (`symbol_led_segments`), to the names
+  of its row carrying its symbol, without it (the row the names joined by space since the last `\and`, `row_starts`:
+  a carrier in another `\and` column is none, 77p r10, probes x6, w28; a compound mark `$^{\dagger*}$` a label per
+  symbol, `SYMBOL_COMMAND`, probes x1, w10, w11, and a line led by one names the names carrying all its symbols,
+  `leading_symbol_labels`, `symbol_carriers`: 2602.19190's `$^{*\dag}$Project lead` shape); each address to the name it spells, one no name spells to the block
+  (no elimination; a `;`-separated brace list read as a `,`-separated one, 2607.16926); a link line to the block. Since
+  77p r10 (`row_line_calls`, the r6 re-review's finding 1) an unmarked line goes on with the institution above it only
+  where that was one labelled institution alone on its line ending in a comma and it reads as an institution too
+  (`reads_as_institution`: 2608.12337's `$^{\dagger}$State Key Laboratory …, \\ School of Computer Science, Peking
+  University`); an unmarked institution otherwise — or a link to one — is every name's of the row (user ruling R12
+  2026-10-20: probe y8's `Department of Physics`, x9's linked `Google`); a legend goes to the names carrying its
+  symbol; any other piece — a note (`Equal contribution`, y7), a place (`Beijing, China`, x7), a symbol no name of the
+  row carries — to the block. None lands on one name for its place (r9 had carried any unmarked line on to the carriers
+  of the line above: 2607.16926's address line under all five names had gone to the two ∗ names as their affiliation,
+  probes x7, x8, y5, y7, w23). The same row reading serves a group whose only symbol-led line is a legend: its unmarked
+  institution lines every name's of the row, its legend its symbol's carriers', its e-mail lines as before (2609.24299's
+  `Department of Mechanical Engineering, \\ Palestine Polytechnic University` had gone to Jasem Tamimi alone,
+  2603.06578's Visual Recognition Group to Jiri Matas alone; the r6 re-review's finding 7). 2601.02680 (`$^\mathsection$ Tsinghua University \ \ \ \ $^\dagger$ University of
+  California, Merced` and `dinghongsong21@` had all gone to Dong Li, silently since r6), 2505.23260 (`\normalsize
+  $^{\dagger}$Department of Statistics, Rutgers University`), 2608.12337 (`$^{\dagger\ddagger}$` names reach both lines,
+  `symbol_labels`). A mark after its institution labels it as one before it does since 77p r11 (`Carnegie Mellon
+  University, …$^{\dagger}$`, 2109.13296: on Zeyu Ma alone; it had stayed on the last name, then r10 had sent it to every
+  name of the row).
+- An empty mark is no mark (user ruling R11 2026-10-20, 77p r10; `drop_empty_marks`): a mark command with an empty
+  argument (`\textsuperscript{}`) or an empty math superscript (`$^{}$`), which print nothing, are dropped before the
+  branch is chosen when the block holds no other mark (in a block other marks make a marked one they stay, each name
+  they end an author's piece of its own: 2604.22129's `Robert Maier\textsuperscript{}~~~Aljaz Bozic\textsuperscript{}`,
+  which a marked block's marker-less pieces would weld into one creator) — 2604.19440's `\textsuperscript{}Univ. Grenoble Alpes, …` under four unmarked names had made the
+  block a marked one, the institution on Maxime Peyrard alone; it is all four names' now. An unmarked linked
+  institution under a marked block (`\href{https://launchsafe.com}{\textbf{LaunchSafe Research}}` under `$^1$Univ A
+  \\ $^2$Univ B`, probe u38) is every author's (user ruling R12 2026-10-20; r9 gave it to the shared creator). A
+  markerless line under a marked affiliation still continues it, as Perl welds it (`$^2$Univ B \\ Univ C`, probe x12,
+  Univ C on Bob Baker; main-session decision 2026-10-20: it stays welded, `$^1$Department of X \\ University of Y` being
+  the common shape R12 must not split).
+  Guards (77p r10, each red on r9 from its minimal repro) `perfect_kernel_batch77p::{symbol_row_brace_list_goes_by_spelling,
+  symbol_row_note_line_is_the_blocks, symbol_row_unmarked_institution_is_every_names, link_word_makes_a_url_line,
+  linked_domain_root_is_an_institution, link_column_is_no_creator, symbol_carriers_stay_in_their_row,
+  compound_symbol_mark_is_a_label_per_symbol, scalebox_factor_is_no_address_letter, font_family_is_no_address_letter,
+  at_handle_link_is_a_url, url_brace_list_is_addresses_by_spelling, legend_row_shares_the_institution,
+  marked_block_linked_institution_is_every_authors, unspelled_email_is_the_blocks_unmarked,
+  unspelled_email_is_the_blocks_marked, empty_mark_is_no_mark}`, re-pinned for R10/R11
+  `{colour_in_mailto_links_is_no_letter, mailto_line_spelling_no_name_is_one_contact,
+  email_gap_at_the_list_end_waits_on_the_other_lines, email_elimination_waits_on_the_other_lines,
+  email_gap_counts_every_author, email_order_path_respects_spelled_owners, email_owner_by_confirmed_order,
+  institution_row_over_an_email_line_is_no_names, settled_addresses_keep_their_owners}`,
+  `perfect_kernel_batch63::{author_names_line_and_address_line, author_email_list_out_of_author_order}`,
+  `06_cluster_frontmatter::frontmatter_shared_email_distribution`; from the r10 A/B
+  `{compound_legend_mark_names_its_carrier, email_given_name_and_initials_spell, ieee_halign_markers_print_nothing,
+  empty_mark_in_a_marked_block_stays}`
+  (an address spells a name by its given name and surname whole, `Di Wu` "diwu", or the initials before the surname,
+  `Kai-Wei Chang` "kwchang": 2604.01354, 2608.18082's "moyu", which R10 would have sent to the block; an environment's
+  `\begin{…}`/`\end{…}`, `\strut` and `\centering` print nothing, `prints_nothing`, and a marked affiliation list skips
+  a line that prints nothing: IEEEtran's `\end{@IEEEauthorhalign}\hfill\strut`, 2309.15562, whose environment name had
+  read as an address, then as an empty affiliation); and the unit tests
+  `base_utilities::author_split_tests::{non_printing_arguments_are_no_letters,
+  bare_address_needs_a_local_part_and_a_dotted_domain, empty_marks_and_compound_symbol_labels, is_url_line_not_a_mailbox}`.
+- 77p r11 (the r7 re-review's findings 1-12). Marks a reader could not see: a line holding a footnote-symbol mark
+  anywhere (`symbol_marks`) is no unmarked line of the row — r10 had read a line whose marks a group hid, or that ended
+  in its mark, as unmarked and given it to every name of the row (2606.28166's `{\small $^{\dagger}$\,University of
+  Toronto \qquad $^{\ddagger}$\,EPFL}`, 2602.16540's `{\it \normalsize $^\sharp$Department of Biostatistics, …}`,
+  2109.13296's `Carnegie Mellon University, …$^{\dagger}$`; probes g1, g3, p7, p8); a marked piece no institution reads
+  goes to the names carrying all its marks, else to the block (`row_line_calls`). A group around a whole line or piece is
+  looked through (`unwrapped`, in `after_symbol_mark` and `symbol_led_segments`, which also parts at a group a mark
+  opens), and a mark after its text labels that text (`before_trailing_symbol_mark`, in `labelled_institution`; an
+  e-mail line's trailing mark is no letter of its address, `apart_line_calls`). A group of comma-parted names whose own
+  symbols label its lines goes by them too (`by_symbols` no longer needs the group kept apart: probes r13, r17, each line
+  had gone to every name; 2602.16540's two names), its e-mail lines by the group's names as in any group, the order
+  confirming an unspelled address (2603.07345's `bgh@`), in the order the lines print; an unmarked piece before the
+  labelled institutions of its line, no note and no address, is every name's of the row (`institution_beside_labelled`:
+  2603.07345's `Uber Technologies \ \ \ $^\dagger$University of British Columbia`; a piece `\quad` parts onto a line of
+  its own reads alone: 2509.20478's `UC Berkeley \quad $^\dagger$\unskip Princeton University` gives Princeton to
+  Benjamin Eysenbach, whose † line had been a creator, and UC Berkeley, no institution word, to the block). A block that a leaked line break (`\hspace{.2cm}\\`, made `\quad \\`)
+  or horizontal space after a group's lines parts off, whose first line is an institution (`reads_as_affiliation`) a
+  symbol of the names before it labels, is lines under those names, not a names line (2602.16540's creator "⋆School of
+  Mathematics …", probes g2, x13's creator "‡Univ B", int34a the same; a name its mark leads, `$^\ddagger$Cat Cole`,
+  stays a name). A doubled mark (`$^{**}$`, `$^{\dagger\dagger}$`) is its own label (`leading_symbol_labels` drops only
+  the whole-run label `clean_frontmatter_labels` puts first of several: probes n1, n2). Links: a dotted word is a web
+  address only with a top-level domain of two letters or more and no run of initials (`reads_as_web_address`:
+  2601.06085's `Edward A.G. Schuur`, whose loss had made six creators of his institution; 2606.03745's `T.J.C.
+  Bezerra`); a link printing a name opens a column as its author unless it shows a scheme or `www.` or every word is a
+  link word (`prints_a_url`, `all_link_words`: probes n3, n4), and one printing an institution is an affiliation whatever
+  link word it holds (`is_url_line` reads `reads_as_affiliation` first: probes n6, n7); a link to a bare domain is an
+  institution only when its text names an organization, each word with a capital (`names_an_organization`: `here` is a
+  URL contact, probes n13, p9); a command that prints no word — a macro of optional arguments alone whose expansion holds
+  only such commands, down to fontawesome's `\faIcon[…]{…}`, `\faicon`, `\faIconFromMacro` — is part of the one
+  non-printing table (`icon_macro_options`: 2601.03661's `\faGithub \, \href{…}`, 2601.06979's `\yticon~\href{…}`), and
+  a line of several links is a link line per link (`link_run_lines`, in both branches: 2601.06979's Code, Demo Video,
+  Dataset each a URL contact). The non-printing table gains latex.ltx's `\rule`, `\phantom`, `\hphantom`, `\vphantom`
+  and TeX's `\kern`, `\hskip`, `\vskip` with a dimension or glue (`dimension_length`, tex.web §443/§448/§461: a unit of
+  two letters, `true`, `fil`…, one optional space, `plus`/`minus`: probes p1, p2, p4, p5, p6). E-mails: a mailbox link
+  printing a brace list is an address per local part (`mailto_addresses`: 2602.12235); a joined family-first spelling's
+  first six letters spell its name (`spelled_owners`: 2602.03328's `zhuzhenh22@`, 2609.11716's `chenyuxi22@`). Lines that
+  print nothing are no entry in the unmarked branch either (2602.23649's `~~~~`, probes e1-e4); a mark holding only
+  `\relax` is empty (`drop_empty_marks`: probe n10, "Bob BakerUniv A"); a line break's optional argument after spaces is
+  consumed (`strip_linebreak_options`: 2604.20841's `\\ [0.5em]`; a star after a space is not, a residual: 2608.23637). Guards (each red on 77p r10 from its minimal repro)
+  `perfect_kernel_batch77p::{symbol_row_group_wrapped_line_goes_by_its_marks,
+  symbol_row_group_wrapped_lines_go_by_their_marks, symbol_lines_after_a_spaced_break_go_by_their_marks,
+  trailing_symbol_mark_labels_its_line, trailing_marks_under_spaced_names_label_their_lines, dotted_initials_link_is_a_name,
+  dotted_initials_link_is_an_authblk_name, doubled_symbol_marks_label_their_institutions,
+  link_words_in_a_linked_name_keep_the_name, link_words_in_a_linked_institution_keep_the_affiliation,
+  link_words_in_a_linked_institution_under_a_marked_row, icon_led_link_line_is_a_url, multi_link_line_is_a_url_per_link,
+  empty_lines_under_unmarked_rows_print_nothing, mailto_brace_list_goes_by_spelling,
+  line_break_optional_after_spaces_prints_nothing, truncated_family_first_address_spells_its_name,
+  bare_domain_link_printing_here_is_a_url, rules_phantoms_and_skips_print_no_letter, symbol_institution_row_parted_by_space,
+  relax_mark_is_no_mark, comma_group_symbol_lines_go_by_their_marks}`, the negative `prefix_marked_name_after_lines_stays_a_name`, re-pinned
+  `{symbol_led_affiliation_run_is_no_creator, spacing_run_off_the_names_line_parts_nothing}`, unit tests
+  `base_utilities::author_split_tests::{dotted_initials_are_no_web_address, non_printing_arguments_are_no_letters}`.
+  Residual: a "Contact:" label is no e-mail label (2606.28166's starred contact line a legend of the ∗ names); a symbol
+  row's addresses go by spelling alone, no elimination (2109.13296's `azu5030@`, `rmz5227@` the block's).
+- A token whose meaning is a mark command — TeX's `\ifx` (`Token::defined_as`, which follows `\let`) — is that command
+  (`mark_command_meant`, `unalias_mark_commands` at the author and affiliation entries; `is_mark_command`,
+  `is_author_mark`, `author_mark_position`, `is_affiliation_mark` the one test every mark reader makes):
+  `\let\up\textsuperscript` (2209.14855, macros/custom.tex:23) had read as name text, the block as unmarked, its
+  `\up{2}Univ B` line as an author; Perl's `positionOf` compares tokens literally (`Equals`).
+- Spacing inside a mark's operand parts its labels as a comma does (`SPACING_IN_LABEL` in `clean_frontmatter_labels`,
+  on both sides of the match): `\up{~~1}` is the label 1, `\up{\!1,2}` 1 and 2 (2209.14855), `$^{1,2\,*}$` 1, 2 and the
+  symbol (2403.08629, its second affiliation now reached); Perl's `cleanFrontmatterLabels` keeps them in the label,
+  which then matches no affiliation.
+Guards `perfect_kernel_batch77p::{thin_space_run_separates_names, control_space_run_separates_names,
+tie_run_separates_names, single_spacing_stays_in_the_name, let_alias_mark_is_a_mark,
+space_parted_names_share_the_address, space_parted_names_negatives_pin_residuals,
+spacing_run_after_an_initial_stays_in_the_name, spacing_run_off_the_names_line_parts_nothing, byline_by_is_no_name,
+mark_operand_labels_and_par_in_the_names_row, email_owner_by_elimination, email_owner_by_given_name,
+spacing_run_marked_rows, spacing_run_names_rows, and_word_in_any_case_or_wrapper_separates,
+institution_row_under_names_is_no_names, names_rows_by_count_or_following_line, email_owner_by_confirmed_order,
+email_owner_by_confirmed_order_marked, legend_line_is_no_name, symbol_led_affiliation_run_is_no_creator,
+institution_row_over_an_email_line_is_no_names, settled_addresses_keep_their_owners,
+email_order_path_respects_spelled_owners, and_run_between_marked_entries,
+email_elimination_waits_on_the_other_lines, email_gap_counts_every_author, email_score_is_the_best_spelling,
+link_line_under_an_email_line_is_its_own_entry, fnsymbol_command_is_a_symbol_mark,
+symbol_led_affiliation_is_labelled_by_its_symbol}`,
+`perfect_kernel_batch64::marked_block_email_line_owner`,
+`perfect_kernel_batch63::author_email_list_out_of_author_order`,
+`perfect_kernel_batch77n::email_pile_beside_marked_affiliations_is_dealt`. Residuals (SYNC_STATUS rows): a run or
+`\quad` inside a group or wrapper (`\textbf{Ann Able\;\;Bob Baker}`; a declaring group's `\quad`, 2603.20775,
+2610.21682) parts no names; a single tie between spaces (`David McAllister$^{1}$ ~ Songwei Ge`, 2406.09417, inside a group
+too) is no run and no separator (user ruling 2026-10-19: the ruling covers runs of two or more); a mark wrapped in a
+user macro (`\newcommand*{\affmark}[1][*]{\textsuperscript{#1}}`, 2304.13998) is not read as a mark; an IEEE affiliation
+block whose refmarked entries a tie run parts (`\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A~~~\IEEEauthorrefmark{2}Univ
+B}`, 2603.03918) stays one entry; a row of names under an affiliation line of an unmarked block stays an affiliation line
+(`Ann Able \\ Univ A \\ Bob Baker~~~~Cat Cole`), and a row of institutions under a row of names is shared by the names,
+not set one under each (`Ann Able~~~~Bob Baker \\ Carnegie Mellon~~~~Johns Hopkins`) — and read as names going on
+where neither its count nor the line under it tells (two names over three institutions; a legend line under the row:
+the re-review's probes v4, v2).
+
 ### 53. `inst`-style `\author[marks]{name}` accepts the optional marks and accumulates
 
 **Decision:** `inst_support.sty`'s `\author` (used by classes following the
@@ -21217,6 +21591,38 @@ binding applies them (`six_begin_processing_for_units`), and an explicit empty v
 `true`: 2504.05919's `\DeclareSIUnit[number-unit-product={}]\%{\char`\%}` prints "85%" as pdflatex does; 1501.03532's
 per-unit `number-unit-product = \ ` puts its interword space before nm/dBm. 77r r2; repro
 `package-bindings/siunitx_unit_named_by_its_own_char_code`; guard `perfect_kernel_batch77r::siunitx_*`.
+
+### 775. aero.cls's `\ADsetup` title page is the frontmatter (Perl: no aero binding, `\ADsetup` undefined)
+
+aero.cls (latexstudio.net's *Astrodynamics* template, v1.0 2022/01/04, shipped with the paper, not in TeX Live) keeps its
+title page in l3keys variables `\l_ADkeys_<key>_tl` set by `\ADsetup{title=…, author=…, address=…, email=…,
+abstract=…, keywords=…, name=…, url=…}` (aero.cls:97-118) and prints them only in its `\RenewDocumentCommand\maketitle`
+(:128-148), which the kernel's locked `\maketitle` refuses: the replayed class body printed them as body paragraphs and
+the document had no title, creator or abstract (2610.12827, arXiv html_feedback HF14; user ruling 2026-10-19 — a
+reader-reported class gets a binding at any sample reach). The binding (latexml_contrib aero_cls.rs) loads the shipped
+class raw, so its own keys run, and the kernel `\maketitle` (`\lx@maketitle@begin`) hands each variable the paper set —
+one that differs from the class's `initial:n` value, the template's placeholder, kept as `\lx@aero@initial@<key>` when
+the class loads — in the class's order: `\title`, `\author` (the article split), the address under every author
+(`\lx@add@affiliation@marked[annotate=all]`, its `\sep` a line break as the class's hanging paragraphs, :137; marked
+lines to the authors their marks name), the e-mail, `\lx@add@abstract`, and the keywords joined by the class's `~·\ \ `
+(:145), a `\\` ending them dropped. A variable the paper never set is no frontmatter: 2509.08607 and 2511.17720 ship a
+modified class whose `\maketitle` prints the kernel's `\@title`/`\@author` and set those, never calling `\ADsetup` —
+handing the placeholders over had replaced their title and authors with "Paper title: Preparation of papers for
+*Astrodynamics*" and "First A. Author" (77p r2 review); the kernel path keeps them. The class's corresponding mark
+`\cor` (:92 `{\rm (\Letter)}`) after an author's name is a request for the e-mail, as elsarticle's `\corref` is for its
+`\cortext` (`\lx@request@frontmatter@annotation[cor]{aero}`, the e-mail `\lx@add@email[label={cor:aero}]`), not name
+text: 2609.23496's `allan.junior@uc.pt` goes to `A. K. de Almeida Jr$^{1,2}$\cor{}` (was a nameless creator, the "(🖂)"
+in the personname); without a `\cor` the e-mail is placed by the name it spells (`\lx@add@contact@placed`; the class
+prints it apart after `\Letter`, :139). The class's own `\maketitle` is not replayed (`\lx@dropped@maketitle` relaxed).
+`name` and `url` print only in the running head (:120-126) and stay page furniture. Witnesses 2610.12827, 2609.23496,
+2509.20748, 2603.14589, 2607.23790, 2609.00861 (`\ADsetup`), 2509.08607, 2511.17720 (the variant). 2509.20748's `author`
+key ends in two legend lines (`\\ \textsuperscript{*}\textit{Equal contribution.}\\ \textsuperscript{$\dagger$}…`),
+which the article split reads as for any `\author` (OD #52(o)): the `*` legend is no part of the last name since 77p r4,
+but lands on that author as an affiliation, not on the starred authors (the symbol-mark SYNC_STATUS residual). Repros
+`class-bindings/aero_setup_frontmatter.tex`, `class-bindings/aero_corresponding_mark_owns_the_email.tex` (with an
+excerpt of the class, `class-bindings/aero.cls`), `class-bindings/aero_variant/aero_title_author_without_setup.tex` (with
+the variant's excerpt); guards `perfect_kernel_batch77p::{aero_setup_is_the_frontmatter,
+aero_corresponding_mark_owns_the_email, aero_variant_keeps_the_kernel_title_and_authors}`.
 
 ### 776. A Cyrillic text symbol set in a Latin letter's slot (T2A/T2B/T2C) is that Cyrillic letter (Perl: the Latin letter)
 

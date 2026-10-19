@@ -1,0 +1,17 @@
+% witness: 2603.07345; batch 77p r11 A/B (comma-parted names whose symbols label their lines)
+% oracle:  pdflatex 0 errors: the comma-parted names (Dan Dorn marked †), "Uber Technologies   †University of British
+%          Columbia" on one line, the brace list of addresses and Dan Dorn's †-marked address under them
+% engines: rust 77p r10 = 0 errors; "Uber Technologies †University of British Columbia" one affiliation of every name
+% expect:  0 errors, 0 warnings; Uber Technologies on every name (R12), UBC on Dan Dorn alone; aable@, ccole@, dorn@ on
+%          the names they spell, bgh@ on Bob Baker by the order its neighbours confirm
+% status:  RED (77p r10) -> GREEN (77p r11)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able, Bob Baker, Cat Cole, Dan Dorn$^\dagger$ \\
+Uber Technologies \ \ \ $^\dagger$University of British Columbia \\
+\textit{\{aable, bgh, ccole\}@uber.com, \ $^\dagger$dorn@cs.ubc.ca}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,15 @@
+% witness: HF14 M2(b) — a `\let` alias of `\textsuperscript` as the author marks (2209.14855, macros/custom.tex:23
+%          `\let\up\textsuperscript`): TeX's `\ifx` reads it as the command
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker1,2 / 1Univ A 2Univ B"
+% engines: rust int33a = "Ann Able1", "Bob Baker1,2" with Univ A, and a creator "2Univ B"; Perl one merged creator
+% expect:  0 errors, 0 warnings; creators "Ann Able" (Univ A) and "Bob Baker" (Univ A, Univ B)
+% status:  RED (int33a) -> GREEN (77p)
+\documentclass{article}
+\let\up\textsuperscript
+\title{T}
+\author{Ann Able\up{1}\hfill Bob Baker\up{1,2}\\
+\up{1}Univ A \quad \up{2}Univ B}
+\begin{document}
+\maketitle
+Body.
+\end{document}

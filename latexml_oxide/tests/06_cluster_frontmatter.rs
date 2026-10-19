@@ -318,7 +318,8 @@ fn frontmatter_authblk_comma_list() {
 /// A shared author email line must not bunch every address under the last author.
 /// Distributed (`a@x, b@y, c@z`) → email i to author i; grouped brace-expansion
 /// (`{a,b,c}@dom`) → expand then distribute (and NOT glue into the affiliation);
-/// a single shared address → the lead (first) author. OXIDIZED_DESIGN #52(j).
+/// a single shared address no name spells → the block's, on the shared nameless creator below the authors (user ruling
+/// R10 2026-10-20, OXIDIZED_DESIGN #159; it had gone to the lead author by its place). OXIDIZED_DESIGN #52(j).
 #[test]
 fn frontmatter_shared_email_distribution() {
   // 1. Distributed list, one address per author.
@@ -354,16 +355,24 @@ fn frontmatter_shared_email_distribution() {
       "grouped email leaked into the affiliation text:\n{g}"
     );
   }
-  // 3. A single shared address lands on the lead (first) author, not the last.
+  // 3. A single shared address no name spells is the block's: on the shared creator, on no author.
   let s = convert_to_xml("tests/cluster_regressions/frontmatter_email_single_shared.tex");
+  for name in ["Alice", "Bob"] {
+    assert!(
+      !creator_has_email(&s, name, "contact@lab.org"),
+      "single shared: {name} must not carry contact@lab.org:\n{s}"
+    );
+  }
+  let shared = s
+    .rsplit("<creator ")
+    .next()
+    .and_then(|last| last.split("</creator>").next())
+    .unwrap_or("");
   assert!(
-    creator_has_email(&s, "Alice", "contact@lab.org"),
-    "single shared: lead author Alice must carry contact@lab.org:\n{s}"
+    shared.contains("contact@lab.org") && !shared.contains("<personname"),
+    "single shared: the shared creator must carry contact@lab.org:\n{s}"
   );
-  assert!(
-    !creator_has_email(&s, "Bob", "contact@lab.org"),
-    "single shared: must not also land on a trailing author:\n{s}"
-  );
+  assert_eq!(s.matches("contact@lab.org").count(), 1, "{s}");
 }
 /// arXiv/html_feedback#46 (witness 2308.06214v1, amsart): all `\author` declared up
 /// front, THEN one `\address`/`\email` pair each. LaTeXML's default "attach contact

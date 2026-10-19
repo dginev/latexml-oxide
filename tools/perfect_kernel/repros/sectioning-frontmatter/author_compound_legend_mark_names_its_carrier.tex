@@ -1,0 +1,16 @@
+% witness: 2602.19190 (`$^{*\dag}$Project lead: Yi Yang`, the shape shortened and written `$^{\dagger\ddagger}$`, a
+%          footnote symbol mark; its own `$^{*\dag}$` is read as an affiliation mark, a marked block, see SYNC); batch
+%          77p r10 A/B (a line's compound mark had been read by its first symbol alone)
+% oracle:  pdflatex 0 errors: a row of two names, Bob Baker marked dagger and double dagger, the dagger institution
+%          and the dagger-double-dagger line under the row
+% engines: rust 77p r9 and r10 w2 = 0 errors; "Project lead" on Ann Able too (a dagger carrier)
+% expect:  0 errors, 0 warnings; Univ A on both names (both carry the dagger); "Project lead" Bob Baker's alone, the
+%          name carrying both its symbols
+% status:  RED (77p r9, 77p r10 w2) -> GREEN (77p r10)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\dagger}$ \ \ \ \ Bob Baker$^{\dagger\ddagger}$ \\ $^{\dagger}$ Univ A \ \ \ \ $^{\dagger\ddagger}$ Project lead}
+\begin{document}
+\maketitle
+Text.
+\end{document}

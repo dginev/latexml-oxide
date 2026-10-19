@@ -1,0 +1,28 @@
+% witness: 2608.10670 (`\{kbatra\_be22, psingh1\_be22, jasmeet.singh\}@thapar.edu` under Karamvir Singh Batra,
+%          Prathamjyot Singh, Jasmeet Singh: an initial and a surname), 2606.23525 (`\{tli104, danielk\}@jhu.edu`),
+%          2303.11225 (`\{tianyuhe,xuta,tabaltru,musclewu,runnan.li,…\}@microsoft.com`: xuta@ and musclewu@ each
+%          between two spelled addresses with one name between their owners), 2403.08629 (a link line under the e-mail
+%          line: `… \texttt{yixin.zhu@pku.edu.cn,\,syhuang@bigai.ai} \vspace{3pt}\\ \href{…}{…}`); a line of spacing
+%          alone under an e-mail line (2510.07961's `\\ \vspace{8pt}`, 2607.21993: a panic in an r4 draft)
+% oracle:  pdflatex 0 errors: the rows as written
+% engines: rust 77p r3 = 0 errors; each of the first two lines one contact on the last author (psingh1@ tying among
+%          three Singhs, tli104@ spelling no one), the third line one contact (two addresses no name spells), the link
+%          line welded into it; int34a the first line by order, the rest one contact on the last author
+% expect:  0 errors, 0 warnings; every address on its author; the link line its own entry, welded into neither the e-mail
+%          line nor the affiliation before the e-mail lines (Univ M; 77p r6, the r5 re-review: it lands on the last
+%          name), the spacing line no entry
+% status:  RED (77p r3) -> GREEN (77p r4; the link line's place r6)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Karamvir Singh Batra$^{1}$, Prathamjyot Singh$^{1}$, Jasmeet Singh$^{1}$, Tianjian Li$^{2}$, Daniel Khashabi$^{2}$, \\
+Tianyu He$^{3}$, Xu Tan$^{3}$, Tadas Baltrusaitis$^{3}$, HsiangTao Wu$^{3}$, Runnan Li$^{3}$ \\
+$^{1}$Univ T \\ $^{2}$Univ J \\ $^{3}$Univ M \\
+\texttt{\{jasmeet.singh, kbatra\_be22, psingh1\_be22\}@t.edu} \\
+\texttt{\{tli104, danielk\}@j.edu} \\ \vspace{2pt} \\
+\texttt{\{tianyuhe,xuta,tabaltru,musclewu,runnan.li\}@m.com} \\
+\href{https://a.github.io/}{https://a.github.io/}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

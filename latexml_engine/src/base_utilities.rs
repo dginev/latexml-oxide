@@ -1650,7 +1650,11 @@ LoadDefinitions!({
     keyvals: Option<Tokens>,
     cautious: bool,
   ) -> Result<Tokens> {
-    let stuff = expand_separator_macros(expand_sole_author_macro(stuff));
+    // (a `\let` alias of a mark command is the command: `\let\up\textsuperscript`, 2209.14855; [`unalias_mark_commands`])
+    let stuff = unalias_mark_commands(expand_separator_macros(expand_sole_author_macro(stuff)));
+    // (an empty mark prints nothing and is no mark: `\textsuperscript{}Univ. Grenoble Alpes…` leaves the block unmarked,
+    // its line every name's; [`drop_empty_marks`])
+    let stuff = drop_empty_marks(stuff);
     // Beyond-Perl (surpasses Perl; KNOWN_PERL_ERRORS #100): IJCAI-style author
     // blocks — ijcai97.sty and its derivatives (e.g. the ttm.sty in
     // arXiv:2401.03955) — pack names, `\affiliations` and a comma-separated
@@ -1791,26 +1795,50 @@ LoadDefinitions!({
         .map(unwrap_alignment_environment)
         .filter(|group| !group.is_empty())
         .collect();
+      // (a line of several links a line per link, [`link_run_lines`]: 2601.06979, the r7 re-review's finding 5)
+      let group_lines = |group: Tokens| -> Vec<(Vec<Token>, Tokens)> {
+        split_tokens_delimited(group, author_affil_splits())
+          .into_iter()
+          .flat_map(|(delimiter, line)| {
+            link_run_lines(line)
+              .into_iter()
+              .enumerate()
+              .map(move |(at, piece)| {
+                let delimiter = if at == 0 {
+                  delimiter.clone()
+                } else {
+                  vec![T_SPACE!()]
+                };
+                (delimiter, piece)
+              })
+          })
+          .collect()
+      };
       let block_lines: Vec<Tokens> = groups
         .iter()
-        .flat_map(|group| split_tokens_delimited(group.clone(), author_affil_splits()))
+        .flat_map(|group| group_lines(group.clone()))
         .map(|(_, line)| line)
         .collect();
       let mut position = 0;
+      // where each `\and` group's entries start, for the creator a link line's URL contact goes to ([`link_line_owner`])
+      let mut group_starts: Vec<usize> = Vec::new();
       for group in groups {
         // Marker-less lines may only continue an entry created WITHIN this
         // `\and` group — never one from a previous group.
         let group_start = entries.len();
+        group_starts.push(group_start);
         let mut names_line = true;
         // the last line of names this group's authors were split from, which a line of more names continues
         let mut last_names: Option<Tokens> = None;
-        for (delimiter, line) in split_tokens_delimited(group, author_affil_splits()) {
+        for (delimiter, line) in group_lines(group) {
           position += 1;
           let beside = beside_prefix_marked_names(prefix_marked_names, &mut names_line, &delimiter);
-          if line.is_empty() {
+          // (a piece that is only the word "and" separates the names beside it: `\quad \textnormal{and} \quad`,
+          // 2608.24427)
+          if line.is_empty() || is_and_piece(line.unlist_ref()) {
             continue;
           }
-          match position_of(&line, &authorsup_markers()) {
+          match author_mark_position(&line) {
             None => {
               // A marker-less line that is purely a list of email addresses is a
               // SHARED email line (\texttt{a@x, b@y}) covering all the authors, not
@@ -1844,8 +1872,14 @@ LoadDefinitions!({
                   .iter()
                   .all(|(kind, _)| *kind == AuthorLineKind::LabelledEmail)
               {
-                // (only email lines before it in its `\and` group: its own entry, not a new author)
-                entries.push((AuthorLineKind::Affiliation, line));
+                // (only email lines before it in its `\and` group: its own entry, not a new author; a link line a URL
+                // contact, [`is_link_line`])
+                let kind = if is_link_line(&line) {
+                  AuthorLineKind::Link
+                } else {
+                  AuthorLineKind::Affiliation
+                };
+                entries.push((kind, line));
               } else if let Some(continued) = entries[group_start..]
                 .iter()
                 .rposition(|(kind, _)| *kind != AuthorLineKind::LabelledEmail)
@@ -1860,12 +1894,56 @@ LoadDefinitions!({
                 // (1503.08624's `E-mail: \email{…}\\ \textbf{Proceeding of …}`, both lost when welded together).
                 // …and after an email line under a name, its own entry: welded, it read as part of the name
                 // (`A.~Able$^a$ \\ E-mail: \email{x} \\ More text`)
-                if entries[continued].0 == AuthorLineKind::Author
-                  && entries[continued + 1..]
-                    .iter()
-                    .any(|(kind, _)| *kind == AuthorLineKind::LabelledEmail)
+                // …and a legend, a footnote symbol and its text (`\\ \textsuperscript{*}\textit{Equal
+                // contribution.}`, 2509.20748), is no part of the name before it, as it is no affiliation's
+                // continuation in `\lx@add@affiliation` (llncs `\institute`, 2609.06094); and, under an affiliation
+                // too, a symbol-led line that reads as an affiliation its symbol labels is its own entry, which the
+                // symbol links to the authors carrying it (`symbol_labelled_affiliation`: 2601.05633's
+                // `$^{\diamond}$ National University of Singapore` under the `$^{\heartsuit}$` line, not welded into it
+                // and so given to the authors marked ♡, batch 77p r6); a note (`$^\dagger$ Deceased`, `$^*$
+                // Corresponding author`) continues the affiliation above as before (batch 64k)
+                // …and under an e-mail line, a line that is not addresses is its own entry, welded into neither the
+                // e-mail line (the addresses no longer read as such, the line one contact on the last author: 2602.22394's
+                // `{\footnotesize \url{…}}`, 2602.23802, 2602.09509's `Demo Code:~\url{…}`) nor the entry above it
+                // (the r5 re-review's q3, "Univ Bhttps://…"; 2403.08629); and so is a link line ([`is_link_line`]) under
+                // any entry, no part of an affiliation's or a name's text: a URL contact, not an affiliation (user ruling
+                // 2026-10-20, batch 77p r7: 2605.06223, 2602.08439, 2604.12896), and a line under it is no part of it
+                // (a line that prints nothing is no entry: `\large{~~}`, 2609.05430; a blank line's `\par`, 2606.00747;
+                // `\tt\small` before a `\quad`, 2103.00887)
+                if prints_nothing(&line) {
+                  continue;
+                }
+                // (an address the line above leaves unfinished goes on here: `{\tt yoshikawa.masashi.yh8@}\\{\tt
+                // is.naist.jp}`, 1906.01834)
+                let finishes_an_address = entries[continued].0 == AuthorLineKind::Email
+                  && email_addresses(&entries[continued].1)
+                    .and_then(|addresses| addresses.last().cloned())
+                    .is_some_and(|address| address.ends_with('@'));
+                // (a labelled e-mail line between them is skipped, as before: 1503.08624's proceedings line goes on with
+                // the affiliation above it, a name's own entry)
+                let under_email = entries[continued..].iter().any(|(kind, _)| {
+                  *kind == AuthorLineKind::Email
+                    || (*kind == AuthorLineKind::LabelledEmail
+                      && entries[continued].0 == AuthorLineKind::Author)
+                });
+                let carried: Vec<String> = entries
+                  .iter()
+                  .filter(|(kind, _)| *kind == AuthorLineKind::Author)
+                  .flat_map(|(_, author)| symbol_marks(author))
+                  .collect();
+                let labelled = symbol_labelled_affiliation(&line, &carried);
+                // (a link printing an institution too: placed as a link line is, an affiliation, [`url_contact_call`])
+                if !finishes_an_address && is_link_line(&line) {
+                  entries.push((AuthorLineKind::Link, line));
+                  continue;
+                }
+                if !finishes_an_address
+                  && (labelled.is_some()
+                    || (entries[continued].0 == AuthorLineKind::Author && is_legend_line(&line))
+                    || under_email
+                    || entries[continued].0 == AuthorLineKind::Link)
                 {
-                  entries.push((AuthorLineKind::Affiliation, line));
+                  entries.push((AuthorLineKind::Affiliation, labelled.unwrap_or(line)));
                   continue;
                 }
                 let last = &mut entries[continued];
@@ -1878,8 +1956,12 @@ LoadDefinitions!({
                 // back into the previous group), whole as Perl keeps it ("safest to assume author?",
                 // Base_Utility.pool.ltxml:705-706) — unless it reads as several names, then each its own
                 // (`Aghil Alaee\footnote{…} \,\,and Hari K. Kunduri\footnote{…}\\ … $^a$ Department …`,
-                // 1407.0988), as the merged-author check would otherwise report.
-                if name_count(&visible_name_text(line.unlist_ref())) >= 2 {
+                // 1407.0988), as the merged-author check would otherwise report. A link line printing a URL there is
+                // no name: a URL contact, as under an entry (`\url{…} \\ Ann Able$^1$ …`, `… \and \url{…}`; the r5
+                // re-review's u4, u16); a linked name is its author ([`prints_a_url`]; 2608.24427).
+                if prints_a_url(&line) {
+                  entries.push((AuthorLineKind::Link, line));
+                } else if name_count(&visible_name_text(line.unlist_ref())) >= 2 {
                   // …a names line an unmarked row of more names continues, as a later one does (`Ann Able$^{*}$, Bob
                   // Baker, \\ Cat Cole, Dan Dee, \\ Eve Eck$^{1}$`: the first line's symbol mark is no affiliation mark;
                   // 2411.13503, 2410.07701, 2401.05566, 2510.11639, 2304.07193).
@@ -1934,9 +2016,10 @@ LoadDefinitions!({
                     .any(|label| !requested.contains(label))
                   })
               };
-              let affiliations_begun = entries
-                .iter()
-                .any(|(kind, _)| *kind == AuthorLineKind::Affiliation);
+              // (a link line among them, as when it read as an affiliation)
+              let affiliations_begun = entries.iter().any(|(kind, _)| {
+                matches!(kind, AuthorLineKind::Affiliation | AuthorLineKind::Link)
+              });
               // A line marked as the first that reads as names is a name by where it stands: as the first line of an
               // `\and` group when no author before it requests its mark (Perl-era rule) or an affiliation below
               // answers it ([`mark_answered_below`]: `… $^{1}$Univ A \and $^{2}$Bob Baker\\ $^{2}$Univ B`); before the
@@ -1985,7 +2068,9 @@ LoadDefinitions!({
                   if names_correspondence(&visible_name_text(seg.unlist_ref())) {
                     correspondence_notes.push(entries.len());
                   }
-                  if let Some((AuthorLineKind::Affiliation, last)) = entries.last_mut() {
+                  if let Some((AuthorLineKind::Affiliation | AuthorLineKind::Link, last)) =
+                    entries.last_mut()
+                  {
                     *last = Tokens::new(trim_trailing_separator(last.clone().unlist()));
                   }
                   entries.push((AuthorLineKind::Affiliation, seg));
@@ -2007,12 +2092,26 @@ LoadDefinitions!({
           })
         })
         .collect::<Result<Vec<_>>>()?;
-      let author_keys: Vec<Vec<String>> = entries
+      let author_keys: Vec<NameKeys> = entries
         .iter()
         .filter(|(k, ..)| *k == AuthorLineKind::Author)
-        .map(|(_, author, _)| surname_keys(author))
+        .map(|(_, author, _)| NameKeys::of(author))
         .collect();
       let author_count = author_keys.len();
+      // the authors an address on any e-mail line of the block spells, whom elimination gives no other address
+      // ([`owners_by_elimination`]; 2605.06223's `kyle.min@…` under the `{treejhk, …}@…` line)
+      let mut block_addresses: Vec<String> = Vec::new();
+      // (and, by entry, how many of an e-mail line's addresses no name spells and no rule has placed yet: while another
+      // line holds one, no name goes by elimination, [`owners_by_elimination`]; 2602.23777, the r5 re-review's q6)
+      let mut unplaced: Vec<usize> = vec![0; entries.len()];
+      for (at, (kind, line, _)) in entries.iter().enumerate() {
+        if matches!(kind, AuthorLineKind::Email | AuthorLineKind::LabelledEmail) {
+          let texts = line_address_texts(line)?;
+          unplaced[at] = unspelled_addresses(&author_keys, &texts);
+          block_addresses.extend(texts);
+        }
+      }
+      let mut taken = names_spelled(&author_keys, &block_addresses);
       // the one author a `\thanks{Corresponding author.}` names, who an address spelling no name belongs to
       let corresponding = corresponding_author(
         entries
@@ -2045,11 +2144,71 @@ LoadDefinitions!({
         lookup_mapping_int("num_ltx:creator", "author") as usize
       };
       let numbered_before = numbered_kept + queued_author_count();
-      for (index, (kind, line, email)) in entries.into_iter().enumerate() {
+      let kinds: Vec<AuthorLineKind> = entries.iter().map(|(kind, ..)| *kind).collect();
+      // Each link line's owner, and the authors (by their order in the block) it names: an author's or a column's
+      // link goes to them by labels of their own (`placed_label`), placed after the marked affiliations above it, which
+      // the labels place at the end — the contacts in the order the column prints them (the r5 re-review's u14).
+      let made = |at: usize| {
+        kinds[..at.min(kinds.len())]
+          .iter()
+          .filter(|kind| **kind == AuthorLineKind::Author)
+          .count()
+      };
+      // (a name making its creator itself takes its link as before, the label of its `\lx@add@author` reaching no one:
+      // [`makes_its_creator`])
+      let own_creator: Vec<bool> = entries
+        .iter()
+        .filter(|(kind, ..)| *kind == AuthorLineKind::Author)
+        .map(|(_, author, _)| makes_its_creator(author.unlist_ref()))
+        .collect::<Result<Vec<_>>>()?;
+      let link_authors: Vec<(LinkOwner, std::ops::Range<usize>)> = (0..kinds.len())
+        .map(|index| {
+          if kinds[index] != AuthorLineKind::Link {
+            return (LinkOwner::Block, 0..0);
+          }
+          let (start, end) = group_bounds(&group_starts, kinds.len(), index);
+          // (the authors of the line's `\and` column, and the one made last)
+          let column = made(start)..made(end);
+          let owner = link_line_owner(&kinds, &group_starts, index, replace);
+          let authors = match owner {
+            LinkOwner::Current if column.len() == 1 => column,
+            LinkOwner::Current => made(index).saturating_sub(1)..made(index),
+            LinkOwner::Group(_) => column,
+            // (a link printing an institution, unmarked under the marked block, is every author's: user ruling R12
+            // 2026-10-20, the r5 re-review's u38; a URL the block's)
+            LinkOwner::Block if link_prints_an_institution(&entries[index].1) => {
+              0..made(kinds.len())
+            },
+            LinkOwner::Block | LinkOwner::Author(_) => 0..0,
+          };
+          let authors = if authors
+            .clone()
+            .any(|author| own_creator.get(author).copied().unwrap_or(true))
+          {
+            0..0
+          } else {
+            authors
+          };
+          (owner, authors)
+        })
+        .collect();
+      let mut placed: Vec<Option<String>> = Vec::new();
+      let mut placed_calls: Vec<Vec<Token>> = vec![Vec::new(); made(kinds.len())];
+      for (_, authors) in &link_authors {
+        for author in authors.clone() {
+          if let (_, Some(call)) = placed_label(&mut placed, author)? {
+            placed_calls[author].extend(call);
+          }
+        }
+      }
+      let mut author_at = 0;
+      for (index, (kind, mut line, email)) in entries.into_iter().enumerate() {
         match kind {
           AuthorLineKind::Author => {
             correspondence_mark = None;
             let mut content = Invocation!(T_CS!("\\lx@author@withsup"), vec![Some(line)]).unlist();
+            content.extend(std::mem::take(&mut placed_calls[author_at]));
+            author_at += 1;
             if let Some(email) = email {
               content
                 .extend(Invocation!(T_CS!("\\lx@add@email"), vec![None, Some(email)]).unlist());
@@ -2075,6 +2234,23 @@ LoadDefinitions!({
             calls.extend(
               Invocation!(T_CS!("\\lx@add@affiliation"), vec![None, Some(withsup)]).unlist(),
             );
+          },
+          AuthorLineKind::Link => {
+            correspondence_mark = None;
+            let (owner, authors) = link_authors[index].clone();
+            let url = is_url_line(&line);
+            if authors.is_empty() {
+              calls.extend(url_contact_call(line, owner, url)?);
+            } else {
+              for author in authors {
+                let (label, _) = placed_label(&mut placed, author)?;
+                calls.extend(url_contact_call(
+                  line.clone(),
+                  LinkOwner::Author(label),
+                  url,
+                )?);
+              }
+            }
           },
           AuthorLineKind::LabelledEmail => {
             if let Some((label, addresses)) = labelled_emails(&line)? {
@@ -2118,17 +2294,95 @@ LoadDefinitions!({
             // at its place (2406.06326's `{zhangxy, jyzhou, hmmeng}@…`, by institution; 63m). OXIDIZED_DESIGN #52(j).
             let addresses = email_addresses(&line).unwrap_or_default();
             let placement = match sequenced {
+              // (in order; and when the block lists an address for each author at most, no address there goes to an
+              // author another address of the block spells or an earlier line was given: 2609.34459's `mayhhu@…` is
+              // not Yuanyang Zhu's, whose own address is on a later line — where the block lists more, an author may
+              // have two, `\{xx,yy\}@x.edu \\ ann.able@gmail.com` under Ann Able, Bob Baker, the r4 re-review's y1)
+              // (every address spelling the author at its place: an address no name spells is never placed by its
+              // position, user ruling R10 2026-10-20 — it goes by elimination where the order confirms it, else to the
+              // block)
               Some(offset)
                 if author_count >= 1
                   && addresses.len() <= author_count
-                  && addresses_in_order(&author_keys, &addresses, offset) =>
+                  && addresses_in_order(&author_keys, &addresses, offset)
+                  && addresses.iter().enumerate().all(|(at, address)| {
+                    spelled_owner(&author_keys, address) == Some(offset + at)
+                  })
+                  && (block_addresses.len() > author_count
+                    || addresses.iter().enumerate().all(|(at, address)| {
+                      !taken.get(offset + at).copied().unwrap_or(false)
+                        || spelled_owner(&author_keys, address) == Some(offset + at)
+                    })) =>
               {
                 sequenced = Some(offset + addresses.len());
+                for owner in offset..offset + addresses.len() {
+                  if let Some(owner) = taken.get_mut(owner) {
+                    *owner = true;
+                  }
+                }
+                unplaced[index] = 0;
                 AddressPlacement::Sequence
               },
+              // (else each address to the author it spells, the rest by elimination — `owners_by_elimination`:
+              // 2603.24730's `\{yuqihu,~ahna,~vasha\}@berkeley.edu \ \ \ \{vasha,~j8675309\}@mit.edu` under four
+              // authors; the addresses no name settles are the block's, on its shared creator (user ruling R10
+              // 2026-10-20; were one contact on the last author), the line's
+              // ties and spacing commands printed as the spaces they are, not as "~~~" (2603.00717's
+              // `{\tt\small D250201011@stu.cqupt.edu.cn ~~~ boliu@cqupt.edu.cn}`; 2605.06264's `cryexplorer@…`
+              // between two spelled addresses with four names between their owners), and every address a name
+              // settles goes to that name (main-session decision 2026-10-20, 77p r5: 2609.15028's `zihanxue@…`,
+              // `serhii@…` beside an address no name spells, 2609.05913, 2609.37829, 2609.38070)
               _ => {
                 sequenced = None;
-                AddressPlacement::OneContact
+                // (not while another e-mail line holds an address no name spells and no rule placed: 2602.23777)
+                let elsewhere_open = unplaced
+                  .iter()
+                  .enumerate()
+                  .any(|(at, count)| at != index && *count > 0);
+                let owners =
+                  owners_by_elimination(&author_keys, &addresses, &taken, elsewhere_open);
+                // (a name an address went to leaves the pool of the lines after: 2407.00382)
+                for owner in owners.iter().flatten() {
+                  taken[*owner] = true;
+                }
+                unplaced[index] = owners
+                  .iter()
+                  .zip(&addresses)
+                  .filter(|(owner, address)| owner.is_none() && !is_role_mailbox(address))
+                  .count();
+                if !addresses.is_empty() && owners.iter().all(Option::is_some) {
+                  AddressPlacement::Authors(
+                    owners
+                      .into_iter()
+                      .flatten()
+                      .map(|owner| numbered_before + owner + 1)
+                      .collect(),
+                  )
+                } else {
+                  line = Tokens::new(
+                    line
+                      .unlist()
+                      .into_iter()
+                      .map(|t| {
+                        if is_spacing_command(&t) {
+                          T_SPACE!()
+                        } else {
+                          t
+                        }
+                      })
+                      .collect(),
+                  );
+                  if owners.iter().any(Option::is_some) {
+                    AddressPlacement::Settled(
+                      owners
+                        .into_iter()
+                        .map(|owner| owner.map(|owner| numbered_before + owner + 1))
+                        .collect(),
+                    )
+                  } else {
+                    AddressPlacement::Shared
+                  }
+                }
               },
             };
             calls.extend(email_line_calls(line, placement)?);
@@ -2146,12 +2400,25 @@ LoadDefinitions!({
       // ("…Laboratory, Laurel, MD 20723") into fake authors and mislabeled the
       // trailing \email line as an affiliation. OXIDIZED_DESIGN #52 (surpass-Perl,
       // Perl's @authorsplits shares the comma); witness arXiv:2606.00315.
-      let mut groups: Vec<(Vec<Tokens>, Vec<Tokens>)> = Vec::new();
-      for block in split_tokens(stuff, author_group_splits()) {
+      // (a group: its names and the lines under them)
+      type Group = (Vec<Tokens>, Vec<Tokens>);
+      // Each block's groups, with whether only horizontal space (`\quad`, `\qquad`, the `\hspace`/`\hfill` and spacing
+      // runs `normalize_hspace_separators` makes `\quad`) parts it from the block before.
+      let mut blocks: Vec<(bool, Vec<Group>)> = Vec::new();
+      // (the block's link lines no names stand over: the whole block's URL contacts, after its names)
+      let mut block_links: Vec<Tokens> = Vec::new();
+      let mut spaced = true;
+      for (delimiter, block) in split_tokens_delimited(stuff, author_group_splits()) {
+        spaced &= delimiter
+          .first()
+          .is_some_and(|d| *d == T_CS!("\\quad") || *d == T_CS!("\\qquad"));
         let block = unwrap_alignment_environment(block);
-        if block.is_empty() {
+        // (a block that is only the word "and", in any case or wrapper, separates the names beside it — never a name
+        // or their affiliation: `\href{…}{…Eric Rossetto} \quad \textnormal{and} \quad \href{…}{…}`, 2608.24427)
+        if block.is_empty() || is_and_piece(block.unlist_ref()) {
           continue;
         }
+        let mut pairs = Vec::new();
         // Drop empty `\\`-pieces up front. A group that BEGINS with `\\` — because
         // the previous author line ended with a trailing `\quad\\` (or `\and\\`) that
         // leaked the line-break into this group — would otherwise give an EMPTY
@@ -2163,17 +2430,133 @@ LoadDefinitions!({
         // single empty author below, so its affiliations are not dropped.)
         // So is a line that prints nothing ([`spacing_end`]: `\author[2]{\vspace{2mm}\\O.~Ennis, U.~Chauhan, …}`,
         // 2504.09158, read as the name with the names below it its affiliation).
-        let lines: Vec<Tokens> = split_tokens(block, author_line_breaks())
+        let pieces = split_tokens(block, author_line_breaks());
+        let opens_with_break = pieces.len() > 1
+          && pieces
+            .first()
+            .is_some_and(|l| spacing_end(l.unlist_ref()) == 0);
+        let mut lines: Vec<Tokens> = pieces
           .into_iter()
           .filter(|l| spacing_end(l.unlist_ref()) > 0)
+          .flat_map(link_run_lines)
           .collect();
-        for (names_line, affils) in name_groups(lines) {
+        // …but a block the line break opens whose first line is an institution a footnote symbol of the names before it
+        // labels is lines under those names, no names (`Bob Baker$^\sharp$\footnote{…}\hspace{.2cm}\\ {\it \normalsize
+        // $^\star$School of Mathematics …}\\ {\it \normalsize $^\sharp$Department of Biostatistics …}`, 2602.16540: a
+        // creator named "⋆School of Mathematics …"; the r7 re-review's finding 1)
+        // …and so is a block only horizontal space parts from a group's lines, the next institution on their printed
+        // line (`Cat Cole$^{\dagger}$ \\ $^{\dagger}$Univ A \qquad $^{\ddagger}$Univ B`, the r7 re-review's g2, x13:
+        // a creator "‡Univ B")
+        let after_lines = spaced
+          && blocks
+            .last()
+            .and_then(|(_, groups)| groups.last())
+            .is_some_and(|(_, affils)| !affils.is_empty());
+        // (an institution, a name led by its mark no part of it: `$^\dagger$Ann Able \\ $^\dagger$Univ A \quad
+        // $^\ddagger$Bob Baker`)
+        let earlier: Vec<Vec<String>> = blocks
+          .iter()
+          .flat_map(|(_, groups)| groups.iter())
+          .flat_map(|(names, _)| names.iter().map(symbol_labels))
+          .collect();
+        if (opens_with_break || after_lines)
+          && let Some(first) = lines.first()
+          && symbol_led_segments(first).iter().any(|segment| {
+            labelled_institution(segment, &earlier)
+              .is_some_and(|(_, rest)| reads_as_affiliation(&rest))
+          })
+          && let Some((_, groups)) = blocks.last_mut()
+          && let Some((_, affils)) = groups.last_mut()
+        {
+          affils.append(&mut lines);
+          spaced = true;
+          continue;
+        }
+        // A link line printing a URL is no name ([`prints_a_url`]; a linked name is one, 2608.24427): one opening the
+        // block goes with the lines under its names
+        // (`\url{…} \\ Ann Able \\ Univ A`, the r5 re-review's u17), a block of link lines alone is the whole block's
+        // (`Ann Able \\ Univ A \and \url{…}`, u16), not a creator named by its URL.
+        let leading_links = lines.iter().take_while(|line| prints_a_url(line)).count();
+        if leading_links == lines.len() && !lines.is_empty() {
+          block_links.append(&mut lines);
+          continue;
+        }
+        let mut links: Vec<Tokens> = lines.drain(..leading_links).collect();
+        for (names_line, mut affils) in name_groups(lines) {
+          affils.splice(0..0, std::mem::take(&mut links));
           let mut names = split_names(names_line);
           if names.is_empty() {
             names.push(Tokens::default());
           }
-          groups.push((names, affils));
+          pairs.push((names, affils));
         }
+        blocks.push((spaced, pairs));
+        spaced = true;
+      }
+      // Names parted by horizontal space alone share the address lines under them, as names parted by a comma do in
+      // one group: `Yuxi Fu \ \ \ Han Zhu \\ BASICS, Shanghai Jiao Tong University` gives the address to both, as
+      // pdflatex prints it under the whole row (user ruling 2026-10-19, batch 77p r2; OXIDIZED_DESIGN #52(o); 1508.00093,
+      // 1009.3124, 1202.3179, 1503.08895; 2304.13998 waits on its user-macro marks). Perl's `@authorsplits` parts the
+      // names at `\quad` as at the comma and gives the lines to the last name (Base_Utility.pool.ltxml:676). A space before the line break ends no list
+      // (`Zhiyuan Zhu\quad \\ \textbf{Ruiqi Li} \quad …\\ Zhejiang University`, 2507.06670), as a comma there does not
+      // ([`names_continue`]). A name with lines of its own keeps them (`A \\ Univ A \quad B \\ Univ B`), and so does a
+      // row of names whose address line is parted by space too (`A \quad B \\ Univ A \quad Univ B`, set by position;
+      // nor does a piece of that row take the names after it, 2609.25833's `\texttt{a@x} \quad \texttt{b@y}`), and so
+      // do names whose symbol marks label the lines (`Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \\
+      // $^{\dagger}$Univ A \\ $^{\ddagger}$Univ B`, 2505.23260, 2109.13296: the marks decide, not the row).
+      let mut groups: Vec<Group> = Vec::new();
+      // (by group, whether its lines' symbol marks kept it from the names before it: lines under the whole row, each
+      // placed by its marks across the block, [`apart_line_calls`])
+      let mut apart: Vec<bool> = Vec::new();
+      // (and whether it opens a row of names — the block's first group, one after an `\and`, a names line under lines —
+      // or goes on with the names before it on their printed line, joined by space or kept apart by its lines' marks: the
+      // names an unmarked line under a marked row, and the symbol carriers of its marked lines, are the row's, the r6
+      // re-review's x6)
+      let mut row_starts: Vec<bool> = Vec::new();
+      let next_spaced: Vec<bool> = blocks
+        .iter()
+        .skip(1)
+        .map(|(spaced, _)| *spaced)
+        .chain(std::iter::once(false))
+        .collect();
+      // (whether the last group's names may join the block after it: not a piece of a space-parted address row)
+      let mut joinable = false;
+      for ((spaced, mut pairs), next_spaced) in blocks.into_iter().zip(next_spaced) {
+        let after_lines = groups.last().is_some_and(|(_, affils)| !affils.is_empty());
+        let by_position = next_spaced && pairs.last().is_some_and(|(_, affils)| !affils.is_empty());
+        let marked_lines = |earlier: &[Tokens], first: &Group| {
+          let line_marks: Vec<String> = first.1.iter().flat_map(symbol_marks).collect();
+          !line_marks.is_empty()
+            && earlier
+              .iter()
+              .chain(&first.0)
+              .flat_map(symbol_marks)
+              .any(|mark| line_marks.contains(&mark))
+        };
+        let mut kept_apart = false;
+        let mut opens_row = !spaced;
+        if spaced
+          && joinable
+          && !by_position
+          && let Some((earlier, _)) = groups.last()
+          && let Some(first) = pairs.first()
+        {
+          kept_apart = marked_lines(earlier, first);
+          if !kept_apart
+            && let Some((mut names, _)) = groups.pop()
+            && let Some((first_names, _)) = pairs.first_mut()
+          {
+            apart.pop();
+            opens_row = row_starts.pop().unwrap_or(true);
+            names.append(first_names);
+            *first_names = names;
+          }
+        }
+        joinable =
+          !(spaced && after_lines) && pairs.last().is_some_and(|(_, affils)| affils.is_empty());
+        apart.extend((0..pairs.len()).map(|at| at == 0 && kept_apart));
+        row_starts.extend((0..pairs.len()).map(|at| at > 0 || opens_row));
+        groups.extend(pairs);
       }
       // Every group's names are known before any line is placed, so a line of more addresses than its group has names
       // gives each to the name it spells in any group of the block (`\author{Rose Bohrer \and Ashe Neth\\ … \\
@@ -2190,11 +2573,23 @@ LoadDefinitions!({
           Ok((names, affils))
         })
         .collect::<Result<Vec<_>>>()?;
-      let name_keys: Vec<Vec<String>> = groups
+      let name_keys: Vec<NameKeys> = groups
         .iter()
-        .flat_map(|(names, _)| names.iter().map(|(name, _)| surname_keys(name)))
+        .flat_map(|(names, _)| names.iter().map(|(name, _)| NameKeys::of(name)))
+        .collect();
+      // (the footnote symbols each name carries, for the lines they label, [`apart_line_calls`])
+      let name_symbols: Vec<Vec<String>> = groups
+        .iter()
+        .flat_map(|(names, _)| names.iter().map(|(name, _)| symbol_labels(name)))
         .collect();
       let mut bodies: Vec<Vec<Token>> = Vec::with_capacity(name_keys.len());
+      // (the calls after each name's: an address of a name before its group's last, given to it by a label of its own
+      // once the group's lines, which its last name's body gives to all of them, are placed — the contacts in the order
+      // the lines print, `Ann Able, Bob Baker \\ Univ A \\ Correspondence: \href{mailto:bbaker@…}{…}`: Univ A, then the
+      // address; the r5 re-review's u14)
+      let mut after_bodies: Vec<Vec<Token>> = Vec::with_capacity(name_keys.len());
+      // (the labels of the names a contact is placed on after the names are made, [`placed_label`])
+      let mut placed: Vec<Option<String>> = Vec::new();
       let mut spans = Vec::with_capacity(groups.len());
       for (names, affils) in groups {
         let first = bodies.len();
@@ -2204,54 +2599,283 @@ LoadDefinitions!({
             body.extend(Invocation!(T_CS!("\\lx@add@email"), vec![None, Some(email)]).unlist());
           }
           bodies.push(body);
+          after_bodies.push(Vec::new());
         }
         spans.push((first, bodies.len() - 1, affils));
       }
-      for (first, last, affils) in spans {
-        // The name an address of a line of `count` addresses spells, else the group's last.
-        let owner_of = |address: &Tokens, count: usize| {
-          let owner = if count > last - first + 1 && name_keys.len() > 1 {
-            address_owner(&name_keys, address)
+      // (the names an address on any e-mail line of the block spells, whom elimination gives no other address)
+      let mut block_addresses: Vec<String> = Vec::new();
+      // (and, by group and line, how many of a line's addresses no name spells and no rule has placed yet: while another
+      // line holds one, no name goes by elimination, [`owners_by_elimination`] — another line of the group, for the
+      // group's names; any line of the block, for all of them)
+      let mut unplaced: Vec<(usize, usize)> = Vec::new();
+      for (group, (_, _, affils)) in spans.iter().enumerate() {
+        for line in affils {
+          let texts = line_address_texts(line)?;
+          unplaced.push((group, unspelled_addresses(&name_keys, &texts)));
+          block_addresses.extend(texts);
+        }
+      }
+      // (and those an earlier line's address went to by elimination: 2407.00382's `jw2423@…` and `ljcc0930@…` on lines of
+      // their own are not both Joseph G. Wallwork's)
+      let mut taken = names_spelled(&name_keys, &block_addresses);
+      let mut line_at = 0;
+      // (the first name of each group's row, [`row_starts`])
+      let mut row_firsts: Vec<usize> = Vec::with_capacity(spans.len());
+      for (group, (first, ..)) in spans.iter().enumerate() {
+        let opens = group == 0 || row_starts.get(group).copied().unwrap_or(true);
+        row_firsts.push(if opens { *first } else { row_firsts[group - 1] });
+      }
+      for (group, (first, last, affils)) in spans.into_iter().enumerate() {
+        let kept_apart = apart.get(group).copied().unwrap_or(false);
+        // (the names a line under a group kept apart from the names before it prints under: its whole row — an
+        // unmarked line under a row whose only symbol line is a legend, every name's, user ruling R12 2026-10-20,
+        // 2609.24299, 2603.06578; else the group's)
+        let shared_first = if kept_apart { row_firsts[group] } else { first };
+        // The names a line's addresses spell, or by elimination where the order confirms it ([`owners_by_elimination`]:
+        // 1503.08895's `\{aszlam,jase,robfergus\}@fb.com`); an address under one name alone, printed in its column,
+        // that name's; any other the block's, `None` (user ruling R10 2026-10-20: an address no name spells is never
+        // the last name's).
+        let owners_of = |addresses: &[&Tokens],
+                         taken: &mut Vec<bool>,
+                         unplaced: &mut Vec<(usize, usize)>,
+                         line_at: usize|
+         -> Vec<Option<usize>> {
+          let texts: Vec<String> = addresses
+            .iter()
+            .map(|address| address_text(address))
+            .collect();
+          let whole_block = addresses.len() > last - first + 1 && name_keys.len() > 1;
+          let elsewhere_open = unplaced
+            .iter()
+            .enumerate()
+            .any(|(at, (of, count))| at != line_at && (whole_block || *of == group) && *count > 0);
+          let owners: Vec<Option<usize>> = if whole_block {
+            owners_by_elimination(&name_keys, &texts, taken, elsewhere_open)
           } else if last > first {
-            address_owner(&name_keys[first..=last], address).map(|at| first + at)
+            owners_by_elimination(
+              &name_keys[first..=last],
+              &texts,
+              &taken[first..=last],
+              elsewhere_open,
+            )
+            .into_iter()
+            .map(|owner| owner.map(|at| first + at))
+            .collect()
           } else {
-            None
+            vec![None; texts.len()]
           };
-          owner.unwrap_or(last)
+          for owner in owners.iter().flatten() {
+            taken[*owner] = true;
+          }
+          if let Some((_, count)) = unplaced.get_mut(line_at) {
+            *count = owners
+              .iter()
+              .zip(&texts)
+              .filter(|(owner, address)| owner.is_none() && !is_role_mailbox(address))
+              .count();
+          }
+          let alone = last == first && !kept_apart && !whole_block;
+          owners
+            .into_iter()
+            .map(|owner| owner.or(alone.then_some(last)))
+            .collect()
         };
+        // (a group kept from the names before it whose lines' symbols label institutions: placed by them, a line at a
+        // time, [`apart_line_calls`]; the symbols of the names of its row alone, an `\and` column's carriers no part of
+        // it, the r6 re-review's x6, w28)
+        let row = shared_first..=last;
+        let row_symbols: Vec<Vec<String>> = name_symbols
+          .iter()
+          .enumerate()
+          .map(|(at, symbols)| {
+            if row.contains(&at) {
+              symbols.clone()
+            } else {
+              Vec::new()
+            }
+          })
+          .collect();
+        // (and a group of names whose own symbols label its lines, `Ann Able$^\star$, and Bob Baker$^\sharp$ \\
+        // $^\star$School … \\ $^\sharp$Department …`, 2602.16540: each line to the names carrying its symbol, not to
+        // every name of the group; the r7 re-review's finding 1)
+        let by_symbols = replace
+          && (kept_apart || last > first)
+          && affils.iter().any(|line| {
+            symbol_led_segments(line)
+              .iter()
+              .any(|segment| labelled_institution(segment, &row_symbols).is_some())
+          })
+          && !bodies
+            .iter()
+            .map(|body| makes_its_creator(body))
+            .collect::<Result<Vec<_>>>()?
+            .contains(&true);
+        let mut continuing: Vec<usize> = Vec::new();
+        // (whether a line the group's names share, digested under its last name, came before: an address of an earlier
+        // name after it is placed after it, by a label of its own, as the lines print — `Ann Able, Bob Baker \\ Univ A
+        // \\ \{aable,bbaker\}@x.edu`; one before it, as an address row right under the names, stays in its name's
+        // content, before it — 2602.05084's `\texttt{zuo.167@osu.edu} ~~~ \texttt{khalili.17@osu.edu}` over the
+        // department)
+        let mut shared_before = false;
+        // (the block's, on its shared creator: an address no name spells, user ruling R10 2026-10-20)
+        let block = s!("label=addresses:block");
         for line in &affils {
+          let this_line = line_at;
+          line_at += 1;
           let (line, annotations) = if cautious {
             take_author_annotations(line)
           } else {
             (line.clone(), Vec::new())
           };
-          if let Some((label, addresses)) = labelled_emails(&line)? {
+          // (a line under a whole row of names, its marks those of names before its group: placed by them across the
+          // block, [`apart_line_calls`]; 2601.02680)
+          // (…but in a group of names not kept apart, whose own marks label its lines, an e-mail line goes by the
+          // group's names as in any group, by spelling and the order that confirms it: 2603.07345's `\{mabansal, milind,
+          // bgh, …\}@uber.com` under its comma-parted names, 77p r11)
+          let group_email_line = by_symbols
+            && !kept_apart
+            && (line_labelled_emails(&line)?.is_some() || bare_email_addresses(&line)?.is_some());
+          if group_email_line {
+            continuing.clear();
+          }
+          if by_symbols && !group_email_line {
+            shared_before = true;
+            after_bodies[last].extend(apart_line_calls(
+              &line,
+              &name_keys,
+              &row_symbols,
+              row.clone(),
+              &mut placed,
+              &mut bodies,
+              &mut continuing,
+            )?);
+            if let Some((_, count)) = unplaced.get_mut(this_line) {
+              *count = 0;
+            }
+            bodies[last].extend(annotations);
+            continue;
+          }
+          if let Some((label, addresses)) = line_labelled_emails(&line)? {
             // A shared email line under several names gives each address to the one name it spells (0911.0568's
             // five PoS authors over one `E-mail:` line, 0911.0082's addresses in another order than the names,
-            // 63k); an address naming no one, or several, stays with the line's last name.
-            let count = addresses.len();
-            for address in addresses {
-              let owner = owner_of(&address.address, count);
-              bodies[owner].extend(email_calls(label.as_ref(), vec![address])?);
+            // 63k); an address naming no one, or several, is the block's (user ruling R10 2026-10-20).
+            let owners = owners_of(
+              &addresses
+                .iter()
+                .map(|address| &address.address)
+                .collect::<Vec<_>>(),
+              &mut taken,
+              &mut unplaced,
+              this_line,
+            );
+            for (address, owner) in addresses.into_iter().zip(owners) {
+              match owner {
+                None => after_bodies[last].extend(email_calls(
+                  label.as_ref(),
+                  vec![address],
+                  Some(&block),
+                )?),
+                Some(owner)
+                  if shared_before
+                    && (shared_first..last + usize::from(kept_apart || by_symbols))
+                      .contains(&owner)
+                    && !makes_its_creator(&bodies[owner])? =>
+                {
+                  let (placement, call) = placed_label(&mut placed, owner)?;
+                  bodies[owner].extend(call.unwrap_or_default());
+                  after_bodies[last].extend(email_calls(
+                    label.as_ref(),
+                    vec![address],
+                    Some(&s!("label={placement}")),
+                  )?);
+                },
+                Some(owner) => {
+                  bodies[owner].extend(email_calls(label.as_ref(), vec![address], None)?)
+                },
+              }
             }
           } else if let Some(addresses) = bare_email_addresses(&line)? {
             // A bare email line (\texttt{user@host}; `a@x, b@y`; `{a,b}@dom`) is the names' emails, not an
             // affiliation (OXIDIZED_DESIGN #52; witness arXiv:2606.00315): each address to the name it spells, as a
-            // labelled line's are, else the last (2401.15897, 2402.02746, 63m).
-            let count = addresses.len();
-            for address in addresses {
-              let owner = owner_of(&address, count);
-              bodies[owner]
-                .extend(Invocation!(T_CS!("\\lx@add@email"), vec![None, Some(address)]).unlist());
+            // labelled line's are (2401.15897, 2402.02746, 63m), else the block's (user ruling R10 2026-10-20).
+            let owners = owners_of(
+              &addresses.iter().collect::<Vec<_>>(),
+              &mut taken,
+              &mut unplaced,
+              this_line,
+            );
+            for (address, owner) in addresses.into_iter().zip(owners) {
+              match owner {
+                None => after_bodies[last].extend(email_calls(
+                  None,
+                  vec![EmailAddress { address, call: None }],
+                  Some(&block),
+                )?),
+                Some(owner)
+                  if shared_before
+                    && (shared_first..last + usize::from(kept_apart || by_symbols))
+                      .contains(&owner)
+                    && !makes_its_creator(&bodies[owner])? =>
+                {
+                  let (placement, call) = placed_label(&mut placed, owner)?;
+                  bodies[owner].extend(call.unwrap_or_default());
+                  after_bodies[last].extend(email_calls(
+                    None,
+                    vec![EmailAddress { address, call: None }],
+                    Some(&s!("label={placement}")),
+                  )?);
+                },
+                Some(owner) => bodies[owner]
+                  .extend(Invocation!(T_CS!("\\lx@add@email"), vec![None, Some(address)]).unlist()),
+              }
             }
-          } else if spacing_end(line.unlist_ref()) > 0 {
-            // (digested once, under the group's last name, and given to the group's names)
-            let (cs, keyvals) = if line_is_email(&line) {
-              (T_CS!("\\lx@add@email"), None)
+          } else if is_url_line(&line) {
+            // A link line is a URL contact, not an affiliation of the names (user ruling 2026-10-20, batch 77p r7):
+            // its one name's; the whole block's when the names it prints under are the document's whole author list
+            // (a project's page, `Ann Able, Bob Baker \\ Univ A \\ \url{…}`); else its group's names', as the group's
+            // other lines are — its row's, under a group kept apart from the names before it (R12).
+            let owner = if last == shared_first {
+              LinkOwner::Current
+            } else if replace && shared_first == 0 && last + 1 == name_keys.len() {
+              LinkOwner::Block
             } else {
-              let shared = (last > first).then(|| {
-                mouth::tokenize_internal(TeXString::assembled(s!("annotate={}", last - first + 1)))
+              LinkOwner::Group(last - shared_first + 1)
+            };
+            shared_before |= matches!(owner, LinkOwner::Group(_));
+            bodies[last].extend(url_contact_call(line, owner, true)?);
+          } else if prints_nothing(&line) {
+            // (a line that prints nothing is no entry, `~~~~` between the names and the institution: 2602.23649, the
+            // r7 re-review's finding 6, as [`affiliation_calls`] skips it)
+          } else if kept_apart && !line_is_email(&line) && spacing_end(line.unlist_ref()) > 0 {
+            // (under a row whose only symbol line is a legend: an institution every name's of the row, a legend its
+            // symbol's carriers', any other line the block's, as under a row whose symbols label its institutions —
+            // [`row_line_calls`]; user ruling R12 2026-10-20, 2609.24299, 2603.06578, the r6 re-review's finding 7)
+            after_bodies[last].extend(row_line_calls(
+              &line,
+              &row_symbols,
+              row.clone(),
+              &mut placed,
+              &mut bodies,
+              &[],
+              &mut continuing,
+            )?);
+            shared_before = true;
+          } else if spacing_end(line.unlist_ref()) > 0 {
+            // (digested once, under the group's last name, and given to the group's names; an address line no list
+            // reads, the block's, R10)
+            let (cs, keyvals) = if line_is_email(&line) {
+              let shared = (last > shared_first)
+                .then(|| mouth::tokenize_internal(TeXString::assembled(block.clone())));
+              (T_CS!("\\lx@add@email"), shared)
+            } else {
+              let shared = (last > shared_first).then(|| {
+                mouth::tokenize_internal(TeXString::assembled(s!(
+                  "annotate={}",
+                  last - shared_first + 1
+                )))
               });
+              shared_before |= shared.is_some();
               (T_CS!("\\lx@add@affiliation"), shared)
             };
             bodies[last].extend(Invocation!(cs, vec![keyvals, Some(line)]).unlist());
@@ -2259,7 +2883,7 @@ LoadDefinitions!({
           bodies[last].extend(annotations);
         }
       }
-      for body in bodies {
+      for (body, after) in bodies.into_iter().zip(after_bodies) {
         calls.extend(
           Invocation!(T_CS!("\\lx@add@author"), vec![
             keyvals.clone(),
@@ -2267,6 +2891,15 @@ LoadDefinitions!({
           ])
           .unlist(),
         );
+        calls.extend(after);
+      }
+      for link in block_links {
+        let owner = if replace {
+          LinkOwner::Block
+        } else {
+          LinkOwner::Current
+        };
+        calls.extend(url_contact_call(link, owner, true)?);
       }
     }
     Ok(Tokens::new(calls))
@@ -2477,6 +3110,20 @@ LoadDefinitions!({
   // used. Only on a creator: in an affiliation the label is its own (`\lx@affiliation@withsup`).
   DefPrimitive!("\\lx@frontmatter@symbolmark{}", sub[(sym)] {
     let label = clean_frontmatter_labels(&sym.to_string(), "affiliation").join(",");
+    with_pending_entry_attr(move |attr| {
+      if attr.get("role").map(String::as_str) != Some("pending") && !label.is_empty() {
+        let labels = attr.get("_annotations").cloned().unwrap_or_default();
+        let newval = if labels.is_empty() { label.clone() } else { s!("{labels},{label}") };
+        attr.insert("_annotations".to_string(), newval);
+      }
+    });
+  });
+
+  // Rust-only: a label of the creator being made (inside its `\lx@add@author`), for a contact of the author block
+  // placed on it after the names are made, in the order its lines print ([`placed_label`]; batch 77p r9). Only on a
+  // creator, as `\lx@frontmatter@symbolmark`.
+  DefPrimitive!("\\lx@author@placed@label{}", sub[(label)] {
+    let label = label.to_string();
     with_pending_entry_attr(move |attr| {
       if attr.get("role").map(String::as_str) != Some("pending") && !label.is_empty() {
         let labels = attr.get("_annotations").cloned().unwrap_or_default();
@@ -3077,8 +3724,8 @@ pub fn affiliation_calls(
 ) -> Result<Vec<Token>> {
   let mut calls: Vec<Token> = Vec::new();
   // Consume `\\[len]` row-break optionals before splitting (KNOWN_PERL_ERRORS #75).
-  let stuff = rewrite_ordinal_superscripts(strip_linebreak_options(stuff));
-  let with_sup = marks_are_labels && position_of(&stuff, &authorsup_markers()).is_some();
+  let stuff = rewrite_ordinal_superscripts(strip_linebreak_options(unalias_mark_commands(stuff)));
+  let with_sup = marks_are_labels && author_mark_position(&stuff).is_some();
   // In a marked list, the affiliations it names, each a mark-led line (or a piece of one) with the unmarked lines
   // that follow it.
   let mut marked_entries: Vec<Vec<Token>> = Vec::new();
@@ -3090,8 +3737,9 @@ pub fn affiliation_calls(
   for (delimiter, line) in split_tokens_delimited(stuff, affil_splits()) {
     // Skip empty segments (e.g. a trailing \\ or a line that was wholly
     // consumed by an \email/\url) so they don't become blank affiliations.
-    // Mirrors \lx@add@authors.
-    if line.is_empty() {
+    // Mirrors \lx@add@authors. So is a line that prints nothing ([`prints_nothing`]: IEEEtran's
+    // `\end{@IEEEauthorhalign}\hfill\strut`, 2309.15562, an empty affiliation of the last author).
+    if line.is_empty() || prints_nothing(&line) {
       continue;
     }
     if with_sup {
@@ -3100,10 +3748,7 @@ pub fn affiliation_calls(
           .iter()
           .any(|d| matches!(d, SplitDelim::Token(a) if a == t))
       });
-      if authors_queued
-        && position_of(&line, &authorsup_markers()).is_none()
-        && line_is_email_list(&line)
-      {
+      if authors_queued && author_mark_position(&line).is_none() && line_is_email_list(&line) {
         // (`\and` separates entries, and runs: `Univ A \\ a@x \and b@y` is two)
         if !in_run || across_and {
           let under = (follows_entry && !across_and).then(|| {
@@ -3127,7 +3772,7 @@ pub fn affiliation_calls(
       // separates entries there too (DIVERGENCES #52(g)), nor a footnote-symbol legend (`* Equal contribution`,
       // `$\dagger$ Corresponding author`), which belongs to the whole block (llncs `\institute`, 2609.06094).
       if authors_queued
-        && position_of(&line, &authorsup_markers()).is_none()
+        && author_mark_position(&line).is_none()
         && !across_and
         && !starts_with_footnote_symbol(&line)
         && let Some(last) = marked_entries.last_mut()
@@ -3193,7 +3838,7 @@ pub fn affiliation_calls(
 /// without its label had no one to go to).
 fn affiliation_is_marked(stuff: &Tokens) -> bool {
   (queued_creators_have_marks() || queued_creator_count() == 0)
-    && position_of(stuff, &authorsup_markers()).is_some()
+    && author_mark_position(stuff).is_some()
 }
 
 /// The calls for an unmarked address shared by the authors before it (`\lx@add@affiliation@shared`): each of its
@@ -3400,16 +4045,16 @@ fn queued_name(entry: &Tokens) -> Tokens {
   entry.clone()
 }
 
-/// The surname keys ([`surname_keys`]) of each queued author's name ([`queued_name`]), in queue order (the n-th digests
+/// The keys ([`NameKeys`]) of each queued author's name ([`queued_name`]), in queue order (the n-th digests
 /// with `author:n`).
-fn queued_author_surname_keys() -> Vec<Vec<String>> {
+fn queued_author_name_keys() -> Vec<NameKeys> {
   with_value("frontmatter_raw", |v| match v {
     Some(Stored::FrontmatterRaw(queue)) => queue
       .iter()
       .filter(|entry| {
         entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
       })
-      .map(|entry| surname_keys(&queued_name(&entry.2)))
+      .map(|entry| NameKeys::of(&queued_name(&entry.2)))
       .collect(),
     _ => Vec::new(),
   })
@@ -3440,7 +4085,7 @@ enum ContactOwner {
 /// a mark on a nearby note being weaker evidence than one on the address.
 fn placed_contact_owner(mark: &Tokens, content: &Tokens) -> ContactOwner {
   let authors = queued_author_marks();
-  let keys = queued_author_surname_keys();
+  let keys = queued_author_name_keys();
   let requesting = if mark.is_empty() {
     Vec::new()
   } else {
@@ -3532,12 +4177,14 @@ fn frontmatter_group_first() -> usize {
 
 /// Where the addresses of a line in an author block go.
 enum AddressPlacement {
-  /// The whole line is one contact, attached as an unlabelled email is.
-  OneContact,
   /// The n-th address to the n-th author, counted over the emails so far (`labelseq=author`).
   Sequence,
   /// Each address to the author at that queue position, by the `author:N` label the creator digests with.
   Authors(Vec<usize>),
+  /// Each address a name settles to the author at that queue position, as [`AddressPlacement::Authors`]; each other
+  /// the block's, as [`AddressPlacement::Shared`] places it (2609.15028's `qq@…`-like address no name spells beside
+  /// `zihanxue@…`, `serhii@…`; user ruling R10 2026-10-20). The line itself when no address is settled.
+  Settled(Vec<Option<usize>>),
   /// The block's, on the shared creator below the authors (#159): its label names no creator. One contact an address
   /// when the line lists several (1802.07182's `\{jrr41,$\,$wct23,…\}@cam.ac.uk`, whose raw line a Semiverbatim
   /// contact showed as `{jrr41,$ $wct23,…}`), else the line.
@@ -3558,6 +4205,33 @@ fn email_line_calls(line: Tokens, placement: AddressPlacement) -> Result<Vec<Tok
     _ => Ok(line),
   };
   let addrs = email_addresses(&line).unwrap_or_default();
+  let placement = match placement {
+    AddressPlacement::Settled(owners) if !addrs.is_empty() && owners.len() == addrs.len() => {
+      if owners.iter().all(Option::is_none) {
+        AddressPlacement::Shared
+      } else if owners.iter().all(Option::is_some) {
+        AddressPlacement::Authors(owners.into_iter().flatten().collect())
+      } else {
+        // (the settled ones to their authors, each other the block's, in the line's order)
+        for (address, owner) in address_tokens(&line, addrs)?.into_iter().zip(owners) {
+          let placement = match owner {
+            Some(n) => s!("label=author:{n}"),
+            None => s!("label=addresses:block"),
+          };
+          calls.extend(
+            Invocation!(T_CS!("\\lx@add@email"), vec![
+              Some(mouth::tokenize_internal(TeXString::assembled(placement))),
+              Some(address)
+            ])
+            .unlist(),
+          );
+        }
+        return Ok(calls);
+      }
+    },
+    AddressPlacement::Settled(_) => AddressPlacement::Shared,
+    placement => placement,
+  };
   let options: Vec<Option<Tokens>> = match placement {
     AddressPlacement::Sequence if !addrs.is_empty() => addrs
       .iter()
@@ -3641,6 +4315,19 @@ fn address_tokens(line: &Tokens, addrs: Vec<String>) -> Result<Vec<Tokens>> {
   let wrapper = line_wrapper.filter(|cmd| !is_email_wrapper(cmd));
   // (an email command's address set as the command sets it, [`email_command_address`])
   let email_command = line_wrapper.filter(is_email_wrapper);
+  // (the line's links to a mailbox, by the address they reach: each address keeps its link, `\texttt{\{}\href{mailto:
+  // Xinhao.Zhang@…}{…xinhao.zhang,} \href{mailto:maxime.peyrard@…}{…}\texttt{\}@…}`, 2604.19440)
+  let v = line.unlist_ref();
+  let links: Vec<(String, Vec<Token>)> = (0..v.len())
+    .filter(|at| v[*at] == T_CS!("\\href"))
+    .filter_map(|at| {
+      let open = at + 1 + v[at + 1..].iter().take_while(|t| **t == T_SPACE!()).count();
+      let target = v[open..skip_group(v, open).clamp(open, v.len())].to_vec();
+      let (text, _) = link_texts(&v[at..], 0);
+      let address = text.strip_prefix("mailto:")?.trim().to_lowercase();
+      Some((address, target))
+    })
+    .collect();
   addrs
     .into_iter()
     .map(|addr| {
@@ -3650,6 +4337,18 @@ fn address_tokens(line: &Tokens, addrs: Vec<String>) -> Result<Vec<Tokens>> {
         wrapped.append(&mut toks);
         wrapped.push(T_END!());
         toks = wrapped;
+      }
+      if email_command.is_none()
+        && let Some((_, target)) = links
+          .iter()
+          .find(|(address, _)| *address == addr.to_lowercase())
+      {
+        let mut linked = vec![T_CS!("\\href")];
+        linked.extend(target.iter().copied());
+        linked.push(T_BEGIN!());
+        linked.append(&mut toks);
+        linked.push(T_END!());
+        toks = linked;
       }
       match email_command {
         Some(cmd) => email_command_address(&cmd, Tokens::new(toks)),
@@ -3990,26 +4689,18 @@ fn closes_only_its_own_groups(tokens: &[Token]) -> bool {
 }
 
 /// The marks that request an affiliation label in an author (`\lx@author@withsup`, llncs `\inst`) and set it in an
-/// affiliation (`\lx@affiliation@withsup`, `\lx@affiliation@withinst`).
-fn affiliation_mark_tokens() -> [Token; 6] {
-  let [textsuperscript, ieee, refmark] = mark_commands();
-  [
-    T_SUPER!(),
-    textsuperscript,
-    ieee,
-    refmark,
-    T_CS!("\\inst"),
-    T_CS!("\\lx@frontmatter@symbolmark"),
-  ]
+/// affiliation (`\lx@affiliation@withsup`, `\lx@affiliation@withinst`): the author marks ([`is_author_mark`]), llncs's
+/// `\inst` and the symbol mark.
+fn is_affiliation_mark(t: &Token) -> bool {
+  is_author_mark(t) || *t == T_CS!("\\inst") || *t == T_CS!("\\lx@frontmatter@symbolmark")
 }
 
 /// The operand of each mark in `tokens`, in order, read as `read_frontmatter_sup_operand` reads it.
 fn mark_operands(tokens: &[Token]) -> Vec<Vec<Token>> {
-  let marks = affiliation_mark_tokens();
   let mut operands = Vec::new();
   let mut i = 0;
   while i < tokens.len() {
-    if marks.contains(&tokens[i])
+    if is_affiliation_mark(&tokens[i])
       && let Some((operand, next)) = sup_operand_at(tokens, i + 1)
     {
       operands.push(operand);
@@ -4151,7 +4842,7 @@ fn queued_author_marks() -> Vec<Vec<Vec<Token>>> {
 /// Whether the addresses of `lines` may be the queued authors' in order from the one at `offset`
 /// ([`addresses_in_order`]).
 fn run_in_author_order(lines: &[(Vec<Token>, Tokens)], offset: usize) -> bool {
-  let keys = queued_author_surname_keys();
+  let keys = queued_author_name_keys();
   let addresses: Vec<String> = lines
     .iter()
     .flat_map(|(_, line)| email_addresses(line).unwrap_or_default())
@@ -4159,15 +4850,71 @@ fn run_in_author_order(lines: &[(Vec<Token>, Tokens)], offset: usize) -> bool {
   addresses_in_order(&keys, &addresses, offset)
 }
 
-/// Whether `addresses` may be the authors' in order from the one at `offset` (names keyed by `keys`, [`surname_keys`]):
+/// Whether `addresses` may be the authors' in order from the one at `offset` (names keyed by `keys`, [`NameKeys`]):
 /// none spells the name of an author other than the one at its place. 2509.10377's
 /// `{12421181,ziyuzhao.cs,wu\_zhiliang,yangyics,…}@zju.edu.cn` lists one address for each author, by institution —
 /// "yangyics" at Zhiliang Wu's place spells Yi Yang (2406.06326: "jyzhou" at Baolin Peng's, 63m).
-fn addresses_in_order(keys: &[Vec<String>], addresses: &[String], offset: usize) -> bool {
+fn addresses_in_order(keys: &[NameKeys], addresses: &[String], offset: usize) -> bool {
   addresses
     .iter()
     .enumerate()
     .all(|(at, address)| spelled_owner(keys, address).is_none_or(|owner| owner == offset + at))
+}
+
+/// `tokens` without the marks that print nothing: a mark command's empty argument (`\textsuperscript{}`, [`mark_commands`])
+/// and an empty math superscript (`$^{}$`), spaces and `\relax` aside, when the block holds no other mark. An empty mark is no mark
+/// (user ruling R11 2026-10-20): it makes no block a marked one (2604.19440's `\textsuperscript{}Univ. Grenoble Alpes,
+/// …` under four unmarked names, which pdflatex prints with no mark, an affiliation of all four). In a block other marks
+/// make a marked one it stays, as before: it labels nothing there, and each name it ends is an author's piece of its
+/// own (2604.22129's `Robert Maier\textsuperscript{}~~~Aljaz Bozic\textsuperscript{}` beside `David
+/// Recasens\textsuperscript{\rm 1}`, which a marked block's marker-less pieces would weld into one creator).
+fn drop_empty_marks(tokens: Tokens) -> Tokens {
+  let original = tokens.clone();
+  let v = tokens.unlist();
+  // (a `\relax` in it prints nothing either: `Ann Able\textsuperscript{\relax}, Bob Baker`, the r7 re-review's n10)
+  let blank = |range: &[Token]| {
+    range.iter().all(|t| {
+      matches!(
+        t.get_catcode(),
+        Catcode::BEGIN | Catcode::END | Catcode::SPACE
+      ) || *t == T_CS!("\\relax")
+    })
+  };
+  let mut out = Vec::with_capacity(v.len());
+  let mut i = 0;
+  while i < v.len() {
+    let (operand, after) = if mark_commands().contains(&v[i]) {
+      let open = i + 1 + v[i + 1..].iter().take_while(|t| **t == T_SPACE!()).count();
+      (open, 0)
+    } else if v[i].get_catcode() == Catcode::MATH && v.get(i + 1) == Some(&T_SUPER!()) {
+      (i + 2, 1)
+    } else {
+      out.push(v[i]);
+      i += 1;
+      continue;
+    };
+    let close = skip_group(&v, operand);
+    if v
+      .get(operand)
+      .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+      && blank(&v[operand..close.min(v.len())])
+      && (after == 0
+        || v
+          .get(close)
+          .is_some_and(|t| t.get_catcode() == Catcode::MATH))
+    {
+      i = close + after;
+    } else {
+      out.push(v[i]);
+      i += 1;
+    }
+  }
+  let out = Tokens::new(out);
+  if has_author_marks(&rewrite_symbol_superscripts(out.clone())) {
+    original
+  } else {
+    out
+  }
 }
 
 /// The operand of a mark at `tokens[i..]`, as `read_frontmatter_sup_operand` reads it from the input — a group's
@@ -4846,9 +5593,9 @@ pub fn queued_authors_carry_entry_mark(affiliation: &Tokens) -> bool {
 /// to be matched against?
 pub fn queued_creators_have_marks() -> bool {
   with_value("frontmatter_raw", |v| match v {
-    Some(Stored::FrontmatterRaw(queue)) => queue.iter().any(|entry| {
-      entry.0 == "ltx:creator" && position_of(&entry.2, &authorsup_markers()).is_some()
-    }),
+    Some(Stored::FrontmatterRaw(queue)) => queue
+      .iter()
+      .any(|entry| entry.0 == "ltx:creator" && author_mark_position(&entry.2).is_some()),
     _ => false,
   })
 }
@@ -5187,21 +5934,66 @@ fn read_frontmatter_sup_operand() -> Result<Tokens> {
   Ok(Tokens::new(vec![first]))
 }
 
-/// A mark's font switch, no part of it: `$^{\bf{1}}$`, 1109.3726; Perl strips `\rm` only,
-/// Base_Utility.pool.ltxml:365 — OXIDIZED_DESIGN #34.
+/// A mark's font switch, no part of it: `$^{\bf{1}}$`, 1109.3726; `\textsuperscript{\normalfont{1},}` inside a bold
+/// name, 2604.24532; Perl strips `\rm` only, Base_Utility.pool.ltxml:365 — OXIDIZED_DESIGN #34.
 static FONT_SWITCH: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
-  Regex::new(r"\\(?:rm|bf|it|mathbf|mathrm|textbf|textrm)([^a-zA-Z]|$)").unwrap()
+  Regex::new(
+    r"\\(?:rm|bf|it|sf|mathbf|mathrm|mathsf|textbf|textrm|textsf|textit|textmd|textup|textnormal|normalfont|upshape|mdseries|bfseries|rmfamily)([^a-zA-Z]|$)",
+  )
+  .unwrap()
 });
 
-/// Perl: cleanFrontmatterLabels($labels, $prefix).
+/// A symbol unit of a mark — a control word or a star — and a mark's operand that is two or more of them alone
+/// (`\spadesuit\heartsuit`; `\dagger*`, `\dagger *`, the r6 re-review's x1, w10, w11), which [`clean_frontmatter_labels`]
+/// reads as a label each when they differ (`**`, a doubled star, stays one).
+static SYMBOL_COMMAND: std::sync::LazyLock<Regex> =
+  std::sync::LazyLock::new(|| Regex::new(r"\\[a-zA-Z]+|\*").unwrap());
+static SYMBOL_COMMAND_RUN: std::sync::LazyLock<Regex> =
+  std::sync::LazyLock::new(|| Regex::new(r"^(?:(?:\\[a-zA-Z]+|\*)\s*){2,}$").unwrap());
+
+/// The spacing a mark's operand may carry, which prints no label character and parts the labels it stands between as a
+/// comma does: a tie, the control space, the math kerns `\!`, `\,`, `\:`, `\;`, `\>`, and the named spaces
+/// (`\up{~~1}` is the label 1 and `\up{\!1,2}` the labels 1 and 2, 2209.14855; `$^{1,2\,*}$` the labels 1, 2 and the
+/// symbol, 2403.08629).
+static SPACING_IN_LABEL: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+  Regex::new(r"~|\\[!,:;> ]|\\(?:quad|qquad|enspace|enskip|thinspace|negthinspace)([^a-zA-Z]|$)")
+    .unwrap()
+});
+
+/// Perl: cleanFrontmatterLabels($labels, $prefix). Rust also parts the labels at the spacing ([`SPACING_IN_LABEL`]), on
+/// both sides of the match: the mark an author requests and the one an affiliation sets (OXIDIZED_DESIGN #52(o)).
 fn clean_frontmatter_labels(labels: &str, prefix: &str) -> Vec<String> {
   let labels = FONT_SWITCH.replace_all(labels, "$1");
+  let labels = SPACING_IN_LABEL.replace_all(&labels, ",$1");
   let mut cleaned = Vec::new();
   let mut pieces: Vec<&str> = labels.split(',').collect();
   // Perl split drops trailing empty fields
   while pieces.last().is_some_and(|p| p.is_empty()) {
     pieces.pop();
   }
+  // (a run of distinct symbol commands is a label each, as `$^{1,2}$` is two: `$^{\spadesuit\heartsuit}$` under
+  // `$^\spadesuit$Univ A \\ $^\heartsuit$Univ B`, 1811.10830)
+  let pieces: Vec<&str> = pieces
+    .into_iter()
+    .flat_map(|piece| match SYMBOL_COMMAND_RUN.is_match(piece.trim()) {
+      true => {
+        let symbols: Vec<&str> = SYMBOL_COMMAND
+          .find_iter(piece)
+          .map(|m| m.as_str())
+          .collect();
+        // (the run whole first, then each symbol: a line labelled by the run — `$^{*\dag}$Project lead`, which
+        // `\lx@sup@setlabel@affiliation` labels by its first label — is answered by a name carrying the whole run,
+        // not every name carrying one of its symbols, 2602.19190; a name's run requests each symbol too,
+        // 2606.15609's `$^{*\spadesuit}$`)
+        if symbols.iter().skip(1).any(|symbol| *symbol != symbols[0]) {
+          std::iter::once(piece).chain(symbols).collect()
+        } else {
+          vec![piece]
+        }
+      },
+      false => vec![piece],
+    })
+    .collect();
   for label in pieces {
     let label = label.trim();
     // INTENTIONAL DIVERGENCE (OXIDIZED_DESIGN #34, KNOWN_PERL_ERRORS #31,
@@ -7918,7 +8710,9 @@ fn answered_labels(document: &mut Document) -> HashSet<String> {
   }
   for node in document.findnodes(".//*[@_label][not(self::ltx:creator)]", None) {
     for label in node.get_attribute("_label").unwrap_or_default().split(',') {
-      if label.is_empty() {
+      // (nor does a contact's placement by that label, `label=author:N`: 2403.00801's `jiawei2020@…` placed on the
+      // second author answered every mark "2")
+      if label.is_empty() || label.starts_with("author:") {
         continue;
       }
       answered.insert(label.to_string());
@@ -12004,8 +12798,10 @@ fn split_author_names(line: Tokens) -> Vec<(Vec<Token>, Tokens)> {
     pieces
   };
   // a names line opening with "and" opens with the separator before its first name (mnras's `Bob Baker$^{2}$
-  // \newauthor and Cat Cole$^{1}$`, 2401.11878)
+  // \newauthor and Cat Cole$^{1}$`, 2401.11878); a byline's "By" before the names is none of them
+  // (`By~~{\scshape Vitaly~Bergelson}~~and~~{\scshape Florian~K.~Richter}`, 2603.25922, 2604.12864)
   let line = without_leading_and(&line).unwrap_or(line);
+  let line = without_leading_by(&line).unwrap_or(line);
   let line = marks_before_glued_commas(spaced_name_separators(hoist_wrapped_separators(line)));
   let top = split(line.clone());
   // a piece that is one wrapper holding names, its marks or notes after it (`\textbf{Cat Cole$^1$, Dan Dorn$^2$}\thanks{…}`,
@@ -12424,10 +13220,7 @@ fn names_in_wrapper(delimiter: &[Token], piece: &Tokens) -> Vec<(Vec<Token>, Tok
     return unchanged();
   }
   let (open, close) = if v[start].get_catcode() == Catcode::CS {
-    if is_footnote_mark(&v[start])
-      || is_name_annotation(&v[start])
-      || authorsup_markers().contains(&v[start])
-    {
+    if is_footnote_mark(&v[start]) || is_name_annotation(&v[start]) || is_author_mark(&v[start]) {
       return unchanged();
     }
     let (mut i, mut last) = (start + 1, None);
@@ -12736,7 +13529,7 @@ fn hoist_wrapped_separators(line: Tokens) -> Tokens {
         .is_some_and(|n| n.get_catcode() == Catcode::BEGIN)
       && !is_footnote_mark(&t)
       && !is_name_annotation(&t)
-      && !authorsup_markers().contains(&t);
+      && !is_author_mark(&t);
     let open = if command {
       i + 1
     } else if t.get_catcode() == Catcode::BEGIN {
@@ -13773,11 +14566,53 @@ fn mark_commands() -> [Token; 3] {
   ]
 }
 
-/// The marks an author line links its names and affiliations by: a superscript, and the mark commands.
-fn authorsup_markers() -> Vec<Token> {
-  let mut markers = vec![T_SUPER!()];
-  markers.extend(mark_commands());
-  markers
+/// The mark command `t` means, by TeX's `\ifx` (`Token::defined_as`, which follows `\let`): one of [`mark_commands`]
+/// itself, or an alias a document made of it (`\let\up\textsuperscript`, 2209.14855's macros/custom.tex:23, `Ann
+/// Able\up{1}`). The one test every reader of an author block's marks makes: a literal comparison took the alias for
+/// name text, so the block read as unmarked and its `\up{2}Univ B` line became an author (batch 77p, HF14 M2(b)).
+fn mark_command_meant(t: &Token) -> Option<Token> {
+  if !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) {
+    return None;
+  }
+  mark_commands().into_iter().find(|mark| t.defined_as(mark))
+}
+
+/// Is `t` a mark command, or an alias of one ([`mark_command_meant`])?
+fn is_mark_command(t: &Token) -> bool { mark_command_meant(t).is_some() }
+
+/// Is `t` one of the marks an author line links its names and affiliations by: a superscript, or a mark command
+/// ([`is_mark_command`])?
+fn is_author_mark(t: &Token) -> bool { *t == T_SUPER!() || is_mark_command(t) }
+
+/// The 1-based position of the first author mark in `tokens`, as [`position_of`] counts: a superscript, `\textsuperscript`
+/// or an author reference mark (`\IEEEauthorrefmark`, `\authorrefmark`), or a `\let` alias of one
+/// (`is_author_mark`).
+pub fn author_mark_position(tokens: &Tokens) -> Option<usize> {
+  tokens
+    .unlist_ref()
+    .iter()
+    .position(is_author_mark)
+    .map(|i| i + 1)
+}
+
+/// `tokens` with every alias of a mark command written as the command it means ([`mark_command_meant`]), so the
+/// readers of an author or affiliation block that match a command by name (`\textsuperscript`'s symbol and ordinal
+/// rewrites) see the alias as the command.
+fn unalias_mark_commands(tokens: Tokens) -> Tokens {
+  if !tokens.unlist_ref().iter().any(|t| {
+    matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+      && !mark_commands().contains(t)
+      && is_mark_command(t)
+  }) {
+    return tokens;
+  }
+  Tokens::new(
+    tokens
+      .unlist()
+      .into_iter()
+      .map(|t| mark_command_meant(&t).unwrap_or(t))
+      .collect(),
+  )
 }
 
 /// How many distinct marks (by operand) `stuff` shows outside its notes. Two or more make an address a key the names'
@@ -13799,7 +14634,6 @@ pub fn distinct_author_marks(stuff: &Tokens) -> usize {
 /// `\thanks` is the note's own text, not a mark: 0911.0568's `LPT Orsay (CNRS)~\footnote{$^a$Laboratoire …}` line
 /// made its PoS author block a marked list, its affiliation and email line read as a person (63k).
 pub fn has_author_marks(stuff: &Tokens) -> bool {
-  let markers = authorsup_markers();
   let tokens = stuff.unlist_ref();
   let mut i = 0;
   while i < tokens.len() {
@@ -13831,7 +14665,7 @@ pub fn has_author_marks(stuff: &Tokens) -> bool {
           i += 1;
         }
       }
-    } else if markers.contains(t) {
+    } else if is_author_mark(t) {
       return true;
     }
     i += 1;
@@ -13915,7 +14749,7 @@ pub fn author_marks_end_name(stuff: &Tokens, contacts: &[Token]) -> bool {
       sup_operand_at(&tokens, i + 2)
         .filter(|(operand, next)| tokens.get(*next) == Some(&T_MATH!()) && reads_as_labels(operand))
         .map(|(_, next)| next + 1)
-    } else if t == T_SUPER!() || mark_commands().contains(&t) {
+    } else if t == T_SUPER!() || is_mark_command(&t) {
       sup_operand_at(&tokens, i + 1)
         .filter(|(operand, _)| reads_as_labels(operand))
         .map(|(_, next)| next)
@@ -14085,9 +14919,9 @@ fn name_precedes_marker(line: &Tokens, marker_pos: usize) -> bool {
 /// this way fails to catch `\\[1em]`, so really should Let it") but never fixes
 /// it, so both engines garble it identically; consuming it here is a beyond-Perl
 /// improvement (KNOWN_PERL_ERRORS #75, witness arXiv:2605.23553). The `[...]` is
-/// matched only as a balanced OTHER-catcode bracket group immediately following
-/// the `\\`, so ordinary bracketed content elsewhere in a name/affiliation is
-/// untouched.
+/// matched only as a balanced OTHER-catcode bracket group following the `\\` and
+/// the spaces after it, which `\@ifnextchar` skips (`\\ [0.5em]`, 2604.20841), so
+/// ordinary bracketed content elsewhere in a name/affiliation is untouched.
 fn strip_linebreak_options(tokens: Tokens) -> Tokens {
   let src = tokens.unlist();
   let n = src.len();
@@ -14099,11 +14933,23 @@ fn strip_linebreak_options(tokens: Tokens) -> Tokens {
     if src[i] == brk {
       let mut j = i + 1;
       let mut consumed = false;
+      // (the spaces before the optional argument skipped, as `\@ifnextchar` skips them: latex.ltx's `\@xnewline`,
+      // `\@xarraycr`; `\\ [0.5em]`, 2604.20841, the r7 re-review's finding 8. Not before a star: `\\ * Equal
+      // contribution` stays a legend line, though `\@ifstar` skips them too and pdflatex prints no star there —
+      // 2608.23637, a SYNC_STATUS residual)
+      let after_spaces = |from: usize| {
+        from
+          + src[from.min(n)..]
+            .iter()
+            .take_while(|t| **t == T_SPACE!())
+            .count()
+      };
       if j < n && src[j] == T_OTHER!("*") {
         j += 1;
         consumed = true;
       }
-      if j < n && src[j] == T_OTHER!("[") {
+      if after_spaces(j) < n && src[after_spaces(j)] == T_OTHER!("[") {
+        j = after_spaces(j);
         let mut k = j + 1;
         let mut depth = 1usize;
         while k < n && depth > 0 {
@@ -14138,13 +14984,150 @@ fn strip_linebreak_options(tokens: Tokens) -> Tokens {
 /// `\hspace`'s optional `*` and mandatory `{len}` argument are consumed together
 /// so the length cannot leak as literal text. OXIDIZED_DESIGN #52; witness
 /// arXiv:2506.06941 (six authors separated by `\hspace{0.5cm}`).
+///
+/// A run of two or more spacing commands ([`is_spacing_command`]) between two names at the block's top level is such a
+/// separator too (user ruling 2026-10-19, batch 77p): `\textbf{Ann Able}\textsuperscript{1}\;\;\textbf{Bob Baker}`
+/// (2610.20409), `Ann Able$^{1}$ \ \ \ \ Bob Baker` (2310.10873), ACL's `Shanshan Wang$^1$~~~~ Derek F. Wong$^1$`
+/// (2603.20851; `~~`, 2605.30274), 1702.05821, 1508.00093, 2009.12421 (OXIDIZED_DESIGN #52(o)). One spacing command
+/// stays inside a name (`J.~Smith`, `Ann\ Able`, `van~der~Berg`); see [`spacing_run_separator`] for what counts as the
+/// names on either side. A run or `\quad` inside a group parts nothing here: neurips_2024's 2406.09417 (one tie between
+/// spaces) and 2603.20775 (`{\large \bf A \quad B}`), named with the ruling, are that shape.
 fn normalize_hspace_separators(tokens: Tokens) -> Tokens {
+  // (marked as the branch choice reads it, a footnote-symbol mark no mark: `\textbf{Vaibhav Singh}$^{*}$`, 2603.09835)
+  let marked_block = has_author_marks(&rewrite_symbol_superscripts(tokens.clone()));
   let src = tokens.unlist();
   let n = src.len();
   let mut out: Vec<Token> = Vec::with_capacity(n);
+  // (the group depth and math mode at `src[i]`: a run is a separator only at the top level, outside math; whether a
+  // name letter — outside math, outside a mark command's argument, at the top level or inside a group that shows its
+  // letters as name text ([`shows_name_text`]) — came since the last top-level separator, so a run after a
+  // line-leading mark is the mark's space, `$\ast$~~Department of Physics`, hep-ph9708397, and one after an icon is
+  // the icon's, `\raisebox{-0.3ex}{\includegraphics[height=1.1em]{daedalus.jpg}}\;\;Daedalus Research Team`,
+  // 2604.10005; the depth of the mark argument being read)
+  let mut depth = 0usize;
+  let mut in_math = false;
+  let mut named = false;
+  let mut mark_argument: Option<usize> = None;
+  // (for each open group, whether its letters are name text; and the depth of an optional argument being read, whose
+  // letters are not, `\includegraphics[height=0.7em]`)
+  let mut shown: Vec<bool> = Vec::new();
+  let mut closed_shown = true;
+  let mut optional_argument = false;
+  // (whether the line opens with a mark — an affiliation line, `$^1$The University of Hong Kong~~~~~~$^2$Zhejiang Lab`,
+  // 2310.15160 —, where a run before the next mark parts two entries; `None` before its first token)
+  let mut mark_led: Option<bool> = None;
+  // (whether this is a line of names — the block's first, or the first after an `\and`; a line break ends it — and
+  // where in `out` the piece since the last top-level separator starts)
+  let mut names_line = true;
+  let mut piece_start = 0usize;
+  // (in an unmarked block, the line break that began this line, where in `out` it stands, after a line of names: a
+  // run that parts two names on this line makes it a row of names going on with the one before, the break a `\quad`
+  // — `\textbf{Pratham Grover}\\ \textbf{Ramakrishna B.~Bairi}\ \ \textbf{Ritabrata Maiti}`, 2603.09835, where
+  // "Ramakrishna B. Bairi" had read as an address line of Pratham Grover; a marked block reads its rows by their marks)
+  let mut row_break: Option<usize> = None;
+  // (where in `out` the names line starts, and where in `src` the line after it does: a row of names goes on with the
+  // names line only when it lists another number of names than it, or a line that is no row of as many entries
+  // follows it — [`row_of_names`])
+  let mut names_start = 0usize;
+  let mut row_start = 0usize;
   let mut i = 0;
   while i < n {
     let t = src[i];
+    if mark_led.is_none() && t.get_catcode() != Catcode::SPACE && t != T_CS!("\\par") {
+      mark_led = Some(starts_with_mark(after_leading_markup(&src[i..])));
+    }
+    match t.get_catcode() {
+      Catcode::BEGIN => {
+        depth += 1;
+        if mark_argument.is_none() && out.last().is_some_and(is_mark_command) {
+          mark_argument = Some(depth);
+        }
+        let outer = shown.last().copied().unwrap_or(true);
+        shown.push(outer && !optional_argument && shows_name_text(out.last(), closed_shown));
+      },
+      Catcode::END => {
+        if mark_argument == Some(depth) {
+          mark_argument = None;
+        }
+        depth = depth.saturating_sub(1);
+        closed_shown = shown.pop().unwrap_or(true);
+      },
+      Catcode::MATH => in_math = !in_math,
+      Catcode::LETTER
+        if !in_math
+          && mark_argument.is_none()
+          && !optional_argument
+          && shown.last().copied().unwrap_or(true) =>
+      {
+        named = true
+      },
+      Catcode::OTHER
+        if t == T_OTHER!("[") && out.last().is_some_and(|p| p.get_catcode() == Catcode::CS) =>
+      {
+        optional_argument = true
+      },
+      Catcode::OTHER if t == T_OTHER!("]") => optional_argument = false,
+      _ if depth == 0 && is_line_separator(&t) => {
+        (named, mark_led) = (false, None);
+        piece_start = out.len() + 1;
+        if t == T_CS!("\\\\") || t == T_CS!("\\newline") {
+          row_break = (names_line && !marked_block).then_some(out.len());
+          row_start = i + 1;
+          names_line = false;
+        } else if t == T_CS!("\\and") || t == T_CS!("\\And") || t == T_CS!("\\AND") {
+          (names_line, row_break) = (true, None);
+          names_start = out.len() + 1;
+        }
+      },
+      _ => {},
+    }
+    // (a line opens with a mark only in a marked block, a mark being what the branch choice reads as one: in a block
+    // marked only with footnote symbols — no mark there, [`rewrite_symbol_superscripts`] — a symbol-led line is an
+    // affiliation line read as any other line off the names line, `$^{*}$\daplablogo\ Columbia University\ \ \
+    // $^{\dagger}$University at Buffalo` (2609.35807; was a creator "†University at Buffalo", 77p r4 re-review))
+    let entry_mark_led = marked_block && mark_led == Some(true);
+    if depth == 0
+      && !in_math
+      && named
+      && is_spacing_command(&t)
+      && let Some(run) = spacing_run_separator(&src, &out, i, RunContext {
+        mark_led: entry_mark_led,
+        names_line,
+        piece_start,
+      })
+      // (in an unmarked block, off the names line, a run between two names parts them only on a row of names going on
+      // with the names line — the line right after it, [`row_of_names`]: not institutions under the names, `Ann
+      // Able~~~~Bob Baker \\ Carnegie Mellon~~~~Johns Hopkins`, nor names under an affiliation, `Ann Able \\ Univ A
+      // \\ Bob Baker~~~~Cat Cole`, which read as the affiliation lines they stand as, nor on a line a footnote symbol
+      // leads, `$^{*}$Univ A~~~~$^{\dagger}$Univ B` (2609.35807); a marked block reads its lines by their marks)
+      && (names_line
+        || marked_block
+        || row_break
+          .is_some_and(|at| row_of_names(&out[names_start.min(at)..at], &src[row_start..])))
+    {
+      if !names_line
+        && !entry_mark_led
+        && let Some(at) = row_break.take()
+      {
+        out[at] = T_CS!("\\quad");
+        names_line = true;
+      }
+      if run.and_word {
+        out.extend([
+          T_SPACE!(),
+          T_LETTER!("a"),
+          T_LETTER!("n"),
+          T_LETTER!("d"),
+          T_SPACE!(),
+        ]);
+      } else {
+        out.push(T_CS!("\\quad"));
+      }
+      (named, mark_led) = (false, None);
+      piece_start = out.len();
+      i = run.end;
+      continue;
+    }
     if t == T_CS!("\\hspace") {
       let mut j = i + 1;
       // optional `*` (\hspace*)
@@ -14179,6 +15162,572 @@ fn normalize_hspace_separators(tokens: Tokens) -> Tokens {
   Tokens::new(out)
 }
 
+/// Whether the line after a line of names `names` (as rewritten so far, the rows it already goes on with included) —
+/// `rest`, from just after the line break —, which a spacing run parts into names, is a row of more names going on with
+/// them rather than the institutions under them, one under each name (`Ann Able~~~~Bob Baker \\ Carnegie
+/// Mellon~~~~Johns Hopkins`, a column per author; `Ann Able \\ Carnegie Mellon~~~~Johns Hopkins`). The names line holds
+/// two or more names, and the row lists another number of names (2603.09835, 2607.07318, 2603.07624, 2603.16856: rows
+/// of five over three, two over four), or a line follows it that is no row of as many entries — the address under all
+/// the rows (2605.24414's six names over six over three, then `\textit{JIUTIAN Research}`; 2608.21409's three over
+/// three over its e-mail line; 2607.09029's five over five over `LiAuto Inc.`). A row of institutions under the names
+/// ends the block, or has a row of as many entries under it (their e-mails). Markup does not tell the two apart:
+/// 2607.07318's and 2603.16856's second rows open with `{\bf`/`\bf` under plain first rows.
+///
+/// A line of addresses under the row says whose they are ([`row_spelled_by_addresses`]): the row is names only when an
+/// address spells one of its pieces, or the addresses are as many as the names of both rows together — not institutions
+/// over the authors' addresses, `Ann Able~~~~Bob Baker \\ Carnegie Mellon~~~~Johns Hopkins \\
+/// \texttt{\{aa,bb\}@x.edu}`, nor three over three over one address (probes v1, v3: were creators "Carnegie Mellon",
+/// "Johns Hopkins", 77p r4 re-review).
+fn row_of_names(names: &[Token], rest: &[Token]) -> bool {
+  let names_count = row_name_count(names);
+  if names_count < 2 {
+    return false;
+  }
+  let rest = after_line_break_options(rest);
+  let mut at = rest.iter().position(is_row_break).unwrap_or(rest.len());
+  let row = &rest[..at];
+  let row_count = row_name_count(row);
+  // (the next line that prints something, past the lines of spacing alone: `\vspace{2mm}\\`)
+  let mut under: Option<&[Token]> = None;
+  while rest
+    .get(at)
+    .is_some_and(|t| *t == T_CS!("\\\\") || *t == T_CS!("\\newline"))
+  {
+    let start = rest.len() - after_line_break_options(&rest[at + 1..]).len();
+    let end = start
+      + rest[start..]
+        .iter()
+        .position(is_row_break)
+        .unwrap_or(rest.len() - start);
+    let line = &rest[start..end];
+    if spacing_end(line) > 0 {
+      under = Some(line);
+      break;
+    }
+    at = end;
+  }
+  if let Some(addresses) = under.and_then(|line| email_addresses(&Tokens::new(line.to_vec()))) {
+    return addresses.len() == names_count + row_count
+      || row_spelled_by_addresses(names, row, &addresses);
+  }
+  if row_count != names_count {
+    return true;
+  }
+  under.is_some_and(|line| row_entry_count(line) != names_count)
+}
+
+/// Whether one of `addresses` spells a piece of `row` ([`spelled_owners`], the names line's pieces `names` spelled
+/// against too, so an address spells the row's piece only when it spells it best).
+fn row_spelled_by_addresses(names: &[Token], row: &[Token], addresses: &[String]) -> bool {
+  let pieces = |tokens: &[Token]| -> Vec<NameKeys> {
+    let mut keys = Vec::new();
+    let mut i = 0;
+    while i < tokens.len() && !is_row_break(&tokens[i]) {
+      let piece = next_name_piece(&tokens[i..]);
+      if piece.is_empty() {
+        i += 1;
+        continue;
+      }
+      if has_name_letter(piece) {
+        keys.push(NameKeys::of(&Tokens::new(outside_notes(piece))));
+      }
+      i += piece.len();
+    }
+    keys
+  };
+  let mut keys = pieces(names);
+  let row_from = keys.len();
+  keys.extend(pieces(row));
+  addresses.iter().any(|address| {
+    spelled_owners(&keys, address)
+      .iter()
+      .any(|owner| *owner >= row_from)
+  })
+}
+
+/// `tokens` after the star and the optional `[…]` argument of the line break before them, and the spaces before each
+/// (`\\[0.2em]`, `\\*`).
+fn after_line_break_options(tokens: &[Token]) -> &[Token] {
+  let mut i = tokens
+    .iter()
+    .take_while(|t| t.get_catcode() == Catcode::SPACE)
+    .count();
+  if tokens.get(i) == Some(&T_OTHER!("*")) {
+    i += 1;
+  }
+  if tokens.get(i) == Some(&T_OTHER!("["))
+    && let Some(close) = tokens[i..].iter().position(|t| *t == T_OTHER!("]"))
+  {
+    i += close + 1;
+  }
+  &tokens[i..]
+}
+
+/// How many entries an author line lists up to its first line break: the pieces between its separators
+/// ([`next_name_piece`]) that print text (`\texttt{a@x}~~~~\texttt{b@y}` two).
+fn row_entry_count(tokens: &[Token]) -> usize {
+  let mut count = 0;
+  let mut i = 0;
+  while i < tokens.len() && !is_row_break(&tokens[i]) {
+    let piece = next_name_piece(&tokens[i..]);
+    if piece.is_empty() {
+      i += 1;
+      continue;
+    }
+    if !visible_name_text(piece).trim().is_empty() {
+      count += 1;
+    }
+    i += piece.len();
+  }
+  count
+}
+
+/// A token that ends an author line's row of names: a line break, or the `\and` family.
+fn is_row_break(t: &Token) -> bool {
+  t.with_str(|s| matches!(s, "\\\\" | "\\newline" | "\\and" | "\\And" | "\\AND"))
+}
+
+/// How many names an author line lists up to its first line break ([`is_row_break`]): each piece between its
+/// separators ([`next_name_piece`]) with a name letter counts the names its text lists ([`name_count`], "Ann Able and
+/// Bob Baker" two), one at least.
+fn row_name_count(tokens: &[Token]) -> usize {
+  let mut count = 0;
+  let mut i = 0;
+  while i < tokens.len() && !is_row_break(&tokens[i]) {
+    let piece = next_name_piece(&tokens[i..]);
+    if piece.is_empty() {
+      i += 1;
+      continue;
+    }
+    if has_name_letter(piece) {
+      count += name_count(visible_name_text(&outside_notes(piece)).trim()).max(1);
+    }
+    i += piece.len();
+  }
+  count
+}
+
+/// The spacing commands a run of which parts two author names (user ruling 2026-10-19): the control space `\ ` — also
+/// as the control return a line ending in `\ ` leaves, TeX dropping the line's trailing space (latex.ltx's `\^^M` is
+/// `\ `; cs0207008's `K.V. Hindriks \affila\ \ ⏎ W. van der Hoek`) —, the medium and thick spaces `\:`, `\>`, `\;`,
+/// the tie `~` and `\enspace`.
+fn is_spacing_command(t: &Token) -> bool {
+  *t == T_ACTIVE!('~')
+    || (t.get_catcode() == Catcode::CS
+      && t.with_str(|s| matches!(s, "\\ " | "\\\r" | "\\:" | "\\>" | "\\;" | "\\enspace")))
+}
+
+/// `tokens` after the markup a line or an entry may open with before its mark: spaces, group openings and the font and
+/// size commands of [`NAME_TEXT_COMMANDS`] (`\normalsize{$^1$I3A - Universidad de Zaragoza} ~~~~~~
+/// \normalsize{$^2$École Polytechnique Fédérale de Lausanne}`, 2308.10525).
+fn after_leading_markup(tokens: &[Token]) -> &[Token] {
+  let lead = tokens
+    .iter()
+    .take_while(|t| {
+      matches!(t.get_catcode(), Catcode::SPACE | Catcode::BEGIN)
+        || (t.get_catcode() == Catcode::CS && t.with_str(|s| NAME_TEXT_COMMANDS.contains(&s)))
+    })
+    .count();
+  &tokens[lead..]
+}
+
+/// Whether `tokens` open with an author mark: `$^…$` or `\(^…\)` (a math shift before a superscript), a superscript, a
+/// mark command ([`is_author_mark`]).
+fn starts_with_mark(tokens: &[Token]) -> bool {
+  match tokens {
+    [t, ..] if is_author_mark(t) => true,
+    // (`$^1$`, and `\(^{1}\)`: 2604.12896's `\(^{1}\)Huawei Technologies, Canada~~\(^2\)University of Alberta`)
+    [open, sup, ..] => {
+      (open.get_catcode() == Catcode::MATH || *open == T_CS!("\\(")) && *sup == T_SUPER!()
+    },
+    _ => false,
+  }
+}
+
+/// A token that ends an author line or a name, before any spacing run reads it so: the `\and` family, `\quad`,
+/// `\qquad`, a line break, the horizontal spaces [`normalize_hspace_separators`] makes `\quad`. Not `\par`: an author
+/// block is set in a `c` column (latex.ltx's `\@maketitle`, `\begin{tabular}[t]{c}\@author\end{tabular}`; ACL's the
+/// same), restricted horizontal mode, where a blank line's `\par` ends no paragraph and prints nothing (tex.web §1094
+/// `hmode+par_end` calls `end_graf`, §1096 acts only when `mode=hmode`): 2009.12421's `Ehsan
+/// Shareghi$^\spadesuit$$^\clubsuit$ <blank line> \ \ Nigel Collier$^\clubsuit$` prints the two names on one row.
+fn is_line_separator(t: &Token) -> bool {
+  t.get_catcode() == Catcode::CS
+    && (author_affil_splits()
+      .iter()
+      .chain(author_and_splits().iter())
+      .chain(author_line_breaks().iter())
+      .any(|d| matches!(d, SplitDelim::Token(d) if d == t))
+      || t.with_str(|s| matches!(s, "\\qquad" | "\\hfill" | "\\hfil" | "\\hspace")))
+}
+
+/// Whether a group opened after `before` shows its letters as name text, for a spacing run to part names after them: a
+/// group of its own (`{\scshape Vitaly~Bergelson}`, also after a separator or a spacing command: `~~ {Kyungtae Lim}`
+/// once the run before it is `\quad`, 2605.30545) or a font command's argument (`\textbf{Ann Able}`); not another
+/// command's argument (`\raisebox{-0.3ex}{\includegraphics[…]{daedalus.jpg}}`, 2604.10005; `\mbox{\orcidlink{…}}`,
+/// 2605.06250; `\url{…}`, 2605.28131). A group right after another (`}{`) is shown as that one was (`closed_shown`):
+/// the next argument of the same command.
+fn shows_name_text(before: Option<&Token>, closed_shown: bool) -> bool {
+  match before {
+    Some(t) if t.get_catcode() == Catcode::CS => {
+      t.with_str(|s| {
+        NAME_TEXT_COMMANDS.contains(&s) || matches!(s, "\\par" | "\\relax" | "\\noindent")
+      }) || is_line_separator(t)
+        || is_spacing_command(t)
+    },
+    Some(t) if *t == T_END!() || *t == T_OTHER!("]") => closed_shown,
+    _ => true,
+  }
+}
+
+/// The font and size commands an author line styles a name or an entry with: their argument, or the group after the
+/// declaration, prints as the name it styles ([`shows_name_text`]), and an entry may open with them before its mark
+/// ([`after_leading_markup`]).
+const NAME_TEXT_COMMANDS: &[&str] = &[
+  "\\footnotesize",
+  "\\scriptsize",
+  "\\tiny",
+  "\\LARGE",
+  "\\huge",
+  "\\Huge",
+  "\\rm",
+  "\\sf",
+  "\\tt",
+  "\\em",
+  "\\sl",
+  "\\upshape",
+  "\\itshape",
+  "\\slshape",
+  "\\scshape",
+  "\\bfseries",
+  "\\mdseries",
+  "\\rmfamily",
+  "\\sffamily",
+  "\\ttfamily",
+  "\\normalfont",
+  "\\textbf",
+  "\\textit",
+  "\\textsc",
+  "\\textsl",
+  "\\textup",
+  "\\textmd",
+  "\\textrm",
+  "\\textsf",
+  "\\textnormal",
+  "\\emph",
+  "\\bf",
+  "\\it",
+  "\\sc",
+  "\\large",
+  "\\Large",
+  "\\normalsize",
+  "\\small",
+];
+
+/// What a spacing run's place on its author block tells [`spacing_run_separator`].
+struct RunContext {
+  /// the line of a marked block opens with a mark (an affiliation line, `$^1$Univ A~~~~$^2$Univ B`, 2310.15160)
+  mark_led:    bool,
+  /// the line is a line of names: the block's first, or the first after an `\and` (a line break ends it)
+  names_line:  bool,
+  /// where in the tokens before the run the piece since the last top-level separator starts
+  piece_start: usize,
+}
+
+/// A spacing run that parts two names ([`spacing_run_separator`]): where it ends, and whether the word "and" stands in
+/// it (`~~AND~~`, `~~{and}~~`), which then is the separator, written as the plain word between spaces that every author
+/// split reads (`Cat Cole~~\textrm{and}~~Dan Dorn` → `Cat Cole and Dan Dorn`; a marked block's line welds a piece a
+/// `\quad` parts off into the entry before it).
+struct RunSeparator {
+  end:      usize,
+  and_word: bool,
+}
+
+/// Where a run of spacing commands that starts at `src[start]` ends, when it parts two names: two or more spacing
+/// commands ([`is_spacing_command`], spaces and a blank line's `\par` between them), after a name — `out` holds what
+/// precedes it, a name letter is on its line (the caller's test), and it does not end with a separator already (`\\`,
+/// `\and`, `\quad`, a comma or `;`), nor with an initial (`R.~~Beyer`, 2603.17646; `L.~~Caballero-Ontanaya`,
+/// 2604.25437; `Rafa\l ~R.\ ~Suszek`, 2603.20914: one person) — and before the next one, which starts with a letter, a
+/// group or a command that is no name annotation (a run before `\thanks{…}`, `\textsuperscript{1}` or a `$^1$` mark
+/// leaves the mark on its name) and has a name letter before the next separator (not `~~\JMorcid,`, 2605.12398;
+/// `~~\mbox{\orcidlink{…}}`, 2605.06250); or, on a line that opens with a mark (`ctx.mark_led`), with the next mark.
+/// Off the names line (`ctx.names_line`: after a line break, before the next `\and`) both sides must read as names, not
+/// as an address, an e-mail or a link (`Ann Able \\ Department of Physics~~~~University of X`; `\url{…}~~~ \url{…}`,
+/// 2605.28131). A run before the word "and" — in any case, alone or in one wrapper ([`and_word_end`]: `~~AND~~`,
+/// `~~{and}~~`, `\;\;\textnormal{AND}\;\;`, 2606.27261, 2607.03677) — parts with it, the word the separator
+/// ([`RunSeparator`]). `None` for a single spacing command, inside one name, and for a run after the word "and", or
+/// after a byline's "By" (`By~~{\scshape Vitaly~Bergelson}~~and~~…`, 2603.25922, 2604.12864, 2603.27258, 2604.07186),
+/// which separate the names themselves.
+fn spacing_run_separator(
+  src: &[Token],
+  out: &[Token],
+  start: usize,
+  ctx: RunContext,
+) -> Option<RunSeparator> {
+  let mut end = start;
+  let mut commands = 0;
+  while let Some(t) = src.get(end) {
+    if is_spacing_command(t) {
+      commands += 1;
+    } else if t.get_catcode() != Catcode::SPACE && *t != T_CS!("\\par") {
+      break;
+    }
+    end += 1;
+  }
+  if commands < 2 {
+    return None;
+  }
+  let unprinted = |t: &&Token| t.get_catcode() == Catcode::SPACE || **t == T_CS!("\\par");
+  let mut before_run = out.iter().rev().skip_while(unprinted);
+  let before = *before_run.next()?;
+  if is_line_separator(&before)
+    || before == T_CS!("\\&")
+    || matches!(before.get_catcode(), Catcode::OTHER if before.with_str(|s| s == "," || s == ";"))
+  {
+    return None;
+  }
+  // (an initial: one letter and its period, after no letter)
+  if before == T_OTHER!(".")
+    && before_run
+      .next()
+      .is_some_and(|t| t.get_catcode() == Catcode::LETTER)
+    && before_run
+      .next()
+      .is_none_or(|t| t.get_catcode() != Catcode::LETTER)
+  {
+    return None;
+  }
+  // (a run after the word "and" — in any case, alone or in one wrapper — leaves the separating to it: `Cat
+  // Cole and~~Dan Dorn`; so does one after a byline's "by")
+  let word_before: String = word_letters(out.iter().rev()).chars().rev().collect();
+  if and_word_end(&out.iter().rev().copied().collect::<Vec<_>>(), true).is_some()
+    || word_before.eq_ignore_ascii_case("by")
+  {
+    return None;
+  }
+  // (a run before the word "and" — `~~and~~`, `~~AND~~`, `~~{and}~~`, `\;\;\textnormal{AND}\;\;`, 2606.27261,
+  // 2607.03677 — is one separator with it and the space after it: what follows must open a name as after a run)
+  let (end, and_word) = match and_word_end(&src[end..], false) {
+    Some(word_end) => (
+      end
+        + word_end
+        + src[end + word_end..]
+          .iter()
+          .take_while(|t| {
+            t.get_catcode() == Catcode::SPACE || is_spacing_command(t) || **t == T_CS!("\\par")
+          })
+          .count(),
+      true,
+    ),
+    None => (end, false),
+  };
+  let after = src.get(end)?;
+  if *after == T_CS!("\\&") {
+    return None;
+  }
+  // (on a mark-led line, a run before the next mark parts its entries: `$^1$Univ A~~~~$^2$Univ B`; the word "and" in
+  // it too, off the names line as the `\quad` that parts affiliation entries, `$^1$Univ A~~and~~$^2$Univ B` (probe
+  // w10, was "Univ A and" an entry))
+  if ctx.mark_led && starts_with_mark(after_leading_markup(&src[end..])) {
+    return Some(RunSeparator {
+      end,
+      and_word: and_word && ctx.names_line,
+    });
+  }
+  let starts_name = match after.get_catcode() {
+    Catcode::LETTER | Catcode::BEGIN => true,
+    Catcode::OTHER => after.with_str(|s| s.chars().next().is_some_and(char::is_alphabetic)),
+    Catcode::CS => {
+      !is_line_separator(after)
+        && !is_name_annotation(after)
+        && !is_footnote_mark(after)
+        && !is_mark_command(after)
+    },
+    _ => false,
+  };
+  if !starts_name {
+    return None;
+  }
+  let next_piece = next_name_piece(&src[end..]);
+  if !has_name_letter(next_piece) {
+    return None;
+  }
+  if !ctx.names_line
+    && !(reads_as_name_piece(&out[ctx.piece_start.min(out.len())..])
+      && reads_as_name_piece(next_piece))
+  {
+    return None;
+  }
+  Some(RunSeparator { end, and_word })
+}
+
+/// Whether `tokens` print only the word "and", in any case and wrapper (`and`, `\textnormal{AND}`, `{and}`): the
+/// separator between two names, never a name or an affiliation.
+fn is_and_piece(tokens: &[Token]) -> bool {
+  visible_name_text(tokens).trim().eq_ignore_ascii_case("and")
+}
+
+/// The letters of the word `tokens` open with, after their spaces.
+fn word_letters<'a>(tokens: impl Iterator<Item = &'a Token>) -> String {
+  tokens
+    .skip_while(|t| t.get_catcode() == Catcode::SPACE)
+    .take_while(|t| t.get_catcode() == Catcode::LETTER)
+    .map(|t| t.with_str(str::to_string))
+    .collect()
+}
+
+/// Where the word "and" that `tokens` open with ends (after their spaces), in any case (`and`, `And`, `AND`), written
+/// alone or as the only word of one wrapper — a group, or a font command's argument (`{and}`, `\textrm{and}`,
+/// `\textnormal{AND}`: 2606.27261, 2607.03677, 2608.24427). `reversed`: `tokens` run backwards (the tokens before a
+/// run), the wrapper's closing brace first. `None` when they open with anything else (`Andrew`, `Anders`).
+fn and_word_end(tokens: &[Token], reversed: bool) -> Option<usize> {
+  let (open, close) = if reversed {
+    (T_END!(), T_BEGIN!())
+  } else {
+    (T_BEGIN!(), T_END!())
+  };
+  let mut i = tokens
+    .iter()
+    .take_while(|t| t.get_catcode() == Catcode::SPACE)
+    .count();
+  // (a font command before its argument: read forwards, it opens the wrapper; read backwards, it stands after it)
+  if !reversed
+    && tokens.get(i).is_some_and(|t| {
+      t.get_catcode() == Catcode::CS && t.with_str(|s| NAME_TEXT_COMMANDS.contains(&s))
+    })
+    && tokens.get(i + 1) == Some(&open)
+  {
+    i += 1;
+  }
+  let wrapped = tokens.get(i) == Some(&open);
+  if wrapped {
+    i += 1;
+  }
+  let word_start = i
+    + tokens[i..]
+      .iter()
+      .take_while(|t| wrapped && t.get_catcode() == Catcode::SPACE)
+      .count();
+  let word: String = word_letters(tokens[word_start..].iter());
+  let word: String = if reversed {
+    word.chars().rev().collect()
+  } else {
+    word
+  };
+  if !word.eq_ignore_ascii_case("and") {
+    return None;
+  }
+  i = word_start + 3;
+  if wrapped {
+    i += tokens[i..]
+      .iter()
+      .take_while(|t| t.get_catcode() == Catcode::SPACE)
+      .count();
+    if tokens.get(i) != Some(&close) {
+      return None;
+    }
+    i += 1;
+  }
+  // (a letter or a letter command after it is a longer word's: `and\o`; the closing word of a reversed read must not
+  // be glued to one before it either, `Rand`)
+  tokens
+    .get(i)
+    .is_none_or(|t| !parts_words_after(t))
+    .then_some(i)
+}
+
+/// Whether `t`, after a word, goes on with it: a letter, or a letter written as a command (`\o`, `\ss`).
+fn parts_words_after(t: &Token) -> bool {
+  t.get_catcode() == Catcode::LETTER
+    || (t.get_catcode() == Catcode::CS && t.with_str(letter_command).is_some())
+}
+
+/// The tokens from the start of `tokens` to the next top-level separator: a line separator ([`is_line_separator`]), a
+/// comma or `;`, a run of two or more spacing commands, or the mark that ends a name (`Rui Wang$^{*, 2}$ <blank line>
+/// \vspace{2pt} $^1$Ant Group`, 2603.19223: the name, not the lines after it).
+fn next_name_piece(tokens: &[Token]) -> &[Token] {
+  let mut depth = 0usize;
+  let mut lettered = false;
+  for (j, t) in tokens.iter().enumerate() {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END if depth == 0 => return &tokens[..j],
+      Catcode::END => depth -= 1,
+      Catcode::LETTER => lettered = true,
+      _ if depth > 0 => {},
+      _ if lettered && starts_with_mark(&tokens[j..]) => return &tokens[..j],
+      _ if is_line_separator(t) || *t == T_OTHER!(",") || *t == T_OTHER!(";") => {
+        return &tokens[..j];
+      },
+      _ if is_spacing_command(t)
+        && tokens[j + 1..]
+          .iter()
+          .find(|u| u.get_catcode() != Catcode::SPACE)
+          .is_some_and(is_spacing_command) =>
+      {
+        return &tokens[..j];
+      },
+      _ => {},
+    }
+  }
+  tokens
+}
+
+/// Whether `tokens` hold a letter of name text: outside math, outside a mark command's argument and an optional
+/// argument, at the top level or in a group that shows its letters ([`shows_name_text`]).
+fn has_name_letter(tokens: &[Token]) -> bool {
+  let mut shown: Vec<bool> = Vec::new();
+  let mut closed_shown = true;
+  let mut in_math = false;
+  let mut optional_argument = false;
+  let mut previous: Option<&Token> = None;
+  for t in tokens {
+    match t.get_catcode() {
+      Catcode::BEGIN => {
+        let outer = shown.last().copied().unwrap_or(true);
+        shown.push(
+          outer
+            && !optional_argument
+            && !previous.is_some_and(is_mark_command)
+            && shows_name_text(previous, closed_shown),
+        );
+      },
+      Catcode::END => {
+        closed_shown = shown.pop().unwrap_or(true);
+      },
+      Catcode::MATH => in_math = !in_math,
+      Catcode::LETTER
+        if !in_math && !optional_argument && shown.last().copied().unwrap_or(true) =>
+      {
+        return true;
+      },
+      Catcode::OTHER
+        if *t == T_OTHER!("[") && previous.is_some_and(|p| p.get_catcode() == Catcode::CS) =>
+      {
+        optional_argument = true
+      },
+      Catcode::OTHER if *t == T_OTHER!("]") => optional_argument = false,
+      _ => {},
+    }
+    previous = Some(t);
+  }
+  false
+}
+
+/// Whether a piece of an author line off its names line reads as a name, for a spacing run there to part two: its text
+/// is names ([`name_count`]), not an affiliation ([`reads_as_affiliation`]), and it holds no address (`@`) or link
+/// (`\url`, `\href`, `\texttt`).
+fn reads_as_name_piece(piece: &[Token]) -> bool {
+  // (a name's notes are no part of it: `Xinlei He\textsuperscript{1}\thanks{… \href{mailto:…}{…}}`, 2605.30366)
+  let piece = outside_notes(piece);
+  let text = visible_name_text(&piece);
+  !text.contains('@')
+    && !piece
+      .iter()
+      .any(|t| t.with_str(|s| matches!(s, "\\url" | "\\href" | "\\texttt" | "\\tt")))
+    && name_count(&text) > 0
+    && !reads_as_affiliation(&Tokens::new(piece))
+}
+
 /// The footnote-SYMBOL characters (`\fnsymbol`-style) and control sequences that,
 /// as a superscript on an author, mark an equal-contribution / corresponding /
 /// note relation — NEVER an affiliation (which is numbered). Kept deliberately to
@@ -14187,30 +15736,17 @@ fn normalize_hspace_separators(tokens: Tokens) -> Tokens {
 /// `starts_with_affiliation_mark`. The ptephy binding normalizes the same symbols (latexml_contrib ptephy_cls.rs
 /// `footnote_symbol`): keep the two lists in step.
 fn is_footnote_symbol_operand(sym: &[Token]) -> bool {
+  use FOOTNOTE_SYMBOL_CS as SYMBOL_CS;
   const SYMBOL_CHARS: &[&str] = &[
     "*", "\u{2217}", "\u{2020}", "\u{2021}", "\u{A7}", "\u{B6}", "\u{22C6}", "\u{2605}",
     "\u{2022}", "\u{25E6}", "\u{2666}",
-  ];
-  const SYMBOL_CS: &[&str] = &[
-    "\\ast",
-    "\\star",
-    "\\dagger",
-    "\\ddagger",
-    "\\S",
-    "\\P",
-    "\\bullet",
-    "\\diamond",
-    "\\circ",
-    "\\sharp",
-    "\\|",
-    "\\#",
   ];
   let mut saw_symbol = false;
   for t in sym {
     match t.get_catcode() {
       Catcode::SPACE => continue,
       Catcode::CS => {
-        if !t.with_str(|s| SYMBOL_CS.contains(&s)) {
+        if !t.with_str(|s| SYMBOL_CS.contains(&s)) && !is_symbol_command(t, 1) {
           return false;
         }
         saw_symbol = true;
@@ -14225,6 +15761,71 @@ fn is_footnote_symbol_operand(sym: &[Token]) -> bool {
     }
   }
   saw_symbol
+}
+
+/// The footnote-symbol commands ([`is_footnote_symbol_operand`]).
+const FOOTNOTE_SYMBOL_CS: &[&str] = &[
+  "\\ast",
+  "\\star",
+  "\\dagger",
+  "\\ddagger",
+  "\\S",
+  "\\P",
+  "\\bullet",
+  "\\diamond",
+  "\\circ",
+  "\\sharp",
+  "\\|",
+  "\\#",
+];
+
+/// Whether `t` is a footnote-symbol command beyond [`FOOTNOTE_SYMBOL_CS`]: one LaTeX's own footnote marks print — a
+/// command in the body of `\@fnsymbol` (latex.ltx `\def\@fnsymbol#1{\ifcase#1\or \TextOrMath\textasteriskcentered *\or
+/// \TextOrMath \textdagger \dagger\or … \TextOrMath \textsection \mathsection\or …}`, as the document's class may
+/// redefine it) that prints a symbol, a math symbol or a primitive printing one (`\mathsection`, `\textparagraph`),
+/// not the conditionals around them; or a macro without parameters whose body is only such commands
+/// (`\newcommand{\eq}{\mathsection}`), `depth` macros deep. A superscript holding only such commands is a symbol mark,
+/// as one holding `\dagger` is (main-session decision 2026-10-20, batch 77p r6: 2601.02680's `$^\mathsection$` and
+/// `$^{\mathsection}$`, beside its `$^{\dagger}$`). Letters and digits are none, nor is a text-mode `\dag`/`\ddag`,
+/// the affiliation mark it is today ([`is_symbol_mark`]); and a math symbol outside `\@fnsymbol` (a suit, `\clubsuit`)
+/// stays the affiliation mark it labels its lines with (2601.05633's `$^{\clubsuit \heartsuit}$`).
+fn is_symbol_command(t: &Token, depth: usize) -> bool {
+  if t.get_catcode() != Catcode::CS || *t == T_CS!("\\dag") || *t == T_CS!("\\ddag") {
+    return false;
+  }
+  // (a command that prints a symbol: a math symbol, or a primitive printing a character that is no letter or digit)
+  let prints_a_symbol = |u: &Token| match lookup_definition_stored(u) {
+    Ok(Some(Stored::MathPrimitive(math))) => math.nargs.unwrap_or(0) == 0,
+    Ok(Some(Stored::Primitive(primitive))) => matches!(
+      &primitive.replacement,
+      Some(PrimitiveBody::String(text))
+        if with(*text, |text| {
+          !text.is_empty() && !text.chars().any(|c| c.is_alphanumeric() || c.is_whitespace())
+        })
+    ),
+    _ => false,
+  };
+  let in_fnsymbol = |u: &Token| {
+    matches!(lookup_definition_stored(&T_CS!("\\@fnsymbol")),
+      Ok(Some(Stored::Expandable(fnsymbol)))
+        if matches!(fnsymbol.get_expansion(), Some(ExpansionBody::Tokens(body))
+          if body.unlist_ref().contains(u)))
+  };
+  if in_fnsymbol(t) && prints_a_symbol(t) {
+    return true;
+  }
+  depth > 0
+    && matches!(lookup_definition_stored(t), Ok(Some(Stored::Expandable(macro_def)))
+    if macro_def
+      .get_parameters()
+      .is_none_or(|p| p.get_parameters().is_empty())
+      && matches!(macro_def.get_expansion(), Some(ExpansionBody::Tokens(body))
+        if body.unlist_ref().iter().any(|u| *u != T_SPACE!())
+          && body.unlist_ref().iter().all(|u| {
+            *u == T_SPACE!()
+              || u.with_str(|s| FOOTNOTE_SYMBOL_CS.contains(&s))
+              || is_symbol_command(u, depth - 1)
+          })))
 }
 
 /// Is a mark's operand a footnote symbol (`*`, `\dagger`, `\dag`), an equal-contribution or correspondence legend's
@@ -14256,6 +15857,47 @@ fn starts_with_footnote_symbol(line: &Tokens) -> bool {
         || *t == T_CS!("\\ddag")
         || is_footnote_symbol_operand(std::slice::from_ref(t))
     })
+}
+
+/// A legend-shaped `line` that is an affiliation its symbol labels: led by a symbol mark [`keepsup`] made
+/// (`$^{\diamond}$ National University of Singapore`), the symbol one an author of the block carries (`carried`, the
+/// authors' [`symbol_marks`]), and the rest reading as an affiliation ([`reads_as_affiliation`]): the line with that mark
+/// written back as the superscript it was, which `\lx@affiliation@withsup` labels the affiliation by, so it goes to the
+/// authors carrying the symbol as a numbered one goes to the authors carrying the number (2601.05633's ⋄ line under its ♡
+/// line, to Yang Zhang, Zhiyong Huang and Tat-Seng Chua, not the last author; batch 77p r6). A legend
+/// (`$^{*}$ Equal contribution`) or a symbol no author carries stays as it is.
+fn symbol_labelled_affiliation(line: &Tokens, carried: &[String]) -> Option<Tokens> {
+  let v = line.unlist_ref();
+  let lead = v.len() - after_leading_markup(&v[leading_spacing_end(v)..]).len();
+  if v.get(lead) != Some(&T_CS!("\\lx@frontmatter@keepsup")) {
+    return None;
+  }
+  let shown_end = skip_group(v, lead + 1);
+  if v.get(shown_end) != Some(&T_CS!("\\lx@frontmatter@symbolmark")) {
+    return None;
+  }
+  let end = skip_group(v, shown_end + 1);
+  let mark = symbol_marks(&Tokens::new(v[shown_end..end].to_vec()));
+  let rest = Tokens::new(v[end..].to_vec());
+  if !mark.first().is_some_and(|mark| carried.contains(mark)) || !reads_as_affiliation(&rest) {
+    return None;
+  }
+  let mut out = v[..lead].to_vec();
+  out.push(T_CS!("\\textsuperscript"));
+  out.extend_from_slice(&v[lead + 1..shown_end]);
+  out.extend(rest.unlist());
+  Some(Tokens::new(out))
+}
+
+/// Whether `line` is a legend: a footnote symbol ([`starts_with_footnote_symbol`]), also as the visible superscript
+/// [`rewrite_symbol_superscripts`] makes it (`\textsuperscript{*}\textit{Equal contribution.}`, 2509.20748), and text
+/// after it.
+fn is_legend_line(line: &Tokens) -> bool {
+  let v = line.unlist_ref();
+  let v = after_leading_markup(&v[leading_spacing_end(v)..]);
+  (starts_with_footnote_symbol(&Tokens::new(v.to_vec()))
+    || v.first() == Some(&T_CS!("\\lx@frontmatter@keepsup")))
+    && has_name_letter(v)
 }
 
 /// Rewrite footnote-SYMBOL author superscripts — `$^{*}$`, `${}^{\dagger}$`,
@@ -14420,6 +16062,38 @@ fn visible_sup(sym: Vec<Token>) -> Vec<Token> {
   v.extend(sym);
   v.push(T_END!());
   v
+}
+
+/// The footnote-symbol marks [`keepsup`] wrote into `tokens` (the `\lx@frontmatter@symbolmark` operands, as text), at
+/// any depth: `Ann Able$^{\dagger}$` and `$^{\dagger}$Univ A` both hold `\dagger`.
+fn symbol_marks(tokens: &Tokens) -> Vec<String> {
+  let v = tokens.unlist_ref();
+  let mut marks = Vec::new();
+  for (i, t) in v.iter().enumerate() {
+    if *t == T_CS!("\\lx@frontmatter@symbolmark") && v.get(i + 1) == Some(&T_BEGIN!()) {
+      let mut depth = 0usize;
+      let mut operand: Vec<Token> = Vec::new();
+      for &u in &v[i + 1..] {
+        match u.get_catcode() {
+          Catcode::BEGIN => depth += 1,
+          Catcode::END => depth -= 1,
+          _ => {},
+        }
+        if depth == 0 {
+          break;
+        }
+        if !(depth == 1 && u.get_catcode() == Catcode::BEGIN) {
+          operand.push(u);
+        }
+      }
+      let mark = Tokens::new(operand).to_string();
+      let mark = mark.trim();
+      if !mark.is_empty() {
+        marks.push(mark.to_string());
+      }
+    }
+  }
+  marks
 }
 
 /// A footnote-symbol author mark: shown (`visible_sup`), and requesting the affiliation of its symbol
@@ -14671,7 +16345,7 @@ pub fn leads_with_mark(content: &Tokens) -> bool {
     .skip_while(|t| **t == T_BEGIN!() || **t == T_CS!("\\noindent") || switch(t))
     .collect();
   let script = match tokens.as_slice() {
-    [t, rest @ ..] if mark_commands().contains(t) || **t == T_SUPER!() => rest,
+    [t, rest @ ..] if is_mark_command(t) || **t == T_SUPER!() => rest,
     [t, s, rest @ ..] if t.get_catcode() == Catcode::MATH && **s == T_SUPER!() => rest,
     _ => return false,
   };
@@ -14763,7 +16437,7 @@ fn split_marked_pieces(tokens: Tokens, line_start: bool) -> Vec<Tokens> {
   let mut depth = 0usize;
   for (i, t) in toks.iter().enumerate() {
     let dollar_super = *t == T_MATH!() && toks.get(i + 1).is_some_and(|n| *n == T_SUPER!());
-    let is_mark_start = dollar_super || mark_commands().contains(t);
+    let is_mark_start = dollar_super || is_mark_command(t);
     // Only treat a mark as an affiliation boundary when it is preceded by
     // whitespace (institutions are space-separated). A mark glued to the
     // preceding text — e.g. a superscript INSIDE an institution name,
@@ -14876,10 +16550,10 @@ fn marker_leads(line: &Tokens) -> bool {
     Some((_, inner, _)) => printed(inner.unlist_ref()),
     None => line.clone(),
   };
-  match position_of(&probe, &authorsup_markers()) {
+  match author_mark_position(&probe) {
     Some(p) => !name_precedes_marker(&probe, p),
     // No mark inside the wrapper (`{}$^1$Univ A`, `\noindent{}$^1$…`): the whole line decides, as before.
-    None => position_of(line, &authorsup_markers()).is_some_and(|p| !name_precedes_marker(line, p)),
+    None => author_mark_position(line).is_some_and(|p| !name_precedes_marker(line, p)),
   }
 }
 
@@ -14973,7 +16647,7 @@ fn opening_declarations(inner: &Tokens) -> Vec<Token> {
       out.push(t);
       i += 1;
     } else if t.get_catcode() == Catcode::CS
-      && !mark_commands().contains(&t)
+      && !is_mark_command(&t)
       && (with_arguments || !braced)
       // (a command over an optional argument is content too: `{\parbox[c]{\textwidth}{…}}`, 2504.03146)
       && v.get(i + 1) != Some(&T_OTHER!("["))
@@ -15017,7 +16691,7 @@ fn leading_wrapper(line: &Tokens) -> Option<(Option<Token>, Tokens, Vec<Token>)>
         .get(start + 1)
         .is_some_and(|t| t.get_catcode() == Catcode::BEGIN) =>
     {
-      if mark_commands().contains(&v[start]) {
+      if is_mark_command(&v[start]) {
         return None;
       }
       (Some(v[start]), start + 1)
@@ -15763,7 +17437,7 @@ fn names_marked_alike(names: &Tokens, line: &Tokens) -> bool {
 }
 
 /// Whether a name carries a mark after it, outside its notes: a superscript or mark command
-/// ([`affiliation_mark_tokens`]: IEEEtran's `\IEEEauthorrefmark`) or aastex's `\altaffilmark` after its first letter
+/// ([`is_affiliation_mark`]: IEEEtran's `\IEEEauthorrefmark`) or aastex's `\altaffilmark` after its first letter
 /// (`Bob Baker$^{2}$`; not `$^{2}$Univ B`).
 fn marked_after_name(name: &Tokens) -> bool {
   let outside = outside_notes(name.unlist_ref());
@@ -15775,7 +17449,7 @@ fn marked_after_name(name: &Tokens) -> bool {
   };
   outside[first_letter..]
     .iter()
-    .any(|t| affiliation_mark_tokens().contains(t) || *t == T_CS!("\\altaffilmark"))
+    .any(|t| is_affiliation_mark(t) || *t == T_CS!("\\altaffilmark"))
 }
 
 /// The markup an author line opens with, before its first letter: its control sequences and the groups they open
@@ -15924,18 +17598,21 @@ fn author_note_of(line: &Tokens) -> Option<Token> {
   })
 }
 
-/// `line` without the byline word "by"/"By" that opens it, when names follow it (see [`without_leading_and`]).
+/// `line` without the byline word "by" (in any case) that opens it, when names follow it (see [`without_leading_and`]), and the
+/// spaces after it (ties and control spaces too: `By~~{\scshape Vitaly~Bergelson}~~and~~…`, 2603.25922).
 fn without_leading_by(line: &Tokens) -> Option<Tokens> {
   let v = line.unlist_ref();
   let first = v.iter().position(|t| t.get_catcode() == Catcode::LETTER)?;
+  let spacing = |t: Option<&Token>| t.is_some_and(|t| *t == T_SPACE!() || is_spacing_command(t));
+  // (in any case: "by", "By", "BY")
   if !(v[first] == T_LETTER!("b") || v[first] == T_LETTER!("B"))
-    || v.get(first + 1) != Some(&T_LETTER!("y"))
-    || v.get(first + 2) != Some(&T_SPACE!())
+    || !(v.get(first + 1) == Some(&T_LETTER!("y")) || v.get(first + 1) == Some(&T_LETTER!("Y")))
+    || !spacing(v.get(first + 2))
   {
     return None;
   }
   let mut rest = first + 2;
-  while v.get(rest) == Some(&T_SPACE!()) {
+  while spacing(v.get(rest)) {
     rest += 1;
   }
   let mut out = v[..first].to_vec();
@@ -16015,9 +17692,7 @@ fn only_marks_and_notes(tokens: &[Token]) -> bool {
         i += 2
       },
       // (a mark command too: ieeeaccess's `\authorrefmark{2}` after a list's closing period, 2201.07394)
-      Catcode::CS
-        if is_footnote_mark(&t) || is_name_annotation(&t) || mark_commands().contains(&t) =>
-      {
+      Catcode::CS if is_footnote_mark(&t) || is_name_annotation(&t) || is_mark_command(&t) => {
         any = true;
         i += 1;
         if tokens.get(i) == Some(&T_OTHER!("[")) {
@@ -16157,9 +17832,13 @@ fn line_is_email(line: &Tokens) -> bool {
 /// `E-mail: \email{x}` (JHEP.cls/PoS.cls author blocks, astro-ph0611258), `E-mail: \texttt{x@y}`, `\email{x}`. Each
 /// address becomes `\lx@add@email`, the label (as written, "E-mail:") its `name`, so it stays markup a stylesheet can
 /// show or hide (as the default "Email: " is). Before, the label stood as an affiliation of its own ("E-mail: ") and
-/// a lone `\email{x}` line nested its own `\lx@add@email` in another, leaving an empty email contact. `None` for any
-/// other line.
+/// a lone `\email{x}` line nested its own `\lx@add@email` in another, leaving an empty email contact. A link line to a
+/// mailbox is one too, under whatever label it prints (`\textbf{Correspondence:} \href{mailto:…}{…}`, [`mailto_line`]).
+/// `None` for any other line.
 fn labelled_emails(line: &Tokens) -> Result<Option<(Option<Tokens>, Vec<EmailAddress>)>> {
+  // (a footnote symbol before the label is the line's mark, no part of it: `$^*$Corresponding author:
+  // \href{mailto:…}{…}`, the r5 re-review's u23)
+  let line = &Tokens::new(after_symbol_mark(line.unlist_ref()).to_vec());
   let (label, rest) = split_email_label(line);
   if let Some(calls) = email_command_calls(&rest)? {
     return Ok(Some((label, calls)));
@@ -16170,10 +17849,207 @@ fn labelled_emails(line: &Tokens) -> Result<Option<(Option<Tokens>, Vec<EmailAdd
     .filter(|t| t.code == Catcode::CS)
     .map(is_email_command)
     .collect::<Result<Vec<bool>>>()?;
-  Ok(
-    (label.is_some() && line_is_email(&rest) && !commands.contains(&true))
-      .then(|| (label, vec![EmailAddress { address: rest, call: None }])),
-  )
+  if label.is_some() && line_is_email(&rest) && !commands.contains(&true) {
+    return Ok(Some((label, vec![EmailAddress {
+      address: rest,
+      call:    None,
+    }])));
+  }
+  // (several, a comma or a semicolon between them, each an address or a link to one: `Emails:
+  // \href{mailto:a@x}{a@x}, \href{mailto:b@y}{b@y}`, the r5 re-review's u22)
+  if label.is_some() && !commands.contains(&true) {
+    let items = split_top_level_list(rest.unlist_ref());
+    if items.len() > 1
+      && items
+        .iter()
+        .all(|item| line_is_email(item) || mailto_line(item).is_some())
+    {
+      return Ok(Some((
+        label,
+        items
+          .into_iter()
+          .map(|address| EmailAddress { address, call: None })
+          .collect(),
+      )));
+    }
+  }
+  // …and a link line to a mailbox, under any label (`\textbf{Correspondence:} \href{mailto:…}{…}`, [`mailto_line`]),
+  // an address each of a brace list it prints ([`mailto_addresses`])
+  Ok(mailto_line(line).map(|(label, address)| (label, mailto_addresses(address))))
+}
+
+/// The addresses a mailbox link prints ([`mailto_line`]): itself, or, when it prints a list of them, each address of it
+/// ([`email_addresses`]: `\href{mailto:julia.belikova@skol.tech}{\{julia.belikova, a.panchenko\}@skol.tech}`,
+/// 2602.12235; the r7 re-review's finding 7) — the one its target reaches kept the link, the others as they print.
+fn mailto_addresses(link: EmailAddress) -> Vec<EmailAddress> {
+  let v = link.address.unlist_ref();
+  let Some(at) = v.iter().position(|t| *t == T_CS!("\\href")) else {
+    return vec![link];
+  };
+  let (open, close) = link_printed_argument(v, at);
+  let Some(addresses) =
+    email_addresses(&Tokens::new(v[open..close].to_vec())).filter(|a| a.len() > 1)
+  else {
+    return vec![link];
+  };
+  let ((target_open, target_close), _) = link_arguments(v, at);
+  let (target, _) = link_texts(v, at);
+  let reached = target.trim_start_matches("mailto:").trim().to_lowercase();
+  addresses
+    .into_iter()
+    .map(|address| {
+      let printed = mouth::tokenize(TeXString::assembled(address.replace('_', "\\_"))).unlist();
+      let tokens = if address.to_lowercase() == reached {
+        let mut linked = vec![T_CS!("\\href")];
+        linked.extend_from_slice(&v[target_open..target_close]);
+        linked.push(T_BEGIN!());
+        linked.extend(printed);
+        linked.push(T_END!());
+        linked
+      } else {
+        printed
+      };
+      EmailAddress {
+        address: Tokens::new(tokens),
+        call:    None,
+      }
+    })
+    .collect()
+}
+
+/// `tokens` after the footnote symbol mark that leads them, as [`rewrite_symbol_superscripts`] writes it
+/// (`\lx@frontmatter@keepsup{*}\lx@frontmatter@symbolmark{*}`), a size or font before it and the spaces after it;
+/// `tokens` when none does.
+fn after_symbol_mark(tokens: &[Token]) -> &[Token] {
+  let whole = tokens;
+  // (through a group around the whole piece: `{\small $^{\dagger}$\,University of Toronto}`, 2606.28166;
+  // `{\it \normalsize $^\sharp$Department of Biostatistics, …}`, 2602.16540 — the r7 re-review's finding 1)
+  let tokens = unwrapped(tokens);
+  // (and a size or font before it, `\normalsize $^{\dagger}$Department of Statistics`, 2505.23260)
+  let lead = tokens
+    .iter()
+    .take_while(|t| {
+      **t == T_SPACE!()
+        || (t.get_catcode() == Catcode::CS && t.with_str(|s| NAME_TEXT_COMMANDS.contains(&s)))
+    })
+    .count();
+  if tokens.get(lead) != Some(&T_CS!("\\lx@frontmatter@keepsup")) {
+    return whole;
+  }
+  let mut at = skip_group(tokens, lead + 1);
+  if tokens.get(at) == Some(&T_CS!("\\lx@frontmatter@symbolmark")) {
+    at = skip_group(tokens, at + 1);
+  }
+  let at = at.min(tokens.len());
+  &tokens[at
+    + tokens[at..]
+      .iter()
+      .take_while(|t| **t == T_SPACE!())
+      .count()..]
+}
+
+/// `tokens` inside the groups around the whole of them, and the spaces around those (`{\small $^{\dagger}$\,Univ A
+/// \qquad $^{\ddagger}$\,EPFL}`, 2606.28166): what a wrapper group holds, its font aside, is the piece; `tokens` when no
+/// group holds them whole.
+fn unwrapped(tokens: &[Token]) -> &[Token] {
+  let mut v = tokens;
+  loop {
+    let start = v.iter().take_while(|t| **t == T_SPACE!()).count();
+    let end = v
+      .iter()
+      .rposition(|t| *t != T_SPACE!())
+      .map_or(start, |at| at + 1);
+    let inner = &v[start..end.max(start)];
+    if inner
+      .first()
+      .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+      && skip_group(inner, 0) == inner.len()
+      && inner.len() >= 2
+    {
+      v = &inner[1..inner.len() - 1];
+    } else {
+      return v;
+    }
+  }
+}
+
+/// `tokens` before the footnote symbol marks that end them after their text (`Carnegie Mellon University, Pittsburgh, PA,
+/// USA$^{\dagger}$`, `\texttt{mazeyuwhu@gmail.com}$^{\dagger}$`, 2109.13296; the r7 re-review's finding 1), inside a
+/// group around the whole of them ([`unwrapped`]), without the spaces before the marks, and the marks as written
+/// (`\lx@frontmatter@keepsup{…}\lx@frontmatter@symbolmark{…}`, [`keepsup`]): a mark after its text labels that text, as
+/// one before it does. `None` when no mark ends them, or nothing stands before it.
+fn before_trailing_symbol_mark(tokens: &[Token]) -> Option<(&[Token], &[Token])> {
+  let v = unwrapped(tokens);
+  let last = v.iter().rposition(|t| *t != T_SPACE!())? + 1;
+  let mut end = last;
+  while let Some(open) = group_opening(v, end)
+    && open >= 1
+    && v[open - 1] == T_CS!("\\lx@frontmatter@symbolmark")
+    && let Some(sup) = group_opening(v, open - 1)
+    && sup >= 1
+    && v[sup - 1] == T_CS!("\\lx@frontmatter@keepsup")
+  {
+    end = sup - 1;
+  }
+  if end == last {
+    return None;
+  }
+  let text = v[..end].iter().rposition(|t| *t != T_SPACE!())? + 1;
+  Some((&v[..text], &v[end..last]))
+}
+
+/// Where the group that the `}` at `end - 1` of `v` closes opens; `None` when `v[end - 1]` closes none.
+fn group_opening(v: &[Token], end: usize) -> Option<usize> {
+  if end == 0 || v.get(end - 1)?.get_catcode() != Catcode::END {
+    return None;
+  }
+  let mut depth = 0usize;
+  for at in (0..end).rev() {
+    match v[at].get_catcode() {
+      Catcode::END => depth += 1,
+      Catcode::BEGIN => {
+        depth -= 1;
+        if depth == 0 {
+          return Some(at);
+        }
+      },
+      _ => {},
+    }
+  }
+  None
+}
+
+/// The items of `tokens` at its commas and semicolons outside groups, each without the spaces around it; empty items
+/// dropped.
+fn split_top_level_list(tokens: &[Token]) -> Vec<Tokens> {
+  let mut items: Vec<Tokens> = Vec::new();
+  let mut item: Vec<Token> = Vec::new();
+  let mut depth = 0usize;
+  let mut finish = |item: &mut Vec<Token>| {
+    let start = item.iter().take_while(|t| **t == T_SPACE!()).count();
+    let end = item
+      .iter()
+      .rposition(|t| *t != T_SPACE!())
+      .map_or(0, |at| at + 1);
+    if start < end {
+      items.push(Tokens::new(item[start..end].to_vec()));
+    }
+    item.clear();
+  };
+  for t in tokens {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ if depth == 0 && (*t == T_OTHER!(",") || *t == T_OTHER!(";")) => {
+        finish(&mut item);
+        continue;
+      },
+      _ => {},
+    }
+    item.push(*t);
+  }
+  finish(&mut item);
+  items
 }
 
 /// One address of an email line, and the class's email command that gave it (`\email{x}`), if any.
@@ -16182,45 +18058,131 @@ struct EmailAddress {
   call:    Option<Tokens>,
 }
 
-/// The words that can stand for a person in an email address: the name's words after the first that have three
-/// letters or more (`Ph.~Boucaud` "boucaud", `J.~Rodr\'iguez-Quintero` "rodriguez", "quintero"), lowercased — of the
-/// name as printed, its notes aside (1706.03762's `Ashish Vaswani\thanks{… Noam proposed …}` is not "noam").
-fn surname_keys(name: &Tokens) -> Vec<String> {
-  visible_name_text(name.unlist_ref())
-    .split(|c: char| !c.is_alphabetic())
-    .filter(|word| !word.is_empty())
-    .skip(1)
-    .filter(|word| word.chars().count() >= 3)
-    .map(str::to_lowercase)
-    .collect()
+/// The words that can stand for a person in an email address ([`spelled_owners`]), lowercased, of the name as printed,
+/// its notes aside (1706.03762's `Ashish Vaswani\thanks{… Noam proposed …}` is not "noam").
+#[derive(Clone, Debug, Default)]
+struct NameKeys {
+  /// the name's words after the first that have three letters or more (`Ph.~Boucaud` "boucaud",
+  /// `J.~Rodr\'iguez-Quintero` "rodriguez", "quintero")
+  surnames: Vec<String>,
+  /// its first word, when it has three letters or more (`Ahna R. Girshick` "ahna"; not the initial of `J.~Smith`)
+  given:    Option<String>,
+  /// the spellings an address opens with that join two of its words: the first word's initial and a later word of two
+  /// letters or more (`Prathamjyot Singh` "psingh", 2608.10670's `psingh1_be22@…` among three Singhs; `Tianjian Li`
+  /// "tli", 2606.23525's `tli104@…`; `Karamvir Singh Batra` "kbatra"), a later word before the whole first, the
+  /// family name first (`Fei Wu` "wufei", `Yu Cheng` "chengyu": 2509.10377), or after it (`Di Wu` "diwu", 2604.01354;
+  /// `Mo Yu` "moyu", 2608.18082 — 77p r10, where an address no name spells is the block's), and the initials of the
+  /// words before the last with the last (`Kai-Wei Chang` "kwchang", 2604.01354); and the initials of every word, two or more
+  /// (`Ann Able` "aa"), or of the first and the last when more stand between (`Joseph G. Wallwork` "jgw" and "jw",
+  /// 2407.00382's `jw2423@cam.ac.uk`), which only a local part of those letters alone spells
+  joined:   Vec<String>,
+  initials: Vec<String>,
 }
 
-/// The one name (index into `name_keys`) whose surname the address's local part spells — whole, or its first six
-/// letters (`leyaouan@…` for "A.~Le~Yaouanc") — or `None` when no name or several do.
-fn address_owner(name_keys: &[Vec<String>], address: &Tokens) -> Option<usize> {
-  let text: String = address
-    .unlist_ref()
-    .iter()
-    .filter(|t| matches!(t.code, Catcode::LETTER | Catcode::OTHER))
-    .map(|t| t.to_string())
-    .collect();
-  spelled_owner(name_keys, &text)
+impl NameKeys {
+  fn of(name: &Tokens) -> NameKeys {
+    let text = visible_name_text(name.unlist_ref());
+    let words: Vec<String> = text
+      .split(|c: char| !c.is_alphabetic())
+      .filter(|word| !word.is_empty())
+      .map(str::to_lowercase)
+      .collect();
+    let Some((first, later)) = words.split_first() else {
+      return NameKeys::default();
+    };
+    let initial: String = first.chars().take(1).collect();
+    let mut joined: Vec<String> = Vec::new();
+    for word in later.iter().filter(|word| word.chars().count() >= 2) {
+      joined.push(format!("{initial}{word}"));
+      if first.chars().count() >= 2 {
+        joined.push(format!("{word}{first}"));
+        joined.push(format!("{first}{word}"));
+      }
+    }
+    // (the initials of every word before the last, then the last: `Kai-Wei Chang` "kwchang", 2604.01354)
+    if let Some((last, before)) = words.split_last()
+      && before.len() >= 2
+      && last.chars().count() >= 2
+    {
+      let initials: String = before
+        .iter()
+        .filter_map(|word| word.chars().next())
+        .collect();
+      joined.push(format!("{initials}{last}"));
+    }
+    let initials: String = words
+      .iter()
+      .filter_map(|word| word.chars().next())
+      .collect();
+    NameKeys {
+      surnames: later
+        .iter()
+        .filter(|word| word.chars().count() >= 3)
+        .cloned()
+        .collect(),
+      given: Some(first.clone()).filter(|word| word.chars().count() >= 3),
+      joined,
+      initials: [
+        Some(initials.clone()),
+        (words.len() >= 3).then(|| {
+          initials
+            .chars()
+            .take(1)
+            .chain(initials.chars().last())
+            .collect()
+        }),
+      ]
+      .into_iter()
+      .flatten()
+      .filter(|initials: &String| initials.chars().count() >= 2)
+      .collect(),
+    }
+  }
+}
+
+/// An address's letters and other characters, as [`spelled_owners`] reads them.
+fn address_text(address: &Tokens) -> String {
+  // (a colour, a font, a scale is no letter of it, [`without_non_printing_arguments`]: 2604.19440, 2609.25669)
+  let printed = without_non_printing_arguments(address.unlist_ref());
+  let v = printed.as_slice();
+  let text = |v: &[Token]| -> String {
+    v.iter()
+      .filter(|t| matches!(t.code, Catcode::LETTER | Catcode::OTHER))
+      .map(|t| t.to_string())
+      .collect()
+  };
+  // `\href{mailto:t}{p}`: the address it prints, not its target and the printed one run together; its target's, past
+  // `mailto:`, when it prints none (a placeholder target, `\href{mailto:email@domain}{yuxi.xia@univie.ac.at}`,
+  // 2601.07974)
+  if let Some(at) = v.iter().position(|t| *t == T_CS!("\\href")) {
+    let open = at + 1 + v[at + 1..].iter().take_while(|t| **t == T_SPACE!()).count();
+    let close = skip_group(v, open).min(v.len());
+    let target = text(&v[open..close]);
+    let printed = text(&v[..at]) + &text(&v[close..]);
+    return if printed.contains('@') {
+      printed
+    } else {
+      target.trim_start_matches("mailto:").to_string()
+    };
+  }
+  text(v)
 }
 
 /// Every name (index into `name_keys`) whose surname the local part of `address` spells ([`spelled_owners`]).
-fn address_owners(name_keys: &[Vec<String>], address: &Tokens) -> Vec<usize> {
-  let text: String = address
-    .unlist_ref()
-    .iter()
-    .filter(|t| matches!(t.code, Catcode::LETTER | Catcode::OTHER))
-    .map(|t| t.to_string())
-    .collect();
-  spelled_owners(name_keys, &text)
+fn address_owners(name_keys: &[NameKeys], address: &Tokens) -> Vec<usize> {
+  spelled_owners(name_keys, &address_text(address))
 }
 
-/// Every name (index into `name_keys`) whose surname the local part of `address` spells — whole, or its first six
-/// letters (`leyaouan@…` for "A.~Le~Yaouanc").
-fn spelled_owners(name_keys: &[Vec<String>], address: &str) -> Vec<usize> {
+/// The names (indices into `name_keys`) the local part of `address` spells best: each name scores the letters of its
+/// keys the local part holds — a surname whole, or its first six letters (`leyaouan@…` for "A.~Le~Yaouanc"); the given
+/// name it opens with, or holds when the given name has four letters or more (2603.24730's
+/// `\{yuqihu,~ahna,~vasha\}@berkeley.edu` for Yuqi Hu, Ahna R. Girshick, Vasha DuTell; 2603.20851's
+/// `nlp2ct.shanshan@…` for Shanshan Wang, `lidiasc@…` for Lidia S. Chao), or a joined spelling it opens with when
+/// that scores better (the better of the two, never their sum: 2602.07835) — and the highest scores own it: a longer
+/// spelling outranks a key it holds (`fucheng.fuc@…` is Cheng Fu's, not Jiawei Chen's, 2403.00801; `wangchiew@…`
+/// Wang-Chiew Tan's, not Xiaolan Wang's, 2104.01371; `yipengzhang97@…` Yipeng Zhang's, not Xiaoying Zhang's,
+/// 2406.06326), a tie going to the surname's spelling. No name when none scores.
+fn spelled_owners(name_keys: &[NameKeys], address: &str) -> Vec<usize> {
   let Some(local) = address.split('@').next() else {
     return Vec::new();
   };
@@ -16229,20 +18191,720 @@ fn spelled_owners(name_keys: &[Vec<String>], address: &str) -> Vec<usize> {
     .filter(|c| c.is_alphabetic())
     .collect::<String>()
     .to_lowercase();
-  let spells = |key: &String| {
-    local.contains(key.as_str())
-      || (key.chars().count() >= 6 && local.contains(&key.chars().take(6).collect::<String>()))
+  let surname_score = |key: &String| {
+    if local.contains(key.as_str()) {
+      key.chars().count()
+    } else if key.chars().count() >= 6 && local.contains(&key.chars().take(6).collect::<String>()) {
+      6
+    } else {
+      0
+    }
   };
-  name_keys
+  let given_score = |given: &String| {
+    let length = given.chars().count();
+    if local.starts_with(given.as_str()) || (length >= 4 && local.contains(given.as_str())) {
+      length
+    } else {
+      0
+    }
+  };
+  // (a joined spelling the local part opens with, its length; the initials, the local part's letters alone)
+  // (or its first six letters, as a surname's: a truncated family-first spelling, `zhuzhenh22@` for Zhenhao Zhu,
+  // `chenyuxi22@` for Yuxiang Chen, 2602.03328, 2609.11716; the r7 re-review's finding 9)
+  let joined_score = |keys: &NameKeys| {
+    keys
+      .joined
+      .iter()
+      .filter_map(|key| {
+        if local.starts_with(key.as_str()) {
+          Some(key.chars().count())
+        } else {
+          (key.chars().count() >= 6 && local.starts_with(&key.chars().take(6).collect::<String>()))
+            .then_some(6)
+        }
+      })
+      .max()
+      .unwrap_or(0)
+      + keys
+        .initials
+        .iter()
+        .find(|initials| **initials == local)
+        .map_or(0, |initials| initials.chars().count())
+  };
+  // (the score, then its surname part: a tie goes to the surname, `chen@…` Wei Chen's before Chen Li's). A name scores
+  // the better of its words spelled apart and a joined spelling, never both added: one spelling of the letters is
+  // counted once (`khan.muhammad@ieee.org` scores 12 for Khan Muhammad, "muhammad" and "khan" apart, and 12 for
+  // Muhammad Haris Khan, "khanmuhammad" joined, and goes to the surname's spelling, 2602.07835).
+  let scores: Vec<(usize, usize)> = name_keys
     .iter()
-    .enumerate()
-    .filter(|(_, keys)| keys.iter().any(spells))
-    .map(|(at, _)| at)
-    .collect()
+    .map(|keys| {
+      let surname: usize = keys.surnames.iter().map(surname_score).sum();
+      (
+        (surname + keys.given.as_ref().map_or(0, given_score)).max(joined_score(keys)),
+        surname,
+      )
+    })
+    .collect();
+  let best = scores.iter().copied().max().unwrap_or((0, 0));
+  if best.0 == 0 {
+    return Vec::new();
+  }
+  (0..scores.len()).filter(|at| scores[*at] == best).collect()
 }
 
-/// The one name (index into `name_keys`) whose surname the local part of `address` spells ([`address_owner`]).
-fn spelled_owner(name_keys: &[Vec<String>], address: &str) -> Option<usize> {
+/// The owner (index into `name_keys`) of each of a line's `addresses`: the one name it spells ([`spelled_owner`]); and,
+/// by elimination, an address no name spells goes to a name no address spells — on this line, or on another e-mail line
+/// of the block (`taken`, by index; 2605.06223's `kyle.min@…` on the next line leaves `treejhk@…` Junhyuk Kwon's) — only
+/// where the order is confirmed (user decision 2026-10-20, batch 77p r4):
+///  - exactly one address and one name are left (`\{lzhang,zhangw,smith\}@…` under Wei Zhang, Li Zhang, Bob Smith:
+///    "zhangw" Wei Zhang's once "lzhang" is Li Zhang's); or
+///  - the addresses the names spell stand in name order (one at least), and the addresses left are as many as the names
+///    left (2605.26032's `\{jzxchen,chenzhuo,archerdw,gore,congyued,billf,soljacic\}@mit.edu`), or those between two
+///    of them as many as the names between their owners (never a run before the first or after the last, which no
+///    spelled address bounds: user ruling R10 2026-10-20, 2509.10377), every one of those
+///    names counted, spelled on another line or not, and none of them spelled or given another address (`\{aszlam,jase,
+///    robfergus\}@fb.com`: "jase" to Jason Weston, 1503.08895; 2603.24730's `j8675309@mit.edu` to Jennifer E. Corbett;
+///    2303.11225's `xuta@…`, `musclewu@…` between `tianyuhe@…`, `tabaltru@…`, `runnan.li@…`).
+///
+/// A name left over is no one's to give while another e-mail line of the block holds an address no name spells
+/// (`elsewhere_open`): that address may be the name's, so neither the one-left nor the as-many-left rule places one
+/// (the r5 re-review's q6, `\{aable,q77,ddorn\}@x.edu \\ \{bbaker,z99\}@y.edu`: `q77@` is not Cat Cole's;
+/// 2602.23777's `dongsli@` on the next line). The run between two spelled owners is read by the order alone, every
+/// author between them counted, spelled on another line or not: 2602.23777's `nnwang@` between `xu_zhipeng@` and
+/// `dcheng@` has Zilong Wang, Xinyang Jiang and Dongsheng Li between Zhipeng Xu and De Cheng, so it goes to none of
+/// them; 2303.11225's `xuta@` has Xu Tan alone between Tianyu He and Tadas Baltrušaitis, as its PDF prints the list
+/// in the authors' order (and its `\thanks` names `xuta@microsoft.com` Xu Tan's), though `ztk21@` on the line above
+/// spells no one (batch 77p r6).
+///
+/// Not in order — a list by institution (2509.10377), or none spelled (`\{bb,aa\}@x.edu` reads by the initials, not
+/// the order) — the rest stay `None`, as does a role mailbox (RFC 2142's `info@`, `support@`, …, [`is_role_mailbox`]),
+/// which is no person's: the block's, on its shared creator (user ruling R10 2026-10-20).
+fn owners_by_elimination(
+  name_keys: &[NameKeys],
+  addresses: &[String],
+  taken: &[bool],
+  elsewhere_open: bool,
+) -> Vec<Option<usize>> {
+  let mut owners: Vec<Option<usize>> = addresses
+    .iter()
+    .map(|address| spelled_owner(name_keys, address))
+    .collect();
+  let free = |name: usize| !taken.get(name).copied().unwrap_or(false);
+  let left: Vec<usize> = (0..name_keys.len())
+    .filter(|name| !owners.contains(&Some(*name)) && free(*name))
+    .collect();
+  let open: Vec<usize> = (0..owners.len())
+    .filter(|at| owners[*at].is_none() && !is_role_mailbox(&addresses[*at]))
+    .collect();
+  if let ([at], [name]) = (open.as_slice(), left.as_slice())
+    && !elsewhere_open
+  {
+    owners[*at] = Some(*name);
+    return owners;
+  }
+  let spelled: Vec<usize> = owners.iter().flatten().copied().collect();
+  if open.is_empty() || spelled.is_empty() || !spelled.windows(2).all(|pair| pair[0] < pair[1]) {
+    return owners;
+  }
+  // (as many left as there are names left: in order, 2605.26032's `jzxchen@`, `billf@`, `soljacic@`)
+  if open.len() == left.len() && !elsewhere_open {
+    for (at, name) in open.into_iter().zip(left) {
+      owners[at] = Some(name);
+    }
+    return owners;
+  }
+  // (each run of open addresses, with the owners of the spelled addresses around it, and every name between them)
+  let mut run: Vec<usize> = Vec::new();
+  let mut below: Option<usize> = None;
+  for at in 0..=owners.len() {
+    let bound = if at == owners.len() {
+      Some(name_keys.len())
+    } else {
+      owners[at]
+    };
+    match bound {
+      Some(above) => {
+        let between = below.map_or(0, |below| below + 1)..above;
+        // (a run before the first spelled owner or after the last is bounded by the list's end alone, which no spelled
+        // address confirms: no position placement at a list's end (user ruling R10 2026-10-20; 2509.10377's `12421181@`
+        // first in its list, the r5 re-review's q7 `z99@`); a run between two spelled owners is read by the order,
+        // 2303.11225)
+        let at_an_end = below.is_none() || at == owners.len();
+        if !run.is_empty() && between.len() == run.len() && between.clone().all(free) && !at_an_end
+        {
+          for (address, name) in run.iter().zip(between) {
+            owners[*address] = Some(name);
+          }
+        }
+        run.clear();
+        below = Some(above);
+      },
+      None if open.contains(&at) => run.push(at),
+      None => {},
+    }
+  }
+  owners
+}
+
+/// How many of a line's `addresses` no name spells ([`spelled_owner`]), a role mailbox aside: the addresses that keep
+/// the names of the other e-mail lines of the block from going by elimination ([`owners_by_elimination`]).
+fn unspelled_addresses(name_keys: &[NameKeys], addresses: &[String]) -> usize {
+  addresses
+    .iter()
+    .filter(|address| spelled_owner(name_keys, address).is_none() && !is_role_mailbox(address))
+    .count()
+}
+
+/// Whether `line` prints nothing: spacing ([`leading_spacing_end`], `\vspace{2pt}`), a paragraph break, and the groups, font and size
+/// commands around them (`\large{~~}`, 2609.05430); a strut, an alignment declaration, an environment's `\begin{…}` or
+/// `\end{…}` itself (`\end{@IEEEauthorhalign}\hfill\strut`, 2309.15562's IEEE block, whose environment name had read as an
+/// address, then as an empty affiliation).
+fn prints_nothing(line: &Tokens) -> bool {
+  let v = line.unlist_ref();
+  let mut i = 0;
+  while i < v.len() {
+    let t = &v[i];
+    if matches!(
+      t.get_catcode(),
+      Catcode::BEGIN | Catcode::END | Catcode::SPACE
+    ) || *t == T_CS!("\\par")
+      || is_spacing_command(t)
+      || (t.get_catcode() == Catcode::CS
+        && t.with_str(|s| {
+          NAME_TEXT_COMMANDS.contains(&s)
+            || matches!(
+              s,
+              "\\strut" | "\\centering" | "\\raggedright" | "\\raggedleft"
+            )
+        }))
+    {
+      i += 1;
+    } else if *t == T_CS!("\\begin") || *t == T_CS!("\\end") {
+      i = skip_group(v, i + 1).max(i + 1);
+    } else if *t == T_CS!("\\vspace") || *t == T_CS!("\\hspace") {
+      // (its length, after a star)
+      let mut at = i + 1;
+      while v
+        .get(at)
+        .is_some_and(|u| *u == T_SPACE!() || *u == T_OTHER!("*"))
+      {
+        at += 1;
+      }
+      i = skip_group(v, at);
+    } else {
+      match leading_spacing_end(&v[i..]) {
+        0 => return false,
+        skipped => i += skipped,
+      }
+    }
+  }
+  true
+}
+
+/// Whether `line` is only a link, `\href{…}{…}` or `\url{…}`, with the groups, size or font it is set in, the spacing
+/// that prints nothing (`\href{https://jnnan.github.io/trumans/}{…} \vspace{-21pt}`, 2403.08629;
+/// `{\footnotesize \url{…}}`, 2602.22394; `{\tt{\small{\url{…}}}}`, 2602.23802), and a label ending in a colon before it
+/// (`Demo Code:~\url{…}`, 2602.09509).
+fn is_link_line(line: &Tokens) -> bool { link_line_link(line).is_some() }
+
+/// Where the one link of a link line ([`is_link_line`]) stands among its tokens, from its command to the end of its
+/// arguments; `None` for any other line.
+fn link_line_link(line: &Tokens) -> Option<(usize, usize)> {
+  let v = line.unlist_ref();
+  let (start, end) = (leading_spacing_end(v), spacing_end(v));
+  // (a line of spacing alone is no link: 2510.07961, 2607.21993)
+  if start >= end {
+    return None;
+  }
+  let v = &v[start..end];
+  let mut links = 0;
+  let mut link = (0, 0);
+  // (the last visible character of a label before the link)
+  let mut label: Option<char> = None;
+  let mut i = 0;
+  while i < v.len() {
+    let t = v[i];
+    if matches!(
+      t.get_catcode(),
+      Catcode::SPACE | Catcode::BEGIN | Catcode::END
+    ) || is_spacing_command(&t)
+      || is_spacing(&t)
+      || (t.get_catcode() == Catcode::CS
+        && t.with_str(|s| NAME_TEXT_COMMANDS.contains(&s) || s == "\\texttt"))
+    {
+      i += 1;
+    } else if let Some((end, _)) = non_printing_end(v, i) {
+      // (a colour, a font, a scale, an icon the link is set in or beside prints no word: `{\color{orange}\textbf{\url{…}}}`,
+      // `\textcolor{blue}{\url{…}}`, [`NON_PRINTING_ARGUMENTS`])
+      i = end.max(i + 1);
+    } else if t == T_CS!("\\href") || t == T_CS!("\\url") {
+      if label.is_some_and(|last| last != ':') {
+        return None;
+      }
+      // (a link that prints nothing is no link of the line: 2601.02680's `\href{…}{…} \url{}`)
+      let (open, close) = link_printed_argument(v, i);
+      if v[open..close].iter().all(|t| {
+        matches!(
+          t.get_catcode(),
+          Catcode::BEGIN | Catcode::END | Catcode::SPACE
+        )
+      }) {
+        i = close.max(i + 1);
+        continue;
+      }
+      links += 1;
+      let at = i;
+      // (its arguments, the spaces before each skipped as TeX skips them: `\href{…}⏎{…}`, 2605.06223; none after a
+      // bare `\href` that ends the line)
+      let argument = |at: usize| {
+        let at = at
+          + v.get(at..).map_or(0, |rest| {
+            rest.iter().take_while(|t| **t == T_SPACE!()).count()
+          });
+        skip_group(v, at)
+      };
+      i = argument(i + 1);
+      if t == T_CS!("\\href") {
+        i = argument(i);
+      }
+      link = (start + at, start + i.min(v.len()));
+    } else if links == 0 && matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER) {
+      label = t.with_str(|s| s.chars().last());
+      i += 1;
+    } else {
+      return None;
+    }
+  }
+  (links == 1).then_some(link)
+}
+
+/// The links of a line of several, each a link line of its own ([`is_url_line`]) with the icon or label before it, the
+/// spacing and the separators (`|`, `·`, `,`) between them dropped (`\faGithub~\href{…}{Code} | \yticon~\href{…}{Demo
+/// Video}`, 2601.06979; the r7 re-review's finding 5): a URL contact each. The line whole when it holds one link, or a
+/// piece of it is no such link line (a row of linked names).
+fn link_run_lines(line: Tokens) -> Vec<Tokens> {
+  let v = line.unlist_ref();
+  let mut ends = Vec::new();
+  let mut depth = 0usize;
+  let mut i = 0;
+  while i < v.len() {
+    let t = v[i];
+    if depth == 0 && (t == T_CS!("\\href") || t == T_CS!("\\url")) {
+      let (_, (_, after_second)) = link_arguments(v, i);
+      let (_, close) = link_printed_argument(v, i);
+      i = if t == T_CS!("\\href") {
+        after_second
+      } else {
+        close
+      }
+      .max(i + 1);
+      ends.push(i);
+      continue;
+    }
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ => {},
+    }
+    i += 1;
+  }
+  if ends.len() < 2 {
+    return vec![line];
+  }
+  let separator = |t: &Token| {
+    t.get_catcode() == Catcode::MATH
+      || is_spacing(t)
+      || is_spacing_command(t)
+      || [",", ";", "|", "·", "/", "•"]
+        .iter()
+        .any(|mark| *t == T_OTHER!(*mark))
+      || *t == T_CS!("\\textbar")
+      || *t == T_CS!("\\textbullet")
+      || *t == T_CS!("\\cdot")
+  };
+  let mut pieces = Vec::with_capacity(ends.len());
+  let mut start = 0;
+  for (at, end) in ends.iter().enumerate() {
+    let end = if at + 1 == ends.len() { v.len() } else { *end };
+    let mut from = start;
+    while from < end && separator(&v[from]) {
+      from += 1;
+    }
+    pieces.push(Tokens::new(v[from..end].to_vec()));
+    start = end;
+  }
+  if pieces.iter().all(is_url_line) {
+    pieces
+  } else {
+    vec![line]
+  }
+}
+
+/// The words that name what a link leads to — a page, a project, its code or data — and no institution or person
+/// (`Project Page`, `GitHub Repository`, `Hugging Face Demo`, `Substack Article`: 2602.22227, 2604.24697, 2601.18810,
+/// 2604.15404, the r6 re-review's finding 2), as [`link_words`] reads them.
+const LINK_WORDS: &[&str] = &[
+  "page",
+  "webpage",
+  "homepage",
+  "website",
+  "site",
+  "url",
+  "link",
+  "code",
+  "repository",
+  "repo",
+  "github",
+  "demo",
+  "dataset",
+  "data",
+  "article",
+  "blog",
+  "video",
+  "model",
+  "project",
+];
+
+/// Whether `text` holds a word of [`LINK_WORDS`], in any case, singular or plural.
+fn link_words(text: &str) -> bool {
+  text
+    .split(|c: char| !c.is_alphanumeric())
+    .map(str::to_lowercase)
+    .any(|word| {
+      let word = word
+        .strip_suffix('s')
+        .filter(|_| word.len() > 3)
+        .unwrap_or(&word);
+      LINK_WORDS.contains(&word)
+    })
+}
+
+/// Whether the web address `target` reaches a page below its site's root: a path after its host (`https://x.org/proj`,
+/// `github.com/a/b`), not the bare domain an institution's link is (`https://www.google.com`, `https://x.ai/`).
+fn target_has_path(target: &str) -> bool {
+  let rest = target.split_once("://").map_or(target, |(_, rest)| rest);
+  rest
+    .split_once('/')
+    .is_some_and(|(_, path)| !path.trim_matches(['/', '#', '?']).is_empty())
+}
+
+/// Whether `line` is a link line ([`is_link_line`]) to a web page, a URL contact of the author block
+/// ([`url_contact_call`]), by what the link says and where it goes, not by the shape of its words: not to a mailbox
+/// (`\textbf{Correspondence:} \href{mailto:…}{…}`, 2601.00240, 2605.18563, an address and no URL: an e-mail line,
+/// [`mailto_line`]); a `\url`, or an `\href` printing a web address or a link word before or in its text
+/// ([`link_words`]: `\href{…}{Project Page}`, `Demo Code:~\href{…}{here}`, 2602.09509); not one printing an institution,
+/// that institution linked, an affiliation (`\href{https://launchsafe.com}{\textbf{LaunchSafe Research}}`, 2606.26479,
+/// the r5 re-review's u32, u33, u35), nor a person's name, that name (`\textit{Author:} \href{…}{Masashi Sekine}`,
+/// 2603.22058); else a link printing no word (an icon) or to a page below a site's root is one, and a link to a bare
+/// domain is the institution it prints (`\href{https://www.google.com}{Google}`, `\href{https://x.ai}{xAI}`, the r6 re-review's x10, w8).
+fn is_url_line(line: &Tokens) -> bool {
+  let Some((at, end)) = link_line_link(line) else {
+    return false;
+  };
+  let v = &line.unlist_ref()[..end];
+  let (target, printed) = link_texts(v, at);
+  if links_a_mailbox(&target, &printed) {
+    return false;
+  }
+  if v[at] == T_CS!("\\url") || reads_as_web_address(&printed) {
+    return true;
+  }
+  let label = visible_name_text(&printed_words(&v[..at]));
+  let (open, close) = link_printed_argument(v, at);
+  let printed_tokens = Tokens::new(printed_words(&v[open..close]));
+  // (an institution holding a link word is that institution linked: `\href{…}{Data Science Institute}`, the r7
+  // re-review's finding 4, probe n6)
+  if reads_as_affiliation(&printed_tokens) {
+    return false;
+  }
+  if link_words(&printed) || link_words(&label) {
+    return true;
+  }
+  if name_count(&visible_name_text(printed_tokens.unlist_ref())) > 0 {
+    return false;
+  }
+  // (an icon, a link printing no word, is one: 2604.10930; and one printing a word that names no organization, `here`,
+  // the r7 re-review's finding 10)
+  !printed.chars().any(char::is_alphanumeric)
+    || target_has_path(&target)
+    || !names_an_organization(&visible_name_text(printed_tokens.unlist_ref()))
+}
+
+/// Whether `line` is a link line printing an institution, no URL line ([`is_url_line`]): its printed text reads as an
+/// affiliation (`\href{https://launchsafe.com}{\textbf{LaunchSafe Research}}`, 2606.26479), or it links a bare domain
+/// and prints no name (`\href{https://www.google.com}{Google}`, the r6 re-review's x9, x10) — not a linked name
+/// (`Advisor: \href{…}{Carl Doe}`, the r6 re-review's w5).
+fn link_prints_an_institution(line: &Tokens) -> bool {
+  let Some((at, end)) = link_line_link(line) else {
+    return false;
+  };
+  let v = &line.unlist_ref()[..end];
+  let (target, printed) = link_texts(v, at);
+  if is_url_line(line) || links_a_mailbox(&target, &printed) {
+    return false;
+  }
+  let (open, close) = link_printed_argument(v, at);
+  let printed = Tokens::new(printed_words(&v[open..close]));
+  let text = visible_name_text(printed.unlist_ref());
+  reads_as_affiliation(&printed)
+    || (name_count(&text) == 0 && names_an_organization(&text) && !target_has_path(&target))
+}
+
+/// Whether a bare domain's link text names its organization, as such a name is written — each word with a capital
+/// (`Google`, `xAI`) —, not a word of the sentence around it (`\href{https://ann.org}{here}`, a link: the r7 re-review's
+/// finding 10, probes n13, p9).
+fn names_an_organization(text: &str) -> bool {
+  !text.trim().is_empty()
+    && text
+      .split_whitespace()
+      .all(|word| word.chars().any(char::is_uppercase))
+}
+
+/// Whether `line` is a link line ([`is_url_line`]) that prints a web address, a link word or a label before its link:
+/// a `\url`, an `\href` printing a URL, `\href{…}{Project Page}`, `Project page: \href{…}{here}`. A link line opening an
+/// author block or an `\and` column is only one so, a linked name there its author
+/// (`\href{https://orcid.org/…}{\includegraphics{orcid.pdf}\hspace{1mm}Eric Rossetto}`, 2608.24427, 2602.15968,
+/// 2603.04124); a column of a "Project Page" link alone is the block's, no author (the r6 re-review's w22).
+fn prints_a_url(line: &Tokens) -> bool {
+  let Some((at, end)) = link_line_link(line) else {
+    return false;
+  };
+  let v = &line.unlist_ref()[..end];
+  let (_, printed) = link_texts(v, at);
+  // (a printed text that reads as a name is that name linked, whatever word of it is a link word, unless it shows a
+  // scheme or `www.`: `\href{…}{Lucy Page}`, `\href{…}{Edward A.G. Schuur}`, 2601.06085; the r7 re-review's findings 2
+  // and 4 — not `\href{…}{Project Page}`, every word a link word)
+  if name_count(&printed) > 0
+    && !printed.contains("://")
+    && !printed
+      .split_whitespace()
+      .any(|word| word.starts_with("www."))
+    && !all_link_words(&printed)
+  {
+    return false;
+  }
+  is_url_line(line)
+    && (v[at] == T_CS!("\\url")
+      || reads_as_web_address(&printed)
+      || link_words(&printed)
+      || v[..at]
+        .iter()
+        .any(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER)))
+}
+
+/// `v` without what prints no word ([`without_non_printing_arguments`]): a colour's arguments, a graphic with its
+/// arguments (an ORCID icon, `\includegraphics[scale=0.06]{orcid.pdf}`), a skip's length (`\hspace{1mm}`, a space).
+fn printed_words(v: &[Token]) -> Vec<Token> { without_non_printing_arguments(v) }
+
+/// Where the printed argument of the link at `at` in `v` stands: an `\href`'s second, a `\url`'s one.
+fn link_printed_argument(v: &[Token], at: usize) -> (usize, usize) {
+  let (target, printed) = link_arguments(v, at);
+  if v.get(at) == Some(&T_CS!("\\href")) {
+    printed
+  } else {
+    target
+  }
+}
+
+/// Where the first two arguments after the link command at `at` in `v` stand, the spaces before each skipped as TeX
+/// skips them; empty past the end.
+fn link_arguments(v: &[Token], at: usize) -> ((usize, usize), (usize, usize)) {
+  let end = v.len();
+  let argument = |from: usize| -> (usize, usize) {
+    let from = from.min(end);
+    let open = from + v[from..].iter().take_while(|t| **t == T_SPACE!()).count();
+    (open, skip_group(v, open).clamp(open, end))
+  };
+  let first = argument(at + 1);
+  (first, argument(first.1))
+}
+
+/// The target and the printed text of the link at `at` in `v` (`\href{target}{printed}`; a `\url`'s argument is both),
+/// as their letters, other characters and spaces read, what prints no word aside ([`printed_words`]: a colour, an ORCID
+/// icon's `\includegraphics[scale=0.06]{orcid.pdf}`, a skip's length).
+fn link_texts(v: &[Token], at: usize) -> (String, String) {
+  let text = |v: &[Token]| -> String {
+    let mut text = String::new();
+    for t in printed_words(v) {
+      match t.get_catcode() {
+        Catcode::LETTER | Catcode::OTHER => t.with_str(|s| text.push_str(s)),
+        Catcode::SPACE => text.push(' '),
+        Catcode::ACTIVE if t == T_ACTIVE!('~') => text.push(' '),
+        _ => {},
+      }
+    }
+    text.trim().to_string()
+  };
+  let ((open, close), _) = link_arguments(v, at);
+  let target = text(&v[open..close]);
+  let (open, close) = link_printed_argument(v, at);
+  (target, text(&v[open..close]))
+}
+
+/// Whether `text` is a bare e-mail address, a mailbox and no web page: a local part, an `@`, a domain with a dot, and
+/// no `/` (`binzhu@smu.edu.sg` as the ACL template's `\href{binzhu@smu.edu.sg}{binzhu@smu.edu.sg}` writes it, without
+/// `mailto:`; 2604.04847, 2605.29064, 2605.29893, 2606.01600) — not a handle (`@aable`, the r6 re-review's w21), nor a
+/// list of them (`{a,b}@x.edu` is no one address, [`email_addresses`] reads it: 2609.00588).
+fn is_bare_address(text: &str) -> bool {
+  let Some((local, domain)) = text.trim().split_once('@') else {
+    return false;
+  };
+  !local.is_empty()
+    && !local.contains([',', ';', '{', '}', ' '])
+    && !text.contains('/')
+    && domain.split('.').filter(|part| !part.is_empty()).count() >= 2
+    && !domain.contains(['@', ' ', ','])
+}
+
+/// Whether a link to `target` printing `printed` reaches a mailbox: to `mailto:`, or a bare address
+/// ([`is_bare_address`]) either way, its target no web page (`\href{https://x.com/aable}{@aable}` is a profile's, the r6
+/// re-review's w21).
+fn links_a_mailbox(target: &str, printed: &str) -> bool {
+  target.starts_with("mailto:")
+    || (!target.contains("://") && (is_bare_address(target) || is_bare_address(printed)))
+}
+
+/// Whether `text` prints a web address: a word with `://`, opening with `www.`, with a `/` between two letters or digits
+/// (`github.io/traj_evo_search`), or with a `.` between two whose last label is a top-level domain of two letters or
+/// more (`x.org`), and no `@` — not a run of dotted initials (`Edward A.G. Schuur`, 2601.06085; `T.J.C. Bezerra`,
+/// 2606.03745; the r7 re-review's finding 2), nor a version number (`v1.2`).
+fn reads_as_web_address(text: &str) -> bool {
+  text.split_whitespace().any(|word| {
+    let between = |c: u8| {
+      word
+        .as_bytes()
+        .windows(3)
+        .any(|w| w[0].is_ascii_alphanumeric() && w[1] == c && w[2].is_ascii_alphanumeric())
+    };
+    let initials = word
+      .as_bytes()
+      .windows(3)
+      .any(|w| w[0].is_ascii_uppercase() && w[1] == b'.' && w[2].is_ascii_uppercase());
+    let domain = word
+      .trim_end_matches(|c: char| !c.is_alphanumeric())
+      .rsplit_once('.')
+      .is_some_and(|(_, last)| last.len() >= 2 && last.chars().all(|c| c.is_ascii_alphabetic()));
+    !word.contains('@')
+      && (word.contains("://")
+        || word.starts_with("www.")
+        || between(b'/')
+        || (between(b'.') && domain && !initials))
+  })
+}
+
+/// Whether every word of `text` is a link word ([`LINK_WORDS`]): `Project Page`, `GitHub Repository` — not `Lucy Page`,
+/// `Mark Link` (the r7 re-review's finding 4).
+fn all_link_words(text: &str) -> bool {
+  let mut words = text
+    .split(|c: char| !c.is_alphanumeric())
+    .filter(|word| !word.is_empty())
+    .peekable();
+  words.peek().is_some() && words.all(link_words)
+}
+
+/// A link line ([`link_line_link`]) to a mailbox (`\textbf{Correspondence:} \href{mailto:x@y}{x@y}`, `Email:
+/// \href{mailto:…}{…}`), read as a labelled e-mail line (user ruling 2026-10-20, batch 77p r8: 2601.00240, 2601.07974,
+/// 2604.23002, 2606.03014, 2605.18563): the text before the link, as it prints without its font ("Correspondence:"),
+/// is the label, and the link, kept a link, the address ([`address_text`] reads the one it prints). `None` for any
+/// other line.
+fn mailto_line(line: &Tokens) -> Option<(Option<Tokens>, EmailAddress)> {
+  let (at, end) = link_line_link(line)?;
+  let v = line.unlist_ref();
+  // (the link's target and printed text: to a mailbox, or a bare address without `mailto:`, the ACL template's
+  // `\textbf{Correspondence:} \href{binzhu@smu.edu.sg}{binzhu@smu.edu.sg}`, 2604.04847, 2605.29064, 2605.29893,
+  // 2606.01600)
+  let (target, printed) = link_texts(&v[..end], at);
+  if !links_a_mailbox(&target, &printed) {
+    return None;
+  }
+  let mut label: Vec<Token> = Vec::new();
+  for t in &without_non_printing_arguments(&v[..at]) {
+    match t.get_catcode() {
+      Catcode::LETTER | Catcode::OTHER => label.push(*t),
+      _ if (t.get_catcode() == Catcode::SPACE || is_spacing(t))
+        && label.last().is_some_and(|last| *last != T_SPACE!()) =>
+      {
+        label.push(T_SPACE!())
+      },
+      _ => {},
+    }
+  }
+  while label.last() == Some(&T_SPACE!()) {
+    label.pop();
+  }
+  Some((
+    (!label.is_empty()).then(|| Tokens::new(label)),
+    EmailAddress {
+      address: Tokens::new(v[at..end].to_vec()),
+      call:    None,
+    },
+  ))
+}
+
+/// The e-mail addresses of an author block's line, as text: a line of addresses (`a@x, b@y`, `{a,b}@dom`) or a
+/// labelled one (`Email: \email{a@x}`); none for any other line.
+fn line_address_texts(line: &Tokens) -> Result<Vec<String>> {
+  if let Some(addresses) = email_addresses(line) {
+    return Ok(addresses);
+  }
+  Ok(
+    line_labelled_emails(line)?
+      .map(|(_, addresses)| {
+        addresses
+          .iter()
+          .map(|address| address_text(&address.address))
+          .collect()
+      })
+      .unwrap_or_default(),
+  )
+}
+
+/// Which names (by index into `name_keys`) one of `addresses` spells ([`spelled_owner`]).
+fn names_spelled(name_keys: &[NameKeys], addresses: &[String]) -> Vec<bool> {
+  let mut spelled = vec![false; name_keys.len()];
+  for address in addresses {
+    if let Some(owner) = spelled_owner(name_keys, address) {
+      spelled[owner] = true;
+    }
+  }
+  spelled
+}
+
+/// Whether `address` is a role mailbox, no person's (RFC 2142 "Mailbox Names for Common Services, Roles and
+/// Functions", and `contact@`, `office@`, `admin@`): `info@x.edu` beside `bbaker@x.edu` is not Ann Able's.
+fn is_role_mailbox(address: &str) -> bool {
+  let local = address
+    .split('@')
+    .next()
+    .unwrap_or_default()
+    .trim()
+    .to_lowercase();
+  matches!(
+    local.as_str(),
+    "info"
+      | "marketing"
+      | "sales"
+      | "support"
+      | "abuse"
+      | "noc"
+      | "security"
+      | "postmaster"
+      | "hostmaster"
+      | "usenet"
+      | "news"
+      | "webmaster"
+      | "www"
+      | "uucp"
+      | "ftp"
+      | "contact"
+      | "office"
+      | "admin"
+  )
+}
+
+/// The one name (index into `name_keys`) the local part of `address` spells ([`spelled_owners`]), or `None` when no name or
+/// several do.
+fn spelled_owner(name_keys: &[NameKeys], address: &str) -> Option<usize> {
   match spelled_owners(name_keys, address).as_slice() {
     [owner] => Some(*owner),
     _ => None,
@@ -16250,16 +18912,29 @@ fn spelled_owner(name_keys: &[Vec<String>], address: &str) -> Option<usize> {
 }
 
 /// The email calls for `addresses`: under the author's `label`, `\lx@add@email` named by it; without one, the class's
-/// own email command as written (`\email{x}`), or `\lx@add@email`.
-fn email_calls(label: Option<&Tokens>, addresses: Vec<EmailAddress>) -> Result<Vec<Token>> {
-  let keyvals = label.map(|label| {
-    let mut kv = mouth::tokenize_internal("name=").unlist();
+/// own email command as written (`\email{x}`), or `\lx@add@email`; placed by the label `placement` gives when it gives
+/// one (`label=author:N`, the creator that numbers, placed once the authors are made, in the order the lines are written;
+/// `label=addresses:block`, the block's).
+fn email_calls(
+  label: Option<&Tokens>,
+  addresses: Vec<EmailAddress>,
+  placement: Option<&str>,
+) -> Result<Vec<Token>> {
+  let mut kv: Vec<Token> = Vec::new();
+  if let Some(label) = label {
+    kv.extend(mouth::tokenize_internal("name=").unlist());
     kv.push(T_BEGIN!());
     kv.extend(label.unlist_ref().iter().copied());
     kv.push(T_SPACE!());
     kv.push(T_END!());
-    Tokens::new(kv)
-  });
+  }
+  if let Some(placement) = placement {
+    if !kv.is_empty() {
+      kv.push(T_OTHER!(","));
+    }
+    kv.extend(mouth::tokenize_internal(TeXString::assembled(placement.to_string())).unlist());
+  }
+  let keyvals = (!kv.is_empty()).then(|| Tokens::new(kv));
   let mut calls = Vec::new();
   for EmailAddress { address, call } in addresses {
     match (&keyvals, call) {
@@ -16329,7 +19004,7 @@ struct EmailOwners {
 fn block_email_calls(
   label: Option<&Tokens>,
   addresses: Vec<EmailAddress>,
-  author_keys: &[Vec<String>],
+  author_keys: &[NameKeys],
   owners: EmailOwners,
 ) -> Result<Vec<Token>> {
   let mut calls = Vec::new();
@@ -16420,8 +19095,36 @@ fn labelled_email_line(line: &Tokens) -> Result<Option<Tokens>> {
   while end > lead && (toks[end - 1] == T_CS!("\\par") || is_spacing(&toks[end - 1])) {
     end -= 1;
   }
+  // …and a group around the whole of it, with what leads it there (`\tt\small {Email Address:
+  // songyuxinbb@outlook.com}`, 2603.19228)
+  // (`\small {…}` reads as a command over its argument, which a size or font command does not take)
+  loop {
+    let open = if toks.get(lead).is_some_and(|t| {
+      t.get_catcode() == Catcode::CS && t.with_str(|s| NAME_TEXT_COMMANDS.contains(&s))
+    }) {
+      lead + 1
+    } else {
+      lead
+    };
+    if end > open + 1 && toks[open].get_catcode() == Catcode::BEGIN && skip_group(toks, open) == end
+    {
+      lead = open + 1 + leading_unprinted_end(&toks[open + 1..end - 1]);
+      end -= 1;
+    } else {
+      break;
+    }
+  }
   let rest = Tokens::new(toks[lead..end].to_vec());
   Ok(labelled_emails(&rest)?.is_some().then_some(rest))
+}
+
+/// The label and addresses of a labelled e-mail line ([`labelled_emails`]) behind what prints nothing before it
+/// ([`labelled_email_line`]); `None` for any other line.
+fn line_labelled_emails(line: &Tokens) -> Result<Option<(Option<Tokens>, Vec<EmailAddress>)>> {
+  match labelled_email_line(line)? {
+    Some(rest) => labelled_emails(&rest),
+    None => Ok(None),
+  }
 }
 
 /// Whether a note's text names its author the corresponding one ("Corresponding author.", "Correspondence to …",
@@ -16675,6 +19378,299 @@ fn is_email_command(cs: &Token) -> Result<bool> {
 /// misclassifies an address as an email.
 fn line_is_email_list(line: &Tokens) -> bool { email_addresses(line).is_some() }
 
+/// The commands whose arguments print no letter, each with those arguments as an xparse-style signature — `s` a star,
+/// `o` an optional `[…]` argument, `m` a mandatory one — and whether the command prints a space: what the command
+/// prints, if anything, is the argument after them. One table for every reader of an author block's printed text
+/// ([`email_addresses`], [`address_text`], [`printed_words`], [`link_line_link`], [`mailto_line`]'s label): a colour, a
+/// font's name or size, a scale, an angle, a raise, a graphic's file, a skip's length are no letters of an address, a
+/// label or a link's text (`\href{mailto:…}{\color{black}…}`, 2604.19440; `\texttt{\fontfamily{pcr}\selectfont
+/// xw109@illinois.edu}`, 2609.25669, 2609.35216; `\scalebox{0.9}{…}`, `\fontsize{9}{11}`, the r6 re-review's w14,
+/// w15). The signatures are those of xcolor.sty (`\fcolorbox[model]{frame}[model]{background}{text}`, `\colorlet`,
+/// `\definecolor`), latex.ltx's font selection (`\fontsize{size}{skip}`, `\usefont{enc}{family}{series}{shape}`) and
+/// boxes (`\raisebox{lift}[height][depth]{text}`, `\hspace*{len}`), and graphicx.sty (`\scalebox{h}[v]{text}`,
+/// `\rotatebox[keys]{angle}{text}`, `\resizebox*{width}{height}{text}`, `\includegraphics*[…][…]{file}`, all of whose
+/// arguments print no letter).
+const NON_PRINTING_ARGUMENTS: &[(&str, &str, bool)] = &[
+  ("\\color", "om", false),
+  ("\\textcolor", "om", false),
+  ("\\colorbox", "om", false),
+  ("\\fcolorbox", "omom", false),
+  ("\\pagecolor", "om", false),
+  ("\\colorlet", "omom", false),
+  ("\\definecolor", "ommm", false),
+  ("\\fontfamily", "m", false),
+  ("\\fontseries", "m", false),
+  ("\\fontshape", "m", false),
+  ("\\fontencoding", "m", false),
+  ("\\fontsize", "mm", false),
+  ("\\usefont", "mmmm", false),
+  ("\\scalebox", "mo", false),
+  ("\\rotatebox", "om", false),
+  ("\\raisebox", "moo", false),
+  ("\\resizebox", "smm", false),
+  ("\\includegraphics", "soom", false),
+  ("\\hspace", "sm", true),
+  ("\\vspace", "sm", true),
+  // (latex.ltx's `\rule[raise]{width}{height}` and `\phantom{…}` print a box, no letter: the r7 re-review's finding 11,
+  // probes p1, p2, p4)
+  ("\\rule", "omm", false),
+  ("\\phantom", "m", true),
+  ("\\hphantom", "m", true),
+  ("\\vphantom", "m", false),
+  // (TeX's `\kern`, `\hskip`, `\vskip` take a dimension or glue, `d`/`g`, no group: probes p5, p6)
+  ("\\kern", "d", true),
+  ("\\hskip", "g", true),
+  ("\\vskip", "g", false),
+  // (an icon prints its glyph, no letter: fontawesome5's `\faIcon[style]{name}`, fontawesome's `\faicon[…]{name}` and
+  // `\faIconFromMacro{name}`, which their `\faGithub`-style commands expand to, [`icon_macro_options`]; 2601.03661,
+  // 2601.06979, the r7 re-review's finding 5)
+  ("\\faIcon", "om", false),
+  ("\\faicon", "om", false),
+  ("\\faIconFromMacro", "m", false),
+];
+
+/// Where the command at `at` and its arguments that print no letter end ([`NON_PRINTING_ARGUMENTS`]), the spaces before
+/// each argument skipped as TeX skips them, and whether it prints a space; `None` for any other token.
+fn non_printing_end(v: &[Token], at: usize) -> Option<(usize, bool)> {
+  non_printing_end_within(v, at, 0)
+}
+
+/// [`non_printing_end`], `depth` macros deep in the expansion of a command that prints no word
+/// ([`icon_macro_options`]).
+fn non_printing_end_within(v: &[Token], at: usize, depth: usize) -> Option<(usize, bool)> {
+  let t = v.get(at)?;
+  if t.get_catcode() != Catcode::CS {
+    return None;
+  }
+  let found = t.with_str(|name| {
+    NON_PRINTING_ARGUMENTS
+      .iter()
+      .find(|(command, ..)| *command == name)
+      .map(|(_, signature, space)| (*signature, *space))
+  });
+  // (a macro of optional arguments alone whose expansion prints no word, an icon: `\faGithub`, a user's
+  // `\newcommand{\yticon}{\textcolor{youtubeRed}{\faYoutube}}`)
+  let owned;
+  let (signature, space) = match found {
+    Some(found) => found,
+    None => {
+      owned = "o".repeat(icon_macro_options(t, depth)?);
+      (owned.as_str(), false)
+    },
+  };
+  let mut i = at + 1;
+  for kind in signature.chars() {
+    let next = i
+      + v[i.min(v.len())..]
+        .iter()
+        .take_while(|t| **t == T_SPACE!())
+        .count();
+    match kind {
+      's' if v.get(next) == Some(&T_OTHER!("*")) => i = next + 1,
+      'o' if v.get(next) == Some(&T_OTHER!("[")) => {
+        i = next
+          + v[next..]
+            .iter()
+            .position(|t| *t == T_OTHER!("]"))
+            .map_or(v.len() - next, |close| close + 1);
+      },
+      'm' if next < v.len() => i = skip_group(v, next).max(next + 1),
+      'd' | 'g' => i = next + dimension_length(&v[next.min(v.len())..], kind == 'g'),
+      _ => {},
+    }
+  }
+  Some((i.min(v.len()), space))
+}
+
+/// How many tokens of `v` a dimension takes (`2em`, `-1.5pt`, `\fill`, `0.5\textwidth`), the spaces in it, and with
+/// `glue` its `plus`/`minus` parts (`2em plus 1fil`) — TeX's ⟨dimen⟩ and ⟨glue⟩ (tex.web §448, §461), read as written
+/// in an author line.
+fn dimension_length(v: &[Token], glue: bool) -> usize {
+  let text_of = |t: &Token| -> Option<char> {
+    matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER)
+      .then(|| t.with_str(|s| s.chars().next()))
+      .flatten()
+  };
+  // (a sign, digits and a point, then a unit of two letters or a register)
+  let dimen = |from: usize| -> usize {
+    let mut i = from;
+    while v
+      .get(i)
+      .is_some_and(|t| *t == T_SPACE!() || matches!(text_of(t), Some('+' | '-')))
+    {
+      i += 1;
+    }
+    let digits = i;
+    while v
+      .get(i)
+      .is_some_and(|t| matches!(text_of(t), Some(c) if c.is_ascii_digit() || c == '.' || c == ','))
+    {
+      i += 1;
+    }
+    while v.get(i) == Some(&T_SPACE!()) {
+      i += 1;
+    }
+    match v.get(i) {
+      Some(t) if t.get_catcode() == Catcode::CS => i + 1,
+      Some(_) if i > digits => {
+        // (a unit of two letters, `true` before it; `fil`, `fill`, `filll` in glue)
+        let letters: String = v[i..]
+          .iter()
+          .take_while(|t| t.get_catcode() == Catcode::LETTER)
+          .take(6)
+          .filter_map(text_of)
+          .collect();
+        let unit = if let Some(more) = letters.strip_prefix("fil") {
+          3 + more.chars().take_while(|c| *c == 'l').count().min(2)
+        } else if letters.starts_with("true") && letters.len() >= 6 {
+          6
+        } else if letters.len() >= 2 {
+          2
+        } else {
+          return from;
+        };
+        // (and the one optional space after a unit, tex.web §443)
+        i + unit + usize::from(v.get(i + unit) == Some(&T_SPACE!()))
+      },
+      _ => from,
+    }
+  };
+  let mut end = dimen(0);
+  if end == 0 {
+    return 0;
+  }
+  if glue {
+    for keyword in ["plus", "minus"] {
+      let mut at = end;
+      while v.get(at) == Some(&T_SPACE!()) {
+        at += 1;
+      }
+      let word: String = v[at.min(v.len())..]
+        .iter()
+        .take(keyword.len())
+        .filter_map(text_of)
+        .collect();
+      if word == keyword {
+        let after = dimen(at + keyword.len());
+        if after > at + keyword.len() {
+          end = after;
+        }
+      }
+    }
+  }
+  end
+}
+
+/// How many optional arguments the command `t` takes when it is a macro taking no other whose expansion prints no
+/// word, only commands that print none ([`NON_PRINTING_ARGUMENTS`], an icon: fontawesome5's `\faGithub[]` is
+/// `\faIcon[#1]{github}`; 2601.03661's `\faGithub \, \href{…}{…}`, 2601.06979's `\yticon~\href{…}{…}`, the r7
+/// re-review's finding 5) and the groups, spaces and spacing around them; `None` for any other command, a macro that
+/// expands to nothing among them.
+fn icon_macro_options(t: &Token, depth: usize) -> Option<usize> {
+  if depth > 3 {
+    return None;
+  }
+  let definition = lookup_definition(t).ok()??;
+  let Some(ExpansionBody::Tokens(body)) = definition.get_expansion() else {
+    return None;
+  };
+  let parameters = definition
+    .get_parameters()
+    .map(|parameters| parameters.get_parameters())
+    .unwrap_or_default();
+  if parameters
+    .iter()
+    .any(|parameter| !parameter.optional && !parameter.novalue)
+  {
+    return None;
+  }
+  let v = body.unlist_ref();
+  let mut icon = false;
+  let mut i = 0;
+  while i < v.len() {
+    let u = &v[i];
+    match u.get_catcode() {
+      Catcode::BEGIN
+      | Catcode::END
+      | Catcode::SPACE
+      | Catcode::PARAM
+      | Catcode::ARG
+      | Catcode::MARKER => i += 1,
+      _ if is_spacing_command(u) || is_spacing(u) => i += 1,
+      Catcode::CS => {
+        let (end, _) = non_printing_end_within(v, i, depth + 1)?;
+        icon = true;
+        i = end.max(i + 1);
+      },
+      _ => return None,
+    }
+  }
+  icon.then_some(
+    parameters
+      .iter()
+      .filter(|parameter| parameter.optional)
+      .count(),
+  )
+}
+
+/// `v` without the arguments that print no letter ([`NON_PRINTING_ARGUMENTS`]), each command with them gone, or a
+/// space where it prints one (a skip). What a command prints, its argument after them, stays.
+fn without_non_printing_arguments(v: &[Token]) -> Vec<Token> {
+  let mut out = Vec::with_capacity(v.len());
+  let mut i = 0;
+  while i < v.len() {
+    match non_printing_end(v, i) {
+      Some((end, space)) => {
+        if space {
+          out.push(T_SPACE!());
+        }
+        i = end.max(i + 1);
+      },
+      None => {
+        out.push(v[i]);
+        i += 1;
+      },
+    }
+  }
+  out
+}
+
+/// `v` with each `\url`'s argument as the command prints it, verbatim: its braces and underscores characters
+/// (`\{`, `\}`, `\_`), not a group and a subscript (`\texttt{\url{{co_gy,lyu,funakoshi,oku}@lr.first.iir.isct.ac.jp}}`,
+/// a brace list of local parts, 2609.00588).
+fn url_arguments_printed(v: &[Token]) -> Vec<Token> {
+  let mut out = Vec::with_capacity(v.len());
+  let mut i = 0;
+  while i < v.len() {
+    out.push(v[i]);
+    i += 1;
+    if v[i - 1] != T_CS!("\\url") {
+      continue;
+    }
+    while v.get(i) == Some(&T_SPACE!()) {
+      i += 1;
+    }
+    if v.get(i).is_none_or(|t| t.get_catcode() != Catcode::BEGIN) {
+      continue;
+    }
+    let close = skip_group(v, i).min(v.len());
+    out.push(v[i]);
+    for t in &v[i + 1..close.saturating_sub(1).max(i + 1)] {
+      out.push(match t.get_catcode() {
+        Catcode::BEGIN => T_CS!("\\{"),
+        Catcode::END => T_CS!("\\}"),
+        Catcode::SUB => T_CS!("\\_"),
+        _ => *t,
+      });
+    }
+    if close > i + 1 {
+      out.push(v[close - 1]);
+    }
+    i = close;
+  }
+  out
+}
+
 /// Parse an email line into its individual address strings, or `None` if the line
 /// is not an email list. Two forms are recognized, and mixed (after skipping
 /// wrapper commands and grouping — the visible letter/other/space chars are read,
@@ -16690,14 +19686,34 @@ fn line_is_email_list(line: &Tokens) -> bool { email_addresses(line).is_some() }
 /// and a place before an address (`Berlin, Germany, foo@bar.de`) is a bare word, so
 /// either is rejected and an address is never invented.
 fn email_addresses(line: &Tokens) -> Option<Vec<String>> {
+  // (a colour command's colour is no letter of the address: `\href{mailto:…}{\color{black}\texttt{xinhao.zhang},}`,
+  // 2604.19440, read `blackxinhao.zhang@…`; a font's name, a scale, a skip's length neither, `\fontfamily{pcr}`,
+  // 2609.25669; [`without_non_printing_arguments`])
+  // (and a skip's length, printing a space: `xiaobing.gxb@alibaba-inc.com \hspace{25pt}zixuanze@andrew.cmu.edu`,
+  // 2107.06049; `\vspace{-1.25ex}`, 2602.09494; a `\url`'s braces print, `\url{{a,b}@x}`, [`url_arguments_printed`])
+  let printed = url_arguments_printed(&without_non_printing_arguments(line.unlist_ref()));
   let mut visible = String::new();
   // `\href`'s first argument is its link, not printed (`\href{mailto:a@x}{a@x}`).
   let mut skip_group = false;
   let mut depth = 0usize;
-  for t in line.unlist_ref() {
+  // (a command's optional arguments are no text: `\makebox[\textwidth][c]{\tt haiyang.wang@huawei.com ~
+  // lue.fan@ia.ac.cn}`, 2602.10975)
+  let mut optional = false;
+  let mut after_command = false;
+  for t in &printed {
+    if optional {
+      optional = *t != T_OTHER!("]");
+      continue;
+    }
+    if after_command && *t == T_OTHER!("[") {
+      optional = true;
+      continue;
+    }
+    after_command = t.get_catcode() == Catcode::CS || (after_command && *t == T_SPACE!());
     if skip_group {
       match t.code {
         Catcode::SPACE if depth == 0 => {},
+        Catcode::OTHER if depth == 0 && *t == T_OTHER!("*") => {},
         Catcode::BEGIN => depth += 1,
         Catcode::END => {
           depth = depth.saturating_sub(1);
@@ -16710,7 +19726,11 @@ fn email_addresses(line: &Tokens) -> Option<Vec<String>> {
     }
     match t.code {
       Catcode::LETTER | Catcode::OTHER => t.with_str(|s| visible.push_str(s)),
+      // (a space, and the spacing that parts addresses printed in a row: `\texttt{jl-tong@sjtu.edu.cn}~~~~~
+      // \texttt{xyshen@eitech.edu.cn}`, 2603.04592)
       Catcode::SPACE => visible.push(' '),
+      Catcode::ACTIVE if *t == T_ACTIVE!('~') => visible.push(' '),
+      Catcode::CS if is_spacing_command(t) || is_line_separator(t) => visible.push(' '),
       Catcode::CS if *t == T_CS!("\\href") => skip_group = true,
       // the printed braces of a list of local parts, and an underscore (`wu\_zhiliang`, 2509.10377)
       Catcode::CS => t.with_str(|name| match name {
@@ -16739,13 +19759,22 @@ fn email_addresses(line: &Tokens) -> Option<Vec<String>> {
       Some(list) => {
         let close = list.find('}')?;
         let after = &list[close + 1..];
-        let (domain, next) = after.split_once(',').unwrap_or((after, ""));
-        let domain = domain.trim();
+        // (the domain ends at a comma or a space: `{a,b}@x.edu \ \ \ {c,d}@y.edu`, 2603.24730)
+        let (domain, next) = match after.find([',', ' ']) {
+          Some(end) => (
+            &after[..end],
+            after[end..].trim_start().trim_start_matches(','),
+          ),
+          None => (after, ""),
+        };
+        // (a sentence's `;` or `.` after it is no part of it: `\{lizixu.cs, …\}@gmail.com;`, 2605.24470)
+        let domain = domain.trim().trim_end_matches([';', '.']);
         if !domain.starts_with('@') || !is_part(&domain[1..]) {
           return None;
         }
+        // (a `;` parts them as a comma does: `\{hjjang; dychoi; …\}@vclab.kaist.ac.kr`, 2607.16926)
         for local in list[..close]
-          .split(',')
+          .split([',', ';'])
           .map(str::trim)
           .filter(|p| !p.is_empty())
         {
@@ -16762,12 +19791,16 @@ fn email_addresses(line: &Tokens) -> Option<Vec<String>> {
       },
     };
     // (an item is taken whole, as the line prints it: 2410.07147's `vn72@cornell.edu\nsone sj597@…` has no space
-    // between its addresses)
+    // between its addresses; addresses a space parts are items each, `a@x~~~b@y`, every one of them an address)
     if let Some(item) = item.filter(|item| !item.is_empty()) {
-      if !item.contains('@') || item.contains(['{', '}']) || item.chars().any(char::is_whitespace) {
-        return None;
+      for item in item.split_whitespace() {
+        let item = item.trim_end_matches([';', '.']);
+        // (a local part before the `@`: a handle, `@aable`, is no address, the r6 re-review's w4)
+        if !item.contains('@') || item.starts_with('@') || item.contains(['{', '}']) {
+          return None;
+        }
+        out.push(item.to_string());
       }
-      out.push(item.to_string());
     }
     rest = next;
   }
@@ -16782,6 +19815,500 @@ enum AuthorLineKind {
   Email,
   /// An email line behind a label or the class's email command (`Email: \email{x}`, [`labelled_emails`]).
   LabelledEmail,
+  /// A line that is only a link ([`is_link_line`]): a URL contact, or an affiliation when the link prints an institution
+  /// ([`is_url_line`], [`url_contact_call`]).
+  Link,
+}
+
+/// The creator a link line of an author block goes to ([`url_contact_call`]).
+#[derive(Clone, Debug, PartialEq)]
+enum LinkOwner {
+  /// the whole block's (`label=addresses:block`, the shared creator of OXIDIZED_DESIGN #159; a sole author's)
+  Block,
+  /// the author being made, the last of the line's group
+  Current,
+  /// the line's group of that many names, as the group's affiliation lines are (`annotate=N`)
+  Group(usize),
+  /// the author a label of its own names (`label=…`, [`placed_label`]), given once the block's marked affiliations are:
+  /// a marked block's link after them in its contacts, as the column prints it (the r5 re-review's u14)
+  Author(String),
+}
+
+/// Whose a link line of a marked author block is ([`url_contact_call`]): in an `\and` group of authors while other
+/// groups hold authors, that group's (its one author's, or its names' as its affiliation lines are), the link printed in
+/// that column; else the block's when the call makes
+/// the whole author list (`replace`, the document's `\author`), the project's page of 2605.06223, 2602.08439,
+/// 2604.12896 (user ruling 2026-10-20, batch 77p r7); else, a per-author class's call, its author's. `kinds` are the
+/// block's entries, `group_starts` where each group's begin, `index` the line's entry.
+fn link_line_owner(
+  kinds: &[AuthorLineKind],
+  group_starts: &[usize],
+  index: usize,
+  replace: bool,
+) -> LinkOwner {
+  let (start, end) = group_bounds(group_starts, kinds.len(), index);
+  let authors = |kinds: &[AuthorLineKind]| {
+    kinds
+      .iter()
+      .filter(|kind| **kind == AuthorLineKind::Author)
+      .count()
+  };
+  let here = authors(&kinds[start..end.max(start)]);
+  if here == 1 && authors(kinds) > here {
+    LinkOwner::Current
+  } else if here > 1 && authors(kinds) > here {
+    // (a column of several names: theirs, as the column's affiliation lines are, `Ann Able$^1$, Bob Baker$^1$ \\
+    // $^1$Univ A \\ \url{…} \and Cat Cole$^2$ …`, the r5 re-review's u6m; ruling 9)
+    LinkOwner::Group(here)
+  } else if replace {
+    LinkOwner::Block
+  } else {
+    LinkOwner::Current
+  }
+}
+
+/// The calls placing a line under a row of names parted by space whose footnote symbols label the institutions under
+/// them (a group of the unmarked branch kept from the names before it by its lines' marks, and one of its lines an
+/// institution a symbol labels, [`labelled_institution`]: `Dinghong Song$^{\dagger}$ \ \ \ \ Zhiwei Xu$^\mathsection$ …
+/// Dong Li$^{\dagger}$ \\ $^\mathsection$ Tsinghua University \ \ \ \ $^\dagger$ University of California, Merced \\
+/// \texttt{dinghongsong21@gmail.com}`, 2601.02680, 2505.23260, 2608.12337, the r5 re-review's r10, r11, r14, r16, r18):
+/// the lines print under the whole row, not under its last name. `row` is the row's names (indices into `name_keys`),
+/// `name_symbols` the symbols each name of it carries (none for a name of another row: an `\and` column's carriers are
+/// no part of it, the r6 re-review's x6, w28). Each address of an e-mail line goes to the name it spells anywhere in
+/// the block, and one no name spells to the block (`label=addresses:block`, the shared creator of #159) — no
+/// elimination; a link line is the block's; an institution a symbol labels goes to every name carrying it
+/// (`label=author:N`), without the symbol, each such institution of the line its own (`$^\mathsection$ Tsinghua
+/// University \ \ \ \ $^\dagger$ …`). An unmarked line goes on with the institution above it only where that line is
+/// one such institution alone, ending in a comma, and it reads as an institution too (`continuing`, the carriers of
+/// that one: `$^{\dagger}$State Key Laboratory …, \\ School of Computer Science, Peking University`, 2608.12337); an
+/// unmarked institution otherwise is every name's of the row, as it prints under the whole row (user ruling R12
+/// 2026-10-20: `… \\ Department of Physics`, the r6 re-review's y8); a legend goes to the names carrying its symbol;
+/// any other piece — a note, a place, a symbol no name of the row carries, an address line no list reads — is the
+/// block's (`Equal contribution`, the r6 re-review's y7; 2607.16926's address line under all five names) —
+/// [`row_line_calls`]. None lands on one name for its place (batch 77p r9, r10). A line that prints nothing is none.
+fn apart_line_calls(
+  line: &Tokens,
+  name_keys: &[NameKeys],
+  name_symbols: &[Vec<String>],
+  row: std::ops::RangeInclusive<usize>,
+  placed: &mut Vec<Option<String>>,
+  bodies: &mut [Vec<Token>],
+  continuing: &mut Vec<usize>,
+) -> Result<Vec<Token>> {
+  // (a name's label of its own, given to it in its content, [`placed_label`])
+  let mut author = |owner: usize| -> Result<String> {
+    let (label, call) = placed_label(placed, owner)?;
+    if let Some(body) = bodies.get_mut(owner) {
+      body.extend(call.unwrap_or_default());
+    }
+    Ok(s!("label={label}"))
+  };
+  let block = s!("label=addresses:block");
+  let mut calls = Vec::new();
+  if prints_nothing(line) {
+    return Ok(calls);
+  }
+  // (the carriers the line above leaves this one to go on with: none unless set again below)
+  let above = std::mem::take(continuing);
+  // (a mark after an address is no letter of it: `\texttt{mazeyuwhu@gmail.com}$^{\dagger}$`, 2109.13296, the address
+  // of the name it spells; the r7 re-review's findings 1 and 9)
+  let addresses_line = before_trailing_symbol_mark(line.unlist_ref())
+    .map_or_else(|| line.clone(), |(text, _)| Tokens::new(text.to_vec()));
+  let emails = match line_labelled_emails(&addresses_line)? {
+    Some(found) => Some(found),
+    None => bare_email_addresses(&addresses_line)?.map(|addresses| {
+      (
+        None,
+        addresses
+          .into_iter()
+          .map(|address| EmailAddress { address, call: None })
+          .collect::<Vec<_>>(),
+      )
+    }),
+  };
+  if let Some((label, addresses)) = emails {
+    for address in addresses {
+      let placement = match spelled_owner(name_keys, &address_text(&address.address)) {
+        Some(owner) => author(owner)?,
+        None => block.clone(),
+      };
+      calls.extend(email_calls(
+        label.as_ref(),
+        vec![address],
+        Some(&placement),
+      )?);
+    }
+    return Ok(calls);
+  }
+  if is_url_line(line) {
+    return url_contact_call(line.clone(), LinkOwner::Block, true);
+  }
+  calls.extend(row_line_calls(
+    line,
+    name_symbols,
+    row,
+    placed,
+    bodies,
+    &above,
+    continuing,
+  )?);
+  Ok(calls)
+}
+
+/// The calls placing a line under a row of names that is no address and no link ([`apart_line_calls`]; and a line
+/// under a row whose only symbol line is a legend, 2609.24299, 2603.06578): each symbol-led piece of it
+/// ([`symbol_led_segments`]) that is an institution its symbol labels to the row's names carrying the symbol
+/// (`name_symbols`, by index, none for a name of another row), without it; a legend (`$^*$Corresponding author: …`) to
+/// the names carrying its symbol, whole, its mark naming them; an unmarked institution ([`reads_as_institution`]) to
+/// the carriers of the line above when that was one labelled institution alone ending in a comma (`above`), else to
+/// every name of the `row` (user ruling R12 2026-10-20); anything else — a note, a place, a symbol no name of the row
+/// carries — to the block (`label=addresses:block`, the shared creator of #159), never to one name for its place.
+/// `continuing` is set to the carriers a line under this one goes on with.
+fn row_line_calls(
+  line: &Tokens,
+  name_symbols: &[Vec<String>],
+  row: std::ops::RangeInclusive<usize>,
+  placed: &mut Vec<Option<String>>,
+  bodies: &mut [Vec<Token>],
+  above: &[usize],
+  continuing: &mut Vec<usize>,
+) -> Result<Vec<Token>> {
+  let mut calls = Vec::new();
+  let mut affiliation = |owner: Option<usize>, content: Tokens| -> Result<Vec<Token>> {
+    let placement = match owner {
+      Some(owner) => {
+        // (a name's label of its own, given to it in its content, [`placed_label`])
+        let (label, call) = placed_label(placed, owner)?;
+        if let Some(body) = bodies.get_mut(owner) {
+          body.extend(call.unwrap_or_default());
+        }
+        s!("label={label}")
+      },
+      None => s!("label=addresses:block"),
+    };
+    Ok(
+      Invocation!(T_CS!("\\lx@add@affiliation"), vec![
+        Some(mouth::tokenize_internal(TeXString::assembled(placement))),
+        Some(content)
+      ])
+      .unlist(),
+    )
+  };
+  let segments = symbol_led_segments(line);
+  let alone = segments.len() == 1;
+  for segment in segments {
+    // (a mark anywhere in it, a group around it or after its text, makes it no unmarked line: the r7 re-review's
+    // finding 1, 2606.28166, 2602.16540, 2109.13296)
+    let unmarked = symbol_marks(&segment).is_empty();
+    let (owners, content): (Vec<usize>, Tokens) = match labelled_institution(&segment, name_symbols)
+    {
+      Some((carriers, rest)) => {
+        // (one institution alone on its line, ending in a comma, goes on on the line under it)
+        if alone
+          && visible_name_text(rest.unlist_ref())
+            .trim_end()
+            .ends_with(',')
+        {
+          *continuing = carriers.clone();
+        }
+        (carriers, rest)
+      },
+      // (and an unmarked piece before the labelled institutions of its line, no note and no address, is the
+      // institution of the names no mark sends elsewhere, as it prints in their row: `Uber Technologies \ \ \
+      // $^\dagger$University of British Columbia`, 2603.07345 — 77p r11; not one `\quad` parts onto a line of its own,
+      // which reads alone: 2509.20478's `UC Berkeley \quad $^\dagger$\unskip Princeton University`)
+      None
+        if unmarked
+          && (reads_as_institution(&segment)
+            || link_prints_an_institution(&segment)
+            || (!alone && institution_beside_labelled(&segment))) =>
+      {
+        if alone && !above.is_empty() {
+          (above.to_vec(), segment)
+        } else {
+          (row.clone().collect(), segment)
+        }
+      },
+      // (a marked piece no institution reads: the names carrying every mark of it, else the block's — never the row's)
+      None if !unmarked => (
+        symbol_carriers(&symbol_labels(&segment), name_symbols),
+        segment,
+      ),
+      None => (Vec::new(), segment),
+    };
+    if owners.is_empty() {
+      calls.extend(affiliation(None, content)?);
+    } else {
+      for owner in owners {
+        calls.extend(affiliation(Some(owner), content.clone())?);
+      }
+    }
+  }
+  Ok(calls)
+}
+
+/// Whether an unmarked piece of a line of symbol-led pieces ([`symbol_led_segments`]) reads as their fellow
+/// institution: letters, no address, no note — correspondence, a contribution, funding ([`classify_thanks`]) — and no link
+/// line (`Uber Technologies` beside `$^\dagger$University of British Columbia`, 2603.07345).
+fn institution_beside_labelled(segment: &Tokens) -> bool {
+  let text = visible_name_text(segment.unlist_ref());
+  has_name_letter(segment.unlist_ref())
+    && !text.contains('@')
+    && classify_thanks(&text) == "note"
+    && !is_link_line(segment)
+}
+
+/// Whether `line` reads as an institution: as an affiliation ([`reads_as_affiliation`]: an institution word, no name,
+/// no `@`), and no note — correspondence, a contribution, an address, funding ([`classify_thanks`]).
+fn reads_as_institution(line: &Tokens) -> bool {
+  reads_as_affiliation(line) && classify_thanks(&visible_name_text(line.unlist_ref())) == "note"
+}
+
+/// The footnote symbols [`symbol_marks`] reads in `tokens`, one each of a run of distinct ones (`$^{\dagger\ddagger}$`:
+/// two, 2608.12337), as the labels they request are read ([`clean_frontmatter_labels`]).
+fn symbol_labels(tokens: &Tokens) -> Vec<String> {
+  symbol_marks(tokens)
+    .iter()
+    .flat_map(|mark| clean_frontmatter_labels(mark, ""))
+    .collect()
+}
+
+/// A piece of a line ([`symbol_led_segments`]) that is an institution its footnote symbol labels: led by a symbol mark
+/// some names carry (`name_symbols`), the rest no note — not correspondence, a contribution, an address or funding
+/// ([`classify_thanks`]), and no e-mail address (`$^\mathsection$ Tsinghua University`, `$^{\ddagger}$LLM-Core Xiaomi`,
+/// 2601.02680, 2608.12337; not `$^*$ Corresponding author`) —: the names carrying the symbol, and the piece without it.
+fn labelled_institution(
+  segment: &Tokens,
+  name_symbols: &[Vec<String>],
+) -> Option<(Vec<usize>, Tokens)> {
+  let after = after_symbol_mark(segment.unlist_ref());
+  let (rest, marks) = if after.len() == segment.unlist_ref().len() {
+    // (a mark after its text labels it as one before it does: `Carnegie Mellon University, …$^{\dagger}$`, 2109.13296)
+    let (text, marks) = before_trailing_symbol_mark(segment.unlist_ref())?;
+    (
+      Tokens::new(text.to_vec()),
+      symbol_labels(&Tokens::new(marks.to_vec())),
+    )
+  } else {
+    (Tokens::new(after.to_vec()), leading_symbol_labels(segment))
+  };
+  if marks.is_empty() {
+    return None;
+  }
+  let text = visible_name_text(rest.unlist_ref());
+  // (under the names, a symbol-led line is no name: `$^{\ddagger}$LLM-Core Xiaomi` reads as one)
+  let institution = reads_as_affiliation(&rest)
+    || (classify_thanks(&text) == "note"
+      && !text.contains('@')
+      && has_name_letter(rest.unlist_ref()));
+  let carriers = symbol_carriers(&marks, name_symbols);
+  (institution && !carriers.is_empty()).then_some((carriers, rest))
+}
+
+/// The labels of the footnote symbol marks that lead `segment` before its text ([`after_symbol_mark`], each mark of a
+/// run, [`symbol_marks`]; one each of a compound mark's symbols, [`clean_frontmatter_labels`]: `$^{*\dag}$Project lead:
+/// …` gives `*` and `\dag`, 2602.19190).
+fn leading_symbol_labels(segment: &Tokens) -> Vec<String> {
+  // (each symbol, not a run whole: [`clean_frontmatter_labels`] gives both)
+  let mut labels: Vec<String> = Vec::new();
+  let mut v: &[Token] = segment.unlist_ref();
+  loop {
+    let rest = after_symbol_mark(v);
+    if rest.len() == v.len() {
+      break;
+    }
+    let lead = Tokens::new(v[..v.len() - rest.len()].to_vec());
+    // (the run whole is the first label of several; a doubled mark, `$^{**}$`, `$^{\dagger\dagger}$`, is one label,
+    // its own: the r7 re-review's finding 3, probes n1, n2)
+    for label in symbol_marks(&lead).iter().flat_map(|mark| {
+      let labels = clean_frontmatter_labels(mark, "");
+      let skip = usize::from(labels.len() > 1);
+      labels.into_iter().skip(skip)
+    }) {
+      if !labels.contains(&label) {
+        labels.push(label);
+      }
+    }
+    v = rest;
+  }
+  labels
+}
+
+/// The names (by index into `name_symbols`, the symbols each carries) carrying every one of `marks`: a line's compound
+/// mark names those marked with all its symbols (`$^{*\dag}$Project lead: Yi Yang` is Yi Yang's, `$^{*\dag}$`, not
+/// every starred name's, 2602.19190), a single symbol every name carrying it (`$^\dagger$` reaches a name marked
+/// `$^{\dagger\ddagger}$`, 2608.12337).
+fn symbol_carriers(marks: &[String], name_symbols: &[Vec<String>]) -> Vec<usize> {
+  (0..name_symbols.len())
+    .filter(|at| !marks.is_empty() && marks.iter().all(|mark| name_symbols[*at].contains(mark)))
+    .collect()
+}
+
+/// The pieces of `line` each footnote symbol mark ([`keepsup`]) leads, at the top level after a space or spacing
+/// (`$^\mathsection$ Tsinghua University \ \ \ \ $^\dagger$ University of California, Merced`: two), without the spacing
+/// around them; the line whole when none does.
+fn symbol_led_segments(line: &Tokens) -> Vec<Tokens> {
+  // (through a group around the whole line, and at a group a mark opens: `{\small $^{\dagger}$\,University of
+  // Toronto \qquad $^{\ddagger}$\,EPFL}`, 2606.28166; the r7 re-review's finding 1, probes g1, g3)
+  let v = unwrapped(line.unlist_ref());
+  let mut cuts = vec![0];
+  let mut depth = 0usize;
+  for (i, t) in v.iter().enumerate() {
+    let after_space = i > 0 && (v[i - 1] == T_SPACE!() || is_spacing(&v[i - 1]));
+    if depth == 0
+      && after_space
+      && (*t == T_CS!("\\lx@frontmatter@keepsup")
+        || (t.get_catcode() == Catcode::BEGIN
+          && after_leading_markup(&v[i..]).first() == Some(&T_CS!("\\lx@frontmatter@keepsup"))))
+    {
+      cuts.push(i);
+    }
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ => {},
+    }
+  }
+  cuts.push(v.len());
+  cuts
+    .windows(2)
+    .filter_map(|pair| {
+      let piece = &v[pair[0]..pair[1]];
+      let piece = &piece[leading_spacing_end(piece)..];
+      let mut end = spacing_end(piece);
+      // (and the run that parts it from the next, `\ \ \ \ `)
+      while end > 0 && is_spacing(&piece[end - 1]) {
+        end -= 1;
+      }
+      let piece = unwrapped(&piece[..end]);
+      (!piece.is_empty()).then(|| Tokens::new(piece.to_vec()))
+    })
+    .collect()
+}
+
+/// Whether a name's content holds a command that makes its creator itself (`\lx@add@creator`: PoS's `\speaker{Piotr
+/// Korcyl}`, 1307.5080), which a label of the `\lx@add@author` around it would not reach ([`placed_label`]): a contact of
+/// that name is placed in its content, as the name is made.
+fn makes_its_creator(name: &[Token]) -> Result<bool> {
+  for t in name.iter().filter(|t| t.get_catcode() == Catcode::CS) {
+    if let Some(def) = lookup_definition(t)?
+      && let Some(ExpansionBody::Tokens(body)) = def.get_expansion()
+      && body.unlist_ref().first() == Some(&T_CS!("\\lx@add@creator"))
+    {
+      return Ok(true);
+    }
+  }
+  Ok(false)
+}
+
+/// The label of the author `author` of a block (an index among its names) that a contact placed on it after the names
+/// are made reaches it by, `labels` holding those given so far: a new one, `author:placed<N>` (counted over the
+/// document, so no two blocks share one; `author:` so no misprefixed institute label's number reaches it), given to the
+/// author by `\lx@author@placed@label` in its content (`label`, the call to add there, `Some` when new). Not the
+/// `author:N` sequence label: a block whose content makes creators of its own (PoS's `\speaker`, 1307.5080) numbers them
+/// otherwise.
+fn placed_label(
+  labels: &mut Vec<Option<String>>,
+  author: usize,
+) -> Result<(String, Option<Vec<Token>>)> {
+  if labels.len() <= author {
+    labels.resize(author + 1, None);
+  }
+  if let Some(label) = &labels[author] {
+    return Ok((label.clone(), None));
+  }
+  let count = lookup_int("lx_author_placed_labels") + 1;
+  assign_value(
+    "lx_author_placed_labels",
+    Stored::Int(count),
+    Some(Scope::Global),
+  );
+  let label = s!("author:placed{count}");
+  labels[author] = Some(label.clone());
+  let call = Invocation!(T_CS!("\\lx@author@placed@label"), vec![Some(
+    mouth::tokenize_internal(TeXString::assembled(label.clone()))
+  )])
+  .unlist();
+  Ok((label, Some(call)))
+}
+
+/// Where the `\and` group of a marked author block's entry `index` begins and ends among its `count` entries
+/// (`group_starts`, where each begins).
+fn group_bounds(group_starts: &[usize], count: usize, index: usize) -> (usize, usize) {
+  let group = group_starts
+    .iter()
+    .rposition(|start| *start <= index)
+    .unwrap_or(0);
+  let start = group_starts.get(group).copied().unwrap_or(0);
+  let end = group_starts.get(group + 1).copied().unwrap_or(count);
+  (start, end.max(start))
+}
+
+/// The call making a link line of an author block ([`is_link_line`]) a URL contact (`\lx@add@contact[role=url]`, as a
+/// class's `\homepage` is), not an affiliation: the line is its content, a label before the link with it (`Demo
+/// Code:~\url{…}`, 2602.09509), in the author block's markup as an affiliation line is (`\lx@affiliation@withinst`);
+/// placed as `owner` says (user ruling 2026-10-20, batch 77p r7). A link printing an institution
+/// ([`is_url_line`] false: `\href{https://launchsafe.com}{\textbf{LaunchSafe Research}}`, 2606.26479) is an affiliation
+/// placed so, the link inside it (`url` false; the r5 re-review's u38).
+fn url_contact_call(line: Tokens, owner: LinkOwner, url: bool) -> Result<Vec<Token>> {
+  let placement = match owner {
+    LinkOwner::Block => s!("label=addresses:block"),
+    LinkOwner::Current => String::new(),
+    LinkOwner::Group(names) => s!("annotate={names}"),
+    LinkOwner::Author(label) => s!("label={label}"),
+  };
+  if !url {
+    return Ok(
+      Invocation!(T_CS!("\\lx@add@affiliation"), vec![
+        (!placement.is_empty()).then(|| mouth::tokenize_internal(TeXString::assembled(placement))),
+        Some(line)
+      ])
+      .unlist(),
+    );
+  }
+  let keyvals = if placement.is_empty() {
+    s!("role=url")
+  } else {
+    s!("role=url,{placement}")
+  };
+  let mut content = mouth::tokenize_internal(
+    r"\lx@author@markup@begin\expandafter\lx@author@markup@run\expandafter{\lx@author@markup@unprovide}",
+  )
+  .unlist();
+  content.push(T_BEGIN!());
+  // (a link that prints nothing is none of it: 2601.02680's `\url{}` after its repository link)
+  let v = line.unlist_ref();
+  let mut i = 0;
+  while i < v.len() {
+    if v[i] == T_CS!("\\url") || v[i] == T_CS!("\\href") {
+      let (_, (_, after_second)) = link_arguments(v, i);
+      let (open, close) = link_printed_argument(v, i);
+      let end = if v[i] == T_CS!("\\href") {
+        after_second
+      } else {
+        close
+      };
+      if v[open..close].iter().all(|t| {
+        matches!(
+          t.get_catcode(),
+          Catcode::BEGIN | Catcode::END | Catcode::SPACE
+        )
+      }) {
+        i = end.max(i + 1);
+        continue;
+      }
+    }
+    content.push(v[i]);
+    i += 1;
+  }
+  content.push(T_END!());
+  Ok(
+    Invocation!(T_CS!("\\lx@add@contact"), vec![
+      Some(mouth::tokenize_internal(TeXString::assembled(keyvals))),
+      Some(Tokens::new(content))
+    ])
+    .unlist(),
+  )
 }
 
 /// Converts tokens to a string in the fashion of \message and others
@@ -17662,6 +21189,331 @@ mod author_split_tests {
         "real math superscript lost in {expr}: {math}"
       );
       assert!(position_of(&math, &[T_CS!("\\lx@frontmatter@keepsup")]).is_none());
+    }
+  }
+
+  #[test]
+  fn is_link_line_bare_trailing_href() {
+    setup();
+    // a bare `\href` ending the line, or one whose second argument is missing, reads no argument past the line (was a
+    // slice past its end, 77p r4 re-review) and prints nothing, so is no link line (77p r9: 2601.02680's `\url{}`); a
+    // whole link is a link line, a line of spacing alone none
+    for (line, link) in [
+      ("\\href", false),
+      ("\\href ", false),
+      ("\\href{https://x.org}", false),
+      ("\\href{https://x.org}{x.org} \\url{}", true),
+      ("\\small \\href{https://x.org}{x.org}", true),
+      ("\\url{https://x.org} text", false),
+      ("\\vspace{2mm}", false),
+      // (in groups and sizes, after a label ending in a colon: 2602.22394, 2602.23802, 2602.09509, 77p r6)
+      ("{\\footnotesize \\url{https://x.org}}", true),
+      ("{\\tt{\\small{\\url{https://x.org}}}}", true),
+      ("Demo Code:~\\url{https://x.org}", true),
+      ("Demo Code \\url{https://x.org}", false),
+      ("\\url{https://x.org} \\url{https://y.org}", false),
+    ] {
+      assert_eq!(is_link_line(&tk(line)), link, "{line}");
+    }
+  }
+
+  #[test]
+  fn dotted_initials_are_no_web_address() {
+    // (77p r11, the r7 re-review's finding 2: 2601.06085, 2606.03745)
+    for (text, web) in [
+      ("Edward A.G. Schuur", false),
+      ("T.J.C. Bezerra", false),
+      ("J.Smith", false),
+      ("version 1.2", false),
+      ("x.org", true),
+      ("ai.meta.com", true),
+      ("github.io/traj_evo_search", true),
+      ("www.x", true),
+      ("https://a.b", true),
+      ("aable@x.edu", false),
+    ] {
+      assert_eq!(reads_as_web_address(text), web, "{text}");
+    }
+  }
+
+  #[test]
+  fn is_url_line_not_a_mailbox() {
+    setup();
+    // a link line to a web page is a URL contact, one to a mailbox not, an e-mail line ([`mailto_line`]; 2601.00240's
+    // `\textbf{Correspondence:} \href{mailto:…}{…}`, 77p r7, r8)
+    for (line, url) in [
+      ("Code:~\\url{https://x.org}", true),
+      ("\\href{https://x.org}{x.org}", true),
+      (
+        "\\textbf{Correspondence:} \\href{mailto:a@x.org}{a@x.org}",
+        false,
+      ),
+      ("Univ A", false),
+      // (77p r9: a phrase, a colour around the link, an empty `\url{}` beside it; a linked institution or name is
+      // none, nor a link to a bare address, 2606.26479, 2604.04847)
+      ("\\href{https://x.org}{Project page}", true),
+      ("{\\color{orange}\\textbf{\\url{https://x.org}}}", true),
+      ("\\href{https://x.org}{x.org} \\url{}", true),
+      (
+        "\\href{https://launchsafe.com}{\\textbf{LaunchSafe Research}}",
+        false,
+      ),
+      ("\\href{https://www.mit.edu}{MIT}", false),
+      ("\\href{https://x.org}{Davide Grossi}", false),
+      ("\\textbf{Correspondence:} \\href{b@x.org}{b@x.org}", false),
+      // (77p r10: the link's wording and target decide, not the shape of its words — a link word is a page
+      // (2602.22227, 2601.18810), a bare domain an institution (the r6 re-review's x10, w8), a handle's profile a page
+      // (w21), a person's name that name (2603.22058), an icon a link)
+      ("\\href{https://x.org/p}{Project Page}", true),
+      (
+        "\\href{https://x.substack.com/p/a}{\\textcolor{blue}{Substack Article}}",
+        true,
+      ),
+      ("\\href{https://github.com/x/y}{GitHub Repository}", true),
+      ("\\href{https://huggingface.co/x}{Hugging Face Demo}", true),
+      ("\\href{https://www.google.com}{Google}", false),
+      ("\\href{https://x.ai/}{xAI}", false),
+      ("Contact: \\href{https://x.com/aable}{@aable}", true),
+      (
+        "\\textit{Author:} \\href{https://x.org/ms}{Masashi Sekine}",
+        false,
+      ),
+      (
+        "\\href{https://github.com/x}{\\includegraphics{gh.png}}",
+        true,
+      ),
+    ] {
+      assert_eq!(is_url_line(&tk(line)), url, "{line}");
+    }
+  }
+
+  #[test]
+  fn bare_address_needs_a_local_part_and_a_dotted_domain() {
+    // (77p r10, the r6 re-review's finding 6: a handle, a list, a web page are no one address)
+    for (text, bare) in [
+      ("binzhu@smu.edu.sg", true),
+      ("@aable", false),
+      ("aable@localhost", false),
+      ("{a,b}@x.edu", false),
+      ("x.com/aable@b.org", false),
+    ] {
+      assert_eq!(is_bare_address(text), bare, "{text}");
+    }
+    assert!(!links_a_mailbox("https://x.com/aable", "@aable"));
+    assert!(links_a_mailbox("mailto:a@x.org", "a@x.org"));
+  }
+
+  #[test]
+  fn non_printing_arguments_are_no_letters() {
+    setup();
+    // every command of the one table ([`NON_PRINTING_ARGUMENTS`]) drops its non-printing arguments and keeps what it
+    // prints (77p r10, the r6 re-review's finding 5: 2609.25669's `\fontfamily{pcr}`, w14's `\scalebox{0.9}`)
+    for (line, printed) in [
+      ("\\color[rgb]{0,0,1}aable", "aable"),
+      ("\\textcolor{blue}{aable}", "aable"),
+      ("\\colorbox{red}{aable}", "aable"),
+      ("\\fcolorbox[rgb]{1,0,0}[gray]{0.5}{aable}", "aable"),
+      ("\\pagecolor{white}aable", "aable"),
+      ("\\colorlet{mine}[rgb]{red}aable", "aable"),
+      ("\\definecolor{mine}{rgb}{1,0,0}aable", "aable"),
+      ("\\fontfamily{pcr}\\selectfont aable", "aable"),
+      ("\\fontseries{b}aable", "aable"),
+      ("\\fontshape{it}aable", "aable"),
+      ("\\fontencoding{T1}aable", "aable"),
+      ("\\fontsize{9}{11}aable", "aable"),
+      ("\\usefont{T1}{pcr}{m}{n}aable", "aable"),
+      ("\\scalebox{0.9}[0.8]{aable}", "aable"),
+      ("\\rotatebox[origin=c]{90}{aable}", "aable"),
+      ("\\raisebox{-1pt}[0pt][0pt]{aable}", "aable"),
+      ("\\resizebox*{2cm}{!}{aable}", "aable"),
+      ("\\includegraphics*[scale=0.1]{icon.pdf}aable", "aable"),
+      ("x\\hspace*{2pt}aable", "x aable"),
+      ("x\\vspace{1ex}aable", "x aable"),
+      // (77p r11, the r7 re-review's finding 11: probes p1, p2, p4, p5, p6)
+      ("\\rule{0pt}{2ex}aable", "aable"),
+      ("\\rule[-1pt]{1em}{1em}aable", "aable"),
+      ("x\\phantom{xx}aable", "x aable"),
+      ("x\\hphantom{xx}aable", "x aable"),
+      ("\\vphantom{Xy}aable", "aable"),
+      ("x\\kern2em aable", "x aable"),
+      ("x\\kern-1.5pt aable", "x aable"),
+      ("x\\hskip 2em plus 1fil aable", "x aable"),
+      ("x\\hskip\\fill aable", "x aable"),
+      ("x\\vskip 1ex minus 2pt aable", "xaable"),
+      ("x\\kern2emaable", "x aable"),
+    ] {
+      let text: String = without_non_printing_arguments(tk(line).unlist_ref())
+        .iter()
+        .filter(|t| {
+          matches!(
+            t.get_catcode(),
+            Catcode::LETTER | Catcode::OTHER | Catcode::SPACE
+          )
+        })
+        .map(|t| t.to_string())
+        .collect();
+      assert_eq!(text, printed, "{line}");
+    }
+    assert_eq!(
+      email_addresses(&tk(
+        "\\texttt{\\fontfamily{pcr}\\selectfont xw109@illinois.edu, tunder@illinois.edu}"
+      )),
+      Some(vec![s!("xw109@illinois.edu"), s!("tunder@illinois.edu")])
+    );
+    // (a `\url`'s braces print: a brace list of local parts, 2609.00588; a `;` parts them, 2607.16926)
+    assert_eq!(
+      email_addresses(&tk("\\texttt{\\url{{co_gy,lyu}@x.ac.jp}}")),
+      Some(vec![s!("co_gy@x.ac.jp"), s!("lyu@x.ac.jp")])
+    );
+    assert_eq!(
+      email_addresses(&tk("{\\tt\\small \\{hjjang; dychoi\\}@vclab.kaist.ac.kr}")),
+      Some(vec![
+        s!("hjjang@vclab.kaist.ac.kr"),
+        s!("dychoi@vclab.kaist.ac.kr")
+      ])
+    );
+  }
+
+  #[test]
+  fn empty_marks_and_compound_symbol_labels() {
+    setup();
+    // an empty mark is no mark (user ruling R11 2026-10-20, 2604.19440)
+    assert_eq!(
+      drop_empty_marks(tk("Ann Able \\\\ \\textsuperscript{}Univ A $^{ }$B")).to_string(),
+      tk("Ann Able \\\\ Univ A B").to_string()
+    );
+    assert_eq!(
+      drop_empty_marks(tk("Ann$^{1}$")).to_string(),
+      tk("Ann$^{1}$").to_string()
+    );
+    // (in a block other marks make a marked one it stays: 2604.22129)
+    let marked = "Ann$^{1}$~~~Bob\\textsuperscript{}";
+    assert_eq!(
+      drop_empty_marks(tk(marked)).to_string(),
+      tk(marked).to_string()
+    );
+    // a compound symbol mark is its run whole and a label per symbol, a doubled star one (the r6 re-review's x1, w10,
+    // w11; 2602.19190, 2606.15609)
+    assert_eq!(clean_frontmatter_labels("\\dagger*", ""), [
+      "\\dagger*",
+      "\\dagger",
+      "*"
+    ]);
+    assert_eq!(clean_frontmatter_labels("\\dagger *", ""), [
+      "\\dagger_*",
+      "\\dagger",
+      "*"
+    ]);
+    assert_eq!(clean_frontmatter_labels("**", ""), ["**"]);
+  }
+
+  #[test]
+  fn mailto_line_is_a_labelled_email_line() {
+    setup();
+    // a link line to a mailbox is an e-mail line under the text before it, whatever it says, and its address the one
+    // the link prints, its target's when it prints none (2601.00240, 2601.07974's placeholder target, 77p r8)
+    for (line, label, address) in [
+      (
+        "\\small{ \\textbf{Correspondence:} \\href{mailto:email@domain}{a.b@x.org} }",
+        Some("Correspondence:"),
+        "a.b@x.org",
+      ),
+      ("\\href{mailto:a@x.org}{Write to us}", None, "a@x.org"),
+      (
+        "Contact:~\\href{mailto:a@x.org}{a@x.org}",
+        Some("Contact:"),
+        "a@x.org",
+      ),
+      // (77p r9: a link to a bare address without `mailto:`, the ACL template's, 2604.04847; a footnote symbol before
+      // the label)
+      (
+        "\\textbf{Correspondence:} \\href{b@x.org}{b@x.org}",
+        Some("Correspondence:"),
+        "b@x.org",
+      ),
+      (
+        "\\lx@frontmatter@keepsup{*}\\lx@frontmatter@symbolmark{*}Corresponding author: \\href{mailto:a@x.org}{a@x.org}",
+        Some("Corresponding author:"),
+        "a@x.org",
+      ),
+    ] {
+      let (got_label, addresses) = labelled_emails(&tk(line)).unwrap().expect(line);
+      assert_eq!(
+        got_label.map(|label| label.to_string()).as_deref(),
+        label,
+        "{line}"
+      );
+      let texts: Vec<String> = addresses.iter().map(|a| address_text(&a.address)).collect();
+      assert_eq!(texts, [address], "{line}");
+    }
+    for line in [
+      "\\href",
+      "Mail: \\href",
+      "\\textbf{Code:} \\href{https://x.org}{x.org}",
+      "Write \\href{mailto:a@x.org}{a@x.org}",
+    ] {
+      assert!(labelled_emails(&tk(line)).unwrap().is_none(), "{line}");
+    }
+  }
+
+  #[test]
+  fn email_addresses_skip_colour_arguments() {
+    setup();
+    // a colour command's colour is no letter of an address (2604.19440's `\href{mailto:…}{\color{black}\texttt{…}}`,
+    // the r5 re-review's c1-c6; 77p r9); what it prints stays
+    for line in [
+      "\\texttt{\\{\\color{black}aable, bbaker\\}@x.edu}",
+      "\\textcolor{blue}{\\texttt{aable@x.edu, bbaker@x.edu}}",
+      "\\textcolor[rgb]{0,0,1}{aable@x.edu, bbaker@x.edu}",
+      "\\fcolorbox{red}{white}{aable@x.edu, bbaker@x.edu}",
+      "\\texttt{\\{}\\href{mailto:aable@x.edu}{\\color{black}\\texttt{aable},} \\href{mailto:bbaker@x.edu}{\\color{black}\\texttt{bbaker}}\\texttt{\\}@x.edu}",
+    ] {
+      assert_eq!(
+        email_addresses(&tk(line)),
+        Some(vec![s!("aable@x.edu"), s!("bbaker@x.edu")]),
+        "{line}"
+      );
+    }
+    // (several linked addresses behind a label, the r5 re-review's u22)
+    let (label, addresses) = labelled_emails(&tk(
+      "Emails: \\href{mailto:a@x.org}{a@x.org}, \\href{mailto:b@y.org}{b@y.org}",
+    ))
+    .unwrap()
+    .expect("a labelled list");
+    assert_eq!(
+      label.map(|label| label.to_string()).as_deref(),
+      Some("Emails:")
+    );
+    let texts: Vec<String> = addresses.iter().map(|a| address_text(&a.address)).collect();
+    assert_eq!(texts, ["a@x.org", "b@y.org"]);
+  }
+
+  #[test]
+  fn email_addresses_skip_optional_arguments() {
+    setup();
+    // a command's optional arguments are no address text (2602.10975's `\makebox[\textwidth][c]{\tt …}`, 77p r6)
+    assert_eq!(
+      email_addresses(&tk(
+        "\\makebox[\\textwidth][c]{\\tt haiyang.wang@huawei.com ~ lue.fan@ia.ac.cn}"
+      )),
+      Some(vec![s!("haiyang.wang@huawei.com"), s!("lue.fan@ia.ac.cn")])
+    );
+  }
+
+  #[test]
+  fn prints_nothing_reads_spacing_fonts_and_paragraphs() {
+    setup();
+    // (2609.05430's `\large{~~}`, 2606.00747's blank line, 2103.00887's `\tt\small`; 77p r6)
+    for (line, nothing) in [
+      ("\\large{~~}", true),
+      ("\\vspace{2pt}", true),
+      ("{\\small \\vspace{2pt}}", true),
+      ("\\par", true),
+      ("\\tt\\small ", true),
+      ("\\large{Univ A}", false),
+      ("\\url{https://x.org}", false),
+    ] {
+      assert_eq!(prints_nothing(&tk(line)), nothing, "{line}");
     }
   }
 

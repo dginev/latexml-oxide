@@ -38,6 +38,7 @@ pub mod mytemplate_sty;
 pub mod aamas_cls;
 pub mod abntex2cite_sty;
 pub mod achemso_cls;
+pub mod aero_cls;
 pub mod agujournal2019_cls;
 pub mod aguplus_cls;
 pub mod aistats_sty;
@@ -670,6 +671,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     agujournal2019_cls::load_definitions,
   ),
   ("agutexSI2019", "cls", agujournal2019_cls::load_definitions),
+  ("aero", "cls", aero_cls::load_definitions),
   ("aguplus", "cls", aguplus_cls::load_definitions),
   ("aomart", "cls", aomart_cls::load_definitions),
   ("apacite", "sty", apacite_sty::load_definitions),

@@ -1,0 +1,16 @@
+% witness: 2601.06979; the r7 re-review of batch 77p (finding 5)
+% oracle:  pdflatex 0 errors: two marked names, the institution, the addresses, then one line of two icon-led links
+%          ("Code", "Demo Video") parted by
+%          \hspace, one of two links parted by $\cdot$
+% engines: rust 77p r10 = 0 errors; the link line an affiliation "Code Demo Video" of Bob Baker
+% expect:  0 errors, 0 warnings; each link a URL contact of the block (the shared creator)
+% status:  RED (77p r10) -> GREEN (77p r11)
+\documentclass{article}
+\usepackage{hyperref}
+\usepackage{fontawesome5}\usepackage{xcolor}\newcommand{\yticon}{\textcolor{red}{\faYoutube}}
+\title{T}
+\author{\textbf{Ann Able\textsuperscript{1}}\quad \textbf{Bob Baker\textsuperscript{1}}\\ \textsuperscript{1}Department of Computer Science, Univ A \\ \texttt{\{aable,bbaker\}@x.edu} \\ \faGithub~\href{https://github.com/a/b}{Code}\hspace{1.5em} \yticon~\href{https://www.youtube.com/watch?v=7}{Demo Video} \\ \href{https://x.org/data}{Dataset} $\cdot$ \href{https://x.org/paper}{Paper}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

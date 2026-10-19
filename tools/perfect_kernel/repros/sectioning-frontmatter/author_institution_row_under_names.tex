@@ -1,0 +1,23 @@
+% witness: the 77p r3 re-review's probes: a row of institutions under a row of names, one under each (`Ann Able~~~~Bob
+%          Baker \\ Carnegie Mellon~~~~Johns Hopkins`; `\textbf` names over `\textit` institutions; one name over two
+%          institutions), and a row of names under an affiliation (`Ann Able \\ Univ A \\ Bob Baker~~~~Cat Cole`, probes
+%          p19, p27)
+% oracle:  pdflatex 0 errors: each institution row printed under the names row, as written
+% engines: rust 77p r3 = 0 errors; "Carnegie Mellon", "Johns Hopkins", "Google DeepMind", "Meta Platforms" creators
+%          (the institution row read as a row of names going on with the names), the names without an affiliation;
+%          "Hal Hunt" a creator while Gil Gray stayed an affiliation; int34a the names merged, the row their affiliation
+% expect:  0 errors, 0 warnings; creators Ann Able, Bob Baker, Cat Cole, Dan Dorn, Eve Eads, Fay Fox only, each with the
+%          institution row printed under it as its affiliation (the row whole on each name, as names parted by space
+%          share the lines under them); "Gil Gray Hal Hunt" stays an affiliation line of Fay Fox, as in int34a (a
+%          SYNC_STATUS residual: names after an affiliation line in an unmarked block)
+% status:  RED (77p r3) -> GREEN (77p r4)
+\documentclass{article}
+\title{T}
+\author{Ann Able~~~~Bob Baker \\ Carnegie Mellon~~~~Johns Hopkins
+\and \textbf{Cat Cole}~~~~\textbf{Dan Dorn} \\ \textit{Google DeepMind}~~~~\textit{Meta Platforms}
+\and Eve Eads \\ Carnegie Mellon~~~~Johns Hopkins
+\and Fay Fox \\ Univ F \\ Gil Gray~~~~Hal Hunt}
+\begin{document}
+\maketitle
+Text.
+\end{document}

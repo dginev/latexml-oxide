@@ -1,0 +1,24 @@
+% witness: 2606.27261 (`THEODOROS ASSIOTIS\thanks{…} \;\;\textnormal{AND}\;\; MILES FOSTER NYAMUNDANDA\thanks{…}`),
+%          2607.03677 (`Fugui Ma$^{\dag,}$\footnote{…}~~ {and}~~ Zhimeng Ouyang$^\ddag$`), 2608.24427 (`\href{…}{…Eric
+%          Rossetto} \quad \textnormal{and} \quad \href{…}{…Alessandro Antonucci}`), and the 77p r3 re-review's probes
+%          `Ann Able~~AND~~Bob Baker`, `~~And~~`, `~~{and}~~`, `~~\textrm{and}~~`; a byline's "BY"
+% oracle:  pdflatex 0 errors: each pair printed with its "and" between the names
+% engines: rust 77p r3 = 0 errors; creators "AND" and "And" (the word read as a name after a run), "and" an
+%          affiliation of the name before `~~{and}~~` and `~~\textrm{and}~~` (the word's piece one of its lines), and
+%          after `\quad \textnormal{and} \quad`; a creator "BY"; int34a each pair one creator (no spacing-run rule)
+%          except `\textrm{and}`; Perl the same as int34a
+% expect:  0 errors, 0 warnings; fourteen creators, each one name, no "and" or "BY" in any creator
+% status:  RED (77p r3) -> GREEN (77p r4)
+\documentclass{article}
+\title{T}
+\author{Ann Able~~AND~~Bob Baker
+\and Cat Cole~~And~~Dan Dorn
+\and Eve Eads~~{and}~~Fay Fox
+\and Gil Gray~~\textrm{and}~~Hal Hunt
+\and Ivy Ives \;\;\textnormal{AND}\;\; Jon Jay
+\and Kim Key \quad \textnormal{and} \quad Lou Lee
+\and BY~~Max Moss~~and~~Ned Nash}
+\begin{document}
+\maketitle
+Text.
+\end{document}

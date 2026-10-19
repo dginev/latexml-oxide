@@ -1,0 +1,19 @@
+% witness: 2602.23777 (`\tt \small xu\_zhipeng@stu.xidian.edu.cn, \{nnwang,dcheng\}@xidian.edu.cn \\ \tt \small
+%          \{wangzilong, xinyangjiang, dongsli\}@microsoft.com`; the 77p r5 re-review's probes q4, q6): e-mail lines of one
+%          block, each holding an address no name spells
+% oracle:  pdflatex 0 errors: the lines as written, under the affiliations
+% engines: rust 77p r5 = 0 errors; q77@ Cat Cole's by elimination while z99@ on the next line spells no one either;
+%          nnwang@ Dongsheng Li's by the gap rule, the authors spelled on the other line not counted, then dongsli@ Nannan
+%          Wang's; int34a kept each line one contact
+% expect:  0 errors, 0 warnings; every spelled address on its owner; q77@, z99@ (first block) and nnwang@, dongsli@
+%          (second) go to no name by elimination: one contact each of the last author (an address no name spells is
+%          never guessed)
+% status:  RED (77p r5) -> GREEN (77p r6)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$, Cat Cole$^2$, Dan Dorn$^1$ \\ $^1$Univ A \\ $^2$Univ B \\
+\texttt{\{aable,q77,ddorn\}@x.edu} \\ \texttt{\{bbaker,z99\}@y.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

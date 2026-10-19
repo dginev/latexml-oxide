@@ -1,0 +1,26 @@
+% witness: the negatives of the 77p r2 ruling (names parted by horizontal space share the address lines under them):
+%          a name with its own lines keeps them (`Ann Able \\ Univ A \quad Bob Baker \\ Univ B`), names an `\and`
+%          parts do not share (`Fay Fox \quad Gil Gray \and Hal Hunt \\ Univ H`), one name keeps its lines, and a row
+%          of addresses parted by space too (`Cat Cole \quad Dan Dorn \\ Univ C \quad Univ D`, set under the names by
+%          position) stays as before — Univ C on Dan Dorn and "Univ D" a creator (SYNC_STATUS row, Perl the same) —, and
+%          lines labelled by the names' symbol marks stay on the last name (`Budhaditya Halder$^{\dagger}$ \quad
+%          Shubhayan Pan$^{\ddagger}$ … \\ $^{\dagger}$Department of Statistics, Rutgers University`, 2505.23260;
+%          2109.13296: the marks decide, a SYNC_STATUS row)
+% oracle:  pdflatex 0 errors: "Ann Able / Univ A Bob Baker / Univ B", "Cat Cole Dan Dorn / Univ C Univ D",
+%          "Eve Eads / Univ E / eads@e.edu", "Fay Fox Gil Gray", "Hal Hunt / Univ H", "Ivy Ives† Jon Jay‡ / †Univ I /
+%          ‡Univ J"
+% engines: rust 77p r1 the same creators; Perl reads the symbols as marks for the whole block: Ivy Ives Univ I, Jon Jay
+%          Univ J, every other name and line merged into one creator
+% expect:  0 errors, 0 warnings; the creators unchanged by the ruling
+% status:  GREEN (77p r1) -> GREEN (77p r2), a control
+\documentclass{article}
+\title{T}
+\author{Ann Able \\ Univ A \quad Bob Baker \\ Univ B
+\and Cat Cole \quad Dan Dorn \\ Univ C \quad Univ D
+\and Eve Eads \\ Univ E \\ \texttt{eads@e.edu}
+\and Fay Fox \quad Gil Gray \and Hal Hunt \\ Univ H
+\and Ivy Ives$^{\dagger}$ \quad Jon Jay$^{\ddagger}$ \\ $^{\dagger}$Univ I \\ $^{\ddagger}$Univ J}
+\begin{document}
+\maketitle
+Body.
+\end{document}

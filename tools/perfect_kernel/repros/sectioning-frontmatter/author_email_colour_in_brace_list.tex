@@ -1,0 +1,13 @@
+% witness: the r5 re-review of batch 77p (finding 1, probe c3); 2604.19440's colour inside its address list
+% oracle:  pdflatex 0 errors: the two names, "1Univ A", then "{aable, bbaker}@x.edu" in black typewriter
+% engines: rust 77p r8 = 0 errors; "blackaable@x.edu" an e-mail of Ann Able, the colour's name read as letters
+% expect:  0 errors, 0 warnings; aable@x.edu Ann Able's e-mail, bbaker@x.edu Bob Baker's; no colour name in either
+% status:  RED (77p r8) -> GREEN (77p r9)
+\documentclass{article}
+\usepackage{xcolor}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^1$ \\ $^1$Univ A \\ \texttt{\{\color{black}aable, bbaker\}@x.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

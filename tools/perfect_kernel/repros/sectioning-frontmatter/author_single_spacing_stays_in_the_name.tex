@@ -1,0 +1,16 @@
+% witness: the negative of the spacing-run separator (user ruling 2026-10-19): one tie or control space inside a name,
+%          a run beside the word "and", a run inside a group, a run before a note or a mark
+% oracle:  pdflatex 0 errors: "J. Smith / Ann Able / Jan van der Berg / Cat Cole and Dan Dorn / Eve Ell Fay Fox /
+%          Gus Gray* / Hal Hunt1"
+% engines: rust int33a = the same seven groups, "Cat Cole" and "Dan Dorn" split at "and"
+% expect:  0 errors, 0 warnings; creators "J. Smith", "Ann Able", "Jan van der Berg", "Cat Cole", "Dan Dorn",
+%          "Eve Ell Fay Fox" (inside `\textbf`, one creator as before), "Gus Gray" (with the note), "Hal Hunt"
+% status:  CONTROL (int33a and 77p alike)
+\documentclass{article}
+\title{T}
+\author{J.~Smith \and Ann\ Able \and Jan van~der~Berg \and Cat Cole~~and~~Dan Dorn
+\and \textbf{Eve Ell\;\;Fay Fox} \and Gus Gray~~\thanks{Note G.} \and Hal Hunt\ \ $^{1}$}
+\begin{document}
+\maketitle
+Body.
+\end{document}

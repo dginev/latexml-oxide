@@ -1,0 +1,16 @@
+% witness: the r7 re-review of batch 77p (finding 11, probes p1, p2, p4, p5, p6)
+% oracle:  pdflatex 0 errors: six names, the institution, three address lines set with \rule, \phantom, \kern,
+%          \raisebox, \hskip
+% engines: rust 77p r10 = 0 errors; "0pt2exaable@", "xxccole@x.edu ddorn@x.edu" one contact, "eeads@x.edu ffox@x.edu" an
+%          affiliation
+% expect:  0 errors, 0 warnings; each address the e-mail of the name it spells
+% status:  RED (77p r10) -> GREEN (77p r11)
+\documentclass{article}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^1$, Cat Cole$^1$, Dan Dorn$^1$, Eve Eads$^1$, Fay Fox$^1$ \\ $^1$Univ A \\ \rule{0pt}{2ex}\texttt{aable@x.edu, bbaker@x.edu} \\ \texttt{\phantom{xx}ccole@x.edu}\kern2em\texttt{ddorn@x.edu} \\ \raisebox{-1pt}{\rule{1em}{1em}}~\texttt{eeads@x.edu}\hskip 2em plus 1fil\texttt{ffox@x.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

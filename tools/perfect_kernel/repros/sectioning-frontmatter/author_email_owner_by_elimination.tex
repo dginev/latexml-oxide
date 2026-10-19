@@ -1,0 +1,18 @@
+% witness: 1503.08895 (`Arthur Szlam \:\:\:\:\:\: Jason Weston \:\:\:\:\:\: Rob Fergus \\ … \\
+%          \texttt{\{aszlam,jase,robfergus\}@fb.com}`: "jase" spells no surname, Jason Weston is the one name left), and
+%          the review's probe `Ann Able \quad Bob Baker \quad Cat Cole \\ Univ X \\ \texttt{\{able,bobb,cole\}@x.edu}`
+% oracle:  pdflatex 0 errors: the rows as written
+% engines: rust 77p r2 = 0 errors; jase@ and robfergus@ on Rob Fergus, Jason Weston without one; bobb@ and cole@ on
+%          Cat Cole; int34a the space-parted names merged (no spacing-run rule)
+% expect:  0 errors, 0 warnings; each address on its owner: aszlam/jase/robfergus to Szlam/Weston/Fergus,
+%          able/bobb/cole to Able/Baker/Cole
+% status:  RED (77p r2) -> GREEN (77p r3)
+\documentclass{article}
+\title{T}
+\author{Arthur Szlam \:\:\:\:\:\: Jason Weston \:\:\:\:\:\: Rob Fergus \\ FAIR \\
+\texttt{\{aszlam,jase,robfergus\}@fb.com}
+\and Ann Able \quad Bob Baker \quad Cat Cole \\ Univ X \\ \texttt{\{able,bobb,cole\}@x.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

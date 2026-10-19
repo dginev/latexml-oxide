@@ -1,0 +1,15 @@
+% witness: 2603.25922, 2604.12864 (`\author{By~~{\scshape Vitaly~Bergelson}~~and~~{\scshape Florian~K.~Richter}}`),
+%          2603.27258 (`…~~and~~{\scshape Florian~K.~Richter}\\~~and~~{\scshape Donald Robertson}`), 2604.07186: a
+%          byline's "By" is no name, and the runs beside it and beside "and" part nothing themselves
+% oracle:  pdflatex 0 errors: "By Bryna Kra and Joel Moreira and Florian K. Richter / and Donald Robertson"
+% engines: rust 77p r2 = 0 errors; creators "By" and "Bryna Kra", …, Donald Robertson only "and Donald Robertson" as
+%          an affiliation of every creator; int34a "By Bryna Kra" (the byline word in the name); Perl the same as int34a
+% expect:  0 errors, 0 warnings; creators "Bryna Kra", "Joel Moreira", "Florian K. Richter", "Donald Robertson"
+% status:  RED (77p r2) -> GREEN (77p r3)
+\documentclass{article}
+\title{T}
+\author{By~~{\scshape Bryna Kra}~~and~~{\scshape Joel~Moreira}~~and~~{\scshape Florian~K.~Richter}\\~~and~~{\scshape Donald Robertson}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

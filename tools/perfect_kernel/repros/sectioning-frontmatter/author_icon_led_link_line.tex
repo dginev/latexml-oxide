@@ -1,0 +1,16 @@
+% witness: 2601.03661; the r7 re-review of batch 77p (finding 5)
+% oracle:  pdflatex 0 errors: two names, the institution, the brace list of addresses, then a GitHub icon (\faGithub)
+%          before a \href printing the URL
+% engines: rust 77p r10 = 0 errors; the icon-led link line an affiliation of both names
+% expect:  0 errors, 0 warnings; Univ A and its address on each name; the link line a URL contact of the block (the
+%          shared creator)
+% status:  RED (77p r10) -> GREEN (77p r11)
+\documentclass{article}
+\usepackage{hyperref}
+\usepackage{fontawesome5}
+\title{T}
+\author{Ann Able \qquad Bob Baker \\ Univ A\\ \small \texttt{\{aable,bbaker\}@x.edu} \\ \faGithub \, \href{https://github.com/aable/proj} {\textsf{\small https://github.com/aable/proj}}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,25 @@
+% witness: the 77p r3 re-review's probes p9 (`\texttt{bb@x.edu, aa@x.edu}` under Ann Able and Bob Baker: the initials,
+%          not the order), p28 (`info@x.edu` is no person's), p8 (`\{lzhang,zhangw,smith\}@x.edu` under Wei Zhang, Li
+%          Zhang, Bob Smith: "lzhang" spells Li Zhang, "zhangw" the one name left); 2605.06223 (`kyle.min@…` on the
+%          next line leaves the line's other address to the one name left); 2509.10377 (addresses by institution, not
+%          in name order: no address goes by its place)
+% oracle:  pdflatex 0 errors: the rows as written
+% engines: rust 77p r3 = 0 errors; bb@ on Ann Able and aa@ on Bob Baker, info@ on Cat Cole, zhangw@ on Li Zhang and
+%          lzhang@ on Wei Zhang, qq@ on Cy Cruz, … in order, the out-of-order list's xx@, yy@ on Gil Gray
+%          and Hal Hunt; int34a the space-parted names merged (no spacing-run rule)
+% expect:  0 errors, 0 warnings; aa@ Ann Able, bb@ Bob Baker; ddorn@ Dan Dorn and info@ unplaced (the group's last name,
+%          Dan Dorn); lzhang@ Li Zhang, zhangw@ Wei Zhang, smith@ Bob Smith; aames@ Al Ames, qq@ Bo Bell (the one name
+%          left once ccruz@ on the next line is Cy Cruz's), ccruz@ Cy Cruz; ffox@ Fay Fox, eeads@ Eve Eads, xx@ and yy@
+%          unplaced (on Hal Hunt)
+% status:  RED (77p r3) -> GREEN (77p r4)
+\documentclass{article}
+\title{T}
+\author{Ann Able \quad Bob Baker \\ Univ X \\ \texttt{bb@x.edu, aa@x.edu}
+\and Cat Cole \quad Dan Dorn \\ Univ Y \\ \texttt{info@y.edu, ddorn@y.edu}
+\and Wei Zhang \quad Li Zhang \quad Bob Smith \\ Univ Z \\ \texttt{\{lzhang,zhangw,smith\}@z.edu}
+\and Al Ames \quad Bo Bell \quad Cy Cruz \\ Univ A \\ \texttt{\{aames,qq\}@a.edu} \\ \texttt{ccruz@b.edu}
+\and Eve Eads \quad Fay Fox \quad Gil Gray \quad Hal Hunt \\ Univ W \\ \texttt{\{ffox,xx,eeads,yy\}@w.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

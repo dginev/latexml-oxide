@@ -1,0 +1,13 @@
+% witness: 2609.00588 (its author block, shortened); the r6 re-review of batch 77p (finding 6)
+% oracle:  pdflatex 0 errors: three names, the institution, "{aable,bbaker,ccole}@x.edu" set by \url
+% engines: rust 77p r9 = 0 errors; one e-mail contact on Bob Baker holding the whole list
+% expect:  0 errors, 0 warnings; each address of the printed brace list the e-mail of the name it spells
+% status:  RED (77p r9) -> GREEN (77p r10)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^1$, Cat Cole$^1$ \\ $^1$Univ A \\ \texttt{\url{{aable,bbaker,ccole}@x.edu}}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

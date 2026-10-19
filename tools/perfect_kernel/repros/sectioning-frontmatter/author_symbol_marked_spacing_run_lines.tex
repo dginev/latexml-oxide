@@ -1,0 +1,26 @@
+% witness: 2601.02680 (its author block, shortened); the r5 re-review of batch 77p (finding 6, probes r10, r11, r18;
+%          residual 9's empty \url{} beside a link)
+% oracle:  pdflatex 0 errors: one row of six names marked dagger or section sign, the two institutions on one line,
+%          the address, the repository link
+% engines: rust 77p r8 = 0 errors; every line, the address too, on the last name, Dong Li
+% expect:  0 errors, 0 warnings; "Tsinghua University" an affiliation of the section-marked names, "University of
+%          California, Merced" of the dagger-marked ones; dinghongsong21@ Dinghong Song's e-mail; the link a URL
+%          contact of the block (the shared creator), the empty \url{} nothing
+% status:  RED (77p r8) -> GREEN (77p r9)
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\title{T}
+\author{
+Dinghong Song$^{\dagger}$\thanks{Equal contribution} \ \ \ \ Zhiwei Xu$^\mathsection$\ \ \ \ Hai Wan$^\mathsection$\ \ \ \ Xibin Zhao$^\mathsection$\ \ \ \ Pengfei Su$^{\dagger}$ \ \ \ \ Dong Li$^{\dagger}$
+\\
+$^\mathsection$ Tsinghua University \ \ \ \ $^\dagger$ University of California, Merced \\
+\texttt{dinghongsong21@gmail.com}
+\\
+\href{https://github.com/dinghongsong/ACL}{\textcolor{magenta}{\texttt{https://github.com/dinghongsong/ACL}}}
+\url{}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,17 @@
+% witness: 2601.05633 (`Nuoyan Lyu$^{\clubsuit \heartsuit}$, … Yang Zhang$^{\diamond}$, … \\ $^{\clubsuit}$ State Key
+%          Laboratory … \\ $^{\heartsuit}$ University of Chinese Academy of Sciences \\ $^{\diamond}$ National University
+%          of Singapore`; the 77p r5 re-review's probe d1)
+% oracle:  pdflatex 0 errors: Univ A under ♣, Univ B under ♡, Univ C under ⋄
+% engines: rust 77p r5 = 0 errors; the ⋄ line (a footnote symbol's) welded into the ♡ line: "Univ B⋄ Univ C" on Ann
+%          Able, none on Cat Cole; int34a the welded line on a nameless creator
+% expect:  0 errors, 0 warnings; the ⋄ line its own entry, labelled by its symbol: Univ C on Cat Cole, the one author
+%          carrying ⋄
+% status:  RED (77p r5) -> GREEN (77p r6)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\clubsuit \heartsuit}$, Cat Cole$^{\diamond}$, Bob Baker$^{\clubsuit}$ \\ $^{\clubsuit}$ Univ A \\
+$^{\heartsuit}$ Univ B \\ $^{\diamond}$ Univ C}
+\begin{document}
+\maketitle
+Text.
+\end{document}

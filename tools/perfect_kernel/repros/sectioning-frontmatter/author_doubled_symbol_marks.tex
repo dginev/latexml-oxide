@@ -1,0 +1,14 @@
+% witness: the r7 re-review of batch 77p (finding 3, probes n1, n2)
+% oracle:  pdflatex 0 errors: three names marked ∗, ∗∗ and ††, the three institutions on one line, each led by its mark
+% engines: rust 77p r10 = 0 errors; Univ B and Univ C, led by the doubled marks, affiliations of the shared creator,
+%          their marks kept
+% expect:  0 errors, 0 warnings; Univ A on Ann Able, Univ B on Bob Baker, Univ C on Cat Cole
+% status:  RED (77p r10) -> GREEN (77p r11)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able$^{*}$ \ \ \ \ Bob Baker$^{**}$ \ \ \ \ Cat Cole$^{\dagger\dagger}$ \\ $^{*}$ Univ A \ \ \ \ $^{**}$ Univ B \ \ \ \ $^{\dagger\dagger}$ Univ C}
+\begin{document}
+\maketitle
+Text.
+\end{document}

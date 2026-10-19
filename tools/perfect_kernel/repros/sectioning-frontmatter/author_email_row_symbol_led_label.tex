@@ -1,0 +1,13 @@
+% witness: the r5 re-review of batch 77p (residual 9, probe u23)
+% oracle:  pdflatex 0 errors: the names, the institution, "*Corresponding author: aable@x.edu"
+% engines: rust 77p r8 = 0 errors; the line welded into Univ A, on both names
+% expect:  0 errors, 0 warnings; aable@x.edu Ann Able's e-mail, named "Corresponding author:"; Bob Baker none
+% status:  RED (77p r8) -> GREEN (77p r9)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able$^{1,*}$, Bob Baker$^1$ \\ $^1$Univ A \\ $^*$Corresponding author: \href{mailto:aable@x.edu}{aable@x.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

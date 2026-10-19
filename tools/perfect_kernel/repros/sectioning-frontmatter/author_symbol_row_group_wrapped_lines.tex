@@ -1,0 +1,15 @@
+% witness: 2602.16540; the r7 re-review of batch 77p (finding 1, probe g3)
+% oracle:  pdflatex 0 errors: the row of marked names, each symbol-labelled institution on its own line in a {\it
+%          \normalsize …} group
+% engines: rust 77p r10 = 0 errors; both institutions affiliations of every name of the row
+% expect:  0 errors, 0 warnings; "Univ A, Dublin" on Ann Able and Cat Cole, "Department of Biostatistics, Univ B" on Bob
+%          Baker
+% status:  RED (77p r10) -> GREEN (77p r11)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \quad Cat Cole$^{\dagger}$ \\ {\it \normalsize $^{\dagger}$Univ A, Dublin} \\ {\it \normalsize $^{\ddagger}$Department of Biostatistics, Univ B}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

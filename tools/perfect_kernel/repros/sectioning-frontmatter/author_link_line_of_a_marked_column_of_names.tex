@@ -1,0 +1,13 @@
+% witness: the r5 re-review of batch 77p (finding 4, probe u6m; user ruling 2026-10-20, link lines per column)
+% oracle:  pdflatex 0 errors: two columns, Ann Able and Bob Baker over Univ A and their URL, Cat Cole over Univ B
+% engines: rust 77p r8 = 0 errors; the URL on the nameless shared creator
+% expect:  0 errors, 0 warnings; the URL a contact of Ann Able and Bob Baker, after their institution; none on Cat Cole
+% status:  RED (77p r8) -> GREEN (77p r9)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^1$ \\ $^1$Univ A \\ \url{https://a.org} \and Cat Cole$^2$ \\ $^2$Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}
