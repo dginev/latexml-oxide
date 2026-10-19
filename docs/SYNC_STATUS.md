@@ -4391,6 +4391,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   repro: pdflatex 6 errors, int32a 0, int33a 3 — the honest old-form diagnostic). Binding nets (int33a) 136/136, 0
   documents worse than int32a but neurips_2024's 2406.09417 (0 → 1 `merged_creators`: four names int32a merged silently
   are now flagged — their separators are spacing runs, batch 77p's ruling, as 2603.20775).
+  **Integration (int34, 3ee3125260 + 3cfb24d0d3 + a4ffc3fe0a, binary int34a):** 77o HF14 M1 (a box's position is no
+  printed text: `OptionalPosition`/`Position` parameter types; a cross-reference is ink) + M3 (aistats family binding,
+  OD #772; colm registration), reviews r1-r3 NO-SHIP → main-session follow-up (an address is a key to marked names only
+  with two or more distinct marks; 1905.11190, 2405.18281); 77r run-367 regressions part 2 (C3 revtex hyperref reload KPE
+  #997, C6, C8, C9, C10, C11 partial, C12, C13 OD #773, C15; `\DeclareSIUnit[<options>]` applied, OD #774), review SHIP
+  → r2 should-fixes. Gates int34a: nextest 6305/6305 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs
+  int33a empty; `tools/lint.sh` all checks passed. Witness A/B (98 ids, the ten 2610 html_feedback sources included) vs
+  int33a: F 20 → 7, 0 Fatal worse; 9 papers from Fatal with no output to converted documents (2207.13707 126,755 words,
+  2405.01972 122,266, 2508.03994 108,087, 2403.04828, 2601.20155, 1902.09345, 1704.06321, 1204.1969, astro-ph0203021) —
+  their Errors count as they convert; 2202.05722 0 → 2 `merged_creators` (the SYNC row above); 2209.14855's word drop is
+  an emptied strut table, no text lost. Population A/B (1,428) vs int33a: E 5,569 → 5,566, F 15 → 15, 0 worse. Binding
+  nets (int34a) 136/136, 0 documents worse than int33a.
 
 - **77k** (sole-cause `unexpected:_` shapes, part 2, of the same study): a float caption is a paragraph of a vertical
   box, Perl's `\@@caption PBoxContents` (tex_box.rs `PBoxContents`, `\lx@enterhorizontal`; OD #769), so `$$…$$` in it is
