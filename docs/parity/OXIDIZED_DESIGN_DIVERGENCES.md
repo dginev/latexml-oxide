@@ -20403,27 +20403,31 @@ paragraph, so an item whose element holds only inline content — `Inline.model`
 ran its paragraphs together into one text: apa.cls's `\acknowledgements{We thank …\n\nCorrespondence to …}` (#763)
 read "…agency. Correspondence…". By user ruling (2026-10-18) such a paragraph break is a line break of the item.
 
-Mechanism (all at construction, where the schema is loaded — Perl too reads the model only when it builds the document;
-WISDOM #100): the `\par` whatsit records the frontmatter field it was digested in (tex_paragraph.rs `\lx@normal@par`,
-the `lx_frontmatter_item` value set by `digest_frontmatter_item` and by `\lx@add@frontmatter@until` for a keywords or
-classification environment's body). Its constructor (base_utilities.rs `frontmatter_paragraph_break`) walks up from the
-insertion point to that field's element; when the element is inline-only and no element on the way holds paragraphs of
-its own (a minipage, a note), it inserts a marked `ltx:break` — unless the item has no text yet, or its content already
-ends with such a break (a run of `\par`s, in a group of the item too) — and closes nothing. When the item element
-closes, the marked breaks left at its end are dropped (`drop_trailing_paragraph_breaks`). Otherwise the `\par` is the
-ordinary one: an `ltx:abstract` (`Block.model`) keeps its `<p>`s, an `ltx:note` its one run of text, a box absorbed
-outside its item (a reused title) is untouched. No token of the item is changed.
+Mechanism: the item's text is digested in a mode frame of its own (`digest_frontmatter_item`; the body of a keywords or
+classification environment, `\lx@add@frontmatter@until`, in the frame it began in), and the field and that frame's depth
+(the number of frames binding `MODE`) are noted there (`note_frontmatter_paragraphs`). A `\par` digested at that depth
+records the field on its whatsit (tex_paragraph.rs `\lx@normal@par`, `frontmatter_paragraph_field`); a box, an
+alignment cell or math inside the item begins a deeper frame, where the `\par` is the ordinary one — in a box or a `c`
+cell it ends nothing, as in TeX (tex.web §1096 `end_graf`: `\date{\begin{tabular}{c}D1\par D2\end{tabular}}` "D1D2") —
+while a group (`{\bfseries …}`) begins none. At construction, where the schema is loaded (Perl too reads the model only
+when it builds the document; WISDOM #100), the `\par`'s constructor (base_utilities.rs `frontmatter_paragraph_break`)
+walks up from the insertion point to that field's element; when the element is inline-only and no element on the way
+holds paragraphs of its own (a minipage, a note), it inserts a marked `ltx:break` when the item's content so far ends
+in other content — not before its first content, not after another such break (a run of `\par`s, in a group too) —
+and closes nothing. When the item element closes, the marked breaks left at its end are dropped
+(`drop_trailing_paragraph_breaks`). Otherwise the `\par` is the ordinary one: an `ltx:abstract` (`Block.model`) keeps its
+`<p>`s, an `ltx:note` its one run of text, a box absorbed outside its item (a reused title) is untouched. No token of the
+item is changed.
 
-Where it shows: `ltx:acknowledgements`, `ltx:keywords`, `ltx:classification`, `ltx:date`, `ltx:pubnote`, `ltx:contact`,
-`ltx:title` and an author's `ltx:personname` (through its `ltx:creator`). In the standard classes `\title`, `\author`
-and `\date` are not `\long` — pdflatex stops with "Paragraph ended before \author was complete" — so the last three are
-reached only through `\long` setters (apa's) or bindings. Beyond TeX: a `\par` in a box or a `c` cell inside an item
-(`\date{\begin{tabular}{c}D1\par D2\end{tabular}}`) is a line break here, where TeX ignores `\par` in restricted
-horizontal mode (tex.web §1096 `end_graf`; the item's own text mode is the same mode string, so the two cannot be told
-apart at digest time). A macro whose string body is a single space tokenizes as an empty line, `\par` (KNOWN_PERL_ERRORS
-#984); amsppt's `\usualspace` and the Rust-only bindings' `\And`/`\AND`/`\Ands` (colm2025_conference, jmlr, jmlr2e),
-`\auxiliaryspace` (axessibility) and `\bibnamedelimi` (biblatex) are explicit space tokens now, so none of them breaks a
-line (colm's `\Ands` had made "Carol <break/>Dan"). Repros `sectioning-frontmatter/inline_item_paragraphs_are_line_breaks`,
+Where it shows: `ltx:acknowledgements`, `ltx:keywords`, `ltx:classification`, `ltx:pubnote`, `ltx:contact`, `ltx:date`
+and `ltx:title`. In the standard classes `\title` and `\date` are not `\long` — pdflatex stops with "Paragraph ended
+before \date was complete" — so those two are reached through `\long` setters (apa's), bindings, or an `\endgraf`. An
+author's name is digested in a frame of its own inside its `ltx:creator` item, so a `\par` in it ends nothing, as before.
+A macro whose string body is a single space tokenizes as an empty line, `\par` (KNOWN_PERL_ERRORS #984): amsppt's
+`\usualspace`, biblatex's `\bibnamedelimi` and axessibility's `\auxiliaryspace` (the Perl/ar5iv bodies), and the
+Rust-only bindings' `\And`/`\AND`/`\Ands` (colm2025_conference, jmlr, jmlr2e) are explicit space tokens now (colm's
+`\Ands` had made "Carol <break/>Dan"; `X\bibnamedelimi Y` had split a paragraph). Repros `sectioning-frontmatter/inline_item_paragraphs_are_line_breaks`,
 `sectioning-frontmatter/class_notes/apa_acknowledgements_paragraphs_are_lines`; guards
-`perfect_kernel_batch77f::{inline_item_paragraphs_are_line_breaks, apa_acknowledgements_paragraphs_are_lines}`. **Why**:
+`perfect_kernel_batch77f::{inline_item_paragraphs_are_line_breaks, apa_acknowledgements_paragraphs_are_lines,
+single_space_macros_are_spaces}`. **Why**:
 the author's line structure is content; merging two paragraphs into one sentence run misreports it.

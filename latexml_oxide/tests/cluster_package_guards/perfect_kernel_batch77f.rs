@@ -11,7 +11,8 @@ fn squash(xml: &str) -> String { xml.split_whitespace().collect::<Vec<_>>().join
 /// The acknowledgements' paragraphs (`Inline.model`) are lines, in a group of the item too, and so are a keywords
 /// environment's (the `\lx@add@frontmatter@until` path); breaks at an item's or a group's ends and a run of them add
 /// nothing; an element that holds paragraphs keeps the ordinary `\par`: the abstract (`Block.model`) its paragraphs, a
-/// note its one run of text with its space, a minipage in an item its blocks with no break between them.
+/// note its one run of text with its space, a minipage in an item its blocks with no break between them; in a box or
+/// a `c` cell inside an item a `\par` ends nothing (tex.web §1096).
 #[test]
 fn inline_item_paragraphs_are_line_breaks() {
   let (log, xml) = convert_with(
@@ -29,6 +30,7 @@ fn inline_item_paragraphs_are_line_breaks() {
     r#"<pubnote name="Dedication: " role="dedication"><text font="bold">Lead</text> and <text font="italic">tail</text></pubnote>"#,
     r#"</itemize> <p>Mini two</p> </inline-block></pubnote>"#,
     r#"<keywords name="Keywords: ">alpha, beta <break/>gamma</keywords>"#,
+    r#"<td align="center">D1D2</td> </tr> </tbody> </tabular> and M1M2</date>"#,
   ] {
     assert!(xml.contains(element), "{element}: {xml}");
   }
@@ -83,4 +85,28 @@ fn apa_acknowledgements_paragraphs_are_lines() {
       "{mode}: {xml}"
     );
   }
+}
+
+/// A macro whose body is a single space is a space, not the empty line a `" "` string body tokenizes as (`\par`;
+/// KNOWN_PERL_ERRORS #984): colm's `\Ands` in an author list makes no line break of the name, biblatex's
+/// `\bibnamedelimi` in the body splits no paragraph.
+#[test]
+fn single_space_macros_are_spaces() {
+  let (log, xml) = convert_with(
+    "\\documentclass{article}\n\\usepackage{colm2025_conference}\n\\title{T}\n\\author{Alice \\And Bob \\AND Carol \\Ands Dan}\n\\begin{document}\n\\maketitle\nBody.\n\\end{document}",
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let xml = squash(&xml);
+  assert!(xml.contains("<personname>Carol Dan</personname>"), "{xml}");
+  assert_eq!(xml.matches("<break/>").count(), 0, "{xml}");
+  let (log, xml) = convert_with(
+    "\\documentclass{article}\n\\usepackage{biblatex}\n\\begin{document}\nX\\bibnamedelimi Y\n\\end{document}",
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    squash(&xml).contains(r#"<para xml:id="p1"> <p>X Y</p> </para>"#),
+    "{xml}"
+  );
 }

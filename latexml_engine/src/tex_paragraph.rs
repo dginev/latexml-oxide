@@ -261,10 +261,9 @@ LoadDefinitions!({
         whatsit.set_property("internal_par", true);
         whatsit.set_property("reversion", Tokens!());
       } else {
-        // the frontmatter field being made (`digest_frontmatter_item`), whose element decides at construction what this
-        // paragraph break is (`frontmatter_paragraph_break`)
-        let item = lookup_string("lx_frontmatter_item");
-        if !item.is_empty() {
+        // the frontmatter field whose own paragraph break this is (`frontmatter_paragraph_field`), whose element decides
+        // at construction what it makes (`frontmatter_paragraph_break`)
+        if let Some(item) = frontmatter_paragraph_field() {
           whatsit.set_property("frontmatter_item", item);
         }
       }

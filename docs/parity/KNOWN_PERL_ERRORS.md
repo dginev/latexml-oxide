@@ -15791,8 +15791,11 @@ reach the body. Guard `perfect_kernel_batch75a::twocolumn_class_header_is_its_ow
 Perl `DefMacro('\usualspace', ' ')` (amsppt.sty.ltxml:322) tokenizes its body with a string Mouth, which appends the
 end-of-line character to the line and, in state N, skips the leading space and reads the end of line as an empty line:
 `\par` (Mouth.pm:316-326). `\meaning\usualspace` is `macro:->\par `, where amsppt.sty:405 makes it a space
-(`{\rm\enspace}`). Minimal trigger: `\input amstex \documentstyle{amsppt} … \subjclass\nofrills{{\it MSC}.\usualspace}
+(`{\rm\enspace}`). The ar5iv bindings carry the same body for biblatex's `\bibnamedelimi`
+(biblatex.sty.ltxml:801, over :426's `\addnbspace`; `X\bibnamedelimi Y` in the body splits the paragraph) and
+axessibility's `\auxiliaryspace` (axessibility.sty.ltxml:24). Minimal trigger: `\input amstex \documentstyle{amsppt} … \subjclass\nofrills{{\it MSC}.\usualspace}
 14D06\endsubjclass` — the classification held a `\par` (a line break once a paragraph break in an inline-only
-frontmatter item is one, OXIDIZED_DESIGN_DIVERGENCES #766; 0804.1078). Rust's string tokenizer is the same; the amsppt
-binding gives `\usualspace` an explicit space token (amsppt_sty.rs). Guard
-`perfect_kernel_batch68r::amsppt_subjclassyear_names_the_scheme`.
+frontmatter item is one, OXIDIZED_DESIGN_DIVERGENCES #766; 0804.1078). Rust's string tokenizer is the same; the
+bindings give each an explicit space token (amsppt_sty.rs, biblatex_sty.rs, axessibility_sty.rs, and the Rust-only
+colm2025_conference/jmlr/jmlr2e `\And`s). Guards `perfect_kernel_batch68r::amsppt_subjclassyear_names_the_scheme`,
+`perfect_kernel_batch77f::single_space_macros_are_spaces`.

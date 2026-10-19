@@ -4,14 +4,15 @@
 % OXIDIZED_DESIGN_DIVERGENCES #766). Decided at construction, by the schema: a break parts lines only (none before the
 % item's first text, none after another, none left at its end, in a group of it too); an element that holds paragraphs
 % keeps the ordinary `\par` — the abstract its `<p>`s, a note its one run (spaces kept), a minipage in an item its
-% blocks; a keywords environment (`\lx@begin@keywords`, the `\lx@add@frontmatter@until` path) has the same rule.
+% blocks; a keywords environment (`\lx@begin@keywords`, the `\lx@add@frontmatter@until` path) has the same rule. A
+% `\par` in a box or a `c` cell inside an item ends nothing, as in TeX (tex.web §1096): the date's "D1D2" and "M1M2".
 % witness: none (apa.cls `\acknowledgements`, repro class_notes/apa_acknowledgements_paragraphs_are_lines)
 % oracle:  pdflatex prints each part on its own line (the class title pages set the store as paragraphs)
 % engines: rust 67int29 = 0 errors, "First part. Second part." one text run; perl = the same (Inline.model, text mode)
 % expect:  0 errors, 0 warnings; <ltx:acknowledgements>First part. <ltx:break/>Second part. <ltx:break/><ltx:text
 %          font="bold">Bold part. <ltx:break/>Bold again.</ltx:text></ltx:acknowledgements>; the abstract two <ltx:p>;
 %          <ltx:note>Note one. Note two.</ltx:note>; the dedication with no break; the minipage with no break;
-%          <ltx:keywords>alpha, beta <ltx:break/>gamma</ltx:keywords>
+%          <ltx:keywords>alpha, beta <ltx:break/>gamma</ltx:keywords>; the date's cell "D1D2" and box "M1M2", no break
 % status:  RED (67int29) -> GREEN (77f)
 \documentclass{article}
 \makeatletter
@@ -35,6 +36,7 @@ Second paragraph.}
 Note two.}
 \lx@add@frontmatter{ltx:pubnote}[role=dedication]{{\bfseries\par Lead} and \textit{tail\par}}
 \lx@add@frontmatter{ltx:pubnote}[role=thanks]{\begin{minipage}{5cm}\begin{itemize}\item one\end{itemize}\par Mini two\end{minipage}}
+\lx@add@frontmatter{ltx:date}[role=creation]{\begin{tabular}{c}D1\par D2\end{tabular} and \mbox{M1\par M2}}
 \lx@begin@keywords[]alpha, beta
 
 gamma\lx@end@keywords

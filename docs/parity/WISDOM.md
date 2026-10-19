@@ -3106,7 +3106,7 @@ names any it misses.
 
 ## 100. The schema model is not loaded at digest time — decide model questions in a constructor
 
-`document::can_contain_qname` at digest time returns false for every pair but the `_Capture_`/`#Comment` fast paths (model.rs): the model is loaded with the document head
+`document::can_contain_qname` at digest time returns false for every pair but the `_Capture_`/`#Comment`/`_WildCard_` fast paths (latexml_core/src/common/model.rs): the model is loaded with the document head
 (latexml_oxide `core_interface.rs` `build_document_head`, as Perl's `convertDocument` loads it after digestion, since
 a binding may still change the schema while digesting). A digest-time rule keyed on "can this element hold X" silently
 never fires. Record what the rule needs on the whatsit at digest (an `after_digest` property, e.g. the frontmatter

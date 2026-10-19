@@ -564,16 +564,17 @@ LoadDefinitions!({
       );
     }
     let index = frontmatter_push(&tag, entry);
-    // the field being made, for its paragraph breaks (`frontmatter_paragraph_break`), as `digest_frontmatter_item` sets
-    // it; the field around this body comes back after it
-    let enclosing_item = lookup_string("lx_frontmatter_item");
-    assign_value("lx_frontmatter_item", tag.clone(), Some(Scope::Local));
+    // the body's own paragraph breaks are the field's (`frontmatter_paragraph_break`); the enclosing notes come back
+    // after it
+    let enclosing = (lookup_value("lx_frontmatter_par_item"), lookup_value("lx_frontmatter_par_depth"));
+    note_frontmatter_paragraphs(&tag);
     // A terminal reached INSIDE a nested group (`\section`'s
     // `\@startsection@hook` inside an unbalanced `\abstract{…`) ends the
     // body from there: `digest_next_body` records the terminal and depth on
     // this frame, `until_terminal_inside_group` (stomach.rs) acts.
     let body = digest_next_body(Some(end));
-    assign_value("lx_frontmatter_item", enclosing_item, Some(Scope::Local));
+    assign_value("lx_frontmatter_par_item", enclosing.0.unwrap_or(Stored::None), Some(Scope::Local));
+    assign_value("lx_frontmatter_par_depth", enclosing.1.unwrap_or(Stored::None), Some(Scope::Local));
     let digested = Digested::from(List::new(body?));
     // A body that typesets nothing adds no entry: an abstract (keywords, classification) with no authored content is
     // no frontmatter, whatever ended it — a heading that closed it before its first line (scrartcl's
@@ -4467,7 +4468,7 @@ pub fn dequeue_front_matter(tag: &str, attr: &[(&str, &str)]) {
 /// `ltx:p`, but `ltx:break`) and is reached from the insertion point without passing an element that holds paragraphs
 /// of its own, the paragraph break is a line break of the item, where text mode would merge the paragraphs (user ruling
 /// 2026-10-18; apa.cls's two-paragraph `\acknowledgements`, OXIDIZED_DESIGN_DIVERGENCES #766). A break only parts
-/// lines: none before the item's first text, none after another (a run of `\par`s), and those left at its end are
+/// lines: none before the item's first content, none after another (a run of `\par`s), and those left at its end are
 /// dropped when it closes ([`drop_trailing_paragraph_breaks`]). Returns whether the `\par` was the item's (it then
 /// closes nothing); otherwise it is the ordinary `\par`.
 pub(crate) fn frontmatter_paragraph_break(document: &mut Document, item: &str) -> Result<bool> {
@@ -4494,10 +4495,7 @@ pub(crate) fn frontmatter_paragraph_break(document: &mut Document, item: &str) -
     open.push(n);
   };
   open.push(item_node.clone());
-  let begun = !item_node.get_content().trim().is_empty();
-  if begun
-    && last_line_end(&item_node, &open) != Some(true)
-    && document::can_contain(&current, "ltx:break")
+  if last_line_end(&item_node, &open) == Some(false) && document::can_contain(&current, "ltx:break")
   {
     document.insert_element(
       "ltx:break",
@@ -4506,6 +4504,34 @@ pub(crate) fn frontmatter_paragraph_break(document: &mut Document, item: &str) -
     )?;
   }
   Ok(true)
+}
+
+/// Note that the `\par`s digested from here on, at this mode frame, are paragraph breaks of the frontmatter field `tag`
+/// ([`frontmatter_paragraph_break`]): a box, an alignment cell or math inside it begins a deeper mode frame, where a
+/// `\par` is the ordinary one (in a box or cell it ends nothing, tex.web §1096 `end_graf`), while a group (`{\bfseries …}`)
+/// begins none.
+fn note_frontmatter_paragraphs(tag: &str) {
+  assign_value(
+    "lx_frontmatter_par_item",
+    tag.to_string(),
+    Some(Scope::Local),
+  );
+  assign_value(
+    "lx_frontmatter_par_depth",
+    Stored::Int(mode_frame_depth()),
+    Some(Scope::Local),
+  );
+}
+
+/// How many frames bind the mode (`MODE`): each mode switch — a box, a cell, math, a frontmatter item's text — binds it
+/// in a frame of its own.
+pub(crate) fn mode_frame_depth() -> i64 { with_stacked_values("MODE", |modes| modes.len() as i64) }
+
+/// The frontmatter field whose paragraph break a `\par` digested now is (what [`note_frontmatter_paragraphs`] noted, at
+/// the same mode frame), if any.
+pub(crate) fn frontmatter_paragraph_field() -> Option<String> {
+  let item = lookup_string("lx_frontmatter_par_item");
+  (!item.is_empty() && lookup_int("lx_frontmatter_par_depth") == mode_frame_depth()).then_some(item)
 }
 
 /// The transient mark on the `ltx:break`s [`frontmatter_paragraph_break`] makes (dropped with the other `_`
@@ -4593,7 +4619,11 @@ fn digest_frontmatter_item(tag: &str, item: Tokens) -> Result<Digested> {
     let_i(&T_CS!("\\fnmsep"), &T_CS!("\\lx@frontmatter@fnmsep"), None);
     assign_value("lx_frontmatter_fnmsep", Stored::Bool(true), None);
   }
-  let digested = digest_text(item);
+  // `DigestText`, with the item's own paragraph breaks noted in its text mode's frame (`frontmatter_paragraph_break`)
+  begin_mode("text")?;
+  note_frontmatter_paragraphs(tag);
+  let digested = digest(item);
+  end_mode("text")?;
   egroup()?;
   digested
 }
