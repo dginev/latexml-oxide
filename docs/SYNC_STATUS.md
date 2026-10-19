@@ -4206,6 +4206,19 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   1608.02012 +20, 2108.12618 +34, 1303.1716 +36), 1309.6905 −1 (the label above), two papers' warnings 4 → 2 and 5 → 3
   (0801.3557, 2101.09366). With int31 every HIGH-priority silent-loss row is closed; the open inventory rows are
   duplication, mis-split, hover-only or reference-number defects (no lost text).
+  **Integration (int32, 62d0b9231b + 4fc65b8e35, binary int32a):** 77k sole-cause shapes part 2 — captions are
+  paragraphs of a vertical box (Perl `PBoxContents`; OD #769), pstricks boxes in math keep their math (KPE #989),
+  blkarray block preambles format their rows (OD #771), aastex `C`/`h` columns (KPE #991), revtex `\preprint` printed
+  per class family (REVTeX 3 `\ifpreprintsty`, 4.0 preamble calls, 4-1/4-2 options; unprinted numbers become
+  `dcterms:identifier`; OD #770, KPE #990); reviews r1 NO-SHIP → r2 SHIP; follow-ups: RED
+  `boxes-groups/extra_brace_meeting_a_macro_formula_ends_it` + SYNC row (synthetic, 0 of 115,456 zips). Gates int32a:
+  nextest 6180/6180 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int31a empty. Population A/B
+  (1,428) vs int31a: E 5,609 → 5,577, F 16 → 16, 0 worse; 19 changed — gains (an algorithm's first line numbered
+  "1" where base numbered from the second line: 1711.00181, 2005.14485, 2103.04487; blkarray block alignment
+  1711.10309; Errors cleared in 1912.12399, 2510.18653, 2310.11556, 0706.4029, 2302.13128), neutral (algorithm2e
+  `\KwIn` line nesting after a caption, 2606.11926; whitespace), and three timeout flips that are load noise
+  (1805.03313, 2005.02474, 2410.03281 re-run alone: identical status; 2410.03281 times out at 200 s on both).
+  Binding nets (int32a) 136/136, 0 documents worse than int31a.
 
 - **77k** (sole-cause `unexpected:_` shapes, part 2, of the same study): a float caption is a paragraph of a vertical
   box, Perl's `\@@caption PBoxContents` (tex_box.rs `PBoxContents`, `\lx@enterhorizontal`; OD #769), so `$$…$$` in it is
