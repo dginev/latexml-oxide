@@ -310,7 +310,7 @@ LoadDefinitions!({
     "\\lx@tabular@p{}{}",
     "\\setlength\\hsize{#2}\\lx@restore@interline\\lx@tabular@p@{#1}{\\the\\hsize}"
   );
-  DefConstructor!("\\lx@tabular@p@{}{Dimension} VBoxContents",
+  DefConstructor!("\\lx@tabular@p@ Position {Dimension} VBoxContents",
   sub[document, args, props] {
     let body = args[2].as_ref().unwrap();
     if body.is_empty()? { return Ok(()); }

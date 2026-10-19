@@ -45,7 +45,8 @@ fn ieee_refmark_sized_marks_link() {
 
 /// 64a: `\IEEEauthorrefmark` is a mark wherever a block is read — `Google, \IEEEauthorrefmark{3}Google DeepMind` is
 /// two affiliations (2310.02368), and an address under one author's mark is that author's (2404.05610), while a
-/// shared affiliation's address continues it and an address under two marks stays the block's (OD #52(j), #159).
+/// shared affiliation's address continues it and an address under two marks stays the block's (OD #52(j), #159), one
+/// contact an address (77o r3).
 /// Repro sectioning-frontmatter/ieee_refmark_address_and_marks_in_a_line.
 #[test]
 fn ieee_refmark_address_and_marks_in_a_line() {
@@ -57,7 +58,7 @@ fn ieee_refmark_address_and_marks_in_a_line() {
     "<creator before=\"  \" role=\"author\">\n    <personname>Mic Tufo<sup xml:id=\"id2\">2</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Google</contact>\n  </creator>",
     "<creator before=\"  \" role=\"author\">\n    <personname>Alex Svy<sup xml:id=\"id3\">3</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Google DeepMind</contact>\n  </creator>",
     "<creator before=\"  \" role=\"author\">\n    <personname>Dem Hespe<sup xml:id=\"id4\">4</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text font=\"italic\" xml:id=\"id5\">Independent</text></contact>\n    <contact name=\"Email: \" role=\"email\">dem.hespe@outlook.com</contact>\n  </creator>",
-    "<creator role=\"author\">\n    <contact name=\"Email: \" role=\"email\">{tufo,svy}@google.com</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <contact name=\"Email: \" role=\"email\">tufo@google.com</contact>\n    <contact name=\"Email: \" role=\"email\">svy@google.com</contact>\n  </creator>",
   ]);
 }
 

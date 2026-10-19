@@ -1,0 +1,21 @@
+% mechanism: a class's `\@maketitle` deposit is kept only when it prints something (`typesets_content`), which reads
+%   the arguments a whatsit shows (`shown_arguments`); a cross-reference's or a citation's key is not shown, but the
+%   reference prints the label's number and the citation the work's name, which the post-processor fills in
+%   (`fills_generated_text`: the `label` property `labelref` names, a citation's `bibrefs`). `\label` alone prints
+%   nothing (`alignmentSkippable`) and its deposit still goes.
+% witness: 77o review probe m1_depref (synthetic; no corpus hit in the 77o A/B)
+% oracle:  pdflatex 0 errors; "1" (the class prints only the reference) then "1 Intro Body."
+% engines: rust int32a: 0 errors, the <ref> kept; rust 77o r1: 0 errors, the deposit dropped (no <ref>);
+%   perl: no deposit mechanism (the class `\@maketitle` is dropped)
+% expect:  0 errors; <p align="center"><ref labelref="LABEL:s1"/></p> before the section
+% status:  RED (77o r1) -> GREEN (77o r2)
+\documentclass{article}
+\makeatletter
+\def\@maketitle{\begin{center}\ref{s1}\end{center}}
+\makeatother
+\title{T}
+\author{A}
+\begin{document}
+\maketitle
+\section{Intro}\label{s1}Body.
+\end{document}

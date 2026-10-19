@@ -1859,7 +1859,8 @@ pub(crate) fn load() -> Result<()> {
   // schema-invalid. Each such child is wrapped in the element the model
   // auto-opens for it there (`<p>` → `<para>`), the shape ordinary paragraph
   // flow gives it; admissible children stay as they are. OXIDIZED_DESIGN #263.
-  // Guard `perfect_kernel_batch56::unwound_titlepage_rehomes_its_paragraphs`.
+  // Guards `perfect_kernel_batch56::unwound_titlepage_rehomes_a_printed_paragraph` (a class `\@maketitle`'s printed
+  // paragraph, deposited in the document's `{titlepage}`) and `…::unwound_titlepage_rehomes_its_paragraphs` (jlreq).
   DefConstructor!("\\unwind@titlepage", sub[document,_args,_props] {
     if let Some(titlepage) = document.maybe_close_element("ltx:titlepage")? {
       // The unwound cover no longer stands in for the document's `<ltx:title>`, which the HTML then displays: the

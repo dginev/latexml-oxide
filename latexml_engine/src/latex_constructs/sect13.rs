@@ -79,7 +79,7 @@ pub(crate) fn load() -> Result<()> {
     before_digest => { egroup()?; },
     after_digest  => { bgroup(); });
 
-  DefConstructor!("\\shortstack[]{}  OptionalMatch:* [Dimension]",
+  DefConstructor!("\\shortstack OptionalPosition {}  OptionalMatch:* [Dimension]",
   "<ltx:inline-block align='#align'><ltx:p>#2</ltx:p></ltx:inline-block>",
   bounded      => true,
   sizer        => "#2",

@@ -40,7 +40,7 @@ pub mod abntex2cite_sty;
 pub mod achemso_cls;
 pub mod agujournal2019_cls;
 pub mod aguplus_cls;
-pub mod aistats2026_sty;
+pub mod aistats_sty;
 pub mod alegreyasans_sty;
 pub mod algpseudocodex_sty;
 pub mod aliascnt_sty;
@@ -381,7 +381,14 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   // undefined under the fixture). Used by tests/contrib/hw.tex.
   ("lxtesttemplate", "sty", mytemplate_sty::load_definitions),
   // ar5iv-bindings ports
-  ("aistats2026", "sty", aistats2026_sty::load_definitions),
+  // The AISTATS family (aistats_sty.rs): `aistats` answers the years the versioned fallback strips to it
+  // (aistats2012.sty, aistats2014.sty … aistats2027.sty), `aistats2026` by name as before, and the 2010-2011 templates
+  // by their own names, which keep a letter after the digits (aistats2e.sty: 1003.0024, 1302.5134, 1302.4922's
+  // `format/aistats2e`; its margin variant aistats2eM.sty: 1202.1568).
+  ("aistats", "sty", aistats_sty::load_definitions),
+  ("aistats2026", "sty", aistats_sty::load_definitions),
+  ("aistats2e", "sty", aistats_sty::load_definitions),
+  ("aistats2eM", "sty", aistats_sty::load_definitions),
   (
     "algpseudocodex",
     "sty",
@@ -692,6 +699,9 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     "sty",
     colm2025_conference_sty::load_definitions,
   ),
+  // The COLM family: colm2024_conference, colm2024_arxiv, colm2026_conference reach it through the versioned fallback
+  // (2404.05892, 2404.07921, 2406.07546, 2605.21807, 2608.09164).
+  ("colm", "sty", colm2025_conference_sty::load_definitions),
   ("cvpr", "sty", cvpr_sty::load_definitions),
   ("cvpr2023", "sty", cvpr_sty::load_definitions),
   ("cvpr2024", "sty", cvpr_sty::load_definitions),

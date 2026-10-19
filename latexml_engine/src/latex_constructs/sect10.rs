@@ -308,8 +308,9 @@ pub(crate) fn load() -> Result<()> {
     }
   });
   // Perl latex_constructs.pool.ltxml L3735-3746: mode => 'restricted_horizontal',
-  //   enterHorizontal => 1.
-  DefConstructor!("\\@@tabular[] Undigested DigestedBody",
+  //   enterHorizontal => 1. Perl's `[]` is an `OptionalPosition` here (and on `\@@tabular@`, `\@@array`): read the
+  //   same, but no text on the page (base_parameter_types.rs, base_utilities.rs `shown_arguments`).
+  DefConstructor!("\\@@tabular OptionalPosition Undigested DigestedBody",
     "#3",
     reversion    => r"\begin{tabular}[#1]{#2}#3\end{tabular}",
     before_digest => { bgroup(); },
@@ -345,7 +346,7 @@ pub(crate) fn load() -> Result<()> {
   );
   // Perl latex_constructs.pool.ltxml L3753-3757: mode => 'restricted_horizontal',
   //   enterHorizontal => 1.
-  DefConstructor!("\\@@tabular@{Dimension}[] Undigested DigestedBody",
+  DefConstructor!("\\@@tabular@{Dimension} OptionalPosition Undigested DigestedBody",
     "#4",
     before_digest => { bgroup(); },
     reversion    => r"\begin{tabular*}{#1}[#2]{#3}#4\end{tabular*}",
@@ -532,7 +533,7 @@ pub(crate) fn load() -> Result<()> {
     egroup()?;
     restore_dollar_outside_alignment();
   });
-  DefConstructor!("\\@@array[] Undigested DigestedBody",
+  DefConstructor!("\\@@array OptionalPosition Undigested DigestedBody",
     "#3",
     before_digest => { bgroup(); },
     reversion    => r"\begin{array}[#1]{#2}#3\end{array}");

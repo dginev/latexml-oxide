@@ -339,7 +339,7 @@ pub(crate) fn load() -> Result<()> {
   // (latex.ltx:16077-16078 `\leavevmode`), which the mode alone does not give:
   // the space after a box starting a paragraph was dropped (batch 54n's mode
   // change; arXiv 2605.21322's `\makebox[0pt][c]` figure panels).
-  DefConstructor!("\\@makebox[TempboxaDimension][] HBoxArgContents",
+  DefConstructor!("\\@makebox[TempboxaDimension] OptionalPosition HBoxArgContents",
     "<ltx:text width='#width' align='#align' _noautoclose='1'>#3</ltx:text>",
     mode => "restricted_horizontal", enter_horizontal => true, bounded => true,
     alias => "\\makebox", sizer => "#3",
@@ -392,7 +392,7 @@ pub(crate) fn load() -> Result<()> {
   // Perl: DefConstructor('\@framebox[Dimension][]{}', ...)
   // Perl uses restricted_horizontal mode, saves IN_MATH, unwraps single children
   // When in math mode, produces <ltx:XMArg enclose='box'> instead of <ltx:text framed='rectangle'>
-  DefConstructor!("\\@framebox[TempboxaDimension][] HBoxArgContents",
+  DefConstructor!("\\@framebox[TempboxaDimension] OptionalPosition HBoxArgContents",
     "?#mathframe(<ltx:XMArg enclose='box'>#inner</ltx:XMArg>)\
      (<ltx:text ?#width(width='#width') ?#align(align='#align') ?#cssstyle(cssstyle='#cssstyle') framed='rectangle' framecolor='#framecolor' _noautoclose='1'>#3</ltx:text>)",
     alias => "\\framebox",
@@ -590,7 +590,7 @@ pub(crate) fn load() -> Result<()> {
     "\\parbox[] [] [] {SetlengthDimension}{}",
     r"\lx@hidden@bgroup\hsize=#4\textwidth\hsize\columnwidth\hsize\linewidth\hsize\parindent\z@\parskip\z@skip\lx@restore@interline\ifx.#2.\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{\lx@parbox[#1]{#4}{#5}}{\lx@parbox[#1][#2][#3]{#4}{#5}}\lx@hidden@egroup"
   );
-  DefConstructor!("\\lx@parbox[][TempboxaDimension] OptionalUndigested {Dimension} VBoxContents",
+  DefConstructor!("\\lx@parbox OptionalPosition [TempboxaDimension] OptionalUndigested {Dimension} VBoxContents",
     sub[document, args, props] {
       let body = args[4].as_ref().unwrap();
       let mut attr = string_map!("class" => "ltx_parbox");
@@ -701,7 +701,7 @@ pub(crate) fn load() -> Result<()> {
   DefConditional!("\\if@minipage");
   def_macro_noop("\\@setminipage")?;
   // Perl: latex_constructs.pool.ltxml lines 4769-4796 (DefEnvironment at 4771)
-  DefEnvironment!("{minipage}[] OptionalUndigested [] {SetlengthDimension}",
+  DefEnvironment!("{minipage} OptionalPosition OptionalUndigested OptionalPosition {SetlengthDimension}",
     sub[document, args, props] {
       let attachment = args
         .first()

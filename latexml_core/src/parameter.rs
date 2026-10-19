@@ -579,7 +579,7 @@ impl Parameter {
       // "\foo" will use the default value for the Optional.
       if self.optional && value_arg.is_none() {
         None
-      } else if self.name == pin!("Plain") && is_implicit_begin_group(&value_arg) {
+      } else if self.reads_plain() && is_implicit_begin_group(&value_arg) {
         // `\mbox\bgroup A … B\egroup` (syntax.sty:158 `\syn@assist`, whose
         // `\egroup` is even inserted by `\readupto`'s `\aftergroup`; the
         // newcommand manual): TeX hands `\bgroup` to `\mbox#1` as its one-token
@@ -637,6 +637,10 @@ impl Parameter {
     }
   }
 
+  /// Whether this parameter reads a plain braced argument: `Plain` (`{}`), or `Position`, a box's position keyword
+  /// read as `{}` is (base_parameter_types.rs).
+  fn reads_plain(&self) -> bool { self.name == pin!("Plain") || self.name == pin!("Position") }
+
   /// This is needed by structured parameter types like KeyVals
   /// where the argument may already have been tokenized before the KeyVals
   /// (and the parameter types for the keys) had a chance to properly parse.
@@ -644,7 +648,7 @@ impl Parameter {
   pub fn reparse(&self, tokens: Tokens) -> Result<ArgWrap> {
     // Needs neutralization, since the keyvals may have been tokenized already???
     // perhaps a better test would involve whether $tokens is, in fact, Tokens?
-    if self.name == pin!("Plain") || self.predigest.is_some() {
+    if self.reads_plain() || self.predigest.is_some() {
       // Gack!
       Ok(ArgWrap::Tokens(tokens))
     } else if self.semiverbatim.is_some() {

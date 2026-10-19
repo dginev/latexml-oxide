@@ -5,7 +5,7 @@ use crate::{
 
 // wrapfig.sty — wrapping figures/tables around text
 LoadDefinitions!({
-  DefEnvironment!("{wrapfigure} [Number] {} [Dimension] {Dimension}",
+  DefEnvironment!("{wrapfigure} [Number] Position [Dimension] {Dimension}",
     "<ltx:figure xml:id='#id' inlist='#inlist' float='#float' ?#width(width='#width')>#tags#body</ltx:figure>",
     mode => "internal_vertical",
     after_digest_begin => sub[whatsit] {
@@ -35,7 +35,7 @@ LoadDefinitions!({
     after_digest => sub[whatsit] { after_float(whatsit); Ok(Vec::new()) }
   );
 
-  DefEnvironment!("{wraptable} [Number] {} [Dimension] {Dimension}",
+  DefEnvironment!("{wraptable} [Number] Position [Dimension] {Dimension}",
     "<ltx:table xml:id='#id' inlist='#inlist' float='#float' ?#width(width='#width')>#tags#body</ltx:table>",
     mode => "internal_vertical",
     after_digest_begin => sub[whatsit] {

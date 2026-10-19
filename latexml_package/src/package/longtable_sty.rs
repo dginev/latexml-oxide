@@ -34,7 +34,7 @@ LoadDefinitions!({
   DefMacro!("\\@gobble@optional[]", None);
   DefMacro!("\\lx@LT@newpage", "\\noalign{\\break}");
 
-  DefConstructor!("\\@@longtable [] Undigested DigestedBody",
+  DefConstructor!("\\@@longtable OptionalPosition Undigested DigestedBody",
     "<ltx:table xml:id='#id' inlist='lot' labels='#label'>#tags?#headcaption(<ltx:caption>#headcaption</ltx:caption>)?#headtoccaption(<ltx:toccaption>#headtoccaption</ltx:toccaption>)#3?#footcaption(<ltx:caption>#footcaption</ltx:caption>)?#foottoccaption(<ltx:toccaption>#foottoccaption</ltx:toccaption>)</ltx:table>",
     reversion => r"\begin{longtable}[#1]{#2}#3\end{longtable}",
     before_digest => {

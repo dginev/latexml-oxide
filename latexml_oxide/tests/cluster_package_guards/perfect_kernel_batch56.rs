@@ -7077,11 +7077,54 @@ Body text here.
 }
 
 /// Batch 56gg: `\unwind@titlepage` (the `{titlepage}` env's `\maketitle` hook)
+/// re-homes the unwound children the new parent cannot hold. A class `\@maketitle`
+/// deposited inside the document's `{titlepage}` (`\begin{titlepage}\maketitle
+/// \end{titlepage}`) leaves its paragraphs in that titlepage, which the hook unwraps:
+/// a paragraph the class prints is wrapped in a `<para>` under `<document>`, not left a
+/// bare `<p>` there (`element "p" not allowed here`). The jlreq case is
+/// [`unwound_titlepage_rehomes_its_paragraphs`].
+#[test]
+fn unwound_titlepage_rehomes_a_printed_paragraph() {
+  let (stderr, xml) = convert_with(
+    r"\documentclass{article}
+\makeatletter
+\def\@maketitle{\begin{center}{\LARGE \@title \par}\vskip 1em{\large\begin{tabular}[t]{c}\@author\end{tabular}\par}%
+  \vskip 1em Printed cover text\end{center}\par}
+\makeatother
+\title{T}\author{A}
+\begin{document}
+\begin{titlepage}
+\maketitle
+\end{titlepage}
+\section{S} Body.
+\end{document}
+",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  // (the paragraph alone: that it stands before the title, where the PDF prints it after the title and the author, is
+  // a base residual, SYNC_STATUS)
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    r#"<para xml:id="p1"><p align="center" xml:id="p1.1">Printed cover text</p></para>"#,
+  );
+  assert!(!xml.contains("<titlepage"), "{xml}");
+}
+
+/// Batch 56gg: `\unwind@titlepage` (the `{titlepage}` env's `\maketitle` hook)
 /// re-homes the unwound children the new parent cannot hold. jlreq's own
 /// `\maketitle` opens a titlepage inside the document's `{titlepage}`
 /// (jlreq.cls:5501-5527); its empty centered paragraphs were unwrapped straight
 /// under `<document>` — `element "p" not allowed here` ×2, the only schema errors
-/// of gckanbun-doc and kksymbols-doc. Now each is wrapped in a `<para>`.
+/// of gckanbun-doc and kksymbols-doc. Now each is wrapped in a `<para>`; since 77o the
+/// title page that printed only its emptied fields is not deposited at all, so the
+/// printed-paragraph case is [`unwound_titlepage_rehomes_a_printed_paragraph`].
 #[test]
 fn unwound_titlepage_rehomes_its_paragraphs() {
   if !kpsewhich_has("jlreq.cls") {
@@ -7123,8 +7166,11 @@ Hello.
   let flat = gaps
     .replace_all(&ids.replace_all(&xml, ""), "><")
     .into_owned();
+  // 77o: jlreq's `\maketitle` (jlreq.cls:5501-5527) prints nothing but its fields, `\@author` in a
+  // `\begin{tabular}[t]{c}` whose position letter is no text (base_utilities.rs `typesets_content`), so its deposit
+  // goes: no empty centered paragraphs are left to re-home.
   assert!(
-    flat.contains(r#"<para><p/></para><para><p align="center"/></para>"#),
+    !flat.contains("<p/>") && !flat.contains(r#"<p align="center"/>"#),
     "{flat}"
   );
   let bare = regex::Regex::new(r"</(?:title|creator|date|pagination|para)><p[ />]").unwrap();

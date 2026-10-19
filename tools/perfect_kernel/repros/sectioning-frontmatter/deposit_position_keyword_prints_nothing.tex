@@ -1,0 +1,24 @@
+% mechanism: the kernel `\maketitle` keeps a class's `\@maketitle` deposit only when it prints something
+%   (`typesets_content`); the position letter of `\begin{tabular}[t]` counted as printed text, so the deproc title
+%   code (iclr*_conference.sty:83-93, arxiv.sty, colm, corl, nips) left an empty table with a zero-width strut rule
+%   before the first section. LaTeX only tests the letter (latex.ltx:16565-16566 `\@array[#1]` `\if #1t\vtop`).
+% witness: 2610.20409, 2310.10873 (HF14; 94 of 6,000 sampled papers)
+% oracle:  pdflatex 0 errors; "A Title / Ann Able Bob Baker / Univ A Univ B", no table
+% engines: rust int31a: 0 errors + <tabular vattach="top"> with <rule width="0.0pt"> before the section;
+%   perl: 0 errors, no table
+% expect:  0 errors; 2 creators; no tabular or rule between the abstract and the section
+% status:  RED (int31a) -> GREEN (77o)
+\documentclass{article}
+\makeatletter
+\def\@maketitle{\vbox{\hsize\textwidth{\LARGE\sc \@title\par}%
+  \def\And{\end{tabular}\hfil\begin{tabular}[t]{l}\bf\rule{\z@}{24pt}\ignorespaces}%
+  \begin{tabular}[t]{l}\bf\rule{\z@}{24pt}\@author\end{tabular}\vskip 0.3in}}
+\makeatother
+\title{A Title}
+\author{Ann Able \\ Univ A \And Bob Baker \\ Univ B}
+\begin{document}
+\maketitle
+\begin{abstract}Abs.\end{abstract}
+\section{Intro}
+Body.
+\end{document}

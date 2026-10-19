@@ -15980,3 +15980,14 @@ right after it (`drop_row_skips`): amsmath's `\math@cr` reads them with amsgen's
 `package-bindings/proof_premises_split_on_an_active_ampersand`,
 `package-bindings/proof_premise_bracket_after_a_space_is_text`; guards `perfect_kernel_batch77q::{
 proof_premise_rows_stay_in_the_inference, proof_premises_split_on_an_active_ampersand}`.
+
+## 996. `\shortstack` eats the space after its argument
+
+Perl declares `\shortstack` with trailing optional parameters LaTeX does not read (latex_constructs.pool.ltxml:5099
+`DefConstructor('\shortstack[]{}  OptionalMatch:* [Dimension]', …)`); latex.ltx's `\shortstack` reads only its `[pos]`
+and the `{…}` (`\@ifnextchar[\@shortstack{\@shortstack[c]}`). The `[Dimension]` reader skips spaces looking for its
+`[` (Gullet.pm:748-757 `readOptional`: `readNonSpace`, and only the non-space token is put back), so the space after
+the argument is consumed. Minimal trigger: `A \shortstack[r]{x} Body.` → `A <inline-block …>x</inline-block>Body.` (pdflatex "A x Body."). The Rust port
+has the same prototype (latex_constructs/sect13.rs `\shortstack OptionalPosition {}  OptionalMatch:* [Dimension]`) and
+the same loss; not fixed (SYNC_STATUS row; the 77o repro `deposit_box_position_keywords_print_nothing` avoids the
+shape).

@@ -1613,8 +1613,9 @@ with no name):
   an affiliation continues it, as the PDF prints it — an affiliation several authors share, or several addresses
   under one author's, which may be everyone's.
 - **Otherwise the runs are the block's** → one address for each author goes to the authors in order (llncs
-  `\institute{$^1$A \\ $^2$B \\ \email{a@x} \\ \email{b@y}}`); any other is one contact a line on the shared creator
-  below the authors (#159) — 2609.06094's four addresses for six authors had gone, by order, Jindong Gu's to Runjia
+  `\institute{$^1$A \\ $^2$B \\ \email{a@x} \\ \email{b@y}}`); any other goes to the shared creator below the
+  authors (#159), one contact an address (a line whose addresses are not read, one contact; 77o: the raw line was one
+  Semiverbatim contact, 1802.07182's `\{jrr41,$\,$wct23,…\}@cam.ac.uk` printed `{jrr41,$ $wct23,…}`) — 2609.06094's four addresses for six authors had gone, by order, Jindong Gu's to Runjia
   Li, and by the mark of the affiliation they follow, three to the wrong author.
 `\and` ends a run as it ends an entry. A line with one address is kept as written (`\href{mailto:a@x}{a@x}` stays a link; `email_addresses` reads past
 `\href`'s URL and a `mailto:`). An `\author` call's tail (`author_tail_calls`) is placed so only at `\maketitle` when
@@ -21102,3 +21103,62 @@ dropped them too; review probe b3 "M", "N"; SYNC_STATUS row "blkarray side label
 `alignment-bindings/blkarray_block_preamble_formats_its_rows_1706.05431` (control
 `blkarray_block_cells_in_text_control`); guards `perfect_kernel_batch77k::{blkarray_block_preamble_formats_its_rows,
 blkarray_block_text_cell_in_display_errs}`.
+
+### 772. The AISTATS styles' title-block setters are the frontmatter, one binding for every year (Perl: no binding)
+
+Every AISTATS template — aistats2e.sty (2010-2011), its margin variant aistats2eM.sty, aistats2012.sty, aistats2014.sty
+… aistats2027.sty — prints its title block in place inside the document's `\twocolumn[…]`: `\aistatstitle`,
+`\aistatsauthor` and `\aistatsaddress` (aistats2027.sty:173/248/355, aistats2eM.sty:102/171/252, the same in every
+year) typeset the title and centred author and address tables and never reach `\title`/`\author`. **Perl** has no
+aistats binding: the shipped copy is read raw (or, without it, the three are undefined), and the document has no title
+and no creators — the HTML head falls back to the first section heading. **Rust** had the same, through a stub
+registered under `aistats2026` only (the versioned fallback strips `aistats2027` to `aistats`, which nothing answered).
+
+Now one family binding, `latexml_contrib/src/aistats_sty.rs`, answers `aistats` (the years the versioned fallback
+strips to it: aistats2012, aistats2014 … aistats2027), and by name `aistats2026`, `aistats2e` and `aistats2eM` (a letter
+follows their digits, which the fallback does not strip), as Perl's icml.sty.ltxml answers the ICML years. It reads the
+paper's copy raw (`fallback_request`), then, where the copy defines them:
+- the first `\aistatstitle{T}` is the title (`\title`; it also keeps aistats2022.sty:172's `\gdef\@supplementtitle{#1}`
+  for that copy's `\makesupplementtitle`, 1910.09056); a later one prints in place as the copy does (2610.11580's
+  supplement "Supplementary Material" heading, which a second `\title` would drop);
+- `\aistatsauthor{A₁ \And A₂}` with the `\aistatsaddress{a₁ \And a₂}` under it are authors: column by column
+  `A₁ \\ a₁ \And A₂ \\ a₂` when the row has several columns and the address as many (`\And`, `\AND`, `\ANDD`), in as
+  many rows (`\AND`), and the two are not both marked (marks pair them: 2312.06786's two marked affiliations over a
+  second row of e-mails), read as the kernel `\author` reads name, affiliation and e-mail lines (2610.11580,
+  1002.4058) — the PDF prints column i under author i. The binding reads ahead from the row, brace-balanced, through what prints nothing (spaces, `~`,
+  paragraph ends, vertical space, definitions, size and font declarations, the copy's `\runningauthor`/`\runningtitle`,
+  groups) to the address, stopping at anything that may print, the next `\aistatsauthor` or the block's end; the
+  material between runs first, then the pair (29 of 2,843 papers: `\runningauthor` 1804.04378, 2402.12508; `\vspace`
+  2003.03080, 2305.16147; `\medskip` 2602.12181; `~` 1603.09584; `\newcommand` 1302.5348, 1902.01239, whose macro is
+  then defined when the address is read). Otherwise — a row of one column, whose address the copy centres under every
+  name (2510.09534's `Jeong$^\ast$ \quad Zhai$^\ast$ \quad Ro\v{c}kov\'{a}`), columns that do not match (1806.02924's
+  four names over one address), or an address after printed material — the names are one author list rebuilt
+  from their columns (`\ANDD` a column break, not an undefined command inside a name), and the address goes through the
+  kernel's `\lx@add@affiliation@shared[annotate=run]`: marked, each `$^1$` line to the authors showing the mark
+  (1910.09056: Wood gets UBC, MILA and CIFAR); unmarked, each column an affiliation of every author of the row (columns
+  printed alike once), its e-mail lines the authors' e-mails placed as a marked list's are — one for each
+  author in their order, else the block's (1806.02924's `\{asuggala, …\}@cs.cmu.edu`, 1311.1894's
+  `\{honda,takemura\}@…`): the row is the authors queued after the last affiliation, as `annotate=run` attaches one
+  (2006.04012's, 2310.19690's later row), else the last author list (2010.08573's second `\aistatsaddress` of e-mails
+  under a paired row), and a list not one for each author is one block contact an address, not the raw line
+  (1802.07182). A shared affiliation attached to every author it serves is the kernel convention (Perl's
+  `annotate` the same); the PDF prints it once. Each row (`\lx@add@authors@list`) adds to the rows before;
+- the setters' arguments are read where they stand: a macro without parameters whose meaning the paper made inside the
+  `\twocolumn[…]` group (1302.5348's `\newcommand{\UMDAddress}{…}` between `\aistatsauthor` and `\aistatsaddress`; a
+  global macro renewed there) is replaced by its expansion, as the queued frontmatter is digested after that group ends,
+  where the meaning is gone (`state::meaning_is_group_local`); a column that assigns or tests a meaning
+  (`\renewcommand{\Uni}{…}\Uni`, 2511.05163's `\renewcommand{\arraystretch}{1.0}`) is left as it is;
+- a submission under review (`\statePaper` not 1: no `accepted` option, nor aistats2027's `preprint`) prints
+  "Anonymous Author" and "Anonymous Institution" where the copy has that block (aistats2020.sty … aistats2027.sty; the
+  2e, 2012, 2014 and 2019 copies print the names either way), and so does the conversion (user ruling 2026-10-06,
+  display toggles as the PDF shows them).
+
+The copy's running-head measurement inside `\aistatsauthor` is not run, so its
+`\PackageError{Document}{Running heading author exceeds size limitations}` (aistats2026.sty:289-295) no longer needs
+the former stub's placeholder `\@runningauthor`. `\runningtitle`/`\runningauthor` (page furniture) stay the copy's.
+Witnesses 1002.4058, 1302.5134, 1302.5348, 1303.0449, 1103.0941 (2e), 1202.1568 (2eM), 1102.1492 (2012), 1311.1894
+(2014), 1806.02924 (2019), 2604.21432 (2020), 1910.09056 (2022), 2405.15172 (2025), 2605.03921, 2510.09534 (2026),
+2610.11580 (2027); 7 of 6,000 sampled papers, each with no title and no creators before. Repros
+`class-bindings/aistats_{setters_are_the_frontmatter,one_column_names_share_the_address,unpaired_address_columns_split}`,
+`class-bindings/aistats_{address_after_unprinted_material_is_paired,in_place_leaves_assignments_alone,shared_email_list_goes_to_its_row}`,
+`class-bindings/aistats2e_template_reaches_the_binding`; guards `perfect_kernel_batch77o::aistats*`.

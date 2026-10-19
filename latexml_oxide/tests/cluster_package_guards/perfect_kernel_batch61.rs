@@ -7091,7 +7091,8 @@ Text.
     ]
   );
   // A list whose addresses only follow its affiliations gives them to the authors in order when there is one for
-  // each, else to the shared creator below the authors (#159) — 2609.06094's shape: two authors request mark 2, two
+  // each, else to the shared creator below the authors (#159), one contact an address (77o r3: the raw line was one
+  // Semiverbatim contact, 1802.07182's `$\,$` shown as `$ $`) — 2609.06094's shape: two authors request mark 2, two
   // addresses, a legend after. (The legend on the last author is the unmarked-row placement of before, not pinned
   // as intended.) A footnote-symbol legend after the run, `$^\dagger$ Corresponding author`, is no affiliation the
   // run sits above (round 6: Ann's address went to Bob).
@@ -7118,7 +7119,11 @@ Text.
           affiliation(" Univ B")
         )
       ),
-      shared(&email_tt("ann@x.y, bob@x.y", 1))
+      shared(&format!(
+        "{}{}",
+        email_tt("ann@x.y", 1),
+        email_tt("bob@x.y", 2)
+      ))
     ]
   );
   assert_eq!(
@@ -7280,8 +7285,8 @@ Text.
       creator(true, "Bob Baker", "")
     ]
   );
-  // More addresses than authors: one contact of the block, on the shared creator, without the `\email{…}` wrapper
-  // (round 2: an empty contact beside it; round 5: on the last author).
+  // More addresses than authors: the block's, on the shared creator, without the `\email{…}` wrapper, one contact an
+  // address (round 2: an empty contact beside it; round 5: on the last author; 77o r3: one contact for the line).
   assert_eq!(
     contacts(
       r"\documentclass{llncs}
@@ -7297,8 +7302,10 @@ Text.
       creator(false, "Ann Able", &affiliation(" Univ A")),
       creator(true, "Bob Baker", &affiliation(" Univ B")),
       format!(
-        "<creator role=\"author\">{}</creator>",
-        email_tt("a@x.y, b@x.y, c@x.y", 1)
+        "<creator role=\"author\">{}{}{}</creator>",
+        email_tt("a@x.y", 1),
+        email_tt("b@x.y", 2),
+        email_tt("c@x.y", 3)
       )
     ]
   );

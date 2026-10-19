@@ -22,7 +22,7 @@ LoadDefinitions!({
     egroup()?;
     restore_dollar_outside_alignment();
   });
-  DefConstructor!("\\@@tabularx{Dimension}[] Undigested DigestedBody",
+  DefConstructor!("\\@@tabularx{Dimension} OptionalPosition Undigested DigestedBody",
     "#4",
     reversion => "\\begin{tabularx}{#1}[#2]{#3}#4\\end{tabularx}",
     before_digest => { bgroup(); },

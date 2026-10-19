@@ -2285,7 +2285,9 @@ LoadDefinitions!({
   });
   // A class's own author-list command (informs4.cls:1198 `\AUTHOR{Ann Able$^{a}$, Bob Baker$^{b}$}`, documented as a
   // name list): appended like `\lx@add@authors@append`, but split at every separator as the article `\author` is.
+  // (where the list starts in the queue: the row an address shared by its authors falls back to, `queued_row_start`)
   DefMacro!("\\lx@add@authors@list{}", sub[(stuff)] {
+    assign_value("lx_authors_list_start", queued_author_count() as i64, Some(Scope::Global));
     add_authors_calls_sectioned(stuff, false, true, None, false)
   });
   // A name list where a binding has no lines or affiliations to read: each name `split_author_line` finds (comma,
@@ -2304,14 +2306,22 @@ LoadDefinitions!({
   // (`affiliation_calls`; 2609.17368, 22690, 28084); otherwise it is one affiliation, of the last author or as the
   // optional attributes place it (apa7's unnumbered list, `annotate=all`).
   DefMacro!("\\lx@add@affiliation@marked[]{}", sub[(attr, stuff)] {
-    // (before any author, the marks are labels for the authors to come: an affiliation without its label had no one
-    // to go to)
-    if (queued_creators_have_marks() || queued_creator_count() == 0)
-      && position_of(&stuff, &authorsup_markers()).is_some()
-    {
+    if affiliation_is_marked(&stuff) {
       Ok(Tokens::new(affiliation_calls(None, None, stuff, true, true)?))
     } else {
       Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr, Some(stuff)]))
+    }
+  });
+  // Rust-only: an address a class prints under a row of names it shares (aistats's `\aistatsaddress` under
+  // `\aistatsauthor{A \And B \And C}` when its columns are not the names', 1806.02924, 2510.09534): marked,
+  // `\lx@add@affiliation@marked`'s; else each entry an affiliation of the authors the optional attributes place
+  // (`annotate=run`), without its e-mail lines, whose addresses are the authors' e-mails as a marked list's are
+  // (`shared_affiliation_calls`).
+  DefMacro!("\\lx@add@affiliation@shared[]{}", sub[(attr, stuff)] {
+    if affiliation_is_marked(&stuff) {
+      Ok(Tokens::new(affiliation_calls(None, None, stuff, true, true)?))
+    } else {
+      Ok(Tokens::new(shared_affiliation_calls(attr, stuff)?))
     }
   });
   DefMacro!("\\lx@ijcai@names{}", sub[(stuff)] { add_authors_calls_sectioned(stuff, true, false, None, false) });
@@ -3130,7 +3140,7 @@ pub fn affiliation_calls(
       );
     }
   }
-  let email_calls = place_address_runs(address_runs, &mut marked_entries)?;
+  let email_calls = place_address_runs(address_runs, &mut marked_entries, 0)?;
   for entry in marked_entries {
     let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(Tokens::new(
       entry
@@ -3144,6 +3154,71 @@ pub fn affiliation_calls(
     );
   }
   calls.extend(email_calls);
+  Ok(calls)
+}
+
+/// Whether an affiliation a class gives after its authors is a marked list ([`affiliation_calls`]): it has a mark, and the
+/// queued authors carry marks — or none is queued yet, when the marks are labels for the authors to come (an affiliation
+/// without its label had no one to go to).
+fn affiliation_is_marked(stuff: &Tokens) -> bool {
+  (queued_creators_have_marks() || queued_creator_count() == 0)
+    && position_of(stuff, &authorsup_markers()).is_some()
+}
+
+/// The calls for an unmarked address shared by the authors before it (`\lx@add@affiliation@shared`): each of its
+/// entries (separated by the `\and` family, `\And` the column break of the conference templates) one affiliation,
+/// attributed by `attr` — one for entries printed alike (1302.5348's `\UMDAddress \\ … \And \UMDAddress \\ …`) —
+/// without its e-mail lines, whose addresses, all of them, are one run placed as a marked list's are
+/// ([`place_address_runs`]: one for each author of the row, in their order, else the block's, one contact an address —
+/// the row the authors queued after the last affiliation, as `annotate=run` attaches one: 2302.10910's four e-mails of
+/// a later row go to its four authors, not to the block for not being one for each queued author) — not lines of the
+/// affiliation (1806.02924's `Carnegie Mellon University\\ \{asuggala, adarshp, vaishnavh, pradeepr\}@cs.cmu.edu`,
+/// 1311.1894's `\texttt{\small \{honda,takemura\}@…}`), as the authors' own addresses are in a paired block
+/// (2610.11580).
+fn shared_affiliation_calls(attr: Option<Tokens>, stuff: Tokens) -> Result<Vec<Token>> {
+  let authors_queued = queued_creator_count() > 0;
+  let mut entries: Vec<Vec<Token>> = Vec::new();
+  let mut run = AddressRun { lines: Vec::new(), under: None };
+  for entry in split_tokens(strip_linebreak_options(stuff), author_and_splits()) {
+    let mut kept: Vec<Token> = Vec::new();
+    for (delimiter, line) in split_tokens_delimited(entry, author_line_breaks()) {
+      if authors_queued && line_is_email_list(&line) {
+        run.lines.push((delimiter, line));
+      } else if spacing_end(line.unlist_ref()) > 0 {
+        if !kept.is_empty() {
+          kept.extend(delimiter);
+        }
+        kept.extend(line.unlist());
+      }
+    }
+    let lead = kept
+      .iter()
+      .take_while(|t| t.get_catcode() == Catcode::SPACE)
+      .count();
+    kept.drain(..lead);
+    while kept
+      .last()
+      .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+    {
+      kept.pop();
+    }
+    if !kept.is_empty() && !entries.contains(&kept) {
+      entries.push(kept);
+    }
+  }
+  let mut calls: Vec<Token> = Vec::new();
+  for entry in entries {
+    calls.extend(
+      Invocation!(T_CS!("\\lx@add@affiliation"), vec![
+        attr.clone(),
+        Some(Tokens::new(entry))
+      ])
+      .unlist(),
+    );
+  }
+  if !run.lines.is_empty() {
+    calls.extend(place_address_runs(vec![run], &mut [], queued_row_start())?);
+  }
   Ok(calls)
 }
 
@@ -3164,11 +3239,18 @@ struct AddressRun {
 ///   it, claiming no author (an affiliation several authors share, or several addresses under one author's, which
 ///   may be everyone's);
 /// - else the run is the block's: one address for each author goes to the authors in order (llncs
-///   `\institute{$^1$A \\ $^2$B \\ \email{a@x} \\ \email{b@y}}`), any other is one contact a line on the shared
+///   `\institute{$^1$A \\ $^2$B \\ \email{a@x} \\ \email{b@y}}`), any other is one contact an address on the shared
 ///   creator below the authors (#159) — by order, 2609.06094's four addresses for six authors had given Jindong
 ///   Gu's to Runjia Li, and by the mark of the affiliation they follow, three of them to the wrong author.
-fn place_address_runs(runs: Vec<AddressRun>, entries: &mut [Vec<Token>]) -> Result<Vec<Token>> {
+///
+/// `row_start` is the queue position the authors the list belongs to start after (0: every queued author).
+fn place_address_runs(
+  runs: Vec<AddressRun>,
+  entries: &mut [Vec<Token>],
+  row_start: usize,
+) -> Result<Vec<Token>> {
   let authors = queued_author_marks();
+  let row_start = row_start.min(authors.len());
   // (a legend line, `* Equal contribution`, is an entry with no mark; nor does a footnote-symbol mark after a run,
   // `$^\dagger$ Corresponding author`, show the run sits under an affiliation — as an iopart `\address`'s one mark it
   // still labels one)
@@ -3215,8 +3297,8 @@ fn place_address_runs(runs: Vec<AddressRun>, entries: &mut [Vec<Token>]) -> Resu
           entries[entry].splice(at..at, continuation);
         }
       },
-      _ if total == authors.len() && run_in_author_order(&run.lines) => {
-        let mut positions = 1..;
+      _ if total == authors.len() - row_start && run_in_author_order(&run.lines, row_start) => {
+        let mut positions = row_start + 1..;
         for ((_, line), count) in run.lines.into_iter().zip(counts) {
           let authors = positions.by_ref().take(count).collect();
           calls.extend(email_line_calls(line, AddressPlacement::Authors(authors))?);
@@ -3425,8 +3507,9 @@ enum AddressPlacement {
   Sequence,
   /// Each address to the author at that queue position, by the `author:N` label the creator digests with.
   Authors(Vec<usize>),
-  /// The whole line is one contact of the author block, on the shared creator below the authors (#159): its label
-  /// names no creator.
+  /// The block's, on the shared creator below the authors (#159): its label names no creator. One contact an address
+  /// when the line lists several (1802.07182's `\{jrr41,$\,$wct23,…\}@cam.ac.uk`, whose raw line a Semiverbatim
+  /// contact showed as `{jrr41,$ $wct23,…}`), else the line.
   Shared,
 }
 
@@ -3448,6 +3531,10 @@ fn email_line_calls(line: Tokens, placement: AddressPlacement) -> Result<Vec<Tok
     AddressPlacement::Sequence if !addrs.is_empty() => addrs
       .iter()
       .map(|_| Some(mouth::tokenize_internal("labelseq=author")))
+      .collect(),
+    AddressPlacement::Shared if addrs.len() > 1 => addrs
+      .iter()
+      .map(|_| Some(mouth::tokenize_internal("label=addresses:block")))
       .collect(),
     AddressPlacement::Authors(authors) if !addrs.is_empty() && authors.len() == addrs.len() => {
       authors
@@ -3980,6 +4067,40 @@ fn mark_label(operand: &[Token]) -> Option<String> {
     .next()
 }
 
+/// The queue position of the first author of the row an address shared by a row of names belongs to
+/// ([`shared_affiliation_calls`]): the authors queued after the last affiliation queued — on its own, or in an author's
+/// entry (a paired row's `Ann Able\lx@add@affiliation{Univ A}`) —, those an `annotate=run` affiliation goes to; when
+/// every queued author has one, the authors of the last author list (`\lx@add@authors@list`: 2010.08573's second
+/// `\aistatsaddress`, the e-mails under a row its first address was paired with).
+fn queued_row_start() -> usize {
+  let affiliation = T_CS!("\\lx@add@affiliation");
+  let (authors, start) = with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => {
+      let (mut authors, mut start) = (0, 0);
+      for (tag, attr, content) in queue {
+        let role = attr.get("role").map(String::as_str);
+        if tag == "ltx:creator" && role == Some("author") {
+          authors += 1;
+          if content.unlist_ref().contains(&affiliation) {
+            start = authors;
+          }
+        } else if tag == "ltx:contact" && role == Some("affiliation") {
+          start = authors;
+        }
+      }
+      (authors, start)
+    },
+    _ => (0, 0),
+  });
+  if start < authors {
+    return start;
+  }
+  match lookup_value("lx_authors_list_start") {
+    Some(Stored::Int(list_start)) if (list_start as usize) < authors => list_start as usize,
+    _ => start,
+  }
+}
+
 /// The mark operands of each queued author, in queue order: the n-th digests with the label `author:n`
 /// (`num_ltx:creator{author}`), by which an address goes to it — as the count starts from no author, which holds
 /// unless authors an earlier flush digested are still kept (an appending `\author` after `\maketitle`).
@@ -3996,14 +4117,15 @@ fn queued_author_marks() -> Vec<Vec<Vec<Token>>> {
   })
 }
 
-/// Whether the addresses of `lines` may be the queued authors' in order ([`addresses_in_order`]).
-fn run_in_author_order(lines: &[(Vec<Token>, Tokens)]) -> bool {
+/// Whether the addresses of `lines` may be the queued authors' in order from the one at `offset`
+/// ([`addresses_in_order`]).
+fn run_in_author_order(lines: &[(Vec<Token>, Tokens)], offset: usize) -> bool {
   let keys = queued_author_surname_keys();
   let addresses: Vec<String> = lines
     .iter()
     .flat_map(|(_, line)| email_addresses(line).unwrap_or_default())
     .collect();
-  addresses_in_order(&keys, &addresses, 0)
+  addresses_in_order(&keys, &addresses, offset)
 }
 
 /// Whether `addresses` may be the authors' in order from the one at `offset` (names keyed by `keys`, [`surname_keys`]):
@@ -4273,9 +4395,15 @@ pub fn digested_to_text(d: &Digested) -> Result<String> {
   Ok(out)
 }
 
-/// Whether digested material typesets something a reader sees: a character that is not a space, or
-/// an image (a whatsit carrying a `graphic`), anywhere in it — through lists, whatsit arguments and
-/// bodies, and alignment cells. Paragraph and spacing commands, rules and empty boxes are not content.
+/// Whether digested material typesets something a reader sees: a character that is not a space, an image (a whatsit
+/// carrying a `graphic` or image `candidates`), or a cross-reference or citation, whose text the post-processor
+/// fills in (`fills_generated_text`), anywhere in it — through lists, the whatsit arguments it shows
+/// (`shown_arguments`, as [`ink_text`] reads them) and bodies, and alignment cells. Paragraph and spacing commands,
+/// rules and empty boxes are not content, nor is an argument LaTeX only tests: the position letter of
+/// `\begin{tabular}[t]`, `\parbox[t]`, `{minipage}[t]`, `\makebox[w][l]` or `\shortstack[l]` (a `Position` parameter,
+/// base_parameter_types.rs) — counted, the deproc title code's `\begin{tabular}[t]{l}\bf\rule{\z@}{24pt}…` with an
+/// emptied `\@author` (iclr*_conference.sty:83-93, arxiv.sty, colm, corl, nips) kept its `\@maketitle` deposit, an empty
+/// strut table before the first section (HF14; 94 of 6,000 sampled papers, 2610.20409, 2310.10873).
 /// A whatsit's own string is its reversion (Whatsit.pm `toString`), so a digested `\noindent\par`
 /// stringifies as source; this walks the boxes instead. Used to keep a speculative typesetting (a
 /// class's `\maketitle` replay, a one-shot page overlay) only when it shows something.
@@ -4288,11 +4416,19 @@ pub fn typesets_content(d: &Digested) -> bool {
     DigestedData::List(l) => l.borrow().boxes.iter().any(typesets_content),
     DigestedData::Whatsit(w) => {
       let w = w.borrow();
+      // (an image: graphics.sty's `\@includegraphics` records its `graphic`, graphicx's `\@includegraphicx` its
+      // `path`, both the image's `candidates`; its file name is no shown argument)
       w.get_property("graphic").is_some()
+        || w.get_property("candidates").is_some()
+        || fills_generated_text(&w)
         // A tabular or `\halign` keeps its rows in its `alignment` property (tex_tables.rs): a class's `\maketitle`
         // that is only a table typesets it (simplecv's header, brandeis-problemset's title table; dropped since 59p).
         || matches!(w.get_property("alignment").as_deref(), Some(Stored::Digested(a)) if typesets_content(a))
-        || w.get_args().iter().flatten().any(typesets_content)
+        || w
+          .get_args()
+          .iter()
+          .zip(shown_arguments(&w))
+          .any(|(arg, shown)| shown && arg.as_ref().is_some_and(typesets_content))
         || w
           .get_body()
           .ok()
@@ -4307,6 +4443,17 @@ pub fn typesets_content(d: &Digested) -> bool {
     }),
     _ => false,
   }
+}
+
+/// Whether the whatsit `w` is a cross-reference or a citation, which prints text the post-processor generates (the
+/// label's number, the cited work's name and year) though its arguments are keys, never shown ([`shown_arguments`]):
+/// a reference carries the `label` its `labelref` names (`\ref`, `\pageref`, `\eqref`, `\autoref`, `\nameref`,
+/// cleveref's `\lx@cref`, ntheorem's `\thref`), a citation its `bibrefs` (`\@@bibref`, which every `\cite` form reaches).
+/// `\label` records its `label` too, but prints nothing: an alignment may skip it (`alignmentSkippable`). A class's
+/// `\@maketitle` printing only `\ref{s1}` keeps its deposit, as pdflatex prints "1" (77o review probe `m1_depref`).
+fn fills_generated_text(w: &Whatsit) -> bool {
+  w.get_property("bibrefs").is_some()
+    || (w.get_property("label").is_some() && w.get_property("alignmentSkippable").is_none())
 }
 
 /// The text digested material typesets, as [`typesets_content`] walks it — characters of its boxes, through lists,
@@ -4375,7 +4522,8 @@ const VERBATIM_PRINTERS: &[(&str, &[bool])] = &[
 /// verbatim argument (`Semiverbatim`, `Verbatim`, `HyperVerbatim`: a file name, a URL, a label) only when the whatsit
 /// is one that prints it ([`VERBATIM_PRINTERS`]: `\url{…}`, `\nolinkurl{…}`, the arguments its entry names) — never a
 /// reference's or a citation's key (`\ref{\@x}` prints the label's number, review probe `ctx3`), and
-/// `\href{<url>}{<text>}` and `\hypertarget{<name>}{<text>}` print the text —, and never keyvals (options). Every
+/// `\href{<url>}{<text>}` and `\hypertarget{<name>}{<text>}` print the text —, and never keyvals (options) nor a
+/// position keyword (`Position`, `OptionalPosition`: the `[t]` of `\begin{tabular}[t]`, base_parameter_types.rs). Every
 /// argument when its parameters cannot be matched to them.
 fn shown_arguments(w: &Whatsit) -> Vec<bool> {
   let args = w.get_args();
@@ -4399,12 +4547,12 @@ fn shown_arguments(w: &Whatsit) -> Vec<bool> {
   if types.len() != args.len() {
     return vec![true; args.len()];
   }
-  // (0: keyvals, 1: verbatim, 2: shown text)
+  // (0: keyvals or a position keyword, 1: verbatim, 2: shown text)
   let kinds: Vec<u8> = types
     .iter()
     .map(|t| {
       with(*t, |name| {
-        if name.contains("KeyVals") {
+        if name.contains("KeyVals") || name.ends_with("Position") {
           0
         } else if name.contains("erbatim") {
           1
@@ -13569,7 +13717,7 @@ fn authorsup_markers() -> Vec<Token> {
 /// Does an author block mark its names (`$^{a}$`, `\textsuperscript{1}`)? A superscript inside a `\footnote` or
 /// `\thanks` is the note's own text, not a mark: 0911.0568's `LPT Orsay (CNRS)~\footnote{$^a$Laboratoire …}` line
 /// made its PoS author block a marked list, its affiliation and email line read as a person (63k).
-fn has_author_marks(stuff: &Tokens) -> bool {
+pub fn has_author_marks(stuff: &Tokens) -> bool {
   let markers = authorsup_markers();
   let tokens = stuff.unlist_ref();
   let mut i = 0;

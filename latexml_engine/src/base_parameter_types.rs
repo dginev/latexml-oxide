@@ -254,6 +254,32 @@ LoadDefinitions!({
     optional_arg_reversion(arg, inner, T_OTHER!("["), T_OTHER!("]"))
   });
 
+  // Rust-only: a position or alignment keyword LaTeX only tests and never typesets — the `[t]` of
+  // `\begin{tabular}[t]`, `\parbox[t]`, `{minipage}[t][h][s]` (latex.ltx:16565-16566 `\@array[#1]` `\if #1t\vtop…`,
+  // `\@iiiparbox` :16258-16259), the `[l]` of `\makebox[w][l]` and `\shortstack[l]`, wrapfig's `{r}` placement. Read,
+  // digested and reverted exactly as `Optional` (`[]`) and `Plain` (`{}`) are, so the whatsit holds the letter for
+  // `translate_attachment` and the reversions; only its type says it is no text on the page (base_utilities.rs
+  // `shown_arguments`, as it says a `KeyVals` or a verbatim key is not): a class's emptied `\@maketitle` deposit that
+  // holds only `\begin{tabular}[t]{l}\bf\rule{\z@}{24pt}\@author\end{tabular}` prints nothing (iclr*_conference.sty:83-93,
+  // arxiv.sty, colm, corl, nips; HF14, 2610.20409, 2310.10873, 2209.14855). Not `OptionalSemiverbatim`: its catcode
+  // change moved 2212.05358's `\captionof` (babel) into its `\quad~\begin{minipage}[b]`.
+  DefParameterType!(OptionalPosition, sub[inner, default] {
+    optional_arg_value(read_optional(None)?, inner, default)?
+  },
+  optional => true,
+  reversion => sub[arg, inner, _extra] {
+    optional_arg_reversion(arg, inner, T_OTHER!("["), T_OTHER!("]"))
+  });
+  DefParameterType!(Position, sub[_inner, _extra] {
+    ArgWrap::Tokens(read_arg(ExpansionLevel::Off)?)
+  },
+  reversion => sub[arg, _inner, _extra] {
+    let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
+    read_tokens.extend(arg.iter().map(|t| t.revert()));
+    read_tokens.push(T_END!());
+    Ok(Tokens::new(read_tokens))
+  });
+
   // The angle-bracket twin of `Optional`, mirroring Perl beamer.cls.ltxml
   // L46-57 (`OptionalBeamerAngled` / `readBeamerAngled`). Not beamer-specific:
   // apacite spells its citation pre-note this way — `\cite<see>[p.5]{key}`,

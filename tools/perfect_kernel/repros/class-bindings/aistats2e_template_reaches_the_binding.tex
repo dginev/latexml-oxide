@@ -1,0 +1,28 @@
+% mechanism: the 2010-2011 AISTATS templates are named aistats2e.sty (and the margin variant aistats2eM.sty), which the
+%   versioned fallback does not strip to `aistats` (a letter follows the digits): registered by their own names, they
+%   reach the family binding; their copies have no anonymous block, so the names print under review too.
+% witness: 1003.2751, 1002.4058, 1103.0941, 1302.5134, 1302.5348, 1303.0449, 1302.4922 (`format/aistats2e`);
+%   1202.1568 (aistats2eM)
+% oracle:  pdflatex 0 errors; "A Title / Ann Able Bob Baker / Univ A Univ B"
+% engines: rust int32a and 77o r1: 0 errors, no title, no creators (the setters' tables); perl: no aistats binding
+% expect:  0 errors; the title; 2 creators, each with its affiliation
+% status:  RED (77o r1) -> GREEN (77o r2)
+\begin{filecontents*}{aistats2e.sty}
+\ProvidesPackage{aistats2e}
+\DeclareOption{accepted}{\renewcommand{\statePaper}{\acceptedPaper}}
+\newcommand{\statePaper}{0}\newcommand{\acceptedPaper}{1}
+\ProcessOptions\relax
+\long\def\aistatstitle#1{{\centering{\Large\bf #1\par}}\vskip 0.25in}
+\long\def\aistatsauthor#1{{\def\And{\end{tabular}\hskip 1in\begin{tabular}[t]{c}\bf}\begin{tabular}[t]{c}\bf #1\end{tabular}}\par}
+\long\def\aistatsaddress#1{{\def\And{\end{tabular}\hskip 1in\begin{tabular}[t]{c}}\begin{tabular}[t]{c}#1\end{tabular}}\par}
+\end{filecontents*}
+\documentclass[twoside]{article}
+\usepackage{aistats2e}
+\begin{document}
+\twocolumn[\aistatstitle{A Title}
+
+\aistatsauthor{Ann Able \And Bob Baker}
+
+\aistatsaddress{Univ A \And Univ B}]
+\section{Intro} Body.
+\end{document}

@@ -4444,6 +4444,36 @@ pub fn lookup_meaning(token: &Token) -> Option<Stored> {
   }
 }
 
+/// Whether the current meaning of `token` was made inside a group open now, so it is gone once that group closes —
+/// whether or not a meaning stands outside it (a global assignment clears the counts of the open groups' frames). A
+/// binding that queues what it reads to digest later (the frontmatter API) loses such a meaning: aistats's
+/// `\aistatsaddress` prints in place inside `\twocolumn[…]`, where 1302.5348 defines `\newcommand{\UMDAddress}{…}`
+/// just before it, and where a paper may renew a macro it defined globally (77o review probe `g_globlocal`: pdflatex
+/// prints the local meaning).
+pub fn meaning_is_group_local(token: &Token) -> bool {
+  if !token.get_catcode().is_active_or_cs() {
+    return false;
+  }
+  let key = meaning_key(token);
+  let state = state!();
+  let Some(values) = state.meaning.get(&key) else {
+    return false;
+  };
+  if values
+    .front()
+    .is_none_or(|value| matches!(value, Stored::None))
+  {
+    return false;
+  }
+  // (the groups above the locked base frame, which holds the global binding: a global assignment is counted there,
+  // and clears the counts above it, state.rs `assign_internal`)
+  state
+    .undo
+    .iter()
+    .take_while(|frame| !frame.locked)
+    .any(|frame| frame.meaning.get(&key).is_some_and(|count| *count > 0))
+}
+
 /// Closure-based variant of `lookup_meaning` — avoids the per-call
 /// `Stored::clone()` when the caller only needs to *inspect* the
 /// meaning (e.g. extract a CS Token from an Expandable/Primitive
@@ -4781,6 +4811,7 @@ fn defines_value(cs: &Token, defn: &Expandable) -> bool {
 /// a binding whose first mandatory parameter is one of them takes a braced argument ([`owns_calls`]).
 pub const BRACED_ARGUMENT_TYPES: &[&str] = &[
   "Plain",
+  "Position",
   "Semiverbatim",
   "ExpandedSemiverbatim",
   "Undigested",

@@ -1,0 +1,31 @@
+% mechanism: aistats's setters read a macro the block defines where it stands (`in_place`), as the frontmatter is
+%   digested after the `\twocolumn[…]` group: a macro renewed inside the block is read with its local meaning, but an
+%   argument that assigns or tests a meaning (`\renewcommand{\Uni}{…}`, `\ifx`, `\string`) is left as it is — reading
+%   the target in place garbled it.
+% witness: 77o r2 review probes g_renewin, g_globlocal; 2511.05163 (`\renewcommand{\arraystretch}{1.0}` in its names)
+% oracle:  pdflatex 0 errors; "A Title / Ann Able Bob Baker Cat Cole / Second Local Univ Other"
+% engines: rust 77o r2: "rstSecondFirst", "Global Univ"; rust 77o r1: "Second", "Global Univ"; perl: no aistats binding
+% expect:  0 errors; Ann: Second, Bob: Local Univ, Cat: Other
+% status:  RED (77o r2) -> GREEN (77o r3)
+\begin{filecontents*}{aistats2027.sty}
+\ProvidesPackage{aistats2027}
+\DeclareOption{accepted}{\renewcommand{\statePaper}{\acceptedPaper}}
+\newcommand{\statePaper}{0}\newcommand{\acceptedPaper}{1}
+\ProcessOptions\relax
+\long\def\aistatstitle#1{{\centering{\Large\bfseries #1\par}}\vskip 0.25in}
+\long\def\aistatsauthor#1{\ifnum\statePaper=0 {\begin{tabular}[t]{c}\bfseries Anonymous Author\end{tabular}}\else
+  {\def\And{\end{tabular}\hskip 1in\begin{tabular}[t]{c}\bfseries}\begin{tabular}[t]{c}\bfseries #1\end{tabular}}\fi\par}
+\long\def\aistatsaddress#1{\ifnum\statePaper=0 {\begin{tabular}[t]{c}Anonymous Institution\end{tabular}}\else
+  {\def\And{\end{tabular}\hskip 1in\begin{tabular}[t]{c}}\begin{tabular}[t]{c}#1\end{tabular}}\fi\par}
+\end{filecontents*}
+\documentclass[twoside]{article}
+\usepackage[accepted]{aistats2027}
+\newcommand{\Glob}{Global Univ}
+\begin{document}
+\twocolumn[\aistatstitle{A Title}
+\newcommand{\Uni}{First}
+\renewcommand{\Glob}{Local Univ}
+\aistatsauthor{Ann Able \And Bob Baker \And Cat Cole}
+\aistatsaddress{\renewcommand{\Uni}{Second}\Uni \And \Glob \And Other}]
+\section{Intro} Body.
+\end{document}
