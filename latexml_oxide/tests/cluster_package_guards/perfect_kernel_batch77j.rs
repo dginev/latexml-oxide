@@ -18,6 +18,12 @@ fn addcontentsline_names_are_not_digested() {
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(squash(&xml).contains("Text."), "{xml}");
+  // the written type is the list the section joins; the entry text is only written, never typeset
+  assert!(
+    xml.contains(r#"<section inlist="toc file" xml:id="S1">"#),
+    "{xml}"
+  );
+  assert!(!xml.contains("entry"), "{xml}");
 }
 
 /// An acronym's key is a name: `\acro{gcc_phat}` and `\ac{gcc_phat}` keep it whole (2003.05548, 2603.23723).
@@ -62,6 +68,22 @@ fn underscore_catcode_hook_runs_in_load_order() {
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(xml.contains("See a˙b and"), "{xml}");
+  // math keeps `_` a subscript
+  assert!(xml.contains(r#"tex="x_{1}""#), "{xml}");
+}
+
+/// Code a begin-document hook adds to that hook runs at once, as LaTeX's one-time hooks do (`\UseOneTimeHook`,
+/// latex.ltx:9512; sect02.rs `hook_use_once_tokens`): a nested `\AtBeginDocument`, and underscore.sty loaded from the
+/// hook, whose own `\AtBeginDocument{\catcode`\_\active}` was dropped (77j review). pdflatex: "INNER and a_b.", 0 errors.
+#[test]
+fn begin_document_code_added_by_the_hook_runs() {
+  let (log, xml) = convert_with(
+    "\\documentclass{article}\n\\AtBeginDocument{\\AtBeginDocument{\\def\\inner{INNER}}\\usepackage{underscore}}\n\\begin{document}\n\\inner{} and a_b.\n\\end{document}",
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(squash(&xml).contains("INNER and a"), "{xml}");
+  assert!(!xml.contains("<Math"), "{xml}");
 }
 
 /// A theorem's `[within]` is a counter name (latex.ltx `\@xnthm`), read through `\csname` (1307.7314).

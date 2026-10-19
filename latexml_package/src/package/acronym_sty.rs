@@ -57,7 +57,7 @@ LoadDefinitions!({
   // structurally invalid block-level glossaryref node.
   // An acronym's key is a name (acronym.sty builds `\csname fn@#1\endcsname` from it), never typeset, so the
   // constructors read it Semiverbatim: `\acro{gcc_phat}[GCC-PHAT]{…}` raised "Script _ can only appear in math mode"
-  // where pdflatex is silent (2003.05548, 2603.23723; Perl acronym.sty.ltxml:164,177 digests it).
+  // where pdflatex is silent (2003.05548, 2603.23723; Perl acronym.sty.ltxml:60, :164, :177, :197 digests it).
   DefConstructor!("\\lx@acronym Undigested Semiverbatim {}{}",
     "<ltx:glossaryref key='#2' inlist='#3' show='#4'/>",
     mode => "text", enter_horizontal => true,

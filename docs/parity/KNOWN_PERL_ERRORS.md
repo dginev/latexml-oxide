@@ -15837,7 +15837,7 @@ mode" where pdflatex is silent:
   (1204.2781, 2402.17181).
 - acronym's keys (acronym.sty.ltxml:164,177; acronym.sty builds `\csname fn@#1\endcsname` from them):
   `\acro{gcc_phat}[GCC-PHAT]{…}` (2003.05548, 2603.23723).
-- a theorem's `[within]` (latex_constructs.pool.ltxml `DigestLiteral`; latex.ltx `\@xnthm` uses it as a counter name),
+- a theorem's `[within]` (latex_constructs.pool.ltxml:2894 `DigestLiteral`; latex.ltx `\@xnthm` uses it as a counter name),
   the case of #691 for the trailing optional: `\newtheorem{t}{T}[todo_counter]` (1307.7314).
 The Rust port reads them as names (Semiverbatim / `\csname` text): sect04.rs `\addcontentsline`, acronym_sty.rs, the
 latex_constructs `define_new_theorem` `[within]`, and nomencl's sort prefix (nomencl_sty.rs; 2105.05016). Guards

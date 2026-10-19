@@ -201,8 +201,8 @@ pub(crate) fn load() -> Result<()> {
     }
     // Fire the L3 hook system for begindocument/before, then begindocument.
     // Modern LaTeX (with expl3) fires these in order at \begin{document}:
-    //   1. \hook_use:n {begindocument/before}  — pre-init hook, STILL preamble
-    //   2. @at@begin@document + \hook_use:n {begindocument}  — \AtBeginDocument,
+    //   1. \hook_use_once:n {begindocument/before}  — pre-init hook, STILL preamble
+    //   2. @at@begin@document + \hook_use_once:n {begindocument}  — \AtBeginDocument,
     //      STILL preamble (latex.ltx disables \@onlypreamble only afterwards)
     //   3. leave the preamble  (inPreamble=0, AFTER the hooks — see below)
     // begindocument/before therefore fires while inPreamble=1: it carries
@@ -218,7 +218,7 @@ pub(crate) fn load() -> Result<()> {
     //
     // NOTE: this is a Rust-only deviation from Perl (Perl does not fire a
     // begindocument hook dispatch), but it's load-bearing because our raw
-    // expl3-code.tex load path *does* define `\hook_use:n` and enqueues
+    // expl3-code.tex load path *does* define `\hook_use_once:n` and enqueues
     // real hook code against it. Keep until the kernel-parity direction
     // either (a) stops loading raw expl3-code.tex, or (b) ports l3hooks
     // natively with storage. See SYNC_STATUS.md "l3hooks parity".
@@ -229,33 +229,9 @@ pub(crate) fn load() -> Result<()> {
     // polyglossia.sty:1442-1456 `\cs_set:Npn \@caption #1 [#2] #3` in the
     // `begindocument` hook overrode our locked `\@caption` and its `[`-scan
     // overshot every figure (beamerdarkthemes guide, 101 caption errors).
-    if first_begin && lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
+    if first_begin && lookup_definition(&T_CS!("\\hook_use_once:n"))?.is_some() {
       local_state_unlocked(false);
-      let r = digest(Tokens!(
-        T_CS!("\\hook_use:n"),
-        T_BEGIN!(),
-        T_LETTER!("b"),
-        T_LETTER!("e"),
-        T_LETTER!("g"),
-        T_LETTER!("i"),
-        T_LETTER!("n"),
-        T_LETTER!("d"),
-        T_LETTER!("o"),
-        T_LETTER!("c"),
-        T_LETTER!("u"),
-        T_LETTER!("m"),
-        T_LETTER!("e"),
-        T_LETTER!("n"),
-        T_LETTER!("t"),
-        T_OTHER!("/"),
-        T_LETTER!("b"),
-        T_LETTER!("e"),
-        T_LETTER!("f"),
-        T_LETTER!("o"),
-        T_LETTER!("r"),
-        T_LETTER!("e"),
-        T_END!()
-      ));
+      let r = digest(hook_use_once_tokens("begindocument/before"));
       expire_state_unlocked();
       boxes.push(r?);
     }
@@ -322,30 +298,9 @@ pub(crate) fn load() -> Result<()> {
     // shadow it (its `\cref@override@label@type` `[#1][#2]` scan ran to EOF:
     // crossreftools_driver, test-autonum fatal; RUST-ONLY, Perl has no raw
     // cleveref). Guard: `perfect_kernel_batch56::binding_begin_document_code_outranks_raw_hook`.
-    if first_begin && lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
-      // Build the Tokens explicitly: `Tokenize!` runs at the runtime
-      // catcode regime where `:` is OTHER (not LETTER), which would
-      // truncate the CS to `\hook_use` and emit `:n` as plain text.
-      // That leaks `_use:n` + arg-text into the document body.
+    if first_begin && lookup_definition(&T_CS!("\\hook_use_once:n"))?.is_some() {
       local_state_unlocked(false); // see the begindocument/before block
-      let r = digest(Tokens!(
-        T_CS!("\\hook_use:n"),
-        T_BEGIN!(),
-        T_LETTER!("b"),
-        T_LETTER!("e"),
-        T_LETTER!("g"),
-        T_LETTER!("i"),
-        T_LETTER!("n"),
-        T_LETTER!("d"),
-        T_LETTER!("o"),
-        T_LETTER!("c"),
-        T_LETTER!("u"),
-        T_LETTER!("m"),
-        T_LETTER!("e"),
-        T_LETTER!("n"),
-        T_LETTER!("t"),
-        T_END!()
-      ));
+      let r = digest(hook_use_once_tokens("begindocument"));
       expire_state_unlocked();
       boxes.push(r?);
     }
@@ -386,8 +341,8 @@ pub(crate) fn load() -> Result<()> {
     // document file, not from the hook's own (empty) mouth.
     // Collected with the other inline hook below and unread once, in order.
     let mut inline_hooks: Vec<Token> = Vec::new();
-    if first_begin && lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
-      inline_hooks.extend(hook_use_tokens("begindocument/end").unlist());
+    if first_begin && lookup_definition(&T_CS!("\\hook_use_once:n"))?.is_some() {
+      inline_hooks.extend(hook_use_once_tokens("begindocument/end").unlist());
     }
     // Preamble cleanup: force `\ExplSyntaxOff` if `_` is still LETTER at
     // document start. LaTeX restores expl3 syntax per file (the kernel's
@@ -443,11 +398,18 @@ pub(crate) fn load() -> Result<()> {
   // be read off that CS.
   Let!("\\lx@orig@document", "\\begin{document}", Scope::Global);
 
-  /// `\hook_use:n {name}` as explicit tokens: `Tokenize!` runs under the
+  /// `\hook_use_once:n {name}` as explicit tokens: `Tokenize!` runs under the
   /// runtime catcodes, where `:` is OTHER and `/` must stay OTHER inside the
-  /// name.
-  fn hook_use_tokens(name: &str) -> Tokens {
-    let mut toks = vec![T_CS!("\\hook_use:n"), T_BEGIN!()];
+  /// name. latex.ltx runs each document hook with `\UseOneTimeHook` (=
+  /// `\hook_use_once:n`, :6729): `begindocument/before` (:9470), `begindocument`
+  /// (:9512), `begindocument/end` (:9525), `enddocument` (:15257). Code added to
+  /// such a hook once it has run executes at once (lthooks), so an
+  /// `\AtBeginDocument` issued from the begin-document hook itself — a package
+  /// loaded there, `\AtBeginDocument{\usepackage{underscore}}` — still runs; under
+  /// `\hook_use:n` it was appended to a hook never used again, and dropped. Guard:
+  /// `perfect_kernel_batch77j::begin_document_code_added_by_the_hook_runs`.
+  fn hook_use_once_tokens(name: &str) -> Tokens {
+    let mut toks = vec![T_CS!("\\hook_use_once:n"), T_BEGIN!()];
     for c in name.chars() {
       toks.push(if c.is_ascii_alphabetic() {
         T_LETTER!(c.to_string())
@@ -539,8 +501,8 @@ pub(crate) fn load() -> Result<()> {
     }
     // latex.ltx:15257 `\UseOneTimeHook{enddocument}` (the lthooks slot; the
     // legacy `\AtEndDocument` list above is `@at@end@document`).
-    if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
-      toks.extend(hook_use_tokens("enddocument").unlist());
+    if lookup_definition(&T_CS!("\\hook_use_once:n"))?.is_some() {
+      toks.extend(hook_use_once_tokens("enddocument").unlist());
     }
     // Rust-only: a binding's code that must see what every end-document hook did (prelude.rs
     // `after_end_document_hooks`; biblatex's hidden bibliography, built only when no hook printed one).

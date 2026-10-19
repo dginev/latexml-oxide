@@ -40,7 +40,8 @@ fn with_expl_catcodes<T>(body: impl FnOnce() -> Result<T>) -> Result<T> {
   result
 }
 
-/// The characters whose catcodes `\ExplSyntaxOn` changes, each with its document default (expl3-code.tex:262-270).
+/// The characters whose catcodes `\ExplSyntaxOn` changes (the ones `\ExplSyntaxOff` restores, expl3-code.tex:247-261),
+/// each with the `unwrap_or` fallback used when no saved value is found.
 const EXPL_SYNTAX_CHARS: [(char, Catcode); 8] = [
   ('\t', Catcode::SPACE),
   (' ', Catcode::SPACE),
