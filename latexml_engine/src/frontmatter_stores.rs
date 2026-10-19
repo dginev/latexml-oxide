@@ -868,9 +868,12 @@ pub fn reroute_raw_class_stores(cls: &str) -> Result<()> {
     // carry it: courseoutline.cls:150 `\@department` in a document with no `\author`) stays the
     // class's to print. One the document never set and the class gives no value before its own
     // `\maketitle` — an.cls:532 `\ch@ckobl{institute}{Address(es) of author(s) should be given}`
-    // runs in the class's `\maketitle`, which the kernel's replaces — reads as empty too: its
-    // undefined store raised an error that dropped the whole deposit, the paper's `\keywords` line
-    // with it (0 errors; pdflatex prints the line beside the class's placeholder).
+    // runs in the class's `\maketitle`, which the kernel's replaces — is `\relax`: its undefined
+    // store raised an error that dropped the whole deposit, the paper's `\keywords` line with it
+    // (0 errors; pdflatex prints the line beside the class's placeholder). `\relax`, not empty, so
+    // a class that tests for the unset store still sees it unset: ptptex.cls:88-104 prints its
+    // journal line and "(Received …)" only `\@ifundefined{@pubinfo}`/`{@recdate}` is false
+    // (hep-th9803240, 1309.6905).
     DefMacro!("\\lx@captured@stores", sub[_args] {
       let names = lookup_string("lx_rerouted_stores");
       let mut nulls: Vec<Token> = Vec::new();
@@ -879,7 +882,7 @@ pub fn reroute_raw_class_stores(cls: &str) -> Result<()> {
         let null = if lookup_bool(&s!("lx_store_handed_{name}")) {
           s!("\\let\\{store}\\@empty")
         } else {
-          s!("\\ifdefined\\{store}\\else\\let\\{store}\\@empty\\fi")
+          s!("\\ifdefined\\{store}\\else\\let\\{store}\\relax\\fi")
         };
         nulls.extend(mouth::tokenize_internal(TeXString::assembled(null)).unlist());
       }
