@@ -317,6 +317,32 @@ fn aistats_unpaired_address_columns_split() {
   );
 }
 
+/// A marked row over an address with one mark only — a note's (`$^*$equal contribution`, `Univ A$^*$` twice) — still
+/// pairs column by column, as the PDF prints column i under author i: an address is a key the names' marks index only
+/// when it shows two or more distinct marks (2312.06786's marked affiliations, `aistats_marked_address_goes_to_its_authors`).
+/// 77o r3 review probes m_lead, m_star; 1905.11190, 2405.18281, 2011.03885, 2301.11862, 2410.15516 (r3 gave every author
+/// every column).
+#[test]
+fn aistats_note_marked_address_still_pairs_by_column() {
+  for (names, address, expected) in [
+    (
+      r"Ann Able$^*$ \And Bob Baker$^*$ \And Cy Cole",
+      r"Univ A \And Univ B \\ $^*$equal contribution \And Univ C",
+      r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">*</sup>equal contribution</contact> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact name="Affiliation: " role="affiliation">Univ C</contact> </creator>"#,
+    ),
+    (
+      r"Ann Able \And Bob Baker \And Cy Cole$^\dagger$",
+      r"Univ A$^*$ \And Univ B \And Univ A$^*$",
+      r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A<sup xml:id="id1">*</sup></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator> <creator before=" " role="author"> <personname>Cy Cole<sup xml:id="id2">†</sup></personname> <contact name="Affiliation: " role="affiliation">Univ A<sup xml:id="id3">*</sup></contact> </creator>"#,
+    ),
+  ] {
+    let xml = clean(&format!(
+      "\\documentclass[twoside]{{article}}\n\\usepackage[accepted]{{aistats2027}}\n\\begin{{document}}\n\\twocolumn[\\aistatstitle{{A Title}}\n\\aistatsauthor{{{names}}}\n\\aistatsaddress{{{address}}}]\n\\section{{Intro}} Body.\n\\end{{document}}\n"
+    ));
+    assert_eq!(frontmatter(&xml), expected, "{names}: {xml}");
+  }
+}
+
 /// The same row and address with material that prints nothing between the setters: the address is still paired column
 /// by column, as the PDF prints column i under author i (77o review scan: 29 papers — `\vspace` 2003.03080, 2305.16147;
 /// `\runningauthor` 1804.04378, 2402.12508; `\medskip` 2602.12181; `~` 1603.09584; `\renewcommand\thefootnote`

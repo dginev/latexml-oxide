@@ -13714,6 +13714,21 @@ fn authorsup_markers() -> Vec<Token> {
   markers
 }
 
+/// How many distinct marks (by operand) `stuff` shows outside its notes. Two or more make an address a key the names'
+/// marks index (aistats' marked address over a marked row, 2312.06786, 1901.02427); a single mark is a note's
+/// (`$^*$equal contribution`, `Univ A$^*$` twice), and the address still pairs by column (77o r3 review: 1905.11190,
+/// 2405.18281, 2011.03885, 2301.11862, 2410.15516; probes m_lead, m_star).
+pub fn distinct_author_marks(stuff: &Tokens) -> usize {
+  let mut seen: Vec<String> = Vec::new();
+  for operand in author_mark_operands(stuff.unlist_ref()) {
+    let key = Tokens::new(operand).to_string();
+    if !seen.contains(&key) {
+      seen.push(key);
+    }
+  }
+  seen.len()
+}
+
 /// Does an author block mark its names (`$^{a}$`, `\textsuperscript{1}`)? A superscript inside a `\footnote` or
 /// `\thanks` is the note's own text, not a mark: 0911.0568's `LPT Orsay (CNRS)~\footnote{$^a$Laboratoire …}` line
 /// made its PoS author block a marked list, its affiliation and email line read as a person (63k).

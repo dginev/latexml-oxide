@@ -25,7 +25,7 @@
 //! OXIDIZED_DESIGN_DIVERGENCES #772. Witnesses 1002.4058, 1302.5134, 1302.5348, 1303.0449, 1103.0941 (2e), 1202.1568
 //! (2eM), 1102.1492 (2012), 1311.1894 (2014), 1806.02924 (2019), 2604.21432 (2020), 1910.09056 (2022), 2405.15172 (2025),
 //! 2605.03921, 2510.09534 (2026), 2610.11580 (2027); 2101.00218 ships aistats2021.sty unused.
-use latexml_engine::base_utilities::has_author_marks;
+use latexml_engine::base_utilities::{distinct_author_marks, has_author_marks};
 use latexml_package::{
   prelude::*,
   shipped_class::{class_code_contains, shipped_copy_text},
@@ -561,7 +561,9 @@ fn aistats_pair(names: Tokens, address: Tokens) -> Result<Tokens> {
       Tokens::new(block)
     )]));
   }
-  // (rows of the two tables alike, and no marks to pair them by)
+  // (rows of the two tables alike, and no marks to pair them by: an address is a key the names' marks index only when it
+  // shows two or more distinct marks — one mark is a note's, `$^*$equal contribution`, and the PDF still prints column i
+  // under author i; 77o r3 review, 1905.11190, 2405.18281)
   let row_breaks = |tokens: &Tokens| {
     tokens
       .unlist_ref()
@@ -570,7 +572,7 @@ fn aistats_pair(names: Tokens, address: Tokens) -> Result<Tokens> {
       .count()
   };
   let by_column = row_breaks(&names) == row_breaks(&address)
-    && !(has_author_marks(&names) && has_author_marks(&address));
+    && !(has_author_marks(&names) && distinct_author_marks(&address) >= 2);
   let name_columns = read_columns(names);
   let address_columns = read_columns(address);
   if by_column && name_columns.len() > 1 && name_columns.len() == address_columns.len() {

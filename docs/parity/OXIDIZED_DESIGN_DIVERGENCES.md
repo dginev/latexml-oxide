@@ -21123,8 +21123,9 @@ paper's copy raw (`fallback_request`), then, where the copy defines them:
   supplement "Supplementary Material" heading, which a second `\title` would drop);
 - `\aistatsauthor{A₁ \And A₂}` with the `\aistatsaddress{a₁ \And a₂}` under it are authors: column by column
   `A₁ \\ a₁ \And A₂ \\ a₂` when the row has several columns and the address as many (`\And`, `\AND`, `\ANDD`), in as
-  many rows (`\AND`), and the two are not both marked (marks pair them: 2312.06786's two marked affiliations over a
-  second row of e-mails), read as the kernel `\author` reads name, affiliation and e-mail lines (2610.11580,
+  many rows (`\AND`), and the address is no key to marked names (two or more distinct marks in it: 2312.06786's two
+  marked affiliations over a second row of e-mails go by mark; one mark is a note's, `$^*$equal contribution` or
+  `Univ A$^*$` twice, and the columns still pair — 1905.11190, 2405.18281, 2011.03885, 2301.11862, 2410.15516), read as the kernel `\author` reads name, affiliation and e-mail lines (2610.11580,
   1002.4058) — the PDF prints column i under author i. The binding reads ahead from the row, brace-balanced, through what prints nothing (spaces, `~`,
   paragraph ends, vertical space, definitions, size and font declarations, the copy's `\runningauthor`/`\runningtitle`,
   groups) to the address, stopping at anything that may print, the next `\aistatsauthor` or the block's end; the
