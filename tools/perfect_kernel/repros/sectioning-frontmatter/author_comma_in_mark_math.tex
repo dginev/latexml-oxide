@@ -1,0 +1,16 @@
+% witness: 1610.00129 (`Denis Wittor$^{1}, $Marcus Brüggen`), 1706.05664, 2108.04461 (`$,^{5,6,7}$`),
+%          2402.11182 (`$^{2},$`)
+% oracle:  pdflatex 0 errors: "Ann Able^1 ,Bob Baker^1 , Cat Cole,^2 Dan Dorn^2 , Eve Ess^1" / "^1 Univ A" / "^2 Univ B"
+% engines: rust 67int29 = "Ann Able , Bob Baker" and "Cat Cole , Dan Dorn , Eve Ess" two creators, their marks
+%          lost, + 2 Error:frontmatter:merged_creators; Perl merges alike, silently
+% expect:  0 errors, 0 warnings; 5 creators, Ann, Bob, Eve with Univ A, Cat, Dan with Univ B
+% status:  RED (67int29) -> GREEN (77d)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}, $Bob Baker$^{1}$, Cat Cole$,^{2}$ Dan Dorn$^{2},$ Eve Ess$^{1}$\\
+$^{1}$Univ A\\ $^{2}$Univ B}
+\maketitle
+x
+\end{document}

@@ -1,0 +1,20 @@
+% witness: the boundary rule of 77d's separators (OXIDIZED_DESIGN_DIVERGENCES #765): a letter, a letter command or an
+%          accent's argument beside "and" keeps it in its word, and so does a control symbol that skips no space —
+%          `\-` (a discretionary hyphen), `\/` (an italic correction): only a control word parts the words
+% oracle:  pdflatex 0 errors: "Ann Rand and Bob Anders and Cat Zoëand Lee and Dan Øand Fox and Eve Sandén",
+%          "Roland Smith", "Bertrand Smith", "Gus Rađand Lee"
+% engines: rust 67int29 = 8 creators as below; 77d r1 split "Rol" | "Smith" and "Bertr" | "Smith"; Perl the same as
+%          67int29
+% expect:  0 errors, 0 warnings; 8 creators "Ann Rand", "Bob Anders", "Cat Zoëand Lee", "Dan Øand Fox", "Eve Sandén",
+%          "Roland Smith", "Bertrand Smith", "Gus Rađand Lee"
+% status:  GREEN (negative guard, 77d)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\begin{document}
+\title{T}
+\author{Ann Rand and Bob Anders\ and Cat Zo\"{e}and Lee and Dan {\O}and Fox and Eve Sand\'{e}n
+  \and Rol\-and Smith \and Bertr\/and Smith \and Gus Ra\dj and Lee}
+\maketitle
+x
+\end{document}

@@ -1,0 +1,17 @@
+% witness: 0711.2584, 0801.3557, 1402.1844, 2109.08173, 2309.14694, hep-th0703055 (cimento.cls:1525-1526, every
+%          shipped copy: `\newcommand{\atque}{{\normalfont\MakeLowercase{and\ \ignorespaces}}}`)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker and Cat Cole and Dan Dorn and Eve Ess"
+% engines: rust 67int29 = "Bob Baker and Cat Cole and Dan Dorn and Eve Ess" one creator +
+%          Error:frontmatter:merged_creators; Perl merges alike, silently
+% expect:  0 errors, 0 warnings; 5 creators, one name each
+% status:  RED (67int29) -> GREEN (77d)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand{\atque}{{\normalfont\MakeLowercase{and\ \ignorespaces}}}
+\newcommand{\et}{ \lowercase{AND} }
+\begin{document}
+\title{T}
+\author{Ann Able, Bob Baker \atque Cat Cole~\atque Dan Dorn\et Eve Ess}
+\maketitle
+x
+\end{document}

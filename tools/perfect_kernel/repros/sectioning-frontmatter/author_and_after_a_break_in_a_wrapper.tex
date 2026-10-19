@@ -1,0 +1,22 @@
+% witness: 77d r2 — a whole-line group whose names are parted by "and" after `\break` or a `\thanks` note: the split's
+%          name-count gate reads the group with its separators written (`separated_name_count`,
+%          OXIDIZED_DESIGN_DIVERGENCES #765); and a declaration before the separator leaves no space in the name
+% oracle:  pdflatex 0 errors: "Ann Ableand Bob Baker" (bold: article's author tabular cell is restricted horizontal
+%          mode, where `\break` breaks nothing — in a paragraph, as amsart's or svmult's author line, it does),
+%          "Cat Cole∗and Dan Dorn" (bold, the note's mark between), "Eve Ess and Fay Fox" in small capitals: the same
+%          shapes as the top-level `\break and` / `\thanks{…}and` of 1311.3650, 2005.00317
+% engines: rust 67int29 = 3 creators "Ann Ableand Bob Baker", "Cat Coleand Dan Dorn", "Eve Ess and Fay Fox" (+1
+%          Error:frontmatter:merged_creators); 77d r1 the first two the same, silently, and "Eve Ess " | "Fay Fox";
+%          Perl merges each pair
+% expect:  0 errors, 0 warnings; 6 creators "Ann Able", "Bob Baker", "Cat Cole" (its note), "Dan Dorn", "Eve Ess",
+%          "Fay Fox", each in its group's font
+% status:  GREEN (77d r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{{\bf Ann Able\break and Bob Baker} \and {\bf Cat Cole\thanks{Univ C}and Dan Dorn}
+  \and \sc Eve Ess \rm and \sc Fay Fox}
+\maketitle
+x
+\end{document}

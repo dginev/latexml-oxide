@@ -1342,8 +1342,9 @@ fn abstract_setter_definitions() -> Vec<(&'static str, &'static str, Definer, Ve
   found
 }
 
-/// Declarations and spacing that typeset nothing (font, size, paragraph shape), taking no argument.
-const LAYOUT: &[&str] = &[
+/// Declarations and spacing that typeset nothing (font, size, paragraph shape), taking no argument (also the
+/// declarations an author line's separator takes the gap before: `base_utilities::spaced_name_separators`).
+pub(crate) const LAYOUT: &[&str] = &[
   "\\tiny",
   "\\scriptsize",
   "\\footnotesize",

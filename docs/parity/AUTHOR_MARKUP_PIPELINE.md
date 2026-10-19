@@ -36,7 +36,9 @@ Same entry point, same emitted `\lx@add@author` / `\lx@add@affiliation` /
    marker-led / institution-shaped → affiliation; else → author-names. Superscript
    position becomes one input, not a separate algorithm.
 3. **Split author-name lines into creators** (`split_author_line`: comma / " and " /
-   `\quad` / `\and`); fold the whole-line `\textbf{…}` unwrap in here.
+   `\quad` / `\and`; an "and" or `\&` beside a control word or line break and a comma in a
+   mark's math read as separators first, OXIDIZED_DESIGN_DIVERGENCES #765); fold the
+   whole-line `\textbf{…}` unwrap in here.
 4. **Attach contacts** — affiliation/email lines to the right authors; a lone trailing
    affiliation after a multi-line author list attaches to **all** authors (shared),
    not just the last.

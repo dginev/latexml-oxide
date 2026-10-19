@@ -1,0 +1,16 @@
+% witness: 2401.17237, 2509.11693, 2506.15327, 2403.07875, 2512.18788, 2603.27055 (svmult `and\\`),
+%          1311.3650, 1503.04190, 1505.06278 (jfm `\break and`), 2509.22118 (mdpi `\linebreak and`)
+% oracle:  pdflatex (with the papers' svmult.cls) 0 errors: "Ann Able[orcid] / and / Bob Baker / and Cat Cole / and Dan Dorn"
+% engines: rust 67int29 = one creator "Ann Able and<break/>Bob Bakerand Cat Coleand Dan Dorn", no diagnostic (with
+%          the papers' Error:frontmatter:merged_creators); Perl merges alike
+% expect:  0 errors, 0 warnings; 4 creators, Ann Able with her ORCID and Univ A, Bob Baker with Univ B
+% status:  RED (67int29) -> GREEN (77d)
+% preload: ar5iv.sty
+\documentclass[graybox]{svmult}
+\begin{document}
+\title*{T}
+\author{Ann Able\orcidID{0000-0003-0647-7371} and\\ Bob Baker\break and Cat Cole\linebreak and Dan Dorn}
+\institute{Ann Able \at Univ A \and Bob Baker \at Univ B}
+\maketitle
+x
+\end{document}

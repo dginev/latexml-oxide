@@ -20337,6 +20337,65 @@ go from 13-39 Errors to 0, word counts unchanged. Packages the class loads get t
 own (no hook label is pushed for them, as on the LaTeX of the era). Repro `loader/pasa_era_pushfilename_balanced`
 (with a pasa.cls stub); guard `perfect_kernel_batch77c::pasa_era_pushfilename_balances_package_loads`.
 
+### 765. Author-name separators beside a control word, a line break or a mark, and in a mark's math (Perl: " and " between spaces only)
+
+Perl's author splitter knows the word "and" only between two space tokens (Base_Utility.pool.ltxml:678), and so did
+ours, with the ties and `{\ and}` added. TeX skips the spaces after a control word, so `Ann Able\space and Bob`, jfm's
+`Badr~Kaoui$^{3,4}$\break and Jens~Harting`, `Chang Liu \ns and Dennice F. Gayme` (jfm.cls:1025 `\newcommand\ns{\kern
+.5em\relax}`), `\linebreak and`, a line ending in `\` (latex.ltx:558 `\def\^^M{\ }`), `\thanks{…}and`, `and\;`,
+svmult's `Ann Able\orcidID{…} and\\ Bob Baker` and `Sun$^\ast$\&Fei` hold no space token beside the separator pdflatex
+prints between the names; every such pair became one author, flagged `Error:frontmatter:merged_creators` or silently
+("Lyubov Sveshnikova andVladimir Ptuskin"). Two other shapes merged too: cimento.cls:1525-1526 (every shipped copy)
+`\newcommand{\atque}{{\normalfont\MakeLowercase{and\ \ignorespaces}}}`, whose "and" the separator-macro reader
+(`separator_macro_text`) gave up on, and a comma written inside a name's mark math (`Wittor$^{1}, $Brüggen`,
+`Iacobuta$,^{5,6,7}$ Mabel`, `Manoj$^{2},$ Chandra`), which the split never sees (it does not look inside math).
+
+`split_author_names` now writes these as the split reads them first (`spaced_name_separators`, base_utilities.rs, at
+the line's top level and again in each wrapper's content the split re-reads): the word "and" between two word
+boundaries, or `\&` after one, becomes ` and ` / ` \& `, the spacing beside it dropped: spaces, ties, the spacing
+commands of `leading_spacing_end` (`\newline` among its parameterless ones, `PARAMETERLESS_SPACING`), the line breaks
+of `SEPARATOR_LINE_BREAKS` (`\\`, `\break`, `\linebreak`, `\allowbreak`, `\^^M`) and parameterless macros whose body is
+only spacing (`prints_only_spacing`, a spacing command's braced argument its own: `\hspace{1em}`); a space before
+declarations that typeset nothing ahead of the word (`\sc Ann Able \rm and`, the frontmatter `LAYOUT` list) goes too.
+A boundary is a space or tie, a control word that is no letter or accent command (`parts_words`: a name of two
+characters or more, or of one letter — tex.web §354-356, after which TeX skips the spaces), a note's or mark's argument
+(`\thanks{…}`, `NAME_ANNOTATIONS`), a group whose text does not end in a letter or a control symbol, or a math span
+holding only a superscript. A control symbol skips no space and prints inside the word: `\-` (a discretionary hyphen)
+and `\/` (an italic correction) keep "and" in it (`Rol\-and Smith` is "Roland Smith", `Bertr\/and Smith` "Bertrand
+Smith"); a spacing one (`\,`, `\;`, `\ `) is a gap. A letter, a letter command (`\L`, `\ss`, `\dj`, `\th`, `\ng` and
+their capitals, T1) or an accent's argument beside the word keeps it in its name ("Rand", "Anders", `Zo\"{e}and`,
+`{\O}and`, `\textbf{Bak}and` which prints "Bakand"), and `AT\&T` stays one word. The split's name-count gates — the
+whole-line group, a wrapper piece (`names_in_wrapper`) and the per-author bindings' cautious split
+(`split_author_line_cautious`: amsart, revtex) — count the names with these separators written
+(`separated_name_count`), so `{\bf Ann Able\break and Bob Baker}`, `{\bf Ann Able\thanks{…}and Bob Baker}` and amsart's
+`\author{Ann Able\break and Bob Baker}` split as their top-level forms do (1801.10166: `\parbox[t]{\textwidth}{Philip
+F.~Hopkins\altaffilmark{1}, \&\ Jonathan Squire\altaffilmark{1}}`, merged with `merged_creators` before). A comma at the edge of a math span holding only a superscript mark
+moves outside it (`$^{1}$,`, `,$^{5}$`), where the existing rule gives a mark glued after the comma to the name before
+it. `separator_macro_text` reads `\ignorespaces` as printing nothing and applies `\MakeLowercase`/`\MakeUppercase`/
+`\lowercase`/`\uppercase` to its group's letters, or to the one token after it when no group follows. SHARED with Perl (it merges every one of these, silently); a reading of
+the author's intent, beyond what pdflatex prints: TeX drops the space after a control word, so a pair the author typed
+apart can print glued (`The ATLAS\thanks{x}and CMS Collaborations` "ATLAS∗and CMS", `Bob Baker \LaTeX and Cat`
+"LATEXand Cat", a macro whose expansion ends in a word before `and`; 2005.00317 `\thanks{…}and`) and is still two
+creators here; a group ending in a note (`{Ann Able\thanks{x}}and`) continues the word and is not split. A/B (67int29 vs 77d) over the 78 `merged_creators` papers of
+the projection samples: 29 of the 55 sole-cause papers to 0 Errors — the six cimento papers (0711.2584, 0801.3557,
+1402.1844, 2109.08173, 2309.14694, hep-th0703055), nineteen S2 papers (1311.3650, 1503.04190, 1505.06278, 2005.00317,
+1912.02168, 2509.22118, 1504.03105, 1607.04619, 2004.02831, 2404.12084, 2502.11348, astro-ph9704233, 1707.03934,
+2401.17237, 2506.15327, 2509.11693, 2403.07875, 2512.18788, 2603.27055), three S3 papers (1610.00129, 2108.04461,
+2402.11182) and 1911.02873, whose `\&` now parts the last name while the first two (`FLORIAN REETZ$^1$ \ns PRIYA
+SUBRAMANIAN$^{2,3}$`, apart only by a mark and jfm's `\ns`, which also spaces a name's words: `TOBIAS M.\ns SCHNEIDER`)
+stay one creator; the merge check (`flag_merged_creators`) reads a personname's `ltx:sup` as ending the name before it
+when its text alone reads as fewer than two names, so that creator keeps its `Error:frontmatter:merged_creators`; `merged_creators` also gone from 1012.2722, 1109.2895,
+astro-ph9804111, gr-qc0308071; Errors 239 → 207, 0 papers worse, every split checked against the source. On 239
+multi-author control papers from pop67int23 one output changed (2409.19958, svmult `and\\` split, its
+`merged_creators` gone). 1012.2722's Error count holds: icrc2009.cls's raw `\IEEEauthorblockN` (`#1\crcr`, :3310-3322), re-applied to
+each name the wrapper held, errs once per name ("\noalign cannot be used here"), now three names. Not covered: 1706.05664
+(its `$^{1}, $` names reach pasj01's own per-author `\author`, not this split) and the S4-S6 shapes of the root-cause
+(a separator inside a wrapper with layout, a note command among the names, a class's list `\author`).
+Not caught either: a pair still merged with nothing but glued text to show it ("Ann Ableand Bob Baker") — "Ableand
+Bob" cannot be told from "Ferdinand Smith" by its text, so the merge check does not try. Repros
+`sectioning-frontmatter/{author_and_after_a_control_word, author_and_beside_a_line_break,
+author_separator_macro_lowercase, author_comma_in_mark_math, author_and_inside_a_word_stays_the_name,
+author_and_after_a_break_in_a_wrapper}`; guards `perfect_kernel_batch77d::*`.
 ### 766. A paragraph break inside an inline-only frontmatter item is a line break (Perl: the paragraphs run together)
 
 A frontmatter item is digested in text mode (Perl `digestFrontmatterItem` → `DigestText`), where `\par` closes no
