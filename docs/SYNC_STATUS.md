@@ -4147,6 +4147,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   98.06 % (E+F 56,654). Still before the E/F rerun: 77i (title-page sentinel run, silent-loss rows #5-#8 and 23b) in
   round 4, 77m (row #16, tcolorbox listing titles, + `\newtcbinputlisting` text/label and raw tcolorbox `label=`) in
   round 2.
+  **Integration (int30, 819537839c, binary int30a):** 77m tcolorbox listing boxes keep their title, listings' `nolol`
+  keeps tcolorbox's read-back out of the list of listings (silent-loss row #16; reviews r1 NO-SHIP → r2 SHIP, nits folded;
+  OD #768, KPE #988). Gates int30a: nextest 6139/6139 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int29c
+  empty. Population A/B (1,428) vs int29c: 0 tally changes, one byte change (2407.09320, the math-parse nondeterminism
+  seen in int29). Binding nets 136/136, 0 documents worse than int29c. Witnesses (int29c → int30a, E/F/W identical):
+  titles gained in 2402.13846, 2405.01480, 2405.01576, 2405.02221, 2405.02462, 2405.03285, 2409.11413, 2605.21082,
+  2606.00555; the spurious "<job>.listing" toc caption gone in 2512.18601, 2606.05464, 2606.27251, 2607.12625; 2507.00833,
+  2508.16690 unchanged.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
