@@ -1140,7 +1140,40 @@ fn name_memberships(tokens: Vec<Token>) -> Vec<Token> {
           );
       }
     }
-    if in_names && depth == 0 && t == T_CS!("\\IEEEmembership") {
+    // (a note's text is no name line: `\thanks{… \IEEEmembership{…}}` keeps the grade it names, dropped)
+    if [
+      T_CS!("\\thanks"),
+      T_CS!("\\footnote"),
+      T_CS!("\\IEEEcompsocitemizethanks"),
+    ]
+    .contains(&t)
+    {
+      let mut j = i + 1;
+      while j < tokens.len() && tokens[j] == T_SPACE!() {
+        j += 1;
+      }
+      if j < tokens.len() && tokens[j].code == Catcode::BEGIN {
+        let mut level = 0usize;
+        while j < tokens.len() {
+          match tokens[j].code {
+            Catcode::BEGIN => level += 1,
+            Catcode::END => level = level.saturating_sub(1),
+            _ => {},
+          }
+          j += 1;
+          if level == 0 {
+            break;
+          }
+        }
+        out.extend_from_slice(&tokens[i..j]);
+        i = j;
+        continue;
+      }
+    }
+    // (inside a wrapper of the names too: `{{Ann Able},~\IEEEmembership{Senior Member, IEEE}, …}`, 2112.09769;
+    // `\uppercase{K. Liu\authorrefmark{2}, J. Chen\authorrefmark{2}, \IEEEmembership{Senior, IEEE} R.C. de Lamare…}`,
+    // ieeeaccess 2209.12464)
+    if in_names && t == T_CS!("\\IEEEmembership") {
       let mut j = i + 1;
       while j < tokens.len() && tokens[j] == T_SPACE!() {
         j += 1;

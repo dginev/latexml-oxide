@@ -10,7 +10,7 @@ use latexml::util::test::convert_with;
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
 /// The XML with every whitespace run collapsed to one space.
-fn squash(xml: &str) -> String { xml.split_whitespace().collect::<Vec<_>>().join(" ") }
+pub(super) fn squash(xml: &str) -> String { xml.split_whitespace().collect::<Vec<_>>().join(" ") }
 
 /// A `sectioning-frontmatter` repro's log and squashed XML.
 macro_rules! convert_repro {
@@ -28,7 +28,7 @@ macro_rules! convert_repro {
 }
 
 /// The document's `ltx:creator` elements, in order, each whole.
-fn creators(xml: &str) -> Vec<&str> {
+pub(super) fn creators(xml: &str) -> Vec<&str> {
   xml
     .match_indices("<creator ")
     .map(|(start, _)| {
@@ -41,7 +41,7 @@ fn creators(xml: &str) -> Vec<&str> {
 
 /// A creator holding exactly one personname, `name`, and the rest `tail` (contacts, notes), as the squashed XML writes
 /// it.
-fn creator(first: bool, name: &str, tail: &str) -> String {
+pub(super) fn creator(first: bool, name: &str, tail: &str) -> String {
   let before = if first { "" } else { r#"before=" " "# };
   let tail = if tail.is_empty() {
     String::new()
@@ -52,7 +52,7 @@ fn creator(first: bool, name: &str, tail: &str) -> String {
 }
 
 /// No personname holds a separator: the names are apart.
-fn assert_no_merged_names(xml: &str) {
+pub(super) fn assert_no_merged_names(xml: &str) {
   for piece in xml.split("<personname>").skip(1) {
     let name = &piece[..piece.find("</personname>").unwrap()];
     assert!(

@@ -1,0 +1,20 @@
+% witness: 77n r5 review — a marked authblk author and its `\affil`, then an unmarked author with two `\affil`s (review
+%          probe g02)
+% oracle:  pdflatex 0 errors: "Ann Able1 / 1Univ X", "Bob Baker / Univ Y / Univ W"
+% engines: rust int32a = the same as pdflatex; 77n r4 and r5 = Ann with Univ Y and Univ X, Bob with Univ W only (the
+%          contact grid redistributor)
+% expect:  0 errors, 0 warnings; 2 creators, Ann Able with Univ X, Bob Baker with Univ Y and Univ W
+% status:  RED (77n r4) -> GREEN (77n r6)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\affil{$^1$Univ X}
+\author{Bob Baker}
+\affil{Univ Y}
+\affil{Univ W}
+\maketitle
+x
+\end{document}

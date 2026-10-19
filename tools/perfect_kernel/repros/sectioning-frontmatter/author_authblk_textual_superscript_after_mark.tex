@@ -1,0 +1,21 @@
+% witness: 77n r4 review — a raised text after an authblk name's mark (review probe d4; d1 `\textsuperscript{(*)}`, d3
+%          `$^{\rm (a)}$`, c4 `\textsuperscript{ (equal)}` are the same class)
+% oracle:  pdflatex 0 errors: "Ann Able1equal contrib. and Bob Baker / 1Univ X / Univ Y"
+% engines: rust int32a = "Ann Able¹ equal contrib." with Univ X, Bob Baker with Univ X and Univ Y; 77n r4 = "Ann Able",
+%          the words lost (the superscript read as a mark, the name a list whose marks nothing answered)
+% expect:  0 errors, 0 warnings; 2 creators, "Ann Able" with its "1" and "equal contrib." shown (a superscript is a mark
+%          only when its operand reads as labels, `reads_as_labels`), Ann with Univ X (her mark requests it on
+%          `\lx@add@creator` too, `author_label_marks`), Bob with Univ Y (the run's unanswered author)
+% status:  RED (77n r4) -> GREEN (77n r5; 77n r6: Univ Y no longer on Ann)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$\textsuperscript{equal contrib.}}
+\author{Bob Baker}
+\affil{$^1$Univ X}
+\affil{Univ Y}
+\maketitle
+x
+\end{document}

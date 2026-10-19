@@ -1,0 +1,18 @@
+% witness: 77n r3 review — a name's mark glued to the "and" before the next name (2604.27101 ieeeconf `\author{Bipasha
+%          Kundu$^{1}$and Cristian Linte$^{1,2}$\thanks{$^{1}$…}\thanks{$^{1,2}$…}}`)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker1,2" over the two legends (the witness's second legend is
+%          `$^{1,2}$`; a combined legend mark is labelled by its first label, a separate residual, so `$^{2}$` here)
+% engines: rust int32a = Ann Able and Bob Baker, each with both legends; 77n r3 = "Ann Able<sup>1</sup>" with no
+%          affiliation (`rewrite_in_word_superscripts` read the "1" between "Able" and "and" as spelling)
+% expect:  0 errors, 0 warnings; 2 creators, Ann Able with the legend of mark 1, Bob Baker with both; no mark in a name
+% status:  RED (77n r3) -> GREEN (77n r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$and Bob Baker$^{1,2}$%
+\thanks{$^{1}$Ann Able is with Univ X.}%
+\thanks{$^{2}$Bob Baker is with Univ Y.}}
+\maketitle
+x
+\end{document}

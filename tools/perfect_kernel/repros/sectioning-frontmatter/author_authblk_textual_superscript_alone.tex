@@ -1,0 +1,19 @@
+% witness: 77n r4 review — a raised parenthesised text on an authblk name with no mark (review probe d6)
+% oracle:  pdflatex 0 errors: "Ann Able (equal) and Bob Baker / 1Univ X / Univ Y"
+% engines: rust int32a = "Ann Able (equal)" (raised) with Univ X, Bob Baker with Univ X and Univ Y; 77n r4 = "Ann
+%          Able<sup>equal</sup>", the parentheses and the space lost (the superscript read as a mark)
+% expect:  0 errors, 0 warnings; 2 creators, "Ann Able" with " (equal)" raised as written, each with Univ X and Univ
+%          Y (authblk prints both under the block: no author carries the "1")
+% status:  RED (77n r4) -> GREEN (77n r5)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{ (equal)}}
+\author{Bob Baker}
+\affil{$^1$Univ X}
+\affil{Univ Y}
+\maketitle
+x
+\end{document}

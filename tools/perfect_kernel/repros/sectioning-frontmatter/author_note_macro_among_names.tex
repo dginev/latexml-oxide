@@ -1,0 +1,40 @@
+% witness: 77n S5 — a document's own note command among the names, a macro whose argument goes to `\thanks`
+%          (`\newcommand{\blackthanks}[1]{\begingroup…\thanks{#1}\unskip\endgroup}`), each name's row in a `{\rm …}`
+%          group: `{\rm Yuke Peng\textsuperscript{1,}\blackthanks{Co-first authors.}\ , Hongliang
+%          Tian\textsuperscript{2,}\footnotemark[1]\ , …}` (2506.03876)
+% oracle:  pdflatex 0 errors: "Ann Able1,∗ , Bob Baker2,∗ , Cat Cole3, / Dan Dorn1,† , Eve Ess2,†" over the
+%          affiliations
+% engines: rust int31a = two creators "Ann Able , Bob Baker , Cat Cole" and "Dan Dorn , Eve Ess" (+2
+%          Error:frontmatter:merged_creators): the note's text read as a name's; Perl merges alike
+% expect:  0 errors, 0 warnings; 5 creators, the notes Ann Able's and Dan Dorn's, each name with its affiliations
+% status:  RED (int31a) -> GREEN (77n)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{xcolor}
+\newcommand{\blackthanks}[1]{%
+    \begingroup
+    \renewcommand{\thefootnote}{\textcolor{black}{\fnsymbol{footnote}}}\unskip
+    \thanks{#1}
+    \unskip\endgroup
+}
+\begin{document}
+\title{T}
+\author{
+{\rm
+Ann Able\textsuperscript{1,}\blackthanks{Co-first authors.}\ ,
+Bob Baker\textsuperscript{2,}\footnotemark[1]\ ,
+Cat Cole\textsuperscript{3},
+}
+\\
+{\rm
+Dan Dorn\textsuperscript{1,}\blackthanks{Co-corresponding authors.}\ ,
+Eve Ess\textsuperscript{2,}\footnotemark[2]\ 
+}
+\\
+\textsuperscript{1}Univ A \hspace{1cm}
+\textsuperscript{2}Univ B \hspace{1cm}
+\textsuperscript{3}Univ C
+}
+\maketitle
+x
+\end{document}

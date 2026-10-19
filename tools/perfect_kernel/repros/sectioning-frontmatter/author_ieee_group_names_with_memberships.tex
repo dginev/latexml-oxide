@@ -1,0 +1,23 @@
+% witness: 77n S4 — IEEEtran names inside one outer group, each with its `\IEEEmembership` grade, the group broken
+%          by `\\`, a paragraph break and `\thanks` after it: `\author{{{Abdelaali Chaoub},~\IEEEmembership{Senior
+%          Member, IEEE}, … \\ … {Ashutosh Dutta},~\IEEEmembership{Fellow, IEEE} }\par \thanks{…}}` (2112.09769)
+% oracle:  pdflatex 0 errors: "Ann Able, Senior Member, IEEE, Bob Baker, Member, IEEE, / Cat Cole, Dan Dorn, Fellow,
+%          IEEE"
+% engines: rust int31a = one creator "Ann Able, , Bob Baker, ,<break/>Cat Cole, Dan Dorn", every grade dropped (+1
+%          Error:frontmatter:merged_creators); Perl merges alike (SplitTokens passes over groups)
+% expect:  0 errors, 0 warnings; 4 creators, each grade its name's membership contact, the note Dan Dorn's
+% status:  RED (int31a) -> GREEN (77n)
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{{{Ann Able},~\IEEEmembership{Senior Member, IEEE},
+{Bob Baker},~\IEEEmembership{Member, IEEE},\\
+{Cat Cole},
+{Dan Dorn},~\IEEEmembership{Fellow, IEEE}
+}
+
+\thanks{Ann Able is with Univ A.}}
+\maketitle
+x
+\end{document}

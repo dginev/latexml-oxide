@@ -1,0 +1,17 @@
+% witness: 77n r2 residual — a name's mark before its ORCID link in a names list: `\author{Ajay Chandra$^{1}$\orcidlink{…}
+%          and Harprit Singh$^2$\orcidlink{…}}` (2405.16615, authblk's unlabelled `\author`; the article `\author` the same)
+% oracle:  pdflatex 0 errors: "Ann Able1[iD] and Bob Baker2[iD]"
+% engines: rust int31a = "Ann Able[iD]1", "Bob Baker[iD]2": the split names' marks are read as affiliation requests
+%          (`\lx@sup@request@affiliation`), and one nothing answers is shown again at the end of the name
+%          (`show_unanswered_marks`), after the link
+% expect:  0 errors, 0 warnings; 2 creators, each mark before its ORCID link
+% status:  RED (int31a, 77n)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{orcidlink}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$\orcidlink{0000-0003-3690-1890} and Bob Baker$^2$\orcidlink{0000-0002-9991-8393}}
+\maketitle
+x
+\end{document}

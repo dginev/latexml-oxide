@@ -1,0 +1,18 @@
+% witness: 77n r2 — authblk's unlabelled `\author`s, each a name with a `\thanks` holding a comma, each followed by its
+%          `\affil` (the reviewer's probe a1: the comma branch counted the note's comma and replaced the authors before)
+% oracle:  pdflatex 0 errors: "Ann Able∗ / Univ X / Bob Baker† / Univ Z"
+% engines: rust int31a, 77n r1 = one creator "Bob Baker" with Univ Z and Univ X: Ann Able and her note lost, 0 errors
+% expect:  0 errors, 0 warnings; 2 creators, each with its note and its affiliation
+% status:  RED (int31a, 77n r1) -> GREEN (77n r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Dept. X, Univ Y}}
+\affil{Univ X}
+\author{Bob Baker\thanks{Dept. Z, Univ W}}
+\affil{Univ Z}
+\maketitle
+x
+\end{document}

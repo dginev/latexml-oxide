@@ -1,0 +1,17 @@
+% witness: 77n S4 — two names inside one link whose text opens with a graphic: `\href{https://bigdata.ui.ac.ir}{
+%          \includegraphics[scale=0.06]{orcid.pdf}\hspace{1mm}Hossein Bahak, Farzaneh Taheri }\thanks{…}` (2312.07592)
+% oracle:  pdflatex 0 errors: "[image] Ann Able, Bob Baker∗" as one link
+% engines: rust int31a = one creator "Ann Able, Bob Baker" (+1 Error:frontmatter:merged_creators): the graphic's
+%          options and file name read as name text; Perl merges alike (SplitTokens passes over groups)
+% expect:  0 errors, 0 warnings; 2 creators, each name in the link, the graphic with the first, the note Bob Baker's
+% status:  RED (int31a) -> GREEN (77n)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{\href{https://uni.edu}{\includegraphics[scale=0.06]{example-image}\hspace{1mm}Ann Able, Bob Baker }\thanks{These two authors contributed equally.}}
+\maketitle
+x
+\end{document}

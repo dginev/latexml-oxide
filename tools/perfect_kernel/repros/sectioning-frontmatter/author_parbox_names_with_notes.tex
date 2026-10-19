@@ -1,0 +1,24 @@
+% witness: 77n S4 — the names laid out in a `\parbox`, its notes among them, affiliation lines below it: mn2e's
+%          `\author[Chuang \& Wang]{\parbox{\textwidth}{Chia-Hsun Chuang,\thanks{E-mail: …} \thanks{MultiDark Fellow}
+%          and Yun Wang} \vspace*{4pt} \\ $^1$ Instituto … \\ $^2$ …}` (1205.5573)
+% oracle:  pdflatex 0 errors: "Ann Able,∗†and Bob Baker" over the two affiliation lines
+% engines: rust int31a = one creator, the parbox "Ann Able, and Bob Baker" its name (+1
+%          Error:frontmatter:merged_creators); Perl merges alike (SplitTokens passes over groups)
+% expect:  0 errors, 0 warnings; 2 creators "Ann Able" (both notes, Univ A) and "Bob Baker" (Univ B), no parbox
+%          around either name (the box lays the line out; it styles no name)
+% status:  RED (int31a) -> GREEN (77n)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{
+  \parbox{\textwidth}{
+ Ann Able,\thanks{E-mail: ann@uni.edu} \thanks{Fellow}
+ and Bob Baker
+  }
+  \vspace*{4pt} \\
+$^1$ Univ A, City \\
+$^2$ Univ B, Town}
+\maketitle
+x
+\end{document}

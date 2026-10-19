@@ -1,0 +1,18 @@
+% witness: 77n r2 — authblk's consecutive unlabelled `\affil`s after an unlabelled names list: both are printed under
+%          the same authors (authblk.sty:115-116, only the next `\author` steps `\AB@thenote`; the reviewer's probe o7)
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker / Univ X / Univ Y"
+% engines: rust int31a = one creator "Ann Able and Bob Baker" with both (+1 Error:frontmatter:merged_creators); 77n r1 =
+%          Ann Able gets Univ X, Bob Baker Univ X and Univ Y (`annotate=new` stops at an author holding one)
+% expect:  0 errors, 0 warnings; 2 creators, each with Univ X and Univ Y
+% status:  RED (int31a, 77n r1) -> GREEN (77n r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker}
+\affil{Univ X}
+\affil{Univ Y}
+\maketitle
+x
+\end{document}

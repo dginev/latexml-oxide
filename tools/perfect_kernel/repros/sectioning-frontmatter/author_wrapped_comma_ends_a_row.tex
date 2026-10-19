@@ -1,0 +1,27 @@
+% witness: 77n S4 — rows of bold names, the first row's commas each in a `\textrm{,}` of its own, so the row ends in
+%          a wrapped comma: `\textbf{Charles J. Lovering}$^{\diamondsuit}$\textrm{,} \textbf{Seth
+%          Ebner}$^{\diamondsuit}$\textrm{,} \\ \textbf{Brandon Smock}, …` (2512.18601)
+% oracle:  pdflatex 0 errors: "Ann Able♢, Bob Baker♢, / Cat Cole, Dan Dorn, / Eve Ess", the legend and the address
+% engines: rust int31a = "Ann Able" and one creator "Bob Baker<break/>Cat Cole, Dan Dorn, Eve Ess" (+1
+%          Error:frontmatter:merged_creators): the next row read as Bob Baker's affiliation-like continuation
+% expect:  0 errors, 0 warnings; 5 creators, the ♢ legend Ann Able's and Bob Baker's
+% status:  RED (int31a) -> GREEN (77n)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amssymb}
+\begin{document}
+\title{T}
+\author{
+ \textbf{Ann Able}$^{\diamondsuit}$\textrm{,}
+ \textbf{Bob Baker}$^{\diamondsuit}$\textrm{,}
+ \\
+ \textbf{Cat Cole},
+ \textbf{Dan Dorn},
+ \\
+ \textbf{Eve Ess}\\
+$^{\diamondsuit}$Core Contributor\\
+\texttt{\{first\}.\{last\}@kensho.com}
+}
+\maketitle
+x
+\end{document}

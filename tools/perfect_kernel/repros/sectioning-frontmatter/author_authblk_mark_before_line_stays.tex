@@ -1,0 +1,21 @@
+% witness: 77n r3 review — an authblk `\author` whose mark a line or other text follows (review probes m2, m7, m8, m9)
+% oracle:  pdflatex 0 errors: "Ann Able1 / ann@x.org", "Bob Baker2 (bob@x.org)", "Cat Cole3[iD]", "Univ X", "Univ Y"
+% engines: rust int32a = the marks in place; 77n r3 = Ann Able's "1" dropped before the `\\`, Bob Baker's "2" moved
+%          after "(bob@x.org)" and Cat Cole's "3" after the ORCID link (a marked name read as a list, whose split shows
+%          an unanswered mark at the name's end)
+% expect:  0 errors, 0 warnings; 3 creators, each mark where it is written, all with Univ X and Univ Y (authblk's run)
+% status:  RED (77n r3) -> GREEN (77n r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\usepackage{orcidlink}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$\\ ann@x.org}
+\author{Bob Baker$^{2}$ (bob@x.org)}
+\author{Cat Cole$^{3}$ \orcidlink{0000-0002-9991-8393}}
+\affil{Univ X}
+\affil{Univ Y}
+\maketitle
+x
+\end{document}

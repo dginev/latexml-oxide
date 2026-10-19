@@ -1,0 +1,20 @@
+% witness: 77n r6 review — a footnote symbol on a name an address follows (review probes s3, s1, z1)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker* (bob@x.org) / 1Univ X / Univ Y / *Corresponding author"
+% engines: rust int32a = the star shown once; 77n r6 = shown twice, "Bob Baker* (bob@x.org)*" (the symbol requested on
+%          `\lx@add@creator` and shown again as an unanswered mark)
+% expect:  0 errors, 0 warnings; 2 creators, Bob Baker's star shown once, before "(bob@x.org)"; Ann Able with Univ X
+%          and the legend, Bob Baker with Univ Y and the legend
+% status:  RED (77n r6) -> GREEN (77n r7)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{*}$ (bob@x.org)}
+\affil{$^1$Univ X}
+\affil{Univ Y}
+\affil{$^*$Corresponding author}
+\maketitle
+x
+\end{document}

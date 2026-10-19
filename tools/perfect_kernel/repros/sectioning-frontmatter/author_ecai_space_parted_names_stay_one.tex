@@ -1,0 +1,18 @@
+% witness: 77n r2 negative — ecai.cls 2020's names parted only by `\ `, with a `\\` line of more names and the
+%          `\institute` after the last: `\author{Martin C. Cooper \ Andreas Herzig \ Faustine Maffre \\ Fr\'{e}d\'{e}ric
+%          Maris \ Pierre R\'{e}gnier\institute{IRIT, …}}` (1606.03244)
+% oracle:  pdflatex (with the paper's ecai.cls) 0 errors: "Ann Able Bob Baker Cat Cole / Dan Dorn Eve Ess1"
+% engines: rust int31a = one creator holding the five names, the institute its affiliation; 77n r1 = a creator of the
+%          first line's names, the second line an affiliation and the institute a document note (the block split as a
+%          per-author class's although it holds no `\and`); Perl has no ecai binding
+% expect:  0 errors, 0 warnings; 1 creator holding the five names, the institute its affiliation
+% status:  GREEN (int31a) -> RED (77n r1) -> GREEN (77n r2)
+% preload: ar5iv.sty
+\documentclass{ecai}
+\begin{document}
+\title{T}
+\author{Ann Able \ Bob Baker \ Cat Cole \\
+Dan Dorn \ Eve Ess\institute{Univ X, City}}
+\maketitle
+x
+\end{document}

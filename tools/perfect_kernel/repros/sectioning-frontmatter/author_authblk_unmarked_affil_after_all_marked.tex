@@ -1,0 +1,20 @@
+% witness: 77n r5 review — an unmarked authblk `\affil` after the mark-picked ones of every author (review probe r01; g06
+%          the same class)
+% oracle:  pdflatex 0 errors: "Ann1 and Bob2 / 1Univ X / 2Univ Y / Univ Z"
+% engines: rust int32a = Univ X and Univ Z on Bob too; 77n r5 = Univ Z on Bob only
+% expect:  0 errors, 0 warnings; 2 creators, Ann with Univ Z and Univ X, Bob with Univ Z and Univ Y (the run's, every
+%          author answered: Perl's `annotate=new`)
+% status:  RED (77n r5) -> GREEN (77n r6)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann$^{1}$}
+\author{Bob$^{2}$}
+\affil{$^1$Univ X}
+\affil{$^2$Univ Y}
+\affil{Univ Z}
+\maketitle
+x
+\end{document}

@@ -1,0 +1,21 @@
+% witness: 77n r5 review — a symbol legend after an unmarked `\affil` the run gave the unmarked author only (review
+%          probe m11; g05 the same class)
+% oracle:  pdflatex 0 errors: "Ann Able1,dagger and Bob Baker / 1Univ X / Univ Y / daggerCorresponding author"
+% engines: rust int32a = Univ X on both, Univ Y and the legend on Bob; 77n r5 = Ann with Univ Y and Univ X, Bob with the
+%          legend only (the contact grid redistributor)
+% expect:  0 errors, 0 warnings; 2 creators, Ann Able (dagger shown) with the legend and Univ X, Bob Baker with Univ Y
+%          and the legend (a legend is the whole run's: Perl's `new` extent of the contact before it)
+% status:  RED (77n r5) -> GREEN (77n r6)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,\dagger}$}
+\author{Bob Baker}
+\affil{$^1$Univ X}
+\affil{Univ Y}
+\affil{$^\dagger$Corresponding author}
+\maketitle
+x
+\end{document}

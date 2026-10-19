@@ -1,0 +1,18 @@
+% witness: 77n S5 — elsarticle's note reference after the last of two names, a space before it: `\author{Susarla
+%          Raghuram and Anil Bhardwaj \corref{cor1}}` (1201.6291)
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker∗", the corresponding-author note below
+% engines: rust int31a = one creator "Ann Able and Bob Baker" (+1 Error:frontmatter:merged_creators): the reference's
+%          label read as name text; Perl merges alike
+% expect:  0 errors, 0 warnings; 2 creators, the correspondence note Bob Baker's
+% status:  RED (int31a) -> GREEN (77n)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Ann Able and Bob Baker \corref{cor1}}
+\cortext[cor1]{Corresponding author: bob@uni.edu}
+\address{Univ A, City}
+\end{frontmatter}
+x
+\end{document}

@@ -1,0 +1,20 @@
+% witness: 2605.10201 (77n r6 review) — a whole author block in one authblk `\author`, marks glued to symbols
+%          (`$^{1\ast}$`, `$^{1\dagger}$`), the legends inside it
+% oracle:  pdflatex 0 errors: "Ann Able1* Bob Baker2* Cat Cole1dagger / 1Univ X 2Univ Y / *Equal contribution
+%          daggerCorresponding author"
+% engines: rust int32a and 77n r5 = one creator, the block as printed; 77n r6 = the same, with "*,dagger" appended to
+%          its name (its symbols requested on `\lx@add@creator` and shown again as unanswered marks)
+% expect:  0 errors, 0 warnings; one creator, the block's symbols shown once each, nothing appended
+% status:  RED (77n r6) -> GREEN (77n r7)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{\textbf{Ann Able}$^{1\ast}$ \: \textbf{Bob Baker}$^{2\ast}$ \: \textbf{Cat Cole}$^{1\dagger}$ \\
+  $^1$Univ X \quad $^2$Univ Y
+
+  $^{\ast}$ Equal contribution \: ${^\dagger}$ Corresponding author}
+\maketitle
+x
+\end{document}

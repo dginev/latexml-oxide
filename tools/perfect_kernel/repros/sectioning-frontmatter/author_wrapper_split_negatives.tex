@@ -1,0 +1,21 @@
+% witness: 77n negative guards for the wrapper and note split (OXIDIZED_DESIGN_DIVERGENCES #765): one name in a
+%          wrapper with its note, "and" inside names (Rand, Anders, Ferdinand, Andrea Sand) in and beside boxes, an
+%          accented name before "and" in a wrapper, a document macro that prints its first argument and notes its second
+% oracle:  pdflatex 0 errors: "Ann Able∗ and Rand Anders and Ferdinand Ott, Andrea Sand and Zoë Able and Bob Baker
+%          and Cat Cole† and Dan Dorn‡"
+% engines: rust int31a = the same 8 creators (unchanged by 77n)
+% expect:  0 errors, 0 warnings; 8 creators "Ann Able" (note), "Rand Anders", "Ferdinand Ott", "Andrea Sand", "Zoë
+%          Able", "Bob Baker", "Cat Cole" (note), "Dan Dorn" (note) — no name split inside, none merged
+% status:  GREEN (int31a, 77n)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand{\auth}[2]{#1\thanks{#2}}
+\begin{document}
+\title{T}
+\author{\textbf{Ann Able}\thanks{Univ A, City}
+  \and \mbox{Rand Anders} and \emph{Ferdinand Ott}, \mbox{Andrea Sand}
+  \and \textbf{Zo\"{e} Able and Bob Baker}
+  \and \auth{Cat Cole}{Univ C, Town} and \auth{Dan Dorn}{Univ D, Village}}
+\maketitle
+x
+\end{document}

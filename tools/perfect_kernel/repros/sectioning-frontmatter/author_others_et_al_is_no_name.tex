@@ -1,0 +1,17 @@
+% witness: 77n r2 — "others" and "et al." closing a names list name no one: `\emph{and others}` after a name (the
+%          reviewer's finding 8; "and" opening a wrapper is the line's separator, 77n), `Bob Baker, et al.`
+% oracle:  pdflatex 0 errors: "Ann Able and others   Bob Baker, Cat Cole, et al."
+% engines: rust int31a = "Ann Able \emph{and others}" one creator, "Bob Baker", "Cat Cole", "et al" a creator each;
+%          77n r1 = "Ann Able", "others", "Bob Baker", "Cat Cole", "et al" (each its own creator); 77n r2 = "Ann Able and
+%          \emph{others}"
+% expect:  0 errors, 0 warnings; 3 creators "Ann Able \emph{and others}" (the "and" kept in its wrapper, italic: before
+%          what names no one it is no separator, 77n r3), "Bob Baker", "Cat Cole, et al."
+% status:  RED (int31a, 77n r1) -> GREEN (77n r2; r2 moved the "and" out of the \emph, upright) -> GREEN (77n r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \emph{and others} \and Bob Baker, Cat Cole, et al.}
+\maketitle
+x
+\end{document}

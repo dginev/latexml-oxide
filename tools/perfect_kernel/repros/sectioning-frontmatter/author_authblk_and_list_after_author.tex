@@ -1,0 +1,19 @@
+% witness: 77n r2 — authblk's unlabelled `\author{Bob Baker \and Cat Cole}` after `\author{Ann Able}\affil{Univ A}`
+% oracle:  pdflatex 0 errors: "Ann Able / Univ A / Bob Baker   Cat Cole / Univ B"
+% engines: rust int31a, 77n r1 = Ann Able lost (the `\and` branch replaced the authors before); Perl loses her too
+%          (authblk.sty.ltxml:52 sends an `\and` list to `\lx@add@authors`, which dequeues every author queued before it,
+%          Base_Utility.pool.ltxml:691)
+% expect:  0 errors, 0 warnings; 3 creators, Ann Able's affiliation Univ A, Bob Baker's and Cat Cole's Univ B
+% status:  RED (int31a, 77n r1) -> GREEN (77n r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affil{Univ A}
+\author{Bob Baker \and Cat Cole}
+\affil{Univ B}
+\maketitle
+x
+\end{document}

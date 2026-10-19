@@ -1,0 +1,19 @@
+% witness: 77n r4 review — an `\affil` inside a later authblk `\author`, after a marked author whose mark an `\affil`
+%          answers (review probe e1; e2, the `\affil` after `\maketitle`, and e3, `\author[1]`, are the same class)
+% oracle:  pdflatex 0 errors: "Ann1 / 1Univ X" (Bob and Univ Y are not printed: the `\affil` inside `\author` breaks
+%          authblk's block)
+% engines: rust int32a = Ann with Univ X, Bob with Univ Y (Perl's `annotate=new`); 77n r4 = Ann with Univ Y and Univ X
+%          (the uncapped run took Ann, whose deferred Univ X had not reached her, for a new author)
+% expect:  0 errors, 0 warnings; 2 creators, Ann with Univ X, Bob with Univ Y
+% status:  RED (77n r4) -> GREEN (77n r5)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann$^{1}$}
+\affil{$^1$Univ X}
+\author{Bob \affil{Univ Y}}
+\maketitle
+x
+\end{document}

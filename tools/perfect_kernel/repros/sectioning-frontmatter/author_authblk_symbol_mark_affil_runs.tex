@@ -1,0 +1,20 @@
+% witness: 77n r3 — authblk `\affil` led by a footnote symbol the authors carry (`$^*$Equal contribution`) after
+%          mark-picked ones (the r2 review probe c1)
+% oracle:  pdflatex 0 errors: "Ann1* and Bob1* / 1Univ X / *Equal contribution"
+% engines: rust int32a = Ann Univ X, Bob Univ X and "*Equal contribution"; 77n r2 = a third creator without a name
+%          holding "Equal contribution" (its mark dropped)
+% expect:  0 errors, 0 warnings; 2 creators, Ann and Bob, each with Univ X and the Equal contribution line (authblk
+%          prints both under the block); no nameless creator
+% status:  RED (77n r2) -> GREEN (77n r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann$^{1*}$}
+\author{Bob$^{1*}$}
+\affil{$^1$Univ X}
+\affil{$^*$Equal contribution}
+\maketitle
+x
+\end{document}

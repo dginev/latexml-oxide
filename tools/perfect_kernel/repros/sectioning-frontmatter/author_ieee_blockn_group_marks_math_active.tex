@@ -1,0 +1,20 @@
+% witness: 77n S4 — an `\IEEEauthorblockN` names group with a mark after it, its `^` math-active (catcode 12,
+%          mathcode "8000) as breqn sets it from `\begin{document}` (breqn.sty, by flexisym; written out here, as the
+%          breqn stub warns of itself): `\IEEEauthorblockN{{Mohamed Benzaghta$^{\star}$, Sahar
+%          Ammar$^{\flat}$, David L\'{o}pez-P\'{e}rez}$^{\sharp}$, Basem Shihada$^{\flat}$, and …}` (2504.02633)
+% oracle:  pdflatex 0 errors (the marks raised as superscripts): "Ann Able⋆, Bob Baker♭, Cat L\'opez♯, Dan Dorn♭, and Eve Ess†⋆"
+% engines: rust int31a = one creator "Ann Able⋆, Bob Baker♭, Cat López♯" (+1 Error:frontmatter:merged_creators): the
+%          marks were not read as marks; without breqn the same block splits
+% expect:  0 errors, 0 warnings; 5 creators, each with its own mark
+% status:  RED (int31a) -> GREEN (77n)
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begingroup\catcode`\^=\active \global\let^=\sp \endgroup
+\AtBeginDocument{\mathcode`\^="8000 \catcode`\^=12 }
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{{Ann Able$^{\star}$, Bob Baker$^{\flat}$, Cat L\'{o}pez}$^{\sharp}$, Dan Dorn$^{\flat}$, and Eve Ess$^{\dagger\,\star}$ \vspace{0.1cm}
+}}
+\maketitle
+x
+\end{document}

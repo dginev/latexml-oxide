@@ -1,0 +1,15 @@
+% witness: 77n r5 review — ptephy `\affil{}{…}` after labelled `\affil{1}{…}\affil{2}{…}`, every author answered (review
+%          probe t02; t04 the same class; ptephy witnesses 1605.07339, 2311.07297, 1902.10888)
+% oracle:  ptephy.cls is not in TeX Live; the class prints `\affil{}{…}` under all of the names (ptephy_cls.rs)
+% engines: rust int32a = Univ Z on both; 77n r5 = Univ Z on Bob only (the label-answered break on the last author)
+% expect:  0 errors, 0 warnings; 2 creators, Ann with Univ Z and Univ X, Bob with Univ Z and Univ Y
+% status:  RED (77n r5) -> GREEN (77n r6)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\begin{document}
+\title{T}
+\author{\name{Ann}{1} and \name{Bob}{2}}
+\address{\affil{1}{Univ X}\affil{2}{Univ Y}\affil{}{Univ Z}}
+\maketitle
+x
+\end{document}

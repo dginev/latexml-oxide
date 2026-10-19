@@ -1,0 +1,14 @@
+% witness: 77n r4/r5 reviews — a mark glued to a capitalised "And" before the next name (review probes a1, a6)
+% oracle:  pdflatex 0 errors: "Ann Able1 And Bob Baker2" with two notes
+% engines: rust int32a and 77n r5 = one creator "Ann AbleAnd Bob Baker", no error (the marks gone); 77n r4 = flagged
+% expect:  1 error (Error:frontmatter:merged_creators), 0 warnings; one creator, its mark shown, both notes on it — a
+%          merge the splitter cannot read, reported (fail toward flagging)
+% status:  RED (77n r5) -> GREEN (77n r6)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$And Bob Baker$^{2}$\thanks{$^{1}$Ann Able is with Univ X.}\thanks{$^{2}$Bob Baker is with Univ Y.}}
+\maketitle
+x
+\end{document}

@@ -1,0 +1,16 @@
+% witness: 77n r5 review — a marked authblk name whose mark an address follows (review probe k2)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker1 (bob@x.org) / 1Univ X"
+% engines: rust int32a = both with Univ X; 77n r3, r4, r5 = Bob Baker with nothing
+% expect:  0 errors, 0 warnings; 2 creators, both with Univ X, Bob Baker's "1" and "(bob@x.org)" shown
+% status:  RED (77n r3) -> GREEN (77n r6)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{1}$ (bob@x.org)}
+\affil{$^1$Univ X}
+\maketitle
+x
+\end{document}

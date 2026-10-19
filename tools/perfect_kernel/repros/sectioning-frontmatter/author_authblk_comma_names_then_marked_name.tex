@@ -1,0 +1,18 @@
+% witness: 77n r3 — authblk `\author{Ann\textsuperscript{1}, Bob\textsuperscript{2}}\author{Cat\textsuperscript{2}}`
+%          (the r2 review probe c4)
+% oracle:  pdflatex 0 errors: "Ann1 , Bob2 and Cat2 / 1Univ X / 2Univ Y"
+% engines: rust int32a = Ann X, Bob X, Cat X and Y; 77n r2 = Cat none (her mark kept, requesting nothing)
+% expect:  0 errors, 0 warnings; 3 creators, Ann with Univ X, Bob and Cat with Univ Y
+% status:  RED (77n r2) -> GREEN (77n r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann\textsuperscript{1}, Bob\textsuperscript{2}}
+\author{Cat\textsuperscript{2}}
+\affil{\textsuperscript{1}Univ X}
+\affil{\textsuperscript{2}Univ Y}
+\maketitle
+x
+\end{document}

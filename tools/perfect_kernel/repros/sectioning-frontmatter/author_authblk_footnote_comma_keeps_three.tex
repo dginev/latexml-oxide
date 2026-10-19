@@ -1,0 +1,21 @@
+% witness: 77n r2 — authblk's unlabelled `\author`s each with a `\footnote` holding a comma, each followed by its `\affil`
+%          (AIAA new-aiaa.cls pattern: 2610.21324; 2008.05535: both kept 1 of 3 authors on int31a, 0 errors)
+% oracle:  pdflatex 0 errors: "Ann Able∗1, Bob Baker†2, and Cat Cole3 / 1Univ A / 2Univ B / 3Univ C"
+% engines: rust int31a, 77n r1 = the note's comma sent `\author` to the replacing `\lx@add@authors`: only the last
+%          comma author and those after kept; Perl keeps 3 creators (authblk.sty.ltxml)
+% expect:  0 errors, 0 warnings; 3 creators in order, each with its note and its affiliation
+% status:  RED (int31a, 77n r1) -> GREEN (77n r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able\footnote{Student, Dept.~A.}}
+\affil{Univ A}
+\author{Bob Baker\footnote{Professor, Dept.~B.}}
+\affil{Univ B}
+\author{Cat Cole}
+\affil{Univ C}
+\maketitle
+x
+\end{document}

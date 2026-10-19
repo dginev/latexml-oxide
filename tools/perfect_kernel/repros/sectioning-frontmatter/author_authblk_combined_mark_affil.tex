@@ -1,0 +1,18 @@
+% witness: 77n r3 review — authblk `\affil{$^{1,2}$Univ X}` whose combined mark answers two authors (review probes w1,
+%          v8)
+% oracle:  pdflatex 0 errors: "Ann1 and Bob2 / 1,2Univ X"
+% engines: rust int32a = both with Univ X; 77n r3 = Ann alone (the marked path labels the affiliation by its first mark
+%          only)
+% expect:  0 errors, 0 warnings; 2 creators, both with Univ X (a combined mark keeps authblk's run)
+% status:  RED (77n r3) -> GREEN (77n r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann$^{1}$}
+\author{Bob$^{2}$}
+\affil{$^{1,2}$Univ X}
+\maketitle
+x
+\end{document}

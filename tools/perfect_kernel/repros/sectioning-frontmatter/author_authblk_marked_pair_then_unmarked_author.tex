@@ -1,0 +1,22 @@
+% witness: 77n r5 review — two authblk authors sharing a mark, an unmarked third, then a marked `\affil` and three
+%          unmarked ones (review probe g04)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker1, and Cat Cole / 1Univ X / Univ Y / Univ W / Univ V"
+% engines: rust int32a = Univ X on all three, Univ Y, W, V on Cat Cole; 77n r5 = Ann with Univ Y, Bob with Univ W, Cat
+%          with Univ V only (the contact grid redistributor paired them)
+% expect:  0 errors, 0 warnings; 3 creators, Ann Able and Bob Baker with Univ X, Cat Cole with Univ Y, W and V
+% status:  RED (77n r5) -> GREEN (77n r6)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{1}$}
+\author{Cat Cole}
+\affil{$^1$Univ X}
+\affil{Univ Y}
+\affil{Univ W}
+\affil{Univ V}
+\maketitle
+x
+\end{document}

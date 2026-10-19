@@ -1,0 +1,16 @@
+% witness: 77n r2 — a layout box's declarations after its paragraph layout style every name it holds:
+%          `\parbox{\textwidth}{\centering\large Ann Able, Bob Baker}` (the reviewer's finding 6; the shape of 2504.03146's
+%          `\parbox[c]{…}{\centering …}`)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker" centred, both large
+% engines: rust int31a = two creators, each in a parbox of its own, only Ann Able centred and large; 77n r1 = two
+%          creators without the parbox, only Ann Able large
+% expect:  0 errors, 0 warnings; 2 creators, both large, no parbox
+% status:  RED (int31a, 77n r1) -> GREEN (77n r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\parbox{\textwidth}{\centering\large Ann Able, Bob Baker}}
+\maketitle
+x
+\end{document}

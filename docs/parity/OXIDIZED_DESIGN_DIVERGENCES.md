@@ -20587,13 +20587,177 @@ astro-ph9804111, gr-qc0308071; Errors 239 → 207, 0 papers worse, every split c
 multi-author control papers from pop67int23 one output changed (2409.19958, svmult `and\\` split, its
 `merged_creators` gone). 1012.2722's Error count holds: icrc2009.cls's raw `\IEEEauthorblockN` (`#1\crcr`, :3310-3322), re-applied to
 each name the wrapper held, errs once per name ("\noalign cannot be used here"), now three names. Not covered: 1706.05664
-(its `$^{1}, $` names reach pasj01's own per-author `\author`, not this split) and the S4-S6 shapes of the root-cause
-(a separator inside a wrapper with layout, a note command among the names, a class's list `\author`).
+(its `$^{1}, $` names reach pasj01's own per-author `\author`, not this split) and the S6 shape of the root-cause (a
+class's list `\author`; S4 and S5 are 77n's, below).
 Not caught either: a pair still merged with nothing but glued text to show it ("Ann Ableand Bob Baker") — "Ableand
 Bob" cannot be told from "Ferdinand Smith" by its text, so the merge check does not try. Repros
 `sectioning-frontmatter/{author_and_after_a_control_word, author_and_beside_a_line_break,
 author_separator_macro_lowercase, author_comma_in_mark_math, author_and_inside_a_word_stays_the_name,
 author_and_after_a_break_in_a_wrapper}`; guards `perfect_kernel_batch77d::*`.
+
+**77n: separators inside a wrapper (S4), note commands among the names (S5).** A wrapper's names split inside it
+(`names_in_wrapper`) when what follows the wrapper prints nothing but marks and notes, its spacing and paragraph breaks
+aside (`without_spacing`: `\emph{Wenzhuo Ouyang, Atilla Eryilmaz, and Ness B. Shroff} \vspace{-9pt}\par \vspace{-5pt}
+\thanks{…}`, 1108.3768), and a piece of marks and notes only, inside the wrapper, is the name's before it
+(`notes_to_the_name_before`, which also leaves out a line break at a piece's edge: `{Ann Able},~\IEEEmembership{…},\\
+{Cat Cole}`) instead of keeping the wrapper whole (`Chia-Hsun Chuang,\thanks{…} \thanks{…} and Yun Wang` in a parbox,
+1205.5573; 2112.09769, 2603.10769, 2209.12464). Each name keeps the wrapper's styling (`\emph`, `\uppercase` — the case
+TeX prints —, a group's declarations); a layout box (`LAYOUT_BOXES`: `\parbox[pos]{width}{…}`, `\mbox`, `\makebox`,
+`\hbox`) styles no name and is left out, with the paragraph layout its content opens with (`\centering`), its other
+opening declarations put around each name (`\parbox{…}{\centering\large A, B}`: both large): spconf's
+`\name{{\parbox[c]{\textwidth}{\centering A$^{1}$, B$^{2}$, …}}}` (2504.03146), and a name list already split from
+its parbox no longer puts each name in a text-wide box of its own (1801.10166, 1011.3045, 2306.06320). A command over an
+optional argument is content, not an opening declaration (`{\parbox[c]…}`), and a control word's optional argument,
+glue (`\vskip 0.3in`, `\hskip`, `\kern`), a graphic's file name and a link's address are no name text
+(`visible_name_text`; hep-ph0107182, whose REVTeX 3 cautious split read "0.3in" as part of the last name;
+`\href{…}{\includegraphics[scale=0.06]{orcid.pdf}\hspace{1mm}Hossein Bahak, Farzaneh Taheri}`, 2312.07592). The word "and" opening or closing a wrapper is a separator of the line
+(`hoist_wrapped_separators`: mdpi's `\mbox{and {Thomas~P.} Krichbaum $^{5}$}`, 2108.09054), and a row ending in a
+wrapped comma reads as unfinished (`names_list_continues` reads the row with its wrapped separators hoisted:
+`\textbf{Seth Ebner}$^{\diamondsuit}$\textrm{,} \\ \textbf{Brandon Smock}, …`, 2512.18601). The note commands of a
+name (`is_name_annotation`) are `NAME_ANNOTATIONS` with `\footnotetext` (revtex4-1 2201.11098; amsppt
+`D. Logachev\footnotemark \footnotetext{…}`, 2209.04044), elsarticle's `\corref`/`\fnref`/`\tnoteref` (`… and Anil
+Bhardwaj \corref{cor1}`, 1201.6291) and `\institute` (ecai.cls 2020:450 `\newcommand{\institute}[1]{\thanks{#1}}`,
+2008.02735), and a document's own note macro, one whose every argument goes into a `\thanks` or `\footnote` of its
+body (`is_note_macro`: `\blackthanks`, 2506.03876; a macro printing an argument itself is none). An author block's
+`\begin{footnote}{text}…\end{footnote}` is read as LaTeX reads it, `\footnote{text}` and the rest
+(`note_environments_as_commands`: the comma after the first note parts `Velibor \v{Z}eli` and `Du\v{s}an Zorica`,
+1703.02032; the environment's `\begingroup`/`\endgroup` is not kept, as it would open in one name and close in the
+next), and its math-active `^`/`_` (catcode 12, mathcode "8000, as mathstyle.sty:233-236, :251-258 sets them from
+`\begin{document}`, which breqn loads) are
+the superscript and subscript TeX reads (`math_active_scripts`; 2504.02633, and 2404.16541, whose affiliation marks
+had left an author with no name). SHARED with Perl for S4 and S5 (SplitTokens passes over groups,
+Base_Utility.pool.ltxml:152-165: latexml 0.8.8 keeps each wrapped list one author, and every note command among names
+merges them too), except the `{footnote}` environment, which Perl, not keeping an environment whole, splits at its
+inner comma with its `\begin` and `\end` in different authors (6 Errors on the repro). Bindings: IEEEtran's grades
+become their names' membership contacts inside a wrapper too, a note's argument aside (ieeetran_cls.rs
+`name_memberships`); authblk's unlabelled `\author` holding the word "and" is a list (`\lx@add@authors@list`: `Ajay
+Chandra$^{1}$\orcidlink{…} and Harprit Singh$^2$\orcidlink{…}`, 2405.16615, preprint.cls + authblk); ecai's `\author`
+holding a top-level `\and`, or the current class's `\author[A,D]{…}`, is read as a per-author class's
+(`\lx@add@authors@append`), so the 2020 class's `\author{A\institute{…} \and B$^1$}` gives two authors and the current
+class's one-name `\author[A,D]{…}` stays one; any other block is one author as written, as Perl adds it (1606.03244's
+`\`-parted names with a `\\` line of more names). r2: authblk's comma and `\and` lists are added after the authors
+before them (`\lx@add@authors@list`, not the replacing `\lx@add@authors`, as authblk.sty:114-145 always appends:
+`\author{Ann Able\thanks{Dept. X, Univ Y}}\affil{…}\author{Bob Baker\thanks{…, …}}`, sent there by the note's comma,
+replaced Ann Able, 0 Errors, int31a too — AIAA new-aiaa.cls papers 2610.21324 and 2008.05535 kept 1 of 3 authors;
+Perl's `\and` branch replaces the same way, KNOWN_PERL_ERRORS #992); consecutive unlabelled `\affil`s go to every
+author given since the last `\affil` (authblk.sty:115-116's `\AB@thenote`); "others" and "et al." closing a list name
+no one (`is_name_qualifier`: `Cat Cole, et al.`), and an "and" opening a wrapper before them stays in it, in its font
+(`Ann Able \emph{and others}`, r3). r3 (the r2 review): every unlabelled authblk `\author` showing a superscript mark
+outside its notes is a list too (`has_author_marks`; since r4 only when they end what it prints), so its marks request
+the affiliations they label on every path (`\author{Ann Able$^{1,2}$}\author{Bob Baker$^{2}$}` had left Bob Baker
+without affiliation 2, his mark requesting nothing on `\lx@add@creator`); an unlabelled `\affil` goes to at most the
+authors since the last `\affil`
+(`annotate=run:N`, `affil_run` in authblk_sty.rs — `run` capped at N — so a mark-picked affiliation, which reaches its
+authors only once matched, does not leave them to read as new: `\author{Ann$^1$}\affil{$^1$X}\author{Bob}\affil{$^2$Y}`);
+a mark glued to a footnote symbol (`$^{1*}$`, `\textsuperscript{a\dagger}`) is that mark and the symbol shown
+(`split_glued_symbol` in `rewrite_symbol_superscripts`), else its one request `affiliation:1*` matched nothing (the
+article `\author` the same: the 06_cluster_frontmatter neurips fixture's Wenqi Shao had no affiliation); a superscript
+inside a word — a letter on each side, its operand no mark list and the letters after it not the word "and" — is the
+name's spelling, shown in place (`rewrite_in_word_superscripts`: `Craig M$^{\mathrm{c}}$Rae`, 2505.09041, which as a
+request left the name "Craig MRae"; `I$^2$R`, `NLP$^2$CT`, `DM$^3$L`, which stay words; but `Hiroshi Ito$^{1,3}$and
+Tetsuya Ogata`, 2605.00471, and `Bipasha Kundu$^{1}$and Cristian Linte`, 2604.27101, are marks); and the comma
+ending a marked affiliation's line is its own when the next line continues it ("Université Laval,\\ pavillon …",
+1507.08653; `trim_trailing_separator` trims it only before the next marked institution). r4 (the r3 review): an
+`\affil` expanding with no author queued (inside `\author{Ann \affil{Univ X}}`, read at the flush; after `\maketitle`)
+runs uncapped (`annotate=run`), and the engine reads a cap below 1 as none and records no run that reached no one
+(2605.01689's DSSL block had gone to no one, `annotate=run:0`); an `\affil` whose mark combines labels
+(`\affil{$^{1,2}$Univ X}`) keeps authblk's run, the marked path labelling by the first label only; and a single authblk
+name is a list only when its marks end what it prints, notes, spacing and an `\affil` aside (`author_marks_end_name`:
+`Ann Able$^{1}$\\ ann@x.org` and `Ann Able$^{a}$ (ann@x.org)` keep their marks in place). r5 (the r4 review): a
+superscript there is a mark only when its operand reads as labels (`reads_as_labels`: no word of three or more letters,
+and `clean_frontmatter_labels` gives each label back as written — it drops parentheses and writes an inner space as
+`_`), so `Ann Able$^{1}$\textsuperscript{equal contrib.}`, `\textsuperscript{(*)}`, `$^{\rm (a)}$` keep their text on
+`\lx@add@creator` (r4 had lost or cut it); the name annotations printed in place (`PRINTED_IN_PLACE`: an address, an
+ORCID link, a grade, a citation, a superscript) are one classification for this test and the email split
+(`is_name_note_command`); a run's `new` passes over an author whose label request (`{role}:…` or unprefixed,
+`\author[1]`) a contact of the role answers — one deferred until the labels are compared, or one the same flush digests
+later (`lx_frontmatter_offered_labels`, read at the flush from the queued contacts' `label=` and their
+`\lx@affiliation@withsup` line's first mark; every `annotate=run` binding: authblk, elsarticle's unlabelled `\address`,
+ptephy, osa) — where Perl's `new` reads the contact only (Base_Utility.pool.ltxml:530):
+`\author{Ann$^{1}$}\affil{$^1$Univ X}\author{Bob \affil{Univ Y}}` gave Ann Univ Y too; a contact led by a mark of
+its own (`marker_leads`: a footnote-symbol legend, a mark no author carries, which labels no one) reads `new` by the
+contact only, so it stays every new author's (r3 review probe q04; 2605.11982's `\affil{$^*$…}` after `\maketitle`). r6
+(the r5 review): only a mark-picked contact (`_bymark`, a `\lx@affiliation@withsup` line) answers an author in a run —
+a `label=` does not, authblk printing the unlabelled `\affil` after `\affil[1]` under its note
+(`\author[1]{Ann}\author{Bob}\affil[1]{Univ X}\affil{Univ Y}`: Univ Y both authors', as int32a and Perl give it;
+2605.25017's e-mail line, which r5 took from one of its two authors); the walk stops at an answered author only once it
+has attached the contact to an unanswered one, so a contact whose run is answered throughout is the whole run's, as
+Perl's `new` gives it (ptephy's `\affil{}{Univ Z}` after `\affil{1}{…}\affil{2}{…}`, opex3's `\address{Univ Z}`); a
+legend continues the run with the extent Perl's `new` gave the contact before it, the answered authors that contact
+passed over included (`lx_frontmatter_new_run` keeps both counts; a legend opening a run records it, and a contact
+continuing the run keeps the larger extent — r7, the r6 review's x1: a second unmarked `\affil` had shrunk it to the
+authors it reached), so the author showing its mark keeps it; the contact grid redistributor (`distribute_upfront_contacts`) leaves the last author's
+contacts where they are when another author requests a label a pending contact of their role carries —
+`relocate_annotations`, after it, gives that author its own, and the last author's are the run's, no pile (`\author{Ann
+Able$^{1}$}\author{Bob Baker}\affil{$^1$Univ X}\affil{Univ Y}\affil{Univ W}` had handed Univ Y to Ann); pending
+contacts of another role leave a pile one (2605.30274's e-mail lines beside mark-picked affiliations); a mark glued to a
+braced footnote symbol (`$^{1{\dagger}}$`, 2605.01693) is the mark and the symbol shown (`split_glued_symbol`); an authblk name kept on
+`\lx@add@creator` because text follows its marks still requests the affiliations its label-reading marks pick, the name
+kept as printed (`author_label_marks`: `Bob Baker$^{1}$\textsuperscript{equal contrib.}`, `Bob Baker$^{1}$ (bob@x.org)`
+had lost Univ X), which also passes it over in the run as a marked list name is — its labels only (`label_pieces`, r7):
+a footnote symbol there, alone, in a list or glued to a label (`$^{*}$`, `$^{1,\dagger}$`, `$^{1\ast}$`), is the
+printed name's and requests nothing (r6 showed it a second time after the name: `Bob Baker∗ (bob@x.org)∗`, 2605.10201's
+block gained "∗,†"); an `\affil` whose mark follows spacing
+or declarations that print nothing (`\affil{\vspace{-1.05em}$^2$\normalsize{…}}`, 2605.11124) opens with that mark
+(`opens_with_a_mark` past `leading_unprinted_end`); only the word "and" glued after a mark is a separator — a capitalised
+"And"/"AND" leaves the line one creator, reported `merged_creators` (r5 had merged it silently, the marks gone); and an
+address glued to a name annotation other than its markup (`\orcidlink{…}ann@x.org`, `\cite{x}ann@x.org`) stays the
+name's text.
+Beyond Perl and the classes (outside what they print, but the run): ecai's `\institute` is the author's affiliation
+(2008.02735, 1606.03244; witnesses 2501.13598, 2501.02040), where ecai.cls 2020:450 prints a `\thanks` footnote — a
+main-session decision, the semantic gain of an affiliation element over a footnote; and an unlabelled authblk `\affil`
+opening with a mark a queued author carries goes to the authors showing that mark (`\lx@add@affiliation@marked`, as a
+marked affiliation list's lines do: `\affil{$^1$Univ X}\affil{$^2$Univ Y}`, 1507.08653, 2510.01944), where
+authblk.sty:115-116 prints it under every author since the last `\affil` (`\AB@thenote`), the hand-written marks only
+pointing the reader to it; a footnote symbol (`$^*$Equal contribution`) or a mark no author carries keeps authblk's
+rule (a label no one requests would go to an author without a name). Beyond Perl but as authblk prints it: the run
+itself, consecutive unlabelled `\affil`s under the same authors (authblk.sty:115-116's `\AB@thenote`), where Perl's
+`annotate=new` (authblk.sty.ltxml:57) gives a later `\affil` only to the authors without one yet —
+`\author{Ann}\author{Bob}\affil{Univ X}\affil{Univ Y}` (r3 review probe q11) gives Ann X and Y, Perl Ann X alone. Also as
+authblk prints it (r7): a mark and a bracketed label printed as the same superscript are one label in
+`relocate_annotations` (`\AB@authnote`/`\AB@affilnote` set `\author[1]` and `\affil[1]` as `\textsuperscript{1}`,
+authblk.sty:98-99, :142, :162) — the label a mark set (`\affil{$^1$Univ X}`, `affiliation:1`) also reaches the authors
+labelled `1` (`\author[1]{Bob}`), and a bracketed label (`\affil[1]{Univ X}`) the authors requesting `affiliation:1` by a
+mark or `\inst{1}`; Perl matches the spellings exactly, and Bob lost Univ X (r6 review probes f2, f7, f1). A/B
+(int31a
+vs 77n) over the 17 S4/S5 projection papers, the 77d `merged_creators` set and 239 multi-author controls: the 17 and
+four more (2207.09162, 2304.04743, 2304.11349, nucl-th0101014) lose `Error:frontmatter:merged_creators`, 0 papers worse;
+three control outputs changed, all improvements (1011.3045 and 2306.06320 a parbox per name dropped, 2404.16541 the
+breqn marks); a fourth (1710.02500) was a time-limited math parse, identical on rerun. Witnesses also 2312.07592. Repros `sectioning-frontmatter/{author_ieee_wrapped_name_lists, author_ieee_group_names_with_memberships,
+author_ieee_group_bold_names_membership, author_ieee_uppercase_names_memberships,
+author_ieee_blockn_group_marks_math_active, author_parbox_names_with_notes, author_parbox_centered_names_in_a_group,
+author_note_macro_among_names, author_wrapped_comma_ends_a_row, author_and_opens_a_box,
+author_elsarticle_corref_after_names, author_footnote_environment_after_names, author_revtex_footnotetext_among_names,
+author_amsppt_footnotetext_after_names, author_ecai_institute_notes_and, author_authblk_and_between_names,
+author_revtex3_letter_marks_glue_after, author_link_wrapper_with_graphic, author_wrapper_split_negatives,
+author_parbox_single_author_stays, author_ecai_space_parted_names_stay_one, author_authblk_note_comma_keeps_earlier_authors,
+author_authblk_comma_list_after_author, author_authblk_consecutive_affils_share_authors,
+author_layout_box_styles_every_name, author_others_et_al_is_no_name, author_authblk_footnote_comma_keeps_three,
+author_authblk_and_list_after_author, author_authblk_marked_affils_pick_their_authors,
+author_authblk_symbol_mark_affil_runs, author_authblk_affil_after_unmarked_author, author_authblk_typo_mark_affil_runs,
+author_authblk_mark_list_then_single_mark, author_authblk_single_mark_then_mark_list,
+author_authblk_comma_names_then_marked_name, author_authblk_note_comma_then_marked_name,
+author_authblk_marked_affil_keeps_its_comma, author_authblk_superscript_inside_a_name, author_mark_glued_to_and,
+author_mark_list_glued_to_and, author_superscript_inside_a_word_digit, author_authblk_affil_inside_author,
+author_authblk_affil_after_affils_in_author, author_authblk_combined_mark_affil,
+author_authblk_mark_before_line_stays, author_authblk_textual_superscript_after_mark,
+author_authblk_textual_superscript_alone, author_authblk_superscript_marks_control,
+author_authblk_affil_in_later_author_skips_marked, author_authblk_affil_in_author_between_marked,
+author_authblk_labelled_author_shares_run, author_authblk_symbol_legend_reaches_marked,
+author_authblk_marked_then_plain_affil, author_authblk_unmarked_affils_after_marked_author,
+author_authblk_unmarked_affils_after_marked_group, author_authblk_marked_pair_then_unmarked_author,
+author_authblk_legend_after_passed_over_run, author_authblk_mark_then_raised_text_requests,
+author_authblk_mark_then_address_requests, author_authblk_second_mark_then_raised_text_requests,
+author_ptephy_unlabelled_affil_after_labelled, author_opex3_unmarked_address_after_marked,
+author_authblk_unmarked_affil_after_all_marked, author_mark_glued_to_capital_and_is_flagged,
+author_authblk_marked_affil_after_vspace, author_orcid_glued_to_email_stays, author_authblk_glued_braced_symbol_mark,
+author_email_pile_beside_marked_affiliations, author_authblk_symbol_mark_then_address_shown_once,
+author_authblk_symbol_mark_then_raised_text_shown_once, author_authblk_glued_symbols_in_one_author_block,
+author_authblk_labelled_author_and_marked_affil, author_authblk_marked_author_and_labelled_affil,
+author_authblk_legend_after_two_unmarked_affils}` and the RED residual
+`author_mark_before_orcid_link` (a split name's unanswered mark is shown after its ORCID link, SYNC_STATUS); guards
+`perfect_kernel_batch77n::*`.
+
 ### 766. A paragraph break inside an inline-only frontmatter item is a line break (Perl: the paragraphs run together)
 
 A frontmatter item is digested in text mode (Perl `digestFrontmatterItem` → `DigestText`), where `\par` closes no

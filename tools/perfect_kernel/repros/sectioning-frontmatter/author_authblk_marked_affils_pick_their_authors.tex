@@ -1,0 +1,18 @@
+% witness: 77n r2 — authblk's unlabelled `\affil`s opening with the hand-written marks the authors carry:
+%          `\author{Ann Able$^{1}$ and Bob Baker$^2$}\affil{$^1$Univ X}\affil{$^2$Univ Y}` (the r1 review's probe o4)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker2 / 1Univ X / 2Univ Y"
+% engines: rust int31a = one creator "Ann Able and Bob Baker" (+1 Error:frontmatter:merged_creators); 77n r1 = Ann Able
+%          Univ X, Bob Baker Univ X and Univ Y (`annotate=new`), the marks kept in the names
+% expect:  0 errors, 0 warnings; 2 creators, Ann Able's affiliation Univ X, Bob Baker's Univ Y (the marks answered)
+% status:  RED (int31a, 77n r1) -> GREEN (77n r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^2$}
+\affil{$^1$Univ X}
+\affil{$^2$Univ Y}
+\maketitle
+x
+\end{document}

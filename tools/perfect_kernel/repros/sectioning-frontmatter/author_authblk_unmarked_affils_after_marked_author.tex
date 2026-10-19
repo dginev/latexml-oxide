@@ -1,0 +1,20 @@
+% witness: 77n r5 review — unmarked authblk `\affil`s after a mark-picked one, the marked author before an unmarked one
+%          (review probe g01; g03, g05 the same class)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker / 1Univ X / Univ Y / Univ W"
+% engines: rust int32a = Ann with Univ X, Bob with Univ X, Univ Y and Univ W; 77n r5 = Ann with Univ Y and Univ X, Bob with
+%          Univ W only (the N x m contact grid redistributor read the run as a pile on the last author)
+% expect:  0 errors, 0 warnings; 2 creators, Ann Able with Univ X (her mark's), Bob Baker with Univ Y and Univ W
+% status:  RED (77n r5) -> GREEN (77n r6)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker}
+\affil{$^1$Univ X}
+\affil{Univ Y}
+\affil{Univ W}
+\maketitle
+x
+\end{document}

@@ -15901,3 +15901,16 @@ in math mode" for every hidden cell (1907.13126: 76). The Rust port defines `\ea
 with an active `$` (the class's `\hskip-2\tabcolsep` left out). Repro
 `class-bindings/aastex_table_dollar_and_hidden_column_2411.04196`; guard
 `perfect_kernel_batch77k::aastex_table_dollar_and_hidden_column`.
+
+## 992. authblk's `\author` with an `\and` list replaces the authors before it
+
+authblk.sty:114-145 adds every `\author` to the author block. Perl's authblk binding sends an unlabelled `\author`
+holding `\and`/`\And` to `\lx@add@authors` (authblk.sty.ltxml:52-53), whose first act is
+`dequeueFrontMatter('ltx:creator', role => 'author')` (Base_Utility.pool.ltxml:691), so every author queued before it is
+dropped, silently:
+`\usepackage{authblk}` … `\author{Ann Able}\affil{Univ A}\author{Bob Baker \and Cat Cole}\affil{Univ B}` gives Bob Baker
+and Cat Cole only; pdflatex prints all three. The Rust port adds such a list after the authors before it
+(`\lx@add@authors@list`, authblk_sty.rs `author_call`; OXIDIZED_DESIGN_DIVERGENCES #765), as it does an authblk comma
+list (AIAA new-aiaa.cls papers 2610.21324, 2008.05535 kept 1 of 3 authors when a note's comma sent them there). Repro
+`sectioning-frontmatter/author_authblk_and_list_after_author`; guard
+`perfect_kernel_batch77n::authblk_and_list_adds_to_earlier_authors`.

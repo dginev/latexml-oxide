@@ -704,12 +704,27 @@ fn frontmatter_abstract_centering_name() {
 fn frontmatter_neurips_author_bold_coherent() {
   let x = convert_to_xml("tests/cluster_regressions/frontmatter_neurips_author_bold_coherent.tex");
   // The plain-`\textbf` authors survive as plain personnames…
-  for name in ["Fanqing Meng", "Wenqi Shao", "Kaipeng Zhang", "Yu Qiao"] {
+  for name in ["Fanqing Meng", "Kaipeng Zhang", "Yu Qiao"] {
     assert!(
       x.contains(&format!("<personname>{name}</personname>")),
       "author {name} must be a plain personname (whole-name bold unwrapped):\n{x}"
     );
   }
+  // …Wenqi Shao's `$^{1*}$` is affiliation 1's mark and a star shown (77n r3: the one request `affiliation:1*`
+  // matched no affiliation, and Wenqi Shao had none)…
+  let shao = x
+    .split("<creator ")
+    .find(|creator| creator.contains("Wenqi Shao"))
+    // (squashed: the em spaces of `before` and the no-break space of the contact's name are whitespace too)
+    .map(|creator| creator.split_whitespace().collect::<Vec<_>>().join(" "));
+  assert_eq!(
+    shao.as_deref(),
+    Some(
+      "before=\" \" role=\"author\"> <personname>Wenqi Shao<sup>*</sup></personname> <contact name=\"Affiliation: \" \
+       role=\"affiliation\">OpenGVLab, Shanghai AI Laboratory</contact> </creator>"
+    ),
+    "Wenqi Shao must show the star and hold affiliation 1:\n{x}"
+  );
   // …the bold author WITH a trailing footnotemark is also unwrapped (the marker
   // stays inside the personname, the bold does not).
   assert!(

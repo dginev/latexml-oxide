@@ -1,0 +1,22 @@
+% witness: 77n S5 — REVTeX 3 names with letter marks, glue after the last: `\author{ Jonathan L.~Feng$^{ab}$,
+%          Konstantin T.~Matchev$^{c}$, and Yael Shadmi$^{d}$ \vskip 0.3in }` (hep-ph0107182)
+% oracle:  the paper's REVTeX 3 (`\documentstyle`; LaTeX 2.09 compatibility mode): "Ann Ableab, Bob Bakerc, and Cat
+%          Coled"
+% engines: rust int31a = one creator "Ann Able , Bob Baker , and Cat Cole" (+1 Error:frontmatter:merged_creators): the
+%          glue "0.3in" read as name text, so the cautious split read no names; Perl keeps the block one author
+% expect:  0 errors, 0 warnings; 3 creators, each with its mark
+% status:  RED (int31a) -> GREEN (77n)
+% preload: ar5iv.sty
+\documentstyle[prd,aps,preprint]{revtex}
+\begin{document}
+\title{T}
+\author{
+Ann Able$^{ab}$,
+Bob Baker$^{c}$,
+and Cat Cole$^{d}$
+\vskip 0.3in
+}
+\address{${}^{a}$Univ A\\ ${}^{b}$Univ B\\ ${}^{c}$Univ C\\ ${}^{d}$Univ D}
+\maketitle
+x
+\end{document}

@@ -1,0 +1,21 @@
+% witness: 77n r4 review — an `\affil` inside an authblk `\author` between marked authors, one of whose marks an
+%          `\affil` after it answers (review probe e4)
+% oracle:  pdflatex 0 errors: "Ann1 and Bob2 / 1Univ X / Cat / 2Univ Y" (Cat printed among the affiliations, Univ Z
+%          not at all)
+% engines: rust int32a = Ann with Univ X, Bob with Univ X, Cat with Univ Z and Univ Y; 77n r4 = Univ Z on all three
+% expect:  0 errors, 0 warnings; 3 creators, Ann with Univ X, Bob with Univ Y, Cat with Univ Z (Cat's `\affil` is
+%          digested with her, before Univ Y: the flush's offered labels tell Bob is answered)
+% status:  RED (77n r4) -> GREEN (77n r5)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann$^{1}$}
+\author{Bob$^{2}$}
+\affil{$^1$Univ X}
+\author{Cat \affil{Univ Z}}
+\affil{$^2$Univ Y}
+\maketitle
+x
+\end{document}

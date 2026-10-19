@@ -1,0 +1,18 @@
+% witness: 77n r6 review — a marked author and an `\author[1]` sharing an `\affil[1]` (review probes f7, f1)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker11 / 1Univ X / 1Univ Y"
+% engines: rust int32a, 77n r3-r6 = Bob Baker without Univ X (the label `1` reached the author labelled by it, not the
+%          one showing the mark, `affiliation:1`)
+% expect:  0 errors, 0 warnings; both authors with Univ Y and Univ X
+% status:  RED (int32a) -> GREEN (77n r7)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{Ann Able}
+\author{Bob Baker$^{1}$}
+\affil[1]{Univ X}
+\affil{Univ Y}
+\maketitle
+x
+\end{document}

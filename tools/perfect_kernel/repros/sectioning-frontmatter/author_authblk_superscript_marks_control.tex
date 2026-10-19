@@ -1,0 +1,19 @@
+% witness: 77n r5 — control for `reads_as_labels`: a `\textsuperscript{2}` after an authblk name's `$^{1}$` is a mark
+% oracle:  pdflatex 0 errors: "Ann Able12 and Bob Baker2 / 1Univ X / 2Univ Y"
+% engines: rust int32a = "Ann Able¹²" with Univ X only, Bob Baker with Univ X and Univ Y; 77n r4 = Ann Able with Univ X
+%          and Univ Y, Bob Baker with Univ Y
+% expect:  0 errors, 0 warnings; 2 creators, Ann Able with Univ X and Univ Y (both marks answered), Bob Baker with
+%          Univ Y (77n r4's, kept)
+% status:  GREEN (77n r4, r5)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$\textsuperscript{2}}
+\author{Bob Baker$^{2}$}
+\affil{$^1$Univ X}
+\affil{$^2$Univ Y}
+\maketitle
+x
+\end{document}

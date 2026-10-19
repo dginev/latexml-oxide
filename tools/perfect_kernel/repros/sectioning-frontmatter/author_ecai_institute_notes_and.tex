@@ -1,0 +1,17 @@
+% witness: 77n S5 — ecai.cls 2020's names in one `\author`, parted by its `\and` (:889 `\def\and{{\enspace \rm and
+%          \enspace}}`), a name's affiliation its `\institute` (:450 `\newcommand{\institute}[1]{\thanks{#1}}`):
+%          `\author{Kenneth Skiba\institute{…} \and Matthias Thimm$^1$}` (2008.02735)
+% oracle:  pdflatex (with the paper's ecai.cls) 0 errors: "Kenneth Skiba1 and Matthias Thimm1"
+% engines: rust int31a = one creator "Ann Able and Bob Baker", the note an affiliation of it (+1
+%          Error:frontmatter:merged_creators): the ecai binding added the block as one author; Perl has no ecai binding
+% expect:  0 errors, 0 warnings; 2 creators, the institute Ann Able's affiliation (77n r1 made it a thanks note; r2
+%          an affiliation, as int31a's one-author block had it)
+% status:  RED (int31a) -> GREEN (77n)
+% preload: ar5iv.sty
+\documentclass{ecai}
+\begin{document}
+\title{T}
+\author{Ann Able\institute{Univ A, City, email: \{ann, bob\}@uni.edu} \and Bob Baker$^1$}
+\maketitle
+x
+\end{document}

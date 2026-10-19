@@ -1,0 +1,22 @@
+% witness: 77n r3 — a superscript inside a name, a letter on each side (2505.09041 `\author{Craig
+%          M$^{\mathrm{c}}$Rae\thanks{…}}`), beside a marked author: the name's spelling, not an affiliation mark
+% oracle:  pdflatex 0 errors: "Craig McRae* and Ann Able1 / 1Univ X / Univ Y"
+% engines: rust int32a = "Craig M^c Rae" (the superscript kept in the name); 77n r3 before the fix = "Craig MRae" with
+%          the "c" shown after the name (read as an affiliation request once a marked authblk `\author` is a list)
+% expect:  0 errors, 0 warnings; 2 creators, "Craig M<sup>c</sup>Rae" with its note and Univ Y, Ann Able with Univ Y
+%          (the run's, under the block as printed) and Univ X (her mark's); since 77n r4 the name, its superscript text
+%          followed, is no list (`author_marks_end_name`) and keeps int32a's rendering of the superscript (an italic
+%          "c": int32a's font residual, pdflatex prints `$^{\mathrm{c}}$` upright)
+% status:  RED (77n r3 interim) -> GREEN (77n r3, r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Craig M$^{\mathrm{c}}$Rae\thanks{Electronic address: craig@x.org}}
+\author{Ann Able$^{1}$}
+\affil{$^1$Univ X}
+\affil{Univ Y}
+\maketitle
+x
+\end{document}

@@ -1,0 +1,18 @@
+% witness: 77n r2 — authblk's unlabelled `\author{Bob Baker, Cat Cole}` after an author with its `\affil` (the
+%          reviewer's probe a2: the comma branch replaced the authors before)
+% oracle:  pdflatex 0 errors: "Ann Able / Univ X / Bob Baker, Cat Cole / Univ Z"
+% engines: rust int31a, 77n r1 = "Bob Baker", "Cat Cole" and a nameless creator holding Univ X: Ann Able lost, 0 errors
+% expect:  0 errors, 0 warnings; 3 creators, Ann Able's affiliation Univ X, Bob Baker's and Cat Cole's Univ Z
+% status:  RED (int31a, 77n r1) -> GREEN (77n r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affil{Univ X}
+\author{Bob Baker, Cat Cole}
+\affil{Univ Z}
+\maketitle
+x
+\end{document}

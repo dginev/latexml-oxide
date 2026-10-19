@@ -1,0 +1,19 @@
+% witness: 77n r5 review — a marked authblk name whose second affiliation's mark a raised text follows (review probe k5)
+% oracle:  pdflatex 0 errors: "Ann Able1,2 and Bob Baker2equal / 1Univ X / 2Univ Y"
+% engines: rust int32a = Ann with Univ X, Bob with Univ X and Univ Y; 77n r4 = "Bob Bakerequal", the "2" lost; 77n r5 =
+%          Bob Baker with nothing
+% expect:  0 errors, 0 warnings; 2 creators, Ann Able with Univ X and Univ Y, Bob Baker ("2" and "equal" shown) with
+%          Univ Y
+% status:  RED (77n r5) -> GREEN (77n r6)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2}$}
+\author{Bob Baker$^{2}$\textsuperscript{equal}}
+\affil{$^1$Univ X}
+\affil{$^2$Univ Y}
+\maketitle
+x
+\end{document}
