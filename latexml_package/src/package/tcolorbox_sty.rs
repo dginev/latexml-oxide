@@ -50,20 +50,29 @@ pub(crate) fn tcb_resolve_listing_mode(opts: Tokens) -> Result<Vec<Digested>> {
   // key list carries the bracket text, not a macro name pgfkeys would
   // report as an unknown key.
   // (and so does every other delimited argument of the begin line, `\lxtcbopt<slot>`:
-  // `\NewTCBListing{macrodef}{ s o }{…IfValueT={#2}{hypertarget=#2}}`, jsonparse-doc)
+  // `\NewTCBListing{macrodef}{ s o }{…IfValueT={#2}{hypertarget=#2}}`, jsonparse-doc; and an
+  // absent leading optional's default, `\lxtcbleadopt`, `tcb_xparse_listing`)
   let opts = {
     let stands_in = |t: &Token| {
       t.get_catcode() == Catcode::CS
-        && t.with_str(|name| name == "\\lxtcbbangopt" || name.starts_with("\\lxtcbopt"))
+        && t.with_str(|name| {
+          name == "\\lxtcbbangopt" || name == "\\lxtcbleadopt" || name.starts_with("\\lxtcbopt")
+        })
     };
     if opts.unlist_ref().iter().any(stands_in) {
       let mut out = Vec::new();
       for t in opts.unlist_ref().iter() {
+        // (an absent `O{}` is `\def<slot>{}`, a macro with no expansion: it splices to nothing, as
+        // xparse passes the empty default — neoschool.cls:5168-5214 `\ifx\relax#3\relax` titled
+        // every `{code}` box "Listing N —" with the stand-in left in place)
         let body = if stands_in(t)
           && let Ok(Some(defn)) = lookup_definition(t)
-          && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
         {
-          Some(body.clone())
+          match defn.get_expansion() {
+            Some(ExpansionBody::Tokens(body)) => Some(body.clone()),
+            None if defn.is_expandable() => Some(Tokens::new(Vec::new())),
+            _ => None,
+          }
         } else {
           None
         };
@@ -89,9 +98,7 @@ pub(crate) fn tcb_resolve_listing_mode(opts: Tokens) -> Result<Vec<Digested>> {
     // (`\tcbset` reads the option tokens themselves, catcodes and all: xparse's no-value marker,
     // `\c_novalue_tl`, is `-NoValue-` with a letter `-`, expl3-code.tex:3562-3564, which a
     // text round-trip makes a value — `hypertarget=-NoValue-`, leporello-doc)
-    let mut set = vec![T_CS!("\\begingroup"), T_CS!("\\tcbset"), T_BEGIN!()];
-    set.extend(opts.unlist_ref().iter().copied());
-    set.push(T_END!());
+    let mut set = tcb_options_in_a_group(&opts);
     let src: &'static str = "\\ifdefined\\kvtcb@before@lower\\global\\let\\lx@tcb@execbefore\\kvtcb@before@lower\
          \\else\\global\\let\\lx@tcb@execbefore\\@empty\\fi\
        \\ifdefined\\kvtcb@after@lower\\global\\let\\lx@tcb@execafter\\kvtcb@after@lower\
@@ -103,6 +110,17 @@ pub(crate) fn tcb_resolve_listing_mode(opts: Tokens) -> Result<Vec<Digested>> {
        \\else\\lxtcbexec0 \\fi\
        \\ifdefined\\kvtcb@phantom\\global\\let\\lx@tcb@phantom\\kvtcb@phantom\
          \\else\\global\\let\\lx@tcb@phantom\\@empty\\fi\
+       \\gdef\\lx@tcb@layout{LO}\
+       \\ifx\\tcb@inputlisting\\tcb@inputlisting@inside \
+         \\ifx\\tcb@listing@process\\tcb@listing@listing \\gdef\\lx@tcb@layout{L}\\fi\
+         \\ifx\\tcb@listing@process\\tcb@listing@otherAndListing \\gdef\\lx@tcb@layout{OL}\\fi\
+         \\ifx\\tcb@listing@process\\tcbuselistingtext \\gdef\\lx@tcb@layout{O}\\fi\
+         \\ifx\\tcb@listing@process\\tcbuselistingcomment \\gdef\\lx@tcb@layout{O}\\fi\
+       \\else\
+         \\ifx\\tcb@inputlisting\\tcb@inputlisting@out@otherAboveListing \\gdef\\lx@tcb@layout{OL}\\fi\
+         \\ifx\\tcb@inputlisting\\tcb@inputlisting@out@otherAboveListing@Decoupled \\gdef\\lx@tcb@layout{OL}\\fi\
+         \\ifx\\tcb@inputlisting\\tcb@inputlisting@out@otherAndListing \\gdef\\lx@tcb@layout{OL}\\fi\
+       \\fi\
        \\endgroup";
     set.extend(mouth::tokenize_internal(TeXString::from(src)).unlist());
     let _ = digest(Tokens::new(set));
@@ -123,13 +141,80 @@ pub(crate) fn tcb_resolve_listing_mode(opts: Tokens) -> Result<Vec<Digested>> {
       _ => Stored::None,
     };
     AssignValue!("tcb_pending_phantom" => phantom, Scope::Global);
+    // Where the box puts its listing and its other part (the text or the comment), read off the
+    // resolved process macros (tcblistingscore.code.tex:195-220): `L` listing only, `O` the other part
+    // only (`text only`, `comment only`), `LO` listing first (`listing and text`, the default, and
+    // the `listing above …`/`… outside` forms), `OL` the other part first. Only `\newtcbinputlisting`
+    // honours it (`tcb_pending_layout`); the listing environments keep their display.
+    let layout = match lookup_definition(&T_CS!("\\lx@tcb@layout")) {
+      Ok(Some(defn)) => match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => body.to_string(),
+        _ => String::from("LO"),
+      },
+      _ => String::from("LO"),
+    };
+    AssignValue!("tcb_pending_layout" => Stored::String(pin(&layout)), Scope::Global);
+    tcb_store_pending_title();
   } else {
     let execute = !split_keyval_source(&text)
       .iter()
       .any(|(key, _)| NO_TEXT_MODES.contains(&key.trim()));
     AssignValue!("LISTINGS_EXECUTE_BODY" => execute, Scope::Global);
+    AssignValue!("tcb_pending_layout" => Stored::String(pin("LO")), Scope::Global);
   }
   Ok(Vec::new())
+}
+
+/// A box on a layer above the first starts from `reset` (tcolorbox.sty:1393/1405-1407 `every box on
+/// layer N` = `reset,every box` for N > 1, applied by `\tcb@layer@inc`, :1411-1426), so inside another
+/// box the enclosing box's `title` is not the listing box's. Run before the options' `\tcbset`.
+const TCB_TITLE_NESTED_RESET: &str = "\\ifnum\\c@tcblayer>\\z@ \\let\\kvtcb@title\\@empty\\fi";
+/// The resolved `title` of the box (tcolorbox.sty:214 `title/.store in=\kvtcb@title`; a `detach title`
+/// box keeps it in `\tcbtitletext` instead, :165-172, and draws no title bar), and whether the box removes
+/// listings' own caption (tcblistings.code.tex:69-72 `listing remove caption`, on by default through
+/// `reset@listings`, :88-93: `\lst@MakeCaption` gobbled — no listings caption, title or `lol` entry), read back
+/// after the options' `\tcbset` for [`tcb_store_pending_title`].
+const TCB_TITLE_CAPTURE: &str = "\\ifdefined\\kvtcb@title\\global\\let\\lx@tcb@title\\kvtcb@title\\else\\global\\let\\lx@tcb@title\\@empty\\fi\
+  \\gdef\\lx@tcb@nocaption{0}\\ifdefined\\tcb@listing@set@MakeCaption\\ifx\\tcb@listing@set@MakeCaption\\tcb@listing@set@MakeCaption@empty\
+  \\gdef\\lx@tcb@nocaption{1}\\fi\\fi";
+
+/// `\begingroup` and a listing box's options set as the box sets them (`\tcbset{opts}`, after
+/// [`TCB_TITLE_NESTED_RESET`]), then its title read back ([`TCB_TITLE_CAPTURE`]); the caller reads
+/// what else it needs and closes the group.
+fn tcb_options_in_a_group(opts: &Tokens) -> Vec<Token> {
+  let mut set = vec![T_CS!("\\begingroup")];
+  set.extend(mouth::tokenize_internal(TeXString::from(TCB_TITLE_NESTED_RESET)).unlist());
+  set.extend([T_CS!("\\tcbset"), T_BEGIN!()]);
+  set.extend(opts.unlist_ref().iter().copied());
+  set.push(T_END!());
+  set.extend(mouth::tokenize_internal(TeXString::from(TCB_TITLE_CAPTURE)).unlist());
+  set
+}
+
+/// Park the box title [`TCB_TITLE_CAPTURE`] read for the listing the box typesets
+/// (`tcb_pending_title`, taken by `listings_sty::lst_process_display_with`, which sets it as the
+/// listing's title — listings' own `title=` path, `\lstlisting@maketitle`). tcolorbox prints it in the
+/// box's title bar (tcolorbox.sty:162-163 `\tcbtitle`); the binding's listing environments
+/// (`\newtcblisting`, the `\NewTCBListing` family, `\newtcbinputlisting`) are listings
+/// environments without that box, and dropped it: `\newtcblisting[use
+/// counter=example]{example}[2][]{title={Example~\thetcbcounter: #2},#1}` (2405.01480, 1912.06298,
+/// 2105.06630, 2301.07825, 2302.14514, 2410.04867) lost every "Example N: …" with no diagnostic.
+/// Guards: `perfect_kernel_batch77m::{newtcblisting_keeps_its_counted_title,
+/// new_tcb_listing_keeps_its_title, newtcbinputlisting_keeps_its_title}`.
+fn tcb_store_pending_title() {
+  let title = match lookup_definition(&T_CS!("\\lx@tcb@title")) {
+    Ok(Some(defn)) => match defn.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) if !body.is_empty() => Stored::Tokens(body.clone()),
+      _ => Stored::None,
+    },
+    _ => Stored::None,
+  };
+  AssignValue!("tcb_pending_title" => title, Scope::Global);
+  let remove_caption = matches!(
+    lookup_definition(&T_CS!("\\lx@tcb@nocaption")),
+    Ok(Some(defn)) if matches!(defn.get_expansion(), Some(ExpansionBody::Tokens(body)) if body.to_string() == "1")
+  );
+  AssignValue!("tcb_pending_remove_caption" => remove_caption, Scope::Global);
 }
 
 /// Read a tcolorbox listing environment's delimited begin-line arguments from the rest of its
@@ -236,15 +321,16 @@ LoadDefinitions!({
   DefMacro!("\\tcb@check@library@version", "", locked => true);
 
   // \newtcblisting[init-options]{name}[N][default]{tcb-options} (tcolorbox
-  // `listings`/`minted` library) — a code-listing box. Its box styling is purely
-  // visual; what matters for the logical output is the code BODY, which must be
-  // captured verbatim and CLOSED at \end{name}. The raw library's body capture
-  // does not integrate with LaTeXML's verbatim reader, so the listing runs past
-  // its \end{name} and swallows following content (sections leak into
+  // `listings`/`minted` library) — a code-listing box. What matters for the logical
+  // output is the code BODY, which must be captured verbatim and CLOSED at
+  // \end{name}, and the box's title. The raw library's body capture once ran past
+  // its \end{name} and swallowed following content (sections leaked into
   // <ltx:verbatim>). Delegate to listings' \lstnewenvironment (same
-  // name/[N][default] shape; the leading [init-options] and trailing tcb options
-  // are dropped), whose verbatim reader terminates correctly. `locked` so a later
-  // raw `\tcbuselibrary{listings}` can't clobber it.
+  // name/[N][default] shape; of the leading [init-options] and trailing tcb options,
+  // the counter, the mode, the listing file, the phantom code and the title are
+  // honoured — `tcb_listing_startend`, `tcb_resolve_listing_mode`), whose verbatim
+  // reader terminates correctly; why not tcolorbox's own definition: OD #768.
+  // `locked` so a later raw `\tcbuselibrary{listings}` can't clobber it.
   //
   // The signature MUST include the leading `[init-options]` optional (real
   // tcolorbox `\NewDocumentCommand \__tcobox_new_tcolorbox:w { m +O{} m o +o +m }`,
@@ -281,6 +367,8 @@ LoadDefinitions!({
   RawTeX!(r"\expandafter\let\expandafter\lxtcbnovalue\csname c_novalue_tl\endcsname");
   DefPrimitive!("\\lxtcbdropphantom", {
     AssignValue!("tcb_pending_phantom" => Stored::None, Scope::Global);
+    AssignValue!("tcb_pending_title" => Stored::None, Scope::Global);
+    AssignValue!("tcb_pending_remove_caption" => false, Scope::Global);
     Ok(Vec::new())
   });
   DefMacro!("\\lx@tcb@execbefore", "");
@@ -505,9 +593,20 @@ pub(crate) fn tcb_xparse_listing(
   // itself (jsonparse-doc's `{ s o }` `macrodef`: the bracket was lost, its `hypertarget=#2` empty).
   // Guards: `perfect_kernel_batch59::tcb_listing_keeps_its_hypertarget`,
   // `perfect_kernel_batch59::tcb_listing_begin_line_edge_cases`.
+  // A LEADING optional is the `[n][default]` parameter of `\lstnewenvironment`, whose default is the
+  // slot's stand-in, absent like the others: `O{Default}` its default, `o`/`d[]` xparse's no-value
+  // marker — `\IfNoValueTF{#1}` tests the tokens `-NoValue-` (expl3-code.tex:4130-4143), which only
+  // the stand-in's splice delivers with their catcodes (`\lxtcbleadopt`: no begin-line argument for
+  // listings' raw reader to re-read, so not one that parks the options, `tcb_pending_mode_opts`, and
+  // turns off its "Text dropped" warning). The arity's empty default once made
+  // `\NewTCBListing{codeo}{ o }{title={\IfNoValueTF{#1}{Code}{Code: #1}}}` "Code: " and
+  // `{ O{Default} }{title={T: #1}}` "T:" (pdflatex: "Code", "T: Default").
+  // Guards: `perfect_kernel_batch77m::{new_tcb_listing_leading_o_absent_is_no_value,
+  // new_tcb_listing_leading_optional_keeps_its_default}`.
   let mut absent_values = String::new();
   for (i, (c, d, _)) in specs.iter().enumerate() {
     if i == 0 && leading_optional {
+      absent_values.push_str(&absent(i, "\\lxtcbleadopt"));
       continue;
     }
     match c {
@@ -595,7 +694,7 @@ pub(crate) fn tcb_xparse_listing(
   let (start, end) = tcb_listing_startend(&name_str, init, &opts_renumbered);
   let start = format!("{absent_values}{start}");
   let arity = if leading_optional {
-    format!("[{}][]", mandatory + 1)
+    format!("[{}][\\lxtcbleadopt]", mandatory + 1)
   } else {
     format!("[{}]", mandatory)
   };
@@ -728,6 +827,18 @@ fn xparse_signature_specs_defaults(sig: &str) -> Vec<(char, String, String, bool
   out
 }
 
+/// A tcb listing box's per-use counter code, as `\tcb@proc@counter@autoanduse` / `…@from` / `…@no` append it
+/// to the box options (tcolorbox.sty:2297-2331): with a counter recorded for `name` by tcolorbox's init processor
+/// (`\tcb@cnt@<name>`), step it and expose `\thetcbcounter`; without one, `\tcbcounter` and `\thetcbcounter` are
+/// empty. Read at the user's catcodes (no `@` letters outside the `\csname` texts).
+pub(crate) fn tcb_counter_step_code(name: &str) -> String {
+  format!(
+    "\\ifcsdef{{tcb@cnt@{name}}}{{\\letcs\\tcbcounter{{tcb@cnt@{name}}}\
+     \\letcs\\thetcbcounter{{thetcb@cnt@{name}}}\\refstepcounter{{\\tcbcounter}}}}\
+     {{\\let\\tcbcounter\\empty\\let\\thetcbcounter\\empty}}"
+  )
+}
+
 /// Distill the per-use side effects a tcb listing environment owes from its
 /// `[init-options]` + `{options}` — the pieces of the tcolorbox option
 /// machinery with document-visible consequences. Currently honored:
@@ -736,7 +847,9 @@ fn xparse_signature_specs_defaults(sig: &str) -> Vec<(char, String, String, bool
 /// to F for `\input`-back, tcblistingscore `listing file`; F is expanded at
 /// USE time so `\jobname.\thetcbcounter.listing` names follow the counter —
 /// witness incgraph.tex L857 `\inputlisting{\n}` reading 12 such files).
-/// Everything else remains presentation-only and is dropped.
+/// The mode, the phantom code and the title are resolved per use from the start
+/// code's `\lxtcblistingmode` (`tcb_resolve_listing_mode`); the rest is
+/// presentation only and is dropped.
 pub(crate) fn tcb_listing_startend(
   env_name: &str,
   init: Option<&Tokens>,
@@ -763,14 +876,11 @@ pub(crate) fn tcb_listing_startend(
     let _ = digest(mouth::tokenize_internal(TeXString::assembled(format!(
       "\\tcb@proc@options@init{{{init_src}}}{{{env_name}}}"
     ))));
-    start.insert_str(
-      0,
-      &format!(
-        "\\ifcsdef{{tcb@cnt@{env_name}}}{{\\letcs\\tcbcounter{{tcb@cnt@{env_name}}}\
-         \\letcs\\thetcbcounter{{thetcb@cnt@{env_name}}}\\refstepcounter{{\\tcbcounter}}}}{{}}"
-      ),
-    );
   }
+  // A box without a counter has an empty `\thetcbcounter` (`no counter`, the `reset@new` default,
+  // tcolorbox.sty:2335-2337 `\tcb@proc@counter@no` `\let\thetcbcounter=\@empty`, key `no counter` :2258): 2605.21082's `title={\textbf{code~\thetcbcounter}:
+  // #2}` with no counter prints "code : …" (it was undefined:\thetcbcounter once the title was typeset).
+  start.insert_str(0, &tcb_counter_step_code(env_name));
   // The listing MODE (tcblistingscore.code.tex:200-215: `listing and text`
   // default, `listing only`, `text only`, the `*comment*` forms) decides
   // whether the body is also executed; the per-use `#1` is only known at use

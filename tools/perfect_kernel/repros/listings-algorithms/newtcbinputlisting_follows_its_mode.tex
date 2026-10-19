@@ -1,0 +1,18 @@
+% witness: 2405.01480, 2405.02221, 2405.02462, 2405.03285, incgraph-doc; shipped template unused by the main file in
+%   1912.06298, 2105.06630, 2301.07825, 2302.14514, 2410.04867 (`\examplefile[label={ex:abs}]`: the default `listing and text`)
+% oracle:  pdflatex 0 errors: default = code then bold "Typeset"; `text and listing` = "Typeset" then code; `text only` = "Typeset"; `listing only` = code
+% engines: rust 77m r1 = 0 errors, every box code only (the text part dropped); perl: raw tcblistings
+% expect:  0 errors, 0 warnings; the four boxes in pdflatex's order
+% status:  RED (77m r1) -> GREEN (77m r2: tcblistingscore_code_tex.rs `\newtcbinputlisting` follows `tcb_pending_layout`)
+\documentclass{article}
+\usepackage[listings]{tcolorbox}
+\begin{filecontents*}[overwrite]{tcbmode.txt}
+\textbf{Typeset}
+\end{filecontents*}
+\newtcbinputlisting{\showfile}[2][]{title={Mode: #2},listing file={tcbmode.txt},#1}
+\begin{document}
+\showfile{default}
+\showfile[text and listing]{text first}
+\showfile[text only]{text alone}
+\showfile[listing only]{listing alone}
+\end{document}

@@ -1,0 +1,17 @@
+% witness: 2409.11413 (`\lstset{…title=\lstname…}` with `\newtcblisting[auto counter,…]{tcbcode}[2][]{title=Listing~\thetcbcounter:~#2,…}`, 13 boxes)
+% oracle:  pdflatex 0 errors: "Listing 1: Setup" over "x = 1"; the raw box "Raw Title" over "y = 2"; no listings title (`listing remove caption`, tcblistings.code.tex:31-33/:91, gobbles `\lst@MakeCaption`)
+% engines: rust 77j3 = 0 errors, an empty caption on the environment's listing, the raw box's listing captioned "<job>.listing"; perl: raw tcblistings
+% expect:  0 errors, 0 warnings; the environment's listing captioned "Listing 1: Setup"; no other caption
+% status:  RED (77j3) -> GREEN (77m: listings_sty.rs `lst_process_display_with`, gobbled `\lst@MakeCaption` / `tcb_pending_remove_caption`)
+\documentclass{article}
+\usepackage[listings]{tcolorbox}
+\lstset{title=\lstname}
+\newtcblisting[auto counter]{tcbcode}[2][]{title=Listing~\thetcbcounter:~#2,listing only,#1}
+\begin{document}
+\begin{tcbcode}{Setup}
+x = 1
+\end{tcbcode}
+\begin{tcblisting}{title=Raw Title,listing only}
+y = 2
+\end{tcblisting}
+\end{document}

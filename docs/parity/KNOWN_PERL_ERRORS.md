@@ -15854,3 +15854,18 @@ class building on the saved copy, as latex.ltx's own `\underline` does, raises a
 port saves it in latex_base.rs, where latex.ltx does (C.13 boxes). Guards
 `dump_gate_init::nodump_latex_branch_converts_healthily` (NODUMP) and
 `perfect_kernel_batch77g::kernel_primitive_standins_mean_their_primitive` (dump).
+
+## 988. listings' `nolol` is ignored: every named listing is a list-of-listings float
+
+listings.sty:1409-1411 `nolol` keeps a listing out of the list of listings: `\lst@MakeCaption` (:1644-1656) writes the
+`lol` entry — the caption, or the bare name of a named listing such as `\lstinputlisting`'s file — only without it.
+Perl's binding declares the key ignorable (listings.sty.ltxml:889 `DefKeyVal('LST', 'nolol', '', 'true'); #
+Ignorable`) and makes every named listing a `\@listings` float (`<ltx:float inlist='lol'>`, :210-216) whose toc
+caption is the name (`LST@toctitle`, :180). Minimal trigger: `\lstinputlisting[nolol]{code.txt}` → `<float
+inlist="lol">` … `<toccaption>code.txt</toccaption>`; pdflatex lists nothing and prints no caption. tcolorbox reads
+every listing box body back that way (`\lstinputlisting[nolol,…]{\jobname.listing}`, tcblistings.code.tex:39/:45),
+so each raw `{tcblisting}` box held a `lol` float captioned "<job>.listing" (2512.18601, 2606.05464, 2606.27251,
+2607.12625). The Rust port honours the key (listings_sty.rs `lst_process_display_with`: no `LST@toctitle` from the
+name, no float for an uncaptioned named listing, a captioned one numbered in no list, `\lx@listings@unlisted`). Guards
+`perfect_kernel_batch77m::{raw_tcblisting_read_back_is_not_listed, newtcbinputlisting_keeps_its_title,
+nolol_listing_is_numbered_but_not_listed}`.

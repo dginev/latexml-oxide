@@ -20556,3 +20556,63 @@ Rust-only bindings' `\And`/`\AND`/`\Ands` (colm2025_conference, jmlr, jmlr2e) ar
 `perfect_kernel_batch77f::{inline_item_paragraphs_are_line_breaks, apa_acknowledgements_paragraphs_are_lines,
 single_space_macros_are_spaces}`. **Why**:
 the author's line structure is content; merging two paragraphs into one sentence run misreports it.
+
+### 768. A tcolorbox listing environment's box title is the listing's title (Perl: raw tcblistings, the box not read back)
+
+tcolorbox prints a listing box's `title=` in the box's title bar (tcolorbox.sty:162-163 `\tcbtitle`, :214
+`title/.store in=\kvtcb@title`); `\newtcblisting`/`\NewTCBListing` environments and `\newtcbinputlisting` commands are
+boxes around `\tcblisting{…,options@for=name}` / `\tcbinputlisting{…}` (tcblistingscore.code.tex:301-378). **Perl**
+raw-loads them (tcolorbox.sty.ltxml:27). **Rust** delegates them to listings (OD #410), which typeset the listing
+without the box and had dropped every box option but the counter, the mode and the listing file — the "Example N: …"
+or "Listing N: …" of each box was lost with no diagnostic (silent-loss row #16).
+
+Now the box options are set in a group as the box sets them (`tcolorbox_sty::tcb_resolve_listing_mode`, for the
+environments and for `\newtcbinputlisting`; inside another box, where tcolorbox's `every box on layer N` is `reset`, the
+enclosing box's title is cleared first), the resolved `\kvtcb@title` is parked (`tcb_pending_title`) and the listing
+takes it as its listings `title=` when it has none (`listings_sty::lst_process_display_with` → `\lstlisting@maketitle`):
+an unnumbered `ltx:float class="ltx_lstlisting"` whose `ltx:caption` (and `ltx:toccaption`) is the title, always above
+the code — the box's title bar is above whatever listings' `captionpos` says (the box gobbles `\lst@MakeCaption`, so
+`captionpos` never reaches it; 2409.11413 setup.tex:86 and 2402.13846 headers/lqa/listing.tex:35 set `captionpos=b`). Not in the list of
+listings (tcolorbox reads the body back `nolol`, KNOWN_PERL_ERRORS #988). The box's `listing remove caption`
+(tcblistings.code.tex:69-72, on by default through `reset@listings`, :88-93) is honoured the same way: it gobbles
+`\lst@MakeCaption`, so listings' own caption, title and list entry are not made — the box title is the only one
+(2409.11413's `\lstset{title=\lstname}` had emptied all 13 "Listing N: …" titles; a raw box's read-back runs with
+`\lst@MakeCaption` = `\@gobble`, which `lst_process_display_with` reads as such). The box frame and colours are not
+drawn; a box with `detach title` (title not in the bar) keeps none. `\newtcbinputlisting`'s `[init]` options go through
+tcolorbox's own init processor under the command's name (`\tcb@proc@options@init`, tcblistingscore.code.tex:374-377), so
+`use counter=` gives each use `\thetcbcounter`, and a box without a counter has an empty `\thetcbcounter`
+(tcolorbox.sty:2335-2337 `\tcb@proc@counter@no`, key `no counter` :2258; 2605.21082's `title={\textbf{code~\thetcbcounter}: #2}` prints "code : …",
+`tcolorbox_sty::tcb_counter_step_code`). `\newtcbinputlisting` also carries the box's phantom code (a per-use `label=` /
+`hypertarget=`, at the listing's first line as for the environments) and follows the box's mode as `\tcbinputlisting`
+does (tcblistingscore.code.tex:195-220, `tcb_pending_layout`): `listing and text` (the default) typesets the file again
+after the listing, `text and listing` before it, `text only` alone, `listing only` not. An absent begin-line argument
+stands in the options as xparse passes it: an `O{}` its empty default (an empty `\def` splices to nothing;
+neoschool.cls:5168-5214 `\ifx\relax#3\relax` had titled all 40 `{code}` boxes, and its unspliced stand-ins raised 44 of
+its 141 pgfkeys errors), a LEADING `O{default}`/`D[]{default}` its default and a leading `o`/`d[]` xparse's no-value
+marker (the `\lstnewenvironment` arity's default is the slot's stand-in, `tcb_xparse_listing`; its empty default had
+made `\IfNoValueTF{#1}{Code}{Code: #1}` "Code: " and `O{Default}` empty). The raw `{tcblisting}` environment is
+unchanged: it draws the box (a picture), title included.
+
+Residuals: `blend into=listings` (its `before title` "Listing N: " prefix), `before title=` and `attach title to upper`
+are not captured; `adjusted title`'s `\vphantom` renders as a hidden span with width; a `text only` listing
+environment still shows its code (the delegation always displays it; `\newtcbinputlisting` honours the mode); a
+`text only` input listing has no listing to carry its title (a paragraph before the text) or its label (dropped); the `comment` modes' comment
+is not typeset; `captionpos=tb` keeps Perl's `eq 't'` reading for a listings title (bottom only). A box `label=`'s
+`\ref` prints the enclosing section's number, not the box's counter (Perl identical; SYNC silent-loss row "tcolorbox
+box label").
+
+Witnesses 2405.01480, 2405.02221, 2405.02462, 2405.03285, incgraph-doc (and the same template shipped unused by the
+main file in 1912.06298, 2105.06630, 2301.07825, 2302.14514, 2410.04867) (`\newtcblisting[use
+counter=example]{example}[2][]{title={Example~\thetcbcounter: #2},#1}` and its `\examplefile`, in the shipped
+docsiamonline/docsiamart template), 2405.01576, 2409.11413, 2508.16690, 2605.21082, neoschool. Repros
+`listings-algorithms/{newtcblisting_keeps_its_counted_title, new_tcb_listing_keeps_its_title,
+newtcbinputlisting_keeps_its_title, new_tcb_listing_empty_optional_is_empty,
+newtcblisting_without_a_counter_has_an_empty_counter, tcb_box_title_replaces_the_listings_title,
+tcb_box_title_stays_above_under_captionpos_b, new_tcb_listing_leading_o_absent_is_no_value,
+new_tcb_listing_leading_optional_keeps_its_default, newtcbinputlisting_keeps_its_label,
+newtcbinputlisting_follows_its_mode}`; guards `perfect_kernel_batch77m::*` (same names). **Why**: the title is
+authored content (often the listing's number and name, the target of the text's references); the switch to
+tcolorbox's own definitions (the raw `{tcblisting}` path) was measured and not taken in this batch — it loses a box
+`label`'s target (raw tcolorbox puts it on the nearest labelled ancestor, a section or `<document>`) and the
+`\NewTCBListing` begin-line reading (`perfect_kernel_batch59::{tcb_listing_label_names_its_listing,
+tcb_listing_keeps_its_hypertarget, tcb_listing_begin_line_edge_cases}`, `perfect_kernel_batch40_43::newtcblisting_xparse_leading_optional`).

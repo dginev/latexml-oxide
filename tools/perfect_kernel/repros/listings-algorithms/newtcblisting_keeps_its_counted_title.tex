@@ -1,0 +1,14 @@
+% witness: silent-loss row #16 (probe tcb16/v5.tex); 2405.01576 (`\newtcblisting[auto counter,number within=section]{promptbox}`), 2409.11413 (`title=Listing~\thetcbcounter:~#2`)
+% oracle:  pdflatex 0 errors: the box's title bar prints "Listing 1: Numbered One", the box holds "y = 2", then "After."
+% engines: rust 77j3 = 0 errors but a bare <listing>, the title lost (`tcb_listing_startend` kept the counter/mode/file keys only); perl: raw tcblistings, the listing is not read back
+% expect:  0 errors, 0 warnings; the listing's caption is "Listing 1: Numbered One" above "y = 2"; "After." follows outside it
+% status:  RED (77j3) -> GREEN (77m: tcolorbox_sty.rs `tcb_store_pending_title`, listings_sty.rs `lst_process_display_with`)
+\documentclass{article}
+\usepackage[listings]{tcolorbox}
+\newtcblisting[auto counter]{mylisting}[1]{title={Listing \thetcbcounter: #1},listing only}
+\begin{document}
+\begin{mylisting}{Numbered One}
+y = 2
+\end{mylisting}
+After.
+\end{document}

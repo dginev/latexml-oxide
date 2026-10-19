@@ -1,0 +1,17 @@
+% witness: none (found while fixing silent-loss row #16; probe scratch_77m/stale.tex)
+% oracle:  pdflatex 0 errors: the box shows "AAA" and runs it (`listing and text`, the default); the plain listings environment shows "BBB" once, as code only
+% engines: rust 77j3 = 0 errors, "BBB" also typeset as a paragraph (the box's execute flag outlived it); perl: raw tcblistings
+% expect:  0 errors, 0 warnings; "BBB" only in the listing
+% status:  RED (77j3) -> GREEN (77m: listings_sty.rs `\lx@lstenv@body` takes LISTINGS_EXECUTE_BODY)
+\documentclass{article}
+\usepackage[listings]{tcolorbox}
+\newtcblisting{demo}{}
+\lstnewenvironment{plain}{}{}
+\begin{document}
+\begin{demo}
+AAA
+\end{demo}
+\begin{plain}
+BBB
+\end{plain}
+\end{document}

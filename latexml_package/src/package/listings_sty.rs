@@ -2473,17 +2473,63 @@ pub fn lst_process_display_with(
   let processed = with_tcb_phantom(processed);
   let (mut body, trailer) = lst_process_block_with(name.clone(), text, processed);
 
+  // `nolol` (listings.sty:1409-1411; `\lstKV@SetIf` reads the value's first letter) keeps the listing
+  // out of the list of listings: `\lst@MakeCaption` (:1644-1656) writes the `lol` entry — the caption,
+  // or the bare name of a named listing — only without it. Perl ignores the key
+  // (listings.sty.ltxml:889 `# Ignorable`), so every named listing is a `lol` float whose toc caption
+  // is its name: tcolorbox's read-back of its box body, `\lstinputlisting[nolol]{\jobname.listing}`
+  // (tcblistings.code.tex:39/:45), put a `<toccaption>` "<job>.listing" in every raw `{tcblisting}`
+  // box (2512.18601, 2606.05464, 2606.27251, 2607.12625; KNOWN_PERL_ERRORS #988). Guard
+  // `perfect_kernel_batch77m::raw_tcblisting_read_back_is_not_listed`.
+  let nolol = lst_get_literal("nolol").trim().starts_with(['t', 'T']);
+  // A gobbled `\lst@MakeCaption` (listings.sty:1635-1663) makes no caption, title or `lol` entry at
+  // all: tcolorbox's `listing remove caption` (tcblistings.code.tex:31-33, on by default) around its
+  // read-back of a raw box, or — for the binding's listing environments, which run no such group — the
+  // box's resolved setting (`tcolorbox_sty::tcb_store_pending_title`). Its box title is then the only
+  // one: 2409.11413's `\lstset{title=\lstname}` emptied every box's "Listing N: …" title.
+  // Guard `perfect_kernel_batch77m::tcb_box_title_replaces_the_listings_title`.
+  let gobbled = matches!(
+    (lookup_meaning(&T_CS!("\\lst@MakeCaption")), lookup_meaning(&T_CS!("\\@gobble"))),
+    (Some(a), Some(b)) if a == b
+  );
+  let tcb_remove_caption = lookup_bool("tcb_pending_remove_caption");
+  AssignValue!("tcb_pending_remove_caption" => false, Scope::Global);
+  let no_caption = gobbled || tcb_remove_caption;
+  let nolol = nolol || no_caption;
   // Perl: AssignValue('LST@toctitle', $name) — so it shows up in list of listings
   if let Some(ref n) = name
     && !n.is_empty()
+    && !nolol
   {
     assign_value("LST@toctitle", Stored::from(n.clone()), None);
   }
 
   // Check for caption/title/toctitle — Perl lines 183-193
-  let caption_tokens = lst_get_tokens("caption");
-  let title_tokens = lst_get_tokens("title");
-  let toctitle_tokens = lst_get_tokens("toctitle");
+  let (caption_tokens, mut title_tokens) = if no_caption {
+    (Tokens!(), Tokens!())
+  } else {
+    (lst_get_tokens("caption"), lst_get_tokens("title"))
+  };
+  // A tcolorbox listing box's title (`tcolorbox_sty::tcb_store_pending_title`), the listing's own when
+  // it has none: the box prints it above the listing, in its title bar (tcolorbox.sty:162-163
+  // `\tcbtitle`), whatever listings' `captionpos` says — the box gobbles `\lst@MakeCaption`, so
+  // `captionpos` never reaches it (2409.11413 setup.tex:86 `\lstset{captionpos=b}`: its 13 box titles
+  // went below the code; 2402.13846 headers/lqa/listing.tex:35; 2508.16690 and 2301.07825 set it for
+  // plain listings only, which keep it). Guard
+  // `perfect_kernel_batch77m::tcb_box_title_stays_above_under_captionpos_b`.
+  let mut title_from_tcb = false;
+  if let Some(Stored::Tokens(tcb_title)) = lookup_value("tcb_pending_title") {
+    AssignValue!("tcb_pending_title" => Stored::None, Scope::Global);
+    if title_tokens.is_empty() {
+      title_tokens = tcb_title;
+      title_from_tcb = true;
+    }
+  }
+  let toctitle_tokens = if no_caption {
+    Tokens!()
+  } else {
+    lst_get_tokens("toctitle")
+  };
   let label_tokens = lst_get_tokens("label");
 
   let mut numbered = false;
@@ -2515,15 +2561,30 @@ pub fn lst_process_display_with(
     } else {
       body.extend(caption);
     }
-  } else if !title_tokens.is_empty() {
-    has_caption = true;
-    let title_inv = invoke(T_CS!("\\lstlisting@maketitle"), vec![title_tokens]);
-    body.extend(title_inv);
-  } else if !toctitle_tokens.is_empty() {
-    // Perl line 192-193: toctitle without caption/title
-    has_caption = true;
-    let toctitle_inv = invoke(T_CS!("\\lstlisting@maketoctitle"), vec![toctitle_tokens]);
-    body.extend(toctitle_inv);
+  } else {
+    // A title (or a bare toc title) goes where `captionpos` puts it, as the caption does (Perl
+    // listings.sty.ltxml:199-203 places whichever of the three it made; listings.sty:1658
+    // `\lst@IfSubstring #1\lst@captionpos` prints the title at the top by default).
+    let made = if !title_tokens.is_empty() {
+      Some(invoke(T_CS!("\\lstlisting@maketitle"), vec![title_tokens]))
+    } else if !toctitle_tokens.is_empty() {
+      // Perl line 192-193: toctitle without caption/title
+      Some(invoke(T_CS!("\\lstlisting@maketoctitle"), vec![
+        toctitle_tokens,
+      ]))
+    } else {
+      None
+    };
+    if let Some(made) = made {
+      has_caption = true;
+      if title_from_tcb || lst_get_literal("captionpos") == "t" {
+        let mut new_body = made;
+        new_body.extend(body);
+        body = new_body;
+      } else {
+        body.extend(made);
+      }
+    }
   }
 
   // listings.sty:1641 writes a literal `\label{\lst@label}`. Perl builds
@@ -2568,7 +2629,11 @@ pub fn lst_process_display_with(
 
   let name_nonempty = name.as_ref().is_some_and(|n| !n.is_empty());
 
-  if numbered || name_nonempty {
+  if numbered && nolol {
+    result.extend(invoke(T_CS!("\\lx@listings@unlisted"), vec![Tokens::new(
+      body,
+    )]));
+  } else if numbered || (name_nonempty && !nolol) {
     result.extend(invoke(T_CS!("\\@listings"), vec![Tokens::new(body)]));
   } else if has_caption {
     result.extend(invoke(T_CS!("\\@@listings"), vec![Tokens::new(body)]));
@@ -3217,6 +3282,15 @@ LoadDefinitions!({
     // Perl escapes only because it never writes the round-trip file).
     // Guard: `perfect_kernel_batch56::lstnewenvironment_end_code_with_a_listing_does_not_recurse`.
     let text = listings_read_raw_lines_with_outer(&env_name, outer_opt);
+    // The flag is the environment's own: `\lxtcblistingmode` sets it in a tcolorbox box's start code,
+    // and it is taken here — before a diverted body returns below — so a later plain
+    // `\lstnewenvironment` (no tcolorbox mode) does not execute its body as well
+    // (`\newtcblisting{demo}{}` then `\lstnewenvironment{plain}{}{}`: the plain body was typeset a
+    // second time as text). Guards
+    // `perfect_kernel_batch77m::{plain_lstnewenvironment_after_a_tcb_box_does_not_run_its_body,
+    // plain_lstnewenvironment_after_a_diverted_tcb_box_does_not_run_its_body}`.
+    let execute = lookup_bool("LISTINGS_EXECUTE_BODY");
+    AssignValue!("LISTINGS_EXECUTE_BODY" => false, Scope::Global);
     if !lst_writefile_tee(&text) {
       // A body diverted to a file (`\lst@BeginWriteFile`, lstmisc.sty:30-70)
       // is not displayed, but the environment still owes its END code: the
@@ -3225,7 +3299,14 @@ LoadDefinitions!({
       // \SX@put@code@result` in the end code (pst-exa.sty:163-170). Dropping
       // it left the `\hbox` open and lost the read-back result (pst-exa-doc).
       // Guard: `perfect_kernel_batch56::lstnewenvironment_writefile_runs_the_end_code`.
-      let mut out = post;
+      // A tcolorbox box still runs its text part (`listing and text`): only the listing is diverted
+      // (pdflatex prints the box's text, no code).
+      let mut out = if execute {
+        lst_run_body_via_input(&env_name, &text)?.unlist()
+      } else {
+        Vec::new()
+      };
+      out.extend(post);
       out.push(T_CS!("\\endgroup"));
       return Ok(Tokens::new(out));
     }
@@ -3249,7 +3330,8 @@ LoadDefinitions!({
     // `\tcbuselistingtext` inside its box: local definitions stay local,
     // `\global` ones (pgf's `remember picture` node registrations, postit)
     // escape as in TeX.
-    if lookup_bool("LISTINGS_EXECUTE_BODY") {
+    // (the execute flag, taken above)
+    if execute {
       let closer = out.pop();
       // tcolorbox's resolved `before lower*`/`after lower*` wrapper around the
       // executed part (`tikz lower`, tcolorbox.sty:712); empty for every other
@@ -3317,6 +3399,20 @@ LoadDefinitions!({
   // minipage > quote > listing).
   DefConstructor!("\\@listings {}",
     "^^<ltx:float inlist='lol' xml:id='#id' class='ltx_lstlisting'>\
+     #tags\
+     #1\
+     </ltx:float>",
+    mode => "internal_vertical",
+    before_digest => {
+      engine::latex_constructs::before_untyped_float("lstlisting")?;
+    },
+    after_digest => sub[whatsit] {
+      engine::latex_constructs::after_float(whatsit);
+    });
+  // The numbered form of a `nolol` listing: numbered, in no list (`lst_process_display_with`
+  // chooses it while the listing's keys are in force; KNOWN_PERL_ERRORS #988).
+  DefConstructor!("\\lx@listings@unlisted {}",
+    "^^<ltx:float xml:id='#id' class='ltx_lstlisting'>\
      #tags\
      #1\
      </ltx:float>",
