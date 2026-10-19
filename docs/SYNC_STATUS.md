@@ -545,6 +545,17 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   `\omit` before inserting the template; Perl says true there). Effect: pstricks sets a box in a display's array cell
   in `\displaystyle` where pdflatex uses `\textstyle` (KPE #989 `\lx@ps@mathflag`). Fix: the alignment cell's math
   mode is the inline one. RED `kernel-alignment/ifinner_in_a_display_array_cell`.
+- **A `}` meeting a formula a macro opened inside a unit ends the formula** (RUST-ONLY kernel recovery; 77k r2 review
+  finding 1): TeX deletes the brace (tex.web §1069 `extra_right_brace`) and the macro's own `$` closes the formula;
+  our OD #553 rule (`formula_ends_with_its_unit`, stomach.rs ~:3542-3565) ends the formula at the unit's `}` and reads
+  the brace again, so the groups after it are off by one — `$\psframebox{$q$}$ after text.` gives 7 errors and
+  " after text." as math, where latex gives 2 errors and text. Fix: delete the brace (TeX's branch) when the formula
+  was opened by a macro that supplies its own closing `$` (e.g. a flag `\lx@ps@mathbox` binds and the `deleted` test
+  reads). Reach: none in 115,456 zips. RED `boxes-groups/extra_brace_meeting_a_macro_formula_ends_it`; the guard
+  `perfect_kernel_batch77k::pstricks_math_box_keeps_its_group` pins the count only. Related NITs (77k r2 review
+  2-3): the inner formula of an unwrapped pstricks box keeps `tex="\textstyle{…}"` (KPE #989's inserted style);
+  REVTeX 3 prints every `\preprint` where aps.sty v3.0:961-965 / v3.1:965-968 keep only the last
+  (`\def\@preprint` each call; cond-mat9601115, 2 of 305 preprint-style papers, base the same).
 - **blkarray side labels dropped** (RUST-ONLY binding gap, base too; 77k review probe b3): `\Left{label}{delim}` and
   `\Right{delim}{label}` in a block's preamble (blkarray.sty:1998-2003) print their label beside the block's bracket;
   the binding drops delimiters and labels alike (OD #771), so "M" and "N" are lost with 0 errors. Needs a place for a

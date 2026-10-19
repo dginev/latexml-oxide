@@ -100,6 +100,8 @@ fn pstricks_box_in_math_is_math() {
 /// an author's `$…$` in a box called in math is a formula ended inside that group: latex errs ("Missing } inserted",
 /// "Extra }, or forgotten $"), and so do we, the letter set as text — not a silent text "q" (review probe p1 D). Our
 /// count is larger: the kernel's recovery from "Extra }, or forgotten $" ends the formula where TeX drops the brace.
+/// This pins the count only: with text after the box that recovery also turns the text into math (RED
+/// `boxes-groups/extra_brace_meeting_a_macro_formula_ends_it`, SYNC "A `}` meeting a formula a macro opened").
 #[test]
 fn pstricks_math_box_keeps_its_group() {
   let (log, xml) = convert_with(
@@ -210,13 +212,17 @@ fn revtex_printed_preprint_is_read_as_tex() {
     None,
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert!(
-    xml.contains(
-      "<pubnote name=\"Preprint:\u{a0}\" role=\"preprint\">Gasi <text font=\"italic\">et al.</text>, \
-       Fe<sub><text font=\"italic\">2</text></sub>YZ</pubnote>"
-    ),
-    "{xml}"
-  );
+  // The text and the subscript structure; the subscript digit's font is not pinned (TeX sets it upright, the italic
+  // `2` here is a pre-existing rendering artifact, base the same — 77k r2 review NIT 4).
+  let head = "<pubnote name=\"Preprint:\u{a0}\" role=\"preprint\">Gasi <text font=\"italic\">et al.</text>, Fe<sub>";
+  let start = xml.find(head).unwrap_or_else(|| panic!("{xml}")) + head.len();
+  let len = xml[start..]
+    .find("</sub>YZ</pubnote>")
+    .unwrap_or_else(|| panic!("{xml}"));
+  let digit = xml[start..start + len]
+    .replace(r#"<text font="italic">"#, "")
+    .replace("</text>", "");
+  assert_eq!(digit, "2", "{xml}");
   assert!(
     xml.contains("<pubnote name=\"Preprint:\u{a0}\" role=\"preprint\">DESY\u{a0}11–210</pubnote>"),
     "{xml}"
