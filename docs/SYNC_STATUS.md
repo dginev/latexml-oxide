@@ -1532,6 +1532,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   a_watchdog_timeout_is_reported_as_fatal_timeout, an_allocation_past_rlimit_as_is_reported_as_fatal_oom}` (the
   `alloc_exhausted` test fault spends the address space through the raw allocator first). Residual: a hook whose sweep
   itself fails to allocate exits without finishing it.
+- **Runs 366/367** (E/F rerun of run 365 on 5059484050: int10-int31; MARKED 2026-10-19 09:43:34Z, 81,903 tasks =
+  E 77,932 + F 3,971 of 2,922,325): triggered once the combined projection reached 98.06 % (int29a, gate ≥ 98.05 %), the
+  perf/RAM pass had landed (int12) and every numbered silent-loss row was closed (int31). Fleet: `cortex_worker`
+  maxperf-cortex built at 5059484050, distro dumps of 2026-10-11 (sorted-set identical to the int31a vendor dumps).
+  In progress; compare with run 365 only once complete.
 - **Runs 364/365** (E/F rerun of run 363 on 026cf18f87: 68c Part B, 68a; COMPLETE 2026-10-16 12:20:31Z):
   E 79,627 → 77,932, F 3,971 → 3,971 (success 97.14 % → 97.20 % of 2,922,325). Transitions vs run 363: E→OK 362,
   E→warning 1,330, E→F 33, F→warning 3, F→E 30. E→F: `timeout` 22 + `Timeout:Convert` 2 and `oom` 4 (fleet contention,
