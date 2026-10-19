@@ -20303,8 +20303,8 @@ Under the raw classes (OD #444) three class stores that only a class's own title
   Note"), in every mode (apa6_cls.rs `define_notes`, beside `\note`). In man mode this moves the text from the class's
   closing `\AtEndDocument` "Author Note" section (:760-764 `\section{\acksname}\@acks`, which the raw class
   produced) into the frontmatter: semantic markup over PDF placement. `ltx:acknowledgements` is `Inline.model` (the
-  schema, as Perl's), so a multi-paragraph argument runs on as one text, as every acknowledgements binding's does
-  (revtex's in-place `{acknowledgments}` too); the man-mode section had kept its paragraphs.
+  schema, as Perl's), so each paragraph of a multi-paragraph argument is a line of it (#766), where the man-mode
+  section had kept `<p>`s.
 - **cclayout.sty** (cc.cls:229-230): `\Abstract{…}` (:66) and `{subject}` (:76-81) are `ltx:abstract` named
   `\ccabstractname` and `ltx:classification` named `\ccsubjectclassificationname` (latexml_contrib `cclayout_sty.rs`,
   which reads the package raw first); `{keywords}` stays K11's collected-body reroute.
@@ -20336,3 +20336,21 @@ kernel's push and pop after it, so every load balances: the 13 sample papers (13
 go from 13-39 Errors to 0, word counts unchanged. Packages the class loads get the class's hook label rather than their
 own (no hook label is pushed for them, as on the LaTeX of the era). Repro `loader/pasa_era_pushfilename_balanced`
 (with a pasa.cls stub); guard `perfect_kernel_batch77c::pasa_era_pushfilename_balances_package_loads`.
+
+### 766. A paragraph break inside an inline-only frontmatter item is a line break (Perl: the paragraphs run together)
+
+A frontmatter item is digested in text mode (Perl `digestFrontmatterItem` → `DigestText`), where `\par` closes no
+paragraph, so an item whose element holds only inline content — `ltx:acknowledgements`, `ltx:keywords`, `ltx:date`,
+`ltx:contact`, … (`Inline.model`: no `ltx:p`, but `ltx:break`) — ran its paragraphs together into one text: apa.cls's
+`\acknowledgements{We thank …\n\nCorrespondence to …}` (#763) read "…agency. Correspondence…" as one run. By user
+ruling (2026-10-18) such a paragraph break is a line break of the item. The `\par` whatsit records the frontmatter field
+it was digested in (tex_paragraph.rs `\lx@normal@par`, the `lx_frontmatter_item` value `digest_frontmatter_item`
+sets), and its constructor — where the schema is loaded, as in Perl the model is only read when the document is built
+— inserts an `ltx:break` when that element cannot hold `ltx:p` but can hold `ltx:break` and no paragraph of the item is
+open (base_utilities.rs `frontmatter_paragraph_break`); otherwise it closes paragraphs as before, so an `ltx:abstract`
+(`Block.model`) keeps its `<p>`s. Before digestion the item's `\par`s are kept between content only — none at either
+end, one for a run, the spaces between them dropped (`paragraph_breaks_between_content`) — which in a block item is what
+TeX's `\par` does anyway. Repros `sectioning-frontmatter/inline_item_paragraphs_are_line_breaks`,
+`sectioning-frontmatter/class_notes/apa_acknowledgements_paragraphs_are_lines`; guards
+`perfect_kernel_batch77f::{inline_item_paragraphs_are_line_breaks, apa_acknowledgements_paragraphs_are_lines}`. **Why**:
+the author's line structure is content; merging two paragraphs into one sentence run misreports it.

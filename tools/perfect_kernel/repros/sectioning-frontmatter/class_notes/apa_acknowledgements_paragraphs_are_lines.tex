@@ -1,0 +1,27 @@
+% apa.cls's `\acknowledgements{…}` (apa.cls:461 `\long\def\acknowledgements#1{\long\def\@acks{#1}}`) is the paper's
+% `ltx:acknowledgements` (repro apa_acknowledgements_kept, OXIDIZED_DESIGN_DIVERGENCES #763); its argument may hold
+% paragraphs, which the class's title pages and man mode's closing "Author Note" section set as paragraphs
+% (:1262-1267, :1549-1557, :760-764). `ltx:acknowledgements` holds only inline content (`Inline.model`), so each
+% paragraph break is a line break of the item (user ruling 2026-10-18, OXIDIZED_DESIGN_DIVERGENCES #766). The guard
+% runs the doc, jou and man modes.
+% witness: none in the sampled corpus; silent-loss inventory #11 (77b review finding 2)
+% oracle:  pdflatex 0 errors in each mode, the two paragraphs on separate lines; the class warning "Using BibTeX with
+%          apacite for citations and references"
+% engines: rust 77b = 0 errors, "We thank the funding agency. Correspondence to A. Author." one run of text
+% expect:  0 errors, 1 warning (the class's); <ltx:acknowledgements name="Author Note">We thank the funding
+%          agency.<ltx:break/>Correspondence to A. Author.</ltx:acknowledgements>
+% status:  RED (67int29, 77b) -> GREEN (77f)
+% preload: ar5iv.sty
+\documentclass[doc]{apa}
+\title{A Title}
+\author{Ann Author}
+\affiliation{Some University}
+\abstract{The abstract text here.}
+\acknowledgements{We thank the funding agency.
+
+Correspondence to A. Author.}
+\begin{document}
+\maketitle
+\section{Intro}
+Body text.
+\end{document}

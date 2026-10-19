@@ -5,7 +5,7 @@
 use latexml_package::prelude::*;
 
 /// Interpret the shipped class `name` raw (as the document asked for it, a path-prefixed copy included:
-/// [`crate::shipped_class::requested_shipped_class`]), then route the frontmatter it stores for its own title page to the
+/// [`latexml_package::shipped_class::requested_shipped_class`]), then route the frontmatter it stores for its own title page to the
 /// frontmatter, as the JHEP binding does (Perl JHEP.cls.ltxml):
 /// - `\received`, `\revised`, `\accepted`, `\published` (JINST.cls:764-774) and the copyright dates (`\JINSTcopydate`
 ///   :777, `\JHEPcopydate`, `\CECScopydate`) are frontmatter dates, after the class's own setter has run for the flags

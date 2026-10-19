@@ -40,7 +40,7 @@ pub fn define_numbered_author_forms(mask: Option<&str>) -> Result<()> {
   Ok(())
 }
 
-/// Interpret the class `name` raw (as the document asked for it: [`crate::shipped_class::requested_shipped_class`], so
+/// Interpret the class `name` raw (as the document asked for it: [`latexml_package::shipped_class::requested_shipped_class`], so
 /// a class only named like the family — TeX Live's apa6e.cls, a paper's `apa6mod.cls`, which the prefix fallback
 /// answers with this binding — is read as itself), then give its numbered author forms to the frontmatter
 /// ([`define_numbered_author_forms`]) when it has them. A paper whose source lacks the class falls to OmniBus, with the

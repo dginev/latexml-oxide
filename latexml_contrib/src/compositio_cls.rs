@@ -4,7 +4,7 @@
 use latexml_package::prelude::*;
 
 /// Interpret the shipped class `name` raw (as the document asked for it, a path-prefixed copy included:
-/// [`crate::shipped_class::requested_shipped_class`]), then route the frontmatter it stores for its own title page and closing
+/// [`latexml_package::shipped_class::requested_shipped_class`]), then route the frontmatter it stores for its own title page and closing
 /// address block to the frontmatter:
 /// - `\address`, `\curraddr`, `\email`, `\homepage` (compositio.cls:141-165, hha.cls:104-137) append to the current
 ///   author's `\@curr@author` and the `\AtEndDocument` `\@addresses` block, and error without an `\author` the kernel

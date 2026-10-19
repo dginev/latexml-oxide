@@ -4457,6 +4457,65 @@ pub fn dequeue_front_matter(tag: &str, attr: &[(&str, &str)]) {
   });
 }
 
+/// A `\par` digested in the frontmatter item `item` (its whatsit's `frontmatter_item`), constructed where the schema is
+/// known: when the item's element holds only inline content (`ltx:acknowledgements`, `ltx:keywords`, `ltx:date`, …: no
+/// `ltx:p`, but `ltx:break`) and no paragraph of its own is open, the paragraph break is a line break of the item, where
+/// text mode would merge the paragraphs (user ruling 2026-10-18; apa.cls's two-paragraph `\acknowledgements`,
+/// OXIDIZED_DESIGN_DIVERGENCES #766). Returns whether it was (the `\par` then closes nothing).
+pub(crate) fn frontmatter_paragraph_break(document: &mut Document, item: &str) -> Result<bool> {
+  if document::can_contain_qname(item, "ltx:p") || !document::can_contain_qname(item, "ltx:break") {
+    return Ok(false);
+  }
+  let Some(current) = document.get_element() else {
+    return Ok(false);
+  };
+  let (item_sym, p_sym) = (pin(item), pin!("ltx:p"));
+  let mut node = Some(current.clone());
+  while let Some(n) = node {
+    let qname = document::get_node_qname(&n);
+    if qname == p_sym {
+      return Ok(false);
+    }
+    if qname == item_sym {
+      if document::can_contain(&current, "ltx:break") {
+        document.insert_element("ltx:break", Vec::new(), None)?;
+      }
+      return Ok(true);
+    }
+    node = n.get_parent();
+  }
+  Ok(false)
+}
+
+/// `item` with its paragraph breaks (`\par`) between content only: none at either end, one for a run of them (spaces
+/// between them count for nothing). TeX's `\par` begins, ends or repeats no paragraph there, and a paragraph break the
+/// item's element takes as a line break ([`frontmatter_paragraph_break`]) is one between its lines.
+fn paragraph_breaks_between_content(item: Tokens) -> Tokens {
+  let par = T_CS!("\\par");
+  let mut out: Vec<Token> = Vec::new();
+  let mut pending = false;
+  for t in item.unlist_ref() {
+    if *t == par {
+      pending = out.iter().any(|o| o.get_catcode() != Catcode::SPACE);
+    } else if pending && t.get_catcode() == Catcode::SPACE {
+      continue;
+    } else {
+      if pending {
+        while out
+          .last()
+          .is_some_and(|l| l.get_catcode() == Catcode::SPACE)
+        {
+          out.pop();
+        }
+        out.push(par);
+        pending = false;
+      }
+      out.push(*t);
+    }
+  }
+  Tokens::new(out)
+}
+
 /// Digest the content for a frontmatter item, disabling or masking certain commands.
 /// Note that we shouldn't be digesting any frontmatter until within document, so inPreamble unnec.
 /// See clean_trailing_break for cleanup of misused \\.
@@ -4499,7 +4558,8 @@ fn digest_frontmatter_item(tag: &str, item: Tokens) -> Result<Digested> {
     let_i(&T_CS!("\\fnmsep"), &T_CS!("\\lx@frontmatter@fnmsep"), None);
     assign_value("lx_frontmatter_fnmsep", Stored::Bool(true), None);
   }
-  let digested = digest_text(item);
+  // (its `\par`s, which an inline-only element takes as line breaks: `frontmatter_paragraph_break`)
+  let digested = digest_text(paragraph_breaks_between_content(item));
   egroup()?;
   digested
 }

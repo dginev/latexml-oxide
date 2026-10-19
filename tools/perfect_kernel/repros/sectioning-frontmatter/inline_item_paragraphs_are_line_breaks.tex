@@ -1,0 +1,36 @@
+% A paragraph break (`\par`, a blank line) inside a frontmatter item whose element holds only inline content
+% (`ltx:acknowledgements`, `ltx:keywords`, `ltx:date`, …: `Inline.model`, no `ltx:p`, but `ltx:break`) is a line break
+% of the item, where text mode merged the paragraphs into one run of text; breaks at the item's ends add nothing and a
+% run of them is one (user ruling 2026-10-18, OXIDIZED_DESIGN_DIVERGENCES #766). The rule is decided at construction,
+% by the schema: the abstract (`Block.model`) keeps its paragraphs, and a `\par` in a group of the item (`ltx:text`)
+% breaks the line there.
+% witness: none (apa.cls `\acknowledgements`, repro class_notes/apa_acknowledgements_paragraphs_are_lines)
+% oracle:  pdflatex prints each part on its own line (the class title pages set the store as paragraphs)
+% engines: rust 67int29 = 0 errors, "First part.\nSecond part." one text run; perl = the same (Inline.model, text mode)
+% expect:  0 errors; <ltx:acknowledgements …>First part.<ltx:break/>Second part.<ltx:break/><ltx:text font="bold">Bold
+%          part.<ltx:break/>Bold again.</ltx:text></ltx:acknowledgements>; the abstract two <ltx:p>
+% status:  RED (67int29) -> GREEN (77f)
+\documentclass{article}
+\makeatletter
+\lx@add@frontmatter{ltx:acknowledgements}[name={Acknowledgements}]{
+
+First part.
+
+
+Second part.
+
+{\bfseries Bold part.
+
+Bold again.}
+
+}
+\lx@add@abstract{First paragraph.
+
+Second paragraph.}
+\makeatother
+\title{A Title}
+\author{Ann Author}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

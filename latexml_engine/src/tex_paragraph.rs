@@ -163,6 +163,11 @@ LoadDefinitions!({
 
   DefConstructor!("\\lx@normal@par",
     sub[document, _args, props] {
+      // (in a frontmatter item whose element holds only inline content, a line break: OXIDIZED_DESIGN_DIVERGENCES #766)
+      let item = prop_string!(props, "frontmatter_item");
+      if !item.is_empty() && frontmatter_paragraph_break(document, &item)? {
+        return Ok(());
+      }
       if !prop_bool!(props, "noop") {
         document.maybe_close_element("ltx:p")?;
         let element = document.get_element();
@@ -255,6 +260,13 @@ LoadDefinitions!({
       if LookupBool!("INTERNAL_PAR") {
         whatsit.set_property("internal_par", true);
         whatsit.set_property("reversion", Tokens!());
+      } else {
+        // the frontmatter field being made (`digest_frontmatter_item`), whose element decides at construction what this
+        // paragraph break is (`frontmatter_paragraph_break`)
+        let item = lookup_string("lx_frontmatter_item");
+        if !item.is_empty() {
+          whatsit.set_property("frontmatter_item", item);
+        }
       }
       // \par is a NOOP only in the RAW preamble — before `\begin{document}` opens the
       // document environment (package loading, stray `\str_lowercase` output in the
