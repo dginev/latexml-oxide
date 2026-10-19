@@ -15814,3 +15814,19 @@ port lists these kernel stand-ins (tex_debugging.rs `KERNEL_PRIMITIVE_STANDINS_F
 only, so a `\let` copy reads `\over` and a document's `\def\over` is a macro). Witnesses 1005.4193, 1803.03483 (7 → 0
 Errors), 1111.1504 (8 → 1). Repro `expansion-primitives/saveprimitive_kernel_fractions`; guards
 `perfect_kernel_batch77g::{saveprimitive_accepts_kernel_fraction_primitives, kernel_primitive_standins_mean_their_primitive}`.
+
+## 986. Names that LaTeX only writes or uses as control-sequence names are digested as text
+
+Perl digests several arguments that LaTeX never typesets, so a `_` in them raises "Script _ can only appear in math
+mode" where pdflatex is silent:
+- `\addcontentsline`'s file extension and unit type (latex_constructs.pool.ltxml:749 `{}{}{}`; latex.ltx writes them as
+  `\@writefile{#1}` and `\contentsline{#2}`), beside the title of #120: `\addcontentsline{file}{sec_unit}{entry}`
+  (1204.2781, 2402.17181).
+- acronym's keys (acronym.sty.ltxml:164,177; acronym.sty builds `\csname fn@#1\endcsname` from them):
+  `\acro{gcc_phat}[GCC-PHAT]{…}` (2003.05548, 2603.23723).
+- a theorem's `[within]` (latex_constructs.pool.ltxml `DigestLiteral`; latex.ltx `\@xnthm` uses it as a counter name),
+  the case of #691 for the trailing optional: `\newtheorem{t}{T}[todo_counter]` (1307.7314).
+The Rust port reads them as names (Semiverbatim / `\csname` text): sect04.rs `\addcontentsline`, acronym_sty.rs, the
+latex_constructs `define_new_theorem` `[within]`, and nomencl's sort prefix (nomencl_sty.rs; 2105.05016). Guards
+`perfect_kernel_batch77j::{addcontentsline_names_are_not_digested, acronym_keys_are_names,
+theorem_within_is_a_counter_name, nomenclature_prefix_is_a_string}`.

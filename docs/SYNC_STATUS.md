@@ -4098,6 +4098,22 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   samples): 1005.4193/1803.03483 7 → 0, 1111.1504 8 → 1, 0705.0395 13 → 5, 0907.5495 9 → 1, 1804.04572 14 → 4,
   2004.09110 24 → 16, 2312.05929/1306.1270/cs0603063 −7 each; the only text changes are `\@@over` error tokens
   replaced by fractions. 77a (biblatex filters) is held for its round-3 review.
+- **77j** (sole-cause `unexpected:_` shapes of the 67int29 projection samples, agent_reports/sole_underscore_2026-10-19
+  and extracted_356a0c47/…a8e6b1083b3a27d34: of 91 sole-`_` papers 25 are TL-2025 author errors pdflatex also raises —
+  14 `\DeclareMathOperator{\Mid_3}` names, kept by the TL-version ruling — ~13 unverifiable): names LaTeX only writes or
+  uses as control-sequence names are read as names, not digested (KPE #986: `\addcontentsline` file and type,
+  acronym keys, a theorem's `[within]`, nomencl's sort prefix); a raw expl3-syntax load (expl3, xparse, l3keys2e, mhsetup)
+  gives the catcodes and `\endlinechar` it found back, as `\ExplSyntaxOff` restores what `\ExplSyntaxOn` saved
+  (expl3_sty.rs `with_expl_syntax_restored`, expl3-code.tex:247-261; gb4e's active `_`, 2408.09634); underscore.sty's
+  begin-document catcode goes through `\AtBeginDocument` in load order (mathstyle's later catcode 12 wins, 2507.09194).
+  Witnesses 2003.05548 1 → 0, 2408.09634 1 → 0, 2507.09194 1 → 0, 2402.17181 1 → 0, 1307.7314 2 → 0, 1204.2781 1 → 0,
+  2603.23723 2 → 0, 2105.05016 7 → 0, words kept. Guards `perfect_kernel_batch77j::*`; nextest 6095/6095. Open from the
+  same study: `$$` in a caption (Perl `PBoxContents`, sect09.rs `\lx@@caption` text mode; 1005.1555, 1907.01498, 2310.11556,
+  1404.2359), pstricks boxes in math (`\put@end`, psmathbox; 2603.19804 +3), blkarray block column specs (1706.05431,
+  2207.06508, 2210.16910), aastex `C`/`h` columns (2411.04196, 1907.13126), revtex `\preprint` display toggle (5); rulings
+  needed: bibliography/citation commands a paper redefines through the kernel hooks `\@citex`/`\@lbibitem` and the
+  Rust-only `locked` `\cite` (6), OD #654's sn-jnl `\href` exception (2), front-matter fields the class never typesets
+  (revtex `\thanks` in `\author`, aastex running heads).
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the

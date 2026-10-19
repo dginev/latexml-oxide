@@ -567,7 +567,11 @@ pub(crate) fn load() -> Result<()> {
   // raw KOMA `\numberline` became 1-arg and stopped swallowing the title).
   // Perl hangs on the 8-line repro. KNOWN_PERL_ERRORS #120; guard
   // `perfect_kernel_batch53::addcontentsline_title_is_not_digested`.
-  DefConstructor!("\\addcontentsline{}{} Undigested", sub[document,args] {
+  // The file extension and the unit type (#1, #2) are only written too (`\@writefile{#1}` and
+  // `\contentsline{#2}`), so they are read as names, not digested: a template's leftover
+  // `\addcontentsline{file}{sec_unit}{entry}` raised "Script _ can only appear in math mode" where
+  // pdflatex is silent (1204.2781, 2402.17181; Perl digests both, KNOWN_PERL_ERRORS #120).
+  DefConstructor!("\\addcontentsline Semiverbatim Semiverbatim Undigested", sub[document,args] {
       if let [inlist,_vtype,_title @ ..] = args.as_slice() {
         // Note that the node can be inlist $inlist.
         // Could conceivably want to add $title as toctitle???

@@ -55,7 +55,10 @@ LoadDefinitions!({
   // cycle 91: a bare `\ac{ABC}` between paragraphs at top level
   // emits <ltx:glossaryref> outside any <ltx:p>, producing a
   // structurally invalid block-level glossaryref node.
-  DefConstructor!("\\lx@acronym Undigested {}{}{}",
+  // An acronym's key is a name (acronym.sty builds `\csname fn@#1\endcsname` from it), never typeset, so the
+  // constructors read it Semiverbatim: `\acro{gcc_phat}[GCC-PHAT]{…}` raised "Script _ can only appear in math mode"
+  // where pdflatex is silent (2003.05548, 2603.23723; Perl acronym.sty.ltxml:164,177 digests it).
+  DefConstructor!("\\lx@acronym Undigested Semiverbatim {}{}",
     "<ltx:glossaryref key='#2' inlist='#3' show='#4'/>",
     mode => "text", enter_horizontal => true,
     reversion => "#1{#2}"
@@ -301,7 +304,7 @@ LoadDefinitions!({
     "\\lx@acro@@@item{#1}{#2}{#3}{{\\let\\acroextra\\@gobble #2}}{{\\let\\acroextra\\@gobble #3}}"
   );
   DefConstructor!(
-    "\\lx@acro@@@item{}{}{}{}{}",
+    "\\lx@acro@@@item Semiverbatim {}{}{}{}",
     "<ltx:glossaryentry inlist='acronym' key='#1'>\
      <ltx:glossaryphrase role='label'>#2</ltx:glossaryphrase>\
      <ltx:glossaryphrase role='short'>#4</ltx:glossaryphrase>\
@@ -322,7 +325,7 @@ LoadDefinitions!({
     "\\lx@acro@@@def{#1}{#2}{#3}{{\\let\\acroextra\\@gobble #2}}{{\\let\\acroextra\\@gobble #3}}"
   );
   DefConstructor!(
-    "\\lx@acro@@@def{}{}{}{}{}",
+    "\\lx@acro@@@def Semiverbatim {}{}{}{}",
     "<ltx:glossarydefinition inlist='acronym' key='#1'>\
      <ltx:glossaryphrase role='label'>#2</ltx:glossaryphrase>\
      <ltx:glossaryphrase role='short'>#4</ltx:glossaryphrase>\
@@ -344,7 +347,7 @@ LoadDefinitions!({
   );
   // ^ float-up: glossarydefinition floats out of glossarylist to glossary
   DefConstructor!(
-    "\\lx@@acro@phrase{}{}{}",
+    "\\lx@@acro@phrase Semiverbatim {}{}",
     "^ <ltx:glossarydefinition inlist='acronym' key='#1'>\
      <ltx:glossaryphrase role='#2'>#3</ltx:glossaryphrase>\
      </ltx:glossarydefinition>"

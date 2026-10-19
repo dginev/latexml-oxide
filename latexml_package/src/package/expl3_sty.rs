@@ -20,7 +20,7 @@ use crate::prelude::*;
 ///
 /// We cannot delegate to `\ExplSyntaxOn`/`\ExplSyntaxOff` here: our expl3
 /// kernel's `\ExplSyntaxOff` is incomplete (the reason xparse_sty.rs, l3keys2e_sty.rs and
-/// mhsetup_sty.rs hardcode a `:`/`_` restore after their raw loads —
+/// mhsetup_sty.rs restore the syntax catcodes after their raw loads, `with_expl_syntax_restored` —
 /// docs/archive/EXPL3_CATCODE_GAP_2026-06-08.md). Instead this
 /// saves the ambient catcodes of `:`/`_`, installs the expl3 LETTER regime for
 /// the duration, and restores the saved values — including on the error path,
@@ -37,6 +37,36 @@ fn with_expl_catcodes<T>(body: impl FnOnce() -> Result<T>) -> Result<T> {
   for ((c, _), cc) in EXPL_LETTERS.into_iter().zip(saved) {
     assign_catcode(c, cc, Some(Scope::Global));
   }
+  result
+}
+
+/// The characters whose catcodes `\ExplSyntaxOn` changes, each with its document default (expl3-code.tex:262-270).
+const EXPL_SYNTAX_CHARS: [(char, Catcode); 8] = [
+  ('\t', Catcode::SPACE),
+  (' ', Catcode::SPACE),
+  ('"', Catcode::OTHER),
+  (':', Catcode::OTHER),
+  ('^', Catcode::SUPER),
+  ('_', Catcode::SUB),
+  ('|', Catcode::OTHER),
+  ('~', Catcode::ACTIVE),
+];
+
+/// Run the raw load of an expl3-syntax file and give the catcodes and `\endlinechar` it changes back the values they
+/// had before it, as `\ExplSyntaxOff` restores what `\ExplSyntaxOn` saved (expl3-code.tex:247-261) — our kernel's
+/// `\ExplSyntaxOff` is incomplete (docs/archive/EXPL3_CATCODE_GAP_2026-06-08.md). A document's own catcode survives
+/// the load: gb4e's active `_` (`\catcode`\_=13`) stayed active in pdflatex where a fixed `_`=SUB reset after
+/// tikzmark's xparse load made every later `_` a subscript in text (2408.09634). Shared by expl3_sty.rs,
+/// xparse_sty.rs, l3keys2e_sty.rs and mhsetup_sty.rs.
+pub(crate) fn with_expl_syntax_restored<T>(load: impl FnOnce() -> Result<T>) -> Result<T> {
+  let saved = EXPL_SYNTAX_CHARS.map(|(c, dflt)| lookup_catcode(c).unwrap_or(dflt));
+  let endlinechar =
+    lookup_register("\\endlinechar", Vec::new())?.map_or(13, |value| value.value_of());
+  let result = load();
+  for ((c, _), cc) in EXPL_SYNTAX_CHARS.into_iter().zip(saved) {
+    assign_catcode(c, cc, Some(Scope::Global));
+  }
+  raw_tex(&s!("\\endlinechar={endlinechar}\\relax"))?;
   result
 }
 
@@ -94,8 +124,8 @@ LoadDefinitions!({
     assign_value("SUPPRESS_UNEXPECTED_ERRORS", true, None);
   }
 
-  let _ = input_definitions("expl3", NewDefault!(InputDefinitionOptions,
-    noltxml => true, extension => Some(Cow::Borrowed("sty"))));
+  let _ = with_expl_syntax_restored(|| Ok(input_definitions("expl3", NewDefault!(InputDefinitionOptions,
+    noltxml => true, extension => Some(Cow::Borrowed("sty"))))));
 
   if raw_load_will_run {
     assign_value("SUPPRESS_UNDEFINED_ERRORS", false, None);
@@ -222,17 +252,7 @@ LoadDefinitions!({
   // on its original cascade witness 2406.14142 (21 errors -> 0) and the
   // expl3/regex_match + expl3/regex_native test fixtures. (Shim in git history.)
 
-  assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
-  assign_catcode('_', Catcode::SUB, Some(Scope::Global));
-  // Also restore `~` to ACTIVE (13). `\usepackage{expl3}` in real LaTeX
-  // leaves expl3 syntax OFF — `~` back to its document catcode (13/active),
-  // not the expl3 `~`=10 (SPACE). Our raw expl3-code.tex load leaves `~` at
-  // 10 because Rust's `\ExplSyntaxOff` is incomplete; the `:`/`_` restores
-  // above already turn expl3-letters off, but `~` was missed. Without this, a
-  // LATER `\usepackage[english]{babel}` runs `\initiate@active@char{~}` with
-  // `~` at catcode 10 → an `expected:<relationaltoken>` cascade. Minimal
-  // repro `\usepackage{expl3}\usepackage[english]{babel}` (2 errors → 0).
-  // `~` is not an expl3 LETTER char (unlike `:`/`_`), so this is glossary-safe.
-  // Complements the per-package restore in xparse_sty.rs / l3keys2e_sty.rs / mhsetup_sty.rs.
-  assign_catcode('~', Catcode::ACTIVE, Some(Scope::Global));
+  // The raw load's catcodes are restored by `with_expl_syntax_restored` above (`:`/`_` back from expl3's LETTER, `~`
+  // back from its SPACE: a later `\usepackage[english]{babel}` ran `\initiate@active@char{~}` with `~` at catcode
+  // 10, an `expected:<relationaltoken>` cascade; minimal repro `\usepackage{expl3}\usepackage[english]{babel}`).
 });

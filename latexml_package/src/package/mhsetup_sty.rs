@@ -11,9 +11,10 @@
 //! matches the `\expandafter\gdef\:` invocation and
 //! `\pgfutil@xifnch` is left undefined.
 //!
-//! Fix: raw-load mhsetup.sty as usual via InputDefinitions, then
-//! EXPLICITLY restore the `:` and `_` catcodes globally to their
-//! LaTeX defaults. Defensive belt-and-suspenders on top of the
+//! Fix: raw-load mhsetup.sty as usual via InputDefinitions inside
+//! `with_expl_syntax_restored` (expl3_sty.rs), which gives the expl3
+//! syntax catcodes (`:` and `_` among them) the values they had before
+//! the load. Defensive belt-and-suspenders on top of the
 //! `\AtEndOfPackage` hook.
 //!
 //! Witness: arXiv:1207.2132 (mhsetup + tikz → `\pgfutil@xifnch`
@@ -23,13 +24,12 @@
 //! interleaved with mhsetup's load via the digest auto-pop
 //! upstream of this binding, which is a separate issue.
 
-use latexml_core::token::Catcode;
-
 use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  InputDefinitions!("mhsetup", noltxml => true, extension => Some(Cow::Borrowed("sty")));
-  assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
-  assign_catcode('_', Catcode::SUB, Some(Scope::Global));
+  expl3_sty::with_expl_syntax_restored(|| {
+    InputDefinitions!("mhsetup", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+    Ok(())
+  })?;
 });

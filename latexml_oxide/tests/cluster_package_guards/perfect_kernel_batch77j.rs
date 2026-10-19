@@ -1,0 +1,88 @@
+//! Red/green guard for batch 77j: text that LaTeX only writes or uses as a name is not digested, and a raw expl3-syntax
+//! load gives back the catcodes it found — sole-cause `unexpected:_` shapes of the projection samples
+//! (agent_reports/sole_underscore_2026-10-19). The guards assert the three measures: no Error, the authored text present,
+//! its element.
+use latexml::util::test::convert_with;
+
+use super::perfect_kernel_batch46::{error_count, warning_count};
+
+fn squash(xml: &str) -> String { xml.split_whitespace().collect::<Vec<_>>().join(" ") }
+
+/// `\addcontentsline`'s file and unit type are only written (`\@writefile{#1}`, `\contentsline{#2}`): a template's
+/// leftover line with `_` in the type raises nothing (1204.2781, 2402.17181).
+#[test]
+fn addcontentsline_names_are_not_digested() {
+  let (log, xml) = convert_with(
+    "\\documentclass{amsart}\\begin{document}\\section{One}\n\\addcontentsline{file}{sec_unit}{entry}\nText.\\end{document}",
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(squash(&xml).contains("Text."), "{xml}");
+}
+
+/// An acronym's key is a name: `\acro{gcc_phat}` and `\ac{gcc_phat}` keep it whole (2003.05548, 2603.23723).
+#[test]
+fn acronym_keys_are_names() {
+  let (log, xml) = convert_with(
+    "\\documentclass{article}\\usepackage{acronym}\n\\begin{document}\\begin{acronym}\n\\acro{gcc_phat}[GCC-PHAT]{generalized \
+     cross-correlation phase transform}\n\\end{acronym}Text \\ac{gcc_phat}.\\end{document}",
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains(r#"<glossaryref inlist="acronym" key="gcc_phat" show="long"/>"#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains("generalized cross-correlation phase transform"),
+    "{xml}"
+  );
+}
+
+/// A document's active `_` survives a raw xparse load (`\ExplSyntaxOff` restores what `\ExplSyntaxOn` saved,
+/// expl3-code.tex:247-261; gb4e + tikzmark, 2408.09634).
+#[test]
+fn expl_syntax_load_restores_the_documents_catcodes() {
+  let (log, xml) = convert_with(
+    "\\documentclass{article}\\catcode`\\_=13 \\def_{U}\n\\usepackage{xparse}\\typeout{CAT=\\the\\catcode`\\_}\n\\begin{document}a_b\\end{document}",
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(log.contains("CAT=13"), "{log}");
+  assert!(xml.contains(">aUb</p>"), "{xml}");
+}
+
+/// underscore.sty's `\AtBeginDocument` catcode runs in load order, so mathstyle's later one (catcode 12) wins
+/// (2507.09194; pdflatex "a˙b" in OT1).
+#[test]
+fn underscore_catcode_hook_runs_in_load_order() {
+  let (log, xml) = convert_with(
+    "\\documentclass{article}\\usepackage{underscore}\\usepackage{mathstyle}\n\\begin{document}See a_b and $x_1$.\\end{document}",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains("See a˙b and"), "{xml}");
+}
+
+/// A theorem's `[within]` is a counter name (latex.ltx `\@xnthm`), read through `\csname` (1307.7314).
+#[test]
+fn theorem_within_is_a_counter_name() {
+  let (log, xml) = convert_with(
+    "\\documentclass{article}\\newcounter{todo_counter}\\newtheorem{t}{T}[todo_counter]\n\\begin{document}\\begin{t}x\\end{t}\\end{document}",
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains("<tag>T 0.1</tag>"), "{xml}");
+}
+
+/// nomencl's sort prefix is only written for makeindex, kept as a string (2105.05016).
+#[test]
+fn nomenclature_prefix_is_a_string() {
+  let (log, xml) = convert_with(
+    "\\documentclass{article}\\usepackage{nomencl}\\makenomenclature\n\\begin{document}\\nomenclature[Enc_Aut]{$E$}{Energy}Text.\\printnomenclature\\end{document}",
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains(r#"role="sort">Enc_Aut<Math"#), "{xml}");
+  assert!(xml.contains("Energy"), "{xml}");
+}

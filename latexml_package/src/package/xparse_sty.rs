@@ -10,16 +10,9 @@ LoadDefinitions!({
   AssignMapping!("INTERPRETABLE_SOURCES", "xparse-2018-04-12.sty" => 1);
   AssignMapping!("INTERPRETABLE_SOURCES", "xparse-2020-10-01.sty" => 1);
 
-  // Load raw xparse.sty — may hit errors from partial expl3 kernel.
-  let _ = input_definitions("xparse", NewDefault!(InputDefinitionOptions,
-    noltxml => true, extension => Some(Cow::Borrowed("sty"))));
-  // Restore catcodes: xparse loading calls \ExplSyntaxOn which changes catcodes.
-  // If \ExplSyntaxOff doesn't fully restore (due to partial expl3 kernel),
-  // spaces become IGNORE and paragraphs break.
-  assign_catcode(' ', Catcode::SPACE, Some(Scope::Global));
-  assign_catcode('\t', Catcode::SPACE, Some(Scope::Global));
-  assign_catcode('~', Catcode::ACTIVE, Some(Scope::Global));
-  assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
-  assign_catcode('_', Catcode::SUB, Some(Scope::Global));
-  raw_tex(r"\endlinechar=13\relax")?;
+  // Load raw xparse.sty — may hit errors from partial expl3 kernel. Its `\ExplSyntaxOn` changes catcodes that our
+  // `\ExplSyntaxOff` does not fully restore (spaces left IGNORE broke paragraphs), so the load restores the values
+  // they had before it.
+  let _ = expl3_sty::with_expl_syntax_restored(|| Ok(input_definitions("xparse",
+    NewDefault!(InputDefinitionOptions, noltxml => true, extension => Some(Cow::Borrowed("sty"))))));
 });

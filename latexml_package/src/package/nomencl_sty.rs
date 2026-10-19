@@ -109,7 +109,10 @@ LoadDefinitions!({
       },
     })
   });
-  DefConstructor!("\\lx@nomencl@definition{}{}{}{}{}{}",
+  // The sort prefix (#1) is only written to the `.nlo` for makeindex (nomencl.sty `\nomenclature[#1]`), never typeset,
+  // so it is read as a string: `\nomenclature[Enc_Aut]{…}` raised "Script _ can only appear in math mode" where pdflatex
+  // is silent (2105.05016).
+  DefConstructor!("\\lx@nomencl@definition Semiverbatim{}{}{}{}{}",
     "<ltx:glossarydefinition key='#key' inlist='nomenclature'>\
      <ltx:glossaryphrase key='#key' role='sort'>#1#2</ltx:glossaryphrase>\
      <ltx:glossaryphrase key='#key' role='name'>#2</ltx:glossaryphrase>\

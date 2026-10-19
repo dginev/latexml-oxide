@@ -2348,8 +2348,10 @@ pub fn define_new_theorem(
   // `\gdef\smf@thm{smfthm}` `\newtheorem{theo}[\smf@thm]{\theoname}` (witnesses 1711.11547, 1902.02049, 2108.12000)
   // and ccthm.sty's `[\cc@thmcnter]` (1507.02955) named a counter `\smf@thm`: "Counter not defined" and an undefined
   // `\the\smf@thm` for every theorem. Perl takes the literal string (latex_constructs.pool.ltxml:2892
-  // `ToString($otherthmset)`), KNOWN_PERL_ERRORS #691. The trailing `[within]` is digested (`digest_literal`, as Perl
-  // `DigestLiteral`), which expands a macro too. Guards `perfect_kernel_batch67s::newtheorem_*`.
+  // `ToString($otherthmset)`), KNOWN_PERL_ERRORS #691. The trailing `[within]` is a counter name the same way
+  // (latex.ltx `\@xnthm`: `\@addtoreset{#1}{#3}`, `\csname the#3\endcsname`), so it is read through `\csname` too:
+  // digested (Perl `DigestLiteral`), `\newtheorem{x}{X}[todo_counter]` raised "Script _ can only appear in math mode"
+  // where pdflatex is silent (1307.7314). Guards `perfect_kernel_batch67s::newtheorem_*`.
   let otherthmset_str = otherthmset
     .map(|t| ::latexml_core::gullet::expand_as_csname_text(t).map(|e| e.to_string()))
     .transpose()?
@@ -2357,12 +2359,10 @@ pub fn define_new_theorem(
   let has_type = typ.as_ref().is_some_and(|t| !t.is_empty());
   let is_starred = flag.is_some();
 
-  let within_str = if let Some(ref w) = within {
-    let ws = digest_literal(w.clone())?.to_string();
-    if ws.is_empty() { None } else { Some(ws) }
-  } else {
-    None
-  };
+  let within_str = within
+    .map(|t| ::latexml_core::gullet::expand_as_csname_text(t).map(|e| e.to_string()))
+    .transpose()?
+    .filter(|s| !s.is_empty());
 
   let counter = otherthmset_str
     .clone()
