@@ -1,12 +1,15 @@
-% A raw class's store set before `\maketitle` and again after it keeps the value the title page
-% prints: the second `\lx@add@keywords` replaces the first, so only "gamma" survives where pdflatex's
-% title page prints "KW: alpha, beta". An affiliation store set again after `\maketitle` instead adds
-% its new value beside the first, where the title page prints only the first.
-% witness: none (synthetic; review probe of the K11 store timing).
-% status:  RED
+% A raw class's store set before `\maketitle` and again after it keeps the value the title page printed: once
+% `\maketitle` placed the store's entry — handed to the frontmatter and printed by the title page, its sentinel
+% reaching the speculative run (`settle_placed_stores`) — the setter called again only re-sets the store
+% (`\lx@store@hand`, frontmatter_stores.rs); a store the title page does not print takes the later value
+% (`store_set_again_after_maketitle_printed_outside_the_title_page_is_replaced.tex`). The class's label before the store on its title page ("KW:") names the keywords, and the
+% deposit takes it out with the store (no orphan "KW:" line before the body). An affiliation-kind store set again
+% after `\maketitle` still adds its new value beside the first (`accumulating_store_set_late_adds_its_value`).
+% witness: none (synthetic; review probe of the K11 store timing; silent-loss inventory #6b).
 % oracle:  pdflatex 0 errors: "KW: alpha, beta".
-% engines: rust mg58l and 58m: `<keywords>gamma</keywords>` only.
-% expect:  0 errors, 0 warnings; keywords "alpha, beta" kept.
+% engines: rust 58m-67int35: `<keywords name="Keywords: ">gamma</keywords>` only, an orphan "KW:" before "Text.".
+% expect:  0 errors, 0 warnings; `<keywords name="KW:">alpha, beta</keywords>`, no "gamma", no "KW:" in the body.
+% status:  RED (67int35) -> GREEN (77i)
 \begin{filecontents*}[overwrite]{rcagain.cls}
 \ProvidesClass{rcagain}
 \LoadClass{article}

@@ -1,0 +1,21 @@
+% CONTROL for the off-table store rule: a store the kept `\@maketitle` deposit typesets is not handed on again (its
+% sentinel reaches the speculative run of the deposit, `before_title_page_runs`, frontmatter_stores.rs).
+% witness: none (synthetic; the duplicate direction of silent-loss inventory #5 (a))
+% oracle:  pdflatex 0 errors: "Laboratory: Widget Lab" after the author.
+% engines: rust 67int35 = 77i: "Laboratory: Widget Lab" once, in the deposit's paragraph; no note.
+% expect:  0 errors, 0 warnings; "Widget Lab" once, in its own paragraph; no `<note>`, no `<pubnote>`.
+% status:  GREEN (67int35, 77i)
+\begin{filecontents*}[overwrite]{rckept.cls}
+\ProvidesClass{rckept}
+\LoadClass{article}
+\def\@lab{}
+\newcommand{\lab}[1]{\def\@lab{#1}}
+\def\@maketitle{\@title\par\@author\par Laboratory: \@lab\par}
+\end{filecontents*}
+\documentclass{rckept}
+\title{T}\author{Anton}
+\lab{Widget Lab}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,26 @@
+% A raw class's abstract store its title page reads but does not print — `\hypersetup{pdfsubject={\@abst}}` in
+% `\@maketitle`, PDF metadata — beside the document's own `{abstract}`: the store's entry is the class's own (`_store`,
+% which the document's abstract does not replace) only when the speculative run of the title page printed it
+% (`release_unprinted_store_entries`, frontmatter_stores.rs; base_utilities.rs `frontmatter_release_store`); here it is
+% an ordinary entry, which the document's abstract of the same name replaces, as before the title page was consulted.
+% witness: none (synthetic; review probe `md` of 77i r4).
+% oracle:  pdflatex 0 errors: "Document abstract." once; "Metadata abstract." nowhere (PDF metadata only).
+% engines: rust 77i r4: two `ltx:abstract`s (0 errors); base int29a: one.
+% expect:  0 errors, 0 warnings; one `ltx:abstract`, the document's "Document abstract."; the store's text not shown.
+% status:  RED (77i r4) -> GREEN (77i r5)
+\begin{filecontents*}[overwrite]{rcmeta.cls}
+\ProvidesClass{rcmeta}
+\LoadClass{article}
+\RequirePackage{hyperref}
+\newcommand*\abst[1]{\gdef\@abst{#1}}
+\def\@abst{}
+\def\@maketitle{\hypersetup{pdfsubject={\@abst}}\begin{center}{\Large\@title\par}\@author\par\end{center}}
+\end{filecontents*}
+\documentclass{rcmeta}
+\title{T}\author{Anton}
+\abst{Metadata abstract.}
+\begin{document}
+\maketitle
+\begin{abstract}Document abstract.\end{abstract}
+Text.
+\end{document}

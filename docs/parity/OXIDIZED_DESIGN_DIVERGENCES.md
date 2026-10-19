@@ -6278,6 +6278,50 @@ a section, now keep the first title, as page 1 shows. Guards `perfect_kernel_bat
 supplement_title_after_body_dropped, supplement_imsart_frontmatter, starred_section_before_late_maketitle,
 beamer_second_title_frame_after_a_section}`, `perfect_kernel_batch59::author_after_a_fallback_flush_is_sealed_off`.
 
+**A raw class's labelled store (77i, silent-loss #6a, #6b).** A K11 store the class's title page prints after a label
+(`Resumen: \@resumen`) is named by that label (frontmatter_stores.rs `labelled_api`, `ClassReaders::title_page_label`:
+label material and layout from the line's start to the store) when its entry is an abstract, keywords or a
+classification — once TeX's run of the title page prints the label right before the store (`verify_title_page_labels`;
+OD #767), else the entry is unnamed. An abstract or keywords store the title page reads, labelled or not (77i r4:
+`\begin{quote}\itshape\@resumen\end{quote}`, review probe `d_nolab`), and a labelled classification, is the class's
+store, which LaTeX expands where the class's `\maketitle` prints it: its setter only stores (`lx_store_deferred_<name>`, `\lx@store@hand`), and `\maketitle` queues the entry from
+the store (`harvest_stores`, `\lx@add@frontmatter`, no clearing of other entries), digested there with the rest — so a
+value using a macro or package defined later in the preamble (`\foo`, xcolor's `\textcolor`, babel shorthands) reads as
+pdflatex reads it (77i r2 digested it where it was set, 2 errors on the review's `early` probe), and the document's own
+`{abstract}`, whose `\lx@clear@frontmatter` clears what is queued before it, does not remove it, nor does the
+document's later abstract of the same name replace it (the entry carries `_store=<store>`, the store's control sequence,
+and `frontmatter_clear_same_name`, base_utilities.rs, replaces it only by another of the same store): the two are two
+elements, the document's first when its `{abstract}` comes before `\maketitle` — pdflatex prints both, in that order.
+That holds only while the title page prints the store: once the speculative run of the title page shows it does not
+(`title_page_prints_store`, `lx_sentinel_printed`; without a run, its code reads it), the entry is an ordinary one at
+`\lx@store@untypeset` (`release_unprinted_store_entries`, base_utilities.rs `frontmatter_release_store`: one the
+document's own entry of the same name and language already replaces is dropped), as an entry with no `\maketitle`
+(`harvest_stores` at the fallback) and one set after the `\maketitle` that read the store are (`untagged_api`) —
+`\hypersetup{pdfsubject={\@abst}}` in `\@maketitle` beside the document's `{abstract}` gives one abstract, as pdflatex
+prints (77i r5; review probe `md`). Two setters of one store (a class's `\let\keyword\keywords`, `\let\resumen\abst`)
+make one entry: `\maketitle` hands each store on once (77i r4 handed it once per setter; review probes `al1`, `al2`). Set
+after `\maketitle`, the store is handed on at once. When the store is handed on, the title-page deposit takes the label out with
+it (`note_title_page_part`, read by `\lx@replay@records`): no orphan "Resumen:" line before the body. A store whose
+entry a `\maketitle` placed keeps that entry when its setter is called again (`\lx@store@hand`,
+`lx_store_placed_<name>`): the call only re-sets the store for what reads it later, as the title page printed the first
+value ("KW: alpha, beta", not the later "gamma"). Placed means handed on and printed by the class's title page — its
+sentinel reached the speculative run of the title page (`settle_placed_stores`, OD #767): a store the title page does
+not print takes the later value, which pdflatex prints elsewhere (a class abstract's end code `Keywords: \@keywords`;
+77i r1 kept the preamble's "TO BE FILLED"). A store first set after `\maketitle` is still handed on
+(pittetd.cls:503-527). Guards `perfect_kernel_batch77i::{abstract_store_keeps_the_document_abstract,
+store_set_again_after_maketitle_keeps_the_title_page_value, store_printed_outside_the_title_page_takes_the_later_value,
+named_store_using_later_definitions_reads_them_at_maketitle, store_printed_in_a_title_page_footnote_keeps_its_value,
+store_printed_in_a_title_page_thanks_keeps_its_value, unlabelled_abstract_store_keeps_the_document_abstract,
+class_maketitle_labelled_abstract_after_an_environment, abstract_store_cleared_by_the_class_title_page_is_kept,
+two_setters_of_one_store_make_one_entry, abstract_store_read_but_not_printed_yields_to_the_document_abstract}` (a store
+the class's own running `\maketitle` cleared after printing it is handed on with the value its setter stored,
+`lx_store_value_<name>`: ptptex `[preprint]`, 0906.3938, 0907.2968 — which keeps the `ltx:abstract` base has; that
+class's printed block keeps the abstract too, so its text is there twice where pdflatex prints it once, on base as
+here: a residual, SYNC_STATUS "Silent-loss inventory" row "ptptex `[preprint]` double abstract", pinned by the
+guard's count; a store the title page prints in a footnote or a `\thanks` is
+printed: the speculative run typesets both, and the footnote its label and store leave empty goes with them — a
+`\footnotetext`'s `\footnotemark` too —, `\lx@replay@records`).
+
 ### 155. A `.bbl` preamble no longer emits a phantom empty `(N)` bibliography entry
 
 **Background.** An ACM-Reference-Format-style `.bbl` (and others) places a preamble —
@@ -15049,7 +15093,8 @@ and an imbalance that cannot be closed (or a document group it closed) is an Err
 dropped with its diagnostics (Info), as the `\maketitle` deposit is (#265), and with its assignments (#534).
 Afterwards the lock's own record (`\lx@dropped@<name>`, `<name>:redefined@nargs`, which a `\let`/`\def` of the name in
 the body would rewrite globally) is as before, and so are the kernel's `\@author`/`\@shortauthor` and every store the
-dropped body `\def`s/`\gdef`s/`\edef`s/`\xdef`s — where the body changed them past its group; empty if undefined, the
+dropped body `\def`s/`\gdef`s/`\edef`s/`\xdef`s that does not now hold the call's argument (one that does stays set,
+77i, below) — where the body changed them past its group; empty if undefined, the
 convention the lock's drop already keeps (state.rs; afthesis.cls:520). What stays is the class's flags, counters,
 `\g@addto@macro` lists and `\let`s: the stores a class's title layout prints carry no second copy (JINST.cls:757-761
 `\xdef\@author`, :820 `\gdef\abstract@cs`), but a list the class appends to does (compositio's `\@authors`), which is why
@@ -15138,8 +15183,14 @@ jhep_family_title_page, family_binding_reads_requested_class, replayed_setter_ca
 replayed_setter_keeps_frontmatter, replayed_setter_closes_its_groups}`; RED
 `sectioning-frontmatter/family_wrapper_loads_family_class` (a renamed wrapper `\LoadClass`ing the family class re-enters
 the binding; no corpus witness),
-`perfect_kernel_batch54::locked_setter_internals_are_defined_empty`,
+`perfect_kernel_batch54::refused_setter_internals_take_the_replayed_value`,
 `perfect_kernel_batch56::class_maketitle_body_deposits_its_fields`.
+
+**77i, the body's own stores (silent-loss #7).** A store the dropped body itself defines that holds the call's argument
+after a clean replay is the class's record of the field (#759; `note_replay_records`, now read before the stores are
+put back, the kernel's two left out) and stays set, as TeX leaves it; the title-page deposit and replay read it as empty
+(`\lx@replay@records`). A document's `\renewcommand\author[1]{\gdef\myauth{#1}\gdef\@author{#1}}` read back in the body
+printed "Written by ." (pdflatex "Written by Alice."). Guard `perfect_kernel_batch77i::replayed_document_setter_keeps_its_store`.
 
 ### 483. paspconf is bound to aaspp, caption2 by its own name, and a keyless `\reference` starts an unkeyed entry (Perl: OmniBus, the caption fallback, the first letter as key)
 
@@ -16051,15 +16102,33 @@ digested in place (`\lx@sealed@class@run`), only when that definition provably k
   warning, an empty body), with an Info.
 
 Residuals, all dropped as the base drops them:
-- **the largest:** a body that both stores and prints (`\gdef\@author{#1}\par\noindent\textit{#1}\par`), which pdflatex
-  prints;
+- **the largest, closed 77i:** a body that both stores and prints (`\gdef\@author{#1}\par\noindent\textit{#1}\par`),
+  which pdflatex prints — now run in place, the frontmatter's stores put back (below);
 - a scratch `\toks@{#1}` used only to typeset it;
 - formatting `{\let\\\newline #1}` (brace pairs are not counted as groups, since most are macro arguments);
 - a store two helper levels down (`\author`→`\@setauthor`→`\@@setauthor`) runs the class's code but adds nothing.
 
 Guards `perfect_kernel_batch65a::{sealed_title_runs_the_class_title_in_place,
-storing_class_title_after_the_body_is_dropped, author_kept_in_a_register_or_a_box_is_a_store,
+storing_class_title_after_the_body_prints_in_place, author_kept_in_a_register_or_a_box_is_a_store,
 class_command_calling_the_kernels_does_not_loop, class_title_with_a_length_default_typesets_in_place}`.
+
+**77i (silent-loss #8; user direction (a), 2026-10-19).** A storing class command that also prints where it stands
+runs in place: `\lx@sealed@storing@run` (sect05.rs `sealed_storing_run`), before the kernel's part (which the seal
+keeps out of the frontmatter), runs the class's own command and keeps its output — a collection's per-contribution
+`\author` (`\gdef\@author{#1}…\par\noindent\textit{#1}\par`, its own `\maketitle` leaving `\author` defined), a
+`\title` that stores and prints the supplement's title — and puts back the stores the frontmatter owns
+(frontmatter_stores.rs `frontmatter_owned_stores`: the kernel's fields and short forms, the K11 rerouted and off-table
+stores), so the paper's frontmatter is not replaced (user ruling 2026-10-09: a supplement's frontmatter does not
+replace the paper's; printing its text in place is right, as the in-place supplement abstract). Its other assignments
+stay, as in pdflatex, and the kernel's part does not replay the command again (`lx_sealed_class_ran`). A storing command
+that prints nothing (imsart.sty:1958, schooldocs.sty:70) is the supplement's setter: run journaled and undone whole
+(`AssignmentJournalGuard::rollback`), its diagnostics discarded, an Info; when no journal can open its assignments stay,
+said in an Info (no silent drop). Inside the document's `{titlepage}` a storing `\title` is the cover's (#629,
+`titlepage_class_call`), as before 77i. An address block's local `\author` the lock refuses as well is unchanged
+(smfart.cls:437; `perfect_kernel_batch68x::smfart_altabstract_is_a_second_abstract`). Guards
+`perfect_kernel_batch77i::late_class_author_that_prints_is_kept_in_place`,
+`perfect_kernel_batch65a::storing_class_title_after_the_body_prints_in_place` (its five storing shapes; 2301.10468,
+2401.11672); repro `sectioning-frontmatter/late_class_author_that_prints_is_kept_in_place` (GREEN).
 
 ### 527. A late `\author` the class hands only to page furniture is the author of its sectional unit (Perl: dropped with the refused definition)
 
@@ -16347,9 +16416,9 @@ back). Package and document setters stay replayed, as pdflatex runs whatever set
 is in force (`sectioning-frontmatter/package_setter_is_replayed`, a CONTROL: Count 1 as pdflatex).
 **Why**: jsty3-author.sty:542's xparse `\author` (a package; 2607.24171) erred half-way at each of its 4 replays,
 leaving its expl3 author sequence half-built; the printer looped over it: 991 errors, Fatal:TooManyErrors → 3 errors
-(the package's own `[T009] Float without caption`, as 64h). Open (RED `sectioning-frontmatter/
-replayed_document_setter_keeps_its_store`): a clean replay still puts back every store its body `\gdef`s (#482), so a
-document setter's `\gdef\myauth{#1}` read in the body prints empty. Guards
+(the package's own `[T009] Float without caption`, as 64h). Closed 77i (`sectioning-frontmatter/replayed_document_setter_keeps_its_store`, GREEN): a clean replay put back every
+store its body `\gdef`s (#482), so a document setter's `\gdef\myauth{#1}` read in the body printed empty; a body store
+holding the argument now stays set (#482's 77i addendum). Guards
 `perfect_kernel_batch65e::{replayed_setter_error_rolls_back, package_setter_is_replayed}`.
 
 ### 535. hyperref loads letltxmacro (Perl: commented out)
@@ -20224,6 +20293,10 @@ maketitle_replay_keeps_other_setters_in_shared_list,
 maketitle_replay_keeps_other_setters_in_sentinel_list}`; repros
 `sectioning-frontmatter/class_title_page/maketitle_replay_{reads_class_author_list_as_empty,keeps_other_setters_in_{shared,sentinel}_list_*}`.
 
+**77i.** The records are now read before a clean replay puts the stores back, so a store the body itself defines that
+holds the argument is a record too and stays set (#482's 77i addendum; a document's `\gdef\myauth{#1}` read in the
+body); the kernel's `\@author`/`\@shortauthor` are put back and are no records.
+
 ### 760. A document's `\halign` redefinition runs where a binding's alignment reaches `\halign` (Perl: never runs)
 
 In TeX every amsmath alignment environment and every `\ialign`-based one (latex.ltx `\@array` for array/tabular/
@@ -20556,6 +20629,156 @@ Rust-only bindings' `\And`/`\AND`/`\Ands` (colm2025_conference, jmlr, jmlr2e) ar
 `perfect_kernel_batch77f::{inline_item_paragraphs_are_line_breaks, apa_acknowledgements_paragraphs_are_lines,
 single_space_macros_are_spaces}`. **Why**:
 the author's line structure is content; merging two paragraphs into one sentence run misreports it.
+
+### 767. A raw class's title-page stores are judged by a speculative run of its title page; an off-table store no kept run typesets is handed on (Perl: dropped)
+
+Silent-loss #5 (a), the generic rule for the stores K11's table (`STORE_SETTERS`) does not name (75a row (a);
+agent_reports/2026-10-18_k11_offtable_reach.md), and the 77h/77i follow-ups on what the title page prints. **Perl** drops
+a raw class's title page whole (latex_constructs.pool.ltxml:1105 `\global\let\@maketitle\relax`, its refused
+`\maketitle`, State.pm:502-517), and with it every value only that page prints.
+
+**Which stores.** At the raw class's end (frontmatter_stores.rs `survey_off_table_stores`) every one-argument command
+the class defined without an `@` in its name, outside the table and the kernel's setters, whose body is a pure store of
+its argument (`setter_stores`) into one control sequence of the class's that only its title-page code reads — rule (a)'s
+reader scan with the class's own `\@title`/`\@author`/`\@date` counted as title-page code, LaTeX's `\@maketitle`
+printing them (`ClassReaders::read_only_by_the_title_page_or_fields`) — is recorded with its class default
+(`lx_offtable_stores`; Info names them) and the label its title page prints before it (`ClassReaders::label_in`, below).
+
+**TeX decides what the title page prints** (`before_title_page_runs`, called at the head of `\lx@deposit@maketitle`,
+sect05.rs, in the state the deposit and the replay meet). Each candidate store is given a unique sentinel value and
+title-page code is digested speculatively (sect05.rs `speculative_title_page_run`: output discarded, every assignment
+undone by the assignment journal, diagnostics discarded, terminal output muted under a guard that also ends on a panic
+(`SuppressLogOutputGuard`, reset in `reset_thread_engine`), groups left open closed in a reading context of their own;
+frontmatter frozen and no setter replayed while it runs). Each run is made twice, the stores given letters sentinels
+(`LxSentinel<a-p>zZ`, mixed case, matched lower-cased) and then digits ones (`9090<1-8>0909`, `sentinel`; the second run only when the first printed a
+sentinel, `sentinel_runs`): a store is printed by it when both its sentinels reach the digested text
+(`sentinels_printed`) — a numeric context consumes the digits while TeX's "Missing number" recovery typesets the letters
+(`\setcounter{page}{\@fp}`, gammas.cls:305, kluwer.cls:1049; review probe `num`, where one sentinel invented
+`<pubnote>17</pubnote>`). A store run (1) finds printed whose value is plain text (characters and spaces) is confirmed
+by one more run with the document's own values (`confirmed_printed`): its letters and digits must be in that run's
+text, in their case unless the sentinel run printed the mixed-case sentinel in another (`\MakeUppercase`,
+`\MakeLowercase`) — `\ifx\@vc\@open OPEN\else\@vc\fi` with "open" prints the class's word, not the value (review probe
+`ctx2`, which invented `<pubnote>open</pubnote>`). Letters and digits only (`alphanumerics`), on both sides: TeX typesets
+`'`, ``` `` ``` and `''` as ’ “ ”, `--` as a dash, and 77i r4's comparison of the source characters lost "Women’s
+Workshop" and "“Quoted” words" (review probes `q3`, `q4`; 0 errors). The
+digested text is `ink_text` (base_utilities.rs): box characters, never a whatsit's reversion, and only the arguments a
+whatsit shows (`shown_arguments`, by declared parameter type: none of an image; a verbatim argument only when the
+whatsit's constructor prints it, the arguments `VERBATIM_PRINTERS` names for it (`(name, shown mask)`: llncs's `\url`,
+`\nolinkurl`, aas's `\@@email`, `\lx@doi`, `\harvardurl`, each its one argument; a two-verbatim `\href` would name
+its second); a constructor's replacement is compiled, so what it puts in its element cannot be read off the whatsit —, never a reference's or citation's key, `\ref{\@vb}` printing "1" (review probe `ctx3`, which
+invented `<pubnote>sec:intro</pubnote>`); url.sty's and hyperref's `\url` keep their text in an argument of their own;
+`\href{<url>}{Home}` prints "Home"; never keyvals; review probe `logo`'s `\includegraphics{\@logo}` and
+`\href{\@url}{Home}`). The print run typesets footnotes and `\thanks` (`\@firstofone`: a store the title page prints in
+one is printed, review probes `fn`, `fnt`); it gobbles `\label`, `\index`. A Fatal of a speculative run that is not a
+resource Fatal (deadline, memory budget, runaway limit) and whose run was undone is the run's alone — a sentinel value
+may cause it —: it is discarded with the run's diagnostics (an Info says so) and run (1) printed nothing
+(`SpeculativeRun::Aborted`, which `decide_unset_nulls` counts as no "fewer characters": `\relax` stays); an aborted
+deposit or replay run, (2) or (3), is no run (`sentinel_runs`): the walk decides, since a Fatal the sentinel value alone
+caused does not stop the real deposit printing the store. Three
+runs: (1) the class's whole title page with the document's values (`title_page_print_tokens`: its refused `\maketitle`
+when replayable, else LaTeX's, which runs the class's or a binding's `\@maketitle`, else article.cls:209-229's printing
+of the fields; a call of the kernel's `\maketitle` from the class's, `\let\@origmaketitle\maketitle`, runs LaTeX's
+`\@maketitle` there), with the off-table stores the document set and the rerouted stores handed to the frontmatter as
+candidates (`lx_sentinel_printed`); (2) and (3) the deposit and the replay exactly as they then run
+(`title_page_deposit_tokens`, `title_page_replay_tokens`, shared with `\lx@deposit@maketitle`), the off-table candidates
+given sentinels (`lx_sentinel_deposit`, `lx_sentinel_replay`). A class's own booleans (sigplanconf.cls:87-90
+`\def\@true{TT}`/`\def\@false{FL}`, :1118 `\if \@copyrightwanted …`), `\newif` switches (aiaa-tc.cls:199-200
+`[handcarry]`), `\@ifundefined`/`\ifx…\@empty` tests, and what it only boxes or puts in a running head (`\setbox`,
+`\markboth`: degruyter-journal-a.cls:574-586, 620, 1704.03582; acmlarge.cls:1021, 1508.03599) are then what they are in
+pdflatex. A run that errors still gives its text (TeX's recovery typesets on; an internal our emulation of the class
+lacks becomes an `<ltx:ERROR>` holding its name). Without a run (a journal already open, or a run whose assignments
+could not be undone, `SpeculativeRun::Unavailable`; an Info says so, for sweeps to count) the stores' readers are walked
+instead (`walked_title_page_reads`: the live code, `\newif`/kvoptions switches and `\if`/`\ifx` on parameterless macros
+of characters evaluated, `evaluated_switch`; only the code that runs, `executed_code`).
+
+**Labels.** The label a title page prints before a store is read off the class's code (`ClassReaders::label_in`,
+`line_label_before`: label material and layout from the line's start — the macro's start, a `\par`, a `\\`, an
+environment's `\begin{…}`/`\end{…}`, another value, the open brace of the store's group — up to the store; the phrase
+right before the store, a sentence before it in the line staying where it is: `\footnote{Funded. KW: \@keywords}` names
+the keywords "KW:" and the footnote keeps "Funded.", review probe `fnm`), and is the entry's name only when TeX's output
+says so: at `\maketitle`, before the stores are handed on (`\lx@store@defaults`), one more speculative run of the whole
+title page with the labelled stores given letters sentinels must print the label's text right before the store's
+sentinel (`verify_title_page_labels`, `printed_right_before`, letters and digits compared: the class's `Author's
+keywords:` is typeset "Author’s keywords:", review probe `ap`; once per document). `\href{mailto:\@vg}{\@vg}` read
+"mailto:" off the URL argument (review probe `ctx3`; modernposter.cls, skdoc.cls have the shape), which the page does not
+print. A rejected label stays in the title page and the entry is unnamed; without a run, a label in a group that is a
+control sequence's argument (not a font command's) is rejected.
+
+**What is handed on** (`hand_untypeset_stores`, at `\lx@store@untypeset` after the deposit and the replay): each
+off-table store the document set (no longer the class default, not blank; once per store, sigplanconf.cls:939-942's
+`\copyrightDOI` and its `\let` `\copyrightdoi`) that run (1) printed and no kept run typeset (run (2) or (3) for a kept
+deposit or replay, `lx_title_page_{deposit,replay}_kept`), in the order the title page prints them, with no visible label
+of ours — the meta XSLT shows a note's `@role` as a visible label (LaTeXML-meta-xhtml.xsl:79-85), which 77i r1's
+`note[role=<setter>]` made "titre:", "auteurs:", "copyrightDOI:" — as: the document's `ltx:title` when the class's own
+refused `\title` hands its argument to the store's setter and the document has no title (`class_field_setter`:
+jfpc.cls:122 `\renewcommand{\title}[1]{\titre{#1}}`, its `\@title` :176-186 printing `\@letitre`); the document's authors
+(`\lx@add@authors@adaptive`) when there is no creator and the store holds the names the class's own `\@author` prints —
+the one its refused `\author` hands its argument to (:126 → `\auteurs`), else the first store its `\@author` reads
+(`lx_offtable_author_reads`); a store the class's `\@author` prints beside the names (jfpc.cls:188-191
+`\@lesinstitutions`, `\@lesmels`) rows of the creators' author block (`\lx@add@store@authorblock`, `role=authorblock`,
+as an `\author` call's tail is, its label as printed before it) — the creators' data, attached to them as any
+affiliation is, where 77i r2's `pubnote` made them a note on the document (under the default `ltx_authors_1line` layout
+both are hover popups, LaTeXML.css:74-88 and :107-120: the gain is what the rows are, not where they show); a store
+that only repeats the creators' names — the class prints no label before it, every word of each of its lines (split at
+`\and`, `\\`, `\newline`, `\par`) is a word of a creator's name, and every creator's words are among its words — is a
+duplicate, not handed on (`repeats_creator_names`; "Corresponding author: \@corr" with one author's name is a role, kept:
+review probe `corr`); any other store an `ltx:pubnote` (Base_Utility.pool.ltxml:634, a note about the document),
+its `\and` between authors' blocks a line break, named by the label the title page prints before it with the space
+printed before the store kept as a tie (jfpc's `\@lannee`: `name="Actes JFPC~"`, "Actes JFPC 2015", :177, as
+acmart_cls.rs:178's `name={Price:~}`). 1503.05530 had lost its title, authors, institutions and e-mail. The same run (1) settles #6b (`settle_placed_stores`, `\lx@store@hand`): a handed store's
+setter called again after `\maketitle` only re-sets the store when run (1) printed the store (OD #154 addendum).
+
+**The deposit's unset stores** (77h/23b; `decide_unset_nulls`, `\lx@captured@stores`): a rerouted store the paper never
+set, still undefined, is defined in the deposit and the replay — undefined, it raised an error that dropped the whole
+deposit (an.cls:532 `\ch@ckobl{institute}{…}` runs in the class's own `\maketitle`; the "Key words" line lost, 23b) — as
+`\relax` or `\@empty`: a "prints fewer characters" rule over the text TeX typesets for each candidate, from speculative
+runs of the deposit and the replay (all `\relax`, all `\@empty`, then each store alone `\@empty`; a tie keeps
+`\relax`): `\relax` where a class tests
+`\@ifundefined{@pubinfo}`/`{@recdate}` (ptptex.cls:88-104; hep-th9803240, 1309.6905, 0911.1235, 0708.3877, 0801.2466,
+1009.4028, 1007.1507, cond-mat0411234; jpsj 0903.1491, 0912.1097, 1101.2977, 1203.5392), `\@empty` where it tests
+`\ifx\@institute\@empty` after its own `\maketitle` defaulted the store so (no orphan "Institute:").
+
+**Duplicates and furniture.** A store a kept run typesets is not handed on (CONTROL
+`offtable_store_typeset_by_the_deposit_stays_there`); one printed only under a switch that is off, or only in a box or a
+running head, is not printed and not handed on (the page-furniture ruling); page-furniture and metadata stores read by
+code outside the title page are not recorded (nature_djm `\pubdate`, cedram `\CDRorcid`). nowfnt.cls:798-804's
+`\maintitleauthorlist` ("AUTHORS FOR COVER PAGE", 2308.02698 main.tex:44) is the cover's author block printed beside
+the abstract page's `\author[n]{Surname, First}`/`\affil` lines (main-session decision under the page-furniture ruling:
+print flourish dropped, semantic notes kept, no content lost): in 2308.02698 it holds the names alone, a repeat of the
+creators, dropped (`repeats_creator_names` — by words, as nowfnt's `\author[1]{Sung, Yoonchang}` gives two creators,
+SYNC_STATUS row "nowfnt creators"); in 2108.12618 it carries the affiliations and e-mails, which reach the document
+nowhere else (nowfnt's `\affil` is not captured), and stays a pubnote, its `\and` line breaks between the authors (77i
+r2 ran "…mkokotov@gmail.com Matan Gavish"). **Cost:** the speculative runs digest title-page code at most 8 + 2 + N
+more times per raw-class `\maketitle` (the print, deposit and replay runs, each with letters and digits sentinels; the
+label run when a store is labelled and the confirming run when a store found printed has a plain value; N = unset
+rerouted stores, `decide_unset_nulls`'s all-`\relax` and all-`\@empty` runs then one per store; measured +0.03–0.29%
+`instructions:u` in 77i r3 — 1309.6905 +0.03%, 1503.05530 +0.07%, 1603.03011 +0.29%, the r3 review's run of 1603.03011
++0.23%, 10.0017e9 → 10.0251e9 — and, over r3, +0.06% (1503.05530), +0.23% (1603.03011), +0.98% (1309.6905: its labelled keywords add the label and
+confirming runs) in 77i r4). **Residuals:** what the assignment journal does not undo — the raw-read paths list
+(`RAW_READ_PATHS`, content.rs:2166) and the pending field-provenance cover (`FIELD_COVER_PENDING`, token.rs:884) —, unlikely to
+be reached by title-page code; a run whose assignments could not be undone (its groups changed) keeps the global
+assignments it made with sentinel values (a class's `\xdef\@x{\@store}` would carry "LxSentinel…zZ" into the document),
+and the walk then decides; a test of the value takes its branch with the sentinel's value, not the document's —
+`\ifnum\@x<100 No.~\@x\fi` with 7 takes the other branch with the digits and `\romannumeral\@va` prints neither sentinel
+(pdflatex prints "No. 7" and "iii"; the store counts as not printed and is not handed on: review probes `ctx2`, `ctx`) —
+the confirming run checks only what the sentinel runs found printed, so it does not recover these, and a plain value
+whose letters TeX prints as other characters (a font's ligature glyph) would fail it; a label with an accent
+(`R\'esum\'e :`, `\textbf{Mots-cl\'es :}`) is not read off the code (`label_item`), and a heading-style label before an
+abstract the kernel's `\abstract` owns (`\begin{center}{\bf Abstract}\end{center}`, `{\bf Abstract.}`) is not this
+mechanism's: both stay orphan paragraphs, as on base (SYNC_STATUS "Silent-loss inventory" #6a residual); a constructor
+outside `VERBATIM_PRINTERS` that prints a verbatim argument (a binding's two-verbatim `\href`, jhep_cls.rs) does not
+count it printed; a store the class prints only behind a label macro it defines at `\maketitle`
+(bullsrsl.cls:747-765 `\BSRSL@CorrespIntro` "Correspondence to:", 2401.09121, 2410.19120) is a pubnote without that
+label, a hover-only popup (SYNC_STATUS row "bullsrsl correspondence"). Guards
+`perfect_kernel_batch77i::{offtable_stores_read_by_class_author_are_the_creators,
+offtable_store_typeset_by_the_deposit_stays_there, offtable_store_the_class_title_hands_on_is_the_title,
+offtable_store_the_title_page_does_not_print_is_not_handed_on, unset_store_reads_as_the_title_page_tests_it,
+store_read_as_a_number_is_not_printed, store_in_an_image_path_or_link_target_is_not_printed,
+cover_author_list_is_dropped_only_when_it_repeats_the_names, store_label_is_printed_text_not_a_link_target_or_key,
+store_label_is_the_phrase_printed_before_it, labelled_role_store_naming_one_author_is_a_note,
+store_tested_against_a_word_is_not_printed, store_values_typeset_with_quotes_are_printed,
+store_label_with_an_apostrophe_names_the_entry}`, `perfect_kernel_batch77h::an_without_institute_keeps_the_title_block`,
+`latexml_core` `suppress_log_output_guard_restores_on_drop_and_unwind`.
 
 ### 768. A tcolorbox listing environment's box title is the listing's title (Perl: raw tcblistings, the box not read back)
 

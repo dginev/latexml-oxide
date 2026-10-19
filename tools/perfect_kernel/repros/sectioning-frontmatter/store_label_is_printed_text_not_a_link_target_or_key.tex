@@ -1,0 +1,31 @@
+% A raw class's store the title page uses as a cross-reference key (`see \ref{\@vb}`, pdflatex "see 1") is not text
+% on the page: a verbatim argument is shown only by a command that prints it (`shown_arguments`, base_utilities.rs:
+% `\url`, `\path`, `\nolinkurl`, an e-mail, a DOI), never a reference's or citation's key. A store printed by
+% `\href{mailto:\@vg}{\@vg}` is printed (its text argument), without the "mailto:" of the URL argument as its label:
+% a label read off the class's code is the entry's name only when TeX's run of the title page prints it right before
+% the store (`verify_title_page_labels`, frontmatter_stores.rs).
+% The `\undefinedthing` drops the title-page deposit (an error there), so the stores reach the frontmatter or nothing.
+% witness: none (synthetic; review probe `ctx3` of 77i r3; the `\href{mailto:\@email}{\@email}` shape: modernposter.cls,
+%          skdoc.cls).
+% oracle:  pdflatex 1 error (the deliberate `\undefinedthing`): "B:see 1", "G:me@x.org"; no "sec:intro", no "mailto:".
+% engines: rust 77i r3: `<pubnote>sec:intro</pubnote>`, `<pubnote name="mailto:">me@x.org</pubnote>`.
+% expect:  0 errors, 0 warnings; `<pubnote>me@x.org</pubnote>` the only pubnote; no "sec:intro" note, no "mailto:".
+% status:  RED (77i r3) -> GREEN (77i r4)
+\begin{filecontents*}[overwrite]{rclabkey.cls}
+\ProvidesClass{rclabkey}
+\LoadClass{article}
+\RequirePackage{hyperref}
+\def\@vb{}\newcommand{\svb}[1]{\def\@vb{#1}}
+\def\@vg{}\newcommand{\svg}[1]{\def\@vg{#1}}
+\def\@maketitle{\undefinedthing\@title\par\@author\par
+ B:see \ref{\@vb}\par
+ G:\href{mailto:\@vg}{\@vg}\par}
+\end{filecontents*}
+\documentclass{rclabkey}
+\title{T}\author{Anton}
+\svb{sec:intro}\svg{me@x.org}
+\begin{document}
+\maketitle
+\section{Intro}\label{sec:intro}
+Text.
+\end{document}

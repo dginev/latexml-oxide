@@ -1,0 +1,23 @@
+% A rerouted store the paper never set, which the class's `\@maketitle` tests with `\@ifundefined`, stays `\relax` in
+% the title-page deposit, so the class still sees it unset and prints neither its journal line nor "(Received …)":
+% ptptex.cls:88-104 (`\@ifundefined{@pubinfo}`/`{@recdate}`); decided by TeX (`decide_unset_nulls`,
+% frontmatter_stores.rs). The other direction is `unset_store_tested_for_emptiness_reads_empty_in_the_deposit.tex`.
+% witness: hep-th9803240, 1309.6905, 0911.1235, 0708.3877, 0801.2466, 1009.4028, 1007.1507, cond-mat0411234 (ptptex);
+%          0903.1491, 0912.1097, 1101.2977, 1203.5392 (jpsj).
+% oracle:  pdflatex 0 errors: "T Anton Prog. Theor. Phys. Text.", no journal line, no "(Received".
+% engines: rust 77h r1 (`\@empty`): "Journal: " and "(Received )" printed; rust 77h r2 (`\relax`) = 77i r2: right.
+% expect:  0 errors, 0 warnings; no "Journal:", no "Received"; the class's own line "Prog. Theor. Phys." once.
+% status:  RED (77h r1) -> GREEN (77h r2, 77i r2)
+\begin{filecontents*}[overwrite]{rcundef.cls}
+\ProvidesClass{rcundef}
+\LoadClass{article}
+\def\recdate#1{\gdef\@recdate{#1}}
+\def\pubinfo#1{\gdef\@pubinfo{#1}}
+\def\@maketitle{\@ifundefined{@pubinfo}{}{Journal: \@pubinfo\par}\@title\par\@author\par\@ifundefined{@recdate}{}{(Received \@recdate)\par}Prog. Theor. Phys.\par}
+\end{filecontents*}
+\documentclass{rcundef}
+\title{T}\author{Anton}
+\begin{document}
+\maketitle
+Text.
+\end{document}

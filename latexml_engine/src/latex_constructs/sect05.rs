@@ -947,13 +947,16 @@ pub(crate) fn load() -> Result<()> {
   // `{titlepage}`, the class's own printing call and then the kernel's (`titlepage_class_call`); else the kernel's.
   DefMacro!("\\lx@sealed@class@call{}{}{}{}", sub[(name, opt, arg, kernel)] {
     let name = name.to_string();
-    Ok(match sealed_class_call(&name, &opt, &arg) {
+    Ok(match sealed_class_call(&name, &opt, &arg, &kernel) {
       Some(call) => call,
       None => titlepage_class_call(&name, &opt, &arg, &kernel).unwrap_or(kernel),
     })
   });
   DefPrimitive!("\\lx@sealed@class@run{}{}{}", sub[(name, opt, arg)] {
     sealed_class_run(&name.to_string(), opt, arg)
+  });
+  DefPrimitive!("\\lx@sealed@storing@run{}{}{}", sub[(name, opt, arg)] {
+    sealed_storing_run(&name.to_string(), opt, arg)
   });
   // The same `{titlepage}` rule for a binding's own `\title[]{}` (revtex4_support, ams_support, iopart_support,
   // mn2e_support): its body is the kernel's part.
@@ -1137,7 +1140,16 @@ pub(crate) fn load() -> Result<()> {
   });
   // the end of a replayed setter's body, in its own group: what it first defined there (`replay_class_setter`)
   DefPrimitive!("\\lx@replay@capture", {
-    let meanings = top_frame_new_meanings();
+    let mut meanings = top_frame_new_meanings();
+    // …and the body's own stores it set here (`defined_stores`), new or not — the lock's drop defined them empty
+    // (state.rs; afthesis.cls:520 `\def\author#1{\def\auth@r{#1}}`): the one holding the argument stays, as the
+    // `\gdef`ed ones do (`note_replay_records`)
+    let body_stores = REPLAY_BODY_STORES.with(|c| c.borrow().clone());
+    for (key, meaning) in top_group_frames_meanings(1) {
+      if body_stores.contains(&key) && !meanings.iter().any(|(k, _)| *k == key) {
+        meanings.push((key, meaning));
+      }
+    }
     REPLAY_CAPTURED.with(|c| *c.borrow_mut() = meanings);
   });
   // the end of a replayed begin code, in the body's own group: what it bound in its plain groups, new or changed
@@ -1262,8 +1274,31 @@ pub(crate) fn load() -> Result<()> {
         continue;
       }
       let Some(at) = body.windows(part.len()).position(|w| w == part) else { continue };
-      let mut rest = body[..at].to_vec();
-      rest.extend_from_slice(&body[at + part.len()..]);
+      let (mut head, mut tail) = (&body[..at], &body[at + part.len()..]);
+      // a note left empty goes with its text: `\footnote{KW: \@keywords}` with the keywords' label and store taken
+      // out (review probe `fn`) is no note in the PDF, whose footnote showed the keywords
+      if let ([.., note, open], [close, ..]) = (head, tail)
+        && open.get_catcode() == Catcode::BEGIN
+        && close.get_catcode() == Catcode::END
+        && [T_CS!("\\footnote"), T_CS!("\\footnotetext"), T_CS!("\\thanks")].contains(note)
+      {
+        let text_only = *note == T_CS!("\\footnotetext");
+        head = &head[..head.len() - 2];
+        tail = &tail[1..];
+        // (and the mark of an emptied `\footnotetext`, `\footnotemark\footnotetext{KW: \@keywords}`: review probe
+        // `fnx` left an empty `ltx:note` of role footnotemark)
+        if text_only {
+          let mut end = head.len();
+          while end > 0 && head[end - 1].get_catcode() == Catcode::SPACE {
+            end -= 1;
+          }
+          if end > 0 && head[end - 1] == T_CS!("\\footnotemark") {
+            head = &head[..end - 1];
+          }
+        }
+      }
+      let mut rest = head.to_vec();
+      rest.extend_from_slice(tail);
       let mut emptied = (*d).clone();
       emptied.expansion = (!rest.is_empty()).then(|| ExpansionBody::Tokens(Tokens::new(rest)));
       emptied.plan = std::cell::OnceCell::new();
@@ -1277,18 +1312,23 @@ pub(crate) fn load() -> Result<()> {
   // empty centred paragraphs and a page break — dropped; bfhthesis's
   // degree/advisor block beside its captured `\@institution` is kept.
   DefPrimitive!("\\lx@deposit@maketitle", {
+    // What the class's title page prints, decided by TeX: the speculative sentinel runs (frontmatter_stores.rs
+    // `before_title_page_runs`), made in the state the deposit and the replay below meet.
+    crate::frontmatter_stores::before_title_page_runs()?;
     // Both deposits null the title fields, so a `{titlepage}` either lays out
     // builds no `ltx:titlepage` (the `{titlepage}` constructor's `fields`).
     AssignValue!("lx_depositing_frontmatter_fields" => true, Some(Scope::Global));
+    // Which title-page runs are kept, for the off-table stores no kept run typeset (`\lx@store@untypeset`,
+    // frontmatter_stores.rs).
+    AssignValue!("lx_title_page_deposit_kept" => false, Some(Scope::Global));
+    AssignValue!("lx_title_page_replay_kept" => false, Some(Scope::Global));
     // Speculative like the class-body replay below — it runs with the title fields emptied, outside the class's own
     // `\maketitle`, and Perl never runs it — so its diagnostics are held the same way, and a deposit that raises an
     // error is dropped with them: eptcs.cls:114-130's `\@maketitle` prints `\publicationstatus` and
     // `\copyrightholders`, which its `\maketitle` (:73-89) provides just before calling it, so alone it raised
     // "undefined" for page furniture (1309.1271, 1405.5596, 1109.2657).
     let hold = util::logger::DiagnosticsHold::begin();
-    let deposit = digest(mouth::tokenize_internal(
-      r"\ifx\@maketitle\@empty\else{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\thetitle\@empty\let\theauthor\@empty\let\thedate\@empty\lx@deposit@setters\let\and\relax\lx@captured@stores\lx@dropped@env@stores\lx@replay@records\@maketitle}\fi",
-    ));
+    let deposit = digest(title_page_deposit_tokens(&[]));
     AssignValue!("lx_depositing_frontmatter_fields" => false, Some(Scope::Global));
     let deposit = match deposit {
       Ok(deposit) => deposit,
@@ -1309,6 +1349,7 @@ pub(crate) fn load() -> Result<()> {
     } else {
       hold.commit();
       if typesets_content(&deposit) {
+        AssignValue!("lx_title_page_deposit_kept" => true, Some(Scope::Global));
         out.push(deposit);
       }
     }
@@ -1327,7 +1368,6 @@ pub(crate) fn load() -> Result<()> {
     // only a shipout picture or boxes yields nothing and is dropped. Surpass
     // (Perl drops the class body, State.pm:502-517); OXIDIZED_DESIGN #265.
     // Guard `perfect_kernel_batch56::class_maketitle_body_deposits_its_fields`.
-    let dropped = T_CS!("\\lx@dropped@maketitle");
     // Replay only a body whose vocabulary exists here: every control sequence it
     // would run must be defined at deposit time (`body_vocabulary_is_defined`; a
     // no-op's arguments are skipped, and a defined macro whose own expansion needs
@@ -1336,37 +1376,14 @@ pub(crate) fn load() -> Result<()> {
     // :331 over the amsart binding: `\@setcopyright`, `\andify`, `\@maketitle@hook`)
     // would otherwise error and leave groups open — the backfire that retired an
     // earlier generic replay. A helper the body defines before using it counts as defined
-    // (since 61o; uiucthesis.cls:134-147).
-    let argless = match lookup_meaning(&dropped) {
-      Some(Stored::Expandable(ref d)) => {
-        (d.get_parameters().is_none_or(|p| p.get_parameters().is_empty())
-          || dropped_maketitle_takes_options())
-          && match d.get_expansion() {
-            Some(ExpansionBody::Tokens(body)) => body_vocabulary_is_defined(body.unlist_ref(), "\\maketitle"),
-            _ => false,
-          }
-      },
-      _ => false,
-    };
+    // (since 61o; uiucthesis.cls:134-147). Argument-free bodies only (`title_page_replay_tokens`).
     // Not re-entrant: a class body that calls `\maketitle` again reaches the
     // kernel `\maketitle` (locked), whose deposit must not run the body twice.
     // (`\maketitle` itself is NOT redefined here — it is locked, and the lock
     // would record that redefinition as the dropped body.)
-    if argless && !lookup_bool("lx_depositing_class_maketitle") {
+    if let Some(replay) = title_page_replay_tokens(&[]) {
       AssignValue!("lx_depositing_class_maketitle" => true, Some(Scope::Global));
       AssignValue!("lx_depositing_frontmatter_fields" => true, Some(Scope::Global));
-      // A `\maketitle[<options>]` body gets the options the kernel `\maketitle`
-      // read for it (`\lx@maketitle@withopt`); without them, its default.
-      let mut replay = mouth::tokenize_internal(
-        r"{\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\thetitle\@empty\let\theauthor\@empty\let\thedate\@empty\lx@deposit@setters\let\thanks\@gobble\let\and\relax\let\@maketitle\relax\lx@captured@stores\lx@dropped@env@stores\lx@replay@records\lx@dropped@maketitle",
-      )
-      .unlist();
-      if let Some(Stored::Expandable(ref o)) = lookup_meaning(&T_CS!("\\lx@maketitle@opts"))
-        && let Some(ExpansionBody::Tokens(opts)) = o.get_expansion()
-      {
-        replay.extend(opts.unlist_ref().iter().copied());
-      }
-      replay.push(T_END!());
       // The replay is speculative — the body runs with its fields emptied, a
       // state the class never faces — so its diagnostics are held and are the
       // document's only if the replay is kept. A replay that raises an error is
@@ -1379,7 +1396,7 @@ pub(crate) fn load() -> Result<()> {
       let hold = util::logger::DiagnosticsHold::begin();
       // The class's code, read as the class's: a `\def` of a locked name it makes stays refused (state.rs
       // `install_definition`), not a document override.
-      let body = with_origin(DefinitionOrigin::File, || digest(Tokens::new(replay)));
+      let body = with_origin(DefinitionOrigin::File, || digest(replay));
       // Reset before propagating an error, so a failed deposit does not disable
       // every later one. A hard error still propagates on purpose (Fatal stays
       // Fatal): only a recursion/resource Fatal gets here — an undefined internal
@@ -1408,12 +1425,17 @@ pub(crate) fn load() -> Result<()> {
         // Kept only when it shows something: KOMA's emptied title page (scrreprt, scrbook,
         // `scrartcl[titlepage]`) and boek/rapport typeset only `\noindent`, skips and `\par`.
         if typesets_content(&body) {
+          AssignValue!("lx_title_page_replay_kept" => true, Some(Scope::Global));
           out.push(body);
         }
       }
     }
     Ok(out)
   });
+
+  // LaTeX's `\maketitle` as a speculative run of the class's title page runs it (`title_page_print_tokens`): its
+  // `\@maketitle`, in a group (article.cls:191-207, its `\\thanks` gobbled by the run).
+  DefMacro!("\\lx@print@maketitle", r"\begingroup\@maketitle\endgroup");
 
   // Doesn't produce anything (we're already inserting frontmatter),
   // But, it does make the various frontmatter macros into no-ops.
@@ -1511,7 +1533,7 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\lx@maketitle@begin", "");
   DefMacro!(
     "\\lx@maketitle@body",
-    r"\lx@maketitle@begin\lx@maketitle@supersede\lx@author@tail\lx@store@defaults\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\global\let\thanks\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\lx@maketitle@clear@and\global\let\lx@maketitle@opts\relax\lx@maketitle@cleanup",
+    r"\lx@maketitle@begin\lx@maketitle@supersede\lx@author@tail\lx@store@defaults\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\lx@store@untypeset\global\let\thanks\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\lx@maketitle@clear@and\global\let\lx@maketitle@opts\relax\lx@maketitle@cleanup",
     locked => true
   );
   // article.cls's `\maketitle` ends by disabling itself and the setters
@@ -2867,6 +2889,9 @@ thread_local! {
   /// The local definitions a replayed class setter made (`\lx@replay@capture`), for [`replay_class_setter`].
   static REPLAY_CAPTURED: std::cell::RefCell<Vec<(SymStr, Stored)>> =
     const { std::cell::RefCell::new(Vec::new()) };
+  /// The stores the replayed setter's own body defines (`defined_stores`), for `\lx@replay@capture`.
+  static REPLAY_BODY_STORES: std::cell::RefCell<Vec<SymStr>> =
+    const { std::cell::RefCell::new(Vec::new()) };
 }
 
 /// Run a raw class's own frontmatter setter that the lock refused (`\lx@dropped@<name>`, state.rs) for its side
@@ -2880,7 +2905,10 @@ thread_local! {
 /// or reading its own arguments (no parameters: given the call's `[opt]{arg}`) whose vocabulary is defined
 /// (`body_vocabulary_is_defined`) runs, in a group, with `\thanks`, `\footnote` and `\label` gobbled (the kernel makes
 /// the author's notes and labels), not re-entrant; afterwards the kernel's `\@author`/`\@shortauthor` and every store the
-/// body `\def`s are as before (empty if undefined), so what stays is the class's flags, counters, lists and `\let`s; an absent optional argument (`opt` empty) takes the class's default.
+/// body `\def`s that does not hold the argument are as before (empty if undefined), so what stays is the class's flags,
+/// counters, lists and `\let`s, and the body's stores of the argument, which the title-page code reads as empty
+/// (`note_replay_records`; a document's `\gdef\myauth{#1}` read in the body, 77i); an absent optional argument (`opt`
+/// empty) takes the class's default.
 /// Only the dropped body itself is read for stores (`defined_stores`): a store defined inside an internal it calls is
 /// kept, as the amsart `\@dblarg\csname\string\author\endcsname` wrapper's `\\author` sets them (cmfne.cls:462-483
 /// `\firstshortauthor`, which its `\enddoc@text` prints at the end of the document, 2210.02246; the class's own
@@ -2956,8 +2984,13 @@ pub fn note_title_page_part(name: &str, part: Tokens) {
 /// argument `arg`: the class's own record of the value the kernel's setter gave
 /// the frontmatter. Each joins `lx_replay_records` (name, part), which `\lx@replay@records` takes out of the macro in
 /// the title-page deposit and replay (`\lx@deposit@maketitle`); what other code put in the same macro stays (an
-/// affiliation a second class setter appends to the author list).
-fn note_replay_records(assigned: &[(SymStr, Option<Stored>)], arg: &Tokens) {
+/// affiliation a second class setter appends to the author list). `skip`: the kernel's stores, put back, no records.
+/// Returns the macros recorded, which the replay leaves set (77i).
+fn note_replay_records(
+  assigned: &[(SymStr, Option<Stored>)],
+  arg: &Tokens,
+  skip: &[SymStr],
+) -> Vec<SymStr> {
   let ink = |toks: &[Token]| -> Vec<Token> {
     toks
       .iter()
@@ -2966,8 +2999,9 @@ fn note_replay_records(assigned: &[(SymStr, Option<Stored>)], arg: &Tokens) {
       .collect()
   };
   let arg = ink(arg.unlist_ref());
+  let mut recorded = Vec::new();
   if arg.is_empty() {
-    return;
+    return recorded;
   }
   // a parameterless token-list macro's body (an empty one stored as `None`)
   let value = |m: Option<&Stored>| -> Option<Vec<Token>> {
@@ -2992,7 +3026,7 @@ fn note_replay_records(assigned: &[(SymStr, Option<Stored>)], arg: &Tokens) {
   };
   for (key, before) in assigned {
     let name = with(*key, ToString::to_string);
-    if !name.starts_with('\\') {
+    if !name.starts_with('\\') || skip.contains(key) {
       continue;
     }
     let cs = T_CS!(&name);
@@ -3031,6 +3065,7 @@ fn note_replay_records(assigned: &[(SymStr, Option<Stored>)], arg: &Tokens) {
         Stored::String(pin(name)),
         Stored::Tokens(Tokens::new(part)),
       ])));
+      recorded.push(*key);
     }
   }
   assign_value(
@@ -3038,6 +3073,7 @@ fn note_replay_records(assigned: &[(SymStr, Option<Stored>)], arg: &Tokens) {
     Stored::VecDequeStored(records),
     Some(Scope::Global),
   );
+  recorded
 }
 
 /// [`replay_class_setter`] (`call` = the call's `[opt]{arg}`) and [`replay_class_begin_code`] (`call` = `None`).
@@ -3056,6 +3092,15 @@ fn replay_dropped_class_code(
   // the kernel's part of a `{titlepage}` call whose class `\title` just ran on the cover (`titlepage_class_run`)
   if call.is_some() && name == "title" && lookup_bool("lx_titlepage_class_ran") {
     AssignValue!("lx_titlepage_class_ran" => false, Some(Scope::Global));
+    return Ok(());
+  }
+  // …or whose class command just ran in place after the document body began (`sealed_storing_run`)
+  if call.is_some() && lookup_string("lx_sealed_class_ran") == name {
+    assign_value(
+      "lx_sealed_class_ran",
+      Stored::String(pin("")),
+      Some(Scope::Global),
+    );
     return Ok(());
   }
   let dropped = T_CS!(s!("\\lx@dropped@{name}"));
@@ -3122,8 +3167,9 @@ fn replay_dropped_class_code(
   // far, which `\lx@author@flush` would then hand to the previous author as an author-block row) and those the body
   // itself defines (`\gdef\abstract@cs{…}`, JINST.cls:820), which the class's title layout prints — the kernel is the
   // one source of the frontmatter, and a store the body would define is empty if it was undefined (state.rs, the
-  // dropped setter's internals; afthesis.cls:520).
+  // dropped setter's internals; afthesis.cls:520) — save a body store that now holds the argument (below).
   let mut kernel_stores = vec![T_CS!("\\@author"), T_CS!("\\@shortauthor")];
+  REPLAY_BODY_STORES.with(|c| *c.borrow_mut() = stores.iter().map(meaning_key).collect());
   kernel_stores.extend(stores);
   let saved: Vec<Option<Stored>> = kernel_stores.iter().map(lookup_meaning).collect();
   // …and the boxes the body itself fills (`filled_boxes`): memo-l.cls:79-84's begin code `\global\setbox\abstractbox=
@@ -3221,7 +3267,27 @@ fn replay_dropped_class_code(
   for (key, value) in boxes.iter().zip(saved_boxes) {
     assign_value(key, value.unwrap_or(Stored::None), Some(Scope::Global));
   }
+  // The class's own record of the field's value — a list the body appended the call's argument to, vmsta.cls:296-315's
+  // `\g@addto@macro\@@@authors{…\name@m@front{#2}…}`, which its `\maketitle` (:534-545, its `\appto` at :691) prints —
+  // is the frontmatter's field (`note_replay_records`): the title-page deposit and replay take out what the replay added,
+  // as they null `\@author` (1506.02940 printed its author and affiliation a second time), and keep what other code
+  // added to the same list. Read before the stores are put back: a store the body itself defines that now holds the
+  // argument is such a record too, and stays set, as TeX leaves it — a document's `\renewcommand\author[1]{\gdef
+  // \myauth{#1}…}` read back in the body ("Written by \myauth.", silent-loss #7) — while the title-page code reads it
+  // as empty. The kernel's own `\@author`/`\@shortauthor` are the frontmatter's and are put back.
+  let kernel_keys = [
+    meaning_key(&kernel_stores[0]),
+    meaning_key(&kernel_stores[1]),
+  ];
+  let recorded = if !begin_code && result.is_ok() && hold.errors_raised() == 0 {
+    note_replay_records(&assigned, &arg, &kernel_keys)
+  } else {
+    Vec::new()
+  };
   for (cs, meaning) in kernel_stores.iter().zip(saved) {
+    if recorded.contains(&meaning_key(cs)) {
+      continue;
+    }
     // only what the body changed past its group (a global `\gdef`/`\xdef`): a store a group of the document holds
     // locally stays local (iosart2x's `\author`s inside `{frontmatter}`), and so does what a begin code bound in its
     // own groups, held in the environment's above — its extent is the body's, as in TeX (`\def\abstracthead{X}`,
@@ -3243,14 +3309,6 @@ fn replay_dropped_class_code(
       .map(|empty| Stored::Expandable(Rc::new(empty)))
     });
     assign_meaning(cs, meaning.unwrap_or(Stored::None), Some(Scope::Global));
-  }
-  // The class's own record of the field's value — a list the body appended the call's argument to, vmsta.cls:296-315's
-  // `\g@addto@macro\@@@authors{…\name@m@front{#2}…}`, which its `\maketitle` (:534-545, its `\appto` at :691) prints —
-  // is the frontmatter's field (`note_replay_records`): the title-page deposit and replay take out what the replay added,
-  // as they null `\@author` (1506.02940 printed its author and affiliation a second time), and keep what other code
-  // added to the same list.
-  if !begin_code && result.is_ok() && hold.errors_raised() == 0 {
-    note_replay_records(&assigned, &arg);
   }
   if let Err(err) = result {
     hold.commit();
@@ -3336,7 +3394,7 @@ fn dropped_class_setter(name: &str) -> Option<(bool, Vec<Token>)> {
 /// cmpj/template, schooldocs-examples, 2301.10468). Not while such a call runs: a class command that calls the kernel's
 /// (`\let\origtitle\title`, beamerbasetitle.sty:69-70, authoraftertitle.sty:11-23) reaches the kernel's, once.
 /// OXIDIZED_DESIGN #526.
-fn sealed_class_call(name: &str, opt: &Tokens, arg: &Tokens) -> Option<Tokens> {
+fn sealed_class_call(name: &str, opt: &Tokens, arg: &Tokens, kernel: &Tokens) -> Option<Tokens> {
   let (tag, role) = match name {
     "title" => ("ltx:title", ""),
     "author" => ("ltx:creator", "author"),
@@ -3354,10 +3412,21 @@ fn sealed_class_call(name: &str, opt: &Tokens, arg: &Tokens) -> Option<Tokens> {
     return None;
   }
   dropped_class_setter(name)?;
-  if class_command_stores(name) {
+  // A class command that stores what it is given is the class's frontmatter setter: run in place, kept when it prints
+  // and dropped whole when it does not (`sealed_storing_run`). Inside the document's `{titlepage}`, a storing `\title`
+  // is the cover's (`titlepage_class_call`).
+  let stores = class_command_stores(name);
+  if stores && name == "title" && lookup_bool("lx_titlepage_cover") {
     return None;
   }
-  let mut call = vec![T_CS!("\\lx@sealed@class@run"), T_BEGIN!()];
+  let mut call = vec![
+    T_CS!(if stores {
+      "\\lx@sealed@storing@run"
+    } else {
+      "\\lx@sealed@class@run"
+    }),
+    T_BEGIN!(),
+  ];
   call.extend(mouth::tokenize(TeXString::assembled(name.to_string())).unlist());
   call.push(T_END!());
   call.push(T_BEGIN!());
@@ -3366,7 +3435,101 @@ fn sealed_class_call(name: &str, opt: &Tokens, arg: &Tokens) -> Option<Tokens> {
   call.push(T_BEGIN!());
   call.extend(arg.unlist_ref().iter().copied());
   call.push(T_END!());
+  if stores {
+    call.extend(kernel.unlist_ref().iter().copied());
+  }
   Some(Tokens::new(call))
+}
+
+/// [`sealed_class_call`]'s run of a class command that stores what it is given (`class_command_stores`), before the
+/// kernel's part, which the seal keeps out of the frontmatter. A class `\author`/`\title` that also prints where it
+/// stands — a collection's per-contribution `\author` (`\gdef\@author{#1}…\par\noindent\textit{#1}\par`, its own
+/// `\maketitle` leaving `\author` defined) — shows text pdflatex shows (silent-loss #8): it runs in place and its
+/// output is kept, as the in-place supplement abstract is, while the stores the frontmatter owns — the kernel's fields
+/// and the raw class's stores K11 hands to the frontmatter (frontmatter_stores.rs `frontmatter_owned_stores`) — are
+/// put back as they were, so the call does not replace the placed frontmatter (user ruling 2026-10-09: a supplement's
+/// frontmatter does not replace the paper's; printing its text in place is right). Its other assignments stay, as in
+/// pdflatex. One that prints nothing is the class's frontmatter setter, a supplement's (imsart.sty:1958,
+/// schooldocs.sty:70; `perfect_kernel_batch65a`): run journaled and undone whole (`AssignmentJournalGuard::rollback`),
+/// its diagnostics discarded. When no journal can open (one is already open), a run that prints is kept as above and
+/// one that prints nothing keeps its other assignments, said in an Info, the frontmatter's stores put back too. A store
+/// that was undefined is put back undefined. The kernel's part that follows does not
+/// replay the class's command a second time (`lx_sealed_class_ran`). OXIDIZED_DESIGN_DIVERGENCES #526.
+fn sealed_storing_run(name: &str, opt: Tokens, arg: Tokens) -> Result<Vec<Digested>> {
+  let owned = crate::frontmatter_stores::frontmatter_owned_stores();
+  let saved: Vec<Option<Stored>> = owned.iter().map(lookup_meaning).collect();
+  let journal = begin_assignment_journal();
+  let hold = util::logger::DiagnosticsHold::begin();
+  let run = run_dropped_class_command(name, &opt, &arg);
+  let printed = matches!(&run, Ok(Some(digested)) if typesets_content(digested));
+  // The frontmatter's own stores as they were — a store that was undefined is undefined again, as `\@ifundefined` then
+  // reads it.
+  let put_back = |saved: Vec<Option<Stored>>| {
+    for (cs, meaning) in owned.iter().zip(saved) {
+      if !same_meaning(lookup_meaning(cs).as_ref(), meaning.as_ref()) {
+        assign_meaning(cs, meaning.unwrap_or(Stored::None), Some(Scope::Global));
+      }
+    }
+  };
+  if !printed {
+    // An error of the run itself propagates with its diagnostics: a Fatal stays Fatal, its record and the status with
+    // it (discarding the hold would restore the report's counts too).
+    if run.is_err() {
+      hold.commit();
+      return run.map(|_| Vec::new());
+    }
+    let journaled = journal.is_some();
+    let undone = journal.is_some_and(|journal| journal.rollback());
+    if undone {
+      hold.discard();
+    } else {
+      hold.commit();
+      // (not undone: its other assignments stay, but not over the paper's frontmatter)
+      put_back(saved);
+    }
+    if undone {
+      Info!(
+        "frontmatter",
+        "sealed",
+        s!(
+          "\\{name} after the document body began is dropped: the class's own \\{name} only stores it (a frontmatter setter, a supplement's)"
+        )
+      );
+    } else {
+      Info!(
+        "frontmatter",
+        "sealed",
+        s!(
+          "\\{name} after the document body began prints nothing: the class's own \\{name} ran{}",
+          if journaled {
+            " and could not be undone (its groups changed)"
+          } else {
+            ", its assignments kept (no journal could open)"
+          }
+        )
+      );
+    }
+    return Ok(Vec::new());
+  }
+  if let Some(journal) = journal {
+    journal.keep();
+  }
+  hold.commit();
+  let digested = run?;
+  put_back(saved);
+  assign_value(
+    "lx_sealed_class_ran",
+    Stored::String(pin(name)),
+    Some(Scope::Global),
+  );
+  Info!(
+    "frontmatter",
+    "sealed",
+    s!(
+      "\\{name} after the document body began runs the class's own \\{name} in place: its text stays there, the frontmatter keeps the paper's"
+    )
+  );
+  Ok(digested.into_iter().collect())
 }
 
 /// [`sealed_class_call`]'s run: the class's `\lx@dropped@<name>[opt]{arg}`, digested where the call stands, its output
@@ -4349,4 +4512,214 @@ fn dropped_maketitle_takes_options() -> bool {
     }),
     _ => false,
   }
+}
+
+/// The kernel's title fields and their setters as the title-page deposit and replay read them: empty (the frontmatter
+/// carries them), the setters only setting the field a class body reads (`\lx@deposit@setters`).
+const TITLE_PAGE_FIELDS: &str = r"\let\@title\@empty\let\@author\@empty\let\@date\@empty\let\@thanks\@empty\let\thetitle\@empty\let\theauthor\@empty\let\thedate\@empty\lx@deposit@setters";
+
+/// The title-page deposit (`\lx@deposit@maketitle`): the class's `\@maketitle`, unless empty, in a group with the
+/// kernel's fields and the stores the frontmatter carries read as empty. `inject`: definitions made just before
+/// `\@maketitle` runs — a speculative run's sentinel values (frontmatter_stores.rs `before_title_page_runs`).
+pub(crate) fn title_page_deposit_tokens(inject: &[Token]) -> Tokens {
+  let mut tokens = mouth::tokenize_internal(TeXString::assembled(s!(
+    r"\ifx\@maketitle\@empty\else{{{TITLE_PAGE_FIELDS}\let\and\relax\lx@captured@stores\lx@dropped@env@stores\lx@replay@records"
+  )))
+  .unlist();
+  tokens.extend_from_slice(inject);
+  tokens.extend(mouth::tokenize_internal(r"\@maketitle}\fi").unlist());
+  Tokens::new(tokens)
+}
+
+/// The replay of the class's own refused `\maketitle` (`\lx@dropped@maketitle`, `\lx@deposit@maketitle`), in a group
+/// with the fields read as the deposit reads them, `\thanks` gobbled and `\@maketitle` relaxed (no second deposit),
+/// with the options the kernel `\maketitle` read for a `\maketitle[<options>]` body (`\lx@maketitle@withopt`).
+/// `None` when it is not replayed: a body that takes arguments other than those options, one whose vocabulary is not
+/// defined here (`body_vocabulary_is_defined`), or while a replay runs (not re-entrant). `inject`: as
+/// [`title_page_deposit_tokens`].
+pub(crate) fn title_page_replay_tokens(inject: &[Token]) -> Option<Tokens> {
+  if lookup_bool("lx_depositing_class_maketitle") {
+    return None;
+  }
+  let argless = match lookup_meaning(&T_CS!("\\lx@dropped@maketitle")) {
+    Some(Stored::Expandable(ref d)) => {
+      (d.get_parameters()
+        .is_none_or(|p| p.get_parameters().is_empty())
+        || dropped_maketitle_takes_options())
+        && match d.get_expansion() {
+          Some(ExpansionBody::Tokens(body)) => {
+            body_vocabulary_is_defined(body.unlist_ref(), "\\maketitle")
+          },
+          _ => false,
+        }
+    },
+    _ => false,
+  };
+  if !argless {
+    return None;
+  }
+  let mut replay = mouth::tokenize_internal(TeXString::assembled(s!(
+    r"{{{TITLE_PAGE_FIELDS}\let\thanks\@gobble\let\and\relax\let\@maketitle\relax\lx@captured@stores\lx@dropped@env@stores\lx@replay@records"
+  )))
+  .unlist();
+  replay.extend_from_slice(inject);
+  replay.push(T_CS!("\\lx@dropped@maketitle"));
+  if let Some(Stored::Expandable(ref o)) = lookup_meaning(&T_CS!("\\lx@maketitle@opts"))
+    && let Some(ExpansionBody::Tokens(opts)) = o.get_expansion()
+  {
+    replay.extend(opts.unlist_ref().iter().copied());
+  }
+  replay.push(T_END!());
+  Some(Tokens::new(replay))
+}
+
+/// The class's whole title page as pdflatex runs it at `\maketitle`: the class's own refused `\maketitle` when it is
+/// replayable ([`title_page_replay_tokens`]'s conditions), else LaTeX's, which runs `\@maketitle` — the class's, or
+/// article.cls:209-229's printing of `\@title`, `\@author` and `\@date` when no raw file defined one. A call of the
+/// kernel's `\maketitle` from the class's (`\let\@origmaketitle\maketitle`, sigplanconf.cls) is LaTeX's here too: its
+/// `\lx@maketitle@body` runs `\@maketitle`. The fields hold the document's values; labels and index entries are
+/// gobbled, while a footnote is typeset, and an author's note (`\thanks`, `\@firstofone` here) is typeset in place, as
+/// a store the class prints in one is printed (review probes `fn`: "KW: alpha, beta" in the title page's footnote;
+/// `fnt`: `\@author\thanks{KW: \@keywords}`).
+/// `inject`: as [`title_page_deposit_tokens`].
+pub(crate) fn title_page_print_tokens(inject: &[Token]) -> Tokens {
+  // (a raw file's or a binding's `\@maketitle`; not the kernel's empty one, a document's teaser appended to it)
+  let class_maketitle = matches!(lookup_meaning(&T_CS!("\\@maketitle")),
+    Some(Stored::Expandable(ref d)) if matches!(d.get_origin(), DefinitionOrigin::File | DefinitionOrigin::Binding)
+      && matches!(d.get_expansion(), Some(ExpansionBody::Tokens(body)) if !body.is_empty()));
+  let mut run = mouth::tokenize_internal(
+    r"{\let\thanks\@firstofone\let\label\@gobble\let\index\@gobble\let\lx@maketitle@body\lx@print@maketitle",
+  )
+  .unlist();
+  if !class_maketitle {
+    run.extend(
+      mouth::tokenize_internal(
+        r"\def\@maketitle{{\@title\par}{\let\and\relax\@author\par}{\@date\par}}",
+      )
+      .unlist(),
+    );
+  }
+  run.extend_from_slice(inject);
+  let replayable =
+    !lookup_bool("lx_depositing_class_maketitle") && title_page_replay_tokens(&[]).is_some();
+  if replayable {
+    run.push(T_CS!("\\lx@dropped@maketitle"));
+    if let Some(Stored::Expandable(ref o)) = lookup_meaning(&T_CS!("\\lx@maketitle@opts"))
+      && let Some(ExpansionBody::Tokens(opts)) = o.get_expansion()
+    {
+      run.extend(opts.unlist_ref().iter().copied());
+    }
+  } else {
+    run.push(T_CS!("\\lx@print@maketitle"));
+  }
+  run.push(T_END!());
+  Tokens::new(run)
+}
+
+/// What a speculative title-page run ([`speculative_title_page_run`]) gave.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum SpeculativeRun {
+  /// The text the run typeset, as [`ink_text`] reads it (in its own case: a caller lower-cases it where it matches a
+  /// sentinel).
+  Printed(String),
+  /// The run ended in a Fatal error of its own, discarded with it: it printed nothing, and no title page the document
+  /// makes is like it (a value only the sentinels give may raise it).
+  Aborted,
+  /// No run was made or kept: no journal could open (one is already open), or its assignments could not be undone.
+  Unavailable,
+}
+
+/// Digest title-page code speculatively (`tokens`: [`title_page_print_tokens`], [`title_page_deposit_tokens`],
+/// [`title_page_replay_tokens`]) and return the text it typesets ([`ink_text`]); nothing of it stays:
+/// its output is discarded, its assignments undone (`AssignmentJournalGuard::rollback`), its diagnostics discarded and
+/// its terminal output muted,
+/// the groups it left open closed in a reading context of their own (as `replay_dropped_class_code` closes a
+/// setter's). While it runs the frontmatter is frozen and no refused setter is replayed (`lx_replaying_class_setter`),
+/// a `{titlepage}` builds no `ltx:titlepage` (`lx_depositing_frontmatter_fields`) and no deposit re-enters
+/// (`lx_depositing_class_maketitle`). [`SpeculativeRun::Unavailable`] when no journal can open (one is already open)
+/// or when the run's assignments could not be undone (it then keeps its diagnostics, and the global assignments it
+/// made — a class's `\xdef\@x{\@store}` with a sentinel value — stay: OXIDIZED_DESIGN_DIVERGENCES #767's residuals). A
+/// run that raised errors still gives its text: an error is TeX's recovery, which typesets on (an internal our
+/// emulation of the class lacks becomes an `<ltx:ERROR>` holding its name), as pdflatex typesets what the title page
+/// prints. A resource Fatal of the run propagates (Fatal stays Fatal), as does one whose run could not be undone; any
+/// other Fatal is the run's alone — the document never makes it, and a sentinel value may cause it —, discarded with
+/// its diagnostics (an Info says so): [`SpeculativeRun::Aborted`].
+pub(crate) fn speculative_title_page_run(tokens: Tokens) -> Result<SpeculativeRun> {
+  let Some(journal) = begin_assignment_journal() else {
+    return Ok(SpeculativeRun::Unavailable);
+  };
+  const FLAGS: [&str; 3] = [
+    "lx_replaying_class_setter",
+    "lx_depositing_frontmatter_fields",
+    "lx_depositing_class_maketitle",
+  ];
+  let saved: Vec<bool> = FLAGS.iter().map(|flag| lookup_bool(flag)).collect();
+  for flag in FLAGS {
+    assign_value(flag, true, Some(Scope::Global));
+  }
+  let hold = util::logger::DiagnosticsHold::begin();
+  let resource_fatal_before = resource_fatal_latched();
+  // (and its terminal output — a class's `\typeout{Warning: Missing \institute}`, an.cls's `\ch@ckobl` — is not the
+  // document's: the class's own run of it, the deposit or the replay, writes it once; put back however the run ends)
+  let muted = SuppressLogOutputGuard::new(true);
+  let depth = get_frame_depth();
+  let result = with_origin(DefinitionOrigin::File, || digest(tokens));
+  let unwound = reading_from_mouth(Mouth::default(), || {
+    new_local_box_list();
+    while get_frame_depth() > depth {
+      let before = get_frame_depth();
+      let nobox = lookup_bool("groupNonBoxing");
+      if pop_stack_frame(nobox).is_err() || get_frame_depth() >= before {
+        break;
+      }
+    }
+    expire_local_box_list();
+    Ok(())
+  });
+  let text = match &result {
+    Ok(digested) => {
+      let mut text = String::new();
+      ink_text(digested, &mut text);
+      Some(text)
+    },
+    Err(_) => None,
+  };
+  drop(muted);
+  let undone = journal.rollback();
+  for (flag, value) in FLAGS.iter().zip(saved) {
+    assign_value(flag, value, Some(Scope::Global));
+  }
+  if let Err(err) = result {
+    // A resource Fatal (the conversion's deadline, its memory budget, a runaway limit) is the document's, and so is
+    // one whose run could not be undone. Any other ends only this run, which the document never makes: a value only
+    // the sentinels give may raise it (a letter where the class's code expects a number). It is discarded with the
+    // run's diagnostics, and the run printed nothing — no store counts as printed by it.
+    if !undone || (resource_fatal_latched() && !resource_fatal_before) {
+      hold.commit();
+      return Err(err);
+    }
+    hold.discard();
+    unwound?;
+    Info!(
+      "frontmatter",
+      "\\maketitle",
+      "A speculative run of the class's title page ended in a Fatal error, discarded with it: no store counts as printed by it"
+    );
+    return Ok(SpeculativeRun::Aborted);
+  }
+  if undone {
+    hold.discard();
+  } else {
+    hold.commit();
+    Info!(
+      "frontmatter",
+      "\\maketitle",
+      "A speculative run of the class's title page could not be undone (its groups changed): its diagnostics and its global assignments stay"
+    );
+  }
+  unwound?;
+  Ok(match text {
+    Some(text) if undone => SpeculativeRun::Printed(text),
+    _ => SpeculativeRun::Unavailable,
+  })
 }

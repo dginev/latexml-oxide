@@ -1,0 +1,23 @@
+% A raw class's store printed under a label, "Corresponding author: \@corr", whose value is one of the authors'
+% names: a role, not a duplicate of the creators — a store is dropped as repeating the names only when the class
+% prints no label before it and it names every creator (`repeats_creator_names`, frontmatter_stores.rs).
+% The `\undefinedthing` drops the title-page deposit (an error there), so the stores reach the frontmatter or nothing.
+% witness: none (synthetic; review probe `corr` of 77i r3).
+% oracle:  pdflatex 1 error (the deliberate `\undefinedthing`): "Corresponding author: Bob Jones".
+% engines: rust 77i r3: the line dropped ("only repeats the authors' names").
+% expect:  0 errors, 0 warnings; two creators; `<pubnote name="Corresponding author: ">Bob Jones</pubnote>` (a tie
+%          after the label).
+% status:  RED (77i r3) -> GREEN (77i r4)
+\begin{filecontents*}[overwrite]{rccorr.cls}
+\ProvidesClass{rccorr}
+\LoadClass{article}
+\def\@corr{}\newcommand{\corresponding}[1]{\def\@corr{#1}}
+\def\@maketitle{\undefinedthing\@title\par\begin{tabular}[t]{c}\@author\end{tabular}\par Corresponding author: \@corr\par}
+\end{filecontents*}
+\documentclass{rccorr}
+\title{T}\author{Ann Smith \and Bob Jones}
+\corresponding{Bob Jones}
+\begin{document}
+\maketitle
+Text.
+\end{document}

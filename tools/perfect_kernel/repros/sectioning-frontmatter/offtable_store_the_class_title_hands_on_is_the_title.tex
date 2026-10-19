@@ -1,0 +1,33 @@
+% A raw class whose own `\title` and `\author` hand their argument to setters outside the K11 table, whose stores only
+% its own `\@title`/`\@author` print (jfpc.cls:119-132, 176-191): a document that calls those setters and never
+% `\title`/`\author` has its title and authors there only. The store the class's refused `\title` hands its argument
+% to is the document's `ltx:title`, the one its `\author` hands on its authors; another store the title page prints
+% is an `ltx:pubnote`, named by the label printed before it (`hand_untypeset_stores`, frontmatter_stores.rs).
+% witness: 1503.05530 (jfpc: title, authors, "Actes JFPC 2015" lost; 77i r1: notes labelled "titre:", "auteurs:").
+% oracle:  pdflatex 0 errors: "Actes JFPC 2015", "Exploration", "Mohammed Bekkouche".
+% engines: rust 67int35: all lost; rust 77i r1: `note[role=annee|titre|auteurs]` (visible labels "annee:", …).
+% expect:  0 errors, 0 warnings; `<title>Exploration</title>`, one creator "Mohammed Bekkouche",
+%          `<pubnote name="Actes JFPC">2015</pubnote>`; no placeholder text.
+% status:  RED (77i r1) -> GREEN (77i r2)
+\begin{filecontents*}[overwrite]{rctitre.cls}
+\ProvidesClass{rctitre}
+\LoadClass{article}
+\def\@lannee{\the\year}
+\newcommand{\annee}[1]{\def\@lannee{#1}}
+\def\@letitre{definir le titre}
+\newcommand{\titre}[1]{\def\@letitre{#1}}
+\renewcommand{\title}[1]{\titre{#1}}
+\def\@lesauteurs{donner les auteurs}
+\newcommand{\auteurs}[1]{\def\@lesauteurs{#1}}
+\renewcommand{\author}[1]{\auteurs{#1}}
+\def\@title{{\footnotesize\itshape Actes JFPC \@lannee}\par{\huge\bfseries\@letitre}}
+\def\@author{\textbf{\@lesauteurs}}
+\end{filecontents*}
+\documentclass{rctitre}
+\annee{2015}
+\titre{Exploration}
+\auteurs{Mohammed Bekkouche}
+\begin{document}
+\maketitle
+Text.
+\end{document}

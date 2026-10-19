@@ -1,0 +1,24 @@
+% A raw class's own `\maketitle` prints its abstract store after its title block, `\end{center}\noindent Resumen:
+% \@resumen`: an environment's end starts the line, so "Resumen:" is the store's label (`line_label_before`,
+% frontmatter_stores.rs), the class's abstract is named by it and the replay of the class's `\maketitle` leaves no
+% orphan "Resumen:"; the document's `{abstract}` before `\maketitle` stays first.
+% witness: none (synthetic; review probes `d_own2`, `d_own3` of 77i r3; silent-loss inventory #6a).
+% oracle:  pdflatex 0 errors: the abstract "English abstract.", then "Resumen: Spanish abstract.".
+% engines: rust 77i r3 and 67int35: only "English abstract." and an orphan paragraph "Resumen:".
+% expect:  0 errors, 0 warnings; `<abstract … name="Abstract">` "English abstract.", then `<abstract …
+%          name="Resumen:">` "Spanish abstract."; no "Resumen:" paragraph.
+% status:  RED (77i r3) -> GREEN (77i r4)
+\begin{filecontents*}[overwrite]{rcownmk.cls}
+\ProvidesClass{rcownmk}
+\LoadClass{article}
+\newcommand*\resumen[1]{\gdef\@resumen{#1}}
+\def\@resumen{}
+\renewcommand\maketitle{\begin{center}{\Large\@title}\par\@author\par\end{center}\noindent Resumen: \@resumen\par}
+\end{filecontents*}
+\documentclass{rcownmk}
+\title{T}\author{Anton}\resumen{Spanish abstract.}
+\begin{document}
+\begin{abstract}English abstract.\end{abstract}
+\maketitle
+Text.
+\end{document}

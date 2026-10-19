@@ -1,0 +1,23 @@
+% A raw class's abstract store its title page prints without a label (`\begin{quote}\itshape\@resumen\end{quote}`)
+% is read at `\maketitle`, as LaTeX expands it there (`labelled_api`, frontmatter_stores.rs: the deferred
+% `\lx@add@frontmatter{ltx:abstract}`, labelled or not), as an entry of the class's store (`_store`), which the
+% document's own `{abstract}` after `\maketitle` does not replace (`frontmatter_clear_same_name`, base_utilities.rs).
+% witness: none (synthetic; review probe `d_nolab` of 77i r3; silent-loss inventory #6a).
+% oracle:  pdflatex 0 errors: "Spanish abstract." (in the quote), then the abstract "English abstract.".
+% engines: rust 77i r3 and 67int35: only "English abstract." (the class's store lost silently).
+% expect:  0 errors, 0 warnings; two abstracts, "Spanish abstract." first.
+% status:  RED (77i r3) -> GREEN (77i r4)
+\begin{filecontents*}[overwrite]{rcnolab.cls}
+\ProvidesClass{rcnolab}
+\LoadClass{article}
+\newcommand*\resumen[1]{\gdef\@resumen{#1}}
+\def\@resumen{}
+\def\@maketitle{\@title\par\@author\par\begin{quote}\itshape\@resumen\end{quote}}
+\end{filecontents*}
+\documentclass{rcnolab}
+\title{T}\author{Anton}\resumen{Spanish abstract.}
+\begin{document}
+\maketitle
+\begin{abstract}English abstract.\end{abstract}
+Text.
+\end{document}

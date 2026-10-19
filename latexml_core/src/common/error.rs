@@ -87,6 +87,31 @@ pub fn set_suppress_log_output(suppress: bool) -> bool {
   prev
 }
 
+/// The log-output suppression flag set for a scope ([`set_suppress_log_output`]) and put back as it was when the
+/// guard is dropped — at the scope's end, on an early return or while a panic unwinds — so a scope that fails cannot
+/// leave the thread's later conversions silent (a speculative title-page run, sect05.rs
+/// `speculative_title_page_run`, under `cortex_worker`'s per-paper `catch_unwind`).
+#[must_use = "the suppression ends when the guard is dropped"]
+pub struct SuppressLogOutputGuard {
+  prev: bool,
+}
+
+impl SuppressLogOutputGuard {
+  /// Set the flag to `suppress` until the guard is dropped.
+  pub fn new(suppress: bool) -> Self {
+    SuppressLogOutputGuard {
+      prev: set_suppress_log_output(suppress),
+    }
+  }
+}
+
+impl Drop for SuppressLogOutputGuard {
+  fn drop(&mut self) { SUPPRESS_LOG_OUTPUT.set(self.prev); }
+}
+
+/// Clear the log-output suppression flag (`reset_thread_engine`): a fresh conversion on a reused thread logs.
+pub fn reset_suppress_log_output() { SUPPRESS_LOG_OUTPUT.set(false); }
+
 // Thread-local FATAL DEMOTION for bibliography post-processing (user
 // policy 2026-07-04): with the live-state field interpretation, Warn!/
 // Error! report at NATIVE severity and count normally (matching Perl's
@@ -1712,5 +1737,26 @@ mod tests {
     assert!(!is_log_output_suppressed());
     // Clean up to original state.
     set_suppress_log_output(prior);
+  }
+
+  /// The guard puts the flag back on drop — also when the scope panics (77i r3: a speculative title-page run that
+  /// panicked left the thread's later conversions without Info/Warning lines).
+  #[test]
+  fn suppress_log_output_guard_restores_on_drop_and_unwind() {
+    set_suppress_log_output(false);
+    {
+      let _guard = SuppressLogOutputGuard::new(true);
+      assert!(is_log_output_suppressed());
+    }
+    assert!(!is_log_output_suppressed());
+    let unwound = std::panic::catch_unwind(|| {
+      let _guard = SuppressLogOutputGuard::new(true);
+      panic!("speculative run panicked");
+    });
+    assert!(unwound.is_err());
+    assert!(!is_log_output_suppressed());
+    set_suppress_log_output(true);
+    reset_suppress_log_output();
+    assert!(!is_log_output_suppressed());
   }
 }

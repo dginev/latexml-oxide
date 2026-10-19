@@ -1,0 +1,23 @@
+% A raw class's cover author list (nowfnt.cls:803-806 `\maintitleauthorlist`, "AUTHORS FOR COVER PAGE") that holds
+% only the authors' names repeats the creators: a print flourish of the cover, not handed on (`repeats_creator_names`,
+% frontmatter_stores.rs: every word of every line is a creator's name word). The `\undefinedthing` drops the
+% title-page deposit, as nowfnt's replay raised errors in 2308.02698.
+% witness: 2308.02698 (nowfnt: the cover list "Yoonchang Sung, Zhiang Chen, …" a pubnote beside the creators in 77i r2).
+% oracle:  pdflatex 1 error (the deliberate `\undefinedthing`): the cover list "Ann Smith", "Bob Jones".
+% engines: rust 77i r2: `<pubnote>Ann Smith <break/>Bob Jones</pubnote>` beside the two creators.
+% expect:  0 errors, 0 warnings; two creators; no `pubnote`.
+% status:  RED (77i r2) -> GREEN (77i r3)
+\begin{filecontents*}[overwrite]{rccover.cls}
+\ProvidesClass{rccover}
+\LoadClass{article}
+\def\@coverauthors{}
+\newcommand{\coverauthors}[1]{\def\@coverauthors{#1}}
+\def\@maketitle{\undefinedthing\@title\par\@author\par{\def\and{\par}\bfseries\@coverauthors\par}}
+\end{filecontents*}
+\documentclass{rccover}
+\title{T}\author{Ann Smith \and Bob Jones}
+\coverauthors{Ann Smith \and Bob Jones}
+\begin{document}
+\maketitle
+Text.
+\end{document}

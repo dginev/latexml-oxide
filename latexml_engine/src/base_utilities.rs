@@ -482,6 +482,7 @@ LoadDefinitions!({
         &tag,
         entry.attr.get("name").map(String::as_str),
         entry.attr.get("xml:lang").map(String::as_str),
+        entry.attr.get("_store").map(String::as_str),
       );
     }
     let index = frontmatter_push(&tag, entry);
@@ -561,6 +562,7 @@ LoadDefinitions!({
         &tag,
         entry.attr.get("name").map(String::as_str),
         entry.attr.get("xml:lang").map(String::as_str),
+        entry.attr.get("_store").map(String::as_str),
       );
     }
     let index = frontmatter_push(&tag, entry);
@@ -4181,6 +4183,123 @@ pub fn typesets_content(d: &Digested) -> bool {
   }
 }
 
+/// The text digested material typesets, as [`typesets_content`] walks it — characters of its boxes, through lists,
+/// whatsit arguments and bodies, alignment rows and cells; never a whatsit's reversion (its source), and only the
+/// arguments it shows (`shown_arguments`): an image's file name and options are not text on the page
+/// (`\includegraphics{\@logo}`), nor is a link's target (`\href{\@url}{Home}` prints "Home"). What a speculative
+/// title-page run printed (sect05.rs `speculative_title_page_run`; review probe `logo`).
+pub fn ink_text(d: &Digested, out: &mut String) {
+  match d.data() {
+    DigestedData::TBox(b) => {
+      if let Ok(s) = b.borrow().get_string() {
+        out.push_str(&s);
+      }
+    },
+    DigestedData::List(l) => {
+      for child in l.borrow().boxes.iter() {
+        ink_text(child, out);
+      }
+    },
+    DigestedData::Whatsit(w) => {
+      let w = w.borrow();
+      if let Some(Stored::Digested(a)) = w.get_property("alignment").as_deref() {
+        ink_text(a, out);
+      }
+      for (arg, shown) in w.get_args().iter().zip(shown_arguments(&w)) {
+        if shown && let Some(arg) = arg {
+          ink_text(arg, out);
+        }
+      }
+      if let Ok(Some(body)) = w.get_body() {
+        ink_text(&body, out);
+      }
+    },
+    DigestedData::Alignment(a) => {
+      for row in a.borrow().rows() {
+        for cell in row.get_columns() {
+          if let Some(boxes) = cell.boxes.as_ref() {
+            ink_text(boxes, out);
+          }
+        }
+      }
+    },
+    _ => {},
+  }
+}
+
+/// The constructors that print a verbatim argument as it is — a URL, an e-mail address, a DOI —, each with which of its
+/// arguments it shows (by position), for [`shown_arguments`]: llncs.cls's `\url` (llncs_cls.rs), hyperref's
+/// `\nolinkurl`, aas's `\@@email`, the OmniBus `\lx@doi`, natbib's `\harvardurl`. A constructor's replacement is
+/// compiled, so what it puts in its element cannot be read off the whatsit; a verbatim argument is otherwise a key
+/// (`\ref`, `\pageref`, `\eqref`, `\cite`, `\nameref`, `\autoref`, `\label`), a link target or a file name, which the
+/// page does not show. url.sty's and hyperref's `\url`/`\path` and the bindings' `\email`s are macros: what they print
+/// reaches a constructor of its own, whose text argument is shown (`\lx@url@url@nolink`'s, `\lx@hyper@url@`'s `#5`), as
+/// aas's `\doi{…}`'s is. A constructor printing one of two verbatim arguments names it: `("\\href", &[false, true])` would show the
+/// text, not the URL (jhep's two-verbatim `\href`, a binding class's, which never meets the raw-class stores).
+const VERBATIM_PRINTERS: &[(&str, &[bool])] = &[
+  ("\\url", &[true]),
+  ("\\nolinkurl", &[true]),
+  ("\\@@email", &[true]),
+  ("\\lx@doi", &[true]),
+  ("\\harvardurl", &[true]),
+];
+
+/// Which arguments of the whatsit `w` it shows as text, for [`ink_text`], by their declared parameter types: none of an
+/// image (a whatsit carrying a `graphic` or image `candidates`: its arguments are the file and its options); else a
+/// verbatim argument (`Semiverbatim`, `Verbatim`, `HyperVerbatim`: a file name, a URL, a label) only when the whatsit
+/// is one that prints it ([`VERBATIM_PRINTERS`]: `\url{…}`, `\nolinkurl{…}`, the arguments its entry names) — never a
+/// reference's or a citation's key (`\ref{\@x}` prints the label's number, review probe `ctx3`), and
+/// `\href{<url>}{<text>}` and `\hypertarget{<name>}{<text>}` print the text —, and never keyvals (options). Every
+/// argument when its parameters cannot be matched to them.
+fn shown_arguments(w: &Whatsit) -> Vec<bool> {
+  let args = w.get_args();
+  // (graphics.sty's `\@includegraphics` records its `graphic`, graphicx's `\@includegraphicx` its `path`; both the
+  // image's `candidates`)
+  if w.get_property("graphic").is_some() || w.get_property("candidates").is_some() {
+    return vec![false; args.len()];
+  }
+  let definition = w.get_definition();
+  let types: Vec<SymStr> = definition
+    .get_parameters()
+    .map(|params| {
+      params
+        .get_parameters()
+        .into_iter()
+        .filter(|p| !p.novalue)
+        .map(|p| p.name)
+        .collect()
+    })
+    .unwrap_or_default();
+  if types.len() != args.len() {
+    return vec![true; args.len()];
+  }
+  // (0: keyvals, 1: verbatim, 2: shown text)
+  let kinds: Vec<u8> = types
+    .iter()
+    .map(|t| {
+      with(*t, |name| {
+        if name.contains("KeyVals") {
+          0
+        } else if name.contains("erbatim") {
+          1
+        } else {
+          2
+        }
+      })
+    })
+    .collect();
+  let cs = definition.get_cs();
+  let shown: &[bool] = VERBATIM_PRINTERS
+    .iter()
+    .find(|(name, _)| *cs == T_CS!(*name))
+    .map_or(&[], |(_, shown)| shown);
+  kinds
+    .iter()
+    .enumerate()
+    .map(|(i, kind)| *kind == 2 || (*kind == 1 && shown.get(i).copied().unwrap_or(false)))
+    .collect()
+}
+
 /// While a raw class's own frontmatter setter replays for its side effects (`replay_class_setter`, OXIDIZED_DESIGN
 /// #482), the frontmatter is the kernel's alone: nothing is queued (an entry, an annotation) or removed
 /// (`\lx@clear@frontmatter`, which the kernel's `\lx@add@title`, `\lx@add@date`, `\lx@add@abstract` and
@@ -5008,7 +5127,17 @@ fn frontmatter_entry_in_progress() -> bool {
 /// (`xml:lang`): smfart's `{altabstract}`, named "Abstract" as the kernel names the document's abstract written
 /// before `\begin{document}` sets the class's captions (smfart_cls.rs; 2506.20120, math0201262).
 /// OXIDIZED_DESIGN #154.
-fn frontmatter_clear_same_name(tag: &str, name: Option<&str>, lang: Option<&str>) {
+/// Drop the `tag` entries a new one of the same `name` and `lang` replaces. A raw class's store's entry (`_store`, the
+/// store: frontmatter_stores.rs `labelled_api`) is replaced only by another of the same store: the class's title page
+/// prints it beside the document's own abstract (`\begin{quote}\itshape\@resumen\end{quote}` and the document's
+/// `{abstract}`, review probe `d_nolab`; silent-loss #6a) — one it does not print is released
+/// ([`frontmatter_release_store`]).
+fn frontmatter_clear_same_name(
+  tag: &str,
+  name: Option<&str>,
+  lang: Option<&str>,
+  store: Option<&str>,
+) {
   with_value_mut("frontmatter", |val_opt| {
     if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
       && let Some(list) = frnt.get_mut(tag)
@@ -5016,7 +5145,45 @@ fn frontmatter_clear_same_name(tag: &str, name: Option<&str>, lang: Option<&str>
       list.retain(|e| {
         e.attr.get("name").map(String::as_str) != name
           || e.attr.get("xml:lang").map(String::as_str) != lang
+          || e.attr.get("_store").map(String::as_str) != store
       });
+    }
+  });
+}
+
+/// The abstract and keywords entries of a raw class's `store` (`_store`, frontmatter_stores.rs `labelled_api`) whose
+/// title page does not print it (`\hypersetup{pdfsubject={\@abst}}`, review probe `md`) become ordinary entries, which
+/// the document's own of the same name and language replaces as it replaces any (`frontmatter_clear_same_name`): one
+/// already there drops the store's.
+pub(crate) fn frontmatter_release_store(store: &str) {
+  with_value_mut("frontmatter", |val_opt| {
+    if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
+      for tag in ["ltx:abstract", "ltx:keywords"] {
+        let Some(list) = frnt.get_mut(tag) else {
+          continue;
+        };
+        let released: Vec<usize> = (0..list.len())
+          .filter(|&i| list[i].attr.get("_store").map(String::as_str) == Some(store))
+          .collect();
+        let mut dropped: Vec<usize> = Vec::new();
+        for &i in &released {
+          list[i].attr.remove("_store");
+          let (name, lang) = (list[i].attr.get("name"), list[i].attr.get("xml:lang"));
+          let replaced = list.iter().enumerate().any(|(j, e)| {
+            j != i
+              && !released.contains(&j)
+              && !e.attr.contains_key("_store")
+              && e.attr.get("name") == name
+              && e.attr.get("xml:lang") == lang
+          });
+          if replaced {
+            dropped.push(i);
+          }
+        }
+        for i in dropped.into_iter().rev() {
+          list.remove(i);
+        }
+      }
     }
   });
 }

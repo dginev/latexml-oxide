@@ -1,0 +1,31 @@
+% A raw class's setters outside the K11 table whose stores only its own `\@author` reads (jfpc.cls:124-132, :188-191)
+% lost their values: the title-page deposit reads `\@author` as empty. At `\maketitle` each such store the document
+% set that the class's title page prints (TeX decides: its sentinels reach the speculative run of the title page,
+% `before_title_page_runs`) and no kept title-page run typeset is handed on (`hand_untypeset_stores`,
+% frontmatter_stores.rs): the first store the class's `\@author` reads, its names, makes the creators when the document
+% has none; a store it prints beside them is a row of their author block (`\lx@add@store@authorblock`,
+% `role=authorblock`, as an `\author` call's tail is), not a hover-only `ltx:pubnote` (LaTeXML.css:107-120).
+% witness: 1503.05530 (jfpc: the author, institutions and e-mail lost); silent-loss inventory #5 (a)
+% oracle:  pdflatex 0 errors: "Mohammed Bekkouche", "bekkouche@unice.fr" under the title.
+% engines: rust 67int35: both lost, 0 errors; rust 77i r1: `<note role="auteurs">`, `<note role="mels">`; rust 77i r2:
+%          `<pubnote>Mohammed Bekkouche</pubnote>`, `<pubnote>bekkouche@unice.fr</pubnote>`.
+% expect:  0 errors, 0 warnings; one creator "Mohammed Bekkouche" with `<contact role="authorblock">bekkouche@unice.fr`;
+%          no note, once each.
+% status:  RED (67int35) -> GREEN (77i r3)
+\begin{filecontents*}[overwrite]{rcoff.cls}
+\ProvidesClass{rcoff}
+\LoadClass{article}
+\def\@lesauteurs{donner les auteurs}
+\newcommand{\auteurs}[1]{\def\@lesauteurs{#1}}
+\def\@lesmels{preciser les mails}
+\newcommand{\mels}[1]{\def\@lesmels{#1}}
+\def\@author{\textbf{\@lesauteurs}\\ \texttt{\@lesmels}}
+\end{filecontents*}
+\documentclass{rcoff}
+\title{T}
+\auteurs{Mohammed Bekkouche}
+\mels{bekkouche@unice.fr}
+\begin{document}
+\maketitle
+Text.
+\end{document}

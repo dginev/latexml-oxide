@@ -1,0 +1,27 @@
+% The negative direction of silent-loss #6b: a class store set before `\maketitle` and again after it, which the title
+% page does not print (the class's abstract prints it at its end), takes the later value — only a store the title
+% page printed is placed by `\maketitle` (`settle_placed_stores`, frontmatter_stores.rs: its sentinel reached the
+% speculative run of the title page).
+% witness: none (synthetic; 77i review probe `late`).
+% oracle:  pdflatex 0 errors: "Abstract. Abs. Keywords: alpha, beta".
+% engines: rust 67int35: `<keywords>alpha, beta</keywords>`; rust 77i r1: `<keywords name="Keywords: ">TO BE FILLED</keywords>`
+%          (0 warnings: the preamble placeholder kept, the authored value lost).
+% expect:  0 errors, 0 warnings; the keywords hold "alpha, beta"; no "TO BE FILLED".
+% status:  RED (77i r1) -> GREEN (77i r2)
+\begin{filecontents*}[overwrite]{rclate2.cls}
+\ProvidesClass{rclate2}
+\LoadClass{article}
+\newcommand*{\keywords}[1]{\def\@keywords{#1}}
+\def\@keywords{}
+\renewenvironment{abstract}{\par\textbf{Abstract.} }{\par Keywords: \@keywords\par}
+\end{filecontents*}
+\documentclass{rclate2}
+\title{T}\author{Anton}\keywords{TO BE FILLED}
+\begin{document}
+\maketitle
+\keywords{alpha, beta}
+\begin{abstract}
+Abs.
+\end{abstract}
+Text.
+\end{document}

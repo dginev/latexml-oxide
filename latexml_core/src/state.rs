@@ -1660,7 +1660,7 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
     // every `\def`/`\gdef`/`\edef`/`\xdef <cs>` in the dropped body whose
     // `<cs>` is still undefined gets an EMPTY definition — the class's own
     // default convention, with no name enumerated. Guard:
-    // `perfect_kernel_batch54::locked_setter_internals_are_defined_empty`.
+    // `perfect_kernel_batch54::refused_setter_internals_take_the_replayed_value`.
     if let Stored::Expandable(ref defn) = definition
       && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
     {

@@ -5131,9 +5131,12 @@ $\begin{pNiceMatrix}
 /// (Perl State.pm:502-517), and its readers then fail on the internal it
 /// would have defined (`\flyleaf`/`\titlepage` :637/:688; usethesis). The
 /// dropped body's `\def`-targets are defined EMPTY, the class's own default
-/// convention (:494-495), so the locked binding stays the single source.
+/// convention (:494-495), so the locked binding stays the single source; the
+/// replay of the refused setter (OXIDIZED_DESIGN #482) then sets them as the
+/// call does, and a store that holds the argument stays set (77i): pdflatex
+/// prints "[First Author][First Author]".
 #[test]
-fn locked_setter_internals_are_defined_empty() {
+fn refused_setter_internals_take_the_replayed_value() {
   let tex = r"\documentclass{article}
 \makeatletter
 \def\author#1{\def\auth@r{#1}\gdef\auth@rtwo{#1}}
@@ -5145,8 +5148,13 @@ fn locked_setter_internals_are_defined_empty() {
 ";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert!(xml.contains("[][]"), "{xml}");
-  assert!(xml.contains("First Author"), "{xml}");
+  assert!(xml.contains("[First Author][First Author]"), "{xml}");
+  // …and the author is the frontmatter's creator, once
+  assert_eq!(xml.matches("<creator ").count(), 1, "{xml}");
+  assert!(
+    xml.contains("<personname>First Author</personname>"),
+    "{xml}"
+  );
 }
 
 /// xcolor.sty:762-763 `\color` = `\@ifnextchar[\@undeclaredcolor\@declaredcolor`;

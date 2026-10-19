@@ -1,11 +1,16 @@
-% A raw class's second abstract store (`\resumen`) and the document's own `{abstract}` are both
-% kept: the store's `\lx@add@abstract` replaces the same-named abstract, so the English abstract
-% was lost (mg58l: the Spanish one was).
-% witness: none (synthetic; review probe of the K11 store timing).
-% status:  RED
+% A raw class's abstract store (`\resumen`) printed by its title page ("Resumen: \@resumen") and the document's own
+% `{abstract}` are both kept: the class's label names its abstract "Resumen:" and it is read at `\maketitle`, where
+% LaTeX expands the store (`labelled_api`, `harvest_stores`, frontmatter_stores.rs), so the document's `{abstract}`,
+% which clears the abstracts queued before it, does not remove it, and an entry under another name is another element
+% (OXIDIZED_DESIGN_DIVERGENCES #154): the document's abstract first, as pdflatex prints it before `\maketitle`.
+% witness: none (synthetic; review probe of the K11 store timing; silent-loss inventory #6a).
 % oracle:  pdflatex 0 errors: "English abstract." and "Resumen: Spanish abstract."
-% engines: rust mg58l and 58m: one abstract, the other lost.
-% expect:  0 errors, 0 warnings; both abstracts.
+% engines: rust 58m-67int35: only the document's abstract, "Spanish abstract." lost, an orphan "Resumen:" before
+%          "Text."
+%          rust 77i r2: both, the class's first (digested where it was set).
+% expect:  0 errors, 0 warnings; both abstracts, the document's first, the class's named "Resumen:"; no "Resumen:" in
+%          the body.
+% status:  RED (67int35) -> GREEN (77i)
 \begin{filecontents*}[overwrite]{rcresumen.cls}
 \ProvidesClass{rcresumen}
 \LoadClass{article}

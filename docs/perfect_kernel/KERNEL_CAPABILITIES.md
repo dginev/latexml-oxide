@@ -335,11 +335,24 @@ empty and keeps what it typesets when it raises no error, and replays the class'
 (`\lx@dropped@maketitle`) the same way when the replay gate finds its vocabulary defined (`body_vocabulary_is_defined`;
 since 75a a `\def`'s replacement text and a called macro's delimiters are not checked as run, and a class's
 `\appto`/`\g@addto@macro` to the refused `\maketitle` extends the class's definition, state.rs
-`extended_refused_definition`; OXIDIZED_DESIGN_DIVERGENCES #756-#757). An off-table store is lost only when the
-title-page code that reads it does not typeset: a refused body the gate rejects, a deposit or replay that errs, or a
-store only a refused class environment prints (wiley-article's abstract, whose stores 75a tables; #758). Guard
+`extended_refused_definition`; OXIDIZED_DESIGN_DIVERGENCES #756-#757). An off-table store whose
+title-page code does not typeset — a refused body the gate rejects, a deposit or replay that errs, a class field the
+deposit reads as empty (jfpc's `\@author` built from its stores) — is handed on at `\maketitle` since 77i — the document's title or
+authors when the class's own `\title`/`\author` hands its argument to the store's setter (or its `\@author` prints the
+store as the names) and the document has none, rows of the creators' author block for a store its `\@author` prints
+beside the names, nothing for a store that only repeats the creators' names (no label printed before it, every creator
+named), else an `ltx:pubnote` named by the label the title page prints before it (when TeX's run prints it right before
+the store, `verify_title_page_labels`, 77i r4) — when speculative runs of the class's title page with each store set to
+a letters and then a digits sentinel print both, a plain value is in the run with the document's own values, and no
+kept deposit or replay typesets it (`before_title_page_runs`,
+`hand_untypeset_stores`, OXIDIZED_DESIGN_DIVERGENCES #767); one only a refused class environment
+prints (wiley-article's abstract) was tabled in 75a (#758). Guard
 `only_table_names_with_store_bodies_are_rerouted`. Since 58m the stores are read where the class reads them:
-creator stores (affiliation, address, e-mail, ORCID; editor, speaker) at `\maketitle`, the others when set. 58q
+creator stores (affiliation, address, e-mail, ORCID; editor, speaker) and an abstract or keywords the title page reads (named
+by its label or not, 77i r4) at `\maketitle`,
+the others when set (once a
+`\maketitle` placed one — handed on and printed by its title page, the sentinel run — a later call only re-sets the store; a store the title page prints after a label is named by
+it, 77i, #154). 58q
 leaves a binding's own setters alone (`latexml_core::binding::store_setters`, KPE #418/#419); 59d hands what code
 appends to `\@author` to the creator (DIVERGENCES #405); 59e lets a later `\maketitle` typeset the authors set
 after the last one (DIVERGENCES #406). Inside author content `\inst{n}` is the affiliation link request

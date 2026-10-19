@@ -1,0 +1,35 @@
+% A raw class's store its title page uses only as an image's file (`\includegraphics{\@logo}`) or a link's target
+% (`\href{\@url}{Home}`) is not text on the page, so it is not handed on as a note; one it typesets as a URL
+% (`\url{\@site}`) is. The speculative run's text counts only the arguments a whatsit shows (`ink_text`,
+% `shown_arguments`, base_utilities.rs: none of an image, a verbatim argument only when nothing else is shown, never
+% keyvals). The `\undefinedthing` drops the title-page deposit (its error is the deposit's, discarded with it), so
+% each store the title page prints reaches the frontmatter or nothing.
+% witness: none (synthetic; review probe `logo` of 77i r2).
+% oracle:  pdflatex 1 error (the deliberate `\undefinedthing`): the image, "Home", "https://site.org".
+% engines: rust 77i r2: `<pubnote>example-image</pubnote>`, `<pubnote>https://example.org</pubnote>`; rust 67int35:
+%          every store lost, the site's URL too.
+% expect:  0 errors, 0 warnings (the deposit's error is not the document's); one `<pubnote>https://site.org</pubnote>`;
+%          no "example-image", no "example.org".
+% status:  RED (77i r2) -> GREEN (77i r3)
+\begin{filecontents*}[overwrite]{rclogo.cls}
+\ProvidesClass{rclogo}
+\LoadClass{article}
+\RequirePackage{graphicx}
+\def\@logo{}
+\newcommand{\logo}[1]{\def\@logo{#1}}
+\def\@url{}
+\newcommand{\homepage}[1]{\def\@url{#1}}
+\def\@site{}
+\newcommand{\site}[1]{\def\@site{#1}}
+\def\@maketitle{\undefinedthing\@title\par\@author\par\includegraphics{\@logo}\par\href{\@url}{Home}\par\url{\@site}\par}
+\end{filecontents*}
+\documentclass{rclogo}
+\usepackage{hyperref}
+\title{T}\author{Anton}
+\logo{example-image}
+\homepage{https://example.org}
+\site{https://site.org}
+\begin{document}
+\maketitle
+Text.
+\end{document}

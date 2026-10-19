@@ -5699,7 +5699,10 @@ mod sect04;
 pub use sect04::kernel_chapter_with_warning;
 mod sect05;
 pub use sect05::note_title_page_part;
-pub(crate) use sect05::replay_class_begin_code;
+pub(crate) use sect05::{
+  SpeculativeRun, replay_class_begin_code, speculative_title_page_run, title_page_deposit_tokens,
+  title_page_print_tokens, title_page_replay_tokens,
+};
 mod sect06;
 mod sect07;
 mod sect08;

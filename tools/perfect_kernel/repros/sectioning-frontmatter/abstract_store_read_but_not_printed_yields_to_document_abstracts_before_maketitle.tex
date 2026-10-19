@@ -1,0 +1,30 @@
+% A raw class's abstract store its title page reads but does not print (`\hypersetup{pdfsubject={\@abst}}`), with the
+% document's own abstracts — an English one and an `otherlanguage` German one — set BEFORE `\maketitle`: the store's
+% ordinary entry is dropped because the document already has its own abstract (base_utilities.rs
+% `frontmatter_release_store`), and both document abstracts are kept.
+% witness: none (synthetic; 77i r5 re-check probe `n/p4e`).
+% oracle:  pdflatex 0 errors: "English document abstract." and "Deutsche Zusammenfassung." (headed "Zusammenfassung");
+%          "Metadata abstract." nowhere (PDF metadata only).
+% engines: rust 77i r5: as the oracle; the branch had no guard before.
+% expect:  0 errors, 0 warnings; two `ltx:abstract`s (English, German), no "Metadata abstract.".
+% status:  GREEN (77i r5)
+\begin{filecontents*}[overwrite]{rcp4e.cls}
+\ProvidesClass{rcp4e}
+\LoadClass{article}
+\RequirePackage{hyperref}
+\newcommand*\abst[1]{\gdef\@abst{#1}}
+\def\@abst{}
+\def\@maketitle{\hypersetup{pdfsubject={\@abst}}\begin{center}{\Large\@title\par}\@author\par\end{center}}
+\end{filecontents*}
+\documentclass{rcp4e}
+\usepackage[ngerman,english]{babel}
+\title{T}\author{Anton}
+\abst{Metadata abstract.}
+\begin{document}
+\begin{abstract}English document abstract.\end{abstract}
+\begin{otherlanguage}{ngerman}
+\begin{abstract}Deutsche Zusammenfassung.\end{abstract}
+\end{otherlanguage}
+\maketitle
+Text.
+\end{document}

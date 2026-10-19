@@ -1,0 +1,27 @@
+% A rerouted store the paper never set, which the class defaults to `\@empty` only in its own `\maketitle` (refused by
+% the lock) and its `\@maketitle` tests `\ifx\@institute\@empty`, reads as empty in the title-page deposit: of `\relax`
+% and `\@empty`, the value under which the title page prints less, decided by TeX (`decide_unset_nulls`,
+% frontmatter_stores.rs). The other direction, `\@ifundefined` (ptptex.cls:88-104), is
+% `unset_store_tested_for_undefinedness_reads_relax_in_the_deposit.tex`.
+% witness: none (synthetic; 77i review probe `relax`; the 77h follow-up).
+% oracle:  pdflatex 0 errors: "T Anton Key words: lensing Text.", no "Institute:".
+% engines: rust 67int35: "Key words" lost (the undefined store dropped the deposit); rust 77h r1 (`\@empty`): right;
+%          rust 77h r2 (`\relax`): an orphan "Institute:" paragraph.
+% expect:  0 errors, 0 warnings; "Key words: lensing" once; no "Institute:".
+% status:  RED (77h r2) -> GREEN (77i r2)
+\begin{filecontents*}[overwrite]{rcrelax.cls}
+\ProvidesClass{rcrelax}
+\LoadClass{article}
+\def\institute#1{\def\@institute{#1}}
+\def\@keyw{}
+\def\keyw#1{\def\@keyw{#1}}
+\def\@maketitle{\@title\par\@author\par\ifx\@institute\@empty\else Institute: \@institute\par\fi Key words: \@keyw\par}
+\let\@origmaketitle\maketitle
+\def\maketitle{\ifx\@institute\undefined\let\@institute\@empty\fi\@origmaketitle}
+\end{filecontents*}
+\documentclass{rcrelax}
+\title{T}\author{Anton}\keyw{lensing}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -403,12 +403,15 @@ The Supplement</p>
   );
 }
 
-/// A class `\title` that keeps what it is given is the class's frontmatter setter, whose call after the body is a
-/// supplement's, dropped, however it stores: `\gdef` (then prints), `\protected@xdef`, an xparse command's code,
-/// imsart.sty:1958-1968's `\xdef` inside a group, or by calling a saved kernel `\title` (beamerbasetitle.sty:69-70
-/// shape; 2301.10468, 2401.11672).
+/// A class `\title` that keeps what it is given and also prints it where it stands, called after the body, runs in
+/// place (silent-loss #8, user direction (a) 2026-10-19; `sealed_storing_run`, sect05.rs): pdflatex prints the title
+/// there, so its text stays, while the frontmatter keeps the paper's title (user ruling 2026-10-09: a supplement's
+/// frontmatter does not replace the paper's) — however it stores: `\gdef`, `\protected@xdef`, an xparse command's
+/// code, imsart.sty:1958-1968's `\xdef` inside a group, or by calling a saved kernel `\title` (beamerbasetitle.sty:69-70
+/// shape; 2301.10468, 2401.11672). One that only stores (imsart.sty:1958, schooldocs.sty:70) prints nothing and is
+/// still dropped whole.
 #[test]
-fn storing_class_title_after_the_body_is_dropped() {
+fn storing_class_title_after_the_body_prints_in_place() {
   let doc = r"\documentclass{setterclass}
 \begin{document}
 \title{The Paper}
@@ -418,12 +421,27 @@ Text.
 \section{More}
 More text.
 \end{document}";
-  for class in [
-    r"\renewcommand{\title}[1]{\gdef\@title{#1}\par\noindent\textbf{#1}\par}",
-    r"\renewcommand{\title}[1]{\protected@xdef\@title{#1}\par\noindent\textbf{#1}\par}",
-    r"\RenewDocumentCommand{\title}{m}{\gdef\@title{#1}\par\noindent\textbf{#1}\par}",
-    r"\def\title#1{\vglue 1pt\bgroup\xdef\@argi{#1}\xdef\@title{#1}\egroup\par\noindent\textbf{#1}\par}",
-    r"\let\origtitle\title \renewcommand{\title}[1]{\origtitle{#1}\par\noindent\textbf{#1}\par}",
+  for (class, rule) in [
+    (
+      r"\renewcommand{\title}[1]{\gdef\@title{#1}\par\noindent\textbf{#1}\par}",
+      "",
+    ),
+    (
+      r"\renewcommand{\title}[1]{\protected@xdef\@title{#1}\par\noindent\textbf{#1}\par}",
+      "",
+    ),
+    (
+      r"\RenewDocumentCommand{\title}{m}{\gdef\@title{#1}\par\noindent\textbf{#1}\par}",
+      "",
+    ),
+    (
+      r"\def\title#1{\vglue 1pt\bgroup\xdef\@argi{#1}\xdef\@title{#1}\egroup\par\noindent\textbf{#1}\par}",
+      r#"<rule height="0.0pt" width="100%"/>"#,
+    ),
+    (
+      r"\let\origtitle\title \renewcommand{\title}[1]{\origtitle{#1}\par\noindent\textbf{#1}\par}",
+      "",
+    ),
   ] {
     let cls = format!("\\ProvidesClass{{setterclass}}\n\\LoadClass{{article}}\n{class}\n");
     let xml = convert_clean_files(doc, &[("setterclass.cls", &cls)]);
@@ -432,8 +450,21 @@ More text.
       1,
       "{class}\n{xml}"
     );
-    assert!(!xml.contains("The Supplement"), "{class}\n{xml}");
+    assert_eq!(xml.matches("The Supplement").count(), 1, "{class}\n{xml}");
+    let flat = xml.split_whitespace().collect::<Vec<_>>().join(" ");
+    assert!(
+      flat.contains(&format!(
+        r#"<para xml:id="S1.p1"> <p xml:id="S1.p1.1">Text.</p> </para> {rule}{}<para class="ltx_noindent" xml:id="S1.p2"> <p xml:id="S1.p2.1"><text font="bold" xml:id="S1.p2.1.1">The Supplement</text></p> </para> </section>"#,
+        if rule.is_empty() { "" } else { " " }
+      )),
+      "{class}\n{xml}"
+    );
   }
+  // only stores: the supplement's setter, dropped whole
+  let cls = "\\ProvidesClass{setterclass}\n\\LoadClass{article}\n\\renewcommand{\\title}[1]{\\gdef\\@title{#1}}\n";
+  let xml = convert_clean_files(doc, &[("setterclass.cls", cls)]);
+  assert_eq!(xml.matches("<title>The Paper</title>").count(), 1, "{xml}");
+  assert!(!xml.contains("The Supplement"), "{xml}");
 }
 
 /// A heading name is digested in a group of its own: a `\contentsname` that switches the font unbraced

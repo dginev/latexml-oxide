@@ -1,0 +1,27 @@
+% An off-table store the class prints only under its own boolean, which is off, is not handed on: TeX decides what
+% the title page prints (`before_title_page_runs`, frontmatter_stores.rs: the store's sentinel does not reach the
+% speculative run of the title page). sigplanconf.cls:87-90 builds its booleans as `\def\@true{TT}`/`\def\@false{FL}`
+% and prints its copyright block only `\if \@copyrightwanted` (:1118); `[preprint,nocopyrightspace]` turns it off.
+% witness: 1603.03011 (sigplanconf `[preprint,nocopyrightspace]`: the template's placeholder DOI "nnnnnnn.nnnnnnn"
+%          became a note pdflatex never prints); 77i review probe `flag`.
+% oracle:  pdflatex 0 errors: "T Anton <date> Text.", no DOI.
+% engines: rust 67int35: no note; rust 77i r1: `<note role="copyrightDOI">nnnnnnn.nnnnnnn</note>` (0 warnings).
+% expect:  0 errors, 0 warnings; no "nnnnnnn.nnnnnnn" anywhere.
+% status:  RED (77i r1) -> GREEN (77i r2)
+\begin{filecontents*}[overwrite]{rcflag.cls}
+\ProvidesClass{rcflag}
+\LoadClass{article}
+\def\@true{TT}\def\@false{FL}
+\def\@copyrightwanted{FL}
+\def\@doi{}
+\def\copyrightDOI#1{\gdef\@doi{#1}}
+\def\@copyrightspace{\par DOI: \@doi\par}
+\let\@origmaketitle\maketitle
+\def\maketitle{\@origmaketitle\if\@copyrightwanted\@copyrightspace\fi}
+\end{filecontents*}
+\documentclass{rcflag}
+\title{T}\author{Anton}\copyrightDOI{nnnnnnn.nnnnnnn}
+\begin{document}
+\maketitle
+Text.
+\end{document}

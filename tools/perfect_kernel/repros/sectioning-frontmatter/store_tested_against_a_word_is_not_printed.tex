@@ -1,0 +1,27 @@
+% A raw class's store its title page tests against a word and prints the class's own word for,
+% `\ifx\@vc\@open OPEN\else\@vc\fi` with "open": the letters sentinel takes the `\else` branch, so the store counts as
+% printed by the sentinel runs, but the run with the document's own values does not print its value, "open" (the
+% confirming check, `confirmed_printed`, frontmatter_stores.rs): not handed on. A store printed plainly is.
+% The `\undefinedthing` drops the title-page deposit (an error there), so the stores reach the frontmatter or nothing.
+% witness: none (synthetic; review probe `ctx2` of 77i r3).
+% oracle:  pdflatex 1 error (the deliberate `\undefinedthing`): "C:OPEN", "D:dee".
+% engines: rust 77i r3: `<pubnote>open</pubnote>`.
+% expect:  0 errors, 0 warnings; `<pubnote>dee</pubnote>` the only pubnote; no "open".
+% status:  RED (77i r3) -> GREEN (77i r4)
+\begin{filecontents*}[overwrite]{rcword.cls}
+\ProvidesClass{rcword}
+\LoadClass{article}
+\def\@vc{}\newcommand{\svc}[1]{\def\@vc{#1}}
+\def\@vd{}\newcommand{\svd}[1]{\def\@vd{#1}}
+\def\@open{open}
+\def\@maketitle{\undefinedthing\@title\par\@author\par
+ C:\ifx\@vc\@open OPEN\else\@vc\fi\par
+ D:\hbox{\@vd}\par}
+\end{filecontents*}
+\documentclass{rcword}
+\title{T}\author{Anton}
+\svc{open}\svd{dee}
+\begin{document}
+\maketitle
+Text.
+\end{document}

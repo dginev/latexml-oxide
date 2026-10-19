@@ -158,6 +158,8 @@ pub fn reset_thread_engine() {
   // resolves, in the renumbered arena, to a different string (phantom undefined).
   // (`reset_arena_keyed_reports` is in scope via `pub use crate::common::error::*`.)
   reset_arena_keyed_reports();
+  // A speculative scope's log muting (`SuppressLogOutputGuard`) ends with the conversion.
+  reset_suppress_log_output();
   // The is_noexpand_family and fontmap-key memos are keyed by arena symbols —
   // same stale-alias hazard as the REPORT maps; clear them with the arena.
   token::reset_noexpand_family_memo();
