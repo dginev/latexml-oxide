@@ -15799,3 +15799,18 @@ frontmatter item is one, OXIDIZED_DESIGN_DIVERGENCES #766; 0804.1078). Rust's st
 bindings give each an explicit space token (amsppt_sty.rs, biblatex_sty.rs, axessibility_sty.rs, and the Rust-only
 colm2025_conference/jmlr/jmlr2e `\And`s). Guards `perfect_kernel_batch68r::amsppt_subjclassyear_names_the_scheme`,
 `perfect_kernel_batch77f::single_space_macros_are_spaces`.
+
+## 985. amsgen's `\@saveprimitive` refuses the kernel's `\over` family and `\overline`
+
+Perl defines `\over`, `\atop`, `\above`, their `withdelims` forms (TeX_Math.pool.ltxml:1134-1140) and `\overline` (:989)
+as macros, so `\meaning\over` is `macro:->…`, not `\over`. amsgen's `\@saveprimitive` (amsgen.sty:27-38, and the copies
+classes embed — asl.cls:326-338) saves a primitive only when its meaning is its own name: "Unable to properly define
+\@@over; primitive \over no longer primitive" for each, and a `\frac` built on the unsaved `\@@over` (asl.cls:739-753)
+loses its fraction. Perl's amsgen binding sidesteps it with `\let#2#1` (amsgen.sty.ltxml:19), but a class or package
+carrying its own copy runs the real check. Minimal trigger: the amsgen definition of `\@saveprimitive`, then
+`\@saveprimitive\over\@@over \@saveprimitive\overline\@@overline` and `$\@@over$`-built fractions — Perl 3 Errors. Perl's
+own `\meaning` exception list (TeX_Debugging.pool.ltxml:125-127, "could be extended further") is the mechanism: the Rust
+port lists these kernel stand-ins (tex_debugging.rs `KERNEL_PRIMITIVE_STANDINS_FOR_MEANING`, LaTeXML-owned definitions
+only, so a `\let` copy reads `\over` and a document's `\def\over` is a macro). Witnesses 1005.4193, 1803.03483 (7 → 0
+Errors), 1111.1504 (8 → 1). Repro `expansion-primitives/saveprimitive_kernel_fractions`; guards
+`perfect_kernel_batch77g::{saveprimitive_accepts_kernel_fraction_primitives, kernel_primitive_standins_mean_their_primitive}`.

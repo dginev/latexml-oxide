@@ -830,7 +830,8 @@ LoadDefinitions!({
   RawTeX!(
     r"\@saveprimitive\over\@@over \@saveprimitive\atop\@@atop \@saveprimitive\above\@@above
 \@saveprimitive\overwithdelims\@@overwithdelims \@saveprimitive\atopwithdelims\@@atopwithdelims
-\@saveprimitive\abovewithdelims\@@abovewithdelims"
+\@saveprimitive\abovewithdelims\@@abovewithdelims
+\@saveprimitive\overline\@@overline"
   );
   // amsmath.sty:949-950 `\std@minus`/`\std@equal` (the non-Umathcode branch)
   // and :983/:998 `\overarrow@`/`\underarrow@`, read by packages that build

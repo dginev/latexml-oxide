@@ -13,6 +13,20 @@ static EXCEPTION_MACRO_NAMES_FOR_MEANING: Lazy<Regex> = Lazy::new(|| {
 /// macro). Perl prints `macro:#1#2->CODE(0x…)`, a heap address.
 static EXPANDABLE_PRIMITIVE_NAMES_FOR_MEANING: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^\\(?:expandafter|noexpand|string|meaning)$").unwrap());
+/// TeX primitives the kernel implements as macros of its own (tex_math.rs `\over` family, `\overline`,
+/// `\underline`): `\meaning` prints the primitive's name, as tex.web §296 `print_meaning` does, while the definition is
+/// still LaTeXML's (its origin survives a `\let`, so `\let\@@over\over` reads `\over`; a document's or file's
+/// redefinition is a macro again). amsgen's `\@saveprimitive` (amsgen.sty:27, amsmath.sty:397, and the copies classes
+/// embed: asl.cls:327 — 1005.4193, 1803.03483, 1111.1504) compares `\meaning\over` with `\string\over`; a macro meaning
+/// failed it with "Unable to properly define \@@over; primitive \over no longer primitive", and the class's `\frac`
+/// built on the unsaved `\@@over` lost its fraction (KNOWN_PERL_ERRORS #985). Perl TeX_Debugging.pool.ltxml:125-127
+/// keeps this list for `\expanded`/`\unexpanded`/`\detokenize` ("could be extended further").
+static KERNEL_PRIMITIVE_STANDINS_FOR_MEANING: Lazy<Regex> = Lazy::new(|| {
+  Regex::new(
+    r"^\\(?:over|atop|above|overwithdelims|atopwithdelims|abovewithdelims|overline|underline)$",
+  )
+  .unwrap()
+});
 static LEAD_W_COLON_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+):").unwrap());
 static UNTIL_SPEC: Lazy<Regex> = Lazy::new(|| Regex::new("^\\w?Until(\\w*):").unwrap());
 
@@ -260,6 +274,11 @@ LoadDefinitions!({
             EXCEPTION_MACRO_NAMES_FOR_MEANING.is_match(name)
               || (kernel_closure && EXPANDABLE_PRIMITIVE_NAMES_FOR_MEANING.is_match(name))
           };
+          if expandable.origin.is_latexml_owned()
+            && KERNEL_PRIMITIVE_STANDINS_FOR_MEANING.is_match(&cs)
+          {
+            return Ok(Tokens::new(ExplodeChars!(cs)));
+          }
           // These exceptions could be extended further, as we add more .sty/.cls support
           if shown_as_primitive(&cs) || shown_as_primitive(&cs_token) {
             let mut canonical = if shown_as_primitive(&cs_token) {

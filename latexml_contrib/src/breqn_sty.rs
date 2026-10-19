@@ -138,7 +138,8 @@ LoadDefinitions!({
   // and `^` math-active (mathcode "8000, the active forms `\sb`/`\sp`) and, from `\begin{document}`, catcode 12
   // ("other") in text: a bare URL `https://…/boiler_room` prints its `_` (2402.04396, 2403.03720; was an error). breqn's
   // `mathstyleoff` (breqn.sty:42-44) reaches mathstyle as `noactivechars` (flexisym.sty:401-402): catcodes 7 and 8
-  // again. Read raw, mathstyle.sty errs ("\over no longer primitive").
+  // again. (Read raw, mathstyle.sty's `\@saveprimitive` copy, :37-70, refused the kernel's `\over` — "\over no longer
+  // primitive" — until `\meaning` printed it as the primitive, KNOWN_PERL_ERRORS #985.)
   DeclareOption!(
     "mathstyleoff",
     r"\def\lx@breqn@catcodes{\catcode`\^=7\relax \catcode`\_=8\relax}"

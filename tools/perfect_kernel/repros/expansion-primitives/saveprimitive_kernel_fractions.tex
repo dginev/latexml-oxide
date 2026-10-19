@@ -1,0 +1,26 @@
+% amsgen's `\@saveprimitive` (amsgen.sty:27; the copies classes embed, asl.cls:327-338 — 1005.4193, 1803.03483,
+% 1111.1504) saves a TeX primitive under another name only when `\meaning` of it is its own name. The kernel's `\over`
+% family and `\overline` are macros (tex_math.rs), so the check failed: "Unable to properly define \@@over; primitive
+% \over no longer primitive" per primitive, and a fraction built on the unsaved `\@@over` lost its division
+% (asl.cls:739-753's `\frac`). `\meaning` now prints these kernel stand-ins as the primitives they are (tex.web §296
+% `print_meaning`; Perl TeX_Debugging.pool.ltxml:125-127's exception list, extended), so the save succeeds.
+% witness: 1005.4193, 1803.03483 (7 Errors each, nothing else); 1111.1504
+% oracle:  pdflatex 0 errors, a/b typeset as a fraction, x overlined
+% engines: rust 67int33 = 3 errors (two GenericError, \@@over undefined), no fraction; perl = the same 3 errors
+% expect:  0 errors, 0 warnings; the formula holds an XMApp whose operator is XMTok meaning="divide"
+% status:  RED (67int33) -> GREEN (77g)
+\documentclass{article}
+\makeatletter
+\providecommand{\@saveprimitive}[2]{\begingroup\escapechar`\\\relax
+  \edef\@tempa{\string#1}\edef\@tempb{\meaning#1}%
+  \ifx\@tempa\@tempb \global\let#2#1%
+  \else\edef\@tempb{\meaning#2}%
+    \ifx\@tempa\@tempb\else\@latex@error{Unable to properly define
+      \string#2; primitive \noexpand#1no longer primitive}\@eha\fi
+  \fi\endgroup}
+\@saveprimitive\over\@@over \@saveprimitive\overline\@@overline
+\newcommand\fr[2]{{\begingroup#1\endgroup\@@over#2}}
+\makeatother
+\begin{document}
+$\fr{a}{b}$ and $\overline{x}$
+\end{document}
