@@ -1,0 +1,14 @@
+% witness: 2207.13707 (revtex4-2 + \usepackage{hyperref} + cleveref after the class's preload), 1704.06321,
+%          1204.1969 (emulateapj, a revtex4 class)
+% oracle:  pdflatex 0 errors; \cref{s} prints "Section I"
+% engines: rust int32a = 0 errors (the document's hyperref load skipped); with the preload marked unloaded and the
+%          binding's `\let\H@refstepcounter\refstepcounter` made again, Fatal PushbackLimit (`\H@refstepcounter`
+%          calling itself under cleveref)
+% expect:  0 errors, 0 warnings; the section keeps its cleveref tags
+% status:  GREEN (batch 77r: hyperref_sty.rs saves the kernel's \refstepcounter once)
+\documentclass{revtex4-2}
+\usepackage{hyperref}
+\usepackage[nameinlink,capitalize]{cleveref}
+\begin{document}
+\section{A}\label{s}Text \cref{s}.
+\end{document}

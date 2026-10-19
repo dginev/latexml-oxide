@@ -791,17 +791,27 @@ pub fn label_stepped_counter(ctype: &str, ctr: &str) -> Result<HashMap<Stored>> 
         hold.discard();
         push_frame();
         let saved = T_CS!(s!("\\lx@the@in@math@{ctr}"));
-        let_i(&saved, &the_ctr_cs, Some(Scope::Local));
-        let label = def_macro(
-          the_ctr_cs,
-          None,
-          Tokens::new(vec![T_CS!("\\ensuremath"), T_BEGIN!(), saved, T_END!()]),
-          Some(ExpandableOptions {
-            scope: Some(Scope::Local),
-            ..ExpandableOptions::default()
-          }),
-        )
-        .and_then(|()| digest_label());
+        let math_label = Tokens::new(vec![T_CS!("\\ensuremath"), T_BEGIN!(), saved, T_END!()]);
+        // (a label whose digest left a group open — a `\p@equation` taking nine arguments ate the closing braces,
+        // 1902.09345 — keeps the frame this pushed, and with it the math label: saved again, the label would call
+        // itself, `\@ensuremath` for ever)
+        let label = if matches!(lookup_meaning(&the_ctr_cs), Some(Stored::Expandable(ref d))
+          if matches!(d.get_expansion(), Some(ExpansionBody::Tokens(body)) if *body == math_label))
+        {
+          digest_label()
+        } else {
+          let_i(&saved, &the_ctr_cs, Some(Scope::Local));
+          def_macro(
+            the_ctr_cs,
+            None,
+            math_label,
+            Some(ExpandableOptions {
+              scope: Some(Scope::Local),
+              ..ExpandableOptions::default()
+            }),
+          )
+          .and_then(|()| digest_label())
+        };
         pop_frame()?;
         label?
       },

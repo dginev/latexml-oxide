@@ -1,0 +1,20 @@
+% witness: astro-ph0203021 (VisionStyle.cls: a non-robust `\small` in the title, `\@maketitle`'s `\MakeUppercase`;
+%          the class reduced to its three loop-making lines)
+% oracle:  pdflatex hangs too (`\MakeUppercase` expands `\small`'s `\@setfontsize\small`, for ever)
+% engines: rust int31a = Fatal Timeout:PushbackLimit in the speculative title-page run (77i), int30a 0 errors
+% expect:  0 errors, 0 warnings; title "X Y", the affiliation "B"
+% status:  GREEN (batch 77r, user ruling 2026-10-19: a runaway limit inside a speculative run is discarded with the
+%          run, SpeculativeRun::Aborted; the real `\maketitle` never runs this code)
+\begin{filecontents*}[overwrite]{titleloop.cls}
+\newcommand\small{\@setfontsize\small\@ixpt{11}}
+\def\institute#1{\gdef\@institute{#1}}
+\def\@maketitle{\newpage\MakeUppercase\@title\par}
+\end{filecontents*}
+\documentclass{titleloop}
+\begin{document}
+\title{X \small Y}
+\author{A}
+\institute{B}
+\maketitle
+Text
+\end{document}

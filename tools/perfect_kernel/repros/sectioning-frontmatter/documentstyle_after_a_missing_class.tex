@@ -1,0 +1,18 @@
+% witness: astro-ph9812142 (line 1 `#\documentstyle[psfig,epsf]{/disk/3/roud/home/Texstuff/aa}` — the `#` is no
+%          comment — then `\documentstyle[psfig,epsf]{aa}`)
+% oracle:  pdflatex "File `/nowhere/aa.cls' not found", Emergency stop, no PDF (TL 2025 has no aa.cls either)
+% engines: rust 77r (r1) = the OmniBus fallback latched the class declaration and the real `\documentstyle{aa}` was
+%          refused ("Two \documentclass or \documentstyle commands"; `\offprints` undefined); int32a Fatal
+%          Timeout:Convert (latex209 applied twice: `\normalsize` and `\original@normalsize` call each other);
+%          67int19b loads aa
+% expect:  0 errors, 1 warning (the missing class); aa's `\offprints` note and the text
+% status:  GREEN (batch 77r r2, main-session ruling 2026-10-19: a first class declaration no binding and no file
+%          answered does not count, and latex209.def's definitions apply once)
+\documentstyle{/nowhere/aa}
+\documentstyle{aa}
+\offprints{A. Name}
+\begin{document}
+\title{T}\author{A}
+\maketitle
+Hello \textbf{world}. {\small small}
+\end{document}

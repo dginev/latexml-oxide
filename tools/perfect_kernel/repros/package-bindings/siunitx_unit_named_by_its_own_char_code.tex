@@ -1,0 +1,15 @@
+% witness: 2504.05919 (atlaspackage.sty:225-227 declares exactly these two units)
+% oracle:  pdflatex 0 errors, "x 60% y"
+% engines: rust int32a = exit 134 (stack overflow: the `\%` after `\char`` resolved as the unit `\%` itself, for
+%          ever); Perl 3 errors
+% expect:  0 errors, 0 warnings; "60%", the unit "%" with no space before it
+% status:  GREEN (batch 77r: a control sequence after a backquote is a character code, read unexpanded, tex.web
+%          §442, and a unit inside its own presentation is itself; r2: the unit's own `number-unit-product={}`
+%          applies, siunitx.sty:6684-6694 `\siunitx_unit_options_apply:n`, where 77r r1 printed `60\text{\,}%`)
+\documentclass{article}
+\usepackage{siunitx}
+\DeclareSIUnit[number-unit-product={}]\percent{\char`\%}
+\DeclareSIUnit[number-unit-product={}]\%{\char`\%}
+\begin{document}
+x \SI{60}{\percent} y
+\end{document}

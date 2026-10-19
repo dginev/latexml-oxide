@@ -579,6 +579,23 @@ pub fn record_last_fatal(e: &Error) {
   RESOURCE_FATAL_SEEN.with(|c| c.set(true));
 }
 
+/// Unlatch the latched resource fatal when it is a runaway limit of the expansion in progress — the pushback, a
+/// recursion — for a run the document never makes, discarded with it (`speculative_title_page_run`). A limit of the
+/// conversion stays latched as the document's: its deadline, its memory budget, its token budget, its conditional
+/// ids. (The token count itself does not carry past the failed run: `reading_from_mouth`'s error path resets the
+/// gullet's `progress`, gullet.rs.) Whether it was one.
+pub fn unlatch_runaway_fatal() -> bool {
+  use ErrorCategory as C;
+  let runaway = LAST_RESOURCE_FATAL.with(|c| {
+    matches!(c.borrow().as_ref(), Some(e) if matches!(e.category, C::PushbackLimit | C::Recursion))
+  });
+  if runaway {
+    LAST_RESOURCE_FATAL.with(|c| *c.borrow_mut() = None);
+    RESOURCE_FATAL_SEEN.with(|c| c.set(false));
+  }
+  runaway
+}
+
 /// Take (and clear) the latched resource fatal, if any. Returns the
 /// structured `Error` so a boundary that received only a flattened string can
 /// propagate the real thing.

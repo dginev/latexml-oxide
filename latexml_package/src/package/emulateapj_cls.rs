@@ -51,9 +51,18 @@ LoadDefinitions!({
   // `\tablecaption` and `\tabletypesize` before it are in (the class's `\kill`).
   RequirePackage!("longtable"); // emulateapj.cls:192 (REVTeX's support has loaded it already)
   RawTeX!(r"\newif\iflx@eapj@deluxetable");
+  // A deluxetable begun inside another (left open by a bare `\tablenotemark` taking the `}` that closed it, 1704.06321,
+  // or a stray `\[` in a `\colhead`, 1204.1969) is a float in a float: its `{table}` is in the outer one's minipage, so
+  // LaTeX's `\@xfloat` finds `\ifinner` and raises `\@parmoderr` "Not in outer par mode" with `\@floatpenalty\z@`
+  // (latex.ltx:17440-17441), and `\end@float` (:17501-17505) then never adds the inner box anywhere: pdflatex drops
+  // the inner table ("You've lost some text"). Here it is kept, as Perl and 67int17b keep it (its content is the
+  // author's): the inner table opens inside the outer's bindings, which stay: the
+  // outer's `\label` is already the table's (`\lx@eapj@label`), and saving it again as the original made `\label`
+  // call itself for ever (an IfLimit Fatal).
   DefMacro!("\\lx@eapj@begin@deluxetable",
-    r"\lx@eapj@deluxetabletrue\global\lx@deluxetable@datafalse\lx@eapj@head@forget
-\let\tablenotetext\lx@eapj@tablenotetext\let\lx@eapj@saved@label\label\let\label\lx@eapj@label\gdef\lx@eapj@labels{}");
+    r"\iflx@eapj@deluxetable\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{\@parmoderr}
+{\lx@eapj@deluxetabletrue\global\lx@deluxetable@datafalse\lx@eapj@head@forget
+\let\tablenotetext\lx@eapj@tablenotetext\let\lx@eapj@saved@label\label\let\label\lx@eapj@label\gdef\lx@eapj@labels{}}");
   DefMacro!("\\lx@eapj@open@data",
     r"\iflx@deluxetable@data\expandafter\@gobble\else\expandafter\@firstofone\fi
 {\lx@deluxe@print@caption\global\lx@deluxetable@datatrue\bgroup\@deluxetable@bindings\@@deluxetabular\lx@begin@alignment

@@ -308,7 +308,15 @@ fn six_setup(kv: &KeyVals) {
     }
     match value {
       ArgWrap::Tokens(t) => {
-        if t.is_empty() {
+        // An empty value of a key whose value is a token list (its current one neither `true` nor `false`) is that
+        // empty list: atlaspackage.sty:225-227 `number-unit-product={}` prints no space (2504.05919).
+        let token_list = || {
+          lookup_value(&format!("SIX_{key_str}"))
+            .is_some_and(|current| !matches!(current.to_string().trim(), "" | "true" | "false"))
+        };
+        if t.is_empty() && token_list() {
+          assign_value(&format!("SIX_{key_str}"), Stored::Tokens(Tokens!()), None);
+        } else if t.is_empty() {
           // Bare flag (e.g., "parse-numbers" without "= true") → set "true"
           assign_value(&format!("SIX_{key_str}"), Stored::from("true"), None);
         } else {
@@ -336,8 +344,30 @@ fn six_setup(kv: &KeyVals) {
 }
 
 /// Perl: six_begin_processing — bgroup + apply keyvals + redefine input-protect-tokens
-fn six_begin_processing(kv: Option<&KeyVals>) {
+fn six_begin_processing(kv: Option<&KeyVals>) { six_begin_processing_for_units(kv, None) }
+
+/// The state key holding the options a `\DeclareSIUnit[<options>]\<unit>` declared for `<unit>`.
+fn six_unit_options_key(name: &str) -> String { s!("SIX_unit_options:{name}") }
+
+/// [`six_begin_processing`] for a command with a unit argument, `units`: a unit argument that is one unit macro
+/// applies the options its `\DeclareSIUnit` declared before the command's own (siunitx.sty:6684-6694
+/// `\siunitx_unit_options_apply:n`, on a single token; :9167, :9529 `\qty`, `\SI`). Perl stores the options and
+/// applies none (siunitx.sty.ltxml:1343-1353): atlaspackage.sty:225-227 `\DeclareSIUnit[number-unit-product={}]\percent`
+/// printed "60 %" for pdflatex's "60%" (2504.05919).
+fn six_begin_processing_for_units(kv: Option<&KeyVals>, units: Option<&Tokens>) {
   bgroup();
+  let mut unit = units
+    .into_iter()
+    .flat_map(|units| units.unlist_ref().iter())
+    .filter(|t| t.get_catcode() != Catcode::SPACE);
+  if let (Some(unit), None) = (unit.next(), unit.next())
+    && unit.get_catcode().is_active_or_cs()
+    && let Some(Stored::KeyVals(options)) = lookup_value(&six_unit_options_key(
+      unit.to_string().trim_start_matches('\\'),
+    ))
+  {
+    six_setup(&options);
+  }
   if let Some(kv) = kv {
     six_setup(kv);
   }
@@ -2635,6 +2665,9 @@ fn read_brace_group_str<I: Iterator<Item = Token>>(
 // interns to a different SymStr, so the old cache entry is simply
 // never looked up again.
 thread_local! {
+  /// The units whose presentation `\lx@six@unitobject@collapsible` is expanding (innermost last).
+  static COLLAPSING_UNITS: std::cell::RefCell<Vec<String>> =
+    const { std::cell::RefCell::new(Vec::new()) };
   static UNIT_DEFN_CACHE: std::cell::RefCell<
     rustc_hash::FxHashMap<::latexml_core::common::arena::SymStr, SixUnitDefn>,
   > = std::cell::RefCell::new(rustc_hash::FxHashMap::default());
@@ -2726,35 +2759,95 @@ fn define_macro_simple(cs: Token, expansion: Tokens) -> Result<()> {
 /// known unit macros, replace them with their stored presentation text.
 /// E.g., \DeclareSIUnit \metre { \meter } → resolve \meter → "m"
 fn resolve_unit_presentation(pres: &Tokens) -> String {
+  resolve_unit_presentation_within(pres, &mut Vec::new())
+}
+
+/// [`resolve_unit_presentation`] inside the units being resolved (`within`). A control sequence after a backquote is
+/// a character code, which TeX reads unexpanded (tex.web §442), and a unit inside its own presentation is itself:
+/// both stay as written (atlaspackage.sty:225-227 `\DeclareSIUnit[number-unit-product={}]\%{\char`\%}`, which
+/// recursed until the stack overflowed; 2504.05919). The text is read again as TeX (`six_format_1unit`), so a
+/// control word kept as written is ended by a space where a letter follows (tex.web §356: a letter would continue
+/// its name): `\char`\a b` is "ab", not `\char`\ab`, and `\textmu m` (`\DeclareSIUnit\um{\textmu m}`, or a
+/// unit `m` resolved after it) is µm, not an undefined `\textmum`.
+fn resolve_unit_presentation_within(pres: &Tokens, within: &mut Vec<String>) -> String {
+  // Append `text`, separated by a space from a control word it would otherwise continue.
+  fn push_text(
+    result: &mut String,
+    ends_control_word: &mut bool,
+    text: &str,
+    is_control_word: bool,
+  ) {
+    if *ends_control_word && text.starts_with(|c: char| c.is_ascii_alphabetic()) {
+      result.push(' ');
+    }
+    result.push_str(text);
+    *ends_control_word = is_control_word || (*ends_control_word && text.is_empty());
+  }
   let mut result = String::new();
+  let mut ends_control_word = false;
+  let mut after_backquote = false;
   for tok in pres.unlist_ref() {
+    let char_code = std::mem::replace(
+      &mut after_backquote,
+      tok.get_catcode() == Catcode::OTHER && tok.to_string() == "`",
+    );
     if tok.get_catcode() == Catcode::CS {
       let cs_name = tok.to_string();
       let unit_name = cs_name.trim_start_matches('\\');
       // Look up in siunitx_macros mapping
-      if let Some(Stored::String(encoded)) = lookup_mapping_sym(pin!("siunitx_macros"), unit_name) {
+      if !char_code
+        && !within.iter().any(|name| name == unit_name)
+        && let Some(Stored::String(encoded)) = lookup_mapping_sym(pin!("siunitx_macros"), unit_name)
+      {
         let encoded_str = with(encoded, |s| s.to_string());
         let parts: Vec<&str> = encoded_str.splitn(4, '|').collect();
         if parts.len() >= 2 {
           let pres = parts[1];
           // If the presentation itself contains backslashes, try to resolve recursively
-          if pres.contains('\\') {
+          let resolved = if pres.contains('\\') {
             let sub = Tokenize!(TeXString::assembled(pres.to_string()));
-            let sub_resolved = resolve_unit_presentation(&sub);
-            result.push_str(&sub_resolved);
+            within.push(unit_name.to_string());
+            let sub_resolved = resolve_unit_presentation_within(&sub, within);
+            within.pop();
+            sub_resolved
           } else {
-            result.push_str(pres);
-          }
+            pres.to_string()
+          };
+          let is_control_word = ends_with_control_word(&resolved);
+          push_text(
+            &mut result,
+            &mut ends_control_word,
+            &resolved,
+            is_control_word,
+          );
           continue;
         }
       }
       // Not a unit macro — keep as-is
-      result.push_str(&cs_name);
+      let is_control_word =
+        unit_name.chars().all(|c| c.is_ascii_alphabetic()) && !unit_name.is_empty();
+      push_text(
+        &mut result,
+        &mut ends_control_word,
+        &cs_name,
+        is_control_word,
+      );
     } else if tok.get_catcode() != Catcode::SPACE {
-      result.push_str(&tok.to_string());
+      push_text(&mut result, &mut ends_control_word, &tok.to_string(), false);
     }
   }
   result
+}
+
+/// Does `text` (TeX source) end with a control word — a backslash and one or more letters?
+fn ends_with_control_word(text: &str) -> bool {
+  let letters = text.len()
+    - text
+      .trim_end_matches(|c: char| c.is_ascii_alphabetic())
+      .len();
+  letters > 0
+    && text[..text.len() - letters].ends_with('\\')
+    && !text[..text.len() - letters - 1].ends_with('\\')
 }
 
 /// Build expansion tokens: \lx@six@unitobject{name}
@@ -3055,6 +3148,19 @@ LoadDefinitions!({
   DefMacro!("\\lx@six@unitobject@collapsible{}{}", sub [args] {
     let name = args[0].to_string();
     let data_toks = args[1].clone().owned_tokens().unwrap_or_default();
+    // A unit whose presentation reaches the unit itself is a literal: atlaspackage.sty:225-227
+    // `\DeclareSIUnit[number-unit-product={}]\%{\char`\%}`, where TeX reads the `\%` after `\char`` unexpanded
+    // (tex.web §442), the chardef, never the unit (2504.05919: the expansion below re-entered this unit's own
+    // collapsing until the stack overflowed).
+    if COLLAPSING_UNITS.with(|units| units.borrow().contains(&name)) {
+      return Ok(make_unitobject_expansion(&name));
+    }
+    COLLAPSING_UNITS.with(|units| units.borrow_mut().push(name.clone()));
+    struct CollapsingGuard;
+    impl Drop for CollapsingGuard {
+      fn drop(&mut self) { COLLAPSING_UNITS.with(|units| { units.borrow_mut().pop(); }); }
+    }
+    let _collapsing = CollapsingGuard;
     // Fully expand the presentation data (not just partially)
     // This resolves the chain: \meter → \lx@six@meter → collapsible{meter}{m} → unitobject{meter}
     let expanded = do_expand(data_toks)?;
@@ -3116,12 +3222,17 @@ LoadDefinitions!({
   // which without `SkipSpaces` causes the DefToken arg to read the
   // space character and the actual CS to be parsed as the body.
   // Driver: 1501.03532 (stage 17 RUST-REGRESSION: \dBm undefined).
-  DefPrimitive!("\\DeclareSIUnit[] SkipSpaces DefToken {}", sub[(_kv, cs, presentation)] {
+  DefPrimitive!("\\DeclareSIUnit OptionalKeyVals:SIX SkipSpaces DefToken {}", sub[(kv, cs, presentation)] {
     let name = cs.to_string().trim_start_matches('\\').to_string();
     let newcs_name = format!("\\lx@six@{name}");
+    // The unit's own options (siunitx.sty:6681-6682 `\siunitx_unit_options_declare:Nn`, local), applied where the
+    // unit is a command's whole unit argument (`six_begin_processing_for_units`).
+    assign_value(&six_unit_options_key(&name), kv.map_or(Stored::None, |kv| Stored::KeyVals(Rc::new(kv))), None);
 
-    // Store in mapping as a simple string encoding (raw presentation)
-    let pres_str = presentation.to_string();
+    // Store in mapping as a simple string encoding (raw presentation), read again as TeX (`decode_unit_defn_from_
+    // encoded_sym`): untexed, so a control word keeps its space before a letter (`\DeclareSIUnit\um{\textmu m}` is
+    // not an undefined `\textmum`; `\char`\a b` is "ab").
+    let pres_str = presentation.clone().untex();
     let encoded = format!("unit|{}", pres_str);
     assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
     register_unit_macro_name(&name);
@@ -3146,7 +3257,7 @@ LoadDefinitions!({
     let name = cs.to_string().trim_start_matches('\\').to_string();
     let newcs_name = format!("\\lx@six@{name}");
 
-    let pres_str = presentation.to_string();
+    let pres_str = presentation.clone().untex();
     let encoded = format!("prefix|{}|{}|10", pres_str, power);
     assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
     register_unit_macro_name(&name);
@@ -3207,7 +3318,7 @@ LoadDefinitions!({
     let name = cs.to_string().trim_start_matches('\\').to_string();
     let newcs_name = format!("\\lx@six@{name}");
 
-    let encoded = format!("qualifier|{}", qualifier);
+    let encoded = format!("qualifier|{}", qualifier.clone().untex());
     assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
     register_unit_macro_name(&name);
 
@@ -3227,7 +3338,7 @@ LoadDefinitions!({
     let name = cs.to_string().trim_start_matches('\\').to_string();
     let newcs_name = format!("\\lx@six@{name}");
 
-    let encoded = format!("prefix|{}|{}|2", presentation, power);
+    let encoded = format!("prefix|{}|{}|2", presentation.clone().untex(), power);
     assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
     register_unit_macro_name(&name);
 
@@ -3418,7 +3529,7 @@ LoadDefinitions!({
   // \si[options]{units}
   DefMacro!("\\si OptionalKeyVals:SIX {}", sub[(kv, units_arg)] {
     let units = units_arg;
-    six_begin_processing(kv.as_ref());
+    six_begin_processing_for_units(kv.as_ref(), Some(&units));
     six_enable_unit_macros(true);
     let funits = six_wrap(six_process_units(&units));
     six_end_processing();
@@ -3449,7 +3560,7 @@ LoadDefinitions!({
   DefMacro!("\\SI OptionalKeyVals:SIX {}[]{}", sub[(kv, number_arg, pre_arg, units_arg)] {
     let number = number_arg;
     let units = units_arg;
-    six_begin_processing(kv.as_ref());
+    six_begin_processing_for_units(kv.as_ref(), Some(&units));
     let fnumber = six_format_number(&six_parse_number(&number), 0);
     six_enable_unit_macros(true);
     // An empty pre-unit, `\SI{7}[]{\metre}`, prints nothing (siunitx's `\IfNoValueF` sees a value,
@@ -3472,7 +3583,7 @@ LoadDefinitions!({
   DefMacro!("\\SIlist OptionalKeyVals:SIX {}{}", sub[(kv, numbers_arg, units_arg)] {
     let numbers = numbers_arg;
     let units = units_arg;
-    six_begin_processing(kv.as_ref());
+    six_begin_processing_for_units(kv.as_ref(), Some(&units));
     let times = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("number-unit-product"));
     let mode = six_get_choice_sym(six_pin!("list-units"));
     let items: Vec<Tokens> = six_parse_numbers(&numbers).iter()
@@ -3498,7 +3609,7 @@ LoadDefinitions!({
     let first = first_arg;
     let last = last_arg;
     let units = units_arg;
-    six_begin_processing(kv.as_ref());
+    six_begin_processing_for_units(kv.as_ref(), Some(&units));
     let times = six_get_op_sym(&[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("times"))], six_pin!("number-unit-product"));
     let mode = six_get_choice_sym(six_pin!("range-units"));
     let fnumber = six_format_number(&six_parse_number(&first), 0);

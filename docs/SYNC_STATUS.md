@@ -1673,6 +1673,48 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
     attribute reads `\\[t]u`, which a re-read takes as a row skip (the `\infer` formula's `tex=` was already poor:
     `C\lx@proof@logical@and a=bx`); after a `\\` outside amsmath displays (`{array}`, `{eqnarray}`, no amsmath) LaTeX's
     `\@xarraycr` skips spaces before `[` (latex.ltx:16585) where we keep ` [t]` as text (no content lost).
+  - **Fixed in 77r** (run-367 regressions part 2, triage clusters C3, C6, C8-C13, C15; guards
+    `perfect_kernel_batch77r::*`): **C3** the revtex support's hyperref preload is marked unloaded, so the document's
+    own `\usepackage{hyperref}` runs the binding (phfnote `hyperrefdefs=defer` looped in the one-time begin-document
+    hook: 2207.13707, 2403.04828, 2508.03993, 2508.03994, 2601.20155; KNOWN_PERL_ERRORS #997), the binding taking
+    `\H@refstepcounter` from the kernel's own `\refstepcounter` as hyperref.sty:6651 does (a second save of the current
+    one looped under cleveref) and accepting hyperref's `runcolor` key;
+    **C6** a deluxetable begun inside an open emulateapj one raises `\@parmoderr` and keeps the outer's `\label`
+    (IfLimit: 1704.06321, 1204.1969; the inner table kept, as Perl and 67int17b, where pdflatex drops it); **C8** a
+    siunitx unit named by its own character code (`\%{\char`\%}`, atlaspackage.sty:225-227) is the character, not a
+    recursion to a stack overflow (2504.05919, exit 134), a unit's own `\DeclareSIUnit[<options>]` apply where it is a
+    command's whole unit argument (siunitx.sty:6684-6694, OD #774; Perl stores and ignores them: 2504.05919's "85%", 1501.03532's
+    `number-unit-product = \ `), and a presentation keeps the space ending a control word (`\char`\a b` "ab", not "a";
+    `\textmu m` not an undefined `\textmum`); **C9** a refused begin code calling a macro whose delimiter does not occur
+    later in it is not replayed (wds10 `\pickup#1\end#2`, 0910.4848) — only the code's own calls are judged: outside
+    braces, not a definition's operands (`\def`/`\let`/`\newcommand` targets, `\let`'s value — also at the code's
+    tail, `tail_reads_ahead`), not one after `\expandafter` or before `\meaning`/`\the`/`\string` (repro
+    `sectioning-frontmatter/refused_begin_code_definition_operands`); **C10** an autoload a `\bibitem` label calls loads its package before the
+    entry (crckapb `\citeauthoryear` → natbib, astro-ph0007279; OD #750 addendum); **C12** `\errmessage` shows
+    `\errhelp` unexpanded, tex.web §1283 (t4enc.def's `\m #1` help called `\m` for ever: 2405.01972);
+    **C13** a second `\documentstyle` raises LaTeX's "Two \documentclass or \documentstyle commands" and loads no
+    class, unless the first fell to OmniBus (no binding, no file: astro-ph9812142's `#\documentstyle[…]{/disk/…/aa}`
+    line, then the real aa — 1 Error, 3,433 words as 67int19b), latex209.def's definitions applied once (OD #773); **C15** a runaway limit (pushback, recursion) inside a speculative title-page run
+    is discarded with the run, its box lists and conditionals unwound (astro-ph0203021; user ruling 2026-10-19, OD #767
+    addendum). Residuals, RED: (C11) a nine-argument `\p@equation` no longer loops (73b's math label is not saved as
+    its own original), but its reference forms, typed at the equation, read past their end — 8 errors where pdflatex
+    has 0, 18 on 1902.09345 (`parameter-conditional/p_equation_taking_nine_arguments`); the fix is a `\p@<counter>`
+    form applied to the expanded `\the<counter>` as latex.ltx's `\@currentlabel` is (`\protected@edef`), or typed only
+    where a `\ref` prints it. (C12) `\DeclareTextComposite` is a no-op (Perl LaTeX.pool too), so a T4 composite
+    (`\m{y}`, t4enc.def:164) falls to `\m`'s own `\errmessage` and the letter is lost: 44 Errors on 2405.01972
+    (pdflatex 0, Perl 0 — its `\errmessage` is a Note, KNOWN_PERL_ERRORS #195), `fonts-nfss/t4_modified_letter_help_is_not_expanded`.
+    Not loops of ours: `\clap` (1011.2267, 1308.3100), `\Ref` (math0204358) and `\robustify` (2003.07558) — the TL 2025
+    definition wins, as ruled — stop pdflatex too at its 100-error limit (no PDF; ours TooManyErrors or PushbackLimit,
+    the same document breakage); 1603.09649 (`\input{\Ref{…}}`, pdflatex 121 errors and a PDF) still ends in Fatal
+    Timeout:Recursion: after the l3 expandable error of `\Ref` in the file name (`\???` "doesn't match its
+    definition"), the l3hook file-hook code re-enters it (`\__hook_prop_gput_labeled_cleanup`, csname errors) — our 101
+    errors where pdflatex has 7 on `\documentclass{article}\newcommand{\Ref}[1]{#1}\input{\Ref{foo_def}}`; not brief,
+    open. (C6, from 68y, int32a too) an emulateapj deluxetable begun inside an open one: begun inside the outer's
+    `\startdata` (1704.06321's shape) the inner table's first `\colhead` is lost and the alignment cascades (10 errors
+    on `\begin{deluxetable}{cc}\tablehead{\colhead{OA}&\colhead{OB}}\startdata oone&otwo\\ \begin{deluxetable}{cc}
+    \tablehead{\colhead{IA}&\colhead{IB}}\startdata ione&itwo\\ \enddata\end{deluxetable}\enddata\end{deluxetable}`,
+    67int17b 0 and everything kept, int32a 6 and the whole inner table lost); begun before it, the inner `\tablecaption` replaces the outer's stored caption
+    (`class-bindings/emulateapj_deluxetable_in_deluxetable`, RED part).
 - **Runs 364/365** (E/F rerun of run 363 on 026cf18f87: 68c Part B, 68a; COMPLETE 2026-10-16 12:20:31Z):
   E 79,627 → 77,932, F 3,971 → 3,971 (success 97.14 % → 97.20 % of 2,922,325). Transitions vs run 363: E→OK 362,
   E→warning 1,330, E→F 33, F→warning 3, F→E 30. E→F: `timeout` 22 + `Timeout:Convert` 2 and `oom` 4 (fleet contention,

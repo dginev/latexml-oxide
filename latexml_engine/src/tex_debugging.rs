@@ -133,9 +133,14 @@ LoadDefinitions!({
   // (`MAX_CONSECUTIVE_ERRORS`) end the loop with a partial document. Guard:
   // `perfect_kernel_batch56::errmessage_counts_toward_the_error_breaker`.
   // Its text is `\message`'s, `scan_toks(false, true)` (§1279 `issue_message`).
+  // The help is shown as it stands, tex.web §1283 `token_show(err_help)`, unexpanded: t4enc.def:36-39's `\m`
+  // keeps `\m #1` in it, which Perl's `Expand(\the\errhelp)` (TeX_Debugging.pool.ltxml:73) called again for ever
+  // (2405.01972, `\m{y}` in T4: Fatal PushbackLimit).
   DefPrimitive!("\\errmessage XGeneralText", sub[(message)] {
-    let help = Expand!(Tokens!(T_CS!("\\the"), T_CS!("\\errhelp")));
-    let help = help.to_string();
+    let help = match lookup_register("\\errhelp", Vec::new())? {
+      Some(RegisterValue::Tokens(help)) => help.to_string(),
+      _ => String::new(),
+    };
     let text = if help.trim().is_empty() { message.to_string() } else { s!("{message}: {help}") };
     Error!("errmessage", "\\errmessage", text);
   });

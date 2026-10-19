@@ -5973,6 +5973,14 @@ at 100. Trigger: `\csvreader[sort by=namesort.xml]{grade.csv}{}{X}` with no sort
 Rust: `\errmessage` is a counted `Error!`, and the consecutive-error breaker ends the
 loop with a partial document. Guard:
 `perfect_kernel_batch56::errmessage_counts_toward_the_error_breaker`.
+Addendum (batch 77r): Perl's Note also *expands* the help, `Expand(Tokens(T_CS('\the'), T_CS('\errhelp')))`
+(TeX_Debugging.pool.ltxml:73), where TeX shows it as it stands (tex.web §1283 `token_show(err_help)`). A help that
+holds a call of its own command loops: t4enc.def:36-39's `\m` sets `\errhelp` to text holding `\m #1`, so a T4
+letter t4enc.def has no composite for (`\m{y}`) called `\m` again for ever (2405.01972: Fatal PushbackLimit). Trigger:
+`\usepackage[T4,T2A,T1]{fontenc}\usepackage[russian,english]{babel}` … `{\fontencoding{T4}\selectfont\m{y}}`.
+Rust (beyond Perl, toward TeX): tex_debugging.rs `\errmessage` reads the `\errhelp` register unexpanded — 1 Error, the
+text kept. Repro `fonts-nfss/t4_modified_letter_help_is_not_expanded`; guard
+`perfect_kernel_batch77r::errmessage_help_is_not_expanded`.
 
 ## 196. `\parbox`'s dispatch leaves the box body inside an open `\ifx` (Rust fixes)
 
@@ -15991,3 +15999,25 @@ the argument is consumed. Minimal trigger: `A \shortstack[r]{x} Body.` → `A <i
 has the same prototype (latex_constructs/sect13.rs `\shortstack OptionalPosition {}  OptionalMatch:* [Dimension]`) and
 the same loss; not fixed (SYNC_STATUS row; the 77o repro `deposit_box_position_keywords_print_nothing` avoids the
 shape).
+
+## 997. The revtex classes' hyperref preload makes the document's own `\usepackage{hyperref}` a no-op
+
+Perl revtex4_support.sty.ltxml:23 `RequirePackage('hyperref')` loads hyperref with every revtex4 class (revtex4,
+revtex4-1, revtex4-2, and emulateapj, AIAA and the other classes built on them); the real classes never load it,
+revtex4-2.cls:476 only tests for it. The document's own `\usepackage{hyperref}` then finds the package loaded and runs
+nothing — its options are lost, and a package that expects that later load to restore something misbehaves: phfnote's
+`hyperrefdefs=defer` (phfnote.sty:857-861) `\let`s `\hypersetup` to a deferred copy that re-adds its code with
+`\AtBeginDocument`, so once begin-document hooks run once (latex.ltx:6400-6402), the hook never empties (Timeout:Convert;
+2207.13707, 2403.04828, 2508.03993, 2508.03994, 2601.20155). Minimal trigger:
+`\documentclass{revtex4-2}\usepackage[hyperrefdefs={defer}]{phfnote}\usepackage{hyperref}\begin{document}Text.\end{document}`.
+The Rust port keeps the preload (documents use hyperref's commands under revtex without loading it) and marks it
+unloaded, as aa_cls.rs does for amsmath (Perl aa.cls.ltxml:57), so the document's own load runs the binding again; the
+binding takes `\H@refstepcounter` from the kernel's own `\refstepcounter` (`\lx@kernel@refstepcounter`), the same on every
+load as hyperref.sty:6651 `\let\H@refstepcounter\@kernel@refstepcounter` (saving the current one again made it call
+itself under cleveref). A visible side effect, as in pdflatex: under a revtex class whose document does not load
+hyperref, `\@ifpackageloaded{hyperref}` now answers no (it said yes), so a document's fallback branch runs — where it
+is `\newcommand\autoref…`, our preload's `\autoref` is already defined and the `\newcommand` is refused (an Info, as in Perl), so
+the reference keeps hyperref's form where pdflatex prints the document's ("Sec. I"); the XML of the reviewed
+controls is unchanged. Repros `class-bindings/revtex_preloaded_hyperref_loads_again`,
+`class-bindings/revtex_hyperref_loaded_twice_cleveref`; guards `perfect_kernel_batch77r::{
+revtex_preloaded_hyperref_loads_again, revtex_hyperref_loaded_twice_keeps_cleveref}`.

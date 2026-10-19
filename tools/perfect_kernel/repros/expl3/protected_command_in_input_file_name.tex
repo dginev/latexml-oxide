@@ -1,0 +1,15 @@
+% witness: 1603.09649 (`\newcommand{\Ref}[1]{#1}` refused: TL 2025's LaTeX defines `\Ref`, latex.ltx:14983; then
+%          `\input{\Ref{biblatex_journal_def}}`)
+% oracle:  pdflatex 7 errors ("Command \Ref already defined", 3 "Use of ??? doesn't match its definition" — xparse's
+%          "not expandable" expandable error — and 3 "Missing \endcsname inserted"), finishes
+% engines: rust int32a = 101 errors + Fatal TooManyErrors here (the paper: Fatal Timeout:Recursion), the l3 expandable
+%          error re-entered from the file-hook code (`\__hook_prop_gput_labeled_cleanup:nnn`, `\tl_if_empty:nTF`
+%          between \csname and \endcsname); 77r the same
+% expect:  the 7 errors of pdflatex, no Fatal
+% status:  RED (batch 77r, SYNC_STATUS runs 366/367 "Fixed in 77r" residuals)
+\documentclass{article}
+\newcommand{\Ref}[1]{#1}
+\input{\Ref{foo_def}}
+\begin{document}
+Hello.
+\end{document}

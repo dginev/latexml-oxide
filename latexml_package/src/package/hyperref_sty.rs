@@ -164,6 +164,8 @@ LoadDefinitions!({
     "citecolor",
     "filecolor",
     "menucolor",
+    // hyperref.sty:3312 `\Hy@temp{run}{\@filecolor}` (phfnote.sty:822-828's link options; 2207.13707)
+    "runcolor",
     "pagecolor",
     "urlcolor",
     "frenchlinks",
@@ -408,7 +410,12 @@ LoadDefinitions!({
     }
   });
 
-  push_value("@at@end@document", T_CS!("\\@add@PDF@RDFa@triples"))?;
+  // (once: a second load — the document's own after the revtex classes' preload, revtex4_support_sty.rs — wrote
+  // every triple twice; 1105.3660, 1511.07709)
+  if !lookup_bool("hyperref:rdfa@scheduled") {
+    push_value("@at@end@document", T_CS!("\\@add@PDF@RDFa@triples"))?;
+    AssignValue!("hyperref:rdfa@scheduled" => true, Some(Scope::Global));
+  }
 
   // \@add@PDF@RDFa@triples — emit <ltx:rdf> elements for PDF metadata
   {
@@ -1024,7 +1031,13 @@ LoadDefinitions!({
   // `\Hy@raisedlink` carries is kept (below, 57cn); `\hyper@anchorstart`/
   // `\hyper@anchorend` are still skipped (SYNC_STATUS) — only the dispatch
   // matters here.
-  Let!("\\H@refstepcounter", "\\refstepcounter");
+  // The kernel's own, whatever `\refstepcounter` is now, as hyperref.sty:6651 `\let\H@refstepcounter
+  // \@kernel@refstepcounter`: our kernel's is `\lx@kernel@refstepcounter` (latex_constructs/sect08.rs; the dump's
+  // `\@kernel@refstepcounter` is latex.ltx:14969's raw macro, which bypasses the binding's counter and ID handling).
+  // Loaded again — a document's own `\usepackage{hyperref}` after the revtex classes' preload, revtex4_support_sty.rs
+  // — `\refstepcounter` is this one, and `\H@refstepcounter` saved as it called itself, a PushbackLimit Fatal under
+  // cleveref (2207.13707).
+  Let!("\\H@refstepcounter", "\\lx@kernel@refstepcounter");
   DefMacro!("\\refstepcounter{}", "\\H@refstepcounter{#1}");
 
   AssignMapping!("type_tag_formatter", "autoref" => "\\lx@autorefnum@@");

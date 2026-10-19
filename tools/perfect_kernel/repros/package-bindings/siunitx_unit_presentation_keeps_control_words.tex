@@ -1,0 +1,15 @@
+% witness: 2504.05919 (atlaspackage.sty:225-227 `\DeclareSIUnit[number-unit-product={}]\%{\char`\%}`, the C8 shape)
+% oracle:  pdflatex 0 errors, "x 1 ab y 2 m z m w" (the µ of `\textmu` is lost in siunitx's math mode; with
+%          mode=text "2 µm")
+% engines: rust int32a = "1 a" and `\textmum` undefined (1 error): a presentation's control word glued to the
+%          letter after it; Perl 0 errors
+% expect:  0 errors, 0 warnings; the units "ab" and "µm"
+% status:  GREEN (batch 77r r2: a unit presentation is stored and resolved with the space that ends a control word)
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage{siunitx}
+\DeclareSIUnit\ab{\char`\a b}
+\DeclareSIUnit\um{\textmu m}
+\begin{document}
+x \SI{1}{\ab} y \SI{2}{\um} z \unit{\um} w
+\end{document}

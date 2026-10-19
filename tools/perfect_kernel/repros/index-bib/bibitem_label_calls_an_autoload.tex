@@ -1,0 +1,18 @@
+% witness: astro-ph0007279 (crckapb `[editedvolume]`, `\bibitem[\citeauthoryear{Zurek}{1988}]{ZQS88}`)
+% oracle:  pdflatex with the paper's crckapb.sty: `\citeauthoryear` is undefined outside `[numreferences]`
+%          (crckapb.sty:637-798); the binding gives it to natbib (OXIDIZED_DESIGN_DIVERGENCES #731)
+% engines: rust 67int24 = Fatal Stomach:Recursion (natbib loaded inside the entry's tags, its `\citeauthoryear`
+%          parser reading the label `\the@bibitem` as its own number); 67int23b 3 errors; Perl 4
+% expect:  0 errors, 0 warnings; the entry's tags are natbib's: authors "Zurek", year "1988"
+% status:  GREEN (batch 77r: `\bibitem` fires the autoloads its label calls first, sect11.rs
+%          `\lx@bibitem@autoloads`)
+\documentstyle{crckapb}
+\begin{opening}
+\title{T}
+\end{opening}
+\begin{document}
+See \cite{ZQS88}.
+\begin{thebibliography}{}
+\bibitem[\citeauthoryear{Zurek}{1988}]{ZQS88} Text.
+\end{thebibliography}
+\end{document}

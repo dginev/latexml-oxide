@@ -6,6 +6,14 @@ LoadDefinitions!({
   // Support macros for RevTeX4 class (APS journals)
 
   RequirePackage!("hyperref");
+  // The real revtex4-1/4-2.cls never load hyperref, they only test for it (revtex4-2.cls:476); Perl preloads it here
+  // (revtex4_support.sty.ltxml:23), so a document's own `\usepackage{hyperref}` did nothing — and phfnote's
+  // `hyperrefdefs=defer` (phfnote.sty:829-860), which `\let`s `\hypersetup` to a deferred copy expecting that later
+  // load to restore it, then re-added its `\AtBeginDocument` code for ever from inside the hook (KNOWN_PERL_ERRORS
+  // #997; 2207.13707, 2403.04828, 2508.03993, 2508.03994, 2601.20155). The preload stays, for the documents that use
+  // hyperref's commands without loading it, but marked unloaded so the document's own load runs the binding again
+  // (the `amsmath` precedent of aa_cls.rs, Perl aa.cls.ltxml:57).
+  AssignValue!("hyperref.sty_loaded" => Stored::None, Some(Scope::Global));
   RequirePackage!("natbib");
   RequirePackage!("revsymb");
   RequirePackage!("url");

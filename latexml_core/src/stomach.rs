@@ -1997,6 +1997,27 @@ pub fn expire_local_box_list() -> Vec<Digested> {
   buffer
 }
 
+/// The depth of the box lists suspended by [`new_local_box_list`] and of the boxing stack: a mark for
+/// [`unwind_box_lists_to`].
+pub fn box_lists_mark() -> (usize, usize) {
+  let stomach = stomach!();
+  (stomach.localized_box_list.len(), stomach.boxing.len())
+}
+
+/// Back to the box lists and boxing depth of `mark` ([`box_lists_mark`]), what was digested since discarded: the
+/// lists a failed digestion left suspended (an `Err` leaves each `new_local_box_list` it was in unexpired) for a run
+/// that is undone (sect05.rs `speculative_title_page_run`).
+pub fn unwind_box_lists_to(mark: (usize, usize)) {
+  let mut stomach = stomach_mut!();
+  while stomach.localized_box_list.len() > mark.0
+    && let Some((parent, start)) = stomach.localized_box_list.pop()
+  {
+    stomach.box_list = parent;
+    stomach.paragraph_start = start;
+  }
+  stomach.boxing.truncate(mark.1);
+}
+
 /// Recover the boxes a failed `digest_next_body` left stranded, in document
 /// order, and reset the accumulation stack.
 ///

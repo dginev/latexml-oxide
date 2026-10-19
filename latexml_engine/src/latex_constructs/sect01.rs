@@ -65,6 +65,11 @@ pub(crate) fn retract_chapter_before_class_load() {
   assign_value("\\chapter:settles", true, Some(Scope::Global));
 }
 
+/// Set by the document's first `\documentclass` or `\documentstyle`: a second `\documentstyle` loads no class
+/// (latex.ltx:18617-18624 `\@twoclasseserror`; `tex_job.rs` `\lx@documentstyle@impl`). Cleared again when no
+/// binding and no file answered the class (the OmniBus fallback; main-session ruling 2026-10-19, astro-ph9812142).
+pub const CLASS_DECLARED: &str = "lx@class@declared";
+
 #[rustfmt::skip]
 /// OXIDIZED_DESIGN #179, the "has chapters" step, after each class load of a `\documentclass` document: the class's
 /// own (`\documentclass`), a raw class's `\LoadClass`/`\LoadClassWithOptions` (sect05.rs), a binding's `LoadClass!`
@@ -269,14 +274,25 @@ pub(crate) fn load() -> Result<()> {
       let requested = whatsit.get_arg(2).unwrap().to_string();
       let class_name = sect05::requested_class_name(&requested);
       sect05::respell_file_argument(whatsit, 2)?;
+      assign_value(CLASS_DECLARED, true, Some(Scope::Global));
       retract_chapter_before_class_load();
+      let omnibus_before = lookup_bool("OmniBus.cls_loaded");
       load_class(&class_name,
                 class_opts,
                 Tokens!(T_CS!("\\AtBeginDocument"), T_CS!("\\warn@unusedclassoptions")))?;
+      // A class no binding and no file answered (the OmniBus fallback) is no declaration a later `\documentstyle`
+      // meets as the second (`tex_job.rs` `\lx@documentstyle@impl`; astro-ph9812142).
+      let base = class_name.rsplit('/').next().unwrap_or(&class_name);
+      if !omnibus_before && lookup_bool("OmniBus.cls_loaded") && base != "OmniBus"
+        && [class_name.as_str(), base].iter().all(|name| {
+          !lookup_bool(&s!("{name}.cls_loaded")) && !lookup_bool(&s!("{name}.cls_raw_loaded"))
+        })
+      {
+        assign_value(CLASS_DECLARED, false, Some(Scope::Global));
+      }
       // OXIDIZED_DESIGN #179: `\chapter` exists only where the class has chapters (`settle_chapter_after_class_load`);
       // a class answered by a binding not its own (an alternate, a versioned fallback) says so in the chapterless
       // Warning, as the real class may have chapters (0909.2812: mn_thesis.cls → mnphd.cls → report, bound as `mn`).
-      let base = class_name.rsplit('/').next().unwrap_or(&class_name);
       if !lookup_bool(&s!("{base}.cls.ltxml_loaded")) && !lookup_bool(&s!("{base}.cls_raw_loaded")) {
         assign_value("\\chapter:class@stood@in", class_name.clone(), Some(Scope::Global));
       }

@@ -1,0 +1,14 @@
+% witness: 2405.01972 (`\usepackage[T4,T2A,T1]{fontenc}`, `\m{y}` in T4)
+% oracle:  pdflatex 0 errors (`\DeclareTextComposite{\m}{T4}{y}{175}`, t4enc.def:164)
+% engines: rust 67int16 = Fatal PushbackLimit: `\errmessage` expanded `\the\errhelp`, and t4enc.def:36-39's help
+%          text holds `\m #1`, which called itself; Perl 0 (its `\errmessage` is a Note)
+% expect:  1 error (the t4enc.def `\errmessage`: `\DeclareTextComposite` is a no-op here, as in Perl, so
+%          the composite falls to `\m`'s own error), no Fatal; "Text y here."
+% status:  RED for the error (T4 composites; SYNC_STATUS), GREEN for the Fatal (batch 77r: the help is shown
+%          unexpanded, tex.web §1283 `token_show(err_help)`)
+\documentclass{article}
+\usepackage[T4,T2A,T1]{fontenc}
+\usepackage[russian,english]{babel}
+\begin{document}
+Text {\fontencoding{T4}\selectfont\m{y}} here.
+\end{document}

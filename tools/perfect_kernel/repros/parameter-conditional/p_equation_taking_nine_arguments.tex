@@ -1,0 +1,16 @@
+% witness: 1902.09345 (`\renewcommand{\p@equation}{\gobblesomeargs}`, a 9-argument robust command, with
+%          `\theequation` = "Equation S\arabic{equation}": `\ref` prints "S1")
+% oracle:  pdflatex 0 errors (no `\ref`: `\p@equation` is used only where a `\ref` prints the label)
+% engines: rust 67int24 = Fatal Timeout:Recursion (the second equation's math label called itself: the first one's
+%          digest left a group open and with it the `\ensuremath` label of 73b); 67int23b 8 errors; Perl 4
+% expect:  no Fatal; 8 errors (the refnum form typed at the equation, its nine arguments reading past the form)
+% status:  RED for the errors (a `\p@<counter>` reference form typed only where a `\ref` prints it, or applied to the
+%          expanded `\the<counter>` as `\@currentlabel` is, latex.ltx `\refstepcounter`; SYNC_STATUS), GREEN for the
+%          Fatal (batch 77r: dialect.rs does not save the math label as its own original)
+\documentclass{article}\makeatletter
+\DeclareRobustCommand{\gobblesomeargs}[9]{#9}
+\renewcommand{\p@equation}{\gobblesomeargs}\makeatother
+\begin{document}
+\begin{equation} x \end{equation}
+\begin{equation} y \end{equation}
+\end{document}

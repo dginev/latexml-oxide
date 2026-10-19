@@ -1,0 +1,21 @@
+% witness: 0910.4848 (wds10.sty:527-539: `\abstract` ends `\pickup\ignorespaces`, `\long\def\pickup#1\end#2`)
+% oracle:  pdflatex 0 errors, the abstract "Abstract text." then "Body."
+% engines: rust 67int25 = 101 errors + Fatal (the refused begin code replayed: `\pickup` read past it); 67int24b 4
+%          errors (wds10.sty's own); Perl 0
+% expect:  0 errors, 0 warnings; the abstract holds "Abstract text."
+% status:  GREEN (batch 77r: a begin code calling a macro whose delimiter does not occur later in it is not
+%          replayed, sect05.rs `delimiter_reads_ahead`)
+\documentclass{article}
+\begin{filecontents*}[overwrite]{wdsmini.sty}
+\def\abstract{\vskip1pt\pickup\ignorespaces}
+\def\endabstract{\vskip-6pt\vskip1pt}
+\long\def\pickup#1\end#2{\par\noindent{\bf Abstract.}\ \ #1\end{#2}}
+\end{filecontents*}
+\usepackage{wdsmini}
+\begin{document}
+\title{T}\author{A}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+Body.
+\end{document}

@@ -3119,7 +3119,7 @@ fn replay_dropped_class_code(
   if begin_code
     && let Some(Stored::Expandable(d)) = lookup_meaning(&dropped)
     && let Some(ExpansionBody::Tokens(body)) = d.get_expansion()
-    && tail_reads_ahead(body.unlist_ref())
+    && (tail_reads_ahead(body.unlist_ref()) || delimiter_reads_ahead(body.unlist_ref()))
   {
     return Ok(());
   }
@@ -4404,11 +4404,35 @@ fn tail_reads_ahead(tokens: &[Token]) -> bool {
     return false;
   }
   // a definition's target is no command the code runs: `\def\msccodes{…}` (cmmse2008.cls:146, 0806.4576) ends in
-  // `\def`, which reads its operands in the code
-  if next(&mut i).is_some_and(|before| {
-    before.get_catcode() == Catcode::CS
-      && before.with_cs_name(|n| matches!(n, "\\def" | "\\gdef" | "\\edef" | "\\xdef"))
+  // `\def`, which reads its operands in the code, as `\renewcommand\pickup{…}` does; nor is `\let`'s value
+  // (`\let\savedpickup\pickup`, `\let\savedpickup=\pickup`)
+  let is_cs = |t: &Token, names: &[&str]| {
+    t.get_catcode() == Catcode::CS && t.with_cs_name(|n| names.contains(&n))
+  };
+  let before = next(&mut i);
+  if before.is_some_and(|before| {
+    is_cs(&before, &[
+      "\\def",
+      "\\gdef",
+      "\\edef",
+      "\\xdef",
+      "\\newcommand",
+      "\\renewcommand",
+      "\\providecommand",
+      "\\DeclareRobustCommand",
+    ])
   }) {
+    return false;
+  }
+  let target = match before {
+    Some(before) if before.get_catcode() == Catcode::OTHER && before.to_string() == "=" => {
+      next(&mut i)
+    },
+    before => before,
+  };
+  if target.is_some_and(|t| t.get_catcode().is_active_or_cs())
+    && next(&mut i).is_some_and(|t| is_cs(&t, &["\\let"]))
+  {
     return false;
   }
   match lookup_meaning(&last) {
@@ -4418,6 +4442,143 @@ fn tail_reads_ahead(tokens: &[Token]) -> bool {
         .is_some_and(|p| !p.get_parameters().is_empty())
     }),
   }
+}
+
+/// Whether code `tokens` calls a macro whose parameter text has a delimiter that does not occur later in the code, so
+/// the call reads on past the code's end: wds10.sty:527-531's `\abstract` ends `\pickup\ignorespaces`, and `\pickup`
+/// (:539 `\long\def\pickup#1\end#2`) reads the environment's body up to its `\end` (0910.4848), which a replay does
+/// not have. Only the code's own calls count, the tokens outside braces: a braced group is an argument or a body
+/// (`\edef\x{\expandafter\strip@prefix\meaning\relax}`). A definition's operands are no calls: the target and parameter
+/// text of `\def`/`\gdef`/`\edef`/`\xdef` (`\def\pickup#1\end#2{…}` in the code), both of `\let`'s (`\let\saved\pickup`),
+/// `\futurelet`'s target and the command a `\newcommand`/`\renewcommand`/`\providecommand`/`\DeclareRobustCommand`
+/// defines. Nor is a call whose argument the code's expansion produces: one after `\expandafter`
+/// (`\expandafter\rem@pt\the\dimen@`), or followed by `\meaning`, `\the`, `\string` or another primitive whose
+/// expansion is text the code does not show (`\strip@prefix`'s `>` comes from `\meaning`).
+/// The limit: a delimiter a macro of the code expands to (`\pickup\foo`, `\foo` holding `\end`) is not seen, so
+/// such a code is refused, which only leaves it unreplayed, as Perl never replays a refused code.
+fn delimiter_reads_ahead(tokens: &[Token]) -> bool {
+  const DEFINERS: [&str; 4] = ["\\def", "\\gdef", "\\edef", "\\xdef"];
+  const COMMAND_DEFINERS: [&str; 4] = [
+    "\\newcommand",
+    "\\renewcommand",
+    "\\providecommand",
+    "\\DeclareRobustCommand",
+  ];
+  // primitives whose expansion is text the code does not show (tex.web §468 `conv_toks`, §465 `the_toks`)
+  const PRODUCERS: [&str; 10] = [
+    "\\meaning",
+    "\\the",
+    "\\string",
+    "\\detokenize",
+    "\\unexpanded",
+    "\\number",
+    "\\romannumeral",
+    "\\jobname",
+    "\\fontname",
+    "\\csname",
+  ];
+  let is_cs = |t: &Token, names: &[&str]| {
+    t.get_catcode() == Catcode::CS && t.with_cs_name(|n| names.contains(&n))
+  };
+  let mut depth = 0usize;
+  let mut i = 0;
+  // the next token outside braces at or after `i`, skipping spaces
+  let next_operand = |mut i: usize| {
+    while tokens
+      .get(i)
+      .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+    {
+      i += 1;
+    }
+    i
+  };
+  let mut after_expandafter = false;
+  while let Some(t) = tokens.get(i) {
+    let catcode = t.get_catcode();
+    if catcode == Catcode::BEGIN {
+      depth += 1;
+    } else if catcode == Catcode::END {
+      depth = depth.saturating_sub(1);
+    }
+    if depth > 0
+      || catcode == Catcode::BEGIN
+      || catcode == Catcode::END
+      || catcode == Catcode::SPACE
+    {
+      i += 1;
+      continue;
+    }
+    if is_cs(t, &DEFINERS) {
+      // the target, then the parameter text up to the body's `{`
+      i = next_operand(i + 1) + 1;
+      while tokens
+        .get(i)
+        .is_some_and(|t| t.get_catcode() != Catcode::BEGIN)
+      {
+        i += 1;
+      }
+      after_expandafter = false;
+      continue;
+    }
+    if is_cs(t, &["\\let"]) {
+      // the target, an optional `=` and one optional space, the value
+      i = next_operand(i + 1) + 1;
+      i = next_operand(i);
+      if tokens
+        .get(i)
+        .is_some_and(|t| t.get_catcode() == Catcode::OTHER && t.to_string() == "=")
+      {
+        i = next_operand(i + 1);
+      }
+      i += 1;
+      after_expandafter = false;
+      continue;
+    }
+    if is_cs(t, &["\\futurelet"]) || is_cs(t, &COMMAND_DEFINERS) {
+      i = next_operand(i + 1);
+      if tokens
+        .get(i)
+        .is_some_and(|t| t.get_catcode() == Catcode::OTHER && t.to_string() == "*")
+      {
+        i = next_operand(i + 1);
+      }
+      if tokens
+        .get(i)
+        .is_some_and(|t| t.get_catcode().is_active_or_cs())
+      {
+        i += 1;
+      }
+      after_expandafter = false;
+      continue;
+    }
+    let call = t.get_catcode().is_active_or_cs() && !after_expandafter;
+    after_expandafter = is_cs(t, &["\\expandafter"]);
+    i += 1;
+    if !call {
+      continue;
+    }
+    let Some(Stored::Expandable(definition)) = lookup_meaning(t) else {
+      continue;
+    };
+    let Some(parameters) = definition.get_parameters() else {
+      continue;
+    };
+    let rest = &tokens[i..];
+    if rest.iter().any(|t| is_cs(t, &PRODUCERS)) {
+      continue;
+    }
+    if parameters.get_parameters().iter().any(|p| {
+      p.name == pin!("Until")
+        && p
+          .extra
+          .first()
+          .and_then(|delimiter| delimiter.unlist_ref().first())
+          .is_some_and(|first| !rest.contains(first))
+    }) {
+      return true;
+    }
+  }
+  false
 }
 
 /// The box registers a dropped body `\setbox`es itself (`\global\setbox\abstractbox=\vtop\bgroup`, memo-l.cls:80), as
@@ -4664,6 +4825,8 @@ pub(crate) fn speculative_title_page_run(tokens: Tokens) -> Result<SpeculativeRu
   // document's: the class's own run of it, the deposit or the replay, writes it once; put back however the run ends)
   let muted = SuppressLogOutputGuard::new(true);
   let depth = get_frame_depth();
+  let boxes = box_lists_mark();
+  let conditionals = if_stack_depth();
   let result = with_origin(DefinitionOrigin::File, || digest(tokens));
   let unwound = reading_from_mouth(Mouth::default(), || {
     new_local_box_list();
@@ -4694,13 +4857,21 @@ pub(crate) fn speculative_title_page_run(tokens: Tokens) -> Result<SpeculativeRu
     // A resource Fatal (the conversion's deadline, its memory budget, a runaway limit) is the document's, and so is
     // one whose run could not be undone. Any other ends only this run, which the document never makes: a value only
     // the sentinels give may raise it (a letter where the class's code expects a number). It is discarded with the
-    // run's diagnostics, and the run printed nothing — no store counts as printed by it.
-    if !undone || (resource_fatal_latched() && !resource_fatal_before) {
+    // run's diagnostics, and the run printed nothing — no store counts as printed by it. A runaway limit (the
+    // pushback, a recursion) is the run's own, as the real `\maketitle` never runs this
+    // code: VisionStyle.cls's title page loops on `\title{X \small Y}`, in pdflatex too (astro-ph0203021; user ruling
+    // 2026-10-19).
+    if !undone || (resource_fatal_latched() && !resource_fatal_before && !unlatch_runaway_fatal()) {
       hold.commit();
       return Err(err);
     }
     hold.discard();
     unwound?;
+    // (and the box lists and conditionals the failed digestion left open)
+    unwind_box_lists_to(boxes);
+    while if_stack_depth() > conditionals {
+      pop_if_frame();
+    }
     Info!(
       "frontmatter",
       "\\maketitle",

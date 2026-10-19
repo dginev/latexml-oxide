@@ -20105,7 +20105,11 @@ label at the `\bibitem` and writes the parsed author and year, so no `\cite` exp
 once, as the optional argument it was, and the tags made from what it digested to (a copy's delimited `\citeauthoryear`,
 natbib.sty:1014, read raw out of that context ran past the label's end: 1003.3017's natbib_vw.sty; repro
 `index-bib/mn2e_natbib_copy/natbib_copy_citeauthoryear_label_cited`, pdflatex and Perl 0 errors). Divergence from
-Perl, which digests the label and every form at `\bibitem` (latex_constructs.pool.ltxml:4096-4102). Witnesses
+Perl, which digests the label and every form at `\bibitem` (latex_constructs.pool.ltxml:4096-4102). An autoload the
+label calls loads its package before the entry is read, where Perl's digestion of the label loaded it (sect11.rs
+`\lx@bibitem@autoloads`; a package that takes `\bibitem` over then reads the entry): crckapb's `\citeauthoryear` is
+natbib's (#731), whose parser, loaded inside the tags, took `\the@bibitem` as its own number for ever (astro-ph0007279;
+guard `perfect_kernel_batch77r::bibitem_label_autoload_loads_before_the_entry`). Witnesses
 0812.1037, 1105.2318, 1306.6339, 1805.00040. Guards `perfect_kernel_batch70c::*`; repros
 `index-bib/mnras_bibitem_label_{uncited,nocite_only,cited_before,cited_after}`, controls
 `index-bib/bibitem_numeric_label_cited_and_uncited`, `index-bib/mnras_usenatbib_bibitem_label_cited`.
@@ -20835,7 +20839,11 @@ invented `<pubnote>sec:intro</pubnote>`); url.sty's and hyperref's `\url` keep t
 `\href{<url>}{Home}` prints "Home"; never keyvals; review probe `logo`'s `\includegraphics{\@logo}` and
 `\href{\@url}{Home}`). The print run typesets footnotes and `\thanks` (`\@firstofone`: a store the title page prints in
 one is printed, review probes `fn`, `fnt`); it gobbles `\label`, `\index`. A Fatal of a speculative run that is not a
-resource Fatal (deadline, memory budget, runaway limit) and whose run was undone is the run's alone — a sentinel value
+resource Fatal of the conversion (deadline, memory budget, token budget, conditional ids) and whose run was undone is
+the run's alone — a runaway limit of the run's own expansion (the pushback, a recursion) too, the latch unset
+(`unlatch_runaway_fatal`) and the box lists and conditionals the run left open unwound (user ruling 2026-10-19:
+VisionStyle.cls's `\MakeUppercase` of a title holding its non-robust `\small` loops in pdflatex too, astro-ph0203021;
+guard `perfect_kernel_batch77r::speculative_title_run_runaway_is_discarded`) — a sentinel value
 may cause it —: it is discarded with the run's diagnostics (an Info says so) and run (1) printed nothing
 (`SpeculativeRun::Aborted`, which `decide_unset_nulls` counts as no "fewer characters": `\relax` stays); an aborted
 deposit or replay run, (2) or (3), is no run (`sentinel_runs`): the walk decides, since a Fatal the sentinel value alone
@@ -21163,3 +21171,34 @@ Witnesses 1002.4058, 1302.5134, 1302.5348, 1303.0449, 1103.0941 (2e), 1202.1568 
 `class-bindings/aistats_{setters_are_the_frontmatter,one_column_names_share_the_address,unpaired_address_columns_split}`,
 `class-bindings/aistats_{address_after_unprinted_material_is_paired,in_place_leaves_assignments_alone,shared_email_list_goes_to_its_row}`,
 `class-bindings/aistats2e_template_reaches_the_binding`; guards `perfect_kernel_batch77o::aistats*`.
+
+### 773. A second `\documentstyle` raises LaTeX's error and loads no class (Perl: applies latex209 and the class again)
+
+latex.ltx:18617-18618 `\documentclass` makes itself `\@twoclasseserror` (:18944-18947, "Two \documentclass or
+\documentstyle commands", the rest gobbled), and `\documentstyle` (:18622-18624) ends in `\documentclass`, so a second
+class declaration only errs. Perl's `\documentstyle` (latex_constructs.pool.ltxml:97-129) loads the class every time.
+Now the document's first `\documentclass` or `\documentstyle` sets `lx@class@declared` (sect01.rs `CLASS_DECLARED`)
+and a later `\documentstyle` raises the LaTeX error and loads nothing; a second `\documentclass` is unchanged (it still
+loads, sect01.rs `retract_chapter_before_class_load`). A first declaration no binding and no file answered — the
+OmniBus fallback (tex_job.rs `\lx@documentstyle@impl`'s last branch; after `\documentclass`, OmniBus newly loaded
+and the class's own `.cls_loaded`/`.cls_raw_loaded` unset) — does not count (main-session ruling 2026-10-19): the real
+`\documentstyle` after it loads. astro-ph9812142's line 1 is `#\documentstyle[psfig,epsf]{/disk/3/roud/home/Texstuff/aa}`
+— the `#` is no comment: pdflatex says "You can't use macro parameter character #", runs that `\documentstyle`, and
+stops at the missing class (no PDF; TL 2025 has no aa.cls either) — and its line 2 `\documentstyle[psfig,epsf]{aa}`
+gives aa's `\thesaurus`, `\offprints` and bibitem tags (1 Error, the stray `#`; 3,433 words, as 67int19b). latex209.def's
+definitions (`\lx@latex@ix@definitions`, since 70b) apply once per document: applied again, they saved the settled
+`\normalsize` as `\original@normalsize` and the two called each other (Timeout:Convert); a second class load after the
+fallback runs again under the 2e-command traps' `\@gobble` until its own `\@documentclasshook`. Repros
+`sectioning-frontmatter/documentstyle_twice_loads_one_class`, `sectioning-frontmatter/documentstyle_after_a_missing_class`;
+guards `perfect_kernel_batch77r::{documentstyle_twice_loads_one_class, documentstyle_after_a_missing_class_loads_the_class,
+documentstyle_after_a_missing_documentclass_loads_the_class}`.
+
+### 774. A siunitx unit's own `\DeclareSIUnit[<options>]` apply where it is a command's whole unit (Perl: stored, ignored)
+
+siunitx.sty:6684-6694 keeps a unit's options from `\DeclareSIUnit[<options>]{\unit}{…}` and applies them when that unit
+is the whole unit argument of `\qty`/`\SI`/`\unit`, before the command's own options. Perl's siunitx binding stores the
+options and never reads them, so a unit declared with `number-unit-product={}` keeps the default thin space. The Rust
+binding applies them (`six_begin_processing_for_units`), and an explicit empty value for a token-list key is empty, not
+`true`: 2504.05919's `\DeclareSIUnit[number-unit-product={}]\%{\char`\%}` prints "85%" as pdflatex does; 1501.03532's
+per-unit `number-unit-product = \ ` puts its interword space before nm/dBm. 77r r2; repro
+`package-bindings/siunitx_unit_named_by_its_own_char_code`; guard `perfect_kernel_batch77r::siunitx_*`.

@@ -7,6 +7,10 @@ use once_cell::sync::Lazy;
 
 use crate::prelude::*;
 
+/// Set once `\documentstyle` has applied latex209.def's definitions (`\lx@latex@ix@definitions`): a later class
+/// declaration after an OmniBus fallback does not apply them again.
+const LATEX_IX_DEFINITIONS_APPLIED: &str = "lx@latex@ix@definitions@applied";
+
 // Process-once cached env var (see WISDOM #56 — getenv hot-path race).
 static SOURCE_DATE_EPOCH: Lazy<Option<String>> =
   Lazy::new(|| std::env::var("SOURCE_DATE_EPOCH").ok());
@@ -168,6 +172,19 @@ LoadDefinitions!({
       .filter(|c| !c.is_ascii_whitespace())
       .collect();
 
+    // A second class declaration loads no class: latex.ltx's `\documentclass` has made itself `\@twoclasseserror`
+    // (:18617-18618, :18944-18947), which `\documentstyle`'s calls too (:18622-18624), "Two \documentclass or
+    // \documentstyle commands". A first declaration no binding and no file answered (the OmniBus fallback, branch 3
+    // below; `sect01.rs` `\documentclass`) does not count (main-session ruling 2026-10-19): astro-ph9812142's line 1
+    // `#\documentstyle[psfig,epsf]{/disk/3/roud/home/Texstuff/aa}` names a path no tree has (the `#` is no comment:
+    // pdflatex's "You can't use macro parameter character #", then the missing class stops it), and its line 2
+    // `\documentstyle[psfig,epsf]{aa}` loads the real class (aa's `\thesaurus`, `\offprints`, bibitem tags).
+    if lookup_bool(crate::latex_constructs::CLASS_DECLARED) {
+      return Ok(TokenizeInternal!(
+        r"\@latex@error{Two \noexpand\documentclass or \noexpand\documentstyle commands}{The document may only declare one class.}"));
+    }
+    assign_value(crate::latex_constructs::CLASS_DECLARED, true, Some(Scope::Global));
+
     let pool = if class == "amsppt" { "AmSTeX" } else { "LaTeX" };
     input_definitions(pool, InputDefinitionOptions {
       extension: Some(Cow::Borrowed("pool")),
@@ -200,7 +217,15 @@ LoadDefinitions!({
 
     // latex.ltx:18623 `\documentstyle` inputs latex209.def before the class (`\lx@latex@ix@definitions`), and the
     // class's end runs latex209.def's `\@documentclasshook` (latex.ltx:18721), ahead of `\compat@loadpackages`.
-    digest(Tokens!(T_CS!("\\lx@latex@ix@definitions")))?;
+    // Once per document: after a first declaration's OmniBus fallback (above), applying it again would save the
+    // settled `\normalsize` as `\original@normalsize` and make the two call each other (astro-ph9812142). The second
+    // class's load is again under the 2e-command traps' `\@gobble`, until its own `\@documentclasshook`.
+    if lookup_bool(LATEX_IX_DEFINITIONS_APPLIED) {
+      digest(TokenizeInternal!(r"\let\@latex@e@error\@gobble"))?;
+    } else {
+      assign_value(LATEX_IX_DEFINITIONS_APPLIED, true, Some(Scope::Global));
+      digest(Tokens!(T_CS!("\\lx@latex@ix@definitions")))?;
+    }
 
     // Perl L132-135 `compatDefinitions` — pre-bind LaTeX 2.09 dimensions.
     // Perl helper redefines `\@maxsep` and `\@dblmaxsep`; if these come
@@ -367,6 +392,8 @@ LoadDefinitions!({
         as_class: true,
         ..RequireOptions::default()
       })?;
+      // No binding and no file answered: a later `\documentstyle` may still declare the class (above).
+      assign_value(crate::latex_constructs::CLASS_DECLARED, false, Some(Scope::Global));
     }
 
     Ok(Tokens!())

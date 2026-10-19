@@ -563,8 +563,45 @@ pub(crate) fn load() -> Result<()> {
   // Hack for abused bibliographies; see below
   DefMacro!(
     "\\bibitem",
-    r#"\if@lx@inbibliography\else\expandafter\lx@mung@bibliography\expandafter{\@currenvir}\fi\lx@bibitem"#,
+    r#"\if@lx@inbibliography\else\expandafter\lx@mung@bibliography\expandafter{\@currenvir}\fi\lx@bibitem@autoloads"#,
     locked=>true);
+  // An autoload the `[label]` calls loads its package before the entry is read, where Perl's digestion of the label
+  // as the `\lx@bibitem`'s argument loaded it (latex_constructs.pool.ltxml:4134): the label is typeset only in the
+  // entry's tags, where a package load came too late — the binding of crckapb.sty gives its bibliography's
+  // `\citeauthoryear` to natbib (OXIDIZED_DESIGN_DIVERGENCES #731), whose parser, loaded inside the tags, took the
+  // label `\the@bibitem` as its own number, `\NAT@wrout{\the@bibitem}` for ever (astro-ph0007279: Fatal
+  // Stomach:Recursion). A package that takes `\bibitem` over (natbib) reads the entry itself. The label is peeked,
+  // and put back as it was; a `\par` ends the peek, as it ends the non-long `\@lbibitem`'s argument (latex.ltx).
+  DefMacro!("\\lx@bibitem@autoloads", {
+    let kernel_bibitem = lookup_meaning(&T_CS!("\\bibitem"));
+    let par = T_CS!("\\par");
+    let mut peeked: Vec<Token> = Vec::new();
+    let mut fired = false;
+    if let Some(open) = read_token()? {
+      peeked.push(open);
+      if open == T_OTHER!("[") {
+        let mut level = 0usize;
+        while let Some(t) = read_token()? {
+          peeked.push(t);
+          match t.get_catcode() {
+            Catcode::BEGIN => level += 1,
+            Catcode::END => level = level.saturating_sub(1),
+            _ if level == 0 && t == T_OTHER!("]") => break,
+            _ if t == par => break,
+            _ => {},
+          }
+          if let Some(package) = crate::tex::unfired_autoload_package(&t) {
+            crate::tex::fire_autoload(&t, &package)?;
+            fired = true;
+          }
+        }
+      }
+    }
+    unread(Tokens::new(peeked));
+    let taken_over = fired && !matches!((lookup_meaning(&T_CS!("\\bibitem")), kernel_bibitem),
+      (Some(Stored::Expandable(now)), Some(Stored::Expandable(before))) if Rc::ptr_eq(&now, &before));
+    Ok(Tokens!(if taken_over { T_CS!("\\bibitem") } else { T_CS!("\\lx@bibitem") }))
+  });
   // Perl latex_constructs.pool.ltxml L4134-4162: enterHorizontal => 1 + afterDigest. The `[label]` is read
   // undigested (Perl `[]` digests it): it is typeset only in the entry's tags, each form where TeX prints it
   // (OXIDIZED_DESIGN_DIVERGENCES #750).
