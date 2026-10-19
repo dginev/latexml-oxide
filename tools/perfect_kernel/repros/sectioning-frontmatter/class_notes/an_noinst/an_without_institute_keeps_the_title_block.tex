@@ -1,0 +1,20 @@
+% an.cls gives `\@institute` a value only in its own `\maketitle` (an.cls:532 `\ch@ckobl{institute}{Address(es) of
+% author(s) should be given}`), which the kernel's replaces; `\@institute` is a rerouted store (frontmatter_stores.rs),
+% so in the title-page deposit (`\lx@deposit@maketitle`, sect05.rs) the unset store was undefined, its error dropped the
+% whole deposit, and the paper's `\keywords` line was lost with 0 errors. In the deposit the unset store reads as empty
+% (`\lx@captured@stores`).
+% witness: none in the projection samples (silent-loss inventory 23b; reviewer probe an_noabs, 77b review)
+% oracle:  pdflatex 0 errors (beside the trimmed an.cls): "A Title", "A. Author", "Address(es) of author(s) should be given", "Key words lensing – quasars", then the section
+% engines: rust 67int35 = 0 errors, the "Key words" line absent (Info: the \@maketitle deposit was dropped); perl (OmniBus, no an binding) = 0 errors
+% expect:  0 errors, 0 warnings; the title block's "Key words lensing – quasars" line kept, no "Address(es)" placeholder
+% status:  RED (67int35) -> GREEN (77h)
+% preload: ar5iv.sty
+\documentclass{an}
+\begin{document}
+\title{A Title}
+\author{A. Author}
+\keywords{lensing -- quasars}
+\maketitle
+\section{Introduction}
+Body text.
+\end{document}

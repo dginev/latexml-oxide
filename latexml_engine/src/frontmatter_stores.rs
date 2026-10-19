@@ -866,16 +866,22 @@ pub fn reroute_raw_class_stores(cls: &str) -> Result<()> {
     // Inside the deposit group a store handed to the frontmatter reads as empty, so a kept
     // `\@maketitle` never typesets it twice; one not handed on (an affiliation with no author to
     // carry it: courseoutline.cls:150 `\@department` in a document with no `\author`) stays the
-    // class's to print.
+    // class's to print. One the document never set and the class gives no value before its own
+    // `\maketitle` — an.cls:532 `\ch@ckobl{institute}{Address(es) of author(s) should be given}`
+    // runs in the class's `\maketitle`, which the kernel's replaces — reads as empty too: its
+    // undefined store raised an error that dropped the whole deposit, the paper's `\keywords` line
+    // with it (0 errors; pdflatex prints the line beside the class's placeholder).
     DefMacro!("\\lx@captured@stores", sub[_args] {
       let names = lookup_string("lx_rerouted_stores");
       let mut nulls: Vec<Token> = Vec::new();
       for name in names.split(',').filter(|n| !n.is_empty()) {
-        if lookup_bool(&s!("lx_store_handed_{name}")) {
-          nulls.extend(
-            mouth::tokenize_internal(TeXString::assembled(s!("\\let\\{}\\@empty", store_of(name)))).unlist(),
-          );
-        }
+        let store = store_of(name);
+        let null = if lookup_bool(&s!("lx_store_handed_{name}")) {
+          s!("\\let\\{store}\\@empty")
+        } else {
+          s!("\\ifdefined\\{store}\\else\\let\\{store}\\@empty\\fi")
+        };
+        nulls.extend(mouth::tokenize_internal(TeXString::assembled(null)).unlist());
       }
       Ok(Tokens::new(nulls))
     });
