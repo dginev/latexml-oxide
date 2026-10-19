@@ -4129,6 +4129,23 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   needed: bibliography/citation commands a paper redefines through the kernel hooks `\@citex`/`\@lbibitem` and the
   Rust-only `locked` `\cite` (6), OD #654's sn-jnl `\href` exception (2), front-matter fields the class never typesets
   (revtex `\thanks` in `\author`, aastex running heads).
+  **Integration (int29, 41b82a6abd, binary int29c):** 77a biblatex `\printbibliography` filters, refsection lists and
+  numbering (d6d52c14f9, reviews r1-r6 to SHIP; OD #762, KPE #983; `\bibliographystyle` ignored with biblatex's error as
+  a Warning, 64zf), 77h an.cls deposit with an unset store (dce4398ef1, 3ff6aa59ab; its per-store `\relax`/`\@empty`
+  choice is finished in 77i), 77j names LaTeX only writes, expl3-syntax catcode restore, underscore.sty and backref's
+  `\Hy@backout` (e4f6da9779, 5ef0139a04; KPE #986; review SHIP + r2 12187e990e: the document hooks are LaTeX's
+  one-time hooks, `\hook_use_once:n` as latex.ltx:9470/9512/9525/15257 — code a begin-document hook adds to itself runs,
+  where it was dropped (nested `\AtBeginDocument`, underscore.sty loaded from the hook); r3 41b82a6abd: a standalone
+  sub-file's preamble still runs no begin-document code, as before and in Perl — 2405.01743), 77l `\@@underline`
+  without a dump (8db91138db; KPE #987). Gates int29c: nextest 6124/6124 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int29b empty. Population A/B (1,428, pop67int23): int29a vs
+  67int35 44 changed, E 5,612 → 5,609, F 15 → 15, 0 newly Fatal, 0 worse; 42 are 77a's biblatex data
+  (`<bib-data role="labelnumber">` on `.bbl` entries, `inlist="refsection<n>"` on citations), 1812.11661 −9,730 words is
+  its three keyword-filtered lists printing 13 + 34 + 48 entries instead of all 95 each (pdflatex prints each once; its
+  `filter=`/`segment=` stay unmodelled, OD #762) with E 1 → 0 (`{refsegment}` defined); int29c vs int29a: 0 tally changes, one byte change (2407.09320, a nested formula parsed vs unparsed — the known math-parse nondeterminism); the r2 hook change alone (int29b) changed only 2405.01743 (E 6 → 12, the standalone sub-preamble case r3 fixes).
+  Binding nets 136/136 on int29a and on int29c, 0 documents worse than 67int34. Projection int29a: 98.10 % / 98.04 % / combined
+  98.06 % (E+F 56,654). Still before the E/F rerun: 77i (title-page sentinel run, silent-loss rows #5-#8 and 23b) in
+  round 4, 77m (row #16, tcolorbox listing titles, + `\newtcbinputlisting` text/label and raw tcolorbox `label=`) in
+  round 2.
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
