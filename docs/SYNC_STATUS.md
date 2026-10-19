@@ -4084,6 +4084,20 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (i27a) E 5,632 → 5,632, 2 changed (+525 words); 76a 27 `\@pc@lb` papers 45 E → 0, numbered lines 145 → 1,180; 75a
   r2 over the 3,000 projection sample E 34,993 → 34,981, F 163 → 163, "not replayed" 329 → 52.
 
+  **Integration (int28, a58d155573, binary 67int35):** 77c pasa.cls era `\@popfilename` (7c1db57606; OD #764), 77e
+  `RawRead`/`read_raw` (75f505f9ad, c7feb06bd4; WISDOM #99), 77b an/apa/cclayout stores (037f043479; OD #763), 77f
+  paragraph breaks in inline-only frontmatter items (a994bb245c, 046f346fc1, f9f254f890, 204de3b6c7; OD #766, KPE
+  #984, WISDOM #100 — user ruling (b), decided at construction at the item's own mode frame), 77d author-name
+  separators (07a13d93d4 with review-r2 doc/guard fixes; OD #765; user ruling: "and" after a control word splits), 77g
+  `\meaning` of the kernel's primitive stand-ins (a81d5ad502, a58d155573; KPE #985). Gates 67int35: nextest
+  6088/6088 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff empty. Population A/B (1,428, pop67int23) vs
+  67int29: 8 changed, E 5,632 → 5,612, F 15 → 15, 0 newly Fatal, no word loss over 1 %; one paper more (1906.03608: the
+  77d mark-as-comma check flags five names merged, XML unchanged). Binding nets (67int34) 136/136: 13 documents gain
+  the same honest `merged_creators` flag, XML byte-identical (open row above). 77g witnesses (10 of the projection
+  samples): 1005.4193/1803.03483 7 → 0, 1111.1504 8 → 1, 0705.0395 13 → 5, 0907.5495 9 → 1, 1804.04572 14 → 4,
+  2004.09110 24 → 16, 2312.05929/1306.1270/cs0603063 −7 each; the only text changes are `\@@over` error tokens
+  replaced by fractions. 77a (biblatex filters) is held for its round-3 review.
+
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;
