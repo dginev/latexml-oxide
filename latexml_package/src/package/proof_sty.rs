@@ -38,7 +38,10 @@ fn split_premises(tokens: Tokens) -> Tokens {
 /// `\@ifstar` is a `\new@ifnextchar` too (amsgen.sty:54-63), which skips no space: only a `*` right after the `\\` and
 /// a `[` right after that are the row end's. After a space (a token after the control symbol `\\`) they are the
 /// premise's own text: pdflatex prints `\infer{E}{s \\ [t] u}` and `{s \\ *[t] u}` in `{align*}` with their `[t]`,
-/// 0 errors. Read before the premises split into rows, whose pieces lose their leading spaces (`split_tokens`).
+/// 0 errors. That is the rule of amsmath's displays, where proof.sty's papers put `\infer`; outside them (`{array}`,
+/// `{eqnarray}`, no amsmath) LaTeX's `\@xarraycr` skips spaces before `[` (latex.ltx:16585) and pdflatex reads
+/// `s \\ [t] u`'s `[t]` as a skip, where this keeps it as text. Read before the premises split into rows, whose pieces
+/// lose their leading spaces (`split_tokens`).
 fn drop_row_skips(tokens: Tokens) -> Tokens {
   let tokens = tokens.unlist();
   let mut out = Vec::with_capacity(tokens.len());

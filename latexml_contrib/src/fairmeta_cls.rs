@@ -37,13 +37,9 @@ LoadDefinitions!({
     s!("columnsep=0.65cm"),
   ])?;
   RequirePackage!("geometry");
-  // fairmeta.cls loads amsmath in some versions only (2 of 58 copies in a 1/20 arXiv sample): amsmath's commands for
-  // papers that use them unloaded, its "Old form" error once the paper loads it; the paper's copy decides
-  // (`amsmath_sty::require_amsmath_beyond_original`, KNOWN_PERL_ERRORS #993).
-  amsmath_sty::require_amsmath_beyond_original(
-    latexml_package::shipped_class::shipped_copy_loads("cls", "amsmath")?,
-    &[],
-  )?;
+  // fairmeta.cls loads amsmath, directly or through `tcolorbox[most]` and nicematrix (every copy of a 1/20 arXiv sample;
+  // tcbtheorems.code.tex:23).
+  RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   RequirePackage!("graphicx");
   RequirePackage!("xcolor");

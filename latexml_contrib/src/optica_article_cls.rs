@@ -3,13 +3,9 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
-  // optica-article.cls loads no amsmath (66 copies in a 1/20 arXiv sample): amsmath's commands for papers that use them
-  // unloaded, its "Old form" error once the paper loads it; the paper's copy decides
-  // (`amsmath_sty::require_amsmath_beyond_original`, KNOWN_PERL_ERRORS #993).
-  amsmath_sty::require_amsmath_beyond_original(
-    latexml_package::shipped_class::shipped_copy_loads("cls", "amsmath")?,
-    &[],
-  )?;
+  // optica-article.cls loads amsmath through newtxmath (:40 `\RequirePackage{newtxtext,newtxmath}`, every copy of a 1/20
+  // arXiv sample; newtxmath.sty requires amsmath).
+  RequirePackage!("amsmath");
   RequirePackage!("amsthm");
   // No eager plain xcolor (Perl parity: a later document xcolor[table] would be a no-op, so colortbl/array never load;
   // ifacconf_cls.rs, SYNC_STATUS eager-xcolor cluster): the class's own `xcolor[table]` (:32) comes from the scan below.

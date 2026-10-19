@@ -3629,9 +3629,11 @@ fn sideset_wrap_impl(
 /// `perfect_kernel_batch77q::{old_form_matrix_is_plain_tex_where_amsmath_is_not_loaded,
 /// old_form_matrix_errs_once_the_document_loads_amsmath}`.
 pub fn require_amsmath_beyond_original(original_loads: bool, options: &[&str]) -> Result<()> {
+  // A file whose original does load amsmath after an earlier beyond-original load is the real load: it runs the
+  // binding again (spie.cls, then a Scientific Word 5.x tcilatex.tex copy with `\RequirePackage{amsmath}`).
   if lookup_bool("amsmath.sty_loaded")
     || lookup_bool("amsmath.sty_raw_loaded")
-    || lookup_bool("amsmath.sty:beyond_original")
+    || (!original_loads && lookup_bool("amsmath.sty:beyond_original"))
   {
     return Ok(());
   }

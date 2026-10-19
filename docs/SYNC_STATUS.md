@@ -1623,12 +1623,16 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
     amsmath.sty loads: the 7 ptptex papers (ptptex.cls:362) keep it, as pdflatex does (hep-ph9511429 4 = 4,
     nucl-th0305048 2 = 2); a binding that loads amsmath where its original does not — spie (1003.3524), the old
     ws-procs9x6/ws-ijmpb copies (nucl-th0206027, quant-ph0607049), Scientific Word 2.5's tcilatex (0805.4522), OmniBus's
-    autoload, the old aa.cls, and the audited sn-jnl, imsart, svproc, jfm, autart, ecai, egpubl, optica-article,
-    agujournal2019, wileymsp-template, asme2ej, tac, uai2025, gretsi, fairmeta, fcs, selfevolagent, dmtcs-episciences,
-    bytedance_seed, achemso, combine (copies in a 1/20 arXiv sample load none; the paper's copy decides) — goes through
+    autoload, the old aa.cls, and the audited sn-jnl, imsart, svproc, jfm, autart, ecai, egpubl, agujournal2019,
+    wileymsp-template, asme2ej, tac, uai2025, gretsi, fcs, dmtcs-episciences, achemso, combine (copies in a 1/20 arXiv
+    sample load none, directly or through a package; the paper's copy decides; optica-article, bytedance_seed, fairmeta
+    and selfevolagent load it through newtxmath, nicematrix or `tcolorbox[most]` and keep the plain load) — goes through
     `amsmath_sty::require_amsmath_beyond_original`: amsmath's definitions in force, no old-form error,
     `\@ifpackageloaded{amsmath}` false, until a real load (the document's, a raw file's, a copy's, mathtools') runs the
-    binding again (aa.cls.ltxml:57's reload, generalised; those 4 papers → 0 old-form errors, pdflatex 0). The dispatch
+    binding again (aa.cls.ltxml:57's reload, generalised; those 4 papers → 0 old-form errors, pdflatex 0) — a file whose
+    original loads it is that real load even after a beyond-original one (spie.cls, then a Scientific Word 5.x
+    tcilatex.tex copy). A mid-document reload (an OmniBus autoload of ams_support for `\subjclass` under spie) turns the
+    error on for later old forms where pdflatex has none (it fails on `\subjclass` there; no clean witness). The dispatch
     replaces aa_cls.rs's own copy, AMS-TeX keeps `\matrix…\endmatrix` (amstex.rs; 1411.5748), gauss's `gmatrix` and
     physics' matrices open their amsmath environment by `\begin` as the packages do. C2 `\binom` on the kernel's `\atop`
     body, not the document's `\atop` (#994): 1010.0429, 1209.4365, 1308.4325, 1806.09142, 1904.01263 → 0 Errors; an
@@ -1652,8 +1656,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
     form): 302 of 312 byte-identical; 0805.4522 22 → 0, 1003.3524 16 → 0, nucl-th0206027 1 → 0, quant-ph0607049 1 → 0,
     0705.3096 (ws-ijmpb) 11 → 0 errors (XML identical; pdflatex 0 old-form errors each); 2002.04115 takes
     imsart.cls:72-74's `\PassOptionsToPackage{leqno}{amsmath}` (`ltx_leqno`, as pdflatex's amsmath gets it); 1402.0250,
-    1704.02959, 2605.27010 a `\pgfsys@hbox` register number one higher in a `tex=` (amsmath's binding run again); 0
-    worse. Guards `perfect_kernel_batch77q::*` (11).
+    1704.02959, 2605.27010 a `\pgfsys@hbox` register number one higher in a `tex=` (amsmath's binding run again,
+    its `\newbox\strutbox@`); 0 worse. Guards `perfect_kernel_batch77q::*` (11). Residual: a premise row's `tex=`
+    attribute reads `\\[t]u`, which a re-read takes as a row skip (the `\infer` formula's `tex=` was already poor:
+    `C\lx@proof@logical@and a=bx`); after a `\\` outside amsmath displays (`{array}`, `{eqnarray}`, no amsmath) LaTeX's
+    `\@xarraycr` skips spaces before `[` (latex.ltx:16585) where we keep ` [t]` as text (no content lost).
 - **Runs 364/365** (E/F rerun of run 363 on 026cf18f87: 68c Part B, 68a; COMPLETE 2026-10-16 12:20:31Z):
   E 79,627 → 77,932, F 3,971 → 3,971 (success 97.14 % → 97.20 % of 2,922,325). Transitions vs run 363: E→OK 362,
   E→warning 1,330, E→F 33, F→warning 3, F→E 30. E→F: `timeout` 22 + `Timeout:Convert` 2 and `oom` 4 (fleet contention,

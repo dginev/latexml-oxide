@@ -15930,10 +15930,11 @@ matrix with its rows (`\lx@gen@plain@matrix`, `\lx@gen@plain@cases`). AMS-TeX's 
 (amstex.tex:512-552) keeps the environment form (amstex.rs). The error is amsmath's, so only where the real amsmath.sty
 loads: a binding that loads amsmath where its original does not (spie.cls, the old ws-procs9x6/ws-ijmpb copies,
 Scientific Word 2.5's tcilatex.tex, OmniBus's autoload, the old aa.cls, and the audited sn-jnl, imsart, svproc, jfm,
-autart, ecai, … classes, whose copies load none) goes through `amsmath_sty::require_amsmath_beyond_original`: amsmath's
+autart, ecai, … classes, whose copies load none, directly or through a package) goes through `amsmath_sty::require_amsmath_beyond_original`: amsmath's
 definitions in force, its old-form error off, `\@ifpackageloaded{amsmath}` false, until the document's
 `\usepackage{amsmath}`, a raw class or package (ptptex.cls:362 `\if@ams`), a paper's copy or a binding whose original
-loads it runs the binding again (Perl's aa.cls.ltxml:57 reload, generalised). Papers of run 367: the 7 that load
+loads it runs the binding again (Perl's aa.cls.ltxml:57 reload, generalised), also after a beyond-original load
+(spie.cls, then a Scientific Word 5.x tcilatex.tex copy). Papers of run 367: the 7 that load
 amsmath, by ptptex.cls:362 (hep-ph0110005, hep-ph9509392, hep-ph9511429, hep-ph9702336, hep-th9908038, nucl-th0305048,
 hep-th9910005), keep the error, as pdflatex gives it (hep-ph9511429 4 = 4, nucl-th0305048 2 = 2); the 4 where pdflatex
 loads no amsmath — 0805.4522 (tcilatex 2.5), 1003.3524 (spie), nucl-th0206027 (ws-procs9x6), quant-ph0607049 (ws-ijmpb)

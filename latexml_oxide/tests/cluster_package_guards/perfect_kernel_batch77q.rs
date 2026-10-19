@@ -181,6 +181,11 @@ fn old_form_matrix_errs_once_the_document_loads_amsmath() {
       r"\documentclass{article}\input{tcilatex}",
       &[("tcilatex.tex", tci_copy)][..],
     ),
+    // A real load after a binding's beyond-original one (spie's) is still the real load.
+    (
+      r"\documentclass{spie}\input{tcilatex}",
+      &[("tcilatex.tex", tci_copy)][..],
+    ),
   ] {
     let (log, xml) = convert_files_with(
       &format!("{preamble}\n{OLD_FORM_BODY}"),
