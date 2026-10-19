@@ -78,6 +78,11 @@ conversion that loses authored content or its markup with 0 errors is a false su
 an honest Error, before the 98 % report or the E/F rerun. Measured on all three targets (error-free log, authored text
 present, semantic element) — `feedback_three_metrics_honest_tests`.
 
+**Status 2026-10-19 (int31, 9482a8e7db):** every numbered row is fixed (#21 in part: what remains prints extra
+entries, it loses none), closed, or an honest Error; the unnumbered
+rows left open below lose no authored text (duplication, mis-split, hover-only placement, a wrong reference number) and
+do not block the E/F rerun.
+
 | # | loss | state |
 |---|---|---|
 | 1, 2 | open frontmatter body at `\end{document}` → empty `<document/>` | FIXED int26 (OD #754) |
@@ -4159,6 +4164,21 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   titles gained in 2402.13846, 2405.01480, 2405.01576, 2405.02221, 2405.02462, 2405.03285, 2409.11413, 2605.21082,
   2606.00555; the spurious "<job>.listing" toc caption gone in 2512.18601, 2606.05464, 2606.27251, 2607.12625; 2507.00833,
   2508.16690 unchanged.
+  **Integration (int31, 9482a8e7db, binary int31a):** 77i frontmatter stores — TeX decides what the title page prints
+  (silent-loss rows #5 (a), #6a, #6b, #7, #8, 23b; reviews r1-r4 NO-SHIP, r4 narrowly with no real-paper regression;
+  r5 closes its six findings, re-checked by the main session on the r4 probes; OD #767): a class's off-table
+  store is handed to the frontmatter only when a speculative title-page run with sentinel values shows it printed,
+  labels are read from what the run typesets right before the store, per-store `\relax`/`\@empty` for unset stores.
+  Gates int31a: nextest 6168/6168 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int30a empty.
+  Population A/B (1,428) vs int30a: E 5,609 → 5,609, F 15 → 15, 0 newly Fatal, 0 worse, +42 words; 9 XML changes,
+  all gains — smfart address blocks name their author (0801.2953, 1001.4269, 1011.3162, 1901.00144, 2102.05898,
+  math0610405) and lose the stray `\bullet` leaders (also 0805.2826), 1703.10331's author block recovered, 1309.6905's
+  keywords named by its printed "KEYWORDS:" label with the orphan label paragraph gone. Binding nets (int31a) 136/136,
+  0 documents worse than int30a.
+  Witnesses (21, int30a → int31a): E/F identical, words equal or up (1503.05530 +22, 1603.03011 +35, 1605.03227 +28,
+  1608.02012 +20, 2108.12618 +34, 1303.1716 +36), 1309.6905 −1 (the label above), two papers' warnings 4 → 2 and 5 → 3
+  (0801.3557, 2101.09366). With int31 every HIGH-priority silent-loss row is closed; the open inventory rows are
+  duplication, mis-split, hover-only or reference-number defects (no lost text).
 
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
