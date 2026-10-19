@@ -1558,7 +1558,17 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   E 77,932 + F 3,971 of 2,922,325): triggered once the combined projection reached 98.06 % (int29a, gate ≥ 98.05 %), the
   perf/RAM pass had landed (int12) and every numbered silent-loss row was closed (int31). Fleet: `cortex_worker`
   maxperf-cortex built at 5059484050, distro dumps of 2026-10-11 (sorted-set identical to the int31a vendor dumps).
-  In progress; compare with run 365 only once complete.
+  COMPLETE 2026-10-19 12:57:33Z: E 77,932 → 53,977, F 3,971 → 3,068 (success 97.20 % → 98.05 % of 2,922,325, the
+  int29a projection said 98.06 %). Transitions vs run 365: E→OK 4,130, E→warning 19,986, E→F 69, F→OK 46,
+  F→warning 696, F→E 230. E→F re-converted locally (67int9 = run 365's code vs int31a, cores 64-127): 49 are Fatal on
+  int31a and not on 67int9 — real regressions introduced between 026cf18f87 and 5059484050 (TooManyErrors 31, most
+  from a handful of errors to >100; Timeout:Convert 6; PushbackLimit 5; IfLimit 2; Recursion 3; Mouth:EoF 1;
+  Document:Malformed 2207.09187; a crash 2504.05919), triage + bisection running
+  (`~/.claude/jobs/356a0c47/tmp/ef367/triage.tsv`); 17 are non-Fatal on both binaries (fleet artifacts), 1 Fatal on both.
+  Side finding (fleet harness, upstream): pericortex 0.2.8 `harness.rs:642-670`'s unresponsive-worker watchdog SIGKILLs
+  IDLE workers — a 60 s idle poll uses under one clock tick of CPU, so the tick count never advances (seen
+  2026-10-19 09:41Z) — respawn churn only while the fleet is idle; fix upstream: arm the watchdog only while a task is
+  leased.
 - **Runs 364/365** (E/F rerun of run 363 on 026cf18f87: 68c Part B, 68a; COMPLETE 2026-10-16 12:20:31Z):
   E 79,627 → 77,932, F 3,971 → 3,971 (success 97.14 % → 97.20 % of 2,922,325). Transitions vs run 363: E→OK 362,
   E→warning 1,330, E→F 33, F→warning 3, F→E 30. E→F: `timeout` 22 + `Timeout:Convert` 2 and `oom` 4 (fleet contention,
