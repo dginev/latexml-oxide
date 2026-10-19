@@ -111,7 +111,7 @@ LoadDefinitions!({
   });
   DefMacro!(
     "\\lx@toc@copy@neutralize",
-    r"\lx@written@copy\let\lx@note\lx@note@gobble\let\lx@notemark\lx@notemark@gobble\let\lx@notetext\lx@notetext@gobble\let\lx@current@footnote\lx@note@standard\let\lx@current@footnotetext\lx@notetext@standard\let\label\lx@gobble@om\let\index\lx@gobble@som\let\glossary\lx@gobble@om"
+    r"\lx@written@copy\let\lx@note\lx@note@gobble\let\lx@notemark\lx@notemark@gobble\let\lx@notetext\lx@notetext@gobble\let\lx@current@footnote\lx@note@standard\let\lx@current@footnotetext\lx@notetext@standard\let\label\lx@gobble@om\let\lx@caption@postlabel\@gobble\let\index\lx@gobble@som\let\glossary\lx@gobble@om"
   );
 
   //======================================================================

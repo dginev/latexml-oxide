@@ -72,10 +72,18 @@ pub(crate) fn load() -> Result<()> {
   // cleveref's `\label[type]{key}` (cleveref.sty `\label` takes an optional type; our `\lx@cleverref@label[]` drops it)
   // gives its `[type]` here too: read as the key, `[` became the label and the key was typeset (2404.11739; OXIDIZED_DESIGN
   // #552). Guard `perfect_kernel_batch65m::cleveref_label_type_after_caption`.
+  // The label goes in front of the caption's material: a `\label` after `\caption` names what the caption's
+  // `\refstepcounter` stepped (latex.ltx:17391-17393), the float, and an unnumbered display in the caption steps
+  // nothing; the caption's paragraph (`PBoxContents`) ends with that display's `ltx:equation` open, which a `\label`
+  // at the end took (2310.11556, 1404.2359; Perl puts it at the end, latex_constructs.pool.ltxml:3175;
+  // OXIDIZED_DESIGN_DIVERGENCES #769). It is `\lx@caption@postlabel`, not `\label`, so the scan below for the
+  // caption's own labels does not take the caption's text as its argument, where a stray `\fi` in it would close
+  // that scan's `\ifx` (KNOWN_PERL_ERRORS #641); the toc copy drops it.
   DefMacro!(
     r"\@caption@postlabel{}{}{} SkipMatch:\label [] Semiverbatim",
-    r"\@caption@{#1}{#2}{#3\label{#5}}"
+    r"\lx@note@caption@label{#5}\@caption@{#1}{#2}{\lx@caption@postlabel{#5}#3}"
   );
+  DefMacro!("\\lx@caption@postlabel", "\\lx@label");
   DefMacro!(
     r"\@caption@{}{}{}",
     r"\@hack@caption@{#1}{#2}{}#3\label\endcaption"
@@ -160,7 +168,10 @@ pub(crate) fn load() -> Result<()> {
       Some(Stored::HashStored(pre)) => pre,
       _ => step_float_counter(&captype)?,
     };
-    let inlist = digest(T_CS!(s!("\\ext@{}", captype)))?.to_string();
+    // The list's extension, read as `\@captype` is above: digested, its letters began a paragraph in the float's
+    // vertical list, whose horizontal mode outlived the counters, and the caption's box then ended that paragraph with
+    // a `\par` (an aas `\references` entry in a table, `perfect_kernel_batch64x::bibitem_after_a_float_reopens_the_list`).
+    let inlist = do_expand(T_CS!(s!("\\ext@{}", captype)))?.to_string();
     assign_value(
       &s!("{}_tags", captype),
       props.get("tags"),
@@ -222,7 +233,10 @@ pub(crate) fn load() -> Result<()> {
   // 1410.5131, 1610.02500, 2205.14586, 2212.13027, 1604.04575, 2112.07588). The constructor is `\lx@@caption`, which
   // the kernel and the bindings call; `\@@caption` stays its alias, so a class's own meaning for the name is the
   // class's (OXIDIZED_DESIGN #566, KNOWN_PERL_ERRORS #637). Guard `perfect_kernel_batch66b::cup_contcaption_keeps_its_caption`.
-  DefConstructor!("\\lx@@caption{}", sub[document, args, props] {
+  // The material is a paragraph of a vertical box (`PBoxContents`, as Perl's `\@@caption PBoxContents`,
+  // latex_constructs.pool.ltxml:3368), so a `$$…$$` in it is display math (1005.1555, 1907.01498, 2310.11556,
+  // 1404.2359; OXIDIZED_DESIGN_DIVERGENCES #769); `\@@toccaption` below alike.
+  DefConstructor!("\\lx@@caption PBoxContents", sub[document, args, props] {
     let body = args[0].clone();
     // The list entry `\@@toccaption` could not place (below), for the float this caption may become.
     let unplaced_toccaption = remove_value("lx@unplaced@toccaption");
@@ -321,15 +335,14 @@ pub(crate) fn load() -> Result<()> {
       }
     }
     Ok(map)
-  },
-  mode => "text");
+  });
   Let!("\\@@caption", "\\lx@@caption");
   // With no ancestor to hold it, the entry waits for the `\lx@@caption` that follows: a caption in a box that is not a
   // float becomes that float (above), whose list entry it is — LaTeX's `\caption` writes the `\addcontentsline` there
   // too (latex.ltx:17391-17399), and without it the list of figures showed the float's number alone
   // (`\captionsetup{type=figure}` or `\def\@captype{figure}` in a minipage, the tufte margin figures; 2609.06557,
   // 32742).
-  DefConstructor!("\\@@toccaption{}", sub[document, args] {
+  DefConstructor!("\\@@toccaption PBoxContents", sub[document, args] {
     let body = args[0].clone();
     if caption_can_float(document, "ltx:toccaption") {
       let save = document.float_to_element("ltx:toccaption", true)?;
@@ -344,7 +357,7 @@ pub(crate) fn load() -> Result<()> {
     } else if let Some(body) = body {
       assign_value("lx@unplaced@toccaption", Stored::Digested(body), Some(Scope::Global));
     }
-  }, mode => "text");
+  });
 
   // Perl: latex_constructs.pool.ltxml L3450-3458
   // Uses beforeFloat('figure') / afterFloat — sets LAST_FLOATTYPE, rescues counters.

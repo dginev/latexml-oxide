@@ -1146,6 +1146,20 @@ fn def_ps_object_macro(cmd: &str) -> Result<()> {
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // pst-code-box.tex:10-17 (`\pst@makenotverbbox`, also `\pst@makeverbbox`, `\pst@makelongbox`): pstricks sets
+  // the material of its boxes (`\rput`'s body, `\psframebox`, `\pscirclebox`, …) in an `\hbox`, entering math
+  // there when it was called in math and `\ifpsmathbox` is true (the default, :4-5) — `$\m@th\textstyle` in an
+  // inner formula, `$\m@th\displaystyle` in a display. `\lx@ps@mathflag` takes that choice where the box is
+  // called, `\lx@ps@mathbox{material}` sets the material, in the group pstricks gives it (`{\pst@thisbox…#2}`), in
+  // the box the choice was made for; the box constructors take the material as written too, which they revert to
+  // (`tex` shows the author's argument, not the inserted `$\textstyle…$`). The raw pstricks load
+  // (pstricks_sty.rs, pstricks_tex.rs) defines `\ifpsmathbox`; a binding loaded without it has the default.
+  if lookup_meaning(&T_CS!("\\ifpsmathbox")).is_none() {
+    RawTeX!(r"\newif\ifpsmathbox \psmathboxtrue");
+  }
+  RawTeX!(r"\def\lx@ps@mathflag{\edef\lx@ps@mathmode{\ifpsmathbox\ifmmode\ifinner 1\else 2\fi\else 0\fi\else 0\fi}}
+\long\def\lx@ps@mathbox#1{\ifcase\lx@ps@mathmode\or$\m@th\textstyle\or$\m@th\displaystyle\fi{#1}\ifnum\lx@ps@mathmode>0 $\fi}
+\def\lx@ps@mathmode{0}");
   // Parameter types — Perl pstricks_support.sty.ltxml:25-250. `PSCoord`
   // is a `Pair` in points; `OptionalPSCoord` needs no definition (the spec
   // parser derives `Optional<Type>` from the prefix).
@@ -1621,8 +1635,13 @@ LoadDefinitions!({
     alias => "\\rput",
     properties => sub[args] { ps_put_properties(args[1].as_ref()) }
   );
-  DefConstructor!("\\put@end {}", "#1</ltx:g>",
-    alias => "",
+  // The placed body is set as pstricks sets a box (pst-code-box.tex:10-17 `\pst@makenotverbbox`): in math, with
+  // `\ifpsmathbox` (true by default, :4-5), it is a formula of the style around it (`$\m@th\textstyle…$` inner,
+  // `\displaystyle` in a display), so `$x \rput(1,1){V_1}$` keeps its `V_1` (2603.19804, 0707.0546, 1010.2311).
+  // Perl's `\put@end {}` is a text box everywhere (pstricks_support.sty.ltxml:890; KNOWN_PERL_ERRORS #989).
+  DefMacro!("\\put@end{}", r"\lx@ps@mathflag\lx@ps@put@end{#1}{\lx@ps@mathbox{#1}}");
+  DefConstructor!("\\lx@ps@put@end Undigested {}", "#2</ltx:g>",
+    reversion => "{#1}",
     mode  => "restricted_horizontal"
   );
   // \Rput[refpoint](x,y){body} — placement at coords (real pstricks

@@ -8,9 +8,9 @@ LoadDefinitions!({
 
   // Generally ignorable options
   for option in [
-    "overload", "checkin", "preprint", "manuscript", "showpacs", "noshowpacs",
+    "overload", "showpacs", "noshowpacs",
     "showkeys", "noshowkeys", "balancelastpage", "nobalancelastpage",
-    "preprintnumbers", "nopreprintnumbers", "bibnotes", "nobibnotes",
+    "bibnotes", "nobibnotes",
     "footinbib", "nofootinbib", "altaffilletter", "altaffilsymbol",
     "superbib", "citeautoscript", "raggedbottom", "flushbottom", "tightenlines",
     "lengthcheck", "eqsecnum", "secnumarabic", "fleqn", "floats", "endfloats",
@@ -25,6 +25,21 @@ LoadDefinitions!({
   ].iter() {
     DeclareOption!(*option, None);
   }
+  // The options that decide whether the class prints the `\preprint` numbers (revtex4-1.cls:5856-5909, revtex4.cls
+  // :3847-3892, revtex4-2.cls alike): `preprint` (and `manuscript`, `checkin`) set the preprint style, which prints
+  // them unless `nopreprintnumbers` (in REVTeX 4.0 even then, :3811-3812); `preprintnumbers` prints them in any style
+  // (revtex4_support_sty.rs `preprint_printed`).
+  for option in ["preprint", "manuscript", "checkin"] {
+    DeclareOption!(option, {
+      assign_value("revtex@preprintsty", true, Some(Scope::Global));
+    });
+  }
+  DeclareOption!("preprintnumbers", {
+    assign_value("revtex@preprintnumbers", Stored::Bool(true), Some(Scope::Global));
+  });
+  DeclareOption!("nopreprintnumbers", {
+    assign_value("revtex@preprintnumbers", Stored::Bool(false), Some(Scope::Global));
+  });
 
   // Perl revtex4.cls.ltxml L40-45:
   //   my @revtex_toload = ();        # EMPTY by default
@@ -107,6 +122,10 @@ LoadDefinitions!({
   // revtex4_support (after hyperref), so only the option changes. html_feedback #6609.
   if lookup_string("revtex_cite_style") == "numbers" {
     Digest!("\\PassOptionsToPackage{numbers}{natbib}")?;
+  }
+  // REVTeX 4.0's own rule for printing a `\preprint` (revtex4_support_sty.rs `preprint_printed`).
+  if revtex4_0 {
+    assign_value("revtex@preprint@v4.0", true, Some(Scope::Global));
   }
   RequirePackage!("revtex4_support");
   revtex4_support_sty::record_implicit_bibstyle(if revtex4_0 { "" } else { "4-2" });

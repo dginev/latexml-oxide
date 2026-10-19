@@ -539,6 +539,17 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   `\<name>*` later) is not one of the keys `thmtools_use_keys` reads (`label`, `name`, `continues`), so the argument is
   the note: "(restate=…)" in the title, the restated copy undefined. Fix: the key stores the theorem as `{restatable}`
   does (thm-restate.sty). No repro yet.
+- **`\ifinner` is false in a display's array cell** (SHARED, Perl the same; 77k review Q3): an array cell's math is a
+  formula of its own, so TeX's `\ifinner` is true there, inside `\[…\]` too (pdflatex "aI"; tex.web §1138-1145); we
+  and Perl report false ("aD"). `\ifmmode` false at a cell's first token is TeX's own (it expands that token looking for
+  `\omit` before inserting the template; Perl says true there). Effect: pstricks sets a box in a display's array cell
+  in `\displaystyle` where pdflatex uses `\textstyle` (KPE #989 `\lx@ps@mathflag`). Fix: the alignment cell's math
+  mode is the inline one. RED `kernel-alignment/ifinner_in_a_display_array_cell`.
+- **blkarray side labels dropped** (RUST-ONLY binding gap, base too; 77k review probe b3): `\Left{label}{delim}` and
+  `\Right{delim}{label}` in a block's preamble (blkarray.sty:1998-2003) print their label beside the block's bracket;
+  the binding drops delimiters and labels alike (OD #771), so "M" and "N" are lost with 0 errors. Needs a place for a
+  label spanning the block's rows (a cell of its own beside them, or an annotation of the rows). RED
+  `alignment-bindings/blkarray_block_side_labels_are_dropped`.
 - **Header re-grades pending**: `luatex-profile/xetexprobe_xevlna_shared` needs `% preload: [xetex]` (then libertinus-otf.sty:215 `\XeTeXtracingfonts` undefined is a new RED); `luatex-profile/babelmodifier_greek_polutoniko` drops its `[luatex]` line (lualatex fails too; pdfTeX 0 errors); `luatex-profile/zugferdtabular_loop` needs the witness's `unit=hour`; `graphics-tikz/calc_scbox_babel_frozen_bang_stale_oracle` becomes CONTROL.
 
 ### Fidelity audit round 2 (2026-10-08) — findings and their state
@@ -4138,7 +4149,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   begin-document catcode goes through `\AtBeginDocument` in load order (mathstyle's later catcode 12 wins, 2507.09194).
   Witnesses 2003.05548 1 → 0, 2408.09634 1 → 0, 2507.09194 1 → 0, 2402.17181 1 → 0, 1307.7314 2 → 0, 1204.2781 1 → 0,
   2603.23723 2 → 0, 2105.05016 7 → 0, words kept. Guards `perfect_kernel_batch77j::*`; nextest 6095/6095. Open from the
-  same study: `$$` in a caption (Perl `PBoxContents`, sect09.rs `\lx@@caption` text mode; 1005.1555, 1907.01498, 2310.11556,
+  same study (all five done in 77k, below): `$$` in a caption (Perl `PBoxContents`, sect09.rs `\lx@@caption` text mode; 1005.1555, 1907.01498, 2310.11556,
   1404.2359), pstricks boxes in math (`\put@end`, psmathbox; 2603.19804 +3), blkarray block column specs (1706.05431,
   2207.06508, 2210.16910), aastex `C`/`h` columns (2411.04196, 1907.13126), revtex `\preprint` display toggle (5); rulings
   needed: bibliography/citation commands a paper redefines through the kernel hooks `\@citex`/`\@lbibitem` and the
@@ -4185,6 +4196,44 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (0801.3557, 2101.09366). With int31 every HIGH-priority silent-loss row is closed; the open inventory rows are
   duplication, mis-split, hover-only or reference-number defects (no lost text).
 
+- **77k** (sole-cause `unexpected:_` shapes, part 2, of the same study): a float caption is a paragraph of a vertical
+  box, Perl's `\@@caption PBoxContents` (tex_box.rs `PBoxContents`, `\lx@enterhorizontal`; OD #769), so `$$…$$` in it is
+  display math — read as its macro argument from a mouth of its own, in the inline vertical mode (no `\par`, no
+  `\everypar`), a trailing `\label` in front of it as `\lx@caption@postlabel`; `\@@add@caption@counters` reads
+  `\ext@<type>` by expansion (digested, its letters left every float body after its caption in horizontal mode);
+  pstricks boxes called in math set their material in math under `\ifpsmathbox` (`\put@end`, `\psframebox` family,
+  pst-code-box.tex:10-17; KPE #989); a blkarray block's preamble formats its rows (`>{}`/`<{}`, delimiters dropped; OD
+  #771); an AASTeX 6+ deluxetable's `$` is active from its begin (aastex701.cls:11298-11299; a Rust-only lag: the
+  binding activated it at `\startdata`, so a `$m_{G}$` in the `\tablehead` of a `C` column was text, 2411.04196) and
+  `\eatone` is the class's math box (KPE #991); revtex `\preprint` follows the class family's rule (r2: REVTeX 4.1/4.2
+  `\preprint@sw` and no preamble number, REVTeX 4.0 a preamble number and the `preprint` style forcing it, REVTeX 3
+  `\ifpreprintsty` wherever called) — printed Perl's pubnote read as TeX, otherwise an `ltx:rdf` identifier read as
+  written, split at top-level `\\` only (OD #770, KPE #990). Witnesses (int29c → 77k, Errors): 1005.1555 4 → 0,
+  1907.01498 2 → 0, 2310.11556 3 → 0, 1404.2359 10 → 0, 2603.19804 2 → 0, 0707.0546 12 → 0, 1010.2311 9 → 0, 1106.3964 2
+  → 0, 1706.05431 12 → 0, 2207.06508 4 → 0, 2210.16910 12 → 0, 2411.04196 7 → 0, 1907.13126 76 → 0, 1205.1463 2 → 0,
+  1207.6705 1 → 0, 1912.04576 1 → 0, 2110.00437 2 → 0, 2408.13616 2 → 0; words kept or gained. Guards
+  `perfect_kernel_batch77k::*`; repros `captions-floats/caption_display_math_is_display_1005.1555`,
+  `boxes-groups/pstricks_box_in_math_is_math_2603.19804`,
+  `alignment-bindings/blkarray_block_preamble_formats_its_rows_1706.05431` (+ control), `class-bindings/
+  aastex_table_dollar_and_hidden_column_2411.04196`,
+  `sectioning-frontmatter/revtex_preprint_number_is_an_identifier_2408.13616`. Size attributes of floats sized from a
+  caption follow the paragraph (graphrot.xml, `perfect_kernel_batch65a`); open (OD #769 residual): a tabularray
+  `talltblr` caption is set at the float's `\hsize`, so a talltblr beside another table is a row of its own
+  (`perfect_kernel_batch57::tabularray_tall_table_in_a_*`); `\ifinner` in a display's array cell and blkarray's
+  `\Left`/`\Right` side labels (rows in "Perfect-kernel RED repros without a row elsewhere"); a `\label` right after a
+  `$$…$$` in a caption labels the display, not the float (Perl the same; OD #769). Cluster A/B (161 projection-sample
+  papers: pstricks, blkarray, AASTeX 6+, revtex4, amsart and `$$`-in-caption, 30 each): E 3,350 → 3,248, F 4 → 4, 0
+  worse; every byte change classified — display math and cell/box math gained, figure `\label`s recovered (2503.18937,
+  2507.06693, 2606.21656: the label after a caption had landed in the leaked paragraph), leading/trailing listing-line
+  spaces gone (algorithm2e/listings after a caption), blkarray block `|`/`r` formats applied (2404.19328, 2407.12215),
+  rotated-float size attributes (2008.08518, 2403.11191), 2107.02579's side-by-side subfigures no longer broken by a row
+  break; inits 0/0, dumps identical to int29c. r2 (review findings): the printed `\preprint` branch is chosen before the
+  argument is read and per class family; pstricks boxes keep pst-code-box's group in the formula and revert to the
+  author's argument; `Cell::mark_intercol_after` serves `tabular_bindings` and blkarray. r2 A/B on int31a (the 161 + 18
+  witnesses + 30 of the 305 REVTeX 3 preprint-style papers of 9601-0001): E 3,514 → 3,249, F 4 → 4, 0 worse; vs r1 the
+  REVTeX 3 papers are byte-identical to int31a again (pubnotes, hep-ph0001309 and hep-ph9801334 5 + 4 Errors of r1
+  gone), and pstricks `tex` attributes show the source (0707.0546, 1010.2311, 1106.2128, 1106.3964, 2603.19804,
+  math0602047, quant-ph0308170).
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

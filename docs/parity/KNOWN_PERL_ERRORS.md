@@ -15869,3 +15869,35 @@ so each raw `{tcblisting}` box held a `lol` float captioned "<job>.listing" (251
 name, no float for an uncaptioned named listing, a captioned one numbered in no list, `\lx@listings@unlisted`). Guards
 `perfect_kernel_batch77m::{raw_tcblisting_read_back_is_not_listed, newtcbinputlisting_keeps_its_title,
 nolol_listing_is_numbered_but_not_listed}`.
+
+## 989. pstricks box material in math is set as text
+
+pst-code-box.tex:4-17 (`\pst@makenotverbbox`, also the verbatim and long forms): with `\ifpsmathbox` (true by default)
+a box called in math sets its material as a formula of the style around it (`$\m@th\textstyle…$` inner,
+`$\m@th\displaystyle…$` in a display). Perl's `\put@end {}` (pstricks_support.sty.ltxml:890), which holds every `\rput`
+and `\uput` body, and its framed boxes are text boxes everywhere. Minimal trigger: `\usepackage{pstricks}` …
+`$x \rput(1,1){V_1}$` → "Script _ can only appear in math mode"; `latex` is clean. The Rust port decides where the box
+is called (`\lx@ps@mathflag`, pstricks_support_sty.rs) and sets the material in that formula, in pstricks' own group
+(`\lx@ps@mathbox`), for `\put@end` and `\psframebox`/`\psdblframebox`/`\psshadowbox`/`\pscirclebox`/`\psovalbox`
+(pstricks_sty.rs), whose `tex` reverts to the argument as written. Witnesses 2603.19804, 0707.0546, 1010.2311,
+1106.3964 (`\pscirclebox` in an `eqnarray`). Repro `boxes-groups/pstricks_box_in_math_is_math_2603.19804`; guards
+`perfect_kernel_batch77k::{pstricks_box_in_math_is_math, pstricks_math_box_keeps_its_group}`.
+
+## 990. A revtex `\preprint` number is digested as text and always displayed
+
+revtex4-1.cls:2516-2519 stores the `\preprint` number and prints it only under `\preprint@sw` (aps4-1.rtx:216-221);
+Perl's `\preprint{}` is `\lx@add@pubnote[role=preprint]{#1}` (revtex4_support.sty.ltxml:71), which digests the number:
+`\documentclass[aps,prl,reprint]{revtex4-1}` … `\preprint{DMRG_Sampled_Variance}` raises "Script _ can only appear in
+math mode" ×2 for a number pdflatex never prints (2408.13616, 1912.04576, 2110.00437, 1207.6705, 1205.1463). The Rust
+port follows the class's rule for printing it and reads an unprinted number as an identifier
+(OXIDIZED_DESIGN_DIVERGENCES #770). Guard `perfect_kernel_batch77k::revtex_preprint_number_is_an_identifier`.
+
+## 991. AASTeX's hidden column cell is set as text
+
+aastex701.cls:8851-8855 (aastex62.cls:2143-2144) `\eatone` = `\setbox0=\hbox\bgroup\savedollar\let$\relax`: the `h` (and
+`B`) column's cell is a formula in a box nobody uses. Perl's `{eatone}` is an empty environment (aas_support.sty.ltxml:374)
+that digests the cell as text: `\begin{deluxetable}{ch}` … `1 & {grp1.8_diffuse} \\` raises "Script _ can only appear
+in math mode" for every hidden cell (1907.13126: 76). The Rust port defines `\eatone`/`\endeatone` as the class does,
+with an active `$` (the class's `\hskip-2\tabcolsep` left out). Repro
+`class-bindings/aastex_table_dollar_and_hidden_column_2411.04196`; guard
+`perfect_kernel_batch77k::aastex_table_dollar_and_hidden_column`.

@@ -1,0 +1,18 @@
+% CONTROL for blkarray_block_preamble_formats_its_rows: a plain `{cc}` block in a display keeps the cells math, so an
+% author's `$x_{1}$` there leaves math and its `_` is text — pdflatex errs too.
+% witness: none (sole_underscore study, rep/blk/d.tex)
+% oracle:  pdflatex 4 errors (Missing $ inserted)
+% engines: rust 77k = 2 x `Error:unexpected:_ Script _ can only appear in math mode`
+% expect:  errors (the author's)
+% status:  CONTROL
+\documentclass{article}
+\usepackage{blkarray}
+\begin{document}
+\begin{equation}
+  \begin{blockarray}{cc}
+    \begin{block}{cc}
+      $x_{1}$ & $y_{2}$ \\
+    \end{block}
+  \end{blockarray}
+\end{equation}
+\end{document}

@@ -163,7 +163,7 @@ fn caption_in_minipage_with_adjustbox() {
     &xml,
     "table",
     &["xml:id=\"S0.T1\""],
-    "<table class=\"ltx_minipage ltx_pruned_first\" inlist=\"lot\" labels=\"LABEL:t:a\" vattach=\"middle\" width=\"138.0pt\" xml:id=\"S0.T1\"><tags><tag>Table 1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><toccaption><tag close=\" \">1</tag>First</toccaption><caption><tag close=\": \">Table 1</tag>First</caption><inline-block depth=\"0.0pt\" height=\"4.3pt\" width=\"5.0pt\" xml:id=\"S0.T1.1\" xscale=\"1\" xtranslate=\"0.0pt\" yscale=\"1\" ytranslate=\"0.0pt\"><p xml:id=\"S0.T1.1.1\"><text xml:id=\"S0.T1.1.1.1\">a</text></p></inline-block></table>",
+    "<table class=\"ltx_minipage\" inlist=\"lot\" labels=\"LABEL:t:a\" vattach=\"middle\" width=\"138.0pt\" xml:id=\"S0.T1\"><tags><tag>Table 1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><toccaption><tag close=\" \">1</tag>First</toccaption><caption><tag close=\": \">Table 1</tag>First</caption><inline-block depth=\"0.0pt\" height=\"4.3pt\" width=\"5.0pt\" xml:id=\"S0.T1.1\" xscale=\"1\" xtranslate=\"0.0pt\" yscale=\"1\" ytranslate=\"0.0pt\"><p xml:id=\"S0.T1.1.1\"><text xml:id=\"S0.T1.1.1.1\">a</text></p></inline-block></table>",
   );
 }
 
@@ -180,7 +180,7 @@ fn caption_in_centered_minipage_with_adjustbox() {
     &xml,
     "table",
     &["xml:id=\"S0.T1\""],
-    "<table class=\"ltx_minipage ltx_pruned_first\" inlist=\"lot\" labels=\"LABEL:t:a\" vattach=\"middle\" width=\"138.0pt\" xml:id=\"S0.T1\"><tags><tag>Table 1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><toccaption class=\"ltx_centering\"><tag close=\" \">1</tag>First</toccaption><caption class=\"ltx_centering\"><tag close=\": \">Table 1</tag>First</caption><inline-block class=\"ltx_centering\" depth=\"0.0pt\" height=\"4.3pt\" width=\"5.0pt\" xml:id=\"S0.T1.1\" xscale=\"1\" xtranslate=\"0.0pt\" yscale=\"1\" ytranslate=\"0.0pt\"><p xml:id=\"S0.T1.1.1\"><text xml:id=\"S0.T1.1.1.1\">a</text></p></inline-block></table>",
+    "<table class=\"ltx_minipage\" inlist=\"lot\" labels=\"LABEL:t:a\" vattach=\"middle\" width=\"138.0pt\" xml:id=\"S0.T1\"><tags><tag>Table 1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><toccaption class=\"ltx_centering\"><tag close=\" \">1</tag>First</toccaption><caption class=\"ltx_centering\"><tag close=\": \">Table 1</tag>First</caption><inline-block class=\"ltx_centering\" depth=\"0.0pt\" height=\"4.3pt\" width=\"5.0pt\" xml:id=\"S0.T1.1\" xscale=\"1\" xtranslate=\"0.0pt\" yscale=\"1\" ytranslate=\"0.0pt\"><p xml:id=\"S0.T1.1.1\"><text xml:id=\"S0.T1.1.1.1\">a</text></p></inline-block></table>",
   );
 }
 

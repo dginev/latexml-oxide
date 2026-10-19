@@ -1,0 +1,17 @@
+% A caption is set as a paragraph of a vertical box (amsart.cls:1386-1392 `\vbox{\noindent…}`; Perl `\@@caption
+% PBoxContents`, latex_constructs.pool.ltxml:3368, TeX_Box.pool.ltxml:202-205), so its `$$…$$` is display math. The
+% restricted horizontal argument read `$$` as an empty formula (tex.web §1138) and the formula's `_` as text. A
+% `\label` after the caption names the figure even when the caption ends in a display.
+% witness: 1005.1555, 1907.01498, 2310.11556, 1404.2359 (amsart)
+% oracle:  pdflatex 0 errors (amsart; article's `\@makecaption` measures the caption in an `\hbox` first and errs)
+% engines: rust int29c = 6 x `Error:unexpected:_ Script _ can only appear in math mode`; perl = 4 x
+%          `<ltx:equation> isn't allowed in` (2 x `<ltx:caption>`, 2 x `<ltx:toccaption>`)
+% expect:  0 errors, 0 warnings; the caption holds an `ltx:equation`; the figure carries the label
+% status:  RED (int29c) -> GREEN (77k)
+\documentclass{amsart}
+\begin{document}
+\begin{figure}
+\caption{The ratio for large $i$, $$ 1.60 < b_{u_i}/a_{u_i} < 1.66 $$ and more, so $$ b_{l_i} < 1.48.$$}\label{fig:r}
+\end{figure}
+See Figure~\ref{fig:r}.
+\end{document}

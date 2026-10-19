@@ -2,9 +2,9 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: revtex4-1.cls.ltxml
-  for option in ["overload", "preprint", "manuscript", "showpacs", "noshowpacs",
+  for option in ["overload", "showpacs", "noshowpacs",
     "showkeys", "noshowkeys", "balancelastpage", "nobalancelastpage",
-    "preprintnumbers", "nopreprintnumbers", "bibnotes", "nobibnotes",
+    "bibnotes", "nobibnotes",
     "footinbib", "nofootinbib", "altaffilletter", "altaffilsymbol",
     "superbib", "citeautoscript", "raggedbottom", "flushbottom",
     "tightenlines", "lengthcheck", "eqsecnum", "secnumarabic",
@@ -17,10 +17,25 @@ LoadDefinitions!({
     "groupedaddress", "unsortedaddress", "runinaddress",
     "superscriptaddress", "byrevtex", "floatfix", "nofloatfix",
     "ltxgridinfo", "outputdebug", "raggedfooter",
-    "newabstract", "oldabstract", "checkin"].iter()
+    "newabstract", "oldabstract"].iter()
   {
     DeclareOption!(*option, None);
   }
+  // The options that decide whether the class prints the `\preprint` numbers (revtex4-1.cls:5856-5909, revtex4.cls
+  // :3847-3892, revtex4-2.cls alike): `preprint` (and `manuscript`, `checkin`) set the preprint style, which prints
+  // them unless `nopreprintnumbers`; `preprintnumbers` prints them in any style (revtex4_support_sty.rs
+  // `preprint_printed`).
+  for option in ["preprint", "manuscript", "checkin"] {
+    DeclareOption!(option, {
+      assign_value("revtex@preprintsty", true, Some(Scope::Global));
+    });
+  }
+  DeclareOption!("preprintnumbers", {
+    assign_value("revtex@preprintnumbers", Stored::Bool(true), Some(Scope::Global));
+  });
+  DeclareOption!("nopreprintnumbers", {
+    assign_value("revtex@preprintnumbers", Stored::Bool(false), Some(Scope::Global));
+  });
   for substyle in ["aps", "pra", "prb", "prc", "prd", "pre", "prl",
     "prstab", "rmp", "osa", "osameet", "opex", "tops", "josa"].iter()
   {

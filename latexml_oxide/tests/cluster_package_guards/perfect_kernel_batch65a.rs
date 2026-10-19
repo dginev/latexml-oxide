@@ -606,7 +606,7 @@ Table~\ref{t1}.
     "table",
     &[r#"xml:id="tab1""#],
     r#"<table xml:id="tab1">
-    <inline-block align="center" angle="90" depth="0.0pt" height="227.6pt" innerdepth="25.5pt" innerheight="30.5pt" innerwidth="227.6pt" width="55.9pt" xtranslate="-85.8pt" ytranslate="-85.8pt" xml:id="tab1.1">
+    <inline-block align="center" angle="90" depth="0.0pt" height="227.6pt" innerdepth="19.5pt" innerheight="24.5pt" innerwidth="227.6pt" width="43.9pt" xtranslate="-91.8pt" ytranslate="-91.8pt" xml:id="tab1.1">
       <figure class="ltx_minipage" inlist="lot" labels="LABEL:t1" vattach="middle" width="227.6pt" xml:id="S0.T1">
         <tags>
           <tag>Table 1</tag>
@@ -636,7 +636,7 @@ Table~\ref{t1}.
     "table",
     &[r#"xml:id="tab2""#],
     r#"<table xml:id="tab2">
-    <inline-block depth="20.9pt" height="26.0pt" width="345.0pt" xscale="1.01044696817242" xtranslate="1.8pt" yscale="1.01044696817242" ytranslate="-0.2pt" xml:id="tab2.1">
+    <inline-block depth="14.9pt" height="19.9pt" width="345.0pt" xscale="1.01044696817242" xtranslate="1.8pt" yscale="1.01044696817242" ytranslate="-0.2pt" xml:id="tab2.1">
       <figure class="ltx_minipage" inlist="lot" labels="LABEL:t2" vattach="middle" width="341.4pt" xml:id="S0.T2">
         <tags>
           <tag>Table 2</tag>
@@ -686,7 +686,7 @@ A drawing.
     "figure",
     &[r#"placement="h""#],
     r#"<figure placement="h" xml:id="fig1">
-    <inline-block depth="8.5pt" height="13.4pt" width="327.8pt" xscale="1.0" xtranslate="-3.3pt" yscale="1.0" ytranslate="0.2pt" xml:id="fig1.1">
+    <inline-block depth="13.1pt" height="18.0pt" width="327.8pt" xscale="1.0" xtranslate="-3.3pt" yscale="1.0" ytranslate="0.3pt" xml:id="fig1.1">
       <figure class="ltx_minipage" inlist="lof" labels="LABEL:fig:a" vattach="middle" width="165.6pt" xml:id="S0.F1">
         <tags>
           <tag>Figure 1</tag>

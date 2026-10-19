@@ -1,0 +1,16 @@
+% REVTeX 3.1's aps.sty:965-968 (as chao-dyn9701025 ships it) defines `\@preprint` only under `\ifpreprintsty`, and
+% `\@maketitle` prints it (:1006-1010) with no reset at the document's start: in the preprint style the number is
+% printed wherever `\preprint` is called. revtex4_support's REVTeX 4.1 rule (no preamble number printed, the class's
+% `\preprint@sw`) hid it as metadata (77k r1; review probes r7, r8; 305 of 8,247 REVTeX 3 papers of 9601-0001).
+% oracle:  REVTeX 3 is not in TL 2025 (`revtex.cls` not found); aps.sty read from chao-dyn9701025
+% engines: rust int31a = pubnote; 77k r1 = `ltx:rdf` identifier; perl = pubnote
+% expect:  0 errors, 0 warnings; `<ltx:pubnote role="preprint">UCB-PTH-95/01</ltx:pubnote>`, no `ltx:rdf`
+% status:  GREEN (int31a, 77k r2; RED in 77k r1)
+\documentstyle[preprint,aps]{revtex}
+\begin{document}
+\preprint{UCB-PTH-95/01}
+\title{T}
+\author{A}
+\maketitle
+Body.
+\end{document}

@@ -1955,7 +1955,8 @@ fn tabularray_template_names_and_environment_lists() {
 /// caption before or after it (both numbers kept, as pdflatex), and the float itself when the float
 /// has no caption (`collapse_float`, the table's id); the document float taking the table's caption
 /// put two captions in one float (KNOWN_PERL_ERRORS #396). Repro
-/// alignment-bindings/tabularray_tall_table_in_a_captioned_float.
+/// alignment-bindings/tabularray_tall_table_in_a_captioned_float. Two tall tables side by side are on rows of their own
+/// since 77k (the caption-width residual of `tabularray_tall_table_in_a_captionless_float`).
 #[test]
 fn tabularray_tall_table_in_a_captioned_float() {
   let tex = include_str!(
@@ -1970,7 +1971,7 @@ fn tabularray_tall_table_in_a_captioned_float() {
     (
       "table",
       "tab1",
-      r##"<table xml:id="tab1"><table align="center" class="ltx_figure_panel ltx_tblr_box" inlist="lot" labels="LABEL:t:i2" xml:id="S0.T3"><tags><tag>Table 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Table 3</tag></tags><toccaption><tag close=" ">3</tag>Inner two</toccaption><caption><tag close=": ">Table 3</tag>Inner two</caption><tabular vattach="middle"><tbody><tr><td align="left">C</td><td align="left">D</td></tr></tbody></tabular></table><table align="center" class="ltx_figure_panel ltx_tblr_box" inlist="lot" labels="LABEL:t:i3" xml:id="S0.T4"><tags><tag>Table 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Table 4</tag></tags><toccaption><tag close=" ">4</tag>Inner three</toccaption><caption><tag close=": ">Table 4</tag>Inner three</caption><tabular vattach="middle"><tbody><tr><td align="left">E</td><td align="left">F</td></tr></tbody></tabular></table></table>"##,
+      r##"<table xml:id="tab1"><table align="center" class="ltx_figure_panel ltx_tblr_box" inlist="lot" labels="LABEL:t:i2" xml:id="S0.T3"><tags><tag>Table 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Table 3</tag></tags><toccaption><tag close=" ">3</tag>Inner two</toccaption><caption><tag close=": ">Table 3</tag>Inner two</caption><tabular vattach="middle"><tbody><tr><td align="left">C</td><td align="left">D</td></tr></tbody></tabular></table><break class="ltx_break"/><table align="center" class="ltx_figure_panel ltx_tblr_box" inlist="lot" labels="LABEL:t:i3" xml:id="S0.T4"><tags><tag>Table 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Table 4</tag></tags><toccaption><tag close=" ">4</tag>Inner three</toccaption><caption><tag close=": ">Table 4</tag>Inner three</caption><tabular vattach="middle"><tbody><tr><td align="left">E</td><td align="left">F</td></tr></tbody></tabular></table></table>"##,
     ),
     (
       "table",
@@ -2040,7 +2041,10 @@ fn tabularray_caption_library_lists_its_tables() {
 
 /// 57cp (review 5): a tall table in a caption-less `table` is that table — numbered by its tags alone
 /// too (a theme hiding the head: `S0.T1`, not `tab1`) — and beside a tabular it stays one panel of
-/// two. Repro alignment-bindings/tabularray_tall_table_in_a_captionless_float.
+/// two. Repro alignment-bindings/tabularray_tall_table_in_a_captionless_float. The two panels are on rows of their
+/// own since 77k: the talltblr's caption is a paragraph of the float's `\hsize`, as a kernel caption is (`PBoxContents`,
+/// OXIDIZED_DESIGN_DIVERGENCES #769), where tabularray sets it at the table's width and pdflatex puts the two side by
+/// side (residual, tabularray_sty.rs `\lx@tblr@caption`).
 #[test]
 fn tabularray_tall_table_in_a_captionless_float() {
   let tex = include_str!(
@@ -2055,7 +2059,7 @@ fn tabularray_tall_table_in_a_captionless_float() {
     (
       "table",
       "S0.T2",
-      r##"<table class="ltx_tblr_box" inlist="lot" labels="LABEL:t:s" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>Tall with tabular</toccaption><caption><tag close=": ">Table 2</tag>Tall with tabular</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="center">a</td><td align="center">b</td></tr></tbody></tabular><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="center">x</td><td align="center">y</td></tr></tbody></tabular></table>"##,
+      r##"<table class="ltx_tblr_box" inlist="lot" labels="LABEL:t:s" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>Tall with tabular</toccaption><caption><tag close=": ">Table 2</tag>Tall with tabular</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="center">a</td><td align="center">b</td></tr></tbody></tabular><break class="ltx_break"/><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="center">x</td><td align="center">y</td></tr></tbody></tabular></table>"##,
     ),
     (
       "table",

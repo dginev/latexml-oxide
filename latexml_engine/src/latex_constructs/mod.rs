@@ -584,24 +584,10 @@ pub fn tabular_bindings(
   mut xml_attributes: HashMap<String, String>,
 ) -> Result<()> {
   for col in template.get_columns_mut() {
-    if let Some(ref after) = col.after
-      && after
-        .unlist_ref()
-        .iter()
-        .any(|t| t.with_str(|s| s.contains("intercol")))
-    {
-      col.has_intercol_after = true;
-    }
+    col.mark_intercol_after();
   }
   for col in template.get_repeated_mut() {
-    if let Some(ref after) = col.after
-      && after
-        .unlist_ref()
-        .iter()
-        .any(|t| t.with_str(|s| s.contains("intercol")))
-    {
-      col.has_intercol_after = true;
-    }
+    col.mark_intercol_after();
   }
   if !properties.contains_key("guess_headers")
     && let Some(v) = lookup_value("GUESS_TABULAR_HEADERS")

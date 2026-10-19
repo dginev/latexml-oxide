@@ -1110,6 +1110,41 @@ LoadDefinitions!({
     t.push(T_END!());
     Ok(Tokens::new(t))
   });
+  // Perl TeX_Box.pool.ltxml:200-209: like `VBoxContents`, but horizontal mode starts at once
+  // (`\lx@enterhorizontal` in front of the material), so the result is one paragraph of the current width, set in an
+  // internal vertical list: a caption (`\@@caption PBoxContents`, latex_constructs.pool.ltxml:3368), whose `$$` is
+  // display math as in the `\vbox` LaTeX sets a caption in (amsart.cls:1386-1392 `\vbox{\noindent…}`), where a
+  // restricted horizontal argument would make it an empty formula (tex.web §1138; 1005.1555, 1907.01498, 2310.11556,
+  // 1404.2359). The material is the braced argument, digested from a mouth of its own, as `HBoxArgContents` digests
+  // an unbraced one: a caption is a macro's argument, tokenized before `\lx@@caption` reads it, and a formula it
+  // leaves open (an author's `$` inside a math `\qty` unit, 2512.12866) ends with it, where Perl's live reader
+  // (`readBoxContents`) took the caption's `}` as the formula's and read on through the document. The box's mode is
+  // the inline form, which ends no paragraph around it with a `\par` (Perl's `internal_vertical` does): a caption the
+  // engine had set as text never did, and a `\par` an enclosing list redefined — an aas `\references` entry — must
+  // not run for it (OXIDIZED_DESIGN_DIVERGENCES #769).
+  DefParameterType!(PBoxContents, sub[_inner, _extra] {
+    let mut body = box_prefix_tokens(Some(Tokens!(T_CS!("\\lx@enterhorizontal")))).unlist();
+    body.extend(read_arg(ExpansionLevel::Off)?.unlist());
+    Ok(Tokens::new(body))
+  },
+  predigest => sub[arg] {
+    match arg {
+      ArgWrap::Tokens(body) => reading_from_mouth(Mouth::default(), move || {
+        unread(body);
+        predigest_box_contents_in_mode(ArgWrap::None, "inline_internal_vertical")
+      }),
+      _ => predigest_box_contents_in_mode(arg, "inline_internal_vertical"),
+    } },
+  reversion => sub[arg, _inner, _extra] {
+    let mut t: Vec<Token> = vec![T_BEGIN!()];
+    t.extend(arg);
+    t.push(T_END!());
+    Ok(Tokens::new(t))
+  });
+  // Perl TeX_Box.pool.ltxml:211-213 `$_[0]->enterHorizontal`, which fires no `\everypar`.
+  DefPrimitive!("\\lx@enterhorizontal", {
+    enter_horizontal_without_everypar();
+  });
 
   // This re-binds a number of important control sequences to their default text binding.
   // This is useful within common boxing or footnote macros that can appear within

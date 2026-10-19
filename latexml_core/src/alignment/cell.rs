@@ -75,6 +75,20 @@ pub struct Cell {
   pub overprint:           bool,
 }
 impl Cell {
+  /// Marks the column padded on its right when its after tokens hold an intercolumn macro (`\lx@intercol`, or a
+  /// binding's `…intercol` one), for the nopad heuristic: a column built outside `Template::add_column`'s own marking
+  /// (`tabular_bindings`, blkarray's block columns).
+  pub fn mark_intercol_after(&mut self) {
+    if self.after.as_ref().is_some_and(|after| {
+      after
+        .unlist_ref()
+        .iter()
+        .any(|t| t.with_str(|s| s.contains("intercol")))
+    }) {
+      self.has_intercol_after = true;
+    }
+  }
+
   pub fn border_at(&self, side: BorderSpec) -> Option<usize> {
     match side {
       BorderSpec::Left => self.border_left,

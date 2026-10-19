@@ -1,0 +1,18 @@
+% An AASTeX 6+ deluxetable makes `$` active as it begins (aastex701.cls:11298-11299 `\def\deluxetable{…\catcode`\$=
+% \active…`), before its `\tablehead` is read, so the head's `$m_{G}$` in a `C` column is the cell's math, which the
+% column's `\let$\relax` leaves alone (:8857). A hidden `h` cell is a box in math that is never used (:8851-8852
+% `\eatone` = `\setbox0=\hbox\bgroup\savedollar\let$\relax`); Perl's `{eatone}` set it as text.
+% witness: 2411.04196 (`C` head cell), 1907.13126 (`h` columns, 76 errors)
+% oracle:  pdflatex 0 errors
+% engines: rust int29c = 2 x `Error:unexpected:_ Script _ can only appear in math mode`
+% expect:  0 errors, 0 warnings; the head cell is `m_{G}` math; the hidden cell is empty
+% status:  RED (int29c) -> GREEN (77k)
+\documentclass{aastex701}
+\begin{document}
+\begin{deluxetable}{cCh}
+\tablehead{\colhead{A} & $m_{G}$ & \colhead{H}}
+\startdata
+1 & 2 & {grp1.8_diffuse} \\
+\enddata
+\end{deluxetable}
+\end{document}

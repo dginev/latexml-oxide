@@ -1,0 +1,18 @@
+% A printed `\preprint` number is set as the class sets it (revtex4-1.cls:2516-2519 stores `#1`, aps4-1.rtx:216-221
+% typesets it), so its math is math and its `~` a tie: pdflatex prints "Fe2YZ" and "DESY 11–210". Read as an
+% identifier (Semiverbatim) it printed "Fe$_2$YZ", "DESY~11–210", and `$\mathrm{UCB}$` warned (77k r1, review
+% probe r6; 14 of 1,084 printed numbers in a 10-month scan hold `~` or `$`).
+% oracle:  pdflatex 0 errors
+% engines: rust int31a = Perl's `\lx@add@pubnote[role=preprint]{#1}`, 0 errors; 77k r1 = literal `$`, `~`, 1 Warning
+% expect:  0 errors, 0 warnings; three pubnotes, "Fe" + subscript "2" + "YZ", "DESY 11–210", math "UCB"
+% status:  GREEN (int31a, 77k r2; RED in 77k r1)
+\documentclass[aps,prb,preprint]{revtex4-1}
+\begin{document}
+\preprint{Gasi \textit{et al.}, Fe$_{2}$YZ}
+\preprint{DESY~11--210}
+\preprint{$\mathrm{UCB}$-PTH}
+\title{T}
+\author{A}
+\maketitle
+Body.
+\end{document}

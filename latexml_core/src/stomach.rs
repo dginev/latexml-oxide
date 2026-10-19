@@ -1763,20 +1763,26 @@ fn back_input_for_new_graf(token: Token) -> bool {
 /// Can only switch from vertical|internal_vertical to horizontal.
 /// Perl: sub enterHorizontal.
 /// tex.web `new_graf` (L21117) fires `\everypar` here (`begin_token_list`).
-pub fn enter_horizontal() { enter_horizontal_graf(true) }
+pub fn enter_horizontal() { enter_horizontal_graf(true, true) }
 
 /// [`enter_horizontal`] for `\noindent` and `\indent`: a paragraph whose indent box, if any, is on the list — none for
 /// `\noindent` (tex.web §1091 `new_graf(false)`), `\indent`'s own whatsit — with `\everypar` read after it.
-pub fn enter_horizontal_listed_indent() { enter_horizontal_graf(false) }
+pub fn enter_horizontal_listed_indent() { enter_horizontal_graf(false, true) }
 
-fn enter_horizontal_graf(implicit_indent: bool) {
+/// [`enter_horizontal`] without `\everypar`, as Perl's `enterHorizontal` (Stomach.pm:422-433): the paragraph of a
+/// box LaTeX resets `\everypar` in, a float's caption (`PBoxContents`; latex.ltx `\@floatboxreset` → `\@setminipage`
+/// leaves only `\@minipagefalse` there), where a hook an enclosing list armed — aasms4's `\references`, whose
+/// paragraphs are entries — does not run.
+pub fn enter_horizontal_without_everypar() { enter_horizontal_graf(true, false) }
+
+fn enter_horizontal_graf(implicit_indent: bool, everypar: bool) {
   let mode = lookup_string_from_sym(crate::pin!("MODE"));
   if mode.ends_with("vertical") {
     assign_value_inplace_sym(crate::pin!("MODE"), crate::pin!("horizontal"));
     mark_paragraph_start(implicit_indent);
-    if implicit_indent {
+    if everypar && implicit_indent {
       fire_everypar();
-    } else if let Some(toks) = pending_everypar() {
+    } else if everypar && let Some(toks) = pending_everypar() {
       // `\indent`/`\noindent` (tex.web §1088 `start_par`): `new_graf` lists the indent box, if any, and THEN
       // `begin_token_list(every_par)`, so the hook is the next input, read after the command — its whatsit precedes
       // the hook's material, and `\noindent` finds the paragraph it marks `ltx_noindent` (digested here, the hook's

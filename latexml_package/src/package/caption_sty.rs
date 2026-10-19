@@ -1055,7 +1055,8 @@ fn caption_labels_only(text: Tokens) -> Tokens {
   let mut kept = Vec::new();
   let mut i = 0;
   while i < tokens.len() {
-    if tokens[i] == T_CS!("\\label") {
+    // (`\lx@caption@postlabel`: the kernel's `\label` after the caption, sect09.rs)
+    if tokens[i] == T_CS!("\\label") || tokens[i] == T_CS!("\\lx@caption@postlabel") {
       kept.push(tokens[i]);
       i += 1;
       let mut depth = 0;
@@ -1105,7 +1106,11 @@ fn caption_text_is_empty(text: &Tokens) -> bool {
     if *token == T_CS!("\\ignorespaces") {
       continue;
     }
-    if *token == T_CS!("\\label") || *token == T_CS!("\\index") || *token == T_CS!("\\glossary") {
+    if *token == T_CS!("\\label")
+      || *token == T_CS!("\\lx@caption@postlabel")
+      || *token == T_CS!("\\index")
+      || *token == T_CS!("\\glossary")
+    {
       // `\@gobbletwo`: the command and its argument, a group or one token.
       skip_spaces(&mut i);
       if tokens

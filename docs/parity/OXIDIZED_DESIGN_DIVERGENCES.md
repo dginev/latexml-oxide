@@ -20839,3 +20839,102 @@ tcolorbox's own definitions (the raw `{tcblisting}` path) was measured and not t
 `label`'s target (raw tcolorbox puts it on the nearest labelled ancestor, a section or `<document>`) and the
 `\NewTCBListing` begin-line reading (`perfect_kernel_batch59::{tcb_listing_label_names_its_listing,
 tcb_listing_keeps_its_hypertarget, tcb_listing_begin_line_edge_cases}`, `perfect_kernel_batch40_43::newtcblisting_xparse_leading_optional`).
+
+### 769. A caption is a paragraph of a vertical box, read as its macro argument (Perl: `PBoxContents` read live; the trailing `\label` last)
+
+A float caption is set as a paragraph in a vertical box: latex.ltx's `\@makecaption` sets `#1: #2\par` in a `\vbox`
+when it does not fit one line, amsart.cls:1386-1392 always (`\vbox{\noindent…}`), so `$$…$$` in a caption is display
+math. **Perl** builds `\@@caption` and `\@@toccaption` from `PBoxContents` (latex_constructs.pool.ltxml:3368-3371;
+TeX_Box.pool.ltxml:200-213: `readBoxContents` in `internal_vertical` with `\lx@enterhorizontal` in front). **Rust** had
+`\lx@@caption{}` / `\@@toccaption{}` with `mode => "text"` — restricted horizontal, where `$$` is an empty formula
+(tex.web §1138) and the formula's `_` text: "Script _ can only appear in math mode" ×2 per caption, the display lost
+(1005.1555, 1907.01498, 2310.11556, 1404.2359). Now both take the ported `PBoxContents` (tex_box.rs, with
+`\lx@enterhorizontal`), so the display is an `ltx:equation` in an `ltx:inline-block` of the caption, the text after it
+an `ltx:p` there; Perl's output puts the `ltx:equation` straight in the caption and its list copy (`<ltx:equation>
+isn't allowed in <ltx:caption>` and `… in <ltx:toccaption>`, 4 Errors on the repro).
+
+Departures from Perl's reading, each for a caption the engine set as text before: (1) the material is the braced
+argument, digested from a mouth of its own (as `HBoxArgContents` digests an unbraced one), not read live up to the
+box's own `}`: the caption is always a macro's argument (`\@caption@@@`, `\lx@format@caption@@`), tokenized before
+`\lx@@caption` reads it, and a formula it leaves open ends with it — an author's `$` in a math `\qty` unit (2512.12866:
+`$t \approx \qty{29000}{fm/$c$}$`) made the live reader take the caption's `}` as the formula's and read on through the
+float and the document (10 → 17 Errors). (2) The box's mode is `inline_internal_vertical`, which ends no paragraph
+around it with a `\par`, and `\lx@enterhorizontal` fires no `\everypar` (`stomach::enter_horizontal_without_everypar`,
+as Perl's `enterHorizontal`, Stomach.pm:422-433): in an aas `\references`, whose `\par` opens an entry and whose
+`\everypar` would too, a caption in a float made phantom entries ("<ltx:bibitem> isn't allowed in <ltx:table>";
+LaTeX's floats reset `\everypar`, latex.ltx `\@floatboxreset`). (3) A `\label` after `\caption` goes in front of the
+caption's material as `\lx@caption@postlabel` (`\@caption@postlabel`), where Perl appends a `\label`
+(latex_constructs.pool.ltxml:3175): the paragraph ends with a final display's `ltx:equation` open, which the label took
+(2310.11556, 1404.2359 lost the figure's label), while LaTeX's `\label` names what `\caption`'s `\refstepcounter`
+stepped (latex.ltx:17391-17393), the float; under its own name the scan for the caption's own labels does not take the
+caption's text as its argument (a stray `\fi` there closed the scan's `\ifx`, KNOWN_PERL_ERRORS #641), and the toc copy
+drops it. A `\label` the author writes inside the caption right after a display is the residual Perl shares: LaTeX's
+`$$…$$` steps no counter, so `\@currentlabel` is still the float's and the reference reads its number (as ours does),
+but the label lands on the unnumbered `ltx:equation` it follows (`floatToLabel`, the nearest labelled element still
+open), so the link targets the display, not the float — Perl the same, in a caption as in running text (review probe
+cap2 `fig:inner`; moving it is a change to `\lx@label`'s target rule, not this caption's).
+(4) `\@@add@caption@counters` reads the list extension (`\ext@<type>`) by expansion, as it reads `\@captype`: digested,
+its letters began a paragraph in the float's vertical list whose horizontal mode outlived the counters (every float
+body after its caption was in horizontal mode).
+
+The caption's size is now Perl's: a paragraph of the current `\hsize` (`repack_paragraph`'s `width`, Perl #2798), where
+it was the natural width of one line or the leaked paragraph around it. Floats sized from it change: panels side by
+side whose caption widened them past the line no longer break the row (2107.02579's 0.3\textwidth subfigures), a
+caption in a minipage no longer opens the paragraph the capture pruned (`ltx_pruned_first` gone), and rotated floats
+take the caption's paragraph height (graphrot.xml's `sidewaystable`, `perfect_kernel_batch65a`'s transforms).
+Residual: a tabularray `talltblr` caption is set at the float's `\hsize` (tabularray_sty.rs `\lx@tblr@caption`) where
+tabularray sets it at the table's width (tabularray.sty:6444-6452, :6481-6492), so a talltblr beside another table in
+one float is now a row of its own (`perfect_kernel_batch57::tabularray_tall_table_in_a_{captionless,captioned}_float`;
+pdflatex: side by side). Giving `{lx@tblr@box}` the table's width as its size (`cached_width` in its `after_digest`) does
+not reach `arrange_panels`, which sizes the panel from the box node's own content; reach ~0 (3 of 6,000 projection
+papers use talltblr/longtblr, none side by side, all byte-identical).
+Repro `captions-floats/caption_display_math_is_display_1005.1555`; guards
+`perfect_kernel_batch77k::{caption_display_math_is_display, caption_without_display_is_one_text_run}`.
+
+### 770. A revtex `\preprint` number the class does not print is metadata (Perl: always a pubnote)
+
+`\preprint` stores the number for the title page, which prints it or not by the class family's own rule. **Perl** makes
+every call a displayed pubnote (revtex4_support.sty.ltxml:71 `\lx@add@pubnote[role=preprint]{#1}`). **Rust** follows the
+class (user rulings 2026-10-06 display toggles, 2026-10-09 unprinted metadata → RDFa), choosing the branch before it
+reads the argument (revtex4_support_sty.rs `\preprint`, `preprint_printed`):
+- REVTeX 4.1/4.2: the title page prints the store (aps4-1.rtx:216-221 `\ps@titlepage`, aip/aapm/sor alike) under
+  `\preprint@sw` — `preprintnumbers`/`nopreprintnumbers`, an unset switch following the `preprint` style (`preprint`,
+  `manuscript`, `checkin`; revtex4-2.cls:5927-5930, revtex4-1.cls alike) — and `\frontmatter@init`, a document hook
+  (revtex4-1.cls:2094, :2517-2519), empties it, so a preamble `\preprint` is not printed.
+- REVTeX 4.0 (revtex4.cls; `revtex@preprint@v4.0`, set by revtex4_cls.rs, which also serves revtex4-2): the store is
+  emptied once at load (:4618-4619), so a preamble call is printed too, and the `preprint` style forces `\preprint@sw`
+  on after the options (class init hook, :3811-3812), so `nopreprintnumbers` does not hide it there.
+- REVTeX 3/3.1 (revtex3_support_sty.rs, also under aipproc): aps.sty:965-968 defines `\@preprint` only under
+  `\ifpreprintsty` and `\@maketitle` prints it (:1006-1010), with no reset — printed in the preprint style wherever it
+  is called (305 of 8,247 REVTeX 3 papers of 9601-0001 are preprint style with a `\preprint`), decided in TeX by
+  `\ifpreprintsty`.
+A printed number is Perl's pubnote, its argument read as TeX reads it (`Fe$_{2}$YZ`, `DESY~11--210` as on the page;
+a text `_` errs as in pdflatex). An unprinted one is an `ltx:rdf property="dcterms:identifier"` per `\\`-separated number
+at the argument's top level (a `\\` in a group or an environment — a `\parbox`, FERMILAB's `{minipage}` with
+`{flushright}` — is the block's own), read as an identifier (Semiverbatim, in the identity encoding), KNOWN_PERL_ERRORS
+#990. The class options are recorded by revtex4_cls.rs and revtex4_1_cls.rs (`revtex@preprintsty`,
+`revtex@preprintnumbers`), REVTeX 3's by revtex3_support (`\global\preprintstytrue`). Witnesses 2408.13616,
+1912.04576, 2110.00437 (unprinted, 4.1), 1207.6705 (unprinted, 4.0), 1205.1463 (a preamble `\preprint` dropped, two
+printed); repros `sectioning-frontmatter/revtex_preprint_number_is_an_identifier_2408.13616`,
+`…/revtex3_preprint_style_prints_the_number`, `…/revtex_printed_preprint_is_read_as_tex`; guards
+`perfect_kernel_batch77k::{revtex_preprint_number_is_an_identifier, revtex_printed_preprint_is_read_as_tex,
+revtex_unprinted_preprint_splits_only_top_level_lines, revtex3_preprint_style_prints_the_number,
+revtex40_preprint_numbers_follow_the_class}`.
+
+### 771. A blkarray block's preamble formats its rows; its delimiters are dropped (Perl: no blkarray binding)
+
+blkarray.sty:868-922 `\BA@beginblock` is a `\noalign` that parses the block's preamble; its rows use the block's columns
+(`\BA@col@use`, :838-839, keyed by the block) until `\BA@endblock` restores the blockarray's. The binding
+(blkarray_sty.rs; Perl has none, the raw package hangs both engines) had gobbled the block preamble, so
+`\begin{block}{*{2}{>{$\footnotesize}c<{$}}}` lost its `$` wrappers and the cells' own `$x_{1}$` were text in the
+display (1706.05431, 2207.06508, 2210.16910). Now `\begin{block}{spec}` is a hidden `\noalign` (no row of its own) that
+parses the spec with blkarray's `>{}`/`<{}` column types, local to it, and puts the block's columns in place of the
+alignment template's for the rows that follow; `\end{block}` puts the saved template back (a stack,
+`lx@blkarray@preambles`). The delimiters `(` `)` `[` `]` `\{` `\}` `\Left` `\Right` (:1998-2003) are read as no column
+and dropped: they draw a bracket beside the block's sub-region, which the `array` alignment cannot express (the
+binding's documented simplification). The text arguments of `\Left{label}{delim}` and `\Right{delim}{label}` — the
+block's side labels, which pdflatex prints beside the bracket — are dropped with them (base and the earlier binding
+dropped them too; review probe b3 "M", "N"; SYNC_STATUS row "blkarray side labels"). Repro
+`alignment-bindings/blkarray_block_preamble_formats_its_rows_1706.05431` (control
+`blkarray_block_cells_in_text_control`); guards `perfect_kernel_batch77k::{blkarray_block_preamble_formats_its_rows,
+blkarray_block_text_cell_in_display_errs}`.

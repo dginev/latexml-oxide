@@ -133,7 +133,43 @@ LoadDefinitions!({
 
   DefMacro!("\\pacs{}",     "\\lx@add@classification[scheme=pacs,name={PACS:~}]{#1}");
   DefMacro!("\\keywords{}", "\\lx@add@keywords{#1}");
-  DefMacro!("\\preprint{}", "\\lx@add@pubnote[role=preprint]{#1}");
+  // `\preprint` stores the number for the title page, which prints it or not by the class family's rule, so the branch
+  // is chosen before the argument is read (`preprint_printed`). A printed number is Perl's
+  // `\lx@add@pubnote[role=preprint]{#1}` (revtex4_support.sty.ltxml:71), its argument read as TeX reads it (`$`, `~`
+  // are math and a tie, as on the page: "Fe$_{2}$YZ", "DESY~11--210"; a text `_` errs as in pdflatex). One the class
+  // does not print is metadata, an `ltx:rdf` identifier per `\\`-separated number (user rulings 2026-10-06,
+  // 2026-10-09: a display the class toggles off is not shown, and what it keeps unprinted is RDFa), read as written
+  // and set in the identity encoding (`\lx@address@textfont`), so its `_` stays as typed: Perl's digestion raised
+  // "Script _" on `DMRG_Sampled_Variance` (1205.1463, 1207.6705, 1912.04576, 2110.00437, 2408.13616;
+  // KNOWN_PERL_ERRORS #990, OXIDIZED_DESIGN_DIVERGENCES #770). REVTeX 3 decides it in TeX (revtex3_support_sty.rs).
+  DefMacro!("\\preprint", sub[_args] {
+    Ok(Tokens!(if preprint_printed() {
+      T_CS!("\\lx@revtex@preprint@printed")
+    } else {
+      T_CS!("\\lx@revtex@preprint@identifier")
+    }))
+  });
+  DefMacro!("\\lx@revtex@preprint@printed{}", "\\lx@add@pubnote[role=preprint]{#1}");
+  // The numbers are the argument's `\\`-separated items at its top level: a `\\` in a group or an environment
+  // (`\parbox{2in}{A-1\\B-2}`, a `{flushright}` block in a `{minipage}`, FERMILAB's layout) belongs to it.
+  DefMacro!("\\lx@revtex@preprint@identifier Semiverbatim", sub[(number)] {
+    let number = number.unlist();
+    let mut out: Vec<Token> = Vec::new();
+    for item in split_top_level_lines(&number) {
+      let start = item.iter().take_while(|t| t.get_catcode() == Catcode::SPACE).count();
+      let end = item.len() - item.iter().rev().take_while(|t| t.get_catcode() == Catcode::SPACE).count();
+      if start >= end {
+        continue;
+      }
+      out.extend(
+        mouth::tokenize_internal("\\lx@add@frontmatter{ltx:rdf}[property=dcterms:identifier]{\\lx@address@textfont").unlist(),
+      );
+      out.push(T_BEGIN!());
+      out.extend(item[start..end].iter().copied());
+      out.extend([T_END!(), T_END!()]);
+    }
+    Ok(Tokens::new(out))
+  });
 
   // Extra
   def_macro_noop("\\blankaffiliation")?;
@@ -694,4 +730,45 @@ pub fn defer_bm_to_begin_document() -> Result<()> {
     r"\let\lx@revtex@bm\bm\let\bm\@undefined\AtBeginDocument{\@ifxundefined\bm{\let\bm\lx@revtex@bm}{}}"
   );
   Ok(())
+}
+
+/// Whether the REVTeX 4 class prints a `\preprint` called now: its title page prints the stored numbers under
+/// `\preprint@sw` (aps4-1.rtx:216-221 `\ps@titlepage`, aip, aapm, sor alike; revtex4's aps.rtx:195, :208-209).
+/// - REVTeX 4.0 (`revtex@preprint@v4.0`, revtex4_cls.rs): `preprintnumbers`/`nopreprintnumbers` set the switch
+///   (revtex4.cls:3891-3892) and the `preprint` style forces it on after them (class init hook, :3811-3812); the store
+///   is emptied once at load (:4618-4619), so a preamble call is printed too.
+/// - REVTeX 4.1/4.2: an unset switch follows the `preprint` style (revtex4-2.cls:5927-5930, revtex4-1.cls alike), and
+///   `\frontmatter@init` empties the store at the document's start (revtex4-1.cls:2094, :2517-2519), so a preamble
+///   call is never printed.
+fn preprint_printed() -> bool {
+  let style = lookup_bool("revtex@preprintsty");
+  let numbers = match lookup_value("revtex@preprintnumbers") {
+    Some(Stored::Bool(numbers)) => Some(numbers),
+    _ => None,
+  };
+  if lookup_bool("revtex@preprint@v4.0") {
+    style || numbers == Some(true)
+  } else {
+    !lookup_bool("inPreamble") && numbers.unwrap_or(style)
+  }
+}
+
+/// The items of `tokens` separated by `\\` at its top level, outside every group and `\begin`…`\end` environment.
+fn split_top_level_lines(tokens: &[Token]) -> Vec<&[Token]> {
+  let (mut items, mut start, mut depth, mut envs) = (Vec::new(), 0, 0usize, 0usize);
+  for (i, t) in tokens.iter().enumerate() {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ if *t == T_CS!("\\begin") => envs += 1,
+      _ if *t == T_CS!("\\end") => envs = envs.saturating_sub(1),
+      _ if depth == 0 && envs == 0 && t.defined_as(&T_CS!("\\\\")) => {
+        items.push(&tokens[start..i]);
+        start = i + 1;
+      },
+      _ => {},
+    }
+  }
+  items.push(&tokens[start..]);
+  items
 }

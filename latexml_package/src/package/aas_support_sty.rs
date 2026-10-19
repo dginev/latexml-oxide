@@ -631,6 +631,19 @@ LoadDefinitions!({
 
   // 2.15 Tables
   RequirePackage!("deluxetable");
+  // aastex701.cls TL :11298-11299 (aastex62.cls, aastex631.cls alike) `\def\deluxetable{\global\deluxetrue
+  // \catcode`\&=\active \catcode`\$=\active…`: the table makes `$` active as it begins, before its template and its
+  // `\tablehead` are read, so a `$m_{G}$` in the head of a `C` column is the cell's math, which the column's
+  // `\let$\relax` leaves alone (2411.04196). `\aas@table@dollar` is that catcode change in AASTeX 6+ only (below).
+  Let!("\\aas@@deluxetable", "\\deluxetable");
+  DefMacro!("\\deluxetable", "\\aas@table@dollar\\aas@@deluxetable");
+  let_i(&T_CS!("\\aas@@deluxetable*"), &T_CS!("\\deluxetable*"), None);
+  def_macro(
+    T_CS!("\\deluxetable*"),
+    None,
+    ExpansionBody::Tokens(Tokens!(T_CS!("\\aas@table@dollar"), T_CS!("\\aas@@deluxetable*"))),
+    None,
+  )?;
   // (after deluxetable, whose `\tablenum`, `\tablerefs`, `\tablecaption` and `\tabletypesize` these follow; the
   // AASTeX 6.x table commands listed above)
   RawTeX!(r"\def\tabletypesize#1{\gdef\currtabletypesize{#1}}\tabletypesize{\small}");
@@ -714,8 +727,13 @@ LoadDefinitions!({
   DefMacro!("\\deluxedecimalcolnumbers", "\\deluxedecimalstrue\\colnumbersontrue");
   Let!("\\decimalcolnumbers", "\\deluxedecimalcolnumbers");
 
-  // Hidden column environment — Perl L374
-  DefEnvironment!("{eatone}", "");
+  // The hidden column's cell (`h`, `B` below): aastex701.cls TL :8851-8852 (aastex62.cls :2143-2144) `\eatone` =
+  // `\setbox0=\hbox\bgroup\savedollar\let$\relax`, a box that is never used, holding the cell in math, where the
+  // table's active `$` does nothing; `\endeatone` closes the math and the box. Perl's `{eatone}` environment (L374)
+  // digested the cell as text, so a `{grp1.8_diffuse}` there was a "Script _" error (1907.13126, 76; KNOWN_PERL_ERRORS #991). The class's
+  // `\hskip-2\tabcolsep`, which takes the hidden column's padding back, is presentation and is left out.
+  RawTeX!(r"\begingroup\catcode`\$=\active
+\long\gdef\eatone{\setbox0=\hbox\bgroup\savedollar\let$\relax}\gdef\endeatone{\savedollar\egroup}\endgroup");
 
   // A `D` decimal column is two template columns (aastex701.cls TL :12010 `>\newdoit r<{\endnewdoit} @{}l`; Perl
   // aas_support.sty.ltxml:353-372, which reads `d` the same way — the class's `d`, :12011, is that pair hidden). After
