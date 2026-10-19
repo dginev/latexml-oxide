@@ -20718,7 +20718,7 @@ authblk prints it (r7): a mark and a bracketed label printed as the same supersc
 `relocate_annotations` (`\AB@authnote`/`\AB@affilnote` set `\author[1]` and `\affil[1]` as `\textsuperscript{1}`,
 authblk.sty:98-99, :142, :162) — the label a mark set (`\affil{$^1$Univ X}`, `affiliation:1`) also reaches the authors
 labelled `1` (`\author[1]{Bob}`), and a bracketed label (`\affil[1]{Univ X}`) the authors requesting `affiliation:1` by a
-mark or `\inst{1}`; Perl matches the spellings exactly, and Bob lost Univ X (r6 review probes f2, f7, f1). A/B
+mark or `\inst{1}`; Perl matches the spelling first and then its prefix-stripped form (Base_Utility.pool.ltxml:899-900), neither of which pairs a mark with a bracketed label, and Bob lost Univ X (r6 review probes f2, f7, f1). A/B
 (int31a
 vs 77n) over the 17 S4/S5 projection papers, the 77d `merged_creators` set and 239 multi-author controls: the 17 and
 four more (2207.09162, 2304.04743, 2304.11349, nucl-th0101014) lose `Error:frontmatter:merged_creators`, 0 papers worse;

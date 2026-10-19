@@ -1411,7 +1411,9 @@ fn email_pile_beside_marked_affiliations_is_dealt() {
 /// A footnote symbol on an authblk name an address (r6 review probe s3; s1, z1) or a raised text (s5) follows, kept on
 /// `\lx@add@creator` as printed: the symbol is shown once, where the name prints it — its mark requests nothing
 /// (`author_label_marks` requests labels only), so no unanswered mark is appended after the name (77n r6: "Bob Baker∗
-/// (bob@x.org)∗", "Bob Baker∗equal∗").
+/// (bob@x.org)∗", "Bob Baker∗equal∗"). Ann Able's "Corresponding author" is the run's extent (Perl's `annotate=new`),
+/// not the page — pdflatex shows the ∗ on Bob only (77n r7 review finding 2; SYNC "A symbol legend reaches authors who
+/// do not show its symbol").
 #[test]
 fn authblk_symbol_mark_then_text_shown_once() {
   let xml = convert_repro!("author_authblk_symbol_mark_then_address_shown_once.tex");
@@ -1434,6 +1436,28 @@ fn authblk_symbol_mark_then_text_shown_once() {
     r#"Bob Baker<sup xml:id="id1"><text font="italic" xml:id="id1.1">∗</text></sup><sup xml:id="id2">equal</sup>"#,
     &affiliation("Univ X")
   )]);
+}
+
+/// A name kept on `\lx@add@creator` whose mark is glued to a symbol (`Bob Baker$^{2*}$ (bob@y.org)`): the `\affil` its
+/// label answers reads the mark as the request does (`label_pieces`), so `\affil{$^2$Univ Y}` is Bob's and not authblk's
+/// run's (77n r7 review probe g8: Ann Able had Univ Y too). The `*` legend on Ann is the run's extent, not the page (SYNC
+/// "A symbol legend reaches authors who do not show its symbol").
+#[test]
+fn authblk_glued_symbol_mark_answered_by_its_affil() {
+  let xml = convert_repro!("author_authblk_glued_symbol_mark_answered_by_its_affil.tex");
+  let legend = |id: &str| marked_affiliation(id, "∗", "Corresponding");
+  assert_eq!(creators(&xml), [
+    creator(
+      true,
+      "Ann Able",
+      &[legend("id1"), affiliation("Univ X")].join(" ")
+    ),
+    creator(
+      false,
+      r#"Bob Baker<sup xml:id="id2"><text font="italic" xml:id="id2.1">2∗</text></sup> (bob@y.org)"#,
+      &[legend("id3"), affiliation("Univ Y")].join(" ")
+    ),
+  ]);
 }
 
 /// A whole author block in one authblk `\author`, its marks glued to symbols (`$^{1\ast}$`, `$^{1\dagger}$`) and its

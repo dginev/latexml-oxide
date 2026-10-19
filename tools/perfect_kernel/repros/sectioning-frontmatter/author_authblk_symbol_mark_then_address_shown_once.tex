@@ -3,7 +3,9 @@
 % engines: rust int32a = the star shown once; 77n r6 = shown twice, "Bob Baker* (bob@x.org)*" (the symbol requested on
 %          `\lx@add@creator` and shown again as an unanswered mark)
 % expect:  0 errors, 0 warnings; 2 creators, Bob Baker's star shown once, before "(bob@x.org)"; Ann Able with Univ X
-%          and the legend, Bob Baker with Univ Y and the legend
+%          and the legend, Bob Baker with Univ Y and the legend. Ann's legend is the run's extent (Perl's
+%          `annotate=new`), not the page: pdflatex shows the star on Bob only (SYNC "A symbol legend reaches authors
+%          who do not show its symbol")
 % status:  RED (77n r6) -> GREEN (77n r7)
 % preload: ar5iv.sty
 \documentclass{article}

@@ -1,0 +1,20 @@
+% witness: 77n r7 review — a name kept on `\lx@add@creator` whose mark is glued to a symbol (review probe g8)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker2* (bob@y.org) / 1Univ X / 2Univ Y / *Corresponding"
+% engines: rust int32a = Ann Able with Univ X only; 77n r5-r7 = Ann Able with Univ Y too (Bob's `2*` asked for label
+%          2, but the `\affil` answering it read the mark as `2*` and fell to authblk's run)
+% expect:  0 errors, 0 warnings; Ann Able with Univ X, Bob Baker (his `2∗` shown) with Univ Y; the `*` legend on both
+%          (the run's extent — SYNC "A symbol legend reaches authors who do not show its symbol")
+% status:  RED (77n r7) -> GREEN (77n r7 review follow-up)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{2*}$ (bob@y.org)}
+\affil{$^1$Univ X}
+\affil{$^2$Univ Y}
+\affil{$^*$Corresponding}
+\maketitle
+x
+\end{document}

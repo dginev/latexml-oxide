@@ -3233,7 +3233,11 @@ fn place_address_runs(runs: Vec<AddressRun>, entries: &mut [Vec<Token>]) -> Resu
   Ok(placed.into_iter().rev().flatten().collect())
 }
 
-/// The queue positions of the authors whose marks request the affiliation label `mark` sets.
+/// The queue positions of the authors whose marks request the affiliation label `mark` sets. An author's mark reads as
+/// its spelling (a symbol answered by its own line: OSA's `A. Able,$^{1,*}$` and `$^*$e-mail: …`, guard
+/// `perfect_kernel_batch64u::osa_email_line_mark_shapes`) and as its request reads it ([`label_pieces`]): a glued
+/// `1*`/`1\dagger` asks for label 1 too (77n r7 review probe g8: `Bob$^{2*}$` answered by `\affil{$^2$Y}`, not by
+/// authblk's run).
 fn requesting_authors(authors: &[Vec<Vec<Token>>], mark: &[Token]) -> Vec<usize> {
   let Some(label) = mark_label(mark) else {
     return Vec::new();
@@ -3243,8 +3247,11 @@ fn requesting_authors(authors: &[Vec<Vec<Token>>], mark: &[Token]) -> Vec<usize>
     .enumerate()
     .filter(|(_, marks)| {
       marks.iter().any(|operand| {
-        clean_frontmatter_labels(&Tokens::new(operand.clone()).to_string(), "affiliation")
-          .contains(&label)
+        let reads = |operand: Vec<Token>| {
+          clean_frontmatter_labels(&Tokens::new(operand).to_string(), "affiliation")
+            .contains(&label)
+        };
+        reads(operand.clone()) || label_pieces(operand).is_some_and(reads)
       })
     })
     .map(|(i, _)| i + 1)
@@ -7996,11 +8003,14 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
     .find(|targets| !targets.is_empty())
   };
   // A superscript mark and a bracketed label printed as the same superscript are one label (authblk sets
-  // `\author[1]{Bob}` and `\affil[1]{Univ X}` as a `\textsuperscript{1}`, `\AB@authnote`/`\AB@affilnote`, authblk.sty:98-99,
-  // :142, :162): the label a mark set (`\affil{$^1$Univ X}`, `affiliation:1` for the authors showing that mark) also
-  // reaches the authors whose label is its mark (`\author[1]{Bob}`, `1`), and a bracketed label (`\affil[1]{Univ X}`, `1`) the authors requesting it by a
-  // mark (`\author{Bob$^{1}$}`, whose answered mark the name no longer shows; `\inst{1}`: `affiliation:1`): Bob lost Univ X to the author whose spelling matched (77n r6 review
-  // probes f2, f7).
+  // `\author[1]{Bob}` and `\affil[1]{Univ X}` as a `\textsuperscript{1}`, `\AB@authnote`/`\AB@affilnote`,
+  // authblk.sty:98-99, :142, :162): the label a mark set (`\affil{$^1$Univ X}`, `affiliation:1` for the authors
+  // showing that mark) also reaches the authors whose label is its mark (`\author[1]{Bob}`, `1`), and a bracketed
+  // label (`\affil[1]{Univ X}`, `1`) the authors requesting it by a mark (`\author{Bob$^{1}$}`, whose answered mark
+  // the name no longer shows; `\inst{1}`: `affiliation:1`): Bob lost Univ X to the author whose spelling matched
+  // (77n r6 review probes f2, f7). Only authblk's names and `\inst` request `affiliation:N` from a printed label, so
+  // a class that renumbers its labels (elsarticle prints `\author[1]` as "a") is untouched (r7 review: elsarticle,
+  // cas, llncs, revtex, aastex, IEEE probes and 12 elsarticle/cas papers unchanged).
   let find_targets = |label: &str| -> Option<Vec<Node>> {
     let mut targets = indexed_targets(label).unwrap_or_default();
     let respelt: Vec<Node> = if let Some(keys) = by_mark.get(label) {
