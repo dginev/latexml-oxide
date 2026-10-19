@@ -33,18 +33,19 @@ fn saveprimitive_accepts_kernel_fraction_primitives() {
   );
 }
 
-/// amsmath's saved copies read as the primitives (amsmath.sty:211-216, :397); a document's own `\def\over` is a macro
-/// again. (LaTeX's `\underline` is a robust macro, latex.ltx:16369, so its own name keeps the macro meaning.)
+/// amsmath's saved copies read as the primitives (amsmath.sty:211-216, :397), and so does latex.ltx:16368's
+/// `\@@underline` (NODUMP half: `dump_gate_init::nodump_latex_branch_converts_healthily`); a document's own `\def\over`
+/// is a macro again. (LaTeX's `\underline` is a robust macro, latex.ltx:16369, so its own name keeps the macro meaning.)
 #[test]
 fn kernel_primitive_standins_mean_their_primitive() {
   let (log, xml) = convert_with(
     "\\documentclass{article}\n\\usepackage{amsmath}\n\\begin{document}\n\\makeatletter\n\\texttt{A:\\meaning\\@@over; \
-     O:\\meaning\\@@overline; \\def\\over{x}B:\\meaning\\over}\n\\makeatother\n\\end{document}",
+     O:\\meaning\\@@overline; U:\\meaning\\@@underline; \\def\\over{x}B:\\meaning\\over}\n\\makeatother\n\\end{document}",
     None,
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(
-    xml.contains(r#"<text font="typewriter">A:\over; O:\overline; B:macro:-&gt;x"#),
+    xml.contains(r#"<text font="typewriter">A:\over; O:\overline; U:\underline; B:macro:-&gt;x"#),
     "{xml}"
   );
 }

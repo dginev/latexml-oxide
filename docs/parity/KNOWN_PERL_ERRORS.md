@@ -15830,3 +15830,14 @@ The Rust port reads them as names (Semiverbatim / `\csname` text): sect04.rs `\a
 latex_constructs `define_new_theorem` `[within]`, and nomencl's sort prefix (nomencl_sty.rs; 2105.05016). Guards
 `perfect_kernel_batch77j::{addcontentsline_names_are_not_digested, acronym_keys_are_names,
 theorem_within_is_a_counter_name, nomenclature_prefix_is_a_string}`.
+
+## 987. Without a dump, `\@@underline` is undefined
+
+latex.ltx:16368 saves the primitive as `\let\@@underline\underline` before defining its robust `\underline`; the dump
+carries it (record `M \@@underline PA \underline`), but Perl latex_base.pool.ltxml — the `LoadFormat('latex')` branch
+taken without a dump — has no copy, so the two branches disagree. Minimal trigger, under `LATEXML_NODUMP=1`:
+`\makeatletter\texttt{\meaning\@@underline}` — pdflatex and the dump `\underline`, the base branch `undefined` (and a
+class building on the saved copy, as latex.ltx's own `\underline` does, raises an undefined-macro Error). The Rust
+port saves it in latex_base.rs, where latex.ltx does (C.13 boxes). Guards
+`dump_gate_init::nodump_latex_branch_converts_healthily` (NODUMP) and
+`perfect_kernel_batch77g::kernel_primitive_standins_mean_their_primitive` (dump).

@@ -260,7 +260,10 @@ fn current_file_is_defined_empty_under_latex() {
 ///   `06_cluster_regressions::cluster_first_para_noindent_719`;
 /// - the `\CurrentFile` family is defined and empty from `latex.rs`'s fallback
 ///   (dump half: `current_file_is_defined_empty_under_latex`), and the branch
-///   warns once, for its `recursion:LaTeX.pool` re-entrance.
+///   warns once, for its `recursion:LaTeX.pool` re-entrance;
+/// - `\@@underline` is latex.ltx:16368's saved `\underline` without a dump too
+///   (KNOWN_PERL_ERRORS #987; dump half:
+///   `perfect_kernel_batch77g::kernel_primitive_standins_mean_their_primitive`).
 #[test]
 fn nodump_latex_branch_converts_healthily() {
   let tex = include_str!("../../../tools/perfect_kernel/repros/loader/nodump_latex_branch.tex");
@@ -293,6 +296,12 @@ fn nodump_latex_branch_converts_healthily() {
     "para",
     &["xml:id=\"p4\""],
     r#"<para class="ltx_noindent" xml:id="p4"><p>degraded-body-text</p></para>"#,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p5\""],
+    r#"<para class="ltx_noindent" xml:id="p5"><p><text font="typewriter">U:\underline</text></p></para>"#,
   );
 }
 
