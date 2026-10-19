@@ -3103,3 +3103,11 @@ after a real read. Hand-rolled copies of this sequence drifted before it existed
 some did not, and a forgotten `AUTHOR_FILE_STAND_INS` entry failed the gates (deepseek, pasa). A new author-file
 binding still needs its name in `AUTHOR_FILE_STAND_INS`; `perfect_kernel_batch68d::every_binding_outside_tex_live_is_listed`
 names any it misses.
+
+## 100. The schema model is not loaded at digest time — decide model questions in a constructor
+
+`document::can_contain_qname` at digest time returns false for every pair: the model is loaded with the document head
+(latexml_oxide `core_interface.rs` `build_document_head`, as Perl's `convertDocument` loads it after digestion, since
+a binding may still change the schema while digesting). A digest-time rule keyed on "can this element hold X" silently
+never fires. Record what the rule needs on the whatsit at digest (an `after_digest` property, e.g. the frontmatter
+field the `\par` was digested in) and ask the model in the constructor (`frontmatter_paragraph_break`, OD #766).

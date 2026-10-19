@@ -120,7 +120,8 @@ fn amsppt_subjclassyear_names_the_scheme() {
     "{xml}"
   );
   // `\subjclass\nofrills` (amsppt.sty:403-411: the prefix is `\frills@`'s): the author's own prefix, no scheme or name
-  // (0804.1078, 1107.2266: "1991 Mathematics Subject Classification" above the author's "2000 …")
+  // (0804.1078, 1107.2266: "1991 Mathematics Subject Classification" above the author's "2000 …"); its `\usualspace`
+  // is a space (KNOWN_PERL_ERRORS #984), the one after the group another
   let (log, xml) = convert_counted(include_str!(
     "../../../tools/perfect_kernel/repros/amstex/amsppt_subjclass_nofrills.tex"
   ));
@@ -128,7 +129,7 @@ fn amsppt_subjclassyear_names_the_scheme() {
   assert!(
     xml.contains(
       "<classification name=\"Classification:\u{a0}\">2000<text font=\"italic\" xml:id=\"id1\">Mathematics Subject \
-       Classification</text>. 14D06, 14J32</classification>"
+       Classification</text>.  14D06, 14J32</classification>"
     ),
     "{xml}"
   );

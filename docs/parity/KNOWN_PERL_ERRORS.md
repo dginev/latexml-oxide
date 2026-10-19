@@ -15785,3 +15785,14 @@ Rust: sect05.rs `\long\def\@topnewpage[#1]{\par{\noindent#1\par}}` (75a; the jps
 and "]" in cond-mat0011490, cond-mat0101276, quant-ph9911038): latex.ltx sets the header in a `\vbox` of its own, so it
 is a paragraph of its own in a group, as the Rust `\twocolumn[…]` sets it, and a `\Large\centering` in it does not
 reach the body. Guard `perfect_kernel_batch75a::twocolumn_class_header_is_its_own_paragraph`.
+
+## 984. A macro whose string body is a single space is `\par`
+
+Perl `DefMacro('\usualspace', ' ')` (amsppt.sty.ltxml:322) tokenizes its body with a string Mouth, which appends the
+end-of-line character to the line and, in state N, skips the leading space and reads the end of line as an empty line:
+`\par` (Mouth.pm:316-326). `\meaning\usualspace` is `macro:->\par `, where amsppt.sty:405 makes it a space
+(`{\rm\enspace}`). Minimal trigger: `\input amstex \documentstyle{amsppt} … \subjclass\nofrills{{\it MSC}.\usualspace}
+14D06\endsubjclass` — the classification held a `\par` (a line break once a paragraph break in an inline-only
+frontmatter item is one, OXIDIZED_DESIGN_DIVERGENCES #766; 0804.1078). Rust's string tokenizer is the same; the amsppt
+binding gives `\usualspace` an explicit space token (amsppt_sty.rs). Guard
+`perfect_kernel_batch68r::amsppt_subjclassyear_names_the_scheme`.

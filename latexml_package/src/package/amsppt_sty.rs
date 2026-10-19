@@ -1105,7 +1105,11 @@ LoadDefinitions!({
   // not). Restored to faithful primitive form.
   DefPrimitive!("\\tildechar", "~", font => { family => "typewriter" });
   def_macro_noop("\\breakcheck")?;
-  DefMacro!("\\usualspace", " ");
+  // amsppt.sty:405 `{\rm\enspace}` (the prefix's space, :346 `\space` in the `\nofrills` form): a space. Perl's
+  // `DefMacro('\usualspace', ' ')` (amsppt.sty.ltxml:322) tokenizes its body as a line holding only a space — an
+  // empty line, so `\par` (Mouth.pm:324-326) — which in a frontmatter item is a line break (OXIDIZED_DESIGN_DIVERGENCES
+  // #766; 0804.1078's `\subjclass\nofrills{… Classification}.\usualspace}`); KNOWN_PERL_ERRORS #984.
+  DefMacro!(T_CS!("\\usualspace"), None, Tokens!(T_SPACE!()));
   DefMacro!("\\@", "@"); // Perl PR #2767
   // Perl L329: \normalparindent — zero-Dimension register. Without it,
   // `\the\normalparindent` fails on amsppt documents that probe it.
