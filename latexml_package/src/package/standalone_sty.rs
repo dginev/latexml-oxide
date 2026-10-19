@@ -104,6 +104,7 @@ LoadDefinitions!({
   // Perl L21-23: DefPrimitiveI \@standalone@start@input — sets inPreamble = 0.
   DefPrimitive!("\\@standalone@start@input", {
     assign_value("inPreamble", false, None);
+    assign_value("lx@subpreamble@begindocument", Stored::Bool(false), None);
   });
 
   // Perl L24-33: DefPrimitive \@standalone@documentclass[]{} — open a
@@ -154,6 +155,8 @@ LoadDefinitions!({
     // and `100_stale_autoload_no_runaway` (same boundary, fresh process).
     activate_scope(subfile_scope_here());
     assign_value("inPreamble", true, None);
+    // its `\AtBeginDocument` code is not run (`at_document_hook`, sect02.rs; 2405.01743)
+    assign_value("lx@subpreamble@begindocument", Stored::Bool(true), None);
     if class_tks.to_string().trim() == "standalone"
       && let Some(kv) = options_kv.as_ref()
     {

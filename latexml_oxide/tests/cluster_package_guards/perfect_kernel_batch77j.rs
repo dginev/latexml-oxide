@@ -86,6 +86,25 @@ fn begin_document_code_added_by_the_hook_runs() {
   assert!(!xml.contains("<Math"), "{xml}");
 }
 
+/// A standalone sub-file's preamble runs for its definitions only; its begin-document code is not run: once the
+/// document hooks are one-time hooks it would run in the middle of babel.sty (six undefined `\bbl@…`, 2405.01743).
+/// pdflatex: "Main text. Sub text. After.", 0 errors.
+#[test]
+fn standalone_subpreamble_begin_document_code_is_not_run() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    "\\documentclass{article}\n\\usepackage{standalone}\n\\begin{document}\nMain text.\n\n\\input{pic}\n\nAfter.\n\\end{document}",
+    &[(
+      "pic.tex",
+      "\\documentclass{standalone}\n\\usepackage[english]{babel}\n\\begin{document}\nSub text.\n\\end{document}",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for text in ["Main text.", "Sub text.", "After."] {
+    assert!(squash(&xml).contains(text), "{xml}");
+  }
+}
+
 /// A theorem's `[within]` is a counter name (latex.ltx `\@xnthm`), read through `\csname` (1307.7314).
 #[test]
 fn theorem_within_is_a_counter_name() {

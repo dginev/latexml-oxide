@@ -682,6 +682,21 @@ fn at_document_hook(
   }) {
     return Ok(Tokens!());
   }
+  // A standalone sub-file's preamble runs inside the main document only for its definitions (standalone_sty.rs
+  // `\@standalone@documentclass`; real standalone.sty:602-646 gobbles it, OXIDIZED_DESIGN_DIVERGENCES #63, #65): its
+  // begin-document code is not run, as before the document hooks were one-time hooks and as in Perl (its
+  // `\AtBeginDocument` list has already run). The main one-time `begindocument` hook would execute it at once, in the
+  // middle of the package that adds it — babel.sty:1140-1162 before babel's own internals are defined (2405.01743,
+  // six undefined `\bbl@…`); run later, at the sub-file's `\begin{document}`, its `\selectlanguage` leaves an
+  // `\aftergroup\bbl@pop@language` the binding does not define.
+  if hook == "begindocument"
+    && matches!(
+      lookup_value("lx@subpreamble@begindocument"),
+      Some(Stored::Bool(true))
+    )
+  {
+    return Ok(Tokens!());
+  }
   // INTERIM (K3 correctness item, KERNEL_CAPABILITIES.md): a parameter-
   // bearing chunk under a package label (pm-isomath.sty's
   // `\AtBeginDocument{…\NewDocumentCommand\vectorsymbol{s m}{…#2…}}`)
