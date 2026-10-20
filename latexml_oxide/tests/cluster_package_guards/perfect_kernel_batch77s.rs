@@ -666,3 +666,33 @@ fn untyped_captionsetup_in_a_float_overrides_its_type() {
     ],
   );
 }
+
+/// cleveref derives the other variant of a name by changing the case of its first token (cleveref.sty:1311-1318): a macro
+/// is read whole by `\MakeUppercase` ("EQUATION" from `\crefname{equation}{\nameEq}…`, as 1704.08542's
+/// `\nameProposition`), and a name led by a command that takes its own argument (`\crefname{figure}{\text{fig.}}…`,
+/// 2604.22361, 2206.03535) must not be split from it by the kernel's grouped `\MakeUppercase` — int35a gave 7 errors here
+/// (binding nets lipics-v2021 2604.22361 0 → 572, IEEEojcsys 2206.03535 0 → 63). pdflatex: "See equation (1) and fig. 1.",
+/// 0 errors. Repro package-bindings/cleveref_derived_name_led_by_a_command.
+#[test]
+fn cleveref_derived_name_led_by_a_command() {
+  assert_elements(
+    r"\documentclass{article}
+\usepackage{amsmath}
+\usepackage{cleveref}
+\newcommand\nameEq{equation}
+\crefname{equation}{\nameEq}{\nameEq s}
+\crefname{figure}{\text{fig.}}{\text{figs.}}
+\begin{document}
+\begin{equation}a\label{e}\end{equation}
+\begin{figure}x\caption{C}\label{f}\end{figure}
+See \cref{e} and \cref{f}.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[(
+      "equation",
+      "S0.E1",
+      r#"<equation labels="LABEL:e" xml:id="S0.E1"><tags><tag>(1)</tag><tag role="creftype">equation</tag><tag role="creftypecap">EQUATION</tag><tag role="creftypeplural">equations</tag><tag role="creftypepluralcap">EQUATIONS</tag><tag role="refnum">1</tag></tags><Math mode="display" tex="a" text="a" xml:id="S0.E1.m1"><XMath xml:id="S0.E1.m1.1"><XMTok font="italic" role="UNKNOWN">a</XMTok></XMath></Math></equation>"#,
+    )],
+  );
+}

@@ -1,0 +1,18 @@
+% witness: binding nets int35a — lipics-v2021 2604.22361 (0 → 572 Errors, `\crefname{line}{\text{line}}{\text{lines}}`),
+%          IEEEojcsys 2206.03535 (0 → 63, `\Crefname{figure}{\text{Fig.}}{\text{Figs.}}`); 1704.08542 (`\nameProposition`)
+% oracle:  pdflatex 0 errors: "See equation (1) and fig. 1."
+% engines: rust int35a = 7 errors (the derived `\MakeUppercase\text{fig.}` split `\text` from its argument)
+% expect:  0 errors, 0 warnings; derived capitalised names "EQUATION"/"EQUATIONS" (cleveref.sty:1311-1318)
+% status:  RED (int35a) -> GREEN (int35 follow-up)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{cleveref}
+\newcommand\nameEq{equation}
+\crefname{equation}{\nameEq}{\nameEq s}
+\crefname{figure}{\text{fig.}}{\text{figs.}}
+\begin{document}
+\begin{equation}a\label{e}\end{equation}
+\begin{figure}x\caption{C}\label{f}\end{figure}
+See \cref{e} and \cref{f}.
+\end{document}

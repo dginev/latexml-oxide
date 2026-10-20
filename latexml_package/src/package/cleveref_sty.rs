@@ -272,10 +272,11 @@ fn cref_define_name(
   if !has_meaning(&T_CS!(s!("\\{}@{}@name", other, ctype))) {
     let change_case = if prefix == "cref" {
       Some(T_CS!("\\MakeUppercase"))
-    } else if Expand!(TokenizeInternal!(r"\if@cref@capitalise1\else0\fi"))
-      .to_string()
-      .trim()
-      == "1"
+    } else if IsDefined!(&T_CS!("\\if@cref@capitalise"))
+      && Expand!(TokenizeInternal!(r"\if@cref@capitalise1\else0\fi"))
+        .to_string()
+        .trim()
+        == "1"
     {
       None
     } else {
@@ -284,11 +285,27 @@ fn cref_define_name(
     // Both names change case, or neither, as the singular is empty or not (cleveref.sty:1309 `\expandafter\ifx\@tempa
     // \@empty`, the singular alone): `\crefname{x}{}{xs}` derives the plural unchanged.
     let change_case = change_case.filter(|_| !singular.unlist_ref().is_empty());
+    // cleveref applies the case change to the name's first token (`\expandafter\@tempd\@tempa`, :1311-1318): a letter
+    // is changed alone ("eq." → "Eq."), a macro is read whole by `\MakeUppercase` (`\crefname{proposition}
+    // {\nameProposition}…` → "PROPOSITION", 1704.08542). A command that takes its own argument (`\crefname{line}
+    // {\text{line}}…`, 2604.22361; 2206.03535) would be split from it by the kernel's grouped `\MakeUppercase` (latex.ltx
+    // :22385 `{{…}}`), an error in pdflatex too, but only where that variant is typeset; our tags typeset every variant,
+    // so a name led by a command is changed whole, braced.
     let derive = |name: Tokens| -> Tokens {
       match change_case {
         Some(cs) => {
           let mut tokens = vec![cs];
-          tokens.extend(name.unlist());
+          if name
+            .unlist_ref()
+            .first()
+            .is_some_and(|t| t.code.is_active_or_cs())
+          {
+            tokens.push(T_BEGIN!());
+            tokens.extend(name.unlist());
+            tokens.push(T_END!());
+          } else {
+            tokens.extend(name.unlist());
+          }
           Tokens::new(tokens)
         },
         _ => name,
