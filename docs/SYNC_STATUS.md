@@ -4857,6 +4857,16 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   the document is read; follow-ups folded at integration — the OmniBus guard pins the refusal after a guess (a second
   `\newtheorem{note}{Again}`, pdflatex's one error, "Notation 2"), OD #783 and the sect08.rs comment say the document's
   declaration gives the title (not tac's number), neurips' witness 2406.11672.
+  **Integration (int39, 77v r1-r3 + the rev77v3 follow-ups, binary int39a):** reviews rev77v SHIP (r1) → r2; rev77v2
+  NO-SHIP (a binding's theorem guess made while the document is read claimed the name, so the author's `\newtheorem`
+  was refused) → r3; rev77v3 SHIP. Gates int39a (on dcfec45915): nextest 6493/6493 + cortex 10/10, clippy/rustdoc
+  clean, inits 0/0, dump diff vs int38b empty; the follow-up commit (fixture, guard, comments) re-ran `batch77v` 24/24,
+  fmt, clippy. Population A/B (1,038: 747 papers of the 77v rounds and reviews — thm-restate, `\todo[`, KOMA, sn-jnl,
+  `[section]` and repeated theorems, arxbj/elsart/tac, multline `\tag`, IEEEeqnarraybox, amsppt, endnotes, ntheorem,
+  neurips/OmniBus guesses, the witnesses — + 291 random of the proj98 sample) vs int38b: E 6,025 → 5,934, F 17 → 17,
+  0 Fatal worse, 17 Error better (15 thm-restate papers: E 112 → 21), 60 outputs changed (thm-restate, multline tags
+  and numbers, theorem numbers, ids); 1 Error worse is load timing (2310.15806 times out on both sides at 180 s, the
+  candidate 10 lines further on, the same `\omit` error class); no word loss > 1 %. Binding nets (int39a) 136/136, 0 documents worse than int38a.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;
