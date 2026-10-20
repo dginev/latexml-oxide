@@ -296,6 +296,17 @@ pub(crate) fn load() -> Result<()> {
 
   // #------------------------------------------------------------
 
+  // The body of a text symbol declared in an encoding that has no font map (below): the glyph is unknown, so the
+  // symbol prints nothing, and says so once per symbol, naming the encoding.
+  DefMacro!("\\lx@unmapped@text@symbol{}{}", sub[(encoding, cs)] {
+    let encoding = encoding.to_string();
+    let cs = cs.to_string();
+    if !already_reported(&s!("unmapped_text_symbol_{encoding}{cs}")) {
+      Warn!("missing_font_encoding", encoding,
+        s!("Font encoding {encoding} has no font map: the text symbol {cs} has no glyph and is dropped"));
+    }
+    Tokens!()
+  });
   DefPrimitive!("\\DeclareTextSymbol DefToken {}{Number}", sub[(cs, encoding, code)] {
     // Perl `latex_constructs.pool.ltxml:2671-2682`:
     //   if (isDefinableLaTeX($cs)) {
@@ -349,7 +360,20 @@ pub(crate) fn load() -> Result<()> {
     } else if IsDefinable!(&ecs) {
       // Can't decode: install no-op fallback so downstream chains find
       // *something* to resolve to. Witness arXiv:1802.05444 / tipa T3.
-      DefMacro!(ecs, None, Tokens!());
+      // In an encoding with no font map at all the symbol is lost where it is
+      // used: it says so, naming the encoding (`\lx@unmapped@text@symbol`; X2's
+      // `\cyrje` vanished silently before the X2 map, 77s). A Token body, not a
+      // closure, so a format dump keeps it.
+      if load_font_map(&encoding_str).is_none() {
+        let mut body = vec![T_CS!("\\lx@unmapped@text@symbol"), T_BEGIN!()];
+        body.extend(Explode!(&encoding_str));
+        body.extend([T_END!(), T_BEGIN!()]);
+        body.extend(Explode!(&cs_str));
+        body.push(T_END!());
+        DefMacro!(ecs, None, Tokens::new(body));
+      } else {
+        DefMacro!(ecs, None, Tokens!());
+      }
     }
     // Bare `\cs` always becomes a dispatch chain (matches Perl).
     if IsDefinable!(&cs) {
@@ -403,8 +427,12 @@ pub(crate) fn load() -> Result<()> {
   // each use: its slot is read here only to find the combining mark, and
   // nothing of it comes back as input (pd1supp.def:5-6 `{\texthookabove}`,
   // `{\textdotbelow}`: amsldoc-vi, OXIDIZED_DESIGN #317).
+  // A bare command that is already an encoding dispatcher — this handler's own, from another encoding's file — still
+  // gets this encoding's command, as latex.ltx's `\DeclareTextCommand` always defines it: x2enc.def's `\U` came first,
+  // so ot2enc.def:47 `\DeclareTextAccent{\U}{OT2}{36}` defined nothing and `\U{i}` (й, its composite at :156) printed
+  // и. Guard `perfect_kernel_batch77u::second_encoding_accent_composes`.
   DefPrimitive!("\\DeclareTextAccent DefToken {}{}", sub[(cs, encoding, code)] {
-    if IsDefined!(&cs) {
+    if IsDefined!(&cs) && !is_encoding_dispatcher(&cs)? {
       return Ok(vec![]);
     }
     let (code, _stored_with_the_command) = read_braced(Tokens::new(code.revert()), read_number)?;
@@ -433,9 +461,15 @@ pub(crate) fn load() -> Result<()> {
       "\u{1FC1}" => Some("\u{0308}\u{0342}"), // dialytika perispomeni
       "\u{02D8}" => Some("\u{0306}"),          // vrachy (breve)
       "\u{00AF}" => Some("\u{0304}"),          // macron
+      "\u{2036}" => Some("\u{030F}"),          // double grave (T2A/X2 `\C`, slot 19: t2aenc.def, x2enc.def)
       _ => None,
     };
-    let combining: Option<String> = combining.map(str::to_owned).or_else(|| {
+    // A slot whose glyph is itself a combining mark (T4's `\G` 159, `\U` 188, `\I` 191: fc.rme Appendix D) decodes
+    // as the mark on a no-break space (`decode_str`): the mark is the accent.
+    let marked = standalone
+      .strip_prefix('\u{00A0}')
+      .filter(|marks| !marks.is_empty() && marks.chars().all(font::is_combining_mark));
+    let combining: Option<String> = combining.or(marked).map(str::to_owned).or_else(|| {
       lookup_mapping("accent_combiner_above", &standalone)
         .or_else(|| lookup_mapping("accent_combiner_below", &standalone))
         .map(|v| v.to_string())
@@ -1761,6 +1795,23 @@ fn define_optional_internal(cs: &Token, nargs: usize, body: &Tokens, star: bool)
     tex_declared => { star && nargs > 0 }
   );
   Ok(())
+}
+
+/// Is `cs` an encoding dispatcher (`def_text_command_dispatcher`, the `\DeclareTextSymbol` chain): a macro whose body
+/// begins `\expandafter\ifx\csname\cf@encoding\string`.
+fn is_encoding_dispatcher(cs: &Token) -> Result<bool> {
+  let head = [
+    T_CS!("\\expandafter"),
+    T_CS!("\\ifx"),
+    T_CS!("\\csname"),
+    T_CS!("\\cf@encoding"),
+    T_CS!("\\string"),
+  ];
+  Ok(match lookup_definition(cs)? {
+    Some(defn) => matches!(defn.get_expansion(),
+      Some(ExpansionBody::Tokens(body)) if body.unlist_ref().starts_with(&head)),
+    None => false,
+  })
 }
 
 /// The encoding dispatcher a declared text command becomes (latex.ltx `\@changed@cmd`, :9871-9888): the encoding's

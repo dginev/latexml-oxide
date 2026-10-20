@@ -1,0 +1,11 @@
+% witness: 2405.01972 (`\textipa{\textltailn}`, tipa's T3 `\DeclareTextSymbol{\textltailn}{T3}{...}`)
+% oracle:  pdflatex 0 errors; "Schwa ə and ə." (T3, the tipa fonts)
+% engines: rust 77s = "Schwa  and ." silently (T3 has no map: the symbol declared an empty macro); 77u the same text and
+%          one Warning naming T3 and the symbol; Perl the symbol lost silently
+% expect:  0 errors, 1 warning ("Font encoding T3 has no font map: the text symbol \textschwa has no glyph")
+% status:  CONTROL for the loss (no T3 map; SYNC_STATUS), GREEN for the warning (77u `\lx@unmapped@text@symbol`)
+\documentclass{article}
+\usepackage{tipa}
+\begin{document}
+Schwa \textschwa\ and \textschwa.
+\end{document}

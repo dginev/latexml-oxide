@@ -14096,10 +14096,14 @@ enumitem.sty:660-681 `\enit@first` (run under `shortlabels`, :1787-1794) turns a
 with the enumerate package's `setEnumerationStyle` (latex_constructs.pool.ltxml), which makes `\theenumi` `\alph{enumi}`
 and only the label `(\theenumi)`, so the reference reads "a". Minimal trigger:
 `\usepackage[shortlabels]{enumitem}` `\begin{enumerate}[(a)]\item\label{x} red\end{enumerate}\ref{x}` — pdflatex "(a)",
-Perl and Rust "a" (`label=(\alph*)` gives "(a)" in all three). Rust's enumitem_sty.rs `mark_short_label` ports Perl;
-open (a fix writes the short label as `label=` with enumitem's replacements). Witnesses: every
-`[shortlabels]{enumitem}` paper referring to a short-labelled item, and the newer lmcs.cls (2003.01491, 2604.16477), which
-passes `shortlabels`. Repro package-bindings/enumitem_shortlabel_ref (RED); pinned in
+Perl and Rust "a" (`label=(\alph*)` gives "(a)" in all three). Rust (77u): the short label is the list's `label=`, its
+marks replaced as enumitem.sty:633-700 does (`\enit@marklist`, so a document's `\SetEnumerateShortLabel` counts;
+enumitem_sty.rs `enumerate_short_label`), and an enumerate's own label or ref below the first level empties
+`\p@<counter>` (enumitem.sty:551-556 `\enit@reflabel`; Perl and Rust before kept `\p@enumii` = `\theenumi`, so
+`ref=\theenumi.\roman*` referred as "(a)(a).i", pdflatex "(a).i"). Witnesses: every `[shortlabels]{enumitem}` paper
+referring to a short-labelled item, and the newer lmcs.cls (2003.01491, 2604.16477), which passes `shortlabels`. Repros
+package-bindings/enumitem_shortlabel_ref, list-structure/enumitem_ref_clears_the_parent_prefix; guards
+`perfect_kernel_batch77u::{enumitem_short_label_is_the_reference, enumitem_ref_clears_the_parent_prefix}`,
 `perfect_kernel_batch68i::enumitem_shortlabels_under_lmcs`.
 
 ## 810. JHEP3's binding lacks `\arXivid` and `\@firstaubox`
@@ -16093,3 +16097,17 @@ type with no name: `labelformat=simple` gives " (a)" with a leading no-break spa
 Rust (77s r3): the body of caption3.sty:54-65 (caption_sty.rs `\bothIfFirst`/`\bothIfSecond`). Guard
 `perfect_kernel_batch77s::captionof_takes_the_enclosing_float_options` (its `labelformat=simple` half); witnesses
 2002.11064, 1809.08822, 1811.06803 (algorithm2e under lipics-v2021 `labelformat=boxed`).
+
+## 1001. A `\p@<counter>` reference form is typed unexpanded at the step
+
+latex.ltx:14963-14964 `\refstepcounter` stores `\protected@edef\@currentlabel{\csname p@#1\expandafter\endcsname
+\csname the#1\endcsname}`: `\p@<counter>` meets the expanded number, inside the definition's braces, and a robust
+command in it is kept for the `\ref` that prints it. Perl's refnum form (Base_Utility.pool.ltxml:1027-1028
+`\lx@@therefnum@@`, and the typeref forms :1081-1085) types `\csname p@#1\endcsname\csname the#1\endcsname` at the
+step, so a `\p@` taking arguments reads `\csname`, the letters of `the<counter>` and what follows the tag. Minimal
+trigger: `\renewcommand{\theequation}{Equation S\arabic{equation}}\DeclareRobustCommand{\gobblesomeargs}[9]{#9}
+\renewcommand{\p@equation}{\gobblesomeargs}` and two `{equation}`s — pdflatex 0 errors, `\ref` "S1"; Perl and Rust
+before 77u errors at each equation (1902.09345: 18 errors, the first SI equation lost). Rust (77u): `\lx@@p@the@@`
+(base_utilities.rs) expands the form as `\protected@edef` does (OXIDIZED_DESIGN_DIVERGENCES #778). Repro
+`parameter-conditional/p_form_applies_to_the_expanded_number`; guard
+`perfect_kernel_batch77u::p_form_applies_to_the_expanded_number`.

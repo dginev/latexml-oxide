@@ -229,19 +229,21 @@ fn p_equation_taking_nine_arguments_does_not_loop() {
 }
 
 /// C12: `\errmessage` shows `\errhelp` unexpanded (tex.web §1283 `token_show(err_help)`): t4enc.def:36-39's `\m`
-/// puts `\m #1` in its help, which, expanded, called `\m` again for ever (2405.01972: Fatal PushbackLimit). The one
-/// error is t4enc.def's own, met because `\DeclareTextComposite` is a no-op here (as in Perl; SYNC_STATUS). Repro
+/// puts `\m #1` in its help, which, expanded, called `\m` again for ever (2405.01972: Fatal PushbackLimit). t4enc.def's
+/// own "Non existent modified letter" for a letter it has no slot for is shown with the help as written; `\m{y}` itself
+/// prints ƴ since the T4 map (77u, `perfect_kernel_batch77u::t4_modified_letter_prints`). Repro
 /// fonts-nfss/t4_modified_letter_help_is_not_expanded.
 #[test]
 fn errmessage_help_is_not_expanded() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/fonts-nfss/t4_modified_letter_help_is_not_expanded.tex"
-  );
   assert_elements_with(
-    tex,
+    r"\documentclass{article}
+\usepackage[T4,T1]{fontenc}
+\begin{document}
+Text {\fontencoding{T4}\selectfont\m{q}} here.
+\end{document}",
     RAW,
     (1, 0),
-    &[r"t4enc.def: Non existent modified letter: The modified letter \my does not exist in the"],
+    &[r"t4enc.def: Non existent modified letter: The modified letter \mq does not exist in the"],
     &[(
       "para",
       "p1",

@@ -368,8 +368,8 @@ And more.</p>
               <item xml:id="S5.I1.i12.I1.i7">
                 <tags>
                   <tag>(l.vii)</tag>
-                  <tag role="refnum">(l)(l.vii)</tag>
-                  <tag role="typerefnum">item (l)(l.vii)</tag>
+                  <tag role="refnum">(l.vii)</tag>
+                  <tag role="typerefnum">item (l.vii)</tag>
                 </tags>
                 <para xml:id="S5.I1.i12.I1.i7.p1">
                   <p>Line one, first</p>
@@ -390,8 +390,8 @@ And more.</p>
               <item xml:id="S5.I1.i13.I1.i8">
                 <tags>
                   <tag>(m.viii)</tag>
-                  <tag role="refnum">(m)(m.viii)</tag>
-                  <tag role="typerefnum">item (m)(m.viii)</tag>
+                  <tag role="refnum">(m.viii)</tag>
+                  <tag role="typerefnum">item (m.viii)</tag>
                 </tags>
                 <para xml:id="S5.I1.i13.I1.i8.p1">
                   <p>Line one, second</p>

@@ -244,6 +244,19 @@ pub(crate) fn load() -> Result<()> {
       expire_state_unlocked();
       boxes.push(r?);
     }
+    // The hook's other half (latex.ltx:12513-12514), `\init@series@setup` (:13902-13920): `\reset@font`, then
+    // `\mdseries` and `\let\seriesdefault\f@series` while `\seriesdefault` is the kernel's. A font switch of the
+    // preamble or the class body (`\itshape\bfseries`, a class's `\usefont`) does not reach the body: pdflatex
+    // sets it upright medium in the default family. Perl runs neither half (its body kept the preamble's font,
+    // `<text font="bold italic">`). OXIDIZED_DESIGN_DIVERGENCES #315 addendum; guards
+    // `perfect_kernel_batch77u::{preamble_font_switch_does_not_reach_the_body,
+    // class_body_font_does_not_reach_the_body}`.
+    if first_begin && lookup_definition(&T_CS!("\\init@series@setup"))?.is_some() {
+      local_state_unlocked(false);
+      let r = digest(Tokens!(T_CS!("\\init@series@setup")));
+      expire_state_unlocked();
+      boxes.push(r?);
+    }
     // latex.ltx `\document` L9472: right after begindocument/before, the
     // kernel loads the expl3 BACKEND — `\@expl@sys@load@backend@@` →
     // `\sys_load_backend:n {}` unless one was chosen — raw-inputting

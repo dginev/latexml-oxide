@@ -56,14 +56,26 @@ fn begin_enum_itemize(
   } else {
     level
   };
-  let hash = merged_enumitem_keyvals(itype, key_level, listdepth, keys);
+  let mut hash = merged_enumitem_keyvals(itype, key_level, listdepth, keys);
 
-  // Deal with shortlabels — Perl L88-93: the label template the `EnumitemKeyVals`
-  // parameter found (enumitem.sty's `\enit@first`).
-  if let Some(template) = keys.and_then(|kv| kv.get_value(SHORTLABEL_KEY))
-    && let Some(toks) = argwrap_to_tokens(template)
+  // The short label the `EnumitemKeyVals` parameter found is the list's first key, `label=` (enumitem.sty:660-681
+  // `\enit@first`): an enumerate's with its `\SetEnumerateShortLabel` marks replaced (`(a)` → `(\alph*)`), any other
+  // list's as written; a `label`/`label*` among the list's own keys comes after it and wins. As a label, it is the
+  // reference too (:519-521): `[(a)]` refers as "(a)". Perl set it as the enumerate package's style
+  // (enumitem.sty.ltxml:88-93, `setEnumerationStyle`), whose `\theenumi` is the bare "a" (KNOWN_PERL_ERRORS #808).
+  // Repro package-bindings/enumitem_shortlabel_ref.
+  if let Some(template) = keys
+    .and_then(|kv| kv.get_value(SHORTLABEL_KEY))
+    .and_then(argwrap_to_tokens)
+    && !keys.is_some_and(|kv| kv.get_value("label").is_some() || kv.get_value("label*").is_some())
   {
-    set_enumeration_style(Some(&toks), Some(level as i32))?;
+    let label = if enumerate_type {
+      enumerate_short_label(&template)?
+    } else {
+      template
+    };
+    hash.remove("label*");
+    hash.insert("label".to_string(), ArgWrap::Tokens(label));
   }
 
   // Build BeginItemizeOptions from the merged hash
@@ -132,6 +144,14 @@ fn begin_enum_itemize(
       ]),
       None,
     )?;
+  }
+
+  // An enumerate's own label or ref is its whole reference: below the first level enumitem empties the counter's
+  // `\p@<counter>` (enumitem.sty:551-556 `\enit@reflabel`, "Don't accumulate labels"), so the kernel's `\p@enumii`
+  // = `\theenumi` no longer prefixes the parent's label ("(a)(a).i" for `ref=\theenumi.\roman*`). Repro
+  // list-structure/enumitem_ref_clears_the_parent_prefix.
+  if enumerate_type && level > 1 && (label_toks.is_some() || hash.contains_key("ref")) {
+    def_macro(T_CS!(s!("\\p@{usecounter}")), None, Tokens!(), None)?;
   }
 
   // ref — Perl L102-109
@@ -217,6 +237,70 @@ fn begin_enum_itemize(
   }
 
   Ok(props)
+}
+
+/// enumitem.sty:633-652 and :685-700: an enumerate's short label with each mark of `\enit@marklist` (`a` `A` `i` `I`
+/// `1`, and the document's `\SetEnumerateShortLabel`s, :641-652) replaced by its counter command, every occurrence
+/// outside braces (`\enit@replace`, a delimited macro, reads none inside), the marks in their list's order.
+fn enumerate_short_label(template: &Tokens) -> Result<Tokens> {
+  let marklist = match lookup_definition(&T_CS!("\\enit@marklist"))? {
+    Some(defn) => match defn.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => body.unlist_ref().to_vec(),
+      _ => Vec::new(),
+    },
+    None => Vec::new(),
+  };
+  let elt = T_CS!("\\enit@elt");
+  let mut label = template.unlist_ref().to_vec();
+  let mut rest = marklist.into_iter().peekable();
+  while let Some(t) = rest.next() {
+    if t != elt {
+      continue;
+    }
+    let mut group = || -> Vec<Token> {
+      let mut out = Vec::new();
+      let mut depth = 0i32;
+      for t in rest.by_ref() {
+        match t.get_catcode() {
+          Catcode::BEGIN if depth == 0 => {
+            depth = 1;
+            continue;
+          },
+          Catcode::BEGIN => depth += 1,
+          Catcode::END if depth == 1 => return out,
+          Catcode::END => depth -= 1,
+          _ => {},
+        }
+        out.push(t);
+      }
+      out
+    };
+    let mark = group();
+    let replacement = group();
+    if mark.is_empty() {
+      continue;
+    }
+    let mut replaced = Vec::with_capacity(label.len());
+    let mut depth = 0i32;
+    let mut i = 0;
+    while i < label.len() {
+      let t = label[i];
+      if depth == 0 && label[i..].starts_with(&mark) {
+        replaced.extend_from_slice(&replacement);
+        i += mark.len();
+        continue;
+      }
+      match t.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth -= 1,
+        _ => {},
+      }
+      replaced.push(t);
+      i += 1;
+    }
+    label = replaced;
+  }
+  Ok(Tokens::new(label))
 }
 
 /// A `leftmargin` value we can safely place verbatim in a CSS length: a number
@@ -888,7 +972,16 @@ LoadDefinitions!({
   def_macro_noop("\\SetLabelAlign{}{}")?;
   def_macro_noop("\\EnumitemId")?;
   def_macro_noop("\\SetEnumitemKey{}{}")?;
-  def_macro_noop("\\SetEnumerateShortLabel{}{}")?;
+  // enumitem.sty:633-652, the short label marks an enumerate's short label replaces (`enumerate_short_label`).
+  RawTeX!(r"\let\enit@marklist\@empty
+  \newcommand\SetEnumerateShortLabel[2]{\let\enit@a\@empty
+    \def\enit@elt##1##2{\def\enit@b{#1}\def\enit@c{##1}\ifx\enit@b\enit@c\else
+      \expandafter\def\expandafter\enit@a\expandafter{\enit@a\enit@elt{##1}{##2}}\fi}%
+    \enit@marklist
+    \expandafter\def\expandafter\enit@a\expandafter{\enit@a\enit@elt{#1}{#2}}%
+    \let\enit@marklist\enit@a}
+  \SetEnumerateShortLabel{a}{\alph*}\SetEnumerateShortLabel{A}{\Alph*}\SetEnumerateShortLabel{i}{\roman*}
+  \SetEnumerateShortLabel{I}{\Roman*}\SetEnumerateShortLabel{1}{\arabic*}");
   def_macro_noop("\\SetEnumitemValue{}{}{}")?;
   def_macro_noop("\\SetEnumitemSize{}{}")?;
   // enumitem.sty:575-598 `\@ifstar\enit@addcounter@s\enit@addcounter`: the command and its

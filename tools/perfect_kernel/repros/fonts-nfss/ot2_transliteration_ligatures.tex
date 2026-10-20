@@ -1,0 +1,13 @@
+% witness: 1405.1988, 2510.25931 (OT2 "sh" in Russian names), 1205.3890, 1508.03007 (77u A/B: OT2 text in the corpus)
+% oracle:  pdflatex 0 errors; the wncyr fonts' ligatures (wncyr10.tfm LIGTABLE): "Москва, щи, Хрущев, ЩУКА, журнал,
+%          язык, Юрии, это, Чехов, Ђорђе, цар’, “кавычки” «ето» № 5 — да."
+% engines: rust 77s = the Latin text (no OT2 map, OT1); 77u r1 letter by letter ("сх" for "sh"); 77u Cyrillic with the
+%          ligatures; Perl the Latin text
+% expect:  0 errors, 0 warnings; the oracle's text
+% status:  GREEN (77u, ot2_fontmap.rs `ot2_ligature`)
+\documentclass{article}
+\usepackage[OT2,T1]{fontenc}
+\begin{document}
+{\fontencoding{OT2}\selectfont Moskva, shchi, Khrushchev, SHCHUKA, zhurnal, yazyk, Yurii, e1to, Chekhov, D1ordje,
+tsar', ``kavychki'' [[eto]] N0 5 --- da.}
+\end{document}

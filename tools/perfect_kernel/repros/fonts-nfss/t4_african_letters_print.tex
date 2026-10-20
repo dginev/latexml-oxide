@@ -1,0 +1,12 @@
+% witness: 2405.01972 (`\usepackage[T4,T2A,T1]{fontenc}`, `\AS{\m{b}}` = `{\fontencoding{T4}\fontfamily{fcr}\selectfont\m{b}}`)
+% oracle:  pdflatex 0 errors; the fc letters of t4enc.def's composites and symbols (fccoding.mf glyphs; fc.rme Appendix D)
+% engines: rust 77s = 1 error per `\m` (t4enc.def's "Non existent modified letter"), the letters lost; 77u 0 errors,
+%          every letter; Perl the letters lost (no T4 map, `\DeclareTextComposite` ignored)
+% expect:  0 errors, 0 warnings; "Ɓɓ Ɗɗ Ɛɛ Ǝǝ Ɔɔ Ŋŋ ƴƳ ʃ ʒ ɖƉ Ɛ̃ E̱ ʋ ʧ fj a̍ ȁ"
+% status:  GREEN (77u, t4_fontmap.rs)
+\documentclass{article}
+\usepackage[T4,T1]{fontenc}
+\begin{document}
+{\fontencoding{T4}\selectfont \m{B}\m{b} \m{D}\m{d} \m{E}\m{e} \M{E}\M{e} \m{O}\m{o} \m{N}\m{n} \m{y}\m{Y} \m{s} \m{z}
+\M{d}\M{D} \T{E} \b{E} \m{v} \tsh{} fj \I{a} \G{a}}
+\end{document}

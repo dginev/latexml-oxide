@@ -4,9 +4,12 @@
 % engines: rust 67int24 = Fatal Timeout:Recursion (the second equation's math label called itself: the first one's
 %          digest left a group open and with it the `\ensuremath` label of 73b); 67int23b 8 errors; Perl 4
 % expect:  no Fatal; 8 errors (the refnum form typed at the equation, its nine arguments reading past the form)
-% status:  RED for the errors (a `\p@<counter>` reference form typed only where a `\ref` prints it, or applied to the
-%          expanded `\the<counter>` as `\@currentlabel` is, latex.ltx `\refstepcounter`; SYNC_STATUS), GREEN for the
-%          Fatal (batch 77r: dialect.rs does not save the math label as its own original)
+% status:  RED for the errors, GREEN for the Fatal (batch 77r: dialect.rs does not save the math label as its own
+%          original). 77u applies the form to the expanded number (`\lx@@p@the@@`, the witness's shape is GREEN:
+%          p_form_applies_to_the_expanded_number.tex); here the number is one token, and the form, typed at the step
+%          where pdflatex types it only at a `\ref`, still reads past it: our argument reader takes the `}` closing the
+%          tag as an undelimited argument (Perl Gullet.pm:732-744 the same) where tex.web §395 stops with "Argument of
+%          \gobblesomeargs has an extra }" (SYNC_STATUS)
 \documentclass{article}\makeatletter
 \DeclareRobustCommand{\gobblesomeargs}[9]{#9}
 \renewcommand{\p@equation}{\gobblesomeargs}\makeatother

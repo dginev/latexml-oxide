@@ -4,7 +4,7 @@
 % refnum doubles the parent: "(a)(a).i" (57y review; also in 57x, not a regression).
 % oracle:  pdflatex 0 errors; "See (a).i."
 % expect:  0 errors; the inner item's refnum and the \ref read "(a).i"
-% status:  RED (57y2)
+% status:  GREEN (77u: enumitem_sty.rs empties `\p@<counter>` below the first level, enumitem.sty:551-556)
 \documentclass{article}
 \usepackage{enumitem}
 \begin{document}

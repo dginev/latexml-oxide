@@ -248,14 +248,14 @@ fn enumitem_inline_under_lmcs() {
 #[test]
 fn enumitem_shortlabels_under_lmcs() {
   let xml = convert_checked(repro!("enumitem_shortlabels_under_lmcs.tex"), 0);
-  // The reference number is the short label's counter alone ("a"; pdflatex `\ref` "(a)", enumitem making the short
-  // label `label=`, enumitem.sty:660-681): KNOWN_PERL_ERRORS #808, repro package-bindings/enumitem_shortlabel_ref (RED).
+  // The reference number is the short label, as pdflatex's `\ref` "(a)": enumitem makes the short label `label=`
+  // (enumitem.sty:660-681; KNOWN_PERL_ERRORS #808, fixed 77u; repro package-bindings/enumitem_shortlabel_ref).
   assert_element(
     &xml,
     "enumerate",
     &[],
     &format!(
-      r#"<enumerate xml:id="S1.I1"><item xml:id="S1.I1.i1"><tags><tag>(a)</tag><tag role="autoref">item{NBSP}a<text xml:id="S1.I1.i1.1"/></tag><tag role="refnum">a</tag><tag role="typerefnum">item{NBSP}a</tag></tags><para xml:id="S1.I1.i1.p1"><p xml:id="S1.I1.i1.p1.1">red</p></para></item><item xml:id="S1.I1.i2"><tags><tag>(b)</tag><tag role="autoref">item{NBSP}b<text xml:id="S1.I1.i2.1"/></tag><tag role="refnum">b</tag><tag role="typerefnum">item{NBSP}b</tag></tags><para xml:id="S1.I1.i2.p1"><p xml:id="S1.I1.i2.p1.1">green</p></para></item></enumerate>"#
+      r#"<enumerate xml:id="S1.I1"><item xml:id="S1.I1.i1"><tags><tag>(a)</tag><tag role="autoref">item{NBSP}(a)<text xml:id="S1.I1.i1.1"/></tag><tag role="refnum">(a)</tag><tag role="typerefnum">item{NBSP}(a)</tag></tags><para xml:id="S1.I1.i1.p1"><p xml:id="S1.I1.i1.p1.1">red</p></para></item><item xml:id="S1.I1.i2"><tags><tag>(b)</tag><tag role="autoref">item{NBSP}(b)<text xml:id="S1.I1.i2.1"/></tag><tag role="refnum">(b)</tag><tag role="typerefnum">item{NBSP}(b)</tag></tags><para xml:id="S1.I1.i2.p1"><p xml:id="S1.I1.i2.p1.1">green</p></para></item></enumerate>"#
     ),
   );
 }

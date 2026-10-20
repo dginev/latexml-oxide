@@ -610,6 +610,7 @@ fn siunitx_v3_keys() {
 /// enumitem's `shortlabels`: a list's first key with no `=` that names no
 /// enumitem key is a label template (enumitem.sty:660-681 `\enit@first`), not
 /// an unknown key: `[(a)]` warned and kept arabic labels.
+/// As a `label=`, it is the reference too: "(a)" (77u, KNOWN_PERL_ERRORS #808).
 #[test]
 fn enumitem_shortlabels() {
   let tex =
@@ -626,11 +627,11 @@ fn enumitem_shortlabels() {
     tags,
     [
       "<tag>(a)</tag>",
-      r#"<tag role="refnum">a</tag>"#,
+      r#"<tag role="refnum">(a)</tag>"#,
       "<tag>(b)</tag>",
-      r#"<tag role="refnum">b</tag>"#,
+      r#"<tag role="refnum">(b)</tag>"#,
       "<tag>(i)</tag>",
-      r#"<tag role="refnum">i</tag>"#,
+      r#"<tag role="refnum">(i)</tag>"#,
     ],
     "{xml}"
   );

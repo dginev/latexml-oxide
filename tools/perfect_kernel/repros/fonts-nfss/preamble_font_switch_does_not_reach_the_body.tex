@@ -1,0 +1,11 @@
+% witness: none (SYNC_STATUS "Font-Selection Chain Residuals" 4, W17; DIVERGENCES #315)
+% oracle:  pdflatex 0 errors; "Body text." upright medium CMR10 (`\init@series@setup`'s `\reset@font` at
+%          `\begin{document}`, latex.ltx:12513-12514, :13902-13920)
+% engines: rust 77s = `<text font="bold italic">Body text.</text>`; 77u plain text; Perl as 77s
+% expect:  0 errors, 0 warnings; "Body text." with no font attribute; a class body's `\usefont` likewise
+% status:  GREEN (77u, sect02.rs runs `\init@series@setup`)
+\documentclass{article}
+\itshape\bfseries
+\begin{document}
+Body text. \textit{it}
+\end{document}

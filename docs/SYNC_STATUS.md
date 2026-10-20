@@ -140,7 +140,8 @@ do not block the E/F rerun.
 | — | aistats `in_place` residuals: a macro with parameters defined inside the `\twocolumn[…]` block (`\def\Uni#1{…}`, probe `g_args`: Error undefined, pdflatex "Univ of Here") or a local `\let` of a primitive (`\let\Uni\relax`, probe `g_letprim`: Error) is not read in place | open (77o r2 review finding 4); no corpus witness |
 | — | aistats renamed copies: ~100 papers ship a renamed aistats style the versioned fallback and the registrations do not reach (`aistats2022_arxiv.sty` 9, `aistats_arxiv.sty` 7, `*_preprint`, `*_mod`, `*_old`, …): no title, no creators | open (77o r2 review finding 10) |
 | — | renamed natbib copies read raw: a shipped natbib copy under a name the versioned fallback does not reduce to `natbib` (`natbib_vw.sty` 16 papers, `modnatbib` 21, `hbnatbib` 16, `ctextemp_natbib` 13, `natbib_jrm` 12, `NAR-natbib` 9, `natbib_padeu` 8, `rnatbib` 7, `wsnatbib`/`natbibsty`/`igsnatbib` 6 each, … — census: 1,509 corpus papers ship a `*natbib*.sty` (1,677 paper/file rows), `~/data/pk_agents/main/scratch_356a0c47/natbib_copies/natbib_copies_all.tsv`; `natbib2`/`natbib209`/`natbib1`/`natbib_mod` already fall back to the binding, "Interpreted as versioned package"; NJDnatbib/bmvc2k_natbib/ws-rv-har are 72a stand-ins) is read raw: its `\citet`/`\citep` read `\b@<key>`, which no `\bibitem` of ours writes (no `\bibcite`), so every citation prints "?" with a "Citation undefined" Warning, and a labelled `\bibitem` keeps no refnum, so the kernel `\cite` shows no label (1003.3017: 62 Warnings, 0802.4100: 142, astro-ph0512042; pdflatex "Schneider et al. (2010), Smith (2001), (Smith, 2001)."; RED `index-bib/mn2e_natbib_copy/natbib_renamed_copy_citations_resolve`). Not the brief label route of 70c (g): the copy's whole citation layer is missing | open (77s) — the same hole as the aistats row above and 72a's per-copy stand-ins (a 3rd/4th recurrence). **Rule adopted (user ruling 2026-10-20)**: a shipped file whose `\ProvidesPackage`/`\ProvidesClass` names a bound package/class loads that binding, then is read as a stand-in copy (OD #731), instead of a per-name stand-in list (natbib_vw/modnatbib/natbib_jrm/natbibsty/tsnatbib … all `\ProvidesPackage{natbib}`); its own batch follows |
-| — | X2/OT2 Cyrillic text symbols dropped with no diagnostic: `\usepackage[X2,OT2,T1]{fontenc}` + `A {\fontencoding{X2}\selectfont \cyrje\cyrii\CYRA} B {\fontencoding{OT2}\selectfont \cyrje\CYRJE} C.` — pdflatex "A јіА B jJ C." (OT2 sets Ј ј in the J j slots, ot2enc.def:96,124), we and Perl "A А B  C." with 0 Errors/Warnings: there is no x2/ot2 fontmap, so the slots decode to nothing and `\DeclareTextSymbol` gives no glyph (T2A/T2B/T2C print since 77s, OD #776). RED `fonts-nfss/x2_ot2_cyrillic_symbols_print` (77s r2 re-review probe x2) | open — batch 77u adds the X2/OT2 fontmaps |
+| — | X2/OT2 Cyrillic text symbols dropped with no diagnostic: `\usepackage[X2,OT2,T1]{fontenc}` + `A {\fontencoding{X2}\selectfont \cyrje\cyrii\CYRA} B {\fontencoding{OT2}\selectfont \cyrje\CYRJE} C.` — pdflatex "A јіА B jJ C." (OT2 sets Ј ј in the J j slots, ot2enc.def:96,124), we and Perl "A А B  C." with 0 Errors/Warnings: there is no x2/ot2 fontmap, so the slots decode to nothing and `\DeclareTextSymbol` gives no glyph (T2A/T2B/T2C print since 77s, OD #776). `fonts-nfss/x2_ot2_cyrillic_symbols_print` (77s r2 re-review probe x2) | FIXED 77u (x2_fontmap.rs, ot2_fontmap.rs, OD #777: "A јіА B јЈ C."; a `\DeclareTextAccent` of a command another encoding declared first defines this encoding's too, so OT2's `\U{i}` is й). A text symbol of an encoding that still has no map now warns where it is dropped, naming the encoding (tipa's T3: residual row below) |
+| — | tipa's T3 has no font map: its named symbols (`\textschwa`, `\textltailn` …, t3enc.def) print nothing — since 77u with one Warning per symbol ("Font encoding T3 has no font map …"), 2405.01972's `\textipa{\textltailn}`; the ASCII IPA shorthand inside `\textipa{…}` decodes as OT1 letters (pdflatex ə for `@`). A T3 map (tipa's fonts: tipa.sty, t3enc.def slots) closes both | open (77u; not brief: ~250 slots and the shorthand ligatures) |
 | — | 1802.07182 (aistats): the affiliations written as a second `\aistatsauthor` row become creators "University of Cambridge1", "Invenia Labs2", "Cambridge", "UK" (the author's misuse of the setter; its e-mail list is the block's, one contact an address since 77o r3) | open, author misuse (77o r2 review finding 3) |
 | — | 1202.1568 (aistats2eM): an e-mail list with the domain after the braces (`{seungyeon.kim@, fli@cc., …}gatech.edu`) is not read as an e-mail list and stays inside the affiliation (content kept) | open (77o r2 report) |
 | — | 2203.06997 (aistats, paired): a `~\\` spacer line before a column's e-mail line makes the kernel `\author` line reading take the e-mail for an affiliation ("Richard E. Turner: University of Cambridge; ret26@cam.ac.uk" both affiliations) | open (77o r3 A/B; content kept) |
@@ -233,7 +234,7 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
 1. **`\cal ABC` collapses to one `<mi>`**: Drops `class="ltx_font_mathcaligraphic"` (Perl emits three `<mi>` elements, Rust one containing `𝒜ℬ𝒞`). Token grouping and class diverge.
 2. **`\DeclareTextCommand`/`\ProvideTextCommand` lack encoding-dispatch chain**: `latex_constructs.rs:6525/6544` bind bare `\cs` to first-encoding expansion permanently.
 3. **Minor font registration gaps**: `\DeclareTextSymbol` decodes eagerly instead of installing deferred `CharDef`; `\DeclareErrorFont` is a bare no-op where Perl defines argument as `\relax`.
-4. **A preamble font switch stays in force in the body** (W17, DIVERGENCES #315; shared with Perl): latex.ltx's `\@kernel@after@begindocument@before` also runs `\init@series@setup` (latex.ltx:13902-13920: `\reset@font`, `\mdseries`, `\let\seriesdefault\f@series`), which Rust does not run. `\documentclass{article}\itshape\bfseries\begin{document}Body text.` — pdflatex upright CMR10; Rust and Perl `<text font="bold italic">`.
+4. ~~A preamble font switch stays in force in the body~~ FIXED 77u (W17, DIVERGENCES #315 addendum): the begin-document constructor runs latex.ltx's `\init@series@setup` (:13902-13920, `\reset@font`, `\mdseries`, `\let\seriesdefault\f@series`) after `\reinstall@nfss@defs`, so a preamble or class-body font switch does not reach the body (guards `perfect_kernel_batch77u::{preamble_font_switch_does_not_reach_the_body, class_body_font_does_not_reach_the_body}`). Residual: our `\normalfont`/`\reset@font` sets `\rmdefault`, not latex.ltx's `\familydefault` (Perl latex_constructs.pool.ltxml:5194), so a `\renewcommand\familydefault{\sfdefault}` document stays serif in the body (it was, unless the preamble also switched `\sffamily`, whose `font="sansserif"` the body no longer carries).
 
 ### Fragid Parity Open Items
 1. **`associateNode` (Post.pm L508-585) unported**: Generated MathML/OpenMath nodes carry no `xml:id`, so `convertedIDs` and pmml↔cmml parallel cross-linking do not exist.
@@ -1698,13 +1699,17 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
     class, unless the first fell to OmniBus (no binding, no file: astro-ph9812142's `#\documentstyle[…]{/disk/…/aa}`
     line, then the real aa — 1 Error, 3,433 words as 67int19b), latex209.def's definitions applied once (OD #773); **C15** a runaway limit (pushback, recursion) inside a speculative title-page run
     is discarded with the run, its box lists and conditionals unwound (astro-ph0203021; user ruling 2026-10-19, OD #767
-    addendum). Residuals, RED: (C11) a nine-argument `\p@equation` no longer loops (73b's math label is not saved as
-    its own original), but its reference forms, typed at the equation, read past their end — 8 errors where pdflatex
-    has 0, 18 on 1902.09345 (`parameter-conditional/p_equation_taking_nine_arguments`); the fix is a `\p@<counter>`
-    form applied to the expanded `\the<counter>` as latex.ltx's `\@currentlabel` is (`\protected@edef`), or typed only
-    where a `\ref` prints it. (C12) `\DeclareTextComposite` is a no-op (Perl LaTeX.pool too), so a T4 composite
-    (`\m{y}`, t4enc.def:164) falls to `\m`'s own `\errmessage` and the letter is lost: 44 Errors on 2405.01972
-    (pdflatex 0, Perl 0 — its `\errmessage` is a Note, KNOWN_PERL_ERRORS #195), `fonts-nfss/t4_modified_letter_help_is_not_expanded`.
+    addendum). (C11) FIXED 77u for the witness: a `\p@<counter>` form is applied to the expanded `\the<counter>` as
+    latex.ltx's `\@currentlabel` is (`\protected@edef`; `\lx@@p@the@@`, OD #778, KPE #1001): 1902.09345 18 → 2
+    Errors (the two are `ltx:chapter` in `ltx:text`, base too), its first SI equation back, refnum "S1"
+    (`parameter-conditional/p_form_applies_to_the_expanded_number`). Residual RED: the form is still typeset at the
+    step, where pdflatex typesets it only at a `\ref`, so a nine-argument `\p@equation` before a one-token number still
+    reads past its tag (8 errors, `parameter-conditional/p_equation_taking_nine_arguments`): our argument reader takes a
+    `}` as an undelimited argument (`\def\g#1#2#3{[#3]}{\g a}b` prints "[b]"; Perl Gullet.pm:732-744 the same) where
+    tex.web §395 stops with "Argument of \g has an extra }" and §396 drops the call — a gullet change of its own. (C12)
+    FIXED 77u: T4 has a font map (t4_fontmap.rs, OD #777), so t4enc.def's composites are declared and `\m{y}` prints ƴ;
+    2405.01972 45 → 1 Error (the `substitutefont.sty` TL 2025 lacks), the Pular letters in place
+    (`fonts-nfss/t4_modified_letter_help_is_not_expanded`, `fonts-nfss/t4_african_letters_print`).
     Not loops of ours: `\clap` (1011.2267, 1308.3100), `\Ref` (math0204358) and `\robustify` (2003.07558) — the TL 2025
     definition wins, as ruled — stop pdflatex too at its 100-error limit (no PDF; ours TooManyErrors or PushbackLimit,
     the same document breakage); 1603.09649 (`\input{\Ref{…}}`, pdflatex 121 errors and a PDF) still ends in Fatal
@@ -4570,6 +4575,30 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (1809.08822, 1811.06803). Open, pre-existing (r2 and int34a the same): under lipics-v2021's `labelformat=boxed` an
   algorithm2e caption takes caption's format (a rule box, then "1 Title"), where pdflatex prints algorithm2e's own "Algorithm 1 Title"
   (its ruled caption does not go through caption's; 2002.11064, 1809.08822, 1811.06803) — the word "Algorithm" lost.
+- **77u** (quality batch 2: T4 letters, `\p@<counter>` reference forms, the font at `\begin{document}`; guards
+  `perfect_kernel_batch77u::*`, 13). (1) T4, X2 and OT2 have font maps (t4_fontmap.rs from fccoding.mf and fc.rme's
+  Appendix D, x2_fontmap.rs from x2enc.def/.dfu over T2A's upper half, ot2_fontmap.rs from wncyr10.afm with the fonts'
+  transliteration ligatures from wncyr10.tfm; OD #777): t4enc.def's composites are declared, so `\m{y}` is ƴ (2405.01972
+  45 → 1 Error, the remaining one the `substitutefont.sty` TL 2025 lacks; its Pular letters ɓ ɗ ƴ in place); X2/OT2
+  symbols print (the silent-loss row), OT2's `sh` is ш (1405.1988, 2510.25931), its `\U{i}` й (a `\DeclareTextAccent`
+  for a command another encoding declared first now defines this encoding's); a combining-mark accent slot (T4 `\G`
+  `\U` `\I`) and T2A/X2's `\C` compose; a text symbol of an encoding still without a map (tipa's T3) warns where it is
+  dropped (`\lx@unmapped@text@symbol`). (2) The reference form `\p@<counter>\the<counter>` is applied to the expanded
+  number as latex.ltx's `\refstepcounter` stores `\@currentlabel` (`\protected@edef`; `\lx@@p@the@@`, only for a
+  `\p@` that does something; OD #778, KPE #1001): 1902.09345 18 → 2 Errors, its first SI equation back, refnum "S1";
+  enumitem's short label is the list's `label=` (refnum "(a)", KPE #808) and its label/ref below the first level empties
+  `\p@<counter>` ("(a).i", not "(a)(a).i"; 1404.5334 "2(a)" for `ref=\theenumi(\alph*)`, was "22(a)"). (3) The
+  begin-document constructor runs latex.ltx's `\init@series@setup` (OD #315 addendum): a preamble or class-body font
+  switch does not reach the body (2402.07363's preamble `\sffamily` no longer makes its date and abstract sans; the PDF's
+  are CMR; 1506.02089's class-body `\fontfamily{aer}` no longer sets its math letters upright). A/B vs int35a (release,
+  `--preload=ar5iv.sty`): 187 papers (31 T4/OT2/X2 from a 40k-paper scan + pop67int23, 33 with `\p@` definitions, 30
+  with preamble font switches, 100 pop67int23 controls) E 426 → 366, F 2 → 2, W 4,643 → 4,643, 9 changed outputs; 27
+  papers with a top-level preamble switch (a second scan) E 2 → 2, W 764 → 764, 2 changed; every change classified a
+  gain (letters, refnums, fonts as the PDF); no paper worse (2405.01972's one more Warning is the T3 notice). Dumps
+  identical to int35a, inits 0/0. Residuals: the C11 synthetic shape (a `\p@` reading past a one-token number; our
+  reader takes `}` as an undelimited argument, tex.web §395), T3 (tipa) has no map (silent-loss row), `\normalfont`
+  is `\rmdefault` not `\familydefault` (Font-Selection Chain Residuals 4), T4's own quote/guillemet ligatures (fcr10.tfm:
+  the double quotes and `,,` as T1's, `<<`/`>>` reversed) are not modelled.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

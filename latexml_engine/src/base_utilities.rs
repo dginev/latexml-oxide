@@ -2822,10 +2822,41 @@ LoadDefinitions!({
     "\\lx@p@the@@{}",
     "\\expandafter\\lx@@p@the@@\\expandafter{\\lx@counterfor{#1}}"
   );
-  DefMacro!(
-    "\\lx@@p@the@@{}",
-    "\\csname p@#1\\expandafter\\endcsname\\csname the#1\\endcsname"
-  );
+  // The form is what latex.ltx:14963-14964 `\refstepcounter` stores in `\@currentlabel` and a `\ref` prints:
+  // `\protected@edef` of `\csname p@<ctr>\expandafter\endcsname\csname the<ctr>\endcsname`, so `\p@<ctr>` is
+  // applied once, to the expanded `\the<ctr>`, inside the definition's braces. Typed in place (Perl
+  // Base_Utility.pool.ltxml:1028), a `\p@equation` taking nine arguments (`\renewcommand{\p@equation}
+  // {\gobblesomeargs}`, a robust command, 1902.09345) read past the form's group: 18 errors where pdflatex has 0;
+  // protected, it stays, and gobbles "Equation" of the expanded `\theequation` as the `\ref` does ("S1").
+  // Only a `\p@<ctr>` that does something is applied so: with the kernel's empty one (`\@definecounter`, latex.ltx:10144) the
+  // stored text is `\the<ctr>`'s expansion, which is typeset the same, and the number is typed as written — an
+  // itemize's `\tikz` bullet (a number LaTeX never stores) does not survive an `\edef`.
+  // OXIDIZED_DESIGN_DIVERGENCES #778; guards `perfect_kernel_batch77u::{p_form_applies_to_the_expanded_number,
+  // p_forms_of_the_kernel_keep_their_reference}`, `perfect_kernel_batch56::itemize_label_is_used_as_written`.
+  DefMacro!("\\lx@@p@the@@{}", sub[(ctr)] {
+    let ctr = ctr.to_string();
+    let mut form = vec![T_CS!("\\csname")];
+    form.extend(Explode!(s!("p@{ctr}")));
+    form.extend([T_CS!("\\expandafter"), T_CS!("\\endcsname"), T_CS!("\\csname")]);
+    form.extend(Explode!(s!("the{ctr}")));
+    form.push(T_CS!("\\endcsname"));
+    let form = Tokens::new(form);
+    let applies = match lookup_definition(&T_CS!(s!("\\p@{ctr}")))? {
+      Some(defn) => !(defn.is_expandable()
+        && defn.get_parameters().is_none_or(|params| params.get_num_args() == 0)
+        && match defn.get_expansion() {
+          None => true,
+          Some(ExpansionBody::Tokens(body)) => body.is_empty(),
+          Some(_) => false,
+        }),
+      None => false,
+    };
+    if applies {
+      with_unexpandable_protect(|| do_expand_partially(form))?
+    } else {
+      form
+    }
+  });
 
   AssignMapping!("type_tag_formatter", "refnum" => "\\lx@therefnum@@");
 

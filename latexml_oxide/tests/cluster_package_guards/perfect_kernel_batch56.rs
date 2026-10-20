@@ -13390,6 +13390,7 @@ fn enumitem_setlist_levels_and_names() {
 }
 
 /// 57u: `\setlist` replaces and `\setlist*` appends, `list<depth>` keys apply, only a counter command takes `*`, a `\newlist` name is a list (enumitem.sty:573-598, :977-980, :1597-1612; KPE #354).
+/// The level-2 label empties `\p@enumii` (enumitem.sty:551-556, 77u): its reference is "**", as pdflatex's `\ref`.
 #[test]
 fn enumitem_setlist_replaces_appends_and_depth() {
   let (stderr, xml) = convert_with(
@@ -13404,7 +13405,7 @@ fn enumitem_setlist_replaces_appends_and_depth() {
     &xml,
     "enumerate",
     &[r#"xml:id="S0.I1""#],
-    r##"<enumerate xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag><text font="bold">1.</text></tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I1.i1.p1"><p>one</p><enumerate xml:id="S0.I1.i1.I1"><item xml:id="S0.I1.i1.I1.i1"><tags><tag><text font="bold">**</text></tag><tag role="refnum">1**</tag><tag role="typerefnum">item 1**</tag></tags><para xml:id="S0.I1.i1.I1.i1.p1"><p>two</p></para></item></enumerate></para></item></enumerate>"##,
+    r##"<enumerate xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag><text font="bold">1.</text></tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I1.i1.p1"><p>one</p><enumerate xml:id="S0.I1.i1.I1"><item xml:id="S0.I1.i1.I1.i1"><tags><tag><text font="bold">**</text></tag><tag role="refnum">**</tag><tag role="typerefnum">item **</tag></tags><para xml:id="S0.I1.i1.I1.i1.p1"><p>two</p></para></item></enumerate></para></item></enumerate>"##,
   );
   latexml::util::test::assert_element(
     &xml,

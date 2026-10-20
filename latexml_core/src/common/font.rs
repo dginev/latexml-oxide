@@ -2313,7 +2313,7 @@ fn push_fontmap_char(result: &mut String, c: char, _code: u8) {
 }
 
 /// Check if a character is a Unicode combining mark (category Mn).
-fn is_combining_mark(c: char) -> bool {
+pub fn is_combining_mark(c: char) -> bool {
   matches!(c as u32,
     0x0300..=0x036F   // Combining Diacritical Marks
     | 0x1AB0..=0x1AFF // Combining Diacritical Marks Extended

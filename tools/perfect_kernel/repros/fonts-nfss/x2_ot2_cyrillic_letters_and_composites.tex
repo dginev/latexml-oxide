@@ -1,0 +1,13 @@
+% witness: synthetic, the letters of x2_ot2_cyrillic_symbols_print.tex and more: X2's Latin-slot letters, OT2's
+%          transliteration and its `\U` composite after X2's `\U` (59 OT2/X2 papers in a 40k-paper corpus scan, 77u)
+% oracle:  pdflatex 0 errors; "X2: ј Ј ђ ԛ ԝ Ѣ ҩ ша і." and "OT2: Москва Жж ј ѣ ъ ё й."
+% engines: rust 77s = "X2: ша ." and "OT2: Moskva Жж ъ ë i." (no X2/OT2 map: the encodings fell back to OT1, their
+%          symbols declared nothing); 77u as pdflatex; Perl as 77s
+% expect:  0 errors, 0 warnings; both lines as pdflatex
+% status:  GREEN (77u, x2_fontmap.rs, ot2_fontmap.rs; `\U` declared for a second encoding, sect08.rs)
+\documentclass{article}
+\usepackage[X2,OT2,T2A,T1]{fontenc}
+\begin{document}
+X2: {\fontencoding{X2}\selectfont \cyrje\ \CYRJE\ \cyrdje\ \cyrq\ \cyrw\ \CYRYAT\ \cyrabhha\ \cyrsh\cyra\ \cyrii}.
+OT2: {\fontencoding{OT2}\selectfont Moskva \CYRZH\cyrzh\ \cyrje\ \cyryat\ \cyrhrdsn\ \"e \U{i}}.
+\end{document}

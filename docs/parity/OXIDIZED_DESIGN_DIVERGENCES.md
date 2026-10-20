@@ -10469,11 +10469,15 @@ series switches stay wrappers. Like latex.ltx it replaces a preamble redefinitio
 (pdflatex: `\DeclareRobustCommand\itshape{\bfseries}` in the preamble is gone in the body).
 `\normalshape` is a `\protected` macro in the preamble and the body (latex.ltx:12486-12488; Perl
 latex_constructs.pool.ltxml:5161 lets it to `\upshape`, which copied the dump's robust wrapper, so a
-plain `\edef` expanded it). The hook's `\init@series@setup` (latex.ltx:13902-13920) is not run: the
-bound `\bfseries` does not read its `\bfseries@rm` family, but it also runs `\reset@font`, `\mdseries`
-and `\let\seriesdefault\f@series`, so a preamble font switch stays in force in the body — shared
-residual (base and same-host Perl alike): `\documentclass{article}\itshape\bfseries\begin{document}
-Body text.` is upright CMR10 in pdflatex and bold italic in Rust. amsthm's `\nonslanted` is amsthm.sty's (Perl
+plain `\edef` expanded it). The hook's `\init@series@setup` (latex.ltx:13902-13920) runs after it (77u): its
+`\bfseries@rm` family settings are latex.ltx's (the bound `\bfseries` does not read them), and its `\reset@font`,
+`\mdseries` and `\let\seriesdefault\f@series` keep a font switch of the preamble or the class body out of the body:
+`\documentclass{article}\itshape\bfseries\begin{document}Body text.` is upright medium, as pdflatex's CMR10 (Perl, and
+Rust before 77u: `<text font="bold italic">`; guards `perfect_kernel_batch77u::{preamble_font_switch_does_not_reach_the_body,
+class_body_font_does_not_reach_the_body}`). `\reset@font` is our `\normalfont`, whose family is `\rmdefault` (Perl
+latex_constructs.pool.ltxml:5194), not latex.ltx's `\familydefault`: a `\renewcommand\familydefault{\sfdefault}`
+document, which pdflatex sets in sans, is serif in the body as before, and one that also switched `\sffamily` in the
+preamble no longer carries that switch's `font="sansserif"` into the body. amsthm's `\nonslanted` is amsthm.sty's (Perl
 amsthm.sty.ltxml:28 lets it to `\upshape`, which also set small caps upright). etoolbox's
 `\patchcmd` keeps the macro's `\protected\long\outer` prefix, `[<prefix>]` replaces it, and only
 the first match is replaced (etoolbox.sty:1358-1371; KNOWN_PERL_ERRORS #270).
@@ -21228,8 +21232,65 @@ Ukrainian "Іван" and Serbian "ј" come out spelled with Latin letters, wrong
 
 **Rust** (77s): a text symbol naming one of those letters is the letter when its slot decodes to an ASCII letter, in any
 encoding (`cyrillic_letter_in_latin_slot`, latex_constructs/sect08.rs); the slot still decodes as Latin, so a Latin `i`
-typed in T2A text stays Latin, and a letter with a slot of its own (`\cyrdze` at T2A 175) is unchanged. X2 and OT2 have
-no fontmap here (Perl neither: no x2/ot2.fontmap.ltxml), so their symbols decode to nothing before this applies — the
-letters are dropped without a diagnostic (SYNC_STATUS silent-loss row "X2/OT2 Cyrillic text symbols", RED
-`fonts-nfss/x2_ot2_cyrillic_symbols_print`); once a fontmap gives their slots, the rule above applies to them too. Repro
+typed in T2A text stays Latin, and a letter with a slot of its own (`\cyrdze` at T2A 175) is unchanged. X2 and OT2 had
+no fontmap (Perl neither: no x2/ot2.fontmap.ltxml), so their symbols decoded to nothing and the letters were dropped
+without a diagnostic; 77u gives them maps whose slots are already the Cyrillic letters (#777). Repro
 `fonts-nfss/t2a_cyrillic_i_and_je_are_cyrillic`; guard `perfect_kernel_batch77s::t2a_cyrillic_i_and_je_are_cyrillic`.
+
+### 777. T4, X2 and OT2 have font maps; a text symbol of an encoding with no map warns when dropped (Perl: no maps, the letters lost)
+
+**TeX**: t4enc.def (fc, the "African Computer" fonts) declares the African Latin letters as composites of its own
+commands — `\DeclareTextComposite{\m}{T4}{y}{175}` (:164) — and `\m`'s own body is an `\errmessage` ("Non existent
+modified letter", :36-39) for a letter it has no slot for. x2enc.def and ot2enc.def put Cyrillic letters in the Latin
+letters' slots (X2's extended Cyrillic: `\CYRAE` 65 … `\cyrizh` 122; OT2's wncyr transliteration: `A` А, `C` Ц, `Q` Ч).
+
+**Perl**: no t4/x2/ot2.fontmap.ltxml, and its LaTeX.pool `\DeclareTextComposite` is ignored, so the encodings fall back
+to OT1 (`Couldn't find font encoding`): `\m{y}` reaches t4enc.def's `\errmessage` and the letter is lost (2405.01972:
+44 Errors in Rust before this, Perl's `\errmessage` a Note; pdflatex 0), an X2/OT2 `\DeclareTextSymbol` defines
+nothing (`\cyrje` prints nothing, no diagnostic), and Latin letters typed in OT2 text print themselves where pdflatex
+prints Cyrillic ("Moskva" for Москва).
+
+**Rust** (77u): `t4_fontmap.rs` — the lower half T1's (the fc fonts are EC-shaped), the upper half fccoding.mf's glyphs
+as fc.rme's Appendix D "T4-to-UCS correspondence" maps them, its slips corrected (139 Ń, 150 Ʒ, 152 Ė, 162 ɛ, 172 ʃ,
+173/174 ŋ/ʋ), the letters Unicode has no character for as combining sequences (E̱, Ɛ̃ …) and fj as two letters;
+`x2_fontmap.rs` — T2A's upper half and accents, x2enc.def's letters in the Latin slots (Unicode from x2enc.dfu; Ԛ/Ԝ/Ԩ/Ҏ
+where it has none); `ot2_fontmap.rs` — wncyr10's glyphs (wncyr10.afm) with ot2enc.def's letters, and the fonts'
+ligature program (wncyr10.tfm's LIGTABLE, 78 pairs: `sh` ш, `shch` щ, `ya` я, `e1` э, `N0` №, `[[` «, run as TeX
+runs it, the result read again with the next character), so OT2's transliteration reads as the PDF prints it
+(1405.1988, 2510.25931 "sh"; letter by letter it was "сх"). A `\DeclareTextAccent` whose slot holds a combining mark
+(T4's `\G` 159, `\U` 188, `\I` 191) uses that mark, T2A/X2's `\C` (slot 19, ‶) the double grave, and one for a
+command another encoding's file already declared as a text command still defines this encoding's command (OT2's
+`\U{i}` й after X2's or T2A's `\U`; latex.ltx's `\DeclareTextCommand` always does). A `\DeclareTextSymbol` of an encoding that still has no map
+(tipa's T3) keeps its empty body but warns once per symbol where it is used, naming the encoding
+(`\lx@unmapped@text@symbol`, sect08.rs) — the loss is no longer silent. Witness 2405.01972: 45 Errors → 1 (the
+`substitutefont.sty` TL 2025 lacks), "weeɓitanay", "jooɗodi", "o ƴetti" in place; its `\textipa{\textltailn}` (T3) now
+warns. Repros `fonts-nfss/{t4_modified_letter_help_is_not_expanded, t4_african_letters_print,
+x2_ot2_cyrillic_symbols_print, x2_ot2_cyrillic_letters_and_composites, ot2_transliteration_ligatures,
+text_symbol_of_an_unmapped_encoding_warns}`; guards `perfect_kernel_batch77u::{t4_modified_letter_prints,
+t4_african_letters_print, x2_ot2_cyrillic_symbols_print, x2_ot2_cyrillic_letters_and_composites,
+ot2_transliteration_ligatures, second_encoding_accent_composes, text_symbol_of_an_unmapped_encoding_warns}`.
+
+### 778. A `\p@<counter>` reference form is applied to the expanded number, as `\refstepcounter` stores it (Perl: typed unexpanded at the step)
+
+**TeX**: latex.ltx:14963-14964 `\refstepcounter` stores `\protected@edef\@currentlabel{\csname p@#1\expandafter
+\endcsname\csname the#1\endcsname}`: `\p@<counter>` is expanded once, with the expanded `\the<counter>` after it, inside
+the definition's braces, and a robust command in it stays; a `\ref` prints the stored text.
+
+**Perl** (KNOWN_PERL_ERRORS #1001): the reference form is typed at the step unexpanded (Base_Utility.pool.ltxml:1028
+`\lx@@therefnum@@` `{\normalfont\csname p@#1\endcsname\csname the#1\endcsname}`, :1081-1085 the typeref forms), so a
+`\p@` that takes arguments reads the `\csname the…` tokens themselves: 1902.09345's `\renewcommand{\p@equation}{\gobblesomeargs}` (a
+robust nine-argument command keeping the ninth) read `\csname`, `t`, `h`, … and past the tag (18 errors in Rust, the
+first SI equation lost; pdflatex 0).
+
+**Rust** (77u): `\lx@@p@the@@` (base_utilities.rs), shared by the refnum and typerefnum forms, expands latex.ltx's form
+as `\protected@edef` does (`with_unexpandable_protect` + `do_expand_partially`: an `\edef`'s expansion, which keeps
+`\protected` macros, bounded by the form's braces) and returns the text: "Equation S1" → refnum "S1", as pdflatex's
+`\ref`. Only a `\p@<counter>` that does something is applied so: with the kernel's empty one (`\@definecounter`,
+latex.ltx:10144) the number is typed as written, as before — an itemize's `\tikz` bullet, a number LaTeX never stores,
+does not survive an `\edef`. The common forms are the same text as before (`\p@enumii` = `\theenumi`, `\labelformat`'s
+argument-taking `\p@`). Residual: the form is still TYPESET
+at the step, where pdflatex typesets it only at a `\ref`, so a form that cannot typeset (a nine-argument `\p@` before a
+one-token number) still reads past its tag — our argument reader takes a `}` as an undelimited argument (Perl
+Gullet.pm:732-744 alike; tex.web §395 stops at it, "Argument of \x has an extra }"), SYNC_STATUS C11. Repro
+`parameter-conditional/p_form_applies_to_the_expanded_number`; guards
+`perfect_kernel_batch77u::{p_form_applies_to_the_expanded_number, p_forms_of_the_kernel_keep_their_reference}`.

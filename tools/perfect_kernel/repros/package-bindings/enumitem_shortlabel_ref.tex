@@ -2,7 +2,7 @@
 % oracle:  pdflatex 0 errors; "Refs: (a); (a)." (enumitem.sty:660-681 \enit@first makes the short label label=(\alph*), and ref defaults to the label)
 % engines: rust 67int9/68i2 = refnum "a" then "(a)" (the short label set as the enumerate package's style, \theenumi = \alph{enumi}); perl = the same (latex_constructs.pool.ltxml setEnumerationStyle via enumitem.sty.ltxml beginEnumItemize; KNOWN_PERL_ERRORS #808)
 % expect:  0 errors, 0 warnings; both items' refnum "(a)"
-% status:  RED (open: KNOWN_PERL_ERRORS #808; fix site enumitem_sty.rs mark_short_label, the short label as `label=` with enumitem's \SetEnumerateShortLabel replacements, enumitem.sty:633-652)
+% status:  GREEN (77u: the short label is the list's `label=`, its marks replaced as enumitem.sty:633-700 does; enumitem_sty.rs `enumerate_short_label`; KNOWN_PERL_ERRORS #808)
 \documentclass{article}
 \usepackage[shortlabels]{enumitem}
 \begin{document}
