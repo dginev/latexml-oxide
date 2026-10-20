@@ -1,8 +1,10 @@
 //! Red/green guards for batch 77v (quality batch 4): package bindings that lost authored text or mislabelled it —
 //! thm-restate's `restate=` key, todonotes' option list, KOMA's bibliography preamble, sn-jnl's table rules, theorem
 //! counters over a shared one and `\newcounter` over an existing `\the<ctr>`, multline's `\tag`/`\notag`, a text-mode
-//! `{IEEEeqnarrayboxm}`, amsppt's non-`\long` `\footnote`, combine's class options and endnotes' `\theenmark`. Each
-//! guard asserts the diagnostics by count and the authored content in its whole element.
+//! `{IEEEeqnarrayboxm}`, amsppt's non-`\long` `\footnote`, combine's class options and endnotes' `\theenmark`; a
+//! second `\newtheorem` refused, a binding's theorem guess yielding to the document's, tac's `\def`-style `\newtheorem`
+//! and ntheorem's `\renewtheorem` of an undefined name. Each guard asserts the diagnostics by count and the authored
+//! content in its whole element.
 use latexml::util::test::{convert_with, xml_element};
 
 use super::{
@@ -410,4 +412,160 @@ fn combine_class_option_after_colclass() {
     "p1.1",
     r#"<p xml:id="p1.1">Class: book. Book: yes.</p>"#,
   )]);
+}
+
+/// Every `<tags>` element of the document's theorems, in document order.
+fn theorem_tags(xml: &str) -> Vec<String> {
+  xml
+    .match_indices("<theorem ")
+    .map(|(at, _)| xml_element(&xml[at..], "tags", &[]).unwrap_or_default())
+    .collect()
+}
+
+/// The number of LaTeX's "Command \<name> already defined" messages (an Info, `is_typesetting_only_message`).
+fn already_defined(stderr: &str, name: &str) -> usize {
+  let needle = format!("Command \\{name} already defined");
+  stderr.lines().filter(|l| l.contains(&needle)).count()
+}
+
+/// A fallback class's theorem guess (OmniBus `theorem_preload`, run by the first undeclared `\begin{proof}` with the
+/// document's origin) is no declaration of the document's: it declares through `\lx@guess@newtheorem`, which never
+/// claims the name, so the author's later `\newtheorem{note}{Notation}` / `\newtheorem{claim}{Claim}[section]` replace
+/// the guess ("Note 1.1", "Claim 1" and two "already defined" messages under r2). Repro
+/// macro-state/newtheorem_guess_omnibus_yields.
+#[test]
+fn omnibus_guess_yields_to_document_newtheorem() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/macro-state/newtheorem_guess_omnibus_yields.tex"
+  );
+  let (stderr, xml) = convert_with(tex, Some(AR5IV));
+  // The one warning: no binding for the unknown class (OmniBus is used).
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 1),
+    "{stderr}"
+  );
+  assert_eq!(
+    (
+      already_defined(&stderr, "note"),
+      already_defined(&stderr, "claim")
+    ),
+    (0, 0),
+    "{stderr}"
+  );
+  assert_eq!(theorem_tags(&xml), [
+    r#"<tags><tag>Notation 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Notation 1</tag></tags>"#,
+    r#"<tags><tag>Claim 1.1</tag><tag role="refnum">1.1</tag><tag role="typerefnum">Claim 1.1</tag></tags>"#,
+  ]);
+}
+
+/// The neurips binding's `\AtBeginDocument` theorem set is a guess (the shipped neurips_2024.sty declares none): the
+/// document's `\newtheorem{lemma}{Lemma}`, `\newtheorem{remark}{Observation}` replace it, as pdflatex prints ("Lemma
+/// 1.1", "Remark 1.2" under r2). Repro package-bindings/neurips_guess_theorem_yields.
+#[test]
+fn neurips_guess_yields_to_document_newtheorem() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/package-bindings/neurips_guess_theorem_yields.tex"
+  );
+  let (stderr, xml) = convert_with(tex, Some(AR5IV));
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  assert_eq!(
+    (
+      already_defined(&stderr, "lemma"),
+      already_defined(&stderr, "remark")
+    ),
+    (0, 0),
+    "{stderr}"
+  );
+  assert_eq!(theorem_tags(&xml), [
+    r#"<tags><tag>Lemma 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Lemma 1</tag></tags>"#,
+    r#"<tags><tag>Observation 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Observation 1</tag></tags>"#,
+  ]);
+}
+
+/// tac.cls's `\newtheorem`/`\newtheoremrm` are `\def`s that define `\<name>` outright (0708.1921's tac.cls:409-418):
+/// a second declaration of `thm` replaces the first, never refused ("Theorem 2", "Theorem 3" and two "already
+/// defined" messages under r2; pdflatex "0.2. Proposition.", "0.3. Remark."). Repro
+/// class-bindings/tac_newtheorem_redeclares.
+#[test]
+fn tac_newtheorem_redeclares() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/tac_newtheorem_redeclares.tex"
+  );
+  let (stderr, xml) = convert_with(tex, Some(AR5IV));
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  assert_eq!(already_defined(&stderr, "thm"), 0, "{stderr}");
+  let titles: Vec<String> = theorem_tags(&xml)
+    .iter()
+    .map(|tags| xml_element(tags, "tag", &[]).unwrap_or_default())
+    .collect();
+  assert_eq!(titles, [
+    "<tag>Theorem 1</tag>",
+    "<tag>Proposition 2</tag>",
+    "<tag>Remark 3</tag>"
+  ]);
+}
+
+/// ntheorem.sty:808-814 `\@renewtheorem`: `\renewtheorem` of a name no theorem has raises "Theorem keyword Rem
+/// undefined", then declares it (silent under r2). Repro package-bindings/ntheorem_renewtheorem_undefined.
+#[test]
+fn ntheorem_renewtheorem_of_undefined_errs() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/package-bindings/ntheorem_renewtheorem_undefined.tex"
+  );
+  let (stderr, xml) = convert_with(tex, Some(AR5IV));
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (1, 0),
+    "{stderr}"
+  );
+  assert_eq!(
+    stderr
+      .lines()
+      .filter(|l| l.starts_with("Error:") && l.contains("Theorem keyword Rem undefined"))
+      .count(),
+    1,
+    "{stderr}"
+  );
+  assert_eq!(theorem_tags(&xml), [
+    r#"<tags><tag>Remark 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Remark 1</tag></tags>"#,
+  ]);
+}
+
+/// llncs.cls declares {theorem}; LaTeX refuses the document's `\newtheorem{theorem}{Theorem}[section]` and prints
+/// "Theorem 1.", but a binding's declaration yields to the document's (its set is in general more than its class's),
+/// so ours is "Theorem 1.1": OXIDIZED_DESIGN_DIVERGENCES #783. The document's second `\newtheorem{mylemma}` is
+/// refused, as in LaTeX. Pins the divergence (green before and after 77v r3). Repro
+/// class-bindings/llncs_document_newtheorem_over_class.
+#[test]
+fn llncs_document_newtheorem_replaces_the_class() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/llncs_document_newtheorem_over_class.tex"
+  );
+  let (stderr, xml) = convert_with(tex, Some(AR5IV));
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  assert_eq!(
+    (
+      already_defined(&stderr, "theorem"),
+      already_defined(&stderr, "mylemma")
+    ),
+    (0, 1),
+    "{stderr}"
+  );
+  assert_eq!(theorem_tags(&xml), [
+    r#"<tags><tag>Theorem 1.1</tag><tag role="refnum">1.1</tag><tag role="typerefnum">Theorem 1.1</tag></tags>"#,
+    r#"<tags><tag>Lemma 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Lemma 1</tag></tags>"#,
+  ]);
 }

@@ -553,33 +553,37 @@ LoadDefinitions!({
   // a theorem there (1308.6566, 0811.3048; cs0511055 `\fact`). A name numbered within another's counter
   // (`\newtheorem{cor}[thm]{…}`) whose owner the set refused for an author's macro (`\newcommand{\thm}{…}`) has no
   // such counter: it gets its own (`\@ifundefined{c@thm}`), not an undefined `\thethm`.
+  // The set runs with the document's origin (from the stub below, at the first undeclared `\begin{proof}`), so it
+  // declares through `\lx@guess@newtheorem` (sect08.rs), which never claims a name: the author's own later
+  // `\newtheorem{note}{Notation}` replaces the guessed {note} rather than being refused as a second declaration.
+  // Guard `perfect_kernel_batch77v::omnibus_guess_yields_to_document_newtheorem`.
   let theorem_preload = concat!(
-    "\\@ifundefined{theorem}{\\newtheorem{theorem}{Theorem}[section]}{}",
-    "\\@ifundefined{conjecture}{\\@ifundefined{c@theorem}{\\newtheorem{conjecture}{Conjecture}}{\\newtheorem{conjecture}[theorem]{Conjecture}}}{}",
-    "\\@ifundefined{proposition}{\\@ifundefined{c@theorem}{\\newtheorem{proposition}{Proposition}}{\\newtheorem{proposition}[theorem]{Proposition}}}{}",
-    "\\@ifundefined{proof}{\\@ifundefined{c@theorem}{\\newtheorem{proof}{Proof}}{\\newtheorem{proof}[theorem]{Proof}}}{}",
-    "\\@ifundefined{lemma}{\\@ifundefined{c@theorem}{\\newtheorem{lemma}{Lemma}}{\\newtheorem{lemma}[theorem]{Lemma}}}{}",
-    "\\@ifundefined{corollary}{\\@ifundefined{c@theorem}{\\newtheorem{corollary}{Corollary}}{\\newtheorem{corollary}[theorem]{Corollary}}}{}",
-    "\\@ifundefined{example}{\\@ifundefined{c@theorem}{\\newtheorem{example}{Example}}{\\newtheorem{example}[theorem]{Example}}}{}",
-    "\\@ifundefined{exercise}{\\@ifundefined{c@theorem}{\\newtheorem{exercise}{Exercise}}{\\newtheorem{exercise}[theorem]{Exercise}}}{}",
-    "\\@ifundefined{definition}{\\@ifundefined{c@theorem}{\\newtheorem{definition}{Definition}}{\\newtheorem{definition}[theorem]{Definition}}}{}",
-    "\\@ifundefined{problem}{\\@ifundefined{c@theorem}{\\newtheorem{problem}{Problem}}{\\newtheorem{problem}[theorem]{Problem}}}{}",
-    "\\@ifundefined{question}{\\@ifundefined{c@theorem}{\\newtheorem{question}{Question}}{\\newtheorem{question}[theorem]{Question}}}{}",
-    "\\@ifundefined{remark}{\\@ifundefined{c@theorem}{\\newtheorem{remark}{Remark}}{\\newtheorem{remark}[theorem]{Remark}}}{}",
-    "\\@ifundefined{solution}{\\@ifundefined{c@theorem}{\\newtheorem{solution}{Solution}}{\\newtheorem{solution}[theorem]{Solution}}}{}",
-    "\\@ifundefined{step}{\\@ifundefined{c@theorem}{\\newtheorem{step}{Step}}{\\newtheorem{step}[theorem]{Step}}}{}",
-    "\\@ifundefined{note}{\\@ifundefined{c@theorem}{\\newtheorem{note}{Note}}{\\newtheorem{note}[theorem]{Note}}}{}",
-    "\\@ifundefined{thm}{\\newtheorem{thm}{Theorem}}{}",
-    "\\@ifundefined{cor}{\\@ifundefined{c@thm}{\\newtheorem{cor}{Corollary}}{\\newtheorem{cor}[thm]{Corollary}}}{}",
-    "\\@ifundefined{lem}{\\@ifundefined{c@thm}{\\newtheorem{lem}{Lemma}}{\\newtheorem{lem}[thm]{Lemma}}}{}",
-    "\\@ifundefined{claim}{\\@ifundefined{c@thm}{\\newtheorem{claim}{Claim}}{\\newtheorem{claim}[thm]{Claim}}}{}",
-    "\\@ifundefined{axiom}{\\@ifundefined{c@thm}{\\newtheorem{axiom}{Axiom}}{\\newtheorem{axiom}[thm]{Axiom}}}{}",
-    "\\@ifundefined{conj}{\\@ifundefined{c@thm}{\\newtheorem{conj}{Conjecture}}{\\newtheorem{conj}[thm]{Conjecture}}}{}",
-    "\\@ifundefined{fact}{\\@ifundefined{c@thm}{\\newtheorem{fact}{Fact}}{\\newtheorem{fact}[thm]{Fact}}}{}",
-    "\\@ifundefined{hypo}{\\@ifundefined{c@thm}{\\newtheorem{hypo}{Hypothesis}}{\\newtheorem{hypo}[thm]{Hypothesis}}}{}",
-    "\\@ifundefined{assum}{\\@ifundefined{c@thm}{\\newtheorem{assum}{Assumption}}{\\newtheorem{assum}[thm]{Assumption}}}{}",
-    "\\@ifundefined{prop}{\\@ifundefined{c@thm}{\\newtheorem{prop}{Proposition}}{\\newtheorem{prop}[thm]{Proposition}}}{}",
-    "\\@ifundefined{crit}{\\@ifundefined{c@thm}{\\newtheorem{crit}{Criterion}}{\\newtheorem{crit}[thm]{Criterion}}}{}",
+    "\\@ifundefined{theorem}{\\lx@guess@newtheorem{theorem}{Theorem}[section]}{}",
+    "\\@ifundefined{conjecture}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{conjecture}{Conjecture}}{\\lx@guess@newtheorem{conjecture}[theorem]{Conjecture}}}{}",
+    "\\@ifundefined{proposition}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{proposition}{Proposition}}{\\lx@guess@newtheorem{proposition}[theorem]{Proposition}}}{}",
+    "\\@ifundefined{proof}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{proof}{Proof}}{\\lx@guess@newtheorem{proof}[theorem]{Proof}}}{}",
+    "\\@ifundefined{lemma}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{lemma}{Lemma}}{\\lx@guess@newtheorem{lemma}[theorem]{Lemma}}}{}",
+    "\\@ifundefined{corollary}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{corollary}{Corollary}}{\\lx@guess@newtheorem{corollary}[theorem]{Corollary}}}{}",
+    "\\@ifundefined{example}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{example}{Example}}{\\lx@guess@newtheorem{example}[theorem]{Example}}}{}",
+    "\\@ifundefined{exercise}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{exercise}{Exercise}}{\\lx@guess@newtheorem{exercise}[theorem]{Exercise}}}{}",
+    "\\@ifundefined{definition}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{definition}{Definition}}{\\lx@guess@newtheorem{definition}[theorem]{Definition}}}{}",
+    "\\@ifundefined{problem}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{problem}{Problem}}{\\lx@guess@newtheorem{problem}[theorem]{Problem}}}{}",
+    "\\@ifundefined{question}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{question}{Question}}{\\lx@guess@newtheorem{question}[theorem]{Question}}}{}",
+    "\\@ifundefined{remark}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{remark}{Remark}}{\\lx@guess@newtheorem{remark}[theorem]{Remark}}}{}",
+    "\\@ifundefined{solution}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{solution}{Solution}}{\\lx@guess@newtheorem{solution}[theorem]{Solution}}}{}",
+    "\\@ifundefined{step}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{step}{Step}}{\\lx@guess@newtheorem{step}[theorem]{Step}}}{}",
+    "\\@ifundefined{note}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{note}{Note}}{\\lx@guess@newtheorem{note}[theorem]{Note}}}{}",
+    "\\@ifundefined{thm}{\\lx@guess@newtheorem{thm}{Theorem}}{}",
+    "\\@ifundefined{cor}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{cor}{Corollary}}{\\lx@guess@newtheorem{cor}[thm]{Corollary}}}{}",
+    "\\@ifundefined{lem}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{lem}{Lemma}}{\\lx@guess@newtheorem{lem}[thm]{Lemma}}}{}",
+    "\\@ifundefined{claim}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{claim}{Claim}}{\\lx@guess@newtheorem{claim}[thm]{Claim}}}{}",
+    "\\@ifundefined{axiom}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{axiom}{Axiom}}{\\lx@guess@newtheorem{axiom}[thm]{Axiom}}}{}",
+    "\\@ifundefined{conj}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{conj}{Conjecture}}{\\lx@guess@newtheorem{conj}[thm]{Conjecture}}}{}",
+    "\\@ifundefined{fact}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{fact}{Fact}}{\\lx@guess@newtheorem{fact}[thm]{Fact}}}{}",
+    "\\@ifundefined{hypo}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{hypo}{Hypothesis}}{\\lx@guess@newtheorem{hypo}[thm]{Hypothesis}}}{}",
+    "\\@ifundefined{assum}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{assum}{Assumption}}{\\lx@guess@newtheorem{assum}[thm]{Assumption}}}{}",
+    "\\@ifundefined{prop}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{prop}{Proposition}}{\\lx@guess@newtheorem{prop}[thm]{Proposition}}}{}",
+    "\\@ifundefined{crit}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{crit}{Criterion}}{\\lx@guess@newtheorem{crit}[thm]{Criterion}}}{}",
     // Guard `\theoremstyle{definition}` with `\@ifundefined` so the
     // stub does NOT error when the document deliberately undefined
     // `\theoremstyle` (e.g. `\let\theoremstyle\@undefined` followed
@@ -591,12 +595,12 @@ LoadDefinitions!({
     // `\let\theoremstyle\@undefined\usepackage{amsthm}`; since 67p the
     // theorem binding leaves amsthm unloaded, so that load is real).
     "\\@ifundefined{theoremstyle}{}{\\theoremstyle{definition}}",
-    "\\@ifundefined{defn}{\\@ifundefined{c@thm}{\\newtheorem{defn}{Definition}}{\\newtheorem{defn}[thm]{Definition}}}{}",
-    "\\@ifundefined{exmp}{\\@ifundefined{c@thm}{\\newtheorem{exmp}{Example}}{\\newtheorem{exmp}[thm]{Example}}}{}",
-    "\\@ifundefined{rem}{\\@ifundefined{c@thm}{\\newtheorem{rem}{Remark}}{\\newtheorem{rem}[thm]{Remark}}}{}",
-    "\\@ifundefined{prob}{\\@ifundefined{c@thm}{\\newtheorem{prob}{Problem}}{\\newtheorem{prob}[thm]{Problem}}}{}",
-    "\\@ifundefined{prin}{\\@ifundefined{c@thm}{\\newtheorem{prin}{Principle}}{\\newtheorem{prin}[thm]{Principle}}}{}",
-    "\\@ifundefined{alg}{\\newtheorem{alg}{Algorithm}}{}",
+    "\\@ifundefined{defn}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{defn}{Definition}}{\\lx@guess@newtheorem{defn}[thm]{Definition}}}{}",
+    "\\@ifundefined{exmp}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{exmp}{Example}}{\\lx@guess@newtheorem{exmp}[thm]{Example}}}{}",
+    "\\@ifundefined{rem}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{rem}{Remark}}{\\lx@guess@newtheorem{rem}[thm]{Remark}}}{}",
+    "\\@ifundefined{prob}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{prob}{Problem}}{\\lx@guess@newtheorem{prob}[thm]{Problem}}}{}",
+    "\\@ifundefined{prin}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{prin}{Principle}}{\\lx@guess@newtheorem{prin}[thm]{Principle}}}{}",
+    "\\@ifundefined{alg}{\\lx@guess@newtheorem{alg}{Algorithm}}{}",
   );
   // Only install autoload stubs for CSes that aren't already defined. If
   // amsthm was pre-loaded (e.g. via dep-scan of a local .cls that

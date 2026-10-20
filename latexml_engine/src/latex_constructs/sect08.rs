@@ -1483,14 +1483,21 @@ pub(crate) fn load() -> Result<()> {
   //
   // latex.ltx `\@nthm` (`\expandafter\@ifdefinable\csname #1\endcsname`, amsthm.sty's alike) refuses a theorem whose
   // `\<name>` is defined: "Command \<name> already defined", the first declaration kept. The refusal is kept to a
-  // theorem the document's world (the document, a raw file it loaded) declared: a binding's declaration is our guess
-  // at the class, which the document's own replaces (2407.21129, 1205.2947), and a `\let\<name>\relax` before
-  // declaring it again makes it definable, as in LaTeX. `\newtheorem{prop}[theorem]{Prop}` then `\newtheorem{prop}
-  // {Prop}` gave prop a counter of its own and renumbered every theorem (pdflatex "Theorem 1, Prop 2, Theorem 3").
-  // Guard `perfect_kernel_batch77v::newtheorem_twice_keeps_the_first`.
+  // theorem the document's world (the document, a raw file it loaded) declared — a `\let\<name>\relax` before declaring
+  // it again makes it definable, as in LaTeX. `\newtheorem{prop}[theorem]{Prop}` then `\newtheorem{prop}{Prop}` gave
+  // prop a counter of its own and renumbered every theorem (pdflatex "Theorem 1, Prop 2, Theorem 3"). Guard
+  // `perfect_kernel_batch77v::newtheorem_twice_keeps_the_first`.
+  // A binding's declaration does not claim the name, so the document's own replaces it: where the binding declares
+  // more than its class does (2407.21129, 1205.2947), that is the document's theorem as pdflatex prints it; where the
+  // real class declares it too, LaTeX refuses the document's (llncs `{theorem}`: OXIDIZED_DESIGN_DIVERGENCES #783).
+  // Nor does a binding's guess made while the document is read (OmniBus's set at the first undeclared `\begin{proof}`,
+  // a binding's `\AtBeginDocument` set: neurips, tac), which declares through `\lx@guess@newtheorem` below: the
+  // author's later `\newtheorem{note}{Notation}` is the theorem. Guards
+  // `perfect_kernel_batch77v::{omnibus,neurips}_guess_yields_to_document_newtheorem`.
   DefPrimitive!("\\newtheorem OptionalMatch:* [] {}[]{}[]", sub[(flag, _style_opt, thmset, otherthmset, typ, reset)] {
     use definition::origin::{current_origin, DefinitionOrigin};
-    let document_world = matches!(current_origin(), DefinitionOrigin::Document | DefinitionOrigin::File);
+    let document_world = matches!(current_origin(), DefinitionOrigin::Document | DefinitionOrigin::File)
+      && !lookup_bool(GUESSING_NEWTHEOREM);
     let name = Expand!(thmset.clone()).to_string();
     let declared_key = s!("lx@newtheorem@document@{name}");
     if document_world
@@ -1519,6 +1526,38 @@ pub(crate) fn load() -> Result<()> {
       RegisterValue::Tokens(Tokens!()), None, vec![])?;
     assign_register("\\thm@postwork",
       RegisterValue::Tokens(Tokens!()), None, vec![])?;
+  });
+  // `\lx@guess@newtheorem`, the arguments of `\newtheorem`: a binding's guess at a theorem the document may declare
+  // itself. It runs the `\newtheorem` in force (the kernel's, or amsthm's, ntheorem's, theorem.sty's, a class's), whose
+  // declarations do not claim their names while it runs (`GUESSING_NEWTHEOREM`), so the document's own later
+  // `\newtheorem` of the name replaces the guess rather than being refused. Callers: OmniBus `theorem_preload`,
+  // neurips_sty.rs and tac_cls.rs `\AtBeginDocument` sets.
+  DefPrimitive!("\\lx@guess@newtheorem OptionalMatch:* [] {}[]{}[]", sub[(flag, style_opt, thmset, otherthmset, typ, reset)] {
+    let optional = |tokens: &mut Vec<Token>, arg: Option<Tokens>| {
+      if let Some(arg) = arg.filter(|a| !a.is_empty()) {
+        tokens.push(T_OTHER!("["));
+        tokens.extend(arg.unlist());
+        tokens.push(T_OTHER!("]"));
+      }
+    };
+    let mut call = vec![T_CS!("\\newtheorem")];
+    if let Some(flag) = flag.filter(|f| !f.is_empty()) {
+      call.extend(flag.unlist());
+    }
+    optional(&mut call, style_opt);
+    call.push(T_BEGIN!());
+    call.extend(thmset.unlist());
+    call.push(T_END!());
+    optional(&mut call, otherthmset);
+    call.push(T_BEGIN!());
+    call.extend(typ.unlist());
+    call.push(T_END!());
+    optional(&mut call, reset);
+    let outer = lookup_bool(GUESSING_NEWTHEOREM);
+    assign_value(GUESSING_NEWTHEOREM, true, Some(Scope::Global));
+    let declared = Digest!(Tokens::new(call));
+    assign_value(GUESSING_NEWTHEOREM, outer, Some(Scope::Global));
+    Ok(vec![declared?])
   });
 
   //======================================================================
@@ -1990,6 +2029,10 @@ pub fn declare_bound_text_symbols(encoding: &str, names: &[&str]) -> Result<()> 
   }
   Ok(())
 }
+
+/// Set while `\lx@guess@newtheorem` runs a binding's guessed declaration: `\newtheorem` then claims no name (its
+/// `lx@newtheorem@document@<name>` key), so the document's own declaration replaces the guess.
+const GUESSING_NEWTHEOREM: &str = "lx@newtheorem@guessing";
 
 /// The state key, by command, of the encoding whose `\<enc>\cs` holds a bound symbol's glyph
 /// (`declare_bound_text_symbols`).

@@ -21874,3 +21874,21 @@ came (KNOWN_PERL_ERRORS #1012).
 `\footnote` and `\footnotetext` are such macros, handing the text to the note constructors. No other binding is
 changed: a binding's macros stay `\long` unless the original's non-`\long` reading is the point. Guard
 `perfect_kernel_batch77v::amsppt_footnote_argument_runs_past_par`.
+
+### 783. A document's `\newtheorem` replaces a binding's theorem of the name, also where the real class declares it (Perl: replaced, every `\newtheorem` redefining)
+
+**LaTeX**: `\newtheorem{X}` of a defined `\X` is refused (latex.ltx `\@nthm`, amsthm.sty:78-80 `\@ifdefinable`):
+"Command \X already defined", the first declaration kept. Under llncs.cls (`\spnewtheorem{theorem}{Theorem}…`), a
+document's `\newtheorem{theorem}{Theorem}[section]` is refused and its theorems print "Theorem 1.".
+
+**Perl**: `\newtheorem` refuses nothing; every declaration replaces the previous one.
+
+**Rust** (77v r2/r3): a second `\newtheorem` is refused, as in LaTeX, only when the document's world (the document, a
+raw file it loaded) made the first; a binding's declaration — and a binding's guess made while the document is read,
+through `\lx@guess@newtheorem` (KNOWN_PERL_ERRORS #1008) — claims no name, so the document's replaces it. A binding's
+theorem set is in general more than its class declares (elsart_support's `{rem}` under arxbj, 1205.2947; tac's under
+2407.21129's `\newtheoremrm{examples}…[section]`), where the document's declaration is the one pdflatex prints; telling
+the class's own theorems apart per binding is not done. Where the real class does declare the name, the document's
+declaration wins here and LaTeX's refusal is lost: llncs + `\newtheorem{theorem}{Theorem}[section]` gives "Theorem 1.1"
+where pdflatex prints "Theorem 1." with an error. Guard `perfect_kernel_batch77v::llncs_document_newtheorem_replaces_the_class`
+(repro class-bindings/llncs_document_newtheorem_over_class).

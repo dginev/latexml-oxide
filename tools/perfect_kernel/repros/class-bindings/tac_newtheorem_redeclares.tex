@@ -1,0 +1,18 @@
+% tac.cls's `\newtheorem`/`\newtheoremrm` are `\def`s (0708.1921's tac.cls:409-418, `\@@newthm` defines `\<name>`
+% outright): a second `\newtheorem{thm}{Proposition}` replaces the first, never refused as latex.ltx's `\@nthm` does.
+% witness: review of batch 77v r2 (probe rev77v2/tac.tex, pdflatex with 0708.1921's tac.cls in rev77v2/pdftac/)
+% oracle:  pdflatex 0 errors; "0.1. Theorem. a", "0.2. Proposition. b", "0.3. Remark. c" (the class's headings
+%          number by section)
+% engines: rust 77v2-rel (f30e7bb268): "Theorem 1", "Theorem 2" (refused, an "already defined" Info); 77v-rel:
+%          "Theorem 1", "Proposition 2"
+% expect:  0 errors, 0 warnings; "Theorem 1", "Proposition 2", "Remark 3", no "already defined" message
+% status:  RED -> GREEN (77v r3; guard perfect_kernel_batch77v::tac_newtheorem_redeclares)
+\documentclass{tac}
+\begin{document}
+\newtheorem{thm}{Theorem}
+\begin{thm}a\end{thm}
+\newtheorem{thm}{Proposition}
+\begin{thm}b\end{thm}
+\newtheoremrm{thm}{Remark}
+\begin{thm}c\end{thm}
+\end{document}

@@ -105,12 +105,23 @@ LoadDefinitions!({
   // `\newtheoremrm{examples}{Examples}` (8 witnesses: 0907.2460, 1003.5552, 1202.1004, 1203.4318, 1309.4821),
   // defined at the document's start where the paper has not: tac.cls's own `\newtheorem` is a `\def` (0708.1921's
   // :409-418), so a paper's `\newtheoremrm{examples}{Examples}[section]` replaces the class's (2407.21129), which a
-  // theorem declared here first would not cleanly (its counter stays the shared one: "Examples 2.0").
+  // theorem declared here first would not cleanly (its counter stays the shared one: "Examples 2.0"). A guess
+  // (`\lx@guess@newtheorem`, sect08.rs), it never claims the name from the document's own declaration.
   RawTeX!(
-    r"\AtBeginDocument{\@ifundefined{remarks}{\newtheorem{remarks}[theorem]{Remarks}}{}%
-\@ifundefined{examples}{\newtheorem{examples}[theorem]{Examples}}{}}"
+    r"\AtBeginDocument{\@ifundefined{remarks}{\lx@guess@newtheorem{remarks}[theorem]{Remarks}}{}%
+\@ifundefined{examples}{\lx@guess@newtheorem{examples}[theorem]{Examples}}{}}"
   );
   RawTeX!(r"\newtheorem{notation}[theorem]{Notation}");
+  // tac.cls's `\newtheorem`, `\newtheoremrm` (0708.1921's :409-418, `\@@newthm`/`\@@newthmrm`) are `\def`s that define
+  // `\<name>` outright, so a second declaration of a name replaces the first where latex.ltx's `\@nthm` refuses it
+  // (pdflatex "0.2. Proposition." for `\newtheorem{thm}{Theorem}` then `\newtheorem{thm}{Proposition}`): `\<name>` is
+  // freed, then declared by the kernel's, as ntheorem's `\renewtheorem` does. Guard
+  // `perfect_kernel_batch77v::tac_newtheorem_redeclares`.
+  Let!("\\lx@tac@newtheorem", "\\newtheorem");
+  DefMacro!(
+    "\\newtheorem OptionalMatch:* {}",
+    "\\expandafter\\let\\csname #2\\endcsname\\relax\\lx@tac@newtheorem#1{#2}"
+  );
   Let!("\\newtheoremrm", "\\newtheorem");
 
   // What every tac.cls copy papers ship defines (83 of 83: 2015/03/16 and 2023/03/06 versions; line numbers from

@@ -16218,9 +16218,18 @@ arxbj's `\newtheorem{rem}{Remark}` over elsart_support's `\newtheorem{rem}[thm]{
 a counter of its own. Where `\<X>` is still defined, latex.ltx `\@nthm` (`\@ifdefinable`) refuses the second declaration
 and keeps the first: `\newtheorem{prop}[theorem]{Prop}\newtheorem{prop}{Prop}` — pdflatex "Command \prop already
 defined", "Theorem 1, Prop 2, Theorem 3"; Perl redefines it ("Prop 0"). Rust (77v r2) refuses it when the document's world
-(the document, a raw file it loaded) declared the first, not over a binding's declaration. Guards
+(the document, a raw file it loaded) declared the first, not over a binding's declaration (OXIDIZED_DESIGN_DIVERGENCES
+#783), nor (77v r3) over a binding's guess made while the document is read — OmniBus's set at the first undeclared
+`\begin{proof}`, neurips' and tac's `\AtBeginDocument` sets, which declare through `\lx@guess@newtheorem` and claim no
+name (sect08.rs): the author's later `\newtheorem{note}{Notation}` is the theorem. tac.cls's `\newtheorem`/`\newtheoremrm`
+are `\def`s that never refuse (0708.1921's tac.cls:409-418; pdflatex "0.2. Proposition."), and so are the binding's.
+Scope: the refusal fires only over a previous `\newtheorem` of the name; a document's `\newenvironment{X}` then
+`\newtheorem{X}`, which LaTeX refuses, is still not refused (older than r2). Not emulated: pdflatex's error path after
+amsthm.sty:78-92's refusal, which leaves `\@tempa` `\relax` and so typesets the arguments it did not read (stray "Satz",
+"Unnumbered", "[theorem]Lemma" in the text); ours drops them with the declaration. Guards
 `perfect_kernel_batch77v::{newtheorem_over_shared_counter_theorem, elsart_support_theorem_tag_zero,
-newtheorem_twice_keeps_the_first}`.
+newtheorem_twice_keeps_the_first, omnibus_guess_yields_to_document_newtheorem,
+neurips_guess_yields_to_document_newtheorem, tac_newtheorem_redeclares}`.
 
 ## 1009. `\newcounter` replaces an existing `\the<ctr>`
 

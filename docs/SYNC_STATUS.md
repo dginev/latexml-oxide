@@ -4835,7 +4835,21 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   loads book). `{multline*}`'s equation now has an xml:id as `{equation*}`'s (56_ams mathtools golden: ids only). A/B vs
   77v-rel (556 papers: r1's 410, rev77v's 120, 26 repeating a `\newtheorem` name): E/F/W 474/5/11114 unchanged, 37
   outputs changed — 36 xml:id-only (the multline* ids), 1604.03189's `\label` in a `{multline*}` on the equation, not
-  the subsection (as `{equation*}`; pdflatex "??").
+  the subsection (as `{equation*}`; pdflatex "??"). r3 (re-review rev77v2; guards `perfect_kernel_batch77v::*` +5, four RED
+  on f30e7bb268, the llncs one pinning OD #783): a binding's theorem guess made while the document is read (OmniBus's
+  set at the first undeclared `\begin{proof}`, neurips' and tac's `\AtBeginDocument` sets) declares through
+  `\lx@guess@newtheorem` (sect08.rs), which runs the `\newtheorem` in force without claiming the name, so the author's
+  own later `\newtheorem{note}{Notation}` replaces the guess instead of being refused ("Note 1.1", "Remark 1.2" under
+  r2); tac's `\newtheorem`/`\newtheoremrm` free `\<name>` before declaring it, as tac.cls's `\def`s never refuse
+  (0708.1921's tac.cls:409-418); ntheorem's `\renewtheorem` of an undefined name raises ntheorem.sty:808-811's "Theorem
+  keyword … undefined"; KPE #1008 records the refusal's scope and amsthm's unemulated error-path text; OD #783 the
+  llncs case (the document's `\newtheorem{theorem}` replaces the class's: "Theorem 1.1", pdflatex "Theorem 1." with an
+  error). A/B vs 77v2-rel (747 papers: r2's 556, rev77v2's 144, 23 unbound-class and 13 neurips papers with a body
+  `\newtheorem`, 22 tac and guess witnesses): E/F/W 524/5/15581 unchanged; 2406.11672 (neurips, body
+  `\newtheorem{definition}`) "Definition 3.1" → "Definition 1" as pdflatex; 2602.02822 one formula unparsed, math-parse
+  noise (identical on rerun). Residuals: under tac + amsthm the binding's amsthm keeps tac's non-refusing
+  `\newtheorem` (amsthm_sty.rs:18 saves the one in force), where amsthm.sty:77 restores a refusing one; theorem.sty's
+  binding `\newtheorem` refuses nothing (theorem.sty's `\@xnthm` does).
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

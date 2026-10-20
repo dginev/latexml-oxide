@@ -1,0 +1,20 @@
+% llncs.cls declares {theorem} (`\spnewtheorem{theorem}{Theorem}{\bfseries}{\itshape}`); LaTeX refuses the
+% document's `\newtheorem{theorem}{Theorem}[section]` ("Command \theorem already defined") and keeps the class's.
+% The binding's declarations yield to the document's (a binding's theorem set is in general more than its class's:
+% 2407.21129, 1205.2947), so ours numbers within section: OXIDIZED_DESIGN_DIVERGENCES #783. A second document
+% `\newtheorem{mylemma}` is refused as in LaTeX.
+% witness: review of batch 77v r2 (finding 4, probe rev77v2/lncs.tex)
+% oracle:  pdflatex 2 errors ("Command \theorem already defined", "Command \mylemma already defined"); "Theorem 1.",
+%          "Lemma 1"
+% engines: rust 77v2-rel: "Theorem 1.1", "Lemma 1", one "already defined" Info (for \mylemma)
+% expect:  0 errors, 0 warnings; "Theorem 1.1" (the divergence), "Lemma 1"
+% status:  CONTROL (pins OXIDIZED_DESIGN_DIVERGENCES #783; guard perfect_kernel_batch77v::llncs_document_newtheorem_replaces_the_class)
+\documentclass{llncs}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{mylemma}{Lemma}
+\newtheorem{mylemma}{Hilfssatz}
+\begin{document}
+\section{S}
+\begin{theorem}a\end{theorem}
+\begin{mylemma}b\end{mylemma}
+\end{document}

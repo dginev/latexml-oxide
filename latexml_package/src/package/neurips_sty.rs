@@ -244,20 +244,23 @@ LoadDefinitions!({
   // wins. Without deferral our unconditional defs run at .sty-load time,
   // pre-define `\lemma`, and silently suppress the user's `\newtheorem*
   // {lemma*}` branch. Witness 2305.11788 (neurips paper + mymath.sty).
+  // A guess run with the document's origin, so through `\lx@guess@newtheorem` (sect08.rs), which never claims a
+  // name: the author's `\newtheorem{remark}{Observation}` in the body replaces the guessed {remark} rather than being
+  // refused as a second declaration. Guard `perfect_kernel_batch77v::neurips_guess_yields_to_document_newtheorem`.
   RawTeX!(
     r"\AtBeginDocument{%
-\@ifundefined{theorem}{\newtheorem{theorem}{Theorem}[section]}{}%
-\@ifundefined{lemma}{\newtheorem{lemma}[theorem]{Lemma}}{}%
-\@ifundefined{corollary}{\newtheorem{corollary}[theorem]{Corollary}}{}%
-\@ifundefined{proposition}{\newtheorem{proposition}[theorem]{Proposition}}{}%
-\@ifundefined{propo}{\newtheorem{propo}[theorem]{Proposition}}{}%
-\@ifundefined{definition}{\newtheorem{definition}[theorem]{Definition}}{}%
-\@ifundefined{remark}{\newtheorem{remark}[theorem]{Remark}}{}%
-\@ifundefined{example}{\newtheorem{example}[theorem]{Example}}{}%
-\@ifundefined{claim}{\newtheorem{claim}[theorem]{Claim}}{}%
-\@ifundefined{assumption}{\newtheorem{assumption}[theorem]{Assumption}}{}%
-\@ifundefined{question}{\newtheorem{question}[theorem]{Question}}{}%
-\@ifundefined{problem}{\newtheorem{problem}[theorem]{Problem}}{}%
-\@ifundefined{result}{\newtheorem{result}[theorem]{Result}}{}}"
+\@ifundefined{theorem}{\lx@guess@newtheorem{theorem}{Theorem}[section]}{}%
+\@ifundefined{lemma}{\lx@guess@newtheorem{lemma}[theorem]{Lemma}}{}%
+\@ifundefined{corollary}{\lx@guess@newtheorem{corollary}[theorem]{Corollary}}{}%
+\@ifundefined{proposition}{\lx@guess@newtheorem{proposition}[theorem]{Proposition}}{}%
+\@ifundefined{propo}{\lx@guess@newtheorem{propo}[theorem]{Proposition}}{}%
+\@ifundefined{definition}{\lx@guess@newtheorem{definition}[theorem]{Definition}}{}%
+\@ifundefined{remark}{\lx@guess@newtheorem{remark}[theorem]{Remark}}{}%
+\@ifundefined{example}{\lx@guess@newtheorem{example}[theorem]{Example}}{}%
+\@ifundefined{claim}{\lx@guess@newtheorem{claim}[theorem]{Claim}}{}%
+\@ifundefined{assumption}{\lx@guess@newtheorem{assumption}[theorem]{Assumption}}{}%
+\@ifundefined{question}{\lx@guess@newtheorem{question}[theorem]{Question}}{}%
+\@ifundefined{problem}{\lx@guess@newtheorem{problem}[theorem]{Problem}}{}%
+\@ifundefined{result}{\lx@guess@newtheorem{result}[theorem]{Result}}{}}"
   );
 });

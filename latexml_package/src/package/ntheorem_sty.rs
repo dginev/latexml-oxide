@@ -155,13 +155,16 @@ LoadDefinitions!({
   );
 
   DefMacro!("\\Theoremname", "\\lx@thistheorem");
-  // ntheorem.sty:731-740, :808-814 `\renewtheorem{<name>}`: `\<name>` and `\<name>*` let to `\relax`, then
-  // `\@newtheorem{<name>}`, so the `\@ifdefinable` refusal of an existing theorem (sect08.rs `\newtheorem`) does not
-  // apply (Perl ntheorem.sty.ltxml:170 `Let('\renewtheorem', '\newtheorem')`, its `\newtheorem` refusing none).
-  // Guard `55_theorem::ntheorem_test` (`\renewtheorem{Lemma}{Lemma}`).
+  // ntheorem.sty:731-740, :808-814 `\renewtheorem{<name>}`: a name no theorem has is an error ("Theorem keyword #1
+  // undefined", `\@ifundefined{#1}`, :809-811), then `\<name>` and `\<name>*` are let to `\relax` and
+  // `\@newtheorem{<name>}` declares it, so the `\@ifdefinable` refusal of an existing theorem (sect08.rs
+  // `\newtheorem`) does not apply (Perl ntheorem.sty.ltxml:170 `Let('\renewtheorem', '\newtheorem')`, its
+  // `\newtheorem` refusing none). Guards `55_theorem::ntheorem_test` (`\renewtheorem{Lemma}{Lemma}`),
+  // `perfect_kernel_batch77v::ntheorem_renewtheorem_of_undefined_errs`.
   DefMacro!(
     "\\renewtheorem OptionalMatch:* {}",
-    "\\expandafter\\let\\csname #2\\endcsname\\relax\\expandafter\\let\\csname #2*\\endcsname\\relax\\newtheorem#1{#2}"
+    "\\@ifundefined{#2}{\\PackageError{ntheorem}{Theorem keyword #2 undefined}\\@ehc}{}\
+     \\expandafter\\let\\csname #2\\endcsname\\relax\\expandafter\\let\\csname #2*\\endcsname\\relax\\newtheorem#1{#2}"
   );
 
   //======================================================================
