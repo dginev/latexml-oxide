@@ -45,6 +45,10 @@ thread_local! {
   /// absolute fontsize on tokens, which the mathsize context gate already
   /// compensates.)
   static CTX_FONT: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
+  /// The font of the text around the formula (Perl's `$LaTeXML::MathML::FONT`, MathML.pm:278), which an `XMText`'s
+  /// content is written against and its `m:mtext` falls back to; the tokens' own context is `CTX_FONT`, read inside
+  /// the formula only (`math_context_font`, OXIDIZED_DESIGN_DIVERGENCES #780).
+  static CTX_TEXTFONT: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
   static CTX_COLOR: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
   static CTX_BGCOLOR: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
   static CTX_OPACITY: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
@@ -407,6 +411,7 @@ pub fn convert_to_pmml(doc: &PostDocument, xmath: &Node) -> NodeData {
   // nested math's style/font and mangles its remaining tokens.
   let saved_style = CURRENT_STYLE.with(|s| s.get());
   let saved_font = CTX_FONT.with(|c| c.borrow().clone());
+  let saved_text_font = CTX_TEXTFONT.with(|c| c.borrow().clone());
   let saved_color = CTX_COLOR.with(|c| c.borrow().clone());
   let saved_bgcolor = CTX_BGCOLOR.with(|c| c.borrow().clone());
   let saved_opacity = CTX_OPACITY.with(|c| c.borrow().clone());
@@ -428,9 +433,11 @@ pub fn convert_to_pmml(doc: &PostDocument, xmath: &Node) -> NodeData {
   });
   // Perl pmml_top L278-285: bind the inherited style context from the XMath
   // node's ancestor chain, so tokens without their own attributes pick up
-  // the surrounding font/color ({\color{red}$a+b$}).
+  // the surrounding color ({\color{red}$a+b$}); the font from inside the
+  // formula only (`math_context_font`, OXIDIZED_DESIGN_DIVERGENCES #780).
+  ctx_set(&CTX_FONT, super::math_context_font(xmath));
   ctx_set(
-    &CTX_FONT,
+    &CTX_TEXTFONT,
     super::find_inherited_attribute(doc, xmath, "font"),
   );
   ctx_set(
@@ -460,6 +467,7 @@ pub fn convert_to_pmml(doc: &PostDocument, xmath: &Node) -> NodeData {
   // Restore the caller's inherited context (see the reentrancy note above).
   CURRENT_STYLE.with(|s| s.set(saved_style));
   ctx_set(&CTX_FONT, saved_font);
+  ctx_set(&CTX_TEXTFONT, saved_text_font);
   ctx_set(&CTX_COLOR, saved_color);
   ctx_set(&CTX_BGCOLOR, saved_bgcolor);
   ctx_set(&CTX_OPACITY, saved_opacity);
@@ -480,8 +488,9 @@ pub(super) fn pmml_for_ci(doc: &PostDocument, node: &Node) -> NodeData { pmml(do
 /// the previous conversion left (audit should-fix 11).
 pub(super) fn bind_cmml_top_context(doc: &PostDocument, xmath: &Node) {
   CURRENT_STYLE.with(|s| s.set(MathStyle::Text));
+  ctx_set(&CTX_FONT, super::math_context_font(xmath));
   ctx_set(
-    &CTX_FONT,
+    &CTX_TEXTFONT,
     super::find_inherited_attribute(doc, xmath, "font"),
   );
   ctx_set(
@@ -501,6 +510,9 @@ pub(super) fn bind_cmml_top_context(doc: &PostDocument, xmath: &Node) {
 /// The inherited font context, for the content side's ci stylization
 /// (Perl stylizeContent's `|| $LaTeXML::MathML::FONT` fallback).
 pub(super) fn ctx_font() -> Option<String> { ctx_get(&CTX_FONT) }
+
+/// The text font around the formula, for an `XMText`'s `m:mtext` (Perl stylizeContent's `|| $LaTeXML::MathML::FONT`).
+pub(super) fn ctx_text_font() -> Option<String> { ctx_get(&CTX_TEXTFONT) }
 
 /// The inherited color context (Perl `|| $LaTeXML::MathML::COLOR`).
 pub(super) fn ctx_color() -> Option<String> { ctx_get(&CTX_COLOR) }

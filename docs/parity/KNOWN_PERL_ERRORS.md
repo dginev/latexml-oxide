@@ -16111,3 +16111,34 @@ before 77u errors at each equation (1902.09345: 18 errors, the first SI equation
 (base_utilities.rs) expands the form as `\protected@edef` does (OXIDIZED_DESIGN_DIVERGENCES #778). Repro
 `parameter-conditional/p_form_applies_to_the_expanded_number`; guard
 `perfect_kernel_batch77u::p_form_applies_to_the_expanded_number`.
+
+## 1002. A formula's tokens are written against the text element around it, and MathML reads them whole
+
+Core/Document.pm:385-410 (`finalize_rec`) writes a math token's font relative to the enclosing text element's, and
+Post/MathML.pm:677 reads a token's `font` as the whole font (the enclosing element's, :278, only when it has none). In a
+sans and italic context the italic letter is written `font="serif"` and read as upright. Minimal trigger:
+`\documentclass{article}\begin{document}\textsf{\emph{h $y$}}\end{document}` — pdflatex sets `y` in CMMI10; Perl
+`<mi mathvariant="normal">y</mi>`. Rust (77u r3): tokens are written relative to the text default and MathML reads the
+context font inside the formula only (OXIDIZED_DESIGN_DIVERGENCES #780). Repro
+`fonts-nfss/math_fonts_in_sans_italic_text_of_a_serif_document`; guard
+`perfect_kernel_batch77u::math_fonts_in_sans_italic_text_of_a_serif_document`.
+
+## 1003. An `\item[…]`'s reference is `\p@<counter>`, not the label in force
+
+latex.ltx's `\@item` steps the list counter only without an optional label (`\if@noitemarg … \refstepcounter`), so a
+`\label` on `\item[…]` takes `\@currentlabel` as the last numbered item left it. Perl's `RefStepItemCounter`
+(latex_constructs.pool.ltxml:1373-1392) lets `\the<counter>` to `\@empty` and makes the refnum `\p@<counter>`, the
+enclosing item's label only while the counter's `\p@` happens to be it. Minimal trigger:
+`\begin{enumerate}\item o\begin{enumerate}\item a\begin{enumerate}\item[(W)]\label{w}\end{enumerate}\end{enumerate}
+\end{enumerate}\ref{w}` — pdflatex "1a", Perl "1(a)"; under enumitem, which empties `\p@enumii` (enumitem.sty:551-556),
+a nested `\item[(X)]`'s reference is lost (2603.02347, 7 items; covington's `\item[b.]` in an `{example}`, whose
+reference is the example's number, 2405.01972). Rust (77u r3): `ref_step_item_counter` (dialect.rs) records the counter
+of the last numbered item in force, local to the list, and when it is an enclosing list's, an `\item[…]`'s refnum is that
+item's `\p@<ctr>\the<ctr>`. After a numbered item of the same list (pdflatex: that sibling's label) and with none in force
+(a top-level `\item[…]`: the last section's or equation's) Perl's form stays: authors who reference such an item set
+`\@currentlabel` themselves (`\def\@currentlabel{(P2')}\label{…}`, 2502.11630; 2409.02896's `\phantomitem`), which is
+not read, and the sibling's label would replace the item's own (SYNC_STATUS 77u r3 residual). Repros
+`list-structure/item_with_its_own_label_takes_the_enclosing_label`,
+`list-structure/enumitem_item_with_its_own_label_takes_the_enclosing_label`; guards
+`perfect_kernel_batch77u::{item_with_its_own_label_takes_the_enclosing_label,
+enumitem_item_with_its_own_label_takes_the_enclosing_label}`.

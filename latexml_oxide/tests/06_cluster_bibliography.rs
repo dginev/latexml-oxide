@@ -3314,13 +3314,22 @@ fn bib_entries_take_the_defaults_where_the_bibliography_stands() {
     &["key=\"a\""],
     r##"<bibitem class="ltx_bib_book" fragid="bib.bib1" key="a" type="book" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2001</tag><tag class="ltx_bib_title" role="title">Serif title</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Alpha Author</text><text class="ltx_bib_year"> (2001)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Serif title</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">P</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
   );
+  // The sans document's title and publisher are sans, as the PDF. Its author names and year, which the post stage
+  // builds (`ltx_bib_author`, `ltx_bib_year`), are not yet: SYNC_STATUS "Font-Selection Chain Residuals" 5, left out
+  // here rather than pinned wrong.
   let sans =
     convert_and_post_clean("tests/cluster_regressions/bib_font_defaults_sans_document.tex");
   latexml::util::test::assert_element(
     &sans,
-    "bibitem",
-    &["key=\"a\""],
-    r##"<bibitem class="ltx_bib_book" fragid="bib.bib1" key="a" type="book" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2001</tag><tag class="ltx_bib_title" role="title">Sans title</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Alpha Author</text><text class="ltx_bib_year"> (2001)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title"><text font="sansserif">Sans title</text></text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher"><text font="sansserif">P</text></text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+    "text",
+    &["class=\"ltx_bib_title\""],
+    r##"<text class="ltx_bib_title"><text font="sansserif">Sans title</text></text>"##,
+  );
+  latexml::util::test::assert_element(
+    &sans,
+    "text",
+    &["class=\"ltx_bib_publisher\""],
+    r##"<text class="ltx_bib_publisher"><text font="sansserif">P</text></text>"##,
   );
 }
 

@@ -234,7 +234,10 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
 1. **`\cal ABC` collapses to one `<mi>`**: Drops `class="ltx_font_mathcaligraphic"` (Perl emits three `<mi>` elements, Rust one containing `𝒜ℬ𝒞`). Token grouping and class diverge.
 2. **`\DeclareTextCommand`/`\ProvideTextCommand` lack encoding-dispatch chain**: `latex_constructs.rs:6525/6544` bind bare `\cs` to first-encoding expansion permanently.
 3. **Minor font registration gaps**: `\DeclareTextSymbol` decodes eagerly instead of installing deferred `CharDef`; `\DeclareErrorFont` is a bare no-op where Perl defines argument as `\relax`.
-4. ~~A preamble font switch stays in force in the body~~ FIXED 77u (W17, DIVERGENCES #315 addendum): the begin-document constructor runs latex.ltx's `\init@series@setup` (:13902-13920, `\reset@font`, `\mdseries`, `\let\seriesdefault\f@series`) after `\reinstall@nfss@defs`, so a preamble or class-body font switch does not reach the body (guards `perfect_kernel_batch77u::{preamble_font_switch_does_not_reach_the_body, class_body_font_does_not_reach_the_body}`). ~~Residual: `\normalfont` sets `\rmdefault`, not `\familydefault`~~ FIXED 77u r2 (user ruling 2026-10-20, DIVERGENCES #779): `\normalfont`/`\reset@font` are latex.ltx's (:14113-14122, `\encodingdefault`, `\familydefault`, `\seriesdefault`, `\shapedefault`) and the neutral font of notes and tags takes the same defaults, so a `\renewcommand\familydefault{\sfdefault}` document is sans throughout, as its PDF (guards `perfect_kernel_batch77u::{family_default_sets_the_body, family_default_survives_a_preamble_switch}`). Residual: `\textnormal` in maths keeps its fixed serif font (`\textnormal@math`).
+4. ~~A preamble font switch stays in force in the body~~ FIXED 77u (W17, DIVERGENCES #315 addendum): the begin-document constructor runs latex.ltx's `\init@series@setup` (:13902-13920, `\reset@font`, `\mdseries`, `\let\seriesdefault\f@series`) after `\reinstall@nfss@defs`, so a preamble or class-body font switch does not reach the body (guards `perfect_kernel_batch77u::{preamble_font_switch_does_not_reach_the_body, class_body_font_does_not_reach_the_body}`). ~~Residual: `\normalfont` sets `\rmdefault`, not `\familydefault`~~ FIXED 77u r2 (user ruling 2026-10-20, DIVERGENCES #779): `\normalfont`/`\reset@font` are latex.ltx's (:14113-14122, `\encodingdefault`, `\familydefault`, `\seriesdefault`, `\shapedefault`) and the neutral font of notes and tags takes the same defaults, so a `\renewcommand\familydefault{\sfdefault}` document is sans throughout, as its PDF (guards `perfect_kernel_batch77u::{family_default_sets_the_body, family_default_survives_a_preamble_switch}`). Residual: row 6.
+5. **`.bib` author names and year are not sans in a sans document** (77u r2/r3): `\renewcommand\familydefault{\sfdefault}` + a `.bib` bibliography — the title and publisher spans are `font="sansserif"` (the session digests in the defaults where `\bibliography` stands, `lx@bibliography@normalfont`), the `ltx_bib_author` and `ltx_bib_year` spans, which the post stage builds, carry no font; pdflatex sets the whole entry in CMSS10. Fixture `latexml_oxide/tests/cluster_regressions/bib_font_defaults_sans_document.tex`; `06_cluster_bibliography::bib_entries_take_the_defaults_where_the_bibliography_stands` asserts the title and publisher only. Open.
+6. **`\textnormal` in maths keeps a fixed serif font** (77u r2): `\textnormal@math` (`$\textnormal{x}$` in a `\familydefault{\sfdefault}` document) is serif, pdflatex CMSS10; the text-mode `\textnormal` follows `\familydefault` (OD #779). Open.
+7. **A `\familydefault` the font table does not know falls back to serif only in `\normalfont`** (77u r2, kept by the main session): `\lx@normalfont@base` (sect13.rs) puts serif in force before `\normalfont`'s `\selectfont`; elsewhere `\selectfont` keeps the font in force for an unknown family (`{\sffamily\fontfamily{droidserif}\selectfont x}` stays sans). The neutral font of notes and tags (`font_code_named`) reads only a literal or a chain of parameterless macros: opensans.sty's `[default]` (:160-161, `\familydefault` = `\opensansfamily` = `\opensans@family{…}`, "opensans-TLF", not in font.rs's table either) stays serif where pdflatex sets Open Sans. Open.
 
 ### Fragid Parity Open Items
 1. **`associateNode` (Post.pm L508-585) unported**: Generated MathML/OpenMath nodes carry no `xml:id`, so `convertedIDs` and pmml↔cmml parallel cross-linking do not exist.
@@ -4616,6 +4619,37 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   golden `tikz/ac-drive-components.xml` re-blessed (sans node text, CMSS widths). Cost: controls +0.0-0.25 %
   instructions; a sans document +8.5 % (2603.06291: 6,196 more `<text font="sansserif">` runs). Residual: `\textnormal`
   in maths keeps its fixed serif font.
+  **r3** (review fixes; OD #780, KPE #1002, #1003): a formula's token fonts are written relative to the text default,
+  not the enclosing text element (document.rs `finalize_rec` resets family, series and shape at an `ltx:Math`), and
+  MathML reads the context font inside the formula only (`math_context_font`): r2's sans `\normalfont` had made every
+  italic or bold text of a sans document set its math upright (`\emph{$y$}` → `<mi mathvariant="normal">`, a theorem's
+  letters, `\mathsf` in `\textit` lost; 2608.14133 1,890 letters, 2608.31026, 2605.03549, 2604.00146, 2607.19982,
+  2606.05381, 2604.16675), and Perl's `\textsf{\emph{$y$}}` did so in a serif document. An `\item[…]`'s refnum is the
+  enclosing numbered item's `\p@<ctr>\the<ctr>` (latex.ltx `\@item` keeps `\@currentlabel`; dialect.rs
+  `ref_step_item_counter`): enumitem's emptied `\p@enumii` lost it (2603.02347, 7 items), covington's `\item[b.]` now
+  references its example's number (2405.01972), and Perl's third-level form read "1(a)" where pdflatex has "1a". cmbright.sty:26-28 and acmart's sigchi-a
+  (acmart.cls:238-240, :888-890) set the sans default in their bindings; the OD #315 addendum points to #779;
+  `\lx@normalfont@base` falls back to the text default without a font. Goldens re-blessed (token fonts only):
+  theorem/{amstheorem,latextheorem,ntheorem}, math/{niceunits,declaration_scope_labels}, alignment/listing,
+  tokenize/alltt, structure/{algorithm2e_linenumbers,paralists}; guards updated in batch56/61/64/64p/65n/68c (64p's autobold formula is now `bold italic`, CMMIB10 in the PDF,
+  where MathML had lost the bold). A/B r2 vs r3 (release, `--preload=ar5iv.sty`; the
+  review's 132 + r2's 254 = 386 papers): E 393 → 393, F 2 → 2, W 8,967 → 8,967, 65 outputs changed. Single-letter
+  upright `<mi>` 13,409 → 9,272 (plain italic +4,015, sans +101): the seven witnesses back to int35a's counts exactly,
+  and serif documents' italic or bold-italic contexts (2102.09074, 1803.04622) gain their italic; 850 bold-upright letters
+  are bold italic (`\bm`, `\boldsymbol`, `\boldmath` in italic text, CMMIB10 in the PDF: 1503.06160, 2008.06429,
+  2208.10521); covington's `\item[b.]` references its example's number (2405.01972, 135 references); 2603.02347's 12
+  nested `\item[…]` refnums are back ("1", "3"); empty-token names and reference tooltips are no longer italic letters.
+  None worse: a sibling rule for `\item[…]` (the numbered sibling's label, as pdflatex without the authors' fix) printed
+  "(P1)" and "(iv)" in 2502.11630 and 2409.02896 and was dropped (residual below). Inits 0/0, dumps identical to int35a.
+  Residuals: Font-Selection Chain Residuals 5-7. An `\item[…]` keeps Perl's `\p@<counter>` form (KPE #1003) after a
+  numbered item of its own list (pdflatex: that sibling's label; `\item a \item[(X)]\label{x}` at the second level is
+  "1", pdflatex "1a") and at the top level (empty; pdflatex the last section's or equation's label): authors who
+  reference such an item set `\@currentlabel` themselves (`\def\@currentlabel{(P2')}\label{…}`, 2502.11630;
+  2409.02896's `\phantomitem`), which `\label` does not read here or in Perl — the sibling rule, tried in r3, printed
+  "(P1)" and "(iv)" for them. Reading an author-set `\@currentlabel` at `\label` would close both (question for the main
+  session). An itemize's `\item[(Z)]` after an `\item` of its itemize, inside an enumerate item, has no
+  refnum (the itemize item counts as its numbered sibling, sect06.rs's `\the@item<n>` per list), pdflatex the enclosing
+  item's "1" (LaTeX's itemize never steps).
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

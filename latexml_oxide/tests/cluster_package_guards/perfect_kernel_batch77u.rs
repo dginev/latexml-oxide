@@ -5,7 +5,7 @@
 use latexml::util::test::convert_files_with;
 
 use super::{
-  perfect_kernel_batch46::{error_count, warning_count},
+  perfect_kernel_batch46::{convert_html, error_count, warning_count},
   perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with},
 };
 
@@ -160,7 +160,7 @@ fn p_form_applies_to_the_expanded_number() {
 /// ("1a"), `\labelformat` (an argument-taking `\p@section`), and an empty `\p@equation`: pdflatex "Sec. 1 1 1a".
 #[test]
 fn p_forms_of_the_kernel_keep_their_reference() {
-  let xml = assert_elements(
+  assert_elements(
     r"\documentclass{article}
 \labelformat{section}{Sec.~#1}
 \begin{document}
@@ -171,15 +171,28 @@ fn p_forms_of_the_kernel_keep_their_reference() {
 \end{document}",
     RAW,
     (0, 0),
-    &[],
-  );
-  for refnum in ["Sec.\u{00A0}1", "1", "1a"] {
-    let tag = format!(r#"<tag role="refnum">{refnum}</tag>"#);
-    assert!(xml.contains(&tag), "{tag}: {xml}");
-  }
-  assert!(
-    xml.contains("<tag role=\"typerefnum\">item\u{00A0}1a</tag>"),
-    "{xml}"
+    &[(
+      "section",
+      "S1",
+      concat!(
+        r#"<section inlist="toc" labels="LABEL:s" xml:id="S1"><tags><tag>1</tag><tag role="refnum">Sec."#,
+        "\u{00A0}",
+        r#"1</tag><tag role="typerefnum">"#,
+        "\u{00A7}Sec.\u{00A0}",
+        r#"1</tag></tags><title><tag close=" ">1</tag>S</title><para xml:id="S1.p1"><equation labels="LABEL:e" "#,
+        r#"xml:id="S1.E1"><tags><tag>(1)</tag><tag role="refnum">1</tag></tags><Math mode="display" tex="x" "#,
+        r#"text="x" xml:id="S1.E1.m1"><XMath><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math></equation>"#,
+        r#"<enumerate xml:id="S1.I1"><item xml:id="S1.I1.i1"><tags><tag>1.</tag><tag role="refnum">1</tag>"#,
+        r#"<tag role="typerefnum">item"#,
+        "\u{00A0}",
+        r#"1</tag></tags><para xml:id="S1.I1.i1.p1"><p>A</p><enumerate xml:id="S1.I1.i1.I1"><item labels="LABEL:b" "#,
+        r#"xml:id="S1.I1.i1.I1.i1"><tags><tag>(a)</tag><tag role="refnum">1a</tag><tag role="typerefnum">item"#,
+        "\u{00A0}",
+        r#"1a</tag></tags><para xml:id="S1.I1.i1.I1.i1.p1"><p>B</p></para></item></enumerate></para></item>"#,
+        r#"</enumerate><p><ref labelref="LABEL:s"/> <ref labelref="LABEL:e"/> <ref labelref="LABEL:b"/></p></para>"#,
+        r#"</section>"#,
+      ),
+    )],
   );
 }
 
@@ -206,8 +219,154 @@ fn enumitem_ref_clears_the_parent_prefix() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/list-structure/enumitem_ref_clears_the_parent_prefix.tex"
   );
-  let xml = assert_elements(tex, RAW, (0, 0), &[]);
-  assert!(xml.contains(r#"<tag role="refnum">(a).i</tag>"#), "{xml}");
+  let item = nbsp(
+    r#"<item labels="LABEL:in" xml:id="S0.I1.i1.I1.i1"><tags><tag>i.</tag><tag role="refnum">(a).i</tag><tag role="typerefnum">item~(a).i</tag></tags><para xml:id="S0.I1.i1.I1.i1.p1"><p>inner</p></para></item>"#,
+  );
+  assert_elements(tex, RAW, (0, 0), &[("item", "S0.I1.i1.I1.i1", &item)]);
+}
+
+/// A guard's `~` is the no-break space the reference forms carry (`\lx@tag@texttilde`).
+fn nbsp(markup: &str) -> String { markup.replace('~', "\u{00A0}") }
+
+/// An `\item[…]` does not `\refstepcounter` (latex.ltx `\@item`, only `\if@noitemarg`), so a `\label` on it takes
+/// `\@currentlabel` as the last numbered item left it: the enclosing item's "1" for the first nested `\item[(X)]`.
+/// enumitem empties `\p@enumii` (enumitem.sty:551-556), which Perl's `\p@<counter>` form (latex_constructs.pool.ltxml:
+/// 1383) relied on: the refnum was lost (77u r2; 2603.02347, 7 items). (Z), after a numbered item of its own list,
+/// keeps Perl's form, here none (pdflatex "a"; authors who reference such an item set `\@currentlabel` themselves,
+/// 2502.11630). pdflatex "Refs: [1] [a] [a]". Repro
+/// list-structure/enumitem_item_with_its_own_label_takes_the_enclosing_label.
+#[test]
+fn enumitem_item_with_its_own_label_takes_the_enclosing_label() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/list-structure/enumitem_item_with_its_own_label_takes_the_enclosing_label.tex"
+  );
+  let x = nbsp(
+    r#"<item labels="LABEL:x" xml:id="S0.I1.i1.I1.ix1"><tags><tag>(X)</tag><tag role="refnum">1</tag><tag role="typerefnum">item (X)</tag></tags><para xml:id="S0.I1.i1.I1.ix1.p1"><p>custom</p></para></item>"#,
+  );
+  let y = nbsp(
+    r#"<item labels="LABEL:y" xml:id="S0.I1.i1.I1.i1"><tags><tag>(a)</tag><tag role="refnum">a</tag><tag role="typerefnum">item~a</tag></tags><para xml:id="S0.I1.i1.I1.i1.p1"><p>plain</p></para></item>"#,
+  );
+  let z = nbsp(
+    r#"<item labels="LABEL:z" xml:id="S0.I1.i1.I1.ix2"><tags><tag>(Z)</tag><tag role="typerefnum">item (Z)</tag></tags><para xml:id="S0.I1.i1.I1.ix2.p1"><p>after</p></para></item>"#,
+  );
+  assert_elements(tex, RAW, (0, 0), &[
+    ("item", "S0.I1.i1.I1.ix1", &x),
+    ("item", "S0.I1.i1.I1.i1", &y),
+    ("item", "S0.I1.i1.I1.ix2", &z),
+  ]);
+}
+
+/// The same in the kernel's lists: a first nested `\item[(W)]` takes its enclosing item's "1a" (pdflatex), where Perl's
+/// `\p@enumiii` form gave "1(a)"; (X), after a numbered item of its own list, keeps Perl's "1" (pdflatex "1a"). pdflatex
+/// "Refs: [1] [1a] [1a] [1a] [1(a)i]". Repro list-structure/item_with_its_own_label_takes_the_enclosing_label.
+#[test]
+fn item_with_its_own_label_takes_the_enclosing_label() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/list-structure/item_with_its_own_label_takes_the_enclosing_label.tex"
+  );
+  let x = nbsp(concat!(
+    r#"<item labels="LABEL:x" xml:id="S0.I1.i1.I1.ix1"><tags><tag>(X)</tag><tag role="refnum">1</tag>"#,
+    r#"<tag role="typerefnum">item (X)</tag></tags><para xml:id="S0.I1.i1.I1.ix1.p1"><p>custom</p>"#,
+    r#"<enumerate xml:id="S0.I1.i1.I1.ix1.I1"><item labels="LABEL:w" xml:id="S0.I1.i1.I1.ix1.I1.ix1"><tags>"#,
+    r#"<tag>(W)</tag><tag role="refnum">1a</tag><tag role="typerefnum">item (W)</tag></tags>"#,
+    r#"<para xml:id="S0.I1.i1.I1.ix1.I1.ix1.p1"><p>w</p></para></item><item labels="LABEL:v" "#,
+    r#"xml:id="S0.I1.i1.I1.ix1.I1.i1"><tags><tag>i.</tag><tag role="refnum">1(a)i</tag>"#,
+    r#"<tag role="typerefnum">item~1(a)i</tag></tags><para xml:id="S0.I1.i1.I1.ix1.I1.i1.p1"><p>v</p></para></item>"#,
+    r#"</enumerate></para></item>"#,
+  ));
+  assert_elements(tex, RAW, (0, 0), &[("item", "S0.I1.i1.I1.ix1", &x)]);
+}
+
+/// A formula's fonts are the math fonts, never the text family, series or shape around it (fontmath.ltx's math
+/// versions): in a `\renewcommand\familydefault{\sfdefault}` document pdflatex sets `y`, `\alpha` and `\mathrm{c}` in
+/// CMMI10/CMR10 and `\mathsf` in CMSS10 inside `\emph`, `\textbf`, `\textit` and a theorem body alike. Written relative
+/// to the `sansserif italic` text element (Perl Document.pm:385-410) the italic `y` was `font="serif"`, which MathML
+/// reads whole (MathML.pm:677) as upright (77u r2; 2608.14133, 2606.05381's theorems). The tokens are now relative to
+/// the text default, the XML the same wherever the formula stands, and the MathML context font is read inside the
+/// formula only. OXIDIZED_DESIGN_DIVERGENCES #780. Repro fonts-nfss/math_fonts_do_not_follow_a_sans_text_font.
+#[test]
+fn math_fonts_do_not_follow_a_sans_text_font() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/fonts-nfss/math_fonts_do_not_follow_a_sans_text_font.tex"
+  );
+  let (stderr, html) = convert_html(tex);
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  for (id, alt, body) in [
+    (
+      "p1.m1",
+      r"y+\alpha",
+      "<mrow><mi>y</mi><mo>+</mo><mi>\u{03B1}</mi></mrow>",
+    ),
+    (
+      "p1.m2",
+      r"\alpha+\mathsf{H}",
+      "<mrow><mi>\u{03B1}</mi><mo>+</mo><mi>\u{1D5A7}</mi></mrow>",
+    ),
+    ("p1.m3", r"\mathsf{G}", "<mi>\u{1D5A6}</mi>"),
+    (
+      "p1.m4",
+      r"y+\mathsf{K}",
+      "<mrow><mi>y</mi><mo>+</mo><mi>\u{1D5AA}</mi></mrow>",
+    ),
+    (
+      "Thmthm1.p1.m1",
+      r"y+\mathrm{c}",
+      "<mrow><mi>y</mi><mo>+</mo><mi mathvariant=\"normal\">c</mi></mrow>",
+    ),
+  ] {
+    latexml::util::test::assert_element(
+      &html,
+      "math",
+      &[&format!(r#"id="{id}""#)],
+      &format!(
+        r#"<math alttext="{alt}" class="ltx_Math" display="inline" id="{id}">{body}</math>"#
+      ),
+    );
+  }
+  // the XML: the `\emph` formula's tokens as outside any text element
+  assert_elements(tex, RAW, (0, 0), &[(
+    "Math",
+    "p1.m1",
+    r#"<Math mode="inline" tex="y+\alpha" text="y + alpha" xml:id="p1.m1"><XMath><XMApp><XMTok meaning="plus" role="ADDOP">+</XMTok><XMTok font="italic" role="UNKNOWN">y</XMTok><XMTok font="italic" name="alpha" role="UNKNOWN">α</XMTok></XMApp></XMath></Math>"#,
+  )]);
+}
+
+/// The same in a serif document's `\textsf{\emph{…}}`, where Perl writes `y` as `font="serif"` against the
+/// `sansserif italic` text and MathML.pm:677 sets it upright (KNOWN_PERL_ERRORS #1002): pdflatex CMMI10 for `y` and
+/// `\alpha`, CMSS10 for `\mathsf{H}` in `\textbf`. Repro fonts-nfss/math_fonts_in_sans_italic_text_of_a_serif_document.
+#[test]
+fn math_fonts_in_sans_italic_text_of_a_serif_document() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/fonts-nfss/math_fonts_in_sans_italic_text_of_a_serif_document.tex"
+  );
+  let (stderr, html) = convert_html(tex);
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  for (id, alt, body) in [
+    ("p1.m1", "y", "<mi>y</mi>"),
+    (
+      "p1.m2",
+      r"\alpha+\mathsf{H}",
+      "<mrow><mi>\u{03B1}</mi><mo>+</mo><mi>\u{1D5A7}</mi></mrow>",
+    ),
+    ("p1.m3", "y", "<mi>y</mi>"),
+  ] {
+    latexml::util::test::assert_element(
+      &html,
+      "math",
+      &[&format!(r#"id="{id}""#)],
+      &format!(
+        r#"<math alttext="{alt}" class="ltx_Math" display="inline" id="{id}">{body}</math>"#
+      ),
+    );
+  }
 }
 
 /// latex.ltx's `\@kernel@after@begindocument@before` runs `\init@series@setup` (:12513-12514, :13902-13920): the

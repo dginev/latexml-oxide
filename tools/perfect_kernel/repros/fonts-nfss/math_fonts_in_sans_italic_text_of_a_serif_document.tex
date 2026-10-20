@@ -1,0 +1,10 @@
+% witness: rev77u finding 1 (pre-existing: Perl and 77u r1 alike)
+% oracle:  pdflatex 0 errors; y and alpha CMMI10 inside \textsf{\emph{...}} and \textbf{...}, H CMSS10
+% engines: rust 77u r2 and perl 0.8.8 `<mi mathvariant="normal">y</mi>` in \textsf{\emph{...}} (the token's font
+%          "serif", written relative to the `sansserif italic` text, read as absolute by MathML.pm:677)
+% expect:  0 errors, 0 warnings; y, alpha a plain `<mi>` and H sans-serif (U+1D5A7) in every context
+% status:  RED (77u r2) -> GREEN (77u r3: document.rs finalize, presentation.rs; KNOWN_PERL_ERRORS #1002)
+\documentclass{article}
+\begin{document}
+A \textsf{\emph{h $y$}}. B \textbf{b $\alpha+\mathsf{H}$}. C \textsf{s $y$}.
+\end{document}

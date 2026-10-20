@@ -3512,7 +3512,7 @@ After.
       r#"<XMath><XMTok name="backslash" role="MULOP">\</XMTok></XMath></Math>"#,
       r#"<text font="typewriter">a{B {C} D}. "#,
       r#"<Math mode="inline" tex="\backslash" text="backslash" xml:id="p1.m2"><XMath>"#,
-      r#"<XMTok font="serif" name="backslash" role="MULOP">\</XMTok></XMath></Math>x</text></p></para>"#
+      r#"<XMTok name="backslash" role="MULOP">\</XMTok></XMath></Math>x</text></p></para>"#
     ),
   );
   latexml::util::test::assert_element(
@@ -6792,7 +6792,7 @@ fn everypar_grammar_survives_vertical_material_between_productions() {
     &xml,
     "item",
     &[r#"xml:id="S0.I1.ix2""#],
-    r##"<item xml:id="S0.I1.ix2"><tags><tag><Math mode="inline" tex="\langle" text="langle" xml:id="S0.I1.ix2.m1"><XMath><XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok></XMath></Math><text font="italic">model<Math mode="inline" tex="\rangle" text="rangle" xml:id="S0.I1.ix2.m2"><XMath><XMTok font="upright" name="rangle" role="CLOSE" stretchy="false">⟩</XMTok></XMath></Math></text>  ::=</tag><tag role="typerefnum">item </tag></tags><para xml:id="S0.I1.ix2.p1"><p>bar</p></para></item>"##,
+    r##"<item xml:id="S0.I1.ix2"><tags><tag><Math mode="inline" tex="\langle" text="langle" xml:id="S0.I1.ix2.m1"><XMath><XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok></XMath></Math><text font="italic">model<Math mode="inline" tex="\rangle" text="rangle" xml:id="S0.I1.ix2.m2"><XMath><XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok></XMath></Math></text>  ::=</tag><tag role="typerefnum">item </tag></tags><para xml:id="S0.I1.ix2.p1"><p>bar</p></para></item>"##,
   );
 }
 
@@ -14257,9 +14257,10 @@ fn declaremathoperator_keeps_the_following_letters_italic() {
   );
 }
 
-/// 57ab: in an italic context the italic is the context's (`<text font="italic">`, a theorem
-/// body), so a letter there is a plain `<mi>`, found by the inherited font as Perl's
-/// `$LaTeXML::MathML::FONT` (MathML.pm:278); an upright one says `normal`.
+/// 57ab: in an italic context (`<text font="italic">`, a theorem body) a letter is a plain `<mi>`;
+/// an upright one says `normal`. Perl finds the italic by the inherited font (`$LaTeXML::MathML::FONT`,
+/// MathML.pm:278); since 77u r3 the letter carries its own `font="italic"`, written against the text
+/// default rather than the enclosing text (OXIDIZED_DESIGN_DIVERGENCES #780).
 #[test]
 fn letters_in_an_italic_context_stay_plain_mi() {
   let (stderr, html) = convert_html(

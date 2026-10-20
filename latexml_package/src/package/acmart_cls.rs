@@ -857,6 +857,11 @@ LoadDefinitions!({
     let number = ["manuscript", "acmsmall", "acmlarge", "acmtog", "sigconf", "siggraph", "sigplan", "sigchi",
       "sigchi-a", "acmengage", "acmcp"].iter().position(|f| *f == format).unwrap_or(0);
     RawTeX!(&s!("\\def\\ACM@format{{{format}}}\\def\\ACM@format@nr{{{number}}}"));
+    // sigchi-a sets `\@ACM@sigchiamodetrue` (acmart.cls:238-240) and with it a sans body (:888-890
+    // `\renewcommand{\familydefault}{\sfdefault}`; OXIDIZED_DESIGN_DIVERGENCES #779); aamas.cls passes its format on.
+    if format == "sigchi-a" {
+      RawTeX!(r"\@ACM@sigchiamodetrue\renewcommand{\familydefault}{\sfdefault}");
+    }
   }
   // The class's title-block fonts by format, which papers set their own title lines in (`\@titlefont`: 12 papers that
   // ship acmart.cls, 2 on TeX Live's: 2006.07812, 2201.00614, 2201.05893; `\@authorfont`/`\@affiliationfont`:

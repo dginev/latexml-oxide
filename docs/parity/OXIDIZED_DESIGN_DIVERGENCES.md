@@ -10474,10 +10474,10 @@ plain `\edef` expanded it). The hook's `\init@series@setup` (latex.ltx:13902-139
 `\mdseries` and `\let\seriesdefault\f@series` keep a font switch of the preamble or the class body out of the body:
 `\documentclass{article}\itshape\bfseries\begin{document}Body text.` is upright medium, as pdflatex's CMR10 (Perl, and
 Rust before 77u: `<text font="bold italic">`; guards `perfect_kernel_batch77u::{preamble_font_switch_does_not_reach_the_body,
-class_body_font_does_not_reach_the_body}`). `\reset@font` is our `\normalfont`, whose family is `\rmdefault` (Perl
-latex_constructs.pool.ltxml:5194), not latex.ltx's `\familydefault`: a `\renewcommand\familydefault{\sfdefault}`
-document, which pdflatex sets in sans, is serif in the body as before, and one that also switched `\sffamily` in the
-preamble no longer carries that switch's `font="sansserif"` into the body. amsthm's `\nonslanted` is amsthm.sty's (Perl
+class_body_font_does_not_reach_the_body}`). `\reset@font` is our `\normalfont`, which selects latex.ltx's `\familydefault`, `\seriesdefault`
+and `\shapedefault` (#779): a `\renewcommand\familydefault{\sfdefault}` document is sans in the body, as pdflatex
+sets it, and a preamble `\sffamily` switch does not reach the body (guard
+`perfect_kernel_batch77u::family_default_survives_a_preamble_switch`). amsthm's `\nonslanted` is amsthm.sty's (Perl
 amsthm.sty.ltxml:28 lets it to `\upshape`, which also set small caps upright). etoolbox's
 `\patchcmd` keeps the macro's `\protected\long\outer` prefix, `[<prefix>]` replaces it, and only
 the first match is replaced (etoolbox.sty:1358-1371; KNOWN_PERL_ERRORS #270).
@@ -21327,9 +21327,47 @@ Two consequences of the reset now reading the document:
 `\normalfont` restoring the encoding is latex.ltx's too: after `{\fontencoding{OT1}\selectfont <c> \normalfont <d>}` in
 a T1 document `<d>` prints as written (pdflatex), no longer ¡d¿; 0710.2028's `\cyr`
 (`\renewcommand\encodingdefault{OT2}\normalfont`) now prints its OT2 transliteration in Cyrillic ("Там даже …", as the
-PDF). Residual: `\textnormal` in maths (`\textnormal@math`) keeps its fixed serif font. Repros
+PDF). The bindings that stand for a package or class setting the default do so as the original does (77u r3):
+cmbright_sty.rs runs cmbright.sty:26-28, acmart_cls.rs sigchi-a's `\@ACM@sigchiamodetrue` and `\familydefault`
+(acmart.cls:238-240, :888-890). Residuals (SYNC_STATUS "Font-Selection Chain Residuals" 5-7): `\textnormal` in maths
+(`\textnormal@math`) keeps its fixed serif font; a `.bib` entry's author names and year carry no sans; a family the
+font table does not know falls back to serif only in `\normalfont` — opensans.sty's `[default]` (:160-161,
+`\opensansfamily`) stays serif. A formula's tokens are written against the text default, not the sans text (#780). Repros
 `fonts-nfss/family_default_sets_the_body`, `fonts-nfss/family_default_survives_a_preamble_switch`,
 `fonts-nfss/unknown_family_default_resets_to_serif`; guards `perfect_kernel_batch77u::{family_default_sets_the_body,
 family_default_survives_a_preamble_switch, unknown_family_default_resets_to_serif}`,
 `06_cluster_bibliography::bib_entries_take_the_defaults_where_the_bibliography_stands`; golden
 `tikz/ac-drive-components.xml` (its node text CMSS, "Control unit" CMSSBX10 as pdflatex).
+
+### 780. A formula's token fonts are written relative to the text default, not to the enclosing text element, and MathML reads the context font inside the formula only
+
+**TeX**: a formula is set in the math fonts of the current math version (fontmath.ltx: `\mathversion{normal}`'s CMMI
+letters, CMR operators and digits, `\mathsf` CMSS), never in the text family, series or shape around it: `$y$` in
+`\emph` of a `\renewcommand\familydefault{\sfdefault}` document is CMMI10, `\mathsf{G}` in `\textit` CMSS10, `$y$` in
+`\textsf{\emph{…}}` of a serif document CMMI10 (pdflatex, `pdffonts`). Size and colour do reach the formula.
+
+**Perl** (Core/Document.pm:385-410 `finalize_rec`): every node's font is written relative to the font declared on its
+nearest written ancestor, so a token is written against the text element enclosing the formula — in a theorem body
+`y` gets no `font` and `+` `font="upright"`. Post/MathML.pm:278 then takes the enclosing text element's `font` as the
+context (`find_inherited_attribute`), and :677 reads a token's own `font` whole, falling back to that context. The two
+halves agree only while the text family is serif: against `sansserif italic` the italic `y` is written `font="serif"`
+(the shape matches, the family differs) and read as upright serif, `mathvariant="normal"`; `\mathsf{G}` is written
+`font="upright"` and loses its sans (KNOWN_PERL_ERRORS #1002).
+
+**Rust** (77u r3): `finalize_rec` (document.rs) resets the declared family, series and shape to the text default's
+(serif, medium, upright) at an `ltx:Math`, keeping size and colour, so a formula's tokens are written the same wherever
+it stands — `y` is `font="italic"`, `+` has none, inside `\emph`, a theorem body or a plain paragraph alike. An
+`XMText` (`\text`, `\mbox`) is text, set in the font around the formula (amstext's `\text` takes `\f@family`,
+`\f@series`, `\f@shape`): its content is written against that font, as Perl writes it. `math_context_font`
+(latexml_post mathml/mod.rs) reads the tokens' presentation and content context font only between the `XMath` and its
+`ltx:Math` (where none can be written), so a token without a `font` is upright serif, not the text around; an
+`m:mtext` falls back to the text font around the formula (`ctx_text_font`, Perl's `$LaTeXML::MathML::FONT`). The MathML of
+a serif document is unchanged (an italic context's letters were plain `<mi>` by inheritance and now are by their own
+`italic`), and a `\bm`/`\boldsymbol` letter or a `\boldmath` formula in italic text is bold italic where Perl's MathML
+read the bare `bold` as bold upright (1503.06160 `\bm{B}` in lemmas, pdflatex CMMIB10); the XML of a formula in italic or
+bold text differs from Perl's (theorem goldens re-blessed). 77u r2's sans
+`\normalfont` (#779) made the Perl shape hit every sans-default document's italic and bold text: 2608.14133 (1,890
+letters upright), 2608.31026, 2605.03549, 2604.00146, 2607.19982, 2606.05381 (theorem bodies), 2604.16675. Repros
+`fonts-nfss/math_fonts_do_not_follow_a_sans_text_font`, `fonts-nfss/math_fonts_in_sans_italic_text_of_a_serif_document`;
+guards `perfect_kernel_batch77u::{math_fonts_do_not_follow_a_sans_text_font,
+math_fonts_in_sans_italic_text_of_a_serif_document}`, `perfect_kernel_batch56::letters_in_an_italic_context_stay_plain_mi`.

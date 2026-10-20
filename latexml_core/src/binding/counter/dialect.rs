@@ -1096,6 +1096,23 @@ pub fn reset_counter(ctr: &Token) -> Result<()> {
   Ok(())
 }
 
+/// The counter of the last numbered `\item` in force, whose label an `\item[…]` references ([`ref_step_item_counter`]).
+const ITEM_LABEL_COUNTER: &str = "lx@item@label@counter";
+
+/// Whether the macro `cs` expands to something: defined, and not a parameterless empty macro.
+fn prints_something(cs: &str) -> Result<bool> {
+  Ok(match lookup_definition(&T_CS!(cs))? {
+    Some(defn) => {
+      !(defn.is_expandable()
+        && defn
+          .get_parameters()
+          .is_none_or(|params| params.get_num_args() == 0)
+        && matches!(defn.get_expansion(), Some(ExpansionBody::Tokens(body)) if body.is_empty()))
+    },
+    None => false,
+  })
+}
+
 /// Create id, and tags for an itemize type \item
 pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>> {
   let counter = lookup_string("itemcounter");
@@ -1128,8 +1145,46 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
       T_CS!("\\itemtyperefname")
     };
 
-    let mut tag_tokens = vec![
-      T_BEGIN!(),
+    let mut tag_tokens = vec![T_BEGIN!()];
+    // An `\item[…]` does not `\refstepcounter` (latex.ltx `\@item`: only `\if@noitemarg`), so a `\label` on it takes
+    // `\@currentlabel` as the last numbered item in force left it. Perl types `\p@<counter>` instead
+    // (latex_constructs.pool.ltxml:1383 `\let\the<counter>\@empty`), the enclosing item's label only while `\p@enumii`
+    // is the kernel's `\theenumi`: enumitem empties it below the first level (enumitem.sty:551-556), and the reference
+    // was lost (2603.02347, 7 items; covington's `\item[b.]` in an `{example}`, 2405.01972). So when the last numbered
+    // item in force is an enclosing list's (`ITEM_LABEL_COUNTER` names another counter), the refnum is that item's
+    // `\p@<ctr>\the<ctr>`, read before `\the<counter>` is emptied. After a numbered item of the same list LaTeX's
+    // label is that sibling's, which authors replace with their own (`\def\@currentlabel{(P2')}\label{…}`,
+    // 2502.11630; 2409.02896), and `\@currentlabel` is not read here: Perl's form stays, as it does with no numbered
+    // item in force (a top-level `\item[…]`, where LaTeX's label is the last section's or equation's). KNOWN_PERL_ERRORS
+    // #1003; guards `perfect_kernel_batch77u::{item_with_its_own_label_takes_the_enclosing_label,
+    // enumitem_item_with_its_own_label_takes_the_enclosing_label}`.
+    let ctr = counter_for_type(&counter);
+    let labelled = lookup_string(ITEM_LABEL_COUNTER);
+    if !labelled.is_empty() && labelled != ctr {
+      for (alias, cs) in [
+        ("\\lx@item@label@p@", s!("p@{labelled}")),
+        ("\\lx@item@label@the@", s!("the{labelled}")),
+      ] {
+        tag_tokens.extend([
+          T_CS!("\\expandafter"),
+          T_CS!("\\let"),
+          T_CS!("\\expandafter"),
+          T_CS!(alias),
+          T_CS!("\\csname"),
+        ]);
+        tag_tokens.extend(Explode!(cs));
+        tag_tokens.push(T_CS!("\\endcsname"));
+      }
+      tag_tokens.extend([
+        T_CS!("\\def"),
+        T_CS!(s!("\\p@{ctr}")),
+        T_BEGIN!(),
+        T_CS!("\\lx@item@label@p@"),
+        T_CS!("\\lx@item@label@the@"),
+        T_END!(),
+      ]);
+    }
+    tag_tokens.extend([
       T_CS!("\\let"),
       T_CS!(s!("\\the{counter}")),
       T_CS!("\\@empty"),
@@ -1138,7 +1193,7 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
       T_BEGIN!(),
       formatter,
       T_BEGIN!(),
-    ];
+    ]);
     // TODO: Another iffy clone...
     let reverted_tag = (*tag).clone().revert();
     tag_tokens.extend(reverted_tag.clone());
@@ -1167,7 +1222,15 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
     }
     props
   } else {
-    ref_step_counter_by_meaning(&counter)?
+    let props = ref_step_counter_by_meaning(&counter)?;
+    // The item set `\@currentlabel` (latex.ltx `\refstepcounter` in `\@item`) when its list is numbered — its
+    // `\the<counter>` prints something; an itemize's is empty (sect06.rs), as LaTeX's itemize never steps. Local to
+    // the list, as the `\protected@edef` is.
+    let ctr = counter_for_type(&counter);
+    if prints_something(&s!("\\the{ctr}"))? {
+      assign_value(ITEM_LABEL_COUNTER, ctr, None);
+    }
+    props
   };
   for (k, v) in attr.into_iter() {
     result.insert_sym(k, v);

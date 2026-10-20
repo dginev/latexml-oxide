@@ -318,7 +318,7 @@ fn icml2024_accepted_notice_is_proceedings() {
     &xml,
     "p",
     &[r#"xml:id="p1.1""#],
-    r#"<p xml:id="p1.1">Notice: <text font="italic" xml:id="p1.1.1">Proceedings of the <Math mode="inline" tex="\mathit{41}^{st}" text="41 ^ (s * t)" xml:id="p1.m1"><XMath xml:id="p1.m1.1"><XMApp xml:id="p1.m1.1.1"><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok meaning="41" role="NUMBER">41</XMTok><XMApp xml:id="p1.m1.1.1.3"><XMTok font="upright" meaning="times" role="MULOP">⁢</XMTok><XMTok fontsize="70%" role="UNKNOWN">s</XMTok><XMTok fontsize="70%" role="UNKNOWN">t</XMTok></XMApp></XMApp></XMath></Math> International Conference on Machine Learning</text>, Vienna, Austria. PMLR 235, 2024. Copyright 2024 by the author(s)..</p>"#,
+    r#"<p xml:id="p1.1">Notice: <text font="italic" xml:id="p1.1.1">Proceedings of the <Math mode="inline" tex="\mathit{41}^{st}" text="41 ^ (s * t)" xml:id="p1.m1"><XMath xml:id="p1.m1.1"><XMApp xml:id="p1.m1.1.1"><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok font="italic" meaning="41" role="NUMBER">41</XMTok><XMApp xml:id="p1.m1.1.1.3"><XMTok meaning="times" role="MULOP">⁢</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">t</XMTok></XMApp></XMApp></XMath></Math> International Conference on Machine Learning</text>, Vienna, Austria. PMLR 235, 2024. Copyright 2024 by the author(s)..</p>"#,
   );
 }
 

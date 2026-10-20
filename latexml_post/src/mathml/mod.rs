@@ -563,12 +563,13 @@ fn stylize_text_content(
       .filter(|v| !v.is_empty())
   };
   // Perl L677-686: the passed-in %attr wins, then the item's own attribute,
-  // then the inherited context.
+  // then the inherited context — the text around the formula, which an
+  // `XMText`'s content is written against (OXIDIZED_DESIGN_DIVERGENCES #780).
   let font = attrs
     .font
     .clone()
     .or_else(|| attr_of("font"))
-    .or_else(presentation::ctx_font);
+    .or_else(presentation::ctx_text_font);
   let size = attrs.fontsize.clone().or_else(|| attr_of("fontsize"));
   let color = attrs
     .color
@@ -757,6 +758,36 @@ pub fn find_inherited_attribute(
     }
     if let Some(val) = n.get_attribute(attribute) {
       return Some(val);
+    }
+    current = n.get_parent();
+  }
+  None
+}
+
+/// The font a formula's tokens are read against: a `font` inside the formula (between the `XMath` and its
+/// `ltx:Math`), never the text around it. Perl's pmml_top/cmml_top take [`find_inherited_attribute`]
+/// (MathML.pm:278, :1293), the enclosing text element's font, which is right only while the tokens are written
+/// relative to that element; ours are written relative to the text default (document.rs `finalize_rec`), so a token
+/// without a `font` is upright serif whatever text surrounds the formula, and a sans or italic text font must not
+/// reach it (`<mi>` of `\mathrm{c}` in a theorem body, of `+` in `\emph` of a sans document).
+/// OXIDIZED_DESIGN_DIVERGENCES #780; witness 2608.14133.
+pub fn math_context_font(xmath: &Node) -> Option<String> {
+  let mut current = Some(xmath.clone());
+  while let Some(ref n) = current {
+    if n.get_type() != Some(libxml::tree::NodeType::ElementNode) {
+      break;
+    }
+    if n
+      .get_namespace()
+      .is_some_and(|ns| ns.get_href() != crate::document::LTX_NSURI)
+    {
+      break;
+    }
+    if let Some(val) = n.get_attribute("font") {
+      return Some(val);
+    }
+    if n.get_name() == "Math" {
+      return None;
     }
     current = n.get_parent();
   }

@@ -837,6 +837,9 @@ impl Document {
     // of ancestor nodes. By collecting collapses and running them after
     // the entire traversal completes, we avoid accessing corrupted state.
     let mut deferred_collapses: Vec<(Node, SymStr)> = Vec::new();
+    // The text font declared around each open `ltx:Math`, innermost last: an `XMText` in it is text, set in that font
+    // (see the reset at `ltx:Math` below).
+    let mut math_outer_fonts: Vec<Rc<Font>> = Vec::new();
     stack.push(Work::Enter(node.clone()));
 
     while let Some(work) = stack.pop() {
@@ -857,6 +860,17 @@ impl Document {
           } else {
             Cow::Borrowed(&*local_font)
           };
+          // An `XMText` (`\text`, `\mbox` in a formula) is set in the text font around the formula (amstext's `\text`
+          // takes `\f@family`, `\f@series`, `\f@shape`), so its content is written against that, as Perl writes it.
+          if qname == pin!("ltx:XMText")
+            && let Some(outer) = math_outer_fonts.last()
+          {
+            let mut text_context = declared_font.into_owned();
+            text_context.family.clone_from(&outer.family);
+            text_context.series.clone_from(&outer.series);
+            text_context.shape.clone_from(&outer.shape);
+            declared_font = Cow::Owned(text_context);
+          }
 
           // TODO: _pre_comment / _comment insertion requires create_comment support in libxml
           // wrapper Perl: parent.insertBefore(XML::LibXML::Comment.new(comment), node)
@@ -932,6 +946,24 @@ impl Document {
               ..Font::default()
             }));
             pending_declaration.remove("fontsize");
+          }
+          // A formula's fonts are the math fonts (fontmath.ltx's math versions), never the text family, series or
+          // shape around it: `$y$` in `\emph` of a sans document is CMMI10, `\mathsf{G}` in `\textit` CMSS10. So its
+          // tokens are written relative to the text default's family, series and shape (size and colour do reach
+          // math), not to the enclosing text element as Perl's finalize_rec does (Document.pm:385-410) — against
+          // a `sansserif italic` `\emph` the italic `y` was written `font="serif"`, which MathML reads whole
+          // (MathML.pm:677) as upright: 2608.14133 (1,890 letters), 2608.31026, 2605.03549, 2604.00146,
+          // 2607.19982, 2606.05381, 2604.16675; `\textsf{\emph{$y$}}` in Perl too (KNOWN_PERL_ERRORS #1002). The
+          // MathML side reads the context font from inside the formula only (`math_context_font`). An `XMText` in it
+          // returns to the text font (above). OXIDIZED_DESIGN_DIVERGENCES #780; guards
+          // `perfect_kernel_batch77u::math_fonts_*`.
+          if qname == pin!("ltx:Math") {
+            math_outer_fonts.push(Rc::new(declared_font.clone().into_owned()));
+            let mut math_context = declared_font.into_owned();
+            math_context.family.clone_from(&FONT_TEXT_DEFAULT.family);
+            math_context.series.clone_from(&FONT_TEXT_DEFAULT.series);
+            math_context.shape.clone_from(&FONT_TEXT_DEFAULT.shape);
+            declared_font = Cow::Owned(math_context);
           }
           self.set_local_font(Rc::new(declared_font.into_owned()));
 
@@ -1082,6 +1114,9 @@ impl Document {
             if total_attrs <= bookkeeping_count {
               empty_attr_nodes.insert(node.to_hashable());
             }
+          }
+          if get_node_qname(&node) == pin!("ltx:Math") {
+            math_outer_fonts.pop();
           }
           self.expire_local_font();
         },

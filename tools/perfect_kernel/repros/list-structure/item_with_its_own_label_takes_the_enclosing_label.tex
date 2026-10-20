@@ -1,0 +1,19 @@
+% witness: rev77u finding 2 (the kernel's lists; Perl's form gives "1" and "1(a)" where LaTeX's label is "1a")
+% oracle:  pdflatex 0 errors; "Refs: [1] [1a] [1a] [1a] [1(a)i]." — `\item[…]` keeps `\@currentlabel` (latex.ltx
+%          `\@item`): the enclosing item's, or the numbered sibling's before it
+% engines: rust 77u r2 / perl: (X) "1" (`\p@enumii` = `\theenumi`), (W) "1(a)" (`\p@enumiii`)
+% expect:  0 errors, 0 warnings; refnums "1", "1a", "1", "1a", "1(a)i": (W) takes its enclosing item's label; (X),
+%          after a numbered item of its own list, keeps Perl's form ("1", pdflatex "1a"; residual, see the enumitem repro)
+% status:  RED (77u r2) -> GREEN for (W) (77u r3: dialect.rs `ref_step_item_counter`)
+\documentclass{article}
+\begin{document}
+\begin{enumerate}
+\item outer\label{o}
+  \begin{enumerate}
+  \item a\label{a}
+  \item[(X)] custom\label{x}
+    \begin{enumerate}\item[(W)] w\label{w}\item v\label{v}\end{enumerate}
+  \end{enumerate}
+\end{enumerate}
+Refs: [\ref{o}] [\ref{a}] [\ref{x}] [\ref{w}] [\ref{v}].
+\end{document}

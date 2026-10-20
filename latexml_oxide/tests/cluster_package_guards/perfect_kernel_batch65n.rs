@@ -196,7 +196,7 @@ fn stray_brace_in_a_formula_is_deleted() {
     &[r#"xml:id="p1.1""#],
     concat!(
       r#"<p xml:id="p1.1">Before <text font="italic" xml:id="p1.1.1">a <Math mode="inline" tex="x" text="x" xml:id="p1.m1">"#,
-      r#"<XMath xml:id="p1.m1.1"><XMTok role="UNKNOWN">x</XMTok></XMath></Math> y</text> after one.</p>"#
+      r#"<XMath xml:id="p1.m1.1"><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math> y</text> after one.</p>"#
     ),
   );
 }

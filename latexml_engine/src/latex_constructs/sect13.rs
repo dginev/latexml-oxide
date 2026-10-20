@@ -1023,7 +1023,7 @@ pub(crate) fn load() -> Result<()> {
   // `perfect_kernel_batch77u::{family_default_sets_the_body, family_default_survives_a_preamble_switch,
   // unknown_family_default_resets_to_serif}`.
   DefPrimitive!("\\lx@normalfont@base", {
-    let current = lookup_font().unwrap();
+    let current = lookup_font().unwrap_or_else(|| Rc::new(Font::text_default()));
     let base =
       current.merge_ref(&fontmap!(family => "serif", series => "medium", shape => "upright"));
     assign_font(Rc::new(base), Some(Scope::Local));

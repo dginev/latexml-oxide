@@ -669,11 +669,11 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
               <XMath>
                 <XMApp>
                   <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                  <XMTok role="UNKNOWN">a</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">a</XMTok>
                   <XMApp>
-                    <XMTok font="upright" meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok fontsize="70%" role="UNKNOWN">i</XMTok>
-                    <XMTok fontsize="70%" role="UNKNOWN">j</XMTok>
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
                   </XMApp>
                 </XMApp>
               </XMath>

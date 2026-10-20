@@ -287,7 +287,7 @@
               </XMath>
             </Math><text font="italic">do<Math mode="inline" tex="\}" text="}" xml:id="S0.I9.ix1.m2">
                 <XMath>
-                  <XMTok font="upright" role="CLOSE" stretchy="false">}</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">}</XMTok>
                 </XMath>
               </Math> </text></tag>
           <tag role="typerefnum">item do</tag>
@@ -304,7 +304,7 @@
               </XMath>
             </Math><text font="italic">re<Math mode="inline" tex="\}" text="}" xml:id="S0.I9.ix2.m2">
                 <XMath>
-                  <XMTok font="upright" role="CLOSE" stretchy="false">}</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">}</XMTok>
                 </XMath>
               </Math> </text></tag>
           <tag role="typerefnum">item re</tag>
