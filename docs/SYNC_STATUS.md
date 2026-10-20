@@ -4762,6 +4762,19 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   digit-before-`\!`, Greek/mathdesign/Cyrillic kernel set — + 318 random of the proj98b sample) vs int36a: E 4,116 →
   4,116, F 22 → 22, 0 Error or Fatal worse, words +1,812, no word loss > 1 %. Binding nets (int37a) 136/136, 0 documents
   worse than int36a.
+- **77p** (author blocks: spacing-run name separators, e-mails by spelling under the no-guessing rulings R10-R12, link
+  lines as URL contacts and mailto lines as e-mail lines, `\@fnsymbol` symbol marks and symbol-labelled lines placed by
+  their carriers per row, one non-printing-argument table for address text, aero.cls binding; OD #52(o), #775; rows above
+  and the e-mail/symbol-mark rows). Eleven rounds; rev77p8 SHIP under the stopping rule (no new blocker), its remaining
+  should-fixes, nits and the int34a-same shapes are batch 77y.
+  **Integration (int38, 77p r11, binary int38a):** gates int38a: nextest 6469/6469 + cortex 10/10, clippy/rustdoc clean,
+  inits 0/0, dump diff vs int37a empty. Population A/B (1,891: 1,596 papers of the 77p rounds and reviews + 291 random
+  of the proj98 sample + 4 html_feedback) vs int37a: E 7,195 → 7,172, F 74 → 74, 0 Fatal worse, 19 Error better; 2
+  Error worse are honest `merged_creators` diagnostics of merges int37a already made silently (2401.16553 three names in
+  one creator, now with its affiliation and e-mails split off; 2602.09443 the legend line as a creator, now flagged);
+  3 word losses > 1 % are affiliation lines no longer copied onto every name (2603.07345, 2607.20027) and one jammed
+  affiliation string now 26 per-institution affiliations (2605.10858). Binding nets (int38a) 136/136, 0 documents worse
+  than int37a.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;
