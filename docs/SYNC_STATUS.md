@@ -141,7 +141,7 @@ do not block the E/F rerun.
 | — | aistats renamed copies: ~100 papers ship a renamed aistats style the versioned fallback and the registrations do not reach (`aistats2022_arxiv.sty` 9, `aistats_arxiv.sty` 7, `*_preprint`, `*_mod`, `*_old`, …): no title, no creators | open (77o r2 review finding 10) |
 | — | renamed natbib copies read raw: a shipped natbib copy under a name the versioned fallback does not reduce to `natbib` (`natbib_vw.sty` 16 papers, `modnatbib` 21, `hbnatbib` 16, `ctextemp_natbib` 13, `natbib_jrm` 12, `NAR-natbib` 9, `natbib_padeu` 8, `rnatbib` 7, `wsnatbib`/`natbibsty`/`igsnatbib` 6 each, … — census: 1,509 corpus papers ship a `*natbib*.sty` (1,677 paper/file rows), `~/data/pk_agents/main/scratch_356a0c47/natbib_copies/natbib_copies_all.tsv`; `natbib2`/`natbib209`/`natbib1`/`natbib_mod` already fall back to the binding, "Interpreted as versioned package"; NJDnatbib/bmvc2k_natbib/ws-rv-har are 72a stand-ins) is read raw: its `\citet`/`\citep` read `\b@<key>`, which no `\bibitem` of ours writes (no `\bibcite`), so every citation prints "?" with a "Citation undefined" Warning, and a labelled `\bibitem` keeps no refnum, so the kernel `\cite` shows no label (1003.3017: 62 Warnings, 0802.4100: 142, astro-ph0512042; pdflatex "Schneider et al. (2010), Smith (2001), (Smith, 2001)."; RED `index-bib/mn2e_natbib_copy/natbib_renamed_copy_citations_resolve`). Not the brief label route of 70c (g): the copy's whole citation layer is missing | open (77s) — the same hole as the aistats row above and 72a's per-copy stand-ins (a 3rd/4th recurrence). **Rule adopted (user ruling 2026-10-20)**: a shipped file whose `\ProvidesPackage`/`\ProvidesClass` names a bound package/class loads that binding, then is read as a stand-in copy (OD #731), instead of a per-name stand-in list (natbib_vw/modnatbib/natbib_jrm/natbibsty/tsnatbib … all `\ProvidesPackage{natbib}`); its own batch follows |
 | — | X2/OT2 Cyrillic text symbols dropped with no diagnostic: `\usepackage[X2,OT2,T1]{fontenc}` + `A {\fontencoding{X2}\selectfont \cyrje\cyrii\CYRA} B {\fontencoding{OT2}\selectfont \cyrje\CYRJE} C.` — pdflatex "A јіА B jJ C." (OT2 sets Ј ј in the J j slots, ot2enc.def:96,124), we and Perl "A А B  C." with 0 Errors/Warnings: there is no x2/ot2 fontmap, so the slots decode to nothing and `\DeclareTextSymbol` gives no glyph (T2A/T2B/T2C print since 77s, OD #776). `fonts-nfss/x2_ot2_cyrillic_symbols_print` (77s r2 re-review probe x2) | FIXED 77u (x2_fontmap.rs, ot2_fontmap.rs, OD #777: "A јіА B јЈ C."; a `\DeclareTextAccent` of a command another encoding declared first defines this encoding's too, so OT2's `\U{i}` is й). A text symbol of an encoding that still has no map now warns where it is dropped, naming the encoding (tipa's T3: residual row below) |
-| — | tipa's T3 has no font map: its named symbols (`\textschwa`, `\textltailn` …, t3enc.def) print nothing — since 77u with one Warning per symbol ("Font encoding T3 has no font map …"), 2405.01972's `\textipa{\textltailn}`; the ASCII IPA shorthand inside `\textipa{…}` decodes as OT1 letters (pdflatex ə for `@`). A T3 map (tipa's fonts: tipa.sty, t3enc.def slots) closes both | open (77u; not brief: ~250 slots and the shorthand ligatures) |
+| — | tipa's T3 has no font map: its named symbols (`\textschwa`, `\textltailn` …, t3enc.def) print nothing — since 77u with one Warning per symbol ("Font encoding T3 has no font map …"), 2405.01972's `\textipa{\textltailn}`; the ASCII IPA shorthand inside `\textipa{…}` decodes as OT1 letters (pdflatex ə for `@`). A T3 map (tipa's fonts: tipa.sty, t3enc.def slots) closes both | FIXED 77x (t3_fontmap.rs, t3enc_def.rs, tone_sty.rs; OD #781): the input letters and symbols are the tipa fonts' IPA letters (`\textipa{[D@"lIm@]}` [ðəˈlɪmə], 2405.01972's ɲ ɓ ɡɔ), the diacritics combining marks (`\textsubring{n}` n̥, `\~*{a}` a̰), `\tone{51}` ˥˩; the glyphs Unicode lacks (hooktop, tone-letter parts, Viby letters, `\textoverw`) warn |
 | — | 1802.07182 (aistats): the affiliations written as a second `\aistatsauthor` row become creators "University of Cambridge1", "Invenia Labs2", "Cambridge", "UK" (the author's misuse of the setter; its e-mail list is the block's, one contact an address since 77o r3) | open, author misuse (77o r2 review finding 3) |
 | — | 1202.1568 (aistats2eM): an e-mail list with the domain after the braces (`{seungyeon.kim@, fli@cc., …}gatech.edu`) is not read as an e-mail list and stays inside the affiliation (content kept) | open (77o r2 report) |
 | — | 2203.06997 (aistats, paired): a `~\\` spacer line before a column's e-mail line makes the kernel `\author` line reading take the e-mail for an affiliation ("Richard E. Turner: University of Cambridge; ret26@cam.ac.uk" both affiliations) | open (77o r3 A/B; content kept) |
@@ -4614,7 +4614,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   papers with a top-level preamble switch (a second scan) E 2 → 2, W 764 → 764, 2 changed; every change classified a
   gain (letters, refnums, fonts as the PDF); no paper worse (2405.01972's one more Warning is the T3 notice). Dumps
   identical to int35a, inits 0/0. Residuals: the C11 synthetic shape (a `\p@` reading past a one-token number; our
-  reader takes `}` as an undelimited argument, tex.web §395), T3 (tipa) has no map (silent-loss row), T4's own quote/guillemet ligatures (fcr10.tfm:
+  reader takes `}` as an undelimited argument, tex.web §395), T3 (tipa) has no map (silent-loss row; closed by 77x, OD #781), T4's own quote/guillemet ligatures (fcr10.tfm:
   the double quotes and `,,` as T1's, `<<`/`>>` reversed) are not modelled.
   **r2** (user ruling 2026-10-20; OD #779): `\normalfont`/`\reset@font` are latex.ltx's (:14113-14122:
   `\encodingdefault`, `\familydefault`, `\seriesdefault`, `\shapedefault`, where Perl and r1 reset to `\rmdefault`), the
@@ -4682,14 +4682,30 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   plain itemize `\item` has no refnum (Perl's form; pdflatex the enclosing item's label). `\cref` to a description
   `\item[…]` in an enumerate prints no name (RED row above), and math a package makes sans stays serif
   (Font-Selection Chain Residuals 8).
-  **Integration (int36, 77u r1-r5, binary int36a):** quality batch 2 lands alone (77p stays in review — r10 — and lands
-  as int37). Reviews: rev77u NO-SHIP (math fonts in sans-default documents, enumitem `\item[…]`) → r3; rev77u2 NO-SHIP
+  **Integration (int36, 77u r1-r5, binary int36a):** quality batch 2 lands alone (77p stays in review and lands after
+  int37). Reviews: rev77u NO-SHIP (math fonts in sans-default documents, enumitem `\item[…]`) → r3; rev77u2 NO-SHIP
   (enumitem sibling refnum) → r4; rev77u3: the sibling rule kept as LaTeX's `\@currentlabel` (main-session ruling, its
   author-override witness 2609.14520 recorded under the deferred `\@currentlabel` residual) → r5 docs. Gates int36a:
   nextest 6342/6342 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int35b empty. Population A/B (923:
   528 papers of the 77u rounds and reviews + 395 random of the proj98 sample) vs int35b: E 6,709 → 6,647, F 23 → 23, 0
   Error or Fatal worse; one word loss > 1 % (2609.14520, 50,807 → 50,123: its `\ref` texts "(1.1)(i))a" → "a" as its
   enumitem `ref=` sets them, no authored text lost). Binding nets (int36a) 136/136, 0 documents worse than int35b.
+- **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
+  `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
+  parts draw, as Unicode's IPA letter, cross-checked against tipauni.sty; the `""`/`||` ligatures ˌ ǁ), so its input
+  letters (`\textipa{[D@"lIm@]}` [ðəˈlɪmə]), named symbols and `\;` `\:` `\!` `\*` composites print; t3enc_def.rs sets
+  t3enc.def's `\upper@accent`/`\lower@accent` as combining marks (`\textsubring{n}` n̥, `\~*{a}` a̰, `\|[{t}` t̪, the
+  kernel accents in T3 taking t3enc.def's commands), `\ipabar` and `\textsuperimposetilde` as overlays, the made letters
+  Unicode has as its letters (ƀ đ ǥ ƻ ƾ ʣ ʥ ʨ); tone_sty.rs writes `\tone{51}` as ˥˩. `\DeclareTextAccentDefault` and
+  `\UseTextAccent` are latex.ltx's (a T3 accent in T1 text keeps its mark and its T1 letter; in math the letters alone),
+  a text symbol at an empty slot of a mapped encoding warns, and T3 has no dash ligatures. Census: 1,550 of 2601-2609's
+  papers load tipa (306 with T3 content). A/B vs int36a (release, `--preload=ar5iv.sty`; 40 T3-content papers, 18
+  tipa-only, 2405.01972, 1802.05444): E 93 → 93, F 1 → 1 (2605.10232's timeout, both), W 432 → 354 (the T3 notices), 32
+  outputs changed, each the IPA as the PDF prints it (2405.01972 ɲ ɓ ɡɔ; 2606.11542's clicks ǀ ǁ ǂ, 2106.15390 247 ʃ,
+  2604.00174 /rʃʧ/, 2603.05213 /ɪ̃/); no paper worse. Inits 0/0, dumps identical to int36a. Residuals: glyphs Unicode
+  has no character for print nothing with a Warning (the hooktop, the Celtic palatalization mark, tone-letter parts
+  reached outside tone.sty, the Viby and left-hooktop long letters, `\textoverw`'s mark); a box accent (`\sups`,
+  `\Upperaccent`'s `b` form) keeps t3enc.def's stacked boxes.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

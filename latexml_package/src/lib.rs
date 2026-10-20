@@ -641,6 +641,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("cp852", "def", package::cp852_def::load_definitions),
   ("csquotes", "def", package::csquotes_def::load_definitions),
   ("latin10", "def", package::latin10_def::load_definitions),
+  ("t3enc", "def", package::t3enc_def::load_definitions),
   ("t5enc", "def", package::t5enc_def::load_definitions),
   ("t1enc", "sty", package::t1enc_sty::load_definitions),
   ("t1enc", "def", package::t1enc_def::load_definitions),
@@ -673,6 +674,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("t2a", "fontmap", package::t2a_fontmap::load_definitions),
   ("t2b", "fontmap", package::t2b_fontmap::load_definitions),
   ("t2c", "fontmap", package::t2c_fontmap::load_definitions),
+  ("t3", "fontmap", package::t3_fontmap::load_definitions),
   ("t4", "fontmap", package::t4_fontmap::load_definitions),
   ("ts1", "fontmap", package::ts1_fontmap::load_definitions),
   ("x2", "fontmap", package::x2_fontmap::load_definitions),
@@ -998,6 +1000,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ),
   ("tocbibind", "sty", package::tocbibind_sty::load_definitions),
   ("todonotes", "sty", package::todonotes_sty::load_definitions),
+  ("tone", "sty", package::tone_sty::load_definitions),
   (
     "transparent",
     "sty",

@@ -16154,3 +16154,15 @@ sibling's "ii)" where pdflatex prints "ii′)" (int35a "(1.1)") — the deferred
 `list-structure/enumitem_item_with_its_own_label_takes_the_enclosing_label`; guards
 `perfect_kernel_batch77u::{item_with_its_own_label_takes_the_enclosing_label,
 enumitem_item_with_its_own_label_takes_the_enclosing_label}`.
+
+## 1004. `\UseTextAccent` reads two arguments and substitutes a third; `\DeclareTextAccentDefault` is ignored
+
+latex.ltx:9958-9965 `\DeclareRobustCommand*\UseTextAccent[3]` sets accent `#2` of encoding `#1` on `#3`, the argument
+back in the caller's encoding. Perl's `DefMacro('\UseTextAccent{}{}', '{\fontencoding{#1}#2{#3}}')`
+(latex_constructs.pool.ltxml:2643) declares two parameters, so `#3` is empty and the letter follows the bare accent.
+Minimal trigger: `A \UseTextAccent{OT1}{\'}{e} B.` — pdflatex "A é B.", Perl "A ´e B.". It is rarely reached because
+`\DeclareTextAccentDefault` (latex.ltx:9985-9986, the `\?\cs` → `\UseTextAccent` default) is ignored
+(latex_base.pool.ltxml:361-362): tipa.sty's `\DeclareTextAccentDefault{\textsubring}{T3}` leaves `\textsubring{n}` in
+T1 text without its ring (pdflatex n̥). Rust (77x): both as latex.ltx, `\UseTextAccent` calling the encoding's command
+directly and setting the argument alone in math or when the encoding has none (sect08.rs; OXIDIZED_DESIGN_DIVERGENCES
+#781). Guard `perfect_kernel_batch77x::t3_accent_outside_t3_text`.

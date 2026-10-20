@@ -114,7 +114,8 @@ fn second_encoding_accent_composes() {
 }
 
 /// A text symbol of an encoding with no map at all prints nothing, as before, and says so once, naming the encoding
-/// (tipa's T3; 2405.01972 `\textipa{\textltailn}`). Repro fonts-nfss/text_symbol_of_an_unmapped_encoding_warns.
+/// (a document-declared XX; tipa's T3 was such an encoding until 77x gave it a map: 2405.01972 `\textipa{\textltailn}`,
+/// the schwa now prints). Repro fonts-nfss/text_symbol_of_an_unmapped_encoding_warns.
 #[test]
 fn text_symbol_of_an_unmapped_encoding_warns() {
   let tex = include_str!(
@@ -124,11 +125,11 @@ fn text_symbol_of_an_unmapped_encoding_warns() {
     tex,
     RAW,
     (0, 1),
-    &["Font encoding T3 has no font map: the text symbol \\textschwa has no glyph and is dropped"],
+    &["Font encoding XX has no font map: the text symbol \\textxxa has no glyph and is dropped"],
     &[(
       "para",
       "p1",
-      r#"<para xml:id="p1"><p>Schwa  and .</p></para>"#,
+      "<para xml:id=\"p1\"><p>Schwa \u{0259} and \u{0259}; slot  and .</p></para>",
     )],
   );
 }

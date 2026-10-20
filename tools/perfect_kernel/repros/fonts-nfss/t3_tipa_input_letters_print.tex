@@ -1,0 +1,13 @@
+% witness: 2405.01972 (`\textipa{gO}`, `\textipa{\!b}ay`), 1802.05444 (`\usepackage{tipa}`); tipaman §3 "IPA input"
+% oracle:  pdflatex 0 errors; the tipa fonts' glyphs at the input letters (tipasym1.mf: `0` barred u … `9` reversed e,
+%          `@` schwa, `A`-`Z` IPA letters; `"` primary stress, `""`/`||` the ligatures ˌ ǁ of tipa10.tfm; t3enc.def;
+%          tipa.sty:413-464 composites). pdftotext reads the slots as ASCII (tipa10.pfb has no Unicode names)
+% engines: rust int36a = the OT1 letters ("[D@”lIm@] 0123456789 ABC…", `""` ””, `|` —); 77x the IPA letters; Perl reads no
+%          tipa.sty (no binding): `\textipa` undefined, 2 Errors, the OT1 letters
+% expect:  0 errors, 0 warnings; "[ðəˈlɪmə] ʉɨʌɜɥɐɒɤɵɘ ɑβɕðɛɸɣɦɪʝʁʎɱŋɔʔʕɾʃθʊʋɯχʏʒ ə ɡ aː eˑ ˌa ˌˈa ǀ ǁ ᴇ ʈ ɓ ʞ"
+% status:  GREEN (77x, t3_fontmap.rs)
+\documentclass{article}
+\usepackage{tipa}
+\begin{document}
+\textipa{[D@"lIm@]} \textipa{0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZ @ g} \textipa{a: e; ""a """a | || \;E \:t \!b \*k}
+\end{document}

@@ -1,11 +1,20 @@
 % witness: 2405.01972 (`\textipa{\textltailn}`, tipa's T3 `\DeclareTextSymbol{\textltailn}{T3}{...}`)
-% oracle:  pdflatex 0 errors; "Schwa ə and ə." (T3, the tipa fonts)
-% engines: rust 77s = "Schwa  and ." silently (T3 has no map: the symbol declared an empty macro); 77u the same text and
-%          one Warning naming T3 and the symbol; Perl the symbol lost silently
-% expect:  0 errors, 1 warning ("Font encoding T3 has no font map: the text symbol \textschwa has no glyph")
-% status:  CONTROL for the loss (no T3 map; SYNC_STATUS), GREEN for the warning (77u `\lx@unmapped@text@symbol`)
+% oracle:  pdflatex 0 errors; "Schwa ə and ə; slot A and A." (T3, the tipa fonts; XX, a document-declared encoding on
+%          cmr10, whose slot 65 is A)
+% engines: rust 77s = "Schwa  and ." silently (T3 had no map: the symbol declared an empty macro); 77u the same text and
+%          one Warning naming T3 and the symbol; 77x the schwa (t3_fontmap.rs), and the XX symbol, of an encoding with
+%          no map, dropped with one Warning naming XX; Perl the symbols lost silently
+% expect:  0 errors, 1 warning ("Font encoding XX has no font map: the text symbol \textxxa has no glyph"); "Schwa ə
+%          and ə; slot  and ."
+% status:  GREEN for the warning (77u `\lx@unmapped@text@symbol`) and the schwa (77x); the XX glyph a CONTROL (no map)
 \documentclass{article}
 \usepackage{tipa}
+\DeclareFontEncoding{XX}{}{}
+\DeclareFontFamily{XX}{cmr}{}
+\DeclareFontShape{XX}{cmr}{m}{n}{<->cmr10}{}
+\DeclareFontSubstitution{XX}{cmr}{m}{n}
+\DeclareTextSymbol{\textxxa}{XX}{65}
+\DeclareTextSymbolDefault{\textxxa}{XX}
 \begin{document}
-Schwa \textschwa\ and \textschwa.
+Schwa \textschwa\ and \textschwa; slot \textxxa\ and \textxxa.
 \end{document}

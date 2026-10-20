@@ -1,0 +1,14 @@
+% witness: t3enc.def:212 `\texthooktop` (slot 35), :410 `\textoverw` (slot 22 above)
+% oracle:  pdflatex 0 errors; the hooktop on b, the subscript W glyph set above a — Unicode has neither (no spacing
+%          hooktop, no combining W above)
+% engines: rust int36a = both dropped, 1 Warning ("T3 has no font map"), the over-w silently; 77x both dropped with a
+%          Warning each; Perl 2 Errors (`\textipa`
+%          undefined: no tipa.sty)
+% expect:  0 errors, 2 warnings ("Font encoding T3 has no Unicode glyph for it: the text symbol \texthooktop", "no
+%          combining mark for the accent in slot 22"); "Hook b and a."
+% status:  RESIDUAL (no Unicode character; OXIDIZED_DESIGN_DIVERGENCES #781), GREEN for the diagnostics
+\documentclass{article}
+\usepackage{tipa}
+\begin{document}
+Hook \textipa{b\texthooktop} and \textipa{\textoverw{a}}.
+\end{document}

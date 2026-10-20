@@ -298,12 +298,14 @@ pub(crate) fn load() -> Result<()> {
 
   // The body of a text symbol declared in an encoding that has no font map (below): the glyph is unknown, so the
   // symbol prints nothing, and says so once per symbol, naming the encoding.
+  // An encoding with a map whose slot holds no character (tipa's T3 `\texthooktop`, slot 35: t3_fontmap.rs) says that.
   DefMacro!("\\lx@unmapped@text@symbol{}{}", sub[(encoding, cs)] {
     let encoding = encoding.to_string();
     let cs = cs.to_string();
     if !already_reported(&s!("unmapped_text_symbol_{encoding}{cs}")) {
+      let reason = if load_font_map(&encoding).is_none() { "has no font map" } else { "has no Unicode glyph for it" };
       Warn!("missing_font_encoding", encoding,
-        s!("Font encoding {encoding} has no font map: the text symbol {cs} has no glyph and is dropped"));
+        s!("Font encoding {encoding} {reason}: the text symbol {cs} has no glyph and is dropped"));
     }
     Tokens!()
   });
@@ -360,20 +362,17 @@ pub(crate) fn load() -> Result<()> {
     } else if IsDefinable!(&ecs) {
       // Can't decode: install no-op fallback so downstream chains find
       // *something* to resolve to. Witness arXiv:1802.05444 / tipa T3.
-      // In an encoding with no font map at all the symbol is lost where it is
-      // used: it says so, naming the encoding (`\lx@unmapped@text@symbol`; X2's
-      // `\cyrje` vanished silently before the X2 map, 77s). A Token body, not a
-      // closure, so a format dump keeps it.
-      if load_font_map(&encoding_str).is_none() {
-        let mut body = vec![T_CS!("\\lx@unmapped@text@symbol"), T_BEGIN!()];
-        body.extend(Explode!(&encoding_str));
-        body.extend([T_END!(), T_BEGIN!()]);
-        body.extend(Explode!(&cs_str));
-        body.push(T_END!());
-        DefMacro!(ecs, None, Tokens::new(body));
-      } else {
-        DefMacro!(ecs, None, Tokens!());
-      }
+      // The symbol is lost where it is used — in an encoding with no font map
+      // at all, or at a slot its map has no character for (tipa's T3 hooktop,
+      // slot 35) — and says so, naming the encoding (`\lx@unmapped@text@symbol`;
+      // X2's `\cyrje` vanished silently before the X2 map, 77s). A Token body,
+      // not a closure, so a format dump keeps it.
+      let mut body = vec![T_CS!("\\lx@unmapped@text@symbol"), T_BEGIN!()];
+      body.extend(Explode!(&encoding_str));
+      body.extend([T_END!(), T_BEGIN!()]);
+      body.extend(Explode!(&cs_str));
+      body.push(T_END!());
+      DefMacro!(ecs, None, Tokens::new(body));
     }
     // Bare `\cs` always becomes a dispatch chain (matches Perl).
     if IsDefinable!(&cs) {
@@ -486,7 +485,13 @@ pub(crate) fn load() -> Result<()> {
     def_macro(ecs, parse_parameters("{}", &ecs, true)?, ExpansionBody::Tokens(body), None)?;
     def_text_command_dispatcher(&cs, &cs_str, false)?;
   }, locked => true);
-  DefPrimitive!("\\DeclareTextAccentDefault{}{}", None, locked => true);
+  // latex.ltx:9985-9986: the default of a text accent is the accent of its encoding, `\?\cs` →
+  // `\UseTextAccent{<enc>}\cs` (Perl latex_base.pool.ltxml:361-362 ignores it, so `\?\cs` stayed undefined and an
+  // encoding's accent used in another — tipa.sty:289 `\DeclareTextAccentDefault\textsubring{T3}`, `\textsubring{n}` in
+  // T1 text — printed the bare letter: n where pdflatex sets n̥). OXIDIZED_DESIGN_DIVERGENCES #781; guard
+  // `perfect_kernel_batch77x::t3_accent_outside_t3_text`.
+  DefMacro!("\\DeclareTextAccentDefault{}{}", "\\DeclareTextCommandDefault#1{\\UseTextAccent{#2}#1}",
+    locked => true);
 
   // TL2023+ kernel per-codepoint case-mapping declarations (ltmiscen:
   // `\DeclareUppercaseMapping{"0390}{\accdialytikatonos{\textiota}}` etc.)
@@ -723,7 +728,30 @@ pub(crate) fn load() -> Result<()> {
       },
     }
   });
-  DefMacro!("\\UseTextAccent{}{}", "{\\fontencoding{#1}#2{#3}}");
+  // latex.ltx:9958-9965 `\UseTextAccent[3]`: the accent is set in its encoding and its argument back in the one it was
+  // called in (`\@curr@enc`), so a T3 accent on a T1 letter keeps the letter (`g` is ɡ in T3). The encoding's own
+  // command is called directly, as `\UseTextSymbol` above does: an encoding without it (`\DeclareTextAccentDefault
+  // {\figurecircled}{MDB}`, mathdesign.sty:214, with no MDB command) would re-enter the dispatcher, so the argument is
+  // set alone; so is it in math, where a text encoding sets nothing (`$a\;b\!c\:d$` after tipa.sty:429-457: pdflatex
+  // "abcd", no retroflex ɖ). Perl latex_constructs.pool.ltxml:2643 reads two arguments and substitutes a third
+  // (KNOWN_PERL_ERRORS #1004).
+  DefMacro!("\\UseTextAccent{}{}{}", sub[(enc, cs, arg)] {
+    let enc_str = Expand!(enc).to_string();
+    let ecs = T_CS!(s!("\\{enc_str}{}", cs.to_string()));
+    if lookup_bool("IN_MATH") || lookup_definition(&ecs)?.is_none() {
+      return Ok(arg);
+    }
+    let mut toks = vec![
+      T_BEGIN!(), T_CS!("\\edef"), T_CS!("\\@curr@enc"), T_BEGIN!(), T_CS!("\\cf@encoding"), T_END!(),
+      T_CS!("\\fontencoding"), T_BEGIN!(),
+    ];
+    toks.extend(Explode!(enc_str));
+    toks.extend([T_END!(), T_CS!("\\selectfont"), ecs, T_BEGIN!(), T_CS!("\\fontencoding"), T_BEGIN!(),
+      T_CS!("\\@curr@enc"), T_END!(), T_CS!("\\selectfont")]);
+    toks.extend(arg.unlist());
+    toks.extend([T_END!(), T_END!()]);
+    Ok(Tokens::new(toks))
+  });
 
   // Perl: DefPrimitive('\DeclareMathAccent DefToken {}{} {Number}', ...)
   // latex_constructs.pool.ltxml:2702-2709. Perl always calls DefMathI even

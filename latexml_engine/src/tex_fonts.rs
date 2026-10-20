@@ -509,9 +509,9 @@ LoadDefinitions!({
   });
 
   // EN DASH (NOTE: With digits before & aft => \N{FIGURE DASH})
-  DefLigature!(r"--", "\u{2013}", fontTest => sub[arg] { non_typewriter(arg) });
+  DefLigature!(r"--", "\u{2013}", fontTest => sub[arg] { dash_ligatures(arg) });
   // EM DASH
-  DefLigature!(r"---", "\u{2014}", fontTest => sub[arg] { non_typewriter(arg) });
+  DefLigature!(r"---", "\u{2014}", fontTest => sub[arg] { dash_ligatures(arg) });
 
   // Ligatures for doubled single left & right quotes to convert to double quotes
   DefLigature!("\u{2018}\u{2018}", "\u{201C}",
@@ -556,6 +556,10 @@ fn encoding_of(font: &Font) -> &str {
     .get_encoding()
     .map_or("OT1", |encoding| encoding.as_ref())
 }
+
+/// The dashes are every text font's but typewriter's and tipa's: tipa10.tfm's ligature program has only `""` and `||`
+/// (tipa.mf:66-67, t3_fontmap.rs), so `--` in IPA text is two hyphens.
+fn dash_ligatures(font: &Font) -> bool { non_typewriter(font) && encoding_of(font) != "T3" }
 
 /// The Cork-family encodings (ec and its Cyrillic, Vietnamese and texnansi relatives) and the Unicode ones.
 fn guillemet_ligature_fonts(encoding: &str) -> bool {

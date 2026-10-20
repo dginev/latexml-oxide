@@ -1,0 +1,17 @@
+% witness: 2405.01972 (T3 text), tipaman §5 "Diacritics"
+% oracle:  pdflatex 0 errors; t3enc.def:368-516 sets each diacritic as slot N of the tipa font above (`\upper@accent`)
+%          or below (`\lower@accent`) the letter: the `*` forms below (`\~*` subscript tilde, `\r*` subscript ring),
+%          `\|[` the subscript bridge (tipa.sty:391-408), the tone accents 152-159 (tipatone.mf, tipadiac.mf)
+% engines: rust int36a = the accent boxes lost or the native accent on the `*` ("*̃a", "∥[t", `\textroundcap{a}` a);
+%          77x the combining marks; Perl as int36a, 2 Errors (`\textipa`
+%          undefined: no tipa.sty)
+% expect:  0 errors, 0 warnings; "n̥ a̰ n̥ t̪ ȃ t͡s t͜s ṳ o̬ ḍ ȁ" "á è ô ū č ż å ĕ ő ü ç ă̇ a᷄ l̴ m̩ t̪ e̞"
+% status:  GREEN (77x, t3enc_def.rs)
+\documentclass{article}
+\usepackage{tipa}
+\begin{document}
+\textipa{\textsubring{n} \~*{a} \r*{n} \|[{t} \textroundcap{a} \t{ts} \t*{ts} \"*u \v*{o} \.*{d} \H*{a}}
+
+\textipa{\'a \`e \^o \=u \v{c} \.{z} \r{a} \u{e} \H{o} \"u \c{c} \textdotbreve{a} \texthighrise{a}
+\textsuperimposetilde{l} \textsyllabic{m} \textsubbridge{t} \textlowering{e}}
+\end{document}
