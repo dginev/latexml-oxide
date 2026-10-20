@@ -21430,7 +21430,8 @@ argument (`\textsubring{g}` in T1 text is g̥, not ɡ̥) and calls `\<enc>\cs` d
 the argument alone: tipa's `\;` `\!` `\:` in `$a\;b$` set the letters as pdflatex does, while an accent proper in a
 formula loses its mark (`$\textsubring{n}$` is n, pdflatex n̥ with "invalid in math mode": residual). It reads its
 argument (#3) itself: an `&`, `$`, `}`, `\end` or, in an alignment, a row end is not taken — pdflatex reads it and errs,
-losing the cell, formula or group it ends (amsmath loaded before tipa: `\!\! &`, `,\;$x$`; 2605.00132, 2607.12821) — the
+losing the cell, formula or group it ends (amsmath loaded before tipa: `\!\! &`, `,\;$x$`; witness 2609.13770's
+`\crefname{section}{\S\!}`; 2605.00132 and 2607.12821 exercise the robust form and its math path) — the
 accent is set alone with a Warning (once per accent and token). amsmath_sty.rs re-asserts the kernel's `\,` `\!` `\:`
 `\;` `\negmedspace` `\negthickspace` as amsmath.sty:155-175 declares them again
 (`latex_constructs::define_amsmath_tmspace_commands`), so tipa loaded before amsmath leaves them the spacing commands
@@ -21440,8 +21441,8 @@ character as tex.web §1123/§1270 do — protected macros expanded, `\relax` sk
 (`\lx@fontencoding`, `\selectfont`) an assignment — so `\UseTextAccent{OT1}{\'}{e}` (`\add@accent`'s `\accent19
 \fontencoding{OT1}\selectfont e`) is é (KNOWN_PERL_ERRORS #1004). tex_fonts.rs: the `--`/`---` dash ligatures are not
 T3's (tipa10.tfm has none). Other encodings' empty slots the new Warning exposed: OT4 and LY1 slot 17 is the dotless j ȷ
-(ot4enc.def:82, ly1enc.def:42; Perl's ot4/ly1 fontmaps leave it undef: the Perl-synced golden `tests/encoding/ly1.xml`
-now shows ȷ there); LAE 198-203 (`\shaddanasb` … `\shaddakasra`, laeenc.def:83-97) are shadda with the vowel, as arabi's
+(ot4enc.def:82, ly1enc.def:42; Perl's ot4/ly1 fontmaps leave it undef, KNOWN_PERL_ERRORS #1005: the Perl-synced
+golden `tests/encoding/ly1.xml` now shows ȷ there); LAE 198-203 (`\shaddanasb` … `\shaddakasra`, laeenc.def:83-97) are shadda with the vowel, as arabi's
 DTP Naskh LAE font draws them and LFE 0xC6-0xCB (the default aealmohanadb has no glyph there); LAE `\Decimalchar` (251,
 no glyph in any LAE font) keeps the Warning. Witnesses 2405.01972 (`\textipa{\textltailn}` ɲ, `\textipa{\!b}` ɓ,
 `\textipa{gO}` ɡɔ), 1802.05444. Repros `fonts-nfss/{t3_tipa_input_letters_print, t3_tipa_symbols_print,

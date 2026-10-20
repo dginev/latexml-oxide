@@ -1870,7 +1870,7 @@ fn is_encoding_dispatcher(cs: &Token) -> Result<bool> {
 
 /// A token `\UseTextAccent` does not read as its undelimited argument: an alignment tab, a math shift, a closing brace,
 /// `\end`, or a row end in an alignment — where pdflatex's reading it breaks the cell, formula, group or environment
-/// it ends (latex.ltx:9958; tipa.sty:429-458 `\!` before `&`).
+/// it ends (latex.ltx:9958; tipa.sty:429-458 `\!` before `&`). Witness 2609.13770 (`\crefname{section}{\S\!}`).
 fn ends_accent_argument(token: &Token) -> bool {
   matches!(
     token.get_catcode(),

@@ -4713,7 +4713,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   now re-asserts the kernel's `\,` `\!` `\:` `\;` `\negmedspace` `\negthickspace` as amsmath.sty:155-175 does
   (`latex_constructs::define_amsmath_tmspace_commands`); with amsmath before tipa (pdflatex errs) the robust
   `\UseTextAccent` takes no `&`/`$`/`}`/`\end`/row end as its argument and sets the accent alone with a Warning
-  (2605.00132, 2607.12821). t3enc.def/tone.sty read twice no longer hang. T3 slots follow tipauni.sty: `!` ǃ, `&` ɞ,
+  (2609.13770's `\crefname{section}{\S\!}`; 2605.00132 and 2607.12821 exercise the robust `\UseTextAccent` and its math
+  path, no refusal). t3enc.def/tone.sty read twice no longer hang. T3 slots follow tipauni.sty: `!` ǃ, `&` ɞ,
   `\textcorner` U+031A, `\textsubbar` U+0320 (`\textopencorner` stays ˹); `\textrthook`/`\textpalhook`/`\textcorner`
   attach to the letter before them. `\ipabar` overlays character runs only (`\textdoublebaresh` printed TeX source).
   `\accent` performs the assignments before its character (tex.web §1123/§1270), so KPE #1004's
@@ -4732,8 +4733,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   every one numbers back (2609.36534 +91, 2606.16857 +68 "1", 2607.00847 +54, 2607.11470 𝟙) or symmetric operator
   spacing, none lost; the Rust golden `tests/babel/numprints.xml` had the loss baked in (`\numprint[\!{}^{\prime
   \prime}]{6.00117}` without its 17) and now matches Perl's. 2609.13770 +1 Warning (`\crefname{section}{\S\!}`: the binding's group closes after `\!`,
-  where pdflatex reads a `~`). Residual: an accent proper in a formula loses its mark (`$\textsubring{n}$` n, pdflatex
-  n̥).
+  where pdflatex reads a `~`). Residuals (rev77x2, 0 census uses each): an accent proper in a formula loses its mark
+  (`$\textsubring{n}$` n, pdflatex n̥); a T3 accent over a math group or `\\` prints TeX source ("$̥x$", as the kernel's
+  `\'{$x$}` already does — apply_accent should mark only a character run); a combining-mark slot (36, 37, 60, 62, 94)
+  with no letter before it in its text node attaches to the preceding space (`{\textcorner}x`, `\textipa{<s}`,
+  2604.00122 after `</math>`); `{\accent19\selectfont\'e}` gives é́ (pdflatex "´é"; int36a's `\accent19\"o` ö́ the same
+  class); `\textdoublebaresh` sets ʃ with its bars as rules beneath it, without a Warning.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

@@ -192,7 +192,8 @@ fn t3_tipa_then_amsmath_thickspace_before_math() {
 /// `}` or `$` after one as its argument (pdflatex: 101 errors). The accent takes no argument there and says so (a
 /// Warning each: the recovery keeps the cell, group and formula boundaries); before a letter it sets the letter in its
 /// own encoding, as pdflatex (`\;E` is E); in a formula the letters alone. Red (77x r1): 5 Errors, the cells and the
-/// formula lost. Witnesses 2605.00132, 2607.12821. Repro fonts-nfss/t3_tipa_after_amsmath_accent_at_boundary.
+/// formula lost. Witness 2609.13770 (`\crefname{section}{\S\!}`); 2605.00132 and 2607.12821 exercise the robust
+/// `\UseTextAccent` and its math path. Repro fonts-nfss/t3_tipa_after_amsmath_accent_at_boundary.
 #[test]
 fn t3_tipa_after_amsmath_accent_at_boundary() {
   let tex = include_str!(
@@ -260,6 +261,8 @@ fn t3_ipa_meaning_slots() {
 /// t3enc.def's `\ipabar` sets a stroke over a character run (`\textbarc` c̵, `\textcrg` ɡ̵); over anything else —
 /// `\textdoublebaresh`'s `\hb@xt@` box of another `\ipabar` — it keeps t3enc.def's construction, with no TeX source in
 /// the text. Red (77x r1): "\̵hboxto7.5pt{\hss\ipabar{{\textesh}}\hss}". Repro fonts-nfss/t3_ipabar_built_symbols.
+/// The prefix and no-source checks are deliberate: the rest of the paragraph is t3enc.def's box construction (the
+/// bars as rules beneath ʃ, a SYNC_STATUS 77x residual), which a whole-element pin would freeze.
 #[test]
 fn t3_ipabar_built_symbols() {
   let tex =
@@ -306,22 +309,18 @@ fn ot4_ly1_dotless_j() {
 #[test]
 fn lae_shadda_vowels() {
   let tex = include_str!("../../../tools/perfect_kernel/repros/fonts-nfss/lae_shadda_vowels.tex");
-  let xml = assert_elements(tex, RAW, (0, 0), &[]);
-  let para = latexml::util::test::xml_element(&xml, "para", &["xml:id=\"p1\""]).expect("para p1");
-  for vowel in [
-    '\u{064B}', '\u{064C}', '\u{064D}', '\u{064E}', '\u{064F}', '\u{0650}',
-  ] {
-    assert!(
-      para.contains(&format!("\u{0651}{vowel}")),
-      "shadda + U+{:04X} in {para}",
-      vowel as u32
-    );
-  }
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    "<para xml:id=\"p1\"><p>\u{0628}\u{0651}\u{064B} \u{0628}\u{0651}\u{064C} \u{0628}\u{0651}\u{064D} \
+     \u{0628}\u{0651}\u{064E} \u{0628}\u{0651}\u{064F} \u{0628}\u{0651}\u{0650}.</p></para>",
+  )]);
 }
 
 /// tone.sty's `\tone` with a level outside 1-5 has no tone letter: tone.sty's construction (tone-letter parts with no
 /// character) is kept and the loss says so. Red (77x r1): dropped silently. Witnesses 2601.19932, 2602.10003. Repro
-/// fonts-nfss/t3_tone_level_outside_range_warns.
+/// fonts-nfss/t3_tone_level_outside_range_warns. The prefix check is deliberate: what follows "and" is tone.sty's
+/// box construction for the level with no tone letter, the dropped content its Warning reports.
 #[test]
 fn t3_tone_level_outside_range_warns() {
   let tex = include_str!(

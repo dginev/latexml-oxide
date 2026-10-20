@@ -16171,3 +16171,11 @@ number and its character (tex.web §1123 make_accent, §1270 do_assignments): `\
 prefixes, font identifiers, registers and `\def`s as assignments, not LaTeX's font switch, nor skips a `\relax`; Rust
 (77x r2) expands protected macros there, skips `\relax` and takes the NFSS switch as an assignment (math_common.rs), "A
 é B.". Guards `perfect_kernel_batch77x::t3_accent_outside_t3_text`, `use_text_accent_font_assignments`.
+
+## 1005. OT4 and LY1 leave the dotless j's slot empty
+
+ot4enc.def:82 and ly1enc.def:42 declare `\j` at slot 17 (`\DeclareTextSymbol{\j}{OT4}{17}`, the same in LY1), the
+dotless j ȷ U+0237. Perl's `Package/ot4.fontmap.ltxml` and `ly1.fontmap.ltxml:21` leave slot 0x11 `undef`, so `\j`
+in OT4 or LY1 text prints nothing. Minimal trigger: `\usepackage[LY1]{fontenc} \j` — pdflatex ȷ, Perl nothing. Rust
+(77x r2): both maps put ȷ at slot 17 (OXIDIZED_DESIGN_DIVERGENCES #781); the Perl-synced golden `tests/encoding/ly1.xml`
+shows ȷ there. Guard `perfect_kernel_batch77x::ot4_ly1_dotless_j`.
