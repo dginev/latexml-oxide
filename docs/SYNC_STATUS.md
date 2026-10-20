@@ -4739,6 +4739,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   with no letter before it in its text node attaches to the preceding space (`{\textcorner}x`, `\textipa{<s}`,
   2604.00122 after `</math>`); `{\accent19\selectfont\'e}` gives é́ (pdflatex "´é"; int36a's `\accent19\"o` ö́ the same
   class); `\textdoublebaresh` sets ʃ with its bars as rules beneath it, without a Warning.
+  **Integration (int37, 77x r1-r3, binary int37a):** T3 lands alone (77p, review SHIP at r11, lands as int38). Reviews:
+  rev77x NO-SHIP (tipa's `\!` `\;` `\:` swallowing a boundary token after amsmath — 2603.03017, 2605.00529, 2608.02769;
+  double t3enc.def load; the user's IPA-meaning ruling) → r2; rev77x2 SHIP → r3 docs (KPE #1005, refusal witness,
+  residuals, LAE guard whole). Gates int37a: nextest 6360/6360 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump
+  diff vs int36a empty. Population A/B (653: 335 papers of the 77x rounds and reviews — tipa census, `\!`/`\;` exposure,
+  digit-before-`\!`, Greek/mathdesign/Cyrillic kernel set — + 318 random of the proj98b sample) vs int36a: E 4,116 →
+  4,116, F 22 → 22, 0 Error or Fatal worse, words +1,812, no word loss > 1 %. Binding nets (int37a) 136/136, 0 documents
+  worse than int36a.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;
