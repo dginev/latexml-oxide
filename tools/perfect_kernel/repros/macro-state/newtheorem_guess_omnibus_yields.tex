@@ -1,10 +1,13 @@
 % A fallback class's theorem guess (OmniBus `theorem_preload`, run by the first undeclared `\begin{proof}`) is no
 % declaration of the document's: the author's later `\newtheorem{note}`, `\newtheorem{claim}…[section]` replace the
-% guessed {note} ("Note", theorem's counter) and {claim} ("Claim", thm's counter), as with no guess at all.
+% guessed {note} ("Note", theorem's counter) and {claim} ("Claim", thm's counter), as with no guess at all. The
+% author's own {note} still claims the name after the guess: a second `\newtheorem{note}{Again}` is refused.
 % witness: review of batch 77v r2 (probe rev77v2/omni.tex)
-% oracle:  pdflatex (article + amsthm for the unknown class) 0 errors; "Notation 1. N.", "Claim 1.1. C."
+% oracle:  pdflatex (article + amsthm for the unknown class) 1 error (Command \note already defined); "Notation 1. N.",
+%          "Notation 2. M.", "Claim 1.1. C."
 % engines: rust 77v2-rel (f30e7bb268): "Note 1.1", "Claim 1", two "already defined" Infos; 77v-rel: as expected
-% expect:  0 errors, 0 warnings; "Notation 1", "Claim 1.1"
+% expect:  0 errors, 1 warning (no binding for the class); one "already defined" Info (note); "Notation 1",
+%          "Notation 2", "Claim 1.1"
 % status:  RED -> GREEN (77v r3; guard perfect_kernel_batch77v::omnibus_guess_yields_to_document_newtheorem)
 \documentclass{foobarxyzcls}
 \begin{document}
@@ -12,6 +15,8 @@
 \begin{proof}P.\end{proof}
 \newtheorem{note}{Notation}
 \begin{note}N.\end{note}
+\newtheorem{note}{Again}
+\begin{note}M.\end{note}
 \newtheorem{claim}{Claim}[section]
 \begin{claim}C.\end{claim}
 \end{document}

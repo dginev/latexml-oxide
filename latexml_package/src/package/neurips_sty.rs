@@ -246,7 +246,8 @@ LoadDefinitions!({
   // {lemma*}` branch. Witness 2305.11788 (neurips paper + mymath.sty).
   // A guess run with the document's origin, so through `\lx@guess@newtheorem` (sect08.rs), which never claims a
   // name: the author's `\newtheorem{remark}{Observation}` in the body replaces the guessed {remark} rather than being
-  // refused as a second declaration. Guard `perfect_kernel_batch77v::neurips_guess_yields_to_document_newtheorem`.
+  // refused as a second declaration (2406.11672: "Definition 1", pdflatex's, not "Definition 0"). Guard
+  // `perfect_kernel_batch77v::neurips_guess_yields_to_document_newtheorem`.
   RawTeX!(
     r"\AtBeginDocument{%
 \@ifundefined{theorem}{\lx@guess@newtheorem{theorem}{Theorem}[section]}{}%

@@ -445,16 +445,19 @@ fn omnibus_guess_yields_to_document_newtheorem() {
     (0, 1),
     "{stderr}"
   );
+  // The author's {note} claims the name after the guess: the second `\newtheorem{note}{Again}` is refused (pdflatex
+  // "Command \note already defined"), the guessed {claim} is replaced without one.
   assert_eq!(
     (
       already_defined(&stderr, "note"),
       already_defined(&stderr, "claim")
     ),
-    (0, 0),
+    (1, 0),
     "{stderr}"
   );
   assert_eq!(theorem_tags(&xml), [
     r#"<tags><tag>Notation 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Notation 1</tag></tags>"#,
+    r#"<tags><tag>Notation 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Notation 2</tag></tags>"#,
     r#"<tags><tag>Claim 1.1</tag><tag role="refnum">1.1</tag><tag role="typerefnum">Claim 1.1</tag></tags>"#,
   ]);
 }

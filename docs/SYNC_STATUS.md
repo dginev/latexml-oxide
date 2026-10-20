@@ -4849,7 +4849,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\newtheorem{definition}`) "Definition 3.1" → "Definition 1" as pdflatex; 2602.02822 one formula unparsed, math-parse
   noise (identical on rerun). Residuals: under tac + amsthm the binding's amsthm keeps tac's non-refusing
   `\newtheorem` (amsthm_sty.rs:18 saves the one in force), where amsthm.sty:77 restores a refusing one; theorem.sty's
-  binding `\newtheorem` refuses nothing (theorem.sty's `\@xnthm` does).
+  binding `\newtheorem` refuses nothing (theorem.sty's `\@xnthm` does); tac numbers every theorem on the one
+  `\subsection` sequence (tac.cls's `\@@newthm#1[#2]#3[#4]` drops both counter arguments: "0.1. Theorem", "0.2.
+  Proposition"), the tac binding by each declaration's own counter (2407.21129 "Definition 1.1, Proposition 1.1,
+  Corollary 1.1"; the titles right since r1); a tac theorem's `\autoref` tag has no type name (" 1"). rev77v3 (SHIP):
+  the guess flag is restored on every path, the three switched sites are the only theorem declarations made while
+  the document is read; follow-ups folded at integration — the OmniBus guard pins the refusal after a guess (a second
+  `\newtheorem{note}{Again}`, pdflatex's one error, "Notation 2"), OD #783 and the sect08.rs comment say the document's
+  declaration gives the title (not tac's number), neurips' witness 2406.11672.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

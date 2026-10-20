@@ -21887,8 +21887,10 @@ document's `\newtheorem{theorem}{Theorem}[section]` is refused and its theorems 
 raw file it loaded) made the first; a binding's declaration — and a binding's guess made while the document is read,
 through `\lx@guess@newtheorem` (KNOWN_PERL_ERRORS #1008) — claims no name, so the document's replaces it. A binding's
 theorem set is in general more than its class declares (elsart_support's `{rem}` under arxbj, 1205.2947; tac's under
-2407.21129's `\newtheoremrm{examples}…[section]`), where the document's declaration is the one pdflatex prints; telling
-the class's own theorems apart per binding is not done. Where the real class does declare the name, the document's
+2407.21129's `\newtheoremrm{examples}…[section]`), where the document's declaration gives the theorem the title pdflatex
+prints (its number need not match: tac.cls's `\@@newthm#1[#2]#3[#4]` drops both counter arguments and numbers every
+theorem on the one `\subsection` sequence, "0.1. Theorem", "0.2. Proposition", which the tac binding does not model —
+SYNC row); telling the class's own theorems apart per binding is not done. Where the real class does declare the name, the document's
 declaration wins here and LaTeX's refusal is lost: llncs + `\newtheorem{theorem}{Theorem}[section]` gives "Theorem 1.1"
 where pdflatex prints "Theorem 1." with an error. Guard `perfect_kernel_batch77v::llncs_document_newtheorem_replaces_the_class`
 (repro class-bindings/llncs_document_newtheorem_over_class).

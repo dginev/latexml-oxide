@@ -1488,8 +1488,9 @@ pub(crate) fn load() -> Result<()> {
   // prop a counter of its own and renumbered every theorem (pdflatex "Theorem 1, Prop 2, Theorem 3"). Guard
   // `perfect_kernel_batch77v::newtheorem_twice_keeps_the_first`.
   // A binding's declaration does not claim the name, so the document's own replaces it: where the binding declares
-  // more than its class does (2407.21129, 1205.2947), that is the document's theorem as pdflatex prints it; where the
-  // real class declares it too, LaTeX refuses the document's (llncs `{theorem}`: OXIDIZED_DESIGN_DIVERGENCES #783).
+  // more than its class does (2407.21129, 1205.2947), the document's declaration gives the theorem the title pdflatex
+  // prints (tac's numbering on its one `\subsection` sequence is not modelled); where the real class declares it too,
+  // LaTeX refuses the document's (llncs `{theorem}`: OXIDIZED_DESIGN_DIVERGENCES #783).
   // Nor does a binding's guess made while the document is read (OmniBus's set at the first undeclared `\begin{proof}`,
   // a binding's `\AtBeginDocument` set: neurips, tac), which declares through `\lx@guess@newtheorem` below: the
   // author's later `\newtheorem{note}{Notation}` is the theorem. Guards
