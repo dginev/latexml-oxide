@@ -1,0 +1,13 @@
+% witness: rev77x finding 2 (no census paper: fontenc guards on `\T@T3`); t3enc.def read again after tipa.sty
+% oracle:  pdflatex 0 errors; the second read re-declares the same T3 commands
+% engines: rust int36a = 0 errors, "*̃a @ n" (no T3 map); 77x r1 = Fatal:Timeout (the rebinding saved its own wrappers
+%          as the kernel accents, which then expanded to themselves); Perl 1 Error (`\textipa` undefined)
+% expect:  0 errors, 0 warnings; "X: ä é ñ ä é a̰ ə n̥."
+% status:  GREEN (77x r2, t3enc_def.rs keeps the first saved kernel accents)
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage{tipa}
+\makeatletter\input{t3enc.def}\makeatother
+\begin{document}
+X: \"a \'e \~n \textipa{\"a \'e \~*a @} \textsubring{n}.
+\end{document}

@@ -167,13 +167,36 @@ LoadDefinitions!({
     "{}",
     "\\begingroup\\tipaencoding\\lx@tipa@accent@mark{over}{38}\\endgroup\\lx@tipa@accent@apply{#1}"
   );
-  // t3enc.def:343-354: a bar ruled across the symbol, the short stroke overlay U+0335.
-  DefMacro!("\\ipabar{}{}{}{}{}", sub[(symbol, _height, _width, _left, _right)] {
-    let mut tokens = vec![
-      T_CS!("\\lx@applyaccent"), T_CS!("\\ipabar"), T_OTHER!("\u{0335}"), T_OTHER!("\u{00A0}\u{0335}"), T_BEGIN!(),
-    ];
-    tokens.extend(symbol.unlist());
+  // t3enc.def:343-354: a bar ruled across the symbol, the short stroke overlay U+0335 — over a character run
+  // (`\textbarc`'s `{\tipaencoding c}`). Anything else keeps t3enc.def's construction: `\textdoublebaresh`
+  // (:535-537) bars an `\hb@xt@` box of another `\ipabar`, which the overlay printed as TeX source (rev77x).
+  // `\providecommand`ed: read again, t3enc.def keeps this binding's, and the raw one saved first stays.
+  if !IsDefined!(&T_CS!("\\lx@tipa@raw@ipabar")) {
+    Let!("\\lx@tipa@raw@ipabar", "\\ipabar");
+  }
+  DefMacro!("\\ipabar{}{}{}{}{}", sub[(symbol, height, width, left, right)] {
+    let symbol = symbol.unlist();
+    let character_run = symbol.iter().all(|t| {
+      matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER | Catcode::BEGIN | Catcode::END)
+        || *t == T_CS!("\\tipaencoding")
+    });
+    let mut tokens = if character_run {
+      vec![
+        T_CS!("\\lx@applyaccent"), T_CS!("\\ipabar"), T_OTHER!("\u{0335}"), T_OTHER!("\u{00A0}\u{0335}"),
+        T_BEGIN!(),
+      ]
+    } else {
+      vec![T_CS!("\\lx@tipa@raw@ipabar"), T_BEGIN!()]
+    };
+    tokens.extend(symbol);
     tokens.push(T_END!());
+    if !character_run {
+      for arg in [height, width, left, right] {
+        tokens.push(T_BEGIN!());
+        tokens.extend(arg.unlist());
+        tokens.push(T_END!());
+      }
+    }
     Tokens::new(tokens)
   });
   for (cs, glyph) in T3_MADE_LETTERS {
@@ -183,6 +206,13 @@ LoadDefinitions!({
       Some(PrimitiveBody::String(pin(glyph))),
       PrimitiveOptions::default(),
     )?;
+  }
+
+  // t3enc.def read again (`\input{t3enc.def}` after tipa.sty) re-declares its T3 commands, and the kernel ones saved
+  // the first time stay saved: saving again would save these wrappers, which then expand to themselves (rev77x;
+  // guard `perfect_kernel_batch77x::t3enc_def_loaded_twice`).
+  if IsDefined!(&T_CS!("\\lx@tipa@native@'")) {
+    return Ok(());
   }
 
   // In T3 text the kernel accents are t3enc.def's (latex.ltx's text commands dispatch on `\cf@encoding`; ours are

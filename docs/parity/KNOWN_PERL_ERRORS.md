@@ -16163,6 +16163,11 @@ back in the caller's encoding. Perl's `DefMacro('\UseTextAccent{}{}', '{\fontenc
 Minimal trigger: `A \UseTextAccent{OT1}{\'}{e} B.` — pdflatex "A é B.", Perl "A ´e B.". It is rarely reached because
 `\DeclareTextAccentDefault` (latex.ltx:9985-9986, the `\?\cs` → `\UseTextAccent` default) is ignored
 (latex_base.pool.ltxml:361-362): tipa.sty's `\DeclareTextAccentDefault{\textsubring}{T3}` leaves `\textsubring{n}` in
-T1 text without its ring (pdflatex n̥). Rust (77x): both as latex.ltx, `\UseTextAccent` calling the encoding's command
-directly and setting the argument alone in math or when the encoding has none (sect08.rs; OXIDIZED_DESIGN_DIVERGENCES
-#781). Guard `perfect_kernel_batch77x::t3_accent_outside_t3_text`.
+T1 text without its ring (pdflatex n̥). Rust (77x): both as latex.ltx, `\UseTextAccent` robust, calling the encoding's
+command directly and setting the argument alone in math or when the encoding has none (sect08.rs;
+OXIDIZED_DESIGN_DIVERGENCES #781). The trigger also needs the kernel `\accent` to perform the assignments between its
+number and its character (tex.web §1123 make_accent, §1270 do_assignments): `\add@accent` (latex.ltx:9906-9912) sets
+`\accent19 \fontencoding{OT1}\selectfont e`, and Perl's `\accent` (TeX_Character.pool.ltxml:117-123) takes only
+prefixes, font identifiers, registers and `\def`s as assignments, not LaTeX's font switch, nor skips a `\relax`; Rust
+(77x r2) expands protected macros there, skips `\relax` and takes the NFSS switch as an assignment (math_common.rs), "A
+é B.". Guards `perfect_kernel_batch77x::t3_accent_outside_t3_text`, `use_text_accent_font_assignments`.

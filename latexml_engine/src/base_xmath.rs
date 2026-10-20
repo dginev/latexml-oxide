@@ -827,7 +827,11 @@ LoadDefinitions!({
     // OR if XMHint with 0 <= width <= thickmuskip (5mu == ?)
     } else if qn == pin!("ltx:XMHint") {
       if let Some(s_name) = node_ref.get_attribute("name") {
-        if let Some(s_char) = NAMED_SPACE_CHARS.get(s_name.as_str()) {
+        // Perl `($s = $space_chars{$s})` is false for `\!`'s empty string, so a negative thin space ends the scan:
+        // taken as a separator, `2\!x` made a "number" of the 2 and the hint, which the parser drops with the hint
+        // (`$2\!x$` read "x"; 2609.36534 `$+5.9\!\cdot\!10^{-7}$`, 2608.02769 `\mathbf 1\!\left(`, 2603.03017; guard
+        // `perfect_kernel_batch77x::number_before_negative_thin_space_kept`).
+        if let Some(s_char) = NAMED_SPACE_CHARS.get(s_name.as_str()).filter(|c| !c.is_empty()) {
           combined = s_char.to_string() + &combined;
         } else {
           break;

@@ -5705,6 +5705,16 @@ pub use sect10::math_array_bindings;
 pub use sect11::{label_type, typed_label};
 pub use sect13::nfss_selected_font;
 
+/// amsmath.sty:155-175 declares the spacing commands again — `\,` `\!` `\:` `\;`, `\negmedspace`, `\negthickspace`
+/// (`\let\!\@undefined` …, then `\DeclareRobustCommand\!{\tmspace…}`) — over whatever a package loaded before
+/// made of them: tipa.sty:429-458's T3 text accents `\!` `\;` `\:`, which would read the next token as their
+/// argument (`\!\! &`). The amsmath binding calls this; the commands are the kernel's (plain_constructs.rs,
+/// sect07.rs). Witnesses 2603.03017, 2605.00529, 2608.02769; guards `perfect_kernel_batch77x::t3_tipa_then_amsmath_*`.
+pub fn define_amsmath_tmspace_commands() -> Result<()> {
+  crate::plain_constructs::define_tmspace_commands()?;
+  sect07::define_negative_tmspaces()
+}
+
 LoadDefinitions!({
   // Perl `latex_constructs.pool.ltxml` L19-38 — force-reload of
   // `plain_constructs` and `math_common`. By the time

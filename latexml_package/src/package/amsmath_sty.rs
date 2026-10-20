@@ -586,7 +586,10 @@ LoadDefinitions!({
   // \! == \negthinspace, plus \quad, \qquad, \negmedspace, \negthickspace
   // these are now native to LaTeX (see latex_constructs.rs C.7.7 Spacing,
   // mirroring Perl latex_constructs.pool.ltxml L2498-2525). The amsmath
-  // pool no longer redefines them.
+  // pool no longer redefines them; amsmath.sty:155-175 declares them again over a package loaded before it
+  // (tipa.sty:429-458's T3 text accents `\!` `\;` `\:`), so the binding re-asserts the kernel's
+  // (witnesses 2603.03017, 2605.00529, 2608.02769).
+  latexml_engine::latex_constructs::define_amsmath_tmspace_commands()?;
 
   // Perl: \mspace{MuDimension} — we use {} since MuDimension param type isn't implemented
   DefConstructor!("\\mspace{}", "<ltx:XMHint name='mspace' width='#1'/>");

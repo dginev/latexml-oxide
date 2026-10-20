@@ -1,0 +1,18 @@
+% witness: 2605.00529 (`\!\! &` in a tabular cell; amsmath loaded after tipa)
+% oracle:  pdflatex 0 errors; after amsmath.sty:155-175 `\!` is the negative thin space in text too (a kern), so the
+%          cell ends at the `&`
+% engines: rust int36a = 0 errors; 77x r1 = 7 Errors (`\!` read the `&` as an accent argument), "After text." lost;
+%          Perl 1 Error (`\@defaultenc` undefined in its fontenc binding)
+% expect:  0 errors, 0 warnings; the two-row table and "After text."
+% status:  GREEN (77x r2, amsmath_sty.rs re-asserts the kernel spacing commands)
+\documentclass{article}
+\usepackage{tipa}
+\usepackage{amsmath}
+\begin{document}
+\begin{tabular}{ll}
+a \!\!{\small x}\!\! & b \\
+c & d \\
+\end{tabular}
+
+After text.
+\end{document}

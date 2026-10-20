@@ -602,21 +602,12 @@ pub(crate) fn load() -> Result<()> {
     properties => { Ok(stored_map!("isSpace" => true, "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
       "width" => tmspace_width("\\medmuskip", false, "0.2222em")?)) },
     enter_horizontal => true);
-  DefConstructor!("\\negmedspace",
-    "?#isMath(<ltx:XMHint name='negmedspace' width='#width'/>)()",
-    properties => { Ok(stored_map!("isSpace" => true, "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
-      "width" => tmspace_width("\\medmuskip", true, "0.2222em")?)) },
-    enter_horizontal => true);
   DefConstructor!("\\thickspace",
     "?#isMath(<ltx:XMHint name='thickspace' width='#width'/>)(\u{2004})",
     properties => { Ok(stored_map!("isSpace" => true, "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
       "width" => tmspace_width("\\thickmuskip", false, "0.2777em")?)) },
     enter_horizontal => true);
-  DefConstructor!("\\negthickspace",
-    "?#isMath(<ltx:XMHint name='negthickspace' width='#width'/>)(\u{2004})",
-    properties => { Ok(stored_map!("isSpace" => true, "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
-      "width" => tmspace_width("\\thickmuskip", true, "0.2777em")?)) },
-    enter_horizontal => true);
+  define_negative_tmspaces()?;
 
   DefConstructor!(
     "\\frac InFractionStyle InFractionStyle",
@@ -665,6 +656,23 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\operator@font", None,
     font => {family => "serif", series => "medium", shape => "upright"});
 
+  Ok(())
+}
+
+/// `\negmedspace` and `\negthickspace` (Perl latex_constructs.pool.ltxml L2457-2467), which amsmath.sty:155-175 also
+/// declares again (`define_amsmath_tmspace_commands`).
+#[rustfmt::skip]
+pub(super) fn define_negative_tmspaces() -> Result<()> {
+  DefConstructor!("\\negmedspace",
+    "?#isMath(<ltx:XMHint name='negmedspace' width='#width'/>)()",
+    properties => { Ok(stored_map!("isSpace" => true, "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+      "width" => tmspace_width("\\medmuskip", true, "0.2222em")?)) },
+    enter_horizontal => true);
+  DefConstructor!("\\negthickspace",
+    "?#isMath(<ltx:XMHint name='negthickspace' width='#width'/>)(\u{2004})",
+    properties => { Ok(stored_map!("isSpace" => true, "isKern" => !lookup_bool_sym(pin!("IN_MATH")),
+      "width" => tmspace_width("\\thickmuskip", true, "0.2777em")?)) },
+    enter_horizontal => true);
   Ok(())
 }
 

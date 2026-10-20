@@ -1,0 +1,12 @@
+% witness: rev77x finding 4 (t3enc.def:535-537 `\textdoublebaresh`: `\ipabar` of an `\hb@xt@` box)
+% oracle:  pdflatex 0 errors; the barred letters t3enc.def:523-541 builds with `\ipabar`
+% engines: rust int36a = each a two-row table, no source; 77x r1 = "\̵hboxto7.5pt{\hss\ipabar{{\textesh}}\hss}" (TeX
+%          source in the text); Perl 2 Errors (`\textipa` undefined)
+% expect:  0 errors, 0 warnings; c̵ ɡ̵ as stroke overlays; the double-barred esh t3enc.def's construction (ʃ over two
+%          rules, as int36a), no TeX source
+% status:  GREEN (77x r2, t3enc_def.rs `\ipabar` takes the overlay only for a character run)
+\documentclass{article}
+\usepackage{tipa}
+\begin{document}
+Barred \textipa{\textbarc} and \textipa{\textcrg}; esh \textipa{\textdoublebaresh}.
+\end{document}

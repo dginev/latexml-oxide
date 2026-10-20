@@ -11,6 +11,10 @@
 //! ligature program (tipa10.tfm LIGTABLE, tipa.mf:66-67) makes `""` the secondary stress ˌ (127) and `||` the double
 //! pipe ǁ (123): `t3_ligature`.
 //!
+//! Where the glyph the font draws and its IPA meaning differ, the slot is the IPA meaning, as tipauni.sty maps it (user
+//! ruling 2026-10-20): `!` the alveolar click ǃ, `&` ɞ, `\textcorner` U+031A, `\textsubbar` U+0320; the open corner,
+//! which tipauni.sty does not map, stays ˹.
+//!
 //! An accent slot holds the combining mark it is set as (decoded alone on a no-break space, the Perl fontmaps' shape),
 //! or the spacing accent where T1 has one (0-12); [`t3_accent_mark`] gives the mark above or below a letter that
 //! t3enc.def's `\upper@accent`/`\lower@accent` set it as (t3enc_def.rs). Slots with no Unicode character — the tone
@@ -35,8 +39,11 @@ fn t3_map() -> Rc<[Option<char>]> {
     '\u{0311}', '\u{032A}', '\u{033A}', '\u{033B}', '\u{0339}', '\u{031C}', '\u{032B}', '\u{033C}',
     // 0x18: over-cross, ı ȷ (tiparoml.mf:774-788), plus, raising, lowering, advancing, retracting signs (:415-503)
     '\u{033D}', '\u{0131}', '\u{0237}', '\u{031F}', '\u{031D}', '\u{031E}', '\u{0318}', '\u{0319}',
-    // 0x20: Celtic palatalization mark, !, primary stress ˈ, hooktop, right hook, palatal hook, superimposed tilde, ’
-    None,       '\u{0021}', '\u{02C8}', None,       '\u{0322}', '\u{0321}', '\u{0334}', '\u{2019}',
+    // 0x20: Celtic palatalization mark, the alveolar click ǃ (the font draws an exclamation mark: tipaman2.tex:1105
+    // "(post)alveolar click"; 2606.11542 "!Xoon"), primary stress ˈ, hooktop, right hook, palatal hook, ɞ (the font
+    // draws the superimposed tilde, tipauni.sty's `&` is the closed reversed epsilon; `t3_accent_mark` keeps the
+    // tilde for `\textsuperimposetilde`), ’
+    None,       '\u{01C3}', '\u{02C8}', None,       '\u{0322}', '\u{0321}', '\u{025E}', '\u{2019}',
     // 0x28: ( ) * + , - . / (tipapnct.mf)
     '\u{0028}', '\u{0029}', '\u{002A}', '\u{002B}', '\u{002C}', '\u{002D}', '\u{002E}', '\u{002F}',
     // 0x30: the digits: ʉ ɨ ʌ ɜ ɥ ɐ ɒ ɤ (tipasym1.mf:21-244; t3enc.def:47-54)
@@ -49,8 +56,9 @@ fn t3_map() -> Rc<[Option<char>]> {
     '\u{0266}', '\u{026A}', '\u{029D}', '\u{0281}', '\u{028E}', '\u{0271}', '\u{014B}', '\u{0254}',
     // 0x50: ʔ ʕ ɾ ʃ θ ʊ ʋ ɯ (:79-87)
     '\u{0294}', '\u{0295}', '\u{027E}', '\u{0283}', '\u{03B8}', '\u{028A}', '\u{028B}', '\u{026F}',
-    // 0x58: χ ʏ ʒ [, reversed apostrophe ʽ, ], corner ˺, open corner ˹ (:87-89, :218-220; tipadiac.mf:567-602)
-    '\u{03C7}', '\u{028F}', '\u{0292}', '\u{005B}', '\u{02BD}', '\u{005D}', '\u{02FA}', '\u{02F9}',
+    // 0x58: χ ʏ ʒ [, reversed apostrophe ʽ, ], the corner as the no-audible-release mark U+031A (tipauni.sty), the open
+    // corner ˹ (tipauni.sty has none; tipaman gives it another meaning) (:87-89, :218-220; tipadiac.mf:567-602)
+    '\u{03C7}', '\u{028F}', '\u{0292}', '\u{005B}', '\u{02BD}', '\u{005D}', '\u{031A}', '\u{02F9}',
     // 0x60: ‘ and the lower-case letters (tiparoml.mf), `g` the single-storey ɡ (t3enc.def:93 `\textscriptg`)
     '\u{2018}', '\u{0061}', '\u{0062}', '\u{0063}', '\u{0064}', '\u{0065}', '\u{0066}', '\u{0261}',
     '\u{0068}', '\u{0069}', '\u{006A}', '\u{006B}', '\u{006C}', '\u{006D}', '\u{006E}', '\u{006F}',
@@ -133,7 +141,9 @@ pub fn t3_accent_mark(slot: i64, place: AccentPlace) -> Option<char> {
     (8, Above) => '\u{0306}',
     (8, Below) => '\u{032E}',
     (9, Above) => '\u{0304}',
-    (9, Below) => '\u{0331}',
+    // `\textsubbar`, `\b` in T3: the font draws a macron below, tipauni.sty and tipaman2.tex:1461 "retracted" the
+    // minus sign below.
+    (9, Below) => '\u{0320}',
     (10, Above) => '\u{0307}',
     (10, Below) => '\u{0323}',
     (11, _) => '\u{0327}',
@@ -201,6 +211,17 @@ fn is_t3(font: &Font) -> bool { font.get_encoding().is_some_and(|encoding| encod
 
 LoadDefinitions!({
   DeclareFontMap!("T3", t3_map());
+  // The marks t3enc.def:213-219 sets after the letter they modify — `\textrthook`, `\textpalhook`, `\textcorner`,
+  // drawn to hang off the letter before them (`t\textrthook` t̢, `k\textcorner` k̚: 2601.02906, 2609.04232) — are the
+  // bare combining marks, which attach to that letter, not the no-break space a standalone combining mark is
+  // decoded on; so are the tie bars typed `<` `>` (60, 62), set between the letters they join (`\textipa{t<s}` t͜s).
+  DeclareFontMapMultichar!("T3", {
+    36u8 => "\u{0322}",
+    37u8 => "\u{0321}",
+    60u8 => "\u{035C}",
+    62u8 => "\u{0361}",
+    94u8 => "\u{031A}",
+  });
   DefLigature!(
     "\u{02C8}{2,}|\u{01C0}{2,}",
     |caps: &regex::Captures| t3_ligature(&caps[0]),

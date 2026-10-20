@@ -728,16 +728,42 @@ pub(crate) fn load() -> Result<()> {
       },
     }
   });
-  // latex.ltx:9958-9965 `\UseTextAccent[3]`: the accent is set in its encoding and its argument back in the one it was
-  // called in (`\@curr@enc`), so a T3 accent on a T1 letter keeps the letter (`g` is ɡ in T3). The encoding's own
-  // command is called directly, as `\UseTextSymbol` above does: an encoding without it (`\DeclareTextAccentDefault
-  // {\figurecircled}{MDB}`, mathdesign.sty:214, with no MDB command) would re-enter the dispatcher, so the argument is
-  // set alone; so is it in math, where a text encoding sets nothing (`$a\;b\!c\:d$` after tipa.sty:429-457: pdflatex
-  // "abcd", no retroflex ɖ). Perl latex_constructs.pool.ltxml:2643 reads two arguments and substitutes a third
-  // (KNOWN_PERL_ERRORS #1004).
-  DefMacro!("\\UseTextAccent{}{}{}", sub[(enc, cs, arg)] {
+  // latex.ltx:9958-9965 `\DeclareRobustCommand*\UseTextAccent[3]`: the accent is set in its encoding and its argument
+  // back in the one it was called in (`\@curr@enc`), so a T3 accent on a T1 letter keeps the letter (`g` is ɡ in T3).
+  // Robust as there: an alignment's look-ahead for `\omit` stops at it, so `\!` at the start of an align cell after
+  // tipa.sty:429-458 (amsmath loaded before tipa) is read in the cell's formula. The encoding's own command is called
+  // directly, as `\UseTextSymbol` above does: an encoding without it (`\DeclareTextAccentDefault{\figurecircled}
+  // {MDB}`, mathdesign.sty:214, with no MDB command) would re-enter the dispatcher, so the argument is set alone. In
+  // math the argument is set alone too: tipa's `\;` `\!` `\:` in a formula (`$a\;b\!c\:d$` with tipa.sty and no
+  // amsmath: pdflatex "abcd", no retroflex ɖ); an accent proper in a formula loses its mark (`$\textsubring{n}$` is n,
+  // pdflatex n̥ with "invalid in math mode"). The argument (#3) is undelimited: an `&`, `$`, `}`, `\end` or, in an
+  // alignment, a row end after the accent would be read as it — pdflatex errs, and the cell, formula or group it ends
+  // is lost (tipa's `\!\! &` with amsmath loaded before tipa) — so the accent takes no argument there, sets the accent
+  // alone (`\T3\!{}` nothing) and says so. Perl latex_constructs.pool.ltxml:2643 reads two arguments and substitutes a
+  // third (KNOWN_PERL_ERRORS #1004). Guards `perfect_kernel_batch77x::t3_accent_outside_t3_text`,
+  // `t3_tipa_after_amsmath_accent_at_boundary`.
+  DefMacro!("\\UseTextAccent{}{}", sub[(enc, cs)] {
     let enc_str = Expand!(enc).to_string();
-    let ecs = T_CS!(s!("\\{enc_str}{}", cs.to_string()));
+    let cs_str = cs.to_string();
+    let ecs = T_CS!(s!("\\{enc_str}{cs_str}"));
+    let arg = match read_non_space()? {
+      Some(token) if ends_accent_argument(&token) => {
+        // Once per accent and token: a binding's own group can close after a name (2609.13770's `\crefname{section}
+        // {\S\!}{…}`, 76 times).
+        if !already_reported(&s!("accent_without_argument_{enc_str}{cs_str}{token}")) {
+          Warn!("expected", "argument",
+            s!("The text accent {cs_str} of encoding {enc_str} has no argument before {token}: it is set alone \
+                (latex.ltx \\UseTextAccent would read the {token} as its argument)"));
+        }
+        unread_one(token);
+        Tokens!()
+      },
+      Some(token) => {
+        unread_one(token);
+        read_arg(ExpansionLevel::Off)?
+      },
+      None => Tokens!(),
+    };
     if lookup_bool("IN_MATH") || lookup_definition(&ecs)?.is_none() {
       return Ok(arg);
     }
@@ -751,7 +777,7 @@ pub(crate) fn load() -> Result<()> {
     toks.extend(arg.unlist());
     toks.extend([T_END!(), T_END!()]);
     Ok(Tokens::new(toks))
-  });
+  }, robust => true);
 
   // Perl: DefPrimitive('\DeclareMathAccent DefToken {}{} {Number}', ...)
   // latex_constructs.pool.ltxml:2702-2709. Perl always calls DefMathI even
@@ -1840,6 +1866,20 @@ fn is_encoding_dispatcher(cs: &Token) -> Result<bool> {
       Some(ExpansionBody::Tokens(body)) if body.unlist_ref().starts_with(&head)),
     None => false,
   })
+}
+
+/// A token `\UseTextAccent` does not read as its undelimited argument: an alignment tab, a math shift, a closing brace,
+/// `\end`, or a row end in an alignment — where pdflatex's reading it breaks the cell, formula, group or environment
+/// it ends (latex.ltx:9958; tipa.sty:429-458 `\!` before `&`).
+fn ends_accent_argument(token: &Token) -> bool {
+  matches!(
+    token.get_catcode(),
+    Catcode::END | Catcode::MATH | Catcode::ALIGN
+  ) || *token == T_CS!("\\end")
+    || (lookup_alignment().is_some()
+      && ["\\\\", "\\cr", "\\crcr", "\\tabularnewline"]
+        .iter()
+        .any(|row_end| *token == T_CS!(*row_end)))
 }
 
 /// The encoding dispatcher a declared text command becomes (latex.ltx `\@changed@cmd`, :9871-9888): the encoding's

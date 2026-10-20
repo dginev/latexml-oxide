@@ -195,6 +195,10 @@ pub fn augment_delimiter_properties(document: &mut Document, role: &str) -> Resu
   Ok(())
 }
 
+/// The NFSS commands that are latex.ltx macros of assignments (`\fontencoding` sets `\f@encoding`, `\selectfont`
+/// the font) and primitives here: `\accent` performs them between its number and its character (tex.web §1123).
+const NFSS_ASSIGNMENTS: [&str; 2] = ["\\lx@fontencoding", "\\selectfont"];
+
 #[rustfmt::skip]
 LoadDefinitions!({
   //----------------------------------------------------------------------
@@ -263,12 +267,22 @@ LoadDefinitions!({
     let mut assignments: Vec<Digested> = Vec::new();
     let mut last_token: Option<Token> = None;
     let mut last_defn: Option<Rc<dyn Definition>> = None;
+    // tex.web §1270 do_assignments reads "the next non-blank non-relax non-call token" (§404) with get_x_token, which
+    // expands a protected macro too: latex.ltx:9958-9965 `\UseTextAccent{OT1}{\'}{e}` sets `\accent19 \fontencoding
+    // {OT1}\selectfont e` (`\add@accent`, :9906-9912), the robust `\fontencoding` a `\protect` (`\relax`) and the
+    // font switch a run of assignments in latex.ltx; here `\lx@fontencoding` and `\selectfont` are primitives
+    // (`NFSS_ASSIGNMENTS`). Perl stops at the font switch (KNOWN_PERL_ERRORS #1004; guard
+    // `perfect_kernel_batch77x::use_text_accent_font_assignments`).
     loop {
-      let token_opt = read_x_non_space()?;
+      // Expanded as for execution: a protected macro too.
+      let token_opt = read_x_token(Some(false), false, Some(true))?;
       let token = match token_opt {
         Some(t) => t,
         None => { break; }
       };
+      if token.get_catcode() == Catcode::SPACE || token.defined_as(&TOKEN_RELAX) {
+        continue;
+      }
       let defn = if token.get_catcode().is_active_or_cs() {
         lookup_definition(&token)?.map(|d| d as Rc<dyn Definition>)
       } else {
@@ -289,6 +303,7 @@ LoadDefinitions!({
           } else {
             // Check \def, \edef, \gdef, \xdef
             matches!(cs_str.as_str(), "\\def" | "\\edef" | "\\gdef" | "\\xdef")
+              || NFSS_ASSIGNMENTS.contains(&cs_str.as_str())
           }
         }
       } else {

@@ -237,7 +237,8 @@ fn tabularray_cells_take_their_mode_and_cmd() {
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   let xml = normalize_markup(&xml);
   for (tex, text) in [
-    (r"27.47\!\pm\!9.62^{*}", "plus-or-minus 9.62 ^ *"),
+    // the 27.47 before `\!` kept (77x r2, base_xmath.rs number ligature; it was lost here before)
+    (r"27.47\!\pm\!9.62^{*}", "27.47 plus-or-minus 9.62 ^ *"),
     ("[a^{2}]", "delimited-[]@(a ^ 2)"),
     ("[b_{1}]", "delimited-[]@(b _ 1)"),
     ("[d]", "delimited-[]@(d)"),

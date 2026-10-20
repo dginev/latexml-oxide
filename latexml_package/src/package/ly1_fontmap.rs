@@ -6,7 +6,8 @@ LoadDefinitions!({
   DeclareFontMap!("LY1", mixrc![
     None,         '\u{20AC}',   None,         None,         '\u{2044}',   '\u{02D9}',   '\u{02DD}',   '\u{02DB}',
     '\u{FB02}',   None,         None,         None,         '\u{FB01}',   None,         None,         None,
-    '\u{0131}',   None,         '\u{0060}',   '\u{00B4}',   '\u{02C7}',   '\u{02D8}',   '\u{00AF}',   '\u{02DA}',
+    // 0x10: ı, the dotless j ȷ (ly1enc.def:42 `\DeclareTextSymbol{\j}{LY1}{17}`; Perl's map leaves it empty) …
+    '\u{0131}',   '\u{0237}',   '\u{0060}',   '\u{00B4}',   '\u{02C7}',   '\u{02D8}',   '\u{00AF}',   '\u{02DA}',
     '\u{00B8}',   '\u{00DF}',   '\u{00E6}',   '\u{0153}',   '\u{00F8}',   '\u{00C6}',   '\u{0152}',   '\u{00D8}',
     ' ',          '!',          '"',          '#',          '$',          '%',          '&',          '\u{2019}',
     '(',          ')',          '*',          '+',          ',',          '-',          '.',          '/',

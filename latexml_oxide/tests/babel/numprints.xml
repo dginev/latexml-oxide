@@ -456,8 +456,9 @@ vs.
                 </XMApp>
                 <XMWrap>
                   <XMTok meaning="6.001" role="NUMBER">6.001</XMTok>
-                  <XMTok role="PUNCT" rpadding="-1.7pt">,</XMTok>
-                  <XMApp role="FLOATSUPERSCRIPT" scriptpos="2">
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok meaning="17" role="NUMBER" rpadding="0.0pt">17</XMTok>
+                  <XMApp class="ltx_unit" role="FLOATSUPERSCRIPT" scriptpos="2">
                     <XMTok fontsize="70%" name="prime2" role="SUPOP">′′</XMTok>
                   </XMApp>
                 </XMWrap>

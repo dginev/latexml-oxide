@@ -21394,31 +21394,60 @@ the symbols are empty and the input letters OT1's ("D@”lIm@"); `\DeclareTextAc
 
 **Rust** (77x): `t3_fontmap.rs` — every slot the glyph tipa.mf's parts draw there (tipadiac, tipapnct, tiparoml,
 tipasym1-4, tipagerm, tipasc, tipatone `cmchar` names), as the IPA letter Unicode has for it by t3enc.def's command
-name, cross-checked against tipauni.sty's table, and the two ligatures. Choices where the glyph and IPA usage part: `!`
-stays the exclamation mark (tipapnct.mf; tipauni maps the click ǃ), `&` the superimposed tilde U+0334 it draws
-(tipadiac.mf:681; tipauni ɞ), `|` `{` `}` are the click letters ǀ ǁ ǂ (the glyphs are tipasym1.mf's pipes), the corners
-94/95 the spacing ˺ ˹ (5.2u glyphs; tipauni the combining U+031A), the baby gamma 200 shares the ram's horns' ɤ
-(U+0264's former name), 175 is ꭢ (tipasym4.mf:299 "Open O-E Ligature"), `\textsubbar` (slot 9 below) the macron below
-U+0331 (tipauni U+0320). Slots with no Unicode character decode to nothing, and a text symbol at one warns where it is
-used (`\lx@unmapped@text@symbol`, now for an empty slot of a mapped encoding too): the Celtic palatalization mark 32,
-the hooktop 35, the tone-letter parts 128-145 and stem 191, the left- hooktop long i/y and Viby i/y 166, 167, 182, 183.
+name, cross-checked against tipauni.sty's table, and the two ligatures. Where the glyph the font draws and its IPA
+meaning part, the slot is the IPA meaning, as tipauni.sty maps it (user ruling 2026-10-20, 77x r2): `!` the alveolar
+click ǃ U+01C3 (tipapnct.mf draws an exclamation mark; tipaman2.tex:1105 "(post)alveolar click"; 2606.11542 "!Xoon"),
+`&` ɞ U+025E (the font draws the superimposed tilde, which `\textsuperimposetilde` keeps as U+0334), the corner 94 the
+no-audible-release mark U+031A (2601.02906, 2609.04232), `\textsubbar` (slot 9 below, `\b` in T3) the minus sign below
+U+0320 ("retracted", tipaman2.tex:1461); the open corner 95, which tipauni.sty does not map (tipaman gives it another
+meaning), stays the spacing ˹ — so a `\textopencorner x\textcorner` bracket pair (2604.00122's Quine corners) is ˹x̚.
+Kept as drawn: `|` `{` `}` the click letters ǀ ǁ ǂ (tipasym1.mf's pipes), the baby gamma 200 the ram's horns' ɤ
+(U+0264's former name), 175 ꭢ (tipasym4.mf:299 "Open O-E Ligature"). The marks t3enc.def:213-219 sets after the letter
+they modify — `\textrthook` 36, `\textpalhook` 37, `\textcorner` 94 — are the bare combining marks
+(`DeclareFontMapMultichar`), which attach to that letter (`t\textrthook` t̢, `k\textcorner` k̚), not to the no-break
+space a standalone combining mark is decoded on; so are the tie bars typed `<` `>` (60, 62), between the letters they
+join (`\textipa{t<s}` t͜s). Slots with no Unicode character decode to nothing, and a text symbol at one warns where it
+is used (`\lx@unmapped@text@symbol`, now for an empty slot of a mapped encoding too): the Celtic palatalization mark 32,
+the hooktop 35, the tone-letter parts 128-145 and stem 191, the left-hooktop long i/y and Viby i/y 166, 167, 182, 183.
 `t3enc_def.rs` reads t3enc.def raw, then sets the `a` form of `\upper@accent`/`\lower@accent` as the slot's combining
 mark above or below (`t3_accent_mark`: the tilde 3 is U+0303 above, U+0330 below; the round cap 16 U+0311/U+032F; the
 stroke 34 below the syllabicity mark U+0329; the tone accents 152-159 U+1DC4 U+1DC5 U+1DC8 U+1DC9 U+030D U+030E U+1DC0
 U+1DC1), decoded in the font `#2` selects and applied as the kernel's `\accent` (`\lx@applyaccent`: `\'a` á,
 `\textdotbreve{a}` ă̇, `\t{ts}` t͡s); the `b` (box) form stays raw (tipa.sty:477 `\sups`). `\textsuperimposetilde` is
-U+0334, `\ipabar` the stroke overlay U+0335, and the made letters Unicode has are its letters (`\textbarb` ƀ,
-`\textbard` đ, `\textbarg` ǥ, `\textcrtwo` ƻ, `\textcrinvglotstop` ƾ, the kerned `\textdzlig` ʣ, `\textdctzlig` ʥ,
-`\texttctclig` ʨ). In T3 text, outside math, the kernel accents and `\|` take T3's command (an expandable macro to the
-native accent elsewhere; a protected step to T3's). The subscript W set above (`\textoverw`) has no Unicode mark: the
-letter prints alone with a Warning. `tone_sty.rs` reads tone.sty raw and writes `\tone`/`\stone` as the Chao tone
-letters ˥˦˧˨˩ (U+02E5-02E9) and `\rtone` as the left-stem ones (U+A712-A716): `\tone{51}` ˥˩; a level outside 1-5 keeps
-tone.sty's boxes. sect08.rs: `\DeclareTextAccentDefault` is latex.ltx's, `\UseTextAccent` takes three arguments and
-restores the caller's encoding for the argument (`\textsubring{g}` in T1 text is g̥, not ɡ̥), calling `\<enc>\cs`
-directly — with no such command, or in math (tipa's `\;` `\!` `\:` in `$a\;b$`: pdflatex sets the letters), the argument
-alone. tex_fonts.rs: the `--`/`---` dash ligatures are not T3's (tipa10.tfm has none). Witnesses 2405.01972 (`\textipa
-{\textltailn}` ɲ, `\textipa{\!b}` ɓ, `\textipa{gO}` ɡɔ), 1802.05444. Repros `fonts-nfss/{t3_tipa_input_letters_print,
-t3_tipa_symbols_print, t3_tipa_diacritics_compose, t3_tone_letters, t3_accent_outside_t3_text,
-t3_slot_without_unicode_warns}`; guards `perfect_kernel_batch77x::{t3_tipa_input_letters_print, t3_tipa_symbols_print,
-t3_tipa_diacritics_compose, t3_tone_letters, t3_accent_outside_t3_text, t3_slot_without_unicode_warns}`,
-`perfect_kernel_batch77u::text_symbol_of_an_unmapped_encoding_warns` (now a document-declared encoding).
+U+0334, `\ipabar` the stroke overlay U+0335 over a character run (`\textbarc` c̵, `\textcrg` ɡ̵; over another
+construction — `\textdoublebaresh`'s `\hb@xt@` box, :535-537 — t3enc.def's raw `\ipabar`, which r1's overlay printed as
+TeX source), and the made letters Unicode has are its letters (`\textbarb` ƀ, `\textbard` đ, `\textbarg` ǥ, `\textcrtwo`
+ƻ, `\textcrinvglotstop` ƾ, the kerned `\textdzlig` ʣ, `\textdctzlig` ʥ, `\texttctclig` ʨ). In T3 text, outside math, the
+kernel accents and `\|` take T3's command (an expandable macro to the native accent elsewhere; a protected step to
+T3's). The subscript W set above (`\textoverw`) has no Unicode mark: the letter prints alone with a Warning.
+`tone_sty.rs` reads tone.sty raw and writes `\tone`/`\stone` as the Chao tone letters ˥˦˧˨˩ (U+02E5-02E9) and `\rtone`
+as the left-stem ones (U+A712-A716): `\tone{51}` ˥˩; a level outside 1-5 keeps tone.sty's boxes, which print nothing,
+with a Warning (witnesses 2601.19932, 2602.10003). t3enc.def or tone.sty read a second time (`\input{t3enc.def}` after
+tipa.sty) keeps the commands the binding saved the first time (saving its own wrappers made them expand to themselves:
+Fatal:Timeout). sect08.rs: `\DeclareTextAccentDefault` is latex.ltx's, `\UseTextAccent` is robust as latex.ltx's
+`\DeclareRobustCommand*` (an alignment's look-ahead for `\omit` stops at it), restores the caller's encoding for the
+argument (`\textsubring{g}` in T1 text is g̥, not ɡ̥) and calls `\<enc>\cs` directly — with no such command, or in math,
+the argument alone: tipa's `\;` `\!` `\:` in `$a\;b$` set the letters as pdflatex does, while an accent proper in a
+formula loses its mark (`$\textsubring{n}$` is n, pdflatex n̥ with "invalid in math mode": residual). It reads its
+argument (#3) itself: an `&`, `$`, `}`, `\end` or, in an alignment, a row end is not taken — pdflatex reads it and errs,
+losing the cell, formula or group it ends (amsmath loaded before tipa: `\!\! &`, `,\;$x$`; 2605.00132, 2607.12821) — the
+accent is set alone with a Warning (once per accent and token). amsmath_sty.rs re-asserts the kernel's `\,` `\!` `\:`
+`\;` `\negmedspace` `\negthickspace` as amsmath.sty:155-175 declares them again
+(`latex_constructs::define_amsmath_tmspace_commands`), so tipa loaded before amsmath leaves them the spacing commands
+(r1 regressed 2603.03017 E 0 → 12, 2605.00529 E 0 → 66 with 16,534 words lost, 2608.02769 E 0 → 14: `\!` read the `&`,
+`$` or `}` after it). The kernel `\accent` (math_common.rs) performs the assignments between its number and its
+character as tex.web §1123/§1270 do — protected macros expanded, `\relax` skipped, the NFSS font switch
+(`\lx@fontencoding`, `\selectfont`) an assignment — so `\UseTextAccent{OT1}{\'}{e}` (`\add@accent`'s `\accent19
+\fontencoding{OT1}\selectfont e`) is é (KNOWN_PERL_ERRORS #1004). tex_fonts.rs: the `--`/`---` dash ligatures are not
+T3's (tipa10.tfm has none). Other encodings' empty slots the new Warning exposed: OT4 and LY1 slot 17 is the dotless j ȷ
+(ot4enc.def:82, ly1enc.def:42; Perl's ot4/ly1 fontmaps leave it undef: the Perl-synced golden `tests/encoding/ly1.xml`
+now shows ȷ there); LAE 198-203 (`\shaddanasb` … `\shaddakasra`, laeenc.def:83-97) are shadda with the vowel, as arabi's
+DTP Naskh LAE font draws them and LFE 0xC6-0xCB (the default aealmohanadb has no glyph there); LAE `\Decimalchar` (251,
+no glyph in any LAE font) keeps the Warning. Witnesses 2405.01972 (`\textipa{\textltailn}` ɲ, `\textipa{\!b}` ɓ,
+`\textipa{gO}` ɡɔ), 1802.05444. Repros `fonts-nfss/{t3_tipa_input_letters_print, t3_tipa_symbols_print,
+t3_tipa_diacritics_compose, t3_tone_letters, t3_accent_outside_t3_text, t3_slot_without_unicode_warns,
+t3_tipa_then_amsmath_align_negspace, t3_tipa_then_amsmath_tabular_negspace, t3_tipa_then_amsmath_thickspace_before_math,
+t3_tipa_after_amsmath_accent_at_boundary, t3enc_def_loaded_twice, t3_ipa_meaning_slots, t3_ipabar_built_symbols,
+use_text_accent_font_assignments, ot4_ly1_dotless_j, lae_shadda_vowels, t3_tone_level_outside_range_warns}`; guards
+`perfect_kernel_batch77x::*` (the same names), `perfect_kernel_batch77u::text_symbol_of_an_unmapped_encoding_warns` (now
+a document-declared encoding).
