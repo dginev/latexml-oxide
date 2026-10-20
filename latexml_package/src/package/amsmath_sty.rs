@@ -1417,9 +1417,19 @@ LoadDefinitions!({
    <ltx:Math mode='display'><ltx:XMath>#1</ltx:XMath></ltx:Math>\
    </ltx:equation>",
   mode => "display_math",
-  properties => { ref_step_counter_by_meaning("equation") },
-  before_digest => { bgroup(); },
+  // Numbered as `{equation}` is (latex_constructs sect07.rs): the number stepped at the start, a `\tag` in the body
+  // its tag in place of the number, a `\notag`/`\nonumber` none (amsmath.sty `\multline@`, `\tag@in@align`,
+  // `\make@df@tag`: a tagged multline never steps the counter). Perl steps the counter in its properties
+  // (amsmath.sty.ltxml:247 `RefStepCounter('equation')`) and ignores both (hep-th0210191: "(1) (2) (3)" for "(29)",
+  // "(30)" and none). Guards `perfect_kernel_batch77v::{multline_notag_then_tag, multline_tag_replaces_the_number}`.
+  before_digest => {
+    bgroup();
+    use crate::engine::latex_constructs::{before_equation, prepare_equation_counter};
+    prepare_equation_counter(stored_map!("numbered" => true, "preset" => true));
+    before_equation()?;
+  },
   after_digest => sub[whatsit] {
+    engine::latex_constructs::after_equation(Some(whatsit))?;
     // Perl #2835: multline rows center by default (left under fleqn); the
     // first row is left-aligned and the last row right-aligned.
     let default_align =

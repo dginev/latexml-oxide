@@ -447,7 +447,18 @@ LoadDefinitions!({
   // NewCounter already gives us the same behavior via `\arabic{footnote}`.
   // The closure form would only differ in tokenization corner cases not
   // exercised by amsppt.
-  DefConstructor!("\\footnote[]{}",
+  // amsppt.sty:810-818 `\footnote` reads its text with `\nextiv@##1` (`\DNii@[##1]##2` after a `[`), neither `\long`:
+  // the text stops at a paragraph's end, "Paragraph ended before \footnote was complete" (tex.web §396), the note
+  // dropped and the paragraphs after it kept as paragraphs. Perl's `\footnote[]{}` constructor reads it `\long`, so
+  // a note whose `}` never comes took every later paragraph (repro amstex/amsppt_footnote_argument_runs_past_par).
+  // `\footnotetext` (:799-808) alike. Guard `perfect_kernel_batch77v::amsppt_footnote_argument_runs_past_par`.
+  DefMacro!("\\footnote[]{}", sub[(mark, text)] {
+    Ok(amsppt_note_call("\\lx@amsppt@footnote", mark, text))
+  }, short => true);
+  DefMacro!("\\footnotetext[]{}", sub[(mark, text)] {
+    Ok(amsppt_note_call("\\lx@amsppt@footnotetext", mark, text))
+  }, short => true);
+  DefConstructor!("\\lx@amsppt@footnote[]{}",
     "<ltx:note role='footnote' mark='#mark' xml:id='#id'>#2</ltx:note>",
     mode => "internal_vertical",
     sizer => sub[whatsit] { note_size_in_line(whatsit) },
@@ -482,7 +493,7 @@ LoadDefinitions!({
     });
   // Perl L298-304: \footnotetext does NOT step the counter; reads
   // current \thefootnote value directly.
-  DefConstructor!("\\footnotetext[]{}",
+  DefConstructor!("\\lx@amsppt@footnotetext[]{}",
     "<ltx:note role='footnotetext' mark='#mark' xml:id='#id'>#2</ltx:note>",
     mode => "internal_vertical",
     sizer => sub[_whatsit] { Ok(out_of_line_size()) },
@@ -1213,4 +1224,19 @@ fn amsppt_point_size(size: f64) {
       ..Font::default()
     });
   }
+}
+
+/// `<constructor>[<mark>]{<text>}`, or `<constructor>{<text>}` without a mark: amsppt's `\footnote`/`\footnotetext`
+/// handing the text they read to the note's constructor.
+fn amsppt_note_call(constructor: &str, mark: Option<Tokens>, text: Tokens) -> Tokens {
+  let mut out = vec![T_CS!(constructor)];
+  if let Some(mark) = mark {
+    out.push(T_OTHER!("["));
+    out.extend(mark.unlist());
+    out.push(T_OTHER!("]"));
+  }
+  out.push(T_BEGIN!());
+  out.extend(text.unlist());
+  out.push(T_END!());
+  Tokens::new(out)
 }

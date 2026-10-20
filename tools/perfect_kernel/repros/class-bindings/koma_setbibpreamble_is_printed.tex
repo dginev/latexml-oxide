@@ -1,0 +1,16 @@
+% witness: SYNC_STATUS K13 bibliography row (natbib `\bibpostamble`, KOMA `\setbibpreamble` without natbib)
+% oracle:  pdflatex 0 errors: "References", then "Pre text." above "[1] A. Author, Title." (scrartcl.cls:6752-6763:
+%          KOMA's `thebibliography` typesets `\bibpreamble` after the heading when it is neither `\relax` nor empty)
+% engines: rust 529dc1b543 = 0 errors, the bibliography without "Pre text." (dropped silently); perl not compared (no
+%          KOMA binding, OmniBus/article)
+% expect:  0 errors, 0 warnings; "Pre text." a paragraph between the bibliography's title and its list
+% status:  RED (529dc1b543) -> GREEN (77v)
+% preload: ar5iv.sty
+\documentclass{scrartcl}
+\setbibpreamble{Pre text.}
+\begin{document}
+Text \cite{a}.
+\begin{thebibliography}{9}
+\bibitem{a} A. Author, Title.
+\end{thebibliography}
+\end{document}

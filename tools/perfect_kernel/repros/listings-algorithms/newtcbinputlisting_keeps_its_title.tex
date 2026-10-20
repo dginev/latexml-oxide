@@ -1,7 +1,9 @@
 % witness: 1912.06298, 2105.06630, 2301.07825, 2302.14514, 2410.04867, 2405.01480 (the shared `\examplefile` template preamble)
 % oracle:  pdflatex 0 errors: "Example 1: Inline" over "x = 1", then "Example 2: From file" over the file's "z = 3"; no list-of-listings entry
 % engines: rust 77j3 = 0 errors, both titles lost, and the input listing a `lol` float captioned with the file name; perl: raw tcblistings
-% expect:  0 errors, 0 warnings; captions "Example 1: Inline" and "Example 2: From file"; no inlist="lol", no file-name toccaption
+% expect:  0 errors, 1 warning (pdflatex's too: "Command `\theexample' already defined -- not changed", the template's
+%          `\newcounter{example}` after `use counter=example`); captions "Example 1: Inline" and "Example 2: From file";
+%          no inlist="lol", no file-name toccaption
 % status:  RED (77j3) -> GREEN (77m: tcblistingscore_code_tex.rs `\newtcbinputlisting` → `tcb_resolve_listing_mode`, `nolol`)
 \documentclass{article}
 \usepackage[listings]{tcolorbox}

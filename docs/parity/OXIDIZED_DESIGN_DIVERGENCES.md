@@ -21858,3 +21858,19 @@ t3_tipa_after_amsmath_accent_at_boundary, t3enc_def_loaded_twice, t3_ipa_meaning
 use_text_accent_font_assignments, ot4_ly1_dotless_j, lae_shadda_vowels, t3_tone_level_outside_range_warns}`; guards
 `perfect_kernel_batch77x::*` (the same names), `perfect_kernel_batch77u::text_symbol_of_an_unmapped_encoding_warns` (now
 a document-declared encoding).
+
+### 782. A binding may port a non-`\long` TeX macro as one: its arguments stop at a `\par` (Perl: every binding macro reads `\long`)
+
+**TeX**: a macro not declared `\long` stops reading its arguments at a `\par` — "Paragraph ended before \x was
+complete", the call dropped, the `\par` read again (tex.web §392, §396; #442). amsppt.sty:799-818's `\footnote` and
+`\footnotetext` read their text so (`\nextiv@##1`, `\DNii@[##1]##2`).
+
+**Perl**: every `DefMacro`/`DefConstructor` reads its arguments across paragraphs (Expandable.pm stores `isLong` and
+never reads it); amsppt.sty.ltxml:268's `\footnote[]{}` constructor took every paragraph after a note whose `}` never
+came (KNOWN_PERL_ERRORS #1012).
+
+**Rust** (77v): `ExpandableOptions::short` — a binding's macro made with `short => true` checks its arguments for
+`\par` as #442's TeX-declared macros do, wherever it is made (`Expandable::checks_par`, expandable.rs). amsppt_sty.rs's
+`\footnote` and `\footnotetext` are such macros, handing the text to the note constructors. No other binding is
+changed: a binding's macros stay `\long` unless the original's non-`\long` reading is the point. Guard
+`perfect_kernel_batch77v::amsppt_footnote_argument_runs_past_par`.

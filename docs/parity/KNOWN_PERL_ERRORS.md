@@ -16180,3 +16180,101 @@ dotless j ȷ U+0237. Perl's `Package/ot4.fontmap.ltxml` and `ly1.fontmap.ltxml:2
 in OT4 or LY1 text prints nothing. Minimal trigger: `\usepackage[LY1]{fontenc} \j` — pdflatex ȷ, Perl nothing. Rust
 (77x r2): both maps put ȷ at slot 17 (OXIDIZED_DESIGN_DIVERGENCES #781); the Perl-synced golden `tests/encoding/ly1.xml`
 shows ȷ there. Guard `perfect_kernel_batch77x::ot4_ly1_dotless_j`.
+
+## 1006. thm-restate's `restate=<name>` key is not read
+
+thm-restate.sty:193-215 adds a `restate` key to a theorem's optional argument (its "restate phase" key families):
+`\begin{theorem}[restate=foo, name=Bar]` is `\begin{restatable}[Bar]{theorem}{foo}`, the theorem stored for a later
+`\foo`/`\foo*`, `[<keys>]foo` adding keys for the restated copy only. Perl's thm-restate.sty.ltxml defines
+`{restatable}` alone and reads no theorem keys (`\begin{theorem}[…]` takes the whole argument as the note). Minimal
+trigger: `\usepackage{amsthm,thmtools}\newtheorem{theorem}{Theorem}` … `\begin{theorem}[restate=other]B.\end{theorem}
+\other*` — pdflatex "Theorem 1. B." twice, Perl the title "Theorem 1 (restate=other)" and `\other` undefined. Rust
+(77v): `thmtools_use_keys` (latex_constructs) reads `restate=` with thmtools' `label=`/`name=`/`continues=`; the theorem
+runs thm_restate_sty.rs `\lx@thm@restate@store{<name>}` after its head, the store `{restatable}` uses too (the label
+`restatable:<name>`, `\<name>` its reference). Witnesses 2108.11527, 2602.09462 (−243 words of key text). Guard
+`perfect_kernel_batch77v::thmtools_restate_key`.
+
+## 1007. todonotes' `\todo[<options>]` takes the options as the note's mark
+
+todonotes.sty:561 `\newcommand{\todo}[2][]`: the optional argument is a key list (`inline`, `color=…`, `author=…`, a
+`\todostyle` name), passed to `\setkeys{todonotes}`; the note is numbered as any. Perl's `DefMacro('\todo',
+'\lx@note{todo}')` hands the bracket to `\lx@note`'s `[<mark>]`. Minimal trigger: `\usepackage{todonotes}`
+`Text\todo[inline]{Fix this.}` — pdflatex the note "Fix this." (no "inline" printed), Perl `mark="inline"` and the
+tags "inline", "ToDo inline". Rust (77v): `\todo[]{}` is `\lx@note{todo}{#2}`, the keys unread (the binding draws no
+notes; `author=`'s name, which todonotes prints before the text, is not kept). 19 papers' `\todo[inline]`, 27 with
+`\todostyle` (2407.14906, 2409.03694, 2410.02385). Guard `perfect_kernel_batch77v::todonotes_style_key`.
+
+## 1008. A `\newtheorem` with its own counter keeps an earlier shared counter's mapping
+
+latex.ltx `\@nthm` → `\@xnthm`: `\newtheorem{X}{…}[section]` makes X a counter of its own (`\newcounter{X}[section]`,
+`\theX` its own) whatever an earlier `\newtheorem{X}[Y]{…}` made it. Perl's `defineNewTheorem`
+(latex_constructs.pool.ltxml:2882-2899, `AssignMapping('counter_for_type', $thmset => $counter)` only when it differs)
+never clears that mapping, so the theorem steps Y's counter and prints X's. Minimal trigger:
+`\newtheorem{theorem}{Theorem}[section]\newtheorem{proposition}[theorem]{Proposition}\let\proposition\relax
+\let\endproposition\relax\newtheorem{proposition}{Proposition}[section]` and a theorem and a proposition in section 1
+— pdflatex "Proposition 1.1", Perl "Proposition 1.0" (refnum 1.2). The same arises over a binding's shared theorems:
+arxbj's `\newtheorem{rem}{Remark}` over elsart_support's `\newtheorem{rem}[thm]{Remark}` tagged every remark "Remark 0"
+(1205.2947, 1307.5990), 2407.21129 over tac's. Rust (77v): `define_new_theorem` clears the mapping when the theorem has
+a counter of its own. Guards `perfect_kernel_batch77v::{newtheorem_over_shared_counter_theorem,
+elsart_support_theorem_tag_zero}`.
+
+## 1009. `\newcounter` replaces an existing `\the<ctr>`
+
+latex.ltx:10147-10155 `\@definecounter` defines `\the<ctr>` only when it is undefined or `\relax`, else warns "Command
+`\the<ctr>' already defined -- not changed". Perl's `\newcounter` is `NewCounter` (latex_bootstrap.pool.ltxml:51-54),
+which always defines it (Package.pm:686). Minimal trigger: `\documentclass[envcountsame]{llncs}`
+`\let\c@case\relax\newcounter{case}\@addtoreset{case}{theorem}` and lemmas and cases — pdflatex "Lemma 1, Case 1, Case
+1, Lemma 2, Case 2" (`\thecase` stays the alias's `\thetheorem`), Perl the cases on their own counter. Rust (77v): the
+`\newcounter` primitive (latex_bootstrap.rs) keeps a `\the<ctr>` defined before it, with LaTeX's warning, when the
+counter's register is new (a counter whose `\c@` is already a register is LaTeX's "Command \c@<ctr> already defined",
+and `NewCounter` redefines it as before), unless that `\the<ctr>` is a fallback class's or stub's guess (OmniBus's
+`\thechapter` under informs.cls's `\newcounter{chapter}`, 2310.17392) or a stand-in's copy is read over its binding
+(elsart_support's `\theaddress` under arxbj's copy, 1205.2947): there `NewCounter` decides as before, without a
+warning LaTeX, which has neither definition, never gives. Witness 2303.08726. Guard
+`perfect_kernel_batch77v::llncs_alias_newcounter`.
+
+## 1010. `{multline}` ignores `\tag` and `\notag`
+
+amsmath's multline is one equation: `\tag{…}` replaces its number and never steps the counter, `\notag`/`\nonumber`
+drop it (amsmath.sty `\multline@`, `\tag@in@align`, `\make@df@tag`). Perl's `\@@multline` steps the counter in its
+properties (amsmath.sty.ltxml:247 `RefStepCounter('equation')`) and keeps no equation numbering state, so neither
+reaches it. Minimal trigger: `\begin{multline} a+b \notag\\ +c \tag{29} \end{multline}` — pdflatex "(29)", Perl "(1)".
+Rust (77v): `\@@multline` numbers as `{equation}` (`prepare_equation_counter`, `before_equation`, `after_equation`),
+so the kernel's `\lx@equation@settag`/`\lx@equation@nonumber` act on it. `{multline*}` with a `\tag` stays untagged.
+Witness hep-th0210191. Guards `perfect_kernel_batch77v::{multline_notag_then_tag, multline_tag_replaces_the_number}`.
+
+## 1011. A text-mode `{IEEEeqnarrayboxm}` opens no math
+
+IEEEtrantools.sty:2143: `\IEEEeqnarrayboxm` sets its `\vbox` of math cells (`$…$`, the column templates) wherever it
+is, in a paragraph too. Perl's `\IEEEeqnarrayboxm` (IEEEtran.cls.ltxml:313-316) builds an `\array` and opens no inline
+math, which only its `t` form does. Minimal trigger: `\usepackage{IEEEtrantools}`
+`Text \begin{IEEEeqnarrayboxm}{c}z\end{IEEEeqnarrayboxm} and more.` — pdflatex "Text z and more.", Perl's Math takes
+"and more." (an `XMText` inside, `tex="z and more."`). Rust (77v): in text the `m` form opens inline math as the `t`
+form does and its end closes it (`\lx@IEEE@box@end`, ieeetrantools_sty.rs). Guard
+`perfect_kernel_batch77v::ieeeeqnarrayboxm_in_text_keeps_its_math`.
+
+## 1012. amsppt's `\footnote` reads its text `\long`
+
+amsppt.sty:810-818 `\footnote` reads its text with `\nextiv@##1` (after `[`, `\DNii@[##1]##2`), and `\footnotetext`
+(:799-808) alike, neither `\long`: a `\par` in the text ends the call, "Paragraph ended before \next@ was complete"
+(tex.web §396), the note dropped and the paragraphs after it set as paragraphs. Perl's `DefConstructor('\footnote[]{}'
+…)` (amsppt.sty.ltxml:268) reads to the closing brace across paragraphs, and a note whose `}` never comes takes the
+rest of the file. Minimal trigger: `\input amstex \input amsppt.sty \document Text\footnote{A note.` + blank line +
+`Later paragraph.` … `\enddocument` — pdftex 1 error, two paragraphs; Perl 2 errors (`readBalanced` out of input, the
+document's close inside the `<note>`), both paragraphs in the note. Rust (77v): `\footnote`/`\footnotetext` are short
+macros (`short => true`, OXIDIZED_DESIGN_DIVERGENCES #782) handing their text to the note constructors
+(`\lx@amsppt@footnote`, `\lx@amsppt@footnotetext`). Guard
+`perfect_kernel_batch77v::amsppt_footnote_argument_runs_past_par`.
+
+## 1013. endnotes' `\theenmark` is the endnote counter where it is read
+
+endnotes.sty:271 `\def\theenmark{\@theenmark}`: the mark of the note last made, set as each note is made
+(`\endnote`/`\endnotemark` :274-282, :343-358 `\protected@xdef\@theenmark{\theendnote}` after the step, `[<n>]` the
+number given; `\endnotetext` :360-373 without a step) and as `\theendnotes` lists each note. Perl's
+`DefMacro('\theenmark', '\theendnote')` (endnotes.sty.ltxml:29, commented "This is NOT correct") reads the counter
+wherever `\theenmark` is expanded. Minimal trigger: `\usepackage{endnotes}` `One\endnote{A.} two\endnote{B.}
+\setcounter{endnote}{17} \theenmark` — pdflatex "2", Perl "17". Packages that read it later (biblatex-chicago's
+cmsendnotes back-references, which set `\@theenmark` themselves) print the last number for every note
+(cms-noteref-demo: "18"). Rust (77v): `\theenmark` is `\@theenmark`, which `\endnote`, `\endnotemark` and `\endnotetext`
+set before the note (`\lx@enote@mark`, endnotes_sty.rs). Guard
+`perfect_kernel_batch77v::endnotes_theenmark_is_the_note_mark`.

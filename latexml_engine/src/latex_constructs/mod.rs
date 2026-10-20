@@ -2378,6 +2378,13 @@ pub fn define_new_theorem(
   let is_starred = is_starred || numbering.is_empty();
 
   if otherthmset_str.is_none() {
+    // A theorem declared with a counter of its own steps that counter, even where an earlier `\newtheorem{X}[Y]`
+    // made X share Y's (latex.ltx `\@xnthm`: `\newcounter{X}`, `\theX` its own): the shared mapping goes, or its
+    // numbers step Y's counter and print X's, "Proposition 1.0" (2407.21129, a paper's `\newtheorem{proposition}
+    // {Proposition}[section]` over tac's `[theorem]` one) and "Remark 0" (1205.2947, 1307.5990: arxbj's
+    // `\newtheorem{rem}{Remark}` over elsart_support's `[thm]` one). Guards
+    // `perfect_kernel_batch77v::{newtheorem_over_shared_counter_theorem, elsart_support_theorem_tag_zero}`.
+    assign_mapping::<Stored>("counter_for_type", &thmset_str, None);
     let idprefix = s!("Thm{}", classname.replace('*', "."));
     let c_counter = s!("\\c@{counter}");
     if !is_defined(&c_counter) {
@@ -2700,6 +2707,14 @@ pub fn define_new_theorem(
       assign_value("thmt_local_label", Stored::None, None);
       digested.push(digest(Invocation!(T_CS!("\\label"), vec![label]))?);
     }
+    // …and thm-restate's `restate=<name>` (thm-restate.sty:198-215, the same hook): the theorem is stored for
+    // `\<name>` as `{restatable}` stores it (thm_restate_sty.rs `\lx@thm@restate@store`)
+    if let Some(Stored::Tokens(name)) = lookup_value("thmt_local_restate") {
+      assign_value("thmt_local_restate", Stored::None, None);
+      digested.push(digest(Invocation!(T_CS!("\\lx@thm@restate@store"), vec![
+        name
+      ]))?);
+    }
     Ok(digested)
   });
   options.after_digest_begin.push(after_digest_begin_closure);
@@ -2746,6 +2761,11 @@ pub fn define_new_theorem(
       };
       if let Some(label) = thmuse.as_ref().and_then(|u| u.label.clone()) {
         assign_value("thmt_local_label", Stored::Tokens(label), None);
+      }
+      if let Some(name) = thmuse.as_ref().and_then(|u| u.restate.clone())
+        && has_meaning(&T_CS!("\\lx@thm@restate@store"))
+      {
+        assign_value("thmt_local_restate", Stored::Tokens(name), None);
       }
       // `continues=<label>` (thm-kv.sty:511-516 `\thmt@suspendcounter`): the theorem is numbered as the one it
       // continues — its number, in its tags and its title, is a reference to that label — and its counter does not
@@ -2859,6 +2879,9 @@ struct ThmUse {
   label:     Option<Tokens>,
   /// `continues=<label>` (:511-516): the theorem continued, whose number this one takes.
   continues: Option<Tokens>,
+  /// thm-restate's `restate=[<keys>]<name>` (thm-restate.sty:198-215): the name the theorem is stored under for a
+  /// later `\<name>`; the bracketed keys apply to the restated copy only.
+  restate:   Option<Tokens>,
 }
 
 /// thm-kv's `\thmt@garbleoptarg` (thm-kv.sty:439-463) over the keys it defines: `label` (:485-487), `name` (:488-496,
@@ -2866,8 +2889,9 @@ struct ThmUse {
 /// "\thmcontinues{<label>}" — the `\@gobble` the note starts with eats its `{, }`), processed in order as `\kvsetkeys`
 /// does. An argument none of whose keys is one of these is no key list (`\ifthmt@thmuse@iskv`), kept as written: a
 /// note "Smith, 2001" is a note. Written as keys, a `_` in a label was a math error and "(label=ex:a_b)" its title (run
-/// 336 first error `unexpected:_`, ~150 papers: 2002.09876, 2409.14881). The keys are thmtools' only: thm-restate's
-/// `restate=` (thm-restate.sty:198-215) is not one of them.
+/// 336 first error `unexpected:_`, ~150 papers: 2002.09876, 2409.14881). thm-restate adds `restate=` (thm-restate.sty
+/// :193-215, its "restate phase" families): the theorem stored for a later `\<name>`, its note none (2108.11527,
+/// 2602.09462: "(restate=…)" was the title and `\<name>` undefined).
 fn thmtools_use_keys(arg: &Tokens) -> Option<ThmUse> {
   let tokens = arg.unlist_ref();
   // the top-level `key=value` items, spaces trimmed, one brace level off a value (keyval's)
@@ -2919,6 +2943,7 @@ fn thmtools_use_keys(arg: &Tokens) -> Option<ThmUse> {
   let mut note: Vec<Token> = Vec::new();
   let mut label = None;
   let mut continues = None;
+  let mut restate = None;
   for (key, value) in items {
     match key.as_str() {
       "label" => {
@@ -2955,10 +2980,48 @@ fn thmtools_use_keys(arg: &Tokens) -> Option<ThmUse> {
         note.push(T_END!());
         continues = Some(Tokens::new(value));
       },
+      "restate" => {
+        iskv = true;
+        // `\thmt@splitrestateargs`: `[<keys>]<name>`, the keys for the restated copy only; its `\@ifnextchar[` skips the
+        // spaces before the bracket or the name (2602.09462 writes the value over several lines), a space after the
+        // name is part of it
+        let start = value
+          .iter()
+          .position(|t| t.get_catcode() != Catcode::SPACE)
+          .unwrap_or(value.len());
+        let value = value[start..].to_vec();
+        let name = match value.first() {
+          Some(t) if t.get_catcode() == Catcode::OTHER && t.to_string() == "[" => {
+            // the `]` outside braces (`name={[x]}` keeps its own)
+            let mut level = 0i32;
+            let close = value.iter().position(|t| {
+              match t.get_catcode() {
+                Catcode::BEGIN => level += 1,
+                Catcode::END => level -= 1,
+                _ => {},
+              }
+              level == 0 && t.get_catcode() == Catcode::OTHER && t.to_string() == "]"
+            });
+            match close {
+              Some(close) => value[close + 1..].to_vec(),
+              None => value,
+            }
+          },
+          _ => value,
+        };
+        if !name.is_empty() {
+          restate = Some(Tokens::new(name));
+        }
+      },
       _ => {},
     }
   }
-  iskv.then_some(ThmUse { note, label, continues })
+  iskv.then_some(ThmUse {
+    note,
+    label,
+    continues,
+    restate,
+  })
 }
 
 /// `tokens` without its leading and trailing spaces.

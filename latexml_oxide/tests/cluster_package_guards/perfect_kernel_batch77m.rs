@@ -5,7 +5,7 @@ use latexml::util::test::{assert_element, convert_with};
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batch57::{RAW, assert_elements},
+  perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with},
 };
 
 /// `\newtcblisting[auto counter]{…}[1]{title={Listing \thetcbcounter: #1},…}`: the box prints its title above the
@@ -51,24 +51,32 @@ fn new_tcb_listing_keeps_its_title() {
 /// `\newtcbinputlisting[use counter=example]{\examplefile}[3][]{title={Example~\thetcbcounter: #2},listing
 /// file={#3},…}` shares the environment's counter through tcolorbox's init processor and keeps its title; the file
 /// is read back `nolol`, so it is no `lol` float captioned with its name (1912.06298, 2105.06630, 2301.07825,
-/// 2302.14514, 2410.04867, 2405.01480). Repro listings-algorithms/newtcbinputlisting_keeps_its_title.
+/// 2302.14514, 2410.04867, 2405.01480). The template's `\newcounter{example}` after `use counter=example` meets the
+/// `\theexample` tcolorbox made and keeps it, with LaTeX's warning, as pdflatex (latex.ltx `\@definecounter`, 77v,
+/// KNOWN_PERL_ERRORS #1009). Repro listings-algorithms/newtcbinputlisting_keeps_its_title.
 #[test]
 fn newtcbinputlisting_keeps_its_title() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/listings-algorithms/newtcbinputlisting_keeps_its_title.tex"
   );
-  let xml = assert_elements(tex, RAW, (0, 0), &[
-    (
-      "float",
-      "LSTx1",
-      r##"<float class="ltx_lstlisting" xml:id="LSTx1"><toccaption>Example 1: Inline</toccaption><caption>Example 1: Inline</caption><listing class="ltx_lstlisting" data="eCA9IDE=" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx1"><text class="ltx_lst_identifier">x</text><text class="ltx_lst_space"> </text>=<text class="ltx_lst_space"> </text>1</listingline></listing></float>"##,
-    ),
-    (
-      "float",
-      "LSTx2",
-      r##"<float class="ltx_lstlisting" xml:id="LSTx2"><toccaption>Example 2: From file</toccaption><caption>Example 2: From file</caption><listing class="ltx_lstlisting" data="eiA9IDM=" dataencoding="base64" datamimetype="text/plain" dataname="tcbexample.txt"><listingline xml:id="lstnumberx2"><text class="ltx_lst_identifier">z</text><text class="ltx_lst_space"> </text>=<text class="ltx_lst_space"> </text>3</listingline></listing></float>"##,
-    ),
-  ]);
+  let xml = assert_elements_with(
+    tex,
+    RAW,
+    (0, 1),
+    &["Command `\\theexample' already defined -- not changed"],
+    &[
+      (
+        "float",
+        "LSTx1",
+        r##"<float class="ltx_lstlisting" xml:id="LSTx1"><toccaption>Example 1: Inline</toccaption><caption>Example 1: Inline</caption><listing class="ltx_lstlisting" data="eCA9IDE=" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx1"><text class="ltx_lst_identifier">x</text><text class="ltx_lst_space"> </text>=<text class="ltx_lst_space"> </text>1</listingline></listing></float>"##,
+      ),
+      (
+        "float",
+        "LSTx2",
+        r##"<float class="ltx_lstlisting" xml:id="LSTx2"><toccaption>Example 2: From file</toccaption><caption>Example 2: From file</caption><listing class="ltx_lstlisting" data="eiA9IDM=" dataencoding="base64" datamimetype="text/plain" dataname="tcbexample.txt"><listingline xml:id="lstnumberx2"><text class="ltx_lst_identifier">z</text><text class="ltx_lst_space"> </text>=<text class="ltx_lst_space"> </text>3</listingline></listing></float>"##,
+      ),
+    ],
+  );
   assert!(!xml.contains("inlist=\"lol\""), "{xml}");
   assert!(!xml.contains("tcbexample.txt</toccaption>"), "{xml}");
 }

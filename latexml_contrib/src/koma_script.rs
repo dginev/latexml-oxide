@@ -100,6 +100,21 @@ pub(crate) fn koma_post_load(class: KomaClass) -> Result<()> {
   // element). RUST-ONLY surpass (no Perl koma binding). Do NOT alias
   // `\scr@startpart` — different signature.
   Let!("\\scr@startsection", "\\@startsection");
+  koma_bibliography_preamble()?;
+  Ok(())
+}
+
+/// `\setbibpreamble{<text>}` (scrartcl.cls:6752-6754, scrreprt/scrbook alike) sets `\bibpreamble`, which KOMA's
+/// `thebibliography` typesets after the heading when it is neither `\relax` (its default) nor empty (:6762-6763,
+/// `\noindent\bibpreamble\par\nobreak`). The bibliography here is the kernel's (the class's `thebibliography` gives way
+/// to it), which typesets `\lx@bibliography@preamble` there (sect11.rs): it is KOMA's test and its text. Before, the text
+/// was dropped without a diagnostic. natbib, loaded after the class, points the preamble at its own `\bibpreamble`
+/// (natbib_sty.rs), as its `thebibliography` replaces KOMA's. Neither Perl (no KOMA binding) nor the former binding
+/// printed it. Guard `perfect_kernel_batch77v::koma_setbibpreamble_is_printed`.
+fn koma_bibliography_preamble() -> Result<()> {
+  RawTeX!(
+    r"\def\lx@bibliography@preamble{\ifx\bibpreamble\relax\else\ifx\bibpreamble\@empty\else\noindent\bibpreamble\par\fi\fi}"
+  );
   Ok(())
 }
 

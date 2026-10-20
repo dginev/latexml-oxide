@@ -5,7 +5,9 @@
 % engines: rust 68a = 0 errors, 0 warnings, "Theorem 1.1", "Proposition 1.0" (the new counter is not stepped, or not
 %          read; not root-caused)
 % expect:  0 errors, 0 warnings; <tag>Proposition 1.1</tag>
-% status:  RED (open; side finding of 68a, Perl not run; SYNC_STATUS 68a)
+% status:  RED (side finding of 68a; the shared `counter_for_type` mapping outlived the new counter) -> GREEN (77v,
+%          KNOWN_PERL_ERRORS #1008; guard perfect_kernel_batch77v::newtheorem_over_shared_counter_theorem). pdflatex also
+%          warns "Command `\theproposition' already defined -- not changed" (`\@xnthm`'s `\newcounter`), not emitted here
 % preload: ar5iv.sty
 \documentclass{article}
 \newtheorem{theorem}{Theorem}[section]

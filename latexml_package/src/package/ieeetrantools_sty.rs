@@ -350,10 +350,23 @@ pub fn define_eqnarraybox() -> Result<()> {
   );
   // IEEEtrantools.sty:2166-2173: `[<decl>][<pos>][<width>]{<cols>}` (Perl takes `{<cols>}` alone, so a box written
   // with its options read `[` as the column specification).
+  // The math form in text (IEEEtrantools.sty:2143, `\@IEEEeqnarrayboxHBOXSWfalse`): TeX sets its `\vbox` of math cells in
+  // the paragraph, where the alignment here needs math around it — opened as the text form opens it (:2201
+  // `\hbox\bgroup$`), and closed at the end by `\lx@IEEE@box@end`, which each box sets at the level its end reads it.
+  // Before, a text-mode `{IEEEeqnarrayboxm}` opened none, and its Math took the following text (repro
+  // alignment-bindings/ieeeeqnarrayboxm_in_text_keeps_its_math; guard
+  // `perfect_kernel_batch77v::ieeeeqnarrayboxm_in_text_keeps_its_math`).
   DefMacro!("\\IEEEeqnarrayboxm OptionalMatch:* [][][] {}", sub[(star, decl, pos, width, cols)] {
-    Ok(eqnarraybox_begin(star.is_some(), [decl, pos, width], &cols, false))
+    let mut out = TokenizeInternal!(
+      r"\ifmmode\let\lx@IEEE@box@end\relax\else\lx@begin@inline@math\let\lx@IEEE@box@end\lx@end@inline@math\fi"
+    ).unlist();
+    out.extend(eqnarraybox_begin(star.is_some(), [decl, pos, width], &cols, false).unlist());
+    Ok(Tokens::new(out))
   });
-  DefMacro!("\\endIEEEeqnarrayboxm", "\\lx@end@alignment\\@end@array");
+  DefMacro!(
+    "\\endIEEEeqnarrayboxm",
+    "\\lx@end@alignment\\@end@array\\lx@IEEE@box@end"
+  );
   DefMacro!("\\IEEEeqnarrayboxt OptionalMatch:* [][][] {}", sub[(star, decl, pos, width, cols)] {
     Ok(eqnarraybox_begin(star.is_some(), [decl, pos, width], &cols, true))
   });

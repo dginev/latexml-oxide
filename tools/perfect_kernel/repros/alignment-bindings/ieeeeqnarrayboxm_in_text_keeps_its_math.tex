@@ -4,7 +4,8 @@
 %          it — since the binding's `\IEEEeqnarrayboxm` opens no inline math of its own (only the `t` form does); perl
 %          not compared
 % expect:  0 errors; "and more." stays text after the Math
-% status:  RED (filed from the 62zg review)
+% status:  RED (filed from the 62zg review) -> GREEN (77v, KNOWN_PERL_ERRORS #1011; guard
+%          perfect_kernel_batch77v::ieeeeqnarrayboxm_in_text_keeps_its_math)
 \documentclass{article}
 \usepackage{IEEEtrantools}
 \begin{document}

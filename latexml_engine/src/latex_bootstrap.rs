@@ -44,7 +44,32 @@ LoadDefinitions!({
       Tokens!()
     };
     let cs_expanded = &Expand!(cs).to_string();
+    // latex.ltx:10147-10155 `\@definecounter`: a `\the<ctr>` already defined (not `\relax`) is kept, "Command
+    // `\the<ctr>' already defined -- not changed" — llncs's `\let\c@case\relax\newcounter{case}` over its alias keeps
+    // `\thecase` = `\thetheorem` (2303.08726; pdflatex "Lemma 1, Case 1, Case 1, Lemma 2"). Perl's `NewCounter` always
+    // defines it (Package.pm:686). Guard `perfect_kernel_batch77v::llncs_alias_newcounter`.
+    // Not kept: a counter whose register exists already (LaTeX's "Command \c@<ctr> already defined" comes before
+    // `\@definecounter`; `NewCounter` redefines it as before), a fallback class's or stub's guess at `\the<ctr>`, which
+    // the real file's definitions replace (OmniBus's `\thechapter` under informs.cls's `\newcounter{chapter}`:
+    // 2310.17392), and a stand-in's copy read over its binding, whose counters are the binding's
+    // (`copy_provides_keeps_counter`; elsart_support's `\theaddress` under arxbj's: 1205.2947).
+    let the_cs = T_CS!(s!("\\the{cs_expanded}"));
+    let is_new = !lookup_definition(&T_CS!(s!("\\c@{cs_expanded}")))?.is_some_and(|defn| defn.is_register());
+    let kept = lookup_meaning(&the_cs).filter(|meaning| {
+      is_new
+        && Some(meaning) != lookup_meaning(&T_RELAX!()).as_ref()
+        && !is_fallback_meaning(&the_cs)
+        && definition::origin::copy_provides() == 0
+    });
     NewCounter!(cs_expanded, &default.to_string());
+    if let Some(meaning) = kept {
+      assign_meaning(&the_cs, meaning, Some(Scope::Global));
+      if has_meaning(&T_CS!("\\@latex@warning")) {
+        Digest!(mouth::tokenize_internal(TeXString::assembled(s!(
+          "\\@latex@warning{{Command `\\string\\the{cs_expanded}' already defined -- not changed}}"
+        ))))?;
+      }
+    }
   }, locked => true);
   // Perl latex_bootstrap.pool.ltxml:54: `\@definecounter` is the LOCKED
   // macro `\newcounter`, so latex.ltx:15736's raw `\def\@definecounter` is

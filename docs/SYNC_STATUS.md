@@ -234,8 +234,9 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
   rerun's `Stomach:Recursion` cluster (55 papers, MIXED) had three REAL-by-count witnesses never followed up:
   `2605.17696` (Rust 144 / Perl 56 errors), `2606.05321` (35 / 15), `2606.08524` (94 / 50).
 - **sn-jnl (DIVERGENCES #333):** newer class copies (2404+, e.g. 2605.00003 L1280-1321) define `\toprule`/`\midrule`/
-  `\botrule`/`\cmidrule` themselves instead of loading booktabs; neither Perl nor the binding runs the class code, so a
-  paper relying on them without its own `\usepackage{booktabs}` keeps `\toprule` undefined (parity).
+  `\botrule`/`\cmidrule` themselves instead of loading booktabs. CLOSED (verified 77v): since 67z (3a3cbdfd01) the
+  binding loads booktabs as the class as distributed does (sn_jnl_cls.rs), so the rules are defined without the paper's
+  own `\usepackage{booktabs}`; guard `perfect_kernel_batch77v::sn_jnl_table_rules_without_booktabs`.
 - **Equation layout (DIVERGENCES #334):** `eqnarray` after a class's `fleqn` + amsmath is flush left in pdflatex, centred
   here (`ltx_fleqn` is document-wide). `document_class_filename` (content.rs) is overwritten by nested class loads, and
   xkeyval's fallback reads it (`xkeyval_sty.rs:1524`). elsarticle's `\ifpreprint` is always false here; elsarticle.cls:112
@@ -301,7 +302,9 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
   inner class (`\c@lclass`, default article, :29), but combine_cls.rs:11 always loads article, so under
   `\documentclass[book]{combine}` `\chapter` is undefined and a chapter reads #734's stand-in with the chapterless
   Warning, where TeX has book's chapters. Fix: load the option's class (`LoadClass!` of `book`/`report`/`memoir`),
-  as combine.cls does. Witness 2310.14794 (combine, article). Classification: RUST-ONLY.
+  as combine.cls does. Witness 2310.14794 (combine, article). Classification: RUST-ONLY. FIXED 77v: combine_cls.rs
+  declares combine's options, passes the others to `\c@lclass` and loads it (`colclass=` too); guard
+  `perfect_kernel_batch77v::combine_book_option_loads_book`.
 - **A paragraph's trailing whitespace: Perl and Rust split its text into different nodes** (56jy; RED repro `tools/perfect_kernel/repros/block-model/paragraph_trim_text_node_split.tex`): both trim with `s/\s+$//` (all Unicode whitespace; TeX_Paragraph.pool.ltxml:184-196, `document.rs` `trim_node_right_whitespace`) and only the last text node. Perl appends the space after a formula with XML::LibXML `appendChild` (Document.pm:1148-1153), which never merges, and a formula's own text with `appendTextNode` (Document.pm:2123, :2133), which merges into the text before it; Rust's `add_child` (xmlAddChild) merges the space, and `replace_node_as_tree` keeps the formula's text a node of its own. `\item $\,$ ` gives Perl `<p>U+2006</p>` (its golden `t/parse/artefacts.xml`), us `<p/>`; `\item A $\,$\par` Perl `A`, us `A `. `cleanup_Math` runs as the Math element closes in both (Document.pm:1239-1248, tex_math.rs:756), so ordering is not the cause. Cosmetic; a faithful fix appends text without merging, which touches many goldens. Where the trim empties the last text node, Rust frees it and Perl keeps it empty, which Perl's `isVAttached` then counts (KNOWN_PERL_ERRORS #311).
 - **Test-suite hygiene (57z)**: the logger echoes through `eprint!` (`logger.rs` `stderr_echo`), so `cargo test` captures every test's log lines with its output (a direct `std::io::stderr()` write bypassed libtest's capture and leaked all of them to the terminal); every passing test that prints `Error:`/`Fatal:` exercises an error path and pins it by count (inventory 2026-09-28: 84 of 3,634 tests; incidental fixture errors removed, loose `> 0`/`contains` checks made exact); the streaming sweeps require each swept fixture to convert error-free (the math sweep has its dispatcher; intentional-error and preload-needing fixtures are excluded); `latexml::util::test::error_count` counts every `Error:<category>:` (`missing_file`, `I/O` were missed). Found by the inventory: LANDED 57aa `expl3/tex_jobname_is_the_jobname` (the dump wrote `\tex_jobname:D`, a `\let` of `\jobname`, by value — empty; now, as Perl's `Lt`, a `\let` copy identical to its source is an alias record re-`\let` at load; copies a preload takes before the job's `\jobname` exists are re-pointed at install, `core_interface::install_jobname`: `\c_sys_jobname_str` is the job name with and without a preload; RUST-ONLY; DUMP_DESIGN "Format"); open: RED `boxes-groups/nicefrac_text_argument_is_text` (nicefrac's parts are text in `\mbox`, the binding digests them in math; PERL-ORIGIN); forest binding gaps `\@escapeifif` (forest.sty:203) and `\forest@file@copy` (:8430), used by forest-index.sty (RUST-ONLY, stub binding), and `\lst@InstallKeywords` (lstmisc.sty:618, lstdoc.sty:178; SHARED) — pinned by `perfect_kernel_batch56::forest_docinput_lstenv_writefile_gobbles_doc_percent`; the parked pTeX-format registers (`\hour`, `\jfam`, `\kanjiskip`, §D9) behind jsarticle/jarticle/otf; tests that still mutate the process env (race under `cargo test`): `117_post_2gib_handoff.rs:82` (`LATEXML_POST_MEM_PARSE_LIMIT`), `118_streaming_split_parity.rs:142-216` (`LATEXML_POST_STREAM_SPLIT`/`_THRESHOLD`), `identity.rs:113` (`SOURCE_DATE_EPOCH`) — migrate to thread-local overrides as `datatool_sty`/`pgfkeys_code_tex::set_native_override`; RED `loader/package_options_keep_protected_macros` (a robust or e-TeX `\protected` macro in a package option is expanded on the option path: pdflatex stores `k=\protect \lxr`, `j=\lxp`; Rust `k=\protect \protectR`, `j=P`; the chinesechess guard `package_options_are_stored_by_protected_xdef` no longer discriminates).
 - **simplebnf-doc warns `unexpected:\fatslash … should only appear in math mode`** (sweep #130, 0 → 1; new since sweep #129): stmaryrd's `\fatslash` (loaded `\AtBeginDocument` with `[only,fatslash]`) inside the manual's tcolorbox `example` re-typesetting (`lx-example-1.tmp`); a minimal `bnf` + stmaryrd probe is clean in both builds and Perl, so the trigger is the example's re-read. Likely 57n's requireMath for every DefMath constructor meeting a text-mode re-read; confirm against Perl on the manual before fixing.
@@ -334,8 +337,11 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
     `\EmulatedPackage`; honouring it broke 2605.08402's `\listoffigures*` on the 57bu A/B; the loader half retried in
     66m, KPE #668, awaits a ruling); Rust's `\@addtoreset` omits
     Perl's `defCounterID … unless \the<ctr>@ID` (latex_constructs.pool.ltxml:3044; 57ac).
-  - *bibliography*: natbib's `\bibpostamble`; KOMA's `\setbibpreamble` without natbib; apacite's citation layer is natbib's
-    (`\cite` textual, `\citeA` abbreviates).
+  - *bibliography* (77v): natbib's `\bibpostamble` is typeset where natbib does (in the last entry, before
+    `\endlist`: pdflatex "A. Author, Title. Post text.", 64y); KOMA's `\setbibpreamble` without natbib FIXED 77v
+    (koma_script.rs, guard `perfect_kernel_batch77v::koma_setbibpreamble_is_printed`); apacite's citation layer is
+    apacite's since int17 (`\cite` parenthetical, `\citeA` textual) — open: its first citation lists every author
+    ("Author, Brown, & Cole, 2001"; ours "Author et al.") and `\citeyear` prints "(2001)" (ours "2001").
   - *anchors and hooks*: RED `block-model/hyperdef_starts_the_paragraph`, RED
     `block-model/hypertarget_heading_a_paragraph_keeps_the_space` (both shared); math in a new anchor takes ids chained from
     the anchor's (`m.m1`); RED `macro-state/afterendpreamble_code_is_followed_by_ignorespaces` (RUST-ONLY); RED
@@ -435,7 +441,8 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
     `authorversion` statement are unported, an unknown `\setcopyright` is silent.
   - *bibliography and notes*: `\printbibliography[type=…]`/`[check=…]` all print under the first call (biblatex_sty.rs
     `\biblatex@printbibliography`; `~/data/pk_agents/rc132/repro/typed_print.tex`; the biblatex manual's 244 missing
-    words); endnotes `\theenmark` = `\theendnote` (PERL-ORIGIN endnotes.sty.ltxml:29; cms-noteref-demo "18" ×18); enotez
+    words); endnotes `\theenmark` = `\theendnote` (PERL-ORIGIN endnotes.sty.ltxml:29; cms-noteref-demo "18" ×18; FIXED 77v,
+    KNOWN_PERL_ERRORS #1013); enotez
     `split=section` — a `\chapter` starts a split, a pre-heading mark's `\endnotetext` lists in the mark's split, 0.10d
     internals overridden; biblatex-ext-oa prints no open-access mark (RED `boxes-groups/xsavebox_saved_box_prints_its_content`);
     Ruled STAY (D15): biblatex `cite.<n>@<key>` (cms-dates-intro 80, cms-trad-appendix 4) and
@@ -607,8 +614,9 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
 - **thm-restate's `restate=` key in a theorem's optional argument** (RUST-ONLY gap of 68w's thmtools keys; 2108.11527,
   2602.09462 −243 words of key text): thm-restate.sty's `restate=<name>` (the theorem stored for `\<name>` /
   `\<name>*` later) is not one of the keys `thmtools_use_keys` reads (`label`, `name`, `continues`), so the argument is
-  the note: "(restate=…)" in the title, the restated copy undefined. Fix: the key stores the theorem as `{restatable}`
-  does (thm-restate.sty). No repro yet.
+  the note: "(restate=…)" in the title, the restated copy undefined. FIXED 77v: the key stores the theorem as
+  `{restatable}` does (KNOWN_PERL_ERRORS #1006; repro package-bindings/thmtools_restate_key, guard
+  `perfect_kernel_batch77v::thmtools_restate_key`).
 - **`\ifinner` is false in a display's array cell** (SHARED, Perl the same; 77k review Q3): an array cell's math is a
   formula of its own, so TeX's `\ifinner` is true there, inside `\[…\]` too (pdflatex "aI"; tex.web §1138-1145); we
   and Perl report false ("aD"). `\ifmmode` false at a cell's first token is TeX's own (it expands that token looking for
@@ -1468,8 +1476,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   row tag (`amstex_tag_row_end`'s `Catcode::CS` gate); a `\par` in `$$\align … \endalign$$` raises no error (TeX's
   `\align` reads its body as an argument: "Paragraph ended before \align was complete"; before 66e too); an amsppt
   `\footnote{` whose `}` never comes reads to the file's end, the later paragraphs inside the `<note>` (amsppt_sty.rs
-  `\footnote[]{}` reads `\long`, amsppt.sty:804/:814 `\nextiv@##1` does not; RED
-  `amstex/amsppt_footnote_argument_runs_past_par`); an alignment open at `\enddocument` drops its open row's last cells
+  `\footnote[]{}` reads `\long`, amsppt.sty:804/:814 `\nextiv@##1` does not; FIXED 77v, KNOWN_PERL_ERRORS #1012,
+  OXIDIZED_DESIGN_DIVERGENCES #782, `amstex/amsppt_footnote_argument_runs_past_par` GREEN); an alignment open at `\enddocument` drops its open row's last cells
   without an error (RED `amstex/amstex_align_unclosed_at_enddocument`, before 66e too); a display open at `\enddocument`
   takes `\enddocument` into its formula's `tex` (RED `amstex/amstex_display_unclosed_at_enddocument`, before 66e too). Guards
   `perfect_kernel_batch66e::*`.
@@ -1572,7 +1580,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   155 Errors, none worse. Every `\TCItag` in the 13 tcilatex papers is emitted as a tag. The words lost are the ERROR
   text, the `$Id$` math, the running heads, slug and session lines, "[author]", the `\U{…}` argument text (now the
   PDF's square), and tag text that sat inside the formula as math tokens and is now one `<tag>`. RED repro
-  alignment/multline_notag_then_tag: multline ignores its `\tag` and `\notag` (always (n); hep-th0210191; Perl alike).
+  alignment/multline_notag_then_tag: multline ignores its `\tag` and `\notag` (always (n); hep-th0210191; Perl alike;
+  FIXED 77v, KNOWN_PERL_ERRORS #1010).
   Residual in those papers, other mechanisms: plain TeX's
   `\settabs\+` under the LaTeX route (alg-geom9410018, hep-th9306053), amsppt internals papers copy
   (`\textonlyfont@`, `\ifsyntax@`, `\eightrm`: funct-an9706006, math0002200), imsart `{supplement}` without
@@ -2397,7 +2406,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   duplicated "Proof." and amsthm's ∎, and the then-dropped alt texts (2608.22901, 2608.14294, 2609.06413); the 9 aipproc
   papers whose main file the harness missed (aipcheck.tex) 21 → 0 Errors. Binding nets vs 67int2: 0 worse in all nine
   (arxbj has none); Errors 127 → 18. Side finding, RED: class-bindings/elsart_support_theorem_tag_zero (under
-  elsart_support — arxbj, elsart — a `\newtheorem` statement is tagged "Remark 0", its refnum 1). Not taken: the
+  elsart_support — arxbj, elsart — a `\newtheorem` statement is tagged "Remark 0", its refnum 1; FIXED 77v,
+  KNOWN_PERL_ERRORS #1008). Not taken: the
   modified copies' one-paper commands (sn-jnl's astronomy block 2108.07431/2507.08592, informs `{observation}` in
   `\TheoremsNumberedThrough`, oup `{methods}`/`\absection`, sigmasthesis.cls 2510.12158 — another class). Round 2
   (review fixes): repros class-bindings/{arximspdf_keyword_blocks_and_starred_theorems, snjnl_author_notes,
@@ -2408,7 +2418,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   \TheoremHeaderFont}`; theorem_sty.rs keeps one global `\theorem@headerfont`, and informs4's two fonts differ, so a
   global `\gdef` would set examples sans: pdflatex's small caps against our bold, PDF fidelity only); a loader rule
   running a shipped copy's own simple one-line definitions for names its binding leaves undefined (the modified copies'
-  long tail across all ten classes) is a pending user decision; class-bindings/elsart_support_theorem_tag_zero stays RED;
+  long tail across all ten classes) is a pending user decision; class-bindings/elsart_support_theorem_tag_zero stays RED
+  (GREEN in 77v);
   sn-jnl with no shipped copy loads none of the class's packages (rotating…); the same visible-`@name` flaw in bindings
   outside this batch: sn_jnl_cls.rs `{declarations}` (`name='declarations'`, an environment sn-jnl.cls does not define)
   and jmlr_cls.rs/jmlr2e_sty.rs `\acks` (`name='acknowledgments-disclosure-of-funding'`). Ruled 2026-10-15: arximspdf's
@@ -2604,7 +2615,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\edef\@thmcountersep{}`, OXIDIZED_DESIGN_DIVERGENCES #615). Open: latex.ltx `\@definecounter` keeps an existing
   `\the<ctr>` ("Command `\thecase' already defined -- not changed"); the kernel's `\newcounter` redefines it, as Perl's
   NewCounter (Package.pm), so 2303.08726's cases print "Case 1, Case 2" where the PDF prints the enclosing lemma's
-  "Case 22, Case 22" (repro class-bindings/llncs_alias_newcounter). Round 3 (the 68g re-review): the branches title the
+  "Case 22, Case 22" (repro class-bindings/llncs_alias_newcounter; FIXED 77v: `\newcounter` keeps an existing
+  `\the<ctr>` with LaTeX's warning, KNOWN_PERL_ERRORS #1009). Round 3 (the 68g re-review): the branches title the
   env through `\csname <env>name\endcsname` (llncs.cls:1073/1082/1096/1122; `\renewcommand\lemmaname{Lemme}` "Lemme 2"
   in title and `\autoref`, r2 title "Lemma 2"), and the alias defines aliascnt.sty :54-57's `\AC@cnt@<env>`/`\cl@<env>`
   (a paper's own `\aliascntresetthe{lemma}`: no Error); guards `perfect_kernel_batch68g::{llncs_renamed_theorem_title,
@@ -2683,8 +2695,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   environments (the class's are `\subsection` headings). Side finding (pre-existing; RED row, ruling 2026-10-16): a paper's
   `\newtheorem{proposition}{Proposition}[section]` over a `\newtheorem{proposition}[theorem]…` (a binding's, or the
   paper's own after `\let\proposition\relax`) numbers from a counter that reads 0 (tac's 2407.21129: "Proposition
-  2.0"; pdflatex "Proposition 1.1" on the article repro macro-state/newtheorem_over_shared_counter_theorem, RED, not
-  root-caused). Round 2 (review of 68a): aa's `\arxiv`, `\arxivprefixe`, `\arxivprefixesep` and `\etalname` (v8.2+
+  2.0"; pdflatex "Proposition 1.1" on the article repro macro-state/newtheorem_over_shared_counter_theorem; FIXED 77v:
+  the shared counter's `counter_for_type` mapping outlived the theorem's own counter, KNOWN_PERL_ERRORS #1008). Round 2 (review of 68a): aa's `\arxiv`, `\arxivprefixe`, `\arxivprefixesep` and `\etalname` (v8.2+
   only: 14 and 13 of 139 copies lack them, 1201.4282's v7.0) and aas_support's AASTeX 6.2+ commands (`\mdash`,
   `\tabcaption`, `\BeforeBegin`, `\authorcomment`, `\apjsecfont`, `\onecolfootnote`, `\resetapptablenumbers`,
   `\savetablenum`, `\tablereferences`, `\deluxetablecaption`; none in AASTeX 5.2's aastex.cls, 1001.0026) are
@@ -2982,7 +2994,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   theorem numbered by `\ref` to the one it continues, its counter not stepped (KNOWN_PERL_ERRORS #857). 130 papers of
   the cluster writing `[label=`/`[name=`/`[continues=` (many are enumitem's `\begin{enumerate}[label=…]`, not thmtools):
   27 → 0 errors, none worse; words lost are the key text (2201.10483 −61) and the later numbers a continuation no
-  longer steps (2103.08319). Open: thm-restate's `restate=` key (2108.11527). Repro
+  longer steps (2103.08319). thm-restate's `restate=` key (2108.11527): FIXED 77v (KNOWN_PERL_ERRORS #1006). Repro
   package-bindings/thmtools_keyval_optional_argument; guard `perfect_kernel_batch68w::thmtools_keyval_*`.
   One-liners (one witness each, all → 0 errors): apacite's short family `\shortcite`/`\shortciteA`/`\shortciteNP`/
   `\shortciteauthor` take `\cite`'s `<pre-note>` (apacite.sty:277-401; 1805.05444 23 → 0); `\DeclareGraphicsRule` a
@@ -3118,7 +3130,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   reaches the 100-error Fatal on both sides — base on `\mathscr` (eulerpx, fixed by #569's lock restore), int17 on a
   later `_` (16,523 → 43,460 words). Nets 136/136 0 worse. Open rows from the bundle: sn-jnl `\href{text}{URL}` written
   for the class's DVI-mode swap (2401.05832, RED class-bindings/sn_jnl_href_swapped_order); thm-restate `restate=`
-  (2108.11527, 2602.09462); topical bibliography groups over an empty "References" give the second group `bibaa`
+  (2108.11527, 2602.09462; FIXED 77v); topical bibliography groups over an empty "References" give the second group `bibaa`
   (hep-th0109182; decide id reuse at heading time by the prune's own criterion); an `\appendix` heading inside the
   bibliography is not in `BIBLIOGRAPHY_HEADED_UNITS` (1810.04031, 1304.6684); apacite `\citeA<e.g.>{a}` gives
   "Smith (e.g. 2001)" (pdflatex "e.g. Smith (2001)") and its pre-notes lack apacite's comma; classic apacite
@@ -4775,6 +4787,32 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   3 word losses > 1 % are affiliation lines no longer copied onto every name (2603.07345, 2607.20027) and one jammed
   affiliation string now 26 per-institution affiliations (2605.10858). Binding nets (int38a) 136/136, 0 documents worse
   than int37a.
+- **77v** (quality batch 4: package bindings that lose text or mislabel it, quality inventory rows 42, 62, 14, 57, 78,
+  95, 108, 104, 112, 91; guards `perfect_kernel_batch77v::*`, 13, each RED on 529dc1b543 but the sn-jnl one; OD #782,
+  KPE #1006-#1013). thm-restate's `restate=[<keys>]<name>` key stores the theorem for `\<name>` as `{restatable}` does
+  (`thmtools_use_keys`, `\lx@thm@restate@store`; 2108.11527, 2602.09462); todonotes' `\todo[<options>]` options are keys,
+  not the mark; KOMA's `\setbibpreamble` is typeset after the bibliography heading (koma_script.rs); a `\newtheorem` with a
+  counter of its own drops an earlier shared-counter mapping ("Proposition 1.0", "Lemma 0" → their numbers: 2407.21129,
+  2602.12471, 2407.02950, 2407.10640's thmtools theorems over acmart's); `\newcounter` keeps an existing `\the<ctr>` with
+  LaTeX's warning (llncs `\let\c@case\relax\newcounter{case}`, 2303.08726; not over a fallback's guess or under a
+  stand-in's copy; pdflatex's warnings, now ours too: cryptocode.sty:636-644's four `\newcounter{H…}` meeting the
+  kernel's `\theH<ctr>`, +4 W per cryptocode paper, and the tcolorbox template's `\newcounter{example}` after `use
+  counter=example`, 1912.06298); `{multline}` numbers as `{equation}`, so `\tag`/`\notag`/`\nonumber` act (hep-th0210191); a text-mode
+  `{IEEEeqnarrayboxm}` is inline math of its own; amsppt's `\footnote`/`\footnotetext` are non-`\long` (`short => true`,
+  OD #782); combine loads the class its options name; endnotes' `\theenmark` is the note's mark. sn-jnl's table rules
+  verified fixed since 67z (guard added). A/B vs int37a (release, `--preload=ar5iv.sty`; 410 papers: 18 thm-restate, 30
+  `\todo[`, 3 `\setbibpreamble`/`\bibpostamble`, 30 sn-jnl, 18 `\let\c@…\relax`, 30 `[section]` theorems, 30
+  arxbj/elsart/tac, 40 multline (30 with `\tag`/`\notag`), 12 IEEEeqnarraybox, 30 amsppt `\footnote`, 30 endnotes, 30
+  KOMA, the 9 witnesses, 100 random of 2108/2310/2404/2407/2602 and five 1990s months): E 406 → 314, F 5 → 5, W 8329 →
+  8330 (2303.08726's LaTeX warning), 53 outputs changed, all improvements — 18 thm-restate papers lose every undefined
+  `\<name>` error (their E 112 → 21, the rest other causes) and print the restated copy, 29 papers' multlines number as
+  pdflatex (`\nonumber`'d ones unnumbered, `\tag{24}` tagged, later numbers back in step), 4 papers' theorem numbers
+  (2407.21129, 2602.12471, 2407.02950, 2407.10640), 2303.08726's cases; no word loss above 1 %. A further 30 papers with live `\todo[`: no output changed (none prints a note), 2602.24285 +1 Error
+  (its `\if\todo[…]{…` comment hack around an unclosed `\todo` brace: `\if` now expands `\todo` with its arguments
+  and the skip misses the `\fi` inside them; pdflatex's `\todo` peeks by `\futurelet`, its `\if` is true; XML
+  byte-identical). Residuals: `\todo`'s `author=` name is not kept; `{multline*}` with a `\tag` stays untagged;
+  apacite's first-citation author list and `\citeyear` parentheses (bibliography row above); pdflatex's
+  `\@xnthm` "Command `\theX' already defined" warning for a `\newtheorem` over a shared counter is not emitted.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;
@@ -4853,7 +4891,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   ccaption's load warning names only what stays approximated (`\bottomcaption`, `\legend`, the caption styling);
   subfigure's `\lx@subfloat@done` is empty without ccaption. Open: `\todo[<style>]` takes its style key as the note's
   mark (`mark="mine"`; 19 papers' `\todo[inline]` alike, before 68i too; todonotes_sty.rs:15 `\todo` is `\lx@note{todo}`,
-  whose `[<mark>]` takes todonotes' option list; repro package-bindings/todonotes_style_key, RED); enumitem's short
+  whose `[<mark>]` takes todonotes' option list; repro package-bindings/todonotes_style_key; FIXED 77v,
+  KNOWN_PERL_ERRORS #1007; open: `author=`'s name, printed before the text, is not kept); enumitem's short
   label numbers a reference without the label's punctuation (`\ref` "a" for pdflatex "(a)"; Perl alike,
   KNOWN_PERL_ERRORS #808; repro package-bindings/enumitem_shortlabel_ref, RED).
 - **68j** (binding gaps G3 D, TeX Live package bindings, the tail; bindgaps/g23_macros.tsv rows newpxmath, listings,
@@ -5763,7 +5802,7 @@ physics_operator_bracket_across_a_row_break, biblatex_leaves_sort_to_the_documen
 ieeeeqnarraybox_star_with_options_and_glue}`. RED from the review: `\text{\lstinline|w|}`'s tex= carries the listing's
 internal setup macros (`tools/perfect_kernel/repros/singletons/lstinline_in_text_reverts_as_written.tex`); a text-mode
 `{IEEEeqnarrayboxm}` opens no inline math, so its Math swallows the following text
-(`alignment-bindings/ieeeeqnarrayboxm_in_text_keeps_its_math.tex`). Open: (C) arabtex's asect.sty:297 `\let\endabstract\endquotation`
+(`alignment-bindings/ieeeeqnarrayboxm_in_text_keeps_its_math.tex`; FIXED 77v, KNOWN_PERL_ERRORS #1011). Open: (C) arabtex's asect.sty:297 `\let\endabstract\endquotation`
 (reached through alatex.sty's 2.09 `\begin`) closes the frontmatter `\abstract` with a quotation's end (2609.06402,
 10153) — locking `\endabstract` does not help, since `\let` assigns past a lock in both engines (State.pm:380-384
 `assignMeaning`; state.rs checks locks only in `install_definition`); (F) `\foreach \x/\text` against a locked kernel
@@ -6008,7 +6047,7 @@ mutably — one being absorbed too, unless all three of its sizes are requested 
 auto-opened picture 204.16×22.56 where Perl gives 7.3×5.96 (pre-62j); 0709.1145's `\LT@array`.
 
 From the 62i review: amsmath `multline` drops a `\tag` and numbers the equation (pdflatex "(Q)"; the counter then
-runs one ahead) — RED `repros/alignment-bindings/multline_tag_replaces_the_number.tex`.
+runs one ahead) — `repros/alignment-bindings/multline_tag_replaces_the_number.tex`, FIXED 77v (KNOWN_PERL_ERRORS #1010).
 
 From the 62h in-scope manual pass (each pdflatex-clean, so Rust-only; both were Fatals on 62g1 and stay failures):
 - typog-example: Rust's `\fontname\font` gives the fallback `cmss9` for an NFSS family (`Inter-LF`, T1Inter-LF.fd)

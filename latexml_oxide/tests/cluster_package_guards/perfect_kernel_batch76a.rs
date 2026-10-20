@@ -23,6 +23,27 @@ fn has_cryptocode() -> bool {
 }
 
 /// The line-number cell of pseudocode row `row` (`\pcln`, cryptocode.sty:656-662: `\pclnstyle{N}:\hspace{\pclnspace}`).
+/// No errors, and the four LaTeX warnings pdflatex gives too when cryptocode loads: cryptocode.sty:636-644
+/// `\newcounter{Hpclinenumber}`, `{H@pclinenumber}`, `{Hpcgamecounter}`, `{Hpcrlinenumber}` meet the `\theH<ctr>` the
+/// kernel's `\@definecounter` made for `pclinenumber`, `@pclinenumber`, `pcgamecounter`, `pcrlinenumber`, and keep it
+/// (latex.ltx:10147-10155, "Command `\theHpclinenumber' already defined -- not changed"; KNOWN_PERL_ERRORS #1009).
+fn assert_cryptocode_diagnostics(log: &str) {
+  assert_eq!((error_count(log), warning_count(log)), (0, 4), "{log}");
+  for counter in [
+    "Hpclinenumber",
+    "H@pclinenumber",
+    "Hpcgamecounter",
+    "Hpcrlinenumber",
+  ] {
+    assert!(
+      log.contains(&format!(
+        "Command `\\the{counter}' already defined -- not changed"
+      )),
+      "{log}"
+    );
+  }
+}
+
 fn number_td(row: u32, n: u32) -> String {
   format!(
     r#"<td align="right" xml:id="S0.Ex{row}.1"><Math mode="inline" tex="\displaystyle\hskip 3.87498pt\text{{\scriptsize {n}}}:\hskip 9.24994pt" text="[{n}] colon absent" xml:id="S0.Ex{row}.m1"><XMath xml:id="S0.Ex{row}.m1.1"><XMApp xml:id="S0.Ex{row}.m1.1.1"><XMTok fontsize="90%" name="colon" role="METARELOP" rpadding="9.3pt">:</XMTok><XMText lpadding="3.9pt" xml:id="S0.Ex{row}.m1.1.1.2"><text fontsize="70%" xml:id="S0.Ex{row}.m1.1.1.2.1">{n}</text></XMText><XMTok meaning="absent"/></XMApp></XMath></Math></td>"#
@@ -67,7 +88,7 @@ third line
 \end{document}
 ";
   let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_cryptocode_diagnostics(&log);
   assert_eq!(xml.matches("<equation ").count(), 6, "{xml}");
   for (row, var, n) in [(1, "a", 1), (2, "b", 2), (3, "c", 3)] {
     let id = format!("xml:id=\"S0.Ex{row}.1\"");
@@ -112,7 +133,7 @@ r & s
 \end{document}
 ";
   let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_cryptocode_diagnostics(&log);
   assert_element(&xml, "td", &["xml:id=\"S0.Ex2.1\""], &number_td(2, 2));
   assert_element(
     &xml,
@@ -309,7 +330,7 @@ second line
 \end{document}
 ";
   let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_cryptocode_diagnostics(&log);
   for (row, text) in [(1, "first line"), (2, "second line")] {
     let id = format!("xml:id=\"S0.Ex{row}.1\"");
     assert_element(&xml, "td", &[&id], &number_td(row, row));

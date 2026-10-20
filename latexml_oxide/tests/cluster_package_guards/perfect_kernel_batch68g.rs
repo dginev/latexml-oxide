@@ -296,15 +296,24 @@ fn aliascnt_autoref_names_the_alias() {
 
 /// An alias given a register of its own (2303.08726: `\let\c@case\relax\newcounter{case}` under envcountsame) steps
 /// that register, not `theorem`: the lemmas number as pdflatex's "Lemma 1, Lemma 2, Lemma 3" (round 1: "Lemma 4,
-/// Lemma 6", every case stepping the theorem counter). The cases print their own counter; pdflatex keeps the alias's
-/// `\thecase` (latex.ltx `\@definecounter`, "not changed"), "Case 1, Case 1, Case 2" — the kernel's `\newcounter`
-/// redefines it, as Perl's NewCounter (open).
+/// Lemma 6", every case stepping the theorem counter). The cases print the alias's `\thecase` = `\thetheorem`, which
+/// latex.ltx's `\@definecounter` keeps with its warning ("not changed"): "Case 1, Case 1, Case 2", as pdflatex (77v,
+/// KNOWN_PERL_ERRORS #1009; Perl's NewCounter redefines it).
 #[test]
 fn llncs_alias_newcounter() {
-  let xml = clean!("llncs_alias_newcounter.tex");
+  let (log, xml) = convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/class-bindings/llncs_alias_newcounter.tex"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains("Command `\\thecase' already defined -- not changed"),
+    "{log}"
+  );
+  let xml = squash(&xml);
   expect_tags(
     &xml,
-    "Lemma 1/1, Case 1/1, Case 2/2, Lemma 2/2, Case 1/1, Lemma 3/3",
+    "Lemma 1/1, Case 1/1, Case 1/1, Lemma 2/2, Case 2/2, Lemma 3/3",
   );
   assert_eq!(
     labelled_tags(&xml, "l3"),

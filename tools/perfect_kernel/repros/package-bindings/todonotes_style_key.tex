@@ -2,7 +2,8 @@
 % oracle:  pdflatex 0 errors; "Text more." with the note "Fix this." in the margin, numbered as any note (no "mine" printed)
 % engines: rust 68i = <note mark="mine" xml:id="todox1"> with the tags "mine", "ToDo mine" (the option list taken as the note's mark: SYNC_STATUS 68i "Open: \todo[<style>]"); perl = no \todostyle (KNOWN_PERL_ERRORS #805)
 % expect:  0 errors, 0 warnings; the note "Fix this." numbered 1 (mark="1", xml:id="todo1"), no "mine" text
-% status:  RED (open: SYNC_STATUS 68i "\todo[<style>]"; todonotes_sty.rs:15 \todo is \lx@note{todo}, whose [<mark>] takes todonotes' option list)
+% status:  RED (68i; todonotes_sty.rs \todo was \lx@note{todo}, whose [<mark>] took todonotes' option list) -> GREEN
+%          (77v, KNOWN_PERL_ERRORS #1007; guard perfect_kernel_batch77v::todonotes_style_key)
 \documentclass{article}
 \usepackage{todonotes}
 \todostyle{mine}{color=red!40}

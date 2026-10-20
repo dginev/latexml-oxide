@@ -4,11 +4,53 @@
 //! merging multiple LaTeX documents into a single PDF. It defines
 //! `{papers}`, `{document*}`, etc. envs that wrap sub-document
 //! content. Our HTML/XML output is single-document; just render the
-//! body transparently. Witness 2310.14794.
+//! body transparently, in the class combine's options name. Witness 2310.14794.
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  LoadClass!("article");
+  // combine.cls:29 `\c@lclass`, the class each document is typeset in (article, :85-88 `book`, `report`, `letter` or
+  // `memoir`; `colclass=<class>`, :30-50), :105 every other option passed to it, :111 `\LoadClass{\c@lclass}`. The
+  // binding loaded article whatever the option, so `\documentclass[book]{combine}`'s `\chapter` was undefined
+  // (72b review; witness 2310.14794 is an article one). combine's own switches (:89-104) set what this binding does
+  // not model. Guard `perfect_kernel_batch77v::combine_book_option_loads_book`.
+  RawTeX!(r"\providecommand{\c@lclass}{article}");
+  for class in ["book", "report", "letter", "memoir"] {
+    DeclareOption!(class, {
+      RawTeX!(&s!(r"\def\c@lclass{{{class}}}"));
+    });
+  }
+  for option in [
+    "classes",
+    "packages",
+    "layouts",
+    "folios",
+    "notoc",
+    "nolof",
+    "nolot",
+    "maintoc",
+    "date",
+    "noauthor",
+    "notitle",
+    "nomaketitle",
+    "nopubindoc",
+    "nopubintoc",
+    "onebib",
+    "combinedbib",
+  ] {
+    DeclareOption!(option, None);
+  }
+  DeclareOption!(None, {
+    let option = Expand!(T_CS!("\\CurrentOption")).to_string();
+    if let Some(class) = option.strip_prefix("colclass=") {
+      RawTeX!(&s!(r"\def\c@lclass{{{}}}", class.trim()));
+    } else {
+      let class = Expand!(T_CS!("\\c@lclass")).to_string();
+      RawTeX!(&s!(r"\PassOptionsToClass{{\CurrentOption}}{{{class}}}"));
+    }
+  });
+  ProcessOptions!();
+  let class = Expand!(T_CS!("\\c@lclass")).to_string();
+  LoadClass!(&class);
   // combine.cls (TeX Live's) loads no amsmath: amsmath's commands for papers that use them unloaded, its "Old form"
   // error once the paper loads it; the paper's copy decides (`amsmath_sty::require_amsmath_beyond_original`,
   // KNOWN_PERL_ERRORS #993).

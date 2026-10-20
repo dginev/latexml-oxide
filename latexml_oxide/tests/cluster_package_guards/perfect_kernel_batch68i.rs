@@ -172,8 +172,8 @@ fn paralist_blank_lists() {
 
 /// todonotes.sty:46-49 and :581-583: `\todostyle` declares a style key and an empty `\phantomsection` stands in for
 /// hyperref's (67int9: both undefined); the note keeps its text and its number (pdflatex "Text more." with the margin
-/// note "Fix this."). A note given the style key (`\todo[mine]`) still takes the key as its mark — the open SYNC_STATUS
-/// 68i row, repro package-bindings/todonotes_style_key (RED). 2407.14906, 1308.6029.
+/// note "Fix this."). A note given the style key (`\todo[mine]`) is numbered as any since 77v (repro
+/// package-bindings/todonotes_style_key, guard `perfect_kernel_batch77v::todonotes_style_key`). 2407.14906, 1308.6029.
 #[test]
 fn todonotes_todostyle() {
   let xml = convert_checked(repro!("todonotes_todostyle.tex"), 0);

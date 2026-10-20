@@ -1,0 +1,24 @@
+% witness: 2108.11527, 2602.09462 (`\begin{theorem}[restate=<name>, name=…]`, −243 words of key text)
+% oracle:  pdflatex 0 errors: "Theorem 1 (Main). A." and "Theorem 2. B.", then each again at `\mainthm*` and `\other*`
+%          (thm-restate.sty:198-215: the key stores the theorem as `{restatable}` does, the bracketed keys for the copy
+%          only, after spaces as 2602.09462 writes them: the `\other*` copy is titled "Theorem 2 (Again)")
+% engines: rust 529dc1b543 = `\mainthm` and `\other` undefined (2 errors), the second title "Theorem 2 (restate=…)";
+%          perl not compared (its thm-restate binding has no `restate=` key either)
+% expect:  0 errors, 0 warnings; the titles "Theorem 1 (Main)" and "Theorem 2", each restated copy a reference to its
+%          theorem (the binding's `{restatable}` copy)
+% status:  RED (529dc1b543) -> GREEN (77v)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsthm,thmtools}
+\newtheorem{theorem}{Theorem}
+\begin{document}
+\begin{theorem}[restate=mainthm, name=Main]
+A.
+\end{theorem}
+\begin{theorem}[restate={
+    [name={Again}]other%
+  }]
+B.
+\end{theorem}
+Again: \mainthm* and \other*
+\end{document}

@@ -5,13 +5,25 @@ LoadDefinitions!({
   DefMacro!("\\theendnote", None, "\\arabic{endnote}");
   DefMacro!("\\endnotetyperefname", None, "\\lx@latin@name{endnote}");
 
-  // \theenmark  Should be assigned to the mark, by \endnote,\endnotemark !
-
   // \enotesize
   // \@makeentext to format the text of the endnote; not used (yet)!!!
 
-  // This is NOT correct; it should be edef"d after the counter is stepped...
-  DefMacro!("\\theenmark", "\\theendnote");
+  // endnotes.sty:271 `\theenmark` is `\@theenmark`, the mark of the note last made: `\endnote`, `\endnotemark` and
+  // `\endnotetext` set it as the note's number when they make it (:274-282, :343-373 `\protected@xdef\@theenmark
+  // {\theendnote}` after the step; `[<n>]` the number given), and `\theendnotes` as each note it lists (:400-405).
+  // Perl's `\theenmark` is `\theendnote` (endnotes.sty.ltxml:29, "NOT correct"), the counter as it stands where it
+  // is read: biblatex-chicago's endnote back-references (cmsendnotes.sty:164-204, which sets `\@theenmark` itself)
+  // and a later `\theenmark` read the last number (cms-noteref-demo: every mark "18"). KNOWN_PERL_ERRORS #1013; guard
+  // `perfect_kernel_batch77v::endnotes_theenmark_is_the_note_mark`.
+  DefMacro!("\\theenmark", "\\@theenmark");
+  // `\lx@enote@mark{<maker>}` `[<n>]`: the mark of the note `<maker>` is about to make, the number given, else the
+  // number the counter steps to (`\lx@enote@textmark`: the counter's number, `\endnotetext` steps none)
+  RawTeX!(
+    r"\def\lx@enote@mark#1{\@ifnextchar[{\lx@enote@given{#1}}{\begingroup\advance\c@endnote\@ne
+\protected@xdef\@theenmark{\theendnote}\endgroup#1}}
+\def\lx@enote@textmark#1{\@ifnextchar[{\lx@enote@given{#1}}{\protected@xdef\@theenmark{\theendnote}#1}}
+\def\lx@enote@given#1[#2]{\protected@xdef\@theenmark{#2}#1[#2]}"
+  );
   DefMacro!(
     "\\makeenmark",
     r"\hbox{\textsuperscript{\normalfont\theenmark}}"
@@ -32,12 +44,12 @@ LoadDefinitions!({
   // `perfect_kernel_batch56::endnote_opens_the_ent_file_for_a_raw_theendnotes`.
   DefMacro!(
     "\\endnote",
-    "\\if@enotesopen\\else\\@openenotes\\fi\\lx@note{endnote}"
+    "\\if@enotesopen\\else\\@openenotes\\fi\\lx@enote@mark{\\lx@note{endnote}}"
   );
-  DefMacro!("\\endnotemark", "\\lx@notemark{endnote}");
+  DefMacro!("\\endnotemark", "\\lx@enote@mark{\\lx@notemark{endnote}}");
   DefMacro!(
     "\\endnotetext",
-    "\\if@enotesopen\\else\\@openenotes\\fi\\lx@notetext{endnote}"
+    "\\if@enotesopen\\else\\@openenotes\\fi\\lx@enote@textmark{\\lx@notetext{endnote}}"
   );
 
   // \addtoendnotes{text} — appends author-typed text to the endnotes
