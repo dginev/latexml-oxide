@@ -1,0 +1,20 @@
+% witness: 0802.4100 (142 "Citation undefined" Warnings), 1003.3017 (62), astro-ph0512042 — natbib_vw.sty, a natbib
+%          copy `\ProvidesPackage{natbib}` (../../index-bib/mn2e_natbib_copy/natbib_vw.sty) under a name the versioned
+%          fallback does not reduce to natbib; census: 90 renamed copies in 88 papers declare natbib (modnatbib 21,
+%          natbib_vw 16, natbib_jrm 11, my_natbib 7, natbibsty 6, tsnatbib 5, …), 299 more the fallback reaches
+% oracle:  pdflatex (2 passes) 0 errors, "Schneider et al. (2010), Smith (2001), (Smith, 2001)."
+% engines: rust 529dc1b543 = the copy read raw: its \citet/\citep find no `\b@key`, "?" and 2 "Citation undefined"
+%          Warnings; Perl reads the copy raw too
+% expect:  0 errors, 0 warnings; natbib's author-year citations with their label text
+% status:  RED (529dc1b543) -> GREEN (77w: the declaration routes the request to the natbib binding)
+% preload: ar5iv.sty
+\documentclass{article}
+\newlength{\bibhang}% (mn2e.cls:1376-1377 allocates it; the copy sets it, natbib_vw.sty:441)
+\usepackage{natbib_vw}
+\begin{document}
+\citet{s10}, \citet{a}, \citep{a}.
+\begin{thebibliography}{}
+\bibitem[{Schneider et~al.(2010)}]{s10} Schneider D.~P., et al., 2010, AJ, in press
+\bibitem[{Smith(2001)}]{a} J. Smith. A paper. 2001.
+\end{thebibliography}
+\end{document}

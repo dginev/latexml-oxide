@@ -217,6 +217,9 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions) -> Res
   // (a raw file's own request — a copy's `\RequirePackage{natbib}`, neurips_2024.sty:71: the load TeX sees, which a
   // binding's early load of the package only anticipated; `apply_new_options_on_reload`)
   let requested_by_file = current_origin() == DefinitionOrigin::File;
+  // (a stand-in's copy's own request, read before its provides-mode is suspended for the load below:
+  // `apply_repeat_options`)
+  let requested_by_copy = crate::definition::origin::copy_provides() != 0;
   let base = raw_file
     .trim()
     .rsplit(['/', '\\'])
@@ -274,7 +277,13 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions) -> Res
   // (a class it loads is its base class, whose text defaults are not its own: `StandInLoadGuard::suspend_for`)
   let _nested = crate::definition::origin::stand_in_loading()
     .then(|| crate::definition::origin::StandInLoadGuard::suspend_for(class));
-  input_definitions_impl(raw_file, options, requested_by_binding, requested_by_file)
+  input_definitions_impl(
+    raw_file,
+    options,
+    requested_by_binding,
+    requested_by_file,
+    requested_by_copy,
+  )
 }
 
 /// Is the file now being read one the author shipped: under the document's own source directory
@@ -299,6 +308,7 @@ fn input_definitions_impl(
   mut options: InputDefinitionOptions,
   requested_by_binding: bool,
   requested_by_file: bool,
+  requested_by_copy: bool,
 ) -> Result<()> {
   let trimmed = raw_file.trim();
   // A compiled binding keyed by BASENAME raw-loads its own name (`noltxml`), but
@@ -621,10 +631,16 @@ fn input_definitions_impl(
       // A class binding that loads the package where the real class does too (jmlr.cls:150, acmart.cls:300,
       // elsarticle.cls:1243, jheppub.sty:37) records its load as the class's own (`<file>:requested_by_binding` false);
       // a raw file's own repeat ends the early-load state (`apply_new_options_on_reload` below).
+      // A stand-in's copy that loads the package its binding loaded on the copy's behalf (`<file>:loaded_by_stand_in`,
+      // the first load made while a stand-in binding loaded) makes the load the binding stands in for: TeX sees the
+      // copy's only, so its options apply (a renamed elsarticle.cls copy's `\RequirePackage[square]{natbib}`,
+      // 1811.10063).
+      let copys_own_load = requested_by_copy && lookup_bool(&s!("{fkey}:loaded_by_stand_in"));
       if !new_options.is_empty()
         && lookup_bool(&s!("{fkey}_repeat_clash"))
         && !lookup_bool(&s!("{fkey}:requested_by_binding"))
         && !lookup_bool(&s!("{fkey}:options_of_a_renamed_copy"))
+        && !copys_own_load
       {
         let package = fkey.rsplit_once('.').map_or(fkey, |(stem, _)| stem);
         Error!(
@@ -877,6 +893,13 @@ fn input_definitions_impl(
       requested_by_binding,
       Some(Scope::Global),
     );
+    // (and whether a stand-in binding was loading: its copy's own load of the package is that load,
+    // `apply_repeat_options`)
+    assign_value(
+      &s!("{filename}:loaded_by_stand_in"),
+      crate::definition::origin::stand_in_loading(),
+      Some(Scope::Global),
+    );
   }
 
   // Track loaded files in \@filelist BEFORE loading (Perl: Package.pm calls
@@ -949,12 +972,14 @@ fn input_definitions_impl(
   } else {
     // (what a binding standing in for an author's file defines is its own, which the paper's copy read after it only
     // provides: `read_stand_in_copy`)
-    let _stand_in =
-      crate::binding::author_files::stands_in_for_an_author_file(&filename).then(|| {
-        crate::definition::origin::StandInLoadGuard::loaded_by(
-          crate::definition::origin::stand_in_loader_own_code(),
-        )
-      });
+    // (and so does the binding a shipped copy's declaration routed its request to: `provided_binding`)
+    let stands_in = crate::binding::author_files::stands_in_for_an_author_file(&filename)
+      || loading_for_a_provides_route(name);
+    let _stand_in = stands_in.then(|| {
+      crate::definition::origin::StandInLoadGuard::loaded_by(
+        crate::definition::origin::stand_in_loader_own_code(),
+      )
+    });
     // (a binding a stand-in's copy reaches by `\input` is a load of its own, not the copy's code: `input_definitions`)
     let _copy_suspended = (crate::definition::origin::copy_provides() != 0)
       .then(|| crate::definition::origin::CopyProvidesGuard::new(0));
@@ -1073,8 +1098,11 @@ fn input_definitions_impl(
     }
     // A stand-in binding is followed by the paper's copy of the file it stands in for, which only provides
     // (OXIDIZED_DESIGN_DIVERGENCES #731): inside this load, so the copy's `\AtEndOfClass`/`\AtEndOfPackage` code runs
-    // at its end with the binding's.
-    if crate::binding::author_files::stands_in_for_an_author_file(&filename) {
+    // at its end with the binding's. So is the binding a shipped copy's declaration routed its request to
+    // (`provided_binding`).
+    if crate::binding::author_files::stands_in_for_an_author_file(&filename)
+      || loading_for_a_provides_route(name)
+    {
       read_stand_in_copy(
         &stand_in_copy_request(name),
         name,
@@ -1126,7 +1154,15 @@ fn input_definitions_impl(
     // returned the real caption3.sty from TL, raw-loading it and
     // triggering the `\DeclareCaptionFormat{hang}[#1#2#3\par]{...}`
     // PARAM-leak cascade (arXiv:2506.19291: Rust=30 vs Perl=2).
-    let found_raw = if (interpreting || interpretable) && !options.notex {
+    // A shipped file declaring itself a bound file is that binding's request, read after it as its stand-in's copy
+    // ([`provided_binding`]; OXIDIZED_DESIGN_DIVERGENCES #731): ahead of every raw read, as a binding always wins over
+    // a shipped copy (user rulings 2026-10-17, 2026-10-20), and of the versioned fallback, which reads no copy.
+    let provides = if !options.noltxml && !interpretable {
+      provided_binding(name, &as_type)
+    } else {
+      None
+    };
+    let found_raw = if provides.is_none() && (interpreting || interpretable) && !options.notex {
       find_file(
         &filename,
         Some(FindFileOptions {
@@ -1163,12 +1199,29 @@ fn input_definitions_impl(
       // Perl L2119: `(!noltxml && !$interpretable && FindFile_fallback)` —
       // an INTERPRETABLE source must NOT be version-stripped to a fallback
       // binding; it falls through to the raw-TeX/kpsewhich path below.
-      if let Some((fallback, _kind)) = find_file_fallback(name, &as_type) {
-        Info!(
-          "fallback",
-          name,
-          s!("Interpreted as versioned package, falling back to {fallback}")
-        );
+      let route = match &provides {
+        Some((binding, declared)) => {
+          let fallback = s!("{binding}.{as_type}");
+          Info!(
+            "fallback",
+            name,
+            s!(
+              "The paper's {filename} declares itself {declared}: loading the {fallback} binding, then the copy as \
+               its stand-in's"
+            )
+          );
+          Some(fallback)
+        },
+        None => find_file_fallback(name, &as_type).map(|(fallback, _kind)| {
+          Info!(
+            "fallback",
+            name,
+            s!("Interpreted as versioned package, falling back to {fallback}")
+          );
+          fallback
+        }),
+      };
+      if let Some(fallback) = route {
         // Load the fallback binding once: a binding the document already loaded under its own name is not run again
         // (Perl `loadLTXML`, Package.pm:2328-2330).
         let ext_suffix = if as_type == "sty" { ".sty" } else { ".cls" };
@@ -1178,14 +1231,30 @@ fn input_definitions_impl(
         // name. neurips_sty.rs reads the year of `Styles/neurips_2026` here (2609.20831).
         // `fallback_target`: the binding answering it, so a binding tells its own request from an outer load's
         // (shipped_class.rs).
+        // `fallback_provides`: the binding a shipped copy's declaration routed to, which reads the copy after it
+        // (`loading_for_a_provides_route`); with the copy's options, which its own `\ProcessOptions` takes in TeX, even
+        // after the binding loaded already (`<file>:options_of_a_renamed_copy`, `apply_repeat_options`)
         let outer_request = lookup_string("fallback_request");
         let outer_target = lookup_string("fallback_target");
+        let outer_provides = lookup_string("fallback_provides");
         assign_value("fallback_request", name.to_string(), Some(Scope::Global));
         assign_value(
           "fallback_target",
           fallback_name.clone(),
           Some(Scope::Global),
         );
+        let renamed_copy_key = s!("{fallback}:options_of_a_renamed_copy");
+        let outer_renamed_copy = lookup_bool(&renamed_copy_key);
+        if provides.is_some() {
+          assign_value(
+            "fallback_provides",
+            fallback_name.clone(),
+            Some(Scope::Global),
+          );
+          assign_value(&renamed_copy_key, true, Some(Scope::Global));
+        } else {
+          assign_value("fallback_provides", String::new(), Some(Scope::Global));
+        }
         // Forward the original options + after-hook so fallback bindings see
         // user-supplied class/package options (Perl-faithful: in Perl FindFile
         // returns a path and the caller's options/after stay attached to the
@@ -1204,6 +1273,10 @@ fn input_definitions_impl(
         });
         assign_value("fallback_request", outer_request, Some(Scope::Global));
         assign_value("fallback_target", outer_target, Some(Scope::Global));
+        assign_value("fallback_provides", outer_provides, Some(Scope::Global));
+        if provides.is_some() {
+          assign_value(&renamed_copy_key, outer_renamed_copy, Some(Scope::Global));
+        }
         if fb_result.is_ok() {
           assign_value(&s!("{filename}_loaded"), true, Some(Scope::Global));
           // latex.ltx:18484-18486 `\@pr@videpackage`: the requested name takes the
@@ -2198,7 +2271,8 @@ fn stand_in_copy_request(name: &str) -> String {
 }
 
 /// "A stand-in's copy provides" (OXIDIZED_DESIGN_DIVERGENCES #731; user ruling 2026-10-17): after a binding that
-/// stands in for an author's file ([`crate::binding::author_files`]) has loaded, the copy of that file the paper ships
+/// stands in for an author's file ([`crate::binding::author_files`]), or one a shipped file's declaration routed its
+/// request to ([`provided_binding`]; user ruling 2026-10-20), has loaded, the copy of that file the paper ships
 /// is read too, raw, at the same `\documentclass`/`\usepackage`/`\RequirePackage`/`\input` point, origin `File`. Its
 /// definitions of names the binding owns hold only inside its own code ([`crate::state::note_copy_provides_assignment`]),
 /// so for the document they act as `\providecommand`; the rest stand as TeX makes them — the copy's extras: 1309.5950's
@@ -2234,7 +2308,8 @@ fn read_stand_in_copy(request: &str, binding: &str, ext: &str, in_expl3: bool) -
   {
     return Ok(());
   }
-  if !copy_is_the_stood_in_file(&file, binding, &path) {
+  // (a copy whose declaration routed its request here is the file by that declaration: [`provided_binding`])
+  if !loading_for_a_provides_route(binding) && !copy_is_the_stood_in_file(&file, binding, &path) {
     return Ok(());
   }
   let id = new_copy_provides_record(file.rsplit(['/', '\\']).next().unwrap_or(&file));
@@ -2257,6 +2332,81 @@ fn shipped_with_paper(path: &str) -> bool {
       |p: &str| std::fs::canonicalize(p).unwrap_or_else(|_| Path::new(p).to_path_buf());
     !dir.is_empty() && canonical(path).starts_with(canonical(&dir))
   }
+}
+
+/// "A shipped file that `\Provides` a bound name loads that binding" (OXIDIZED_DESIGN_DIVERGENCES #731, the
+/// declaration route; user ruling 2026-10-20): the binding that answers a request with no binding of its own (`name`,
+/// a `.sty` or `.cls`) because the file the paper ships under that name declares itself another file a binding stands
+/// for — `\ProvidesPackage{natbib}` in natbib_vw.sty (0802.4100, 1003.3017, astro-ph0512042), modnatbib.sty,
+/// natbib_jrm.sty; `\ProvidesClass{revtex4}` in qm2008_abs.cls and snp.cls (0805.2253, 0806.0481, 0805.4759);
+/// `\ProvidesPackage{aistats2023}` in a renamed aistats style; `\ProvidesPackage{everyshi}` in cvpr_eso.sty. The
+/// declaration is [`file_declaration`]'s (the declared-macro form included); its kind is the request's (a `.sty`'s
+/// `\ProvidesPackage` or `\ProvidesFile{X.sty}`, a `.cls`'s `\ProvidesClass` or `\ProvidesFile{X.cls}`: a `.sty`
+/// that `\ProvidesClass{X}` is not routed); the name is another (a copy declaring its own name, in any case, is that
+/// file); and the name has a binding of that kind — the registry's, matched as a request is without regard to case,
+/// or the one its versioned fallback reaches (`aistats2023` → aistats, [`find_file_fallback`]). Only the paper's own
+/// files are read ([`shipped_with_paper`]): a TeX Live file is its own name's. Returns the binding's name and the
+/// declared one. In TeX the copy is read whole, redefining everything the package defines; the binding's markup
+/// for it is the ruled answer, the copy read after it as the stand-in's copy (`read_stand_in_copy`), its own
+/// commands added. One rule for what were per-name stand-ins (72a's renamed natbib copies, 77o's renamed aistats
+/// styles, 68v's revtex4 copies).
+fn provided_binding(name: &str, ext: &str) -> Option<(String, String)> {
+  if !matches!(ext, "sty" | "cls") {
+    return None;
+  }
+  // (the search paths only, no kpsewhich: a file the paper ships is in its source directory or a `{filecontents}` one)
+  let path = find_file(
+    name,
+    Some(FindFileOptions {
+      ext_type: Some(Cow::Owned(ext.to_string())),
+      forbid_ltxml: true,
+      search_paths_only: true,
+      ..FindFileOptions::default()
+    }),
+  )?;
+  if !shipped_with_paper(&path) {
+    return None;
+  }
+  let (kind, declared) = file_declaration(&source_text(&path)?)?;
+  let declared = declared.rsplit(['/', '\\']).next().unwrap_or(&declared);
+  let dotted = s!(".{ext}");
+  let declared = match (kind, ext) {
+    ("Class", "cls") | ("Package", "sty") => declared.strip_suffix(&dotted).unwrap_or(declared),
+    ("File", _) => declared.strip_suffix(&dotted)?,
+    _ => return None,
+  };
+  let request = name.rsplit(['/', '\\']).next().unwrap_or(name);
+  if declared.is_empty() || declared.starts_with('\\') || declared.eq_ignore_ascii_case(request) {
+    return None;
+  }
+  let registered = get_binding_names().iter().find_map(|names| {
+    names
+      .iter()
+      .find(|(n, e)| n.eq_ignore_ascii_case(declared) && *e == ext)
+      .map(|(n, _)| (*n).to_string())
+  });
+  let binding = match registered {
+    Some(binding) => binding,
+    None => {
+      let (fallback, _) = find_file_fallback(declared, ext)?;
+      fallback
+        .strip_suffix(&dotted)
+        .unwrap_or(&fallback)
+        .to_string()
+    },
+  };
+  // (never the request itself: a declared name whose versioned fallback is the request's name)
+  if binding.eq_ignore_ascii_case(request) {
+    return None;
+  }
+  Some((binding, declared.to_string()))
+}
+
+/// Is the binding `name` loading now the one a shipped copy's declaration routed its request to
+/// ([`provided_binding`]; `fallback_provides` names it while the route's load runs)?
+fn loading_for_a_provides_route(name: &str) -> bool {
+  let target = lookup_string("fallback_provides");
+  !target.is_empty() && file_stem(&target).eq_ignore_ascii_case(file_stem(name))
 }
 
 /// One class slot (OXIDIZED_DESIGN_DIVERGENCES #736): does the base class a stand-in class binding loaded stand for the
@@ -2318,6 +2468,76 @@ fn binding_base_class_stands_for(name: &str) -> Result<bool> {
   Ok(true)
 }
 
+/// The text of the file at `path`: a `{filecontents}` virtual file, else the file on disk, each byte a character.
+fn source_text(path: &str) -> Option<String> {
+  crate::binding::virtual_files::vfs_read(path).or_else(|| {
+    std::fs::read(path)
+      .ok()
+      .map(|bytes| bytes.iter().map(|&b| b as char).collect::<String>())
+  })
+}
+
+/// The code of each line of `text`, its `%` comment dropped; a line ends at CR or LF, as in TeX (2402.17342's
+/// sn-jnl.cls has CR-only ends).
+fn source_code_lines(text: &str) -> impl Iterator<Item = &str> {
+  text
+    .split(['\n', '\r'])
+    .map(|line| line.split('%').next().unwrap_or(""))
+}
+
+/// `name` without its directory and its `.cls`/`.sty`/`.tex`/`.clo`/`.def` extension.
+fn file_stem(name: &str) -> &str {
+  let base = name.rsplit(['/', '\\']).next().unwrap_or(name);
+  base
+    .rsplit_once('.')
+    .filter(|(_, ext)| matches!(*ext, "cls" | "sty" | "tex" | "clo" | "def"))
+    .map_or(base, |(stem, _)| stem)
+}
+
+/// What a file declares itself, read as text: its first `\ProvidesClass`/`\ProvidesPackage`/`\ProvidesFile` (or the
+/// `\ProvidesExpl…` form) outside a comment, as the kind (`Class`, `Package`, `File`) and the name. A declaration naming
+/// a macro reads its expansion, as `\ProvidesClass` does: cimart.cls:13-14
+/// `\def\ClassName@CiM{cimart}\ProvidesClass{\ClassName@CiM}`, 2412.00032. The file's first parameterless `\def` or
+/// `\newcommand` of the name is taken, wherever it stands, not the one in force at the declaration; a name defined
+/// with parameters or in another file is not found, and the macro's own name is returned. Later declarations do not
+/// count: a class may carry the packages it is built on (qm2008_abs.cls, a REVTeX 4 copy, embeds textcase.sty's
+/// `\ProvidesPackage{textcase}`, :3680).
+fn file_declaration(text: &str) -> Option<(&'static str, String)> {
+  static PROVIDES: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"\\Provides(?:Expl)?(Class|Package|File)\s*\{\s*([^}\s]+)\s*\}").unwrap()
+  });
+  let expansion = |name: &str| {
+    let def = Regex::new(&s!(
+      r"\\[egx]?def\s*{}\s*\{{\s*([^{{}}\s]+)\s*\}}|\\(?:re)?newcommand\*?\s*\{{?\s*{}\s*\}}?\s*\{{\s*([^{{}}\s]+)\s*\}}",
+      regex::escape(name),
+      regex::escape(name)
+    ))
+    .ok()?;
+    source_code_lines(text).find_map(|code| {
+      def
+        .captures(code)
+        .and_then(|cap| cap.get(1).or_else(|| cap.get(2)))
+        .map(|value| value.as_str().to_string())
+    })
+  };
+  source_code_lines(text).find_map(|code| {
+    PROVIDES.captures(code).map(|cap| {
+      let kind = match &cap[1] {
+        "Class" => "Class",
+        "Package" => "Package",
+        _ => "File",
+      };
+      let name = &cap[2];
+      let name = if name.starts_with('\\') {
+        expansion(name).unwrap_or_else(|| name.to_string())
+      } else {
+        name.to_string()
+      };
+      (kind, name)
+    })
+  })
+}
+
 /// Is the paper's file at `path`, of the name a stand-in binding answers (`file`), the file the binding `binding`
 /// stands in for (OXIDIZED_DESIGN_DIVERGENCES #731 rule 0)? Two tests, in order:
 /// 1. **Its declaration.** A `\ProvidesClass`/`\ProvidesPackage`/`\ProvidesFile` (or the `\ProvidesExpl…` form) naming
@@ -2346,60 +2566,13 @@ fn copy_is_the_stood_in_file(file: &str, binding: &str, path: &str) -> bool {
     )
     .unwrap()
   });
-  static PROVIDES: Lazy<Regex> = Lazy::new(|| {
-    Regex::new(r"\\Provides(?:Expl)?(?:Class|Package|File)\s*\{\s*([^}\s]+)\s*\}").unwrap()
-  });
-  let text = crate::binding::virtual_files::vfs_read(path).or_else(|| {
-    std::fs::read(path)
-      .ok()
-      .map(|bytes| bytes.iter().map(|&b| b as char).collect::<String>())
-  });
-  let Some(text) = text else {
+  let Some(text) = source_text(path) else {
     return false;
   };
-  let stem = |name: &str| {
-    let base = name.rsplit(['/', '\\']).next().unwrap_or(name);
-    base
-      .rsplit_once('.')
-      .filter(|(_, ext)| matches!(*ext, "cls" | "sty" | "tex" | "clo" | "def"))
-      .map_or(base, |(stem, _)| stem)
-      .to_ascii_lowercase()
-  };
+  let stem = |name: &str| file_stem(name).to_ascii_lowercase();
   // (a line ends at CR or LF, as in TeX: 2402.17342's sn-jnl.cls has CR-only ends)
-  let lines = || {
-    text
-      .split(['\n', '\r'])
-      .map(|line| line.split('%').next().unwrap_or(""))
-  };
-  // (a declaration naming a macro reads its expansion, as `\ProvidesClass` does: cimart.cls:13-14
-  // `\def\ClassName@CiM{cimart}\ProvidesClass{\ClassName@CiM}`, 2412.00032. The file's first parameterless `\def`
-  // or `\newcommand` of the name is taken, wherever it stands, not the one in force at the declaration; a name
-  // defined with parameters or in another file is not found, and the copy is judged by the quarter clause below — it
-  // errs toward not reading)
-  let expansion = |name: &str| {
-    let def = Regex::new(&s!(
-      r"\\[egx]?def\s*{}\s*\{{\s*([^{{}}\s]+)\s*\}}|\\(?:re)?newcommand\*?\s*\{{?\s*{}\s*\}}?\s*\{{\s*([^{{}}\s]+)\s*\}}",
-      regex::escape(name),
-      regex::escape(name)
-    ))
-    .ok()?;
-    lines().find_map(|code| {
-      def
-        .captures(code)
-        .and_then(|cap| cap.get(1).or_else(|| cap.get(2)))
-        .map(|value| value.as_str().to_string())
-    })
-  };
-  let declared = lines().find_map(|code| {
-    PROVIDES.captures(code).map(|cap| {
-      let name = &cap[1];
-      if name.starts_with('\\') {
-        stem(&expansion(name).unwrap_or_else(|| name.to_string()))
-      } else {
-        stem(name)
-      }
-    })
-  });
+  let lines = || source_code_lines(&text);
+  let declared = file_declaration(&text).map(|(_, name)| stem(&name));
   let built_on = stand_in_built_on();
   // (the binding that answered, not the name asked for: a fallback answers a renamed file too — 1705.03989's aaart.cls,
   // amsart renamed and declaring itself `aaart`, which the `aa` binding answers — so a copy declaring the requested

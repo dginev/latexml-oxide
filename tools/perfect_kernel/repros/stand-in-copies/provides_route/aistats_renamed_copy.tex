@@ -1,0 +1,18 @@
+% witness: SYNC row "aistats renamed copies" (77o r2 review finding 10): about 100 papers ship a renamed aistats style
+%          the versioned fallback does not reach by name (aistats2022_arxiv.sty 9, aistats_arxiv.sty 7, twocolumn2023.sty,
+%          myStyle.sty, edge_dnetworks.sty, …), declaring `\ProvidesPackage{aistats20NN}`; mystyle.sty is the cut-down copy
+% oracle:  pdflatex 0 errors (the "provides aistats2023" LaTeX Warning), "A Title / Ann Author / Univ" and
+%          "Text STYLE-EXTRA."
+% engines: rust 529dc1b543 = the copy read raw: no title, no creator
+% expect:  0 errors, 0 warnings; the aistats binding's title and creator, the copy's own \styleextra
+% status:  RED (529dc1b543) -> GREEN (77w: the declaration routes the request to the aistats binding)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mystyle}
+\begin{document}
+\twocolumn[
+\aistatstitle{A Title}
+\aistatsauthor{Ann Author}
+\aistatsaddress{Univ}]
+Text \styleextra.
+\end{document}

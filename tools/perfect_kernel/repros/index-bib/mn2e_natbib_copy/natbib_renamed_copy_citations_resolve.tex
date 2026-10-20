@@ -6,7 +6,8 @@
 % engines: rust int34a = the copy read raw: its \citet/\citep find no `\b@key` (our \bibitem writes no \bibcite):
 %          "?" and "Citation undefined" Warnings; the kernel \cite a bare [bibref] with no label text
 % expect:  0 errors, 0 warnings; the natbib binding's author-year citations with their label text
-% status:  RED (int34a; SYNC 77s row: a renamed natbib copy is not the natbib binding — rule pending)
+% status:  RED (int34a; SYNC 77s row) -> GREEN (77w: the copy's `\ProvidesPackage{natbib}` routes the request to the natbib
+%          binding, the copy read after it as its stand-in's; guard perfect_kernel_batch77w::natbib_renamed_copy_citations_resolve)
 % preload: ar5iv.sty
 \documentclass{mn2e}
 \usepackage{natbib_vw}

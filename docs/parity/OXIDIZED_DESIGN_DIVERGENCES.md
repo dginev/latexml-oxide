@@ -19838,7 +19838,14 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    `copy_provides_keeps_counter`): the pool's article defaults yield to the copy, as article.cls's own would to the real
    class — jheppub.sty:313-314 `\renewcommand{\theequation}{\thesection.\arabic{equation}}` and
    `\numberwithin{equation}{section}` number (2.1) as its PDF does (2112.14648, 2607.20603; r2: "(1)" … "(60)"). The
-   read is no raw class read for K11 (`\lx@class@loaded@raw`): the binding owns the title page.
+   read is no raw class read for K11 (`\lx@class@loaded@raw`): the binding owns the title page. *A command saved
+   again* (77w): a `\let\org\X` of the copy, where `\org` already holds an earlier meaning of `\X` (a `\let` copy made
+   under `\X`'s name) that the binding's load assigned and `\X` has been redefined since, is declined in the copy's own
+   code too (`state::copy_provides_keeps_saved_meaning`, Info): `\org` keeps the meaning TeX gives it, `\X` before the
+   redefinition. The binding (or a file it read) made the same save-and-wrap, and the wrapper saved into `\org` calls
+   itself when the copy's own code uses it: myjmlr.cls and jmlr_mod.cls (jmlr.cls copies, rule 12) run
+   `\let\jmlr@org@newtheorem\newtheorem` (jmlr.cls:753-754; the jmlr binding's jmlrutils.sty makes the same wrap) before
+   their own `\newtheorem{example}`, which looped to the timeout (1506.02582, 2304.14217).
 3. *Locks.* A locked name is refused as for any file, but without the records a raw class's takeover leaves
    (`\lx@dropped@<name>`, `<cs>:redefined`, defaults; OD #265, #500): `copy_provides_refuses_locked`, so no replay of the
    copy's `\maketitle` body.
@@ -19981,7 +19988,56 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    first definition kept (r6, `state::copy_provides_text_default_clashes`, sect08.rs; the reviewer's probes newcmd_base
    and nc_chain: pdflatex 2 errors, "References", "Figure 1"). A name made `\relax` is definable, as LaTeX's
    `\newcommand` finds it (the copy's own `\let\refname\relax` before its `\newcommand`, or a raw base class's; r7).
-   `\def`/`\renewcommand` redefine as before.
+   `\def`/`\renewcommand` redefine as before. A copy's own load of a package its stand-in binding loaded on its behalf
+   (`<file>:loaded_by_stand_in`, the first load made while a stand-in binding loaded; the request read before the
+   load's provides-mode suspension, `requested_by_copy`) is that load, which TeX sees alone: its options apply, at
+   Info, with no "Option clash" (77w; a modified elsarticle.cls copy's `\RequirePackage[square,…]{natbib}`,
+   1811.10063).
+12. *The declaration route* (77w, user ruling 2026-10-20, extending 2026-10-17's "a binding always wins over a shipped
+   copy"). A `.sty` or `.cls` the paper ships under a name with no binding of its own that declares itself another file
+   a binding stands for is that binding's request (content.rs `provided_binding`, from `input_definitions_impl` ahead
+   of the raw read of a file found while interpreting definitions, Step 2, and of the versioned fallback, Step 3, which
+   reads no copy): `\usepackage{natbib_vw}` whose file `\ProvidesPackage{natbib}` loads the natbib binding,
+   `\documentclass{qm2008_abs}` whose file `\ProvidesClass{revtex4}` the revtex4 binding. The declaration is the file's
+   first `\Provides(Expl)?(Class|Package|File)` outside a comment (`file_declaration`, shared with rule 0 (a), the
+   declared-macro form included; a later one does not count: qm2008_abs.cls embeds textcase.sty's
+   `\ProvidesPackage{textcase}`, :3680); of the request's kind (a `.sty`'s `\ProvidesPackage` or `\ProvidesFile{X.sty}`,
+   a `.cls`'s `\ProvidesClass` or `\ProvidesFile{X.cls}`); naming another file, compared without regard to case; whose
+   binding is the registry's, matched as a request is without regard to case, or the one its versioned fallback reaches
+   (`aistats2023` → aistats). The binding loads with the request's options as a versioned fallback's does
+   (`fallback_request`/`fallback_target`; `\ver@<request>` is the binding's), its load a stand-in load
+   (`StandInLoadGuard`; `fallback_provides` names it, `loading_for_a_provides_route`), and the copy is read after it by
+   rules 1-11, identity by the declaration (rule 0 not asked); `<binding>:options_of_a_renamed_copy` is set for the load
+   (rule 11). Info `fallback`: "The paper's natbib_vw.sty declares itself natbib: loading the natbib.sty binding, then
+   the copy as its stand-in's". Not routed: a request with a binding of its own; a file the search paths do not find
+   in the paper's source (a TeX Live file, e.g. TL's dated rollback copies `multicol-2019-10-01.sty`, keeps the
+   versioned fallback); a copy naming itself (NJDnatbib, bmvc2k_natbib, ws-rv-har, hbnatbib, aistats2e: their own
+   bindings, or raw); another kind (a `.sty` that `\ProvidesClass{revtex4}`); a name no binding answers. No per-name list
+   is replaced: the renamed natbib forks with bindings (NJDnatbib, bmvc2k_natbib, ws-rv-har) and aistats2e/aistats2eM
+   declare their own names, so their registrations stay. Census (77w): of the 1,677 shipped `*natbib*.sty` (1,509
+   papers), 389 declare `natbib` under another name (90 new routes: modnatbib 21, natbib_vw 16, natbib_jrm 11,
+   my_natbib 7, natbibsty 6, …; 299 the versioned fallback reached before, natbib209 137, natbib2 134, whose copies are
+   now read too); over a 3 % corpus sample (87,937 papers) 491 papers (≈0.56 %) request a shipped file that the rule
+   routes, 186 of them reached by the versioned fallback before (by binding: aastex 102, neurips 42, IEEEtran 24,
+   longtable 23 — aalongtable.sty —, rotating 22 — rotating_pr.sty —, jheppub 22, aa 16, article 13). Perl: `FindFile`
+   finds no `.ltxml` for the request and reads the copy raw (Package.pm:2113-2133; `FindFile_fallback` reduces by name
+   only, :2141-2210), so a renamed natbib copy's citations read `\b@<key>`, which no `\bibitem` writes: "?" and a "Citation undefined" Warning per citation
+   (0802.4100 142 Warnings, 1003.3017 62, astro-ph0512042). Residual: a binding loaded already is not run again and
+   its copy is not read (its options reach it, rule 11); a bundle file declaring itself its first package
+   (1312.3078's cauchy.sty: theorem.sty, then exscale, epsfig and apacite) ends at that package's load guard
+   (`\@ifundefined{theorem@style}{}{\endinput}`), the rest of the bundle lost (0 → 8 Errors; options for the main
+   session: leave, or refuse a file with three or more distinct declarations — qm2008_abs.cls declares two); where the
+   copy departs from the binding's class the binding's markup stands (2209.10785's cidr.cls comments out acmart's
+   `natbib=true` default, so the acmart binding's natbib meets the document's `\usepackage[numbers]{natbib}`: LaTeX's
+   "Option clash" Error, where pdflatex loads natbib once; 1401.1086's confSt.cls, an aamas2013 copy, and 2312.16264's
+   arxiv.cls, an egpubl copy, meet those bindings' author-block gaps, 4-6 Errors and a merged creator, as a copy under
+   the binding's own name does; 2605.07897's bytedance_seed binding raises its honest "merged_creators" Error on a
+   parboxed author row). A/B (77w r3, base 529dc1b543, 471 papers: 161 natbib-census papers requesting their copy,
+   280 sampled routes, 30 witnesses; plus 200 random ships/controls, byte-identical): Errors 144 → 123, Fatals 0 → 0,
+   Warnings 12,652 → 8,787, words +1.5 %, "?" 2,608 → 109, "Citation undefined" Warnings 3,707 → 39; title
+   +37/−11, creator +29/−2, contact +66/−14 papers (the losses: raw classes' duplicated frontmatter now printed
+   once, 2210.16202 82 "Japan" → 10 as its source); 4 papers worse in Errors, all above. Guards
+   `perfect_kernel_batch77w::*`; repros `tools/perfect_kernel/repros/stand-in-copies/provides_route/`.
 
 Costs (instructions, 72a r3 vs 67int21, faithful loads): atlasdoc papers +26-33 % in r3-r7, its `\LoadClass{scrartcl}`
 (atlasdoc.cls:319, KOMA's 22 files), +0.8-3.8 % in r8, where the binding's base class stood for it, and back with r9,

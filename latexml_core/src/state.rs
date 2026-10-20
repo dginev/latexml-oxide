@@ -1608,6 +1608,13 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
   // unlocked state reads no lock and allocates nothing here)
   let locked =
     !state_is_unlocked() && token.with_cs_name(|cs| redefinition_locked(cs, &definition));
+  // (a stand-in's copy's own write to LaTeX's document hooks is document-time code, which it does not register, as it
+  // does not its `\AtBeginDocument` code: `copy_provides_defers`. ltxgrid's `\prepdef\@begindocumenthook{\open@column@one
+  // \@ne\set@colht…}` in qm2008_abs.cls and snp.cls, REVTeX 4 copies routed to the revtex4 binding, ran its page
+  // grid over the binding's names at `\begin{document}`: 7 "Missing number" Warnings, 0805.2253, 0806.0481, 0805.4759)
+  if !state_is_unlocked() && copy_provides_defers_hook_write(&token) {
+    return;
+  }
   // (a stand-in's copy's own title page, whatever becomes of it: what it prints decides its setters' defaults,
   // `copy_title_page_prints`)
   if let Stored::Expandable(ref defn) = definition
@@ -2151,6 +2158,55 @@ pub fn copy_provides_refuses_locked(token: &Token) -> bool {
       "provide",
       name,
       s!("{name} keeps LaTeXML's locked definition: the paper's {file} redefines it")
+    );
+  }
+  true
+}
+
+/// Does a stand-in's copy, read now ([`note_copy_provides_assignment`]), save `source` again into `token` — `\let
+/// \token\source` — where `token` already holds an earlier meaning of `source` (its definition is a `\let` copy made
+/// under `source`'s name, `definition_cs`) that the stand-in binding's load assigned, and `source` has been redefined
+/// since? Then the `\let` is declined, in the copy's code too: `token` keeps the meaning TeX gives it, `source` before
+/// the redefinition. The binding (or a file it read) made the very save-and-wrap the copy makes — `\let\org\X`, then
+/// `\X` redefined to call `\org` —, and saving the wrapper into `\org` makes `\X` call itself: myjmlr.cls and
+/// jmlr_mod.cls (renamed jmlr.cls copies routed to the jmlr binding, whose jmlrutils.sty made the same wrap) run
+/// `\let\jmlr@org@newtheorem\newtheorem` (jmlr.cls:753-754) before their own `\newtheorem{example}`, which looped to
+/// the timeout (1506.02582, 2304.14217; OXIDIZED_DESIGN_DIVERGENCES #731 rule 2, the epl2.cls `\let\epl@org@bibitem`
+/// case met in the copy's own code). Logged once per copy, at Info.
+pub fn copy_provides_keeps_saved_meaning(token: &Token, source: &Token, meaning: &Stored) -> bool {
+  let id = crate::definition::origin::copy_provides();
+  if id == 0
+    || state_is_unlocked()
+    || !matches!(token.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+    || token == source
+  {
+    return false;
+  }
+  let key = meaning_key(token);
+  if !state!().stand_in_meanings.contains(&key) {
+    return false;
+  }
+  let Some(saved) = lookup_meaning(token) else {
+    return false;
+  };
+  if definition_cs(&saved) != Some(*source) || same_meaning(&saved, meaning) {
+    return false;
+  }
+  let mut state = state_mut!();
+  if let Some(copy) = state.copy_provides_copies.get_mut(id as usize - 1)
+    && copy.declined.insert(key)
+  {
+    let file = copy.file.clone();
+    drop(state);
+    let name = token.with_cs_name(ToString::to_string);
+    let source_name = source.with_cs_name(ToString::to_string);
+    Info!(
+      "provide",
+      name,
+      s!(
+        "{name} keeps its saved {source_name}: the paper's {file} saves {source_name} again after its binding \
+         redefined it"
+      )
     );
   }
   true
@@ -2918,6 +2974,18 @@ pub fn copy_provides_defers(seam: &str) -> bool {
     );
   }
   true
+}
+
+/// Is `token` one of LaTeX's document hooks (`\@begindocumenthook`, `\@enddocumenthook`), which a stand-in's copy read
+/// now writes — `\g@addto@macro`, ltxgrid's `\prepdef`, a `\def` —, so that the write is document-time code, which the
+/// copy does not register, as it does not its `\AtBeginDocument` code ([`copy_provides_defers`], Info)? ltxgrid's
+/// `\prepdef\@begindocumenthook{\open@column@one\@ne\set@colht…}` (qm2008_abs.cls:3233, snp.cls; REVTeX 4 copies
+/// routed to the revtex4 binding) ran its page grid over the binding's names at `\begin{document}`: 7 "Missing number"
+/// Warnings in 0805.2253, 0806.0481, 0805.4759.
+pub fn copy_provides_defers_hook_write(token: &Token) -> bool {
+  crate::definition::origin::copy_provides() != 0
+    && token.with_cs_name(|cs| matches!(cs, "\\@begindocumenthook" | "\\@enddocumenthook"))
+    && token.with_cs_name(copy_provides_defers)
 }
 
 /// Put lthooks' code registration (`\AddToHook code`, the inner macro latex.ltx's `\AddToHook` hands the hook name,
@@ -6123,6 +6191,10 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
     lookup_meaning(token2)
       .unwrap_or(Stored::None);
   // };
+  if copy_provides_keeps_saved_meaning(token1, token2, &meaning) {
+    after_assignment();
+    return;
+  }
   // A lock against the class and package files (`"{cs}:locked@files"`, [`name_carries_lock`]) holds for their `\let`
   // as for their `\def` ([`install_definition`]): arabtex's asect.sty:297 `\let\endabstract\endquotation`, which its
   // own raw `\end` (alatex.sty:105-109) then calls, closed the kernel abstract's body as a quotation (2401.14559). A

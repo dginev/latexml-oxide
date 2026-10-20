@@ -1,0 +1,17 @@
+% witness: 0805.2253, 0806.0481, 0805.4759 (qm2008_abs.cls, snp.cls: renamed REVTeX 4 copies that
+%          `\ProvidesClass{revtex4}`; SYNC 68v open question, inventory Q12); qmcopy.cls is the cut-down copy
+% oracle:  pdflatex 0 errors (the "provides revtex4" LaTeX Warning), "Title / A. Author / Univ" and "Text QM-EXTRA."
+% engines: rust 529dc1b543 = the copy read raw: no affiliation in the creator (the copy's \affiliation stores it);
+%          Perl the OmniBus class
+% expect:  0 errors, 0 warnings; the revtex4 binding's creator with its affiliation contact, and the copy's own
+%          \qmextra
+% status:  RED (529dc1b543) -> GREEN (77w: the declaration routes the class to the revtex4 binding)
+% preload: ar5iv.sty
+\documentclass{qmcopy}
+\begin{document}
+\title{Title}
+\author{A. Author}
+\affiliation{Univ}
+\maketitle
+Text \qmextra.
+\end{document}

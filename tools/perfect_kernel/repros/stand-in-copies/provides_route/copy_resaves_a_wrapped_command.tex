@@ -1,0 +1,14 @@
+% witness: 1506.02582 (myjmlr.cls), 2304.14217 (jmlr_mod.cls): renamed jmlr.cls copies routed to the jmlr binding, whose
+%          jmlrutils.sty makes the same save-and-wrap of \newtheorem; the copy's own `\let\jmlr@org@newtheorem\newtheorem`
+%          saved the wrapper and its `\newtheorem{example}` called itself (timeout, Fatal)
+% oracle:  pdflatex 0 errors, "Example 1. Text."
+% engines: rust 77w r1 (the declaration route without the saved-meaning rule) = Fatal Timeout; 529dc1b543 = the copy
+%          read raw, no route
+% expect:  0 errors, 0 warnings; the example theorem numbered 1
+% status:  RED (77w r1) -> GREEN (77w: a copy's `\let` re-saving a command into the name that holds its earlier
+%          meaning is declined, state::copy_provides_keeps_saved_meaning)
+% preload: ar5iv.sty
+\documentclass{jmlrcopy}
+\begin{document}
+\begin{example}Text.\end{example}
+\end{document}

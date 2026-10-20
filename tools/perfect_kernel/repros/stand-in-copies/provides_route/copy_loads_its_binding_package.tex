@@ -1,0 +1,17 @@
+% witness: 1811.10063 (Article_website.cls, an elsarticle.cls copy: `\RequirePackage[square,…]{natbib}`): the copy's
+%          own natbib load after its binding loaded natbib for the class was LaTeX's "Option clash" Error, its options
+%          dropped
+% oracle:  pdflatex 0 errors, "See [1]."
+% engines: rust 77w r1 (the declaration route) = 1 Error "Option clash for package natbib", author-year; 529dc1b543 =
+%          the copy read raw
+% expect:  0 errors, 0 warnings; natbib's numeric citation in square brackets
+% status:  RED (77w r1) -> GREEN (77w: a copy's own load of a package its stand-in binding loaded is that load,
+%          content.rs `<file>:loaded_by_stand_in`)
+% preload: ar5iv.sty
+\documentclass{elscopy}
+\begin{document}
+See \citep{a}.
+\begin{thebibliography}{1}
+\bibitem[Smith(2001)]{a} J. Smith. A paper. 2001.
+\end{thebibliography}
+\end{document}
