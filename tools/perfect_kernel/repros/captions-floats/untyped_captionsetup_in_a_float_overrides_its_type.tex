@@ -1,0 +1,23 @@
+% witness: 77s r3 review probe p1 (corpus reach: none found in 390 papers of 2601-2606 with a typed \captionsetup and
+%          a \captionof; the shape is TeX's order of caption settings)
+% oracle:  pdflatex 0 errors: "Table 1 Tab in fig one" and "Figure 1 Fig own one" (bold labels, space), "Table 2. Tab in
+%          fig two" (bold label, the figure's period), "Table 3: Tab outside"
+% engines: rust 77s r3 = "Table 1. Tab in fig one" (the figure's preamble period beat the untyped setting inside it)
+% expect:  0 errors, 0 warnings; the captions as pdflatex
+% status:  RED (77s r3) -> GREEN (77s r3 review follow-up)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{caption}
+\captionsetup[figure]{labelsep=period,labelfont=bf}
+\begin{document}
+\begin{figure}
+\captionsetup{labelsep=space}
+\begin{minipage}{.4\textwidth}\captionof{table}{Tab in fig one}\end{minipage}
+\caption{Fig own one}
+\end{figure}
+\begin{figure}
+\begin{minipage}{.4\textwidth}\captionof{table}{Tab in fig two}\end{minipage}
+\caption{Fig own two}
+\end{figure}
+\begin{minipage}{.4\textwidth}\captionof{table}{Tab outside}\end{minipage}
+\end{document}

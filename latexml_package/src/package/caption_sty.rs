@@ -120,6 +120,15 @@ LoadDefinitions!({
       // caption3.sty:252-262): subfig's `\captionsetup[subfloat]{labelformat=empty}` must not empty every
       // figure's label, now that the main captions read these settings (`caption_format_tokens`).
       let typed = !type_prefix.is_empty() || !sub_prefix.is_empty();
+      // An untyped `\captionsetup` inside a float comes after the float type's options, which caption applied when
+      // the float began (`\caption@xfloat` → `\caption@settype`, caption.sty:271-274, :315), so it overrides them for
+      // the rest of the float: its keys are also that type's here, locally (a `\captionof{table}` in a figure under
+      // `\captionsetup[figure]{labelsep=period}` + `\captionsetup{labelsep=space}` is "Table 1 …", rev77s3 probe p1).
+      let current_type = if !typed && has_meaning(&T_CS!("\\@captype")) {
+        Some(do_expand(T_CS!("\\@captype"))?.to_string().trim().to_string()).filter(|t| !t.is_empty())
+      } else {
+        None
+      };
       for (key, value) in kv.get_pairs() {
         // The value's tokens, and its text for the keyword values (`labelsep=period`, `font={small,it}`), read back
         // without welding (`untex`).
@@ -134,6 +143,9 @@ LoadDefinitions!({
             .find(|v| !v.is_empty())
             .unwrap_or_default();
           let joined = if previous.is_empty() { text_value.clone() } else { s!("{previous},{text_value}") };
+          if let Some(captype) = &current_type {
+            assign_value(&s!("CAPTION_{captype}_{base}"), Stored::String(pin(joined.clone())), None);
+          }
           assign_value(&s!("{prefix}{base}"), Stored::String(pin(joined)), None);
           continue;
         }
@@ -144,6 +156,9 @@ LoadDefinitions!({
           other => other,
         };
         assign_value(&s!("{prefix}{key}"), Stored::String(pin(text_value.clone())), None);
+        if let Some(captype) = &current_type {
+          assign_value(&s!("CAPTION_{captype}_{key}"), Stored::String(pin(text_value.clone())), None);
+        }
         if key == "name" {
           assign_value(&s!("{prefix}name@tokens"), Stored::Tokens(value_tokens.clone()), None);
         }

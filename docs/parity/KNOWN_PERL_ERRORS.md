@@ -16082,3 +16082,14 @@ visible `{subfigure*}` node; pdflatex 0 errors, "Star"). And subfig's
 `captions-floats/captionof_subfigure_sty_is_a_panel`, `captions-floats/captionof_subfigure_sty_before_subfig`,
 `captions-floats/captionof_star_subfigure_sty_is_a_panel`; guards `perfect_kernel_batch77s::{
 captionof_subfig_subfloat_is_refused, captionof_subfigure_sty_is_a_panel, captionof_star_subfigure_sty_is_a_panel}`.
+
+## 1000. caption's `\bothIfFirst`/`\bothIfSecond` test their argument without expanding it
+
+caption3.sty:54-65 expands the tested argument (`\caption@prepare@bothif` + `\protected@xdef`) before asking whether it is
+empty, so a macro that expands to nothing counts as empty. Perl's caption.sty.ltxml:81-87 asks `IsEmpty` of the
+unexpanded tokens, so a name held in an empty macro still yields both arguments. Minimal trigger:
+`\usepackage{caption}\def\e{}[\bothIfFirst{\e}{X}]` — pdflatex "[]", Perl "[X]". In captions this is the label of a
+type with no name: `labelformat=simple` gives " (a)" with a leading no-break space (Perl and int34a), "(a)" in pdflatex.
+Rust (77s r3): the body of caption3.sty:54-65 (caption_sty.rs `\bothIfFirst`/`\bothIfSecond`). Guard
+`perfect_kernel_batch77s::captionof_takes_the_enclosing_float_options` (its `labelformat=simple` half); witnesses
+2002.11064, 1809.08822, 1811.06803 (algorithm2e under lipics-v2021 `labelformat=boxed`).

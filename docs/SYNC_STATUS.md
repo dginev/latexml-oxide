@@ -4522,7 +4522,20 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   subfigure.sty is hosted too (it opened the undefined `{subfigure*}`: an Error and a visible node; pdflatex "Star").
   Residual: pdflatex leaves `\@captype` set to the `\captionof`'s type in the float, so a `\caption` after
   `\captionof*{subfigure}{Star}` directly in a figure is "(a): Whole2" there; ours keeps the float's own type ("Figure 2:
-  Whole2"), by design (guard `perfect_kernel_gemini::captionof_in_a_float_keeps_the_float_type`). Docs: OD #776 titled
+  Whole2"), as Perl (its `\begin{#1}…\end{#1}` wrapper group restores `\@captype`, caption.sty.ltxml:124-125), kept by
+  main-session decision 2026-10-20: setting the type for the float is what lost a figure its number and shifted every
+  later float (57bu, 2605.19656, 2605.20199; guard `perfect_kernel_gemini::captionof_in_a_float_keeps_the_float_type`).
+  r3 review follow-up (main session): an untyped `\captionsetup` inside a float is also that float type's setting
+  there, locally, as TeX's order has it (the float's typed options apply when it begins, caption.sty:271-274, :315),
+  so a `\captionof{table}` in it reads it before the figure's preamble options (rev77s3 probe p1: "Table 1 Tab in fig
+  one", not "Table 1. "; guard `perfect_kernel_batch77s::untyped_captionsetup_in_a_float_overrides_its_type`). Open: a
+  document that defines `\@captype` in its preamble makes every `\captionof` outside floats take that type's options
+  (caption applies none) — rare, no corpus case. Older problems the r3 review found (int34a the same; open):
+  subfigure.sty `\subfigure[]{CCC}` drops its "(a)" (a panel with no tag); `\caption*`/`\captionof*` never apply a typed
+  `textfont=`; acmart main captions "Figure 1." where pdflatex prints "Figure 1:" and acmart.cls:958's caption fonts are
+  not applied (2602.09445); with subcaption and subfigure.sty both loaded, the main caption and the `\subfigure` panels
+  are at 90% where pdflatex has normal size and 80% (probes p7, p9, p3b in ~/data/pk_agents/main/scratch_356a0c47/rev77s3_probes/).
+  Docs: OD #776 titled
   T2A/T2B/T2C, X2/OT2 an open silent-loss row; OD #552 lists the caption-text and longtable sites and the
   no-cleveref divergence; the cleveref derivation moved to "Rust Error Fixes". A/B r3 vs r2 over r2's 409 papers:
   E 743 → 743, F 8 → 8, words −20 (2605.30420's 20 labels the PDF does not print); 23 papers change, every one a

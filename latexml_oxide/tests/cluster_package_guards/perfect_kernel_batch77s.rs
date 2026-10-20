@@ -544,6 +544,12 @@ Out \captionof{subfigure}{Loose} end.
         "S0.F2",
         r#"<figure inlist="lof" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure class="ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.F1.sf1"><tags><tag><text fontsize="80%" xml:id="S0.F1.sf1.1">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p class="ltx_figure_panel" xml:id="S0.F1.sf1.2">CCC</p><break class="ltx_break"/><toccaption><tag close=" ">(a)</tag>Sub in fig</toccaption><caption><tag close=". ">(a)</tag>Sub in fig</caption></figure><toccaption><tag close=" ">2</tag>FWhole</toccaption><caption><tag close=". ">Figure 2</tag>FWhole</caption></figure>"#,
       ),
+      // No enclosing float: caption's own `colon` separator, no type options (pdflatex "(a): Loose").
+      (
+        "figure",
+        "S0.F2.sf1",
+        r#"<figure xml:id="S0.F2.sf1"><tags><tag><text fontsize="80%" xml:id="S0.F2.sf1.1">(a)</text></tag><tag role="refnum">2(a)</tag></tags><toccaption><tag close=" ">(a)</tag>Loose</toccaption><caption><tag close=": ">(a)</tag>Loose</caption></figure>"#,
+      ),
     ],
   );
   // `labelformat=simple` for a type with no name (caption3.sty:54-65 `\bothIfFirst` expands its first argument):
@@ -611,6 +617,51 @@ See \Cref{n:a,n:b}, \cref{n:a}, \cref{m:a,m:b} and \cref{m:a}.
         "theorem",
         "Thmmemo1",
         r#"<theorem class="ltx_theorem_memo" inlist="thm theorem:memo" labels="LABEL:m:a" xml:id="Thmmemo1"><tags><tag>Memo 1</tag><tag role="creftype">memo</tag><tag role="creftypecap">Memo</tag><tag role="refnum">1</tag><tag role="typerefnum">Memo 1</tag></tags><title class="ltx_runin"><tag><text font="bold" xml:id="Thmmemo1.1">Memo 1</text></tag></title><para xml:id="Thmmemo1.p1"><p xml:id="Thmmemo1.p1.1"><text font="italic" xml:id="Thmmemo1.p1.1.1">C.</text></p></para></theorem>"#,
+      ),
+    ],
+  );
+}
+
+/// An untyped `\captionsetup` inside a float overrides the float type's preamble options for the rest of the float: caption
+/// applies a float's typed options when it begins (caption.sty:271-274 `\caption@xfloat` → `\caption@settype`, :315), so a
+/// later untyped setting comes after them, and a `\captionof` of another type there reads it (77s r3 review probe p1).
+/// pdflatex: "**Table 1** Tab in fig one" and "**Figure 1** Fig own one" (space), "**Table 2.** Tab in fig two" (the figure's
+/// period, no setting inside), "Table 4: Tab outside" (no float). Before, the figure's period won in the first figure.
+#[test]
+fn untyped_captionsetup_in_a_float_overrides_its_type() {
+  assert_elements(
+    r"\documentclass{article}
+\usepackage{caption}
+\captionsetup[figure]{labelsep=period,labelfont=bf}
+\begin{document}
+\begin{figure}
+\captionsetup{labelsep=space}
+\begin{minipage}{.4\textwidth}\captionof{table}{Tab in fig one}\end{minipage}
+\caption{Fig own one}
+\end{figure}
+\begin{figure}
+\begin{minipage}{.4\textwidth}\captionof{table}{Tab in fig two}\end{minipage}
+\caption{Fig own two}
+\end{figure}
+\begin{minipage}{.4\textwidth}\captionof{table}{Tab outside}\end{minipage}
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "figure",
+        "S0.F1",
+        r#"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><table class="ltx_minipage" inlist="lot" vattach="middle" width="138.0pt" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Tab in fig one</toccaption><caption><tag close=" "><text font="bold" xml:id="S0.T1.1">Table 1</text></tag>Tab in fig one</caption></table><toccaption><tag close=" ">1</tag>Fig own one</toccaption><caption><tag close=" "><text font="bold" xml:id="S0.F1.1">Figure 1</text></tag>Fig own one</caption></figure>"#,
+      ),
+      (
+        "table",
+        "S0.T2",
+        r#"<table class="ltx_minipage" inlist="lot" vattach="middle" width="138.0pt" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>Tab in fig two</toccaption><caption><tag close=". "><text font="bold" xml:id="S0.T2.1">Table 2</text></tag>Tab in fig two</caption></table>"#,
+      ),
+      (
+        "table",
+        "S0.T3",
+        r#"<table class="ltx_minipage" inlist="lot" vattach="middle" width="138.0pt" xml:id="S0.T3"><tags><tag>Table 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Table 3</tag></tags><toccaption><tag close=" ">3</tag>Tab outside</toccaption><caption><tag close=": ">Table 3</tag>Tab outside</caption></table>"#,
       ),
     ],
   );

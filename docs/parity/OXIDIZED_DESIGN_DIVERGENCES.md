@@ -16980,7 +16980,7 @@ mode":
 **Guards**: `perfect_kernel_batch65m::{imsart_bdoi_is_gobbled, file_arguments_are_not_typeset,
 raw_class_doi_is_a_string, counter_name_with_underscore_is_its_id}`.
 
-### 552. cleveref's `\label[type]{key}` right after `\caption` keeps its key (Perl: `[` is read as the label)
+### 552. A `\label[type]{key}` keeps its key wherever a caption reads its label — after `\caption`, in its text, in a longtable — with or without cleveref (Perl: `[` is read as the label)
 
 `\@caption` moves a `\label` that follows the caption into it (`\@caption@postlabel … SkipMatch:\label Semiverbatim`,
 latex_constructs.pool.ltxml:3172), reading the label's key as the next argument. cleveref's `\label` takes an optional
@@ -17002,8 +17002,9 @@ inside the caption's text (`\@@@hack@caption@`, latex_constructs/sect09.rs; 1412
 whether or not cleveref is loaded; the kernel `\label` takes no optional, so pdflatex reads `[` as the key and typesets
 the rest — a longtable's `\caption{Long}\label[appendixtable]{lt}` prints "appendixtable]lt" after the caption and
 every `\ref{lt}` is "??" (0 errors). We label the key and drop the `[type]` text, so the reference resolves (77s r2
-re-review probe l2). Recorded as a divergence, not ruled on: reading the type only with cleveref loaded would match
-pdflatex. **Guards**:
+re-review probe l2). Kept by main-session decision 2026-10-20 as a semantic gain (content and markup before PDF fidelity:
+the key labels the object and its references resolve, where pdflatex prints bracket text and "??"); reading the type
+only with cleveref loaded would match pdflatex. **Guards**:
 `perfect_kernel_batch65m::cleveref_label_type_after_caption` (repros
 captions-floats/cleveref_label_type_after_{caption,procedure_caption,captionof}),
 `perfect_kernel_batch77s::label_type_in_caption_text` (repro package-bindings/cleveref_label_type_in_caption_text).
