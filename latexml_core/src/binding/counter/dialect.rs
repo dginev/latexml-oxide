@@ -1169,7 +1169,9 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
     // the reference reads the item's own label): its `\p@enumi` is empty too, but its authors replace the sibling's
     // label with their own (`\def\@currentlabel{(P2')}\label{…}`, 2502.11630; 2409.02896), and `\@currentlabel` is
     // not read here; so is a top-level `\item[…]` with no numbered item in force, where LaTeX's label is the last
-    // section's or equation's. KNOWN_PERL_ERRORS #1003; guards `perfect_kernel_batch77u::{
+    // section's or equation's. A nested list's author can override it too, and there the sibling's label wins
+    // (2609.14520: "ii)" for the author's "ii′)"); reading an author-set `\@currentlabel` is deferred (user ruling
+    // 2026-10-20, SYNC_STATUS 77u residual). KNOWN_PERL_ERRORS #1003; guards `perfect_kernel_batch77u::{
     // item_with_its_own_label_takes_the_enclosing_label, enumitem_item_with_its_own_label_takes_the_enclosing_label}`.
     let ctr = counter_for_type(&counter);
     let labelled = lookup_string(ITEM_LABEL_COUNTER);

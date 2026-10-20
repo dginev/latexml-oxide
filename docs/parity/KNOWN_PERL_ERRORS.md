@@ -16144,7 +16144,12 @@ item's label. Perl's form stays after a numbered sibling whose `\p@` prints (the
 "1", pdflatex "1a") and in a top-level list (`\p@enumi` is empty: no refnum, the reference reads the item's own label;
 with no numbered item in force LaTeX's label is the last section's or equation's): authors who reference a top-level
 sibling `\item[…]` set `\@currentlabel` themselves (`\def\@currentlabel{(P2')}\label{…}`, 2502.11630; 2409.02896's
-`\phantomitem`), which is not read, and the sibling's label would replace the item's own (SYNC_STATUS 77u residual). Repros
+`\phantomitem`), which is not read, and the sibling's label would replace the item's own (SYNC_STATUS 77u residual).
+A nested enumitem list's author does the same: 2609.14520's level-2 `[label=\roman*$)$]` list has
+`\item[ii$')$]\def\@currentlabel{ii$')$}\label{…}` after a numbered sibling, and its two references print the
+sibling's "ii)" where pdflatex prints "ii′)" (int35a "(1.1)") — the deferred `\@currentlabel` residual (user ruling
+2026-10-20). A `\p@<counter>` whose body is only `\@empty` still counts as printing (`\def\p@bar{\@empty}` on a
+`\usecounter{bar}` list: "(H)", pdflatex "B1"). Repros
 `list-structure/item_with_its_own_label_takes_the_enclosing_label`,
 `list-structure/enumitem_item_with_its_own_label_takes_the_enclosing_label`; guards
 `perfect_kernel_batch77u::{item_with_its_own_label_takes_the_enclosing_label,

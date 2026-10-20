@@ -4675,7 +4675,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   pdflatex the sibling's label, or the last section's or equation's with no numbered item in force): authors who
   reference such an item set `\@currentlabel` themselves (`\def\@currentlabel{(P2')}\label{…}`, 2502.11630;
   2409.02896's `\phantomitem`), which `\label` does not read here or in Perl, and the sibling rule printed "(P1)" and
-  "(iv)" for them. Reading an author-set `\@currentlabel` at `\label` would close both (awaiting a user ruling). A
+  "(iv)" for them; in a nested enumitem list the sibling rule does replace an author's own label: 2609.14520's
+  `\item[ii$')$]\def\@currentlabel{ii$')$}\label{…}` after a numbered sibling prints the sibling's "ii)" (pdflatex
+  "ii′)", int35a "(1.1)", rev77u3 finding 1). Reading an author-set `\@currentlabel` at `\label` would close all
+  three — DEFERRED by user ruling 2026-10-20 (a residual, not a batch now). A
   plain itemize `\item` has no refnum (Perl's form; pdflatex the enclosing item's label). `\cref` to a description
   `\item[…]` in an enumerate prints no name (RED row above), and math a package makes sans stays serif
   (Font-Selection Chain Residuals 8).
