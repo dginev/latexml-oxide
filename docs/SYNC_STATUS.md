@@ -4432,7 +4432,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   name derivation, T2A/T2B/T2C і/ј, `{filecontents}` over a disk file, caption.sty's sub-type refusal with subfigure.sty
   panels hosted in caption's format, a `\captionof` taking the enclosing float's options, an untyped `\captionsetup`
   inside a float; KPE #998-#1000, OD #552/#776, the new "Rust Error Fixes" section); 77p (spacing-run author separators)
-  stays in review and lands as int36. Reviews: r1 SHIP-after-fixes, r2 SHIP-after-fixes, r3 SHIP after the
+  stays in review (it lands after int36). Reviews: r1 SHIP-after-fixes, r2 SHIP-after-fixes, r3 SHIP after the
   `\captionsetup` follow-up. Gates int35a: nextest 6318/6318 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff
   vs int34a empty. Witness A/B (396 papers of the 77s rounds) vs int34a: E 3,381 → 732, F 13 → 8, 0 Fatal worse,
   +45,700 words; the 9 papers with more Errors are caption + subfig `\captionof{subfigure}` refusals pdflatex raises too
@@ -4682,6 +4682,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   plain itemize `\item` has no refnum (Perl's form; pdflatex the enclosing item's label). `\cref` to a description
   `\item[…]` in an enumerate prints no name (RED row above), and math a package makes sans stays serif
   (Font-Selection Chain Residuals 8).
+  **Integration (int36, 77u r1-r5, binary int36a):** quality batch 2 lands alone (77p stays in review — r10 — and lands
+  as int37). Reviews: rev77u NO-SHIP (math fonts in sans-default documents, enumitem `\item[…]`) → r3; rev77u2 NO-SHIP
+  (enumitem sibling refnum) → r4; rev77u3: the sibling rule kept as LaTeX's `\@currentlabel` (main-session ruling, its
+  author-override witness 2609.14520 recorded under the deferred `\@currentlabel` residual) → r5 docs. Gates int36a:
+  nextest 6342/6342 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int35b empty. Population A/B (923:
+  528 papers of the 77u rounds and reviews + 395 random of the proj98 sample) vs int35b: E 6,709 → 6,647, F 23 → 23, 0
+  Error or Fatal worse; one word loss > 1 % (2609.14520, 50,807 → 50,123: its `\ref` texts "(1.1)(i))a" → "a" as its
+  enumitem `ref=` sets them, no authored text lost). Binding nets (int36a) 136/136, 0 documents worse than int35b.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;
