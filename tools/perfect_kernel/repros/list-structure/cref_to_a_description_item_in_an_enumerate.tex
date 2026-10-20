@@ -1,0 +1,22 @@
+% witness: rev77u2 finding 4 (pre-existing)
+% oracle:  pdflatex 0 errors; "REFS [2] [item 2] [item 2]." — `\item[D]` does not `\refstepcounter` (latex.ltx
+%          `\@item`), so `\label` takes `\@currentlabel` and cleveref's `\cref@currentlabel` as the enumerate item
+%          left them: number "2", type enumi ("item")
+% engines: int35a "[D] [item ] [D]"; 77u r3/r4 "[2] [item 2] [2]": the refnum is the enclosing item's (KNOWN_PERL_ERRORS
+%          #1003) but the item's cleveref forms are its own list's type (`\lx@make@tags{@desci}`), which has no
+%          `\crefname`, so `\cref` prints no name
+% expect:  0 errors, 0 warnings; `\cref{d}` "item 2" (the `creftype` tags of the enclosing counter's type)
+% status:  RED (77u r4; SYNC "Perfect-kernel RED repros without a row elsewhere")
+\documentclass{article}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\begin{document}
+\begin{enumerate}
+\item one
+\item two
+  \begin{description}
+  \item[D] dee\label{d}
+  \end{description}
+\end{enumerate}
+REFS [\ref{d}] [\autoref{d}] [\cref{d}].
+\end{document}

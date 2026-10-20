@@ -231,9 +231,10 @@ fn nbsp(markup: &str) -> String { markup.replace('~', "\u{00A0}") }
 /// An `\item[…]` does not `\refstepcounter` (latex.ltx `\@item`, only `\if@noitemarg`), so a `\label` on it takes
 /// `\@currentlabel` as the last numbered item left it: the enclosing item's "1" for the first nested `\item[(X)]`.
 /// enumitem empties `\p@enumii` (enumitem.sty:551-556), which Perl's `\p@<counter>` form (latex_constructs.pool.ltxml:
-/// 1383) relied on: the refnum was lost (77u r2; 2603.02347, 7 items). (Z), after a numbered item of its own list,
-/// keeps Perl's form, here none (pdflatex "a"; authors who reference such an item set `\@currentlabel` themselves,
-/// 2502.11630). pdflatex "Refs: [1] [a] [a]". Repro
+/// 1383) relied on: the refnum was lost (77u r2; 2603.02347, 7 items). (Z), after a numbered item of its own nested
+/// list whose `\p@enumii` prints nothing, takes that sibling's `\p@enumii\theenumii`, LaTeX's `\@currentlabel` "a"
+/// (77u r3 had none; Perl's enumitem binding never empties `\p@`, so Perl and int35a print "1"). pdflatex
+/// "Refs: [1] [a] [a]". KNOWN_PERL_ERRORS #1003. Repro
 /// list-structure/enumitem_item_with_its_own_label_takes_the_enclosing_label.
 #[test]
 fn enumitem_item_with_its_own_label_takes_the_enclosing_label() {
@@ -247,7 +248,7 @@ fn enumitem_item_with_its_own_label_takes_the_enclosing_label() {
     r#"<item labels="LABEL:y" xml:id="S0.I1.i1.I1.i1"><tags><tag>(a)</tag><tag role="refnum">a</tag><tag role="typerefnum">item~a</tag></tags><para xml:id="S0.I1.i1.I1.i1.p1"><p>plain</p></para></item>"#,
   );
   let z = nbsp(
-    r#"<item labels="LABEL:z" xml:id="S0.I1.i1.I1.ix2"><tags><tag>(Z)</tag><tag role="typerefnum">item (Z)</tag></tags><para xml:id="S0.I1.i1.I1.ix2.p1"><p>after</p></para></item>"#,
+    r#"<item labels="LABEL:z" xml:id="S0.I1.i1.I1.ix2"><tags><tag>(Z)</tag><tag role="refnum">a</tag><tag role="typerefnum">item (Z)</tag></tags><para xml:id="S0.I1.i1.I1.ix2.p1"><p>after</p></para></item>"#,
   );
   assert_elements(tex, RAW, (0, 0), &[
     ("item", "S0.I1.i1.I1.ix1", &x),
@@ -256,8 +257,46 @@ fn enumitem_item_with_its_own_label_takes_the_enclosing_label() {
   ]);
 }
 
+/// The sibling's form reaches every reference form: hyperref's `\autoref` and cleveref's `\cref` of the (Z) item
+/// print "item a", as pdflatex (77u r3: "item " dangling and "item (Z)", the item had no refnum; rev77u2 finding 1).
+/// pdflatex "REFS [a] [item a] [item a]". Repro list-structure/enumitem_sibling_item_reference_forms.
+#[test]
+fn enumitem_sibling_item_reference_forms() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/list-structure/enumitem_sibling_item_reference_forms.tex"
+  );
+  let z = nbsp(concat!(
+    r#"<item labels="LABEL:z" xml:id="S0.I1.i1.I1.ix1"><tags><tag>(Z)</tag><tag role="autoref">item~a</tag>"#,
+    r#"<tag role="creftype">item</tag><tag role="creftypecap">Item</tag><tag role="creftypeplural">items</tag>"#,
+    r#"<tag role="creftypepluralcap">Items</tag><tag role="refnum">a</tag><tag role="typerefnum">item (Z)</tag>"#,
+    r#"</tags><para xml:id="S0.I1.i1.I1.ix1.p1"><p>after</p></para></item>"#,
+  ));
+  assert_elements(tex, RAW, (0, 0), &[("item", "S0.I1.i1.I1.ix1", &z)]);
+}
+
+/// An itemize never steps (`\@nmbrlistfalse`): an `\item[…]` after a plain `\item` of an itemize nested in an
+/// enumerate item still takes that enumerate item's "1", as pdflatex. 77u r3 counted the plain item as a numbered
+/// sibling, so s2 had no refnum: `\the@itemii` is empty (sect06.rs), and an empty body is stored as no expansion,
+/// which `prints_something` (dialect.rs) read as printing (rev77u2 finding 3). pdflatex "REFS [1] [1] [1]" (the plain
+/// item keeps Perl's form, no refnum). Repro list-structure/item_after_an_itemize_sibling_takes_the_enclosing_label.
+#[test]
+fn item_after_an_itemize_sibling_takes_the_enclosing_label() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/list-structure/item_after_an_itemize_sibling_takes_the_enclosing_label.tex"
+  );
+  let s2 = concat!(
+    r#"<item labels="LABEL:s2" xml:id="S0.I1.i1.I1.ix2"><tags><tag><Math mode="inline" tex="\circ" text="compose" "#,
+    r#"xml:id="S0.I1.i1.I1.ix2.m1"><XMath><XMTok meaning="compose" name="circ" role="MULOP">∘</XMTok></XMath>"#,
+    r#"</Math></tag><tag role="refnum">1</tag><tag role="typerefnum">item <Math mode="inline" tex="\circ" "#,
+    r#"text="compose" xml:id="S0.I1.i1.I1.ix2.m2"><XMath><XMTok meaning="compose" name="circ" role="MULOP">∘"#,
+    r#"</XMTok></XMath></Math></tag></tags><para xml:id="S0.I1.i1.I1.ix2.p1"><p>circ</p></para></item>"#,
+  );
+  assert_elements(tex, RAW, (0, 0), &[("item", "S0.I1.i1.I1.ix2", s2)]);
+}
+
 /// The same in the kernel's lists: a first nested `\item[(W)]` takes its enclosing item's "1a" (pdflatex), where Perl's
-/// `\p@enumiii` form gave "1(a)"; (X), after a numbered item of its own list, keeps Perl's "1" (pdflatex "1a"). pdflatex
+/// `\p@enumiii` form gave "1(a)"; (X), after a numbered item of its own list whose `\p@enumii` (`\theenumi`) prints,
+/// keeps Perl's "1" (pdflatex "1a"; KNOWN_PERL_ERRORS #1003). pdflatex
 /// "Refs: [1] [1a] [1a] [1a] [1(a)i]". Repro list-structure/item_with_its_own_label_takes_the_enclosing_label.
 #[test]
 fn item_with_its_own_label_takes_the_enclosing_label() {

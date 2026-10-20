@@ -2,11 +2,13 @@
 % oracle:  pdflatex 0 errors; "Refs: [1] [a] [a]." — an `\item[…]` does not `\refstepcounter` (latex.ltx `\@item`), so
 %          its label is `\@currentlabel` as the enclosing item ("1") or the numbered sibling before it ("a") left it
 % engines: rust 77u r2 no refnum on (X) and (Z) (`\p@enumii` emptied by enumitem.sty:551-556, which Perl's
-%          `\p@<counter>` form, latex_constructs.pool.ltxml:1383, relied on); int35a/perl "1" for both
-% expect:  0 errors, 0 warnings; refnums "1", "a"; (Z), after a numbered item of its own list, keeps Perl's form (no
-%          refnum here: authors who reference such an item set `\@currentlabel` themselves, which is not read — SYNC
-%          "77u" r3 residual; 2502.11630, 2409.02896)
-% status:  RED (77u r2) -> GREEN (77u r3: dialect.rs `ref_step_item_counter`, the enclosing numbered item's form)
+%          `\p@<counter>` form, latex_constructs.pool.ltxml:1383, relied on; Perl's enumitem binding never empties
+%          it); int35a/perl "1" for both; 77u r3 "1", none
+% expect:  0 errors, 0 warnings; refnums "1", "a", "a": (Z), after a numbered item of its own nested list whose
+%          `\p@enumii` enumitem emptied, takes that sibling's `\p@enumii\theenumii` (LaTeX's `\@currentlabel`)
+% status:  RED (77u r2) -> GREEN for (X) (77u r3: dialect.rs `ref_step_item_counter`, the enclosing numbered item's
+%          form) -> GREEN for (Z) (77u r4: the sibling's form where `\p@<ctr>` prints nothing; r3 had no refnum,
+%          rev77u2 finding 1)
 \documentclass{article}
 \usepackage{enumitem}
 \setlist[enumerate,2]{label=(\alph*), ref=\alph*}

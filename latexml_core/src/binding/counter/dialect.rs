@@ -1098,16 +1098,26 @@ pub fn reset_counter(ctr: &Token) -> Result<()> {
 
 /// The counter of the last numbered `\item` in force, whose label an `\item[…]` references ([`ref_step_item_counter`]).
 const ITEM_LABEL_COUNTER: &str = "lx@item@label@counter";
+/// The [`ITEM_LABEL_COUNTER`] the list's first numbered `\item` found in force: an enclosing list's counter, empty in
+/// a top-level list ([`ref_step_item_counter`]).
+const ITEM_LABEL_ENCLOSING: &str = "lx@item@label@enclosing";
 
-/// Whether the macro `cs` expands to something: defined, and not a parameterless empty macro.
+/// Whether the macro `cs` expands to something: defined, and not a parameterless empty macro. An empty body is
+/// stored as no expansion at all (`Expandable::new` "treat empty tokens as None"), so both forms are empty: the
+/// itemize's `\the@item<n>` (sect06.rs) and enumitem's emptied `\p@enum<n>` (enumitem_sty.rs).
 fn prints_something(cs: &str) -> Result<bool> {
   Ok(match lookup_definition(&T_CS!(cs))? {
     Some(defn) => {
       !(defn.is_expandable()
+        && defn.get_conditional_type().is_none()
         && defn
           .get_parameters()
           .is_none_or(|params| params.get_num_args() == 0)
-        && matches!(defn.get_expansion(), Some(ExpansionBody::Tokens(body)) if body.is_empty()))
+        && match defn.get_expansion() {
+          None => true,
+          Some(ExpansionBody::Tokens(body)) => body.is_empty(),
+          Some(ExpansionBody::Closure(_)) => false,
+        })
     },
     None => false,
   })
@@ -1153,14 +1163,20 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
     // was lost (2603.02347, 7 items; covington's `\item[b.]` in an `{example}`, 2405.01972). So when the last numbered
     // item in force is an enclosing list's (`ITEM_LABEL_COUNTER` names another counter), the refnum is that item's
     // `\p@<ctr>\the<ctr>`, read before `\the<counter>` is emptied. After a numbered item of the same list LaTeX's
-    // label is that sibling's, which authors replace with their own (`\def\@currentlabel{(P2')}\label{…}`,
-    // 2502.11630; 2409.02896), and `\@currentlabel` is not read here: Perl's form stays, as it does with no numbered
-    // item in force (a top-level `\item[…]`, where LaTeX's label is the last section's or equation's). KNOWN_PERL_ERRORS
-    // #1003; guards `perfect_kernel_batch77u::{item_with_its_own_label_takes_the_enclosing_label,
-    // enumitem_item_with_its_own_label_takes_the_enclosing_label}`.
+    // label is that sibling's. Perl's form keeps the enclosing item's label (`\p@enumii` = `\theenumi`, "1" where
+    // LaTeX has "1a"), and nothing at all once enumitem has emptied `\p@<ctr>`: there a nested list's refnum is the
+    // sibling's `\p@<ctr>\the<ctr>`, LaTeX's `\@currentlabel` ("a"). A top-level list keeps Perl's form (no refnum,
+    // the reference reads the item's own label): its `\p@enumi` is empty too, but its authors replace the sibling's
+    // label with their own (`\def\@currentlabel{(P2')}\label{…}`, 2502.11630; 2409.02896), and `\@currentlabel` is
+    // not read here; so is a top-level `\item[…]` with no numbered item in force, where LaTeX's label is the last
+    // section's or equation's. KNOWN_PERL_ERRORS #1003; guards `perfect_kernel_batch77u::{
+    // item_with_its_own_label_takes_the_enclosing_label, enumitem_item_with_its_own_label_takes_the_enclosing_label}`.
     let ctr = counter_for_type(&counter);
     let labelled = lookup_string(ITEM_LABEL_COUNTER);
-    if !labelled.is_empty() && labelled != ctr {
+    let sibling_label = labelled == ctr
+      && !lookup_string(ITEM_LABEL_ENCLOSING).is_empty()
+      && !prints_something(&s!("\\p@{ctr}"))?;
+    if !labelled.is_empty() && (labelled != ctr || sibling_label) {
       for (alias, cs) in [
         ("\\lx@item@label@p@", s!("p@{labelled}")),
         ("\\lx@item@label@the@", s!("the{labelled}")),
@@ -1224,10 +1240,16 @@ pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>
   } else {
     let props = ref_step_counter_by_meaning(&counter)?;
     // The item set `\@currentlabel` (latex.ltx `\refstepcounter` in `\@item`) when its list is numbered — its
-    // `\the<counter>` prints something; an itemize's is empty (sect06.rs), as LaTeX's itemize never steps. Local to
-    // the list, as the `\protected@edef` is.
+    // `\the<counter>` prints something; an itemize's `\the@item<n>` and a description's are empty (sect06.rs), as
+    // LaTeX's `\@nmbrlistfalse` lists never step, so an `\item[…]` after an itemize sibling still takes the enclosing
+    // enumerate item's label ("1"). Local to the list, as the `\protected@edef` is; the first numbered item records
+    // the enclosing list's counter it replaces.
     let ctr = counter_for_type(&counter);
     if prints_something(&s!("\\the{ctr}"))? {
+      let in_force = lookup_string(ITEM_LABEL_COUNTER);
+      if in_force != ctr {
+        assign_value(ITEM_LABEL_ENCLOSING, in_force, None);
+      }
       assign_value(ITEM_LABEL_COUNTER, ctr, None);
     }
     props

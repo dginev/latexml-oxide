@@ -3,7 +3,8 @@
 %          `\@item`): the enclosing item's, or the numbered sibling's before it
 % engines: rust 77u r2 / perl: (X) "1" (`\p@enumii` = `\theenumi`), (W) "1(a)" (`\p@enumiii`)
 % expect:  0 errors, 0 warnings; refnums "1", "1a", "1", "1a", "1(a)i": (W) takes its enclosing item's label; (X),
-%          after a numbered item of its own list, keeps Perl's form ("1", pdflatex "1a"; residual, see the enumitem repro)
+%          after a numbered item of its own list whose `\p@enumii` prints (`\theenumi`), keeps Perl's form ("1", pdflatex
+%          "1a"; residual, SYNC "77u"; KNOWN_PERL_ERRORS #1003)
 % status:  RED (77u r2) -> GREEN for (W) (77u r3: dialect.rs `ref_step_item_counter`)
 \documentclass{article}
 \begin{document}

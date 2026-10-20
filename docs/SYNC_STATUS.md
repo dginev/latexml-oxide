@@ -238,6 +238,14 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
 5. **`.bib` author names and year are not sans in a sans document** (77u r2/r3): `\renewcommand\familydefault{\sfdefault}` + a `.bib` bibliography — the title and publisher spans are `font="sansserif"` (the session digests in the defaults where `\bibliography` stands, `lx@bibliography@normalfont`), the `ltx_bib_author` and `ltx_bib_year` spans, which the post stage builds, carry no font; pdflatex sets the whole entry in CMSS10. Fixture `latexml_oxide/tests/cluster_regressions/bib_font_defaults_sans_document.tex`; `06_cluster_bibliography::bib_entries_take_the_defaults_where_the_bibliography_stands` asserts the title and publisher only. Open.
 6. **`\textnormal` in maths keeps a fixed serif font** (77u r2): `\textnormal@math` (`$\textnormal{x}$` in a `\familydefault{\sfdefault}` document) is serif, pdflatex CMSS10; the text-mode `\textnormal` follows `\familydefault` (OD #779). Open.
 7. **A `\familydefault` the font table does not know falls back to serif only in `\normalfont`** (77u r2, kept by the main session): `\lx@normalfont@base` (sect13.rs) puts serif in force before `\normalfont`'s `\selectfont`; elsewhere `\selectfont` keeps the font in force for an unknown family (`{\sffamily\fontfamily{droidserif}\selectfont x}` stays sans). The neutral font of notes and tags (`font_code_named`) reads only a literal or a chain of parameterless macros: opensans.sty's `[default]` (:160-161, `\familydefault` = `\opensansfamily` = `\opensans@family{…}`, "opensans-TLF", not in font.rs's table either) stays serif where pdflatex sets Open Sans. Open.
+8. **Math a package makes sans stays serif** (77u r4, review probe sfm; base and r3 alike): sfmath.sty (:329-344,
+   `\SetSymbolFont{operators}`, the `SFMath` letters), arev.sty, cmbright.sty (:29-33, the `cmbrm`/`cmbrs` symbol fonts)
+   and beamer's default sans math (beamerbasefont.sty:205-222, `\SetSymbolFont{operators}{normal}{OT1}{cmss}…` unless
+   `professionalfonts`) set a formula's letters and digits in a sans font (pdflatex `pdffonts` CMSS/HFBR); here the
+   letters are `<mi>` italic serif. A formula's token fonts are the
+   text default's (OD #780), and none of these bindings declares a sans math version (`\DeclareSymbolFont`/
+   `\SetSymbolFont` for `operators`/`letters`). Fix: a binding-level math default (the family of the `operators` and
+   `letters` symbol fonts) read where `finalize_rec` resets an `ltx:Math`. Open.
 
 ### Fragid Parity Open Items
 1. **`associateNode` (Post.pm L508-585) unported**: Generated MathML/OpenMath nodes carry no `xml:id`, so `convertedIDs` and pmml↔cmml parallel cross-linking do not exist.
@@ -452,6 +460,13 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
 The open RED repros of `tools/perfect_kernel/repros/` that no other row names; headers re-checked 2026-10-02 (scope:
 PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary). Each row: defect, classification, repro path.
 
+- **`\cref` to an `\item[…]` of a description inside an enumerate prints no name** (GENUINE-RUST-ONLY since 77u r3, base
+  printed the item's own label; review rev77u2 finding 4): the refnum is now the enclosing enumerate item's ("2", KNOWN_PERL_ERRORS
+  #1003), but the item's cleveref forms are built for its own list's type (`\lx@make@tags{@desci}`, dialect.rs
+  `ref_step_item_counter`), which has no `\crefname`, so `\cref{d}` prints "2" where pdflatex prints "item 2" (cleveref's
+  `\cref@currentlabel` keeps the enclosing item's type, as `\@currentlabel` its number). Fix: the `creftype…` tags of an
+  `\item[…]` that takes another counter's label are that counter's type (not one line: the role-less and `typerefnum`
+  tags stay the item's own). RED `list-structure/cref_to_a_description_item_in_an_enumerate`.
 - **biblatex-only `.bib` fields are digested under natbib/BibTeX** (GENUINE-RUST-ONLY, predates 77a; 77a r5 review
   finding 3): 47 field handlers of latexml_engine/src/bibtex.rs, none in Perl's BibTeX.pool — the block at :1962-2172
   (19 defaults: `journaltitle`, `location`, `urldate`, `titleaddon`, `addendum`, `maintitle`, `mainsubtitle`,
@@ -4641,15 +4656,29 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   nested `\item[…]` refnums are back ("1", "3"); empty-token names and reference tooltips are no longer italic letters.
   None worse: a sibling rule for `\item[…]` (the numbered sibling's label, as pdflatex without the authors' fix) printed
   "(P1)" and "(iv)" in 2502.11630 and 2409.02896 and was dropped (residual below). Inits 0/0, dumps identical to int35a.
-  Residuals: Font-Selection Chain Residuals 5-7. An `\item[…]` keeps Perl's `\p@<counter>` form (KPE #1003) after a
-  numbered item of its own list (pdflatex: that sibling's label; `\item a \item[(X)]\label{x}` at the second level is
-  "1", pdflatex "1a") and at the top level (empty; pdflatex the last section's or equation's label): authors who
+  Residuals: Font-Selection Chain Residuals 5-7; the `\item[…]` residuals are restated in r4.
+  **r4** (re-review fixes; KPE #1003 corrected, OD #780 worded): under enumitem an `\item[…]` after a numbered item
+  of its own nested list had no refnum in r3 (`\setlist[enumerate,2]{label=(\alph*),ref=\alph*}`: `\ref` "(Z)",
+  `\autoref` a dangling "item ", pdflatex "a"/"item a"; Perl and int35a "1", Perl's enumitem binding never empties
+  `\p@`): where the list's `\p@<ctr>` prints nothing and an enclosing numbered item is in force, the refnum is the
+  sibling's `\p@<ctr>\the<ctr>`, read before `\the<counter>` is emptied, LaTeX's `\@currentlabel` (dialect.rs
+  `ref_step_item_counter`, `ITEM_LABEL_ENCLOSING`). An itemize's `\item[…]` after a plain `\item` of its itemize, inside an
+  enumerate item, had none either: r3's `prints_something` read an empty macro as printing (an empty body is stored
+  as no expansion, `Expandable::new`), so `\the@itemii` (sect06.rs) made the itemize item a numbered sibling; it now
+  takes the enumerate item's "1", as pdflatex. 2502.11630 and 2409.02896 are byte-identical to r2/r3 (their
+  `\item[…]`s are in top-level lists). Repros `list-structure/{enumitem_sibling_item_reference_forms,
+  item_after_an_itemize_sibling_takes_the_enclosing_label}`; guards `perfect_kernel_batch77u::{
+  enumitem_sibling_item_reference_forms, item_after_an_itemize_sibling_takes_the_enclosing_label}`,
+  `enumitem_item_with_its_own_label_takes_the_enclosing_label`'s (Z) now "a". Residuals (KPE #1003): an `\item[…]`
+  keeps Perl's `\p@<counter>` form after a numbered sibling whose `\p@` prints (the kernel's `\p@enumii` =
+  `\theenumi`: "1", pdflatex "1a") and in a top-level list (no refnum, the reference reads the item's own label;
+  pdflatex the sibling's label, or the last section's or equation's with no numbered item in force): authors who
   reference such an item set `\@currentlabel` themselves (`\def\@currentlabel{(P2')}\label{…}`, 2502.11630;
-  2409.02896's `\phantomitem`), which `\label` does not read here or in Perl — the sibling rule, tried in r3, printed
-  "(P1)" and "(iv)" for them. Reading an author-set `\@currentlabel` at `\label` would close both (question for the main
-  session). An itemize's `\item[(Z)]` after an `\item` of its itemize, inside an enumerate item, has no
-  refnum (the itemize item counts as its numbered sibling, sect06.rs's `\the@item<n>` per list), pdflatex the enclosing
-  item's "1" (LaTeX's itemize never steps).
+  2409.02896's `\phantomitem`), which `\label` does not read here or in Perl, and the sibling rule printed "(P1)" and
+  "(iv)" for them. Reading an author-set `\@currentlabel` at `\label` would close both (awaiting a user ruling). A
+  plain itemize `\item` has no refnum (Perl's form; pdflatex the enclosing item's label). `\cref` to a description
+  `\item[…]` in an enumerate prints no name (RED row above), and math a package makes sans stays serif
+  (Font-Selection Chain Residuals 8).
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

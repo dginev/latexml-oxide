@@ -21339,7 +21339,7 @@ family_default_survives_a_preamble_switch, unknown_family_default_resets_to_seri
 `06_cluster_bibliography::bib_entries_take_the_defaults_where_the_bibliography_stands`; golden
 `tikz/ac-drive-components.xml` (its node text CMSS, "Control unit" CMSSBX10 as pdflatex).
 
-### 780. A formula's token fonts are written relative to the text default, not to the enclosing text element, and MathML reads the context font inside the formula only
+### 780. A formula's token fonts are written relative to the text default, not to the enclosing text element, and MathML reads the context font inside the formula only (Perl: written against the enclosing text element, that relative font read whole)
 
 **TeX**: a formula is set in the math fonts of the current math version (fontmath.ltx: `\mathversion{normal}`'s CMMI
 letters, CMR operators and digits, `\mathsf` CMSS), never in the text family, series or shape around it: `$y$` in
@@ -21361,10 +21361,14 @@ it stands — `y` is `font="italic"`, `+` has none, inside `\emph`, a theorem bo
 `\f@series`, `\f@shape`): its content is written against that font, as Perl writes it. `math_context_font`
 (latexml_post mathml/mod.rs) reads the tokens' presentation and content context font only between the `XMath` and its
 `ltx:Math` (where none can be written), so a token without a `font` is upright serif, not the text around; an
-`m:mtext` falls back to the text font around the formula (`ctx_text_font`, Perl's `$LaTeXML::MathML::FONT`). The MathML of
-a serif document is unchanged (an italic context's letters were plain `<mi>` by inheritance and now are by their own
-`italic`), and a `\bm`/`\boldsymbol` letter or a `\boldmath` formula in italic text is bold italic where Perl's MathML
-read the bare `bold` as bold upright (1503.06160 `\bm{B}` in lemmas, pdflatex CMMIB10); the XML of a formula in italic or
+`m:mtext` falls back to the text font around the formula (`ctx_text_font`, Perl's `$LaTeXML::MathML::FONT`). In a serif
+document an italic context's letters were plain `<mi>` by inheritance and now are by their own `italic`; the MathML
+changes in two cases, both to TeX's fonts. A `\bm`/`\boldsymbol` letter or a `\boldmath` formula in italic text is bold
+italic where Perl's MathML read the bare `bold` as bold upright (1503.06160 `\bm{B}` in lemmas, pdflatex CMMIB10). A
+formula in a text element nested in another — `\textbf{Momentum:} $m_t$` in a theorem body is written
+`<text font="bold italic">Momentum:<text font="medium">$m_t$</text></text>` — took the nearer element's relative
+`medium` alone as its context, so its letters were upright (`mathvariant="normal"`); they are italic, as TeX sets them
+in CMMI (2601.02609, 30 letters; 2608.12539, 24; 2603.28663, 2603.28316, 2607.18880). The XML of a formula in italic or
 bold text differs from Perl's (theorem goldens re-blessed). 77u r2's sans
 `\normalfont` (#779) made the Perl shape hit every sans-default document's italic and bold text: 2608.14133 (1,890
 letters upright), 2608.31026, 2605.03549, 2604.00146, 2607.19982, 2606.05381 (theorem bodies), 2604.16675. Repros

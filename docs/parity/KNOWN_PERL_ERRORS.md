@@ -16130,14 +16130,21 @@ latex.ltx's `\@item` steps the list counter only without an optional label (`\if
 (latex_constructs.pool.ltxml:1373-1392) lets `\the<counter>` to `\@empty` and makes the refnum `\p@<counter>`, the
 enclosing item's label only while the counter's `\p@` happens to be it. Minimal trigger:
 `\begin{enumerate}\item o\begin{enumerate}\item a\begin{enumerate}\item[(W)]\label{w}\end{enumerate}\end{enumerate}
-\end{enumerate}\ref{w}` — pdflatex "1a", Perl "1(a)"; under enumitem, which empties `\p@enumii` (enumitem.sty:551-556),
-a nested `\item[(X)]`'s reference is lost (2603.02347, 7 items; covington's `\item[b.]` in an `{example}`, whose
-reference is the example's number, 2405.01972). Rust (77u r3): `ref_step_item_counter` (dialect.rs) records the counter
-of the last numbered item in force, local to the list, and when it is an enclosing list's, an `\item[…]`'s refnum is that
-item's `\p@<ctr>\the<ctr>`. After a numbered item of the same list (pdflatex: that sibling's label) and with none in force
-(a top-level `\item[…]`: the last section's or equation's) Perl's form stays: authors who reference such an item set
-`\@currentlabel` themselves (`\def\@currentlabel{(P2')}\label{…}`, 2502.11630; 2409.02896's `\phantomitem`), which is
-not read, and the sibling's label would replace the item's own (SYNC_STATUS 77u r3 residual). Repros
+\end{enumerate}\ref{w}` — pdflatex "1a", Perl "1(a)". Perl's enumitem binding never empties `\p@`, so there the form
+keeps the enclosing label; enumitem.sty empties `\p@enumii` below the first level (:551-556), and once the binding does
+too (77u r1) a nested `\item[(X)]`'s reference is lost (2603.02347, 7 items; covington's `\item[b.]` in an `{example}`,
+whose reference is the example's number, 2405.01972). Rust (77u r3, r4): `ref_step_item_counter` (dialect.rs) records
+the counter of the last numbered item in force, local to the list, and the enclosing list's counter it replaced. When
+it is an enclosing list's, an `\item[…]`'s refnum is that item's `\p@<ctr>\the<ctr>`. After a numbered item of its own
+nested list whose `\p@<ctr>` prints nothing (enumitem's), the refnum is that sibling's `\p@<ctr>\the<ctr>`, read
+before `\the<counter>` is emptied: LaTeX's `\@currentlabel` (`\setlist[enumerate,2]{label=(\alph*),ref=\alph*}`, an
+`\item[(Z)]` after `\item a`: pdflatex and r4 "a", Perl "1", r3 nothing). An itemize or description item is no numbered
+sibling (its `\the@item<n>`, `\the@desc<n>` are empty, sect06.rs), so an `\item[…]` after one still takes the enclosing
+item's label. Perl's form stays after a numbered sibling whose `\p@` prints (the kernel's `\p@enumii` = `\theenumi`:
+"1", pdflatex "1a") and in a top-level list (`\p@enumi` is empty: no refnum, the reference reads the item's own label;
+with no numbered item in force LaTeX's label is the last section's or equation's): authors who reference a top-level
+sibling `\item[…]` set `\@currentlabel` themselves (`\def\@currentlabel{(P2')}\label{…}`, 2502.11630; 2409.02896's
+`\phantomitem`), which is not read, and the sibling's label would replace the item's own (SYNC_STATUS 77u residual). Repros
 `list-structure/item_with_its_own_label_takes_the_enclosing_label`,
 `list-structure/enumitem_item_with_its_own_label_takes_the_enclosing_label`; guards
 `perfect_kernel_batch77u::{item_with_its_own_label_takes_the_enclosing_label,

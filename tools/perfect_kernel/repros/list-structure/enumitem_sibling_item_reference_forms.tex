@@ -1,0 +1,24 @@
+% witness: rev77u2 finding 1 (probe l4); the enumitem level-2 lists of 2603.02347
+% oracle:  pdflatex 0 errors; "REFS [a] [item a] [item a]." — `\item[(Z)]` keeps `\@currentlabel` (latex.ltx
+%          `\@item`), its numbered sibling's `\p@enumii\theenumii`, which enumitem's `ref=` makes "a" (`\p@enumii`
+%          emptied, enumitem.sty:551-556); hyperref's and cleveref's type is the sibling's counter, enumii ("item")
+% engines: perl / int35a "1", "item 1", "item 1" (Perl's enumitem binding never empties `\p@enumii`); 77u r3 "(Z)",
+%          "item " (dangling), "item (Z)": no refnum
+% expect:  0 errors, 0 warnings; (Z)'s refnum "a", autoref "item a"
+% status:  RED (77u r3) -> GREEN (77u r4: dialect.rs `ref_step_item_counter`, the sibling's form where `\p@<ctr>`
+%          prints nothing)
+\documentclass{article}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\setlist[enumerate,2]{label=(\alph*),ref=\alph*}
+\begin{document}
+\begin{enumerate}
+\item outer
+  \begin{enumerate}
+  \item plain\label{y}
+  \item[(Z)] after\label{z}
+  \end{enumerate}
+\end{enumerate}
+REFS [\ref{z}] [\autoref{z}] [\cref{z}].
+\end{document}

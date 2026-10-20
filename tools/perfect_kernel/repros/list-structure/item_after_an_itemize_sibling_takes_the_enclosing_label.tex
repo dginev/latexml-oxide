@@ -1,0 +1,22 @@
+% witness: rev77u2 finding 3 (probe l1, s2)
+% oracle:  pdflatex 0 errors; "REFS [1] [1] [1]." — an itemize never steps (`\@nmbrlistfalse`), so every
+%          `\label` in it takes `\@currentlabel` as the enclosing enumerate item left it, before and after a plain
+%          `\item`
+% engines: perl / int35a / 77u r3: s2, after the plain item, has no refnum (77u r3 counted the itemize item as a
+%          numbered sibling: an empty `\the@itemii` is stored with no expansion, which `prints_something` read as
+%          printing)
+% expect:  0 errors, 0 warnings; s1 and s2 refnum "1"; the plain bullet item none (Perl's form for a numbered item
+%          whose `\the@itemii` is empty; pdflatex "1": residual, SYNC "77u")
+% status:  RED (77u r3) -> GREEN (77u r4: dialect.rs `prints_something` reads a body-less macro as empty)
+\documentclass{article}
+\begin{document}
+\begin{enumerate}
+\item A
+  \begin{itemize}
+  \item[$\star$] star\label{s1}
+  \item plain bullet\label{b1}
+  \item[$\circ$] circ\label{s2}
+  \end{itemize}
+\end{enumerate}
+REFS [\ref{s1}] [\ref{b1}] [\ref{s2}].
+\end{document}
