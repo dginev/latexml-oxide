@@ -190,9 +190,10 @@ AUDITED = {
         "links = \"rayon-core\": same version-lock trick. Its build.rs says so outright "
         "-- \"we're not *actually* linking\".",
     ),
-    "pericortex": ("0.2.8",
+    "pericortex": ("0.2.9",
         "Ours (dginev). The 'vendored archive' is 1508.01222.zip, an arXiv test paper "
-        "-- data, not code.",
+        "-- data, not code. 0.2.9 re-checked 2026-10-20: no build.rs, no native source, "
+        "the same zip byte for byte; the diff is Rust only (harness.rs fleet RSS helper).",
     ),
 
     # The dginev/marpa fork's sys crate, published to crates.io as
