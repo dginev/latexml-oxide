@@ -19995,12 +19995,14 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    and nc_chain: pdflatex 2 errors, "References", "Figure 1"). A name made `\relax` is definable, as LaTeX's
    `\newcommand` finds it (the copy's own `\let\refname\relax` before its `\newcommand`, or a raw base class's; r7).
    `\def`/`\renewcommand` redefine as before. A copy's own load of a package its stand-in binding loaded on its behalf
-   (`<file>:loaded_by_stand_in`, the innermost stand-in binding whose load made the first load; the request's copy,
+   (`<file>:loaded_by_stand_in`, the innermost stand-in binding whose load made the first load — a `.sty`, `.cls` or
+   `.tex` stand-in's, `StandInBindingName`, the last since 77w r3: mssymb.tex's amsfonts; the request's copy,
    read before the load's provides-mode suspension, `requested_by_copy`, is that binding's — `state::copy_provides_binding`)
    is that load, which TeX sees alone: its options apply, at Info, with no "Option clash" (77w; a modified elsarticle.cls
    copy's `\RequirePackage[square,…]{natbib}`, 1811.10063). Another stand-in's copy repeating the load with other
    options meets LaTeX's "Option clash", as in pdflatex (77w r2; the review's finding 6, guard
-   `perfect_kernel_batch77w::another_copys_repeat_load_clashes`).
+   `perfect_kernel_batch77w::another_copys_repeat_load_clashes`; the `.tex` stand-ins' record,
+   `tex_stand_in_names_its_package_loads`).
 12. *The declaration route* (77w, user ruling 2026-10-20, extending 2026-10-17's "a binding always wins over a shipped
    copy"). A `.sty` or `.cls` the paper ships under a name with no binding of its own that declares itself another file
    a binding stands for is that binding's request (content.rs `provided_binding`, from `input_definitions_impl` ahead
@@ -20062,11 +20064,15 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    `is_latex_base_class`) — is not that class but an arXiv-side override of it: aip-cp.cls:24 `\ProvidesClass{article}`
    (AIP Conference Proceedings, not in TeX Live; 1506.04050, 1604.08112), mf.cls (0709.4467), antonio.cls (1808.10740),
    articlegm.cls, articlefederico.cls, HERON.cls and mbook.cls (`book`: 1903.06504, nucl-th0703058), avh.cls
-   (`report`). The binding models the kernel's class and nothing beyond LaTeXML's kernel, so every section of the
-   copy that differs patches the kernel's class; the provides mode of rules 1-11 kept the binding's meaning for each
-   and lost them, silently: aip-cp's accumulating `\author[aff1]{…}` (aip-cp.cls:235-258) kept the last of five
-   authors under the locked kernel `\author`, its `\affil` list was lost, mf.cls's size file left no nominal font
-   size, HERON.cls's and mbook.cls's affiliation contact went. So the copy is read after the binding's load as a raw
+   (`report`). Every section of the copy that differs patches the kernel's class, which the binding models with two
+   kinds of names: the class's text (`\refname`, `\figurename`, `\@ptsize`), which the copy may change, and LaTeXML's
+   structural markup of it (`\appendix` → `<ltx:appendix>`, book's `\frontmatter`/`\mainmatter`/`\backmatter`, the
+   sectioning, the counters' ids), which the copy's equivalent code cannot give (user refinement 2026-10-20: honor the
+   derivative's patches "without losing the entire binding support for high quality XML such as frontmatter"). The
+   provides mode of rules 1-11 kept the binding's meaning for each and lost the patches, silently: aip-cp's
+   accumulating `\author[aff1]{…}` (aip-cp.cls:235-258) kept the last of five authors under the locked kernel
+   `\author`, its `\affil` list was lost, mf.cls's size file left no nominal font size, HERON.cls's and mbook.cls's
+   affiliation contact went. So the copy is read after the binding's load as a raw
    class is (`read_standard_class_derivative`, Info "The paper's X derives from a LaTeX class: read as a raw class over
    its binding"), and its patches are recognised by the raw-class mechanisms, section by section:
    - *frontmatter setters* — a locked kernel name it redefines (`\author`, `\title`, `\maketitle`, `\abstract`, …) is
@@ -20075,25 +20081,47 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
      class's own setter for its flags and stores (#482, #534), its `\maketitle` deposits what the frontmatter does not
      carry (#265: aip-cp's `\aipaffil`), and the title-page stores reach the frontmatter API (K11,
      `\lx@class@loaded@raw` at the binding load's end; `store_setters::mark_raw`);
-   - *the class's own names* — its `\newcommand` of a name the standard binding assigned in its own code (origin
-     `Binding`: `\refname`, `\bibname`, `\figurename`, `\abstractname`) defines it, the derivative being read in the
-     class's place (`state::standard_class_binding_name`, latex_constructs `is_definable_latex`): aip-cp.cls:875-878
-     "REFERENCES", "FIGURE 1"; HERON.cls:682 `\bibname{References}`; Lowx2013.cls:629 `\abstractname{ }`;
-   - *everything else* — size code, counters and their representations, captions, lists, page layout — stands as TeX
-     makes it: mf.cls's `[11pt]` gives the nominal size 10.95, articlegm.cls's 11pt and bookstyle.cls's 12pt ones too
-     (1504.00071, quant-ph0408036: none before), article_saj.cls:476 `\fnum@figure{\ninebf …}`.
-   The binding's own markup stays where the copy does not patch: its counters' ids (`S1`, `Ch1`), its class options
-   (`leqno`), `ltx-article.css`, the one-line authors class. A/B vs int37a (529dc1b543, the class read raw) over the 27
-   derivative papers of the A/B sets (the 17 of the reviewer's 87,937-paper sample routing to article/book/report, 9
-   natbib-census papers with an IMA class copy — imamat.cls, imanum.cls — or arc.cls, all `\ProvidesClass{article}`,
-   and 1904.06854): Errors
-   27 → 21 (the census papers' natbib route), Fatals 0 → 0, Warnings 333 → 284, words +0.7 %; the XML differs from
-   int37a's only by the binding's ids and the patches above (1506.04050's five creators as int37a, "REFERENCES" and
-   "FIGURE 1" as its PDF), except 2008.02832's twocolumn figure, whose panel break is gone (layout; r1 the same,
-   residual). Against r1 (c400169c19) over the 905 papers of r1's and the reviewer's A/B sets: 26 changed — the 25
-   derivatives and 1312.3078's bundle (rule 12, 8 → 0 Errors) —, Errors 154 → 146, Fatals 4 → 4, Warnings equal. Residual: aip-cp's `\author[aff1]` marks are not linked to `\affil[aff1]` (the affiliations reach the
-   page as the title page's deposit, as on int37a; SYNC row). Guards `perfect_kernel_batch77w::
-   {standard_class_derivative_keeps_every_author, standard_class_derivative_patches_stand}`.
+   - *the class's text names* — its `\newcommand` (or `\providecommand`) of a text name the standard binding assigned in
+     its own load defines it, the derivative being read in the class's place (`state::standard_class_binding_name`,
+     latex_constructs `is_definable_latex`): a macro of origin `Binding` without parameters whose expansion has no
+     control sequence or active character, and is not empty (`\refname`, `\bibname`, `\figurename`,
+     `\abstractname`, `\@ptsize`, `\@pnumwidth`) — aip-cp.cls:875-878 "REFERENCES", "FIGURE 1"; HERON.cls:682
+     `\bibname{References}`; Lowx2013.cls:629 `\abstractname{ }`. The names are those of the standard binding's own
+     load (`state::stand_in_last_load_names` when the derivative's read begins, `content::standard_class_binding_assigned`),
+     not a stand-in's the derivative loads (its `\RequirePackage{jheppub}` keeps jheppub's `\jname`);
+   - *the binding's structure* — a structural command the binding defined is not replaced by the copy's
+     `\newcommand` (an Info, "Ignoring redefinition", as for any defined name): `\appendix`/`\@appendix`
+     (`<ltx:appendix>`), book's `\frontmatter`/`\mainmatter`/`\backmatter` (unnumbered front chapters), `\@chapapp`,
+     the sizes `\small`…`\Huge` (primitives); full class copies `\newcommand` all of them (articlecea.cls:449,
+     imamat.cls:860, book_modified.cls:296-304 and :531, khbook.cls:285-293), and r2, which let every binding name
+     yield, lost the appendices of 0705.2210 (3), hep-ex0405054 (4, "Chapter A…D"), hep-ph0008011 (2), cond-mat0402505,
+     quant-ph0409078, 1401.7612 (2), 1711.09297, 2402.18237 (8) and numbered math0301023's "Voorwoord"/"Dankwoord".
+     A counter the binding declared keeps its ids under the copy's `\newcounter` (article.cls's `\newcounter{figure}`:
+     `S1.F1`, not `F1`; `counter::dialect::new_counter` skips `define_counter_ids` when the binding's own load defined
+     `\the<ctr>@ID`); its register, reset list and `\the<ctr>` are the copy's;
+   - *everything else* — size code, counters' values and representations, captions, lists, page layout — stands as
+     TeX makes it: mf.cls's `[11pt]` gives the nominal size 10.95, articlegm.cls's 11pt and bookstyle.cls's 12pt ones
+     too (1504.00071, quant-ph0408036: none before), article_saj.cls:476 `\fnum@figure{\ninebf …}`.
+   The binding's own markup stays: its counters' ids (`S1`, `S1.F1`, `Ch1`), its appendices and matter divisions, its
+   class options (`leqno`), `ltx-article.css`, the one-line authors class. A derivative is told by its declared base
+   class's file in the TeX tree (kpathsea `latex/base/<class>.cls`), not by `find_file`, which finds a self-named
+   `article.cls` the paper ships first. A/B (77w r3) vs int37a (529dc1b543, the class read raw) over the 70 papers of
+   the r2 re-review's 130-paper derivative census that take this route: every paper equal to int37a or better in
+   `<appendix>`, `<chapter>`, `<creator>`, `<contact>`, `<abstract>`, `<bibitem>`, `<figure>` and `<equation>`; Errors
+   38 → 26, Fatals 0 → 0, Warnings 754 → 700; gains: the appendices of 1401.7612 (2), 1711.09297 (1) and 2402.18237 (8),
+   none on int37a; 1808.00761's two creators (1); the nominal size of 0705.2210, 1504.00071, 1608.04800,
+   cond-mat0402505, hep-ex0405054, hep-ph0008011, quant-ph0408036, quant-ph0409078; math0301023's chapters before
+   `\mainmatter` ("Voorwoord", "Dankwoord", "Introduction") unnumbered as its PDF prints them, where int37a numbered
+   them; "REFERENCES"/"FIGURE 1" in 1506.04050 as its PDF. Against r2 (69e78f9511) over the 905 papers of r1's and the
+   r1 reviewer's A/B sets: 19 changed, all derivatives; Errors 146, Fatals 4, Warnings 12,973 on both; 18 take back the
+   binding's float ids (`F1` → `S1.F1`), 1401.7612 and 1711.09297 their appendices, and quant-ph0408036 loses the two
+   page breaks of its copy's `\frontmatter`/`\mainmatter` `\cleardoublepage`, as int37a. Residuals: 2008.02832's
+   twocolumn figure has lost a panel break (layout; r1 and r2 the same); aip-cp's `\author[aff1]` marks are not linked
+   to `\affil[aff1]` (the affiliations reach the page as the title page's deposit, as on int37a; SYNC row); a chapter
+   after book's `\backmatter` keeps its number (the binding's `\backmatter` is Perl's, book.cls.ltxml:121, as under
+   `\documentclass{book}`). Guards `perfect_kernel_batch77w::{standard_class_derivative_keeps_every_author,
+   standard_class_derivative_patches_stand, standard_class_derivative_keeps_book_structure,
+   standard_class_derivative_defines_only_its_class_names, standard_class_derivative_beside_a_self_named_article}`.
 
 Costs (instructions, 72a r3 vs 67int21, faithful loads): atlasdoc papers +26-33 % in r3-r7, its `\LoadClass{scrartcl}`
 (atlasdoc.cls:319, KOMA's 22 files), +0.8-3.8 % in r8, where the binding's base class stood for it, and back with r9,

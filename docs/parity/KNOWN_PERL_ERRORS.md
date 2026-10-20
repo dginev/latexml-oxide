@@ -16305,7 +16305,9 @@ every citation prints a bold "?" with "Citation `<key>' on page 1 undefined", an
 undefined (an Error). By default Perl reads no raw style: it warns the file missing and its dependency scan loads the
 natbib binding, so the citations resolve and the copy's own commands are lost. Minimal trigger:
 `tools/perfect_kernel/repros/stand-in-copies/provides_route/natbib_copy_is_natbib.tex` with
-`index-bib/mn2e_natbib_copy/natbib_vw.sty` — `latexml --includestyles`: 1 Error, 3 Warnings, "?), ?), (?)."; pdflatex
+`index-bib/mn2e_natbib_copy/natbib_vw.sty` — `latexml --includestyles`: "4 warnings; 1 error" (`\@listi` undefined; three
+"Citation `<key>' on page 1 undefined" and natbib's "There were undefined citations"), "?), ?), (?)."; default
+`latexml`: "1 warning; 1 missing file[natbib_vw.sty]", the citations natbib's; pdflatex
 "Schneider et al. (2010), Smith (2001), (Smith, 2001)." Witnesses 0802.4100 (142 "Citation undefined"), 1003.3017 (62),
 astro-ph0512042. Rust (77w; OXIDIZED_DESIGN_DIVERGENCES #731 rule 12): the declaration routes the request to the
 natbib binding with its options, the copy read after it as the stand-in's copy. Guards

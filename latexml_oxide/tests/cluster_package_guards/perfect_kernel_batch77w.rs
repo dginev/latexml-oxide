@@ -357,6 +357,69 @@ fn standard_class_derivative_patches_stand() {
     "<title><tag close=\" \">1</tag>Introduction</title>",
   );
   assert!(xml.contains("<title>REFERENCES</title>"), "{xml}");
+  // Its `\newcommand\appendix` (article.cls's, stdderiv.cls) does not replace the binding's, which makes the
+  // appendices LaTeXML's `<appendix>` (the 77w r2 re-review's finding 1: 0705.2210, hep-ph0008011, cond-mat0402505,
+  // quant-ph0409078 lost theirs), and its `\newcounter{figure}` keeps the binding's ids (`S1.F1`, not `F1`: probe1).
+  assert_element(
+    &xml,
+    "appendix",
+    &["inlist=\"toc\"", "xml:id=\"A1\""],
+    "<appendix inlist=\"toc\" xml:id=\"A1\"><tags><tag>Appendix A</tag><tag role=\"refnum\">A</tag><tag \
+     role=\"typerefnum\">Appendix A</tag></tags><title><tag close=\" \">Appendix A</tag>Proofs</title><toctitle><tag \
+     close=\" \">A</tag>Proofs</toctitle><para xml:id=\"A1.p1\"><p xml:id=\"A1.p1.1\">Appendix \
+     text.</p></para></appendix>",
+  );
+  assert!(
+    xml.contains("<figure inlist=\"lof\" placement=\"h\" xml:id=\"S1.F1\">"),
+    "{xml}"
+  );
+}
+
+/// A derivative of the book class (a full copy declaring `\ProvidesClass{book}`: hep-ex0405054's book_modified.cls,
+/// math0301023's khbook.cls) keeps the book binding's structural commands — its `\newcommand\frontmatter`,
+/// `\mainmatter`, `\backmatter` and `\appendix` do not replace them (OD #731 rule 13: only the binding's text names
+/// yield; the 77w r2 re-review's finding 1, its probe4). pdflatex: "Preface", "Chapter 1 Intro", "1.1 Sec",
+/// "Appendix A Extra", "Afterword"; the last is "Appendix B Afterword" as under `\documentclass{book}`, whose
+/// `\backmatter` numbers on (Perl book.cls.ltxml:121 alike).
+#[test]
+fn standard_class_derivative_keeps_book_structure() {
+  let (log, xml) = convert_files_with(
+    repro!("standard_class_derivative_book.tex"),
+    &[("bookcopy.cls", repro!("bookcopy.cls"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    log.contains(
+      "Info:provide:bookcopy.cls The paper's bookcopy.cls derives from a LaTeX class: read as a raw class over its binding"
+    ),
+    "{log}"
+  );
+  let titles: Vec<&str> = xml
+    .match_indices("<title>")
+    .map(|(at, _)| {
+      let rest = &xml[at..];
+      &rest[..rest
+        .find("</title>")
+        .map_or(rest.len(), |end| end + "</title>".len())]
+    })
+    .collect();
+  assert_eq!(
+    titles,
+    [
+      "<title>Preface</title>",
+      "<title><tag close=\" \">Chapter 1</tag>Intro</title>",
+      "<title><tag close=\" \">1.1</tag>Sec</title>",
+      "<title><tag close=\" \">Appendix A</tag>Extra</title>",
+      "<title><tag close=\" \">Appendix B</tag>Afterword</title>",
+    ],
+    "{xml}"
+  );
+  assert_eq!(xml.matches("<appendix ").count(), 2, "{xml}");
+  assert!(
+    xml.contains("<chapter inlist=\"toc\" xml:id=\"Chx1\">"),
+    "{xml}"
+  );
 }
 
 /// A file that declares three files or more is a bundle, not a copy (cauchy.sty: theorem, exscale, epsfig, apacite;
@@ -411,4 +474,72 @@ fn another_copys_repeat_load_clashes() {
     "<p xml:id=\"p1.1\">See <cite class=\"ltx_citemacro_citep\">[<bibref bibrefs=\"a\" separator=\",\" \
      show=\"Number\" yyseparator=\",\"/>]</cite>.</p>",
   );
+}
+
+/// A standard-class derivative defines over its binding only the standard class binding's own names (OD #731 rule
+/// 13), not those of a stand-in it loads (the 77w r2 re-review's finding 4): `\providecommand\jname` after
+/// `\RequirePackage{jheppub}` keeps jheppub's "JHEP", as LaTeX does. pdflatex: "Published in JHEP."
+#[test]
+fn standard_class_derivative_defines_only_its_class_names() {
+  let (log, xml) = convert_files_with(
+    repro!("standard_class_derivative_scope.tex"),
+    &[
+      ("scopederiv.cls", repro!("scopederiv.cls")),
+      ("jheppub.sty", repro!("jheppub.sty")),
+    ],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">Published in JHEP.</p>",
+  );
+}
+
+/// A `.tex` stand-in binding records itself as the loader of the packages its load loads first, as a package or class
+/// stand-in does (`<file>:loaded_by_stand_in`, `StandInBindingName`; the 77w r2 re-review's finding 3): mssymb_tex.rs's
+/// amsfonts. pdflatex: "The reals R."
+#[test]
+fn tex_stand_in_names_its_package_loads() {
+  let files: [(&str, &[u8]); 1] = [("mssymb.tex", repro!("mssymb.tex").as_bytes())];
+  let (log, _xml, loader) = latexml::util::test::convert_bytes_files_then(
+    repro!("tex_stand_in_loads_packages.tex").as_bytes(),
+    &files,
+    Some("ar5iv.sty"),
+    |_, _| latexml_core::state::lookup_string("amsfonts.sty:loaded_by_stand_in"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(loader, "mssymb", "{log}");
+}
+
+/// A derivative beside a self-named `article.cls` the paper also ships still declares the LaTeX class (the 77w r2
+/// re-review's finding 6): the base class is looked up in the TeX tree, not the paper's directory first, so the
+/// derivative is read as a raw class over its binding and keeps every author (as
+/// `standard_class_derivative_keeps_every_author`).
+#[test]
+fn standard_class_derivative_beside_a_self_named_article() {
+  let (log, xml) = convert_files_with(
+    repro!("standard_class_derivative_beside_article.tex"),
+    &[
+      ("aipcopy.cls", repro!("aipcopy.cls")),
+      ("article.cls", repro!("stdderiv.cls")),
+    ],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    log.contains(
+      "Info:provide:aipcopy.cls The paper's aipcopy.cls derives from a LaTeX class: read as a raw class over its binding"
+    ),
+    "{log}"
+  );
+  assert_element(
+    &xml,
+    "creator",
+    &["role=\"author\""],
+    "<creator role=\"author\"><personname>M. Bruemmer</personname></creator>",
+  );
+  assert_eq!(xml.matches("<creator ").count(), 2, "{xml}");
 }

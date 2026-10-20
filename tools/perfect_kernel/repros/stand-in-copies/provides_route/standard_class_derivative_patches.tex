@@ -2,14 +2,21 @@
 %          its graphics sized against 12pt), 1506.04050 (aip-cp.cls:875-878 `\newcommand\refname{REFERENCES}`,
 %          `\figurename{FIGURE}`), 1903.06504 (HERON.cls:682 `\newcommand\bibname{References}`), nucl-th0703058
 %          (mbook.cls), 1309.0738 and hep-ph0311184 (`\newcommand\abstractname{ }`)
-% oracle:  pdflatex 0 errors: "1 Introduction ... FIGURE 1: A caption. ... REFERENCES [1] A. Author." at 11pt
+%          0705.2210, hep-ph0008011, cond-mat0402505, quant-ph0409078 (a full copy's `\newcommand\appendix`: 77w r2
+%          lost their <appendix>, the r2 re-review's finding 1)
+% oracle:  pdflatex 0 errors: "1 Introduction ... FIGURE 1: A caption. ... A Proofs ... REFERENCES [1] A. Author." at
+%          11pt
 % engines: rust c400169c19 (77w r1) = routed to the article binding, the copy read as its stand-in's: its size file's
 %          `\normalsize` held only inside its own code (no nominal size), its `\newcommand`s of the binding's text
 %          defaults refused as "already defined": "Figure 1", "References"; rust 529dc1b543 (int37a) = read raw, the
 %          names LaTeXML predefined kept: "Figure 1"
-% expect:  0 errors, 0 warnings; the copy's 11pt size, "FIGURE 1", "REFERENCES"
+%          rust 69e78f9511 (77w r2) = the copy's `\newcommand\appendix` replaced the binding's: "A Proofs" a
+%          <section xml:id="S1a">, and its `\newcounter{figure}` dropped the binding's ids: <figure xml:id="F1">
+% expect:  0 errors, 0 warnings; the copy's 11pt size, "FIGURE 1", "REFERENCES"; <appendix xml:id="A1">
+%          "Appendix A Proofs", <figure xml:id="S1.F1">
 % status:  RED (c400169c19) -> GREEN (77w r2: a standard-class derivative is read as a raw class over its binding,
-%          the names the binding assigned the derivative's to define)
+%          the names the binding assigned the derivative's to define); RED (69e78f9511) -> GREEN (77w r3: only the
+%          binding's text names yield, its structure and counter ids stay)
 % preload: ar5iv.sty
 \documentclass[11pt]{stdderiv}
 \begin{document}
@@ -18,6 +25,9 @@ Body text.
 \begin{figure}[h]
 \caption{A caption.}
 \end{figure}
+\appendix
+\section{Proofs}
+Appendix text.
 \begin{thebibliography}{9}
 \bibitem{a} A. Author.
 \end{thebibliography}

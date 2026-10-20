@@ -4,7 +4,8 @@
 %          natbib_vw 16, natbib_jrm 11, my_natbib 7, natbibsty 6, tsnatbib 5, …), 299 more the fallback reaches
 % oracle:  pdflatex (2 passes) 0 errors, "Schneider et al. (2010), Smith (2001), (Smith, 2001)."
 % engines: rust 529dc1b543 = the copy read raw: its \citet/\citep find no `\b@key`, "?" and 2 "Citation undefined"
-%          Warnings; Perl reads the copy raw too
+%          Warnings; Perl (default) reads no raw style: "1 missing file[natbib_vw.sty]", its dependency scan loading the
+%          natbib binding; Perl `--includestyles` reads the copy raw: "4 warnings; 1 error", "?" (KNOWN_PERL_ERRORS #1014)
 % expect:  0 errors, 0 warnings; natbib's author-year citations with their label text
 % status:  RED (529dc1b543) -> GREEN (77w: the declaration routes the request to the natbib binding)
 % preload: ar5iv.sty

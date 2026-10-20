@@ -45,11 +45,15 @@ thread_local! {
   /// handling) that no class load has yet given to K11: the enclosing class load claims them at its end
   /// (`input_definitions_impl`). A Rust local count, so nested loads pair by the call stack.
   static UNCLAIMED_RAW_CLASS_READS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
-  /// The stand-in bindings loading now, innermost last (`StandInBindingName`).
+  /// The stand-in bindings loading now, innermost last (`StandInBindingName`; a renamed elsarticle.cls copy's natbib
+  /// load, 1811.10063).
   static STAND_IN_BINDINGS: std::cell::RefCell<Vec<String>> =
     const { std::cell::RefCell::new(Vec::new()) };
-  /// (a standard-class derivative read now: [`reading_standard_class_derivative`])
-  static STANDARD_CLASS_DERIVATIVE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+  /// The standard-class derivatives read now, innermost last, each with the names its standard class's binding
+  /// assigned in its own load ([`reading_standard_class_derivative`], [`standard_class_binding_assigned`]; aip-cp.cls,
+  /// 1506.04050).
+  static STANDARD_CLASS_DERIVATIVE: std::cell::RefCell<Vec<HashSet<SymStr>>> =
+    const { std::cell::RefCell::new(Vec::new()) };
   /// Current nesting depth of [`load_class`] calls: above 0, a class is loading,
   /// and a class it loads is nested.
   static CLASS_LOAD_DEPTH: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
@@ -2142,12 +2146,15 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
           s!("{}.tex", clean_req)
         };
         let stand_in = crate::binding::author_files::stands_in_for_an_author_file(&tex_name);
+        let stem = tex_name.strip_suffix(".tex").unwrap_or(&tex_name);
         let loaded = {
           let _stand_in = stand_in.then(crate::definition::origin::StandInLoadGuard::new);
+          // (its name, for the packages its load loads first, as a package or class stand-in's: mssymb.tex's
+          // amsfonts and amssymb, `<file>:loaded_by_stand_in`; the 77w r2 re-review's finding 3)
+          let _stand_in_name = stand_in.then(|| StandInBindingName::enter(file_stem(stem)));
           load_binding(&tex_name)?.is_some() || load_external_binding(&tex_name)?.is_some()
         };
         if loaded && stand_in {
-          let stem = tex_name.strip_suffix(".tex").unwrap_or(&tex_name);
           read_stand_in_copy(stem, stem, "tex", false)?;
         }
         loaded
@@ -2345,19 +2352,15 @@ fn read_stand_in_copy(request: &str, binding: &str, ext: &str, in_expl3: bool) -
 }
 
 /// Is `class` one of LaTeX's own document classes — its file in the format's base distribution (TeX Live's
-/// `tex/latex/base/`: article, report, book, letter, proc, slides, minimal), whose binding models nothing beyond the
-/// kernel's own definitions?
+/// `tex/latex/base/`: article, report, book, letter, proc, slides, minimal), whose binding is LaTeXML's model of that
+/// class: its text names and its structural markup?
+///
+/// Looked up in the TeX tree by its directory there (kpathsea's `latex/base/<class>.cls`), not by `find_file`, which
+/// searches the paper's directory first: a paper that ships a self-named `article.cls` beside its derivative still
+/// declares a LaTeX class (the 77w r2 re-review's finding 6).
 fn is_latex_base_class(class: &str) -> bool {
-  let file = s!("{}.cls", file_stem(class));
-  find_file(
-    &file,
-    Some(FindFileOptions {
-      forbid_ltxml: true,
-      ext_type: Some(Cow::Borrowed("cls")),
-      ..FindFileOptions::default()
-    }),
-  )
-  .is_some_and(|path| {
+  let file = s!("latex/base/{}.cls", file_stem(class));
+  pathname::kpsewhich(&[file.as_str()]).is_some_and(|path| {
     !shipped_with_paper(&path) && path.replace('\\', "/").contains("/tex/latex/base/")
   })
 }
@@ -2366,15 +2369,17 @@ fn is_latex_base_class(class: &str) -> bool {
 /// user rulings 2026-10-20: the route stays, the bindings lose nothing). A class the paper ships that declares itself
 /// one of LaTeX's own classes ([`is_latex_base_class`]: aip-cp.cls:24 `\ProvidesClass{article}`, 1506.04050,
 /// 1604.08112; mf.cls, 0709.4467; antonio.cls, 1808.10740; HERON.cls, 1903.06504; mbook.cls, nucl-th0703058) is not
-/// that class but a derivative of it: what it redefines patches the kernel's class, and the binding, which models the
-/// kernel's class and no more, has nothing of its own for those patches to be kept from. So after the binding has
-/// loaded (its defaults: counters and their ids, the class options, `ltx-article.css`), the copy is read as a raw class
-/// is, not in provides mode: an unlocked name it defines stands as TeX makes it (its size file's `\normalsize`, so the
-/// nominal font size; its `\thesection`; its contact setters), and a locked one is refused with the records a raw
-/// class's takeover leaves — `\lx@dropped@<name>` and `<name>:redefined` — so the kernel's `\author` appends each call
-/// (OXIDIZED_DESIGN #253) and replays the class's own setter (#482), its `\maketitle` deposits what the frontmatter does
-/// not carry (#265), and the title-page stores reach the frontmatter (K11, `\lx@class@loaded@raw` at the binding
-/// load's end). Under provides mode aip-cp's accumulating `\author[aff1]{…}` kept only the last author (5 → 1) and its
+/// that class but a derivative of it: what it redefines patches the kernel's class. So after the binding has loaded
+/// (its defaults: counters and their ids, the class options, `ltx-article.css`), the copy is read as a raw class is,
+/// not in provides mode: an unlocked name it redefines stands as TeX makes it (its size file's `\normalsize`, so the
+/// nominal font size; its `\thesection`; its contact setters); its `\newcommand` of a name the binding defined takes
+/// over only a text name (`\refname`; `state::standard_class_binding_name`), never the binding's structural commands
+/// (`\appendix`, book's `\frontmatter`: hep-ex0405054, math0301023), and its `\newcounter` of a counter the binding
+/// declared keeps the binding's ids (`S1.F1`; `counter::dialect::new_counter`); a locked name is refused with the
+/// records a raw class's takeover leaves — `\lx@dropped@<name>` and `<name>:redefined` — so the kernel's `\author`
+/// appends each call (OXIDIZED_DESIGN #253) and replays the class's own setter (#482), its `\maketitle` deposits what
+/// the frontmatter does not carry (#265), and the title-page stores reach the frontmatter (K11,
+/// `\lx@class@loaded@raw` at the binding load's end). Under provides mode aip-cp's accumulating `\author[aff1]{…}` kept only the last author (5 → 1) and its
 /// `\affil` list was lost, silently.
 fn read_standard_class_derivative(file: &str, path: &str, in_expl3: bool) -> Result<()> {
   use crate::definition::origin::{CopyProvidesGuard, DefinitionOrigin, OriginGuard};
@@ -2386,9 +2391,11 @@ fn read_standard_class_derivative(file: &str, path: &str, in_expl3: bool) -> Res
   let _origin = OriginGuard::new(DefinitionOrigin::File);
   let _not_a_copy = CopyProvidesGuard::new(0);
   let setters_before = crate::binding::store_setters::snapshot()?;
-  let outer = STANDARD_CLASS_DERIVATIVE.replace(true);
+  // (the binding loaded last is the standard class's, whose load just ended: its own names are the class's)
+  let class_names = stand_in_last_load_names();
+  STANDARD_CLASS_DERIVATIVE.with(|reads| reads.borrow_mut().push(class_names));
   let read = load_tex_definitions(file, path, false, true, in_expl3, true);
-  STANDARD_CLASS_DERIVATIVE.set(outer);
+  STANDARD_CLASS_DERIVATIVE.with(|reads| reads.borrow_mut().pop());
   read?;
   crate::binding::store_setters::mark_raw(&setters_before)?;
   UNCLAIMED_RAW_CLASS_READS.set(UNCLAIMED_RAW_CLASS_READS.get() + 1);
@@ -2396,7 +2403,8 @@ fn read_standard_class_derivative(file: &str, path: &str, in_expl3: bool) -> Res
 }
 
 /// A stand-in binding's name while its load runs (`STAND_IN_BINDINGS`): a package its load loads first records it
-/// (`<file>:loaded_by_stand_in`), so that only the copy read after this binding takes that load as its own.
+/// (`<file>:loaded_by_stand_in`), so that only the copy read after this binding takes that load as its own (a renamed
+/// elsarticle.cls copy's `\RequirePackage[square]{natbib}`, 1811.10063).
 struct StandInBindingName;
 
 impl StandInBindingName {
@@ -2414,7 +2422,20 @@ impl Drop for StandInBindingName {
 /// ships, `reading_author_file`) rather than a TeX Live file it loads? Its `\newcommand` of a name the standard class's
 /// binding assigned defines it (`state::standard_class_binding_name`).
 pub fn reading_standard_class_derivative() -> bool {
-  STANDARD_CLASS_DERIVATIVE.get() && reading_author_file()
+  STANDARD_CLASS_DERIVATIVE.with(|reads| !reads.borrow().is_empty()) && reading_author_file()
+}
+
+/// Is a standard-class derivative being read now ([`reading_standard_class_derivative`]), and did its standard class's
+/// binding assign the name `key` in its own load (`state::stand_in_last_load_names` when the derivative's read began)?
+/// Not a name a stand-in the derivative loads assigned, which LaTeX finds defined (the 77w r2 re-review's finding 4).
+pub fn standard_class_binding_assigned(key: SymStr) -> bool {
+  reading_standard_class_derivative()
+    && STANDARD_CLASS_DERIVATIVE.with(|reads| {
+      reads
+        .borrow()
+        .last()
+        .is_some_and(|names| names.contains(&key))
+    })
 }
 
 /// Is the file at `path` one the paper ships: a `{filecontents}` virtual file, or one under the document's own source

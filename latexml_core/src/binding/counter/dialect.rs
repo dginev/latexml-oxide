@@ -293,6 +293,14 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
     )?;
   }
 
+  // (a standard-class derivative re-declaring a counter its standard class's binding declared — article.cls's
+  // `\newcounter{figure}` in a full copy — keeps the binding's ids, LaTeXML's markup: `S1.F1`, not `F1`; the register,
+  // its reset list and `\the<ctr>` are the copy's, as TeX makes them. OXIDIZED_DESIGN_DIVERGENCES #731 rule 13; the 77w
+  // r2 re-review's probe1)
+  let ids = T_CS!(s!("\\the{ctr}@ID"));
+  if crate::binding::content::standard_class_binding_assigned(meaning_key(&ids)) {
+    return Ok(());
+  }
   define_counter_ids(ctr, within, options_opt.as_ref())
 }
 

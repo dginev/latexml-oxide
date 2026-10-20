@@ -2606,17 +2606,45 @@ pub fn copy_provides_binding() -> String {
     .unwrap_or_default()
 }
 
-/// Is `token` a name the standard class's binding assigned in its own code (`State::stand_in_meanings`, origin
-/// `Binding`: article_cls.rs's `\refname`, `\@ptsize`), which a derivative of that class read now defines itself
-/// (`binding::content::reading_standard_class_derivative`, OXIDIZED_DESIGN_DIVERGENCES #731 rule 13)? In TeX the
-/// derivative is read in the class's place, so its `\newcommand` of the name is the first: aip-cp.cls:875
-/// `\newcommand\refname{REFERENCES}` (1506.04050, 1604.08112).
+/// Is `token` a text name the standard class's binding assigned in its own load, which a derivative of that class read
+/// now defines itself (`binding::content::standard_class_binding_assigned`, OXIDIZED_DESIGN_DIVERGENCES #731 rule 13)?
+/// In TeX the derivative is read in the class's place, so its `\newcommand` of the name is the first: aip-cp.cls:875
+/// `\newcommand\refname{REFERENCES}` (1506.04050, 1604.08112). Only a text name yields (`binding_text_name`:
+/// `\refname`, `\figurename`, `\@ptsize`, `\@pnumwidth`); a structural command stays the binding's, LaTeXML's markup of
+/// the class — `\appendix` (`<ltx:appendix>`, article_cls.rs, book_cls.rs), book's `\frontmatter`/`\mainmatter`/
+/// `\backmatter` (unnumbered chapters), whose `\newcommand`s in a full class copy (hep-ex0405054's book_modified.cls:531,
+/// math0301023's khbook.cls:285; 0705.2210, hep-ph0008011, cond-mat0402505, quant-ph0409078) lost the appendices and
+/// numbered the preface. Names a stand-in the derivative loads assigned are not the class's (the 77w r2 re-review's
+/// finding 4).
 pub fn standard_class_binding_name(token: &Token) -> bool {
-  crate::binding::content::reading_standard_class_derivative()
-    && state!().stand_in_meanings.contains(&meaning_key(token))
-    && lookup_meaning(token).is_some_and(|meaning| {
-      definition_origin(&meaning) == Some(crate::definition::origin::DefinitionOrigin::Binding)
-    })
+  crate::binding::content::standard_class_binding_assigned(meaning_key(token))
+    && lookup_meaning(token).is_some_and(|meaning| binding_text_name(&meaning))
+}
+
+/// Is `meaning` a binding's text name: a macro its code defined (origin `Binding`), without parameters, whose expansion
+/// is text — tokens, none a control sequence or active character (`\refname`'s "References", `\@ptsize`'s "0",
+/// `\@pnumwidth`'s "1.55em")? A primitive, a constructor, a register, an empty macro (a hook) or a macro that calls
+/// anything (`\appendix`'s `\@appendix`, book's `\@chapapp` → `\chaptername`) is not.
+fn binding_text_name(meaning: &Stored) -> bool {
+  let Stored::Expandable(defn) = meaning else {
+    return false;
+  };
+  if defn.origin != crate::definition::origin::DefinitionOrigin::Binding
+    || defn
+      .paramlist
+      .as_ref()
+      .is_some_and(|params| !params.get_parameters().is_empty())
+  {
+    return false;
+  }
+  let Some(ExpansionBody::Tokens(body)) = &defn.expansion else {
+    return false;
+  };
+  let body = body.unlist_ref();
+  !body.is_empty()
+    && body
+      .iter()
+      .all(|t| !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE))
 }
 
 /// Did the stand-in binding's own load assign `token` last (`State::stand_in_meanings`, not its base class's
@@ -3076,6 +3104,11 @@ pub fn end_stand_in_load(into_outer: bool) {
     state.stand_in_last_load = load;
     state.stand_in_last_files = files;
   }
+}
+
+/// Every name the latest stand-in binding's own code assigned ([`State::stand_in_last_load`]).
+pub fn stand_in_last_load_names() -> rustc_hash::FxHashSet<SymStr> {
+  state!().stand_in_last_load.iter().copied().collect()
 }
 
 /// The public names (letters only: no `@`) the latest stand-in binding's own code assigned ([`State::stand_in_last_load`]).
