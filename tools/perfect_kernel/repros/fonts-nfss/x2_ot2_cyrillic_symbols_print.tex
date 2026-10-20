@@ -1,0 +1,12 @@
+% witness: synthetic (77s r2 re-review probe x2; the X2/OT2 half of OXIDIZED_DESIGN_DIVERGENCES #776)
+% oracle:  pdflatex 0 errors: "A јіА B jJ C." (OT2 sets Ј ј at J j, ot2enc.def:96,124; pdftotext reads them as j J)
+% engines: rust int34a and 77s = "A А B  C." with 0 diagnostics: no x2/ot2 fontmap, so every X2/OT2 slot but the
+%          ones another table supplies decodes to nothing and the symbol is dropped; Perl the same (no fontmap)
+% expect:  0 errors, 0 warnings; "A јіА B јЈ C." (the named letters, as OD #776 gives T2A), no symbol dropped
+% status:  RED (open: SYNC_STATUS silent-loss row "X2/OT2 Cyrillic text symbols"; batch 77u adds the fontmaps)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[X2,OT2,T1]{fontenc}
+\begin{document}
+A {\fontencoding{X2}\selectfont \cyrje\cyrii\CYRA} B {\fontencoding{OT2}\selectfont \cyrje\CYRJE} C.
+\end{document}

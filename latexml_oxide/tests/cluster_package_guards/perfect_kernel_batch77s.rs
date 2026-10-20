@@ -1,6 +1,6 @@
 //! Red/green guards for batch 77s: brief silent content losses outside the frontmatter — longtable's `\caption*`,
-//! algpseudocodex's labelled lines, cleveref's `\label[type]`, T2A's Cyrillic і/ј, `{filecontents}` over a file on disk,
-//! `\captionof` of a caption sub-type. Each guard asserts the diagnostics by count and the authored content in its
+//! algpseudocodex's labelled lines, cleveref's `\label[type]`, T2A's Cyrillic і/ј, `{filecontents}` over a file on
+//! disk, `\captionof` of a caption sub-type. Each guard asserts the diagnostics by count and the authored content in its
 //! element.
 use latexml::util::test::convert_files_with;
 
@@ -391,12 +391,14 @@ End text.
   );
 }
 
-/// With subfigure.sty `subfigure` is a command (`\subfigure[..][..]{..}`), no environment and no caption sub-type, so
-/// caption accepts `\captionof{subfigure}` and the caption is a sub-float's: the binding's `{@subfigure}` panel hosts it
-/// (`captionof_environment@subfigure`). `\begin{subfigure}` called `\subfigure` with the caption's internals as its
-/// arguments: 20 errors, "subfigureFirst", the figure's caption numbered "(c)" and the text after it drawn in
-/// (2508.00020). pdflatex: 0 errors, "(a): First", "(b) SubA", "Figure 1: Whole". subfig loaded after it makes no
-/// `subfigure` of its own (subfig.sty:298 `\@ifundefined{c@subfigure}{\newsubfloat{figure}}{}`), so its
+/// With subfigure.sty `subfigure` is a command (`\subfigure[..][..]{..}`), no environment and no caption sub-type,
+/// so caption accepts `\captionof{subfigure}` and the caption is a sub-float's: the binding's `{@subfigure}` panel
+/// hosts it (`captionof_environment@subfigure`), formatted as caption's own caption — its `colon` separator and its
+/// fonts — where `\subfigure`'s panel keeps subfigure.sty's (footnotesize, a space). `\begin{subfigure}` called
+/// `\subfigure` with the caption's internals as its arguments: 20 errors, "subfigureFirst", the figure's caption
+/// numbered "(c)" and the text after it drawn in (2508.00020); r2's panel read "(a) First" in subfigure.sty's format
+/// (1608.05355, 1806.00503). pdflatex: 0 errors, "(a): First", "(b) SubA", "Figure 1: Whole". subfig loaded after it
+/// makes no `subfigure` of its own (subfig.sty:298 `\@ifundefined{c@subfigure}{\newsubfloat{figure}}{}`), so its
 /// `\sf@counterlist` does not name it and caption still accepts the type (2508.00020's preamble: 52 errors at int34a,
 /// 0 now and Figs. 4-9 as the PDF numbers them). Repros captions-floats/captionof_subfigure_sty_is_a_panel,
 /// captions-floats/captionof_subfigure_sty_before_subfig.
@@ -421,7 +423,7 @@ End text.
       (
         "figure",
         "S0.F1",
-        r#"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure class="ltx_figure_panel ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.F0.sf1"><tags><tag><text fontsize="80%" xml:id="S0.F0.sf1.1">(a)</text></tag><tag role="refnum">0(a)</tag></tags><p class="ltx_figure_panel" xml:id="S0.F0.sf1.2">AAA</p><break class="ltx_break"/><toccaption><tag close=" ">(a)</tag>First</toccaption><caption><tag close=" "><text fontsize="80%" xml:id="S0.F0.sf1.3">(a)</text></tag><text fontsize="80%" xml:id="S0.F0.sf1.4">First</text></caption></figure><break class="ltx_break"/><figure class="ltx_figure_panel" xml:id="S0.F1.sf2"><tags><tag><text fontsize="80%" xml:id="S0.F1.sf2.1">(b)</text></tag><tag role="refnum">1(b)</tag></tags><p xml:id="S0.F1.sf2.2">XXX</p><toccaption><tag close=" ">(b)</tag>SubA</toccaption><caption><tag close=" "><text fontsize="80%" xml:id="S0.F1.sf2.3">(b)</text></tag><text fontsize="80%" xml:id="S0.F1.sf2.4">SubA</text></caption></figure><toccaption><tag close=" ">1</tag>Whole</toccaption><caption><tag close=": ">Figure 1</tag>Whole</caption></figure>"#,
+        r#"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure class="ltx_figure_panel ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.F0.sf1"><tags><tag><text fontsize="80%" xml:id="S0.F0.sf1.1">(a)</text></tag><tag role="refnum">0(a)</tag></tags><p class="ltx_figure_panel" xml:id="S0.F0.sf1.2">AAA</p><break class="ltx_break"/><toccaption><tag close=" ">(a)</tag>First</toccaption><caption><tag close=": ">(a)</tag>First</caption></figure><break class="ltx_break"/><figure class="ltx_figure_panel" xml:id="S0.F1.sf2"><tags><tag><text fontsize="80%" xml:id="S0.F1.sf2.1">(b)</text></tag><tag role="refnum">1(b)</tag></tags><p xml:id="S0.F1.sf2.2">XXX</p><toccaption><tag close=" ">(b)</tag>SubA</toccaption><caption><tag close=" "><text fontsize="80%" xml:id="S0.F1.sf2.3">(b)</text></tag><text fontsize="80%" xml:id="S0.F1.sf2.4">SubA</text></caption></figure><toccaption><tag close=" ">1</tag>Whole</toccaption><caption><tag close=": ">Figure 1</tag>Whole</caption></figure>"#,
       ),
       (
         "para",
@@ -449,8 +451,131 @@ End text.
     &[(
       "figure",
       "S0.F0.sf1",
-      r#"<figure class="ltx_figure_panel ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.F0.sf1"><tags><tag><text fontsize="80%" xml:id="S0.F0.sf1.1">(a)</text></tag><tag role="refnum">0a</tag></tags><p class="ltx_figure_panel" xml:id="S0.F0.sf1.2">AAA</p><break class="ltx_break"/><toccaption><tag close=" ">a</tag>First</toccaption><caption><tag close=" "><text fontsize="80%" xml:id="S0.F0.sf1.3">(a)</text></tag><text fontsize="80%" xml:id="S0.F0.sf1.4">First</text></caption></figure>"#,
+      r#"<figure class="ltx_figure_panel ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.F0.sf1"><tags><tag><text fontsize="80%" xml:id="S0.F0.sf1.1">(a)</text></tag><tag role="refnum">0a</tag></tags><p class="ltx_figure_panel" xml:id="S0.F0.sf1.2">AAA</p><break class="ltx_break"/><toccaption><tag close=" ">a</tag>First</toccaption><caption><tag close=": ">(a)</tag>First</caption></figure>"#,
     )],
+  );
+}
+
+/// The starred `\captionof*{subfigure}` is hosted as the unstarred one (`\@scaptionof`, `captionof_host`): it opened the
+/// undefined `{subfigure*}` (an Error and a visible `{subfigure*}` node). `\captionsetup{labelformat=empty}` before a
+/// hosted panel drops its label, as for `\captionof{figure}` (2605.30420's 20 panels print no label). pdflatex: 0
+/// errors, "First" (no label), "(b) SubA", "Figure 1: Whole", "Star"; it then numbers the second figure's caption
+/// "(a): Whole2", the type `subfigure` left set in the float (caption.sty:391) where ours keeps the float's own type
+/// (`\lx@caption@of@set@after`, guard `perfect_kernel_gemini::captionof_in_a_float_keeps_the_float_type`). Repro
+/// captions-floats/captionof_star_subfigure_sty_is_a_panel.
+#[test]
+fn captionof_star_subfigure_sty_is_a_panel() {
+  assert_elements(
+    r"\documentclass{article}
+\usepackage{caption}
+\usepackage{subfigure}
+\begin{document}
+\begin{figure}
+\begin{minipage}{.4\textwidth}AAA\captionsetup{labelformat=empty}\captionof{subfigure}{First}\end{minipage}
+\subfigure[SubA]{XXX}
+\caption{Whole}
+\end{figure}
+\begin{figure}
+\captionof*{subfigure}{Star}
+\caption{Whole2}
+\end{figure}
+End text.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "figure",
+        "S0.F0.sf1",
+        r#"<figure class="ltx_figure_panel ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.F0.sf1"><tags><tag><text fontsize="80%" xml:id="S0.F0.sf1.1">(a)</text></tag><tag role="refnum">0(a)</tag></tags><p class="ltx_figure_panel" xml:id="S0.F0.sf1.2">AAA</p><break class="ltx_break"/><toccaption><tag close=" ">(a)</tag>First</toccaption><caption>First</caption></figure>"#,
+      ),
+      (
+        "figure",
+        "S0.F2",
+        r#"<figure inlist="lof" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure xml:id="S0.F2.fig1"><caption>Star</caption></figure><toccaption><tag close=" ">2</tag>Whole2</toccaption><caption><tag close=": ">Figure 2</tag>Whole2</caption></figure>"#,
+      ),
+      (
+        "para",
+        "p1",
+        r#"<para xml:id="p1"><p xml:id="p1.1">End text.</p></para>"#,
+      ),
+    ],
+  );
+}
+
+/// A `\captionof` takes the caption options in force where it stands: the enclosing float's
+/// (`\captionsetup[table]{…}`, applied when the table begins), then its own type's on top (caption.sty:300-320
+/// `\caption@@settype` → `\caption@setoptions`; `caption_setting`'s `lx@caption@outer`). 2502.11752's
+/// `\captionof{subtable}` panels in a table under `\captionsetup[table]{labelfont=bf,labelsep=space}` print "(a) For
+/// participant 1" (r2 and before: subfigure.sty's format; a colon with the separator alone). pdflatex: "(a) For one"
+/// with a bold label, "Figure 1. Fig in table" with a bold label, "Table 1 Whole", "(a). Sub in fig", "Figure 2.
+/// FWhole", "(a): Loose"; with `labelformat=simple` "(a) For one", where the label read " (a)" (`\bothIfFirst`
+/// tested the name unexpanded). Repro captions-floats/captionof_takes_the_enclosing_float_options.
+#[test]
+fn captionof_takes_the_enclosing_float_options() {
+  assert_elements(
+    r"\documentclass{article}
+\usepackage{caption}
+\usepackage{subfigure}
+\captionsetup[table]{labelfont=bf,labelsep=space}
+\captionsetup[figure]{labelsep=period}
+\begin{document}
+\begin{table}
+\begin{minipage}{.4\textwidth}AAA\captionof{subtable}{For one}\end{minipage}
+\begin{minipage}{.4\textwidth}BBB\captionof{figure}{Fig in table}\end{minipage}
+\caption{Whole}
+\end{table}
+\begin{figure}
+\begin{minipage}{.4\textwidth}CCC\captionof{subfigure}{Sub in fig}\end{minipage}
+\caption{FWhole}
+\end{figure}
+Out \captionof{subfigure}{Loose} end.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "table",
+        "S0.T1",
+        r#"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><figure class="ltx_figure_panel ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.T0.st1"><tags><tag><text fontsize="80%" xml:id="S0.T0.st1.1">(a)</text></tag><tag role="refnum">0(a)</tag></tags><p class="ltx_figure_panel" xml:id="S0.T0.st1.2">AAA</p><break class="ltx_break"/><toccaption><tag close=" ">(a)</tag>For one</toccaption><caption><tag close=" "><text font="bold" xml:id="S0.T0.st1.3">(a)</text></tag>For one</caption></figure><figure class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="138.0pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p class="ltx_figure_panel" xml:id="S0.F1.1">BBB</p><break class="ltx_break"/><toccaption><tag close=" ">1</tag>Fig in table</toccaption><caption><tag close=". "><text font="bold" xml:id="S0.F1.2">Figure 1</text></tag>Fig in table</caption></figure><toccaption><tag close=" ">1</tag>Whole</toccaption><caption><tag close=" "><text font="bold" xml:id="S0.T1.1">Table 1</text></tag>Whole</caption></table>"#,
+      ),
+      (
+        "figure",
+        "S0.F2",
+        r#"<figure inlist="lof" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure class="ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.F1.sf1"><tags><tag><text fontsize="80%" xml:id="S0.F1.sf1.1">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p class="ltx_figure_panel" xml:id="S0.F1.sf1.2">CCC</p><break class="ltx_break"/><toccaption><tag close=" ">(a)</tag>Sub in fig</toccaption><caption><tag close=". ">(a)</tag>Sub in fig</caption></figure><toccaption><tag close=" ">2</tag>FWhole</toccaption><caption><tag close=". ">Figure 2</tag>FWhole</caption></figure>"#,
+      ),
+    ],
+  );
+  // `labelformat=simple` for a type with no name (caption3.sty:54-65 `\bothIfFirst` expands its first argument):
+  // "(a) For one", no leading space; `parens` "Figure (1): Paren".
+  assert_elements(
+    r"\documentclass{article}
+\usepackage{caption}
+\usepackage{subfigure}
+\captionsetup[table]{labelfont=bf,labelformat=simple,labelsep=space,name=Supplementary Table}
+\begin{document}
+\begin{table}
+\begin{minipage}{.4\textwidth}AAA\captionof{subtable}{For one}\end{minipage}
+\caption{Whole}
+\end{table}
+\begin{figure}
+\captionsetup{labelformat=parens}\caption{Paren}
+\end{figure}
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "table",
+        "S0.T1",
+        r#"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><figure class="ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.T0.st1"><tags><tag><text fontsize="80%" xml:id="S0.T0.st1.1">(a)</text></tag><tag role="refnum">0(a)</tag></tags><p class="ltx_figure_panel" xml:id="S0.T0.st1.2">AAA</p><break class="ltx_break"/><toccaption><tag close=" ">(a)</tag>For one</toccaption><caption><tag close=" "><text font="bold" xml:id="S0.T0.st1.3">(a)</text></tag>For one</caption></figure><toccaption><tag close=" ">1</tag>Whole</toccaption><caption><tag close=" "><text font="bold" xml:id="S0.T1.1">Supplementary Table 1</text></tag>Whole</caption></table>"#,
+      ),
+      (
+        "figure",
+        "S0.F1",
+        r#"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><toccaption><tag close=" ">1</tag>Paren</toccaption><caption><tag close=": ">Figure (1)</tag>Paren</caption></figure>"#,
+      ),
+    ],
   );
 }
 

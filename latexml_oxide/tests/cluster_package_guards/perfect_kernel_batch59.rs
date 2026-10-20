@@ -214,8 +214,9 @@ fn author_block_appended_after_author_is_kept() {
 
 /// 59d: the extended T2A letters print through t2aenc.def's `\DeclareTextSymbol`s; the fontenc
 /// binding's empty stubs made the declarations refuse the bare commands, so ј љ њ ћ ђ џ і ї є ґ
-/// vanished (serbian-def-cyr/proba, cmpj/template). Since 77s ј і Ј, set in the Latin slots j i J, are the Cyrillic
-/// letters (OXIDIZED_DESIGN_DIVERGENCES #776; they read Latin j/i/J before). Repro fonts-nfss/t2a_extended_letters_print.
+/// vanished (serbian-def-cyr/proba, cmpj/template). Since 77s ј і Ј, set in the Latin slots j i J, are the
+/// Cyrillic letters (OXIDIZED_DESIGN_DIVERGENCES #776; they read Latin j/i/J before). Repro
+/// fonts-nfss/t2a_extended_letters_print.
 #[test]
 fn t2a_extended_letters_print() {
   let tex =

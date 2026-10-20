@@ -131,8 +131,9 @@ LoadDefinitions!({
   Let!("\\ext@subtable", "\\ext@table");
   // subfig.sty:261-263: `\newsubfloat` lists the sub-float counters it made in `\sf@counterlist`, which caption's
   // `\DeclareCaptionSubType` names in its error for a counter subfig made (caption3.sty:1848-1856) and caption's
-  // `\captionof` refuses (caption.sty:348). subfigure.sty's `subfigure` (loaded first: 2508.00020) is not subfig's: caption
-  // accepts `\captionof{subfigure}` there, "(a): First". Guard `perfect_kernel_batch77s::captionof_subfigure_sty_is_a_panel`.
+  // `\captionof` refuses (caption.sty:348; 1506.06268). subfigure.sty's `subfigure` (loaded first: 2508.00020) is
+  // not subfig's: caption accepts `\captionof{subfigure}` there, a panel caption formats as its own, "(a): First"
+  // as pdflatex. Guard `perfect_kernel_batch77s::captionof_subfigure_sty_is_a_panel`.
   for sub in made_by_subfig {
     RawTeX!(&s!(r"\edef\sf@counterlist{{\@ifundefined{{sf@counterlist}}{{}}{{\sf@counterlist,}}{sub}}}"));
   }

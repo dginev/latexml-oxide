@@ -440,21 +440,14 @@ LoadDefinitions!({
   // tokenization breakage. Witness: same floatrow chain.
   def_macro_noop("\\undefine@key{}{}")?;
 
-  DefMacro!("\\bothIfFirst{}{}", sub[(first, second)] {
-    if first.is_empty() { Ok(Tokens!()) } else {
-      let mut result = first.unlist();
-      result.extend(second.unlist());
-      Ok(Tokens::new(result))
-    }
-  });
-
-  DefMacro!("\\bothIfSecond{}{}", sub[(first, second)] {
-    if second.is_empty() { Ok(Tokens!()) } else {
-      let mut result = first.unlist();
-      result.extend(second.unlist());
-      Ok(Tokens::new(result))
-    }
-  });
+  // caption3.sty:54-65: `\bothIfFirst{a}{b}` is `ab` unless `a` EXPANDS to nothing (`\protected@xdef`, then `\ifx`
+  // against `\@empty`). A label format's name argument is `\ifcsname <type>name\endcsname…\fi`
+  // (`\lx@caption@fnum`), empty for a type with no name: tested as tokens it gave `labelformat=simple` a leading
+  // no-break space, " (a)" (2502.11752's `\captionof{subtable}` panels; Perl's `IsEmpty` test,
+  // caption.sty.ltxml:81-87, does not expand either).
+  RawTeX!(r"\def\bothIfFirst#1#2{\caption@bothif{#1}{#1#2}}
+\def\bothIfSecond#1#2{\caption@bothif{#2}{#1#2}}
+\def\caption@bothif#1#2{\begingroup\let\inputencoding\@gobble\protected@xdef\caption@tempa{#1}\endgroup\ifx\caption@tempa\@empty\else#2\fi}");
 
   // caption3.sty:1048-1051: caption hook definitions.
   // bicaption.sty:128 appends to \caption@beginhook with \g@addto@macro.
@@ -626,9 +619,10 @@ LoadDefinitions!({
   // not modelled: a refused sub-type there gives this message, one error as there. A sub-type is caption's own
   // (`\caption@subtypelist`) or a sub-float subfig's `\newsubfloat` made (`\sf@counterlist`, caption.sty:348): with
   // caption and subfig, `\captionof{subfigure}{First}` in a minipage is "Figure 1: First", not panel (a) before the
-  // real `\subfloat`. Outside any float (`\@captype` undefined) the `\caption` it falls back to is caption.sty's
-  // `\caption@OutsideFloat\caption\caption@withoptargs\@gobbletwo` (:200-207): a second error, and the text dropped
-  // (it printed "CCCLone" glued to the box's text). Guards `perfect_kernel_batch77s::captionof_subtype_is_refused`,
+  // real `\subfloat` (1506.06268). Outside any float (`\@captype` undefined) the `\caption` it falls back to is
+  // caption.sty's `\caption@OutsideFloat\caption\caption@withoptargs\@gobbletwo` (:200-207): a second error, and the
+  // text dropped (it printed "CCCLone" glued to the box's text; 1801.09806's "Bounds for y", 8 errors as pdflatex).
+  // Guards `perfect_kernel_batch77s::captionof_subtype_is_refused`,
   // `perfect_kernel_batch77s::captionof_subfig_subfloat_is_refused`.
   RawTeX!(r"\def\lx@caption@of#1#2{\edef\lx@caption@of@type{#2}\expandafter\lx@caption@of@\expandafter{\lx@caption@of@type}#1}
 \def\lx@caption@of@#1#2{\caption@ifdefined@subtype{#1}\@firstoftwo{\caption@ifin@list\sf@counterlist{#1}}{\caption@Error{Should not be used with subtype `#1'}\lx@caption@of@refused#2}{\lx@caption@of@set@after{#1}\lx@caption@settype{#1}#2{#1}}}
@@ -697,13 +691,10 @@ LoadDefinitions!({
     // A type that is no environment (`\end<type>` undefined) is hosted by the environment its binding names
     // (`captionof_environment@<type>`): subfigure.sty's `subfigure` is the command `\subfigure[..][..]{..}`, which
     // `\begin{subfigure}` called with the caption's internals as its arguments (20 errors, "subfigureFirst", the
-    // figure's own caption numbered "(c)"); its `{@subfigure}` panel is the sub-float, "(a): First" as pdflatex
-    // (2508.00020, KNOWN_PERL_ERRORS #999). Guard `perfect_kernel_batch77s::captionof_subfig_subfloat_is_refused`.
-    let hosted = if lookup_definition(&T_CS!(s!("\\end{}", name.trim())))?.is_none() {
-      lookup_value(&s!("captionof_environment@{}", name.trim())).map(|env| env.to_string())
-    } else {
-      None
-    };
+    // figure's own caption numbered "(c)"); its `{@subfigure}` panel is the sub-float, formatted as caption's own
+    // caption (`\lx@caption@hosted`, `caption_format_tokens`): "(a): First" as pdflatex (2508.00020, 2605.30420,
+    // KNOWN_PERL_ERRORS #999). Guard `perfect_kernel_batch77s::captionof_subfigure_sty_is_a_panel`.
+    let hosted = captionof_host(name.trim())?;
     let wrapper: Vec<Token> = if VERBATIM_BODY_ENVS.contains(&name.trim()) {
       let mut env = ExplodeText!("@float");
       env.push(T_END!());
@@ -719,10 +710,15 @@ LoadDefinitions!({
     // environment that sets none (a non-float `\captionof{myfig}`, whose two errors are then
     // pdflatex's "No counter" and "No float type"), and never past the group. Before the wrapper's
     // `\begin`, which may read arguments (`\captionof{subfigure}`: its width, 2605.30420).
-    let mut out = vec![T_CS!("\\begingroup"), T_CS!("\\def"), T_CS!("\\@captype"), T_BEGIN!()];
+    let mut out = vec![T_CS!("\\begingroup")];
+    out.extend(caption_outer_type()?);
+    out.extend([T_CS!("\\def"), T_CS!("\\@captype"), T_BEGIN!()]);
     out.extend(ExplodeText!(name.trim()));
     out.push(T_END!());
     out.push(T_CS!("\\lx@caption@wrapper"));
+    if hosted.is_some() {
+      out.push(T_CS!("\\lx@caption@hosted"));
+    }
     out.push(T_CS!("\\begin"));
     out.push(T_BEGIN!());
     out.extend(wrapper.iter().cloned());
@@ -748,7 +744,48 @@ LoadDefinitions!({
     out.extend([T_CS!("\\lx@caption@of@after"), T_CS!("\\let"), T_CS!("\\lx@caption@of@after"), T_CS!("\\relax")]);
     Ok(Tokens::new(out))
   });
-  DefMacro!("\\@scaptionof{}{}", r"\begin{#1*}\@scaption{#2}\end{#1*}\lx@caption@of@after\let\lx@caption@of@after\relax");
+  // The starred form is hosted as the unstarred one (`captionof_host`): `\captionof*{subfigure}{Star}` with
+  // subfigure.sty opened the undefined `{subfigure*}` (an Error and a visible `{subfigure*}` node; pdflatex: 0 errors,
+  // "Star"). Guard `perfect_kernel_batch77s::captionof_star_subfigure_sty_is_a_panel`.
+  DefMacro!("\\@scaptionof{}{}", sub[(ty, text)] {
+    let name = ty.to_string();
+    let after = [T_CS!("\\lx@caption@of@after"), T_CS!("\\let"), T_CS!("\\lx@caption@of@after"), T_CS!("\\relax")];
+    let mut out = Vec::new();
+    let host = captionof_host(name.trim())?;
+    let env = if let Some(env) = &host {
+      out.push(T_CS!("\\begingroup"));
+      out.extend(caption_outer_type()?);
+      out.extend([T_CS!("\\def"), T_CS!("\\@captype"), T_BEGIN!()]);
+      out.extend(ExplodeText!(name.trim()));
+      out.extend([T_END!(), T_CS!("\\lx@caption@wrapper"), T_CS!("\\lx@caption@hosted")]);
+      ExplodeText!(env)
+    } else {
+      let mut env = ty.unlist();
+      env.push(T_OTHER!("*"));
+      env
+    };
+    out.extend([T_CS!("\\begin"), T_BEGIN!()]);
+    out.extend(env.iter().cloned());
+    out.extend([T_END!(), T_CS!("\\@scaption"), T_BEGIN!()]);
+    out.extend(text.unlist());
+    out.extend([T_END!(), T_CS!("\\end"), T_BEGIN!()]);
+    out.extend(env);
+    out.push(T_END!());
+    if host.is_some() {
+      out.extend([T_CS!("\\lx@caption@wrapper@done"), T_CS!("\\endgroup")]);
+    }
+    out.extend(after);
+    Ok(Tokens::new(out))
+  });
+  // A `\captionof` panel a binding hosts (`captionof_host`) is caption's own `\caption` of that type
+  // (`caption_format_tokens`), set in the hosting group.
+  DefPrimitive!("\\lx@caption@hosted", {
+    assign_value("lx@caption@hosted", true, Some(Scope::Local));
+  });
+  // The type whose caption options are in force where a `\captionof` stands (`caption_setting`), in its group.
+  DefPrimitive!("\\lx@caption@outer{}", sub[(ty)] {
+    assign_value("lx@caption@outer", ty.to_string().trim().to_string(), Some(Scope::Local));
+  });
 
   // caption3.sty:275-280 `\clearcaptionsetup*[option]{type}`; Perl's argument-less
   // (caption.sty.ltxml:130) left the type as text (KPE #316).
@@ -1041,12 +1078,22 @@ fn caption_value(value: &str) -> String {
   }
 }
 
-/// A caption setting for float type `ty`: the type's own (`\captionsetup[figure]{…}`), else the general one.
+/// A caption setting for float type `ty`: the type's own (`\captionsetup[figure]{…}`), else the enclosing type's
+/// (`lx@caption@outer`, a `\captionof` of another type: caption applies a float's options when it begins and a
+/// `\captionof`'s on top, caption.sty:300-320 `\caption@@settype` → `\caption@setoptions`, so a `\captionof{subtable}`
+/// in a table under `\captionsetup[table]{labelsep=space}` is "(a) For participant 1", 2502.11752), else the general one.
 fn caption_setting(ty: &str, key: &str) -> Option<String> {
-  [s!("CAPTION_{ty}_{key}"), s!("CAPTION_{key}")]
-    .iter()
-    .map(|k| lookup_string(k))
-    .find(|v| !v.is_empty())
+  let outer = lookup_string("lx@caption@outer");
+  let outer = (!outer.is_empty() && outer != ty).then(|| s!("CAPTION_{outer}_{key}"));
+  [
+    Some(s!("CAPTION_{ty}_{key}")),
+    outer,
+    Some(s!("CAPTION_{key}")),
+  ]
+  .iter()
+  .flatten()
+  .map(|k| lookup_string(k))
+  .find(|v| !v.is_empty())
 }
 
 /// caption3.sty:852-858: a font option's value is a list of caption fonts (`font={small,it}`, `labelfont=bf`,
@@ -1130,6 +1177,29 @@ fn caption_labels_only(text: Tokens) -> Tokens {
   Tokens::new(kept)
 }
 
+/// `\lx@caption@outer{<type>}` for the `\@captype` in force where a `\captionof` stands — the enclosing float's, or
+/// the type an earlier `\captionof` left outside floats — whose options caption has applied (`caption_setting`).
+fn caption_outer_type() -> Result<Vec<Token>> {
+  if !has_meaning(&T_CS!("\\@captype")) {
+    return Ok(Vec::new());
+  }
+  let mut tokens = vec![T_CS!("\\lx@caption@outer"), T_BEGIN!()];
+  tokens.extend(ExplodeText!(&do_expand(T_CS!("\\@captype"))?.to_string()));
+  tokens.push(T_END!());
+  Ok(tokens)
+}
+
+/// The environment a binding names to host a `\captionof` of a type that is no environment (`\end<type>` undefined):
+/// `captionof_environment@<type>`, set by subfigure_sty.rs (`subfigure` is subfigure.sty's command, its panel the
+/// binding's `{@subfigure}`). Witnesses 2508.00020, 2605.30420.
+fn captionof_host(ty: &str) -> Result<Option<String>> {
+  Ok(if lookup_definition(&T_CS!(s!("\\end{ty}")))?.is_none() {
+    lookup_value(&s!("captionof_environment@{ty}")).map(|env| env.to_string())
+  } else {
+    None
+  })
+}
+
 /// caption3.sty:1713-1748 `\caption@ifempty`: a caption text is empty when nothing is left once its spaces, a leading
 /// `\ignorespaces` and its `\label{…}`, `\index{…}` and `\glossary{…}` are taken away (`\caption{\label{f3}}`,
 /// pdflatex "Figure 3" with no separator); a group, even an empty one, is text.
@@ -1197,9 +1267,16 @@ fn caption_text_is_empty(text: &Tokens) -> bool {
 fn caption_format_tokens(ty: Tokens, text: Tokens) -> Result<Tokens> {
   let ty_name = ty.to_string().trim().to_string();
   let text_empty = caption_text_is_empty(&text);
+  // A `\captionof` panel a binding hosts (`\lx@caption@hosted`, `\@captionof@`) is caption's `\caption` of that
+  // type, so caption formats it as any other: its default separator `colon` (caption3.sty:787
+  // `\SetCaptionDefault{labelseparator}{colon}`), its `labelformat=` (`empty`: no label, 2605.30420) and its own fonts
+  // in place of the sub-float package's (1608.05355, 1806.00503).
+  let hosted = lookup_bool("lx@caption@hosted");
   let get = |key: &str| caption_setting(&ty_name, key);
   let format = get("labelformat").filter(|f| f != "default" && f != "original");
-  let separator = get("labelsep").filter(|s| s != "default");
+  let separator = get("labelsep")
+    .filter(|s| s != "default")
+    .or_else(|| hosted.then(|| "colon".to_string()));
   let (font, label_font, text_font) = (get("font"), get("labelfont"), get("textfont"));
   // caption3.sty:1680-1683: an empty text also takes the `simple` text format (`textformat=period` adds no ".").
   let text_format = get("textformat").filter(|f| f != "simple" && f != "default" && !text_empty);
@@ -1208,7 +1285,7 @@ fn caption_format_tokens(ty: Tokens, text: Tokens) -> Result<Tokens> {
   let mut line_break: Vec<Token> = Vec::new();
   // No type (a caption whose type an argument scan lost) has nothing to format.
   let passthrough = ty_name.is_empty()
-    || ty_name.starts_with("sub")
+    || (ty_name.starts_with("sub") && !hosted)
     || (format.is_none()
       && separator.is_none()
       && font.is_none()
@@ -1225,6 +1302,12 @@ fn caption_format_tokens(ty: Tokens, text: Tokens) -> Result<Tokens> {
   };
   if !passthrough {
     tokens.push(T_CS!("\\begingroup"));
+    if hosted {
+      // caption3.sty:1686 `\caption@applyfont`: caption's fonts, not subfigure.sty's `\subcapsize\subcaplabelfont`.
+      for font_cs in [s!("fnum@font@{ty_name}"), s!("format@title@font@{ty_name}")] {
+        tokens.extend([T_CS!("\\let"), T_CS!(&s!("\\{font_cs}")), T_CS!("\\@empty")]);
+      }
+    }
     if let Some(name) = name {
       tokens.push(T_CS!("\\lx@caption@setname"));
       braced(&mut tokens, explode(&ty_name));

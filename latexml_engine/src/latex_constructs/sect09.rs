@@ -118,10 +118,11 @@ pub(crate) fn load() -> Result<()> {
     r"\ifx.#5.\expandafter\lx@caption@nolabel\else\expandafter\@@@hack@caption@\fi{#1}{#2}{#3#4}#5\endcaption"
   );
   DefMacro!(r"\lx@caption@nolabel{}{} Until:\endcaption", r"\@caption@@@{#1}{#2}{#3}");
-  // A `\label` in the caption's text reads cleveref's optional type as `\@caption@postlabel` does (typed_label): read as
-  // the key, `\caption{Foo\label[appendixtable]{tin}}` labelled the float `[` and printed "Fooappendixtable]tin"
-  // (pdflatex: "appendix table 1"; the 2404.11739 mechanism, KNOWN_PERL_ERRORS #998). Guard
-  // `perfect_kernel_batch77s::label_type_in_caption_text`.
+  // A `\label` in the caption's text reads cleveref's optional type as `\@caption@postlabel` does (typed_label):
+  // read as the key, `\caption{Foo\label[appendixtable]{tin}}` labelled the float `[` and printed
+  // "Fooappendixtable]tin" (pdflatex: "appendix table 1"; the 2404.11739 mechanism, KNOWN_PERL_ERRORS #998;
+  // 1412.3542, 1901.00405, 2008.03354, 2201.04036). Without cleveref the type is read too (OXIDIZED_DESIGN #552).
+  // Guard `perfect_kernel_batch77s::label_type_in_caption_text`.
   DefMacro!(
     r"\@@@hack@caption@{}{}{} [] Semiverbatim Until:\label Until:\endcaption",
     sub[(captype, short, text, ty, key, after, rest)] {

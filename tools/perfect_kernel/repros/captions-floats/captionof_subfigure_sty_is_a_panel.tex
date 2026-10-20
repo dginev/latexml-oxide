@@ -2,8 +2,9 @@
 % oracle:  pdflatex 0 errors: "(a): First", "(b) SubA", "Figure 1: Whole", "End text."
 % engines: rust 77s r1 = 20 errors (\begin{subfigure} called subfigure.sty's \subfigure command with the caption's
 %          internals as its arguments): "subfigureFirst", the figure's caption "(c) Whole", "End text." drawn into it
-% expect:  0 errors, 0 warnings; the caption is a sub-float panel "(a) First", then "(b) SubA", "Figure 1: Whole"
-% status:  RED (77s r1) -> GREEN (77s r2)
+% expect:  0 errors, 0 warnings; the caption is a sub-float panel in caption's format "(a): First" (77s r2: "(a) First",
+%          subfigure.sty's), then "(b) SubA", "Figure 1: Whole"
+% status:  RED (77s r1) -> GREEN (77s r3)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{caption}

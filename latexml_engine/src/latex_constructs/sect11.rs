@@ -2199,10 +2199,11 @@ fn cite_prints_keys(bibrefs: &str) -> Result<()> {
   Ok(())
 }
 
-/// The tokens of a trailing `\label[type]{key}` a site moves into a caption (`\@caption@postlabel`, sect09.rs; caption's
-/// `\@captionof@postlabel`; algorithm2e's procedure caption), which read the optional type themselves: `<label>{<key>}`,
-/// after `\lx@label@type{<type>}` when a type was given (cleveref.sty `\label[type]`, KNOWN_PERL_ERRORS #998). An absent
-/// or blank type adds no token to the caption's text, which other code re-reads and scans.
+/// The tokens of a trailing `\label[type]{key}` a site moves into a caption (`\@caption@postlabel`, sect09.rs;
+/// caption's `\@captionof@postlabel`; algorithm2e's procedure caption), which read the optional type themselves:
+/// `<label>{<key>}`, after `\lx@label@type{<type>}` when a type was given (cleveref.sty `\label[type]`,
+/// KNOWN_PERL_ERRORS #998). An absent or blank type adds no token to the caption's text, which other code re-reads
+/// and scans.
 pub fn typed_label(label: Token, ty: Option<Tokens>, key: Tokens) -> Vec<Token> {
   let mut tokens = label_type(ty);
   tokens.extend([label, T_BEGIN!()]);

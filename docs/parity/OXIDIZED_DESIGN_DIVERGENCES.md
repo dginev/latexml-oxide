@@ -16995,9 +16995,18 @@ caption (`\lx@algocf@proccaption@postlabel`, algorithm2e_sty.rs) and caption.sty
 (`\@captionof@postlabel`, caption_sty.rs; Perl caption.sty.ltxml:122 the same as pool:3172). subeqn's
 `\@lab@subeqnarray` (subeqn.sty:57 `[2]`, so pdflatex reads `[` too) is left as TeX has it. The label-mapping peek
 `maybe_peek_label` (counter/dialect.rs; Perl Package.pm:819ff the same) also reads `[` as the key, but runs only under a
-label-mapping hook, which only the test helper `labelled_tex.rs` sets. **Guard**:
+label-mapping hook, which only the test helper `labelled_tex.rs` sets. Since 77s r2 two more sites read it: a `\label`
+inside the caption's text (`\@@@hack@caption@`, latex_constructs/sect09.rs; 1412.3542, 1901.00405, 2008.03354,
+2201.04036) and longtable's label (`\lx@longtable@label`, longtable_sty.rs, the type applied after the table by
+`\lx@longtable@labeltype`; 2508.14936). **Divergence without cleveref**: all five sites read the optional `[type]`
+whether or not cleveref is loaded; the kernel `\label` takes no optional, so pdflatex reads `[` as the key and typesets
+the rest — a longtable's `\caption{Long}\label[appendixtable]{lt}` prints "appendixtable]lt" after the caption and
+every `\ref{lt}` is "??" (0 errors). We label the key and drop the `[type]` text, so the reference resolves (77s r2
+re-review probe l2). Recorded as a divergence, not ruled on: reading the type only with cleveref loaded would match
+pdflatex. **Guards**:
 `perfect_kernel_batch65m::cleveref_label_type_after_caption` (repros
-captions-floats/cleveref_label_type_after_{caption,procedure_caption,captionof}).
+captions-floats/cleveref_label_type_after_{caption,procedure_caption,captionof}),
+`perfect_kernel_batch77s::label_type_in_caption_text` (repro package-bindings/cleveref_label_type_in_caption_text).
 
 ### 553. TeX's math-group recovery for an inline formula outside alignments: a math shift closes the groups opened in it, `\par` ends it unless the math after it goes on (then it is kept open, as Perl's), an environment's end ends it, a `}` at its math shift ends it when it closes a construct digested as a unit, else is deleted (Perl: none of the three)
 
@@ -21204,7 +21213,7 @@ binding applies them (`six_begin_processing_for_units`), and an explicit empty v
 per-unit `number-unit-product = \ ` puts its interword space before nm/dBm. 77r r2; repro
 `package-bindings/siunitx_unit_named_by_its_own_char_code`; guard `perfect_kernel_batch77r::siunitx_*`.
 
-### 776. A Cyrillic text symbol set in a Latin letter's slot (T2A/T2B/T2C, X2, OT2) is that Cyrillic letter (Perl: the Latin letter)
+### 776. A Cyrillic text symbol set in a Latin letter's slot (T2A/T2B/T2C) is that Cyrillic letter (Perl: the Latin letter)
 
 **TeX**: t2aenc.def:230-237 (t2benc.def:230-239, t2cenc.def alike) declares `\CYRII`/`\cyrii`, `\CYRJE`/`\cyrje`,
 `\CYRQ`/`\cyrq`, `\CYRW`/`\cyrw` — and in T2B/T2C `\CYRDZE`/`\cyrdze` — at the slots of I i J j Q q W w (S s): the LH
@@ -21220,5 +21229,6 @@ Ukrainian "Іван" and Serbian "ј" come out spelled with Latin letters, wrong
 encoding (`cyrillic_letter_in_latin_slot`, latex_constructs/sect08.rs); the slot still decodes as Latin, so a Latin `i`
 typed in T2A text stays Latin, and a letter with a slot of its own (`\cyrdze` at T2A 175) is unchanged. X2 and OT2 have
 no fontmap here (Perl neither: no x2/ot2.fontmap.ltxml), so their symbols decode to nothing before this applies — the
-letters are dropped without a diagnostic (SYNC_STATUS 77s residual). Repro
+letters are dropped without a diagnostic (SYNC_STATUS silent-loss row "X2/OT2 Cyrillic text symbols", RED
+`fonts-nfss/x2_ot2_cyrillic_symbols_print`); once a fontmap gives their slots, the rule above applies to them too. Repro
 `fonts-nfss/t2a_cyrillic_i_and_je_are_cyrillic`; guard `perfect_kernel_batch77s::t2a_cyrillic_i_and_je_are_cyrillic`.

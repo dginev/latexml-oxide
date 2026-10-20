@@ -16070,9 +16070,15 @@ the `\subfloat` keeps "(a)" — and outside any float the fallback `\caption` is
 whose `subfigure` is a command (`\subfigure[..][..]{..}`), not an environment: `\begin{subfigure}` called it with the
 caption's internals as its arguments (caption + subfigure: 20 errors, "subfigureFirst", the figure's caption "(c)", the
 text after it drawn in; pdflatex 0 errors, "(a): First"; 2508.00020). A type that is no environment is now hosted by
-the environment its binding names (`captionof_environment@<type>`; subfigure.sty's `{@subfigure}` panel), and subfig's
+the environment its binding names (`captionof_environment@<type>`; subfigure.sty's `{@subfigure}` panel) and formatted
+as caption's own caption — its `colon` separator, `labelformat=` and fonts, where `\subfigure`'s own panels keep
+subfigure.sty's — so it reads "(a): First" as pdflatex (77s r3; r2 printed subfigure.sty's "(a) First"; 2605.30420's
+`labelformat=empty` panels print no label, 1608.05355 and 1806.00503 "(a): Time step = 1"). The starred
+`\captionof*{subfigure}` is hosted the same way (Perl's `\begin{#1*}` opens the undefined `{subfigure*}`: an Error and a
+visible `{subfigure*}` node; pdflatex 0 errors, "Star"). And subfig's
 `\sf@counterlist` names only the sub-floats subfig itself made (subfig.sty:298-299 `\@ifundefined{c@subfigure}
 {\newsubfloat{figure}}{}`: after subfigure.sty it makes none, so caption still accepts the type; 2508.00020 52 Errors →
 0, its figures numbered as the PDF). Repros `captions-floats/captionof_subfig_subfloat_is_refused`,
-`captions-floats/captionof_subfigure_sty_is_a_panel`, `captions-floats/captionof_subfigure_sty_before_subfig`; guards
-`perfect_kernel_batch77s::{captionof_subfig_subfloat_is_refused, captionof_subfigure_sty_is_a_panel}`.
+`captions-floats/captionof_subfigure_sty_is_a_panel`, `captions-floats/captionof_subfigure_sty_before_subfig`,
+`captions-floats/captionof_star_subfigure_sty_is_a_panel`; guards `perfect_kernel_batch77s::{
+captionof_subfig_subfloat_is_refused, captionof_subfigure_sty_is_a_panel, captionof_star_subfigure_sty_is_a_panel}`.

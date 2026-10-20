@@ -16,6 +16,7 @@ whole intent of this file; everything after it is supporting detail.
 | section | what it is | when you read it |
 |---|---|---|
 | **Ranked worklist** | every open item, ordered, with size + where the detail lives | **first, always** |
+| Rust Error Fixes | Rust-only defects fixed (with their KNOWN_PERL_ERRORS cross-reference) | before filing a defect as Perl's |
 | Current status | suite count, the last session, release state | to orient |
 | Open items | the detail behind the ranked rows | when you pick that row |
 | Standing policies | rules that constrain *how* you fix things | before adding a CLI flag, a stub, or a divergence |
@@ -139,6 +140,7 @@ do not block the E/F rerun.
 | — | aistats `in_place` residuals: a macro with parameters defined inside the `\twocolumn[…]` block (`\def\Uni#1{…}`, probe `g_args`: Error undefined, pdflatex "Univ of Here") or a local `\let` of a primitive (`\let\Uni\relax`, probe `g_letprim`: Error) is not read in place | open (77o r2 review finding 4); no corpus witness |
 | — | aistats renamed copies: ~100 papers ship a renamed aistats style the versioned fallback and the registrations do not reach (`aistats2022_arxiv.sty` 9, `aistats_arxiv.sty` 7, `*_preprint`, `*_mod`, `*_old`, …): no title, no creators | open (77o r2 review finding 10) |
 | — | renamed natbib copies read raw: a shipped natbib copy under a name the versioned fallback does not reduce to `natbib` (`natbib_vw.sty` 16 papers, `modnatbib` 21, `hbnatbib` 16, `ctextemp_natbib` 13, `natbib_jrm` 12, `NAR-natbib` 9, `natbib_padeu` 8, `rnatbib` 7, `wsnatbib`/`natbibsty`/`igsnatbib` 6 each, … — census: 1,509 corpus papers ship a `*natbib*.sty` (1,677 paper/file rows), `~/data/pk_agents/main/scratch_356a0c47/natbib_copies/natbib_copies_all.tsv`; `natbib2`/`natbib209`/`natbib1`/`natbib_mod` already fall back to the binding, "Interpreted as versioned package"; NJDnatbib/bmvc2k_natbib/ws-rv-har are 72a stand-ins) is read raw: its `\citet`/`\citep` read `\b@<key>`, which no `\bibitem` of ours writes (no `\bibcite`), so every citation prints "?" with a "Citation undefined" Warning, and a labelled `\bibitem` keeps no refnum, so the kernel `\cite` shows no label (1003.3017: 62 Warnings, 0802.4100: 142, astro-ph0512042; pdflatex "Schneider et al. (2010), Smith (2001), (Smith, 2001)."; RED `index-bib/mn2e_natbib_copy/natbib_renamed_copy_citations_resolve`). Not the brief label route of 70c (g): the copy's whole citation layer is missing | open (77s) — the same hole as the aistats row above and 72a's per-copy stand-ins (a 3rd/4th recurrence). **Rule adopted (user ruling 2026-10-20)**: a shipped file whose `\ProvidesPackage`/`\ProvidesClass` names a bound package/class loads that binding, then is read as a stand-in copy (OD #731), instead of a per-name stand-in list (natbib_vw/modnatbib/natbib_jrm/natbibsty/tsnatbib … all `\ProvidesPackage{natbib}`); its own batch follows |
+| — | X2/OT2 Cyrillic text symbols dropped with no diagnostic: `\usepackage[X2,OT2,T1]{fontenc}` + `A {\fontencoding{X2}\selectfont \cyrje\cyrii\CYRA} B {\fontencoding{OT2}\selectfont \cyrje\CYRJE} C.` — pdflatex "A јіА B jJ C." (OT2 sets Ј ј in the J j slots, ot2enc.def:96,124), we and Perl "A А B  C." with 0 Errors/Warnings: there is no x2/ot2 fontmap, so the slots decode to nothing and `\DeclareTextSymbol` gives no glyph (T2A/T2B/T2C print since 77s, OD #776). RED `fonts-nfss/x2_ot2_cyrillic_symbols_print` (77s r2 re-review probe x2) | open — batch 77u adds the X2/OT2 fontmaps |
 | — | 1802.07182 (aistats): the affiliations written as a second `\aistatsauthor` row become creators "University of Cambridge1", "Invenia Labs2", "Cambridge", "UK" (the author's misuse of the setter; its e-mail list is the block's, one contact an address since 77o r3) | open, author misuse (77o r2 review finding 3) |
 | — | 1202.1568 (aistats2eM): an e-mail list with the domain after the braces (`{seungyeon.kim@, fli@cc., …}gatech.edu`) is not read as an e-mail list and stays inside the affiliation (content kept) | open (77o r2 report) |
 | — | 2203.06997 (aistats, paired): a `~\\` spacer line before a column's e-mail line makes the kernel `\author` line reading take the e-mail for an affiliation ("Richard E. Turner: University of Cambridge; ret26@cam.ac.uk" both affiliations) | open (77o r3 A/B; content kept) |
@@ -146,6 +148,18 @@ do not block the E/F rerun.
 | — | `\shortstack` eats the space after its argument (`A \shortstack[r]{x} Body.` → `…</inline-block>Body.`): the trailing `OptionalMatch:* [Dimension]` of the prototype reads past it; Perl the same | open, KNOWN_PERL_ERRORS #996 |
 | — | a `{titlepage}` whose class `\@maketitle` prints a paragraph after the title and author: the paragraph is re-homed before the title (`<para>…Printed cover text…</para><title>T</title>`), the PDF prints it after them; base, 77o r1-r3 alike | open (77o r2 review finding 9; guard `perfect_kernel_batch56::unwound_titlepage_rehomes_a_printed_paragraph` asserts the paragraph alone) |
 | 25, 26, 27 | `--splitindex`/`--splitbibliography` (non-default), alignment open at `\end{document}`, lstlisting in `\parbox` | not silent, re-checked on head 2026-10-19: #26 is an honest Error (a `tabular` left open, `c & d`: 4 Errors; an `align`, `c&=d`: 3 — "Attempt to close a group that switched to mode internal_vertical"; invalid input, pdflatex errs); #27 has raised 1 Error since 64zf (CONTROL `kernel-alignment/pcol_lstlisting_parbox_CONTROL`, pdflatex 7); #25 needs a non-default option the arXiv runs never pass — open, low reach, not blocking |
+
+## Rust Error Fixes
+
+Rust-only defects (a port that diverged from the Perl it translates, not a Perl-origin defect), each with its
+KNOWN_PERL_ERRORS cross-reference when one applies. Perl-origin defects go to `parity/KNOWN_PERL_ERRORS.md`.
+
+- **cleveref `\crefname`/`\Crefname` derivation (77s)**: our clean port (`cref_define_name`, cleveref_sty.rs) dropped
+  cleveref.sty:1296-1325's derivation of the other variant (Perl loads the raw macro), so a lone
+  `\crefname{appendixtable}{Appendix Table}{…}` left `\Cref` with no name (2404.11739). Derived since 77s, changing case
+  for both names or neither as the singular is empty or not (cleveref.sty:1309). Related Perl defect: KPE #998 (the
+  `\label[type]` it names). Guards `perfect_kernel_batch77s::{cleveref_label_type_names_the_reference,
+  cleveref_derived_name_follows_the_singular}`.
 
 ## Current status
 
@@ -4473,21 +4487,20 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   text dropped; "CCCLone" printed). (3) a `\captionof` type that is no environment is hosted by the environment its
   binding names (`captionof_environment@<type>`): subfigure.sty's `subfigure` is a command, and `\begin{subfigure}`
   called it with the caption's internals (caption + subfigure: 20 errors, "subfigureFirst", the figure's caption "(c)",
-  the text after it drawn in; now 0 errors, "(a) First", "(b) SubA", "Figure 1: Whole" as pdflatex; KPE #999), and subfig's
+  the text after it drawn in; now 0 errors, "(a) First", "(b) SubA", "Figure 1: Whole" — pdflatex "(a): First", caption's
+  format, r3 below; KPE #999), and subfig's
   `\sf@counterlist` names only the sub-floats subfig made (subfig.sty:298-299; after subfigure.sty none): 2508.00020 52
   Errors at int34a (54 r1) → 0, Figs. 4-9 as the PDF numbers them; 2605.30420 101 Errors + Fatal → 0, 1608.05355,
   1806.00503, 1905.01354, 2502.11752 Fatal → 0 errors.
   (4) cleveref's derived variant changes case for both names or neither, as the singular is empty or not
-  (cleveref.sty:1309 `\ifx\@tempa\@empty`; it was tested per name). Rust error fix (not a Perl defect, so not in
-  KPE #998): our clean `\crefname`/`\Crefname` port (`cref_define_name`) had dropped cleveref.sty:1296-1325's
-  derivation of the other variant (Perl loads the raw macro), so a lone `\crefname{appendixtable}{Appendix Table}{…}`
-  left `\Cref` with no name (2404.11739); derived since 77s. Residuals: a `\label[type]` in an amsmath `align`/`split` —
+  (cleveref.sty:1309 `\ifx\@tempa\@empty`; it was tested per name); the derivation itself is a Rust error fix (section
+  "Rust Error Fixes"). Residuals: a `\label[type]` in an amsmath `align`/`split` —
   pdflatex prints "??" (cleveref's `\label@in@display@optarg` hands `[type]{key}` to amsmath), we drop the type in
   `align` with an "Unexpected text after the value" Warning and give it to the display in `split`; `{filecontents}` named
   `\jobname`/`\jobname.tex` under `[overwrite]` (latex.ltx:19005-19021 "Trying to overwrite `\jobname.tex'", an Error)
   and the "Writing or overwriting file" Warning under `[force]`/`[overwrite]` are not modelled; X2 and OT2 Cyrillic text
   symbols (`\usepackage[X2]{fontenc}` + `\cyrje`, `\fontencoding{OT2}\selectfont\cyrje`) are dropped without a
-  diagnostic — no x2/ot2 fontmap here or in Perl (OD #776). Not reading `[type]`: pasj00's PASJ longtable label
+  diagnostic — no x2/ot2 fontmap here or in Perl (OD #776; silent-loss row "X2/OT2 Cyrillic text symbols"). Not reading `[type]`: pasj00's PASJ longtable label
   (`\lx@pasj@lt@label`, pasj00_cls.rs) and the frontmatter's `\lx@set@frontmatter@label [prefix]` (a `\label[type]` in an
   author or affiliation would take the type as its prefix); neither seen with cleveref. A/B r2 (vs r1 over r1's 349
   papers + 30 with a `\label[type]` in or after a caption + 30 with `\captionof{subfigure}` under subfig/subfigure from a
@@ -4496,6 +4509,28 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   every one a `\captionof{subfigure}` pdflatex refuses too (2002.04205 1 → 19 and the 1907.12365 thesis 3 → 55, pdflatex
   19 and 53 of the same error; 1506.06268, 1603.00573, 1904.11277, 1907.12250, 2002.02143, 1808.00739, 1710.07132), their
   other errors gone; 1801.09806's four refused `\captionof` outside floats drop "Bounds for y" as pdflatex does.
+  **r3** (re-review follow-ups; guards `perfect_kernel_batch77s::*`, 12): (1) a hosted `\captionof` panel is caption's
+  own `\caption` of its type (`\lx@caption@hosted`, `caption_format_tokens`): caption's `colon` separator, its
+  `labelformat=` and its fonts, where `\subfigure`'s own panels keep subfigure.sty's — "(a): Time step = 1" as the PDFs
+  of 1608.05355 and 1806.00503 (r2 "(a) Time step = 1" in footnotesize), 2605.30420's `labelformat=empty` panels with no
+  label (r2 "(a)"-"(t)"), an empty-text panel "(a)" with no separator (2508.00020, 2508.03326). (2) a `\captionof`
+  takes the options of the type in force where it stands, then its own (caption.sty:300-320; `lx@caption@outer`):
+  2502.11752's `\captionof{subtable}` in tables under `\captionsetup[table]{labelfont=bf,labelsep=space}` is "(a) For
+  participant 1", bold label, as the PDF. (3) `\bothIfFirst`/`\bothIfSecond` expand their test argument (caption3.sty:54-65):
+  a label format's name argument for a type with no name gave `labelformat=simple` a leading no-break space (" (a)");
+  Perl's `IsEmpty` test (caption.sty.ltxml:81-87) does not expand either. (4) `\captionof*{subfigure}` with
+  subfigure.sty is hosted too (it opened the undefined `{subfigure*}`: an Error and a visible node; pdflatex "Star").
+  Residual: pdflatex leaves `\@captype` set to the `\captionof`'s type in the float, so a `\caption` after
+  `\captionof*{subfigure}{Star}` directly in a figure is "(a): Whole2" there; ours keeps the float's own type ("Figure 2:
+  Whole2"), by design (guard `perfect_kernel_gemini::captionof_in_a_float_keeps_the_float_type`). Docs: OD #776 titled
+  T2A/T2B/T2C, X2/OT2 an open silent-loss row; OD #552 lists the caption-text and longtable sites and the
+  no-cleveref divergence; the cleveref derivation moved to "Rust Error Fixes". A/B r3 vs r2 over r2's 409 papers:
+  E 743 → 743, F 8 → 8, words −20 (2605.30420's 20 labels the PDF does not print); 23 papers change, every one a
+  hosted panel's separator, label format or font as caption sets it, or one space less in an algorithm2e label (item 3).
+  A 30-paper `labelformat=` sample (12k-paper scan): 28 byte-identical, the other two the same algorithm2e label space
+  (1809.08822, 1811.06803). Open, pre-existing (r2 and int34a the same): under lipics-v2021's `labelformat=boxed` an
+  algorithm2e caption takes caption's format (a rule box, then "1 Title"), where pdflatex prints algorithm2e's own "Algorithm 1 Title"
+  (its ruled caption does not go through caption's; 2002.11064, 1809.08822, 1811.06803) — the word "Algorithm" lost.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

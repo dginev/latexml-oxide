@@ -149,7 +149,12 @@ LoadDefinitions!({
     after_digest => sub[whatsit] { after_float(whatsit); });
 
   // A `\captionof{subfigure}` (caption.sty `\setcaptiontype*{subfigure}\caption`) is a sub-float's caption, which
-  // `\@captionof@` (caption_sty.rs) hosts in the panel environment here: `subfigure` is a command, no environment.
+  // `\@captionof@` and `\@scaptionof` (caption_sty.rs) host in the panel environment here: `subfigure` is a command,
+  // no environment. The caption is caption's (`caption_format_tokens`): "(a): First", in caption's fonts and with
+  // `\captionsetup{labelformat=empty}` honoured, where `\subfigure`'s own panels keep subfigure.sty's format.
+  // Witnesses 2508.00020, 2605.30420 (20 unlabelled panels), 1608.05355, 1806.00503. Guards
+  // `perfect_kernel_batch77s::captionof_subfigure_sty_is_a_panel`,
+  // `perfect_kernel_batch77s::captionof_star_subfigure_sty_is_a_panel`.
   assign_value("captionof_environment@subfigure", "@subfigure", Some(Scope::Global));
   assign_value("captionof_environment@subtable", "@subtable", Some(Scope::Global));
 

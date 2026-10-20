@@ -1,0 +1,26 @@
+% witness: 2502.11752 (`\captionof{subtable}` panels in tables under `\captionsetup[table]{labelfont=bf,labelsep=space}`;
+%          77s r3)
+% oracle:  pdflatex 0 errors: "(a) For one" (bold label), "Figure 1. Fig in table" (bold label), "Table 1 Whole",
+%          "(a). Sub in fig", "Figure 2. FWhole", "(a): Loose"
+% engines: rust 77s r2 = "(a) For one", "(a) Sub in fig", "(a) Loose" in subfigure.sty's format (footnotesize, a
+%          space), "Figure 1. Fig in table" with a plain label (the table's options not applied)
+% expect:  0 errors, 0 warnings; the six captions as pdflatex, the bold labels bold
+% status:  RED (77s r2) -> GREEN (77s r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{caption}
+\usepackage{subfigure}
+\captionsetup[table]{labelfont=bf,labelsep=space}
+\captionsetup[figure]{labelsep=period}
+\begin{document}
+\begin{table}
+\begin{minipage}{.4\textwidth}AAA\captionof{subtable}{For one}\end{minipage}
+\begin{minipage}{.4\textwidth}BBB\captionof{figure}{Fig in table}\end{minipage}
+\caption{Whole}
+\end{table}
+\begin{figure}
+\begin{minipage}{.4\textwidth}CCC\captionof{subfigure}{Sub in fig}\end{minipage}
+\caption{FWhole}
+\end{figure}
+Out \captionof{subfigure}{Loose} end.
+\end{document}

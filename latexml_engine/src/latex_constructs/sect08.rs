@@ -1985,12 +1985,13 @@ fn nullable_store(target: &Token) -> bool {
 /// The Cyrillic letter a text symbol names, where its encoding sets it in a Latin letter's slot. T2A, T2B and T2C
 /// (t2aenc.def:230-237; t2benc.def:230-239, t2cenc.def alike) put І і Ј ј Ԛ ԛ Ԝ ԝ, and T2B/T2C also Ѕ ѕ, in the
 /// slots of I i J j Q q W w S s, whose glyphs they share; X2 the same ten (x2enc.def:244-273), OT2 Ј ј at J j
-/// (ot2enc.def:96,124). Any encoding whose slot decodes to an ASCII letter. The fontmap reads such a slot as the Latin letter — a Latin
-/// `i` typed in T2A text is that slot, and pdftotext reads the PDF's `і` as `i` too — so the symbol `\cyrii` (which a
-/// UTF-8 `і` becomes, t2aenc.dfu) decoded as Latin `i`: Ukrainian "Іван", Serbian "ј" spelled with Latin letters
-/// (Perl the same, latex_constructs.pool.ltxml:2614-2625; OXIDIZED_DESIGN_DIVERGENCES #776). The named symbol is its
-/// letter; a slot that is no Latin letter keeps its decoding. Guard
-/// `perfect_kernel_batch77s::t2a_cyrillic_i_and_je_are_cyrillic`.
+/// (ot2enc.def:96,124). Any encoding whose slot decodes to an ASCII letter: X2 and OT2 have no fontmap yet, so their
+/// slots decode to nothing and the symbols are still dropped (the SYNC silent-loss row). The fontmap reads such a
+/// slot as the Latin letter — a Latin `i` typed in T2A text is that slot, and pdftotext reads the PDF's `і` as `i`
+/// too — so the symbol `\cyrii` (which a UTF-8 `і` becomes, t2aenc.dfu) decoded as Latin `i`: Ukrainian "Іван",
+/// Serbian "ј" spelled with Latin letters (Perl the same, latex_constructs.pool.ltxml:2614-2625;
+/// OXIDIZED_DESIGN_DIVERGENCES #776). The named symbol is its letter; a slot that is no Latin letter keeps its
+/// decoding. Guard `perfect_kernel_batch77s::t2a_cyrillic_i_and_je_are_cyrillic`.
 fn cyrillic_letter_in_latin_slot(cs: &str, decoded: SymStr) -> SymStr {
   let letter = match cs {
     "\\CYRII" => '\u{0406}',

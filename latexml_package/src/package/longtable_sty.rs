@@ -255,7 +255,8 @@ LoadDefinitions!({
   // cleveref's `\label[type]{key}` (cleveref.sty `\label` takes an optional type) reads its type here too: read as the
   // key, `[` labelled the table and the rest was typeset. The type goes on after the table (`\endlongtable`'s
   // `\lx@longtable@labeltype`), where the built table is the object `\lx@label@type` finds — as the sites that move a
-  // trailing `\label` into a caption give it (sect11.rs `typed_label`; KNOWN_PERL_ERRORS #998). Guard
+  // trailing `\label` into a caption give it (sect11.rs `typed_label`; KNOWN_PERL_ERRORS #998; 2508.14936, 30 Errors
+  // -> 0). Without cleveref the type is read too (OXIDIZED_DESIGN #552). Guard
   // `perfect_kernel_batch77s::label_type_in_caption_text`.
   DefPrimitive!("\\lx@longtable@label [] Semiverbatim", sub[(ty, label)] {
     // Perl: AssignValue(LONGTABLE_LABEL => CleanLabel(ToString($label)), 'global')
