@@ -2150,7 +2150,8 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
         let loaded = {
           let _stand_in = stand_in.then(crate::definition::origin::StandInLoadGuard::new);
           // (its name, for the packages its load loads first, as a package or class stand-in's: mssymb.tex's
-          // amsfonts and amssymb, `<file>:loaded_by_stand_in`; the 77w r2 re-review's finding 3)
+          // amsfonts and amssymb, `<file>:loaded_by_stand_in`; guard
+          // `perfect_kernel_batch77w::tex_stand_in_names_its_package_loads`)
           let _stand_in_name = stand_in.then(|| StandInBindingName::enter(file_stem(stem)));
           load_binding(&tex_name)?.is_some() || load_external_binding(&tex_name)?.is_some()
         };
@@ -2357,7 +2358,7 @@ fn read_stand_in_copy(request: &str, binding: &str, ext: &str, in_expl3: bool) -
 ///
 /// Looked up in the TeX tree by its directory there (kpathsea's `latex/base/<class>.cls`), not by `find_file`, which
 /// searches the paper's directory first: a paper that ships a self-named `article.cls` beside its derivative still
-/// declares a LaTeX class (the 77w r2 re-review's finding 6).
+/// declares a LaTeX class (guard `perfect_kernel_batch77w::standard_class_derivative_beside_a_self_named_article`).
 fn is_latex_base_class(class: &str) -> bool {
   let file = s!("latex/base/{}.cls", file_stem(class));
   pathname::kpsewhich(&[file.as_str()]).is_some_and(|path| {
@@ -2379,8 +2380,8 @@ fn is_latex_base_class(class: &str) -> bool {
 /// records a raw class's takeover leaves — `\lx@dropped@<name>` and `<name>:redefined` — so the kernel's `\author`
 /// appends each call (OXIDIZED_DESIGN #253) and replays the class's own setter (#482), its `\maketitle` deposits what
 /// the frontmatter does not carry (#265), and the title-page stores reach the frontmatter (K11,
-/// `\lx@class@loaded@raw` at the binding load's end). Under provides mode aip-cp's accumulating `\author[aff1]{…}` kept only the last author (5 → 1) and its
-/// `\affil` list was lost, silently.
+/// `\lx@class@loaded@raw` at the binding load's end). Under provides mode aip-cp's accumulating `\author[aff1]{…}`
+/// kept only the last author (5 → 1) and its `\affil` list was lost, silently.
 fn read_standard_class_derivative(file: &str, path: &str, in_expl3: bool) -> Result<()> {
   use crate::definition::origin::{CopyProvidesGuard, DefinitionOrigin, OriginGuard};
   Info!(
@@ -2427,7 +2428,8 @@ pub fn reading_standard_class_derivative() -> bool {
 
 /// Is a standard-class derivative being read now ([`reading_standard_class_derivative`]), and did its standard class's
 /// binding assign the name `key` in its own load (`state::stand_in_last_load_names` when the derivative's read began)?
-/// Not a name a stand-in the derivative loads assigned, which LaTeX finds defined (the 77w r2 re-review's finding 4).
+/// Not a name a stand-in the derivative loads assigned, which LaTeX finds defined (guard
+/// `perfect_kernel_batch77w::standard_class_derivative_defines_only_its_class_names`).
 pub fn standard_class_binding_assigned(key: SymStr) -> bool {
   reading_standard_class_derivative()
     && STANDARD_CLASS_DERIVATIVE.with(|reads| {

@@ -20099,9 +20099,12 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
      A counter the binding declared keeps its ids under the copy's `\newcounter` (article.cls's `\newcounter{figure}`:
      `S1.F1`, not `F1`; `counter::dialect::new_counter` skips `define_counter_ids` when the binding's own load defined
      `\the<ctr>@ID`); its register, reset list and `\the<ctr>` are the copy's;
-   - *everything else* — size code, counters' values and representations, captions, lists, page layout — stands as
-     TeX makes it: mf.cls's `[11pt]` gives the nominal size 10.95, articlegm.cls's 11pt and bookstyle.cls's 12pt ones
-     too (1504.00071, quant-ph0408036: none before), article_saj.cls:476 `\fnum@figure{\ninebf …}`.
+   - *everything else* — the size file's `\renewcommand\normalsize` (the nominal size), counters' values and
+     representations, captions, lists, page layout — stands as TeX makes it: mf.cls's `[11pt]` gives the nominal size
+     10.95, articlegm.cls's 11pt and bookstyle.cls's 12pt ones too (1504.00071, quant-ph0408036: none before),
+     article_saj.cls:476 `\fnum@figure{\ninebf …}`. The size commands are the binding's (primitives, above): a copy
+     that defines its own `\small`… beside a 12pt `\normalsize` keeps the binding's relative sizes (`\small` 75 %,
+     pdflatex 91.7 %; synthetic only — the 7 aip-cp papers are 10pt with the standard sizes; SYNC residual).
    The binding's own markup stays: its counters' ids (`S1`, `S1.F1`, `Ch1`), its appendices and matter divisions, its
    class options (`leqno`), `ltx-article.css`, the one-line authors class. A derivative is told by its declared base
    class's file in the TeX tree (kpathsea `latex/base/<class>.cls`), not by `find_file`, which finds a self-named
@@ -20116,12 +20119,15 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    r1 reviewer's A/B sets: 19 changed, all derivatives; Errors 146, Fatals 4, Warnings 12,973 on both; 18 take back the
    binding's float ids (`F1` → `S1.F1`), 1401.7612 and 1711.09297 their appendices, and quant-ph0408036 loses the two
    page breaks of its copy's `\frontmatter`/`\mainmatter` `\cleardoublepage`, as int37a. Residuals: 2008.02832's
-   twocolumn figure has lost a panel break (layout; r1 and r2 the same); aip-cp's `\author[aff1]` marks are not linked
-   to `\affil[aff1]` (the affiliations reach the page as the title page's deposit, as on int37a; SYNC row); a chapter
-   after book's `\backmatter` keeps its number (the binding's `\backmatter` is Perl's, book.cls.ltxml:121, as under
-   `\documentclass{book}`). Guards `perfect_kernel_batch77w::{standard_class_derivative_keeps_every_author,
-   standard_class_derivative_patches_stand, standard_class_derivative_keeps_book_structure,
-   standard_class_derivative_defines_only_its_class_names, standard_class_derivative_beside_a_self_named_article}`.
+   twocolumn figure has lost a panel break (layout; r1 and r2 the same); a copy's `\newcounter{figure}[subsection]`,
+   finer than the binding's id scope, gives suffixed ids (`S1.F1`, `S1.F1a`; the printed numbers right; no corpus paper:
+   the 30 `\newcounter{figure|table}[chapter]` lines of the 70 match the binding's scope); aip-cp's `\author[aff1]`
+   marks are not linked to `\affil[aff1]` (the affiliations reach the page as the title page's deposit, as on int37a;
+   SYNC row); a chapter after book's `\backmatter` keeps its number (the binding's `\backmatter` is Perl's,
+   book.cls.ltxml:121, as under `\documentclass{book}`). Guards
+   `perfect_kernel_batch77w::{standard_class_derivative_keeps_every_author, standard_class_derivative_patches_stand,
+   standard_class_derivative_keeps_book_structure, standard_class_derivative_defines_only_its_class_names,
+   standard_class_derivative_beside_a_self_named_article}`.
 
 Costs (instructions, 72a r3 vs 67int21, faithful loads): atlasdoc papers +26-33 % in r3-r7, its `\LoadClass{scrartcl}`
 (atlasdoc.cls:319, KOMA's 22 files), +0.8-3.8 % in r8, where the binding's base class stood for it, and back with r9,

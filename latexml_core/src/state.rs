@@ -2614,8 +2614,8 @@ pub fn copy_provides_binding() -> String {
 /// the class — `\appendix` (`<ltx:appendix>`, article_cls.rs, book_cls.rs), book's `\frontmatter`/`\mainmatter`/
 /// `\backmatter` (unnumbered chapters), whose `\newcommand`s in a full class copy (hep-ex0405054's book_modified.cls:531,
 /// math0301023's khbook.cls:285; 0705.2210, hep-ph0008011, cond-mat0402505, quant-ph0409078) lost the appendices and
-/// numbered the preface. Names a stand-in the derivative loads assigned are not the class's (the 77w r2 re-review's
-/// finding 4).
+/// numbered the preface. Names a stand-in the derivative loads assigned are not the class's (guard
+/// `perfect_kernel_batch77w::standard_class_derivative_defines_only_its_class_names`).
 pub fn standard_class_binding_name(token: &Token) -> bool {
   crate::binding::content::standard_class_binding_assigned(meaning_key(token))
     && lookup_meaning(token).is_some_and(|meaning| binding_text_name(&meaning))
