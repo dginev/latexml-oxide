@@ -4404,7 +4404,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   their Errors count as they convert; 2202.05722 0 → 2 `merged_creators` (the SYNC row above); 2209.14855's word drop is
   an emptied strut table, no text lost. Population A/B (1,428) vs int33a: E 5,569 → 5,566, F 15 → 15, 0 worse. Binding
   nets (int34a) 136/136, 0 documents worse than int33a.
-  **Integration (int35, 77s r1-r3 + main-session review follow-up, binary int35a):** quality batch 1 (longtable
+  **Integration (int35, 77s r1-r3 + two main-session follow-ups, binary int35b):** quality batch 1 (longtable
   `\caption*`, algpseudocodex labels, cleveref `\label[type]` at every caption site and in longtables with cleveref's
   name derivation, T2A/T2B/T2C і/ј, `{filecontents}` over a disk file, caption.sty's sub-type refusal with subfigure.sty
   panels hosted in caption's format, a `\captionof` taking the enclosing float's options, an untyped `\captionsetup`
@@ -4427,7 +4427,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   Guard `perfect_kernel_batch77s::cleveref_derived_name_led_by_a_command`. Open: a cleveref name wrapped in `\text{…}`
   gives no creftype tag at all (int34a the same for `\Crefname{figure}{\text{Fig.}}`; 2206.03535's `\cref{fig}` shows no
   name where pdflatex prints "Fig.").
-  BINDING_NETS_PLACEHOLDER
+  Gates int35b (with that follow-up): nextest 6319/6319 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs
+  int34a empty; witness and population A/B on int35b identical to int35a's tallies above; binding nets (int35b) 136/136,
+  0 documents worse than int34a.
 
 - **77k** (sole-cause `unexpected:_` shapes, part 2, of the same study): a float caption is a paragraph of a vertical
   box, Perl's `\@@caption PBoxContents` (tex_box.rs `PBoxContents`, `\lx@enterhorizontal`; OD #769), so `$$…$$` in it is
