@@ -255,8 +255,16 @@ fn convert(request: &BibConversionRequest) -> Option<PostDocument> {
     // `<bibentry>` nesting: 99 `#PCDATA isn't allowed in <ltx:bibentry>`.
     // `\normalfont` here keeps every live definition (the point of the
     // monolithic pass) and only normalizes the typographic state. Guard:
-    // `06_cluster_bibliography::bib_entries_digest_in_the_default_font`.
-    latexml_core::stomach::digest(latexml_core::mouth::tokenize(r"\normalfont"))?;
+    // `06_cluster_bibliography::bib_entries_digest_in_the_default_font`. The defaults are those in force where
+    // `\bibliography` stands (`lx@bibliography@normalfont`, recorded by sect11.rs `\lx@bibliography`), not at the
+    // document's end: cmpj3's `\ukrainianpart` after the bibliography makes the rest sans, while pdflatex's
+    // bibliography stays serif (2603.23615; OXIDIZED_DESIGN_DIVERGENCES #779). Guard
+    // `06_cluster_bibliography::bib_entries_take_the_defaults_where_the_bibliography_stands`.
+    let normalfont = match latexml_core::state::lookup_value("lx@bibliography@normalfont") {
+      Some(latexml_core::state::Stored::Tokens(tokens)) => tokens,
+      _ => latexml_core::mouth::tokenize(r"\normalfont"),
+    };
+    latexml_core::stomach::digest(normalfont)?;
 
     // Digest only what the document cites — a `.bib` is a library, and
     // `bibtex(1)` reads the `.aux`'s `\citation` records rather than the whole

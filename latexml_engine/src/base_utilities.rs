@@ -8835,38 +8835,73 @@ pub fn reenter_text_mode(vertical_mode: bool) {
 /// footnotes (`\reset@font`, latex.ltx:17659) typeset `<b> x|y` through OT1 as `¡b¿ x—y` (Perl alike,
 /// TeX_Box.pool.ltxml:218-221). LaTeXML's tags neutralize too, where a LaTeX label inherits the body's encoding. Plain
 /// TeX has no `\encodingdefault`: OT1.
-pub fn neutralize_font() { neutralize_font_in(encoding_named("\\encodingdefault")); }
-
-fn neutralize_font_in(encoding: Option<String>) {
+///
+/// The family, series and shape are likewise the document's `\familydefault`, `\seriesdefault` and `\shapedefault`
+/// that `\reset@font` selects (`\edef\f@family{\familydefault}`, latex.ltx:14115-14117), where they name a font
+/// LaTeXML knows: a `\renewcommand\familydefault{\sfdefault}` document's footnotes and tags are sans, as its PDF
+/// (CMSS8 footnote text), not Perl's serif `textDefault`. OXIDIZED_DESIGN_DIVERGENCES #779; guard
+/// `perfect_kernel_batch77u::family_default_sets_the_body`.
+pub fn neutralize_font() {
   let mut font = Font::text_default();
-  if let Some(encoding) = encoding {
+  if let Some(encoding) = encoding_named("\\encodingdefault") {
     font.encoding = Some(Cow::Owned(encoding));
+  }
+  let components = [
+    font_code_named("\\familydefault").and_then(|code| font::lookup_font_family(&code)),
+    font_code_named("\\seriesdefault").and_then(|code| font::lookup_font_series(&code)),
+    font_code_named("\\shapedefault").and_then(|code| font::lookup_font_shape(&code)),
+  ];
+  for component in components.into_iter().flatten() {
+    font = font.merge_ref(component);
   }
   sync_nfss_font_codes(&font);
   assign_value("font", font, Some(Scope::Local));
   assign_value("mathfont", Font::math_default(), Some(Scope::Local));
 }
 
-/// The encoding the macro `cs` (`\encodingdefault`, `\latinencoding`) names, expanded as `\fontencoding` expands it
-/// (a literal name is read without expanding: the common case, on every tag). `None` when undefined (plain TeX) or
-/// not an encoding name.
-fn encoding_named(cs: &str) -> Option<String> {
-  let defn = lookup_definition(&T_CS!(cs)).ok()??;
-  let literal = match defn.get_expansion() {
-    Some(ExpansionBody::Tokens(body)) => body
-      .unlist_ref()
+/// The NFSS code the macro `cs` (`\encodingdefault`, `\familydefault`, …) names, expanded as `\fontencoding` or
+/// `\edef\f@family{…}` expands it. The common cases are read without expanding, as they are on every tag: a literal
+/// name (`OT1`), or a chain of parameterless macros ending in one (`\familydefault` → `\rmdefault` → `cmr`). `None`
+/// when undefined (plain TeX) or empty.
+fn font_code_named(cs: &str) -> Option<String> {
+  let mut token = T_CS!(cs);
+  let mut literal = None;
+  for _ in 0..8 {
+    let defn = lookup_definition(&token).ok()??;
+    let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+      break;
+    };
+    if defn
+      .get_parameters()
+      .is_some_and(|p| !p.get_parameters().is_empty())
+    {
+      break;
+    }
+    let tokens = body.unlist_ref();
+    if tokens
       .iter()
       .all(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
-      .then(|| body.to_string()),
-    _ => None,
-  };
-  let encoding = match literal {
-    Some(encoding) => encoding,
+    {
+      literal = Some(body.to_string());
+      break;
+    }
+    match tokens[..] {
+      [next] if matches!(next.get_catcode(), Catcode::CS) => token = next,
+      _ => break,
+    }
+  }
+  let code = match literal {
+    Some(code) => code,
     None => do_expand(T_CS!(cs)).ok()?.to_string(),
   };
-  let encoding = encoding.trim();
-  (!encoding.is_empty() && encoding != "ASCII" && !encoding.contains('\\'))
-    .then(|| encoding.to_string())
+  let code = code.trim();
+  (!code.is_empty()).then(|| code.to_string())
+}
+
+/// The encoding the macro `cs` (`\encodingdefault`, `\latinencoding`) names ([`font_code_named`]). `None` when
+/// undefined (plain TeX) or not an encoding name.
+fn encoding_named(cs: &str) -> Option<String> {
+  font_code_named(cs).filter(|encoding| encoding != "ASCII" && !encoding.contains('\\'))
 }
 
 /// Today's date as LaTeX's `\today` renders it — `Month D, YYYY`.

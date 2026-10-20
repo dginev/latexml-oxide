@@ -575,12 +575,13 @@ LoadDefinitions!({
   // constructor (sect02.rs) runs it where latex.ltx runs the kernel hook;
   // latexrelease.sty:15609 can `\let` it to `\relax`. Perl keeps the preamble
   // definitions. `\init@series@setup` (latex.ltx:13902-13920), the hook's other
-  // half, is not run: the bound `\bfseries`/`\mdseries` do not read its
-  // `\bfseries@rm` family, but it also runs `\reset@font`, `\mdseries` and
-  // `\let\seriesdefault\f@series`, so a preamble `\itshape\bfseries` stays in
-  // force in the body where pdflatex's body is upright medium (a residual
-  // shared with the base and Perl; OXIDIZED_DESIGN_DIVERGENCES #315).
-  // Guard: `rtoken_patchcmd::body_shape_switches_are_protected`.
+  // half, runs after it (sect02.rs): the bound `\bfseries`/`\mdseries` do not
+  // read its `\bfseries@rm` family, but its `\reset@font` (the document's
+  // `\familydefault`, sect13.rs `\normalfont`) ends a preamble
+  // `\itshape\bfseries`, which pdflatex's body does not carry (Perl does;
+  // OXIDIZED_DESIGN_DIVERGENCES #315 addendum, #779).
+  // Guards: `rtoken_patchcmd::body_shape_switches_are_protected`,
+  // `perfect_kernel_batch77u::preamble_font_switch_does_not_reach_the_body`.
   DefMacro!(
     "\\reinstall@nfss@defs",
     r"\protected\def\upshape{\not@math@alphabet@@{\updefault}\fontshape{\updefault}\selectfont}%

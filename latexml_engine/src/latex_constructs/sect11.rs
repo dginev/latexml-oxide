@@ -265,6 +265,7 @@ pub(crate) fn load() -> Result<()> {
   DefConstructor!("\\lx@bibliography [] Semiverbatim",
     "<ltx:bibliography files='#2' xml:id='#id' class='#bibclass' bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort' lists='#lists'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>#preamble</ltx:bibliography>",
     after_digest => sub[whatsit] {
+      record_bibliography_normalfont()?;
       bgroup();
       begin_bibliography_clean(whatsit)?;
       digest_bibliography_preamble(whatsit)?;
@@ -1601,6 +1602,45 @@ pub(crate) fn load() -> Result<()> {
   });
   def_primitive_noop("\\typein[]{}")?;
 
+  Ok(())
+}
+
+/// Record, globally as `lx@bibliography@normalfont`, the font the document's `\normalfont` selects where
+/// `\bibliography` stands — latex.ltx's `\fontencoding\encodingdefault`, `\familydefault`, `\seriesdefault`,
+/// `\shapedefault` (:14113-14121), each expanded now — as the `\normalfont` body, `\fontencoding{…}\lx@normalfont@base
+/// \fontfamily{…}\fontseries{…}\fontshape{…}\selectfont` (sect13.rs), the `.bib` session (bib_session.rs) digests its
+/// entries in. That session runs after the document, in its live state, so its own
+/// `\normalfont` read the defaults of the document's END: cmpj3.sty's `\ukrainianpart` after the bibliography
+/// (`\renewcommand\familydefault{\sfdefault}`, 2603.23615) set the entries sans where pdflatex's bibliography,
+/// typeset in place, is serif. OXIDIZED_DESIGN_DIVERGENCES #779; guard
+/// `06_cluster_bibliography::bib_entries_take_the_defaults_where_the_bibliography_stands`.
+fn record_bibliography_normalfont() -> Result<()> {
+  let mut tokens = Vec::new();
+  for (default, select) in [
+    ("\\encodingdefault", "\\fontencoding"),
+    ("\\familydefault", "\\fontfamily"),
+    ("\\seriesdefault", "\\fontseries"),
+    ("\\shapedefault", "\\fontshape"),
+  ] {
+    if lookup_definition(&T_CS!(default))?.is_none() {
+      return Ok(());
+    }
+    let code = Expand!(T_CS!(default)).to_string();
+    tokens.push(T_CS!(select));
+    tokens.push(T_BEGIN!());
+    tokens.extend(Explode!(code.trim()));
+    tokens.push(T_END!());
+    if select == "\\fontencoding" {
+      // as `\normalfont` (sect13.rs): an unknown family resets to LaTeXML's serif, not the font in force
+      tokens.push(T_CS!("\\lx@normalfont@base"));
+    }
+  }
+  tokens.push(T_CS!("\\selectfont"));
+  assign_value(
+    "lx@bibliography@normalfont",
+    Tokens::new(tokens),
+    Some(Scope::Global),
+  );
   Ok(())
 }
 

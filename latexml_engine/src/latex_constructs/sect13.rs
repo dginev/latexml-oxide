@@ -1009,9 +1009,30 @@ pub(crate) fn load() -> Result<()> {
     robust => true
   );
 
+  // latex.ltx:14113-14121 `\normalfont`: `\fontencoding\encodingdefault`, `\edef\f@family{\familydefault}`,
+  // `\edef\f@series{\seriesdefault}`, `\edef\f@shape{\shapedefault}`, `\selectfont` — the DOCUMENT's defaults, and
+  // `\reset@font` (:14122) is the same command, so every reset (`\begin{document}`'s `\init@series@setup`, a
+  // footnote's `\reset@font\footnotesize`, `\textnormal`, a float's `\@floatboxreset`) returns to them. Perl
+  // (latex_constructs.pool.ltxml:5194-5195) resets to `\rmdefault`, `\mddefault`, `\updefault` and keeps the
+  // encoding: a document with `\renewcommand\familydefault{\sfdefault}` (helvet's, cmbright's, sans-serif
+  // posters' and theses' idiom), which pdflatex sets in CMSS throughout, came out serif from the first reset on.
+  // `\lx@normalfont@base` first puts LaTeXML's serif medium upright in force, so a default the font table does not
+  // know (`\familydefault` = `droidserif`, droidserif.sty's `[default]`, 2603.23615) resets to that, as Perl's
+  // `\rmdefault` did, where `\selectfont` alone keeps the font in force for an unknown family (the sans of a
+  // `\sffamily` it was meant to end). OXIDIZED_DESIGN_DIVERGENCES #779. Guards
+  // `perfect_kernel_batch77u::{family_default_sets_the_body, family_default_survives_a_preamble_switch,
+  // unknown_family_default_resets_to_serif}`.
+  DefPrimitive!("\\lx@normalfont@base", {
+    let current = lookup_font().unwrap();
+    let base =
+      current.merge_ref(&fontmap!(family => "serif", series => "medium", shape => "upright"));
+    assign_font(Rc::new(base), Some(Scope::Local));
+    Ok(Vec::new())
+  });
   DefMacro!(
     "\\normalfont",
-    "\\fontfamily{\\rmdefault}\\fontseries{\\mddefault}\\fontshape{\\updefault}\\selectfont",
+    "\\fontencoding\\encodingdefault\\lx@normalfont@base\\fontfamily{\\familydefault}\
+     \\fontseries{\\seriesdefault}\\fontshape{\\shapedefault}\\selectfont",
     robust => true
   );
   // `\lx@fontencoding{ASCII}` (OXIDIZED_DESIGN #144, issue #723): a verbatim `~`/`^`

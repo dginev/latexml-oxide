@@ -247,10 +247,11 @@ pub(crate) fn load() -> Result<()> {
     // The hook's other half (latex.ltx:12513-12514), `\init@series@setup` (:13902-13920): `\reset@font`, then
     // `\mdseries` and `\let\seriesdefault\f@series` while `\seriesdefault` is the kernel's. A font switch of the
     // preamble or the class body (`\itshape\bfseries`, a class's `\usefont`) does not reach the body: pdflatex
-    // sets it upright medium in the default family. Perl runs neither half (its body kept the preamble's font,
-    // `<text font="bold italic">`). OXIDIZED_DESIGN_DIVERGENCES #315 addendum; guards
+    // sets it upright medium in the document's `\familydefault` (`\reset@font` is `\normalfont`, sect13.rs; a
+    // `\renewcommand\familydefault{\sfdefault}` body is sans). Perl runs neither half (its body kept the preamble's
+    // font, `<text font="bold italic">`). OXIDIZED_DESIGN_DIVERGENCES #315 addendum, #779; guards
     // `perfect_kernel_batch77u::{preamble_font_switch_does_not_reach_the_body,
-    // class_body_font_does_not_reach_the_body}`.
+    // class_body_font_does_not_reach_the_body, family_default_survives_a_preamble_switch}`.
     if first_begin && lookup_definition(&T_CS!("\\init@series@setup"))?.is_some() {
       local_state_unlocked(false);
       let r = digest(Tokens!(T_CS!("\\init@series@setup")));

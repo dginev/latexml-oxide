@@ -21294,3 +21294,42 @@ one-token number) still reads past its tag — our argument reader takes a `}` a
 Gullet.pm:732-744 alike; tex.web §395 stops at it, "Argument of \x has an extra }"), SYNC_STATUS C11. Repro
 `parameter-conditional/p_form_applies_to_the_expanded_number`; guards
 `perfect_kernel_batch77u::{p_form_applies_to_the_expanded_number, p_forms_of_the_kernel_keep_their_reference}`.
+
+### 779. `\normalfont` and `\reset@font` select the document's `\familydefault`, `\seriesdefault`, `\shapedefault` and `\encodingdefault` (Perl: `\rmdefault`, `\mddefault`, `\updefault`, the encoding kept)
+
+**TeX**: latex.ltx:14113-14122 `\DeclareRobustCommand\normalfont{\fontencoding\encodingdefault \edef\f@family{\familydefault}
+\edef\f@series{\seriesdefault} \edef\f@shape{\shapedefault} … \selectfont}`, `\let\reset@font\normalfont`: every reset —
+`\begin{document}`'s `\init@series@setup` (:13902-13920), a footnote's `\reset@font\footnotesize` (:17659), `\textnormal`
+(:14216), `\@eqnnum`, a float's `\@floatboxreset` — returns to the document's defaults. A
+`\renewcommand\familydefault{\sfdefault}` document (helvet's and cmbright's idiom, lrec2026.sty's tgheros branch,
+acmart/aamas's sigchi-a mode, posters and theses) is set in the sans family throughout.
+
+**Perl** (latex_constructs.pool.ltxml:5194-5195): `\normalfont` is `\fontfamily{\rmdefault}\fontseries{\mddefault}
+\fontshape{\updefault}\selectfont`, and `neutralizeFont` (TeX_Box.pool.ltxml:218-221) the serif `textDefault`: such a
+document was serif from its first reset on — the body after `\begin{document}` once 77u ran `\init@series@setup`, every
+footnote, tag and `\textnormal` before.
+
+**Rust** (77u r2, user ruling 2026-10-20): sect13.rs `\normalfont` is latex.ltx's (`\fontencoding\encodingdefault`
+first, then the three defaults); `neutralize_font` (base_utilities.rs: notes, tags, index entries) takes the family,
+series and shape `\familydefault`/`\seriesdefault`/`\shapedefault` name when the font table knows them
+(`font_code_named` reads a literal or a chain of parameterless macros without expanding, as on every tag), the encoding
+as before. A sans-default document's text carries `font="sansserif"` throughout (the document root keeps LaTeXML's serif
+default, so the attribute sits on the text runs), as its PDF (CMSS10/CMSSI10, CMSS8 footnotes); `\textrm` stays serif.
+Two consequences of the reset now reading the document:
+- A default the font table does not know (`\familydefault` = `droidserif`, droidserif.sty:101 under `[default]`, which
+  cmpj3.sty loads, 2603.23615) would keep the font in force, as `\selectfont` does for any unknown family; `\normalfont`
+  first puts serif medium upright in force (`\lx@normalfont@base`), so it resets to LaTeXML's serif as Perl's
+  `\rmdefault` did.
+- The `.bib` session (bib_session.rs) runs after the document in its live state, so its `\normalfont` read the defaults
+  of the document's end: cmpj3's `\ukrainianpart` after the bibliography (`\renewcommand\familydefault{\sfdefault}`) made
+  the entries sans where pdflatex's bibliography, typeset in place, is serif. `\lx@bibliography` (sect11.rs) records the
+  reset as the defaults stand there (`lx@bibliography@normalfont`), and the session digests that.
+`\normalfont` restoring the encoding is latex.ltx's too: after `{\fontencoding{OT1}\selectfont <c> \normalfont <d>}` in
+a T1 document `<d>` prints as written (pdflatex), no longer ¡d¿; 0710.2028's `\cyr`
+(`\renewcommand\encodingdefault{OT2}\normalfont`) now prints its OT2 transliteration in Cyrillic ("Там даже …", as the
+PDF). Residual: `\textnormal` in maths (`\textnormal@math`) keeps its fixed serif font. Repros
+`fonts-nfss/family_default_sets_the_body`, `fonts-nfss/family_default_survives_a_preamble_switch`,
+`fonts-nfss/unknown_family_default_resets_to_serif`; guards `perfect_kernel_batch77u::{family_default_sets_the_body,
+family_default_survives_a_preamble_switch, unknown_family_default_resets_to_serif}`,
+`06_cluster_bibliography::bib_entries_take_the_defaults_where_the_bibliography_stands`; golden
+`tikz/ac-drive-components.xml` (its node text CMSS, "Control unit" CMSSBX10 as pdflatex).

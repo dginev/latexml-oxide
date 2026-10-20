@@ -252,3 +252,62 @@ fn class_body_font_does_not_reach_the_body() {
     r#"<para xml:id="p1"><p>Body text. <text font="italic">it</text></p></para>"#,
   );
 }
+
+/// `\normalfont` is latex.ltx's (:14113-14122): the document's `\familydefault`, `\seriesdefault`, `\shapedefault`
+/// (and `\encodingdefault`), not Perl's `\rmdefault` (latex_constructs.pool.ltxml:5194). A
+/// `\renewcommand\familydefault{\sfdefault}` document is sans from `\begin{document}` on, after a `\normalfont` and in
+/// its footnotes (the note's neutral font is the same defaults): pdflatex CMSS10/CMSSI10/CMSS8. User ruling
+/// 2026-10-20, OXIDIZED_DESIGN_DIVERGENCES #779. Repro fonts-nfss/family_default_sets_the_body.
+#[test]
+fn family_default_sets_the_body() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/fonts-nfss/family_default_sets_the_body.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    concat!(
+      r#"<para xml:id="p1"><p><text font="sansserif">Body text. </text><text font="sansserif italic">it</text>"#,
+      r#"<text font="sansserif"> </text><text font="typewriter">tt </text><text font="sansserif">back</text>"#,
+      r#"<note mark="1" role="footnote" xml:id="footnote1"><tags><tag><text font="sansserif">1</text></tag>"#,
+      r#"<tag role="refnum"><text font="sansserif">1</text></tag><tag role="typerefnum"><text "#,
+      r#"font="sansserif">footnote 1</text></tag></tags><text font="sansserif">Note.</text></note></p></para>"#,
+    ),
+  )]);
+}
+
+/// A preamble `\sffamily\bfseries` under `\familydefault` = `\sfdefault`: `\init@series@setup`'s `\reset@font` at
+/// `\begin{document}` drops the bold but keeps the document's sans family (pdflatex: "Body text." CMSS10, `\textrm`
+/// CMR10, `\textnormal` CMSS10). 77u r1 reset it to serif. Repro fonts-nfss/family_default_survives_a_preamble_switch.
+#[test]
+fn family_default_survives_a_preamble_switch() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/fonts-nfss/family_default_survives_a_preamble_switch.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    r#"<para xml:id="p1"><p><text font="sansserif">Body text. </text>rm<text font="sansserif"> normal</text></p></para>"#,
+  )]);
+}
+
+/// A `\familydefault` the font table does not know (`droidserif`, droidserif.sty:101 under `[default]`; cmpj3.sty's
+/// papers, 2603.23615) resets to LaTeXML's serif, as Perl's `\rmdefault` did: `\normalfont` puts serif medium upright
+/// in force before its `\selectfont` (`\lx@normalfont@base`), which keeps the font in force for an unknown family —
+/// "b" stayed sans after `{\sffamily a \normalfont b}`. pdflatex: "a" CMSS10, "b" and the note DroidSerif. Repro
+/// fonts-nfss/unknown_family_default_resets_to_serif.
+#[test]
+fn unknown_family_default_resets_to_serif() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/fonts-nfss/unknown_family_default_resets_to_serif.tex"
+  );
+  assert_elements(tex, RAW, (0, 0), &[(
+    "para",
+    "p1",
+    concat!(
+      r#"<para xml:id="p1"><p><text font="sansserif">a </text>b<note mark="1" role="footnote" "#,
+      r#"xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag>"#,
+      r#"</tags>Note.</note></p></para>"#,
+    ),
+  )]);
+}

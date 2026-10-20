@@ -3298,6 +3298,32 @@ fn bib_entries_digest_in_the_default_font() {
   assert!(x.contains("key=\"b\""), "second entry lost:\n{x}");
 }
 
+/// The `.bib` session digests its entries in the font the document's `\normalfont` selects where `\bibliography`
+/// stands (sect11.rs `\lx@bibliography` records it; OXIDIZED_DESIGN_DIVERGENCES #779): a
+/// `\renewcommand\familydefault{\sfdefault}` document's entries are sans (pdflatex CMSS10), while one that switches
+/// to sans only after its bibliography keeps them serif (pdflatex CMR10; cmpj3.sty's `\ukrainianpart`, 2603.23615),
+/// where the session, run after the document in its live state, read the defaults of the document's end.
+#[test]
+fn bib_entries_take_the_defaults_where_the_bibliography_stands() {
+  let after = convert_and_post_clean(
+    "tests/cluster_regressions/bib_font_defaults_after_the_bibliography.tex",
+  );
+  latexml::util::test::assert_element(
+    &after,
+    "bibitem",
+    &["key=\"a\""],
+    r##"<bibitem class="ltx_bib_book" fragid="bib.bib1" key="a" type="book" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2001</tag><tag class="ltx_bib_title" role="title">Serif title</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Alpha Author</text><text class="ltx_bib_year"> (2001)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">Serif title</text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher">P</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+  let sans =
+    convert_and_post_clean("tests/cluster_regressions/bib_font_defaults_sans_document.tex");
+  latexml::util::test::assert_element(
+    &sans,
+    "bibitem",
+    &["key=\"a\""],
+    r##"<bibitem class="ltx_bib_book" fragid="bib.bib1" key="a" type="book" xml:id="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Author</tag><tag class="ltx_bib_year" role="year">2001</tag><tag class="ltx_bib_title" role="title">Sans title</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">Alpha Author</text><text class="ltx_bib_year"> (2001)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title"><text font="sansserif">Sans title</text></text>.</bibblock><bibblock xml:space="preserve"> <text class="ltx_bib_publisher"><text font="sansserif">P</text></text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+  );
+}
+
 /// Surpass #229: a `.bib` field value ending in an escaped space keeps it.
 /// `type={Memo No.\ }` trimmed to a lone `\` welded with the splice's closing
 /// brace and swallowed the next entries (asmejour, 23 malformed; real bibtex

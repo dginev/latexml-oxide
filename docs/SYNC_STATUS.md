@@ -234,7 +234,7 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
 1. **`\cal ABC` collapses to one `<mi>`**: Drops `class="ltx_font_mathcaligraphic"` (Perl emits three `<mi>` elements, Rust one containing `𝒜ℬ𝒞`). Token grouping and class diverge.
 2. **`\DeclareTextCommand`/`\ProvideTextCommand` lack encoding-dispatch chain**: `latex_constructs.rs:6525/6544` bind bare `\cs` to first-encoding expansion permanently.
 3. **Minor font registration gaps**: `\DeclareTextSymbol` decodes eagerly instead of installing deferred `CharDef`; `\DeclareErrorFont` is a bare no-op where Perl defines argument as `\relax`.
-4. ~~A preamble font switch stays in force in the body~~ FIXED 77u (W17, DIVERGENCES #315 addendum): the begin-document constructor runs latex.ltx's `\init@series@setup` (:13902-13920, `\reset@font`, `\mdseries`, `\let\seriesdefault\f@series`) after `\reinstall@nfss@defs`, so a preamble or class-body font switch does not reach the body (guards `perfect_kernel_batch77u::{preamble_font_switch_does_not_reach_the_body, class_body_font_does_not_reach_the_body}`). Residual: our `\normalfont`/`\reset@font` sets `\rmdefault`, not latex.ltx's `\familydefault` (Perl latex_constructs.pool.ltxml:5194), so a `\renewcommand\familydefault{\sfdefault}` document stays serif in the body (it was, unless the preamble also switched `\sffamily`, whose `font="sansserif"` the body no longer carries).
+4. ~~A preamble font switch stays in force in the body~~ FIXED 77u (W17, DIVERGENCES #315 addendum): the begin-document constructor runs latex.ltx's `\init@series@setup` (:13902-13920, `\reset@font`, `\mdseries`, `\let\seriesdefault\f@series`) after `\reinstall@nfss@defs`, so a preamble or class-body font switch does not reach the body (guards `perfect_kernel_batch77u::{preamble_font_switch_does_not_reach_the_body, class_body_font_does_not_reach_the_body}`). ~~Residual: `\normalfont` sets `\rmdefault`, not `\familydefault`~~ FIXED 77u r2 (user ruling 2026-10-20, DIVERGENCES #779): `\normalfont`/`\reset@font` are latex.ltx's (:14113-14122, `\encodingdefault`, `\familydefault`, `\seriesdefault`, `\shapedefault`) and the neutral font of notes and tags takes the same defaults, so a `\renewcommand\familydefault{\sfdefault}` document is sans throughout, as its PDF (guards `perfect_kernel_batch77u::{family_default_sets_the_body, family_default_survives_a_preamble_switch}`). Residual: `\textnormal` in maths keeps its fixed serif font (`\textnormal@math`).
 
 ### Fragid Parity Open Items
 1. **`associateNode` (Post.pm L508-585) unported**: Generated MathML/OpenMath nodes carry no `xml:id`, so `convertedIDs` and pmml↔cmml parallel cross-linking do not exist.
@@ -4596,9 +4596,26 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   papers with a top-level preamble switch (a second scan) E 2 → 2, W 764 → 764, 2 changed; every change classified a
   gain (letters, refnums, fonts as the PDF); no paper worse (2405.01972's one more Warning is the T3 notice). Dumps
   identical to int35a, inits 0/0. Residuals: the C11 synthetic shape (a `\p@` reading past a one-token number; our
-  reader takes `}` as an undelimited argument, tex.web §395), T3 (tipa) has no map (silent-loss row), `\normalfont`
-  is `\rmdefault` not `\familydefault` (Font-Selection Chain Residuals 4), T4's own quote/guillemet ligatures (fcr10.tfm:
+  reader takes `}` as an undelimited argument, tex.web §395), T3 (tipa) has no map (silent-loss row), T4's own quote/guillemet ligatures (fcr10.tfm:
   the double quotes and `,,` as T1's, `<<`/`>>` reversed) are not modelled.
+  **r2** (user ruling 2026-10-20; OD #779): `\normalfont`/`\reset@font` are latex.ltx's (:14113-14122:
+  `\encodingdefault`, `\familydefault`, `\seriesdefault`, `\shapedefault`, where Perl and r1 reset to `\rmdefault`), the
+  neutral font of notes and tags takes the same defaults, a default the font table does not know resets to serif
+  (`\lx@normalfont@base`; droidserif's `[default]`, 2603.23615), and the `.bib` session digests in the defaults where
+  `\bibliography` stands, not the document's end (cmpj3's `\ukrainianpart`). A `\renewcommand\familydefault{\sfdefault}`
+  document is sans throughout, as its PDF. Corpus: 1,646 of 2601-2609's papers redefine `\familydefault` outside the
+  bound acmart (lrec2026.sty 351, imsart.sty's no-op `\rmdefault` 212, aamas 197, other shipped classes and styles
+  382, the documents' own 504). A/B r1 vs r2
+  (release, `--preload=ar5iv.sty`): the r1 set + 40 of those papers, 254 papers, E 385 → 385, F 2 → 2, W 6,122 →
+  6,122, words identical but 0710.2028 (its `\cyr` = `\renewcommand\encodingdefault{OT2}\normalfont` now prints the OT2
+  transliteration in Cyrillic, as the PDF); 21 outputs gain `font="sansserif"`, each sans in its PDF (pdffonts/mutool:
+  CMSS, TeX Gyre Heros, Nimbus Sans, Source Sans, DroidSans; two papers TL 2025 pdflatex does not build, fontspec and Greek under lrec2026, sans by
+  their style), none worse.
+  Guards `perfect_kernel_batch77u::{family_default_sets_the_body, family_default_survives_a_preamble_switch,
+  unknown_family_default_resets_to_serif}`, `06_cluster_bibliography::bib_entries_take_the_defaults_where_the_bibliography_stands`;
+  golden `tikz/ac-drive-components.xml` re-blessed (sans node text, CMSS widths). Cost: controls +0.0-0.25 %
+  instructions; a sans document +8.5 % (2603.06291: 6,196 more `<text font="sansserif">` runs). Residual: `\textnormal`
+  in maths keeps its fixed serif font.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;

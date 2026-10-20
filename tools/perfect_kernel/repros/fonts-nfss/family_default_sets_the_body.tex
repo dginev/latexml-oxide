@@ -1,0 +1,11 @@
+% witness: none (user ruling 2026-10-20; SYNC_STATUS "Font-Selection Chain Residuals"; DIVERGENCES #779)
+% oracle:  pdflatex 0 errors; body CMSS10, "it" CMSSI10, "back" CMSS10 after `\normalfont`, footnote CMSS8
+%          (`\normalfont` = `\familydefault`, latex.ltx:14113-14122; the footnote's `\reset@font`, :17659)
+% engines: rust 77u r1 = serif throughout (`\normalfont` reset to `\rmdefault`, as Perl latex_constructs.pool.ltxml:5194)
+% expect:  0 errors, 0 warnings; "Body text.", "back" and the note text `font="sansserif"`, "it" `sansserif italic`
+% status:  GREEN (77u r2, sect13.rs `\normalfont`, base_utilities.rs `neutralize_font`)
+\documentclass{article}
+\renewcommand\familydefault{\sfdefault}
+\begin{document}
+Body text. \textit{it} {\ttfamily tt \normalfont back}\footnote{Note.}
+\end{document}

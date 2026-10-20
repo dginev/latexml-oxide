@@ -1,0 +1,13 @@
+% witness: 2603.23615 (cmpj3.sty loads droidserif.sty `[default]`: `\familydefault` = `droidserif`; its
+%          `\ukrainianpart` then leaves the font sans for every later `\normalfont`)
+% oracle:  pdflatex 0 errors; "a" CMSS (`\sffamily`), "b" and the note text DroidSerif (serif)
+% engines: rust 77u r2 before `\lx@normalfont@base` = "b" sans (`\selectfont` keeps the font in force for a family
+%          the font table does not know); 77u r1 and Perl serif (`\normalfont` = `\rmdefault`)
+% expect:  0 errors, 0 warnings; "a" `font="sansserif"`, "b" and "Note." plain (serif)
+% status:  GREEN (77u r2, sect13.rs `\lx@normalfont@base`)
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\renewcommand*{\familydefault}{droidserif}% droidserif.sty:101 under [default]
+\begin{document}
+{\sffamily a \normalfont b}\footnote{Note.}
+\end{document}
