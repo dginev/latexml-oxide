@@ -1480,7 +1480,32 @@ pub(crate) fn load() -> Result<()> {
   // handler discards the optional (`\@aom@newthm@[#1]{\@xnthm\relax}`),
   // so discarding is the ground truth. Standard forms start with `{` and
   // never match the optional. KNOWN_PERL_ERRORS #82.
+  //
+  // latex.ltx `\@nthm` (`\expandafter\@ifdefinable\csname #1\endcsname`, amsthm.sty's alike) refuses a theorem whose
+  // `\<name>` is defined: "Command \<name> already defined", the first declaration kept. The refusal is kept to a
+  // theorem the document's world (the document, a raw file it loaded) declared: a binding's declaration is our guess
+  // at the class, which the document's own replaces (2407.21129, 1205.2947), and a `\let\<name>\relax` before
+  // declaring it again makes it definable, as in LaTeX. `\newtheorem{prop}[theorem]{Prop}` then `\newtheorem{prop}
+  // {Prop}` gave prop a counter of its own and renumbered every theorem (pdflatex "Theorem 1, Prop 2, Theorem 3").
+  // Guard `perfect_kernel_batch77v::newtheorem_twice_keeps_the_first`.
   DefPrimitive!("\\newtheorem OptionalMatch:* [] {}[]{}[]", sub[(flag, _style_opt, thmset, otherthmset, typ, reset)] {
+    use definition::origin::{current_origin, DefinitionOrigin};
+    let document_world = matches!(current_origin(), DefinitionOrigin::Document | DefinitionOrigin::File);
+    let name = Expand!(thmset.clone()).to_string();
+    let declared_key = s!("lx@newtheorem@document@{name}");
+    if document_world
+      && has_value(&declared_key)
+      && !is_definable_latex(&T_CS!(s!("\\{name}")))?.0
+    {
+      let mut refusal = vec![T_CS!("\\expandafter"), T_CS!("\\@ifdefinable"), T_CS!("\\csname")];
+      refusal.extend(ExplodeText!(name));
+      refusal.extend([T_CS!("\\endcsname"), T_BEGIN!(), T_END!()]);
+      Digest!(Tokens::new(refusal))?;
+      return Ok(Vec::new());
+    }
+    if document_world {
+      assign_value(&declared_key, true, Some(Scope::Global));
+    }
     define_new_theorem(
       flag.filter(|f| !f.is_empty()),
       thmset,

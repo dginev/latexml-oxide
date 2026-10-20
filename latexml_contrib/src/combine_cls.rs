@@ -40,14 +40,22 @@ LoadDefinitions!({
     DeclareOption!(option, None);
   }
   DeclareOption!(None, {
-    let option = Expand!(T_CS!("\\CurrentOption")).to_string();
-    if let Some(class) = option.strip_prefix("colclass=") {
-      RawTeX!(&s!(r"\def\c@lclass{{{}}}", class.trim()));
-    } else {
-      let class = Expand!(T_CS!("\\c@lclass")).to_string();
-      RawTeX!(&s!(r"\PassOptionsToClass{{\CurrentOption}}{{{class}}}"));
-    }
+    let class = Expand!(T_CS!("\\c@lclass")).to_string();
+    RawTeX!(&s!(r"\PassOptionsToClass{{\CurrentOption}}{{{class}}}"));
   });
+  // combine.cls:31-50 reads `colclass=<class>` (`colclass` alone: article) from the class options before
+  // `\ProcessOptions`, the last one given winning (`\setkeys`): every other option then goes to that class, and a
+  // class option (:85-88) replaces it. Read in `\DeclareOption*`, in turn, `[11pt,colclass=amsart]` passed 11pt to
+  // article and `[colclass=report,book]` loaded report. Guards `perfect_kernel_batch77v::{
+  // combine_colclass_gets_the_class_options, combine_class_option_after_colclass}`.
+  let options = Expand!(T_CS!("\\@classoptionslist")).to_string();
+  let colclass = options.split(',').rev().find_map(|option| {
+    let (name, value) = option.split_once('=').unwrap_or((option, "article"));
+    (name.trim() == "colclass").then(|| value.trim().to_string())
+  });
+  if let Some(class) = colclass {
+    RawTeX!(&s!(r"\def\c@lclass{{{class}}}"));
+  }
   ProcessOptions!();
   let class = Expand!(T_CS!("\\c@lclass")).to_string();
   LoadClass!(&class);

@@ -1471,12 +1471,21 @@ LoadDefinitions!({
     }
   });
   DefConstructor!("\\@@multlinestar DigestedBody",
-  "<ltx:equation>\
+  "<ltx:equation xml:id='#id'>#tags\
    <ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math>\
    </ltx:equation>",
   mode => "display_math",
-  before_digest => { bgroup(); },
+  // Unnumbered as `{equation*}` is (latex_constructs sect07.rs): a `\tag` in the body is its tag (amsmath.sty
+  // `\tag@in@align`, `\make@df@tag`), which the `<ltx:equation>` without `#tags` dropped (pdflatex "(Z)"). Guard
+  // `perfect_kernel_batch77v::multline_star_tag_is_kept`.
+  before_digest => {
+    bgroup();
+    use crate::engine::latex_constructs::{before_equation, prepare_equation_counter};
+    prepare_equation_counter(stored_map!("preset" => true));
+    before_equation()?;
+  },
   after_digest => sub[whatsit] {
+    engine::latex_constructs::after_equation(Some(whatsit))?;
     // Perl #2835: multline rows center by default (left under fleqn); the
     // first row is left-aligned and the last row right-aligned.
     let default_align =

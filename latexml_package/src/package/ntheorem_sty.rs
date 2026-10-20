@@ -155,7 +155,14 @@ LoadDefinitions!({
   );
 
   DefMacro!("\\Theoremname", "\\lx@thistheorem");
-  Let!("\\renewtheorem", "\\newtheorem");
+  // ntheorem.sty:731-740, :808-814 `\renewtheorem{<name>}`: `\<name>` and `\<name>*` let to `\relax`, then
+  // `\@newtheorem{<name>}`, so the `\@ifdefinable` refusal of an existing theorem (sect08.rs `\newtheorem`) does not
+  // apply (Perl ntheorem.sty.ltxml:170 `Let('\renewtheorem', '\newtheorem')`, its `\newtheorem` refusing none).
+  // Guard `55_theorem::ntheorem_test` (`\renewtheorem{Lemma}{Lemma}`).
+  DefMacro!(
+    "\\renewtheorem OptionalMatch:* {}",
+    "\\expandafter\\let\\csname #2\\endcsname\\relax\\expandafter\\let\\csname #2*\\endcsname\\relax\\newtheorem#1{#2}"
+  );
 
   //======================================================================
   // Style commands - newtheoremstyle and renewtheoremstyle

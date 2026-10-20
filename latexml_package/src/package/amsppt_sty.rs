@@ -447,19 +447,22 @@ LoadDefinitions!({
   // NewCounter already gives us the same behavior via `\arabic{footnote}`.
   // The closure form would only differ in tokenization corner cases not
   // exercised by amsppt.
-  // amsppt.sty:810-818 `\footnote` reads its text with `\nextiv@##1` (`\DNii@[##1]##2` after a `[`), neither `\long`:
+  // amsppt.sty:807-815 `\footnote` reads its text with `\nextiv@##1` (`\DNii@[##1]##2` after a `[`), neither `\long`:
   // the text stops at a paragraph's end, "Paragraph ended before \footnote was complete" (tex.web §396), the note
   // dropped and the paragraphs after it kept as paragraphs. Perl's `\footnote[]{}` constructor reads it `\long`, so
   // a note whose `}` never comes took every later paragraph (repro amstex/amsppt_footnote_argument_runs_past_par).
-  // `\footnotetext` (:799-808) alike. Guard `perfect_kernel_batch77v::amsppt_footnote_argument_runs_past_par`.
+  // `\footnotetext` (:798-806) alike. Guard `perfect_kernel_batch77v::amsppt_footnote_argument_runs_past_par`.
   DefMacro!("\\footnote[]{}", sub[(mark, text)] {
     Ok(amsppt_note_call("\\lx@amsppt@footnote", mark, text))
   }, short => true);
   DefMacro!("\\footnotetext[]{}", sub[(mark, text)] {
     Ok(amsppt_note_call("\\lx@amsppt@footnotetext", mark, text))
   }, short => true);
+  // Reverted as the author's `\footnote` (`[<mark>]` only when one was given), not the internal name, in a formula's
+  // `tex=`. Guard `perfect_kernel_batch77v::amsppt_footnote_in_math_reverts_as_footnote`.
   DefConstructor!("\\lx@amsppt@footnote[]{}",
     "<ltx:note role='footnote' mark='#mark' xml:id='#id'>#2</ltx:note>",
+    alias => "\\footnote",
     mode => "internal_vertical",
     sizer => sub[whatsit] { note_size_in_line(whatsit) },
     before_digest => { neutralize_font(); },
@@ -495,6 +498,7 @@ LoadDefinitions!({
   // current \thefootnote value directly.
   DefConstructor!("\\lx@amsppt@footnotetext[]{}",
     "<ltx:note role='footnotetext' mark='#mark' xml:id='#id'>#2</ltx:note>",
+    alias => "\\footnotetext",
     mode => "internal_vertical",
     sizer => sub[_whatsit] { Ok(out_of_line_size()) },
     properties => sub [args] {

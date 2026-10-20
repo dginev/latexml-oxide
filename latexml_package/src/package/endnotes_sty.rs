@@ -17,12 +17,16 @@ LoadDefinitions!({
   // `perfect_kernel_batch77v::endnotes_theenmark_is_the_note_mark`.
   DefMacro!("\\theenmark", "\\@theenmark");
   // `\lx@enote@mark{<maker>}` `[<n>]`: the mark of the note `<maker>` is about to make, the number given, else the
-  // number the counter steps to (`\lx@enote@textmark`: the counter's number, `\endnotetext` steps none)
+  // number the counter steps to (`\lx@enote@textmark`: the counter's number, `\endnotetext` steps none). A number
+  // given is formatted as the counter is (endnotes.sty:278-283, :351-357, :373-378 `\c@endnote=#1` in a group,
+  // `\@theenmark` = `\theendnote`), and the note made with that mark: `\endnote[4]` under a `\roman` `\theendnote` is
+  // "iv" at the note, in the list and as `\theenmark` (it was "4"). Guard
+  // `perfect_kernel_batch77v::endnotes_given_number_is_formatted`.
   RawTeX!(
     r"\def\lx@enote@mark#1{\@ifnextchar[{\lx@enote@given{#1}}{\begingroup\advance\c@endnote\@ne
 \protected@xdef\@theenmark{\theendnote}\endgroup#1}}
 \def\lx@enote@textmark#1{\@ifnextchar[{\lx@enote@given{#1}}{\protected@xdef\@theenmark{\theendnote}#1}}
-\def\lx@enote@given#1[#2]{\protected@xdef\@theenmark{#2}#1[#2]}"
+\def\lx@enote@given#1[#2]{\begingroup\c@endnote#2\relax\protected@xdef\@theenmark{\theendnote}\endgroup#1[\@theenmark]}"
   );
   DefMacro!(
     "\\makeenmark",

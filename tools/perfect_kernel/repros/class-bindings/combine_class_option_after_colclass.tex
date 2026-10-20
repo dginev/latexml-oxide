@@ -1,0 +1,14 @@
+% combine.cls:31-50 reads `colclass=<class>` before `\ProcessOptions`, which then runs a class option (:85-88
+% `book`, `report`, `letter`, `memoir`): `[colclass=report,book]` typesets in book. Rust set the class from
+% `colclass=` in `\DeclareOption*`, after the declared options, and so loaded report.
+% witness: review of batch 77v (probe rev77v/cb2.tex)
+% oracle:  pdflatex "Class: book. Book: yes."
+% engines: rust (77v-rel) "Class: report. Book: no."
+% expect:  "Class: book. Book: yes."; 0 errors
+% status:  RED -> GREEN (77v r2; guard perfect_kernel_batch77v::combine_class_option_after_colclass)
+\documentclass[colclass=report,book]{combine}
+\begin{document}
+\makeatletter
+Class: \c@lclass. Book: \@ifclassloaded{book}{yes}{no}.
+\makeatother
+\end{document}

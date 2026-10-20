@@ -16,7 +16,7 @@ LoadDefinitions!({
   DefMacro!("\\ext@todo", "todo");
   NewCounter!("todo");
   DefMacro!("\\todotyperefname", "\\lx@latin@name{ToDo}");
-  // todonotes.sty:461-469 `\todo[<options>]{<text>}`: the optional argument is the note's keys (`inline`, `color=…`,
+  // todonotes.sty:561 `\todo[<options>]{<text>}`: the optional argument is the note's keys (`inline`, `color=…`,
   // a `\todostyle` name), never its mark; the note is numbered as any (19 papers' `\todo[inline]`; witnesses
   // 2407.14906, 2409.03694, 2410.02385). Perl's `\todo` is `\lx@note{todo}`, whose `[<mark>]` took the keys as the mark
   // (KNOWN_PERL_ERRORS #1007). The keys only style the note, which this binding does not draw.

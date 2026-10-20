@@ -1,0 +1,20 @@
+% latex.ltx `\newtheorem` (`\@nthm`: `\expandafter\@ifdefinable\csname #1\endcsname`) refuses a theorem the document
+% has declared already: "Command \prop already defined", the first declaration, sharing theorem's counter, kept.
+% Rust (77v) replaced it, so prop stepped a counter of its own and the theorems renumbered.
+% witness: review of batch 77v (probe rev77v/th1.tex)
+% oracle:  pdflatex 1 error ("Command \prop already defined"); "Theorem 1", "Prop 2", "Theorem 3", "Prop 4"
+% engines: rust (77v-rel) 0 errors; "Theorem 1", "Prop 1", "Theorem 2", "Prop 2" (529dc1b543 and perl: "Prop 0"
+%          twice)
+% expect:  "Theorem 1", "Prop 2", "Theorem 3", "Prop 4"; LaTeX's message (an Info, as every "already defined. Or
+%          name" message, `is_typesetting_only_message`)
+% status:  RED -> GREEN (77v r2; guard perfect_kernel_batch77v::newtheorem_twice_keeps_the_first)
+\documentclass{article}
+\newtheorem{theorem}{Theorem}
+\newtheorem{prop}[theorem]{Prop}
+\newtheorem{prop}{Prop}
+\begin{document}
+\begin{theorem}A.\end{theorem}
+\begin{prop}B.\end{prop}
+\begin{theorem}C.\end{theorem}
+\begin{prop}D.\end{prop}
+\end{document}

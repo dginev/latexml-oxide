@@ -16215,8 +16215,12 @@ never clears that mapping, so the theorem steps Y's counter and prints X's. Mini
 — pdflatex "Proposition 1.1", Perl "Proposition 1.0" (refnum 1.2). The same arises over a binding's shared theorems:
 arxbj's `\newtheorem{rem}{Remark}` over elsart_support's `\newtheorem{rem}[thm]{Remark}` tagged every remark "Remark 0"
 (1205.2947, 1307.5990), 2407.21129 over tac's. Rust (77v): `define_new_theorem` clears the mapping when the theorem has
-a counter of its own. Guards `perfect_kernel_batch77v::{newtheorem_over_shared_counter_theorem,
-elsart_support_theorem_tag_zero}`.
+a counter of its own. Where `\<X>` is still defined, latex.ltx `\@nthm` (`\@ifdefinable`) refuses the second declaration
+and keeps the first: `\newtheorem{prop}[theorem]{Prop}\newtheorem{prop}{Prop}` — pdflatex "Command \prop already
+defined", "Theorem 1, Prop 2, Theorem 3"; Perl redefines it ("Prop 0"). Rust (77v r2) refuses it when the document's world
+(the document, a raw file it loaded) declared the first, not over a binding's declaration. Guards
+`perfect_kernel_batch77v::{newtheorem_over_shared_counter_theorem, elsart_support_theorem_tag_zero,
+newtheorem_twice_keeps_the_first}`.
 
 ## 1009. `\newcounter` replaces an existing `\the<ctr>`
 
@@ -16240,8 +16244,10 @@ drop it (amsmath.sty `\multline@`, `\tag@in@align`, `\make@df@tag`). Perl's `\@@
 properties (amsmath.sty.ltxml:247 `RefStepCounter('equation')`) and keeps no equation numbering state, so neither
 reaches it. Minimal trigger: `\begin{multline} a+b \notag\\ +c \tag{29} \end{multline}` — pdflatex "(29)", Perl "(1)".
 Rust (77v): `\@@multline` numbers as `{equation}` (`prepare_equation_counter`, `before_equation`, `after_equation`),
-so the kernel's `\lx@equation@settag`/`\lx@equation@nonumber` act on it. `{multline*}` with a `\tag` stays untagged.
-Witness hep-th0210191. Guards `perfect_kernel_batch77v::{multline_notag_then_tag, multline_tag_replaces_the_number}`.
+so the kernel's `\lx@equation@settag`/`\lx@equation@nonumber` act on it. Perl's `\@@multlinestar` (amsmath.sty.ltxml:258)
+has no `#tags` slot either: `\begin{multline*} a+b \\ +c \tag{Z} \end{multline*}` — pdflatex "(Z)", Perl no tag; Rust
+(77v r2) numbers it as `{equation*}` (`preset`). Witness hep-th0210191. Guards `perfect_kernel_batch77v::{
+multline_notag_then_tag, multline_tag_replaces_the_number, multline_star_tag_is_kept}`.
 
 ## 1011. A text-mode `{IEEEeqnarrayboxm}` opens no math
 
@@ -16255,8 +16261,8 @@ form does and its end closes it (`\lx@IEEE@box@end`, ieeetrantools_sty.rs). Guar
 
 ## 1012. amsppt's `\footnote` reads its text `\long`
 
-amsppt.sty:810-818 `\footnote` reads its text with `\nextiv@##1` (after `[`, `\DNii@[##1]##2`), and `\footnotetext`
-(:799-808) alike, neither `\long`: a `\par` in the text ends the call, "Paragraph ended before \next@ was complete"
+amsppt.sty:807-815 `\footnote` reads its text with `\nextiv@##1` (after `[`, `\DNii@[##1]##2`), and `\footnotetext`
+(:798-806) alike, neither `\long`: a `\par` in the text ends the call, "Paragraph ended before \next@ was complete"
 (tex.web §396), the note dropped and the paragraphs after it set as paragraphs. Perl's `DefConstructor('\footnote[]{}'
 …)` (amsppt.sty.ltxml:268) reads to the closing brace across paragraphs, and a note whose `}` never comes takes the
 rest of the file. Minimal trigger: `\input amstex \input amsppt.sty \document Text\footnote{A note.` + blank line +
@@ -16270,11 +16276,12 @@ macros (`short => true`, OXIDIZED_DESIGN_DIVERGENCES #782) handing their text to
 
 endnotes.sty:271 `\def\theenmark{\@theenmark}`: the mark of the note last made, set as each note is made
 (`\endnote`/`\endnotemark` :274-282, :343-358 `\protected@xdef\@theenmark{\theendnote}` after the step, `[<n>]` the
-number given; `\endnotetext` :360-373 without a step) and as `\theendnotes` lists each note. Perl's
+counter set to <n> in a group, :278-283; `\endnotetext` :360-378 without a step) and as `\theendnotes` lists each note. Perl's
 `DefMacro('\theenmark', '\theendnote')` (endnotes.sty.ltxml:29, commented "This is NOT correct") reads the counter
 wherever `\theenmark` is expanded. Minimal trigger: `\usepackage{endnotes}` `One\endnote{A.} two\endnote{B.}
 \setcounter{endnote}{17} \theenmark` — pdflatex "2", Perl "17". Packages that read it later (biblatex-chicago's
 cmsendnotes back-references, which set `\@theenmark` themselves) print the last number for every note
 (cms-noteref-demo: "18"). Rust (77v): `\theenmark` is `\@theenmark`, which `\endnote`, `\endnotemark` and `\endnotetext`
-set before the note (`\lx@enote@mark`, endnotes_sty.rs). Guard
-`perfect_kernel_batch77v::endnotes_theenmark_is_the_note_mark`.
+set before the note (`\lx@enote@mark`, endnotes_sty.rs); a given `[<n>]` is formatted so and is the note's mark too
+(Perl's `\lx@note{endnote}[4]` marks the note "4" where a `\roman` `\theendnote` gives pdflatex "iv"; 77v r2). Guards
+`perfect_kernel_batch77v::{endnotes_theenmark_is_the_note_mark, endnotes_given_number_is_formatted}`.

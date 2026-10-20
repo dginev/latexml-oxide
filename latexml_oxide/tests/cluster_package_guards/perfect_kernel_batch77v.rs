@@ -213,7 +213,7 @@ fn ieeeeqnarrayboxm_in_text_keeps_its_math() {
   )]);
 }
 
-/// amsppt.sty:810-818: `\footnote`'s text is no `\long` argument — a runaway one stops at the paragraph's end, 1
+/// amsppt.sty:807-815: `\footnote`'s text is no `\long` argument — a runaway one stops at the paragraph's end, 1
 /// error ("Paragraph ended before \footnote was complete"), the note dropped and both later paragraphs kept outside
 /// any note (it took them, 2 errors). Repro amstex/amsppt_footnote_argument_runs_past_par.
 #[test]
@@ -279,4 +279,135 @@ fn endnotes_theenmark_is_the_note_mark() {
       r#"<p xml:id="p2.1">Given<note inlist="ent" mark="7" role="endnote" xml:id="endnotex1"><tags><tag><text xml:id="endnotex1.1"><sup xml:id="endnotex1.1.1">7</sup></text></tag><tag role="refnum">7</tag><tag role="typerefnum">endnote 7</tag></tags>C.</note>The given mark is 7.</p>"#,
     ),
   ]);
+}
+
+/// A `\tag` in `{multline*}` is the equation's tag, as in `{equation*}`: "(Z)", the untagged one none, the counter not
+/// stepped (it was dropped). Repro alignment-bindings/multline_star_tag_is_kept.
+#[test]
+fn multline_star_tag_is_kept() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/multline_star_tag_is_kept.tex"
+  );
+  let (stderr, xml) = convert_with(tex, Some(AR5IV));
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  assert_eq!(equation_tags(&xml), [
+    r#"<tags><tag>(Z)</tag><tag role="refnum">Z</tag></tags>"#,
+    "",
+    r#"<tags><tag>(1)</tag><tag role="refnum">1</tag></tags>"#,
+  ]);
+}
+
+/// latex.ltx `\@nthm` refuses a theorem the document declared already ("Command \prop already defined", an Info as
+/// every "already defined. Or name" message): the first, sharing theorem's counter, is kept — "Theorem 1, Prop 2,
+/// Theorem 3, Prop 4" (it was replaced: "Prop 1", "Theorem 2", "Prop 2"). Repro
+/// macro-state/newtheorem_twice_keeps_the_first.
+#[test]
+fn newtheorem_twice_keeps_the_first() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/macro-state/newtheorem_twice_keeps_the_first.tex"
+  );
+  let (stderr, xml) = convert_with(tex, Some(AR5IV));
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  assert_eq!(
+    stderr
+      .lines()
+      .filter(|l| l.starts_with("Info:") && l.contains("Command \\prop already defined"))
+      .count(),
+    1,
+    "{stderr}"
+  );
+  let tags: Vec<String> = ["Thmtheorem1", "Thmtheorem2", "Thmtheorem3", "Thmtheorem4"]
+    .iter()
+    .map(|id| {
+      let theorem =
+        xml_element(&xml, "theorem", &[&format!("xml:id=\"{id}\"")]).unwrap_or_default();
+      xml_element(&theorem, "tags", &[]).unwrap_or_default()
+    })
+    .collect();
+  assert_eq!(tags, [
+    r#"<tags><tag>Theorem 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Theorem 1</tag></tags>"#,
+    r#"<tags><tag>Prop 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Prop 2</tag></tags>"#,
+    r#"<tags><tag>Theorem 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Theorem 3</tag></tags>"#,
+    r#"<tags><tag>Prop 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Prop 4</tag></tags>"#,
+  ]);
+}
+
+/// amsppt.sty:807-815, :798-806: a footnote in a formula reverts in its `tex=` as the author's `\footnote{…}` /
+/// `\footnotetext{…}` (it was the binding's `\lx@amsppt@footnote`). Repro
+/// amstex/amsppt_footnote_in_math_reverts_as_footnote.
+#[test]
+fn amsppt_footnote_in_math_reverts_as_footnote() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/amstex/amsppt_footnote_in_math_reverts_as_footnote.tex"
+  );
+  let (stderr, xml) = convert_with(tex, Some(AR5IV));
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  let texs: Vec<&str> = xml
+    .match_indices("<Math ")
+    .filter_map(|(at, _)| {
+      let head = &xml[at..at + xml[at..].find('>').unwrap_or(0)];
+      let start = head.find(" tex=\"")? + 6;
+      Some(&head[start..start + head[start..].find('"')?])
+    })
+    .collect();
+  assert_eq!(texs, [
+    r"a=b\text{\footnote{In display.}}",
+    r"c=d\text{\footnotetext{Its text.}}",
+  ]);
+  assert!(!xml.contains("lx@amsppt"), "{xml}");
+}
+
+/// endnotes.sty:278-283: `\endnote[4]` sets the counter to 4 in a group and marks the note `\theendnote`, so a `\roman`
+/// one is "iv" at the note and as `\theenmark` (both were "4"); the next note steps on from 1, "ii". Repro
+/// package-bindings/endnotes_given_number_is_formatted.
+#[test]
+fn endnotes_given_number_is_formatted() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/package-bindings/endnotes_given_number_is_formatted.tex"
+  );
+  assert_elements(tex, AR5IV, (0, 0), &[(
+    "p",
+    "p1.1",
+    r#"<p xml:id="p1.1">One<note inlist="ent" mark="i" role="endnote" xml:id="endnote1"><tags><tag><text xml:id="endnote1.1"><sup xml:id="endnote1.1.1">i</sup></text></tag><tag role="refnum">i</tag><tag role="typerefnum">endnote i</tag></tags>A.</note> two<note inlist="ent" mark="iv" role="endnote" xml:id="endnotex1"><tags><tag><text xml:id="endnotex1.1"><sup xml:id="endnotex1.1.1">iv</sup></text></tag><tag role="refnum">iv</tag><tag role="typerefnum">endnote iv</tag></tags>B.</note> mark: iv. Three<note inlist="ent" mark="ii" role="endnote" xml:id="endnote2"><tags><tag><text xml:id="endnote2.1"><sup xml:id="endnote2.1.1">ii</sup></text></tag><tag role="refnum">ii</tag><tag role="typerefnum">endnote ii</tag></tags>C.</note></p>"#,
+  )]);
+}
+
+/// combine.cls:31-50: `colclass=` is read before `\ProcessOptions`, so `[11pt,colclass=amsart]` passes 11pt to
+/// amsart (it went to article). Repro class-bindings/combine_colclass_gets_the_class_options.
+#[test]
+fn combine_colclass_gets_the_class_options() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/combine_colclass_gets_the_class_options.tex"
+  );
+  assert_elements(tex, AR5IV, (0, 0), &[(
+    "p",
+    "p1.1",
+    r#"<p xml:id="p1.1">amsart takes 11pt: yes. article: no.</p>"#,
+  )]);
+}
+
+/// combine.cls:31-50, :85-88: `[colclass=report,book]` typesets in book, the class option run after `colclass=` was
+/// read (it loaded report). Repro class-bindings/combine_class_option_after_colclass.
+#[test]
+fn combine_class_option_after_colclass() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/combine_class_option_after_colclass.tex"
+  );
+  assert_elements(tex, AR5IV, (0, 0), &[(
+    "p",
+    "p1.1",
+    r#"<p xml:id="p1.1">Class: book. Book: yes.</p>"#,
+  )]);
 }

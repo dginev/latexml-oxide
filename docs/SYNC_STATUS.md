@@ -617,6 +617,14 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   the note: "(restate=…)" in the title, the restated copy undefined. FIXED 77v: the key stores the theorem as
   `{restatable}` does (KNOWN_PERL_ERRORS #1006; repro package-bindings/thmtools_restate_key, guard
   `perfect_kernel_batch77v::thmtools_restate_key`).
+- **A restated theorem prints a reference, not its statement** (SHARED, Perl the same for `{restatable}`:
+  thm-restate.sty.ltxml:28 `\lx@thm@restate{}` = "See \ref{restatable:#1}"; 77v review finding 1): thm-restate's
+  `\<name>`/`\<name>*` (thm-restate.sty:103-184 `thmt@restatable`: `\thmt@stored@<name>` re-typesets the collected
+  body) restate the theorem in full, its head and statement again, numbered as the original; ours print "See ⟨ref⟩" —
+  the restated statement text is lost against the PDF wherever a paper restates (`{restatable}` and the `restate=` key;
+  2108.11527, 2602.09462, 2402.14202). Fix shape: store the theorem's body tokens at `\lx@thm@restate@store` and
+  replay them in an unnumbered copy of the theorem carrying the original's tags. Guard to make RED:
+  `perfect_kernel_batch77v::thmtools_restate_key` pins "Again: See <ref…/> and See <ref…/>".
 - **`\ifinner` is false in a display's array cell** (SHARED, Perl the same; 77k review Q3): an array cell's math is a
   formula of its own, so TeX's `\ifinner` is true there, inside `\[…\]` too (pdflatex "aI"; tex.web §1138-1145); we
   and Perl report false ("aD"). `\ifmmode` false at a cell's first token is TeX's own (it expands that token looking for
@@ -4805,14 +4813,29 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   arxbj/elsart/tac, 40 multline (30 with `\tag`/`\notag`), 12 IEEEeqnarraybox, 30 amsppt `\footnote`, 30 endnotes, 30
   KOMA, the 9 witnesses, 100 random of 2108/2310/2404/2407/2602 and five 1990s months): E 406 → 314, F 5 → 5, W 8329 →
   8330 (2303.08726's LaTeX warning), 53 outputs changed, all improvements — 18 thm-restate papers lose every undefined
-  `\<name>` error (their E 112 → 21, the rest other causes) and print the restated copy, 29 papers' multlines number as
+  `\<name>` error (their E 112 → 21, the rest other causes) and print a reference to the stored theorem ("See
+  ⟨ref⟩") where pdflatex restates it in full (residual row "A restated theorem prints a reference"), 29 papers' multlines number as
   pdflatex (`\nonumber`'d ones unnumbered, `\tag{24}` tagged, later numbers back in step), 4 papers' theorem numbers
   (2407.21129, 2602.12471, 2407.02950, 2407.10640), 2303.08726's cases; no word loss above 1 %. A further 30 papers with live `\todo[`: no output changed (none prints a note), 2602.24285 +1 Error
   (its `\if\todo[…]{…` comment hack around an unclosed `\todo` brace: `\if` now expands `\todo` with its arguments
   and the skip misses the `\fi` inside them; pdflatex's `\todo` peeks by `\futurelet`, its `\if` is true; XML
-  byte-identical). Residuals: `\todo`'s `author=` name is not kept; `{multline*}` with a `\tag` stays untagged;
-  apacite's first-citation author list and `\citeyear` parentheses (bibliography row above); pdflatex's
-  `\@xnthm` "Command `\theX' already defined" warning for a `\newtheorem` over a shared counter is not emitted.
+  byte-identical). Residuals: `\todo`'s `author=` name is not kept; apacite's first-citation author list and
+  `\citeyear` parentheses (bibliography row above); pdflatex's `\@xnthm` "Command `\theX' already defined" warning for
+  a `\newtheorem` over a shared counter is not emitted; a restated theorem prints a reference, not its statement (same
+  row). r2 (review rev77v; guards `perfect_kernel_batch77v::*` +6, each RED on d486e9cbc0): `{multline*}` keeps a
+  `\tag` (the `{equation*}` path: "(Z)"); a second `\newtheorem{X}` of a theorem the document's world declared is
+  refused as latex.ltx `\@nthm`'s `\@ifdefinable` refuses it ("Command \X already defined", an Info as every "already
+  defined. Or name" message), the first kept — a binding's declaration is still replaced, `\let\X\relax` still makes
+  it definable (`\newtheorem{prop}[theorem]{Prop}` then `\newtheorem{prop}{Prop}`: pdflatex "Theorem 1, Prop 2,
+  Theorem 3, Prop 4", 77v renumbered; ntheorem's `\renewtheorem` lets `\X`/`\X*` to `\relax` first, ntheorem.sty:808-814);
+  amsppt's footnote in a formula reverts as `\footnote`/`\footnotetext` in `tex=`
+  (`alias`); endnotes' `\endnote[<n>]` (`\endnotemark`, `\endnotetext` alike) marks the note `\theendnote` with the
+  counter at <n> (endnotes.sty:278-283: "iv", not "4", under `\roman`); combine reads `colclass=` before
+  `\ProcessOptions` (combine.cls:31-50: `[11pt,colclass=amsart]` passes 11pt to amsart, `[colclass=report,book]`
+  loads book). `{multline*}`'s equation now has an xml:id as `{equation*}`'s (56_ams mathtools golden: ids only). A/B vs
+  77v-rel (556 papers: r1's 410, rev77v's 120, 26 repeating a `\newtheorem` name): E/F/W 474/5/11114 unchanged, 37
+  outputs changed — 36 xml:id-only (the multline* ids), 1604.03189's `\label` in a `{multline*}` on the equation, not
+  the subsection (as `{equation*}`; pdflatex "??").
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;
