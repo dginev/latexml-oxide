@@ -45,6 +45,11 @@ thread_local! {
   /// handling) that no class load has yet given to K11: the enclosing class load claims them at its end
   /// (`input_definitions_impl`). A Rust local count, so nested loads pair by the call stack.
   static UNCLAIMED_RAW_CLASS_READS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+  /// The stand-in bindings loading now, innermost last (`StandInBindingName`).
+  static STAND_IN_BINDINGS: std::cell::RefCell<Vec<String>> =
+    const { std::cell::RefCell::new(Vec::new()) };
+  /// (a standard-class derivative read now: [`reading_standard_class_derivative`])
+  static STANDARD_CLASS_DERIVATIVE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
   /// Current nesting depth of [`load_class`] calls: above 0, a class is loading,
   /// and a class it loads is nested.
   static CLASS_LOAD_DEPTH: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
@@ -217,9 +222,10 @@ pub fn input_definitions(raw_file: &str, options: InputDefinitionOptions) -> Res
   // (a raw file's own request — a copy's `\RequirePackage{natbib}`, neurips_2024.sty:71: the load TeX sees, which a
   // binding's early load of the package only anticipated; `apply_new_options_on_reload`)
   let requested_by_file = current_origin() == DefinitionOrigin::File;
-  // (a stand-in's copy's own request, read before its provides-mode is suspended for the load below:
-  // `apply_repeat_options`)
-  let requested_by_copy = crate::definition::origin::copy_provides() != 0;
+  // (a stand-in's copy's own request, read before its provides-mode is suspended for the load below — by the stand-in
+  // binding it is read after: `apply_repeat_options`; an elsarticle.cls copy's `\RequirePackage[square,…]{natbib}`,
+  // 1811.10063)
+  let requested_by_copy = copy_provides_binding();
   let base = raw_file
     .trim()
     .rsplit(['/', '\\'])
@@ -308,7 +314,7 @@ fn input_definitions_impl(
   mut options: InputDefinitionOptions,
   requested_by_binding: bool,
   requested_by_file: bool,
-  requested_by_copy: bool,
+  requested_by_copy: String,
 ) -> Result<()> {
   let trimmed = raw_file.trim();
   // A compiled binding keyed by BASENAME raw-loads its own name (`noltxml`), but
@@ -635,7 +641,8 @@ fn input_definitions_impl(
       // the first load made while a stand-in binding loaded) makes the load the binding stands in for: TeX sees the
       // copy's only, so its options apply (a renamed elsarticle.cls copy's `\RequirePackage[square]{natbib}`,
       // 1811.10063).
-      let copys_own_load = requested_by_copy && lookup_bool(&s!("{fkey}:loaded_by_stand_in"));
+      let copys_own_load = !requested_by_copy.is_empty()
+        && lookup_string(&s!("{fkey}:loaded_by_stand_in")).eq_ignore_ascii_case(&requested_by_copy);
       if !new_options.is_empty()
         && lookup_bool(&s!("{fkey}_repeat_clash"))
         && !lookup_bool(&s!("{fkey}:requested_by_binding"))
@@ -893,11 +900,16 @@ fn input_definitions_impl(
       requested_by_binding,
       Some(Scope::Global),
     );
-    // (and whether a stand-in binding was loading: its copy's own load of the package is that load,
-    // `apply_repeat_options`)
+    // (and which stand-in binding was loading, the innermost: its copy's own load of the package is that load, and
+    // no other copy's, `apply_repeat_options`)
+    let stand_in = if crate::definition::origin::stand_in_loading() {
+      STAND_IN_BINDINGS.with(|names| names.borrow().last().cloned().unwrap_or_default())
+    } else {
+      String::new()
+    };
     assign_value(
       &s!("{filename}:loaded_by_stand_in"),
-      crate::definition::origin::stand_in_loading(),
+      stand_in,
       Some(Scope::Global),
     );
   }
@@ -980,6 +992,8 @@ fn input_definitions_impl(
         crate::definition::origin::stand_in_loader_own_code(),
       )
     });
+    // (its name, for the packages its load loads first: `<file>:loaded_by_stand_in`)
+    let _stand_in_name = stands_in.then(|| StandInBindingName::enter(file_stem(&filename)));
     // (a binding a stand-in's copy reaches by `\input` is a load of its own, not the copy's code: `input_definitions`)
     let _copy_suspended = (crate::definition::origin::copy_provides() != 0)
       .then(|| crate::definition::origin::CopyProvidesGuard::new(0));
@@ -2309,10 +2323,17 @@ fn read_stand_in_copy(request: &str, binding: &str, ext: &str, in_expl3: bool) -
     return Ok(());
   }
   // (a copy whose declaration routed its request here is the file by that declaration: [`provided_binding`])
-  if !loading_for_a_provides_route(binding) && !copy_is_the_stood_in_file(&file, binding, &path) {
+  let routed = loading_for_a_provides_route(binding);
+  if !routed && !copy_is_the_stood_in_file(&file, binding, &path) {
     return Ok(());
   }
-  let id = new_copy_provides_record(file.rsplit(['/', '\\']).next().unwrap_or(&file));
+  if routed && ext == "cls" && is_latex_base_class(binding) {
+    return read_standard_class_derivative(&file, &path, in_expl3);
+  }
+  let id = new_copy_provides_record(
+    file.rsplit(['/', '\\']).next().unwrap_or(&file),
+    file_stem(binding),
+  );
   use crate::definition::origin::{CopyProvidesGuard, DefinitionOrigin, OriginGuard};
   // (not a raw class read for K11, `\lx@class@loaded@raw`: the binding owns the title page)
   let _origin = OriginGuard::new(DefinitionOrigin::File);
@@ -2321,6 +2342,79 @@ fn read_stand_in_copy(request: &str, binding: &str, ext: &str, in_expl3: bool) -
   // syntax a `\ProvidesExplClass` turned on — fcs.cls:70, whose expl3 catcodes stayed on for the document and ate its
   // spaces, `\theta_` undefined: 2606.16349, 2308.11432; an `\input` copy restores nothing, as TeX's `\input`)
   load_tex_definitions(&file, &path, false, ext != "tex", in_expl3, ext != "tex")
+}
+
+/// Is `class` one of LaTeX's own document classes — its file in the format's base distribution (TeX Live's
+/// `tex/latex/base/`: article, report, book, letter, proc, slides, minimal), whose binding models nothing beyond the
+/// kernel's own definitions?
+fn is_latex_base_class(class: &str) -> bool {
+  let file = s!("{}.cls", file_stem(class));
+  find_file(
+    &file,
+    Some(FindFileOptions {
+      forbid_ltxml: true,
+      ext_type: Some(Cow::Borrowed("cls")),
+      ..FindFileOptions::default()
+    }),
+  )
+  .is_some_and(|path| {
+    !shipped_with_paper(&path) && path.replace('\\', "/").contains("/tex/latex/base/")
+  })
+}
+
+/// "A standard-class derivative is read as a raw class over its binding" (OXIDIZED_DESIGN_DIVERGENCES #731 rule 13;
+/// user rulings 2026-10-20: the route stays, the bindings lose nothing). A class the paper ships that declares itself
+/// one of LaTeX's own classes ([`is_latex_base_class`]: aip-cp.cls:24 `\ProvidesClass{article}`, 1506.04050,
+/// 1604.08112; mf.cls, 0709.4467; antonio.cls, 1808.10740; HERON.cls, 1903.06504; mbook.cls, nucl-th0703058) is not
+/// that class but a derivative of it: what it redefines patches the kernel's class, and the binding, which models the
+/// kernel's class and no more, has nothing of its own for those patches to be kept from. So after the binding has
+/// loaded (its defaults: counters and their ids, the class options, `ltx-article.css`), the copy is read as a raw class
+/// is, not in provides mode: an unlocked name it defines stands as TeX makes it (its size file's `\normalsize`, so the
+/// nominal font size; its `\thesection`; its contact setters), and a locked one is refused with the records a raw
+/// class's takeover leaves — `\lx@dropped@<name>` and `<name>:redefined` — so the kernel's `\author` appends each call
+/// (OXIDIZED_DESIGN #253) and replays the class's own setter (#482), its `\maketitle` deposits what the frontmatter does
+/// not carry (#265), and the title-page stores reach the frontmatter (K11, `\lx@class@loaded@raw` at the binding
+/// load's end). Under provides mode aip-cp's accumulating `\author[aff1]{…}` kept only the last author (5 → 1) and its
+/// `\affil` list was lost, silently.
+fn read_standard_class_derivative(file: &str, path: &str, in_expl3: bool) -> Result<()> {
+  use crate::definition::origin::{CopyProvidesGuard, DefinitionOrigin, OriginGuard};
+  Info!(
+    "provide",
+    file,
+    s!("The paper's {file} derives from a LaTeX class: read as a raw class over its binding")
+  );
+  let _origin = OriginGuard::new(DefinitionOrigin::File);
+  let _not_a_copy = CopyProvidesGuard::new(0);
+  let setters_before = crate::binding::store_setters::snapshot()?;
+  let outer = STANDARD_CLASS_DERIVATIVE.replace(true);
+  let read = load_tex_definitions(file, path, false, true, in_expl3, true);
+  STANDARD_CLASS_DERIVATIVE.set(outer);
+  read?;
+  crate::binding::store_setters::mark_raw(&setters_before)?;
+  UNCLAIMED_RAW_CLASS_READS.set(UNCLAIMED_RAW_CLASS_READS.get() + 1);
+  Ok(())
+}
+
+/// A stand-in binding's name while its load runs (`STAND_IN_BINDINGS`): a package its load loads first records it
+/// (`<file>:loaded_by_stand_in`), so that only the copy read after this binding takes that load as its own.
+struct StandInBindingName;
+
+impl StandInBindingName {
+  fn enter(name: &str) -> Self {
+    STAND_IN_BINDINGS.with(|names| names.borrow_mut().push(name.to_string()));
+    StandInBindingName
+  }
+}
+
+impl Drop for StandInBindingName {
+  fn drop(&mut self) { let _ = STAND_IN_BINDINGS.try_with(|names| names.borrow_mut().pop()); }
+}
+
+/// Is a standard-class derivative (`read_standard_class_derivative`) being read now, its own code (a file the paper
+/// ships, `reading_author_file`) rather than a TeX Live file it loads? Its `\newcommand` of a name the standard class's
+/// binding assigned defines it (`state::standard_class_binding_name`).
+pub fn reading_standard_class_derivative() -> bool {
+  STANDARD_CLASS_DERIVATIVE.get() && reading_author_file()
 }
 
 /// Is the file at `path` one the paper ships: a `{filecontents}` virtual file, or one under the document's own source
@@ -2367,7 +2461,21 @@ fn provided_binding(name: &str, ext: &str) -> Option<(String, String)> {
   if !shipped_with_paper(&path) {
     return None;
   }
-  let (kind, declared) = file_declaration(&source_text(&path)?)?;
+  let declarations = file_declarations(&source_text(&path)?);
+  // (a file that declares three files or more is a bundle of them, not a copy of the first: cauchy.sty carries
+  // theorem, exscale, epsfig and apacite, and routed to the theorem binding the rest was lost after theorem.sty's load
+  // guard, 1312.3078; two may be a class and a package it embeds, qm2008_abs.cls's textcase)
+  let mut distinct: Vec<String> = Vec::new();
+  for (_, name) in &declarations {
+    let stem = file_stem(name).to_ascii_lowercase();
+    if !distinct.contains(&stem) {
+      distinct.push(stem);
+    }
+  }
+  if distinct.len() >= 3 {
+    return None;
+  }
+  let (kind, declared) = declarations.into_iter().next()?;
   let declared = declared.rsplit(['/', '\\']).next().unwrap_or(&declared);
   let dotted = s!(".{ext}");
   let declared = match (kind, ext) {
@@ -2503,6 +2611,13 @@ fn file_stem(name: &str) -> &str {
 /// count: a class may carry the packages it is built on (qm2008_abs.cls, a REVTeX 4 copy, embeds textcase.sty's
 /// `\ProvidesPackage{textcase}`, :3680).
 fn file_declaration(text: &str) -> Option<(&'static str, String)> {
+  file_declarations(text).into_iter().next()
+}
+
+/// Every declaration of [`file_declaration`]'s kind in `text`, in order, up to the file's first top-level `\endinput`
+/// — a code line of it alone, outside any brace group — where TeX stops reading the file: a declaration in the
+/// documentation after it (a `.dtx`-style trailer) is not the file's (77w review 8).
+fn file_declarations(text: &str) -> Vec<(&'static str, String)> {
   static PROVIDES: Lazy<Regex> = Lazy::new(|| {
     Regex::new(r"\\Provides(?:Expl)?(Class|Package|File)\s*\{\s*([^}\s]+)\s*\}").unwrap()
   });
@@ -2520,8 +2635,13 @@ fn file_declaration(text: &str) -> Option<(&'static str, String)> {
         .map(|value| value.as_str().to_string())
     })
   };
-  source_code_lines(text).find_map(|code| {
-    PROVIDES.captures(code).map(|cap| {
+  let mut depth = 0_i64;
+  let mut declarations = Vec::new();
+  for code in source_code_lines(text) {
+    if depth == 0 && code.trim() == "\\endinput" {
+      break;
+    }
+    for cap in PROVIDES.captures_iter(code) {
       let kind = match &cap[1] {
         "Class" => "Class",
         "Package" => "Package",
@@ -2533,9 +2653,20 @@ fn file_declaration(text: &str) -> Option<(&'static str, String)> {
       } else {
         name.to_string()
       };
-      (kind, name)
-    })
-  })
+      declarations.push((kind, name));
+    }
+    // (the braces of the line's code, an escaped one not counted)
+    let mut escaped = false;
+    for c in code.chars() {
+      match c {
+        '{' if !escaped => depth += 1,
+        '}' if !escaped => depth -= 1,
+        _ => {},
+      }
+      escaped = c == '\\' && !escaped;
+    }
+  }
+  declarations
 }
 
 /// Is the paper's file at `path`, of the name a stand-in binding answers (`file`), the file the binding `binding`

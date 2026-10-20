@@ -1,0 +1,17 @@
+% witness: 2507.06135 (JFM-FLM_Au.cls:1317-1318, a jfm.cls copy routed to the jfm binding: its PDF numbers (2.1),
+%          (2.14a), (A 1)); the 77w review's finding 3
+% oracle:  pdflatex 0 errors: "1 Introduction ... (1.1) ... 2 Model ... (2.1) ... See (2.1)."
+% engines: rust c400169c19 (77w r1) = "Counter equation keeps LaTeXML's numbering": (1), (2), as a `\documentclass{jfm}`
+%          without a copy numbers them
+% expect:  0 errors, 0 warnings; (1.1), (2.1)
+% status:  RED (open, 77w r2: SYNC row "jfm copies' equation numbers" — letting a counter the binding's base class
+%          numbered yield to the copy fixes it but changed 258 of 905 A/B papers; awaiting a ruling)
+% preload: ar5iv.sty
+\documentclass{jfmcopy}
+\begin{document}
+\section{Introduction}
+\begin{equation}a=b\end{equation}
+\section{Model}
+\begin{equation}c=d\label{e}\end{equation}
+See (\ref{e}).
+\end{document}

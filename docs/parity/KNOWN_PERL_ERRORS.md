@@ -16294,3 +16294,19 @@ cmsendnotes back-references, which set `\@theenmark` themselves) print the last 
 set before the note (`\lx@enote@mark`, endnotes_sty.rs); a given `[<n>]` is formatted so and is the note's mark too
 (Perl's `\lx@note{endnote}[4]` marks the note "4" where a `\roman` `\theendnote` gives pdflatex "iv"; 77v r2). Guards
 `perfect_kernel_batch77v::{endnotes_theenmark_is_the_note_mark, endnotes_given_number_is_formatted}`.
+
+## 1014. A renamed natbib copy read raw prints "?" for every citation
+
+A paper that ships natbib under another name (`natbib_vw.sty`, `modnatbib.sty`, `natbib_jrm.sty`: each
+`\ProvidesPackage{natbib}`) and loads it by that name has no binding for the request; `FindFile_fallback` reduces names
+by suffix and prefix only (Package.pm:2141-2210), and none of those reduces to `natbib`. Under `--includestyles` Perl
+reads the copy raw: its `\citet`/`\citep` read `\b@<key>`, which LaTeXML's `\bibitem` never writes (no `\bibcite`), so
+every citation prints a bold "?" with "Citation `<key>' on page 1 undefined", and natbib_vw.sty:443's `\@listi` is
+undefined (an Error). By default Perl reads no raw style: it warns the file missing and its dependency scan loads the
+natbib binding, so the citations resolve and the copy's own commands are lost. Minimal trigger:
+`tools/perfect_kernel/repros/stand-in-copies/provides_route/natbib_copy_is_natbib.tex` with
+`index-bib/mn2e_natbib_copy/natbib_vw.sty` — `latexml --includestyles`: 1 Error, 3 Warnings, "?), ?), (?)."; pdflatex
+"Schneider et al. (2010), Smith (2001), (Smith, 2001)." Witnesses 0802.4100 (142 "Citation undefined"), 1003.3017 (62),
+astro-ph0512042. Rust (77w; OXIDIZED_DESIGN_DIVERGENCES #731 rule 12): the declaration routes the request to the
+natbib binding with its options, the copy read after it as the stand-in's copy. Guards
+`perfect_kernel_batch77w::{natbib_copy_is_natbib, natbib_renamed_copy_citations_resolve}`.

@@ -1,0 +1,16 @@
+% witness: 1312.3078 (cauchy.sty: `\ProvidesPackage` theorem, exscale, epsfig, apacite — routed to the theorem binding by
+%          its first, theorem.sty's load guard `\@ifundefined{theorem@style}{}{\endinput}` then ended the read: 8
+%          undefined apacite `\BB…` Errors); the 77w review's finding 8 (a declaration after the top-level `\endinput`)
+% oracle:  pdflatex 0 errors (2 "You have requested package" Warnings): "EXSCALE & TOOL."
+% engines: rust c400169c19 (77w r1) = bundle.sty routed to the theorem binding, its read ended at the guard: `\BBA`,
+%          `\bundleexscale` undefined (2 Errors); mytools.sty routed to natbib by the text after its `\endinput`;
+%          rust 529dc1b543 = both read raw
+% expect:  0 errors, 0 warnings; both files read raw as before 77w, neither routed
+% status:  RED (c400169c19) -> GREEN (77w r2: three declarations or more make a bundle; the scan stops at `\endinput`)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{bundle}
+\usepackage{mytools}
+\begin{document}
+\bundleexscale{} \BBA{} \mytool.
+\end{document}

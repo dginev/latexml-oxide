@@ -19867,7 +19867,13 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    papers fixed, 3 aastex7 Fatals, junk text): they stay unregistered, the binding owning the document-time machinery.
    Likewise decided: the copy-local overlay of rule 2 stays, nested loads are real loads (rule 6) with the `\ver@` test
    scoped to the copy's own `\usepackage` lines, and (72a r3) counter ownership follows the stand-in binding's own load
-   only (rule 2).
+   only (rule 2). *Direct hook writes* (77w): the copy's own write to LaTeX's hook macros — `\g@addto@macro
+   \@begindocumenthook{…}`, ltxgrid's `\prepdef\@begindocumenthook` (qm2008_abs.cls:3233, snp.cls) or a `\def` of
+   `\@begindocumenthook`/`\@enddocumenthook` — is the same document-time code and is not registered either
+   (`state::copy_provides_defers_hook_write`, from `install_definition`): ltxgrid's page grid ran over the revtex4
+   binding's names at `\begin{document}`, 7 "Missing number" Warnings each in 0805.2253, 0806.0481, 0805.4759 (guard
+   `perfect_kernel_batch77w::copy_writes_document_hook`, which pins "UNHOOKED" where pdflatex prints "HOOKED"). Its cost
+   is `\AtBeginDocument`'s: a hook body that defines names the document uses loses them.
 6. *Nested loads.* A package or class the copy loads (`\RequirePackage`, `\usepackage`, `\LoadClass`) is a real load,
    the mode suspended for it (`input_definitions`; a file it pulls in by `\input` is part of the copy, #744): a package the binding did not load loads whole (bmvc2k.cls:139's
    `tabularx`, colm's `multirow`, ws-rv9x6.cls's `ws-crop9x6`), a loaded one is the usual no-op, and `\LoadClass` of
@@ -19989,10 +19995,12 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    and nc_chain: pdflatex 2 errors, "References", "Figure 1"). A name made `\relax` is definable, as LaTeX's
    `\newcommand` finds it (the copy's own `\let\refname\relax` before its `\newcommand`, or a raw base class's; r7).
    `\def`/`\renewcommand` redefine as before. A copy's own load of a package its stand-in binding loaded on its behalf
-   (`<file>:loaded_by_stand_in`, the first load made while a stand-in binding loaded; the request read before the
-   load's provides-mode suspension, `requested_by_copy`) is that load, which TeX sees alone: its options apply, at
-   Info, with no "Option clash" (77w; a modified elsarticle.cls copy's `\RequirePackage[square,…]{natbib}`,
-   1811.10063).
+   (`<file>:loaded_by_stand_in`, the innermost stand-in binding whose load made the first load; the request's copy,
+   read before the load's provides-mode suspension, `requested_by_copy`, is that binding's — `state::copy_provides_binding`)
+   is that load, which TeX sees alone: its options apply, at Info, with no "Option clash" (77w; a modified elsarticle.cls
+   copy's `\RequirePackage[square,…]{natbib}`, 1811.10063). Another stand-in's copy repeating the load with other
+   options meets LaTeX's "Option clash", as in pdflatex (77w r2; the review's finding 6, guard
+   `perfect_kernel_batch77w::another_copys_repeat_load_clashes`).
 12. *The declaration route* (77w, user ruling 2026-10-20, extending 2026-10-17's "a binding always wins over a shipped
    copy"). A `.sty` or `.cls` the paper ships under a name with no binding of its own that declares itself another file
    a binding stands for is that binding's request (content.rs `provided_binding`, from `input_definitions_impl` ahead
@@ -20001,7 +20009,13 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    `\documentclass{qm2008_abs}` whose file `\ProvidesClass{revtex4}` the revtex4 binding. The declaration is the file's
    first `\Provides(Expl)?(Class|Package|File)` outside a comment (`file_declaration`, shared with rule 0 (a), the
    declared-macro form included; a later one does not count: qm2008_abs.cls embeds textcase.sty's
-   `\ProvidesPackage{textcase}`, :3680); of the request's kind (a `.sty`'s `\ProvidesPackage` or `\ProvidesFile{X.sty}`,
+   `\ProvidesPackage{textcase}`, :3680), read up to the file's first top-level `\endinput` (a code line of it alone
+   outside a brace group, where TeX stops: a declaration in a documentation trailer after it is not the file's — 77w r2,
+   the review's finding 8; `file_declarations`); not a bundle — a file declaring three or more distinct files is several
+   files in one, read raw as before (77w r2, main-session decision 2026-10-20: 1312.3078's cauchy.sty declares theorem,
+   exscale, epsfig and apacite; routed to the theorem binding, theorem.sty's load guard
+   `\@ifundefined{theorem@style}{}{\endinput}` ended the read, 8 undefined apacite `\BB…` Errors; qm2008_abs.cls's two
+   stay routed; guard `perfect_kernel_batch77w::provides_route_skips_bundles_and_trailers`); of the request's kind (a `.sty`'s `\ProvidesPackage` or `\ProvidesFile{X.sty}`,
    a `.cls`'s `\ProvidesClass` or `\ProvidesFile{X.cls}`); naming another file, compared without regard to case; whose
    binding is the registry's, matched as a request is without regard to case, or the one its versioned fallback reaches
    (`aistats2023` → aistats). The binding loads with the request's options as a versioned fallback's does
@@ -20020,13 +20034,15 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    now read too); over a 3 % corpus sample (87,937 papers) 491 papers (≈0.56 %) request a shipped file that the rule
    routes, 186 of them reached by the versioned fallback before (by binding: aastex 102, neurips 42, IEEEtran 24,
    longtable 23 — aalongtable.sty —, rotating 22 — rotating_pr.sty —, jheppub 22, aa 16, article 13). Perl: `FindFile`
-   finds no `.ltxml` for the request and reads the copy raw (Package.pm:2113-2133; `FindFile_fallback` reduces by name
-   only, :2141-2210), so a renamed natbib copy's citations read `\b@<key>`, which no `\bibitem` writes: "?" and a "Citation undefined" Warning per citation
-   (0802.4100 142 Warnings, 1003.3017 62, astro-ph0512042). Residual: a binding loaded already is not run again and
-   its copy is not read (its options reach it, rule 11); a bundle file declaring itself its first package
-   (1312.3078's cauchy.sty: theorem.sty, then exscale, epsfig and apacite) ends at that package's load guard
-   (`\@ifundefined{theorem@style}{}{\endinput}`), the rest of the bundle lost (0 → 8 Errors; options for the main
-   session: leave, or refuse a file with three or more distinct declarations — qm2008_abs.cls declares two); where the
+   finds no `.ltxml` for the request (Package.pm:2113-2133; `FindFile_fallback` reduces by name only, :2141-2210); by
+   default it reads no raw style, warns the file missing and loads the bindings its dependency scan names (natbib: the
+   citations resolve, the copy's extras are lost), and under `--includestyles` it reads the copy raw, whose citations read
+   `\b@<key>`, which no `\bibitem` writes: "?" and a "Citation undefined" Warning per citation (KNOWN_PERL_ERRORS
+   #1014; 0802.4100 142 Warnings, 1003.3017 62, astro-ph0512042). Residual: a binding loaded already is not run again
+   and its copy is not read (its options reach it, rule 11); a file whose first declaration follows a long stretch of
+   its own code is routed by it all the same (adassconf.sty, astro-ph0101121: html.sty's embedded
+   `\ProvidesPackage{html}`, :1374, after 391 definitions of its own, so it routes to the html binding; it converts
+   cleanly, +17 words; main-session decision: leave, SYNC row); where the
    copy departs from the binding's class the binding's markup stands (2209.10785's cidr.cls comments out acmart's
    `natbib=true` default, so the acmart binding's natbib meets the document's `\usepackage[numbers]{natbib}`: LaTeX's
    "Option clash" Error, where pdflatex loads natbib once; 1401.1086's confSt.cls, an aamas2013 copy, and 2312.16264's
@@ -20036,8 +20052,48 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    280 sampled routes, 30 witnesses; plus 200 random ships/controls, byte-identical): Errors 144 → 123, Fatals 0 → 0,
    Warnings 12,652 → 8,787, words +1.5 %, "?" 2,608 → 109, "Citation undefined" Warnings 3,707 → 39; title
    +37/−11, creator +29/−2, contact +66/−14 papers (the losses: raw classes' duplicated frontmatter now printed
-   once, 2210.16202 82 "Japan" → 10 as its source); 4 papers worse in Errors, all above. Guards
+   once, 2210.16202 82 "Japan" → 10 as its source); 4 papers worse in Errors: the three above and 1312.3078's
+   bundle, read raw again since r2. Guards
    `perfect_kernel_batch77w::*`; repros `tools/perfect_kernel/repros/stand-in-copies/provides_route/`.
+13. *A standard-class derivative* (77w r2; user rulings 2026-10-20: "a shipped class declaring a LaTeX standard class
+   stays routed; fix the bindings so the route loses nothing", then "call out arXiv overrides of standard classes in the
+   sections patching them"). A class the paper ships that declares one of LaTeX's own classes — its file in the
+   format's base distribution, `tex/latex/base/` (article, report, book, letter, proc, slides, minimal; content.rs
+   `is_latex_base_class`) — is not that class but an arXiv-side override of it: aip-cp.cls:24 `\ProvidesClass{article}`
+   (AIP Conference Proceedings, not in TeX Live; 1506.04050, 1604.08112), mf.cls (0709.4467), antonio.cls (1808.10740),
+   articlegm.cls, articlefederico.cls, HERON.cls and mbook.cls (`book`: 1903.06504, nucl-th0703058), avh.cls
+   (`report`). The binding models the kernel's class and nothing beyond LaTeXML's kernel, so every section of the
+   copy that differs patches the kernel's class; the provides mode of rules 1-11 kept the binding's meaning for each
+   and lost them, silently: aip-cp's accumulating `\author[aff1]{…}` (aip-cp.cls:235-258) kept the last of five
+   authors under the locked kernel `\author`, its `\affil` list was lost, mf.cls's size file left no nominal font
+   size, HERON.cls's and mbook.cls's affiliation contact went. So the copy is read after the binding's load as a raw
+   class is (`read_standard_class_derivative`, Info "The paper's X derives from a LaTeX class: read as a raw class over
+   its binding"), and its patches are recognised by the raw-class mechanisms, section by section:
+   - *frontmatter setters* — a locked kernel name it redefines (`\author`, `\title`, `\maketitle`, `\abstract`, …) is
+     refused with the records a raw class's takeover leaves (`\lx@dropped@<name>`, `<name>:redefined`; state.rs
+     `install_definition`): the kernel `\author` appends each call (#253, `\lx@add@authors@adaptive`) and replays the
+     class's own setter for its flags and stores (#482, #534), its `\maketitle` deposits what the frontmatter does not
+     carry (#265: aip-cp's `\aipaffil`), and the title-page stores reach the frontmatter API (K11,
+     `\lx@class@loaded@raw` at the binding load's end; `store_setters::mark_raw`);
+   - *the class's own names* — its `\newcommand` of a name the standard binding assigned in its own code (origin
+     `Binding`: `\refname`, `\bibname`, `\figurename`, `\abstractname`) defines it, the derivative being read in the
+     class's place (`state::standard_class_binding_name`, latex_constructs `is_definable_latex`): aip-cp.cls:875-878
+     "REFERENCES", "FIGURE 1"; HERON.cls:682 `\bibname{References}`; Lowx2013.cls:629 `\abstractname{ }`;
+   - *everything else* — size code, counters and their representations, captions, lists, page layout — stands as TeX
+     makes it: mf.cls's `[11pt]` gives the nominal size 10.95, articlegm.cls's 11pt and bookstyle.cls's 12pt ones too
+     (1504.00071, quant-ph0408036: none before), article_saj.cls:476 `\fnum@figure{\ninebf …}`.
+   The binding's own markup stays where the copy does not patch: its counters' ids (`S1`, `Ch1`), its class options
+   (`leqno`), `ltx-article.css`, the one-line authors class. A/B vs int37a (529dc1b543, the class read raw) over the 27
+   derivative papers of the A/B sets (the 17 of the reviewer's 87,937-paper sample routing to article/book/report, 9
+   natbib-census papers with an IMA class copy — imamat.cls, imanum.cls — or arc.cls, all `\ProvidesClass{article}`,
+   and 1904.06854): Errors
+   27 → 21 (the census papers' natbib route), Fatals 0 → 0, Warnings 333 → 284, words +0.7 %; the XML differs from
+   int37a's only by the binding's ids and the patches above (1506.04050's five creators as int37a, "REFERENCES" and
+   "FIGURE 1" as its PDF), except 2008.02832's twocolumn figure, whose panel break is gone (layout; r1 the same,
+   residual). Against r1 (c400169c19) over the 905 papers of r1's and the reviewer's A/B sets: 26 changed — the 25
+   derivatives and 1312.3078's bundle (rule 12, 8 → 0 Errors) —, Errors 154 → 146, Fatals 4 → 4, Warnings equal. Residual: aip-cp's `\author[aff1]` marks are not linked to `\affil[aff1]` (the affiliations reach the
+   page as the title page's deposit, as on int37a; SYNC row). Guards `perfect_kernel_batch77w::
+   {standard_class_derivative_keeps_every_author, standard_class_derivative_patches_stand}`.
 
 Costs (instructions, 72a r3 vs 67int21, faithful loads): atlasdoc papers +26-33 % in r3-r7, its `\LoadClass{scrartcl}`
 (atlasdoc.cls:319, KOMA's 22 files), +0.8-3.8 % in r8, where the binding's base class stood for it, and back with r9,

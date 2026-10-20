@@ -284,3 +284,131 @@ fn copy_writes_document_hook() {
     "<p xml:id=\"p1.1\">Text UNHOOKED.</p>",
   );
 }
+
+/// A class the paper ships that declares one of LaTeX's own classes (aip-cp.cls:24 `\ProvidesClass{article}`;
+/// 1506.04050's five authors, 1604.08112's two) is a derivative of it, read as a raw class over the article binding (OD
+/// #731 rule 13): its accumulating `\author[aff1]{…}` keeps every author — the kernel `\author` appends each call and
+/// replays the class's own setter — and its `\affil` list reaches the page through its title page's deposit. Read as
+/// the binding's stand-in copy (77w r1), the locked `\author` kept only the last call, silently. pdflatex: "A Paper /
+/// M. Bruemmer^aff1, S. Sekula^aff1 / ^aff1 Department of Physics, SMU".
+#[test]
+fn standard_class_derivative_keeps_every_author() {
+  let (log, xml) = convert_files_with(
+    repro!("standard_class_derivative_authors.tex"),
+    &[("aipcopy.cls", repro!("aipcopy.cls"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    log.contains(
+      "Info:provide:aipcopy.cls The paper's aipcopy.cls derives from a LaTeX class: read as a raw class over its binding"
+    ),
+    "{log}"
+  );
+  assert_element(
+    &xml,
+    "creator",
+    &["role=\"author\""],
+    "<creator role=\"author\"><personname>M. Bruemmer</personname></creator>",
+  );
+  assert_element(
+    &xml,
+    "creator",
+    &["before=\"\u{2003}\u{2003}\"", "role=\"author\""],
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>S. Sekula</personname></creator>",
+  );
+  assert_eq!(xml.matches("<creator ").count(), 2, "{xml}");
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    "<para xml:id=\"p1\"><p align=\"center\" xml:id=\"p1.1\"><sup xml:id=\"p1.1.1\">aff1</sup><text font=\"italic\" \
+     xml:id=\"p1.1.2\">Department of Physics, SMU</text></p></para>",
+  );
+}
+
+/// The derivative's other patches of the kernel's class stand as it makes them (OD #731 rule 13): its size file
+/// (`\input{size1\@ptsize.clo}` under `[11pt]`) sets the nominal font size (0709.4467's mf.cls: 10.95; 1808.10740's
+/// antonio.cls: 12), and its `\newcommand`s of the names the article binding assigned define them, as the class read in
+/// article.cls's place does (aip-cp.cls:875-878, 1506.04050: "REFERENCES", "FIGURE 1"; HERON.cls:682, 1903.06504).
+/// pdflatex: "FIGURE 1: A caption.", "REFERENCES".
+#[test]
+fn standard_class_derivative_patches_stand() {
+  let (log, xml) = convert_files_with(
+    repro!("standard_class_derivative_patches.tex"),
+    &[("stdderiv.cls", repro!("stdderiv.cls"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains("<?latexml nominal-font-size=\"10.95\"?>"),
+    "{xml}"
+  );
+  assert_element(
+    &xml,
+    "caption",
+    &[],
+    "<caption><tag close=\": \">FIGURE\u{a0}1</tag>A caption.</caption>",
+  );
+  assert_element(
+    &xml,
+    "title",
+    &[],
+    "<title><tag close=\" \">1</tag>Introduction</title>",
+  );
+  assert!(xml.contains("<title>REFERENCES</title>"), "{xml}");
+}
+
+/// A file that declares three files or more is a bundle, not a copy (cauchy.sty: theorem, exscale, epsfig, apacite;
+/// 1312.3078), and a declaration after a file's top-level `\endinput` is its documentation's (the 77w review's
+/// finding 8): both are read raw as before the route. pdflatex: "EXSCALE & TOOL."
+#[test]
+fn provides_route_skips_bundles_and_trailers() {
+  let (log, xml) = convert_files_with(
+    repro!("provides_route_bundles.tex"),
+    &[
+      ("bundle.sty", repro!("bundle.sty")),
+      ("mytools.sty", repro!("mytools.sty")),
+    ],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(!log.contains("declares itself"), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">EXSCALE &amp; TOOL.</p>",
+  );
+}
+
+/// A package a stand-in binding's load loaded first is the copy's own load for that binding's copy only (the 77w
+/// review's finding 6): another stand-in's copy that loads it with other options is LaTeX's "Option clash", the first
+/// load's options kept (the elsarticle copy's own repeat, 1811.10063, stays `copy_loads_its_binding_package`).
+/// pdflatex: 1 error, "See [1]."
+#[test]
+fn another_copys_repeat_load_clashes() {
+  let (log, xml) = convert_files_with(
+    repro!("another_copy_loads_the_package.tex"),
+    &[
+      ("elscopy0.cls", repro!("elscopy0.cls")),
+      ("ijcaicopy.sty", repro!("ijcaicopy.sty")),
+    ],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert!(
+    log.contains(
+      "Error:latex:options Option clash for package natbib: options 'round' of a repeat load dropped, as LaTeX keeps \
+       the first load's"
+    ),
+    "{log}"
+  );
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">See <cite class=\"ltx_citemacro_citep\">[<bibref bibrefs=\"a\" separator=\",\" \
+     show=\"Number\" yyseparator=\",\"/>]</cite>.</p>",
+  );
+}

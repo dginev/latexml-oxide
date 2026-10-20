@@ -453,6 +453,9 @@ pub struct ClassLoadRecord {
 #[derive(Debug, Default)]
 pub struct CopyProvidesRecord {
   pub file:          String,
+  /// The stand-in binding the copy is read after (`binding::content::read_stand_in_copy`): a package that binding's
+  /// load loaded first is the copy's own load (`<file>:loaded_by_stand_in`).
+  pub binding:       String,
   pub overlay:       rustc_hash::FxHashMap<SymStr, Stored>,
   pub declined:      rustc_hash::FxHashSet<SymStr>,
   pub deferred:      rustc_hash::FxHashSet<SymStr>,
@@ -2460,10 +2463,11 @@ fn meaning_by_key(key: SymStr) -> Stored {
 }
 
 /// Number a new stand-in copy of `file` for [`note_copy_provides_assignment`] (1-based, [`crate::definition::origin::copy_provides`]).
-pub fn new_copy_provides_record(file: &str) -> u32 {
+pub fn new_copy_provides_record(file: &str, binding: &str) -> u32 {
   let mut state = state_mut!();
   state.copy_provides_copies.push(CopyProvidesRecord {
     file: file.to_string(),
+    binding: binding.to_string(),
     ..CopyProvidesRecord::default()
   });
   state.copy_provides_copies.len() as u32
@@ -2587,6 +2591,32 @@ pub fn copy_provides_text_default_clashes(token: &Token) -> bool {
     && text_default(token)
     && !binding_owns(token)
     && copy_base_class_defines(token)
+}
+
+/// The stand-in binding the copy read now (`copy_provides`) was read after, or the empty string when no copy is read.
+pub fn copy_provides_binding() -> String {
+  let id = crate::definition::origin::copy_provides();
+  if id == 0 {
+    return String::new();
+  }
+  state!()
+    .copy_provides_copies
+    .get(id as usize - 1)
+    .map(|copy| copy.binding.clone())
+    .unwrap_or_default()
+}
+
+/// Is `token` a name the standard class's binding assigned in its own code (`State::stand_in_meanings`, origin
+/// `Binding`: article_cls.rs's `\refname`, `\@ptsize`), which a derivative of that class read now defines itself
+/// (`binding::content::reading_standard_class_derivative`, OXIDIZED_DESIGN_DIVERGENCES #731 rule 13)? In TeX the
+/// derivative is read in the class's place, so its `\newcommand` of the name is the first: aip-cp.cls:875
+/// `\newcommand\refname{REFERENCES}` (1506.04050, 1604.08112).
+pub fn standard_class_binding_name(token: &Token) -> bool {
+  crate::binding::content::reading_standard_class_derivative()
+    && state!().stand_in_meanings.contains(&meaning_key(token))
+    && lookup_meaning(token).is_some_and(|meaning| {
+      definition_origin(&meaning) == Some(crate::definition::origin::DefinitionOrigin::Binding)
+    })
 }
 
 /// Did the stand-in binding's own load assign `token` last (`State::stand_in_meanings`, not its base class's

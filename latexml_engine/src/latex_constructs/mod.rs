@@ -254,6 +254,12 @@ fn is_definable_latex(cs: &Token) -> Result<(bool, bool)> {
       return Ok((true, false));
     }
   }
+  // A standard-class derivative read over its binding defines the names the binding assigned as the class's own, as
+  // it does in TeX, read in the class's place (`state::standard_class_binding_name`; aip-cp.cls:875
+  // `\newcommand\refname{REFERENCES}`, 1506.04050; OXIDIZED_DESIGN_DIVERGENCES #731 rule 13).
+  if standard_class_binding_name(cs) {
+    return Ok((true, false));
+  }
   // Perl reads the definition's source (`=~ /^plain/`); Rust pools carry no such
   // locator, so the plain LAYER is also read from the definition's provenance.
   let plain = lookup_definition(cs)?.is_some_and(|prev| {

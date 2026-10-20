@@ -616,7 +616,8 @@ pub(crate) fn load() -> Result<()> {
   //    \g@addto@macro\out{WRONG}\fi[\out]`. Guard:
   //    `perfect_kernel_batch54::g_addto_macro_appends_at_digestion`.
   DefPrimitive!("\\g@addto@macro DefToken {}", sub[(cs, tokens)] {
-    // (a stand-in's copy's append to the document hooks registers nothing: `state::copy_provides_defers_hook_write`)
+    // (a stand-in's copy's append to the document hooks registers nothing: `state::copy_provides_defers_hook_write`;
+    // qm2008_abs.cls's ltxgrid page grid, 0805.2253)
     if !copy_provides_defers_hook_write(&cs) {
       AddToMacro!(cs, tokens);
     }

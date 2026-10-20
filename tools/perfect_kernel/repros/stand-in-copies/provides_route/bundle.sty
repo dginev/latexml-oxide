@@ -1,0 +1,11 @@
+%% A paper's bundle of packages in one file (cauchy.sty, 1312.3078: theorem, exscale, epsfig and apacite), cut down:
+%% its first declaration is theorem.sty's, under theorem.sty's own load guard (theorem.sty:46)
+\@ifundefined{theorem@style}{}{\endinput}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{theorem}[1995/11/23 v2.2c Theorem extension package (FMi)]
+\newtoks\theorem@style
+\ProvidesPackage{exscale}[1997/06/16 v2.1g Standard LaTeX package exscale]
+\def\bundleexscale{EXSCALE}
+\ProvidesPackage{apacite}[1994/11/30 APA citation]
+\def\BBA{\&}
+\endinput

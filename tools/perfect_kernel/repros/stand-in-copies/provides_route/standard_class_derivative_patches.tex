@@ -1,0 +1,24 @@
+% witness: 0709.4467 (mf.cls, `\documentclass[11pt,leqno]{mf}`: nominal-font-size 10.95), 1808.10740 (antonio.cls, 12pt:
+%          its graphics sized against 12pt), 1506.04050 (aip-cp.cls:875-878 `\newcommand\refname{REFERENCES}`,
+%          `\figurename{FIGURE}`), 1903.06504 (HERON.cls:682 `\newcommand\bibname{References}`), nucl-th0703058
+%          (mbook.cls), 1309.0738 and hep-ph0311184 (`\newcommand\abstractname{ }`)
+% oracle:  pdflatex 0 errors: "1 Introduction ... FIGURE 1: A caption. ... REFERENCES [1] A. Author." at 11pt
+% engines: rust c400169c19 (77w r1) = routed to the article binding, the copy read as its stand-in's: its size file's
+%          `\normalsize` held only inside its own code (no nominal size), its `\newcommand`s of the binding's text
+%          defaults refused as "already defined": "Figure 1", "References"; rust 529dc1b543 (int37a) = read raw, the
+%          names LaTeXML predefined kept: "Figure 1"
+% expect:  0 errors, 0 warnings; the copy's 11pt size, "FIGURE 1", "REFERENCES"
+% status:  RED (c400169c19) -> GREEN (77w r2: a standard-class derivative is read as a raw class over its binding,
+%          the names the binding assigned the derivative's to define)
+% preload: ar5iv.sty
+\documentclass[11pt]{stdderiv}
+\begin{document}
+\section{Introduction}
+Body text.
+\begin{figure}[h]
+\caption{A caption.}
+\end{figure}
+\begin{thebibliography}{9}
+\bibitem{a} A. Author.
+\end{thebibliography}
+\end{document}
