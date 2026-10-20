@@ -1,0 +1,19 @@
+% witness: 2508.00020 (subfigure.sty with caption; review r2 finding 3)
+% oracle:  pdflatex 0 errors: "(a): First", "(b) SubA", "Figure 1: Whole", "End text."
+% engines: rust 77s r1 = 20 errors (\begin{subfigure} called subfigure.sty's \subfigure command with the caption's
+%          internals as its arguments): "subfigureFirst", the figure's caption "(c) Whole", "End text." drawn into it
+% expect:  0 errors, 0 warnings; the caption is a sub-float panel "(a) First", then "(b) SubA", "Figure 1: Whole"
+% status:  RED (77s r1) -> GREEN (77s r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{caption}
+\usepackage{subfigure}
+\begin{document}
+Start.
+\begin{figure}
+\begin{minipage}{.4\textwidth}AAA\captionof{subfigure}{First}\end{minipage}
+\subfigure[SubA]{XXX}
+\caption{Whole}
+\end{figure}
+End text.
+\end{document}

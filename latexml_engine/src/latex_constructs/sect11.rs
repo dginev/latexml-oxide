@@ -2204,6 +2204,16 @@ fn cite_prints_keys(bibrefs: &str) -> Result<()> {
 /// after `\lx@label@type{<type>}` when a type was given (cleveref.sty `\label[type]`, KNOWN_PERL_ERRORS #998). An absent
 /// or blank type adds no token to the caption's text, which other code re-reads and scans.
 pub fn typed_label(label: Token, ty: Option<Tokens>, key: Tokens) -> Vec<Token> {
+  let mut tokens = label_type(ty);
+  tokens.extend([label, T_BEGIN!()]);
+  tokens.extend(key.unlist());
+  tokens.push(T_END!());
+  tokens
+}
+
+/// `\lx@label@type{<type>}` for a `\label[type]` a site reads itself (`typed_label`; longtable's label, which names
+/// the table it ends), or nothing for an absent or blank type.
+pub fn label_type(ty: Option<Tokens>) -> Vec<Token> {
   let mut tokens = Vec::new();
   if let Some(ty) = ty.filter(|ty| {
     ty.unlist_ref()
@@ -2214,8 +2224,5 @@ pub fn typed_label(label: Token, ty: Option<Tokens>, key: Tokens) -> Vec<Token> 
     tokens.extend(ty.unlist());
     tokens.push(T_END!());
   }
-  tokens.extend([label, T_BEGIN!()]);
-  tokens.extend(key.unlist());
-  tokens.push(T_END!());
   tokens
 }

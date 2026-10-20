@@ -150,9 +150,10 @@ LoadDefinitions!({
       "\\label Semiverbatim",
       "\\lxRDF@original@label{#1}\\lxRDFa{property=dcterms:alternative,content=#1}"
     );
+    // (longtable's label reads cleveref's optional `[type]`, longtable_sty.rs; passed on)
     DefMacro!(
-      "\\lx@longtable@label Semiverbatim",
-      "\\lxRDF@originallx@longtable@label{#1}\\lxRDFa{property=dcterms:alternative,content=#1}"
+      "\\lx@longtable@label [] Semiverbatim",
+      "\\lxRDF@originallx@longtable@label[#1]{#2}\\lxRDFa{property=dcterms:alternative,content=#2}"
     );
   });
   ProcessOptions!();

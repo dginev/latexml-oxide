@@ -1,0 +1,23 @@
+% witness: 2508.00020 (caption + subfig + subfigure + subcaption, `\captionof{subfigure}{}` in minipages; review r2
+%          finding 3)
+% oracle:  pdflatex 3 errors ("Should not be used with subtype `subfigure'" and `subtable', caption.sty:346-352 with
+%          subfig's \sf@counterlist; "\caption outside float", caption.sty:200-207): "Figure 1: First", "(a) SubA",
+%          "Figure 2: Whole", "CCC", "End text."
+% engines: rust 77s r1 = 2 errors, "First" made panel (a) and the \subfloat (b); "CCCLone" printed
+% expect:  3 errors; "Figure 1: First", "(a) SubA", "Figure 2: Whole"; "Lone" dropped
+% status:  RED (77s r1) -> GREEN (77s r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{caption}
+\usepackage{subfig}
+\begin{document}
+Start.
+\begin{figure}
+\begin{minipage}{.4\textwidth}AAA\captionof{subfigure}{First}\end{minipage}
+\subfloat[SubA]{XXX}
+\caption{Whole}
+\end{figure}
+\begin{minipage}{.4\textwidth}CCC\captionof{subtable}[List]{Lone}\end{minipage}
+
+End text.
+\end{document}

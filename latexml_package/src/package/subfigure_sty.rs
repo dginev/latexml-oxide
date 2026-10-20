@@ -148,6 +148,11 @@ LoadDefinitions!({
     },
     after_digest => sub[whatsit] { after_float(whatsit); });
 
+  // A `\captionof{subfigure}` (caption.sty `\setcaptiontype*{subfigure}\caption`) is a sub-float's caption, which
+  // `\@captionof@` (caption_sty.rs) hosts in the panel environment here: `subfigure` is a command, no environment.
+  assign_value("captionof_environment@subfigure", "@subfigure", Some(Scope::Global));
+  assign_value("captionof_environment@subtable", "@subtable", Some(Scope::Global));
+
   // Perl: DefMacro('\subref OptionalMatch:* Semiverbatim', '\ref{#2}');
   DefMacro!("\\subref OptionalMatch:* Semiverbatim", "\\ref{#2}");
 });

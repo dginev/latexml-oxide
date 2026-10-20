@@ -281,9 +281,12 @@ fn cref_define_name(
     } else {
       Some(T_CS!("\\MakeLowercase"))
     };
+    // Both names change case, or neither, as the singular is empty or not (cleveref.sty:1309 `\expandafter\ifx\@tempa
+    // \@empty`, the singular alone): `\crefname{x}{}{xs}` derives the plural unchanged.
+    let change_case = change_case.filter(|_| !singular.unlist_ref().is_empty());
     let derive = |name: Tokens| -> Tokens {
       match change_case {
-        Some(cs) if !name.unlist_ref().is_empty() => {
+        Some(cs) => {
           let mut tokens = vec![cs];
           tokens.extend(name.unlist());
           Tokens::new(tokens)

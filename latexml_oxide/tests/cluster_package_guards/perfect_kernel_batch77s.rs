@@ -70,8 +70,11 @@ fn algpseudocodex_require_shows_its_label() {
 /// cleveref's `\label[type]{key}`: the object the label names takes the type in its cleveref tags, which `\cref`
 /// prints — after `\caption` (the kernel's `\@caption@postlabel` reads the optional), before it, on a theorem and on an
 /// equation. The capitalised form is derived from `\crefname` as cleveref.sty:1296-1325 derives it (`\MakeUppercase`
-/// before the singular). pdflatex: "See Appendix Table 1, table 2, Appendix Figure 1, Lemma 1 and Appendix Table 1";
-/// the type was dropped ("table 1", "figure 1", "equation 1"; 2404.11739, 2605.13648; Perl the same). Repro
+/// before the singular). pdflatex: "See Appendix Table 1, table 2, Appendix Figure 1, Lemma 1, Appendix Table 1 and
+/// ?? supp."; the type was dropped ("table 1", "figure 1", "equation 1"; 2404.11739, 2605.13648; Perl the same). The
+/// sixth, a `\label[supp]` before the `\caption`, is cleveref's error in pdflatex ("Use of \cref@override@label@type
+/// doesn't match its definition", the reference "??"); here the label names the float, LaTeXML's rule for a label in a
+/// float, and the float takes the type: "Supplement 3", 0 errors. Repro
 /// package-bindings/cleveref_label_type_names_the_reference.
 #[test]
 fn cleveref_label_type_names_the_reference() {
@@ -280,5 +283,210 @@ See \ref{f:a}. Text after.
   assert!(
     xml.contains(r#"<caption><tag close=": "><text fontsize="90%" xml:id="S0.F1.3">Figure 1</text></tag><text fontsize="90%" xml:id="S0.F1.4">First</text></caption>"#),
     "{xml}"
+  );
+}
+
+/// A `\label[type]{key}` in the caption's text (sect09.rs `\@@@hack@caption@`) and in a longtable (longtable_sty.rs
+/// `\lx@longtable@label`) reads cleveref's optional type, as the label after a `\caption` does: read as the key, the
+/// float was labelled `[` and "Fooappendixtable]tin" printed. pdflatex: "See appendix table 1, appendix table 2,
+/// appendix table 4 and table 3." Repro package-bindings/cleveref_label_type_in_caption_text.
+#[test]
+fn label_type_in_caption_text() {
+  let tags = |n: u32, name: &str| {
+    let cap = if name == "table" {
+      "Table"
+    } else {
+      "Appendix table"
+    };
+    format!(
+      r#"<tags><tag>Table {n}</tag><tag role="creftype">{name}</tag><tag role="creftypecap">{cap}</tag><tag role="creftypeplural">{name}s</tag><tag role="creftypepluralcap">{cap}s</tag><tag role="refnum">{n}</tag><tag role="typerefnum">Table {n}</tag></tags>"#
+    )
+  };
+  assert_elements(
+    r"\documentclass{article}
+\usepackage{longtable}
+\usepackage{cleveref}
+\crefname{appendixtable}{appendix table}{appendix tables}
+\begin{document}
+See \cref{tin}, \cref{tout}, \cref{lt} and \cref{plain}.
+\begin{table}\caption{Foo\label[appendixtable]{tin}}\end{table}
+\begin{table}\caption{Bar}\label[appendixtable]{tout}\end{table}
+\begin{table}\caption{Baz\label{plain}}\end{table}
+\begin{longtable}{l}\caption{Long}\label[appendixtable]{lt}\\ x\\\end{longtable}
+End.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "table",
+        "S0.T1",
+        &format!(
+          r#"<table inlist="lot" labels="LABEL:tin" xml:id="S0.T1">{}<toccaption><tag close=" ">1</tag>Foo</toccaption><caption><tag close=": ">Table 1</tag>Foo</caption></table>"#,
+          tags(1, "appendix table")
+        ),
+      ),
+      (
+        "table",
+        "S0.T3",
+        &format!(
+          r#"<table inlist="lot" labels="LABEL:plain" xml:id="S0.T3">{}<toccaption><tag close=" ">3</tag>Baz</toccaption><caption><tag close=": ">Table 3</tag>Baz</caption></table>"#,
+          tags(3, "table")
+        ),
+      ),
+      (
+        "table",
+        "S0.T4",
+        &format!(
+          r#"<table inlist="lot" labels="LABEL:lt" xml:id="S0.T4">{}<caption><tag close=": ">Table 4</tag>Long</caption><toccaption><tag close=" ">4</tag>Long</toccaption><tabular xml:id="S0.T4.1"><tr xml:id="S0.T4.1.1"><td align="left" xml:id="S0.T4.1.1.1">x</td></tr></tabular></table>"#,
+          tags(4, "appendix table")
+        ),
+      ),
+    ],
+  );
+}
+
+/// caption.sty:348 `\caption@checktype` refuses a sub-float subfig's `\newsubfloat` made (`\sf@counterlist`) as it does
+/// caption's own sub-types: `\captionof{subfigure}{First}` in a minipage is the figure's "Figure 1: First" and the
+/// `\subfloat` is "(a)" (it was panel (a), the `\subfloat` (b)). Outside any float the `\caption` it falls back to is
+/// `\caption@OutsideFloat` (caption.sty:200-207): a second error and the text dropped, "CCC" alone ("CCCLone" printed).
+/// pdflatex: 3 errors, "Figure 1: First", "(a) SubA", "Figure 2: Whole", "CCC", "End text." (KNOWN_PERL_ERRORS #999).
+/// Repro captions-floats/captionof_subfig_subfloat_is_refused.
+#[test]
+fn captionof_subfig_subfloat_is_refused() {
+  assert_elements_with(
+    r"\documentclass{article}
+\usepackage{caption}
+\usepackage{subfig}
+\begin{document}
+Start.
+\begin{figure}
+\begin{minipage}{.4\textwidth}AAA\captionof{subfigure}{First}\end{minipage}
+\subfloat[SubA]{XXX}
+\caption{Whole}
+\end{figure}
+\begin{minipage}{.4\textwidth}CCC\captionof{subtable}[List]{Lone}\end{minipage}
+
+End text.
+\end{document}",
+    "ar5iv.sty",
+    (3, 0),
+    &[
+      "Should not be used with subtype `subfigure'",
+      "Should not be used with subtype `subtable'",
+      "\\caption outside float",
+    ],
+    &[
+      (
+        "figure",
+        "S0.F2",
+        r#"<figure inlist="lof" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="138.0pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S0.F1.1">AAA</p><toccaption><tag close=" ">1</tag>First</toccaption><caption><tag close=": ">Figure 1</tag>First</caption></figure><break class="ltx_break"/><figure class="ltx_figure_panel" xml:id="S0.F2.sf1"><tags><tag>(a)</tag><tag role="refnum">2a</tag></tags><p xml:id="S0.F2.sf1.1">XXX</p><toccaption><tag close=" ">a</tag>SubA</toccaption><caption><tag close=" ">(a)</tag>SubA</caption></figure><toccaption><tag close=" ">2</tag>Whole</toccaption><caption><tag close=": ">Figure 2</tag>Whole</caption></figure>"#,
+      ),
+      (
+        "para",
+        "p2",
+        r#"<para xml:id="p2"><p xml:id="p2.1"><inline-block class="ltx_minipage" vattach="middle" width="138.0pt" xml:id="p2.1.1"><p xml:id="p2.1.1.1">CCC</p></inline-block></p></para>"#,
+      ),
+    ],
+  );
+}
+
+/// With subfigure.sty `subfigure` is a command (`\subfigure[..][..]{..}`), no environment and no caption sub-type, so
+/// caption accepts `\captionof{subfigure}` and the caption is a sub-float's: the binding's `{@subfigure}` panel hosts it
+/// (`captionof_environment@subfigure`). `\begin{subfigure}` called `\subfigure` with the caption's internals as its
+/// arguments: 20 errors, "subfigureFirst", the figure's caption numbered "(c)" and the text after it drawn in
+/// (2508.00020). pdflatex: 0 errors, "(a): First", "(b) SubA", "Figure 1: Whole". subfig loaded after it makes no
+/// `subfigure` of its own (subfig.sty:298 `\@ifundefined{c@subfigure}{\newsubfloat{figure}}{}`), so its
+/// `\sf@counterlist` does not name it and caption still accepts the type (2508.00020's preamble: 52 errors at int34a,
+/// 0 now and Figs. 4-9 as the PDF numbers them). Repros captions-floats/captionof_subfigure_sty_is_a_panel,
+/// captions-floats/captionof_subfigure_sty_before_subfig.
+#[test]
+fn captionof_subfigure_sty_is_a_panel() {
+  assert_elements(
+    r"\documentclass{article}
+\usepackage{caption}
+\usepackage{subfigure}
+\begin{document}
+Start.
+\begin{figure}
+\begin{minipage}{.4\textwidth}AAA\captionof{subfigure}{First}\end{minipage}
+\subfigure[SubA]{XXX}
+\caption{Whole}
+\end{figure}
+End text.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "figure",
+        "S0.F1",
+        r#"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure class="ltx_figure_panel ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.F0.sf1"><tags><tag><text fontsize="80%" xml:id="S0.F0.sf1.1">(a)</text></tag><tag role="refnum">0(a)</tag></tags><p class="ltx_figure_panel" xml:id="S0.F0.sf1.2">AAA</p><break class="ltx_break"/><toccaption><tag close=" ">(a)</tag>First</toccaption><caption><tag close=" "><text fontsize="80%" xml:id="S0.F0.sf1.3">(a)</text></tag><text fontsize="80%" xml:id="S0.F0.sf1.4">First</text></caption></figure><break class="ltx_break"/><figure class="ltx_figure_panel" xml:id="S0.F1.sf2"><tags><tag><text fontsize="80%" xml:id="S0.F1.sf2.1">(b)</text></tag><tag role="refnum">1(b)</tag></tags><p xml:id="S0.F1.sf2.2">XXX</p><toccaption><tag close=" ">(b)</tag>SubA</toccaption><caption><tag close=" "><text fontsize="80%" xml:id="S0.F1.sf2.3">(b)</text></tag><text fontsize="80%" xml:id="S0.F1.sf2.4">SubA</text></caption></figure><toccaption><tag close=" ">1</tag>Whole</toccaption><caption><tag close=": ">Figure 1</tag>Whole</caption></figure>"#,
+      ),
+      (
+        "para",
+        "p2",
+        r#"<para xml:id="p2"><p xml:id="p2.1">End text.</p></para>"#,
+      ),
+    ],
+  );
+  assert_elements(
+    r"\documentclass{article}
+\usepackage{caption}
+\usepackage{subfigure}
+\usepackage{subfig}
+\begin{document}
+Start.
+\begin{figure}
+\begin{minipage}{.4\textwidth}AAA\captionof{subfigure}{First}\end{minipage}
+\subfigure[SubA]{XXX}
+\caption{Whole}
+\end{figure}
+End text.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[(
+      "figure",
+      "S0.F0.sf1",
+      r#"<figure class="ltx_figure_panel ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.F0.sf1"><tags><tag><text fontsize="80%" xml:id="S0.F0.sf1.1">(a)</text></tag><tag role="refnum">0a</tag></tags><p class="ltx_figure_panel" xml:id="S0.F0.sf1.2">AAA</p><break class="ltx_break"/><toccaption><tag close=" ">a</tag>First</toccaption><caption><tag close=" "><text fontsize="80%" xml:id="S0.F0.sf1.3">(a)</text></tag><text fontsize="80%" xml:id="S0.F0.sf1.4">First</text></caption></figure>"#,
+    )],
+  );
+}
+
+/// cleveref.sty:1309 derives both names of the other variant with a case change, or neither, as the SINGULAR is empty
+/// or not (`\expandafter\ifx\@tempa\@empty`): `\crefname{note}{}{notes}` gives `\Cref` the plural "notes" unchanged;
+/// `\Crefname{memo}{Memo}{}` gives `\cref` "memo" and an empty plural. pdflatex: "See notes 1 and 2, 1, 1 and 2 and
+/// memo 1." Was per name ("Notes"). Repro package-bindings/cleveref_derived_name_follows_the_singular.
+#[test]
+fn cleveref_derived_name_follows_the_singular() {
+  assert_elements(
+    r"\documentclass{article}
+\usepackage{cleveref}
+\crefname{note}{}{notes}
+\Crefname{memo}{Memo}{}
+\newtheorem{note}{Note}
+\newtheorem{memo}{Memo}
+\begin{document}
+\begin{note}\label{n:a}A.\end{note}
+\begin{note}\label{n:b}B.\end{note}
+\begin{memo}\label{m:a}C.\end{memo}
+\begin{memo}\label{m:b}D.\end{memo}
+See \Cref{n:a,n:b}, \cref{n:a}, \cref{m:a,m:b} and \cref{m:a}.
+\end{document}",
+    "ar5iv.sty",
+    (0, 0),
+    &[
+      (
+        "theorem",
+        "Thmnote1",
+        r#"<theorem class="ltx_theorem_note" inlist="thm theorem:note" labels="LABEL:n:a" xml:id="Thmnote1"><tags><tag>Note 1</tag><tag role="creftypeplural">notes</tag><tag role="creftypepluralcap">notes</tag><tag role="refnum">1</tag><tag role="typerefnum">Note 1</tag></tags><title class="ltx_runin"><tag><text font="bold" xml:id="Thmnote1.1">Note 1</text></tag></title><para xml:id="Thmnote1.p1"><p xml:id="Thmnote1.p1.1"><text font="italic" xml:id="Thmnote1.p1.1.1">A.</text></p></para></theorem>"#,
+      ),
+      (
+        "theorem",
+        "Thmmemo1",
+        r#"<theorem class="ltx_theorem_memo" inlist="thm theorem:memo" labels="LABEL:m:a" xml:id="Thmmemo1"><tags><tag>Memo 1</tag><tag role="creftype">memo</tag><tag role="creftypecap">Memo</tag><tag role="refnum">1</tag><tag role="typerefnum">Memo 1</tag></tags><title class="ltx_runin"><tag><text font="bold" xml:id="Thmmemo1.1">Memo 1</text></tag></title><para xml:id="Thmmemo1.p1"><p xml:id="Thmmemo1.p1.1"><text font="italic" xml:id="Thmmemo1.p1.1.1">C.</text></p></para></theorem>"#,
+      ),
+    ],
   );
 }

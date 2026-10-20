@@ -108,6 +108,12 @@ LoadDefinitions!({
   // Call NewCounter directly with the Perl options; the `\@ifundefined`
   // guard is dropped because NewCounter is itself idempotent (Perl L36
   // reads as a fresh-or-overwrite, mirroring `\newcounter` semantics).
+  // subfig.sty:298-299 makes a sub-float only where no package made the counter (`\@ifundefined{c@subfigure}
+  // {\newsubfloat{figure}}{}`), and only those join `\sf@counterlist` (below).
+  let made_by_subfig: Vec<&str> = ["subfigure", "subtable"]
+    .into_iter()
+    .filter(|sub| !has_meaning(&T_CS!(s!("\\c@{sub}"))))
+    .collect();
   NewCounter!("subfigure", "figure", idprefix => "sf", idwithin => "figure");
   NewCounter!("subtable", "table", idprefix => "sf", idwithin => "table");
   NewCounter!("subfigure@save");
@@ -124,8 +130,12 @@ LoadDefinitions!({
   Let!("\\ext@subfigure", "\\ext@figure");
   Let!("\\ext@subtable", "\\ext@table");
   // subfig.sty:261-263: `\newsubfloat` lists the sub-float counters it made in `\sf@counterlist`, which caption's
-  // `\DeclareCaptionSubType` names in its error for a counter subfig made (caption.sty:348, caption3.sty:1848-1856).
-  RawTeX!(r"\def\sf@counterlist{subfigure,subtable}");
+  // `\DeclareCaptionSubType` names in its error for a counter subfig made (caption3.sty:1848-1856) and caption's
+  // `\captionof` refuses (caption.sty:348). subfigure.sty's `subfigure` (loaded first: 2508.00020) is not subfig's: caption
+  // accepts `\captionof{subfigure}` there, "(a): First". Guard `perfect_kernel_batch77s::captionof_subfigure_sty_is_a_panel`.
+  for sub in made_by_subfig {
+    RawTeX!(&s!(r"\edef\sf@counterlist{{\@ifundefined{{sf@counterlist}}{{}}{{\sf@counterlist,}}{sub}}}"));
+  }
 
   // Subfigure display macros
   DefMacro!("\\thesubfigure", "\\alph{subfigure}");

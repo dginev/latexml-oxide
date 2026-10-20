@@ -623,12 +623,19 @@ LoadDefinitions!({
   // sub-type's own environment, the caption's internals were read as that environment's width and, in a TikZ
   // `\node`, cascaded mode errors that emptied the figure and lost the text after it (2008.05535: 30 errors, pdflatex
   // 2). The `\caption@settype` caption.sty runs inside a sub-float, "<type> inside <subtype>" (caption.sty:655-656), is
-  // not modelled: a refused sub-type there gives this message, one error as there. Guard
-  // `perfect_kernel_batch77s::captionof_subtype_is_refused`.
+  // not modelled: a refused sub-type there gives this message, one error as there. A sub-type is caption's own
+  // (`\caption@subtypelist`) or a sub-float subfig's `\newsubfloat` made (`\sf@counterlist`, caption.sty:348): with
+  // caption and subfig, `\captionof{subfigure}{First}` in a minipage is "Figure 1: First", not panel (a) before the
+  // real `\subfloat`. Outside any float (`\@captype` undefined) the `\caption` it falls back to is caption.sty's
+  // `\caption@OutsideFloat\caption\caption@withoptargs\@gobbletwo` (:200-207): a second error, and the text dropped
+  // (it printed "CCCLone" glued to the box's text). Guards `perfect_kernel_batch77s::captionof_subtype_is_refused`,
+  // `perfect_kernel_batch77s::captionof_subfig_subfloat_is_refused`.
   RawTeX!(r"\def\lx@caption@of#1#2{\edef\lx@caption@of@type{#2}\expandafter\lx@caption@of@\expandafter{\lx@caption@of@type}#1}
-\def\lx@caption@of@#1#2{\caption@ifdefined@subtype{#1}{\caption@Error{Should not be used with subtype `#1'}\lx@caption@of@refused#2}{\lx@caption@of@set@after{#1}\lx@caption@settype{#1}#2{#1}}}
-\def\lx@caption@of@refused#1{\ifx#1\@scaptionof\expandafter\lx@caption@of@refused@star\else\expandafter\caption\fi}
+\def\lx@caption@of@#1#2{\caption@ifdefined@subtype{#1}\@firstoftwo{\caption@ifin@list\sf@counterlist{#1}}{\caption@Error{Should not be used with subtype `#1'}\lx@caption@of@refused#2}{\lx@caption@of@set@after{#1}\lx@caption@settype{#1}#2{#1}}}
+\def\lx@caption@of@refused#1{\@ifundefined{@captype}{\caption@Error{\string\caption\space outside float}\lx@caption@gobble}{\ifx#1\@scaptionof\expandafter\lx@caption@of@refused@star\else\expandafter\caption\fi}}
 \def\lx@caption@of@refused@star{\caption*}
+\def\lx@caption@gobble{\@ifnextchar[\lx@caption@gobble@opt\@gobble}
+\def\lx@caption@gobble@opt[#1]{\lx@caption@gobble}
 \let\lx@caption@of@after\relax");
   // caption.sty:288-298 `\setcaptiontype[*]{type}[options]`: `\caption@settype`, in the group it
   // stands in (the options are typographic, `\caption@setoptions` a no-op here). 2605.20199's
@@ -687,12 +694,24 @@ LoadDefinitions!({
     // `collapse_float` folds into a captionless figure or keeps beside a main caption — its `\label`
     // then names it (57bu re-review: in a group of its own the label fell to the section and the
     // listing's counters leaked to the next listing).
+    // A type that is no environment (`\end<type>` undefined) is hosted by the environment its binding names
+    // (`captionof_environment@<type>`): subfigure.sty's `subfigure` is the command `\subfigure[..][..]{..}`, which
+    // `\begin{subfigure}` called with the caption's internals as its arguments (20 errors, "subfigureFirst", the
+    // figure's own caption numbered "(c)"); its `{@subfigure}` panel is the sub-float, "(a): First" as pdflatex
+    // (2508.00020, KNOWN_PERL_ERRORS #999). Guard `perfect_kernel_batch77s::captionof_subfig_subfloat_is_refused`.
+    let hosted = if lookup_definition(&T_CS!(s!("\\end{}", name.trim())))?.is_none() {
+      lookup_value(&s!("captionof_environment@{}", name.trim())).map(|env| env.to_string())
+    } else {
+      None
+    };
     let wrapper: Vec<Token> = if VERBATIM_BODY_ENVS.contains(&name.trim()) {
       let mut env = ExplodeText!("@float");
       env.push(T_END!());
       env.push(T_BEGIN!());
       env.extend(ExplodeText!(name.trim()));
       env
+    } else if let Some(env) = &hosted {
+      ExplodeText!(env)
     } else {
       ExplodeText!(name.trim())
     };
@@ -718,6 +737,8 @@ LoadDefinitions!({
     out.push(T_BEGIN!());
     out.extend(if VERBATIM_BODY_ENVS.contains(&name.trim()) {
       ExplodeText!("@float")
+    } else if let Some(env) = &hosted {
+      ExplodeText!(env)
     } else {
       ExplodeText!(name.trim())
     });
@@ -932,7 +953,8 @@ LoadDefinitions!({
   // papers' first error in run 336: 1202.5818, 1604.05412, 2002.03129, 2106.01798, 1706.00437, 2405.16148, 1907.05468,
   // 2512.12259); Perl has no binding for it either (KNOWN_PERL_ERRORS #795).
   RawTeX!(r"\newcommand*\caption@subtypelist{}
-\def\caption@ifdefined@subtype#1{\edef\lx@caption@tempa{\noexpand\in@{,#1,}{,\caption@subtypelist,}}\lx@caption@tempa\ifin@\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}
+\def\caption@ifin@list#1#2{\ifdefined#1\edef\lx@caption@tempa{\noexpand\in@{,#2,}{,#1,}}\lx@caption@tempa\else\in@false\fi\ifin@\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}
+\def\caption@ifdefined@subtype{\caption@ifin@list\caption@subtypelist}
 \def\lx@caption@addsubtype#1{\caption@ifdefined@subtype{#1}{}{\edef\caption@subtypelist{\ifx\caption@subtypelist\@empty\else\caption@subtypelist,\fi#1}}}
 \newcommand*\DeclareCaptionSubType{\@ifstar{\caption@declaresubtype\@firstoftwo}{\caption@declaresubtype\@secondoftwo}}
 \newcommand*\caption@declaresubtype[1]{\@testopt{\caption@@declaresubtype#1}{alph}}
@@ -949,8 +971,7 @@ LoadDefinitions!({
     {\@namedef{p@#4}{\csname the#3\endcsname}\@namedef{the#4}{\@nameuse{#2}{#4}}}%
   \@namedef{theH#4}{\csname theH#3\endcsname.\arabic{#4}}}
 \def\caption@subtypesource#1{\def\caption@subtype@source{an unknown document class or package}%
-  \ifcsname sf@counterlist\endcsname\edef\lx@caption@tempa{\noexpand\in@{,#1,}{,\sf@counterlist,}}\lx@caption@tempa
-    \ifin@\def\caption@subtype@source{\noexpand\newsubfloat (offered by the subfig package)}\fi\fi}
+  \caption@ifin@list\sf@counterlist{#1}{\def\caption@subtype@source{\noexpand\newsubfloat (offered by the subfig package)}}{}}
 \@onlypreamble\DeclareCaptionSubType");
 
   // caption3.sty:1788 `\newcounter{sub<type>}[<type>]`, its ids within the type's as subcaption's (`sf` for a

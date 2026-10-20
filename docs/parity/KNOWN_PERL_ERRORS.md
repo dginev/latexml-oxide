@@ -16040,13 +16040,16 @@ cleveref.sty's `\label[<type>]{<key>}` overrides the reference type of that labe
 binding reads the optional and drops it ("We won't yet support the optional arg to the redefined \label",
 cleveref.sty.ltxml:20-22), so the reference says "table 1" (2404.11739, 2605.13648). Rust (77s): the type goes on as
 `\lx@label@type` (also from the sites that move a trailing `\label` into a caption, sect09.rs `\@caption@postlabel`,
-caption's `\@captionof@postlabel`, algorithm2e's procedure caption) and replaces the labelled object's cleveref tags
-(`creftype`, `creftypecap`, `creftypeplural`, `creftypepluralcap`) with the type's names, the object found as
-`\lx@label` finds it. The type is the object's, not the label's: two labels of one object with different types share the
-last. With it, the capitalised (or lower-case) variant of a `\crefname` is derived as cleveref.sty:1296-1325 derives it,
-which our clean `\crefname` port had dropped (Perl loads the raw macro). Repro
-`package-bindings/cleveref_label_type_names_the_reference`; guard
-`perfect_kernel_batch77s::cleveref_label_type_names_the_reference`.
+caption's `\@captionof@postlabel`, algorithm2e's procedure caption; since 77s r2 from a `\label` inside the caption's
+text, sect09.rs `\@@@hack@caption@`, and from a longtable's `\label`, applied after the table) and replaces the labelled
+object's cleveref tags (`creftype`, `creftypecap`, `creftypeplural`, `creftypepluralcap`) with the type's names, the
+object found as `\lx@label` finds it. The type is the object's, not the label's: two labels of one object with different
+types share the last. Not modelled: a `\label[type]` in an amsmath `align`/`split` (cleveref's `\label@in@display@optarg`
+passes `[type]{key}` to amsmath, and pdflatex prints "??" without an error; we read and drop the type in `align`,
+sect07.rs `\lx@eqnarray@label`, with an "Unexpected text after the value" Warning, and give the display the type in
+`split`). Repros
+`package-bindings/cleveref_label_type_names_the_reference`, `package-bindings/cleveref_label_type_in_caption_text`;
+guards `perfect_kernel_batch77s::{cleveref_label_type_names_the_reference, label_type_in_caption_text}`.
 
 ## 999. `\captionof{subfigure}` is wrapped in a `{subfigure}` that reads the caption as its width
 
@@ -16060,3 +16063,16 @@ fall into the node's box (mode errors, the figure emptied and the text after it 
 `\begin{figure}\begin{minipage}{.4\textwidth}A\captionof{subfigure}{First}\end{minipage}\end{figure}` — pdflatex "Figure
 1: First" and 1 error. Rust (77s): the refusal, `\caption` (`\caption*` for the starred form) after it. Repro
 `captions-floats/captionof_subfigure_in_a_tikz_node`; guard `perfect_kernel_batch77s::captionof_subtype_is_refused`.
+Since 77s r2 the refusal tests both lists of caption.sty:348 — caption's own sub-types and the sub-floats subfig's
+`\newsubfloat` made (`\sf@counterlist`): with caption + subfig, `\captionof{subfigure}{First}` is "Figure 1: First" and
+the `\subfloat` keeps "(a)" — and outside any float the fallback `\caption` is caption.sty's `\caption@OutsideFloat`
+(:200-207: "\caption outside float", the text dropped; it printed "CCCLone"). The same wrapping breaks subfigure.sty,
+whose `subfigure` is a command (`\subfigure[..][..]{..}`), not an environment: `\begin{subfigure}` called it with the
+caption's internals as its arguments (caption + subfigure: 20 errors, "subfigureFirst", the figure's caption "(c)", the
+text after it drawn in; pdflatex 0 errors, "(a): First"; 2508.00020). A type that is no environment is now hosted by
+the environment its binding names (`captionof_environment@<type>`; subfigure.sty's `{@subfigure}` panel), and subfig's
+`\sf@counterlist` names only the sub-floats subfig itself made (subfig.sty:298-299 `\@ifundefined{c@subfigure}
+{\newsubfloat{figure}}{}`: after subfigure.sty it makes none, so caption still accepts the type; 2508.00020 52 Errors →
+0, its figures numbered as the PDF). Repros `captions-floats/captionof_subfig_subfloat_is_refused`,
+`captions-floats/captionof_subfigure_sty_is_a_panel`, `captions-floats/captionof_subfigure_sty_before_subfig`; guards
+`perfect_kernel_batch77s::{captionof_subfig_subfloat_is_refused, captionof_subfigure_sty_is_a_panel}`.

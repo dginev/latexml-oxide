@@ -21204,17 +21204,21 @@ binding applies them (`six_begin_processing_for_units`), and an explicit empty v
 per-unit `number-unit-product = \ ` puts its interword space before nm/dBm. 77r r2; repro
 `package-bindings/siunitx_unit_named_by_its_own_char_code`; guard `perfect_kernel_batch77r::siunitx_*`.
 
-### 776. A T2A/T2B/T2C text symbol for a Cyrillic letter set in a Latin letter's slot is that Cyrillic letter (Perl: the Latin letter)
+### 776. A Cyrillic text symbol set in a Latin letter's slot (T2A/T2B/T2C, X2, OT2) is that Cyrillic letter (Perl: the Latin letter)
 
 **TeX**: t2aenc.def:230-237 (t2benc.def:230-239, t2cenc.def alike) declares `\CYRII`/`\cyrii`, `\CYRJE`/`\cyrje`,
 `\CYRQ`/`\cyrq`, `\CYRW`/`\cyrw` — and in T2B/T2C `\CYRDZE`/`\cyrdze` — at the slots of I i J j Q q W w (S s): the LH
-fonts draw the shared glyph, so the PDF shows the letter, while its text layer reads Latin (pdftotext "Iван").
+fonts draw the shared glyph, so the PDF shows the letter, while its text layer reads Latin (pdftotext "Iван"). X2
+(x2enc.def:244-273) uses the same slots for the same ten letters, and OT2 puts `\CYRJE`/`\cyrje` at J/j (ot2enc.def:96,
+124, slots 74/106).
 
 **Perl**: `\DeclareTextSymbol` decodes the slot through the encoding's fontmap (latex_constructs.pool.ltxml:2614-2625, a
 `CharDef` of the slot; t2a.fontmap.ltxml), so `\cyrii` — which a UTF-8 `і` becomes (t2aenc.dfu) — is Latin `i`:
 Ukrainian "Іван" and Serbian "ј" come out spelled with Latin letters, wrong for search, hyphenation and speech.
 
-**Rust** (77s): a text symbol naming one of those letters is the letter when its slot decodes to an ASCII letter
-(`cyrillic_letter_in_latin_slot`, latex_constructs/sect08.rs); the slot still decodes as Latin, so a Latin `i` typed in
-T2A text stays Latin, and a letter with a slot of its own (`\cyrdze` at T2A 175) is unchanged. Repro
+**Rust** (77s): a text symbol naming one of those letters is the letter when its slot decodes to an ASCII letter, in any
+encoding (`cyrillic_letter_in_latin_slot`, latex_constructs/sect08.rs); the slot still decodes as Latin, so a Latin `i`
+typed in T2A text stays Latin, and a letter with a slot of its own (`\cyrdze` at T2A 175) is unchanged. X2 and OT2 have
+no fontmap here (Perl neither: no x2/ot2.fontmap.ltxml), so their symbols decode to nothing before this applies — the
+letters are dropped without a diagnostic (SYNC_STATUS 77s residual). Repro
 `fonts-nfss/t2a_cyrillic_i_and_je_are_cyrillic`; guard `perfect_kernel_batch77s::t2a_cyrillic_i_and_je_are_cyrillic`.

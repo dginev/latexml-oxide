@@ -1,0 +1,21 @@
+% witness: 2508.00020 (caption + subfigure + subfig + subcaption, `\captionof{subfigure}{}` in minipages)
+% oracle:  pdflatex 0 errors: "(a): First", "(b) SubA", "Figure 1: Whole", "End text." (subfig.sty:298 makes no
+%          subfigure counter of its own after subfigure.sty, so caption accepts the type)
+% engines: rust 77s r1 = 20 errors ("subfigureFirst", "(c) Whole"); 77s r2 before subfig's list followed subfig.sty:298
+%          = 1 error (refused as a subfig sub-float)
+% expect:  0 errors, 0 warnings; the caption a sub-float panel "(a) First", then "(b) SubA", "Figure 1: Whole"
+% status:  RED (77s r1) -> GREEN (77s r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{caption}
+\usepackage{subfigure}
+\usepackage{subfig}
+\begin{document}
+Start.
+\begin{figure}
+\begin{minipage}{.4\textwidth}AAA\captionof{subfigure}{First}\end{minipage}
+\subfigure[SubA]{XXX}
+\caption{Whole}
+\end{figure}
+End text.
+\end{document}

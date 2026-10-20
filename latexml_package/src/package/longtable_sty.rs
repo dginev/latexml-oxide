@@ -17,11 +17,11 @@ LoadDefinitions!({
   DefMacro!("\\LT@array[]{}",
     r"\lx@longtable@bindings{#2}\@@longtable[#1]{#2}\lx@begin@alignment");
   DefMacro!("\\endlongtable",
-    r"\lx@end@alignment\@end@tabular\endgroup");
+    r"\lx@end@alignment\@end@tabular\endgroup\lx@longtable@labeltype");
   // {longtable*} is defined in revtex4-1 to be able to span a two column document
   DefMacro!("\\csname longtable*\\endcsname", r"\begingroup\LT@array");
   DefMacro!("\\csname endlongtable*\\endcsname",
-    r"\lx@end@alignment\@end@tabular\endgroup");
+    r"\lx@end@alignment\@end@tabular\endgroup\lx@longtable@labeltype");
   // acro.sty's `patch/longtable` (default true) `\patchcmd`s longtable.sty's `\endlongtable` at
   // begindocument/before to switch acronyms off in repeated table heads, which a table here never
   // has; this `\endlongtable` is not longtable.sty's, so the patch failed with "Patching `longtable'
@@ -252,11 +252,25 @@ LoadDefinitions!({
     }
     Ok(())
   });
-  DefPrimitive!("\\lx@longtable@label Semiverbatim", sub[(label)] {
+  // cleveref's `\label[type]{key}` (cleveref.sty `\label` takes an optional type) reads its type here too: read as the
+  // key, `[` labelled the table and the rest was typeset. The type goes on after the table (`\endlongtable`'s
+  // `\lx@longtable@labeltype`), where the built table is the object `\lx@label@type` finds — as the sites that move a
+  // trailing `\label` into a caption give it (sect11.rs `typed_label`; KNOWN_PERL_ERRORS #998). Guard
+  // `perfect_kernel_batch77s::label_type_in_caption_text`.
+  DefPrimitive!("\\lx@longtable@label [] Semiverbatim", sub[(ty, label)] {
     // Perl: AssignValue(LONGTABLE_LABEL => CleanLabel(ToString($label)), 'global')
     let label = clean_label(&label.to_string(), None).into_owned();
     assign_value("LONGTABLE_LABEL", Stored::String(pin(label)), Some(Scope::Global));
+    assign_value("LONGTABLE_LABEL_TYPE", ty.map_or(Stored::None, Stored::Tokens), Some(Scope::Global));
     Ok(())
+  });
+  DefMacro!("\\lx@longtable@labeltype", sub[_args] {
+    let ty = lookup_value("LONGTABLE_LABEL_TYPE");
+    assign_value("LONGTABLE_LABEL_TYPE", Stored::None, Some(Scope::Global));
+    match ty {
+      Some(Stored::Tokens(ty)) => Ok(Tokens::new(engine::latex_constructs::label_type(Some(ty)))),
+      _ => Ok(Tokens!()),
+    }
   });
 
   // Not used, but must be defined.
@@ -319,6 +333,7 @@ fn longtable_bindings(template: Template) -> Result<()> {
   let_i(&T_CS!("\\kill"), &T_CS!("\\lx@longtable@kill"), None);
 
   assign_value("LONGTABLE_LABEL", Stored::None, Some(Scope::Global));
+  assign_value("LONGTABLE_LABEL_TYPE", Stored::None, Some(Scope::Global));
   assign_value("LONGTABLE_CAPTIONS", Stored::None, Some(Scope::Global));
   // Clear any leaked caption/kill row-drop flag from a prior table (#534): the
   // flag is normally consumed by the caption/kill row's `\\`, but a malformed

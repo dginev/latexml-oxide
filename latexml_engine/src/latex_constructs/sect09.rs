@@ -118,9 +118,30 @@ pub(crate) fn load() -> Result<()> {
     r"\ifx.#5.\expandafter\lx@caption@nolabel\else\expandafter\@@@hack@caption@\fi{#1}{#2}{#3#4}#5\endcaption"
   );
   DefMacro!(r"\lx@caption@nolabel{}{} Until:\endcaption", r"\@caption@@@{#1}{#2}{#3}");
+  // A `\label` in the caption's text reads cleveref's optional type as `\@caption@postlabel` does (typed_label): read as
+  // the key, `\caption{Foo\label[appendixtable]{tin}}` labelled the float `[` and printed "Fooappendixtable]tin"
+  // (pdflatex: "appendix table 1"; the 2404.11739 mechanism, KNOWN_PERL_ERRORS #998). Guard
+  // `perfect_kernel_batch77s::label_type_in_caption_text`.
   DefMacro!(
-    r"\@@@hack@caption@{}{}{} Semiverbatim Until:\label Until:\endcaption",
-    r"\lx@note@caption@label{#4}\@hack@caption@{#1}{#2}{#3\label{#4}#5}\label#6\endcaption"
+    r"\@@@hack@caption@{}{}{} [] Semiverbatim Until:\label Until:\endcaption",
+    sub[(captype, short, text, ty, key, after, rest)] {
+      let mut tokens = vec![T_CS!("\\lx@note@caption@label"), T_BEGIN!()];
+      tokens.extend(key.clone().unlist());
+      tokens.extend([T_END!(), T_CS!("\\@hack@caption@")]);
+      for arg in [captype, short] {
+        tokens.push(T_BEGIN!());
+        tokens.extend(arg.unlist());
+        tokens.push(T_END!());
+      }
+      tokens.push(T_BEGIN!());
+      tokens.extend(text.unlist());
+      tokens.extend(typed_label(T_CS!("\\label"), ty, key));
+      tokens.extend(after.unlist());
+      tokens.extend([T_END!(), T_CS!("\\label")]);
+      tokens.extend(rest.unlist());
+      tokens.push(T_CS!("\\endcaption"));
+      Tokens::new(tokens)
+    }
   );
 
   DefPrimitive!("\\lx@note@caption@label{}", sub[(label)] {

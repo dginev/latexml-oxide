@@ -138,7 +138,7 @@ do not block the E/F rerun.
 | — | aistats: a marked first row followed by an unmarked row leaks the second row's address upward (review probe `r_secondrow_marked`: Ann gets "Univ C" before "Univ A"; her marked affiliation is attached later, so `annotate=run` still counts her new) | open, 0 of 2,843 aistats papers (77o r2 review finding 7) |
 | — | aistats `in_place` residuals: a macro with parameters defined inside the `\twocolumn[…]` block (`\def\Uni#1{…}`, probe `g_args`: Error undefined, pdflatex "Univ of Here") or a local `\let` of a primitive (`\let\Uni\relax`, probe `g_letprim`: Error) is not read in place | open (77o r2 review finding 4); no corpus witness |
 | — | aistats renamed copies: ~100 papers ship a renamed aistats style the versioned fallback and the registrations do not reach (`aistats2022_arxiv.sty` 9, `aistats_arxiv.sty` 7, `*_preprint`, `*_mod`, `*_old`, …): no title, no creators | open (77o r2 review finding 10) |
-| — | renamed natbib copies read raw: a shipped natbib copy under a name the versioned fallback does not reduce to `natbib` (`natbib_vw.sty` 16 papers, `modnatbib` 21, `hbnatbib` 16, `ctextemp_natbib` 13, `natbib_jrm` 12, `NAR-natbib` 9, `natbib_padeu` 8, `rnatbib` 7, `wsnatbib`/`natbibsty`/`igsnatbib` 6 each, … — census of 1,677 corpus papers shipping a `*natbib*.sty`, `~/data/pk_wt/scratch_77s/natbib_copies_all.tsv`; `natbib2`/`natbib209`/`natbib1`/`natbib_mod` already fall back to the binding, "Interpreted as versioned package"; NJDnatbib/bmvc2k_natbib/ws-rv-har are 72a stand-ins) is read raw: its `\citet`/`\citep` read `\b@<key>`, which no `\bibitem` of ours writes (no `\bibcite`), so every citation prints "?" with a "Citation undefined" Warning, and a labelled `\bibitem` keeps no refnum, so the kernel `\cite` shows no label (1003.3017: 62 Warnings, 0802.4100: 142, astro-ph0512042; pdflatex "Schneider et al. (2010), Smith (2001), (Smith, 2001)."; RED `index-bib/mn2e_natbib_copy/natbib_renamed_copy_citations_resolve`). Not the brief label route of 70c (g): the copy's whole citation layer is missing | open (77s), **ruling asked** — the same hole as the aistats row above and 72a's per-copy stand-ins (a 3rd/4th recurrence): one rule, a shipped package or class whose `\Provides…` names a bound file (natbib_vw/modnatbib/natbib_jrm/natbibsty/tsnatbib … all `\ProvidesPackage{natbib}`) loads that binding with the options given and the copy read after it as a stand-in copy (OD #731), instead of a per-name stand-in list |
+| — | renamed natbib copies read raw: a shipped natbib copy under a name the versioned fallback does not reduce to `natbib` (`natbib_vw.sty` 16 papers, `modnatbib` 21, `hbnatbib` 16, `ctextemp_natbib` 13, `natbib_jrm` 12, `NAR-natbib` 9, `natbib_padeu` 8, `rnatbib` 7, `wsnatbib`/`natbibsty`/`igsnatbib` 6 each, … — census: 1,509 corpus papers ship a `*natbib*.sty` (1,677 paper/file rows), `~/data/pk_agents/main/scratch_356a0c47/natbib_copies/natbib_copies_all.tsv`; `natbib2`/`natbib209`/`natbib1`/`natbib_mod` already fall back to the binding, "Interpreted as versioned package"; NJDnatbib/bmvc2k_natbib/ws-rv-har are 72a stand-ins) is read raw: its `\citet`/`\citep` read `\b@<key>`, which no `\bibitem` of ours writes (no `\bibcite`), so every citation prints "?" with a "Citation undefined" Warning, and a labelled `\bibitem` keeps no refnum, so the kernel `\cite` shows no label (1003.3017: 62 Warnings, 0802.4100: 142, astro-ph0512042; pdflatex "Schneider et al. (2010), Smith (2001), (Smith, 2001)."; RED `index-bib/mn2e_natbib_copy/natbib_renamed_copy_citations_resolve`). Not the brief label route of 70c (g): the copy's whole citation layer is missing | open (77s) — the same hole as the aistats row above and 72a's per-copy stand-ins (a 3rd/4th recurrence). **Rule adopted (user ruling 2026-10-20)**: a shipped file whose `\ProvidesPackage`/`\ProvidesClass` names a bound package/class loads that binding, then is read as a stand-in copy (OD #731), instead of a per-name stand-in list (natbib_vw/modnatbib/natbib_jrm/natbibsty/tsnatbib … all `\ProvidesPackage{natbib}`); its own batch follows |
 | — | 1802.07182 (aistats): the affiliations written as a second `\aistatsauthor` row become creators "University of Cambridge1", "Invenia Labs2", "Cambridge", "UK" (the author's misuse of the setter; its e-mail list is the block's, one contact an address since 77o r3) | open, author misuse (77o r2 review finding 3) |
 | — | 1202.1568 (aistats2eM): an e-mail list with the domain after the braces (`{seungyeon.kim@, fli@cc., …}gatech.edu`) is not read as an e-mail list and stays inside the affiliation (content kept) | open (77o r2 report) |
 | — | 2203.06997 (aistats, paired): a `~\\` spacer line before a column's e-mail line makes the kernel `\author` line reading take the e-mail for an affiliation ("Richard E. Turner: University of Cambridge; ret26@cam.ac.uk" both affiliations) | open (77o r3 A/B; content kept) |
@@ -4448,8 +4448,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   pdflatex error per refused `\captionof`). (7) NATBIB-COPY-LABEL is not a label route: the silent-loss row "renamed
   natbib copies read raw" (ruling asked). A/B vs int34a over 349 papers (41 witnesses, 30 per item from a 10-month
   and a 14-month corpus scan, 99 pop67int23 controls): E 1,729 → 1,439, F 10 → 10, W 5,893 → 5,845, words +4,874; one
-  paper with more errors, 2508.00020 52 → 54, its own `\Crefname{section}{Section\!}{Sections.\!}` under `capitalise`
-  now also the derived `\cref@section@name` (faithful; `\!` in text errs in pdflatex too); every other XML change is a
+  paper with more errors, 2508.00020 52 → 54: two more `readBalanced` errors from the derived `\cref@equation@name`
+  (`Eq.\!`, cleveref.sty:1283-1325 under `capitalise`; the derived name is right, and `\!` works in text,
+  latex.ltx:15673) built into each label's tags after base's own error cascade — `\captionof{subfigure}` with
+  subfigure.sty loaded, which `\begin{subfigure}` turned into a call of subfigure.sty's `\subfigure` command (group level
+  20 at the end; KPE #999, fixed in r2 below); every other XML change is a
   kept caption/label, a cleveref tag following the given type or derivation, a Cyrillic letter, or the disk file of a
   `{filecontents}`. Residuals: a `\crefformat` for a type with no `\crefname` is not modelled, so `\label[prob]` with
   only `\crefformat{prob}{prob.~(#2#1#3)}` shows the bare number where pdflatex prints "prob. (P)" (2609.28438; it
@@ -4457,6 +4460,42 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (2502.00149); the type is the object's, not the label's (two labels of one object with different types share the
   last); `\captionof{subfigure}` inside a `{subfigure}` reports caption.sty's subtype message where pdflatex's is
   "subfigure inside subfigure" (caption.sty:655-656, one error either way).
+  **r2** (review follow-ups; guards `perfect_kernel_batch77s::*`, 10): (1) a `\label[type]{key}` inside a caption's text
+  (sect09.rs `\@@@hack@caption@`) and in a longtable (`\lx@longtable@label`, the type applied after the table) reads the
+  optional type as the other three sites do — read as the key, `\caption{Foo\label[appendixtable]{tin}}` labelled the
+  float `[` and printed "Fooappendixtable]tin" (KPE #998). The other `\label` readers: algorithm2e's procedure caption,
+  caption's `\@captionof@postlabel`, `\@caption@postlabel` and amsmath's `align` label (`\lx@eqnarray@label`) read the
+  optional; lxRDFa's longtable wrapper passes it on; subeqn's `\@lab@subeqnarray` reads `[` as pdflatex does
+  (subeqn.sty:57); ntheorem's `\label{key}[type]` is its own syntax; thmtools' `label=` and listings' `label=` build the
+  `\label` themselves. (2) `\captionof`'s sub-type refusal tests both lists of caption.sty:348, caption's sub-types and
+  subfig's `\sf@counterlist` (caption + subfig: "Figure 1: First" and the `\subfloat` "(a)", where `First` was panel (a)),
+  and outside any float the fallback `\caption` is caption.sty's `\caption@OutsideFloat` (:200-207: a second error, the
+  text dropped; "CCCLone" printed). (3) a `\captionof` type that is no environment is hosted by the environment its
+  binding names (`captionof_environment@<type>`): subfigure.sty's `subfigure` is a command, and `\begin{subfigure}`
+  called it with the caption's internals (caption + subfigure: 20 errors, "subfigureFirst", the figure's caption "(c)",
+  the text after it drawn in; now 0 errors, "(a) First", "(b) SubA", "Figure 1: Whole" as pdflatex; KPE #999), and subfig's
+  `\sf@counterlist` names only the sub-floats subfig made (subfig.sty:298-299; after subfigure.sty none): 2508.00020 52
+  Errors at int34a (54 r1) → 0, Figs. 4-9 as the PDF numbers them; 2605.30420 101 Errors + Fatal → 0, 1608.05355,
+  1806.00503, 1905.01354, 2502.11752 Fatal → 0 errors.
+  (4) cleveref's derived variant changes case for both names or neither, as the singular is empty or not
+  (cleveref.sty:1309 `\ifx\@tempa\@empty`; it was tested per name). Rust error fix (not a Perl defect, so not in
+  KPE #998): our clean `\crefname`/`\Crefname` port (`cref_define_name`) had dropped cleveref.sty:1296-1325's
+  derivation of the other variant (Perl loads the raw macro), so a lone `\crefname{appendixtable}{Appendix Table}{…}`
+  left `\Cref` with no name (2404.11739); derived since 77s. Residuals: a `\label[type]` in an amsmath `align`/`split` —
+  pdflatex prints "??" (cleveref's `\label@in@display@optarg` hands `[type]{key}` to amsmath), we drop the type in
+  `align` with an "Unexpected text after the value" Warning and give it to the display in `split`; `{filecontents}` named
+  `\jobname`/`\jobname.tex` under `[overwrite]` (latex.ltx:19005-19021 "Trying to overwrite `\jobname.tex'", an Error)
+  and the "Writing or overwriting file" Warning under `[force]`/`[overwrite]` are not modelled; X2 and OT2 Cyrillic text
+  symbols (`\usepackage[X2]{fontenc}` + `\cyrje`, `\fontencoding{OT2}\selectfont\cyrje`) are dropped without a
+  diagnostic — no x2/ot2 fontmap here or in Perl (OD #776). Not reading `[type]`: pasj00's PASJ longtable label
+  (`\lx@pasj@lt@label`, pasj00_cls.rs) and the frontmatter's `\lx@set@frontmatter@label [prefix]` (a `\label[type]` in an
+  author or affiliation would take the type as its prefix); neither seen with cleveref. A/B r2 (vs r1 over r1's 349
+  papers + 30 with a `\label[type]` in or after a caption + 30 with `\captionof{subfigure}` under subfig/subfigure from a
+  full-corpus scan): E 2,283 → 743, F 13 → 8, words +33,684, 363 of 409 byte-identical (7 more are PDF-only sources);
+  vs int34a on the 60 new papers E 1,521 → 265, F 2 → 0, words +30,666. More Errors than r1 in 9 caption + subfig papers,
+  every one a `\captionof{subfigure}` pdflatex refuses too (2002.04205 1 → 19 and the 1907.12365 thesis 3 → 55, pdflatex
+  19 and 53 of the same error; 1506.06268, 1603.00573, 1904.11277, 1907.12250, 2002.02143, 1808.00739, 1710.07132), their
+  other errors gone; 1801.09806's four refused `\captionof` outside floats drop "Bounds for y" as pdflatex does.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;
