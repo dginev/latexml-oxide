@@ -592,6 +592,12 @@ LoadDefinitions!({
   DefConditional!("\\ifdefined NormalToken", sub[(t)] {
     has_meaning(&t)
   });
+  // The kernel's own `\ifdefined`, for the tests LaTeXML's macros make (`\lx@latin@name`, the frontmatter stores'
+  // nulls, `\makeindex`, `\makeglossary`): a document may redefine `\ifdefined` (amams.sty:1099
+  // `\def\ifdefined#1#2#3`, a three-argument test), which left those tests reading `\latinencoding` as its argument and
+  // their `\else`, `\fi` extra. `\loggingall` and `\tracingnone` keep the public `\ifdefined`, as latex.ltx:662/:679
+  // and Perl plain_base.pool.ltxml:40/:56 do. Witness math0402285.
+  Let!("\\lx@ifdefined", "\\ifdefined");
 
   // \ifcsname stuff \endcsname.
   // Uses CSNameQuiet — unlike \csname, \ifcsname does NOT emit errors

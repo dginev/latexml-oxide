@@ -2105,7 +2105,7 @@ fn record_dropped_environment_stores(name: &str, bodies: &[&Tokens]) -> Result<(
         // renewal writes amsart's `\abstractbox`, which our amsart binding
         // never allocates.
         nulls.extend([
-          T_CS!("\\ifdefined"),
+          T_CS!("\\lx@ifdefined"),
           target,
           T_CS!("\\setbox"),
           target,
@@ -2121,7 +2121,7 @@ fn record_dropped_environment_stores(name: &str, bodies: &[&Tokens]) -> Result<(
   }
   let store = T_CS!(s!("\\@{name}"));
   nulls.extend([
-    T_CS!("\\ifdefined"),
+    T_CS!("\\lx@ifdefined"),
     store,
     T_CS!("\\else"),
     T_CS!("\\let"),

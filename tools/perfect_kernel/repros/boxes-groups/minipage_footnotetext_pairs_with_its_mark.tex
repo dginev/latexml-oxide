@@ -1,0 +1,17 @@
+% witness: 2304.06412 (sn-jnl table: `\footnotemark[1]` in the tabular, `\footnotetext[1]{…}` in the minipage)
+% oracle:  pdflatex 0 errors: the mark "1" in the cell, the text under the minipage lettered "a" (latex.ltx:17690-17699
+%          `\footnotetext` marks `\thempfn`, :17677 `\footnotemark` keeps to `footnote`): LaTeX's own mismatch
+% engines: rust int47a and perl: one footnote, mark 1, its text; 78i r1 (the minipage's `\@mpfn` for `\footnotetext`
+%          too): a mark "1" and a separate text "a", unpaired, the cell's note showing "footnotemark"
+% expect:  clean (0 errors, 0 warnings); one footnote, mark 1, holding the text (the pairing kept over the PDF's mismatch,
+%          KNOWN_PERL_ERRORS #1049)
+% status:  GREEN (guard for 78i)
+\documentclass{article}
+\begin{document}
+\begin{minipage}{5cm}
+\begin{tabular}{l}
+L\footnotemark[1]\\
+\end{tabular}
+\footnotetext[1]{L is low.}
+\end{minipage}
+\end{document}

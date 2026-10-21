@@ -1,0 +1,23 @@
+% witness: none in the A/B (review probe s1 of rev78i2); 1702.04225's `{restatable*}` previews, followed by one `\<name>`
+% oracle:  pdflatex 0 errors (second run; Warnings "Label `thmt@@main' multiply defined", `thm:main' too): § 1
+%          "Theorem 3.1. Main statement.", "See 3.1."; § 2 "Theorem 2.1. Main statement."; § 3 "Theorem 3.1. Main
+%          statement.", "See 3.1." (every `\main` sets `\label{thmt@@main}`, thm-restate.sty:158-160; the last one read)
+% engines: rust 78i r2: the preview "Theorem 2.1" (only the first `\main` labelled); perl (thm-restate.sty.ltxml:17-28
+%          defines no `{restatable*}`): Error:undefined:{restatable*} (KNOWN_PERL_ERRORS #1052)
+% expect:  clean (0 errors, 0 warnings); the preview tagged by reference, 3.1 in the HTML; both `\main`s labelled
+% status:  RED (78i r2) -> GREEN (78i r3)
+\documentclass{article}
+\usepackage{amsthm,thmtools,thm-restate}
+\declaretheorem[name=Theorem,numberwithin=section]{theorem}
+\begin{document}
+\section{Intro}
+\begin{restatable*}{theorem}{main}\label{thm:main}
+Main statement.
+\end{restatable*}
+See \ref{thm:main}.
+\section{Body}
+\main
+\section{Again}
+\main
+See \ref{thm:main}.
+\end{document}

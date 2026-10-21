@@ -4000,7 +4000,7 @@ LoadDefinitions!({
   // `perfect_kernel_batch60::identifiers_are_not_font_decoded`.
   DefMacro!(
     "\\lx@latin@name{}",
-    r"{\ifdefined\latinencoding\fontencoding{\latinencoding}\else\fontencoding{OT1}\fi\selectfont#1}"
+    r"{\lx@ifdefined\latinencoding\fontencoding{\latinencoding}\else\fontencoding{OT1}\fi\selectfont#1}"
   );
   DefMacro!(
     "\\lx@@fnum@@ {}",

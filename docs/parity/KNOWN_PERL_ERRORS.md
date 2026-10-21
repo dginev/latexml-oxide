@@ -16194,8 +16194,9 @@ thm-restate.sty:193-215 adds a `restate` key to a theorem's optional argument (i
 trigger: `\usepackage{amsthm,thmtools}\newtheorem{theorem}{Theorem}` … `\begin{theorem}[restate=other]B.\end{theorem}
 \other*` — pdflatex "Theorem 1. B." twice, Perl the title "Theorem 1 (restate=other)" and `\other` undefined. Rust
 (77v): `thmtools_use_keys` (latex_constructs) reads `restate=` with thmtools' `label=`/`name=`/`continues=`; the theorem
-runs thm_restate_sty.rs `\lx@thm@restate@store{<name>}` after its head, the store `{restatable}` uses too (the label
-`restatable:<name>`, `\<name>` its reference). Witnesses 2108.11527, 2602.09462 (−243 words of key text). Guard
+runs thm_restate_sty.rs `\lx@thm@restate@store` after its head, the store `{restatable}` uses too (the label
+`restatable:<name>`; since 78i the body stored and `\<name>*` the statement again, its other keys the copy's, KPE
+#1048). Witnesses 2108.11527, 2602.09462 (−243 words of key text). Guard
 `perfect_kernel_batch77v::thmtools_restate_key`.
 
 ## 1007. todonotes' `\todo[<options>]` takes the options as the note's mark
@@ -16710,3 +16711,98 @@ labelled the enclosing section, its `\ref` the section's number. Minimal trigger
 step's number; also an unnumbered display's (`\[ a=b \refstepcounter{equation}\label{e1} \]`, pdflatex 21; Perl the
 section's). Residuals (OD #813): a raw step in running text, a second step in one picture, an unnumbered listing line.
 Guards `perfect_kernel_batch78g`.
+
+## 1048. A restated theorem prints "See ⟨ref⟩" for its statement
+
+thm-restate.sty:103-184 (`thmt@restatable`) collects a `{restatable}[<opt>]{<env>}{<name>}` body (`\thmt@collect@body`,
+:35-49) and defines `\<name>` to set the theorem again: `\<name>*` with the original's number (`\the<env>` faked from the
+label `thmt@@<name>`, the counter not stepped, `\label` gobbled, the equation counter put back, :122-156), `\<name>`
+alone as a new numbered theorem whose number later restatements print (:116-121). Perl's thm-restate.sty.ltxml:28
+defines `\<name>` as `See \ref{restatable:<name>}` ("Let's not bother copying the whole thing, but just refer to it!"),
+so the appendix's restated theorem is a sentence and its statement is lost. Minimal trigger:
+`\usepackage{amsthm,thmtools,thm-restate}\declaretheorem{theorem}` … `\begin{restatable}[Main]{theorem}{mt}For all
+$x$.\end{restatable}` … `\mt*` — pdflatex "Theorem 1 (Main). For all x." twice; Perl `<p>See <ref
+labelref="LABEL:restatable:mt"/></p>`. Fixed in Rust (78i, thm_restate_sty.rs): the store reads the body up to
+`\end{restatable}` (or the theorem's own `\end`, for the `restate=` key, KPE #1006) and leaves it in place; `\<name>*`
+replays `\begin{<env>}[<opt>]<body>\end{<env>}` in a group with `\label` gobbled (cleveref's `\label[…]{…}` too, :186-191),
+the frozen number (`\lx@thm@restate@number`, numbered as the `continues=` key numbers, latex_constructs), the equation
+counter set to its value at the original and put back after; `\<name>` replays it as a new theorem and freezes its
+number for the next `\<name>*`. `{restatable*}` (thm-restate.sty:207-213, `\thmt@thisistheonefalse`; undefined in
+Perl, #1052) prints its theorem as a starred restatement: no counter stepped, its labels gobbled, the
+equation counter put back, and its number — with a `\<name>*`'s until the later `\<name>` — that later instance's, a
+`\ref` to the label `restatable:<name>` the first unstarred `\<name>` sets, resolved with the document's references
+(pdflatex reads it from the `.aux`; the `continues=` key's mechanism); the later `\<name>` sets the body's labels too
+(1702.04225: the introduction's previews "Theorem 6.21", "Proposition 6.13", "6.24" where r1 printed "Theorem
+1.1…1.8"; repro package-bindings/thm_restate_restatable_star_takes_the_later_number). Its equations are numbered on
+the current counter, not from the later instance's `\thmt@@<name>@data` label (:146-152). One pass has no `.aux`: after a
+`{restatable}` a `\<name>*` before a later `\<name>`, which pdflatex numbers it by from the previous run, prints the
+original's number. Shapes thm-restate itself
+does not take, which ours ends as pdflatex does: a `\verb` in the body (the body is an argument: pdflatex "\verb illegal
+in argument", 3 errors; ours `\verb ended by end of line` and the unbalanced group, 6), a `{restatable}` inside
+another's body (`\thmt@collect@body` stops at the inner `\end{restatable}`: pdflatex 100 "Missing \endcsname" and its
+fatal error-count stop; ours 101 errors and Fatal:TooManyErrors, bounded the same way). A restatement replays what the
+original holds, errors too: 1711.05227 55 → 58 errors, `\thmrelevance*` at proofs.tex:45 replayed inside a math frame
+left open at proofs.tex:23 and an alignment open since magic.tex:150-155, its error locations moving to
+`\end{restatable}`. Witnesses 2108.11527, 2602.09462, 2402.14202, 1702.04225. Repros
+package-bindings/thm_restate_restated_theorem_prints_its_statement, …/thm_restate_restatable_star_takes_the_later_number;
+guards `perfect_kernel_batch78i::{restated_theorem_prints_its_statement, restatable_star_takes_the_later_number}`.
+
+## 1049. A minipage's footnotes are numbered as the page's
+
+latex.ltx:16323 (`\@iiiminipage`): `\def\@mpfn{mpfootnote}\def\thempfn{\thempfootnote}\c@mpfootnote\z@`, and
+`\footnote` steps the counter `\@mpfn` names and marks the note `\thempfn` (:17649-17656),
+`\thempfootnote` being `{\itshape\@alph\c@mpfootnote}` (:17638): a minipage letters its notes "a", "b", … and the
+page's notes go on where they were. Perl's `\footnote` always takes `footnote` and its
+`\thempfootnote` is `\arabic` (latex_base.pool.ltxml:270-272), so a minipage note took the page's next number and every
+later note one more (`\ref` to a later footnote one higher than the PDF's). Minimal trigger:
+`\begin{minipage}{5cm}A\footnote{x}\end{minipage} B\footnote{y}` — pdflatex "A^a", "B^1"; Perl marks 1 and 2. Fixed
+in Rust (78i): the minipage's begin code sets the three (sect12.rs `{minipage}`, a group of its own); a footnote
+(`\lx@note{footnote}`, whatever command made it) steps `\@mpfn` and is marked `\thempfn` when that names another
+counter than `footnote` (latex_constructs `footnote_tag`; `\footnote[<n>]` the `<n>`-th letter), its role staying
+`footnote`;
+`\thempfootnote` is latex.ltx's. `\footnotemark` keeps to `footnote`, as in LaTeX, and so does `\footnotetext`, which
+LaTeX marks `\thempfn` (:17690-17699): in a minipage LaTeX numbers the mark and letters the text it answers
+(2304.06412's table, `\footnotemark[1]` "1" and `\footnotetext[1]` "a"), a mismatch that would leave them unpaired
+here; kept on `footnote` they pair, as in Perl. Witnesses 0802.0707 (table notes in a minipage), 2305.00493,
+2309.00006. Repro
+boxes-groups/minipage_footnotes_are_lettered; guard `perfect_kernel_batch78i::minipage_footnotes_are_lettered`.
+
+## 1050. hyperref's PDF information values are recorded as their source text
+
+hyperref expands `pdftitle={…}` and the other information keys with `\pdfstringdef` when they are set
+(hyperref.sty:3543-3600). Perl's `\hypersetup` stores `ToString($value)` (hyperref.sty.ltxml:133; "This actually needs
+some sort of 'safe' digestion"), so the `dcterms:title` metadata is the source: `\hypersetup{pdftitle={\mytitle}}` gives
+`<rdf content="\mytitle" property="dcterms:title"/>` where the PDF's Title is the title (pdfinfo). Minimal trigger:
+`\usepackage{hyperref}\def\mytitle{Real Title}\hypersetup{pdftitle=\mytitle}`. Fixed in Rust (78i,
+OXIDIZED_DESIGN_DIVERGENCES #824): the five text keys are expanded as `\pdfstringdef` expands them, without making a
+note, and recorded as their text. Witness 1210.7805 (`\OfficialTitle`), resphilosophica.cls:311/:324. Repros
+sectioning-frontmatter/{hyperref_pdfinfo_expands_macros, hyperref_pdfinfo_drops_notes_and_markup}; guards
+`perfect_kernel_batch78i::{hyperref_metadata_is_expanded, hyperref_metadata_drops_notes_and_markup}`.
+
+## 1051. AMS-TeX's `\documentstyle` never reads the paper's own style
+
+amstex.tex:1731 `\def\documentstyle#1{\W@{}\input #1.sty\relax}` reads any `#1.sty`. Perl's `\documentstyle` requires a
+binding (`RequirePackage($style, type => 'sty', notex => 1, as_class => 1) || RequirePackage('amsppt')`,
+AmSTeX.pool.ltxml:71-72), so a paper's own style is replaced by amsppt: amams.sty's one-argument `\title` meets
+amsppt's `\title … \endtitle` and the paper ends inside the argument (math0402285, math9806089: Fatal:Mouth:EoF, 0
+words; ~33 papers). Minimal trigger: `\input amstex\documentstyle{loc}\document\received{1}\title{T}Body.\enddocument`
+with a loc.sty defining `\received#1` and `\title#1`. Fixed in Rust (78i, OXIDIZED_DESIGN_DIVERGENCES #825): a style with
+no binding on the search path is read raw unless it builds on another style, which the amsppt binding stands in for.
+Repro amstex/amstex_local_style_is_read; guard `perfect_kernel_batch78i::amstex_local_style_is_read`.
+
+## 1052. thm-restate's `{restatable*}` is undefined
+
+thm-restate.sty:207-213 defines `{restatable*}` beside `{restatable}`: the theorem printed where it stands is not the
+numbered one (`\thmt@thisistheonefalse`) — an introduction's preview of a theorem proved later, numbered as that later
+`\<name>`. Perl's thm-restate.sty.ltxml:17-28 defines only `{restatable}`, so the starred environment is undefined, its
+statement loose text and `\<name>` undefined after it. Minimal trigger: `\usepackage{amsthm,thmtools,thm-restate}
+\declaretheorem[numberwithin=section]{theorem}` … `\section{A}\begin{restatable*}{theorem}{main}Main.\end{restatable*}`
+`\section{B}\begin{theorem}Other.\end{theorem}\main\begin{theorem}Last.\end{theorem}` — pdflatex (second run)
+"Theorem 2.2. Main." in § 1, then 2.1, 2.2, 2.3; Perl `Error:undefined:{restatable*}`, `Error:undefined:\main`, "Last."
+numbered 2.2. Fixed in Rust (78i r2, thm_restate_sty.rs; KNOWN_PERL_ERRORS #1048 for the restatement itself): the
+environment prints its theorem as a starred restatement numbered by reference to the later `\<name>`; every `\<name>`
+sets that label (thm-restate.sty:158-160, pdflatex "Label `thmt@@main' multiply defined" and the last one read), so
+with two later `\<name>`s the preview is the last one's number (78i r3; r2 the first's). Witness 1702.04225. Repros
+package-bindings/{thm_restate_restatable_star_takes_the_later_number, thm_restate_restatable_star_takes_the_last_number};
+guards `perfect_kernel_batch78i::{restatable_star_takes_the_later_number, restatable_star_takes_the_last_number}`,
+`perfect_kernel_batch56::restatable_star_and_lineno_bframe`.

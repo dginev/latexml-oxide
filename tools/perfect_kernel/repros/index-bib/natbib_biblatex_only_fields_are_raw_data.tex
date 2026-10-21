@@ -7,8 +7,9 @@
 %          field handlers of latexml_engine/src/bibtex.rs (:1962-2172, :2337) digest them on every BibTeX route;
 %          Perl keeps them raw (BibTeX.pool \bib@field@default@default)
 % expect:  clean (0 errors, 0 warnings); the fields stay raw bib-data, the entry prints as the oracle
-% status:  RED (SYNC "Perfect-kernel RED repros": move the handlers into the biblatex binding, after its
-%          LoadPool!("BibTeX"), as 77a r5 did for shorthand/labelalpha; needs its own population A/B)
+% status:  RED (77a r5) -> GREEN (78i: the handlers moved into the biblatex binding, after its LoadPool!("BibTeX"),
+%          as 77a r5 did for shorthand/labelalpha; witnesses 2602.10008, 2606.11822; twin
+%          biblatex_prints_its_own_fields)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{natbib}

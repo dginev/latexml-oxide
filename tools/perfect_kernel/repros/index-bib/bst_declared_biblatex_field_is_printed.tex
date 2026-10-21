@@ -1,0 +1,20 @@
+% witness: the ACM papers of the 78i A/B (2603.25517, 2601.12610: ACM-Reference-Format.bst:38 declares `location`,
+%          printed after the event, :1318-1342); sn-mathphys.bst and mdpi.bst declare `urldate` (2607.28080,
+%          2511.08819, 2608.12223)
+% oracle:  pdflatex + bibtex 0 errors: "Ann Able. 2001. Paper. In Proc. of the Conference (Berlin, Germany). ACM, New
+%          York, NY, USA, 1–2." — the declared `location` printed, the undeclared `urldate` not
+% engines: rust int47a: the location and "Accessed: 2020-01-01"; 78i r1 (the biblatex fields under biblatex only): no
+%          location; perl: neither (raw bib-data)
+% expect:  clean (0 errors, 0 warnings); the entry holds "Berlin, Germany", no "Accessed"
+% status:  GREEN (78i: on the BibTeX route a biblatex field is read when the style's .bst ENTRY list declares it)
+\begin{filecontents*}[overwrite]{bst_declared_biblatex_field_is_printed.bib}
+@inproceedings{a, author={Ann Able}, title={Paper}, booktitle={Proc. of the Conference}, year=2001, pages={1--2},
+  location={Berlin, Germany}, urldate={2020-01-01}, publisher={ACM}, address={New York, NY, USA}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{natbib}
+\begin{document}
+X \citep{a}.
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{bst_declared_biblatex_field_is_printed}
+\end{document}

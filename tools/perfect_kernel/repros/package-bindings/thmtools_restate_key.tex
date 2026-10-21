@@ -4,9 +4,9 @@
 %          only, after spaces as 2602.09462 writes them: the `\other*` copy is titled "Theorem 2 (Again)")
 % engines: rust 529dc1b543 = `\mainthm` and `\other` undefined (2 errors), the second title "Theorem 2 (restate=…)";
 %          perl not compared (its thm-restate binding has no `restate=` key either)
-% expect:  0 errors, 0 warnings; the titles "Theorem 1 (Main)" and "Theorem 2", each restated copy a reference to its
-%          theorem (the binding's `{restatable}` copy)
-% status:  RED (529dc1b543) -> GREEN (77v)
+% expect:  0 errors, 0 warnings; the titles "Theorem 1 (Main)" and "Theorem 2", each restated copy the statement again
+%          numbered as its theorem, the second titled "(Again)" (77v: a "See" reference to its theorem; 78i: the copy)
+% status:  RED (529dc1b543) -> GREEN (77v, 78i)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{amsthm,thmtools}

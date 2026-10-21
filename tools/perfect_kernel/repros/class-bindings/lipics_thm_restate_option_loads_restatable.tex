@@ -1,7 +1,7 @@
 % witness: 2211.04601 (`\documentclass[...,thm-restate]{lipics-v2021}`)
 % oracle: none (lipics-v2021.cls ships with the papers, not TL); engine: pdflatex
-% expect: 0 errors; the theorem's body once ("Restated body."); `\mythm*` a reference to it, "See" + ref to
-%   LABEL:restatable:mythm (thm-restate.sty.ltxml:28 `\lx@thm@restate`, as Perl)
+% expect: 0 errors; the theorem's body twice ("Restated body."): `\mythm*` the statement again, "Theorem 1" (78i,
+%   KNOWN_PERL_ERRORS #1048; Perl's thm-restate.sty.ltxml:28 a "See" reference)
 % mechanism: lipics-v2021.cls:193/:1015-1016 loads thm-restate on its `thm-restate` option; the binding reads the option
 %   from the class's option list (lipics_cls.rs).
 % status:  GREEN

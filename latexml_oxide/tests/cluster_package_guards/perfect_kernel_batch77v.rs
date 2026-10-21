@@ -15,8 +15,9 @@ use super::{
 const AR5IV: &str = "ar5iv.sty";
 
 /// thm-restate.sty:198-215: a theorem's `restate=<name>` key stores it for `\<name>` as `{restatable}` does; the
-/// key is no note ("(restate=other)" was the title, `\mainthm`/`\other` undefined: 2 errors). Witnesses 2108.11527,
-/// 2602.09462. Repro package-bindings/thmtools_restate_key.
+/// key is no note ("(restate=other)" was the title, `\mainthm`/`\other` undefined: 2 errors). Since 78i the restated
+/// copies are the statements again, as pdflatex prints them (were "See ⟨ref⟩"). Witnesses 2108.11527, 2602.09462.
+/// Repro package-bindings/thmtools_restate_key.
 #[test]
 fn thmtools_restate_key() {
   let tex =
@@ -32,10 +33,18 @@ fn thmtools_restate_key() {
       "Thmtheorem2",
       r#"<theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" labels="LABEL:restatable:other" xml:id="Thmtheorem2"><tags><tag>Theorem 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Theorem 2</tag></tags><title class="ltx_runin"><tag><text font="bold" xml:id="Thmtheorem2.1">Theorem 2</text></tag><text font="bold" xml:id="Thmtheorem2.2">.</text></title><para xml:id="Thmtheorem2.p1"><p xml:id="Thmtheorem2.p1.1"><text font="italic" xml:id="Thmtheorem2.p1.1.1">B.</text></p></para></theorem>"#,
     ),
+    // each restated copy is the statement again (78i, KNOWN_PERL_ERRORS #1048), numbered as its theorem, unlabelled,
+    // `\other*` with the copy's own `name=Again`
+    ("p", "p1.1", r#"<p xml:id="p1.1">Again:</p>"#),
     (
-      "p",
-      "p1.1",
-      r#"<p xml:id="p1.1">Again: See <ref labelref="LABEL:restatable:mainthm"/> and See <ref labelref="LABEL:restatable:other"/></p>"#,
+      "theorem",
+      "Thmtheoremx1",
+      r#"<theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" xml:id="Thmtheoremx1"><tags><tag>Theorem 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Theorem 1</tag></tags><title class="ltx_runin"><tag><text font="bold" xml:id="Thmtheoremx1.1">Theorem 1</text></tag><text font="bold" xml:id="Thmtheoremx1.2"> </text>(Main)<text font="bold" xml:id="Thmtheoremx1.3">.</text></title><para xml:id="Thmtheoremx1.p1"><p xml:id="Thmtheoremx1.p1.1"><text font="italic" xml:id="Thmtheoremx1.p1.1.1">A.</text></p></para></theorem>"#,
+    ),
+    (
+      "theorem",
+      "Thmtheoremx2",
+      r#"<theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" xml:id="Thmtheoremx2"><tags><tag>Theorem 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Theorem 2</tag></tags><title class="ltx_runin"><tag><text font="bold" xml:id="Thmtheoremx2.1">Theorem 2</text></tag><text font="bold" xml:id="Thmtheoremx2.2"> </text>(Again)<text font="bold" xml:id="Thmtheoremx2.3">.</text></title><para xml:id="Thmtheoremx2.p1"><p xml:id="Thmtheoremx2.p1.1"><text font="italic" xml:id="Thmtheoremx2.p1.1.1">B.</text></p></para></theorem>"#,
     ),
   ]);
 }

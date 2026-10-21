@@ -1,0 +1,13 @@
+% witness: math0402285 (amams.sty:1099 `\def\ifdefined#1#2#3`, a three-argument test)
+% oracle:  pdflatex 0 errors: "Text1 and no, no." with the note "1 A note." (LaTeX makes no `\ifdefined` test after
+%          the redefinition)
+% engines: rust 78i r1: Error:undefined:\latinencoding, an extra \else and an extra \fi (the kernel's
+%          `\lx@latin@name` test of the footnote's typerefname read by the document's `\ifdefined`), the ERROR inside
+%          the note's typerefnum tag
+% expect:  clean (0 errors, 0 warnings); the note's tags 1 / 1 / "footnote 1"; "and no, no."
+% status:  RED (78i r1) -> GREEN (78i r2)
+\documentclass{article}
+\begin{document}
+\def\ifdefined#1#2#3{\expandafter\ifx\csname#1\endcsname\relax#3\else#2\fi}
+Text\footnote{A note.}\label{x} and \ifdefined{foo}{yes}{no}, \ifdefined{relax}{yes}{no}.
+\end{document}

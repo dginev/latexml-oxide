@@ -2693,8 +2693,10 @@ fn mdframed_theorem_environments_are_theorems() {
   );
 }
 
-/// thm-restate.sty:191 `restatable*` (proof-at-the-end demo) and
-/// lineno.sty:2881 `bframe` (ulineno).
+/// thm-restate.sty:207-213 `restatable*` (proof-at-the-end demo) and lineno.sty:2881 `bframe` (ulineno). The
+/// `{restatable*}` is not the numbered instance (`\thmt@thisistheonefalse`): its number is the later `\mainthm`'s, by
+/// reference to the label that one sets (:158-160); pdflatex (second run): "Theorem 1 (Main). Restated body." twice.
+/// Without the later `\mainthm` the reference is missing (pdflatex "??", ours a Warning).
 #[test]
 fn restatable_star_and_lineno_bframe() {
   let tex = r"\documentclass{article}
@@ -2705,13 +2707,24 @@ fn restatable_star_and_lineno_bframe() {
 \begin{document}
 \begin{restatable*}[Main]{theorem}{mainthm}Restated body.\end{restatable*}
 \begin{bframe}Framed text.\end{bframe}
+\mainthm
 \end{document}
 ";
   let (stderr, xml) = convert(tex, true);
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert!(
-    xml.contains("Restated body.") && xml.contains("Framed text."),
-    "{xml}"
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  let preview = r##"<theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" xml:id="Thmtheoremx1"><tags><tag>Theorem <ref labelref="LABEL:restatable:mainthm"/></tag><tag role="refnum"><ref labelref="LABEL:restatable:mainthm"/></tag><tag role="typerefnum">Theorem <ref labelref="LABEL:restatable:mainthm"/></tag></tags><title class="ltx_runin"><tag><text font="bold">Theorem </text><ref font="bold" labelref="LABEL:restatable:mainthm"/></tag><text font="bold"> </text>(Main)<text font="bold">.</text></title><para xml:id="Thmtheoremx1.p1"><p><text font="italic">Restated body.</text></p></para></theorem>"##;
+  latexml::util::test::assert_element(&xml, "theorem", &["xml:id=\"Thmtheoremx1\""], preview);
+  let the_one = r##"<theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" labels="LABEL:restatable:mainthm" xml:id="Thmtheorem1"><tags><tag>Theorem 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Theorem 1</tag></tags><title class="ltx_runin"><tag><text font="bold">Theorem 1</text></tag><text font="bold"> </text>(Main)<text font="bold">.</text></title><para xml:id="Thmtheorem1.p1"><p><text font="italic">Restated body.</text></p></para></theorem>"##;
+  latexml::util::test::assert_element(&xml, "theorem", &["xml:id=\"Thmtheorem1\""], the_one);
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    "<para xml:id=\"p1\"><p>Framed text.</p></para>",
   );
 }
 

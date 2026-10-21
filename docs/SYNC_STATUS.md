@@ -62,7 +62,7 @@ affected** → **is it unblocked** → **effort**.
 | **T1** | **Repro suite move**: `tools/perfect_kernel/repros` (1,469 files) → `latexml_oxide/tests/repros` header-contract trials (release CI + `LATEXML_FULL_TESTS=1`); drain `tools/` | **OPEN**, not started (user 2026-10-02) | large | memory `project_repro_suite_move` |
 | **T2** | **Test API stage 2**: 37 test files still spawn binaries (`Command::new`; cluster_cli 33, cluster_xslt_split 13 …) → the in-process convert API; five `[[bin]]`s remain | **OPEN** (stage 1 landed 61a) | medium | `~/data/pk_agents/main/agent_reports/` (61a) |
 | **F1** | **Per-encoding text commands**: textcomp's symbols now dispatch on the encoding (62r, KPE #489; repro `fonts-nfss/textmu_follows_the_encoding` GREEN). Residual: the kernel letters keep Perl's definedness gate (a T1 fontmap slot shared by `\DH`/`\DJ`), and `\<E>-cmd` chains ignore `\cf@encoding` | **PARTIAL** | medium | §Font-Selection Chain Residuals |
-| **F2** | Small RED repros: hyperref pdfinfo values expanded as by `\pdfstringdef`; `\vadjust` queue scoped to its list (60k, TeX nest; low return); the rest under §"Perfect-kernel RED repros" | **OPEN**, safe now | small each | §Perfect-kernel RED repros |
+| **F2** | Small RED repros: ~~hyperref pdfinfo values expanded as by `\pdfstringdef`~~ (FIXED 78i, OD #824); `\vadjust` queue scoped to its list (60k, TeX nest; low return); the rest under §"Perfect-kernel RED repros" | **OPEN**, safe now | small each | §Perfect-kernel RED repros |
 | **R3** | **Bibliography-absence campaign** (PR #444) — **291 recovered / 20 338 entries**. Remaining unblocked: **R3d tab-mark parameter scan vs cell read** | **R3d next** (12 papers left, unblocks alignment macro `&` splits) | medium | Open items §R3, [`RESIDUAL.md`](parity/bib_absence_2026-07-29/RESIDUAL.md) |
 | **R8b** | **forest.sty full support** (side goal, user 2026-09-05; heavily used on arXiv) — native semantic tree since 56iz (nested inline lists, labels as TeX, node keys; DIVERGENCES #302); open: drawing/layout fidelity | **OPEN**, recorded | large | [`perfect_kernel/DIFFICULT_CASES.md` §D10](perfect_kernel/DIFFICULT_CASES.md) |
 | **R4** | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | **OPEN**, re-verified (1 error with `--preload=article.cls`, 0 without). Pool load reordering | medium | Open items §R4 |
@@ -320,6 +320,20 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
 4. **`make_sub_collection_documents` returns `vec![]`** (collector.rs:141): `--splitindex`/`--splitbibliography` drop entries past first initial.
 
 ### Corpus Triage Quick Wins
+- **AMS-TeX papers read through their own amams.sty: the errors left are our emulation's** (RUST-ONLY, opened 78i r2;
+  Perl never reads the style, KPE #1051; `tex` converts math9906120 clean). Since 78i (OD #825) the Annals style is
+  read raw and the papers have their content (the 78i bullet's word counts); what errs is our AMS-TeX
+  display emulation under the style's own machinery. math9906120: 102 Errors and Fatal:TooManyErrors from
+  JohanssonArchive.tex:250 on — 43 "Use \Bbb only in math" and 43 "Script ^/_ can only appear in math mode", after
+  the `\@@multline`/`\tag` errors at :250 where amams's `\everydisplay{\lookforbreak}` (amams.sty:585-590: the
+  display read to its closing `$$` as a macro argument, split at `\splitmath`) meets amstex's `\multline`.
+  math9806089: 13 (no longer Fatal) — 9 from amams's `\split` (lines 3979, 4444) over amstex.tex internals the AmSTeX
+  pool does not have (`\ifinany@`, `\next`, `\@end@split`, two stray `&`), 4 from boxedeps.tex, which neither the
+  paper nor TeX Live ships (harness). math0101270: 8 — `\scriptsize` undefined from our amsmath binding's
+  `\smallmatrix` (`style=\scriptsize`, amsmath_sty.rs:560; Zagier.tex:811, plain has no `\scriptsize`) and 7
+  "Missing sub/superscript argument" in expanded strings (not root-caused). math0402285: 0 (78i r2: the kernel tests
+  with `\lx@ifdefined`, which amams.sty:1099's three-argument `\ifdefined` cannot reach). Fix shape: amstex.tex's
+  display layer (`\multline`, `\split`, `\ifinany@`) as tex.web reads it under a document `\everydisplay`.
 - **mn_thesis.cls is bound as `mn` (the prefix alternate)** (72b review finding 1): 0909.2812's mn_thesis.cls:36
   loads mnphd.cls, whose :22 `\LoadClass{report}`; pdflatex 0 errors, six chapters. The class loader's prefix fallback
   (Perl Package.pm:2700-2716, the same alternate there) picks `mn` (MNRAS) by name for both, so the thesis gets MNRAS's
@@ -598,11 +612,10 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   `annotation` (:2337) — exist for the biblatex `.bib` route but are defined on every route, so natbib + plainnat
   prints content the PDF does not have: pdflatex "Ann Able. Paper. J Real, 3:1–2, 2001." 0 errors; we print
   "Main Work Title . Paper . Addon Words . J Real, \undefinedmacro Jt 3, pp. 1–2. Note: An addendum text Accessed:
-  2020-01-01" and `Error:undefined:\undefinedmacro` (Perl keeps the fields raw, `\bib@field@default@default`). Fix:
-  move them next to the `shorthand`/`labelalpha` handlers the biblatex binding defines after its `LoadPool!("BibTeX")`
-  (latexml_contrib biblatex_sty.rs, 77a r5), with a population A/B of its own (natbib `.bib` outputs change; the
-  handlers' comment cites ~7,000 words of sweep-120 manuals they recovered on the biblatex route). Repro
-  `index-bib/natbib_biblatex_only_fields_are_raw_data` (77a r5 review probe n7).
+  2020-01-01" and `Error:undefined:\undefinedmacro` (Perl keeps the fields raw, `\bib@field@default@default`).
+  **FIXED 78i** (OD #823; quality ledger #155): the handlers moved next to the `shorthand`/`labelalpha` handlers the
+  biblatex binding defines after its `LoadPool!("BibTeX")` (biblatex_sty.rs); witnesses 2602.10008, 2606.11822; GREEN
+  `index-bib/natbib_biblatex_only_fields_are_raw_data` (77a r5 review probe n7) and its biblatex twin.
 
 - **etna's `\remark` ends by the class's `\@endtheorem`, which the native `\endtheorem` never runs** (SHARED, Perl 2; 70b
   E4): etna.cls:288-326 defines `\remark` as `{…\@begintheorem…}` (its `}` closes `\@begintheorem`'s `\bgroup`, its
@@ -657,10 +670,10 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
 - **An `\index` phrase is re-tokenized live** (SHARED; with the `&` glossary row above): SanitizedVerbatim (`base_parameter_types.rs:692-716`) re-tokenizes `\index`'s argument with normal catcodes, so `\index{a\def{b}c}` runs `\def` at the mark (1 error). Repro `string-mouth/index_phrase_primitive_retokenize.tex`.
 - **An \item inside {framed}** (RUST-ONLY shape; GREEN on errors): the boxed `\item` keeps the outer numbering (`S0.I1.i2`) but sits in a framed `<itemize>` inside item 1's paragraph, not as the list's own second `<item>` (Perl: 2 `Error:malformed:ltx:item`). Ruling needed on the shape: a framed sibling item or the nested framed list. Repro `boxes-groups/mal_item_framed_capture.tex` (colorframed-doc, OUT OF SCOPE).
 - **hyperref's PDF information values are recorded unexpanded** (SHARED, Perl hyperref.sty.ltxml:133 `ToString`):
-  `pdftitle=\mytitle` gives `<rdf content="\mytitle"/>`; hyperref expands with `\pdfstringdef` (resphilosophica.cls:311
-  `pdftitle=\@title`). Digesting the value would duplicate frontmatter notes (`\thanks`); needs a `\pdfstringdef`-like
-  expansion. RED `sectioning-frontmatter/hyperref_pdfinfo_expands_macros`. The same for an AASTeX 7 address recorded as
-  `schema:email` metadata (`\email{\url{…}}` → `content="\url{…}"`; RED
+  **FIXED 78i** (OD #824, KPE #1050; 1210.7805): the text keys are expanded as `\pdfstringdef` expands them when
+  `\hypersetup` sets them, `\thanks` and the note commands gobbled, the text recorded; GREEN
+  `sectioning-frontmatter/hyperref_pdfinfo_expands_macros`, `…/hyperref_pdfinfo_drops_notes_and_markup`. Still open:
+  an AASTeX 7 address recorded as `schema:email` metadata (`\email{\url{…}}` → `content="\url{…}"`; RED
   `sectioning-frontmatter/aastex7_email_markup_recorded_as_text`, OXIDIZED_DESIGN_DIVERGENCES #479).
 - **FIXED int26 (OXIDIZED_DESIGN_DIVERGENCES #754, KNOWN_PERL_ERRORS #980) — a `{abstract}` left open at `\end{document}` empties the document** (SHARED; 65c review side finding): the deferred
   abstract body (`\lx@add@frontmatter@until … \lx@end@abstract`) runs to the end, holding the finalize whatsit and the
@@ -727,9 +740,10 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   `\<name>`/`\<name>*` (thm-restate.sty:103-184 `thmt@restatable`: `\thmt@stored@<name>` re-typesets the collected
   body) restate the theorem in full, its head and statement again, numbered as the original; ours print "See ⟨ref⟩" —
   the restated statement text is lost against the PDF wherever a paper restates (`{restatable}` and the `restate=` key;
-  2108.11527, 2602.09462, 2402.14202). Fix shape: store the theorem's body tokens at `\lx@thm@restate@store` and
-  replay them in an unnumbered copy of the theorem carrying the original's tags. Guard to make RED:
-  `perfect_kernel_batch77v::thmtools_restate_key` pins "Again: See <ref…/> and See <ref…/>".
+  2108.11527, 2602.09462, 2402.14202). **FIXED 78i** (KNOWN_PERL_ERRORS #1048): the store collects the body, `\<name>*`
+  replays it numbered as the original, `\<name>` as a new theorem, and `{restatable*}` (r2; 1702.04225) prints its
+  theorem with the later `\<name>`'s number by reference; guards `perfect_kernel_batch78i::{restated_theorem_prints_its_statement,
+  restatable_star_takes_the_later_number}`, `perfect_kernel_batch77v::thmtools_restate_key` (the restated statement).
 - **`\ifinner` is false in a display's array cell** (SHARED, Perl the same; 77k review Q3): an array cell's math is a
   formula of its own, so TeX's `\ifinner` is true there, inside `\[…\]` too (pdflatex "aI"; tex.web §1138-1145); we
   and Perl report false ("aD"). `\ifmmode` false at a cell's first token is TeX's own (it expands that token looking for
@@ -1497,8 +1511,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `perfect_kernel_batch66b::*`; repros `captions-floats/cup_contcaption_lets_caption`,
   `macro-state/{newcommand_optional_internal_cs,locked_robust_inner_cite}`. Residual: AMS-TeX `\documentstyle{X}`
   never raw-loads a paper-local `X.sty` (Perl the same, `notex => 1`), so amams.sty's `\title#1` meets amsppt's
-  `\title … \endtitle` and the file ends in the argument (math0402285, math0101270, math9906120; ~33 papers; raw-loading
-  needs an A/B against gr-qc9507042's fic.sty, which the amsppt fallback fixed); gtmacros papers ship no gtmacros.tex
+  `\title … \endtitle` and the file ends in the argument (math0402285, math0101270, math9906120; ~33 papers) — **FIXED
+  78i** (OD #825, KPE #1051; quality ledger #37): a style of its own is read raw, one that `\input`s another style
+  (gr-qc9507042's fic.sty) keeps the amsppt stand-in; gtmacros papers ship no gtmacros.tex
   (math9804003, math9902122, math9905203: harness).
 - **66c** (run-340 `\endgroup` cluster, the empty-trigger frame: 937 papers have an `\endgroup` error whose frame was opened
   by no token, half of a 40-paper sample mdpi papers closing `\end{paracol}`): the mdpi binding follows the copy the
@@ -5154,6 +5169,65 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   Binding nets (int47a) 136/136; mathastext 1 of 26 below int46a: 2201.00699 (jinstpub) recall 98.0 → 97.4 — the stock
   header line, the table of contents (OD #801, ruling pending) and the "E-mail:"/"Keywords" labels no longer printed; its
   arXiv number stays a `role=arxiv` pubnote; no authored word lost.
+- **78i** (quality batch 10, the sel78i selection study's five non-frontmatter items; guards `perfect_kernel_batch78i::*`,
+  9; OD #823-825, KPE #1048-1052; quality ledger rows #155 BIBLATEX-ONLY-FIELDS and #37 AMSTEX-LOCALSTY closed). (1)
+  biblatex's own `.bib` fields (`journaltitle`, `location`, `urldate`, `addendum`, `maintitle`, the event fields, …: 47
+  handlers, bibtex.rs `define_biblatex_fields`) are read by the biblatex binding and, on the BibTeX route, only where the
+  document's `.bst` declares them in its `ENTRY` list (`bst_declared_fields`; ACM-Reference-Format's `location`,
+  sn-mathphys's and mdpi's `urldate`); elsewhere raw `bib-data` as in Perl: 2602.10008's 54 and 2606.11822's 10
+  "Accessed:" lines and the duplicated event titles gone (OD #823). (2) thm-restate: `\<name>*` prints the stored
+  statement again with the original's number, labels gobbled, the equation counter put back; `\<name>` a new numbered
+  theorem; the `restate=` key stores the same way (Perl "See ⟨ref⟩", KPE #1048; 2108.11527, 2602.09462, 2402.14202;
+  `perfect_kernel_batch77v::thmtools_restate_key` and `perfect_kernel_batch66h::lipics_thm_restate_option_loads_restatable`
+  now pin the restated statement). (3)
+  A minipage's `\footnote`s are lettered on `mpfootnote` (latex.ltx:16323, :17638, :17649), the page's notes go on
+  unshifted; `\footnotetext` keeps to `footnote` so it pairs with its `\footnotemark` (2304.06412; KPE #1049; 0802.0707).
+  (4) hyperref's information keys are expanded as `\pdfstringdef` expands them when `\hypersetup` sets them
+  (`\lx@pdfstringdef`, `pdf_string`: notes gobbled, markup dropped, accents composed; OD #824, KPE #1050; 1210.7805).
+  (5) AMS-TeX's `\documentstyle{X}` reads a paper's own X.sty raw unless it `\input`s another style (fic.sty,
+  grubb-p.sty keep the amsppt stand-in); amstex.tex's `\Invalid@` (OD #825, KPE #1051; math0402285, math9806089,
+  math0101270: 0 → 5,826 / 34,174 / 32,200 words, the Fatal gone). A/B (release, `--preload=ar5iv.sty`, int47a vs 78i;
+  1,695 papers: the 476 `.bib`-without-`.bbl` papers and 200 of the 2,307 `.bib` papers, 200 biblatex, 250
+  restatable/thm-restate, 52 + 150 minipage-`\footnote`, 64 `\hypersetup` pdfinfo-macro and 100 hyperref papers, 152
+  AMS-TeX papers, 100 random controls, the 12 witnesses): E 2,946 → 3,044, F 24 → 21; 467 outputs changed, of the controls
+  only minipage-footnote papers and one hyperref triple. Every changed output read against its PDF: 210 bibliographies
+  lose fields their style does not print (the paper's `.bst` checked: none declares a dropped field), the declared ones
+  kept; 437 restated theorems where "See ⟨ref⟩" stood; minipage notes lettered as pdflatex letters them (mn2e's
+  `\thempfootnote` too); 151 raw-TeX `rdf` triples now text, 27 now empty (a class's own author storage our kernel's
+  `\author` does not fill: LIPIcs `\@authorsforpdf`; a `\hypersetup{pdftitle=\@title}` before `\title`, empty in the PDF
+  too). Error rises, each root-caused: the amams papers now read past their title, and what errs there is our
+  emulation, not amams.sty (`tex` converts math9906120 clean; SYNC "AMS-TeX papers read through their own amams.sty"):
+  math9906120 5 → 102 (Fatal both, 0 → 1,209 words; 43 "Use \Bbb only in math" and 43 "Script ^/_ can only appear in
+  math mode" where amams's `\everydisplay{\lookforbreak}` (amams.sty:585-590) meets amstex's `\multline`,
+  JohanssonArchive.tex:250), math9806089 8 → 13 (no longer Fatal; amams's `\split` over amstex internals the pool lacks,
+  `\ifinany@`; boxedeps.tex, shipped by neither the paper nor TeX Live), math0101270 6 → 8 (no longer Fatal; our
+  amsmath `\smallmatrix`'s `\scriptsize`, plain having none), math0402285 5 → 0 (the kernel's tests use `\lx@ifdefined`,
+  etex.rs, which amams.sty:1099's three-argument `\ifdefined` cannot reach); 1711.05227 55 → 58 (the `\thmrelevance*`
+  replay at proofs.tex:45 inside a math frame left open at proofs.tex:23 and an alignment open since magic.tex:150-155,
+  its error locations moving to `\end{restatable}`). r2 (review round; guards
+  `perfect_kernel_batch78i::{restatable_star_takes_the_later_number, kernel_ifdefined_survives_a_document_redefinition}`,
+  11; KPE #1052): PDF strings define puenc.def's text glyphs as their characters and compose an accent on `\i`/`\j` as
+  on i/j ("Martínez, García, Straße", as pdfinfo; r1 "Martınez, Garcıa, Strae"); `{restatable*}` prints its theorem
+  unstepped, its labels gobbled, numbered by reference to the later `\<name>` (1702.04225's previews "Theorem 6.21",
+  "Proposition 6.13", "Theorem 6.24", as the PDF; r1 "Theorem 1.1…1.8"; 1407.7827, 1910.14249, 1911.00646, 2004.07319,
+  2402.00791, 2404.17677, 2508.18759); the kernel's own `\ifdefined` tests (`\lx@latin@name`, the frontmatter stores'
+  nulls, `\makeindex`, `\makeglossary`) use `\lx@ifdefined` (`\loggingall`, `\tracingnone` keep the public
+  `\ifdefined`, as latex.ltx:662/:679 and Perl do). A/B r2 (release
+  15346dafb8; 1,727 papers: r1's 1,695, the 31 census papers whose hyperref values hold `\i`, `\ss`, `\o`, `\ae`, `\l`
+  or an accent, the papers defining `\ifdefined` — none in the 30k census, hep-th9410188, q-alg9412016 and math9806089
+  in the projection sample, math0402285 and math9906120 —, the 8 `{restatable*}` papers): r1 → r2 E 3,699 → 3,686, F 21 → 21, 0 worse, 3 better (math0402285, math9806089,
+  math0101270), 11 outputs changed (2 `rdf` triples, 7 `{restatable*}` papers, 2 amams papers' note ids); base → r2 E
+  3,601 → 3,686, F 24 → 21, 493 changed, 4 worse (math9906120, math9806089, math0101270, 1711.05227, above). Residuals:
+  after a `{restatable}` a `\<name>*` before a later `\<name>`, which pdflatex numbers it by from the `.aux`, prints the
+  original's number; a `{restatable*}`'s equations are numbered on the current counter; a `{restatable*}` no `\<name>`
+  follows prints an empty missing-label reference with a Warning (pdflatex "??"). r3 (review follow-ups; guards
+  `perfect_kernel_batch78i::{hyperref_metadata_text_symbols, restatable_star_takes_the_last_number}`, 13;
+  `perfect_kernel_batch56::restatable_star_and_lineno_bframe` 0/0 with a later `\mainthm`, the whole elements): PDF
+  strings also take puenc.def's text symbols (`\textendash`, `\S`, `\dag`, `\copyright`, `\pounds`, `\ldots`,
+  `\guillemotleft`, `\textquoteright`, …) and hyperref's `---`/`--` dashes (hyperref.sty:620-621): "A–B, §2, †, ©",
+  "Pre–post—end", as pdfinfo (r2 "AB, 2, , ,", "Pre--post---end"); every `\<name>` sets the label a `{restatable*}`'s
+  number refers to (thm-restate.sty:158-160), so the preview is the last one's, as pdflatex; `\loggingall` and
+  `\tracingnone` back to the public `\ifdefined` (latex.ltx:662/:679, Perl plain_base.pool.ltxml:40/:56).
 - **78g** (kernel batch: tcolorbox box labels, TCB-LABEL, user ruling 2026-10-21 item 12; + the repro stand-in licence
   audit, item 11; guards `perfect_kernel_batch78g::*`, 4, each RED on 25730beb73; OD #813, KPE #1038). (1) A label after a
   raw `\refstepcounter` names the object the step numbers, which takes the step's number: the kernel's

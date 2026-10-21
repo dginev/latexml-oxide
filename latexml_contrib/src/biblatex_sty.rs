@@ -4772,6 +4772,9 @@ LoadDefinitions!({
     "\\bib@field@default@shorthand",
     "\\bib@@field{ltx:bib-data}[role=shorthand]"
   );
+  // biblatex's own field names, on both of its routes (`define_biblatex_fields`, the BibTeX pool; a `.bst` that
+  // declares one of them has it read on the BibTeX route too).
+  latexml_engine::bibtex::define_biblatex_fields(None)?;
   BBL_ENTRY.with(|entry| *entry.borrow_mut() = None);
   BBL_DATALISTS.with(|lists| *lists.borrow_mut() = BblDatalists::default());
   BLX.with(|blx| *blx.borrow_mut() = BlxState::default());

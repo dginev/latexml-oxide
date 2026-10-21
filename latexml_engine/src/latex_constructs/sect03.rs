@@ -195,8 +195,8 @@ pub(crate) fn load() -> Result<()> {
   properties   => sub [args] {
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
-    let arg3 = args[2].as_ref().map(Cow::Borrowed);
     let note_type = arg2.map(type_name).unwrap_or_default();
+    let arg3 = footnote_tag(&note_type, args[2].as_ref())?;
     let mut props = make_note_tags(&note_type, arg1, arg3)?;
     props.insert("list", digest_text(Tokens!(T_CS!(s!("\\ext@{note_type}"))))?.into());
     props.insert("role", note_type.into());
@@ -264,8 +264,8 @@ pub(crate) fn load() -> Result<()> {
   properties   => sub [args] {
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
-    let arg3 = args[2].as_ref().map(Cow::Borrowed);
     let note_type = arg2.map(type_name).unwrap_or_default();
+    let arg3 = footnote_tag(&note_type, args[2].as_ref())?;
     let mut props = make_note_tags(&note_type, arg1, arg3)?;
     props.insert("list", digest_text(Tokens!(T_CS!(s!("\\ext@{note_type}"))))?.into());
     props.insert("role", note_type.into());

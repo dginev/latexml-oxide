@@ -1,0 +1,20 @@
+% witness: 1210.7805 (pdftitle=\OfficialTitle)
+% oracle:  pdflatex 0 errors; pdfinfo: Title "A Study of Things", Subject "alpha-rays and x2", Keywords "König,
+%          LaTeX, Martínez, Straße"; one footnote (the title's thanks); Author "Ann Able [t]cBob Baker" (a `\and` in a
+%          PDF string is garbage there; hyperref's own pdfusetitle author makes it "; ", hyperref.sty:6255, which ours
+%          follows)
+% engines: rust int47a and perl (hyperref.sty.ltxml:133 ToString): content="\mytitle", "\names", the source text
+% expect:  clean (0 errors, 0 warnings); dcterms:title "A Study of Things" (the \thanks dropped, no second note),
+%          dcterms:creator "Ann Able; Bob Baker", the subjects "alpha-rays and x2", "König, LaTeX, Martínez, Straße"
+% status:  RED (int47a) -> GREEN (78i); the glyphs RED (78i r1: "Martınez, Strae") -> GREEN (78i r2)
+\documentclass{article}
+\usepackage{hyperref}
+\newcommand\mytitle{A Study of \emph{Things}\thanks{Funded by X.}}
+\newcommand\names{Ann~Able \and Bob\ Baker}
+\title{\mytitle}
+\author{Ann Able}
+\hypersetup{pdftitle={\mytitle},pdfauthor={\names},pdfsubject={\texorpdfstring{$\alpha$-rays}{alpha-rays} and $x^2$},pdfkeywords={K\"onig, \LaTeX, Mart\'{\i}nez, Stra\ss e}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -768,6 +768,8 @@ pub(crate) fn load() -> Result<()> {
       // `\\@parboxrestore`'s interline values (latex.ltx:16284-16286): lines set as the document's, though an
       // enclosing `\\@array` zeroed `\\baselineskip` (`\\lx@begin@alignment`).
       digest(Tokens!(T_CS!("\\lx@restore@interline")))?;
+      // latex.ltx:16323: the minipage's own footnotes, lettered from "a" (latex_constructs `footnote_tag`)
+      digest(TokenizeInternal!(r"\def\@mpfn{mpfootnote}\def\thempfn{\thempfootnote}\c@mpfootnote\z@"))?;
       whatsit.set_property("vattach", Stored::from(vattach.to_string()));
       Let!("\\\\", "\\lx@newline");
     },

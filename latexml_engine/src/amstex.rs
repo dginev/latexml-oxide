@@ -35,6 +35,9 @@ LoadDefinitions!({
   DefMacro!("\\undefine Token", "\\let#1\\relax");
   // amstex.tex:80-85 the error reporter its packages call (amsppt.sty's `\add@missing`); `\errhelp\defaulthelp@` left out.
   RawTeX!(r"\def\err@#1{\errmessage{AmS-TeX error: #1}}\def\Err@{\err@}");
+  // amstex.tex:251-252, which a style marks the commands it does not allow with (amams.sty:63-64 `\Invalid@\nofrills`;
+  // math0402285, math9806089).
+  RawTeX!(r"\def\Invalid@#1{\def#1{\Err@{\Invalid@@\string#1}}}\def\Invalid@@{Invalid use of }");
   // amstex.tex:72-73, the mode tests its own macros and the macro files written for it use (Michor's diag.tex,
   // `\RIfM@`: math9611223 and 6 more papers, 6 of the 7 out of their Fatal; Perl's pool lacks them too).
   RawTeX!(r"\def\RIfM@{\relax\ifmmode}\def\RIfMIfI@{\relax\ifmmode\ifinner}");
@@ -56,11 +59,31 @@ LoadDefinitions!({
   // `\documentstyle{fic}` (fic.sty is a paper-local AmSTeX style
   // derived from amsppt). Without the fallback, `\leftheadtext` and
   // 23 other amsppt CSes stayed undefined.
+  //
+  // amstex.tex:1731 `\def\documentstyle#1{\W@{}\input #1.sty\relax}`: a style of its own with no binding that is on
+  // the search path — the paper's (math0402285's and math9806089's amams.sty, whose `\title#1\endtitle` the amsppt
+  // fallback lacks: a Fatal runaway, 0 words) — is read raw, as `\input` reads it. A style that `\input`s another
+  // style is that style's variation (gr-qc9507042's fic.sty `\input amsppt.sty`, math0406145's grubb-p.sty and
+  // 0803.2668's conm-p-mod.sty `\input ams-p.sty`, not in TeX Live): its changes are to the internals of the style it
+  // builds on, which the amsppt binding stands in for, as before. Perl requires a binding (`notex => 1`,
+  // AmSTeX.pool.ltxml:71) and falls back to amsppt (KNOWN_PERL_ERRORS #1051). Guard
+  // `perfect_kernel_batch78i::amstex_local_style_is_read`.
   DefConstructor!("\\documentstyle Semiverbatim",
     "<?latexml class='#1' amstex='true'?>",
     after_digest => sub[whatsit] {
       let style = whatsit.get_arg(1).map(|d| d.to_string()).unwrap_or_default();
       let style = style.trim().to_string();
+      if !style.is_empty()
+        && !binding_exists(&style, "sty")
+        && let Some(path) = find_file(&s!("{style}.sty"), None)
+        && !inputs_a_style(&path)
+      {
+        let mut input = vec![T_CS!("\\input")];
+        input.extend(Explode!(s!("{style}.sty")));
+        input.push(T_CS!("\\relax"));
+        unread(Tokens::new(input));
+        return Ok(Vec::new());
+      }
       let primary_ok = if style.is_empty() { false } else {
         require_package(&style, RequireOptions {
           extension: Some(Cow::Borrowed("sty")),
@@ -1166,4 +1189,21 @@ fn tie_floated_tags_to_row(document: &mut Document) -> Result<()> {
     ancestor = a.get_parent();
   }
   Ok(())
+}
+
+/// Whether the AMS-TeX style file at `path` `\input`s another style (`\input amsppt.sty`, `\input ams-p.sty`), outside
+/// comments.
+fn inputs_a_style(path: &str) -> bool {
+  static INPUT: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\\input\s*\{?\s*([A-Za-z0-9_.-]+)").unwrap());
+  let Ok(bytes) = std::fs::read(path) else {
+    return false;
+  };
+  String::from_utf8_lossy(&bytes).lines().any(|line| {
+    let code = line.split('%').next().unwrap_or_default();
+    INPUT.captures_iter(code).any(|c| {
+      let name = &c[1];
+      name.ends_with(".sty") || name == "amsppt"
+    })
+  })
 }

@@ -1,0 +1,21 @@
+% witness: the twin of natbib_biblatex_only_fields_are_raw_data: the fields the BibTeX route keeps raw are printed under
+%          biblatex (sweep 120: biblatex-ieee, biblatex-chicago, biblatex-apa manuals)
+% oracle:  pdflatex + biber 0 errors: [1] Ann Able. "Paper". In: J Real 3 (2001), pp. 1–2. url: … (visited on
+%          01/01/2020). An addendum text. [2] Bob Baker. Main Work Title. Volume Title. Addon Words. Berlin: Pub, 2002.
+% engines: rust int47a and 78i (no .bbl: the .bib through the biblatex binding): "Note: An addendum text",
+%          "Accessed: 2020-01-01", "Main Work Title. Volume Title. Addon Words.", "Pub, Berlin"
+% expect:  clean (0 errors, 0 warnings); the biblatex-only fields printed
+% status:  GREEN (guard for 78i, which moved the handlers into the biblatex binding)
+\begin{filecontents*}[overwrite]{biblatex_prints_its_own_fields.bib}
+@article{a, author={Ann Able}, title={Paper}, journaltitle={J Real}, date=2001, volume=3, pages={1--2},
+  addendum={An addendum text}, urldate={2020-01-01}, url={https://example.org/a}}
+@book{b, author={Bob Baker}, title={Volume Title}, maintitle={Main Work Title}, titleaddon={Addon Words},
+  location={Berlin}, publisher={Pub}, date=2002}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{biblatex}
+\addbibresource{biblatex_prints_its_own_fields.bib}
+\begin{document}
+X \cite{a,b}.
+\printbibliography
+\end{document}

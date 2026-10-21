@@ -1,0 +1,15 @@
+% witness: math0402285 (\documentstyle{amams}, the paper's amams.sty), math9806089 (the same style)
+% oracle:  tex (\input amstex) 0 errors: "Main Title" centred, "Body text of the paper." (amstex.tex:1731
+%          \documentstyle = \input #1.sty)
+% engines: rust int47a = Fatal:Mouth:EoF (amsppt's \title...\endtitle runs to the end: the local style never read,
+%          the amsppt fallback used) + 4 Errors, 0 words; perl the same (AmSTeX.pool.ltxml:71 notex => 1)
+% expect:  clean (0 errors, 0 warnings); the title text and the body paragraph present
+% status:  RED (int47a) -> GREEN (78i)
+\input amstex
+\documentstyle{amslocal}
+\document
+\received{May 1, 2003}
+\startingpage{1}
+\title{Main Title}
+Body text of the paper.
+\enddocument

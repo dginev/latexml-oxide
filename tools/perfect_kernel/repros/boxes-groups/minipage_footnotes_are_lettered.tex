@@ -1,0 +1,18 @@
+% witness: 0802.0707 (table notes in a minipage)
+% oracle:  pdflatex 0 errors: "Head^1", "Mini^a text." with "a Mini note." under the minipage, the caption mark 2,
+%          "Body^3 see 3." (latex.ltx:16323 minipage `\def\@mpfn{mpfootnote}`, :17638 `\thempfootnote`, :17649)
+% engines: rust int47a and perl (latex_base.pool.ltxml:270-272): the minipage note is 2 on the page's counter, the
+%          caption and body notes 3 and 4, "see 4"
+% expect:  clean (0 errors, 0 warnings); notes 1, a, 2, 3; the reference prints 3
+% status:  RED (int47a) -> GREEN (78i)
+\documentclass{article}
+\usepackage{footmisc}
+\begin{document}
+\section{Head\protect\footnote{In heading.}}
+\begin{minipage}{5cm}
+Mini\footnote{Mini note.} text.
+\end{minipage}
+\begin{figure}X\caption[Short]{Cap\footnotemark}\end{figure}
+\footnotetext{Caption note.}
+Body\footnote{Body note.\label{fn:b}} see \ref{fn:b}.
+\end{document}

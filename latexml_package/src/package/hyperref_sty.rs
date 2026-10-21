@@ -3,6 +3,7 @@ use latexml_core::{
   common::error::Result as CoreResult,
   document::{Document, can_contain_qsym, get_node_qname},
 };
+use latexml_engine::setup_binding_language::{accent_composite, accent_inner_name};
 use libxml::tree::NodeType;
 
 use crate::{package::url_sty::LEADING_BACKSLASH_RE, prelude::*};
@@ -361,6 +362,44 @@ LoadDefinitions!({
   // The options of a later `\usepackage[…]{hyperref}` are keys `\hypersetup` takes (the repeat load after a
   // class binding's own hyperref load; binding/content.rs `apply_new_options_on_reload`).
   AssignValue!("hyperref.sty_keyval_setter" => "\\hypersetup", Scope::Global);
+  // `\lx@pdfstringdef\cs{<text>}`: hyperref's `\pdfstringdef` (hyperref.sty:386-560) in brief — `<text>` expanded in full
+  // with the document's markup made harmless: `\protect` empty, font and size commands their argument or nothing, `\\`
+  // a space, `~` and the other spaces a space (`\HyPsd@LetUnexpandableSpace`), `\texorpdfstring` its PDF branch,
+  // labels, index entries and error messages gobbled (:550-552), the text glyphs and symbols their characters (puenc.def's
+  // `\DeclareTextCommand{\ss}{PU}{\80\337}` …, latex.ltx:564 `\aa`; `\textendash` :1082, `\textsection` :184, … with
+  // the kernel's names for them, `\S`, `\dag`, `\copyright`, `\pounds`, and hyperref.sty:416-418's `\P`, `\ldots`,
+  // `\dots`), and (as for `pdfusetitle`'s title, hyperref.sty
+  // `\Hy@UseMaketitleString`) `\thanks` and the note commands gobbled, so that no note is made twice; then the
+  // document's own `\pdfstringdefPreHook` (`\pdfstringdefDisableCommands`). [`pdf_string`] keeps the characters of the
+  // result.
+  RawTeX!(
+    r#"\long\def\lx@pdfstringdef#1#2{\begingroup
+\let\protect\@empty\let\thanks\@gobble\let\footnote\@gobble\let\footnotemark\@empty\let\footnotetext\@gobble
+\let\label\@gobble\let\index\@gobble\let\glossary\@gobble\long\def\texorpdfstring##1##2{##2}%
+\def\\{ }\def\newline{ }\def~{ }\def\nobreakspace{ }\def\ { }\def\,{ }\def\quad{ }%
+\let\emph\@firstofone\let\textnormal\@firstofone\let\textrm\@firstofone\let\textsf\@firstofone
+\let\texttt\@firstofone\let\textbf\@firstofone\let\textmd\@firstofone\let\textit\@firstofone
+\let\textsc\@firstofone\let\textsl\@firstofone\let\textup\@firstofone\let\mbox\@firstofone
+\let\ensuremath\@firstofone\let\normalfont\@empty\let\rmfamily\@empty\let\sffamily\@empty
+\let\ttfamily\@empty\let\bfseries\@empty\let\mdseries\@empty\let\itshape\@empty\let\scshape\@empty
+\let\slshape\@empty\let\upshape\@empty\let\em\@empty\let\rm\@empty\let\bf\@empty\let\it\@empty
+\let\Huge\@empty\let\huge\@empty\let\LARGE\@empty\let\Large\@empty\let\large\@empty
+\let\normalsize\@empty\let\small\@empty\let\footnotesize\@empty\let\scriptsize\@empty\let\tiny\@empty
+\let\phantom\@gobble\let\hphantom\@gobble\let\vphantom\@gobble\let\leavevmode\@empty
+\let\GenericError\@gobblefour\let\GenericWarning\@gobbletwo\let\GenericInfo\@gobbletwo
+\def\ss{ß}\def\SS{SS}\def\i{ı}\def\j{ȷ}\def\o{ø}\def\O{Ø}\def\ae{æ}\def\AE{Æ}\def\oe{œ}\def\OE{Œ}\def\aa{å}\def\AA{Å}%
+\def\l{ł}\def\L{Ł}\def\dh{ð}\def\DH{Ð}\def\dj{đ}\def\DJ{Đ}\def\th{þ}\def\TH{Þ}\def\ng{ŋ}\def\NG{Ŋ}\def\ij{ĳ}\def\IJ{Ĳ}%
+\def\textendash{\string–}\def\textemdash{\string—}\def\textsection{\string§}\let\S\textsection\def\textparagraph{\string¶}\let\P\textparagraph
+\def\textdagger{\string†}\let\dag\textdagger\def\textdaggerdbl{\string‡}\let\ddag\textdaggerdbl\def\textcopyright{\string©}%
+\let\copyright\textcopyright\def\textregistered{\string®}\def\texttrademark{\string™}\def\textsterling{\string£}\let\pounds\textsterling
+\def\textellipsis{\string…}\let\ldots\textellipsis\let\dots\textellipsis\def\textquoteleft{\string‘}\def\textquoteright{\string’}%
+\def\textquotedblleft{\string“}\def\textquotedblright{\string”}\def\quotesinglbase{\string‚}\def\quotedblbase{\string„}\def\textquotedbl{\string"}%
+\def\guillemotleft{\string«}\let\guillemetleft\guillemotleft\def\guillemotright{\string»}\let\guillemetright\guillemotright
+\def\guilsinglleft{\string‹}\def\guilsinglright{\string›}\def\textdegree{\string°}\def\textbullet{\string•}\def\textexclamdown{\string¡}%
+\def\textquestiondown{\string¿}%
+\csname pdfstringdefPreHook\endcsname
+\xdef#1{#2}\endgroup}"#
+  );
   // Digest & store the options
   // Perl: DefPrimitive('\hypersetup RequiredKeyVals:Hyp', sub {
   //   hyperref_setoption($key, Digest($value)); });
@@ -382,7 +421,19 @@ LoadDefinitions!({
       // restricted to plain text(?) — `hyperref_setoption($key, ToString($value))`.
       // (This actually needs some sort of "safe" digestion, recognizing
       // unicode, but no macros.)
-      assign_mapping("Hyperref_options", key, Some(value_str.clone()));
+      // The PDF information strings hyperref expands as it sets them (`\pdfstringdef\@pdf<key>{#1}`,
+      // hyperref.sty:3543-3600): the metadata `\@add@PDF@RDFa@triples` records is their text, not the source
+      // (`pdftitle={\mytitle}` was `content="\mytitle"`; 1210.7805 `\OfficialTitle`). Perl records `ToString`
+      // (hyperref.sty.ltxml:133; KNOWN_PERL_ERRORS #1050). Guard `perfect_kernel_batch78i::hyperref_metadata_is_expanded`.
+      let recorded = if matches!(
+        key.as_str(),
+        "pdftitle" | "pdfauthor" | "pdfsubject" | "pdfkeywords" | "pdfcopyright"
+      ) {
+        pdf_string(value.revert()?)?
+      } else {
+        value_str.clone()
+      };
+      assign_mapping("Hyperref_options", key, Some(recorded));
       if key == "baseurl" {
         AssignValue!("BASE_URL" => value_str);
       }
@@ -1904,6 +1955,123 @@ LoadDefinitions!({
 \ExplSyntaxOff"
   );
 });
+
+/// The text accents of a PDF string and their combining characters (puenc.def's `\DeclareTextAccent`s).
+const PDF_ACCENTS: &[(&str, char)] = &[
+  ("`", '\u{0300}'),
+  ("'", '\u{0301}'),
+  ("^", '\u{0302}'),
+  ("~", '\u{0303}'),
+  ("=", '\u{0304}'),
+  ("u", '\u{0306}'),
+  (".", '\u{0307}'),
+  ("\"", '\u{0308}'),
+  ("r", '\u{030A}'),
+  ("H", '\u{030B}'),
+  ("v", '\u{030C}'),
+  ("d", '\u{0323}'),
+  ("c", '\u{0327}'),
+  ("k", '\u{0328}'),
+  ("b", '\u{0331}'),
+];
+
+/// The control sequences a PDF string spells out (hyperref.sty:423-434 for the logos, `\and` as in its
+/// `pdfusetitle` author, :6255) that stay unexpanded here (locked definitions, character definitions); puenc.def's
+/// letters (`\ss`, `\i`, …) are defined as their characters in `\lx@pdfstringdef`'s group.
+const PDF_GLYPHS: &[(&str, &str)] = &[
+  ("TeX", "TeX"),
+  ("LaTeX", "LaTeX"),
+  ("LaTeXe", "LaTeX2e"),
+  ("and", "; "),
+  ("&", "&"),
+  ("%", "%"),
+  ("$", "$"),
+  ("#", "#"),
+  ("_", "_"),
+];
+
+/// The text of a PDF information string: `tokens` expanded by `\lx@pdfstringdef`, its characters kept (a control
+/// sequence left unexpanded, a brace, a math shift, a script mark dropped, hyperref.sty `\HyPsd@RemoveBraces`,
+/// `\HyPsd@CheckCatcodes`) and its spaces collapsed.
+fn pdf_string(tokens: Tokens) -> Result<String> {
+  let target = T_CS!("\\lx@hyp@pdfstring");
+  let mut call = vec![T_CS!("\\lx@pdfstringdef"), target, T_BEGIN!()];
+  call.extend(tokens.unlist());
+  call.push(T_END!());
+  digest(Tokens::new(call))?;
+  let expansion = match lookup_definition(&target)? {
+    Some(defn) => match defn.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => body.clone(),
+      _ => Tokens!(),
+    },
+    None => Tokens!(),
+  };
+  let mut text = String::new();
+  let tokens = expansion.unlist();
+  let mut i = 0;
+  while i < tokens.len() {
+    let token = tokens[i];
+    i += 1;
+    match token.get_catcode() {
+      Catcode::LETTER | Catcode::OTHER => text.push_str(&token.to_string()),
+      Catcode::SPACE => text.push(' '),
+      Catcode::CS => {
+        let name = token.to_string();
+        let name = name.strip_prefix('\\').unwrap_or(&name);
+        // the text accents, on the next character (`\"o`, `\"{o}`), as the PU encoding composes them
+        // (an accent expands to its inner control sequence, `\"` to `\lxaccentumlaut`: `accent_inner_name`)
+        let accent = PDF_ACCENTS.iter().find(|(accent, _)| {
+          *accent == name || accent_inner_name(&s!("\\{accent}")) == token.to_string()
+        });
+        if let Some(&(_, combiner)) = accent {
+          while i < tokens.len()
+            && matches!(tokens[i].get_catcode(), Catcode::BEGIN | Catcode::SPACE)
+          {
+            i += 1;
+          }
+          if let Some(&letter) = tokens
+            .get(i)
+            .filter(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
+          {
+            i += 1;
+            // an accent on the dotless `\i`, `\j` is on i, j (puenc.def:172-264 `\DeclareTextCompositeCommand{\'}{PU}
+            // {\i}{\80\355}`, í); `\.{\i}` is a plain i (:172)
+            let letter = match letter.to_string().as_str() {
+              "ı" if combiner == '\u{0307}' => {
+                text.push('i');
+                continue;
+              },
+              "ı" => T_LETTER!("i"),
+              "ȷ" => T_LETTER!("j"),
+              _ => letter,
+            };
+            match accent_composite(&[letter], combiner) {
+              Some(composed) => text.push_str(&composed.to_string()),
+              None => {
+                text.push_str(&letter.to_string());
+                text.push(combiner);
+              },
+            }
+          }
+        } else if let Some(&(cs, glyph)) = PDF_GLYPHS.iter().find(|(cs, _)| *cs == name) {
+          if cs == "and" {
+            text.truncate(text.trim_end().len());
+          }
+          text.push_str(glyph);
+        }
+      },
+      _ => {},
+    }
+  }
+  // the ligatures hyperref substitutes in the expanded string (hyperref.sty:620-623 `\HyPsd@Subst{---}\textemdash`,
+  // `{--}\textendash`, ``{!`}\textexclamdown``, ``{?`}\textquestiondown``)
+  let text = text
+    .replace("---", "\u{2014}")
+    .replace("--", "\u{2013}")
+    .replace("!`", "\u{00A1}")
+    .replace("?`", "\u{00BF}");
+  Ok(text.split_whitespace().collect::<Vec<_>>().join(" "))
+}
 
 /// Emit a bare, self-closed `<ltx:anchor xml:id=id/>` destination at the current
 /// insertion point — for a `\hypertarget`/`\hyperdef` with no content to localize

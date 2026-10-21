@@ -694,7 +694,9 @@ LoadDefinitions!({
   DefMacro!("\\thefootnote", "\\arabic{footnote}");
   NewCounter!("mpfootnote");
   DefMacro!("\\thempfn", "\\thefootnote");
-  DefMacro!("\\thempfootnote", "\\arabic{mpfootnote}");
+  // A minipage's notes are lettered in italics, latex.ltx:17638 (Perl latex_base.pool.ltxml:272 `\arabic`, unused
+  // there: its minipage numbers its notes as the page's; KNOWN_PERL_ERRORS #1049)
+  DefMacro!("\\thempfootnote", "{\\itshape\\@alph\\c@mpfootnote}");
   DefRegister!("\\footnotesep" => Dimension::new(0));
 
   // C.4.4 / C.5.1 NewCounters (Perl latex_base L300, L312) — dump-path

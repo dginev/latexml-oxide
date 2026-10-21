@@ -10127,7 +10127,7 @@ bibliography): a `ltx:bib-subtitle` spec after each title ("Title. Subtitle."), 
 block's `ltx:bib-related/ltx:bib-publisher` and `ltx:bib-related/ltx:bib-place`, and a metadata
 line for `ltx:bib-date[@role='accessed']` ("Accessed: …", biblatex's `urldate`). The `.bib` reader
 also reads biblatex's field names (`journaltitle`, `location`, `urldate`, `titleaddon`,
-`addendum`) for the biblatex binding's no-biber path. Witnesses: 78 biblatex manuals of sweep 120
+`addendum`) for the biblatex binding's no-biber path (since 78i defined by the binding, not the pool: #823). Witnesses: 78 biblatex manuals of sweep 120
 (biblatex-ieee 75.1 → 78.3 %, biblatex-chicago/cms-notes-sample 66.2 → 74.9 %,
 biblatex-apa-test 72.6 → 78.4 % recall). No existing golden carries these fields.
 
@@ -10205,7 +10205,7 @@ biblatex-apa-test, the biblatex-chicago samples, and docsurvey's 126 annotated e
   `bibstyle='biblatex'`, natbib's `plainnat`/`abbrvnat`/`unsrtnat`, plainnat.bst:285
   `format.url`, and abnTeX2's `abntex2-num`/`abntex2-alf`, abntex2-num.bst:993-1001, 57cm). The classic `plain`/`alpha`/`unsrt` keep "Link".
 - A "Translated by …" row sits in the shared field block.
-- `annotation` reads like `annote`, as a `role=annotation` note.
+- `annotation` reads like `annote`, as a `role=annotation` note (under biblatex only since 78i, #823).
 
 Only the URL change is style-gated; the translator row and the `annotation` field print for every
 style, like the `note`/`annote` row before them (#286's pattern: captured `.bib` content is printed).
@@ -22892,3 +22892,90 @@ amsmath_row_label_names_the_display_step, unnumbered_display_label_takes_the_ste
 picture_second_step_label_climbs, amsmath_saved_kernel_label_names_the_cell_step,
 math_box_label_climbs_to_the_display}` (the last three and the align-family, `{multline*}`, `{aligned}` and minipage rows
 of `amsmath_row_label_names_the_display_step` 78g r2-r4).
+
+### 823. biblatex's own `.bib` fields are read by the biblatex binding only
+
+The `.bib` reader's handlers for biblatex's field names (biblatex manual §2.2.2: `journaltitle`, `location`, `urldate`,
+`titleaddon`, `addendum`, `maintitle`, `mainsubtitle`, `maintitleaddon`, `booksubtitle`, `booktitleaddon`,
+`issuetitle`, `issuesubtitle`, `eventtitle`, `eventtitleaddon`, `venue`, `eventdate`, `editora`-`editorc`,
+`annotation`, and the per-type variants that nest them in a host or event: 47 in all, batches 56ie, 56ii and 57) were
+defined in the BibTeX pool (bibtex.rs), so every route read them — under natbib or the classic styles too, where a
+`.bst` declares a closed field list without them (plainnat, apsrev4-1) and bibtex(1) never writes them to the `.bbl`.
+Perl's pool has none of them (they are `\bib@field@default@default` data, BibTeX.pool.ltxml:346). A paper with no
+`.bbl` printed what its PDF does not have: "Accessed: 2025-08-15" (2606.11822 [9]; 2602.10008's 54 apsrev4-1 entries),
+"Note: <addendum>", the main title before the title, and a `journaltitle={\undefinedmacro Jt}` raised
+`Error:undefined` where pdflatex has 0. Ours (78i, bibtex.rs `define_biblatex_fields`): the handlers are defined by
+the biblatex binding after its `LoadPool!("BibTeX")` (biblatex_sty.rs, beside 77a r5's `shorthand`/`labelalpha`), for
+both of biblatex's routes (a `.bbl`'s entries, a `.bib` rendered without biber), and on the BibTeX route only for the
+fields the document's style declares in its `.bst`'s `ENTRY` list (`bst_declared_fields`: the `\bibliographystyle`
+recorded as `BIBSTYLE`, the `.bst` found on the search path) — what bibtex(1) copies for the style to print:
+ACM-Reference-Format.bst:38 `location` (printed after the event, :1318-1342; 2603.25517, 2601.12610), sn-mathphys.bst
+and mdpi.bst `urldate` (2607.28080, 2511.08819, 2608.12223). Elsewhere the fields are raw `bib-data`, as in Perl. OD #289's `annotation` and 56ie's biblatex names (the entry for the subtitle and host rows) are biblatex-only
+accordingly. Repros index-bib/natbib_biblatex_only_fields_are_raw_data (red int47a) and its twin
+index-bib/biblatex_prints_its_own_fields, index-bib/bst_declared_biblatex_field_is_printed; guards
+`perfect_kernel_batch78i::{natbib_biblatex_only_fields_are_raw_data, biblatex_prints_its_own_fields,
+bst_declared_biblatex_field_is_printed}`, `06_cluster_bibliography`'s biblatex field guards.
+
+### 824. hyperref's PDF information strings are expanded when `\hypersetup` sets them
+
+hyperref sets `pdftitle`, `pdfauthor`, `pdfsubject`, `pdfkeywords` (and the rest of its information keys) by
+`\pdfstringdef\@pdf<key>{#1}` (hyperref.sty:3543-3600): expanded at once with the document's markup made harmless, the
+string its characters. Perl records the value's source text (hyperref.sty.ltxml:133 `ToString`, KNOWN_PERL_ERRORS
+#1050), so `pdftitle={\mytitle}` was the metadata `<rdf content="\mytitle" property="dcterms:title"/>` (1210.7805
+`\OfficialTitle`; resphilosophica.cls:311/:324 `pdftitle=\@title`, `pdfauthor=\authors` in every paper of that class).
+Ours (78i, hyperref_sty.rs `pdf_string`): the value of `pdftitle`, `pdfauthor`, `pdfsubject`, `pdfkeywords` and
+`pdfcopyright` is expanded by `\lx@pdfstringdef` — hyperref's `\pdfstringdef` in brief (:386-560): `\protect` empty, the
+font and size commands their argument or nothing, `\\`, `~` and the other spaces a space, `\texorpdfstring` its PDF
+branch, labels, index entries and error messages gobbled, then the document's `\pdfstringdefPreHook` — and, as for
+hyperref's own `pdfusetitle` title (`\Hy@UseMaketitleString`, :6248-6266), `\thanks` and the note commands gobbled,
+so that expanding the title makes no second note; the result's characters are kept (a control sequence still
+unexpanded, a brace, a math shift, a script mark dropped: `$x^2$` is "x2" as in the PDF); puenc.def's text glyphs are
+their characters in `\lx@pdfstringdef`'s group (`\DeclareTextCommand{\ss}{PU}{\80\337}` …: `\ss` ß, `\i` ı, `\j` ȷ,
+`\o`, `\O`, `\ae`, `\AE`, `\oe`, `\OE`, `\l`, `\L`, `\dh`, `\th`, `\ng`, `\dj`, `\ij` and their capitals, `\SS` "SS",
+latex.ltx:564's `\aa` å) and so are its text symbols (78i r3: `\textendash` :1082 –, `\textemdash` —, `\textsection` :184
+§, `\textparagraph` ¶, `\textdagger` †, `\textdaggerdbl` ‡, `\textcopyright` ©, `\textregistered` ®, `\texttrademark`
+™, `\textsterling` £, `\textellipsis` …, the `\textquote*` and `\quote*base` quotes, `\guillemot*`/`\guillemet*`,
+`\guilsingl*`, `\textdegree` °, `\textbullet` •, `\textexclamdown`, `\textquestiondown`, with the kernel's names `\S`,
+`\P`, `\dag`, `\ddag`, `\copyright`, `\pounds` and hyperref.sty:416-418's `\ldots`, `\dots`; each `\string`s its
+character, which the utf8 input encoding makes active as the very command), `---`, `--`, `` !` ``, `` ?` `` are the
+dashes and inverted marks hyperref substitutes in the expanded string (hyperref.sty:620-623; r2 "AB, 2, , , …",
+"Pre--post---end", pdfinfo "A–B, §2, †, …", "Pre–post—end"), the text accents composed on the next character as the PU encoding composes them (`\"o` "ö";
+on `\i` and `\j` the dotted letter, puenc.def:172-264 `\DeclareTextCompositeCommand{\'}{PU}{\i}{\80\355}`, so
+`Mart\'{\i}nez` is "Martínez" and `\.{\i}` "i"), and the logos spelled (`\TeX`, `\LaTeX`: our logos are locked
+constructors, which `\pdfstringdef`'s `\def\TeX{TeX}` cannot reach). The expansion happens when the key is
+set, hyperref's own timing: `\hypersetup{pdftitle=\@title}` before `\title{…}` is the kernel's `\@title` as in the PDF
+("title" — `\@` then the letters), one after it is the title, and a class's `\hypersetup` inside its `\maketitle`
+(resphilosophica) sees its local definitions. Beyond hyperref: a `\and` in a PDF string is "; ", the separator of
+hyperref's own `pdfusetitle` author (:6255), where `\pdfstringdef` makes garbage of it (pdfinfo "Ann Able [t]cBob
+Baker"). The `\@pdf<key>` macros keep the value's tokens, as before (packages read them as text: nlctuserguide.sty's
+`author={\@pdfauthor}`). Repros sectioning-frontmatter/{hyperref_pdfinfo_expands_macros (red 60m),
+hyperref_pdfinfo_drops_notes_and_markup, hyperref_pdfinfo_text_symbols}; guards
+`perfect_kernel_batch78i::{hyperref_metadata_is_expanded, hyperref_metadata_drops_notes_and_markup,
+hyperref_metadata_text_symbols}`.
+
+### 825. An AMS-TeX paper's own style is read raw unless it builds on another style
+
+amstex.tex:1731 `\def\documentstyle#1{\W@{}\input #1.sty\relax}`. Perl's `\documentstyle` loads only a binding
+(AmSTeX.pool.ltxml:71 `notex => 1`) and falls back to amsppt (KNOWN_PERL_ERRORS #1051), so a paper's own style was
+never read: amams.sty (Annals of Mathematics; math0402285, math9806089) defines `\annalsline`, `\received`,
+`\startingpage` and a one-argument `\title`, which met amsppt's `\title … \endtitle` and read the whole paper as the
+title (Fatal:Mouth:EoF, 0 words); 1412.7214's phd.sty its `\ThesisTitle`, `\Committee` and `\Contents` (16 Errors, 97
+words). Ours (78i, amstex.rs): a style with no binding that the search path finds is read raw, as `\input` reads it —
+unless it `\input`s another style (`\input amsppt.sty`, `\input ams-p.sty`: `inputs_a_style`), when it is a variation on
+that style, whose changes are to internals of the style it builds on (gr-qc9507042's fic.sty redefines amsppt's
+`\titlebox@`, `\thethanks@`; read raw over the amsppt binding it ended in a Fatal pushback runaway and 16 Errors), or
+its parent is missing (math0406145's grubb-p.sty and 0803.2668's conm-p-mod.sty `\input ams-p.sty`, not in TeX Live):
+then the amsppt binding stands in, as before. amstex.tex's `\Invalid@` (:251-252), with which such a style marks the
+commands it disallows, is defined. amams.sty redefines `\ifdefined` (amams.sty:1099, a three-argument label test,
+as pre-e-TeX styles did); LaTeXML's own macros test with the kernel's `\lx@ifdefined` (etex.rs, `\let` to e-TeX's
+primitive: `\lx@latin@name`, the frontmatter stores' nulls, `\makeindex`, `\makeglossary`), which the redefinition
+cannot reach; `\loggingall` and `\tracingnone` keep the public `\ifdefined`, as latex.ltx:662/:679 and Perl
+plain_base.pool.ltxml:40/:56 do (78i r2; math0402285 3 → 0 Errors; repro parameter-conditional/kernel_ifdefined_survives_a_document_redefinition,
+guard `perfect_kernel_batch78i::kernel_ifdefined_survives_a_document_redefinition`). The errors these papers still
+raise are our emulation's, not the style's (`tex` converts math9906120 clean): amams's `\everydisplay{\lookforbreak}`
+(amams.sty:585-590) over amstex's `\multline` (math9906120: 43 "Use \Bbb only in math", 43 "Script ^/_ can only
+appear in math mode", Fatal:TooManyErrors, from JohanssonArchive.tex:250), its `\split` over amstex.tex internals the
+AmSTeX pool does not have (`\ifinany@`; math9806089's 9 split errors); SYNC_STATUS "AMS-TeX papers read through their
+own amams.sty". Repro
+amstex/amstex_local_style_is_read (with a stand-in amslocal.sty written from scratch: amams.sty states no licence);
+guard `perfect_kernel_batch78i::amstex_local_style_is_read`.

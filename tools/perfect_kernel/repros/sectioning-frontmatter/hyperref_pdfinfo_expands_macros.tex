@@ -3,7 +3,7 @@
 % `content="\mytitle"`; resphilosophica.cls:311/:324 (`\hypersetup{pdftitle=\@title}`, `pdfauthor=\authors`) put
 % `\@title` and `\authors` in every paper's metadata (side finding of batch 60m). SHARED (Perl hyperref.sty.ltxml:133
 % `ToString($value)`).
-% status:  RED (open)
+% status:  RED (60m) -> GREEN (78i: expanded as `\pdfstringdef` does when `\hypersetup` sets the key)
 % oracle:  pdflatex 0 errors; pdfinfo: Title "Real Title", Author "Ann Alpha and Bob Bravo"
 % engines: rust 60m: `<rdf content="\mytitle" property="dcterms:title"/>`, `content="\myauthors"`
 % expect:  0 errors; `<rdf about="" content="Real Title" property="dcterms:title"/>`, `content="Ann Alpha and Bob

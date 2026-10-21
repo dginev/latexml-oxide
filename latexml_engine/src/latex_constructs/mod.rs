@@ -463,6 +463,42 @@ pub fn out_of_line_size() -> (Dimension, Dimension, Dimension) {
   (Dimension::new(0), Dimension::new(0), Dimension::new(0))
 }
 
+/// Whether a `\footnote` here is a minipage's (latex.ltx:16323 `\def\@mpfn{mpfootnote}`): `\@mpfn` names another
+/// counter than `footnote`.
+pub(crate) fn minipage_footnotes() -> Result<bool> {
+  Ok(has_meaning(&T_CS!("\\@mpfn")) && Expand!(Tokens!(T_CS!("\\@mpfn"))).to_string() != "footnote")
+}
+
+/// The tag a note of `note_type` is given (`\lx@note`'s `[<tag>]`, the `given` one or none). latex.ltx:17649-17656
+/// `\footnote` steps the counter `\@mpfn` names and marks the note `\thempfn` (`\footnote[<n>]` sets that counter to
+/// `<n>`); a minipage makes them `mpfootnote` and `\thempfootnote` (:16323, the counter set to 0; sect12.rs
+/// `{minipage}`), so a minipage's footnotes are lettered "a", "b", … (:17638) apart from the page's, which go on where
+/// they were; the note stays a footnote. `\footnotemark` keeps to `footnote` (:17677), and so does `\footnotetext`,
+/// which LaTeX marks `\thempfn` (:17690-17699): in a minipage LaTeX numbers a mark and letters the text answering it
+/// (2304.06412's table, `\footnotemark[1]` "1", `\footnotetext[1]` "a"), a mismatch that would leave the two unpaired.
+/// Perl (latex_base.pool.ltxml:270-272) numbers a minipage's notes as the page's (KNOWN_PERL_ERRORS #1049). Witnesses
+/// 0802.0707, 2305.00493, 2309.00006; guards `perfect_kernel_batch78i::{minipage_footnotes_are_lettered,
+/// minipage_footnotetext_pairs_with_its_mark}`.
+pub(crate) fn footnote_tag<'a>(
+  note_type: &str,
+  given: Option<&'a Digested>,
+) -> Result<Option<Cow<'a, Digested>>> {
+  if note_type != "footnote" || !minipage_footnotes()? {
+    return Ok(given.map(Cow::Borrowed));
+  }
+  let mut tokens = TokenizeInternal!(r"\begingroup").unlist();
+  match given {
+    None => tokens.extend(TokenizeInternal!(r"\stepcounter\@mpfn").unlist()),
+    Some(number) => {
+      tokens.extend(TokenizeInternal!(r"\csname c@\@mpfn\endcsname").unlist());
+      tokens.extend(number.revert()?.unlist());
+      tokens.push(T_CS!("\\relax"));
+    },
+  }
+  tokens.extend(TokenizeInternal!(r"\thempfn\endgroup").unlist());
+  Ok(Some(Cow::Owned(digest(Tokens::new(tokens))?)))
+}
+
 pub fn make_note_tags(
   counter: &str,
   mark_opt: Option<&Digested>,
@@ -2672,6 +2708,7 @@ pub fn define_new_theorem(
   // because `thmset_str` is moved into `thmset_for_tags` below.
   let thmset_for_before = thmset_str.clone();
   let thmset_for_head_hooks = thmset_str.clone();
+  let thmset_for_restate = thmset_for_env.clone();
   let thmset_for_foot_hooks = thmset_str.clone();
   // `thmset_for_tags` and `counter_for_tags` are the last uses of
   // thmset_str and counter — move instead of clone.
@@ -2721,12 +2758,22 @@ pub fn define_new_theorem(
       digested.push(digest(Invocation!(T_CS!("\\label"), vec![label]))?);
     }
     // …and thm-restate's `restate=<name>` (thm-restate.sty:198-215, the same hook): the theorem is stored for
-    // `\<name>` as `{restatable}` stores it (thm_restate_sty.rs `\lx@thm@restate@store`)
+    // `\<name>` as `{restatable}` stores it (thm_restate_sty.rs `\lx@thm@restate@store`, with the theorem's other
+    // keys for the restated copy). The store reads the body that follows, so it is read from the input, not digested
+    // here.
     if let Some(Stored::Tokens(name)) = lookup_value("thmt_local_restate") {
       assign_value("thmt_local_restate", Stored::None, None);
-      digested.push(digest(Invocation!(T_CS!("\\lx@thm@restate@store"), vec![
-        name
-      ]))?);
+      let keys = match lookup_value("thmt_local_restate_keys") {
+        Some(Stored::Tokens(keys)) => keys,
+        _ => Tokens!(),
+      };
+      let env = Tokens::new(Explode!(&thmset_for_restate));
+      unread(Invocation!(T_CS!("\\lx@thm@restate@store"), vec![
+        env.clone(),
+        env,
+        name,
+        keys
+      ]));
     }
     Ok(digested)
   });
@@ -2779,15 +2826,40 @@ pub fn define_new_theorem(
         && has_meaning(&T_CS!("\\lx@thm@restate@store"))
       {
         assign_value("thmt_local_restate", Stored::Tokens(name), None);
+        let keys = thmuse
+          .as_ref()
+          .map(|u| u.restate_keys.clone())
+          .unwrap_or_default();
+        assign_value(
+          "thmt_local_restate_keys",
+          Stored::Tokens(Tokens::new(keys)),
+          None,
+        );
       }
+      // A starred restatement (thm_restate_sty.rs `\lx@thm@restate*`) is numbered as the theorem it restates
+      // (thm-restate.sty:130-140: `\the<env>` faked from the stored number, the counter not stepped), as
+      // `continues=` below numbers a theorem as the one it continues
+      let restated = match lookup_value("thmt_restate_number") {
+        Some(Stored::Tokens(number)) => {
+          assign_value("thmt_restate_number", Stored::None, None);
+          Some(number)
+        },
+        _ => None,
+      };
       // `continues=<label>` (thm-kv.sty:511-516 `\thmt@suspendcounter`): the theorem is numbered as the one it
       // continues — its number, in its tags and its title, is a reference to that label — and its counter does not
       // step
-      let suspended: Vec<Token> = match thmuse.as_ref().and_then(|u| u.continues.as_ref()) {
-        Some(continued) if !is_starred_for_props && !counter_for_tags.is_empty() => {
+      let continued = thmuse
+        .as_ref()
+        .and_then(|u| u.continues.as_ref())
+        .map(|continued| {
           let mut number = vec![T_CS!("\\ref"), T_BEGIN!()];
           number.extend(continued.unlist_ref().iter().copied());
           number.push(T_END!());
+          number
+        });
+      let suspended: Vec<Token> = match restated.map(|number| number.unlist()).or(continued) {
+        Some(number) if !is_starred_for_props && !counter_for_tags.is_empty() => {
           let mut toks = Vec::new();
           for name in [&counter_for_tags, &thmset_for_tags] {
             toks.extend([T_CS!("\\def"), T_CS!(s!("\\the{}", name)), T_BEGIN!()]);
@@ -2887,14 +2959,17 @@ pub fn define_new_theorem(
 /// every theorem's pre-head hook, :439-463): its note, the label it sets, the theorem it continues.
 struct ThmUse {
   /// The note in place of the argument (`\thmt@newoptarg`, expanded): empty when only `label=` is given.
-  note:      Vec<Token>,
+  note:         Vec<Token>,
   /// `label=<name>` (:485-487): a `\label` after the head (`\thmt@local@postheadhook`).
-  label:     Option<Tokens>,
+  label:        Option<Tokens>,
   /// `continues=<label>` (:511-516): the theorem continued, whose number this one takes.
-  continues: Option<Tokens>,
+  continues:    Option<Tokens>,
   /// thm-restate's `restate=[<keys>]<name>` (thm-restate.sty:198-215): the name the theorem is stored under for a
   /// later `\<name>`; the bracketed keys apply to the restated copy only.
-  restate:   Option<Tokens>,
+  restate:      Option<Tokens>,
+  /// The keys the restated copy is begun with (thm-restate.sty:217-229 `restate phase 2`): the theorem's other keys,
+  /// then the bracketed ones.
+  restate_keys: Vec<Token>,
 }
 
 /// thm-kv's `\thmt@garbleoptarg` (thm-kv.sty:439-463) over the keys it defines: `label` (:485-487), `name` (:488-496,
@@ -2957,7 +3032,18 @@ fn thmtools_use_keys(arg: &Tokens) -> Option<ThmUse> {
   let mut label = None;
   let mut continues = None;
   let mut restate = None;
+  let mut restate_keys: Vec<Token> = Vec::new();
+  let mut restate_extra: Vec<Token> = Vec::new();
   for (key, value) in items {
+    if key != "restate" {
+      if !restate_keys.is_empty() {
+        restate_keys.push(T_OTHER!(","));
+      }
+      restate_keys.extend(Explode!(&key));
+      restate_keys.extend([T_OTHER!("="), T_BEGIN!()]);
+      restate_keys.extend(value.iter().copied());
+      restate_keys.push(T_END!());
+    }
     match key.as_str() {
       "label" => {
         iskv = true;
@@ -3016,7 +3102,10 @@ fn thmtools_use_keys(arg: &Tokens) -> Option<ThmUse> {
               level == 0 && t.get_catcode() == Catcode::OTHER && t.to_string() == "]"
             });
             match close {
-              Some(close) => value[close + 1..].to_vec(),
+              Some(close) => {
+                restate_extra = value[1..close].to_vec();
+                value[close + 1..].to_vec()
+              },
               None => value,
             }
           },
@@ -3029,11 +3118,18 @@ fn thmtools_use_keys(arg: &Tokens) -> Option<ThmUse> {
       _ => {},
     }
   }
+  if !restate_extra.is_empty() {
+    if !restate_keys.is_empty() {
+      restate_keys.push(T_OTHER!(","));
+    }
+    restate_keys.extend(restate_extra);
+  }
   iskv.then_some(ThmUse {
     note,
     label,
     continues,
     restate,
+    restate_keys,
   })
 }
 

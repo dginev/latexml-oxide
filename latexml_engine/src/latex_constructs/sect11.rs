@@ -1470,11 +1470,11 @@ pub(crate) fn load() -> Result<()> {
   // does when no file is open — harmless.
   DefMacro!(
     "\\makeindex",
-    "\\ifdefined\\@indexfile\\else\\csname newwrite\\endcsname\\@indexfile\\fi"
+    "\\lx@ifdefined\\@indexfile\\else\\csname newwrite\\endcsname\\@indexfile\\fi"
   );
   DefMacro!(
     "\\makeglossary",
-    "\\ifdefined\\@glossaryfile\\else\\csname newwrite\\endcsname\\@glossaryfile\\fi"
+    "\\lx@ifdefined\\@glossaryfile\\else\\csname newwrite\\endcsname\\@glossaryfile\\fi"
   );
   // \printindex removed — not in Perl engine (defined in makeidx.sty.ltxml)
 

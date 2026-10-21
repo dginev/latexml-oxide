@@ -1061,9 +1061,9 @@ pub fn reroute_raw_class_stores(cls: &str) -> Result<()> {
         let null = if lookup_bool(&s!("lx_store_handed_{name}")) {
           s!("\\let\\{store}\\@empty")
         } else if lookup_bool(&s!("lx_store_unset_empty_{name}")) {
-          s!("\\ifdefined\\{store}\\else\\let\\{store}\\@empty\\fi")
+          s!("\\lx@ifdefined\\{store}\\else\\let\\{store}\\@empty\\fi")
         } else {
-          s!("\\ifdefined\\{store}\\else\\let\\{store}\\relax\\fi")
+          s!("\\lx@ifdefined\\{store}\\else\\let\\{store}\\relax\\fi")
         };
         nulls.extend(mouth::tokenize_internal(TeXString::assembled(null)).unlist());
       }
