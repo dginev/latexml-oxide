@@ -350,8 +350,9 @@ const VERBATIM_PRINTERS: &[(&str, &[bool])] = &[
 /// reference's or a citation's key (`\ref{\@x}` prints the label's number, review probe `ctx3`), and
 /// `\href{<url>}{<text>}` and `\hypertarget{<name>}{<text>}` print the text —, and never keyvals (options) nor a
 /// position keyword (`Position`, `OptionalPosition`: the `[t]` of `\begin{tabular}[t]`, base_parameter_types.rs). Every
-/// argument when its parameters cannot be matched to them.
-fn shown_arguments(w: &Whatsit) -> Vec<bool> {
+/// argument when its parameters cannot be matched to them. Also what `\textcircled` circles (sect13.rs
+/// `typeset_text`).
+pub(crate) fn shown_arguments(w: &Whatsit) -> Vec<bool> {
   let args = w.get_args();
   // (graphics.sty's `\@includegraphics` records its `graphic`, graphicx's `\@includegraphicx` its `path`; both the
   // image's `candidates`)

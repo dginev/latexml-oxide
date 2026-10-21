@@ -177,6 +177,10 @@ pub(crate) fn load() -> Result<()> {
   // label formats, separators and fonts (caption_sty.rs, caption3.sty:1661-1715), as latex.ltx's `\@makecaption` is
   // what caption.sty replaces (caption.sty:206). longtable's caption takes it too (caption.sty:1167).
   DefMacro!("\\lx@format@caption@@{}{}", r"\lx@format@title@@{#1}{#2}");
+  // A starred caption (`\caption*`, caption.sty:210-227; longtable's, longtable.sty:471-474) is its text alone, which
+  // the kernel leaves as written; caption formats it with the caption's fonts and text format, the label suppressed
+  // (caption_sty.rs `caption_star_format_tokens`).
+  DefMacro!("\\lx@format@scaption@@{}{}", "#2");
   DefMacro!(
     "\\@caption@@@{}{}{}",
     r"\@@add@caption@counters\lx@setfloatcapt{\@@toccaption{\lx@format@toctitle@@{#1}{\lx@toc@copy@text{#2}{#3}}}\lx@@caption{\lx@format@caption@@{#1}{#3}}}"

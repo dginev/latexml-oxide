@@ -5760,8 +5760,23 @@ fn fmt_px(v: f64) -> String {
 }
 
 /// Perl: %unicode_enclosed_alphanumerics table
-/// Maps single chars (0-9, a-z, A-Z) and numbers 10-20 to their circled Unicode equivalents.
+/// Maps single chars (0-9, a-z, A-Z) and numbers 10-20 to their circled Unicode equivalents; beyond Perl's table,
+/// the circled numbers 21-35 (U+3251-325F) and 36-50 (U+32B1-32BF) of Enclosed CJK Letters and Months, which Perl
+/// prints as "21⃝" (KNOWN_PERL_ERRORS #361).
 fn unicode_enclosed_alphanumeric(text: &str) -> Option<String> {
+  if let Ok(n) = text.parse::<u32>()
+    && text.bytes().all(|b| b.is_ascii_digit())
+    && !text.starts_with('0')
+  {
+    let ch = match n {
+      21..=35 => char::from_u32(0x3251 + (n - 21)),
+      36..=50 => char::from_u32(0x32B1 + (n - 36)),
+      _ => None,
+    };
+    if let Some(ch) = ch {
+      return Some(ch.to_string());
+    }
+  }
   let ch = match text {
     "0" => '\u{24EA}',
     "1" => '\u{2460}',

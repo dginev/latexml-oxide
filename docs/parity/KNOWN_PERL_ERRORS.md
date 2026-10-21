@@ -8177,9 +8177,9 @@ Rust (57y, DIVERGENCES #346): the itemize counts in `@item`. Its ids are the ker
 
 latex_constructs.pool.ltxml:5399 builds the circle from `ToString($arg)`, the argument's raw tokens: `\textcircled{\small{2}}` is "\small{2}⃝", and an enumitem label `\textcircled{\arabic*}` prints "\arabicenumi⃝" (enumitem.sty.ltxml:114-119 puts one `enumi` token for the star). `\textcircled` is a text accent (latex.ltx:10057, :14449-14450 `\UseTextAccent`) that typesets its argument; pdflatex prints a circled 2 and ①.
 
-Rust fix (57y): after leaving vertical mode (`\hmode@bgroup`, omsenc.def:62), the argument is digested in a group and the circle holds its text (`\small{2}` → ②, `\arabic{enumi}` → ①); the enclosed-alphanumeric table and the U+20DD fallback are unchanged. Residual: a box or math argument's text is its TeX reversion, so `\textcircled{\raisebox{-0.9pt}{1}}` still circles its source (RED `fonts-nfss/textcircled_of_a_box_circles_its_text`). Witness latex-via-exemplos (`label={\large\protect\textcircled{\normalsize\arabic*}}`).
+Rust fix (57y): after leaving vertical mode (`\hmode@bgroup`, omsenc.def:62), the argument is digested in a group and the circle holds its text (`\small{2}` → ②, `\arabic{enumi}` → ①); the enclosed-alphanumeric table and the U+20DD fallback are unchanged. A box or math argument's text was its TeX reversion, so `\textcircled{\raisebox{-0.9pt}{1}}` circled its source ("\raisebox{-0.9pt}{1}⃝", `$x$⃝`; the `\newcommand\circled[1]{\textcircled{\raisebox{-0.9pt}{#1}}}` idiom, 27 of the 30k sample, sel78k). Fixed 78l (sect13.rs `typeset_text`): the circle holds the text the argument typesets when that text is one run of characters — a box's string, a list's pieces, a plain formula's body (`\textcircled{$\cap$}`, 1401.5657), and a whatsit's one box-valued argument that it shows (base_utilities.rs `shown_arguments`: no Semiverbatim key, keyvals or position keyword; `\raisebox`, `\hbox`, `\mbox`, `\makebox[0pt][c]{2}`, `\fbox`: ①, ⓧ); a space-like whatsit (`isSpace`: `\phantom`, 2501.11185's padding) and a rule (`\rule`, `\strut`'s `\vrule`: dimensions only) show none, and the spacing around the text is trimmed (`\textcircled{\hspace{-1.1mm} \small 1}`, 2501.14912); a whatsit with no content argument gives its own string (`\label{q}` none; `\ref{s}` has no number while digesting: "\ref{s}⃝", pdflatex ①). Anything else keeps the source, as before (78l r2, a fail-safe: a 78l r1 draft circled `$\frac12$` and `$\sqrt{2}$` as ②, `$\overset{a}{b}$` as ⓑ, `$\mathbb{R}$` as Ⓡ and `$q_0$` as "q0⃝", 2508.14614): a whatsit inside a formula (a script, `\frac`, `\sqrt`, an accent, `\overset`, `\mathbb`, `\bm`), a whatsit with two box-valued arguments (`\scalebox{.8}{3}`, `\resizebox`, `\rotatebox`: the factor or angle is a box too; none in the 274 `\textcircled` papers of the 30k sample) and an environment body; pdflatex circles each. The enclosed-alphanumeric table goes past Perl's 20 to the circled numbers 21-35 (U+3251-325F) and 36-50 (U+32B1-32BF), as pdflatex circles them (Perl "21⃝"). Witnesses 2104.12292, 2110.15350 (the `\raisebox` idiom). Witness latex-via-exemplos (`label={\large\protect\textcircled{\normalsize\arabic*}}`).
 
-**Guard**: `perfect_kernel_batch56::textcircled_circles_its_typeset_argument` (repro `fonts-nfss/textcircled_circles_its_typeset_argument`).
+**Guard**: `perfect_kernel_batch56::textcircled_circles_its_typeset_argument` (repro `fonts-nfss/textcircled_circles_its_typeset_argument`); `perfect_kernel_batch78l::{textcircled_of_a_box_circles_its_text, textcircled_keeps_keys_out_of_the_circle, textcircled_ignores_spacing_and_phantoms, textcircled_of_a_formula_keeps_its_source, textcircled_rules_show_nothing_and_numbers_reach_fifty}` (repros `fonts-nfss/textcircled_of_a_box_circles_its_text`, `fonts-nfss/textcircled_of_a_formula_keeps_its_source`), `perfect_kernel_batch61::textcircled_argument_is_text_in_math` (`$\textcircled{$C$}_1$` is Ⓒ₁).
 
 ## 362. caption's `\ContinuedFloat` is a no-op
 
@@ -16904,3 +16904,21 @@ the block's level again. Perl's `\algocf@Noline` (algorithm2e.sty.ltxml:120) pus
 trigger: `\usepackage[noline]{algorithm2e}` `\SetKwBlock{Loop}{loop}{end}` `\begin{algorithm}\Loop{a\;}b\;\end{algorithm}`
 — pdflatex "end", "b;" at the left; Perl and Rust indent both. Open (SHARED; algorithm2e_sty.rs `\algocf@Noline` is
 Perl's). RED listings-algorithms/algorithm2e_noline_block_pops_its_indentation.
+
+## 1063. caption's `\caption*` takes none of caption's fonts
+
+caption.sty:210-227: `\caption*` is `\caption@star`, which sets `\caption@startrue` and makes the caption through the
+full `\caption@make`; with `\ifcaption@star` true it leaves out the label and its separator (caption3.sty:1688-1699)
+but sets the text in the caption's fonts (`font=`, then `textfont=`: `\caption@applyfont`, `\captiontextfont`, :1686,
+:1701) and text format (:1708). Perl's caption.sty.ltxml reads none of these keys (#795) and its starred caption is
+the bare text. Minimal trigger: `\usepackage[font=small,labelfont=bf,textfont=it]{caption}`,
+`\begin{figure}\caption*{Starred caption}\end{figure}` — pdflatex sets the text italic and small; Perl
+`<caption>Starred caption</caption>`. Rust before 78l the same (its `\@scaption` bypassed the caption formatting of
+OXIDIZED_DESIGN #617). Fixed 78l: `\@scaption` (and longtable's `\caption*`, which caption's `\LT@makecaption` formats
+too, caption.sty:1167) goes through the kernel hook `\lx@format@scaption@@{<type>}{<text>}` (sect09.rs, the text as
+written), which caption makes `caption_star_format_tokens` (caption_sty.rs): the text in a group with the type's
+`font=` and `textfont=` fonts and its `textformat=` (the `simple` one for an empty text), no label; with none set, the
+text as before; a sub-caption keeps its package's format. `\captionof*` reaches it through `\@scaption`. Probe
+`capstar.tex` (sel78k; 40 of the 30k sample use `\caption*` with caption font options, 187 `\caption*` at all). Repro
+captions-floats/caption_star_takes_the_caption_fonts; guards `perfect_kernel_batch78l::{caption_star_takes_the_caption_fonts,
+caption_star_takes_the_type_settings_everywhere}`.

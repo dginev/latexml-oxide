@@ -200,12 +200,14 @@ LoadDefinitions!({
   // "Table n:" (the `\@gobble` eats `\fnum@table`), no List of Tables line (`[]` empty); the table keeps the number its
   // begin stepped. Perl's `\lx@longtable@caption[]{}` (longtable.sty.ltxml:127) has no star and took `*` as the caption
   // ("Table 2: *", the text lost; KNOWN_PERL_ERRORS #363). Guard
-  // `perfect_kernel_batch77s::longtable_starred_caption_keeps_its_text`.
+  // `perfect_kernel_batch77s::longtable_starred_caption_keeps_its_text`. With caption loaded the text takes caption's
+  // fonts, as its `\LT@makecaption` makes every longtable caption (caption.sty:1167; `\lx@format@scaption@@`).
   DefMacro!("\\lx@longtable@caption",
     r"\@ifstar\lx@longtable@scaption\lx@longtable@caption@nostar");
   DefMacro!("\\lx@longtable@caption@nostar[]{}",
     r"\lx@longtable@caption@text{#1}{#2}\lx@longtable@caption@row");
-  DefMacro!("\\lx@longtable@scaption{}", r"\lx@longtable@caption@{}{#1}\lx@longtable@caption@row");
+  DefMacro!("\\lx@longtable@scaption{}",
+    r"\lx@longtable@caption@{}{\lx@format@scaption@@{table}{#1}}\lx@longtable@caption@row");
   DefMacro!("\\lx@longtable@caption@text{}{}",
     r"\lx@longtable@caption@{\lx@format@toctitle@@{table}{\lx@toc@copy@text{#1}{#2}}}{\lx@format@caption@@{table}{#2}}");
   DefPrimitive!("\\lx@longtable@caption@{}{}", sub[(toccap, cap)] {

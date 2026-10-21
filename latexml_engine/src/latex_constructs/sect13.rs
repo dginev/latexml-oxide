@@ -6,7 +6,7 @@
 use latexml_core::common::numeric_ops::UNITY_F64;
 
 use super::*;
-use crate::base_utilities::unitlength_sp;
+use crate::base_utilities::{shown_arguments, unitlength_sp};
 
 /// `\unitlength` in pt, to the sp: Perl's `picScale` multiplies the register
 /// (latex_constructs.pool.ltxml:4896-4921).
@@ -1347,7 +1347,11 @@ pub(crate) fn load() -> Result<()> {
     begin_mode("restricted_horizontal")?;
     let digested = digest(arg.clone())?;
     end_mode("restricted_horizontal")?;
-    let text = digested.to_string();
+    // the spacing around the text (`\hspace{-1.1mm} \small 1`, 2501.14912) is the circle's layout
+    let text = typeset_text(&digested, false)
+      .unwrap_or_else(|| digested.to_string())
+      .trim()
+      .to_string();
     let content = unicode_enclosed_alphanumeric(&text)
       .unwrap_or_else(|| format!("{}\u{20DD}", text));
     let in_math = lookup_bool_sym(pin!("IN_MATH"));
@@ -2314,6 +2318,92 @@ fn pic_float_arg(arg: Option<&Digested>) -> f64 {
   arg
     .map(|d| d.to_string().trim().parse().unwrap_or(0.0))
     .unwrap_or(0.0)
+}
+
+/// The text a digested `\textcircled` argument typesets, for the circle, or `None` when the circle cannot hold it
+/// as text — then the caller circles the argument's string, its TeX reversion (Perl's `ToString`, KNOWN_PERL_ERRORS
+/// #361): ugly but complete. A box gives its string and a list its pieces in order. A whatsit gives: nothing when it
+/// is space-like (Perl's `isSpace`: the `\phantom{0}` padding of 2501.11185, `\hspace`, `\kern`) or a rule
+/// (`\rule`, the `\vrule` of `\strut`: arguments that are all dimensions or key-values, no text); its formula's body
+/// when it is inline math (`\textcircled{$\cap$}`, 1401.5657); else the text of its one box-valued argument that it
+/// shows (base_utilities.rs `shown_arguments`: no key, keyvals or position keyword) — the content of a box constructor (`\raisebox{-0.9pt}{1}` the `1`, `\mbox`, `\hbox`,
+/// `\fbox`; the `\newcommand\circled[1]{\textcircled{\raisebox{-0.9pt}{#1}}}` idiom, 27 of the 30k sample, sel78k;
+/// 2104.12292, 2110.15350). `None` for anything whose text is not one run of characters: a whatsit inside a formula
+/// (a script, `\frac`, `\sqrt`, an accent, `\overset`, `\mathbb`: `$q_0$` circled as "q0" lost its subscript,
+/// 2508.14614), a whatsit with more than one box-valued argument (`\scalebox{.8}{3}`'s factor is a box too) and an
+/// environment body. A whatsit with no content argument gives its own string: none for `\label{q}`, the reversion
+/// for `\ref{s}` (whose number is not known while digesting) and `\ldots`. Repros:
+/// fonts-nfss/textcircled_of_a_box_circles_its_text, fonts-nfss/textcircled_of_a_formula_keeps_its_source.
+fn typeset_text(digested: &Digested, in_formula: bool) -> Option<String> {
+  match digested.data() {
+    DigestedData::List(list) => list
+      .borrow()
+      .boxes
+      .iter()
+      .map(|b| typeset_text(b, in_formula))
+      .collect(),
+    DigestedData::Whatsit(whatsit) => {
+      let whatsit = whatsit.borrow();
+      // a space-like whatsit (Perl's `isSpace`: `\phantom`, `\hphantom`, `\mathstrut`) shows no text
+      if whatsit.get_property_bool("isSpace") {
+        return Some(String::new());
+      }
+      // a script, a fraction, a root, an accent or a font switch in a formula is no run of characters
+      if in_formula {
+        return None;
+      }
+      if let Ok(Some(body)) = whatsit.get_body() {
+        // a formula's body is its text; an environment's is not
+        let is_formula = matches!(body.data(), DigestedData::List(list)
+          if list.borrow().mode == Some(TexMode::Math));
+        return if is_formula {
+          typeset_text(&body, true)
+        } else {
+          None
+        };
+      }
+      // the arguments it shows as text, by their parameter types: never a key (`\ref{s}`'s label), keyvals or a
+      // position keyword (`\makebox[0pt][c]{2}`'s `c`, 2501.11185)
+      let shown = shown_arguments(&whatsit);
+      let args = whatsit.get_args();
+      let present: Vec<(usize, &Digested)> = args
+        .iter()
+        .enumerate()
+        .filter_map(|(i, arg)| Some((i, arg.as_ref()?)))
+        .collect();
+      let is_box = |arg: &Digested| {
+        matches!(
+          arg.data(),
+          DigestedData::TBox(_) | DigestedData::List(_) | DigestedData::Whatsit(_)
+        )
+      };
+      // a rule (`\rule{1pt}{1pt}`, `\strut`'s `\vrule height…`): dimensions and key-values only, no text
+      if !present.is_empty()
+        && present.iter().all(|(_, arg)| {
+          matches!(
+            arg.data(),
+            DigestedData::RegisterValue(_) | DigestedData::KeyVals(_)
+          )
+        })
+      {
+        return Some(String::new());
+      }
+      let mut content = present
+        .iter()
+        .filter(|(i, arg)| is_box(arg) && shown.get(*i).copied().unwrap_or(true));
+      match (content.next(), content.next()) {
+        (Some((_, arg)), None) => typeset_text(arg, false),
+        // no content argument: the whatsit's own string (`\label{q}` none, `\ref{s}` its reversion)
+        (None, _) => Some(digested.to_string()),
+        _ => None,
+      }
+    },
+    DigestedData::RegisterValue(_) | DigestedData::KeyVals(_) | DigestedData::Comment(_) => {
+      Some(String::new())
+    },
+    DigestedData::TBox(_) => Some(digested.to_string()),
+    _ => None,
+  }
 }
 
 /// Perl `picProperties(pt => PairList(picScale(p1), picScale(p2),

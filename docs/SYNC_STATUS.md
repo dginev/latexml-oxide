@@ -419,8 +419,8 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
     `\AfterEndPreamble` flag).
   - *layout and lists*: RED `boxes-groups/rotatebox_starts_the_paragraph` (shared); RED `fonts-nfss/ulem_custom_mark_is_rendered`
     (41 of 30,079 2605 papers; the class mapping is a design call); RED `block-model/noindent_paragraph_in_a_minipage_takes_its_id`
-    (same defect as 58g's RED `noindent_paragraph_in_minipage_numbers_inside` — merge the two); RED
-    `fonts-nfss/textcircled_of_a_box_circles_its_text`; `list-structure/enumitem_ref_clears_the_parent_prefix`
+    (same defect as 58g's RED `noindent_paragraph_in_minipage_numbers_inside` — merge the two); ~~RED
+    `fonts-nfss/textcircled_of_a_box_circles_its_text`~~ GREEN since 78l (KPE #361); `list-structure/enumitem_ref_clears_the_parent_prefix`
     (enumitem.sty:551-556) GREEN since 77u (verified on int40c in 78a: "(a).i"); RED `list-structure/endtrivlist_after_a_heading_starts_a_paragraph` (61p review; OD #435
     residual); RED `string-mouth/verbatim_sty_starred_shows_visible_spaces` (verbatim.sty's `{verbatim*}` without its
     visible-space setup; SHARED); level-only `\setlist[1]` (re-verify after 57u's KPE #354); `\optc[x]` in a message prints `\optc [x]` (KPE #381
@@ -475,7 +475,7 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
     `\makeEmptyTable` demo, tabularray.tex:2859-2870); a math table without a colspec is sized before `evaluate=`/`expand=` run (RED `alignment-bindings/tblr_math_columns_follow_the_expanded_body`); custom `caption-tag`/`caption-sep`
     ("Quadro 2 —", tabularray-abnt); a long/tall table in a captioned `figure`/`subfigure` nests a `table`; document
     templates print as tabularray's own (tblr-extras head, `label=none`); a math table's `tex=` holds the reduction;
-    `\SetCell[c=…,r=…]` spans, `rownum`/`colnum`/`rowcount`/`colcount`; `cmd=`/font styles; the LoT line of a caption-less
+    ~~`\SetCell[c=…,r=…]` spans~~ (FIXED 78l, OD #834; `cell{i}{j}={r=…,c=…}` spans open), `rownum`/`colnum`/`rowcount`/`colcount`; `cmd=`/font styles; the LoT line of a caption-less
     long table. Settled (pdflatex errors too): `\caption{\url{…#1}}`, floats in minipages, `{l→}`.
   - *floats/captions*: RED `captions-floats/{two_captions_in_one_float_are_numbered_apart (KPE #396),
     subfig_subfloats_restart_in_each_figure, float_in_a_subfloat_row_keeps_the_parent_number (KPE #395 part),
@@ -5267,6 +5267,36 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (en dash in `dcterms:subject`), 2407.02379 (metadata macros expanded), 2407.14159 (empty creator triple, as Perl), 1805.03240
   and 2202.10894 (footnotes in a minipage / tcolorbox lettered a, b, as pdflatex; no text lost). Binding nets (int49a)
   136/136, 0 worse than int48a.
+- **78l** (quality batch 12, the sel78k selection study's items 4, 7, 8; r1-r2; guards `perfect_kernel_batch78l::*`, 9,
+  each RED on int49a or on 78l r1; OD #834, KPE #1063, KPE #361 updated). (1) `\textcircled` circles the text its
+  argument typesets when that is one run of characters (sect13.rs `typeset_text`: a box's string, a list's pieces, a
+  plain formula's body, a whatsit's one shown box-valued argument by base_utilities.rs `shown_arguments`, nothing for
+  an `isSpace` whatsit or a rule, the spacing around it trimmed): the `\textcircled{\raisebox{-0.9pt}{1}}` idiom is ①,
+  `\textcircled{$\cap$}` ∩⃝, where int49a and Perl printed "\raisebox{-0.9pt}{1}⃝" (2104.12292, 2110.15350, 2207.02277's
+  426 ⓚ, 1401.5657, 2501.11185's `\phantom{0}` padding, 2501.14912's `\hspace` spacing); anything else keeps its source
+  as before (r2 fail-safe, after r1 circled `$\frac12$` as ② and `$q_0$` as "q0⃝", 2508.14614): a whatsit in a formula,
+  two box-valued arguments (`\scalebox{.8}{3}`), an environment; the circled numbers reach 50 (U+3251-325F,
+  U+32B1-32BF). Residuals: a `\ref` keeps its reversion, a structured formula or `\scalebox` its source.
+  (2) tabularray's `\SetCell[c=<n>,r=<m>]` spans (tabularray_sty.rs `tblr_span_cells`, the body read whole as
+  tabularray's `+b`), a `\SetCell` at a cell's start, after any row-level rule command (`\hline`, `\cline{…}`,
+  `\SetRow{…}`, a row end's `[…]`/`*`; r2, 2308.16907's 11, 2507.01654, 2502.18449, 2404.12789, 2601.16161,
+  2604.10925, 2606.09108): `r=` the cell's rowspan (as `\multirow`), `c=` the covered separators made the primitive
+  `\span`, padded when the row ends first (2305.00635), so the columns' rules stay; `halign` and the other inner keys
+  stay unrendered (a `\multicolumn` dropped rules: 2408.02133, 2403.06461); open: `cell{i}{j}={r=,c=}` spans,
+  `\SetCells`, a row span over a non-empty cell below, a math table's `tex=` after a span. (3) `\caption*` (and
+  longtable's) takes caption's `font=`/`textfont=`/`textformat=` through the kernel hook `\lx@format@scaption@@`
+  (caption_sty.rs `caption_star_format_tokens`), no label (KPE #1063). r1 A/B (release 78l vs int49a, int49a dumps,
+  1,110 papers: every census `\textcircled` paper 274, every tblr-family paper 152 incl. all 25 `\SetCell`/`\SetCells`
+  callers, the 187 `\caption*` papers of the 30k + a seeded 400 caption papers, 100 random controls; counted per
+  pool): E 3,467 → 3,467, F 8 → 8, W 18,022 → 18,022, 0 worse; 62 distinct papers changed, all classified — 30 circled
+  texts, 10 tblr spans, 22 starred-caption fonts (incl. 2112.14209's `font=normalsize` `\caption*` in a `\scriptsize`
+  table, now 100 % as pdflatex, and 1511.03137 whitespace only); random controls 0 changed; words −22 (2501.14912: its
+  "\raisebox{-0.8pt}{{\hskip-3.1298pt 1}}⃝" source tokens become ①). r2 A/B (release r2 vs r1 and vs int49a, the same 1,110 papers, int49a dumps): E 3,467 → 3,467,
+  F 8 → 8, W 18,022 → 18,022, 0 worse; r1 → r2 10 distinct papers changed, all classified — 8 tblr papers gain spans
+  after a row rule (2305.00635, 2308.16907, 2311.09782, 2502.18449, 2507.01654, 2601.16161, 2604.10925, 2606.09108:
+  53 stray empty cells fewer, words equal), 2 circles back to their source (2508.14614's `$q_{0}$⃝`, 2606.27167's
+  `$\bm{e}$⃝`, where r1 printed "q0⃝" and a plain ⓔ); int49a → r2 66 distinct papers changed (r1's 62 less those 2, plus the 6
+  new span papers), random controls 0.
 - **78k** (quality batch 11, the sel78k selection study's items 1, 2, 3, 5, 6; guards `perfect_kernel_batch78k::*`, 11;
   OD #829-831, KPE #1056-1062; quality ledger #101 BIBENTRY closed, the study's new rows THMTOOLS-NAME, ALG2E-END,
   FOOTMISC-SYMBOL and NATBIB-CITETEXT closed). (1) thmtools: a `\declaretheorem` without `name=` is named

@@ -1628,8 +1628,8 @@ fn scanned_class_options_naming_macros_stay_inert() {
 /// 62a (stopped full-arXiv run 329): `\textcircled`'s argument is typeset in a box (omsenc.def:62-64 `\ooalign`'s
 /// `\hbox`), restricted horizontal even in math, so in `$\textcircled{$C$}_1$` the inner `$` opens a formula. Digested
 /// in the surrounding math mode, it closed the outer one and the `_1` raised "Script _ can only appear in math mode"
-/// (1009.5713, 53 errors). latex: two circled C₁, C₂; Perl is clean (it circles the raw tokens). The circled text
-/// "$C$" (Perl's too) is a pinned residual, not the target.
+/// (1009.5713, 53 errors). latex: two circled C₁, C₂; Perl is clean (it circles the raw tokens). The circled text is
+/// the formula's, Ⓒ (78l, sect13.rs `typeset_text`; before, "$C$⃝" as Perl's, KNOWN_PERL_ERRORS #361).
 #[test]
 fn textcircled_argument_is_text_in_math() {
   let xml = assert_elements(
@@ -1645,7 +1645,7 @@ glue $\textcircled{$C$}_1$ and $\textcircled{$C$}_2$ along.
     &xml,
     "Math",
     &[r#"xml:id="p1.m1""#],
-    r#"<Math mode="inline" tex="\textcircled{$C$}_{1}" text="circled-$C$ _ 1" xml:id="p1.m1"><XMath><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="circled-$C$" role="UNKNOWN">$C$⃝</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math>"#,
+    r#"<Math mode="inline" tex="\textcircled{$C$}_{1}" text="circled-C _ 1" xml:id="p1.m1"><XMath><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="circled-C" role="UNKNOWN">Ⓒ</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math>"#,
   );
 }
 

@@ -13318,7 +13318,8 @@ boxes) is not a route either engine can take.
   cell nodes to draw on); siunitx's `S`/`s` columns are centered columns (their `\TblrNum`/`\TblrUnit` cell
   formatting, :8416-8425, is not applied).
 
-Not modelled: cell/row/column styles (`cell{…}={…}`, `row{…}`, fonts, colors, `cmd=`), `\SetCell[c=…,r=…]` spans,
+Not modelled: cell/row/column styles (`cell{…}={…}` incl. its spans, `row{…}`, fonts, colors, `cmd=`; `\SetCell[c=…,r=…]`
+spans since 78l, #834),
 `rowhead`/`rowfoot` repetition, the `rownum`/`colnum`/`rowcount`/`colcount` counters, `evaluate=`, the List of Tables
 line without text of a table with no float of its own (a caption-less long table). Witnesses: the tabularray manual
 (26 errors before 57co → 7 → 1 after 57cp), panda, pegmatch, circularglyphs, PixelArtTikz, tblr-extras,
@@ -18751,7 +18752,7 @@ text's first `\\` (`<ltx:break/>`) and the tag gets none. Not carried: sub-capti
 (subcaption_sty.rs, subfig_sty.rs; the general keys do not reach them, nor the `[sub]`/`[subfloat]` separator);
 `\captionsetup[longtable]{…}` (caption's `longtable` type, caption.sty:1167) is not read for longtable's captions,
 which take the `table` settings ("Table 1." where pdflatex prints "Table 1 LT one." for `labelsep=space`);
-`\caption*` takes no font and no text format (`font=`, `textfont=`, `textformat=`); `\caption{{}}` counts as empty
+`\caption*` takes its fonts and text format since 78l (`\lx@format@scaption@@`, KNOWN_PERL_ERRORS #1063); `\caption{{}}` counts as empty
 (the kernel's label hoist, sect09.rs `\@hack@caption@`'s delimited read, strips the group; pdflatex "Figure 1:");
 the relative sizes `smaller`/`larger`, the spacing fonts and `hypersetup` are no fonts here, and the layout keys
 (`format`, `justification`, margins, `singlelinecheck`) stay stored and unread. Perl's binding reads none of the keys
@@ -23022,3 +23023,32 @@ starless form stores the entries for `\bibentry` and builds the list where it st
 page differs; the starred form (followed by a `\bibliography`) builds none, so one list stands as in the PDF. Repro
 index-bib/bibentry_nobibliography_keeps_the_list_its_citations_resolve_to; guard
 `perfect_kernel_batch78k::bibentry_nobibliography_keeps_the_list_its_citations_resolve_to`.
+
+### 834. tabularray's `\SetCell[c=<n>,r=<m>]` spans columns and rows
+
+tabularray.sty:2542-2615: `\SetCell[<outer>]{<inner>}` sets a cell's `r=`/`c=` span (`cell/outer` keys, :2611-2615) and
+its style (`cell/inner`, :2617-2642); the author leaves the covered cells empty and tabularray typesets the spanned cell
+over them. Perl's ar5iv stub maps `tblr` to `tabular` and has no `\SetCell`; ours had it as a no-op (#384), so "Wide"
+(`c=2`) sat in one cell beside a stray empty `<td/>` and "Tall" (`r=2`) spanned no row. Ours (78l, tabularray_sty.rs
+`tblr_span_cells`): `\lx@tblr@env` reads the table body whole, as tabularray's `+b` argument holds it (:3463; before,
+only for `evaluate=`/`expand=`), and when it holds a `\SetCell` at a cell's start, after any row-level rule command, at
+the body's own level (tabularray's extractor takes every table command at a cell's start, with its `[…]`/`{…}`
+arguments, among the cell's own tokens unexpanded, :3770-3860 — `\hline`, `\hline[1pt]`, `\cline{1-2}`, `\midrule`,
+`\cmidrule[…](lr){…}`, `\SetRow{…}`, `\SetHline`, …; the `*` and `[<space>]` of the row end before it, `\\[2pt]`;
+2308.16907's 11 `\hline \SetCell`, 2507.01654, 2305.00635, 2502.18449, 2404.12789, 2601.16161, 2604.10925, 2606.09108, a 78l r1
+draft taking only a first-token `\SetCell`; never one in braces or in a cell's environment), rewrites that cell (a body without one is put back as read): `r=<m>` becomes `\lx@tblr@cell@span{<m>}`, the row span `\multirow` sets (multirow_sty.rs
+`\lx@multirow@setup`), and `c=<n>` turns the `n-1` column separators after the cell's text into the primitive `\span`
+(`\lx@span`, as `\multispan` spans), so the cell keeps its columns' templates — their rules and the first one's
+alignment, as tabularray's spanned cell keeps the first column's `halign`. A covered cell's text, if the author wrote
+any, stays in the spanned cell (tabularray hides it; authored content is kept, FIDELITY_CHARTER §2). The inner keys stay
+unrendered, `halign` (`l`, `c`, `r`, `halign=`) included: a `\multicolumn{<n>}{<halign>}` would replace the columns'
+templates and drop their rules, which tabularray draws apart from the cell (`colspec={Q[l]|l}` with
+`\SetCell[c=1]{c}`, 2408.02133; `\SetCell{c, gray9}` in a `c |` column, 2403.06461; both lost a `border` in a 78l
+draft), so `\SetCell[c=2]{c}` over `l` columns is left-aligned where pdflatex centres it. `\SetCells` (every cell,
+:2510) and the inner spec's `cell{i}{j}={r=…,c=…}{…}` spans are not modelled. Residuals: a row span over a cell below
+that holds text is not applied — the cell below keeps its own cell and the spanned one spans no row (`\SetCell[r=2]{c}
+T & … \\ Below & …`, where tabularray hides "Below" under "T"; the text stays, FIDELITY_CHARTER §2); a math table's
+`tex=` reverts a spanned row with its `\span`s as `\hfil\hfil` (`\SetCell[c=2]{c} mx & \\` in a `$…$` tblr:
+"mx\hfil\hfil\\"). Probe `tblr.tex` (sel78k; 25 sample papers call `\SetCell`/`\SetCells`); 78l review probes `tb.tex`,
+`tb2.tex`. Repros alignment-bindings/tblr_setcell_spans_columns_and_rows, alignment-bindings/tblr_setcell_after_a_row_rule_spans;
+guards `perfect_kernel_batch78l::{tblr_setcell_spans_columns_and_rows, tblr_setcell_after_a_row_rule_spans}`.

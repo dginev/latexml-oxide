@@ -1,0 +1,21 @@
+% tabularray takes every table command at a cell's start before the cell text (tabularray.sty:3775-3860
+% `\__tblr_extract_table_commands:N`), so a `\SetCell` after `\hline`, `\hline[1pt]`, `\cline{1-2}`, `\SetRow{gray9}`
+% or a row end's `[<space>]`/`*` still spans. The 78l r1 body pass (`tblr_span_cells`) took only a `\SetCell` that was
+% the cell's first token: "T" spanned no row, "W2"/"W3"/"W4" no columns, each beside a stray empty <td/>.
+% witness: 2308.16907 (11 \hline \SetCell), 2507.01654, 2305.00635, 2502.18449, 2404.12789, 2601.16161, 2604.10925,
+%   2606.09108; 78l review probe tb.tex
+% oracle:  pdflatex 0 errors; "T" over rows 1-2, "W"/"W2"/"W3" over columns 1-2, "W4" over the row
+% engines: rust 78l r1 = 0 errors, only "W" spans; rust int49a and perl (ar5iv stub) no spans
+% expect:  0 errors; "T" rowspan="2", "W", "W2", "W3" colspan="2", "W4" colspan="3", no empty cell
+% status:  RED (78l r1) -> GREEN (78l r2)
+\documentclass{article}
+\usepackage{tabularray,xcolor}
+\begin{document}
+\begin{tblr}{colspec={|c|c|c|}}
+\hline \SetCell[r=2]{c} T & A & B\\
+ & C & D\\
+\hline
+\SetCell[c=2]{c} W & & E\\ \hline[1pt] \SetCell[c=2]{c} W2 & & F\\* \SetCell[c=2]{c} W3 & & G\\
+\cline{1-2} \SetRow{gray9} \SetCell[c=3]{c} W4 & & \\
+\end{tblr}
+\end{document}

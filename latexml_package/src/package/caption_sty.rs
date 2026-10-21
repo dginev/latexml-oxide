@@ -581,8 +581,11 @@ LoadDefinitions!({
   DefMacro!("\\caption",
     r"\lx@donecaptiontrue\@ifundefined{@captype}{\maybe@@generic@caption}{\@ifstar{\@scaption}{\expandafter\@dblarg\expandafter{\expandafter\@caption\expandafter{\@captype}}}}"
   );
-  // caption.sty:213-235: the starred caption is made through `\caption@setfloatcapt` too.
-  DefMacro!("\\@scaption{}", "\\lx@setfloatcapt{\\lx@@caption{#1}}");
+  // caption.sty:213-235: the starred caption is made through `\caption@setfloatcapt` too, and by the full
+  // `\caption@make` with the label suppressed (`\ifcaption@star`, caption3.sty:1686-1715): the caption's fonts and
+  // text format apply to its text (`\lx@format@scaption@@`).
+  DefMacro!("\\@scaption{}",
+    "\\lx@setfloatcapt{\\lx@@caption{\\expandafter\\lx@format@scaption@@\\expandafter{\\@captype}{#1}}}");
 
   // \captionof — fake a caption in any context.
   //
@@ -994,6 +997,7 @@ LoadDefinitions!({
   // (`caption_format_tokens`). Perl's binding stores them and reads none (caption.sty.ltxml:62-68; KNOWN_PERL_ERRORS
   // #795), so `labelsep=period`, `name=Fig.`, `labelformat=parens`, `labelfont=bf` made no difference.
   DefMacro!("\\lx@format@caption@@{}{}", sub[(ty, text)] { caption_format_tokens(ty, text) });
+  DefMacro!("\\lx@format@scaption@@{}{}", sub[(ty, text)] { caption_star_format_tokens(ty, text) });
   // caption3.sty:1468-1472 `\caption@fnum`: the label format's name argument is `\@nameuse{<type>name}`, empty when
   // the type has none.
   // The title takes the caption's text as caption3 does, `\long` (`\newcommand\caption@@make[2]`, caption3.sty:1488): a
@@ -1433,19 +1437,7 @@ fn caption_format_tokens(ty: Tokens, text: Tokens) -> Result<Tokens> {
       braced(&mut tokens, separator_cs);
     }
   }
-  let text = match text_format.filter(|_| !passthrough) {
-    Some(f) if f == "empty" => caption_labels_only(text),
-    Some(f) if is_defined(&s!("\\caption@textformat@{f}")) => {
-      let mut wrapped = vec![T_CS!(&s!("\\caption@textformat@{f}"))];
-      braced(&mut wrapped, text.unlist());
-      Tokens::new(wrapped)
-    },
-    Some(f) => {
-      Error!("undefined", &f, &s!("Undefined text format `{f}'"));
-      text
-    },
-    None => text,
-  };
+  let text = caption_text_format(text, text_format.filter(|_| !passthrough))?;
   tokens.push(T_CS!("\\lx@format@title@@"));
   braced(&mut tokens, ty.unlist());
   line_break.extend(text.unlist());
@@ -1453,6 +1445,54 @@ fn caption_format_tokens(ty: Tokens, text: Tokens) -> Result<Tokens> {
   if !passthrough {
     tokens.push(T_CS!("\\endgroup"));
   }
+  Ok(Tokens::new(tokens))
+}
+
+/// A caption's text in its text format (`textformat=`, caption3.sty:1708 `\caption@textformat{#2}`; `empty` keeps
+/// only its labels).
+fn caption_text_format(text: Tokens, text_format: Option<String>) -> Result<Tokens> {
+  Ok(match text_format {
+    Some(f) if f == "empty" => caption_labels_only(text),
+    Some(f) if is_defined(&s!("\\caption@textformat@{f}")) => {
+      let mut wrapped = vec![T_CS!(&s!("\\caption@textformat@{f}")), T_BEGIN!()];
+      wrapped.extend(text.unlist());
+      wrapped.push(T_END!());
+      Tokens::new(wrapped)
+    },
+    Some(f) => {
+      Error!("undefined", &f, &s!("Undefined text format `{f}'"));
+      text
+    },
+    None => text,
+  })
+}
+
+/// A starred caption as caption formats it: caption.sty:210-227 `\caption@star` makes it through the full
+/// `\caption@make` with `\ifcaption@star` true, which leaves out the label and its separator (caption3.sty:1688-1699)
+/// and sets the text in the caption's fonts (`font=` then `textfont=`, `\caption@applyfont` and `\captiontextfont`,
+/// :1686, :1701) and its text format (`textformat=`, the `simple` one for an empty text, :1680-1683). With none of
+/// them set, the text as written (the kernel's `\lx@format@scaption@@`); a sub-caption keeps its package's format, as
+/// in [`caption_format_tokens`]. Probe `capstar.tex` (sel78k, `[font=small,labelfont=bf,textfont=it]`: the starred
+/// caption italic and small, as pdflatex sets it); guard `perfect_kernel_batch78l::caption_star_takes_the_caption_fonts`.
+fn caption_star_format_tokens(ty: Tokens, text: Tokens) -> Result<Tokens> {
+  let ty_name = ty.to_string().trim().to_string();
+  let hosted = lookup_bool("lx@caption@hosted");
+  if ty_name.is_empty() || (ty_name.starts_with("sub") && !hosted) {
+    return Ok(text);
+  }
+  let get = |key: &str| caption_setting(&ty_name, key);
+  let (font, text_font) = (get("font"), get("textfont"));
+  let text_format =
+    get("textformat").filter(|f| f != "simple" && f != "default" && !caption_text_is_empty(&text));
+  if font.is_none() && text_font.is_none() && text_format.is_none() {
+    return Ok(text);
+  }
+  let mut tokens = vec![T_BEGIN!()];
+  for spec in [font, text_font].iter().flatten() {
+    tokens.extend(caption_font_tokens(spec)?);
+  }
+  tokens.extend(caption_text_format(text, text_format)?.unlist());
+  tokens.push(T_END!());
   Ok(Tokens::new(tokens))
 }
 
