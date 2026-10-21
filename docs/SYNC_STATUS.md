@@ -5404,6 +5404,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   after normalising visibility and rustfmt. Inits 0/0; `comm -3` against the int48a dumps is 0 lines for latex, plain
   and texlive.version. nextest 6671/6671, the same count as int48a. The 40-paper `feature:author_marks` census sample
   (seed 114) gives byte-identical XML against int48a.
+  **Integration (int50, split114 squashed 2dcd4588f1 onto int49; binary int50a):** int49's one changed line of the old file
+  (78i's `\lx@ifdefined` in `\lx@latin@name`) carried to `base_utilities/defs/tags_refnums.rs:242`; the pure-move check re-run
+  by the main session (only-old 0, only-new 0). Gates int50a: nextest 6688/6688 + cortex 10/10, clippy/rustdoc clean, inits
+  0/0, dump diff vs int49a empty. A/B (297 of 298: 200 census `feature:author_*` + 97 mixed-class) int49a vs int50a: every XML
+  byte-identical, E 40 = 40, F 0 = 0. Binding nets (int50a) 136/136, 0 worse than int49a.
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
   parts draw, as Unicode's IPA letter, cross-checked against tipauni.sty; the `""`/`||` ligatures ˌ ǁ), so its input
