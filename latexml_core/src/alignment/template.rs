@@ -445,6 +445,12 @@ impl Template {
 /// empty (`… \nonumber \\ && \tag{27}`); stripped with the other `_` attributes at finalization.
 pub const TAGGED_ROW_ATTRIBUTE: &str = "_tagged";
 
+/// The property a math alignment's row carries when it prints a number that must survive though its cells are empty:
+/// latex.ltx's eqnarray number on a row of its own under an unnumbered row (`x &=& y \cr \end{eqnarray}`, the
+/// `\@@eqncr` of the end), which `rearrange_eqnarray` joins to the equation above. Normalization keeps such a row; it
+/// is stripped with the other `_` attributes at finalization.
+pub const NUMBER_ROW_PROPERTY: &str = "_number_row";
+
 #[cfg(test)]
 mod tests {
   use super::*;

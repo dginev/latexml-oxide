@@ -1,0 +1,13 @@
+% witness: none (natbib.sty:272-274; the review of 78n r1); revtex 4.1/4.2 papers set the level at \thr@@ (1808.00247)
+% oracle:  pdflatex 0 errors; "Merge level 2." (\ProcessOptions in declaration order: mcite sets 1, merge raises it to 2)
+% engines: rust (78n r1) = "Merge level 2." (merge set outright: equal here, as LaTeX's option order never lowers it); int51a "Merge level 0." (no merge options); Perl 0.8.8 no merging
+% expect:  0 errors; "Merge level 2."
+% status:  GREEN (78n r1) -> GREEN (78n r2: merge and elide raise the level only, as natbib.sty:273-274)
+\documentclass{article}
+\usepackage[merge,mcite]{natbib}
+\makeatletter
+\edef\mergelevel{\number\NAT@merge}
+\makeatother
+\begin{document}
+Merge level \mergelevel.
+\end{document}

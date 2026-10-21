@@ -1,6 +1,10 @@
 use std::{collections::VecDeque, str::FromStr};
 
-use super::{Alignment, cell::Cell, template::Align};
+use super::{
+  Alignment,
+  cell::Cell,
+  template::{self, Align},
+};
 use crate::{
   BoxOps, Tokens,
   common::{
@@ -409,7 +413,11 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
     // A row the author tagged is not empty: its tag is its content. Perl prunes the empty last row with its tag
     // (KNOWN_PERL_ERRORS #682, surpass OD #591) — Scientific Word's `… \nonumber \\ && \TCItag{27}`, amsmath's
     // `\\ && \tag{27}`, where pdflatex prints (27) on that row (witness nlin0106009).
-    if prunable && row.has_explicit_tags() {
+    // So is a row whose number prints on a row of its own (`template::NUMBER_ROW_PROPERTY`: eqnarray's
+    // `x &=& y \cr \end{eqnarray}`, 0708.0012).
+    if prunable
+      && (row.has_explicit_tags() || row.properties.contains_key(template::NUMBER_ROW_PROPERTY))
+    {
       prunable = false;
     }
     keep[i] = !prunable;

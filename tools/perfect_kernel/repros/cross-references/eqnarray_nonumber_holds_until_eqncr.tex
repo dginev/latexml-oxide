@@ -1,0 +1,21 @@
+% witness: arXiv 2112.13115 (eqnarray numbers one ahead of the PDF's from its (32)); the review's probe on 78n r2
+% oracle:  pdflatex 0 errors; "Refs 1, 1, 2, 2, 3." (latex.ltx:15775 \nonumber is \global\@eqnswfalse; :15795 only \@@eqncr tests and resets \if@eqnsw, a row ended by \cr leaves it, so a \nonumber in a \cr row unnumbers the next \\ row too)
+% engines: rust (78n r2) = c=d (1), e=f (2), m=n (3), the equation (4), d left on its unnumbered row; int52a numbers the \cr rows too; Perl 0.8.8 numbers every row without \nonumber
+% expect:  0 errors; only e=f (1), m=n (2) and the equation (3) numbered; a, b on (1), c, d on (2)
+% status:  RED (78n r2) -> GREEN (78n r3, OXIDIZED_DESIGN_DIVERGENCES #847)
+\documentclass{article}
+\begin{document}
+\begin{eqnarray}
+a &=& b \nonumber \cr
+c &=& d \label{a} \\
+e &=& f \label{b}
+\end{eqnarray}
+\begin{eqnarray}
+g &=& h \label{c} \nonumber \cr
+i &=& j \cr
+k &=& l \label{d} \nonumber \\
+m &=& n
+\end{eqnarray}
+\begin{equation} u = v \label{e} \end{equation}
+Refs \ref{a}, \ref{b}, \ref{c}, \ref{d}, \ref{e}.
+\end{document}

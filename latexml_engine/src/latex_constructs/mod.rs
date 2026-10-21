@@ -217,7 +217,7 @@ fn is_plain_definition_source(locator: Locator) -> bool {
 ///     it to bypass any `<cs>:locked` guard installed on plain-pool CSes (Rust-specific lock
 ///     mechanism not present in Perl). False when the CS was undefined (no prior locator → no lock
 ///     to bypass).
-fn is_definable_latex(cs: &Token) -> Result<(bool, bool)> {
+pub fn is_definable_latex(cs: &Token) -> Result<(bool, bool)> {
   if is_definable(cs) {
     return Ok((true, false));
   }
@@ -2032,14 +2032,15 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
   use crate::base_xmath::{equationgroup_join_cols, equationgroup_join_rows};
 
   struct EqRow {
-    node:     Node,
-    cols:     Vec<Node>,
-    has_l:    bool,
-    has_m:    bool,
-    has_r:    bool,
-    numbered: bool,
-    labelled: bool,
-    tagged:   bool,
+    node:             Node,
+    cols:             Vec<Node>,
+    has_l:            bool,
+    has_m:            bool,
+    has_r:            bool,
+    numbered:         bool,
+    labelled:         bool,
+    tagged:           bool,
+    unnumbered_eqncr: bool,
   }
 
   // Scan the equations (rows). Perl reads the eqnarray's three columns; an `\IEEEeqnarray` has as many as its
@@ -2084,6 +2085,11 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
     let labelled = rownode.get_attribute("labels").is_some();
     // a row its author tagged (`… \nonumber \\ && \TCItag{27}`; the alignment's `_tagged` row, `Template::has_explicit_tags`)
     let tagged = rownode.get_attribute(TAGGED_ROW_ATTRIBUTE).is_some();
+    let mut rownode = rownode;
+    let unnumbered_eqncr = rownode
+      .get_attribute(UNNUMBERED_EQNCR_ROW_ATTRIBUTE)
+      .is_some();
+    let _ = rownode.remove_attribute(UNNUMBERED_EQNCR_ROW_ATTRIBUTE);
     rows.push(EqRow {
       node: rownode,
       cols: cells,
@@ -2093,7 +2099,35 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
       numbered,
       labelled,
       tagged,
+      unnumbered_eqncr,
     });
+  }
+  // Every `\label` names the number the next printing `\@@eqncr` prints ([`eqnarray_eqncr_numbering`]): an unnumbered
+  // row's labels move to the next numbered row, and stay when none follows (an eqnarray* row, a trailing `\nonumber`
+  // row: LaTeX's `\ref` names the counter's next value, which no row here prints, so our `\ref` prints a wrong
+  // number — the group's, a section's, or a raw id — with no diagnostic; SYNC row "eqnarray label with no numbered row
+  // after it", 1303.3431's appa3).
+  let mut pending: Vec<usize> = Vec::new();
+  for index in 0..rows.len() {
+    if rows[index].numbered && !pending.is_empty() {
+      let mut carried: Vec<String> = Vec::new();
+      for from in pending.drain(..) {
+        let row = &mut rows[from];
+        if let Some(labels) = row.node.get_attribute("labels") {
+          carried.push(labels);
+        }
+        let _ = row.node.remove_attribute("labels");
+        row.labelled = false;
+      }
+      let row = &mut rows[index];
+      if let Some(own) = row.node.get_attribute("labels") {
+        carried.push(own);
+      }
+      document.set_attribute(&mut row.node, "labels", &carried.join(" "))?;
+      row.labelled = true;
+    } else if rows[index].unnumbered_eqncr && rows[index].labelled && !rows[index].numbered {
+      pending.push(index);
+    }
   }
 
   // The columns any row uses.
@@ -2139,8 +2173,26 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
       let nodes: Vec<Node> = rows.into_iter().map(|r| r.node).collect();
       equationgroup_join_rows(document, equationgroup, nodes)?;
     } else {
-      for mut row in rows {
-        equationgroup_join_cols(document, 1, &mut row.node)?;
+      // Each row its own equation, except an empty numbered row under an unnumbered one, which joins it with its
+      // number and labels, as below (`\label{e} … \nonumber\\ \end{eqnarray}`: the end's `\@@eqncr` prints it, and
+      // the label names it; 1206.6051).
+      let mut groups: Vec<(Vec<Node>, bool)> = Vec::new();
+      for row in rows {
+        let empty = !(row.has_l || row.has_m || row.has_r || row.tagged);
+        match groups.last_mut() {
+          Some((group, numbered)) if empty && row.numbered && !*numbered => {
+            group.push(row.node);
+            *numbered = true;
+          },
+          _ => groups.push((vec![row.node], row.numbered)),
+        }
+      }
+      for (mut group, _) in groups {
+        if group.len() > 1 {
+          equationgroup_join_rows(document, equationgroup, group)?;
+        } else if let Some(node) = group.first_mut() {
+          equationgroup_join_cols(document, 1, node)?;
+        }
       }
     }
     return Ok(());
@@ -2169,11 +2221,12 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
         class = "continue";
       }
     } else if (row.labelled || row.tagged) && row.numbered {
-      // All columns empty, but the row holds a `\label`: LaTeX numbers it all the same (latex.ltx:15795, `\@@eqncr`
-      // steps `\@eqnnum` for every row), and the label binds to that number. Its number and label join the equation
-      // above, or stand as their own when that one has a number already (Perl latex_constructs.pool.ltxml:2366-2369
-      // notes the rows lost; 1011.4399, hep-th9412215, 1305.3072; repro alignment/eqnarray_empty_labelled_row_keeps_number).
-      // An unnumbered one (`\label{x}\nonumber`) names no number and stays flagged, as before. So does a row whose only
+      // All columns empty, but the row holds a `\label`: when `\@@eqncr` prints its number (latex.ltx:15795, only while
+      // `\if@eqnsw` holds — the rule is [`eqnarray_eqncr_numbering`]) the label binds to that number. Its number and label
+      // join the equation above, or stand as their own when that one has a number already (Perl
+      // latex_constructs.pool.ltxml:2366-2369 notes the rows lost; 1011.4399, hep-th9412215, 1305.3072; repro
+      // alignment/eqnarray_empty_labelled_row_keeps_number). The labels of an unnumbered row move to the next numbered row
+      // (`rearrange_eqnarray`); only a label with no numbered row after it stays, flagged. So does a row whose only
       // content is its author's tag: Scientific Word's `… \nonumber \\ && \TCItag{27}` numbers the equation above it
       // (pdflatex prints (27) on the tag's row; nlin0106009's 11 such rows; OXIDIZED_DESIGN_DIVERGENCES #591,
       // KNOWN_PERL_ERRORS #682) — in a multi-column eqnarray; a single-column one returned above, where the tagged row
@@ -2183,6 +2236,12 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
       } else {
         "continue"
       };
+    } else if row.numbered && !eqs.is_empty() && !numbered {
+      // All columns empty, numbered, under an unnumbered equation: the number `\@@eqncr` prints on a row of its own,
+      // after rows ended by `\cr` (`x &=& y \cr \end{eqnarray}`; `… \cr &&\\`, 0708.0012, nucl-th9807024) or
+      // `\nonumber`. It is that equation's, so it joins it with its tags and id (latex.ltx:15789-15797; repro
+      // cross-references/eqnarray_cr_then_empty_numbered_row). Perl removes the row and the number with it.
+      class = "continue";
     } else {
       // All columns empty
       class = "remove";
@@ -2208,6 +2267,41 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
   }
   Ok(())
 }
+
+/// eqnarray numbering as latex.ltx's `\@@eqncr` state (latex.ltx:15750-15797). A row is numbered only if it ends
+/// through `\@@eqncr` (`\\`, `\\*`, `\\[len]`, `\end{eqnarray}`; here `\lx@eqnarray@number@check`) and no `\nonumber`
+/// came since the previous `\@@eqncr`: `\nonumber` is `\global\@eqnswfalse`, `\@@eqncr` prints `\@eqnnum` and steps the
+/// counter only `\if@eqnsw`, then sets it true, and a row ended by a raw `\cr` neither prints nor resets it. So a
+/// `\nonumber` in a `\cr` row unnumbers the next row too (2112.13115), and a `\cr` row is unnumbered (1011.0523,
+/// nucl-th9903062). `\@currentlabel` is `\p@equation\theequation`, the counter `\eqnarray`'s `\stepcounter` and each
+/// printing `\@@eqncr` step, so every `\label` names the number the next printing `\@@eqncr` prints: the labels of an
+/// unnumbered row move to the next numbered row in `rearrange_eqnarray` (`UNNUMBERED_EQNCR_ROW_ATTRIBUTE`; a `\label`
+/// in a `\nonumber` row, 1206.6051's NA3; in a `\cr` row, 0708.0012), and stay where they are when none follows. A
+/// number `\@@eqncr` prints on an empty row of its own under an unnumbered one (`x &=& y \cr \end{eqnarray}`,
+/// `\cr &&\\`, `\nonumber\\ \end{eqnarray}`) is that equation's (`NUMBER_ROW_PROPERTY`; 0708.0012, nucl-th9807024,
+/// 1206.6051). For the environments that opt in with `eqncr=1`: latex.ltx's eqnarray and eqnarray*. Rust-only (Perl
+/// numbers each row unless it holds `\nonumber`: OXIDIZED_DESIGN_DIVERGENCES #847). Witnesses also 0806.3762,
+/// 0910.0753. Guards `perfect_kernel_batch78n::{eqnarray_row_ended_by_cr_is_unnumbered,
+/// eqnarray_empty_numbered_row_numbers_the_equation_above, eqnarray_cr_row_label_names_next_number,
+/// eqnarray_nonumber_row_label_names_next_number, eqnarray_nonumber_holds_until_eqncr}`.
+pub(crate) fn eqnarray_eqncr_numbering() -> bool {
+  with_value(
+    "EQUATION_NUMBERING",
+    |v| matches!(v, Some(Stored::HashStored(n)) if matches!(n.get("eqncr"), Some(&Stored::Bool(true)))),
+  )
+}
+
+/// latex.ltx's `\if@eqnsw` ([`eqnarray_eqncr_numbering`]), global as there.
+pub(crate) const EQNARRAY_EQNSW: &str = "EQNARRAY_EQNSW";
+
+/// Whether the `\@@eqncr` that ended the current eqnarray row printed its number ([`eqnarray_eqncr_numbering`]): set
+/// by `\lx@eqnarray@number@check`, taken by `\eqnarray@row@after@`; false or absent for a row ended by a raw `\cr`.
+pub(crate) const EQNARRAY_EQNNUM: &str = "EQNARRAY_EQNNUM";
+
+/// The row attribute that marks an eqnarray row its `\@@eqncr` state left unnumbered ([`eqnarray_eqncr_numbering`]):
+/// its labels name the next printed number. Set by `\eqnarray@row@after@` (sect07.rs), read and removed by
+/// `rearrange_eqnarray`.
+pub(crate) const UNNUMBERED_EQNCR_ROW_ATTRIBUTE: &str = "_unnumbered_eqncr";
 
 /// The trailing run of empty cells past an eqnarray row's `equation_columns` (latex.ltx's number column, :15764, and
 /// any an extra `&` opened) is dropped, and a span reaching into it (a `\lefteqn`'s, over the empty cells after it)
@@ -2355,6 +2449,25 @@ fn theorem_hooks(hooks: &[(&str, &str)]) -> String {
     .collect()
 }
 
+/// The mapping from a counter to the macro (of one argument, the counter's name) a theorem numbered within it prints
+/// in place of `\the<counter>`.
+const THEOREM_WITHIN_DISPLAY: &str = "theorem_within_display";
+
+/// A class's `\@xnthm` printing a theorem numbered within `within` with `display{within}` in place of
+/// `\the<within>`: IEEEtran.cls:5607-5627 `\@IEEEthmcounterinsection{section}`, so "Theorem 2.1" where `\thesection` is
+/// "II" (1911.01952; ieeetran_cls.rs; OXIDIZED_DESIGN_DIVERGENCES #848). `None` removes it.
+pub fn set_theorem_within_display(within: &str, display: Option<&str>) {
+  assign_mapping(THEOREM_WITHIN_DISPLAY, within, display.map(String::from));
+}
+
+/// A package whose own `\@xnthm` replaces the class's (amsthm, ntheorem, theorem.sty) drops every
+/// [`set_theorem_within_display`]: its theorems print `\the<within>`.
+pub fn clear_theorem_within_display() {
+  for within in with_mapping_keys(THEOREM_WITHIN_DISPLAY, |keys| keys) {
+    assign_mapping::<String>(THEOREM_WITHIN_DISPLAY, &to_string(within), None);
+  }
+}
+
 pub fn define_new_theorem(
   flag: Option<Tokens>,
   thmset: Tokens,
@@ -2443,7 +2556,11 @@ pub fn define_new_theorem(
     // Define \the<counter>
     if !numbering.is_empty() {
       let the_counter_body = if let Some(ref w) = within_str {
-        s!("\\csname the{w}\\endcsname\\@thmcountersep{numbering}{{{counter}}}")
+        // A class's own `\@xnthm` may print the within-counter its own way ([`set_theorem_within_display`]).
+        match lookup_mapping(THEOREM_WITHIN_DISPLAY, w) {
+          Some(display) => s!("{display}{{{w}}}\\@thmcountersep{numbering}{{{counter}}}"),
+          None => s!("\\csname the{w}\\endcsname\\@thmcountersep{numbering}{{{counter}}}"),
+        }
       } else {
         s!("{numbering}{{{counter}}}")
       };

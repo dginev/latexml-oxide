@@ -1,0 +1,18 @@
+% witness: arXiv 1206.6051 (`\begin{eqnarray}\label{NA3} f_{\Lambda}&=&…,\nonumber\\ f_{\Lambda,B}^{p}&=&…`: the PDF's \ref "V.3", the second row's number)
+% oracle:  pdflatex 0 errors; "Refs 1, 2, 3, 3." (latex.ltx:15750-15797: \@currentlabel is \theequation, which only a printing \@@eqncr steps, so a \label in a \nonumber row names the next printed number)
+% engines: rust (78n r2) = a and c stay on their unnumbered rows (no number for their \ref); int52a the same; Perl 0.8.8 the same
+% expect:  0 errors; a on (1) (the h=k row), b on (2), c and d on (3)
+% status:  RED (78n r2) -> GREEN (78n r3, OXIDIZED_DESIGN_DIVERGENCES #847)
+\documentclass{article}
+\begin{document}
+\begin{eqnarray}\label{a}
+f &=& g,\nonumber\\
+h &=& k,
+\end{eqnarray}
+\begin{eqnarray}
+a &=& b \label{b} \\
+c &=& d \label{c} \nonumber \\
+e &=& f \label{d}
+\end{eqnarray}
+Refs \ref{a}, \ref{b}, \ref{c}, \ref{d}.
+\end{document}

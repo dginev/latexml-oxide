@@ -16953,3 +16953,79 @@ creator, with Univ A twice and Univ B. Fixed in Rust (78m, OXIDIZED_DESIGN_DIVER
 group of spacing only is that spacing, and an `\enskip` right after a mark or note a space OD #52(i) rewrites to
 `\quad` (elsewhere one stays inside a name, `J.\enskip Smith`). Witnesses 1602.04504, 1312.1414; guards
 `perfect_kernel_batch78m::{author_spacing_math_between_names_separates, author_enskip_in_name_and_after_note}`.
+
+## 1077. REVTeX's tables are numbered in arabic
+
+revtex4.cls:5367, revtex4-1.cls:6759, revtex4-2.cls:6780 and REVTeX 3's aps.sty:636 set `\thetable{\@Roman\c@table}`:
+"TABLE I", and a `\ref` to it "I". Perl's revtex4_support.sty.ltxml:111 sets only `\thesection`, so tables are "Table 1"
+and every `\ref` reads "1" (0708.2630, 0902.4794, 1911.02024, cond-mat9610218, cond-mat0408054; 1,973 revtex papers with
+tables in the fidelity3 audit). Minimal trigger: `\documentclass{revtex4-1}\begin{document}\begin{table}\caption{C.}
+\label{t}\end{table}See Table~\ref{t}.\end{document}` — pdflatex "TABLE I. C." and "See Table I"; Perl "Table 1".
+Fixed in Rust (78n, revtex4_support_sty.rs `\thetable` `\Roman`); the caption names stay "Table"/"Figure" (user ruling
+2026-10-21, 18, where the class prints "TABLE"/"FIG."), and AASTeX (aastex.cls 5.x:1518, aastex63.cls:1507,
+aastex701.cls:8117) and emulateapj (emulateapj.cls:1011), built on REVTeX, set them back to arabic (aastex_cls.rs). Repro
+cross-references/revtex_table_number_is_roman; guard `perfect_kernel_batch78n::revtex_tables_are_roman`.
+
+## 1078. iopart's `\appendix` is the kernel's
+
+iopart.cls:489-510 (0712.1190's copy; :498-519 in 1509.00381's): `\appendix` (`\eqnobysec\@appendixstar`) resets the
+counters and numbers the section "Appendix A" (its `\ref` text), the equations within it "A.1" ("A1" for `\appendix*`),
+tables and figures "A1", reset by each appendix section when numbered by section ("B1"). Perl's iopart_support.sty.ltxml
+leaves `\appendix` the kernel's: appendix equations 70, 72 where the PDF prints A.1, A.3, a figure 5 for B1, and `\ref`
+"A" for "Appendix A" (0712.1190, 1509.00381; 224 iopart papers with `\appendix`). Minimal trigger:
+`\documentclass{iopart}\begin{document}\section{I}\appendix\section{P}\label{a}\begin{equation}x\end{equation}See
+\ref{a}.\end{document}` — pdflatex "Appendix A. P", "(A.1)", "See Appendix A"; Perl "(1)", "See A". Fixed in Rust (78n,
+iopart_support_sty.rs `\appendix`, after the kernel's, the appendix tag the section number alone). iopart.cls:815-825's
+`\numparts` numbers its parts by the class's own `\arabic{section}.\arabic{eqnval}\alph{equation}` whatever
+`\theequation` was — "(1.1a)" in Appendix A — and `\endnumparts` sets the arabic form back; Perl's subnumbering takes the
+`\theequation` in force and keeps it, so the command form `\numparts … \endnumparts` piles letters up (0910.0753
+"4.3dabga" where the PDF prints 4.3a). Fixed in Rust alike (78n r2, iopart_support_sty.rs `\numparts`, its id form put
+back too). Repros cross-references/iopart_appendix_numbers, iopart_numparts_number_arabic; guards
+`perfect_kernel_batch78n::{iopart_appendix_numbers, iopart_numparts_number_arabic}`.
+
+## 1079. IEEEtran's theorems numbered within a section print the section's Roman number
+
+IEEEtran.cls:5607-5627 prints a theorem numbered within sections through `\@IEEEthmcounterinsection` (`\arabic`), not
+`\thesection` (Roman): "Example 2.1". Perl's IEEEtran.cls.ltxml has no theorem code, so the kernel's `\the<section>`
+gives "Example II.1" (1911.01952; 110 papers in the fidelity3 audit's scan). Minimal trigger: `\documentclass{IEEEtran}
+\newtheorem{ex}{Example}[section]\begin{document}\section{A}\section{B}\begin{ex}E.\end{ex}\end{document}` — pdflatex
+"Example 2.1"; Perl "Example II.1". Fixed in Rust (78n, OXIDIZED_DESIGN_DIVERGENCES #848; ieeetran_cls.rs, the
+appendices' "A"/`\Alph` too). Repro cross-references/ieeetran_theorem_within_section_is_arabic; guard
+`perfect_kernel_batch78n::ieeetran_theorem_within_section`.
+
+## 1080. elsarticle's `\newproof` heads are numbered
+
+elsarticle.cls:1200-1236 `\newproof`: the environment steps its own counter, but `\@beginproof` prints only the name, in
+small caps ("Proof.", "Proof (note)."), and sets the body `\rmfamily`. Perl's elsart_support_core.sty.ltxml:208 lets
+`\newproof` be `\newtheorem`: bold "Proof 1." … "Proof 13." with italic bodies (1304.5109; 341 papers). Minimal
+trigger: `\documentclass{elsarticle}\newproof{pf}{Proof}\begin{document}\begin{pf}P.\end{pf}\end{document}` — pdflatex
+"Proof. P." upright; Perl "Proof 1. P." italic. Fixed in Rust (78n, elsarticle_cls.rs `\newproof`: a numbered theorem
+— `\@prf`'s `\refstepcounter`, so a `\ref` to a label in it prints its number, `\newproof{x}[y]{…}` steps y's counter
+(`\@oprf`), `{…}[within]` numbers within it (`\@xnprf`) — whose `\format@title@<name>` prints the name alone, small caps,
+with :1232's period, its body upright; elsart.cls, which has no `\newproof`, keeps Perl's `\let`). Each form declares
+under `\expandafter\@ifdefinable\csname #1\endcsname` (:1205, :1213, :1220), so with amsthm loaded first
+`\newproof{proof}{Proof}` is LaTeX's "Command \proof already defined" (pdflatex 1 error; here an Info, as every
+"already defined. Or name" message, `is_typesetting_only_message`) and amsthm's proof stays (78n r3; Perl's
+`\newtheorem` redefines it, 78n r2 did too). Repros cross-references/elsarticle_newproof_head_is_unnumbered,
+elsarticle_newproof_steps_its_counter, elsarticle_newproof_keeps_a_defined_proof; guards
+`perfect_kernel_batch78n::{elsarticle_newproof_head_is_unnumbered, elsarticle_newproof_steps_its_counter,
+elsarticle_newproof_keeps_a_defined_proof}`.
+
+## 1081. natbib's merged citations `\cite{a,*b}` cite the key "*b"
+
+natbib.sty:272-274 (`mcite`, `merge`, `elide`) and revtex4-1.cls:7046, revtex4-2.cls:7067 (`\let\NAT@merge\thr@@`) turn
+on entry merging: in a citation list a `*key` is `key` (natbib.sty:1135-1160 `\NAT@star@cite`), its entry merged into
+the preceding one in the bibliography, and a key may carry `[pre][post]` notes for its entry
+(`\cite{[See][and references therein.]pra78}`). Perl's natbib.sty.ltxml has no merging, so the keys are "*b" and
+"[See][andreferencestherein.]pra78": missing citations with Warnings (1808.00247's three `*` keys, PDF "[37]";
+1509.05768, 1206.6986, 1209.2422 the notes; 76 revtex 4.1/4.2 papers with `\cite{…,*`). Minimal trigger: `\documentclass{revtex4-1}
+\begin{document}\cite{a,*b}\begin{thebibliography}{2}\bibitem{a}A.\bibitem{b}B.\end{thebibliography}\end{document}` —
+pdflatex "[1]" and one entry "[1] A. B."; Perl "[1, *b]". Fixed in Rust for the citation (78n, natbib_sty.rs
+`natbib_merge_citations`: the options and the REVTeX 4.1/4.2 bindings (not `nomerge`, not REVTeX 4.0) strip the `*` and
+the notes, so the citation is "[1, 2]" and links both; `mcite` and the classes set `\NAT@merge`, `merge` and `elide` only
+raise it, natbib.sty:273-274; repro index-bib/natbib_merge_options_raise_level, guard
+`perfect_kernel_batch78n::natbib_merge_options_raise_level`). Residuals: the entry is not merged into the one before it, so
+the citation prints both numbers and later entries are numbered one higher per merge (natbib.sty:841-860
+`\NAT@b*@key`), and the notes are not added to the entry (`\nat@keyopt@open`/`\nat@keyopt@shut`; a `{thebibliography}`
+entry does not print them in pdflatex either). Repro
+index-bib/revtex_merged_citation_key; guard `perfect_kernel_batch78n::revtex_merged_citation`.

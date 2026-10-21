@@ -321,6 +321,94 @@ fn cite_by_flags(
 /// (latexml_contrib njdnatbib_sty.rs; the reviewer's probe njd_direct_v2: pdflatex "2, p. 5" raised).
 fn super_postnote_inside() -> bool { lookup_bool("NATBIB_SUPER_POSTNOTE_INSIDE") }
 
+/// natbib.sty:1135-1160 `\NAT@star@cite`, with `\NAT@merge` above zero (the `mcite`, `merge` and `elide` options,
+/// :272-274, at `level` `\@ne`, `\tw@`, `\thr@@`; revtex4-1.cls:7046 and revtex4-2.cls:7067 `\let\NAT@merge\thr@@`): a key
+/// written `*key` in a citation's list is `key`. Perl's natbib binding never merges, and cites the key "*b": "missing
+/// citation" (1808.00247; KNOWN_PERL_ERRORS #1081). Guard `perfect_kernel_batch78n::revtex_merged_citation`. A
+/// residual: natbib also merges the entry into the one before it in the bibliography (`\NAT@b*@key`, :1160, read by its
+/// `\bibitem`, :841-860), so the citation prints the one number "\[1\]"; here the entry stays its own, "\[1, 2\]".
+/// `mcite` and the classes set the level; `merge` and `elide` only raise it (natbib.sty:273-274
+/// `\@ifnum{\NAT@merge<\tw@}{\let\NAT@merge\tw@}{}`), so `[elide,merge]` stays at `elide`'s: `raise_only`.
+pub fn natbib_merge_citations(level: &str, raise_only: bool) -> Result<()> {
+  if raise_only {
+    RawTeX!(&s!(
+      "\\@ifnum{{\\NAT@merge<{level}}}{{\\global\\let\\NAT@merge{level}}}{{}}"
+    ));
+  } else {
+    RawTeX!(&s!("\\global\\let\\NAT@merge{level}"));
+  }
+  if !is_defined("\\lx@natbib@kernel@bibref") {
+    Let!("\\lx@natbib@kernel@bibref", "\\@@bibref", Scope::Global);
+    DefMacro!("\\@@bibref Semiverbatim Semiverbatim {}{}", sub[(show, keys, phrase1, phrase2)] {
+      let merging = !x_equals(&T_CS!("\\NAT@merge"), &T_CS!("\\z@"));
+      let keys = if merging { merged_citation_keys(keys) } else { keys };
+      Ok(Invocation!(T_CS!("\\lx@natbib@kernel@bibref"), vec![show, keys, phrase1, phrase2]))
+    });
+  }
+  Ok(())
+}
+
+/// The keys of a merging citation list, read as natbib.sty:1135-1160 `\NAT@star@cite` reads each one (`\@for` splits the
+/// list at its commas outside braces): a `*` prefix and the `[pre][post]` notes after it dropped. natbib prints the notes
+/// in the entry's bibliography text (`\nat@keyopt@open`, `\nat@keyopt@shut`; not done here, KPE #1081): 1509.05768's
+/// `\cite{[See][and references therein.]pra78}`, 1206.6986's `[][{, Chap.~2.}]Peresbook`.
+fn merged_citation_keys(keys: Tokens) -> Tokens {
+  let is = |t: &Token, c: &str| t.get_catcode() == Catcode::OTHER && t.to_string() == c;
+  let mut pieces: Vec<Vec<Token>> = vec![Vec::new()];
+  let mut depth = 0i32;
+  for token in keys.unlist() {
+    match token.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      _ => {},
+    }
+    if depth == 0 && is(&token, ",") {
+      pieces.push(Vec::new());
+    } else if let Some(piece) = pieces.last_mut() {
+      piece.push(token);
+    }
+  }
+  let mut out = Vec::new();
+  for (index, piece) in pieces.into_iter().enumerate() {
+    let mut key = piece
+      .into_iter()
+      .skip_while(|t| t.get_catcode() == Catcode::SPACE)
+      .peekable();
+    if key.peek().is_some_and(|t| is(t, "*")) {
+      key.next();
+    }
+    let mut key: Vec<Token> = key
+      .skip_while(|t| t.get_catcode() == Catcode::SPACE)
+      .collect();
+    for _ in 0..2 {
+      if !key.first().is_some_and(|t| is(t, "[")) {
+        break;
+      }
+      let mut depth = 0i32;
+      let close = key.iter().position(|t| {
+        match t.get_catcode() {
+          Catcode::BEGIN => depth += 1,
+          Catcode::END => depth -= 1,
+          _ => {},
+        }
+        depth == 0 && is(t, "]")
+      });
+      let Some(close) = close else { break };
+      key.drain(..=close);
+      let spaces = key
+        .iter()
+        .take_while(|t| t.get_catcode() == Catcode::SPACE)
+        .count();
+      key.drain(..spaces);
+    }
+    if index > 0 {
+      out.push(T_OTHER!(","));
+    }
+    out.extend(key);
+  }
+  Tokens::new(out)
+}
+
 fn natbib_cite(
   star: Option<Tokens>,
   pre_raw: Option<Tokens>,
@@ -516,8 +604,18 @@ LoadDefinitions!({
 \providecommand\@ifx[1]{\ifx#1\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi}
 \providecommand\appdef[2]{\toks@\expandafter{#1}\@temptokena{#2}\edef#1{\the\toks@\the\@temptokena}}"
   );
-  // natbib.sty:237, no `mcite`/`merge`/`elide` option bound: entries are never merged.
+  // natbib.sty:237: entries are merged only under `mcite`/`merge`/`elide` (:272-274) or a class that sets
+  // `\NAT@merge` (revtex4-1.cls:7046, revtex4-2.cls:7067): `natbib_merge_citations`.
   RawTeX!(r"\let\NAT@merge\z@");
+  DeclareOption!("mcite", {
+    natbib_merge_citations("\\@ne", false)?;
+  });
+  DeclareOption!("merge", {
+    natbib_merge_citations("\\tw@", true)?;
+  });
+  DeclareOption!("elide", {
+    natbib_merge_citations("\\thr@@", true)?;
+  });
   DeclareOption!("nonamebreak", "");
   // The options of a later `\usepackage[…]{natbib}` — a class's, a renamed copy's or the document's, after a binding
   // loaded natbib where the real class does not yet — take effect as natbib's options do (natbib.sty:238-262: `numbers`
@@ -1477,7 +1575,9 @@ LoadDefinitions!({
   // pdflatex then uses (1008.0439, revtex4-1; acmart and elsarticle load natbib too). `\BibitemShut` only records
   // the stop; `\bibitem@fin` puts it at the start of the next entry (`\@lbibitem` below, natbib.sty:864) or at the
   // list's end (`\lx@bibliography@postamble`, natbib.sty:1080), so it ends the entry it belongs to. The entry
-  // merging behind `\NAT@merge` (natbib's `mcite`/`merge`/`elide`) is kept as written and never taken.
+  // merging behind `\NAT@merge` (natbib's `mcite`/`merge`/`elide`, REVTeX 4.1/4.2's `elide`: `natbib_merge_citations`)
+  // is kept as written: `\bibfield` elides a field repeated within an entry, never across two, as every `\bibitem`
+  // starts an entry (`\NAT@bibitem@init`; the merging of an entry into the one before is not done, KPE #1081).
   RawTeX!(
     r"\def\bibitem@fin{\@ifxundefined\@bibstop{}{\csname bibitem@\@bibstop\endcsname}}
 \def\NAT@bibitem@init{\let\@bibstop\@undefined}

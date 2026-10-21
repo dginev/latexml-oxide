@@ -17,7 +17,7 @@ pub use latexml_core::{
   alignment::{
     Alignment, AlignmentConfig,
     cell::Cell,
-    template::{Align, TAGGED_ROW_ATTRIBUTE, Template},
+    template::{Align, NUMBER_ROW_PROPERTY, TAGGED_ROW_ATTRIBUTE, Template},
   },
   binding::{
     counter::dialect::*,

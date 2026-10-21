@@ -192,6 +192,9 @@ do not block the E/F rerun.
 | — | `\hyperref[s1]{}` with empty text: a class deposit holding only it is kept (a `<ref labelref>`, which post fills with "1"); pdflatex prints nothing. Perl does the same in body text | open (77o r2 review finding 10) |
 | — | `\shortstack` eats the space after its argument (`A \shortstack[r]{x} Body.` → `…</inline-block>Body.`): the trailing `OptionalMatch:* [Dimension]` of the prototype reads past it; Perl the same | open, KNOWN_PERL_ERRORS #996 |
 | — | a `{titlepage}` whose class `\@maketitle` prints a paragraph after the title and author: the paragraph is re-homed before the title (`<para>…Printed cover text…</para><title>T</title>`), the PDF prints it after them; base, 77o r1-r3 alike | open (77o r2 review finding 9; guard `perfect_kernel_batch56::unwound_titlepage_rehomes_a_printed_paragraph` asserts the paragraph alone) |
+| — | natbib merged citations (`\cite{a,*b}` under `mcite`/`merge`/`elide`, REVTeX 4.1/4.2 unless `nomerge`): since 78n the keys are a and b, but the merged entry is not folded into the one before it (natbib.sty:841-860 `\NAT@b*@key`), so the citation prints "[1, 2]" for pdflatex's "[1]", the bibliography keeps b as an entry of its own and every later entry is numbered one higher per merge; the `[pre][post]` notes are not added to the entry (`\nat@keyopt@open`/`\nat@keyopt@shut`). 1808.00247, 1509.05768, 1206.6986, 1209.2422; KPE #1081, guard `perfect_kernel_batch78n::revtex_merged_citation` | open (78n r1-r3 residual; a wrong reference number, content kept) |
+| — | eqnarray label with no numbered row after it (pre-existing; review rev78n2): a `\label` in a trailing `\nonumber` row or in an `eqnarray*` stays on its unnumbered row, and its `\ref` prints a wrong number with no diagnostic — the group's (5 for pdflatex's 6), a section's (iopart: "1" for 2), or a raw id ("S0.Ex5" for 7); LaTeX's `\ref` names the counter's next value. Fix: give such a label a refnum-only tag holding the counter's next value (OD #847). Witness 1303.3431 `appa3`; probes `/home/deyan/.claude/jobs/356a0c47/tmp/rev78n2/p/q1.tex`, `iop/q8.tex` (copy into a repro). | open |
+| — | `\nonumber` inside `{equation}` removes the number (Perl's extension; LaTeX without amsmath still prints it): hep-ph9710521 (`\nl` inside `\beq`) has every number from (3.22) on one behind its PDF, 45/56 matching (78n r3 report). | open |
 | 25, 26, 27 | `--splitindex`/`--splitbibliography` (non-default), alignment open at `\end{document}`, lstlisting in `\parbox` | not silent, re-checked on head 2026-10-19: #26 is an honest Error (a `tabular` left open, `c & d`: 4 Errors; an `align`, `c&=d`: 3 — "Attempt to close a group that switched to mode internal_vertical"; invalid input, pdflatex errs); #27 has raised 1 Error since 64zf (CONTROL `kernel-alignment/pcol_lstlisting_parbox_CONTROL`, pdflatex 7); #25 needs a non-default option the arXiv runs never pass — open, low reach, not blocking |
 
 ## Rust Error Fixes
@@ -1379,8 +1382,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   equal or fewer (nucl-th9512020's `\hat`-in-text and math0407427's `\span` warnings gone); 40 seeded random eqnarray
   papers: 39 byte-identical, cond-mat0601437 2 → 0 errors (a `\lefteqn` row). Guards `perfect_kernel_batch65o::*`;
   repros `alignment/{lefteqn_*,eqnarray_number_column*,eqnarray_empty_cell_keeps_later_column}` GREEN. Open (RED):
-  `alignment/eqnarray_cr_row_unnumbered` and `eqnarray_cr_row_column_count` (a raw `\cr` skips `\@@eqncr`: TeX leaves
-  the row unnumbered and counts on into the next row's "Too many columns"; we, as Perl, number it and count afresh);
+  `alignment/eqnarray_cr_row_column_count` (a raw `\cr` skips `\@@eqncr`: TeX counts on into the next row's "Too many
+  columns"; we, as Perl, count afresh; its sibling `eqnarray_cr_row_unnumbered`, the row's number, is GREEN since 78n,
+  OD #847);
   `alignment/lefteqn_overprint_keeps_template_material` (the `\multicolumn{1}{l}` drops column 1's `@{…}` and `|`,
   which TeX's `\rlap` keeps); `alignment/eqnarray_side_content_only_cell` (KPE #625: a cell holding only an `\index`
   or anchor measures under 1pt and is never absorbed, and an eqnarray row join drops a floated indexmark; rule
@@ -5553,6 +5557,57 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   places; row in Corpus Triage Quick Wins). Binding nets (int48a) 136/136, no recall below int47a; 6 nets flagged 3
   documents (1704.06338, 2607.02089, 2608.05298) "valid 1 → 0" against the nets' schema copy of 2026-10-15, which lacked
   78g's `ltx:picture` labels and tags — all three validate (0 errors) against the repo schema, and the copy is refreshed.
+- **78n** (fidelity audit round 3, numbering and cross-reference text: N1, N2, N3, N5, N7, N8; r2 the review rev78n's
+  findings; r3 the main session's two rulings; guards `perfect_kernel_batch78n::*`, 14, each RED on int50a, r1 or r2 but
+  `natbib_merge_options_raise_level`; OD #847-848, KPE #1077-1081). (1, rewritten r3 as one rule) eqnarray numbers its
+  rows by latex.ltx's `\@@eqncr` state (OD #847; opt-in `eqncr=1` for `eqnarray`/`eqnarray*` only): a row is numbered
+  only if it ends through `\@@eqncr` (`\\`, `\end{eqnarray}`) and no `\nonumber` came since the previous one (`\if@eqnsw`
+  holds across `\cr` rows), and every `\label` names the number the next printing `\@@eqncr` prints (an unnumbered row's
+  labels move to the next numbered row). So a `\cr` row is unnumbered (1011.0523 77 → 73 numbers, PDF 73;
+  nucl-th9903062 12 → 6; 0806.3762), a `\nonumber` in a `\cr` row unnumbers the next `\\` row too (2112.13115), and a
+  `\label` in a `\nonumber` or `\cr` row names the next number (1206.6051's NA3; 0708.0012); the number printed on an
+  empty row of its own under an unnumbered one (`x &=& y \cr \end{eqnarray}`, `… \cr &&\\`, `x \nonumber\\
+  \end{eqnarray}`) joins that equation, its tags, id and labels with it (r1 deleted it, `\ref` "III A" or "S0.Ex5":
+  0708.0012); `perfect_kernel_batch65o::eqnarray_number_column` updated to pdflatex's (1)/(star)/(2). (2) REVTeX tables
+  `\Roman` ("Table I", `\ref` "I"; revtex4-1.cls:6759; KPE #1077); caption names stay "Table"/"Figure" (user ruling
+  2026-10-21, 18); AASTeX and emulateapj set them back to arabic (aastex_cls.rs). (3) iopart `\appendix`: "Appendix A"
+  section numbers and `\ref`s, equations "A.1", figures/tables "A1"/"B1" (iopart.cls:489-510; KPE #1078; 0712.1190,
+  1509.00381, 0910.0753 now matching its PDF). (4) IEEEtran theorems within a section print `\arabic` sections ("Example
+  2.1"), "A"/`\Alph` in appendices (IEEEtran.cls:5607-5627; a kernel hook `set_theorem_within_display`, cleared by
+  amsthm, OD #848; KPE #1079; 1911.01952). (5) elsarticle `\newproof`: a numbered theorem (`\@prf` steps
+  its counter, `[y]` steps y's) whose head prints the name alone, small caps, with its period ("Proof."), body upright
+  (elsarticle.cls:1200-1236; KPE #1080; 1304.5109's 12 proofs; r1 left it unnumbered, `\ref` "Proof"); r3: declared
+  under the class's `\@ifdefinable`, so after amsthm `\newproof{proof}` is LaTeX's "Command \proof already defined" (an
+  Info, as every such message) and amsthm's proof stays. (6) natbib merging (`mcite`/`merge`/`elide`, REVTeX
+  4.1/4.2 unless `nomerge`): a citation key's `*` and `[pre][post]` notes are dropped, so `\cite{a,*b}` cites a and b
+  (KPE #1081; 1808.00247, 1509.05768, 1206.6986, 1209.2422); `merge`/`elide` raise `\NAT@merge` only (natbib.sty:273-274).
+  (7, r2) iopart `\numparts` numbers by the class's arabic form, `\endnumparts` sets it back (iopart.cls:815-825; KPE
+  #1078): "(1.1a)" in Appendix A, and the command form's letters no longer pile up (0910.0753 "4.3dabga" → 4.3a; 9 papers,
+  439 tags in the A/B). Residual: the merged entry is not folded into the one before (its own row in the
+  Silent-loss inventory). A/B (release,
+  `--preload=ar5iv.sty`, int50a vs 78n; 1,343 papers: 150 eqnarray-`\cr` + 100 random eqnarray, 298 revtex-with-tables,
+  50 REVTeX 3, 50 AASTeX/emulateapj, 218 iopart-`\appendix`, 110 IEEEtran `[section]` theorems, 200 elsarticle
+  `\newproof`, 71 revtex `\cite{…,*`, 96 random controls, the witnesses): E 2,423 → 2,423, F 7 → 7, W 14,401 → 14,353
+  (math-ambiguity counts as eqnarray rows regroup); 0 papers worse in E or F. Changed outputs: the eqnarray papers' numbers
+  (four lose >1 % words: "Equation" autoref and number tags of the unnumbered rows, the continuation rows' math kept in
+  the merged equation), revtex table numbers (381 of 421 differ only by Roman numbers and cite keys), iopart appendices,
+  IEEEtran theorem numbers, elsarticle proof heads; controls changed only where revtex. A second A/B after the cite-note
+  change (516 revtex + control papers): E 1,214 → 1,214, F 1 → 1. r2 A/B (release, int51a / r1 / r2 on the same 1,346
+  papers, populations saved as `census/pops/pop78n_<item>.tsv`): E 2,418 / 2,423 / 2,418, F 7 / 7 / 7, none worse in E or F;
+  132 changed r1 → r2 (eqnarray groups, theorem heads and tags only, beside the rebase onto int51); referenced labels on
+  an unnumbered equation 543 / 619 / 496, none rising in any paper. Equation `\ref` numbers against pdflatex's `.aux` on
+  22 changed eqnarray papers: 374 / 608 / 655 of 741 (0708.0012 28/29, its miss a label defined twice). r3 A/B (release, int52a / r2 / r3,
+  1,482 papers: the saved `pop78n_<item>.tsv` populations plus 150 seeded eqnarray papers with `\nonumber`/`\notag`,
+  `pop78n_nonumber.tsv`, deduplicated): E 2,556 / 2,556 / 2,556, F 8 / 8 / 8, W r2 = r3, none worse in E or F; 147 changed
+  r2 → r3, every difference inside eqnarray groups, their tags and ids (no paper changes elsewhere; each paper's label
+  set unchanged, labels only move); referenced labels on an unnumbered equation 643 / 595 / 310, none rising in any
+  paper. Equation `\ref` numbers against pdflatex's `.aux` on 35 changed papers: 805 / 933 / 1,066 of 1,151 (2112.13115
+  30 / 63 / 112 of 112, 1206.6051 66 / 79 / 98 of 98; 0708.0012 28/29 and 0806.3762 15/16, each miss a label defined
+  twice). The 113 elsarticle papers with amsthm and `\newproof` (`pop78n_elsamsthm.tsv`): none declares a defined name,
+  E 190 = 190, the 3 changed are eqnarray labels. Residuals: a label in an unnumbered row with no numbered row after it
+  in its group (an `eqnarray*`, a trailing `\nonumber` row) stays there, where LaTeX's `\ref` names the counter's next
+  value (1303.3431's `appa3`); a `\nonumber` inside `{equation}` still unnumbers it (Perl's extension; LaTeX without
+  amsmath prints the number: hep-ph9710521's `\nl` in a `\beq`, one behind from 3.22).
 - **split114** (task #114, user directive 2026-10-07; a pure move, before FM S2a): `latexml_engine/src/base_utilities.rs`
   (23,317 lines) is the module directory `base_utilities/` — `mod.rs` (the imports, `FRONTMATTER_ELEMENTS`,
   `REPLACEABLE_FRONTMATTER_TAGS`, and `LoadDefinitions!` calling `defs::{general, frontmatter_api, frontmatter_fields,

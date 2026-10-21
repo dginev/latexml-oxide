@@ -303,9 +303,24 @@ LoadDefinitions!({
   DefPrimitive!("\\fullcircle", "\u{25CF}");
   DefPrimitive!("\\fullsquare", "\u{25A0}");
 
-  // Equation numbering — Perl L160-162
-  DefMacro!("\\numparts", "\\lx@equationgroup@subnumbering@begin");
-  DefMacro!("\\endnumparts", "\\lx@equationgroup@subnumbering@end");
+  // Equation numbering — Perl L160-162. iopart.cls:815-825: `\numparts` numbers its equations by the class's own
+  // `\theequation`, `\arabic{section}.\arabic{eqnval}{\it\alph{equation}}`, whatever `\theequation` was (an appendix's
+  // "A.1" form too: pdflatex "(1.1a)" in Appendix A), and `\endnumparts` sets the class's arabic form back, so the
+  // command form `\numparts … \endnumparts` (no group) leaves no letters behind: 0910.0753's "4.3dabga" where the PDF
+  // prints 4.3a. The id form is put back alike. Perl: the parts take the `\theequation` in force and keep it. Guard
+  // `perfect_kernel_batch78n::iopart_numparts_number_arabic`.
+  DefMacro!(
+    "\\numparts",
+    "\\let\\lx@iopart@numparts@ID\\theequation@ID\\lx@iopart@theequation\\lx@equationgroup@subnumbering@begin"
+  );
+  DefMacro!(
+    "\\endnumparts",
+    "\\lx@equationgroup@subnumbering@end\\lx@iopart@theequation\\let\\theequation@ID\\lx@iopart@numparts@ID"
+  );
+  DefMacro!(
+    "\\lx@iopart@theequation",
+    "\\def\\theequation{\\ifnumbysec\\arabic{section}.\\arabic{equation}\\else\\arabic{equation}\\fi}"
+  );
   Let!("\\pcal", "\\cal");
   Let!("\\pmit", "\\mathnormal");
 
@@ -320,6 +335,23 @@ LoadDefinitions!({
   DefMacro!("\\Tref{}", "Table~\\ref{#1}");
   DefMacro!("\\aref{}", "\\ref{#1}");
   DefMacro!("\\Aref{}", "\\ref{#1}");
+
+  // iopart.cls:489-510 (0712.1190's copy; :498-519 in 1509.00381's): `\appendix` numbers the equations within
+  // the appendix section (`\eqnobysec`; `\appendix*` does not, and, `\@ifnextchar`, leaves its `*`), resets the counters,
+  // and prints "Appendix A" as the section number, equations "A.1" ("A1" unnumbered by section), tables and figures "A1"
+  // (reset by each appendix section when numbered by section). The kernel's `\appendix` (article_cls.rs `\@appendix`)
+  // runs first for the `ltx:appendix` units, their tag the section number alone ("Appendix A", not the kernel's
+  // `\appendixname` before it). Perl's binding leaves `\appendix` the kernel's (equations 70, 72 where the
+  // PDF prints A.1, A.3): KNOWN_PERL_ERRORS #1078. Guard `perfect_kernel_batch78n::iopart_appendix_numbers`.
+  DefMacro!("\\appendix", "\\@ifnextchar*{\\lx@iopart@appendix@star}{\\eqnobysec\\lx@iopart@appendix@star}");
+  RawTeX!(r"\def\lx@iopart@appendix@star{\@appendix\par
+ \ifnumbysec\@addtoreset{table}{section}\@addtoreset{figure}{section}\fi
+ \setcounter{section}{0}\setcounter{subsection}{0}\setcounter{subsubsection}{0}%
+ \setcounter{equation}{0}\setcounter{figure}{0}\setcounter{table}{0}%
+ \def\thesection{Appendix \Alph{section}}\def\fnum@appendix{\thesection}\def\typerefnum@appendix{\thesection}%
+ \def\theequation{\ifnumbysec\Alph{section}.\arabic{equation}\else\Alph{section}\arabic{equation}\fi}%
+ \def\thetable{\ifnumbysec\Alph{section}\arabic{table}\else A\arabic{table}\fi}%
+ \def\thefigure{\ifnumbysec\Alph{section}\arabic{figure}\else A\arabic{figure}\fi}}");
 
   // Tables — Perl L198-210
   DefMacro!("\\noappendix", "\\setcounter{figure}{0}\\setcounter{table}{0}\\def\\thetable{\\arabic{table}}\\def\\thefigure{\\arabic{figure}}");

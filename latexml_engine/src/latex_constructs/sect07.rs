@@ -120,7 +120,10 @@ pub(crate) fn load() -> Result<()> {
       ),
       _ => (false, false),
     });
-    if in_equation {
+    if eqnarray_eqncr_numbering() {
+      // latex.ltx:15775 `\global\@eqnswfalse`: the next `\@@eqncr` prints no number (`eqnarray_eqncr_numbering`).
+      assign_value(EQNARRAY_EQNSW, Stored::Bool(false), Some(Scope::Global));
+    } else if in_equation {
       if defer_retract {
         with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
           if let Some(Stored::HashStored(tags)) = tags_opt {
@@ -193,6 +196,9 @@ pub(crate) fn load() -> Result<()> {
       }
     }
     prepare_equation_counter(options);
+    // latex.ltx:15754 `\global\@eqnswtrue` (eqnarray_eqncr_numbering).
+    assign_value(EQNARRAY_EQNSW, Stored::Bool(true), Some(Scope::Global));
+    assign_value(EQNARRAY_EQNNUM, Stored::Bool(false), Some(Scope::Global));
     Ok(())
   });
 
@@ -200,8 +206,47 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\eqnarray@row@before@", {
     before_equation()?;
   });
+  // An eqnarray row is numbered as `\@@eqncr`'s state says (`eqnarray_eqncr_numbering`): unnumbered rows retract the
+  // number `\eqnarray@row@before@` preset, and are marked for `rearrange_eqnarray` (their labels name the next
+  // printed number, `UNNUMBERED_EQNCR_ROW_ATTRIBUTE`; a number printed on an empty row joins the unnumbered equation
+  // above, `NUMBER_ROW_PROPERTY`). Only for the environments that opt in with `eqncr=1` (latex.ltx's eqnarray and
+  // eqnarray*; plain-style `\eqnalign` rows all end in `\cr`). Witnesses 1011.0523, nucl-th9903062, 0708.0012,
+  // nucl-th9807024, 2112.13115, 1206.6051; Rust-only (OXIDIZED_DESIGN_DIVERGENCES #847).
   DefPrimitive!("\\eqnarray@row@after@", {
+    let eqncr = eqnarray_eqncr_numbering();
+    let numbered = !eqncr || matches!(remove_value(EQNARRAY_EQNNUM), Some(Stored::Bool(true)));
+    if !numbered {
+      with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
+        if let Some(Stored::HashStored(tags)) = tags_opt {
+          tags.insert("retract", true.into());
+        }
+      });
+    }
     after_equation(None)?;
+    if eqncr
+      && let Some(alignment_digested) = lookup_alignment()
+      && let Some(alignment_cell) = alignment_digested.alignment_cell()
+    {
+      let mut alignment = alignment_cell.borrow_mut();
+      let rows = alignment.rows();
+      let previous_numbered = rows
+        .iter()
+        .take(rows.len().saturating_sub(1))
+        .rev()
+        .find(|row| !row.is_pseudo())
+        .map(|row| row.properties.contains_key("tags"));
+      if let Some(row) = alignment.current_row_mut() {
+        if !row.properties.contains_key("tags") {
+          row
+            .properties
+            .insert(UNNUMBERED_EQNCR_ROW_ATTRIBUTE.to_string(), Stored::from("true"));
+        } else if previous_numbered == Some(false) {
+          row
+            .properties
+            .insert(NUMBER_ROW_PROPERTY.to_string(), Stored::from("true"));
+        }
+      }
+    }
   });
   DefMacro!(
     "\\eqnarray@row@before",
@@ -241,7 +286,7 @@ pub(crate) fn load() -> Result<()> {
 
   DefMacro!("\\eqnarray",
     "\\@eqnarray@bindings\\@@eqnarray\
-     \\@equationgroup@numbering{numbered=1,preset=1,deferretract=1,grouped=1,aligned=1}\
+     \\@equationgroup@numbering{numbered=1,preset=1,deferretract=1,grouped=1,aligned=1,eqncr=1}\
      \\lx@begin@alignment",
     locked => true);
   DefMacro!("\\endeqnarray",
@@ -249,7 +294,7 @@ pub(crate) fn load() -> Result<()> {
     locked => true);
   DefMacro!("\\csname eqnarray*\\endcsname",
     "\\@eqnarray@bindings\\@@eqnarray\
-     \\@equationgroup@numbering{numbered=1,preset=1,retract=1,grouped=1,aligned=1}\
+     \\@equationgroup@numbering{numbered=1,preset=1,retract=1,grouped=1,aligned=1,eqncr=1}\
      \\lx@begin@alignment",
     locked => true);
   DefMacro!("\\csname endeqnarray*\\endcsname",
@@ -261,6 +306,11 @@ pub(crate) fn load() -> Result<()> {
   // before (as `\if@in@firstcolumn`), so `&\\` counts the cell it opens, as TeX's u-part does. Rust-only (Perl's
   // template has three columns, and the fourth cell's `&` overflows it: OXIDIZED_DESIGN_DIVERGENCES #557).
   DefMacro!("\\lx@eqnarray@number@check", {
+    // latex.ltx:15795 `\if@eqnsw\@eqnnum\stepcounter{equation}\fi \global\@eqnswtrue`: the row this `\@@eqncr` ends
+    // is numbered unless a `\nonumber` came since the last one (`eqnarray_eqncr_numbering`).
+    let eqnsw = !matches!(lookup_value(EQNARRAY_EQNSW), Some(Stored::Bool(false)));
+    assign_value(EQNARRAY_EQNNUM, Stored::Bool(eqnsw), Some(Scope::Global));
+    assign_value(EQNARRAY_EQNSW, Stored::Bool(true), Some(Scope::Global));
     if let Some(alignment_digested) = lookup_alignment()
       && let Some(alignment_cell) = alignment_digested.alignment_cell()
     {

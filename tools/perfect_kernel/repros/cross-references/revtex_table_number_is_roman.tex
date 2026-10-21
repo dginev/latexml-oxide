@@ -1,0 +1,13 @@
+% witness: arXiv 0708.2630, 0902.4794, 1911.02024, cond-mat9610218, cond-mat0408054 (\ref to a table "1" where the PDF prints "I")
+% oracle:  pdflatex 0 errors; "TABLE I. Cap.", "TABLE II. Two.", "See Table I, Table II, Fig. 1." (revtex4-1.cls:6759 \thetable \@Roman)
+% engines: rust (int50a) = "Table 1", "Table 2"; Perl 0.8.8 the same (fidelity3 audit N2). Names stay "Table"/"Figure" (user ruling 2026-10-21, 18)
+% expect:  0 errors; table refnums I, II, caption tags "Table I", "Table II"; the figure 1
+% status:  RED (int50a) -> GREEN (78n, KNOWN_PERL_ERRORS #1077)
+\documentclass[aps,prl]{revtex4-1}
+\begin{document}
+\section{S}
+\begin{table}\caption{Cap.}\label{t}\begin{tabular}{c}x\end{tabular}\end{table}
+\begin{table}\caption{Two.}\label{u}\begin{tabular}{c}y\end{tabular}\end{table}
+\begin{figure}\caption{Fig.}\label{f}\end{figure}
+See Table~\ref{t}, Table~\ref{u}, Fig.~\ref{f}.
+\end{document}

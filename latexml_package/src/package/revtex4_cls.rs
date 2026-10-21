@@ -122,6 +122,12 @@ LoadDefinitions!({
       assign_value("revtex_linenumbers", true, Some(Scope::Global));
     });
   }
+  if !revtex4_0 {
+    // revtex4-1.cls:6194-6198, revtex4-2.cls:6215-6219: `nomerge` turns natbib's entry merging off.
+    DeclareOption!("nomerge", {
+      assign_value("revtex_nomerge", true, Some(Scope::Global));
+    });
+  }
   assign_value("revtex_cite_style", pin("numbers"), Some(Scope::Global));
   ProcessOptions!();
   LoadClass!("article");
@@ -142,6 +148,11 @@ LoadDefinitions!({
     assign_value("revtex@preprint@v4.0", true, Some(Scope::Global));
   }
   RequirePackage!("revtex4_support");
+  // revtex4-1.cls:7046, revtex4-2.cls:7067 `\let\NAT@merge\thr@@`: `\cite{a,*b}` merges b's entry into a's
+  // (`natbib_sty::natbib_merge_citations`; REVTeX 4.0 does not merge). 1808.00247.
+  if !revtex4_0 && !lookup_bool("revtex_nomerge") {
+    natbib_sty::natbib_merge_citations("\\thr@@", false)?;
+  }
   revtex4_support_sty::define_section_numbers(if revtex4_0 { "" } else { "4-2" })?;
   revtex4_support_sty::record_implicit_bibstyle(if revtex4_0 { "" } else { "4-2" });
   revtex4_support_sty::retire_option_handlers();

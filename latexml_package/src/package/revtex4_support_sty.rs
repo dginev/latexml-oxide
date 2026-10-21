@@ -220,6 +220,11 @@ LoadDefinitions!({
 
   // Section numbering style
   DefMacro!("\\thesection", "\\Roman{section}");
+  // revtex4.cls:5367, revtex4-1.cls:6759, revtex4-2.cls:6780 and REVTeX 3's aps.sty:636 number tables in capital
+  // Roman, "TABLE I"; the caption names stay Perl's "Figure"/"Table" (user ruling 2026-10-21, 18). Perl's binding
+  // (revtex4_support.sty.ltxml:111) sets only `\thesection`: KNOWN_PERL_ERRORS #1077. 0708.2630, 0902.4794,
+  // 1911.02024, cond-mat9610218, cond-mat0408054. Guard `perfect_kernel_batch78n::revtex_tables_are_roman`.
+  DefMacro!("\\thetable", "\\Roman{table}");
 
   // Grid / column macros
   DefMacro!("\\thepagegrid", "one");

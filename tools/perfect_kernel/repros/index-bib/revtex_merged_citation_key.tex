@@ -1,0 +1,16 @@
+% witness: arXiv 1808.00247 (three \cite{...,*key}: "missing citation" where the PDF prints [37])
+% oracle:  pdflatex 0 errors; "See [1] and [2]."; [1] holds both a and b, the [See][and Chap. 2] notes not printed with
+%          {thebibliography} (natbib.sty:1135-1160, revtex4-1.cls:7046 \NAT@merge=3)
+% engines: rust (int50a) = "See [1, *b] and [[See][andChap.2]c]." with a missing-citation Warning; Perl 0.8.8 the
+%          same for *b (fidelity3 audit N8)
+% expect:  0 errors, 0 warnings; the citations cite keys a,b and c; residual: b stays its own entry [2], c is [3]
+% status:  RED (int50a) -> GREEN for the key (78n, KNOWN_PERL_ERRORS #1081); entry merge open
+\documentclass{revtex4-1}
+\begin{document}
+See~\cite{a,*b} and~\cite{[See][and Chap. 2]c}.
+\begin{thebibliography}{3}
+\bibitem{a} A. Author, J. 1 (2000);
+\bibitem{b} B. Author, J. 2 (2001).
+\bibitem{c} C. Author, J. 3 (2002).
+\end{thebibliography}
+\end{document}

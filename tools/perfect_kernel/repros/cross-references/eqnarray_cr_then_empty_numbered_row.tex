@@ -1,0 +1,25 @@
+% witness: arXiv 0708.0012 (`\label{Flowg1}` ... `\cr &&\\`: \ref texts "III A" or "S0.Ex5" where the PDF prints 24, 26, 30, 40, 45), nucl-th9807024, 2112.13115
+% oracle:  pdflatex 0 errors; "Refs 1, 2, 3, 4, 5.", (1) on the `&&\\` row, (2) (3) (4) on the end's empty row after a trailing \cr, (5) after a single-column `\nonumber\\` (1206.6051) (latex.ltx:15789-15797 \@@eqncr, \endeqnarray)
+% engines: rust (78n r1) = "Refs S0.Ex2, S0.Ex3, S0.Ex4, S0.Ex6, S0.Ex7.", no numbers (each empty numbered row removed with its number); int51a \cr rows numbered, "Refs 1, 4, 6, 9, S0.Ex1."; Perl 0.8.8 numbers every row
+% expect:  0 errors; each empty numbered row joins the unnumbered equation above it: refnums 1, 2, 3, 4, 5
+% status:  RED (78n r1) -> GREEN (78n r2, OXIDIZED_DESIGN_DIVERGENCES #847)
+\documentclass{article}
+\begin{document}
+\begin{eqnarray}
+\label{a} x &=& y \cr
+ &=& z \cr
+&&\\
+u &=& v \label{b}\cr
+\end{eqnarray}
+\begin{eqnarray}
+i &=& j \label{c} \cr
+\end{eqnarray}
+\begin{eqnarray}
+p &=& q \cr
+ &=& r \label{d}\cr
+\end{eqnarray}
+\begin{eqnarray}\label{e}
+x = y, \nonumber\\
+\end{eqnarray}
+Refs \ref{a}, \ref{b}, \ref{c}, \ref{d}, \ref{e}.
+\end{document}

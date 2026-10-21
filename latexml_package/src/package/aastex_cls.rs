@@ -53,6 +53,11 @@ LoadDefinitions!({
   // section numbers and `\ref`s read "I", "I.1" (2609.21324, astro-ph/0003209; Perl the same: aastex.cls.ltxml:44 +
   // revtex4_support.sty.ltxml:111; KNOWN_PERL_ERRORS #557).
   RawTeX!(r"\def\thesection{\arabic{section}}\def\thesubsection{\thesection.\arabic{subsection}}\def\thesubsubsection{\thesubsection.\arabic{subsubsection}}\def\theparagraph{\thesubsubsection.\arabic{paragraph}}");
+  // Its tables in arabic too (aastex.cls 5.x:1518, aastex62.cls:1430, aastex63.cls:1507, aastex701.cls:8117
+  // `\def\thetable{\@arabic\c@table}`, over revtex's Roman at :6237;
+  // emulateapj.cls:1011), where the REVTeX binding's are Roman (revtex4_support_sty.rs `\thetable`): 0709.1471's
+  // "Table 1" and its `\ref`s, "I" without this.
+  RawTeX!(r"\def\thetable{\arabic{table}}");
   // The AASTeX version the document asked for: a versioned fallback's request (`aastex701`, `aastex61` answered by this
   // binding), else the name this class loads under (`aastex`, `aastex63`, `aastex7`; emulateapj_cls.rs loads it as
   // `aastex`, then undefines both versions' own commands).

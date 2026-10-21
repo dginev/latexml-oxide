@@ -23231,3 +23231,58 @@ of two authors, which the PDF prints.) The class's `corref` key (its "Correspond
 class's own printing, the e-mail it names an `email` contact already. bmcart.cls is on `author_files::AUTHOR_FILES`.
 Repro sectioning-frontmatter/bmcart_copy (a stand-in bmcart.cls written from scratch); guard
 `perfect_kernel_batch78m::bmcart_frontmatter_is_frontmatter`.
+
+### 847. eqnarray numbers its rows by `\@@eqncr`'s `\if@eqnsw` state
+
+latex.ltx:15750-15797: a row of `eqnarray` is numbered only if it ends through `\@@eqncr` (`\\`, `\\*`, `\\[len]`,
+`\end{eqnarray}`) and no `\nonumber` came since the previous `\@@eqncr` — `\nonumber` is `\global\@eqnswfalse`
+(:15775), `\@@eqncr` runs `\if@eqnsw\@eqnnum\stepcounter{equation}\fi \global\@eqnswtrue` (:15795), and a row an
+author ends with a raw `\cr` neither prints a number nor resets the switch. `\@currentlabel` is
+`\p@equation\theequation` (:15752), a counter only `\eqnarray`'s `\stepcounter` and each printing `\@@eqncr` step, so
+every `\label` names the number the next printing `\@@eqncr` prints. Perl numbers every row unless it holds a
+`\nonumber` (latex_constructs.pool.ltxml:2226 `\eqnarray@row@after@` runs `afterEquation` whatever ended the row) and
+leaves each label on its row: a `\cr` row is numbered (1011.0523's PDF (19) was our 22, nucl-th9903062's (1) our 2 and
+(6) our 12; 212 papers in the fidelity3 audit's scan of 9,829 eqnarray papers), a `\nonumber` before a `\cr` does not
+reach the `\\` row after it (2112.13115 one ahead of its PDF from (32)), and a `\label` in an unnumbered row names no
+number (1206.6051's NA3, PDF "V.3"; 0708.0012's `\label{l5}\cr &=& v`). Ours (78n r3, sect07.rs; the rule documented
+once at `latex_constructs::eqnarray_eqncr_numbering`): `\lx@eqnarray@number@check`, which `\\` and `\end{eqnarray}`
+expand, is `\@@eqncr`'s test — it records whether the row it ends prints its number (`EQNARRAY_EQNNUM`, from
+`EQNARRAY_EQNSW` = `\if@eqnsw`, then sets the switch); `\nonumber` clears the switch; `\eqnarray@row@after@` retracts
+the preset number of every row not so numbered and marks it (`UNNUMBERED_EQNCR_ROW_ATTRIBUTE`), and `rearrange_eqnarray`
+moves the labels of each marked row to the next numbered row (with none after it — an `eqnarray*`, a trailing
+`\nonumber` row — they stay: LaTeX's `\ref` then names the counter's next value, which no row of the group prints). For
+the environments that opt in with the numbering key `eqncr=1`: latex.ltx's `eqnarray` and `eqnarray*` (iopart's
+`\eqnalign`, subeqn's and subeqnarray's `subeqnarray`, whose rows end in `\cr` or whose end has no check, do not). The
+XML placement of a number printed on an empty row of its own under an unnumbered one — `x &=& y \cr \end{eqnarray}`
+(the end's row), the `… \cr &&\\` idiom, `\label{e} x = y, \nonumber\\ \end{eqnarray}` — is that equation's: the
+row is kept through normalization (`NUMBER_ROW_PROPERTY`, set when it is numbered and the row before is not), and
+`rearrange_eqnarray` joins an empty numbered row (labelled or not) to the unnumbered equation above it, its tags and
+id with it, in a single-column eqnarray too (Perl removes empty rows and their numbers; an empty numbered row under a
+numbered equation, the trailing `\\` of `a &=& b \\ \end{eqnarray}`, is still removed, its number consumed as in
+LaTeX). Equation `\ref` numbers against pdflatex's `.aux` (int52a / 78n r2 / r3): 2112.13115 30 / 63 / 112 of 112,
+1206.6051 66 / 79 / 98 of 98, 1011.0523 7 / 12 / 12 of 12, 0910.0753 14 / 35 / 35 of 35, 0708.0012 0 / 28 / 28 of 29 and
+0806.3762 3 / 15 / 15 of 16 (each miss a label defined twice); 35 changed papers 805 / 933 / 1,066 of 1,151. Residual: a
+label with no numbered row after it in its group stays on its unnumbered row (1303.3431's `eqnarray*` `appa3`), so its
+`\ref` prints a wrong number with no diagnostic — the group's number (a trailing `\nonumber` row: pdflatex the next, 6
+for our 5), a section's (iopart, a `\nonumber\cr` row held into the last row: "1" for pdflatex's 2), or the raw id
+(`eqnarray*`: "S0.Ex5" for pdflatex's 7); review rev78n2, SYNC row "eqnarray label with no numbered row after it". Repros
+cross-references/eqnarray_cr_row_is_unnumbered, eqnarray_cr_then_empty_numbered_row, eqnarray_cr_row_label_names_next_number,
+eqnarray_nonumber_row_label_names_next_number, eqnarray_nonumber_holds_until_eqncr, alignment/eqnarray_cr_row_unnumbered
+(65o review); guards `perfect_kernel_batch78n::{eqnarray_row_ended_by_cr_is_unnumbered,
+eqnarray_empty_numbered_row_numbers_the_equation_above, eqnarray_cr_row_label_names_next_number,
+eqnarray_nonumber_row_label_names_next_number, eqnarray_nonumber_holds_until_eqncr}`,
+`perfect_kernel_batch65o::eqnarray_number_column` ("(1)", unnumbered "(star)" row, "(2)", as pdflatex). Witnesses also
+0806.3762, 0910.0753, nucl-th9807024.
+
+### 848. A class's `\@xnthm` may print a theorem's within-counter its own way
+
+latex.ltx's `\@xnthm` defines `\the<thm>` as `\the<within>\@thmcountersep\@thmcounter{<thm>}`; IEEEtran.cls:5607-5627
+redefines it so a theorem numbered within sections prints `\@IEEEthmcounterinsection{section}` (`\arabic`, "Theorem
+2.1" where `\thesection` is "II"; "A" after `\appendix`, `\Alph` after `\appendices`, `A\arabic` under
+`romanappendices`, :5737/:5768/:5773). Perl's kernel `\newtheorem` (latex_constructs.pool.ltxml `defineNewTheorem`)
+always prints `\the<within>`, and its IEEEtran binding has no theorem code: "Example II.1" (1911.01952; KNOWN_PERL_ERRORS
+#1079). Ours (78n): `define_new_theorem` reads the mapping `theorem_within_display` (within counter → a one-argument
+macro) set by `set_theorem_within_display` (ieeetran_cls.rs, for `section` → `\@IEEEthmcounterinsection`); amsthm's
+binding, which ntheorem and theorem.sty borrow, clears it (`clear_theorem_within_display`), as their own `\@xnthm`
+replaces the class's in LaTeX. Repro cross-references/ieeetran_theorem_within_section_is_arabic; guard
+`perfect_kernel_batch78n::ieeetran_theorem_within_section`.

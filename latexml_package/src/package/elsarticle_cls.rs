@@ -90,6 +90,43 @@ LoadDefinitions!({
   // leaves it at OT1; divergence from Perl.
   RequirePackage!("fontenc", options => vec!["T1".to_string()]);
   RequirePackage!("elsart_support_core");
+  // elsarticle.cls:1200-1236 `\newproof`: the environment steps a counter as `\newtheorem` does (`\@prf` is
+  // `\refstepcounter`, so a `\label` in it names that number; `\newproof{x}[y]{…}` steps y's, `\@oprf`; `{…}[within]`
+  // numbers within it, `\@xnprf`), but its head (`\@beginproof`, `\@opargbeginproof`) prints only the name, in small
+  // caps with a period ("Proof.", "Proof (note)."; :1229-1233), and the body is upright. Perl lets `\newproof` be
+  // `\newtheorem` (elsart_support_core.sty.ltxml:208), bold heads "Proof 1." with an italic body (1304.5109,
+  // 2606.18393's own numbered `\newtheorem{proof}`; KNOWN_PERL_ERRORS #1080). Here a numbered theorem whose title
+  // prints the name alone. Each form declares under `\expandafter\@ifdefinable\csname #1\endcsname` (:1205, :1213,
+  // :1220): a name already defined (amsthm's `proof`, loaded first) is LaTeX's "Command \proof already defined", and
+  // the first definition stays (the reviewer's probe el2: pdflatex 1 error, amsthm's "Proof."). Guards
+  // `perfect_kernel_batch78n::{elsarticle_newproof_head_is_unnumbered, elsarticle_newproof_steps_its_counter,
+  // elsarticle_newproof_keeps_a_defined_proof}`.
+  DefPrimitive!("\\newproof {}[]{}[]", sub[(thmset, otherthmset, typ, within)] {
+    let name = thmset.to_string();
+    if !engine::latex_constructs::is_definable_latex(&T_CS!(s!("\\{name}")))?.0 {
+      let mut refusal = vec![T_CS!("\\expandafter"), T_CS!("\\@ifdefinable"), T_CS!("\\csname")];
+      refusal.extend(ExplodeText!(name));
+      refusal.extend([T_CS!("\\endcsname"), T_BEGIN!(), T_END!()]);
+      Digest!(Tokens::new(refusal))?;
+      return Ok(Vec::new());
+    }
+    engine::latex_constructs::define_new_theorem(
+      None,
+      thmset,
+      otherthmset,
+      Some(typ),
+      within,
+      Some(Tokenize!("\\rmfamily")),
+    )?;
+    DefMacro!(
+      T_CS!(s!("\\format@title@{name}")),
+      parse_parameters("{}", &T_CS!(s!("\\format@title@{name}")), true)?,
+      Some(ExpansionBody::Tokens(mouth::tokenize_internal(TeXString::assembled(s!(
+        "{{\\normalfont\\scshape\\lx@tag{{\\csname lx@name@{name}\\endcsname}}{{\\ifx.#1.\\else\\space(#1)\\fi}}.}}"
+      ))))),
+      scope => Some(Scope::Global)
+    );
+  });
   // DIVERGENCE from Perl (#335, KPE #305): elsarticle.cls inputs fleqn.clo
   // only for `5p`, or `3p` with `twocolumn` (elsarticle.cls:1280, 1295); the
   // default `preprint`, `1p` and one-column `3p` centre their equations.

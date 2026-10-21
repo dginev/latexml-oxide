@@ -3,7 +3,7 @@
 use crate::{
   engine::{
     base_utilities::names_continue,
-    latex_constructs::{FontUnit, symbol_box_size},
+    latex_constructs::{FontUnit, set_theorem_within_display, symbol_box_size},
   },
   prelude::*,
 };
@@ -418,6 +418,12 @@ LoadDefinitions!({
   // IEEEtran's `\appendices` is its own code, not a call of `\appendix`, so it reaches the kernel's through a copy
   // taken here: a document's `\let\appendix\appendices` (2605.23316) then runs once instead of looping.
   Let!("\\lx@IEEE@appendix", "\\appendix");
+  // IEEEtran.cls:5597-5627: a theorem numbered within sections prints the section through
+  // `\@IEEEthmcounterinsection`, `\arabic` (so "Theorem 2.1" where `\thesection` is "II"), "A" after `\appendix`, `\Alph`
+  // after `\appendices` (`A\arabic` under `romanappendices`), :5737/:5768/:5773. Perl's binding prints `\thesection`,
+  // "II.1": KNOWN_PERL_ERRORS #1079. Witness 1911.01952. Guard `perfect_kernel_batch78n::ieeetran_theorem_within_section`.
+  RawTeX!(r"\gdef\@IEEEthmcounterinsection#1{\arabic{#1}}\edef\@IEEEstringsection{section}");
+  set_theorem_within_display("section", Some("\\@IEEEthmcounterinsection"));
   // IEEEtran V1.5-1.6c's switch for the same choice (V1.6b :4075-4091 `\newif\ifuseRomanappendices`, read by its
   // `\appendices`), which their documents set (`\useRomanappendicesfalse`; 67x, witnesses cs0504030, 0805.0012,
   // quant-ph0703150, 0705.3677): false here, as V1.8b numbers `\Alph` without the option (V1.6's default was true).
@@ -454,6 +460,7 @@ LoadDefinitions!({
 \setcounter{subsection}{0}\setcounter{subsubsection}{0}\setcounter{paragraph}{0}%
 \gdef\thesectiondis{}\gdef\thesubsection{\Alph{subsection}}%
 \gdef\fnum@appendix{\ifnum\c@section>\@ne\lx@@fnum@@{appendix}\else\appendixname\fi}%
+\gdef\@IEEEthmcounterinsection##1{A}%
 \gdef\lx@IEEE@appendix@labels{}\@ifmtarg{#1}{\lx@IEEE@appendix@next}{\section{#1}}}
 \def\lx@IEEE@appendix@next{\@ifnextchar\par{\expandafter\lx@IEEE@appendix@next\@gobble}{%
 \@ifnextchar\label{\expandafter\lx@IEEE@appendix@label\@gobble}{%
@@ -469,8 +476,10 @@ LoadDefinitions!({
 \newif\ifuseRomanappendices
 \def\appendices{\@IEEEsaveoriginalsectiononce\lx@IEEE@appendix\global\let\fnum@appendix\@undefined\setcounter{section}{0}%
 \ifCLASSOPTIONromanappendices\lx@IEEE@roman@appendices\else\ifuseRomanappendices\lx@IEEE@roman@appendices\else
-\gdef\thesectiondis{\Alph{section}}\@IEEEcompsocconfonly{\gdef\thesectiondis{\Alph{section}.}}\fi\fi}
+\gdef\thesectiondis{\Alph{section}}\@IEEEcompsocconfonly{\gdef\thesectiondis{\Alph{section}.}}%
+\gdef\@IEEEthmcounterinsection##1{\Alph{##1}}\fi\fi}
 \def\lx@IEEE@roman@appendices{\gdef\thesection{\Roman{section}}\gdef\thesectiondis{\Roman{section}}%
+\gdef\@IEEEthmcounterinsection##1{A\arabic{##1}}%
 \@IEEEcompsocconfonly{\gdef\thesectiondis{\Roman{section}.}}}");
 
   // Bibliography style — Perl IEEEtran doesn't touch bibliography
