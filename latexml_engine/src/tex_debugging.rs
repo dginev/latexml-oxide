@@ -321,9 +321,10 @@ LoadDefinitions!({
                 p_spec = pin!("{");
               },
               "UntilBrace" => {
+                // `\def\b#1#{…}`: TeX's `macro:#1{->…{` (tex.web §473-476), the brace after the parameter too
                 p_trailer = "{";
                 arg_index += 1;
-                p_spec = pin(with(p_spec, |p_str| format!("#{arg_index}{p_str}")));
+                p_spec = pin(s!("#{arg_index}{{"));
               },
               other if other.starts_with("Match:") => {
                 // just match, don't increment arg index
@@ -334,6 +335,15 @@ LoadDefinitions!({
                 let delim = delimiter_text(param, other);
                 arg_index += 1;
                 p_spec = pin(s!("#{arg_index}{delim}"));
+                // A `#{` delimiter's brace ends the replacement text too (tex.web §476; `parse_def_parameters`).
+                if param
+                  .extra
+                  .first()
+                  .and_then(|tks| tks.unlist_ref().last())
+                  .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+                {
+                  p_trailer = "{";
+                }
               },
               _other => {
                 // regular parameter, increment

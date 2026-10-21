@@ -4974,6 +4974,73 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   witnesses, 12 papers loading caption with options after floatrow or `[caption=false]{subfig}`, 58 subcaption controls)
   int45b vs int45a: E 139 → 139, F 1 → 1, 3 outputs changed — the witnesses, each one unknown-key Warning fewer and its
   option applied. Binding nets (int45a) 136/136, 0 documents worse than int44a.
+- **78d** (quality batch 7, the sel78d selection study's items 1, 3, 6, 8, 9; guards `perfect_kernel_batch78d::*`, 5,
+  each RED on int45b, and `token_kernel_gaps::kernel_def_hash_brace_delimiter`; OD #793, KPE #1027-#1029, #1022
+  residual fixed). (1) REVTeX's section numbers (revtex4-2.cls:6528-6551 `\secnums@rtx`, revtex4.cls:5163-5172; KPE
+  #1027; ~3,050 of the 30k census): "I", "A", "1", "a", `\ref` "I A 1" through `\p@<level>` with thin spaces,
+  paragraphs numbered (`secnumdepth` 4), heading tags `\the<level>.` (aps4-2.rtx:288) via `\fnum@<level>`, `\theequation`
+  with REVTeX's prefix, the class's `\appendix` (subsections `\arabic`, equations "(A1)", `\appendix*` "(A.1)");
+  `rmp`, `aapm` (4.2), `secnumarabic`, `eqsecnum` as their `.rtx`/class code — revtex4_support_sty.rs
+  `define_section_numbers`, called by the revtex4/revtex4-2 and revtex4-1 bindings; AASTeX (and emulateapj through it)
+  keeps its own numbers (`lx@revtex@sections@by@class`), REVTeX 3 is unchanged. (2) IEEEtran's (and ieeeconf's)
+  `\appendix[<title>]` is one appendix (IEEEtran.cls:5719-5745): refnum "A", tag "Appendix", the title, subsections
+  from 1 (rev78c2 probe i2: a "[Proof]" paragraph and a "B." subsection before); the class's discarding of a following
+  `\section`'s argument is not ported — an unstarred `\section` right after `\appendix` is the appendix, a later one
+  another appendix (OD #793; KPE #1022 residual closed). (3) subcaption's sub-floats set `\hsize`, `\textwidth`,
+  `\columnwidth`, `\linewidth` from their width as the minipage they are (subcaption.sty:70-92; one helper
+  `set_minipage_width`, the minipage's too; `\subcaptionbox` without a width changes none, caption.sty:462-464; KPE
+  #1028; witness 2509.19464 A1.F6 397.5pt → 111.3pt/139.1pt as pdflatex; subfig's `\subfloat` and subfigure.sty set
+  an `\hbox` and change no width). (4) mdpi's caption settings (mdpi.cls:1362-1373, "Figure 1. " bold small) when no copy
+  is shipped (quality ledger 132); a shipped copy, read after the binding, set them already — all 22 census papers ship
+  one and printed "Figure 1. " on int45b; the study's witness 2302.03012 converts its arXiv main file, which is
+  `article` ("Figure 1: " correct), so the item reaches no sampled paper. (5) A parameter text's closing `#{` extends
+  the last delimiter (tex.web §473-476; KPE #1029): `Until:){`, the brace put back after the match, `read_until`
+  matching a delimiter's `{` (gullet.rs), `\meaning` "(#1){->…{"; "Expected a { here." with one brace; witness
+  2610.26441 (tkz-euclide `\def\tkz@DefPoint[#1](#2)#{`) 9 Errors → 0. Guards changed for the intended output:
+  `50_structure` figure_grids golden (110 sub-figure image widths: `0.8\columnwidth` is the panel's), `perfect_kernel_batch57::
+  collapsed_panel_keeps_the_float_geometry` (110.4pt, the subfigure's `\linewidth`), `perfect_kernel_batch67x::
+  ieeetran_appendix_clears_sectiondis` (the "Appendix" heading, ids `A1.SS1`), `perfect_kernel_batch77r::
+  revtex_hyperref_loaded_twice_keeps_cleveref` ("I."). A/B vs int45b (release, `--preload=ar5iv.sty`; 248 papers: 40
+  revtex4* with `\subsection`, 17 IEEEtran `\appendix[`, 40 with a width in a sub-float, 20 mdpi, 20 tkz-euclide, 100
+  random of the 30k census, 12 witnesses incl. 2610.26441): E 37 → 28, F 0 → 0, W 3,019 → 3,018, 0 papers worse; 118
+  outputs changed — revtex in 37 + 22 random + 2610.08787 (heading tags, refnums, `toctitle`s, paragraph ids `Px` →
+  `P`, appendix equations "(A1)" in 25 papers), IEEEtran/ieeeconf appendices in 13 + 2102.02632, 2002.08586, 1907.08915
+  (its `\appendix \label` now on the appendix), sub-float widths in 32 + 9 random + 4 witnesses (graphics and TikZ;
+  some papers in two groups), 2610.26441 (its pictures drawn); no text word
+  lost outside numbering tags (the ±1 are the stray "*" of `\appendix*` gone and "[Proof]" brackets), formulas
+  unchanged but their ids. Inits 0/0, dumps identical to int45b's. That "0 papers worse" was wrong (rev78d): the A/B
+  sampled neither an IEEEtran `\appendix` followed by a blank line (16 of 1,923 IEEEtran papers; r1 made an empty
+  appendix "A" and the titled one "B") nor a PRL appendix, and judged 1509.05768 (PRL, unnumbered in its PDF) correct
+  with r1's numbers; PRL papers gained paragraph tags and "(A1)" appendix equations (1411.2258, 2606.23684,
+  2404.18827, 1508.03506). Round 2 (rev78d findings 1-10): (1) IEEEtran `\appendix` without a title takes the first
+  unstarred `\section` past blank lines, spaces, comment lines and `\label`s (which then label the appendix) as the
+  appendix; anything else next (`\section*`, `\subsection`) follows the empty "Appendix" heading pdflatex prints;
+  witnesses 1903.01287, 1103.2068, 2002.03484, 2410.15995, 2401.07123 one appendix "A" again. (2) REVTeX's PRL journal
+  unnumbers the headings (`\c@secnumdepth=-\maxdimen`, aps4-2.rtx:587, aps4-1.rtx:564, revtex4 aps.rtx:517): the
+  journal read from the class options as the class reads them (`revtex4_support_sty::selected_journal`: first given in
+  4.1/4.2, last declared in 4.0); appendix equations count on ("(16)", 1508.03506's PDF). AIP's `cp`
+  (aip4-2.rtx:1181 `secnumdepth` 0) is dead code in the class — its `\ifx\@journal\jnl@cp` is read before the journal
+  is selected — so `cp` stays numbered (pdflatex; no `cp` paper in the census). No other society file sets
+  `secnumdepth` or the numbers. (3) `\appendices` after `\appendix` restores the kernel's appendix tag and numbers from
+  "A" (pdflatex "APPENDIX", "APPENDIX A", "APPENDIX B"). (4) A later `\section` after `\appendix` is tagged "Appendix
+  B", "C" as its refnum (OD #793 records that pdflatex's refs to it read "A"). (5) `\subcaptionbox[<width>]` is a
+  `\parbox`: `\hsize` and `\linewidth` only (`\lx@subcaption@parbox`). (6) `\meaning` of `\def\b#1#{…}` is
+  "macro:#1{->…{". (8) gullet.rs tests the BEGIN catcode first. (9) the `token_kernel_gaps` and `batch67x` guards
+  assert whole elements. Open (7): a `\ref` to an `\appendix*` appendix prints "Appendix" where pdflatex prints
+  nothing — the scan reads the role-less heading tag as the refnum and the post-processor never renders a `\ref`
+  empty (KPE #1027). Guards extended: `revtex_sections_number_as_the_class` (`aps,prl` in 4.2/4.1/4.0, `prb,prl` in
+  4.2/4.0, `aip,cp`, PRL's appendix element), `ieeetran_appendix_with_a_title_is_one_appendix` (blank line, comment
+  line, `\label`, `\section*`, a later `\section`, `\appendices`), `subfigure_sets_the_line_width` (the
+  `\subcaptionbox`), `hash_brace_extends_the_last_delimiter` and `kernel_def_hash_brace_delimiter` (`\meaning` of
+  `#1#{`) — each new case red on 78d r1. A/B r1 vs r2 (release, 332 papers: the 248 above, rev78d's 40, the 16
+  blank-line IEEEtran, 30 PRL with `\appendix` or `\paragraph`, 10 AIP): E 195 → 195, F 0 → 0, W 3,683 → 3,683; 45
+  outputs changed — 34 PRL papers lose their heading numbers and keep their equation numbers counting (2501.04107
+  checked against its PDF), 10 IEEEtran appendices as above (2507.18220 gains the "Appendix" heading before its
+  `\section*`), 1909.01124 ids only. int45b vs r2 over the same 332: E 204 → 195, F 0 → 0, W 3,684 → 3,683, 180
+  changed. rev78d2 (SHIP after two fixes): that set sampled no IEEEtran `\appendix` followed by an empty group, a
+  non-printing command or a float — 2002.07641 (`\appendix{}`), 2404.01875, 2007.07179 were worse than int45b (an empty
+  appendix "A", the titled one "B"); the main-session follow-up skips empty groups (guard row "an empty group", red on
+  r2), the rest is OD #793's recorded residual. PRL headings take the unnumbered ids `Sx1`/`Ax1` (KPE #1027).
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
   parts draw, as Unicode's IPA letter, cross-checked against tipauni.sty; the `""`/`||` ligatures ˌ ǁ), so its input

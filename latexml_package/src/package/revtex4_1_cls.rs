@@ -7,7 +7,7 @@ LoadDefinitions!({
     "bibnotes", "nobibnotes",
     "footinbib", "nofootinbib", "altaffilletter", "altaffilsymbol",
     "superbib", "citeautoscript", "raggedbottom", "flushbottom",
-    "tightenlines", "lengthcheck", "eqsecnum", "secnumarabic",
+    "tightenlines", "lengthcheck",
     "fleqn", "floats", "endfloats",
     // Perl L29 also declares the starred `endfloats*`; Rust was missing it
     // so `\documentclass[endfloats*]{revtex4-1}` fell through to the article
@@ -36,10 +36,20 @@ LoadDefinitions!({
   DeclareOption!("nopreprintnumbers", {
     assign_value("revtex@preprintnumbers", Stored::Bool(false), Some(Scope::Global));
   });
+  // The society and journal, which the section numbers depend on (the `rmp` journal, apsrmp4-1.rtx:115-139; PRL's
+  // `secnumdepth`, aps4-1.rtx:564), are read from the options as the class reads them
+  // (`revtex4_support_sty::selected_journal`).
   for substyle in ["aps", "pra", "prb", "prc", "prd", "pre", "prl",
     "prstab", "rmp", "osa", "osameet", "opex", "tops", "josa"].iter()
   {
     DeclareOption!(*substyle, None);
+  }
+  // The options that number the sections and equations (`revtex4_support_sty::define_section_numbers`): `eqsecnum`
+  // (revtex4-1.cls:6036-6043) and `secnumarabic` (:6047-6050).
+  for option in ["eqsecnum", "secnumarabic"] {
+    DeclareOption!(option, {
+      assign_value(&s!("revtex@opt@{option}"), true, Some(Scope::Global));
+    });
   }
   // Perl revtex4-1.cls.ltxml L40-45:
   //   my @revtex_toload = ();        # EMPTY by default
@@ -115,6 +125,7 @@ LoadDefinitions!({
     Digest!("\\PassOptionsToPackage{numbers}{natbib}")?;
   }
   RequirePackage!("revtex4_support");
+  revtex4_support_sty::define_section_numbers("4-1")?;
   revtex4_support_sty::record_implicit_bibstyle("4-1");
   revtex4_support_sty::retire_option_handlers();
   revtex4_support_sty::define_float_repair()?;

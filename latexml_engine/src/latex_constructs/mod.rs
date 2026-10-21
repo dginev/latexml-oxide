@@ -3161,6 +3161,21 @@ pub fn reset_float_box() -> Result<()> {
   Ok(())
 }
 
+/// The width registers a minipage of width `width` sets (latex.ltx:16312-16313 `\@iiiminipage`: `\hsize#4`,
+/// `\textwidth\hsize \columnwidth\hsize`, then `\@parboxrestore`'s `\linewidth\hsize`), in the current group: the
+/// `{minipage}` environment and the sub-float environments subcaption makes of one (subcaption.sty:70-92
+/// `\subcaption@iiminipage`). Perl's `{minipage}` assigns the first three (latex_constructs.pool.ltxml:4785-4787;
+/// `\linewidth` OXIDIZED_DESIGN tcolorbox note, witness 2605.02240) and its sub-floats only `beforeFloat`'s `\hsize`
+/// (:3377), so a `width=\linewidth` image in a `{subfigure}{.28\textwidth}` took the page's width (KNOWN_PERL_ERRORS
+/// #1028; witness 2509.19464 A1.F6). Guard `perfect_kernel_batch78d::subfigure_sets_the_line_width`.
+pub fn set_minipage_width(width: Dimension) -> Result<()> {
+  let rv: RegisterValue = width.into();
+  for register in ["\\hsize", "\\textwidth", "\\columnwidth", "\\linewidth"] {
+    assign_register(register, rv.clone(), None, Vec::new())?;
+  }
+  Ok(())
+}
+
 /// Perl: beforeFloat (latex_constructs.pool.ltxml L3430-3438)
 /// Sets \@captype, adjusts \hsize for single/double column floats.
 /// `preincrement`: if Some("figure"), pre-increments the parent float counter

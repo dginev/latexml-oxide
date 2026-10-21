@@ -364,24 +364,24 @@ fn ieeetrantools_under_ieeetran_keeps_class_author_marks() {
 
 /// `\appendix` (IEEEtran.cls:5723-5736) clears `\thesectiondis` and numbers the subsections `\Alph`: pdflatex "A. Sub",
 /// "Dis [] sub [A]". ieeeconf's `\appendices` (ieeeconf.cls:4103-4117) does neither: "Appendix I", subsection "I-A".
+/// Since 78d the `\appendix` prints its "APPENDIX" heading, an `ltx:appendix` the subsection is in (`A1.SS1`, was
+/// `A0.SS1`; KNOWN_PERL_ERRORS #1022, OXIDIZED_DESIGN_DIVERGENCES #793).
 #[test]
 fn ieeetran_appendix_clears_sectiondis() {
   let body = "\\begin{document}\n\\section{Intro}\nText.\n\\appendix\n\\subsection{Sub}\n\
               Dis [\\thesectiondis] sub [\\thesubsection].\n\\end{document}\n";
   let (log, xml) = convert_counted(&format!("\\documentclass{{IEEEtran}}\n{body}"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let assert_element = latexml::util::test::assert_element;
-  assert!(
-    xml.contains(
-      r#"<title><tag close=" ">A.</tag><text font="italic" xml:id="A0.SS1.1">Sub</text></title>"#
-    ),
-    "{xml}"
-  );
-  assert_element(
+  latexml::util::test::assert_element(
     &xml,
-    "p",
-    &[r#"xml:id="A0.SS1.p1.1""#],
-    r#"<p xml:id="A0.SS1.p1.1">Dis [] sub [A].</p>"#,
+    "appendix",
+    &[r#"xml:id="A1""#],
+    r#"<appendix inlist="toc" xml:id="A1"><tags><tag>Appendix</tag><tag role="refnum">A</tag>
+ <tag role="typerefnum">Appendix A</tag></tags><title><tag close=" ">Appendix</tag></title>
+ <toctitle><tag close=" ">A</tag></toctitle><subsection inlist="toc" xml:id="A1.SS1"><tags><tag>A.</tag>
+ <tag role="refnum">A</tag><tag role="typerefnum">§A</tag></tags><title><tag close=" ">A.</tag>
+ <text font="italic" xml:id="A1.SS1.1">Sub</text></title><toctitle><tag close=" ">A</tag>Sub</toctitle>
+ <para xml:id="A1.SS1.p1"><p xml:id="A1.SS1.p1.1">Dis [] sub [A].</p></para></subsection></appendix>"#,
   );
   let body = body.replace("\\appendix\n", "\\appendices\n\\section{First}\n");
   let (log, xml) = convert_counted(&format!("\\documentclass{{ieeeconf}}\n{body}"));

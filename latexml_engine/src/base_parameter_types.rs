@@ -346,7 +346,15 @@ LoadDefinitions!({
     // re-misses until the error cap; same Fatal outcome, one report instead
     // of hundreds. Guard: `perfect_kernel_batch52::until_miss_at_eof_is_fatal_once`.
     match read_until(&until_extra[0])? {
-      Some(tokens) => Ok(ArgWrap::Tokens(tokens)),
+      Some(tokens) => {
+        // A delimiter ending in `{` comes only from a parameter text's closing `#{`, whose brace TeX also appends to
+        // the replacement text (tex.web §476, `parse_def_parameters`): it goes back to the input, after the call.
+        let last = until_extra[0].unlist_ref().last();
+        if let Some(brace) = last.filter(|t| t.get_catcode() == Catcode::BEGIN) {
+          unread_one(*brace);
+        }
+        Ok(ArgWrap::Tokens(tokens))
+      },
       None => {
         if at_end_of_all_input() {
           let caller = get_current_token()
@@ -647,7 +655,7 @@ LoadDefinitions!({
     read_token()?.inspect(|&tok| {
       unread_one(tok);
       if tok.get_catcode() != Catcode::BEGIN {
-        let err = || {Error!("expected","{","Expected a {{ here."); Ok(())};
+        let err = || {Error!("expected","{","Expected a { here."); Ok(())};
         err().ok();
       }
     })

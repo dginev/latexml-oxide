@@ -250,17 +250,25 @@ pub fn shipped_file_loads(file: &str, ext: &str, package: &str) -> bool {
 /// Does the document's class option list (`\@classoptionslist`) name `option`? For a class option a binding that
 /// does not process its options reads (ieeeaccess's `jtehm`).
 pub fn class_option_given(option: &str) -> Result<bool> {
+  Ok(class_options()?.iter().any(|given| given == option))
+}
+
+/// The document's class options (`\@classoptionslist`) in the order given, for a binding that reads them as its class
+/// does rather than in the order they are declared (REVTeX's journal, `revtex4_support_sty::selected_journal`).
+pub fn class_options() -> Result<Vec<String>> {
   let Some(defn) = lookup_definition(&T_CS!("\\@classoptionslist"))? else {
-    return Ok(false);
+    return Ok(Vec::new());
   };
   let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
-    return Ok(false);
+    return Ok(Vec::new());
   };
   Ok(
     body
       .to_string()
       .split(',')
-      .any(|given| given.trim() == option),
+      .map(|given| given.trim().to_string())
+      .filter(|given| !given.is_empty())
+      .collect(),
   )
 }
 

@@ -13,7 +13,7 @@ LoadDefinitions!({
     "bibnotes", "nobibnotes",
     "footinbib", "nofootinbib", "altaffilletter", "altaffilsymbol",
     "superbib", "citeautoscript", "raggedbottom", "flushbottom", "tightenlines",
-    "lengthcheck", "eqsecnum", "secnumarabic", "fleqn", "floats", "endfloats",
+    "lengthcheck", "fleqn", "floats", "endfloats",
     "titlepage", "notitlepage", "groupedaddress", "unsortedaddress", "runinaddress",
     "superscriptaddress", "byrevtex", "floatfix", "nofloatfix", "ltxgridinfo",
     "outputdebug", "raggedfooter", "newabstract", "oldabstract",
@@ -24,6 +24,20 @@ LoadDefinitions!({
     "osa", "osameet", "opex", "tops", "josa",
   ].iter() {
     DeclareOption!(*option, None);
+  }
+  // REVTeX 4.2's `aapm` society (aapm4-2.rtx; REVTeX 4.0 has no aapm.rtx). The society and journal, which the section
+  // numbers depend on (the `rmp` journal, apsrmp4-2.rtx:124-148, revtex4's rmp.rtx:113-122; `aapm`, aapm4-2.rtx:290-314;
+  // PRL's and AIP `cp`'s `secnumdepth`), are read from the options as the class reads them
+  // (`revtex4_support_sty::selected_journal`).
+  if !revtex4_0 {
+    DeclareOption!("aapm", None);
+  }
+  // The options that number the sections and equations (`revtex4_support_sty::define_section_numbers`): `eqsecnum`
+  // (revtex4-2.cls:6057-6064, revtex4.cls:3836-3840) and `secnumarabic` (revtex4-2.cls:6068-6071, revtex4.cls:3987).
+  for option in ["eqsecnum", "secnumarabic"] {
+    DeclareOption!(option, {
+      assign_value(&s!("revtex@opt@{option}"), true, Some(Scope::Global));
+    });
   }
   // The options that decide whether the class prints the `\preprint` numbers (revtex4-1.cls:5856-5909, revtex4.cls
   // :3847-3892, revtex4-2.cls alike): `preprint` (and `manuscript`, `checkin`) set the preprint style, which prints
@@ -128,6 +142,7 @@ LoadDefinitions!({
     assign_value("revtex@preprint@v4.0", true, Some(Scope::Global));
   }
   RequirePackage!("revtex4_support");
+  revtex4_support_sty::define_section_numbers(if revtex4_0 { "" } else { "4-2" })?;
   revtex4_support_sty::record_implicit_bibstyle(if revtex4_0 { "" } else { "4-2" });
   revtex4_support_sty::retire_option_handlers();
   if revtex4_0 {

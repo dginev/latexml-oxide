@@ -102,6 +102,19 @@ LoadDefinitions!({
       RequirePackage!(package);
     }
   }
+  // mdpi.cls:1362-1373 (2302.03012's copy; the same settings in the copies of 22 mdpi papers of the sel78d 30k census,
+  // some with `margin=0.75cm` or `singlelinecheck=on`): after caption, the class sets its float types' captions — a bold
+  // small label ended by a period, small text ("Figure 1. "). A shipped copy is read after this binding and sets them
+  // itself (those 22 papers printed "Figure 1. " before too); without one the binding stands in for the class, which
+  // had left caption's default "Figure 1: " (quality ledger 132). The figure and table rows as the class writes them; its
+  // newfloat types (`listing`, `boxenv`, `chart`, `scheme`, mdpi.cls:1355-1360) are not defined here. Guard
+  // `perfect_kernel_batch78d::mdpi_captions_end_the_label_with_a_period`.
+  if shipped.is_none() {
+    RawTeX!(
+      r"\captionsetup[figure]{position=bottom, labelfont={bf, small, stretch=1.17}, labelsep=period, textfont={small, stretch=1.17}, aboveskip=6pt, belowskip=-6pt, singlelinecheck=off, justification=justified}
+\captionsetup[table]{position=top, labelfont={bf, small, stretch=1.17}, labelsep=period, textfont={small, stretch=1.17}, aboveskip=6pt, singlelinecheck=off, justification=justified}"
+    );
+  }
   // The copies that load paracol (2105.08579's, 2201.05363's, 1809.00601's: :55 `\RequirePackage{paracol}`) open
   // `\begin{paracol}{2}` for the first page's side column (citation, editor, dates) and `\switchcolumn` to the body,
   // in `\AfterEndPreamble` after the class's own `\maketitle` (2105.08579's :880-887, directly; 1809.00601's :908-912,

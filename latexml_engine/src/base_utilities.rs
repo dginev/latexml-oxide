@@ -10116,6 +10116,17 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens) -> Result<Option<Para
       }
       // Found text that marks the end of the parameter
       if !delim.is_empty() {
+        // tex.web §476: a `#` that ends the parameter text (`#{`) appends the `{` to the last delimiter and to the
+        // replacement text, so `\def\pt(#1)#{…}` delimits #1 by `){` and gives the brace back after its expansion
+        // (the `Until` reader puts a matched delimiter's closing `{` back, `read_until` matches it as tex.web §392
+        // does). Perl (TeX_Macro.pool.ltxml:108-112) reads #1 to the first `)` and then requires a `{`: tkz-euclide's
+        // `\def\tkz@DefPoint[#1](#2)#{` (tkz-obj-eu-points.tex:82) split `\tkzDefPoint(2*cos(1),3){T}` at
+        // `cos(1` and raised "expected {" (witness 2610.26441, 9 Errors with what followed; KNOWN_PERL_ERRORS #1029).
+        // Guards `perfect_kernel_batch78d::hash_brace_extends_the_last_delimiter`, `kernel_def_hash_brace_delimiter`.
+        if tokens.len() == 1 && tokens.front().unwrap().get_catcode() == Catcode::PARAM {
+          tokens.pop_front();
+          delim.push(T_BEGIN!());
+        }
         let extra = Tokens::new(delim);
         params.push(
           Parameter {

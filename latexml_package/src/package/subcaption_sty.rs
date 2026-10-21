@@ -36,6 +36,33 @@ pub(crate) fn subcaption_width_props(args: &[Option<Digested>]) -> Result<SymHas
   Ok(props)
 }
 
+/// A sub-float environment is subcaption's minipage (subcaption.sty:70-92 `\subcaption@iiminipage`, `\minipage[#1]#2{#3}`):
+/// its width argument (the fourth) sets the width registers inside it, `\linewidth` among them (`set_minipage_width`;
+/// KNOWN_PERL_ERRORS #1028, witness 2509.19464 A1.F6). `\subcaptionbox`, which opens one with its optional width, sets
+/// them only when given a width (caption.sty:460-489 `\parbox{#6}`); without, its content is measured at the outer
+/// width (:462-464 `\hbox{#4}`), so the `0pt` stand-in (`\@@subcaptionbox`) changes none (html_feedback #6903's
+/// `\subcaptionbox{}{\includegraphics[width=0.48\linewidth]{…}}`). Its box is a `\parbox` (caption.sty:473, :482), which
+/// sets `\hsize` and `\linewidth` only (latex.ltx `\@iiiparbox`), `\textwidth` and `\columnwidth` staying the outer ones
+/// (rev78d probe sfw case G); `\@@subcaptionbox` marks its sub-float `\lx@subcaption@parbox`.
+fn subfloat_minipage_width(whatsit: &mut Whatsit) -> Result<()> {
+  let parbox = lookup_bool("lx@subcaption@parbox");
+  if parbox {
+    // This sub-float's alone: one in its body is a minipage again.
+    assign_value("lx@subcaption@parbox", false, Some(Scope::Local));
+  }
+  if let Some(width) = whatsit.get_arg(4).map(|w| w.value_of()).filter(|w| *w > 0) {
+    if parbox {
+      let rv: RegisterValue = Dimension::new(width).into();
+      for register in ["\\hsize", "\\linewidth"] {
+        assign_register(register, rv.clone(), None, Vec::new())?;
+      }
+    } else {
+      set_minipage_width(Dimension::new(width))?;
+    }
+  }
+  Ok(())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: subcaption.sty.ltxml
@@ -248,6 +275,7 @@ LoadDefinitions!({
       // The begin code opens a TeX group of its own: subcaption.sty:70-80 `\minipage` (latex.ltx:16310 `\vbox\bgroup`).
       tex_group => { TexGroup::Box },
       before_digest => { before_float("subfigure", Some("figure"))?; },
+      after_digest_begin => sub[whatsit] { subfloat_minipage_width(whatsit)?; },
       after_digest => sub[whatsit] { after_float(whatsit); }
     );
   }
@@ -264,6 +292,7 @@ LoadDefinitions!({
     // The begin code opens a TeX group of its own: subcaption.sty:70-80 `\minipage` (latex.ltx:16310 `\vbox\bgroup`).
     tex_group => { TexGroup::Box },
     before_digest => { before_float_ex("subfigure", Some("figure"), true)?; },
+    after_digest_begin => sub[whatsit] { subfloat_minipage_width(whatsit)?; },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
 
@@ -280,6 +309,7 @@ LoadDefinitions!({
     // The begin code opens a TeX group of its own: subcaption.sty:70-80 `\minipage` (latex.ltx:16310 `\vbox\bgroup`).
     tex_group => { TexGroup::Box },
     before_digest => { before_float("subfigure", Some("figure"))?; },
+    after_digest_begin => sub[whatsit] { subfloat_minipage_width(whatsit)?; },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
   DefEnvironment!("{subcaptionblock*}[][][]{SetlengthDimension}",
@@ -292,6 +322,7 @@ LoadDefinitions!({
     // The begin code opens a TeX group of its own: subcaption.sty:70-80 `\minipage` (latex.ltx:16310 `\vbox\bgroup`).
     tex_group => { TexGroup::Box },
     before_digest => { before_float_ex("subfigure", Some("figure"), true)?; },
+    after_digest_begin => sub[whatsit] { subfloat_minipage_width(whatsit)?; },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
 
@@ -312,6 +343,7 @@ LoadDefinitions!({
       // The begin code opens a TeX group of its own: subcaption.sty:70-80 `\minipage` (latex.ltx:16310 `\vbox\bgroup`).
       tex_group => { TexGroup::Box },
       before_digest => { before_float("subtable", Some("table"))?; },
+      after_digest_begin => sub[whatsit] { subfloat_minipage_width(whatsit)?; },
       after_digest => sub[whatsit] { after_float(whatsit); }
     );
   }
@@ -327,6 +359,7 @@ LoadDefinitions!({
     // The begin code opens a TeX group of its own: subcaption.sty:70-80 `\minipage` (latex.ltx:16310 `\vbox\bgroup`).
     tex_group => { TexGroup::Box },
     before_digest => { before_float_ex("subtable", Some("table"), true)?; },
+    after_digest_begin => sub[whatsit] { subfloat_minipage_width(whatsit)?; },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
 
@@ -365,8 +398,12 @@ LoadDefinitions!({
   DefMacro!("\\subcaptionbox",
     "\\expandafter\\@@subcaptionbox\\expandafter{\\@captype}"
   );
+  // The sub-float is the box's `\parbox` (`subfloat_minipage_width`).
+  DefPrimitive!("\\lx@subcaption@parbox", {
+    assign_value("lx@subcaption@parbox", true, Some(Scope::Local));
+  });
   DefMacro!("\\@@subcaptionbox{} []{} Optional:0pt []{}",
-    "\\begingroup\\csname sub#1\\endcsname{#4}\
+    "\\begingroup\\lx@subcaption@parbox\\csname sub#1\\endcsname{#4}\
      #6\
      \\caption{#3}\
      \\ifx.#2.\\else\\lx@subcaption@addinlist{#2}\\fi\

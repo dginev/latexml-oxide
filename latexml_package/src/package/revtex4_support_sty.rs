@@ -727,6 +727,167 @@ pub(crate) fn define_revtex41_internals() -> Result<()> {
   Ok(())
 }
 
+/// REVTeX 4's section and equation numbers, set by the class after its options (revtex4-2.cls:6528-6576
+/// `\secnums@rtx`/`\secnums@arabic` run from `\setup@hook` at :7678, revtex4-1.cls:6507-6555 the same; revtex4.cls:5163-5172
+/// at load, :6055-6064 its `secnumarabic`), which Perl's binding reduces to `\thesection` (revtex4_support.sty.ltxml:111;
+/// KNOWN_PERL_ERRORS #1027):
+/// - APS (and AIP, SOR, the class's default): "I", "A", "1", "a", a `\ref` chaining them with thin spaces through
+///   `\p@<level>` ("I A 1"); the `rmp` journal with periods (apsrmp4-2.rtx:124-148, apsrmp4-1.rtx:115-139, revtex4's
+///   rmp.rtx:113-122: "I.A.1"); REVTeX 4.2's `aapm` society in the numbers themselves (aapm4-2.rtx:290-314: "I.A.1");
+///   `secnumarabic` "I.1", "I.1.1" in 4.1/4.2 (its `\thesection` stays `\Roman`), "1.1" in 4.0 (`\arabic`).
+/// - `\setcounter{secnumdepth}{4}` (revtex4-2.cls:6677, revtex4-1.cls:6656, revtex4.cls:5273): paragraphs numbered.
+///   The society's journal hook, run after it, unnumbers them: PRL's `\c@secnumdepth=-\maxdimen` (aps4-2.rtx:587
+///   `\rtx@apsprl`, run from `\@process@journal` at revtex4-2.cls:7671; aps4-1.rtx:564; revtex4's aps.rtx:517 at
+///   `\AtEndOfClass`): its headings carry no number, a `\ref` to one prints nothing, and the appendix steps no section,
+///   so its equations go on counting ("(16)", the empty `\Alph{0}` their prefix; 1508.03506's PDF). The journal is the
+///   one the class selects ([`selected_journal`]). AIP Conference Proceedings' `\setcounter{secnumdepth}{0}`
+///   (aip4-2.rtx:1181) never runs: its `\ifx\@journal\jnl@cp` (:1016) is read when the society file loads (:7670),
+///   before the journal option is (:7671), so `cp` papers are numbered (pdflatex). No other society file sets either
+///   (aapm4-2.rtx, sor4-2.rtx, aip4-1.rtx: only their `{theindex}`).
+/// - The heading prints `\csname the#1\endcsname.` (aps4-2.rtx:288 `\@seccntformat`, aps4-1.rtx:258, aip4-2.rtx:375,
+///   sor4-2.rtx:338, revtex4's aps.rtx:231; apsrmp and aapm with `\hskip0.5em`): the heading tags' `\fnum@<level>`
+///   (base_utilities.rs `\lx@fnum@@`), the refnum staying the `\ref` form.
+/// - `\theequation` is `\theequation@prefix\arabic{equation}` (revtex4-2.cls:6672-6676), the prefix `\arabic{section}.`
+///   with equations reset per section under `eqsecnum` (:6057-6064).
+/// - `\appendix` (revtex4-2.cls:7372-7387, revtex4-1.cls:7351-7366, revtex4.cls:5814-5829) numbers the appendices'
+///   subsections `\arabic`, their subsubsections `\alph`, and their equations within each appendix ("A1"); `\appendix*`
+///   leaves the appendix unnumbered ("A." for its equations). The heading "Appendix A" is the appendix type's tag
+///   (aps4-2.rtx:479 `\@appendixcntformat`).
+///
+/// Guards `perfect_kernel_batch78d::revtex_sections_number_as_the_class`; `perfect_kernel_batch64::aastex_sections_arabic`
+/// (AASTeX's own numbers stay).
+pub(crate) fn define_section_numbers(post: &str) -> Result<()> {
+  // A class built on REVTeX that sets its own (aastex_cls.rs, which emulateapj_cls.rs loads).
+  if lookup_bool("lx@revtex@sections@by@class") {
+    return Ok(());
+  }
+  let revtex4_0 = post.is_empty();
+  let opt = |name: &str| lookup_bool(&s!("revtex@opt@{name}"));
+  let (society, journal) = selected_journal(post)?;
+  let (rmp, aapm, arabic) = (
+    society == "aps" && journal == "rmp",
+    society == "aapm",
+    opt("secnumarabic"),
+  );
+  let mut tex =
+    String::from(r"\def\thepart{\Roman{part}}\def\thesection{\Roman{section}}\def\p@section{}");
+  if aapm && !rmp {
+    tex.push_str(
+      r"\def\thesubsection{\thesection.\Alph{subsection}}\def\p@subsection{}%
+\def\thesubsubsection{\thesubsection.\arabic{subsubsection}}\def\p@subsubsection{}%
+\def\theparagraph{\thesubsubsection.\alph{paragraph}}\def\p@paragraph{}%
+\def\thesubparagraph{\theparagraph.\arabic{subparagraph}}\def\p@subparagraph{}",
+    );
+  } else {
+    let sep = if rmp { "." } else { r"\," };
+    tex.push_str(&s!(
+      r"\def\thesubsection{{\Alph{{subsection}}}}\def\p@subsection{{\thesection{sep}}}%
+\def\thesubsubsection{{\arabic{{subsubsection}}}}\def\p@subsubsection{{\thesection{sep}\thesubsection{sep}}}%
+\def\theparagraph{{\alph{{paragraph}}}}\def\p@paragraph{{\thesection{sep}\thesubsection{sep}\thesubsubsection{sep}}}%
+\def\thesubparagraph{{\arabic{{subparagraph}}}}%
+\def\p@subparagraph{{\thesection{sep}\thesubsection{sep}\thesubsubsection{sep}\theparagraph{sep}}}"
+    ));
+  }
+  if arabic && revtex4_0 {
+    tex.push_str(
+      r"\def\p@section{}\def\thesection{\arabic{section}}\def\p@subsection{}%
+\def\thesubsection{\thesection.\arabic{subsection}}\def\p@subsubsection{}%
+\def\thesubsubsection{\thesubsection.\arabic{subsubsection}}",
+    );
+  } else if arabic {
+    tex.push_str(
+      r"\def\thesubsection{\thesection.\arabic{subsection}}\def\p@subsection{}%
+\def\thesubsubsection{\thesubsection.\arabic{subsubsection}}\def\p@subsubsection{}%
+\def\theparagraph{\thesubsubsection.\arabic{paragraph}}\def\p@paragraph{}%
+\def\thesubparagraph{\theparagraph.\arabic{subparagraph}}\def\p@subparagraph{}",
+    );
+  }
+  tex.push_str(
+    r"\setcounter{secnumdepth}{4}%
+\def\fnum@section{\thesection.}\def\fnum@subsection{\thesubsection.}\def\fnum@subsubsection{\thesubsubsection.}%
+\def\fnum@paragraph{\theparagraph.}\def\fnum@subparagraph{\thesubparagraph.}%
+\def\theequation{\theequation@prefix\arabic{equation}}%
+\def\appendix{\par\@appendix\setcounter{subsection}\z@\setcounter{subsubsection}\z@
+ \def\thesubsection{\arabic{subsection}}\def\thesubsubsection{\alph{subsubsection}}%
+ \@addtoreset{equation}{section}\def\theequation@prefix{\thesection}%
+ \@ifstar{\def\thesection{\unskip}\def\theequation@prefix{A.}}{}}",
+  );
+  if opt("eqsecnum") {
+    tex.push_str(r"\@addtoreset{equation}{section}\def\theequation@prefix{\arabic{section}.}");
+  }
+  if society == "aps" && journal == "prl" {
+    tex.push_str(r"\c@secnumdepth=-\maxdimen");
+  }
+  RawTeX!(&tex);
+  Ok(())
+}
+
+/// The society and journal a REVTeX class selects from its options, `post` its `\substyle@post` ("4-2", "4-1", or ""
+/// for REVTeX 4.0). REVTeX 4.1/4.2 read the options in the order given: the first naming a society file
+/// (`<society><post>.rtx`) is the society (revtex4-2.cls:6220-6230 `\@parse@class@options@society`, `aps` without one,
+/// :7670), the first naming one of its journals (`\change@journal`, :6094-6104; aps4-2.rtx, aip4-2.rtx `\DeclareOption`s)
+/// the journal. REVTeX 4.0 processes them in declaration order, each `\def\@journal` replacing the last
+/// (revtex4.cls:4010-4023, :4160 `\ProcessOptions\relax`), `aps` and `osa` emptying it.
+pub(crate) fn selected_journal(post: &str) -> Result<(String, String)> {
+  let given = crate::shipped_class::class_options()?;
+  let named = |option: &str| given.iter().any(|g| g == option);
+  if post.is_empty() {
+    // The declaration order, `aps` and `osa` emptying the journal, the `osa` ones changing the society.
+    let declared: Vec<&str> = "aps pra prb prc prd pre prl prstab rmp osa osameet opex tops josa"
+      .split_whitespace()
+      .collect();
+    let last = declared
+      .iter()
+      .enumerate()
+      .rfind(|(_, option)| named(option));
+    return Ok(match last {
+      Some((at, option)) => (
+        (if at < 9 { "aps" } else { "osa" }).to_string(),
+        (if matches!(*option, "aps" | "osa") {
+          ""
+        } else {
+          option
+        })
+        .to_string(),
+      ),
+      None => ("aps".to_string(), String::new()),
+    });
+  }
+  let societies = if post == "4-1" {
+    "aps aip apsrmp"
+  } else {
+    "aps aip aapm sor apsrmp"
+  };
+  let society = given
+    .iter()
+    .find(|g| {
+      societies
+        .split_whitespace()
+        .any(|society| society == g.as_str())
+    })
+    .map_or("aps", String::as_str)
+    .to_string();
+  let journals = match (post, society.as_str()) {
+    ("4-1", "aps") => "pra prb prc prd pre prl prstab prstper rmp",
+    ("4-1", "aip") => "jcp pop rsi jap apl cha pof bmf rse jmp",
+    (_, "aps") => {
+      "pra prb prc prd pre prl prab prper rmp prx prapplied prmaterials prfluids physrev"
+    },
+    (_, "aip") => "jcp pop rsi jap apl apm cha pof bmf rse jmp adv sd jor cp",
+    _ => "",
+  };
+  let journal = given
+    .iter()
+    .find(|g| {
+      journals
+        .split_whitespace()
+        .any(|journal| journal == g.as_str())
+    })
+    .cloned()
+    .unwrap_or_default();
+  Ok((society, journal))
+}
+
 /// REVTeX 4.0 provides `\bm` at `\begin{document}`, only while it is still undefined (revtex4.cls:6030-6032
 /// `\appdef\class@inithook{…\@ifxundefined\bm{\let\bm\REV@bm}{}…}`, run from `\class@documenthook` at
 /// `\AtBeginDocument`, :213-215; `\@ifxundefined` counts a `\relax` as defined), so a preamble's own

@@ -2942,8 +2942,17 @@ pub fn read_until(delim: &Tokens) -> Result<Option<Tokens>> {
           abandon_argument_at_par(token);
           return Ok(Some(Tokens!()));
         }
-        // Perl: $$token[1] == CC_BEGIN — direct catcode check
-        if token.get_catcode() == Catcode::BEGIN {
+        // Perl: $$token[1] == CC_BEGIN — direct catcode check. A `{` that completes the delimiter (one ending in `{`,
+        // from a parameter text's closing `#{`) is its last token: tex.web §392 compares the token with the delimiter
+        // before it takes a `{` as a group.
+        if token.get_catcode() == Catcode::BEGIN
+          && !(ring.len() + 1 == ntomatch
+            && token == want[ntomatch - 1]
+            && ring
+              .iter()
+              .zip(want.iter())
+              .all(|(have, wanted)| have == wanted))
+        {
           // read balanced, and refill ring.
           nbraces += 1;
           for r_token in ring {

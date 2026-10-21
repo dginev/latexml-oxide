@@ -305,3 +305,35 @@ fn an_unbraced_mark_is_an_error() {
   assert_para(&xml, 1, "AxB");
   assert_para(&xml, 2, "CyD");
 }
+
+/// A parameter text's closing `#{` appends the `{` to the last delimiter and to the replacement text (tex.web
+/// §473-476): `\def\pt(#1)#{…}` delimits #1 by `){` — under `\def`, `\long\def`, `\edef`, `\gdef`, `\protected\xdef`
+/// — and the brace is read again after the expansion (pdflatex "A [2*cos(1),3|T] B …", OT1's `|` an em dash). Perl
+/// (TeX_Macro.pool.ltxml:108-112) and Rust before 78d read #1 to the first `)` and required a `{` (3 Errors; witness
+/// 2610.26441, tkz-euclide's `\def\tkz@DefPoint[#1](#2)#{`). A bare `#{` whose call has no `{` is one Error, as
+/// pdflatex's "Use of \b doesn't match its definition", its message with one brace. Repro
+/// `expansion-primitives/def_hash_brace_extends_the_last_delimiter.tex`; batch guard
+/// `perfect_kernel_batch78d::hash_brace_extends_the_last_delimiter`.
+#[test]
+fn kernel_def_hash_brace_delimiter() {
+  let xml = convert_clean(include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/def_hash_brace_extends_the_last_delimiter.tex"
+  ));
+  assert_para(
+    &xml,
+    1,
+    "A [2*cos(1),3\u{2014}T] B [x\u{2014}L] [x\u{2014}E] [g(h)\u{2014}G] [g(h)\u{2014}X] [a/b(c)\u{2014}W]",
+  );
+  assert_para(
+    &xml,
+    2,
+    "<text font=\"typewriter\">macro:(#1){-&gt;\\def \\got {#1}\\usegot {</text> \
+     <text font=\"typewriter\">macro:#1{-&gt;[#1]{</text>",
+  );
+  let (log, _) = convert(
+    "\\documentclass{article}\\def\\b#{[B]}\\begin{document}\\b x{}\\end{document}",
+    true,
+  );
+  assert_eq!(error_count(&log), 1, "{log}");
+  assert!(log.contains("Error:expected:{ Expected a { here."), "{log}");
+}

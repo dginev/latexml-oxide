@@ -22364,3 +22364,25 @@ sectioning-frontmatter/llncs_author_line_break_affiliation, llncs_author_line_br
 llncs_author_and_is_inline; guards `perfect_kernel_batch77t::{llncs_author_line_break_affiliation,
 llncs_author_line_break_affiliation_rows, llncs_author_line_break_affiliation_per_name, llncs_author_and_is_inline,
 llncs_author_e_mail_line_ends_a_row}`.
+
+### 793. IEEEtran's `\appendix` keeps the title of the `\section` that follows it
+
+IEEEtran.cls:5719-5745 `\appendix[<title>]` is one appendix: it prints the heading "Appendix" (or "Appendix \\* <title>")
+through the kernel's `\section*`, steps the section counter once (`\ref` "A") and redefines `\section` so that an
+unstarred one throws its argument away (`\@IEEEdestroythesectionargument`, :5711-5713, a terminal warning only): the
+common `\appendix` `\section{Proof of Theorem 1}` prints "APPENDIX" and loses the title. Ours (ieeetran_cls.rs): the
+optional title is the appendix's (an `ltx:appendix`, refnum "A", tag "Appendix" as the class prints it). Without one, the
+first unstarred `\section` after `\appendix` — past blank lines, spaces, comment lines, empty groups (2002.07641's
+`\appendix{}`) and `\label`s, the labels then the appendix's — makes the appendix, its title kept; anything else next
+(`\section*`, `\subsection`, text) follows an appendix with an empty title, the "Appendix" heading pdflatex prints
+(witnesses 1903.01287, 1103.2068, 2002.03484, 2410.15995, 2401.07123: a blank line after `\appendix` had made the titled
+section a second appendix "B"). Residual: a non-printing command or a float between `\appendix` and the `\section`
+(2404.01875's `\setlength{\jot}… \allowdisplaybreaks`, 2007.07179's figure; 3 of ~140 IEEEtran `\appendix` files, rev78d2)
+takes the heading path too, so the titled section is "Appendix B" and refs to it read "B" where pdflatex's read "A"
+(int45b had one appendix "Appendix A" with that title). A later
+unstarred `\section` is another appendix with its title, tagged by its refnum, "Appendix B", "Appendix C" (2401.07123),
+where pdflatex prints nothing of it and a `\ref` to a label in it prints "A" — ours reads "B", "C". `\appendices`
+after `\appendix` numbers its appendices from "A" with their letters, as the class (pdflatex "APPENDIX", "APPENDIX A",
+"APPENDIX B"). Authored content first: the destroyed argument is the author's text. Repro
+sectioning-frontmatter/ieeetran_appendix_with_a_title_is_one_appendix; guard
+`perfect_kernel_batch78d::ieeetran_appendix_with_a_title_is_one_appendix` (KNOWN_PERL_ERRORS #1022).

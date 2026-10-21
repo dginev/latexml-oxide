@@ -423,7 +423,22 @@ LoadDefinitions!({
   // quant-ph0703150, 0705.3677): false here, as V1.8b numbers `\Alph` without the option (V1.6's default was true).
   // The heading form `\thesectiondis` follows (:5765-5774; `\renewcommand{\thesubsection}{\thesectiondis-…}` in
   // 1605.01233, 1702.07429).
-  // `\appendix` (:5723-5736) clears the heading form `\thesectiondis` and numbers the subsections `\Alph` ("A. Sub").
+  // `\appendix[<title>]` (:5719-5745) is one appendix: it resets the counters, clears the heading form `\thesectiondis`,
+  // numbers the subsections `\Alph` ("A. Sub") and prints its heading, "Appendix" or "Appendix \\* <title>" through the
+  // kernel's `\section*`, with `\refstepcounter{section}` making `\ref` "A". Here the heading is the appendix (refnum
+  // "A", tag "Appendix", the `\appendixname` alone as the class prints it), its title the optional argument (rev78c2
+  // probe i2, `[Proof]` had been a paragraph and the next subsection "B."/".2"; KNOWN_PERL_ERRORS #1022). The class's
+  // `\section` after it throws its argument away (`\@IEEEdestroythesectionargument`); here the authored title is kept
+  // (OXIDIZED_DESIGN_DIVERGENCES #793): the first unstarred `\section` after an argument-less `\appendix` — past blank
+  // lines, spaces, empty groups (2002.07641's `\appendix{}`) and `\label`s, which then label the appendix — is the
+  // appendix's heading (pdflatex prints "APPENDIX" alone); anything else next (`\section*`, `\subsection`, text, and —
+  // a residual — a non-printing command or a float before the `\section`: 2404.01875, 2007.07179) follows the "Appendix"
+  // heading the class prints
+  // (rev78d probe ie_blank; witnesses 1903.01287, 1103.2068, 2002.03484, 2410.15995, 2401.07123, whose blank line had
+  // made the titled section a second appendix "B"). A later `\section` is another appendix, tagged "Appendix B", "C"
+  // as its refnum (pdflatex drops its title, and a `\ref` to it prints "A"). `\appendices` after `\appendix` numbers
+  // its appendices from "A" again with the kernel's tag (probe ie_appendices: "Appendix A", "Appendix B"). Guard
+  // `perfect_kernel_batch78d::ieeetran_appendix_with_a_title_is_one_appendix`.
   // Both save the kernel's `\section` once as `\@IEEEappendixsavesection` (:5695-5696 `\@IEEEsaveoriginalsectiononce`),
   // which documents' own appendix-like commands copied from the class's `\appendix` call, with its
   // `\@IEEEprocessthesectionargument`/`\@IEEEdestroythesectionargument` (:5701-5713; 1907.08915's `\suppl`).
@@ -435,9 +450,24 @@ LoadDefinitions!({
 \addcontentsline{toc}{section}{\appendixname\nobreakspace\thesection: #1}}}
 \def\@IEEEdestroythesectionargument#1{\typeout{** WARNING: Ignoring useless
 \protect\section\space in Appendix (line \the\inputlineno).}}
-\def\appendix{\@IEEEsaveoriginalsectiononce\lx@IEEE@appendix\gdef\thesectiondis{}\gdef\thesubsection{\Alph{subsection}}}
+\renewcommand{\appendix}[1][]{\@IEEEsaveoriginalsectiononce\par\lx@IEEE@appendix
+\setcounter{subsection}{0}\setcounter{subsubsection}{0}\setcounter{paragraph}{0}%
+\gdef\thesectiondis{}\gdef\thesubsection{\Alph{subsection}}%
+\gdef\fnum@appendix{\ifnum\c@section>\@ne\lx@@fnum@@{appendix}\else\appendixname\fi}%
+\gdef\lx@IEEE@appendix@labels{}\@ifmtarg{#1}{\lx@IEEE@appendix@next}{\section{#1}}}
+\def\lx@IEEE@appendix@next{\@ifnextchar\par{\expandafter\lx@IEEE@appendix@next\@gobble}{%
+\@ifnextchar\label{\expandafter\lx@IEEE@appendix@label\@gobble}{%
+\@ifnextchar\bgroup{\lx@IEEE@appendix@group}{%
+\@ifnextchar\section{\expandafter\lx@IEEE@appendix@section\@gobble}{\lx@IEEE@appendix@heading}}}}}
+\def\lx@IEEE@appendix@label#1{\g@addto@macro\lx@IEEE@appendix@labels{\label{#1}}\lx@IEEE@appendix@next}
+\long\def\lx@IEEE@appendix@group#1{\@ifmtarg{#1}{\lx@IEEE@appendix@next}{\lx@IEEE@appendix@heading{#1}}}
+\def\lx@IEEE@appendix@heading{\section{}\lx@IEEE@appendix@labels}
+\def\lx@IEEE@appendix@section{\@ifstar{\lx@IEEE@appendix@heading\section*}{\@ifnextchar[%
+{\lx@IEEE@appendix@titled}{\lx@IEEE@appendix@titled@}}}
+\def\lx@IEEE@appendix@titled[#1]#2{\section[#1]{#2}\lx@IEEE@appendix@labels}
+\def\lx@IEEE@appendix@titled@#1{\section{#1}\lx@IEEE@appendix@labels}
 \newif\ifuseRomanappendices
-\def\appendices{\@IEEEsaveoriginalsectiononce\lx@IEEE@appendix
+\def\appendices{\@IEEEsaveoriginalsectiononce\lx@IEEE@appendix\global\let\fnum@appendix\@undefined\setcounter{section}{0}%
 \ifCLASSOPTIONromanappendices\lx@IEEE@roman@appendices\else\ifuseRomanappendices\lx@IEEE@roman@appendices\else
 \gdef\thesectiondis{\Alph{section}}\@IEEEcompsocconfonly{\gdef\thesectiondis{\Alph{section}.}}\fi\fi}
 \def\lx@IEEE@roman@appendices{\gdef\thesection{\Roman{section}}\gdef\thesectiondis{\Roman{section}}%

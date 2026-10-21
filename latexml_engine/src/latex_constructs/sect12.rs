@@ -748,20 +748,13 @@ pub(crate) fn load() -> Result<()> {
       if let Some(width_arg) = whatsit.get_arg(4) {
         let width_val = width_arg.value_of();
         let dim = Dimension::new(width_val);
-        let rv: RegisterValue = dim.into();
-        assign_register("\\hsize", rv.clone(), None, Vec::new())?;
-        assign_register("\\textwidth", rv.clone(), None, Vec::new())?;
-        assign_register("\\columnwidth", rv.clone(), None, Vec::new())?;
-        // INTENTIONAL DIVERGENCE from Perl (which assigns only the trio
-        // above): real LaTeX \@iiiminipage follows `\hsize#3 \textwidth\hsize
-        // \columnwidth\hsize` with \@parboxrestore, whose `\linewidth\hsize`
-        // is what raw-loaded packages read back. tcolorbox wraps box content
-        // in \minipage (tcb@lrbox), and a NESTED tcolorbox takes
-        // `width=\linewidth` — with \linewidth stale at the page width, the
-        // inner box drew itself full-outer-width, overflowing the parent
-        // frame (arXiv 2605.02240; pdflatex INNER linewidth=282.40pt vs
-        // stale 345.0pt). See OXIDIZED_DESIGN.
-        assign_register("\\linewidth", rv, None, Vec::new())?;
+        // Perl assigns `\hsize`, `\textwidth`, `\columnwidth`; real LaTeX's \@parboxrestore also sets
+        // `\linewidth\hsize`, which raw-loaded packages read back (INTENTIONAL DIVERGENCE): tcolorbox wraps box
+        // content in \minipage (tcb@lrbox), and a NESTED tcolorbox takes `width=\linewidth` — with \linewidth stale
+        // at the page width, the inner box drew itself full-outer-width, overflowing the parent frame (arXiv
+        // 2605.02240; pdflatex INNER linewidth=282.40pt vs stale 345.0pt). See OXIDIZED_DESIGN and
+        // `set_minipage_width`.
+        set_minipage_width(dim)?;
         whatsit.set_property("width", Stored::Dimension(dim));
       }
       // `\\@parboxrestore`'s interline values (latex.ltx:16284-16286): lines set as the document's, though an

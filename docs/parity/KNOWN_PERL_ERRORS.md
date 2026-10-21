@@ -16492,11 +16492,13 @@ Rust binding had set `\thesection` Roman in every mode (a Rust-only gap the head
 "1.1", "1.1.1", compsoc conference "1.", "1.1.", `\ref` "1.1", appendix subsections "A.1" (repros
 sectioning-frontmatter/ieeetran_compsoc_headings_are_arabic, …_compsoc_conference_headings_are_arabic, in the same
 guard). Open: a compsoc conference appendix's heading prints "Appendix A." (`\thesectiondis` "A."), ours the appendix
-type's "Appendix A"; `\paragraph` is unnumbered where pdflatex prints "a)" (compsoc "1.1.1.1"); `\appendix[<title>]`
-(IEEEtran.cls:5719-5745, one appendix: counters reset, the heading "Appendix" or "Appendix \\ <title>" printed, a later
-unstarred `\section`'s argument thrown out) is the kernel's `\appendix` here — the title a "[Proof]" paragraph, no
-heading, the next subsection ".2" with refnum "B" where pdflatex prints "APPENDIX PROOF", ".1 Lemma", "A" (rev78c2 probe
-i2; all before 78c).
+type's "Appendix A"; `\paragraph` is unnumbered where pdflatex prints "a)" (compsoc "1.1.1.1"). Fixed in 78d:
+`\appendix[<title>]` (IEEEtran.cls:5719-5745, one appendix: counters reset, the heading "Appendix" or "Appendix \\
+<title>" printed) had been the kernel's `\appendix` — the title a "[Proof]" paragraph, no heading, the next subsection
+".2" with refnum "B" where pdflatex prints "APPENDIX PROOF", ".1 Lemma", "A" (rev78c2 probe i2); it is now one
+`ltx:appendix` tagged "Appendix" (refnum "A") with the title, its subsections numbered from 1, and the class's discarding
+of a later `\section`'s argument is not ported (OXIDIZED_DESIGN_DIVERGENCES #793; guard
+`perfect_kernel_batch78d::ieeetran_appendix_with_a_title_is_one_appendix`).
 
 ## 1023. acmart's citations are author-year
 
@@ -16564,3 +16566,74 @@ svmult's does not: `\title{First}…\maketitle`, `\title*{Second}…\maketitle`,
 "1.1, 1.2 | 1, (1) | Chapter 2, 2.1", ours "1.1, 1.2, 1.3, 1.4" with "*SecondB" and "ThirdC" as paragraphs (rev78c probe
 svm1; int43a the same). Several titles in one document need the frontmatter model's per-contribution titles (the
 double-`\maketitle` ruling keeps one), not a binding line.
+
+## 1027. REVTeX's subsections are "I.1"
+
+revtex4-2.cls:6528-6551 `\secnums@rtx` (run from `\setup@hook`, :7678; revtex4-1.cls:6507-6530, revtex4.cls:5163-5172 the
+same) numbers the sections `\Roman`, the subsections `\Alph`, the subsubsections `\arabic`, the paragraphs `\alph`, and
+chains a `\ref` through `\p@<level>` with thin spaces ("I A 1"); `\setcounter{secnumdepth}{4}` (:6677) numbers the
+paragraphs; a heading prints `\csname the#1\endcsname.` (aps4-2.rtx:288 `\@seccntformat`, aip/sor alike, revtex4's
+aps.rtx:231); `\theequation` is `\theequation@prefix\arabic{equation}` (:6672), and `\appendix` (:7372-7387) numbers the
+appendix's subsections `\arabic`, subsubsections `\alph` and equations "A1" (`\appendix*` "A.1", the appendix itself
+unnumbered). The `rmp` journal chains with periods (apsrmp4-2.rtx:124-148, revtex4's rmp.rtx:113-122), REVTeX 4.2's
+`aapm` society numbers "I.A.1" (aapm4-2.rtx:290-314), `secnumarabic` "I.1" (4.1/4.2 `\secnums@arabic`, :6553-6576) or
+"1.1" (revtex4.cls:6055-6064), `eqsecnum` "(1.1)" (:6057-6064). Perl's revtex4_support.sty.ltxml:111 defines
+`\thesection` alone: subsections "I.1", "I.1.1" (article's), paragraphs unnumbered, appendix subsections "A.1", the
+appendix's equations continuing the body's. Minimal trigger: `\documentclass{revtex4-2}\begin{document}\section{S}
+\subsection{T}\label{t}\ref{t}\appendix\section{A}\begin{equation}x\end{equation}\end{document}` — pdflatex "A. T",
+"I A", "(A1)". About 3,050 of the sel78d 30k census's papers (revtex4* with a `\subsection`). The PRL journal then
+unnumbers every heading: its hook sets `\c@secnumdepth=-\maxdimen` after the class's 4 (aps4-2.rtx:587 `\rtx@apsprl`,
+run from `\@process@journal` at revtex4-2.cls:7671; aps4-1.rtx:564; revtex4's aps.rtx:517 from `\AtEndOfClass`), so a
+`\ref` to a heading prints nothing and the appendix steps no section — its equations count on ("(16)", the empty
+`\Alph{0}` their prefix; 1508.03506's PDF). The journal is the first journal option given in 4.1/4.2
+(`\change@journal`, revtex4-2.cls:6094-6104: `[prb,prl]` is PRB) and the last declared in 4.0 (revtex4.cls:4010-4023
+under `\ProcessOptions\relax`: `[prb,prl]` is PRL). AIP's `cp` journal has `\setcounter{secnumdepth}{0}`
+(aip4-2.rtx:1181), but inside `\ifx\@journal\jnl@cp` (:1016), read when the society file loads (:7670) before the
+journal is selected (:7671): it never runs, and `cp` papers are numbered (pdflatex). No other society file sets
+`secnumdepth` or the section numbers outside `{theindex}` (aapm4-2.rtx and apsrmp4-2.rtx's `\secnums@rtx` as above;
+sor4-2.rtx, aip4-1.rtx none). Fixed in Rust (78d): revtex4_support_sty.rs `define_section_numbers`, called by the
+revtex4/revtex4-2 and revtex4-1 classes after their options (`eqsecnum`, `secnumarabic` recorded; the society and
+journal read from the class options as the class reads them, `selected_journal`), sets the numbers, `secnumdepth` (PRL's
+`-\maxdimen`), the heading forms as `\fnum@<level>` (base_utilities.rs `\lx@fnum@@`), `\theequation` and the class's
+`\appendix`; REVTeX 3 (revtex3_support_sty.rs) is unchanged. Guard
+`perfect_kernel_batch78d::revtex_sections_number_as_the_class` (aps, rmp, secnumarabic, aapm, eqsecnum, `\appendix*`,
+revtex4-1, revtex4, `aps,prl` in 4.2, 4.1 and 4.0, `prb,prl` in 4.2 and 4.0, `aip,cp`, against pdflatex). Open: the
+appendix heading's ":" ("Appendix A: App", aps4-2.rtx:468-475) is the appendix type's tag "Appendix A" with a space;
+a `\ref` to an `\appendix*` appendix (`\thesection` `\unskip`) prints nothing in pdflatex, ours the heading's
+"Appendix" — the scan reads a heading tag without a role as the refnum, and the post-processor never renders a `\ref`
+empty (it falls back to the title). The unnumbered PRL headings take the kernel's unnumbered ids (`S1` → `Sx1`,
+`A1` → `Ax1`; latex_constructs.pool.ltxml:586, sections deeper than `secnumdepth`), which Perl and int45b never gave PRL
+papers: fragment links into about a fifth of REVTeX papers change (rev78d2 finding 3).
+
+## 1028. A sub-float's `\linewidth` is the page's
+
+subcaption.sty:70-92 makes `{subfigure}`, `{subtable}` and `{subcaptionblock}` a `\minipage` (`\subcaption@iiminipage`),
+which sets `\hsize` to its width, `\textwidth\hsize \columnwidth\hsize`, and `\@parboxrestore`'s `\linewidth\hsize`
+(latex.ltx:16312-16313). Perl's subcaption.sty.ltxml environments run only `beforeFloat`'s `\hsize := \columnwidth`
+(latex_constructs.pool.ltxml:3377), so an `\includegraphics[width=\linewidth]` in a `{subfigure}{.28\textwidth}` is the
+page's width (345pt for 96.6pt). Minimal trigger: `\begin{figure}\begin{subfigure}{.28\textwidth}\the\linewidth
+\end{subfigure}\end{figure}` with `\usepackage{subcaption}` — pdflatex "96.59958pt". About 2,390 of the sel78d 30k
+census's papers set a width inside a sub-float. Fixed in Rust (78d): the six sub-float environments' `after_digest_begin`
+assigns the four registers from the width argument through the minipage's `set_minipage_width`
+(latex_constructs/mod.rs; `{minipage}` uses it too). subfig's `\subfloat` and subfigure.sty's `\subfigure` set their body
+in an `\hbox` (subfig.sty:245, subfigure.sty:307) and change no width, as here. `\subcaptionbox[<width>]` (and
+subcaption's `\subfloat` through it) sets its body in a `\parbox` (caption.sty:473, :482), which assigns `\hsize` and
+`\linewidth` only: there the sub-float keeps the outer `\textwidth` and `\columnwidth` (`\lx@subcaption@parbox`,
+subcaption_sty.rs). Witness 2509.19464 A1.F6. Guard `perfect_kernel_batch78d::subfigure_sets_the_line_width`.
+
+## 1029. `#{` at the end of a parameter text after a delimiter
+
+tex.web §473-476: a `#` that ends a parameter text (`\def\pt(#1)#{…}`) appends the `{` to the last delimiter and to the
+replacement text — #1 is delimited by `){`, matched before the `{` is taken as a group (§392), and the brace is read
+again after the expansion. Perl's TeX_Macro.pool.ltxml:108-112 makes the lone `#` a `RequireBrace` parameter after an
+`Until:)` one: #1 ends at the first `)`, and the next token must be `{`. tkz-euclide's
+`\def\tkz@DefPoint[#1](#2)#{` (tkz-obj-eu-points.tex:82) read `\tkzDefPoint(2*cos(1),3){T}` as `#2 = 2*cos(1` and
+raised "Expected a { here." (witness 2610.26441: 9 Errors, two of them that one, the rest the pgf "No shape named"
+and `\tkz@getfrompolar` runaways that followed; 0 now). Minimal trigger: `\def\pt(#1)#{[#1]}\pt(f(x)){y}` —
+pdflatex "[f(x)]y". Fixed in Rust (78d): base_utilities.rs `parse_def_parameters` appends the brace to the delimiter
+(`Until:){`), the `Until` reader puts it back after the match (base_parameter_types.rs), `read_until` (gullet.rs)
+matches a delimiter's closing `{` as tex.web does, and `\meaning` prints it at both ends; every `\def`, `\edef`,
+`\gdef`, `\xdef` (with `\long`, `\protected`) shares the path. The "Expected a {{ here." message of a bare `#{` whose
+call has no brace now has one brace, and `\meaning` of `\def\b#1#{…}` (#1 delimited by the brace) prints TeX's
+"macro:#1{->…{" (it had dropped the first brace; tex_debugging.rs). Guards
+`perfect_kernel_batch78d::hash_brace_extends_the_last_delimiter`, `token_kernel_gaps::kernel_def_hash_brace_delimiter`.

@@ -47,7 +47,8 @@ fn revtex_preloaded_hyperref_loads_again() {
 }
 
 /// C3's second load of the hyperref binding saves the kernel's `\refstepcounter` once: saved again it was hyperref's
-/// own, `\H@refstepcounter` calling itself under cleveref (2207.13707, 1704.06321, 1204.1969). Repro
+/// own, `\H@refstepcounter` calling itself under cleveref (2207.13707, 1704.06321, 1204.1969). The heading tag is REVTeX's
+/// "I." (aps4-2.rtx:288 `\@seccntformat`, 78d; KNOWN_PERL_ERRORS #1027). Repro
 /// class-bindings/revtex_hyperref_loaded_twice_cleveref.
 #[test]
 fn revtex_hyperref_loaded_twice_keeps_cleveref() {
@@ -63,7 +64,7 @@ fn revtex_hyperref_loaded_twice_keeps_cleveref() {
     &xml,
     "tags",
     &[],
-    "<tags><tag>I</tag><tag role=\"autoref\">section\u{a0}I</tag><tag role=\"creftype\">Section</tag><tag \
+    "<tags><tag>I.</tag><tag role=\"autoref\">section\u{a0}I</tag><tag role=\"creftype\">Section</tag><tag \
      role=\"creftypecap\">Section</tag><tag role=\"creftypeplural\">Sections</tag><tag \
      role=\"creftypepluralcap\">Sections</tag><tag role=\"refnum\">I</tag><tag role=\"typerefnum\">§I</tag></tags>",
   );

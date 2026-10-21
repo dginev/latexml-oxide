@@ -117,7 +117,7 @@ pub use crate::{
   latex_constructs::{
     begin_appendices, declare_bound_text_symbols, end_appendices, has_chapter_counter,
     kernel_chapter_with_warning, make_note_tags, note_size_in_line, only_preamble,
-    out_of_line_size, relocate_footnote, start_appendices, tabular_bindings,
+    out_of_line_size, relocate_footnote, set_minipage_width, start_appendices, tabular_bindings,
   },
   math_common::{augment_delimiter_properties, symbolic_font_size},
   tex_box::{FramedOptions, framed_properties},

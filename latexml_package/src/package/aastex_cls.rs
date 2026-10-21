@@ -43,6 +43,10 @@ LoadDefinitions!({
 
   ProcessOptions!();
 
+  // AASTeX sets its own section numbers, `secnumdepth` and `\appendix` over REVTeX's (aastex701.cls:7576
+  // `\setcounter{secnumdepth}{3}`, :7629-7637 arabic numbers with empty `\p@<level>`, :7867-7895 `\appendix`; aastex.cls
+  // 5.x:1076-1093, aastex63.cls:1117), so the REVTeX class's (`revtex4_support_sty::define_section_numbers`) are not set.
+  assign_value("lx@revtex@sections@by@class", true, Some(Scope::Global));
   LoadClass!("revtex4");
   // Every AASTeX numbers its sections in arabic (aastex.cls 5.x:1076-1093, aastex63.cls:1117, aastex701.cls:7629-7636),
   // as does emulateapj.cls:676, where revtex4's are Roman (revtex4_support_sty.rs `\thesection`): every AAS paper's
