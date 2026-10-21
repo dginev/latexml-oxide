@@ -5487,6 +5487,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   to run on the r2 side (1410.4917 one formula unparsed, 1608.08920 one ambiguous_math Warning fewer than in its two
   other runs). The first cut's A/B changed 1405.7962, 2507.05750, astro-ph9712060 (pairing lost) and 1907.00457 (a
   section title's mark), each now guarded.
+  **Integration (int53, 78n r1-r3 squashed ba83a4e50a + 78o r1-r3 squashed 6f959635dd onto int52; binary int53a; 78j moves to
+  int54 after its r3):** reviews rev78n (NO-SHIP: an empty numbered eqnarray row deleted with its number), rev78n2 (SHIP; its doc
+  fixes folded in: the empty-labelled-row comment points at the one rule, the rule doc lists all five guards, OD #847 and two SYNC
+  rows state what our `\ref` prints for a label with no numbered row after it and the `\nonumber`-in-`{equation}` residual),
+  rev78o (NO-SHIP: title `\thanks` stepped no `\c@footnote`), rev78o2 (SHIP once r3 fixed counter-derived title marks pairing
+  across the reset and the triple-reported `[<n>]` errors; the refined cross-reset rule kept 2507.05750, 1405.7962,
+  astro-ph9712060 paired as their PDFs print them). Gates int53a: nextest 6781/6781 + cortex 10/10, clippy/rustdoc clean, inits
+  0/0, dump diff vs int52a empty. A/B int52a vs int53a over the two writers' saved populations (2,719 of 2,726: `pop78n_*`,
+  `pop78o_*`): E 8,625 → 8,591, F 18 = 18, 0 papers worse in E or F; 1,022 outputs byte-changed. Word loss > 1 % in 2
+  (1012.3225, 2111.02107: the "Equation" tags of rows `\@@eqncr` does not number). Random controls: 26 of 188 changed — 19 by the
+  eqnarray rule (the common `… \nonumber \\ \end{eqnarray}`: the empty last row is the one `\@@eqncr` numbers, pdflatex prints its
+  (1); 0905.4550 `S2.Ex3` → `S2.E1`), the rest by 78o's title marks (1812.11634 "2"/"3" → "†"…). Binding nets (int53a) 136/136, 0 worse than int52a.
 - **78g** (kernel batch: tcolorbox box labels, TCB-LABEL, user ruling 2026-10-21 item 12; + the repro stand-in licence
   audit, item 11; guards `perfect_kernel_batch78g::*`, 4, each RED on 25730beb73; OD #813, KPE #1038). (1) A label after a
   raw `\refstepcounter` names the object the step numbers, which takes the step's number: the kernel's
