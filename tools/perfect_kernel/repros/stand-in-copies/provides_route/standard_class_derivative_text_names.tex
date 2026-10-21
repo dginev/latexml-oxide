@@ -1,0 +1,25 @@
+% witness: rule 13's text names are the declared ones (78h r2, user ruling 2026-10-21): a derivative's `\newcommand`
+%          of a declared text name the article binding assigned defines it (stdderiv.cls `\newcommand\figurename{FIGURE}`,
+%          as aip-cp.cls:875-878 "REFERENCES"/"FIGURE", 1506.04050), its `\newcommand` of a caption format does not
+%          (stdderiv.cls `\newcommand\fnum@table{TABLE~\thetable}`, modified from article.cls); article_saj.cls:476
+%          `\def\fnum@figure{\ninebf …}` is a `\def`, which a derivative read as a raw class keeps
+% oracle:  pdflatex 0 errors: "FIGURE 1: A figure. TABLE 1: A table." at 11pt; "A Proofs"
+% engines: rust dbe1eb8db2 (int47a) = "FIGURE 1", "Table 1" ("Ignoring redefinition (\newcommand) of \fnum@table");
+%          78h r1 (2460d8ba71) = "TABLE 1" (its widened test let the caption format yield)
+% expect:  0 errors, 0 warnings; "FIGURE 1"; the binding's "Table 1"; <appendix xml:id="A1"> "Appendix A"
+% status:  RED (2460d8ba71, 78h r1) -> GREEN (78h r2)
+% preload: ar5iv.sty
+\documentclass[11pt]{stdderiv}
+\begin{document}
+\section{Introduction}
+Body text.
+\begin{figure}[h]
+\caption{A figure.}
+\end{figure}
+\begin{table}[h]
+\caption{A table.}
+\end{table}
+\appendix
+\section{Proofs}
+Appendix text.
+\end{document}

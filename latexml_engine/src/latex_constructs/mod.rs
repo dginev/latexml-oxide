@@ -254,10 +254,17 @@ fn is_definable_latex(cs: &Token) -> Result<(bool, bool)> {
       return Ok((true, false));
     }
   }
-  // A standard-class derivative read over its binding defines the names the binding assigned as the class's own, as
-  // it does in TeX, read in the class's place (`state::standard_class_binding_name`; aip-cp.cls:875
+  // A standard-class derivative read over its binding defines the declared text names the binding assigned as the
+  // class's own, as it does in TeX, read in the class's place (`state::standard_class_binding_name`; aip-cp.cls:875
   // `\newcommand\refname{REFERENCES}`, 1506.04050; OXIDIZED_DESIGN_DIVERGENCES #731 rule 13).
-  if standard_class_binding_name(cs) {
+  // So does a copy its `\Provides` line routed to its binding, for a declared text name the binding (or one it
+  // requires) defined: proto.cls:1731 `\newcommand\apj{\ref@jnl{\it Astrophys.\ J.}}` over the aas_macros binding's
+  // "ApJ" (1402.7103; `state::routed_copy_text_name_yields`, rule 14, user ruling 2026-10-21); whether its definition
+  // stands for the document is decided by its body when the copy's read ends (`state::leave_copy_provides_frame`).
+  // The declarations are global (`state::declare_copy_text_names` assigns them so): a name any binding loaded so far
+  // declared counts for every routed copy, not only for one routed to that binding — a copy routed to the IEEEtran
+  // binding in a document that also loaded aas_macros may supply `\apj`.
+  if standard_class_binding_name(cs) || routed_copy_text_name_yields(cs) {
     return Ok((true, false));
   }
   // Perl reads the definition's source (`=~ /^plain/`); Rust pools carry no such

@@ -19944,9 +19944,10 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    binding's `\diagram`, 1 → 101 Errors and a Fatal); 2411.02780's equations.sty, which is annotate-equations.sty
    renamed (`\ProvidesPackage{annotate-equations}`; r1: 2 → 99 Errors over xkeyval's `\usevalue`). Logged at Info.
    Reading such a file raw, as TeX does, is an open row.
-1. *Ownership.* A name is the binding's when it was assigned while the stand-in binding loaded (origin.rs
-   `StandInLoadGuard`, `State::stand_in_meanings`: its `DefMacro!`s, `Let!`s, `RawTeX`, the bindings it required) at an
-   origin of LaTeXML's own, its guesses included (`Fallback`: the OmniBus base a class binding loads, whose `\received`
+1. *Ownership* (a routed copy's declared text names: rule 14; a copy under the binding's own name supplies none). A
+   name is the binding's when it was assigned while the stand-in binding loaded (origin.rs `StandInLoadGuard`,
+   `State::stand_in_meanings`: its `DefMacro!`s, `Let!`s, `RawTeX`, the bindings it required) at an origin of
+   LaTeXML's own, its guesses included (`Fallback`: the OmniBus base a class binding loads, whose `\received`
    WileyNJDv5.cls:5071 replaced, dropping 2609.19994's dated frontmatter — OD #408's yielding is to the document, and
    the copy is not the document), or its meaning is a definition made under that very name at origin `Unknown`, `Pool`
    or `Binding` (a pool's `\maketitle`, another binding's `\citep`); an environment is owned when `\begin{X}` or
@@ -20246,18 +20247,29 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
      class's own setter for its flags and stores (#482, #534), its `\maketitle` deposits what the frontmatter does not
      carry (#265: aip-cp's `\aipaffil`), and the title-page stores reach the frontmatter API (K11,
      `\lx@class@loaded@raw` at the binding load's end; `store_setters::mark_raw`);
-   - *the class's text names* — its `\newcommand` (or `\providecommand`) of a text name the standard binding assigned in
-     its own load defines it, the derivative being read in the class's place (`state::standard_class_binding_name`,
-     latex_constructs `is_definable_latex`): a macro of origin `Binding` without parameters whose expansion has no
-     control sequence or active character, and is not empty (`\refname`, `\bibname`, `\figurename`,
-     `\abstractname`, `\@ptsize`, `\@pnumwidth`) — aip-cp.cls:875-878 "REFERENCES", "FIGURE 1"; HERON.cls:682
-     `\bibname{References}`; Lowx2013.cls:629 `\abstractname{ }`. The names are those of the standard binding's own
-     load (`state::stand_in_last_load_names` when the derivative's read begins, `content::standard_class_binding_assigned`),
-     not a stand-in's the derivative loads (its `\RequirePackage{jheppub}` keeps jheppub's `\jname`);
+   - *the class's text names* — its `\newcommand` (or `\providecommand`) of a declared text name (rule 14's list: the
+     kernel's `state::COPY_TEXT_NAMES` and the names a binding declares) that the standard binding assigned in its own
+     load defines it, the derivative being read in the class's place (`state::standard_class_binding_name`,
+     latex_constructs `is_definable_latex`) — aip-cp.cls:875-878 "REFERENCES", "FIGURE 1"; HERON.cls:682
+     `\bibname{References}`; Lowx2013.cls:629 `\abstractname{ }`; article_saj.cls:631
+     `\newcommand\refname{\noindent\tenrm REFERENCES\vskip-.5cm}` (2212.09079, 2402.12725). Its body is not checked
+     (rule 14's safety check is the routed copy's, whose definition otherwise gives way to the binding's): the
+     derivative is read as a raw class, whose `\def` and `\renewcommand` of the same name stand unchecked (applied here,
+     the check fails closed on `\noindent`, a constructor, and prints article's "References"). Every other `\newcommand`
+     of a name the binding defined is "Ignoring redefinition" (78h r2, user ruling 2026-10-21): a caption format (a
+     derivative's `\newcommand\fnum@table{TABLE~\thetable}` keeps the article binding's "Table 1"; 78h r1 let every name
+     that only prints yield, "TABLE 1"), book's `\@chapapp`, and the four names 77w r3 let yield as bodies without
+     control sequences that the list does not hold — `\@ptsize`, `\@pnumwidth`, `\@tocrmarg`, `\@dotsep`
+     (article.cls:52, :503-505, which full copies `\newcommand`): no output changed on the 78h r2 A/B's 69 derivatives
+     (a copy's size option `\renewcommand\@ptsize{1}` sets it, as before; the TOC layout is LaTeXML's). A derivative's
+     `\def` of any name stands as a raw class's (*everything else*, below). The names are those of the standard
+     binding's own load (`state::stand_in_last_load_names` when the derivative's read begins,
+     `content::standard_class_binding_assigned`), not a stand-in's the derivative loads (its `\RequirePackage{jheppub}`
+     keeps jheppub's `\jname`);
    - *the binding's structure* — a structural command the binding defined is not replaced by the copy's
      `\newcommand` (an Info, "Ignoring redefinition", as for any defined name): `\appendix`/`\@appendix`
-     (`<ltx:appendix>`), book's `\frontmatter`/`\mainmatter`/`\backmatter` (unnumbered front chapters), `\@chapapp`,
-     the sizes `\small`…`\Huge` (primitives); full class copies `\newcommand` all of them (articlecea.cls:449,
+     (`<ltx:appendix>`), book's `\frontmatter`/`\mainmatter`/`\backmatter` (unnumbered front chapters), the sizes
+     `\small`…`\Huge` (primitives); full class copies `\newcommand` all of them (articlecea.cls:449,
      imamat.cls:860, book_modified.cls:296-304 and :531, khbook.cls:285-293), and r2, which let every binding name
      yield, lost the appendices of 0705.2210 (3), hep-ex0405054 (4, "Chapter A…D"), hep-ph0008011 (2), cond-mat0402505,
      quant-ph0409078, 1401.7612 (2), 1711.09297, 2402.18237 (8) and numbered math0301023's "Voorwoord"/"Dankwoord".
@@ -20292,7 +20304,86 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    book.cls.ltxml:121, as under `\documentclass{book}`). Guards
    `perfect_kernel_batch77w::{standard_class_derivative_keeps_every_author, standard_class_derivative_patches_stand,
    standard_class_derivative_keeps_book_structure, standard_class_derivative_defines_only_its_class_names,
-   standard_class_derivative_beside_a_self_named_article}`.
+   standard_class_derivative_beside_a_self_named_article}`,
+   `perfect_kernel_batch78h::standard_class_derivative_newcommands_only_declared_text_names`.
+14. *A routed copy's text names* (78h; user rulings 2026-10-21, memory `feedback_rulings_2026_10_21` item 9, refined the
+   same day: "The bindings should always win in terms of semantic markup, as they hold the ground truth for the XML
+   spec. The slight typographic variations in the raw .cls or .sty file are often ignorable, and if we can preserve and
+   reuse them that should be via a generic mechanism that is set in the binding with a reasonable default"). A copy rule
+   12 routed to its binding supplies only the *text names its binding declares*. The list classifies by name: the
+   kernel's default, `state::COPY_TEXT_NAMES` — the standard classes' and LaTeX's `\…name` macros `\abstractname`,
+   `\appendixname`, `\bibname`, `\chaptername`, `\contentsname`, `\figurename`, `\indexname`, `\listfigurename`,
+   `\listtablename`, `\partname`, `\proofname`, `\refname`, `\tablename` —, which a binding extends with the names it
+   defines, where it defines them (`state::declare_copy_text_names`, the one declaration point: a value
+   `<name>:copy@text`, as a lock is `<name>:locked`; aas_macros_sty.rs declares its 65 journal abbreviations,
+   ieeetran_cls.rs `\IEEEkeywordsname` and `\IEEEproofname`). The safety check reads the copy's own definition and fails
+   closed: a declared name the binding owns (rule 1) is kept aside as any owned name (rule 2), and when the copy's read
+   ends (`state::leave_copy_provides_frame` → `copy_text_names_stand`) the copy's meaning stands for the document only
+   if it is a macro without parameters whose body reads as text (`state::copy_text_refusal`, `text_body_refusal`:
+   every macro it reaches, at most 32, is followed, a robust `\protect\X` through `\X` and LaTeX's inner `\X `; what
+   reads as text is characters, a `\let` or `\chardef` character (`\&`), a conditional (both branches), a primitive
+   that prints a character or selects a font by its definition (`\it`, a `\font` selector) or prints a space (`\ `,
+   `~`'s `\lx@NBSP`, `\lx@nobreakspace`), LaTeX's font selection commands (`\fontfamily`, `\fontseries`, `\fontshape`,
+   `\fontencoding`, `\fontsize`, `\selectfont`, `\usefont`, `\not@math@alphabet@@`, `\lx@normalfont@base`, not
+   followed: a font switch's robust command reaches them, `\let\jnl@style=\rm` in the AASTeX copies) and an empty
+   body; everything else is refused — a constructor, `\par`, `\csname`/`\endcsname`, an undefined name, a macro whose
+   expansion is LaTeXML's code (`\begin`), any other primitive (`\noindent`, `\hbox`), a register, a locked command
+   that reads arguments), else the binding's comes back (Info "… defines this text name as more than text (<the
+   refused token>)", once per name: aastex63_bren.cls:879 `\def\abstractname{\textbf{Abstract}}`, whose `\textbf`
+   reaches its math branch's constructor, keeps "Abstract", 1905.12710, 2410.02864). 78h r2 failed open there — it
+   accepted every primitive but `\par`, a macro whose expansion is code, `\csname`, and did not follow `\protect\X`:
+   `\DeclareRobustCommand\myhead{\par\noindent HEADX}` with `\def\abstractname{\myhead}` wrote
+   `name="\par\noindentHEADX"`, a `\def\pra{\begin{center}PRAX\end{center}}` split the paragraph (guard
+   `perfect_kernel_batch78h::routed_copy_text_name_check_fails_closed`, repro
+   `provides_route/routed_copy_text_names_fail_closed.tex`); r2 → r3 over the A/B's 542 papers changed no output and no
+   count, and 2 names newly declined without a change (1504.07568, 2111.14400: fcaa.cls's
+   `\DeclareOldFontCommand{\bf}`, a macro whose expansion is code, in `{\bf Abstract}`). The declarations are global, not tied to the copy's
+   binding: `state::declare_copy_text_names` assigns them globally, so a name any binding loaded so far declared counts
+   for every routed copy (a copy routed to the IEEEtran binding in a document that also loaded aas_macros may supply
+   `\apj`); no scoping is kept. Its `\newcommand`/`\providecommand` of a declared name the
+   binding owns defines it (decided at the read's end as a `\def` is), unless a base class the copy `\LoadClass`es has
+   it, which stays LaTeX's "already defined" (`state::routed_copy_text_name_yields`, latex_constructs
+   `is_definable_latex`). Every other name stays the binding's (rule 1), whatever it prints: the caption formats
+   `\fnum@<type>` and the caption separator (the binding's, ": " by default as Perl's; no raw `\@makecaption` is read),
+   `\@thmcountersep`, `\the<ctr>`, `\p@<ctr>`, `\the<ctr>@ID`, the list labels (`\labelitem*`, `\labelenum*`), `\today`,
+   `\baselinestretch`, `\CurrentOption`, every `\lx@` name, structure (`\appendix`, sectioning, title pages, frontmatter
+   setters). A copy under the binding's own name (rule 0: a shipped svjour3.cls, aas_macros.sty) supplies none; rule 1's
+   text defaults — names the base class or the kernel assigned, which the binding does not own — stand for every copy as
+   before. 78h r1 decided by meaning instead (`meaning_only_prints`: the name typeset alone in a rolled-back run), so
+   every name that only prints yielded, and the copies' caption labels met the binding's separator — "Fig. 1.—.— "
+   (1106.2565's emulateapj-rtx4.cls:911, astro-ph0204283), "Figure 1..— " (1505.06804), "Table 1:: " (astro-ph0601469,
+   astro-ph0603093), "Figure 1.: " (astro-ph0101121), "Fig. 1.—: " (1402.7103) —, a routed svjour3 copy's
+   `\def\@thmcountersep{}` numbered "Theorem 51" (1803.06644, the binding's "5.1" again; the PDF's "Theorem 1" is a
+   binding gap, SYNC row), and the copies' `$\bullet$` items became Math. 1402.7103's proto.cls
+   (`\ProvidesClass{aastex}`, :64) prints its journal names, :1729-1790 "ApJ" → "Astrophys. J." (117), "A&A" → "Astron.
+   Astrophys." (45), "MNRAS" → "Mon. Not. R. Astron. Soc." (20)…, and :798 `\def\abstractname{~}` (its PDF heads the
+   abstract with no name); its `\fnum@figure` (:1694, "Fig. 1.—") is a caption format, so the binding's "Figure 1: "
+   stands, as at int47a (proto.cls defines no `\figurename`). A/B (78h r2, base int47a dbe1eb8db2, r1 2460d8ba71; 542
+   papers: 339 requesting a shipped class or package their `\Provides` line routes to a binding — r1's 174 and the
+   shapes its census scan missed, a requested class's directory path (`\documentclass{dir/new_tlp}`: 1711.06128,
+   2401.16124, 2007.03948) and a copy another shipped file loads (`\LoadClass{myjmlr}`: 1506.02582, 1602.06746,
+   2510.21506; the `*_eso.sty` copies eso-pic.sty `\input`s, 158, which the eso-pic binding never reads; 280 of the 339
+   take the route), 69 standard-class derivatives, 34 witnesses of rules 12-13, 100 random controls): Errors 300 → 300,
+   Warnings 5,124 → 5,124, Fatals 0 → 0 on all three, no paper's counts changed; base → r2: 15 outputs changed, controls
+   and derivatives none, each the copy's declared text as its source writes it — `\abstractname` (11: the AASTeX 6+ and
+   emulateapj copies' "ABSTRACT", 1106.2565, 1505.06804, 2007.00749, 2107.03400, 2505.22102, 2512.01642; proto.cls's
+   "~", 1402.7103, astro-ph0601469, astro-ph0603093; PoS copies' `{\bfseries\scshape Abstract: }`, 1506.03731,
+   2504.20273), the journal names (AASTeX 6.1-6.3 copies' "ApJL", "JQSRT", "AcA": 1905.12710, 2007.00749, 2107.03400,
+   2410.02864, 2505.22102; proto.cls's italic names), `\tablename` (the PoS copies' bold small caps), `\proofname`
+   (2311.15635's svjour3 copy "Proof.", which reaches only the proofs' hidden `<tag role="autoref">`; the visible
+   run-in heading and the other tags stay the svjour3 binding's "Proof"), `\IEEEkeywordsname` (1803.07915's IEEEURAI.cls "Keywords", as its PDF); r1 →
+   r2: 88 changed, 73 back to int47a's output, the other 15 keeping only r1's declared names (r1's changes undone:
+   caption labels in 45 papers, list labels in 33, 1803.06644's theorem numbers, 0805.4759's "Acknowledgments",
+   2209.10785's cidr.cls licence note, the icml copies' "*Equal contribution" — 1907.04728, 2402.06666, 2407.12588: the
+   icml binding's note has no mark —, 2503.23679's iccv `\@onedot` empty `<text/>` gone). Checked against the PDFs:
+   1106.2565, 1505.06804, 2107.03400 "ABSTRACT"; 2107.03400 "ApJL"; 1402.7103 "Astrophys. J."; 1803.07915 "Keywords";
+   1803.06644 "Theorem 1". Cost: none measurable on controls (+0.04 %, +0.05 % instructions on 1507.01999, 2607.02356);
+   1402.7103 6.744 G → 6.791 G (+0.7 %, the copy's journal names now typeset, in italic; r1 6.817 G); `perf stat -e
+   instructions:u`. Guards `perfect_kernel_batch78h::{routed_copy_supplies_only_declared_text_names,
+   self_named_copy_supplies_no_text_names, standard_class_derivative_newcommands_only_declared_text_names}`; repros
+   `provides_route/routed_copy_text_names.tex` (aascopy.cls, a shortened stand-in with a few cited lines of proto.cls),
+   `provides_route/self_named_copy_text_names.tex` (aas_macros.sty, from scratch),
+   `provides_route/standard_class_derivative_text_names.tex`.
 
 Costs (instructions, 72a r3 vs 67int21, faithful loads): atlasdoc papers +26-33 % in r3-r7, its `\LoadClass{scrartcl}`
 (atlasdoc.cls:319, KOMA's 22 files), +0.8-3.8 % in r8, where the binding's base class stood for it, and back with r9,

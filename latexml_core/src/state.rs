@@ -465,6 +465,9 @@ pub struct CopyProvidesRecord {
   /// The classes the copy's own code loaded (`\LoadClass`, and the classes loaded inside it: [`ClassLoadFrame`]): the
   /// real class has the names they define ([`copy_provides_text_default_clashes`]).
   pub loads_classes: Vec<String>,
+  /// Whether the copy's `\Provides` line routed its request to the binding (OXIDIZED_DESIGN_DIVERGENCES #731 rule 12):
+  /// the declared text names it defines stand (rule 14, [`routed_copy_text_name_yields`]).
+  pub routed:        bool,
 }
 
 /// One frame of a stand-in copy's provides-mode ([`enter_copy_provides_frame`]): the copy (`0`: a suspension), whether
@@ -2435,6 +2438,8 @@ pub fn leave_copy_provides_frame() {
   if frame.id == 0 || frame.repeat {
     return;
   }
+  let mut frame = frame;
+  copy_text_names_stand(&mut frame);
   // A name the copy `\let` to its own version of a name the binding owns takes the binding's back with it:
   // emulateapj5.sty:386 defines `\keywords`, :394 `\let\subjectheadings=\keywords`, and the document's
   // `\subjectheadings` made the class's "Subject headings:" paragraph where the binding makes `<keywords>`
@@ -2517,12 +2522,70 @@ fn meaning_by_key(key: SymStr) -> Stored {
     .unwrap_or(Stored::None)
 }
 
-/// Number a new stand-in copy of `file` for [`note_copy_provides_assignment`] (1-based, [`crate::definition::origin::copy_provides`]).
-pub fn new_copy_provides_record(file: &str, binding: &str) -> u32 {
+/// A routed copy's definitions of the declared text names (OXIDIZED_DESIGN_DIVERGENCES #731 rule 14,
+/// [`copy_text_name_declared`]) that read as text ([`copy_text_refusal`]) stand for the document when its read ends,
+/// as the real class's: they leave `frame`'s kept names, which the binding's meanings replace. Decided on the copy's
+/// own meanings, before any is put back, so `\let\refname\relax` then `\newcommand\refname{…}` is the copy's last.
+/// Logged once per name, at Info.
+fn copy_text_names_stand(frame: &mut CopyProvidesFrame) {
+  let file = {
+    let state = state!();
+    match state.copy_provides_copies.get(frame.id as usize - 1) {
+      Some(copy) if copy.routed => copy.file.clone(),
+      _ => return,
+    }
+  };
+  let mut standing = Vec::new();
+  for (key, kept) in &frame.kept {
+    let name = arena::to_string(*key);
+    let copys = meaning_by_key(*key);
+    if same_meaning(&copys, kept) || !copy_text_name_declared_as(&name) {
+      continue;
+    }
+    match copy_text_refusal(&copys) {
+      None => {
+        standing.push(*key);
+        Info!(
+          "provide",
+          name,
+          s!("{name} takes the paper's {file} definition: a text name its binding declares")
+        );
+      },
+      Some(refused) => {
+        // (one Info per name, when it is first declined — the check runs again at each frame the copy's read leaves
+        // — and not the general one of `leave_copy_provides_frame`)
+        let first = state_mut!()
+          .copy_provides_copies
+          .get_mut(frame.id as usize - 1)
+          .is_some_and(|copy| copy.declined.insert(*key));
+        if first {
+          Info!(
+            "provide",
+            name,
+            s!(
+              "{name} keeps LaTeXML's definition: the paper's {file} defines this text name as more than text \
+               ({refused})"
+            )
+          );
+        }
+      },
+    }
+  }
+  frame.kept.retain(|(key, _)| !standing.contains(key));
+  for key in standing {
+    frame.kept_keys.remove(&key);
+  }
+}
+
+/// Number a new stand-in copy of `file` for [`note_copy_provides_assignment`] (1-based,
+/// [`crate::definition::origin::copy_provides`]); `routed`: its `\Provides` line routed it to `binding`
+/// (OXIDIZED_DESIGN_DIVERGENCES #731 rule 12).
+pub fn new_copy_provides_record(file: &str, binding: &str, routed: bool) -> u32 {
   let mut state = state_mut!();
   state.copy_provides_copies.push(CopyProvidesRecord {
     file: file.to_string(),
     binding: binding.to_string(),
+    routed,
     ..CopyProvidesRecord::default()
   });
   state.copy_provides_copies.len() as u32
@@ -2661,45 +2724,244 @@ pub fn copy_provides_binding() -> String {
     .unwrap_or_default()
 }
 
+/// The text names a stand-in's copy may supply over its binding, the kernel's default (OXIDIZED_DESIGN_DIVERGENCES
+/// #731 rules 13 and 14; user ruling 2026-10-21: "the bindings should always win in terms of semantic markup … the
+/// slight typographic variations in the raw .cls or .sty file … if we can preserve and reuse them that should be via
+/// a generic mechanism that is set in the binding with a reasonable default"): the standard classes' and LaTeX's
+/// `\…name` macros, the word a heading or a label prints — aip-cp.cls:875 `\newcommand\refname{REFERENCES}`
+/// (1506.04050, 1604.08112), the AASTeX 6+ copies' `\def\abstractname{ABSTRACT}` (2107.03400), proto.cls:798
+/// `\def\abstractname{~}` (1402.7103). A binding extends it with its own ([`declare_copy_text_names`]). Everything else
+/// a binding defines is its markup of the class, and the copy's version of it is declined: caption formats
+/// (`\fnum@<type>`, whose punctuation met the binding's caption separator, "Fig. 1.—.— " in 1106.2565), the caption
+/// separator, `\@thmcountersep` (1803.06644's "Theorem 51"), `\the<ctr>`, `\p@<ctr>`, `\the<ctr>@ID`, list labels
+/// (`\labelitemi`), `\today`, `\baselinestretch`, `\CurrentOption`, every `\lx@` name, structure.
+pub const COPY_TEXT_NAMES: [&str; 13] = [
+  "\\abstractname",
+  "\\appendixname",
+  "\\bibname",
+  "\\chaptername",
+  "\\contentsname",
+  "\\figurename",
+  "\\indexname",
+  "\\listfigurename",
+  "\\listtablename",
+  "\\partname",
+  "\\proofname",
+  "\\refname",
+  "\\tablename",
+];
+
+/// Declare `names` (`\apj`) text names of the binding loading now, besides the kernel's [`COPY_TEXT_NAMES`]: a copy
+/// routed to it or a derivative of its class may supply them (OXIDIZED_DESIGN_DIVERGENCES #731 rules 13 and 14). The
+/// one declaration point of the mechanism, a value `"<name>:copy@text"` as a lock is `"<name>:locked"`; a binding
+/// declares the names it defines, where it defines them (aas_macros_sty.rs: its journal abbreviations, which
+/// 1402.7103's proto.cls :1729-1790 spells out, "Astrophys. J.").
+pub fn declare_copy_text_names(names: &[&str]) {
+  for name in names {
+    assign_value(&s!("{name}:copy@text"), true, Some(Scope::Global));
+  }
+}
+
+/// Is `token` a declared text name ([`COPY_TEXT_NAMES`], [`declare_copy_text_names`])? Decided by its name; a routed
+/// copy's definition of it must read as text besides ([`copy_text_refusal`]).
+fn copy_text_name_declared(token: &Token) -> bool { token.with_cs_name(copy_text_name_declared_as) }
+
+/// [`copy_text_name_declared`] for the name `name` (`\refname`).
+fn copy_text_name_declared_as(name: &str) -> bool {
+  COPY_TEXT_NAMES.contains(&name) || arena::get(s!("{name}:copy@text")).is_some_and(lookup_bool_sym)
+}
+
 /// Is `token` a text name the standard class's binding assigned in its own load, which a derivative of that class read
 /// now defines itself (`binding::content::standard_class_binding_assigned`, OXIDIZED_DESIGN_DIVERGENCES #731 rule 13)?
 /// In TeX the derivative is read in the class's place, so its `\newcommand` of the name is the first: aip-cp.cls:875
-/// `\newcommand\refname{REFERENCES}` (1506.04050, 1604.08112). Only a text name yields (`binding_text_name`:
-/// `\refname`, `\figurename`, `\@ptsize`, `\@pnumwidth`); a structural command stays the binding's, LaTeXML's markup of
-/// the class — `\appendix` (`<ltx:appendix>`, article_cls.rs, book_cls.rs), book's `\frontmatter`/`\mainmatter`/
-/// `\backmatter` (unnumbered chapters), whose `\newcommand`s in a full class copy (hep-ex0405054's book_modified.cls:531,
-/// math0301023's khbook.cls:285; 0705.2210, hep-ph0008011, cond-mat0402505, quant-ph0409078) lost the appendices and
-/// numbered the preface. Names a stand-in the derivative loads assigned are not the class's (guard
+/// `\newcommand\refname{REFERENCES}` (1506.04050, 1604.08112). Only a declared text name yields
+/// (`copy_text_name_declared`: `\refname`, `\figurename`, `\abstractname`); every other name the binding defined
+/// stays its markup of the class — `\appendix` (`<ltx:appendix>`, article_cls.rs, book_cls.rs), book's
+/// `\frontmatter`/`\mainmatter`/`\backmatter` (unnumbered chapters), whose `\newcommand`s in a full class copy
+/// (hep-ex0405054's book_modified.cls:531, math0301023's khbook.cls:285; 0705.2210, hep-ph0008011, cond-mat0402505,
+/// quant-ph0409078) lost the appendices and numbered the preface; the caption formats (`\fnum@table`), `\@ptsize`,
+/// `\@pnumwidth`. Names a stand-in the derivative loads assigned are not the class's (guard
 /// `perfect_kernel_batch77w::standard_class_derivative_defines_only_its_class_names`).
 pub fn standard_class_binding_name(token: &Token) -> bool {
-  crate::binding::content::standard_class_binding_assigned(meaning_key(token))
-    && lookup_meaning(token).is_some_and(|meaning| binding_text_name(&meaning))
+  copy_text_name_declared(token)
+    && crate::binding::content::standard_class_binding_assigned(meaning_key(token))
 }
 
-/// Is `meaning` a binding's text name: a macro its code defined (origin `Binding`), without parameters, whose expansion
-/// is text — tokens, none a control sequence or active character (`\refname`'s "References", `\@ptsize`'s "0",
-/// `\@pnumwidth`'s "1.55em")? A primitive, a constructor, a register, an empty macro (a hook) or a macro that calls
-/// anything (`\appendix`'s `\@appendix`, book's `\@chapapp` → `\chaptername`) is not.
-fn binding_text_name(meaning: &Stored) -> bool {
+/// Is a copy its `\Provides` line routed to its binding (OXIDIZED_DESIGN_DIVERGENCES #731 rule 12) read now, its own
+/// code locked as a raw read's is?
+fn reading_a_routed_copy() -> bool {
+  let id = crate::definition::origin::copy_provides();
+  id != 0
+    && !state_is_unlocked()
+    && state!()
+      .copy_provides_copies
+      .get(id as usize - 1)
+      .is_some_and(|copy| copy.routed)
+}
+
+/// Does a routed copy, read now, `\newcommand` (or `\providecommand`) a declared text name (`copy_text_name_declared`)
+/// that LaTeXML's code defined (owned as rule 1 tells, `owned_by_the_semantic_layer`) and no base class the copy
+/// `\LoadClass`es defines? Then the declaration defines it, as the real class's first definition (proto.cls:798's
+/// `\abstractname`, :1731 `\newcommand\apj{\ref@jnl{\it Astrophys.\ J.}}` over the aas_macros binding's "ApJ",
+/// 1402.7103; OXIDIZED_DESIGN_DIVERGENCES #731 rule 14); a name the copy's base class has is LaTeX's "already
+/// defined", as before. Whether its definition stands for the document is decided when the copy's read ends
+/// (`leave_copy_provides_frame`, `copy_text_refusal`).
+pub fn routed_copy_text_name_yields(token: &Token) -> bool {
+  copy_text_name_declared(token)
+    && reading_a_routed_copy()
+    && owned_by_the_semantic_layer(token)
+    && !copy_base_class_defines(token)
+}
+
+/// Why does the routed copy's meaning `meaning` of a declared text name not stand for the document, when the copy's
+/// read ends (`leave_copy_provides_frame`; OXIDIZED_DESIGN_DIVERGENCES #731 rule 14)? `None`: it stands — a macro
+/// without parameters whose body reads as text ([`text_body_refusal`]). The safety check reads the copy's own
+/// definition and fails closed: `\let\refname\relax`, a macro reading arguments, one whose expansion is LaTeXML's code
+/// or a `\refname` that sets a heading keeps the binding's; the reason names the first refused token.
+fn copy_text_refusal(meaning: &Stored) -> Option<String> {
   let Stored::Expandable(defn) = meaning else {
-    return false;
+    return Some(s!("not a macro"));
   };
-  if defn.origin != crate::definition::origin::DefinitionOrigin::Binding
-    || defn
-      .paramlist
-      .as_ref()
-      .is_some_and(|params| !params.get_parameters().is_empty())
+  if defn
+    .paramlist
+    .as_ref()
+    .is_some_and(|params| !params.get_parameters().is_empty())
   {
-    return false;
+    return Some(s!("parameters"));
   }
-  let Some(ExpansionBody::Tokens(body)) = &defn.expansion else {
-    return false;
+  match &defn.expansion {
+    Some(ExpansionBody::Tokens(body)) => {
+      text_body_refusal(body.unlist_ref(), &mut Vec::new()).map(|refused| refused.to_string())
+    },
+    Some(ExpansionBody::Closure(_)) => Some(defn.cs.to_string()),
+    None => None,
+  }
+}
+
+/// Does `meaning` read arguments — a macro or primitive with parameters?
+fn reads_arguments(meaning: &Stored) -> bool {
+  let params = match meaning {
+    Stored::Expandable(defn) => defn.paramlist.as_ref(),
+    Stored::Primitive(defn) => defn.paramlist.as_ref(),
+    _ => None,
   };
-  let body = body.unlist_ref();
-  !body.is_empty()
-    && body
-      .iter()
-      .all(|t| !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE))
+  params.is_some_and(|params| !params.get_parameters().is_empty())
+}
+
+/// The most macros a copy's text name may go through ([`text_body_refusal`]): a journal name's `\ref@jnl`, a font
+/// switch's, a counter's representation; sectioning and title pages go through LaTeX's machinery of many more.
+const TEXT_NAME_MACROS: usize = 32;
+
+/// The primitives of LaTeXML's code a text name may call besides those printing a character or selecting a font by
+/// their definition ([`printing_primitive`]): the spaces a name prints, `\ ` (1402.7103's proto.cls:1731 `Astrophys.\
+/// J.`), `~`'s `\lx@NBSP` (proto.cls:798 `\def\abstractname{~}`, :1737 `Appl.~Opt.`) and `\nobreakspace`'s
+/// `\lx@nobreakspace`.
+const TEXT_NAME_SPACES: &[&str] = &["\\ ", "\\lx@NBSP", "\\lx@nobreakspace"];
+
+/// LaTeX's font selection interface (NFSS, latex.ltx's `\DeclareRobustCommand\fontseries` …), which a font switch's
+/// robust command reaches and LaTeXML defines (latex_constructs sect08.rs, sect13.rs): a text name may call them,
+/// unfollowed — `\fontfamily` reads its argument under a lock, `\not@math@alphabet@@` reads one to warn in math. The
+/// AASTeX 6+ and emulateapj copies' journal names reach them (`\let\jnl@style=\rm`, `\rm` → `\rmfamily` →
+/// `\fontfamily\rmdefault\selectfont`: 2007.00749, 2107.03400, 1905.12710), the PoS copies' `\bfseries\scshape`
+/// (1506.03731, 2504.20273).
+const TEXT_NAME_FONT_SELECTION: &[&str] = &[
+  "\\fontencoding",
+  "\\fontfamily",
+  "\\fontseries",
+  "\\fontshape",
+  "\\fontsize",
+  "\\selectfont",
+  "\\usefont",
+  "\\not@math@alphabet",
+  "\\not@math@alphabet@@",
+  "\\lx@normalfont@base",
+];
+
+/// Does the primitive `defn` print or select a font: a character (`\ss`), a font switch (`\it`, a `\font` selector)
+/// or one of [`TEXT_NAME_SPACES`]?
+fn printing_primitive(defn: &crate::definition::primitive::Primitive) -> bool {
+  defn.font.is_some()
+    || defn.font_id.is_some()
+    || matches!(
+      defn.replacement,
+      Some(crate::definition::PrimitiveBody::String(_))
+    )
+    || defn
+      .cs
+      .with_cs_name(|name| TEXT_NAME_SPACES.contains(&name))
+}
+
+/// The first token of `body`, a copy's definition of a declared text name, that does not read as text — the safety
+/// check, which fails closed. Every macro it calls is followed, and those theirs call (at most [`TEXT_NAME_MACROS`],
+/// `seen`); a robust command's `\protect\X` is followed through `\X` and LaTeX's inner `\X ` (`\DeclareRobustCommand`).
+/// Characters, a `\let` or `\chardef` character (`\bgroup`, `\&`), a conditional (both branches are read), a font, a
+/// primitive that prints or selects a font ([`printing_primitive`]), LaTeX's font selection commands
+/// ([`TEXT_NAME_FONT_SELECTION`], not followed) and macros composing them read as text, so does an empty body (the
+/// class prints no name). Refused: a constructor (an element), `\par` (a paragraph), `\csname`/`\endcsname` (a name
+/// made at run time), an undefined name (an error), a macro whose expansion is LaTeXML's code (`\begin`), any other
+/// primitive (`\noindent`, `\vskip`), a register, a locked command reading arguments (LaTeXML's markup interface:
+/// `\@startsection`, `\@lbibitem`; a binding owns its calls, OXIDIZED_DESIGN_DIVERGENCES #500).
+fn text_body_refusal(body: &[Token], seen: &mut Vec<SymStr>) -> Option<Token> {
+  let protect = T_CS!("\\protect");
+  for t in body {
+    if !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) || *t == protect {
+      continue;
+    }
+    if t.with_cs_name(|name| matches!(name, "\\par" | "\\csname" | "\\endcsname")) {
+      return Some(*t);
+    }
+    let key = meaning_key(t);
+    if seen.contains(&key) {
+      continue;
+    }
+    let meaning = lookup_meaning(t);
+    if meaning.is_some() && t.with_cs_name(|name| TEXT_NAME_FONT_SELECTION.contains(&name)) {
+      continue;
+    }
+    if t.with_cs_name(name_carries_lock) && meaning.as_ref().is_some_and(reads_arguments) {
+      return Some(*t);
+    }
+    let reads_as_text = match meaning {
+      Some(Stored::Expandable(defn)) => {
+        seen.push(key);
+        if seen.len() > TEXT_NAME_MACROS {
+          return Some(*t);
+        }
+        match &defn.expansion {
+          Some(ExpansionBody::Tokens(inner)) => {
+            if let Some(refused) = text_body_refusal(inner.unlist_ref(), seen) {
+              return Some(refused);
+            }
+            true
+          },
+          Some(ExpansionBody::Closure(_)) => false,
+          None => true,
+        }
+      },
+      Some(Stored::Primitive(defn)) => {
+        printing_primitive(&defn)
+          && defn
+            .paramlist
+            .as_ref()
+            .is_none_or(|params| params.get_parameters().is_empty())
+      },
+      // (a `\chardef` character prints it: `\&`, latex.ltx's chardef, in the AASTeX copies' `A\&A`)
+      Some(Stored::Register(register)) => {
+        matches!(
+          register.register_type,
+          crate::definition::register::RegisterType::CharDef
+        )
+      },
+      Some(
+        Stored::Token(_) | Stored::Conditional(_) | Stored::Font(_) | Stored::FontDirective(_),
+      ) => true,
+      _ => false,
+    };
+    if !reads_as_text {
+      return Some(*t);
+    }
+  }
+  None
 }
 
 /// Did the stand-in binding's own load assign `token` last (`State::stand_in_meanings`, not its base class's

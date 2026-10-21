@@ -82,4 +82,17 @@ LoadDefinitions!({
   Let!("\\apjlett", "\\apjl");
   Let!("\\apjsupp", "\\apjs");
   Let!("\\applopt", "\\ao");
+
+  // The journal abbreviations are text names a copy may spell out (OXIDIZED_DESIGN_DIVERGENCES #731 rules 13-14,
+  // `state::declare_copy_text_names`): 1402.7103's proto.cls (`\ProvidesClass{aastex}`) :1729-1790, `\newcommand\apj
+  // {\ref@jnl{\it Astrophys.\ J.}}`, its PDF "Astrophys. J." where this binding prints "ApJ".
+  declare_copy_text_names(&[
+    "\\aj", "\\actaa", "\\araa", "\\apj", "\\aas", "\\dps", "\\jaavso", "\\maps", "\\apjl", "\\apjs", "\\ao",
+    "\\apss", "\\aap", "\\aapr", "\\aaps", "\\azh", "\\baas", "\\bac", "\\caa", "\\cjaa", "\\icarus", "\\jcap",
+    "\\jrasc", "\\memras", "\\mnras", "\\na", "\\nar", "\\pra", "\\prb", "\\prc", "\\prd", "\\pre", "\\prl",
+    "\\pasa", "\\pasp", "\\pasj", "\\qjras", "\\rmxaa", "\\skytel", "\\solphys", "\\sovast", "\\ssr", "\\zap",
+    "\\nat", "\\iaucirc", "\\aplett", "\\apspr", "\\bain", "\\fcp", "\\gca", "\\grl", "\\jcp", "\\jgr", "\\jqsrt",
+    "\\memsai", "\\nphysa", "\\physrep", "\\physscr", "\\planss", "\\procspie", "\\psj", "\\astap", "\\apjlett",
+    "\\apjsupp", "\\applopt",
+  ]);
 });

@@ -1,9 +1,11 @@
 %% A journal's derivative of the standard article class, as mf.cls (0709.4467), antonio.cls (1808.10740),
 %% articlegm.cls (1504.00071) ship it: TeX Live's article.cls (LPPL, notices below) with its own reference and
-%% figure names (aip-cp.cls:877, HERON.cls:682 `\newcommand\bibname{References}` likewise).
+%% figure names (aip-cp.cls:877, HERON.cls:682 `\newcommand\bibname{References}` likewise), and a `\newcommand` of its
+%% table label (`\fnum@table`, a caption format the binding keeps; article.cls has
+%% `\def\fnum@table{\tablename\nobreakspace\thetable}`).
 %% MODIFIED: a modified copy of TeX Live 2025's article.cls, made for latexml-oxide's repros
 %% (tools/perfect_kernel/repros/stand-in-copies/provides_route/), not the original work: `\refname` and `\figurename`
-%% are "REFERENCES" and "FIGURE".
+%% are "REFERENCES" and "FIGURE", and `\fnum@table` is `\newcommand`ed to "TABLE~\thetable".
 %%
 %% This is file `article.cls',
 %% generated with the docstrip utility.
@@ -472,7 +474,7 @@
 \def\fps@table{tbp}
 \def\ftype@table{2}
 \def\ext@table{lot}
-\def\fnum@table{\tablename\nobreakspace\thetable}
+\newcommand\fnum@table{TABLE~\thetable}
 \newenvironment{table}
                {\@float{table}}
                {\end@float}

@@ -1,0 +1,17 @@
+% witness: the 2026-10-21 ruling's scope (78h r2): a copy shipped under its binding's own name (a paper's
+%          aas_macros.sty, svjour3.cls) supplies none of the text names a binding declares; aas_macros.sty is a
+%          from-scratch stand-in
+% oracle:  pdflatex 0 errors: "Journal: Astrophys. J.. FIG. 1: A figure."
+% engines: rust dbe1eb8db2 (int47a) = the binding's "ApJ"; `\figurename` is article's, a text default the binding does
+%          not own (rule 1), so the copy's "FIG." stands; 78h r1 the same
+% expect:  0 errors, 0 warnings; "ApJ" (the aas_macros binding's), "FIG. 1" (rule 1's text default)
+% status:  GREEN (dbe1eb8db2) -> GREEN (78h r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{aas_macros}
+\begin{document}
+Journal: \apj.
+\begin{figure}[h]
+\caption{A figure.}
+\end{figure}
+\end{document}

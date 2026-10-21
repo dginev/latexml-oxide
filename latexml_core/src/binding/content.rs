@@ -2330,7 +2330,9 @@ fn read_stand_in_copy(request: &str, binding: &str, ext: &str, in_expl3: bool) -
   {
     return Ok(());
   }
-  // (a copy whose declaration routed its request here is the file by that declaration: [`provided_binding`])
+  // (a copy whose declaration routed its request here is the file by that declaration: [`provided_binding`]; the
+  // text names its binding declares are its own, as the real class's: `state::routed_copy_text_name_yields`,
+  // OXIDIZED_DESIGN_DIVERGENCES #731 rule 14, 1402.7103)
   let routed = loading_for_a_provides_route(binding);
   if !routed && !copy_is_the_stood_in_file(&file, binding, &path) {
     return Ok(());
@@ -2341,6 +2343,7 @@ fn read_stand_in_copy(request: &str, binding: &str, ext: &str, in_expl3: bool) -
   let id = new_copy_provides_record(
     file.rsplit(['/', '\\']).next().unwrap_or(&file),
     file_stem(binding),
+    routed,
   );
   use crate::definition::origin::{CopyProvidesGuard, DefinitionOrigin, OriginGuard};
   // (not a raw class read for K11, `\lx@class@loaded@raw`: the binding owns the title page)

@@ -515,6 +515,10 @@ LoadDefinitions!({
   DefMacro!("\\abstractname", "Abstract");
   DefMacro!("\\IEEEkeywordsname", "Index Terms");
   DefMacro!("\\IEEEproofname", "Proof");
+  // IEEEtran's own `\…name`s are text names a copy may spell otherwise (OXIDIZED_DESIGN_DIVERGENCES #731 rule 14,
+  // `state::declare_copy_text_names`): 1803.07915's IEEEURAI.cls (`\ProvidesClass{IEEEtran}`) heads its keywords
+  // "Keywords", as its PDF.
+  declare_copy_text_names(&["\\IEEEkeywordsname", "\\IEEEproofname"]);
 
   // Legacy aliases (Perl L398-439)
   Let!("\\authorblockA", "\\IEEEauthorblockA");
