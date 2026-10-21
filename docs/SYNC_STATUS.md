@@ -5384,6 +5384,21 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   and `\declaretheorem{a, b}[opts]` declares each name with both option lists (thm-kv.sty:333-348; 2608.16854's
   lemmas, propositions, definitions, examples, remarks were undefined) (KPE #1061). New RED rows: algorithm2e
   `noline` indentation (KPE #1062), amsmath's alignment dimens (0912.5438).
+  **Integration (int51, 78k r1-r2 squashed da215b9142 + 78l r1-r2 squashed 3e8c5345f4 + 78m r1-r2 squashed 5b7182df45;
+  binary int51a):** 78l's `shown_arguments` change landed on its moved home `base_utilities/util_text.rs` (split114 had
+  deleted the old file; `pub(crate)` + the `\textcircled` doc line), reached by sect13.rs through the `pub use util_text::*`
+  re-export. Gates int51a: nextest 6720/6720 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int50a empty.
+  A/B int50a vs int51a over the three writers' reach populations (2,563 of 2,564: 78k 944 — `\citetext`, `\declaretheorem`
+  + thmtools, algorithm2e, bibentry, footmisc (seed 51, cap 150 each) + the rev78k lists; 78l 1,041; 78m 579): E 13,373 →
+  13,313, F 24 = 24, 0 papers worse in E or F, 19 better; 421 changed. Word loss > 1 % in 7, all classified: 2012.02570,
+  1211.2618, 2505.07606, 2507.01709, 2608.05624 print a `\nobibliography*` + `\bibliography` list once instead of twice
+  (bibentry.sty: the starred form reads the .bbl silently); 0711.2399 loses its leaked `\multido \Ik =0+12…` source text
+  (pst-plot loads multido, E 6 → 1); 0912.5438 shows no bibliography where the base printed it at `\nobibliography*` —
+  both sides stop at equation 4.21 (the `\totwidth@`/`\alignsep@` cascade, RED
+  `package-bindings/amsmath_alignment_dimens_totwidth_alignsep_are_defined`, queued as 78o item 5), so its real
+  `\bibliography` was never reached on either side. Random controls: 2 of 98 (78l) and 1 of 95 (78m) changed — the
+  algorithm2e default block end "end" (2210.14751, 2608.25754; 78k) and 1706.03762's Aidan N. Gomez keeping one
+  "University of Toronto" instead of two, Polosukhin's thanks before his e-mail as printed (78m). Binding nets (int51a) 136/136, 0 worse than int50a.
 - **78g** (kernel batch: tcolorbox box labels, TCB-LABEL, user ruling 2026-10-21 item 12; + the repro stand-in licence
   audit, item 11; guards `perfect_kernel_batch78g::*`, 4, each RED on 25730beb73; OD #813, KPE #1038). (1) A label after a
   raw `\refstepcounter` names the object the step numbers, which takes the step's number: the kernel's
