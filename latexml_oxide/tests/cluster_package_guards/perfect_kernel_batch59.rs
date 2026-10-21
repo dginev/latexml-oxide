@@ -589,7 +589,8 @@ fn tcb_listing_keeps_its_hypertarget() {
 }
 
 /// 59i: a listing box's `label=` names its own listing (its first line; run before the listing,
-/// the label named the element before it), and `step=` steps its counter. Repro
+/// the label named the element before it), and `step=` steps its counter; 78g: the first line takes the box counter's
+/// number, which `\ref` prints (each `[auto counter]` box "1"; OXIDIZED_DESIGN_DIVERGENCES #813). Repro
 /// captions-floats/tcb_listing_label_names_its_listing.
 #[test]
 fn tcb_listing_label_names_its_listing() {
@@ -599,7 +600,7 @@ fn tcb_listing_label_names_its_listing() {
   assert_elements(tex, RAW, (0, 0), &[(
     "para",
     "p1",
-    r##"<para xml:id="p1"><listing class="ltx_lstlisting" data="YSBi" dataencoding="base64" datamimetype="text/plain"><listingline labels="LABEL:first" xml:id="lstnumberx1"><text class="ltx_lst_identifier">a</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">b</text></listingline></listing><listing class="ltx_lstlisting" data="YyBk" dataencoding="base64" datamimetype="text/plain"><listingline labels="LABEL:second" xml:id="lstnumberx2"><text class="ltx_lst_identifier">c</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">d</text></listingline></listing><listing class="ltx_lstlisting" data="ZSBm" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx3"><text class="ltx_lst_identifier">e</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">f</text></listingline></listing><p>See <ref labelref="LABEL:first"/>, <ref labelref="LABEL:second"/>; section 1.</p></para>"##,
+    r##"<para xml:id="p1"><listing class="ltx_lstlisting" data="YSBi" dataencoding="base64" datamimetype="text/plain"><listingline labels="LABEL:first" xml:id="lstnumberx1"><tags><tag role="refnum">1</tag></tags><text class="ltx_lst_identifier">a</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">b</text></listingline></listing><listing class="ltx_lstlisting" data="YyBk" dataencoding="base64" datamimetype="text/plain"><listingline labels="LABEL:second" xml:id="lstnumberx2"><tags><tag role="refnum">1</tag></tags><text class="ltx_lst_identifier">c</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">d</text></listingline></listing><listing class="ltx_lstlisting" data="ZSBm" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx3"><text class="ltx_lst_identifier">e</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">f</text></listingline></listing><p>See <ref labelref="LABEL:first"/>, <ref labelref="LABEL:second"/>; section 1.</p></para>"##,
   )]);
 }
 

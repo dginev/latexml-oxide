@@ -1666,9 +1666,14 @@ pub(crate) fn load() -> Result<()> {
     tokens.push(T_END!());
     tokens
   });
+  // A step no constructor takes (a raw `\refstepcounter`) is recorded for the labels made after it, whose number
+  // it is (`note_raw_refstep`; the `\lx@label` in sect11.rs). Witnesses: 2506.01072 (`\newtcbtheorem`), 2505.20088
+  // (`\newtcolorbox[auto counter]`), 2402.06608 (`[blend into=figures]`), 2609.20563 (`\newtcblisting`).
   DefPrimitive!("\\lx@refstepcounter@label{}", sub[(ctype)] {
     let ctype = Expand!(ctype).to_string();
-    label_stepped_counter(&ctype, &counter_for_type(&ctype))?;
+    let ctr = counter_for_type(&ctype);
+    let props = label_stepped_counter(&ctype, &ctr)?;
+    note_raw_refstep(&ctr, &props);
   });
   DefPrimitive!("\\lx@refstepcounter@label@planned{}", sub[(ctype)] {
     let ctype = Expand!(ctype).to_string();

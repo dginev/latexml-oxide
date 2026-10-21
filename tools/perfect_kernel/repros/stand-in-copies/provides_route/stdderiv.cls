@@ -1,6 +1,9 @@
 %% A journal's derivative of the standard article class, as mf.cls (0709.4467), antonio.cls (1808.10740),
 %% articlegm.cls (1504.00071) ship it: TeX Live's article.cls (LPPL, notices below) with its own reference and
 %% figure names (aip-cp.cls:877, HERON.cls:682 `\newcommand\bibname{References}` likewise).
+%% MODIFIED: a modified copy of TeX Live 2025's article.cls, made for latexml-oxide's repros
+%% (tools/perfect_kernel/repros/stand-in-copies/provides_route/), not the original work: `\refname` and `\figurename`
+%% are "REFERENCES" and "FIGURE".
 %%
 %% This is file `article.cls',
 %% generated with the docstrip utility.

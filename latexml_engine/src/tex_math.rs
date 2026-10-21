@@ -1933,8 +1933,14 @@ LoadDefinitions!({
     }
   );
   // Revert to nothing, since it really doesn't belong in the TeX string(?)
+  // A display a raw counter step numbered (`$$ \refstepcounter{foo}\label{x2} c=d \eqno(B) $$`) keeps one
+  // `ltx:tags`: the tag joins the step's number (`Document::merge_raw_refstep_tags`, OXIDIZED_DESIGN_DIVERGENCES #813;
+  // repro `cross-references/unnumbered_display_label_takes_the_step_number.tex`).
   DefConstructor!("\\lx@eqno EqnoTag",
     "^ <ltx:tags><ltx:tag><ltx:Math><ltx:XMath>#1</ltx:XMath></ltx:Math></ltx:tag></ltx:tags>",
+    after_construct => sub[document, _whatsit] {
+      document.merge_raw_refstep_tags();
+    },
     reversion => "");
 
   //======================================================================

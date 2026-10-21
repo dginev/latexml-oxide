@@ -682,6 +682,10 @@ pub(crate) fn load() -> Result<()> {
       // `\@normalcr` equals `\lx@newline`'s original meaning, so behavior is
       // unchanged.
       Let!("\\\\", "\\@normalcr");
+      // `\@parboxrestore`'s `\let\label\ltx@label` under amsmath (amsmath.sty:1237-1238): a label in the box is
+      // made at once, not as the enclosing display's (`leave_display_for_parbox`; repro
+      // `cross-references/math_box_label_climbs_to_the_display.tex`, its m:f row; review probe rev78g3 pb2.tex y2).
+      leave_display_for_parbox();
       // A caption in the parbox is its own (`begin_caption_box`).
       begin_caption_box()?;
     },
@@ -739,6 +743,10 @@ pub(crate) fn load() -> Result<()> {
       digest(Tokens!(T_CS!("\\@minipagetrue")))?;
     },
     after_digest_begin => sub[whatsit] {
+      // `\@parboxrestore`'s `\let\label\ltx@label` under amsmath (amsmath.sty:1237-1238): a label in the minipage
+      // is made at once, not as the enclosing display's (`leave_display_for_parbox`; repro
+      // `cross-references/amsmath_row_label_names_the_display_step.tex`, its z:a row).
+      leave_display_for_parbox();
       // A caption in the minipage is its own (`begin_caption_box`).
       begin_caption_box()?;
       // Perl: afterDigestBegin sets \hsize, \textwidth, \columnwidth from width arg

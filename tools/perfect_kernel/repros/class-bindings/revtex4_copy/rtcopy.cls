@@ -1,3 +1,12 @@
+%%
+%% Copyright (c) 1999, 2001 The American Physical Society (revtex4.cls; ltxutil portions licensed from W. E. Baxter)
+%%
+%% Licensed under the LPPL (revtex4.cls: http://www.ctan.org/tex-archive/macros/latex/base/lppl.txt).
+%%
+%% MODIFIED: this is a modified and shortened copy of part of revtex4.cls (v4.0, 2001/08/03, as qm2008_abs.cls copies
+%% it), made for latexml-oxide's repros (tools/perfect_kernel/repros/class-bindings/revtex4_copy/), not the original
+%% work: it keeps only the author/collaboration bookkeeping (:164-182, :4215-4330), on article.
+%%
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesClass{rtcopy}[2001/08/03 v4.0 revtex4 copy]
 \LoadClass{article}

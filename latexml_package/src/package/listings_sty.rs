@@ -2413,6 +2413,12 @@ fn with_tcb_phantom(mut processed: Vec<Token>) -> Vec<Token> {
     return processed;
   };
   AssignValue!("tcb_pending_phantom" => Stored::None, Scope::Global);
+  // (its `label` names the box's step, which the listing's start forgot: `\lx@lst@renote@raw@refstep`)
+  let phantom = Tokens::new(
+    std::iter::once(T_CS!("\\lx@lst@renote@raw@refstep"))
+      .chain(phantom.unlist())
+      .collect(),
+  );
   let Some(start) = processed
     .iter()
     .position(|t| *t == T_CS!("\\@lst@startline"))
@@ -3451,10 +3457,19 @@ LoadDefinitions!({
   // observable XML identical. Intentional afterDigest → properties
   // kind-translation so the count-diff audit (Perl 3 vs Rust 2
   // `after_digest`) is a documented false positive.
+  // A listing starts: listings makes `\@currentlabel` its line number's (lstmisc.sty:1228 `\lst@Init`, and
+  // `\refstepcounter{lstnumber}` per line, :1225), so a `\label` in it names no raw step made before it
+  // (`forget_raw_refstep`; a `\refstepcounter{problem}` then an unnumbered `lstlisting` with `(*\label{ln1}*)`
+  // named the problem, 41; pdflatex the line's 2, which an unnumbered `ltx:listingline` does not carry —
+  // OXIDIZED_DESIGN_DIVERGENCES #813). A tcolorbox listing box notes its own step again where its phantom code runs
+  // (`with_tcb_phantom`, `\lx@lst@renote@raw@refstep`; 2609.20563).
   DefConstructor!("\\@@listings@block {} {} {}",
     "<ltx:listing class='ltx_lstlisting' data='#lstdata' datamimetype='#lstmime' \
      dataencoding='#lstenc' dataname='#3'>#2</ltx:listing>",
     mode => "internal_vertical",
+    before_digest => {
+      forget_raw_refstep();
+    },
     properties => sub[args] {
       // Try multiple indices to find the counter
       let c = args.iter()
@@ -3480,6 +3495,13 @@ LoadDefinitions!({
       Ok(props)
     },
     sizer => sub[whatsit] { lst_block_size(whatsit) });
+
+  // The box's step, which the listing's start forgot (`forget_raw_refstep`), named by the label of a tcolorbox listing
+  // box's phantom code (`with_tcb_phantom`): tcolorbox runs that code in the box before the listing
+  // (tcolorbox.sty:1154-1161, :1925).
+  DefPrimitive!("\\lx@lst@renote@raw@refstep", {
+    renote_forgotten_raw_refstep();
+  });
 
   // List of listings
   DefConstructor!("\\lstlistoflistings",

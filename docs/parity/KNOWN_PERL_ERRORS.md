@@ -16638,3 +16638,18 @@ matches a delimiter's closing `{` as tex.web does, and `\meaning` prints it at b
 call has no brace now has one brace, and `\meaning` of `\def\b#1#{…}` (#1 delimited by the brace) prints TeX's
 "macro:#1{->…{" (it had dropped the first brace; tex_debugging.rs). Guards
 `perfect_kernel_batch78d::hash_brace_extends_the_last_delimiter`, `token_kernel_gaps::kernel_def_hash_brace_delimiter`.
+
+## 1038. A label after a raw `\refstepcounter` names the enclosing section
+
+Perl's `\label` (latex_constructs.pool.ltxml:3782, `floatToLabel` Document.pm:1098-1127) attaches to the nearest
+ancestor that may carry `labels` and has an id, and `\ref` prints that element's `refnum`; a `\refstepcounter` no
+constructor takes (`DefPrimitive('\refstepcounter{}', …)`, :3003) numbers no element, and the `\@currentlabel` it digests
+into `LABEL@<label>` (:3802) is never read. Every box tcolorbox numbers (`\newtcbtheorem`, `\newtcolorbox[auto
+counter]`, a `\newtcblisting`'s counter: the `\refstepcounter` in the phantom code, tcolorbox.sty:2311) therefore
+labelled the enclosing section, its `\ref` the section's number. Minimal trigger: `\usepackage{tcolorbox}
+\tcbuselibrary{theorems}\newtcbtheorem{thm}{Theorem}{}{th} \section{A}\section{B}\begin{thm}{T}{a}x\end{thm}\ref{th:a}`
+— pdflatex "1", Perl and the Rust port before 78g "2"; also `\newcounter{c}\begin{picture}(10,10)\put(0,0){\refstepcounter{c}
+\label{d}}\end{picture}`. Fixed in Rust (78g, OXIDIZED_DESIGN_DIVERGENCES #813): the label names the box, which takes the
+step's number; also an unnumbered display's (`\[ a=b \refstepcounter{equation}\label{e1} \]`, pdflatex 21; Perl the
+section's). Residuals (OD #813): a raw step in running text, a second step in one picture, an unnumbered listing line.
+Guards `perfect_kernel_batch78g`.

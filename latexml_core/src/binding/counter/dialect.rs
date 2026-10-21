@@ -555,6 +555,238 @@ pub fn record_refstep_props(counter: &str, props: &HashMap<Stored>) {
   REFSTEP_PROPS.with(|slot| slot.borrow_mut().insert(counter.to_string(), props.clone()));
 }
 
+/// The tags of the step a raw `\refstepcounter` made (`note_raw_refstep`): one no constructor took, so no element
+/// carries its number.
+const RAW_REFSTEP_TAGS: &str = "raw_refstep_tags";
+/// The counter of that step.
+const RAW_REFSTEP_COUNTER: &str = "raw_refstep_counter";
+/// Which step it is (a serial, one per raw step), told apart from another step's on the object one numbered
+/// (`Document::take_raw_refstep_number`).
+const RAW_REFSTEP_SERIAL: &str = "raw_refstep_serial";
+/// The step [`forget_raw_refstep`] forgot (a listing's start), for [`renote_forgotten_raw_refstep`].
+const RAW_REFSTEP_FORGOTTEN: &str = "raw_refstep_forgotten";
+/// The step an amsmath display's labels name ([`hold_raw_refstep_for_display`]): `Some` inside one.
+const RAW_REFSTEP_DISPLAY: &str = "raw_refstep_display";
+
+thread_local! {
+  static RAW_REFSTEP_SERIALS: std::cell::Cell<i64> = const { std::cell::Cell::new(0) };
+}
+
+/// A raw counter step a `\label` names ([`current_raw_refstep`]): the `tags` LaTeXML makes for every step and the
+/// step's serial.
+#[derive(Clone, Debug)]
+pub struct RawRefstep {
+  /// The step's `tags` (`label_stepped_counter`), whose `refnum` is what `\ref` prints.
+  pub tags:   crate::Digested,
+  /// Which step it is: two steps that print the same number are still two.
+  pub serial: i64,
+}
+
+/// Records the step a raw `\refstepcounter` made on `counter` (its `props` from [`label_stepped_counter`]), whose
+/// number LaTeX's `\label` takes from `\@currentlabel` (latex.ltx:14963-14967), for the labels made after it
+/// ([`current_raw_refstep`]). Local, as LaTeX's `\@currentlabel` is (`\protected@edef`): a box's step stays in
+/// the box. Any other step forgets it ([`label_stepped_counter`]). Witnesses: 2506.01072 (`\newtcbtheorem`),
+/// 2505.20088 (`\newtcolorbox[auto counter]`), 2402.06608 (`[blend into=figures]`), 2609.20563 (`\newtcblisting`).
+pub fn note_raw_refstep(counter: &str, props: &HashMap<Stored>) {
+  if let Some(tags @ Stored::Digested(_)) = props.get("tags") {
+    let serial = RAW_REFSTEP_SERIALS.with(|c| {
+      c.set(c.get() + 1);
+      c.get()
+    });
+    assign_value(RAW_REFSTEP_TAGS, tags.clone(), Some(Scope::Local));
+    assign_value(RAW_REFSTEP_COUNTER, counter.to_string(), Some(Scope::Local));
+    assign_value(RAW_REFSTEP_SERIAL, Stored::Int(serial), Some(Scope::Local));
+  }
+}
+
+/// The raw step current now, as recorded ([`note_raw_refstep`]).
+fn recorded_raw_refstep() -> Option<(crate::Digested, String, i64)> {
+  let Some(Stored::Digested(tags)) = lookup_value(RAW_REFSTEP_TAGS) else {
+    return None;
+  };
+  let serial = match lookup_value(RAW_REFSTEP_SERIAL) {
+    Some(Stored::Int(serial)) => serial,
+    _ => 0,
+  };
+  Some((tags, lookup_string(RAW_REFSTEP_COUNTER), serial))
+}
+
+/// Forgets the raw step locally, keeping it for [`renote_forgotten_raw_refstep`]: a listing starts, where listings
+/// makes `\@currentlabel` its line number's (lstmisc.sty:1228 `\lst@Init`, and `\refstepcounter{lstnumber}` per line,
+/// :1225), so a `\label` in an unnumbered listing does not name a step made before it (a `\refstepcounter{problem}`
+/// then an `lstlisting` with `(*\label{ln1}*)`: pdflatex the line's 2; repro
+/// `cross-references/listing_label_names_no_step_before_it.tex`).
+pub fn forget_raw_refstep() {
+  let forgotten = recorded_raw_refstep();
+  assign_value(
+    RAW_REFSTEP_FORGOTTEN,
+    forgotten.is_some(),
+    Some(Scope::Local),
+  );
+  if let Some((tags, counter, serial)) = forgotten {
+    assign_value(
+      &s!("{RAW_REFSTEP_FORGOTTEN}_tags"),
+      Stored::Digested(tags),
+      Some(Scope::Local),
+    );
+    assign_value(
+      &s!("{RAW_REFSTEP_FORGOTTEN}_counter"),
+      counter,
+      Some(Scope::Local),
+    );
+    assign_value(
+      &s!("{RAW_REFSTEP_FORGOTTEN}_serial"),
+      Stored::Int(serial),
+      Some(Scope::Local),
+    );
+    assign_value(RAW_REFSTEP_TAGS, Stored::None, Some(Scope::Local));
+  }
+}
+
+/// Notes again, locally, the step [`forget_raw_refstep`] forgot where the listing started: the box a tcolorbox
+/// listing box is, whose phantom code (its `label`) runs before the listing in the box (tcolorbox.sty:1154-1161,
+/// :1925) while this port runs it in the listing's first line (`listings_sty::with_tcb_phantom`): its label names
+/// the box's step (`\newtcblisting` with `auto counter`, 2609.20563).
+pub fn renote_forgotten_raw_refstep() {
+  if !matches!(
+    lookup_value(RAW_REFSTEP_FORGOTTEN),
+    Some(Stored::Bool(true))
+  ) {
+    return;
+  }
+  if let Some(tags @ Stored::Digested(_)) = lookup_value(&s!("{RAW_REFSTEP_FORGOTTEN}_tags")) {
+    assign_value(RAW_REFSTEP_TAGS, tags, Some(Scope::Local));
+    let counter = lookup_string(&s!("{RAW_REFSTEP_FORGOTTEN}_counter"));
+    assign_value(RAW_REFSTEP_COUNTER, counter, Some(Scope::Local));
+    if let Some(serial) = lookup_value(&s!("{RAW_REFSTEP_FORGOTTEN}_serial")) {
+      assign_value(RAW_REFSTEP_SERIAL, serial, Some(Scope::Local));
+    }
+  }
+}
+
+/// A label the display's own `\label` makes ([`mark_display_label`]) is pending until the kernel's `\label` takes it.
+const RAW_REFSTEP_DISPLAY_LABEL: &str = "raw_refstep_display_label";
+
+/// An amsmath display starts (`{gather}`, `{align}`, `{multline}`, `{aligned}` … and their starred forms): the labels
+/// its own `\label` makes ([`mark_display_label`]) name the step held here, not one made in a row. amsmath's `\label`
+/// there is `\label@in@display` (amsmath.sty:1230-1236), which only stores the key; `\make@display@tag` makes the label
+/// in the row's tag cell (:1240-1252, :1621-1627 `{gather}`, every row), after the cell group a `\refstepcounter` was
+/// made in restored `\@currentlabel` — `\begin{gather*} u=v \refstepcounter{foo}\label{e6} \end{gather*}` is the
+/// section's 7 in pdflatex. `names_the_step`: the display's labels may name the step current here (`{gather}`, and an
+/// `{aligned}`/`{split}` in an `{equation*}`: pdflatex 44, 45). Not for the align family (`{align}`, `{flalign}`,
+/// `{alignat}`) and `{multline}`, starred or not: `\math@cr@@@align` makes the display tag only under `\iftag@`
+/// (:1833-1843), so an untagged row's label is the next tagged row's (`\df@label` carried) or none (pdflatex `??`),
+/// never a step held at the start (repro `cross-references/amsmath_row_label_names_the_display_step.tex`, review probe
+/// rev78g2 al2.tex: `\begin{align} a&=b \label{n2}\notag \\ c&=d \end{align}` in a `\refstepcounter` environment is
+/// equation 1). The kernel's `\label` a document saved before (`\let\originallabel\label` at `\begin{document}`, the
+/// `\labelrel` idiom of 2310.19138) labels at once, after the cell's step ("a"). Local to the display; an inner one
+/// (`{aligned}` in `{gather*}`) keeps the outer's. The outermost start forgets a display label announced and never made
+/// ([`mark_display_label`]).
+pub fn hold_raw_refstep_for_display(names_the_step: bool) {
+  if matches!(lookup_value(RAW_REFSTEP_DISPLAY), Some(Stored::Bool(true))) {
+    return;
+  }
+  end_display_label();
+  if let Some(step) = current_raw_refstep_now().filter(|_| names_the_step) {
+    assign_value(
+      &s!("{RAW_REFSTEP_DISPLAY}_tags"),
+      Stored::Digested(step.tags),
+      Some(Scope::Local),
+    );
+    assign_value(
+      &s!("{RAW_REFSTEP_DISPLAY}_serial"),
+      Stored::Int(step.serial),
+      Some(Scope::Local),
+    );
+  } else {
+    assign_value(
+      &s!("{RAW_REFSTEP_DISPLAY}_tags"),
+      Stored::None,
+      Some(Scope::Local),
+    );
+  }
+  assign_value(RAW_REFSTEP_DISPLAY, Stored::Bool(true), Some(Scope::Local));
+}
+
+/// A paragraph box (`{minipage}`, `\parbox`, the kernel's `\@arrayparboxrestore`) starts: amsmath's
+/// `\@arrayparboxrestore` restores `\label` to the kernel's (amsmath.sty:1237-1238 `\let\label\ltx@label`), so a label
+/// in the box is made at once and names the step current in it, not the display's held step (review probe rev78g2
+/// nest.tex z5, `\begin{gather*} a=b \refstepcounter{foo}\text{\begin{minipage}{2cm}\label{z5}x\end{minipage}}
+/// \end{gather*}`: pdflatex 42; repro `cross-references/amsmath_row_label_names_the_display_step.tex`). Local to the
+/// box. Outside an amsmath display nothing.
+pub fn leave_display_for_parbox() {
+  if !matches!(lookup_value(RAW_REFSTEP_DISPLAY), Some(Stored::Bool(true))) {
+    return;
+  }
+  assign_value(RAW_REFSTEP_DISPLAY, Stored::Bool(false), Some(Scope::Local));
+  let display_label = matches!(
+    (lookup_meaning(&T_CS!("\\label")), lookup_meaning(&T_CS!("\\lx@ams@display@label"))),
+    (Some(Stored::Expandable(a)), Some(Stored::Expandable(b))) if std::rc::Rc::ptr_eq(&a, &b)
+  );
+  if display_label && lookup_meaning(&T_CS!("\\ltx@label")).is_some() {
+    let_i(&T_CS!("\\label"), &T_CS!("\\ltx@label"), None);
+  }
+}
+
+/// The display's own `\label` is making a label (amsmath's `\label@in@display`, expanded): the kernel's `\label` it
+/// reaches (directly, through cleveref's, or after a row's `\noalign` deferral) names the step current where the
+/// display started ([`hold_raw_refstep_for_display`]), until [`end_display_label`].
+pub fn mark_display_label() { assign_value(RAW_REFSTEP_DISPLAY_LABEL, true, Some(Scope::Global)); }
+
+/// The kernel's `\label` made the label [`mark_display_label`] announced.
+pub fn end_display_label() {
+  if lookup_bool(RAW_REFSTEP_DISPLAY_LABEL) {
+    assign_value(RAW_REFSTEP_DISPLAY_LABEL, false, Some(Scope::Global));
+  }
+}
+
+/// The raw step ([`note_raw_refstep`]) a `\label` made now names: `\@currentlabel` is still the step's
+/// `\the<counter>`, not text a package defined since (`\protected@edef\@currentlabel{…}`); for an amsmath display's
+/// own `\label` ([`mark_display_label`]) the step current where the display started ([`hold_raw_refstep_for_display`]).
+/// Witnesses: 2506.01072 (`\newtcbtheorem`), 2505.20088 (`\newtcolorbox[auto counter]`), 2402.06608 (`[blend into=
+/// figures]`), 2609.20563 (`\newtcblisting`), 2310.19138 (`\labelrel` in `{align*}`).
+pub fn current_raw_refstep() -> Option<RawRefstep> {
+  if !(matches!(lookup_value(RAW_REFSTEP_DISPLAY), Some(Stored::Bool(true)))
+    && lookup_bool(RAW_REFSTEP_DISPLAY_LABEL))
+  {
+    return current_raw_refstep_now();
+  }
+  let Some(Stored::Digested(tags)) = lookup_value(&s!("{RAW_REFSTEP_DISPLAY}_tags")) else {
+    return None;
+  };
+  let serial = match lookup_value(&s!("{RAW_REFSTEP_DISPLAY}_serial")) {
+    Some(Stored::Int(serial)) => serial,
+    _ => 0,
+  };
+  Some(RawRefstep { tags, serial })
+}
+
+/// The raw step a `\label`'s whatsit recorded ([`current_raw_refstep`], its `raw_refstep_tags` and
+/// `raw_refstep_serial` properties).
+pub fn raw_refstep_of(props: &HashMap<Stored>) -> Option<RawRefstep> {
+  let Some(Stored::Digested(tags)) = props.get("raw_refstep_tags") else {
+    return None;
+  };
+  let serial = match props.get("raw_refstep_serial") {
+    Some(Stored::Int(serial)) => *serial,
+    _ => 0,
+  };
+  Some(RawRefstep { tags: tags.clone(), serial })
+}
+
+/// [`current_raw_refstep`] outside an amsmath display.
+fn current_raw_refstep_now() -> Option<RawRefstep> {
+  let (tags, counter, serial) = recorded_raw_refstep()?;
+  let the_counter = Tokens!(T_CS!(s!("\\the{}", counter)));
+  let names_the_step = match lookup_meaning(&T_CS!("\\@currentlabel")) {
+    Some(Stored::Expandable(label)) => {
+      matches!(label.get_expansion(), Some(ExpansionBody::Tokens(body)) if *body == the_counter)
+    },
+    _ => false,
+  };
+  names_the_step.then_some(RawRefstep { tags, serial })
+}
+
 /// `\refstepcounter{<ctype>}` through what `\refstepcounter` means now
 /// (`ref_step_counter_planned`).
 pub fn ref_step_counter_by_meaning(ctype: &str) -> Result<HashMap<Stored>> {
@@ -726,6 +958,11 @@ pub fn strip_counter_type_sentinel(ctype: &str) -> &str {
 /// stepped for `ctype`. Returns the `tags` and `id` properties.
 pub fn label_stepped_counter(ctype: &str, ctr: &str) -> Result<HashMap<Stored>> {
   let ctr = ctr.to_string();
+  // A step is the current label's now (`note_raw_refstep` records it again for a raw one); global, as this port's
+  // `\@currentlabel` is.
+  if matches!(lookup_value(RAW_REFSTEP_TAGS), Some(Stored::Digested(_))) {
+    assign_value(RAW_REFSTEP_TAGS, Stored::None, Some(Scope::Global));
+  }
   maybe_preempt_refnum(&ctr, false);
 
   let the_ctr_id = s!("\\the{ctr}@ID");

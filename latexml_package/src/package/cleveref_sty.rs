@@ -37,11 +37,28 @@ LoadDefinitions!({
     let Some(Stored::VecDigested(tags)) = props.get("cref_tags") else {
       return Ok(());
     };
-    if let Some(savenode) = document.float_to_label() {
+    let raw_step = raw_refstep_of(props);
+    if let Some(savenode) = document.float_to_label_for(raw_step.as_ref().map(|step| step.serial)) {
+      // (numbered first, as `\lx@label` numbers it: cleveref's `\label` gives the type before the label;
+      // 2506.01072 `\newtcbtheorem`, 2505.20088 `[auto counter]`)
+      if let Some(step) = raw_step {
+        document.take_raw_refstep_number(&step.tags, step.serial)?;
+      }
       let target = document.get_node().clone();
       for ((role, _), tag) in CREF_TAG_ROLES.iter().zip(tags.iter()) {
         let xpath = s!("ltx:tags/ltx:tag[@role='{role}']");
-        for mut old in document.findnodes(&xpath, Some(&target)) {
+        let olds = document.findnodes(&xpath, Some(&target));
+        // A form the object's own type has no name for (its empty tag removed: a tcolorbox counter, numbered by the
+        // box's raw step, `\newtcbtheorem[crefname={theorem}{theorems}]` with `label type=<box>`, tcolorbox.sty:2270,
+        // :955-968; 2506.01072) is the label's type's.
+        if olds.is_empty() {
+          if let Some(tags_node) = document.findnodes("ltx:tags", Some(&target)).into_iter().next() {
+            document.set_node(&tags_node);
+            document.absorb(tag, None)?;
+          }
+          continue;
+        }
+        for mut old in olds {
           let Some(tags_node) = old.get_parent() else {
             continue;
           };
@@ -77,8 +94,14 @@ LoadDefinitions!({
       tokens.extend([T_END!(), T_END!(), T_CS!("\\endgroup")]);
       tags.push(Digest!(Tokens::new(tokens))?);
     }
-    Ok(stored_map!("cref_tags" => Stored::VecDigested(tags),
-      "alignmentSkippable" => true, "alignmentPreserve" => true))
+    let mut props = stored_map!("cref_tags" => Stored::VecDigested(tags),
+      "alignmentSkippable" => true, "alignmentPreserve" => true);
+    // (the object `\lx@label` names after a raw step, `current_raw_refstep`; 2506.01072, 2505.20088)
+    if let Some(step) = current_raw_refstep() {
+      props.insert("raw_refstep_tags", Stored::Digested(step.tags));
+      props.insert("raw_refstep_serial", Stored::Int(step.serial));
+    }
+    Ok(props)
   });
 
   // Load the raw cleveref.sty (for language-dependent definitions)

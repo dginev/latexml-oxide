@@ -1,3 +1,15 @@
+%%
+%% Copyright 2014 by VTEX UAB (vmsta.cls)
+%%
+%% This work may be distributed and/or modified under the conditions of the LaTeX Project Public License, either
+%% version 1.2 of this license or (at your option) any later version. The latest version of this license is in
+%%   http://www.latex-project.org/lppl.txt
+%%
+%% MODIFIED: this is a modified and shortened copy of vmsta.cls (v1.1, 2015/06/08), made for latexml-oxide's repros
+%% (tools/perfect_kernel/repros/class-bindings/vmsta/), not the original work: it keeps only the frontmatter named
+%% below, on article. This modified copy, kept under the original file name, is distributed under LPPL 1.3c (the
+%% original's "any later version"); it says it is modified here and in its `\ProvidesClass` line (LPPL 1.3c clause 6).
+%%
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesClass{vmsta}[2015/06/08 vmsta.cls v1.1 cut down]
 \LoadClass{article}

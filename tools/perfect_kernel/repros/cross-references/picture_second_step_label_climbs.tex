@@ -1,0 +1,16 @@
+% witness: none in the corpus (review probe rev78g pic.tex pp2/pp3: two raw steps in one picture)
+% oracle:  pdflatex 0 errors; "See 41 and 42." (newlabel p:a {41}, p:b {42}: each `\put` its own step)
+% engines: rust (int47a) = "See 2 and 2." (the section's); 78g r1 "See 41 and 41." (both labels on the picture, the first step's number); Perl 0.8.8 the section's
+% expect:  0 errors; p:a on the picture with refnum 41; p:b, another step's, climbs past it to the section, "2" (OXIDIZED_DESIGN_DIVERGENCES #813 residual: no element of the second `\put` can carry a label)
+% status:  GREEN (78g r2; p:b residual: pdflatex 42)
+\documentclass{article}
+\newcounter{foo}\setcounter{foo}{40}
+\begin{document}
+\section{One}
+\section{Two}
+\begin{picture}(100,20)
+\put(0,0){\refstepcounter{foo}\label{p:a}Q}
+\put(50,0){\refstepcounter{foo}\label{p:b}R}
+\end{picture}
+See \ref{p:a} and \ref{p:b}.
+\end{document}

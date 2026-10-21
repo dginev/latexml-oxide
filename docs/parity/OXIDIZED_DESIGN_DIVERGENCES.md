@@ -22498,3 +22498,88 @@ made a creator "*[2mm] C" (the rev78e review's finding 6; synthetic, 0 of 158 we
 llncs's unmarked list already apply). Repros class-bindings/webofc/webofc_author_line_break_options,
 sectioning-frontmatter/llncs_author_line_break_options_with_inst_marks; guards
 `perfect_kernel_batch78e::{webofc_author_line_break_options, llncs_author_line_break_options_with_inst_marks}`.
+
+### 813. A label after a raw counter step names the object the step numbers, which takes the step's number
+
+LaTeX's `\label` writes the `\@currentlabel` of the last `\refstepcounter` and hyperref's anchor of that step
+(latex.ltx:14963-14967); LaTeXML's (Perl latex_constructs.pool.ltxml:3782, Document.pm:1098-1127 `floatToLabel`) climbs
+to the nearest ancestor that may carry `labels`, and `\ref` prints that element's `refnum`. A step no constructor takes —
+a raw `\refstepcounter` — numbers no element, so its labels landed on the enclosing section, whose number `\ref`
+printed (KNOWN_PERL_ERRORS #1038). tcolorbox numbers its boxes so: `\newtcbtheorem`, `\newtcolorbox[auto counter]` and
+the like put `\addtocounter{\tcbcounter}{-1}\refstepcounter{\tcbcounter}` and the `label=` key's `\label` in the box's
+phantom code (tcolorbox.sty:2311, :998, :1154-1161), placed inside the frame picture (:1925 `\pgftext`). Ours:
+(1) the kernel's `\refstepcounter` primitive records the step it made with the tags LaTeXML makes for every step
+(sect08.rs `\lx@refstepcounter@label`, dialect.rs `note_raw_refstep`; local, as LaTeX's `\@currentlabel`; any other
+step forgets it), and a `\label` made while `\@currentlabel` is still that step's `\the<counter>` carries them
+(`current_raw_refstep`, with the step's serial); (2) such a label may stop at an `ltx:picture` — the box the step is
+made in (`Document::float_to_label_for`) — but not at an object another raw step numbered (the serial in the bookkeeping
+attribute `_raw_refstep`: it climbs past, as Perl's); any other label climbs past a picture, as Perl's; the schema gives `ltx:picture`
+`Labelled.attributes` and an optional leading `ltx:tags` (LaTeXML-picture.rnc/.rng, LaTeXML.model); (3) the object it
+lands on takes the step's tags (`Document::take_raw_refstep_number`) when it has no number of its own and is not a unit
+numbered by its heading (an `ltx:title` holder: an unnumbered `\section*` or theorem stays unnumbered); the role-less
+display tag is not kept, the box printed its own number; (4) under cleveref, tcolorbox's `label type` (`\label[<box>]`,
+:955-968, with `crefname`, :2270) gives the numbered box the type's cleveref forms, adding the roles the counter has no
+name for (cleveref_sty.rs `\lx@cleverref@labeltype`, which numbered the box first — it had overwritten the enclosing
+section's names); (5) the SVG post-processor keeps a labelled `picture` element — its id, `labels` and `ltx:tags` around
+its drawing converted to SVG — where it replaces an unlabelled one (svg.rs). So `\ref` prints pdflatex's number and links
+to the box: a delegated listing box (`\newtcblisting`, `\newtcbinputlisting`) labels its first listing line, which
+takes the box counter's number. (6) A listing's start forgets the raw step (`forget_raw_refstep` in `\@@listings@block`'s
+`before_digest`: listings makes `\@currentlabel` its line number's, lstmisc.sty:1228 `\lst@Init`, :1225), and a
+tcolorbox listing box notes its own step again where its phantom code runs in the first line
+(`\lx@lst@renote@raw@refstep`, `renote_forgotten_raw_refstep`). (7) An amsmath display's own `\label` names the step held
+where the display starts (`hold_raw_refstep_for_display` in `ams_rearrangeable_bindings`/`ams_alignment_bindings`;
+the display's `\label` is `\lx@ams@display@label`, an expandable wrapper of the `\label` it replaced that announces
+its label, `mark_display_label`, until the kernel's `\lx@label` makes it; the outermost display start forgets one
+announced and never made): amsmath's `\label` there is `\label@in@display` (amsmath.sty:1230-1236), made in the row's
+tag cell after the cell group restored `\@currentlabel` (:1240-1252). A `{gather}` makes the display tag on every row
+(:1621-1627), so a `{gather*}` row's label after a step in its cell is the section's (pdflatex 7), one after a step
+before the display the step's, and an `{aligned}`/`{split}` in an `{equation*}` names the step before it (pdflatex 44,
+45). The align family (`{align}`, `{flalign}`, `{alignat}`) and `{multline}`, starred or not, hold no step:
+`\math@cr@@@align` makes the display tag only under `\iftag@` (:1833-1843), so an untagged row's label is the next
+tagged row's (`\df@label` carried: `\begin{align} a&=b \label{n2}\notag \\ c&=d \end{align}` in a `\refstepcounter`
+environment is equation 1) or none (`??`), never a held step (78g r2 gave the step, 41/42 for pdflatex's 1/2; review
+probe rev78g2 al2.tex). A paragraph box in a display (`{minipage}`, `\parbox`, and the kernel's `\@arrayparboxrestore`)
+leaves it (`leave_display_for_parbox`): amsmath's `\@arrayparboxrestore` restores `\label` to `\ltx@label`
+(:1237-1238), so its label is made at once with the box's step (`\begin{gather*} a=b
+\refstepcounter{foo}\text{\begin{minipage}{2cm}\label{z5}x\end{minipage}}\end{gather*}`: pdflatex 42). The kernel's `\label` a document saved
+(`\AtBeginDocument{\let\originallabel\label}`, the `\labelrel` idiom of 2310.19138) labels at once, with the cell's
+step ("a"). A label whose step is not the one that numbered an object climbs past it (the `_raw_refstep` mark; a
+`{gather*}` row's `\label` after `\labelrel`'s on that row). (8) `\eqno` on a display a raw step numbered
+joins that step's `ltx:tags` (`Document::merge_raw_refstep_tags`): `$$ \refstepcounter{foo}\label{x2} c=d \eqno(B) $$`
+shows "(B)" and `\ref` prints the step's 42, as pdflatex. (9) A label after a raw step never stops inside an
+`ltx:Math` (`within_math` in `float_to_label_for`): a box in math (`\text{\begin{tcolorbox}\label{t1}…}`, `\mbox`) has an
+id the math's rendering does not keep, so a label on it dangles (78g r1-r3: `\ref` empty, "Missing Target"); it climbs
+to where Perl's lands — the display, which takes the step's number when it has none (a `{gather*}` row, `\[…\]`: pdflatex
+41, 43), or past an inline formula the section (pdflatex 42, ours 7, Perl the same). Residuals (pdflatex differs): an unnumbered listing's line
+label prints the section's number (pdflatex the line's: listings steps `lstnumber` on every line; the
+`ltx:listingline` of an unnumbered listing carries no number); a second raw step in one picture
+(`\put(0,0){\refstepcounter{foo}\label{p:a}…}\put(50,0){\refstepcounter{foo}\label{p:b}…}`) labels the section (pdflatex
+42: no element of the second `\put` may carry a label — `ltx:g` has no id, a tikz node is `svg:g`). Decided (main
+session 2026-10-21): the section fallback stays, no `ltx:g` schema change; giving `ltx:g` `Labelled.attributes`, an id
+and a leading `ltx:tags`, and the SVG post-processor an `id` on its `svg:g`, remains only this residual's future path.
+An untagged `{align*}`/`{flalign*}`/`{multline*}` row's label, which amsmath never makes (pdflatex `??`, and "Multiple
+\label's" at the next label), labels the row or the section as before (Perl the same); a kernel `\label` a document
+saved, in a later `{align*}` row than a raw step made in a cell (`u&=v \refstepcounter{foo}\oldlabel{o2} \\ w&=x
+\oldlabel{o3}`), names that step (ours 45; pdflatex the section's 7: the cell group restored `\@currentlabel`; review
+probe rev78g2 obs.tex o3); a `$$…$$` label after an `{align*}` whose cell made a raw step names no step (`\refstepcounter{foo}
+\lstinputlisting[numbers=left]{code.txt}` … `\begin{align*} u&=v \refstepcounter{foo}\\ w&=x \end{align*} $$ a=b
+\label{d3} $$`: ours the section's 7, pdflatex the step before the display, 42; leak2.tex d3); a label after an `\eqno`
+(`$$ \refstepcounter{foo} c=d \eqno(E) \label{x5}$$`) is the `\eqno` tag's "(E)" (pdflatex 43, the step's; int47a the
+same; eqno.tex x5); an
+object with its own number keeps it (`\begin{equation} p=q \refstepcounter{foo}\label{e4}\end{equation}` pdflatex 42,
+ours the equation's; an `\item` likewise; a numbered `{align}`/`{gather}` row's number wins over the step of a
+paragraph box or a box in its cell, `\begin{align} a&=b \refstepcounter{foo}\text{\begin{minipage}{2cm}\label{y7}x\end{minipage}}
+\end{align}` pdflatex 48, ours 1; review probes rev78g3 pb2.tex y7, cr.tex w2); a raw step in running text labels the paragraph's section (`ltx:para` holds
+no `ltx:tags`; Perl the same); and (pre-existing, not 78g's) cleveref's `\label[]` inside an `equation` gives "condition 1"
+where pdflatex prints `??`. A/B (the sel78d census's 150 `tcb_label_ref` papers + 100 random): 8 papers changed
+references, all 44 labels on boxes with pdflatex's `.aux` number; 2 others gained numbers on unreferenced boxes (their
+inner ids shifted by one, the numbered object's tags first); 0 Error/Fatal changes. Residual too: a box whose listing
+numbers its lines keeps the label on the numbered first line, whose line number `\ref` prints. Witnesses 2505.20088,
+2311.09542, 2509.17784, 2602.03411, 2606.06976 (`\newtcolorbox[auto counter]`), 2402.06608 (`[blend into=figures]`,
+the figure counter), 2506.01072 (`\newtcbtheorem`), 2609.20563 (`\newtcblisting`). Repros tools/perfect_kernel/repros/cross-references/; guards
+`perfect_kernel_batch78g::{tcb_box_label_takes_the_box_number, tcb_listing_box_label_takes_the_box_number,
+picture_step_label_takes_the_step_number, tcb_theorem_cref_names_the_box_type, listing_label_names_no_step_before_it,
+amsmath_row_label_names_the_display_step, unnumbered_display_label_takes_the_step_number,
+picture_second_step_label_climbs, amsmath_saved_kernel_label_names_the_cell_step,
+math_box_label_climbs_to_the_display}` (the last three and the align-family, `{multline*}`, `{aligned}` and minipage rows
+of `amsmath_row_label_names_the_display_step` 78g r2-r4).

@@ -1,0 +1,18 @@
+% witness: 2310.19138 (Template/MATH_template.tex `\labelrel`: `\refstepcounter{relctr}` then `\originallabel`, the kernel's `\label` saved at `\begin{document}`, in `align` cells)
+% oracle:  pdflatex 0 errors; "See a, b and 2." (newlabel r:a {a}, r:b {b}: the saved kernel `\label` labels at once, after the cell's step; r:c {2}: the display's own `\label`, amsmath's `\label@in@display`, labels in the row's tag cell, the section's)
+% engines: rust (int47a) = "See 2, 2 and 2."; 78g r1 "See a, b and b." (r:c took r:b's number); an r2 draft holding every label at the display's start gave 2310.19138 "53" for its "a"; Perl 0.8.8 the section's
+% expect:  0 errors; r:a, r:b on their rows with the relation counter's "a", "b"; r:c, the display's label on r:b's row, climbs past it (its number is another step's) to the equation group, the section's "2"
+% status:  GREEN (78g r2)
+\documentclass{article}
+\usepackage{amsmath}
+\newcounter{relctr}
+\renewcommand*\therelctr{\alph{relctr}}
+\newcommand\labelrel[2]{\begingroup\refstepcounter{relctr}\stackrel{\textnormal{(\alph{relctr})}}{\mathstrut{#1}}\originallabel{#2}\endgroup}
+\AtBeginDocument{\let\originallabel\label}
+\begin{document}
+\section{One}
+\section{Two}
+\begin{gather*} x \labelrel{=}{r:a} y \end{gather*}
+\begin{gather*} x \labelrel{=}{r:b} y \refstepcounter{relctr}\label{r:c} \end{gather*}
+See \ref{r:a}, \ref{r:b} and \ref{r:c}.
+\end{document}

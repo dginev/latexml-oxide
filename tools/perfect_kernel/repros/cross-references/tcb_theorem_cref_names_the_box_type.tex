@@ -1,0 +1,17 @@
+% witness: none in the A/B sample (the census shape under cleveref; tcolorbox.sty:2270 `crefname` + :955-968 `\label[<box>]` under cleveref)
+% oracle:  pdflatex 0 errors; "See Theorem 1.1, 1.1, theorem 1.1."
+% engines: rust (int47a) = "See Theorem 1, section 1, theorem 1." (the label on section S1, whose cleveref type it overwrote); Perl 0.8.8 the section's
+% expect:  0 errors; th:pyth on the box picture with refnum 1.1 and the cleveref type "theorem"; S1 keeps "section"
+% status:  GREEN (78g)
+\documentclass{article}
+\usepackage[most]{tcolorbox}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\newtcbtheorem[number within=section,crefname={theorem}{theorems}]{mytheo}{Theorem}{}{th}
+\begin{document}
+\section{Intro}
+\begin{mytheo}{Pythagoras}{pyth}
+$a^2+b^2=c^2$.
+\end{mytheo}
+See Theorem \ref{th:pyth}, \autoref{th:pyth}, \cref{th:pyth}.
+\end{document}

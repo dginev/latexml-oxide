@@ -13,6 +13,13 @@ use crate::prelude::*;
 /// Simple alignment bindings for ams environments (no equation rearrangement)
 fn ams_alignment_bindings(template: Template, mut xml_attributes: HashMap<String, String>) {
   use crate::engine::tex_tables::{alignment_bindings, array_strut};
+  // Its `\label`s are amsmath's `\label@in@display`, made after the cell's group (`hold_raw_refstep_for_display`):
+  // an `{aligned}`/`{split}` in an `{equation*}` names the step held at its start (pdflatex 44), a `{multline}`'s none
+  // (`\math@cr@@@align`'s display tag only under `\iftag@`, amsmath.sty:1833-1843; review probe rev78g2 al.tex
+  // `{multline*}` `??`; repro `cross-references/amsmath_row_label_names_the_display_step.tex`).
+  let multline = xml_attributes.get("name").map(String::as_str) == Some("multline");
+  hold_raw_refstep_for_display(!multline);
+  let_display_label();
   // amsmath's rows carry `\strut@`, `\strutbox`'s copy (amsmath.sty:714-718): an `aligned` in a table cell, where
   // `\@array` zeroed `\baselineskip`, keeps its rows' height (KNOWN_PERL_ERRORS #445)
   let mut properties = array_strut()
@@ -60,6 +67,15 @@ fn ams_rearrangeable_bindings(
   mut xml_attributes: HashMap<String, String>,
   redirect_label: bool,
 ) -> Result<()> {
+  // A row's `\label` is amsmath's `\label@in@display` (amsmath.sty:1230-1236), made in the row's tag cell or not at
+  // all (:1240-1252), after the cell group a `\refstepcounter` was made in restored `\@currentlabel`
+  // (`hold_raw_refstep_for_display`). A `{gather}` makes the display tag on every row (:1621-1627): its labels name
+  // the step current where the display starts (`{gather*}` after a step: that step, a step in the cell the section's
+  // 7). The align family (`redirect_label`: `{align}`, `{flalign}`, `{alignat}`, starred or not) makes it only under
+  // `\iftag@` (:1833-1843): an untagged row's label is the next tagged row's (`\df@label` carried) or none (`??`),
+  // never a held step — it names none (kept on the section or the row as before; review probe rev78g2 al2.tex,
+  // repro `cross-references/amsmath_row_label_names_the_display_step.tex`; OXIDIZED_DESIGN_DIVERGENCES #813).
+  hold_raw_refstep_for_display(!redirect_label);
   // amsmath.sty `\start@align`, `\start@gather`: the `\halign` is the display itself (`$$\halign`).
   let mut properties = SymHashMap::default();
   properties.insert(engine::tex_tables::ALIGNMENT_IS_DISPLAY, Stored::Bool(true));
@@ -185,7 +201,29 @@ fn ams_rearrangeable_bindings(
     );
     let_i(&T_CS!("\\label"), &T_CS!("\\lx@eqnarray@label"), None);
   }
+  let_display_label();
   Ok(())
+}
+
+/// The display's `\label` is amsmath's `\label@in@display` (amsmath.sty:1230-1236): `\lx@ams@display@label`, which
+/// announces the label it makes (`mark_display_label`) and makes it with the `\label` it replaced
+/// (`\lx@ams@display@outer@label`: the kernel's, the `{align}` redirect, cleveref's). Expandable, so a label-only cell
+/// is scanned as before. Once per display: an inner one (`{aligned}`) keeps the outer's. Repros
+/// `cross-references/amsmath_row_label_names_the_display_step.tex`,
+/// `cross-references/amsmath_saved_kernel_label_names_the_cell_step.tex` (witness 2310.19138).
+fn let_display_label() {
+  let wrapped = matches!(
+    (lookup_meaning(&T_CS!("\\label")), lookup_meaning(&T_CS!("\\lx@ams@display@label"))),
+    (Some(Stored::Expandable(a)), Some(Stored::Expandable(b))) if Rc::ptr_eq(&a, &b)
+  );
+  if !wrapped {
+    let_i(
+      &T_CS!("\\lx@ams@display@outer@label"),
+      &T_CS!("\\label"),
+      None,
+    );
+    let_i(&T_CS!("\\label"), &T_CS!("\\lx@ams@display@label"), None);
+  }
 }
 
 /// Perl: \@ams@gather@bindings — single centered column. amsmath's templates brace their cells
@@ -328,6 +366,26 @@ fn ams_start_box(opt: Option<Tokens>, open: Vec<Token>) -> Tokens {
 }
 
 LoadDefinitions!({
+  // A display's `\label` (`let_display_label`): amsmath's `\label@in@display`, made with the `\label` it replaced
+  // (OXIDIZED_DESIGN_DIVERGENCES #813; repro `cross-references/amsmath_row_label_names_the_display_step.tex`, witness
+  // 2310.19138).
+  DefMacro!("\\lx@ams@display@label", {
+    mark_display_label();
+    Tokens!(T_CS!("\\lx@ams@display@outer@label"))
+  });
+  // amsmath.sty:1237-1238: `\@arrayparboxrestore` restores `\label` to the kernel's (`\let\label\ltx@label`), so a
+  // paragraph box in a display labels at once (`leave_display_for_parbox`; the port's `{minipage}`/`\parbox` call it
+  // themselves; review probe rev78g2 nest.tex z5, the z:a row of repro
+  // `cross-references/amsmath_row_label_names_the_display_step.tex`).
+  DefPrimitive!("\\lx@ams@parbox@label", {
+    leave_display_for_parbox();
+  });
+  // (Not under plain TeX's amstex, which has no `\@arrayparboxrestore`.)
+  if lookup_meaning(&T_CS!("\\@arrayparboxrestore")).is_some() {
+    RawTeX!(
+      r"\toks@\expandafter{\@arrayparboxrestore\lx@ams@parbox@label}\edef\@arrayparboxrestore{\the\toks@}"
+    );
+  }
   // Package options (Perl L44-57). amsmath.sty:52-57 `\newif\ifctagsplit@`
   // (centertags = true by default) is the switch testmath.tex:1796 pokes
   // directly (`\ctagsplit@true`); tag placement is a render no-op here.

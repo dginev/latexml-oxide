@@ -1,15 +1,11 @@
-% An excerpt of jcm.cls (the copy quant-ph0412067 ships): its two-argument \homepage (:157-162), for
-% compositio_family_old_variant.tex.
+% A minimal stand-in for jcm.cls (the Compositio-family class quant-ph0412067 ships — not in TeX Live; copyright
+% David Carlisle, no licence stated), written from scratch for compositio_family_old_variant.tex: it defines only the
+% interface the Compositio family's binding (latexml_contrib/src/compositio_cls.rs) reads — the family's
+% `\@curr@author` store and the two-argument `\homepage{url}{text}` (jcm.cls:157-162). No code of the class is copied.
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{jcm}
+\ProvidesClass{jcm}[1997/01/01 repro stand-in]
 \LoadClass{article}
-\renewcommand*\author[2][]{\g@addto@macro\@curr@author{\\*#2}}
-\def\@curr@author{\@gobbletwo}
-\def\JCM@gobble{\@gobbletwo}
-\def\homepage#1#2{%
-  \ifx\@curr@author\JCM@gobble
-    \ClassError{jcm}{\noexpand\homepage with no \string\author}\@ehd
-  \else
-    \g@addto@macro\@curr@author{\\ \href{{#1}}{\tt #2}}%
-  \fi}
+\newcommand\@curr@author{}
+\renewcommand\author[2][]{\gdef\@curr@author{#2}\gdef\@author{#2}}
+\newcommand\homepage[2]{\g@addto@macro\@curr@author{, \href{#1}{\texttt{#2}}}}
 \endinput

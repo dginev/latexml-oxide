@@ -1,0 +1,16 @@
+% witness: 2212.07486 (cs839.sty:23-30: `\everydisplay\expandafter{\the\everydisplay\setcounter{relctr}{0}}` resets the `\labelrel` relation counter at every display, `\therelctr` = `\alph`); amsmath.sty's displays start with `$$` (`\start@align`, `\start@gather`), so TeX runs `\everydisplay` (tex.web §1145)
+% oracle:  pdflatex 0 errors; "r1 r1 r1 r1 r1" (the counter reset at every display)
+% engines: rust (78g r4) = "r1 r2 r3 r1 r1" (amsmath displays run no `\everydisplay`: amsmath_sty.rs `\if@display` comment, :443); Perl 0.8.8 the same (SHARED)
+% expect:  0 errors; every display's text "r1"
+% status:  RED (78g r4)
+\documentclass{article}
+\usepackage{amsmath}
+\newcounter{relctr}
+\everydisplay\expandafter{\the\everydisplay\setcounter{relctr}{0}}
+\begin{document}
+\begin{align} a&=b \stepcounter{relctr}\text{r\arabic{relctr}} \end{align}
+\begin{align} c&=d \stepcounter{relctr}\text{r\arabic{relctr}} \end{align}
+\begin{gather} e=f \stepcounter{relctr}\text{r\arabic{relctr}} \end{gather}
+\[ g=h \stepcounter{relctr}\text{r\arabic{relctr}} \]
+\begin{equation} i=j \stepcounter{relctr}\text{r\arabic{relctr}} \end{equation}
+\end{document}

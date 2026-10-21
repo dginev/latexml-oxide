@@ -1,4 +1,6 @@
-% Trimmed copy of 2511.10879's jmlr2e.sty: its \acks (:372-373) verbatim.
+% A stand-in written from scratch for 2511.10879's jmlr2e.sty (the JMLR style the papers ship; no licence stated for
+% it): its `\acks{text}` (:372-373) — the shape the binding reads off a paper's copy (jmlr2e_sty.rs `acks_heading`: a
+% `\def\acks` whose heading follows `\bf`), here with the newer copies' heading. No code of the style is copied.
 \ProvidesPackage{jmlr2e}
-\long\def\acks#1{\vskip 0.3in\noindent{\large\bf Acknowledgments and Disclosure of Funding}\vskip 0.2in
-\noindent #1}
+\long\def\acks#1{\par\vspace{0.3in}\noindent{\large\bf Acknowledgments and Disclosure of Funding}\par
+  \vspace{0.2in}\noindent #1}

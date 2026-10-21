@@ -1,3 +1,14 @@
+%%
+%% Copyright 2014-2017 by VTEX UAB (vmsta.cls)
+%%
+%% This work may be distributed and/or modified under the conditions of the LaTeX Project Public License, as
+%% described in lppl.txt in the base LaTeX distribution.
+%%
+%% MODIFIED: this is a modified and shortened copy of 1805.02511's style/vmsta.cls (the 2018+ copies), made for
+%% latexml-oxide's repros (tools/perfect_kernel/repros/class-bindings/vmsta_2018/), not the original work: it keeps
+%% only the frontmatter named below, on article. This modified copy, kept under the original file name, is distributed
+%% under LPPL 1.3c.
+%%
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesClass{vmsta}[2018/09/11 vmsta.cls v2 cut down]
 \LoadClass{article}

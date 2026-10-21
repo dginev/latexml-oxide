@@ -46,7 +46,7 @@ impl SVG {
       .unwrap_or(0.0);
 
     // Build a group with the y-flip transform
-    let children: Vec<NodeData> = element_children_iter(node)
+    let children: Vec<NodeData> = drawn_children(doc, node)
       .filter_map(|child| self.convert_node(doc, &child))
       .collect();
 
@@ -124,7 +124,7 @@ impl SVG {
   /// rendered `svg:svg` in a flipped `foreignObject` (`convertNode`'s else branch), mirroring it again:
   /// uantwerpenexam's title-page tikz overlay came out upside-down (OXIDIZED_DESIGN_DIVERGENCES #414).
   fn convert_picture(&self, doc: &PostDocument, node: &Node) -> Option<NodeData> {
-    let children: Vec<Node> = element_children_iter(node).collect();
+    let children: Vec<Node> = drawn_children(doc, node).collect();
     let rendered = !children.is_empty()
       && children.iter().all(|child| {
         child
@@ -518,7 +518,7 @@ impl SVG {
 
   /// Convert all element children of a node.
   fn convert_children(&self, doc: &PostDocument, node: &Node) -> Vec<NodeData> {
-    element_children_iter(node)
+    drawn_children(doc, node)
       .filter_map(|child| self.convert_node(doc, &child))
       .collect()
   }
@@ -548,7 +548,7 @@ impl Processor for SVG {
   fn get_name(&self) -> &str { &self.name }
 
   fn to_process(&self, doc: &PostDocument) -> Vec<Node> {
-    doc.findnodes("//ltx:picture[child::*[not(local-name()='svg')]]")
+    doc.findnodes("//ltx:picture[child::*[not(local-name()='svg') and not(self::ltx:tags)]]")
   }
 
   fn process(&mut self, mut doc: PostDocument, nodes: Vec<Node>) -> ProcessResult {
@@ -576,8 +576,19 @@ impl Processor for SVG {
           continue; // detached by an earlier replacement; its clone is live
         }
         if let Some(svg) = self.process_svg(&doc, node) {
-          let node_mut = node.clone();
-          doc.replace_node(&node_mut, &[svg]);
+          let mut node_mut = node.clone();
+          if node.has_attribute("labels") {
+            // A labelled picture — the box a raw `\refstepcounter` numbered, carrying the step's label and number
+            // (`Document::float_to_label_for`, OXIDIZED_DESIGN_DIVERGENCES #813) — is a reference's target: it stays,
+            // with its id, `labels` and `ltx:tags`, around its drawing made SVG, as a pgf picture's is (rendered
+            // `as-svg`, the id on the `svg`). Witnesses: 2506.01072 (`\newtcbtheorem`), 2505.20088
+            // (`\newtcolorbox[auto counter]`), 2402.06608 (`[blend into=figures]`).
+            let drawn: Vec<Node> = drawn_children(&doc, node).collect();
+            doc.remove_nodes(&drawn);
+            doc.add_nodes(&mut node_mut, &[svg]);
+          } else {
+            doc.replace_node(&node_mut, &[svg]);
+          }
         }
       }
       passes += 1;
@@ -592,6 +603,12 @@ impl Processor for SVG {
 
 // ======================================================================
 // Utility functions
+
+/// A picture's element children but its `ltx:tags` (the number a labelled picture carries, OXIDIZED_DESIGN_DIVERGENCES
+/// #813): what it draws.
+fn drawn_children<'a>(doc: &'a PostDocument, node: &Node) -> impl Iterator<Item = Node> + 'a {
+  element_children_iter(node).filter(|child| doc.get_qname(child).as_deref() != Some("ltx:tags"))
+}
 
 /// Convert a TeX dimension string to SVG pixels.
 ///

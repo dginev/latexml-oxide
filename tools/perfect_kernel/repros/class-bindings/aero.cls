@@ -1,67 +1,45 @@
-% An excerpt of aero.cls (latexstudio.net, v1.0 2022/01/04, shipped with 2610.12827, not in TeX Live): its option
-% handling, the title-page keys (:95-118), the running head (:120-126) and its `\maketitle` (:128-148), verbatim; the
-% layout and the many packages of the rest left out.
-\NeedsTeXFormat{LaTeX2e}[1999/12/01]
-\ProvidesClass{aero}[2022/01/04, v1.0 by latexstudio.net]
-\newif\if@linenumberon\global\@linenumberonfalse%
-\DeclareOption{lineno}{\global\@linenumberontrue}%
+% A minimal stand-in for aero.cls (latexstudio.net's template for the journal Astrodynamics, v1.0 2022/01/04, which
+% 2610.12827 ships — not in TeX Live; it states no licence), written from scratch for the repros beside it: it defines
+% only the interface they and the binding (latexml_contrib/src/aero_cls.rs) use — `\ADsetup`'s keys and the title-page
+% variables `\l_ADkeys_<key>_tl` they set (the binding reads them and leaves alone one still holding its placeholder),
+% the corresponding mark `\cor` and a `\maketitle` printing them — with what the class does there; line numbers are
+% those of 2610.12827's copy. No code of the class is copied; the placeholders are shortened.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{aero}[2022/01/04 repro stand-in]
 \DeclareOption*{\PassOptionsToClass{\CurrentOption}{article}}
 \ProcessOptions\relax
-\LoadClass[oneside,a4paper,11pt]{article}
-\RequirePackage{expl3}
-\RequirePackage{fancyhdr}
+\LoadClass[11pt]{article}
 \RequirePackage{marvosym}
-\let\linenumbershook\empty
-\newcommand{\cor}{{\rm (\Letter)}}
+% :92 the corresponding author's mark, an envelope
+\newcommand\cor{{\rm(\Letter)}}
 \ExplSyntaxOn
-\keys_define:nn { ADkeys } {
-  name     . tl_set:N  = \l_ADkeys_name_tl,
-  name     . initial:n = ,
-  title    . tl_set:N  = \l_ADkeys_title_tl,
-  title    . initial:n = Paper~title:~Preparation~of~papers~for~\textit{Astrodynamics},
-  author   . tl_set:N  = \l_ADkeys_author_tl,
-  author   . initial:n = {First~A.~Author$^{1}$,~Second~B.~Author$^{2}$,~and~Third~C.~Author$^{3}$},
-  address  . tl_set:N  = \l_ADkeys_address_tl,
-  address  . initial:n = {1.~Business~or~academic~affiliation~of~First~A.~Author,~with~city,~post~code,~and~country},
-  email    . tl_set:N  = \l_ADkeys_email_tl,
-  email    . initial:n = Corresponding~author's~name~and~email~address,
-  abstract . tl_set:N  = \l_ADkeys_abstract_tl,
-  abstract . initial:n = Abstract~content,
-  keywords . tl_set:N  = \l_ADkeys_keywords_tl,
-  keywords . initial:n = keywords~content,
-  url      . tl_set:N  = \l_ADkeys_url_tl,
-  url      . initial:n = ,
-}
-\NewDocumentCommand\ADsetup{ +m }{
-  \keys_set:nn{ADkeys}{#1}
-}
-\fancypagestyle{plain}{
-  \fancyhf{}
-  \renewcommand{\headrulewidth}{0pt}
-  \fancyhead[L]{\itshape \l_ADkeys_name_tl}
-  \fancyhead[R]{\l_ADkeys_url_tl}
-  \fancyfoot[C]{\thepage}
-}
-\RenewDocumentCommand\maketitle{}{
-  \pagestyle{plain}
-  \linenumbershook
-  \parindent 0pt
-  \begingroup
-  {\bfseries\LARGE\l_ADkeys_title_tl}\par
-  \bigskip
-  \l_ADkeys_author_tl\par
-  \bigskip
-  {\itshape\hangafter1\hangindent 1.06em \def\sep{\par \hangafter1\hangindent 1.06em} \l_ADkeys_address_tl}\par
-  \bigskip
-  {\Letter\ \l_ADkeys_email_tl}\par
-  \bigskip
-  \textbf{Abstract}\\
-  \l_ADkeys_abstract_tl\par
-  \bigskip
-  \textbf{Keywords}\\
-  {\def\sep{~·\ \ } \l_ADkeys_keywords_tl}
-  \endgroup
-  \parindent 1em
-}
+% :97-118 each title-page field: its variable, its placeholder, its key
+\cs_new_protected:Npn \__aero_field:nn #1#2
+  {
+    \tl_new:c { l_ADkeys_#1_tl }
+    \tl_set:cn { l_ADkeys_#1_tl } {#2}
+    \keys_define:nn { ADkeys } { #1 .tl_set:c = { l_ADkeys_#1_tl } }
+  }
+\__aero_field:nn { name } { }
+\__aero_field:nn { url } { }
+\__aero_field:nn { title } { Paper~title }
+\__aero_field:nn { author } { First~A.~Author }
+\__aero_field:nn { address } { Affiliation }
+\__aero_field:nn { email } { Corresponding~author's~e-mail }
+\__aero_field:nn { abstract } { Abstract~content }
+\__aero_field:nn { keywords } { keywords~content }
+\NewDocumentCommand \ADsetup { +m } { \keys_set:nn { ADkeys } {#1} }
+% :128-148 the title page: the title, the authors, the addresses (`\sep` a new line), the e-mail after an envelope, the
+% abstract and the keywords (`\sep` a centred dot)
+\RenewDocumentCommand \maketitle { }
+  {
+    \par\noindent { \LARGE \bfseries \l_ADkeys_title_tl } \par\medskip
+    \noindent \l_ADkeys_author_tl \par\medskip
+    { \itshape \cs_set:Npn \sep { \par } \noindent \l_ADkeys_address_tl \par } \medskip
+    \noindent \Letter \  \l_ADkeys_email_tl \par\medskip
+    \noindent \textbf { Abstract } \par \noindent \l_ADkeys_abstract_tl \par\medskip
+    \noindent \textbf { Keywords } \par
+    { \cs_set:Npn \sep { ~\textperiodcentered\ } \noindent \l_ADkeys_keywords_tl } \par
+  }
 \ExplSyntaxOff
 \endinput

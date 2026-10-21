@@ -1,60 +1,36 @@
-% The shapes of tlp.cls (Theory and Practice of Logic Programming, shipped by 1209.2617; not in TeX Live) the repro
-% tlp_placeholders_and_date_line.tex reads: its title-page date line (:596-631), the running head's placeholders
-% (:697-728), the switch that prints them only under `prodtf` (:760-764) and its `\maketitle` (:515-531, in short).
+% A minimal stand-in for tlp.cls (Cambridge University Press, Theory and Practice of Logic Programming, the class
+% 1209.2617 ships — not in TeX Live; its notice allows use only for CUP publications), written from scratch for
+% tlp_placeholders_and_date_line.tex: it has only the shapes the repro reads, with what the class does there — the
+% title page's date line (:596-631, :627), the running head's placeholders and journal line (:697-728) printed only under `prodtf`
+% (:760-764), a `\maketitle` (:515-531); line numbers are those of 1209.2617's copy. No code of the class is copied.
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{tlp}
+\ProvidesClass{tlp}[2003/01/01 repro stand-in]
 \newif\ifprodtf
 \DeclareOption{prodtf}{\prodtftrue}
 \ProcessOptions
 \LoadClass{article}
-\renewcommand\maketitle{\par\begingroup\@maketitle\thispagestyle{titlepage}\endgroup}
+% the three dates of the title page's line, each with a default
 \newcommand\submitted[1]{\gdef\@submitted{#1}}
-  \gdef\@submitted{1 January 2003}
 \newcommand\revised[1]{\gdef\@revised{#1}}
-  \gdef\@revised{1 January 2003}
 \newcommand\accepted[1]{\gdef\@accepted{#1}}
-  \gdef\@accepted{1 January 2003}
-\def\@maketitle{%
-  \newpage
-  {\centering \sloppy
-   {\normalfont\LARGE\itshape \@title\par}%
-   \vskip 16\p@
-   {\normalfont\normalsize\rmfamily \@author\par}%
-     \vskip 10pt%
-     {{\small\it submitted \@submitted; revised \@revised; accepted \@accepted}}\par
-  }%
-  \vskip 18\p@ \@plus 2\p@ \@minus 1\p@
-}
-\newcommand\volume[1]{\gdef\@volume{#1}}
-\gdef\@volume{{\normalfont\bfseries 1} (1)}
-\newcommand\pagerange[1]{\gdef\@pagerange{#1}}
-\gdef\@pagerange{1--000}
-\newcommand\pubyear[1]{\gdef\@year{#1}}
-\gdef\@year{20XX}
-\newcommand\jdate[1]{\gdef\@jdate{#1}}
-\gdef\@jdate{January \@year}
-\newcommand\doi[1]{\gdef\@doi{10.1017/#1}}
-\gdef\@doi{10.1017/S147106840100xxxx}
-\newcommand\journal[1]{\gdef\@journal{#1}}
-\def\@journal{%
-  \vbox to 5.6\p@{\noindent\parbox[t]{4.8in}{\normalfont\small\rmfamily
-    {\itshape TLP\/}\ \@volume: \@pagerange, \@jdate.\quad
-    \copyright\ \@year\ Cambridge University Press\\[2.5\p@]%
-    DOI: \@doi\quad Printed in the United Kingdom}%
-  \vss}%
-}
-\def\@underjournal{%
-  \vbox to 5.6\p@{\noindent\parbox[t]{4.8in}{\normalfont\small\rmfamily
-    {\itshape Under consideration for publication in
-     Theory and Practice of Logic Programming\/}\\[2.5\p@]
-     \ }%
-  \vss}%
-}
-\ifprodtf
-  \let\@j@urnal\@journal
-\else
-  \let\@j@urnal\@underjournal
-\fi
-\def\ps@titlepage{\let\@mkboth\@gobbletwo
-  \def\@oddhead{\@j@urnal\hfil}\let\@evenhead\@oddhead
+\gdef\@submitted{0000}\gdef\@revised{0000}\gdef\@accepted{0000}
+% the running head's stores, each with a placeholder; only the production head (`prodtf`) prints them
+\newcommand\volume[1]{\gdef\@volume{#1}}\gdef\@volume{0}
+\newcommand\pagerange[1]{\gdef\@pagerange{#1}}\gdef\@pagerange{0--0}
+\newcommand\pubyear[1]{\gdef\@year{#1}}\gdef\@year{0000}
+\newcommand\doi[1]{\gdef\@doi{#1}}\gdef\@doi{0000}
+\newcommand\jdate[1]{\gdef\@jdate{#1}}\gdef\@jdate{January \@year}
+% the journal line, a store with a default of its own made of the others (the class's `\journal`), which only the
+% production head prints
+\newcommand\journal[1]{\gdef\@journal{#1}}\gdef\@journal{TLP \@volume: \@pagerange, \@jdate. DOI \@doi}
+\newcommand\tlps@prodhead{\small\itshape\@journal}
+\newcommand\tlps@draftheadline{\small\itshape Under consideration for publication in Theory and Practice of Logic
+  Programming}
+\ifprodtf\let\tlps@head\tlps@prodhead\else\let\tlps@head\tlps@draftheadline\fi
+\def\ps@titlepage{\let\@mkboth\@gobbletwo\def\@oddhead{\tlps@head\hfil}\let\@evenhead\@oddhead
   \let\@oddfoot\@empty\let\@evenfoot\@empty}
+% the title page: the title, the author, the date line
+\def\@maketitle{\newpage{\centering{\LARGE\itshape\@title\par}\vskip 16pt{\@author\par}\vskip 10pt
+  {\small\itshape submitted \@submitted; revised \@revised; accepted \@accepted}\par}\vskip 18pt}
+\renewcommand\maketitle{\par\begingroup\@maketitle\thispagestyle{titlepage}\endgroup}
+\endinput

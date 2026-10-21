@@ -1,4 +1,6 @@
-% cvpr.sty:595-597 (2308.03900), verbatim idiom
-\let\titleold\title
-\renewcommand{\title}[1]{\titleold{#1}\newcommand{\thetitle}{#1}}
-\def\maketitlesupplementary{\newpage\begin{center}\Large\textbf{\thetitle}\\Supplementary Material\end{center}}
+% A stand-in written from scratch for the idiom of cvpr.sty:595-597 (2308.03900's copy; the conference style states no
+% licence): the package's `\title` also defines `\thetitle`, which `\maketitlesupplementary` prints. No code of the style
+% is copied.
+\let\ttl@kerneltitle\title
+\renewcommand\title[1]{\ttl@kerneltitle{#1}\newcommand\thetitle{#1}}
+\newcommand\maketitlesupplementary{\newpage\begin{center}\Large\textbf{\thetitle}\\Supplementary Material\end{center}}

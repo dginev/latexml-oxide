@@ -164,8 +164,9 @@ NOTE: Eventually we will drop these subset elements and incorporate SVG itself.<
   </define>
   <define name="picture_attributes">
     <a:documentation>Attributes for \elementref{picture}.</a:documentation>
+    <!-- `Labelled.attributes` (for `ID.attributes`) and `tags` added by latexml-oxide (OXIDIZED_DESIGN #813) -->
     <ref name="Common.attributes"/>
-    <ref name="ID.attributes"/>
+    <ref name="Labelled.attributes"/>
     <ref name="Picture.attributes"/>
     <ref name="Imageable.attributes"/>
     <optional>
@@ -200,6 +201,9 @@ NOTE: Eventually we will drop these subset elements and incorporate SVG itself.<
   </define>
   <define name="picture_model">
     <a:documentation>Content model for \elementref{picture}.</a:documentation>
+    <optional>
+      <ref name="tags"/>
+    </optional>
     <zeroOrMore>
       <choice>
         <ref name="Picture.class"/>

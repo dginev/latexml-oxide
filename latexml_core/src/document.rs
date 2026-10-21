@@ -271,6 +271,28 @@ pub fn spilled_segment_count() -> usize { SPILLED_SEGMENTS.get() }
 /// start; eager conversions never touch it).
 pub fn reset_spilled_segment_count() { SPILLED_SEGMENTS.set(0); }
 
+/// The bookkeeping attribute (dropped at the end, as every `_` attribute) on an object a raw counter step numbered:
+/// the step's serial ([`Document::take_raw_refstep_number`], OXIDIZED_DESIGN_DIVERGENCES #813).
+pub const RAW_REFSTEP_MARK: &str = "_raw_refstep";
+
+/// Whether `node` stands inside an `ltx:Math` (a box in an `ltx:XMText`: `\text{\begin{tcolorbox}…}`): math is
+/// rendered as one formula, so an id there names no object the HTML keeps and a label there would dangle
+/// ([`Document::float_to_label_for`]; review probes rev78g3 tbx.tex, tbx3.tex; repro
+/// `cross-references/math_box_label_climbs_to_the_display.tex`).
+fn within_math(node: &Node) -> bool {
+  let mut parent = node.get_parent();
+  while let Some(current) = parent {
+    if current.get_type() != Some(NodeType::ElementNode) {
+      return false;
+    }
+    if get_node_qname(&current) == pin!("ltx:Math") {
+      return true;
+    }
+    parent = current.get_parent();
+  }
+  false
+}
+
 /// The target of the processing instructions marking a run of a frontmatter field's ink (`FieldRun`):
 /// construction-time scaffolding, never in the output (the engine's frontmatter placement removes them; the finalize
 /// drops a stray one).
@@ -7475,8 +7497,44 @@ impl Document {
   // find a node that can accept a label.
   // A bit more than just whether the element can have the attribute, but
   // whether it has an id (and ideally either a refnum or title)
-  pub fn float_to_label(&mut self) -> Option<Node> {
+  pub fn float_to_label(&mut self) -> Option<Node> { self.float_to_label_for(None) }
+
+  /// [`float_to_label`](Self::float_to_label) for a label that names a counter step no element took (`raw_step`, the
+  /// step's serial: a raw `\refstepcounter`, `binding::counter::current_raw_refstep`), which a picture may carry: a box
+  /// drawn as a picture frame is the object such a step numbers (tcolorbox's `\refstepcounter` in its phantom code,
+  /// tcolorbox.sty:2311 and :1154-1161, placed in the frame at :1925; a `\put` in a `picture`), as LaTeX's `\label`
+  /// after the step names the step's anchor (latex.ltx:14963-14967 `\@currentlabel`). An object another raw step
+  /// numbered ([`take_raw_refstep_number`](Self::take_raw_refstep_number)) is not this step's: the label climbs past it,
+  /// as Perl's does (a second `\put` step in one `picture`; pdflatex prints each step's number, an object this port
+  /// cannot give, OXIDIZED_DESIGN_DIVERGENCES #813). Any other label climbs past a picture, and past an object a raw
+  /// step numbered (whose number its `\@currentlabel` is not: a `{gather*}` row's `\label` after the `\labelrel` idiom's
+  /// immediate one, 2310.19138), to the object its step numbered, as Perl's does (Document.pm:1098-1127; the picture
+  /// carries no `labels` there). Witnesses: 2506.01072
+  /// (`\newtcbtheorem`), 2505.20088 (`[auto counter]`), 2402.06608 (`[blend into=figures]`), 2609.20563
+  /// (`\newtcblisting`). An object inside `ltx:Math` (the box of a `\text{\begin{tcolorbox}…}` in a display) is not
+  /// the step's either: its id does not survive the math's rendering, so the label climbs out of the math to where
+  /// Perl's lands: a display, which takes the step's number when it has none
+  /// ([`take_raw_refstep_number`](Self::take_raw_refstep_number): a `{gather*}` row, `\[…\]`) and keeps its own
+  /// otherwise (a numbered `{equation}`), or past an inline formula the enclosing unit, whose number `\ref` prints
+  /// (OXIDIZED_DESIGN_DIVERGENCES #813). Repro `cross-references/math_box_label_climbs_to_the_display.tex`.
+  pub fn float_to_label_for(&mut self, raw_step: Option<i64>) -> Option<Node> {
     let key = "labels";
+    let may_label = |node: &Node| {
+      can_node_have_attribute(node, key)
+        && node.has_attribute_ns("id", XML_NS)
+        && match raw_step {
+          Some(serial) => {
+            node
+              .get_attribute(RAW_REFSTEP_MARK)
+              .is_none_or(|numbered| numbered == serial.to_string())
+              && !within_math(node)
+          },
+          None => {
+            get_node_qname(node) != pin!("ltx:picture")
+              && node.get_attribute(RAW_REFSTEP_MARK).is_none()
+          },
+        }
+    };
     // Perl: start from lastChild of current node if it's an element
     let start = if self.node.get_type() == Some(NodeType::ElementNode) {
       self
@@ -7495,7 +7553,7 @@ impl Document {
     // Should we only accept a node that already has an id, or should we create an id?
     let mut node_opt: Option<Cow<Node>> = None;
     while let Some(candidate) = candidates.pop_front() {
-      if can_node_have_attribute(candidate, key) && candidate.has_attribute_ns("id", XML_NS) {
+      if may_label(candidate) {
         node_opt = Some(Cow::Borrowed(candidate));
         break;
       }
@@ -7508,7 +7566,7 @@ impl Document {
         None => None,
       };
       if let Some(sibling) = sib {
-        if can_node_have_attribute(&sibling, key) && sibling.has_attribute_ns("id", XML_NS) {
+        if may_label(&sibling) {
           node_opt = Some(Cow::Owned(sibling));
         } else if !ancestors.is_empty() {
           // just take root element?
@@ -7528,6 +7586,94 @@ impl Document {
       Warn!("malformed", key, message);
       //  $self->getInsertionContext());
       None
+    }
+  }
+
+  /// The object a label after a raw counter step names (the node [`float_to_label_for`](Self::float_to_label_for)
+  /// found, current) takes the step's number: the `tags` LaTeXML makes for every step
+  /// (`binding::counter::dialect::label_stepped_counter`), whose `refnum` is what `\ref` prints, as LaTeX's `\ref`
+  /// prints the step's `\@currentlabel` (latex.ltx:14963-14967). Only an object with no number of its own (no
+  /// `ltx:tags`: a box drawn as a picture, a listing's line) that may hold one and is not a unit numbered by its heading
+  /// (an `ltx:title` holder: an unnumbered `\section*` or theorem stays unnumbered). The tag without a role, the number
+  /// as the object prints it, is not kept: the box printed its number itself (tcolorbox's title "Theorem 1: …"). The
+  /// object is marked with the step's `serial` (`_raw_refstep`, a bookkeeping attribute), so another step's label does
+  /// not take it. Perl leaves the label on the enclosing section, whose number `\ref` prints (KNOWN_PERL_ERRORS
+  /// #1038). Witnesses: 2506.01072 (`\newtcbtheorem`), 2505.20088 (`\newtcolorbox[auto counter]`), 2402.06608,
+  /// 2609.20563 (`\newtcblisting`); guards `perfect_kernel_batch78g`.
+  pub fn take_raw_refstep_number(&mut self, tags: &Digested, serial: i64) -> Result<()> {
+    let mut target = self.node.clone();
+    let qname = get_node_qname(&target);
+    let has_tags = target
+      .get_child_elements()
+      .iter()
+      .any(|child| get_node_qname(child) == pin!("ltx:tags"));
+    if has_tags
+      || !can_contain_qsym(qname, pin!("ltx:tags"))
+      || can_contain_qsym(qname, pin!("ltx:title"))
+    {
+      return Ok(());
+    }
+    let before = target.get_child_nodes();
+    self.absorb(tags, None)?;
+    let _ = target.set_attribute(RAW_REFSTEP_MARK, &serial.to_string());
+    let first = before.first().cloned();
+    for mut new in target.get_child_nodes() {
+      if before.contains(&new) {
+        continue;
+      }
+      for tag in new.get_child_elements() {
+        if get_node_qname(&tag) == pin!("ltx:tag") && !tag.has_attribute("role") {
+          self.remove_node(tag);
+        }
+      }
+      // The number first, where an object's `ltx:tags` stands.
+      if let Some(mut first) = first.clone() {
+        new.unlink_node();
+        first.add_prev_sibling(&mut new).ok();
+      }
+    }
+    Ok(())
+  }
+
+  /// One `ltx:tags` for an object a raw step numbered ([`take_raw_refstep_number`](Self::take_raw_refstep_number))
+  /// that a later construct tags as well (`\eqno`'s, made after the label in `$$ \refstepcounter{foo}\label{x2} c=d
+  /// \eqno(B) $$`): the later tags' tags join the step's `ltx:tags`, before its `refnum`, so the object shows "(B)" and
+  /// `\ref` prints the step's number (pdflatex 42; the `\@currentlabel` `\eqno` leaves alone). The nearest open
+  /// element holding an `ltx:tags`, from the current node. Repro
+  /// `cross-references/unnumbered_display_label_takes_the_step_number.tex`.
+  pub fn merge_raw_refstep_tags(&mut self) {
+    let mut node = Some(self.node.clone());
+    while let Some(current) = node {
+      let tags: Vec<Node> = current
+        .get_child_elements()
+        .into_iter()
+        .filter(|child| get_node_qname(child) == pin!("ltx:tags"))
+        .collect();
+      if !tags.is_empty() {
+        if tags.len() > 1 && current.get_attribute(RAW_REFSTEP_MARK).is_some() {
+          let mut first = tags[0].clone();
+          let anchor = first.get_first_child();
+          for mut later in tags.into_iter().skip(1) {
+            for mut tag in later.get_child_nodes() {
+              tag.unlink_node();
+              match &anchor {
+                Some(anchor) => {
+                  let mut anchor = anchor.clone();
+                  anchor.add_prev_sibling(&mut tag).ok();
+                },
+                None => {
+                  first.add_child(&mut tag).ok();
+                },
+              }
+            }
+            later.unlink_node();
+          }
+        }
+        return;
+      }
+      node = current
+        .get_parent()
+        .filter(|p| p.get_type() == Some(NodeType::ElementNode));
     }
   }
 

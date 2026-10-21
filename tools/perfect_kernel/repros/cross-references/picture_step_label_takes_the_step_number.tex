@@ -1,0 +1,20 @@
+% witness: none in the corpus (the general shape of the tcolorbox one: a `\refstepcounter` and a `\label` in a picture frame)
+% oracle:  pdflatex 0 errors; "See 1, 2 and 2." (newlabel d:a {1}; d:b and s:a {2}: a `\put` is a group, the step stays in its own)
+% engines: rust (int47a) = "See 2, 2 and 2." (every label on section S2); Perl 0.8.8 the same (KNOWN_PERL_ERRORS #1038)
+% expect:  0 errors; d:a on the first picture with refnum 1; d:b, s:a on S2; `\ref`s print "1, 2 and 2"
+% status:  GREEN (78g)
+\documentclass{article}
+\newcounter{diagram}
+\begin{document}
+\section{One}
+\section{Two}
+\begin{picture}(100,20)
+\put(0,0){\refstepcounter{diagram}\label{d:a}Diagram \thediagram}
+\put(50,0){\label{d:b}}
+\end{picture}
+
+\begin{picture}(100,20)
+\put(0,0){\label{s:a}Text}
+\end{picture}
+See \ref{d:a}, \ref{d:b} and \ref{s:a}.
+\end{document}

@@ -30,8 +30,13 @@ pub(crate) fn load() -> Result<()> {
   // \label attaches a label to the nearest parent that can accept a labels attribute
   // but only those that have an xml:id (but should this require a refnum and/or title ???)
   // Note that latex essentially allows redundant labels, but we can record only one!!!
+  // A label after a raw step (`raw_refstep_tags`: a `\refstepcounter` no constructor took, sect08.rs) names the
+  // object the step numbers, which takes the step's number (`take_raw_refstep_number`), and a box drawn as a picture
+  // may be that object (`Document::float_to_label_for`; OXIDIZED_DESIGN_DIVERGENCES #813). Witnesses: 2506.01072
+  // (`\newtcbtheorem`), 2505.20088 (`\newtcolorbox[auto counter]`), 2402.06608, 2609.20563 (`\newtcblisting`).
   DefConstructor!("\\lx@label Semiverbatim", sub[document, _olabel, props] {
-    if let Some(savenode) = document.float_to_label() {
+    let raw_step = raw_refstep_of(props);
+    if let Some(savenode) = document.float_to_label_for(raw_step.as_ref().map(|step| step.serial)) {
       let mut labels : HashMap<String,bool> = HashMap::default();
       if let Some(label) = props.get("label") {
         labels.insert(label.to_string(), true);
@@ -42,6 +47,9 @@ pub(crate) fn load() -> Result<()> {
       let mut sorted_labels: Vec<String> = labels.into_keys().collect();
       sorted_labels.sort();
       document.node_set_attribute("labels", &sorted_labels.join(" "))?;
+      if let Some(step) = raw_step {
+        document.take_raw_refstep_number(&step.tags, step.serial)?;
+      }
       document.set_node(&savenode);
     }
   },
@@ -59,6 +67,11 @@ pub(crate) fn load() -> Result<()> {
     };
     let scope = label.replace("LABEL:","label:");
     whatsit.set_property("label", label);
+    if let Some(step) = current_raw_refstep() {
+      whatsit.set_property("raw_refstep_tags", Stored::Digested(step.tags));
+      whatsit.set_property("raw_refstep_serial", Stored::Int(step.serial));
+    }
+    end_display_label();
 
     let ctr_key_opt = with_value("current_counter", |val_opt| val_opt
       .map(|ctr| s!("scopes_for_counter:{}", ctr)));

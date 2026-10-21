@@ -1,5 +1,7 @@
 %% A thesis or monograph derivative of the standard book class, as hep-ex0405054 and math0301023 ship it (book_modified.cls:531,
 %% khbook.cls:285 `\newcommand\frontmatter`): TeX Live's book.cls (LPPL, notices below), declaring itself `book`.
+%% (TeX Live 2025's book.cls unchanged but for these comment lines, kept for latexml-oxide's repros,
+%% tools/perfect_kernel/repros/stand-in-copies/provides_route/.)
 %%
 %%
 %% This is file `book.cls',

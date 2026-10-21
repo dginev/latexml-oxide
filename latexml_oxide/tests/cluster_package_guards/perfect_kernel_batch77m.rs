@@ -304,7 +304,8 @@ fn new_tcb_listing_leading_optional_keeps_its_default() {
 }
 
 /// `\newtcbinputlisting`'s per-use `label=` is the box's phantom code, run at its listing's first line as for a
-/// listing environment (it was dropped: a dangling `\ref`). 2405.01480, 2405.02221, 2405.02462, 2405.03285, incgraph-doc
+/// listing environment (it was dropped: a dangling `\ref`); 78g: the line takes the box counter's number, `\ref`'s "1"
+/// (OXIDIZED_DESIGN_DIVERGENCES #813). 2405.01480, 2405.02221, 2405.02462, 2405.03285, incgraph-doc
 /// (`\examplefile[label={ex:header},…]`; the template also ships, unused by the main file, in 1912.06298, 2105.06630,
 /// 2301.07825, 2302.14514, 2410.04867). Repro listings-algorithms/newtcbinputlisting_keeps_its_label.
 #[test]
@@ -320,7 +321,7 @@ fn newtcbinputlisting_keeps_its_label() {
       "\u{a0}",
       r##"1: Header</toccaption><caption>Example"##,
       "\u{a0}",
-      r##"1: Header</caption><listing class="ltx_lstlisting" data="eiA9IDM=" dataencoding="base64" datamimetype="text/plain" dataname="tcblabel.txt"><listingline labels="LABEL:ex:header" xml:id="lstnumberx1"><text class="ltx_lst_identifier">z</text><text class="ltx_lst_space"> </text>=<text class="ltx_lst_space"> </text>3</listingline></listing></float>"##
+      r##"1: Header</caption><listing class="ltx_lstlisting" data="eiA9IDM=" dataencoding="base64" datamimetype="text/plain" dataname="tcblabel.txt"><listingline labels="LABEL:ex:header" xml:id="lstnumberx1"><tags><tag role="refnum">1</tag></tags><text class="ltx_lst_identifier">z</text><text class="ltx_lst_space"> </text>=<text class="ltx_lst_space"> </text>3</listingline></listing></float>"##
     ),
   )]);
 }
