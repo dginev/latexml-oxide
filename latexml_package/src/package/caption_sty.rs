@@ -1517,3 +1517,40 @@ pub fn sub_label_tokens(keys: &[String], default: &str, number: Tokens) -> Resul
   tokens.push(T_END!());
   Ok(Tokens::new(tokens))
 }
+
+/// A class's own `\@makecaption` whose label is set in `font` and closed by `close`, the close set in the label's font
+/// too when `close_in_font`: "**Figure 1.** …", the period in the bold (webofc.cls:788-812 `\@CaptionTitleFont #1
+/// \@FloatCounterEnd\@FloatCounterSep` in one group, `\@FloatCounterSep` ". ", :786), or "**Figure 1**. …", the period
+/// after it (jinstpub.sty:362-378 `\textbf{\figurename\nobreakspace\thefigure}` with `#1. #2`): the figure's and
+/// table's title format (`\format@title@<type>`, its label font `\fnum@font@<type>`, sect09.rs; as amsart's,
+/// ams_support_sty.rs, and jfm's, jfm_cls.rs, which drops its period on `\removefullpoint`), set at `\begin{document}`
+/// unless the document loaded caption, which replaces the class's `\@makecaption` — caption's kernel alone
+/// (`\lx@caption@kernel@only`: floatrow.sty:39, subfig's `caption=false`) keeps it. The kernel's caption keeps
+/// LaTeXML's own `\@makecaption`, so the class's label format was "Figure 1:" (2610.23498 webofc, 2006.05543 jinstpub).
+pub fn class_makecaption_label(font: &str, close: &str, close_in_font: bool) -> Result<()> {
+  // (the label, `\lx@fnum@@`'s own group in `font`; with the close's text after it in a group of that font, its trailing
+  // space the tag's close)
+  let title = |kind: &str| {
+    let (label, close) = if close_in_font {
+      let text = close.trim_end();
+      (
+        s!(r"{{{font}\lx@fnum@@{{{kind}}}{text}}}"),
+        &close[text.len()..],
+      )
+    } else {
+      (s!(r"\lx@fnum@@{{{kind}}}"), close)
+    };
+    s!(r"\def\format@title@{kind}##1{{\lx@tag[][{close}]{{{label}}}##1}}")
+  };
+  RawTeX!(&s!(
+    r"\def\lx@class@captionformat{{%
+\def\fnum@font@figure{{{font}}}\def\fnum@font@table{{{font}}}%
+{}%
+{}}}
+\AtBeginDocument{{\@ifpackageloaded{{caption}}%
+{{\@ifundefined{{lx@caption@kernel@only}}{{}}{{\lx@class@captionformat}}}}{{\lx@class@captionformat}}}}",
+    title("figure"),
+    title("table")
+  ));
+  Ok(())
+}

@@ -1,0 +1,21 @@
+% witness: 1805.02511, 1810.09681, 2001.02487 (`\author[a]{…\ead[label=e1]{…}}` with `\address[a]{…}`), 1912.07948
+%          (one `\address` for both authors); the 2018+ vmsta.cls (:1263-1297 `\ead`, :871-920 `\address`), cut down beside
+% oracle:  pdflatex 0 errors: "Yuliya Mishura", "Ivan Voronov", the addresses "a Univ A" and "b Univ B" in italics,
+%          "myus@univ.kiev.ua ivan@univ.kiev.ua", "Text."
+% engines: rust int45b = 0 errors, no e-mail, no affiliation (the addresses a paragraph of the deposited title page)
+% expect:  0 errors, 0 warnings; "Yuliya Mishura" with the e-mail myus@univ.kiev.ua and the affiliation Univ A, "Ivan
+%          Voronov" with ivan@univ.kiev.ua and Univ B; the class's check finds its e-mails (no "At least one email
+%          address is required!")
+% status:  RED (int45b) -> GREEN (78e)
+% preload: ar5iv.sty
+\documentclass{vmsta}
+\begin{document}
+\begin{frontmatter}
+\author[a]{\inits{Yu.}\fnms{Yuliya}~\snm{Mishura}\ead[label=e1]{myus@univ.kiev.ua}}
+\author[b]{\inits{I.}\fnms{Ivan}~\snm{Voronov}\ead
+[label=e2]{ivan@univ.kiev.ua}}
+\address[a]{Univ A}
+\address[b]{Univ B}
+\end{frontmatter}
+Text.
+\end{document}

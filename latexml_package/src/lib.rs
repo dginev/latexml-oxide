@@ -164,15 +164,6 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("revtex", "cls", package::revtex_cls::load_definitions),
   ("revtex4-1", "cls", package::revtex4_1_cls::load_definitions),
   ("jheppub", "sty", package::jheppub_sty::load_definitions),
-  // jcappub is JCAP's SISSA/IOP publication class — the JCAP sibling of jheppub
-  // (JHEP), with the same accumulating `\author[affil]{name}` + `\affiliation` +
-  // `\emailAdd` + `\keywords`/`\acknowledgments` frontmatter. Neither Perl nor
-  // Rust ships a jcappub binding, so its `\author`s fell through to article's
-  // (which overwrites), truncating the list to the last author, and
-  // `\affiliation`/`\emailAdd` were undefined. Route it to the jheppub binding —
-  // faithful (same author API) and surpass-Perl. html_feedback #6884, witness
-  // arXiv 2404.03569 (63 authors, previously 1). Its own journal abbreviations ride along (jcappub_sty.rs).
-  ("jcappub", "sty", package::jcappub_sty::load_definitions),
   ("neurips", "sty", package::neurips_sty::load_definitions),
   (
     "neurips_2019",

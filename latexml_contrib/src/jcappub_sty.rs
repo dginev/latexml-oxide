@@ -1,7 +1,7 @@
 //! jcappub.sty — JCAP's SISSA/IOP publication style: jheppub's frontmatter (the same accumulating
 //! `\author[affil]{name}` + `\affiliation` + `\emailAdd` API; html_feedback #6884, 2404.03569) and its own journal
 //! abbreviations. Neither Perl nor Rust had a jcappub binding.
-use crate::prelude::*;
+use latexml_package::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({

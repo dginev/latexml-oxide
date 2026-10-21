@@ -222,7 +222,22 @@ LoadDefinitions!({
     // so the split always applies (an empty delimiter list yields one piece).
     let delims: Vec<SplitDelim> = delimiters.unlist().into_iter().map(SplitDelim::from).collect();
     let mut result: Vec<Token> = Vec::new();
-    for piece in split_tokens(tokens, delims) {
+    let line_break = T_CS!("\\\\");
+    for (delimiter, piece) in split_tokens_delimited(tokens, delims) {
+      // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #804): a piece after a `\\` delimiter (a split at line breaks, which no
+      // Perl binding makes: llncs's `\inst` list, webofc's `\author`) starts without the break's `*` and `[…]`, which
+      // are no text (`B\inst{2}\\*[2mm] C\inst{1}` made a creator "*[2mm] C"; the rev78e review's finding 6)
+      let piece = if delimiter == [line_break] {
+        let with_break: Vec<Token> = std::iter::once(line_break).chain(piece.unlist()).collect();
+        let mut stripped = strip_linebreak_options(Tokens::new(with_break)).unlist();
+        stripped.remove(0);
+        while stripped.first() == Some(&T_SPACE!()) {
+          stripped.remove(0);
+        }
+        Tokens::new(stripped)
+      } else {
+        piece
+      };
       result.extend(op.unlist_ref().iter().copied());
       result.push(T_BEGIN!());
       result.extend(piece.unlist());
@@ -654,6 +669,10 @@ LoadDefinitions!({
       return Ok(Vec::new());
     }
     let preformatted = tag == "preformatted"; // Obsolete API? $content is constructor!
+    // (the annotations made so far, this one counted: one made while its content is digested is content it moved out,
+    // for the note below)
+    let annotations = lookup_int("lx_frontmatter_annotations") + 1;
+    assign_value("lx_frontmatter_annotations", Stored::Int(annotations), Some(Scope::Global));
     let mut options = TagAttrs::default();
     if let Some(kv) = kv
       && let DigestedData::KeyVals(dkv) = kv.be_digested()?.data() {
@@ -723,6 +742,22 @@ LoadDefinitions!({
     // no author carries — is no answer to an author's label request, nor passes over the authors one answers)
     let legend = marker_leads(&content);
     let xcontent = digest_frontmatter_item(&tag, content)?;
+    // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #803; ruling 2026-10-21): a note whose whole content became contacts is
+    // none. `\fnsep\thanks{\email{…}}` (webofc; aa's `\fnmsep\thanks{\email{…}}`) moves the e-mail into the author's
+    // contact and left an empty `<note role="thanks"/>`, a visible mark opening a note with nothing in it (2409.01693;
+    // 20 of 21 webofc papers). An author's own empty `\thanks{}` moved nothing out and stays a note, as Perl keeps it.
+    if tag == "ltx:note" && lookup_int("lx_frontmatter_annotations") > annotations && !typesets_content(&xcontent) {
+      DebugFeature!("frontmatter", "FRONT drop {tag}: its content became contacts");
+      with_value_mut("frontmatter", |val_opt| {
+        if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
+          && let Some(list) = frnt.get_mut(&parenttag)
+          && list.get(stub_idx).is_some_and(|e| e.attr.get("role").map(String::as_str) == Some("pending"))
+        {
+          list.remove(stub_idx);
+        }
+      });
+      return Ok(Vec::new());
+    }
     // Reset if changed (eg. by \lx@set@frontmatter@label during digestion)!
     let stub_label = with_value("frontmatter", |v| {
       if let Some(Stored::HashTagData(frnt)) = v {
@@ -1283,10 +1318,19 @@ LoadDefinitions!({
   });
 
   // `\fnmsep` in frontmatter content (`digest_frontmatter_item`): nothing before a mark the frontmatter turns into a
-  // link or a note, the class's comma otherwise.
+  // link or a note, the class's comma (`#1`, its saved meaning) otherwise. webofc's `\fnsep` (webofc.cls:217) is the
+  // same separator under another name (2301.07438, 1411.7792).
+  DefMacro!(
+    "\\lx@frontmatter@marksep{}",
+    r"\@ifnextchar\thanks{}{\@ifnextchar\inst{}{\@ifnextchar\footnote{}{\@ifnextchar\thanksref{}{#1}}}}"
+  );
   DefMacro!(
     "\\lx@frontmatter@fnmsep",
-    r"\@ifnextchar\thanks{}{\@ifnextchar\inst{}{\@ifnextchar\footnote{}{\@ifnextchar\thanksref{}{\lx@saved@fnmsep}}}}"
+    r"\lx@frontmatter@marksep\lx@saved@fnmsep"
+  );
+  DefMacro!(
+    "\\lx@frontmatter@fnsep",
+    r"\lx@frontmatter@marksep\lx@saved@fnsep"
   );
 
   // Add random notes about the document itself
@@ -6094,14 +6138,22 @@ fn digest_frontmatter_item(tag: &str, item: Tokens) -> Result<Digested> {
     }),
     None,
   );
-  // `\fnmsep` sets the comma between two footnote marks (`U.~Hopp\inst{1}\fnmsep\thanks{…}`, aa/llncs); before a
-  // mark that becomes a link or a note here it would stand alone in the name ("U. Hopp,": astro-ph0001054,
-  // astro-ph0611016), so it sets nothing there; between two marks that stay visible it is still their comma.
+  // `\fnmsep` sets the comma between two footnote marks (`U.~Hopp\inst{1}\fnmsep\thanks{…}`, aa/llncs; webofc's
+  // `\fnsep`, webofc.cls:217); before a mark that becomes a link or a note here it would stand alone in the name
+  // ("U. Hopp,": astro-ph0001054, astro-ph0611016; "Andrea Shindler,": 2301.07438), so it sets nothing there; between
+  // two marks that stay visible it is still their comma.
   // (once: an item digested within another — a `\thanks` in an author — would save the wrapper as itself, and a
   // `\fnmsep` there not before a mark would call itself without end)
-  if !lookup_bool("lx_frontmatter_fnmsep") && lookup_definition(&T_CS!("\\fnmsep"))?.is_some() {
-    let_i(&T_CS!("\\lx@saved@fnmsep"), &T_CS!("\\fnmsep"), None);
-    let_i(&T_CS!("\\fnmsep"), &T_CS!("\\lx@frontmatter@fnmsep"), None);
+  if !lookup_bool("lx_frontmatter_fnmsep") {
+    for (sep, saved, wrapper) in [
+      ("\\fnmsep", "\\lx@saved@fnmsep", "\\lx@frontmatter@fnmsep"),
+      ("\\fnsep", "\\lx@saved@fnsep", "\\lx@frontmatter@fnsep"),
+    ] {
+      if lookup_definition(&T_CS!(sep))?.is_some() {
+        let_i(&T_CS!(saved), &T_CS!(sep), None);
+        let_i(&T_CS!(sep), &T_CS!(wrapper), None);
+      }
+    }
     assign_value("lx_frontmatter_fnmsep", Stored::Bool(true), None);
   }
   // `DigestText`, with the item's own paragraph breaks noted in its text mode's frame (`frontmatter_paragraph_break`)
@@ -17142,6 +17194,15 @@ const NAME_ANNOTATIONS: &[&str] = &[
   "\\institute",
 ];
 
+/// The frontmatter's author annotation commands, whose content is no part of a name ([`is_note_macro`]).
+const NAME_ANNOTATORS: &[&str] = &[
+  "\\lx@add@contact",
+  "\\lx@add@note",
+  "\\lx@add@thanks",
+  "\\lx@add@email",
+  "\\lx@add@affiliation",
+];
+
 /// Whether `t` is a note or mark command an author name carries: one of [`NAME_ANNOTATIONS`], or a document's own note
 /// command ([`is_note_macro`]).
 fn is_name_annotation(t: &Token) -> bool {
@@ -17151,7 +17212,10 @@ fn is_name_annotation(t: &Token) -> bool {
 /// A macro that is a note command: it takes arguments and every one of them goes into a `\thanks` or `\footnote` in its
 /// body, so what it prints beside a name is that note's mark (`\newcommand{\blackthanks}[1]{\begingroup
 /// \renewcommand{\thefootnote}{…}\unskip \thanks{#1}\unskip\endgroup}`: `Yuke Peng\textsuperscript{1,}\blackthanks{Co-first
-/// authors.}\ ,`, 2506.03876). A macro that prints an argument itself (`\newcommand{\auth}[2]{#1\thanks{#2}}`) is none.
+/// authors.}\ ,`, 2506.03876) — or into one of the frontmatter's author annotations ([`NAME_ANNOTATORS`]: a binding's
+/// contact command, jheppub's and jinstpub's `\note{…}` = `\lx@add@contact[role=note]{…}`, whose "Corresponding
+/// author." read as the name's last word left the corresponding author's e-mail spelling no one, 2406.08712,
+/// 2603.01867). A macro that prints an argument itself (`\newcommand{\auth}[2]{#1\thanks{#2}}`) is none.
 fn is_note_macro(cs: &Token) -> bool {
   if cs.get_catcode() != Catcode::CS || lookup_conditional(cs).is_some() {
     return false;
@@ -17170,10 +17234,18 @@ fn is_note_macro(cs: &Token) -> bool {
   let mut i = 0;
   while i < body.len() {
     let t = body[i];
-    if t == T_CS!("\\thanks") || t == T_CS!("\\footnote") {
+    let annotator = t.with_str(|s| NAME_ANNOTATORS.contains(&s));
+    if t == T_CS!("\\thanks") || t == T_CS!("\\footnote") || annotator {
       let mut j = i + 1;
       while body.get(j) == Some(&T_SPACE!()) {
         j += 1;
+      }
+      // (an annotator's keyvals, `[role=note]`, are no argument of the name)
+      if annotator
+        && body.get(j) == Some(&T_OTHER!("["))
+        && let Some(close) = body[j..].iter().position(|u| *u == T_OTHER!("]"))
+      {
+        j += close + 1;
       }
       if body
         .get(j)

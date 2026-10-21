@@ -190,11 +190,13 @@ pub mod interspeech_cls;
 pub mod interspeech_sty;
 pub mod jabbrv_sty;
 pub mod jair_sty;
+pub mod jcappub_sty;
 pub mod jcm_cls;
 pub mod jfm_cls;
 pub mod jgcc_cls;
 pub mod jhrs_cls;
 pub mod jinst_cls;
+pub mod jinstpub_sty;
 pub mod jmlr2e_sty;
 pub mod jmlr_cls;
 pub mod jpc_sty;
@@ -344,6 +346,7 @@ pub mod updatemarks_sty;
 pub mod uspatent_cls;
 pub mod ut_thesis_cls;
 pub mod vmsta_cls;
+pub mod webofc_cls;
 pub mod widetext_sty;
 pub mod wileyasna_cls;
 pub mod wileymsp_template_cls;
@@ -521,6 +524,15 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("tabls", "sty", tabls_sty::load_definitions),
   ("chemnum", "sty", chemnum_sty::load_definitions),
   ("JINST", "cls", jinst_cls::load_definitions),
+  // jcappub (JCAP) and jinstpub (JINST) are SISSA/IOP's siblings of jheppub (JHEP), with its accumulating
+  // `\author[affil]{name}` + `\affiliation` + `\emailAdd` + `\keywords`/`\acknowledgments` frontmatter: each binding
+  // loads jheppub's and adds its own. Perl has no binding for either. Without one, jcappub's `\author`s fell through
+  // to article's (which overwrites), truncating the list to the last author, and `\affiliation`/`\emailAdd` were
+  // undefined: html_feedback #6884, witness arXiv 2404.03569 (63 authors, previously 1); its own journal
+  // abbreviations ride along (jcappub_sty.rs). jinstpub read raw left the affiliations an itemize (2006.05543,
+  // 2303.10224; jinstpub_sty.rs).
+  ("jcappub", "sty", jcappub_sty::load_definitions),
+  ("jinstpub", "sty", jinstpub_sty::load_definitions),
   ("CECS", "cls", cecs_cls::load_definitions),
   ("compositio", "cls", compositio_cls::load_definitions),
   ("alggeom", "cls", alggeom_cls::load_definitions),
@@ -694,6 +706,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("cimart", "cls", cimart_cls::load_definitions),
   ("cimento", "cls", cimento_cls::load_definitions),
   ("vmsta", "cls", vmsta_cls::load_definitions),
+  ("webofc", "cls", webofc_cls::load_definitions),
   ("entics", "cls", entics_cls::load_definitions),
   ("entcs", "cls", entics_cls::load_definitions),
   (

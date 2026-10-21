@@ -13,4 +13,14 @@
   #1\@fnm~\@snm}
 \def\@@author[#1]#2{\g@addto@macro\@@@authors{\bgroup\bfseries\name@m\authorsep\name@m@front{#2}\egroup
   \def\authorsep{\unskip,\space}}}
-\def\maketitle{\par{\centering\@@@authors\par}}
+% vmsta.cls:234-256, :347-390 (cut down): the e-mail written to the .aux for a later run's title page, the addresses
+% appended to the title page's list
+\let\@@@@eads\@empty
+\def\email{\@ifnextchar[{\@uemail}{\@email}}
+\gdef\@email#1{\immediate\write\@auxout{\string\emailauthor{#1}{}}}
+\gdef\emailauthor#1#2{\g@addto@macro\@@@@eads{#1 }}
+\def\@@@address{}
+\def\address{\@ifnextchar[{\@@address}{\@address}}
+\long\def\@@address[#1]#2{\g@addto@macro\@@@address{\textsuperscript{#1}#2\par}}
+\long\def\@address#1{\g@addto@macro\@@@address{#1\par}}
+\def\maketitle{\par{\centering\@@@authors\par{\itshape\@@@address}\@@@@eads\par}}

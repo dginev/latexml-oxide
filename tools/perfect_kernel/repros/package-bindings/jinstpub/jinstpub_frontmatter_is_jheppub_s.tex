@@ -1,0 +1,28 @@
+% witness: 2006.05543, 2303.10224 (jinstpub.sty 2015/08/05 and 2020/09/18, shipped; 23 of the 30,000-paper sample):
+%          jinstpub.sty:111-140 `\author[a,b]{…}`, `\affiliation[a]{…}`, `\emailAdd{…}` stored for its `\maketitle`
+% oracle:  pdflatex 0 errors: "C. Fanelli^{a,b,1} B. Baker^b", "a Univ A" and "b Lab B" in a list, "E-mail:
+%          cfanelli@mit.edu", "Abstract: Abs.", "Keywords: Cherenkov detectors", the note "1 Corresponding author.",
+%          "1 S", "(1.1)", "Figure 1. A box." with the label bold
+% engines: rust int45b = 0 errors, the affiliations an itemize, the e-mail and the abstract paragraphs, "Corresponding
+%          author." inside the personname; Perl has no jinstpub binding (the package read raw)
+% expect:  0 errors, 0 warnings; the creators "C. Fanelli" (Univ A and Lab B, the e-mail, the note) and "B. Baker" (Lab
+%          B), the keywords, equation "(1.1)", the figure's label "Figure 1" closed by ". "
+% status:  RED (int45b) -> GREEN (78e)
+% preload: ar5iv.sty
+\documentclass[a4paper,11pt]{article}
+\usepackage{jinstpub}
+\title{T}
+\author[a,b,1]{C. Fanelli\note{Corresponding author.}}
+\author[b]{B. Baker}
+\affiliation[a]{Univ A, Cambridge}
+\affiliation[b]{Lab B, Newport News}
+\emailAdd{cfanelli@mit.edu}
+\abstract{Abs.}
+\keywords{Cherenkov detectors}
+\begin{document}
+\maketitle
+\section{S}
+\begin{equation}a=b\label{e}\end{equation}
+\begin{figure}\caption{A box.}\end{figure}
+Text (\ref{e}).
+\end{document}

@@ -1,0 +1,18 @@
+% witness: the rev78e review (finding 2; the main session's ruling 2026-10-21): aa's `\fnmsep\thanks{\email{…}}`
+%          (aa.cls v9.1 :761 `\email`; the template's shape, as webofc's `\fnsep\thanks{\email{…}}`, 2409.01693)
+% oracle:  pdflatex with 2605.30420's aa.cls (v9.1): 0 errors; "Ann Able^{1,⋆} and Bob Baker^{2,⋆⋆}", the footnotes
+%          "⋆ e-mail: ann@x.org" and an empty "⋆⋆"
+% engines: rust int45b = an empty thanks note on Ann Able (its e-mail moved into the contact) and one on Bob Baker
+% expect:  0 errors, 0 warnings; Ann Able's e-mail her contact and no note (all of it became contacts); Bob Baker's
+%          empty `\thanks{}` still a thanks note (the kernel keeps an author's own empty note, as Perl)
+% status:  RED (int45b) -> GREEN (78e r2)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1}\fnmsep\thanks{\email{ann@x.org}} \and Bob Baker\inst{2}\fnmsep\thanks{}}
+\institute{Univ A \and Univ B}
+\maketitle
+\section{S}
+Text.
+\end{document}

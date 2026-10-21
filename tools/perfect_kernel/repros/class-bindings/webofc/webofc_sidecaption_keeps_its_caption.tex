@@ -1,0 +1,27 @@
+% witness: 2610.23498 (html_feedback: the side caption is typeset as text, webofc.cls:824-857 `\sidecaption#1\caption`)
+%          and :788-812 `\@makecaption`, the label bold with a period
+% oracle:  pdflatex 0 errors; the rule with "Figure 1. Side caption text." beside it, "Table 1. Values.", the labels
+%          bold; "See Fig. 1."
+% engines: rust int45b = "Figure 1. Side caption text." as text in a parbox, no <caption>, the label on the section;
+%          "Table 1: Values." upright; perl = 3 Errors (`\sidecaption`, `\firstname`, `\lastname` undefined: OmniBus),
+%          the caption kept
+% expect:  0 errors, 0 warnings; a <caption> "Figure 1. Side caption text." in the figure, which carries the label;
+%          "Table 1. Values.", each label bold, closed by ". "
+% status:  RED (int45b) -> GREEN (78e)
+% preload: ar5iv.sty
+\documentclass{webofc}
+\begin{document}
+\title{T}\author{\firstname{Ann} \lastname{Able}\inst{1}}\institute{Univ A}
+\abstract{Abs.}
+\maketitle
+\section{S}
+\begin{figure}[t]
+\sidecaption
+\rule{2cm}{1cm}
+\caption{Side caption text.}\label{f1}
+\end{figure}
+\begin{table}[b]
+\caption{Values.}
+\end{table}
+See Fig.~\ref{f1}.
+\end{document}

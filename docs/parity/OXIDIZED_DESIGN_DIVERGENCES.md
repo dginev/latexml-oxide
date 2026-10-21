@@ -22386,3 +22386,115 @@ after `\appendix` numbers its appendices from "A" with their letters, as the cla
 "APPENDIX B"). Authored content first: the destroyed argument is the author's text. Repro
 sectioning-frontmatter/ieeetran_appendix_with_a_title_is_one_appendix; guard
 `perfect_kernel_batch78d::ieeetran_appendix_with_a_title_is_one_appendix` (KNOWN_PERL_ERRORS #1022).
+### 800. webofc.cls is read raw with the `\inst` frontmatter, its side caption a caption
+
+webofc.cls (EDP Sciences' Web of Conferences: EPJ, MATEC, E3S, ITM, SHS, BIO; shipped by the papers, about 30 of the
+30,000-paper sample) titles the A&A/Springer way: `\author{Ann Able\inst{1}\fnsep\thanks{\email{…}} \and …}` with an
+`\institute{A \and B}` list its title page numbers (webofc.cls:217 `\fnsep`, :434-440 `\institute`, `\inst` =
+`$^{#1}$`, `\email` = "e-mail: …"), and `\sidecaption` (:824-857) reads the float's body up to `\caption` to set it
+beside the caption in a `\parbox`. Read raw (no binding; Perl has none and errs on `\sidecaption`, `\firstname`,
+`\lastname`), the names kept their superscripts ("Andrea Shindler,1": 2301.07438), every author got every institute
+(1411.7792), the e-mail was a thanks note's text, and a side caption was text in a parbox with no `<caption>` (the
+html_feedback report on 2610.23498, the figure's label on its section). Ours (latexml_contrib webofc_cls.rs): the class
+read raw (its packages as it loads them), then inst_support's `\institute`/`\inst` (as aa, llncs and the Springer
+classes have them), its `\author` split at `\\` as well as at `\and` (as llncs's: the template's `\\The SND
+Collaboration` line under the names, 1609.01040 and 2610.23498, a creator of its own, not part of the last name; the
+break's `*` and `[…]` no text, #804), the e-mail the author's contact (`\lx@add@email`; a `\thanks` that held only the
+e-mail leaves no note, #803: 2409.01693), `\sidecaption` layout only (as aa_support and sv_support), and the class's
+`\@makecaption` label format, "**Figure 1.** …" with the period and the space after it in the bold (:786-812
+`\@CaptionTitleFont #1\@FloatCounterEnd\@FloatCounterSep` in one group; `caption_sty::class_makecaption_label`, shared
+with jinstpub, whose period is outside; caption, when the document loads it, replaces it). The kernel's frontmatter
+`\fnmsep` rule (nothing before a `\thanks`/`\inst`/`\footnote` mark, `digest_frontmatter_item`) covers webofc's `\fnsep`
+too. Repros class-bindings/webofc/{webofc_authors_take_their_institutes, webofc_sidecaption_keeps_its_caption,
+webofc_author_line_break_options} (beside a minimal webofc.cls stand-in written for them: the shipped class states no
+licence); guards `perfect_kernel_batch78e::{webofc_authors_take_their_institutes, webofc_sidecaption_keeps_its_caption,
+webofc_author_line_break_options}`.
+
+### 801. jinstpub.sty is jheppub's frontmatter with JINST's extras
+
+jinstpub.sty (JINST's SISSA/IOP publication style, 2015/08/05 v1.0 and 2020/09/18 v1.1638; shipped by the papers, 23 of
+the 30,000-paper sample, about 121 in 8 months) is jheppub.sty with JINST's journal name, an optional mark on `\note`
+(:91-98), an optional placement on `\collaboration` (:145), newtx fonts, amsthm and wrapfig (:32-56), section-numbered
+equations (:335), a bold caption label with a period (:362-378) and four reference shorthands (:384-387). Read raw
+(neither Perl nor Rust had a binding), its `\maketitle` laid the stored frontmatter out as body text: the affiliations an
+itemize, the e-mail and the keywords paragraphs, the author's `\note{Corresponding author.}` a footnote inside the
+personname (2006.05543, 2303.10224). Ours (latexml_contrib jinstpub_sty.rs, as jcappub_sty.rs gives JCAP; both in
+latexml_contrib, as Perl has neither): jheppub's binding, then jinstpub's packages, `\note[]{}`, `\collaboration[t]{}`
+(with its "option b/c" warnings), `\numberwithin{equation}{section}`, the caption label format
+(`caption_sty::class_makecaption_label`), `\erratum`/`\addendum`/`\ibid`/`\pos`. Unlike jheppub's, its `\emailAdd` is
+no n-th-address-to-n-th-author rule: JINST's `\maketitle` prints every address on one shared "E-mail:" line under the
+affiliations (:133-138, :219-224), so an address is the contact of the author whose name it spells, else of the group's
+only author, else of the author block (`\lx@add@contact@placed`; with jheppub's rule 16 of 23 papers had an address on a wrong author:
+2311.16063's bross@fnal.gov on Andrea Bersani, not Alan D. Bross; 2307.12991, 1910.06438, 2311.00870, 2605.30709);
+an `\emailAdd{a, b}` list is an address each (2211.05026, 2409.03065, 2112.00370). For the spelling, the kernel's name
+reading takes a macro whose arguments all go into a frontmatter annotation (`\lx@add@contact`, `\lx@add@note`,
+`\lx@add@thanks`, `\lx@add@email`, `\lx@add@affiliation`) as a name annotation, as it takes a note macro
+(`is_note_macro`, base_utilities.rs): the corresponding author's `\note{Corresponding author.}` — the template's required
+shape — is no part of the name the address spells, where its last word had made "author" the surname (2406.08712's
+zhouyi@ for Y. Zhou, 2603.01867's yuanzy@ for Zhiyang Yuan).
+The "Prepared for submission to JINST" header line (:22, printed first, :180) is page furniture, not kept; a paper's own
+header (its copy's `\gdef\@fpheader{…}`, or its preamble's) is author content, a pubnote (role preprint) at
+`\begin{document}`: 2103.06391 "Prepared for submission to JINST (FERMILAB-PUB-21-079-ND-SCD)", 2205.10526, 2311.06155.
+The table of contents its `\maketitle` ends with unless `\notoc` (:241-249) is dropped and `\notoc` is a no-op, as in
+jheppub's binding (Perl jheppub.sty.ltxml:97), so the family keeps one rule (main session ruling 2026-10-21; whether
+JHEP/JINST should print it is a SYNC_STATUS row awaiting a user ruling). The binding stands in for the paper's copy
+(`author_files::AUTHOR_FILE_STAND_INS`), so the copy is read after it (OD #731), its own definitions of the binding's
+names holding only inside it: its page geometry stays (`\textwidth .72\paperwidth`, the 442pt that `\linewidth`-sized
+figures had read raw). Residual: a copy whose own `\maketitle` adds lines (2103.11983's "Published in JINST as DOI:
+10.1088/1748-0221/16/07/P07016") loses them, the binding owning `\maketitle` (jheppub the same; SYNC_STATUS). The older
+JINST class (`JINST.cls`) keeps its own binding (jinst_cls.rs). Repros package-bindings/jinstpub/{
+jinstpub_frontmatter_is_jheppub_s, jinstpub_emails_go_to_the_authors_they_spell,
+jinstpub_edited_header_is_a_preprint_note} (beside a modified, shortened jinstpub.sty that keeps the original's
+copyright and LPPL 1.3 notice); guards `perfect_kernel_batch78e::{jinstpub_frontmatter_is_jheppub_s,
+jinstpub_emails_go_to_the_authors_they_spell, jinstpub_edited_header_is_a_preprint_note}`.
+
+### 802. vmsta's e-mails and addresses are their authors' contacts
+
+vmsta.cls (Modern Stochastics: Theory and Applications, VTeX; shipped, about 71 papers) prints its e-mails and addresses
+only from its title page: the 2014-2018 copies write each `\email` to the `.aux` for a later run (vmsta.cls:242-256
+`\@email` → `\emailauthor`) and append each `\address[label]` to `\@@@address` (:381-390); the 2018+ copies
+(iosart2x-based) take `\ead[label=…]{…}` inside the `\author` (:1263-1297, the title page's e-mail line) and keep an
+`\address` list (:871-920). The vmsta binding (OD #789) read the class raw, so the e-mails were lost (1508.02842's
+`myus@univ.kiev.ua` nowhere in the output) and the addresses were paragraphs of the deposited title page. Ours
+(latexml_contrib vmsta_cls.rs): `\author[labels]{…}` replays the class's own `\author` for its counters and lists and
+makes the creator with its labels as annotations (`\lx@add@authors@append`), an `\address[a]` is the affiliation of the
+authors labelled `a` and an unlabelled one that of the authors before it with none (`annotate=run`), an `\email` the
+contact of the author it follows and an `\ead` that of the author it is in; where the class's own code runs `\ead` (its
+replayed `\author`, its deposited title page) it only counts the address for the class's "At least one email address is
+required!" check (:550-565) and keeps the e-mail block's font for the history line after it. Perl has no vmsta binding.
+Witnesses 1508.02842, 1801.00977, 1411.4499, 1506.02940, 1601.01109 (2014-2018), 1805.02511, 1810.09681, 2001.02487,
+1912.07948 (2018+). Open: the 2018+ copies' `\thanksref{cor1}` key in the name (SYNC "quality inventory" row 17). Repros
+class-bindings/vmsta/vmsta_emails_and_addresses_are_contacts, class-bindings/vmsta_2018/
+vmsta_2018_emails_and_addresses_are_contacts (cut-down classes beside them); guards
+`perfect_kernel_batch78e::{vmsta_emails_and_addresses_are_contacts, vmsta_2018_emails_and_addresses_are_contacts}`.
+
+### 803. A frontmatter note all of whose content became contacts is not emitted
+
+An author's `\thanks{\email{…}}` — the A&A and Web of Conferences templates' `\fnmsep\thanks{\email{…}}` /
+`\fnsep\thanks{\email{…}}` — digests the `\email` into the author's `email` contact (an annotation made while the note's
+content is digested), which left the thanks note empty: `<note role="thanks"/>`, a visible mark opening a note with
+nothing in it (2409.01693's "†" after Wolfgang Lucha holding only "thanks:"; 20 of 21 webofc papers of the rev78e
+review). Ours (main session ruling 2026-10-21; `\lx@annotate@frontmatter@now`, base_utilities.rs): a frontmatter
+`ltx:note` whose digested content typesets nothing after one or more annotations were made while digesting it is
+dropped, its pending stub removed — for every class whose `\email`, `\affiliation` or other contact setter runs inside a
+`\thanks` (aa, webofc, …); the rule covers `ltx:note`s only, not contact-typed notes (elsarticle's `\fntext[f1]{\ead{…}}`
+keeps an empty `<contact role="note"/>`, as before; synthetic, 0 corpus cases in the rev78e2 sample). An author's own
+empty `\thanks{}` made no annotation and stays a note, as Perl keeps it (the kernel's empty-note behaviour is Perl's).
+Residual: a note left holding only a separator or a lead word once its addresses became contacts — `\thanks{\email{a},
+\email{b}}` a "," note, `\thanks{e-mail: \email{x}}` an "e-mail: " note (0902.3523's three "E-mail:" notes, 1610.04567's
+","; as int45b) — is kept: no further rule (rev78e2). Perl (Base_Utility.pool.ltxml, `\lx@add@thanks` a `role=thanks` contact) emits
+an empty thanks contact the same way. Repro class-bindings/aa_thanks_email_leaves_no_empty_note (and webofc's
+webofc_authors_take_their_institutes); guards `perfect_kernel_batch78e::{aa_thanks_email_leaves_no_empty_note,
+webofc_authors_take_their_institutes}`.
+
+### 804. `\lx@splitting` at `\\` drops the break's `*` and `[…]` from the next piece
+
+`\lx@splitting{op}{delimiters}{tokens}` (Perl Base_Utility.pool.ltxml, `SplitTokens`) cuts at the delimiter tokens
+only, so a split at `\\` left the line break's star and optional spacing at the start of the next piece. No Perl binding
+splits at `\\`; two Rust ones do, an author list printed as a paragraph whose `\\` is a line break: webofc's `\author`
+(#800) and llncs's `\inst`-marked `\author` (llncs_cls.rs `\lx@llncs@author@split`). There `B\inst{2}\\*[2mm] C\inst{1}`
+made a creator "*[2mm] C" (the rev78e review's finding 6; synthetic, 0 of 158 webofc papers). Ours: a piece after a
+`\\` delimiter loses a leading `*` and `[…]` (`strip_linebreak_options`, which the kernel's own author splitting and
+llncs's unmarked list already apply). Repros class-bindings/webofc/webofc_author_line_break_options,
+sectioning-frontmatter/llncs_author_line_break_options_with_inst_marks; guards
+`perfect_kernel_batch78e::{webofc_author_line_break_options, llncs_author_line_break_options_with_inst_marks}`.

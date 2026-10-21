@@ -1,0 +1,15 @@
+% witness: the rev78e review (finding 6, llncs's split shares the `\\` delimiter with webofc's; synthetic): llncs.cls
+%          :1019-1036 sets `\@author` as one centred paragraph, where `\\*[2mm]` and `\\ [1mm]` are line breaks
+% oracle:  pdflatex 0 errors: "Ann Able¹ and Bob Baker²" over "Cat Cole¹", the institutes "1 Inst A", "2 Inst B"
+% engines: rust 78e r1 = the creator "*[2mm] Cat Cole" (an `\inst` list keeps the split at `\\`, which kept the break's
+%          star and option in the next piece)
+% expect:  0 errors, 0 warnings; Ann Able and Cat Cole hold Inst A, Bob Baker Inst B
+% status:  RED (78e r1) -> GREEN (78e r2)
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}\\*[2mm] Cat Cole\inst{1}}
+\institute{Inst A \and Inst B}
+\maketitle
+Text.
+\end{document}

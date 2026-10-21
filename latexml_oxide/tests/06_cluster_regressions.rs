@@ -764,10 +764,11 @@ fn cluster_floatflt_pctwidth() {
 /// survived and `\affiliation`/`\emailAdd`/`\keywords` were undefined. Routing
 /// jcappub to the jheppub binding accumulates every author. SHARED gap with Perl
 /// (also truncates + `missing file[jcappub.sty]`); surpass-Perl. html_feedback
-/// #6884, witness arXiv 2404.03569 (63 authors rendered, previously 1).
+/// #6884, witness arXiv 2404.03569 (63 authors rendered, previously 1). The binding is a contrib one (78e: Perl has no
+/// jcappub.sty.ltxml), so the conversion dispatches the contrib bindings, with the zero-error gate.
 #[test]
 fn cluster_jcappub_accumulates_authors() {
-  let xml = convert_to_xml("tests/cluster_regressions/jcappub_authors.tex");
+  let xml = convert_to_xml_contrib_clean("tests/cluster_regressions/jcappub_authors.tex");
   assert_eq!(
     xml.matches(r#"role="author""#).count(),
     3,

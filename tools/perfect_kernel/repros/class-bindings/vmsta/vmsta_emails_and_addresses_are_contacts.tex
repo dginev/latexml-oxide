@@ -1,0 +1,21 @@
+% witness: 1508.02842 (both e-mails lost, `myus@univ.kiev.ua` in none of the output; the address an italic paragraph),
+%          1801.00977, 1411.4499, 1506.02940 (`\author[a]{…}` with `\address[a]{…}`), 1601.01109; vmsta.cls:242-256
+%          `\@email` writes `\emailauthor` to the .aux for a later run, :381-390 `\@@address`/`\@address` append to the
+%          title page's `\@@@address`; the class beside is cut down from it
+% oracle:  pdflatex 0 errors (second run): "Yuliya Mishura, Ivan Voronov", the addresses "a Univ A" and "b Univ B" in
+%          italics, "myus@univ.kiev.ua ivan@univ.kiev.ua", "Text."
+% engines: rust int45b = 0 errors, no e-mail, the addresses a paragraph after the title page; Perl has no vmsta binding
+% expect:  0 errors, 0 warnings; "Yuliya Mishura" with the e-mail myus@univ.kiev.ua and the affiliation Univ A, "Ivan
+%          Voronov" with ivan@univ.kiev.ua and Univ B
+% status:  RED (int45b) -> GREEN (78e)
+% preload: ar5iv.sty
+\documentclass{vmsta}
+\begin{document}
+\author[a]{\inits{Yu.}\fnm{Yuliya}\snm{Mishura}}\email
+{myus@univ.kiev.ua}
+\author[b]{\inits{I.}\fnm{Ivan}\snm{Voronov}}\email{ivan@univ.kiev.ua}
+\address[a]{Univ A}
+\address[b]{Univ B}
+\maketitle
+Text.
+\end{document}

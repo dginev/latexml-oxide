@@ -1,0 +1,27 @@
+% witness: 2103.06391 (its copy's `\gdef\@fpheader{Prepared for submission to JINST (FERMILAB-PUB-21-079-ND-SCD)}`),
+%          2205.10526 ("JINST-060P-0522, accepted for publication, 11/6/2022"), 2311.06155 ("VERSION ACCEPTED FOR
+%          PUBLICATION …"): jinstpub.sty:22 `\gdef\@fpheader{Prepared for submission to JINST}`, which `\maketitle` prints
+%          first (:179-180); a paper's own header stands where the stock one did (here set in the preamble; the
+%          witnesses edit their copy)
+% oracle:  pdflatex 0 errors: "PREPARED FOR SUBMISSION TO JINST (FERMILAB-PUB-21-079-ND-SCD)" in small capitals over
+%          the title
+% engines: rust 78e r1 = the header lost (the binding owns `\maketitle`); int45b = a paragraph of the raw title page;
+%          Perl has no jinstpub binding (the package read raw)
+% expect:  0 errors, 0 warnings; a pubnote (role preprint) "Prepared for submission to JINST
+%          (FERMILAB-PUB-21-079-ND-SCD)"; the stock header none (jinstpub_frontmatter_is_jheppub_s)
+% status:  RED (78e r1) -> GREEN (78e r2)
+% preload: ar5iv.sty
+\documentclass[a4paper,11pt]{article}
+\usepackage{jinstpub}
+\makeatletter
+\gdef\@fpheader{Prepared for submission to JINST (FERMILAB-PUB-21-079-ND-SCD)}
+\makeatother
+\title{T}
+\author{A. Able}
+\affiliation{Univ A}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+\section{S}
+Text.
+\end{document}

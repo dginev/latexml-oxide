@@ -3534,8 +3534,9 @@ through to article's kernel `\author` (which *overwrites* on each call), and onl
 `\author` survives; `\affiliation`/`\emailAdd`/`\keywords` are undefined. Same-host Perl 0.8.8 is
 byte-identical (SHARED-FAILURE: 1 author, 4 undefined macros), Perl-origin. Reported as
 arXiv/html_feedback#6884 (witness 2404.03569, a 63-author DESI paper collapsing to 1). Rust
-**surpasses**: `latexml_package::BINDINGS` routes `jcappub` to `jheppub_sty::load_definitions` (the
-sibling class's identical author API), so all authors accumulate — the same "route the sibling
+**surpasses**: `latexml_contrib::BINDINGS` routes `jcappub` to `jcappub_sty::load_definitions`, which loads
+`jheppub_sty::load_definitions` (the sibling class's identical author API) and adds JCAP's journal macros (latexml_contrib,
+as Perl has no jcappub binding; moved from latexml_package in 78e), so all authors accumulate — the same "route the sibling
 package to its bound binding" move as the biblatex variants (OXIDIZED_DESIGN #117). Guard:
 `06_cluster_regressions::cluster_jcappub_accumulates_authors`.
 
