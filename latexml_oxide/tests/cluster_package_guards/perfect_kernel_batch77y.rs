@@ -738,8 +738,9 @@ fn names_split_under_symbol_lines_reads_the_line_under() {
       "{line}"
     );
   }
-  // (a line under the names that is an institution of its own — an acronym, an opening no connective — is theirs: the
-  // rev77y3 re-review's finding 1, probes k20, k42, k31; 77y r3 made the names an affiliation of the shared creator)
+  // (a line under the names that is an institution of its own — an acronym, an opening no connective, a hyphenated name
+  // — is theirs: the rev77y3 re-review's finding 1, probes k20, k42, k31; 77y r3 made the names an affiliation of the
+  // shared creator)
   for (xml, names, institution) in [
     (
       convert_repro!("author_symbol_lines_then_name_over_an_acronym_institution.tex"),
@@ -755,6 +756,13 @@ fn names_split_under_symbol_lines_reads_the_line_under() {
       convert_repro!("author_symbol_lines_then_name_over_a_lowercase_institution.tex"),
       vec!["Cat Cole"],
       "the University of Tokyo",
+    ),
+    // (the whole word is the generic noun, never a hyphen part of an institution's own name: the rev77y4 re-review's
+    // finding 1, probes c2, c5)
+    (
+      convert_repro!("author_symbol_lines_then_name_over_a_hyphenated_institution.tex"),
+      vec!["Cat Cole"],
+      "Max-Planck-Institut",
     ),
   ] {
     assert_no_merged_names(&xml);
@@ -876,6 +884,24 @@ fn link_column_lines_are_the_blocks_by_their_kind() {
       url(&href("https://x.org/p", "Project Page")),
       affiliation("Univ B"),
       typewriter_email("contact@x.org", "id1")
+    )),
+  ]);
+}
+
+/// …and a labelled address line under it (`Email: contact@x.org`) is the block's e-mail under its label (the rev77y4
+/// re-review's finding 2, probe x2). Was the line an affiliation (77y r3, r4); a creator "Univ B" with the e-mail in
+/// int38b and 77y r2.
+#[test]
+fn link_column_labelled_email_is_the_blocks() {
+  let xml = convert_repro!("author_link_column_over_an_institution_and_a_labelled_email.tex");
+  assert_no_merged_names(&xml);
+  assert_eq!(creators(&xml), [
+    creator(true, "Ann Able", &affiliation("Univ A")),
+    shared(&format!(
+      "{} {} {}",
+      url(&href("https://x.org/p", "Project Page")),
+      affiliation("Univ B"),
+      r#"<contact name="Email: " role="email">contact@x.org</contact>"#
     )),
   ]);
 }

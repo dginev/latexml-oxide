@@ -1,0 +1,12 @@
+% witness: the rev77y4 re-review (finding 1, probes c2, c5)
+% oracle:  pdflatex 0 errors: Ann Able†, Bob Baker‡ on one line; "†Univ A ‡Univ B" under them; "Cat Cole", then "Max-Planck-Institut"
+% engines: rust 77y r4 = 0 errors; "Cat Cole" an affiliation of the shared creator, Max-Planck-Institut on both marked names (a hyphen part "institut" read as a generic institution noun); 77y r2 as expected
+% expect:  0 errors, 0 warnings; three authors, Univ A on Ann Able, Univ B on Bob Baker, Max-Planck-Institut on Cat Cole
+% status:  RED (77y r4) -> GREEN (int41 follow-up)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \\ $^\dagger$Univ A \quad $^\ddagger$Univ B \\ Cat Cole \\ Max-Planck-Institut}
+\begin{document}
+\maketitle
+Text.
+\end{document}

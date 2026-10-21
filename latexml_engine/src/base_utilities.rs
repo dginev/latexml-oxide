@@ -3006,6 +3006,21 @@ LoadDefinitions!({
           });
           continue;
         }
+        // (a labelled address line, the block's e-mail under its label: `\\ Email: contact@x.org`, the rev77y4
+        // re-review's finding 2, probe x2)
+        if replace && let Some((label, addresses)) = line_labelled_emails(&line)? {
+          calls.extend(block_email_calls(
+            label.as_ref(),
+            addresses,
+            &[],
+            EmailOwners {
+              corresponding:   None,
+              marked:          Vec::new(),
+              numbered_before: 0,
+            },
+          )?);
+          continue;
+        }
         let owner = if replace {
           LinkOwner::Block
         } else {
@@ -18944,12 +18959,13 @@ fn names_an_organization(text: &str, target: &str) -> bool {
 }
 
 /// Whether `line` is a link printing one word whose letters are exactly a spelling of an author's name (`keys`: a joined
-/// spelling or the initials, [`NameKeys`]): the author's own handle, a homepage, never an organization's name its domain
-/// spells ([`names_an_organization`]) — `\href{https://annable.com}{ann-able}`,
+/// spelling or the initials, [`NameKeys`]): the author's own handle, a homepage — `\href{https://annable.com}{ann-able}`,
 /// `\href{https://www.annable42.com}{annable42}`, `{AnnAble}` under Ann Able (the rev77y2 re-review's finding 5, probes
 /// d5, d9, d12; `deepseek-ai` no name spells stays an affiliation). A name's words running inside an organization's
 /// name are no spelling of it (`{Huawei}` under Hua Wu and Xiaoming Wei, `{Samsung}` under Sam Smith, `{able-lab}`
-/// under Ann Able: affiliations, the rev77y3 re-review's finding 2, probes h1-h9).
+/// under Ann Able: affiliations, the rev77y3 re-review's finding 2, probes h1-h9). An organization whose name is exactly
+/// an author's spelling (`{Huawei}` under Hua Wei, `{HW}` under Hua Wu) reads as that author's handle: the link stays on
+/// the name it prints under, as a URL contact (rev77y4 probes h20, h21; SYNC residual).
 fn link_prints_a_handle(line: &Tokens, keys: &[NameKeys]) -> bool {
   let Some((at, end)) = link_line_link(line) else {
     return false;
@@ -20618,14 +20634,19 @@ fn institution_beside_labelled(segment: &Tokens) -> bool {
 /// Tong \\ University`), opens with a connective (`… \\ of Science and Technology`), or holds every word of the line
 /// (`Hong Kong \\ The Hong Kong University of Science and Technology`) — the rev77y2 re-review's finding 4, probes k12,
 /// k17. An institution's own name is none (`Cat Cole \\ CERN`, `\\ RIKEN`, `\\ the University of Tokyo`, `\\ eBay
-/// Inc.`: the rev77y3 re-review's finding 1, probes k20, k26, k31, k40-k42).
+/// Inc.`, `\\ Max-Planck-Institut`: the rev77y3 re-review's finding 1, probes k20, k26, k31, k40-k42; rev77y4's, c2,
+/// c5). A name over a one-word generic noun or a connective-led institution of its own (`Cat Cole \\ Physics`, `\\ at
+/// Univ C`) is read as the line's continuation — a SYNC residual (rev77y4 probes c1, c3, c4, c8, k27, k30).
 fn continues_the_line(line: &Tokens, under: &Tokens) -> bool {
   let text = visible_name_text(line.unlist_ref());
   let under = visible_name_text(under.unlist_ref());
   let words: Vec<&str> = under.split_whitespace().collect();
+  // (the whole word, never a hyphen part of an institution's own name: `Max-Planck-Institut`, `Helmholtz-Zentrum` — the
+  // rev77y4 re-review's finding 1, probes c2, c5)
   let generic_noun = |word: &str| {
-    word_forms(word).any(|form| NON_NAME_WORDS.contains(&form.as_str()))
-      && !NON_NAME_ACRONYMS.contains(&word)
+    word_forms(word)
+      .next()
+      .is_some_and(|bare| NON_NAME_WORDS.contains(&bare.as_str()))
   };
   matches!(words.as_slice(), [word] if generic_noun(word))
     || words

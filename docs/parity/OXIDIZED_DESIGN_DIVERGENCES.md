@@ -2079,7 +2079,8 @@ ruling 2026-10-19).** Three readings of an author block Perl gets wrong (it merg
   row's symbol lines after a spaced break takes there only its lines down to a line of names (`name_count`, not itself a
   labelled institution, an address, a link or a note — `classify_thanks` —, no mark leading it, and carrying a symbol
   mark of its own after its text, over an institution, `reads_as_institution`, that does not go on with its words
-  — one generic institution noun (`NON_NAME_WORDS`, no `NON_NAME_ACRONYMS` acronym), an opening connective (`of`,
+  — one generic institution noun, the whole word (`NON_NAME_WORDS`; `Max-Planck-Institut`, `Helmholtz-Zentrum` an
+  institution's own name, the rev77y4 re-review's finding 1, probes c2, c5), an opening connective (`of`,
   `and`, `for`, `at`, `in`), every word of the line again: `continues_the_line` —, or over an e-mail address its
   names spell, `addresses_spelling`; r2, the 77y review's finding 2: `Google DeepMind`, `Hong Kong`, `Equal
   Contribution` alone under the row stay the block's, probes k1, k7, k9, which r1 had made creators; r3, the rev77y2
@@ -2133,15 +2134,19 @@ ruling 2026-10-19).** Three readings of an author block Perl gets wrong (it merg
   contact of Ann Able; "Model Card", "Paper Website" — `paper` a link word —, "Hugging Face Demo", "Interactive Online
   Demo" URL contacts, probes u1, u3, u4, l1-l3, which r11 and r2 had made creators; a two-word text alone in its column
   stays a name, "Source Code", "Online Demo": no corpus witness, probes a5, a6, a SYNC residual — and so does a
-  three-word one ending in a link word that is also a surname, "Full Source Code", "Google Scholar Page", "Hugging Face
-  Link", alone in an `\and` column: a creator named by the link as int38b makes, probes s1, s3, s4, s7 of the rev77y3
+  three-word one ending in a link word that is also a surname or its plural, "Full Source Code", "Google Scholar Page",
+  "Hugging Face Link", "Other Useful Links" (rev77y4 probe s20), alone in an `\and` column: a creator named by the link as int38b makes, probes s1, s3, s4, s7 of the rev77y3
   re-review's finding 5, no author block linking such a text among 519,672 papers of 2025-2026, the same SYNC residual;
   the surname is read as a link word is, a plural's `s` dropped, and a name suffix after it is none, `NAME_SUFFIXES`:
   "Mary Ann Pages", "Lawrence Page Jr." names, r4, the rev77y3 re-review's findings 4 and 6, probes s9, s8, which r3
   had made URL contacts); a column of such links over an institution is the block's, each line under the links by its
   kind — an address the block's e-mail, a link line printing a URL a URL contact, the rest affiliations (`block_lines`:
   probes l1-l3 — not a creator named by the link or the institution; r4, the rev77y3 re-review's finding 3: probe b9's
-  `\texttt{contact@x.org}` an e-mail, which r3 had made an affiliation); a bare domain's link names its organization also when its text spells the domain's
+  `\texttt{contact@x.org}` an e-mail, which r3 had made an affiliation; a labelled address line the block's e-mail under
+  its label, `Email: contact@x.org`, the rev77y4 re-review's finding 2, probe x2, which r3 and r4 had made an
+  affiliation; an address spelling another column's author goes with the column too, `{ann,bob}@x.org` under the link
+  column, as its PDF prints it, probe x5; in a per-author `\author` that adds to its block the column is the current
+  author's, a SYNC residual, probes x7, x8); a bare domain's link names its organization also when its text spells the domain's
   name, its letters and digits, in a handle, a mark no word holds (`names_an_organization`:
   `\href{https://www.deepseek.com}{deepseek-ai}` an affiliation, probe s14; a homepage's
   `\href{https://www.annable.com}{annable}` stays a URL contact, r2, the 77y review's finding 4, probes d1, d2), and a
