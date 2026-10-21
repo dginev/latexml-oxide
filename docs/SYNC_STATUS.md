@@ -5625,6 +5625,16 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   letter's), gaps and the and/comma/word separators unchanged, no `&` column in the sample; ApiCall +4 (1609.09832,
   2010.05094: jpconf's address and e-mail calls, int51's 78m, from the rebase).
   Next: the resolver and the comparator (S2a.2).
+  **Integration (int52, FM S2a.1 r1-r3 squashed a2917112cf onto int51; binary int52a):** reviews revfms2a1 (NO-SHIP:
+  `\aftergroup` leak), revfms2a1_2 (NO-SHIP: placement arguments read as names, breaks lost under a rebound `\\`, an `\input`
+  in the field doubling its log note) and revfms2a1_3 (SHIP); main-session follow-up from revfms2a1_3: `note_progress` /
+  `note_progress_detailed` honour the rehearsal silence too (a `{comment}` skipped inside a rehearsed `\thanks` logged its note
+  twice), and the two guards that pin the token analyser's Error by count also pin it by name (`merged_creators`). Gates int52a:
+  nextest 6741/6741 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int51a empty. A/B int51a vs int52a (544: 300
+  census `feature:author_*`, 147 across 12 classes, 97 rare author shapes `author_tabular`/`author_comma_inst`/
+  `author_user_mark_macro`; seed 52), switch unset: every XML byte-identical, E 782 = 782, F 2 = 2. The status line's
+  undefined-macro and missing-file lists are now sorted (`error.rs`; Perl's order is hash order), so log diffs against
+  pre-int52 bases reorder those lists. Binding nets (int52a) 136/136, 0 worse than int51a.
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
   parts draw, as Unicode's IPA letter, cross-checked against tipauni.sty; the `""`/`||` ligatures ˌ ǁ), so its input
