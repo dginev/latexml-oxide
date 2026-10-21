@@ -5228,6 +5228,16 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   "Pre–post—end", as pdfinfo (r2 "AB, 2, , ,", "Pre--post---end"); every `\<name>` sets the label a `{restatable*}`'s
   number refers to (thm-restate.sty:158-160), so the preview is the last one's, as pdflatex; `\loggingall` and
   `\tracingnone` back to the public `\ifdefined` (latex.ltx:662/:679, Perl plain_base.pool.ltxml:40/:56).
+  **Integration (int49, 78h r1-r3 squashed 5738b779d3 + 78i r1-r3 squashed c3b28b252d; binary int49a):** 78h rev78h2's
+  only blocker (the copy-body check failing open) fixed in r3, guard red on r2; 78i rev78i2 SHIP, its follow-ups in r3. Gates
+  int49a: nextest 6688/6688 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int48a empty. Population A/B
+  (2,331 of 2,340: 78h's 542, 78i's 1,727 + r3's 546) int48a vs int49a: E 3,760 → 3,848, F 26 → 23, +197k words, no paper
+  loses > 1 % of its words; the 4 with more errors are 78i's root-caused ones (math9906120, math9806089, math0101270 read
+  past the title through their own amams.sty, 0 → thousands of words; 1711.05227's restatement replays an erring
+  alignment). 313 outputs changed: 293 classified by the writers, 15 = 78h's declared names, and 5 checked here — 2104.11163
+  (en dash in `dcterms:subject`), 2407.02379 (metadata macros expanded), 2407.14159 (empty creator triple, as Perl), 1805.03240
+  and 2202.10894 (footnotes in a minipage / tcolorbox lettered a, b, as pdflatex; no text lost). Binding nets (int49a)
+  136/136, 0 worse than int48a.
 - **78g** (kernel batch: tcolorbox box labels, TCB-LABEL, user ruling 2026-10-21 item 12; + the repro stand-in licence
   audit, item 11; guards `perfect_kernel_batch78g::*`, 4, each RED on 25730beb73; OD #813, KPE #1038). (1) A label after a
   raw `\refstepcounter` names the object the step numbers, which takes the step's number: the kernel's
