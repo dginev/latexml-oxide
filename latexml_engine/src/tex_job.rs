@@ -373,6 +373,7 @@ LoadDefinitions!({
       })?;
     } else if class_cls_found {
       // Branch 2 — `<class>.cls` exists: load it as the document class.
+      crate::latex_constructs::note_document_class(&class);
       load_class(&class, opts_vec, after)?;
       crate::latex_constructs::make_missing_float_counters()?;
     } else {

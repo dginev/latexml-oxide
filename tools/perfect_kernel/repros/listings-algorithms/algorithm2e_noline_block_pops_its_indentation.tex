@@ -5,7 +5,7 @@
 % engines: rust int49a, 78k r1/r2 = 0 errors, "end", "b;", "body" indented one level, "c;", "d;" two; perl = the same
 %          (algorithm2e.sty.ltxml:120 `\algocf@Noline` pushes `\lx@algo@advlevel` and never pops it, unlike `\algocf@Vline`)
 % expect:  0 errors, 0 warnings; only "a;" and "c;" indented
-% status:  RED
+% status:  GREEN (78o: `\algocf@Noline` pops the level it pushed; guard perfect_kernel_batch78o)
 \documentclass{article}
 \usepackage[noline]{algorithm2e}
 \SetKwBlock{Loop}{loop}{end}

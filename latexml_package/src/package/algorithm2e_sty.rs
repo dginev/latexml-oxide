@@ -654,7 +654,12 @@ LoadDefinitions!({
   // runs).
   DefMacro!("\\algocf@Vline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advline \\lx@strippar{#1}\\lx@algo@pop@indentation", locked => true);
   DefMacro!("\\algocf@Vsline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advline \\lx@strippar{#1}\\lx@algo@pop@indentation", locked => true);
-  DefMacro!("\\algocf@Noline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advlevel \\lx@strippar{#1}", locked => true);
+  // algorithm2e.sty:1851-1860: a `noline` block sets its body in a box of its own (`\algocf@push` inside the box,
+  // `\algocf@pop{\skiprule}` after it), so the line after the block is at the block's level again: the level pushed
+  // is popped as `\algocf@Vline`'s is. Perl's algorithm2e.sty.ltxml:120 never pops it, so every later line went one
+  // level deeper per block (KNOWN_PERL_ERRORS #1062, OXIDIZED_DESIGN_DIVERGENCES #852). Witness 1410.4452 (`noline`,
+  // its listing indented as its PDF); guard `perfect_kernel_batch78o::algorithm2e_noline_block_pops_its_indentation`.
+  DefMacro!("\\algocf@Noline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advlevel \\lx@strippar{#1}\\lx@algo@pop@indentation", locked => true);
 
   // Semicolon handling
   DefMacro!("\\algocf@endline", sub[_args] {

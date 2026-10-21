@@ -224,6 +224,9 @@ pub(crate) fn load() -> Result<()> {
       Some(Scope::Global),
     );
     assign_value(&s!("{}_inlist", captype), inlist, Some(Scope::Global));
+    // How many captions of the type were made, for a box that holds one (`end_caption_box`).
+    let count = s!("{CAPTION_COUNT_PREFIX}{captype}");
+    assign_value(&count, lookup_int(&count) + 1, Some(Scope::Global));
   });
 
   DefConstructor!("\\@@generic@caption[]{}", "<ltx:text class='ltx_caption'>#2</ltx:text>",

@@ -21,5 +21,7 @@ LoadDefinitions!({
   });
   ProcessOptions!();
   LoadClass!("book");
+  // extsizes' copy of book.cls's title block (`declare_fnsymbol_title_block`), when extbook is the document's class.
+  engine::latex_constructs::declare_fnsymbol_title_block("extbook", Some(true))?;
   Let!("\\@ptsize", "\\lx@extsizes@ptsize");
 });

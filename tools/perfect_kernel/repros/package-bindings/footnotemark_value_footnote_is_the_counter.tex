@@ -1,0 +1,13 @@
+% witness: review probe rev78o f8 (`\footnotemark[\value{footnote}]`, a count register as the mark's number)
+% oracle:  pdflatex 0 errors: "Body11 and 1 1", note "1 bodyone" — latex.ltx:17678-17682 `\@xfootnotemark` reads
+%          `\c@footnote #1\relax`, so `[\value{footnote}]` is the counter's value, as `[\arabic{footnote}]`
+%          (`\footnotetext[<n>]`, :17694-17699, and `\footnote[<n>]` read it alike)
+% engines: rust 78o r1 and int52a = 2 warnings ("Missing number, treated as zero": each optional argument digested on its
+%          own, a register assignment), the two `[\value{footnote}]` marks ""; perl the same
+% expect:  0 errors, 0 warnings; the three marks "1"
+% status:  GREEN (78o r2)
+\documentclass{article}
+\begin{document}
+Body\footnote{bodyone}\footnotemark[\value{footnote}] and \footnotemark[\arabic{footnote}]
+\footnotemark[\value{footnote}].
+\end{document}

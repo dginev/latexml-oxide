@@ -1,0 +1,17 @@
+% witness: review probe rev78o2 ttp3 (78o r2 copied the body's `\footnotetext` "two" into an author's bare
+%          `\footnotemark`, both printing "2")
+% oracle:  pdflatex 0 errors: title page "A1 B2", notes "1 aa"; "Body1 x2 y.", notes "1 one", "2 two" — report's
+%          \maketitle sets the footnote counter back to 0 (report.cls:196, :229), so B's "2" is the title's and has no
+%          text; the body's `\footnotetext` answers the body's `\footnotemark` "2"
+% engines: rust 78o r2 = 0 errors, "two" in B's "2" and in the body's "2" (duplicated); int52a B's mark "1" alone,
+%          "two" in the body's (marked "3"); perl the same as int52a (1 warning: ar5iv not found)
+% expect:  0 errors, 0 warnings; B's mark "2" alone, the body's mark "2" holding "two"
+% status:  GREEN (78o r3)
+\documentclass{report}
+\title{T}
+\author{A\thanks{aa} \and B\footnotemark}
+\begin{document}
+\maketitle
+Body\footnote{one} x\footnotemark{} y.
+\footnotetext{two}
+\end{document}

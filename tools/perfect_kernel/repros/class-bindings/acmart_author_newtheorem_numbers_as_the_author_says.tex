@@ -1,0 +1,18 @@
+% witness: 2306.01662 (`\newtheorem{theorem}{Theorem}` in the preamble of an acmart paper: PDF "Theorem 1", "Theorem 2"
+%          across sections, ours "Theorem 1" twice)
+% oracle:  pdflatex 0 errors: "Theorem 1. A", "1 S", "Theorem 2. B", "Lemma 3. C" — acmart.cls:3460-3489 makes its
+%          theorems `\AtEndPreamble`, each under `\@ifundefined`, so the author's `{theorem}` (not within sections)
+%          stands and the class's `{lemma}` shares its counter
+% engines: rust int51a = 0 errors, "Theorem 1.", "Theorem 1.", "Lemma 2." (the class's `theorem` counter, reset by
+%          sections, kept); perl the same (acmart.cls.ltxml:236-243 `\newtheorem` at class load)
+% expect:  0 errors, 0 warnings; "Theorem 1.", "Theorem 2.", "Lemma 3."
+% status:  GREEN (78o)
+\documentclass[sigconf]{acmart}
+\newtheorem{theorem}{Theorem}
+\begin{document}
+\title{T}\maketitle
+\begin{theorem}A\end{theorem}
+\section{S}
+\begin{theorem}B\end{theorem}
+\begin{lemma}C\end{lemma}
+\end{document}

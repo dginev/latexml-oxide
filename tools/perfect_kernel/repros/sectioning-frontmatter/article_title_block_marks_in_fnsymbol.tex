@@ -1,0 +1,21 @@
+% witness: 2412.20504, 0903.0014, 2006.14582 (`\author{A\footnotemark[1] …}` `\maketitle`
+%          `\renewcommand{\thefootnote}{\fnsymbol{footnote}}` `\footnotetext[1]{…}`); 2507.05750
+% oracle:  pdflatex 0 errors: "Ann∗ Bob†", notes "∗ Equal." "† Intern.", "Body1" with note "1 first" — article.cls:203-205
+%          `\maketitle` marks its title block in `\@fnsymbol\c@footnote` and resets the counter (:223); latex.ltx
+%          :17678-17699 mark `[<n>]` with `\thefootnote` at counter <n>
+% engines: rust int51a = 0 errors, marks "1", "2" and texts "1", "2" (paired, but numbered), "first" marked "1"; the
+%          78k draft (`[n]` through `\thefootnote` alone) unpaired them ("1" against "∗"); perl "1", "2" (KNOWN_PERL_ERRORS
+%          #1060)
+% expect:  0 errors, 0 warnings; Ann's note "∗ Equal.", Bob's "† Intern.", the body's "1 first"
+% status:  GREEN (78o)
+\documentclass{article}
+\title{T}
+\author{Ann\footnotemark[1] \and Bob\footnotemark[2]}
+\begin{document}
+\maketitle
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+\footnotetext[1]{Equal.}
+\footnotetext[2]{Intern.}
+\renewcommand{\thefootnote}{\arabic{footnote}}
+Body\footnote{first}.
+\end{document}

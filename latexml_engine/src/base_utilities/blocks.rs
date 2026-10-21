@@ -468,11 +468,16 @@ fn adopt_box_caption(
     .get("caption_type")
     .map(|t| t.to_string())
     .unwrap_or_default();
+  // A sub-caption's panel (`sub<type>`, subcaption's `\subcaption` in a minipage) is the float's element too, as
+  // `{subtable}` is an `ltx:table` (2502.10377's minipage sub-tables).
   if let Some(float) = open
     .iter()
     .map(|(o, _)| o)
     .find(|o| with(document::get_node_qname(o), |q| PANEL_FLOATS.contains(&q)))
-    && is_float_of_type(float, &captype)
+    && (is_float_of_type(float, &captype)
+      || captype
+        .strip_prefix("sub")
+        .is_some_and(|parent| is_float_of_type(float, parent)))
   {
     let float_qname = document::get_node_qname(float);
     if document::get_node_qname(&panel) != float_qname

@@ -6,7 +6,7 @@
 % engines: rust 69c = 6 errors (acmart_cls.rs:442-449 `\newtheorem{…}` at class load, unconditional), perl the
 %   same (acmart.cls.ltxml:236-243)
 % expect:  0 errors; the cell holds "ex1"
-% status:  RED (69c side finding; fix: the class's `\AtEndPreamble` + `\@ifundefined` per theorem)
+% status:  GREEN (78o: the class's `\AtEndPreamble` + `\@ifundefined` per theorem; guard perfect_kernel_batch78o)
 \documentclass[sigconf]{acmart}
 \newcommand{\example}[1]{\textbf{ex#1}}
 \begin{document}

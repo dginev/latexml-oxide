@@ -70,6 +70,15 @@ pub(crate) fn retract_chapter_before_class_load() {
 /// binding and no file answered the class (the OmniBus fallback; main-session ruling 2026-10-19, astro-ph9812142).
 pub const CLASS_DECLARED: &str = "lx@class@declared";
 
+/// The document's class, named by its first `\documentclass` or `\documentstyle` before the class loads
+/// (`lx@document@class`, read by `is_document_class`).
+pub fn note_document_class(class_name: &str) {
+  if lookup_string("lx@document@class").is_empty() {
+    let base = class_name.rsplit('/').next().unwrap_or(class_name);
+    assign_value("lx@document@class", base.to_string(), Some(Scope::Global));
+  }
+}
+
 #[rustfmt::skip]
 /// OXIDIZED_DESIGN #179, the "has chapters" step, after each class load of a `\documentclass` document: the class's
 /// own (`\documentclass`), a raw class's `\LoadClass`/`\LoadClassWithOptions` (sect05.rs), a binding's `LoadClass!`
@@ -277,6 +286,7 @@ pub(crate) fn load() -> Result<()> {
       assign_value(CLASS_DECLARED, true, Some(Scope::Global));
       retract_chapter_before_class_load();
       let omnibus_before = lookup_bool("OmniBus.cls_loaded");
+      note_document_class(&class_name);
       load_class(&class_name,
                 class_opts,
                 Tokens!(T_CS!("\\AtBeginDocument"), T_CS!("\\warn@unusedclassoptions")))?;

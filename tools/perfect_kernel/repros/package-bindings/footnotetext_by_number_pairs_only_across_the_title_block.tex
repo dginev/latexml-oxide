@@ -1,0 +1,24 @@
+% witness: review probe rev78o f2 (78o r1's counter-value pairing took a standalone `\footnotetext[1]` for a table's
+%          `\footnotemark`); the pairing it is for: 2505.14146, 1406.0089, 2002.11721
+% oracle:  pdflatex 0 errors: "A∗ B", "x1 Body2", notes "∗ Equal contribution", "1 table note", "2 bodytwo" — the
+%          `\footnotetext[1]` under `\fnsymbol` is a note of its own ("∗"), the table's `\footnotemark` "1" is answered by
+%          the `\footnotetext` after the tabular (latex.ltx:17678-17699)
+% engines: rust 78o r1 = 0 errors, "Equal contribution" moved into the table's mark (both stand for 1), "table note" left
+%          a text; int52a and perl the same (the `[1]` printed "1", the mark the table's prints; perl also 1 warning,
+%          "Orphaned frontmatter annotation" for the author's `$^{*}$`)
+% expect:  0 errors, 0 warnings; the "∗ Equal contribution" text alone, the table's mark "1" holding "table note"
+% status:  GREEN (78o r2)
+\documentclass{article}
+\title{T}
+\author{A$^{*}$ \and B}
+\begin{document}
+\maketitle
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+\footnotetext[1]{Equal contribution}
+\renewcommand{\thefootnote}{\arabic{footnote}}
+\begin{tabular}{c}
+x\footnotemark\\
+\end{tabular}
+\footnotetext{table note}
+Body\footnote{bodytwo}.
+\end{document}

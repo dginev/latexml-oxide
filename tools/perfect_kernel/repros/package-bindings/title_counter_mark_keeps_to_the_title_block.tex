@@ -1,0 +1,17 @@
+% witness: review probe rev78o2 art2 (78o r2 moved a body `\footnotetext[2]` into an author's
+%          `\footnotemark[\value{footnote}]`, both standing for 2); the literal-number pairing kept: 2505.14146
+% oracle:  pdflatex 0 errors: "A∗ B† C†", notes "∗ aa", "† bb", "2 Body text two" — article's \maketitle sets the
+%          footnote counter back to 0 (article.cls:190, :223), so C's mark is the title's 2 ("†", after two \thanks)
+%          and the body's `\footnotetext[2]` another note
+% engines: rust 78o r2 = 0 errors, "Body text two" in C's "†"; int52a C's mark empty, the text apart; perl the same
+%          (1 warning, "Missing number, treated as zero" for `\value{footnote}` digested on its own)
+% expect:  0 errors, 0 warnings; C's mark "†" alone, the body's text "2 Body text two" apart
+% status:  GREEN (78o r3)
+\documentclass{article}
+\title{T}
+\author{A\thanks{aa} \and B\thanks{bb} \and C\footnotemark[\value{footnote}]}
+\begin{document}
+\maketitle
+Body text.
+\footnotetext[2]{Body text two}
+\end{document}

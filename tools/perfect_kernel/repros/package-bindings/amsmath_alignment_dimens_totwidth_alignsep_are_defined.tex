@@ -5,7 +5,7 @@
 %          (and :1364 `\def\black@#1`), internals raw code reads
 % engines: rust 78k r2 = 2 errors (`\totwidth@`, `\alignsep@` undefined; amsmath_sty.rs defines neither)
 % expect:  0 errors, 0 warnings; "Width 10.0pt."
-% status:  RED
+% status:  GREEN (78o: amsmath.sty:1309-1317 dimens and :1364 `\black@`; guard perfect_kernel_batch78o)
 \documentclass{article}
 \usepackage{amsmath}
 \makeatletter

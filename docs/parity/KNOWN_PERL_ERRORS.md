@@ -8185,7 +8185,7 @@ Rust fix (57y): after leaving vertical mode (`\hmode@bgroup`, omsenc.def:62), th
 
 caption.sty.ltxml:91 defines `\ContinuedFloat` as `Tokens()`: a figure continued over several floats takes a new number for each part and restarts its sub-float letters — refnums 1, 1a, 1b, 2, 2a, 2b, 3 where pdflatex prints "(a) (b) Figure 1", "(c) (d) Figure 1", "Figure 2" (caption.sty:496-536). Trigger: two `figure`s with `\subfloat`s under caption + subcaption, the second starting `\ContinuedFloat`.
 
-Rust fix (57ad): `\continuedfloat[*]` counts the parts in `continuedfloat` (restarted at every real step of the current float's own counter through the `\lx@float@stepped` hook, caption's `\caption@reset@continuedfloat`, :501-503, :577-579; a sub-float's counter restarts nothing), leaves one global pending continuation of its type (`lx@float@continued`, caption's `caption@flags`, :173-192) under which the float's next step keeps the number without resetting the sub-counters (`latex_constructs::step_float_counter`; caption's `\caption@setcontinued`, :192, then `\caption@@refcounter`, :557-568), and suffixes the ids once (`\@alph\c@continuedfloat`); a continuation after another float type is caption's error. Wherever caption runs `\caption@settype` (:300-303) — the begin of a float built by `\@xfloat` (`\caption@xfloat`, :271-275), `\captionof`, `\captionsetup{type=…}` and a longtable's caption (:1167) — the type becomes the current float's and a pending continuation is cleared (`latex_constructs::begin_float_continuation`); floats caption never types — subfig's, subfigure.sty's and subfloat.sty's sub-floats, listings, an uncaptioned longtable — leave it pending, and their own counters step plainly (`before_untyped_float`). subfig's `\ContinuedFloat` calls `\caption@ContinuedFloat` (subfig.sty:581-590). Residual: a minipage `\subcaption` does not pre-step the main counter as caption's `\caption@subtypehook` does (:642), so a continued part's sub-captions restart at (a) (RED `captions-floats/continuedfloat_minipage_subcaption_continues_the_letters`). Witness 2605.17685.
+Rust fix (57ad): `\continuedfloat[*]` counts the parts in `continuedfloat` (restarted at every real step of the current float's own counter through the `\lx@float@stepped` hook, caption's `\caption@reset@continuedfloat`, :501-503, :577-579; a sub-float's counter restarts nothing), leaves one global pending continuation of its type (`lx@float@continued`, caption's `caption@flags`, :173-192) under which the float's next step keeps the number without resetting the sub-counters (`latex_constructs::step_float_counter`; caption's `\caption@setcontinued`, :192, then `\caption@@refcounter`, :557-568), and suffixes the ids once (`\@alph\c@continuedfloat`); a continuation after another float type is caption's error. Wherever caption runs `\caption@settype` (:300-303) — the begin of a float built by `\@xfloat` (`\caption@xfloat`, :271-275), `\captionof`, `\captionsetup{type=…}` and a longtable's caption (:1167) — the type becomes the current float's and a pending continuation is cleared (`latex_constructs::begin_float_continuation`); floats caption never types — subfig's, subfigure.sty's and subfloat.sty's sub-floats, listings, an uncaptioned longtable — leave it pending, and their own counters step plainly (`before_untyped_float`). subfig's `\ContinuedFloat` calls `\caption@ContinuedFloat` (subfig.sty:581-590). A minipage `\subcaption` pre-steps the main counter as caption's `\caption@subtypehook` does (:642) since 78o (OXIDIZED_DESIGN_DIVERGENCES #853), so a continued part's sub-captions go on lettering (`captions-floats/continuedfloat_minipage_subcaption_continues_the_letters`, GREEN). Witness 2605.17685.
 
 **Guard**: `perfect_kernel_batch56::{continuedfloat_keeps_the_number_and_the_letters, continuedfloat_suppresses_one_step_per_real_float, continuedfloat_counts_only_the_main_floats_steps, continuedfloat_scope_opens_where_caption_sets_the_type, continuedfloat_captionof_wrapper_does_not_leak}` (repro `captions-floats/continuedfloat_keeps_the_number_and_the_letters`).
 
@@ -16877,9 +16877,20 @@ of the 89 `symbol` papers of the 30k sample give a footnote a number. NOT FIXED 
 the common title-block idiom `\author{A\footnotemark[1]}` `\maketitle`
 `\renewcommand\thefootnote{\fnsymbol{footnote}}` `\footnotetext[1]{…}` (2412.20504, 0903.0014, 2006.14582) prints "∗"
 for both in pdflatex because article's `\maketitle` marks its title in `\@fnsymbol`, which our frontmatter does not, so
-the mark stayed "1" while the text became "∗". The two halves need one rule (SYNC_STATUS 78k bullet: pair a mark and a
-text by the counter value they stand for, or emulate the class's title-block `\thefootnote`). Repro
-package-bindings/footmisc_symbol_numbered_footnotetext_pairs_with_its_mark (RED).
+the mark stayed "1" while the text became "∗". Fixed in Rust (78o, OXIDIZED_DESIGN_DIVERGENCES #851), both halves
+together: `[<n>]` prints `\thefootnote` at counter `<n>` (a mark that is no number stays as given); article's, report's
+and book's title block (when that class is the document's, without a title page) marks its notes in `\@fnsymbol` and
+resets the counter after `\maketitle`; a mark and a text pair by their printed marks as before and, finding none, by
+the counter value they stand for, when one of the two is in the title block (2505.14146's `\footnotetext[2]` "2"
+answering the title's "†"; siamltex's title marks, 1406.0089). 78o r2: the title block's `\thanks` and `\footnote`
+step the counter as article's `\thanks` (`\footnotemark` and its text, latex.ltx:17215) does — Perl's frontmatter note
+steps nothing, so `\author{A\footnote{…}}\author{B\footnotemark[\arabic{footnote}]}` gives B "0" (pdflatex "∗";
+2201.11183, 2111.13260) —, and `[<n>]` is read undigested, so `\footnotemark[\value{footnote}]` is the counter (Perl:
+"Missing number, treated as zero", the mark printed as nothing). Repros
+package-bindings/{footmisc_symbol_numbered_footnotetext_pairs_with_its_mark, footnotemark_value_footnote_is_the_counter,
+footnotetext_by_number_pairs_only_across_the_title_block}, sectioning-frontmatter/{article_title_block_marks_in_fnsymbol,
+article_title_notes_step_the_footnote_counter, article_title_thanks_in_every_field_step_in_turn}; guards
+`perfect_kernel_batch78o::*`.
 
 ## 1061. thmtools' `\declaretheorem` numbers `unnumbered`/`starred` theorems and takes one name
 
@@ -16902,8 +16913,10 @@ algorithm2e.sty:1851-1860 `\algocf@Noline` sets the block's body in a box of its
 the block's level again. Perl's `\algocf@Noline` (algorithm2e.sty.ltxml:120) pushes `\lx@algo@advlevel` and, unlike
 `\algocf@Vline`/`\algocf@Vsline`, never pops it: every later line of the listing is one level deeper per block. Minimal
 trigger: `\usepackage[noline]{algorithm2e}` `\SetKwBlock{Loop}{loop}{end}` `\begin{algorithm}\Loop{a\;}b\;\end{algorithm}`
-— pdflatex "end", "b;" at the left; Perl and Rust indent both. Open (SHARED; algorithm2e_sty.rs `\algocf@Noline` is
-Perl's). RED listings-algorithms/algorithm2e_noline_block_pops_its_indentation.
+— pdflatex "end", "b;" at the left; Perl and Rust indent both. Fixed in Rust (78o, OXIDIZED_DESIGN_DIVERGENCES #852):
+`\algocf@Noline` pops the level it pushed, so `noline`/`\SetAlgoNoLine` blocks and groups give it back (1410.4452).
+Repro listings-algorithms/algorithm2e_noline_block_pops_its_indentation; guards
+`perfect_kernel_batch78o::{algorithm2e_noline_block_pops_its_indentation, algorithm2e_setalgonoline_groups_pop_their_indentation}`.
 
 ## 1063. caption's `\caption*` takes none of caption's fonts
 
@@ -17029,3 +17042,35 @@ the citation prints both numbers and later entries are numbered one higher per m
 `\NAT@b*@key`), and the notes are not added to the entry (`\nat@keyopt@open`/`\nat@keyopt@shut`; a `{thebibliography}`
 entry does not print them in pdflatex either). Repro
 index-bib/revtex_merged_citation_key; guard `perfect_kernel_batch78n::revtex_merged_citation`.
+
+## 1085. A `\subcaption` in a minipage numbers no panel; its label names the figure
+
+subcaption.sty:251 `\subcaption` is `\caption` under `\@captype` `sub<type>`: in a minipage of a figure it numbers that
+minipage "1a" (caption.sty:639-664 steps the figure's counter first) and a `\label` after it names the panel. Perl's
+`\subcaption` (subcaption.sty.ltxml:43-56, "TODO: … should become a sub<float>") only changes `\@captype`: no element
+carries the sub-caption's number and its `\label` lands on the figure. Minimal trigger: `\usepackage{subcaption}`
+`\begin{figure}\begin{minipage}{.4\linewidth}X\subcaption{One}\label{a}\end{minipage}\caption{Both.}\end{figure}`
+`\ref{a}` — pdflatex "1a", Perl "1". Fixed in Rust (78o, OXIDIZED_DESIGN_DIVERGENCES #853): the minipage is the
+sub-figure. Witness 2011.13897. Repro captions-floats/subcaption_in_a_minipage_labels_its_panel; guards
+`perfect_kernel_batch78o::{subcaption_in_a_minipage_labels_its_panel, subcaption_minipage_panels_in_boxes_and_continued_floats}`.
+
+## 1086. acmart defines its theorems at class load, over the author's
+
+acmart.cls:3460-3489 makes its theorem set `\AtEndPreamble`, each `\@ifundefined`, under the `acmthm` key. Perl's
+acmart.cls.ltxml:236-243 `\newtheorem`s them at class load, so the author's `\newtheorem{theorem}{Theorem}` keeps the
+class's within-section counter and the author's `\newcommand{\example}` is refused. Minimal trigger:
+`\documentclass{acmart}\newtheorem{theorem}{Theorem}` `\begin{theorem}A\end{theorem}\section{S}\begin{theorem}B\end{theorem}`
+— pdflatex "Theorem 1", "Theorem 2", Perl "Theorem 1" twice. Fixed in Rust (78o, OXIDIZED_DESIGN_DIVERGENCES #854).
+Witnesses 2306.01662, 2510.04987. Repros class-bindings/acmart_author_theorem_name_wins,
+class-bindings/acmart_author_newtheorem_numbers_as_the_author_says; guards `perfect_kernel_batch78o::acmart_*`.
+
+## 1087. amsmath's alignment dimens `\totwidth@`, `\alignsep@` and `\black@` are undefined
+
+amsmath.sty:1309-1317 `\newdimen` `\eqnshift@`, `\alignsep@`, `\tagshift@`, `\tagwidth@`, `\totwidth@`, `\lineht@`, and
+:1364-1376 `\def\black@#1`; Perl's amsmath.sty.ltxml defines none, so raw code reading them errs. Minimal trigger:
+`\usepackage{amsmath}\makeatletter` `\dimen0=\totwidth@ \advance\dimen0 by \alignsep@` — pdflatex 0 errors, Perl 2
+undefined. Witness 0912.5438 (its shipped mathtools.sty v1.01a's `\x@calc@shift@lf` and fabntheorem.sty's `\endgather`
+copy ending `\math@cr\black@\totwidth@\egroup`): 156 → 124 Errors (the rest its shipped tikz.code.tex), the paper's
+tail and bibliography back (15,382 → 43,578 words). Fixed in Rust (78o, amsmath_sty.rs, placed as in amsmath.sty).
+Repro package-bindings/amsmath_alignment_dimens_totwidth_alignsep_are_defined; guard
+`perfect_kernel_batch78o::amsmath_alignment_dimens_totwidth_alignsep_are_defined`.

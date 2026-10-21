@@ -65,6 +65,9 @@ LoadDefinitions!( {
   // for derived classes with multiple lines, map this to undef and add ltx_authors_multiline
 
   AddToMacro!("\\lx@maketitle@body", "\\ltx@authors@oneline");
+  // article.cls:170-232: the title block marks its notes in `\@fnsymbol` (without `titlepage`) and resets the footnote
+  // counter, when article is the document's class.
+  engine::latex_constructs::declare_fnsymbol_title_block("article", Some(false))?;
 
   DefMacro!("\\@ptsize", "0"); // should depend on options...
   DefMacro!("\\@pnumwidth", "1.55em");

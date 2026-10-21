@@ -1,0 +1,12 @@
+% witness: review probe rev78o2 valerr (78o r2 expanded `[<n>]` three times: to look for a number, for the mark, for
+%          the counter value — each raising the expansion's error)
+% oracle:  pdflatex 1 error ("You can't use `\relax' after \the"): "A1 . H0 X.", note "1 one" — the mark is printed
+%          from the counter as TeX recovers (0)
+% engines: rust 78o r2 = 2 errors (the same one twice); int52a 1 error; perl 1 error (and 1 warning: ar5iv not found)
+% expect:  1 error, Error:unexpected:\the\relax; 0 warnings; H's mark "0"
+% status:  GREEN (78o r3)
+\documentclass{article}
+\begin{document}
+A\footnote{one}.
+H\footnotemark[\the\relax] X.
+\end{document}

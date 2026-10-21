@@ -79,6 +79,9 @@ LoadDefinitions!({
   // This makes the authors appear on 1 line;
   // for derived classes with multiple lines, map this to undef and add ltx_authors_multiline
   AddToMacro!("\\lx@maketitle@body", "\\ltx@authors@oneline");
+  // book.cls's title block: `\@fnsymbol` marks only under `notitlepage` (`titlepage` is the default), the footnote
+  // counter reset after it, when book is the document's class.
+  engine::latex_constructs::declare_fnsymbol_title_block("book", Some(true))?;
 
   DefMacro!("\\@ptsize", "0"); // should depend on options...
   DefMacro!("\\@pnumwidth", "1.55em");

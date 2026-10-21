@@ -779,7 +779,7 @@ fn float_of(xml: &str, label: &str) -> (String, String) {
 /// A closing caption is hoisted out of a transform only into a float that holds no other caption: two `\resizebox`ed
 /// captioned panels side by side, or a rotated captioned `\parbox` beside the float's own `\caption`, stay separate
 /// floats with their own labels and numbers (one hoist made "See Figures 1 and 1"), and `\subcaption` panels in
-/// `\scalebox`es keep their panels. Perl's container stands for all of them.
+/// `\scalebox`es keep their panels (each its sub-figure since 78o). Perl's container stands for all of them.
 #[test]
 fn caption_hoist_never_merges_two_captions() {
   let xml = convert_clean(
@@ -820,9 +820,13 @@ See \ref{inner}, \ref{outer}.
     inner_number == "Figure 1" && outer_number == "Figure 2",
     "{xml}"
   );
-  assert!(
-    xml.contains(r#"xml:id="S0.F3.fig1""#) && xml.contains(r#"xml:id="S0.F3.fig2""#),
-    "{xml}"
+  // The `\subcaption` panels are the figure's sub-figures, numbered "3a", "3b" (78o, OXIDIZED_DESIGN_DIVERGENCES #853;
+  // before, the id-less panels `S0.F3.fig1`/`fig2`).
+  assert_element(
+    &xml,
+    "figure",
+    &["xml:id=\"S0.F3\""],
+    r#"<figure inlist="lof" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><inline-block align="center" class="ltx_figure_panel" depth="7.3pt" height="11.8pt" width="124.2pt" xml:id="S0.F3.1" xscale="0.9" xtranslate="-6.9pt" yscale="0.9" ytranslate="1.1pt"><figure class="ltx_minipage" inlist="lof" vattach="middle" width="138.0pt" xml:id="S0.F3.sf1"><tags><tag><text fontsize="90%" xml:id="S0.F3.sf1.1">(a)</text></tag><tag role="refnum">3a</tag></tags><p xml:id="S0.F3.sf1.2">Panel A.</p><toccaption><tag close=" ">a</tag>Sub A</toccaption><caption><tag close=" "><text fontsize="90%" xml:id="S0.F3.sf1.3">(a)</text></tag><text fontsize="90%" xml:id="S0.F3.sf1.4">Sub A</text></caption></figure></inline-block><inline-block align="center" class="ltx_figure_panel" depth="7.3pt" height="11.8pt" width="124.2pt" xml:id="S0.F3.2" xscale="0.9" xtranslate="-6.9pt" yscale="0.9" ytranslate="1.1pt"><figure class="ltx_minipage" inlist="lof" vattach="middle" width="138.0pt" xml:id="S0.F3.sf2"><tags><tag><text fontsize="90%" xml:id="S0.F3.sf2.1">(b)</text></tag><tag role="refnum">3b</tag></tags><p xml:id="S0.F3.sf2.2">Panel B.</p><toccaption><tag close=" ">b</tag>Sub B</toccaption><caption><tag close=" "><text fontsize="90%" xml:id="S0.F3.sf2.3">(b)</text></tag><text fontsize="90%" xml:id="S0.F3.sf2.4">Sub B</text></caption></figure></inline-block><toccaption class="ltx_centering"><tag close=" ">3</tag>Whole</toccaption><caption class="ltx_centering"><tag close=": ">Figure 3</tag>Whole</caption></figure>"#,
   );
 }
 

@@ -16756,7 +16756,8 @@ Witnesses heria/heria-proposal (heria.cls:737-745 `SidewaysFigure`), 1810.08269.
 - an environment not directly in the float.
 
 The `ltx_figure_panel` wrap that would keep such a box valid with its own id, labels and tags is a follow-up
-(task #193; RED `captions-floats/subcaption_labels_in_scaled_panels_stay_on_their_panels`). Guards
+(task #193; `captions-floats/subcaption_labels_in_scaled_panels_stay_on_their_panels`, GREEN 78o for its labels and
+numbers through #853, its panel inside the box's `ltx:inline-block` still schema-invalid). Guards
 `perfect_kernel_batch65a::{caption_in_a_rotated_parbox_stays_with_its_figure,
 caption_first_box_in_a_transform_keeps_its_content, captioned_box_beside_other_content_in_a_transform_stays_inside,
 caption_hoist_never_merges_two_captions, caption_hoist_never_moves_content_beside_the_box,
@@ -23087,10 +23088,12 @@ adversarial shapes: an `\aftergroup`, a `\thanks` holding a `\label` with a `\re
   `\newline`, `\linebreak`, `\par` a row; `\thanks`, `\footnote`, `\footnotetext` a note reading its argument;
   `\footnotemark`, `\inst` marks; `\label` the note's label; `\lx@annotate@frontmatter` and the defined contact commands
   `\email`, `\url`, `\href`, `\orcidlink`, `\affil`, `\address`, … contacts; `\thefootnote` the title's footnote marks:
-  the binding-declared hook `\lx@fm@title@thefootnote` when one is defined, else the kernel `\maketitle`'s
-  `\@fnsymbol\c@footnote` — rehearsal.rs `TITLE_FOOTNOTE_HOOK`, for a class numbering its title's marks otherwise:
-  revtex4-2.cls:3040-3041 `\frontmatter@thefootnote` is `\@fnsymbol` by default and `\@alph` only under its
-  `altaffilletter` option, :5978; no binding declares it yet, guard `title_footnote_hook_overrides_fnsymbol`), through
+  the title's `\thefootnote` hook `\lx@title@thefootnote` when one is defined — the kernel's own, the one the printed
+  title marks follow (78o r2, #851: rehearsal.rs `TITLE_FOOTNOTE_HOOK` is `latex_constructs::TITLE_THEFOOTNOTE`;
+  article, report and book define it `\@fnsymbol\c@footnote`), else the kernel `\maketitle`'s `\@fnsymbol\c@footnote`
+  — for a class numbering its title's marks otherwise: revtex4-2.cls:3040-3041 `\frontmatter@thefootnote` is
+  `\@fnsymbol` by default and `\@alph` only under its `altaffilletter` option, :5978; guards
+  `title_footnote_hook_overrides_fnsymbol`, `perfect_kernel_batch78o::declared_title_thefootnote_prints_the_marks_the_observer_labels`), through
   the speculative-run engine of #767 (assignments journalled and rolled back, diagnostics held and discarded, terminal
   output muted, the frontmatter frozen), with progress notes silenced (core `error::SilenceProgressNotesGuard`: an
   `\input` in the field reads its file again, and its `(Processing content …` note is not the conversion's) and with the
@@ -23138,8 +23141,9 @@ would split every name set with a small-caps surname — gretsi's `first \textsc
 S2a.2's call; guard `font_switch_inside_a_run_keeps_the_name`); tokens an `\input` in the field reads come from the
 file and carry no position, so their events have no span (guard `input_field_events_carry_no_span`); `\corref`, `\fnref`, `\thanksref` and `\ead` are not bound
 (they digest as their binding defines them, read by what they print); a bare `\footnotemark`'s label is the kernel
-`\maketitle`'s `\@fnsymbol` mark unless a binding declares the title's own through `\lx@fm@title@thefootnote` (above;
-none does yet: revtex's default is `\@fnsymbol` too, `\@alph` only under `altaffilletter`), and assumes the counter at
+`\maketitle`'s `\@fnsymbol` mark unless the title's own is declared through `\lx@title@thefootnote` (above; article,
+report and book declare `\@fnsymbol`, a title-page class none — report and book print arabic there —, and revtex's
+default is `\@fnsymbol` too, `\@alph` only under `altaffilletter`), and assumes the counter at
 the flush is the one at `\maketitle`; a binding block's projected positions may coincide with positions a later real
 stamp gives (spans are unique only within a block: key an event by (block index, span); once S2b stamps for real,
 projected must equal stamped); an event ending its block stops short of a trailing delimiter (`\footnotemark[1]}`'s
@@ -23286,3 +23290,132 @@ macro) set by `set_theorem_within_display` (ieeetran_cls.rs, for `section` → `
 binding, which ntheorem and theorem.sty borrow, clears it (`clear_theorem_within_display`), as their own `\@xnthm`
 replaces the class's in LaTeX. Repro cross-references/ieeetran_theorem_within_section_is_arabic; guard
 `perfect_kernel_batch78n::ieeetran_theorem_within_section`.
+
+### 851. A footnote's `[<n>]` is `\thefootnote` at `<n>`; article's title block marks in `\@fnsymbol` and steps the counter; a title mark and a body text pair by the number they stand for
+
+latex.ltx:17652-17657 `\@xfootnote`, :17678-17682 `\@xfootnotemark` and :17694-17699 `\@xfootnotenext` set the footnote
+counter to `<n>` in a group and mark the note `\thefootnote` there; article's `\maketitle` (article.cls:203-205; report.cls
+:211, book.cls:217, extarticle's copy, all in the `\if@titlepage` false branch — `titlepage` is report's and book's
+default) typesets the title, the authors and the date with `\thefootnote` `\@fnsymbol\c@footnote` and resets the
+counter after it (:190, :223); its `\thanks` (latex.ltx:17215; `\footnote` is `\thanks` there, article.cls:173, :241)
+is `\footnotemark` and the text, a step of the counter, under a title page too. Perl prints `[<n>]` as given and its
+frontmatter marks a title-block note as the body does and steps nothing (KNOWN_PERL_ERRORS #1060). Ours (78o,
+latex_constructs/mod.rs): `numbered_footnote_mark` prints `[<n>]` through `\thefootnote` at `<n>` (`\lx@note`,
+`\lx@notemark`, `\lx@notetext` and the VerbatimFootnotes `@live` forms, which read `[<n>]` undigested,
+`OptionalUndigested`, as TeX reads `\c@footnote #1\relax`; a minipage's notes stay `footnote_tag`'s); `<n>` is a number
+when it expands to digits (`2`, `\arabic{footnote}`) or is a count register (`\value{footnote}` — digested on its own
+it was a register assignment, "Missing number, treated as zero", and the mark printed nothing), and any other mark
+(`\footnotemark[$\dagger$]`, "Missing number" in LaTeX) is printed as given, as before and as Perl does, with no
+diagnostic; `given_footnote_number` reads `[<n>]` for a number once per note, its diagnostics held, and the mark and
+`_fnvalue` reuse it, so a `[<n>]` whose expansion errs (`\footnotemark[\the\relax]`) is no number and the mark's
+digestion reports the error once, as pdflatex (review probes rev78o2 valerr, val: 78o r2 2 and 3 errors) (read so, a `\footnotetext[<mark>]{…}` no longer drops the space after it, which the digested argument
+lost: `perfect_kernel_batch68y::aa_tablefootmark_sets_the_mark_in_text`). `declare_fnsymbol_title_block` (called by the article, report, book, extarticle, extreport, extbook
+and siamltex bindings — siamltex.cls:156-175 marks its title block in `\fnsymbol` too — when that class is the
+document's — `is_document_class`, recorded by `\documentclass`/`\documentstyle` before the class loads, so revtex4,
+IEEEtran, elsarticle, llncs and the other bindings that load the article binding as their base keep their marks)
+defines the title's `\thefootnote` hook `\lx@title@thefootnote` (`TITLE_THEFOOTNOTE`, `\@fnsymbol\c@footnote`, unless
+the class options set a title page), sets `lx_title_counts_footnotes` and appends `\setcounter{footnote}{0}` to
+`\lx@maketitle@body`; `enter_title_footnotes` makes the hook `\thefootnote` for the rest of a title, creator or date
+field the frontmatter digests (`lx_frontmatter_item`), and `\lx@title@footnote@step` (frontmatter_fields.rs, first in
+`\lx@add@thanks`, `\lx@add@note`, `\lx@add@pubnote` and `\lx@add@pubnote@thanks`) steps the counter for each `\thanks`
+and `\footnote` of those fields as the `\maketitle` flush digests them (`lx_frontmatter_explicit`; a flush without
+`\maketitle` typesets no title and steps nothing). The hook is the one a binding declares its title's own marks with,
+and the frontmatter observer's (#837, `observer/rehearsal.rs` `TITLE_FOOTNOTE_HOOK` is `TITLE_THEFOOTNOTE`), so the
+printed marks and the observer's Mark labels agree for a bare `\footnotemark` and a literal `[<n>]` (the observer
+evaluates `[\arabic{footnote}]` against the counter unstepped, so its label there is the one before the title's notes —
+FM S2a.2's to fix, SYNC). So `\author{A\footnote{…}}\author{B\footnotemark[\arabic{footnote}]}`
+gives B "∗" (2201.11183 "Zhenan Fan∗1, Huang Fang∗2", 2111.13260 "Suhani Vora1 *, Noha Radwan1 *"; int51a "0", 78o r1
+""), and a bare `\footnotemark` after three `\thanks` "§". A mark and a text are paired by their printed marks as before
+(`relocate_footnote`, Perl's `relocateFootnote`); one that finds no such partner and stands in the title block, or
+whose partner would, pairs with the opposite notes standing for the same footnote counter value (`_fnvalue`, a
+bookkeeping attribute `footnote_pairing` sets on page footnotes; `title_block_partner`: an `ltx:creator`, `ltx:title` or
+`ltx:date` ancestor on one side), or when neither prints a mark — `{\renewcommand\thefootnote{}\footnotemark
+\footnotetext{…}}`, the unmarked "equal contribution" note, prints the same nothing twice (2606.03847; Perl and int52a
+leave them apart, an empty mark matching none). In a class that sets the counter back after `\maketitle`, a note numbered from the counter — no
+`[<n>]`, or one that moves with the counter (`\value{footnote}`, `\arabic{footnote}`; read with the counter one ahead,
+`FootnoteNumber::from_counter`) — carries `_fncounted` (`footnote_pairing`), and a mark and a text on the two sides of
+the reset (one in the title block, one not) pair by value only when neither carries it, and by printed mark unless both
+do (`same_count`): the body counts from 1 again, so its "2" is another note — article's "C†" for
+`\footnotemark[\value{footnote}]` after two `\thanks` and the body's `\footnotetext[2]` "2 Body text two", report's
+(title page) "B2" for a bare `\footnotemark` after a `\thanks` and the body's bare `\footnotetext` "2" answering the
+body's own mark (pdflatex; review probes rev78o2 art2, ttp3; 78o r2 moved, and for ttp3 copied, the body's text into
+the title's mark). A `[<n>]` naming its number keeps the pairing across the reset: by value `\footnotemark[2]` "†" and
+`\footnotetext[2]` "2" (2505.14146), by printed mark a title's bare `\footnotemark` "∗" and the body's
+`\footnotetext[1]` under `\fnsymbol` "∗", one note in the PDF too (2507.05750, 1405.7962), and a `[\thealtnum]` of a
+counter of its own on both sides (astro-ph9712060). The title block is the document's title, its creators and its
+date — a section's `ltx:title` is the body's (1907.00457's `\section{Results\footnotemark}` and the `\footnotetext`
+after it, one body note; `in_title_block`, also `title_block_partner`'s predicate). Two body notes that print apart stay apart, as in pdflatex: a `\footnotetext[1]`
+under `\fnsymbol` ("∗ Equal contribution") is no answer to a table's `\footnotemark` "1" (review probe rev78o f2; 78o
+r1, int52a and Perl moved the text into the table's mark). This keeps the common title-block idiom paired —
+`\author{A\footnotemark[1]}` `\maketitle` `\renewcommand{\thefootnote}{\fnsymbol{footnote}}` `\footnotetext[1]{…}`
+prints "∗" for both (2412.20504, 2006.14582; siamltex 0903.0014); `\footnotetext[2]` after `\maketitle` without the
+renewal prints "2" where the title shows "†", which pdflatex leaves apart and we pair (2505.14146); a class whose title
+marks we do not model pairs too (siamltex1213, 1406.0089, 1503.07490); and `\fnsymbol`'s "∥" against `\@fnsymbol`'s "‖"
+for 6 (2002.11721; Perl's `\fnsymbol` table, latex_constructs.pool.ltxml:3070, against latex.ltx's `\@fnsymbol` the
+kernel runs). Witness 2507.05750 (footmisc `symbol`). 0707.3986 (RR.sty:141 `\RRnote` = `\footnotetext[0]`, under
+RR.sty:445 `\def\thefootnote{\fnsymbol{footnote}}`) prints its note unmarked, as the class asks; its TL 2025 PDF's "0"
+is pdflatex's error recovery — RR.sty's `\xdef` of the accented theme name (`\RRtheme{\THCog}`, :160-168) raises
+"Missing } inserted" and "Too many }'s" in `\makeRR`, which close its group early, so `\thefootnote` is article's
+`\@arabic` again when `\@RRnote` runs (:477). Residuals: the frontmatter digests the fields in the order the preamble
+set them, so a title `\thanks` set after the `\author` steps after the authors' (pdflatex: the title's first); the
+observer's fallback when the hook is undefined (a title-page class) is `\@fnsymbol`, where report and book print arabic.
+Repros package-bindings/footmisc_symbol_numbered_footnotetext_pairs_with_its_mark, package-bindings/
+footnotemark_value_footnote_is_the_counter, package-bindings/footnotetext_by_number_pairs_only_across_the_title_block,
+package-bindings/title_counter_mark_keeps_to_the_title_block, package-bindings/
+report_title_bare_footnotemark_keeps_to_the_title_block, package-bindings/footnotemark_number_error_reported_once,
+sectioning-frontmatter/article_title_block_marks_in_fnsymbol, sectioning-frontmatter/
+article_title_notes_step_the_footnote_counter, sectioning-frontmatter/article_title_thanks_in_every_field_step_in_turn;
+guards `perfect_kernel_batch78o::{footmisc_symbol_numbered_footnotetext_pairs_with_its_mark,
+article_title_block_marks_in_fnsymbol, report_title_page_marks_stay_arabic, title_mark_pairs_with_its_text_by_number,
+footnotemark_value_footnote_is_the_counter, article_title_notes_step_the_footnote_counter,
+article_title_thanks_in_every_field_step_in_turn, footnotetext_by_number_pairs_only_across_the_title_block,
+unmarked_footnotemark_pairs_with_its_unmarked_text, declared_title_thefootnote_prints_the_marks_the_observer_labels, title_counter_mark_keeps_to_the_title_block,
+report_title_bare_footnotemark_keeps_to_the_title_block, footnotemark_number_error_reported_once,
+footnotetext_number_error_reported_once, title_bare_footnotemark_pairs_with_a_numbered_body_text,
+title_mark_of_another_counter_pairs_with_its_body_text, section_title_footnotemark_pairs_with_its_text}`, `perfect_kernel_batchfms2a1::title_footnote_hook_overrides_fnsymbol`.
+
+### 852. algorithm2e's `noline` block gives its indentation back
+
+algorithm2e.sty:1851-1860 `\algocf@Noline` sets the block's body in a box of its own (`\algocf@push{\skiprule}` around
+it, `\algocf@pop` after), so the line after a block is at the block's level; `\SetAlgoNoLine` (the `noline` option,
+:1438, and `\SetNoline`, :3244) and `\SetNothing` make `\algocf@group` (an `\If`'s branch, a loop's body) and the block
+`\algocf@Noline` (:1901-1905, :1919-1923). Perl's `\algocf@Noline` (algorithm2e.sty.ltxml:120) pushes
+`\lx@algo@advlevel` and never pops it, unlike its `\algocf@Vline`/`\algocf@Vsline`, so every line after a block went one
+level deeper (KNOWN_PERL_ERRORS #1062). Ours (78o, algorithm2e_sty.rs) pops it as `\algocf@Vline` does (1410.4452's
+Algorithm 1 now reads as its PDF: "else", "end", "foreach" back at the left). Repro
+listings-algorithms/algorithm2e_noline_block_pops_its_indentation; guards
+`perfect_kernel_batch78o::{algorithm2e_noline_block_pops_its_indentation, algorithm2e_setalgonoline_groups_pop_their_indentation}`.
+
+### 853. A minipage holding a `\subcaption` is the sub-figure
+
+subcaption.sty:251 makes `\subcaption` `\caption` under `\@captype` `sub<type>`: in a minipage of a figure it numbers
+the minipage "1a", and a `\label` after it names that panel; caption's `\caption@subtypehook` (caption.sty:639-664)
+steps the float's counter ahead of the float's own caption. Perl's `\subcaption` (subcaption.sty.ltxml:43-56, with a
+TODO for exactly this) changes `\@captype` only: the sub-caption's number is made but no element carries it, and its
+label falls to the figure (KNOWN_PERL_ERRORS #1085). Ours (78o): `begin_caption_box`/`end_caption_box`
+(latex_constructs/mod.rs) take a box's caption of the float's sub-type as well as of its type (`caption_box_types`), so the
+minipage becomes the sub-caption's panel — its id, tags and list entry, the labels its content left, as a `{subfigure}`
+has them (#447), and the float's element (`ltx:table` in a `table`, as a `{subtable}` is; blocks.rs
+`adopt_box_caption`, 2502.10377); `\lx@subcaption@type` (subcaption_sty.rs) steps the float's counter ahead
+once per float as `{subfigure}`'s `before_float` does (`preincrement_float_counter`, not again under `\ContinuedFloat`).
+A box holding two sub-captions (2008.05644: two `\includegraphics` + `\subcaption` pairs in one minipage) is not one
+sub-figure: it stays as before (`\@@add@caption@counters` counts the captions per type, `CAPTION_COUNT_PREFIX`).
+Witness 2011.13897 (PDF "2a"/"2b", before "2"/"2"; fidelity3 N4). Outside a float (`\captionsetup{type=figure}` in a
+`center`) nothing changes (the RED `captions-floats/subcaption_before_caption_numbers_its_figure` stays). Repros
+captions-floats/subcaption_in_a_minipage_labels_its_panel (and, now green, subcaption_labels_in_scaled_panels_stay_on_their_panels,
+continuedfloat_minipage_subcaption_continues_the_letters); guards `perfect_kernel_batch78o::{subcaption_in_a_minipage_labels_its_panel,
+subcaption_in_a_minipage_of_a_table_is_a_subtable, subcaption_minipage_panels_in_boxes_and_continued_floats}`.
+
+### 854. acmart makes its theorems at the end of the preamble, each only when undefined
+
+acmart.cls:3460-3489 (TL 2025; 2510.04987's copy :3405-3430) defines `{theorem}`, `{conjecture}`, `{proposition}`,
+`{lemma}`, `{corollary}` (style `acmplain`) and `{example}`, `{definition}` (`acmdefinition`) `\AtEndPreamble`, under the
+`acmthm` key (default true, :86-93), each `\@ifundefined`, so an author's own `\newtheorem{theorem}{Theorem}` keeps its
+numbering and style and an author's `\newcommand{\example}` its meaning. Perl's acmart.cls.ltxml:236-243 makes them at
+class load (KNOWN_PERL_ERRORS #1086): the author's `{theorem}` kept the class's within-section counter ("Theorem 1"
+twice in 2306.01662, PDF 1, 2), the author's `\theoremstyle{definition}` theorems the class's italic heads, and
+2510.04987's `\example` opened a theorem in 14 table cells. Ours (78o, acmart_cls.rs) is the class's `\AtEndPreamble`
+block, with `acmthm` read from the class options. Repros class-bindings/acmart_author_theorem_name_wins,
+class-bindings/acmart_author_newtheorem_numbers_as_the_author_says; guards
+`perfect_kernel_batch78o::{acmart_author_theorem_name_wins, acmart_author_newtheorem_numbers_as_the_author_says,
+acmart_acmthm_false_makes_no_theorems}`.

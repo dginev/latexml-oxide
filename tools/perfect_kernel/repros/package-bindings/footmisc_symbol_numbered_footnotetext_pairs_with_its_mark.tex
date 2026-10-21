@@ -6,7 +6,8 @@
 % engines: rust 78k = 0 errors, the mark "*" and the text "1" unpaired (int49a: "1" and "1", paired: footmisc's
 %          `symbol` was a no-op); perl = "1" for both (KNOWN_PERL_ERRORS #1057; `[n]` printed as given, #1060)
 % expect:  0 errors, 0 warnings; the text of `[1]` is marked "*" as its mark, the `[2]` note "†"
-% status:  RED (78k r1 A/B; formatting `[n]` through `\thefootnote` alone unpairs the title-block idiom, KPE #1060)
+% status:  GREEN (78o: `[n]` is `\thefootnote` at <n>, article's title block marks in `\@fnsymbol`, a mark and a text
+%          printing no common mark pair by the counter value; guard perfect_kernel_batch78o)
 \documentclass{article}
 \usepackage[symbol]{footmisc}
 \begin{document}

@@ -378,7 +378,8 @@ fn author_declaration_line_opens_with_and() {
   );
   assert_eq!(creators(&convert_clean(tex)), vec![
     "<creator role=\"author\">\n    <personname><text font=\"smallcaps\" xml:id=\"id1\">Ann Able</text></personname>\n    <contact name=\"Note:\u{a0}\" role=\"note\"><text font=\"smallcaps\" xml:id=\"id2\">Univ A</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<note mark=\"1\" role=\"footnotemark\" xml:id=\"footnotex1\"><tags>\n          <tag>1</tag>\n          <tag role=\"refnum\">1</tag>\n          <tag role=\"typerefnum\">footnote 1</tag>\n        </tags></note></personname>\n  </creator>",
+    // article's title block marks `\footnotemark[1]` "∗" (article.cls:205; 78o, pdflatex "Bob Baker∗").
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<note mark=\"*\" role=\"footnotemark\" xml:id=\"footnotex1\"><tags>\n          <tag>*</tag>\n          <tag role=\"refnum\">*</tag>\n          <tag role=\"typerefnum\">footnote *</tag>\n        </tags></note></personname>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname><text font=\"smallcaps\" xml:id=\"id3\">Cat Cole</text></personname>\n    <contact name=\"Note:\u{a0}\" role=\"note\"><text font=\"smallcaps\" xml:id=\"id4\">Univ B</text></contact>\n  </creator>",
   ]);
 }

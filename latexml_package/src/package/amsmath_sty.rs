@@ -2775,6 +2775,23 @@ fn ams_author_called_internals() -> Result<()> {
 \let\@spread@equation\spread@equation"
   );
 
+  // amsmath.sty:1309-1317: the alignment dimens, which raw alignment code reads (a shipped
+  // mathtools.sty v1.01a's `\x@calc@shift@lf` and `\place@tag`); and :1364-1376 `\black@`, the
+  // overfull-line check a document's own `\endgather`/`\endalign` copy ends with (`\math@cr
+  // \black@\totwidth@ \egroup`, 0912.5438's fabntheorem.sty: 156 errors before).
+  RawTeX!(
+    r"\newdimen\eqnshift@
+\newdimen\alignsep@
+\newdimen\tagshift@
+\newdimen\tagwidth@
+\newdimen\totwidth@
+\newdimen\lineht@
+\def\black@#1{\noalign{\ifdim#1>\displaywidth
+  \dimen@\prevdepth \nointerlineskip \vskip-\ht\strutbox@ \vskip-\dp\strutbox@
+  \vbox{\noindent\hbox to\displaywidth{\hbox to#1{\strut@\hfill}}}%
+  \prevdepth\dimen@ \fi}}"
+  );
+
   // amsmath.sty:1187 `\intertext@` makes `\intertext` the in-alignment one, which is
   // `\@ams@intertext` here (the alignment bindings `\let` it so; 2506.12131).
   DefMacro!("\\intertext@", "\\let\\intertext\\@ams@intertext");

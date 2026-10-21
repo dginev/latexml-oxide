@@ -363,14 +363,32 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     r"\lx@frontmatter@marksep\lx@saved@fnsep"
   );
 
+  // A note the title block of a class whose `\thanks` is `\footnotemark` and its text makes (article, report, book:
+  // `lx_title_counts_footnotes`, latex_constructs `declare_fnsymbol_title_block`) steps the footnote counter, as the
+  // `\maketitle` digests it (`lx_frontmatter_explicit`): `\thanks` and `\footnote` in the title, an author or the date
+  // (`lx_frontmatter_item`), so a `\footnotemark[\arabic{footnote}]` after one prints its mark (2201.11183, 2111.13260;
+  // KNOWN_PERL_ERRORS #1060, OXIDIZED_DESIGN_DIVERGENCES #851). A flush without `\maketitle` typesets no title, and
+  // steps nothing.
+  DefPrimitive!("\\lx@title@footnote@step", sub[_args] {
+    if lookup_bool("lx_title_counts_footnotes")
+      && lookup_bool("lx_frontmatter_explicit")
+      && matches!(
+        lookup_string("lx_frontmatter_item").as_str(),
+        "ltx:creator" | "ltx:title" | "ltx:date"
+      )
+    {
+      step_counter("footnote", false)?;
+    }
+    Ok(())
+  });
   // Add random notes about the document itself
   DefMacro!(
     "\\lx@add@pubnote[]{}",
-    "\\lx@add@frontmatter{ltx:pubnote}[#1]{#2}"
+    "\\lx@title@footnote@step\\lx@add@frontmatter{ltx:pubnote}[#1]{#2}"
   );
   DefMacro!(
     "\\lx@add@pubnote@thanks[]{}",
-    "\\lx@add@frontmatter{ltx:pubnote}[role=thanks,#1]{#2}"
+    "\\lx@title@footnote@step\\lx@add@frontmatter{ltx:pubnote}[role=thanks,#1]{#2}"
   );
 
   // Other kinds of notes?
@@ -693,7 +711,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // repro sectioning-frontmatter/author_thanks_and_footnote_keep_their_math).
   DefMacro!("\\lx@add@thanks [] {}", sub[(attr, content)] {
     if starts_with_affiliation_mark(&content) {
-      let mut calls: Vec<Token> = Vec::new();
+      let mut calls: Vec<Token> = vec![T_CS!("\\lx@title@footnote@step")];
       for seg in split_wrapped_affiliation_marks(content) {
         if spacing_end(seg.unlist_ref()) == 0 {
           continue;
@@ -723,10 +741,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
         opts.push(T_OTHER!(","));
         opts.extend(a.unlist_ref().iter().copied());
       }
-      Ok(Invocation!(T_CS!("\\lx@annotate@frontmatter"),
+      let mut calls = vec![T_CS!("\\lx@title@footnote@step")];
+      calls.extend(Invocation!(T_CS!("\\lx@annotate@frontmatter"),
         vec![Some(mouth::tokenize_internal("ltx:creator")),
              Some(mouth::tokenize_internal("ltx:note")),
-             Some(Tokens::new(opts)), Some(note_body(content))]))
+             Some(Tokens::new(opts)), Some(note_body(content))]).unlist());
+      Ok(Tokens::new(calls))
     }
   });
   // An ordinary argument, as `\lx@add@thanks` (an author's `\footnote`; KNOWN_PERL_ERRORS #515).
@@ -736,10 +756,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       opts.push(T_OTHER!(","));
       opts.extend(a.unlist_ref().iter().copied());
     }
-    Ok(Invocation!(T_CS!("\\lx@annotate@frontmatter"),
+    let mut calls = vec![T_CS!("\\lx@title@footnote@step")];
+    calls.extend(Invocation!(T_CS!("\\lx@annotate@frontmatter"),
       vec![Some(mouth::tokenize_internal("ltx:creator")),
            Some(mouth::tokenize_internal("ltx:contact")),
-           Some(Tokens::new(opts)), Some(note_body(content))]))
+           Some(Tokens::new(opts)), Some(note_body(content))]).unlist());
+    Ok(Tokens::new(calls))
   });
   Ok(())
 }

@@ -8,7 +8,8 @@ use super::perfect_kernel_batch57::{RAW, assert_elements};
 
 /// class-bindings/aa_tablefootmark_text_mark: aa.cls v9.1 :1672-1681 sets `\tablefootmark`/`\tablefoottext`'s mark in
 /// text: `$^\dag$` is a superscript dagger (2211.06931), and `\tablefoottext{a}` still pairs with `\tablefootmark{a}`
-/// by `mark`.
+/// by `mark`. The `\tablefoot` note keeps both its spaces, "Notes." and the one between the two `\tablefoottext`s
+/// (their texts moved to their marks), as TeX has them; until 78o r2 a `[<mark>]` digested as an argument lost the second.
 #[test]
 fn aa_tablefootmark_sets_the_mark_in_text() {
   assert_elements(
@@ -20,7 +21,7 @@ fn aa_tablefootmark_sets_the_mark_in_text() {
     &[(
       "table",
       "tab1",
-      r##"<table xml:id="tab1"><tabular vattach="middle"><tbody><tr><td align="center">Shift<note mark="a" role="footnote" xml:id="footnotex1"><tags><tag>a</tag><tag role="refnum">a</tag><tag role="typerefnum">footnote a</tag></tags>Modified Julian date.</note></td><td align="center">b<note mark="${}^{\dagger}$" role="footnote" xml:id="footnotex2"><tags><tag><sup><text font="italic">†</text></sup></tag><tag role="refnum"><sup><text font="italic">†</text></sup></tag><tag role="typerefnum">footnote <sup><text font="italic">†</text></sup></tag></tags>Second.</note></td></tr></tbody></tabular><note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><text font="bold">Notes.</text> </note></table>"##,
+      r##"<table xml:id="tab1"><tabular vattach="middle"><tbody><tr><td align="center">Shift<note mark="a" role="footnote" xml:id="footnotex1"><tags><tag>a</tag><tag role="refnum">a</tag><tag role="typerefnum">footnote a</tag></tags>Modified Julian date.</note></td><td align="center">b<note mark="${}^{\dagger}$" role="footnote" xml:id="footnotex2"><tags><tag><sup><text font="italic">†</text></sup></tag><tag role="refnum"><sup><text font="italic">†</text></sup></tag><tag role="typerefnum">footnote <sup><text font="italic">†</text></sup></tag></tags>Second.</note></td></tr></tbody></tabular><note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><text font="bold">Notes.</text>  </note></table>"##,
     )],
   );
 }

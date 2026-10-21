@@ -638,7 +638,7 @@ byte-identical: the rehearsal's group reads from a mouth of its own, so an `\aft
 (r2). The model's departures from the design note (a Note carries no mark, a font Layout no span, gap em of the box's
 font, `\corref`/`\fnref`/`\thanksref`/`\ead` not bound, projected spans keyed by (block, span), a bare
 `\footnotemark` under the kernel `\maketitle`'s `\@fnsymbol` unless a binding declares the title's marks through the
-hook `\lx@fm@title@thefootnote`, a font switch inside a run shown at the next run, an `\input`'s tokens without span)
+hook `\lx@title@thefootnote` (the kernel's, since 78o r2), a font switch inside a run shown at the next run, an `\input`'s tokens without span)
 are listed in OD #837 for S2a.2. r3 (review revfms2a1_2): a container's placement argument is no name (`shown_arguments`),
 the kernel's `\lx@newline` a `\centering` or a box rebinds `\\` to is a Break, a stray `&` a column separator (nothing
 held: the `&` constructor errs only when built), progress notes silenced in the rehearsal (an `\input` in the field no

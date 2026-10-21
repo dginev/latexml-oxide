@@ -233,9 +233,11 @@ fn centered_parbox_names_in_a_group_split() {
 fn note_macro_among_names_is_the_names_note() {
   let xml = convert_repro!("author_note_macro_among_names.tex");
   assert_no_merged_names(&xml);
-  let mark = |n: &str| {
+  // article's title block marks `\footnotemark[1]` "∗" and `[2]` "†" (article.cls:205, 78o; pdflatex "Bob Baker2,∗",
+  // "Eve Ess2,†").
+  let mark = |n: &str, m: &str| {
     format!(
-      r#"<note mark="{n}" role="footnotemark" xml:id="footnotex{n}"><tags> <tag>{n}</tag> <tag role="refnum">{n}</tag> <tag role="typerefnum">footnote {n}</tag> </tags></note>"#
+      r#"<note mark="{m}" role="footnotemark" xml:id="footnotex{n}"><tags> <tag>{m}</tag> <tag role="refnum">{m}</tag> <tag role="typerefnum">footnote {m}</tag> </tags></note>"#
     )
   };
   assert_eq!(creators(&xml), [
@@ -250,7 +252,7 @@ fn note_macro_among_names_is_the_names_note() {
     ),
     creator(
       false,
-      &format!("Bob Baker{}", mark("1")),
+      &format!("Bob Baker{}", mark("1", "*")),
       &affiliation("Univ B")
     ),
     creator(false, "Cat Cole", &affiliation("Univ C")),
@@ -265,7 +267,7 @@ fn note_macro_among_names_is_the_names_note() {
     ),
     creator(
       false,
-      &format!("Eve Ess{}", mark("2")),
+      &format!("Eve Ess{}", mark("2", "†")),
       &affiliation("Univ B")
     ),
   ]);

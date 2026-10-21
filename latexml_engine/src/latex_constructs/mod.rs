@@ -482,9 +482,13 @@ pub(crate) fn minipage_footnotes() -> Result<bool> {
 pub(crate) fn footnote_tag<'a>(
   note_type: &str,
   given: Option<&'a Digested>,
+  number: &FootnoteNumber,
 ) -> Result<Option<Cow<'a, Digested>>> {
   if note_type != "footnote" || !minipage_footnotes()? {
-    return Ok(given.map(Cow::Borrowed));
+    return match given {
+      Some(given) => Ok(Some(Cow::Owned(numbered_footnote_mark(given, number)?))),
+      None => Ok(None),
+    };
   }
   let mut tokens = TokenizeInternal!(r"\begingroup").unlist();
   match given {
@@ -497,6 +501,217 @@ pub(crate) fn footnote_tag<'a>(
   }
   tokens.extend(TokenizeInternal!(r"\thempfn\endgroup").unlist());
   Ok(Some(Cow::Owned(digest(Tokens::new(tokens))?)))
+}
+
+/// The document's class, as its `\documentclass` (or `\documentstyle`) named it (`lx@document@class`, recorded before
+/// the class loads): a binding another class's binding loads as its base (revtex4, IEEEtran, elsarticle and llncs
+/// load the article binding) is not the document's class, and its own title block is not in force.
+pub fn is_document_class(class: &str) -> bool { lookup_string("lx@document@class") == class }
+
+/// The title block's own `\thefootnote`, the one hook a binding declares its title's footnote marks with: defined, the
+/// marks of the notes made in the title, the authors and the date are it (`enter_title_footnotes`), and so are the
+/// frontmatter observer's Mark labels (`observer/rehearsal.rs` `TITLE_FOOTNOTE_HOOK`, OXIDIZED_DESIGN_DIVERGENCES #837,
+/// #851). Article, report and book declare it `\@fnsymbol\c@footnote` (`declare_fnsymbol_title_block`); a class
+/// numbering its title's marks otherwise defines its own (revtex4-2.cls:3040-3041 `\frontmatter@thefootnote`). Guard
+/// `perfect_kernel_batch78o::declared_title_thefootnote_prints_the_marks_the_observer_labels`.
+pub const TITLE_THEFOOTNOTE: &str = "\\lx@title@thefootnote";
+
+/// The title block of a class whose `\maketitle` marks its notes in `\@fnsymbol` — article, report and book (and
+/// extarticle, extreport, extbook, copies of them; article.cls:203-205, report.cls:211, book.cls:217, in the
+/// `\if@titlepage` false branch: `titlepage`, report's and book's default (:50-51) and an option of all three, keeps
+/// `\thefootnote`, `titlepage_default` `Some(..)`), siamltex (siamltex.cls:156-159, no title-page form, `None`) — when
+/// that class is the document's (`is_document_class`): the notes of the title, the authors and the date are marked so,
+/// and the footnote counter is set back to 0 after `\maketitle` (article.cls:190, :223; siamltex.cls:175), so the body's
+/// notes count from 1. The marks are made where the frontmatter digests the fields (`enter_title_footnotes`):
+/// `\footnotemark[1]` in an `\author` prints "∗" as the text `\footnotetext[1]` gives after
+/// `\renewcommand\thefootnote{\fnsymbol{footnote}}` (2412.20504, 2006.14582; siamltex 0903.0014; KNOWN_PERL_ERRORS
+/// #1060). Perl's classes mark them as the body (`\thefootnote`). The class's `\thanks` (and `\footnote`, which its
+/// `\maketitle` lets to `\thanks`) is `\footnotemark` and its text, so each steps the footnote counter, under a title
+/// page too (article.cls:173, :241, report.cls:179, :247, book.cls:185, :253; latex.ltx:17215 `\thanks`): the
+/// block's frontmatter notes step it as the `\maketitle` digests them (`lx_title_counts_footnotes`,
+/// `\lx@title@footnote@step`), and `\footnotemark[\arabic{footnote}]` after an author's `\footnote` is that note's "∗"
+/// (2201.11183 "Zhenan Fan∗1, Huang Fang∗2"; 2111.13260 "Suhani Vora1 *, Noha Radwan1 *").
+pub fn declare_fnsymbol_title_block(class: &str, titlepage_default: Option<bool>) -> Result<()> {
+  if !is_document_class(class) {
+    return Ok(());
+  }
+  let mut options = String::new();
+  for list in [s!("\\opt@{class}.cls"), s!("\\@classoptionslist")] {
+    if let Some(defn) = lookup_definition(&T_CS!(list))?
+      && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+    {
+      options = body.to_string();
+      break;
+    }
+  }
+  let mut titlepage = titlepage_default;
+  if let Some(titlepage) = titlepage.as_mut() {
+    for option in options.split(',').map(str::trim) {
+      match option {
+        "titlepage" => *titlepage = true,
+        "notitlepage" => *titlepage = false,
+        _ => {},
+      }
+    }
+  }
+  // (its `\thanks` steps the counter under a title page too: article.cls:173, :241, latex.ltx:17215)
+  assign_value("lx_title_counts_footnotes", true, Some(Scope::Global));
+  if titlepage != Some(true) {
+    def_macro(
+      T_CS!(TITLE_THEFOOTNOTE),
+      None,
+      TokenizeInternal!(r"\@fnsymbol\c@footnote"),
+      Some(ExpandableOptions {
+        scope: Some(Scope::Global),
+        ..Default::default()
+      }),
+    )?;
+  }
+  AddToMacro!("\\lx@maketitle@body", "\\setcounter{footnote}{0}");
+  Ok(())
+}
+
+/// Before a note is made in the title block (a field the frontmatter digests: the title, an author, the date) of a
+/// class whose title marks its notes in a `\thefootnote` of its own ([`TITLE_THEFOOTNOTE`],
+/// `declare_fnsymbol_title_block`): `\thefootnote` is that one for the rest of the field, as in the class's
+/// `\maketitle` group.
+pub(crate) fn enter_title_footnotes() -> Result<()> {
+  if matches!(
+    lookup_string("lx_frontmatter_item").as_str(),
+    "ltx:creator" | "ltx:title" | "ltx:date"
+  ) && has_meaning(&T_CS!(TITLE_THEFOOTNOTE))
+  {
+    let_i(&T_CS!("\\thefootnote"), &T_CS!(TITLE_THEFOOTNOTE), None);
+  }
+  Ok(())
+}
+
+/// A footnote's mark given as `[<n>]`: latex.ltx:17652-17657 `\@xfootnote`, :17678-17682 `\@xfootnotemark` and
+/// :17694-17699 `\@xfootnotenext` set the counter to `<n>` in a group and mark the note `\thefootnote` there, so under
+/// `\renewcommand\thefootnote{\fnsymbol{footnote}}` (or footmisc's `symbol`) `\footnotetext[1]` is "∗", as the
+/// `\footnotemark` it answers. A mark that is not a number (`\footnotemark[$\dagger$]`, an error in LaTeX: "Missing
+/// number") is printed as given, as before and as in Perl (KNOWN_PERL_ERRORS #1060, OXIDIZED_DESIGN_DIVERGENCES #851).
+/// `number` is the one `given_footnote_number` read for the note; a minipage's notes are `footnote_tag`'s.
+pub(crate) fn numbered_footnote_mark(
+  given: &Digested,
+  number: &FootnoteNumber,
+) -> Result<Digested> {
+  let Some(digits) = number.digits.as_ref() else {
+    return digest(given.revert()?);
+  };
+  let mut tokens = TokenizeInternal!(r"\begingroup\c@footnote").unlist();
+  tokens.extend(digits.clone().unlist());
+  tokens.extend(TokenizeInternal!(r"\relax\thefootnote\endgroup").unlist());
+  digest(Tokens::new(tokens))
+}
+
+/// The number a footnote's `[<n>]` gives (`given_footnote_number`).
+#[derive(Default)]
+pub(crate) struct FootnoteNumber {
+  /// Its digits, once expanded (`2`, `\arabic{footnote}`), or a count register's value (`\value{footnote}`); none for
+  /// any other mark, and for a note given no `[<n>]`, which is the counter's.
+  digits:       Option<Tokens>,
+  /// Whether the number moves with the footnote counter: a note given no `[<n>]`, and a `[<n>]` such as
+  /// `\value{footnote}`, `\arabic{footnote}` or `\the\c@footnote` (a literal `2`, or `\thealtnum` of a counter of its
+  /// own, does not).
+  from_counter: bool,
+}
+
+/// The number a footnote's `[<n>]` gives (`numbered_footnote_mark`, `footnote_pairing`), read once per note (none for
+/// any other type). The notes read `[<n>]` undigested (`OptionalUndigested`, sect03.rs `\lx@note`, `\lx@notemark`,
+/// `\lx@notetext`), as TeX reads `\c@footnote #1\relax` — digested on its own, `\value{footnote}` was a register
+/// assignment missing its number ("Missing number, treated as zero", the mark printed as nothing). The look is a check,
+/// its diagnostics held: a `[<n>]` whose expansion errs (`\footnotemark[\the\relax]`) is no number, and the mark's
+/// digestion as given reports the error, once, as pdflatex does (review probes rev78o2 valerr, val). Whether the number
+/// is the counter's is read the same way, the counter one ahead for the look.
+pub(crate) fn given_footnote_number(
+  note_type: &str,
+  given: Option<&Digested>,
+) -> Result<FootnoteNumber> {
+  if note_type != "footnote" {
+    return Ok(FootnoteNumber::default());
+  }
+  let Some(given) = given else {
+    return Ok(FootnoteNumber {
+      digits:       None,
+      from_counter: true,
+    });
+  };
+  let hold = util::logger::DiagnosticsHold::begin();
+  let digits = footnote_number_digits(given)?;
+  let from_counter = match digits.as_ref() {
+    Some(digits) => {
+      let saved = counter_value("footnote")?;
+      assign_register(
+        "\\c@footnote",
+        Number::new(saved.value_of() + 1).into(),
+        None,
+        Vec::new(),
+      )?;
+      let ahead = footnote_number_digits(given);
+      assign_register("\\c@footnote", saved.into(), None, Vec::new())?;
+      ahead?.map(|n| n.to_string()) != Some(digits.to_string())
+    },
+    None => false,
+  };
+  if !hold.is_empty() {
+    hold.discard();
+    return Ok(FootnoteNumber::default());
+  }
+  hold.commit();
+  Ok(FootnoteNumber { digits, from_counter })
+}
+
+/// `given_footnote_number`'s digits of a `[<n>]`.
+fn footnote_number_digits(given: &Digested) -> Result<Option<Tokens>> {
+  let expanded = Expand!(given.revert()?);
+  let text = expanded.to_string();
+  let text = text.trim();
+  if !text.is_empty()
+    && text
+      .trim_start_matches('-')
+      .chars()
+      .all(|c| c.is_ascii_digit())
+  {
+    return Ok(Some(Tokens::new(ExplodeText!(text))));
+  }
+  Ok(match expanded.unlist().as_slice() {
+    [register] if lookup_definition(register)?.is_some_and(|d| d.is_register()) => {
+      Some(Expand!(Tokens!(T_CS!("\\the"), *register)))
+    },
+    _ => None,
+  })
+}
+
+/// A footnote's bookkeeping for `relocate_footnote`, kept on the note: the value of the footnote counter it stands for
+/// (`_fnvalue`: its `[<n>]`'s number, or the counter as it stepped or stands) — none for a minipage's notes, which
+/// count apart, and any other type —, and, in a class that sets the counter back after its `\maketitle`
+/// (`lx_title_counts_footnotes`, `declare_fnsymbol_title_block`), whether its number is the counter's (`_fncounted`,
+/// `FootnoteNumber::from_counter`): such a note in the title block has the title's count, one after it the body's,
+/// which counts from 1 again (`same_count`).
+pub(crate) fn footnote_pairing(
+  props: &mut SymHashMap<Stored>,
+  note_type: &str,
+  given: Option<&Digested>,
+  number: &FootnoteNumber,
+) -> Result<()> {
+  if note_type != "footnote" || minipage_footnotes()? {
+    return Ok(());
+  }
+  let value = match given {
+    Some(_) => number
+      .digits
+      .as_ref()
+      .and_then(|n| n.to_string().trim().parse::<i64>().ok()),
+    None => Some(counter_value("footnote")?.value_of()),
+  };
+  if let Some(value) = value {
+    props.insert("fnvalue", Stored::String(pin(value.to_string())));
+  }
+  if number.from_counter && lookup_bool("lx_title_counts_footnotes") {
+    props.insert("fncounted", Stored::String(pin("true")));
+  }
+  Ok(())
 }
 
 pub fn make_note_tags(
@@ -557,17 +772,41 @@ pub fn make_note_tags(
 /// Pair a note's mark and text: Perl's `relocateFootnote` (latex_constructs.pool.ltxml:498-510)
 /// matches their `mark`s exactly; here spaces are ignored, so a mark printed as set
 /// (`\tablenotemark{c, d}`, deluxetable_sty.rs `shown_mark`) pairs with the text given `c,d`. A
-/// counter's mark has no space, so a `\footnotemark`'s pairing is Perl's.
+/// counter's mark has no space, so a `\footnotemark`'s pairing is Perl's. A mark and a text that print no common
+/// mark, one of them in the title block — or neither printing a mark (`title_block_partner`) —, pair by the footnote
+/// counter value they stand for (`_fnvalue`, `footnote_pairing`): article's title block marks
+/// `\footnotemark[2]` "†" where a `\footnotetext[2]` after `\maketitle` prints "2" (2505.14146; pdflatex prints the
+/// two apart, the author pairs them), a class whose title marks are not known (siamltex: 1406.0089, 1503.07490), and
+/// `\fnsymbol`'s "∥" against `\@fnsymbol`'s "‖" for 6 (2002.11721). Either way a mark and a text on the two sides of
+/// a class's counter reset after `\maketitle` pair only as `same_count` admits. KNOWN_PERL_ERRORS #1060,
+/// OXIDIZED_DESIGN_DIVERGENCES #851.
 pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()> {
   if let Some(caps) = NOTE_TEXT_END.captures(&node.get_attribute("role").unwrap_or_default()) {
     let notetype = caps.get(1).map_or("", |m| m.as_str());
+    let mut paired = false;
     if let Some(mark) = node.get_attribute("mark") {
       let key = mark.replace(' ', "");
       for mut marknote in document.findnodes(
         &format!(".//ltx:note[@role='{notetype}mark'][translate(@mark,' ','')='{key}']"),
         None,
       ) {
-        if is_descendant_or_self(&marknote, node) {
+        if is_descendant_or_self(&marknote, node) || !same_count(document, &marknote, node, BY_MARK)
+        {
+          continue;
+        }
+        relocate_footnote_aux(document, notetype, &mut marknote, node)?;
+        paired = true;
+      }
+    }
+    if !paired && let Some(value) = node.get_attribute(FOOTNOTE_VALUE) {
+      let partner = title_block_partner(document, node);
+      for mut marknote in document.findnodes(
+        &format!(".//ltx:note[@role='{notetype}mark'][@{FOOTNOTE_VALUE}='{value}']{partner}"),
+        None,
+      ) {
+        if is_descendant_or_self(&marknote, node)
+          || !same_count(document, &marknote, node, BY_VALUE)
+        {
           continue;
         }
         relocate_footnote_aux(document, notetype, &mut marknote, node)?;
@@ -576,13 +815,30 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
   } else if let Some(caps) = NOTE_MARK_END.captures(&node.get_attribute("role").unwrap_or_default())
   {
     let notetype = caps.get(1).map_or("", |m| m.as_str());
+    let mut paired = false;
     if let Some(mark) = node.get_attribute("mark") {
       let key = mark.replace(' ', "");
       for mut textnote in document.findnodes(
         &format!(".//ltx:note[@role='{notetype}text'][translate(@mark,' ','')='{key}']"),
         None,
       ) {
-        if is_descendant_or_self(node, &textnote) {
+        if is_descendant_or_self(node, &textnote) || !same_count(document, node, &textnote, BY_MARK)
+        {
+          continue;
+        }
+        relocate_footnote_aux(document, notetype, node, &mut textnote)?;
+        paired = true;
+      }
+    }
+    if !paired && let Some(value) = node.get_attribute(FOOTNOTE_VALUE) {
+      let partner = title_block_partner(document, node);
+      for mut textnote in document.findnodes(
+        &format!(".//ltx:note[@role='{notetype}text'][@{FOOTNOTE_VALUE}='{value}']{partner}"),
+        None,
+      ) {
+        if is_descendant_or_self(node, &textnote)
+          || !same_count(document, node, &textnote, BY_VALUE)
+        {
           continue;
         }
         relocate_footnote_aux(document, notetype, node, &mut textnote)?;
@@ -590,6 +846,72 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
     }
   }
   Ok(())
+}
+
+/// The bookkeeping attribute holding the footnote counter value a note stands for (`footnote_pairing`).
+const FOOTNOTE_VALUE: &str = "_fnvalue";
+
+/// The bookkeeping attribute of a note numbered from the footnote counter in a class that sets the counter back after
+/// its `\maketitle` (`footnote_pairing`).
+const FOOTNOTE_COUNTED: &str = "_fncounted";
+
+/// Whether the note is in the title block: in a creator, the document's title (not a section's: 1907.00457's
+/// `\section{Results\footnotemark}` and the `\footnotetext` after it are one body note) or the date.
+fn in_title_block(document: &mut Document, node: &Node) -> bool {
+  !document
+    .findnodes(
+      "ancestor::ltx:creator | ancestor::ltx:title[parent::ltx:document] | ancestor::ltx:date",
+      Some(node),
+    )
+    .is_empty()
+}
+
+/// `same_count`'s pairing by the printed mark.
+const BY_MARK: bool = false;
+/// `same_count`'s pairing by the counter value.
+const BY_VALUE: bool = true;
+
+/// Whether a mark and a text that print the same mark (`BY_MARK`) or stand for the same counter value (`BY_VALUE`) are
+/// one note (`relocate_footnote`), in a class that sets the footnote counter back to 0 after its `\maketitle`
+/// (article.cls:190, :223, report.cls:196, :229): two notes on the same side of the reset (both in the title block, or
+/// neither) count alike, as before; across it, a note numbered from the counter (`_fncounted`: no `[<n>]`,
+/// `[\value{footnote}]`, `[\arabic{footnote}]`) has its side's count. So a value pairs across the reset only between two
+/// notes that name it (`\footnotemark[2]` "†" and the body's `\footnotetext[2]` "2", 2505.14146), and a printed mark
+/// unless both are counted: article's "C†" for `\footnotemark[\value{footnote}]` after two `\thanks` is not the body's
+/// `\footnotetext[2]` "2 Body text two", and report's (title page) "B2" for a bare `\footnotemark` after a `\thanks` is
+/// not the body's bare `\footnotetext` "2", which answers the body's own mark (pdflatex; review probes rev78o2 art2,
+/// ttp3), while a title's bare `\footnotemark` "∗" and the body's `\footnotetext[1]` "∗" under `\fnsymbol` print one
+/// note (2507.05750, 1405.7962; astro-ph9712060's `[\thealtnum]` on both sides, a counter of its own).
+fn same_count(document: &mut Document, mark: &Node, text: &Node, by_value: bool) -> bool {
+  let counted = |node: &Node| node.get_attribute(FOOTNOTE_COUNTED).is_some();
+  let (mark_counted, text_counted) = (counted(mark), counted(text));
+  if !(mark_counted || text_counted)
+    || in_title_block(document, mark) == in_title_block(document, text)
+  {
+    return true;
+  }
+  !by_value && !(mark_counted && text_counted)
+}
+
+/// The notes a footnote mark or text pairs with by the counter value they stand for (`relocate_footnote`), as an XPath
+/// predicate on the partner: a title block's marks (article's `\@fnsymbol`, `declare_fnsymbol_title_block`) and the
+/// body's numbers are the two that print no common mark for the same note, so one of the two is in the title block —
+/// any note, when `node` is there, else one in a creator, the title or the date; and two notes that print no mark at all
+/// (`{\renewcommand\thefootnote{}\footnotemark\footnotetext{…}}`, 2606.03847) print the same, so they pair as a mark and
+/// its text printing the same mark do. A body text and a body mark of the same number that print different marks stay
+/// apart, as in pdflatex: `\footnotetext[1]{…}` under `\fnsymbol` ("∗ Equal contribution") is not the table's
+/// `\footnotemark` "1" (review probe rev78o f2).
+fn title_block_partner(document: &mut Document, node: &Node) -> &'static str {
+  if in_title_block(document, node) {
+    ""
+  } else if node
+    .get_attribute("mark")
+    .is_none_or(|mark| mark.trim().is_empty())
+  {
+    "[ancestor::ltx:creator or ancestor::ltx:title[parent::ltx:document] or ancestor::ltx:date or normalize-space(@mark)='']"
+  } else {
+    "[ancestor::ltx:creator or ancestor::ltx:title[parent::ltx:document] or ancestor::ltx:date]"
+  }
 }
 
 fn relocate_footnote_aux(
@@ -3546,6 +3868,7 @@ fn unwind_caption_boxes() {
     _ => return,
   };
   while caption_box_depth() > depth {
+    let _ = pop_value(BOX_CAPTION_COUNTS);
     if let Ok(Some(Stored::HashStored(outer))) = pop_value(BOX_OUTER_PENDING_CAPTIONS) {
       for (key, pending) in outer {
         if with(key, lookup_value).is_none() {
@@ -3576,15 +3899,40 @@ fn caption_box_type() -> Option<String> {
 /// the last number. `end_caption_box` hands the box what its captions left, and gives the float its state back.
 pub fn begin_caption_box() -> Result<()> {
   let mut outer = stored_map!();
+  let mut counts = stored_map!();
   if let Some(captype) = caption_box_type() {
-    for part in PENDING_CAPTION_PARTS {
-      let key = pin(s!("{captype}_{part}"));
-      if let Some(pending) = remove_value_sym(key) {
-        outer.0.insert(key, pending);
+    for captype in caption_box_types(&captype) {
+      for part in PENDING_CAPTION_PARTS {
+        let key = pin(s!("{captype}_{part}"));
+        if let Some(pending) = remove_value_sym(key) {
+          outer.0.insert(key, pending);
+        }
       }
+      let count = s!("{CAPTION_COUNT_PREFIX}{captype}");
+      counts
+        .0
+        .insert(pin(&count), Stored::Number(Number(lookup_int(&count))));
     }
   }
+  push_value(BOX_CAPTION_COUNTS, Stored::HashStored(counts))?;
   push_value(BOX_OUTER_PENDING_CAPTIONS, Stored::HashStored(outer))
+}
+
+/// The prefix of the state key counting the captions made of a type (`\@@add@caption@counters`, sect09.rs).
+pub(crate) const CAPTION_COUNT_PREFIX: &str = "lx@caption@count@";
+/// The caption counts as each open box (`begin_caption_box`) began, innermost last.
+const BOX_CAPTION_COUNTS: &str = "lx@box@caption@counts";
+
+/// The caption types a box begun in a float of `captype` may hold its own caption of: the float's, and its sub-type,
+/// which subcaption's `\subcaption` captions in (`\caption` under `\@captype` `sub<type>`, subcaption.sty:251): the
+/// minipage holding it is the sub-float, as a `{subfigure}` is (subcaption.sty:97-108 makes `{subfigure}` that
+/// minipage). Inside a sub-float the type is the sub-type already.
+fn caption_box_types(captype: &str) -> Vec<String> {
+  if captype.starts_with("sub") {
+    vec![captype.to_string()]
+  } else {
+    vec![captype.to_string(), s!("sub{captype}")]
+  }
 }
 
 /// The end of a box `begin_caption_box` began: the counters a caption in it stepped become the box's properties
@@ -3594,9 +3942,28 @@ pub fn end_caption_box(whatsit: &mut Whatsit) -> Result<()> {
   // A box in math (a minipage in an `array` cell) leaves its caption to the float, as before: the ids made in math
   // are the math's own, and the float's must exist when they are made.
   let in_math = lookup_bool("IN_MATH");
-  if let Some(captype) = caption_box_type()
-    && !in_math
-    && lookup_value(&s!("{captype}_id")).is_some()
+  let counts = match pop_value(BOX_CAPTION_COUNTS)? {
+    Some(Stored::HashStored(counts)) => counts,
+    _ => stored_map!(),
+  };
+  // A box with two sub-captions (2008.05644: two `\includegraphics` + `\subcaption` pairs in one minipage) is not one
+  // sub-figure: its captions stay its float's, as before.
+  let made_one = |captype: &str| {
+    let count = s!("{CAPTION_COUNT_PREFIX}{captype}");
+    let before = match counts.0.get(&pin(&count)) {
+      Some(Stored::Number(Number(n))) => *n,
+      _ => 0,
+    };
+    lookup_int(&count) - before == 1
+  };
+  if let Some(captype) = caption_box_type().and_then(|captype| {
+    let types = caption_box_types(&captype);
+    let main = types.first().cloned();
+    types.into_iter().find(|captype| {
+      lookup_value(&s!("{captype}_id")).is_some()
+        && (Some(captype) == main.as_ref() || made_one(captype))
+    })
+  }) && !in_math
   {
     for part in PENDING_CAPTION_PARTS {
       if let Some(pending) = remove_value(&s!("{captype}_{part}")) {
@@ -5998,7 +6365,8 @@ fn makebox_alignment(key: &str) -> &'static str {
 mod sect01;
 pub(crate) use sect01::make_missing_float_counters;
 pub use sect01::{
-  CLASS_DECLARED, settle_chapter_after_class_load, store_chapter_after_latex_ix_class_load,
+  CLASS_DECLARED, note_document_class, settle_chapter_after_class_load,
+  store_chapter_after_latex_ix_class_load,
 };
 mod sect02;
 mod sect03;

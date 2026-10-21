@@ -36,6 +36,9 @@ fn push_classification_to_frontmatter(
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
+  // siamltex.cls:156-175: `\maketitle` marks the title block's notes in `\fnsymbol` and resets the counter after it
+  // (0903.0014: "BELTRAME∗† AND UWE THIELE‡", the `\footnotetext[n]`s after `\maketitle` the same).
+  latexml_package::engine::latex_constructs::declare_fnsymbol_title_block("siamltex", None)?;
   RequirePackage!("amsthm");
   // A copy of the class the paper edited to load the algorithm packages (2210.03478's siamltex.cls:299-300
   // `\usepackage{algorithmicx,algorithm}` `\usepackage{algpseudocode}`; the distributed class loads none) decides them.

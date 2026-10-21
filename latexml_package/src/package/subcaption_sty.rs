@@ -202,6 +202,21 @@ LoadDefinitions!({
     }
   });
 
+  // `\subcaption`'s sub-type (subcaption.sty:251 `\subcaption@newabbreviation\subcaption\caption`: `\caption` with
+  // `\@captype` `sub<type>`), local to the box it is in. The first sub-caption of a float steps the float's counter
+  // ahead of its own caption, as a `{subfigure}` does (`before_float`'s preincrement): pdflatex numbers a sub-caption
+  // in a minipage "1a" before the figure's `\caption` (2011.13897). The minipage holding it is the sub-float
+  // (`begin_caption_box`, OXIDIZED_DESIGN_DIVERGENCES #853).
+  DefPrimitive!("\\lx@subcaption@type{}", sub[(ctype)] {
+    let ctype = ctype.to_string();
+    let subtype = s!("sub{ctype}");
+    def_macro(T_CS!("\\@captype"), None, Tokens::new(ExplodeText!(&subtype)), None)?;
+    if lookup_bool("lx@in@float") {
+      preincrement_float_counter(&subtype, &ctype);
+      assign_value("LAST_FLOATTYPE", Stored::String(pin(&subtype)), Some(Scope::Global));
+    }
+  });
+
   //======================================================================
   // \subcaption — Perl L47-56: if \@captype is defined, prepend "sub" (unless already
   // sub-prefixed) locally, then delegate to \caption.
@@ -211,11 +226,9 @@ LoadDefinitions!({
       let ctype = do_expand(Tokens!(T_CS!("\\@captype")))?.to_string();
       let ctype = ctype.trim().to_string();
       if !ctype.is_empty() && !ctype.starts_with("sub") {
-        // Local redefinition via \def\@captype{sub<ctype>} tokens.
-        tokens.push(T_CS!("\\def"));
-        tokens.push(T_CS!("\\@captype"));
+        tokens.push(T_CS!("\\lx@subcaption@type"));
         tokens.push(T_BEGIN!());
-        tokens.extend(Explode!(s!("sub{}", ctype)));
+        tokens.extend(Explode!(ctype));
         tokens.push(T_END!());
       }
     }

@@ -14,7 +14,7 @@ use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
 use serde_json::Value;
 
 /// Convert `tex` (with `preload`) under the shadow switch: the log, the XML, and the shadow ledger as JSON.
-fn shadow(tex: &str, preload: Option<&str>) -> (String, String, Value) {
+pub(super) fn shadow(tex: &str, preload: Option<&str>) -> (String, String, Value) {
   let (log, xml, json) = convert_with_setup_then(
     tex,
     preload,
@@ -72,7 +72,7 @@ fn compact(event: &Value) -> String {
 }
 
 /// The author blocks of a shadow ledger, each its compact event list (a skipped block: `["skipped: <reason>"]`).
-fn blocks(json: &Value) -> Vec<Vec<String>> {
+pub(super) fn blocks(json: &Value) -> Vec<Vec<String>> {
   json["entries"]
     .as_array()
     .expect("entries")
@@ -575,14 +575,14 @@ fn ampersand_is_a_column_separator() {
 }
 
 /// The title's footnote marks are the kernel `\maketitle`'s `\@fnsymbol` unless a binding declares its own through the
-/// hook `\lx@fm@title@thefootnote` (review revfms2a1_2 finding 5; revtex4-2.cls:3040-3041 `\frontmatter@thefootnote`,
+/// hook `\lx@title@thefootnote` (review revfms2a1_2 finding 5; revtex4-2.cls:3040-3041 `\frontmatter@thefootnote`,
 /// `\@alph` under `altaffilletter` only): here `\@alph`, so the bare `\footnotemark` after one `\thanks` prints "b" and
 /// `\footnotemark[5]` "e".
 #[test]
 fn title_footnote_hook_overrides_fnsymbol() {
   assert_eq!(
     article_blocks(
-      r"\makeatletter\def\lx@fm@title@thefootnote{\@alph\c@footnote}\makeatother",
+      r"\makeatletter\def\lx@title@thefootnote{\@alph\c@footnote}\makeatother",
       r"\author{Ann Able\thanks{A.} \and Bob Baker\footnotemark \and Cat Cole\footnotemark[5]}"
     ),
     [[

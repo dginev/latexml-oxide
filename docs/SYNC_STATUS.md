@@ -395,9 +395,9 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
     `sectioning-frontmatter/unnumbered_section_takes_the_title_font` GREEN 78a (`\@@unnumbered@section` applies
     `\lx@format@title@font@@`, Perl latex_constructs.pool.ltxml:666-670, and titlesec's after-code,
     `\lx@format@title@after@@`, OXIDIZED_DESIGN_DIVERGENCES #785, so tufte's `\begin{fullwidth}` format closes).
-  - *floats/captions*: RED `captions-floats/par_breaks_a_panel_row`; RED
-    `captions-floats/continuedfloat_minipage_subcaption_continues_the_letters` (no `\caption@subtypehook` pre-step,
-    caption.sty:642); under subfig a third continued part keeps the first continuation's sub-float id suffix (`S0.F1a.sf4`
+  - *floats/captions*: RED `captions-floats/par_breaks_a_panel_row`; GREEN 78o
+    `captions-floats/continuedfloat_minipage_subcaption_continues_the_letters` (`\subcaption` pre-steps the float's
+    counter as `\caption@subtypehook` does, caption.sty:642; OD #853); under subfig a third continued part keeps the first continuation's sub-float id suffix (`S0.F1a.sf4`
     under `S0.F1b`); `[caption=false]{subfig}` still gets `\caption@ContinuedFloat`'s check; caption's
     `continuedfloat`/`continued<type>` option sets (caption.sty:526-528) unapplied; longtable ignores `\LTcaptype`; floatfig/JHEP
     `floatingfigure`/`floatingtable` and elsart `algorithm` typed without a source; RED `captions-floats/subref_prints_the_letter`;
@@ -562,26 +562,48 @@ The open RED repros of `tools/perfect_kernel/repros/` that no other row names; h
 PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary). Each row: defect, classification, repro path.
 
 - **A footnote's numeric `[<n>]` is not marked `\thefootnote`, so symbol marks leave a mark and its text apart**
-  (PERL-ORIGIN, KPE #1060; found by the 78k A/B, witness 2507.05750): latex.ltx:17678-17699 marks `\footnotemark[n]` and
-  `\footnotetext[n]` with `\thefootnote` at counter `n`; ours (and Perl) print `n`, so under footmisc's `symbol` (78k,
-  KPE #1057) an unnumbered `\footnotemark` ("∗") and the `\footnotetext[1]` answering it ("1") stay two notes. Formatting
-  `[n]` alone (tried in 78k) unpaired 58 of 245 numbered-footnote papers, because article's `\maketitle` marks its
-  title block in `\@fnsymbol` and our frontmatter does not (2412.20504: `\author{…\footnotemark[1]}` `\maketitle`
-  `\renewcommand\thefootnote{\fnsymbol{footnote}}` `\footnotetext[1]{…}`, "∗" for both in pdflatex). Needs one rule
-  for both halves (proposal: pair a mark and a text by the counter value they stand for, whatever their printed marks;
-  or the title block's `\thefootnote` as the class sets it). RED
-  `package-bindings/footmisc_symbol_numbered_footnotetext_pairs_with_its_mark`.
-- **amsmath's alignment dimens `\totwidth@`, `\alignsep@` (and `\black@`) are undefined** (SHARED, binding; found by the
-  78k r2 writer, witness 0912.5438): amsmath.sty:1311/:1316 `\newdimen\alignsep@`, `\newdimen\totwidth@`, :1364
-  `\def\black@`; amsmath_sty.rs (as Perl's amsmath.sty.ltxml) defines none, so raw code reading them errs: 0912.5438's
-  shipped mathtools.sty v1.01a (`\x@calc@shift@lf`, its `{gather}` end `\black@\totwidth@`) gives 156 errors whose
-  group-close cascade swallows the paper's tail and its bibliography. RED
-  `package-bindings/amsmath_alignment_dimens_totwidth_alignsep_are_defined`.
-- **algorithm2e's `noline` blocks never give back their indentation** (SHARED, KPE #1062; found by the 78k r2 writer on
-  the review's p/alg_noline.tex): `\algocf@Noline` (algorithm2e_sty.rs, Perl algorithm2e.sty.ltxml:120) pushes
-  `\lx@algo@advlevel` and never pops it (`\algocf@Vline`/`\algocf@Vsline` do), so under `[noline]` (and
-  `\SetAlgoNoLine`) every line after a block is one level deeper. RED
-  `listings-algorithms/algorithm2e_noline_block_pops_its_indentation`.
+  (PERL-ORIGIN, KPE #1060; **FIXED 78o**, OD #851): `[n]` prints `\thefootnote` at `n` (read undigested, so
+  `[\value{footnote}]` is the counter), article's/report's/book's title block marks in `\@fnsymbol`, its `\thanks` and
+  `\footnote` step the counter (78o r2) and it resets the counter, a mark and a text pair by printed mark, else by
+  counter value when one is in the title block or neither prints a mark — across the counter reset, by value only
+  between notes naming their number and by printed mark unless both are numbered from the counter (78o r3). Witnesses 2507.05750, 2412.20504, 0903.0014,
+  2006.14582, 2201.11183, 2111.13260, 2606.03847; guards `perfect_kernel_batch78o`. Residuals: the frontmatter digests
+  the fields in the order the preamble set them, so a title `\thanks` set after `\author` steps after the authors' (the
+  title's first in pdflatex); a `[<n>]` that is not a number (`\footnotemark[$\dagger$]`, pdflatex "Missing number,
+  treated as zero") is printed as given with no diagnostic, as in Perl — an honest-diagnostic gap (a Warning?) left for a
+  ruling. 0707.3986 is classified, not a residual: RR.sty:141 `\footnotetext[0]` under RR.sty:445's `\fnsymbol` prints
+  no mark, ours too; its TL 2025 PDF's "0" is pdflatex's recovery from RR.sty's own errors (the `\xdef` of the accented
+  theme name, :160-168: "Missing } inserted", "Too many }'s" close `\makeRR`'s group early, and `\thefootnote` is
+  article's `\@arabic` again at :477).
+- **A `\newtheorem{<env>}[<counter>]` checks its counter only at the first `\begin{<env>}`** (SHARED, Perl's
+  `\newtheorem` reads the counter lazily; found by rev78o probe a1): pdflatex errs at the definition ("No counter
+  'theorem' defined", the environment left undefined). Since acmart makes its theorems `\AtEndPreamble` (78o, OD #854),
+  `\documentclass{acmart}\newtheorem{remark}[theorem]{Remark}` is silently "Remark 1.2" on the class's theorem counter
+  in ours, an error in pdflatex; with no counter at all (`[foo]`) ours and Perl err at the `\begin{remark}`.
+- **algorithm2e's `\Indp`/`\Indm` do not indent the lines after them** (SHARED, binding, pre-existing; found by rev78o
+  probe g1): algorithm2e.sty:1626-1629 `\Indp` advances `\leftskip` by `\algoskipindent` until `\Indm` (pdflatex
+  "indented;" one level in); ours and Perl set the line at the block's level (int52a the same).
+- **A body `\footnotetext` pairs with a mark printing the same number far away** (PERL-ORIGIN rule, Perl's
+  printed-mark `relocateFootnote`; found by rev78o2): 2509.17784's `\footnotetext[\value{footnote}]{Results are based
+  on Gemini 2.0…}` (main.tex:134, "1" since 78o r2 reads `[<n>]` as the counter) moves into the appendix's COAT
+  `\protect\footnotemark[1]` (sections/appen_exp.tex:290), where pdflatex prints the text on its own page and the
+  appendix mark alone. Int52a left it a text (its mark printed ""). A pairing bounded by position (the nearest mark
+  before the text) would be the general fix; open.
+- **A title page's literal `\footnotemark[<n>]` copies a body text of the same number** (PERL-ORIGIN, Perl's
+  `relocateFootnote` pairs every mark printing the text's mark; found by rev78o2; int52a and 78o r3 alike): report
+  (title page) `\author{A\footnotemark[1]}`, body `x\footnotemark{} \footnotetext{two}` — pdflatex "A1" with no
+  text, "x1" and "1 two"; ours puts "two" in A's mark and in the body's (duplicated). The literal `[<n>]` keeps its
+  pairing across the counter reset on purpose (2505.14146); telling an intended title answer from a body one needs the
+  position rule above. Open.
+- **The frontmatter observer labels `[\arabic{footnote}]` with the counter before the title's notes** (FM S2a.2;
+  found by rev78o2): the printed mark steps with the title's `\thanks` (`\lx@title@footnote@step`, 78o r2), the
+  observer's rehearsal evaluates the argument against the unstepped counter, so the two agree for a bare
+  `\footnotemark` and a literal `[<n>]` only (OD #851). For S2a.2 to fix in the observer.
+- **amsmath's alignment dimens `\totwidth@`, `\alignsep@` (and `\black@`) are undefined** (SHARED, binding; KPE #1087;
+  **FIXED 78o**, amsmath.sty:1309-1317, :1364 in amsmath_sty.rs; 0912.5438 156 → 124 Errors, its tail back). Guard
+  `perfect_kernel_batch78o::amsmath_alignment_dimens_totwidth_alignsep_are_defined`.
+- **algorithm2e's `noline` blocks never give back their indentation** (SHARED, KPE #1062; **FIXED 78o**, OD #852:
+  `\algocf@Noline` pops its level). Guards `perfect_kernel_batch78o::algorithm2e_*`.
 - **amsmath displays do not run `\everydisplay`** (SHARED, binding; found by rev78g3, witness 2212.07486): amsmath's
   `{align}`/`{gather}` family start with `$$` (`\start@align`, `\start@gather`), so TeX runs `\everydisplay` (tex.web
   §1145) at every one; the bindings build the display without it (amsmath_sty.rs:443, the `\if@display` note), while
@@ -653,12 +675,9 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   to close non-boxing group", pdflatex 0). Not local: the fix is a theorem end that consults a class's `\@endtheorem`
   (or the class's `\@begintheorem`/`\@endtheorem` pair as a unit), a theorem-machinery change. Witnesses 2409.06465,
   2603.20879. Repro `boxes-groups/etna_remark_ends_by_class_endtheorem`.
-- **acmart's theorems shadow an author's command of the same name** (SHARED; 69c side finding): acmart.cls defines
-  its theorems `\AtEndPreamble{\if@ACM@acmthm … \@ifundefined{example}{\newtheorem{example}…}{} …}` (TL 2025
-  :3461-3489), acmart_cls.rs:442-449 (and Perl's acmart.cls.ltxml:236-243) `\newtheorem` them at class load, so
-  2510.04987's `\newcommand{\example}[1]{\parbox{…}{\lstinputlisting{…}}}` became a theorem in 14 table cells (6
-  Errors in the repro). Fix: the class's `\AtEndPreamble` + `\@ifundefined` per theorem. Repro
-  `class-bindings/acmart_author_theorem_name_wins`.
+- **acmart's theorems shadow an author's command of the same name** (SHARED, KPE #1086; **FIXED 78o**, OD #854: the
+  class's `\AtEndPreamble` + `\@ifundefined` per theorem, `acmthm` read). Witnesses 2510.04987, 2306.01662; guards
+  `perfect_kernel_batch78o::acmart_*`.
 - **A `$\phantom{$-$}$` toggle in a `{cases}` cell never ends its in-math text** (SHARED, Perl 9; 69c side finding): the author's
   `$`s in a math cell toggle through `\lx@dollar@in@mathmode` (tex_math.rs), whose boxing-level bookkeeping
   (`MATH_ALIGN_$_BEGUN`) loses the text's end across `\phantom`'s argument; 9 Errors and the rest of the display
@@ -1140,8 +1159,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   closing-caption hoist out of a rotate/scale box; ASCE grades (`M.ASCE`) qualify the name. OD #526-#529. Witnesses
   recipebook/LongSample (recipe titles and attributions back), heria/heria-proposal (schema-valid), ascelike/ascexmpl,
   1810.08269. Guards `perfect_kernel_batch65a::*`. Residuals: a late class `\author` that both stores and prints — FIXED
-  77i r2 (runs in place, its text kept, the frontmatter's stores put back: silent-loss #8, OD #526); the figure-panel wrap for refused caption hoists (task #193; RED
-  `captions-floats/subcaption_labels_in_scaled_panels_stay_on_their_panels`).
+  77i r2 (runs in place, its text kept, the frontmatter's stores put back: silent-loss #8, OD #526); the figure-panel wrap for refused caption hoists (task #193;
+  `captions-floats/subcaption_labels_in_scaled_panels_stay_on_their_panels` GREEN 78o for its labels and numbers, OD
+  #853; the panel figure inside the `\scalebox`'s `ltx:inline-block` stays schema-invalid, 2 jing lines).
 - **65h** (RUST-ONLY; run 340's Error→Fatal regressions, 287 papers against run 338):
   - **`\LT@array`**: the longtable binding is split as longtable.sty splits it (`\longtable` = `\begingroup\LT@array`,
     `\endlongtable` closes the group), so aalongtable.sty's and anlongtable.sty's `\longtable` build their tables
@@ -5403,6 +5423,70 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\bibliography` was never reached on either side. Random controls: 2 of 98 (78l) and 1 of 95 (78m) changed — the
   algorithm2e default block end "end" (2210.14751, 2608.25754; 78k) and 1706.03762's Aidan N. Gomez keeping one
   "University of Toronto" instead of two, Polosukhin's thanks before his e-mail as printed (78m). Binding nets (int51a) 136/136, 0 worse than int50a.
+- **78o** (quality batch 12; guards `perfect_kernel_batch78o::*`, 14 in r1, 19 after r2 (one r1 guard replaced), 26 after r3, each
+  RED on int51a; OD #851-854, KPE #1060 and #1062 amended, #1085-1087). (1) Footnotes: `[<n>]` is `\thefootnote` at
+  `<n>` (latex.ltx:17652-17699; a mark that is no number stays as given); article/report/book/ext* and siamltex, when the document's class, mark their title
+  block's notes in `\@fnsymbol` (none under a title page) and reset the counter after `\maketitle`
+  (`declare_fnsymbol_title_block`); a mark and a text pair by printed mark, else by the counter value they stand for
+  (`_fnvalue`). 2412.20504, 2006.14582, 0903.0014 print the PDF's ∗/†/‡ and stay paired; 2507.05750, 1405.7962,
+  2606.03847 pair what int51a left apart; 2505.14146's title "†" pairs with its `\footnotetext[2]` "2" (pdflatex prints
+  them apart). (2) algorithm2e `noline`/`\SetAlgoNoLine` blocks and groups give their indentation back (1410.4452 as its
+  PDF). (3) A minipage holding one `\subcaption` in a float is the sub-float — id, tags "2a"/"2b", list entry, its
+  labels; `ltx:table` in a table — the float counter stepped ahead (2011.13897; the RED repros
+  subcaption_labels_in_scaled_panels_stay_on_their_panels and continuedfloat_minipage_subcaption_continues_the_letters
+  green); a box with two sub-captions stays as before (2008.05644). (4) acmart's theorems are made `\AtEndPreamble`
+  under `\@ifundefined` and `acmthm` (2306.01662 "Theorem 1", "Theorem 2"; 2510.04987's `\example`; authors'
+  `\theoremstyle{definition}` theorems get their bold heads). (5) amsmath's alignment dimens and `\black@` (0912.5438
+  156 → 124 Errors, the rest its shipped tikz.code.tex; 15,382 → 43,578 words, its tail and bibliography back). A/B
+  (release, `--preload=ar5iv.sty`, int51a vs 78o, int51a dumps; 1,215 papers, census pops `pop78o_{wit,fn,footmisc,
+  fnart,algnoline,subcap,acmart,amsmath,ctrl}.tsv`: `\footnotetext|\footnotemark` cap 300, footmisc cap 150, article +
+  `\footnotemark` cap 150, all 82 algorithm2e `noline`/`\SetAlgoNoLine` papers, all 181 `\subcaption`+`{minipage}`, acmart
+  + `\newtheorem` cap 200, amsmath cap 100, 100 random controls, 8 witnesses): E 6,040 → 6,007, F 9 = 9, W 58,970 →
+  59,003 (0912.5438's recovered math), 0 papers worse in E or F, +32,370 words, 235 outputs changed, all classified
+  (pools overlap): 101 papers' footnote marks (title marks "1" → "∗"/"†" as the PDFs print; pairing equal in 97, better
+  in 3, and in 2609.31116 the title "∗" int51a had paired with a body `\footnotetext` is alone, as in the PDF — its 14
+  duplicated words gone), 27
+  algorithm2e listings (indentation as the PDF), 98 sub-figure panels, 16 acmart theorem numbers/heads, 0912.5438.
+  Controls: 5 of 100 changed, all title footnote marks. Repro A/B (sectioning-frontmatter, captions-floats,
+  listings-algorithms, class-bindings, package-bindings): only the two RED repros' error counts changed (6 → 0, 2 → 0).
+  r2 (review rev78o; rebased onto int52 `0dfa195c22`; guards `perfect_kernel_batch78o::{footnotemark_value_footnote_is_the_counter,
+  article_title_notes_step_the_footnote_counter, article_title_thanks_in_every_field_step_in_turn,
+  footnotetext_by_number_pairs_only_across_the_title_block, unmarked_footnotemark_pairs_with_its_unmarked_text,
+  declared_title_thefootnote_prints_the_marks_the_observer_labels}`, each RED on r1 or int52a): the title block's
+  `\thanks` and `\footnote` step the footnote counter as the `\maketitle` digests them (`\lx@title@footnote@step`,
+  `lx_title_counts_footnotes`), so `\footnotemark[\arabic{footnote}]`/`\samethanks` after one prints its symbol
+  (2201.11183, 2111.13260 "∗" for r1's ""; 1001.4802, 1806.01827, 1904.04720, 2504.19677, 2405.18926 "†"/"∗", each as
+  its PDF); one title `\thefootnote` hook, `\lx@title@thefootnote` (`latex_constructs::TITLE_THEFOOTNOTE`), which the
+  frontmatter observer reads too (rehearsal.rs `TITLE_FOOTNOTE_HOOK`; S2a.1's `\lx@fm@title@thefootnote` gone; OD #837);
+  the counter-value pairing only across the title block or between two unmarked notes (`title_block_partner`; the
+  review's standalone `\footnotetext[1]` no longer taken by a table's mark; 2505.14146, 1406.0089, 2002.11721,
+  2606.03847 still pair); `[<n>]` read undigested (`OptionalUndigested`), so `\footnotemark[\value{footnote}]` is the
+  counter (1804.03292 "series5" as its PDF; 2509.17784's `\footnotetext[\value{footnote}]` prints its PDF's "1" and so
+  pairs, by Perl's printed-mark rule, with the appendix's `\footnotemark[1]` that cites it). The r1 report's "every
+  changed mark matches its PDF" did not hold for 0707.3986: its PDF's "0" is pdflatex's error recovery, ours follows
+  RR.sty (row "A footnote's numeric `[<n>]`…" above). A/B (release, int52a vs r2, int52a dumps, the same 1,215 papers):
+  E 6,040 → 6,007, F 9 = 9, W 58,970 → 58,990, +32,425 words, 0 papers worse in E or F, 240 outputs changed; r1 → r2: E,
+  F equal, 9 papers changed (the 9 above), all checked against pdftotext. Residuals: `\fnsymbol` (Perl's table) prints
+  "∥" where `\@fnsymbol` prints "‖" for 6; a minipage with two `\subcaption`s numbers no panel; siamltex1213 (a raw class)
+  marks its title as the body; the field order and `[$\dagger$]` rows above.
+  r3 (review rev78o2; guards `perfect_kernel_batch78o::{title_counter_mark_keeps_to_the_title_block,
+  report_title_bare_footnotemark_keeps_to_the_title_block, footnotemark_number_error_reported_once,
+  footnotetext_number_error_reported_once}` RED on r2, `{title_bare_footnotemark_pairs_with_a_numbered_body_text,
+  title_mark_of_another_counter_pairs_with_its_body_text, section_title_footnotemark_pairs_with_its_text}` RED on the
+  first cut): in a class that resets the counter after `\maketitle`, a note numbered from the counter (no `[<n>]`, or
+  one that moves with it, `FootnoteNumber::from_counter`) carries `_fncounted`, and across the reset a mark and a text
+  pair by value only when neither does and by printed mark unless both do (`same_count`): the review's article "C†"
+  (`\footnotemark[\value{footnote}]`) no longer takes the body's `\footnotetext[2]`, report's title-page "B2" no longer
+  copies the body's bare `\footnotetext` "two"; 2505.14146 (value), 2507.05750, 1405.7962, astro-ph9712060 (printed
+  mark) keep their pairing — the brief's stricter rule (no cross-reset pairing for a counted title mark) split those
+  three in the first A/B. The title block is the document's title, creators and date, not a section's title
+  (1907.00457). `[<n>]` is read for a number once per note, its diagnostics held (`given_footnote_number`), so an error
+  in it is reported once, by the mark's digestion (review valerr 2 → 1, val 3 → 1 Errors, as pdflatex). A/B r2 → r3
+  (release, int52a dumps; census pops `pop78o_{fn,fnart,footmisc,wit}.tsv` and 1406.0089, 2606.03847, 1503.07490, 599
+  papers): E 3,703 = 3,703, F 6 = 6, W 39,621 = 39,621, words equal, no footnote changed; the only differences are run
+  to run on the r2 side (1410.4917 one formula unparsed, 1608.08920 one ambiguous_math Warning fewer than in its two
+  other runs). The first cut's A/B changed 1405.7962, 2507.05750, astro-ph9712060 (pairing lost) and 1907.00457 (a
+  section title's mark), each now guarded.
 - **78g** (kernel batch: tcolorbox box labels, TCB-LABEL, user ruling 2026-10-21 item 12; + the repro stand-in licence
   audit, item 11; guards `perfect_kernel_batch78g::*`, 4, each RED on 25730beb73; OD #813, KPE #1038). (1) A label after a
   raw `\refstepcounter` names the object the step numbers, which takes the step's number: the kernel's
@@ -5667,7 +5751,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   parbox/minipage rebinds `\\` to is a Break (once one Name); a stray `&` a `column` separator — the `&` constructor
   errs only when built into the document, so nothing is held (OD #837 corrected); an `\input` in the field no longer
   doubles the log's `(Processing content …` note with the switch on (core `error::SilenceProgressNotesGuard` in the
-  rehearsal; its tokens carry no span); the title's footnote marks follow a binding-declared `\lx@fm@title@thefootnote`
+  rehearsal; its tokens carry no span); the title's footnote marks follow a binding-declared `\lx@title@thefootnote` (the kernel's hook since 78o r2)
   (hook, default `\@fnsymbol`; revtex's default is `\@fnsymbol` too, `\@alph` only under `altaffilletter`); a block
   deferred for want of a journal reports `journal unavailable`; a font switch inside a run stays a departure (splitting
   would split gretsi's `first \textsc{last}` names, 2508.03934). Guards +6 (20) and an engine unit test. A/B int51a →

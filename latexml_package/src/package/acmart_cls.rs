@@ -454,16 +454,25 @@ yysep={,},notesep={, }}}
   {\@acmdefinitionbodyfont}{\@acmdefinitionindent}{\@acmdefinitionheadfont}{.}{.5em}%
   {\thmname{#1}\thmnumber{ #2}\thmnote{ {\@acmdefinitionnotefont(#3)}}}");
 
+  // acmart.cls:3460-3489 (TL 2025; 2510.04987's copy :3405-3430): the class's theorems are made at the end of the
+  // preamble, under the `acmthm` key (default true, :86-93), each only when the document has not defined that name,
+  // so an author's own `\newtheorem{theorem}` (numbered as the author says: 2306.01662, PDF "Theorem 1", "Theorem 2")
+  // or `\newcommand{\example}` (2510.04987) wins. Perl's acmart.cls.ltxml:236-243 makes them at class load.
   RawTeX!(r"\theoremstyle{acmplain}");
-  RawTeX!(r"\newtheorem{theorem}{Theorem}[section]");
-  RawTeX!(r"\newtheorem{conjecture}[theorem]{Conjecture}");
-  RawTeX!(r"\newtheorem{proposition}[theorem]{Proposition}");
-  RawTeX!(r"\newtheorem{lemma}[theorem]{Lemma}");
-  RawTeX!(r"\newtheorem{corollary}[theorem]{Corollary}");
-  RawTeX!(r"\theoremstyle{acmdefinition}");
-  RawTeX!(r"\newtheorem{example}[theorem]{Example}");
-  RawTeX!(r"\newtheorem{definition}[theorem]{Definition}");
-  RawTeX!(r"\theoremstyle{acmplain}");
+  RawTeX!(
+    r"\AtEndPreamble{\if@ACM@acmthm
+  \theoremstyle{acmplain}%
+  \@ifundefined{theorem}{\newtheorem{theorem}{Theorem}[section]}{}%
+  \@ifundefined{conjecture}{\newtheorem{conjecture}[theorem]{Conjecture}}{}%
+  \@ifundefined{proposition}{\newtheorem{proposition}[theorem]{Proposition}}{}%
+  \@ifundefined{lemma}{\newtheorem{lemma}[theorem]{Lemma}}{}%
+  \@ifundefined{corollary}{\newtheorem{corollary}[theorem]{Corollary}}{}%
+  \theoremstyle{acmdefinition}%
+  \@ifundefined{example}{\newtheorem{example}[theorem]{Example}}{}%
+  \@ifundefined{definition}{\newtheorem{definition}[theorem]{Definition}}{}%
+  \fi
+  \theoremstyle{acmplain}}"
+  );
 
   Let!("\\proof", "\\@proof");
   Let!("\\endproof", "\\end@proof");
@@ -497,6 +506,9 @@ yysep={,},notesep={, }}}
   DefConditional!("\\if@ACM@balance");
   Let!("\\if@ACM@balance", "\\iftrue");
   DefConditional!("\\if@ACM@pbalance");
+  // acmart.cls:86-93 the `acmthm` boolkey (default true): the class's theorem set, made at the end of the preamble.
+  DefConditional!("\\if@ACM@acmthm");
+  Let!("\\if@ACM@acmthm", "\\iftrue");
   // acmart.cls:139 the `anonymous` boolkey, set from the class options below; the class and its
   // author macros (`\correspondingauthor`, :1683) test it (8 2609 papers named it, 2609.06664).
   DefConditional!("\\if@ACM@anonymous");
@@ -817,6 +829,7 @@ yysep={,},notesep={, }}}
       (false, false, false, String::from("manuscript"));
     // acmart.cls:123-130: `balance` defaults true, `pbalance` false.
     let (mut balance, mut pbalance) = (true, false);
+    let mut acmthm = true;
     for option in options.split(',') {
       let option: String = option.chars().filter(|c| !c.is_whitespace()).collect();
       let (key, value) = match option.split_once('=') {
@@ -833,6 +846,7 @@ yysep={,},notesep={, }}}
         "anonymous" => anonymous = flag(&value),
         "balance" => balance = flag(&value),
         "pbalance" => pbalance = flag(&value),
+        "acmthm" => acmthm = flag(&value),
         "format" => format = value.unwrap_or_else(|| String::from("manuscript")),
         "manuscript" | "acmsmall" | "acmlarge" | "acmtog" | "sigconf" | "siggraph" | "sigplan"
         | "sigchi" | "sigchi-a" | "acmengage" | "acmcp"
@@ -851,6 +865,9 @@ yysep={,},notesep={, }}}
     }
     if pbalance {
       Digest!("\\@ACM@pbalancetrue")?;
+    }
+    if !acmthm {
+      Digest!("\\@ACM@acmthmfalse")?;
     }
     if nonacm {
       Digest!("\\@ACM@nonacmtrue")?;

@@ -1,0 +1,18 @@
+% witness: 2011.13897 (two `\subcaption`s, each in a minipage of a figure, `\label` after each: PDF "2a"/"2b", ours "2"/"2")
+% oracle:  pdflatex 0 errors: "(a) One", "(b) Two", "Figure 1: Both.", "See 1a, 1b, 1." — subcaption.sty:251
+%          `\subcaption` is `\caption` under `\@captype` `sub<type>`, stepping `sub<type>` (and the float's counter
+%          first, caption.sty:639-664 `\caption@subtypehook`); the minipage holding it is the panel the label names
+% engines: rust int51a = 0 errors, the panels id-less and unnumbered, both labels on the figure ("1", "1", "1"); perl
+%          the same (subcaption.sty.ltxml:43-56 TODO "should become a sub<float>")
+% expect:  0 errors, 0 warnings; each minipage a figure panel numbered "1a"/"1b" carrying its label
+% status:  GREEN (78o)
+\documentclass{article}
+\usepackage{subcaption}
+\begin{document}
+\begin{figure}
+\begin{minipage}[b]{.4\linewidth}X\subcaption{One}\label{a}\end{minipage}%
+\begin{minipage}[b]{.4\linewidth}Y\subcaption{Two}\label{b}\end{minipage}
+\caption{Both.}\label{f}
+\end{figure}
+See \ref{a}, \ref{b}, \ref{f}.
+\end{document}
