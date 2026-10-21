@@ -1027,7 +1027,8 @@ LoadDefinitions!({
   // the body passes through as before. Guard:
   // `perfect_kernel_batch54::nicematrix_block_ampersand_body_is_a_subgrid`.
   // The `<…>` tokens go before the content in its box (nicematrix.sty:7258 `{ m m D < > { } +m }`, `#4` set before
-  // `#5`: `\Block{2-1}<\bfseries>{Tall}`); unread, they printed as text ("¡Tall¿"; OXIDIZED_DESIGN_DIVERGENCES #787). Guard
+  // `#5`: `\Block{2-1}<\bfseries>{Tall}`); unread, they printed as text ("¡Tall¿"; OXIDIZED_DESIGN_DIVERGENCES #787;
+  // witnesses 2509.04931 `<\LARGE>`, 2411.17050 `<\Large>`, whose formulas parsed only once they were read). Guard
   // `perfect_kernel_batch78a::nicematrix_block_angle_tokens_apply_to_the_content`.
   DefMacro!("\\Block OptionalMatch:* []{} OptionalAngled {}", sub[args] {
     let mut args = args.into_iter().skip(3);

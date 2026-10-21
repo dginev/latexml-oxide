@@ -576,7 +576,8 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   (latex_constructs/sect11.rs) digests the note in text: 1 Error. Needs a Math in the cite's note. Witness math0402383.
   Repro `index-bib/cite_note_in_display_math`.
 - **`\multirow` in a `p{}` column spans no rows** (PERL-ORIGIN; **FIXED 78a**, KNOWN_PERL_ERRORS #1015: the empty p cell
-  below counted as content, `isSkippable`, so the span was truncated; the p cell's box is its `content_box` now; guard
+  below counted as content, `isSkippable`, so the span was truncated; a row span now covers a cell holding only a p box
+  with a skippable body, the `paragraph_cell_body` property `Digested::is_empty_paragraph_cell` reads; guard
   `perfect_kernel_batch78a::multirow_in_a_paragraph_column_spans_its_rows`, 2605.23257's table 122.9 → 62.3pt): the `p{0mm}` cell gets no `rowspan` where the `c`-column copy gets `rowspan="2"`, so the rotated label inflates its row (2605.23257 S5.T4 169.5pt vs pdflatex 116.2; A2.T7). Both bindings put `rowspan` on the alignment lookup's current column (`multirow_sty.rs:18-45`), which misses inside a p cell's box. Repro `alignment-bindings/multirow_in_p_column_spans.tex`.
 - **`\resizebox` of a zero-size box** (PERL-ORIGIN, K18 step 2 residue): a 0-width box gets `xscale="6553600"` where graphics.sty's `\Gscale@div` reports "Division by 0" and uses 1. Repro `boxes-groups/resizebox_zero_size_division.tex`. (The `pspicture` half landed in 58i, DIVERGENCES #397: `graphics-tikz/pspicture_size_is_typed` GREEN.)
 - **`\obeylines` makes the newline an `<ltx:break/>`, not `\par`** (PERL-ORIGIN; OUT OF SCOPE): Perl/Rust let the active `^^M` be `\@break` (`plain_base.rs:467-470`), latex.ltx:575-576 `\obeyedline` (= `\par`), so `\let\par=\cr \obeylines` ends no row. 6 errors, first `Error:unexpected:&`. A faithful fix changes goldens everywhere: ruling needed. Repro `alignment/metre_obeylines_halign.tex`.
@@ -4792,6 +4793,20 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   W 8538 → 8537, 128 outputs changed, each the item's change (no control but one llncs-class paper); the one E+1,
   2108.12618, is nowfnt.cls's `\nowfnt@font@paragraph`, undefined here before as its section fonts are (pre-existing),
   now also reached by its starred paragraph titles. Inits 0/0, dumps identical to int40c.
+  Round 2 (rev78a; guards +6, 18 in all, each RED on 78a r1 but the subfigure control): a jfm copy's own caption format
+  is installed at `\begin{document}` only where caption is not loaded — caption, or subcaption/subfig, which load it,
+  replace the class's `\@makecaption` ("Figure 1:"; 1711.01065, 2205.10181, 2507.07213, 1805.00129), the old subfigure
+  package and floatrow (caption's kernel alone, `\lx@caption@kernel@only`; 2312.13002, 2111.12004) do not; svmult's
+  `\backmatter` keeps its chapters numbered (svmult.cls:478-484; svmono numbers by `\if@chapnum`), book's `\appendix`
+  restarts the sections (book.cls:520-524); a numeric `\textcite` of an entry with no name keeps its brackets, per entry
+  (crossref.rs `nameless_numeric_show`: "[2]", natbib "Smith [2], [1]" for Perl's "2, 1"; guard
+  `bibref_show::natbib_numbers_citet_merges_same_authors` changed; OD #786 residuals: labeltitle, nameless
+  `\citeauthor`); KPE #1015's text describes the `paragraph_cell_body` mechanism; the empty `<text/>` in an autoref
+  tag is hyperref's `\null` (every figure's, pre-existing). A/B r1 → r2 (release; 503 papers: r1's 393, the review's
+  95, the 40 jfm copies with their own `\@makecaption`, 3 svmult/svmono papers with `\backmatter` from a 141k-zip
+  scan): E 1153 → 1153, F 1 → 1, W 9623 → 9623, 10 outputs changed, each a jfm copy under caption/subcaption/subfig
+  ("Figure 1:" as their PDFs, 2205.09346 and 1712.00836 checked); HTML A/B of the 28 biblatex papers and 100 controls:
+  0 changed.
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
   parts draw, as Unicode's IPA letter, cross-checked against tipauni.sty; the `""`/`||` ligatures ˌ ǁ), so its input

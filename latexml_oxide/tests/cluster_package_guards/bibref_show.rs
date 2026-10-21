@@ -158,10 +158,12 @@ and <cite class="ltx_cite ltx_citemacro_citeauthor"><a href="#bib.bib3" title="J
 }
 
 /// natbib numbers mode: `\citet`'s `number` role links each number and
-/// absorbs the next same-author entry, "Smith [2, 3]" (CrossRef.pm:617-622),
-/// and an entry with no authors, full authors or key demotes the whole
-/// citation to refnum (:542). Byte-identical to same-host Perl 0.8.8; the tip
-/// linked "Smith [2]" per entry.
+/// absorbs the next same-author entry, "Smith [2, 3]" (CrossRef.pm:617-622).
+/// An entry with no authors, full authors or key keeps the brackets around its
+/// number, the others their names: "Smith [2], [1]" (pdflatex "Smith [2], ano
+/// [1]", plainnat's key-prefix label); Perl demotes the whole citation to
+/// refnum, "2, 1" (:542; OXIDIZED_DESIGN_DIVERGENCES #786, 78a r2). Otherwise
+/// byte-identical to same-host Perl 0.8.8; the tip linked "Smith [2]" per entry.
 #[test]
 fn natbib_numbers_citet_merges_same_authors() {
   let (stderr, html) = convert_html(NUMBERS_TEX, &[(
@@ -174,7 +176,7 @@ fn natbib_numbers_citet_merges_same_authors() {
     &html,
     "p",
     &[r#"class="ltx_p""#],
-    r##"<p class="ltx_p">Text <cite class="ltx_cite ltx_citemacro_citet">Smith [<a href="#bib.bib1" title="First paper" class="ltx_ref">2</a>, <a href="#bib.bib2" title="Second paper" class="ltx_ref">3</a>]</cite> and <cite class="ltx_cite ltx_citemacro_citep">[<a href="#bib.bib1" title="First paper" class="ltx_ref">2</a>, <a href="#bib.bib2" title="Second paper" class="ltx_ref">3</a>]</cite> and <cite class="ltx_cite ltx_citemacro_citet"><a href="#bib.bib1" title="First paper" class="ltx_ref">2</a>, <a href="#bib.bib3" title="Anonymous notes" class="ltx_ref">1</a></cite>.</p>"##,
+    r##"<p class="ltx_p">Text <cite class="ltx_cite ltx_citemacro_citet">Smith [<a href="#bib.bib1" title="First paper" class="ltx_ref">2</a>, <a href="#bib.bib2" title="Second paper" class="ltx_ref">3</a>]</cite> and <cite class="ltx_cite ltx_citemacro_citep">[<a href="#bib.bib1" title="First paper" class="ltx_ref">2</a>, <a href="#bib.bib2" title="Second paper" class="ltx_ref">3</a>]</cite> and <cite class="ltx_cite ltx_citemacro_citet">Smith [<a href="#bib.bib1" title="First paper" class="ltx_ref">2</a>], [<a href="#bib.bib3" title="Anonymous notes" class="ltx_ref">1</a>]</cite>.</p>"##,
   );
 }
 

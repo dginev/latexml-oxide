@@ -24,6 +24,13 @@ const VERBATIM_BODY_ENVS: &[&str] = &[
 LoadDefinitions!({
   // caption3.sty:209: `\DeclareCaptionOption` defines its keys with keyval's `\define@key`.
   RequirePackage!("keyval");
+  // Loaded as caption3's stand-in (floatrow.sty:39 `\RequirePackage{caption3}`; caption3 has no binding and falls back
+  // to this one, content.rs `find_file_fallback`): TeX loads caption's kernel alone, which leaves the class's
+  // `\@makecaption` in place, so a class binding that models its own caption format keeps it (jfm_cls.rs; 2312.13002,
+  // 2111.12004). Guard `perfect_kernel_batch78a::jfm_copy_caption_kept_with_floatrow`.
+  if lookup_string("fallback_request") == "caption3" {
+    RawTeX!(r"\gdef\lx@caption@kernel@only{}");
+  }
   // caption.sty:170 `\let\AtCaptionPackage\@firstofone`: code a class hands it runs
   // at once, caption being loaded (langscibook.cls; class census 2026-09-24).
   Let!("\\AtCaptionPackage", "\\@firstofone");

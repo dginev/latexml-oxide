@@ -16325,8 +16325,11 @@ the empty p cell below: "Rowspan 2 in cell(0,0) covers non-empty cells", the spa
 row below. Minimal trigger: `\usepackage{multirow}` `\begin{tabular}{|p{2cm}|c|}\multirow{2}{*}{Spanned text}&a\\&b\\
 \end{tabular}` — pdflatex sets the text across both rows; Perl and Rust (int40c) give no `rowspan`. ≈18,700 corpus
 papers have a `\multirow` in a p/m/b column (190 of a 30k sample); witnesses 2602.22000 (A1.T3/T4), 2605.23257 (S5.T4,
-A2.T7). Fixed in Rust (78a): the p cell's constructor records its box as `content_box` (tex_tables.rs), as `\vbox` does,
-so an empty p cell is empty. Guard `perfect_kernel_batch78a::multirow_in_a_paragraph_column_spans_its_rows` (repros
+A2.T7). Fixed in Rust (78a), for row-span coverage only: the p cell's constructor records its body as the whatsit
+property `paragraph_cell_body` (tex_tables.rs), which `Digested::is_empty_paragraph_cell` reads, and the normalization
+lets a row span cover a cell that holds nothing but such a box with a skippable body (alignment/normalize.rs). Everywhere
+else an empty p cell is still content, as in Perl (its `align`, an all-empty row kept). Guard
+`perfect_kernel_batch78a::multirow_in_a_paragraph_column_spans_its_rows` (repros
 alignment-bindings/multirow_in_a_paragraph_column_spans_its_rows, multirow_in_p_column_spans).
 
 ## 1016. book's `\backmatter` leaves the chapters numbered
@@ -16340,7 +16343,15 @@ book_cls.rs's `\backmatter` sets `no_number_chapters`, by which `\@startsection`
 unnumbered; the other levels stay numbered (not `no_number_sections`, which would unnumber them too; scrbook's
 back-matter precedent, koma_script.rs `koma_book_matter`). `\frontmatter`/`\mainmatter` clear it. Guard
 `perfect_kernel_batch78a::book_backmatter_chapters_are_unnumbered` (repro
-sectioning-frontmatter/book_backmatter_chapters_are_unnumbered).
+sectioning-frontmatter/book_backmatter_chapters_are_unnumbered). Not for svmult/svmono, which bind book:
+svmult.cls:478-484 keeps `%\@mainmatterfalse` commented out and its `\@chapter` (:592) steps the counter anyway
+("Chapter 2 Afterword"; 1905.01770's copy); svmono.cls:418 sets it, but its `\@chapter` and `\@makechapterhead`
+(:478-513) number by `\if@chapnum`, not the matter (1704.03069's copy) — so svmult_cls.rs's `\backmatter` is Perl's
+no-op (guard `perfect_kernel_batch78a::svmult_backmatter_chapters_stay_numbered`). The other book-based bindings follow
+their classes: extbook.cls:302-308 and ut-thesis (book's own) are book's, amsbook's is its own no-op, memoir is raw.
+With the back-matter chapters unnumbered, book.cls:520-524's `\appendix` `\setcounter{section}{0}` (which Perl's
+`\appendix` leaves out) is the only section reset before the appendix: book_cls.rs's `\@appendix` does it (".1 Proofs",
+not ".3"; guard `perfect_kernel_batch78a::book_appendix_after_backmatter_restarts_sections`).
 
 ## 1017. llncs's item labels are article's
 

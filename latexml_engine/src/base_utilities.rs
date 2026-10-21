@@ -3797,7 +3797,7 @@ LoadDefinitions!({
   // What an unnumbered heading's title format runs after the title (sect04.rs `\@@unnumbered@section`), as a
   // numbered one's `\format@title@<type>` does: titlesec's after-code (titlesec.sty:756, :780, :816; the numberless
   // title is the same `\ttlf@<type>`), which closes what its format opened (tufte-common.def:1613-1619
-  // `\begin{fullwidth}` … `\end{fullwidth}`). Rust-only (Perl's starred title runs the font alone,
+  // `\begin{fullwidth}` … `\end{fullwidth}`; 1905.13490's run-in `\subsection*` its `[.]`). Rust-only (Perl's starred title runs the font alone,
   // latex_constructs.pool.ltxml:666-670, and titlesec.sty.ltxml:42-57 drops the after-code; OXIDIZED_DESIGN_DIVERGENCES #785).
   DefMacro!(
     r"\lx@format@title@after@@{}",

@@ -270,6 +270,9 @@ struct BibciteDatum {
   /// A key with no bibliography entry (L559-561): one `ltx_missing_citation`
   /// ref showing the key, whatever the `show`.
   missing:     bool,
+  /// An entry with no name to print under a textual numeric `show` ([`nameless_numeric_show`]): its label keeps the
+  /// phrases and the number alone.
+  nameless:    bool,
 }
 
 /// Perl `Post::Document::trimChildNodes` (`Post.pm` L1374-1397) of a stored
@@ -2095,12 +2098,21 @@ impl CrossRef {
           .unwrap_or_default();
         // Disable the author-year format (L542) for an entry with nothing to
         // name it by. Perl's `$show` persists: the whole citation turns refnum.
-        if !(show == "none"
+        // A textual numeric citation (`Authors Phrase1NumberPhrase2`: biblatex's
+        // numeric `\textcite`, natbib's numbers-mode `\citet`) instead keeps, for
+        // that entry alone, its phrases around the number, as its style brackets
+        // the number whatever the name: Perl's bare "2" for biblatex's "No Author
+        // Misc [2]" (numeric.cbx:23-41, the labeltitle before the bracket) and
+        // "2, 1" for natbib's "Smith [2], ano [1]" (plainnat's key-prefix label)
+        // are "[2]" and "Smith [2], [1]" (OXIDIZED_DESIGN_DIVERGENCES #786).
+        // Guards `perfect_kernel_batch78a::biblatex_numeric_textcite_without_author_keeps_its_brackets`,
+        // `bibref_show::natbib_numbers_citet_merges_same_authors`.
+        let nameless = !(show == "none"
           || show.eq_ignore_ascii_case("fullentry")
           || authors.is_some()
           || fauthors.is_some()
-          || keytag.is_some())
-        {
+          || keytag.is_some());
+        if nameless && nameless_numeric_show(&show).is_none() {
           show = "refnum".to_string();
         }
         let mut attr = HashMap::default();
@@ -2138,6 +2150,7 @@ impl CrossRef {
           fullentry,
           attr,
           missing: false,
+          nameless,
         }))
       });
       match found {
@@ -2167,6 +2180,7 @@ impl CrossRef {
               ("class".to_string(), "ltx_missing_citation".to_string()),
             ]),
             missing:     true,
+            nameless:    false,
           });
         },
       }
@@ -2199,14 +2213,19 @@ impl CrossRef {
       lower.contains("author") && (lower.contains("year") || lower.contains("number"));
     let mut data: VecDeque<BibciteDatum> = data.into();
     while let Some(datum) = data.pop_front() {
+      let nameless_show = datum
+        .nameless
+        .then(|| nameless_numeric_show(&show))
+        .flatten();
       let (stuff, didref) = bibcite_show_walk(
-        &show,
+        nameless_show.as_deref().unwrap_or(&show),
         &datum,
         &mut data,
         &preformatted,
         &phrases,
         &yysep,
-        checkdups,
+        // Entries without names share no author label.
+        checkdups && !datum.nameless,
       );
       if !refs.is_empty() {
         refs.push(NodeData::Text(sep.clone()));
@@ -2385,6 +2404,21 @@ fn text_content(nodes: &[NodeData]) -> String {
     })
     .collect::<Vec<_>>()
     .join("")
+}
+
+/// The phrases-and-number part of a textual numeric `show` (`Authors Phrase1NumberPhrase2`, `FullAuthors …`): what
+/// an entry with no name to print keeps of it ([`CrossRef::make_bibcite`]). `None` for any other form, which turns
+/// the citation `refnum` as in Perl (CrossRef.pm:541).
+fn nameless_numeric_show(show: &str) -> Option<String> {
+  let lower = show.to_ascii_lowercase();
+  let after_full = lower.strip_prefix("full").unwrap_or(&lower);
+  let rest = after_full
+    .strip_prefix("authors")
+    .or_else(|| after_full.strip_prefix("author"))
+    .map(|rest| show[show.len() - rest.len()..].trim_start())?;
+  let rest_lower = rest.to_ascii_lowercase();
+  (rest_lower.contains("number") && rest_lower.contains("phrase") && !rest_lower.contains("author"))
+    .then(|| rest.to_string())
 }
 
 #[cfg(test)]

@@ -224,7 +224,8 @@ LoadDefinitions!({
     if matches!(shape_str.as_str(), "rightmargin" | "wrap" | "drop") {
       def_macro(T_CS!(&after_target), None, Tokens!(), None)?;
     } else {
-      // An unnumbered title runs it too (`\lx@format@title@after@@`, base_utilities.rs; guard
+      // An unnumbered title runs it too (`\lx@format@title@after@@`, base_utilities.rs; 1905.13490's run-in
+      // `\subsection*{Basic notation}` ends with its `[.]`; guard
       // `perfect_kernel_batch78a::titlesec_after_code_closes_an_unnumbered_title`).
       // (An `explicit` after-code naming the title, `#1`, has no title to name there.)
       let after_alone = if has_parameter_reference(&after) { Tokens!() } else { Tokens::new(after.clone()) };

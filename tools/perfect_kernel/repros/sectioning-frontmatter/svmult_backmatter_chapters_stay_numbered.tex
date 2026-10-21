@@ -1,0 +1,20 @@
+% witness: 1905.01770's svmult.cls:478-484 (`\backmatter` with `%\@mainmatterfalse` commented out; its `\@chapter`,
+%          :592, steps the counter whatever the matter); svmult binds book (svmult_cls.rs `LoadClass!("book")`)
+% oracle:  pdflatex (with that svmult.cls; TeX Live ships none) 0 errors: "Chapter 2 Afterword", then "2 Notes"
+% engines: rust 78a r1 = "Afterword" unnumbered and "1.2 Notes" (book's `\backmatter`, KNOWN_PERL_ERRORS #1016);
+%          int40c and perl = "Chapter 2 Afterword", "2.1 Notes"
+% expect:  0 errors, 0 warnings; the back-matter chapter "Chapter 2", its section "2.1" (svmult's own "2" section
+%          numbers are not modelled)
+% status:  GREEN (78a r2)
+% preload: ar5iv.sty
+\documentclass{svmult}
+\begin{document}
+\mainmatter
+\chapter{Intro}
+\section{Sec}
+Text.
+\backmatter
+\chapter{Afterword}
+\section{Notes}
+Text.
+\end{document}

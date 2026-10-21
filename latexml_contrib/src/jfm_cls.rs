@@ -51,23 +51,42 @@ LoadDefinitions!({
   // :953-958 `{\normalfont\scshape #1\ifrem@fullpt\else .\fi} #2`, `\removefullpoint` dropping the period once),
   // which the kernel's caption keeps out (`\@makecaption keeps LaTeXML's definition`): its label format is the
   // figure's and table's title format, as amsart's (ams_support_sty.rs `\format@title@figure`), its font the label
-  // font (`\fnum@font@<type>`, sect09.rs). Before, both gave "Figure 1:" (OXIDIZED_DESIGN_DIVERGENCES #784; guards
-  // `perfect_kernel_batch78a::{jfm_copy_captions_end_the_label_with_a_period,
-  // jfm_copy_caption_package_keeps_its_options}`).
+  // font (`\fnum@font@<type>`, sect09.rs). The document's caption package — or subcaption's or subfig's, which load it
+  // — replaces the class's `\@makecaption` ("Figure 1:" in the text font; 1711.01065, 2205.10181, 2507.07213
+  // subcaption, 1805.00129 subfig), the old subfigure package does not, nor floatrow, which loads caption's kernel
+  // alone (floatrow.sty:39 `caption3`, whose stand-in is our caption binding: `\lx@caption@kernel@only`; 2312.13002,
+  // 2111.12004): so the format is the class's only where caption is not loaded by `\begin{document}`;
+  // `\removefullpoint` is the copy's either way. Before, both gave
+  // "Figure 1:" (OXIDIZED_DESIGN_DIVERGENCES #784; guards `perfect_kernel_batch78a::{
+  // jfm_copy_captions_end_the_label_with_a_period, jfm_copy_caption_package_keeps_its_options,
+  // jfm_copy_caption_yields_to_caption_loaders, jfm_copy_caption_kept_with_subfigure,
+  // jfm_copy_caption_kept_with_floatrow}`).
+  if shipped
+    .as_deref()
+    .is_some_and(|text| crate::shipped_class::class_code_contains(text, "rem@fullpt"))
+  {
+    RawTeX!(r"\newif\ifrem@fullpt\def\removefullpoint{\global\rem@fullpttrue}");
+  }
   match shipped.as_deref() {
     None => RequirePackage!("caption"),
     Some(text) if crate::shipped_class::class_text_loads(text, "caption") => {
-      crate::shipped_class::require_shipped_packages("cls", &["caption"])?;
+      // The dependency scan declines a `\usepackage` it cannot read as the class's (a `\def` body, a comment block):
+      // caption is loaded all the same.
+      if !crate::shipped_class::require_shipped_packages("cls", &["caption"])? {
+        RequirePackage!("caption");
+      }
     },
     Some(text) => {
       if crate::shipped_class::class_code_contains(text, "\\@makecaption")
         && crate::shipped_class::class_code_contains(text, "rem@fullpt")
       {
         RawTeX!(
-          r"\newif\ifrem@fullpt\def\removefullpoint{\global\rem@fullpttrue}
-\def\fnum@font@figure{\scshape}\def\fnum@font@table{\scshape}
-\def\format@title@figure#1{\lx@tag[][\ifrem@fullpt\space\else. \fi]{\lx@fnum@@{figure}}#1\global\rem@fullptfalse}
-\def\format@title@table#1{\lx@tag[][\ifrem@fullpt\space\else. \fi]{\lx@fnum@@{table}}#1\global\rem@fullptfalse}"
+          r"\def\lx@jfm@captionformat{%
+\def\fnum@font@figure{\scshape}\def\fnum@font@table{\scshape}%
+\def\format@title@figure##1{\lx@tag[][\ifrem@fullpt\space\else. \fi]{\lx@fnum@@{figure}}##1\global\rem@fullptfalse}%
+\def\format@title@table##1{\lx@tag[][\ifrem@fullpt\space\else. \fi]{\lx@fnum@@{table}}##1\global\rem@fullptfalse}}
+\AtBeginDocument{\@ifpackageloaded{caption}%
+{\@ifundefined{lx@caption@kernel@only}{}{\lx@jfm@captionformat}}{\lx@jfm@captionformat}}"
         );
       }
     },

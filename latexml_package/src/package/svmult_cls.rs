@@ -34,6 +34,12 @@ LoadDefinitions!({
   ProcessOptions!();
   // Perl svmult.cls.ltxml L34: LoadClass('book', withoptions => 1)
   LoadClass!("book", withoptions => true);
+  // svmult.cls:478-484 `\backmatter` keeps its `\@mainmatterfalse` commented out and its `\@chapter` (:592) steps the
+  // counter whatever the matter: a back-matter chapter stays numbered ("Chapter 2 Afterword"; 1905.01770's copy;
+  // svmono.cls:418 sets `\@mainmatterfalse`, but numbers by `\if@chapnum` too, :478-513, 1704.03069), not book's
+  // unnumbered one (book_cls.rs, KNOWN_PERL_ERRORS #1016) — Perl's book no-op, as before. Guard
+  // `perfect_kernel_batch78a::svmult_backmatter_chapters_stay_numbered`.
+  DefPrimitive!("\\backmatter", None);
   RequirePackage!("sv_support");
   RequirePackage!("url");
   // svmult.cls v1.0:939/942 (CR line ends), svmultln.cls:1810/1813: `\newtoks\tocauthor`, `\newtoks\toctitle`, the

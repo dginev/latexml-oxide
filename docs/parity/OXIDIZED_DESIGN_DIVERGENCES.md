@@ -22185,8 +22185,17 @@ options (a bare `RequirePackage!("caption")` dropped them); a copy whose `\@make
 label format as the figure's and table's title format (`\format@title@<type>` = `\lx@tag[][. ]{…}`, as amsart's
 ams_support binding) and its label font as `\fnum@font@<type>` (`\scshape`), with `\removefullpoint`. The copy's own
 `\@makecaption` stays declined (the kernel's caption), so its layout (centred short captions, `\small`) is not
-modelled. Guards `perfect_kernel_batch78a::{jfm_copy_captions_end_the_label_with_a_period,
-jfm_copy_caption_package_keeps_its_options}`.
+modelled. The label format and font are installed at `\begin{document}` only where caption is not loaded
+(`\AtBeginDocument{\@ifpackageloaded{caption}{}{…}}`; `\ifrem@fullpt`/`\removefullpoint` are defined either way): the
+document's caption package — or subcaption's or subfig's, which load it — replaces the class's `\@makecaption` in
+pdflatex ("Figure 1:" in the text font, the sub-captions' "(a)" at their size; 10 of the 40 census copies with their own
+`\@makecaption`: 1711.01065, 2205.10181, 2507.07213 subcaption, 1805.00129 subfig), the old subfigure package does not,
+nor floatrow, which loads caption's kernel alone (floatrow.sty:39 `caption3`; 2312.13002, 2111.12004): caption3 falls
+back to the caption binding, which then defines `\lx@caption@kernel@only` (caption_sty.rs), and the class's format
+stays. Residual: a document that loads caption itself after floatrow keeps the class's format, as the caption binding
+is not run again (78a r2). Guards `perfect_kernel_batch78a::{jfm_copy_captions_end_the_label_with_a_period,
+jfm_copy_caption_package_keeps_its_options, jfm_copy_caption_yields_to_caption_loaders,
+jfm_copy_caption_kept_with_subfigure, jfm_copy_caption_kept_with_floatrow}`.
 
 ### 785. An unnumbered heading runs its title format's after-code (Perl: the title font alone, titlesec's after-code dropped)
 
@@ -22218,6 +22227,15 @@ non-author-year `\textcite`/`\Textcite`/`\citet` is natbib's numbers-mode textua
 `Authors Phrase1NumberPhrase2`, the pre- and postnote inside the brackets). An author-title or verbose style's
 `\textcite` prints "Name [1]" too, where biblatex prints the title. Witnesses 2402.17192 (style=ieee), 2410.22329.
 Guard `perfect_kernel_batch78a::biblatex_citeauthor_and_textcite_print_the_name_in_a_numeric_style`.
+
+An entry with no name (no author, editor or key tag) under such a textual numeric citation keeps the brackets around
+its number, for that entry alone (latexml_post crossref.rs `nameless_numeric_show`, 78a r2): biblatex "No Author Misc
+[2]" (numeric.cbx:23-41 prints the `labeltitle` before the bracket) is "[2]", natbib numbers mode's "Smith [2], ano [1]"
+(plainnat's key-prefix label) "Smith [2], [1]". Perl's CrossRef.pm:541 turns the whole citation's `show` to `refnum`
+("2"; "2, 1"). Residuals: the biblatex `labeltitle` (and natbib's key-prefix) is not printed; `\citeauthor` of a
+nameless entry prints its number ("3"), where biblatex prints nothing. Guards
+`perfect_kernel_batch78a::biblatex_numeric_textcite_without_author_keeps_its_brackets`,
+`bibref_show::natbib_numbers_citet_merges_same_authors`.
 
 ### 787. nicematrix's `\Block{i-j}<tokens>{content}` sets the tokens before the content (Perl: no nicematrix binding)
 

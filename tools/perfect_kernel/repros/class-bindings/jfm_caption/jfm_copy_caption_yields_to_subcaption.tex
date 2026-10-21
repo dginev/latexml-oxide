@@ -1,0 +1,13 @@
+% witness: 1711.01065, 2205.10181, 2507.07213 (jfm copies with their own `\@makecaption`, documents loading subcaption)
+% oracle:  pdflatex 0 errors; "(a) Left.", "Figure 1: Schematic.", "Table 1: Values." in the text font: caption (which
+%          subcaption loads) replaces the class's `\@makecaption`
+% engines: rust 78a r1 = <tag close=". "> with the labels (and the sub-caption's "(a)") in small caps
+% expect:  0 errors, 0 warnings; <tag close=": ">, no small caps, "(a)" at the sub-caption size
+% status:  GREEN (78a r2)
+% preload: ar5iv.sty
+\documentclass{jfm}
+\usepackage{subcaption}
+\begin{document}
+\begin{figure}\begin{subfigure}{.4\textwidth}\caption{Left.}\end{subfigure}\caption{Schematic.}\end{figure}
+\begin{table}\caption{Values.}\end{table}
+\end{document}

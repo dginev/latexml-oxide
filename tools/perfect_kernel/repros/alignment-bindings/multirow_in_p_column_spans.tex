@@ -3,8 +3,8 @@
 % engines: rust 56kj = Perl: 46.56 x 52.2pt: `\multirow` inside a `p{0mm}` column gets no rowspan, so the rotated
 %          label (now measured tall, 56kj) inflates its own row
 % expect:  the multirow spans its rows in a p column as in a c column; pdflatex's heights
-% status:  GREEN for the span (78a: the empty p cell below is empty, its `\lx@tabular@p@` box the cell's
-%          `content_box`; rowspan="2" in both tables, the p table's box 122.9 -> 62.3pt tall vs the c table's 54.3pt;
+% status:  GREEN for the span (78a: a row span may cover the p cell below, whose `\lx@tabular@p@` box has an empty
+%          body, `paragraph_cell_body` read by `Digested::is_empty_paragraph_cell`; rowspan="2" in both tables, the p table's box 122.9 -> 62.3pt tall vs the c table's 54.3pt;
 %          box sizes are not matched further). Guard perfect_kernel_batch78a::multirow_in_a_paragraph_column_spans_its_rows
 \documentclass{article}
 \usepackage{graphicx,multirow}
