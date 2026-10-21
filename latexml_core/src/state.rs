@@ -2169,8 +2169,8 @@ pub fn copy_provides_refuses_locked(token: &Token) -> bool {
 /// Does a stand-in's copy, read now ([`note_copy_provides_assignment`]), save `source` again into `token` — `\let
 /// \token\source` — where `token` already holds an earlier meaning of `source` (its definition is a `\let` copy made
 /// under `source`'s name, `definition_cs`) that the stand-in binding's load assigned, and `source` has been redefined
-/// since? Then the `\let` is declined, in the copy's code too: `token` keeps the meaning TeX gives it, `source` before
-/// the redefinition. The binding (or a file it read) made the very save-and-wrap the copy makes — `\let\org\X`, then
+/// since to a meaning that reaches `token` (`meaning_reaches`), so that the `\let` would make it call itself? Then the
+/// `\let` is declined, in the copy's code too: `token` keeps the meaning TeX gives it, `source` before the redefinition. The binding (or a file it read) made the very save-and-wrap the copy makes — `\let\org\X`, then
 /// `\X` redefined to call `\org` —, and saving the wrapper into `\org` makes `\X` call itself: myjmlr.cls and
 /// jmlr_mod.cls (renamed jmlr.cls copies routed to the jmlr binding, whose jmlrutils.sty made the same wrap) run
 /// `\let\jmlr@org@newtheorem\newtheorem` (jmlr.cls:753-754) before their own `\newtheorem{example}`, which looped to
@@ -2195,6 +2195,12 @@ pub fn copy_provides_keeps_saved_meaning(token: &Token, source: &Token, meaning:
   if definition_cs(&saved) != Some(*source) || same_meaning(&saved, meaning) {
     return false;
   }
+  // (only a `\let` that would make the wrapper call itself — `source`'s meaning now reaches `token` —: pgf's scratch
+  // `\let\pgfutil@reserved@c\pgfutil@reserved@b`, which `\usetikzlibrary` runs while the copy is read, is no
+  // save-and-wrap, and declining it lost 2207.07492's sn-jnl.cls:303 `\usetikzlibrary{snakes}`)
+  if !meaning_reaches(meaning, key) {
+    return false;
+  }
   let mut state = state_mut!();
   if let Some(copy) = state.copy_provides_copies.get_mut(id as usize - 1)
     && copy.declined.insert(key)
@@ -2214,6 +2220,45 @@ pub fn copy_provides_keeps_saved_meaning(token: &Token, source: &Token, meaning:
   }
   true
 }
+
+/// Does the macro `meaning` reach the name `key` — `key` in its body, or in the body of a macro its body names, and so
+/// on — so that `\let\<key>` to it would make it call itself? A breadth-first walk over macro bodies, each name visited
+/// once, up to [`MEANING_REACH_LIMIT`] names (beyond it, no: the wrapper the walk looks for calls its saved command
+/// within a step or two — jmlrutils.sty:466-494's `\newtheorem` → `\jmlr@newtheorem` → `\jmlr@org@newtheorem`,
+/// epl2.cls's `\bibitem` → `\epl@org@bibitem`).
+fn meaning_reaches(meaning: &Stored, key: SymStr) -> bool {
+  let mut seen: HashSet<SymStr> = HashSet::default();
+  let mut pending: VecDeque<Stored> = VecDeque::from([meaning.clone()]);
+  while let Some(current) = pending.pop_front() {
+    let Stored::Expandable(defn) = current else {
+      continue;
+    };
+    let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+      continue;
+    };
+    for t in body.unlist_ref().iter() {
+      if !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) {
+        continue;
+      }
+      let name = meaning_key(t);
+      if name == key {
+        return true;
+      }
+      if seen.len() >= MEANING_REACH_LIMIT {
+        return false;
+      }
+      if seen.insert(name)
+        && let Some(next) = lookup_meaning(t)
+      {
+        pending.push_back(next);
+      }
+    }
+  }
+  false
+}
+
+/// How many names [`meaning_reaches`] visits at most.
+const MEANING_REACH_LIMIT: usize = 256;
 
 /// Does a stand-in's copy, read now ([`note_copy_provides_assignment`]), (re)declare or renumber the counter `ctr` the
 /// stand-in binding's own load declared or numbered (its `\c@<ctr>` assigned while the binding loaded,

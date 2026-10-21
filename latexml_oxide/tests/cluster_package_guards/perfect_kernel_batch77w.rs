@@ -236,6 +236,29 @@ fn copy_resaves_a_wrapped_command() {
 /// A routed copy's own load of a package its binding loaded on the class's behalf is that load: the copy's options
 /// apply, with no "Option clash" (1811.10063's elsarticle.cls copy `\RequirePackage[square,…]{natbib}`). pdflatex:
 /// "See [1]."
+/// A routed copy's own `\usetikzlibrary{snakes}` loads the library (2207.07492's sn-jnl.cls:302-303): pgf's scratch
+/// `\let\pgfutil@reserved@c\pgfutil@reserved@b`, run while the copy is read, is no re-save of a wrapped command — the
+/// new meaning never reaches the name — so it is not declined (c42be4a9a8 declined it: "You need to say
+/// \usetikzlibrary{snakes}"; 2207.07492's six undefined pgf decoration macros). pdflatex: 0 errors, the snake drawn.
+#[test]
+fn copy_loads_a_tikz_library() {
+  let (log, _xml) = convert_files_with(
+    repro!("copy_loads_a_tikz_library.tex"),
+    &[("sn-jnl.cls", repro!("sn-jnl.cls"))],
+    Some("ar5iv.sty"),
+  );
+  // The one warning is pgf's own: "Snakes have been superseded by decorations".
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains("Info:tikz:snakes TIKZ LIBRARY snakes"),
+    "{log}"
+  );
+  assert!(
+    !log.contains("keeps its saved \\pgfutil@reserved@b"),
+    "{log}"
+  );
+}
+
 #[test]
 fn copy_loads_its_binding_package() {
   let (log, xml) = convert_files_with(
