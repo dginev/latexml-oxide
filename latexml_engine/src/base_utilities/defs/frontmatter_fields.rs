@@ -213,6 +213,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       // out of positions: this value is not stamped, and no earlier copy can be whole of it
       assign_value(&s!("lx_field_extent_{field_id}"), String::new(), Some(Scope::Global));
       assign_value(&s!("lx_field_range_{field_id}"), String::new(), Some(Scope::Global));
+      // (the frontmatter observer's ledger, under its shadow switch only: OXIDIZED_DESIGN_DIVERGENCES #837)
+      note_field_stamp(field_id, None, len);
       return Ok(Tokens::default());
     }
     assign_value(&s!("lx_field_base_{field_id}"), (base + len) as i64, Some(Scope::Global));
@@ -262,6 +264,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     assign_value(&s!("lx_field_extent_{field_id}"), joined(&extent), Some(Scope::Global));
     assign_value(&s!("lx_field_chars_{field_id}"), joined(&chars), Some(Scope::Global));
     document::note_field_prov_stamped();
+    note_field_stamp(field_id, Some(base), len);
     let mut out = vec![prefix, store, T_BEGIN!()];
     for (i, t) in value.unlist_ref().iter().enumerate() {
       let stamped = Token { prov: field_prov(field_id, base + i), ..*t };
@@ -273,6 +276,29 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     }
     out.push(T_END!());
     Ok(Tokens::new(out))
+  });
+  // The frontmatter observer (FM S2, OXIDIZED_DESIGN_DIVERGENCES #837): `\lx@field@stamp{<field>}{<tokens>}` — the
+  // tokens of an argument, each stamped with its position in field <field> as `\lx@field@mark` stamps a store's
+  // value, the positions following the field's earlier stamps (`lx_field_base_<id>`): M3's "marked field argument",
+  // for a binding's `\lx@add@authors*` call, whose argument no store holds. Nothing else changes (the extent and the
+  // range of the field's current call are a store's, `\lx@field@mark`'s). An unknown field, a blank argument or one
+  // past the field's positions comes back unstamped. No call site yet: the observer's shadow ledger projects these
+  // positions for the bindings' calls (`record_author_call`), and stage S2b stamps them.
+  DefMacro!("\\lx@field@stamp{}{}", sub[(field, tokens)] {
+    let Some(field_id) = field_id(field.to_string().trim()) else {
+      return Ok(tokens);
+    };
+    if tokens.unlist_ref().iter().all(|t| t.get_catcode() == Catcode::SPACE) {
+      return Ok(tokens);
+    }
+    let len = tokens.unlist_ref().len();
+    let base = usize::try_from(lookup_int(&s!("lx_field_base_{field_id}"))).unwrap_or(0);
+    if base + len > usize::from(FIELD_PROV_POS_MASK) {
+      return Ok(tokens);
+    }
+    assign_value(&s!("lx_field_base_{field_id}"), (base + len) as i64, Some(Scope::Global));
+    document::note_field_prov_stamped();
+    Ok(field_stamped(field_id, base, tokens.unlist_ref()))
   });
   DefMacro!(
     "\\lx@add@abstract[]{}",

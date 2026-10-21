@@ -5570,6 +5570,61 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   by the main session (only-old 0, only-new 0). Gates int50a: nextest 6688/6688 + cortex 10/10, clippy/rustdoc clean, inits
   0/0, dump diff vs int49a empty. A/B (297 of 298: 200 census `feature:author_*` + 97 mixed-class) int49a vs int50a: every XML
   byte-identical, E 40 = 40, F 0 = 0. Binding nets (int50a) 136/136, 0 worse than int49a.
+- **FM S2a.1** (the frontmatter observer core, shadow mode only; KERNEL_CAPABILITIES K23 row, step 1; OD #837; design
+  `agent_reports/2026-10-21_fms2_design_refresh.md` §2/§3, defaults 1, 2, 6, 9): `base_utilities/frontmatter/observer/`
+  — a ledger of the `\author`-family calls (the kernel `\author` and the bindings' `\lx@add@authors*` calls, with their
+  stamped or projected positions, options and queue places; the `\title` S1 stamps; the creator/contact/note API calls,
+  inside a block's expansion or after it), a rehearsal of each block at the flush under Layer-B event bindings (the
+  speculative-run engine of #767; field ledger put back), and the event lexer (Name, Mark with `symbol`/line-first,
+  Sep and/comma/word/gap, Break, Contact, Note, Layout, ApiCall, with field spans). `LATEXML_FM_SHADOW=1` (runtime) makes
+  the CLI write `<dest>.fmshadow.json`; without it nothing runs. New core API: `gullet::{InputMark, input_mark,
+  input_unread_since}`, `Mouth::read_position`, `token::FieldLedgerScope`, `document::{field_prov_stamped,
+  restore_field_prov_stamped}`, `DiagnosticsHold::warnings_raised`; `\lx@field@stamp` defined, no call site. Guards
+  `perfect_kernel_batchfms2a1::*` (14); repros `sectioning-frontmatter/observer_*` (6: four RED for output, the S2b
+  targets; `observer_rehearsal_aftergroup_stays_inside`, `observer_fill_gap_and_footnotemark_labels` GREEN).
+  A/B int50a → fms2a1 on 300 seeded census papers: XML byte-identical 300/300 with the variable unset and 300/300 with it
+  set (the zip's `/tmp/.tmp…` graphicspath normalised), E 27 = 27, F 0 = 0. Shadow on a seeded 1,000 of the 30k census:
+  901 papers with blocks, 3,670 blocks, 3,662 lexed, 7 empty, 1 out of positions (2606.14105, a 49,591-character
+  collaboration list; with hep-ex0311039 of the 300, 2 of 1,159 papers with blocks over both samples, 0.17 %: the 14-bit budget stays, default 2); 6
+  rehearsals held diagnostics (3 sig-alternate blocks, 4 errors each: the class's `\alignauthor`, `\end{tabular}\begin{tabular}`
+  at sig-alternate.cls:274, with no tabular open — 1102.4021, 1611.03298, 2208.01741; 1811.05708's `\note`, 1 error;
+  2403.16604's two blocks, 6 warnings each); 43 papers have creators only from a binding's single-author calls (`\lx@add@author`/`\lx@add@creator`: llncs,
+  authblk's unlabelled `\author`, 23 more bindings), recorded as API calls, no block. Cost (`perf stat -e
+  instructions:u`, 9 stable documents of 10): off −0.007 %, on +0.008 % against int50a (the 10th, 2108.08785, varies
+  ±1.5 % run to run on int50a itself). **r2** (review revfms2a1): the rehearsal's whole group reads from a mouth of its
+  own under a current token of its own — r1 leaked an `\aftergroup` of the block into the document's input
+  (`\author{Ann Able\aftergroup\leak \and Bob}`: `<p>LEAKEDBody after.</p>` with the switch on); `\hfil`/`\hfill` a
+  fill gap (always a separator) and a spacing box's width from its `width` property in em of its font; a bare
+  `\footnotemark` labelled with what it prints (`\thefootnote` under the kernel `\maketitle`'s `\@fnsymbol`, at the
+  counter plus the block's earlier steps, `\c@footnote` never stepped); `Sep(and)` keeps its command (`\And`, `\AND`);
+  ledger `epoch` (flushes before a call), `SkipReason`, a failed JSON write a Warning; the status line's undefined
+  macros/missing files sorted (their hash order followed the interning history, which the rehearsal changes). The
+  departures S2a.2 must know are listed in OD #837 (a Note carries no mark, a font Layout no span, `\corref`/`\fnref`/
+  `\thanksref`/`\ead` not bound, projected spans keyed by (block, span), a block-final `]` uncovered, a mark printing
+  only a `\ref` — A&A's `\inst{\ref{…}}`, 1809.08354, 94 of the 1,000's 3,662 blocks — no mark). A/B int50a → r2:
+  300/300 XML byte-identical unset and set (E 27 = 27, F 0 = 0, W 2,854 = 2,854), logs off = on 299/300 (hep-ph9612328:
+  a time-budgeted math enumeration count, which varies run to run on int50a too); the 970 sectioning-frontmatter repros
+  970/970 identical to int50a unset and set, off = on 972/972 in XML and stderr. Shadow 1,000 unchanged (3,670 blocks,
+  3,662 lexed, 7 empty, 1 out of positions, 6 held); 17 blocks' footnotemark labels now the printed symbols, 225 `\and`
+  separators with their command (113 `\and`, 101 `\And`, 11 `\AND`). **r3** (review revfms2a1_2): a container's
+  placement argument is no name (`\begin{tabular}[t]{c}` gave Name "t", `\parbox[t]{5cm}{…}` "tAnn AbleUniv A": the walk
+  reads the arguments `shown_arguments` marks shown); the kernel's `\lx@newline` a `\centering`/`\raggedright` or a
+  parbox/minipage rebinds `\\` to is a Break (once one Name); a stray `&` a `column` separator — the `&` constructor
+  errs only when built into the document, so nothing is held (OD #837 corrected); an `\input` in the field no longer
+  doubles the log's `(Processing content …` note with the switch on (core `error::SilenceProgressNotesGuard` in the
+  rehearsal; its tokens carry no span); the title's footnote marks follow a binding-declared `\lx@fm@title@thefootnote`
+  (hook, default `\@fnsymbol`; revtex's default is `\@fnsymbol` too, `\@alph` only under `altaffilletter`); a block
+  deferred for want of a journal reports `journal unavailable`; a font switch inside a run stays a departure (splitting
+  would split gretsi's `first \textsc{last}` names, 2508.03934). Guards +6 (20) and an engine unit test. A/B int51a →
+  r3: XML byte-identical on the 300 seeded census papers, 300/300 with the variable unset and 300/300 set (E 27 = 27, F
+  0 = 0, W 2,854 = 2,854), logs off = on 299/300 (hep-ph9612328, the time-budgeted math count as before); the 976 repros
+  976/976 identical to int51a unset and set, off = on 976/976 in XML and stderr. Shadow 1,000 vs r2: 3,670 blocks, 3,662
+  lexed, 7 empty, 1 out of positions, 6 held (as r2); Breaks 1,201 → 1,218 (+17 in 4 papers: minipage and sig-alternate
+  `\\`s), Names 7,228 → 7,218 (−10 in 9: placement letters and `\cite` keys no longer names, rows split at their
+  breaks), Layout 134 → 125 and font Layout 322 → 329 (a cell's run now starts at its own font, not a placement
+  letter's), gaps and the and/comma/word separators unchanged, no `&` column in the sample; ApiCall +4 (1609.09832,
+  2010.05094: jpconf's address and e-mail calls, int51's 78m, from the rebase).
+  Next: the resolver and the comparator (S2a.2).
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
   parts draw, as Unicode's IPA letter, cross-checked against tipauni.sty; the `""`/`||` ligatures ˌ ǁ), so its input

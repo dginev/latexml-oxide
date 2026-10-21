@@ -1,0 +1,19 @@
+% mechanism: the frontmatter observer's rehearsal (OXIDIZED_DESIGN_DIVERGENCES #837) digests an author block in a
+%   group of its own; what the group's end unreads (`\aftergroup`, core stomach.rs `pop_stack_frame_with`) must land in
+%   the rehearsal's own mouth (`reading_from_mouth`, closed with its leftovers), never in the document's input
+% witness: the revfms2a1 review's probe `aftergroup` (shadow on: "LEAKED" before the body's "Body after.")
+% oracle:  pdflatex 0 errors: "Ann Able" "LEAKED" and "Bob" on the title page, "Body after." alone below
+% engines: rust int50a and fms2a1 (shadow off): the creators Ann Able (with a LEAKED box) and Bob, then
+%   <p>Body after.</p>; fms2a1 r1 with LATEXML_FM_SHADOW=1: <p>LEAKEDBody after.</p>; r2: as shadow off (guard
+%   perfect_kernel_batchfms2a1::shadow_switch_leaves_the_xml_unchanged)
+% expect:  0 errors, 0 warnings; the same XML and log with LATEXML_FM_SHADOW=1 as without; <p>Body after.</p>
+% status:  GREEN (fms2a1 r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\def\leak{LEAKED}
+\title{T}
+\author{Ann Able\aftergroup\leak \and Bob}
+\begin{document}
+\maketitle
+Body after.
+\end{document}

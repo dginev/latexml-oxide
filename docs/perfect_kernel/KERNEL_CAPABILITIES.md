@@ -57,7 +57,7 @@ dedicated sessions once a large goal completes, not inside the batch that found 
 | K20 | Gullet expansion fidelity: four tex.web algorithms the gullet deviates from (column ends by command code §342/§789, `\left`/`\middle`/`\right` as primitives with `scan_delimiter` §1160/§1188-1192, §395 extra `}` in a delimited argument, peeking macros as one unexpandable step §380/§440-445/§506/§785) | C5 (study 2026-10-11) | ~400-700 arXiv papers: X1 62 IfLimit Fatals in `\xymatrix`, redefined `\span` ~127, V1b cell-head `_` ~61, part of Mouth:EoF 338; 8 REDs; queued rows 64n/64o/64v; OD #500's expansion-only residual | 2 (after P0) | OPEN, ordered G4 → G2 → G3 → G1 (user 2026-10-11) |
 | K21 | Environments as TeX does them: `Streamed` (group + element opened/closed) vs `Captured` (`#body` box) DefEnvironments, no default mode, the XML element stack independent of the save stack | C2; extends K9, K2 | M1 residual 82/150 (64y), `$$` in 64 mode-less `#body` environments (~1,700 fixed by 64ra), `\endlx@list` 839, ~5k first errors, 15 REDs, HF6 | 3 (behind P0) | OPEN; HIGH risk, staged |
 | K22 | Binding provenance and ownership: a FileIdentity per class/package load, an owned set per binding over a raw-loaded real file, the shipped-copy delta, a corpus-copy conformance audit | C1; generalizes K1 step 3 and K13 stage 3 | `undefined:` 63% of run-336 first errors (227 clusters of ≥100 papers ≈54k tasks), binding surplus over the paper (OSA abbreviations, PoS/JHEP macros, EPL `{widetext}`), 31 renamed JHEP3 copies, ~15 REDs | read-only audit in parallel with K20 | step 2 census DONE 2026-10-11 (83.6% of the not-in-TL bound families' papers ship the file); FileIdentity + owned-set overlay OPEN |
-| K23 | Frontmatter author-block event model: a lexer of author blocks into events (name, mark, separator, affiliation, contact, note, layout, group), per-binding association policy, one resolver, one emission | C4 (beyond Perl) | 49 REDs, HF2 residual 16, A2 rows, ~24 KPE / ~15 OD frontmatter entries, 20+ batches and 30+ NO-SHIP rounds | after K24's frontmatter extractor | OPEN — shadow mode first (user: needs very careful testing) |
+| K23 | Frontmatter author-block event model: a lexer of author blocks into events (name, mark, separator, affiliation, contact, note, layout, group), per-binding association policy, one resolver, one emission | C4 (beyond Perl) | 49 REDs, HF2 residual 16, A2 rows, ~24 KPE / ~15 OD frontmatter entries, 20+ batches and 30+ NO-SHIP rounds | after K24's frontmatter extractor | OPEN — shadow mode first (user: needs very careful testing); step 1's observer core landed as FM S2a.1 (OD #837, `LATEXML_FM_SHADOW=1`), resolver S2a.2 next |
 | K24 | One audited A/B comparator: stamped revisions or refuse, per-qname element counts, attribute text, canonical XML diff with mapped ids, frontmatter tuples; entry numbers allocated at integration | P0; extends K17 to arXiv; seed of the A4 audit | ≥7 missed or near-missed regressions in one week (64zc r1, 64x r1/r4, 63w4, 64k5, 64u EPL, 64b), 122 ad-hoc compare scripts, 3 renumberings | 1 | LANDED (p0 `1e47551e6c`, 2026-10-11): `ab_audit run/compare/audit` + `tools/perfect_kernel/next_entry_numbers.sh` |
 
 ## K1 — Definition provenance and raw-load-then-overlay bindings
@@ -627,6 +627,24 @@ heuristics in `base_utilities/`.
 
 **Class guard:** shadow disagreement < 0.5% per family before migrating; the 49 frontmatter REDs go green without new
 per-shape rules. **Risk:** HIGH; needs very careful testing (user 2026-10-11).
+
+**As landed (FM S2a.1, fms2a1; OXIDIZED_DESIGN_DIVERGENCES #837).** Layer A's data in shadow mode:
+`latexml_engine/src/base_utilities/frontmatter/observer/` — a ledger of the `\author`-family calls (kernel and
+`\lx@add@authors*`) with their stamped positions and queue places, the contact/creator API calls after them; a rehearsal
+of each block under Layer-B event bindings (the speculative-run engine, nothing kept); the event lexer (Name, Mark,
+Sep, Break, Contact, Note, Layout, ApiCall with field spans and ink). Under `LATEXML_FM_SHADOW=1` (unset on the
+fleet) the CLI writes `<dest>.fmshadow.json`; without it nothing runs, and with it the XML and the log are
+byte-identical: the rehearsal's group reads from a mouth of its own, so an `\aftergroup` of the block's stays inside it
+(r2). The model's departures from the design note (a Note carries no mark, a font Layout no span, gap em of the box's
+font, `\corref`/`\fnref`/`\thanksref`/`\ead` not bound, projected spans keyed by (block, span), a bare
+`\footnotemark` under the kernel `\maketitle`'s `\@fnsymbol` unless a binding declares the title's marks through the
+hook `\lx@fm@title@thefootnote`, a font switch inside a run shown at the next run, an `\input`'s tokens without span)
+are listed in OD #837 for S2a.2. r3 (review revfms2a1_2): a container's placement argument is no name (`shown_arguments`),
+the kernel's `\lx@newline` a `\centering` or a box rebinds `\\` to is a Break, a stray `&` a column separator (nothing
+held: the `&` constructor errs only when built), progress notes silenced in the rehearsal (an `\input` in the field no
+longer doubled the log's `(Processing content …` note), a block deferred for want of a journal says so. Not yet: the
+resolver and the comparator (S2a.2), any output change (S2b on). Guards `perfect_kernel_batchfms2a1::*`; SYNC_STATUS
+"FM S2a.1".
 
 ## K24 — One audited A/B comparator
 

@@ -1623,6 +1623,20 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       } else {
         latexml_post::writer::write_output(&xml, target.as_deref())?;
       }
+      // The frontmatter observer's shadow ledger beside the output, under `LATEXML_FM_SHADOW=1` only
+      // (OXIDIZED_DESIGN_DIVERGENCES #837): a study's by-product, so a failure to write it is a Warning, never the
+      // conversion's.
+      if let Some(dest) = target.as_deref()
+        && let Err(e) = latexml_engine::base_utilities::write_fm_shadow(dest)
+      {
+        latexml_core::common::error::emit_warn(
+          "io",
+          "fmshadow",
+          &format!(
+            "could not write the frontmatter observer's shadow ledger {dest}.fmshadow.json: {e}"
+          ),
+        );
+      }
     }
 
     // --log: write conversion log to file (skip if already packed into

@@ -600,6 +600,8 @@ impl Converter {
     // The field provenance is per conversion (OXIDIZED_DESIGN #715): reset here too, for the callers that initialize a
     // session without `prepare_session` (the test harnesses, the streaming sweeps), before any preamble is digested.
     latexml_core::document::reset_field_provenance();
+    // …and so is the frontmatter observer's shadow ledger (OXIDIZED_DESIGN_DIVERGENCES #837)
+    latexml_engine::base_utilities::reset_fm_shadow();
     // The main source's kind, for the preloads below and the document's PDF mode
     // (`core_interface::establish_pdf_output_mode`).
     state::set_plain_tex_document(self.compile_route.plain_tex);
@@ -1154,6 +1156,7 @@ impl Converter {
     // The field provenance of the frontmatter's `\title`/`\author` is per conversion: a previous document's settled
     // ledger would lift nothing here (OXIDIZED_DESIGN #715).
     latexml_core::document::reset_field_provenance();
+    latexml_engine::base_utilities::reset_fm_shadow();
     // The files read raw and the stand-in copies' provides-modes are this conversion's: a CLI run over several files
     // (`latexml_oxide t.tex u.tex`) or a worker reusing its thread starts each with none, so the second paper's copy
     // is read too (OXIDIZED_DESIGN_DIVERGENCES #731).

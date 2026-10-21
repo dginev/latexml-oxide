@@ -1002,6 +1002,41 @@ pub fn field_ledger_entry(serial: u32) -> Option<FieldLedgerEntry> {
   FIELD_LEDGER.with(|ledger| ledger.borrow().get(serial as usize).copied())
 }
 
+/// A stretch of digestion the document never keeps (a rehearsal of a frontmatter field's value, latexml_engine's
+/// frontmatter observer), over which the field ledger records ([`field_ledger_live`], even once the placement settled
+/// it) and after which it is as it was: the entries pushed meanwhile are dropped, the pending cover and the settled
+/// flag put back, and the gate of field stamping (`document::field_prov_stamped`: a `\title` the rehearsal
+/// stamps) as it was (on drop). Its serials are read while it is open ([`field_ledger_entry`]); a print the document
+/// makes later is numbered as if it had never run.
+pub struct FieldLedgerScope {
+  len:     usize,
+  pending: FieldCover,
+  settled: bool,
+  stamped: bool,
+}
+
+impl FieldLedgerScope {
+  /// Open the scope: the ledger records from here.
+  pub fn begin() -> Self {
+    let len = FIELD_LEDGER.with(|ledger| ledger.borrow().len());
+    FieldLedgerScope {
+      len,
+      pending: FIELD_COVER_PENDING.replace(FieldCover::default()),
+      settled: FIELD_LEDGER_SETTLED.replace(false),
+      stamped: crate::document::field_prov_stamped(),
+    }
+  }
+}
+
+impl Drop for FieldLedgerScope {
+  fn drop(&mut self) {
+    FIELD_LEDGER.with(|ledger| ledger.borrow_mut().truncate(self.len));
+    FIELD_COVER_PENDING.set(self.pending);
+    FIELD_LEDGER_SETTLED.set(self.settled);
+    crate::document::restore_field_prov_stamped(self.stamped);
+  }
+}
+
 /// Clear the pending field cover and the ledger, and record again (conversion start).
 pub fn reset_field_cover_pending() {
   FIELD_COVER_PENDING.set(FieldCover::default());

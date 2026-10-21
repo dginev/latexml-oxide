@@ -40,7 +40,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // the same paragraph is read as the class's affiliation argument (`\par`
   // stops `\@ifnextchar`).
   DefMacro!("\\lx@add@authors@adaptive{}", sub[(stuff)] {
-    add_authors_calls(stuff, !lookup_bool("\\author:redefined"))
+    let replace = !lookup_bool("\\author:redefined");
+    record_author_call("\\lx@add@authors@adaptive", &stuff, replace, true, None, false);
+    add_authors_calls(stuff, replace)
   });
   DefMacro!("\\lx@author@trailing", sub[()] {
     if lookup_bool("\\author:redefined") {
@@ -82,7 +84,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     r"\lx@add@affiliation{#1}\lx@author@trailing"
   );
 
-  DefMacro!("\\lx@add@authors{}", sub[(stuff)] { add_authors_calls(stuff, true) });
+  DefMacro!("\\lx@add@authors{}", sub[(stuff)] {
+    record_author_call("\\lx@add@authors", &stuff, true, true, None, false);
+    add_authors_calls(stuff, true)
+  });
   // A class's own author command, called once per author or author group and each adding to the ones before
   // (informs4.cls:1198 `\AUTHOR{Ann Able$^{a}$, Bob Baker$^{b}$}`): the author-line parsing of `\lx@add@authors`
   // without its replacing, so the names' superscript marks request the affiliations labelled with them.
@@ -92,6 +97,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (`\author{Masao Ishikawa\\ \small Faculty of Education, …}`, math0606082). The optional keyvals go to each author
   // (revtex's `annotations=`).
   DefMacro!("\\lx@add@authors@append[]{}", sub[(keyvals, stuff)] {
+    record_author_call("\\lx@add@authors@append", &stuff, false, false, keyvals.as_ref(), true);
     add_authors_calls_sectioned(stuff, false, false, keyvals, true)
   });
   // A class's own author-list command (informs4.cls:1198 `\AUTHOR{Ann Able$^{a}$, Bob Baker$^{b}$}`, documented as a
@@ -99,6 +105,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (where the list starts in the queue: the row an address shared by its authors falls back to, `queued_row_start`)
   DefMacro!("\\lx@add@authors@list{}", sub[(stuff)] {
     assign_value("lx_authors_list_start", queued_author_count() as i64, Some(Scope::Global));
+    record_author_call("\\lx@add@authors@list", &stuff, false, true, None, false);
     add_authors_calls_sectioned(stuff, false, true, None, false)
   });
   // A name list where a binding has no lines or affiliations to read: each name `split_author_line` finds (comma,
@@ -106,6 +113,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // Burton\inst{2}}`, astro-ph9810433; `\IEEEauthorblockN{Clemens Paul Zengler, Niels Troldborg, Mac Gaunaa.}`,
   // 2410.19527).
   DefMacro!("\\lx@add@author@split[]{}", sub[(keyvals, names)] {
+    record_author_call("\\lx@add@author@split", &names, false, false, keyvals.as_ref(), false);
     let mut calls: Vec<Token> = Vec::new();
     for name in split_author_line(names) {
       calls.extend(Invocation!(T_CS!("\\lx@add@author"), vec![keyvals.clone(), Some(name)]).unlist());
@@ -135,7 +143,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       Ok(Tokens::new(shared_affiliation_calls(attr, stuff)?))
     }
   });
-  DefMacro!("\\lx@ijcai@names{}", sub[(stuff)] { add_authors_calls_sectioned(stuff, true, false, None, false) });
+  DefMacro!("\\lx@ijcai@names{}", sub[(stuff)] {
+    record_author_call("\\lx@ijcai@names", &stuff, true, false, None, false);
+    add_authors_calls_sectioned(stuff, true, false, None, false)
+  });
 
   // Shared "sectioned author block" machinery for the IJCAI author idiom
   // (ijcai97.sty and its derivatives): one `\author{}` holding names, then

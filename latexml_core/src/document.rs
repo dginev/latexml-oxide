@@ -305,6 +305,11 @@ pub const FIELD_MARK_TARGET: &str = "ltx-field-mark";
 static FIELD_PROV_STAMPED: std::cell::Cell<bool> = std::cell::Cell::new(false);
 /// Note that a field's stored tokens now carry their provenance (`FIELD_PROV_STAMPED`).
 pub fn note_field_prov_stamped() { FIELD_PROV_STAMPED.set(true); }
+/// The `FIELD_PROV_STAMPED` gate as it stands (to put it back after a rehearsal the document never keeps,
+/// [`FieldLedgerScope`](crate::token::FieldLedgerScope)).
+pub fn field_prov_stamped() -> bool { FIELD_PROV_STAMPED.get() }
+/// Put the `FIELD_PROV_STAMPED` gate back as [`field_prov_stamped`] read it.
+pub fn restore_field_prov_stamped(stamped: bool) { FIELD_PROV_STAMPED.set(stamped); }
 /// Clear the `FIELD_PROV_STAMPED` gate (conversion start).
 pub fn reset_field_prov_stamped() { FIELD_PROV_STAMPED.set(false); }
 /// Reset every piece of a conversion's field-provenance thread state (OXIDIZED_DESIGN #715): the stamped gate, the

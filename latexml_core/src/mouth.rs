@@ -1105,6 +1105,18 @@ impl Mouth {
     }
   }
 
+  /// How far this mouth has read: its line, its column, the characters of the line still to read, and the lines still
+  /// buffered. Only compared with an earlier reading of the same mouth (`gullet::input_unread_since`): it changes
+  /// whenever a character or a line is read.
+  pub fn read_position(&self) -> (usize, usize, usize, usize) {
+    (
+      self.lineno,
+      self.colno,
+      self.chars.len(),
+      self.buffer.len() + self.raw_buffer.len(),
+    )
+  }
+
   /// Checks if there is more input to process.
   ///
   /// Note: we need mutability, as we may refill the internal BufReader

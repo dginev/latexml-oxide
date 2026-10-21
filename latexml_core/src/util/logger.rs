@@ -623,6 +623,12 @@ impl DiagnosticsHold {
     now.error.saturating_sub(then.error) + usize::from(now.fatal && !then.fatal)
   }
 
+  /// Warnings raised since [`begin`](Self::begin) (a suppressed one counted too).
+  pub fn warnings_raised(&self) -> usize {
+    let now = crate::common::error::REPORT.borrow();
+    now.warning.saturating_sub(self.snapshot.report.warning)
+  }
+
   fn take_held(&mut self) -> Vec<(Level, String)> {
     self.resolved = true;
     let mut held = HELD.borrow_mut();

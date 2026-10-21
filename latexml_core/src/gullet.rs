@@ -1887,6 +1887,62 @@ fn expands_now(defn: &std::rc::Rc<dyn Definition>, fully_expand: bool) -> bool {
     && !scan_stops_at_futurelet_peek(defn)
 }
 
+/// A place in the input ([`input_mark`]): what the input held still to be read when it was taken — the current
+/// mouth's pushback (its length and its last token below anything pushed since), the mouth's read position, and how
+/// many mouths enclose it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct InputMark {
+  depth:    usize,
+  pushback: usize,
+  below:    Option<Token>,
+  mouth:    (usize, usize, usize, usize),
+}
+
+/// Mark the input as it stands: everything still to be read now ([`input_unread_since`]). What is pushed back after
+/// the mark (a macro's expansion, unread on top of the pushback) is read before anything the mark holds.
+pub fn input_mark() -> InputMark {
+  let gullet = gullet!();
+  let depth = gullet.mouthstack.len();
+  match gullet.runtime.as_ref() {
+    Some(rt) => InputMark {
+      depth,
+      pushback: rt.pushback.len(),
+      below: rt.pushback.last().copied(),
+      mouth: rt.mouth.read_position(),
+    },
+    None => InputMark {
+      depth,
+      pushback: 0,
+      below: None,
+      mouth: (0, 0, 0, 0),
+    },
+  }
+}
+
+/// Whether none of the input `mark` held has been read since it was taken ([`input_mark`]): its mouth is still open,
+/// has read no further, and its pushback still holds every token it held then (only what was pushed after the mark
+/// was read, or what a mouth opened since holds). Read-only, for an observer telling apart what a call's expansion
+/// did from what the input after the call did (the frontmatter observer's ledger). A token read and another of the
+/// same text pushed back in its place is not told apart.
+pub fn input_unread_since(mark: &InputMark) -> bool {
+  let gullet = gullet!();
+  let depth = gullet.mouthstack.len();
+  if depth < mark.depth {
+    return false;
+  }
+  let runtime = if depth == mark.depth {
+    gullet.runtime.as_ref()
+  } else {
+    gullet.mouthstack.get(depth - mark.depth - 1)
+  };
+  let Some(rt) = runtime else {
+    return mark.pushback == 0 && mark.mouth == (0, 0, 0, 0);
+  };
+  rt.mouth.read_position() == mark.mouth
+    && rt.pushback.len() >= mark.pushback
+    && (mark.pushback == 0 || rt.pushback.get(mark.pushback - 1).copied() == mark.below)
+}
+
 /// What the invocation of a token with field provenance `prov` ([`Token::prov`]) consumed of its field's stored
 /// value, now that it read what it reads: its own position up to the next token of that value still to be read, if
 /// the pushback holds one (a primitive's or a macro's arguments: `\hspace{1em}`, `\\[2pt]`, `$x$`), else its own

@@ -23055,6 +23055,106 @@ T & … \\ Below & …`, where tabularray hides "Below" under "T"; the text stay
 `tb2.tex`. Repros alignment-bindings/tblr_setcell_spans_columns_and_rows, alignment-bindings/tblr_setcell_after_a_row_rule_spans;
 guards `perfect_kernel_batch78l::{tblr_setcell_spans_columns_and_rows, tblr_setcell_after_a_row_rule_spans}`.
 
+### 837. The frontmatter observer records and lexes the author calls, in shadow mode
+
+Beyond Perl, infrastructure only: Perl reads an author block as tokens (Base_Utility.pool.ltxml:676-700, `@authorsplits`
+and `positionOf`), and so does our analyser (`base_utilities/author_block/`). FM S2a.1 (frontmatter model M3 stage
+S2a, KERNEL_CAPABILITIES K23 step 1; design `agent_reports/2026-10-21_fms2_design_refresh.md` §2, defaults 1, 2, 6 and
+9 adopted by the user 2026-10-21) adds an observer that reads what TeX prints instead, beside the conversion, in
+`base_utilities/frontmatter/observer/`. It runs only under the runtime environment variable `LATEXML_FM_SHADOW=1` (read
+once per process; a test sets the thread's override, `set_fm_shadow_override`), which stays **unset on the fleet**
+(`cortex_worker` writes no dump; the shadow census runs through the local CLI), and decides nothing: a conversion's XML
+and its log are the same with and without it (guard `shadow_switch_leaves_the_xml_unchanged`, over the review's
+adversarial shapes: an `\aftergroup`, a `\thanks` holding a `\label` with a `\ref` to it, a `\footnote`, a `\gdef` and a
+`\stepcounter`, an unclosed `\begingroup`, an undefined command, an `\input` in the field).
+- **Ledger** (`ledger.rs`): a block per `\author`-family call — `\lx@add@authors@adaptive` (the kernel `\author`,
+  policy `kernel`), `\lx@add@authors`, `@append`, `@list`, `\lx@add@author@split`, `\lx@ijcai@names` — with its
+  `replace`/`sectioned`/`cautious` options, keyvals, the frontmatter queue's length and queued authors at the call (and
+  the `epoch`, the flushes before it: each flush empties the queue, so a position is one queue's), and its positions in
+  the author field: the kernel block's are `\lx@field@mark`'s own (S1, #715; the mark confirms the block it is the
+  stored copy of), a binding call's are projected past every earlier stamp, as the new argument stamper
+  `\lx@field@stamp{<field>}{<tokens>}` (frontmatter_fields.rs; no call site yet, S2b stamps the calls) would give them;
+  past the 14-bit position budget (cumulative per document) the block is unstamped. Per `\title` call the S1 stamp. Per
+  queued creator, contact or note (`queue_front_matter`, gated on the switch before anything is built) an API call,
+  `inside` when the latest block's own expansion made it: nothing the input held at the block's call has been read since
+  (core `gullet::input_unread_since`, a mark of the pushback and the mouth position). Nothing is recorded while the
+  frontmatter is frozen (a replayed class setter, a speculative run, the rehearsal) or a stand-in copy reads its
+  defaults. A block not rehearsed says why (`SkipReason`: out of positions, empty, no flush after the call, the
+  rehearsal's own Fatal, not undone; one no journal could open for — the flush inside a speculative run — waits for the
+  next flush, `Outcome::Deferred`, and reports `journal unavailable` if none rehearses it).
+- **Rehearsal** (`rehearsal.rs`): at the flush (`digest_front_matter`) each block not yet rehearsed is digested from its
+  stamped tokens in text mode, in a group of Layer-B event bindings (`\and`/`\And`/`\AND` a column, which one kept; `\\`,
+  `\newline`, `\linebreak`, `\par` a row; `\thanks`, `\footnote`, `\footnotetext` a note reading its argument;
+  `\footnotemark`, `\inst` marks; `\label` the note's label; `\lx@annotate@frontmatter` and the defined contact commands
+  `\email`, `\url`, `\href`, `\orcidlink`, `\affil`, `\address`, … contacts; `\thefootnote` the title's footnote marks:
+  the binding-declared hook `\lx@fm@title@thefootnote` when one is defined, else the kernel `\maketitle`'s
+  `\@fnsymbol\c@footnote` — rehearsal.rs `TITLE_FOOTNOTE_HOOK`, for a class numbering its title's marks otherwise:
+  revtex4-2.cls:3040-3041 `\frontmatter@thefootnote` is `\@fnsymbol` by default and `\@alph` only under its
+  `altaffilletter` option, :5978; no binding declares it yet, guard `title_footnote_hook_overrides_fnsymbol`), through
+  the speculative-run engine of #767 (assignments journalled and rolled back, diagnostics held and discarded, terminal
+  output muted, the frontmatter frozen), with progress notes silenced (core `error::SilenceProgressNotesGuard`: an
+  `\input` in the field reads its file again, and its `(Processing content …` note is not the conversion's) and with the
+  field ledger put back after it (core `token::FieldLedgerScope`: the serials, the pending cover, the settled flag and
+  the stamped gate as they were). The whole group — its opening, the digestion, its end — reads from a mouth of its own (`reading_from_mouth`,
+  closed with whatever is left), under a current token of its own: what the group's end unreads (an `\aftergroup` of the
+  block's, core `pop_stack_frame_with`) never reaches the document's input, and `egroup`'s template-brace check never
+  sees the document's token. No counter is stepped: a bare `\footnotemark` prints `\thefootnote` with `\c@footnote` set
+  only inside its mark, to the counter's value at the rehearsal's start plus the steps the block's `\thanks`,
+  `\footnote` and bare marks made before it (`\footnotemark[<n>]` at <n>), as latex.ltx `\footnotemark`/`\@xfootnotemark`
+  print. No `tabular[t]{c}`: a stray `&` digests as the `&` constructor's whatsit, which errs only when it is built into
+  the document (tex_tables.rs) — never in the rehearsal, so nothing is held for it —, and the lexer reads it as a column
+  separator. A Fatal of its own skips the block, a resource Fatal propagates.
+- **Event lexer** (`events.rs`): the digested list into Name, Mark (its label; `symbol` when it prints only LaTeX's
+  `\@fnsymbol` characters, whatever command printed it; its line's first ink), Sep (column with its command — `\and`,
+  `\And`, `\AND`, or `column` `&` for an alignment tab —, comma — a mark printing only a comma, llncs's `\fnmsep`, is
+  one —, the word "and" or a printed `\&`, a gap: ≥ 2 spacing items, one wider
+  than an interword space, or one holding fill glue — `\hfil`/`\hfill`, tex_glue.rs `isFill`, always a separator —, with
+  its item count, its natural width in em of the box's font from a spacing box's `width` property (`\hspace`, `\hskip`;
+  fill glue 0) or the space characters printed, and `fill`), Break (the rehearsal's `\\` and also the kernel's
+  `\lx@newline`, `\lx@parboxnewline` and `\@normalcr` whatsits: `\centering`/`\raggedright`/`\raggedleft` let `\\` be
+  `\@normalcr`, a minipage `\lx@newline`, a parbox's body `\lx@parboxnewline`, past the rehearsal's binding; guard
+  `breaks_survive_a_rebound_newline`), Contact, Note (label, inner contacts, `thanks` or `footnotetext`), Layout (a
+  container, an alignment cell, a font change between runs) and, from the ledger, the API calls after the block; each
+  with its span of the field's positions (`fieldProv`/`fieldSerial`, `gullet::field_cover_of`) and its ink. A
+  container's content is the arguments it shows (util_text.rs `shown_arguments`, as `typesets_content` reads them) and
+  its body: a placement keyword is none (the `[t]` of `\begin{tabular}[t]{c}` and `\parbox[t]`, the `[l]` of
+  `\makebox[3cm][l]`, the `[b]` of `\begin{minipage}[b]`; an image, showing none of its arguments, is a Layout event of
+its own, not its file name — 2503.08161's logos —; guard `placement_arguments_are_not_names`).
+- **Dump**: the CLI writes `<dest>.fmshadow.json` (`write_fm_shadow`: the entries in call order and a summary) after the
+  output; a failure to write it is a Warning, not the conversion's failure. `cortex_worker` writes none.
+- **Core**: the status line's undefined macros and missing files are listed sorted (`error::get_status_message`): a hash
+  map's order follows the symbols' interning history, which the rehearsal (or any new definition) changes; Perl
+  State.pm:771 lists `keys %{$$status{undefined}}`, a random hash order, so either order is Perl's.
+
+Departures from the design note §2 (for S2a.2): the per-block policy id is the hook's family (the policy table, keyed on
+the binding owning the `\author` meaning and the hook, is S2a.2's); single-author API calls (`\lx@add@creator`,
+authblk's unlabelled `\author`) are API calls, not blocks (the comparator's "no block" class); contacts are rebound only
+where the document defines them (an undefined one errs, held, as in pdflatex); a Note carries no mark (only the optional
+number given to it: the symbol its `\thanks` prints is not recorded); a font-change Layout event has no span; a gap's
+em is its box's font's quad (10pt where it has no font); a font switched inside a run of ink is no event there: the
+run stays one Name and the Layout event, which compares a run's first font with the previous run's, shows at the next
+run (`Ann Able\begingroup\bfseries Bob \and Carl`: after the `\and`, before "Carl"; splitting the run at the switch
+would split every name set with a small-caps surname — gretsi's `first \textsc{last}`, 2508.03934 — into two Names:
+S2a.2's call; guard `font_switch_inside_a_run_keeps_the_name`); tokens an `\input` in the field reads come from the
+file and carry no position, so their events have no span (guard `input_field_events_carry_no_span`); `\corref`, `\fnref`, `\thanksref` and `\ead` are not bound
+(they digest as their binding defines them, read by what they print); a bare `\footnotemark`'s label is the kernel
+`\maketitle`'s `\@fnsymbol` mark unless a binding declares the title's own through `\lx@fm@title@thefootnote` (above;
+none does yet: revtex's default is `\@fnsymbol` too, `\@alph` only under `altaffilletter`), and assumes the counter at
+the flush is the one at `\maketitle`; a binding block's projected positions may coincide with positions a later real
+stamp gives (spans are unique only within a block: key an event by (block index, span); once S2b stamps for real,
+projected must equal stamped); an event ending its block stops short of a trailing delimiter (`\footnotemark[1]}`'s
+`]`: core `gullet::field_cover_of` ends a cover at the field's next token, and there is none); a mark printing only a
+`\ref` (A&A's `\inst{\ref{ipag}}`, 1809.08354) prints nothing at digestion — the reference resolves in post — and is
+no mark (S2a.2: read the `\ref`'s label). Guards `perfect_kernel_batchfms2a1::*` (event lists of the design probes, the gretsi
+repro, 2401.16957's `,\inst` shape and the SYNC rows 46-48, 53, 62, 64, 66 shapes; spans in two shapes, gap widths and
+fill, footnotemark labels and `\and` commands, the `inside` flags; the stamper's provenance and base; XML and log
+unchanged by the switch; the CLI dump only under it, 0 errors and 0 warnings; r3, review revfms2a1_2: placement
+arguments, rebound line breaks, the `&` column, the title-footnote hook, a font switch inside a run, an `\input`'s
+spans; engine unit test `shadow::tests::deferred_block_reports_the_journal_not_the_flush`); repros `sectioning-frontmatter/observer_*`
+(the four symbol-line and mark-macro ones RED for their output, the S2b targets: witness 2304.13998's shape and the
+design probes; `observer_rehearsal_aftergroup_stays_inside` and `observer_fill_gap_and_footnotemark_labels` GREEN, the
+review's probes), `class-bindings/gretsi_v13_shared_mark_affiliation` (2508.03934).
+
 ### 840. A space a name sets before its own mark is the name's; spacing-only math, `\enskip` after a mark part names
 
 OD #52(i) rewrites a horizontal space in an author block (`\hspace`, `\hfill`) to `\quad`, which with `\quad` and

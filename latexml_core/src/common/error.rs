@@ -109,8 +109,12 @@ impl Drop for SuppressLogOutputGuard {
   fn drop(&mut self) { SUPPRESS_LOG_OUTPUT.set(self.prev); }
 }
 
-/// Clear the log-output suppression flag (`reset_thread_engine`): a fresh conversion on a reused thread logs.
-pub fn reset_suppress_log_output() { SUPPRESS_LOG_OUTPUT.set(false); }
+/// Clear the log-output suppression flag and the progress notes' silence ([`SilenceProgressNotesGuard`];
+/// `reset_thread_engine`): a fresh conversion on a reused thread logs.
+pub fn reset_suppress_log_output() {
+  SUPPRESS_LOG_OUTPUT.set(false);
+  SILENCE_PROGRESS_NOTES.set(false);
+}
 
 // Thread-local FATAL DEMOTION for bibliography post-processing (user
 // policy 2026-07-04): with the live-state field interpretation, Warn!/
@@ -648,11 +652,15 @@ pub fn get_status_message() -> String {
   if report.fatal {
     parts.push("1 fatal error".to_string());
   }
-  let undef_keys: Vec<String> = report
+  // (sorted, and so are the missing files: a hash map's order follows the symbols' interning history, which any
+  // work done before an error changes — the frontmatter observer's rehearsal, a new definition; Perl State.pm:771
+  // lists `keys %{$$status{undefined}}`, a random hash order)
+  let mut undef_keys: Vec<String> = report
     .undefined
     .keys()
     .map(|k| crate::common::arena::to_string(*k))
     .collect();
+  undef_keys.sort_unstable();
   if !undef_keys.is_empty() {
     parts.push(format!(
       "{} undefined macro{}[{}]",
@@ -661,11 +669,12 @@ pub fn get_status_message() -> String {
       undef_keys.join(", ")
     ));
   }
-  let miss_keys: Vec<String> = report
+  let mut miss_keys: Vec<String> = report
     .missing
     .keys()
     .map(|k| crate::common::arena::to_string(*k))
     .collect();
+  miss_keys.sort_unstable();
   if !miss_keys.is_empty() {
     parts.push(format!(
       "{} missing file{}[{}]",
@@ -1386,6 +1395,37 @@ impl From<ParseFloatError> for Error {
 //**********************************************************************
 // Progress reporting.
 
+/// When true, the progress notes ([`note_begin`]/[`note_end`], [`note_progress`], [`note_progress_detailed`]) log
+/// nothing: a digestion the conversion discards reads a file (an `\input` in an author field rehearsed by the
+/// frontmatter observer, OXIDIZED_DESIGN_DIVERGENCES #837) or skips a `{comment}`, and its log must be the one without
+/// the rehearsal. Not Perl's (it has no rehearsal).
+#[thread_local]
+static SILENCE_PROGRESS_NOTES: std::cell::Cell<bool> = std::cell::Cell::new(false);
+
+/// The progress notes silenced for a scope and put back as they were when the guard is dropped (a panic unwinding
+/// included).
+#[must_use = "the silence ends when the guard is dropped"]
+pub struct SilenceProgressNotesGuard {
+  prev: bool,
+}
+
+impl SilenceProgressNotesGuard {
+  /// Silence the progress notes until the guard is dropped.
+  pub fn new() -> Self {
+    let prev = SILENCE_PROGRESS_NOTES.get();
+    SILENCE_PROGRESS_NOTES.set(true);
+    SilenceProgressNotesGuard { prev }
+  }
+}
+
+impl Default for SilenceProgressNotesGuard {
+  fn default() -> Self { Self::new() }
+}
+
+impl Drop for SilenceProgressNotesGuard {
+  fn drop(&mut self) { SILENCE_PROGRESS_NOTES.set(self.prev); }
+}
+
 /// Advance the progress indicator by one step.
 ///
 /// Perl `Common/Error.pm:ProgressStep` L430-433 ticks a terminal spinner. This
@@ -1400,12 +1440,18 @@ pub fn progress_step(_note: &str) {
 
 pub fn note_progress(stuff: &str) {
   use log::info;
+  if SILENCE_PROGRESS_NOTES.get() {
+    return;
+  }
   info!(target: "note", "{}", stuff);
 }
 
 // TODO: Rethink this reporting
 pub fn note_progress_detailed(stuff: &str) {
   use log::debug;
+  if SILENCE_PROGRESS_NOTES.get() {
+    return;
+  }
   debug!(target: "note", "{}", stuff);
 }
 
@@ -1418,6 +1464,9 @@ pub fn note_progress_detailed(stuff: &str) {
 /// time; this port logs the structure without the timing (per-phase wall times
 /// are the telemetry module's job).
 pub fn note_begin(stage: &str) {
+  if SILENCE_PROGRESS_NOTES.get() {
+    return;
+  }
   // $state->assignMapping('NOTE_TIMERS', $stage, [Time::HiRes::gettimeofday]);
   use log::info;
   info!(target: "note", "\n({}...", stage);
@@ -1429,6 +1478,9 @@ pub fn note_begin(stage: &str) {
 /// elapsed time from its `NOTE_TIMERS` entry; see [`note_begin`] for why this
 /// port does not.
 pub fn note_end(_stage: &str) {
+  if SILENCE_PROGRESS_NOTES.get() {
+    return;
+  }
   // if (my $start = $state && $state->lookupMapping('NOTE_TIMERS', $stage)) {
   //   $state->assignMapping('NOTE_TIMERS', $stage, undef);
 

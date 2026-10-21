@@ -1056,6 +1056,32 @@ pub fn convert_bytes_files_then<R: Send + 'static>(
   (run.log, run.xml, run.inspected)
 }
 
+/// [`convert_with_setup_then`] after writing `files` (`(name, content)`) beside the document: `setup` runs in the
+/// conversion's thread before it (a thread-local override), `inspect` on the XML after it, in the same thread. Returns
+/// (log, XML, `inspect`'s result).
+pub fn convert_files_with_setup_then<R: Send + 'static>(
+  tex: &str,
+  files: &[(&str, &str)],
+  preload: Option<&str>,
+  setup: impl FnOnce() + Send + 'static,
+  inspect: impl FnOnce(&str) -> R + Send + 'static,
+) -> (String, String, R) {
+  let files: Vec<(&str, &[u8])> = files
+    .iter()
+    .map(|(name, content)| (*name, content.as_bytes()))
+    .collect();
+  let run = convert_in_process(
+    tex.as_bytes(),
+    &files,
+    preload,
+    None,
+    GUARD_TIMEOUT_SECS,
+    setup,
+    move |xml, _| inspect(xml),
+  );
+  (run.log, run.xml, run.inspected)
+}
+
 /// [`convert_files_with`] of a source dated `source_date_epoch` (Unix seconds, UTC) — what the CLI and cortex read
 /// from a paper's bundle (`latexml::source_date`) — for a guard of the job's clock under ar5iv's archival preload.
 pub fn convert_dated_files_with(

@@ -396,6 +396,9 @@ fn last_group(tokens: &Tokens) -> Tokens {
 /// Digest FrontMatter (if not already?)
 /// Perl: digestFrontMatter().
 pub fn digest_front_matter() -> Result<()> {
+  // The frontmatter observer's rehearsal of the author blocks, under its shadow switch only (nothing it finds is used
+  // yet; OXIDIZED_DESIGN_DIVERGENCES #837).
+  shadow_flush()?;
   bgroup();
   // INTENTIONAL DIVERGENCE from Perl PR #2767 (KNOWN_PERL_ERRORS #30,
   // OXIDIZED_DESIGN): clear the queue BEFORE digesting. Perl digests
