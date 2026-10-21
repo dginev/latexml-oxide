@@ -1,0 +1,12 @@
+% witness: rev78c2 finding 1 (2509.03211, 2409.17596, 2304.03621): subfig.sty:107-128 `caption=false` loads caption3 alone, so a later
+%          `\usepackage[bf,small]{caption}` is caption's first load, its v1 options valid (caption.sty:114-147)
+% oracle:  pdflatex 0 errors; "Figure 1: Schematic." at 9pt (\f@size 9), the label in CMBX9
+% engines: rust 78c r2 = 2 warnings (unknown KeyVals key 'bf', 'small'), the options dropped
+% expect:  0 errors, 0 warnings; the caption at 90 % with a bold label
+% status:  RED (78c r2) -> GREEN (78c follow-up)
+\documentclass{article}
+\usepackage[caption=false]{subfig}
+\usepackage[bf,small]{caption}
+\begin{document}
+\begin{figure}A\caption{Schematic.}\end{figure}
+\end{document}

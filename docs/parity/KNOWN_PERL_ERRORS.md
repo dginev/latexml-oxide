@@ -16455,17 +16455,31 @@ r2: caption_sty.rs names `\captionsetup` as caption's repeat-load setter (`capti
 `apply_repeat_options`, hyperref's mechanism): witness 1602.00134 (`[font=footnotesize,labelfont=bf]`, 80 % and bold
 labels as its PDF); 50 of 1,057 subcaption papers load caption with a `font=` after it. caption's v1 options (`bf`,
 `small`, caption.sty:114-147) are first-load keys there, caption's "undefined" Error on a repeat; an unknown-key Warning
-here. Guard `perfect_kernel_batch78c::caption_options_after_subcaption_apply`. Open: the sub-captions are `\small` alone
+here. Guard `perfect_kernel_batch78c::caption_options_after_subcaption_apply`. After caption's kernel alone
+(floatrow.sty:39 `\RequirePackage{caption3}`, subfig's `caption=false`) the document's load is caption's first, its v1
+options valid: the 78c follow-up's setter `\lx@caption@repeat@options` runs each option through the first load's
+handler there and drops the kernel-only mark (2509.03211, 2409.17596, 2304.03621: `[bf,small]`, 90 % with bold labels
+as pdflatex, where r2 gave two unknown-key Warnings and dropped them). Guard
+`perfect_kernel_batch78c::caption_v1_options_after_caption3_apply`. Open: the sub-captions are `\small` alone
 — `\captionsetup[sub]{font=…}`, subcaption's own `font=` option and caption's global `font=small` (which makes
 subcaption's `font+=small` `smaller`, 8 pt in pdflatex) do not reach them, as caption_sty.rs's caption formatting passes
-the `sub…` types through (`passthrough`; rev78c probes sc1-sc3: pdflatex 8 pt, ours 90 %).
+the `sub…` types through (`passthrough`; rev78c probes sc1-sc3: pdflatex 8 pt, ours 90 %). An option the first load already
+had is not run again (binding/content.rs `apply_repeat_options` filters by the first load's options; caption3.sty:416-429
+re-runs the whole list: `[labelsep=period]{caption}`, subcaption, `\captionsetup{labelsep=colon}`,
+`[labelsep=period]{caption}` — pdflatex "Figure 1.", ours ": "; rev78c2 probe c3). An option-less
+`\usepackage{caption}` after caption's kernel alone runs no setter and keeps the mark, so a jfm copy's own caption
+format stays where pdflatex prints caption's "Figure 1:" (OD #784's residual; RED repro
+class-bindings/jfm_caption/jfm_copy_caption_package_after_subfig_without_caption, floatrow the same, probe c7c). A
+`\footnote` inside a sized caption reads relative to it (`fontsize="111%"` in a 90 % caption, 1907.07929; pdflatex
+`\footnotesize`), the kernel's relative sizes, as before 78c.
 
 ## 1022. IEEEtran's headings show the `\ref` number
 
 IEEEtran.cls:5397/:5402 `\def\@seccntformat#1{\csname the#1dis\endcsname\hskip 0.5em\relax}` prints a heading's number
 in its heading form, :2570-2587 `\thesectiondis` "I.", `\thesubsectiondis` "A.", `\thesubsubsectiondis` "1)",
 `\theparagraphdis` "a)" (compsoc: "1", "1.1", …; compsoc conference "1.", "1.1."), while `\ref` reads `\thesubsection`
-"I-A". Perl's IEEEtran.cls.ltxml has no heading forms, so every heading tag is the `\ref` number ("I", "I-A", "I-A1").
+"I-A". Perl's IEEEtran.cls.ltxml has no heading forms, so every heading tag is the `\ref` number ("I", "I-A", "I-A1";
+compsoc "1", "1.1", which Perl numbers arabic).
 Minimal trigger: `\documentclass{IEEEtran}\begin{document}\section{Intro}\subsection{Sub}\end{document}` — pdflatex "I.
 INTRO", "A. Sub". About 178,000 papers (IEEEtran with a `\subsection`). Fixed in Rust (78c): ieeetran_cls.rs defines
 `\fnum@section` … `\fnum@paragraph` as the `\the<level>dis` forms (base_utilities.rs `\lx@fnum@@` uses them for the
@@ -16478,7 +16492,11 @@ Rust binding had set `\thesection` Roman in every mode (a Rust-only gap the head
 "1.1", "1.1.1", compsoc conference "1.", "1.1.", `\ref` "1.1", appendix subsections "A.1" (repros
 sectioning-frontmatter/ieeetran_compsoc_headings_are_arabic, …_compsoc_conference_headings_are_arabic, in the same
 guard). Open: a compsoc conference appendix's heading prints "Appendix A." (`\thesectiondis` "A."), ours the appendix
-type's "Appendix A"; `\paragraph` is unnumbered where pdflatex prints "a)" (both before 78c).
+type's "Appendix A"; `\paragraph` is unnumbered where pdflatex prints "a)" (compsoc "1.1.1.1"); `\appendix[<title>]`
+(IEEEtran.cls:5719-5745, one appendix: counters reset, the heading "Appendix" or "Appendix \\ <title>" printed, a later
+unstarred `\section`'s argument thrown out) is the kernel's `\appendix` here — the title a "[Proof]" paragraph, no
+heading, the next subsection ".2" with refnum "B" where pdflatex prints "APPENDIX PROOF", ".1 Lemma", "A" (rev78c2 probe
+i2; all before 78c).
 
 ## 1023. acmart's citations are author-year
 

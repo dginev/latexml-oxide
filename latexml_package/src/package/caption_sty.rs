@@ -1052,29 +1052,45 @@ LoadDefinitions!({
   // content.rs `apply_repeat_options`; witness 1602.00134's `[font=footnotesize,labelfont=bf]`, 80 % and bold labels;
   // 50 of 1,057 subcaption papers). The v1 options are first-load-only keys there, caption's "undefined" Error on a
   // repeat. Guard `perfect_kernel_batch78c::caption_options_after_subcaption_apply`.
-  AssignValue!("caption.sty_keyval_setter" => "\\captionsetup", Scope::Global);
-  DeclareOption!(None, {
-    let option = current_option_text()?;
-    let option = option.trim();
-    let setup = match option {
-      "up" | "it" | "sl" | "sc" | "md" | "bf" | "rm" | "sf" | "tt" => s!("labelfont+={option}"),
-      // caption.sty:124-129: a size option is the whole caption font (`\def\captionfont{\small}`), replacing `font=`.
-      "scriptsize" | "footnotesize" | "small" | "normalsize" | "large" | "Large" => s!("font={option}"),
-      "normal" | "isu" | "hang" | "center" | "centerlast" | "nooneline" | "ruled" | "flushleft"
-      | "flushright" | "oneline" | "ignoreLTcapwidth" => String::new(),
-      // The option's own tokens, unexpanded, as `\caption@ProcessOptions*` passes them on (caption.sty:171-172):
-      // `figurename=\textsc{Fig}` is the name, not `\textsc`'s expansion.
-      _ => {
-        Digest!(r"\expandafter\lx@caption@optionsetup\expandafter{\CurrentOption}")?;
-        String::new()
-      },
-    };
-    if !setup.is_empty() {
-      Digest!(tokenize(TeXString::assembled(s!(r"\captionsetup{{{setup}}}"))))?;
-    }
-  });
+  // After caption's kernel alone (`\lx@caption@kernel@only`: floatrow.sty:39, subfig's `caption=false`) the load is
+  // caption's first in TeX: its options are package options, the v1 ones valid, and caption's `\@makecaption` replaces
+  // the class's from then on, so the mark goes, as in subfig_sty.rs (2509.03211, 2409.17596, 2304.03621: `[bf,small]`
+  // after floatrow or `[caption=false]{subfig}`, two unknown-key Warnings and the options dropped). Guard
+  // `perfect_kernel_batch78c::caption_v1_options_after_caption3_apply`.
+  AssignValue!("caption.sty_keyval_setter" => "\\lx@caption@repeat@options", Scope::Global);
+  RawTeX!(r"\def\lx@caption@repeat@options#1{\@ifundefined{lx@caption@kernel@only}{\captionsetup{#1}}%
+    {\@for\CurrentOption:=#1\do{\lx@caption@option}\global\let\lx@caption@kernel@only\@undefined}}");
+  DefPrimitive!("\\lx@caption@option", sub[_args] { caption_option() });
+  DeclareOption!(None, { caption_option()?; });
   ProcessKeyOptions!();
 });
+
+/// One option of caption's first load (caption.sty:114-147, 171-172): a v1 option sets its key, any other is a key.
+fn caption_option() -> Result<()> {
+  let option = current_option_text()?;
+  let option = option.trim();
+  let setup = match option {
+    "up" | "it" | "sl" | "sc" | "md" | "bf" | "rm" | "sf" | "tt" => s!("labelfont+={option}"),
+    // caption.sty:124-129: a size option is the whole caption font (`\def\captionfont{\small}`), replacing `font=`.
+    "scriptsize" | "footnotesize" | "small" | "normalsize" | "large" | "Large" => {
+      s!("font={option}")
+    },
+    "normal" | "isu" | "hang" | "center" | "centerlast" | "nooneline" | "ruled" | "flushleft"
+    | "flushright" | "oneline" | "ignoreLTcapwidth" => String::new(),
+    // The option's own tokens, unexpanded, as `\caption@ProcessOptions*` passes them on (caption.sty:171-172):
+    // `figurename=\textsc{Fig}` is the name, not `\textsc`'s expansion.
+    _ => {
+      Digest!(r"\expandafter\lx@caption@optionsetup\expandafter{\CurrentOption}")?;
+      String::new()
+    },
+  };
+  if !setup.is_empty() {
+    Digest!(tokenize(TeXString::assembled(s!(
+      r"\captionsetup{{{setup}}}"
+    ))))?;
+  }
+  Ok(())
+}
 
 /// `\CurrentOption`'s text, unexpanded: the option list was read once — `\@pass@ptions` builds `\opt@caption.sty` by a
 /// `\protected@xdef` (latex.ltx:18514), which caption.sty:172 `\caption@ProcessOptions*` reads through caption3.sty:398

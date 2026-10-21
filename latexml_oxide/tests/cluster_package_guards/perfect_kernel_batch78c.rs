@@ -218,6 +218,29 @@ fn caption_options_after_subcaption_apply() {
   );
 }
 
+/// subfig's `caption=false` and floatrow load caption's kernel alone (caption3: subfig.sty:107-128, floatrow.sty:39),
+/// so a later `\usepackage[bf,small]{caption}` is caption's first load and its v1 options are valid (caption.sty:114-147):
+/// the caption at 90 % with a bold label, no diagnostics (pdflatex `\f@size` 9, CMBX9; 2509.03211, 2409.17596,
+/// 2304.03621). Red (78c r2): an unknown-key Warning each, the options dropped. Repros
+/// captions-floats/caption_v1_options_after_caption3_apply, captions-floats/caption_v1_options_after_floatrow_apply.
+#[test]
+fn caption_v1_options_after_caption3_apply() {
+  for tex in [
+    repro!("captions-floats/caption_v1_options_after_caption3_apply.tex"),
+    repro!("captions-floats/caption_v1_options_after_floatrow_apply.tex"),
+  ] {
+    let (log, xml) = convert_with(tex, Some(PRELOAD));
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert_element(
+      &xml,
+      "caption",
+      &[],
+      "<caption><tag close=\": \"><text font=\"bold\" fontsize=\"90%\" xml:id=\"S0.F1.2\">Figure 1</text></tag>\
+       <text fontsize=\"90%\" xml:id=\"S0.F1.3\">Schematic.</text></caption>",
+    );
+  }
+}
+
 /// acmart's default citation style is `\citestyle{acmnumeric}` (acmart.cls:385-393): "[1, 2]" (witness 2112.15328);
 /// `\citestyle{acmauthoryear}` (:379-384) gives "[Able 2001]". Red (int43a; Perl acmart.cls.ltxml:23 only loads
 /// natbib): "(Able, 2001; …)". Repros index-bib/acmart_citations_are_numeric_by_default,

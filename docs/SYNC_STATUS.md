@@ -4945,7 +4945,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (caption3.sty:416-429; the subcaption binding's caption load is the first): caption_sty.rs names `\captionsetup` as
   caption's repeat-load setter (`caption.sty_keyval_setter`, hyperref's mechanism): witness 1602.00134 80 % with bold
   labels as its PDF; caption's v1 options there are first-load keys (pdflatex "undefined" Error), an unknown-key Warning
-  here (KPE #1021; open: the sub-caption fonts, `passthrough`). (2) IEEEtran compsoc numbers arabic, Perl's
+  here (KPE #1021; open: the sub-caption fonts, `passthrough`; after caption's kernel alone see the follow-up). (2) IEEEtran compsoc numbers arabic, Perl's
   IEEEtran.cls.ltxml:160-174 conditional ported (IEEEtran.cls:2545-2556): "1", "1.1", "1.1.1" and `\ref` "1.1" where r1
   read "I", "I.1", "I.1.1" (63 of 558 IEEEtran papers use compsoc; KPE #1022 corrected: a Rust-only gap; open: a compsoc
   conference appendix heading's "Appendix A." period, `\paragraph` unnumbered). Nits: jmlr2e's fallback heading is
@@ -4957,6 +4957,15 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   loading caption with options after it, witness 1602.00134): E 213 → 213, F 1 → 1, W 4,626 → 4,626, 0 papers worse; 54
   outputs changed — 29 compsoc papers (heading tags and refnums arabic), 25 caption-option papers with 1602.00134 (each
   its own options: sizes, bold or italic labels, `labelsep`, `textfont=it`) — no text word outside tags gained or lost.
+  **Follow-up** (rev78c2 SHIP after its finding 1; guard `perfect_kernel_batch78c::caption_v1_options_after_caption3_apply`
+  new, RED on r2): after caption's kernel alone (floatrow.sty:39 `caption3`, subfig's `caption=false`) a
+  `\usepackage[<options>]{caption}` is caption's first load: caption_sty.rs's repeat-load setter is
+  `\lx@caption@repeat@options`, which there runs each option through the first load's handler (the v1 options valid) and
+  drops the kernel-only mark, else `\captionsetup` (2509.03211, 2409.17596, 2304.03621: `[bf,small]`, two unknown-key
+  Warnings and the options dropped on r2; 90 % with bold labels as pdflatex now). Recorded open (KPE #1021, #1022): a
+  repeated identical option after an intervening setup, an option-less caption load after caption's kernel alone (OD
+  #784's residual), a `\footnote`'s size inside a sized caption (1907.07929), IEEEtran's `\appendix[<title>]` (heading
+  and title lost, rev78c2 probe i2).
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
   parts draw, as Unicode's IPA letter, cross-checked against tipauni.sty; the `""`/`||` ligatures ˌ ǁ), so its input
