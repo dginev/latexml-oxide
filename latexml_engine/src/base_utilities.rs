@@ -1745,6 +1745,7 @@ LoadDefinitions!({
     // For the witness, (2) removes its ONLY `^`, dropping the whole block into the
     // clean no-marker branch where (1)'s `\quad`s split all six authors.
     let stuff = normalize_hspace_separators(stuff);
+    let stuff = join_icons_to_links(stuff);
     let stuff = rewrite_symbol_superscripts(stuff);
     let stuff = rewrite_ordinal_superscripts(stuff);
     let stuff = rewrite_in_word_superscripts(stuff);
@@ -2292,6 +2293,26 @@ LoadDefinitions!({
             // addresses than authors (cannot map cleanly), keep the original line
             // as one contact (the prior behavior), as when an address spells the name of an author other than the one
             // at its place (2406.06326's `{zhangxy, jyzhou, hmmeng}@…`, by institution; 63m). OXIDIZED_DESIGN #52(j).
+            // (the authors carrying the footnote symbols that lead the line, whose its addresses are when no name spells
+            // any — the marks then no part of them: `Ann Able$^{1,*}$ … \\ $^*$zq77@x.edu`; main-session decision 3 on
+            // the 77p r11 questions, the r8 re-review's finding 6, probe t3. A spelled address keeps the mark it shows,
+            // 1910.00401's `$^{*}$ghunt@wm.edu`, 65e)
+            let carriers: Vec<usize> = {
+              let marks: Vec<Vec<usize>> = leading_symbol_labels(&line)
+                .iter()
+                .map(|label| authors_requesting(&author_marks, &s!("affiliation:{label}")))
+                .collect();
+              marks
+                .first()
+                .map(|first| {
+                  first
+                    .iter()
+                    .filter(|author| marks.iter().all(|carriers| carriers.contains(author)))
+                    .map(|author| numbered_kept + author + 1)
+                    .collect()
+                })
+                .unwrap_or_default()
+            };
             let addresses = email_addresses(&line).unwrap_or_default();
             let placement = match sequenced {
               // (in order; and when the block lists an address for each author at most, no address there goes to an
@@ -2385,6 +2406,14 @@ LoadDefinitions!({
                 }
               },
             };
+            let placement = match placement {
+              AddressPlacement::Shared if !carriers.is_empty() => {
+                unplaced[index] = 0;
+                line = without_leading_symbol_marks(&line);
+                AddressPlacement::Marked(carriers)
+              },
+              placement => placement,
+            };
             calls.extend(email_line_calls(line, placement)?);
           },
         }
@@ -2459,18 +2488,39 @@ LoadDefinitions!({
           .flat_map(|(_, groups)| groups.iter())
           .flat_map(|(names, _)| names.iter().map(symbol_labels))
           .collect();
-        if (opens_with_break || after_lines)
-          && let Some(first) = lines.first()
-          && symbol_led_segments(first).iter().any(|segment| {
+        let labelled = |line: &Tokens| {
+          symbol_led_segments(line).iter().any(|segment| {
             labelled_institution(segment, &earlier)
               .is_some_and(|(_, rest)| reads_as_affiliation(&rest))
           })
+        };
+        if (opens_with_break || after_lines)
+          && lines.first().is_some_and(labelled)
           && let Some((_, groups)) = blocks.last_mut()
           && let Some((_, affils)) = groups.last_mut()
         {
+          // (only the lines down to a line of names, which with the lines under it is the next author's: `… \quad
+          // $^\ddagger$Univ B \\ Cat Cole \\ Univ C`, the r8 re-review's finding 1, probes w1, w2 — Cat Cole had been an
+          // affiliation, Univ C every name's of the row)
+          let names_at = lines
+            .iter()
+            .skip(1)
+            .position(|line| {
+              !labelled(line)
+                && !line_is_email(line)
+                && !is_link_line(line)
+                && name_count(&visible_name_text(line.unlist_ref())) > 0
+            })
+            .map_or(lines.len(), |at| at + 1);
+          let names: Vec<Tokens> = lines.split_off(names_at);
           affils.append(&mut lines);
-          spaced = true;
-          continue;
+          if names.is_empty() {
+            spaced = true;
+            continue;
+          }
+          // (a line break, no space, parts the names from the lines above)
+          lines = names;
+          spaced = false;
         }
         // A link line printing a URL is no name ([`prints_a_url`]; a linked name is one, 2608.24427): one opening the
         // block goes with the lines under its names
@@ -2711,7 +2761,12 @@ LoadDefinitions!({
             .map(|body| makes_its_creator(body))
             .collect::<Result<Vec<_>>>()?
             .contains(&true);
-        let mut continuing: Vec<usize> = Vec::new();
+        // (the carriers a line goes on with, and whether the group's labelled institutions run on over unmarked lines,
+        // [`welded_layout`])
+        let mut continuing = Continuing {
+          carriers: Vec::new(),
+          welded:   by_symbols && welded_layout(&affils, &row_symbols),
+        };
         // (whether a line the group's names share, digested under its last name, came before: an address of an earlier
         // name after it is placed after it, by a label of its own, as the lines print — `Ann Able, Bob Baker \\ Univ A
         // \\ \{aable,bbaker\}@x.edu`; one before it, as an address row right under the names, stays in its name's
@@ -2737,7 +2792,7 @@ LoadDefinitions!({
             && !kept_apart
             && (line_labelled_emails(&line)?.is_some() || bare_email_addresses(&line)?.is_some());
           if group_email_line {
-            continuing.clear();
+            continuing.carriers.clear();
           }
           if by_symbols && !group_email_line {
             shared_before = true;
@@ -2756,10 +2811,15 @@ LoadDefinitions!({
             bodies[last].extend(annotations);
             continue;
           }
-          if let Some((label, addresses)) = line_labelled_emails(&line)? {
-            // A shared email line under several names gives each address to the one name it spells (0911.0568's
-            // five PoS authors over one `E-mail:` line, 0911.0082's addresses in another order than the names,
-            // 63k); an address naming no one, or several, is the block's (user ruling R10 2026-10-20).
+          // An e-mail line, labelled (`E-mail: …`, `\textbf{Correspondence:} \href{mailto:…}{…}`) or bare
+          // (\texttt{user@host}; `a@x, b@y`; `{a,b}@dom`), is the names' emails, not an affiliation (OXIDIZED_DESIGN #52;
+          // witness arXiv:2606.00315): a shared one under several names gives each address to the one name it spells
+          // (0911.0568's five PoS authors over one `E-mail:` line, 0911.0082's addresses in another order than the names,
+          // 63k; 2401.15897, 2402.02746, 63m); an address naming no one, or several, is the block's (user ruling R10
+          // 2026-10-20) — unless no address of the line names anyone and footnote symbols that names of the row carry
+          // lead it: then its addresses, without the marks, are those names' ([`marked_email_line`]; main-session
+          // decision 3 on the 77p r11 questions, probes s10, t4; a spelled address keeps the mark it shows, 65e).
+          if let Some((label, addresses)) = line_emails(&line)? {
             let owners = owners_of(
               &addresses
                 .iter()
@@ -2769,18 +2829,56 @@ LoadDefinitions!({
               &mut unplaced,
               this_line,
             );
-            for (address, owner) in addresses.into_iter().zip(owners) {
-              match owner {
-                None => after_bodies[last].extend(email_calls(
+            let marked = if owners.iter().all(Option::is_none) {
+              match marked_email_line(&line, &row_symbols)? {
+                Some((stripped, carriers)) => {
+                  line_emails(&stripped)?.map(|found| (found, carriers))
+                },
+                None => None,
+              }
+            } else {
+              None
+            };
+            let (label, placements): (Option<Tokens>, Vec<(EmailAddress, Vec<usize>)>) =
+              match marked {
+                Some(((label, addresses), carriers)) => {
+                  if let Some((_, count)) = unplaced.get_mut(this_line) {
+                    *count = 0;
+                  }
+                  (
+                    label,
+                    addresses
+                      .into_iter()
+                      .map(|address| (address, carriers.clone()))
+                      .collect(),
+                  )
+                },
+                None => (
+                  label,
+                  addresses
+                    .into_iter()
+                    .zip(owners)
+                    .map(|(address, owner)| (address, owner.into_iter().collect()))
+                    .collect(),
+                ),
+              };
+            for (address, owners) in placements {
+              if owners.is_empty() {
+                after_bodies[last].extend(email_calls(
                   label.as_ref(),
                   vec![address],
                   Some(&block),
-                )?),
-                Some(owner)
-                  if shared_before
-                    && (shared_first..last + usize::from(kept_apart || by_symbols))
-                      .contains(&owner)
-                    && !makes_its_creator(&bodies[owner])? =>
+                )?);
+                continue;
+              }
+              for owner in owners {
+                let address = EmailAddress {
+                  address: address.address.clone(),
+                  call:    address.call.clone(),
+                };
+                if shared_before
+                  && (shared_first..last + usize::from(kept_apart || by_symbols)).contains(&owner)
+                  && !makes_its_creator(&bodies[owner])?
                 {
                   let (placement, call) = placed_label(&mut placed, owner)?;
                   bodies[owner].extend(call.unwrap_or_default());
@@ -2789,45 +2887,9 @@ LoadDefinitions!({
                     vec![address],
                     Some(&s!("label={placement}")),
                   )?);
-                },
-                Some(owner) => {
-                  bodies[owner].extend(email_calls(label.as_ref(), vec![address], None)?)
-                },
-              }
-            }
-          } else if let Some(addresses) = bare_email_addresses(&line)? {
-            // A bare email line (\texttt{user@host}; `a@x, b@y`; `{a,b}@dom`) is the names' emails, not an
-            // affiliation (OXIDIZED_DESIGN #52; witness arXiv:2606.00315): each address to the name it spells, as a
-            // labelled line's are (2401.15897, 2402.02746, 63m), else the block's (user ruling R10 2026-10-20).
-            let owners = owners_of(
-              &addresses.iter().collect::<Vec<_>>(),
-              &mut taken,
-              &mut unplaced,
-              this_line,
-            );
-            for (address, owner) in addresses.into_iter().zip(owners) {
-              match owner {
-                None => after_bodies[last].extend(email_calls(
-                  None,
-                  vec![EmailAddress { address, call: None }],
-                  Some(&block),
-                )?),
-                Some(owner)
-                  if shared_before
-                    && (shared_first..last + usize::from(kept_apart || by_symbols))
-                      .contains(&owner)
-                    && !makes_its_creator(&bodies[owner])? =>
-                {
-                  let (placement, call) = placed_label(&mut placed, owner)?;
-                  bodies[owner].extend(call.unwrap_or_default());
-                  after_bodies[last].extend(email_calls(
-                    None,
-                    vec![EmailAddress { address, call: None }],
-                    Some(&s!("label={placement}")),
-                  )?);
-                },
-                Some(owner) => bodies[owner]
-                  .extend(Invocation!(T_CS!("\\lx@add@email"), vec![None, Some(address)]).unlist()),
+                } else {
+                  bodies[owner].extend(email_calls(label.as_ref(), vec![address], None)?);
+                }
               }
             }
           } else if is_url_line(&line) {
@@ -4189,6 +4251,9 @@ enum AddressPlacement {
   /// when the line lists several (1802.07182's `\{jrr41,$\,$wct23,…\}@cam.ac.uk`, whose raw line a Semiverbatim
   /// contact showed as `{jrr41,$ $wct23,…}`), else the line.
   Shared,
+  /// The line's, no address of which a name settles, to every author at these queue positions, those carrying the marks
+  /// that led it (`$^*$zq77@x.edu` under `Ann Able$^{1,*}$`; main-session decision 3 on the 77p r11 questions).
+  Marked(Vec<usize>),
 }
 
 /// The `\lx@add@email` calls for a line of addresses in an author block (`a@x, b@y`, `{a,b}@dom`), placed as
@@ -4205,6 +4270,30 @@ fn email_line_calls(line: Tokens, placement: AddressPlacement) -> Result<Vec<Tok
     _ => Ok(line),
   };
   let addrs = email_addresses(&line).unwrap_or_default();
+  if let AddressPlacement::Marked(carriers) = &placement
+    && !addrs.is_empty()
+  {
+    // (one address: the line itself, as written)
+    let addresses = if addrs.len() == 1 {
+      vec![unwrapped(line.clone())?]
+    } else {
+      address_tokens(&line, addrs)?
+    };
+    for address in addresses {
+      for author in carriers {
+        calls.extend(
+          Invocation!(T_CS!("\\lx@add@email"), vec![
+            Some(mouth::tokenize_internal(TeXString::assembled(s!(
+              "label=author:{author}"
+            )))),
+            Some(address.clone())
+          ])
+          .unlist(),
+        );
+      }
+    }
+    return Ok(calls);
+  }
   let placement = match placement {
     AddressPlacement::Settled(owners) if !addrs.is_empty() && owners.len() == addrs.len() => {
       if owners.iter().all(Option::is_none) {
@@ -4229,7 +4318,7 @@ fn email_line_calls(line: Tokens, placement: AddressPlacement) -> Result<Vec<Tok
         return Ok(calls);
       }
     },
-    AddressPlacement::Settled(_) => AddressPlacement::Shared,
+    AddressPlacement::Settled(_) | AddressPlacement::Marked(..) => AddressPlacement::Shared,
     placement => placement,
   };
   let options: Vec<Option<Tokens>> = match placement {
@@ -17872,10 +17961,42 @@ fn labelled_emails(line: &Tokens) -> Result<Option<(Option<Tokens>, Vec<EmailAdd
           .collect(),
       )));
     }
+    // (or a list the address reader parts, a brace list among them: `Email: aable@x.edu; \{bbaker, ccole\}@y.edu`,
+    // 2604.10316; the r8 re-review's §B, probes t1, t2 — had been one affiliation)
+    if let Some(addresses) = email_addresses(&rest).filter(|addresses| addresses.len() > 1) {
+      return Ok(Some((
+        label,
+        address_tokens(&rest, addresses)?
+          .into_iter()
+          .map(|address| EmailAddress { address, call: None })
+          .collect(),
+      )));
+    }
   }
   // …and a link line to a mailbox, under any label (`\textbf{Correspondence:} \href{mailto:…}{…}`, [`mailto_line`]),
-  // an address each of a brace list it prints ([`mailto_addresses`])
-  Ok(mailto_line(line).map(|(label, address)| (label, mailto_addresses(address))))
+  // an address each of a brace list it prints ([`mailto_addresses`]); and several such links after one label, a comma or
+  // a semicolon between them (`\textbf{Correspondence:} \href{mailto:a@x}{a@x}, \href{mailto:c@x}{c@x}`, 2604.25444;
+  // the r8 re-review's §B, probe t6 — had been one affiliation)
+  if let Some((label, address)) = mailto_line(line) {
+    return Ok(Some((label, mailto_addresses(address))));
+  }
+  let items = split_top_level_list(line.unlist_ref());
+  if items.len() < 2 {
+    return Ok(None);
+  }
+  let mut label = None;
+  let mut addresses = Vec::new();
+  for (at, item) in items.iter().enumerate() {
+    match mailto_line(item) {
+      Some((first, address)) if at == 0 => {
+        label = first;
+        addresses.extend(mailto_addresses(address));
+      },
+      Some((None, address)) => addresses.extend(mailto_addresses(address)),
+      _ => return Ok(None),
+    }
+  }
+  Ok(Some((label, addresses)))
 }
 
 /// The addresses a mailbox link prints ([`mailto_line`]): itself, or, when it prints a list of them, each address of it
@@ -17948,9 +18069,9 @@ fn after_symbol_mark(tokens: &[Token]) -> &[Token] {
       .count()..]
 }
 
-/// `tokens` inside the groups around the whole of them, and the spaces around those (`{\small $^{\dagger}$\,Univ A
-/// \qquad $^{\ddagger}$\,EPFL}`, 2606.28166): what a wrapper group holds, its font aside, is the piece; `tokens` when no
-/// group holds them whole.
+/// `tokens` inside the groups around the whole of them, a one-argument font command's too (`\textit{…}`), and the spaces
+/// around those (`{\small $^{\dagger}$\,Univ A \qquad $^{\ddagger}$\,EPFL}`, 2606.28166): what a wrapper group holds,
+/// its font aside, is the piece; `tokens` when no group holds them whole.
 fn unwrapped(tokens: &[Token]) -> &[Token] {
   let mut v = tokens;
   loop {
@@ -17960,13 +18081,22 @@ fn unwrapped(tokens: &[Token]) -> &[Token] {
       .rposition(|t| *t != T_SPACE!())
       .map_or(start, |at| at + 1);
     let inner = &v[start..end.max(start)];
-    if inner
+    // (and a one-argument font command around them, as a group: `\textit{$^{\dagger}$Univ A \qquad $^{\ddagger}$Univ
+    // B}`, the r8 re-review's finding 8, probe s7)
+    let font = usize::from(
+      inner.len() >= 3
+        && inner[0].get_catcode() == Catcode::CS
+        && inner[0].with_str(|s| s.starts_with("\\text") || s == "\\emph")
+        && inner[0].with_str(|s| NAME_TEXT_COMMANDS.contains(&s)),
+    );
+    let group = &inner[font..];
+    if group
       .first()
       .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
-      && skip_group(inner, 0) == inner.len()
-      && inner.len() >= 2
+      && skip_group(group, 0) == group.len()
+      && group.len() >= 2
     {
-      v = &inner[1..inner.len() - 1];
+      v = &group[1..group.len() - 1];
     } else {
       return v;
     }
@@ -18209,8 +18339,10 @@ fn spelled_owners(name_keys: &[NameKeys], address: &str) -> Vec<usize> {
     }
   };
   // (a joined spelling the local part opens with, its length; the initials, the local part's letters alone)
-  // (or its first six letters, as a surname's: a truncated family-first spelling, `zhuzhenh22@` for Zhenhao Zhu,
-  // `chenyuxi22@` for Yuxiang Chen, 2602.03328, 2609.11716; the r7 re-review's finding 9)
+  // (or its first six letters or more, as a surname's: a truncated family-first spelling, `zhuzhenh22@` for Zhenhao
+  // Zhu, `chenyuxi22@` for Yuxiang Chen, 2602.03328, 2609.11716; the r7 re-review's finding 9 — scored the letters it
+  // holds less one, below a spelling whole of as many: `wangyu@` is Yu Wang's "wangyu", not Yuxin Wang's "wangyuxin",
+  // `liyang@` Yang Li's, not Yangfan Li's; the r8 re-review's finding 3)
   let joined_score = |keys: &NameKeys| {
     keys
       .joined
@@ -18219,8 +18351,12 @@ fn spelled_owners(name_keys: &[NameKeys], address: &str) -> Vec<usize> {
         if local.starts_with(key.as_str()) {
           Some(key.chars().count())
         } else {
-          (key.chars().count() >= 6 && local.starts_with(&key.chars().take(6).collect::<String>()))
-            .then_some(6)
+          let held = local
+            .chars()
+            .zip(key.chars())
+            .take_while(|(a, b)| a == b)
+            .count();
+          (held >= 6).then(|| held - 1)
         }
       })
       .max()
@@ -18478,6 +18614,59 @@ fn link_line_link(line: &Tokens) -> Option<(usize, usize)> {
   (links == 1).then_some(link)
 }
 
+/// `tokens` with each `\quad`/`\qquad` that parts an icon from the link after it a space: a piece of an author block
+/// that is only an icon — what prints no word, an icon macro or a graphic ([`without_non_printing_arguments`]) — before
+/// a link line ([`is_link_line`]) is that link's, one link line with it, a URL contact ([`is_url_line`]), not an
+/// affiliation holding the logo alone (`\github \quad \url{…}`, 2601.17879's
+/// `\def\github{\raisebox{-1.5pt}{\includegraphics…}}`; the r8 re-review's finding 9).
+fn join_icons_to_links(tokens: Tokens) -> Tokens {
+  let mut v = tokens.unlist();
+  let separator = |t: &Token| {
+    [
+      T_CS!("\\\\"),
+      T_CS!("\\newline"),
+      T_CS!("\\and"),
+      T_CS!("\\And"),
+      T_CS!("\\AND"),
+      T_CS!("\\quad"),
+      T_CS!("\\qquad"),
+    ]
+    .contains(t)
+  };
+  let mut delimiters = Vec::new();
+  let mut depth = 0usize;
+  for (at, t) in v.iter().enumerate() {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ if depth == 0 && separator(t) => delimiters.push(at),
+      _ => {},
+    }
+  }
+  let icon_only = |piece: &[Token]| {
+    let piece = Tokens::new(piece.to_vec());
+    !prints_nothing(&piece)
+      && prints_nothing(&Tokens::new(without_non_printing_arguments(
+        piece.unlist_ref(),
+      )))
+  };
+  for (index, at) in delimiters.iter().enumerate() {
+    let before = if index == 0 {
+      0
+    } else {
+      delimiters[index - 1] + 1
+    };
+    let after = delimiters.get(index + 1).copied().unwrap_or(v.len());
+    if (v[*at] == T_CS!("\\quad") || v[*at] == T_CS!("\\qquad"))
+      && icon_only(&v[before..*at])
+      && is_link_line(&Tokens::new(v[at + 1..after].to_vec()))
+    {
+      v[*at] = T_SPACE!();
+    }
+  }
+  Tokens::new(v)
+}
+
 /// The links of a line of several, each a link line of its own ([`is_url_line`]) with the icon or label before it, the
 /// spacing and the separators (`|`, `·`, `,`) between them dropped (`\faGithub~\href{…}{Code} | \yticon~\href{…}{Demo
 /// Video}`, 2601.06979; the r7 re-review's finding 5): a URL contact each. The line whole when it holds one link, or a
@@ -18542,7 +18731,8 @@ fn link_run_lines(line: Tokens) -> Vec<Tokens> {
 
 /// The words that name what a link leads to — a page, a project, its code or data — and no institution or person
 /// (`Project Page`, `GitHub Repository`, `Hugging Face Demo`, `Substack Article`: 2602.22227, 2604.24697, 2601.18810,
-/// 2604.15404, the r6 re-review's finding 2), as [`link_words`] reads them.
+/// 2604.15404, the r6 re-review's finding 2; `Paper Website`, the r8 re-review's finding 2, probe u3), as [`link_words`]
+/// reads them.
 const LINK_WORDS: &[&str] = &[
   "page",
   "webpage",
@@ -18563,6 +18753,7 @@ const LINK_WORDS: &[&str] = &[
   "video",
   "model",
   "project",
+  "paper",
 ];
 
 /// Whether `text` holds a word of [`LINK_WORDS`], in any case, singular or plural.
@@ -18627,7 +18818,7 @@ fn is_url_line(line: &Tokens) -> bool {
   // the r7 re-review's finding 10)
   !printed.chars().any(char::is_alphanumeric)
     || target_has_path(&target)
-    || !names_an_organization(&visible_name_text(printed_tokens.unlist_ref()))
+    || !names_an_organization(&visible_name_text(printed_tokens.unlist_ref()), &target)
 }
 
 /// Whether `line` is a link line printing an institution, no URL line ([`is_url_line`]): its printed text reads as an
@@ -18647,17 +18838,38 @@ fn link_prints_an_institution(line: &Tokens) -> bool {
   let printed = Tokens::new(printed_words(&v[open..close]));
   let text = visible_name_text(printed.unlist_ref());
   reads_as_affiliation(&printed)
-    || (name_count(&text) == 0 && names_an_organization(&text) && !target_has_path(&target))
+    || (name_count(&text) == 0
+      && names_an_organization(&text, &target)
+      && !target_has_path(&target))
 }
 
 /// Whether a bare domain's link text names its organization, as such a name is written — each word with a capital
-/// (`Google`, `xAI`) —, not a word of the sentence around it (`\href{https://ann.org}{here}`, a link: the r7 re-review's
-/// finding 10, probes n13, p9).
-fn names_an_organization(text: &str) -> bool {
-  !text.trim().is_empty()
+/// (`Google`, `xAI`) — or as the domain `target` it links spells it (`\href{https://www.deepseek.com}{deepseek-ai}`,
+/// the r8 re-review's finding 9, probe s14), not a word of the sentence around it (`\href{https://ann.org}{here}`, a
+/// link: the r7 re-review's finding 10, probes n13, p9).
+fn names_an_organization(text: &str, target: &str) -> bool {
+  let capitalized = !text.trim().is_empty()
     && text
       .split_whitespace()
-      .all(|word| word.chars().any(char::is_uppercase))
+      .all(|word| word.chars().any(char::is_uppercase));
+  // (the domain's name, the label before its top-level one: "deepseek" of `https://www.deepseek.com`)
+  let host = target
+    .split_once("://")
+    .map_or(target, |(_, rest)| rest)
+    .split(['/', '?', '#'])
+    .next()
+    .unwrap_or_default()
+    .to_lowercase();
+  let labels: Vec<&str> = host.split('.').filter(|label| !label.is_empty()).collect();
+  let spelled: String = text
+    .chars()
+    .filter(|c| c.is_alphanumeric())
+    .collect::<String>()
+    .to_lowercase();
+  let domain_named = labels.len() >= 2
+    && labels[labels.len() - 2].chars().count() >= 3
+    && spelled.contains(labels[labels.len() - 2]);
+  capitalized || domain_named
 }
 
 /// Whether `line` is a link line ([`is_url_line`]) that prints a web address, a link word or a label before its link:
@@ -18671,15 +18883,16 @@ fn prints_a_url(line: &Tokens) -> bool {
   };
   let v = &line.unlist_ref()[..end];
   let (_, printed) = link_texts(v, at);
-  // (a printed text that reads as a name is that name linked, whatever word of it is a link word, unless it shows a
-  // scheme or `www.`: `\href{…}{Lucy Page}`, `\href{…}{Edward A.G. Schuur}`, 2601.06085; the r7 re-review's findings 2
-  // and 4 — not `\href{…}{Project Page}`, every word a link word)
+  // (a printed text that reads as a name is that name linked, unless it shows a scheme or `www.`, and no word of it is a
+  // link word but the surname of a two-word name: `\href{…}{Lucy Page}`, `\href{…}{Edward A.G. Schuur}`, 2601.06085;
+  // the r7 re-review's findings 2 and 4 — not `\href{…}{Project Page}`, `{Model Card}`, `{Paper Website}`, `{Hugging
+  // Face Demo}`, the r8 re-review's finding 2, probes u1, u3, u4)
   if name_count(&printed) > 0
     && !printed.contains("://")
     && !printed
       .split_whitespace()
       .any(|word| word.starts_with("www."))
-    && !all_link_words(&printed)
+    && !link_words_beyond_a_surname(&printed)
   {
     return false;
   }
@@ -18792,14 +19005,18 @@ fn reads_as_web_address(text: &str) -> bool {
   })
 }
 
-/// Whether every word of `text` is a link word ([`LINK_WORDS`]): `Project Page`, `GitHub Repository` — not `Lucy Page`,
-/// `Mark Link` (the r7 re-review's finding 4).
-fn all_link_words(text: &str) -> bool {
-  let mut words = text
+/// Whether `text` holds a link word ([`LINK_WORDS`]) other than the surname of a two-word name, its first word none:
+/// `Model Card`, `Paper Website`, `Hugging Face Demo`, `Project Page` — not `Lucy Page`, `Mark Link` (the r7 re-review's
+/// finding 4; the r8 re-review's finding 2, probes u1, u3, u4).
+fn link_words_beyond_a_surname(text: &str) -> bool {
+  let words: Vec<&str> = text
     .split(|c: char| !c.is_alphanumeric())
     .filter(|word| !word.is_empty())
-    .peekable();
-  words.peek().is_some() && words.all(link_words)
+    .collect();
+  match words.as_slice() {
+    [first, _] => link_words(first),
+    words => words.iter().any(|word| link_words(word)),
+  }
 }
 
 /// A link line ([`link_line_link`]) to a mailbox (`\textbf{Correspondence:} \href{mailto:x@y}{x@y}`, `Email:
@@ -18902,9 +19119,21 @@ fn is_role_mailbox(address: &str) -> bool {
   )
 }
 
+/// Whether the local part of the e-mail address `address` ([`address_text`]) holds a list the address reader could not
+/// part (`\{luoyanyan,…,fengjunlan\}it@chinamobile.com`, 2605.27805; the r8 re-review's finding 4, probe t5): its
+/// letters run together spell one of the names it lists, so it spells no one, the block's (user ruling R10).
+fn lists_local_parts(address: &str) -> bool {
+  address
+    .split_once('@')
+    .is_some_and(|(local, _)| local.contains([',', ';', '|', '{', '}']))
+}
+
 /// The one name (index into `name_keys`) the local part of `address` spells ([`spelled_owners`]), or `None` when no name or
 /// several do.
 fn spelled_owner(name_keys: &[NameKeys], address: &str) -> Option<usize> {
+  if lists_local_parts(address) {
+    return None;
+  }
   match spelled_owners(name_keys, address).as_slice() {
     [owner] => Some(*owner),
     _ => None,
@@ -19034,6 +19263,7 @@ fn block_email_calls(
     // (`X.~Wang`, `Y.~Wang`), the corresponding author's only if among them
     let spelled: Vec<usize> = address_owners(author_keys, &address)
       .into_iter()
+      .filter(|_| !lists_local_parts(&address_text(&address)))
       .map(|author| owners.numbered_before + author)
       .collect();
     let owner = match spelled.as_slice() {
@@ -19759,11 +19989,11 @@ fn email_addresses(line: &Tokens) -> Option<Vec<String>> {
       Some(list) => {
         let close = list.find('}')?;
         let after = &list[close + 1..];
-        // (the domain ends at a comma or a space: `{a,b}@x.edu \ \ \ {c,d}@y.edu`, 2603.24730)
-        let (domain, next) = match after.find([',', ' ']) {
+        // (the domain ends at a comma, a semicolon or a space: `{a,b}@x.edu \ \ \ {c,d}@y.edu`, 2603.24730)
+        let (domain, next) = match after.find([',', ';', ' ']) {
           Some(end) => (
             &after[..end],
-            after[end..].trim_start().trim_start_matches(','),
+            after[end..].trim_start().trim_start_matches([',', ';']),
           ),
           None => (after, ""),
         };
@@ -19785,8 +20015,10 @@ fn email_addresses(line: &Tokens) -> Option<Vec<String>> {
         }
         (None, next)
       },
+      // (an item ends at a comma or a semicolon: `aable@x.edu; \{bbaker, ccole\}@y.edu`, 2604.10316; the r8
+      // re-review's §B, probes t1, t2)
       None => {
-        let (item, next) = rest.split_once(',').unwrap_or((rest, ""));
+        let (item, next) = rest.split_once([',', ';']).unwrap_or((rest, ""));
         (Some(item.trim().trim_start_matches("mailto:")), next)
       },
     };
@@ -19893,7 +20125,7 @@ fn apart_line_calls(
   row: std::ops::RangeInclusive<usize>,
   placed: &mut Vec<Option<String>>,
   bodies: &mut [Vec<Token>],
-  continuing: &mut Vec<usize>,
+  continuing: &mut Continuing,
 ) -> Result<Vec<Token>> {
   // (a name's label of its own, given to it in its content, [`placed_label`])
   let mut author = |owner: usize| -> Result<String> {
@@ -19909,34 +20141,51 @@ fn apart_line_calls(
     return Ok(calls);
   }
   // (the carriers the line above leaves this one to go on with: none unless set again below)
-  let above = std::mem::take(continuing);
+  let above = std::mem::take(&mut continuing.carriers);
   // (a mark after an address is no letter of it: `\texttt{mazeyuwhu@gmail.com}$^{\dagger}$`, 2109.13296, the address
   // of the name it spells; the r7 re-review's findings 1 and 9)
-  let addresses_line = before_trailing_symbol_mark(line.unlist_ref())
-    .map_or_else(|| line.clone(), |(text, _)| Tokens::new(text.to_vec()));
-  let emails = match line_labelled_emails(&addresses_line)? {
-    Some(found) => Some(found),
-    None => bare_email_addresses(&addresses_line)?.map(|addresses| {
-      (
-        None,
-        addresses
-          .into_iter()
-          .map(|address| EmailAddress { address, call: None })
-          .collect::<Vec<_>>(),
-      )
-    }),
+  let (addresses_line, trailing_carriers) = match before_trailing_symbol_mark(line.unlist_ref()) {
+    Some((text, marks)) => (
+      Tokens::new(text.to_vec()),
+      symbol_carriers(&symbol_labels(&Tokens::new(marks.to_vec())), name_symbols),
+    ),
+    None => (line.clone(), Vec::new()),
   };
-  if let Some((label, addresses)) = emails {
+  if let Some((label, addresses)) = line_emails(&addresses_line)? {
+    // (a line no address of which a name spells goes to the names carrying its marks, the marks no part of its addresses
+    // — [`marked_email_line`] for those that lead it; main-session decision 3 on the 77p r11 questions, the r8
+    // re-review's finding 6, probes s10, t4 —, else to the block; a spelled address keeps the mark it shows, 65e)
+    let unspelled = addresses
+      .iter()
+      .all(|address| spelled_owner(name_keys, &address_text(&address.address)).is_none());
+    let (label, addresses, carriers) = match (unspelled, marked_email_line(line, name_symbols)?) {
+      (true, Some((stripped, carriers))) => match line_emails(&stripped)? {
+        Some((label, addresses)) => (label, addresses, carriers),
+        None => (label, addresses, Vec::new()),
+      },
+      (true, None) => (label, addresses, trailing_carriers),
+      (false, _) => (label, addresses, Vec::new()),
+    };
     for address in addresses {
-      let placement = match spelled_owner(name_keys, &address_text(&address.address)) {
-        Some(owner) => author(owner)?,
-        None => block.clone(),
+      let owners = match spelled_owner(name_keys, &address_text(&address.address)) {
+        Some(owner) => vec![owner],
+        None => carriers.clone(),
       };
-      calls.extend(email_calls(
-        label.as_ref(),
-        vec![address],
-        Some(&placement),
-      )?);
+      if owners.is_empty() {
+        calls.extend(email_calls(label.as_ref(), vec![address], Some(&block))?);
+      } else {
+        for owner in owners {
+          let placement = author(owner)?;
+          calls.extend(email_calls(
+            label.as_ref(),
+            vec![EmailAddress {
+              address: address.address.clone(),
+              call:    address.call.clone(),
+            }],
+            Some(&placement),
+          )?);
+        }
+      }
     }
     return Ok(calls);
   }
@@ -19955,6 +20204,95 @@ fn apart_line_calls(
   Ok(calls)
 }
 
+/// An e-mail line's label and addresses: a labelled one's ([`line_labelled_emails`]), else a bare one's
+/// ([`bare_email_addresses`]); `None` for any other line.
+fn line_emails(line: &Tokens) -> Result<Option<(Option<Tokens>, Vec<EmailAddress>)>> {
+  Ok(match line_labelled_emails(line)? {
+    Some(found) => Some(found),
+    None => bare_email_addresses(line)?.map(|addresses| {
+      (
+        None,
+        addresses
+          .into_iter()
+          .map(|address| EmailAddress { address, call: None })
+          .collect(),
+      )
+    }),
+  })
+}
+
+/// `line` without the footnote symbol marks that lead it ([`after_symbol_mark`], each of a run).
+fn without_leading_symbol_marks(line: &Tokens) -> Tokens {
+  let mut after_marks: &[Token] = line.unlist_ref();
+  while after_symbol_mark(after_marks).len() < after_marks.len() {
+    after_marks = after_symbol_mark(after_marks);
+  }
+  Tokens::new(after_marks.to_vec())
+}
+
+/// An e-mail line its footnote symbol marks lead (`$^\dagger$zq77@x.edu`), when names of the row (`name_symbols`, the
+/// symbols each carries, none for a name of another row) carry them: the line without them, and those names, whose an
+/// address of it no name spells is (main-session decision 3 on the 77p r11 questions, as a marked line ties an
+/// affiliation to its carriers, 63i; the r8 re-review's finding 6, probes s10, t4). `None` for any other line; a mark no
+/// name carries stays, as it prints.
+fn marked_email_line(
+  line: &Tokens,
+  name_symbols: &[Vec<String>],
+) -> Result<Option<(Tokens, Vec<usize>)>> {
+  let stripped = without_leading_symbol_marks(line);
+  if stripped.unlist_ref().len() == line.unlist_ref().len() {
+    return Ok(None);
+  }
+  let carriers = symbol_carriers(&leading_symbol_labels(line), name_symbols);
+  Ok(
+    (!carriers.is_empty()
+      && (line_labelled_emails(&stripped)?.is_some()
+        || bare_email_addresses(&stripped)?.is_some()))
+    .then_some((stripped, carriers)),
+  )
+}
+
+/// The names a line under a row of symbol-marked names goes on with, from the line above it ([`row_line_calls`]).
+struct Continuing {
+  /// the carriers of the institution above, which the line goes on with; none unless set again by the line
+  carriers: Vec<usize>,
+  /// whether the group's labelled institutions run on over unmarked lines ([`welded_layout`])
+  welded:   bool,
+}
+
+/// Whether the lines under a row of symbol-marked names (`affils`, the names' symbols `name_symbols`) set each labelled
+/// institution over unmarked lines of its own: an unmarked line that prints (no address, no link) stands between two
+/// lines holding an institution a symbol labels ([`labelled_institution`]) — `$^\dagger$Department of Computer Science
+/// \\ Ball State University \\ Muncie, IN 47306 \\ … \\ $^\ddagger$School of Artificial Intelligence …`, 2602.05059 (the
+/// r8 re-review's finding 5, probe t7). There every unmarked line goes on with the institution above it, as a numbered
+/// block welds it (x12, main-session decision 3 on the 77p r10 questions); else an unmarked institution under the last
+/// labelled one is every name's of the row (user ruling R12: `$^\dagger$Univ A \\ $^\ddagger$Univ B \\ Department of
+/// Physics`, probe y8).
+fn welded_layout(affils: &[Tokens], name_symbols: &[Vec<String>]) -> bool {
+  let labelled = |line: &Tokens| {
+    symbol_led_segments(line)
+      .iter()
+      .any(|segment| labelled_institution(segment, name_symbols).is_some())
+  };
+  let (mut seen_labelled, mut unmarked_since) = (false, false);
+  for line in affils {
+    if labelled(line) {
+      if unmarked_since {
+        return true;
+      }
+      seen_labelled = true;
+    } else if seen_labelled
+      && symbol_marks(line).is_empty()
+      && !prints_nothing(line)
+      && !visible_name_text(line.unlist_ref()).contains('@')
+      && !is_link_line(line)
+    {
+      unmarked_since = true;
+    }
+  }
+  false
+}
+
 /// The calls placing a line under a row of names that is no address and no link ([`apart_line_calls`]; and a line
 /// under a row whose only symbol line is a legend, 2609.24299, 2603.06578): each symbol-led piece of it
 /// ([`symbol_led_segments`]) that is an institution its symbol labels to the row's names carrying the symbol
@@ -19962,8 +20300,10 @@ fn apart_line_calls(
 /// the names carrying its symbol, whole, its mark naming them; an unmarked institution ([`reads_as_institution`]) to
 /// the carriers of the line above when that was one labelled institution alone ending in a comma (`above`), else to
 /// every name of the `row` (user ruling R12 2026-10-20); anything else — a note, a place, a symbol no name of the row
-/// carries — to the block (`label=addresses:block`, the shared creator of #159), never to one name for its place.
-/// `continuing` is set to the carriers a line under this one goes on with.
+/// carries — to the block (`label=addresses:block`, the shared creator of #159), never to one name for its place. Where
+/// the group's labelled institutions run on over unmarked lines (`continuing.welded`, [`welded_layout`]), every
+/// unmarked line goes on with the carriers of the line above (2602.05059). `continuing` is set to the carriers a line
+/// under this one goes on with.
 fn row_line_calls(
   line: &Tokens,
   name_symbols: &[Vec<String>],
@@ -19971,7 +20311,7 @@ fn row_line_calls(
   placed: &mut Vec<Option<String>>,
   bodies: &mut [Vec<Token>],
   above: &[usize],
-  continuing: &mut Vec<usize>,
+  continuing: &mut Continuing,
 ) -> Result<Vec<Token>> {
   let mut calls = Vec::new();
   let mut affiliation = |owner: Option<usize>, content: Tokens| -> Result<Vec<Token>> {
@@ -20003,15 +20343,25 @@ fn row_line_calls(
     let (owners, content): (Vec<usize>, Tokens) = match labelled_institution(&segment, name_symbols)
     {
       Some((carriers, rest)) => {
-        // (one institution alone on its line, ending in a comma, goes on on the line under it)
+        // (one institution alone on its line, ending in a comma, goes on on the line under it; so does any, where the
+        // group's labelled institutions run on over unmarked lines, [`welded_layout`])
         if alone
-          && visible_name_text(rest.unlist_ref())
-            .trim_end()
-            .ends_with(',')
+          && (continuing.welded
+            || visible_name_text(rest.unlist_ref())
+              .trim_end()
+              .ends_with(','))
         {
-          *continuing = carriers.clone();
+          continuing.carriers = carriers.clone();
         }
         (carriers, rest)
+      },
+      // (an unmarked line under a labelled institution whose group runs its institutions on over unmarked lines goes on
+      // with it, a place too, and so does the line under it: `$^\dagger$Department of Computer Science \\ Ball State
+      // University \\ Muncie, IN 47306`, 2602.05059 — the x12 weld of a numbered block, main-session decision 3 on
+      // the 77p r10 questions, applied to symbol rows; the r8 re-review's finding 5, probe t7)
+      None if unmarked && alone && continuing.welded && !above.is_empty() => {
+        continuing.carriers = above.to_vec();
+        (above.to_vec(), segment)
       },
       // (and an unmarked piece before the labelled institutions of its line, no note and no address, is the
       // institution of the names no mark sends elsewhere, as it prints in their row: `Uber Technologies \ \ \
@@ -20083,8 +20433,13 @@ fn labelled_institution(
 ) -> Option<(Vec<usize>, Tokens)> {
   let after = after_symbol_mark(segment.unlist_ref());
   let (rest, marks) = if after.len() == segment.unlist_ref().len() {
-    // (a mark after its text labels it as one before it does: `Carnegie Mellon University, …$^{\dagger}$`, 2109.13296)
+    // (a mark after its text labels it as one before it does: `Carnegie Mellon University, …$^{\dagger}$`, 2109.13296;
+    // not a text holding marks of its own, a row of marked names, `\textbf{~Pavan Thodima$^{\dagger}$, Aniket
+    // Rege$^{\dagger}$}`, 2601.18077, whose last mark is a name's, no line's label)
     let (text, marks) = before_trailing_symbol_mark(segment.unlist_ref())?;
+    if !symbol_marks(&Tokens::new(text.to_vec())).is_empty() {
+      return None;
+    }
     (
       Tokens::new(text.to_vec()),
       symbol_labels(&Tokens::new(marks.to_vec())),
@@ -20119,10 +20474,16 @@ fn leading_symbol_labels(segment: &Tokens) -> Vec<String> {
     }
     let lead = Tokens::new(v[..v.len() - rest.len()].to_vec());
     // (the run whole is the first label of several; a doubled mark, `$^{**}$`, `$^{\dagger\dagger}$`, is one label,
-    // its own: the r7 re-review's finding 3, probes n1, n2)
+    // its own: the r7 re-review's finding 3, probes n1, n2 — a comma list, `$^{\dagger,\ddagger}$`, has no run whole,
+    // its first label a symbol of its own: the r8 re-review's finding 10)
     for label in symbol_marks(&lead).iter().flat_map(|mark| {
       let labels = clean_frontmatter_labels(mark, "");
-      let skip = usize::from(labels.len() > 1);
+      let skip = usize::from(
+        labels.len() > 1
+          && labels
+            .first()
+            .is_some_and(|run| SYMBOL_COMMAND_RUN.is_match(&run.replace('_', " "))),
+      );
       labels.into_iter().skip(skip)
     }) {
       if !labels.contains(&label) {
@@ -20170,6 +20531,23 @@ fn symbol_led_segments(line: &Tokens) -> Vec<Tokens> {
     }
   }
   cuts.push(v.len());
+  // (a piece of marks alone is no piece: the mark after a space ends the text before it, which it labels,
+  // [`before_trailing_symbol_mark`] — `Univ A $^{\dagger}$`, the r8 re-review's finding 7, probe s3)
+  let marks_only = |piece: &[Token]| {
+    let mut after = piece;
+    while after_symbol_mark(after).len() < after.len() {
+      after = after_symbol_mark(after);
+    }
+    after.len() < piece.len() && spacing_end(after) == 0
+  };
+  let mut at = 1;
+  while at + 1 < cuts.len() {
+    if marks_only(&v[cuts[at]..cuts[at + 1]]) {
+      cuts.remove(at);
+    } else {
+      at += 1;
+    }
+  }
   cuts
     .windows(2)
     .filter_map(|pair| {
@@ -21405,6 +21783,31 @@ mod author_split_tests {
       "*"
     ]);
     assert_eq!(clean_frontmatter_labels("**", ""), ["**"]);
+  }
+
+  #[test]
+  fn leading_symbol_labels_skip_only_a_run_whole() {
+    setup();
+    // a run of distinct symbols is its run whole first, then a label per symbol: the run is no label of the line, its
+    // symbols are (the r7 re-review's finding 3); a comma list gives a label per symbol and no run, so none is skipped
+    // (the r8 re-review's finding 10)
+    let labels = |s: &'static str| leading_symbol_labels(&tk(s));
+    assert_eq!(
+      labels("\\lx@frontmatter@keepsup{x}\\lx@frontmatter@symbolmark{\\dagger\\ddagger}Univ A"),
+      ["\\dagger", "\\ddagger"]
+    );
+    assert_eq!(
+      labels("\\lx@frontmatter@keepsup{x}\\lx@frontmatter@symbolmark{\\dagger,\\ddagger}Univ A"),
+      ["\\dagger", "\\ddagger"]
+    );
+    assert_eq!(
+      labels("\\lx@frontmatter@keepsup{x}\\lx@frontmatter@symbolmark{\\dagger *}Univ A"),
+      ["\\dagger", "*"]
+    );
+    assert_eq!(
+      labels("\\lx@frontmatter@keepsup{x}\\lx@frontmatter@symbolmark{**}Univ A"),
+      ["**"]
+    );
   }
 
   #[test]

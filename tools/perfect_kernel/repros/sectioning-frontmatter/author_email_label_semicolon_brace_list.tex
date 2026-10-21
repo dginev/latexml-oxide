@@ -1,0 +1,14 @@
+% witness: 2604.10316 (`Email: …; \{…\}@…`); the r8 re-review of batch 77p (§B, probes t1, t2; int34a the line on every
+%          name)
+% oracle:  pdflatex 0 errors: three names, Univ A, then "Email: aable@x.edu; {bbaker, ccole}@y.edu"
+% engines: rust int38 (77p r11) = 0 errors; the whole line one affiliation "Email: aable@x.edu; {bbaker, ccole}@y.edu" of
+%          every name
+% expect:  0 errors, 0 warnings; each address the e-mail of the name it spells, named "Email:"
+% status:  RED (int38) -> GREEN (77y)
+\documentclass{article}
+\title{T}
+\author{Ann Able, Bob Baker, Cat Cole \\ Univ A \\ Email: aable@x.edu; \{bbaker, ccole\}@y.edu}
+\begin{document}
+\maketitle
+Text.
+\end{document}

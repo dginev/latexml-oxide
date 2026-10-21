@@ -1,0 +1,12 @@
+% witness: the r8 re-review of batch 77p (finding 8, probe s7; int34a gave the line to Cat Cole alone)
+% oracle:  pdflatex 0 errors: Ann Able†, Bob Baker‡, Cat Cole†; one italic line "†Univ A ‡Univ B"
+% engines: rust int38 (77p r11) = 0 errors; the whole line one affiliation of the shared creator
+% expect:  0 errors, 0 warnings; Univ A on Ann Able and Cat Cole, Univ B on Bob Baker
+% status:  RED (int38) -> GREEN (77y)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \quad Cat Cole$^{\dagger}$ \\ \textit{$^{\dagger}$Univ A \qquad $^{\ddagger}$Univ B}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

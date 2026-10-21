@@ -1,0 +1,13 @@
+% witness: the r8 re-review of batch 77p (finding 1, probe w1; int34a lost Cat Cole in a creator "‡Univ B")
+% oracle:  pdflatex 0 errors: Ann Able†, Bob Baker‡ on one line; "†Univ A ‡Univ B" under them; then Cat Cole and
+%          Univ C under her
+% engines: rust int38 (77p r11) = 0 errors; "Cat Cole" an affiliation of a nameless creator, Univ C on Ann and Bob
+% expect:  0 errors, 0 warnings; three authors: Univ A on Ann Able, Univ B on Bob Baker, Univ C on Cat Cole
+% status:  RED (int38) -> GREEN (77y)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \\ $^\dagger$Univ A \quad $^\ddagger$Univ B \\ Cat Cole \\ Univ C}
+\begin{document}
+\maketitle
+Text.
+\end{document}

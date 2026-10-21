@@ -1,0 +1,16 @@
+% witness: 2601.17879 (`\github \quad \url{…}`, `\def\github{\raisebox{-1.5pt}{\includegraphics…}}`); the r8 re-review
+%          of batch 77p (finding 9)
+% oracle:  pdflatex 0 errors: two marked names, their institutions, the e-mail line, then an icon and the URL
+% engines: rust int38 (77p r11) = 0 errors; the icon alone an affiliation of Bob Baker, the URL on Bob Baker too
+% expect:  0 errors, 0 warnings; the icon and the URL one URL contact of the block's shared creator
+% status:  RED (int38) -> GREEN (77y)
+\documentclass{article}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\def\icon{\raisebox{-1.5pt}{\includegraphics[height=1em]{example-image}}}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$ \\ $^{1}$Univ A \quad $^{2}$Univ B \\ \texttt{aable@x.edu} \\ \icon \quad \url{https://github.com/x/y}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

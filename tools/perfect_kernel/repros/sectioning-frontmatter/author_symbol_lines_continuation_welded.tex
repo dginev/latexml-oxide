@@ -1,0 +1,14 @@
+% witness: 2602.05059; the r8 re-review of batch 77p (finding 5, probe t7; int34a every line on every name)
+% oracle:  pdflatex 0 errors: Ann Able†, Bob Baker‡; "†Department of Physics", "University A", "Muncie, IN",
+%          "‡School of Law", "University B", each on a line of its own
+% engines: rust int38 (77p r11) = 0 errors; University A on both names, University B on both, Muncie on the block
+% expect:  0 errors, 0 warnings; Department of Physics, University A and Muncie on Ann Able; School of Law and
+%          University B on Bob Baker
+% status:  RED (int38) -> GREEN (77y)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\dagger}$, Bob Baker$^{\ddagger}$ \\ $^\dagger$Department of Physics \\ University A \\ Muncie, IN 47306 \\ $^\ddagger$School of Law \\ University B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

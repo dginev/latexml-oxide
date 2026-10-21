@@ -2262,20 +2262,33 @@ fn symbol_row_group_wrapped_lines_go_by_their_marks() {
 fn symbol_lines_after_a_spaced_break_go_by_their_marks() {
   let xml = convert_repro!("author_symbol_lines_after_spaced_break.tex");
   assert_no_merged_names(&xml);
-  let names = creators(&xml);
-  assert_eq!(names.len(), 2, "{xml}");
-  assert!(
-    names[0].contains("Ann Able")
-      && names[0].contains("School of Mathematics and Statistics, Univ A")
-      && !names[0].contains("Biostatistics"),
-    "{xml}"
-  );
-  assert!(
-    names[1].contains("Bob Baker")
-      && names[1].contains("Department of Biostatistics, Univ B")
-      && !names[1].contains("School of Mathematics"),
-    "{xml}"
-  );
+  // (each footnote an e-mail note of its name, before its institution; batch 77y: whole elements, the r8 re-review's
+  // finding 12)
+  let note = |address: &str, id: &str| {
+    format!(
+      r##"<contact name="Note: " role="note">E-mail: <text color="#008080" font="typewriter" xml:id="{id}">{address}</text></contact>"##
+    )
+  };
+  assert_eq!(creators(&xml), [
+    creator(
+      true,
+      r#"Ann Able<sup xml:id="id1">⋆</sup>"#,
+      &format!(
+        "{} {}",
+        note("aable@x.ie", "id2"),
+        affiliation("School of Mathematics and Statistics, Univ A, Dublin 4, Republic of Ireland")
+      )
+    ),
+    creator(
+      false,
+      r#"Bob Baker<sup xml:id="id3">♯</sup>"#,
+      &format!(
+        "{} {}",
+        note("bbaker@y.hk", "id4"),
+        affiliation("Department of Biostatistics, Univ B, Hong Kong")
+      )
+    ),
+  ]);
 }
 
 /// A mark after its institution labels it (`Carnegie Mellon University, …$^{\dagger}$`, 2109.13296; the r7 re-review's
@@ -2361,21 +2374,21 @@ fn dotted_initials_link_is_a_name() {
 fn dotted_initials_link_is_an_authblk_name() {
   let xml = convert_repro!("author_link_dotted_initials_authblk.tex");
   assert_no_merged_names(&xml);
-  let names = creators(&xml);
-  assert_eq!(names.len(), 2, "{xml}");
-  for (name, target) in names.iter().zip([
-    ("T.J.C. Bezerra", "https://orcid.org/0000-0002-0424-7903"),
-    ("L. Asquith", "https://orcid.org/0000-0001-8035-7162"),
-  ]) {
-    assert!(
-      name.contains(&format!(
-        r#"href="{}">{}</ref></personname>"#,
-        target.1, target.0
-      )) && name.contains("University of Sussex")
-        && !name.contains(r#"role="url""#),
-      "{xml}"
-    );
-  }
+  let sussex = affiliation(
+    "Department of Physics and Astronomy, University of Sussex, Brighton, United Kingdom",
+  );
+  assert_eq!(creators(&xml), [
+    creator(
+      true,
+      &href("https://orcid.org/0000-0002-0424-7903", "T.J.C. Bezerra"),
+      &sussex
+    ),
+    creator(
+      false,
+      &href("https://orcid.org/0000-0001-8035-7162", "L. Asquith"),
+      &sussex
+    ),
+  ]);
 }
 
 /// A doubled mark (`$^{**}$`, `$^{\dagger\dagger}$`) labels its institution as a single one does (the r7 re-review's
@@ -2469,21 +2482,26 @@ fn link_words_in_a_linked_institution_under_a_marked_row() {
 fn icon_led_link_line_is_a_url() {
   let xml = convert_repro!("author_icon_led_link_line.tex");
   assert_no_merged_names(&xml);
-  let names = creators(&xml);
-  assert_eq!(names.len(), 3, "{xml}");
-  for (name, address) in names.iter().zip(["aable@x.edu", "bbaker@x.edu"]) {
-    assert!(
-      name.contains(&affiliation("Univ A")) && name.contains(address) && !name.contains("github"),
-      "{xml}"
-    );
-  }
-  assert!(
-    names[2].starts_with(r#"<creator role="author"> <contact name="URL: " role="url">"#)
-      && names[2].contains(r#"class="fas fa-github""#)
-      && names[2].contains(r#"href="https://github.com/aable/proj""#)
-      && names[2].matches("<contact ").count() == 1,
-    "{xml}"
-  );
+  let univ_a = affiliation("Univ A");
+  let email =
+    |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
+  assert_eq!(creators(&xml), [
+    creator(
+      true,
+      "Ann Able",
+      &format!("{univ_a} {}", email("aable@x.edu"))
+    ),
+    creator(
+      false,
+      "Bob Baker",
+      &format!("{univ_a} {}", email("bbaker@x.edu"))
+    ),
+    shared(&url(concat!(
+      r#"<inline-block aria:hidden="true" class="fas fa-github" xml:id="id1"/> "#,
+      r#"<ref class="ltx_href" font="sansserif" fontsize="90%" href="https://github.com/aable/proj">"#,
+      "https://github.com/aable/proj</ref>"
+    ))),
+  ]);
 }
 
 /// A line of several icon-led links (`\faGithub~\href{…}{Code}\hspace{1.5em} \yticon~\href{…}{Demo Video}`,
@@ -2542,27 +2560,27 @@ fn empty_lines_under_unmarked_rows_print_nothing() {
 fn mailto_brace_list_goes_by_spelling() {
   let xml = convert_repro!("author_mailto_brace_list.tex");
   assert_no_merged_names(&xml);
-  let names = creators(&xml);
-  assert_eq!(names.len(), 2, "{xml}");
-  assert!(
-    names[0].contains("Ann Able")
-      && names[0].contains("ann.able@x.edu")
-      && !names[0].contains("b.baker"),
-    "{xml}"
-  );
-  assert!(
-    names[1].contains("Bob Baker")
-      && names[1].contains("b.baker@x.edu")
-      && !names[1].contains("ann.able"),
-    "{xml}"
-  );
-  assert_eq!(
-    xml
-      .matches(r#"<contact name="Correspondence: " role="email">"#)
-      .count(),
-    2,
-    "{xml}"
-  );
+  // (the address the link reaches kept a link, the other as it prints)
+  assert_eq!(creators(&xml), [
+    creator(
+      true,
+      "Ann Able",
+      &format!(
+        "{} {}",
+        affiliation("Univ A"),
+        mailto_email("Correspondence", "ann.able@x.edu", "ann.able@x.edu")
+      )
+    ),
+    creator(
+      false,
+      "Bob Baker",
+      &format!(
+        "{} {}",
+        affiliation("Univ B"),
+        r#"<contact name="Correspondence: " role="email">b.baker@x.edu</contact>"#
+      )
+    ),
+  ]);
 }
 
 /// `\\ [0.5em]`: a line break skips the spaces before its optional argument, as latex.ltx's `\@xnewline` does
@@ -2573,13 +2591,26 @@ fn line_break_optional_after_spaces_prints_nothing() {
   let xml = convert_repro!("author_line_break_spaced_optional.tex");
   assert_no_merged_names(&xml);
   assert!(!xml.contains("[0.5em]"), "{xml}");
-  let names = creators(&xml);
-  assert_eq!(names.len(), 3, "{xml}");
-  assert!(
-    names[2].starts_with(r#"<creator role="author"> <contact name="URL: " role="url">"#)
-      && names[2].contains(r#"href="https://x.org/p/""#),
-    "{xml}"
-  );
+  let univ_a = affiliation("Univ A");
+  assert_eq!(creators(&xml), [
+    creator(
+      true,
+      "Ann Able",
+      &format!("{univ_a} {}", typewriter_email("aable@x.edu", "id1"))
+    ),
+    creator(
+      false,
+      "Bob Baker",
+      &format!(
+        "{univ_a} {} {}",
+        affiliation("Univ B"),
+        typewriter_email("bbaker@x.edu", "id2")
+      )
+    ),
+    shared(&url(
+      r#"<ref class="ltx_href" font="typewriter" fontsize="90%" href="https://x.org/p/">https://x.org/p/</ref>"#
+    )),
+  ]);
 }
 
 /// A truncated family-first address (`zhuzhenh22@`, `chenyuxi22@`; 2602.03328, 2609.11716; the r7 re-review's finding
@@ -2590,19 +2621,22 @@ fn truncated_family_first_address_spells_its_name() {
   let xml = convert_repro!("author_email_truncated_family_first.tex");
   assert_no_merged_names(&xml);
   let univ_a = affiliation("Univ A");
-  let names = creators(&xml);
-  assert_eq!(names.len(), 4, "{xml}");
-  assert!(
-    names[0].contains("Zhenhao Zhu") && names[0].contains("zhuzhenh22@x.edu"),
-    "{xml}"
-  );
-  assert!(
-    names[1].contains("Yuxiang Chen") && names[1].contains("chenyuxi22@x.edu"),
-    "{xml}"
-  );
-  for name in &names[2..] {
-    assert!(name.contains(&univ_a) && !name.contains("@x.edu"), "{xml}");
-  }
+  let email =
+    |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
+  assert_eq!(creators(&xml), [
+    creator(
+      true,
+      "Zhenhao Zhu",
+      &format!("{univ_a} {}", email("zhuzhenh22@x.edu"))
+    ),
+    creator(
+      false,
+      "Yuxiang Chen",
+      &format!("{univ_a} {}", email("chenyuxi22@x.edu"))
+    ),
+    creator(false, "Xinzhong Zhu", &univ_a),
+    creator(false, "Jianfei Chen", &univ_a),
+  ]);
 }
 
 /// A link to a bare domain printing a word that names no institution ("here") is a URL contact of the block (the r7

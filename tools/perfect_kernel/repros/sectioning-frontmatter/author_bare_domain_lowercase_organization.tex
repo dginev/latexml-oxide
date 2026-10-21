@@ -1,0 +1,13 @@
+% witness: the r8 re-review of batch 77p (finding 9, probe s14)
+% oracle:  pdflatex 0 errors: Ann Able over a link "deepseek-ai" to https://www.deepseek.com, Bob Baker over Univ B
+% engines: rust int38 (77p r11) = 0 errors; "deepseek-ai" a URL contact of Ann Able (77p r10: her affiliation)
+% expect:  0 errors, 0 warnings; the linked "deepseek-ai" an affiliation of Ann Able: its text names the domain it links
+% status:  RED (int38) -> GREEN (77y)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able \\ \href{https://www.deepseek.com}{deepseek-ai} \and Bob Baker \\ Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

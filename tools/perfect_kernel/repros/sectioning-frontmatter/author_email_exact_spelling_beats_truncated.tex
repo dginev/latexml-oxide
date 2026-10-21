@@ -1,0 +1,13 @@
+% witness: the r8 re-review of batch 77p (finding 3, probes s1, s2; 77p r10 placed both, int34a on the wrong names)
+% oracle:  pdflatex 0 errors: four names, Univ A, and the addresses wangyu@x.edu and liyang@x.edu on lines of their own
+% engines: rust int38 (77p r11) = 0 errors; both addresses on the shared creator, Yu Wang and Yuxin Wang tied by six
+%          letters of "wangyuxin", Yang Li and Yangfan Li by "liyangfan"
+% expect:  0 errors, 0 warnings; wangyu@ the e-mail of Yu Wang, liyang@ of Yang Li
+% status:  RED (int38) -> GREEN (77y)
+\documentclass{article}
+\title{T}
+\author{Yu Wang, Yuxin Wang, Yang Li, Yangfan Li \\ Univ A \\ \texttt{wangyu@x.edu} \\ \texttt{liyang@x.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}
