@@ -2077,49 +2077,76 @@ ruling 2026-10-19).** Three readings of an author block Perl gets wrong (it merg
   row's addresses go by spelling alone, no elimination (2109.13296's `azu5030@`, `rmz5227@` the block's).
 - 77y (the r8 re-review's findings 1-13; main-session decisions on the 77p r10/r11 questions). A block merged into a
   row's symbol lines after a spaced break takes there only its lines down to a line of names (`name_count`, not itself a
-  labelled institution, an address or a link); that line and the lines under it are a block of their own, opening a row
-  (probe w1's "Cat Cole" had been an affiliation of the shared creator and Univ C every name's of the row; w2's "Cat
-  Cole§" Bob Baker's affiliation). A marked affiliation's unmarked continuation lines stay welded to it in a symbol row,
-  as in a numbered block (x12, main-session decision 3 on the r10 questions): where an unmarked printing line (no
-  address, no link) stands between two labelled institutions (`welded_layout`), every unmarked line goes on with the
-  carriers of the institution above it, a place too, line after line (`Continuing`, `row_line_calls`: 2602.05059's
-  `$^{\dagger}$Department of Computer Science \\ Ball State University \\ Muncie, IN 47306`, Ball State had gone to
-  Mohna Chakraborty and Jio Institute to both † names; probe t7); without such a line an unmarked institution under the
-  last labelled one stays every name's of the row (R12, probe y8). A marked e-mail line no address of which a name
-  spells goes to the names carrying its mark, the mark no part of its addresses (main-session decision 3 on the r11
-  questions; `marked_email_line`, `line_emails` in `apart_line_calls` and a group's e-mail lines, a trailing mark's
-  carriers too; `AddressPlacement::Marked` in the numbered branch, the authors requesting the symbol's label: probes
-  s10, t3, t4, 2605.01818's `$^*$nbes@itu.dk` — had been "†zq77@x.edu" on the shared creator); a spelled address keeps
-  the mark it shows, as the PDF prints it (65e's 1910.00401, `perfect_kernel_batch65e::symbol_mark_shown_by_its_email`),
-  and a mark no name carries stays (probe s11). A mark a space parts from the text before it is no piece of its own
+  labelled institution, an address, a link or a note — `classify_thanks` — and carrying a symbol mark of its own or over
+  an institution, `reads_as_institution`; r2, the 77y review's finding 2: `Google DeepMind`, `Hong Kong`, `Equal
+  Contribution` alone under the row stay the block's, probes k1, k7, k9, which r1 had made creators); that line and the
+  lines under it are a block of their own, opening a row (probe w1's "Cat Cole" had been an affiliation of the shared
+  creator and Univ C every name's of the row; w2's "Cat Cole§" Bob Baker's affiliation; no paper in rev77p8's scan of
+  115k). A marked affiliation's unmarked continuation lines stay welded to it in a symbol row, as in a numbered block
+  (x12, main-session decision 3 on the r10 questions): where an unmarked line that may go on with one (`weldable_line`:
+  an institution, `reads_as_institution`, or a place, `reads_as_place` — a comma list of capitalized words or numbers,
+  no name —; no address, link line or note) stands between two labelled institutions (`welded_layout`), each such
+  unmarked line goes on with the carriers of the institution above it, line after line (`Continuing`, `row_line_calls`:
+  2602.05059's `$^{\dagger}$Department of Computer Science \\ Ball State University \\ Muncie, IN 47306`, Ball State had
+  gone to Mohna Chakraborty and Jio Institute to both † names; probe t7). A note, an address or a link line under them
+  is no continuation line but placed as under any row — the block's (r2, the 77y review's finding 3: 2604.02904's
+  `Corresponding Author: \texttt{aliwazirjam@gmail.com}` and 2602.03421's `Email: (hadi.aghaee,
+  christian.deppe)@tu-bs.de, boche@tum.de` had gone to the last institution's carriers; probes c1, c3, x4) —, and in a
+  row with an unmarked name nothing welds past the last labelled institution (`labelled_left`): the line right under it
+  goes on with it, as under one ending in a comma, and a later one is every name's of the row (R12; probe c4's
+  `Department of Physics, University C` had been Bob Baker's alone, Cat Cole with none). Without such a line an unmarked
+  institution under the last labelled one stays every name's of the row (R12, probe y8). The numbered block's x12 weld
+  still welds a note line the same way (x1-x3; SYNC residual). A marked e-mail line no address of which a name spells
+  goes to the names carrying its mark, the mark no part of its addresses (main-session decision 3 on the r11 questions;
+  `marked_email_line`, `line_emails` in `apart_line_calls` and a group's e-mail lines, a trailing mark's carriers too;
+  `AddressPlacement::Marked` in the numbered branch, the authors requesting the symbol's label: probes s10, t3, t4,
+  2605.01818's `$^*$nbes@itu.dk` — had been "†zq77@x.edu" on the shared creator); a spelled address keeps the mark it
+  shows, as the PDF prints it (65e's 1910.00401, `perfect_kernel_batch65e::symbol_mark_shown_by_its_email`), and a mark
+  no name carries stays (probe s11). A mark a space parts from the text before it is no piece of its own
   (`symbol_led_segments`: probe s3's mark-only affiliations "†", "‡"); a one-argument font command around a line is
   looked through as a group is (`unwrapped`: probe s7's `\textit{$^{\dagger}$Univ A \qquad $^{\ddagger}$Univ B}`, had
   been one affiliation of the shared creator), its font aside — a text holding marks of its own is no institution its
   trailing mark labels (`labelled_institution`: 2601.18077's `\textbf{~Pavan Thodima$^{\dagger}$, Aniket
-  Rege$^{\dagger}$}`, a row of names, keeps its marks); `leading_symbol_labels` skips the first label only when it
-  is a run whole (`SYMBOL_COMMAND_RUN`; a comma list `$^{\dagger,\ddagger}$` has none). Links: a printed text that reads
-  as a name is that name linked only when no word of it is a link word but the surname of a two-word name whose first
-  word is none (`link_words_beyond_a_surname`: "Lucy Page" a name; "Model Card", "Paper Website" — `paper` a link word —,
-  "Hugging Face Demo" URL contacts, probes u1, u3, u4, which r11 had made creators); a bare domain's link names its
-  organization also when its text holds the domain's name (`names_an_organization`: `\href{https://www.deepseek.com}
-  {deepseek-ai}` an affiliation, probe s14); an icon a `\quad` parts from the link line after it is that link's
-  (`join_icons_to_links`, before either branch: 2601.17879's `\github \quad \url{…}`, the logo had been an affiliation of
-  its own). E-mails: a truncated family-first spelling scores the letters it holds less one, below a spelling whole of as
-  many (`spelled_owners`: `wangyu@` Yu Wang's, not Yuxin Wang's "wangyuxin", `liyang@` Yang Li's — probes s1, s2, tied
-  on the shared creator in r11; `zhuzhenh22@`, `chenyuxi22@` kept); a local part holding a list the address reader could
-  not part spells no one (`lists_local_parts`, in `spelled_owner` and `block_email_calls`: 2605.27805's
+  Rege$^{\dagger}$}`, a row of names, keeps its marks); `leading_symbol_labels` skips the first label only when it is a
+  run whole (`SYMBOL_COMMAND_RUN`; a comma list `$^{\dagger,\ddagger}$` has none) — a unit-level change with no
+  end-to-end effect yet: the comma-list mark shapes (probes q1-q3) are a SYNC residual. Links: a printed text that reads
+  as a name is that name linked unless a word of it is a link word other than its surname, the last word, read where
+  spaces part the words (`Hans-Peter Link`, `Lucy Page-Smith` two words) and only where the name reads as one around it
+  — two words, an initial before it, or an institution on the line under it in its column
+  (`link_words_beyond_a_surname`, `prints_a_url`'s `under`: "Lucy Page", "Lawrence E. Page", "Hans-Peter Link", "Mary
+  Ann Code \\ Univ B" names, r2, the 77y review's finding 1, probes a1-a3, a7, a8, which r1 had made creators named by
+  their institution; "Model Card", "Paper Website" — `paper` a link word —, "Hugging Face Demo" URL contacts, probes u1,
+  u3, u4, which r11 had made creators; a two-word text alone in its column stays a name, "Source Code", "Online Demo",
+  2606.06924: SYNC residual); a bare domain's link names its organization also when its text spells the domain's name in
+  a handle, a mark no word holds (`names_an_organization`: `\href{https://www.deepseek.com}{deepseek-ai}` an
+  affiliation, probe s14; a homepage's `\href{https://www.annable.com}{annable}` stays a URL contact, r2, the 77y
+  review's finding 4, probes d1, d2); an icon a `\quad` parts from the link line after it is that link's
+  (`join_icons_to_links`, before either branch: 2601.17879's `\github \quad \url{…}`, the logo had been an affiliation
+  of its own). E-mails: a truncated family-first spelling — the local part's letters used up — scores the letters it
+  holds less one, below a spelling whole of as many, and one going on past the start it shares its six letters (r2, the
+  77y review's finding 5: `zhangweiwei@` Wei Zhang's, not Weiwen Zhang's, probe n1) (`spelled_owners`: `wangyu@` Yu
+  Wang's, not Yuxin Wang's "wangyuxin", `liyang@` Yang Li's — probes s1, s2, tied on the shared creator in r11;
+  `zhuzhenh22@`, `chenyuxi22@` kept); a local part holding a list the address reader could not part spells no one
+  (`lists_local_parts`, in `spelled_owner` and `block_email_calls`: 2605.27805's
   `\{luoyanyan,…,fengjunlan\}it@chinamobile.com`, whole on Yaxing Zhang, now the block's; probe t5); a semicolon parts
   addresses as a comma does and an e-mail label before a list the address reader parts is an e-mail line
   (`email_addresses`, `labelled_emails`: 2604.10316's `Email: …; \{…\}@…`, probes t1, t2 — had been one affiliation);
   several mailto links after one label are one e-mail line (`labelled_emails`: 2604.25444's `Correspondence:` with two
   links, probe t6). Guards (each red on int38 = 77p r11 from its minimal repro; the last two shown red by the int38
   binary on the repro) `perfect_kernel_batch77y::{names_under_merged_symbol_lines_stay_names,
-  marked_names_under_merged_symbol_lines_stay_names, link_word_columns_are_urls, exact_spelling_outranks_a_truncated_one,
-  unsplittable_address_list_spells_no_one, symbol_row_continuation_lines_stay_welded,
-  marked_unspelled_address_goes_by_its_mark, marked_unspelled_address_goes_by_its_mark_numbered,
-  trailing_mark_after_a_space_labels_its_line, symbol_line_in_a_font_command_goes_by_its_marks,
-  icon_parted_from_its_link_goes_with_it, bare_domain_link_naming_its_domain_is_an_institution,
-  email_label_before_a_semicolon_brace_list, correspondence_label_before_two_mailto_links}`, the unit test
+  marked_names_under_merged_symbol_lines_stay_names, link_word_columns_are_urls,
+  exact_spelling_outranks_a_truncated_one, unsplittable_address_list_spells_no_one,
+  symbol_row_continuation_lines_stay_welded, marked_unspelled_address_goes_by_its_mark,
+  marked_unspelled_address_goes_by_its_mark_numbered, trailing_mark_after_a_space_labels_its_line,
+  symbol_line_in_a_font_command_goes_by_its_marks, icon_parted_from_its_link_goes_with_it,
+  bare_domain_link_naming_its_domain_is_an_institution, email_label_before_a_semicolon_brace_list,
+  correspondence_label_before_two_mailto_links}` and, r2 (each red on 77y r1 from its minimal repro),
+  `{link_word_surnames_stay_names, unnamed_line_under_symbol_lines_stays_the_blocks,
+  correspondence_line_under_welded_lines_is_the_blocks, notes_under_welded_lines_are_the_blocks,
+  line_past_the_welded_lines_of_a_row_with_an_unmarked_name_is_the_rows, homepage_handle_link_is_a_url,
+  diverging_local_part_is_the_shorter_names}` and the unit test
+  `base_utilities::author_split_tests::weldable_lines_are_institutions_and_places` (a place's particle, `Campus de
+  Santiago, …`, 2605.19581) (`icon_parted_from_its_link_goes_with_it` pinned whole), the unit test
   `base_utilities::author_split_tests::leading_symbol_labels_skip_only_a_run_whole`; six 77p guards pinned to whole
   elements (`symbol_lines_after_a_spaced_break_go_by_their_marks`, `dotted_initials_link_is_an_authblk_name`,
   `icon_led_link_line_is_a_url`, `mailto_brace_list_goes_by_spelling`, `truncated_family_first_address_spells_its_name`,

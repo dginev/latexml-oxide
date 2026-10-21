@@ -5,8 +5,12 @@
 //! spells no one; a marked affiliation's unmarked continuation lines stay welded to it in a symbol row; a marked address
 //! no name spells goes to the names carrying its mark; a mark after a space labels the text before it; a symbol line set
 //! in a font command is read through it; an icon a `\quad` parts from its link goes with the link; a bare domain's link
-//! naming its domain is an institution. Each guard asserts the three measures: no Error or Warning, every name once in
-//! its own `ltx:creator`, its contacts on it — whole elements.
+//! naming its domain is an institution. Round 2 (the 77y review's findings 1-8): a linked name whose surname is a link
+//! word stays a name; a capitalized line alone under merged symbol lines stays the block's; a symbol row welds only
+//! institutions and places, and nothing past its last labelled institution in a row with an unmarked name; a
+//! homepage's handle link is a URL contact; a local part diverging from a longer name is the shorter name's. Each guard
+//! asserts the three measures: no Error or Warning, every name once in its own `ltx:creator`, its contacts on it —
+//! whole elements.
 use latexml::util::test::convert_with;
 
 use super::{
@@ -291,10 +295,10 @@ fn symbol_line_in_a_font_command_goes_by_its_marks() {
 fn icon_parted_from_its_link_goes_with_it() {
   let xml = convert_repro!("author_icon_macro_quad_before_url.tex");
   assert_no_merged_names(&xml);
-  let names = creators(&xml);
-  assert_eq!(names.len(), 3, "{xml}");
-  assert_eq!(
-    names[0],
+  // (the icon's file as the TeX tree holds it: where that tree is, aside)
+  let texmf = regex::Regex::new(r#"candidates="[^"]*/(example-image\.[a-z]+)""#).unwrap();
+  let xml = texmf.replace_all(&xml, r#"candidates="TEXMF/$1""#);
+  assert_eq!(creators(&xml), [
     creator(
       true,
       "Ann Able",
@@ -303,19 +307,14 @@ fn icon_parted_from_its_link_goes_with_it() {
         affiliation("Univ A"),
         typewriter_email("aable@x.edu", "id1")
       )
-    )
-  );
-  assert_eq!(
-    names[1],
-    creator(false, "Bob Baker", &affiliation("Univ B"))
-  );
-  assert!(
-    names[2].starts_with(r#"<creator role="author"> <contact name="URL: " role="url">"#)
-      && names[2].contains("<graphics ")
-      && names[2].contains(r#"href="https://github.com/x/y""#)
-      && names[2].matches("<contact ").count() == 1,
-    "{xml}"
-  );
+    ),
+    creator(false, "Bob Baker", &affiliation("Univ B")),
+    shared(&url(concat!(
+      r#"<text yoffset="-1.5pt" xml:id="id2"><graphics candidates="TEXMF/example-image.png" "#,
+      r#"graphic="example-image" options="height=10.00002pt,keepaspectratio=true" xml:id="g1"/></text> "#,
+      r#"<ref class="ltx_url" font="typewriter" href="https://github.com/x/y">https://github.com/x/y</ref>"#
+    ))),
+  ]);
 }
 
 /// A link to a bare domain printing the domain's name in lower case (`\href{https://www.deepseek.com}{deepseek-ai}`)
@@ -390,5 +389,218 @@ fn correspondence_label_before_two_mailto_links() {
       "Cat Cole",
       &format!("{univ_a} {}", email("ccole@x.edu"))
     ),
+  ]);
+}
+
+/// A linked name whose surname is a link word is a name: of two words with a hyphenated one (`Hans-Peter Link`, `Lucy
+/// Page-Smith`), with an initial before it (`Lawrence E. Page`, the block's first column too), or over an institution
+/// in its column (`Mary Ann Code \\ Univ D`) — the 77y review's finding 1, probes a1-a3, a7, a8. Was each column a
+/// creator named by its institution, the name its URL contact (77y r1); int38b as now.
+#[test]
+fn link_word_surnames_stay_names() {
+  let xml = convert_repro!("author_linked_names_link_word_surnames.tex");
+  assert_no_merged_names(&xml);
+  assert_eq!(creators(&xml), [
+    creator(
+      true,
+      &href("https://x.org/lp", "Lawrence E. Page"),
+      &affiliation("Univ A")
+    ),
+    creator(
+      false,
+      &href("https://x.org/hj", "Hans-Peter Link"),
+      &affiliation("Univ B")
+    ),
+    creator(
+      false,
+      &href("https://x.org/ls", "Lucy Page-Smith"),
+      &affiliation("Univ C")
+    ),
+    creator(
+      false,
+      &href("https://x.org/mc", "Mary Ann Code"),
+      &affiliation("Univ D")
+    ),
+  ]);
+}
+
+/// A line of capitalized words alone under a row's symbol lines — an organization, a place, a legend — is no names
+/// line: the block's, on its shared creator (the 77y review's finding 2, probes k1, k7, k9). Was a creator named by it,
+/// no contact (77y r1); int38b as now.
+#[test]
+fn unnamed_line_under_symbol_lines_stays_the_blocks() {
+  for (xml, line) in [
+    (
+      convert_repro!("author_symbol_lines_then_unnamed_line_google_deepmind.tex"),
+      "Google DeepMind",
+    ),
+    (
+      convert_repro!("author_symbol_lines_then_unnamed_line_hong_kong.tex"),
+      "Hong Kong",
+    ),
+    (
+      convert_repro!("author_symbol_lines_then_unnamed_line_equal_contribution.tex"),
+      "Equal Contribution",
+    ),
+  ] {
+    assert_no_merged_names(&xml);
+    assert_eq!(
+      creators(&xml),
+      [
+        creator(
+          true,
+          &marked("Ann Able", "id1", "†"),
+          &affiliation("Univ A")
+        ),
+        creator(
+          false,
+          &marked("Bob Baker", "id2", "‡"),
+          &affiliation("Univ B")
+        ),
+        shared(&affiliation(line)),
+      ],
+      "{line}"
+    );
+  }
+}
+
+/// A correspondence line under a symbol row's welded institutions (2604.02904's `Corresponding Author:
+/// \texttt{aliwazirjam@gmail.com}`) is no continuation line: the block's (the 77y review's finding 3). Was an
+/// affiliation of the names carrying the last institution's mark (77y r1); int38b as now.
+#[test]
+fn correspondence_line_under_welded_lines_is_the_blocks() {
+  let xml = convert_repro!("author_symbol_lines_welded_then_correspondence.tex");
+  assert_no_merged_names(&xml);
+  assert_eq!(creators(&xml), [
+    creator(
+      true,
+      &marked("Ann Able", "id1", "†"),
+      &format!(
+        "{} {}",
+        affiliation("Department of Physics"),
+        affiliation("University A")
+      )
+    ),
+    creator(
+      false,
+      &marked("Bob Baker", "id2", "‡"),
+      &format!(
+        "{} {}",
+        affiliation("School of Law"),
+        affiliation("University B")
+      )
+    ),
+    shared(&affiliation(
+      r#"Corresponding Author: <text font="typewriter" xml:id="id3">zq77@gmail.com</text>"#
+    )),
+  ]);
+}
+
+/// Notes under a symbol row's welded institutions (`Preprint. Under review.`, `Corresponding author: Ann Able`) are the
+/// block's, no continuation lines (the 77y review's finding 3, probes c3, x4). Was each an affiliation of Bob Baker
+/// (77y r1); int38b as now.
+#[test]
+fn notes_under_welded_lines_are_the_blocks() {
+  let xml = convert_repro!("author_symbol_lines_welded_then_notes.tex");
+  assert_no_merged_names(&xml);
+  assert_eq!(creators(&xml), [
+    creator(
+      true,
+      &marked("Ann Able", "id1", "†"),
+      &format!(
+        "{} {}",
+        affiliation("Department of Physics,"),
+        affiliation("University A")
+      )
+    ),
+    creator(
+      false,
+      &marked("Bob Baker", "id2", "‡"),
+      &format!(
+        "{} {}",
+        affiliation("School of Law,"),
+        affiliation("University B")
+      )
+    ),
+    shared(&format!(
+      "{} {}",
+      affiliation("Preprint. Under review."),
+      affiliation("Corresponding author: Ann Able")
+    )),
+  ]);
+}
+
+/// In a row with an unmarked name, a line past the last labelled institution's continuation is every name's of the row
+/// (user ruling R12; the 77y review's finding 3, probe c4): `Department of Physics, University C` on all three,
+/// University B, right under `$^\ddagger$School of Law`, on Bob Baker. Was the last line Bob Baker's alone, Cat Cole
+/// with none (77y r1); int38b every line on every name.
+#[test]
+fn line_past_the_welded_lines_of_a_row_with_an_unmarked_name_is_the_rows() {
+  let xml = convert_repro!("author_symbol_lines_welded_unmarked_name.tex");
+  assert_no_merged_names(&xml);
+  let univ_c = affiliation("Department of Physics, University C");
+  assert_eq!(creators(&xml), [
+    creator(
+      true,
+      &marked("Ann Able", "id1", "†"),
+      &format!(
+        "{} {} {univ_c}",
+        affiliation("Department of Physics"),
+        affiliation("University A")
+      )
+    ),
+    creator(
+      false,
+      &marked("Bob Baker", "id2", "‡"),
+      &format!(
+        "{} {} {univ_c}",
+        affiliation("School of Law"),
+        affiliation("University B")
+      )
+    ),
+    creator(false, "Cat Cole", &univ_c),
+  ]);
+}
+
+/// A homepage's link printing the name its domain spells (`\href{https://www.annable.com}{annable}`) is a URL contact
+/// of its author, no organization (the 77y review's finding 4, probes d1, d2). Was each an affiliation (77y r1); int38b
+/// as now.
+#[test]
+fn homepage_handle_link_is_a_url() {
+  let xml = convert_repro!("author_homepage_handle_links.tex");
+  assert_no_merged_names(&xml);
+  assert_eq!(creators(&xml), [
+    creator(
+      true,
+      "Ann Able",
+      &format!(
+        "{} {}",
+        affiliation("Univ A"),
+        url(&href("https://www.annable.com", "annable"))
+      )
+    ),
+    creator(
+      false,
+      "Bob Baker",
+      &url(&href("https://www.bobbaker.org", "bobbaker"))
+    ),
+  ]);
+}
+
+/// A local part going on past the start it shares with a longer name (`zhangweiwei@` beside "zhangweiwen") is no
+/// truncation of it: the address is the shorter name's, whose spelling it opens with (the 77y review's finding 5, probe
+/// n1). Was on Weiwen Zhang (77y r1); int38b as now.
+#[test]
+fn diverging_local_part_is_the_shorter_names() {
+  let xml = convert_repro!("author_email_diverging_from_a_longer_name.tex");
+  assert_no_merged_names(&xml);
+  let univ_a = affiliation("Univ A");
+  assert_eq!(creators(&xml), [
+    creator(
+      true,
+      "Wei Zhang",
+      &format!("{univ_a} {}", typewriter_email("zhangweiwei@x.edu", "id1"))
+    ),
+    creator(false, "Weiwen Zhang", &univ_a),
   ]);
 }
