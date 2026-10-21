@@ -22188,14 +22188,18 @@ ams_support binding) and its label font as `\fnum@font@<type>` (`\scshape`), wit
 modelled. The label format and font are installed at `\begin{document}` only where caption is not loaded
 (`\AtBeginDocument{\@ifpackageloaded{caption}{}{…}}`; `\ifrem@fullpt`/`\removefullpoint` are defined either way): the
 document's caption package — or subcaption's or subfig's, which load it — replaces the class's `\@makecaption` in
-pdflatex ("Figure 1:" in the text font, the sub-captions' "(a)" at their size; 10 of the 40 census copies with their own
-`\@makecaption`: 1711.01065, 2205.10181, 2507.07213 subcaption, 1805.00129 subfig), the old subfigure package does not,
-nor floatrow, which loads caption's kernel alone (floatrow.sty:39 `caption3`; 2312.13002, 2111.12004): caption3 falls
-back to the caption binding, which then defines `\lx@caption@kernel@only` (caption_sty.rs), and the class's format
-stays. Residual: a document that loads caption itself after floatrow keeps the class's format, as the caption binding
-is not run again (78a r2). Guards `perfect_kernel_batch78a::{jfm_copy_captions_end_the_label_with_a_period,
-jfm_copy_caption_package_keeps_its_options, jfm_copy_caption_yields_to_caption_loaders,
-jfm_copy_caption_kept_with_subfigure, jfm_copy_caption_kept_with_floatrow}`.
+pdflatex ("Figure 1:" in the text font, the sub-captions' "(a)" at their size; 10 of the 40 copies with their own
+`\@makecaption` in the 78a census, which is not complete — a 40k-zip sample found 23 more: 1711.01065, 2205.10181,
+2507.07213 subcaption, 1805.00129 and 1612.03374 subfig, 2008.04616 caption), the old subfigure package does not, nor
+floatrow, which loads caption's kernel alone (floatrow.sty:39 `caption3`; 2312.13002, 2111.12004): caption3 falls back
+to the caption binding, which then defines `\lx@caption@kernel@only` (caption_sty.rs), and the class's format stays;
+nor `\usepackage[caption=false]{subfig}`, which loads `caption3` too (subfig.sty:129-141; subfig_sty.rs, 78a r3).
+subcaption (subcaption.sty:43) and subfig without that option (:129-139) load caption even after floatrow's `caption3`,
+so they clear the mark (78a r3). Residual: a document's own `\usepackage{caption}` after floatrow keeps the class's
+format, as the caption binding is not run again. Guards `perfect_kernel_batch78a::{
+jfm_copy_captions_end_the_label_with_a_period, jfm_copy_caption_package_keeps_its_options,
+jfm_copy_caption_yields_to_caption_loaders, jfm_copy_caption_kept_with_subfigure, jfm_copy_caption_kept_with_floatrow,
+jfm_copy_caption_kept_with_subfig_without_caption, jfm_copy_caption_yields_to_caption_loaders_after_floatrow}`.
 
 ### 785. An unnumbered heading runs its title format's after-code (Perl: the title font alone, titlesec's after-code dropped)
 
@@ -22214,7 +22218,7 @@ Rust-only defect — SYNC "Rust Error Fixes") and `\lx@format@title@after@@{type
 Guards `perfect_kernel_batch78a::{unnumbered_section_takes_the_title_font,
 titlesec_after_code_closes_an_unnumbered_title}`.
 
-### 786. biblatex's `\citeauthor` and a numeric style's `\textcite` print the name (Perl: no biblatex binding)
+### 786. biblatex's `\citeauthor` and a numeric style's `\textcite` print the name, and a nameless entry in a textual numeric citation keeps its brackets, natbib's too (Perl: no biblatex binding; CrossRef.pm:541 drops every bracket of the citation)
 
 **biblatex**: `\citeauthor` prints `\printnames{labelname}` in every style (biblatex.def:2497-2506); numeric.cbx's and
 alphabetic.cbx's `\textcite` print the name, then the bracketed label ("Hampe [1]").

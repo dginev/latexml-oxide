@@ -5,6 +5,8 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: svmult.cls.ltxml
+  // svmono, svmult's monograph twin (lib.rs), from the name the binding serves (read before the classes it loads).
+  let svmono = Expand!(Tokens!(T_CS!("\\@currname"))).to_string() == "svmono";
 
   RawTeX!(r"\newif\if@numart\@numarttrue");
   // Generally ignorable options
@@ -35,11 +37,25 @@ LoadDefinitions!({
   // Perl svmult.cls.ltxml L34: LoadClass('book', withoptions => 1)
   LoadClass!("book", withoptions => true);
   // svmult.cls:478-484 `\backmatter` keeps its `\@mainmatterfalse` commented out and its `\@chapter` (:592) steps the
-  // counter whatever the matter: a back-matter chapter stays numbered ("Chapter 2 Afterword"; 1905.01770's copy;
-  // svmono.cls:418 sets `\@mainmatterfalse`, but numbers by `\if@chapnum` too, :478-513, 1704.03069), not book's
-  // unnumbered one (book_cls.rs, KNOWN_PERL_ERRORS #1016) — Perl's book no-op, as before. Guard
-  // `perfect_kernel_batch78a::svmult_backmatter_chapters_stay_numbered`.
-  DefPrimitive!("\\backmatter", None);
+  // counter whatever the matter: a back-matter chapter stays numbered ("Chapter 2 Afterword"; 1905.01770's copy), not
+  // book's unnumbered one (book_cls.rs, KNOWN_PERL_ERRORS #1016) — Perl's book no-op, as before. svmono.cls:418 sets
+  // `\@mainmatterfalse`, but numbers its chapters by `\if@chapnum` too (:478-513, 1704.03069), so only the flag
+  // follows the matter. Guards `perfect_kernel_batch78a::{svmult_backmatter_chapters_stay_numbered,
+  // svmono_backmatter_leaves_the_main_matter}`.
+  //
+  // The appendix: svmult.cls:713 (v5.4 2007; v5.5 2018 :720) `\renewcommand\appendix{\par}`, the article appendix of a
+  // contributed chapter, resets nothing — the sections count on ("3 Proofs" after "2"; 1808.08417's sections 5, 6 and
+  // "Theorem 6.1", 2108.07775's "8 Appendix", 2212.13109's "9 Appendix: Octonions"), so LaTeXML's appendix starts
+  // without book's section reset (KNOWN_PERL_ERRORS #1016); its `\backmatter` (:482) `\let\appendix=\bppendix`, the
+  // book appendix (:715-732), which resets the chapter and section counters as book's does. svmono.cls:598-608 resets
+  // them in every `\appendix`: book's. Guard `perfect_kernel_batch78a::svmult_appendix_keeps_counting_sections`.
+  if svmono {
+    DefMacro!("\\backmatter", "\\@mainmatterfalse");
+  } else {
+    Let!("\\lx@svmult@bppendix", "\\appendix");
+    DefMacro!("\\appendix", "\\@appendix\\gdef\\@chapapp{\\appendixname}");
+    DefMacro!("\\backmatter", "\\let\\appendix\\lx@svmult@bppendix");
+  }
   RequirePackage!("sv_support");
   RequirePackage!("url");
   // svmult.cls v1.0:939/942 (CR line ends), svmultln.cls:1810/1813: `\newtoks\tocauthor`, `\newtoks\toctitle`, the

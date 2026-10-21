@@ -519,6 +519,15 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   `\everycr`) run unbalanced, 28 errors → Fatal; held for a ruling (ship the patch, or `\everycr` first). Repros
   `kernel-alignment/everycr_runs_after_every_cr`, `amstex/amstex_active_at_reads_the_arrows` (both RED).
 
+- **subcaption sets the main caption at 90 %** (PERL-ORIGIN; found by rev78a2): subcaption_sty.rs's
+  `\fnum@font@float`/`\format@title@font@float` are `\small` (Perl subcaption.sty.ltxml:34-35), so with subcaption loaded
+  every figure's and table's label and caption text read `fontsize="90%"`; pdflatex sets them in the text font (CMR10,
+  checked in jfm and in plain article + subcaption). Pinned as it is in
+  `perfect_kernel_batch78a::{jfm_copy_caption_yields_to_caption_loaders,
+  jfm_copy_caption_yields_to_caption_loaders_after_floatrow}` (repro
+  `class-bindings/jfm_caption/jfm_copy_caption_yields_to_subcaption`); open, small: drop the two `\small`s, then
+  re-pin the guards and the captions-floats goldens.
+
 - **`\cref` to an `\item[…]` of a description inside an enumerate prints no name** (GENUINE-RUST-ONLY since 77u r3, base
   printed the item's own label; review rev77u2 finding 4): the refnum is now the enclosing enumerate item's ("2", KNOWN_PERL_ERRORS
   #1003), but the item's cleveref forms are built for its own list's type (`\lx@make@tags{@desci}`, dialect.rs
@@ -4793,7 +4802,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   W 8538 → 8537, 128 outputs changed, each the item's change (no control but one llncs-class paper); the one E+1,
   2108.12618, is nowfnt.cls's `\nowfnt@font@paragraph`, undefined here before as its section fonts are (pre-existing),
   now also reached by its starred paragraph titles. Inits 0/0, dumps identical to int40c.
-  Round 2 (rev78a; guards +6, 18 in all, each RED on 78a r1 but the subfigure control): a jfm copy's own caption format
+  Round 2 (rev78a; guards +6, 18 in all, each RED on 78a r1 but two controls, subfigure and floatrow — the floatrow
+  repro is byte-identical on r1 and r2, the guard pins the r1 output r2 first lost in its own A/B): a jfm copy's own caption format
   is installed at `\begin{document}` only where caption is not loaded — caption, or subcaption/subfig, which load it,
   replace the class's `\@makecaption` ("Figure 1:"; 1711.01065, 2205.10181, 2507.07213, 1805.00129), the old subfigure
   package and floatrow (caption's kernel alone, `\lx@caption@kernel@only`; 2312.13002, 2111.12004) do not; svmult's
@@ -4803,10 +4813,23 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `bibref_show::natbib_numbers_citet_merges_same_authors` changed; OD #786 residuals: labeltitle, nameless
   `\citeauthor`); KPE #1015's text describes the `paragraph_cell_body` mechanism; the empty `<text/>` in an autoref
   tag is hyperref's `\null` (every figure's, pre-existing). A/B r1 → r2 (release; 503 papers: r1's 393, the review's
-  95, the 40 jfm copies with their own `\@makecaption`, 3 svmult/svmono papers with `\backmatter` from a 141k-zip
+  95, the 40 jfm copies with their own `\@makecaption` the census found — not all: rev78a2's 40k-zip sample found 23
+  more, 1612.03374 and 2008.04616 among them —, 3 svmult/svmono papers with `\backmatter` from a 141k-zip
   scan): E 1153 → 1153, F 1 → 1, W 9623 → 9623, 10 outputs changed, each a jfm copy under caption/subcaption/subfig
   ("Figure 1:" as their PDFs, 2205.09346 and 1712.00836 checked); HTML A/B of the 28 biblatex papers and 100 controls:
   0 changed.
+  Round 3 (rev78a2; guards +5, 23 in all, each RED on 78a r2 — the svmult guard's back-matter half a control): svmult's main-matter `\appendix` is `\par` (svmult.cls:713), so its sections count on — r2's book
+  section reset renumbered 1808.08417 (sections 5, 6), 2108.07775 ("8 Appendix") and 2212.13109 ("9 Appendix:
+  Octonions", "10") from 1; its `\backmatter` `\let\appendix=\bppendix` (:482), book's resetting appendix; svmono's
+  `\backmatter` sets `\@mainmatterfalse` (:418; chapters stay numbered); book's section reset moved into `\appendix`, so
+  a second one resets too (KPE #1016). `\usepackage[caption=false]{subfig}` loads `caption3` (subfig.sty:129-141), which
+  keeps a jfm copy's own caption; subcaption and subfig's caption path clear `\lx@caption@kernel@only`, as they load
+  caption after floatrow's `caption3` (OD #784, its residual narrowed to an explicit `\usepackage{caption}` after
+  floatrow). OD #786 retitled for the natbib change; the subcaption 90 % caption size a row of its own ("Perfect-kernel
+  RED repros without a row elsewhere"). A/B r2 → r3 (release, cores 0-31; 701 papers: r2's 503, rev78a2's 35 and 8,
+  and all 168 svmult/svmono papers of rev78a2's 141,963-zip scan): E 1160 → 1160, F 1 → 1, W 12848 → 12848, 3 outputs
+  changed — 1808.08417, 2108.07775, 2212.13109, each byte-identical (ids aside) to r1's and numbered as its PDF; HTML A/B
+  (141): 0 outputs changed (2003.06847's +1 trim Warning is the shared-directory artifact of round 2).
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
   parts draw, as Unicode's IPA letter, cross-checked against tipauni.sty; the `""`/`||` ligatures ˌ ǁ), so its input

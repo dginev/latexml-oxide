@@ -16346,12 +16346,19 @@ back-matter precedent, koma_script.rs `koma_book_matter`). `\frontmatter`/`\main
 sectioning-frontmatter/book_backmatter_chapters_are_unnumbered). Not for svmult/svmono, which bind book:
 svmult.cls:478-484 keeps `%\@mainmatterfalse` commented out and its `\@chapter` (:592) steps the counter anyway
 ("Chapter 2 Afterword"; 1905.01770's copy); svmono.cls:418 sets it, but its `\@chapter` and `\@makechapterhead`
-(:478-513) number by `\if@chapnum`, not the matter (1704.03069's copy) — so svmult_cls.rs's `\backmatter` is Perl's
-no-op (guard `perfect_kernel_batch78a::svmult_backmatter_chapters_stay_numbered`). The other book-based bindings follow
-their classes: extbook.cls:302-308 and ut-thesis (book's own) are book's, amsbook's is its own no-op, memoir is raw.
-With the back-matter chapters unnumbered, book.cls:520-524's `\appendix` `\setcounter{section}{0}` (which Perl's
-`\appendix` leaves out) is the only section reset before the appendix: book_cls.rs's `\@appendix` does it (".1 Proofs",
-not ".3"; guard `perfect_kernel_batch78a::book_appendix_after_backmatter_restarts_sections`).
+(:478-513) number by `\if@chapnum`, not the matter (1704.03069's copy) — so svmult_cls.rs's `\backmatter` keeps the
+chapters numbered: svmult's sets nothing, svmono's `\@mainmatterfalse` alone (guards
+`perfect_kernel_batch78a::{svmult_backmatter_chapters_stay_numbered, svmono_backmatter_leaves_the_main_matter}`). The
+other book-based bindings follow their classes: extbook.cls:302-308 and ut-thesis (book's own) are book's, amsbook's is
+its own no-op, memoir is raw. With the back-matter chapters unnumbered, book.cls:520-524's `\appendix`
+`\setcounter{section}{0}` (which Perl's `\appendix` leaves out) is the only section reset before the appendix:
+book_cls.rs's `\appendix` does it, every time it runs (".1 Proofs", not ".3"; a second `\appendix` ".1" again; guards
+`perfect_kernel_batch78a::{book_appendix_after_backmatter_restarts_sections, book_second_appendix_restarts_sections}`).
+Not svmult's: its main-matter `\appendix` is `\par` (svmult.cls:713, v5.5 :720; the article appendix of a contributed
+chapter), so the sections count on — 1808.08417's sections 5, 6 and "Theorem 6.1", 2108.07775's "8 Appendix",
+2212.13109's "9 Appendix: Octonions" and "10" — and svmult_cls.rs's `\appendix` starts the appendices without the
+reset; its `\backmatter` (:482) `\let\appendix=\bppendix`, the book appendix (:715-732), which resets as book's does.
+svmono.cls:598-608's `\appendix` resets: book's (guard `perfect_kernel_batch78a::svmult_appendix_keeps_counting_sections`).
 
 ## 1017. llncs's item labels are article's
 

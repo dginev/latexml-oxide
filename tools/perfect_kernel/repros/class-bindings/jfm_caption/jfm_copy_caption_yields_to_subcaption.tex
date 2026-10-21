@@ -2,7 +2,9 @@
 % oracle:  pdflatex 0 errors; "(a) Left.", "Figure 1: Schematic.", "Table 1: Values." in the text font: caption (which
 %          subcaption loads) replaces the class's `\@makecaption`
 % engines: rust 78a r1 = <tag close=". "> with the labels (and the sub-caption's "(a)") in small caps
-% expect:  0 errors, 0 warnings; <tag close=": ">, no small caps, "(a)" at the sub-caption size
+% expect:  0 errors, 0 warnings; <tag close=": ">, no small caps, "(a)" at the sub-caption size; the main caption at
+%          fontsize 90%, subcaption's `\small` (Perl's subcaption.sty.ltxml:34-35), where pdflatex sets the text font
+%          (CMR10) — a known artifact (SYNC_STATUS)
 % status:  GREEN (78a r2)
 % preload: ar5iv.sty
 \documentclass{jfm}

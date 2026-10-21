@@ -1,0 +1,14 @@
+% witness: subfig.sty:129-141 (`caption=false` loads caption's kernel alone, `caption3`, which keeps the class's
+%          `\@makecaption`); 1612.03374 (a jfm copy under subfig)
+% oracle:  pdflatex 0 errors; "Figure 1. Schematic." and "Table 1. Values." with the labels in small caps (CMCSC10)
+% engines: rust 78a r2 = <tag close=": "> upright (subfig always loaded caption); 78a r1 = the class's format;
+%          perl = "Figure 1:"
+% expect:  0 errors, 0 warnings; <tag close=". "> with the label in small caps, the sub-caption "(a)"
+% status:  GREEN (78a r3)
+% preload: ar5iv.sty
+\documentclass{jfm}
+\usepackage[caption=false]{subfig}
+\begin{document}
+\begin{figure}\subfloat[Left.]{A}\caption{Schematic.}\end{figure}
+\begin{table}\caption{Values.}\end{table}
+\end{document}

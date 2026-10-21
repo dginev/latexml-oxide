@@ -1,0 +1,23 @@
+% witness: book.cls:520-524 (`\appendix` `\setcounter{section}{0}` each time it runs)
+% oracle:  pdflatex 0 errors: after `\backmatter`, ".1 Proofs", and after the second `\appendix`, ".1 More"
+% engines: rust 78a r2 = ".1", ".2" (the reset ran only with the first `\appendix`); perl = ".2", ".3"
+% expect:  0 errors, 0 warnings; both appendix sections ".1", with distinct ids
+% status:  GREEN (78a r3)
+% preload: ar5iv.sty
+\documentclass{book}
+\begin{document}
+\mainmatter
+\chapter{Intro}
+\section{Sec}
+x
+\backmatter
+\chapter{After}
+\section{Notes}
+a
+\appendix
+\section{Proofs}
+p
+\appendix
+\section{More}
+q
+\end{document}

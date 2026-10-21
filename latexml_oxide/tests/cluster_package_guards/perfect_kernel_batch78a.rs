@@ -3,7 +3,8 @@
 //! in whole elements. Witnesses 0712.2739, 2608.01828 (jfm), 2602.22000 (multirow), 1803.08052 (boldmath),
 //! nucl-ex0511052 and 2208.08472 (ligatures), 2402.17192 and 2410.22329 (biblatex), 2605.04767 (IEEEtran),
 //! 2607.29279 (llncs); round 2: 1711.01065, 2205.10181, 2507.07213, 1805.00129 (jfm copies under caption loaders),
-//! 2312.13002, 2111.12004 (jfm copies under floatrow), 1905.01770 (svmult).
+//! 2312.13002, 2111.12004 (jfm copies under floatrow), 1905.01770 (svmult); round 3: 1808.08417, 2108.07775,
+//! 2212.13109 (svmult appendices), 1704.03069 (svmono), 1612.03374, 2008.04616 (jfm copies under subfig, caption).
 use latexml::util::test::{assert_element, convert_files_with, convert_with};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -286,7 +287,9 @@ fn llncs_item_labels_are_the_class_s() {
 /// The document's caption package — here subcaption's — replaces a jfm copy's own `\@makecaption`: "Figure 1:" in the
 /// caption font, no small caps, the sub-caption's "(a)" at its size. Red (78a r1): `close=". "`, the labels and the
 /// "(a)" in small caps. Witnesses 1711.01065, 2205.10181, 2507.07213. Repro
-/// class-bindings/jfm_caption/jfm_copy_caption_yields_to_subcaption.
+/// class-bindings/jfm_caption/jfm_copy_caption_yields_to_subcaption. (The main caption's `fontsize="90%"` is a known
+/// artifact, pinned as it is: subcaption's `\small` caption font from Perl's subcaption.sty.ltxml:34-35, where pdflatex
+/// sets the text font, CMR10 — a SYNC_STATUS row.)
 #[test]
 fn jfm_copy_caption_yields_to_caption_loaders() {
   assert_clean(
@@ -410,7 +413,8 @@ fn svmult_backmatter_chapters_stay_numbered() {
 
 /// book's `\appendix` restarts the sections (book.cls:520-524 `\setcounter{section}{0}`): after `\backmatter` no
 /// chapter step does it, so the appendix's first section is ".1" as in pdflatex. Red (78a r1): ".3". Repro
-/// sectioning-frontmatter/book_appendix_after_backmatter_restarts_sections.
+/// sectioning-frontmatter/book_appendix_after_backmatter_restarts_sections. (The `typerefnum` "1.§" is a known
+/// artifact, pinned as it is — int40c gives "3.§"; pdflatex prints no reference form here.)
 #[test]
 fn book_appendix_after_backmatter_restarts_sections() {
   assert_clean(
@@ -462,5 +466,161 @@ fn biblatex_numeric_textcite_without_author_keeps_its_brackets() {
     "<p class=\"ltx_p\" id=\"p1.1\"><cite class=\"ltx_cite ltx_citemacro_citet\">Hampe [<a class=\"ltx_ref\" \
      href=\"#bib.bib1\" title=\"T\">1</a>]</cite> showed it.\n<cite class=\"ltx_cite ltx_citemacro_citet\">[<a \
      class=\"ltx_ref\" href=\"#bib.bib2\" title=\"No Author Misc\">2</a>]</cite> said it.</p>",
+  );
+}
+
+/// A jfm copy under `\usepackage[caption=false]{subfig}`: subfig loads caption's kernel alone (subfig.sty:129-141
+/// `caption3`), which keeps the class's `\@makecaption` — "Figure 1." and "Table 1." with the labels in small caps.
+/// Red (78a r2, subfig always loading caption): `close=": "` upright. Witness 1612.03374. Repro
+/// class-bindings/jfm_caption/jfm_copy_caption_kept_with_subfig_without_caption.
+#[test]
+fn jfm_copy_caption_kept_with_subfig_without_caption() {
+  assert_clean(
+    repro!("class-bindings/jfm_caption/jfm_copy_caption_kept_with_subfig_without_caption.tex"),
+    &[("jfm.cls", repro!("class-bindings/jfm_caption/jfm.cls"))],
+    &[
+      (
+        "figure",
+        "S0.F1",
+        "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag><text font=\"smallcaps\" xml:id=\"S0.F1.1\">Figure \
+         1</text></tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.2\"/></tag><tag role=\"refnum\">1</tag>\
+         <tag role=\"typerefnum\">Figure 1</tag></tags><figure xml:id=\"S0.F1.sf1\"><tags><tag>(a)</tag><tag \
+         role=\"autoref\">1a<text xml:id=\"S0.F1.sf1.1\"/></tag><tag role=\"refnum\">1a</tag></tags><p \
+         xml:id=\"S0.F1.sf1.2\">A</p><toccaption><tag close=\" \">a</tag>Left.</toccaption><caption><tag close=\" \">\
+         (a)</tag>Left.</caption></figure><toccaption><tag close=\" \">1</tag>Schematic.</toccaption><caption><tag \
+         close=\". \"><text font=\"smallcaps\" xml:id=\"S0.F1.3\">Figure 1</text></tag>Schematic.</caption></figure>",
+      ),
+      (
+        "table",
+        "S0.T1",
+        "<table inlist=\"lot\" xml:id=\"S0.T1\"><tags><tag><text font=\"smallcaps\" xml:id=\"S0.T1.1\">Table \
+         1</text></tag><tag role=\"autoref\">Table\u{a0}1<text xml:id=\"S0.T1.2\"/></tag><tag role=\"refnum\">1</tag>\
+         <tag role=\"typerefnum\">Table 1</tag></tags><toccaption><tag close=\" \">1</tag>Values.</toccaption><caption>\
+         <tag close=\". \"><text font=\"smallcaps\" xml:id=\"S0.T1.3\">Table 1</text></tag>Values.</caption></table>",
+      ),
+    ],
+  );
+}
+
+/// subcaption and subfig load caption even after floatrow's `caption3` (subcaption.sty:43, subfig.sty:129-139), and
+/// caption replaces a jfm copy's own `\@makecaption`: "Figure 1:", no small caps. Red (78a r1, r2): `close=". "` in
+/// small caps (caption3's stand-in marked caption's kernel alone and the mark stayed). Witness 2008.04616 (a copy under
+/// caption). Repros class-bindings/jfm_caption/jfm_copy_caption_yields_to_{subcaption,subfig}_after_floatrow. (The
+/// `fontsize="90%"` is subcaption's `\small`, the known artifact of `jfm_copy_caption_yields_to_caption_loaders`.)
+#[test]
+fn jfm_copy_caption_yields_to_caption_loaders_after_floatrow() {
+  assert_clean(
+    repro!("class-bindings/jfm_caption/jfm_copy_caption_yields_to_subcaption_after_floatrow.tex"),
+    &[("jfm.cls", repro!("class-bindings/jfm_caption/jfm.cls"))],
+    &[(
+      "figure",
+      "S0.F1",
+      "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag><text fontsize=\"90%\" xml:id=\"S0.F1.1\">Figure \
+       1</text></tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.2\"/></tag><tag role=\"refnum\">1</tag><tag \
+       role=\"typerefnum\">Figure 1</tag></tags><toccaption><tag close=\" \">1</tag>Schematic.</toccaption><caption><tag \
+       close=\": \"><text fontsize=\"90%\" xml:id=\"S0.F1.3\">Figure 1</text></tag><text fontsize=\"90%\" \
+       xml:id=\"S0.F1.4\">Schematic.</text></caption></figure>",
+    )],
+  );
+  assert_clean(
+    repro!("class-bindings/jfm_caption/jfm_copy_caption_yields_to_subfig_after_floatrow.tex"),
+    &[("jfm.cls", repro!("class-bindings/jfm_caption/jfm.cls"))],
+    &[
+      (
+        "figure",
+        "S0.F1",
+        "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text \
+         xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags>\
+         <toccaption><tag close=\" \">1</tag>Schematic.</toccaption><caption><tag close=\": \">Figure 1</tag>Schematic.\
+         </caption></figure>",
+      ),
+      (
+        "table",
+        "S0.T1",
+        "<table inlist=\"lot\" xml:id=\"S0.T1\"><tags><tag>Table 1</tag><tag role=\"autoref\">Table\u{a0}1<text \
+         xml:id=\"S0.T1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags>\
+         <toccaption><tag close=\" \">1</tag>Values.</toccaption><caption><tag close=\": \">Table 1</tag>Values.\
+         </caption></table>",
+      ),
+    ],
+  );
+}
+
+/// svmult's main-matter `\appendix` is a `\par` (svmult.cls:713 `\renewcommand\appendix{\par}`, the article appendix of
+/// a contributed chapter): the sections count on, the appendix's third section is ".3" (pdflatex "3 Proofs"; the "."
+/// is LaTeXML's appendix `\thechapter`, as before). Red (78a r2, book's section reset): ".1", colliding with the main
+/// text's numbers. After `\backmatter` (:482 `\let\appendix=\bppendix`) the book appendix resets: ".1", as pdflatex.
+/// Witnesses 1808.08417 (sections 5, 6; "Theorem 6.1"), 2108.07775 ("8 Appendix"), 2212.13109 ("9 Appendix:
+/// Octonions"). Repros sectioning-frontmatter/svmult_appendix_keeps_counting_sections,
+/// sectioning-frontmatter/svmult_backmatter_appendix_restarts_sections.
+#[test]
+fn svmult_appendix_keeps_counting_sections() {
+  assert_clean(
+    repro!("sectioning-frontmatter/svmult_appendix_keeps_counting_sections.tex"),
+    &[],
+    &[(
+      "section",
+      "A0.S3",
+      "<section inlist=\"toc\" xml:id=\"A0.S3\"><tags><tag>.3</tag><tag role=\"refnum\">.3</tag><tag \
+       role=\"typerefnum\">3.\u{00A7}</tag></tags><title><tag close=\" \">.3</tag>Proofs</title><para \
+       xml:id=\"A0.S3.p1\"><p xml:id=\"A0.S3.p1.1\">P.</p></para></section>",
+    )],
+  );
+  assert_clean(
+    repro!("sectioning-frontmatter/svmult_backmatter_appendix_restarts_sections.tex"),
+    &[],
+    &[(
+      "section",
+      "A0.S1",
+      "<section inlist=\"toc\" xml:id=\"A0.S1\"><tags><tag>.1</tag><tag role=\"refnum\">.1</tag><tag \
+       role=\"typerefnum\">1.\u{00A7}</tag></tags><title><tag close=\" \">.1</tag>Proofs</title><para \
+       xml:id=\"A0.S1.p1\"><p xml:id=\"A0.S1.p1.1\">P.</p></para></section>",
+    )],
+  );
+}
+
+/// svmono's `\backmatter` leaves the main matter (svmono.cls:418 `\@mainmatterfalse`) and its chapters stay numbered
+/// (`\if@chapnum`, :478-513): "Chapter 2 Afterword", "Back matter.". Red (78a r2, svmult's no-op): "Main matter.".
+/// Witness 1704.03069. Repro sectioning-frontmatter/svmono_backmatter_leaves_the_main_matter.
+#[test]
+fn svmono_backmatter_leaves_the_main_matter() {
+  assert_clean(
+    repro!("sectioning-frontmatter/svmono_backmatter_leaves_the_main_matter.tex"),
+    &[],
+    &[(
+      "chapter",
+      "Ch2",
+      "<chapter inlist=\"toc\" xml:id=\"Ch2\"><tags><tag>Chapter 2</tag><tag role=\"refnum\">2</tag><tag \
+       role=\"typerefnum\">Chapter 2</tag></tags><title><tag close=\" \">Chapter 2</tag>Afterword</title><toctitle><tag \
+       close=\" \">2</tag>Afterword</toctitle><para xml:id=\"Ch2.p1\"><p xml:id=\"Ch2.p1.1\">Back matter.</p></para>\
+       </chapter>",
+    )],
+  );
+}
+
+/// book's `\appendix` resets the sections each time (book.cls:520-524): a second `\appendix` after `\backmatter`
+/// numbers its section ".1" again, as pdflatex (distinct ids). Red (78a r2, the reset in `\@appendix`, which runs once):
+/// ".2". Repro sectioning-frontmatter/book_second_appendix_restarts_sections.
+#[test]
+fn book_second_appendix_restarts_sections() {
+  assert_clean(
+    repro!("sectioning-frontmatter/book_second_appendix_restarts_sections.tex"),
+    &[],
+    &[
+      (
+        "section",
+        "A0.S1",
+        "<section inlist=\"toc\" xml:id=\"A0.S1\"><tags><tag>.1</tag><tag role=\"refnum\">.1</tag><tag \
+         role=\"typerefnum\">1.\u{00A7}</tag></tags><title><tag close=\" \">.1</tag>Proofs</title><para \
+         xml:id=\"A0.S1.p1\"><p xml:id=\"A0.S1.p1.1\">p</p></para></section>",
+      ),
+      (
+        "section",
+        "A0.S1a",
+        "<section inlist=\"toc\" xml:id=\"A0.S1a\"><tags><tag>.1</tag><tag role=\"refnum\">.1</tag><tag \
+         role=\"typerefnum\">1.\u{00A7}</tag></tags><title><tag close=\" \">.1</tag>More</title><para \
+         xml:id=\"A0.S1a.p1\"><p xml:id=\"A0.S1a.p1.1\">q</p></para></section>",
+      ),
+    ],
   );
 }

@@ -14,7 +14,29 @@ LoadDefinitions!({
   // `\clearcaptionsetup` are caption's (caption3.sty:244-280). First, so subfig's own definitions
   // below win. Perl's own `\captionsetup[]{}` stub (subfig.sty.ltxml:107; KPE #319) replaced
   // caption's working one when subfig loaded after caption.
-  RequirePackage!("caption");
+  // The `caption` option (subfig.sty:107-128 `\sf@split`, `\sf@setbool`: `0`, `false`, `no`, `off` turn it off) picks
+  // which: caption's kernel alone (`caption3`, which the caption binding stands in for and marks
+  // `\lx@caption@kernel@only`, caption_sty.rs) leaves a class's own `\@makecaption` in place, and caption replaces it —
+  // a load TeX makes even after floatrow's `caption3`, so the mark goes (jfm_cls.rs; 1805.00129, 1612.03374). Guards
+  // `perfect_kernel_batch78a::{jfm_copy_caption_kept_with_subfig_without_caption,
+  // jfm_copy_caption_yields_to_caption_loaders_after_floatrow}`.
+  let use_caption = lookup_vecdeque("opt@subfig.sty").is_none_or(|options| {
+    options.iter().all(|option| {
+      let option = option.to_string();
+      match option.split_once('=') {
+        Some((key, value)) if key.trim() == "caption" => {
+          !matches!(value.trim(), "0" | "false" | "no" | "off")
+        },
+        _ => true,
+      }
+    })
+  });
+  if use_caption {
+    RequirePackage!("caption");
+    RawTeX!(r"\global\let\lx@caption@kernel@only\@undefined");
+  } else if !lookup_bool("caption.sty_loaded") {
+    RequirePackage!("caption3");
+  }
   // subfig's caption-family keys (subfig.sty:163-167, 271-282).
   for key in ["listofformat", "listofindent", "listofnumwidth", "farskip", "topadjust",
               "captionskip", "nearskip"] {

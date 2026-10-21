@@ -182,18 +182,17 @@ LoadDefinitions!({
   AssignMapping!("BACKMATTER_ELEMENT", "ltx:bibliography" => "ltx:chapter");
 
   Tag!("ltx:appendix", auto_close => true);
-  DefMacro!("\\appendix", "\\@appendix\\gdef\\@chapapp{\\appendixname}");
   // book.cls:520-524 `\appendix` also `\setcounter{section}{0}` (Perl's book.cls.ltxml leaves it): a back-matter
-  // chapter steps no chapter, so its sections' count ran on into the appendix (".3" for pdflatex's ".1"). Guard
-  // `perfect_kernel_batch78a::book_appendix_after_backmatter_restarts_sections`.
+  // chapter steps no chapter, so its sections' count ran on into the appendix (".3" for pdflatex's ".1"), and each
+  // `\appendix` resets it, a second one too (`\@appendix` is `\relax` once the appendices start). svmult's main-matter
+  // `\appendix` is a `\par` that resets nothing (svmult_cls.rs). Guards `perfect_kernel_batch78a::{
+  // book_appendix_after_backmatter_restarts_sections, book_second_appendix_restarts_sections}`.
+  DefMacro!(
+    "\\appendix",
+    "\\@appendix\\global\\c@section\\z@\\gdef\\@chapapp{\\appendixname}"
+  );
   DefPrimitive!("\\@appendix", {
     start_appendices("chapter");
-    assign_register(
-      "\\c@section",
-      Number::new(0).into(),
-      Some(Scope::Global),
-      Vec::new(),
-    )?;
   });
   // book.cls:283 `\newcommand\@chapapp{\chaptername}` (`\appendix` re-points it to
   // `\appendixname`): classes built on this one print it in their headings
