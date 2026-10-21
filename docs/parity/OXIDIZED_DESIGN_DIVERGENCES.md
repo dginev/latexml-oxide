@@ -2079,14 +2079,17 @@ ruling 2026-10-19).** Three readings of an author block Perl gets wrong (it merg
   row's symbol lines after a spaced break takes there only its lines down to a line of names (`name_count`, not itself a
   labelled institution, an address, a link or a note — `classify_thanks` —, no mark leading it, and carrying a symbol
   mark of its own after its text, over an institution, `reads_as_institution`, that does not go on with its words
-  — one word, a lowercase opening, every word of the line again: `continues_the_line` —, or over an e-mail address its
+  — one generic institution noun (`NON_NAME_WORDS`, no `NON_NAME_ACRONYMS` acronym), an opening connective (`of`,
+  `and`, `for`, `at`, `in`), every word of the line again: `continues_the_line` —, or over an e-mail address its
   names spell, `addresses_spelling`; r2, the 77y review's finding 2: `Google DeepMind`, `Hong Kong`, `Equal
   Contribution` alone under the row stay the block's, probes k1, k7, k9, which r1 had made creators; r3, the rev77y2
   re-review's findings 2 and 4: `$^*$Project Lead`, a legend, goes to Ann Able, `$^\S$Google DeepMind` to the block,
   probes m2, m4; `Shanghai Jiao Tong \\ University` and `Hong Kong \\ The Hong Kong University of Science and
   Technology` stay the block's, probes k12, k17; `Cat Cole \\ \texttt{ccole@x.edu}` is an author, probe k15, as in r1 —
   r1, r2 and int38b had made creators "*Project Lead", "§Google DeepMind", "Shanghai Jiao Tong", "Hong Kong", and Cat
-  Cole an affiliation); that line and the
+  Cole an affiliation; r4, the rev77y3 re-review's finding 1: `Cat Cole \\ CERN`, `Cat Cole, Dan Dorn \\ RIKEN`,
+  `Cat Cole \\ the University of Tokyo`, `\\ eBay Inc.` keep their authors, the institution theirs, probes k20, k26,
+  k31, k40-k42, which r3 had made an affiliation of the shared creator as int38b does); that line and the
   lines under it are a block of their own, opening a row (probe w1's "Cat Cole" had been an affiliation of the shared
   creator and Univ C every name's of the row; w2's "Cat Cole§" Bob Baker's affiliation; no paper in rev77p8's scan of
   115k). A marked affiliation's unmarked continuation lines stay welded to it in a symbol row, as in a numbered block
@@ -2129,14 +2132,25 @@ ruling 2026-10-19).** Three readings of an author block Perl gets wrong (it merg
   r3, the rev77y2 re-review's finding 3, probes l4-l7, which r2 had made creators named by the line under them or a URL
   contact of Ann Able; "Model Card", "Paper Website" — `paper` a link word —, "Hugging Face Demo", "Interactive Online
   Demo" URL contacts, probes u1, u3, u4, l1-l3, which r11 and r2 had made creators; a two-word text alone in its column
-  stays a name, "Source Code", "Online Demo": no corpus witness, probes a5, a6, a SYNC residual); a column of such links
-  over an institution is the block's, the institution its affiliation (`block_lines`: probes l1-l3 — not a creator named
-  by the link or the institution); a bare domain's link names its organization also when its text spells the domain's
+  stays a name, "Source Code", "Online Demo": no corpus witness, probes a5, a6, a SYNC residual — and so does a
+  three-word one ending in a link word that is also a surname, "Full Source Code", "Google Scholar Page", "Hugging Face
+  Link", alone in an `\and` column: a creator named by the link as int38b makes, probes s1, s3, s4, s7 of the rev77y3
+  re-review's finding 5, no author block linking such a text among 519,672 papers of 2025-2026, the same SYNC residual;
+  the surname is read as a link word is, a plural's `s` dropped, and a name suffix after it is none, `NAME_SUFFIXES`:
+  "Mary Ann Pages", "Lawrence Page Jr." names, r4, the rev77y3 re-review's findings 4 and 6, probes s9, s8, which r3
+  had made URL contacts); a column of such links over an institution is the block's, each line under the links by its
+  kind — an address the block's e-mail, a link line printing a URL a URL contact, the rest affiliations (`block_lines`:
+  probes l1-l3 — not a creator named by the link or the institution; r4, the rev77y3 re-review's finding 3: probe b9's
+  `\texttt{contact@x.org}` an e-mail, which r3 had made an affiliation); a bare domain's link names its organization also when its text spells the domain's
   name, its letters and digits, in a handle, a mark no word holds (`names_an_organization`:
   `\href{https://www.deepseek.com}{deepseek-ai}` an affiliation, probe s14; a homepage's
   `\href{https://www.annable.com}{annable}` stays a URL contact, r2, the 77y review's finding 4, probes d1, d2), and a
-  link printing a handle a name of the block spells is a URL contact (`link_prints_a_handle`: `{ann-able}`,
-  `{annable42}`, r3, the rev77y2 re-review's finding 5, probes d5, d9, which r2 had made affiliations); an icon a
+  link printing a handle whose letters are exactly a spelling of a name of the block — a joined spelling or its
+  initials, `NameKeys` — is a URL contact (`link_prints_a_handle`: `{ann-able}`, `{annable42}`, `{AnnAble}`, r3, the
+  rev77y2 re-review's finding 5, probes d5, d9, d12, which r2 had made affiliations; a name's words running inside an
+  organization's name are none, `{Huawei}` under Hua Wu and Xiaoming Wei, `{Samsung}` under Sam Smith, `{able-lab}`
+  under Ann Able stay affiliations, r4, the rev77y3 re-review's finding 2, probes h1-h9, which r3 had made URL
+  contacts); an icon a
   `\quad` parts from the link line after it is that link's
   (`join_icons_to_links`, before either branch: 2601.17879's `\github \quad \url{…}`, the logo had been an affiliation
   of its own). E-mails: a truncated family-first spelling — the local part's letters used up — scores the letters it
@@ -2164,7 +2178,10 @@ ruling 2026-10-19).** Three readings of an author block Perl gets wrong (it merg
   diverging_local_part_is_the_shorter_names}` and, r3 (each red on 77y r2 from its minimal repro, the c4 guard
   re-pinned), `{line_under_a_one_line_last_institution_is_the_rows, mark_led_line_under_symbol_lines_is_no_names,
   link_word_surnames_stay_names_over_any_line, link_column_over_an_institution_is_the_blocks,
-  names_split_under_symbol_lines_reads_the_line_under, homepage_handle_spelling_the_name_is_a_url}` and the unit test
+  names_split_under_symbol_lines_reads_the_line_under, homepage_handle_spelling_the_name_is_a_url}` and, r4 (each red
+  on 77y r3 from its minimal repro; k20, k42, k31 added to the names-split guard),
+  `{organization_link_its_authors_names_run_through_is_their_affiliation, link_column_lines_are_the_blocks_by_their_kind,
+  link_word_surnames_stay_names_plural_or_suffixed}` and the unit test
   `base_utilities::author_split_tests::weldable_lines_are_institutions_and_places` (a place's particle, `Campus de
   Santiago, …`, 2605.19581) (`icon_parted_from_its_link_goes_with_it` pinned whole), the unit test
   `base_utilities::author_split_tests::leading_symbol_labels_skip_only_a_run_whole`; six 77p guards pinned to whole

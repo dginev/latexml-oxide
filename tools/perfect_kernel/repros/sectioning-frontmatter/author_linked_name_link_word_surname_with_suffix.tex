@@ -1,0 +1,13 @@
+% witness: the rev77y3 re-review (finding 6, probe s8)
+% oracle:  pdflatex 0 errors: two \and columns: Ann Able over Univ A; a linked "Lawrence Page Jr." over Univ B
+% engines: rust 77y r3 = 0 errors; the name a URL contact and Univ B an affiliation of the shared creator (77y r2: a creator "Univ B"); int38b as expected
+% expect:  0 errors, 0 warnings; two authors, Ann Able with Univ A, the linked Lawrence Page Jr. with Univ B
+% status:  RED (77y r3) -> GREEN (77y r4)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able \\ Univ A \and \href{https://x.org/p}{Lawrence Page Jr.} \\ Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -12,7 +12,10 @@
 //! (the rev77y2 re-review's findings 1-5): an unmarked line under a one-line last labelled institution is the row's; a
 //! mark-led line under symbol lines is no names; link-word surnames stay names over any line; a link column over an
 //! institution is the block's; the names split reads an e-mail and an institution's rest under it; a handle the name
-//! spells is a URL contact. Each guard
+//! spells is a URL contact. Round 4 (the rev77y3 re-review's findings 1-6, narrowing round 3): a name over an
+//! institution of its own (an acronym, an opening no connective) stays a name; an organization's link the names run
+//! through is their affiliation; a link column's lines are the block's by their kind; a plural or suffixed link-word
+//! surname keeps a linked name. Each guard
 //! asserts the three measures: no Error or Warning, every name once in its own `ltx:creator`, its contacts on it —
 //! whole elements.
 use latexml::util::test::convert_with;
@@ -682,7 +685,10 @@ fn link_column_over_an_institution_is_the_blocks() {
 /// \texttt{ccole@x.edu}`); a line over the rest of its institution is no names (`Shanghai Jiao Tong \\ University`, `Hong
 /// Kong \\ The Hong Kong University of Science and Technology`): the block's, the institution every name's of the row
 /// (R12) (the rev77y2 re-review's finding 4, probes k15, k12, k17). Was Cat Cole an affiliation of the shared creator
-/// (77y r2, int38b), and creators "Shanghai Jiao Tong", "Hong Kong" (77y r1, r2).
+/// (77y r2, int38b), and creators "Shanghai Jiao Tong", "Hong Kong" (77y r1, r2). A line over an institution of its own
+/// — an acronym (`CERN`, `RIKEN`), an opening no connective (`the University of Tokyo`) — is names, the institution
+/// theirs (the rev77y3 re-review's finding 1, probes k20, k42, k31; 77y r3 and int38b had made them an affiliation of
+/// the shared creator).
 #[test]
 fn names_split_under_symbol_lines_reads_the_line_under() {
   let xml = convert_repro!("author_symbol_lines_then_name_over_its_email.tex");
@@ -731,6 +737,45 @@ fn names_split_under_symbol_lines_reads_the_line_under() {
       ],
       "{line}"
     );
+  }
+  // (a line under the names that is an institution of its own — an acronym, an opening no connective — is theirs: the
+  // rev77y3 re-review's finding 1, probes k20, k42, k31; 77y r3 made the names an affiliation of the shared creator)
+  for (xml, names, institution) in [
+    (
+      convert_repro!("author_symbol_lines_then_name_over_an_acronym_institution.tex"),
+      vec!["Cat Cole"],
+      "CERN",
+    ),
+    (
+      convert_repro!("author_symbol_lines_then_names_over_an_acronym_institution.tex"),
+      vec!["Cat Cole", "Dan Dorn"],
+      "RIKEN",
+    ),
+    (
+      convert_repro!("author_symbol_lines_then_name_over_a_lowercase_institution.tex"),
+      vec!["Cat Cole"],
+      "the University of Tokyo",
+    ),
+  ] {
+    assert_no_merged_names(&xml);
+    let mut expected = vec![
+      creator(
+        true,
+        &marked("Ann Able", "id1", "†"),
+        &affiliation("Univ A"),
+      ),
+      creator(
+        false,
+        &marked("Bob Baker", "id2", "‡"),
+        &affiliation("Univ B"),
+      ),
+    ];
+    expected.extend(
+      names
+        .iter()
+        .map(|name| creator(false, name, &affiliation(institution))),
+    );
+    assert_eq!(creators(&xml), expected, "{institution}");
   }
 }
 
@@ -800,4 +845,69 @@ fn homepage_handle_spelling_the_name_is_a_url() {
       &url(&href("https://www.bobbaker42.com", "bobbaker42"))
     ),
   ]);
+}
+
+/// A link to an organization's bare domain printing its name (`\href{https://www.huawei.com}{Huawei}`) is the
+/// affiliation of the names over it, though their words run inside it ("hua", "wei"): only a handle that is exactly a
+/// spelling of one name is a homepage (the rev77y3 re-review's finding 2, probes h3, h9; h1-h8). Was a URL contact of
+/// the shared creator and no affiliation on either name (77y r3); int38b and 77y r2 as now.
+#[test]
+fn organization_link_its_authors_names_run_through_is_their_affiliation() {
+  let xml = convert_repro!("author_organization_link_its_authors_names_spell.tex");
+  assert_no_merged_names(&xml);
+  let huawei = affiliation(&href("https://www.huawei.com", "Huawei"));
+  assert_eq!(creators(&xml), [
+    creator(true, "Hua Wu", &huawei),
+    creator(false, "Xiaoming Wei", &huawei),
+  ]);
+}
+
+/// A column of a link over an institution over an e-mail address is the block's, each line by its kind: the link a URL
+/// contact, the institution an affiliation, the address an e-mail (the rev77y3 re-review's finding 3, probe b9). Was the
+/// address an affiliation (77y r3); a creator "Univ B" with the e-mail in int38b and 77y r2.
+#[test]
+fn link_column_lines_are_the_blocks_by_their_kind() {
+  let xml = convert_repro!("author_link_column_over_an_institution_and_an_email.tex");
+  assert_no_merged_names(&xml);
+  assert_eq!(creators(&xml), [
+    creator(true, "Ann Able", &affiliation("Univ A")),
+    shared(&format!(
+      "{} {} {}",
+      url(&href("https://x.org/p", "Project Page")),
+      affiliation("Univ B"),
+      typewriter_email("contact@x.org", "id1")
+    )),
+  ]);
+}
+
+/// A linked name whose surname is a link word in the plural (`Mary Ann Pages`) or before a generational suffix
+/// (`Lawrence Page Jr.`) stays a name over its institution (the rev77y3 re-review's findings 4 and 6, probes s9, s8).
+/// Was the name a URL contact and the institution the shared creator's (77y r3; s8 a creator "Univ B" in 77y r2); int38b
+/// as now.
+#[test]
+fn link_word_surnames_stay_names_plural_or_suffixed() {
+  for (xml, name) in [
+    (
+      convert_repro!("author_linked_name_plural_link_word_surname.tex"),
+      "Mary Ann Pages",
+    ),
+    (
+      convert_repro!("author_linked_name_link_word_surname_with_suffix.tex"),
+      "Lawrence Page Jr.",
+    ),
+  ] {
+    assert_no_merged_names(&xml);
+    assert_eq!(
+      creators(&xml),
+      [
+        creator(true, "Ann Able", &affiliation("Univ A")),
+        creator(
+          false,
+          &href("https://x.org/p", name),
+          &affiliation("Univ B")
+        ),
+      ],
+      "{name}"
+    );
+  }
 }

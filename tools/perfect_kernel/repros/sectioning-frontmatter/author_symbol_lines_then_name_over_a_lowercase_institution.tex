@@ -1,0 +1,12 @@
+% witness: the rev77y3 re-review (finding 1, probes k31, k26)
+% oracle:  pdflatex 0 errors: Ann Able†, Bob Baker‡ on one line; "†Univ A ‡Univ B" under them; "Cat Cole", then "the University of Tokyo"
+% engines: rust 77y r3 = 0 errors; "Cat Cole" an affiliation of the shared creator, the institution on both marked names (int38b the same); 77y r2 as expected
+% expect:  0 errors, 0 warnings; three authors, Univ A on Ann Able, Univ B on Bob Baker, "the University of Tokyo" on Cat Cole
+% status:  RED (77y r3) -> GREEN (77y r4)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \\ $^\dagger$Univ A \quad $^\ddagger$Univ B \\ Cat Cole \\ the University of Tokyo}
+\begin{document}
+\maketitle
+Text.
+\end{document}

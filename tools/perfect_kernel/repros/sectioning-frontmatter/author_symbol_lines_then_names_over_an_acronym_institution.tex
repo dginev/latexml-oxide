@@ -1,0 +1,12 @@
+% witness: the rev77y3 re-review (finding 1, probe k42)
+% oracle:  pdflatex 0 errors: Ann Able†, Bob Baker‡ on one line; "†Univ A ‡Univ B" under them; "Cat Cole, Dan Dorn", then "RIKEN"
+% engines: rust 77y r3 = 0 errors; "Cat Cole, Dan Dorn" an affiliation of the shared creator, RIKEN on both marked names (int38b the same); 77y r2 as expected
+% expect:  0 errors, 0 warnings; four authors, Univ A on Ann Able, Univ B on Bob Baker, RIKEN on Cat Cole and on Dan Dorn
+% status:  RED (77y r3) -> GREEN (77y r4)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \\ $^\dagger$Univ A \quad $^\ddagger$Univ B \\ Cat Cole, Dan Dorn \\ RIKEN}
+\begin{document}
+\maketitle
+Text.
+\end{document}

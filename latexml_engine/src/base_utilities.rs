@@ -2994,13 +2994,25 @@ LoadDefinitions!({
         };
         calls.extend(url_contact_call(link, owner, true)?);
       }
+      // (each by its kind: an address the block's e-mail, a link line printing a URL a URL contact, the rest
+      // affiliations — `\href{…}{Project Page} \\ Univ B \\ \texttt{contact@x.org}`, the rev77y3 re-review's finding 3,
+      // probe b9)
       for line in block_lines {
+        if line_is_email(&line) {
+          calls.extend(if replace {
+            email_line_calls(line, AddressPlacement::Shared)?
+          } else {
+            Invocation!(T_CS!("\\lx@add@email"), vec![None, Some(line)]).unlist()
+          });
+          continue;
+        }
         let owner = if replace {
           LinkOwner::Block
         } else {
           LinkOwner::Current
         };
-        calls.extend(url_contact_call(line, owner, false)?);
+        let url = is_url_line(&line);
+        calls.extend(url_contact_call(line, owner, url)?);
       }
     }
     Ok(Tokens::new(calls))
@@ -18931,20 +18943,30 @@ fn names_an_organization(text: &str, target: &str) -> bool {
   capitalized || domain_named
 }
 
-/// Whether `line` is a link printing one word an author's name spells (`keys`, [`spelled_owners`]): the author's own
-/// handle, a homepage, never an organization's name its domain spells ([`names_an_organization`]) —
-/// `\href{https://annable.com}{ann-able}`, `\href{https://www.annable42.com}{annable42}` under Ann Able (the rev77y2
-/// re-review's finding 5, probes d5, d9; `deepseek-ai` no name spells stays an affiliation).
+/// Whether `line` is a link printing one word whose letters are exactly a spelling of an author's name (`keys`: a joined
+/// spelling or the initials, [`NameKeys`]): the author's own handle, a homepage, never an organization's name its domain
+/// spells ([`names_an_organization`]) — `\href{https://annable.com}{ann-able}`,
+/// `\href{https://www.annable42.com}{annable42}`, `{AnnAble}` under Ann Able (the rev77y2 re-review's finding 5, probes
+/// d5, d9, d12; `deepseek-ai` no name spells stays an affiliation). A name's words running inside an organization's
+/// name are no spelling of it (`{Huawei}` under Hua Wu and Xiaoming Wei, `{Samsung}` under Sam Smith, `{able-lab}`
+/// under Ann Able: affiliations, the rev77y3 re-review's finding 2, probes h1-h9).
 fn link_prints_a_handle(line: &Tokens, keys: &[NameKeys]) -> bool {
   let Some((at, end)) = link_line_link(line) else {
     return false;
   };
   let (_, printed) = link_texts(&line.unlist_ref()[..end], at);
   let printed = printed.trim();
-  !printed.is_empty()
+  let letters: String = printed
+    .chars()
+    .filter(|c| c.is_alphabetic())
+    .collect::<String>()
+    .to_lowercase();
+  !letters.is_empty()
     && !printed.contains(char::is_whitespace)
     && !printed.contains('@')
-    && !spelled_owners(keys, printed).is_empty()
+    && keys
+      .iter()
+      .any(|keys| keys.joined.contains(&letters) || keys.initials.contains(&letters))
 }
 
 /// Whether `line` is a link line ([`is_url_line`]) that prints a web address, a link word or a label before its link:
@@ -19091,9 +19113,21 @@ fn reads_as_web_address(text: &str) -> bool {
 /// ([`SURNAME_LINK_WORDS`]: `Mary Ann Code`, `Lawrence Edward Page`, `Juan Carlos de la Page`, alone in their column or
 /// over an e-mail or a place: the 77y review's finding 1, probes a1-a3, a7, a8; the rev77y2 re-review's finding 3,
 /// probes l4-l6; no paper in either scan). A two-word text stays a name (`Source Code`, `Online Demo` alone in a column:
-/// no corpus witness, probes a5, a6; a SYNC residual).
+/// no corpus witness, probes a5, a6; a SYNC residual), and so does a three-word one ending in such a surname (`Full
+/// Source Code`, `Google Scholar Page`, `Hugging Face Link`: the rev77y3 re-review's finding 5, probes s1, s3, s4, s7;
+/// no author block linking such a text in the 2025-2026 scan; the same residual). The surname is read as a link word is,
+/// a plural's `s` dropped (`Mary Ann Pages`), after a name suffix is set aside ([`NAME_SUFFIXES`]: `Lawrence Page Jr.`;
+/// the rev77y3 re-review's findings 4 and 6, probes s9, s8).
 fn link_words_beyond_a_surname(text: &str) -> bool {
-  let words: Vec<&str> = text.split_whitespace().collect();
+  let mut words: Vec<&str> = text.split_whitespace().collect();
+  // (a name suffix after the surname is no surname: `Lawrence Page Jr.`, the rev77y3 re-review's finding 6, probe s8)
+  if words.len() > 2
+    && words
+      .last()
+      .is_some_and(|word| NAME_SUFFIXES.contains(&word.trim_end_matches(',')))
+  {
+    words.pop();
+  }
   let Some((last, before)) = words.split_last() else {
     return false;
   };
@@ -19103,23 +19137,24 @@ fn link_words_beyond_a_surname(text: &str) -> bool {
       && word.chars().all(|c| c.is_alphabetic() || c == '.')
       && word.chars().filter(|c| c.is_alphabetic()).count() <= 2
   };
-  // (a word whole, as spaces part it: no part of `Anne-Page`)
-  let link_word = |word: &str| {
+  // (a word whole, as spaces part it: no part of `Anne-Page`; lowercased, a plural's `s` dropped)
+  let stem = |word: &str| {
     let word = word
       .trim_matches(|c: char| !c.is_alphanumeric())
       .to_lowercase();
-    let word = word
-      .strip_suffix('s')
-      .filter(|_| word.len() > 3)
-      .unwrap_or(&word);
-    LINK_WORDS.contains(&word)
+    match word.strip_suffix('s') {
+      Some(stem) if word.len() > 3 => stem.to_string(),
+      _ => word,
+    }
   };
-  // (the last word's link words, a part of it each, `Page-Smith`, all surnames)
+  let link_word = |word: &str| LINK_WORDS.contains(&stem(word).as_str());
+  // (the last word's link words, a part of it each, `Page-Smith`, all surnames, read as a link word is: `Mary Ann
+  // Pages`, the rev77y3 re-review's finding 4, probe s9)
   let surname = || {
     last
       .split(|c: char| !c.is_alphanumeric())
       .filter(|part| link_word(part))
-      .all(|part| SURNAME_LINK_WORDS.contains(&part.to_lowercase().as_str()))
+      .all(|part| SURNAME_LINK_WORDS.contains(&stem(part).as_str()))
   };
   before.iter().any(|word| link_word(word))
     || (link_words(last) && !(before.len() == 1 || before.iter().any(initial) || surname()))
@@ -20579,17 +20614,23 @@ fn institution_beside_labelled(segment: &Tokens) -> bool {
 }
 
 /// Whether the institution `under` goes on with the words of `line` above it as one name of one institution, no
-/// institution of its own under a line of names: it is one word (`Shanghai Jiao Tong \\ University`), opens with a
-/// lowercase word (`… \\ of Science and Technology`), or holds every word of the line (`Hong Kong \\ The Hong Kong
-/// University of Science and Technology`) — the rev77y2 re-review's finding 4, probes k12, k17.
+/// institution of its own under a line of names: it is one generic institution noun ([`NON_NAME_WORDS`]: `Shanghai Jiao
+/// Tong \\ University`), opens with a connective (`… \\ of Science and Technology`), or holds every word of the line
+/// (`Hong Kong \\ The Hong Kong University of Science and Technology`) — the rev77y2 re-review's finding 4, probes k12,
+/// k17. An institution's own name is none (`Cat Cole \\ CERN`, `\\ RIKEN`, `\\ the University of Tokyo`, `\\ eBay
+/// Inc.`: the rev77y3 re-review's finding 1, probes k20, k26, k31, k40-k42).
 fn continues_the_line(line: &Tokens, under: &Tokens) -> bool {
   let text = visible_name_text(line.unlist_ref());
   let under = visible_name_text(under.unlist_ref());
   let words: Vec<&str> = under.split_whitespace().collect();
-  words.len() == 1
+  let generic_noun = |word: &str| {
+    word_forms(word).any(|form| NON_NAME_WORDS.contains(&form.as_str()))
+      && !NON_NAME_ACRONYMS.contains(&word)
+  };
+  matches!(words.as_slice(), [word] if generic_noun(word))
     || words
       .first()
-      .is_some_and(|word| word.chars().next().is_some_and(char::is_lowercase))
+      .is_some_and(|word| ["of", "and", "for", "at", "in"].contains(word))
     || text.split_whitespace().all(|word| words.contains(&word))
 }
 

@@ -1,0 +1,13 @@
+% witness: the rev77y3 re-review (finding 2, probes h3, h9; h1-h8)
+% oracle:  pdflatex 0 errors: "Hua Wu, Xiaoming Wei" over a "Huawei" link to https://www.huawei.com
+% engines: rust 77y r3 = 0 errors; no affiliation on either name, the link a URL contact of the shared creator; int38b and 77y r2 as expected
+% expect:  0 errors, 0 warnings; two authors, the linked "Huawei" an affiliation of each
+% status:  RED (77y r3) -> GREEN (77y r4)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Hua Wu, Xiaoming Wei \\ \href{https://www.huawei.com}{Huawei}}
+\begin{document}
+\maketitle
+Text.
+\end{document}
