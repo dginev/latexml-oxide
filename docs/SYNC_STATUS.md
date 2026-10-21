@@ -5134,6 +5134,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   llncs_author_inst_marks_keep_the_split}` (red on r2 65fcae409f). Residuals: an llncs `\texttt{ann@x.org, bob@x.org}`
   line under the names makes two creators (L8, as before), an `\inst` list's line under the names a creator (L11, as
   before).
+  **Integration (int44, 77t r1-r2 + follow-ups squashed f8e7ca3d6b, entics `\qed` ec39a99ec4; binary int44b):** gates
+  int44b: nextest 6604/6604 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int43a empty. Population A/B
+  (782: the 77t rounds' and reviews' 486 + 296 random of the proj98 sample) vs int43a (int44a): E 3,109 → 3,109, F 7 →
+  7, 0 Error or Fatal worse, no word loss > 1 %; 87 outputs changed (2 of the controls); 317 fewer `<Math>`, of which
+  the entics/entcs proofs' `$\Box$` → "∎" (elsart's `\ltx@qed` loaded after the raw class; 8 papers, 2204.12376 31) —
+  fixed (ec39a99ec4, the class's `\qed` kept; guard `perfect_kernel_batch77t::entics_qed_is_the_class_box`) and
+  re-checked over those 42 papers (int44b: E 12 → 12, the one Math difference 1011.0516's five `$(a)$` marks now its
+  affiliations' labels). Binding nets (int44a) 136/136, 0 documents worse than int43a.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;
