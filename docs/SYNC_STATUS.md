@@ -169,10 +169,10 @@ do not block the E/F rerun.
 | — | a jinstpub/jheppub copy whose own `\maketitle` adds lines loses them: 2103.11983's copy prints "Published in JINST as DOI: 10.1088/1748-0221/16/07/P07016" from its edited title page; the binding owns `\maketitle` (jheppub's the same exposure; of 121 jinstpub copies the rev78e review read, 4 edit what the title page prints: 3 the header line, kept since 78e r2 as a preprint pubnote, OD #801, and this one) | open, minor (78e r2 residual, the rev78e review's finding 3): a copy-aware rule would read the copy's `\maketitle` for lines the stock one lacks |
 | — | JHEP/JINST `\maketitle` prints the table of contents unless `\notoc` (jheppub.sty:229-232, jinstpub.sty:241-249); Perl's jheppub.sty.ltxml:97 makes `\notoc` a no-op and drops it, and jinstpub follows jheppub so the family keeps one rule (78e r2, main session ruling 2026-10-21; OD #801) — ~986 jheppub + ~121 jinstpub papers in 8 months (the rev78e review's scan) | RULED 2026-10-21: keep Perl's drop (generated content; the HTML provides navigation) — closed |
 | — | jinstpub's (and jheppub's, as Perl's) `\collaboration` and `\proceeding` are pubnotes, which LaTeXML.css shows only on hover (LaTeXML.css:107-119): 2311.16063's "on behalf of the DUNE collaboration" and 1610.01994's Pixel2016 conference line were visible lines read raw (the rev78e review's finding 10) | open, presentation (CSS; review with the ar5iv-css port at the goal's end) |
-| — | jheppub's `\emailAdd` gives the n-th address to the n-th author (Perl jheppub.sty.ltxml), while jheppub.sty's `\maketitle` prints one shared "E-mail:" line, as jinstpub's — whose binding now places each address on the author it spells (`\lx@add@contact@placed`, 78e r2; 16 of 23 jinstpub papers had a wrong owner under the n-th rule, e.g. 2311.16063's bross@fnal.gov on Bersani); jheppub very likely misattributes the same way (~986 papers in 8 months) | open — the same placement for jheppub is a Perl divergence for a large population: its own payload + A/B |
-| — | aa 2401.16957: a comma before the first `\inst` (`\author{Clara Dehman,\n\inst{1}\fnmsep…\inst{4}\thanks{…} Mario Centelles,\inst{5}…}`) makes the splitter give Clara's four affiliations and her e-mail note to Mario Centelles and lose his institutes 5-6 — wrong with 0 errors (as int45b; rev78e2 side finding) | open |
-| — | `\thanks{\label{fn:c}\email{x}}` (aa probe): the `\label` relabels the note, and the e-mail lands on a creator without a name instead of its author (as int45b; rev78e2) | open |
-| — | iopart `\ead` goes to the last author, not the one the address spells (2311.12551's benedikt.maier@ on T. K. Årrestad), and `\AA rrestad` renders "A<text yoffset/> rrestad" (as int45b; rev78e2) | open |
+| — | jheppub's `\emailAdd` gives the n-th address to the n-th author (Perl jheppub.sty.ltxml), while jheppub.sty's `\maketitle` prints one shared "E-mail:" line, as jinstpub's — whose binding now places each address on the author it spells (`\lx@add@contact@placed`, 78e r2; 16 of 23 jinstpub papers had a wrong owner under the n-th rule, e.g. 2311.16063's bross@fnal.gov on Bersani); jheppub very likely misattributes the same way (~986 papers in 8 months) | **FIXED 78f** (OXIDIZED_DESIGN_DIVERGENCES #805, KNOWN_PERL_ERRORS #1030; measured first: placing by the spelling alone would have put 40 of the 150-paper jheppub sample's addresses that the list's order gives right — `zhl61@` for Zhen Liu, 1303.3040 — on the author block): an address goes to the author it spells, else to the n-th author when the list is one place for each author in their order (the consistent list is evidence: user ruling 2026-10-21), else to the group's only author, else — the one address left on the author block of a multi-author paper — to the ONE author marked as the corresponding author (a "Corresponding author" note, or a mark whose legend says so; user ruling 2026-10-21, OD #809: 1901.08773, 2510.11030, 2211.07892; 1802.03677's note number two authors carry → the block; 2308.06532 by its address's "(Corresponding author)" and its one legend-less `*`), else the author block (`\lx@add@contact@placed[owner=sequence]`, `sequenced_contact_labels`); jcappub and jinstpub ride the binding; `\emailAdd{a, b}` an address each. A/B: jheppub addresses on another spelled author 7 → 0 (150 papers), jcappub 15 → 0 (83), jinstpub unchanged (23); guards `perfect_kernel_batch78f::{jheppub_emailadd_in_author_order, jheppub_emailadd_one_call_lists_the_authors, jheppub_emailadd_out_of_order_by_spelling}`. Residual: a name letter the keys drop (`\l`: 2212.09776's inalecz@) or a spelling they do not read leaves an address on the block |
+| — | aa 2401.16957: a comma before the first `\inst` (`\author{Clara Dehman,\n\inst{1}\fnmsep…\inst{4}\thanks{…} Mario Centelles,\inst{5}…}`) makes the splitter give Clara's four affiliations and her e-mail note to Mario Centelles and lose his institutes 5-6 — wrong with 0 errors (as int45b; rev78e2 side finding) | **FIXED 78f** (OXIDIZED_DESIGN_DIVERGENCES #807, KNOWN_PERL_ERRORS #1032): an `\inst` after the comma (with or without the space; llncs.cls:894 / aa.cls:759 `\unskip`) and a `\fnmsep` between marks are the name's before the comma (`marks_before_glued_commas`, `leading_inst_marks_end`): 2401.16957's Clara Dehman keeps her four institutes and note, Mario Centelles his 5-6; 15 census papers write a comma before `\inst`, 7 changed, each as its PDF; guard `perfect_kernel_batch78f::llncs_comma_before_inst_is_the_name_before` |
+| — | `\thanks{\label{fn:c}\email{x}}` (aa probe): the `\label` relabels the note, and the e-mail lands on a creator without a name instead of its author (as int45b; rev78e2) | **STOPPED 78f, not brief and no target**: pdflatex (TL 2025) errs on the shape itself — `\thanks{\label{…}…}` in an `\author` under aa.cls (41 Errors), article (101) and llncs: "Use of \@xfootnotemark doesn't match its definition", no PDF — and 0 of the 26,323 sel78d census papers write `\thanks{\label`; left as is |
+| — | iopart `\ead` goes to the last author, not the one the address spells (2311.12551's benedikt.maier@ on T. K. Årrestad), and `\AA rrestad` renders "A<text yoffset/> rrestad" (as int45b; rev78e2) | `\ead` **FIXED 78f** (OXIDIZED_DESIGN_DIVERGENCES #806, #808, #809, KNOWN_PERL_ERRORS #1031): placed as #805 (spelled, else in author order, else the one author requesting the mark of the `\address` the `\ead` follows — iopart.cls:363 prints it as an address block of its own there, 2407.14305's `rockfish3141@` Hidetomo Hoshino's —, else the group's only author — each iopart `\author` a group —, else, the one address left on the block, the ONE corresponding author of its group (and of its address mark's authors), else the block), an `\ead{a, b}` or `\ead{a and b}` an address each, a `\mailto` inside `\ead` the address font (0811.0981); A/B (r1) 162 iopart `\ead` papers: addresses on their spelled author 154 → 269, on another's 83 (in 81 papers) → 4 by the spelling test (two an `\ead` inside an `\address`, unchanged, residual; two the test's false flags), on the block 3 → 14; guard `perfect_kernel_batch78f::iopart_ead_goes_to_the_author_it_spells`. `\AA rrestad` **open, recorded (78f, not brief)**: the `\AA` is the paper's own `\def\AA{\textrm{A\kern -1.3ex\raisebox{0.6ex}{$^\circ$}}\kern 0.4ex}` (2311.12551 main.tex:49), not the kernel's ("Årrestad" under iopart); in a name the superscript it reaches is read by the frontmatter's mark reader (`^` → `\lx@sup@request@affiliation`) as an affiliation request "∘" no `\address` answers and `unanswered_mark_text` does not print, so the raised box is empty. Fix candidates (each a change of the mark pipeline for every class): read as marks only the superscripts the author line itself writes, or keep a superscript inside a box nested in the name plain. one other of the 26,323 census papers builds its `\AA` from a raised superscript (astro-ph0002307) |
 | — | tlp: a `\documentclass{tlp}` (and a renamed copy routed to it, new_tlp.cls: 1405.1833, 1405.2564, 2008.02015, 2008.04008, 2008.06692) reads the author block's affiliation lines after `\\` as more names — 1405.1833 4 → 6 creators, "KU Leuven E-Mail: …" and "transnational University of Limburg E-Mail: …"; the probe also raises a false "Can't find binding or file for 'tlp.cls'" Warning, OmniBus loaded before tlp_cls.rs (rev77w probe_tlp) | open (77w review finding 2): the raw tlp.cls `\author` lines go through the kernel author splitter; not a few lines on tlp_cls.rs |
 | — | jfm copies' equation numbers: a jfm.cls copy's `\theequation{\thesection.\@arabic\c@equation}` and `\@addtoreset{equation}{section}` (JFM-FLM_Au.cls:1317-1318) keep the OmniBus base's "(1)" — "Counter equation keeps LaTeXML's numbering" (2507.06135, PDF (2.1), (2.14a), (A 1); a `\documentclass{jfm}` without a copy the same; review finding 3; RED `stand-in-copies/provides_route/copy_numbers_equations_by_section`) | open, needs a ruling (77w r2): letting a counter the binding's base class (OmniBus, its article) numbered yield to the copy, as rule 2 lets the pool's article defaults yield to a package's copy (`stand_in_base_defaults` in `copy_provides_keeps_counter`), fixes 2507.06135 but changed 258 of 905 A/B papers: 198 ids only (`S3.F1` → `F1`: the copy's `\newcounter{figure}` declared for real), 54 tags — the copy's own forms, mostly as its PDF (aastex701 copies "TABLE I", jheppub-like (1.1)), some not ("(i)." with the binding's `\labelenumi` period, 2206.08798's "1 " with a trailing space) — and 31 other; reverted, no jfm-only patch |
 | — | 2209.10785: cidr.cls (an acmart copy) comments out acmart's `natbib=true` default; the acmart binding's natbib meets the document's `\usepackage[numbers]{natbib}`, LaTeX's "Option clash" Error where pdflatex loads natbib once | open, stays an Error (main-session decision 2026-10-20; 77w residual) |
@@ -5206,6 +5206,85 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   ajour, jmlr2e ×2, cvpr, paper.cls (GPL), sig-alternate, elife), every affected guard green with its expected output
   unchanged; journal-name data, one-line idioms and the ~110 synthetic stand-ins need nothing. Open (minor): the
   sources of three reduced models were not located to compare (cimento's author list, aip-cp, neurips_2026).
+- **78f** (quality batch 9, the 78e silent-loss rows; guards `perfect_kernel_batch78f::*`, 6, each RED on 25730beb73
+  (int47a); OD #805-807, KPE #1030-1032). (1) jheppub's `\emailAdd` (jcappub and jinstpub ride the binding): measured
+  first — by the spelling alone (jinstpub's 78e rule) 40 of the 150-paper jheppub sample's addresses that the list's
+  order gives right (1303.3040's `zhl61@` for Zhen Liu) would go to the author block — so an address goes to the author
+  it spells, else to the n-th author when the list is one place for each author in their order (by the address or by
+  the call), else to the group's only author or the block (`\lx@add@contact@placed[owner=sequence]`,
+  `\lx@sequence@call`, `sequenced_contact_labels` at the frontmatter flush, so a list before the `\author`s is read
+  against them: 2108.07972), an `\emailAdd{a, b}` an address each (`\lx@split@addresses`, a shared domain written out).
+  (2) iopart's `\ead` the same, a `\mailto` inside it the address font (0811.0981); 2311.12551's benedikt.maier@ now B.
+  Maier's. (3) aa/llncs: an `\inst` after a comma (`,⏎\inst`, `,~\inst`) and a `\fnmsep` between marks stand on the
+  name before the comma (`marks_before_glued_commas`, `leading_inst_marks_end`; llncs.cls:894-896 `\unskip`):
+  2401.16957's Clara Dehman keeps her four institutes and note, Mario Centelles his 5-6. (4) `\thanks{\label…\email…}`
+  STOPPED (pdflatex errs on the shape; 0 census papers) and (5) 2311.12551's `\AA rrestad` recorded (the paper's own
+  raised-superscript `\AA` read as an unanswered affiliation mark; not brief): the silent-loss table's rows. A/B
+  (int47a-rel → 78f release, `--preload=ar5iv.sty`, 544 papers: 14 witnesses, 150 jheppub + 83 jcappub `\emailAdd`
+  papers and 162 iopart `\ead` papers of the sel78d 30k census (random, cap 150 per class plus the 12 pre-2007 iopart
+  ones), its 23 jinstpub and 15 `,\inst` aa/llncs papers, 100 random controls; no "another TeX tree"): E 127 → 127, F 1 →
+  1, W 8,329 → 8,329, 0 papers worse, 159 outputs changed, 0 of the controls and 0 jinstpub. By the reviewer's spelling
+  test (`emailmatch.py`; owners checked against the addresses), addresses on an author another name spells: jheppub 7 →
+  0, jcappub 15 → 0, iopart 83 (in 81 of the 162 papers) → 4 (two an `\ead` inside an `\address`, unchanged; two the
+  test's false flags, each right); on the spelled author 360 → 386,
+  174 → 196, 154 → 269; on the author block 0 → 2, 0 → 8, 3 → 14 (each spelling no single author — `\l` dropped from
+  Nałęcz, 2212.09776; a list shorter than its authors with no spelling, 1802.07622, which the n-th rule guessed); 19
+  iopart papers only reorder a creator's contacts. The 7 changed `,\inst` papers (1604.07826, 1811.07968, 2011.09991,
+  2309.00573, 2404.01383, 2502.20626, 2503.07779) each give every author its own institutes, where all after the first
+  comma had moved one on. Residuals: an `\ead` inside an `\address` takes the address's labels (1205.6797, 1607.05491);
+  name keys drop `\l`/`ø` and read no `ue` for `ü` (2212.09776, 2205.06148); an address spelling two authors equally
+  goes by the order or to the block (1710.06069's `sjkim0305@` beside two Kims, 2607.04241).
+  r2 (review rev78f, user rulings 2026-10-21; guards +12, OD #808-809): step 2 kept, isolated (`author_order_step`; the
+  consistent list ruled evidence); the one address left on a multi-author paper goes to the ONE author a note or a
+  mark's legend names the corresponding author (`marked_corresponding_author`: 1901.08773, 2510.11030, 2211.07892;
+  r2 also counted a `*` with no legend and a note's owner alone, so 1802.03677 and 2308.06532 moved too — narrowed in
+  r3, below; 2111.00753's two stars → the block); an iopart `\ead` after an
+  `\address` whose mark one author requests is that author's (iopart.cls:363 prints it in that block: 2407.14305,
+  2311.07087) — only in a document that writes an `\ead` between its addresses, as IOP's guidelines put them "after the
+  postal address(es)" (the mark named the wrong author in 3 of the 4 trailing-`\ead` papers: 0910.0753, 1111.3344,
+  1911.06133) and only where no list in author order reads it otherwise (1902.07874, 1710.02251); each iopart `\author`
+  a group; `\ead{a and b}` an address each (0710.2104, 1003.0073); a list in markup kept whole, a list of plain
+  addresses (with `\mailto`, spacing, `\\`) written out (1105.4742, 0711.4000); an `\emailAdd` inside `\author` one
+  contact; the `\inst` comma rule by `\inst`'s meaning (`inst_takes_back_space`; epl2's title `\inst` via
+  `\lx@title@inst`, 1201.1900; not beamer's or a document's), not for names that open with their `\inst`; the outer
+  flush's sequence labels restored after a nested one; shortened, notice-keeping jheppub.sty / iopart.cls copies beside
+  the repros (charter §7). A/B 78f r1 → r2 and int47a → r2 (release, 1,140 papers: all 278 iopart `\ead` papers of the
+  census, 300 `\emailAdd` and 300 `\inst` ones (seeded cap), its 15 `,\inst` papers, the review's 150, 28 witnesses,
+  100 random controls; no "another TeX tree"): E 1,490 = 1,490 = 1,490, F 11, W 14,118, 0 papers worse; r1 → r2 14
+  outputs changed, each an e-mail owner, each classified right against its source (1911.05451's unspelled `ccdxslj@` the
+  block's), 0 controls; int47a → r2 214. Addresses on an author another name spells, int47a → r2: iopart 119 (113
+  papers) → 5 (two `\ead` inside `\address`, two test false flags, one svjour3 line, the last three unchanged from
+  int47a), `\emailAdd` 25 (17) → 1 (2504.02039, unchanged from int47a: an "ID" creator). Side findings (unchanged from
+  int47a, not this batch): 2504.02039 a creator named "ID"; 1603.06724 (svjour3) `\email` in an `\institute` line on the
+  last author, not the "[corresponding author]" it names. Residual: name keys read no `ue` for `ü` nor a split surname
+  (0910.0753's `muender@`, 1911.06133's `ledou@` for Le Doussal stay unplaced).
+  r3 (review rev78f2; guards +11, OD #810, KPE #1033): the corresponding-author step to the ruling — the order is
+  spelling → the consistent list's n-th → the group's only author → for the one address left on the block, the ONE
+  author marked by a note naming them so or a mark whose legend says so → the block. A `*` with no legend marks no
+  one (save where the address itself says "(Corresponding author)" and one candidate carries such a `*`: 2308.06532);
+  an author is marked by a note in their name or by carrying its printed mark — jheppub's `\note[*]`, or a
+  jheppub-family `\note`'s footnote number n on `\author[…,n]` (1802.03677's "1 Corresponding author." on two
+  authors → the block); note owners are a set; a legend or note saying something else unmarks its mark (1510.03434);
+  the candidates are the address's author group and its address mark's authors (rev78f2 probes i1, i2); a note names
+  correspondence by a phrase, not the word ("the AdS/CFT correspondence"; English only, as the census). jheppub's
+  `\note[]{}` takes its optional mark (jheppub.sty:84-89; Perl's one-argument `\note` broke 2606.26596's, 1510.03434's
+  and 2404.00867's names, KPE #1033; jinstpub takes jheppub's `\note`); a digested thin space parts labels (OD #810:
+  2404.00867's `\author[*\,b,c]`). Stand-ins: the jheppub.sty/iopart.cls `\Provides…` lines say "(shortened copy,
+  latexml-oxide)", the iopart12.clo stand-in written from scratch. A/B 78f r2 → r3 and int47a → r3 (release, 1,247
+  papers: the r2 set, the review's 66 correspondence `\emailAdd` papers, 41 more naming correspondence or writing
+  `\note[`): E 1,559, F 12, W 53,315 equal, 0 worse, 0 controls changed; r2 → r3 4 changed, each right (1802.03677's
+  `gear8mike@` the block's; 2606.26596, 1510.03434, 2404.00867 names whole, Steinhardt's affiliation b back). Side
+  findings (unchanged from int47a, not this batch): 2409.17846's names keep a trailing comma before `\orcidlink`
+  ("Qin Tan,", "You Wu,"); an iopart `\author{A and B}\address{…}` gives the address to B only (rev78f2 probe i1).
+  r4 (review rev78f3; guards +2, one extended): a `\note`'s counter number is its legend only where no affiliation is
+  labelled with that number — there a number on a name is the name's affiliation request (charter §4; rev78f3 probe a6
+  `\author[1]{Ann Able,\note{Corresponding author.}}\author[1]{Bob Baker}\affiliation[1]{Univ A}`: zq77@ Ann Able's
+  again, as r2/int47a/Perl; the shape of 2005.05695, 2005.14143, 2405.09762, 1403.3797, 2101.00866); an explicit
+  `\note[m]` mark is unchanged. `CORRESPONDENCE_PHRASE`: an opening "Correspondence" only before ":" or "to", "for
+  correspondence" with no word between ("Correspondence between …", "a test for the correspondence" name no one).
+  Recorded in OD #809's residuals, not implemented: notes apart from the names get no counter number (probes a2, a4b;
+  0 realised cases in the 1,247), and a `\thanks`/`\footnote` inside jheppub names steps the counter uncounted. KPE
+  #1033 witnesses +2212.09764, 2404.17559, 2101.00866, 2405.20427. A/B 78f r3 → r4: 1,251 papers (r3's 1,247 and 2005.05695, 2005.14143, 2405.09762, 2101.00866 — 1403.3797 among them —, release, `--preload=ar5iv.sty`): E 1,559, F 11, W 53,326 equal, 0 worse, 0 outputs changed (temp-dir paths masked; the five a6-shape papers place each address by its spelling, none left over; 1806.01746 times out on both).
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
   parts draw, as Unicode's IPA letter, cross-checked against tipauni.sty; the `""`/`||` ligatures ˌ ǁ), so its input

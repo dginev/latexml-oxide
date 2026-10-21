@@ -1,0 +1,23 @@
+% mechanism: `\lx@split@addresses` writes out a shared domain only for a braced group of local parts in plain text:
+%   an address list in markup (`\emailAdd{\mbox{zq1@x.org, bbaker@x.org}}`) is one contact, its markup kept
+% witness: rev78f probe j06_hrefinner (`\emailAdd{\href{mailto:…}{zq1@x.org, bbaker@x.org}}`, whose link r1 dropped;
+%          pdflatex exceeds its input stack on that shape, so the repro uses `\mbox`)
+% oracle:  pdflatex (the shortened jheppub.sty beside this repro, v.1.1227 from 2305.01585) 0 errors: "Ann Ablea Bob
+%          Bakera", "a Univ A",
+%          "E-mail: zq1@x.org, bbaker@x.org"
+% engines: rust 78f r1 = two contacts, the `\mbox` dropped; int47a = one contact on Ann Able (the n-th rule)
+% expect:  0 errors, 0 warnings; one contact of both addresses, the author block's (one place for two authors)
+% status:  RED (78f r1) -> GREEN (78f r2)
+% preload: ar5iv.sty
+\documentclass[a4paper,11pt]{article}
+\usepackage{jheppub}
+\title{T}
+\author[a]{Ann Able}
+\author[a]{Bob Baker}
+\affiliation[a]{Univ A}
+\emailAdd{\mbox{zq1@x.org, bbaker@x.org}}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

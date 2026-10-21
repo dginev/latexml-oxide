@@ -1,0 +1,36 @@
+% mechanism: jheppub.sty:126-131 `\emailAdd` lists the addresses, which its `\maketitle` prints as one "E-mail:" line
+%   under the affiliations (:216-224), attributing none. A list in author order — no address spells another author
+%   than the one at its place, and one spells its own (bbaker@ at place 2) — is the authors' in order, Perl's
+%   jheppub.sty.ltxml rule: the n-th address the n-th author's, also where no name spells it (zq1@, wy7@;
+%   1303.3040's zhl61@ for Zhen Liu, 2011.02499's tpsg4@/tpsr@, 2212.01400's jss55@); the place is the call's, so an
+%   `\emailAdd{a, b}` gives one author two addresses, a contact each (1710.06069's two addresses for Hyungchul Kim
+%   before Sungjoon Kim's)
+% witness: 1303.3040, 2011.02499, 2212.01400, 2505.13601 (unspelled addresses in author order); 1710.06069 (an
+%          author's two addresses in one call)
+% oracle:  pdflatex (the shortened jheppub.sty beside this repro, v.1.1227 from 2305.01585) 0 errors: "Ann Ablea Bob
+%          Bakera
+%          Cat Coleb", "a Univ A", "b Univ B", "E-mail: zq1@x.org, bbaker@x.org, wy7@y.org, cat2@y.org"
+% engines: rust int47a = the n-th address to the n-th author (`labelseq=author`), the two-address call one contact
+%          "wy7@y.org, cat2@y.org" on Cat Cole; perl the same; the spelling placement alone (jinstpub's 78e rule) would
+%          give zq1@ and wy7@ to the author block
+% expect:  0 errors, 0 warnings; zq1@ Ann Able's, bbaker@ Bob Baker's, wy7@ and cat2@ Cat Cole's,
+%          a contact each
+% status:  RED (int47a) -> GREEN (78f)
+% preload: ar5iv.sty
+\documentclass[a4paper,11pt]{article}
+\usepackage{jheppub}
+\title{T}
+\author[a]{Ann Able}
+\author[a]{Bob Baker}
+\author[b]{Cat Cole}
+\affiliation[a]{Univ A}
+\affiliation[b]{Univ B}
+\emailAdd{zq1@x.org}
+\emailAdd{bbaker@x.org}
+\emailAdd{wy7@y.org, cat2@y.org}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+\section{S}
+Text.
+\end{document}

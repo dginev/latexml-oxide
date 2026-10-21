@@ -1,0 +1,25 @@
+% mechanism: an `\emailAdd` written inside an `\author` (`\author[a]{Ann Able \emailAdd{zq1@x.org}}`) is that
+%   author's e-mail: `\lx@add@contact@list`, the command's body, is a frontmatter call (`adds_to_frontmatter`,
+%   `is_note_macro`), so the author line keeps it as the name's annotation, one contact, as base's `\lx@add@contact`
+%   body did
+% witness: rev78f probe j13_inauthor
+% oracle:  pdflatex (the shortened jheppub.sty beside this repro, v.1.1227 from 2305.01585) 0 errors: "Ann Able a Bob
+%          Bakera", "a Univ A",
+%          "E-mail: bbaker@x.org" — the `\emailAdd` runs inside `\maketitle`'s author group (jheppub.sty:196), its
+%          address lost with the group; the address the document gives is kept, Ann Able's (content first)
+% engines: rust 78f r1 = Ann Able with zq1@ and an empty e-mail contact; int47a = one contact
+% expect:  0 errors, 0 warnings; zq1@ Ann Able's, one contact; bbaker@ Bob Baker's
+% status:  RED (78f r1) -> GREEN (78f r2)
+% preload: ar5iv.sty
+\documentclass[a4paper,11pt]{article}
+\usepackage{jheppub}
+\title{T}
+\author[a]{Ann Able \emailAdd{zq1@x.org}}
+\author[a]{Bob Baker}
+\affiliation[a]{Univ A}
+\emailAdd{bbaker@x.org}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

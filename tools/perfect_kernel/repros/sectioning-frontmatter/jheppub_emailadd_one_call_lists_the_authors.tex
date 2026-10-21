@@ -1,0 +1,28 @@
+% mechanism: one jheppub `\emailAdd{a, b, c}` listing every author's address: read by the call, the list is out of
+%   order (bbaker@, Bob Baker's, at the first call's place); read by the address it is the authors' in order, so each
+%   address is the n-th author's, also where no name spells it (zq1@, wy7@)
+% witness: 2406.03543 (`\emailAdd{jdhb@umich.edu, elvang@umich.edu}` for Justin Berman and Henriette Elvang),
+%          2505.23122, 2201.12390, 2502.07664, 2605.16484
+% oracle:  pdflatex (the shortened jheppub.sty beside this repro, v.1.1227 from 2305.01585) 0 errors: "Ann Ablea Bob
+%          Bakera Cat
+%          Coleb", "a Univ A", "b Univ B", "E-mail: zq1@x.org, bbaker@x.org, wy7@y.org"
+% engines: rust int47a = one contact "zq1@x.org, bbaker@x.org, wy7@y.org" on Ann Able (Perl's n-th rule, one call);
+%          perl the same
+% expect:  0 errors, 0 warnings; zq1@ Ann Able's, bbaker@ Bob Baker's, wy7@ Cat Cole's
+% status:  RED (int47a) -> GREEN (78f)
+% preload: ar5iv.sty
+\documentclass[a4paper,11pt]{article}
+\usepackage{jheppub}
+\title{T}
+\author[a]{Ann Able}
+\author[a]{Bob Baker}
+\author[b]{Cat Cole}
+\affiliation[a]{Univ A}
+\affiliation[b]{Univ B}
+\emailAdd{zq1@x.org, bbaker@x.org, wy7@y.org}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+\section{S}
+Text.
+\end{document}

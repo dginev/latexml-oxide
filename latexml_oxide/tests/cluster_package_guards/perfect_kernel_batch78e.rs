@@ -213,8 +213,11 @@ fn jinstpub_frontmatter_is_jheppub_s() {
 /// jinstpub's `\emailAdd` lists the addresses for its title page's one "E-mail:" line (jinstpub.sty:133-138, :219-224):
 /// an address is the contact of the author whose name it spells, else the author block's (`\lx@add@contact@placed`),
 /// not jheppub's n-th address to the n-th author; an `\emailAdd{a, b}` list is an address each; the corresponding
-/// author's `\note{…}` is no part of the name the address spells (`is_note_macro`). Red (78e r1): bbaker@lab.gov on A.
-/// Able, "able@lab.gov, info@lab.gov" one contact on B. Baker; before the note rule bbaker@ the block's. Witnesses
+/// author's `\note{…}` is no part of the name the address spells (`is_note_macro`); the one address left spelling no one
+/// (info@) is the one author's that note marks as the corresponding author, B. Baker (user ruling 2026-10-21, batch 78f
+/// r2; OXIDIZED_DESIGN_DIVERGENCES #809), no longer the block's — the note in his `\author`, its printed number written
+/// on no other name (78f r3). Red (78e r1): bbaker@lab.gov on A. Able, "able@lab.gov,
+/// info@lab.gov" one contact on B. Baker; before the note rule bbaker@ the block's. Witnesses
 /// 2311.16063 (bross@fnal.gov is Bross's, not Bersani's), 2307.12991, 1910.06438, 2311.00870, 2605.30709; lists
 /// 2211.05026, 2409.03065; notes 2406.08712, 2603.01867. Repro
 /// package-bindings/jinstpub/jinstpub_emails_go_to_the_authors_they_spell.
@@ -236,18 +239,15 @@ fn jinstpub_emails_go_to_the_authors_they_spell() {
     email("id1", "able@lab.gov")
   );
   let baker = format!(
-    "{} {} {}",
+    "{} {} {} {}",
     contact("note", "Corresponding author."),
     contact("affiliation", "Univ A"),
-    email("id2", "bbaker@lab.gov")
+    email("id2", "bbaker@lab.gov"),
+    email("id3", "info@lab.gov")
   );
   assert_eq!(creators(&xml), [
     creator(true, "A. Able", &able),
     creator(false, "B. Baker", &baker),
-    format!(
-      r#"<creator role="author"> {} </creator>"#,
-      email("id3", "info@lab.gov")
-    ),
   ]);
 }
 

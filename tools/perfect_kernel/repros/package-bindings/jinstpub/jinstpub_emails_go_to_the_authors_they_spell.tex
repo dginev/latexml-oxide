@@ -1,17 +1,18 @@
 % witness: 2311.16063 (bross@fnal.gov is Alan D. Bross's, author 2, not Andrea Bersani's), 2307.12991, 1910.06438,
 %          2311.00870, 2605.30709 (jinstpub.sty:133-138 `\emailAdd` lists the addresses for its `\maketitle`, which
 %          prints them as one "E-mail:" line under the affiliations, :219-224: not the n-th address to the n-th author,
-%          jheppub's rule); an `\emailAdd{a, b}` list an address each (2211.05026, 2409.03065, 2112.00370); the
-%          corresponding author's `\note{Corresponding author.}` no part of the name the address spells (2406.08712,
-%          2603.01867)
+%          Perl jheppub.sty.ltxml's rule; since 78f the family's binding places so, OD #805); an `\emailAdd{a, b}`
+%          list an address each (2211.05026, 2409.03065, 2112.00370); the corresponding author's
+%          `\note{Corresponding author.}` no part of the name the address spells (2406.08712, 2603.01867)
 % oracle:  pdflatex 0 errors: "A. Able^a B. Baker^a", "a Univ A", "E-mail: bbaker@lab.gov, able@lab.gov,
 %          info@lab.gov", the footnote "1 Corresponding author."
 % engines: rust 78e r1 = bbaker@ on A. Able, "able@lab.gov, info@lab.gov" one contact on B. Baker (jheppub's
 %          `labelseq=author`); 78e r2 before its note rule: bbaker@ the author block's; int45b = the "E-mail:" line a
 %          paragraph; Perl has no jinstpub binding (the package read raw)
 % expect:  0 errors, 0 warnings; each address the contact of the author whose name it spells (bbaker@ B. Baker's,
-%          able@ A. Able's), info@, spelling no one, the author block's
-% status:  RED (78e r1) -> GREEN (78e r2)
+%          able@ A. Able's), info@, spelling no one, the one corresponding author's, B. Baker's (his `\note`; user
+%          ruling 2026-10-21, batch 78f r2; the author block's before it)
+% status:  RED (78e r1) -> GREEN (78e r2); the info@ owner changed in 78f r2
 % preload: ar5iv.sty
 \documentclass[a4paper,11pt]{article}
 \usepackage{jinstpub}

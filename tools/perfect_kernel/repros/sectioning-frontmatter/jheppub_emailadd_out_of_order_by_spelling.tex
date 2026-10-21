@@ -1,0 +1,28 @@
+% mechanism: jheppub's `\emailAdd` list not in author order — an address spells another author than the one at its
+%   place — is no list the n-th rule reads: each address goes to the author it spells, else (several authors, no
+%   spelling) to the author block, as the PDF's shared "E-mail:" line leaves it (`\lx@add@contact@placed`, jinstpub's
+%   rule since 78e r2)
+% witness: 2407.18115 (Michael.Fucilla@ on Renaud Boussarie and back), 2011.05971, 2212.09776, 2602.07867;
+%          jcappub 1804.07528, 1806.05015, 2010.13504, 2310.18996, 2407.07862 (eichhorn@ first for Astrid Eichhorn,
+%          author 2, then hdel@ for Héloïse Delaporte, which the n-th rule gave to Eichhorn)
+% oracle:  pdflatex (the shortened jheppub.sty beside this repro, v.1.1227 from 2305.01585) 0 errors: "Ann Ablea Bob
+%          Bakera",
+%          "a Univ A", "E-mail: bbaker@x.org, zq1@x.org"
+% engines: rust int47a = bbaker@ on Ann Able, zq1@ on Bob Baker (the n-th rule); perl the same
+% expect:  0 errors, 0 warnings; bbaker@ Bob Baker's, zq1@ (spelling no one) the author block's
+% status:  RED (int47a) -> GREEN (78f)
+% preload: ar5iv.sty
+\documentclass[a4paper,11pt]{article}
+\usepackage{jheppub}
+\title{T}
+\author[a]{Ann Able}
+\author[a]{Bob Baker}
+\affiliation[a]{Univ A}
+\emailAdd{bbaker@x.org}
+\emailAdd{zq1@x.org}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+\section{S}
+Text.
+\end{document}

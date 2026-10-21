@@ -4,8 +4,7 @@
 //! with JINST's extras, as jcappub_sty gives JCAP's. Read raw, the affiliations were an itemize, the e-mail a
 //! paragraph and the author's `\note{Corresponding author.}` text in the personname (2006.05543, 2303.10224; 23 of
 //! the 30,000-paper sample). The older JINST class (`JINST.cls`, JHEP3-derived) has its own binding,
-//! latexml_contrib jinst_cls.rs. Neither Perl nor Rust had a jinstpub binding (so it is a contrib binding); unlike
-//! jheppub's, its `\emailAdd` addresses go to the authors they spell (below).
+//! latexml_contrib jinst_cls.rs. Neither Perl nor Rust had a jinstpub binding (so it is a contrib binding).
 use latexml_package::prelude::*;
 
 #[rustfmt::skip]
@@ -23,14 +22,11 @@ LoadDefinitions!({
   // :100
   DefMacro!("\\jname", "JINST");
   // :133-137 `\emailAdd` lists the addresses, which `\maketitle` prints as one "E-mail:" line under the affiliations
-  // (:219-224), each `\href{mailto:#1}{\ttfamily\small #1}` (:138): an address belongs to the author whose name it
-  // spells, else to the group's only author, else to the author block (`\lx@add@contact@placed`). Not jheppub's n-th
-  // address to the n-th author (Perl's jheppub.sty.ltxml rule, kept there), which named the wrong authors here:
-  // 2311.16063's bross@fnal.gov is Alan D. Bross's, author 2, not Andrea Bersani's; 2307.12991, 1910.06438,
-  // 2311.00870, 2605.30709. An `\emailAdd{a@x, b@y}` list is an address each (2211.05026, 2409.03065, 2112.00370:
-  // all on the first address's author).
-  DefMacro!("\\emailAdd Semiverbatim", "\\lx@splitting{\\lx@jinst@email}{,}{#1}");
-  DefMacro!("\\lx@jinst@email{}", "\\lx@add@contact@placed[role=email]{}{\\lx@address@urlfont{#1}}");
+  // (:219-224), each `\href{mailto:#1}{\ttfamily\small #1}` (:138): jheppub's binding, which places an address with
+  // the author it spells, else with the n-th author when the list is the authors' in order, else with the group's only
+  // author or the author block (OXIDIZED_DESIGN_DIVERGENCES #801, #805; 2311.16063's bross@fnal.gov is Alan D.
+  // Bross's, author 2, not Andrea Bersani's; 2307.12991, 1910.06438, 2311.00870, 2605.30709; an `\emailAdd{a@x, b@y}`
+  // list an address each: 2211.05026, 2409.03065, 2112.00370).
   // :22 the first page's header line, "Prepared for submission to JINST", printed first by `\maketitle` (:180), is
   // page furniture; a paper's own (its copy's `\gdef\@fpheader{…}`, read after this binding, or its preamble's) is
   // author content, its report number or publication status: a pubnote (2103.06391 "Prepared for submission to JINST
@@ -39,8 +35,7 @@ LoadDefinitions!({
 \def\lx@jinst@header#1{\lx@add@pubnote[role=preprint]{#1}}
 \AtBeginDocument{\@ifundefined{@fpheader}{}{\ifx\@fpheader\lx@jinst@stockheader\else\ifx\@fpheader\@empty\else%
 \expandafter\lx@jinst@header\expandafter{\@fpheader}\fi\fi}}");
-  // :91-98 `\newcommand\note[2][]`: an optional mark for the footnote, the note jheppub's is
-  DefMacro!("\\note[]{}", "\\lx@add@contact[role=note]{#2}");
+  // (:91-98 `\newcommand\note[2][]`, an optional mark for the footnote: jheppub's `\note`, as above)
   // :145-147 `\newcommand*\collaboration[2][t]`: the optional placement (t, b, c) of the title page, warned about
   RawTeX!(r"\renewcommand*\collaboration[2][t]{\lx@add@pubnote[role=collaboration]{#2}%
 \if b#1 \PackageWarningNoLine{\jname}{option b}\fi\if c#1 \PackageWarningNoLine{\jname}{option c}\fi}");

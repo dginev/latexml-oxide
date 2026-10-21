@@ -1,0 +1,26 @@
+% mechanism: an `\ead` belongs to the author group it follows (iopart.cls:225-231, each `\author` typeset where it
+%   stands): zq1@, under the group of A. Bal and C. Cole, is not B. Maier's, though he alone is marked as the
+%   corresponding author in the next group; it stays the author block's (`marked_corresponding_author` among the
+%   group, `_group`)
+% witness: 2311.17496 (an `\ead` per `\author` group); rev78f2 probe i1
+% oracle:  pdflatex (the shortened iopart.cls beside this repro, from 2311.12551) 0 errors: "A. Bal and C. Cole",
+%          "KIT, Karlsruhe", "E-mail: zq1@kit.edu", "B. Maier∗", "ICL, London", "∗ Author to whom any correspondence
+%          should be addressed."
+% engines: rust 78f r2 = zq1@ B. Maier's; int47a and perl: C. Cole's, the last author before it
+% expect:  0 errors, 0 warnings; zq1@ the author block's
+% status:  RED (78f r2) -> GREEN (78f r3)
+% preload: ar5iv.sty
+\documentclass[12pt]{iopart}
+\begin{document}
+\title{T}
+\author{A. Bal and C. Cole}
+\address{KIT, Karlsruhe}
+\ead{zq1@kit.edu}
+\author{B. Maier$^*$}
+\address{ICL, London}
+\address{$^*$ Author to whom any correspondence should be addressed.}
+\begin{abstract}
+Abs.
+\end{abstract}
+Text.
+\end{document}

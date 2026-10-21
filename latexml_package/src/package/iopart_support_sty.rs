@@ -63,15 +63,39 @@ LoadDefinitions!({
   // affiliation, linked by its superscript marks when the authors carry them. Perl's `\lx@add@affiliations`
   // (iopart_support.sty.ltxml:53) dequeues the affiliations before it, so only the last `\address` survived
   // (KNOWN_PERL_ERRORS #511; 21 of the 41 2609 iopart papers call it more than once, 2609.01831 lost three of four).
-  DefMacro!("\\address{}", "\\lx@add@affiliation@marked{#1}");
-  // iopart.cls:354-355 `\ead` → `\mailto{#1}` = `{\tt #1}` (2301.12119, 2501.12730)
-  DefMacro!("\\ead Semiverbatim", "\\lx@add@email{\\lx@address@urlfont{#1}}");
+  // (its one leading mark is the mark of the `\ead` blocks printed right after it, `\lx@address@mark@set`)
+  DefMacro!("\\address{}", "\\lx@address@mark@set{#1}\\lx@add@affiliation@marked{#1}");
+  // iopart.cls:363 `\def\ead#1{\vspace*{5pt}\address{E-mail: \mailto{#1}}}`, `\mailto` = `{\tt #1}` (:364; 2301.12119,
+  // 2501.12730): the address prints as an address block of its own right after the one before it, no name's. Perl's
+  // `\lx@add@email` gives it to the last author (2311.12551's benedikt.maier@cern.ch on T. K. Årrestad, author 7 of 7;
+  // in the 162 census iopart `\ead` papers A/B'd for batch 78f, int47a put 83 addresses, in 81 papers, on an author
+  // another name spells). Rust-only (OXIDIZED_DESIGN_DIVERGENCES #806, #808, #809): placed as jheppub's `\emailAdd`
+  // is — with the author it spells, else the n-th author's while the addresses are the authors' in order, else with
+  // the one author requesting the mark of the `\address` it follows (`mark=address`: 2407.14305's `rockfish3141@` under
+  // `$^1$ Waseda`, Hidetomo Hoshino's; 2311.07087 — in a document that writes an `\ead` between its addresses;
+  // 1209.0173, 0910.0753, 1111.3344 write them all after), else the group's only author's (one `\author` per call:
+  // 2311.17496), else — the one address left on the author block — the ONE author of its group (and of those requesting
+  // its address's mark) marked as the corresponding author by a note naming them so or a mark whose legend says so
+  // (`$^{1,*}$` under `\address{$^*$ Author to whom any correspondence should be addressed.}`, 2504.15015; two
+  // legend-less `$^{*}$`, 2111.00753, mark no one), else the author block's (`\lx@add@contact@placed[owner=sequence]`).
+  // An `\ead{a@x, b@y}` or `\ead{a@x and b@y}` list is an address each (2111.00753; 0710.2104, 1003.0073), and a
+  // `\mailto` in it is the address font iopart.cls:364 gives it
+  // (`\def\mailto#1{{\tt #1}}`: `\ead{\mailto{edvard@physto.se}, \mailto{chris.clarkson@uct.ac.za}}`, 0811.0981,
+  // where the `\let\mailto\ead` below made each a contact nested in the first).
+  DefMacro!("\\ead Semiverbatim", "\\lx@add@contact@list{\\lx@iop@ead}{#1}");
+  DefMacro!("\\lx@iop@ead{}",
+    "\\lx@add@contact@placed[role=email,owner=sequence,mark=address]{}{\\lx@address@urlfont{\\let\\mailto\\@firstofone#1}}");
   // iopart.cls:225-231: each `\author[short]{names}` typesets its names where it stands, as `\address` does, so each
   // call adds its authors (split as the article `\author` splits them). Perl has no iopart `\author`, and the kernel's
   // replaces the authors before it (latex_constructs.pool.ltxml:1076), keeping the last call's only
   // (KNOWN_PERL_ERRORS #550; 2311.17496 lost three of four authors). Locked as the kernel's is; a binding loaded later
   // (authblk's `\author[mark]`) still replaces it.
-  DefMacro!("\\author[]{}", "\\def\\@shortauthor{#1}\\def\\@author{#2}\\lx@add@authors@list{#2}", locked => true);
+  // Each call starts an author group (`\lx@frontmatter@group@start`): an `\ead` placed by none of its names' spellings
+  // or marks is the group's only author's (`\author{A. Bal and C. Cole}\address{KIT}\ead{…}\author{B. Maier}
+  // \address{ICL}\ead{yy2@…}`: yy2@ B. Maier's), and the `\ead`s after it are under no address of before.
+  DefMacro!("\\author[]{}",
+    "\\lx@frontmatter@group@start\\lx@address@mark@set{}\\def\\@shortauthor{#1}\\def\\@author{#2}\\lx@add@authors@list{#2}",
+    locked => true);
 
   // NOTE: NO `\received`/`\revised`/`\accepted`/`\published`/`\online` date
   // macros here. The prior port added them citing "Perl L82-86", but those Perl

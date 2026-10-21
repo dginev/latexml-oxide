@@ -1,0 +1,21 @@
+% mechanism: iopart.cls:363 `\ead{#1}` prints its argument as written: `\ead{a@x and b@y}` lists two addresses, an
+%   address each (`\lx@split@addresses` parts the list at an " and " as at a comma), each placed as one `\ead` is
+% witness: 0710.2104 (`\ead{cpires@fisica.ufpb.br and psilva@fisica.ufpb.br}`), 1003.0073
+% oracle:  pdflatex (the shortened iopart.cls beside this repro, from 2311.12551) 0 errors: "Ann Able and Bob Baker"
+%          "Univ A, Town"
+%          "E-mail: able@x.org and baker@x.org"
+% engines: rust 78f r1 and int47a = one contact "able@x.org and baker@x.org" on Bob Baker; perl the same
+% expect:  0 errors, 0 warnings; able@ Ann Able's, baker@ Bob Baker's
+% status:  RED (78f r1) -> GREEN (78f r2)
+% preload: ar5iv.sty
+\documentclass[12pt]{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker}
+\address{Univ A, Town}
+\ead{able@x.org and baker@x.org}
+\begin{abstract}
+Abs.
+\end{abstract}
+Text.
+\end{document}

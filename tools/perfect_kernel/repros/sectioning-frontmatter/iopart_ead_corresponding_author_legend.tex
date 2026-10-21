@@ -1,0 +1,27 @@
+% mechanism: an `\ead` that spells no author and stands under an address all three authors request is left to the
+%   author block, unless one author alone is marked as the corresponding author: here Bob Baker's `*`, whose legend
+%   `\address{$^*$ Author to whom any correspondence should be addressed.}` says so (`marked_corresponding_author`,
+%   user ruling 2026-10-21)
+% witness: 2504.15015 (`Bo Yang$^{1,2,*}$` under `\address{$^*$ Author to whom any correspondence should be
+%          addressed.}`), 2205.14019, 2205.09074 (iopart); the jheppub/jcappub papers of the rule are the `\emailAdd`
+%          repros' (1901.08773, 2510.11030 by a note; 1802.03677 a note two authors carry; 2308.06532 an address naming
+%          correspondence); counter-witness 2111.00753 (two legend-less `$^{*}$`, marking no one: the block's)
+% oracle:  pdflatex (the shortened iopart.cls beside this repro, from 2311.12551) 0 errors: "Ann Able1, Bob Baker1,∗
+%          and Cat Cole1",
+%          "1 Univ A, Town" "E-mail: zq77@x.org", "* Author to whom any correspondence should be addressed."
+% engines: rust 78f r1 = zq77@ the author block's; int47a and perl: Cat Cole's, the last author's
+% expect:  0 errors, 0 warnings; zq77@ Bob Baker's
+% status:  RED (78f r1) -> GREEN (78f r2)
+% preload: ar5iv.sty
+\documentclass[12pt]{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{1,*}$ and Cat Cole$^{1}$}
+\address{$^1$ Univ A, Town}
+\ead{zq77@x.org}
+\address{$^*$ Author to whom any correspondence should be addressed.}
+\begin{abstract}
+Abs.
+\end{abstract}
+Text.
+\end{document}

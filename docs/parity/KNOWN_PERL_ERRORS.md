@@ -16639,6 +16639,63 @@ call has no brace now has one brace, and `\meaning` of `\def\b#1#{…}` (#1 deli
 "macro:#1{->…{" (it had dropped the first brace; tex_debugging.rs). Guards
 `perfect_kernel_batch78d::hash_brace_extends_the_last_delimiter`, `token_kernel_gaps::kernel_def_hash_brace_delimiter`.
 
+## 1030. jheppub's n-th `\emailAdd` is given to the n-th author
+
+jheppub.sty:126-131 `\emailAdd` lists the addresses, printed by `\maketitle` as one "E-mail:" line under the
+affiliations, no author's. Perl's jheppub.sty.ltxml:40-41 (`\lx@add@contact[role=email,labelseq=author]{#1}`, "The n-th
+\emailAdd is attached to the n-th author!") gives the n-th call to the n-th author whatever the addresses spell: a list
+out of author order names the wrong authors, an `\emailAdd{a, b}` of two authors' addresses is one contact of the first.
+Minimal trigger: `\usepackage{jheppub}\author[a]{Ann Able}\author[a]{Bob Baker}\affiliation[a]{Univ A}
+\emailAdd{bbaker@x.org}\emailAdd{zq1@x.org}` — bbaker@ on Ann Able, zq1@ on Bob Baker (pdflatex "E-mail:
+bbaker@x.org, zq1@x.org"). 7 of 150 jheppub and 15 of 83 jcappub e-mail papers of the sel78d 30k census had an address
+on an author another name spells (2407.18115, 2011.05971, 2212.09776; 1804.07528, 2407.07862); jinstpub (no Perl
+binding) 16 of 23 under the same rule. Fixed in Rust (78f, OXIDIZED_DESIGN_DIVERGENCES #805): spelled, else in author
+order when the list is one place for each author, else the group's only author, else — the one address left on the
+author block — the ONE author marked as the corresponding author by a note or a mark's legend (#809), else the author
+block. Guards
+`perfect_kernel_batch78f::{jheppub_emailadd_out_of_order_by_spelling, jheppub_emailadd_in_author_order,
+jheppub_emailadd_one_call_lists_the_authors, jheppub_emailadd_corresponding_author_note,
+jheppub_emailadd_corresponding_author_star_legend}`.
+
+## 1031. iopart's `\ead` is given to the last author
+
+iopart.cls:363 `\def\ead#1{\vspace*{5pt}\address{E-mail: \mailto{#1}}}` prints an address block of its own after the
+`\address` before it. Perl's iopart_support.sty.ltxml:54 `\lx@add@email{#1}` annotates the most recent creator: an `\ead` after the
+`\address`es of an author list is the last author's whoever it belongs to, and :55 `\Let('\mailto','\ead')` makes the
+`\mailto{…}` iopart.cls:364 defines as the typewriter font a contact of its own, nested in an `\ead{\mailto{a},
+\mailto{b}}`. Minimal trigger: `\documentclass{iopart}\author{A. Bal$^1$, B. Maier$^{1,2}$ and C. Cole$^2$}
+\address{$^1$ KIT}\address{$^2$ ICL}\ead{benedikt.maier@cern.ch}` — the address on C. Cole. In the 162 iopart `\ead`
+papers of the census A/B'd for 78f, 83 addresses (in 81 papers) were on an author another name spells (2311.12551's
+benedikt.maier@ on T. K. Årrestad; 0811.0981). Fixed in Rust (78f, OXIDIZED_DESIGN_DIVERGENCES #806, #808, #809).
+Guards `perfect_kernel_batch78f::{iopart_ead_goes_to_the_author_it_spells, iopart_ead_under_its_address_mark}`.
+
+## 1032. An `\inst` after a comma goes to the next author
+
+llncs.cls:894-896 and aa.cls:759-760 set `\inst` and `\fnmsep` with `\unskip`: written after a comma (`Clara Dehman,
+\inst{1}`), the mark stands on the name before it. Perl's inst_support.sty.ltxml:33-35 splits the `\author` at `\and`,
+`\And` and the comma (`\lx@splitting{\lx@add@author}{\and\And,}`), so the marks and the note after the comma open the
+next author's piece, and a piece of marks only (`Mario Centelles,\inst{5}\fnmsep\inst{6}`) is a creator without a name.
+Minimal trigger: `\documentclass{llncs}\author{Ann Able, \inst{1}\thanks{ann@x.org} Bob Baker,\inst{2}}
+\institute{A \and B}` — Ann without her institute and note, Bob with A, B and her note (Rust until 78f, by the same
+split; pdflatex "Ann Able,¹⋆ Bob Baker,²"). 2401.16957 (aa); 15 aa/llncs papers of the census write a comma before `\inst`. Fixed in Rust (78f,
+OXIDIZED_DESIGN_DIVERGENCES #807). Guard `perfect_kernel_batch78f::llncs_comma_before_inst_is_the_name_before`.
+
+## 1033. jheppub's `\note[mark]{…}` breaks the author's name
+
+jheppub.sty:84-89 (v.1.1227, 2305.01585) `\newcommand\note[2][]`: a footnote's text without its mark, for use inside
+`\author`, the optional argument the mark it prints the text under. Perl's jheppub.sty.ltxml:39 `DefMacro('\note{}',
+…)` takes one argument, so `\note[*]{…}` reads `[` as the note and leaves `*]` and the text in the name. Minimal
+trigger: `\usepackage{jheppub}\author[a,*]{Bob Baker\note[*]{Corresponding author.}}\affiliation[a]{Univ A}` — Perl:
+the personname "Bob Baker*]Corresponding author" and a note "[" (pdflatex "Bob Baker^{a,*}", the footnote "*
+Corresponding author."). 3 of the 350 census papers that use `\note` under jheppub/jcappub/jinstpub give it a mark:
+2606.26596 ("Jia-Jun Wu*]Corresponding authors"), 1510.03434, 2404.00867; more in the 78f A/B set: 2212.09764
+(`\note[*]{Now at …}`), 2404.17559 (`\note[*]{Corresponding authors}`), 2101.00866 (`\note[*]{Corresponding
+author.}`), 2405.20427 (`\note[a]{ Now at Fermi National Accelerator Laboratory}`). Fixed in Rust (78f r3, latexml_package
+jheppub_sty.rs: `\note[]{}`, its mark kept as the note's `_mark` for the corresponding-author step,
+OXIDIZED_DESIGN_DIVERGENCES #809; jinstpub's binding, which had its own `\note[]{}` dropping the mark, now takes
+jheppub's). Guards `perfect_kernel_batch78f::{jheppub_note_mark_corresponding_author,
+jheppub_note_mark_equal_contribution_stays_the_blocks, jheppub_note_mark_apart_from_the_names}`.
+
 ## 1038. A label after a raw `\refstepcounter` names the enclosing section
 
 Perl's `\label` (latex_constructs.pool.ltxml:3782, `floatToLabel` Document.pm:1098-1127) attaches to the nearest

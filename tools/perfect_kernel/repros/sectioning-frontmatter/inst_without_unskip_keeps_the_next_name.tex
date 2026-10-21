@@ -1,0 +1,17 @@
+% mechanism: the comma rule for `\inst` (llncs_comma_before_inst_is_the_name_before) holds only where `\inst` takes
+%   back the space before it, llncs.cls:894's `\unskip$^{#1}$` (`inst_takes_back_space`, by its meaning): a
+%   document's own `\newcommand{\inst}[1]{$^{#1}$}` prints "Ann Able1, 2Bob Baker", the 2 Bob Baker's
+% witness: rev78f probes c09_userinst, c08_beamer (beamerbasetitle.sty:169 `\textsuperscript{#1}`)
+% oracle:  pdflatex (article) 0 errors: "Ann Able1, 2Bob Baker"
+% engines: rust 78f r1 = "1,2" on Ann Able, Bob Baker bare; int47a = Ann Able's 1, Bob Baker's 2
+% expect:  0 errors, 0 warnings; Ann Able with her 1, Bob Baker with his 2
+% status:  RED (78f r1) -> GREEN (78f r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand{\inst}[1]{$^{#1}$}
+\title{T}
+\author{Ann Able\inst{1}, \inst{2}Bob Baker}
+\begin{document}
+\maketitle
+Text.
+\end{document}

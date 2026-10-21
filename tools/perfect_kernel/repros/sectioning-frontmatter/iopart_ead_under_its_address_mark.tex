@@ -1,0 +1,35 @@
+% mechanism: iopart.cls:363 `\def\ead#1{\vspace*{5pt}\address{E-mail: \mailto{#1}}}`: an `\ead` prints as an address
+%   block of its own right after the `\address` before it, so the mark of that address (`$^1$`) is its mark: an
+%   address that spells no one, after an address whose mark one author alone requests, is that author's
+%   (`\lx@add@contact@placed[mark=address]`, `\lx@address@mark@set`); the spelling still wins first (able@ under
+%   `$^3$` is Ann Able's), and under a mark two authors request (`$^2$`) an unspelled address stays the block's; only
+%   in a document that writes an `\ead` between its addresses, as here
+% witness: 2407.14305 (`rockfish3141@` under `$^1$ … Waseda`, Hidetomo Hoshino's alone; the PDF prints it inside the
+%          Waseda block), 2311.07087 (`sgess@` under `$^4$ SLAC`, Spencer Gessner's); 1111.5264 (`johnwc@` under `$^6$`,
+%          which two authors request). Not by the mark in a document whose `\ead`s all follow its addresses (IOP's
+%          guidelines' "after the postal address(es)"): 0910.0753, 1111.3344, 1911.06133 (the last address's author
+%          wrong), 1209.0173
+% oracle:  pdflatex (the shortened iopart.cls beside this repro, from 2311.12551) 0 errors: "Ann Able1, Bob Baker2
+%          and Cat Cole2,3",
+%          "1 Univ A" "E-mail: zq77@x.org", "2 Univ B" "E-mail: bbaker@y.org" "E-mail: wy5@y.org", "3 Univ C"
+%          "E-mail: able@z.org"
+% engines: rust 78f r1 = zq77@ and wy5@ on the author block; int47a and perl: every address on Cat Cole, the last
+% expect:  0 errors, 0 warnings; zq77@ and able@ Ann Able's, bbaker@ Bob Baker's, wy5@ the author block's
+% status:  RED (78f r1) -> GREEN (78f r2)
+% preload: ar5iv.sty
+\documentclass[12pt]{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$ and Cat Cole$^{2,3}$}
+\address{$^1$ Univ A}
+\ead{zq77@x.org}
+\address{$^2$ Univ B}
+\ead{bbaker@y.org}
+\ead{wy5@y.org}
+\address{$^3$ Univ C}
+\ead{able@z.org}
+\begin{abstract}
+Abs.
+\end{abstract}
+Text.
+\end{document}

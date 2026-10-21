@@ -25,11 +25,33 @@ LoadDefinitions!({
   DefMacro!("\\author[]{}", "\\lx@add@authors@append[annotations={#1}]{#2}");
   DefMacro!("\\affiliation OptionalSemiverbatim {}",
     "\\lx@add@contact[role=affiliation,label={#1}]{#2}");
-  // \note{} appears inside author?
-  DefMacro!("\\note{}", "\\lx@add@contact[role=note]{#1}");
-  // The n-th \emailAdd is attached to the n-th author!
-  // jheppub.sty:127-131, each address `\href{mailto:#1}{\tt #1}` (2301.03278)
-  DefMacro!("\\emailAdd Semiverbatim", "\\lx@add@contact[role=email,labelseq=author]{\\lx@address@urlfont{#1}}");
+  // jheppub.sty:84-89 `\newcommand\note[2][]`: a footnote's text without its mark, for use inside `\author`; the
+  // optional argument is the mark it prints the text under (the footnote counter then not stepped), else the next
+  // footnote number. Perl's jheppub.sty.ltxml:39 `\note{}` takes one argument, so `\note[*]{Corresponding authors.}`
+  // read `[` as the note and the rest into the name ("Jia-Jun Wu*]Corresponding authors" and a note "[", 2606.26596;
+  // 1510.03434, 2404.00867; KNOWN_PERL_ERRORS #1033). The note is placed as an unmarked one is (inside an `\author`
+  // that author's, given apart from the names the author's before it: 2404.00867's `\note[*]{Corresponding author:
+  // steinh@princeton.edu}` after `\author[*\,b,c]{Paul J. Steinhardt,}`); its mark (`_mark`) is the legend the
+  // corresponding-author step of an address list reads (`marked_corresponding_author`, OXIDIZED_DESIGN_DIVERGENCES
+  // #809).
+  DefMacro!("\\note[]{}", "\\lx@add@contact[role=note,_mark={#1}]{#2}");
+  // jheppub.sty:127-131 `\emailAdd` lists the addresses, each `\href{mailto:#1}{\tt #1}` (2301.03278), which
+  // `\maketitle` prints as one "E-mail:" line under the affiliations, attributing none. Perl's jheppub.sty.ltxml
+  // gives the n-th address to the n-th author (`labelseq=author`), which named the wrong author where the list is not
+  // in author order (2011.05971, 2212.09776, 2407.18115; jcappub 1806.05015, 2310.18996, 2407.07862; jinstpub
+  // 2311.16063's bross@fnal.gov on Andrea Bersani, 2307.12991, 1910.06438, 2311.00870, 2605.30709). Rust-only
+  // (OXIDIZED_DESIGN_DIVERGENCES #805, #801, #809): an address goes to the author it spells, else to the n-th author
+  // while the list is one address per author in their order (no address spells another author than the one at its
+  // place), else to the group's only author, else — the one address left on the author block — to the ONE author
+  // marked as the corresponding author, by a note naming them so or a mark whose legend says so (1901.08773's and
+  // 2510.11030's `\note{Corresponding author.}`; 1802.03677's note, whose number 1 two authors carry, leaves its
+  // address to the block; a `*` with no legend counts only where the address itself says "(Corresponding author)",
+  // 2308.06532),
+  // else to the author block (`\lx@add@contact@placed[owner=sequence]`, `sequenced_contact_labels`). An
+  // `\emailAdd{a@x, b@y}` list is an address each (2406.03543, 2505.23122; jinstpub 2211.05026, 2409.03065,
+  // 2112.00370). The family's rule: jcappub and jinstpub take it with this binding.
+  DefMacro!("\\emailAdd Semiverbatim", "\\lx@add@contact@list{\\lx@jhep@email}{#1}");
+  DefMacro!("\\lx@jhep@email{}", "\\lx@add@contact@placed[role=email,owner=sequence]{}{\\lx@address@urlfont{#1}}");
 
   // Keywords
   DefMacro!("\\keywordname", "\\textbf{Keywords}");

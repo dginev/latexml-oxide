@@ -1,0 +1,25 @@
+% mechanism: a note names the corresponding author by a phrase that says so: "for" names it only right before the word
+%   ("Author for correspondence"), so "a test for the correspondence" marks no one and the one `\emailAdd` address
+%   left over stays the author block's (`names_correspondence`)
+% witness: rev78f3 review finding (an optional word after "for"); sibling
+%          jheppub_note_on_the_adscft_correspondence_names_no_one
+% oracle:  pdflatex (the shortened jheppub.sty beside this repro, v.1.1227 from 2305.01585) 0 errors: "Ann Able,a Bob
+%          Bakera and Cat Colea", "a Univ A", "E-mail: zq77@x.org", the footnote "1 Supported by a test for the
+%          correspondence."
+% engines: rust 78f r3 = zq77@ Bob Baker's; int47a and perl: Ann Able's (the n-th rule)
+% expect:  0 errors, 0 warnings; Bob Baker with his note, zq77@ the author block's
+% status:  RED (78f r3) -> GREEN (78f r4)
+% preload: ar5iv.sty
+\documentclass[a4paper,11pt]{article}
+\usepackage{jheppub}
+\title{T}
+\author[a]{Ann Able,}
+\author[a]{Bob Baker\note{Supported by a test for the correspondence.}}
+\author[a]{and Cat Cole}
+\affiliation[a]{Univ A}
+\emailAdd{zq77@x.org}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

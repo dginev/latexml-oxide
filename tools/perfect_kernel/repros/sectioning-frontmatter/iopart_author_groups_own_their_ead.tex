@@ -1,0 +1,26 @@
+% mechanism: iopart.cls:225-231 each `\author` typesets its names where it stands, a group whose `\address` and `\ead`
+%   follow it: an `\ead` that nothing else places is the group's only author's (`\lx@frontmatter@group@start` in the
+%   binding's `\author`), and a group of two leaves it to the author block
+% witness: 2311.17496 (one `\author` per call); rev78f probe i03_groups_two
+% oracle:  pdflatex (the shortened iopart.cls beside this repro, from 2311.12551) 0 errors: "A. Bal and C. Cole"
+%          "KIT, Karlsruhe"
+%          "E-mail: zq1@kit.edu", "B. Maier" "ICL, London" "E-mail: yy2@icl.uk"
+% engines: rust 78f r1 = both addresses on the author block; int47a = zq1@ C. Cole's, yy2@ B. Maier's (the last
+%          author's, as Perl's `\lx@add@email`)
+% expect:  0 errors, 0 warnings; yy2@ B. Maier's, zq1@ the author block's
+% status:  RED (78f r1) -> GREEN (78f r2)
+% preload: ar5iv.sty
+\documentclass[12pt]{iopart}
+\begin{document}
+\title{T}
+\author{A. Bal and C. Cole}
+\address{KIT, Karlsruhe}
+\ead{zq1@kit.edu}
+\author{B. Maier}
+\address{ICL, London}
+\ead{yy2@icl.uk}
+\begin{abstract}
+Abs.
+\end{abstract}
+Text.
+\end{document}

@@ -1,0 +1,27 @@
+% mechanism: a note names the corresponding author by a phrase that says so ("Corresponding author", "Correspondence
+%   to", "to whom correspondence should be addressed"), not by the word alone: "the AdS/CFT correspondence" marks no
+%   one, nor does a note opening with the word not followed by ":" or "to" ("Correspondence between …"), so the one
+%   `\emailAdd` address left over stays the author block's (`names_correspondence`)
+% witness: rev78f2 review finding (the word anywhere); rev78f3 (an opening "Correspondence" before any word); 2606.26596's
+%          "corresponding to second-class currents"
+% oracle:  pdflatex (the shortened jheppub.sty beside this repro, v.1.1227 from 2305.01585) 0 errors: "Ann Able,a Bob
+%          Bakera and Cat Colea", "a Univ A", "E-mail: zq77@x.org", the footnote "1 On leave to study the AdS/CFT
+%          correspondence.", the footnote "2 Correspondence between gauge and string theory." beside it
+% engines: rust 78f r2 and r3 = zq77@ Bob Baker's; int47a and perl: Ann Able's (the n-th rule)
+% expect:  0 errors, 0 warnings; Bob Baker with his two notes, zq77@ the author block's
+% status:  RED (78f r2) -> GREEN (78f r3); the opening "Correspondence" RED (78f r3) -> GREEN (78f r4)
+% preload: ar5iv.sty
+\documentclass[a4paper,11pt]{article}
+\usepackage{jheppub}
+\title{T}
+\author[a]{Ann Able,}
+\author[a]{Bob Baker\note{On leave to study the AdS/CFT correspondence.}\note{Correspondence between gauge and string
+  theory.}}
+\author[a]{and Cat Cole}
+\affiliation[a]{Univ A}
+\emailAdd{zq77@x.org}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

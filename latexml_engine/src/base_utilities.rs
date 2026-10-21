@@ -246,6 +246,61 @@ LoadDefinitions!({
     Ok(Tokens::new(result))
   });
 
+  // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #805): `\lx@split@addresses{op}{list}` — `op{address}` for each address of a
+  // class's address list (jheppub's `\emailAdd{a@x, b@y}`, iopart's `\ead{a@x and b@y}`); a list in plain text that
+  // is a list by `email_addresses` (a braced group of local parts before a shared domain, `\ead{\{yangqq, yangjh\}
+  // @ipp.ac.cn}`, 2607.04241; a semicolon list) each of its addresses written out, as an author block's line gives
+  // them, not "{yangqq" and "yangjh}@ipp.ac.cn"; `op{list}` whole when it is no list of addresses (2011.05971's
+  // `\emailAdd{nikolay.bobev, anthony.charles, valentin.reys @kuleuven.be}`, the bare local parts no address).
+  DefMacro!("\\lx@split@addresses{}{}", sub[(op, list)] {
+    // (at the commas and at an " and ": `\ead{cpires@fisica.ufpb.br and psilva@fisica.ufpb.br}`, 0710.2104, 1003.0073)
+    let pieces: Vec<Tokens> = split_tokens(list.clone(), vec![
+      SplitDelim::Token(T_OTHER!(",")),
+      SplitDelim::Tokens(Tokens::new(vec![
+        T_SPACE!(),
+        T_LETTER!("a"),
+        T_LETTER!("n"),
+        T_LETTER!("d"),
+        T_SPACE!(),
+      ])),
+    ])
+    .into_iter()
+    .filter(|piece| !piece.is_empty())
+    .collect();
+    let addresses = pieces.iter().all(|piece| address_text(piece).contains('@'));
+    // (only a list of plain addresses is written out — their letters, the printed braces `\{ \}` and `\_`, the spacing
+    // and line breaks between them and an e-mail command's address font, `\mailto` (1105.4742's `\ead{\mailto{idan.oren@…}
+    // \\ \mailto{\ \ uzy.smilansky@…}}`): a braced group of local parts, a semicolon list, 0711.4000's `leticia@…;
+    // jorge@…` —, so a list in other markup keeps it: `\href{mailto:a@x,b@y}{a@x, b@y}` one contact, rev78f probe j06)
+    let plain = list.unlist_ref().iter().all(|t| {
+      t.get_catcode() != Catcode::CS
+        || is_spacing_command(t)
+        || is_line_separator(t)
+        || is_email_wrapper(t)
+        || t.with_str(|name| matches!(name, "\\{" | "\\}" | "\\_" | "\\lbrace" | "\\rbrace" | "\\,"))
+    });
+    let pieces = if pieces.len() > 1 && addresses {
+      pieces
+    } else {
+      // (a shared domain's addresses each written out, as an author block's line gives them, `email_line_calls`)
+      match email_addresses(&list) {
+        Some(each) if each.len() > 1 && plain => each
+          .iter()
+          .map(|address| Tokens::new(text_tokens(address)))
+          .collect(),
+        _ => vec![list],
+      }
+    };
+    let mut result: Vec<Token> = Vec::new();
+    for piece in pieces {
+      result.extend(op.unlist_ref().iter().copied());
+      result.push(T_BEGIN!());
+      result.extend(piece.unlist());
+      result.push(T_END!());
+    }
+    Ok(Tokens::new(result))
+  });
+
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // General support for Front Matter. (PR #2767 rework)
   // Not (yet) used by TeX (finish plain?)
@@ -694,6 +749,20 @@ LoadDefinitions!({
         && !labelseq.is_empty() {
           labels.push(clean_label(&n.to_string(), Some(labelseq)).into_owned());
         }
+    }
+    // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #805): a contact of a sequenced list (`\lx@add@contact@placed[owner=sequence]`)
+    // goes where this flush placed it ([`sequenced_contact_labels`]), else where `\lx@add@contact@placed` did.
+    if options.remove("_sequence").is_some() {
+      let at = lookup_int("lx_frontmatter_sequence_at");
+      assign_value("lx_frontmatter_sequence_at", Stored::Int(at + 1), Some(Scope::Global));
+      let placed = lookup_string("lx_frontmatter_sequence_labels");
+      if let Some(label) = placed
+        .split('\u{1}')
+        .nth(usize::try_from(at).unwrap_or(usize::MAX))
+        .filter(|label| !label.is_empty())
+      {
+        labels = vec![label.to_string()];
+      }
     }
     match get_frontmatter_name(options.get("name"), &tag, &role)? {
       Some(name) => { options.insert("name".to_string(), name); },
@@ -1400,10 +1469,41 @@ LoadDefinitions!({
     // AASTeX's `\authoremail` given before the authors, aas_support_sty.rs)
     let attr_text = attr.as_ref().map(ToString::to_string).unwrap_or_default();
     let owner_first = attr_text.split(',').any(|kv| kv.trim() == "owner=first");
-    let attr_rest: Vec<&str> = attr_text.split(',').map(str::trim).filter(|kv| !kv.is_empty() && *kv != "owner=first").collect();
+    // (`owner=sequence`: one of a class's list of addresses printed apart from the names, in the order the document
+    // gives them — jheppub's `\emailAdd`, iopart's `\ead`: placed as below unless the list proves to be the authors'
+    // in order, which the frontmatter's flush decides, `sequenced_contact_labels`)
+    let owner_sequence = attr_text.split(',').any(|kv| kv.trim() == "owner=sequence");
+    // (`mark=address`: a contact the class prints as an address block of its own right after the address before it —
+    // iopart's `\ead`, iopart.cls:363 `\def\ead#1{\vspace*{5pt}\address{E-mail: \mailto{#1}}}` —, whose mark is that
+    // address's (`\lx@address@mark@set`): weaker evidence than the spelling, so it places only an address that spells
+    // no one)
+    let flushing = lookup_bool("lx_frontmatter_flushing");
+    let under_address = attr_text.split(',').any(|kv| kv.trim() == "mark=address");
+    let attr_rest: Vec<&str> = attr_text
+      .split(',')
+      .map(str::trim)
+      .filter(|kv| !kv.is_empty() && !["owner=first", "owner=sequence", "mark=address"].contains(kv))
+      .collect();
+    let (mark, weak_mark) = match lookup_value("lx_address_mark") {
+      Some(Stored::Tokens(address_mark)) if under_address && mark.is_empty() && !flushing => {
+        (address_mark, true)
+      },
+      _ => (mark, false),
+    };
+    // (an address list's contact digested within another entry, `\author[a]{Ann Able \emailAdd{x}}`, `\address{…
+    // \ead{x}}`, is that entry's, as any contact digested there: no list's and placed by nothing of its own, rev78f
+    // probes j13, i04)
+    if owner_sequence && flushing {
+      return Ok(Invocation!(T_CS!("\\lx@annotate@frontmatter"), vec![
+        Some(mouth::tokenize_internal("ltx:creator")),
+        Some(mouth::tokenize_internal("ltx:contact")),
+        Some(mouth::tokenize_internal(TeXString::assembled(attr_rest.join(",")))),
+        Some(content)
+      ]));
+    }
     // (`label=` and `_answers=` are fixed text; a value is a mark's label and is text: tokenized, `$^{1\#}$`'s `#` was
     // a parameter token and a `%` a comment, so each of its characters is taken as it is)
-    let (value, answers) = match placed_contact_owner(&mark, &content) {
+    let (value, answers) = match placed_contact_owner(&mark, &content, weak_mark) {
       ContactOwner::Mark(label) => (label, None),
       // (placed by a footnote-symbol mark its author requests: the contact answers that mark on that author,
       // `show_unanswered_marks`)
@@ -1417,7 +1517,47 @@ LoadDefinitions!({
       keyvals.extend(mouth::tokenize_internal(",_answers=").unlist());
       keyvals.extend(text_tokens(&key));
     }
-    if owner_first {
+    if owner_sequence {
+      keyvals.extend(
+        mouth::tokenize_internal(TeXString::assembled(format!(",_sequence={}", lookup_int("lx_sequence_call"))))
+          .unlist(),
+      );
+      // (the authors it may be of, for the corresponding-author step of `sequenced_contact_labels`, as queue
+      // positions: its author group's, where the class marks groups (iopart's `\author`,
+      // `\lx@frontmatter@group@start`), and those requesting the mark of the address it is printed under (`_marks`,
+      // read where the document writes an e-mail between its addresses); rev78f2 probes i1, i2)
+      if lookup_value("lx_frontmatter_group_first").is_some() {
+        let group: Vec<String> = (frontmatter_group_first()..=queued_author_marks().len())
+          .map(|at| at.to_string())
+          .collect();
+        keyvals.extend(mouth::tokenize_internal(",_group=").unlist());
+        keyvals.extend(text_tokens(&group.join(";")));
+      }
+      if weak_mark {
+        let requesting: Vec<String> = requesting_authors(&queued_author_marks(), mark.unlist_ref())
+          .iter()
+          .map(ToString::to_string)
+          .collect();
+        if !requesting.is_empty() {
+          keyvals.extend(mouth::tokenize_internal(",_marks=").unlist());
+          keyvals.extend(text_tokens(&requesting.join(";")));
+        }
+      }
+      // (placed by its address's mark: where it goes without it, for a document whose addresses are all before its
+      // e-mails, `sequenced_contact_labels`)
+      if weak_mark {
+        let unmarked = match placed_contact_owner(&Tokens::new(Vec::new()), &content, false) {
+          ContactOwner::Author(author) => s!("author:{author}"),
+          ContactOwner::Mark(label) => label,
+          ContactOwner::Block => s!("addresses:block"),
+        };
+        if unmarked != value {
+          keyvals.extend(mouth::tokenize_internal(",_unmarked=").unlist());
+          keyvals.extend(text_tokens(&unmarked));
+        }
+      }
+    }
+    if owner_first || owner_sequence || under_address {
       if !attr_rest.is_empty() {
         keyvals.push(T_OTHER!(","));
         keyvals.extend(mouth::tokenize_internal(TeXString::assembled(attr_rest.join(","))).unlist());
@@ -1433,6 +1573,35 @@ LoadDefinitions!({
       Some(content)
     ]))
   });
+  // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #808): the mark of a class's address block, for the contact the class prints
+  // right after it as a block of its own (`\lx@add@contact@placed[mark=address]`: iopart's `\ead` after its `\address`,
+  // iopart.cls:240-248, :363): the operand of the block's one leading mark (`$^1$ Waseda University`: 1), else none — an
+  // unmarked block, or one of several marked lines (`\address{$^1$ A \\ $^2$ B}`), names no one. `\lx@address@mark@set{}`
+  // clears it (a class's `\author`, after which an address-list contact is under no address).
+  DefPrimitive!("\\lx@address@mark@set{}", sub[(line)] {
+    let line: Tokens = line;
+    let marks = author_mark_operands(line.unlist_ref());
+    let text = |m: &Vec<Token>| Tokens::new(m.clone()).to_string();
+    let one = marker_leads(&line)
+      && marks.first().is_some_and(|first| marks.iter().all(|m| text(m) == text(first)));
+    let mark = if one { Tokens::new(marks[0].clone()) } else { Tokens::new(Vec::new()) };
+    assign_value("lx_address_mark", Stored::Tokens(mark), Some(Scope::Global));
+  });
+  // Rust-only: one call of a class's address-list command (jheppub's `\emailAdd{a, b}`, iopart's `\ead`), whose
+  // addresses `\lx@add@contact@placed[owner=sequence]` places: the n-th call is the n-th author's when the list is the
+  // authors' in order (`sequenced_contact_labels`).
+  DefPrimitive!("\\lx@sequence@call", {
+    let call = lookup_int("lx_sequence_call") + 1;
+    assign_value("lx_sequence_call", Stored::Int(call), Some(Scope::Global));
+  });
+  // Rust-only: a class's address-list command's body (`\emailAdd{#1}` = `\lx@add@contact@list{\lx@jhep@email}{#1}`):
+  // one call (`\lx@sequence@call`) of `op{address}` for each address of the list (`\lx@split@addresses`). A frontmatter
+  // call by its name, so an author line holding the command (`\author[a]{Ann Able \emailAdd{x}}`) keeps it as the
+  // name's annotation, as the `\lx@add@contact` body it replaced was (`adds_to_frontmatter`, `is_note_macro`).
+  DefMacro!(
+    "\\lx@add@contact@list{}{}",
+    "\\lx@sequence@call\\lx@split@addresses{#1}{#2}"
+  );
   // Rust-only: the start of an author group of a class whose `\author` adds a group per call (OSA's, each typesetting
   // its names where it stands): a contact placed after it ([`placed_contact_owner`]) is the group's only author's
   // (`\author{D. L. Boiko}\address{…}\email{…}\author{N. J. Gunther}…`, 0906.4563; guard
@@ -4398,18 +4567,23 @@ enum ContactOwner {
 /// An author block's labelled email lines rank otherwise ([`block_email_calls`]): there the spelling outranks the mark
 /// of a correspondence NOTE before the line (1710.00802's `aleder@` under another author's "Corresponding Author"),
 /// a mark on a nearby note being weaker evidence than one on the address.
-fn placed_contact_owner(mark: &Tokens, content: &Tokens) -> ContactOwner {
+///
+/// A `weak` mark is not written on the contact but on the address block the class prints it under (iopart's `\ead`
+/// after an `\address`, `\lx@address@mark@set`): it places only an address that spells no one (1111.5264's `johnwc@`
+/// under `$^6$`, which two authors request, is J W Conklin's `$^1$`; 2407.14305's `rockfish3141@` under `$^1$ Waseda`,
+/// Hidetomo Hoshino's alone).
+fn placed_contact_owner(mark: &Tokens, content: &Tokens, weak: bool) -> ContactOwner {
   let authors = queued_author_marks();
   let keys = queued_author_name_keys();
-  let requesting = if mark.is_empty() {
-    Vec::new()
-  } else {
-    requesting_authors(&authors, mark.unlist_ref())
-  };
   let spelled: Vec<usize> = address_owners(&keys, content)
     .into_iter()
     .map(|at| at + 1)
     .collect();
+  let requesting = if mark.is_empty() || (weak && !spelled.is_empty()) {
+    Vec::new()
+  } else {
+    requesting_authors(&authors, mark.unlist_ref())
+  };
   if let [author] = requesting.as_slice() {
     // (a footnote-symbol mark stays shown on the name and pairs by no label of its own: the author's position)
     return match mark_label(mark.unlist_ref()) {
@@ -6305,10 +6479,15 @@ static SYMBOL_COMMAND_RUN: std::sync::LazyLock<Regex> =
 /// The spacing a mark's operand may carry, which prints no label character and parts the labels it stands between as a
 /// comma does: a tie, the control space, the math kerns `\!`, `\,`, `\:`, `\;`, `\>`, and the named spaces
 /// (`\up{~~1}` is the label 1 and `\up{\!1,2}` the labels 1 and 2, 2209.14855; `$^{1,2\,*}$` the labels 1, 2 and the
-/// symbol, 2403.08629).
+/// symbol, 2403.08629) — written so, or digested, as a class's optional `\author[*\,b,c]{…}` labels reach it: the
+/// no-break space, the thin, medium, thick, en and em spaces (2404.00867's "*\u{2009}b" was one label `*_b`, so Paul J.
+/// Steinhardt lost his affiliation b).
 static SPACING_IN_LABEL: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
-  Regex::new(r"~|\\[!,:;> ]|\\(?:quad|qquad|enspace|enskip|thinspace|negthinspace)([^a-zA-Z]|$)")
-    .unwrap()
+  Regex::new(concat!(
+    r"~|[\u{00A0}\u{2002}-\u{2009}\u{202F}]|\\[!,:;> ]",
+    r"|\\(?:quad|qquad|enspace|enskip|thinspace|negthinspace)([^a-zA-Z]|$)"
+  ))
+  .unwrap()
 });
 
 /// Perl: cleanFrontmatterLabels($labels, $prefix). Rust also parts the labels at the spacing ([`SPACING_IN_LABEL`]), on
@@ -6709,6 +6888,395 @@ fn with_pending_entry_attr(f: impl FnOnce(&mut TagAttrs)) {
   });
 }
 
+/// Where the contacts a class lists apart from the names, in the order the document gives them
+/// (`\lx@add@contact@placed[owner=sequence]`: jheppub's `\emailAdd`, iopart's `\ead`), queued in `commands`, go: each
+/// the label of its creator, or empty to stay where `\lx@add@contact@placed` put it (the group's only author when it was
+/// given, else the author block). Read against the authors of the same flush, all of them, wherever the list stands
+/// among them (2108.07972's `\emailAdd{kadota.kenji@…}` before the four `\author`s):
+/// 1. the author the address spells ([`address_owners`]);
+/// 2. else the n-th author, the address at the n-th place — Perl's jheppub.sty.ltxml rule (`labelseq=author`) — when the
+///    list is one place for each author and in their order: no address spells an author other than the one at its
+///    place, as [`addresses_in_order`] reads an author block's line (1303.3040's `zhl61@` for Zhen Liu, 2011.02499's
+///    `tpsg4@`/`tpsr@`). The place is the address's, or else the call's (an `\emailAdd{a, b}` of one author's two
+///    addresses). 2407.07862's `eichhorn@` listed first for Astrid Eichhorn, author 2, and 1804.07528's three addresses
+///    each one place on are no list in author order. The user ruled the consistent list evidence (2026-10-21);
+///    [`author_order_step`] is this step, alone;
+/// 3. else where `\lx@add@contact@placed` put it: the group's only author ([`placed_contact_owner`]), or the author
+///    block;
+/// 4. else, for the one address of the list left on the block of a multi-author flush, the ONE author marked as the
+///    corresponding author — by a note naming them so, or a mark whose legend says so —, among the authors of its
+///    group and, where the document places its e-mails by address block, those requesting its address's mark
+///    ([`marked_corresponding_author`]; user ruling 2026-10-21: 1901.08773's `beril@` A. Kopylov's, 2510.11030's
+///    `hjhspace223@` J.-H. Ha's, 2211.07892's `yoomin@` Y. M. Oh's; 2308.06532's `zyxu@` Zhaoyi Xu's, its address
+///    saying "(Corresponding author)" and he alone carrying a `*`; 1802.03677's `gear8mike@` stays the block's, the
+///    number of its "Corresponding author." note on two authors, and 2111.00753's `lad@`, two legend-less `*`s);
+/// 5. a flush with no authors, its list given after `\maketitle` digested them (1903.05554), keeps Perl's rule.
+///
+/// Step 3, for iopart's `\ead`, places after the spelling with the one author requesting the mark of the address block
+/// it is printed under (`mark=address`, `\lx@address@mark@set`: 2407.14305's `rockfish3141@` Hidetomo Hoshino's,
+/// 2311.07087's `sgess@` Spencer Gessner's) — weaker than a list in author order, which the PDF's address blocks do not
+/// contradict (1902.07874's `\ead{…, b97202056@gmail.com, …}` of five authors after `\address{$^9$ …}`, Che-Yu Chen's
+/// at place 3; 1710.02251's three `\mailto`s in an `\eads` after `$^{(2)}$`), and only in a document that writes an
+/// e-mail between its addresses: one whose e-mails all follow its addresses writes them where IOP's guidelines ask,
+/// "after the postal address(es)", under the last address by position only (0910.0753's `wolfgang.muender@` for W
+/// Münder, 1111.3344's `knarf@` for Frank Löffler, 1911.06133's `ledou@` for Pierre Le Doussal, each after the last
+/// author's `\address`; `_unmarked`).
+///
+/// The PDF prints the list as one shared line (jheppub.sty:127-131) or each address as a block under the address before
+/// it (iopart.cls:363), so the spelling, the marks and the order are the only evidence (OXIDIZED_DESIGN_DIVERGENCES #805,
+/// #806, #808, #809).
+fn sequenced_contact_labels(commands: &[RawFrontmatter]) -> Vec<String> {
+  let keys: Vec<NameKeys> = commands
+    .iter()
+    .filter(|entry| {
+      entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
+    })
+    .map(|entry| NameKeys::of(&queued_name(&entry.2)))
+    .collect();
+  // (a document that writes an e-mail between its addresses places each under its address, iopart.cls:363; one whose
+  // addresses all come first writes its e-mails "after the postal address(es)", as IOP's guidelines ask, under the
+  // last address only by position: there an address mark places nothing, `_unmarked`)
+  let first_listed = commands
+    .iter()
+    .position(|entry| entry.0 == "ltx:contact" && entry.1.contains_key("_sequence"));
+  let interleaved = first_listed.is_some_and(|first| {
+    commands[first..].iter().any(|entry| {
+      entry.0 == "ltx:contact" && entry.1.get("role").map(String::as_str) == Some("affiliation")
+    })
+  });
+  // Each address with the class command's call it came from (`\lx@sequence@call`: `\emailAdd{a, b}` is one call of two
+  // addresses), the author it spells, whether it is on the block where `\lx@add@contact@placed` put it, and where it
+  // goes when its address mark places nothing.
+  let listed: Vec<(i64, Option<usize>, bool, Option<&String>)> = commands
+    .iter()
+    .filter(|entry| entry.0 == "ltx:contact" && entry.1.contains_key("_sequence"))
+    .map(|entry| {
+      let call = entry
+        .1
+        .get("_sequence")
+        .and_then(|n| n.parse().ok())
+        .unwrap_or(0);
+      let spelled = match address_owners(&keys, &last_group(&entry.2)).as_slice() {
+        [at] => Some(*at),
+        _ => None,
+      };
+      let unmarked = entry.1.get("_unmarked").filter(|_| !interleaved);
+      let placed = unmarked.or_else(|| entry.1.get("label"));
+      let blocked = placed.map(String::as_str) == Some("addresses:block");
+      (call, spelled, blocked, unmarked)
+    })
+    .collect();
+  let owners: Vec<(i64, Option<usize>)> = listed
+    .iter()
+    .map(|(call, owner, ..)| (*call, *owner))
+    .collect();
+  let places = author_order_step(&owners, keys.len());
+  let mut labels: Vec<String> = owners
+    .iter()
+    .enumerate()
+    .map(|(at, (_, owner))| match (owner, &places) {
+      (Some(owner), _) if !keys.is_empty() => s!("author:{}", owner + 1),
+      (_, Some(places)) if keys.is_empty() || places[at] < keys.len() => {
+        s!("author:{}", places[at] + 1)
+      },
+      _ => listed[at].3.cloned().unwrap_or_default(),
+    })
+    .collect();
+  let left: Vec<usize> = (0..listed.len())
+    .filter(|at| match labels[*at].as_str() {
+      "" => listed[*at].2,
+      label => label == "addresses:block",
+    })
+    .collect();
+  if let ([at], true) = (left.as_slice(), keys.len() > 1) {
+    // (among the authors it may be of: its author group's, and of those the ones requesting its address's mark, when
+    // the document places its e-mails by address block — `_group`, `_marks`, `\lx@add@contact@placed`)
+    let entry = commands
+      .iter()
+      .filter(|entry| entry.0 == "ltx:contact" && entry.1.contains_key("_sequence"))
+      .nth(*at);
+    let positions = |key: &str| -> Option<Vec<usize>> {
+      let value = entry?.1.get(key)?;
+      Some(
+        value
+          .split(';')
+          .filter_map(|n| n.trim().parse::<usize>().ok())
+          .filter_map(|n| n.checked_sub(1))
+          .collect(),
+      )
+    };
+    let group = positions("_group");
+    let marks = positions("_marks").filter(|marks| interleaved && !marks.is_empty());
+    let within: Option<Vec<usize>> = match (group, marks) {
+      (Some(group), Some(marks)) => {
+        Some(group.into_iter().filter(|at| marks.contains(at)).collect())
+      },
+      (Some(only), None) | (None, Some(only)) => Some(only),
+      (None, None) => None,
+    };
+    let address = entry
+      .map(|entry| visible_name_text(last_group(&entry.2).unlist_ref()))
+      .unwrap_or_default();
+    if let Some(author) = marked_corresponding_author(commands, &address, within.as_deref()) {
+      labels[*at] = s!("author:{}", author + 1);
+    }
+  }
+  labels
+}
+
+/// Step 2 of [`sequenced_contact_labels`], kept apart so a ruling can switch it off in one change: the place (from 0)
+/// of each address of `listed` (its call, its known author) in the authors' order, when the list is one place for
+/// each of `authors` authors and no known author is another than the one at its place; `None` when it is no such list.
+/// With no authors (the list given after `\maketitle` digested them, 1903.05554), the call's place, as Perl.
+fn author_order_step(listed: &[(i64, Option<usize>)], authors: usize) -> Option<Vec<usize>> {
+  // The place of each address in the list, read two ways: by the call (Perl's, a call of several addresses one place),
+  // and by the address (`\emailAdd{jdhb@umich.edu, elvang@umich.edu}` for two authors, 2406.03543).
+  let mut by_call: Vec<usize> = Vec::with_capacity(listed.len());
+  for (at, (call, _)) in listed.iter().enumerate() {
+    let place = match by_call.last() {
+      Some(last) if listed[at - 1].0 == *call => *last,
+      Some(last) => last + 1,
+      None => 0,
+    };
+    by_call.push(place);
+  }
+  let by_address: Vec<usize> = (0..listed.len()).collect();
+  let in_order = |places: &[usize]| {
+    let count = places.last().map_or(0, |last| last + 1);
+    listed
+      .iter()
+      .zip(places)
+      .all(|((_, owner), place)| owner.is_none_or(|owner| owner == *place))
+      && count == authors
+  };
+  // (by the address first: a call listing several authors' addresses, `\emailAdd{divyeshsolanki98@gmail.com,
+  // srijuster@gmail.com}` for Divyesh N. Solanki and Srijit Bhattacharjee, 2308.02445, is read so; by the call when an
+  // author's two addresses in one call would put the next one place on, as `\emailAdd{a, b}` for one author of two;
+  // by the call, as Perl, with no authors to read)
+  if authors == 0 {
+    Some(by_call)
+  } else if in_order(&by_address) {
+    Some(by_address)
+  } else if in_order(&by_call) {
+    Some(by_call)
+  } else {
+    None
+  }
+}
+
+/// The one author (index among the authors of `commands`, a frontmatter flush's queue) marked as the corresponding
+/// author, for the one address of a class's list left over (`address`, its text), among the authors it may be of
+/// (`within`, indices; all when `None`). An author is marked
+/// - by a note in their own name that names the corresponding author ([`names_correspondence`]: jheppub's
+///   `\note{Corresponding author.}`, `\note[*]{…}`; `\thanks`, `\footnote`), or
+/// - by a mark they carry whose legend names the corresponding author: an affiliation line's (`\author[a,*]{…}` under
+///   `\affiliation[*]{Corresponding author}`, `$^{1,*}$` under `\address{$^*$ Author to whom any correspondence should
+///   be addressed.}`) or a note's — its own mark (`\note[*]{…}`) or the number a jheppub-family `\note` prints its text
+///   under ([`AuthorNote::mark`]): the authors who write that number on their names are the ones it is about.
+///
+/// A note or a legend that says something else ("Equal contribution", "Since October 1, 2015 at …", 1510.03434) marks
+/// no one. Exactly one marked author among `within` gets the address; none or two and more, the author block keeps it
+/// (1802.03677's "¹ Corresponding author." note, whose 1 both M.V. Smirnov and J.J. Ling carry; 2606.26596's
+/// "Corresponding authors." under the `*` of two authors; user ruling 2026-10-21). A mark with no legend at all is no
+/// evidence of correspondence (a bare `*`, 2111.00753's two `$^{*}$`), save where the address itself says it is the
+/// corresponding author's (`\emailAdd{zyxu@gzu.edu.cn(Corresponding author)}`) and exactly one author among `within`
+/// carries a `*` with no legend (2308.06532's `\author[1,*]{Zhaoyi Xu}`, "E-mail: zyxu@gzu.edu.cn(Corresponding
+/// author)" in its PDF).
+fn marked_corresponding_author(
+  commands: &[RawFrontmatter],
+  address: &str,
+  within: Option<&[usize]>,
+) -> Option<usize> {
+  let authors: Vec<&RawFrontmatter> = commands
+    .iter()
+    .filter(|entry| {
+      entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
+    })
+    .collect();
+  let names: Vec<Tokens> = authors.iter().map(|entry| queued_name(&entry.2)).collect();
+  let mut notes = author_notes(names.iter(), &[
+    T_CS!("\\thanks"),
+    T_CS!("\\footnote"),
+    T_CS!("\\note"),
+  ]);
+  // …and each note given apart from the names, the author's before it, as it is placed (1909.06107's
+  // `\author[a,1]{and V.~Sharyy}\note{Corresponding author}`; 2404.00867's `\note[*]{…}` after Paul J. Steinhardt's
+  // `\author`), its mark its own (`_mark`, jheppub's `\note[*]`)
+  let mut before = None;
+  for entry in commands {
+    match (entry.0.as_str(), entry.1.get("role").map(String::as_str)) {
+      ("ltx:creator", Some("author")) => before = Some(before.map_or(0, |at: usize| at + 1)),
+      ("ltx:contact", Some("note")) => {
+        if let Some(owner) = before {
+          notes.push(AuthorNote {
+            owner,
+            mark: entry.1.get("_mark").and_then(|mark| {
+              clean_frontmatter_labels(mark, "affiliation")
+                .into_iter()
+                .next()
+            }),
+            numbered: false,
+            names_correspondence: names_correspondence(&visible_name_text(
+              last_group(&entry.2).unlist_ref(),
+            )),
+          });
+        }
+      },
+      _ => {},
+    }
+  }
+  // Each author's labels: its class's optional ones (`\author[a,*]`, `annotations=`) and its marks'.
+  let author_labels: Vec<Vec<String>> = authors
+    .iter()
+    .zip(&names)
+    .map(|(entry, name)| {
+      let mut labels = entry
+        .1
+        .get("annotations")
+        .map(|given| clean_frontmatter_labels(given, "affiliation"))
+        .unwrap_or_default();
+      for operand in author_mark_operands(name.unlist_ref()) {
+        labels.extend(clean_frontmatter_labels(
+          &Tokens::new(operand).to_string(),
+          "affiliation",
+        ));
+      }
+      labels
+    })
+    .collect();
+  // The legends: each affiliation's label (`\affiliation[*]{…}`'s, or the line's leading mark) and whether it names the
+  // corresponding author; and each note's mark (`\note[*]{…}`, the n-th `\note`'s n).
+  let mut legends: Vec<(String, bool)> = commands
+    .iter()
+    .filter(|entry| {
+      entry.0 == "ltx:contact" && entry.1.get("role").map(String::as_str) == Some("affiliation")
+    })
+    .filter_map(|entry| {
+      let content = last_group(&entry.2);
+      let inner = queued_affiliation_text(&content);
+      let label = match entry.1.get("label").filter(|label| !label.is_empty()) {
+        Some(label) => clean_frontmatter_labels(label, "affiliation")
+          .into_iter()
+          .next(),
+        None if marker_leads(&inner) => {
+          entry_mark(inner.unlist_ref()).and_then(|mark| mark_label(&mark))
+        },
+        None => None,
+      }?;
+      Some((
+        label,
+        names_correspondence(&visible_name_text(inner.unlist_ref())),
+      ))
+    })
+    .collect();
+  // (a note's counter number is its legend only where no affiliation's label is that number: the authors writing an
+  // affiliation's number request the affiliation, 2005.05695, 2005.14143, 2405.09762, 1403.3797, 2101.00866; a note's
+  // own mark, `\note[*]{…}`, is its legend whatever the affiliations are labelled)
+  let affiliation_legends = legends.len();
+  let note_legends: Vec<(String, bool)> = notes
+    .iter()
+    .filter_map(|note| Some((note.mark.clone()?, note.numbered, note.names_correspondence)))
+    .filter(|(mark, numbered, _)| {
+      !*numbered
+        || !legends[..affiliation_legends]
+          .iter()
+          .any(|(label, _)| label == mark)
+    })
+    .map(|(mark, _, says)| (mark, says))
+    .collect();
+  legends.extend(note_legends);
+  let candidate = |at: &usize| within.is_none_or(|within| within.contains(at));
+  let mut marked: std::collections::BTreeSet<usize> = notes
+    .iter()
+    .filter(|note| note.names_correspondence)
+    .map(|note| note.owner)
+    .collect();
+  for (at, labels) in author_labels.iter().enumerate() {
+    if labels.iter().any(|label| {
+      legends
+        .iter()
+        .any(|(legend, says)| legend == label && *says)
+    }) {
+      marked.insert(at);
+    }
+  }
+  let marked: Vec<usize> = marked.into_iter().filter(candidate).collect();
+  match marked.as_slice() {
+    [author] => return Some(*author),
+    [] => {},
+    _ => return None,
+  }
+  // (no author marked: the address itself naming correspondence, the one author carrying a `*` no legend explains)
+  if !names_correspondence(address) {
+    return None;
+  }
+  let star = clean_frontmatter_labels("*", "affiliation");
+  let starred: Vec<usize> = author_labels
+    .iter()
+    .enumerate()
+    .filter(|(at, labels)| {
+      candidate(at)
+        && labels
+          .iter()
+          .any(|label| star.contains(label) && !legends.iter().any(|(legend, _)| legend == label))
+    })
+    .map(|(at, _)| at)
+    .collect();
+  match starred.as_slice() {
+    [author] => Some(*author),
+    _ => None,
+  }
+}
+
+/// The content of a queued affiliation's entry inside the wrappers that read its marks (`\lx@affiliation@withinst`,
+/// `\lx@affiliation@withsup`), as written.
+fn queued_affiliation_text(content: &Tokens) -> Tokens {
+  let mut inner = content.clone();
+  loop {
+    let v = inner.unlist_ref();
+    let wrappers = [
+      T_CS!("\\lx@affiliation@withinst"),
+      T_CS!("\\lx@affiliation@withsup"),
+    ];
+    let wrapped = v.first().is_some_and(|t| wrappers.contains(t))
+      && v.get(1).is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+      && skip_group(v, 1) == v.len();
+    if !wrapped {
+      return inner;
+    }
+    inner = Tokens::new(v[2..v.len() - 1].to_vec());
+  }
+}
+
+/// The content of the last top-level brace group of `tokens` (a queued frontmatter command's content argument); empty
+/// when there is none.
+fn last_group(tokens: &Tokens) -> Tokens {
+  let v = tokens.unlist_ref();
+  let mut depth = 0usize;
+  let mut start = None;
+  let mut last = Tokens::new(Vec::new());
+  for (i, t) in v.iter().enumerate() {
+    match t.get_catcode() {
+      Catcode::BEGIN => {
+        if depth == 0 {
+          start = Some(i);
+        }
+        depth += 1;
+      },
+      Catcode::END if depth > 0 => {
+        depth -= 1;
+        if depth == 0
+          && let Some(open) = start.take()
+        {
+          last = Tokens::new(v[open + 1..i].to_vec());
+        }
+      },
+      _ => {},
+    }
+  }
+  last
+}
+
 /// Digest FrontMatter (if not already?)
 /// Perl: digestFrontMatter().
 pub fn digest_front_matter() -> Result<()> {
@@ -6751,6 +7319,25 @@ pub fn digest_front_matter() -> Result<()> {
       Some(Scope::Global),
     );
   }
+  // Where this flush's sequenced contacts go ([`sequenced_contact_labels`]), in the order
+  // `\lx@annotate@frontmatter@now` digests them — this flush's, the outer flush's restored after it, as the seal's.
+  let outer_sequence_labels = lookup_string("lx_frontmatter_sequence_labels");
+  let outer_sequence_at = lookup_int("lx_frontmatter_sequence_at");
+  assign_value(
+    "lx_frontmatter_sequence_labels",
+    Stored::String(pin(sequenced_contact_labels(&commands).join("\u{1}"))),
+    Some(Scope::Global),
+  );
+  assign_value(
+    "lx_frontmatter_sequence_at",
+    Stored::Int(0),
+    Some(Scope::Global),
+  );
+  assign_value(
+    "lx_frontmatter_flushing",
+    Stored::Bool(true),
+    Some(Scope::Local),
+  );
   // The labels the authors' marks request, for the notes digested here (`note_body`) — this call's authors only: a
   // note queued for a later call (an appending `\author` after `\maketitle`) sees that call's.
   let requested: Vec<String> = commands
@@ -6861,6 +7448,16 @@ pub fn digest_front_matter() -> Result<()> {
   assign_value(
     "lx_frontmatter_sealed_off",
     Stored::String(pin(&outer_sealed_off)),
+    Some(Scope::Global),
+  );
+  assign_value(
+    "lx_frontmatter_sequence_labels",
+    Stored::String(pin(&outer_sequence_labels)),
+    Some(Scope::Global),
+  );
+  assign_value(
+    "lx_frontmatter_sequence_at",
+    Stored::Int(outer_sequence_at),
     Some(Scope::Global),
   );
   egroup()?;
@@ -14010,9 +14607,22 @@ fn whole_line_group(tokens: &Tokens) -> Option<(Vec<Token>, Tokens)> {
 /// front of the comma before the line is split, glued commas between marks merging (`Ann$^1$,$^2$,$^3$, Bob` is one
 /// name with three marks). Not across a space (`Ann$^1$, $^{*}$Bob` keeps Bob's star), and not when the names open
 /// with their marks (`marker_leads`: `\large $^1$Ann Able, $^2$Bob Baker`). A `\thanks` glued among them goes too
-/// (`Kerstin Hötte,$^{1}$\thanks{Corresponding author: kerstin.hotte@...}`, 2609.37343).
+/// (`Kerstin Hötte,$^{1}$\thanks{Corresponding author: kerstin.hotte@...}`, 2609.37343). The inst convention's marks
+/// go across the space too: llncs.cls:894-896 `\def\inst#1{\unskip$^{#1}$}`, `\def\fnmsep{\unskip$^,$}` (aa.cls the
+/// same, `\unskip\hbox{…}`) take back the space before them, so `Clara Dehman,⏎\inst{1}\fnmsep…\thanks{…} Mario
+/// Centelles,\inst{5}` prints "Clara Dehman,¹,²,³,⁴⋆ Mario Centelles,⁵": Clara's marks and note, not Mario's (2401.16957,
+/// whose four affiliations and e-mail note went to Mario Centelles; [`leading_inst_marks_end`]). Only where `\inst` means
+/// the convention's mark ([`inst_takes_back_space`]): beamer's `\inst` (beamerbasetitle.sty:169 `\textsuperscript{#1}`)
+/// and a document's `\newcommand{\inst}[1]{$^{#1}$}` take back no space, so `Ann Able\inst{1}, \inst{2}Bob Baker` is
+/// Bob's 2 there; and not when the names open with their `\inst`s (`\inst{1}Ann Able, \inst{2}Bob Baker`, each its
+/// own, as `marker_leads` keeps `$^1$Ann Able, $^2$Bob Baker`; rev78f probes c01, c08, c09).
 fn marks_before_glued_commas(line: Tokens) -> Tokens {
-  if marker_leads(&line) {
+  let inst = inst_takes_back_space();
+  let inst_leads = || {
+    let v = line.unlist_ref();
+    v.get(leading_unprinted_end(v)) == Some(&T_CS!("\\inst"))
+  };
+  if marker_leads(&line) || (inst && inst_leads()) {
     return line;
   }
   let src = line.unlist();
@@ -14028,12 +14638,26 @@ fn marks_before_glued_commas(line: Tokens) -> Tokens {
       _ => {},
     }
     if depth == 0 && t == T_OTHER!(",") {
-      let end = leading_marks_end(&src[i + 1..]);
+      let end = leading_inst_marks_end(&src[i + 1..], inst);
       if end > 0 {
         out.extend_from_slice(&src[i + 1..i + 1 + end]);
         pending_comma = Some(t);
         i += 1 + end;
         continue;
+      }
+      // (an `\inst` mark after the comma's space: the space it takes back is dropped with it)
+      let gap = src[i + 1..]
+        .iter()
+        .take_while(|u| **u == T_SPACE!() || **u == T_ACTIVE!('~'))
+        .count();
+      if inst && gap > 0 && src.get(i + 1 + gap) == Some(&T_CS!("\\inst")) {
+        let end = leading_inst_marks_end(&src[i + 1 + gap..], inst);
+        if end > 0 {
+          out.extend_from_slice(&src[i + 1 + gap..i + 1 + gap + end]);
+          pending_comma = Some(t);
+          i += 1 + gap + end;
+          continue;
+        }
       }
       // a glued comma before this one merges into it: commas matter here only as the points the line splits at
       // (the unsplit `whole_line_cs_wrapper` fallback shows one comma for the two)
@@ -14476,6 +15100,65 @@ fn leading_marks_end(tokens: &[Token]) -> usize {
     }
   }
   i
+}
+
+/// [`leading_marks_end`] with the inst convention's marks: `\inst{…}` (llncs.cls:894, aa.cls, webofc.cls) and the
+/// `\fnmsep`/`\fnsep` between two marks (llncs.cls:896), which an author line writes after the comma as often as before
+/// it (`Mario Centelles,\inst{5}\fnmsep\inst{6}`, 2401.16957).
+/// Only [`leading_marks_end`] when `inst` is false: an `\inst` that is not the convention's ([`inst_takes_back_space`]).
+fn leading_inst_marks_end(tokens: &[Token], inst: bool) -> usize {
+  let mut i = 0;
+  loop {
+    let marks = leading_marks_end(&tokens[i..]);
+    if marks > 0 {
+      i += marks;
+      continue;
+    }
+    if !inst {
+      return i;
+    }
+    match tokens.get(i) {
+      Some(t) if *t == T_CS!("\\inst") => match sup_operand_at(tokens, i + 1) {
+        Some((_, next)) => i = next,
+        None => return i,
+      },
+      Some(t)
+        if i > 0
+          && (*t == T_CS!("\\fnmsep") || *t == T_CS!("\\fnsep"))
+          && leading_inst_marks_end(&tokens[i + 1..], inst) > 0 =>
+      {
+        i += 1
+      },
+      _ => return i,
+    }
+  }
+}
+
+/// Whether the document's `\inst` is the inst convention's mark, which takes back the space before it: its meaning starts
+/// with `\unskip` (llncs.cls:894 `\def\inst#1{\unskip$^{#1}$}`, aa.cls:759, svjour3.cls, read raw), or it is the
+/// request the convention's bindings give it for that definition (`\lx@request@frontmatter@annotation`: llncs_cls.rs,
+/// inst_support_sty.rs, sv_support_sty.rs). Beamer's (beamerbasetitle.sty:169 `\textsuperscript{#1}`) and a document's
+/// own `\newcommand{\inst}[1]{$^{#1}$}` are none.
+/// Inside author content, where `\lx@author@withinst` makes `\inst` its mark reader, the one it saved decides; a class
+/// that defines `\inst` only inside its title, where it prints the names (epl2.cls:725 `\def\inst##1{\unskip${}^{##1}$…}`,
+/// 1201.1900), has its binding declare that meaning as `\lx@title@inst`, which decides first.
+fn inst_takes_back_space() -> bool {
+  let first = |cs: &str| match lookup_definition(&T_CS!(cs)) {
+    Ok(Some(defn)) => match defn.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => body
+        .unlist_ref()
+        .iter()
+        .find(|t| **t != T_SPACE!())
+        .copied(),
+      _ => None,
+    },
+    _ => None,
+  };
+  let lead = match first("\\lx@title@inst").or_else(|| first("\\inst")) {
+    Some(t) if t == T_CS!("\\lx@inst@mark") => first("\\lx@saved@inst"),
+    lead => lead,
+  };
+  lead.is_some_and(|t| t == T_CS!("\\unskip") || t == T_CS!("\\lx@request@frontmatter@annotation"))
 }
 
 pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
@@ -17235,6 +17918,24 @@ fn is_note_macro(cs: &Token) -> bool {
   while i < body.len() {
     let t = body[i];
     let annotator = t.with_str(|s| NAME_ANNOTATORS.contains(&s));
+    // (a class's address list, `\lx@add@contact@list{\op}{#1}` — jheppub's `\emailAdd`, iopart's `\ead` — makes a contact
+    // of each address, as an annotator does: its operation, then its list, the note's argument; `\emailAdd` inside
+    // `\author[a]{Ann Able \emailAdd{…}}` is Ann Able's e-mail, not an e-mail line of the name, rev78f probe j13)
+    if t == T_CS!("\\lx@add@contact@list")
+      && body
+        .get(i + 1)
+        .is_some_and(|n| n.get_catcode() == Catcode::BEGIN)
+    {
+      let list = skip_group(body, i + 1);
+      if body
+        .get(list)
+        .is_some_and(|n| n.get_catcode() == Catcode::BEGIN)
+      {
+        notes += 1;
+        i = skip_group(body, list);
+        continue;
+      }
+    }
     if t == T_CS!("\\thanks") || t == T_CS!("\\footnote") || annotator {
       let mut j = i + 1;
       while body.get(j) == Some(&T_SPACE!()) {
@@ -19822,37 +20523,118 @@ fn line_labelled_emails(line: &Tokens) -> Result<Option<(Option<Tokens>, Vec<Ema
   }
 }
 
-/// Whether a note's text names its author the corresponding one ("Corresponding author.", "Correspondence to …",
-/// "to whom correspondence should be addressed"; not a "corresponding member" of an academy).
-fn names_correspondence(text: &str) -> bool {
-  let text = text.to_lowercase();
-  text.contains("corresponding author") || text.contains("correspondence")
-}
+/// The phrases by which a note or a line names the corresponding author ([`names_correspondence`]).
+static CORRESPONDENCE_PHRASE: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+  Regex::new(concat!(
+    r"corresponding[\s-]+authors?\b",
+    r"|correspondence\s*(?::|to\b|should\b|may\b|author|and\s+requests\b)",
+    r"|\bfor\s+correspondence\b",
+    r"|\b(?:whom|any|all)\s+(?:\w+\s+)?correspondence\b"
+  ))
+  .unwrap()
+});
+
+/// Whether a note's text names its author the corresponding one, by a phrase that says so ([`CORRESPONDENCE_PHRASE`]:
+/// "Corresponding author.", "Corresponding authors", "Correspondence to …", "Correspondence: …", "to whom (any)
+/// correspondence should be addressed", "Author for correspondence"), not by the word alone: a "corresponding member"
+/// of an academy, a note on "the AdS/CFT correspondence", "Correspondence between X and Y" (the word opens a note only
+/// before ":" or "to"), "a test for the correspondence" ("for" right before the word only) name no one so (rev78f2,
+/// rev78f3). English phrases only: the census's
+/// notes and address lists of this population name correspondence in English (OXIDIZED_DESIGN_DIVERGENCES #809).
+fn names_correspondence(text: &str) -> bool { CORRESPONDENCE_PHRASE.is_match(&text.to_lowercase()) }
 
 /// The one author (index among `authors`) whose own `\thanks`/`\footnote` note names them the corresponding author
 /// ("Corresponding author.", "Correspondence to …"), or `None` when no author's or several authors' do.
 fn corresponding_author<'a>(authors: impl Iterator<Item = &'a Tokens>) -> Option<usize> {
-  let notes = [T_CS!("\\thanks"), T_CS!("\\footnote")];
-  let mut owners = authors.enumerate().filter(|(_, author)| {
+  match author_notes(authors, &[T_CS!("\\thanks"), T_CS!("\\footnote")])
+    .iter()
+    .filter(|note| note.names_correspondence)
+    .map(|note| note.owner)
+    .collect::<std::collections::BTreeSet<usize>>()
+    .into_iter()
+    .collect::<Vec<_>>()
+    .as_slice()
+  {
+    [owner] => Some(*owner),
+    _ => None,
+  }
+}
+
+/// A note an author's own name holds ([`author_notes`]).
+struct AuthorNote {
+  /// the author (index among the names read) whose name holds it
+  owner:                usize,
+  /// for a jheppub-family `\note`, which prints its text under a mark it shows beside no name (jheppub.sty:84-89), the
+  /// label of that mark, which the authors it is about write on their names: its optional argument's (`\note[*]{…}`),
+  /// else the n-th such note's number, the footnote counter it steps (`\author[a,1]{M.V. Smirnov,\note{Corresponding
+  /// author.}}` … `\author[a,1]{{\rm and} J.J. Ling}`, 1802.03677); `None` for a `\thanks` or `\footnote`, which
+  /// prints its own mark on its owner's name
+  mark:                 Option<String>,
+  /// whether `mark` is the counter's number rather than the note's own optional argument: a number an affiliation's
+  /// label also is, the authors who write it request that affiliation (`\author[1]{Ann Able,\note{…}}`
+  /// `\author[1]{Bob Baker}` `\affiliation[1]{Univ A}`: Bob Baker's 1 is Univ A's), so it is no legend of the note's
+  numbered:             bool,
+  /// whether its text names the corresponding author ([`names_correspondence`])
+  names_correspondence: bool,
+}
+
+/// The notes of the commands `notes` that the names `authors` hold, in their order (a binding's own note command too,
+/// jheppub's `\note{Corresponding author.}`, `\note[*]{…}`).
+fn author_notes<'a>(authors: impl Iterator<Item = &'a Tokens>, notes: &[Token]) -> Vec<AuthorNote> {
+  let mut found = Vec::new();
+  let mut numbered = 0;
+  for (owner, author) in authors.enumerate() {
     let toks = author.unlist_ref();
-    toks.iter().enumerate().any(|(i, t)| {
-      // (past an optional argument: `\thanks[1]{…}`)
-      let mut at = i + 1;
-      if notes.contains(t) && toks.get(at) == Some(&T_OTHER!("[")) {
-        at += toks[at..]
-          .iter()
-          .position(|t| *t == T_OTHER!("]"))
-          .map_or(0, |close| close + 1);
+    let mut i = 0;
+    while i < toks.len() {
+      if !notes.contains(&toks[i]) {
+        i += 1;
+        continue;
       }
-      notes.contains(t)
-        && toks
-          .get(at)
-          .is_some_and(|b| b.get_catcode() == Catcode::BEGIN)
-        && names_correspondence(&visible_name_text(&toks[at..skip_group(toks, at)]))
-    })
-  });
-  let (owner, _) = owners.next()?;
-  owners.next().is_none().then_some(owner)
+      // (past an optional argument: `\thanks[1]{…}`, `\note[*]{…}`)
+      let mut at = i + 1;
+      let mut mark = None;
+      if toks.get(at) == Some(&T_OTHER!("["))
+        && let Some(close) = toks[at..].iter().position(|t| *t == T_OTHER!("]"))
+      {
+        mark = clean_frontmatter_labels(
+          &Tokens::new(toks[at + 1..at + close].to_vec()).to_string(),
+          "affiliation",
+        )
+        .into_iter()
+        .next();
+        at += close + 1;
+      }
+      if !toks
+        .get(at)
+        .is_some_and(|b| b.get_catcode() == Catcode::BEGIN)
+      {
+        i += 1;
+        continue;
+      }
+      let end = skip_group(toks, at);
+      // (a `\thanks`/`\footnote` prints its own mark on the name, whatever its optional number: its owner alone, and
+      // its number no legend of marks the authors write — `$^1$` there is an affiliation's)
+      let mut counted = false;
+      if toks[i] != T_CS!("\\note") {
+        mark = None;
+      } else if mark.is_none() {
+        numbered += 1;
+        counted = true;
+        mark = clean_frontmatter_labels(&numbered.to_string(), "affiliation")
+          .into_iter()
+          .next();
+      }
+      found.push(AuthorNote {
+        owner,
+        mark,
+        numbered: counted,
+        names_correspondence: names_correspondence(&visible_name_text(&toks[at..end])),
+      });
+      i = end;
+    }
+  }
+  found
 }
 
 /// A line's leading email label — "E-mail:", "Email:", "e-mails:", "E-mail address:", up to its colon, or the same

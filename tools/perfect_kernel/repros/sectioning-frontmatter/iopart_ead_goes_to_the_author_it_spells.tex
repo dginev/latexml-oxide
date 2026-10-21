@@ -1,0 +1,26 @@
+% mechanism: iopart.cls:363 `\def\ead#1{\vspace*{5pt}\address{E-mail: \mailto{#1}}}` prints the address as an
+%   address block of its own after the one before it, no name's: it goes to the author it spells, else to the one
+%   author requesting the mark of the address before it (iopart_ead_under_its_address_mark), else the group's only
+%   author, else the author block — or to the n-th author when the `\ead` list is the authors' in order
+%   (`\lx@add@contact@placed[owner=sequence]`, as jheppub's `\emailAdd`). Perl's `\lx@add@email` gives it to the last
+%   author.
+% witness: 2311.12551 (benedikt.maier@cern.ch, B. Maier's, author 5 of 7, on T. K. Årrestad); 2301.12119, 2501.12730
+% oracle:  pdflatex (the shortened iopart.cls beside this repro, from 2311.12551) 0 errors: "A. Bal1, B. Maier1,2 and
+%          C. Cole2", "1 KIT,
+%          Karlsruhe", "2 ICL, London", "E-mail: benedikt.maier@cern.ch"
+% engines: rust int47a = the address on C. Cole, the last author; perl the same
+% expect:  0 errors, 0 warnings; the address B. Maier's
+% status:  RED (int47a) -> GREEN (78f)
+% preload: ar5iv.sty
+\documentclass[12pt]{iopart}
+\begin{document}
+\title{T}
+\author{A. Bal$^1$, B. Maier$^{1,2}$ and C. Cole$^2$}
+\address{$^1$ KIT, Karlsruhe}
+\address{$^2$ ICL, London}
+\ead{benedikt.maier@cern.ch}
+\begin{abstract}
+Abs.
+\end{abstract}
+Text.
+\end{document}

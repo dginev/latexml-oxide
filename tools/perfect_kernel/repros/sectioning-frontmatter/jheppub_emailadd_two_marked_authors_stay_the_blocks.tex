@@ -1,0 +1,26 @@
+% mechanism: the corresponding-author rule places an unspelled address only with the ONE marked author: with two
+%   authors marked `*` under "Corresponding authors" it stays the author block's (user ruling 2026-10-21)
+% witness: 1304.1216 (two authors under `\affiliation[f]{…Corresponding authors}`), 2606.26596 (two under
+%          `\note[*]{Corresponding authors.}`); 2111.00753 (iopart, `$^{*1}$` and `$^{*3}$` with no legend, marking no
+%          one: `lad@` the block's)
+% oracle:  pdflatex (the shortened jheppub.sty beside this repro, v.1.1227 from 2305.01585) 0 errors: "Ann Able,a,∗
+%          Bob Bakera and Cat Colea,∗",
+%          "a Univ A", "* Corresponding authors", "E-mail: zq77@x.org"
+% engines: rust 78f r1 = the block's (no corresponding-author rule); int47a and perl: Ann Able's (the n-th rule)
+% expect:  0 errors, 0 warnings; zq77@ the author block's
+% status:  GREEN (78f r1, 78f r2): the counter-case
+% preload: ar5iv.sty
+\documentclass[a4paper,11pt]{article}
+\usepackage{jheppub}
+\title{T}
+\author[a,*]{Ann Able,}
+\author[a]{Bob Baker}
+\author[a,*]{and Cat Cole}
+\affiliation[a]{Univ A}
+\affiliation[*]{Corresponding authors}
+\emailAdd{zq77@x.org}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

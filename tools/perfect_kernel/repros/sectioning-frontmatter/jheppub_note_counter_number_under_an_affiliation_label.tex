@@ -1,0 +1,31 @@
+% mechanism: jheppub.sty:84-89 a `\note{…}` steps the footnote counter and prints its text under that number; the
+%   authors who write the number on their names are the ones it is about — unless an affiliation is labelled with that
+%   number too: then the number on a name is that name's request for the affiliation (FIDELITY_CHARTER §4). Bob
+%   Baker's `\author[1]` requests `\affiliation[1]{Univ A}`, not note 1: Ann Able, whose own name holds
+%   "Corresponding author.", is the one marked, and zq77@ is hers (`marked_corresponding_author`); an explicit
+%   `\note[m]` mark stays its note's legend whatever the affiliations are labelled
+% witness: 2005.05695, 2005.14143, 2405.09762, 1403.3797, 2101.00866 (numeric `\affiliation[1]` labels beside a
+%          `\note`); rev78f3 probe a6
+% oracle:  pdflatex (the shortened jheppub.sty beside this repro, v.1.1227 from 2305.01585) 0 errors: "Ann Able,1
+%          Bob Baker1 and Cat Cole2", "1 Univ A", "2 Univ B", "E-mail: zq77@x.org, ccole@y.org", the footnote "1
+%          Corresponding author."
+% engines: rust 78f r3 = zq77@ the author block's (Ann Able and Bob Baker both counted marked); 78f r2, int47a and
+%          perl: zq77@ Ann Able's
+% expect:  0 errors, 0 warnings; zq77@ Ann Able's, ccole@ Cat Cole's
+% status:  RED (78f r3) -> GREEN (78f r4)
+% preload: ar5iv.sty
+\documentclass[a4paper,11pt]{article}
+\usepackage{jheppub}
+\title{T}
+\author[1]{Ann Able,\note{Corresponding author.}}
+\author[1]{Bob Baker}
+\author[2]{and Cat Cole}
+\affiliation[1]{Univ A}
+\affiliation[2]{Univ B}
+\emailAdd{zq77@x.org}
+\emailAdd{ccole@y.org}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+Text.
+\end{document}
