@@ -19838,18 +19838,21 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    `copy_provides_keeps_counter`): the pool's article defaults yield to the copy, as article.cls's own would to the real
    class — jheppub.sty:313-314 `\renewcommand{\theequation}{\thesection.\arabic{equation}}` and
    `\numberwithin{equation}{section}` number (2.1) as its PDF does (2112.14648, 2607.20603; r2: "(1)" … "(60)"). The
-   read is no raw class read for K11 (`\lx@class@loaded@raw`): the binding owns the title page. *A command saved
-   again* (77w): a `\let\org\X` of the copy, where `\org` already holds an earlier meaning of `\X` (a `\let` copy made
-   under `\X`'s name) that the binding's load assigned and `\X` has been redefined since to a meaning that reaches `\org`
-   (its body, or a body it names, transitively: `state::meaning_reaches`), is declined in the copy's own code too
-   (`state::copy_provides_keeps_saved_meaning`, Info): `\org` keeps the meaning TeX gives it, `\X` before the
-   redefinition. The binding (or a file it read) made the same save-and-wrap, and the wrapper saved into `\org` calls
-   itself when the copy's own code uses it: myjmlr.cls and jmlr_mod.cls (jmlr.cls copies, rule 12) run
-   `\let\jmlr@org@newtheorem\newtheorem` (jmlr.cls:753-754; the jmlr binding's jmlrutils.sty makes the same wrap) before
-   their own `\newtheorem{example}`, which looped to the timeout (1506.02582, 2304.14217). A `\let` whose new meaning
-   does not reach the name is no such wrap and stands: pgf's scratch `\let\pgfutil@reserved@c\pgfutil@reserved@b`, run
-   by `\usetikzlibrary` while a self-named sn-jnl.cls copy is read, was declined at int40a and the copy's
-   `\usetikzlibrary{snakes}` lost (2207.07492: 0 → 6 Errors; guard `perfect_kernel_batch77w::copy_loads_a_tikz_library`).
+   read is no raw class read for K11 (`\lx@class@loaded@raw`): the binding owns the title page. *A command saved again*
+   (77w): a `\let\org\X` of the copy, where `\org` already holds an earlier meaning of `\X` (a `\let` copy made under
+   `\X`'s name) that the binding's load assigned, while `\X` still holds the binding's later meaning (the copy's read
+   has not assigned `\X` itself) and that meaning reaches `\org` (its body, or a body it names, transitively:
+   `state::meaning_reaches`), is declined in the copy's own code too (`state::copy_provides_keeps_saved_meaning`, Info):
+   `\org` keeps the meaning TeX gives it, `\X` before the redefinition. The binding (or a file it read) made the same
+   save-and-wrap, and the wrapper saved into `\org` calls itself when the copy's own code uses it: myjmlr.cls and
+   jmlr_mod.cls (jmlr.cls copies, rule 12) run `\let\jmlr@org@newtheorem\newtheorem` (jmlr.cls:753-754; the jmlr
+   binding's jmlrutils.sty makes the same wrap) before their own `\newtheorem{example}`, which looped to the timeout
+   (1506.02582, 2304.14217). A `\let` whose new meaning does not reach the name, or whose source the copy's read has
+   just assigned, is no such wrap and stands: pgf's scratch `\let\pgfutil@reserved@c\pgfutil@reserved@b`, run by
+   `\usetikzlibrary` while a self-named sn-jnl.cls copy is read, was declined at int40a and the copy's
+   `\usetikzlibrary{snakes}` lost (2207.07492: 0 → 6 Errors), and where `@b`'s loop body names `@c` the declined `\let`
+   left pgf's recursion spinning to the timeout (2101.08181's lmcs.cls copy: 3 s → Fatal Timeout); guards
+   `perfect_kernel_batch77w::{copy_loads_a_tikz_library, copy_runs_its_own_loop}`.
 3. *Locks.* A locked name is refused as for any file, but without the records a raw class's takeover leaves
    (`\lx@dropped@<name>`, `<cs>:redefined`, defaults; OD #265, #500): `copy_provides_refuses_locked`, so no replay of the
    copy's `\maketitle` body.

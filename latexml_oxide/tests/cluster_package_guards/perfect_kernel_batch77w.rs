@@ -259,6 +259,85 @@ fn copy_loads_a_tikz_library() {
   );
 }
 
+/// A routed copy's own recursion stands (2101.08181's lmcs.cls copy, through pgf): `\def\pgfutil@reserved@b{…
+/// \pgfutil@reserved@c}` then `\let\pgfutil@reserved@c\pgfutil@reserved@b` — the copy has just assigned `@b`, so `@b` no
+/// longer holds its binding's meaning and the `\let` is TeX's (da2615cf7e declined it: 23 Errors here, a timeout in
+/// 2101.08181). pdflatex: "Result: [a][b][c]."
+#[test]
+fn copy_runs_its_own_loop() {
+  let (log, xml) = convert_files_with(
+    repro!("copy_runs_its_own_loop.tex"),
+    &[("sn-jnl.cls", repro!("sn-jnl.cls"))],
+    Some("ar5iv.sty"),
+  );
+  // The one warning is pgf's own: "Snakes have been superseded by decorations".
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(!log.contains("keeps its saved"), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">Result: [a][b][c].</p>",
+  );
+}
+
+/// An acmproc-era aamas class (1401.1086's confSt.cls, `\ProvidesClass{aamas2013}`, "based on acmproc.cls V1.3") is read
+/// raw, as the class it is: the aamas binding models the acmart-based class, whose `\author` met the copy's
+/// `\alignauthor` columns (3-6 Errors, one merged creator; the version fallback sends `\documentclass{aamas2013}` there
+/// too). pdflatex: two author columns, each with its address and e-mail.
+#[test]
+fn acmproc_era_aamas_reads_raw() {
+  let (log, xml) = convert_files_with(
+    repro!("acmproc_era_aamas_reads_raw.tex"),
+    &[("aamas2013.cls", repro!("aamas2013.cls"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_element(
+    &xml,
+    "creator",
+    &["role=\"author\""],
+    "<creator role=\"author\"><personname>Paulo Shakarian</personname><contact name=\"Affiliation:\u{a0}\" \
+     role=\"affiliation\">Dept. EECS</contact><contact name=\"Email:\u{a0}\" role=\"email\">p@x.net</contact></creator>",
+  );
+  assert_eq!(xml.matches("<creator ").count(), 2, "{xml}");
+  assert!(
+    xml.contains("<personname>Roy Lindelauf</personname>"),
+    "{xml}"
+  );
+}
+
+/// spie.cls defines no `\author` (it only `\LoadClassWithOptions{article}`): its documented author block — names with
+/// `\supit` marks, `\skiplinehalf`, `\\`-separated affiliation lines (spie.cls:58-64) — is the kernel's, each line by
+/// its mark (2210.16202's CHRONOS_s.cls, `\ProvidesClass{spie}`, routed to the spie binding: OmniBus's `\author` read the
+/// affiliation lines as 39 names, no contact). pdflatex: "Ann One^{a,b}, Bob Two^{b}", then the two marked lines.
+#[test]
+fn spie_author_block_is_the_kernel_author() {
+  let (log, xml) = convert_files_with(
+    repro!("spie_author_block_is_the_kernel_author.tex"),
+    &[],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(xml.matches("<creator ").count(), 2, "{xml}");
+  assert_element(
+    &xml,
+    "creator",
+    &["role=\"author\""],
+    "<creator role=\"author\"><personname>Ann One</personname><contact name=\"Affiliation:\u{a0}\" \
+     role=\"affiliation\">Dept. of Physics, Univ. X, Taipei, Taiwan</contact><contact name=\"Affiliation:\u{a0}\" \
+     role=\"affiliation\">Inst. Y, Tsukuba, Japan.</contact></creator>",
+  );
+  // Bob carries mark b only: the second line alone.
+  assert_element(
+    &xml,
+    "creator",
+    &["before=\"\u{2003}\u{2003}\"", "role=\"author\""],
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two</personname><contact \
+     name=\"Affiliation:\u{a0}\" role=\"affiliation\">Inst. Y, Tsukuba, Japan.</contact></creator>",
+  );
+}
+
 #[test]
 fn copy_loads_its_binding_package() {
   let (log, xml) = convert_files_with(

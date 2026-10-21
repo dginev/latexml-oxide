@@ -2169,7 +2169,8 @@ pub fn copy_provides_refuses_locked(token: &Token) -> bool {
 /// Does a stand-in's copy, read now ([`note_copy_provides_assignment`]), save `source` again into `token` — `\let
 /// \token\source` — where `token` already holds an earlier meaning of `source` (its definition is a `\let` copy made
 /// under `source`'s name, `definition_cs`) that the stand-in binding's load assigned, and `source` has been redefined
-/// since to a meaning that reaches `token` (`meaning_reaches`), so that the `\let` would make it call itself? Then the
+/// since — by the binding, the copy's read not having assigned `source` itself — to a meaning that reaches `token`
+/// (`meaning_reaches`), so that the `\let` would make it call itself? Then the
 /// `\let` is declined, in the copy's code too: `token` keeps the meaning TeX gives it, `source` before the redefinition. The binding (or a file it read) made the very save-and-wrap the copy makes — `\let\org\X`, then
 /// `\X` redefined to call `\org` —, and saving the wrapper into `\org` makes `\X` call itself: myjmlr.cls and
 /// jmlr_mod.cls (renamed jmlr.cls copies routed to the jmlr binding, whose jmlrutils.sty made the same wrap) run
@@ -2195,10 +2196,19 @@ pub fn copy_provides_keeps_saved_meaning(token: &Token, source: &Token, meaning:
   if definition_cs(&saved) != Some(*source) || same_meaning(&saved, meaning) {
     return false;
   }
-  // (only a `\let` that would make the wrapper call itself — `source`'s meaning now reaches `token` —: pgf's scratch
-  // `\let\pgfutil@reserved@c\pgfutil@reserved@b`, which `\usetikzlibrary` runs while the copy is read, is no
-  // save-and-wrap, and declining it lost 2207.07492's sn-jnl.cls:303 `\usetikzlibrary{snakes}`)
-  if !meaning_reaches(meaning, key) {
+  // (only while `source` still holds the binding's meaning — the copy's read has not assigned it — and only a `\let`
+  // that would make that wrapper call itself, `source`'s meaning reaching `token`: pgf's scratch
+  // `\let\pgfutil@reserved@c\pgfutil@reserved@b`, which `\usetikzlibrary` runs while the copy is read right after its
+  // own `\def\pgfutil@reserved@b`, is no save-and-wrap — declining it lost 2207.07492's sn-jnl.cls:303
+  // `\usetikzlibrary{snakes}`, and where `@b`'s loop body names `@c` it left pgf's recursion spinning to the timeout,
+  // 2101.08181's lmcs.cls copy)
+  let reassigned_by_the_copy = state!()
+    .copy_provides_frames
+    .iter()
+    .rev()
+    .find(|frame| frame.id == id && !frame.repeat)
+    .is_some_and(|frame| frame.assigned.contains(&meaning_key(source)));
+  if reassigned_by_the_copy || !meaning_reaches(meaning, key) {
     return false;
   }
   let mut state = state_mut!();

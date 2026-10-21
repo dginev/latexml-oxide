@@ -1,0 +1,16 @@
+% A routed copy's own recursion stands: `\def\pgfutil@reserved@b{…\pgfutil@reserved@c}` then
+% `\let\pgfutil@reserved@c\pgfutil@reserved@b`, the copy having just assigned `@b` itself, is no re-save of a wrapped
+% command (its binding's meaning is gone), so the `\let` is TeX's.
+% witness: 2101.08181 (lmcs.cls copy: pgf's loop over its scratch registers, run while the copy was read, spun to the
+%          timeout — 3 s → Fatal Timeout)
+% oracle:  pdflatex 0 errors, "Result: [a][b][c]."
+% engines: rust int40b (da2615cf7e) = 23 Errors, "Result: ([shift=(135:0.0pt)]…" (the `\let` declined, `@c` kept
+%          pgf's binding-time meaning); int39a (no saved-meaning rule) = "Result: [a][b][c]."
+% expect:  0 errors; "Result: [a][b][c]."
+% status:  RED (da2615cf7e) -> GREEN (int40 follow-up: a `\let` is declined only while its source still holds the
+%          binding's meaning, state::copy_provides_keeps_saved_meaning)
+% preload: ar5iv.sty
+\documentclass{sn-jnl}
+\begin{document}
+Result: \snloopresult.
+\end{document}
