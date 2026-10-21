@@ -442,12 +442,23 @@ LoadDefinitions!({
   // packages that declare-then-reference pdf objects (e.g. zref-savepos
   // path on certain papers). Witness cluster: arXiv:2506.21632 / .08091.
   def_primitive_noop("\\pdfrefobj Number")?;
-  def_primitive_noop("\\pdfrefxform Number")?;
+  // \pdfrefxform <form number> places the form XObject `\pdfxform` made of a box (pdfTeX manual §`\pdfrefxform`), as
+  // often as it is referenced: here the box `\pdfxform` kept, as `\copy` sets one. xsavebox's `\xsbox`/`\xusebox`
+  // (xsavebox.sty:120-122, :298, :325, through pdfbase's `\pbs_pdfxform:nnnnn`/`\pbs_pdfrefxform:n`) saved a box this way
+  // and printed an empty one of its size (biblatex-ext's open-access symbols, biblatex-ext.tex:3938-4022). Perl defines
+  // neither (pdfTeX.pool.ltxml:96 `\pdfxformname` only; OXIDIZED_DESIGN_DIVERGENCES #788). Guard `perfect_kernel_batch78a::xsavebox_saved_box_prints_its_content`.
+  DefPrimitive!("\\pdfrefxform Number", sub[(number)] {
+    match lookup_value(&s!("pdfxform@{}", number.value_of())) {
+      Some(Stored::Digested(form)) => Ok(vec![form]),
+      _ => Ok(Vec::new()),
+    }
+  });
   // \pdfxform [attr <general text>] [resources <general text>] <box number>
   // makes a form XObject of the box and numbers it in `\pdflastxform`. Nothing
   // is written here; the number is what the caller keeps (media9's pdfbase
   // `\pbs_pdfxform:nnnnn`, pdfbase.sty:426, in PDF output: arXiv 2605.10543).
-  // The box is made void, "as `\box` does" (pdftex manual §`\pdfxform`).
+  // The box is made void, "as `\box` does" (pdftex manual §`\pdfxform`); its content is the form's, which
+  // `\pdfrefxform` places.
   DefPrimitive!("\\pdfxform", sub[_args] {
     for keyword in ["attr", "resources"] {
       if read_keyword(&[keyword])?.is_some() {
@@ -456,11 +467,14 @@ LoadDefinitions!({
       }
     }
     let number = read_number()?;
-    remove_value(&format!("box{}", number.value_of()));
+    let form = remove_value(&format!("box{}", number.value_of()));
     let next = match lookup_register("\\pdflastxform", Vec::new())? {
       Some(RegisterValue::Number(n)) => n.0 + 1,
       _ => 1,
     };
+    if let Some(form @ Stored::Digested(_)) = form {
+      assign_value(&s!("pdfxform@{next}"), form, Some(Scope::Global));
+    }
     assign_register("\\pdflastxform", RegisterValue::Number(Number::new(next)), Some(Scope::Global), Vec::new())?;
   });
   // \pdfannot annot type spec (h, v, m)

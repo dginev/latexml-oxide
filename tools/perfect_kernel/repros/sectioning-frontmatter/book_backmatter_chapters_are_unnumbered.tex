@@ -1,0 +1,21 @@
+% witness: selection study 78a probe (book.cls:355-366 `\@chapter` and :376-385 `\@makechapterhead` test
+%          `\if@mainmatter`, which `\backmatter` (:296-299) sets false); 13 of 30k sampled papers use it in a book
+% oracle:  pdflatex 0 errors; "Afterword" without a number, then "1.2 Notes" (the section counter runs on under the
+%          last main chapter)
+% engines: rust int40c and perl = "Chapter 2 Afterword", "2.1 Notes" (book.cls.ltxml:121 `\backmatter` a no-op)
+% expect:  0 errors, 0 warnings; the back-matter chapter's title untagged, its section "1.2"
+% status:  GREEN (78a)
+\documentclass{book}
+\begin{document}
+\frontmatter
+\chapter{Preface}
+P.
+\mainmatter
+\chapter{Intro}
+\section{Sec}
+I.
+\backmatter
+\chapter{Afterword}
+\section{Notes}
+A.
+\end{document}

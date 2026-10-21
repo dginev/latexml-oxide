@@ -1,0 +1,15 @@
+% witness: math0004017 (`\catcode`@=\active`, then `@>{f^*}>>`, `@<{q_x^*}<<` in displays and `@V{q}VV` in a `\CD`);
+%          amstex.tex:96-107 the active `@` is `\FN@\at@`, :1660-1702 the `\atdef@` arrows, :1804 `@` made active
+% oracle:  tex (AMS-TeX) 0 errors; "A → B ← C" with f over the first arrow
+% engines: rust int40c = "Error:undefined:@ The token T_ACTIVE[@] is not defined.", the arrows printed as "@>>>"
+% expect:  0 errors; the formula holds a rightarrow and a leftarrow, no "@"
+% status:  RED (78a stopped: the fix — the active `@` let to amscd's `\cd@`, AMS-TeX's `\atdef@`, `\FN@` and
+%          punctuation connectors; agent_reports/payload_78a_data/item8_amstex_at.patch — turns this GREEN but takes
+%          math0005042's lamstex `\newCD` diagrams from silently lost to Fatal, as our `\halign` never inserts
+%          `\everycr`: RED kernel-alignment/everycr_runs_after_every_cr; KNOWN_PERL_ERRORS #1018)
+\input amstex
+\documentstyle{amsppt}
+\catcode`@=\active
+\document
+$$A @>f>> B @<<< C$$
+\enddocument

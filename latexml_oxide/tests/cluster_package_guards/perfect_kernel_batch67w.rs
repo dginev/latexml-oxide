@@ -245,8 +245,10 @@ fn wileynjdv5_theorem_styles() {
   assert_theorem_styles(&xml, [None, Some("italic"), Some("italic")]);
 }
 
-/// WileyNJD-v2.cls:1180 `\uns` out of math is a thin space that leaves the paragraph's `--` an en dash (2208.08472;
-/// RED fonts-nfss/ligature_after_space_only_formula is the kernel half).
+/// WileyNJD-v2.cls:1180 `\uns` out of math is a thin space that leaves the paragraph's `--` an en dash (2208.08472).
+/// Since 78a the class's own `$\,$` (a formula holding only a space, written as the six-per-em space U+2006), the
+/// kernel ligating the text after it (`perfect_kernel_batch78a::text_after_a_space_only_formula_is_ligatured`); before,
+/// the binding's `\thinspace` (U+2009) stood in.
 #[test]
 fn wileynjd_uns_keeps_en_dashes() {
   let (log, xml) = convert_with(
@@ -256,10 +258,10 @@ fn wileynjd_uns_keeps_en_dashes() {
     Some("ar5iv.sty"),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  // unsquashed: the thin space (U+2009) is whitespace to `squash`
+  // unsquashed: the space (U+2006) is whitespace to `squash`
   assert!(
     xml.contains(
-      "<p xml:id=\"S1.p1.1\">The 500\u{2009}hPa level over 1989\u{2013}2008, and <Math mode=\"inline\" tex=\"x{\\,}y\""
+      "<p xml:id=\"S1.p1.1\">The 500\u{2006}hPa level over 1989\u{2013}2008, and <Math mode=\"inline\" tex=\"x{\\,}y\""
     ),
     "{xml}"
   );

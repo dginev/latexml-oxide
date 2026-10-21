@@ -182,7 +182,11 @@ pub(crate) fn load() -> Result<()> {
         tokens.extend(type_tokens.unlist());
         tokens.extend(vec![T_END!(), T_BEGIN!(), T_END!()]);
       } else if empty_type || level_int > CounterValue!("secnumdepth").value_of() ||
-        lookup_bool("no_number_sections") {
+        lookup_bool("no_number_sections") ||
+        // A class whose chapters are numbered in the main matter only (book.cls:355-366 `\@chapter`'s
+        // `\if@mainmatter`, after `\backmatter`; book_cls.rs): the chapter level (an appendix's too), the other
+        // levels numbered still.
+        (level_int == 0 && lookup_bool("no_number_chapters")) {
         // No number, but in TOC
         tokens = vec![
           T_CS!("\\par"), T_CS!("\\lx@trivlist@end@group"), T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"),
@@ -409,8 +413,20 @@ pub(crate) fn load() -> Result<()> {
         // TODO: is .clone() on the tokens before they are unlisted a sign that
         // the DigestedData::Postponed variant isn't ideal?
         // should we be draining it? Or is there a better conceptual organization?
-        digest(
-          Tokens!(T_CS!("\\lx@hidden@bgroup"), tokens.clone().unlist(), T_CS!("\\lx@hidden@egroup")))?
+        // In the class's title font, as a numbered unit's (`\lx@format@title@@`): Perl
+        // latex_constructs.pool.ltxml:666-670 (IEEEtran's small-caps `\section*{Acknowledgment}`, sectsty's
+        // `\allsectionsfont`; witnesses 2605.04767, 2605.05014, 2605.13768). Guard
+        // `perfect_kernel_batch78a::unnumbered_section_takes_the_title_font`.
+        // A format that opens what its after-code closes (tufte-common.def:1613-1619's `\chapter`,
+        // `\begin{fullwidth}` … `\end{fullwidth}`) has that closed after the title too
+        // (`\lx@format@title@after@@`, titlesec_sty.rs).
+        let font = Invocation!(T_CS!("\\lx@format@title@font@@"), vec![Tokens::new(Explode!(&stype_str))]);
+        let after = Invocation!(T_CS!("\\lx@format@title@after@@"), vec![Tokens::new(Explode!(&stype_str))]);
+        // The title braced, as a numbered unit's (`\lx@format@title@@`'s `{#2}`): a format ending in an
+        // argument-taking macro (`{\bfseries\MakeUppercase}`) takes the whole title.
+        digest(Tokens!(
+          T_CS!("\\lx@hidden@bgroup"), font, T_BEGIN!(), tokens.clone().unlist(), T_END!(), after,
+          T_CS!("\\lx@hidden@egroup")))?
       } else {
         title.clone()
       };
@@ -419,9 +435,10 @@ pub(crate) fn load() -> Result<()> {
       if let Some(toctitle) = toctitle_arg
         && let Postponed(toctokens) = toctitle.data()
           && !toctokens.is_empty() {
+            let font = Invocation!(T_CS!("\\lx@format@toctitle@font@@"), vec![Tokens::new(Explode!(&stype_str))]);
             let toctitle_digested = digest(
-              Tokens!(T_CS!("\\lx@hidden@bgroup"),
-                toctokens.clone().unlist(), T_CS!("\\lx@hidden@egroup")))?;
+              Tokens!(T_CS!("\\lx@hidden@bgroup"), font,
+                T_BEGIN!(), toctokens.clone().unlist(), T_END!(), T_CS!("\\lx@hidden@egroup")))?;
             props.insert("toctitle", toctitle_digested.into());
           }
       Ok(props)

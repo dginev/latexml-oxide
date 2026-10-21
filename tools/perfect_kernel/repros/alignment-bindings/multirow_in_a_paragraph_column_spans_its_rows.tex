@@ -1,0 +1,15 @@
+% witness: 2602.22000 (A1.T3/T4: the `p{1cm}` cell's `\multirow{2}{*}{…}` spans no rows, its `c` neighbour's does)
+% oracle:  pdflatex 0 errors; "Spanned text" set across both rows of the first column
+% engines: rust int40c and perl = no rowspan, a second empty <td> ("Rowspan 2 in cell(0,0) covers non-empty cells"):
+%          the empty p cell below is an `\lx@tabular@p@` box Alignment.pm `isSkippable` cannot look into
+%          (KNOWN_PERL_ERRORS, PERL-ORIGIN)
+% expect:  0 errors, 0 warnings; <td … rowspan="2" …> on the p cell, the second row's first cell skipped
+% status:  GREEN (78a)
+\documentclass{article}
+\usepackage{multirow}
+\begin{document}
+\begin{tabular}{|p{2cm}|c|}
+\multirow{2}{*}{Spanned text}&a\\
+&b\\
+\end{tabular}
+\end{document}

@@ -1068,6 +1068,14 @@ impl Font {
       series = Some(Cow::Borrowed("bold"));
       force_series = Some(true);
     }
+    // `forcebold` false is the normal math version (`\unboldmath`, `\mathversion{normal}`, latex.ltx:14092-14095,
+    // :10545): the series medium again, no longer forced. Perl's merge ignores it (Font.pm:934-935, KNOWN_PERL_ERRORS
+    // #687), so the bold version stayed to the end of the group (witness 1803.08052, Buras's
+    // `\boldmath\section{…}\unboldmath`). Guard `perfect_kernel_batch78a::unboldmath_restores_the_normal_math_version`.
+    let unbold = other.forcebold == Some(false);
+    if unbold {
+      series = Some(Cow::Borrowed("medium"));
+    }
 
     // Build flags from force options
     let mut flags: u8 = 0;
@@ -1088,7 +1096,7 @@ impl Font {
     } else {
       other.family.clone()
     };
-    let series = if series.is_none() || (oflags & FLAG_FORCE_SERIES != 0) {
+    let series = if !unbold && (series.is_none() || (oflags & FLAG_FORCE_SERIES != 0)) {
       self.series.clone()
     } else {
       series
@@ -1112,6 +1120,9 @@ impl Font {
     let language = other.language.clone().or_else(|| self.language.clone());
     let mut mathstyle = other.mathstyle.clone().or_else(|| self.mathstyle.clone());
     flags |= self.flags.unwrap_or(0);
+    if unbold {
+      flags &= !FLAG_FORCE_SERIES;
+    }
 
     // Dynamic adjustment directives
     if let Some(scale) = other.scale

@@ -3380,15 +3380,15 @@ fn newclude_include_star() {
 }
 
 /// 63t: biblatex's `\Citeauthor` is its capitalized `\citeauthor` (biblatex.def:2624-2625; 2410.22329). In this
-/// numeric style the citation is the bracketed number, where biblatex prints the name: an open residual, RED
-/// index-bib/biblatex_citeauthor_numeric_prints_name. Repro loader/biblatex_capital_citeauthor.
+/// numeric style too it prints the name (78a, OXIDIZED_DESIGN_DIVERGENCES #786; until then the bracketed number,
+/// index-bib/biblatex_citeauthor_numeric_prints_name). Repro loader/biblatex_capital_citeauthor.
 #[test]
 fn biblatex_capital_citeauthor() {
   let tex =
     include_str!("../../../tools/perfect_kernel/repros/loader/biblatex_capital_citeauthor.tex");
   assert_eq!(
     hf3_element(tex, "p", "showed"),
-    "<p xml:id=\"p1.1\"><cite class=\"ltx_citemacro_cite\">[<bibref bibrefs=\"Hampe_2017\" separator=\",\" yyseparator=\",\"/>]</cite> showed it.</p>"
+    "<p xml:id=\"p1.1\"><cite class=\"ltx_citemacro_citeauthor\"><bibref bibrefs=\"Hampe_2017\" separator=\",\" show=\"Authors\" yyseparator=\",\"/></cite> showed it.</p>"
   );
 }
 

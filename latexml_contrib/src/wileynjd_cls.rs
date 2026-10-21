@@ -272,9 +272,9 @@ fn wiley_njd_class_body(class: &str) -> Result<()> {
   // paper's DOI where it is given (`\doiheadtext{DOI: 10.1002/fld.4504}`, 1803.06134; 2306.05470, 2505.23984,
   // 2512.05601), is a DOI note, as `\DOI`.
   // `\uns` (WileyNJD-v2.cls:1180 `\def\uns{\ifmmode\,\else$\,$\fi}`) is a thin space in or out of math (2208.08472,
-  // 2211.16474), here `\thinspace` out of math, the same 1/6 em: the class's formula holding only `\,` ends the
-  // paragraph's `--` ligatures in the kernel (RED fonts-nfss/ligature_after_space_only_formula; 2208.08472's
-  // "1989--2008"), the en dashes pdflatex prints would be lost. `\subtitlefont`
+  // 2211.16474), as the class defines it (until 78a `\thinspace` out of math: the formula holding only `\,` ended the
+  // paragraph's `--` ligatures in the kernel, 2208.08472's "1989--2008"; fixed in document.rs, guard
+  // `perfect_kernel_batch78a::text_after_a_space_only_formula_is_ligatured`). `\subtitlefont`
   // (WileyNJD-v2.cls:1436, 1506, WileyNJDv5.cls:3990, the size options' title fonts) the font of a subtitle in
   // `\title{…\\\subtitlefont …}` (1902.01961, 2108.10040), its margins left out.
   RawTeX!(
@@ -283,7 +283,7 @@ fn wiley_njd_class_body(class: &str) -> Result<()> {
 \def\fundinginfohead#1{\gdef\@fundinginfo@head{#1}}%
 \def\fundinginfoheadtext#1{\gdef\@fundinginfo@head@text{#1}}%
 \def\artid#1{\gdef\@artid{#1}}%
-\def\uns{\ifmmode\,\else\thinspace\fi}%"
+\def\uns{\ifmmode\,\else$\,$\fi}%"
   );
   DefMacro!(
     "\\doiheadtext{}",

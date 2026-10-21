@@ -1,0 +1,15 @@
+% witness: tufte-common.def:1613-1619 (`\titleformat{\chapter}[display]{\begin{fullwidth}}…[\end{fullwidth}]`; the tufte
+%          sample-book's `\chapter*`/`\section*`), with starred titles in the class's title font (78a)
+% oracle:  pdflatex 0 errors; "Starred" in italics, then "Body." upright
+% engines: rust int40c = <title>Starred</title> (no title font, 0 errors); with the title font alone, the format's
+%          `\begin{wide}` left open in the title ("Attempt to close a group that switched to mode horizontal")
+% expect:  0 errors, 0 warnings; <title font="italic">Starred</title>, the paragraph upright
+% status:  GREEN (78a)
+\documentclass{article}
+\usepackage{titlesec}
+\newenvironment{wide}{\itshape}{}
+\titleformat{\section}[display]{\begin{wide}}{\thesection}{0pt}{}[\end{wide}]
+\begin{document}
+\section*{Starred}
+Body.
+\end{document}

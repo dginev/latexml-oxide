@@ -324,6 +324,14 @@ LoadDefinitions!({
     let attachment = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
     let width = args[1].as_ref().map(|w| w.to_attribute()).unwrap_or_default();
     Ok(stored_map!("width" => width, "vattach" => translate_attachment(&attachment)))
+  },
+  // The cell's paragraph box, which a row span may cover when it is empty (`Digested::is_empty_paragraph_cell`,
+  // alignment/normalize.rs): Perl's `isSkippable` (Alignment.pm:513-517) cannot look into this constructor, so a
+  // `\multirow` above an empty p cell was truncated to one row ("covers non-empty cells"; KNOWN_PERL_ERRORS #1015;
+  // witnesses 2602.22000 A1.T3/T4, 2605.23257). Otherwise the empty p cell stays the content it is in Perl (its
+  // `align`, an all-empty row kept). Guard `perfect_kernel_batch78a::multirow_in_a_paragraph_column_spans_its_rows`.
+  after_digest => sub[whatsit] {
+    whatsit.set_property("paragraph_cell_body", whatsit.get_arg(3).cloned());
   });
 
   DefColumnType!("*{Number}{}", sub[(n,pattern)] {

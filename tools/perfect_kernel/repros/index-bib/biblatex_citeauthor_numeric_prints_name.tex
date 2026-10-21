@@ -4,7 +4,7 @@
 % oracle:  pdflatex+biber 0 errors: "Hampe showed it." and "Hampe [1] showed it too."
 % engines: rust 63t3 = "[1] showed it." and "[1] showed it too." (the citation number in place of the name)
 % expect:  0 errors; the author name, linked to the entry
-% status:  RED (63t3)
+% status:  GREEN (78a: `\citeauthor` prints the name in every style, numeric `\textcite` "Name [1]")
 \begin{filecontents*}{biblatex_citeauthor_numeric_prints_name.bib}
 @article{Hampe_2017, author={Hampe, Simon}, title={T}, journal={J}, year={2017}}
 \end{filecontents*}

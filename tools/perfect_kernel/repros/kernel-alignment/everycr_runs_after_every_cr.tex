@@ -1,0 +1,11 @@
+% witness: math0005042 (lamstex diag.tex `\newCD`: `\everycr{\noalign{\global\advance\rowcount@\@ne …}}` counts the
+%          diagram's rows and builds its `\ifcase` size lists; found by 78a's AMS-TeX active `@`, which ran it)
+% oracle:  pdftex 0 errors; "count: 3" (tex.web §799 `fin_row`/§785 `align_peek`: `\everycr` after the preamble's
+%          `\cr` and after every row's)
+% engines: rust int40c = "count: 0" (the register is stored, never inserted: tex_tables.rs `\everycr`); perl alike
+% expect:  0 errors; "count: 3"
+% status:  RED (78a, not brief: a kernel alignment capability; blocks KNOWN_PERL_ERRORS #1018's fix)
+\count1=0
+\setbox0\vbox{\everycr{\noalign{\global\advance\count1 by 1 }}\halign{#\cr a\cr b\cr}}
+count: \the\count1
+\bye

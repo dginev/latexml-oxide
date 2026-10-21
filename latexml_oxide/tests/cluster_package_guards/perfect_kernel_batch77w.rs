@@ -481,8 +481,8 @@ fn standard_class_derivative_patches_stand() {
 /// math0301023's khbook.cls) keeps the book binding's structural commands — its `\newcommand\frontmatter`,
 /// `\mainmatter`, `\backmatter` and `\appendix` do not replace them (OD #731 rule 13: only the binding's text names
 /// yield; the 77w r2 re-review's finding 1, its probe4). pdflatex: "Preface", "Chapter 1 Intro", "1.1 Sec",
-/// "Appendix A Extra", "Afterword"; the last is "Appendix B Afterword" as under `\documentclass{book}`, whose
-/// `\backmatter` numbers on (Perl book.cls.ltxml:121 alike).
+/// "Appendix A Extra", "Afterword"; the last unnumbered as under `\documentclass{book}`, whose `\backmatter` leaves the
+/// chapter level unnumbered since 78a (KNOWN_PERL_ERRORS #1016; Perl book.cls.ltxml:121 numbered it "Appendix B").
 #[test]
 fn standard_class_derivative_keeps_book_structure() {
   let (log, xml) = convert_files_with(
@@ -513,7 +513,7 @@ fn standard_class_derivative_keeps_book_structure() {
       "<title><tag close=\" \">Chapter 1</tag>Intro</title>",
       "<title><tag close=\" \">1.1</tag>Sec</title>",
       "<title><tag close=\" \">Appendix A</tag>Extra</title>",
-      "<title><tag close=\" \">Appendix B</tag>Afterword</title>",
+      "<title>Afterword</title>",
     ],
     "{xml}"
   );

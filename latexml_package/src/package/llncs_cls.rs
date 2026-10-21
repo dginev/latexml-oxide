@@ -36,6 +36,11 @@ LoadDefinitions!({
   // eager-loading here. Witness 2211.16852.
   RequirePackage!("amsbsy");
   RequirePackage!("amssymb");
+  // llncs.cls:521-522 (every version sampled, the v2.x copies of 1006.0220, 1006.0673 too): the first level's item
+  // label is a bold en dash, the second a bullet (`$\m@th\bullet$`, set as the kernel's text bullet) — article's
+  // the other way round, which Perl's binding keeps (KNOWN_PERL_ERRORS #1017). Witness 2607.29279 (waica.cls,
+  // a copy repeating it). Guard `perfect_kernel_batch78a::llncs_item_labels_are_the_class_s`.
+  RawTeX!(r"\renewcommand\labelitemi{\normalfont\bfseries --}\renewcommand\labelitemii{\textbullet}");
 
   //======================================================================
   // Frontmatter

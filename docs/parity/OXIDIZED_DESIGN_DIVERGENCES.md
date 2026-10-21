@@ -20508,10 +20508,13 @@ precedent, batch 53) and koma_script.rs adds the semantic layer the article, rep
    Abstract", "Chapter 2 Introduction", every number one too high; now "Abstract", "1 Introduction", as its PDF.
    Residual: the flag unnumbers every level, where KOMA unnumbers only the chapter outside the main matter and keeps
    a section's number without the chapter's (scrbook.cls:6030-6036 `\if@mainmatter\thechapter.\fi`), so `\backmatter`
-   is left to KOMA, as book's binding leaves its own: a back-matter chapter is numbered (2508.01496's appendix
+   is left to KOMA: a back-matter chapter is numbered (2508.01496's appendix
    "Appendix A", PDF "Appendix"), its sections keep KOMA's numbers ("13", as scrbook.cls numbers them; with the flag
    set there, every reference to them lost its number: -201 words); a section inside a front-matter chapter is
-   unnumbered (KOMA "1").
+   unnumbered (KOMA "1"). book_cls.rs's `no_number_chapters` (78a, KNOWN_PERL_ERRORS #1016) does not serve here: an
+   unnumbered KOMA chapter still resets the counters within it (scrbook.cls:5573-5600, `\cl@<chapter>` with
+   `\@stpelt` from v3.15), which the kernel's unnumbered unit does not, so 2508.01496's appendix figures would number
+   on from the last main chapter (16 figures off by one; PDF "Figure 1" … "Figure 16").
 Divergence from Perl: KOMA's own commands are defined (the raw class), and under scrreprt/scrbook the ids are report's
 (`Ch1.S1`), not Perl's article ids. With it, ceurart's `\title[mode=<mode>]` (ceurart.cls:381-500: the optional
 argument is a key list; `mode=sub`, and `\subtitle`, the subtitle) maps onto the frontmatter (ceurart_cls.rs: `title` the
@@ -22168,3 +22171,69 @@ SYNC row); telling the class's own theorems apart per binding is not done. Where
 declaration wins here and LaTeX's refusal is lost: llncs + `\newtheorem{theorem}{Theorem}[section]` gives "Theorem 1.1"
 where pdflatex prints "Theorem 1." with an error. Guard `perfect_kernel_batch77v::llncs_document_newtheorem_replaces_the_class`
 (repro class-bindings/llncs_document_newtheorem_over_class).
+
+### 784. A jfm copy's caption: its own `\@makecaption`'s label format, or caption with its options (Perl: no jfm binding, article's "Figure 1:")
+
+**LaTeX**: the jfm.cls copies without caption set `{\normalfont\scshape #1\ifrem@fullpt\else .\fi} #2` (0712.2739's
+:953-958, ~41 of 49 sampled jfm papers): "Figure 1." with the label in small caps, `\removefullpoint` dropping the
+period once; the newer copies load caption with their own options (2608.01828's :1837 `labelsep=period`).
+
+**Perl**: no jfm binding; OmniBus (article) prints "Figure 1:".
+
+**Rust** (78a): jfm_cls.rs requires caption through `shipped_class::require_shipped_packages`, with the copy's
+options (a bare `RequirePackage!("caption")` dropped them); a copy whose `\@makecaption` uses `\ifrem@fullpt` gets its
+label format as the figure's and table's title format (`\format@title@<type>` = `\lx@tag[][. ]{…}`, as amsart's
+ams_support binding) and its label font as `\fnum@font@<type>` (`\scshape`), with `\removefullpoint`. The copy's own
+`\@makecaption` stays declined (the kernel's caption), so its layout (centred short captions, `\small`) is not
+modelled. Guards `perfect_kernel_batch78a::{jfm_copy_captions_end_the_label_with_a_period,
+jfm_copy_caption_package_keeps_its_options}`.
+
+### 785. An unnumbered heading runs its title format's after-code (Perl: the title font alone, titlesec's after-code dropped)
+
+**LaTeX**: titlesec typesets a starred title with the same `\ttlf@<sec>` as a numbered one, without the label: the
+format, `<before>{title}` and the after-code (titlesec.sty:740-818). tufte-common.def:1613-1619's `\chapter` format
+opens `\begin{fullwidth}` in the format and closes it in the after-code.
+
+**Perl**: `\@@unnumbered@section` digests `\lx@format@title@font@@{type}` before the title
+(latex_constructs.pool.ltxml:666-670); titlesec.sty.ltxml:42-57 drops the after-code.
+
+**Rust** (78a): the starred title runs `\lx@format@title@font@@{type}` before it (as Perl; the port had lost it, a
+Rust-only defect — SYNC "Rust Error Fixes") and `\lx@format@title@after@@{type}` after it (base_utilities.rs:
+`\format@title@after@<type>` when defined). titlesec_sty.rs defines `\format@title@after@<sec>` as its after-code
+(empty for `rightmargin`/`wrap`/`drop`, and for an `explicit` after-code that names the title): the format's
+`\begin{fullwidth}` is closed in the title (the tufte manuals: 0 errors, the starred titles in the class's italics).
+Guards `perfect_kernel_batch78a::{unnumbered_section_takes_the_title_font,
+titlesec_after_code_closes_an_unnumbered_title}`.
+
+### 786. biblatex's `\citeauthor` and a numeric style's `\textcite` print the name (Perl: no biblatex binding)
+
+**biblatex**: `\citeauthor` prints `\printnames{labelname}` in every style (biblatex.def:2497-2506); numeric.cbx's and
+alphabetic.cbx's `\textcite` print the name, then the bracketed label ("Hampe [1]").
+
+**Perl**: no biblatex binding (the contrib binding ports the upstream draft's `_cite_fallback`, which sends both to the
+plain `\cite` outside an author-year style: "[1] showed it").
+
+**Rust** (78a): biblatex_sty.rs's `\citeauthor` is the author-year form (`\@@bibref{Authors}`) in every style; a
+non-author-year `\textcite`/`\Textcite`/`\citet` is natbib's numbers-mode textual citation (Perl natbib.sty.ltxml:161-171,
+`Authors Phrase1NumberPhrase2`, the pre- and postnote inside the brackets). An author-title or verbose style's
+`\textcite` prints "Name [1]" too, where biblatex prints the title. Witnesses 2402.17192 (style=ieee), 2410.22329.
+Guard `perfect_kernel_batch78a::biblatex_citeauthor_and_textcite_print_the_name_in_a_numeric_style`.
+
+### 787. nicematrix's `\Block{i-j}<tokens>{content}` sets the tokens before the content (Perl: no nicematrix binding)
+
+nicematrix.sty:7258 `\__nicematrix_Block_i: { m m D < > { } +m }`: the `<…>` argument is set before the content in the
+block's box. nicematrix_sty.rs's `\Block` read `{}{}` only, so the `<\bfseries>` was the content (OT1's `<`/`>`, "¡Tall¿").
+Rust (78a): `OptionalAngled` reads it; present, the content is `{<tokens><content>}`. Guard
+`perfect_kernel_batch78a::nicematrix_block_angle_tokens_apply_to_the_content`.
+
+### 788. `\pdfxform` keeps its box as the form, `\pdfrefxform` places it (Perl: `\pdfxformname` only)
+
+**pdfTeX**: `\pdfxform <box>` makes a form XObject of the box (voiding it) and numbers it in `\pdflastxform`;
+`\pdfrefxform <n>` places the form, as often as it is referenced (pdfTeX manual §`\pdfxform`, §`\pdfrefxform`).
+
+**Perl**: pdfTeX.pool.ltxml:96 defines `\pdfxformname`; neither primitive.
+
+**Rust** (78a): pdftex.rs's `\pdfxform` keeps the box (global value `pdfxform@<n>`) and `\pdfrefxform` returns it, as
+`\copy` does. xsavebox's `\xsbox`/`\xusebox` (xsavebox.sty:120-122, :298, :325 through pdfbase's
+`\pbs_pdfxform:nnnnn`/`\pbs_pdfrefxform:n`) printed an empty box of the content's size (biblatex-ext's open-access
+symbols, biblatex-ext.tex:3938-4022). Guard `perfect_kernel_batch78a::xsavebox_saved_box_prints_its_content`.

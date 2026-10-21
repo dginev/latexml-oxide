@@ -256,7 +256,14 @@ pub fn normalize_mark_spans(alignment: &mut Alignment) -> Result<()> {
             nrc -= 1;
           }
           for jj in j..std::cmp::min(j + ncspan, rrow.get_columns().len()) {
-            if !rrow.get_columns()[jj].skippable {
+            // An empty paragraph cell is covered too (KNOWN_PERL_ERRORS #1015).
+            let cell = &rrow.get_columns()[jj];
+            if !(cell.skippable
+              || cell
+                .boxes
+                .as_ref()
+                .is_some_and(Digested::is_empty_paragraph_cell))
+            {
               row_empty = false;
             }
           }

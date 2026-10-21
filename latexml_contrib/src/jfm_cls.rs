@@ -33,9 +33,7 @@ LoadDefinitions!({
   // option there), so the option is the copy's when the paper has one.
   // The paper's own copy decides what follows where the versions differ: that option; caption, which 35 of 119 sampled
   // copies load (`\captionsetup`, run 340: 51; 2406.15733); the msam10 check's `\let\le=\leqslant` (73 copies,
-  // active); the bold-italic sans `\mathsfbi` (below). Without a readable copy, the newer versions' choices. (The copies
-  // without caption print "Figure 1." from their own `\@makecaption`, 0712.2739's :953-958; our captions keep ": ", a
-  // residual.)
+  // active); the bold-italic sans `\mathsfbi` (below). Without a readable copy, the newer versions' choices.
   let shipped = crate::shipped_class::shipped_class_text("jfm")?;
   RawTeX!(r"\newif\ifCUPmtlplainloaded\newif\iflineno");
   DeclareOption!("prodtf", "\\CUPmtlplainloadedtrue");
@@ -48,11 +46,31 @@ LoadDefinitions!({
   DeclareOption!(None, {});
   ProcessOptions!();
   RawTeX!(r"\iflineno\AtBeginDocument{\usepackage{lineno-FLM}}\fi");
-  if shipped
-    .as_deref()
-    .is_none_or(|text| crate::shipped_class::class_text_loads(text, "caption"))
-  {
-    RequirePackage!("caption");
+  // The copy's caption load keeps its options (2608.01828's :1837 `[…,labelsep=period,…]{caption}`: "Figure 1."); the
+  // copies without caption print "Figure 1." with the label in small caps from their own `\@makecaption` (0712.2739's
+  // :953-958 `{\normalfont\scshape #1\ifrem@fullpt\else .\fi} #2`, `\removefullpoint` dropping the period once),
+  // which the kernel's caption keeps out (`\@makecaption keeps LaTeXML's definition`): its label format is the
+  // figure's and table's title format, as amsart's (ams_support_sty.rs `\format@title@figure`), its font the label
+  // font (`\fnum@font@<type>`, sect09.rs). Before, both gave "Figure 1:" (OXIDIZED_DESIGN_DIVERGENCES #784; guards
+  // `perfect_kernel_batch78a::{jfm_copy_captions_end_the_label_with_a_period,
+  // jfm_copy_caption_package_keeps_its_options}`).
+  match shipped.as_deref() {
+    None => RequirePackage!("caption"),
+    Some(text) if crate::shipped_class::class_text_loads(text, "caption") => {
+      crate::shipped_class::require_shipped_packages("cls", &["caption"])?;
+    },
+    Some(text) => {
+      if crate::shipped_class::class_code_contains(text, "\\@makecaption")
+        && crate::shipped_class::class_code_contains(text, "rem@fullpt")
+      {
+        RawTeX!(
+          r"\newif\ifrem@fullpt\def\removefullpoint{\global\rem@fullpttrue}
+\def\fnum@font@figure{\scshape}\def\fnum@font@table{\scshape}
+\def\format@title@figure#1{\lx@tag[][\ifrem@fullpt\space\else. \fi]{\lx@fnum@@{figure}}#1\global\rem@fullptfalse}
+\def\format@title@table#1{\lx@tag[][\ifrem@fullpt\space\else. \fi]{\lx@fnum@@{table}}#1\global\rem@fullptfalse}"
+        );
+      }
+    },
   }
   // jfm.cls:1176-1183 `\checkfont` and the font checks every version runs (:1324-1365): amsbsy, and upmath when the
   // Euler fonts are found and the paper ships upmath.sty (TeX Live has none, so `\upi` is the class's `\pi`; witnesses

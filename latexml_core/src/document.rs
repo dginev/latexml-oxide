@@ -3152,11 +3152,15 @@ impl Document {
     let outnode = self.open_text_internal(text)?;
     if outnode.get_type() == Some(NodeType::TextNode) {
       // A closed text node the insertion re-entered (`swap_comment_text_if_needed` sets the node back on it) was
-      // ligated up to where `close_text_internal` left it.
+      // ligated up to where `close_text_internal` left it; a text sibling libxml merged the insertion into
+      // (`open_text_internal`) holds this run at its end.
       let start = if outnode == previous {
         run_start
       } else {
-        ligated_len(&outnode)
+        match &ligated {
+          Some((ligated_node, len)) if *ligated_node == outnode => *len,
+          _ => outnode.get_content().len().saturating_sub(text.len()),
+        }
       };
       self.text_run_font = Some((outnode.clone(), font.clone(), start));
     }
@@ -3484,9 +3488,17 @@ impl Document {
       if point.get_last_child().as_ref() == Some(&node) {
         // `node` was appended (not merged) — it is live and current.
         self.set_node(&node);
+      } else if let Some(merged) = point.get_last_child()
+        && merged.get_type() == Some(NodeType::TextNode)
+      {
+        // `node` was merged into a text sibling and freed: that sibling holds the text now and is the current
+        // node, as the appended node would be (Perl `setNode($node)`, Document.pm openText_internal), so its
+        // close ligates what was inserted. Leaving the parent current kept the rest of the run out of every
+        // ligature: text after a formula `cleanup_math` turns into spaces (`500$\,$hPa 1989--2008`) merges into
+        // the spaces' text node (witnesses nucl-ex0511052, 2208.08472; guard
+        // `perfect_kernel_batch78a::text_after_a_space_only_formula_is_ligatured`).
+        self.set_node(&merged);
       } else {
-        // `node` was merged into a text sibling and freed — fall back to the
-        // parent insertion point (matches the prior merged-case behavior).
         self.set_node(&point);
       }
     }

@@ -1,0 +1,11 @@
+% witness: 0712.2739 (its jfm.cls:953-958 `\@makecaption`, `{\normalfont\scshape #1\ifrem@fullpt\else .\fi} #2`)
+% oracle:  pdflatex 0 errors; "Figure 1. Schematic." and "Table 1 Values." with the labels in small caps
+% engines: rust int40c = <tag close=": ">Figure 1</tag> (the kernel's colon, upright), the copy's caption declined
+% expect:  0 errors, 0 warnings; <tag close=". "> with the label in small caps; after `\removefullpoint` close=" "
+% status:  GREEN (78a)
+% preload: ar5iv.sty
+\documentclass{jfm}
+\begin{document}
+\begin{figure}\caption{Schematic.}\end{figure}
+\begin{table}\removefullpoint\caption{Values.}\end{table}
+\end{document}

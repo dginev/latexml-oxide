@@ -123,11 +123,13 @@ fn koma_bibliography_preamble() -> Result<()> {
 /// unnumbered and leaves the chapter counter alone. LaTeXML's sectioning numbers by `no_number_sections` instead
 /// (sect04.rs `\@startsection`), which book.cls's binding sets in its `\frontmatter`/`\mainmatter` (book_cls.rs; Perl
 /// book.cls.ltxml:112-118). Here the two also set it, before KOMA's own code (the page clearing, `\@mainmatterfalse`,
-/// `\pagenumbering`), which stays as written. `\backmatter` is left to KOMA, as book's binding leaves its own: the flag
-/// unnumbers every level, where KOMA unnumbers only the chapter and keeps a section's number without the chapter's
-/// (scrbook.cls:6030-6036 `\if@mainmatter\thechapter.\fi`), and a back-matter appendix's sections are referenced by
-/// those numbers (2508.01496: "Appendix" with sections 1-24; set at `\backmatter`, every reference to them lost its
-/// number). Witness 2506.17485: "Abstract" unnumbered, then "1 Introduction", as its PDF (before: "Chapter 1
+/// `\pagenumbering`), which stays as written. `\backmatter` is left to KOMA: the flag unnumbers every level, where KOMA
+/// unnumbers only the chapter and keeps a section's number without the chapter's (scrbook.cls:6030-6036
+/// `\if@mainmatter\thechapter.\fi`), and a back-matter appendix's sections are referenced by those numbers
+/// (2508.01496: "Appendix" with sections 1-24; set at `\backmatter`, every reference to them lost its number). Book's
+/// `no_number_chapters` (book_cls.rs, 78a) unnumbers the chapter alone but does not reset the counters within it, as
+/// an unnumbered KOMA chapter does (scrbook.cls:5590-5600 from v3.15): 2508.01496's appendix figures would be off by
+/// one, so its appendix chapter stays "Appendix A" (PDF "Appendix"). Witness 2506.17485: "Abstract" unnumbered, then "1 Introduction", as its PDF (before: "Chapter 1
 /// Abstract", every later number one too high). Guard
 /// `perfect_kernel_batchint23::scrbook_front_matter_chapters_are_unnumbered`.
 pub(crate) fn koma_book_matter() -> Result<()> {

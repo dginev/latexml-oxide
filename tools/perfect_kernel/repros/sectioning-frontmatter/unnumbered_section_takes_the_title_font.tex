@@ -7,7 +7,7 @@
 % oracle:  pdflatex 0 errors, the unnumbered heading in small caps; perl: <title font="smallcaps">Acknowledgment</title>
 % engines: rust 57k2=0 but <title>Acknowledgment</title>
 % expect:  0 errors; <title font="smallcaps">Acknowledgment</title>, as Perl
-% status:  RED (57k2)
+% status:  GREEN (78a: `\@@unnumbered@section` applies `\lx@format@title@font@@`, and titlesec's after-code)
 \documentclass{IEEEtran}
 \begin{document}
 \section{Intro}

@@ -13471,7 +13471,7 @@ borrowed_proof_yields_to_a_package_newenvironment, borrowed_proof_yields_to_a_pa
 document_proof_after_theorem_is_its_own, borrow_leaves_what_it_loaded_unloaded, amsthm_reload_keeps_theorem_font_commands,
 amsthm_reload_keeps_a_files_proof, ntheorem_amsthm_option_keeps_its_proof}`.
 
-## 687. `\unboldmath` and `\mathversion{normal}` do not undo `\boldmath` (open)
+## 687. `\unboldmath` and `\mathversion{normal}` do not undo `\boldmath`
 
 latex.ltx's `\boldmath` and `\unboldmath` select the math version (`\mathversion{bold}` / `{normal}`), so after
 `\unboldmath` the maths is in the normal version again. Perl's `\boldmath`/`\unboldmath` (plain_base.pool.ltxml:612-617)
@@ -13482,7 +13482,10 @@ then sets the series bold with the force-series flag, which also stops any later
 `\mathversion`, `Font::merge_ref`'s `forcebold == Some(true)`). The end of a group does undo it, as the assignment is
 local. Minimal trigger: `\documentclass{article}\begin{document}\boldmath $x$ \unboldmath $y$\end{document}`:
 pdflatex sets y in `\OML/cmm/m/it/10`, both engines make it `font="bold italic"`; the same with `\mathversion{normal}` in
-place of `\unboldmath`. Not fixed. Repro fonts-nfss/boldmath_undone_by_unboldmath_and_group (RED).
+place of `\unboldmath`. Witness 1803.08052 (Buras's `\boldmath\section{…}\unboldmath`: 3,059 of 4,619 tokens bold).
+Fixed in Rust (78a): `Font::merge_ref` merges `forcebold` false as the normal version — the series medium, the
+force-series flag cleared. Guard `perfect_kernel_batch78a::unboldmath_restores_the_normal_math_version` (repro
+fonts-nfss/boldmath_undone_by_unboldmath_and_group).
 
 ## 690. A class's `\renewenvironment{proof}` replaces amsthm's `<proof>`
 
@@ -16312,3 +16315,54 @@ natbib binding, so the citations resolve and the copy's own commands are lost. M
 astro-ph0512042. Rust (77w; OXIDIZED_DESIGN_DIVERGENCES #731 rule 12): the declaration routes the request to the
 natbib binding with its options, the copy read after it as the stand-in's copy. Guards
 `perfect_kernel_batch77w::{natbib_copy_is_natbib, natbib_renamed_copy_citations_resolve}`.
+
+## 1015. A `\multirow` above an empty p cell spans no rows
+
+A `p{}`/`m{}`/`b{}` cell is the `\lx@tabular@p@` constructor's paragraph box (TeX_Tables.pool.ltxml:76-80), a whatsit
+with no `content_box`, which Alignment.pm's `isSkippable` (:513-517) counts as content. A `\multirow{2}{*}{…}` in such a
+column sets the rowspan (multirow.sty.ltxml:19-36), and the normalization (Alignment.pm:697-721) truncates it before
+the empty p cell below: "Rowspan 2 in cell(0,0) covers non-empty cells", the span lost and an empty `<td>` left in the
+row below. Minimal trigger: `\usepackage{multirow}` `\begin{tabular}{|p{2cm}|c|}\multirow{2}{*}{Spanned text}&a\\&b\\
+\end{tabular}` — pdflatex sets the text across both rows; Perl and Rust (int40c) give no `rowspan`. ≈18,700 corpus
+papers have a `\multirow` in a p/m/b column (190 of a 30k sample); witnesses 2602.22000 (A1.T3/T4), 2605.23257 (S5.T4,
+A2.T7). Fixed in Rust (78a): the p cell's constructor records its box as `content_box` (tex_tables.rs), as `\vbox` does,
+so an empty p cell is empty. Guard `perfect_kernel_batch78a::multirow_in_a_paragraph_column_spans_its_rows` (repros
+alignment-bindings/multirow_in_a_paragraph_column_spans_its_rows, multirow_in_p_column_spans).
+
+## 1016. book's `\backmatter` leaves the chapters numbered
+
+book.cls:296-299 `\backmatter` sets `\@mainmatterfalse`, by which `\@chapter` (:355-366) neither steps the chapter
+counter nor numbers the heading, and `\@makechapterhead` (:376-385) prints no "Chapter n"; the sections keep their
+numbers under the last main chapter ("1.2"). Perl's `\backmatter` is a no-op (book.cls.ltxml:121), so a back-matter
+chapter is "Chapter 2". Minimal trigger: book, `\mainmatter\chapter{Intro}\section{Sec}\backmatter\chapter{Afterword}
+\section{Notes}` — pdflatex "Afterword", "1.2 Notes"; Perl "Chapter 2 Afterword", "2.1 Notes". Fixed in Rust (78a):
+book_cls.rs's `\backmatter` sets `no_number_chapters`, by which `\@startsection` (sect04.rs) leaves the chapter level
+unnumbered; the other levels stay numbered (not `no_number_sections`, which would unnumber them too; scrbook's
+back-matter precedent, koma_script.rs `koma_book_matter`). `\frontmatter`/`\mainmatter` clear it. Guard
+`perfect_kernel_batch78a::book_backmatter_chapters_are_unnumbered` (repro
+sectioning-frontmatter/book_backmatter_chapters_are_unnumbered).
+
+## 1017. llncs's item labels are article's
+
+llncs.cls:521-522 (TL 2025 v2.26 and the v2.x copies sampled, 1006.0220, 1006.0673): `\labelitemi{\normalfont\bfseries
+--}`, `\labelitemii{$\m@th\bullet$}` — a bold en dash at the first level, a bullet at the second. Perl's
+llncs.cls.ltxml keeps the kernel's (article's) "•" then a bold "–". Minimal trigger: `\documentclass{llncs}` and a
+nested `{itemize}`. Every llncs paper's lists; witness 2607.29279 (waica.cls repeats the definitions). Fixed in Rust
+(78a): llncs_cls.rs renews both (the second as the kernel's text bullet). Guard
+`perfect_kernel_batch78a::llncs_item_labels_are_the_class_s` (repro class-bindings/llncs_item_labels_are_the_class_s).
+
+## 1018. AMS-TeX's active `@` is undefined
+
+amstex.tex:96-107 defines the active `@` globally as `\FN@\at@`, the reader of the connectors `\atdef@` defines
+(:1660-1702: `@>>>`, `@<<<`, `@VVV`, `@AAA`, `@=`, `@|`), and :1804 makes `@` active; the arrows work in any formula,
+`\CD` or not. Perl's AmSTeX.pool.ltxml defines no active `@` (amscd.sty.ltxml binds it inside `\CD` only), so a
+document that makes `@` active — as amstex.tex leaves it — gets "The token T_ACTIVE[@] is not defined" for each arrow
+and prints "@>>>". Minimal trigger: `\input amstex \documentstyle{amsppt} \catcode`@=\active \document $$A @>f>> B$$
+\enddocument`. 88 papers in the 68r A/B; witnesses math0004017, math0005042, math0009033 (`\mathbin{Y@!@!@!@!}`).
+Not fixed (78a stopped on it; repro amstex/amstex_active_at_reads_the_arrows, RED): the fix — the active `@` let to the
+amscd binding's connector reader `\cd@`, which reads a document's `\csname\space @\string#1\endcsname` connector (amstex's
+`\atdef@`) before the binding's, amstex.tex:69-71's `\FN@` (`\futurelet\next`) and the punctuation connectors :162-164,
+:318-320 (agent_reports/payload_78a_data/item8_amstex_at.patch) — gives math0004017 and math0607639 their arrows and
+math0009033 its `@!`, but runs math0005042's lamstex `\newCD` diagrams (diag.tex), which count their rows and columns with
+`\everycr{\noalign{…}}` that our `\halign` never inserts (tex.web §799; RED kernel-alignment/everycr_runs_after_every_cr):
+"This arrow points outside the \newCD" and `\ifcase` lists built unbalanced, 28 errors → Fatal (TooManyErrors).

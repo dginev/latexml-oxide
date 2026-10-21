@@ -237,7 +237,7 @@ fn ieeetran_v17_proof_after_amsthm_relaxed() {
 
 /// `\appendix`/`\appendices` save the kernel's `\section` as `\@IEEEappendixsavesection` (IEEEtran.cls:5695-5696),
 /// which a document's own appendix command copied from the class calls (1907.08915's `\suppl`; pdflatex: the
-/// unnumbered heading "Supplementary materials").
+/// unnumbered heading "Supplementary materials", in the section's small caps since 78a).
 #[test]
 fn ieeetran_appendix_saves_section() {
   let tex = "\\documentclass{IEEEtran}\n\\begin{document}\n\\section{Intro}\nText.\n\\appendix\n\\makeatletter\n\
@@ -245,7 +245,7 @@ fn ieeetran_appendix_saves_section() {
   let (log, xml) = convert_counted(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(
-    xml.contains("<title>Supplementary materials</title>"),
+    xml.contains("<title font=\"smallcaps\">Supplementary materials</title>"),
     "{xml}"
   );
 }

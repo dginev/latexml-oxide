@@ -1041,11 +1041,13 @@ hard runaway).
   or the fixed branch; converts with a minor `\vbox` mode note). Trigger = `\heartshape` (and any shape
   whose `\SH@measline` area measures 0 under LaTeXML's no-layout model), via `\heartpar`.
 
-### xsavebox_saved_box_prints_its_content — RED (59l review)
-xsavebox's `\xsbox{name}{content}` saves the content as a PDF XObject and `\xusebox{name}` places it; ours measures
-the box (`<text align="center" width="22.5pt"/>`) but prints nothing, 0 diagnostics. Reaches biblatex-ext's
+### xsavebox_saved_box_prints_its_content — GREEN (78a)
+xsavebox's `\xsbox{name}{content}` saves the content as a PDF XObject and `\xusebox{name}` places it; ours measured
+the box (`<text align="center" width="22.5pt"/>`) but printed nothing, 0 diagnostics. Reaches biblatex-ext's
 open-access symbols (biblatex-ext-oasymb-*.sty save their logos with `\xsbox`; biblatex-ext.tex:3938, 3948,
-4021-4022). Not root-caused.
+4021-4022). Cause: pdftex.rs `\pdfxform` voided the box and `\pdfrefxform` was a no-op (xsavebox.sty:120-122, :298,
+:325 through pdfbase). Fix: `\pdfxform` keeps the box as the form (`pdfxform@<n>`), `\pdfrefxform` places it as
+`\copy` does (OXIDIZED_DESIGN_DIVERGENCES, beyond Perl). Guard `perfect_kernel_batch78a::xsavebox_saved_box_prints_its_content`.
 
 ### bm_left_right_at_the_outer_level — GREEN (65j)
 bm.sty's `\bm` scans its argument token by token and emits it ungrouped (`\bm@general`, bm.sty:162-217; `\left`/

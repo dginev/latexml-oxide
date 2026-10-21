@@ -1,0 +1,10 @@
+% witness: 2608.01828 (its jfm.cls:1837 `\usepackage[…,labelsep=period,…]{caption}`)
+% oracle:  pdflatex 0 errors; "Figure 1. Schematic."
+% engines: rust int40c = <tag close=": ">Figure 1</tag> (caption loaded without the copy's options)
+% expect:  0 errors, 0 warnings; <tag close=". ">Figure 1</tag>
+% status:  GREEN (78a)
+% preload: ar5iv.sty
+\documentclass{jfm}
+\begin{document}
+\begin{figure}\caption{Schematic.}\end{figure}
+\end{document}

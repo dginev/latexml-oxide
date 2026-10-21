@@ -876,6 +876,28 @@ impl Digested {
     }
   }
 
+  /// A table cell's boxes that hold nothing but a paragraph cell (`p{}`/`m{}`/`b{}`, the `\lx@tabular@p@` box,
+  /// tex_tables.rs) with a skippable body, and skippable material: a cell a row span may cover, though
+  /// [`Self::is_skippable`] (Perl's `isSkippable`) counts the box as content. KNOWN_PERL_ERRORS #1015.
+  pub fn is_empty_paragraph_cell(&self) -> bool {
+    use DigestedData::*;
+    match *self.0 {
+      List(ref l) => {
+        let l = l.borrow();
+        !l.get_property_bool("alignmentPreserve")
+          && l
+            .boxes
+            .iter()
+            .all(|d| d.is_skippable() || d.is_empty_paragraph_cell())
+      },
+      Whatsit(ref w) => match w.borrow().get_property("paragraph_cell_body") {
+        Some(prop) => matches!(&*prop, Stored::Digested(body) if body.is_skippable()),
+        None => false,
+      },
+      _ => false,
+    }
+  }
+
   /// Check if all items are "empty" or only spaces or otherwise skippable in a table cell.
   /// Perl: isSkippable (Alignment.pm L484-508)
   pub fn is_skippable(&self) -> bool {

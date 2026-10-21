@@ -1,0 +1,13 @@
+% witness: 2607.29279 (waica.cls, a copy of llncs.cls repeating :521-522); llncs.cls:521-522 (TL 2025 v2.26 and the
+%          v2.x copies of 1006.0220, 1006.0673): `\labelitemi{\normalfont\bfseries --}`, `\labelitemii` the bullet
+% oracle:  pdflatex 0 errors; a bold "–" before "One", "•" before "Inner"
+% engines: rust int40c and perl = "•" then a bold "–", article's labels (llncs.cls.ltxml keeps the kernel's)
+% expect:  0 errors, 0 warnings; the first level's tag a bold en dash, the second's a bullet
+% status:  GREEN (78a)
+\documentclass{llncs}
+\begin{document}
+\begin{itemize}
+\item One
+  \begin{itemize}\item Inner\end{itemize}
+\end{itemize}
+\end{document}

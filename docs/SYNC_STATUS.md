@@ -164,7 +164,7 @@ do not block the E/F rerun.
 | — | natbib forks that declare their own names stay read raw (`hbnatbib` 16, `ctextemp_natbib` 13, `NAR-natbib` 9, `natbib_padeu` 8, `rnatbib` 7, `wsnatbib`/`igsnatbib`/`dmnatbib` 6 each, …) and so do the 399 shipped natbib copies that declare nothing: their citations still print "?" unless the fork has a binding (NJDnatbib, bmvc2k_natbib, ws-rv-har) | open (77w residual; census `~/data/pk_agents/main/scratch_356a0c47/natbib_copies/natbib_copies_all.tsv`): a route by content (rule 0 (b)'s command-set test) is the candidate, a user ruling first |
 | — | author-block gaps that renamed copies now reach through the declaration route: aamas (1401.1086's confSt.cls, an aamas2013 copy: 0 → 6 Errors; the same copy under its own name 4 on int37a), spie (2210.16202's CHRONOS_s.cls: 9 → 39 creators, 81 → 0 contacts), egpubl (2312.16264's arxiv.cls: three creators merged into one), bytedance_seed (2605.07897: its own "merged_creators" Error on a parboxed author row) | aamas FIXED (int40: an acmproc-era copy, `\alignauthor` columns, is read raw — aamas_cls.rs; guard `perfect_kernel_batch77w::acmproc_era_aamas_reads_raw`; also `\documentclass{aamas2013}`); spie FIXED (int40: spie.cls defines no `\author`, so the kernel's reads its block — `\skiplinehalf`/`\skipline` line ends, `\supit` marks; spie_cls.rs; guard `spie_author_block_is_the_kernel_author`; every `\documentclass{spie}` paper's author block); egpubl, bytedance_seed open (binding work in each family, the route only exposes it) |
 | — | a routed copy's text overrides of names a binding it requires owns are dropped: 1402.7103's proto.cls (→ aastex): its `\def\fnum@figure{…Fig.\space\thefigure.---}` (:1694) keeps the binding's "Figure 1", its `\newcommand\apj{\ref@jnl{\it Astrophys.\ J.}}` (:1731) the aas_macros binding's "ApJ" (OD #731 rule 1: a required binding keeps its names; rule 13's text-name yielding is for standard-class derivatives only) | open — needs a ruling: extend rule 13's `binding_text_name` yielding to provides-route copies for text macros a required binding owns? |
-| — | llncs `\labelitemi`/`\labelitemii`: llncs.cls:521-522 sets "–" and "–" (bold en dash), the llncs binding (and Perl llncs.cls.ltxml) keep the kernel's "•" — every llncs paper (2607.29279's waica.cls copy repeats the definition) | open, small: define them in llncs_cls.rs as llncs.cls:521-522 |
+| — | llncs `\labelitemi`/`\labelitemii`: llncs.cls:521-522 sets a bold "–" at the first level and "•" at the second; the llncs binding (and Perl llncs.cls.ltxml) kept article's "•" then "–" — every llncs paper (2607.29279's waica.cls copy repeats the definition) | **DONE 78a** (KNOWN_PERL_ERRORS #1017; guard `perfect_kernel_batch78a::llncs_item_labels_are_the_class_s`) |
 | — | pazh_engl.cls:467's title-page journal line ("Astronomy Letters, 2004, accepted") lost under the aa binding's locked `\maketitle` (astro-ph0402416, routed by the copy's `\ProvidesClass{aa}`) | open, minor: a publication note |
 | — | tlp: a `\documentclass{tlp}` (and a renamed copy routed to it, new_tlp.cls: 1405.1833, 1405.2564, 2008.02015, 2008.04008, 2008.06692) reads the author block's affiliation lines after `\\` as more names — 1405.1833 4 → 6 creators, "KU Leuven E-Mail: …" and "transnational University of Limburg E-Mail: …"; the probe also raises a false "Can't find binding or file for 'tlp.cls'" Warning, OmniBus loaded before tlp_cls.rs (rev77w probe_tlp) | open (77w review finding 2): the raw tlp.cls `\author` lines go through the kernel author splitter; not a few lines on tlp_cls.rs |
 | — | jfm copies' equation numbers: a jfm.cls copy's `\theequation{\thesection.\@arabic\c@equation}` and `\@addtoreset{equation}{section}` (JFM-FLM_Au.cls:1317-1318) keep the OmniBus base's "(1)" — "Counter equation keeps LaTeXML's numbering" (2507.06135, PDF (2.1), (2.14a), (A 1); a `\documentclass{jfm}` without a copy the same; review finding 3; RED `stand-in-copies/provides_route/copy_numbers_equations_by_section`) | open, needs a ruling (77w r2): letting a counter the binding's base class (OmniBus, its article) numbered yield to the copy, as rule 2 lets the pool's article defaults yield to a package's copy (`stand_in_base_defaults` in `copy_provides_keeps_counter`), fixes 2507.06135 but changed 258 of 905 A/B papers: 198 ids only (`S3.F1` → `F1`: the copy's `\newcounter{figure}` declared for real), 54 tags — the copy's own forms, mostly as its PDF (aastex701 copies "TABLE I", jheppub-like (1.1)), some not ("(i)." with the binding's `\labelenumi` period, 2206.08798's "1 " with a trailing space) — and 31 other; reverted, no jfm-only patch |
@@ -192,6 +192,16 @@ KNOWN_PERL_ERRORS cross-reference when one applies. Perl-origin defects go to `p
   for both names or neither as the singular is empty or not (cleveref.sty:1309). Related Perl defect: KPE #998 (the
   `\label[type]` it names). Guards `perfect_kernel_batch77s::{cleveref_label_type_names_the_reference,
   cleveref_derived_name_follows_the_singular}`.
+- **An unnumbered heading's title font (78a)**: our `\@@unnumbered@section` (sect04.rs) dropped Perl's
+  `\lx@format@title@font@@` (latex_constructs.pool.ltxml:666-670), so a starred section lost its class font (IEEEtran's
+  small caps, sectsty's and titlesec's formats; ≈61,800 IEEEtran papers with a `\section*`). Restored, with titlesec's
+  after-code (OD #785) and the title braced as a numbered one's. Guards `perfect_kernel_batch78a::{
+  unnumbered_section_takes_the_title_font, titlesec_after_code_closes_an_unnumbered_title}`.
+- **Text merged into a text node is ligated (78a)**: where libxml merged an insertion into the last text child
+  (`open_text_internal`), the parent stayed current, so the run was never closed and never ligated — text after a
+  formula `cleanup_math` turns into spaces (`500$\,$hPa 1989--2008`, nucl-ex0511052, 2208.08472). The merged node is
+  current now, its run ligated from where it starts (Perl `setNode`, Document.pm openText_internal). Guard
+  `perfect_kernel_batch78a::text_after_a_space_only_formula_is_ligatured`.
 
 ## Current status
 
@@ -255,8 +265,9 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
   own `\usepackage{booktabs}`; guard `perfect_kernel_batch77v::sn_jnl_table_rules_without_booktabs`.
 - **Equation layout (DIVERGENCES #334):** `eqnarray` after a class's `fleqn` + amsmath is flush left in pdflatex, centred
   here (`ltx_fleqn` is document-wide). `document_class_filename` (content.rs) is overwritten by nested class loads, and
-  xkeyval's fallback reads it (`xkeyval_sty.rs:1524`). elsarticle's `\ifpreprint` is always false here; elsarticle.cls:112
-  makes `preprint` the default, and `5p`/`3p`/`1p`/`final` clear it (:71-87).
+  xkeyval's fallback reads it (`xkeyval_sty.rs:1524`). elsarticle's `\ifpreprint` follows elsarticle.cls:112 (`preprint`
+  the default, `5p`/`3p`/`1p`/`final` clear it, :71-87) since 62j (verified on int40c in 78a: "PREPRINT"; guard
+  `perfect_kernel_batch61::elsarticle_journal_layout_is_the_jtype_macro`).
 - **Cropping (DIVERGENCES #337):** `reflect` is not applied; a negative trim (padding) is clamped, as in Perl; anisotropic
   resolutions crop by the x one; the job key holds the full options, so `[trim=X,clip,width=3cm]` and `[…,width=5cm]`
   crop twice into identical files.
@@ -335,9 +346,10 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
   - *setspace/titlesec*: RED `block-model/setspace_display_math_in_doublespace`; titlesec — an alignment switch in the
     before-code aligns an inner `<text>` (#344), a `leftmargin` after-code ends the title where TeX starts the next
     paragraph with it, `explicit` as a global class option unseen, `uppercase` (`\ttl@case`) unread, keyed
-    `\titleformat{name=\section,numberless}` defines a junk macro (13 A/B papers: googledeepmind.cls, mystyle.cls); RED
-    `sectioning-frontmatter/unnumbered_section_takes_the_title_font` (`\@@unnumbered@section`, Perl
-    latex_constructs.pool.ltxml:666-670; ~70 A/B papers; needs tufte's `\titleformat` `[after]` first).
+    `\titleformat{name=\section,numberless}` defines a junk macro (13 A/B papers: googledeepmind.cls, mystyle.cls);
+    `sectioning-frontmatter/unnumbered_section_takes_the_title_font` GREEN 78a (`\@@unnumbered@section` applies
+    `\lx@format@title@font@@`, Perl latex_constructs.pool.ltxml:666-670, and titlesec's after-code,
+    `\lx@format@title@after@@`, OXIDIZED_DESIGN_DIVERGENCES #785, so tufte's `\begin{fullwidth}` format closes).
   - *floats/captions*: RED `captions-floats/par_breaks_a_panel_row`; RED
     `captions-floats/continuedfloat_minipage_subcaption_continues_the_letters` (no `\caption@subtypehook` pre-step,
     caption.sty:642); under subfig a third continued part keeps the first continuation's sub-float id suffix (`S0.F1a.sf4`
@@ -345,8 +357,8 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
     `continuedfloat`/`continued<type>` option sets (caption.sty:526-528) unapplied; longtable ignores `\LTcaptype`; floatfig/JHEP
     `floatingfigure`/`floatingtable` and elsart `algorithm` typed without a source; RED `captions-floats/subref_prints_the_letter`;
     `subfloat_sty.rs:29-30` `\fnum@sub…` = `(\thesub…)` gives "((a))" under `labelformat=simple|empty` (2605.01267,
-    2605.10017, 2605.05371; `subfig_sty.rs:128` moved to `\lx@subfig@fnum` in Gemini Q8 — re-verify which still
-    double-wraps); jfm.cls/interact.cls `\doi` setters (KPE #326); the XSLT DOI-pubnote predicate (DIVERGENCES #345) has no
+    2605.10017, 2605.05371; subfig's no longer double-wraps, verified on int40c in 78a: `<caption><tag close=" ">(a)</tag>`,
+    refnum `1a`; guard `perfect_kernel_gemini` "((a))"); jfm.cls/interact.cls `\doi` setters (KPE #326); the XSLT DOI-pubnote predicate (DIVERGENCES #345) has no
     HTML guard; `\rotcaption*`/`\rotcaptionof` undefined, `\controtcaption` unnumbered (57l); a `\rule{\linewidth}` panel's
     `width="100%"` is unmeasured by the panel rows (57by, 2605.18774; KPE #389).
   - *loader/kernel*: neither the loader nor `\@ifpackageloaded` honours a `\ver@<pkg>.sty` mark (2605.20200; memoir
@@ -366,8 +378,8 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
   - *layout and lists*: RED `boxes-groups/rotatebox_starts_the_paragraph` (shared); RED `fonts-nfss/ulem_custom_mark_is_rendered`
     (41 of 30,079 2605 papers; the class mapping is a design call); RED `block-model/noindent_paragraph_in_a_minipage_takes_its_id`
     (same defect as 58g's RED `noindent_paragraph_in_minipage_numbers_inside` — merge the two); RED
-    `fonts-nfss/textcircled_of_a_box_circles_its_text`; RED `list-structure/enumitem_ref_clears_the_parent_prefix`
-    (enumitem.sty:551-556); RED `list-structure/endtrivlist_after_a_heading_starts_a_paragraph` (61p review; OD #435
+    `fonts-nfss/textcircled_of_a_box_circles_its_text`; `list-structure/enumitem_ref_clears_the_parent_prefix`
+    (enumitem.sty:551-556) GREEN since 77u (verified on int40c in 78a: "(a).i"); RED `list-structure/endtrivlist_after_a_heading_starts_a_paragraph` (61p review; OD #435
     residual); RED `string-mouth/verbatim_sty_starred_shows_visible_spaces` (verbatim.sty's `{verbatim*}` without its
     visible-space setup; SHARED); level-only `\setlist[1]` (re-verify after 57u's KPE #354); `\optc[x]` in a message prints `\optc [x]` (KPE #381
     residual). Settled dead end: a separate counter family for kernel lists fixes the label but changes Perl's ids.
@@ -460,7 +472,8 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
     words); endnotes `\theenmark` = `\theendnote` (PERL-ORIGIN endnotes.sty.ltxml:29; cms-noteref-demo "18" ×18; FIXED 77v,
     KNOWN_PERL_ERRORS #1013); enotez
     `split=section` — a `\chapter` starts a split, a pre-heading mark's `\endnotetext` lists in the mark's split, 0.10d
-    internals overridden; biblatex-ext-oa prints no open-access mark (RED `boxes-groups/xsavebox_saved_box_prints_its_content`);
+    internals overridden; biblatex-ext-oa's open-access mark (xsavebox: `boxes-groups/xsavebox_saved_box_prints_its_content` GREEN 78a,
+    `\pdfxform`/`\pdfrefxform`, OXIDIZED_DESIGN_DIVERGENCES #788);
     Ruled STAY (D15): biblatex `cite.<n>@<key>` (cms-dates-intro 80, cms-trad-appendix 4) and
     gost `back:` (770) dangling links — the surpass option needs a ruling
     (`~/data/pk_agents/main/agent_reports/2026-10-02_biblatex_idref_rootcause.md`).
@@ -497,6 +510,14 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
 
 The open RED repros of `tools/perfect_kernel/repros/` that no other row names; headers re-checked 2026-10-02 (scope:
 PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary). Each row: defect, classification, repro path.
+
+- **`\halign` never inserts `\everycr`** (SHARED, kernel; found by 78a): tex.web §785/§799 insert `\everycr` after the
+  preamble's `\cr` and after every row's; tex_tables.rs stores the register only (Perl's TeX_Tables alike), so
+  `\everycr{\noalign{\global\advance\count1 1}}\halign{#\cr a\cr b\cr}` counts 0 (TeX 3). It blocks AMS-TeX's active `@`
+  (KNOWN_PERL_ERRORS #1018): with it (agent_reports/payload_78a_data/item8_amstex_at.patch) math0004017, math0607639 and
+  math0009033 gain their `@>>>`/`@!` connectors, but math0005042's lamstex `\newCD` diagrams (diag.tex, rows counted in
+  `\everycr`) run unbalanced, 28 errors → Fatal; held for a ruling (ship the patch, or `\everycr` first). Repros
+  `kernel-alignment/everycr_runs_after_every_cr`, `amstex/amstex_active_at_reads_the_arrows` (both RED).
 
 - **`\cref` to an `\item[…]` of a description inside an enumerate prints no name** (GENUINE-RUST-ONLY since 77u r3, base
   printed the item's own label; review rev77u2 finding 4): the refnum is now the enclosing enumerate item's ("2", KNOWN_PERL_ERRORS
@@ -554,7 +575,9 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   `\@cite` keeps the current mode, so `$$ \cite[\text{I}.2.11^\prime]{Mac} $$`'s `^` is a script; `\lx@@cite`
   (latex_constructs/sect11.rs) digests the note in text: 1 Error. Needs a Math in the cite's note. Witness math0402383.
   Repro `index-bib/cite_note_in_display_math`.
-- **`\multirow` in a `p{}` column spans no rows** (PERL-ORIGIN): the `p{0mm}` cell gets no `rowspan` where the `c`-column copy gets `rowspan="2"`, so the rotated label inflates its row (2605.23257 S5.T4 169.5pt vs pdflatex 116.2; A2.T7). Both bindings put `rowspan` on the alignment lookup's current column (`multirow_sty.rs:18-45`), which misses inside a p cell's box. Repro `alignment-bindings/multirow_in_p_column_spans.tex`.
+- **`\multirow` in a `p{}` column spans no rows** (PERL-ORIGIN; **FIXED 78a**, KNOWN_PERL_ERRORS #1015: the empty p cell
+  below counted as content, `isSkippable`, so the span was truncated; the p cell's box is its `content_box` now; guard
+  `perfect_kernel_batch78a::multirow_in_a_paragraph_column_spans_its_rows`, 2605.23257's table 122.9 → 62.3pt): the `p{0mm}` cell gets no `rowspan` where the `c`-column copy gets `rowspan="2"`, so the rotated label inflates its row (2605.23257 S5.T4 169.5pt vs pdflatex 116.2; A2.T7). Both bindings put `rowspan` on the alignment lookup's current column (`multirow_sty.rs:18-45`), which misses inside a p cell's box. Repro `alignment-bindings/multirow_in_p_column_spans.tex`.
 - **`\resizebox` of a zero-size box** (PERL-ORIGIN, K18 step 2 residue): a 0-width box gets `xscale="6553600"` where graphics.sty's `\Gscale@div` reports "Division by 0" and uses 1. Repro `boxes-groups/resizebox_zero_size_division.tex`. (The `pspicture` half landed in 58i, DIVERGENCES #397: `graphics-tikz/pspicture_size_is_typed` GREEN.)
 - **`\obeylines` makes the newline an `<ltx:break/>`, not `\par`** (PERL-ORIGIN; OUT OF SCOPE): Perl/Rust let the active `^^M` be `\@break` (`plain_base.rs:467-470`), latex.ltx:575-576 `\obeyedline` (= `\par`), so `\let\par=\cr \obeylines` ends no row. 6 errors, first `Error:unexpected:&`. A faithful fix changes goldens everywhere: ruling needed. Repro `alignment/metre_obeylines_halign.tex`.
 - **A `\def` whose parameter text meets `}` swallows text to the next `{`** (SHARED; kernel): tex.web §474-475 inserts "Missing {" and ends the definition at the `}`; `\def … UntilBrace` (`tex_macro.rs:91`) reads on, so storecmd-guide loses two sentences. 2 errors vs pdflatex 6. Repro `expansion-primitives/def_param_text_right_brace_storecmd.tex`.
@@ -603,8 +626,10 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
 - **A formula holding only a space ends the paragraph's `--`/`---` ligatures** (RUST-ONLY; 67w side finding, Perl
   0.8.8 and pdflatex ligature every line): after `500$\,$hPa` (the formula written as a space) the rest of the
   paragraph keeps `1989--2008`; `$x$` does not do it. WileyNJD-v2's `\uns` (`\ifmmode\,\else$\,$\fi`, 2208.08472) is
-  the witness; the binding's `\uns` uses `\thinspace` until the kernel is fixed. RED
-  `fonts-nfss/ligature_after_space_only_formula`.
+  the witness. **FIXED 78a**: the text libxml merged into the formula's space node left the parent current, so no close
+  ligated it; that node is now current (document.rs `open_text_internal`, as Perl's `setNode`), and the binding's `\uns`
+  is the class's again. Guard `perfect_kernel_batch78a::text_after_a_space_only_formula_is_ligatured` (repro
+  `fonts-nfss/ligature_after_space_only_formula` GREEN).
 - **bibentry's `\nobibliography*` builds the bibliography where it is called** (RUST-ONLY shape: Perl 0.8.8 does not
   load bibentry — Error undefined `\nobibliography`; 68s review finding 3): bibentry.sty `\BR@nobib` reads the `.bbl`
   inside a group with `{thebibliography}` redefined to record entries only; ours builds a full `<ltx:bibliography>`
@@ -689,7 +714,7 @@ Each class is a silent content or markup loss unless marked otherwise; each land
 | 8 | algorithmic `\REQUIRE`/`\ENSURE` labels replaced by "0:" | 2201.01230 | **DONE 63j** (KPE #527; algpseudocode too) | residuals: `\ref` to a labelled line prints the label (algpseudocodex's label FIXED 77s) |
 | 9 | raw class `\abstract{…}` (an.cls) a plain paragraph, no `ltx:abstract` | astro-ph0611016 | **FIXED 77b** (silent-loss #23) | an.cls binding or a raw-class `\abstract{}` command form → the abstract frontmatter |
 | 10 | entics.cls (raw) `\thanksref{ALL}` prints its key in the name | 2212.08177 | **OPEN** | entics `\thanks[key]`/`\thanksref` → the frontmatter annotation API (elsart-style) |
-| 11 | sectsty `\subsectionfont{…\textit}` applies the font to the first letter only (presentation) | 1508.01140 | **OPEN**, low | sectsty font hooks take the whole title |
+| 11 | sectsty `\subsectionfont{…\textit}` applies the font to the first letter only (presentation) | 1508.01140 | **FIXED** (verified on int40c in 78a: `\subsectionfont{\normalfont\textit}` sets the whole numbered title italic; the starred half 78a, OD #785) | sectsty font hooks take the whole title |
 | 12 | a `\cite` in a section title reads empty in tooltips (63k residual) | — | **OPEN**, low | tooltip text of a nested bibref without double-counting missing-citation warnings |
 | 13 | names continued past a `\\` in an author line read as an affiliation line | 2408.01902, 2408.02464, 2308.07107 | **DONE 63m** | IEEE grades read past a continued `\\` (`names_continue`), compsoc `\IEEEcompsocitemizethanks` a note of the names line, a line of two or more names continues the names; guards `ieee_compsoc_names_continue_past_a_break`, `ieee_grade_comma_before_a_break_continues_names`, `author_names_line_and_address_line` |
 | 14 | an affiliation line under a group of names goes to the group's last name only | 0911.0568 (LPT Orsay group), JHEP/PoS group blocks | **DONE 63m** | `\lx@add@affiliation[annotate=N]` for the group's N names (OD #459); a bare address line gives each address to the name it spells; guards `author_group_affiliation_goes_to_each_name`, `author_names_line_and_address_line` |
@@ -1280,9 +1305,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `\secondnote`/`\thirdnote`, `\conference`, `\featuredapplication`, `\simplesumm`), `\addhighlights` (the switch; the
   block is the paper's own redefinition), `\acknowledgements`, `\publishersnote`, the page and layout setters,
   `\highlighting`, `\cellWidtha`…`\cellWidthz`, `\PreserveBackslash`, `\isAPAandChicago`. Run-340 estimate ~1,800 jfm +
-  ~1,400 mdpi papers' first error (undefined_rootcauses.md row 1). Residuals: captions keep ": " where these classes print
-  "Figure 1." (their own `\@makecaption`, or caption's `labelsep=period`, which our caption binding declares but does not
-  apply); `\oneappendix` keeps the appendix letter. Guards
+  ~1,400 mdpi papers' first error (undefined_rootcauses.md row 1). Residual: `\oneappendix` keeps the appendix letter.
+  (The captions' "Figure 1." is done: mdpi's since 77w, the copy read after its binding, 2608.13303 and 1307.3961's
+  2013 copy bold `close=". "`; jfm's in 78a, OXIDIZED_DESIGN_DIVERGENCES #784.) Guards
   `perfect_kernel_batch65v::*` (with `perfect_kernel_batch64qa::mdpi_history_is_frontmatter`: lastpage's `LastPage`
   label ids the document); repros `class-bindings/{jfm,mdpi}_class_commands`.
 - **65w**: six more class bindings define what their versions define and papers call (the class-family rule, from
@@ -2019,8 +2044,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `tex="{\mathbb{}RZ}"` with both letters italic; guard `old_font_command_alphabet_through_a_macro`); the `{\cal AB}`
   `tex=` round-trip is a recorded residual in OD #593; round-2 A/B on the same 401 papers (392 converted): every
   output byte-equal to round 1's, so vs 67o1 still 0 gain Errors or Fatals; the 10 rawclasses witnesses byte-equal
-  too. RED side finding, not fixed: `\unboldmath` and
-  `\mathversion{normal}` do not undo `\boldmath` (both engines; `Font::merge` of `forcebold: false` is a no-op while the
+  too. Side finding, FIXED 78a: `\unboldmath` and
+  `\mathversion{normal}` did not undo `\boldmath` (both engines; `Font::merge` of `forcebold: false` was a no-op while the
   bold math font forces its series), KNOWN_PERL_ERRORS #687, repro fonts-nfss/boldmath_undone_by_unboldmath_and_group.
 - **67p** (raw TeX Live classes under the coming rawclasses lever, study 2026-10-15_rawclasses_lever.md §2): two
   binding gaps. (1) xkeyval: the `OptionalAngle` reader returned the same empty value for `<>` and for no `<…>`, so
@@ -2852,7 +2877,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   line with `\footnotemark` (math0211283, math0301047, math0304096, math0405036), `,\ \&\ ` separators (math0408166,
   math0410384) and a `\footnotetext` in the list (0711.1928 + 6) as one creator; `undefined:@` (88 papers: AMS-TeX's
   active `@` arrows outside `\CD`, amstex.tex:97-107 `\at@` and :1660-1702 `\atdef@`: math0004017, math0005042,
-  math0009033) not chased; discounted (not in TL 2025, not shipped): bull-ppt.sty (98 papers, math9201251), plain
+  math0009033; KNOWN_PERL_ERRORS #1018, 78a stopped on it, see "Perfect-kernel RED repros without a row elsewhere"); discounted (not in TL 2025, not shipped): bull-ppt.sty (98 papers, math9201251), plain
   `\input mn` (63 papers, astro-ph0002467). Open, before 68r (67int12 the same): `\thanks…\endthanks` inside `\author`
   is garbled ("Ann Oneartially supported." and a note "P"; TeX "Ann One and Bob Two"); AMS-TeX's `\footnote""{…}` is a
   "”" note and a paragraph (math0207223); an `\hbox`/`\vtop` author layout gives `<p>`s inside the personname
@@ -3527,8 +3552,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   int23 (72a review r7): scrbook's `\frontmatter` unnumbers the chapters and `\mainmatter` numbers them
   (`koma_script::koma_book_matter`, `no_number_sections` as book_cls.rs, before KOMA's own `\if@mainmatter` code; #737
   item 4): 2506.17485 "Abstract", then "1 Introduction", as its PDF (was "Chapter 1 Abstract", every number +1);
-  `\backmatter` left to KOMA, as book's (the flag would unnumber KOMA's back-matter sections too: 2508.01496's appendix
-  sections, referenced by number; open: its appendix chapter "Appendix A", PDF "Appendix"); the
+  `\backmatter` left to KOMA, as book's was until 78a (the flag would unnumber KOMA's back-matter sections too:
+  2508.01496's appendix sections, referenced by number; open: its appendix chapter "Appendix A", PDF "Appendix" — book's
+  78a `no_number_chapters` would unnumber it but not reset the counters within it as KOMA ≥3.15 does, scrbook.cls
+  :5590-5600, its 16 appendix figures then off by one); the
   class slot reads the classes the binding loaded from the copy's first class load, so a class a shipped intermediate
   class `\LoadClass`es (copy → mybase.cls → article under svmult's book) meets the slot too (#736,
   `state::open_class_load_classes`). int23 fix round 2 (agent_reports/2026-10-18_int23_fix2.md): a file a copy
@@ -4744,6 +4771,27 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   528 papers of the 77u rounds and reviews + 395 random of the proj98 sample) vs int35b: E 6,709 → 6,647, F 23 → 23, 0
   Error or Fatal worse; one word loss > 1 % (2609.14520, 50,807 → 50,123: its `\ref` texts "(1.1)(i))a" → "a" as its
   enumitem `ref=` sets them, no authored text lost). Binding nets (int36a) 136/136, 0 documents worse than int35b.
+- **78a** (quality batch 5, quality-ledger rows #132 jfm, #142 part 1, #164, #146, #26, #133 starred, #149, book
+  `\backmatter`, #11, llncs labels; guards `perfect_kernel_batch78a::*`, 12, each RED on int40c; OD #784-#788, KPE
+  #1015-#1018, #687 fixed). jfm copies' captions (caption with the copy's options; a copy's own `\@makecaption` its
+  small-caps "Figure 1." label format); `\multirow` above an empty p/m/b cell spans its rows (`is_empty_paragraph_cell`,
+  only for row-span coverage: Perl's empty-p-cell `align` and kept empty rows unchanged, tests/alignment goldens);
+  `\unboldmath`/`\mathversion{normal}` undo `\boldmath`; text libxml merges into a text node is current and ligated;
+  biblatex `\citeauthor` prints the name in every style, numeric `\textcite` "Name [1]"; unnumbered headings take the
+  title font (Rust-only loss) and titlesec's after-code (`\lx@format@title@after@@`), the title braced; nicematrix
+  `\Block<…>`; book's back-matter chapters unnumbered (`no_number_chapters`); `\pdfxform`/`\pdfrefxform` keep and place
+  the box (xsavebox); llncs's item labels ("–" bold, then "•"). Guards changed for the intended output: 63
+  `biblatex_capital_citeauthor`, 64ze/67x starred titles in the class font, 67w WileyNJD's `\uns` (the class's own again,
+  U+2006), 77w book derivative's back-matter chapter.
+  Stopped: AMS-TeX's active `@` (KPE #1018; needs `\everycr`, row "`\halign` never inserts `\everycr`"); KOMA's
+  `\backmatter` (an unnumbered KOMA chapter resets its counters; OD #737 note). Verified fixed on int40c and closed: #107
+  (enumitem refs, 77u), #157 (elsarticle `\ifpreprint`, 62j), #132 mdpi half (77w), #79 "((a))", #133 sectsty numbered
+  titles. A/B vs int40c (release, `--preload=ar5iv.sty`; 393 papers: 30 per item from a 30k-sample census — jfm,
+  multirow-in-p, boldmath undo, space-formula ligature, starred IEEEtran/titlesec/sectsty, AMS-TeX, book backmatter,
+  llncs — 22 biblatex numeric, 2 nicematrix `<>`, 2 xsavebox, 32 witnesses, 99 random controls): E 1143 → 1144, F 1 → 1,
+  W 8538 → 8537, 128 outputs changed, each the item's change (no control but one llncs-class paper); the one E+1,
+  2108.12618, is nowfnt.cls's `\nowfnt@font@paragraph`, undefined here before as its section fonts are (pre-existing),
+  now also reached by its starred paragraph titles. Inits 0/0, dumps identical to int40c.
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
   parts draw, as Unicode's IPA letter, cross-checked against tipauni.sty; the `""`/`||` ligatures ˌ ǁ), so its input
@@ -5030,7 +5078,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   whose `[<mark>]` takes todonotes' option list; repro package-bindings/todonotes_style_key; FIXED 77v,
   KNOWN_PERL_ERRORS #1007; open: `author=`'s name, printed before the text, is not kept); enumitem's short
   label numbers a reference without the label's punctuation (`\ref` "a" for pdflatex "(a)"; Perl alike,
-  KNOWN_PERL_ERRORS #808; repro package-bindings/enumitem_shortlabel_ref, RED).
+  KNOWN_PERL_ERRORS #808; repro package-bindings/enumitem_shortlabel_ref, GREEN since 77u, verified on int40c in 78a).
 - **68j** (binding gaps G3 D, TeX Live package bindings, the tail; bindgaps/g23_macros.tsv rows newpxmath, listings,
   eulervm, nicematrix, nameref, mathalpha, sidecap, tabls, cryptocode, old-arrows, libertinust1math; each macro checked
   against the TL 2025 file). newpxmath (newpxmath_sty.rs) — newtxmath.sty's Palatino twin, so the binding carries the

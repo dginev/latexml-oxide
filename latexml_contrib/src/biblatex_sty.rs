@@ -1345,10 +1345,35 @@ fn blx_cite_textual(
   keys: Tokens,
 ) -> Result<Tokens> {
   let (pre, post) = blx_swap_pre_post(pre, post);
-  if !blx_is_authoryear() {
-    return Ok(blx_cite_fallback(post, keys));
-  }
   let author = if star { "FullAuthors" } else { "Authors" };
+  if !blx_is_authoryear() {
+    // The name, then the bracketed label: numeric.cbx:23-41 `textcite` prints `labelname` before
+    // `\bibopenbracket` (alphabetic.cbx the same), as natbib's numbers mode (Perl natbib.sty.ltxml:161-171). The
+    // fallback to the plain `\cite` printed only "[1]" (OXIDIZED_DESIGN_DIVERGENCES #786; witnesses 2402.17192,
+    // 2410.22329; guard `perfect_kernel_batch78a::biblatex_citeauthor_and_textcite_print_the_name_in_a_numeric_style`).
+    let mut p1 = blx_open().unlist();
+    if let Some(p) = pre {
+      p1.extend(p.unlist());
+      p1.push(T_SPACE!());
+    }
+    let mut p2 = Vec::new();
+    if let Some(p) = post {
+      p2.extend(blx_ns().unlist());
+      p2.push(T_SPACE!());
+      p2.extend(p.unlist());
+    }
+    p2.extend(blx_close().unlist());
+    let bibref = Invocation!(T_CS!("\\@@bibref"), vec![
+      Tokens::new(Explode!(s!("{author} Phrase1NumberPhrase2"))),
+      keys,
+      Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(p1)]),
+      Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(p2)])
+    ]);
+    return Ok(Invocation!(T_CS!("\\lx@@cite"), vec![
+      Tokens::new(Explode!("citet")),
+      bibref
+    ]));
+  }
   let mut p1 = blx_open().unlist();
   if let Some(p) = pre {
     p1.extend(p.unlist());
@@ -2174,9 +2199,8 @@ LoadDefinitions!({
   DefMacro!("\\citeauthor OptionalMatch:* [][] Semiverbatim", sub[args] {
     let (star, pre, post, keys) = blx_cite_args(args);
     let (pre, post) = blx_swap_pre_post(pre, post);
-    if !blx_is_authoryear() {
-      return Ok(blx_cite_fallback(post, keys));
-    }
+    // biblatex.def:2497-2506 prints `labelname` in every style, a numeric one too: no fallback to the plain `\cite`
+    // ("[1] showed it"; witnesses 2402.17192, 2410.22329).
     let author = if star { "FullAuthors" } else { "Authors" };
     let bibref = Invocation!(T_CS!("\\@@bibref"),
       vec![Tokens::new(Explode!(author)), keys, Tokens!(), Tokens!()]);

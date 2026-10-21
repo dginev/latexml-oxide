@@ -4,7 +4,7 @@
 % engines: Perl 0.8.8: an en dash in every line; rust 67int3 and 67w: "1989--2008." in B and C, after a formula
 %          holding only a space (`$\,$`, written as a space), the rest of the paragraph's `--` left unligatured
 % expect:  0 errors, 0 warnings; "1989–2008." in all four paragraphs
-% status:  RED (67w, RUST-ONLY)
+% status:  GREEN (78a: a text insertion libxml merges into the space node keeps that node current, so it is ligated; RUST-ONLY)
 \documentclass{article}
 \begin{document}
 A 1989--2008.

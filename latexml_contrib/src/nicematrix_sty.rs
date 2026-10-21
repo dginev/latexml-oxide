@@ -1026,7 +1026,13 @@ LoadDefinitions!({
   // The sub-grid is built from the body's widest row; without a depth-0 `&`
   // the body passes through as before. Guard:
   // `perfect_kernel_batch54::nicematrix_block_ampersand_body_is_a_subgrid`.
-  DefMacro!("\\Block OptionalMatch:* []{}{}", sub[(_star, _pos, _ij, body)] {
+  // The `<…>` tokens go before the content in its box (nicematrix.sty:7258 `{ m m D < > { } +m }`, `#4` set before
+  // `#5`: `\Block{2-1}<\bfseries>{Tall}`); unread, they printed as text ("¡Tall¿"; OXIDIZED_DESIGN_DIVERGENCES #787). Guard
+  // `perfect_kernel_batch78a::nicematrix_block_angle_tokens_apply_to_the_content`.
+  DefMacro!("\\Block OptionalMatch:* []{} OptionalAngled {}", sub[args] {
+    let mut args = args.into_iter().skip(3);
+    let prefix: Option<Tokens> = args.next().unwrap().into();
+    let body: Tokens = args.next().unwrap().into();
     let toks = body.unlist();
     let mut depth = 0i32;
     let mut cols = 1usize;
@@ -1045,18 +1051,29 @@ LoadDefinitions!({
       }
     }
     max_cols = max_cols.max(cols);
-    if max_cols == 1 {
-      return Ok(Tokens::new(toks));
-    }
-    let (env_begin, env_end) = if lookup_bool_sym(pin!("IN_MATH")) {
-      (s!("\\begin{{array}}{{*{{{max_cols}}}{{c}}}}"), "\\end{array}".to_string())
+    let content = if max_cols == 1 {
+      toks
     } else {
-      (s!("\\begin{{tabular}}{{*{{{max_cols}}}{{c}}}}"), "\\end{tabular}".to_string())
+      let (env_begin, env_end) = if lookup_bool_sym(pin!("IN_MATH")) {
+        (s!("\\begin{{array}}{{*{{{max_cols}}}{{c}}}}"), "\\end{array}".to_string())
+      } else {
+        (s!("\\begin{{tabular}}{{*{{{max_cols}}}{{c}}}}"), "\\end{tabular}".to_string())
+      };
+      let mut out: Vec<Token> = Tokenize!(TeXString::assembled(env_begin)).unlist();
+      out.extend(toks);
+      out.extend(Tokenize!(TeXString::assembled(env_end)).unlist());
+      out
     };
-    let mut out: Vec<Token> = Tokenize!(TeXString::assembled(env_begin)).unlist();
-    out.extend(toks);
-    out.extend(Tokenize!(TeXString::assembled(env_end)).unlist());
-    Ok(Tokens::new(out))
+    match prefix.filter(|p| !p.is_empty()) {
+      Some(prefix) => {
+        let mut out = vec![T_BEGIN!()];
+        out.extend(prefix.unlist());
+        out.extend(content);
+        out.push(T_END!());
+        Ok(Tokens::new(out))
+      },
+      None => Ok(Tokens::new(content)),
+    }
   }, locked => true);
   // \Hline[opts]: nicematrix's own \hline that survives its internal
   // machinery; opts (color=, thickness=) are rule styling. Reduce to \hline.

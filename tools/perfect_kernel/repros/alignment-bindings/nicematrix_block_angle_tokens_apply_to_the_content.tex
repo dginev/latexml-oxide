@@ -1,0 +1,14 @@
+% witness: nicematrix.sty:7258 `\NewExpandableDocumentCommand \__nicematrix_Block_i: { m m D < > { } +m }` (the
+%          `<…>` tokens set before the content); selection study 78a (2 of 30k sampled papers)
+% oracle:  pdflatex 0 errors; "Tall" in bold over both rows of the first column
+% engines: rust int40c = "¡Tall¿": the `<\bfseries>` read as content (OT1 `<` `>` print as ¡ ¿), "Tall" in bold
+% expect:  0 errors, 0 warnings; the first cell holds a bold "Tall" and nothing else
+% status:  GREEN (78a)
+\documentclass{article}
+\usepackage{nicematrix}
+\begin{document}
+\begin{NiceTabular}{ccc}
+\Block{2-1}<\bfseries>{Tall} & a & b \\
+ & c & d \\
+\end{NiceTabular}
+\end{document}

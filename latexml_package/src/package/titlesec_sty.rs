@@ -220,7 +220,15 @@ LoadDefinitions!({
     // resets, an `\endlist` closes the list its before-code opened (AVT.sty's `\part`, 2605.05095);
     // a rule after a display title sits at the title's end. `rightmargin`, `wrap` and `drop` never
     // use it (:901-1029). A run-in title ends `#4{#8}#5\unskip` (:792), after-code or none.
-    if !matches!(shape_str.as_str(), "rightmargin" | "wrap" | "drop") {
+    let after_target = s!("\\format@title@after@{sec}");
+    if matches!(shape_str.as_str(), "rightmargin" | "wrap" | "drop") {
+      def_macro(T_CS!(&after_target), None, Tokens!(), None)?;
+    } else {
+      // An unnumbered title runs it too (`\lx@format@title@after@@`, base_utilities.rs; guard
+      // `perfect_kernel_batch78a::titlesec_after_code_closes_an_unnumbered_title`).
+      // (An `explicit` after-code naming the title, `#1`, has no title to name there.)
+      let after_alone = if has_parameter_reference(&after) { Tokens!() } else { Tokens::new(after.clone()) };
+      def_macro(T_CS!(&after_target), None, after_alone, None)?;
       body.extend(after);
     }
     if shape_str == "runin" {

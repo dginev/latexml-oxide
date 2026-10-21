@@ -4,7 +4,7 @@
 %          alone (merging `forcebold` false is a no-op); the group end does undo `\boldmath` (`{\boldmath $u$} $v$`
 %          alone gives v italic in both), here v is bold because the first `\boldmath` was never undone
 % expect: x and u bold, y and v not
-% status: RED (open; KNOWN_PERL_ERRORS #687, not fixed in 67r)
+% status: GREEN (78a: `Font::merge_ref` sets the series medium on `forcebold` false; KNOWN_PERL_ERRORS #687 fixed in Rust)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

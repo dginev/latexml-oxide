@@ -198,6 +198,7 @@ LoadDefinitions!({
   // \frontmatter
   DefPrimitive!("\\frontmatter", {
     AssignValue!("no_number_sections" => true);
+    AssignValue!("no_number_chapters" => false);
   });
   // frontmatter stuff
   // \maketitle
@@ -205,10 +206,20 @@ LoadDefinitions!({
   // \mainmatter
   DefPrimitive!("\\mainmatter", {
     AssignValue!("no_number_sections" => false);
+    AssignValue!("no_number_chapters" => false);
   });
   // \include various chapters, appendices
   // \backmatter
-  DefPrimitive!("\\backmatter", None);
+  // book.cls:296-299 `\@mainmatterfalse`, by which `\@chapter` (:355-366) and `\@makechapterhead` (:376-385) leave a
+  // back-matter chapter unnumbered and its counter alone; its sections keep numbering under the last main chapter
+  // ("1.2"), so only the chapters lose their numbers (`no_number_chapters`, sect04.rs), not every level
+  // (`no_number_sections`; scrbook's back-matter appendix precedent, koma_script.rs `koma_book_matter`). Perl's is a
+  // no-op (book.cls.ltxml:121; KNOWN_PERL_ERRORS #1016): "Chapter 2 Afterword". Guard
+  // `perfect_kernel_batch78a::book_backmatter_chapters_are_unnumbered`.
+  DefPrimitive!("\\backmatter", {
+    AssignValue!("no_number_sections" => false);
+    AssignValue!("no_number_chapters" => true);
+  });
   // commands for bibliography, indices
   // \end{document}
 
