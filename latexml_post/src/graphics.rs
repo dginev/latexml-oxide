@@ -1238,17 +1238,16 @@ impl Graphics {
   /// Two modes, in priority order:
   ///
   /// 1. **Explicit threshold** (`threshold_kb > 0`): legacy `--graphics-svg-threshold-kb N`
-  ///    behaviour — try SVG for PDFs at most `N` KB, regardless of content. Preserved for
-  ///    back-compat and as the manual override on canvases where the auto-detector misclassifies.
-  /// 2. **Auto-detect default** (`threshold_kb == 0`): scan the PDF header for `/Subtype /Image`
-  ///    and `/Subtype/Image` (the two typical formattings of an image XObject declaration). If NONE
-  ///    is present in the first 256 KB and the file size is at most 500 KB → try SVG. This is the
-  ///    per-paper relief case documented in PERFORMANCE.md (130× speedup on the 41 KB pgfplots
-  ///    fixture).
+  ///    behaviour — try SVG for PDFs at most `N` KiB, regardless of content. Preserved for
+  ///    back-compat and as the manual override for the automatic size threshold.
+  /// 2. **Auto-detect default** (`threshold_kb == 0`): attempt SVG for PDFs
+  ///    at most 500 KiB. An image XObject does not mean the whole figure is
+  ///    raster: mixed figures also contain vector labels, axes and curves.
+  ///    Some image-only PDFs consequently become SVG wrappers; accepting that
+  ///    bounded overhead avoids an incomplete PDF/SVG content classifier.
   ///
-  /// Both modes can be globally disabled via
-  /// `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` (auto-detect only — leaves
-  /// the explicit-threshold path active).
+  /// Auto-detection can be disabled via `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1`;
+  /// the explicit-threshold path remains active.
   ///
   /// Safety net: any false positive falls back to the raster path when a
   /// vector converter emits >`MAX_SVG_OUTPUT_BYTES` (8 MB) of SVG, so a
@@ -1273,15 +1272,13 @@ impl Graphics {
       Ok(md) => md.len(),
       Err(_) => return false,
     };
-    // Hard upper bound: even if the detector misses an image
-    // somewhere deeper in the file, a 500 KB cap keeps the
-    // worst-case wasted vector-conversion work bounded (~1-2 s before the
-    // 8 MB output cap kicks in or the conversion finishes anyway).
+    // Keep the existing 500 KiB input cap. Conversion time is separately
+    // bounded by the per-converter timeout; output size is checked afterward.
     const AUTO_MAX_BYTES: u64 = 500 * 1024;
     if len > AUTO_MAX_BYTES {
       return false;
     }
-    !Self::pdf_has_image_xobject(source).unwrap_or(true)
+    true
   }
 
   /// Has `LATEXML_GRAPHICS_VECTOR_AUTO_OFF` been set? Memoised on
@@ -1298,29 +1295,6 @@ impl Graphics {
         Some("1") | Some("true") | Some("yes")
       )
     })
-  }
-
-  /// Scan a PDF for `/Subtype /Image` (with or without whitespace
-  /// between the tokens) — the canonical marker of an image XObject.
-  /// Returns `Some(true)` when found, `Some(false)` when absent in the
-  /// scanned range, `None` on I/O error.
-  ///
-  /// Reads at most `SCAN_LIMIT` bytes from the start of the file. PDF
-  /// objects are written sequentially; for small files (≤500 KB,
-  /// guarded by `should_try_svg_path`'s outer size check) the entire
-  /// stream fits comfortably within the limit. Pure-vector PDFs scan
-  /// in well under a millisecond on modern hardware.
-  fn pdf_has_image_xobject(source: &str) -> Option<bool> {
-    use std::io::Read;
-    const SCAN_LIMIT: usize = 256 * 1024;
-    let mut f = std::fs::File::open(source).ok()?;
-    let mut buf = vec![0u8; SCAN_LIMIT];
-    let n = f.read(&mut buf).ok()?;
-    let head = &buf[..n];
-    // Both spelling variants seen in the wild: `/Subtype /Image` (PDFs
-    // from inkscape / cairo / latex+dvips) and `/Subtype/Image` (more
-    // common in pdflatex output and ImageMagick-produced PDFs).
-    Some(twoway_contains(head, b"/Subtype /Image") || twoway_contains(head, b"/Subtype/Image"))
   }
 
   fn raster_density_for_source(source: &str) -> u32 {
@@ -1856,16 +1830,6 @@ impl Graphics {
   /// `svg_convert_timeout_secs`; default 60 s. Override via
   /// `LATEXML_CONVERT_TIMEOUT_SECS` for debugging.
   fn convert_timeout_secs() -> u64 { CONVERT_TIMEOUT_SECS.unwrap_or(60) }
-}
-
-/// Byte-substring search. Used by `pdf_has_image_xobject` to scan a
-/// PDF prefix for the `/Subtype /Image` marker. Linear in `hay.len()`
-/// times `needle.len()`; both bounded so adequate.
-fn twoway_contains(hay: &[u8], needle: &[u8]) -> bool {
-  if needle.is_empty() || needle.len() > hay.len() {
-    return false;
-  }
-  hay.windows(needle.len()).any(|w| w == needle)
 }
 
 /// Map a destination path to a `&'static str` extension suitable for
@@ -2793,7 +2757,7 @@ mod tests {
   }
 
   /// Auto-detect path (`threshold_kb == 0`): vector-only PDFs trigger
-  /// the SVG attempt, PDFs containing image XObjects do NOT. Uses the
+  /// the SVG attempt, including PDFs containing image XObjects. Uses the
   /// real fixtures (`cifar10_vector.pdf`, `pathological_vector.pdf`,
   /// `raster_with_image.pdf`) under `latexml_post/tests/fixtures/`.
   #[test]
@@ -2820,21 +2784,94 @@ mod tests {
       "pgfplots-style vector PDF must trigger SVG path under auto-detect"
     );
 
-    // Raster PDF (has /Subtype /Image) → SVG path SKIPPED.
+    // Image-bearing PDFs are candidates too: they may contain vector labels.
     assert!(
-      !Graphics::should_try_svg_path(raster.to_str().unwrap(), 0),
-      "raster-containing PDF must skip auto-detect SVG path"
+      Graphics::should_try_svg_path(raster.to_str().unwrap(), 0),
+      "image-bearing PDF must be considered for bounded SVG conversion"
     );
 
-    // Direct detector sanity check.
-    assert_eq!(
-      Graphics::pdf_has_image_xobject(cifar.to_str().unwrap()),
-      Some(false)
-    );
-    assert_eq!(
-      Graphics::pdf_has_image_xobject(raster.to_str().unwrap()),
-      Some(true)
-    );
+    let temp = TempDir::new("auto_svg_cap");
+    let large = temp.join("large.pdf");
+    std::fs::write(&large, vec![0u8; 500 * 1024 + 1]).unwrap();
+    assert!(!Graphics::should_try_svg_path(large.to_str().unwrap(), 0));
+    std::fs::write(&large, vec![0u8; 500 * 1024]).unwrap();
+    assert!(Graphics::should_try_svg_path(large.to_str().unwrap(), 0));
+    let oversized_svg = temp.join("oversized.svg");
+    let output = std::fs::File::create(&oversized_svg).unwrap();
+    output.set_len(Graphics::MAX_SVG_OUTPUT_BYTES + 1).unwrap();
+    assert!(Graphics::svg_output_too_large(oversized_svg.to_str().unwrap()));
+
+  }
+
+  #[test]
+  fn svg_auto_optout_preserves_explicit_override() {
+    const CHILD: &str = "LATEXML_TEST_SVG_OPTOUT_CHILD";
+    if std::env::var_os(CHILD).is_none() {
+      let status = std::process::Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "graphics::tests::svg_auto_optout_preserves_explicit_override"])
+        .env(CHILD, "1").env("LATEXML_GRAPHICS_VECTOR_AUTO_OFF", "1")
+        .status().unwrap();
+      assert!(status.success());
+      return;
+    }
+    let temp = TempDir::new("svg_optout");
+    let source = temp.join("small.pdf");
+    std::fs::write(&source, b"%PDF-1.4\n/Subtype /Image\n").unwrap();
+    assert!(!Graphics::should_try_svg_path(source.to_str().unwrap(), 0));
+    assert!(Graphics::should_try_svg_path(source.to_str().unwrap(), 500));
+  }
+
+  /// New SVG candidates retain the existing failure/oversize PNG fallback.
+  #[test]
+  #[cfg(unix)]
+  fn mixed_pdf_svg_failure_and_oversize_fall_back_to_png() {
+    // Isolate PATH changes from unrelated parallel tests and converter caches.
+    const CHILD: &str = "LATEXML_TEST_MIXED_SVG_FALLBACK_CHILD";
+    if std::env::var_os(CHILD).is_none() {
+      let status = std::process::Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "graphics::tests::mixed_pdf_svg_failure_and_oversize_fall_back_to_png", "--nocapture"])
+        .env(CHILD, "1").status().unwrap();
+      assert!(status.success());
+      return;
+    }
+    use std::os::unix::fs::PermissionsExt;
+    use crate::document::{PostDocument, PostDocumentOptions};
+    use crate::graphics_cache::CachePolicy;
+    let temp = TempDir::new("mixed_svg_fallback");
+    let source = temp.join("mixed.pdf");
+    std::fs::write(&source, b"%PDF-1.4\n/Subtype /Image\n").unwrap();
+    std::fs::write(temp.join("pixel.png"), ONE_PIXEL_PNG).unwrap();
+    let large = std::fs::File::create(temp.join("large.svg")).unwrap();
+    large.set_len(Graphics::MAX_SVG_OUTPUT_BYTES + 1).unwrap();
+    let mut env = EnvGuard::acquire();
+    env.set("PATH", temp.path().to_str().unwrap());
+    for mode in ["failure", "oversize", "missing"] {
+      for tool in ["mutool", "pdftocairo", "convert"] {
+        let file = temp.join(tool);
+        let script = if tool == "convert" {
+          format!("#!/bin/sh\nfor a in \"$@\"; do out=\"$a\"; done\n/bin/cp '{}' \"$out\"\n", temp.join("pixel.png").display())
+        } else if tool == "pdftocairo" && mode == "oversize" {
+          format!("#!/bin/sh\n[ \"$1\" = -svg ] || exit 1\nfor a in \"$@\"; do out=\"$a\"; done\n/bin/cp '{}' \"$out\"\n", temp.join("large.svg").display())
+        } else { "#!/bin/sh\nexit 1\n".to_string() };
+        std::fs::write(&file, script).unwrap();
+        std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o755)).unwrap();
+        if mode == "missing" && tool != "convert" { std::fs::remove_file(&file).unwrap(); }
+      }
+      let output = temp.join(mode);
+      std::fs::create_dir_all(&output).unwrap();
+      let xml = format!(r#"<document xmlns="http://dlmf.nist.gov/LaTeXML"><graphics graphic="mixed.pdf" candidates="{}"/></document>"#, source.display());
+      let doc = PostDocument::new_from_string(&xml, PostDocumentOptions {
+        destination: Some(output.join("out.html").display().to_string()),
+        source_directory: Some(temp.path().display().to_string()), ..Default::default()
+      }).unwrap();
+      let mut graphics = Graphics::new(None, true).with_cache_policy(CachePolicy::Bypass);
+      let nodes = graphics.to_process(&doc);
+      let node = nodes[0].clone();
+      let _result = graphics.process(doc, nodes).unwrap();
+      assert_eq!(node.get_property("imagesrc").as_deref(), Some("mixed.png"), "{mode}");
+      assert_eq!(std::fs::read(output.join("mixed.png")).unwrap(), ONE_PIXEL_PNG);
+      assert!(!output.join("mixed.svg").exists());
+    }
   }
 
   #[test]

@@ -732,8 +732,11 @@ structural math output on math-heavy fixtures before treating it as a win.
 - **Vector-SVG fast path** (#902) — `--graphics-svg-threshold-kb N` bypasses
   ImageMagick for vector PDFs. `fig8.pdf` 32.4→0.3 s (~130×).
 - **Vector-PDF auto-detect** — `cortex_worker` ar5iv profile passes
-  `graphics_svg_threshold_kb: 0`; scans PDF header for `/Subtype /Image`,
-  routes to SVG when absent and ≤500 KB. Overrides:
+  `graphics_svg_threshold_kb: 0`; attempts SVG for PDFs ≤500 KiB, including
+  mixed raster/vector figures. Image-only PDFs may become SVG wrappers; this
+  bounded overhead avoids discarding vector labels merely because a PDF has an
+  Image XObject. Existing 15 s per-converter timeout and 8 MiB output acceptance
+  limit retain PNG fallback on failure/oversize. Overrides:
   `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` or `--graphics-svg-threshold-kb N>0`.
 - **Sandbox worker default 20 → 8** — gs/convert fork-exec contention made
   graphics-bound papers 5–10× slower at 20 workers; raise `--workers` only when

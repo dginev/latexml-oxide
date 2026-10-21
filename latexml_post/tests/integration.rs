@@ -605,3 +605,47 @@ fn test_unit_bearing_svg_without_viewbox_is_converted_not_truncated() {
     }
   }
 }
+
+/// Mixed PDF figures retain labels/curves. Image-only PDF wrappers are an
+/// accepted bounded tradeoff. Original raster inputs remain byte-identical.
+/// Fixtures are synthetic, not paper content.
+#[test]
+fn test_mixed_pdf_default_retains_vectors() {
+  if !svg_converter_available() {
+    eprintln!("SKIP: mixed-PDF integration needs mutool or pdftocairo");
+    return;
+  }
+  let fixtures = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+  let work = tempfile::tempdir().unwrap();
+  for (input, expected) in [
+    ("mixed_vector_image.pdf", "mixed_vector_image.svg"),
+    ("mixed_alpha_image.pdf", "mixed_alpha_image.svg"),
+    ("image_only.pdf", "image_only.svg"),
+    ("synthetic_vector.pdf", "synthetic_vector.svg"),
+    ("synthetic_tile.png", "synthetic_tile.png"),
+  ] {
+    let src = fixtures.join(input);
+    let output = work.path().join(input.replace('.', "_"));
+    std::fs::create_dir_all(&output).unwrap();
+    let xml = format!(r#"<document xmlns="http://dlmf.nist.gov/LaTeXML"><graphics graphic="{input}" candidates="{}"/></document>"#, src.display());
+    let options = PostDocumentOptions {
+      destination: Some(output.join("out.html").display().to_string()),
+      source_directory: Some(fixtures.display().to_string()),
+      ..Default::default()
+    };
+    let doc = PostDocument::new_from_string(&xml, options).unwrap();
+    let mut graphics = latexml_post::graphics::Graphics::new(None, true)
+      .with_cache_policy(latexml_post::graphics_cache::CachePolicy::Bypass);
+    let nodes = graphics.to_process(&doc);
+    let target = nodes[0].clone();
+    let _result = graphics.process(doc, nodes).unwrap();
+    assert_eq!(target.get_property("imagesrc").as_deref(), Some(expected), "{input}");
+    let bytes = std::fs::read(output.join(expected)).unwrap();
+    if input.starts_with("mixed_") {
+      let text = std::str::from_utf8(&bytes).unwrap();
+      assert!(text.contains("<path") && text.contains("<image"));
+    } else if input == "synthetic_tile.png" {
+      assert_eq!(bytes, std::fs::read(src).unwrap());
+    }
+  }
+}

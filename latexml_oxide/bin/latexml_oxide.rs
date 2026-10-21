@@ -204,9 +204,10 @@ struct Cli {
   #[arg(long, overrides_with = "nonumbersections")]
   numbersections: bool,
 
-  /// Vector-SVG fast path for PDF graphics. `0` (default) auto-detects: vector
-  /// PDFs (no raster image, at most 500 KB) go through the SVG converters
-  /// (mutool → pdftocairo); raster-bearing PDFs stay on the gs/convert path.
+  /// Vector-SVG fast path for PDF graphics. `0` (default) attempts SVG for
+  /// PDFs at most 500 KiB via the SVG converters (mutool → pdftocairo),
+  /// retaining vectors in mixed image/vector figures. Failed or oversized SVG
+  /// output falls back to PNG; image-only PDFs can become SVG wrappers.
   /// `N > 0` forces the SVG path for any PDF at most N KB. Env
   /// `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` disables auto-detect.
   #[arg(
