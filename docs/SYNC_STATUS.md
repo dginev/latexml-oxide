@@ -4836,7 +4836,17 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   RED repros without a row elsewhere"). A/B r2 → r3 (release, cores 0-31; 701 papers: r2's 503, rev78a2's 35 and 8,
   and all 168 svmult/svmono papers of rev78a2's 141,963-zip scan): E 1160 → 1160, F 1 → 1, W 12848 → 12848, 3 outputs
   changed — 1808.08417, 2108.07775, 2212.13109, each byte-identical (ids aside) to r1's and numbered as its PDF; HTML A/B
-  (141): 0 outputs changed (2003.06847's +1 trim Warning is the shared-directory artifact of round 2).
+  (141): 0 outputs changed (2003.06847's +1 trim Warning is the shared-directory artifact of round 2). rev78a3 SHIP;
+  main-session follow-ups (5269735e1d): subfig reads its last `caption=` option, as its `\@for` does; guards cite only
+  witnesses of their own shape; OD #784's residual covers any `caption3` load before a document's `\usepackage{caption}`
+  (RED class-bindings/jfm_caption/jfm_copy_caption_package_after_subfig_without_caption); a row for svmult's main-matter
+  `\appendix`.
+  **Integration (int42, 78a r1-r3 + follow-ups, binary int42a):** gates int42a: nextest 6569/6569 + cortex 10/10,
+  rustdoc clean, inits 0/0, dump diff vs int41a empty; clippy's `double_ended_iterator_last` on the follow-up fixed
+  (34b67b76a3, `next_back`). Population A/B (1,000: the 78a rounds' 701 + 299 random of the proj98 sample) vs int41a:
+  E 4,718 → 4,719, F 13 → 13, 0 Fatal worse; 21 outputs changed; the one Error more is 2108.12618's nowfnt.cls
+  `\nowfnt@font@paragraph`, of the undefined family its section fonts already raise (classified in r1); no word loss
+  > 1 %. Binding nets (int42a) 136/136, 0 documents worse than int41a.
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
   parts draw, as Unicode's IPA letter, cross-checked against tipauni.sty; the `""`/`||` ligatures ˌ ǁ), so its input
