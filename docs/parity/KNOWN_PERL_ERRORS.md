@@ -16377,10 +16377,29 @@ amstex.tex:96-107 defines the active `@` globally as `\FN@\at@`, the reader of t
 document that makes `@` active — as amstex.tex leaves it — gets "The token T_ACTIVE[@] is not defined" for each arrow
 and prints "@>>>". Minimal trigger: `\input amstex \documentstyle{amsppt} \catcode`@=\active \document $$A @>f>> B$$
 \enddocument`. 88 papers in the 68r A/B; witnesses math0004017, math0005042, math0009033 (`\mathbin{Y@!@!@!@!}`).
-Not fixed (78a stopped on it; repro amstex/amstex_active_at_reads_the_arrows, RED): the fix — the active `@` let to the
-amscd binding's connector reader `\cd@`, which reads a document's `\csname\space @\string#1\endcsname` connector (amstex's
-`\atdef@`) before the binding's, amstex.tex:69-71's `\FN@` (`\futurelet\next`) and the punctuation connectors :162-164,
-:318-320 (agent_reports/payload_78a_data/item8_amstex_at.patch) — gives math0004017 and math0607639 their arrows and
-math0009033 its `@!`, but runs math0005042's lamstex `\newCD` diagrams (diag.tex), which count their rows and columns with
-`\everycr{\noalign{…}}` that our `\halign` never inserts (tex.web §799; RED kernel-alignment/everycr_runs_after_every_cr):
-"This arrow points outside the \newCD" and `\ifcase` lists built unbalanced, 28 errors → Fatal (TooManyErrors).
+Fixed in Rust (78b, on top of #1019): the active `@` is let to the amscd binding's connector reader `\cd@`, which reads a
+document's `\csname\space @\string#1\endcsname` connector (amstex's `\atdef@`) before the binding's, with amstex.tex:69-71's
+`\FN@` (`\futurelet\next`) and the punctuation connectors :162-164, :318-320 (amstex.rs, amscd_sty.rs): math0004017 and
+math0607639 get their arrows, math0009033 its `@!`, and math0005042's lamstex `\newCD` diagrams (diag.tex), which count
+their rows and columns with `\everycr{\noalign{…}}`, are built (28 errors → 0; before #1019 the patch took them to
+Fatal, as no `\halign` ran `\everycr`). Guard `perfect_kernel_batch78b::amstex_active_at_reads_the_arrows` (repro
+amstex/amstex_active_at_reads_the_arrows).
+
+## 1019. `\halign` never inserts `\everycr`
+
+tex.web §774 (`init_align`) inserts the `\everycr` list once the preamble is read and §799 (`fin_row`) after every row a
+`\cr` or a nonredundant `\crcr` ends (not after a `\noalign`'s material, §1133, nor at a `\crcr` right after a `\cr`,
+which `align_peek` §785 skips). TeX_Tables.pool.ltxml:109 only stores the register, so nothing an author or a package puts
+there runs: rules (`\everycr{\noalign{\hrule}}`), row counters (lamstex's `\newCD`, diag.tex, counts a diagram's rows
+with `\everycr{\noalign{\global\advance\rowcount@\@ne…}}` and builds its `\ifcase` size lists from them — math0005042),
+tabu's `\everyrow`. Minimal trigger: `\count1=0 \setbox0\vbox{\everycr{\noalign{\global\advance\count1 by 1
+}}\halign{#\cr a\cr b\cr}} count: \the\count1 \bye` — TeX "count: 3", Perl "count: 0". Fixed in Rust (78b): the
+`\halign` primitive's alignment inserts the list current at that moment, in the alignment's group (a cell's local
+`\everycr` has ended with the cell, §791), read from the slot (`\lx@frozen@everycr`, whatever `\everycr` names later:
+tabu.sty:1362, colortbl.sty:116-117); tex_tables.rs `insert_everycr`. An alignment a binding builds
+(`\lx@begin@alignment`: tabular, array, amsmath, longtable, eqnarray, plain's `\eqalign`…) runs none: the macro it stands
+for starts its `\halign` with an `\everycr` of its own (`\ialign`'s `\everycr{}`, latex.ltx:631, :16573; array.sty's and
+longtable's tagging hooks; amsmath's `\displ@y`), whose rows the binding builds. `\valign` still swallows its alignment
+(KPE #142), so it runs none either. Guards `perfect_kernel_batch78b::{everycr_runs_after_the_preamble_and_every_row,
+everycr_skips_a_redundant_crcr, everycr_set_in_a_cell_ends_with_the_cell, nested_haligns_run_their_own_everycr,
+everycr_noalign_rule_rules_every_row, a_latex_tabular_runs_no_everycr}` (repros kernel-alignment/everycr_*).

@@ -196,7 +196,7 @@ LoadDefinitions!({
           AssignRegister!("\\baselineskip", Glue::default().into());
         }
         whatsit.set_property("alignment", Stored::Digested(alignment));
-        digest_alignment_body(whatsit)?;
+        digest_alignment_body(whatsit, false)?;
       }
       egroup()?;
     }
@@ -370,6 +370,10 @@ LoadDefinitions!({
   DefConstructor!("\\lx@hidden@align", "",   alias => "");
 
   DefRegister!("\\everycr", Tokens!());
+  // tex.web §774/§799 `begin_token_list(every_cr, …)`: the alignment inserts the `\everycr` slot, whatever the name
+  // `\everycr` means by then — tabu.sty:1362 `\let\everycr\tabu@noeverycr` (a macro) around its `\ialign`, colortbl.sty
+  // :116-117 `\let\CT@everycr\everycr \newtoks\everycr`. [`insert_everycr`] reads this name.
+  Let!("\\lx@frozen@everycr", "\\everycr");
   DefRegister!("\\tabskip", Glue!("0"));
 
   //======================================================================
@@ -901,7 +905,7 @@ pub fn halign_after_digest(
     xml_attrs.insert(String::from("width"), w);
   }
   bind(template, xml_attrs);
-  digest_alignment_body(whatsit)?;
+  digest_alignment_body(whatsit, true)?;
   end_mode("restricted_horizontal")?;
   // Balance the opening `{` OUTSIDE of the masking of ALIGN_STATE — only
   // when the opener WAS a `{` character (see `parse_halign_template`).
@@ -1066,7 +1070,32 @@ pub fn restore_dollar_outside_alignment() {
   }
 }
 
-pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
+/// Puts the `\everycr` list in front of the next token, as tex.web §774 `init_align` does once the preamble is read
+/// and §799 `fin_row` after every row a `\cr` or a nonredundant `\crcr` ends (never after a `\noalign`'s material,
+/// §1133, nor at a redundant `\crcr`, which `align_peek` §785 skips). The list is the value current then, in the
+/// alignment's group: an `\everycr` a cell sets locally has ended with the cell (§791 `fin_col`'s `unsave`).
+fn insert_everycr() {
+  let Some(register) = lookup_register_definition(&T_CS!("\\lx@frozen@everycr")) else {
+    return;
+  };
+  if let Some(RegisterValue::Tokens(tokens)) = register.value_of(Vec::new())
+    && !tokens.is_empty()
+  {
+    unread(tokens);
+  }
+}
+
+/// Digest an alignment's body, row by row. `runs_everycr`: the alignment is the `\halign` primitive's (tex.web
+/// §768-812), which inserts `\everycr` (`insert_everycr`) after its preamble and after every row. An alignment a
+/// binding builds (`\lx@begin@alignment`) stands for a LaTeX/plain macro that starts its `\halign` with an `\everycr`
+/// of its own — `\ialign`'s `\everycr{}` (latex.ltx:631, `\@array` :16573), array.sty's and longtable's tagging hooks,
+/// amsmath's `\displ@y` spacing — whose rows the binding already builds, so it runs none.
+///
+/// Before (Perl alike, TeX_Tables.pool.ltxml:109 only stores the register): no alignment ran it, so lamstex's
+/// `\newCD` (math0005042), which counts a diagram's rows with `\everycr{\noalign{\global\advance\rowcount@\@ne…}}`,
+/// counted none and built its `\ifcase` size lists empty. KNOWN_PERL_ERRORS #1019. Repro
+/// kernel-alignment/everycr_runs_after_every_cr; guards `perfect_kernel_batch78b`.
+pub fn digest_alignment_body(whatsit: &mut Whatsit, runs_everycr: bool) -> Result<()> {
   // Now read & digest the body.
   // Note that the body MUST end with a \cr, and that we've made Special Arrangments
   // with \alignment@cr to recognize the end of the \halign
@@ -1084,6 +1113,9 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
   };
   local_reading_alignment(&alignment_stored);
   whatsit.set_property("alignment", Stored::Digested(alignment_stored.clone()));
+  if runs_everycr {
+    insert_everycr(); // tex.web §774: the preamble's `\cr`
+  }
 
   // Debug!("Halign {}: BODY Processing...",alignment) if $LaTeXML::DEBUG{halign};
   let mut lastwascr = false;
@@ -1131,7 +1163,7 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
       }
     } else if vtype.as_deref() == Some("insert") {
       alignment_cell.borrow_mut().end_column()?;
-    } else if vtype.as_deref() == Some("cr") || vtype.as_deref() == Some("crcr") {
+    } else if matches!(vtype.as_deref(), Some("cr" | "crcr" | "noalign")) {
       alignment_cell.borrow_mut().end_row()?;
       // longtable `\kill`: the row just ended was only for width measurement;
       // `\lx@longtable@kill@flag` set LONGTABLE_KILL_NEXT before the `\crcr`,
@@ -1160,6 +1192,10 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
         reversion.extend(p_revert(arg.clone())?.unlist());
         creversion.extend(c_revert(arg)?.unlist());
       } else if vtype.as_deref() == Some("crcr") {
+      }
+      // tex.web §799 `fin_row`: a `\cr` or nonredundant `\crcr` ended the row; a `\noalign`'s material ends none.
+      if runs_everycr && vtype.as_deref() != Some("noalign") {
+        insert_everycr();
       }
       lastwascr = true;
     } else if let Some(next_tok) = next {
@@ -1442,7 +1478,9 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
         };
         alignment.borrow_mut().end_row()?;
         expire_local_box_list();
-        return Ok((Some(r), Some(T_CS!("\\cr")), some!("cr"), false)); // Pretend this is a whole
+        // A `\noalign`'s material is digested as a row ended by `\cr`, but it ends no row (vtype `noalign`: no
+        // `\everycr` after it, tex.web §1133).
+        return Ok((Some(r), Some(T_CS!("\\cr")), some!("noalign"), false)); // Pretend this is a whole
       // row???
       } else if token.defined_as(&T_CS!("\\lx@hidden@noalign")) {
         // \puts something in vertical list. Perl L389 uses `defined_as`.

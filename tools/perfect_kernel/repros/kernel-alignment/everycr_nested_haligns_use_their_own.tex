@@ -1,0 +1,12 @@
+% witness: none (tex.web §774/§799: each `\halign` inserts the `\everycr` current in its own group)
+% oracle:  pdftex 0 errors; "outer: 3, inner: 4" (outer: preamble, `a`, the row holding the inner alignment; inner:
+%          preamble, `x`, `y`, `z`)
+% engines: rust int40c = "outer: 0, inner: 0"; perl alike (KNOWN_PERL_ERRORS #1019); 78b = "outer: 3, inner: 4"
+% expect:  0 errors; "outer: 3, inner: 4"
+% status:  GREEN (78b; guard perfect_kernel_batch78b::nested_haligns_run_their_own_everycr)
+\count1=0 \count2=0
+\setbox0\vbox{\everycr{\noalign{\global\advance\count1 by 1 }}\halign{#\cr
+ a\cr
+ \vbox{\everycr{\noalign{\global\advance\count2 by 1 }}\halign{#\cr x\cr y\cr z\cr}}\cr}}
+outer: \the\count1, inner: \the\count2
+\bye

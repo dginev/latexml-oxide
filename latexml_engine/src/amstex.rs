@@ -269,6 +269,37 @@ LoadDefinitions!({
   RequirePackage!("amsopn");
   RequirePackage!("amsxtra");
   RequirePackage!("amscd");
+  // amstex.tex:96-107: the active `@` is the connector reader everywhere, `\FN@\at@` looking up the
+  // `\csname\space @\string#1\endcsname` the `\atdef@` arrows define (:1660-1702), so `@>>>`, `@<<<`, `@VVV` are
+  // arrows in any formula, `\CD` or not (`\ifCD@` only adds the spacing and the cell breaks). The amscd binding's
+  // reader and connectors (`\cd@`, `\atdef@`, `@>`, …) are those; its `\ampersand@` is `\relax` outside a `\CD`.
+  // A document that makes `@` active (amstex.tex:1804 does at its end; our pool leaves its catcode alone, as Perl's)
+  // got "The token T_ACTIVE[@] is not defined" and its arrows printed as "@>>>" (math0004017; 88 papers in the 68r
+  // A/B; KNOWN_PERL_ERRORS #1018). The diagrams it then runs need `\halign`'s `\everycr` (lamstex `\newCD` counts its
+  // rows there: math0005042, Fatal without it; tex_tables.rs `insert_everycr`, KNOWN_PERL_ERRORS #1019). Guard
+  // `perfect_kernel_batch78b::amstex_active_at_reads_the_arrows`.
+  Let!("@", "\\cd@", Scope::Global);
+  // amstex.tex:108 `\atdef@`: a document's connector is ` @<token>` (the space-prefixed name), which `\cd@` reads
+  // before the binding's `@<token>`; the amscd binding's own `\atdef@` (`@<token>`, for LaTeX's amscd) would put the
+  // document's arrows in the namespace of its own (math0005042: `\atdef@({\FN@\ARROW@}` and a `\def` of
+  // `\csname\string @(\endcsname`, two different names in AMS-TeX, one in the binding's).
+  RawTeX!(r"\def\atdef@#1{\expandafter\def\csname\space @\string#1\endcsname}");
+  // amstex.tex:162-164, :166-172, :318-320: the punctuation connectors (`@,` and `@!` a tenth of a thin space in a
+  // formula, math0009033's `\mathbin{Y@!@!@!@!}`; `@.` a cell break in a formula, else a sentence-ending period;
+  // `@-` a hyphen, en or em dash in a box). `@"` (:177-190, the quotes' spacing) is not defined. amstex.tex:69-71's
+  // `\FN@` looks ahead into `\next` (the amsmath binding's amsgen `\FN@` into `\@let@token`), as these connectors and a
+  // document's own AMS-TeX macros test (math0005042's lamstex arrows: `\def\ARROW@{\ifx\next)…`); :166 `\relaxnext@`.
+  RawTeX!(r#"\def\FN@{\futurelet\next}\def\DN@{\def\next@}\def\DNii@{\def\nextii@}\def\relaxnext@{\let\next\relax}
+\atdef@;{\leavevmode\null;}\atdef@:{\leavevmode\null:}\atdef@?{\leavevmode\null?}
+\atdef@-{\relaxnext@\leavevmode
+ \DN@{\ifx\next-\DN@-{\FN@\nextii@}\else
+  \DN@{\leavevmode\hbox{-}}\fi\next@}%
+ \DNii@{\ifx\next-\DN@-{\leavevmode\hbox{---}}\else
+  \DN@{\leavevmode\hbox{--}}\fi\next@}%
+ \FN@\next@}
+\atdef@,{\RIfM@\mskip.1\thinmuskip\else\leavevmode\null,\fi}
+\atdef@!{\RIfM@\mskip-.1\thinmuskip\else\leavevmode\null!\fi}
+\atdef@.{\RIfM@&&\else\leavevmode.\spacefactor3000 \fi}"#);
   // amstex.tex:486 `\Let@`, the row end a document's own AMS-TeX alignment sets up before its `\halign` (diag.tex's
   // `\newCD`, math9611222, math9611223, math9412232, math0005042): `\\` is `\cr`, its brace pair hidden from the
   // alignment count. The amsmath binding loaded above has amsmath.sty's `\let\\\math@cr` (65s), whose `\@ifstar` plain

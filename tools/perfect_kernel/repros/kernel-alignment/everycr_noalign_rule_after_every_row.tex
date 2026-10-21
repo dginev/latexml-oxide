@@ -1,0 +1,8 @@
+% witness: none (the common `\everycr{\noalign{\hrule}}` idiom; tex.web §774/§799)
+% oracle:  pdftex 0 errors; three rules: above `a b` (after the preamble), between the rows, below `c d`
+% engines: rust int40c = no rule; perl alike (KNOWN_PERL_ERRORS #1019); 78b = the rows' `t`, `t`, `b` borders
+% expect:  0 errors; row 1 border "t", row 2 border "b t"
+% status:  GREEN (78b; guard perfect_kernel_batch78b::everycr_noalign_rule_rules_every_row)
+\everycr{\noalign{\hrule}}\halign{#\quad&#\cr a&b\cr c&d\cr}
+\everycr{}
+\bye

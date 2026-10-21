@@ -202,6 +202,10 @@ KNOWN_PERL_ERRORS cross-reference when one applies. Perl-origin defects go to `p
   formula `cleanup_math` turns into spaces (`500$\,$hPa 1989--2008`, nucl-ex0511052, 2208.08472). The merged node is
   current now, its run ligated from where it starts (Perl `setNode`, Document.pm openText_internal). Guard
   `perfect_kernel_batch78a::text_after_a_space_only_formula_is_ligatured`.
+- **`\halign` inserts `\everycr`; AMS-TeX's active `@` (78b)**: the `\halign` primitive inserts `\everycr` after its
+  preamble and after every row (tex.web §774/§799; Perl stores the register only, KPE #1019), and AMS-TeX's active `@`
+  reads its connectors (KPE #1018) — lamstex `\newCD` diagrams, which count their rows in `\everycr`, are built
+  (math0005042 28 errors → 0) where the `@` alone took them to Fatal. Guards `perfect_kernel_batch78b::*`.
 
 ## Current status
 
@@ -511,13 +515,11 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
 The open RED repros of `tools/perfect_kernel/repros/` that no other row names; headers re-checked 2026-10-02 (scope:
 PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary). Each row: defect, classification, repro path.
 
-- **`\halign` never inserts `\everycr`** (SHARED, kernel; found by 78a): tex.web §785/§799 insert `\everycr` after the
-  preamble's `\cr` and after every row's; tex_tables.rs stores the register only (Perl's TeX_Tables alike), so
-  `\everycr{\noalign{\global\advance\count1 1}}\halign{#\cr a\cr b\cr}` counts 0 (TeX 3). It blocks AMS-TeX's active `@`
-  (KNOWN_PERL_ERRORS #1018): with it (agent_reports/payload_78a_data/item8_amstex_at.patch) math0004017, math0607639 and
-  math0009033 gain their `@>>>`/`@!` connectors, but math0005042's lamstex `\newCD` diagrams (diag.tex, rows counted in
-  `\everycr`) run unbalanced, 28 errors → Fatal; held for a ruling (ship the patch, or `\everycr` first). Repros
-  `kernel-alignment/everycr_runs_after_every_cr`, `amstex/amstex_active_at_reads_the_arrows` (both RED).
+- **`\halign` never inserts `\everycr`** (SHARED, kernel; found by 78a; **FIXED 78b**, KNOWN_PERL_ERRORS #1019):
+  tex.web §774/§799 insert `\everycr` after the preamble's `\cr` and after every row's; tex_tables.rs `insert_everycr` does
+  for the `\halign` primitive (binding-built alignments stand for `\ialign`-style macros and run none). It unblocked
+  AMS-TeX's active `@` (KNOWN_PERL_ERRORS #1018, landed with it: math0005042 28 errors → 0, no Fatal). Repros
+  `kernel-alignment/everycr_*`, `amstex/amstex_active_at_reads_the_arrows` (GREEN); guards `perfect_kernel_batch78b::*`.
 
 - **subcaption sets the main caption at 90 %** (PERL-ORIGIN; found by rev78a2): subcaption_sty.rs's
   `\fnum@font@float`/`\format@title@font@float` are `\small` (Perl subcaption.sty.ltxml:34-35), so with subcaption loaded
@@ -2894,7 +2896,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   line with `\footnotemark` (math0211283, math0301047, math0304096, math0405036), `,\ \&\ ` separators (math0408166,
   math0410384) and a `\footnotetext` in the list (0711.1928 + 6) as one creator; `undefined:@` (88 papers: AMS-TeX's
   active `@` arrows outside `\CD`, amstex.tex:97-107 `\at@` and :1660-1702 `\atdef@`: math0004017, math0005042,
-  math0009033; KNOWN_PERL_ERRORS #1018, 78a stopped on it, see "Perfect-kernel RED repros without a row elsewhere"); discounted (not in TL 2025, not shipped): bull-ppt.sty (98 papers, math9201251), plain
+  math0009033; KNOWN_PERL_ERRORS #1018, FIXED 78b with `\halign`'s `\everycr`, KPE #1019); discounted (not in TL 2025, not shipped): bull-ppt.sty (98 papers, math9201251), plain
   `\input mn` (63 papers, astro-ph0002467). Open, before 68r (67int12 the same): `\thanks…\endthanks` inside `\author`
   is garbled ("Ann Oneartially supported." and a note "P"; TeX "Ann One and Bob Two"); AMS-TeX's `\footnote""{…}` is a
   "”" note and a paragraph (math0207223); an `\hbox`/`\vtop` author layout gives `<p>`s inside the personname
@@ -4847,6 +4849,22 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   E 4,718 → 4,719, F 13 → 13, 0 Fatal worse; 21 outputs changed; the one Error more is 2108.12618's nowfnt.cls
   `\nowfnt@font@paragraph`, of the undefined family its section fonts already raise (classified in r1); no word loss
   > 1 %. Binding nets (int42a) 136/136, 0 documents worse than int41a.
+- **78b** (`\halign`'s `\everycr`, then AMS-TeX's active `@`, 78a item 8; guards `perfect_kernel_batch78b::*`, 7, six RED
+  on 78a2; KPE #1019, #1018 fixed). tex_tables.rs `insert_everycr`: the `\halign` primitive inserts `\everycr` after its
+  preamble and after every row a `\cr` or nonredundant `\crcr` ends (tex.web §774/§799; not after `\noalign` material,
+  read from the slot `\lx@frozen@everycr`); binding-built alignments run none (their macros start with their own
+  `\everycr`, `\ialign`'s `{}`). Then the saved 78a patch: the active `@` reads AMS-TeX's connectors (`\cd@` prefers a
+  document's ` @<token>`), `\FN@` = `\futurelet\next`, the punctuation connectors. A/B vs 78a2 (release,
+  `--preload=ar5iv.sty`; 757 papers: 4 witnesses, the 56 AMS-TeX papers of 78a, 200 with `\everycr` in a shipped file
+  — nearly all `\everycr{}` in bound classes —, 200 setting a non-empty `\everycr` in their own files from a
+  200k-paper scan, 100 amsmath `align`/`gather`, 100 longtable/colortbl/arydshln/hhline, 100 random controls): E 1305
+  → 1182, F 12 → 12, W 11337 → 11331, 0 papers worse in E/F, 9 outputs changed, each the items' change: the 4
+  witnesses (math0005042 28 → 0 errors, its lamstex `\newCD` diagrams built), math9611222 (lamstex `\newCD`, 75 → 1),
+  1112.1924 and math9201256 (AMS-TeX `@.` is `&&`, so a CD's empty connector keeps its column), math0612243 (no false
+  "`\newpage` not allowed" from amstex's `\vnonvmode@` lookahead; its PushbackLimit Fatal is pre-existing), 2001.00662
+  (asl.cls's raw amsmath copy: 17 "`\omit` cannot be used here" → 0, the equation tags in their column; +8 "Missing
+  number (Dimension)" warnings of the pre-existing `\@tempdimb` class, reached where the `\omit` errors stopped it).
+  Every amsmath, table, control and `\displ@y`-copy paper (`\ifdtup` noaligns) is byte-identical.
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
   parts draw, as Unicode's IPA letter, cross-checked against tipauni.sty; the `""`/`||` ligatures ˌ ǁ), so its input

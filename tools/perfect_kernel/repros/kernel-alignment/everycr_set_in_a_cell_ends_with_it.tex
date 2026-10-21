@@ -1,0 +1,12 @@
+% witness: none (tex.web §791 `fin_col` unsaves the cell's group before §799 `fin_row` inserts `\everycr`)
+% oracle:  pdftex 0 errors; "local: 0, global: 2" (a cell's local `\everycr` is gone at its `\cr`; a `\global` one
+%          runs after that row and the next)
+% engines: rust int40c = "local: 0, global: 0"; perl alike (KNOWN_PERL_ERRORS #1019); 78b = "local: 0, global: 2"
+% expect:  0 errors; "local: 0, global: 2"
+% status:  GREEN (78b; guard perfect_kernel_batch78b::everycr_set_in_a_cell_ends_with_the_cell)
+\count1=0 \count2=0
+\setbox0\vbox{\halign{#\cr \everycr{\noalign{\global\advance\count1 by 1 }}a\cr b\cr}}
+\setbox0\vbox{\halign{#\cr \global\everycr{\noalign{\global\advance\count2 by 1 }}a\cr b\cr}}
+\global\everycr{}
+local: \the\count1, global: \the\count2
+\bye

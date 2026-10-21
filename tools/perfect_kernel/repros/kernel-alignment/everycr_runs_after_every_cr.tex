@@ -2,9 +2,10 @@
 %          diagram's rows and builds its `\ifcase` size lists; found by 78a's AMS-TeX active `@`, which ran it)
 % oracle:  pdftex 0 errors; "count: 3" (tex.web §799 `fin_row`/§785 `align_peek`: `\everycr` after the preamble's
 %          `\cr` and after every row's)
-% engines: rust int40c = "count: 0" (the register is stored, never inserted: tex_tables.rs `\everycr`); perl alike
+% engines: rust int40c = "count: 0" (the register was stored, never inserted); perl alike (KNOWN_PERL_ERRORS #1019);
+%          78b = "count: 3" (tex_tables.rs `insert_everycr`)
 % expect:  0 errors; "count: 3"
-% status:  RED (78a, not brief: a kernel alignment capability; blocks KNOWN_PERL_ERRORS #1018's fix)
+% status:  GREEN (78b; was RED from 78a; guard perfect_kernel_batch78b::everycr_runs_after_the_preamble_and_every_row)
 \count1=0
 \setbox0\vbox{\everycr{\noalign{\global\advance\count1 by 1 }}\halign{#\cr a\cr b\cr}}
 count: \the\count1
