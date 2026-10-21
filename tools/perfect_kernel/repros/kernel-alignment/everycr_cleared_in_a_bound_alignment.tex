@@ -1,0 +1,16 @@
+% witness: the rev78b review (finding 2): a document-level `\everycr` reaching an `\halign` nested in a `tabular` cell
+% oracle:  pdflatex 0 errors; "rows: 0" (latex.ltx `\@array` starts its `\halign` with `\ialign`'s `\everycr{}`, in the
+%          table's group, so the nested `\halign` inside the cell finds `\everycr` empty)
+% engines: rust 78b = "rows: 3" (the bound alignment `\lx@begin@alignment` does not clear `\everycr` in its group)
+% expect:  0 errors, 0 warnings; "rows: 0"
+% status:  RED (78b) -> GREEN (int43 follow-up)
+\documentclass{article}
+\newcount\rows
+\begin{document}
+\everycr{\noalign{\global\advance\rows by 1 }}
+\begin{tabular}{l}
+\vbox{\halign{#\cr x\cr y\cr}}
+\end{tabular}
+\everycr{}
+rows: \the\rows
+\end{document}

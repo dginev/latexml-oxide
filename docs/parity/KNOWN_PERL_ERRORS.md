@@ -16382,7 +16382,8 @@ document's `\csname\space @\string#1\endcsname` connector (amstex's `\atdef@`) b
 `\FN@` (`\futurelet\next`) and the punctuation connectors :162-164, :318-320 (amstex.rs, amscd_sty.rs): math0004017 and
 math0607639 get their arrows, math0009033 its `@!`, and math0005042's lamstex `\newCD` diagrams (diag.tex), which count
 their rows and columns with `\everycr{\noalign{…}}`, are built (28 errors → 0; before #1019 the patch took them to
-Fatal, as no `\halign` ran `\everycr`). Guard `perfect_kernel_batch78b::amstex_active_at_reads_the_arrows` (repro
+Fatal, as no `\halign` ran `\everycr`) — their labels back, but the arrowheads and dotted shafts print as letters of the
+unmapped lams1-lams5 fonts (`\arrow@i\char119` → "w"; a font-map gap, SYNC row). Guard `perfect_kernel_batch78b::amstex_active_at_reads_the_arrows` (repro
 amstex/amstex_active_at_reads_the_arrows).
 
 ## 1019. `\halign` never inserts `\everycr`
@@ -16399,7 +16400,12 @@ tabu's `\everyrow`. Minimal trigger: `\count1=0 \setbox0\vbox{\everycr{\noalign{
 tabu.sty:1362, colortbl.sty:116-117); tex_tables.rs `insert_everycr`. An alignment a binding builds
 (`\lx@begin@alignment`: tabular, array, amsmath, longtable, eqnarray, plain's `\eqalign`…) runs none: the macro it stands
 for starts its `\halign` with an `\everycr` of its own (`\ialign`'s `\everycr{}`, latex.ltx:631, :16573; array.sty's and
-longtable's tagging hooks; amsmath's `\displ@y`), whose rows the binding builds. `\valign` still swallows its alignment
+longtable's tagging hooks; amsmath's `\displ@y`), whose rows the binding builds — and clears `\everycr` in its group as
+`\ialign` does, so an `\halign` nested in a cell finds it empty (int43 follow-up). plain_base.rs's `\ialign` is
+plain.tex's `\everycr{}\tabskip\z@skip\halign` on the NODUMP branch too, where Perl's `\let\ialign\halign`
+(plain_base.pool.ltxml:118) matched it only while `\halign` ran no `\everycr`. `\valign` still swallows its alignment
 (KPE #142), so it runs none either. Guards `perfect_kernel_batch78b::{everycr_runs_after_the_preamble_and_every_row,
 everycr_skips_a_redundant_crcr, everycr_set_in_a_cell_ends_with_the_cell, nested_haligns_run_their_own_everycr,
-everycr_noalign_rule_rules_every_row, a_latex_tabular_runs_no_everycr}` (repros kernel-alignment/everycr_*).
+everycr_noalign_rule_rules_every_row, a_latex_tabular_runs_no_everycr,
+a_bound_alignment_clears_everycr_for_what_it_holds}`, `dump_gate_init::nodump_plain_ialign_clears_everycr` (repros
+kernel-alignment/everycr_*, ialign_clears_everycr_nodump).

@@ -181,6 +181,10 @@ LoadDefinitions!({
     before_digest => sub { run_halign_redefinition_prelude() },
     after_digest => sub[whatsit] {
       bgroup();
+      // the `\everycr{}` of the `\ialign` the LaTeX/plain macro this alignment stands for starts with (latex.ltx:631,
+      // `\@array` :16573; plain.tex `\ialign`), in the alignment's group: an `\halign` nested in a cell finds it
+      // empty (repro kernel-alignment/everycr_cleared_in_a_bound_alignment, the rev78b review's finding 2)
+      AssignRegister!("\\lx@frozen@everycr", RegisterValue::Tokens(Tokens!()));
       if let Some(alignment) = lookup_alignment() {
         // latex.ltx:16580 `\@array`: `\lineskip\z@skip \baselineskip\z@skip` in the alignment's own group, for
         // a LaTeX table's body (array.sty:231-232, longtable.sty:191 alike; its bindings mark the alignment

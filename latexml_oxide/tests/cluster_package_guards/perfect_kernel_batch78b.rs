@@ -104,9 +104,23 @@ fn a_latex_tabular_runs_no_everycr() {
   );
 }
 
+/// An `\halign` nested in a `tabular` cell finds `\everycr` empty: the table clears it in its group, as `\@array`'s
+/// `\ialign` does (latex.ltx:631, :16573; pdflatex "rows: 0"). Red (78b r1): "rows: 3", the document-level `\everycr`
+/// reaching the nested `\halign`. Repro kernel-alignment/everycr_cleared_in_a_bound_alignment (the rev78b review's
+/// finding 2).
+#[test]
+fn a_bound_alignment_clears_everycr_for_what_it_holds() {
+  assert_clean(
+    repro!("kernel-alignment/everycr_cleared_in_a_bound_alignment.tex"),
+    &[("p", "p1.2", "<p xml:id=\"p1.2\">rows: 0</p>")],
+  );
+}
+
 /// AMS-TeX's active `@` reads the connectors amstex.tex's `\atdef@` defines, in any formula (math0004017's `@>f>>`):
 /// a rightarrow with f over it and a leftarrow, no "@". Red (int40c): "The token T_ACTIVE[@] is not defined" per
 /// arrow, "@>>>" printed. Repro amstex/amstex_active_at_reads_the_arrows; KNOWN_PERL_ERRORS #1018.
+/// (The whole tree is the math parser's current reading of the arrow, a factor of a product; math is parked, so a
+/// future math fix changes it knowingly.)
 #[test]
 fn amstex_active_at_reads_the_arrows() {
   assert_clean(repro!("amstex/amstex_active_at_reads_the_arrows.tex"), &[(

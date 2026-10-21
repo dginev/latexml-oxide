@@ -1,0 +1,10 @@
+% witness: the rev78b review (finding 3): plain.tex's `\ialign` under LATEXML_NODUMP
+% oracle:  pdftex 0 errors; "count: 0" (plain.tex `\def\ialign{\everycr{}\tabskip\z@skip\halign}`)
+% engines: rust 78b with the dump = "count: 0" (the dump holds plain.tex's `\ialign`); with LATEXML_NODUMP=1 = "count: 2"
+%          (plain_base.rs `\let\ialign\halign`, Perl plain_base.pool.ltxml:118, right only while `\halign` ran no `\everycr`)
+% expect:  0 errors, 0 warnings; "count: 0" on both branches
+% status:  RED (78b, NODUMP) -> GREEN (int43 follow-up)
+\count1=0
+\setbox0\vbox{\everycr{\noalign{\global\advance\count1 by 1 }}\ialign{#\cr a\cr}}
+count: \the\count1
+\bye
