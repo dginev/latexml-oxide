@@ -528,6 +528,13 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   `class-bindings/jfm_caption/jfm_copy_caption_yields_to_subcaption`); open, small: drop the two `\small`s, then
   re-pin the guards and the captions-floats goldens.
 
+- **svmult's main-matter `\appendix` starts the appendices** (PERL-ORIGIN, svmult_cls.rs:56 `\@appendix` + `\gdef\@chapapp
+  {\appendixname}`; found by rev78a3): svmult.cls:713's `\appendix` is only `\par` — the main matter's sections keep
+  counting (78a r3 keeps that) and its chapters stay "Chapter N"; here a later `\backmatter\chapter{After}` prints
+  "Appendix A", "A.1" where pdflatex prints "Chapter 2 After", "3 N" (probe `svm_app`; int40c, 78a r1-r3 the same; none
+  of the 8 corpus svm papers with `\appendix` changes). Open, small: svmult's `\appendix` a `\par` outside the back
+  matter, its back-matter `\bppendix` as 78a r3 ports it.
+
 - **`\cref` to an `\item[…]` of a description inside an enumerate prints no name** (GENUINE-RUST-ONLY since 77u r3, base
   printed the item's own label; review rev77u2 finding 4): the refnum is now the enclosing enumerate item's ("2", KNOWN_PERL_ERRORS
   #1003), but the item's cleveref forms are built for its own list's type (`\lx@make@tags{@desci}`, dialect.rs

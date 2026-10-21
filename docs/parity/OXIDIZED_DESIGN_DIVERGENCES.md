@@ -22195,8 +22195,9 @@ floatrow, which loads caption's kernel alone (floatrow.sty:39 `caption3`; 2312.1
 to the caption binding, which then defines `\lx@caption@kernel@only` (caption_sty.rs), and the class's format stays;
 nor `\usepackage[caption=false]{subfig}`, which loads `caption3` too (subfig.sty:129-141; subfig_sty.rs, 78a r3).
 subcaption (subcaption.sty:43) and subfig without that option (:129-139) load caption even after floatrow's `caption3`,
-so they clear the mark (78a r3). Residual: a document's own `\usepackage{caption}` after floatrow keeps the class's
-format, as the caption binding is not run again. Guards `perfect_kernel_batch78a::{
+so they clear the mark (78a r3). Residual: a document's own `\usepackage{caption}` after a `caption3` load — floatrow's,
+or `[caption=false]{subfig}`'s — keeps the class's format, as the caption binding is not run again (RED
+class-bindings/jfm_caption/jfm_copy_caption_package_after_subfig_without_caption, the rev78a3 re-review's finding 1). Guards `perfect_kernel_batch78a::{
 jfm_copy_captions_end_the_label_with_a_period, jfm_copy_caption_package_keeps_its_options,
 jfm_copy_caption_yields_to_caption_loaders, jfm_copy_caption_kept_with_subfigure, jfm_copy_caption_kept_with_floatrow,
 jfm_copy_caption_kept_with_subfig_without_caption, jfm_copy_caption_yields_to_caption_loaders_after_floatrow}`.

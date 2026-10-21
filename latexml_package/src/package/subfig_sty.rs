@@ -20,16 +20,19 @@ LoadDefinitions!({
   // a load TeX makes even after floatrow's `caption3`, so the mark goes (jfm_cls.rs; 1805.00129, 1612.03374). Guards
   // `perfect_kernel_batch78a::{jfm_copy_caption_kept_with_subfig_without_caption,
   // jfm_copy_caption_yields_to_caption_loaders_after_floatrow}`.
+  // (the last `caption=` option wins, as subfig.sty's `\@for` over `\sf@split` sets the switch once per option)
   let use_caption = lookup_vecdeque("opt@subfig.sty").is_none_or(|options| {
-    options.iter().all(|option| {
-      let option = option.to_string();
-      match option.split_once('=') {
-        Some((key, value)) if key.trim() == "caption" => {
-          !matches!(value.trim(), "0" | "false" | "no" | "off")
-        },
-        _ => true,
-      }
-    })
+    options
+      .iter()
+      .filter_map(|option| {
+        let option = option.to_string();
+        option
+          .split_once('=')
+          .filter(|(key, _)| key.trim() == "caption")
+          .map(|(_, value)| !matches!(value.trim(), "0" | "false" | "no" | "off"))
+      })
+      .last()
+      .unwrap_or(true)
   });
   if use_caption {
     RequirePackage!("caption");

@@ -286,7 +286,8 @@ fn llncs_item_labels_are_the_class_s() {
 
 /// The document's caption package — here subcaption's — replaces a jfm copy's own `\@makecaption`: "Figure 1:" in the
 /// caption font, no small caps, the sub-caption's "(a)" at its size. Red (78a r1): `close=". "`, the labels and the
-/// "(a)" in small caps. Witnesses 1711.01065, 2205.10181, 2507.07213. Repro
+/// "(a)" in small caps. Witnesses 1711.01065, 2205.10181, 2507.07213, 1805.00129 and 1612.03374 (subfig), 2008.04616
+/// (caption). Repro
 /// class-bindings/jfm_caption/jfm_copy_caption_yields_to_subcaption. (The main caption's `fontsize="90%"` is a known
 /// artifact, pinned as it is: subcaption's `\small` caption font from Perl's subcaption.sty.ltxml:34-35, where pdflatex
 /// sets the text font, CMR10 — a SYNC_STATUS row.)
@@ -471,7 +472,7 @@ fn biblatex_numeric_textcite_without_author_keeps_its_brackets() {
 
 /// A jfm copy under `\usepackage[caption=false]{subfig}`: subfig loads caption's kernel alone (subfig.sty:129-141
 /// `caption3`), which keeps the class's `\@makecaption` — "Figure 1." and "Table 1." with the labels in small caps.
-/// Red (78a r2, subfig always loading caption): `close=": "` upright. Witness 1612.03374. Repro
+/// Red (78a r2, subfig always loading caption): `close=": "` upright. No corpus witness (the rev78a3 re-review). Repro
 /// class-bindings/jfm_caption/jfm_copy_caption_kept_with_subfig_without_caption.
 #[test]
 fn jfm_copy_caption_kept_with_subfig_without_caption() {
@@ -504,8 +505,8 @@ fn jfm_copy_caption_kept_with_subfig_without_caption() {
 
 /// subcaption and subfig load caption even after floatrow's `caption3` (subcaption.sty:43, subfig.sty:129-139), and
 /// caption replaces a jfm copy's own `\@makecaption`: "Figure 1:", no small caps. Red (78a r1, r2): `close=". "` in
-/// small caps (caption3's stand-in marked caption's kernel alone and the mark stayed). Witness 2008.04616 (a copy under
-/// caption). Repros class-bindings/jfm_caption/jfm_copy_caption_yields_to_{subcaption,subfig}_after_floatrow. (The
+/// small caps (caption3's stand-in marked caption's kernel alone and the mark stayed). No corpus witness (the rev78a3
+/// re-review; 2008.04616 loads caption without floatrow, `jfm_copy_caption_yields_to_caption_loaders`'s shape). Repros class-bindings/jfm_caption/jfm_copy_caption_yields_to_{subcaption,subfig}_after_floatrow. (The
 /// `fontsize="90%"` is subcaption's `\small`, the known artifact of `jfm_copy_caption_yields_to_caption_loaders`.)
 #[test]
 fn jfm_copy_caption_yields_to_caption_loaders_after_floatrow() {
