@@ -4877,7 +4877,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `perfect_kernel_batch78b::a_bound_alignment_clears_everycr_for_what_it_holds`,
   `dump_gate_init::nodump_plain_ialign_clears_everycr`). Open: AMS-TeX's quote connector `@"` (amstex.tex:177-190) is
   undefined under the active `@` (pre-existing, an undefined-`@` error before). Every amsmath, table, control and
-  `\displ@y`-copy paper (`\ifdtup` noaligns) is byte-identical.
+  `\displ@y`-copy paper (`\ifdtup` noaligns) is byte-identical. rev78b SHIP.
+  **Integration (int43, 78b + follow-ups, binary int43a):** gates int43a: nextest 6578/6578 + cortex 10/10,
+  clippy/rustdoc clean, inits 0/0, dump diff vs int42a empty. Population A/B (1,099: the 78b and rev78b sets + 300
+  random of the proj98 sample) vs int42a: E 3,889 → 3,766, F 22 → 22, 0 Error or Fatal worse, 7 Error better; 9 outputs
+  changed, 0 of the controls; two word losses > 1 % are the witnesses whose `\newCD` diagrams are now built,
+  math9611222 (75 → 1 errors) and math0005042 (28 → 0) — no text word lost outside formulas, the counted words the
+  error ink that went; the lams letters they gain are the font-map row above. Binding nets (int43a) 136/136, 0
+  documents worse than int42a.
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
   parts draw, as Unicode's IPA letter, cross-checked against tipauni.sty; the `""`/`||` ligatures ˌ ǁ), so its input
