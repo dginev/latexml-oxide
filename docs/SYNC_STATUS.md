@@ -522,6 +522,11 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
   Base_Utility.pool.ltxml:702-703, PERL-ORIGIN; keep the delimiter as `<break/>`; `~/data/pk_agents/rc131/repro/author_glue.tex`).
   Ruled out: suanpan-l3's last jing line (a second `\title`/`\maketitle` replaces the first — double `\maketitle` keeps
   the latest title, user 2026-10-01).
+- **Frontmatter side findings from 78f / int48** (for FM S2; unchanged from int47a unless stated): 2409.17846's names
+  keep a trailing comma before `\orcidlink` ("Qin Tan,", "You Wu,"); an iopart `\author{A and B}\address{…}` gives the
+  address to B only (rev78f2 probe i1); IOS (`infor.cls`) `\address` labels `aff.a`–`aff.d` land on the corresponding-author
+  note and on the document instead of their affiliations (2406.15038; hidden, no `\ref` uses them; int48 moved
+  `aff.b`–`aff.d` from the note to the document and gave the note the step's refnum).
 
 ### Perfect-kernel RED repros without a row elsewhere
 
@@ -5285,6 +5290,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   Recorded in OD #809's residuals, not implemented: notes apart from the names get no counter number (probes a2, a4b;
   0 realised cases in the 1,247), and a `\thanks`/`\footnote` inside jheppub names steps the counter uncounted. KPE
   #1033 witnesses +2212.09764, 2404.17559, 2101.00866, 2405.20427. A/B 78f r3 → r4: 1,251 papers (r3's 1,247 and 2005.05695, 2005.14143, 2405.09762, 2101.00866 — 1403.3797 among them —, release, `--preload=ar5iv.sty`): E 1,559, F 11, W 53,326 equal, 0 worse, 0 outputs changed (temp-dir paths masked; the five a6-shape papers place each address by its spelling, none left over; 1806.01746 times out on both).
+  **Integration (int48, 78g r1-r4 squashed c38409d75d + 78f r1-r4 squashed 50e5ba3da2 + the charter rulings f5eeb2c219;
+  binary int48a):** rev78g3 SHIP-if (its box-in-math finding fixed in r4, guard red on r3) and rev78f3's regression fixed in
+  r4 (guard red on r3; r3 → r4 byte-identical on 1,251). Gates int48a: nextest 6671/6671 + cortex 10/10, clippy/rustdoc
+  clean, inits 0/0, dump diff vs int47a empty. Population A/B (2,302 of 2,310: 78f's 1,251, 78g's 765, the tcolorbox census
+  400) int47a vs int48a: E 2,222 → 2,222, F 12 → 11, 0 Error or Fatal worse, no paper loses > 1 % of its words; 245 outputs
+  changed, 234 already classified by the writers, the other 11 checked: 5 tcolorbox census papers whose box labels now name
+  the box (1904.12098, 2409.06317, 2509.11120, 2601.01576, 2609.27175), an empty `\label{}` moving with them (1906.11223),
+  2304.11865's cleveref plural names, 2101.00866's `\note[*]` name repaired, 2405.09762's e-mails now on the authors they
+  spell, 2109.03031's unspelled iopart address on the block, and 2406.15038 (IOS `aff.*` labels moved between hidden
+  places; row in Corpus Triage Quick Wins). Binding nets (int48a) 136/136, no recall below int47a; 6 nets flagged 3
+  documents (1704.06338, 2607.02089, 2608.05298) "valid 1 → 0" against the nets' schema copy of 2026-10-15, which lacked
+  78g's `ltx:picture` labels and tags — all three validate (0 errors) against the repo schema, and the copy is refreshed.
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
   parts draw, as Unicode's IPA letter, cross-checked against tipauni.sty; the `""`/`||` ligatures ˌ ǁ), so its input
