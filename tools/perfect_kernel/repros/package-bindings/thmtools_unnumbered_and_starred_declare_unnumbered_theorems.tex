@@ -1,0 +1,19 @@
+% witness: 2311.15711 (`\declaretheorem[style=myproof, unnumbered]{proof}`: "Proof 1" … where the PDF prints "Proof");
+%          1706.08429 (`[unnumbered, style=proof, …]{proof}`, `{proof-sketch}`, `{usage-note}`: "Proof 161")
+% oracle:  pdflatex 0 errors: "Note. N1", "Note. N2", "Proof Sketch. S", "Claim 1. K" — thm-kv.sty:241-242 makes
+%          `unnumbered` and `starred` `\thmt@isnumberedfalse`; the last numbered key decides (:248-262)
+% engines: rust 78k r1 = 0 errors, "Note 1", "Note 2", "Proof Sketch 1"; perl = the same (numbered=no read alone)
+% expect:  0 errors, 0 warnings; the tags "Note", "Note", "Proof Sketch", "Claim 1"
+% status:  RED (78k r1) -> GREEN (78k r2: thmtools_sty.rs reads unnumbered/starred/numbered in order)
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage{thmtools}
+\declaretheorem[style=remark,unnumbered]{note}
+\declaretheorem[starred,name=Proof Sketch]{sketch}
+\declaretheorem[unnumbered,numbered=yes]{claim}
+\begin{document}
+\begin{note}N1\end{note}
+\begin{note}N2\end{note}
+\begin{sketch}S\end{sketch}
+\begin{claim}K\end{claim}
+\end{document}

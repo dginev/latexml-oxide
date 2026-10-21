@@ -224,6 +224,20 @@ fn set_number_tag_text(tag: &Node, n: &str) {
   let _ = target.set_content(n);
 }
 
+/// `\KwSty{\@algocf@endoption{<end>}}`: a block's end keyword as algorithm2e.sty prints it (:1868; v5.00 :1532).
+fn algocf_end_keyword(end: Tokens) -> Vec<Token> {
+  let mut out = Tokens!(
+    T_CS!("\\KwSty"),
+    T_BEGIN!(),
+    T_CS!("\\@algocf@endoption"),
+    T_BEGIN!()
+  )
+  .unlist();
+  out.extend(end.unlist());
+  out.extend([T_END!(), T_END!()]);
+  out
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // No `RequirePackage!("float")` (Perl algorithm2e.sty.ltxml:37): algorithm2e.sty loads no float package — its float is
@@ -568,7 +582,57 @@ LoadDefinitions!({
 
   // Block and group macros
   DefMacro!("\\algocf@group{}", "#1");
-  DefMacro!("\\algocf@@@block{}{}", "#1 #2\\lx@algo@parb");
+  // algorithm2e.sty:1868 `\algocf@@@block[3]`: the body, then the end keyword as `\KwSty{\@algocf@endoption{#2}}`
+  // (shortend's `\@firstword`, :1890-1893, the default by :1485's `\ExecuteOptions{…,shortend}`, prints a bold "end";
+  // longend the whole "end if"; noend nothing) and the side comment `#3` after it, a space before it. Perl's
+  // two-argument form (algorithm2e.sty.ltxml:153) printed `#2` plain and whole ("end if" for pdflatex's bold "end"), its
+  // `{#3}` left over (KNOWN_PERL_ERRORS #1056). The line ends only after an end keyword (`\strut\par`, here
+  // `\lx@algo@parb`): an empty `#2` leaves ` #3` open on the line after the body, as :1868's `{ #3\relax}` does.
+  // A `#3` that is only `\relax` (the `{##4\relax}` of `\eIf`, `\For`: :2169-2179) is no comment: TeX's space before it
+  // is the line's last glue, which the line break removes (tex.web §816), so no space is kept; only a trailing `\relax`
+  // is stripped from a real comment. Witness 1810.03652 (6 "end for", 1 "end while"); line witnesses 1911.01815,
+  // 1903.04631. Guards `perfect_kernel_batch78k::algorithm2e_block_end_*`.
+  //
+  // A paper may ship its own algorithm2e.sty, which `InputDefinitions!` above reads in place of TeX Live's. Release 5.00
+  // (2013/01/06, its :1532-1534) and the releases before 5.1 define `\algocf@@@block`, `\algocf@@block` and
+  // `\algocf@block` with TWO arguments (no side comment; callers `\algocf@block{##1}{#8}`): there the body, then, for a
+  // non-empty `#2` only, `\KwSty{\@algocf@endoption{#2}}\strut\par`. The three-argument form would read the token after
+  // the call as its `#3` and scramble the listing, so the arity of the loaded definition picks the form. Witnesses
+  // (shipping v5.00 or earlier): 1402.6889, 1406.0089, 1410.1699, 1410.6122, 1502.02887, 1507.00513, 1507.00980,
+  // 1511.03137, 1511.05741, 1805.07253, 2208.10273. Guard `perfect_kernel_batch78k::algorithm2e_v500_two_argument_block_*`.
+  let two_argument_block = lookup_definition(&T_CS!("\\algocf@@@block"))?
+    .is_some_and(|definition| definition.get_num_args() == 2);
+  if two_argument_block {
+    DefMacro!("\\algocf@@@block{}{}", sub[(body, end)] {
+      let mut out = body.unlist();
+      if !end.is_empty() {
+        out.extend(algocf_end_keyword(end));
+        out.push(T_CS!("\\lx@algo@parb"));
+      }
+      Ok(Tokens::new(out))
+    });
+  } else {
+    DefMacro!("\\algocf@@@block{}{}{}", sub[(body, end, side)] {
+      let mut side = side.unlist();
+      if side.last() == Some(&T_CS!("\\relax")) {
+        side.pop();
+      }
+      let side_blank = side.iter().all(|t| t.get_catcode() == Catcode::SPACE);
+      let mut out = body.unlist();
+      let ends_line = !end.is_empty();
+      if ends_line {
+        out.extend(algocf_end_keyword(end));
+      }
+      if !side_blank {
+        out.push(T_SPACE!());
+        out.extend(side);
+      }
+      if ends_line {
+        out.push(T_CS!("\\lx@algo@parb"));
+      }
+      Ok(Tokens::new(out))
+    });
+  }
   // The block body `#1` is wrapped in `\lx@strippar{#1}`, matching Perl
   // (algorithm2e.sty.ltxml `\algocf@Vline`/`\algocf@Vsline`/`\algocf@Noline`).
   // `\lx@strippar` appends `\lx@algo@parx\lx@algo@parx\lx@algo@parx` so the block

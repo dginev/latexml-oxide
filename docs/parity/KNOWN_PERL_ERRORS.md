@@ -16806,3 +16806,101 @@ with two later `\<name>`s the preview is the last one's number (78i r3; r2 the f
 package-bindings/{thm_restate_restatable_star_takes_the_later_number, thm_restate_restatable_star_takes_the_last_number};
 guards `perfect_kernel_batch78i::{restatable_star_takes_the_later_number, restatable_star_takes_the_last_number}`,
 `perfect_kernel_batch56::restatable_star_and_lineno_bframe`.
+
+## 1056. algorithm2e's block end keyword is printed whole and plain
+
+algorithm2e.sty:1868 `\algocf@@@block[3]` prints the block's end keyword as `\KwSty{\@algocf@endoption{#2}}`, then the
+side comment `#3`; under the default `shortend` (:1485 `\ExecuteOptions{…,shortend}`, :1890-1893 `\@firstword`) a bold
+"end", under `longend` the bold "end if"/"end for". Perl's binding takes two arguments and prints `#2` as it is
+(algorithm2e.sty.ltxml:153 `\algocf@@@block{}{}`), its `{#3}` left in the stream: "end if" in the body font. Minimal
+trigger: `\usepackage[ruled]{algorithm2e}` … `\begin{algorithm}\eIf{$x$}{a\;}{b\;}\caption{A}\end{algorithm}` —
+pdflatex a bold "end", Perl and int49a "end if". Perl's two-argument form is the shape of the releases before 5.1
+(release 5.00, 2013/01/06, :1532-1534 `\algocf@@@block[2]{#1\ifArgumentEmpty{#2}{\relax}{\KwSty{\@algocf@endoption{#2}}\strut\par}}`,
+callers `\algocf@block{##1}{#8}`), which a paper may ship and the binding then reads; it is wrong only against 5.1 and
+later (TeX Live's 5.2), and even for 5.00 prints `#2` plain where `\KwSty` makes it bold. Fixed in Rust (78k,
+algorithm2e_sty.rs): the arity of the loaded `\algocf@@@block` picks the form — three arguments as :1868 (the line ends,
+`\lx@algo@parb`, only after an end keyword; an empty one leaves ` #3` on the line), two as 5.00's :1532. Witness
+1810.03652; line witnesses 1911.01815, 1903.04631 re-converted; the v5.00 shippers 1402.6889, 1406.0089, 1410.1699,
+1410.6122, 1502.02887, 1507.00513, 1507.00980, 1511.03137, 1511.05741, 1805.07253, 2208.10273. Repros
+listings-algorithms/{algorithm2e_block_end_is_a_bold_short_keyword, algorithm2e_block_end_longend_is_the_whole_keyword,
+algorithm2e_block_end_noend_prints_none, algorithm2e_block_side_comment_without_end_keyword_continues_the_line,
+algorithm2e_v500/algorithm2e_v500_block_takes_two_arguments}; guards `perfect_kernel_batch78k::algorithm2e_block_end_*`,
+`perfect_kernel_batch78k::algorithm2e_block_side_comment_without_end_keyword_continues_the_line`,
+`perfect_kernel_batch78k::algorithm2e_v500_two_argument_block_prints_the_end_keyword_on_its_line`.
+
+## 1057. footmisc's `symbol` and `symbol*` options are ignored
+
+footmisc.sty:65 `\DeclareOption{symbol}{\renewcommand\thefootnote{\fnsymbol{footnote}}}`; :67-70 `symbol*` marks with
+`\@fnsymbol\c@footnote` in the `lamport*-robust` set, which prints the number past its sixteen symbols (`\FN@orange`,
+:522-531); the package's own set is `lamport*` (:578-598, sixteen symbols). Perl declares both options as no-ops
+(footmisc.sty.ltxml:19-22): marks 1, 2, 3. Minimal trigger: `\usepackage[symbol]{footmisc}`
+`A\footnote{x\label{a}} B\footnote{y} \footref{a}` — pdflatex "A∗ B† ∗", Perl "A1 B2 1". Fixed in Rust (78k,
+footmisc_sty.rs): both options as footmisc.sty:65-70, `\@fnsymbol` the `lamport*` set (`\ifFN@robust` the arabic number
+past it). `\setfnsymbol` and `\DefineFNsymbols` stay no-ops (a document's own symbol set is not read). Residuals:
+`[symbol]`'s `\fnsymbol{footnote}` is our kernel `\fnsymbol` (sect08.rs `\fnsymbol`, the radix form of the nine
+latex.ltx symbols, latex_constructs/mod.rs `FNSYMBOLS`), not footmisc's `\@fnsymbol`: marks 1-9 agree, from 10 they
+differ (10 "∗∗" for "§§", 11 "∗†" for "¶¶", 12 "∗‡" for "∗∗∗"), and past 16 we print a mark where footmisc's
+`lamport*` raises the counter error; `perpage` is not emulated, so the counter runs on where pdflatex restarts it on
+each page. Witness 0807.1434 (`[perpage,marginal]{footmisc}`, `\DefineFNsymbols{numbers}{123456789{10}…{20}}`
+`\setfnsymbol{numbers}`, `\renewcommand{\thefootnote}{\fnsymbol{footnote}}`): the PDF numbers each page's notes 1, 2, …;
+ours run on through the radix symbols, "∗†" (11), "††" (20). Witness 1907.00006. Repros package-bindings/{footmisc_symbol_marks_footnotes_with_symbols,
+footmisc_symbol_star_prints_the_number_past_the_symbols}; guards
+`perfect_kernel_batch78k::{footmisc_symbol_marks_footnotes_with_symbols, footmisc_symbol_star_prints_the_number_past_the_symbols}`.
+
+## 1058. natbib's `\citetext` loses its brackets
+
+natbib.sty:739 `\newcommand\citetext[1]{\NAT@open#1\NAT@close}` sets the text in the current citation brackets
+(`round`, `square`, `\bibpunct`, `\setcitestyle`). Perl's `\citetext` is the bare `\@@cite` (natbib.sty.ltxml:254).
+Minimal trigger: `\usepackage[round]{natbib}` `\citetext{see \citealp{k1}}` — pdflatex "(see Able et al., 2001)", Perl
+"see Able et al., 2001". Fixed in Rust (78k, natbib_sty.rs): `\citetext{}` is `\lx@@cite{\NAT@open #1\NAT@close}`.
+Repro index-bib/natbib_citetext_keeps_its_brackets; guard `perfect_kernel_batch78k::natbib_citetext_keeps_its_brackets`.
+
+## 1059. bibentry has no binding: `\nobibliography` and `\bibentry` are undefined
+
+Perl ships no bibentry.sty.ltxml, so under its default (no raw styles) `\nobibliography` and `\bibentry` are undefined
+(2 Errors) and every entry's text is lost; bibentry.sty:42-66 stores each `.bbl` entry and prints it where
+`\bibentry{<key>}` stands. Minimal trigger: `\usepackage{natbib,bibentry}` `\nobibliography*` `Paper: \bibentry{k1}.`
+`\bibliography{refs}` with a `.bbl` — pdflatex "Paper: A. Able. First paper. 2001.". Fixed in Rust (78k, latexml_contrib
+bibentry_sty.rs; OXIDIZED_DESIGN_DIVERGENCES #830, #831). Witnesses 2210.16098, 2505.07606. Guards
+`perfect_kernel_batch78k::bibentry_*`.
+
+## 1060. A footnote's `[<n>]` is printed as the number, not as `\thefootnote`
+
+latex.ltx:17652-17657 `\@xfootnote`, :17678-17682 `\@xfootnotemark` and :17694-17699 `\@xfootnotenext` set the footnote
+counter to `<n>` and mark the note with `\thefootnote` (`\thempfn`). Perl's `\lx@note`/`\lx@notemark`/`\lx@notetext`
+use the given text as the mark (latex_constructs.pool.ltxml), and so do we. Minimal trigger:
+`\usepackage[symbol]{footmisc}` `A\footnotemark{} B\footnote[2]{y}.` `\footnotetext[1]{x}` — pdflatex "A∗ B†" with
+notes "∗ x", "† y"; ours "A∗ B2" and the `\footnotetext[1]` ("1") left apart from its mark ("∗"; Perl "A1 B2", its
+`symbol` a no-op, #1057). Witness 2507.05750 (`\footnotemark` in `\author`, `\footnotetext[1]` after `\maketitle`); 24
+of the 89 `symbol` papers of the 30k sample give a footnote a number. NOT FIXED (78k): formatting `[<n>]` through
+`\thefootnote` alone unpaired the notes of 58 papers of the 78k A/B's 245 numbered-footnote papers, against 2 paired —
+the common title-block idiom `\author{A\footnotemark[1]}` `\maketitle`
+`\renewcommand\thefootnote{\fnsymbol{footnote}}` `\footnotetext[1]{…}` (2412.20504, 0903.0014, 2006.14582) prints "∗"
+for both in pdflatex because article's `\maketitle` marks its title in `\@fnsymbol`, which our frontmatter does not, so
+the mark stayed "1" while the text became "∗". The two halves need one rule (SYNC_STATUS 78k bullet: pair a mark and a
+text by the counter value they stand for, or emulate the class's title-block `\thefootnote`). Repro
+package-bindings/footmisc_symbol_numbered_footnotetext_pairs_with_its_mark (RED).
+
+## 1061. thmtools' `\declaretheorem` numbers `unnumbered`/`starred` theorems and takes one name
+
+thm-kv.sty:241-242 makes the value-less keys `unnumbered` and `starred` `\thmt@isnumberedfalse`, as `numbered=no` is
+(:248-262), the last of them deciding; :333-348 `\declaretheorem[#1]{#2}[#3]` reads a trailing optional argument too and
+declares every name of the comma list `#2` (`\@for`, spaces stripped) with the options `#1,#3`. Perl's binding reads
+`numbered=no` alone (thmtools.sty.ltxml:84-85) and one name with no trailing options. Minimal trigger:
+`\usepackage{amsthm,thmtools}` `\declaretheorem[unnumbered]{note}` `\declaretheorem{corollary, lemma}[sibling=note]`
+`\begin{note}N\end{note}\begin{lemma}L\end{lemma}` — pdflatex "Note. N", "Lemma 1. L"; Perl "Note 1", `{lemma}`
+undefined. Fixed in Rust (78k r2, thmtools_sty.rs): the numbered keys read in order; `\declaretheorem[]{}` then `[]`
+emits one `\lx@thmt@declaretheorem` per name. Witnesses 2311.15711, 1706.08429 ("Proof 1" … "Proof 161" for "Proof"),
+2608.16854 (`\declaretheorem{corollary, lemma, proposition}[sibling=theorem]`). Repros
+package-bindings/{thmtools_unnumbered_and_starred_declare_unnumbered_theorems,
+thmtools_declaretheorem_declares_each_listed_name}; guards
+`perfect_kernel_batch78k::{thmtools_unnumbered_and_starred_declare_unnumbered_theorems, thmtools_declaretheorem_declares_each_listed_name}`.
+
+## 1062. algorithm2e's `noline` blocks never give back their indentation
+
+algorithm2e.sty:1851-1860 `\algocf@Noline` sets the block's body in a box of its own, so the line after the block is at
+the block's level again. Perl's `\algocf@Noline` (algorithm2e.sty.ltxml:120) pushes `\lx@algo@advlevel` and, unlike
+`\algocf@Vline`/`\algocf@Vsline`, never pops it: every later line of the listing is one level deeper per block. Minimal
+trigger: `\usepackage[noline]{algorithm2e}` `\SetKwBlock{Loop}{loop}{end}` `\begin{algorithm}\Loop{a\;}b\;\end{algorithm}`
+— pdflatex "end", "b;" at the left; Perl and Rust indent both. Open (SHARED; algorithm2e_sty.rs `\algocf@Noline` is
+Perl's). RED listings-algorithms/algorithm2e_noline_block_pops_its_indentation.

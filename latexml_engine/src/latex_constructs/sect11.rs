@@ -177,6 +177,15 @@ pub(crate) fn load() -> Result<()> {
   );
 
   DefMacro!("\\lx@ifusebbl{}{}{}", sub[(bib_files_tks, bbl_clause, bib_clause)] {
+    // Every `\bibliography` call is counted, for a package that asks whether one followed its own: bibentry's
+    // `\nobibliography*` warns at the end when none did (bibentry.sty:74-79, whose `\def\bibliography` wrapper the
+    // lock refuses; latexml_contrib bibentry_sty.rs). Witnesses 2505.07606 (`\nobibliography*` then the
+    // `\bibliography`: no warning), 2210.16098 (the starless `\nobibliography`).
+    assign_value(
+      "lx_bibliography_calls",
+      Stored::Int(lookup_int("lx_bibliography_calls") + 1),
+      Some(Scope::Global),
+    );
     let bib_files = Expand!(bib_files_tks).to_string();
     let jobname = Expand!(T_CS!("\\jobname")).to_string();
     if bib_files.is_empty() {

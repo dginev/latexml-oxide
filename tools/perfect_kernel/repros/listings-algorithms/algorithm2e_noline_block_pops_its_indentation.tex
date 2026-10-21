@@ -1,0 +1,20 @@
+% witness: none (found by the 78k r2 writer; reviewer probe p/alg_noline.tex shows it on every block)
+% oracle:  pdflatex 0 errors: "loop / a; / end / b; / body / c; / d;" — under `noline` each block's body is indented
+%          one level and the line after the block is back at the block's level (algorithm2e.sty:1851-1860
+%          `\algocf@Noline`, a box of its own)
+% engines: rust int49a, 78k r1/r2 = 0 errors, "end", "b;", "body" indented one level, "c;", "d;" two; perl = the same
+%          (algorithm2e.sty.ltxml:120 `\algocf@Noline` pushes `\lx@algo@advlevel` and never pops it, unlike `\algocf@Vline`)
+% expect:  0 errors, 0 warnings; only "a;" and "c;" indented
+% status:  RED
+\documentclass{article}
+\usepackage[noline]{algorithm2e}
+\SetKwBlock{Loop}{loop}{end}
+\SetKwBlock{Body}{body}{}
+\begin{document}
+\begin{algorithm}
+\Loop{a\;}
+b\;
+\Body{c\;}
+d\;
+\end{algorithm}
+\end{document}

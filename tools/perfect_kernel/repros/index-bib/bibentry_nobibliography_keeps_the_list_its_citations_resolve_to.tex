@@ -1,0 +1,19 @@
+% witness: 2210.16098 (AAAI: `\nobibliography{aaai23}` at :586, then 48 `\bibentry{…}` lines; 33 `\cite`s)
+% oracle:  pdflatex 0 errors: "Also Baker [2002].", a "Selected" section "A. Able. First paper. 2001." /
+%          "B. Baker. Second paper. 2002." and no list — the store mode's `\bibitem`s write the labels the
+%          citations resolve to (bibentry.sty:49-53, `\BR@bibitem` the original `\bibitem` without the star)
+% engines: rust int49a = 0 errors, both lines "."; perl = 2 errors (no binding)
+% expect:  0 errors, 0 warnings; the section's paragraph holds both entries; the list stays as the citations'
+%          target (OXIDIZED_DESIGN_DIVERGENCES #831), so the `\citet` resolves to "Baker (2002)"
+% status:  RED (int49a) -> GREEN (78k: latexml_contrib bibentry_sty.rs)
+\documentclass{article}
+\usepackage{natbib}
+\usepackage{bibentry}
+\begin{document}
+Also \citet{k2}.
+\bibliographystyle{plainnat}
+\nobibliography{refs}
+\section*{Selected}
+\bibentry{k1}.\\
+\bibentry{k2}.
+\end{document}

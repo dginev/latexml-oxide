@@ -1,0 +1,20 @@
+% witness: 1402.6889 (ships algorithm2e.sty 2013/01/06 v5.00, whose :1532-1534 `\algocf@@@block`, `\algocf@@block`,
+%          `\algocf@block` take two arguments); also 1406.0089, 1410.1699, 1410.6122, 1502.02887, 1507.00513,
+%          1507.00980, 1511.03137, 1511.05741, 1805.07253, 2208.10273
+% companion: algorithm2e.sty here — a from-scratch stand-in with v5.00's two-argument block shape only
+% oracle:  pdflatex 0 errors: "loop / a; / end loop / b; / body / c; / d;" — the end keyword bold on its own line,
+%          an empty end keyword no line at all (v5.00 :1532 `\ifArgumentEmpty{#2}{\relax}{…\strut\par}`)
+% engines: rust 78k r1 = 0 errors, 8 lines: "end loop b" then ";", "d" then ";" (the three-argument `\algocf@@@block` read the
+%          token after the call as its side comment); rust int49a = "end loop" plain; perl = plain (two arguments)
+% expect:  0 errors, 0 warnings; the 7 listing lines as pdflatex prints them, "end loop" bold
+% status:  RED (78k r1) -> GREEN (78k r2: algorithm2e_sty.rs picks the block form by the loaded definition's arity)
+\documentclass{article}
+\usepackage{algorithm2e}
+\begin{document}
+\begin{algorithm}
+\Loop{a\;}
+b\;
+\Body{c\;}
+d\;
+\end{algorithm}
+\end{document}

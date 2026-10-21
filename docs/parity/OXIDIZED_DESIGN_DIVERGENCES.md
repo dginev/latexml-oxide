@@ -22979,3 +22979,46 @@ AmSTeX pool does not have (`\ifinany@`; math9806089's 9 split errors); SYNC_STAT
 own amams.sty". Repro
 amstex/amstex_local_style_is_read (with a stand-in amslocal.sty written from scratch: amams.sty states no licence);
 guard `perfect_kernel_batch78i::amstex_local_style_is_read`.
+
+### 829. thmtools names an unnamed theorem by its environment, case-modified as its options say
+
+thm-kv.sty:359 names a `\declaretheorem{<env>}` without `name=`/`title=`/`heading=` `\thmt@modifycase <env>`, which is
+`\protect\MakeUppercase` by default and `\MakeLowercase` or nothing under thmtools' `lowercase`/`anycase` options
+(thmtools.sty:35-39 passes them to thm-kv, thm-kv.sty:30-42): `\MakeUppercase` takes the first token only, so `{defn}`
+is headed "Defn 1.2". Perl hardwires `\MakeUppercase` (thmtools.sty.ltxml:80-82) and ignores the options; ours had no
+name at all ("1.2", typerefnum " 1.2"; 1505.04294's 90 theorems, 70 papers of the census without a name key). Ours
+(78k, thmtools_sty.rs): the binding declares thm-kv's three options and defaults the name to `\thmt@modifycase` before
+the environment's name. Repros package-bindings/{thmtools_unnamed_theorem_is_headed_by_its_environment,
+thmtools_lowercase_option_lowercases_the_unnamed_theorem}; guards `perfect_kernel_batch78k::{thmtools_unnamed_theorem_is_headed_by_its_environment,
+thmtools_unnamed_theorem_follows_the_case_option}`.
+
+### 830. bibentry's store mode: `\nobibliography` keeps each `.bbl` entry for `\bibentry`
+
+bibentry.sty:42-66: `\nobibliography{<db>}` and `\nobibliography*` read the `.bbl` with `{thebibliography}` and
+`\bibitem` redefined so that each entry's text up to its blank line is stored as `\BR@r@<key>` (`\BR@c@bibitem#1 #2
+\par`) and nothing is printed; `\bibentry{<key>}` `\nocite`s the key and prints the stored text without its final
+period (`\BR@nodot`). Perl has no binding (KNOWN_PERL_ERRORS #1059); read raw, our kernel's locked `{thebibliography}`
+refuses the redefinition, so `\nobibliography*` printed the whole list and each `\bibentry` nothing (2505.07606: 29 empty
+entries, two lists; 2210.16098: 48 lines "."). Ours (78k, latexml_contrib bibentry_sty.rs): `\lx@BR@store` reads the
+`<jobname>.bbl` itself (the file `\bibliography`'s bbl route reads), tokenizes it under the standard catcodes and stores
+each `\bibitem[<label>]{<key>}`'s tokens up to `\par`, the next `\bibitem` or the list's `\end` (where TeX's delimited
+read would run on into the next entry when no blank line separates them); the stored text is digested where
+`\bibentry` stands. A paper with no `.bbl` (only its `.bib`) stores nothing; each `\bibentry` then reports its key in a
+Warning (pdflatex: its `\nocite`'s undefined citation). bibentry's `\def\bibliography` wrapper (bibentry.sty:74-75),
+which resets the star's flag, is refused by the locked `\bibliography`, so the `\AtEndDocument` warning for a
+`\nobibliography*` without a later `\bibliography` (:76-79) asks the kernel's count of `\bibliography` calls
+(`lx_bibliography_calls`, sect11.rs `\lx@ifusebbl`) instead. bibentry's `\BR@b@bibitem`, `\BR@c@bibitem` and `\BR@nodot`
+are defined as there for code that redefines them (tufte-common.def:876-882, whose margin citations are `\bibentry`s).
+Repro index-bib/bibentry_prints_the_stored_entry; guard
+`perfect_kernel_batch78k::bibentry_prints_the_stored_entry`.
+
+### 831. bibentry's `\nobibliography{<db>}` without the star keeps the list its citations resolve to
+
+In TeX, `\nobibliography{<db>}` prints no list, but its `\bibitem`s (the original `\BR@bibitem`, bibentry.sty:49-53)
+still write the `\bibcite` labels every `\cite` resolves to. Our citations resolve to the `ltx:bibitem`s of a
+bibliography in the document: without a list every `\cite` would be a "Missing Entry for citation" (2210.16098's 33
+`\cite`s, AAAI's `\nobibliography{aaai23}` idiom). By the charter's order (semantic markup before PDF fidelity), the
+starless form stores the entries for `\bibentry` and builds the list where it stands, as before: the PDF's list-less
+page differs; the starred form (followed by a `\bibliography`) builds none, so one list stands as in the PDF. Repro
+index-bib/bibentry_nobibliography_keeps_the_list_its_citations_resolve_to; guard
+`perfect_kernel_batch78k::bibentry_nobibliography_keeps_the_list_its_citations_resolve_to`.

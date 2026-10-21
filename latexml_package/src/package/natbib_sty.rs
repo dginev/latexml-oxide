@@ -796,8 +796,12 @@ LoadDefinitions!({
       vec![Tokens::new(Explode!("citenum")), bibref]))
   });
 
-  // \citetext = \@@cite
-  DefMacro!("\\citetext", "\\lx@@cite");
+  // natbib.sty:739 `\newcommand\citetext[1]{\NAT@open#1\NAT@close}`: the text in the current citation brackets
+  // (`round`, `square`, `\bibpunct`, `\setcitestyle`). Perl's `\citetext` is the bare `\@@cite` (natbib.sty.ltxml:254),
+  // "see Able et al., 2001" for pdflatex's "(see Able et al., 2001)" (KNOWN_PERL_ERRORS #1058). Witness 1507.01643
+  // (`proposed \citetext{\citealp{jing2002}; \citealp{bowden2013}}`, bracketed in the PDF). Guard
+  // `perfect_kernel_batch78k::natbib_citetext_keeps_its_brackets`.
+  DefMacro!("\\citetext{}", "\\lx@@cite{\\NAT@open #1\\NAT@close}");
 
   // \citeauthor
   DefMacro!("\\citeauthor OptionalMatch:* [][] Semiverbatim", sub[args] {

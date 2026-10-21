@@ -9,7 +9,8 @@
 %          bibentry's `\AtEndDocument` Warning "You have used \nobibliography* without a following \bibliography"
 %          (its `\AtBeginDocument` `\def\bibliography{\global\BR@starfalse\BR@bib}` does not take). RUST-ONLY shape:
 %          Perl 0.8.8 has no bibentry binding and does not load the package (Error undefined `\nobibliography`, one
-%          bibliography at the end).
+%          bibliography at the end). -> GREEN (78k: latexml_contrib bibentry_sty.rs reads the `.bbl` in store mode,
+%          OXIDIZED_DESIGN_DIVERGENCES #830; the `\AtEndDocument` Warning only when no `\bibliography` follows)
 % oracle:  pdflatex 0 errors (two runs): "Cover"; "Chapter 1 One", "See [1]."; then "Bibliography", "[1] A. Writer. A
 %          book. 2001." once, after the chapter.
 % expect:  0 errors, 0 warnings; one `<ltx:bibliography>`, after the chapter; nothing bibliographic before "Cover".

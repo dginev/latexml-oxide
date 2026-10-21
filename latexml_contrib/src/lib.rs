@@ -69,6 +69,7 @@ pub mod autofe_sty;
 pub mod axessibility_sty;
 pub mod backref_sty;
 pub mod beilstein_cls;
+pub mod bibentry_sty;
 pub mod biblatex_sty;
 pub mod bmvc2k_cls;
 pub mod breqn_sty;
@@ -654,6 +655,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("harvmac", "tex", harvmac_tex::load_definitions),
   ("mciteplus", "sty", mciteplus_sty::load_definitions),
   ("backref", "sty", backref_sty::load_definitions),
+  ("bibentry", "sty", bibentry_sty::load_definitions),
   ("ccaption", "sty", ccaption_sty::load_definitions),
   ("cclayout", "sty", cclayout_sty::load_definitions),
   ("caption2", "sty", caption2_sty::load_definitions),

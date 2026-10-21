@@ -1,0 +1,17 @@
+% witness: 78k selection probe (citetext.ids: 29 of the 30k sample, 85 calls)
+% oracle:  pdflatex 0 errors: "Known (see Able et al., 2001)." — natbib.sty:739
+%          `\newcommand\citetext[1]{\NAT@open#1\NAT@close}`
+% engines: rust int49a = 0 errors, "see Able et al., 2001" (no brackets); perl = the same (natbib.sty.ltxml:254)
+% expect:  0 errors, 0 warnings; the outer `cite` reads "(see Able et al., 2001)"
+% status:  RED (int49a) -> GREEN (78k: natbib_sty.rs `\citetext{}` in `\NAT@open`/`\NAT@close`)
+\documentclass{article}
+\usepackage[round]{natbib}
+\begin{document}
+Known \citetext{see \citealp{k1}}.
+\begin{thebibliography}{1}
+\bibitem[Able et~al.(2001)Able, Baker, and Carr]{k1}
+A.~Able, B.~Baker, and C.~Carr.
+\newblock First.
+\newblock \emph{J}, 2001.
+\end{thebibliography}
+\end{document}

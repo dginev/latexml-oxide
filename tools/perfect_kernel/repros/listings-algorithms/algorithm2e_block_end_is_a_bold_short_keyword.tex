@@ -1,0 +1,16 @@
+% witness: 1810.03652 (versao_arxiv.tex: 6 "end for", 1 "end while" where the PDF prints a bold "end")
+% oracle:  pdflatex 0 errors: "if x then / a; / else / b; / end / for i do / c; / end", each "end" bold —
+%          algorithm2e.sty:1485 `\ExecuteOptions{…,shortend}`, :1890-1893 `\@firstword`, :1868 `\algocf@@@block`
+%          prints `\KwSty{\@algocf@endoption{#2}}`
+% engines: rust int49a = 0 errors, plain "end if", "end for"; perl = the same (algorithm2e.sty.ltxml:153, two args)
+% expect:  0 errors, 0 warnings; the end lines are `<text font="bold">end</text>`
+% status:  RED (int49a) -> GREEN (78k: algorithm2e_sty.rs `\algocf@@@block{}{}{}` as :1868)
+\documentclass{article}
+\usepackage[ruled]{algorithm2e}
+\begin{document}
+\begin{algorithm}
+\eIf{$x$}{a\;}{b\;}
+\For{$i$}{c\;}
+\caption{A}
+\end{algorithm}
+\end{document}

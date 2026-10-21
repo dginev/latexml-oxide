@@ -1,0 +1,15 @@
+% witness: 78k twin of listings-algorithms/algorithm2e_block_end_is_a_bold_short_keyword (option noend)
+% oracle:  pdflatex 0 errors: no end line at all (algorithm2e.sty:1444 noend, :1894-1898 `\SetAlgoNoEnd`:
+%          the block is a group)
+% engines: rust int49a = 0 errors, no end line (CONTROL: unchanged by the fix); perl = the same
+% expect:  0 errors, 0 warnings; four listing lines after the head, none an end line
+% status:  CONTROL (78k: pins the noend side of the three-argument `\algocf@@@block`)
+\documentclass{article}
+\usepackage[ruled,noend]{algorithm2e}
+\begin{document}
+\begin{algorithm}
+\eIf{$x$}{a\;}{b\;}
+\For{$i$}{c\;}
+\caption{A}
+\end{algorithm}
+\end{document}

@@ -1,0 +1,13 @@
+% witness: 78k review of package-bindings/thmtools_unnamed_theorem_is_headed_by_its_environment (the option side)
+% oracle:  pdflatex 0 errors: "remark 1. B" — thmtools.sty:35-39 passes `lowercase` to thm-kv, whose
+%          `\thmt@modifycase` is then `\protect\MakeLowercase` (thm-kv.sty:30-32)
+% engines: rust int49a = 0 errors, head "1"; perl = "Remark 1" (its default `\MakeUppercase` ignores the option)
+% expect:  0 errors, 0 warnings; the theorem's tag is "remark 1"
+% status:  RED (int49a) -> GREEN (78k: thmtools_sty.rs declares thm-kv's case options)
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage[lowercase]{thmtools}
+\declaretheorem{Remark}
+\begin{document}
+\begin{Remark}B\end{Remark}
+\end{document}

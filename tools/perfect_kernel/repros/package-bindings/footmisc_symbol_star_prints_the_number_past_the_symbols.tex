@@ -1,0 +1,13 @@
+% witness: 1907.00006 (`\usepackage[perpage,symbol*]{footmisc}`)
+% oracle:  pdflatex 0 errors: "A∗ B† C17", notes "∗", "†", "17" — footmisc.sty:67-70 `symbol*`:
+%          `\@fnsymbol\c@footnote` in the `lamport*-robust` set (:599-616), whose `\FN@orange` (:522-531) prints the
+%          number past its sixteen symbols
+% engines: rust int49a = 0 errors, marks 1, 2, 17; perl = the same (no-op option)
+% expect:  0 errors, 0 warnings; notes marked "*", "†", "17"
+% status:  RED (int49a) -> GREEN (78k: footmisc_sty.rs `symbol*` and the lamport* sets)
+\documentclass{article}
+\usepackage[perpage,symbol*]{footmisc}
+\begin{document}
+A\footnote{First note.} B\footnote{Second note.}
+\setcounter{footnote}{16}C\footnote{Seventeenth note.}
+\end{document}

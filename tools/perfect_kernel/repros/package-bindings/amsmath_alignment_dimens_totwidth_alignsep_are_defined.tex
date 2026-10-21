@@ -1,0 +1,15 @@
+% witness: 0912.5438 (ships mathtools.sty 2004/10/10 v1.01a, whose `\x@calc@shift@lf` reads `\totwidth@` and
+%          `\alignsep@`, and whose `{gather}` ends with amsmath's `\black@\totwidth@`: 156 errors in both 78k binaries,
+%          the group-close errors after them leaking past `\end{example}` and swallowing the paper's tail)
+% oracle:  pdflatex 0 errors: "Width 10.0pt." — amsmath.sty:1311 `\newdimen\alignsep@`, :1316 `\newdimen\totwidth@`
+%          (and :1364 `\def\black@#1`), internals raw code reads
+% engines: rust 78k r2 = 2 errors (`\totwidth@`, `\alignsep@` undefined; amsmath_sty.rs defines neither)
+% expect:  0 errors, 0 warnings; "Width 10.0pt."
+% status:  RED
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\begin{document}
+\dimen0=\totwidth@ \advance\dimen0 by \alignsep@ \advance\dimen0 by \minalignsep
+Width \the\dimen0.
+\end{document}

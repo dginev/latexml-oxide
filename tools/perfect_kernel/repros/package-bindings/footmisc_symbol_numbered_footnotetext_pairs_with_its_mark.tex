@@ -1,0 +1,15 @@
+% witness: 2507.05750 (`\usepackage[symbol]{footmisc}`, `\footnotemark` in `\author`, `\footnotetext[1]{Work done…}`);
+%          24 of the 89 `symbol` papers of the 30k sample give a footnote a number (`\footnote[n]`, `\footnotemark[n]`,
+%          `\footnotetext[n]`)
+% oracle:  pdflatex 0 errors: "Ann Able∗ and Bob Baker†." with notes "∗ Work done at home." and "† Second."
+%          — latex.ltx:17678-17682/:17694-17699 set the counter to [n] and mark the note `\thefootnote`
+% engines: rust 78k = 0 errors, the mark "*" and the text "1" unpaired (int49a: "1" and "1", paired: footmisc's
+%          `symbol` was a no-op); perl = "1" for both (KNOWN_PERL_ERRORS #1057; `[n]` printed as given, #1060)
+% expect:  0 errors, 0 warnings; the text of `[1]` is marked "*" as its mark, the `[2]` note "†"
+% status:  RED (78k r1 A/B; formatting `[n]` through `\thefootnote` alone unpairs the title-block idiom, KPE #1060)
+\documentclass{article}
+\usepackage[symbol]{footmisc}
+\begin{document}
+Ann Able\footnotemark{} and Bob Baker\footnote[2]{Second.}.
+\footnotetext[1]{Work done at home.}
+\end{document}

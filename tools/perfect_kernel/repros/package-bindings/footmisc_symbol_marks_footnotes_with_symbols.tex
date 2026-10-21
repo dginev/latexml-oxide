@@ -1,0 +1,11 @@
+% witness: 1907.00006 (`\usepackage[perpage,symbol*]{footmisc}`: marks 1, 2, 3 where the PDF prints "∗ † ‡")
+% oracle:  pdflatex 0 errors: "A∗ B† again∗." and notes "∗ First note.", "† Second note." — footmisc.sty:65
+%          `symbol`: `\renewcommand\thefootnote{\fnsymbol{footnote}}`
+% engines: rust int49a = 0 errors, marks 1, 2 and `\footref` "1"; perl = the same (footmisc.sty.ltxml:19-22 no-ops)
+% expect:  0 errors, 0 warnings; notes marked "*", "†" (the ASCII "*" is MARK-ASTERISK #148); `\footref` prints "*"
+% status:  RED (int49a) -> GREEN (78k: footmisc_sty.rs declares the option as footmisc.sty:65)
+\documentclass{article}
+\usepackage[symbol]{footmisc}
+\begin{document}
+A\footnote{First note.\label{fa}} B\footnote{Second note.} again\footref{fa}.
+\end{document}

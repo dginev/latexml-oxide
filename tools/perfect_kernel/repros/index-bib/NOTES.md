@@ -626,3 +626,13 @@ tcolorbox, is out of scope, user 2026-10-02), 10,430 -> 16,825 words.
 author's `\section*{References}\begin{biblist}` is the document's bibliography; outside `{bibdiv}`/`{bibsection}`/
 `{bibchapter}` (`\if@lx@inbibliography`) amsrefs_sty.rs opens one through the kernel's implicit-bibliography marker
 `\lx@mung@bibliography@pre{implicit}`, so the heading before it (or its heading line) heads it, else it is untitled.
+
+`bibentry_prints_the_stored_entry`, `bibentry_nobibliography_keeps_the_list_its_citations_resolve_to`,
+`nobibliography_star_prints_nothing` (78k; SHARED: Perl has no binding, KNOWN_PERL_ERRORS #1059): bibentry.sty:44-66
+`\BR@nobib` stores each `.bbl` entry as `\BR@r@<key>` under a redefined `{thebibliography}`, which our locked kernel
+bibliography refuses when the package is read raw, so the list printed at `\nobibliography` and `\bibentry` printed
+nothing. Fix site latexml_contrib bibentry_sty.rs: `\lx@BR@store` reads the `<jobname>.bbl`, keeps each entry's tokens
+up to its blank line (OXIDIZED_DESIGN_DIVERGENCES #830); the starless form keeps the list as its citations' target (#831).
+
+`natbib_citetext_keeps_its_brackets` (78k; PERL-ORIGIN, KNOWN_PERL_ERRORS #1058): natbib.sty:739 wraps `\citetext`'s
+text in `\NAT@open`/`\NAT@close`; natbib_sty.rs now does.

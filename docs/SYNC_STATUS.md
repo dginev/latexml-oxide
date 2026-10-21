@@ -220,6 +220,11 @@ KNOWN_PERL_ERRORS cross-reference when one applies. Perl-origin defects go to `p
   reads its connectors (KPE #1018) — lamstex `\newCD` diagrams, which count their rows in `\everycr`, are built
   (math0005042 28 errors → 0) where the `@` alone took them to Fatal; their arrowheads still print as lams font letters
   (the font-map row below). Guards `perfect_kernel_batch78b::*`.
+- **thmtools' unnamed theorems (78k)**: our `\declaretheorem` (thmtools_sty.rs) dropped Perl's fallback name
+  (thmtools.sty.ltxml:80-82 `\MakeUppercase` of the environment), so a theorem declared without `name=` was headed by
+  its number alone ("1.2"; 1505.04294's 90 theorems, 70 census papers). Restored as thm-kv.sty:359 has it,
+  `\thmt@modifycase` with the `uppercase`/`lowercase`/`anycase` options (OD #829). Guards
+  `perfect_kernel_batch78k::{thmtools_unnamed_theorem_is_headed_by_its_environment, thmtools_unnamed_theorem_follows_the_case_option}`.
 - **lamstex arrowheads print as letters** (PERL-ORIGIN, found by rev78b): a `\newCD` diagram's arrowheads and dotted
   shafts are `\char`s of the lams1-lams5 fonts (lamstex `\arrow@i\char119`, `\arrow@ii\char104`, `\arrow@iii\char13`),
   which no font map covers, so they print as "w", "h", "ﬂ" in the text font (math0005042's pullback diagram: cells
@@ -553,6 +558,27 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
 The open RED repros of `tools/perfect_kernel/repros/` that no other row names; headers re-checked 2026-10-02 (scope:
 PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary). Each row: defect, classification, repro path.
 
+- **A footnote's numeric `[<n>]` is not marked `\thefootnote`, so symbol marks leave a mark and its text apart**
+  (PERL-ORIGIN, KPE #1060; found by the 78k A/B, witness 2507.05750): latex.ltx:17678-17699 marks `\footnotemark[n]` and
+  `\footnotetext[n]` with `\thefootnote` at counter `n`; ours (and Perl) print `n`, so under footmisc's `symbol` (78k,
+  KPE #1057) an unnumbered `\footnotemark` ("∗") and the `\footnotetext[1]` answering it ("1") stay two notes. Formatting
+  `[n]` alone (tried in 78k) unpaired 58 of 245 numbered-footnote papers, because article's `\maketitle` marks its
+  title block in `\@fnsymbol` and our frontmatter does not (2412.20504: `\author{…\footnotemark[1]}` `\maketitle`
+  `\renewcommand\thefootnote{\fnsymbol{footnote}}` `\footnotetext[1]{…}`, "∗" for both in pdflatex). Needs one rule
+  for both halves (proposal: pair a mark and a text by the counter value they stand for, whatever their printed marks;
+  or the title block's `\thefootnote` as the class sets it). RED
+  `package-bindings/footmisc_symbol_numbered_footnotetext_pairs_with_its_mark`.
+- **amsmath's alignment dimens `\totwidth@`, `\alignsep@` (and `\black@`) are undefined** (SHARED, binding; found by the
+  78k r2 writer, witness 0912.5438): amsmath.sty:1311/:1316 `\newdimen\alignsep@`, `\newdimen\totwidth@`, :1364
+  `\def\black@`; amsmath_sty.rs (as Perl's amsmath.sty.ltxml) defines none, so raw code reading them errs: 0912.5438's
+  shipped mathtools.sty v1.01a (`\x@calc@shift@lf`, its `{gather}` end `\black@\totwidth@`) gives 156 errors whose
+  group-close cascade swallows the paper's tail and its bibliography. RED
+  `package-bindings/amsmath_alignment_dimens_totwidth_alignsep_are_defined`.
+- **algorithm2e's `noline` blocks never give back their indentation** (SHARED, KPE #1062; found by the 78k r2 writer on
+  the review's p/alg_noline.tex): `\algocf@Noline` (algorithm2e_sty.rs, Perl algorithm2e.sty.ltxml:120) pushes
+  `\lx@algo@advlevel` and never pops it (`\algocf@Vline`/`\algocf@Vsline` do), so under `[noline]` (and
+  `\SetAlgoNoLine`) every line after a block is one level deeper. RED
+  `listings-algorithms/algorithm2e_noline_block_pops_its_indentation`.
 - **amsmath displays do not run `\everydisplay`** (SHARED, binding; found by rev78g3, witness 2212.07486): amsmath's
   `{align}`/`{gather}` family start with `$$` (`\start@align`, `\start@gather`), so TeX runs `\everydisplay` (tex.web
   §1145) at every one; the bindings build the display without it (amsmath_sty.rs:443, the `\if@display` note), while
@@ -714,7 +740,10 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   (texpreamble.tex:820, in the preamble) gets its 806 bibitems at the head of the XML, before the cover minipage,
   instead of under `\part{Listings and Bibliography}` (thesis.tex:458-480); the title-ink dedup passes over a
   bibliography ahead of the cover as a workaround (`leading_centered_paragraphs`, OXIDIZED_DESIGN_DIVERGENCES #146).
-  RED `index-bib/nobibliography_star_prints_nothing`.
+  RED `index-bib/nobibliography_star_prints_nothing`. **FIXED 78k** (OD #830, KPE #1059): a bibentry binding
+  (latexml_contrib bibentry_sty.rs) reads the `.bbl` in store mode, so `\nobibliography*` builds no list and
+  `\bibentry` prints the stored entry; guard `perfect_kernel_batch78k::nobibliography_star_prints_nothing`. The
+  `leading_centered_paragraphs` workaround (OD #146) stays (base_utilities.rs, not touched in 78k).
 - **memoir's `{adjustwidth}`/`{adjustwidth*}` are tagless one-item lists** (RUST-ONLY shape: memoir raw-loaded; Perl
   0.8.8 has no memoir binding, OmniBus; 68s review finding 2): memoir.cls:11267-11297 builds the margin-moving list,
   so a cover set in it is `<itemize><item>` without a tag, and the title-ink dedup, which never enters a list, keeps
@@ -5238,6 +5267,48 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (en dash in `dcterms:subject`), 2407.02379 (metadata macros expanded), 2407.14159 (empty creator triple, as Perl), 1805.03240
   and 2202.10894 (footnotes in a minipage / tcolorbox lettered a, b, as pdflatex; no text lost). Binding nets (int49a)
   136/136, 0 worse than int48a.
+- **78k** (quality batch 11, the sel78k selection study's items 1, 2, 3, 5, 6; guards `perfect_kernel_batch78k::*`, 11;
+  OD #829-831, KPE #1056-1062; quality ledger #101 BIBENTRY closed, the study's new rows THMTOOLS-NAME, ALG2E-END,
+  FOOTMISC-SYMBOL and NATBIB-CITETEXT closed). (1) thmtools: a `\declaretheorem` without `name=` is named
+  `\thmt@modifycase{<env>}` (thm-kv.sty:359; `uppercase`/`lowercase`/`anycase`), "Defn 1.2" for "1.2" (RUST-ONLY, OD
+  #829; 1505.04294: 52 unnamed heads → 0 of 90). (2) algorithm2e: `\algocf@@@block` takes its three arguments
+  (algorithm2e.sty:1868), so a block's end is the bold `shortend` "end" (`longend` "end if", `noend` none) where Perl and
+  int49a printed a plain "end if" (KPE #1056; 1810.03652 7 ends, 1911.01815 3; 1903.04631 unchanged). (3) bibentry: a
+  binding (latexml_contrib bibentry_sty.rs) reads the `<jobname>.bbl` in store mode for `\bibentry`; `\nobibliography*`
+  builds no list (2505.07606, 2507.01709, 2608.05624, 2012.02570, 1211.2618, 2010.07703: the duplicated or misplaced list
+  gone), the starless form keeps the list its citations resolve to (OD #831; 2210.16098: 48 lines "." → the entries);
+  tufte's margin citations print their entries (2309.03201); bibentry's end warning only when no `\bibliography` followed
+  (the kernel's `lx_bibliography_calls`, sect11.rs). (4) footmisc `[symbol]`/`[symbol*]` mark footnotes with symbols
+  (KPE #1057; 1907.00006). (5) natbib `\citetext` in the citation brackets (KPE #1058). A/B (release, `--preload=ar5iv.sty`,
+  int49a vs 78k; 2,261 papers: 528 thmtools, 500 of 1,819 algorithm2e (seeded), 194 bibentry, 414 footmisc (400 seeded +
+  the 26 symbol papers), 415 `\citetext` (400 seeded + 29), the 4 tufte papers, 245 papers with a numbered footnote beside
+  a symbol or letter `\thefootnote`, 100 random controls, the 7 witnesses): E+F 13,202 → 13,201, F 24 → 24, 0 papers with
+  more Errors or Fatals; 279 outputs changed (4 controls, each an algorithm2e end), every one read against its PDF: theorem
+  heads named (and the `\cref`/`\autoref` texts that took the empty name: 2310.05384 "Theory 3.6", 2504.04267 "Problem
+  1"), "end" lines, bibentry texts, footnote marks, cite brackets. One paper loses content: 0912.5438's bibliography
+  (23 entries, 24 citations now missing) — int49a printed it at the `\nobibliography*` at the top; now it stands where
+  the author put it, at the end, which our errors swallow with the conclusion (E 156 in both binaries, ours, not the
+  paper's: its shipped 2004 mathtools.sty v1.01a reads amsmath's `\totwidth@`/`\alignsep@`, which our amsmath binding
+  does not define, at its `{gather}`/`{align}` ends with `\cr` rows, FVT.tex:1257-2774, and the group-close errors after
+  them leak past `\end{example}`; plus its shipped tikz.code.tex's arrow tips; TL 2025 pdflatex is no oracle here, it
+  stops Fatal on that tikz.code.tex) — RED row "amsmath's alignment dimens" below; no bibentry heuristic. One pairing lost: 2507.05750's `\footnotemark` ("∗") and
+  `\footnotetext[1]` ("1") — the RED row "A footnote's numeric `[<n>]` is not marked `\thefootnote`" (KPE #1060; formatting
+  `[n]` alone was tried and unpaired 58 papers' title-block notes). Residuals: `\setfnsymbol`/`\DefineFNsymbols` stay
+  no-ops (5 papers of the 30k); a `.bib`-only paper's `\bibentry` prints nothing and warns (2512.12049, tufte-book);
+  footmisc `[symbol]` marks from 10 on follow our radix `\fnsymbol`, not footmisc's set, and `perpage` is not emulated
+  (KPE #1057; 0807.1434). 1804.06840's `numbered=no` proofs were already unnumbered; its biblatex "Cited by"
+  back-references from them now read "Proof" (the referrer's name, as for any unnumbered theorem; int49a " 3.5", the
+  enclosing subsection's number, from the empty theorem name) where the PDF lists pages — no thmtools residual.
+  **r2** (review rev78k; guards +4, 15): (6) algorithm2e: a paper's own algorithm2e.sty before 5.1 (5.00 2013/01/06,
+  :1532-1534) has two-argument block macros; the arity of the loaded `\algocf@@@block` picks the form (the
+  three-argument one read the next statement's first token as a side comment and scrambled the listing: 1402.6889,
+  1406.0089, 1410.1699, 1410.6122, 1502.02887, 1507.00513, 1507.00980, 1511.03137, 1511.05741, 1805.07253, 2208.10273;
+  KPE #1056 amended); under 5.1+ the line ends only after an end keyword (an empty one leaves the side comment on the
+  line, :1868), and only a trailing `\relax` is stripped from a side comment. (7) thmtools: `unnumbered`/`starred`
+  are `numbered=no` (thm-kv.sty:241-242, the last numbered key deciding: 2311.15711, 1706.08429 "Proof 161" → "Proof"),
+  and `\declaretheorem{a, b}[opts]` declares each name with both option lists (thm-kv.sty:333-348; 2608.16854's
+  lemmas, propositions, definitions, examples, remarks were undefined) (KPE #1061). New RED rows: algorithm2e
+  `noline` indentation (KPE #1062), amsmath's alignment dimens (0912.5438).
 - **78g** (kernel batch: tcolorbox box labels, TCB-LABEL, user ruling 2026-10-21 item 12; + the repro stand-in licence
   audit, item 11; guards `perfect_kernel_batch78g::*`, 4, each RED on 25730beb73; OD #813, KPE #1038). (1) A label after a
   raw `\refstepcounter` names the object the step numbers, which takes the step's number: the kernel's
