@@ -4966,6 +4966,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   repeated identical option after an intervening setup, an option-less caption load after caption's kernel alone (OD
   #784's residual), a `\footnote`'s size inside a sized caption (1907.07929), IEEEtran's `\appendix[<title>]` (heading
   and title lost, rev78c2 probe i2).
+  **Integration (int45, 78c r1-r2 squashed 137b084d73, follow-up 6266374b9b; binary int45b):** gates int45b: nextest
+  6614/6614 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int45a empty. Population A/B (719: the 78c
+  rounds' and reviews' 420 + 299 random of the proj98 sample) int45a vs int44b: E 3,708 → 3,708, F 12 → 12, 0 Error or
+  Fatal worse; 164 outputs changed; 30 papers lose > 1 % of their words, every one acmart, the words its author-year
+  citations printed ("et al", years) now `[N]` (acmnumeric, item 3; 2405.12538, 2404.06432). Follow-up A/B (73: the 3
+  witnesses, 12 papers loading caption with options after floatrow or `[caption=false]{subfig}`, 58 subcaption controls)
+  int45b vs int45a: E 139 → 139, F 1 → 1, 3 outputs changed — the witnesses, each one unknown-key Warning fewer and its
+  option applied. Binding nets (int45a) 136/136, 0 documents worse than int44a.
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
   parts draw, as Unicode's IPA letter, cross-checked against tipauni.sty; the `""`/`||` ligatures ˌ ǁ), so its input
