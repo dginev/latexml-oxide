@@ -1,0 +1,17 @@
+% witness: 1508.02842, 1411.4499, 1601.01109 (71 vmsta.cls papers: vmsta.cls:278-291 `\name@m@front` prints the name
+%          parts as `\@fnm~\@snm`, the initials dropped; the class beside is cut down from it)
+% oracle:  pdflatex 0 errors: "Yuliya Mishura, Ivan Voronov" then "Text."
+% engines: rust 77t base (cf9986651a) = 0 errors, the personnames "Yu.YuliyaMishura" and "I.IvanVoronov" (the class's
+%          `\name@m` identities that OXIDIZED_DESIGN_DIVERGENCES #647 finds, OmniBus's `\inits`); Perl has no vmsta
+%          binding (`\fnm` undefined)
+% expect:  0 errors, 0 warnings; two creators, "Yuliya Mishura" and "Ivan Voronov" (the vmsta binding reads the class
+%          raw and gives the author content its title page's name parts, `\lx@author@markup@class`)
+% status:  RED (77t base) -> GREEN (77t)
+% preload: ar5iv.sty
+\documentclass{vmsta}
+\begin{document}
+\author[a]{\inits{Yu.}\fnm{Yuliya}\snm{Mishura}}
+\author[a]{\inits{I.}\fnm{Ivan}\snm{Voronov}}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,16 @@
+% witness: review rev77t finding 7 (no corpus paper of the 71: a `\fnm` with no `\snm` after it)
+% oracle:  pdflatex (the shipped vmsta.cls): "Undefined control sequence" for `\@snm` in `\name@m@front`'s
+%          `\@fnm~\@snm`, which then prints the stored first name after the content: "Yuliya Mishura, VoronovIvan";
+%          the cut-down class beside defines `\@snm` empty, so it prints the same with 0 errors
+% engines: rust 77t r1 (bf9f65aac9) = 0 errors, the personname "Voronov" (the first name stored, never printed)
+% expect:  0 errors, 0 warnings; the creators "Yuliya Mishura" and "VoronovIvan" (the pending first name printed at
+%          the author content's end)
+% status:  RED (77t r1) -> GREEN (77t r2)
+% preload: ar5iv.sty
+\documentclass{vmsta}
+\begin{document}
+\author[a]{\inits{Yu.}\fnm{Yuliya}\snm{Mishura}}
+\author[a]{\fnm{Ivan}~Voronov}
+\maketitle
+Text.
+\end{document}

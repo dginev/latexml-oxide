@@ -1,0 +1,17 @@
+% witness: ledger rank 15 (DAG-MARK; 62zq SYNC note: an author's `$^{\dag}$` is consumed where `$^{*}$` is shown) —
+%          shown on the 77t base when nothing answers it; this repro is the shape it still broke
+% oracle:  pdflatex 0 errors: "Ann Able†, Bob Baker‡, Cat Cole" over "University of Somewhere"
+% engines: rust 77t base (cf9986651a) = 0 errors: "Cat ColeUniversity of Somewhere" one creator, Ann Able and Bob Baker
+%          with no affiliation — a text `\dag` is an affiliation mark (`is_symbol_mark`), so the block is a marked one,
+%          and there an unmarked line under the names continued the last name; with `\dagger` (a footnote symbol, the
+%          block unmarked) every name held the institution. Perl welds it likewise
+% expect:  0 errors, 0 warnings; three authors, the † and ‡ shown, each holding University of Somewhere
+% status:  RED (77t base) -> GREEN (77t)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{\dag}$, Bob Baker$^{\ddag}$, Cat Cole\\ University of Somewhere}
+\maketitle
+Text.
+\end{document}

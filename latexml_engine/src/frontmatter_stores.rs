@@ -3899,6 +3899,12 @@ LoadDefinitions!({
   // not kept (`insert_frontmatter_entry`).
   DefMacro!("\\lx@add@store@affiliations{}{}", sub[(name, stuff)] {
     let name = name.to_string();
+    // (an llncs-style `\institute{A \and B}` the class numbers 1, 2 on its title page: the entries labelled by their
+    // numbers, which the authors' numeric marks — `$^{1}$`, `\inst{1}` — request, `class_numbered_institutes`)
+    let (stuff, numbered) = match class_numbered_institutes(&stuff) {
+      Some(numbered) => (numbered, true),
+      None => (stuff, false),
+    };
     let attr = mouth::tokenize_internal(TeXString::assembled(s!("_store={name},annotate=all")));
     let marked = mouth::tokenize_internal(TeXString::assembled(s!("_store={name}")));
     // Superscript marks label the affiliations only when the authors carry marks to match; else
@@ -3907,7 +3913,7 @@ LoadDefinitions!({
       Some(attr),
       Some(marked),
       stuff,
-      queued_creators_have_marks(),
+      numbered || queued_creators_have_marks(),
       true,
     )?))
   });

@@ -1,0 +1,18 @@
+% witness: 2604.11038 (`\author{Weikun Peng \and Denys Iliash \and Manolis Savva\\ Simon Fraser University\\ …}`);
+%          review probe rev77t/L1
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker" over "University of Somewhere" (llncs.cls:1013-1018: in
+%          `\@maketitle` `\and` is `\unskip,` or `\lastand`, inline text, so the names share the row), then "Inst A"
+% engines: rust 77t r1 (bf9f65aac9) = 0 errors: University of Somewhere on Bob Baker only (the `\and` group's); the
+%          77t base made it a creator
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker both hold University of Somewhere; the unmarked `\institute`
+%          the block's shared creator
+% status:  RED (77t r1) -> GREEN (77t r2)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker\\ University of Somewhere}
+\institute{Inst A}
+\maketitle
+Text.
+\end{document}

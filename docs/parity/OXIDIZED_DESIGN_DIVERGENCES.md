@@ -2232,6 +2232,41 @@ not set one under each (`Ann Able~~~~Bob Baker \\ Carnegie Mellon~~~~Johns Hopki
 where neither its count nor the line under it tells (two names over three institutions; a legend line under the row:
 the re-review's probes v4, v2).
 
+**(p) A parenthesized math lead is its line's mark; an unmarked institution line under marked names is each name's of
+the names row above it (77t, user ruling R12 2026-10-20).**
+- A line of a marked author block led by a mark in parentheses set in math, `$(a)$Department of Physics, …`, whose
+  letter or number an author of the block requests as its superscript mark (`Etsuko Itou$^a$`, or written in
+  parentheses, `$^{(a)}$`: the parentheses are the mark's writing), is labelled by that mark as a `$^a$`-led line is
+  (`parenthesized_mark_line`, beside `symbol_labelled_affiliation`): 1011.0516 (PoS.cls) had its five institute lines
+  welded into the last name, now eight of its nine authors hold theirs. A parenthesized lead no author requests stays
+  the line's text, and a text `(a) Univ` is not read. Perl welds such lines into the last name.
+- An unmarked line reading as an institution (`unmarked_institution_line`: `reads_as_affiliation`, by a word naming an
+  institution — not by a role or contact word alone, "research", "professor", "collaboration", "member", "team",
+  "email" ("This research was supported by the NSF", "for the ATLAS Collaboration") —, no note naming the corresponding
+  author, and no footnote symbol, its visible superscript or math leading it — a symbol-led line is its carriers' or a
+  legend, 2604.02578's `\textsuperscript{*}Department …` under names marked `*†`, `†‡`, `*†‡`) directly under a line of
+  marked names is no part of the last name: it is the affiliation of each name of the names row directly above it (the
+  run of names its line ends, within its `\and` column: `annotate=N`, the names it prints under) — user ruling R12
+  2026-10-20 (an unmarked institution line under a marked block is every author's), for the lines no mark labels. So
+  `A$^{1}$, B$^{2}$\\ C$^{3}$\\ Univ` gives Univ to all three, `Ann Able$^{\dag}$\\ University A\\ Bob Baker$^{\ddag}$\\
+  University B` one each. A names row under such a line, itself over an institution line of its own, is more authors,
+  not the line's continuation (`…\\ University of Somewhere\\ Cat Cole, Dan Dee\\ Other Institute`: four authors, two
+  rows each over its line); a place or a note under it stays its next line (`… Technology\\ Hong Kong SAR`, `…\\ Equal
+  Contribution`: the rev77t2 re-review's s1-s4). A block of names
+  marked only `$^{\dag}$`/`$^{\ddag}$` is a marked one (a text `\dag` is an affiliation mark, `is_symbol_mark`), so `Ann
+  Able$^{\dag}$, Bob Baker$^{\ddag}$, Cat Cole\\ University of Somewhere` gave "Cat ColeUniversity of Somewhere" where
+  `\dagger` gave every name the line (quality ledger rank 15); numbered marks nothing answers the same (`Ann
+  Able$^{1}$, Bob Baker$^{2}$\\ University of Somewhere`). The 64d negatives `author_unmarked_affiliation_after_marked_names`
+  and `author_styled_place_after_marked_names` (Perl-identical welds "Bob Baker<break/>Department of Physics, …") now
+  give the line to both names over it. A role or note line stays welded into the last name, as Perl welds every such
+  line (KNOWN_PERL_ERRORS #446).
+Guards `perfect_kernel_batch77t::{parenthesized_math_marks_label_affiliations,
+parenthesized_superscript_marks_label_affiliations, dag_marked_names_over_a_shared_institution,
+dag_names_rows_each_over_their_institution, numbered_names_rows_each_over_their_institution,
+second_names_row_under_a_shared_institution, role_and_note_lines_are_no_unmarked_institution,
+unmarked_institution_line_under_a_column_is_its_names, symbol_led_line_under_marked_names_is_not_every_names}`,
+`perfect_kernel_batch64::{author_unmarked_affiliation_after_marked_names, author_styled_place_after_marked_names}`.
+
 ### 53. `inst`-style `\author[marks]{name}` accepts the optional marks and accumulates
 
 **Decision:** `inst_support.sty`'s `\author` (used by classes following the
@@ -6767,7 +6802,9 @@ dropped, with the annotations its flush attaches to it; a sealed abstract given 
 in its environment form (`\lx@add@frontmatter@until`; the schema admits `ltx:abstract` only at the head), and is dropped
 in its command form; a later `\maketitle` does not supersede finally sealed authors, and later authors flushed over them —
 a supplement's, or an `\author` after a fallback flush with no `\maketitle` (pdflatex prints neither; Perl adds it) — are
-dropped. Nothing is sealed while an entry is still being digested (a `\section{Keywords:}` inside an abstract). Census over
+dropped. An accumulating environment block (`accumulate`: IEEEtran's `{IEEEkeywords}`, KNOWN_PERL_ERRORS #1020; the
+VTeX `{keyword}` blocks) is sealed the same, a supplement's kept in place (77t: 2604.23289's under its "Supplemental
+File" section). Nothing is sealed while an entry is still being digested (a `\section{Keywords:}` inside an abstract). Census over
 2,154 A/B papers: 4 change, all toward the paper's own; none away from page 1 of the PDF. Perl stacks both copies at the
 head. A bilingual document with a section between its two `\maketitle`s, and a beamer deck with a second title frame after
 a section, now keep the first title, as page 1 shows. Guards `perfect_kernel_batch64::{supplement_abstract_kept_in_place,
@@ -22260,3 +22297,70 @@ Rust (78a): `OptionalAngled` reads it; present, the content is `{<tokens><conten
 `\copy` does. xsavebox's `\xsbox`/`\xusebox` (xsavebox.sty:120-122, :298, :325 through pdfbase's
 `\pbs_pdfxform:nnnnn`/`\pbs_pdfrefxform:n`) printed an empty box of the content's size (biblatex-ext's open-access
 symbols, biblatex-ext.tex:3938-4022). Guard `perfect_kernel_batch78a::xsavebox_saved_box_prints_its_content`.
+### 789. A class's author name markup as its title page prints it: vmsta's `\fnm`/`\snm`/`\inits`
+
+vmsta.cls (Modern Stochastics: Theory and Applications, VTeX; shipped, not in TeX Live) defines the name parts only
+where its `\@@author` prints the author list (vmsta.cls:278-291): `\name@m@front` stores `\fnm{…}` and `\snm{…}`, drops
+`\inits` and `\suffix`, and prints `\@fnm~\@snm` — "Yuliya Mishura" for `\author[a]{\inits{Yu.}\fnm{Yuliya}\snm{Mishura}
+\corref{cor1}}`. The kernel's locked `\author` replaces the class's, and OXIDIZED_DESIGN #647's search found the class's
+`\name@m` identities, OmniBus's `\inits` printing: 1508.02842's creator "Yu.YuliyaMishura". Perl has no vmsta binding
+(`\fnm` undefined). Ours: a vmsta binding (latexml_contrib vmsta_cls.rs) reads the shipped class raw and sets
+`\lx@author@markup@class`, `\lx@author@markup@provide` calls that `\lx@author@markup@begin` (base_utilities.rs) runs
+first for the author content, before OmniBus's identity meanings — `\fnm` stores, `\snm` prints `first~surname`, the
+initials and suffix dropped, for the author content only and undefined after it, as the class defines them only in its
+title code. A first name no `\snm` follows is printed after the content (flushed with the markup's restore list), as
+`\@fnm~\@snm` prints it there: `\fnm{Ivan}~Voronov` "VoronovIvan" (vmsta.cls errs on its undefined `\@snm` there; no
+corpus paper has the shape). 71 vmsta papers (1508.02842, 1411.4499, 1601.01109). The 68v repro of #647
+(`vmsta_name_parts`) now reads its cut-down class as `vtexnames.cls`, which no binding answers. Repros
+class-bindings/vmsta/vmsta_title_page_name_parts, vmsta_first_name_without_surname; guards
+`perfect_kernel_batch77t::{vmsta_title_page_name_parts, vmsta_first_name_without_surname}`.
+
+### 790. entics.cls and entcs.cls are read raw with elsart's frontmatter interface
+
+entics.cls (Electronic Notes in Theoretical Informatics and Computer Science) and its predecessor entcs.cls (ENTCS) are
+shipped by the papers and generated from Elsevier's esl.dtx, as elsart.cls is: `\author[keys]{…}`, `\address[label]{…}`,
+`\thanks[key]{…}` and `\thanksref{key}`, which is no command but a delimiter `\author` reads its argument by
+(entics.cls:707-735, :860-930). Read raw, the kernel's `\thanksref` (a superscript of its key, sect05.rs) printed the key
+in the name — 2212.08177 "Willem HeijltjesALL", 1812.00040 "Mauro LucciALLmyemail" — the `\thanks[key]` notes became
+footnote texts of the document and the `\address` a paragraph of the body. Perl has no binding for either. Ours: an
+entics binding for both names (latexml_contrib entics_cls.rs) reads the class raw and then elsart_support_core (the
+elsart binding's frontmatter interface): `\thanksref{ALL}` requests the `\thanks[ALL]{…}` contact, the address is the
+author's. Repro class-bindings/entics/entics_thanksref_names_its_note (a stand-in class written for it: entics.cls may
+not be redistributed); guard `perfect_kernel_batch77t::entics_thanksref_names_its_note`.
+
+### 791. A class-numbered `\institute` store goes to the authors by their numbers
+
+A raw class carrying llncs's `\institutename` (llncs.cls:870-885; copied by preprint.cls:233-256) prints its
+`\institute{A \and B}` list with each `\and` stepping the institute counter and printing the number before the next
+entry, the first numbered 1. The K11 store path (`\lx@add@store@affiliations`, frontmatter_stores.rs) saw unmarked
+entries and gave every author every entry (`annotate=all`): 2405.16615's two authors each held Imperial College and
+Edinburgh. Ours: when the class's `\institutename` redefines `\and` with a `\stepcounter`, the store holds at least two
+`\and` entries and no mark, and the queued authors' marks are all numbers, the entries are led by their numbers as the
+title page prints them (`class_numbered_institutes`, base_utilities.rs) and labelled by them, so `$^{1}$`/`$^2$` — or
+the class's `\inst{1,2}`/`\inst2` (2512.08621) — pick one each. Perl reads such a class raw (its `\institute` the class's). Repro
+sectioning-frontmatter/class_numbered_institutes_go_by_the_authors_marks (with numinst.cls); guards
+`perfect_kernel_batch77t::{class_numbered_institutes_go_by_the_authors_marks, class_numbered_institutes_go_by_inst_marks}`.
+
+### 792. An llncs `\\` line reading as an affiliation is the affiliation of the names over it
+
+The llncs binding splits `\author` at `\\` as at `\and` (a Rust improvement over Perl's llncs.cls.ltxml, which splits at
+`\and` only: 2606.19939's `Hiuyi Cheng \\ Dezhi Peng`), so `\author{Ann Able\\University of Somewhere\\\email{…}}` made
+a creator "University of Somewhere" holding the e-mail. llncs.cls:1019-1036 sets `\@author` as one centred paragraph,
+its `\\` a line break: the line is printed under the name; and its `\and` is inline text (llncs.cls:1013-1018,
+`\unskip,` or `\lastand` in `\@maketitle`), so the names it joins share the row. Ours (llncs_cls.rs `\lx@llncs@author`):
+in an author list with no marks and no `\inst` marks, read across the whole `\author` body (its `\and`, `\And` and `\\`
+pieces in order), a line after a `\\` that reads as an affiliation (`reads_as_affiliation`; a piece after the inline
+`\and` is names, `Ann Able \and the ATLAS Collaboration`, the rev77t2 re-review's L6) goes into the author content of
+each name since the last line under names — an affiliation line or an e-mail line (`line_is_email_list`), after which
+the next names start a new row —, as an `\email` there does (so `\institute`'s clearing of the queued affiliations
+leaves it): `Ann Able \and Bob Baker\\ University of Somewhere` both names' (2604.11038's Simon Fraser University on its
+three authors), `Ann Able\\ University of X\\ Bob Baker\\ University of Y` one each. A list with marks is split as
+before, since a contact digested with the authors would come before `\institute`'s entries in the count
+`labelseq=affiliation` numbers them by. Residual: an address line with no institution word (`Stanford, CA 94305`) still
+reads as names, creators "Stanford" and "CA 94305" (as before); in a list with `\inst` marks a line under the names
+stays a creator of its own (`University of X`, as before; the rev77t2 re-review's L11); a `\texttt{ann@x.org,
+bob@x.org}` line under the names makes two creators (as before; L8). Repros
+sectioning-frontmatter/llncs_author_line_break_affiliation, llncs_author_line_break_affiliation_rows,
+llncs_author_and_is_inline; guards `perfect_kernel_batch77t::{llncs_author_line_break_affiliation,
+llncs_author_line_break_affiliation_rows, llncs_author_line_break_affiliation_per_name, llncs_author_and_is_inline,
+llncs_author_e_mail_line_ends_a_row}`.

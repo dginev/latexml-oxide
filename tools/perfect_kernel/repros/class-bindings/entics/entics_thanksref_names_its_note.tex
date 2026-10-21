@@ -1,0 +1,20 @@
+% witness: 2212.08177 (entics.cls), 1812.00040 (entcs.cls): `\author{Willem Heijltjes\thanksref{ALL}}`,
+%          `\address{…}`, `\thanks[ALL]{Email: …}` (the class beside is a stand-in written for this repro: entics.cls
+%          may not be redistributed)
+% oracle:  pdflatex 0 errors: "Ann Able1", "University of Somewhere", "1 Email: ann@x.org"
+% engines: rust 77t base (cf9986651a) = 0 errors: the creator "Ann AbleALL" (the kernel's `\thanksref` prints its key as
+%          a superscript), no contact, the address a paragraph of the body; Perl has no entics binding
+% expect:  0 errors, 0 warnings; Ann Able holding the address and the thanks note "Email: ann@x.org" (the entics
+%          binding reads the class raw with elsart's frontmatter interface, elsart_support_core_sty.rs)
+% status:  RED (77t base) -> GREEN (77t)
+% preload: ar5iv.sty
+\documentclass{entics}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Ann Able\thanksref{ALL}}
+\address{University of Somewhere}
+\thanks[ALL]{Email: ann@x.org}
+\end{frontmatter}
+Text.
+\end{document}

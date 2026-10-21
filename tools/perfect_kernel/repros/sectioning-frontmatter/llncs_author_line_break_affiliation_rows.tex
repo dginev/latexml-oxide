@@ -1,0 +1,19 @@
+% witness: review probes rev77t/L2, L4 (llncs.cls:1019-1036 prints `\@author` as one centred paragraph: each `\\` row
+%          sits under the row above it)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker" over "University of Somewhere" over "Cat Cole" over "Other
+%          Institute", then the institute "Inst A"
+% engines: rust 77t r1 (bf9f65aac9) = 0 errors: Ann Able and Bob Baker hold University of Somewhere and Other
+%          Institute (an affiliation line went to every name of the `\and` group before it); the 77t base made
+%          "University of Somewhere" and "Other Institute" creators
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker hold University of Somewhere, Cat Cole Other Institute (a line
+%          is the names' since the last affiliation line); the unmarked `\institute` the block's shared creator
+% status:  RED (77t r1) -> GREEN (77t r2)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able, Bob Baker\\ University of Somewhere\\ Cat Cole\\ Other Institute}
+\institute{Inst A}
+\maketitle
+Text.
+\end{document}

@@ -1,5 +1,5 @@
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{vmstamini}[2015/01/01 vmsta.cls cut down]
+\ProvidesClass{vtexnames}[2015/01/01 vmsta.cls cut down, under a name no binding answers]
 \LoadClass{article}
 \RequirePackage{etoolbox}
 % vmsta.cls:271-283, :308-312: the author's name parts are defined only where the class sets the author list

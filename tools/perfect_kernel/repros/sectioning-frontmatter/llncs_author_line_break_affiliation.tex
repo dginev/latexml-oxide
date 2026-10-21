@@ -1,0 +1,18 @@
+% witness: review probe rv63k/llncs1 (63k review; SYNC_STATUS A2 row 16)
+% oracle:  pdflatex 0 errors: the centred author list "Ann Able" over "University of Somewhere" over "ann@x.org"
+%          (llncs.cls:1019-1036 sets `\@author` as one paragraph: its `\\` a line break), then the institute "Inst A"
+% engines: rust 77t base (cf9986651a) = 0 errors: two creators, "Ann Able" and "University of Somewhere" (holding the
+%          e-mail) — the llncs binding splits `\author` at `\\` as at `\and`; Perl's llncs.cls.ltxml splits at `\and`
+%          only, one creator holding all three lines
+% expect:  0 errors, 0 warnings; one author, Ann Able, holding University of Somewhere and the e-mail (the
+%          unmarked `\institute`, no `\inst` requesting it, stays on the block's shared creator as before)
+% status:  RED (77t base) -> GREEN (77t)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\\University of Somewhere\\\email{ann@x.org}}
+\institute{Inst A}
+\maketitle
+Text.
+\end{document}

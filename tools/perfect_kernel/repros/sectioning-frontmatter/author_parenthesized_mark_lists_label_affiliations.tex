@@ -1,0 +1,13 @@
+% witness: the rev77t2 re-review (finding 5, probes q1, q2)
+% oracle:  pdflatex 0 errors: "Ann Able(a), Bob Baker(a,b), Cat Cole(a),(b)" over "(a)Univ A" and "(b)Univ B"
+% engines: rust 77t r2 = as expected (its whole-operand strip read `$^{(a),(b)}$` as the marks "a)" and "(b" yet the
+%          lines still matched); an int44 follow-up draft that stripped each mark only broke `$^{(a,b)}$` (Univ B on Ann)
+% expect:  0 errors, 0 warnings; Univ A on all three, Univ B on Bob Baker and Cat Cole
+% status:  GREEN (77t r2 and the int44 follow-up; a regression guard for the per-mark strip)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{(a)}$, Bob Baker$^{(a,b)}$, Cat Cole$^{(a),(b)}$\\ $(a)$Univ A\\ $(b)$Univ B}
+\maketitle
+Text.
+\end{document}

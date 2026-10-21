@@ -1,0 +1,15 @@
+% witness: the rev77t2 re-review (finding 2, probe L6)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker, and the ATLAS Collaboration" on the names row (llncs.cls:1013-1018
+%          `\and` inline)
+% engines: rust 77t r2 = 0 errors; two creators, each with "the ATLAS Collaboration" as an affiliation; base and 77t r1
+%          three creators
+% expect:  0 errors, 0 warnings; three creators, the third "the ATLAS Collaboration"
+% status:  RED (77t r2) -> GREEN (int44 follow-up)
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker \and the ATLAS Collaboration}
+\institute{Inst A}
+\maketitle
+Text.
+\end{document}

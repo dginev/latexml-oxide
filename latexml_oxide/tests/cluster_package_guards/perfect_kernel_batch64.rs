@@ -1319,7 +1319,10 @@ fn author_bold_group_rows_after_marked_names() {
   ]);
 }
 
-/// 64d (HF2 S3) negative: a place line after marked names stays the last author's continuation (Perl-identical weld; unchanged). Repro sectioning-frontmatter/author_unmarked_affiliation_after_marked_names.
+/// 64d (HF2 S3) negative: a place line after marked names is no names row. Since 77t (user ruling R12 2026-10-20) it is
+/// the affiliation of the names it stands under, each of them — was welded into the last name, "Bob
+/// Baker<break/>Department of Physics, …", as Perl does. Repro
+/// sectioning-frontmatter/author_unmarked_affiliation_after_marked_names.
 #[test]
 fn author_unmarked_affiliation_after_marked_names() {
   let tex = include_str!(
@@ -1327,12 +1330,14 @@ fn author_unmarked_affiliation_after_marked_names() {
   );
   let xml = convert_clean(tex);
   assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">1</sup></personname>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<break/>Department of Physics, University of Somewhere</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">1</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics, University of Somewhere</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics, University of Somewhere</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
   ]);
 }
 
-/// 64d (HF2 S3) negative: a styled place ("Bell Labs, Murray Hill") after marked names is no names row (unchanged). Repro sectioning-frontmatter/author_styled_place_after_marked_names.
+/// 64d (HF2 S3) negative: a styled place ("Bell Labs, Murray Hill") after marked names is no names row; since 77t (user
+/// ruling R12) the affiliation of both names over it, before their marked Univ A — was welded into the last name.
+/// Repro sectioning-frontmatter/author_styled_place_after_marked_names.
 #[test]
 fn author_styled_place_after_marked_names() {
   let tex = include_str!(
@@ -1340,8 +1345,8 @@ fn author_styled_place_after_marked_names() {
   );
   let xml = convert_clean(tex);
   assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<break/><text font=\"italic\" xml:id=\"id1\">Bell Labs, Murray Hill</text></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"italic\" xml:id=\"id1\">Bell Labs, Murray Hill</text></contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"italic\" xml:id=\"id2\">Bell Labs, Murray Hill</text></contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
   ]);
 }
 

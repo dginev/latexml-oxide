@@ -133,6 +133,7 @@ pub mod egpubl_cls;
 pub mod ejpecp_cls;
 pub mod elife_cls;
 pub mod emlines_sty;
+pub mod entics_cls;
 pub mod envmath_sty;
 pub mod equations_sty;
 pub mod eso_pic_sty;
@@ -342,6 +343,7 @@ pub mod ucs_sty;
 pub mod updatemarks_sty;
 pub mod uspatent_cls;
 pub mod ut_thesis_cls;
+pub mod vmsta_cls;
 pub mod widetext_sty;
 pub mod wileyasna_cls;
 pub mod wileymsp_template_cls;
@@ -691,6 +693,9 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("doclicense", "sty", doclicense_sty::load_definitions),
   ("cimart", "cls", cimart_cls::load_definitions),
   ("cimento", "cls", cimento_cls::load_definitions),
+  ("vmsta", "cls", vmsta_cls::load_definitions),
+  ("entics", "cls", entics_cls::load_definitions),
+  ("entcs", "cls", entics_cls::load_definitions),
   (
     "cjs-rcs-article",
     "cls",

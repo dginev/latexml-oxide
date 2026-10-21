@@ -1,0 +1,30 @@
+% witness: 2508.03934 (gretsi.cls v1.3: `\auteur{Simon}{Lepage}{…}{1,2}, \auteur{Jeremie}{Mary}{…}{1} \auteur{David}
+%          {Picard}{…}{2}`; SYNC_STATUS 68k "Open: the fuzzy name label of a creator …")
+% oracle:  pdflatex with 2508.03934's gretsi.cls: "Simon LEPAGE1,2, Jeremie MARY1 David PICARD2", "1 CRITEO AI Lab,
+%          Paris, France", "2 LIGM, Ecole des Ponts, …"; 0 errors
+% engines: rust 77t (and its base cf9986651a) = 0 errors: "Simon Lepage1,2" holds both affiliations, "Jeremie Mary1"
+%          CRITEO, "David Picard2" none — the creator's fuzzy name label (`Tag ltx:creator`, base_utilities.rs; Perl
+%          Base_Utility.pool.ltxml:870-876 the same) keeps the commas of the marks its name shows, so its pieces
+%          ("…Lepage1", "2") are labels, and the stray "2" takes affiliation 2 from the author showing it alone
+% expect:  0 errors, 0 warnings; Simon Lepage holds CRITEO and LIGM, Jeremie Mary CRITEO, David Picard LIGM, no mark
+%          in a name — NEEDS A RULING (68k: dropping the commas alone fixed 7 of 60 comma-mark papers, broke 1912.00557
+%          and moved 1507.03278; the proposed rule: the shown marks are the requests for labelled affiliations)
+% status:  RED (77t)
+% preload: ar5iv.sty
+\documentclass[english]{gretsi}
+\titre{T}
+\auteurs{
+  \auteur{Simon}{Lepage}{s.lepage@x.com}{1,2},
+  \auteur{Jeremie}{Mary}{j.mary@x.com}{1}
+  \auteur{David}{Picard}{d.picard@y.fr}{2}
+}
+\affils{
+  \affil{1}{CRITEO AI Lab, Paris, France}
+  \affil{2}{LIGM, Ecole des Ponts, France}
+}
+\abstract{This paper studies chains.}
+\begin{document}
+\maketitle
+\section{Introduction}
+Body text.
+\end{document}

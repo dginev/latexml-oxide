@@ -307,8 +307,15 @@ LoadDefinitions!({
     Ok(Invocation!(target, vec![Some(body)]))
   }, locked => true);
 
-  // IEEEkeywords environment (Perl PR #2767: digestion-based capture)
-  DefMacro!("\\IEEEkeywords", "\\lx@begin@keywords[name={\\IEEEkeywordsname:~}]");
+  // IEEEkeywords environment (Perl PR #2767: digestion-based capture). Each block is printed where it stands
+  // (IEEEtran.cls:5286-5292 sets "Index Terms—" and the body in place), so a paper's several blocks are all its keywords
+  // (`accumulate`, as the VTeX `{keyword}` blocks, ims_support_sty.rs): Perl's `\lx@begin@keywords` clears the keywords
+  // before it (Base_Utility.pool.ltxml:626-628), so only the last block was kept (repro
+  // sectioning-frontmatter/ieeekeywords_blocks_are_all_kept; KNOWN_PERL_ERRORS #1020).
+  DefMacro!(
+    "\\IEEEkeywords",
+    "\\lx@add@frontmatter@until{ltx:keywords}[accumulate=true,name={\\IEEEkeywordsname:~}]{\\lx@end@keywords}"
+  );
   DefMacro!("\\endIEEEkeywords", "\\lx@end@keywords");
   // Perl IEEEtran.cls.ltxml L152-153 (pre-PR): explicit env-token aliases.
   // Kept so user `\def\endIEEEkeywords` can't break env routing. Drivers:

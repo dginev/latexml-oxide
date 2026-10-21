@@ -1,13 +1,15 @@
 % witness: 1508.02842, 1411.4499, 1601.01109 (vmsta.cls:278-283 defines `\fnm`/`\snm`/`\inits` only in `\name@m`,
 %          which its `\@@author` applies to each `\author{\inits{Yu.}\fnm{Yuliya}\snm{Mishura}}`)
-% oracle:  pdflatex with vmstamini.cls (beside): "YuliyaMishura Ivan Voronov Text."; 0 errors (the full vmsta.cls's
-%          title page sets `\@fnm~\@snm`, "Yuliya Mishura", through its `\name@m@front`)
+% oracle:  pdflatex with vtexnames.cls (beside; a cut-down vmsta.cls under a name no binding answers, so the kernel's
+%          own search reads it — the vmsta binding, 77t, answers vmsta.cls and its prefixed copies): "YuliyaMishura Ivan
+%          Voronov Text."; 0 errors (the full vmsta.cls's title page sets `\@fnm~\@snm`, "Yuliya Mishura", through its
+%          `\name@m@front`: repro vmsta_title_page_name_parts)
 % engines: rust 67int15 = 1 error (undefined `\fnm`)
 % expect:  0 errors, 0 warnings; `\fnm` the class's (its first-name text); `\inits` keeps OmniBus's meaning (it prints
 %          "Yu."), the author markup the kernel provides for a refused `\author` (OXIDIZED_DESIGN_DIVERGENCES #444)
 % status:  RED (67int15) -> GREEN (68v)
 % preload: ar5iv.sty
-\documentclass{vmstamini}
+\documentclass{vtexnames}
 \begin{document}
 \author{\inits{Yu.}\fnm{Yuliya}\snm{Mishura}}
 \author{\inits{I.}\fnm{Ivan}~\snm{Voronov}}

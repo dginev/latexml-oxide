@@ -521,7 +521,15 @@ LoadDefinitions!({
       None => { options.remove("name"); },
     }
     let replaceable = REPLACEABLE_FRONTMATTER_TAGS.contains(&tag.as_str()) && !accumulate;
-    let seal = frontmatter_seal_key(&tag, options.get("name").map(String::as_str), &role, replaceable);
+    // (sealed whether or not the blocks accumulate: the IEEEtran and VTeX keyword blocks add to the ones before them,
+    // and a supplement's after the body began is still its own — 2604.23289's `{IEEEkeywords}` under its "Supplemental
+    // File" section, 77t)
+    let seal = frontmatter_seal_key(
+      &tag,
+      options.get("name").map(String::as_str),
+      &role,
+      REPLACEABLE_FRONTMATTER_TAGS.contains(&tag.as_str()),
+    );
     // An abstract (or keywords) after the document body began, where the paper's own came before it, is a
     // supplement's: its text stays where it is, as body paragraphs (the schema admits `ltx:abstract` only in a
     // document, sidebar, bibliography or titlepage, LaTeXML-structure.rnc:668-673), and the paper's stays at the head
@@ -1024,14 +1032,22 @@ LoadDefinitions!({
     "\\ifx#1\\@undefined\\let#1#2\\expandafter\\def\\expandafter\\lx@author@markup@unprovide\\expandafter{\\lx@author@markup@unprovide\\let#1\\@undefined}\\fi"
   );
   DefMacro!("\\lx@author@markup@begin", sub[()] {
-    let mut out = if lookup_bool("\\author:redefined") {
-      TokenizeInternal!(
-        r"\def\lx@author@markup@unprovide{}\lx@author@markup@provide\prefix\@firstofone\lx@author@markup@provide\suffix\@firstofone\lx@author@markup@provide\particle\@firstofone\lx@author@markup@provide\fnms\@firstofone\lx@author@markup@provide\snm\@firstofone\lx@author@markup@provide\inits\@firstofone\lx@author@markup@provide\degs\@firstofone\lx@author@markup@provide\roles\@firstofone\lx@author@markup@provide\orcid\lx@author@orcid"
-      )
-    } else {
-      TokenizeInternal!(r"\def\lx@author@markup@unprovide{}")
+    // A binding's author markup for a class that defines its own only where its title code prints the author list
+    // (`\lx@author@markup@class`, `\lx@author@markup@provide` calls: vmsta.cls:278-291 `\name@m@front`, which prints
+    // `\fnm`/`\snm` as "Yuliya~Mishura" and drops `\inits`; latexml_contrib vmsta_cls.rs) comes first, before
+    // OmniBus's identity meanings would take the names it gives.
+    let mut out = TokenizeInternal!(r"\def\lx@author@markup@unprovide{}").unlist();
+    if IsDefined!(&T_CS!("\\lx@author@markup@class")) {
+      out.push(T_CS!("\\lx@author@markup@class"));
     }
-    .unlist();
+    out.extend(if lookup_bool("\\author:redefined") {
+      TokenizeInternal!(
+        r"\lx@author@markup@provide\prefix\@firstofone\lx@author@markup@provide\suffix\@firstofone\lx@author@markup@provide\particle\@firstofone\lx@author@markup@provide\fnms\@firstofone\lx@author@markup@provide\snm\@firstofone\lx@author@markup@provide\inits\@firstofone\lx@author@markup@provide\degs\@firstofone\lx@author@markup@provide\roles\@firstofone\lx@author@markup@provide\orcid\lx@author@orcid"
+      )
+      .unlist()
+    } else {
+      Vec::new()
+    });
     // The author markup a class defines only where its title code reads `\@author` is in force for the author content
     // too: melba.cls:279-283 `{\def\aff{…}\def\name{…}\@author …}` (2405.09787, 2407.21368, 2105.14711), dmlr2e.sty:
     // 249-251 (2404.08403), amta2024.sty:77-78 (2405.16969), ssArxiv.sty:109-111 (2503.22625), a preamble's own
@@ -1779,6 +1795,8 @@ LoadDefinitions!({
       // Corresponding author`, 1305.7027): the next labelled email line, unless an author or affiliation line comes
       // first, goes to whom its mark names ([`block_email_calls`])
       let mut correspondence_notes: Vec<usize> = Vec::new();
+      // (the entries of unmarked institution lines under the names, each with how many names its row above holds)
+      let mut shared_institutions: Vec<(usize, usize)> = Vec::new();
       let mut prefix_marked_names = false;
       // Split on the `\and` family FIRST so an `\and` is a HARD author boundary:
       // a marker-less line — an author whose only superscript is macro-delivered
@@ -1932,7 +1950,25 @@ LoadDefinitions!({
                   .filter(|(kind, _)| *kind == AuthorLineKind::Author)
                   .flat_map(|(_, author)| symbol_marks(author))
                   .collect();
-                let labelled = symbol_labelled_affiliation(&line, &carried);
+                // (the marks the block's authors request, each one: a parenthesized lead labels by them,
+                // `parenthesized_mark_line`; a mark written in parentheses, `$^{(a)}$`, requests `a`, the rev77t review's
+                // A2)
+                let requested: Vec<String> = entries
+                  .iter()
+                  .filter(|(kind, _)| *kind == AuthorLineKind::Author)
+                  .flat_map(|(_, author)| author_mark_operands(author.unlist_ref()))
+                  .flat_map(|operand| {
+                    // (each mark of a list stripped of the parentheses at its ends, whether they wrap the list or
+                    // each mark: `$^{(a,b)}$`, `$^{(a),(b)}$`, the rev77t2 re-review's finding 5)
+                    Tokens::new(operand)
+                      .to_string()
+                      .split(',')
+                      .map(|mark| mark.trim().trim_matches(['(', ')']).trim().to_string())
+                      .collect::<Vec<_>>()
+                  })
+                  .collect();
+                let labelled = symbol_labelled_affiliation(&line, &carried)
+                  .or_else(|| parenthesized_mark_line(&line, &requested));
                 // (a link printing an institution too: placed as a link line is, an affiliation, [`url_contact_call`])
                 if !finishes_an_address && is_link_line(&line) {
                   entries.push((AuthorLineKind::Link, line));
@@ -1941,10 +1977,51 @@ LoadDefinitions!({
                 if !finishes_an_address
                   && (labelled.is_some()
                     || (entries[continued].0 == AuthorLineKind::Author && is_legend_line(&line))
+                    // (an unmarked line reading as an institution under a line of marked names is no part of the
+                    // last name: the block's, as such a line under marked affiliations is — user ruling R12
+                    // 2026-10-20 — where the marks label no line, `Ann Able$^{\dag}$ \and Bob Baker\\ Univ A` and
+                    // `Ann Able$^{1}$, Bob Baker$^{2}$\\ Univ A` gave "Bob BakerUniv A"; a text `\dag` mark is an
+                    // affiliation mark, `is_symbol_mark`, so `\dag` blocks are marked ones)
+                    || (entries[continued].0 == AuthorLineKind::Author
+                      && unmarked_institution_line(&line))
                     || under_email
                     || entries[continued].0 == AuthorLineKind::Link)
                 {
+                  if labelled.is_none()
+                    && entries[continued].0 == AuthorLineKind::Author
+                    && unmarked_institution_line(&line)
+                  {
+                    // (the names row directly above it: the run of names its line ends, not every name of the `\and`
+                    // column — `Ann Able$^{\dag}$\\ University A\\ Bob Baker$^{\ddag}$\\ University B`, the rev77t
+                    // review's r1)
+                    let row = entries[group_start..=continued]
+                      .iter()
+                      .rev()
+                      .take_while(|(kind, _)| *kind == AuthorLineKind::Author)
+                      .count();
+                    shared_institutions.push((entries.len(), row));
+                  }
                   entries.push((AuthorLineKind::Affiliation, labelled.unwrap_or(line)));
+                  continue;
+                }
+                // (a names row under an unmarked institution line is more authors, the line no part of it: `…\\
+                // University of Somewhere\\ Cat Cole, Dan Dee\\ Other Institute`, the rev77t review's r7, where the row
+                // went into the shared line and two authors were lost — only over an institution line of its own: a
+                // place or a note under the institution, `Hong Kong SAR`, `Equal Contribution`, stays the institution's,
+                // the rev77t2 re-review's s1-s4)
+                if !finishes_an_address
+                  && shared_institutions
+                    .last()
+                    .is_some_and(|(shared, _)| *shared == continued)
+                  && name_count(&visible_name_text(line.unlist_ref())) >= 1
+                  && block_lines
+                    .get(position)
+                    .is_some_and(unmarked_institution_line)
+                {
+                  last_names = Some(line.clone());
+                  for author in split_author_line(line) {
+                    entries.push((AuthorLineKind::Author, author));
+                  }
                   continue;
                 }
                 let last = &mut entries[continued];
@@ -2232,8 +2309,19 @@ LoadDefinitions!({
               .then(|| entry_mark(line.unlist_ref()).and_then(|mark| mark_label(&mark)))
               .flatten();
             let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(line)]);
+            // (an unmarked institution line under the names: each author's of the names row directly above it, as
+            // the row prints it under them — of its `\and` column at most, the whole block's when it has no `\and`,
+            // R12)
+            let shared = shared_institutions
+              .iter()
+              .find(|(shared, _)| *shared == index)
+              .map(|(_, row)| *row)
+              .filter(|authors| *authors > 1)
+              .map(|authors| {
+                mouth::tokenize_internal(TeXString::assembled(s!("annotate={authors}")))
+              });
             calls.extend(
-              Invocation!(T_CS!("\\lx@add@affiliation"), vec![None, Some(withsup)]).unlist(),
+              Invocation!(T_CS!("\\lx@add@affiliation"), vec![shared, Some(withsup)]).unlist(),
             );
           },
           AuthorLineKind::Link => {
@@ -3968,6 +4056,52 @@ pub fn affiliation_calls(
   }
   calls.extend(email_calls);
   Ok(calls)
+}
+
+/// A class-numbered institute list as its title page prints it: llncs.cls:870-885 `\institutename` (copied by
+/// preprint.cls:233-256, 2405.16615) redefines `\and` to step the institute counter and print `$^{\theinst}$` before the
+/// next entry, the first numbered 1 — so the n-th `\and` entry of the `\@institute` store is affiliation n, which the
+/// authors' numeric marks pick (`$^{1}$`, `$^2$`). `stuff` with each entry led by its number as a superscript, when the
+/// class carries that `\institutename` (a counter stepped by its `\and`), the store holds at least two `\and` entries and
+/// no mark of its own, and the queued authors carry marks that are all numbers; else `None` (the entries annotate every
+/// author, `\lx@add@store@affiliations`). Was each author given every institute (2405.16615; SYNC_STATUS row 153).
+pub fn class_numbered_institutes(stuff: &Tokens) -> Option<Tokens> {
+  let numbers_its_entries = matches!(lookup_definition_stored(&T_CS!("\\institutename")),
+    Ok(Some(Stored::Expandable(definition)))
+      if matches!(definition.get_expansion(), Some(ExpansionBody::Tokens(body))
+        if body.unlist_ref().windows(2).any(|w| w[0] == T_CS!("\\def") && w[1] == T_CS!("\\and"))
+          && body.unlist_ref().contains(&T_CS!("\\stepcounter"))));
+  if !numbers_its_entries || author_mark_position(stuff).is_some() {
+    return None;
+  }
+  let marks: Vec<String> = queued_author_marks()
+    .into_iter()
+    .flatten()
+    .map(|operand| Tokens::new(operand).to_string())
+    .collect();
+  let numeric = |mark: &String| {
+    mark
+      .split(',')
+      .all(|piece| !piece.trim().is_empty() && piece.trim().chars().all(|c| c.is_ascii_digit()))
+  };
+  if marks.is_empty() || !marks.iter().all(numeric) {
+    return None;
+  }
+  let entries = split_tokens(stuff.clone(), vec![T_CS!("\\and").into()]);
+  if entries.len() < 2 {
+    return None;
+  }
+  let mut out: Vec<Token> = Vec::new();
+  for (n, entry) in entries.into_iter().enumerate() {
+    if n > 0 {
+      out.push(T_CS!("\\and"));
+    }
+    out.extend([T_CS!("\\textsuperscript"), T_BEGIN!()]);
+    out.extend(mouth::tokenize_internal(TeXString::assembled((n + 1).to_string())).unlist());
+    out.push(T_END!());
+    out.extend(entry.unlist());
+  }
+  Some(Tokens::new(out))
 }
 
 /// Whether an affiliation a class gives after its authors is a marked list ([`affiliation_calls`]): it has a mark, and the
@@ -14674,8 +14808,8 @@ fn reads_as_names(line: &Tokens) -> bool {
 }
 
 /// Whether a line reads as an affiliation: no name, no address (`@`), and a word that names an institution
-/// ([`non_name_word`]: `Univ A`, `Department of Physics`, `MIT`).
-fn reads_as_affiliation(line: &Tokens) -> bool {
+/// (`non_name_word`: `Univ A`, `Department of Physics`, `MIT`).
+pub fn reads_as_affiliation(line: &Tokens) -> bool {
   let text = visible_name_text(line.unlist_ref());
   name_count(&text) == 0 && !text.contains('@') && text.split_whitespace().any(non_name_word)
 }
@@ -15087,7 +15221,7 @@ fn name_precedes_marker(line: &Tokens, marker_pos: usize) -> bool {
 /// matched only as a balanced OTHER-catcode bracket group following the `\\` and
 /// the spaces after it, which `\@ifnextchar` skips (`\\ [0.5em]`, 2604.20841), so
 /// ordinary bracketed content elsewhere in a name/affiliation is untouched.
-fn strip_linebreak_options(tokens: Tokens) -> Tokens {
+pub fn strip_linebreak_options(tokens: Tokens) -> Tokens {
   let src = tokens.unlist();
   let n = src.len();
   let mut out: Vec<Token> = Vec::with_capacity(n);
@@ -16051,6 +16185,84 @@ fn symbol_labelled_affiliation(line: &Tokens, carried: &[String]) -> Option<Toke
   out.push(T_CS!("\\textsuperscript"));
   out.extend_from_slice(&v[lead + 1..shown_end]);
   out.extend(rest.unlist());
+  Some(Tokens::new(out))
+}
+
+/// Whether `line` is an institution no mark leads ([`reads_as_affiliation`]): not led, past its spacing and font
+/// commands, by a footnote symbol or the visible superscript [`rewrite_symbol_superscripts`] makes one — a symbol-led line
+/// is its symbol's carriers', or a legend (2604.02578's `\textsuperscript{*}Department of Computer Science` under names
+/// marked `*†`, `†‡`, `*†‡`; 2604.03394's `\small ${\dag}$ Department …`) — nor by math (`$(a)$Univ A`, a mark no author
+/// requests); no note naming the corresponding author; and an institution by a word naming one, not by a role or contact
+/// word alone (`ROLE_WORDS`: "This research was supported by …", "for the ATLAS Collaboration", "Corresponding author:
+/// Professor …", the rev77t review's r4, r6, r8).
+fn unmarked_institution_line(line: &Tokens) -> bool {
+  /// The words [`NON_NAME_WORDS`] holds for a role or a contact, not an institution.
+  const ROLE_WORDS: &[&str] = &[
+    "research",
+    "professor",
+    "collaboration",
+    "member",
+    "team",
+    "email",
+    "e-mail",
+  ];
+  let v = line.unlist_ref();
+  let lead = after_leading_markup(&v[leading_spacing_end(v)..]);
+  let text = visible_name_text(v);
+  reads_as_affiliation(line)
+    && lead.first() != Some(&T_CS!("\\lx@frontmatter@keepsup"))
+    && lead.first().map(Token::get_catcode) != Some(Catcode::MATH)
+    && !starts_with_footnote_symbol(&Tokens::new(lead.to_vec()))
+    && !names_correspondence(&text)
+    && text.split_whitespace().any(|word| {
+      non_name_word(word) && !word_forms(word).any(|form| ROLE_WORDS.contains(&form.as_str()))
+    })
+}
+
+/// A line led by a mark in parentheses set in math, `$(a)$Department of Physics, …`, whose letter or number an author of
+/// the block requests as its superscript mark (`requested`: `Etsuko Itou$^a$`): the line with that mark written as the
+/// superscript `\lx@affiliation@withsup` labels the affiliation by, so it goes to the authors carrying it as a `$^a$`-led
+/// line does (1011.0516, PoS.cls, five such lines welded into the last name). A parenthesized lead no author requests
+/// stays the line's text.
+fn parenthesized_mark_line(line: &Tokens, requested: &[String]) -> Option<Tokens> {
+  let v = line.unlist_ref();
+  let lead = leading_spacing_end(v);
+  let rest = &v[lead..];
+  let close = rest
+    .iter()
+    .skip(1)
+    .position(|t| t.get_catcode() == Catcode::MATH)?
+    + 1;
+  if rest.first().map(Token::get_catcode) != Some(Catcode::MATH) {
+    return None;
+  }
+  let inner: Vec<Token> = rest[1..close]
+    .iter()
+    .copied()
+    .filter(|t| *t != T_SPACE!())
+    .collect();
+  let [open, label @ .., shut] = inner.as_slice() else {
+    return None;
+  };
+  if *open != T_OTHER!("(")
+    || *shut != T_OTHER!(")")
+    || label.is_empty()
+    || !label.iter().all(|t| {
+      matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER)
+        && t.with_str(|s| s.chars().all(char::is_alphanumeric))
+    })
+  {
+    return None;
+  }
+  let mark = Tokens::new(label.to_vec()).to_string();
+  if !requested.contains(&mark) {
+    return None;
+  }
+  let mut out = v[..lead].to_vec();
+  out.extend([T_CS!("\\textsuperscript"), T_BEGIN!()]);
+  out.extend_from_slice(label);
+  out.push(T_END!());
+  out.extend_from_slice(&rest[close + 1..]);
   Some(Tokens::new(out))
 }
 
@@ -19771,12 +19983,12 @@ fn is_email_command(cs: &Token) -> Result<bool> {
 
 /// A marker-less line that is *purely* a list of email addresses — a shared
 /// `\texttt{a@x, b@y,}` / `\email{...}` / `\{a,b\}@x` line covering all authors. Like
-/// [`line_is_email`] but tolerates a comma-separated list (and the trailing
-/// comma authors often leave), as [`email_addresses`] reads it: every item a full
+/// `line_is_email` but tolerates a comma-separated list (and the trailing
+/// comma authors often leave), as `email_addresses` reads it: every item a full
 /// address or a braced list of local parts before its domain. A prose affiliation
 /// line ("Dept. of Foo, University of Pisa, Italy") is rejected, so this never
 /// misclassifies an address as an email.
-fn line_is_email_list(line: &Tokens) -> bool { email_addresses(line).is_some() }
+pub fn line_is_email_list(line: &Tokens) -> bool { email_addresses(line).is_some() }
 
 /// The commands whose arguments print no letter, each with those arguments as an xparse-style signature — `s` a star,
 /// `o` an optional `[…]` argument, `m` a mandatory one — and whether the command prints a space: what the command

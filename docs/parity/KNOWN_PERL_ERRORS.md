@@ -16409,3 +16409,25 @@ everycr_skips_a_redundant_crcr, everycr_set_in_a_cell_ends_with_the_cell, nested
 everycr_noalign_rule_rules_every_row, a_latex_tabular_runs_no_everycr,
 a_bound_alignment_clears_everycr_for_what_it_holds}`, `dump_gate_init::nodump_plain_ialign_clears_everycr` (repros
 kernel-alignment/everycr_*, ialign_clears_everycr_nodump).
+## 1020. Several `{IEEEkeywords}` blocks keep only the last
+
+IEEEtran.cls.ltxml:147 maps `\IEEEkeywords` to `\lx@begin@keywords`, which clears the keywords queued before it
+(Base_Utility.pool.ltxml:626-628 `\lx@clear@frontmatter{ltx:keywords}`), so a paper's second block replaces its first.
+IEEEtran.cls:5286-5292 prints each block where it stands ("Index Terms—…"), so both are the paper's keywords. Minimal
+trigger:
+
+```latex
+\documentclass{IEEEtran}
+\begin{document}
+\begin{IEEEkeywords}Eps.\end{IEEEkeywords}
+\begin{IEEEkeywords}Zeta.\end{IEEEkeywords}
+Body.
+\end{document}
+```
+
+Perl: one `<ltx:keywords>`, "Zeta."; pdflatex prints both. Rust (77t): the IEEEtran binding's `\IEEEkeywords` adds its
+block to the keywords (`\lx@add@frontmatter@until{ltx:keywords}[accumulate=true,…]`, as the VTeX `{keyword}` blocks do,
+ims_support_sty.rs), and an accumulating block after the document body began is sealed as a replacing one is, a
+supplement's kept in place (OXIDIZED_DESIGN_DIVERGENCES #154; 2604.23289's `{IEEEkeywords}` under its "Supplemental
+File" section). Repro sectioning-frontmatter/ieeekeywords_blocks_are_all_kept; guard
+`perfect_kernel_batch77t::ieeekeywords_blocks_are_all_kept`.

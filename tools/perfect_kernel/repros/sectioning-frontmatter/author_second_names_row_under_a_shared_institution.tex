@@ -1,0 +1,17 @@
+% witness: review probe rev77t/r7 (a second names row under an unmarked institution line)
+% oracle:  pdflatex 0 errors: "Ann Able†, Bob Baker‡" over "University of Somewhere" over "Cat Cole, Dan Dee" over
+%          "Other Institute"
+% engines: rust 77t r1 (bf9f65aac9) = 0 errors: two creators, Ann Able and Bob Baker, each holding "University of
+%          Somewhere<break/>Cat Cole, Dan Dee<break/>Other Institute" (the names row appended to the shared line) —
+%          two authors lost; the 77t base kept four creators, welding the lines into Bob Baker's and Dan Dee's names
+% expect:  0 errors, 0 warnings; four authors: Ann Able† and Bob Baker‡ holding University of Somewhere, Cat Cole and
+%          Dan Dee holding Other Institute
+% status:  RED (77t r1) -> GREEN (77t r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{\dag}$, Bob Baker$^{\ddag}$\\ University of Somewhere\\ Cat Cole, Dan Dee\\ Other Institute}
+\maketitle
+Text.
+\end{document}
