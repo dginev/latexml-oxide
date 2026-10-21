@@ -43,6 +43,10 @@ Two traps when reading a test run:
   `mutool` or `pdftocairo` is on PATH, so a green local run does not by itself prove
   that branch ran. CI installs poppler/mupdf.
 
+Conversion decisions (what to keep, how to number, who owns a frontmatter item, when a copy may override a
+binding) follow [`docs/parity/FIDELITY_CHARTER.md`](docs/parity/FIDELITY_CHARTER.md) — the user's rulings as standing
+rules; ask only where it conflicts or is silent.
+
 Durable parity rules (the dump/format boundary):
 
 1. **Strict `LoadFormat` mutual exclusivity** (Perl

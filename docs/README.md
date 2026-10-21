@@ -44,6 +44,7 @@ Strict parity at the dump/format boundary plus corpus-driven parity mining.
 ### Design & orientation
 | Doc | What it is |
 |-----|------------|
+| [`parity/FIDELITY_CHARTER.md`](parity/FIDELITY_CHARTER.md) | **Start here for any conversion decision** — the user's rulings distilled into standing rules (priorities, content, numbering, frontmatter, bindings and copies, diagnostics, verification incl. reach-complete A/Bs); ask the user only where these conflict or are silent. |
 | [`parity/OXIDIZED_DESIGN.md`](parity/OXIDIZED_DESIGN.md) | Public-facing design **index + overview** (principles, architecture). Links the themed family below. |
 | [`parity/OXIDIZED_DESIGN_DIVERGENCES.md`](parity/OXIDIZED_DESIGN_DIVERGENCES.md) | The numbered **intentional Perl divergences** that `.rs` comments cite as `OXIDIZED_DESIGN #N`. (`#N` numbers are load-bearing and kept verbatim; note the pre-existing collision between divergence `#7–#18` and the math cluster `#7–#18`.) |
 | [`parity/OXIDIZED_DESIGN_TYPES.md`](parity/OXIDIZED_DESIGN_TYPES.md) | Type-system improvements + tactical pitfalls. |
