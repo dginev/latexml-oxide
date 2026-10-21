@@ -171,7 +171,7 @@ fn arrayrulecolor_reads_to_the_brace() {
   let xml = clean!("package-bindings/colortbl_arrayrulecolor_unbraced.tex");
   assert_eq!(xml.matches("<tr ").count(), 2, "{xml}");
   assert_all(&xml, &[
-    r#"<td align="center" xml:id="p1.1.1.6">f</td> </tr> <tr xml:id="p1.1.2"> <td align="center" border="b t" xml:id="p1.1.2.1">g</td>"#,
+    r#"<td align="center" xml:id="p1.1.1.6">f</td> </tr> <tr xml:id="p1.1.2"> <td align="center" border="b" thead="row" xml:id="p1.1.2.1">g</td>"#,
   ]);
   assert!(!xml.contains("---"), "{xml}");
 }

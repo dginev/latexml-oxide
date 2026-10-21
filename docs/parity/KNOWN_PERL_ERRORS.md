@@ -16384,7 +16384,10 @@ math0607639 get their arrows, math0009033 its `@!`, and math0005042's lamstex `\
 their rows and columns with `\everycr{\noalign{…}}`, are built (28 errors → 0; before #1019 the patch took them to
 Fatal, as no `\halign` ran `\everycr`) — their labels back, but the arrowheads and dotted shafts print as letters of the
 unmapped lams1-lams5 fonts (`\arrow@i\char119` → "w"; a font-map gap, SYNC row). Guard `perfect_kernel_batch78b::amstex_active_at_reads_the_arrows` (repro
-amstex/amstex_active_at_reads_the_arrows).
+amstex/amstex_active_at_reads_the_arrows). The quote connector `@"` (amstex.tex:173-190, with :90-91's `\space@`), left
+out by 78b, followed in 78c: ``` ``@"`Hi'@"'' ``` kerns the nested quotes as pdftex does, where every `@"` was
+`Error:undefined:@"` (math-ph0607013 ships amstex.tex; guard
+`perfect_kernel_batch78c::amstex_quote_connector_spaces_the_quotes`, repro amstex/amstex_quote_connector_spaces_the_quotes).
 
 ## 1019. `\halign` never inserts `\everycr`
 
@@ -16431,3 +16434,115 @@ ims_support_sty.rs), and an accumulating block after the document body began is 
 supplement's kept in place (OXIDIZED_DESIGN_DIVERGENCES #154; 2604.23289's `{IEEEkeywords}` under its "Supplemental
 File" section). Repro sectioning-frontmatter/ieeekeywords_blocks_are_all_kept; guard
 `perfect_kernel_batch77t::ieeekeywords_blocks_are_all_kept`.
+
+## 1021. subcaption sets every float caption `\small`
+
+subcaption.sty:218-222 adds `font+=small` (`smaller` when the caption font is already `small`) to
+`\captionsetup[sub]` only: the sub-captions are `\small`, the float's own caption keeps the caption font. Perl's
+subcaption.sty.ltxml:34-35 defines `\fnum@font@float` and `\format@title@font@float` as `\small`, which every float type
+inherits, so with subcaption loaded every figure's and table's label and caption text read `fontsize="90%"`. Minimal
+trigger: `\documentclass{article}\usepackage{subcaption}\begin{document}\begin{figure}\begin{subfigure}{.4\textwidth}A
+\caption{Left.}\end{subfigure}\caption{Schematic.}\end{figure}\end{document}` — pdflatex `\f@size` 9 in the sub-caption,
+10 in the main one; Perl both 90 %. About 378,000 papers (3,850 of a 30,000-paper sample). Fixed in Rust (78c):
+subcaption_sty.rs leaves the float fonts as the kernel has them (sect09.rs `\@empty`) and sets the four
+`\fnum@font@sub…`/`\format@title@font@sub…` to `\small`. Guard
+`perfect_kernel_batch78c::subcaption_main_caption_keeps_the_normal_size` (repro
+captions-floats/subcaption_main_caption_keeps_the_normal_size); 30 subcaption guards re-pinned to the normal size.
+With the float-wide `\small` gone, a document's `\usepackage[font=small]{caption}` after `\usepackage{subcaption}`
+showed: the subcaption binding's `RequirePackage("caption")` is the first caption load, and the document's options of
+the repeat load were dropped, where caption3.sty:416-429 runs them (`\caption@ExecuteOptions{caption}{<options>}`). 78c
+r2: caption_sty.rs names `\captionsetup` as caption's repeat-load setter (`caption.sty_keyval_setter`, binding/content.rs
+`apply_repeat_options`, hyperref's mechanism): witness 1602.00134 (`[font=footnotesize,labelfont=bf]`, 80 % and bold
+labels as its PDF); 50 of 1,057 subcaption papers load caption with a `font=` after it. caption's v1 options (`bf`,
+`small`, caption.sty:114-147) are first-load keys there, caption's "undefined" Error on a repeat; an unknown-key Warning
+here. Guard `perfect_kernel_batch78c::caption_options_after_subcaption_apply`. Open: the sub-captions are `\small` alone
+— `\captionsetup[sub]{font=…}`, subcaption's own `font=` option and caption's global `font=small` (which makes
+subcaption's `font+=small` `smaller`, 8 pt in pdflatex) do not reach them, as caption_sty.rs's caption formatting passes
+the `sub…` types through (`passthrough`; rev78c probes sc1-sc3: pdflatex 8 pt, ours 90 %).
+
+## 1022. IEEEtran's headings show the `\ref` number
+
+IEEEtran.cls:5397/:5402 `\def\@seccntformat#1{\csname the#1dis\endcsname\hskip 0.5em\relax}` prints a heading's number
+in its heading form, :2570-2587 `\thesectiondis` "I.", `\thesubsectiondis` "A.", `\thesubsubsectiondis` "1)",
+`\theparagraphdis` "a)" (compsoc: "1", "1.1", …; compsoc conference "1.", "1.1."), while `\ref` reads `\thesubsection`
+"I-A". Perl's IEEEtran.cls.ltxml has no heading forms, so every heading tag is the `\ref` number ("I", "I-A", "I-A1").
+Minimal trigger: `\documentclass{IEEEtran}\begin{document}\section{Intro}\subsection{Sub}\end{document}` — pdflatex "I.
+INTRO", "A. Sub". About 178,000 papers (IEEEtran with a `\subsection`). Fixed in Rust (78c): ieeetran_cls.rs defines
+`\fnum@section` … `\fnum@paragraph` as the `\the<level>dis` forms (base_utilities.rs `\lx@fnum@@` uses them for the
+heading tag; the `refnum` stays); an `\appendices` section keeps its "Appendix A" (the `appendix` type's tag), its
+subsections "A." as pdflatex. Guards `perfect_kernel_batch78c::ieeetran_headings_print_their_heading_forms`,
+`perfect_kernel_batch67x::ieeetran_appendix_clears_sectiondis` (re-pinned: "A. Sub"). The section numbers themselves are
+Perl's: IEEEtran.cls.ltxml:160-174 numbers compsoc arabic (`\ifCLASSOPTIONcompsoc`, IEEEtran.cls:2545-2556), where the
+Rust binding had set `\thesection` Roman in every mode (a Rust-only gap the heading forms made visible: compsoc read "I",
+"I.1", "I.1.1", `\ref` "I-A"; 63 of 558 IEEEtran papers use compsoc); 78c r2 ports Perl's conditional: compsoc "1",
+"1.1", "1.1.1", compsoc conference "1.", "1.1.", `\ref` "1.1", appendix subsections "A.1" (repros
+sectioning-frontmatter/ieeetran_compsoc_headings_are_arabic, …_compsoc_conference_headings_are_arabic, in the same
+guard). Open: a compsoc conference appendix's heading prints "Appendix A." (`\thesectiondis` "A."), ours the appendix
+type's "Appendix A"; `\paragraph` is unnumbered where pdflatex prints "a)" (both before 78c).
+
+## 1023. acmart's citations are author-year
+
+acmart.cls:379-393 defines `\bibstyle@acmauthoryear` (`authoryear`, `[`/`]`, `;`, no comma before the year) and
+`\bibstyle@acmnumeric` (`numbers`, `sort&compress`, `[`/`]`, `,`) and, under its default `natbib=true`, calls
+`\citestyle{acmnumeric}`. Perl's acmart.cls.ltxml:23 only loads natbib, so acmart citations came out as natbib's default
+"(Able, 2001; Bee, 2002)" where the PDF prints "[1, 2]", and a document's `\citestyle{acmauthoryear}` ("[Able 2001]") was
+a no-op. Perl's natbib.sty.ltxml `\setcitestyle` keys (L363-375) also lack natbib.sty:338's `citesep`. Minimal trigger:
+`\documentclass[sigconf]{acmart}\begin{document}\title{T}\maketitle See \cite{a}.\begin{thebibliography}{1}
+\bibitem[Able(2001)]{a} A.\end{thebibliography}\end{document}`. About 61,700 papers; witness 2112.15328. Fixed in Rust
+(78c): acmart_cls.rs defines both styles through `\setcitestyle` and calls `\citestyle{acmnumeric}` when natbib is on;
+natbib_sty.rs reads `citesep`. Open: natbib's `sort&compress` (the order and ranges of the numbers, "[1, 2]" for
+`\cite{b,a}`) is not modelled. Guard `perfect_kernel_batch78c::acmart_citations_are_numeric_by_default` (repros
+index-bib/acmart_citations_are_numeric_by_default, index-bib/acmart_citestyle_acmauthoryear).
+
+## 1024. `\hhline` is a full-width `\hline`
+
+hhline.sty:61-96 (`\HH@loop`) gives each `-` (a rule), `=` (a double rule) and `~` (no rule) of the specification its own
+column, `|`, `:`, `#`, `t`, `b` mark the vertical rules and corners, and `*{n}{…}` repeats (`\HH@xexpast`, :49-60).
+Perl's hhline.sty.ltxml:24 is `DefMacro('\hhline Semiverbatim', '\hline')`: every `\hhline` rules every column once, so
+`\hhline{~~--}` rules the cells it leaves open and `\hhline{|=|=|}` is a single rule. Minimal trigger:
+`\begin{tabular}{cccc}a&b&c&d\\\hhline{~~--}e&f&g&h\\\end{tabular}` with `\usepackage{hhline}` — pdflatex rules only
+over g and h. About 6,000 papers. Fixed in Rust (78c): hhline_sty.rs reads the specification into the table model's
+`\lx@cline` (sect10.rs), a doubly ruled column twice ("tt"); a character `\HH@loop` does not know is ignored with
+hhline's warning. Guards `perfect_kernel_batch78c::hhline_rules_the_columns_it_names`,
+`perfect_kernel_batch69a::arrayrulecolor_reads_to_the_brace` (re-pinned: `\hhline{---~~~}` rules a-c only). Open: the
+kernel's header guess (`ltx_guessed_headers`) reads the new borders — the guard pins `thead="row"` on plain data cells,
+and a `\hhline{|=|…}` double rule after a header row loses that row's `<thead>` (1706.03044, 2207.13493), as
+`\hline\hline` does already: the heuristic's, not hhline's. A specification longer than the row (`\hhline{----}` in a
+3-column table) is pdflatex's "Extra alignment tab has been changed to \cr"; hhline_sty.rs rules the row's columns and
+says nothing (diagnostic parity only).
+
+## 1025. AMS-TeX's tags are on the right
+
+amstex.tex:587-590: `\newif\iftagsleft@`, `\def\TagsOnLeft{\global\tagsleft@true}`, `\def\TagsOnRight{…false}`, then
+`\TagsOnLeft` — AMS-TeX sets `\tag`s on the left unless a document says `\TagsOnRight`. Perl's AmSTeX.pool.ltxml:83-84
+makes both switches no-ops, so an AMS-TeX document's tags render on the right. Minimal trigger: `\input amstex
+\documentstyle{amsppt}\document $$ a=b \tag 1 $$\enddocument` — pdftex "(1)" on the left. About 2,060 papers (AMS-TeX
+`\tag` without `\TagsOnRight`). Fixed in Rust (78c): amstex.rs's `\TagsOnLeft` sets the document's `ltx_leqno` class (as
+the `leqno` option does) and `\tagsleft@`, `\TagsOnRight` clears them, and the pool runs `\TagsOnLeft` after loading the
+amsmath binding (whose `reqno` default clears the class); amsppt_sty.rs no longer redefines them as no-ops. Guards
+`perfect_kernel_batch78c::amstex_tags_are_on_the_left_by_default`, `perfect_kernel_batch64x::amstex_end_ends_the_document`
+(re-pinned with the class).
+
+## 1026. svmult numbers a contribution as chapter 0
+
+svmult.cls (v5.4 2007/06/25; v5.5 alike) :2141-2152 `\maketitle` starts a contribution: it resets the section, figure,
+table, equation and footnote counters and, under a non-star `\title` (`\ds@book`, :1044-1053: `\thesection` is
+`\thechapter.\@arabic\c@section`, sections reset with the chapter), does `\refstepcounter{chapter}` — "Chapter 1",
+"1.1"; under `\title*` (`\ds@numart`, :1034-1042) it steps the chapter and steps it back, the sections numbered "1".
+Without either, `\thesection` is `\newcounter`'s `\@arabic\c@section` and the chapter does not reset it ("Chapter 2",
+"2 Notes"). :713 `\renewcommand\appendix{\par}` is the main matter's appendix (only the back matter's `\bppendix`
+restarts the numbering). Perl's svmult.cls.ltxml:40-42 numbers no chapter at `\maketitle` and keeps book's numbering, and
+its `\appendix` is book's: "0.1", "0.1.1" (witness 1801.05601), the appendix an `ltx:appendix` ".2". Minimal trigger:
+`\documentclass{svmult}\begin{document}\title{C}\maketitle\section{First}\appendix\section{Proofs}\end{document}` —
+pdflatex "Chapter 1", "1.1 First", "1.2 Proofs". Fixed in Rust (78c): svmult_cls.rs's `\maketitle` part
+(`\lx@maketitle@body`) resets and steps as svmult.cls does, `\title` sets `\thesection` and the section reset as
+`\ds@book`, the class default is `\@arabic\c@section` without the reset, and the main-matter `\appendix` is `\par`.
+Open: svmult's figure, table and equation numbering (`\ds@numart`'s `\@takefromreset`, :1919) stays book's. Guards
+`perfect_kernel_batch78c::svmult_maketitle_numbers_the_contribution`,
+`perfect_kernel_batch78a::{svmult_appendix_keeps_counting_sections, svmult_backmatter_chapters_stay_numbered}` (re-pinned
+to pdflatex's "3" and "2"). Open: a volume of several contributions numbers only the first — the kernel's
+`\lx@maketitle@cleanup` (sect05.rs) lets `\title` and `\maketitle` be `\relax` after the first `\maketitle`, which
+svmult's does not: `\title{First}…\maketitle`, `\title*{Second}…\maketitle`, `\title{Third}…\maketitle` is pdflatex
+"1.1, 1.2 | 1, (1) | Chapter 2, 2.1", ours "1.1, 1.2, 1.3, 1.4" with "*SecondB" and "ThirdC" as paragraphs (rev78c probe
+svm1; int43a the same). Several titles in one document need the frontmatter model's per-contribution titles (the
+double-`\maketitle` ruling keeps one), not a binding line.

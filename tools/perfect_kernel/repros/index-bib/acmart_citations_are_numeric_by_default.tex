@@ -1,0 +1,16 @@
+% witness: 2112.15328 (sigconf, PDF "[1, 2]"); sel78c item 3 (628/30k acmart papers cite under the default):
+%          acmart.cls:379-393 \citestyle{acmnumeric} under natbib, Perl's acmart.cls.ltxml:23 only loads natbib (KPE)
+% oracle:  pdflatex 0 errors: "See [1, 2]."
+% engines: rust int43a = "(" AuthorsPhrase1Year ";" ")"
+% expect:  0 errors; the citation "[" show="Number" separator="," "]"
+% status:  RED (int43a) -> GREEN (78c)
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{T}
+\maketitle
+See \cite{b,a}.
+\begin{thebibliography}{2}
+\bibitem[Able(2001)]{a} A. Able. 2001. Paper. J. 1, 2.
+\bibitem[Bee(2002)]{b} B. Bee. 2002. Paper. J. 3, 4.
+\end{thebibliography}
+\end{document}

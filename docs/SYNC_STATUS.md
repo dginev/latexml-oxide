@@ -527,21 +527,35 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   AMS-TeX's active `@` (KNOWN_PERL_ERRORS #1018, landed with it: math0005042 28 errors → 0, no Fatal). Repros
   `kernel-alignment/everycr_*`, `amstex/amstex_active_at_reads_the_arrows` (GREEN); guards `perfect_kernel_batch78b::*`.
 
-- **subcaption sets the main caption at 90 %** (PERL-ORIGIN; found by rev78a2): subcaption_sty.rs's
+- **subcaption sets the main caption at 90 %** (PERL-ORIGIN; found by rev78a2; **FIXED 78c**, KNOWN_PERL_ERRORS #1021:
+  the sub-captions alone are `\small`, the guards re-pinned to the normal size): subcaption_sty.rs's
   `\fnum@font@float`/`\format@title@font@float` are `\small` (Perl subcaption.sty.ltxml:34-35), so with subcaption loaded
   every figure's and table's label and caption text read `fontsize="90%"`; pdflatex sets them in the text font (CMR10,
   checked in jfm and in plain article + subcaption). Pinned as it is in
   `perfect_kernel_batch78a::{jfm_copy_caption_yields_to_caption_loaders,
   jfm_copy_caption_yields_to_caption_loaders_after_floatrow}` (repro
   `class-bindings/jfm_caption/jfm_copy_caption_yields_to_subcaption`); open, small: drop the two `\small`s, then
-  re-pin the guards and the captions-floats goldens.
+  re-pin the guards and the captions-floats goldens. 78c r2: a `\usepackage[<options>]{caption}` after subcaption (the
+  binding's caption load is the first) runs its options as caption3.sty:416-429 does (`caption.sty_keyval_setter`;
+  witness 1602.00134). Open (KPE #1021): sub-captions stay `\small` whatever `\captionsetup[sub]{font=…}`,
+  subcaption's `font=` or caption's global `font=small` (→ `smaller`, 8 pt) say (caption_sty.rs `passthrough`).
 
 - **svmult's main-matter `\appendix` starts the appendices** (PERL-ORIGIN, svmult_cls.rs:56 `\@appendix` + `\gdef\@chapapp
-  {\appendixname}`; found by rev78a3): svmult.cls:713's `\appendix` is only `\par` — the main matter's sections keep
+  {\appendixname}`; found by rev78a3; **FIXED 78c**, KNOWN_PERL_ERRORS #1026: the main-matter `\appendix` is `\par`, the
+  sections are `\@arabic\c@section` without the chapter's reset until a `\title`, svm_app now "Chapter 2 After", "3 N"):
+  svmult.cls:713's `\appendix` is only `\par` — the main matter's sections keep
   counting (78a r3 keeps that) and its chapters stay "Chapter N"; here a later `\backmatter\chapter{After}` prints
   "Appendix A", "A.1" where pdflatex prints "Chapter 2 After", "3 N" (probe `svm_app`; int40c, 78a r1-r3 the same; none
   of the 8 corpus svm papers with `\appendix` changes). Open, small: svmult's `\appendix` a `\par` outside the back
   matter, its back-matter `\bppendix` as 78a r3 ports it.
+
+- **An svmult volume of several contributions numbers only the first** (GENUINE-RUST-ONLY kernel shape, predates 78c;
+  rev78c finding 6, KNOWN_PERL_ERRORS #1026 open): the kernel's `\lx@maketitle@cleanup` (sect05.rs) lets `\title` and
+  `\maketitle` be `\relax` after the first `\maketitle`; svmult's (svmult.cls:2141-2152) does not, so each contribution
+  is its own chapter. Probe svm1 (`\title{First}`, `\title*{Second}`, `\title{Third}`, each `\maketitle`d): pdflatex
+  "1.1, 1.2 | 1, (1) | Chapter 2, 2.1", ours "1.1, 1.2, 1.3, 1.4", the later titles paragraphs ("*SecondB", "ThirdC");
+  int43a the same. Not a binding line: several titles in one document need per-contribution titles in the frontmatter
+  model (the double-`\maketitle` ruling keeps one title); needs a ruling on how a multi-contribution volume is marked up.
 
 - **`\cref` to an `\item[…]` of a description inside an enumerate prints no name** (GENUINE-RUST-ONLY since 77u r3, base
   printed the item's own label; review rev77u2 finding 4): the refnum is now the enclosing enumerate item's ("2", KNOWN_PERL_ERRORS
@@ -1545,8 +1559,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   1, all 60 tags text, 57 on their row/equation vs 51): the next class is `\Sb … \\ … \endSb` after `\input pictex` (RED
   `amstex/amstex_pictex_sb_newline`). A/B over 30 AMS-TeX `\tag` papers: no paper worse; math0001138 and math-ph0001014
   E 2 → 0. Residual: `$$\gather … \tag 1\\ … \endgather$$` keeps both tags on the one display equation (amsmath's
-  `gathered` is not split into rows); AMS-TeX tags sit on the left in the PDF (`\TagsOnLeft`, amstex.tex:590), ours on
-  the right; `\intertext` inside `$$\align` errs (RED `amstex/amstex_align_intertext`, before 66e too); `$$\gather` in a
+  `gathered` is not split into rows); AMS-TeX tags sit on the left in the PDF (`\TagsOnLeft`, amstex.tex:590), ours too
+  since 78c (KNOWN_PERL_ERRORS #1025); `\intertext` inside `$$\align` errs (RED `amstex/amstex_align_intertext`, before 66e too); `$$\gather` in a
   plain document erred "`\ams@return@opt@arg` undefined" (amsmath_sty.rs `\lx@ams@start@box` let it to `\@empty`, which
   only the LaTeX pool defines; math9412232 and 6 more of the 122, 36 errors, before 66e too; fixed in 68r, the kernel's
   `\lx@empty`: `amstex/amstex_plain_gather_return_opt_arg` GREEN); an unbraced inner alignment in a row tag (`\tag 1\matrix a\cr
@@ -2312,8 +2326,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `{eqnarray}` rearranges rows; RED `alignment/ieeeeqnarray_rule_rows_keep_rules_and_numbers`; ruled 2026-10-15: such
   rows stay numbered rows with their rules, as pdflatex numbers them — kernel-wide for the eqnarray family, batch 68e
   with its own A/B, low paper impact: the 32 sampled papers with rule rows use an `{IEEEeqnarraybox}`; IEEEtrantools'
-  `\PackageError` under IEEEtran stays silent). Open: an IEEEtran appendix subsection heading shows its refnum "A-A"
-  where pdflatex prints `\thesubsectiondis` "A." (IEEEtran.cls:2586; pre-existing). IEEEtrantools under any
+  `\PackageError` under IEEEtran stays silent). An IEEEtran heading's tag is its heading form, "I.", "A.", "1)" and an
+  appendix subsection's "A." (IEEEtran.cls:2570-2587, :5397; **FIXED 78c**, KNOWN_PERL_ERRORS #1022; compsoc arabic "1.1",
+  Perl's IEEEtran.cls.ltxml:160-174 conditional, since 78c r2). IEEEtrantools under any
   class but IEEEtran (ieeetrantools_sty.rs; under IEEEtran the package only raises its error, IEEEtrantools.sty:73-78, and
   the class binding's IEEEproof, lists and `\IEEEauthorrefmark` stay): the
   IEEEproof family with its QED switches (:2726-2747) and the IED lists with their parameters (:1000-1140), moved from the
@@ -2500,7 +2515,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (GREEN in 77v);
   sn-jnl with no shipped copy loads none of the class's packages (rotating…); the same visible-`@name` flaw in bindings
   outside this batch: sn_jnl_cls.rs `{declarations}` (`name='declarations'`, an environment sn-jnl.cls does not define)
-  and jmlr_cls.rs/jmlr2e_sty.rs `\acks` (`name='acknowledgments-disclosure-of-funding'`). Ruled 2026-10-15: arximspdf's
+  and jmlr_cls.rs/jmlr2e_sty.rs `\acks` (`name='acknowledgments-disclosure-of-funding'`) — FIXED 78c: jmlr.cls's
+  "Acknowledgments", a jmlr2e.sty copy's own heading ("Acknowledgments" without a copy, 78c r2); `{declarations}`
+  DELETED in 78c r2 as a speculative environment, no witness (0 of 206 shipped sn-jnl.cls copies define it, 0 of
+  ~23,000 papers use it; the template writes `\section*{Declarations}`). Ruled 2026-10-15: arximspdf's
   borrowed amsthm also gives it `{proof}`, which the class lacks (pdflatex errs); kept, as it keeps the author's proof.
   The arximspdf/arxstspdf row from a 24-paper sample — `\ccline` (7 arxstspdf papers), `\freefootnotetext`,
   `\write@toc@…contentsline`, `\maxcsec`, `\setvaluelist` (1203.0565) — landed in 68k; open: arximspdf's own
@@ -4891,6 +4909,54 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   math9611222 (75 → 1 errors) and math0005042 (28 → 0) — no text word lost outside formulas, the counted words the
   error ink that went; the lams letters they gain are the font-map row above. Binding nets (int43a) 136/136, 0
   documents worse than int42a.
+- **78c** (quality batch 6, the sel78c selection study's eight items; guards `perfect_kernel_batch78c::*`, 8, each RED on
+  int43a; KPE #1021-#1026, #1018 residual). (1) subcaption sets only the sub-captions `\small` (subcaption.sty:218-222;
+  Perl's subcaption.sty.ltxml:34-35 made every float caption 90 %, KPE #1021; ~378,000 papers): 30 caption guards and
+  the subcaption, figure_mixed_content goldens re-pinned to the normal size, a caption's math, inline TikZ and
+  `em`-sized graphics now measured at it. (2) IEEEtran heading tags are the `\the<level>dis` forms "I.", "A.", "1)"
+  (IEEEtran.cls:2570-2587, :5397) through `\fnum@<level>`; the refnum stays "I-A", an `\appendices` section keeps
+  "Appendix A", its subsections "A." (KPE #1022; ~178,000 papers). (3) acmart's `\citestyle{acmnumeric}` under natbib,
+  `\bibstyle@acmauthoryear` for `\citestyle{acmauthoryear}` ("[Able 2001]"), natbib's `citesep` key (acmart.cls:379-393,
+  natbib.sty:338; KPE #1023; witness 2112.15328 "[1, 2]"; open: natbib's `sort&compress`, the citation order and
+  ranges, is not modelled). (4) `\hhline` rules the columns it names, a `=` column twice, `*{n}{…}` repeats, colortbl's
+  `>{…}` skipped, one `\cline{a-b}` per run (hhline.sty:61-96; KPE #1024): alignment/colortbls' rainbow rules are double
+  now. (5) AMS-TeX's `\TagsOnLeft` default sets `ltx_leqno`, `\TagsOnRight` clears it (amstex.tex:587-590; KPE #1025).
+  (6) jmlr's `\acks` is "Acknowledgments" (jmlr.cls:595), jmlr2e's the heading its shipped copy prints
+  ("Acknowledgments" in 1512.04829's, "Acknowledgments and Disclosure of Funding" in 2511.10879's; without a copy
+  "Acknowledgments" since r2) — not slugs. (7) svmult's `\maketitle` numbers a `\title` contribution as a
+  chapter and resets its counters (svmult.cls:2141-2152: 1801.05601 "1.1", "Fig. 1.1", "(1.1)" as its PDF, int43a
+  "0.1"), `\thesection` is `\@arabic\c@section` without the chapter's reset until a `\title` (78a's repros now read
+  pdflatex's "3 Proofs" and "2 Notes"), the main-matter `\appendix` is `\par`, the back-matter `\bppendix` numbers in
+  the appendix chapter (KPE #1026; open: svmult's figure/table/equation numbering under `\title*`, `\ds@numart`'s
+  `\@takefromreset`, stays book's). (8) AMS-TeX's `@"` quote connector (amstex.tex:173-190; KPE #1018). A/B vs int43a
+  (release, `--preload=ar5iv.sty`; 300 papers: 20 witnesses, 30 each of acmart, IEEEtran with `\subsection`, hhline,
+  subcaption + `\caption`, 29 svmult/svmono, the 20 AMS-TeX `\tag` and 11 jmlr `\acks` papers of the 30k sample, 100
+  random of the 1k sample): E 84 → 84, F 0 → 0, W 2,970 → 2,970, 0 papers worse; 172 outputs changed, every one by the
+  items (caption sizes and the ids their wrappers shifted, heading tags and their new `toctitle`, citation brackets and
+  `show`, cell borders and the header guess that follows them, `ltx_leqno`, acknowledgement names, svmult numbering and
+  ids), no word of text outside numbering tags gained or lost in any of them. Ledger rows the study re-verified fixed on
+  int43a, closed: #4 CLEVEREF-TYPE, #12 ALGPSEUDOCODEX, #14 BIB-PREAMBLE (natbib, KOMA; the apacite residual stays
+  open), #16 FILECONTENTS-OVERRIDE, #18 LT-CAPTION-STAR, #19 NAMEREF-IN-TITLE, #20 NATBIB-COPY-LABEL, #21 T2A, #22
+  AAS-KEYLESS-REF, #42 THMRESTATE, #48 CAPTIONOF-TIKZ, #57 SNJNL-BOOKTABS, #62 TODONOTES-STYLE, #78 THEOREM-COUNTERS, #90
+  EMULATEAPJ deluxetable, #91 ENDNOTES-MARK, #95 MULTLINE-TAG, #104 AMSPPT-FOOTNOTE, #112 COMBINE-BOOK.
+  **r2** (rev78c NO-SHIP, its two should-fix findings; guards `perfect_kernel_batch78c::{
+  caption_options_after_subcaption_apply}` new, `…::{ieeetran_headings_print_their_heading_forms,
+  jmlr_acknowledgements_carry_the_printed_heading}` extended, each new case RED on r1). (1) A `\usepackage[<options>]{caption}` after subcaption runs its options
+  (caption3.sty:416-429; the subcaption binding's caption load is the first): caption_sty.rs names `\captionsetup` as
+  caption's repeat-load setter (`caption.sty_keyval_setter`, hyperref's mechanism): witness 1602.00134 80 % with bold
+  labels as its PDF; caption's v1 options there are first-load keys (pdflatex "undefined" Error), an unknown-key Warning
+  here (KPE #1021; open: the sub-caption fonts, `passthrough`). (2) IEEEtran compsoc numbers arabic, Perl's
+  IEEEtran.cls.ltxml:160-174 conditional ported (IEEEtran.cls:2545-2556): "1", "1.1", "1.1.1" and `\ref` "1.1" where r1
+  read "I", "I.1", "I.1.1" (63 of 558 IEEEtran papers use compsoc; KPE #1022 corrected: a Rust-only gap; open: a compsoc
+  conference appendix heading's "Appendix A." period, `\paragraph` unnumbered). Nits: jmlr2e's fallback heading is
+  "Acknowledgments" (45 of 64 shipped copies, jmlr.cls:595); sn-jnl's speculative `{declarations}` deleted; recorded
+  open: the hhline guard's `thead` is the header heuristic's, a `\hhline{|=|…}` after a header row loses its `<thead>`
+  as `\hline\hline` does (1706.03044, 2207.13493), a `\hhline` longer than the row is silent where pdflatex errs (KPE
+  #1024); svmult volumes of several contributions (KPE #1026, row above). A/B r1 vs r2 (release, `--preload=ar5iv.sty`;
+  420 papers: r1's 299 + 3 by main file, rev78c's 60, 20 IEEEtran compsoc, 10 compsoc conference, 29 subcaption papers
+  loading caption with options after it, witness 1602.00134): E 213 → 213, F 1 → 1, W 4,626 → 4,626, 0 papers worse; 54
+  outputs changed — 29 compsoc papers (heading tags and refnums arabic), 25 caption-option papers with 1602.00134 (each
+  its own options: sizes, bold or italic labels, `labelsep`, `textfont=it`) — no text word outside tags gained or lost.
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
   parts draw, as Unicode's IPA letter, cross-checked against tipauni.sty; the `""`/`||` ligatures ˌ ǁ), so its input

@@ -321,7 +321,7 @@ fn a_standalone_panel_row_starts_the_next_row_empty() {
   let line = r#"<p align="center" class="ltx_figure_panel"><text align="center" fontsize="90%" width="169.1pt">Left</text><text fontsize="90%">  <text align="center" width="169.1pt">Right</text></text></p>"#;
   let brk = r#"<break class="ltx_break"/>"#;
   let expected = format!(
-    r#"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags>{}{brk}{line}{brk}{}{brk}{line}<toccaption class="ltx_centering"><tag close=" ">1</tag>C</toccaption><caption class="ltx_centering"><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">C</text></caption></figure>"#,
+    r#"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags>{}{brk}{line}{brk}{}{brk}{line}<toccaption class="ltx_centering"><tag close=" ">1</tag>C</toccaption><caption class="ltx_centering"><tag close=": ">Figure 1</tag>C</caption></figure>"#,
     (1..=4).map(panel).collect::<String>(),
     (5..=8).map(panel).collect::<String>(),
   );

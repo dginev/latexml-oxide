@@ -1,0 +1,10 @@
+% witness: sel78c item 6 (13/30k jmlr/jmlr2e \acks); jmlr.cls:595 \acks prints \section*{Acknowledgments}
+% oracle:  pdflatex 0 errors: the heading "Acknowledgments"
+% engines: rust int43a = name="acknowledgments-disclosure-of-funding"
+% expect:  0 errors; <acknowledgements name="Acknowledgments">
+% status:  RED (int43a) -> GREEN (78c)
+\documentclass{jmlr}
+\begin{document}
+Text.
+\acks{We thank Ann.}
+\end{document}

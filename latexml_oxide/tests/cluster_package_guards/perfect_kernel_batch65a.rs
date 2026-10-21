@@ -817,7 +817,7 @@ See \ref{inner}, \ref{outer}.
   let (_, inner_number) = float_of(&xml, "inner");
   let (_, outer_number) = float_of(&xml, "outer");
   assert!(
-    inner_number.ends_with("Figure 1</text>") && outer_number.ends_with("Figure 2</text>"),
+    inner_number == "Figure 1" && outer_number == "Figure 2",
     "{xml}"
   );
   assert!(

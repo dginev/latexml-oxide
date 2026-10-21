@@ -373,7 +373,7 @@ fn ieeetran_appendix_clears_sectiondis() {
   let assert_element = latexml::util::test::assert_element;
   assert!(
     xml.contains(
-      r#"<title><tag close=" ">A</tag><text font="italic" xml:id="A0.SS1.1">Sub</text></title>"#
+      r#"<title><tag close=" ">A.</tag><text font="italic" xml:id="A0.SS1.1">Sub</text></title>"#
     ),
     "{xml}"
   );

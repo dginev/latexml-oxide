@@ -109,13 +109,15 @@ LoadDefinitions!({
   Let!("\\ext@subfigure", "\\ext@figure");
   Let!("\\ext@subtable",  "\\ext@table");
 
-  DefMacro!("\\fnum@font@float",         "\\small");
-  DefMacro!("\\format@title@font@float", "\\small");
-
-  DefMacro!("\\fnum@font@subfigure",         "\\fnum@font@figure");
-  DefMacro!("\\fnum@font@subtable",          "\\fnum@font@table");
-  DefMacro!("\\format@title@font@subfigure", "\\format@title@font@figure");
-  DefMacro!("\\format@title@font@subtable",  "\\format@title@font@table");
+  // subcaption.sty:218-222 sets `font+=small` (`smaller` under `\captionsetup{font=small}`) for `\captionsetup[sub]`
+  // only: the sub-captions are `\small`, the float's own caption keeps the kernel's size (sect09.rs `\fnum@font@float`
+  // `\@empty`; pdflatex `\f@size` 9 in the sub-caption, 10 in the main one). Perl subcaption.sty.ltxml:34-35 makes
+  // every float caption `\small` (KNOWN_PERL_ERRORS #1021; about 378,000 papers use subcaption and `\caption`). Guard
+  // `perfect_kernel_batch78c::subcaption_main_caption_keeps_the_normal_size`.
+  DefMacro!("\\fnum@font@subfigure",         "\\small");
+  DefMacro!("\\fnum@font@subtable",          "\\small");
+  DefMacro!("\\format@title@font@subfigure", "\\small");
+  DefMacro!("\\format@title@font@subtable",  "\\small");
 
   // Perl: \format@title@subfigure and \format@title@subtable use " " separator (not ": ")
   DefMacro!(

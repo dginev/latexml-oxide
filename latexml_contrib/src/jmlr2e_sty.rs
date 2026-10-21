@@ -4,7 +4,10 @@
 //! related Proceedings of Machine Learning Research papers. Define the
 //! \name / \addr / \email author-block font switches as identity so
 //! `\author{\name Foo \email a@b.c \\ \addr Place}` parses cleanly.
-use latexml_package::prelude::*;
+use latexml_package::{
+  prelude::*,
+  shipped_class::{class_code, shipped_copy_text},
+};
 
 LoadDefinitions!({
   RequirePackage!("natbib");
@@ -91,13 +94,25 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=address]{#1}"
   );
 
-  // jmlr2e.sty L372: \acks{text} — acknowledgments section. Emit as
-  // structural ltx:acknowledgements with the funding-disclosure label
-  // (post-processors map to canonical role/styling).
-  DefConstructor!(
-    "\\acks{}",
-    "<ltx:acknowledgements name='acknowledgments-disclosure-of-funding'>#1</ltx:acknowledgements>"
-  );
+  // jmlr2e.sty's `\acks{text}` (2511.10879's copy :372, 1512.04829's :289): the acknowledgments under the heading the
+  // copy prints, `{\large\bf Acknowledgments and Disclosure of Funding}` in the newer copies, `{\large\bf
+  // Acknowledgments}` in the older ones — read from the paper's copy. Without a copy, "Acknowledgments": the heading of
+  // 45 of the 64 copies arXiv papers ship (30,840 sampled; the other 19 the longer one, most of them 2023-25), and
+  // jmlr.cls:595's. The binding wrote the slug "acknowledgments-disclosure-of-funding", which the XSLT printed as the
+  // heading. Guard `perfect_kernel_batch78c::jmlr_acknowledgements_carry_the_printed_heading`.
+  let heading = shipped_copy_text("sty")?
+    .and_then(|text| acks_heading(&class_code(&text)))
+    .unwrap_or_else(|| "Acknowledgments".to_string());
+  def_macro(
+    T_CS!("\\lx@jmlr@acksname"),
+    None,
+    Some(ExpansionBody::from(heading)),
+    None,
+  )?;
+  DefConstructor!("\\acks{}", "<ltx:acknowledgements name='#name'>#1</ltx:acknowledgements>",
+  properties => sub[_args] {
+    Ok(stored_map!("name" => Stored::from(digest_in_group(T_CS!("\\lx@jmlr@acksname"))?)))
+  });
 
   // jmlr2e.sty L33-36: the camera-ready toggle.
   //   \newif\ifnipsfinal \nipsfinalfalse
@@ -145,3 +160,13 @@ LoadDefinitions!({
 \newtheorem{axiom}[theorem]{Axiom}"
   );
 });
+
+/// The heading a jmlr2e.sty copy's `\acks` prints: the text of its bold group, `\long\def\acks#1{\vskip 0.3in\noindent
+/// {\large\bf Acknowledgments}…`.
+fn acks_heading(code: &str) -> Option<String> {
+  let body = &code[code.find("\\def\\acks")?..];
+  let body = &body[..body.find("#1}").map_or(body.len(), |end| end + 3)];
+  let text = &body[body.find("\\bf")? + 3..];
+  let text = text[..text.find('}')?].trim();
+  (!text.is_empty()).then(|| text.to_string())
+}

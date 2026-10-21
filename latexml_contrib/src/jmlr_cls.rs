@@ -102,12 +102,12 @@ LoadDefinitions!({
   );
   // (a space; a `" "` string body would tokenize as an empty line, `\par`: KNOWN_PERL_ERRORS #984)
   DefMacro!(T_CS!("\\And"), None, Tokens!(T_SPACE!()));
-  // \acks{text} — JMLR Acknowledgments-and-Disclosure-of-Funding
-  // section. Author body; emit as structural ltx:acknowledgements
-  // (matches jmlr2e \acks treatment from commit 78bd49f1e2).
+  // jmlr.cls:595 `\newcommand{\acks}[1]{\section*{Acknowledgments}#1}`: the acknowledgments under the heading the
+  // class prints (the binding wrote the slug "acknowledgments-disclosure-of-funding", which the XSLT printed). Guard
+  // `perfect_kernel_batch78c::jmlr_acknowledgements_carry_the_printed_heading`.
   DefConstructor!(
     "\\acks{}",
-    "<ltx:acknowledgements name='acknowledgments-disclosure-of-funding'>#1</ltx:acknowledgements>"
+    "<ltx:acknowledgements name='Acknowledgments'>#1</ltx:acknowledgements>"
   );
   DefMacro!("\\clearauthor{}", "\\author{#1}");
 

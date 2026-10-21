@@ -2,8 +2,8 @@
 % oracle:  pdflatex 0 errors; "Figure 1: Schematic." and "Table 1: Values." in CMR10, no small caps
 % engines: rust 78a r1, r2 = <tag close=". "> in small caps (caption3's stand-in marked caption's kernel only);
 %          int40c and perl = "Figure 1:"
-% expect:  0 errors, 0 warnings; <tag close=": ">, no small caps (fontsize 90% is subcaption's `\small`, Perl's
-%          subcaption.sty.ltxml:34-35, not pdflatex's)
+% expect:  0 errors, 0 warnings; <tag close=": ">, no small caps, the text size (78c; fontsize 90% before, Perl's
+%          subcaption.sty.ltxml:34-35)
 % status:  GREEN (78a r3)
 % preload: ar5iv.sty
 \documentclass{jfm}

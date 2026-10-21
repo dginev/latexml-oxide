@@ -1167,7 +1167,7 @@ fn autoref_names_follow_hyperref() {
       (
         "figure",
         "S0.F1",
-        r##"<figure inlist="lof" labels="LABEL:f" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="autoref">Fig. 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure inlist="lof" labels="LABEL:sf" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="autoref">Fig. 1a</tag><tag role="refnum">1a</tag></tags><toccaption><tag close=" ">a</tag>S</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">S</text></caption></figure><toccaption><tag close=" ">1</tag>C</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">C</text></caption></figure>"##,
+        r##"<figure inlist="lof" labels="LABEL:f" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="autoref">Fig. 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure inlist="lof" labels="LABEL:sf" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="autoref">Fig. 1a</tag><tag role="refnum">1a</tag></tags><toccaption><tag close=" ">a</tag>S</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">S</text></caption></figure><toccaption><tag close=" ">1</tag>C</toccaption><caption><tag close=": ">Figure 1</tag>C</caption></figure>"##,
       ),
       (
         "theorem",

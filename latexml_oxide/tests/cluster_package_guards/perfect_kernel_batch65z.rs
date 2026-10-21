@@ -24,10 +24,10 @@ fn caption_subcaption_setup_list_entry_and_text() {
     "../../../tools/perfect_kernel/repros/package-bindings/caption_subcaptionsetup_listentry_text.tex"
   ));
   assert_contains(&xml, &[
-    r#"<p xml:id="S0.F1.2"><text fontsize="90%" xml:id="S0.F1.2.1">(a)</text></p>"#,
+    r#"<p xml:id="S0.F1.1"><text fontsize="90%" xml:id="S0.F1.1.1">(a)</text></p>"#,
     r#"<figure inlist="lof" labels="LABEL:fig:entry" xml:id="S0.F2">"#,
     r#"<tag role="refnum">2</tag>"#,
-    ">Figure 2</text>: Text only</p>",
+    r#"<p xml:id="fig1.1">Figure 2: Text only</p>"#,
   ]);
 }
 

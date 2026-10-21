@@ -36,8 +36,17 @@ LoadDefinitions!({
   // `\usepackage[authoryear]{natbib}` is LaTeX's "Option clash", its options dropped — binding/content.rs
   // `apply_new_options_on_reload`. Under `natbib=false` (acmart.cls:131-138) the class loads no natbib: the binding's
   // load stays an early one, which the document's own load replaces.)
+  // acmart.cls:379-393: the class's two citation styles, `\citestyle{acmnumeric}` (numbers in square brackets, ","
+  // between them: "[1, 2]") its default under natbib, `\citestyle{acmauthoryear}` the author-year one ("[Able 2001]").
+  // Perl's binding (acmart.cls.ltxml:23) only loads natbib, so acmart citations came out author-year "(Able, 2001)"
+  // (KNOWN_PERL_ERRORS #1023; about 61,700 papers, witness 2112.15328). Guard
+  // `perfect_kernel_batch78c::acmart_citations_are_numeric_by_default`.
+  RawTeX!(r"\newcommand{\bibstyle@acmauthoryear}{\setcitestyle{authoryear,open={[},close={]},citesep={;},aysep={},%
+yysep={,},notesep={, }}}
+\newcommand{\bibstyle@acmnumeric}{\setcitestyle{numbers,sort&compress,open={[},close={]},citesep={,},notesep={, }}}");
   if acmart_natbib_option()? {
     AssignValue!("natbib.sty:requested_by_binding" => false, Some(Scope::Global));
+    RawTeX!(r"\citestyle{acmnumeric}");
   }
   RequirePackage!("textcomp");
   RequirePackage!("graphicx");

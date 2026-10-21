@@ -3,9 +3,9 @@
 % oracle:  pdflatex (with that svmult.cls; TeX Live ships none) 0 errors: "Chapter 2 Afterword", then "2 Notes"
 % engines: rust 78a r1 = "Afterword" unnumbered and "1.2 Notes" (book's `\backmatter`, KNOWN_PERL_ERRORS #1016);
 %          int40c and perl = "Chapter 2 Afterword", "2.1 Notes"
-% expect:  0 errors, 0 warnings; the back-matter chapter "Chapter 2", its section "2.1" (svmult's own "2" section
-%          numbers are not modelled)
-% status:  GREEN (78a r2)
+% expect:  0 errors, 0 warnings; the back-matter chapter "Chapter 2", its section "2" (svmult's `\thesection`, which
+%          the chapter does not reset: 78c)
+% status:  GREEN (78a r2; "2" since 78c)
 % preload: ar5iv.sty
 \documentclass{svmult}
 \begin{document}

@@ -288,9 +288,8 @@ fn llncs_item_labels_are_the_class_s() {
 /// caption font, no small caps, the sub-caption's "(a)" at its size. Red (78a r1): `close=". "`, the labels and the
 /// "(a)" in small caps. Witnesses 1711.01065, 2205.10181, 2507.07213, 1805.00129 and 1612.03374 (subfig), 2008.04616
 /// (caption). Repro
-/// class-bindings/jfm_caption/jfm_copy_caption_yields_to_subcaption. (The main caption's `fontsize="90%"` is a known
-/// artifact, pinned as it is: subcaption's `\small` caption font from Perl's subcaption.sty.ltxml:34-35, where pdflatex
-/// sets the text font, CMR10 — a SYNC_STATUS row.)
+/// class-bindings/jfm_caption/jfm_copy_caption_yields_to_subcaption. (The main caption at the text size, as pdflatex
+/// sets it in CMR10, since 78c: subcaption's `\small` is the sub-captions' alone, KNOWN_PERL_ERRORS #1021.)
 #[test]
 fn jfm_copy_caption_yields_to_caption_loaders() {
   assert_clean(
@@ -299,15 +298,14 @@ fn jfm_copy_caption_yields_to_caption_loaders() {
     &[(
       "figure",
       "S0.F1",
-      "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag><text fontsize=\"90%\" xml:id=\"S0.F1.1\">Figure \
-       1</text></tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.2\"/></tag><tag role=\"refnum\">1</tag><tag \
-       role=\"typerefnum\">Figure 1</tag></tags><figure inlist=\"lof\" xml:id=\"S0.F1.sf1\"><tags><tag><text \
-       fontsize=\"90%\" xml:id=\"S0.F1.sf1.1\">(a)</text></tag><tag role=\"autoref\">Figure\u{a0}1a<text \
-       xml:id=\"S0.F1.sf1.2\"/></tag><tag role=\"refnum\">1a</tag></tags><toccaption><tag close=\" \">a</tag>Left.\
-       </toccaption><caption><tag close=\" \"><text fontsize=\"90%\" xml:id=\"S0.F1.sf1.3\">(a)</text></tag><text \
-       fontsize=\"90%\" xml:id=\"S0.F1.sf1.4\">Left.</text></caption></figure><toccaption><tag close=\" \">1</tag>\
-       Schematic.</toccaption><caption><tag close=\": \"><text fontsize=\"90%\" xml:id=\"S0.F1.3\">Figure 1</text>\
-       </tag><text fontsize=\"90%\" xml:id=\"S0.F1.4\">Schematic.</text></caption></figure>",
+      "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1\
+       <text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags>\
+       <figure inlist=\"lof\" xml:id=\"S0.F1.sf1\"><tags><tag><text fontsize=\"90%\" xml:id=\"S0.F1.sf1.1\">(a)\
+       </text></tag><tag role=\"autoref\">Figure\u{a0}1a<text xml:id=\"S0.F1.sf1.2\"/></tag><tag role=\"refnum\">1a\
+       </tag></tags><toccaption><tag close=\" \">a</tag>Left.</toccaption><caption><tag close=\" \">\
+       <text fontsize=\"90%\" xml:id=\"S0.F1.sf1.3\">(a)</text></tag>\
+       <text fontsize=\"90%\" xml:id=\"S0.F1.sf1.4\">Left.</text></caption></figure><toccaption><tag close=\" \">1\
+       </tag>Schematic.</toccaption><caption><tag close=\": \">Figure 1</tag>Schematic.</caption></figure>",
     )],
   );
   // subfig loads caption too (1805.00129): "Figure 1:" upright, "(a)" plain.
@@ -393,7 +391,8 @@ fn jfm_copy_caption_kept_with_floatrow() {
 }
 
 /// svmult's `\backmatter` keeps the chapters numbered (svmult.cls:478-484, `%\@mainmatterfalse` commented out): the
-/// back-matter chapter is "Chapter 2". Red (78a r1, book's `\backmatter`): "Afterword" unnumbered, "1.2 Notes".
+/// back-matter chapter is "Chapter 2", its section "2 Notes" (svmult's `\newcounter` `\thesection`, not reset by the
+/// chapter: 78c, KNOWN_PERL_ERRORS #1026). Red (78a r1, book's `\backmatter`): "Afterword" unnumbered, "1.2 Notes".
 /// Witness 1905.01770's svmult.cls. Repro sectioning-frontmatter/svmult_backmatter_chapters_stay_numbered.
 #[test]
 fn svmult_backmatter_chapters_stay_numbered() {
@@ -403,11 +402,11 @@ fn svmult_backmatter_chapters_stay_numbered() {
     &[(
       "chapter",
       "Ch2",
-      "<chapter inlist=\"toc\" xml:id=\"Ch2\"><tags><tag>Chapter 2</tag><tag role=\"refnum\">2</tag><tag \
-       role=\"typerefnum\">Chapter 2</tag></tags><title><tag close=\" \">Chapter 2</tag>Afterword</title><toctitle><tag \
-       close=\" \">2</tag>Afterword</toctitle><section inlist=\"toc\" xml:id=\"Ch2.S1\"><tags><tag>2.1</tag><tag \
-       role=\"refnum\">2.1</tag><tag role=\"typerefnum\">\u{00A7}2.1</tag></tags><title><tag close=\" \">2.1</tag>\
-       Notes</title><para xml:id=\"Ch2.S1.p1\"><p xml:id=\"Ch2.S1.p1.1\">Text.</p></para></section></chapter>",
+      "<chapter inlist=\"toc\" xml:id=\"Ch2\"><tags><tag>Chapter 2</tag><tag role=\"refnum\">2</tag>\
+       <tag role=\"typerefnum\">Chapter 2</tag></tags><title><tag close=\" \">Chapter 2</tag>Afterword</title>\
+       <toctitle><tag close=\" \">2</tag>Afterword</toctitle><section inlist=\"toc\" xml:id=\"Ch2.S2\"><tags><tag>2\
+       </tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">§2</tag></tags><title><tag close=\" \">2\
+       </tag>Notes</title><para xml:id=\"Ch2.S2.p1\"><p xml:id=\"Ch2.S2.p1.1\">Text.</p></para></section></chapter>",
     )],
   );
 }
@@ -516,11 +515,10 @@ fn jfm_copy_caption_yields_to_caption_loaders_after_floatrow() {
     &[(
       "figure",
       "S0.F1",
-      "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag><text fontsize=\"90%\" xml:id=\"S0.F1.1\">Figure \
-       1</text></tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.2\"/></tag><tag role=\"refnum\">1</tag><tag \
-       role=\"typerefnum\">Figure 1</tag></tags><toccaption><tag close=\" \">1</tag>Schematic.</toccaption><caption><tag \
-       close=\": \"><text fontsize=\"90%\" xml:id=\"S0.F1.3\">Figure 1</text></tag><text fontsize=\"90%\" \
-       xml:id=\"S0.F1.4\">Schematic.</text></caption></figure>",
+      "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text \
+       xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><toccaption>\
+       <tag close=\" \">1</tag>Schematic.</toccaption><caption><tag close=\": \">Figure 1</tag>Schematic.</caption>\
+       </figure>",
     )],
   );
   assert_clean(
@@ -548,9 +546,10 @@ fn jfm_copy_caption_yields_to_caption_loaders_after_floatrow() {
 }
 
 /// svmult's main-matter `\appendix` is a `\par` (svmult.cls:713 `\renewcommand\appendix{\par}`, the article appendix of
-/// a contributed chapter): the sections count on, the appendix's third section is ".3" (pdflatex "3 Proofs"; the "."
-/// is LaTeXML's appendix `\thechapter`, as before). Red (78a r2, book's section reset): ".1", colliding with the main
-/// text's numbers. After `\backmatter` (:482 `\let\appendix=\bppendix`) the book appendix resets: ".1", as pdflatex.
+/// a contributed chapter): the sections count on, the third is a section "3" (pdflatex "3 Proofs"; 78c, the `\par`
+/// alone and svmult's `\thesection`, KNOWN_PERL_ERRORS #1026; 78a r3 ".3", an `ltx:appendix` of LaTeXML's appendix
+/// `\thechapter`). Red (78a r2, book's section reset): ".1", colliding with the main text's numbers. After
+/// `\backmatter` (:482 `\let\appendix=\bppendix`) the book appendix resets: ".1", as pdflatex.
 /// Witnesses 1808.08417 (sections 5, 6; "Theorem 6.1"), 2108.07775 ("8 Appendix"), 2212.13109 ("9 Appendix:
 /// Octonions"). Repros sectioning-frontmatter/svmult_appendix_keeps_counting_sections,
 /// sectioning-frontmatter/svmult_backmatter_appendix_restarts_sections.
@@ -561,10 +560,10 @@ fn svmult_appendix_keeps_counting_sections() {
     &[],
     &[(
       "section",
-      "A0.S3",
-      "<section inlist=\"toc\" xml:id=\"A0.S3\"><tags><tag>.3</tag><tag role=\"refnum\">.3</tag><tag \
-       role=\"typerefnum\">3.\u{00A7}</tag></tags><title><tag close=\" \">.3</tag>Proofs</title><para \
-       xml:id=\"A0.S3.p1\"><p xml:id=\"A0.S3.p1.1\">P.</p></para></section>",
+      "Ch1.S3",
+      "<section inlist=\"toc\" xml:id=\"Ch1.S3\"><tags><tag>3</tag><tag role=\"refnum\">3</tag><tag \
+       role=\"typerefnum\">\u{00A7}3</tag></tags><title><tag close=\" \">3</tag>Proofs</title><para \
+       xml:id=\"Ch1.S3.p1\"><p xml:id=\"Ch1.S3.p1.1\">P.</p></para></section>",
     )],
   );
   assert_clean(

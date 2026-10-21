@@ -1442,9 +1442,9 @@ fn copy_load_class_meets_the_class_slot() {
     &xml,
     "section",
     &["xml:id=\"Ch0.S1\""],
-    "<section inlist=\"toc\" xml:id=\"Ch0.S1\"><tags><tag>0.1</tag><tag role=\"refnum\">0.1</tag><tag \
-     role=\"typerefnum\">§0.1</tag></tags><title><tag close=\" \">0.1</tag>Intro</title><para xml:id=\"Ch0.S1.p1\"><p \
-     xml:id=\"Ch0.S1.p1.1\">Text SV.</p></para></section>",
+    "<section inlist=\"toc\" xml:id=\"Ch0.S1\"><tags><tag>1</tag><tag role=\"refnum\">1</tag>\
+     <tag role=\"typerefnum\">§1</tag></tags><title><tag close=\" \">1</tag>Intro</title>\
+     <para xml:id=\"Ch0.S1.p1\"><p xml:id=\"Ch0.S1.p1.1\">Text SV.</p></para></section>",
   );
 }
 

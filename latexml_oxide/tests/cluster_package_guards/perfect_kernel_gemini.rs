@@ -2337,8 +2337,7 @@ fn bare_subfloat_has_a_phantom_caption() {
     "figure",
     &[r#"xml:id="S0.F1""#],
     &format!(
-      r#"<figure xml:id="S0.F1"><tags><tag>{}</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags>{}{}</figure>"#,
-      small("Figure 1"),
+      r#"<figure xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags>{}{}</figure>"#,
       panel("1", "a", "A"),
       panel("2", "b", "C")
     ),
@@ -2347,13 +2346,9 @@ fn bare_subfloat_has_a_phantom_caption() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F2""#],
-    &format!(
-      concat!(
-        r#"<figure inlist="lof" xml:id="S0.F2"><tags><tag>{fig}</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags>"#,
-        r#"<p>B</p><toccaption><tag close=" ">2</tag>B</toccaption><caption><tag close=": ">{fig}</tag>{b}</caption></figure>"#
-      ),
-      fig = small("Figure 2"),
-      b = small("B")
+    concat!(
+      r#"<figure inlist="lof" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags>"#,
+      r#"<p>B</p><toccaption><tag close=" ">2</tag>B</toccaption><caption><tag close=": ">Figure 2</tag>B</caption></figure>"#
     ),
   );
 }
@@ -2502,7 +2497,7 @@ fn subcaptiongroup_numbers_the_panels() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r#"<figure inlist="lof" labels="LABEL:a LABEL:b LABEL:f" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p>x</p><toccaption><tag close=" ">1</tag>Grouped</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Grouped</text></caption></figure>"#,
+    r#"<figure inlist="lof" labels="LABEL:a LABEL:b LABEL:f" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p>x</p><toccaption><tag close=" ">1</tag>Grouped</toccaption><caption><tag close=": ">Figure 1</tag>Grouped</caption></figure>"#,
   );
 }
 
@@ -2531,7 +2526,7 @@ fn phantom_numbered_panel_keeps_its_place_and_labels() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r#"<figure inlist="lof" labels="LABEL:main" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>x</p></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure>"#,
+    r#"<figure inlist="lof" labels="LABEL:main" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>x</p></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": ">Figure 1</tag>Main</caption></figure>"#,
   );
 }
 
@@ -2587,16 +2582,16 @@ fn subcaptiongroup_steps_the_figure_counter_once() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F2""#],
-    r#"<figure inlist="lof" labels="LABEL:c LABEL:g" xml:id="S0.F2"><tags><tag><text fontsize="90%">Figure 2</text></tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure inlist="lof" labels="LABEL:d" xml:id="S0.F2.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">2b</tag></tags><p>y</p><toccaption><tag close=" ">b</tag>Sub</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Sub</text></caption></figure><toccaption><tag close=" ">2</tag>Mixed</toccaption><caption><tag close=": "><text fontsize="90%">Figure 2</text></tag><text fontsize="90%">Mixed</text></caption></figure>"#,
+    r#"<figure inlist="lof" labels="LABEL:c LABEL:g" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure inlist="lof" labels="LABEL:d" xml:id="S0.F2.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">2b</tag></tags><p>y</p><toccaption><tag close=" ">b</tag>Sub</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Sub</text></caption></figure><toccaption><tag close=" ">2</tag>Mixed</toccaption><caption><tag close=": ">Figure 2</tag>Mixed</caption></figure>"#,
   );
   for (id, figure) in [
     (
       "S0.F1",
-      r#"<figure inlist="lof" labels="LABEL:a LABEL:b LABEL:f" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p>x</p><toccaption><tag close=" ">1</tag>Grouped</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Grouped</text></caption></figure>"#,
+      r#"<figure inlist="lof" labels="LABEL:a LABEL:b LABEL:f" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p>x</p><toccaption><tag close=" ">1</tag>Grouped</toccaption><caption><tag close=": ">Figure 1</tag>Grouped</caption></figure>"#,
     ),
     (
       "S0.F3",
-      r#"<figure inlist="lof" labels="LABEL:h" xml:id="S0.F3"><tags><tag><text fontsize="90%">Figure 3</text></tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><p>z</p><toccaption><tag close=" ">3</tag>Third</toccaption><caption><tag close=": "><text fontsize="90%">Figure 3</text></tag><text fontsize="90%">Third</text></caption></figure>"#,
+      r#"<figure inlist="lof" labels="LABEL:h" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><p>z</p><toccaption><tag close=" ">3</tag>Third</toccaption><caption><tag close=": ">Figure 3</tag>Third</caption></figure>"#,
     ),
   ] {
     latexml::util::test::assert_element(&xml, "figure", &[&format!(r#"xml:id="{id}""#)], figure);
@@ -2611,13 +2606,13 @@ fn subcaptiongroup_steps_the_figure_counter_once() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F2""#],
-    r#"<figure inlist="lof" labels="LABEL:f2" xml:id="S0.F2"><tags><tag><text fontsize="90%">Figure 2</text></tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure inlist="lof" labels="LABEL:a" xml:id="S0.F2.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">2a</tag></tags><rule height="28.5pt" width="28.5pt"/><toccaption><tag close=" ">a</tag>A</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">A</text></caption></figure><toccaption><tag close=" ">2</tag>Two</toccaption><caption><tag close=": "><text fontsize="90%">Figure 2</text></tag><text fontsize="90%">Two</text></caption></figure>"#,
+    r#"<figure inlist="lof" labels="LABEL:f2" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure inlist="lof" labels="LABEL:a" xml:id="S0.F2.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">2a</tag></tags><rule height="28.5pt" width="28.5pt"/><toccaption><tag close=" ">a</tag>A</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">A</text></caption></figure><toccaption><tag close=" ">2</tag>Two</toccaption><caption><tag close=": ">Figure 2</tag>Two</caption></figure>"#,
   );
   latexml::util::test::assert_element(
     &xml,
     "figure",
     &[r#"xml:id="S0.F3""#],
-    r#"<figure inlist="lof" labels="LABEL:f3" xml:id="S0.F3"><tags><tag><text fontsize="90%">Figure 3</text></tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><rule height="28.5pt" width="28.5pt"/><toccaption><tag close=" ">3</tag>Three</toccaption><caption><tag close=": "><text fontsize="90%">Figure 3</text></tag><text fontsize="90%">Three</text></caption></figure>"#,
+    r#"<figure inlist="lof" labels="LABEL:f3" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><rule height="28.5pt" width="28.5pt"/><toccaption><tag close=" ">3</tag>Three</toccaption><caption><tag close=": ">Figure 3</tag>Three</caption></figure>"#,
   );
 }
 
@@ -2633,7 +2628,7 @@ fn phantom_numbered_outer_keeps_its_captioned_panel() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r#"<figure labels="LABEL:outer" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure inlist="lof" labels="LABEL:sub" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>y</p><toccaption><tag close=" ">a</tag>Sub</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Sub</text></caption></figure></figure>"#,
+    r#"<figure labels="LABEL:outer" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure inlist="lof" labels="LABEL:sub" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>y</p><toccaption><tag close=" ">a</tag>Sub</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Sub</text></caption></figure></figure>"#,
   );
 }
 

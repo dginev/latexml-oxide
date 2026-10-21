@@ -3,8 +3,7 @@
 %          subcaption loads) replaces the class's `\@makecaption`
 % engines: rust 78a r1 = <tag close=". "> with the labels (and the sub-caption's "(a)") in small caps
 % expect:  0 errors, 0 warnings; <tag close=": ">, no small caps, "(a)" at the sub-caption size; the main caption at
-%          fontsize 90%, subcaption's `\small` (Perl's subcaption.sty.ltxml:34-35), where pdflatex sets the text font
-%          (CMR10) — a known artifact (SYNC_STATUS)
+%          the text size (78c, KNOWN_PERL_ERRORS #1021; fontsize 90% before, Perl's subcaption.sty.ltxml:34-35)
 % status:  GREEN (78a r2)
 % preload: ar5iv.sty
 \documentclass{jfm}

@@ -1,0 +1,12 @@
+% witness: sel78c item 5, the control: amstex.tex:588 \TagsOnRight puts the tags on the right
+% oracle:  pdftex 0 errors: "(1)" on the right of "a=b"
+% engines: rust int43a = no ltx_leqno
+% expect:  0 errors; <document> without ltx_leqno
+% status:  CONTROL
+\input amstex
+\documentstyle{amsppt}
+\TagsOnRight
+\document
+Text.
+$$ a=b \tag 1 $$
+\enddocument

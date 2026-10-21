@@ -1,0 +1,12 @@
+% witness: 2511.10879 (its jmlr2e.sty :372 "Acknowledgments and Disclosure of Funding"), 1512.04829 (:289
+%          "Acknowledgments"); with new/jmlr2e.sty or old/jmlr2e.sty beside it (Rust-only contrib binding)
+% oracle:  pdflatex 0 errors: the heading "Acknowledgments and Disclosure of Funding" (new) / "Acknowledgments" (old)
+% engines: rust int43a = name="acknowledgments-disclosure-of-funding", printed as the heading
+% expect:  0 errors; <acknowledgements name="Acknowledgments and Disclosure of Funding"> / name="Acknowledgments"
+% status:  RED (int43a) -> GREEN (78c)
+\documentclass{article}
+\usepackage{jmlr2e}
+\begin{document}
+Text.
+\acks{We thank Ann.}
+\end{document}

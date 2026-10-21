@@ -353,11 +353,21 @@ LoadDefinitions!({
   DefMacro!("\\corresp{}",
     "\\lx@add@frontmatter{ltx:note}[role=corresponding]{#1}");
 
-  // Section numbering — default journal mode uses Roman numerals
-  DefMacro!("\\thesection", "\\Roman{section}");
-  DefMacro!("\\thesubsection", "\\mbox{\\thesection-\\Alph{subsection}}");
-  DefMacro!("\\thesubsubsection", "\\thesubsection\\arabic{subsubsection}");
-  DefMacro!("\\theparagraph", "\\thesubsubsection\\alph{paragraph}");
+  // Section numbering (IEEEtran.cls:2545-2556, Perl IEEEtran.cls.ltxml:160-174, after the options): compsoc is all
+  // arabic ("1.1", which its heading forms `\the<level>dis` print, :2570-2581), the other modes Roman ("I-A"). A
+  // Roman-only port numbered compsoc "I.1" (rev78c probe ie_compsoc; 63 of 558 IEEEtran papers use compsoc). Guard
+  // `perfect_kernel_batch78c::ieeetran_headings_print_their_heading_forms`.
+  RawTeX!(r"\ifCLASSOPTIONcompsoc
+\def\thesection{\arabic{section}}
+\def\thesubsection{\thesection.\arabic{subsection}}
+\def\thesubsubsection{\thesubsection.\arabic{subsubsection}}
+\def\theparagraph{\thesubsubsection.\arabic{paragraph}}
+\else
+\def\thesection{\Roman{section}}
+\def\thesubsection{\mbox{\thesection-\Alph{subsection}}}
+\def\thesubsubsection{\thesubsection\arabic{subsubsection}}
+\def\theparagraph{\thesubsubsection\alph{paragraph}}
+\fi");
 
   // Font primitives (Perl L183-186)
   DefPrimitive!("\\ltx@ieeetran@it", None, font => { shape => "italic", family => "serif", series => "medium" }, locked => true);
@@ -657,7 +667,11 @@ LoadDefinitions!({
   //   layout only, so nothing here; 0705.1682, 0705.3677, 0705.1922 in V1.7a);
   // - :2085-2153 the IED list parameters (`define_ied_lists`, above);
   // - :2571-2587 the heading forms of the section numbers, `\thesectiondis` … `\theparagraphdis` (1605.01233,
-  //   1702.07429, 1610.00529);
+  //   1702.07429, 1610.00529), which :5397/:5402 `\@seccntformat` prints in the heading ("I.", "A.", "1)", where a
+  //   `\ref` reads "I-A"): the heading tags' `\fnum@<level>` (base_utilities.rs `\lx@fnum@@`; Perl's binding has no
+  //   heading forms, KNOWN_PERL_ERRORS #1022; about 178,000 IEEEtran papers with a `\subsection`). An appendix keeps
+  //   its "Appendix A" (the `appendix` type's own tag), its subsections "A.". Guard
+  //   `perfect_kernel_batch78c::ieeetran_headings_print_their_heading_forms`;
   // - :4228-4347 the page styles `\ps@headings` (which documents' `\confheader` recipes call; 1805.00151,
   //   1805.02797, 1811.10132, 1908.05569, 1910.06140), `\ps@IEEEtitlepagestyle`, `\ps@IEEEpeerreviewcoverpagestyle`,
   //   with their `\@IEEEheaderstyle`/`\@IEEEfooterstyle` and :6127-6150 `\@IEEEpubidpullup`, `\@IEEEpubid`,
@@ -711,6 +725,8 @@ LoadDefinitions!({
   \def\thesubsubsectiondis{\arabic{subsubsection})}
   \def\theparagraphdis{\alph{paragraph})}
 \fi
+\def\fnum@section{\thesectiondis}\def\fnum@subsection{\thesubsectiondis}
+\def\fnum@subsubsection{\thesubsubsectiondis}\def\fnum@paragraph{\theparagraphdis}
 \def\@IEEEheaderstyle{\normalfont\scriptsize}
 \def\@IEEEfooterstyle{\normalfont\scriptsize}
 \ifCLASSOPTIONcompsoc

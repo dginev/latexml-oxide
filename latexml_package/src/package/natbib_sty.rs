@@ -120,6 +120,13 @@ fn set_citation_style(pairs: &[(&str, Option<Tokens>)]) {
       "comma" => {
         assign_value("CITE_SEPARATOR", Stored::Token(T_OTHER!(",")), None);
       },
+      // natbib.sty:338-339 `citesep=<sep>` sets `\NAT@sep` (Perl's keys lack it, KNOWN_PERL_ERRORS #1023): acmart.cls:385
+      // `\bibstyle@acmnumeric` sets `citesep={,}`.
+      "citesep" => {
+        if let Some(v) = value {
+          assign_value("CITE_SEPARATOR", Stored::Tokens(v.clone()), None);
+        }
+      },
       // Perl L399: AssignValue(CITE_AY_SEPARATOR => $value);
       "aysep" => {
         if let Some(v) = value {
@@ -1017,9 +1024,9 @@ LoadDefinitions!({
     // any other; Perl's fall-through (natbib.sty.ltxml:402-404) instead resets
     // the style to authoryear, so `numbers,sort&compress` lost `numbers`.
     // Only natbib's words reach the style (OXIDIZED_DESIGN #278).
-    const WORDS: [&str; 15] = [
+    const WORDS: [&str; 16] = [
       "round", "square", "angle", "curly", "semicolon", "colon", "comma", "authoryear",
-      "numbers", "super", "open", "close", "aysep", "yysep", "notesep",
+      "numbers", "super", "open", "close", "aysep", "yysep", "notesep", "citesep",
     ];
     let pairs: Vec<(&str, Option<Tokens>)> = owned
       .iter()

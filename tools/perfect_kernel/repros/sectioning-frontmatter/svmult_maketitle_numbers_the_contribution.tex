@@ -1,0 +1,17 @@
+% witness: 1801.05601 ("0.1", "0.1.1"); svmult.cls (v5.4 2007/06/25) :2141-2152 \maketitle steps the chapter under a
+%          non-star \title (\ds@book, :1044), :713 the main-matter \appendix is \par (KPE)
+% oracle:  pdflatex 0 errors (svmult.cls v5.4; TeX Live ships none): "Chapter 1", "1.1 First", "Text 1.1.", "1.2 Proofs"
+% engines: rust int43a = "0.1 First" (Ch0.S1), the appendix an ltx:appendix ".2" (A0.S2)
+% expect:  0 errors; sections Ch1.S1 "1.1" and Ch1.S2 "1.2"
+% status:  RED (int43a) -> GREEN (78c)
+\documentclass{svmult}
+\begin{document}
+\title{Contribution}
+\author{Ann}
+\maketitle
+\section{First}\label{f}
+Text \ref{f}.
+\appendix
+\section{Proofs}
+Proof.
+\end{document}

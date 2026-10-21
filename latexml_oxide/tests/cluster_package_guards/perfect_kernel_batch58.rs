@@ -653,17 +653,17 @@ fn continued_float_continues_one_step() {
     (
       "figure",
       "S0.F2",
-      r##"<figure inlist="lof" labels="LABEL:b LABEL:c" xml:id="S0.F2"><tags><tag><text fontsize="90%">Figure 2</text></tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><toccaption><tag close=" ">1</tag>B</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">B</text></caption><toccaption><tag close=" ">2</tag>C</toccaption><caption><tag close=": "><text fontsize="90%">Figure 2</text></tag><text fontsize="90%">C</text></caption></figure>"##,
+      r##"<figure inlist="lof" labels="LABEL:b LABEL:c" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><toccaption><tag close=" ">1</tag>B</toccaption><caption><tag close=": ">Figure 1</tag>B</caption><toccaption><tag close=" ">2</tag>C</toccaption><caption><tag close=": ">Figure 2</tag>C</caption></figure>"##,
     ),
     (
       "figure",
       "S0.F6",
-      r##"<figure inlist="lof" labels="LABEL:h LABEL:hh" xml:id="S0.F6"><tags><tag><text fontsize="90%">Figure 6</text></tag><tag role="refnum">6</tag><tag role="typerefnum">Figure 6</tag></tags><toccaption><tag close=" ">6</tag>H</toccaption><caption><tag close=": "><text fontsize="90%">Figure 6</text></tag><text fontsize="90%">H</text></caption></figure>"##,
+      r##"<figure inlist="lof" labels="LABEL:h LABEL:hh" xml:id="S0.F6"><tags><tag>Figure 6</tag><tag role="refnum">6</tag><tag role="typerefnum">Figure 6</tag></tags><toccaption><tag close=" ">6</tag>H</toccaption><caption><tag close=": ">Figure 6</tag>H</caption></figure>"##,
     ),
     (
       "figure",
       "S0.F7",
-      r##"<figure inlist="lof" labels="LABEL:i" xml:id="S0.F7"><tags><tag><text fontsize="90%">Figure 7</text></tag><tag role="refnum">7</tag><tag role="typerefnum">Figure 7</tag></tags><toccaption><tag close=" ">7</tag>I</toccaption><caption><tag close=": "><text fontsize="90%">Figure 7</text></tag><text fontsize="90%">I</text></caption></figure>"##,
+      r##"<figure inlist="lof" labels="LABEL:i" xml:id="S0.F7"><tags><tag>Figure 7</tag><tag role="refnum">7</tag><tag role="typerefnum">Figure 7</tag></tags><toccaption><tag close=" ">7</tag>I</toccaption><caption><tag close=": ">Figure 7</tag>I</caption></figure>"##,
     ),
   ]);
   let wrapper = include_str!(
@@ -673,17 +673,17 @@ fn continued_float_continues_one_step() {
     (
       "figure",
       "S0.F2",
-      r##"<figure inlist="lof" labels="LABEL:b LABEL:c" xml:id="S0.F2"><tags><tag><text fontsize="90%">Figure 2</text></tag><tag role="autoref">Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><toccaption><tag close=" ">1</tag>B</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">B</text></caption><toccaption><tag close=" ">2</tag>C</toccaption><caption><tag close=": "><text fontsize="90%">Figure 2</text></tag><text fontsize="90%">C</text></caption></figure>"##,
+      r##"<figure inlist="lof" labels="LABEL:b LABEL:c" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="autoref">Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><toccaption><tag close=" ">1</tag>B</toccaption><caption><tag close=": ">Figure 1</tag>B</caption><toccaption><tag close=" ">2</tag>C</toccaption><caption><tag close=": ">Figure 2</tag>C</caption></figure>"##,
     ),
     (
       "figure",
       "S0.F6",
-      r##"<figure inlist="lof" labels="LABEL:h LABEL:hh" xml:id="S0.F6"><tags><tag><text fontsize="90%">Figure 6</text></tag><tag role="autoref">Figure 6</tag><tag role="refnum">6</tag><tag role="typerefnum">Figure 6</tag></tags><toccaption><tag close=" ">6</tag>H</toccaption><caption><tag close=": "><text fontsize="90%">Figure 6</text></tag><text fontsize="90%">H</text></caption></figure>"##,
+      r##"<figure inlist="lof" labels="LABEL:h LABEL:hh" xml:id="S0.F6"><tags><tag>Figure 6</tag><tag role="autoref">Figure 6</tag><tag role="refnum">6</tag><tag role="typerefnum">Figure 6</tag></tags><toccaption><tag close=" ">6</tag>H</toccaption><caption><tag close=": ">Figure 6</tag>H</caption></figure>"##,
     ),
     (
       "figure",
       "S0.F7",
-      r##"<figure inlist="lof" labels="LABEL:i" xml:id="S0.F7"><tags><tag><text fontsize="90%">Figure 7</text></tag><tag role="autoref">Figure 7</tag><tag role="refnum">7</tag><tag role="typerefnum">Figure 7</tag></tags><toccaption><tag close=" ">7</tag>I</toccaption><caption><tag close=": "><text fontsize="90%">Figure 7</text></tag><text fontsize="90%">I</text></caption></figure>"##,
+      r##"<figure inlist="lof" labels="LABEL:i" xml:id="S0.F7"><tags><tag>Figure 7</tag><tag role="autoref">Figure 7</tag><tag role="refnum">7</tag><tag role="typerefnum">Figure 7</tag></tags><toccaption><tag close=" ">7</tag>I</toccaption><caption><tag close=": ">Figure 7</tag>I</caption></figure>"##,
     ),
   ]);
 }
@@ -770,7 +770,7 @@ fn floatrow_subcaption_stays_in_its_panel() {
     (
       "figure",
       "S0.F1",
-      r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><logical-block vattach="bottom"><figure align="center" inlist="lof" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>SubA</p><toccaption><tag close=" ">a</tag>SA</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">SA</text></caption></figure><figure align="center" inlist="lof" xml:id="S0.F1.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">1b</tag></tags><p>SubB</p><toccaption><tag close=" ">b</tag>SB</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">SB</text></caption></figure></logical-block><rule depth="0.0pt" height="0.0pt" width="100%"/><figure vattach="top" xml:id="S0.F1.fig1"><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption><p vattach="top"><text fontsize="80%">Main foot.</text></p></figure></inline-logical-block></p></figure>"##,
+      r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><logical-block vattach="bottom"><figure align="center" inlist="lof" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>SubA</p><toccaption><tag close=" ">a</tag>SA</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">SA</text></caption></figure><figure align="center" inlist="lof" xml:id="S0.F1.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">1b</tag></tags><p>SubB</p><toccaption><tag close=" ">b</tag>SB</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">SB</text></caption></figure></logical-block><rule depth="0.0pt" height="0.0pt" width="100%"/><figure vattach="top" xml:id="S0.F1.fig1"><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": ">Figure 1</tag>Main</caption><p vattach="top"><text fontsize="80%">Main foot.</text></p></figure></inline-logical-block></p></figure>"##,
     ),
     (
       "figure",
@@ -780,7 +780,7 @@ fn floatrow_subcaption_stays_in_its_panel() {
     (
       "figure",
       "S0.F2",
-      r##"<figure inlist="lof" xml:id="S0.F2"><tags><tag><text fontsize="90%">Figure 2</text></tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><para xml:id="S0.F2.p1"><p align="center" vattach="bottom">Body short</p><rule depth="0.0pt" height="0.0pt" width="100%"/></para><figure vattach="top" xml:id="S0.F2.fig1"><toccaption><tag close=" ">2</tag>Short</toccaption><caption><tag close=": "><text fontsize="90%">Figure 2</text></tag><text fontsize="90%">Long</text></caption><p vattach="top"><text fontsize="80%">Short foot.</text></p></figure></inline-logical-block></p></figure>"##,
+      r##"<figure inlist="lof" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p vattach="bottom" width="345.0pt"><inline-logical-block vattach="bottom"><para xml:id="S0.F2.p1"><p align="center" vattach="bottom">Body short</p><rule depth="0.0pt" height="0.0pt" width="100%"/></para><figure vattach="top" xml:id="S0.F2.fig1"><toccaption><tag close=" ">2</tag>Short</toccaption><caption><tag close=": ">Figure 2</tag>Long</caption><p vattach="top"><text fontsize="80%">Short foot.</text></p></figure></inline-logical-block></p></figure>"##,
     ),
   ]);
 }

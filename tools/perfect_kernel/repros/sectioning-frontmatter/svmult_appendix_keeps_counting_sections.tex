@@ -1,10 +1,11 @@
 % witness: 1808.08417 (sections 5, 6; "Theorem 6.1"), 2108.07775 ("8 Appendix"), 2212.13109 ("9 Appendix: Octonions",
 %          "10"): their svmult.cls:713 (v5.5 :720) `\renewcommand\appendix{\par}`, the article appendix, resets nothing
 % oracle:  pdflatex (with 1808.08417's svmult.cls; TeX Live ships none) 0 errors: "1 First", "2 Second", "3 Proofs"
-% engines: rust 78a r2 = ".1" (book's `\appendix` section reset); int40c, 78a r1 and perl = ".3"
-% expect:  0 errors, 0 warnings; the appendix section counts on: ".3" (the "." is LaTeXML's appendix `\thechapter`,
-%          not modelled to svmult's "3")
-% status:  GREEN (78a r3)
+% engines: rust 78a r2 = ".1" (book's `\appendix` section reset); int40c, 78a r1 and perl = ".3", an ltx:appendix of
+%          LaTeXML's appendix `\thechapter`
+% expect:  0 errors, 0 warnings; the third section counts on: a section "3" (78c: the `\par` alone, svmult's
+%          `\thesection`)
+% status:  GREEN (78a r3; "3" since 78c)
 % preload: ar5iv.sty
 \documentclass{svmult}
 \begin{document}

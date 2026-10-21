@@ -427,12 +427,10 @@ LoadDefinitions!({
   // (`\begin{abstract}`→`\lx@begin@abstract`, `\end{abstract}`→`\lx@end@abstract`
   // both deferred). arXiv/html_feedback#3436, witnesses 2411.11158, 2306.11901.
   //
-  // Frontmatter envs — internal_vertical mode for multi-paragraph bodies
-  // (declarations especially carries author prose with \par separators). Without
-  // explicit mode, restricted_horizontal default trips Endgroup mismatch on
-  // \par-containing bodies.
-  DefEnvironment!("{declarations}", "<ltx:acknowledgements name='declarations'>#body</ltx:acknowledgements>",
-    mode => "internal_vertical");
+  // `{appendices}` in internal_vertical mode for its multi-paragraph body: without an explicit mode, the
+  // restricted_horizontal default trips an Endgroup mismatch on `\par`-containing bodies. (No `{declarations}`: no
+  // sn-jnl.cls defines one — 0 of 206 shipped copies, 2021-25 — and no paper of ~23,000 sampled, 2019-25, uses it; the
+  // Springer template writes `\section*{Declarations}`/`\bmhead`, so a binding environment was speculative, rev78c.)
   DefEnvironment!("{appendices}", "<ltx:appendix>#body</ltx:appendix>",
     mode => "internal_vertical");
 });

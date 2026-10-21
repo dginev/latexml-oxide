@@ -1046,6 +1046,13 @@ LoadDefinitions!({
   // `labelfont+=bf`), a size for the caption (`small`), the rest layout. Ignored before, so
   // `\usepackage[labelsep=period]{caption}` kept "Figure 1:".
   RawTeX!(r"\def\lx@caption@optionsetup#1{\captionsetup{#1}}");
+  // A repeat `\usepackage[<options>]{caption}` runs its options as keys (caption3.sty:416-429 patches
+  // `\@onefilewithoptions` into `\caption@ExecuteOptions{caption}{<options>}`): subcaption's binding loads caption
+  // first, so a document's `\usepackage[font=small]{caption}` after `\usepackage{subcaption}` is that repeat (binding/
+  // content.rs `apply_repeat_options`; witness 1602.00134's `[font=footnotesize,labelfont=bf]`, 80 % and bold labels;
+  // 50 of 1,057 subcaption papers). The v1 options are first-load-only keys there, caption's "undefined" Error on a
+  // repeat. Guard `perfect_kernel_batch78c::caption_options_after_subcaption_apply`.
+  AssignValue!("caption.sty_keyval_setter" => "\\captionsetup", Scope::Global);
   DeclareOption!(None, {
     let option = current_option_text()?;
     let option = option.trim();

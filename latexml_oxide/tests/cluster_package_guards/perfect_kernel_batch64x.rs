@@ -1019,7 +1019,8 @@ fn amstex_end_ends_the_document() {
     &xml,
     "document",
     &[],
-    "<document xmlns=\"http://dlmf.nist.gov/LaTeXML\"><title>A title</title><para xml:id=\"p1\"><p xml:id=\"p1.1\">Some text.\n</p></para></document>",
+    "<document class=\"ltx_leqno\" xmlns=\"http://dlmf.nist.gov/LaTeXML\"><title>A title</title><para xml:id=\"p1\">\
+     <p xml:id=\"p1.1\">Some text.</p></para></document>",
   );
   let xml = convert_clean(include_str!(
     "../../../tools/perfect_kernel/repros/amstex/amsppt_bare_end.tex"
@@ -1028,7 +1029,8 @@ fn amstex_end_ends_the_document() {
     &xml,
     "document",
     &[],
-    "<document xmlns=\"http://dlmf.nist.gov/LaTeXML\"><para xml:id=\"p1\"><p xml:id=\"p1.1\">Some text.\n</p></para></document>",
+    "<document class=\"ltx_leqno\" xmlns=\"http://dlmf.nist.gov/LaTeXML\"><para xml:id=\"p1\">\
+     <p xml:id=\"p1.1\">Some text.</p></para></document>",
   );
 }
 

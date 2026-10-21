@@ -913,8 +913,7 @@ LoadDefinitions!({
   def_macro_noop("\\NoPageNumbers")?;
   def_macro_noop("\\BlackBoxes")?;
   // (`\TagsAsMath`/`\TagsAsText` are the pool's own switches, amstex.tex:590-593, which `\tag` reads.)
-  def_macro_noop("\\TagsOnLeft")?;
-  def_macro_noop("\\TagsOnRight")?;
+  // (`\TagsOnLeft`/`\TagsOnRight` are the pool's, amstex.tex:587-590, which choose the tags' side.)
   def_macro_noop("\\CenteredTagsOnSplits")?;
   def_macro_noop("\\TopOrBottomTagsOnSplits")?;
   def_macro_noop("\\LimitsOnInts")?;

@@ -14,7 +14,7 @@
   </para>
   <figure inlist="lof" labels="LABEL:fig:1" placement="t!" xml:id="S0.F1">
     <tags>
-      <tag><text fontsize="90%">Figure 1</text></tag>
+      <tag>Figure 1</tag>
       <tag role="refnum">1</tag>
       <tag role="typerefnum">Figure 1</tag>
     </tags>
@@ -37,7 +37,7 @@
       <caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Caption B</text></caption>
     </figure>
     <toccaption><tag close=" ">1</tag>Figure Caption</toccaption>
-    <caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Figure Caption</text></caption>
+    <caption><tag close=": ">Figure 1</tag>Figure Caption</caption>
   </figure>
   <figure xml:id="fig2">
     <p>[Captionless subfigure]</p>

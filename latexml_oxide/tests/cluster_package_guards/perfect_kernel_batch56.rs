@@ -11934,13 +11934,13 @@ fn subfloat_reads_a_lone_optional_as_its_caption() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure class="ltx_figure_panel" inlist="lof" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>A</p><toccaption><tag close=" ">a</tag>One</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">One</text></caption></figure><break class="ltx_break"/><figure class="ltx_figure_panel" inlist="List" xml:id="S0.F1.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">1b</tag></tags><p>B</p><toccaption><tag close=" ">b</tag>Two</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Two</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure>"##,
+    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure class="ltx_figure_panel" inlist="lof" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>A</p><toccaption><tag close=" ">a</tag>One</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">One</text></caption></figure><break class="ltx_break"/><figure class="ltx_figure_panel" inlist="List" xml:id="S0.F1.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">1b</tag></tags><p>B</p><toccaption><tag close=" ">b</tag>Two</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Two</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": ">Figure 1</tag>Main</caption></figure>"##,
   );
   latexml::util::test::assert_element(
     &xml,
     "table",
     &[r#"xml:id="S0.T1""#],
-    r##"<table inlist="lot" xml:id="S0.T1"><tags><tag><text fontsize="90%">Table 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><table inlist="lot" xml:id="S0.T1.st1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>X</p><toccaption><tag close=" ">a</tag>Tab one</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Tab one</text></caption></table><toccaption><tag close=" ">1</tag>Tabs</toccaption><caption><tag close=": "><text fontsize="90%">Table 1</text></tag><text fontsize="90%">Tabs</text></caption></table>"##,
+    r##"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><table inlist="lot" xml:id="S0.T1.st1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>X</p><toccaption><tag close=" ">a</tag>Tab one</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Tab one</text></caption></table><toccaption><tag close=" ">1</tag>Tabs</toccaption><caption><tag close=": ">Table 1</tag>Tabs</caption></table>"##,
   );
 }
 
@@ -12501,7 +12501,7 @@ fn subfigure_refnum_is_the_letter() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r##"<figure inlist="lof" labels="LABEL:m" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>X</p><toccaption><tag close=" ">a</tag>Alpha</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Alpha</text></caption></figure><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:b" xml:id="S0.F1.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">1b</tag></tags><p>Y</p><toccaption><tag close=" ">b</tag>Beta</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Beta</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure>"##,
+    r##"<figure inlist="lof" labels="LABEL:m" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>X</p><toccaption><tag close=" ">a</tag>Alpha</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Alpha</text></caption></figure><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:b" xml:id="S0.F1.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">1b</tag></tags><p>Y</p><toccaption><tag close=" ">b</tag>Beta</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Beta</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": ">Figure 1</tag>Main</caption></figure>"##,
   );
 }
 
@@ -12522,7 +12522,7 @@ fn subcaption_labelformat_option_keeps_the_authors_number() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure inlist="lof" labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p>X</p><toccaption><tag close=" ">(a)</tag>Alpha</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Alpha</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure>"##,
+    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure inlist="lof" labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p>X</p><toccaption><tag close=" ">(a)</tag>Alpha</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Alpha</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": ">Figure 1</tag>Main</caption></figure>"##,
   );
 }
 
@@ -12541,7 +12541,7 @@ fn subcaption_labelformat_setup_keeps_the_authors_number() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure inlist="lof" labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p>X</p><toccaption><tag close=" ">(a)</tag>Alpha</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Alpha</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure>"##,
+    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure inlist="lof" labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p>X</p><toccaption><tag close=" ">(a)</tag>Alpha</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Alpha</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": ">Figure 1</tag>Main</caption></figure>"##,
   );
 }
 
@@ -12561,7 +12561,7 @@ fn subfigure_before_subcaption_keeps_its_numbers() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p>X</p><toccaption><tag close=" ">(a)</tag>Alpha</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Alpha</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure>"##,
+    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p>X</p><toccaption><tag close=" ">(a)</tag>Alpha</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Alpha</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": ">Figure 1</tag>Main</caption></figure>"##,
   );
 }
 
@@ -14376,7 +14376,7 @@ fn continuedfloat_keeps_the_number_and_the_letters() {
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   let figure = |n: &str| {
     format!(
-      r#"<tags><tag><text fontsize="90%">Figure {n}</text></tag><tag role="refnum">{n}</tag><tag role="typerefnum">Figure {n}</tag></tags>"#
+      r#"<tags><tag>Figure {n}</tag><tag role="refnum">{n}</tag><tag role="typerefnum">Figure {n}</tag></tags>"#
     )
   };
   let (f1, f2) = (figure("1"), figure("2"));
@@ -14451,46 +14451,41 @@ fn continuedfloat_suppresses_one_step_per_real_float() {
 /// leaves its step-back, so its next table is Table 1 again; Figure 1, 1, 2.
 #[test]
 fn continuedfloat_counts_only_the_main_floats_steps() {
-  let tags = |kind: &str, n: &str, sized: bool| {
-    let label = if sized {
-      format!(r#"<text fontsize="90%">{kind} {n}</text>"#)
-    } else {
-      format!("{kind} {n}")
-    };
+  let tags = |kind: &str, n: &str| {
     format!(
-      r#"<tags><tag>{label}</tag><tag role="refnum">{n}</tag><tag role="typerefnum">{kind} {n}</tag></tags>"#
+      r#"<tags><tag>{kind} {n}</tag><tag role="refnum">{n}</tag><tag role="typerefnum">{kind} {n}</tag></tags>"#
     )
   };
   for (tex, expected) in [
     (
       "\\documentclass{article}\n\\usepackage{caption}\n\\usepackage{subcaption}\n\\begin{document}\n\\begin{table}\\caption{Top}\n\\begin{minipage}{.4\\linewidth}\\subcaption{One}X\\end{minipage}\n\\end{table}\n\\begin{table}\\ContinuedFloat\\caption{Top again}\n\\begin{minipage}{.4\\linewidth}\\subcaption{Two}Y\\end{minipage}\n\\end{table}\n\\begin{table}\\caption{Next}Z\\end{table}\n\\end{document}\n",
       vec![
-        ("S0.T1", tags("Table", "1", true)),
-        ("S0.T1a", tags("Table", "1", true)),
-        ("S0.T2", tags("Table", "2", true)),
+        ("S0.T1", tags("Table", "1")),
+        ("S0.T1a", tags("Table", "1")),
+        ("S0.T2", tags("Table", "2")),
       ],
     ),
     (
       "\\documentclass{article}\n\\usepackage{graphicx}\n\\usepackage{subfig}\n\\begin{document}\n\\begin{table}\\caption{Top}\\subfloat[One]{\\rule{1cm}{1cm}}\\subfloat[Two]{\\rule{1cm}{1cm}}\\end{table}\n\\begin{table}\\ContinuedFloat\\subfloat[Three]{\\rule{1cm}{1cm}}\\end{table}\n\\begin{table}\\caption{Next}\\rule{1cm}{1cm}\\end{table}\n\\end{document}\n",
       vec![
-        ("S0.T1", tags("Table", "1", false)),
+        ("S0.T1", tags("Table", "1")),
         (
           "S0.T1a.sf3",
           r#"<tags><tag>(c)</tag><tag role="refnum">1c</tag></tags>"#.to_string(),
         ),
         // The next table, Table 1 again: its id `S0.T1` is taken, so it is repaired to `S0.T1a`
         // (the uncaptioned continued table keeps no element of its own, only its sub-float).
-        ("S0.T1a", tags("Table", "1", false)),
+        ("S0.T1a", tags("Table", "1")),
       ],
     ),
     (
       "\\documentclass{article}\n\\usepackage{caption}\n\\begin{document}\n\\begin{figure}A\\caption{A}\\end{figure}\n\\begin{figure}\\begin{center}\\ContinuedFloat B\\end{center}\\caption{B}\\end{figure}\n\\begin{figure}C\\caption{C}\\end{figure}\n\\end{document}\n",
       vec![
-        ("S0.F1", tags("Figure", "1", false)),
+        ("S0.F1", tags("Figure", "1")),
         // The continued figure: its `\@alph` id suffix is local to the `center` (as caption's),
         // so `S0.F1a` is the duplicate-id repair of its `S0.F1`.
-        ("S0.F1a", tags("Figure", "1", false)),
-        ("S0.F2", tags("Figure", "2", false)),
+        ("S0.F1a", tags("Figure", "1")),
+        ("S0.F2", tags("Figure", "2")),
       ],
     ),
   ] {

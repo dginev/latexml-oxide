@@ -17,7 +17,7 @@
   <resource src="ltx-listings.css" type="text/css"/>
   <table inlist="lot" placement="t" xml:id="S0.T1">
     <tags>
-      <tag><text fontsize="90%">Table 1</text></tag>
+      <tag>Table 1</tag>
       <tag role="refnum">1</tag>
       <tag role="typerefnum">Table 1</tag>
     </tags>
@@ -50,12 +50,12 @@
       </tabular>
     </inline-block>
     <toccaption><tag close=" "><text fontsize="80%">1</text></tag><text fontsize="80%">table with two resized, minipage, tabulars</text></toccaption>
-    <caption fontsize="80%"><tag close=": "><text fontsize="113%">Table 1</text></tag><text fontsize="113%">table with two resized, minipage, tabulars</text></caption>
+    <caption fontsize="80%"><tag close=": ">Table 1</tag>table with two resized, minipage, tabulars</caption>
   </table>
   <pagination role="newpage"/>
   <figure inlist="lof" labels="LABEL:array:fig" xml:id="S0.F1">
     <tags>
-      <tag><text fontsize="90%">Figure 1</text></tag>
+      <tag>Figure 1</tag>
       <tag role="refnum">1</tag>
       <tag role="typerefnum">Figure 1</tag>
     </tags>
@@ -93,7 +93,7 @@
       <caption><tag close=" "><text fontsize="90%">(b)</text></tag></caption>
     </figure>
     <toccaption><tag close=" ">1</tag>math array figure</toccaption>
-    <caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">math array figure</text></caption>
+    <caption><tag close=": ">Figure 1</tag>math array figure</caption>
   </figure>
   <para xml:id="p1">
     <p>Testing <ref labelref="LABEL:array:subfig1"/> and <ref labelref="LABEL:array:subfig2"/> inside <ref labelref="LABEL:array:fig"/>.</p>
@@ -117,7 +117,7 @@
     </para>
     <figure inlist="lof" placement="htbp" xml:id="S0.F2">
       <tags>
-        <tag><text fontsize="90%">Figure 2</text></tag>
+        <tag>Figure 2</tag>
         <tag role="refnum">2</tag>
         <tag role="typerefnum">Figure 2</tag>
       </tags>
@@ -148,12 +148,12 @@
         </tbody>
       </tabular>
       <toccaption class="ltx_centering"><tag close=" ">2</tag>a tabular + resizebox</toccaption>
-      <caption class="ltx_centering"><tag close=": "><text fontsize="90%">Figure 2</text></tag><text fontsize="90%">a tabular + resizebox</text></caption>
+      <caption class="ltx_centering"><tag close=": ">Figure 2</tag>a tabular + resizebox</caption>
     </figure>
     <pagination role="newpage"/>
     <figure inlist="lof" xml:id="S0.F3">
       <tags>
-        <tag><text fontsize="90%">Figure 3</text></tag>
+        <tag>Figure 3</tag>
         <tag role="refnum">3</tag>
         <tag role="typerefnum">Figure 3</tag>
       </tags>
@@ -194,7 +194,7 @@
         </item>
       </itemize>
       <toccaption><tag close=" ">3</tag>Two minipages and an itemize</toccaption>
-      <caption><tag close=": "><text fontsize="90%">Figure 3</text></tag><text fontsize="90%">Two minipages and an itemize</text></caption>
+      <caption><tag close=": ">Figure 3</tag>Two minipages and an itemize</caption>
     </figure>
     <pagination role="newpage"/>
     <figure xml:id="S0.SS0.SSS0.Px1.fig1">
@@ -213,7 +213,7 @@
     <pagination role="newpage"/>
     <figure inlist="lof" xml:id="S0.F4">
       <tags>
-        <tag><text fontsize="90%">Figure 4</text></tag>
+        <tag>Figure 4</tag>
         <tag role="refnum">4</tag>
         <tag role="typerefnum">Figure 4</tag>
       </tags>
@@ -393,7 +393,7 @@
       <verbatim class="ltx_figure_panel" font="typewriter"> some verbatim $#! stuff 
 </verbatim>
       <toccaption><tag close=" ">4</tag>Highly mixed figure</toccaption>
-      <caption><tag close=": "><text fontsize="90%">Figure 4</text></tag><text fontsize="90%">Highly mixed figure</text><note mark="1" role="footnote" xml:id="footnote1"><tags>
+      <caption><tag close=": ">Figure 4</tag>Highly mixed figure<note mark="1" role="footnote" xml:id="footnote1"><tags>
             <tag>1</tag>
             <tag role="refnum">1</tag>
             <tag role="typerefnum">footnote 1</tag>
@@ -402,7 +402,7 @@
     <pagination role="newpage"/>
     <figure inlist="lof" xml:id="S0.F5">
       <tags>
-        <tag><text fontsize="90%">Figure 5</text></tag>
+        <tag>Figure 5</tag>
         <tag role="refnum">5</tag>
         <tag role="typerefnum">Figure 5</tag>
       </tags>
@@ -411,7 +411,7 @@
       <break class="ltx_break"/>
       <p class="ltx_figure_panel">.</p>
       <toccaption><tag close=" ">5</tag>Caption</toccaption>
-      <caption><tag close=": "><text fontsize="90%">Figure 5</text></tag><text fontsize="90%">Caption</text><note mark="2" role="footnote" xml:id="footnote2"><tags>
+      <caption><tag close=": ">Figure 5</tag>Caption<note mark="2" role="footnote" xml:id="footnote2"><tags>
             <tag>2</tag>
             <tag role="refnum">2</tag>
             <tag role="typerefnum">footnote 2</tag>
@@ -420,7 +420,7 @@
     <pagination role="newpage"/>
     <figure inlist="lof" xml:id="S0.F6">
       <tags>
-        <tag><text fontsize="90%">Figure 6</text></tag>
+        <tag>Figure 6</tag>
         <tag role="refnum">6</tag>
         <tag role="typerefnum">Figure 6</tag>
       </tags>
@@ -428,28 +428,28 @@
       <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" xml:id="S0.F6.g2"/>
       <break/>
       <toccaption><tag close=" ">6</tag>mid-fig caption</toccaption>
-      <caption><tag close=": "><text fontsize="90%">Figure 6</text></tag><text fontsize="90%">mid-fig caption</text></caption>
+      <caption><tag close=": ">Figure 6</tag>mid-fig caption</caption>
       <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" xml:id="S0.F6.g3"/>
       <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" xml:id="S0.F6.g4"/>
     </figure>
     <pagination role="newpage"/>
     <figure inlist="lof" xml:id="S0.F9">
       <tags>
-        <tag><text fontsize="90%">Figure 9</text></tag>
+        <tag>Figure 9</tag>
         <tag role="refnum">9</tag>
         <tag role="typerefnum">Figure 9</tag>
       </tags>
       <toccaption><tag close=" ">7</tag>leading caption</toccaption>
-      <caption><tag close=": "><text fontsize="90%">Figure 7</text></tag><text fontsize="90%">leading caption</text></caption>
+      <caption><tag close=": ">Figure 7</tag>leading caption</caption>
       <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" xml:id="S0.F9.g1"/>
       <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" xml:id="S0.F9.g2"/>
       <break/>
       <toccaption><tag close=" ">8</tag>mid-fig caption</toccaption>
-      <caption><tag close=": "><text fontsize="90%">Figure 8</text></tag><text fontsize="90%">mid-fig caption</text></caption>
+      <caption><tag close=": ">Figure 8</tag>mid-fig caption</caption>
       <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" xml:id="S0.F9.g3"/>
       <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" xml:id="S0.F9.g4"/>
       <toccaption><tag close=" ">9</tag>trailing caption</toccaption>
-      <caption><tag close=": "><text fontsize="90%">Figure 9</text></tag><text fontsize="90%">trailing caption</text></caption>
+      <caption><tag close=": ">Figure 9</tag>trailing caption</caption>
     </figure>
     <pagination role="newpage"/>
     <figure placement="tb" xml:id="S0.SS0.SSS0.Px1.fig3">

@@ -253,8 +253,8 @@ Text after.
     )],
   );
   for caption in [
-    r#"<caption class="ltx_align_left ltx_centering"><tag close=": "><text fontsize="90%" xml:id="S0.F2.2">Figure 1</text></tag><text fontsize="90%" xml:id="S0.F2.3">Normalized vertiport capacity = 1</text></caption>"#,
-    r#"<caption class="ltx_centering"><tag close=": "><text fontsize="90%" xml:id="S0.F2.4">Figure 2</text></tag><text fontsize="90%" xml:id="S0.F2.5">Whole.</text></caption>"#,
+    r#"<caption class="ltx_align_left ltx_centering"><tag close=": ">Figure 1</tag>Normalized vertiport capacity = 1</caption>"#,
+    r#"<caption class="ltx_centering"><tag close=": ">Figure 2</tag>Whole.</caption>"#,
   ] {
     assert!(xml.contains(caption), "{caption}\n{xml}");
   }
@@ -281,7 +281,7 @@ See \ref{f:a}. Text after.
     )],
   );
   assert!(
-    xml.contains(r#"<caption><tag close=": "><text fontsize="90%" xml:id="S0.F1.3">Figure 1</text></tag><text fontsize="90%" xml:id="S0.F1.4">First</text></caption>"#),
+    xml.contains(r#"<caption><tag close=": ">Figure 1</tag>First</caption>"#),
     "{xml}"
   );
 }

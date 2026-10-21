@@ -5604,7 +5604,9 @@ fn captionsetup_type_sets_the_caption_type() {
       (
         "figure",
         "S0.F1",
-        "<figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag><text fontsize=\"90%\" xml:id=\"S0.F1.1\">Figure 1</text></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><toccaption><tag close=\" \">1</tag>Both.</toccaption><caption><tag close=\": \"><text fontsize=\"90%\" xml:id=\"S0.F1.2\">Figure 1</text></tag><text fontsize=\"90%\" xml:id=\"S0.F1.3\">Both.</text></caption></figure>",
+        "<figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"refnum\">1\
+         </tag><tag role=\"typerefnum\">Figure 1</tag></tags><toccaption><tag close=\" \">1</tag>Both.</toccaption>\
+         <caption><tag close=\": \">Figure 1</tag>Both.</caption></figure>",
       ),
     ],
   );
@@ -5807,7 +5809,9 @@ After \ref{a}, \ref{c}.
       (
         "figure",
         "S0.F1",
-        "<figure align=\"center\" inlist=\"lof\" labels=\"LABEL:c\" xml:id=\"S0.F1\"><tags><tag><text fontsize=\"90%\" xml:id=\"S0.F1.1\">Figure 1</text></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><toccaption><tag close=\" \">1</tag>Both.</toccaption><caption><tag close=\": \"><text fontsize=\"90%\" xml:id=\"S0.F1.2\">Figure 1</text></tag><text fontsize=\"90%\" xml:id=\"S0.F1.3\">Both.</text></caption></figure>",
+        "<figure align=\"center\" inlist=\"lof\" labels=\"LABEL:c\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag>\
+         <tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><toccaption><tag close=\" \">1\
+         </tag>Both.</toccaption><caption><tag close=\": \">Figure 1</tag>Both.</caption></figure>",
       ),
     ],
   );
@@ -5834,7 +5838,26 @@ $x$
     &[(
       "logical-block",
       "id1",
-      "<logical-block xml:id=\"id1\"><para xml:id=\"p3\"><p align=\"center\" xml:id=\"p3.1\"><inline-logical-block class=\"ltx_minipage\" vattach=\"top\" width=\"103.5pt\" xml:id=\"p3.1.1\"><para xml:id=\"p1\"><p align=\"center\" xml:id=\"p1.1\">A</p></para><figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F0.sf1\"><tags><tag><text fontsize=\"90%\" xml:id=\"S0.F0.sf1.1\">(a)</text></tag><tag role=\"refnum\">0a</tag></tags><toccaption><tag close=\" \">a</tag>Left.</toccaption><caption><tag close=\" \"><text fontsize=\"90%\" xml:id=\"S0.F0.sf1.2\">(a)</text></tag><text fontsize=\"90%\" xml:id=\"S0.F0.sf1.3\">Left.</text></caption></figure></inline-logical-block><Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"m1\"><XMath xml:id=\"m1.1\"><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math><inline-logical-block class=\"ltx_minipage\" vattach=\"top\" width=\"103.5pt\" xml:id=\"p3.1.2\"><para xml:id=\"p2\"><p align=\"center\" xml:id=\"p2.1\">B</p></para><figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F0.sf2\"><tags><tag><text fontsize=\"90%\" xml:id=\"S0.F0.sf2.1\">(b)</text></tag><tag role=\"refnum\">0b</tag></tags><toccaption><tag close=\" \">b</tag>Right.</toccaption><caption><tag close=\" \"><text fontsize=\"90%\" xml:id=\"S0.F0.sf2.2\">(b)</text></tag><text fontsize=\"90%\" xml:id=\"S0.F0.sf2.3\">Right.</text></caption></figure></inline-logical-block></p></para><figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag><text fontsize=\"90%\" xml:id=\"S0.F1.1\">Figure 1</text></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><toccaption><tag close=\" \">1</tag>Both.</toccaption><caption><tag close=\": \"><text fontsize=\"90%\" xml:id=\"S0.F1.2\">Figure 1</text></tag><text fontsize=\"90%\" xml:id=\"S0.F1.3\">Both.</text></caption></figure></logical-block>",
+      "<logical-block xml:id=\"id1\"><para xml:id=\"p3\"><p align=\"center\" xml:id=\"p3.1\">\
+       <inline-logical-block class=\"ltx_minipage\" vattach=\"top\" width=\"103.5pt\" xml:id=\"p3.1.1\">\
+       <para xml:id=\"p1\"><p align=\"center\" xml:id=\"p1.1\">A</p></para>\
+       <figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F0.sf1\"><tags><tag>\
+       <text fontsize=\"90%\" xml:id=\"S0.F0.sf1.1\">(a)</text></tag><tag role=\"refnum\">0a</tag></tags>\
+       <toccaption><tag close=\" \">a</tag>Left.</toccaption><caption><tag close=\" \">\
+       <text fontsize=\"90%\" xml:id=\"S0.F0.sf1.2\">(a)</text></tag>\
+       <text fontsize=\"90%\" xml:id=\"S0.F0.sf1.3\">Left.</text></caption></figure></inline-logical-block>\
+       <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"m1\"><XMath xml:id=\"m1.1\">\
+       <XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math>\
+       <inline-logical-block class=\"ltx_minipage\" vattach=\"top\" width=\"103.5pt\" xml:id=\"p3.1.2\">\
+       <para xml:id=\"p2\"><p align=\"center\" xml:id=\"p2.1\">B</p></para>\
+       <figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F0.sf2\"><tags><tag>\
+       <text fontsize=\"90%\" xml:id=\"S0.F0.sf2.1\">(b)</text></tag><tag role=\"refnum\">0b</tag></tags>\
+       <toccaption><tag close=\" \">b</tag>Right.</toccaption><caption><tag close=\" \">\
+       <text fontsize=\"90%\" xml:id=\"S0.F0.sf2.2\">(b)</text></tag>\
+       <text fontsize=\"90%\" xml:id=\"S0.F0.sf2.3\">Right.</text></caption></figure></inline-logical-block></p>\
+       </para><figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag>\
+       <tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><toccaption><tag close=\" \">1\
+       </tag>Both.</toccaption><caption><tag close=\": \">Figure 1</tag>Both.</caption></figure></logical-block>",
     )],
   );
 }

@@ -1,0 +1,18 @@
+% witness: sel78c item 4 (61/30k papers use \hhline, 20/30k with `~`); hhline.sty:61-96 \HH@loop rules each `-`/`=`
+%          column, `~` none; Perl's hhline.sty.ltxml:24 is a full-width \hline (KPE)
+% oracle:  pdflatex 0 errors: a rule over a-d, over g-h only, a double rule over i-j, none over k, one over l
+% engines: rust int43a = every row ruled over every column, single rules
+% expect:  0 errors; borders a-d "t", e-f none, g-h "t", i-j "tt", k none, l "t"
+% status:  RED (int43a) -> GREEN (78c)
+\documentclass{article}
+\usepackage{hhline}
+\begin{document}
+\begin{tabular}{|c|c|c|c|}
+\hhline{|*{4}{-|}}
+a&b&c&d\\
+\hhline{~~--}
+e&f&g&h\\
+\hhline{|=|=:~:-|}
+i&j&k&l\\
+\end{tabular}
+\end{document}

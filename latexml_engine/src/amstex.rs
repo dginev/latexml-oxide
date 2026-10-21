@@ -86,8 +86,19 @@ LoadDefinitions!({
   // amstex.tex:590-593: `\TagsAsMath` sets later tags in math (`\tagform@{$\m@th#1$}`), `\TagsAsText` (the
   // default) as text; `\tag` reads the switch.
   RawTeX!(r"\newif\ifmathtags@ \def\TagsAsMath{\global\mathtags@true}\def\TagsAsText{\global\mathtags@false}");
-  def_macro_noop("\\TagsOnLeft")?;
-  def_macro_noop("\\TagsOnRight")?;
+  // amstex.tex:587-590: `\TagsOnLeft` (the default, set at load) and `\TagsOnRight` choose the side of the tags,
+  // `\tagsleft@`, read by `\tag`: here the document's `ltx_leqno` class, as the `leqno` option of the LaTeX classes
+  // and amsmath sets it (amsmath_sty.rs). Perl's (AmSTeX.pool.ltxml:83-84) are no-ops, so an AMS-TeX document's tags
+  // were on the right where pdftex sets them on the left (KNOWN_PERL_ERRORS #1025; about 2,060 papers). Guard
+  // `perfect_kernel_batch78c::amstex_tags_are_on_the_left_by_default`.
+  DefPrimitive!("\\TagsOnLeft", {
+    Let!("\\iftagsleft@", "\\iftrue", Scope::Global);
+    assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", Some(Stored::Bool(true)));
+  });
+  DefPrimitive!("\\TagsOnRight", {
+    Let!("\\iftagsleft@", "\\iffalse", Scope::Global);
+    assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", None::<bool>);
+  });
   def_macro_noop("\\CenteredTagsOnSplits")?;
   def_macro_noop("\\TopOrBottomTagsOnSplits")?;
 
@@ -259,6 +270,8 @@ LoadDefinitions!({
   // here — the AmSTeX pattern is `\foo … \endfoo`. The amsmath et al.
   // bindings work in either context, so we load them (Perl L220-225).
   RequirePackage!("amsmath");
+  // amstex.tex:590 `\TagsOnLeft`, after amsmath's binding, whose `reqno` default clears `ltx_leqno` (amsmath_sty.rs).
+  Digest!("\\TagsOnLeft")?;
   // AMS-TeX's `\matrix`, `\pmatrix`, `\cases`, … read their rows to `\endmatrix`, `\endpmatrix`, `\endcases`
   // (amstex.tex:512-552): the amsmath binding's environment forms, always — its `\matrix@check` old-form branch
   // (amsmath_sty.rs `\lx@ams@matrix@check`, for LaTeX's `\@currenvir`) is LaTeX's, not AMS-TeX's
@@ -286,7 +299,7 @@ LoadDefinitions!({
   RawTeX!(r"\def\atdef@#1{\expandafter\def\csname\space @\string#1\endcsname}");
   // amstex.tex:162-164, :166-172, :318-320: the punctuation connectors (`@,` and `@!` a tenth of a thin space in a
   // formula, math0009033's `\mathbin{Y@!@!@!@!}`; `@.` a cell break in a formula, else a sentence-ending period;
-  // `@-` a hyphen, en or em dash in a box). `@"` (:177-190, the quotes' spacing) is not defined. amstex.tex:69-71's
+  // `@-` a hyphen, en or em dash in a box). amstex.tex:69-71's
   // `\FN@` looks ahead into `\next` (the amsmath binding's amsgen `\FN@` into `\@let@token`), as these connectors and a
   // document's own AMS-TeX macros test (math0005042's lamstex arrows: `\def\ARROW@{\ifx\next)…`); :166 `\relaxnext@`.
   RawTeX!(r#"\def\FN@{\futurelet\next}\def\DN@{\def\next@}\def\DNii@{\def\nextii@}\def\relaxnext@{\let\next\relax}
@@ -300,6 +313,23 @@ LoadDefinitions!({
 \atdef@,{\RIfM@\mskip.1\thinmuskip\else\leavevmode\null,\fi}
 \atdef@!{\RIfM@\mskip-.1\thinmuskip\else\leavevmode\null!\fi}
 \atdef@.{\RIfM@&&\else\leavevmode.\spacefactor3000 \fi}"#);
+  // amstex.tex:173-190: `@"` spaces nested quotes (``` ``@"`Hi'@"'' ```: a sixth of an em between the double and
+  // the single mark on the outside, a thirty-sixth on the inside), reading the quotes after it with `\FN@`, and
+  // :90-91 `\space@`, the space token it compares with. Undefined, every `@"` was an Error (KNOWN_PERL_ERRORS #1018,
+  // the connector the 78b port left out). Guard `perfect_kernel_batch78c::amstex_quote_connector_spaces_the_quotes`.
+  RawTeX!(r##"\def\space@.{\futurelet\space@\relax}\space@. %
+\def\srdr@{\kern.16667em}\def\drsr@{\kern.02778em}\def\sldl@{\drsr@}\def\dlsl@{\srdr@}
+\atdef@"{\unskip\relaxnext@
+ \DN@{\ifx\next\space@\DN@. {\FN@\nextii@}\else
+  \DN@.{\FN@\nextii@}\fi\next@.}%
+ \DNii@{\ifx\next`\DN@`{\FN@\nextiii@}\else
+  \ifx\next\lq\DN@\lq{\FN@\nextiii@}\else
+  \DN@####1{\FN@\nextiv@}\fi\fi\next@}%
+ \def\nextiii@{\ifx\next`\DN@`{\sldl@``}\else\ifx\next\lq
+  \DN@\lq{\sldl@``}\else\DN@{\dlsl@`}\fi\fi\next@}%
+ \def\nextiv@{\ifx\next'\DN@'{\srdr@''}\else
+  \ifx\next\rq\DN@\rq{\srdr@''}\else\DN@{\drsr@'}\fi\fi\next@}%
+ \FN@\next@}"##);
   // amstex.tex:486 `\Let@`, the row end a document's own AMS-TeX alignment sets up before its `\halign` (diag.tex's
   // `\newCD`, math9611222, math9611223, math9412232, math0005042): `\\` is `\cr`, its brace pair hidden from the
   // alignment count. The amsmath binding loaded above has amsmath.sty's `\let\\\math@cr` (65s), whose `\@ifstar` plain
@@ -334,8 +364,8 @@ LoadDefinitions!({
   // `equation`/`align`) or, in a `$$` display and its math alignments, floats to it (`\lx@equation@settag@float`); a
   // quoted tag is the `\tag*` form (`\maketag@@@"#1"#2\maketag@{\hbox{\rm#1}}`), `\TagsAsMath` wraps the text in `$…$`.
   // The float path is defined here, so a plain `\input amstex` document without the LaTeX pool has it (math9412232,
-  // hep-th9308082, hep-th9206021, hep-th9111004, 1102.5649). `\TagsOnLeft`, AMS-TeX's default (:590), puts the PDF's
-  // tags on the left; ours are on the right. Guards `perfect_kernel_batch66e::{amstex_display_tag_is_a_text_tag,
+  // hep-th9308082, hep-th9206021, hep-th9111004, 1102.5649). `\TagsOnLeft`, AMS-TeX's default (:590), puts the
+  // tags on the left (the document's `ltx_leqno`, above). Guards `perfect_kernel_batch66e::{amstex_display_tag_is_a_text_tag,
   // amstex_align_row_tags_run_to_the_row_end, amstex_tags_as_math_switch, plain_amstex_tags_need_no_latex_pool,
   // amstex_row_tag_ends_at_every_row_ender, amstex_display_tag_in_an_halign_cell_reads_to_the_display_end,
   // amstex_tag_argument_errors, amstex_row_tag_cell_ends_at_par_and_extra_brace,

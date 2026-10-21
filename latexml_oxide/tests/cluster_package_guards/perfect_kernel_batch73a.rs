@@ -90,7 +90,7 @@ fn subcaption_subfloat_is_provided_at_begin_document() {
     &xml,
     "figure",
     &[],
-    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%" xml:id="S0.F1.1">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S0.F1.2"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" xml:id="S0.F1.2.1">A</text></p><toccaption><tag close=" ">1</tag>Two panels.</toccaption><caption><tag close=": "><text fontsize="90%" xml:id="S0.F1.3">Figure 1</text></tag><text fontsize="90%" xml:id="S0.F1.4">Two panels.</text></caption></figure>"##,
+    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S0.F1.1"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" xml:id="S0.F1.1.1">A</text></p><toccaption><tag close=" ">1</tag>Two panels.</toccaption><caption><tag close=": ">Figure 1</tag>Two panels.</caption></figure>"##,
   );
 }
 

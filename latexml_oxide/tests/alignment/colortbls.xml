@@ -313,22 +313,22 @@ or by adding some negative space (in a ”“noalign” between rows.</text></p>
       <tabular vattach="middle">
         <tbody>
           <tr>
-            <td align="center" backgroundcolor="#E6E6E6" border="ll t"><text backgroundcolor="#E6E6E6">Richard</text></td>
-            <td align="center" backgroundcolor="#E6E6E6" border="t"><text backgroundcolor="#E6E6E6">of</text></td>
-            <td align="center" backgroundcolor="#E6E6E6" border="t"><text backgroundcolor="#E6E6E6">York</text></td>
-            <td align="center" backgroundcolor="#E6E6E6" border="t"><text backgroundcolor="#E6E6E6">gave</text></td>
-            <td align="center" backgroundcolor="#E6E6E6" border="t"><text backgroundcolor="#E6E6E6">battle</text></td>
-            <td align="center" backgroundcolor="#E6E6E6" border="t"><text backgroundcolor="#E6E6E6">in</text></td>
-            <td align="center" backgroundcolor="#E6E6E6" border="rr t"><text backgroundcolor="#E6E6E6">vain</text></td>
+            <td align="center" backgroundcolor="#E6E6E6" border="ll tt"><text backgroundcolor="#E6E6E6">Richard</text></td>
+            <td align="center" backgroundcolor="#E6E6E6" border="tt"><text backgroundcolor="#E6E6E6">of</text></td>
+            <td align="center" backgroundcolor="#E6E6E6" border="tt"><text backgroundcolor="#E6E6E6">York</text></td>
+            <td align="center" backgroundcolor="#E6E6E6" border="tt"><text backgroundcolor="#E6E6E6">gave</text></td>
+            <td align="center" backgroundcolor="#E6E6E6" border="tt"><text backgroundcolor="#E6E6E6">battle</text></td>
+            <td align="center" backgroundcolor="#E6E6E6" border="tt"><text backgroundcolor="#E6E6E6">in</text></td>
+            <td align="center" backgroundcolor="#E6E6E6" border="rr tt"><text backgroundcolor="#E6E6E6">vain</text></td>
           </tr>
           <tr>
-            <td align="center" backgroundcolor="#E6E6E6" border="b ll t"><text backgroundcolor="#E6E6E6">1</text></td>
-            <td align="center" backgroundcolor="#E6E6E6" border="b t"><text backgroundcolor="#E6E6E6">2</text></td>
-            <td align="center" backgroundcolor="#E6E6E6" border="b t"><text backgroundcolor="#E6E6E6">3</text></td>
-            <td align="center" backgroundcolor="#E6E6E6" border="b t"><text backgroundcolor="#E6E6E6">4</text></td>
-            <td align="center" backgroundcolor="#E6E6E6" border="b t"><text backgroundcolor="#E6E6E6">5</text></td>
-            <td align="center" backgroundcolor="#E6E6E6" border="b t"><text backgroundcolor="#E6E6E6">6</text></td>
-            <td align="center" backgroundcolor="#E6E6E6" border="b rr t"><text backgroundcolor="#E6E6E6">7</text></td>
+            <td align="center" backgroundcolor="#E6E6E6" border="bb ll tt"><text backgroundcolor="#E6E6E6">1</text></td>
+            <td align="center" backgroundcolor="#E6E6E6" border="bb tt"><text backgroundcolor="#E6E6E6">2</text></td>
+            <td align="center" backgroundcolor="#E6E6E6" border="bb tt"><text backgroundcolor="#E6E6E6">3</text></td>
+            <td align="center" backgroundcolor="#E6E6E6" border="bb tt"><text backgroundcolor="#E6E6E6">4</text></td>
+            <td align="center" backgroundcolor="#E6E6E6" border="bb tt"><text backgroundcolor="#E6E6E6">5</text></td>
+            <td align="center" backgroundcolor="#E6E6E6" border="bb tt"><text backgroundcolor="#E6E6E6">6</text></td>
+            <td align="center" backgroundcolor="#E6E6E6" border="bb rr tt"><text backgroundcolor="#E6E6E6">7</text></td>
           </tr>
         </tbody>
       </tabular>

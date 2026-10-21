@@ -1,0 +1,12 @@
+% witness: sel78c item 5 (21/30k AMS-TeX papers use \tag without \TagsOnRight); amstex.tex:587-590 \TagsOnLeft is
+%          the default, AmSTeX.pool.ltxml:83-84 makes both switches no-ops (KPE)
+% oracle:  pdftex 0 errors: "(1)" on the left of "a=b"
+% engines: rust int43a = no ltx_leqno (tags on the right)
+% expect:  0 errors; <document class="ltx_leqno">
+% status:  RED (int43a) -> GREEN (78c)
+\input amstex
+\documentstyle{amsppt}
+\document
+Text.
+$$ a=b \tag 1 $$
+\enddocument

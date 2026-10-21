@@ -49,11 +49,18 @@ LoadDefinitions!({
   // without book's section reset (KNOWN_PERL_ERRORS #1016); its `\backmatter` (:482) `\let\appendix=\bppendix`, the
   // book appendix (:715-732), which resets the chapter and section counters as book's does. svmono.cls:598-608 resets
   // them in every `\appendix`: book's. Guard `perfect_kernel_batch78a::svmult_appendix_keeps_counting_sections`.
+  //
+  // So the main-matter `\appendix` is that `\par` and nothing else: its sections are the contribution's next ones
+  // ("1.2 Proofs" under a `\title`, "2 Proofs" under a `\title*`), not an `ltx:appendix` of LaTeXML's appendix
+  // numbering (".2", 1801.05601; KNOWN_PERL_ERRORS #1026). Guard
+  // `perfect_kernel_batch78c::svmult_maketitle_numbers_the_contribution`.
   if svmono {
     DefMacro!("\\backmatter", "\\@mainmatterfalse");
   } else {
-    Let!("\\lx@svmult@bppendix", "\\appendix");
-    DefMacro!("\\appendix", "\\@appendix\\gdef\\@chapapp{\\appendixname}");
+    // (the book appendix numbers its sections in the appendix chapter, :728, whatever `\thesection` was before)
+    Let!("\\lx@svmult@book@appendix", "\\appendix");
+    DefMacro!("\\lx@svmult@bppendix", "\\lx@svmult@book@appendix\\def\\thesection{\\thechapter.\\@arabic\\c@section}");
+    DefMacro!("\\appendix", "\\par");
     DefMacro!("\\backmatter", "\\let\\appendix\\lx@svmult@bppendix");
   }
   RequirePackage!("sv_support");
@@ -69,8 +76,23 @@ LoadDefinitions!({
   // `\ds@numart`, `\title` `\ds@book`, which set `\if@numart` (:1033-1044, true by default and by the `numart`
   // option), read by `\subfigures` (below).
   DefMacro!("\\title OptionalMatch:* {}",
-    "\\if.#1.\\@numartfalse\\else\\@numarttrue\\def\\thesection{\\arabic{section}}\\fi\
+    "\\if.#1.\\@numartfalse\\def\\thesection{\\thechapter.\\@arabic\\c@section}\\@addtoreset{section}{chapter}\
+     \\else\\@numarttrue\\def\\thesection{\\arabic{section}}\\fi\
      \\lx@add@title{#2}");
+  // svmult.cls:2141-2152: `\maketitle` starts a contribution — the section, figure, table, equation and footnote
+  // counters from 0 — and numbers it a chapter under a `\title` (`\refstepcounter{chapter}`, "Chapter 1" and its
+  // sections "1.1"), not under a `\title*` (the chapter stepped and stepped back, resetting what it numbers). Its
+  // `\thesection` is `\newcounter`'s `\@arabic\c@section` ("1"), which a chapter does not reset ("Chapter 2", "2
+  // Notes"), until a `\title` (`\ds@book`, :1044-1053) numbers the sections in the chapter and resets them with it.
+  // Perl's binding (svmult.cls.ltxml:40-42) numbers no chapter: "0.1" (1801.05601; KNOWN_PERL_ERRORS #1026).
+  if !svmono {
+    DefMacro!("\\thesection", "\\@arabic\\c@section");
+    RawTeX!(r"\@removefromreset{section}{chapter}");
+    RawTeX!(r"\def\lx@svmult@maketitle{\stepcounter{section}\setcounter{section}{0}\setcounter{subsection}{0}%
+\setcounter{figure}{0}\setcounter{table}{0}\setcounter{equation}{0}\setcounter{footnote}{0}%
+\if@numart\stepcounter{chapter}\addtocounter{chapter}{-1}\else\refstepcounter{chapter}\fi}");
+    AddToMacro!("\\lx@maketitle@body", "\\lx@svmult@maketitle");
+  }
 
   //======================================================================
   // Upright greek letters
