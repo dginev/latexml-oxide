@@ -229,6 +229,10 @@ pub(in crate::base_utilities) fn clean_frontmatter_labels(
   prefix: &str,
 ) -> Vec<String> {
   let labels = FONT_SWITCH.replace_all(labels, "$1");
+  // (Perl's `s/\\rm//g`, Base_Utility.pool.ltxml:365, which strips `\rm` glued to the label it switches, too: the
+  // operand `{\rm a,b}` reads "\rma,b", where the tokenizer skipped the space after `\rm` — `$^{\rm a,b}$` requested
+  // "\rma" and "b", so no `${\rm ^a}$` line answered the first, 0905.3658)
+  let labels = labels.replace("\\rm", "");
   let labels = SPACING_IN_LABEL.replace_all(&labels, ",$1");
   let mut cleaned = Vec::new();
   let mut pieces: Vec<&str> = labels.split(',').collect();

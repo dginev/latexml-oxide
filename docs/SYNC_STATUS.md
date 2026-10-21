@@ -5198,6 +5198,51 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   Binding nets (int47a) 136/136; mathastext 1 of 26 below int46a: 2201.00699 (jinstpub) recall 98.0 → 97.4 — the stock
   header line, the table of contents (OD #801, ruling pending) and the "E-mail:"/"Keywords" labels no longer printed; its
   arXiv number stays a `role=arxiv` pubnote; no authored word lost.
+- **78m** (fidelity audit round 3, items FM1-FM4 and N9, agent_reports/2026-10-21_fidelity3_audit.md; guards
+  `perfect_kernel_batch78m::*`, 8, each RED on int50a or on r1; OD #840-842, KPE #1067-1069; r1 + r2). (1) A shipped
+  spie.cls that loads authblk (SPIE's 2015 v3.4, its :31) loads authblk in the spie binding too, so
+  `\author[\udem]{…}`/`\affil[…]{…}` are authblk's, not the kernel's one-argument `\author` 77w installed (spie_cls.rs;
+  one creator "[" and the names in the body: 2406.08304, now its 114 authors with their affiliations; 28 of the 40
+  census spie papers changed, each from one creator "[" — or the kernel's last `\author` only, 2608.07857 — to its
+  authors; 2210.16202, 77w's witness, unchanged). (2) A horizontal space right before a name's own mark or note is the
+  name's, no separator (rows.rs `space_before_own_mark`: `Oleg L.\thanks{…}\hspace*{2mm}$^{\rm a,b}$, Sergei B.`,
+  0905.3658, had parted ", Sergei Blinnikov" off as an affiliation; 1811.08180, 1906.01604, 2402.15911 likewise); a
+  spacing-only math group (`$\qquad$`, 1602.04504, 1104.2983, 2305.13533, 1904.08825) and an `\enskip` right after a
+  mark or note (1312.1414) part names, one `\enskip` elsewhere staying inside a name as #52(o)'s other spacing commands
+  do (`J.\enskip Smith`; r2, r1 parted it); a tie or control space right after an entry's mark is the entry's
+  (`$^1$~Univ A\quad$^2$~Univ B`, r2: r1 gave Ann "Univ A² Univ B"; 2606.01993, 2402.19080 byte-identical to int50a) (OD
+  #840, KPE #1069); a mark's `\rm` glued to its label is stripped as Perl's `s/\\rm//g` does (queue_digest.rs; `$^{\rm
+  a,b}$` requested "\rma"). (3) jpconf.cls (IOP's conference class) is read raw, then its
+  `\address`/`\ead`/`\eads`/`\mailto` are iopart_support's (jpconf_cls.rs; `iopart_support_sty::iop_address_and_email`;
+  OD #841, KPE #1068): 0705.0202, 1011.0523 and 55 of the 56 census jpconf papers gain their affiliations and e-mails,
+  which were body lists. (4) bmcart.cls is read raw, then its `\title@fmt`, `\author@fmt` (its
+  `addressref`/`presentaddressref`/`email`/`noteref` keys), `\address@fmt` (its `id`) and `\@bmcartnote` (`{artnotes}`'s
+  `\note[id=…]{…}`, a `note:`-labelled note contact, r2) are the frontmatter and `{fmbox}` only holds them
+  (bmcart_cls.rs; OD #842, KPE #1067; not the `frontmatter_stores.rs` reroute the brief named — none existed for bmcart,
+  its printers are no pure stores): 1711.01177 0 → 10 creators, all 19 census bmcart papers gain their title, authors,
+  e-mails and affiliations. (5) The pst-plot binding requires pst-xkey and multido as pst-plot.sty:29-31 does (0711.2399
+  6 → 1 Errors, the one left the elsarticle v1 copy's `{comment}`, audit N10; 1406.1992 6 → 0). A/B (release,
+  `--preload=ar5iv.sty`, int50a vs 78m; 918 papers: the 370 scan.py `spacemark` shapes, 223 of the `author_spacing_sep`
+  feature, 40 spie, 56 jpconf, 19 bmcart, 101 pst-plot, 99 controls, the 10 witnesses): E 1,946 → 1,936, F 3 → 3, +6,468
+  words, 121 changed (byte comparison; 1912.00500 a timeout on both sides), controls 0; r1 → r2 (922 papers, the 918 and
+  2606.01993, 2310.12072, hep-th0310140): 4 outputs changed — the article notes of 1507.06515 ("Corresponding author"),
+  2007.00437 ("Second corresponding author: …") and 2112.10068 ("Equal contributor", on both its authors), which r1 had
+  dropped silently from its `{artnotes}` (the review's blocker), and 1712.06536's University of Bath now on Neill D. F.
+  Campbell (its `$\quad$ \textsuperscript{$\dagger$}~University of Bath` entry, r1 a tail of the "*University of
+  Bristol" line); 2310.12072's `\enskip\enskip\enskip` runs part its four names (int50a one creator, r1 alike); every
+  changed output read against its source: authors, affiliations, e-mails, notes and titles gained; the scan's other
+  shapes (a mark-led affiliation line, `$^1$Univ A\quad$^2$Univ B`) unchanged. Worse: 1312.1414 0 → 1 Error, the honest
+  `merged_creators` flag on "Richard Cleve Robin Kothari Rolando D. Somma" (base: one creator "Dominic W. Berry Andrew
+  M. Childs" with "Richard Cleve" as its affiliation and a nameless one, silent); 0711.2399's 42 fewer words are
+  `\multido` error ink. Repro A/B (968 sectioning-frontmatter repros, class-bindings with its 53 copy directories,
+  stub-dependencies, package-bindings): only this batch's 3 repros changed. Residuals: in a block marked with labels a
+  name whose only mark is a footnote symbol continues the line before it (`Bob Baker$^{2}$\quad Cat Cole$^{\S}$`, the
+  base too; 1312.1414) — FM S2b; a two-name block `Ann Able\thanks{…}\hspace*{1mm}$^{,}$\thanks{…} \enskip Bob
+  Baker\thanks{…}` (a comma-only mark, 1312.1414's shape) is one creator, r1 alike (1312.1414 itself parts its names);
+  iopart_support's routing, now jpconf's too: an `\address` of an unmarked block goes to the last author (1110.0674's
+  three authors under one address), an e-mail no name spells to a nameless creator (1309.7930, 1510.00572, 1609.09832,
+  2111.06834), a `\boldsymbol` in a mark (2010.05094) and a `\label` in an `\address` (2211.03667) leave the mark
+  unanswered — the same under `\documentclass{iopart}`.
 - **78i** (quality batch 10, the sel78i selection study's five non-frontmatter items; guards `perfect_kernel_batch78i::*`,
   9; OD #823-825, KPE #1048-1052; quality ledger rows #155 BIBLATEX-ONLY-FIELDS and #37 AMSTEX-LOCALSTY closed). (1)
   biblatex's own `.bib` fields (`journaltitle`, `location`, `urldate`, `addendum`, `maintitle`, the event fields, …: 47

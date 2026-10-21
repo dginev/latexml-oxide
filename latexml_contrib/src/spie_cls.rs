@@ -34,12 +34,24 @@ LoadDefinitions!({
   // creators, no contact, where the PDF prints 5 authors over 10 affiliation lines). A class that defines its own
   // `\author` (a spieman.cls copy's `\author[a]`/`\affil[a]`) keeps OmniBus's. Guard
   // `perfect_kernel_batch77w::spie_author_block_is_the_kernel_author`.
-  let kernel_author =
-    crate::shipped_class::shipped_class_text("spie")?.is_some_and(|text| !defines_author(&text));
+  //
+  // A copy that loads authblk — SPIE's 2015 v3.4 spie.cls, `\RequirePackage{authblk}` (its :31; the TeX Live v3.25
+  // copy loads none) — writes its author block with authblk's `\author[a]{…}`/`\affil[a]{…}`: it loads authblk as the
+  // copy does, whose `\author` reads the marks (the kernel's one-argument `\author` took "[" as the name and left
+  // every name in the body, 2406.08304: one creator "[", 30 empty affiliations). Guard
+  // `perfect_kernel_batch78m::spie_copy_loading_authblk_reads_authblk_authors`.
+  let copy = crate::shipped_class::shipped_class_text("spie")?;
+  let loads_authblk = copy
+    .as_deref()
+    .is_some_and(|text| crate::shipped_class::class_text_loads(text, "authblk"));
+  let kernel_author = copy.is_some_and(|text| !defines_author(&text)) && !loads_authblk;
   if kernel_author {
     Let!("\\lx@spie@kernel@author", "\\author");
   }
   LoadClass!("OmniBus");
+  if loads_authblk {
+    RequirePackage!("authblk");
+  }
   if kernel_author {
     // (the kernel's splitter reads the argument as written, where TeX expands the class's author-block macros when
     // `\maketitle` prints it: spie.cls:123-124 `\skiplinehalf` (`\medskip\\`) and `\skipline` (`\\`) end a line,

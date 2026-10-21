@@ -1,0 +1,21 @@
+% IOP's jpconf.cls (Journal of Physics: Conference Series; this directory's jpconf.cls is a minimal stand-in) prints
+% each `\address` and `\ead` as an `{indented}` list item where it stands (:104-110), as iopart.cls does: the binding
+% reads the copy raw, then makes them the frontmatter iopart_support does — the address an affiliation of the author
+% before it, the e-mail address the author's.
+% witness: 0705.0202, 1011.0523 (int50a: no contact, the address lines bullet lists after the abstract)
+% oracle:  pdflatex 0 errors; "Andreas Haungs", "Institut für Kernphysik, Karlsruhe, Germany", "E-mail:
+%          haungs@ik.fzk.de"
+% engines: perl (no binding: OmniBus) an address contact and an empty e-mail contact; rust int50a (the class read raw,
+%          OXIDIZED_DESIGN_DIVERGENCES #444) no contact, two `itemize` lists in the body
+% expect:  0 errors; one creator with its affiliation and e-mail contacts, no list in the body
+% status:  RED (int50a) -> GREEN (78m: jpconf_cls.rs)
+% preload: ar5iv.sty
+\documentclass{jpconf}
+\begin{document}
+\title{T}
+\author{Andreas Haungs}
+\address{Institut f\"ur Kernphysik, Karlsruhe, Germany}
+\ead{haungs@ik.fzk.de}
+\begin{abstract}Abs.\end{abstract}
+\section{S} Body.
+\end{document}

@@ -16922,3 +16922,34 @@ text as before; a sub-caption keeps its package's format. `\captionof*` reaches 
 `capstar.tex` (sel78k; 40 of the 30k sample use `\caption*` with caption font options, 187 `\caption*` at all). Repro
 captions-floats/caption_star_takes_the_caption_fonts; guards `perfect_kernel_batch78l::{caption_star_takes_the_caption_fonts,
 caption_star_takes_the_type_settings_everywhere}`.
+
+## 1067. bmcart's frontmatter: OmniBus reads `\author[keys]` as a name
+
+bmcart.cls (BioMed Central) writes each author `\author[addressref={aff1},email={…}]{\inits{JK}\fnm{Jeremie}
+\snm{Kim}}` and each address `\address[id=aff1]{\orgname{…}, \city{…}, \cny{…}}` inside `{frontmatter}` and
+`{fmbox}` (bmcart.cls:966-984, :1198-1296). Perl has no bmcart binding: OmniBus's one-argument `\author` takes "[" as
+the name and leaves the keys and the name in the body, and `{fmbox}`, `{abstractbox}`, `\fnm`, `\snm`, `\orgname`,
+`\city`, `\cny`, `\parttitle` are undefined (3 Errors on the minimal trigger, 7 on 1711.01177's shape). Minimal trigger:
+`\documentclass{bmcart}\begin{document}\begin{frontmatter}\begin{fmbox}\title{T}\author[addressref={aff1}]{\fnm{A}
+\snm{B}}\address[id=aff1]{\orgname{U}}\end{fmbox}\end{frontmatter}x\end{document}` with the paper's bmcart.cls. Fixed in
+Rust (78m, OXIDIZED_DESIGN_DIVERGENCES #842): the class is read raw and its printers are the frontmatter. Witness
+1711.01177; guard `perfect_kernel_batch78m::bmcart_frontmatter_is_frontmatter`.
+
+## 1068. jpconf's `\ead` is an empty e-mail contact
+
+jpconf.cls (IOP's Journal of Physics: Conference Series class) prints `\ead{a@x}` as "E-mail: a@x" under the address
+(:104-106, iopart.cls's). Perl has no jpconf binding: OmniBus's `\ead` makes an e-mail contact with no text
+(`<contact name="Email: " role="email"/>`) and `\address` an address contact. Minimal trigger:
+`\documentclass{jpconf}\begin{document}\title{T}\author{A B}\address{U}\ead{a@x.org}\end{document}` with the paper's
+jpconf.cls (0705.0202's). Fixed in Rust (78m, OXIDIZED_DESIGN_DIVERGENCES #841): the class is read raw and its
+`\address`/`\ead` are iopart_support's. Guard `perfect_kernel_batch78m::jpconf_address_and_email_are_frontmatter`.
+
+## 1069. Names parted only by `$\qquad$` or `\enskip` are one creator
+
+`\author{Ann Able$^{1}$ $\qquad$ Bob Baker$^{2}$ \enskip Cat Cole$^{1}$ \\ $^1$Univ A\quad$^2$Univ B}`: pdflatex prints
+three names. Perl's `@authoraffilsplits` (Base_Utility.pool.ltxml:681-682) has `\qquad` and `\quad`, but a `\qquad`
+inside math is no token of the split's top level, and `\enskip` is in no split list, so the three names are one
+creator, with Univ A twice and Univ B. Fixed in Rust (78m, OXIDIZED_DESIGN_DIVERGENCES #840): a top-level math
+group of spacing only is that spacing, and an `\enskip` right after a mark or note a space OD #52(i) rewrites to
+`\quad` (elsewhere one stays inside a name, `J.\enskip Smith`). Witnesses 1602.04504, 1312.1414; guards
+`perfect_kernel_batch78m::{author_spacing_math_between_names_separates, author_enskip_in_name_and_after_note}`.

@@ -1,0 +1,23 @@
+% A shipped spie.cls that loads authblk (SPIE's 2015 v3.4, :31 `\RequirePackage{authblk}`; this directory's spie.cls
+% is a minimal stand-in) writes its author block with authblk's `\author[a]{…}`/`\affil[a]{…}`: the binding loads
+% authblk as the copy does, so each name is a creator with its marked affiliation.
+% witness: 2406.08304 (34 authors over their affiliations; int50a: one creator "[", 30 empty affiliations, the names in
+%          the body as "a,b]Étienne Artigau c]François Bouchy…")
+% oracle:  pdflatex 0 errors; "Etienne Artigau^a and Francois Bouchy^b", then "^a Universite de Montreal",
+%          "^b Observatoire de Geneve"
+% engines: perl 2 creators, each with its affiliation; rust int50a one creator "[" (the kernel's one-argument
+%          `\author` installed by spie_cls.rs, which recognised only `\def\author` forms), the names in the body
+% expect:  0 errors; two creators, each with its affiliation contact
+% status:  RED (int50a) -> GREEN (78m: spie_cls.rs loads authblk for a copy that does)
+% preload: ar5iv.sty
+\documentclass{spie}
+\def\udem{a}\def\geneva{b}
+\title{T}
+\author[\udem]{Etienne Artigau}
+\author[\geneva]{Francois Bouchy}
+\affil[\udem]{Universite de Montreal}
+\affil[\geneva]{Observatoire de Geneve}
+\begin{document}
+\maketitle
+Body.
+\end{document}

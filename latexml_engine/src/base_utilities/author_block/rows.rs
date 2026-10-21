@@ -89,7 +89,7 @@ pub fn strip_linebreak_options(tokens: Tokens) -> Tokens {
 pub(in crate::base_utilities) fn normalize_hspace_separators(tokens: Tokens) -> Tokens {
   // (marked as the branch choice reads it, a footnote-symbol mark no mark: `\textbf{Vaibhav Singh}$^{*}$`, 2603.09835)
   let marked_block = has_author_marks(&rewrite_symbol_superscripts(tokens.clone()));
-  let src = tokens.unlist();
+  let src = spacing_math_unwrapped(tokens.unlist());
   let n = src.len();
   let mut out: Vec<Token> = Vec::with_capacity(n);
   // (the group depth and math mode at `src[i]`: a run is a separator only at the top level, outside math; whether a
@@ -124,11 +124,30 @@ pub(in crate::base_utilities) fn normalize_hspace_separators(tokens: Tokens) -> 
   // follows it — [`row_of_names`])
   let mut names_start = 0usize;
   let mut row_start = 0usize;
+  // (where in `src` the last top-level mark or note ended, for an `\enskip` right after it)
+  let mut mark_end: Option<usize> = None;
   let mut i = 0;
   while i < n {
     let t = src[i];
+    if depth == 0 && !in_math && mark_end.is_none_or(|at| at <= i) {
+      let marks = leading_marks_end(&src[i..]);
+      if marks > 0 {
+        mark_end = Some(i + marks);
+      }
+    }
     if mark_led.is_none() && t.get_catcode() != Catcode::SPACE && t != T_CS!("\\par") {
       mark_led = Some(starts_with_mark(after_leading_markup(&src[i..])));
+    }
+    // (the horizontal space a name sets before its own mark or note is the name's, no separator: `Oleg
+    // Lychkovskiy\thanks{…}\hspace*{2mm}$^{\rm a,b}$, Sergei Blinnikov\hspace*{2mm}$^{\rm a,c}$`, 0905.3658, where the
+    // `\quad` it made parted ", Sergei Blinnikov" off as an affiliation line; `\hspace*{1.3mm}$^{,\ddag}$`, 1312.1414)
+    if depth == 0
+      && !in_math
+      && named
+      && let Some(end) = space_before_own_mark(&src, i)
+    {
+      i = end;
+      continue;
     }
     match t.get_catcode() {
       Catcode::BEGIN => {
@@ -250,10 +269,140 @@ pub(in crate::base_utilities) fn normalize_hspace_separators(tokens: Tokens) -> 
       i += 1;
       continue;
     }
+    // (latex.ltx's `\enskip`, `\hskip.5em\relax`, is such a space too, at the top level right after a mark or note:
+    // `\normalsize Dominic W.\ Berry\thanks{…} \enskip \normalsize Andrew M.\ Childs\thanks{…}…`, 1312.1414, five
+    // names read as one; elsewhere it is a spacing command, one of which stays inside a name, `J.\enskip Smith$^{1}$`)
+    if t == T_CS!("\\enskip")
+      && depth == 0
+      && !in_math
+      && mark_end.is_some_and(|at| src[at..i].iter().all(|u| u.get_catcode() == Catcode::SPACE))
+    {
+      out.push(T_CS!("\\quad"));
+      i += 1;
+      continue;
+    }
     out.push(t);
     i += 1;
   }
   Tokens::new(out)
+}
+
+/// The horizontal spaces an author line parts its entries with ([`normalize_hspace_separators`]), which are separators
+/// at its top level: `\hspace` (its `*` and length read with it), `\hfill`, `\hfil`, `\quad`, `\qquad`. (Not `\enskip`,
+/// a separator only after a mark or note, else a spacing command, [`is_spacing_command`].)
+fn is_separating_space(t: &Token) -> bool {
+  t.get_catcode() == Catcode::CS
+    && t.with_str(|s| matches!(s, "\\hspace" | "\\hfill" | "\\hfil" | "\\quad" | "\\qquad"))
+}
+
+/// The run of horizontal space that opens `tokens` — spaces, separating spaces ([`is_separating_space`], `\hspace`'s `*`
+/// and length read with it) and spacing commands ([`is_spacing_command`]) —: where it ends, how many spacing commands
+/// it holds, and whether it holds a separating space.
+fn horizontal_space_run(tokens: &[Token]) -> (usize, usize, bool) {
+  let (mut end, mut commands, mut separating) = (0, 0, false);
+  while let Some(t) = tokens.get(end) {
+    if *t == T_CS!("\\hspace") {
+      separating = true;
+      end += 1;
+      if tokens.get(end) == Some(&T_OTHER!("*")) {
+        end += 1;
+      }
+      end = skip_group(tokens, end);
+    } else if is_separating_space(t) {
+      separating = true;
+      end += 1;
+    } else if is_spacing_command(t) {
+      commands += 1;
+      end += 1;
+    } else if t.get_catcode() == Catcode::SPACE {
+      end += 1;
+    } else {
+      break;
+    }
+  }
+  (end, commands, separating)
+}
+
+/// Where a run of horizontal space that starts at `src[start]` with a separating space ([`is_separating_space`]) ends,
+/// when what follows it is a mark or a note of the name before it ([`leading_marks_end`]: `$^{a,b}$`,
+/// `\textsuperscript{1}`, `\thanks{…}`) that no entry text follows — a comma, `;`, the word "and", a separator, a line
+/// break, a separating run of spacing (a separating space, or two or more spacing commands, OXIDIZED_DESIGN #52(o)) or
+/// the end come after it —, so the space is the name's: `Oleg L.\hspace*{2mm}$^{\rm a,b}$, Sergei B.` (0905.3658).
+/// `None` before a mark that leads an entry (`$^1$Univ A\quad$^2$Univ B`, an affiliation line's two entries; with one
+/// tie or control space after the mark, the entry's own, `$^1$~Univ A\quad$^2$~Univ B` and `\textsuperscript{2}\ Univ
+/// B`, whose two universities read as one) and before anything else.
+fn space_before_own_mark(src: &[Token], start: usize) -> Option<usize> {
+  if !src.get(start).is_some_and(is_separating_space) {
+    return None;
+  }
+  let end = start + horizontal_space_run(&src[start..]).0;
+  let marks = leading_marks_end(&src[end..]);
+  if marks == 0 {
+    return None;
+  }
+  let rest = &src[end + marks..];
+  // (the spacing after the marks: a separating run ends the entry there — an `\enskip` too, which right after a mark or
+  // note is a separator, `Childs\thanks{…}\hspace*{1.1mm}$^{,}$\thanks{…} \enskip \normalsize Richard Cleve`,
+  // 1312.1414 —; one other spacing command, and the spaces around it, is the next entry's, which the token after it
+  // tells)
+  let (after, commands, separating) = horizontal_space_run(rest);
+  if separating || commands >= 2 || rest[..after].contains(&T_CS!("\\enskip")) {
+    return Some(end);
+  }
+  let rest = &rest[after..];
+  let own = match rest.first() {
+    None => true,
+    Some(t) if *t == T_OTHER!(",") || *t == T_OTHER!(";") || *t == T_END!() => true,
+    Some(t) if is_line_separator(t) || *t == T_CS!("\\par") => true,
+    Some(_) => and_word_end(rest, false).is_some(),
+  };
+  own.then_some(end)
+}
+
+/// `tokens` with each math group of its top level that holds only spacing — `$\qquad$` — written as that spacing,
+/// outside math, which the separators read as written so (`Michael J. Wilber$^{1,2}$ $\qquad$ Vitaly
+/// Shmatikov$^{1,2}$ $\qquad$ Serge Belongie$^{1,2}$`, 1602.04504, whose three names read as one).
+fn spacing_math_unwrapped(tokens: Vec<Token>) -> Vec<Token> {
+  let spacing = |t: &Token| {
+    t.get_catcode() == Catcode::SPACE
+      || is_spacing_command(t)
+      || (t.get_catcode() == Catcode::CS && t.with_str(|s| matches!(s, "\\quad" | "\\qquad")))
+  };
+  let mut out = Vec::with_capacity(tokens.len());
+  let mut depth = 0usize;
+  let mut in_math = false;
+  let mut i = 0;
+  while i < tokens.len() {
+    let t = tokens[i];
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      Catcode::MATH if depth == 0 && !in_math => {
+        let close = tokens[i + 1..]
+          .iter()
+          .position(|u| u.get_catcode() == Catcode::MATH);
+        if let Some(close) = close {
+          let inner = &tokens[i + 1..i + 1 + close];
+          if inner.iter().all(spacing) && inner.iter().any(|u| u.get_catcode() != Catcode::SPACE) {
+            out.extend(
+              inner
+                .iter()
+                .copied()
+                .filter(|u| u.get_catcode() != Catcode::SPACE),
+            );
+            i += close + 2;
+            continue;
+          }
+        }
+        in_math = true;
+      },
+      Catcode::MATH => in_math = !in_math,
+      _ => {},
+    }
+    out.push(t);
+    i += 1;
+  }
+  out
 }
 
 /// Whether the line after a line of names `names` (as rewritten so far, the rows it already goes on with included) —
@@ -404,11 +553,17 @@ fn row_name_count(tokens: &[Token]) -> usize {
 /// The spacing commands a run of which parts two author names (user ruling 2026-10-19): the control space `\ ` — also
 /// as the control return a line ending in `\ ` leaves, TeX dropping the line's trailing space (latex.ltx's `\^^M` is
 /// `\ `; cs0207008's `K.V. Hindriks \affila\ \ ⏎ W. van der Hoek`) —, the medium and thick spaces `\:`, `\>`, `\;`,
-/// the tie `~` and `\enspace`.
+/// the tie `~`, `\enspace` and `\enskip` (latex.ltx `\hskip.5em\relax`, a separator by itself only after a mark or note,
+/// [`normalize_hspace_separators`]: `A.\enskip B. Smith` is one name).
 pub(in crate::base_utilities) fn is_spacing_command(t: &Token) -> bool {
   *t == T_ACTIVE!('~')
     || (t.get_catcode() == Catcode::CS
-      && t.with_str(|s| matches!(s, "\\ " | "\\\r" | "\\:" | "\\>" | "\\;" | "\\enspace")))
+      && t.with_str(|s| {
+        matches!(
+          s,
+          "\\ " | "\\\r" | "\\:" | "\\>" | "\\;" | "\\enspace" | "\\enskip"
+        )
+      }))
 }
 
 /// `tokens` after the markup a line or an entry may open with before its mark: spaces, group openings and the font and

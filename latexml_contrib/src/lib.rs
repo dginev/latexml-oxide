@@ -71,6 +71,7 @@ pub mod backref_sty;
 pub mod beilstein_cls;
 pub mod bibentry_sty;
 pub mod biblatex_sty;
+pub mod bmcart_cls;
 pub mod bmvc2k_cls;
 pub mod breqn_sty;
 pub mod bussproofs_sty;
@@ -201,6 +202,7 @@ pub mod jinstpub_sty;
 pub mod jmlr2e_sty;
 pub mod jmlr_cls;
 pub mod jpc_sty;
+pub mod jpconf_cls;
 pub mod koma_script;
 pub mod kotexutf_sty;
 pub mod l3draw_sty;
@@ -564,6 +566,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("jhrs", "cls", jhrs_cls::load_definitions),
   ("jcm", "cls", jcm_cls::load_definitions),
   ("pasa", "cls", pasa_cls::load_definitions),
+  ("jpconf", "cls", jpconf_cls::load_definitions),
+  ("bmcart", "cls", bmcart_cls::load_definitions),
   ("pasj00", "cls", pasj00_cls::load_definitions),
   ("pasj01", "cls", pasj01_cls::load_definitions),
   ("pasj02", "cls", pasj02_cls::load_definitions),

@@ -1,0 +1,22 @@
+% latex.ltx's `\enskip` (`\hskip.5em\relax`) parts two names only right after a mark or note (`Berry\thanks{…} \enskip
+% \normalsize Andrew M.\ Childs`, 1312.1414); elsewhere it is a spacing command, one of which stays inside a name
+% (`J.\enskip Smith`), a run of two or more parting names (OXIDIZED_DESIGN #52(o)). An `\enskip` after marks that a
+% space leads (`\hspace*{1mm}$^{1}$\thanks{…} \enskip`, 1312.1414's `\hspace*{1.1mm}$^{,}$\thanks{…} \enskip`) ends the
+% name there, so that space is the name's own.
+% witness: synthetic (78m review: `A.\enskip B. Smith and C.\enskip D. Jones` read as four names); 1312.1414 (five
+%          names read as one at int50a)
+% oracle:  pdflatex 0 errors; "J. Smith^{1*} K. Jones^2", then "1 Univ A", "2 Univ B", the footnote "Corresponding
+%          author."
+% engines: perl one creator "J. Smith K. Jones" with the note and both universities; rust int50a "J. Smith" with
+%          "K. Jones" as an affiliation; rust 78m r1 three creators "J.", "Smith K.", "Jones"
+% expect:  0 errors, 0 warnings; two creators, J. Smith with the note and Univ A, K. Jones with Univ B
+% status:  RED (78m r1) -> GREEN (78m r2: rows.rs `\enskip` a separator only after a mark or note)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{J.\enskip Smith\hspace*{1mm}$^{1}$\thanks{Corresponding author.} \enskip K.\enskip Jones$^{2}$\\ $^1$Univ A\\
+$^2$Univ B}
+\maketitle
+x
+\end{document}

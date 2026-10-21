@@ -1563,7 +1563,9 @@ produced byte-identical output, so this is a surpass, not a Rust-only fix.
   `A \hspace{1cm} B \hspace{1cm} C` (a regular poor-man's separator) collapsed into one
   creator, because the splitter only knew `\and`/`\quad`. `\quad` is already a hard
   separator in every author/affiliation split set, so the rewrite needs no new plumbing;
-  `\hspace`'s optional `*` and mandatory length are consumed so the length cannot leak.
+  `\hspace`'s optional `*` and mandatory length are consumed so the length cannot leak. A space right before a
+  name's own mark or note is the name's, no separator, and an `\enskip` right after a mark or note and a
+  spacing-only math group (`$\qquad$`) separate too (78m, #840).
 - **Footnote-SYMBOL superscripts (`$^{*}$`, `${}^{\dagger}$`, `\textsuperscript{\ddagger}`)
   → a visible `\lx@frontmatter@keepsup` sup.** These are equal-contribution / corresponding
   notes, NEVER affiliation numbers (the same note-vs-affiliation split already encoded in
@@ -23052,3 +23054,80 @@ T & … \\ Below & …`, where tabularray hides "Below" under "T"; the text stay
 "mx\hfil\hfil\\"). Probe `tblr.tex` (sel78k; 25 sample papers call `\SetCell`/`\SetCells`); 78l review probes `tb.tex`,
 `tb2.tex`. Repros alignment-bindings/tblr_setcell_spans_columns_and_rows, alignment-bindings/tblr_setcell_after_a_row_rule_spans;
 guards `perfect_kernel_batch78l::{tblr_setcell_spans_columns_and_rows, tblr_setcell_after_a_row_rule_spans}`.
+
+### 840. A space a name sets before its own mark is the name's; spacing-only math, `\enskip` after a mark part names
+
+OD #52(i) rewrites a horizontal space in an author block (`\hspace`, `\hfill`) to `\quad`, which with `\quad` and
+`\qquad` is a separator of the author/affiliation split (Perl's `@authoraffilsplits`, Base_Utility.pool.ltxml:681-682).
+A name that sets a space before its own mark then lost its co-authors: `Oleg Lychkovskiy\thanks{…}\hspace*{2mm}$^{\rm
+a,b}$, Sergei Blinnikov\hspace*{2mm}$^{\rm a,c}$` (0905.3658) split into the line "Oleg Lychkovskiy" and the mark-led
+line "$^{\rm a,b}$, Sergei Blinnikov", an affiliation (one creator, a contact ", Sergei Blinnikov"); Perl, which never
+rewrites `\hspace`, reads two creators — but splits a written `\quad` there the same way. Ours (78m, rows.rs
+`space_before_own_mark`): at the block's top level, outside math, after a name letter, a run of horizontal space that
+opens with `\hspace` (its `*` and length read with it), `\hfill`, `\hfil`, `\quad` or `\qquad` (more spacing and spaces
+after it in the run) is dropped when a mark or a note of the name before it follows (`leading_marks_end`: `$^{…}$`,
+`\textsuperscript{…}`, `\altaffilmark{…}`, `\thanks{…}`, `\footnote{…}`) and no entry text follows that — a comma, `;`,
+the word "and", a line separator, a separating run of spacing (a separating space, an `\enskip` — a separator right
+after a mark, below —, or two or more spacing commands as #52(o) counts them), `\par`, a closing brace or the end come
+after it; one spacing command after the marks (a tie, a control space) and the spaces around it are passed over before
+that test, being the next entry's. A mark that leads an entry keeps the space a separator: `$^1$Univ A\quad$^2$Univ B`
+and `$^1$~Univ A\quad$^2$~Univ B` (78m r2; r1 read the tie as "more spacing", so Ann had "Univ A² Univ B" and Bob none)
+are an affiliation line's two entries, as `\textsuperscript{2}\ Univ B` is. Two more spacings part names (78m): a math
+group at the block's top level holding only spacing (`\quad`, `\qquad`, the spacing commands of #52(o), spaces) is that
+spacing written outside math (`spacing_math_unwrapped`; 1602.04504's `Michael J. Wilber$^{1,2}$ $\qquad$ Vitaly
+Shmatikov$^{1,2}$ $\qquad$ Serge Belongie$^{1,2}$` was one creator, in Perl too, KNOWN_PERL_ERRORS #1069), and
+latex.ltx's `\enskip` (`\hskip.5em\relax`) at the top level right after a mark or note is a space #52(i) rewrites to
+`\quad`, as `\hspace` (1312.1414's five names parted by `Berry\thanks{…} \enskip \normalsize Andrew M.\ Childs`);
+elsewhere it is one of #52(o)'s spacing commands (`is_spacing_command`), one of which stays inside a name (`J.\enskip
+Smith$^{1}$`, `A.\enskip B. Smith`, which 78m r1, reading every top-level `\enskip` as a separator, parted) and a run of
+two or more of which parts names. The labels of a mark lose a `\rm` glued to them as Perl's `s/\\rm//g`
+(Base_Utility.pool.ltxml:365) strips it (`clean_frontmatter_labels`): `$^{\rm a,b}$` reads "\rma,b", the tokenizer
+having skipped the space after `\rm`, which OD #34's `FONT_SWITCH` (a switch before a non-letter) left, so "\rma" was
+requested and no `${\rm ^a}$` line answered it. Residual: in a block marked with labels, a name whose only mark is a
+footnote symbol continues the line before it (`Bob Baker$^{2}$\quad Cat Cole$^{\S}$` is one name, the base too:
+1312.1414's "Richard Cleve Robin Kothari Rolando D. Somma", flagged `merged_creators`; SYNC_STATUS 78m bullet). Repros
+sectioning-frontmatter/{author_space_before_own_mark_is_the_name, author_spacing_math_between_names_separates,
+author_tie_after_entry_mark_is_the_entry, author_enskip_in_name_and_after_note}; guards
+`perfect_kernel_batch78m::{author_space_before_own_mark_is_the_name, author_spacing_math_between_names_separates,
+author_tie_after_entry_mark_is_the_entry, author_enskip_in_name_and_after_note}`.
+
+### 841. jpconf.cls is read raw, then its address and e-mail blocks are the frontmatter
+
+IOP's conference class (jpconf.cls 2004/05/04 v1.0, Journal of Physics: Conference Series; not in TeX Live, 58 census
+papers ship it) copies iopart.cls's author block: `\address` (:108-110) and `\ead`/`\eads`/`\mailto` (:104-106) print
+an `{indented}` list item where they stand. Perl has no binding (OmniBus: `\address` an address contact, `\ead` an empty
+e-mail contact, KNOWN_PERL_ERRORS #1068); under the raw-class lever (#444) the blocks were bullet lists after the
+abstract and the authors had no contact (0705.0202, 1011.0523). Ours (78m, `latexml_contrib/src/jpconf_cls.rs`): the
+paper's copy is read raw (`RawRead`, `shipped`), then iopart_support's address and e-mail definitions are made
+(`iopart_support_sty::iop_address_and_email`, factored out of the iopart_support binding unchanged): each `\address` an
+affiliation of the authors before it (`\lx@add@affiliation@marked`), each `\ead` an e-mail placed with its author
+(#806, #808, #809). The class's other definitions stay its own; jpconf.cls is on `author_files::AUTHOR_FILES`. Repro
+sectioning-frontmatter/jpconf_copy (a stand-in jpconf.cls written from scratch); guard
+`perfect_kernel_batch78m::jpconf_address_and_email_are_frontmatter`.
+
+### 842. bmcart.cls is read raw, then its title, author and address printers are the frontmatter
+
+BioMed Central's bmcart.cls (VTeX; not in TeX Live, 20 census papers ship it) lets `\title`, `\author`, `\address` and
+`{fmbox}` to its printers in `{frontmatter}` (:966-984): `\title@fmt` typesets the title in the `{fmbox}` (:1034-1053),
+`\author@fmt[keys]{name}` the name and the numbers of its `addressref` addresses (:1198-1255), `\address@fmt[id=…]`
+stores the address (:1287-1296) for the "Author details" that `\thebibliography` prints (:1708-1712 `\printaddresses`),
+which the kernel's bibliography constructor never runs. Read raw (#444) the document had no title, no creator and no
+address (1711.01177: a `titlepage` of boxes, the marks "??"); Perl, with no binding, makes one creator "[" (OmniBus's
+`\author` reads the bracket as the name) and 7 Errors (KNOWN_PERL_ERRORS #1067). Ours (78m,
+`latexml_contrib/src/bmcart_cls.rs`): the copy is read raw, then `\title@fmt` is `\lx@add@title`; `\author@fmt` a
+`\lx@add@creator[role=author,annotations={…}]` requesting its `addressref` and `presentaddressref` ids, its name parts
+as the printed name reads them (:1247-1249: `\inits` dropped, `\fnm`, `\snm`, `\particle`, `\suffix` as written), each
+address of its `email` key (`email={a@x, b@y}`) an `\lx@add@email`; `\address@fmt` an affiliation
+`\lx@add@contact[role=affiliation,label={id}]` (the class's `aff<n>` without an `id`), its parts as
+`\address@definitions` prints them (:1298-1304); `\@bmcartnote[id=…]{text}`, an article note (`{artnotes}`'s
+`\note[id=n1]{Corresponding author}`, :1371-1395), which the class stores by its `id` for `\printartnotes` to print
+under the title block's rule (:999-1002 `\auto@set@thanksbox`, :1406-1409, :1440-1447), a note
+`\lx@add@contact[role=note,label={note:id}]` as elsart_support_core's `\fntext[label]` is, and the author's `noteref`
+ids (and `thanksref`'s, whose alias `noteref` is, :1131-1143) requests of `note:id` among its `annotations`; `{fmbox}`
+only holds them, its "Full list of author information …" line (:1002) a print flourish. (78m r1 kept `{artnotes}` to the
+class, whose printer the empty `\bmc@endfmbox` never ran, so the notes were dropped silently: 1507.06515's
+"Corresponding author", 2007.00437's "Second corresponding author: kcsamir@gmail.com", 2112.10068's "Equal contributor"
+of two authors, which the PDF prints.) The class's `corref` key (its "Correspondence:" line, :1463-1467) keeps the
+class's own printing, the e-mail it names an `email` contact already. bmcart.cls is on `author_files::AUTHOR_FILES`.
+Repro sectioning-frontmatter/bmcart_copy (a stand-in bmcart.cls written from scratch); guard
+`perfect_kernel_batch78m::bmcart_frontmatter_is_frontmatter`.

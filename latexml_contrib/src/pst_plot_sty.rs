@@ -16,7 +16,12 @@ use latexml_package::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // pst-plot.sty:29-31 (its current branch): `\RequirePackage{pstricks}`, `{pst-xkey}`, `{multido}` — a paper's
+  // `\multido` loops over the plot's points with no `\usepackage{multido}` of its own (0711.2399: `Error:undefined:
+  // \multido` where Perl, reading pst-plot.sty raw, is clean). Guard `perfect_kernel_batch78m::pst_plot_loads_multido`.
   RequirePackage!("pstricks");
+  RequirePackage!("pst-xkey");
+  RequirePackage!("multido");
   // pst-plot.tex:16-17 marks itself loaded; pstricks-add.tex:26 (and any other
   // `\ifx\PSTplotLoaded\endinput\else\input pst-plot\fi`) must not raw-input
   // the real file over this binding — raw `\psaxes` typesets its tick labels.
