@@ -47,9 +47,12 @@ When two rules below pull apart, the higher priority wins.
 
 - **One dialect**: class setters capture metadata and rewire to the `\lx@add@*` API; no presentational artifacts
   (tabulars, minipages) inside a `personname` (2026-10).
-- **Ownership by evidence, never by position**: an e-mail goes to the author whose name it spells, else the group's only
-  author, else the block (jinstpub OD #801, 2026-10-21; jheppub to follow if measured better). An address that spells no
-  one is not guessed onto an author.
+- **Ownership by evidence, never by bare position**: an e-mail goes to the author whose name it spells; else, in a list
+  with exactly one address per author that every spelled address agrees with, to the author at its place (the consistent
+  author-order list is evidence, 2026-10-21, OD #805); else to the group's only author (jinstpub OD #801); else, for the
+  one address left on the block of a multi-author paper, to the one author marked as the corresponding author (a
+  "Corresponding author" note, or a mark whose legend says so; 2026-10-21); else to the block. Otherwise an address that
+  spells no one is not guessed onto an author.
 - **The marks shown on a name are its requests for labelled affiliations**; a name's label is the name alone
   (2026-10-21, rank 93).
 - **A footnote-list symbol (`\dag` included) that starts a line labels that line**; the line goes to the authors who
@@ -59,9 +62,15 @@ When two rules below pull apart, the higher priority wins.
 ## 5. Bindings and shipped copies
 
 - **A binding defines a macro where the original package or class defines it**, under its conditions (2026-10-17).
-- **A binding wins over a shipped copy** (2026-10-17); a copy may override **text names** (`\refname`, caption labels,
-  journal abbreviations), never **structure** (`\appendix`, `\frontmatter`) — standard-class derivatives (OD #731
-  rule 13) and, since 2026-10-21, copies routed to a binding by their `\Provides` line (1402.7103).
+- **A binding wins over a shipped copy, for markup and for typography** (2026-10-17, 2026-10-21): bindings are the ground
+  truth for the XML. A copy may supply only the **text names its binding declares** — the kernel's default list of the
+  standard `\…name` macros (`\figurename`, `\tablename`, `\abstractname`, `\refname`, …), extended per binding (journal
+  abbreviations) — and only a standard-class derivative (OD #731 rule 13) or a copy routed to a binding by its `\Provides`
+  line (rule 14, 1402.7103). Caption formats (`\fnum@…`), separators, counter separators, list labels and structure
+  (`\appendix`, `\frontmatter`) stay the binding's; a copy shipped under the binding's own name overrides nothing.
+- **Typographic variation in raw class or package code is ignorable**; where it is worth keeping it becomes a setting the
+  binding makes, with a default, never a reading of the raw definitions (2026-10-21: the caption separator stays the
+  binding's, default ": " as in Perl).
 - **One binding per class or package family** supports the union of its versions' features; a feature is validated
   against the version that defines it (2026-10-09).
 - **A stub loads the real dependencies** its original `\RequirePackage`s (2026-10-12).
