@@ -31,7 +31,7 @@ LoadDefinitions!({
           .filter(|(key, _)| key.trim() == "caption")
           .map(|(_, value)| !matches!(value.trim(), "0" | "false" | "no" | "off"))
       })
-      .last()
+      .next_back()
       .unwrap_or(true)
   });
   if use_caption {
