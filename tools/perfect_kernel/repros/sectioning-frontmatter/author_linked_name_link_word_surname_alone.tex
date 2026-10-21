@@ -1,0 +1,13 @@
+% witness: the rev77y2 re-review (finding 3, probe l6)
+% oracle:  pdflatex 0 errors: two \and columns: Ann Able over Univ A; the linked Mary Ann Code alone
+% engines: rust 77y r2 = 0 errors; "Mary Ann Code" a URL contact of Ann Able; int38b two authors
+% expect:  0 errors, 0 warnings; two authors, Mary Ann Code with no contact
+% status:  RED (77y r2) -> GREEN (77y r3)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able \\ Univ A \and \href{https://x.org/mc}{Mary Ann Code}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

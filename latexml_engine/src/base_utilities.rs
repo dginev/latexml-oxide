@@ -1831,8 +1831,7 @@ LoadDefinitions!({
         let mut names_line = true;
         // the last line of names this group's authors were split from, which a line of more names continues
         let mut last_names: Option<Tokens> = None;
-        let lines_here = group_lines(group);
-        for (at, (delimiter, line)) in lines_here.iter().cloned().enumerate() {
+        for (delimiter, line) in group_lines(group) {
           position += 1;
           let beside = beside_prefix_marked_names(prefix_marked_names, &mut names_line, &delimiter);
           // (a piece that is only the word "and" separates the names beside it: `\quad \textnormal{and} \quad`,
@@ -1961,7 +1960,7 @@ LoadDefinitions!({
                 // 1407.0988), as the merged-author check would otherwise report. A link line printing a URL there is
                 // no name: a URL contact, as under an entry (`\url{…} \\ Ann Able$^1$ …`, `… \and \url{…}`; the r5
                 // re-review's u4, u16); a linked name is its author ([`prints_a_url`]; 2608.24427).
-                if prints_a_url(&line, lines_here.get(at + 1).map(|(_, under)| under)) {
+                if prints_a_url(&line) {
                   entries.push((AuthorLineKind::Link, line));
                 } else if name_count(&visible_name_text(line.unlist_ref())) >= 2 {
                   // …a names line an unmarked row of more names continues, as a later one does (`Ann Able$^{*}$, Bob
@@ -2240,7 +2239,7 @@ LoadDefinitions!({
           AuthorLineKind::Link => {
             correspondence_mark = None;
             let (owner, authors) = link_authors[index].clone();
-            let url = is_url_line(&line);
+            let url = is_url_line(&line) || link_prints_a_handle(&line, &author_keys);
             if authors.is_empty() {
               calls.extend(url_contact_call(line, owner, url)?);
             } else {
@@ -2437,6 +2436,8 @@ LoadDefinitions!({
       let mut blocks: Vec<(bool, Vec<Group>)> = Vec::new();
       // (the block's link lines no names stand over: the whole block's URL contacts, after its names)
       let mut block_links: Vec<Tokens> = Vec::new();
+      // (the lines under such links, the block's affiliations)
+      let mut block_lines: Vec<Tokens> = Vec::new();
       let mut spaced = true;
       for (delimiter, block) in split_tokens_delimited(stuff, author_group_splits()) {
         spaced &= delimiter
@@ -2504,10 +2505,14 @@ LoadDefinitions!({
           // $^\ddagger$Univ B \\ Cat Cole \\ Univ C`, the r8 re-review's finding 1, probes w1, w2 — Cat Cole had been an
           // affiliation, Univ C every name's of the row; no paper in its scan of 115k. A line reads as names there only
           // when it reads as names, no institution ([`reads_as_affiliation`] reads none in a line of names), and as no
-          // note — correspondence, a contribution, funding ([`classify_thanks`]) — and either carries a symbol mark of
-          // its own (w2's `Cat Cole$^{\S}$ \quad Dan Dorn$^{\S}$`) or has an institution under it (w1's Univ C): a line
-          // of capitalized words alone under the row is no name — `Google DeepMind`, `Hong Kong`, `Equal Contribution`
-          // stay the block's lines, the 77y review's finding 2, probes k1, k7, k9)
+          // note — correspondence, a contribution, funding ([`classify_thanks`]) —, no mark leads it (a legend or a
+          // label: `$^*$Project Lead`, `$^\S$Google DeepMind`, the rev77y2 re-review's finding 2, probes m2, m4), and
+          // either carries a symbol mark of its own after its text (w2's `Cat Cole$^{\S}$ \quad Dan Dorn$^{\S}$`), has
+          // an institution under it that does not go on with its words (w1's Univ C; not `Shanghai Jiao Tong \\
+          // University`, `Hong Kong \\ The Hong Kong University …`, [`continues_the_line`]), or an e-mail address its
+          // names spell (`Cat Cole \\ \texttt{ccole@x.edu}`, [`addresses_spelling`]; the rev77y2 re-review's finding 4,
+          // probes k12, k15, k17): a line of capitalized words alone under the row is no name — `Google DeepMind`,
+          // `Hong Kong`, `Equal Contribution` stay the block's lines, the 77y review's finding 2, probes k1, k7, k9)
           let names_at = (1..lines.len())
             .find(|at| {
               let line = &lines[*at];
@@ -2517,8 +2522,12 @@ LoadDefinitions!({
                 && !is_link_line(line)
                 && name_count(&text) > 0
                 && classify_thanks(&text) == "note"
+                && after_symbol_mark(line.unlist_ref()).len() == line.unlist_ref().len()
                 && (!symbol_marks(line).is_empty()
-                  || lines.get(at + 1).is_some_and(reads_as_institution))
+                  || lines.get(at + 1).is_some_and(|under| {
+                    (reads_as_institution(under) && !continues_the_line(line, under))
+                      || addresses_spelling(line, under)
+                  }))
             })
             .unwrap_or(lines.len());
           let names: Vec<Tokens> = lines.split_off(names_at);
@@ -2536,9 +2545,16 @@ LoadDefinitions!({
         // (`\url{…} \\ Ann Able \\ Univ A`, the r5 re-review's u17), a block of link lines alone is the whole block's
         // (`Ann Able \\ Univ A \and \url{…}`, u16), not a creator named by its URL.
         let leading_links = (0..lines.len())
-          .take_while(|at| prints_a_url(&lines[*at], lines.get(at + 1)))
+          .take_while(|at| prints_a_url(&lines[*at]))
           .count();
         if leading_links == lines.len() && !lines.is_empty() {
+          block_links.append(&mut lines);
+          continue;
+        }
+        // (and so is a column of links over an institution, no name under them: `\href{…}{Hugging Face Demo} \\ Univ
+        // B`, the rev77y2 re-review's finding 3, probes l1-l3 — not a creator named by its institution)
+        if leading_links > 0 && lines.get(leading_links).is_some_and(reads_as_institution) {
+          block_lines.extend(lines.drain(leading_links..));
           block_links.append(&mut lines);
           continue;
         }
@@ -2907,7 +2923,7 @@ LoadDefinitions!({
                 }
               }
             }
-          } else if is_url_line(&line) {
+          } else if is_url_line(&line) || link_prints_a_handle(&line, &name_keys) {
             // A link line is a URL contact, not an affiliation of the names (user ruling 2026-10-20, batch 77p r7):
             // its one name's; the whole block's when the names it prints under are the document's whole author list
             // (a project's page, `Ann Able, Bob Baker \\ Univ A \\ \url{…}`); else its group's names', as the group's
@@ -2977,6 +2993,14 @@ LoadDefinitions!({
           LinkOwner::Current
         };
         calls.extend(url_contact_call(link, owner, true)?);
+      }
+      for line in block_lines {
+        let owner = if replace {
+          LinkOwner::Block
+        } else {
+          LinkOwner::Current
+        };
+        calls.extend(url_contact_call(line, owner, false)?);
       }
     }
     Ok(Tokens::new(calls))
@@ -18893,30 +18917,51 @@ fn names_an_organization(text: &str, target: &str) -> bool {
   // (an organization's handle, written with a mark no word holds — `deepseek-ai` —, not a person's: a homepage's link
   // printing the name its domain spells, `\href{https://www.annable.com}{annable}`, is a URL contact; the 77y review's
   // finding 4, probes d1, d2)
-  let domain_named = labels.len() >= 2
-    && labels[labels.len() - 2].chars().count() >= 3
-    && spelled.contains(labels[labels.len() - 2])
+  // (the label's letters and digits, as the text's are read: `ml-group.org`, `{ml-group}`)
+  let label: String = labels
+    .len()
+    .checked_sub(2)
+    .map(|at| labels[at].chars().filter(|c| c.is_alphanumeric()).collect())
+    .unwrap_or_default();
+  let domain_named = label.chars().count() >= 3
+    && spelled.contains(label.as_str())
     && text
       .chars()
       .any(|c| !c.is_alphabetic() && !c.is_whitespace());
   capitalized || domain_named
 }
 
+/// Whether `line` is a link printing one word an author's name spells (`keys`, [`spelled_owners`]): the author's own
+/// handle, a homepage, never an organization's name its domain spells ([`names_an_organization`]) —
+/// `\href{https://annable.com}{ann-able}`, `\href{https://www.annable42.com}{annable42}` under Ann Able (the rev77y2
+/// re-review's finding 5, probes d5, d9; `deepseek-ai` no name spells stays an affiliation).
+fn link_prints_a_handle(line: &Tokens, keys: &[NameKeys]) -> bool {
+  let Some((at, end)) = link_line_link(line) else {
+    return false;
+  };
+  let (_, printed) = link_texts(&line.unlist_ref()[..end], at);
+  let printed = printed.trim();
+  !printed.is_empty()
+    && !printed.contains(char::is_whitespace)
+    && !printed.contains('@')
+    && !spelled_owners(keys, printed).is_empty()
+}
+
 /// Whether `line` is a link line ([`is_url_line`]) that prints a web address, a link word or a label before its link:
 /// a `\url`, an `\href` printing a URL, `\href{…}{Project Page}`, `Project page: \href{…}{here}`. A link line opening an
 /// author block or an `\and` column is only one so, a linked name there its author
 /// (`\href{https://orcid.org/…}{\includegraphics{orcid.pdf}\hspace{1mm}Eric Rossetto}`, 2608.24427, 2602.15968,
-/// 2603.04124); a column of a "Project Page" link alone is the block's, no author (the r6 re-review's w22). `under` is
-/// the line under it in its column, if any: an institution there makes a linked text read as a name whose surname is a
-/// link word ([`link_words_beyond_a_surname`]).
-fn prints_a_url(line: &Tokens, under: Option<&Tokens>) -> bool {
+/// 2603.04124); a column of a "Project Page" link alone is the block's, no author (the r6 re-review's w22). What the
+/// link prints decides, never the line under it: a name whose surname is a link word stays a name
+/// ([`link_words_beyond_a_surname`]; the rev77y2 re-review's finding 3).
+fn prints_a_url(line: &Tokens) -> bool {
   let Some((at, end)) = link_line_link(line) else {
     return false;
   };
   let v = &line.unlist_ref()[..end];
   let (_, printed) = link_texts(v, at);
   // (a printed text that reads as a name is that name linked, unless it shows a scheme or `www.`, and no word of it is a
-  // link word but the surname of a two-word name: `\href{…}{Lucy Page}`, `\href{…}{Edward A.G. Schuur}`, 2601.06085;
+  // link word but a name's surname: `\href{…}{Lucy Page}`, `\href{…}{Edward A.G. Schuur}`, 2601.06085;
   // the r7 re-review's findings 2 and 4 — not `\href{…}{Project Page}`, `{Model Card}`, `{Paper Website}`, `{Hugging
   // Face Demo}`, the r8 re-review's finding 2, probes u1, u3, u4)
   if name_count(&printed) > 0
@@ -18924,7 +18969,7 @@ fn prints_a_url(line: &Tokens, under: Option<&Tokens>) -> bool {
     && !printed
       .split_whitespace()
       .any(|word| word.starts_with("www."))
-    && !link_words_beyond_a_surname(&printed, under.is_some_and(reads_as_institution))
+    && !link_words_beyond_a_surname(&printed)
   {
     return false;
   }
@@ -19038,14 +19083,16 @@ fn reads_as_web_address(text: &str) -> bool {
 }
 
 /// Whether `text` holds a link word ([`LINK_WORDS`]) other than a name's surname: `Model Card`, `Paper Website`,
-/// `Hugging Face Demo`, `Project Page` (the r8 re-review's finding 2, probes u1, u3, u4). Its words are those spaces
-/// part, a hyphenated one one word (`Hans-Peter Link`, `Lucy Page-Smith`); a link word is the surname when it is the
-/// last word, no other word is one, and the name reads as one around it — two words (`Lucy Page`, `Mark Link`: the r7
-/// re-review's finding 4), an initial before it (`Lawrence E. Page`), or, `over_institution`, an institution on the
-/// line under it in its column (`\href{…}{Mary Ann Code} \\ Univ B`): the 77y review's finding 1, probes a1-a3, a7,
-/// a8 (no paper in its scan of the 2026 corpus). A two-word text alone in its column stays a name (`Source Code`,
-/// `Online Demo`, 2606.06924: a creator, a SYNC residual).
-fn link_words_beyond_a_surname(text: &str, over_institution: bool) -> bool {
+/// `Hugging Face Demo`, `Interactive Online Demo`, `Project Page` (the r8 re-review's finding 2, probes u1, u3, u4; the
+/// rev77y2 re-review's finding 3, probes l1-l3), wherever the column puts it. A word before the last is one whole, as
+/// spaces part it (`Anne-Page Smith` a name, probe l7); the last is the surname, no link word, where the name reads as
+/// one around it — two words (`Lucy Page`, `Mark Link`, `Hans-Peter Link`, `Lucy Page-Smith`: the r7 re-review's
+/// finding 4), an initial before it (`Lawrence E. Page`), or more words before a link word that is also a surname
+/// ([`SURNAME_LINK_WORDS`]: `Mary Ann Code`, `Lawrence Edward Page`, `Juan Carlos de la Page`, alone in their column or
+/// over an e-mail or a place: the 77y review's finding 1, probes a1-a3, a7, a8; the rev77y2 re-review's finding 3,
+/// probes l4-l6; no paper in either scan). A two-word text stays a name (`Source Code`, `Online Demo` alone in a column:
+/// no corpus witness, probes a5, a6; a SYNC residual).
+fn link_words_beyond_a_surname(text: &str) -> bool {
   let words: Vec<&str> = text.split_whitespace().collect();
   let Some((last, before)) = words.split_last() else {
     return false;
@@ -19056,9 +19103,31 @@ fn link_words_beyond_a_surname(text: &str, over_institution: bool) -> bool {
       && word.chars().all(|c| c.is_alphabetic() || c == '.')
       && word.chars().filter(|c| c.is_alphabetic()).count() <= 2
   };
-  before.iter().any(|word| link_words(word))
-    || (link_words(last) && !(before.len() == 1 || before.iter().any(initial) || over_institution))
+  // (a word whole, as spaces part it: no part of `Anne-Page`)
+  let link_word = |word: &str| {
+    let word = word
+      .trim_matches(|c: char| !c.is_alphanumeric())
+      .to_lowercase();
+    let word = word
+      .strip_suffix('s')
+      .filter(|_| word.len() > 3)
+      .unwrap_or(&word);
+    LINK_WORDS.contains(&word)
+  };
+  // (the last word's link words, a part of it each, `Page-Smith`, all surnames)
+  let surname = || {
+    last
+      .split(|c: char| !c.is_alphanumeric())
+      .filter(|part| link_word(part))
+      .all(|part| SURNAME_LINK_WORDS.contains(&part.to_lowercase().as_str()))
+  };
+  before.iter().any(|word| link_word(word))
+    || (link_words(last) && !(before.len() == 1 || before.iter().any(initial) || surname()))
 }
+
+/// The link words ([`LINK_WORDS`]) that are also surnames (`Lawrence Edward Page`, `Mary Ann Code`, `Hans Link`): a
+/// name's last word, never a link's ([`link_words_beyond_a_surname`]).
+const SURNAME_LINK_WORDS: &[&str] = &["page", "link", "code"];
 
 /// A link line ([`link_line_link`]) to a mailbox (`\textbf{Correspondence:} \href{mailto:x@y}{x@y}`, `Email:
 /// \href{mailto:…}{…}`), read as a labelled e-mail line (user ruling 2026-10-20, batch 77p r8: 2601.00240, 2601.07974,
@@ -20385,9 +20454,10 @@ fn welded_layout(affils: &[Tokens], name_symbols: &[Vec<String>]) -> bool {
 /// the group's labelled institutions run on over unmarked lines (`continuing.welded`, [`welded_layout`]), an unmarked
 /// institution or place ([`weldable_line`]) goes on with the carriers of the line above (2602.05059) — a note, an
 /// address or a link line not (2604.02904, 2602.03421) — and past the group's last labelled institution only where
-/// every name of the row carries a mark: under a row with an unmarked name the line right under it goes on with it, as
-/// one under an institution ending in a comma does, and a later one is every name's of the row (R12; the 77y review's
-/// finding 3, probe c4). `continuing` is set to the carriers a line under this one goes on with.
+/// every name of the row carries a mark: under a row with an unmarked name an unmarked line under it goes on with it
+/// only as one under an institution ending in a comma does, else it is every name's of the row (R12, literally; the
+/// 77y review's finding 3, probe c4; the rev77y2 re-review's finding 1, probe w1). `continuing` is set to the carriers
+/// a line under this one goes on with.
 fn row_line_calls(
   line: &Tokens,
   name_symbols: &[Vec<String>],
@@ -20440,9 +20510,11 @@ fn row_line_calls(
     {
       Some((carriers, rest)) => {
         // (one institution alone on its line, ending in a comma, goes on on the line under it; so does any, where the
-        // group's labelled institutions run on over unmarked lines, [`welded_layout`])
+        // group's labelled institutions run on over unmarked lines, [`welded_layout`], but the last of them in a row
+        // with an unmarked name, `welds`: `$^\ddagger$School of Law, University B \\ Department of Physics, University
+        // C` gives the last line to every name of the row, R12 — the rev77y2 re-review's finding 1, probe w1)
         if alone
-          && (continuing.welded
+          && (welds
             || visible_name_text(rest.unlist_ref())
               .trim_end()
               .ends_with(','))
@@ -20504,6 +20576,32 @@ fn institution_beside_labelled(segment: &Tokens) -> bool {
     && !text.contains('@')
     && classify_thanks(&text) == "note"
     && !is_link_line(segment)
+}
+
+/// Whether the institution `under` goes on with the words of `line` above it as one name of one institution, no
+/// institution of its own under a line of names: it is one word (`Shanghai Jiao Tong \\ University`), opens with a
+/// lowercase word (`… \\ of Science and Technology`), or holds every word of the line (`Hong Kong \\ The Hong Kong
+/// University of Science and Technology`) — the rev77y2 re-review's finding 4, probes k12, k17.
+fn continues_the_line(line: &Tokens, under: &Tokens) -> bool {
+  let text = visible_name_text(line.unlist_ref());
+  let under = visible_name_text(under.unlist_ref());
+  let words: Vec<&str> = under.split_whitespace().collect();
+  words.len() == 1
+    || words
+      .first()
+      .is_some_and(|word| word.chars().next().is_some_and(char::is_lowercase))
+    || text.split_whitespace().all(|word| words.contains(&word))
+}
+
+/// Whether `under` is an e-mail line holding an address the names of `line` spell ([`spelled_owners`]): `Cat Cole \\
+/// \texttt{ccole@x.edu}` — the rev77y2 re-review's finding 4, probe k15.
+fn addresses_spelling(line: &Tokens, under: &Tokens) -> bool {
+  let keys = [NameKeys::of(line)];
+  email_addresses(under).is_some_and(|addresses| {
+    addresses
+      .iter()
+      .any(|address| !spelled_owners(&keys, address).is_empty())
+  })
 }
 
 /// Whether `line` reads as an institution: as an affiliation ([`reads_as_affiliation`]: an institution word, no name,

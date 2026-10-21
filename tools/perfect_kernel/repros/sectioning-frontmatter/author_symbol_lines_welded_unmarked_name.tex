@@ -1,11 +1,11 @@
-% witness: the 77y review (finding 3, probe c4; user ruling R12 2026-10-20)
+% witness: the 77y review (finding 3, probe c4; user ruling R12 2026-10-20; main-session decision on the 77y r2 Q2)
 % oracle:  pdflatex 0 errors: Ann Able†, Bob Baker‡, Cat Cole; "†Department of Physics", "University A", "‡School of
 %          Law", "University B", "Department of Physics, University C", each on a line of its own
 % engines: rust 77y r1 = 0 errors; "Department of Physics, University C" an affiliation of Bob Baker alone, Cat Cole
-%          with none
-% expect:  0 errors, 0 warnings; Department of Physics and University A on Ann Able, School of Law and University B on
-%          Bob Baker; the last line, under the row of an unmarked name, on all three (R12)
-% status:  RED (77y r1) -> GREEN (77y r2)
+%          with none; 77y r2 = University B on Bob Baker alone
+% expect:  0 errors, 0 warnings; Department of Physics and University A on Ann Able, School of Law on Bob Baker;
+%          University B and the last line, unmarked lines under the row of an unmarked name, on all three (R12)
+% status:  RED (77y r1, r2) -> GREEN (77y r3)
 \documentclass{article}
 \title{T}
 \author{Ann Able$^{\dagger}$, Bob Baker$^{\ddagger}$, Cat Cole \\ $^\dagger$Department of Physics \\ University A \\ $^\ddagger$School of Law \\ University B \\ Department of Physics, University C}

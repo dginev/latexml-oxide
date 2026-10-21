@@ -1,0 +1,14 @@
+% witness: the rev77y2 re-review (finding 4, probe k17)
+% oracle:  pdflatex 0 errors: Ann Able†, Bob Baker‡ on one line; "†Univ A ‡Univ B" under them; "Hong Kong", then
+%          "The Hong Kong University of Science and Technology"
+% engines: rust 77y r2 = 0 errors; a creator "Hong Kong" holding the university; int38b no creator
+% expect:  0 errors, 0 warnings; two authors, Univ A on Ann Able, Univ B on Bob Baker; the university on both (R12),
+%          "Hong Kong" on the shared creator
+% status:  RED (77y r2) -> GREEN (77y r3)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \\ $^\dagger$Univ A \quad $^\ddagger$Univ B \\ Hong Kong \\ The Hong Kong University of Science and Technology}
+\begin{document}
+\maketitle
+Text.
+\end{document}

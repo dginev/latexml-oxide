@@ -1,0 +1,13 @@
+% witness: the rev77y2 re-review (finding 2, probe m2)
+% oracle:  pdflatex 0 errors: Ann Able†*, Bob Baker‡ on one line; "†Univ A ‡Univ B" under them; "*Project Lead" under
+%          both, the legend of Ann Able's mark
+% engines: rust 77y r2 = 0 errors; a creator named "*Project Lead", no contact; int38b "Project Lead" on Ann Able
+% expect:  0 errors, 0 warnings; two authors, Univ A and "Project Lead" on Ann Able, Univ B on Bob Baker
+% status:  RED (77y r2) -> GREEN (77y r3)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\dagger *}$ \quad Bob Baker$^{\ddagger}$ \\ $^\dagger$Univ A \quad $^\ddagger$Univ B \\ $^*$Project Lead}
+\begin{document}
+\maketitle
+Text.
+\end{document}

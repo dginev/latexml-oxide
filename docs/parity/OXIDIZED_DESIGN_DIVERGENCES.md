@@ -2077,9 +2077,16 @@ ruling 2026-10-19).** Three readings of an author block Perl gets wrong (it merg
   row's addresses go by spelling alone, no elimination (2109.13296's `azu5030@`, `rmz5227@` the block's).
 - 77y (the r8 re-review's findings 1-13; main-session decisions on the 77p r10/r11 questions). A block merged into a
   row's symbol lines after a spaced break takes there only its lines down to a line of names (`name_count`, not itself a
-  labelled institution, an address, a link or a note — `classify_thanks` — and carrying a symbol mark of its own or over
-  an institution, `reads_as_institution`; r2, the 77y review's finding 2: `Google DeepMind`, `Hong Kong`, `Equal
-  Contribution` alone under the row stay the block's, probes k1, k7, k9, which r1 had made creators); that line and the
+  labelled institution, an address, a link or a note — `classify_thanks` —, no mark leading it, and carrying a symbol
+  mark of its own after its text, over an institution, `reads_as_institution`, that does not go on with its words
+  — one word, a lowercase opening, every word of the line again: `continues_the_line` —, or over an e-mail address its
+  names spell, `addresses_spelling`; r2, the 77y review's finding 2: `Google DeepMind`, `Hong Kong`, `Equal
+  Contribution` alone under the row stay the block's, probes k1, k7, k9, which r1 had made creators; r3, the rev77y2
+  re-review's findings 2 and 4: `$^*$Project Lead`, a legend, goes to Ann Able, `$^\S$Google DeepMind` to the block,
+  probes m2, m4; `Shanghai Jiao Tong \\ University` and `Hong Kong \\ The Hong Kong University of Science and
+  Technology` stay the block's, probes k12, k17; `Cat Cole \\ \texttt{ccole@x.edu}` is an author, probe k15, as in r1 —
+  r1, r2 and int38b had made creators "*Project Lead", "§Google DeepMind", "Shanghai Jiao Tong", "Hong Kong", and Cat
+  Cole an affiliation); that line and the
   lines under it are a block of their own, opening a row (probe w1's "Cat Cole" had been an affiliation of the shared
   creator and Univ C every name's of the row; w2's "Cat Cole§" Bob Baker's affiliation; no paper in rev77p8's scan of
   115k). A marked affiliation's unmarked continuation lines stay welded to it in a symbol row, as in a numbered block
@@ -2092,9 +2099,12 @@ ruling 2026-10-19).** Three readings of an author block Perl gets wrong (it merg
   is no continuation line but placed as under any row — the block's (r2, the 77y review's finding 3: 2604.02904's
   `Corresponding Author: \texttt{aliwazirjam@gmail.com}` and 2602.03421's `Email: (hadi.aghaee,
   christian.deppe)@tu-bs.de, boche@tum.de` had gone to the last institution's carriers; probes c1, c3, x4) —, and in a
-  row with an unmarked name nothing welds past the last labelled institution (`labelled_left`): the line right under it
-  goes on with it, as under one ending in a comma, and a later one is every name's of the row (R12; probe c4's
-  `Department of Physics, University C` had been Bob Baker's alone, Cat Cole with none). Without such a line an unmarked
+  row with an unmarked name nothing welds past the last labelled institution (`labelled_left`): an unmarked line under
+  it goes on with it only by the comma rule — under one ending in a comma —, else it is every name's of the row (R12,
+  literally: probe c4's University B and `Department of Physics, University C` on all three names, main-session
+  decision on the r2 question 2; probe w1's `Department of Physics, University C` under the one-line `$^\ddagger$School
+  of Law, University B`, r3, the rev77y2 re-review's finding 1 — r1 and r2 had given each to Bob Baker alone, Cat Cole
+  with none). Without such a line an unmarked
   institution under the last labelled one stays every name's of the row (R12, probe y8). The numbered block's x12 weld
   still welds a note line the same way (x1-x3; SYNC residual). A marked e-mail line no address of which a name spells
   goes to the names carrying its mark, the mark no part of its addresses (main-session decision 3 on the r11 questions;
@@ -2110,17 +2120,24 @@ ruling 2026-10-19).** Three readings of an author block Perl gets wrong (it merg
   Rege$^{\dagger}$}`, a row of names, keeps its marks); `leading_symbol_labels` skips the first label only when it is a
   run whole (`SYMBOL_COMMAND_RUN`; a comma list `$^{\dagger,\ddagger}$` has none) — a unit-level change with no
   end-to-end effect yet: the comma-list mark shapes (probes q1-q3) are a SYNC residual. Links: a printed text that reads
-  as a name is that name linked unless a word of it is a link word other than its surname, the last word, read where
-  spaces part the words (`Hans-Peter Link`, `Lucy Page-Smith` two words) and only where the name reads as one around it
-  — two words, an initial before it, or an institution on the line under it in its column
-  (`link_words_beyond_a_surname`, `prints_a_url`'s `under`: "Lucy Page", "Lawrence E. Page", "Hans-Peter Link", "Mary
-  Ann Code \\ Univ B" names, r2, the 77y review's finding 1, probes a1-a3, a7, a8, which r1 had made creators named by
-  their institution; "Model Card", "Paper Website" — `paper` a link word —, "Hugging Face Demo" URL contacts, probes u1,
-  u3, u4, which r11 had made creators; a two-word text alone in its column stays a name, "Source Code", "Online Demo",
-  2606.06924: SYNC residual); a bare domain's link names its organization also when its text spells the domain's name in
-  a handle, a mark no word holds (`names_an_organization`: `\href{https://www.deepseek.com}{deepseek-ai}` an
-  affiliation, probe s14; a homepage's `\href{https://www.annable.com}{annable}` stays a URL contact, r2, the 77y
-  review's finding 4, probes d1, d2); an icon a `\quad` parts from the link line after it is that link's
+  as a name is that name linked unless a word of it is a link word other than its surname, the last word, each word
+  read whole where spaces part the words (`Anne-Page Smith`, `Hans-Peter Link`, `Lucy Page-Smith`) and only where the
+  name reads as one around it — two words, an initial before it, or a link word that is also a surname
+  (`SURNAME_LINK_WORDS`: page, link, code) —, whatever line stands under it (`link_words_beyond_a_surname`: "Lucy Page",
+  "Lawrence E. Page", "Hans-Peter Link", "Mary Ann Code" names over an institution, r2, the 77y review's finding 1,
+  probes a1-a3, a7, a8, which r1 had made creators named by their institution; and over an e-mail, a place or nothing,
+  r3, the rev77y2 re-review's finding 3, probes l4-l7, which r2 had made creators named by the line under them or a URL
+  contact of Ann Able; "Model Card", "Paper Website" — `paper` a link word —, "Hugging Face Demo", "Interactive Online
+  Demo" URL contacts, probes u1, u3, u4, l1-l3, which r11 and r2 had made creators; a two-word text alone in its column
+  stays a name, "Source Code", "Online Demo": no corpus witness, probes a5, a6, a SYNC residual); a column of such links
+  over an institution is the block's, the institution its affiliation (`block_lines`: probes l1-l3 — not a creator named
+  by the link or the institution); a bare domain's link names its organization also when its text spells the domain's
+  name, its letters and digits, in a handle, a mark no word holds (`names_an_organization`:
+  `\href{https://www.deepseek.com}{deepseek-ai}` an affiliation, probe s14; a homepage's
+  `\href{https://www.annable.com}{annable}` stays a URL contact, r2, the 77y review's finding 4, probes d1, d2), and a
+  link printing a handle a name of the block spells is a URL contact (`link_prints_a_handle`: `{ann-able}`,
+  `{annable42}`, r3, the rev77y2 re-review's finding 5, probes d5, d9, which r2 had made affiliations); an icon a
+  `\quad` parts from the link line after it is that link's
   (`join_icons_to_links`, before either branch: 2601.17879's `\github \quad \url{…}`, the logo had been an affiliation
   of its own). E-mails: a truncated family-first spelling — the local part's letters used up — scores the letters it
   holds less one, below a spelling whole of as many, and one going on past the start it shares its six letters (r2, the
@@ -2144,7 +2161,10 @@ ruling 2026-10-19).** Three readings of an author block Perl gets wrong (it merg
   `{link_word_surnames_stay_names, unnamed_line_under_symbol_lines_stays_the_blocks,
   correspondence_line_under_welded_lines_is_the_blocks, notes_under_welded_lines_are_the_blocks,
   line_past_the_welded_lines_of_a_row_with_an_unmarked_name_is_the_rows, homepage_handle_link_is_a_url,
-  diverging_local_part_is_the_shorter_names}` and the unit test
+  diverging_local_part_is_the_shorter_names}` and, r3 (each red on 77y r2 from its minimal repro, the c4 guard
+  re-pinned), `{line_under_a_one_line_last_institution_is_the_rows, mark_led_line_under_symbol_lines_is_no_names,
+  link_word_surnames_stay_names_over_any_line, link_column_over_an_institution_is_the_blocks,
+  names_split_under_symbol_lines_reads_the_line_under, homepage_handle_spelling_the_name_is_a_url}` and the unit test
   `base_utilities::author_split_tests::weldable_lines_are_institutions_and_places` (a place's particle, `Campus de
   Santiago, …`, 2605.19581) (`icon_parted_from_its_link_goes_with_it` pinned whole), the unit test
   `base_utilities::author_split_tests::leading_symbol_labels_skip_only_a_run_whole`; six 77p guards pinned to whole

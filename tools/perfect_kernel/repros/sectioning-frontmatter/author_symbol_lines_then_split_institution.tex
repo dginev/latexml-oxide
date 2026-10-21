@@ -1,0 +1,14 @@
+% witness: the rev77y2 re-review (finding 4, probe k12)
+% oracle:  pdflatex 0 errors: Ann Able†, Bob Baker‡ on one line; "†Univ A ‡Univ B" under them; "Shanghai Jiao Tong",
+%          then "University", one institution over two lines
+% engines: rust 77y r2 = 0 errors; a creator "Shanghai Jiao Tong" holding "University"; int38b no creator
+% expect:  0 errors, 0 warnings; two authors, Univ A on Ann Able, Univ B on Bob Baker; "University" on both (R12),
+%          "Shanghai Jiao Tong" on the shared creator
+% status:  RED (77y r2) -> GREEN (77y r3)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \\ $^\dagger$Univ A \quad $^\ddagger$Univ B \\ Shanghai Jiao Tong \\ University}
+\begin{document}
+\maketitle
+Text.
+\end{document}
