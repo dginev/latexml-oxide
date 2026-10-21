@@ -5124,6 +5124,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   pubnote (2512.23612's "Preprint"). Residuals recorded in the
   silent-loss table: a jinstpub/jheppub copy's own `\maketitle` lines (2103.11983's DOI line); jinstpub/jheppub
   `\collaboration`/`\proceeding` pubnotes hover-only in LaTeXML.css.
+  **Integration (int47, 78e r1-r2 + follow-ups squashed cd7a8c6d31; binary int47a):** rev78e2 SHIP; its nits applied in
+  the main session (the test harness's contrib dispatcher narrowed to the jcappub test, `convert_to_xml_contrib_clean`;
+  OD #803 scoped to `ltx:note` with its separator-note residual; silent-loss rows for the jheppub e-mail rule, aa
+  2401.16957's comma before `\inst`, `\thanks{\label…\email…}`, iopart `\ead`). Gates int47a: nextest 6630/6630 + cortex
+  10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int46a empty. Population A/B (541: 78e's 208, rev78e's 83,
+  rev78e2's 100, 150 random of the 30k sample) int46a vs int47a: E 154 → 154, F 1 → 1, 0 Error or Fatal worse; 108
+  outputs changed; 11 papers lose > 1 % of their words, every one webofc/jinstpub frontmatter — the institutes no longer
+  repeated on every author and the "e-mail:" labels of addresses now contacts (no affiliation word lost; 1309.3933,
+  1411.7792, 1412.3488, 1609.01040, 1609.05029, 1710.06250, 1711.00130, 1711.05413, 2009.04166, 2103.01871, 2105.10529).
+  Binding nets (int47a) 136/136; mathastext 1 of 26 below int46a: 2201.00699 (jinstpub) recall 98.0 → 97.4 — the stock
+  header line, the table of contents (OD #801, ruling pending) and the "E-mail:"/"Keywords" labels no longer printed; its
+  arXiv number stays a `role=arxiv` pubnote; no authored word lost.
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
   parts draw, as Unicode's IPA letter, cross-checked against tipauni.sty; the `""`/`||` ligatures ˌ ǁ), so its input
