@@ -4937,7 +4937,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   their authors); a handle is a homepage only when its letters are exactly a spelling of one name (h1-h9 affiliations
   again); the lines under a block's link column go by their kind (b9's address an e-mail); a plural link-word surname
   and a name suffix after it keep a linked name a name (s9, s8). Guards +3 and three names-split cases (red on 77y
-  r3); the "Source Code" residual row extended to the three-word texts (s1, s3, s4, s7).
+  r3); the "Source Code" residual row extended to the three-word texts (s1, s3, s4, s7). rev77y4 SHIP (probe net 173:
+  r4 no worse than the better of int38b and r2 on any probe outside the residual list); main-session follow-ups
+  (cf9986651a): a generic institution noun is the whole word (`Cat Cole \\ Max-Planck-Institut` keeps its author, c2,
+  c5), a labelled address under a link column is the block's e-mail (`Email: contact@x.org`, x2); residual rows for a
+  name over a one-word generic noun or a connective-led institution (c1, c3, c4, c8, k27, k30), a per-author `\author`'s
+  link column (x7, x8), an organization spelled exactly as an author's handle (h20, h21).
+  **Integration (int41, 77y r1-r4 + follow-ups, binary int41a):** gates int41a: nextest 6546/6546 + cortex 10/10,
+  clippy/rustdoc clean, inits 0/0, dump diff vs int40c empty. Population A/B (2,220: 1,921 papers of the 77y rounds and
+  reviews + 299 random of the proj98 sample) vs int40c: E 6,805 → 6,805, F 74 → 74, 0 Error or Fatal worse; 30 outputs
+  changed, all in the 77y set, 0 of the controls; one word loss > 1 %, 2604.02904 (3,116 → 3,036), its affiliation
+  lines now on the names their marks pick instead of on all five (the witness). Binding nets (int41a) 136/136, 0
+  documents worse than int40c.
 - **68i** (binding gaps G3 C, TeX Live package bindings; bindgaps/g23_macros.tsv rows tocbibind, amsopn, datetime,
   rotating, paralist, todonotes, standalone, ccaption, enumitem; each macro checked against the TL 2025 file, or the
   witnesses' shipped classes for enumitem). tocbibind (tocbibind_sty.rs) — `\tocbibname`/`\settocbibname` (:115-132;
