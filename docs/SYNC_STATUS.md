@@ -5041,6 +5041,13 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   non-printing command or a float — 2002.07641 (`\appendix{}`), 2404.01875, 2007.07179 were worse than int45b (an empty
   appendix "A", the titled one "B"); the main-session follow-up skips empty groups (guard row "an empty group", red on
   r2), the rest is OD #793's recorded residual. PRL headings take the unnumbered ids `Sx1`/`Ax1` (KPE #1027).
+  **Integration (int46, 78d r1-r2 + follow-ups squashed cd808dabf3; binary int46a):** gates int46a: nextest 6620/6620 +
+  cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int45b empty. Population A/B (494: the 78d rounds' 326,
+  rev78d2's 22, 146 random of the 30k sample) int45b vs int46a: E 234 → 234, F 1 → 1, 0 Error or Fatal worse; 174
+  outputs changed (22 of the controls); 7 papers lose > 1 % of their words, every one numbering — PRL heading tags,
+  "§"/"Appendix" typed refs and the `toctitle` copies of unnumbered PRL headings (0901.1919, 1404.6478, 1609.03541,
+  2405.02277, 2601.16391, quant-ph0009002, 2605.18605), no authored word lost. Binding nets (int46a) 136/136, 0
+  documents worse than int45a.
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
   parts draw, as Unicode's IPA letter, cross-checked against tipauni.sty; the `""`/`||` ligatures ˌ ǁ), so its input
