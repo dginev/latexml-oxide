@@ -22,5 +22,15 @@ LoadDefinitions!({
   if !crate::shipped_class::read_raw(&class)? {
     return Ok(());
   }
+  // (the frontmatter interface only: the class's own `\qed`, entics.cls:449's open box `$\Box$`, stays — elsart's
+  // `\ltx@qed` "∎" replaced it in every proof of 2204.12376, 2504.08349, 1905.09181 (entcs); repro
+  // class-bindings/entics/entics_qed_is_the_class_box)
+  let class_qed = is_defined("\\qed");
+  if class_qed {
+    Let!("\\lx@entics@qed", "\\qed");
+  }
   RequirePackage!("elsart_support_core");
+  if class_qed {
+    Let!("\\qed", "\\lx@entics@qed");
+  }
 });

@@ -16,3 +16,5 @@
 \let\@authors\@empty
 \def\address#1{\g@addto@macro\@authors{{\itshape#1}\par}}
 \def\frontmatter{}\def\endfrontmatter{{\centering\@authors}\@notes\par}
+% entics.cls:449: the end-of-proof mark, an open box set in math
+\def\qed{\relax\ifmmode\hfill \Box\else\unskip\nobreak\hfill $\Box$\fi}

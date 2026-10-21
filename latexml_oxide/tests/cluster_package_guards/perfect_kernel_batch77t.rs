@@ -7,7 +7,7 @@
 //! class's numbered `\institute` entries go by the authors' numbers; an llncs `\\` line reading as an affiliation is
 //! the affiliation of the names since the last line under names, across the inline `\and`. Each guard asserts no Error
 //! or Warning, every name once in its own `ltx:creator` and its contacts on it — whole elements.
-use latexml::util::test::{convert_files_with, convert_with};
+use latexml::util::test::{assert_element, convert_files_with, convert_with};
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
@@ -558,4 +558,22 @@ fn parenthesized_mark_lists_label_affiliations() {
     creator(false, "Bob Baker", &both),
     creator(false, "Cat Cole", &both),
   ]);
+}
+
+/// entics.cls's own `\qed` (entics.cls:449, `$\Box$`, an open box) stays the class's: the binding takes elsart's
+/// frontmatter interface only (int44 A/B: elsart_support_core's `\ltx@qed` "∎" had replaced it in every proof of
+/// 2204.12376, 2504.08349, 1905.09181). Red (int44a): "By induction.∎".
+#[test]
+fn entics_qed_is_the_class_box() {
+  let xml = repro_with!(
+    "class-bindings/entics/entics_qed_is_the_class_box.tex",
+    ("entics.cls", "class-bindings/entics/entics.cls")
+  );
+  assert!(!xml.contains('∎'), "{xml}");
+  assert_element(
+    &xml,
+    "Math",
+    &["xml:id=\"p1.m1\""],
+    r#"<Math mode="inline" tex="\Box" text="Box" xml:id="p1.m1"> <XMath xml:id="p1.m1.1"> <XMTok name="Box" role="UNKNOWN">□</XMTok> </XMath> </Math>"#,
+  );
 }
