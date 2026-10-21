@@ -101,7 +101,7 @@ do not block the E/F rerun.
 | — | nowfnt creators: `\author[n]{Haikin, Marina}` (nowfnt.cls:581, BibTeX name order "Surname, First", split by the class's `\nowfnt@splitauthor`) becomes two creators "Haikin" and "Marina" (8 creators for 4 authors), and `\affil[n]{…}` (:599) reaches no creator — 2108.12618, 2308.02698 (base too); the cover's `\maintitleauthorlist` block is dropped when it only repeats the creators' names (2308.02698) and kept as an `ltx:pubnote` with line breaks between the authors when it carries more (2108.12618's affiliations and e-mails; main-session decision, OD #767, 77i r3) | open |
 | — | bullsrsl correspondence: the corresponding-author e-mail (`\correspondance`, bullsrsl.cls:475-477, printed after `\BSRSL@CorrespIntro`, a label macro the class defines only inside its `\maketitle`, :747-765 "Correspondence to:") reaches the frontmatter as an `ltx:pubnote` without that label, which renders as a hover-only popup (LaTeXML.css:107-120) — 2401.09121, 2410.19120 (77i r2/r3; base lost it). Needs: a label read from a macro the title page defines before printing the store, and routing to the corresponding creator's `ltx:contact role=email` (the creator carrying `[corresponding]`): not a brief patch with the existing store techniques (77i r3) | open |
 | 12 | `\AFF` before any `\AUTHOR` (informs4) | GREEN on head (67int35): "Orphan aff first" is kept as the first author's affiliation (after "Univ A"), 0 errors; repro `affiliation_before_any_author_is_kept` |
-| 9 | revtex supplement title replaces the paper's | CLOSED on head 2026-10-18 (probe 67int35): only the set-aside binding aliases replaced the title; today revtex's `\frontmatter@init` is undefined (an honest Error, 2609.07332) and a second `\title`/`\author` after `\maketitle` prints in place, the paper's title kept. Residual (synthetic, no reach): in a paper with no heading and no bibliography before its supplement, the seal (`seal_digested_frontmatter`, base_utilities.rs) never runs, so a second `{abstract}` replaces the first (0 errors; pdflatex prints both) — of the 6,000 projection-sample papers 74 have two abstracts, 56 with no heading or bibliography between, and none loses its first abstract's text to a later one (the two flagged by the word probe are Error/Fatal papers: 2202.10792, 2007.05437) |
+| 9 | revtex supplement title replaces the paper's | CLOSED on head 2026-10-18 (probe 67int35): only the set-aside binding aliases replaced the title; today revtex's `\frontmatter@init` is undefined (an honest Error, 2609.07332) and a second `\title`/`\author` after `\maketitle` prints in place, the paper's title kept. Residual (synthetic, no reach): in a paper with no heading and no bibliography before its supplement, the seal (`seal_digested_frontmatter`, base_utilities/frontmatter/queue_digest.rs) never runs, so a second `{abstract}` replaces the first (0 errors; pdflatex prints both) — of the 6,000 projection-sample papers 74 have two abstracts, 56 with no heading or bibliography between, and none loses its first abstract's text to a later one (the two flagged by the word probe are Error/Fatal papers: 2202.10792, 2007.05437) |
 | 10 | deepseek.cls `\correspondingauthor` note, printed only in the title page's `firststyle` footer | FIXED int27 (deepseek_cls.rs: the shipped class loads raw; the note is added where its `\maketitle` selects the footer; 2401.14196) |
 | 24 | aastex `\figcaption` outside a figure: the text a `<p>`, no caption, no number | FIXED int27 (aas_support_sty.rs `\@figcaption` = a figure with `\caption`, aastex701.cls:8111-8114; astro-ph9806172 0 → 3 captions) |
 | 11 | asmejour `\keywords` (expl3 store for the abstract coffin) lost; apa `\acknowledgements`, cclayout `\Abstract`/`{subject}` stores | asmejour FIXED int27 (asmejour_cls.rs: kept as `ltx:keywords`; its `\date` was never lost — the class's first-column footnote keeps it, 2510.10694); apa `\acknowledgements` (apa.cls:461) FIXED 77b (apa6_cls.rs `define_notes`: `ltx:acknowledgements name="Author Note"` in doc/jou/man; in man mode it leaves the class's closing "Author Note" section, apa.cls:760-764, for the frontmatter; a multi-paragraph argument is one line per paragraph, by the kernel rule of OD #766 (77f, user ruling 2026-10-18: a `\par` in an inline-only frontmatter item is an `ltx:break`)); cclayout `\Abstract` (:66) and `{subject}` (:76-81) FIXED 77b (cclayout_sty.rs: `ltx:abstract`, `ltx:classification name="Subject classification"`; OD #763); the apa `\note` item was stale (already `ltx:note role=note`, apa6_cls.rs). Reach: apa/cc 0 hits in ~38,000 sampled papers |
@@ -148,7 +148,7 @@ do not block the E/F rerun.
 | — | a capitalised "And"/"AND" between two names is no separator: `\author{Ann Able And Bob Baker}` is one creator with 0 Errors — the merge check reads "And" as a name word (int32a and Perl the same; Perl's only word separator is " and ", Base_Utility.pool.ltxml:678); glued after a mark, `Ann Able$^{1}$And Bob Baker$^{2}$` (77n r4/r5 review probes a1, a6), it is one creator flagged `Error:frontmatter:merged_creators` | open (77n r6 keeps the flag, fail toward flagging — r5 read the "And" as a separator after the mark and merged the line silently; guard `perfect_kernel_batch77n::mark_glued_to_capital_and_is_flagged`) |
 | — | a run always reaches its last author (Perl's `new`, Base_Utility.pool.ltxml:530), answered or not — the label-answered break applies only once the run has reached an unanswered author (77n r6, so a run answered throughout is the whole run's, as ptephy prints it): `\author{Craig M$^{\mathrm{c}}$Rae}\author{Ann Able$^{1}$}\affil{$^1$Univ X}\affil{Univ Y}` (2505.09041's shape) gives the answered last author Ann Able Univ Y as well as Univ X | open (77n r5; guard `perfect_kernel_batch77n::authblk_superscript_inside_a_name_stays` pins it). The first half of this row closed in 77n r6: an authblk name kept on `\lx@add@creator` (`Ann Able$^{1}$\textsuperscript{equal contrib.}`) requests the affiliations its marks pick (`author_label_marks`), so the run passes it over (guard `authblk_textual_superscript_after_mark_is_shown`) |
 | — | authblk's note numbering (`\AB@thenote`, authblk.sty:114-167) is not modelled: an unlabelled `\author` after a labelled one shares its note (`\author[1]{Ann}\author{Bob}\affil[1]{Univ X}\affil{Univ Y}`: pdflatex "Ann1 and Bob1 / 1Univ X / 1Univ Y", Univ X under Bob too; we give Bob Univ Y only), and an `\affil` inside a later `\author` steps it (`\author[1]{Ann}\affil[1]{Univ X}\author{Bob \affil{Univ Y}}`: pdflatex "Ann1 Bob2 / 1Univ X / 2Univ Y"; we give Ann Univ Y as well, 77n r4 review probe e3); a marked author before an `\author[1]` shares its note too (`\author{Ann$^{1}$}\author[1]{Bob}\affil{$^1$Univ X}\affil{Univ Y}`: pdflatex "Ann11 and Bob1 / 11Univ X / 1Univ Y"; we give Ann Univ X only, 77n r6 review probe f2 — Bob's Univ X fixed in 77n r7) | open (77n r6; int32a and Perl's `annotate=new`, authblk.sty.ltxml:57, the same; guard `perfect_kernel_batch77n::authblk_labelled_author_shares_the_run` pins it): number the notes as authblk does — an `\author` steps `\AB@thenote` after an `\affil`, an unlabelled one takes it — and label each unlabelled `\author`/`\affil` by it |
-| — | a symbol legend after a run reaches authors who do not show its symbol: `\author{Ann$^{1}$}\author{Bob}\author{Cat$^{\dagger}$}\affil{$^1$X}\affil{Y}\affil{W}\affil{$^\dagger$Corresponding author}` — pdflatex shows † on Cat only, int32a and Perl's `annotate=new` give the legend to Cat only, 77n r6 to Bob and Cat, r7 to Ann, Bob and Cat (77n r7 review probe x7; s1, z1, g05 since r6, the ∗ legend on Ann; guard `perfect_kernel_batch77n::authblk_symbol_mark_then_text_shown_once` pins it). No paper in 823 A/B conversions or the 2603-2605 scans | open (77n r7; reach 0): when an author of the run shows the legend's symbol, the legend is those authors' only (`base_utilities.rs` legend read ~:781, extent ~:907) |
+| — | a symbol legend after a run reaches authors who do not show its symbol: `\author{Ann$^{1}$}\author{Bob}\author{Cat$^{\dagger}$}\affil{$^1$X}\affil{Y}\affil{W}\affil{$^\dagger$Corresponding author}` — pdflatex shows † on Cat only, int32a and Perl's `annotate=new` give the legend to Cat only, 77n r6 to Bob and Cat, r7 to Ann, Bob and Cat (77n r7 review probe x7; s1, z1, g05 since r6, the ∗ legend on Ann; guard `perfect_kernel_batch77n::authblk_symbol_mark_then_text_shown_once` pins it). No paper in 823 A/B conversions or the 2603-2605 scans | open (77n r7; reach 0): when an author of the run shows the legend's symbol, the legend is those authors' only (`base_utilities/defs/frontmatter_api.rs` legend read ~:596, extent ~:719) |
 | — | authblk: an affiliation a mark picks (`\affil{$^1$X}`) is listed on its authors after the run's unlabelled ones (`\author{Ann$^1$ and Bob$^2$}\affil{$^1$X}\affil{$^3$Z}` gives Ann Z, X): the marked contact is placed at the end, when the labels are matched (`relocate_annotations`), the run's at once | open (77n r3; guard `perfect_kernel_batch77n::authblk_typo_mark_affil_runs` pins the order): place a label-matched contact at its queue position among its author's contacts |
 | — | preprint.cls numbered institutes: `\institute{Imperial College London, … \and University of Edinburgh, …}` numbered 1, 2 by the class (preprint.cls:235-257, llncs's `\institutename`) and the authors' `$^1$`/`$^2$` picking one each — 2405.16615 gives each author both institutes (the stored `\@institute` annotates every author, `\lx@add@store@affiliations` `annotate=all`; the entries carry no marks to label them) | FIXED 77t (OD #791): a class carrying llncs's `\institutename` (its `\and` stepping a counter) has the `\and` entries of its `\institute` store labelled 1, 2, … as its title page numbers them, when the store has no marks and the queued authors' marks are all numbers (`class_numbered_institutes`); 2405.16615 Imperial College on Ajay Chandra, Edinburgh on Harprit Singh; guard `perfect_kernel_batch77t::class_numbered_institutes_go_by_the_authors_marks` |
 | — | author names parted by a mark and spacing alone, with no separator (pre-77d, synthetic): `Ann Able$^{1,}$ Bob Baker$^{2}$` is one creator "Ann Able Bob Baker", both marks after it, with 0 Errors (1911.02873's shape, there flagged as its marks stay between the names); `Ann Able\hspace{1em}and\hspace{1em}Bob Baker` makes "and" an affiliation of Ann (the `\hspace` read as an author/affiliation line break before the name split); a pair merged with only glued text to show it ("Ann Ableand Bob Baker", a shape no rule splits) is not flagged — "Ableand Bob" reads as "Ferdinand Smith" | open |
@@ -538,7 +538,7 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
   separators, a multi-key `\citeonline[note]`, authorless entries, `abnt-full-initials=yes`, num "(1)" brackets
   (`\citebrackets`, :213, :232-233), repeated authors (:995-999, :1037-1043), `alf` list labels, note field order, the math
   `tex=` brace group) — repros `~/data/pk_agents/rc131/abntex2/repro/r1–r8`, `review57cm/`; **jacow-collaboration**
-  (92.7 %): author continuation lines glued at `\\` (`add_authors_calls`, base_utilities.rs:1235-1239 = Perl
+  (92.7 %): author continuation lines glued at `\\` (`add_authors_calls`, base_utilities/author_block/dispatch.rs:259-264 = Perl
   Base_Utility.pool.ltxml:702-703, PERL-ORIGIN; keep the delimiter as `<break/>`; `~/data/pk_agents/rc131/repro/author_glue.tex`).
   Ruled out: suanpan-l3's last jing line (a second `\title`/`\maketitle` replaces the first — double `\maketitle` keeps
   the latest title, user 2026-10-01).
@@ -1077,7 +1077,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   2203.01270 83 MB/6.9 GB/357 s → 1.8 MB/3 s; its legend lines after the names a document pubnote each — only when every line after the first `\\` is led
   by a footnote symbol, else the whole list stays names: `ptephy_name_lines_after_break_stay_names`,
   `ptephy_textsuperscript_legend_line`);
-  hyperref loads letltxmacro (OD #535, ruling Q5). Shared (`show_unanswered_marks`, base_utilities.rs): an author's
+  hyperref loads letltxmacro (OD #535, ruling Q5). Shared (`show_unanswered_marks`, base_utilities/frontmatter/insert.rs): an author's
   superscript symbol mark nothing answers is shown, as the PDF prints it, a math `*` as `∗` and a text one
   (`\textsuperscript{1,*}`) as `*` (unless it placed one of that author's contacts that drops it; a mark the author's
   email shows as well stays on the name too, 1910.00401); residual: a `$^{*}$` the kernel shows itself (keepsup, an
@@ -2633,7 +2633,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   still leads with its mark (1810.10167: Yaohua Hu's institute 2 was shared). Repros class-bindings/{mdpi_doi/,
   gretsi_v12/gretsi_v12_abstract_order,gretsi_v13_abstract_order,svmult_v11/,svmult_aas/svmult_norunningheads_subfigures,
   svjour3_marked_pieces_after_a_break}; guards `perfect_kernel_batch68k` (18). Open: the fuzzy name label of a creator
-  (`Tag ltx:creator`, base_utilities.rs; Perl Base_Utility.pool.ltxml:870-876 the same) keeps the commas of the marks
+  (`Tag ltx:creator`, base_utilities/defs/author_macros.rs; Perl Base_Utility.pool.ltxml:870-876 the same) keeps the commas of the marks
   its name shows (`Simon Lepage1,2` → `fuzzy:Simon_Lepage1` and a stray `2`), and the stray piece is an accidental mark
   request: it takes a shared mark's affiliation from the author showing it alone (2508.03934: David Picard loses LIGM to
   Simon Lepage) and supplies the requests marked labels lack elsewhere (jheppub `\affiliation[1]` with `$^{1,2}$`
@@ -2669,7 +2669,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   from `\endabstract` → `\maketitle` → `\@maketitle` (pazhastl, pazhb, pazhb_eng, pazha2, pazh_mod, pazhastlm,
   astrobul), mtt.cls:176-181's own `\renewenvironment{abstract}` (mttr) — found by `abstract_setter_definitions` and
   defined for the abstract's body only by `\lx@abstract@class@setters` (the head of `\lx@begin@abstract`,
-  base_utilities.rs): the frontmatter's keywords, or, in an abstract kept in place as a supplement's, a paragraph in
+  base_utilities/defs/frontmatter_fields.rs): the frontmatter's keywords, or, in an abstract kept in place as a supplement's, a paragraph in
   place with it; a refused `\renewenvironment` now keeps its code as `\lx@dropped@<name>`/`\lx@dropped@end<name>`
   (sect08.rs); (2) a `{keywords}`/`{keyword}` whose begin code only typesets a label (`label_only_begin_code`:
   paper.cls:621-627, acmconf.cls:340, pasa, biometrika, irmaems, ieice) becomes `\lx@class@keywords`: the environment
@@ -2905,7 +2905,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   ever: infernce.sty's `\@adjustPremises` under every semantic.sty `\inference` (31 of the 44-paper fleet
   `oom:alloc_failed` sample are this loop; ~315 corpus-wide is an extrapolation, 31/44 × 448; KNOWN_PERL_ERRORS #840).
   tex_box.rs `vlist_of` splices into a vertical box's own list (`VBoxContents`, marked `lx@vbox@list` in
-  base_utilities.rs `predigest_list_in_mode`; `\unvcopy` as copies) between a pair of boundary marks
+  base_utilities/boxes_lists.rs `predigest_list_in_mode`; `\unvcopy` as copies) between a pair of boundary marks
   (`\lx@splice@begin`/`\lx@splice@end`, round 2, replacing round 1's line-only `\par` mark): the end mark closes what
   the list opened and left open (the paragraph the box's end finished, §1086; a minipage's or `\parbox`'s `ltx:p`; a
   `\noindent` `ltx:para`), the list-tail primitives see through both; on the main vertical list, in a float's, note's
@@ -2983,7 +2983,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   1999."). Gates 5,630/5,630; bundle A/B vs 67int13 over 618 papers (the 400 cluster witnesses, 100 class-less Error
   papers, 150 of pop67o): Errors 2,393 → 1,622, 385 papers fewer, none more, words +267 k; nets 136/136 0 worse.
 - **68s** (the title-ink dedup deletes visible content; 68p review finding 8): `maybe_dedup_leading_title_ink`
-  (base_utilities.rs, OXIDIZED_DESIGN_DIVERGENCES #146, arXiv/html_feedback#6924, witness 2608.10928) ran at every
+  (base_utilities/frontmatter/titlepage_layout.rs, OXIDIZED_DESIGN_DIVERGENCES #146, arXiv/html_feedback#6924, witness 2608.10928) ran at every
   `\lx@frontmatter@fallback`, i.e. at every sectioning command and at `\end{document}`, and each run removed one more
   centered display-font copy of the unprinted `\title` from anywhere before the first `<ltx:section>`: a figure's
   line, a chapter's opening block, a second printed cover (1911.09648's `Capa1`/`Capa2`). It now looks once per
@@ -3025,7 +3025,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   preprints 1205.3963, 1205.5121, 1503.00681, 2112.00610: the CERN header and title on the cover, 0 → 1 visible); the argument's `\thanks`, `\footnote`,
   `\footnotemark`, `\label`, `\index` are gobbled in the print (the kernel's copy owns them, probe p5). Not
   `\author`/`\date` (their frontmatter copy is displayed). The print lies between two empty `_Capture_` marker
-  elements; `drop_cover_title_ink` (base_utilities.rs) removes what lies between them, text included, wherever the cover
+  elements; `drop_cover_title_ink` (base_utilities/frontmatter/field_ink.rs) removes what lies between them, text included, wherever the cover
   stops standing in for the document title: `\unwind@titlepage` (probe p13), `demote_stranded_titlepage` (probe p9),
   and `settle_cover_title_ink` at `\end{document}` when no top-level `ltx:titlepage` hides the title (XSLT test). The paragraph trims
   reach past an empty `_Capture_` mark (document.rs `is_empty_capture_mark`). The title-ink dedup leaves a document
@@ -3949,7 +3949,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   2026-10-17: out-of-band provenance, not in-band marks; design study agent_reports/2026-10-16_frontmatter_design_study.md
   §6, the title-print study's stage 3 = rule R3). `Token` gains `prov: u16` in its padding (still 8 bytes,
   `token_size_invariant`; excluded from `PartialEq`, never written or dumped). The kernel `\title`/`\author`
-  (sect05.rs) stamp their stored tokens once the frontmatter has its copy (`\lx@field@mark`, base_utilities.rs: field +
+  (sect05.rs) stamp their stored tokens once the frontmatter has its copy (`\lx@field@mark`, base_utilities/defs/frontmatter_fields.rs: field +
   position, and the field's character extent `lx_field_extent_<F>`); expansion inherits it (`inherit_field_prov`, gullet
   and stomach), case changes keep it (`\uppercase`, `\lx@latex@changecase`), the stomach copies it to what a stamped
   token digests to (`fieldProv`), and core `Document::absorb` brackets each run of a field's ink with paired processing
@@ -4235,7 +4235,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
     errs there anyway).
 - **70c** (a `\bibitem` label is typeset only where TeX prints it; rc_struct4 row C1; user ruling 2026-10-18 on text
   written to an auxiliary file). `\lx@bibitem` reads its `[label]` undigested and splits the entry's tags
-  (base_utilities.rs `tag_forms`): the role-less tag (`\fnum@@bibitem`, the class's `\@biblabel`) at the `\bibitem`, the
+  (base_utilities/util_text.rs `tag_forms`): the role-less tag (`\fnum@@bibitem`, the class's `\@biblabel`) at the `\bibitem`, the
   reference forms (refnum, autoref, …; TeX's `\b@key`) under the deferred-print list `b@key` of 73a's `defer_print`,
   resolved when a `\@@bibref` names the key (sect11.rs `cite_prints_keys`; `\nocite` does not count; the streaming
   yield's fallback typesets them at the spill). mn2e/mnras bindings define the class's `\def\@biblabel#1{}`
@@ -4253,7 +4253,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   1610.05396; Error kept); (b) old mn.sty prints `[label]` (mn.sty:1605), so 0903.4835 and astro-ph0010188 keep theirs,
   as pdflatex; (c) the bibliography XSLT shows a bibitem's refnum when it has no role-less tag, so under mn2e/mnras a
   cited entry shows its label in HTML and an uncited one none, where the PDF prints none for either (a 4-line patch
-  keeping the empty role-less tag exists, `base_utilities.rs` `\lx@tag@intags` after_construct, but it diverges from
+  keeping the empty role-less tag exists, `base_utilities/defs/tags_refnums.rs` `\lx@tag@intags` after_construct, but it diverges from
   Perl's `removeEmptyElement` and shifts `.ltx_bibitem .ltx_tag`'s -2em margin: kept as a row; `.bbl` lists hold only
   cited or `\nocite`d entries); (d) `\@lbibitem`'s `\write` expansion of the label (latex.ltx:17746-17749, `\let\protect
   \noexpand`) is not run, so an unprotected undefined command in an uncited label (`\bibitem[\foo{A} 2017]{a}`) loses
@@ -5392,6 +5392,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   places; row in Corpus Triage Quick Wins). Binding nets (int48a) 136/136, no recall below int47a; 6 nets flagged 3
   documents (1704.06338, 2607.02089, 2608.05298) "valid 1 → 0" against the nets' schema copy of 2026-10-15, which lacked
   78g's `ltx:picture` labels and tags — all three validate (0 errors) against the repo schema, and the copy is refreshed.
+- **split114** (task #114, user directive 2026-10-07; a pure move, before FM S2a): `latexml_engine/src/base_utilities.rs`
+  (23,317 lines) is the module directory `base_utilities/` — `mod.rs` (the imports, `FRONTMATTER_ELEMENTS`,
+  `REPLACEABLE_FRONTMATTER_TAGS`, and `LoadDefinitions!` calling `defs::{general, frontmatter_api, frontmatter_fields,
+  author_macros, tags_refnums}::load()` in source order), `defs/` (the five parts of that body), `author_block/` (16
+  files), `frontmatter/` (7), eight utility files and `author_split_tests.rs` (module path unchanged). Each file is under
+  1,000 lines except `author_block/dispatch.rs`: `add_authors_calls_sectioned`, one 1,460-line function kept whole and
+  lifted out of the `LoadDefinitions!` body. `pub use` re-exports keep every existing path. The only edits are
+  `use`/`mod` lines, `//!` file heads, visibility (276 cross-file items, 14 fields and `NameKeys::of`; nothing new in the
+  prelude) and three `super::tex_glue::` paths, now `crate::tex_glue::`. Check: 585 items and 218 statements are identical
+  after normalising visibility and rustfmt. Inits 0/0; `comm -3` against the int48a dumps is 0 lines for latex, plain
+  and texlive.version. nextest 6671/6671, the same count as int48a. The 40-paper `feature:author_marks` census sample
+  (seed 114) gives byte-identical XML against int48a.
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
   parts draw, as Unicode's IPA letter, cross-checked against tipauni.sty; the `""`/`||` ligatures ˌ ǁ), so its input
@@ -5859,7 +5871,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   1774-1806; run 336: 39 first errors; 1202.5818, 1604.05412, 2002.03129, 2106.01798, 1706.00437, 2405.16148, 1907.05468,
   2512.12259), moved from subcaption_sty.rs's no-op, its counter made with subcaption's sub-type ids (subcaption and
   subfig register theirs: `\caption@subtypelist`, subfig.sty:261-263 `\sf@counterlist`). OXIDIZED_DESIGN #617. Kernel
-  (base_utilities.rs) — `\lx@add@orcid` takes the iD of an orcid.org address (2104.12510; OXIDIZED_DESIGN #616).
+  (base_utilities/defs/frontmatter_fields.rs) — `\lx@add@orcid` takes the iD of an orcid.org address (2104.12510; OXIDIZED_DESIGN #616).
   cleveref (cleveref_sty.rs) — raw cleveref's `\crefalias` (cleveref.sty:1277-1278) replaces the no-op; `cref_type`
   reads a type's alias, else its counter's (1810.01223, 1706.03576, 2210.04778, 2506.14950). graphics (graphics_sty.rs)
   — `\Gin@driver` is the driver file the options or graphics.cfg choose (pdftex.def for PDF output): trimclip reads
@@ -5900,7 +5912,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   the list on by `\@expandtwoargs`, a `\protected@edef`), so `\DeclareRobustCommand\rb{\laterdefined}` +
   `[figurename=\rb]{caption}` no longer runs `\rb` at package load (1 Error → 0, pdflatex 0); subfig keeps its expanded
   key read, as subfig.sty:125 and :217 `\edef` the list (pdflatex errors there too). A `\<type>name` of `\protect` and
-  a robust or xparse command is a name noun (base_utilities.rs `is_name_noun` follows `\protect\<cs>` hops through
+  a robust or xparse command is a name noun (base_utilities/misc.rs `is_name_noun` follows `\protect\<cs>` hops through
   distinct macros — a hop back to one is a loop, fuse 32 (int10, re-review finding 1: five hops, pdflatex "Ex 1"); it stopped
   at the first, so `\renewcommand\figurename{\protect\rb}` gave the tag "1", pdflatex "Fx 1"; KPE #194). Repros
   captions-floats/{caption_option_key_is_read_unexpanded, protected_robust_name_is_a_name_noun},
@@ -6568,7 +6580,7 @@ class's names; IEEEoj.cls:3447-3451, 3713-3717; 3 papers); when the lock refused
 (`\author:redefined`), author content reads the author markup still undefined there — `\fnms`/`\snm`/`\inits`/
 `\prefix`/`\particle`/`\suffix`/`\degs`/`\roles`/`\orcid`, which IOS-Book-Article.cls and econsocart.cls define
 only inside their own `\author` — with its OmniBus meaning, undefined again after, a class's or the document's own
-definition standing (base_utilities.rs `\lx@author@markup@begin`; 5 papers; Rust-only exposure through
+definition standing (base_utilities/defs/frontmatter_fields.rs `\lx@author@markup@begin`; 5 papers; Rust-only exposure through
 `localrawclasses`, OXIDIZED_DESIGN_DIVERGENCES #444; `\editor`/`\translator` content does not take it yet); amsthm `\@upn` (KNOWN_PERL_ERRORS #509);
 newtxmath's `\re@DeclareMath…` helpers (KNOWN_PERL_ERRORS #510). Open from the same root-cause report
 (`~/data/pk_agents/main/agent_reports/2026-10-06_rc62zj_template_clusters.md`): the informs binding's class API (fixed by 62zk), an apa7 binding (`\authorsnames`/`\authorsaffiliations`/`\authornote`/`\addORCIDlink`; 4 papers), IEEEtran
@@ -6668,7 +6680,7 @@ with `usedcolumn` the `d`/`.`/`,` columns on dcolumn (:1349-1354); the mn bindin
 62zd: rasti.cls (RAS Techniques and Instruments, mnras.cls under another name: v3.0 defines the same commands) loads
 as the mnras binding (rasti_cls.rs): all 18 rasti papers in 2609 at 0 errors (2609.08700, 09329, 27622, 29860, 35676
 had 5-33). cas-common's `stm/mktitle` title-page keys are declared (2609.00281). The box capture's backmatter lift
-stops at a float, as at an alignment (base_utilities.rs `insert_block`, OXIDIZED_DESIGN_DIVERGENCES #205): an appendix
+stops at a float, as at an alignment (base_utilities/blocks.rs `insert_block`, OXIDIZED_DESIGN_DIVERGENCES #205): an appendix
 section or a bibliography in a minipage in a table was lifted past it with no diagnostic, leaving the table empty and
 its caption at the top level; it stays in the table and errors as Perl's does (A/B over 867 papers: 8 improved; 2609.05763,
 a cas paper's abbreviation list in a framed table, now in its table with Perl's `ltx:glossary`-in-`ltx:block` error

@@ -853,7 +853,7 @@ Only `\robustify`'s `\ifdefparam`-false → `\protected\edef` path was broken.)
 
 ### 36. Author-list splitting protects balanced parentheses
 
-**Decision:** `SplitTokens` (`base_utilities.rs`, the author/frontmatter
+**Decision:** `SplitTokens` (`base_utilities/tokens.rs`, the author/frontmatter
 list splitter) does NOT match a delimiter (`,`, ` and `, `\and`, `\quad`, …)
 that sits inside balanced `(…)` parentheses — extending the brace `{…}` and
 math `$…$` protection it already has.
@@ -1248,7 +1248,7 @@ carrying 3–5 copies of the "Princeton…" affiliation, and dropped the
 ²→Lu, ³→Yang, \*→the three equal-contributors, one affiliation each.
 Perl is broken the same way (confirmed same-host); surpass-Perl scope,
 user-directed 2026-07-05. Unit tests: `author_split_tests` in
-base_utilities.rs.
+base_utilities/author_split_tests.rs.
 
 **63z extension.** The descent applies to each piece of a names line, not only a whole line: a wrapper — a command over
 its last braced argument (`\textbf`, `\scalebox{.9}`, `\href{url}`) or a group opening with declarations — holding two or
@@ -1350,7 +1350,7 @@ unchanged, full suite green.
 ### 51. `\lx@add@frontmatter` is a no-op on empty arguments (no empty frontmatter elements)
 
 **Decision:** `\lx@add@frontmatter [keys]{tag}[attrs]{content}`
-(`base_utilities.rs`) early-quits — emitting nothing — when its **tag** or
+(`base_utilities/defs/frontmatter_api.rs`) early-quits — emitting nothing — when its **tag** or
 **content** argument is empty (empty or whitespace-only). A general
 defensive principle for the frontmatter API: any add with an empty string is
 void.
@@ -1392,7 +1392,7 @@ byte-identical.
 ### 52. Structured author↔affiliation recovery from abused frontmatter idioms
 
 **Decision:** Two beyond-Perl hardenings of `\lx@add@authors` / `\lx@add@thanks`
-(`base_utilities.rs`) that recover *structured* author/affiliation metadata from
+(`base_utilities/defs/frontmatter_fields.rs`) that recover *structured* author/affiliation metadata from
 two idioms arXiv authors routinely abuse, where both Perl LaTeXML and a literal
 port emit garbage. Both are **surpass-Perl divergences** (same-host Perl
 reproduces the bad output — witnesses below), authorized under the
@@ -4015,7 +4015,7 @@ fnum@#1\endcsname}`. Rust's definition was byte-identical.
 
 **Rust behavior.** The same, plus a trailing empty group: `{\csname
 fnum@#1\endcsname{}}`. Applied at all three `fnum@` hook sites —
-`\lx@fnum@@` and `\lx@fnum@toc@@` (`base_utilities.rs`) and the theorem-header
+`\lx@fnum@@` and `\lx@fnum@toc@@` (`base_utilities/defs/tags_refnums.rs`) and the theorem-header
 formatter (`latex_constructs.rs`).
 
 **Why.** Real `\fnum@<type>` takes no argument, but LaTeX's `\@makecaption` is
@@ -5560,7 +5560,7 @@ that is the **sole** content of a `minipage` becomes `<listing class="ltx_minipa
 that class, so its indentation collapses. latexml-oxide reproduced this exactly
 (SHARED-FAILURE, verified same-host: Perl 0.8.8 also emits `class="ltx_minipage"`).
 
-**Rust behavior**: `insert_block` (`base_utilities.rs`) treats `class` as the
+**Rust behavior**: `insert_block` (`base_utilities/blocks.rs`) treats `class` as the
 space-separated set it is — it `add_class`es the wrapper's class onto the child
 instead of overwriting, so the child keeps its own semantic class and *gains* the
 wrapper's: `<listing class="ltx_lstlisting ltx_minipage" vattach="…" width="…">`.
@@ -6120,7 +6120,7 @@ before any `\address`/`\email` (a common amsart idiom, witness arXiv:2308.06214v
 most-recent author at every contact is the *last* one, so all addresses/emails bunch under
 that last author. Perl 0.8.8 does the same (verified same-host, byte-identical).
 
-**Rust behavior** (`base_utilities.rs::distribute_upfront_contacts`, a DOM pass in
+**Rust behavior** (`base_utilities/frontmatter/insert.rs::distribute_upfront_contacts`, a DOM pass in
 `insert_frontmatter` between `coalesce_empty_creators` and `relocate_annotations`):
 after creators are built, a *clean* pile is redistributed — the signature is that the
 other N−1 authors carry no `ltx:contact` and the last author's `K` contacts split evenly
@@ -6393,7 +6393,7 @@ bug; the divergence below is a deliberate surpass-Perl.
 
 **Rust behavior**: at frontmatter finalization (`\lx@frontmatter@fallback`, the no-`\maketitle`
 path), once the structured `<ltx:title>` is in the tree, `maybe_dedup_leading_title_ink`
-(`base_utilities.rs`) removes a **leading, non-sectional, centered, display-font** paragraph whose
+(`base_utilities/frontmatter/titlepage_layout.rs`) removes a **leading, non-sectional, centered, display-font** paragraph whose
 normalized text **exactly** reproduces the structured title. Structure wins over ink: the semantic
 `<ltx:title>` is kept; the redundant hand-typeset copy is dropped (empty wrappers pruned). It is the
 mirror of `maybe_promote_leading_title` (which, when *no* structured title exists, promotes such a
@@ -6759,7 +6759,7 @@ before pushing a replaceable entry.
 replaceable tag keeps BOTH entries and emits DUPLICATE frontmatter (two `<title>`, two
 `<abstract>`). Newer upstream Perl does NOT.
 
-**Rust behavior**: `base_utilities.rs` adds `REPLACEABLE_FRONTMATTER_TAGS` and clears
+**Rust behavior**: `base_utilities/mod.rs` adds `REPLACEABLE_FRONTMATTER_TAGS` and clears
 `frontmatter{tag}` before the push in `\lx@add@frontmatter@now` (and `@until`, guarded
 against same-tag re-entrancy so a nested/malformed `{abstract}` is not corrupted).
 Non-replaceable tags — crucially `ltx:creator` — still accumulate (multi-author
@@ -6823,11 +6823,11 @@ value using a macro or package defined later in the preamble (`\foo`, xcolor's `
 pdflatex reads it (77i r2 digested it where it was set, 2 errors on the review's `early` probe), and the document's own
 `{abstract}`, whose `\lx@clear@frontmatter` clears what is queued before it, does not remove it, nor does the
 document's later abstract of the same name replace it (the entry carries `_store=<store>`, the store's control sequence,
-and `frontmatter_clear_same_name`, base_utilities.rs, replaces it only by another of the same store): the two are two
+and `frontmatter_clear_same_name`, base_utilities/frontmatter/queue_digest.rs, replaces it only by another of the same store): the two are two
 elements, the document's first when its `{abstract}` comes before `\maketitle` — pdflatex prints both, in that order.
 That holds only while the title page prints the store: once the speculative run of the title page shows it does not
 (`title_page_prints_store`, `lx_sentinel_printed`; without a run, its code reads it), the entry is an ordinary one at
-`\lx@store@untypeset` (`release_unprinted_store_entries`, base_utilities.rs `frontmatter_release_store`: one the
+`\lx@store@untypeset` (`release_unprinted_store_entries`, base_utilities/frontmatter/queue_digest.rs `frontmatter_release_store`: one the
 document's own entry of the same name and language already replaces is dropped), as an entry with no `\maketitle`
 (`harvest_stores` at the fallback) and one set after the `\maketitle` that read the store are (`untagged_api`) —
 `\hypersetup{pdfsubject={\@abst}}` in `\@maketitle` beside the document's `{abstract}` gives one abstract, as pdflatex
@@ -6918,7 +6918,7 @@ in Rust before this change. (Title-scope `\thanks` already becomes a marked note
 creator-scope was the inline contact.)
 
 **Rust behavior**: creator-scope `\thanks` routes to `<ltx:note role="thanks"
-class="ltx_note_frontmatter ltx_thanks_<kind>">` attached to the creator (`base_utilities.rs`
+class="ltx_note_frontmatter ltx_thanks_<kind>">` attached to the creator (`base_utilities/defs/frontmatter_fields.rs`
 `\lx@add@thanks` else-branch). It reuses the existing `ltx:note` footnote template (a superscript
 `ltx_note_mark` on the author + `ltx_note_outer`/`ltx_note_content`), so a theme can place it as a
 margin/footnote note. `<kind>` is a **best-effort** keyword classifier (`classify_thanks`):
@@ -7055,7 +7055,7 @@ fallback (`$unlabeltable{$noprefix}`, L899-900) reduces `affiliation:1` to `1` a
 the FIRST author's `author:1` — so the whole shared institute is stranded under author 1 only.
 Perl 0.8.8 (installed and vendored) and pre-fix Rust produce byte-identical output.
 
-**Rust behavior**: `relocate_annotations` (`base_utilities.rs`) two-part fix. (1) A creator's
+**Rust behavior**: `relocate_annotations` (`base_utilities/frontmatter/relocate.rs`) two-part fix. (1) A creator's
 own role-sequence label (`author:N`/`editor:N`/`translator:N`) is NOT indexed into the
 prefix-stripped fallback table, so a shared `affiliation:1` no longer binds to `author:1` by
 number. A genuine per-author affiliation still matches EXACTLY via `labeltable` (the
@@ -8223,7 +8223,7 @@ around a `figure class="ltx_figure_panel"` with its content in source order: the
 the side-by-side minipage panel (KNOWN_PERL_ERRORS #486), where Perl reports the caption in an `ltx:block`. The stops
 are per-tag (list, alignment, float) and a quote still leaks (repros/boxes-groups/
 bibliography_in_minipage_in_quote_keeps_the_quote.tex): consolidating them is open, SYNC_STATUS 62zd
-(`latexml_engine/src/base_utilities.rs::insert_block`). Guards:
+(`latexml_engine/src/base_utilities/blocks.rs::insert_block`). Guards:
 `perfect_kernel_gemini::mdframed_block_bibliography_juradiss`,
 `perfect_kernel_batch56::caption_in_inline_parbox_floats_to_figure`,
 `tests/complex/figure_dual_caption` (a minipage of graphics + caption still
@@ -8934,7 +8934,7 @@ a `<para>` is already open from preceding inline text, `<para>` (Block.model)
 cannot hold the `<logical-block>`/`<sectional-block>` chosen, so Perl renames in
 place and emits `<para>…<logical-block>` — schema-invalid (`LaTeXML-para.rnc:16`
 `Para.class = para | logical-block`; `:56` `para_model = Block.model`).
-**Rust behavior**: `insert_block` (`base_utilities.rs`) — when
+**Rust behavior**: `insert_block` (`base_utilities/blocks.rs`) — when
 `allowed_candidates` is empty but a candidate exists, climb from the context to
 the nearest ancestor that can hold the tag and move the capture there (ending
 the paragraph), then rename. The block ends up a valid child of the section/body.
@@ -8987,7 +8987,7 @@ frontmatter to lead (`LaTeXML-structure.rnc:34`:
 `<title>`/`<creator>`/`<date>` is schema-invalid. Perl (native AND raw-class) does
 the same and is invalid against its own schema (verified same-host, Perl LaTeXML
 0.8.8).
-**Rust behavior**: `\lx@frontmatterhere` (`base_utilities.rs`) gates on
+**Rust behavior**: `\lx@frontmatterhere` (`base_utilities/defs/author_macros.rs`) gates on
 `leading_document_nodes_content_free` — true when every `<ltx:document>` child
 after the last `<ltx:resource>` is content-free (a self-closing `<ltx:pagination>`,
 or an empty `<ltx:para>`/`<ltx:p>`/`<ltx:break>`). If so it flushes via
@@ -9028,7 +9028,7 @@ to an in-place rename to `<block>`. But `g_model` (LaTeXML-picture.rng) is inlin
 (`Picture.class | Inline.class | Misc.class | Meta.class`) — `<block>` (Block.class) is
 NOT in it, `<inline-block>` (Misc.class) IS — so `<g>/<block>` is schema-invalid. Perl
 (native AND raw-class) emits the same.
-**Rust behavior**: `insert_block` (`base_utilities.rs`) treats a container that holds
+**Rust behavior**: `insert_block` (`base_utilities/blocks.rs`) treats a container that holds
 `<inline-block>` but neither `<block>` nor `#PCDATA` as inline
 (`can_contain_qsym(ctx,"ltx:inline-block") && !can_contain_qsym(ctx,"ltx:block")`), so
 the capture is renamed IN PLACE to `<inline-block>` — valid in `g_model`, and the box
@@ -9065,7 +9065,7 @@ Para.class (a `<para>` auto-opens when a genuine block — a centered `tabular`,
 no allowed candidate it renames in place to an invalid `<logical-block>` (`Block.model =
 Block.class|Misc.class|Meta.class` has no Para.class; LaTeXML.rnc:37). Perl (native AND
 raw-class) emits the same invalid nesting.
-**Rust behavior**: `insert_block` (`base_utilities.rs`) — when the context holds `<block>`
+**Rust behavior**: `insert_block` (`base_utilities/blocks.rs`) — when the context holds `<block>`
 but not the Para.class `final_tag`, AND `subtree_is_block_demotable` — emits `<block>` and
 recursively demotes the Para.model content BOTTOM-UP: rename descendant `logical-block`/
 `sectional-block` → `block` (KEEPING attributes — a minipage's `width`), unwrap descendant
@@ -9107,7 +9107,7 @@ lands the `\title`/`\author` right behind it. Perl (native and raw-class) leaves
 declines; a titlepage is never queued. Both settle into the same final tree
 `resource*, content-free+, frontmatter+, body*`, so `\lx@finalize@document` (sect02.rs,
 after the `@at@end@document` fallback flush) runs
-`relocate_leading_content_free_past_frontmatter` (`base_utilities.rs`): the leading run of
+`relocate_leading_content_free_past_frontmatter` (`base_utilities/frontmatter/titlepage_layout.rs`): the leading run of
 content-free nodes (per `node_is_content_free` — `<pagination>`, or an empty
 `<para>`/`<p>`/`<break>` with no visible descendant) moves, in order, to just after the
 contiguous run of frontmatter-only elements that follows it. "Frontmatter-only" is the
@@ -9154,7 +9154,7 @@ order. RUST-ONLY: same-host Perl validates all 16 witnesses. The promotion itsel
 unreliable: tikz-mirror-lens got `<title>FHZ</title>` (the author, from an author-first cover
 whose `\Large{#1}` leaks onto the title paragraph), isosigns/bootstrapicons got
 `<title>VERSION 2.1</title>` (a badge in a tcolorbox) — layout mis-read as metadata.
-**Rust behavior (now)** (`\lx@frontmatter@fallback`, `base_utilities.rs`; user ruling
+**Rust behavior (now)** (`\lx@frontmatter@fallback`, `base_utilities/defs/author_macros.rs`; user ruling
 2026-09-20 — a regular document needs no body `logical-block(author)`; titlepage layout is
 not semantic, the frontmatter metadata schema is): (1) `maybe_promote_leading_title` promotes
 ONLY the unambiguous 1609.07638 shape — a plain `center`/paragraph block at document level
@@ -9219,7 +9219,7 @@ late_abstract_after_maketitle_leaves_no_marker_and_wraps_nothing}`; fixture `str
 `\lx@frontmatter@fallback` places it at the top after `ltx:resource[last()]`; nothing else
 (`Base_Utility.pool.ltxml:824-944`). Whatever precedes the placement stays where it is.
 **Rust behavior**: `place_frontmatter(document, wrap_layout, anchor, on_stop)`
-(`base_utilities.rs`) runs at every placement point — `\lx@frontmatterhere`, both
+(`base_utilities/defs/author_macros.rs`) runs at every placement point — `\lx@frontmatterhere`, both
 `\lx@frontmatter@fallback` branches, the `{titlepage}` environment's `after_construct` — and
 classifies the LEADING REGION (root children between the resources and the bound: the
 abstract's `ltx:_Frontmatter_Capture_` position marker when present, else everything built so
@@ -9299,7 +9299,7 @@ schema admits no `sectional-block` (`document.body.class` only, LaTeXML-structur
 0 build errors, invalid tree. SHARED with Rust before this batch.
 **Rust behavior**: in LaTeX a `\section` inside a box IS a section: `\@startsection` ran, the
 counter advanced, and text after `\end{minipage}` belongs to the new unit. `insert_block`
-(`base_utilities.rs`) now checks, before the candidate machinery, whether the captured content
+(`base_utilities/blocks.rs`) now checks, before the candidate machinery, whether the captured content
 holds a sectioning unit (schema-read: admitted by `ltx:sectional-block`, not by
 `ltx:logical-block` — part…subparagraph, slide, sidebar; never a float/theorem/para) and whether
 the insertion context has an auto-closeable path to an ancestor that admits it
@@ -9418,7 +9418,7 @@ class. User ruling 2026-09-22: surpass. Letting the class body run is NOT the
 fix — verified: cas-common, cnbwp and aomart store names in class-private
 accumulators (`\g_stm_prelimsau_seq`, `\CNB@authors`, `\@names`) laid out only
 by their own `\maketitle`, which stays locked, so the authors vanish. **Rust**
-(`base_utilities.rs`, `\lx@add@authors@adaptive`, `\lx@author@trailing`; the
+(`base_utilities/defs/author_macros.rs`, `\lx@add@authors@adaptive`, `\lx@author@trailing`; the
 kernel `\author` and its `inst_support`/`sv_support`/`llncs` twins carry the
 tail): ONLY when `\author:redefined` is set (the lock recorded a refused
 redefinition, `state.rs install_definition`) — (a) the trailing `[keyval]`
@@ -9485,7 +9485,7 @@ where the model puts it: `adjustBackmatterElement`
 (`Document.pm:960-1011`) autoclose only `canAutoClose` nodes and a drawing's
 `svg:g` is not one, so an `ltx:bibliography` built inside a tikz node stays
 there and is reported (`<ltx:bibliography> isn't allowed in <ltx:block>`).
-**Rust** (`base_utilities.rs` `insert_block`, batch 56bq) hoists such a
+**Rust** (`base_utilities/blocks.rs` `insert_block`, batch 56bq) hoists such a
 block out of the drawing when no kept node carries text (a graphic in the box
 is drawing content and stays): xebaposter's bibliography in a top-level tikz
 node floats after the `svg:svg` (guard
@@ -9539,7 +9539,7 @@ preamble argument or undefined-command marker (chemexec_en.tex:119, stanli,
 l2picfaq, pst-calendar-doc), a hand-typeset cover line (toptesi-it), genuine
 prose — both engines emit a stranded `<titlepage>` after the first `<para>`:
 `element "titlepage" not allowed here` (verified identical on the minimal
-repro). **Rust** (`base_utilities.rs` `demote_stranded_titlepage`, run from the
+repro). **Rust** (`base_utilities/frontmatter/field_ink.rs` `demote_stranded_titlepage`, run from the
 environment's `after_construct` after the placement pass): when any preceding
 root child is neither a resource, a frontmatter-group element nor content-free,
 and every child of the titlepage is something `ltx:para` can hold, the element
@@ -9560,7 +9560,7 @@ whose package or engine is missing under `[rawstyles]`: pst-calendar-doc's
 `\DeclareDocumentMetadata`, forest-doc's `\@escapeifif`, pmhanguljamo's
 `\fontid`), the marker opens the body and every frontmatter element after it
 is schema-invalid — or Perl produces no XML at all (7 of the 8 witnesses).
-**Rust** (`base_utilities.rs` `text_outside_error_markers`,
+**Rust** (`base_utilities/frontmatter/titlepage_layout.rs` `text_outside_error_markers`,
 `subtree_elements_all_invisible`): for the placement pass (#242/#247) a
 `para`/`p` whose only element descendants are `ltx:ERROR class="undefined"` markers
 (only that class carries a control-sequence name; `\lx@ERROR` markers and constructor
@@ -9634,7 +9634,7 @@ guard, mirrored in `state.rs` `compute_indirect_model`), so an `itemize` opened
 directly in an `itemize` (legal LaTeX after an empty item: iitem's `\Pseudo@item`,
 lost in qworld because ltjsarticle.cls redefines the kernel `\@item`) is also
 placed in the list. Both are SHARED schema errors. **Rust**: `insert_block`
-(base_utilities.rs) moves a capture that a list container cannot hold through
+(base_utilities/blocks.rs) moves a capture that a list container cannot hold through
 `find_insertion_point`, which opens `item` → `para` exactly as for text arriving
 before the first `\item`; `find_insertion_point`'s bridge table (document.rs)
 gains a row `item → para` for a child whose tag equals the current list's. The
@@ -9657,7 +9657,7 @@ sibling file's macros, an unbound class option), prose or a class-drawn cover be
 `\maketitle`, a logo — leaves `<title>` stranded after the body: schema-invalid, and
 SHARED in the 59 s112 manuals whose first jing error was a frontmatter element.
 **Rust** (user-approved surpass, 2026-09-23), two layers in the one placement pass
-(`place_frontmatter`, base_utilities.rs): (1) the `\begin{document}` constructor
+(`place_frontmatter`, base_utilities/frontmatter/place.rs): (1) the `\begin{document}` constructor
 (latex_constructs/sect02.rs) marks every child of a root the preamble already opened
 as PREAMBLE residue (`_preamble`, internal). LaTeX forbids typesetting there
 (`\@nodocument`, "Missing \begin{document}"), so residue is never body: the pass moves
@@ -9977,7 +9977,7 @@ parts, validity unchanged (27/31), no diagnostic change. Guard
 
 **Perl**: `\footnote`/`\index`/`\gls`/`\nomenclature` inside `\text{}` in math construct in the `ltx:text` that `\text` opens. That element admits them, so their `^` float (`floatToElement`, Document.pm:1052) stops there. `cleanup_XMText` (TeX_Math.pool.ltxml) then unwraps the `ltx:text` and leaves the marker as a direct `XMText` child. `XMText_model = (text | Inline.class | Misc.class)*` has no `Meta.class`, so the document is schema-invalid. The marker is also read into the formula: the footnote enters `text=` (`[b11footnote 1fn]`), and ryethesis's `\nomenclature` entries parse as a factor, `c² × [glossary]`. In an `align` cell, `addColumnToMathFork` (Base_XMath.pool.ltxml:880) clones any non-math element into the main branch's `XMText`, so the fork holds the footnote twice (a `.mf` copy). Separately, the XSLT renders "all of equation_model EXCEPT Meta" (LaTeXML-block-xhtml.xsl), so a footnote at equation level, a bare `\footnote` in `\[…\]` included, never reaches the HTML.
 **Rust** (batch 56gx, user ruling 2026-09-23 "move them out of math"):
-- `cleanup_math` first runs `float_meta_out_of_math` (`base_utilities.rs`). Every outermost `Meta.class` element (LaTeXML-meta.rnc:17) inside the Math's `XMText` moves, in document order, to just after the Math, at the nearest ancestor level that admits it: the `p` for inline math, the `equation` for a display, the `td` for an align cell. This is where a bare `\footnote` in math floats. A `text`/`XMText` wrapper the move leaves empty is removed, so it does not parse as an empty term.
+- `cleanup_math` first runs `float_meta_out_of_math` (`base_utilities/math_cleanup.rs`). Every outermost `Meta.class` element (LaTeXML-meta.rnc:17) inside the Math's `XMText` moves, in document order, to just after the Math, at the nearest ancestor level that admits it: the `p` for inline math, the `equation` for a display, the `td` for an align cell. This is where a bare `\footnote` in math floats. A `text`/`XMText` wrapper the move leaves empty is removed, so it does not parse as an empty term.
 - `add_column_to_math_fork` does not clone Meta content into the main branch.
 - The XSLT's two equation-content selects add `ltx:note`, and an aligned row's own notes render in its right padding cell (`eq-right`'s `notes` parameter).
 
@@ -10874,7 +10874,7 @@ the CB fonts' iota ligature since batch 56jv (KNOWN_PERL_ERRORS #290).
   `\edef`-expanded `\pgfsyssoftpath@flushbuffers`: 1001 errors and a Fatal with #315's
   `\patchcmd` fix → 201, no Fatal). LaTeXML's own frontmatter idiom `\let^\lx@sup@…`
   (Base_Utility.pool.ltxml:729-737) needs the superscript catcode's key, which no TeX name
-  reaches: Rust installs it with `\lx@let@superscript` (`base_utilities.rs`, a local `Let!` of
+  reaches: Rust installs it with `\lx@let@superscript` (`base_utilities/defs/author_macros.rs`, a local `Let!` of
   `T_SUPER`). tcilatex's `\activesoff` is defined inside `\bgroup\makeactives…\egroup` as
   tcilatex.tex.ltxml:369-389 does (the binding had it at normal catcodes: 4 errors per `\FRAME`
   under babel). Frozen control sequences as names are not modelled (Rust has none). Residuals:
@@ -11889,7 +11889,7 @@ latex.ltx's `\parbox` ends in `\@iiiparbox`, which begins with `\leavevmode` (la
 
 **Perl** (KNOWN_PERL_ERRORS #309): `\lx@parbox` (latex_constructs.pool.ltxml:4750-4764) begins `inline_internal_vertical` mode without `enterHorizontal`, and `insertBlock` at section level makes the box a `<para class="ltx_parbox">` of its own; the space after it is read in vertical mode and dropped, and the text opens a new paragraph.
 
-**Rust** (batch 57d): `\lx@parbox` declares `enter_horizontal`, and a constructor declaring it records `in_paragraph` on its whatsit when that `\leavevmode` leaves TeX in a paragraph: invoked in vertical mode (a new one, tex.web §1091 `new_graf`) or in unrestricted horizontal mode (`\noindent\parbox…`); in a restricted box (`\rotatebox{90}{\parbox…}`, arXiv 2605.20645) or math it is a no-op (constructor.rs `digest_to_whatsit`). The parbox is built by `insert_block_in_paragraph` (base_utilities.rs), which after the capture and the sectioning float-out (#250) opens the `ltx:p` where text would open one (`text_opens_paragraph`, the model's auto-open route for `#PCDATA`): the box goes into it as an `<inline-block class="ltx_parbox">` and ` text after.` continues it. Not in a float, whose content is panels for `arrange_panels`, seen through the captures of any box or environment built in it (`in_panel_float`, `PANEL_FLOATS`: arXiv 2605.27134's parbox-topped minipage panels stay side by side, captioned parbox panels in a `{center}` stay sub-figures); not for an empty box; not for content no inline box holds (a bibliography, an index, a caption), which the hoist places after the box as before. Found by the K13 binding-conformance audit.
+**Rust** (batch 57d): `\lx@parbox` declares `enter_horizontal`, and a constructor declaring it records `in_paragraph` on its whatsit when that `\leavevmode` leaves TeX in a paragraph: invoked in vertical mode (a new one, tex.web §1091 `new_graf`) or in unrestricted horizontal mode (`\noindent\parbox…`); in a restricted box (`\rotatebox{90}{\parbox…}`, arXiv 2605.20645) or math it is a no-op (constructor.rs `digest_to_whatsit`). The parbox is built by `insert_block_in_paragraph` (base_utilities/blocks.rs), which after the capture and the sectioning float-out (#250) opens the `ltx:p` where text would open one (`text_opens_paragraph`, the model's auto-open route for `#PCDATA`): the box goes into it as an `<inline-block class="ltx_parbox">` and ` text after.` continues it. Not in a float, whose content is panels for `arrange_panels`, seen through the captures of any box or environment built in it (`in_panel_float`, `PANEL_FLOATS`: arXiv 2605.27134's parbox-topped minipage panels stay side by side, captioned parbox panels in a `{center}` stay sub-figures); not for an empty box; not for content no inline box holds (a bibliography, an index, a caption), which the hoist places after the box as before. Found by the K13 binding-conformance audit.
 
 **`{minipage}`** (batch 57f): `\@iiiminipage` begins with `\leavevmode` too (latex.ltx:16305-16306); the environment declares `enter_horizontal` and is built by `insert_block_in_paragraph`, so a minipage between paragraphs is an inline block in the paragraph it starts, the text after it continues that paragraph, and minipages on one line sit side by side (`\hfill` pairs, a list's minipage of `\item`s beside a second one, 2605.19762's three `\subsubsection*` minipages in a `table*`) instead of stacking. **Lone float** (user ruling 2026-09-27, option C, shared by both boxes): a box whose whole content is one float becomes that float by Perl's fold when its line holds nothing else — `\captionof` in a minipage or a parbox gives `<figure class="ltx_minipage">` / `<figure class="ltx_parbox">` (for the parbox this restores Perl's shape over 57d's inline one); since 57g this is settled once the document is built (#339), and a float-box followed by text on its line stays inline. A box that is clearly a figure but holds more than the float (image + `\captionof`) becomes the float with its image, and lone-float boxes on one line form a row of panels: #339 (57g). Guards `perfect_kernel_batch56::{a_minipage_starts_the_paragraph, a_box_holding_only_a_float_becomes_it, para_class_minipage_in_figure_demotes_keeping_its_width}`, `cluster_schema::quote_holds_framed_logical_and_sectional_blocks` (the #271 admissions through `{framed}`); repros `boxes-groups/minipage_starts_the_paragraph` (RED 57d → GREEN), `captions-floats/box_holding_only_a_float_becomes_it`; goldens `alignment/vmode`, `digestion/dollar`; guards reshaped: list auto-item (the #261 branch now pinned by a `\vbox` case), titlepage demotion (a `{center}` body, whole element), quote (#271), lstnewenvironment, calc/pdfcomment minipages, nested/restricted parbox.
 
@@ -11901,7 +11901,7 @@ latex.ltx's `\parbox` ends in `\@iiiparbox`, which begins with `\leavevmode` (la
 
 `\captionof{figure}{…}` (caption.sty) sets the caption type; LaTeXML's binding (Perl caption.sty.ltxml, ours `\@captionof@`, caption_sty.rs) wraps only the caption in the float element, so a minipage holding an image and `\captionof` becomes a box with the image in a `<para>` beside a caption-only `<figure>` (KNOWN_PERL_ERRORS #312), and such boxes side by side on one line (`\hfill`) stack.
 
-**Rust** (batch 57g, user rulings 2026-09-27): in `insert_block_as` (base_utilities.rs), a box whose content is one float holding only its caption (the shape `\captionof` makes) and figure material — graphics, pictures, tabulars, rules and their `para`/`p`/`\scalebox`/font wrappers, no prose — hands the material to the float in source order (`absorb_figure_material`; a float holding content of its own, `\begin{figure}[H]…`, takes nothing, so its order with the box's material stands). It applies to every box and alignment capture that reaches `insert_block` (`{center}` + `\captionof` + a tikzpicture: the tikz/consort-flowchart golden now holds its flowchart in the figure). Such a float-box is paragraph material like any box (57d/57f): it sits in the paragraph it starts as an inline block. Once the document is built (`settle_float_paragraphs`, latex_constructs, first step of `finish_document` and, per spilled segment, of `streaming_pass2`, core_interface.rs — eager and `--streaming` output are identical), a paragraph holding nothing but float-boxes — besides `\\` breaks and whitespace — gives way to them (`settle_float_paragraph`): one becomes its float with the box's class and sizes folded on (`<figure class="ltx_minipage"><graphics/><caption/></figure>`, Perl's fold), several become a row, an uncaptioned `<figure>` holding them as panels with the author's breaks, laid out by `arrange_panels` (the row's `after_close`) — the markup LaTeXML gives a figure float holding captioned minipages. A paragraph holding anything else (text, a box that is not a float) keeps its boxes inline, side by side (arXiv 2605.18920's table and algorithm boxes). Paragraphs of successive lines (a blank line between) settle separately; a `{center}` grid split by `\\` is several paragraphs of the capture and stays as 57f made it. The line's alignment (`align`, the `\raggedleft` classes) goes onto the float or row. A row takes over the settled paragraph's identity — its `xml:id` and id counters, minted during construction (`Document::wrap_nodes_as`) — so it is numbered alike in a streaming segment and the ids of its contents keep their prefix; a lone float keeps its own id, and its paragraph's number stays unused (settling after construction cannot give it back): later paragraph ids there differ from Perl's and 57f's (the `structure/autoref` golden; 4 of the A/B's changed papers: 2605.16962, 2605.17828, 2605.24961, 2605.29757).
+**Rust** (batch 57g, user rulings 2026-09-27): in `insert_block_as` (base_utilities/block_insertion.rs), a box whose content is one float holding only its caption (the shape `\captionof` makes) and figure material — graphics, pictures, tabulars, rules and their `para`/`p`/`\scalebox`/font wrappers, no prose — hands the material to the float in source order (`absorb_figure_material`; a float holding content of its own, `\begin{figure}[H]…`, takes nothing, so its order with the box's material stands). It applies to every box and alignment capture that reaches `insert_block` (`{center}` + `\captionof` + a tikzpicture: the tikz/consort-flowchart golden now holds its flowchart in the figure). Such a float-box is paragraph material like any box (57d/57f): it sits in the paragraph it starts as an inline block. Once the document is built (`settle_float_paragraphs`, latex_constructs, first step of `finish_document` and, per spilled segment, of `streaming_pass2`, core_interface.rs — eager and `--streaming` output are identical), a paragraph holding nothing but float-boxes — besides `\\` breaks and whitespace — gives way to them (`settle_float_paragraph`): one becomes its float with the box's class and sizes folded on (`<figure class="ltx_minipage"><graphics/><caption/></figure>`, Perl's fold), several become a row, an uncaptioned `<figure>` holding them as panels with the author's breaks, laid out by `arrange_panels` (the row's `after_close`) — the markup LaTeXML gives a figure float holding captioned minipages. A paragraph holding anything else (text, a box that is not a float) keeps its boxes inline, side by side (arXiv 2605.18920's table and algorithm boxes). Paragraphs of successive lines (a blank line between) settle separately; a `{center}` grid split by `\\` is several paragraphs of the capture and stays as 57f made it. The line's alignment (`align`, the `\raggedleft` classes) goes onto the float or row. A row takes over the settled paragraph's identity — its `xml:id` and id counters, minted during construction (`Document::wrap_nodes_as`) — so it is numbered alike in a streaming segment and the ids of its contents keep their prefix; a lone float keeps its own id, and its paragraph's number stays unused (settling after construction cannot give it back): later paragraph ids there differ from Perl's and 57f's (the `structure/autoref` golden; 4 of the A/B's changed papers: 2605.16962, 2605.17828, 2605.24961, 2605.29757).
 
 **Settled dead-ends**: deciding at insertion (lifting a box that became a float out of the paragraph it had started, and grouping boxes by a paragraph serial numbered at `new_graf`) stacked a float-box beside a text box (2605.18920), dropped `\\` between figure-boxes, and appended panels past `arrange_panels`. Settling at the paragraph's close (its `after_close`) fired inside `{center}`'s own construction, which still held the paragraph, and dropped the center alignment (2605.03276 A2.F8-F10). Minting the row's own id when it settles numbered it under a streaming segment's parse wrapper (`fig13` for a section's `S1.fig2`), so eager and streamed output differed. The paragraph is the unit that knows what the line holds, and the finished document the time to ask it.
 
@@ -12620,7 +12620,7 @@ author wrote (2605.05292, 2605.20326).
 Perl's `make_message` (latex_constructs.pool.ltxml:5586-5587) expands a `\GenericInfo`/`\GenericWarning`/`\GenericError`
 text fully, so an `\unexpanded{…}` or `\the\toks` result is expanded again and a protected macro runs.
 
-**Rust** (Gemini round 13; `make_generic_message`, base_utilities.rs): the text is expanded as `\edef` and
+**Rust** (Gemini round 13; `make_generic_message`, base_utilities/misc.rs): the text is expanded as `\edef` and
 `\immediate\write` expand it (latex.ltx:8773-8799), so every `\Package*`/`\Class*`/`\@latex@*` message prints as
 pdflatex's: `\unexpanded` text and `\the` results stay, a protected macro prints as its name (KPE #381).
 
@@ -13338,7 +13338,7 @@ allowed in the context or not: a `{minipage}` holding a float, a theorem or a `\
 `\scalebox` or `\rotatebox` (an `ltx:inline-block`, which holds none of those) becomes `inline-block >
 logical-block` or `> sectional-block`, a schema error.
 
-**Rust** (57cp, base_utilities.rs `insert_block_as`): where the parent holds neither the final tag nor `ltx:block`
+**Rust** (57cp, base_utilities/block_insertion.rs `insert_block_as`): where the parent holds neither the final tag nor `ltx:block`
 (so no demotion), the capture is the first of `ltx:inline-block`, `ltx:inline-logical-block`,
 `ltx:inline-sectional-block` that the parent holds and that holds all its content; otherwise Perl's rename. Nothing
 moves: the element is renamed in place. Documents without such a box are unchanged (the 57cp manual net: only the
@@ -13854,7 +13854,7 @@ author stays the only creator.
 `\lx@maketitle@cleanup`), and an `\author` after a flush marks the authors that flush digested as
 superseded; the next `\maketitle` that holds new authors drops them first thing
 (`\lx@maketitle@supersede`), with their pending annotation stubs, restarts the counts the new batch is
-numbered and labelled by (`supersede_digested_authors`, base_utilities.rs), and hands the class's
+numbered and labelled by (`supersede_digested_authors`, base_utilities/frontmatter/queue_digest.rs), and hands the class's
 stores (`\@address`, `\@email`, which its `\@maketitle` reads again) to the new authors — a store set
 after the new `\author` was handed to them when it was set and is not handed twice; one set before it
 went to the replaced authors and is handed again. A store handed when it was set comes before the
@@ -14175,7 +14175,7 @@ boxes-groups/box_primitives_unpack (cases 6, 10-14, 17; cases 15-16 RED); guard 
 tex.web §679 `append_to_vlist` makes the glue between a vertical list's lines from the `\baselineskip`, `\lineskip` and
 `\lineskiplimit` in force as each line is appended — inside the box. Perl's `List` records only the `\baselineskip`,
 read after the box's group has ended (List.pm:52-53), and the sizing reads `\lineskip` when it measures. Rust (59x,
-base_utilities.rs `predigest_box_contents_in_mode`) records all three on a `\vbox`/`\vtop` list before its group
+base_utilities/boxes_lists.rs `predigest_box_contents_in_mode`) records all three on a `\vbox`/`\vtop` list before its group
 ends; its sizing (font.rs `compute_boxes_size_stack`, `\lineskip` under `\lineskiplimit` as §679) and `\vsplit`'s break
 search (tex_inserts.rs) use them: `\vbox{\offinterlineskip …}` drains in TeX's pieces, `\vbox{\small …}` stacks at
 11pt. They are read at the box's end, not as each line is appended (`\vbox{\begingroup\small …\endgroup}` stacks at
@@ -14608,7 +14608,7 @@ in Perl (0812.3424, OD #189); the `\@ifundefined{figure}` counter guard (fixed b
 which the lock drops (2407.04130; fixed by 62zj: when the lock refused a class's `\author`, author content reads the
 author markup still undefined there — `\fnms`, `\snm`, `\inits`, `\prefix`, `\particle`, `\suffix`, `\degs`, `\roles`,
 `\orcid` — with its OmniBus meaning, undefined again after, a class's or the document's own definition standing
-(base_utilities.rs `\lx@author@markup@begin`; IOS: 2407.04130, 2609.06231, 13776, 15113, 28673; econsocart.cls:
+(base_utilities/defs/frontmatter_fields.rs `\lx@author@markup@begin`; IOS: 2407.04130, 2609.06231, 13776, 15113, 28673; econsocart.cls:
 2609.06865; guard
 `perfect_kernel_batch61::raw_class_author_markup_reads_within_author_content`; open: `\editor`/`\translator` content
 does not take it); irmaems.cls's proof environment (1112.3263, 1 → 5 errors).
@@ -14628,7 +14628,7 @@ The ACM SIG classes (sig-alternate and its dated variants, sigchi, shipped with 
 the title-page tabular. Perl's author splitting (`@authorsplits`, Base_Utility.pool.ltxml:679) has no `\alignauthor`;
 its OmniBus makes it empty (OmniBus.cls.ltxml:76), merging the names into one creator ("Yilin Yang Chen Wang Y…").
 
-**Rust** (batch 62m, base_utilities.rs `author_and_splits`): `\alignauthor` is of the `\and` family, split before
+**Rust** (batch 62m, base_utilities/author_block/separators.rs `author_and_splits`): `\alignauthor` is of the `\and` family, split before
 digestion, so its raw definition never runs inside a name and each column's `\\` lines are the name, its affiliation
 and its e-mail. Before the split (`unbrace_acm_author_columns`), the brace group that follows `\alignauthor` when it is
 the whole column (only spaces and `\\` before the next author) — sigchi writes each column as one, `\alignauthor{Name\\
@@ -14674,7 +14674,7 @@ outer float, which `RescueCaptionCounters` (latex_constructs.pool.ltxml:3203) nu
 **Rust** (batch 62q): a box begun in a float sets the float's pending caption state aside (`begin_caption_box`,
 latex_constructs/mod.rs, as `set_aside_pending_caption` does for nested floats; a float unwinds boxes whose end an
 error recovery skipped, `unwind_caption_boxes`) and at its end takes what a caption in it stepped (`end_caption_box`:
-`caption_tags/_id/_inlist/_type`), giving the float its state back. `insert_block_in_paragraph` (base_utilities.rs)
+`caption_tags/_id/_inlist/_type`), giving the float its state back. `insert_block_in_paragraph` (base_utilities/blocks.rs)
 lets the enclosing float of the caption's type hold the caption's id while the box is built, when no caption of its
 own numbered it, so the box's ids and `\label`s form under that number as before; the panel the box became then takes
 the id, its tags (first) and list, the float's element when the float is of the caption's type (a captioned minipage
@@ -14702,7 +14702,7 @@ minipage inside an `\fbox` beside panels or another such box shares the float's 
 an `{adjustbox}`, whose collectbox `\noindent` opens an `ltx:para` in the capture (2312.04535, 2209.02973, 2404.07198,
 2404.18532, 2406.00259, 2502.04073), is a box no candidate holds while the para wraps its paragraph beside the caption:
 Perl's `insertBlock` (TeX_Box.pool.ltxml:471) warns `Did not find a block-like candidate` and falls back to an
-`ltx:block` the caption and the para are invalid in. `insert_block_as` (base_utilities.rs) unwraps such `ltx:para`s when
+`ltx:block` the caption and the para are invalid in. `insert_block_as` (base_utilities/block_insertion.rs) unwraps such `ltx:para`s when
 a candidate holds their content beside the rest, their `ltx:p`s as the #244 demotion leaves them, so the minipage
 becomes its float. What the para carried goes to the elements it held, its id going with it: a text paragraph
 (`ltx:p`) takes it as the para had it; a box (the adjustbox's `ltx:inline-block`, a picture) is centred as a box
@@ -15157,7 +15157,7 @@ keys: extra links to notes the PDF also prints, nothing lost. Guards
 
 ### 461. A labelled annotation relocated into a title is the title's note (Perl: an `ltx:contact` there, schema-invalid)
 
-**Background.** `relocate_annotations` (`base_utilities.rs`) clones each labelled frontmatter annotation into every
+**Background.** `relocate_annotations` (`base_utilities/frontmatter/relocate.rs`) clones each labelled frontmatter annotation into every
 element that cites its label. A creator holds contacts. A title does not: title_model is inline content plus
 Meta.class, which has `ltx:note` but no `ltx:contact`. The AAS title footnote (`\altaffilmark` / `\altaffiltext`) and
 elsarticle's `\tnoteref` / `\tnotetext` are both cited from a `\title` (KNOWN_PERL_ERRORS #524).
@@ -16027,7 +16027,7 @@ inner mark on (1204.5397; a superscript glued to a letter or digit, `5$^{th}$`, 
 the characters, 1210.1049), and addresses separated by commas or semicolons (a bare "and" between them dropped), each
 perhaps marked before or after it, a parenthesis after it naming its owner (`x@y (A. Able)`) no part of the address the
 contact links to: each address is an email contact named by the label, placed by the Rust-only kernel
-`\lx@add@contact@placed` ([`placed_contact_owner`], base_utilities.rs): (1) the one author requesting the address's own
+`\lx@add@contact@placed` ([`placed_contact_owner`], base_utilities/author_block/affiliations.rs): (1) the one author requesting the address's own
 mark (of several, the one it spells; a numeric mark by its label, so it is answered and leaves the name, a symbol by
 the author's position) — the address's own mark outranks the spelling, where an author block's email lines rank the
 spelling above a correspondence note's mark (1710.00802), a mark on the address being the stronger evidence; (2) the
@@ -16729,7 +16729,7 @@ Witnesses recipebook/LongSample, korigamik-example, sugconf-skeleton, chetdoc, a
 
 ### 529. A closing caption moves out of a rotate/scale box to its float when nothing else would move (Perl: the panel figure nested in the transform's inline-block)
 
-insert_block (base_utilities.rs) keeps Perl's container order (TeX_Box.pool.ltxml:503-509: fits all and allowed,
+insert_block (base_utilities/blocks.rs) keeps Perl's container order (TeX_Box.pool.ltxml:503-509: fits all and allowed,
 else fits all). One Rust-only case: when that container is one the context cannot hold (a figure in a transform's
 `ltx:inline-block`), the box's leading content becomes a block and its *closing* caption moves to the float the box is
 in, read in the same order. All of these must hold (`caption_hoist_is_safe`):
@@ -16863,7 +16863,7 @@ bound on the frame innermost when the brace was put back (inside the formula, so
 valid only while it equals the live serial `lx@putback@live`, which the next `}` digested anywhere clears — in the
 digestion loops' `delete_extra_brace` and at `invoke_token`, the choke point: a cell's `}` and any `}` inside a
 `\noalign` body pass it; a loop's own closing `}` (the `\noalign` loop, tex_tables.rs:1291; the box-body loop,
-base_utilities.rs:7083) leaves the live serial set, which is harmless because the frame holding the mark closes with it
+base_utilities/boxes_lists.rs:120) leaves the live serial set, which is harmless because the frame holding the mark closes with it
 (probe B1) (review r6: a global count outlived a cell's `}` and deleted a later, unrelated `}`; guard
 `perfect_kernel_batch65d::put_back_mark_lives_with_its_brace`). pdflatex: the same two
 diagnostics; pdftotext "Before {x c." for the `\mbox` shape. 65a closed the math at that `}` with 1 Error. The
@@ -18710,7 +18710,7 @@ papers with a main file are affected (68g round 1). Minimal trigger: `\documentc
 
 ### 616. An ORCID iD given as its orcid.org address is the iD (Perl: the contact holds the text as written)
 
-The kernel's `\lx@add@orcid` (base_utilities.rs) makes the iD a link, `https://orcid.org/<iD>` (html_feedback #6571).
+The kernel's `\lx@add@orcid` (base_utilities/defs/frontmatter_fields.rs) makes the iD a link, `https://orcid.org/<iD>` (html_feedback #6571).
 An author who writes the address instead of the iD (`\orcidauthor{https://orcid.org/0000-0001-6534-6641}{…}`,
 2104.12510; `http://`, `www.`, a bare `orcid.org/…`, a trailing `/`) got `https://orcid.org/https://orcid.org/…`. The
 address's iD is taken (`\lx@orcid@id`, `orcid_id`), for every class whose `\orcid`-like setter routes there (acmart,
@@ -18875,7 +18875,7 @@ title-ink dedup never searches a document with a titlepage (#146).
 
 The print stays only on a cover that stays one. It is built between two empty Rust-only marker elements
 (`\lx@cover@title@begin`/`@end`, reverting as nothing; `ltx:_CoverTitleBegin_Capture_`/`ltx:_CoverTitleEnd_Capture_`,
-`base_utilities.rs` `COVER_TITLE_BEGIN`/`COVER_TITLE_END`): `_Capture_`-suffixed, so the model admits them anywhere
+`base_utilities/frontmatter/field_ink.rs` `COVER_TITLE_BEGIN`/`COVER_TITLE_END`): `_Capture_`-suffixed, so the model admits them anywhere
 and no paragraph opens or closes for them, and the paragraph trims reach past them (document.rs
 `is_empty_capture_mark`; the frontmatter position mark too) as if they were not there. One helper,
 `drop_cover_title_ink(scope)`, removes everything between each pair in document order — elements and bare text alike
@@ -18912,7 +18912,7 @@ is the class's run-in heading; OmniBus (OmniBus.cls.ltxml:126-156), used when th
 `{keywords}` the keywords.
 **Rust behavior**: K11 (frontmatter_stores.rs) serves the table's keywords setters (`STORE_SETTERS`: `keywords`,
 `keyword`, `kword`, `kwd`, `terms`) in these two shapes too, each found by a check on what the class defined, never a
-name pattern. (1) The kernel abstract's body begins with `\lx@abstract@class@setters` (base_utilities.rs
+name pattern. (1) The kernel abstract's body begins with `\lx@abstract@class@setters` (base_utilities/defs/frontmatter_fields.rs
 `\lx@begin@abstract`), which walks the refused class abstract — `\lx@dropped@abstract`/`\lx@dropped@endabstract`
 (state.rs; a refused `\renewenvironment` now keeps its begin and end code there too, sect08.rs) — and the commands it
 hands control to (`\begin{X}` as `\X`, environ's `\csname env@X@process\endcsname`, a refused command as its
@@ -18987,7 +18987,7 @@ guards `perfect_kernel_batch68n` (22: round 2 added `group_label_*` (6),
 
 tex.web §1110 puts an `\unvbox`ed box's list into whatever vertical list is current. tex_box.rs `vlist_of` does so where
 the list is a vertical box's own (`VBoxContents`: `\vbox`, `\vtop`, `\parbox`, a `p` column's cell; the frame its
-mode was bound in carries `lx@vbox@list`, base_utilities.rs `predigest_list_in_mode`), where LaTeXML sets a box's
+mode was bound in carries `lx@vbox@list`, base_utilities/boxes_lists.rs `predigest_list_in_mode`), where LaTeXML sets a box's
 hboxes as lines (`_CaptureBlock_`) — the peel loops of KNOWN_PERL_ERRORS #840 and the accumulating
 `\setbox\b=\vbox{\unvbox\b …}` idiom. Everywhere else the box goes back whole, as Perl's: on the main vertical list,
 in a float's, a footnote's or a minipage's body, inside an environment that sets its own mode within the `\vbox`
@@ -19199,7 +19199,7 @@ arguments; it is made where the call stands (in the call's group) and the call r
 defined this way. Perl leaves them undefined (KNOWN_PERL_ERRORS #851). Repro
 class-bindings/bmcart/{bmcart_environment_body_commands, environment_code_ran_not_searched}; guards
 `perfect_kernel_batch68v::{batch68v_bmcart_environment_body_commands, batch68v_an_environment_whose_code_ran_is_not_searched}`. A frontmatter field's text is set by the class
-where its setter put it, so while one is digested (`digest_frontmatter_item`, base_utilities.rs, marks the field:
+where its setter put it, so while one is digested (`digest_frontmatter_item`, base_utilities/frontmatter/queue_digest.rs, marks the field:
 `lx_frontmatter_item`) the class's own setter of that field is searched first (`\lx@dropped@author` for a creator):
 vmsta.cls:278-283 `\csdef{name@m}{…\def\fnm##1{##1}…}`, which its `\@@author` applies to each author (69 papers:
 1508.02842, 1411.4499, 1601.01109; the full title page's `\name@m@front` sets `\@fnm~\@snm`, "Yuliya Mishura", where
@@ -19340,7 +19340,7 @@ address (2609.02711, colorart.cls + ProjLib) were lost. Ours: smfart_cls.rs read
 clearing the first), with the other language's `xml:lang` (:1321-1327) and the class's caption (:1232-1299, captured
 at the call: the class sets it at `\begin{document}`, :1306) as its name, `\alttitle` leading its text as on the page
 (a name is an attribute: its math and ligatures would be raw TeX); an abstract of the same name in another
-`xml:lang` is another element, not a replacement (base_utilities.rs `frontmatter_clear_same_name`, #154: the kernel
+`xml:lang` is another element, not a replacement (base_utilities/frontmatter/queue_digest.rs `frontmatter_clear_same_name`, #154: the kernel
 names the document's abstract "Abstract" too, before the class's captions are set);
 projlib_author_sty.rs reads the package raw and, for each of the four it provided (one defined before it stays, as
 `\ProvideDocumentCommand` keeps it; under an AMS class the package ends at :38), makes the line the frontmatter call of
@@ -19590,7 +19590,7 @@ at byte 4 (`token_layout_code_at_byte_4`; see Cost). It is not part
 of TeX's token: `PartialEq` ignores it (so `\ifx`, `\meaning`, xstring, `\pdfstrcmp` compare as pdflatex), it is never
 written or dumped, and whatever builds a token from characters (`\string`, `\detokenize`, `\scantokens`, `\write`,
 `\csname`) builds one without it. The kernel `\title` and `\author` (sect05.rs) stamp their store once the frontmatter
-has its copy: `\lx@field@mark\gdef\@title{title}` / `\lx@field@mark\def\@author{author}` (base_utilities.rs) redefine the
+has its copy: `\lx@field@mark\gdef\@title{title}` / `\lx@field@mark\def\@author{author}` (base_utilities/defs/frontmatter_fields.rs) redefine the
 store with the same tokens, each carrying "token *i* of field *F*" (`field_prov`: 2 bits field, 14 bits position), and
 record the field's extent (`lx_field_extent_<F>`): the position of every token of the value that makes ink — a letter,
 an other character, a control sequence, an active character; not a space, brace, `$`, `^`, `_`, `&`, `#`, whose effect
@@ -20071,7 +20071,7 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    unreachable: 2406.07381).
 10. *Setter defaults* (72a r3). A frontmatter setter the copy calls (`\author`, `\date`, a binding's `\copyrightinfo`)
    stores the class's default, as in TeX, rather than adding an element: while the copy is read, the frontmatter queue
-   is the copy's defaults (base_utilities.rs `frontmatter_queue_name`, `frontmatter_copy_defaults`; a removal applies to
+   is the copy's defaults (base_utilities/frontmatter/queue.rs `frontmatter_queue_name`, `frontmatter_copy_defaults`; a removal applies to
    the same queue, so atlasdoc.cls:824's `\date{}` under `cernpreprint` clears its `\date{\today}`). At `\maketitle`
    (`\lx@store@defaults` → `hand_copy_frontmatter_defaults`) a default is handed to the frontmatter only when the
    document did not set its kind — decided by the call, whatever its value (r4): a setter of the kernel's fields
@@ -20884,7 +20884,7 @@ Guard `perfect_kernel_batch73b::refstepcounter_in_math_sets_a_math_label`; repro
 when printed is digested only where it is printed): `\@lbibitem` (latex.ltx:17746-17749) typesets the label in the list
 as `\item[\@biblabel{#1}\hfill]` and writes it to the .aux as `\bibcite{key}{label}`; only a `\cite` of the key expands
 `\b@key` (latex.ltx:17761-17771). So `\lx@bibitem` (sect11.rs) reads its `[label]` undigested and splits the entry's tags
-(base_utilities.rs `tag_forms`): the role-less tag, `\fnum@@bibitem` = `{\@biblabel{\the@bibitem}}`, is digested at the
+(base_utilities/util_text.rs `tag_forms`): the role-less tag, `\fnum@@bibitem` = `{\@biblabel{\the@bibitem}}`, is digested at the
 `\bibitem` through the class's own `\@biblabel`; the forms a reference prints (refnum, typerefnum, autoref, the
 cleveref forms) are deferred under the deferred-print list `b@key` (73a's latexml_core `defer_print`, #738), resolved
 when a `\@@bibref` names the key (sect11.rs `cite_prints_keys`: the kernel's `\cite`, natbib's, biblatex's, the `.bbl`
@@ -20946,7 +20946,7 @@ lists_of_figures_and_tables_inside_abstract}`.
 ### 754. A frontmatter body left open at `\end{document}` ends there and keeps its text (Perl: an empty document)
 
 An abstract (or keywords) is read as a deferred frontmatter body up to its terminal (`\lx@add@frontmatter@until …
-\lx@end@abstract`, base_utilities.rs). Left open — an unclosed `\begin{abstract}`, an unbalanced `\abstract{`, a
+\lx@end@abstract`, base_utilities/defs/frontmatter_fields.rs). Left open — an unclosed `\begin{abstract}`, an unbalanced `\abstract{`, a
 brace-less `\abstract` no sectioning command ends — that body ran to the end of input: it held the finalizer and the
 rest of the document, and nothing placed it, so the output was an empty `<document/>` with 0 errors (Perl: resources
 only, 1 error). pdflatex prints every word. `\end{document}` now begins with `\lx@end@open@frontmatter` (sect02.rs):
@@ -20981,7 +20981,7 @@ begin code called as a command has no extent — mn2e.cls:993-1003 and mnras.cls
 section begins; read as the open body, the whole document went into `<ltx:keywords>`, every section an Error
 (`<ltx:section> isn't allowed in <ltx:keywords>`, then in `<ltx:section>`): 1004.2791, 2201.07008, 2309.07195 (28
 Errors → 0, words unchanged). A keywords body a command form opened inside the abstract ends with it
-(base_utilities.rs `\lx@end@abstract`; ieeeconf `\begin{abstract} … \keywords \MyKeywords \end{abstract}`, 1401.5657). The `\end{abstract}` that follows is then a no-op; one a
+(base_utilities/defs/frontmatter_fields.rs `\lx@end@abstract`; ieeeconf `\begin{abstract} … \keywords \MyKeywords \end{abstract}`, 1401.5657). The `\end{abstract}` that follows is then a no-op; one a
 heading-ended `\begin{abstract}` never gets is LaTeX's "\begin{abstract} ended by \end{document}" at `\end{document}`
 (sect02.rs `\lx@end@open@frontmatter`). Not inside a replayed class begin code (its `\section*{\abstractname}` is the
 class's own heading, discarded with the replay, #482), and not where a class rebinds `\section` inside the abstract
@@ -21347,7 +21347,7 @@ prints between the names; every such pair became one author, flagged `Error:fron
 (`separator_macro_text`) gave up on, and a comma written inside a name's mark math (`Wittor$^{1}, $Brüggen`,
 `Iacobuta$,^{5,6,7}$ Mabel`, `Manoj$^{2},$ Chandra`), which the split never sees (it does not look inside math).
 
-`split_author_names` now writes these as the split reads them first (`spaced_name_separators`, base_utilities.rs, at
+`split_author_names` now writes these as the split reads them first (`spaced_name_separators`, base_utilities/author_block/separators.rs, at
 the line's top level and again in each wrapper's content the split re-reads): the word "and" between two word
 boundaries, or `\&` after one, becomes ` and ` / ` \& `, the spacing beside it dropped: spaces, ties, the spacing
 commands of `leading_spacing_end` (`\newline` among its parameterless ones, `PARAMETERLESS_SPACING`), the line breaks
@@ -21571,7 +21571,7 @@ records the field on its whatsit (tex_paragraph.rs `\lx@normal@par`, `frontmatte
 alignment cell or math inside the item begins a deeper frame, where the `\par` is the ordinary one — in a box or a `c`
 cell it ends nothing, as in TeX (tex.web §1096 `end_graf`: `\date{\begin{tabular}{c}D1\par D2\end{tabular}}` "D1D2") —
 while a group (`{\bfseries …}`) begins none. At construction, where the schema is loaded (Perl too reads the model only
-when it builds the document; WISDOM #100), the `\par`'s constructor (base_utilities.rs `frontmatter_paragraph_break`)
+when it builds the document; WISDOM #100), the `\par`'s constructor (base_utilities/frontmatter/queue.rs `frontmatter_paragraph_break`)
 walks up from the insertion point to that field's element; when the element is inline-only and no element on the way
 holds paragraphs of its own (a minipage, a note), it inserts a marked `ltx:break` when the item's content so far ends
 in other content — not before its first content, not after another such break (a run of `\par`s, in a group too) —
@@ -21624,7 +21624,7 @@ text, in their case unless the sentinel run printed the mixed-case sentinel in a
 `ctx2`, which invented `<pubnote>open</pubnote>`). Letters and digits only (`alphanumerics`), on both sides: TeX typesets
 `'`, ``` `` ``` and `''` as ’ “ ”, `--` as a dash, and 77i r4's comparison of the source characters lost "Women’s
 Workshop" and "“Quoted” words" (review probes `q3`, `q4`; 0 errors). The
-digested text is `ink_text` (base_utilities.rs): box characters, never a whatsit's reversion, and only the arguments a
+digested text is `ink_text` (base_utilities/util_text.rs): box characters, never a whatsit's reversion, and only the arguments a
 whatsit shows (`shown_arguments`, by declared parameter type: none of an image; a verbatim argument only when the
 whatsit's constructor prints it, the arguments `VERBATIM_PRINTERS` names for it (`(name, shown mask)`: llncs's `\url`,
 `\nolinkurl`, aas's `\@@email`, `\lx@doi`, `\harvardurl`, each its one argument; a two-verbatim `\href` would name
@@ -22093,7 +22093,7 @@ the definition's braces, and a robust command in it stays; a `\ref` prints the s
 robust nine-argument command keeping the ninth) read `\csname`, `t`, `h`, … and past the tag (18 errors in Rust, the
 first SI equation lost; pdflatex 0).
 
-**Rust** (77u): `\lx@@p@the@@` (base_utilities.rs), shared by the refnum and typerefnum forms, expands latex.ltx's form
+**Rust** (77u): `\lx@@p@the@@` (base_utilities/defs/tags_refnums.rs), shared by the refnum and typerefnum forms, expands latex.ltx's form
 as `\protected@edef` does (`with_unexpandable_protect` + `do_expand_partially`: an `\edef`'s expansion, which keeps
 `\protected` macros, bounded by the form's braces) and returns the text: "Equation S1" → refnum "S1", as pdflatex's
 `\ref`. Only a `\p@<counter>` that does something is applied so: with the kernel's empty one (`\@definecounter`,
@@ -22121,7 +22121,7 @@ document was serif from its first reset on — the body after `\begin{document}`
 footnote, tag and `\textnormal` before.
 
 **Rust** (77u r2, user ruling 2026-10-20): sect13.rs `\normalfont` is latex.ltx's (`\fontencoding\encodingdefault`
-first, then the three defaults); `neutralize_font` (base_utilities.rs: notes, tags, index entries) takes the family,
+first, then the three defaults); `neutralize_font` (base_utilities/fonts_defs.rs: notes, tags, index entries) takes the family,
 series and shape `\familydefault`/`\seriesdefault`/`\shapedefault` name when the font table knows them
 (`font_code_named` reads a literal or a chain of parameterless macros without expanding, as on every tag), the encoding
 as before. A sans-default document's text carries `font="sansserif"` throughout (the document root keeps LaTeXML's serif
@@ -22340,7 +22340,7 @@ opens `\begin{fullwidth}` in the format and closes it in the after-code.
 (latex_constructs.pool.ltxml:666-670); titlesec.sty.ltxml:42-57 drops the after-code.
 
 **Rust** (78a): the starred title runs `\lx@format@title@font@@{type}` before it (as Perl; the port had lost it, a
-Rust-only defect — SYNC "Rust Error Fixes") and `\lx@format@title@after@@{type}` after it (base_utilities.rs:
+Rust-only defect — SYNC "Rust Error Fixes") and `\lx@format@title@after@@{type}` after it (base_utilities/defs/tags_refnums.rs:
 `\format@title@after@<type>` when defined). titlesec_sty.rs defines `\format@title@after@<sec>` as its after-code
 (empty for `rightmargin`/`wrap`/`drop`, and for an `explicit` after-code that names the title): the format's
 `\begin{fullwidth}` is closed in the title (the tufte manuals: 0 errors, the starred titles in the class's italics).
@@ -22396,7 +22396,7 @@ where its `\@@author` prints the author list (vmsta.cls:278-291): `\name@m@front
 \corref{cor1}}`. The kernel's locked `\author` replaces the class's, and OXIDIZED_DESIGN #647's search found the class's
 `\name@m` identities, OmniBus's `\inits` printing: 1508.02842's creator "Yu.YuliyaMishura". Perl has no vmsta binding
 (`\fnm` undefined). Ours: a vmsta binding (latexml_contrib vmsta_cls.rs) reads the shipped class raw and sets
-`\lx@author@markup@class`, `\lx@author@markup@provide` calls that `\lx@author@markup@begin` (base_utilities.rs) runs
+`\lx@author@markup@class`, `\lx@author@markup@provide` calls that `\lx@author@markup@begin` (base_utilities/defs/frontmatter_fields.rs) runs
 first for the author content, before OmniBus's identity meanings — `\fnm` stores, `\snm` prints `first~surname`, the
 initials and suffix dropped, for the author content only and undefined after it, as the class defines them only in its
 title code. A first name no `\snm` follows is printed after the content (flushed with the markup's restore list), as
@@ -22427,7 +22427,7 @@ entry, the first numbered 1. The K11 store path (`\lx@add@store@affiliations`, f
 entries and gave every author every entry (`annotate=all`): 2405.16615's two authors each held Imperial College and
 Edinburgh. Ours: when the class's `\institutename` redefines `\and` with a `\stepcounter`, the store holds at least two
 `\and` entries and no mark, and the queued authors' marks are all numbers, the entries are led by their numbers as the
-title page prints them (`class_numbered_institutes`, base_utilities.rs) and labelled by them, so `$^{1}$`/`$^2$` — or
+title page prints them (`class_numbered_institutes`, base_utilities/author_block/affiliations.rs) and labelled by them, so `$^{1}$`/`$^2$` — or
 the class's `\inst{1,2}`/`\inst2` (2512.08621) — pick one each. Perl reads such a class raw (its `\institute` the class's). Repro
 sectioning-frontmatter/class_numbered_institutes_go_by_the_authors_marks (with numinst.cls); guards
 `perfect_kernel_batch77t::{class_numbered_institutes_go_by_the_authors_marks, class_numbered_institutes_go_by_inst_marks}`.
@@ -22522,7 +22522,7 @@ jinstpub's alone, `\lx@add@contact@placed`; with Perl jheppub's n-th rule 16 of 
 an `\emailAdd{a, b}` list is an address each (2211.05026, 2409.03065, 2112.00370). For the spelling, the kernel's name
 reading takes a macro whose arguments all go into a frontmatter annotation (`\lx@add@contact`, `\lx@add@note`,
 `\lx@add@thanks`, `\lx@add@email`, `\lx@add@affiliation`) as a name annotation, as it takes a note macro
-(`is_note_macro`, base_utilities.rs): the corresponding author's `\note{Corresponding author.}` — the template's required
+(`is_note_macro`, base_utilities/author_block/notes.rs): the corresponding author's `\note{Corresponding author.}` — the template's required
 shape — is no part of the name the address spells, where its last word had made "author" the surname (2406.08712's
 zhouyi@ for Y. Zhou, 2603.01867's yuanzy@ for Zhiyang Yuan).
 The "Prepared for submission to JINST" header line (:22, printed first, :180) is page furniture, not kept; a paper's own
@@ -22567,7 +22567,7 @@ An author's `\thanks{\email{…}}` — the A&A and Web of Conferences templates'
 `\fnsep\thanks{\email{…}}` — digests the `\email` into the author's `email` contact (an annotation made while the note's
 content is digested), which left the thanks note empty: `<note role="thanks"/>`, a visible mark opening a note with
 nothing in it (2409.01693's "†" after Wolfgang Lucha holding only "thanks:"; 20 of 21 webofc papers of the rev78e
-review). Ours (main session ruling 2026-10-21; `\lx@annotate@frontmatter@now`, base_utilities.rs): a frontmatter
+review). Ours (main session ruling 2026-10-21; `\lx@annotate@frontmatter@now`, base_utilities/defs/frontmatter_api.rs): a frontmatter
 `ltx:note` whose digested content typesets nothing after one or more annotations were made while digesting it is
 dropped, its pending stub removed — for every class whose `\email`, `\affiliation` or other contact setter runs inside a
 `\thanks` (aa, webofc, …); the rule covers `ltx:note`s only, not contact-typed notes (elsarticle's `\fntext[f1]{\ead{…}}`
@@ -22604,7 +22604,7 @@ and an `\emailAdd{a, b}` listing two authors' addresses was one contact of the f
 each address by its spelling alone (jinstpub's 78e rule) puts the many addresses no name spells but the list's order
 gives right (1303.3040's `zhl61@` for Zhen Liu, 2011.02499's `tpsg4@`/`tpsr@`, 2212.01400's `jss55@`: 40 in the jheppub
 sample) on the author block. Ours (`\lx@add@contact@placed[owner=sequence]`, each class command call marked by
-`\lx@sequence@call`; the flush's `sequenced_contact_labels`, base_utilities.rs), against all the authors of the same
+`\lx@sequence@call`; the flush's `sequenced_contact_labels`, base_utilities/frontmatter/place.rs), against all the authors of the same
 frontmatter flush: an address goes (1) to the author it spells (`address_owners`); else (2) to the author at its place
 when the list has one place for each author in their order — no address spells another author than the one at its
 place (`addresses_in_order`'s reading of an author block's line), the place the address's, or else the call's (an
@@ -22705,7 +22705,7 @@ right after the `\address` before it (iopart.cls:246-248, "Use once for each add
 inside that address's block, under its mark: 2407.14305's `rockfish3141@` under "¹ Graduate School … Waseda University",
 Hidetomo Hoshino's alone. #806 placed it by the spelling or the author order only, so an address no name spells went to
 the author block (78f r1) or, in Perl, to the last author (KNOWN_PERL_ERRORS #1031). Ours: the binding's `\address`
-records its block's mark (`\lx@address@mark@set`, base_utilities.rs: the operand of the block's one leading mark, none for
+records its block's mark (`\lx@address@mark@set`, base_utilities/defs/frontmatter_fields.rs: the operand of the block's one leading mark, none for
 an unmarked block or one of several marked lines; the binding's `\author` clears it), and `\lx@iop@ead` passes it as the
 contact's mark (`\lx@add@contact@placed[mark=address]`), a weak one: it places only an address that spells no one
 (`placed_contact_owner(…, weak)`: 1111.5264's `johnwc@` under `$^6$`, which two authors request, is J W Conklin's `$^1$`,
@@ -22803,7 +22803,7 @@ guards `perfect_kernel_batch78f::` the same names,
 A class's optional `\author[*\,b,c]{…}` labels reach the frontmatter digested, the thin space a U+2009 character, which
 `clean_frontmatter_labels` read as part of one label `*_b` (OD #52(o) parts the labels at the spacing as written:
 `\,`, `~`, `\quad`), so Paul J. Steinhardt (2404.00867) lost his affiliation b and the `*` of his
-`\note[*]{Corresponding author: …}`. Ours (`SPACING_IN_LABEL`, base_utilities.rs): the no-break, en to thin, and narrow
+`\note[*]{Corresponding author: …}`. Ours (`SPACING_IN_LABEL`, base_utilities/frontmatter/queue_digest.rs): the no-break, en to thin, and narrow
 no-break spaces (U+00A0, U+2002-U+2009, U+202F) part labels as their commands do. Perl's cleanFrontmatterLabels parts at
 commas only. Repro sectioning-frontmatter/jheppub_note_mark_apart_from_the_names; guard
 `perfect_kernel_batch78f::jheppub_note_mark_apart_from_the_names`.

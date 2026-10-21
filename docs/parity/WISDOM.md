@@ -1822,7 +1822,7 @@ or `//` are unaffected.
 **Witness:** PR-2767 port, `\lx@frontmatter@fallback` — frontmatter
 (title/creator) landed at the *end* of `<ltx:document>` instead of
 after the `ltx:resource` block; caught by `the `20_digestion` `rebox` fixture (`tests/digestion/rebox.{tex,xml}`)`.
-Fixed in `base_utilities.rs` by using
+Fixed in `base_utilities/frontmatter/titlepage_layout.rs` by using
 `/ltx:document/ltx:resource[last()]`.
 
 ## #60 libxml string accessors silently fail on namespaced `xml:id`/`xml:lang` — and a *masked* broken accessor is not automatically a bug
@@ -1928,7 +1928,7 @@ emulateapj).
 
 ## 41. Frontmatter fallback DOM surgery: three construction-time traps
 
-Context: `base_utilities.rs` `\lx@frontmatter@fallback` + `maybe_promote_leading_title`
+Context: `base_utilities/defs/author_macros.rs` `\lx@frontmatter@fallback` + `maybe_promote_leading_title` (`base_utilities/frontmatter/titlepage_layout.rs`)
 (the beyond-Perl "keep abstract below a hand-formatted title block" ordering fix
 and the "promote a leading centered display block to `<ltx:title>`" heuristic for
 `\title`-less papers, e.g. arXiv 1609.07638). Three traps bite any code that
@@ -2739,7 +2739,7 @@ it agrees with the bug. Compare glyphs against Perl, or read the rendered page.
 Witness 2503.04421. Guards: `latexml_oxide/tests/fonts/bbding.{tex,xml}` and
 `tests/116_bbding_family_fontmap.rs`. The same primitive also lacked Perl's
 `reported_unrecognized_font_*` report-once guards (`already_reported` in
-`latexml_engine/src/base_utilities.rs`), which had turned one unrecognized
+`latexml_engine/src/base_utilities/util_text.rs`), which had turned one unrecognized
 family into 28 identical `Info` lines.
 
 Settled dead end: Perl's `DeclareFontMap` `(uppercase|lowercase|digit)_mathstyle`

@@ -91,7 +91,7 @@ Dump-build snapshots are taken by the init/dump-generation path
 | `Base.pool.ltxml` | *(inlined in `tex.rs`)* | Pure loader — zero definitions, just `LoadPool(...)` calls |
 | `Base_Schema.pool.ltxml` | `base_schema.rs` | |
 | `Base_ParameterTypes.pool.ltxml` | `base_parameter_types.rs` | |
-| `Base_Utility.pool.ltxml` | `base_utilities.rs` | Rust name uses plural convention |
+| `Base_Utility.pool.ltxml` | `base_utilities/` (module directory) | Rust name uses plural convention |
 | `Base_XMath.pool.ltxml` | `base_xmath.rs` | |
 | `TeX_Box.pool.ltxml` | `tex_box.rs` | |
 | `TeX_Character.pool.ltxml` | `tex_character.rs` | |

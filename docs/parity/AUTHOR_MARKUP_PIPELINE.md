@@ -7,7 +7,7 @@
 
 ## Why
 
-`latexml_engine/src/base_utilities.rs::\lx@add@authors` (the `DefMacro!("\\lx@add@authors{}", …)`
+`latexml_engine/src/base_utilities/defs/author_macros.rs::\lx@add@authors` (the `DefMacro!("\\lx@add@authors{}", …)`
 at ~:883) recovers structured creators from the abused `\author{…}` idiom. It runs
 **two different algorithms**, picked by whether the block contains a superscript
 (`position_of(stuff, authorsup_markers())`, markers = `^` / `\textsuperscript`):

@@ -267,7 +267,7 @@ matching closer with "Missing } inserted". Perl fuses the two
 **Today.** One `State` frame stack carries groups AND modes: `begin_mode` =
 `push_stack_frame(false)` + `BOUND_MODE` bound in that frame (stomach.rs `begin_mode`); `end_mode` demands the top
 frame be the mode frame; `egroup`/`endgroup` gate on `BOUND_MODE`-on-top + `groupNonBoxing`; the box reader's
-terminal is the raw frame depth (base_utilities.rs). Batch 56z added `lx@group@code` for `bounded` environments only.
+terminal is the raw frame depth (base_utilities/boxes_lists.rs). Batch 56z added `lx@group@code` for `bounded` environments only.
 
 **Abstraction (staged; each stage = guard + control).**
 - Stage 0, no behaviour change: every opener writes its group code
@@ -623,7 +623,7 @@ one emission with no relocation pass.
 Layer A in shadow mode beside today's path, logging disagreements, no output change; (2) one family at a time, new and
 small first (OSA/EPL/l-aa, interact, elsarticle/cas, IEEE, acmart, generic article last), byte-identical on the family
 corpus plus every frontmatter guard, any intended change a RED→GREEN repro with a ruling; (3) delete the superseded
-heuristics in `base_utilities.rs`.
+heuristics in `base_utilities/`.
 
 **Class guard:** shadow disagreement < 0.5% per family before migrating; the 49 frontmatter REDs go green without new
 per-shape rules. **Risk:** HIGH; needs very careful testing (user 2026-10-11).

@@ -3257,8 +3257,8 @@ byte-identity break.
 
 ## 75. A lazy single-`\author`-block with `\\[1em]` breaks scrambles authors, affiliations and emails (Perl; Rust surpasses)
 
-`Base_Utility.pool.ltxml` (the `\lx@add@authors` splitter, `base_utilities.rs`
-L870-878) splits an author block on `\\`, `\quad`, `\and`, `,` and guesses
+`Base_Utility.pool.ltxml` (the `\lx@add@authors` splitter, `base_utilities/defs/author_macros.rs`
+L6-14) splits an author block on `\\`, `\quad`, `\and`, `,` and guesses
 author-vs-affiliation from superscript position. Two of its own comments flag the
 limits: *"This is a mess!"* and *"matching `\\` this way fails to catch
 `\\[1em]`, so really should Let it"*. The `\\` **control sequence** is the split
@@ -3291,7 +3291,7 @@ lands inside one affiliation contact. latexml-oxide originally reproduced this
 byte-for-byte (upstream parity, not a Rust divergence).
 
 **Rust now surpasses Perl here.** `\lx@add@authors` / `\lx@add@affiliations`
-(`base_utilities.rs`) gained `strip_linebreak_options` (consume the `*`/`[len]`
+(`base_utilities/author_block/rows.rs`) gained `strip_linebreak_options` (consume the `*`/`[len]`
 after a `\\` row-break token, and the spaces before the `[len]` that `\@ifnextchar`
 skips — `\\ [0.5em]`, 2604.20841, batch 77p r11 — before splitting — so no `[1em]` leak, and the
 following `\textsuperscript` stays at the line front, keeping the comma-bearing
@@ -3808,7 +3808,7 @@ closing `$` ends math against the brace group. Nested `$^\text{$...$}$` markers 
 
 **Rust status (FIXED, beneficial divergence — OXIDIZED_DESIGN #129):** the `^`-hijack
 wrappers read a FULL superscript operand (`read_frontmatter_sup_operand`,
-`base_utilities.rs`), keeping `\text{...}` with its group and any nested `$...$` whole
+`base_utilities/frontmatter/queue_digest.rs`), keeping `\text{...}` with its group and any nested `$...$` whole
 and undigested; the surrounding math stays balanced. Witness arXiv:2403.11905
 (html_feedback#1021): 6 errors → 0. Guard
 `06_cluster_frontmatter::frontmatter_nested_math_author_marker`.
@@ -3840,7 +3840,7 @@ regular arXiv idiom Perl does not structure. Upstream filing pending.
 **Rust status (FIXED, beneficial divergence — OXIDIZED_DESIGN #52(i)):** `\hspace`/`\hfill`
 normalize to the `\quad` separator, and footnote-SYMBOL superscripts rewrite to a visible
 `\lx@frontmatter@keepsup` sup before branch selection (`normalize_hspace_separators`,
-`rewrite_symbol_superscripts`, `base_utilities.rs`). Numeric affiliation marks are untouched.
+`rewrite_symbol_superscripts`, `base_utilities/author_block/symbols.rs`). Numeric affiliation marks are untouched.
 Guards `06_cluster_frontmatter::{frontmatter_hspace_author_split,
 frontmatter_symbol_superscript_mark, frontmatter_thanks_literal_mark_mix}`.
 
@@ -3995,7 +3995,7 @@ the full witness it shreds all six emails into creators (13 for 7). Correct (Rus
 surpasses, OXIDIZED_DESIGN #52):** `\lx@add@authors` detects an `\affiliations`/
 `\emails` marker at the body's top level, undefined, `\relax` or an empty no-op there (a document's own macro
 of that name is author text — 62i, 2407.10582, 2505.05474), and delegates to the shared sectioned-author machinery
-(`\lx@ijcai@authorsplit`, hoisted from `ijcai_sty` into `base_utilities.rs`) — names /
+(`\lx@ijcai@authorsplit`, hoisted from `ijcai_sty` into `base_utilities/defs/author_macros.rs`) — names /
 affiliations / emails split, n-th email to n-th author, markers consumed as
 delimiters (no undefined-CS error). Guard:
 `06_cluster_frontmatter::frontmatter_ijcai_affiliations_emails`. Witness:
@@ -4128,7 +4128,7 @@ byte-identical `<ltx:creator>` output). amsart's own PDF also lists them as one 
 (no per-author association), so there is no ground-truth pairing — only reading-order intent.
 
 **Impact:** Perl-origin (default single-preceding attachment), shared with Rust. **Rust status
-(FIXED — surpasses):** `base_utilities.rs::distribute_upfront_contacts` (a DOM pass beside
+(FIXED — surpasses):** `base_utilities/frontmatter/insert.rs::distribute_upfront_contacts` (a DOM pass beside
 `coalesce_empty_creators`) redistributes ONLY a clean `N × m` pile — the other N−1 authors
 carry no contact and the last author's `K` contacts split evenly (`K = N·m`) into a
 role-periodic sequence — handing group *i* to author *i*. Any irregular pile (heterogeneous
@@ -4643,7 +4643,7 @@ tail ran to `Fatal:Timeout:TokenLimit`. Triggered by any empty/blank expkv
 entry — clrstrip.sty L49-77 `\colorstripSet` → `\ekvset{clrstrip}{}` (witness
 tutodoc-en/fr, `examples-showcase-input-stripe` line 15).
 
-Rust keeps every delimiter token (`base_utilities.rs` `parse_def_parameters`);
+Rust keeps every delimiter token (`base_utilities/fonts_defs.rs` `parse_def_parameters`);
 guards `perfect_kernel_batch53::def_delimiter_keeps_adjacent_spaces`,
 `expkv_blank_entry_does_not_leak_markers`. Package-free trigger (pdflatex 0
 errors; Perl 1 error):
@@ -5949,7 +5949,7 @@ Base_Utility.pool.ltxml:1048-1055 `\lx@@fnum@@` composes the reference tag from
 `\node` inside the tag and reports `undefined:\node` (Perl and Rust identical;
 pdflatex never expands `\afname` there). Trigger: `\newcounter{af}
 \NewDocumentCommand{\afname}{m}{\node[caption](x){#1};} \refstepcounter{af}`. Rust:
-`\iflx@namenoun` (base_utilities.rs `is_name_noun`) admits `\<type>name` only when it is an
+`\iflx@namenoun` (base_utilities/misc.rs `is_name_noun`) admits `\<type>name` only when it is an
 expandable macro whose arguments are all optional (an ltcmd `\__cmd_start_optimized:` dispatcher is
 followed to its ` code` macro, a general one's signature read as written, a `\DeclareRobustCommand` wrapper followed
 to its inner macro, 60d; a `\protect\<cs>` body followed to `\<cs>` through any chain of distinct macros (a hop back to one is a loop, not a name; fuse 32), so
@@ -8365,7 +8365,7 @@ latex.ltx's `\GenericWarning` writes its text with `\immediate\write` (latex.ltx
 Trigger: `\PackageWarning{test}{\unexpanded{\foo x ## y}}` in the preamble — pdflatex "Package test Warning: \foo x
 #### y"; Perl: `Error:undefined:\foo`.
 
-Rust (Gemini round 13): the message text is expanded as `\edef` expands (`do_expand_partially`, base_utilities.rs
+Rust (Gemini round 13): the message text is expanded as `\edef` expands (`do_expand_partially`, base_utilities/misc.rs
 `make_generic_message`), for every `\Generic*`/`\Package*`/`\Class*`/`\@latex@*` message (DIVERGENCES #369). **Guard**:
 `perfect_kernel_gemini::package_warning_keeps_unexpanded_text`.
 
@@ -9486,7 +9486,7 @@ restored, a macro redefined, a counter stepped later).
 Rust: 60e queued each `\vadjust` as `{<material>\lx@normal@par}`; 60g finds the `{` as §403 `scan_left_brace` does
 (gullet.rs `scan_left_brace`: expanded, a `\protected` macro too, past spaces, `\relax` and `\noexpand`ed tokens, else
 "Missing { inserted"), reads the material live after it and builds it there
-(base_utilities.rs `predigest_insert_group_contents`: the box loop in `inline_internal_vertical`, closed with the
+(base_utilities/boxes_lists.rs `predigest_insert_group_contents`: the box loop in `inline_internal_vertical`, closed with the
 primitive `\lx@normal@par` — TeX's `end_graf`, which reads no `\par` token; pdfTeX does under LaTeX's
 `\partokencontext=2`, latex.ltx:22441, so a material ending with `\par` = `\relax` loops in pdflatex), its own
 `\vadjust`s going to its paragraph and its indentation its own `\parindent`'s; the paragraph's `\par` sets the built
@@ -9651,7 +9651,7 @@ became one 1,500-character `personname`. Minimal trigger:
 \author{Alice Smith\textsuperscript{1}\\ \textsuperscript{1}Department of Physics\\ University of Somewhere}
 ```
 
-Rust (60n, base_utilities.rs `add_authors_calls`): the split keeps each piece's delimiter (`split_tokens_delimited`) and
+Rust (60n, base_utilities/author_block/dispatch.rs `add_authors_calls`): the split keeps each piece's delimiter (`split_tokens_delimited`) and
 a continuation is appended with it where it stood, so the `\\` is an `ltx:break` (`\quad` a space). Repro
 sectioning-frontmatter/author_continuation_line_keeps_its_break; guard
 `06_cluster_frontmatter::frontmatter_author_continuation_line_keeps_its_break`.
@@ -9767,7 +9767,7 @@ its XeTeX branch (`\XeTeXrevision` defined for that input only, restored after; 
 T1) — and not through the fontenc binding, whose Perl-inherited `setupCyrillic` defines `\cyrr` & co. for any
 encoding where TU leaves them undefined; TU's fontmap applies the TeX ligatures except in typewriter (tu_fontmap.rs),
 as xelatex prints.
-`neutralize_font` (base_utilities.rs) takes its encoding from `\encodingdefault`, expanded as `\fontencoding` expands
+`neutralize_font` (base_utilities/fonts_defs.rs) takes its encoding from `\encodingdefault`, expanded as `\fontencoding` expands
 it (babel's `\latinencoding`, greek.ldf's `\greekfontencoding`; OT1 under plain TeX); LaTeXML's tags (`\lx@tag@intags`
 — generated names, `\item[…]` labels) are Latin text, set in babel's `\latinencoding` where babel defines it
 (`neutralize_font_latin`). Identifiers digested after it are read from their source tokens, as Perl's OT1 left them
@@ -10494,7 +10494,7 @@ side-by-side figure written as minipages in a tabular.
 ```
 
 pdflatex: "Figure 1: Left.", "Figure 2: Right.". Perl: 4 errors. Rust before 62o: 5 malformed errors — its box placement
-(base_utilities.rs `insert_block_as`) climbed out of the cell to put the captions in the figure and moved the insertion
+(base_utilities/block_insertion.rs `insert_block_as`) climbed out of the cell to put the captions in the figure and moved the insertion
 point past the `<td>` the alignment still owed, so both captions joined one figure and the cells closed out of order
 (1601.03744). Rust (62o): the climb never leaves an alignment, and a box in running text whose leftover content is
 caption material becomes an inline logical block around a figure panel holding it, as the same minipage between
@@ -10842,7 +10842,7 @@ Text.
 \end{document}
 ```
 
-pdflatex: "A" over "X". Perl: 7 errors. Rust (62zg, base_utilities.rs): `{tabular*}`, `{tabularx}`, `{tabulary}`,
+pdflatex: "A" over "X". Perl: 7 errors. Rust (62zg, base_utilities/author_block/dispatch.rs): `{tabular*}`, `{tabularx}`, `{tabulary}`,
 `{longtable}` and `{array}` join the list, and the author is one creator holding the tabular. Witnesses 2609.34061,
 34965, 39374, 39909. Guard `perfect_kernel_batch61::author_in_tabular_star_stays_whole`.
 
@@ -16113,7 +16113,7 @@ step, so a `\p@` taking arguments reads `\csname`, the letters of `the<counter>`
 trigger: `\renewcommand{\theequation}{Equation S\arabic{equation}}\DeclareRobustCommand{\gobblesomeargs}[9]{#9}
 \renewcommand{\p@equation}{\gobblesomeargs}` and two `{equation}`s — pdflatex 0 errors, `\ref` "S1"; Perl and Rust
 before 77u errors at each equation (1902.09345: 18 errors, the first SI equation lost). Rust (77u): `\lx@@p@the@@`
-(base_utilities.rs) expands the form as `\protected@edef` does (OXIDIZED_DESIGN_DIVERGENCES #778). Repro
+(base_utilities/defs/tags_refnums.rs) expands the form as `\protected@edef` does (OXIDIZED_DESIGN_DIVERGENCES #778). Repro
 `parameter-conditional/p_form_applies_to_the_expanded_number`; guard
 `perfect_kernel_batch77u::p_form_applies_to_the_expanded_number`.
 
@@ -16484,7 +16484,7 @@ in its heading form, :2570-2587 `\thesectiondis` "I.", `\thesubsectiondis` "A.",
 compsoc "1", "1.1", which Perl numbers arabic).
 Minimal trigger: `\documentclass{IEEEtran}\begin{document}\section{Intro}\subsection{Sub}\end{document}` — pdflatex "I.
 INTRO", "A. Sub". About 178,000 papers (IEEEtran with a `\subsection`). Fixed in Rust (78c): ieeetran_cls.rs defines
-`\fnum@section` … `\fnum@paragraph` as the `\the<level>dis` forms (base_utilities.rs `\lx@fnum@@` uses them for the
+`\fnum@section` … `\fnum@paragraph` as the `\the<level>dis` forms (base_utilities/defs/tags_refnums.rs `\lx@fnum@@` uses them for the
 heading tag; the `refnum` stays); an `\appendices` section keeps its "Appendix A" (the `appendix` type's tag), its
 subsections "A." as pdflatex. Guards `perfect_kernel_batch78c::ieeetran_headings_print_their_heading_forms`,
 `perfect_kernel_batch67x::ieeetran_appendix_clears_sectiondis` (re-pinned: "A. Sub"). The section numbers themselves are
@@ -16596,7 +16596,7 @@ journal is selected (:7671): it never runs, and `cp` papers are numbered (pdflat
 sor4-2.rtx, aip4-1.rtx none). Fixed in Rust (78d): revtex4_support_sty.rs `define_section_numbers`, called by the
 revtex4/revtex4-2 and revtex4-1 classes after their options (`eqsecnum`, `secnumarabic` recorded; the society and
 journal read from the class options as the class reads them, `selected_journal`), sets the numbers, `secnumdepth` (PRL's
-`-\maxdimen`), the heading forms as `\fnum@<level>` (base_utilities.rs `\lx@fnum@@`), `\theequation` and the class's
+`-\maxdimen`), the heading forms as `\fnum@<level>` (base_utilities/defs/tags_refnums.rs `\lx@fnum@@`), `\theequation` and the class's
 `\appendix`; REVTeX 3 (revtex3_support_sty.rs) is unchanged. Guard
 `perfect_kernel_batch78d::revtex_sections_number_as_the_class` (aps, rmp, secnumarabic, aapm, eqsecnum, `\appendix*`,
 revtex4-1, revtex4, `aps,prl` in 4.2, 4.1 and 4.0, `prb,prl` in 4.2 and 4.0, `aip,cp`, against pdflatex). Open: the
@@ -16632,7 +16632,7 @@ again after the expansion. Perl's TeX_Macro.pool.ltxml:108-112 makes the lone `#
 `\def\tkz@DefPoint[#1](#2)#{` (tkz-obj-eu-points.tex:82) read `\tkzDefPoint(2*cos(1),3){T}` as `#2 = 2*cos(1` and
 raised "Expected a { here." (witness 2610.26441: 9 Errors, two of them that one, the rest the pgf "No shape named"
 and `\tkz@getfrompolar` runaways that followed; 0 now). Minimal trigger: `\def\pt(#1)#{[#1]}\pt(f(x)){y}` —
-pdflatex "[f(x)]y". Fixed in Rust (78d): base_utilities.rs `parse_def_parameters` appends the brace to the delimiter
+pdflatex "[f(x)]y". Fixed in Rust (78d): base_utilities/fonts_defs.rs `parse_def_parameters` appends the brace to the delimiter
 (`Until:){`), the `Until` reader puts it back after the match (base_parameter_types.rs), `read_until` (gullet.rs)
 matches a delimiter's closing `{` as tex.web does, and `\meaning` prints it at both ends; every `\def`, `\edef`,
 `\gdef`, `\xdef` (with `\long`, `\protected`) shares the path. The "Expected a {{ here." message of a bare `#{` whose
