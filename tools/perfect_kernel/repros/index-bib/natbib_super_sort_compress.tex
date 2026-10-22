@@ -1,0 +1,17 @@
+% witness: sel78i item 3 (achemso.cls:1396 `\RequirePackage[sort&compress,numbers,super]{natbib}`)
+% oracle:  pdflatex 0 errors: superscripts "1–3", "1;2", "1–3;5" (natbib.sty:401-421, a run of two kept)
+% engines: rust int50a = superscripts "3; 1; 2", "2; 1", "5; 3; 1; 2"
+% expect:  0 errors; one superscript a citation: "1–3", "1; 2", "1–3; 5"
+% status:  RED (int50a) -> GREEN (78j)
+\documentclass{article}
+\usepackage[super,sort&compress]{natbib}
+\begin{document}
+X\cite{c,a,b}, Y\cite{b,a}, Z\cite{e,c,a,b}.
+\begin{thebibliography}{9}
+\bibitem{a} A. Able.
+\bibitem{b} B. Baker.
+\bibitem{c} C. Cole.
+\bibitem{d} D. Dee.
+\bibitem{e} E. Eve.
+\end{thebibliography}
+\end{document}

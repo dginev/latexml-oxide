@@ -1,0 +1,13 @@
+% witness: rev78j r2 (pdfpages' page check, pdfpages.sty:909-920 \AM@checkpagenumber)
+% oracle:  pdflatex: "! Package pdfpages Error: Page 13 of `example-image-a4-numbered.pdf' does not exist." and the
+%          same for page 14 (then pdfTeX's "required page does not exist"); pages 11 and 12 placed
+% engines: rust 78j r1 = graphics page=11 to page=14 (13 and 14 render the last page again), 0 errors
+% expect:  2 errors (pages 13, 14); pages 11 and 12 placed
+% status:  RED (78j r1) -> GREEN (78j r2)
+\documentclass{article}
+\usepackage{pdfpages}
+\begin{document}
+Before.
+\includepdf[pages=11-14]{example-image-a4-numbered.pdf}
+After.
+\end{document}

@@ -58,7 +58,7 @@ fn revtex_hyperref_loaded_twice_keeps_cleveref() {
   let xml = assert_elements(tex, RAW, (0, 0), &[(
     "para",
     "S1.p1",
-    r##"<para xml:id="S1.p1"><p>Text <ref labelref="LABEL:s" show="creftype~refnum"/>.</p></para>"##,
+    r##"<para xml:id="S1.p1"><p>Text <ref labelref="LABEL:s" show="creftype~creflabel"/>.</p></para>"##,
   )]);
   assert_element(
     &xml,

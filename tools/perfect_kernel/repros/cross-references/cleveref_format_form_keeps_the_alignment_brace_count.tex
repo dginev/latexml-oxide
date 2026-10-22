@@ -1,0 +1,20 @@
+% witness: rev78j3 k5 (a figure's tabular of two captioned minipages under 2008.12750's and 2604.24399's
+%          `\crefformat{figure}{#2\color{blue}Fig.~#1#3}`)
+% oracle:  pdflatex 0 errors: the rows "x | y" and "p | q"; "A Fig. 1. B Fig. 2." (blue)
+% engines: rust 78j r3 = 2 "Missing } inserted" + "Extra alignment tab '&'", "p" moved into the row above: the derived
+%          \Cref form's open `{` (`\MakeUppercase` takes `\color` alone) stayed counted in the alignment brace count
+% expect:  0 errors, 0 warnings; the two rows whole; the references as set
+% status:  RED (78j r3) -> GREEN (78j r4)
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage{cleveref}
+\crefformat{figure}{#2\color{blue}Fig.~#1#3}
+\begin{document}
+\begin{figure}
+\begin{tabular}{cc}
+\begin{minipage}{4cm}x\caption{left}\label{fa}\end{minipage} & \begin{minipage}{4cm}y\caption{right}\label{fb}\end{minipage}\\
+p & q
+\end{tabular}
+\end{figure}
+A \cref{fa}. B \cref{fb}.
+\end{document}

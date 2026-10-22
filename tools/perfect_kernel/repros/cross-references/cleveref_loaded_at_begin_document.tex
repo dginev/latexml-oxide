@@ -1,0 +1,16 @@
+% witness: rev78j r2 A/B (2512.04983, 2608.14769: a class's `\AtBeginDocument{\RequirePackage{cleveref}\crefformat…}`)
+% oracle:  pdflatex 0 errors: "A (1). B Equation (1)."
+% engines: rust 78j r2 before the fix = 1 Error (`\lx@cref@building` undefined: cleveref read after `\begin{document}`
+%          runs its hooks at once, before the binding defined it); int51a = "A eq. 1. B Equation 1."
+% expect:  0 errors; the document's formats
+% status:  RED (78j r2 wip) -> GREEN (78j r2)
+\documentclass{article}
+\usepackage{amsmath}
+\AtBeginDocument{%
+  \RequirePackage{cleveref}%
+  \crefformat{equation}{\textup{#2(#1)#3}}%
+  \Crefformat{equation}{\textup{#2Equation~(#1)#3}}}
+\begin{document}
+\begin{equation}a=b\label{e1}\end{equation}
+A \cref{e1}. B \Cref{e1}.
+\end{document}

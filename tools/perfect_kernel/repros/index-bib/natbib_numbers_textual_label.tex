@@ -1,0 +1,14 @@
+% witness: rev78j2 nb1/nb2 (2608.05327 "[21]" -> "[FNW23]")
+% oracle:  pdflatex 0 errors: "A (author?) [Knu84]. B (author?) [2]. C [Knu84]."
+% engines: rust 78j r2 = "A Knu84 [Knu84]." (the label taken for the full authors too)
+% expect:  0 errors; "A Knu84. B 2. C [Knu84]." (an entry without authors prints its number, as Perl; no "(author?)")
+% status:  RED (78j r2) -> GREEN (78j r3)
+\documentclass{article}
+\usepackage[numbers]{natbib}
+\begin{document}
+A \citet{k}. B \citet{a}. C \citep{k}.
+\begin{thebibliography}{99}
+\bibitem[Knu84]{k} K
+\bibitem{a} A
+\end{thebibliography}
+\end{document}

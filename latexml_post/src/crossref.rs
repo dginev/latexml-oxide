@@ -52,11 +52,22 @@ struct ChildPages {
 fn ref_fallbacks(key: &str) -> &'static [&'static str] {
   match key {
     "typerefnum" => &["refnum"],
+    // cleveref's label format (cleveref_sty.rs `\lx@creflabel@@`), for a target numbered without its tag.
+    "creflabel" => &["refnum"],
     "toctitle" => &["title", "toccaption"],
     "title" => &["toccaption"],
     "rawtoctitle" => &["toctitle", "title", "toccaption"],
     "rawtitle" => &["title", "toccaption"],
     _ => &[],
+  }
+}
+
+/// A stored tag's text in a tooltip: a tag with markup (Scan stores its copy) as [`value_text`] reads it, its math in
+/// reading order; a tag of text alone as it is.
+fn tag_text(doc: &PostDocument, val: &Value) -> String {
+  match val {
+    Value::Xml(_) => value_text(doc, val),
+    other => other.to_string(),
   }
 }
 
@@ -273,6 +284,72 @@ struct BibciteDatum {
   /// An entry with no name to print under a textual numeric `show` ([`nameless_numeric_show`]): its label keeps the
   /// phrases and the number alone.
   nameless:    bool,
+}
+
+impl BibciteDatum {
+  /// The entry's number, which a sorting citation orders by: its `number` (else `refnum`) when that is a whole
+  /// number, as natbib's `\NAT@ifcat@num` and cite.sty's `\@cite@posnumtest` take it; none for a missing entry.
+  fn entry_number(&self) -> Option<u64> {
+    let text = self.sort_label()?;
+    (!text.is_empty() && text.bytes().all(|b| b.is_ascii_digit()))
+      .then(|| text.parse().ok())
+      .flatten()
+  }
+
+  /// The entry's sort number as cite.sty computes it ([`cite_sty_sort_key`]); none for a missing entry or a label it
+  /// cannot sort.
+  fn cite_sty_key(&self) -> Option<u64> { cite_sty_sort_key(&self.sort_label()?) }
+
+  /// The label a sorting citation reads: the entry's `number`, else its `refnum`, trimmed; none for a missing entry.
+  fn sort_label(&self) -> Option<String> {
+    if self.missing {
+      return None;
+    }
+    let label = if self.number.is_empty() {
+      &self.refnum
+    } else {
+      &self.number
+    };
+    Some(text_content(label).trim().to_string())
+  }
+}
+
+/// cite.sty's sort number of a citation label (cite.sty:127-222 `\@addto@cite@list`): a number `n` is `256n`; a
+/// `[prefix]number[suffix]` label, one character each, `(16384p + n)·256 + s` (the characters' codes, `p` zero
+/// without a prefix: "2a" sorts after 2, before 3); a number, a separator and a number (`1.2`) `((16384p + n)·256 +
+/// sep)·4096 + m`, while the part before `m` is below 262144. Any other label (`Knu84`) has none: cite.sty prints it
+/// at once, before the sorted ones (`\@cite@gobbledump@now`).
+fn cite_sty_sort_key(label: &str) -> Option<u64> {
+  let chars: Vec<char> = label.chars().collect();
+  if chars.is_empty() {
+    return None;
+  }
+  if chars.iter().all(char::is_ascii_digit) {
+    return label.parse::<u64>().ok().map(|n| n * 256);
+  }
+  let (prefix, rest) = if chars[0].is_ascii_digit() {
+    (0, &chars[..])
+  } else {
+    (u64::from(u32::from(chars[0])), &chars[1..])
+  };
+  let digits = rest.iter().take_while(|c| c.is_ascii_digit()).count();
+  if digits == 0 {
+    return None;
+  }
+  let number: u64 = rest[..digits].iter().collect::<String>().parse().ok()?;
+  let mut key = (prefix * 16384 + number) * 256;
+  let Some((mark, tail)) = rest[digits..].split_first() else {
+    return Some(key);
+  };
+  key += u64::from(u32::from(*mark));
+  if tail.is_empty() {
+    return Some(key);
+  }
+  if tail.iter().all(char::is_ascii_digit) && key < 262144 {
+    let last: u64 = tail.iter().collect::<String>().parse().ok()?;
+    return Some(key * 4096 + last);
+  }
+  None
 }
 
 /// Perl `Post::Document::trimChildNodes` (`Post.pm` L1374-1397) of a stored
@@ -702,20 +779,22 @@ impl CrossRef {
           .get_value("tag:creftypecap")
           .or_else(|| entry.get_value("tag:creftype"));
         let has_refnum = entry.get_value("refnum");
+        // (cleveref's `creflabel` is the refnum in its label format: OXIDIZED_DESIGN_DIVERGENCES #845)
+        let shows_refnum = shown_so_far.contains("refnum") || shown_so_far.contains("creflabel");
         if has_type.is_some() && has_refnum.is_some() {
-          is_dup = shown_so_far.contains("type") && shown_so_far.contains("refnum");
+          is_dup = shown_so_far.contains("type") && shows_refnum;
           if let Some(t) = has_type {
-            pieces.push(t.to_string());
+            pieces.push(tag_text(doc, t));
           }
           if let Some(r) = has_refnum {
-            pieces.push(r.to_string());
+            pieces.push(tag_text(doc, r));
           }
         } else if let Some(tr) = entry.get_value("typerefnum") {
-          is_dup = shown_so_far.contains("type") && shown_so_far.contains("refnum");
-          pieces.push(tr.to_string());
+          is_dup = shown_so_far.contains("type") && shows_refnum;
+          pieces.push(tag_text(doc, tr));
         } else if let Some(r) = has_refnum {
-          is_dup = shown_so_far.contains("refnum");
-          pieces.push(r.to_string());
+          is_dup = shows_refnum;
+          pieces.push(tag_text(doc, r));
         }
       }
 
@@ -848,6 +927,13 @@ impl CrossRef {
   /// a `\nameref` its leading `ltx:tag` goes (`generateRef_aux` L774-777, which unbinds it from the stored value
   /// itself; the copy loses it here, the stored title keeping its tag for the TOC).
   fn entry_text_children(&self, id: &str, val: &Value, is_nameref: bool) -> Vec<NodeData> {
+    trim_child_data(self.entry_children(id, val, is_nameref))
+  }
+
+  /// [`Self::entry_text_children`] untrimmed. A tag's copy (Scan stores a tag with markup as its copy) keeps its
+  /// spaces, as a tag stored as text does: a document's multi format's second position `{ and~(#2#1#3)}` with math
+  /// in its number is " and (P1)" after "Problems (P)" (2609.28438).
+  fn entry_children(&self, id: &str, val: &Value, is_nameref: bool) -> Vec<NodeData> {
     let Value::Xml(node) = val else {
       return ref_content_children(val);
     };
@@ -869,7 +955,7 @@ impl CrossRef {
     {
       out.remove(at);
     }
-    trim_child_data(out)
+    out
   }
 
   /// Perl `CrossRef::fillInTitle` (CrossRef.pm:882-904) on a copy of a stored value's children: a nested `ltx:ref`
@@ -979,6 +1065,20 @@ impl CrossRef {
     req_show: &str,
     is_nameref: bool,
   ) -> Vec<NodeData> {
+    // A format of the document's (a `|` show's alternative before the last, cleveref_sty.rs `cref_multi`) is the whole
+    // reference as cleveref prints it: kept as it is when the target has it, with no context sought for a format
+    // with no letter or digit in it — siamart's `\crefformat{equation}{\textup{#2(#1)#3}}` with `\tag{$\star$}`
+    // prints "(⋆)", not "(⋆) ‣ section 1" (1905.03839). OXIDIZED_DESIGN_DIVERGENCES #845; guard
+    // `perfect_kernel_batch78j::cleveref_symbol_format_stands_alone`.
+    let alternatives = show_alternatives(req_show);
+    if let Some((_default, formats)) = alternatives.split_last() {
+      for format in formats {
+        let stuff = self.generate_ref_aux(req_id, format, is_nameref);
+        if !stuff.is_empty() {
+          return stuff;
+        }
+      }
+    }
     let show_options = if !req_show.contains("title") {
       vec![req_show.to_string(), "title".to_string()]
     } else {
@@ -1023,8 +1123,18 @@ impl CrossRef {
     vec![NodeData::Text(req_id.to_string())]
   }
 
-  /// Generate ref content from a single DB entry.
+  /// Generate ref content from a single DB entry. A `show` of `|`-separated alternatives (outside `{…}` literals)
+  /// prints the first the entry has: cleveref's format of the document's for the target's type, else its default
+  /// (cleveref_sty.rs `cref_multi`; OXIDIZED_DESIGN_DIVERGENCES #845). Rust-only; Perl's shows have none.
   fn generate_ref_aux(&self, id: &str, show: &str, is_nameref: bool) -> Vec<NodeData> {
+    let alternatives = show_alternatives(show);
+    if alternatives.len() > 1 {
+      return alternatives
+        .into_iter()
+        .map(|alternative| self.generate_ref_aux(id, alternative, is_nameref))
+        .find(|stuff| !stuff.is_empty())
+        .unwrap_or_default();
+    }
     let entry = match self.db.lookup(&format!("ID:{}", id)) {
       Some(e) => e,
       None => return vec![],
@@ -1068,7 +1178,11 @@ impl CrossRef {
                   "class".to_string(),
                   class.to_string(),
                 )])),
-                children:   self.entry_text_children(id, val, is_nameref),
+                children:   if k.starts_with("tag:") || k.ends_with("refnum") {
+                  self.entry_children(id, val, is_nameref)
+                } else {
+                  self.entry_text_children(id, val, is_nameref)
+                },
               });
               break;
             }
@@ -1794,6 +1908,37 @@ impl CrossRef {
     }
   }
 
+  /// The conjunctions between the references of a `\cref` list whose document set a multi-reference format
+  /// (cleveref_sty.rs `\lx@cref@conjunction`): dropped before a reference that printed the document's format, which
+  /// holds its own (cleveref.sty:1514-1519), and unwrapped elsewhere. OXIDIZED_DESIGN_DIVERGENCES #845.
+  fn settle_cref_conjunctions(&mut self, doc: &mut PostDocument) {
+    for conjunction in
+      doc.findnodes("//ltx:text[contains(concat(' ', @class, ' '), ' ltx_cref_conjunction ')]")
+    {
+      let mut next = conjunction.get_next_sibling();
+      while let Some(node) = next.as_ref().filter(|node| {
+        node.get_type() == Some(NodeType::TextNode) && node.get_content().trim().is_empty()
+      }) {
+        next = node.get_next_sibling();
+      }
+      let formatted = next
+        .filter(|node| node.get_name() == "ref")
+        .and_then(|node| Some((node.get_attribute("idref")?, node.get_attribute("show")?)))
+        .is_some_and(|(id, show)| {
+          let alternatives = show_alternatives(&show);
+          alternatives.len() > 1
+            && !self
+              .generate_ref_aux(&id, alternatives[0], false)
+              .is_empty()
+        });
+      if formatted {
+        doc.remove_nodes(&[conjunction]);
+      } else {
+        doc.unwrap_node(&conjunction);
+      }
+    }
+  }
+
   fn fill_in_glossaryrefs(&mut self, doc: &mut PostDocument) {
     // Port of Perl CrossRef.pm:454-482 fill_in_glossaryrefs: resolve each
     // `<ltx:glossaryref key=… inlist=… show=…>` against the GLOSSARY:list:key
@@ -2186,21 +2331,65 @@ impl CrossRef {
       }
     }
 
+    // The package's ordering (`ltx_cite_sort`/`ltx_cite_compress` on the bibref, sect11.rs `cite_order_class`): the
+    // entries by number, those without one after them in their order (natbib.sty:1185-1200 `\NAT@sort@cites@`, its
+    // `\NAT@nonsort@list`); a bare-number citation (`\citep`, `\cite`, a superscript one: natbib.sty:401 compresses
+    // only in `\NAT@citexnum`'s parenthetical branch) joins a run of three or more consecutive numbers with an en dash,
+    // a run of two with the separator (natbib.sty:401-421, cite.sty:272-297). KNOWN_PERL_ERRORS #1072.
+    let order_classes = bibref.get_attribute("class").unwrap_or_default();
+    let has_class = |name: &str| order_classes.split_whitespace().any(|c| c == name);
+    // (cite.sty prints the keys with no number first, at once: cite.sty:225-230 `\@cite@gobbledump@now`,
+    // `ltx_cite_unsorted_first`; natbib after them)
+    // (cite.sty's sort numbers, `cite_sty_sort_key`, and its two kinds of run: consecutive numbers, 256 apart, or
+    // consecutive suffixes of one number, 1 apart, cite.sty:266-297 `\@compress@cite`; natbib's whole numbers)
+    let cite_sty = has_class("ltx_cite_unsorted_first");
+    let sort_key = |datum: &BibciteDatum| {
+      if cite_sty {
+        datum.cite_sty_key()
+      } else {
+        datum.entry_number()
+      }
+    };
+    let steps: &[u64] = if cite_sty { &[256, 1] } else { &[1] };
+    if has_class("ltx_cite_sort") {
+      let unsorted = if has_class("ltx_cite_unsorted_first") {
+        0
+      } else {
+        2
+      };
+      data.sort_by_key(|datum| sort_key(datum).map_or((unsorted, 0), |n| (1, n)));
+    }
+    let bare_number = matches!(
+      show.to_ascii_lowercase().as_str(),
+      "number" | "refnum" | "super"
+    );
+    let joints = if has_class("ltx_cite_compress") && (force_numeric || bare_number) {
+      compressed_joints(&data.iter().map(sort_key).collect::<Vec<_>>(), steps)
+    } else {
+      vec![CiteJoint::Separator; data.len()]
+    };
     let mut refs: Vec<NodeData> = Vec::new();
     if force_numeric {
       // Numeric collapse (#123): each entry's number, joined with ", " (natbib
       // numbers mode), bracketed as a group ([1, 2]) unless `\citep`'s external
       // parens already enclose it.
-      for datum in &data {
-        if !refs.is_empty() {
-          refs.push(NodeData::Text(", ".to_string()));
-        }
+      for (datum, joint) in data.iter().zip(&joints) {
         let label = [&datum.number, &datum.refnum]
           .into_iter()
           .find(|l| !l.is_empty())
           .cloned()
           .unwrap_or_else(|| vec![NodeData::Text(datum.key.clone())]);
-        refs.push(bib_ref(&datum.attr, label));
+        let item = vec![bib_ref(&datum.attr, label)];
+        match joint {
+          CiteJoint::Covered => {},
+          CiteJoint::RangeEnd => append_range_end(&mut refs, item),
+          CiteJoint::Separator => {
+            if !refs.is_empty() {
+              refs.push(NodeData::Text(", ".to_string()));
+            }
+            refs.extend(item);
+          },
+        }
       }
       if internal_delims && !refs.is_empty() {
         refs.insert(0, NodeData::Text("[".to_string()));
@@ -2212,7 +2401,13 @@ impl CrossRef {
     let checkdups =
       lower.contains("author") && (lower.contains("year") || lower.contains("number"));
     let mut data: VecDeque<BibciteDatum> = data.into();
+    // (a bare-number show absorbs no same-author entries, `checkdups`, so the joints stay aligned with the entries)
+    let mut joints = joints.into_iter();
     while let Some(datum) = data.pop_front() {
+      let joint = joints.next().unwrap_or(CiteJoint::Separator);
+      if joint == CiteJoint::Covered {
+        continue;
+      }
       let nameless_show = datum
         .nameless
         .then(|| nameless_numeric_show(&show))
@@ -2227,15 +2422,20 @@ impl CrossRef {
         // Entries without names share no author label.
         checkdups && !datum.nameless,
       );
+      let item = if didref {
+        stuff
+      } else {
+        vec![bib_ref(&datum.attr, stuff)]
+      };
+      if joint == CiteJoint::RangeEnd {
+        append_range_end(&mut refs, item);
+        continue;
+      }
       if !refs.is_empty() {
         refs.push(NodeData::Text(sep.clone()));
         refs.push(NodeData::Text(" ".to_string()));
       }
-      if didref {
-        refs.extend(stuff);
-      } else {
-        refs.push(bib_ref(&datum.attr, stuff));
-      }
+      refs.extend(item);
     }
     refs
   }
@@ -2348,6 +2548,7 @@ impl Processor for CrossRef {
     self.fill_in_frags(&doc);
     self.fill_in_glossaryrefs(&mut doc);
     self.fill_in_refs(&mut doc);
+    self.settle_cref_conjunctions(&mut doc);
     self.fill_in_rdfa_refs(&mut doc);
     self.fill_in_bibrefs(&mut doc);
     self.fill_in_mathlinks(&doc);
@@ -2406,6 +2607,78 @@ fn text_content(nodes: &[NodeData]) -> String {
     .join("")
 }
 
+/// The `|`-separated alternatives of a ref's `show`, outside its `{…}` literals ([`CrossRef::generate_ref_aux`]).
+fn show_alternatives(show: &str) -> Vec<&str> {
+  let mut alternatives = Vec::new();
+  let (mut depth, mut start) = (0usize, 0);
+  for (at, c) in show.char_indices() {
+    match c {
+      '{' => depth += 1,
+      '}' => depth = depth.saturating_sub(1),
+      '|' if depth == 0 => {
+        alternatives.push(&show[start..at]);
+        start = at + 1;
+      },
+      _ => {},
+    }
+  }
+  alternatives.push(&show[start..]);
+  alternatives
+}
+
+/// How a citation's entry joins the one printed before it ([`CrossRef::make_bibcite`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CiteJoint {
+  /// After the separator (the first entry: alone).
+  Separator,
+  /// Inside a compressed range: not printed.
+  Covered,
+  /// The last of a compressed range: after an en dash.
+  RangeEnd,
+}
+
+/// The joints of a sorted citation's entries, by their numbers: each run of three or more consecutive numbers prints
+/// its first and last joined by an en dash, natbib's `--` (natbib.sty:412-417) and cite.sty's `\citedash`
+/// (cite.sty:288-290); a run of two keeps the separator, as both print "[1, 2]".
+fn compressed_joints(numbers: &[Option<u64>], steps: &[u64]) -> Vec<CiteJoint> {
+  let mut joints = vec![CiteJoint::Separator; numbers.len()];
+  let follows = |at: usize, step: u64| matches!((numbers[at], numbers.get(at + 1).copied().flatten()), (Some(a), Some(b)) if b == a + step);
+  let mut start = 0;
+  while start < numbers.len() {
+    let mut end = start;
+    // (the run's step, the first its second number takes)
+    if let Some(&step) = steps.iter().find(|&&step| follows(start, step)) {
+      while end + 1 < numbers.len() && follows(end, step) {
+        end += 1;
+      }
+    }
+    if end >= start + 2 {
+      joints[start + 1..end].fill(CiteJoint::Covered);
+      joints[end] = CiteJoint::RangeEnd;
+    }
+    start = end + 1;
+  }
+  joints
+}
+
+/// Append the last entry of a compressed range after an en dash: inside the superscript the range's first entry
+/// opened, for a superscript citation ("¹⁻³"), else as text.
+fn append_range_end(refs: &mut Vec<NodeData>, mut item: Vec<NodeData>) {
+  let is_sup = |node: &NodeData| matches!(node, NodeData::Element { tag, .. } if tag == "ltx:sup");
+  if item.len() == 1
+    && is_sup(&item[0])
+    && let Some(NodeData::Element { children, .. }) = refs.last_mut().filter(|last| is_sup(last))
+  {
+    if let Some(NodeData::Element { children: inner, .. }) = item.pop() {
+      children.push(NodeData::Text("\u{2013}".to_string()));
+      children.extend(inner);
+    }
+    return;
+  }
+  refs.push(NodeData::Text("\u{2013}".to_string()));
+  refs.extend(item);
+}
+
 /// The phrases-and-number part of a textual numeric `show` (`Authors Phrase1NumberPhrase2`, `FullAuthors …`): what
 /// an entry with no name to print keeps of it ([`CrossRef::make_bibcite`]). `None` for any other form, which turns
 /// the citation `refnum` as in Perl (CrossRef.pm:541).
@@ -2462,6 +2735,59 @@ mod tests {
   #[test]
   fn ref_fallbacks_typerefnum_goes_to_refnum() {
     assert_eq!(ref_fallbacks("typerefnum"), &["refnum"]);
+    assert_eq!(ref_fallbacks("creflabel"), &["refnum"]);
+  }
+
+  #[test]
+  fn compressed_joints_join_runs_of_three() {
+    use CiteJoint::{Covered as C, RangeEnd as R, Separator as S};
+    let joints = |numbers: &[Option<u64>]| compressed_joints(numbers, &[1]);
+    assert_eq!(joints(&[Some(1), Some(2), Some(3)]), [S, C, R]);
+    assert_eq!(joints(&[Some(1), Some(2)]), [S, S]);
+    assert_eq!(
+      joints(&[
+        Some(1),
+        Some(2),
+        Some(3),
+        Some(5),
+        Some(6),
+        Some(7),
+        Some(8)
+      ]),
+      [S, C, R, S, C, C, R]
+    );
+    assert_eq!(joints(&[Some(1), Some(2), None, Some(3)]), [S, S, S, S]);
+  }
+
+  #[test]
+  fn cite_sty_sort_keys_and_runs() {
+    use CiteJoint::{Covered as C, RangeEnd as R, Separator as S};
+    // cite.sty:127-222: a number, `[prefix]number[suffix]`, number-separator-number; the rest unsortable
+    assert_eq!(cite_sty_sort_key("7"), Some(7 * 256));
+    assert_eq!(cite_sty_sort_key("2a"), Some(2 * 256 + 97));
+    assert_eq!(cite_sty_sort_key("a2"), Some((97 * 16384 + 2) * 256));
+    assert_eq!(cite_sty_sort_key("1.2"), Some((256 + 46) * 4096 + 2));
+    assert_eq!(cite_sty_sort_key("Knu84"), None);
+    assert_eq!(cite_sty_sort_key("2ab"), None);
+    let mut labels = ["7", "2a", "1"];
+    labels.sort_by_key(|label| cite_sty_sort_key(label));
+    assert_eq!(labels, ["1", "2a", "7"]);
+    // cite.sty:266-297: consecutive numbers (256 apart) or consecutive suffixes of one number (1 apart)
+    let keys = |labels: &[&str]| {
+      labels
+        .iter()
+        .map(|label| cite_sty_sort_key(label))
+        .collect::<Vec<_>>()
+    };
+    assert_eq!(compressed_joints(&keys(&["1", "2", "3"]), &[256, 1]), [
+      S, C, R
+    ]);
+    assert_eq!(compressed_joints(&keys(&["4a", "4b", "4c"]), &[256, 1]), [
+      S, C, R
+    ]);
+    assert_eq!(compressed_joints(&keys(&["2a", "3", "4"]), &[256, 1]), [
+      S, S, S
+    ]);
   }
 
   #[test]

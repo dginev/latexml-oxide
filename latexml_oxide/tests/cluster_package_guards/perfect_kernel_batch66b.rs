@@ -67,7 +67,7 @@ fn locked_robust_cite_keeps_its_inner_definition() {
   let xml = convert(include_str!(
     "../../../tools/perfect_kernel/repros/macro-state/locked_robust_inner_cite.tex"
   ));
-  assert!(xml.contains(r#"<cite class="ltx_citemacro_cite">[<bibref bibrefs="a" separator="," yyseparator=","/>]</cite>"#), "{xml}");
+  assert!(xml.contains(r#"<cite class="ltx_citemacro_cite">[<bibref bibrefs="a" class="ltx_cite_sort ltx_cite_compress ltx_cite_unsorted_first" separator="," yyseparator=","/>]</cite>"#), "{xml}");
 }
 
 /// A paper's mdpi.cls (2105.08579's, 2201.05363's, 1809.00601's, abridged) loads paracol (:55) and, after the preamble,

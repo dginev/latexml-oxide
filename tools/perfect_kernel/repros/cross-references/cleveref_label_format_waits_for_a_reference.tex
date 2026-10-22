@@ -1,0 +1,15 @@
+% witness: 2506.11592 (`\creflabelformat{enumi}{label*=\arabic*}`, an enumitem key list given as a label format, its
+%          48 items never \cref'd)
+% oracle:  pdflatex 0 errors, 0 warnings: "1. One 2. Two … See eq. (1)." (the format is expanded only by a \cref of an item,
+%          cleveref.sty:1329-1334)
+% engines: rust 78j before the hold = 8 Warnings for the 2 items ("Counter '*' was not defined", "\c@* is not a register")
+% expect:  0 errors, 0 warnings; the equation's reference "eq. (1)"
+% status:  RED (78j r1 pre-release) -> GREEN (78j)
+\documentclass{article}
+\usepackage{amsmath,cleveref}
+\creflabelformat{enumi}{label*=\arabic*}
+\begin{document}
+\begin{enumerate}\item\label{i1} One \item Two\end{enumerate}
+\begin{equation}a\label{e1}\end{equation}
+See \cref{e1}.
+\end{document}

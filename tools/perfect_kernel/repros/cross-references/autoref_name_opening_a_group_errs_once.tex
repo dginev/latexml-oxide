@@ -1,0 +1,17 @@
+% witness: rev78j4 n9 (an `\autoref` name opening a group, the target a `\captionof` in a minipage in a tabular cell)
+% oracle:  pdflatex 1 error at \autoref{f1} ("Missing } inserted."); "A Fig 1."
+% engines: rust 78j r4 = 2 errors: the name's own "Attempt to end mode restricted_horizontal" and a second summary
+%          "The text of a autoref tag does not close the groups it opens" for the same fault
+% expect:  1 error, the held name's own, raised at \autoref{f1}; the tabular's rows whole
+% status:  RED (78j r4) -> GREEN (78j r5)
+\documentclass{article}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\renewcommand\figureautorefname{\bgroup Fig}
+\begin{document}
+\begin{tabular}{cc}
+\begin{minipage}{4cm}x\captionof{figure}{c}\label{f1}\end{minipage} & m\\
+p & q
+\end{tabular}
+A \autoref{f1}.
+\end{document}

@@ -82,7 +82,7 @@ fn revtex_rev_citealpnum() {
     &xml,
     "bibitem",
     &[r#"key="n""#],
-    r#"<bibitem key="n" xml:id="bib.bib2"><tags><tag role="number">2</tag><tag role="refnum">[2]</tag><tag role="key">n</tag></tags><bibblock> Obtained in Ref. <cite class="ltx_citemacro_citenum"><bibref bibrefs="k" separator="," show="Number" yyseparator=","/></cite>.</bibblock></bibitem>"#,
+    r#"<bibitem key="n" xml:id="bib.bib2"><tags><tag role="number">2</tag><tag role="refnum">[2]</tag><tag role="key">n</tag></tags><bibblock> Obtained in Ref. <cite class="ltx_citemacro_citenum"><bibref bibrefs="k" class="ltx_cite_sort ltx_cite_compress" separator="," show="Number" yyseparator=","/></cite>.</bibblock></bibitem>"#,
   );
 }
 

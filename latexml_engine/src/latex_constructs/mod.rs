@@ -6473,7 +6473,7 @@ pub use sect04::toc_select;
 pub use sect07::prepare_latex_equation_counter;
 pub use sect08::declare_bound_text_symbols;
 pub use sect10::math_array_bindings;
-pub use sect11::{label_type, typed_label};
+pub use sect11::{label_type, settle_empty_held_tags, typed_label};
 pub use sect13::nfss_selected_font;
 
 /// amsmath.sty:155-175 declares the spacing commands again — `\,` `\!` `\:` `\;`, `\negmedspace`, `\negthickspace`

@@ -126,6 +126,9 @@ pub(crate) fn load() -> Result<()> {
     if let Some(labels) = node.get_attribute("labels") {
       tie_held_tags(node, &labels);
     }
+    if empty_held_tags_pending() {
+      remove_empty_held_tags(document, node);
+    }
   });
 
   // # These will get filled in during postprocessing.
@@ -1078,7 +1081,7 @@ pub(crate) fn load() -> Result<()> {
   // Perl latex_constructs.pool.ltxml L4244-4251: enterHorizontal => 1.
   DefConstructor!("\\@@bibref Semiverbatim Semiverbatim {}{}",
     "<ltx:bibref show='#1' bibrefs='#bibrefs' inlist='#bibunit' separator='#separator'
-      yyseparator='#yyseparator'>#3#4</ltx:bibref>",
+      yyseparator='#yyseparator' class='#citeclass'>#3#4</ltx:bibref>",
     enter_horizontal => true,
     properties => sub[args] {
       unref!(args => _show, keys, _phrase1, _phrase2);
@@ -1093,7 +1096,8 @@ pub(crate) fn load() -> Result<()> {
           None => String::new() },
         "bibunit" => match lookup_value("CITE_UNIT") {
           Some(Stored::String(s)) => to_string(s),
-          _ => String::new() }
+          _ => String::new() },
+        "citeclass" => cite_order_class()
       ))
     }
   );
@@ -1638,6 +1642,31 @@ pub(crate) fn load() -> Result<()> {
   Ok(())
 }
 
+/// The `class` of a citation's `ltx:bibref` that says how its numbers print (the post stage's `make_bibcite`, where
+/// the entries' numbers are known): `ltx_cite_sort` orders the keys by entry number, `ltx_cite_compress` joins a run of
+/// three or more consecutive numbers with an en dash ("[1–3]"), `ltx_cite_unsorted_first` puts the keys with no number
+/// before the sorted ones (cite.sty's order). `CITE_SORT`/`CITE_COMPRESS` are set by the package
+/// that sorts: natbib's `sort`/`compress`/`sort&compress` options (natbib.sty:267-271, applied at :377 `\NAT@sort@cites`
+/// and :401 in `\NAT@citexnum`), which revtex4*.cls (revtex4-2.cls:7042 `\RequirePackage[sort&compress]{natbib}`),
+/// achemso (achemso.cls:1396-1398) and acmart (`\bibstyle@acmnumeric`, acmart.cls:385-389) pass; cite.sty, which sorts
+/// and compresses unless `nosort`/`nocompress` (cite.sty:95, :272-297, :412, :415). Perl's bindings ignore them
+/// (natbib.sty.ltxml:69-71, cite.sty.ltxml:17-19): KNOWN_PERL_ERRORS #1072, OXIDIZED_DESIGN_DIVERGENCES #844.
+fn cite_order_class() -> String {
+  let mut classes = Vec::new();
+  if lookup_bool("CITE_SORT") {
+    classes.push("ltx_cite_sort");
+  }
+  if lookup_bool("CITE_COMPRESS") {
+    classes.push("ltx_cite_compress");
+  }
+  // (cite.sty prints a citation it cannot sort, a label not a number or an undefined key, at once, before the sorted
+  // ones: cite.sty:225-230 `\@cite@gobbledump@now`; natbib after them, natbib.sty:1185-1200 `\NAT@nonsort@list`)
+  if lookup_bool("CITE_SORT") && lookup_bool("CITE_UNSORTED_FIRST") {
+    classes.push("ltx_cite_unsorted_first");
+  }
+  classes.join(" ")
+}
+
 /// Record, globally as `lx@bibliography@normalfont`, the font the document's `\normalfont` selects where
 /// `\bibliography` stands — latex.ltx's `\fontencoding\encodingdefault`, `\familydefault`, `\seriesdefault`,
 /// `\shapedefault` (:14113-14121), each expanded now — as the `\normalfont` body, `\fontencoding{…}\lx@normalfont@base
@@ -1715,6 +1744,80 @@ fn tie_held_tags(node: &Node, labels: &str) {
         break;
       }
       cursor = current.get_parent();
+    }
+  }
+}
+
+/// Removes the empty held tags of `node` (`note_empty_held_tag`: kept for their diagnostics, now tied to the labels
+/// of `node` or of the nodes inside it, which closed first), and its `ltx:tags` if that leaves it empty.
+fn remove_empty_held_tags(document: &mut Document, node: &Node) {
+  let children = |parent: &Node| {
+    std::iter::successors(parent.get_first_child(), |child| child.get_next_sibling())
+      .filter(|child| child.get_type() == Some(NodeType::ElementNode))
+      .collect::<Vec<_>>()
+  };
+  for tags in children(node)
+    .into_iter()
+    .filter(|child| child.get_name() == "tags")
+  {
+    let mut removed = false;
+    for tag in children(&tags) {
+      if tag.get_name() == "tag"
+        && tag.get_first_child().is_none()
+        && tag.has_attribute("_deferred")
+      {
+        document.remove_node(tag);
+        take_empty_held_tag();
+        removed = true;
+      }
+    }
+    if removed && tags.get_first_child().is_none() {
+      document.remove_node(tags);
+    }
+  }
+}
+
+/// Settles the empty held tags left once the document is built (`note_empty_held_tag`), which no target closing over
+/// them tied and removed: a caption's tags in a minipage that became a figure panel (`settle_float_paragraph`'s fold;
+/// two captioned minipages in a figure), a label type's tags put in place after their target closed. Each is tied to
+/// the labels of its owner only — the element holding its `ltx:tags` — as `tie_held_tags` ties one (its held
+/// diagnostics raised where a reference prints its role, `replay_shown_deferred`, so they run before it); an owner
+/// with no label is an object no reference can print, so its tag's diagnostics are dropped with it, as pdflatex never
+/// typesets that format (a section's or an outer figure's label is not the panel's). Then it is removed with an
+/// `ltx:tags` it leaves empty. Run on the document and on each streamed segment; the pending count ends at none.
+/// Witness 2205.00263 (nine empty panel tags removed). Guards `perfect_kernel_batch78j::cleveref_format_errors_in_minipage_panels`,
+/// `…::cleveref_format_of_an_unlabelled_panel_raises_nothing`.
+pub fn settle_empty_held_tags(document: &mut Document, root: &Node) {
+  if !empty_held_tags_pending() {
+    return;
+  }
+  for tag in document.findnodes(
+    "descendant-or-self::ltx:tag[@_deferred and not(node())]",
+    Some(root),
+  ) {
+    let role = tag.get_attribute("role").unwrap_or_default();
+    if let Some(id) = tag
+      .get_attribute("_deferred")
+      .and_then(|id| id.parse().ok())
+    {
+      let owned = tag
+        .get_parent()
+        .filter(|tags| tags.get_name() == "tags")
+        .and_then(|tags| tags.get_parent())
+        .and_then(|owner| owner.get_attribute("labels"));
+      for label in owned.iter().flat_map(|labels| labels.split_whitespace()) {
+        util::logger::defer_to_label(label, &role, id);
+      }
+    }
+    let tags = tag.get_parent();
+    document.remove_node(tag);
+    take_empty_held_tag();
+    if let Some(tags) = tags
+      && tags.get_name() == "tags"
+      && !std::iter::successors(tags.get_first_child(), Node::get_next_sibling)
+        .any(|child| child.get_type() == Some(NodeType::ElementNode))
+    {
+      document.remove_node(tags);
     }
   }
 }

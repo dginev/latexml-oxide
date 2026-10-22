@@ -128,6 +128,10 @@ LoadDefinitions!({
   if lookup_string("revtex_cite_style") == "numbers" {
     Digest!("\\PassOptionsToPackage{numbers}{natbib}")?;
   }
+  // revtex4-1.cls:7021 `\RequirePackage[sort&compress]{natbib}`: a citation's numbers sorted, a run of three or more
+  // joined with an en dash ("[1–3]"; natbib_sty.rs, KNOWN_PERL_ERRORS #1072). Guard
+  // `perfect_kernel_batch78j::revtex_citations_sort_and_compress`.
+  Digest!("\\PassOptionsToPackage{sort&compress}{natbib}")?;
   RequirePackage!("revtex4_support");
   // revtex4-1.cls:7046, revtex4-2.cls:7067 `\let\NAT@merge\thr@@`: `\cite{a,*b}` merges b's entry into a's
   // (`natbib_sty::natbib_merge_citations`; REVTeX 4.0 does not merge). 1808.00247.

@@ -1,0 +1,14 @@
+% witness: rev78j2 tg (2609.28438 `\tag{$\mathrm{P_1}$}`; 1905.03839, 2510.06152 "( 1.2 )")
+% oracle:  pdflatex 0 errors: "A P1. B (P1). C eq. (P1)."
+% engines: rust 78j r2 = "A P 1. B ( P 1 ). C eq. ( P 1 )." (the tag stored as its flattened text)
+% expect:  0 errors; the tag's math a formula in the reference (Scan stores a tag with markup as its copy, Perl
+%          Scan.pm:269)
+% status:  RED (78j r2) -> GREEN (78j r3)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{cleveref}
+\crefformat{equation}{eq.~(#2#1#3)}
+\begin{document}
+\begin{equation}x\tag{$\mathrm{P_1}$}\label{x}\end{equation}
+A \ref{x}. B \eqref{x}. C \cref{x}.
+\end{document}

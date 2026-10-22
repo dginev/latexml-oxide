@@ -16512,8 +16512,8 @@ a no-op. Perl's natbib.sty.ltxml `\setcitestyle` keys (L363-375) also lack natbi
 `\documentclass[sigconf]{acmart}\begin{document}\title{T}\maketitle See \cite{a}.\begin{thebibliography}{1}
 \bibitem[Able(2001)]{a} A.\end{thebibliography}\end{document}`. About 61,700 papers; witness 2112.15328. Fixed in Rust
 (78c): acmart_cls.rs defines both styles through `\setcitestyle` and calls `\citestyle{acmnumeric}` when natbib is on;
-natbib_sty.rs reads `citesep`. Open: natbib's `sort&compress` (the order and ranges of the numbers, "[1, 2]" for
-`\cite{b,a}`) is not modelled. Guard `perfect_kernel_batch78c::acmart_citations_are_numeric_by_default` (repros
+natbib_sty.rs reads `citesep`. natbib's `sort&compress` (the order and ranges of the numbers, "[1, 2]" for
+`\cite{b,a}`), which acmart's own `\setcitestyle` reads, is modelled since 78j (KNOWN_PERL_ERRORS #1072). Guard `perfect_kernel_batch78c::acmart_citations_are_numeric_by_default` (repros
 index-bib/acmart_citations_are_numeric_by_default, index-bib/acmart_citestyle_acmauthoryear).
 
 ## 1024. `\hhline` is a full-width `\hline`
@@ -16966,6 +16966,84 @@ creator, with Univ A twice and Univ B. Fixed in Rust (78m, OXIDIZED_DESIGN_DIVER
 group of spacing only is that spacing, and an `\enskip` right after a mark or note a space OD #52(i) rewrites to
 `\quad` (elsewhere one stays inside a name, `J.\enskip Smith`). Witnesses 1602.04504, 1312.1414; guards
 `perfect_kernel_batch78m::{author_spacing_math_between_names_separates, author_enskip_in_name_and_after_note}`.
+
+## 1072. Numeric citations are neither sorted nor compressed
+
+natbib's `sort`, `compress` and `sort&compress` options (natbib.sty:267-271) order a citation's numbers and join a run
+of three or more with an en dash; cite.sty does so by default (cite.sty:95, :272-297; `nosort`, `nocompress` :412,
+:415), and revtex4/4-1/4-2 (revtex4-2.cls:7042 `\RequirePackage[sort&compress]{natbib}`), achemso (achemso.cls:1396-1398)
+and acmart (`\bibstyle@acmnumeric`, acmart.cls:385-389) ask for it. Perl's options are no-ops (natbib.sty.ltxml:69-71)
+and its cite.sty.ltxml (:17-19) "ignore[s] the resorting of citations", so `\cite{c,a,b}` prints "[3, 1, 2]" where the
+PDF has "[1–3]" — in the papers of these packages (cite.sty 3,616, revtex4* 5,544 of the 30k sample; acmart; 576 more
+pass natbib a sort option) every citation of several keys. Minimal trigger: `\usepackage{cite}` … `\cite{c,a,b}` with
+`\bibitem{a}`, `\bibitem{b}`, `\bibitem{c}`. cite.sty also prints a key it cannot sort (a label not a number, an
+undefined key) at once, before the sorted ones (cite.sty:205-230 `\@cite@dump@now`): `\cite{k1,a,k2}` with
+`\bibitem[Knu84]{k1}`, `\bibitem[Lam86]{k2}` is "[Knu84, Lam86, 1]", Perl "[Knu84, 1, Lam86]"; and it sorts a
+`[prefix]number[suffix]` label by its own sort numbers (cite.sty:127-222): `\bibitem[2a]{x}` cited with 1 and 7 is
+"[1, 2a, 7]". Fixed in Rust (78j,
+OXIDIZED_DESIGN_DIVERGENCES #844): the package's choice is a class on the `ltx:bibref` (`ltx_cite_unsorted_first` for
+cite.sty's order), applied by the post stage's `make_bibcite`, which knows the numbers. Repros
+index-bib/{natbib_sort_compress_numbers, cite_sty_sorts_and_compresses, cite_sty_prints_unsorted_labels_first,
+revtex_citations_sort_and_compress, acmart_numeric_citations_sort_and_compress, cite_sty_sorts_numbers_with_a_suffix};
+guards `perfect_kernel_batch78j::*` (eight citation guards).
+
+## 1073. cleveref prints an equation's number without its parentheses
+
+cleveref sets `\crefdefaultlabelformat{#2#1#3}` and `\creflabelformat{equation}{\textup{(#2#1#3)}}` (cleveref.sty:
+7838-7842), so `\cref{e1}` prints "eq. (1)", `\crefrange{e1}{e3}` "eqs. (1) to (3)", `\labelcref{e1}` "(1)"; a document's
+`\creflabelformat`/`\crefdefaultlabelformat` (:1264-1272) changes them. Perl's cleveref.sty.ltxml:46-76 shows the
+`refnum` alone ("eq. 1", "eqs. 1 to 3", "1") and ignores both commands. Minimal trigger: `\usepackage{amsmath,cleveref}`
+`\begin{equation}a\label{e1}\end{equation}\cref{e1}`. About 2,556 of the 30k sample load cleveref. Perl ignores the
+document's whole-reference formats too: `\crefformat{equation}{#2#1#3}` (cleveref.sty:1851, :1886-1906) makes `\cref{e1}`
+"1" in the PDF, Perl "eq. 1"; likewise `\Crefformat`, `\crefmultiformat` (`{(#2#1#3}{, #2#1#3)}…`: "(1, 3)") and
+`\labelcrefformat`; 320 of the 35,942 census papers set one (shipped `.sty` included; witnesses 2004.14422,
+2312.00252, 2406.15983). Fixed in Rust (78j, OXIDIZED_DESIGN_DIVERGENCES #845): a `creflabel` tag form, and a tag form
+for each format the document set, which the reference prints, whole, when its target has one (siamart's
+`\textup{#2(#1)#3}` with `\tag{$\star$}` "(⋆)", 1905.03839); a `\labelcref` list under a document `\crefmultiformat`
+the bare numbers ("1 and 3", cleveref.sty:8028-8030). Perl also stores a tag as its deep copy (Scan.pm:269), so a
+`\tag{$\mathrm{P_1}$}`'s math reaches the reference as math; the Rust port's flattened text ("( P 1 )") was its own
+defect, fixed too. Repros cross-references/{cleveref_equation_label_format, cleveref_creflabelformat_overrides,
+cleveref_document_formats_replace_the_reference, cleveref_document_multi_formats, cleveref_label_type_formats,
+cleveref_document_format_with_a_note_mark, cleveref_document_format_opening_a_group,
+cleveref_document_format_errors_wait_for_a_reference, cleveref_symbol_format_stands_alone,
+cleveref_document_format_with_math_in_the_tag, cleveref_labelcref_list_under_a_multi_format}; guards
+`perfect_kernel_batch78j::{cleveref_equation_label_format, cleveref_creflabelformat_overrides,
+cleveref_document_formats_replace_the_reference, cleveref_document_multi_formats, cleveref_label_type_formats,
+cleveref_document_format_with_a_note_mark, cleveref_document_format_opening_a_group,
+cleveref_document_format_errors_wait_for_a_reference, cleveref_symbol_format_stands_alone,
+cleveref_document_format_with_math_in_the_tag, cleveref_labelcref_list_under_a_multi_format}`.
+
+## 1074. A negative `\multirow{-n}` spans only its own row
+
+multirow.sty:172 (`\ifdim#2pt<\z@`) raises a negative `\multirow{-n}`'s box over its row and the n-1 above — the colortbl
+idiom, which writes the text in a group's last row so the rows' `\rowcolor`s do not paint over it. Perl's binding warns
+"Negative row sizes for \multirow are not yet supported" and spans one row (multirow.sty.ltxml:28, its example
+arXiv:2210.15835), so the text sits in the last row. Minimal trigger: `\begin{tabular}{lc} & a \\ \multirow{-2}{*}{Up}
+& c \\ \end{tabular}`. 151 of the 30k sample, 1,132 uses; witness 1509.00049 (42 such warnings). Fixed in Rust (78j,
+latexml_core alignment/normalize.rs `normalize_upward_spans`): when the cells above are empty the content moves to the
+span's top row, which takes `rowspan=n`, each row keeping the material between rows its first cell carried
+(`\lx@hidden@noalign`'s, marked `alignmentNoalign`: `\rowcolor`'s row colour, the last row's at the row's start); over
+a cell that holds something (TeX overprints it) it stays, with a Warning naming the cell. Residual: a row whose first
+cell is empty or covered by a span loses its `\rowcolor` on the `ltx:tr` (the cell's boxes are not absorbed; its cells'
+text keeps the colour), for positive spans as before; a negative `\multirow` inside a multi-column `\multicolumn` stays in
+its row with the Warning, whose cell(i,j) counts the `\hline` rows. Repros alignment-bindings/{multirow_negative_spans_the_rows_above,
+multirow_negative_over_content_stays}; guards `perfect_kernel_batch78j::{multirow_negative_spans_the_rows_above,
+multirow_negative_over_content_stays}`.
+
+## 1075. natbib's numbers mode numbers an entry whose label is given
+
+In natbib's numerical modes an entry's optional label that is not author-year — no `(year)`, no `, <year>` — is its
+number (natbib.sty:811-817 `\NAT@bare`, :1005-1012 `\NAT@apalk` writes it as the number): an alpha-style `.bbl`'s
+`\bibitem[Knu84]{k1}` is "[Knu84]" in the list and at each citation. Perl's `\lx@NAT@parselabel` splits the label's
+trailing digits off as a year (natbib.sty.ltxml:576-581) and numbers the entry by its counter. Minimal trigger:
+`\usepackage[numbers]{natbib}` … `\citep{k1,k2,k3}` with `\bibitem[Knu84]{k1} \bibitem[Lam86]{k2} \bibitem[Mil90]{k3}`
+(first in the list): pdflatex "[Knu84, Lam86, Mil90]", Perl 0.8.8 "[1, 2, 3]". Fixed in Rust (78j r2): in the numbers
+and super modes such a label is the entry's number (natbib_sty.rs `\lx@NAT@parselabel`), never compressed into a range
+(OXIDIZED_DESIGN_DIVERGENCES #844), and not the full authors as well (r3: a `\citet{k}` printed "Knu84 [Knu84]",
+now "Knu84", as an entry without authors prints its number; natbib's "(author?) [Knu84]" is not reproduced); the
+author-year modes keep Perl's split. Witness 2608.05327 ("[21]" → "[FNW23]"). Repros
+index-bib/{natbib_numbers_prints_a_label_given, natbib_numbers_textual_label}; guards
+`perfect_kernel_batch78j::{natbib_numbers_prints_a_label_given, natbib_numbers_textual_label}`.
 
 ## 1077. REVTeX's tables are numbered in arabic
 

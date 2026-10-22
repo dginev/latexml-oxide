@@ -740,7 +740,8 @@ fn renamed_natbib_copies_are_natbib() {
       repro!("natbib_forks/bmvc2k_natbib_is_natbib.tex"),
       "bmvc2k_natbib.sty",
       repro!("natbib_forks/bmvc2k_natbib.sty"),
-      "<cite class=\"ltx_citemacro_cite\">[<bibref bibrefs=\"a\" separator=\",\" show=\"Number\" yyseparator=\",\"/>]</cite>",
+      "<cite class=\"ltx_citemacro_cite\">[<bibref bibrefs=\"a\" class=\"ltx_cite_sort\" separator=\",\" show=\"Number\" \
+       yyseparator=\",\"/>]</cite>",
       "References",
     ),
     (

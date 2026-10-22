@@ -1596,13 +1596,14 @@ fn derivative_package_defines_its_operators() {
 /// arXiv/html_feedback#6876: `\cref` inside math `\text{}` reverted its
 /// inter-word tie to the internal `\lx@tilde` CS in the `tex=` attribute, where
 /// Perl reverts a plain `~`. The `show=` attribute was already `creftype~refnum`
-/// in both engines; only the Semiverbatim `tex=` reversion leaked the CS. Now
-/// byte-matches Perl (`cleveref_sty.rs` emits a catcode-OTHER `~`).
+/// in both engines (`creftype~creflabel` since 78j, the number in cleveref's label
+/// format: OXIDIZED_DESIGN_DIVERGENCES #845); only the Semiverbatim `tex=` reversion
+/// leaked the CS. Now byte-matches Perl (`cleveref_sty.rs` emits a catcode-OTHER `~`).
 #[test]
 fn cleveref_cref_in_math_reverts_tie_as_plain_tilde() {
   let x = convert_to_xml("tests/cluster_regressions/cref_in_math_tilde.tex");
   assert!(
-    x.contains("creftype~refnum"),
+    x.contains("creftype~creflabel"),
     "the cref show/reversion tie is missing:\n{x}"
   );
   assert!(

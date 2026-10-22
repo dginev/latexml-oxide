@@ -28,7 +28,7 @@ fn biblatex_loads_url_not_hyperref() {
     &[(
       "para",
       "S1.p1",
-      r##"<para xml:id="S1.p1"><p xml:id="S1.p1.1">See <ref labelref="LABEL:s" show="creftype~refnum"/>. At <ref class="ltx_nolink ltx_url" font="typewriter" href="https://example.org/a_b">https://example.org/a_b</ref>. NOHYPERREF</p></para>"##,
+      r##"<para xml:id="S1.p1"><p xml:id="S1.p1.1">See <ref labelref="LABEL:s" show="creftype~creflabel"/>. At <ref class="ltx_nolink ltx_url" font="typewriter" href="https://example.org/a_b">https://example.org/a_b</ref>. NOHYPERREF</p></para>"##,
     )],
   );
 }

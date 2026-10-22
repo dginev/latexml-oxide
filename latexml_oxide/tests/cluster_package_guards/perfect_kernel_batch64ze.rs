@@ -250,7 +250,7 @@ fn quantumarticle_revtex_compatibility() {
     &xml,
     "para",
     &["xml:id=\"p1\""],
-    r#"<para xml:id="p1"><p xml:id="p1.1">Body TEXT in Phys. Rev. Lett., see <cite class="ltx_citemacro_citet"><bibref bibrefs="a" separator="," show="Authors Phrase1NumberPhrase2" yyseparator=","><bibrefphrase>[</bibrefphrase><bibrefphrase>]</bibrefphrase></bibref></cite> and <cite class="ltx_citemacro_cite">[<bibref bibrefs="a" separator="," show="Number" yyseparator=","/>]</cite>.</p></para>"#,
+    r#"<para xml:id="p1"><p xml:id="p1.1">Body TEXT in Phys. Rev. Lett., see <cite class="ltx_citemacro_citet"><bibref bibrefs="a" class="ltx_cite_sort ltx_cite_compress" separator="," show="Authors Phrase1NumberPhrase2" yyseparator=","><bibrefphrase>[</bibrefphrase><bibrefphrase>]</bibrefphrase></bibref></cite> and <cite class="ltx_citemacro_cite">[<bibref bibrefs="a" class="ltx_cite_sort ltx_cite_compress" separator="," show="Number" yyseparator=","/>]</cite>.</p></para>"#,
   );
 }
 

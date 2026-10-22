@@ -1,0 +1,14 @@
+% witness: rev78j r2 (cite.sty's order, cite.sty:205-230 \@cite@dump@now: a citation it cannot sort is printed at once)
+% oracle:  pdflatex 0 errors: "A [1–3]. C [Knu84, Lam86, 1]. E [1, 1–3]."
+% engines: rust 78j r1 = "C [1, Knu84, Lam86]"
+% expect:  0 errors; the labels that are not numbers first, in their order
+% status:  RED (78j r1) -> GREEN (78j r2)
+\documentclass{article}
+\usepackage{cite}
+\begin{document}
+A \cite{c,a,b}. C \cite{k1,a,k2}. E \cite{a,a,b,c}.
+\begin{thebibliography}{9}
+\bibitem{a} A. \bibitem{b} B. \bibitem{c} C.
+\bibitem[Knu84]{k1} K1. \bibitem[Lam86]{k2} K2.
+\end{thebibliography}
+\end{document}

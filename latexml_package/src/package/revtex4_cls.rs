@@ -143,6 +143,10 @@ LoadDefinitions!({
   if lookup_string("revtex_cite_style") == "numbers" {
     Digest!("\\PassOptionsToPackage{numbers}{natbib}")?;
   }
+  // revtex4.cls:5480 and revtex4-2.cls:7042 `\RequirePackage[sort&compress]{natbib}`: a citation's numbers sorted, a
+  // run of three or more joined with an en dash ("[1–3]"; natbib_sty.rs, KNOWN_PERL_ERRORS #1072). Guard
+  // `perfect_kernel_batch78j::revtex_citations_sort_and_compress`.
+  Digest!("\\PassOptionsToPackage{sort&compress}{natbib}")?;
   // REVTeX 4.0's own rule for printing a `\preprint` (revtex4_support_sty.rs `preprint_printed`).
   if revtex4_0 {
     assign_value("revtex@preprint@v4.0", true, Some(Scope::Global));

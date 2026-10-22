@@ -1450,7 +1450,7 @@ fn optional_label_after_a_caption_converts() {
     (
       "para",
       "p1",
-      r##"<para xml:id="p1"><p>See <ref labelref="LABEL:alg:a" show="creftype~refnum"/>.</p></para>"##,
+      r##"<para xml:id="p1"><p>See <ref labelref="LABEL:alg:a" show="creftype~creflabel"/>.</p></para>"##,
     ),
     (
       "figure",

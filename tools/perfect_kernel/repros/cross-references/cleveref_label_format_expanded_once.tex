@@ -1,0 +1,12 @@
+% witness: rev78j r2 (2506.11592 `\creflabelformat{enumi}{label*=\arabic*}`)
+% oracle:  pdflatex 1 error ("Missing number, treated as zero", where \cref{it1} typesets the format): "P item label*=0."
+% engines: rust 78j r1 = 4 Warnings (the format expanded twice: the plain-number test, then the tag)
+% expect:  0 errors; 2 Warnings (\c@* not a register, counter `*' undefined: one expansion, for the one reference)
+% status:  RED (78j r1) -> GREEN (78j r2)
+\documentclass{article}
+\usepackage{cleveref}
+\creflabelformat{enumi}{label*=\arabic*}
+\begin{document}
+\begin{enumerate}\item A\label{it1}\item B\label{it2}\end{enumerate}
+P \cref{it1}.
+\end{document}

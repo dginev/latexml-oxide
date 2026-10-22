@@ -1,0 +1,18 @@
+% witness: rev78j3 k6 (two captioned minipages in a figure, the panels `ltx:figure class="ltx_figure_panel
+%          ltx_minipage"`; the format of 2008.12750, 2604.24399)
+% oracle:  pdflatex 2 errors, both at \Cref{fa} ("Argument of \@declaredcolor has an extra }" + "Paragraph ended
+%          before \@declaredcolor was complete", one runaway argument); "A Fig. 1. B Fig. 2. C blueFig. 1."
+% engines: rust 78j r3 = 0 errors, two empty `<tag role="crefformatcap"/>` and two `<tag role="creflabel"/>` left in
+%          the panels: the folded panels never closed over their held tags, which were never tied to the labels
+% expect:  1 error, at \Cref{fa}, which prints cleveref's default "Figure 1"; no empty tag in the panels
+% status:  RED (78j r3) -> GREEN (78j r4)
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage{cleveref}
+\crefformat{figure}{#2\color{blue}Fig.~#1#3}
+\begin{document}
+\begin{figure}
+\begin{minipage}{4cm}x\caption{left}\label{fa}\end{minipage}\hfill\begin{minipage}{4cm}y\caption{right}\label{fb}\end{minipage}
+\end{figure}
+A \cref{fa}. B \cref{fb}. C \Cref{fa}.
+\end{document}

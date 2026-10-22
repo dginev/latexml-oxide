@@ -692,7 +692,7 @@ See \cref{e} and \cref{f}.
     &[(
       "equation",
       "S0.E1",
-      r#"<equation labels="LABEL:e" xml:id="S0.E1"><tags><tag>(1)</tag><tag role="creftype">equation</tag><tag role="creftypecap">EQUATION</tag><tag role="creftypeplural">equations</tag><tag role="creftypepluralcap">EQUATIONS</tag><tag role="refnum">1</tag></tags><Math mode="display" tex="a" text="a" xml:id="S0.E1.m1"><XMath xml:id="S0.E1.m1.1"><XMTok font="italic" role="UNKNOWN">a</XMTok></XMath></Math></equation>"#,
+      r#"<equation labels="LABEL:e" xml:id="S0.E1"><tags><tag>(1)</tag><tag role="creflabel">(1)</tag><tag role="creftype">equation</tag><tag role="creftypecap">EQUATION</tag><tag role="creftypeplural">equations</tag><tag role="creftypepluralcap">EQUATIONS</tag><tag role="refnum">1</tag></tags><Math mode="display" tex="a" text="a" xml:id="S0.E1.m1"><XMath xml:id="S0.E1.m1.1"><XMTok font="italic" role="UNKNOWN">a</XMTok></XMath></Math></equation>"#,
     )],
   );
 }

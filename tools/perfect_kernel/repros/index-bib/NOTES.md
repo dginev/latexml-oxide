@@ -641,3 +641,16 @@ text in `\NAT@open`/`\NAT@close`; natbib_sty.rs now does.
 field by `\def`, typeset only where the entry is used; glossaries_sty.rs digests every field into
 `<ltx:glossarydefinition>`. Fix: `\lx@glossaries@newentry` holds the digest's diagnostics and defers them to
 `glossary:<key>`, replayed for an entry referenced in a document that prints a glossary (OXIDIZED_DESIGN_DIVERGENCES #859).
+
+`natbib_sort_compress_numbers`, `natbib_super_sort_compress`, `cite_sty_sorts_and_compresses`,
+`cite_sty_nosort_keeps_the_order`, `revtex_citations_sort_and_compress`, `acmart_numeric_citations_sort_and_compress`
+(78j, KNOWN_PERL_ERRORS #1072, OXIDIZED_DESIGN_DIVERGENCES #844; PERL-ORIGIN): natbib's `sort`/`compress` options
+(natbib.sty:267-271, :377, :401-421) and cite.sty's default order (cite.sty:95, :272-297) were no-ops. The package's
+choice is a `class` on the `ltx:bibref` (`ltx_cite_sort`, `ltx_cite_compress`; sect11.rs `cite_order_class`), applied
+by latexml_post crossref.rs `make_bibcite`, where the numbers are known: by number, a run of three or more as an en
+dash range, a run of two kept. revtex4*, achemso, acmart (its own `\setcitestyle`), jheppub and quantumarticle ask for it.
+
+`cite_sty_prints_unsorted_labels_first` (78j r2; PERL-ORIGIN, KNOWN_PERL_ERRORS #1072): cite.sty prints a key it cannot
+sort (a label not a number, an undefined key) at once, before the sorted ones (cite.sty:205-230 `\@cite@dump@now`):
+the class `ltx_cite_unsorted_first`. `natbib_numbers_prints_a_label_given` (78j r2; PERL-ORIGIN, KNOWN_PERL_ERRORS
+#1075): in natbib's numbers mode a label with no `(year)` and no `, ` is the number (natbib.sty:811-817, :1005-1012).

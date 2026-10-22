@@ -1,0 +1,19 @@
+% witness: rev78j r2 (2004.14422 `\crefformat{equation}{#2#1#3}`, 2312.00252, 2406.15983 `\Crefformat` in a .sty)
+% oracle:  pdflatex 0 errors: "P 1. Q Equation 1. R 1. U section [1]. V [1]." (cleveref.sty:1851, :1886-1906: the
+%          document's \crefformat/\Crefformat replace the whole reference, #1 the number, #2/#3 the link's ends;
+%          \labelcref of a type whose \crefformat the document set prints \labelcref@default@format, the bare number)
+% engines: rust 78j r1 = "P eq. (1). Q Equation (1). R (1). U section [1]. V [1]."
+% expect:  0 errors; the document's formats, the label format only where none is set
+% status:  RED (78j r1) -> GREEN (78j r2)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{cleveref}
+\crefformat{equation}{#2#1#3}
+\Crefformat{equation}{Equation~#2#1#3}
+\crefname{figure}{Fig.}{Figs.}
+\creflabelformat{section}{[#2#1#3]}
+\begin{document}
+\section{Intro}\label{s1}
+\begin{equation}a=b\label{e1}\end{equation}
+P \cref{e1}. Q \Cref{e1}. R \labelcref{e1}. U \cref{s1}. V \labelcref{s1}.
+\end{document}

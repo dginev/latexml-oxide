@@ -1,0 +1,22 @@
+% witness: rev78j3 k2 (an item's derived \Cref form built inside a tabular cell's minipage)
+% oracle:  pdflatex 2 errors, both at \Cref{i1} ("Argument of \@declaredcolor has an extra }" + "Paragraph ended
+%          before \@declaredcolor was complete", one runaway argument): the rows "x | 1. y" and "z | w";
+%          "A eq. (1). B eq. (2). C It. 1. D blueIt. 1."
+% engines: rust 78j r3 = "Missing } inserted" + "Extra alignment tab '&'", the row's `\\` swallowed: the form's open `{`
+%          stayed counted in the alignment brace count
+% expect:  1 error, for the \Cref form that leaves a group open (TeX's two errors are one runaway argument), raised at
+%          its reference, which prints cleveref's default "Item 1"; the two rows whole
+% status:  RED (78j r3) -> GREEN (78j r4)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{cleveref}
+\crefformat{enumi}{#2\color{blue}It.~#1#3}
+\begin{document}
+\begin{align}a&=b\label{e1}\\ c&=d\label{e2}\end{align}
+\begin{tabular}{ll}
+x & \begin{minipage}{3cm}\begin{enumerate}\item\label{i1} y\end{enumerate}\end{minipage}\\
+z & w
+\end{tabular}
+A \cref{e1}. B \cref{e2}. C \cref{i1}. D \Cref{i1}.
+\end{document}

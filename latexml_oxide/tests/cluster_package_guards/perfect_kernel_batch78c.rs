@@ -254,7 +254,8 @@ fn acmart_citations_are_numeric_by_default() {
       "p",
       "p1.1",
       "<p xml:id=\"p1.1\">See <cite class=\"ltx_citemacro_citep\">[\
-         <bibref bibrefs=\"b,a\" separator=\",\" show=\"Number\" yyseparator=\",\"/>]</cite>.</p>",
+         <bibref bibrefs=\"b,a\" class=\"ltx_cite_sort ltx_cite_compress\" separator=\",\" show=\"Number\" \
+         yyseparator=\",\"/>]</cite>.</p>",
     )],
   );
   assert_clean(
@@ -264,7 +265,8 @@ fn acmart_citations_are_numeric_by_default() {
       "p",
       "p1.1",
       "<p xml:id=\"p1.1\">See <cite class=\"ltx_citemacro_citep\">[\
-         <bibref bibrefs=\"a\" separator=\";\" show=\"AuthorsPhrase1Year\" yyseparator=\",\"><bibrefphrase> \
+         <bibref bibrefs=\"a\" class=\"ltx_cite_sort ltx_cite_compress\" separator=\";\" \
+         show=\"AuthorsPhrase1Year\" yyseparator=\",\"><bibrefphrase> \
          </bibrefphrase></bibref>]</cite>.</p>",
     )],
   );

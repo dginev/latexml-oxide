@@ -24,9 +24,13 @@ LoadDefinitions!({
         let mut data_lock = data.borrow_mut();
         if let Some(colspec) = data_lock.current_column() {
           let rowspan_f = nrows.value_f64();
+          // A negative count spans the rows above (multirow.sty:172), done where the alignment is normalized
+          // (latexml_core alignment/normalize.rs `normalize_upward_spans`, which warns when the cells above are not
+          // empty); Perl's binding warns and spans one row (multirow.sty.ltxml:28, example arXiv:2210.15835
+          // `\multirow{-8.2}{*}{\includegraphics…}`; KNOWN_PERL_ERRORS #1074). Witness 1509.00049.
+          // (a fraction of a row is the box's raise, which spans the whole rows: one Warning at most, the span's)
           let rowspan = if rowspan_f < 0.0 {
-            Warn!("unsupported", "multirow",
-              "Negative row sizes for \\multirow are not yet supported.");
+            colspec.rowspan_up = Some(-rowspan_f as usize);
             1usize
           } else if rowspan_f != rowspan_f.floor() {
             Warn!("unsupported", "multirow",

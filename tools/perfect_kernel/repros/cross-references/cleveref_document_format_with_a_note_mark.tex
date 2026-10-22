@@ -1,0 +1,24 @@
+% witness: rev78j r2 A/B (1601.06262, 1711.01177, 2005.13962, 2008.04624 `\crefformat{footnote}{#2\footnotemark[#1]#3}`;
+%          1905.03839 `\crefformat{fact}{Fact~\ensuremath{#2#1#3}}`; 2608.12136 a format computing with xstring)
+% oracle:  pdflatex 0 errors: "A Fact 1. B (1). C ¹. D Lemma 1 (with (1))." (each format typeset at the \cref)
+% engines: rust 78j r2 before the fix = Fatal Stomach:Recursion (the footnote's form made a mark, whose forms made a
+%          mark again); int51a/r1 = "footnote 1"
+% expect:  0 errors; "Fact 1", "(1)"; a format that typesets a numbered object of its own (the mark), or computes (a
+%          \cref of its own), gives no form: cleveref's defaults "footnote 1", "lemma 1" (OXIDIZED_DESIGN_DIVERGENCES #845)
+% status:  RED (78j r2 wip) -> GREEN (78j r2)
+\documentclass{article}
+\usepackage{amsmath,amsthm}
+\usepackage{cleveref}
+\newtheorem{fact}{Fact}
+\newtheorem{lemma}{Lemma}
+\crefformat{fact}{Fact~\ensuremath{#2#1#3}}
+\crefformat{equation}{\ensuremath{(#2#1#3)}}
+\crefformat{footnote}{#2\footnotemark[#1]#3}
+\crefformat{lemma}{Lemma~#2#1#3 (with \cref{e1})}
+\begin{document}
+\begin{fact}\label{f1}A fact.\end{fact}
+\begin{lemma}\label{l1}A lemma.\end{lemma}
+\begin{equation}a=b\label{e1}\end{equation}
+Text\footnote{A note.\label{fn1}} more.
+A \cref{f1}. B \cref{e1}. C \cref{fn1}. D \cref{l1}.
+\end{document}

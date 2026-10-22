@@ -31,6 +31,10 @@ pub struct Cell {
   pub colspan:             Option<usize>,
   pub colspanned:          Option<usize>,
   pub rowspan:             Option<usize>,
+  /// The rows a negative `\multirow{-n}` spans, this one and the n-1 above it (multirow.sty:172 raises the box over
+  /// them): `normalize_upward_spans` moves the content to the top row with that `rowspan` when the cells above are
+  /// empty.
+  pub rowspan_up:          Option<usize>,
   pub rowspanned:          Option<usize>,
   pub boxes:               Option<Digested>,
   pub cell_type:           Option<char>,

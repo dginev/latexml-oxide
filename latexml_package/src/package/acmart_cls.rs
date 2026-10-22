@@ -46,6 +46,9 @@ yysep={,},notesep={, }}}
 \newcommand{\bibstyle@acmnumeric}{\setcitestyle{numbers,sort&compress,open={[},close={]},citesep={,},notesep={, }}}");
   if acmart_natbib_option()? {
     AssignValue!("natbib.sty:requested_by_binding" => false, Some(Scope::Global));
+    // acmart.cls:306-345 renews `\setcitestyle` to read natbib's ordering words too (`sort`, `nosort`, `compress`,
+    // `nocompress`, `sort&compress`): `acmnumeric` sorts and compresses, "[1–3]" (natbib_sty.rs `\setcitestyle`).
+    AssignValue!("natbib@setcitestyle@orders" => true, Some(Scope::Global));
     RawTeX!(r"\citestyle{acmnumeric}");
   }
   RequirePackage!("textcomp");

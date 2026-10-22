@@ -1,0 +1,20 @@
+% witness: 1509.00049 (42 `\multirow{-n}` Warnings); sel78i item 5 (151/30k papers, 1,132 uses: the colortbl idiom)
+% oracle:  pdflatex 0 errors: "Up" set over rows 1-2, "Low" over rows 3-5 (multirow.sty:172 raises the box)
+% engines: rust int50a = 2 Warning:unsupported:multirow, "Up"/"Low" in the last row of each span, rowspan 1
+%          (multirow_sty.rs:24-31; Perl multirow.sty.ltxml:28 alike)
+% expect:  0 errors, 0 warnings; row 1's first cell "Up" rowspan="2", row 3's "Low" rowspan="3", each row's colour kept
+% status:  RED (int50a) -> GREEN (78j)
+\documentclass{article}
+\usepackage{multirow,colortbl,xcolor}
+\begin{document}
+\begin{tabular}{lcc}
+\hline
+ & a & b \\
+\multirow{-2}{*}{Up} & c & d \\
+\hline
+\rowcolor{gray!20} & e & f \\
+\rowcolor{gray!20} & g & h \\
+\rowcolor{gray!20} \multirow{-3}{*}{Low} & i & j \\
+\hline
+\end{tabular}
+\end{document}

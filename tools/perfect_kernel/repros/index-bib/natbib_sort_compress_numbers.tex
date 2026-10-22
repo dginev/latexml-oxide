@@ -1,0 +1,15 @@
+% witness: sel78i item 3 (576/30k papers pass natbib a sort option; revtex4*, achemso and acmart pass sort&compress)
+% oracle:  pdflatex 0 errors: "X [1–3], Able [1], [2, p. 2], [1, 3]." (natbib.sty:267-271, :377 \NAT@sort@cites, :401)
+% engines: rust int50a = "[3, 1, 2]" (the options no-ops, natbib_sty.rs:498-500; Perl natbib.sty.ltxml:69-71 alike)
+% expect:  0 errors; the first citation "[1–3]", \citet "Able [1]", the two-key run "[1, 3]"
+% status:  RED (int50a) -> GREEN (78j)
+\documentclass{article}
+\usepackage[numbers,sort&compress]{natbib}
+\begin{document}
+X \citep{c,a,b}, \citet{a}, \citep[p.~2]{b}, \cite{a,c}.
+\begin{thebibliography}{9}
+\bibitem[Able(2001)]{a} A. Able, 2001.
+\bibitem[Baker(2002)]{b} B. Baker, 2002.
+\bibitem[Cole(2003)]{c} C. Cole, 2003.
+\end{thebibliography}
+\end{document}

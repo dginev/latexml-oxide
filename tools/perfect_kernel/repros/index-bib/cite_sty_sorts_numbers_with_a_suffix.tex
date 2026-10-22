@@ -1,0 +1,22 @@
+% witness: rev78j2 cs1 (cite.sty `[prefix]number[suffix]` labels)
+% oracle:  pdflatex 0 errors: "A [1, 2a, 7]. B [Knu84, 2, 3]. C [4a-4c]." (cite.sty:127-222 sort numbers,
+%          :266-297 runs of consecutive suffixes)
+% engines: rust 78j r2 = "A [2a, 1, 7]. C [4b, 4a, 4c]."
+% expect:  0 errors; as pdflatex
+% status:  RED (78j r2) -> GREEN (78j r3)
+\documentclass{article}
+\usepackage{cite}
+\begin{document}
+A \cite{x2,a,y}. B \cite{k,c,b}. C \cite{p4,p3,p5}.
+\begin{thebibliography}{99}
+\bibitem[Knu84]{k} K
+\bibitem{a} A
+\bibitem{b} B
+\bibitem{c} C
+\bibitem[2a]{x2} X
+\bibitem[7]{y} Y
+\bibitem[4a]{p3} P
+\bibitem[4b]{p4} P
+\bibitem[4c]{p5} P
+\end{thebibliography}
+\end{document}

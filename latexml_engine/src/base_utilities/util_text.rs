@@ -171,6 +171,11 @@ pub(super) fn lookup_mapping_int(map: &str, key: &str) -> i64 {
   }
 }
 
+// (the count of empty held tags a target has yet to settle is the job's deferred diagnostics', reset with them)
+pub use latexml_core::util::logger::{
+  empty_held_tags_pending, note_empty_held_tag, take_empty_held_tag,
+};
+
 /// The `\lx@tag@intags` whatsit a held tag digested to (`\lx@tag@intags@held`): the digested box itself, or the
 /// first such whatsit of its list.
 pub(super) fn held_tag_whatsit(tag: &Digested) -> Option<Digested> {

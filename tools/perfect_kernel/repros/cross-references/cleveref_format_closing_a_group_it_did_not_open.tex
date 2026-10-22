@@ -1,0 +1,15 @@
+% witness: rev78j3 g2 (a format ending in `\egroup`)
+% oracle:  pdflatex 1 error at \cref{f1} ("Extra }, or forgotten \endgroup"); "Before still italic. Upright here.
+%          A Fig. 1."
+% engines: rust 78j r3 = 0 errors: `\egroup`, a command let to `}`, made the format "not text", no form was built and
+%          its error was never raised
+% expect:  1 error, at \cref{f1}, which prints cleveref's default "fig. 1"; the italic group as the author closed it
+% status:  RED (78j r3) -> GREEN (78j r4)
+\documentclass{article}
+\usepackage{cleveref}
+\crefformat{figure}{#2Fig.~#1#3\egroup}
+\begin{document}
+{\itshape Before \begin{figure}x\caption{c}\label{f1}\end{figure} still italic.}
+Upright here.
+A \cref{f1}.
+\end{document}

@@ -1,0 +1,20 @@
+% witness: rev78j2 lc2 (`\crefformat{figure}{F & #2#1#3}`), col2's derived \Cref variant (2008.12750, 2604.24399)
+% oracle:  pdflatex 3 errors, all at the references: "Misplaced alignment tab character &" at \cref{f1} ("F 1"),
+%          "Argument of \@declaredcolor has an extra }" + "Paragraph ended" at \Cref{t2}; "A F 1. B Tab. 1."
+% engines: rust 78j r2 = 6 "Stray alignment" Errors (every figure's two forms) + 2 group Errors, the table unended
+% expect:  2 errors, raised where a reference prints the form: the stray & (dropped, "F 1"), the \Cref form that leaves
+%          a group open (the reference prints cleveref's default "Table 2")
+% status:  RED (78j r2) -> GREEN (78j r3)
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage{cleveref}
+\crefformat{figure}{F & #2#1#3}
+\crefformat{table}{#2\color{blue}Tab.~#1#3}
+\begin{document}
+\begin{figure}x\caption{c}\label{f1}\end{figure}
+\begin{figure}x\caption{c}\label{f2}\end{figure}
+\begin{figure}x\caption{c}\label{f3}\end{figure}
+\begin{table}x\caption{c}\label{t1}\end{table}
+\begin{table}x\caption{c}\label{t2}\end{table}
+A \cref{f1}. B \cref{t1}. C \Cref{t2}.
+\end{document}

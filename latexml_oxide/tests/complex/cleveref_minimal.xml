@@ -12,6 +12,7 @@
       <equation labels="LABEL:eqn:1" xml:id="S0.E1">
         <tags>
           <tag>(1)</tag>
+          <tag role="creflabel">(1)</tag>
           <tag role="creftype">eq.</tag>
           <tag role="creftypecap">Equation</tag>
           <tag role="creftypeplural">eqs.</tag>
@@ -81,6 +82,7 @@
       <equation labels="LABEL:eqn:2" xml:id="S0.E2">
         <tags>
           <tag>(2)</tag>
+          <tag role="creflabel">(2)</tag>
           <tag role="creftype">eq.</tag>
           <tag role="creftypecap">Equation</tag>
           <tag role="creftypeplural">eqs.</tag>
@@ -150,6 +152,7 @@
       <equation labels="LABEL:eqn:3" xml:id="S0.E3">
         <tags>
           <tag>(3)</tag>
+          <tag role="creflabel">(3)</tag>
           <tag role="creftype">eq.</tag>
           <tag role="creftypecap">Equation</tag>
           <tag role="creftypeplural">eqs.</tag>
@@ -219,6 +222,7 @@
       <equation labels="LABEL:eqn:4" xml:id="S0.E4">
         <tags>
           <tag>(4)</tag>
+          <tag role="creflabel">(4)</tag>
           <tag role="creftype">eq.</tag>
           <tag role="creftypecap">Equation</tag>
           <tag role="creftypeplural">eqs.</tag>
@@ -288,7 +292,7 @@
     </equationgroup>
   </para>
   <para class="ltx_noindent" xml:id="p2">
-    <p>Range example: <ref labelref="LABEL:eqn:1" show="creftypeplural refnum"/> to <ref labelref="LABEL:eqn:4"/></p>
+    <p>Range example: <ref labelref="LABEL:eqn:1" show="creftypeplural creflabel"/> to <ref labelref="LABEL:eqn:4" show="creflabel"/></p>
   </para>
   <figure inlist="lof" labels="LABEL:fig:1" placement="ht" xml:id="S0.F1">
     <tags>
@@ -305,6 +309,6 @@
     <caption class="ltx_centering"><tag close=": ">Figure 1</tag>First figure</caption>
   </figure>
   <para class="ltx_noindent" xml:id="p3">
-    <p>Mixed references example: <ref labelref="LABEL:eqn:1" show="creftypeplural~refnum"/>, <ref labelref="LABEL:eqn:3" show="refnum"/>, <ref labelref="LABEL:eqn:4" show="refnum"/> and <ref labelref="LABEL:fig:1" show="refnum"/></p>
+    <p>Mixed references example: <ref labelref="LABEL:eqn:1" show="creftypeplural~creflabel"/>, <ref labelref="LABEL:eqn:3" show="creflabel"/>, <ref labelref="LABEL:eqn:4" show="creflabel"/> and <ref labelref="LABEL:fig:1" show="creflabel"/></p>
   </para>
 </document>

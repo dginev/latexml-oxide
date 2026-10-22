@@ -22,7 +22,10 @@ LoadDefinitions!({
   // document loads xcolor itself; color/definecolor stay via hyperref->color.
   // See ifacconf_cls.rs and SYNC_STATUS (eager-xcolor cluster).
   RequirePackage!("hyperref");
-  RequirePackage!("natbib");
+  // achemso.cls:1396-1398 `\RequirePackage[sort&compress,numbers,super]{natbib}` (`round` for a non-superscript
+  // journal): a citation's numbers sorted and compressed ("1–3"; natbib_sty.rs, KNOWN_PERL_ERRORS #1072). The
+  // numeric styles are not passed: the binding's citations stay as before.
+  RequirePackage!("natbib", options => vec![s!("sort&compress")]);
   // achemso uses setspace internally; user papers also call
   // \singlespacing / \doublespacing in preambles. Witness 2503.21357.
   RequirePackage!("setspace");

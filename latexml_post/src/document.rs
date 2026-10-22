@@ -1672,6 +1672,19 @@ impl PostDocument {
     }
   }
 
+  /// Replace `node` by its children, which keep their ids (moved, not copied), and remove it as [`remove_nodes`]
+  /// does.
+  ///
+  /// [`remove_nodes`]: Self::remove_nodes
+  pub fn unwrap_node(&mut self, node: &Node) {
+    let mut wrapper = node.clone();
+    for mut child in wrapper.get_child_nodes() {
+      child.unlink_node();
+      wrapper.add_prev_sibling(&mut child).ok();
+    }
+    self.remove_nodes(&[wrapper]);
+  }
+
   /// Prepend `nodes` as the first children of `parent`.
   ///
   /// Port of `Post::Document::prependNodes`.

@@ -58,11 +58,22 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // 1001) after `neutralizeFont`, whose OT1 leaves ASCII alone; the neutral font here keeps the document's encoding
   // (`neutralize_font`), and under babel greek's LGR (`\selectlanguage{greek}`, greek.ldf:151-153) a digested `refnum`
   // read back `ρεφνυμ`. Guard `perfect_kernel_batch60::identifiers_are_not_font_decoded`.
-  let remove_empty_element_2 = remove_empty_element.clone();
+  // (an empty tag holding diagnostics, `_deferred`, stays until its target, or the document's end, ties them to its
+  // labels: `note_empty_held_tag`)
   DefConstructor!("\\lx@tag@intags OptionalUndigested {}", "<ltx:tag role='#1' _deferred='#deferred'>#2</ltx:tag>",
     mode => "restricted_horizontal",
     before_digest => sub { neutralize_font(); },
-    after_construct => remove_empty_element_2
+    after_construct => sub[document, _whatsit] {
+      if let Some(node) = document.get_node().get_last_child()
+        && node.get_first_child().is_none()
+      {
+        if node.has_attribute("_deferred") {
+          note_empty_held_tag();
+        } else {
+          document.remove_node(node);
+        }
+      }
+    }
   );
   // A tag typeset only where a reference prints it — hyperref's `autoref` name (`type_tag_deferred`): TeX expands
   // `\<type>autorefname` only in `\autoref` (hyperref.sty:8202-8278), so the name's diagnostics belong there. Built
@@ -74,8 +85,26 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefPrimitive!("\\lx@tag@intags@held[]{}", sub[(role, stuff)] {
     let role = role.unwrap_or_default();
     let hold = util::logger::DiagnosticsHold::begin();
-    let tag = digest(Invocation!(T_CS!("\\lx@tag@intags"), vec![role, stuff]))?;
-    if hold.is_empty() {
+    // (the tag's text is not the document's input: digested in a group of its own, which undoes what it leaves open,
+    // the alignment brace count too; a text that does not close what it opens errs with the tag, as at a reference)
+    let (tag, balance) = digest_in_own_group(|| {
+      digest(Invocation!(T_CS!("\\lx@tag@intags"), vec![role.clone(), stuff]))
+    })?;
+    let tag = tag?;
+    // (one Error per text: a text whose own typesetting already erred — "Attempt to end mode", the `}` TeX inserts —
+    // raises no summary of the same fault, as `\lx@cref@docformat` does; guard
+    // `perfect_kernel_batch78j::autoref_name_opening_a_group_errs_once`)
+    if balance != 0 && hold.errors_raised() == 0 {
+      Error!(
+        "unexpected",
+        role.to_string(),
+        s!("The text of the {role} tag does not close the groups it opens"),
+        get_source_location().unwrap_or_default()
+      );
+    }
+    // (a tag whose typesetting raised only Debug messages, which are counted but never written, holds nothing: the
+    // plain label format's empty `creflabel` tag is removed where it is built)
+    if hold.is_empty_but_debug() {
       hold.commit();
     } else if let Some(whatsit) = held_tag_whatsit(&tag)
       && let DigestedData::Whatsit(w) = whatsit.data()

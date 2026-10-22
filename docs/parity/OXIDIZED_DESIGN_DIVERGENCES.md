@@ -23237,6 +23237,185 @@ class's own printing, the e-mail it names an `email` contact already. bmcart.cls
 Repro sectioning-frontmatter/bmcart_copy (a stand-in bmcart.cls written from scratch); guard
 `perfect_kernel_batch78m::bmcart_frontmatter_is_frontmatter`.
 
+### 844. A citation's ordering is a class on its `ltx:bibref`, applied where the numbers are known
+
+natbib's `sort`/`compress`/`sort&compress` (natbib.sty:267-271; `\NAT@sort@cites`, :377 and :1185-1200; the run
+compressed in `\NAT@citexnum`, :401-421) and cite.sty (sorts and compresses unless `nosort`/`nocompress`, cite.sty:95,
+:272-297, :412, :415) order a citation's numbers when they typeset it, from the `.aux`. LaTeXML numbers the bibliography
+after the document, so the order is applied by the post stage: the `\@@bibref` constructor (sect11.rs
+`cite_order_class`) writes the package's choice, the values `CITE_SORT`/`CITE_COMPRESS`, as `class="ltx_cite_sort
+ltx_cite_compress"` on the `ltx:bibref` (the schema's `Common.attributes` class: no new attribute; the bibref is
+replaced by its citation in post, so the class never reaches the HTML), and `make_bibcite` (crossref.rs) sorts the
+entries by number (those without a whole number after them, in their order, as natbib's `\NAT@nonsort@list`) and, for a
+bare-number citation (`show` Number/refnum/Super: `\citep`, `\cite`, a superscript one; not natbib's textual `\citet`,
+which natbib does not compress), joins each run of three or more consecutive numbers with an en dash, a run of two with
+the separator ("[1–3]", "[1, 2]"; a superscript range inside its superscript). Who sets the values: natbib's options
+(also on a later `\usepackage[…]{natbib}` after a binding's early load, `\lx@natbib@repeat@options`; a cite.sty loaded
+first is natbib's `sort`, natbib.sty:272-274); cite.sty's binding (its 16 options declared, `nosort`/`nocompress`
+acting); revtex4/4-1/4-2 (`\PassOptionsToPackage{sort&compress}{natbib}`, revtex4.cls:5480, revtex4-1.cls:7021,
+revtex4-2.cls:7042); achemso.cls (:1396-1398, the binding passes `sort&compress` alone: its numeric style is not the
+binding's yet); acmart, whose own `\setcitestyle` (acmart.cls:306-345) reads the ordering words that natbib's ignores
+(`natbib@setcitestyle@orders`), so its default `\citestyle{acmnumeric}` sorts and compresses; jheppub and
+quantumarticle, which already passed `sort&compress`. cite.sty prints a key it cannot sort (a label not a number, an
+undefined key) at once, before the sorted ones (cite.sty:205-230 `\@cite@dump@now`, `\@cite@gobbledump@now`): its
+binding adds `ltx_cite_unsorted_first` (`CITE_UNSORTED_FIRST`, which natbib's load clears), "[Knu84, Lam86, 1]".
+Under that class the entries sort by cite.sty's own sort numbers (crossref.rs `cite_sty_sort_key`, cite.sty:127-222): a
+number `n` is `256n`, a `[prefix]number[suffix]` label one character each `(16384p + n)·256 + s` ("2a" between 2 and 3:
+"[1, 2a, 7]"), number-separator-number `((16384p + n)·256 + sep)·4096 + m`; a run compresses by cite.sty's two kinds
+(:266-297 `\@compress@cite`): consecutive numbers (256 apart) or consecutive suffixes of one number (1 apart, "[4a–4c]").
+Only whole numbers compress, so a label given in natbib's numbers mode ("[Knu84, Lam86, Mil90]", below and natbib_sty.rs
+`\lx@NAT@parselabel`) stays a list; such a label is the number only, not the full authors as well (a `\citet{k}`
+printed "Knu84 [Knu84]"; it prints "Knu84" as an entry without authors prints its number, natbib's "(author?)" not
+reproduced; witness 2608.05327 "[21]" → "[FNW23]"). Perl ignores all of it (KNOWN_PERL_ERRORS #1072). Repros index-bib/{natbib_sort_compress_numbers,
+natbib_super_sort_compress, cite_sty_sorts_and_compresses, cite_sty_nosort_keeps_the_order,
+cite_sty_prints_unsorted_labels_first, revtex_citations_sort_and_compress, acmart_numeric_citations_sort_and_compress,
+natbib_numbers_prints_a_label_given, cite_sty_sorts_numbers_with_a_suffix, natbib_numbers_textual_label}; guards
+`perfect_kernel_batch78j::{natbib_sort_compress_numbers,
+natbib_super_sort_compress, cite_sty_sorts_and_compresses, cite_sty_nosort_keeps_the_order,
+cite_sty_prints_unsorted_labels_first, revtex_citations_sort_and_compress, acmart_numeric_citations_sort_and_compress,
+natbib_numbers_prints_a_label_given, cite_sty_sorts_numbers_with_a_suffix, natbib_numbers_textual_label}`,
+`crossref::tests::{compressed_joints_join_runs_of_three, cite_sty_sort_keys_and_runs}`.
+
+### 845. cleveref's label format and the document's reference formats are tag forms built with the target
+
+cleveref formats the number a `\cref` prints with the type's label format, `\cref@<type>@label` from `\creflabelformat`
+(cleveref.sty:1270-1272), else `\cref@default@label` (`\crefdefaultlabelformat`, :1264-1265), applied when the reference
+is typeset (`\@crefconstructcomponents`, :1329-1334): an equation's "(1)" (:7838-7842). Ours (cleveref_sty.rs): a
+`creflabel` tag role (`type_tag_formatter`, `\lx@creflabel@@`) formats the target's refnum with that macro where the
+target's tags are built (base_utilities `tag_forms`), as the type names are (OD #131, ruling 7e) — only for a type whose
+format does not print the number as it is (read from the format's definition, body `#2#1#3`, so the format is expanded
+once, where the tag is built; a plain type has no such tag and its refnum is the form), its diagnostics held until a
+reference prints it (`type_tag_deferred`, as hyperref's `autoref`: 2506.11592's malformed, never-referenced
+`\creflabelformat{enumi}{label*=\arabic*}` raised 96 Warnings); `\cref`, `\Cref`, `\labelcref` and both ends of
+`\crefrange`/`\Crefrange` show it (the range's second end was a `\ref`), the page references (`\cpageref`,
+`\labelcpageref`) keep the refnum; the post stage falls back to `refnum` for a target without the tag (crossref.rs
+`ref_fallbacks`), and a tooltip treats it as the refnum it formats (`generate_title`'s duplicate test).
+
+A reference format the document sets replaces the whole reference: `\crefformat`/`\Crefformat{<type>}{<format>}`
+(cleveref.sty:1851, :1886-1906; `#1` the number, `#2`/`#3` the link's ends, :1047-1071 `\@@setcref`) and the
+multi-reference `\crefmultiformat`/`\Crefmultiformat` (:1855-1858, `first`/`second`/`middle`/`last`, each holding its
+conjunction, :1000-1018) are what pdflatex prints, with none of cleveref's names or label format; cleveref builds the
+format of every other type from its names and label format at `\begin{document}` (:8020-8032 `\@crefdefineformat`),
+which is our `creftype~creflabel`. Which formats the document set is noted as they are set (`\@crefformat`,
+`\@crefmultiformat`, `\labelcrefformat` wrapped, `\lx@cref@noteformat`, map `cref_doc_format`), cleveref's own
+`\begin{document}` code, which builds the defaults, bracketed out (`\lx@cref@building`, a hook before the file's and one
+after; the builders themselves are left as they are, which packages patch: clevethm's `\patchcmd\@crefdefineformat`,
+2608.12136), the other variant with one when cleveref derives it (:1888-1904, `\cref@othervariant`), and a copy
+cleveref makes of one for a sub-type (`\@crefcopyformats`, :8035-8046: the section's `\S#2#1#3` is the subsection's,
+`cref_note_copy`); a name `\csname` made `\relax` is undefined, as `\@ifundefined` reads it (`cref_defined`). Each such format is a tag form of its own at the target
+(`crefformat`, `crefformatcap`, `labelcrefformat`, `crefmulti{first,firstcap,second,middle,last}`; `\lx@cref@docformat`,
+held like `creflabel`; the family's roles registered by the first format the document sets, so a document that sets
+none builds none), whole inside the link (pdflatex links only `#1`), the number one group (`{{<refnum>}}`, as
+cleveref's `#1` is one macro: the derived `\MakeUppercase#2#1#3` takes it whole; 2307.12991, 2408.03413). A form is the
+format's text, which pdflatex typesets at the reference: a format whose commands compute (`cref_format_is_text`: each
+must typeset — not expandable, protected, robust `\protect\<cs>`, or a macro made only of such — besides the case
+changer cleveref puts first in a variant it derives; 2608.12136's xstring calls on the label being referenced looped
+to a Fatal PushbackLimit at the target, a `\cref` in a format) or that typesets a numbered object of its own
+(`\crefformat{footnote}{#2\footnotemark[#1]#3}`, a mark with its own tags: a recursion; 1601.06262, 1711.01177,
+2005.13962, 2008.04624) gives none, and the reference prints cleveref's default ("footnote 1"); a form makes no forms
+while it is typeset (`\lx@cref@inform`). This is the fail-safe of building at the target what cleveref typesets at
+the reference. Its diagnostics are the held tag's, raised where a reference prints the form, as TeX raises them at the
+reference; a form whose typesetting errs, or that leaves a group open or closes one it did not open, gives none (an
+Error naming the format, its type and the target's place: "The cleveref format of the figure (at …) leaves 1 group(s)
+open"; `\egroup`, a command let to `}`, is text, so `#2Fig.~#1#3\egroup` gives pdflatex's one error — divergence: the
+reference then prints cleveref's default "fig. 1" where pdflatex, which typesets on, prints the author's "Fig. 1"; a held
+tag's text that errs on its own raises no second, summary Error, `\lx@tag@intags@held`: rev78j4's n9, an `\autoref`
+name `\bgroup Fig`, gives pdflatex's one). The form is
+digested in a group of its own, `stomach::digest_in_own_group`, which undoes what its text leaves: the frames it left
+open are unwound and the alignment brace count (tex.web's `align_state`) is put back, as the `{` such a text scanned is
+not the document's (left counted, a figure's tabular of two captioned minipages read its next `&` as text and moved a
+cell into the row above, "Missing } inserted"; rev78j3's k5, k2). Its tag, empty, stays until its target ties the
+diagnostics to its labels (`note_empty_held_tag`, sect11.rs `remove_empty_held_tags`), or, for a tag no target closes
+over (a caption's tags in a minipage folded into a figure panel, a label type's tags put in place after their target
+closed), once the document is built (`settle_empty_held_tags`, before the held diagnostics are replayed; the pending
+count is the job's, reset with its deferred diagnostics), tied to its owner's labels only — the element holding its
+`ltx:tags`; an owner with no label, a panel no reference names, drops the tag with its diagnostics, as pdflatex never
+typesets that format (rev78j4's m1c, m1, m2, m5: a section's or the outer figure's label had replayed the panels'
+errors); a held tag whose typesetting raised only Debug messages holds
+nothing and is removed where it is built (a plain label format's empty `creflabel`): the derived `\Cref` variant `\MakeUppercase#2\color{blue}Fig.~#1#3` of 2008.12750's and
+2604.24399's `\crefformat`, whose `\MakeUppercase` takes `\color` alone (pdflatex errs at a `\Cref`), had left its
+group to the tag's `\endgroup` and the figure's mode unended. A stray `&` in a form (`F & #2#1#3`) is dropped, as TeX
+drops it, with its Error held (pdflatex 1 error for the one `\cref`, where every figure's two forms raised one each). A reference, when the document set any format
+of its family, shows `<format role>|<default>` (`\lx@cref@or`, a text `|`): the post stage prints the first alternative
+its target has (crossref.rs `generate_ref_aux`, `show_alternatives`; a show with no `|` is unchanged, so a document that
+set no format keeps its output; a document format the target has is the whole reference, with no context sought for
+one without a letter or digit, `generate_ref`: siamart's `\crefformat{equation}{\textup{#2(#1)#3}}` with `\tag{$\star$}`
+prints "(⋆)", not "(⋆) ‣ section 1", 1905.03839), and between the references of a `\cref` list the conjunction is wrapped
+(`\lx@cref@conjunction`, `ltx_cref_conjunction`) and dropped before a reference that printed the document's format, else
+unwrapped (crossref.rs `settle_cref_conjunctions`). `\labelcref` prints the document's `\labelcrefformat`, else for a
+type whose `\crefformat` the document set the bare number (cleveref builds that type no `\labelcref` format,
+:1438-1440, so `\labelcref@default@format` applies), else the label format; a `\labelcref` list likewise prints the
+default `\labelcref` format for a type whose `\crefmultiformat` the document set (role `labelcrefmulti`; cleveref.sty
+:8028-8030 builds no `\labelcref` multi format for it, :1620-1669 the defaults): siamart's "1 and 3", not "(1) and (3)". 2004.14422 (`\crefformat{equation}
+{#2#1#3}`: "1"), 2312.00252 (`#2Equation~#1#3`), 2406.15983 (formats in a `.sty`: "Equation 2").
+
+Under `\label[<type>]` (`\lx@cleverref@labeltype`, placed on the object the label names as the kernel's `\lx@label`
+places it, `Document::float_to_label_scoped`: after a closed float, an inner equation or a `\footnote`, the object
+whose step is in scope) the label type's forms replace the object's (names, `creflabel`, the
+document's formats; an empty one, a plain label format or no format of the document's, removes the object's), with the
+object's own number (`\@currentlabel`, `cleveref_label_number`: cleveref.sty:82-96 changes the type of the label it
+writes, not its number): an equation labelled `[lemma]` under `\crefformat{lemma}{Lem.~#2#1#3}` is "Lem. 1".
+Divergence: the format is the one in force where the target is numbered, not where it is referenced, so a
+`\creflabelformat`, `\crefformat` or `\crefmultiformat` between a label and its `\cref` (in a group, set after the
+equation, or a `\crefformat{section}{Appendix~#2#1#3}` after `\appendix` for the sections numbered before it) is not seen
+for that target: the format in force at the target prints, where pdflatex prints the one in force at the reference
+(rev78j2's t1, a `\crefformat` redefined mid-document: ours "C2", "B1", pdflatex "B2", "C1"). Not modelled: `\crefrangeformat`/`\Crefrangeformat` (a range's format holds both numbers,
+`\crefstripprefix{#1}{#2}` in 1409.7964 and 1603.08012, which a tag form at one target cannot carry: `\crefrange` keeps
+`creftypeplural~creflabel` to `creflabel`), `\labelcrefmultiformat`, cleveref's grouping of a `\cref` list by type and
+its range compression (`\cref{e3,e1,e2}`: pdflatex "eqs. (1) to (3)", ours in the order given). The forms are copies
+at every target (an `\ensuremath{(#2#1#3)}` format's math in each equation's `ltx:tags`, which takes the first math ids:
+1905.03839's `Ch1.E1.m1` is `m8`); a stored tag with markup is its copy (latexml_post scan.rs `has_markup`, Perl
+Scan.pm:269 `cleanNode`), so a reference prints the tag's math as a formula ("(P1)" for `\tag{$\mathrm{P_1}$}`, where its
+flattened text read "( P 1 )"; 2609.28438, 1905.03839, 2510.06152), a tag of text alone its text as before.
+Divergence: a tag's text and its copy reach the reference with their spaces, where Perl's `prepRefText`
+(CrossRef.pm:791-793, `trimChildNodes`, Post.pm:1374-1397) trims the copy's first and last text: a tag rarely starts
+or ends with a space, but a cleveref position format holds its conjunction (`\crefmultiformat`'s second
+`{ and~(#2#1#3)}`), which trimmed would print "Problems (P)and (P1)" (2609.28438). A
+format's `#1` is the refnum in `\normalfont` (`\lx@therefnum@@`), where cleveref's is the label's text in the
+format's font (`\sffamily\bfseries … theorem~#1` prints the number upright, pdflatex sans bold). KNOWN_PERL_ERRORS #1073.
+Repros cross-references/{cleveref_equation_label_format, cleveref_creflabelformat_overrides,
+cleveref_label_format_waits_for_a_reference, cleveref_label_format_expanded_once,
+cleveref_document_formats_replace_the_reference, cleveref_document_multi_formats, cleveref_label_type_formats,
+cleveref_document_format_with_a_note_mark, cleveref_document_format_opening_a_group,
+cleveref_document_format_errors_wait_for_a_reference, cleveref_symbol_format_stands_alone,
+cleveref_document_format_with_math_in_the_tag, cleveref_labelcref_list_under_a_multi_format,
+cleveref_format_form_keeps_the_alignment_brace_count, cleveref_format_form_keeps_an_alignment_row_end,
+cleveref_format_errors_in_minipage_panels, cleveref_format_closing_a_group_it_did_not_open,
+cleveref_format_of_an_unlabelled_panel_raises_nothing, autoref_name_opening_a_group_errs_once,
+cleveref_label_type_after_a_closed_float_names_the_object_in_scope}; guards
+`perfect_kernel_batch78j::{cleveref_equation_label_format,
+cleveref_creflabelformat_overrides, cleveref_label_format_waits_for_a_reference, cleveref_label_format_expanded_once,
+cleveref_document_formats_replace_the_reference, cleveref_document_multi_formats, cleveref_label_type_formats,
+cleveref_document_format_with_a_note_mark, cleveref_document_format_opening_a_group,
+cleveref_document_format_errors_wait_for_a_reference, cleveref_symbol_format_stands_alone,
+cleveref_document_format_with_math_in_the_tag, cleveref_labelcref_list_under_a_multi_format,
+cleveref_format_form_keeps_the_alignment_brace_count, cleveref_format_form_keeps_an_alignment_row_end,
+cleveref_format_errors_in_minipage_panels, cleveref_format_closing_a_group_it_did_not_open,
+empty_held_tags_start_at_none_on_a_reused_thread, cleveref_format_of_an_unlabelled_panel_raises_nothing,
+autoref_name_opening_a_group_errs_once, cleveref_label_type_after_a_closed_float_names_the_object_in_scope}`.
+
+### 846. pdfpages' `\includepdf` places the file's pages as graphics
+
+Perl's `\includepdf` (pdfpages.sty.ltxml:30-36) writes the PDF as an `ltx:resource` and the text "See [pages X of]
+⟨link⟩"; pdflatex places the pages, each as a page of the document. Ours (pdfpages_sty.rs): each page the `pages` list
+names (pdfpages.sty's syntax: `N`, `N-M` descending when `M < N`, `N-`, `-M`, `-`, `last`; `{}` a blank page, which
+places nothing; default `1`) is an `\includegraphics[page=N]{file}` in its own paragraph, with the graphicx keys given
+(`scale`, `angle`, `width`, `height`, `trim`, `clip`, `viewport`, `keepaspectratio`), as pdfpages includes each page
+through graphicx; the post stage renders the page (`page=`, latexml_post graphics.rs). The list and the file name are
+expanded first, as pdfpages reads them (a `\foreach` loop's `pages={\x}`, 2605.05847; a name in a macro, 2406.13026). An
+open range reads the page count from the file (`read_pdf_page_count`), and a page past the last is an Error placing
+nothing, in pdfpages' words ("Page 6 of `five.pdf' does not exist", pdfpages.sty:909-920 `\AM@checkpagenumber`; a count
+not read keeps every page). A PDF the graphics search path does not find
+(pdflatex: "Cannot find file"), or a list not understood, keeps Perl's link (`\lx@includepdf@link`). pdfpages' layout
+keys (`nup`, `frame`, `landscape`, `pagecommand`, `offset`, `fitpaper`, …) are not modelled. The pages are content, as
+pdflatex prints them, at their size cost where Perl's link (pdfpages.sty.ltxml:24-29) chose size: a paper that is one
+included PDF converts to its page images (1805.02202: 133 PNGs, 23 MB, 1.38 s cold). Repros
+singletons/{includepdf_places_its_pages, includepdf_expands_its_arguments, includepdf_page_past_the_last}; guards
+`perfect_kernel_batch78j::{includepdf_places_its_pages, includepdf_expands_its_arguments,
+includepdf_page_past_the_last}`, `pdfpages_sty::tests::include_pdf_pages_reads_pdfpages_lists`; the missing-file link
+`binding_singletons_56::includepdf_file_name_is_semiverbatim`,
+`perfect_kernel_gemini::pdfpages_includepdfmerge_multi_and_opts`.
+
 ### 847. eqnarray numbers its rows by `\@@eqncr`'s `\if@eqnsw` state
 
 latex.ltx:15750-15797: a row of `eqnarray` is numbered only if it ends through `\@@eqncr` (`\\`, `\\*`, `\\[len]`,
@@ -23479,7 +23658,8 @@ list names the enclosing section's (or theorem's, or item's) number, as `\ref` p
 `subequations` block's inner `align` names the block's number (2505.03288 `eq:GNG` "13", int52a an unnumbered inner
 group); after `\subfloat{…}\label{…}` the figure when its `\caption` comes before the subfloats — when the caption comes
 after them pdflatex names the section (1504.02206 `fig:2c`: pdflatex 5.1, ours 2; review rev78p). cleveref's `\label[type]` constructor
-(`\lx@cleverref@labeltype`) still places its type by `float_to_label_for` (open). Repro
+(`\lx@cleverref@labeltype`) places its type by `float_to_label_scoped` too since 78j r5 (guard
+`perfect_kernel_batch78j::cleveref_label_type_after_a_closed_float_names_the_object_in_scope`). Repro
 cross-references/label_after_an_inner_equation_names_the_theorem; guards `perfect_kernel_batch78p::{
 label_after_an_inner_equation_names_the_theorem, label_after_a_closed_step_names_the_step_in_scope,
 label_after_captionof_names_its_float}`.

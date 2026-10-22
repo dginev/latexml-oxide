@@ -174,6 +174,32 @@ pub fn set_align_group_count(v: i32) {
   }
 }
 pub fn local_align_group_count(v: i32) { locals_mut!().align_group_count.push(v); }
+/// The alignment brace count as it stands (tex.web's `align_state`, with its stack of saved values), to be put back by
+/// [`restore_align_group_count`] after a digestion whose tokens are not the document's input.
+pub fn mark_align_group_count() -> (usize, Option<i32>) {
+  let locals = locals!();
+  (
+    locals.align_group_count.len(),
+    locals.align_group_count.last().copied(),
+  )
+}
+/// Puts back the alignment brace count [`mark_align_group_count`] read: the stack at its depth then, the current value
+/// as it was. A `{` the abandoned digestion scanned and never closed is no longer counted against the document's `&`s.
+pub fn restore_align_group_count(mark: (usize, Option<i32>)) {
+  let (depth, value) = mark;
+  trace_align_state("restore", align_group_count(), value.unwrap_or_default());
+  let mut locals = locals_mut!();
+  let stack = &mut locals.align_group_count;
+  stack.truncate(depth);
+  if let Some(value) = value {
+    if stack.len() < depth {
+      stack.resize(depth, value);
+    }
+    if let Some(top) = stack.last_mut() {
+      *top = value;
+    }
+  }
+}
 pub fn expire_align_group_count() -> Option<i32> { locals_mut!().align_group_count.pop() }
 
 /// Disables tab marks for the lifetime of the guard, restoring the previous

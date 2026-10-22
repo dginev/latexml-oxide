@@ -662,7 +662,9 @@ LoadDefinitions!({
     reversion  => "",
     properties =>  sub[args] {
       // Sometimes, we're smuggling stuff that needs to be carried into the XML.
-      let mut props = stored_map!("alignmentSkippable" => true);
+      // (`alignmentNoalign`: material between rows, which the next cell carries, as `\rowcolor`'s, and which stays
+      // with its row when the cell's content moves: latexml_core alignment/normalize.rs `normalize_upward_spans`)
+      let mut props = stored_map!("alignmentSkippable" => true, "alignmentNoalign" => true);
       // Check if any arg (or child of a List arg) has alignmentPreserve.
       // This propagates the property from e.g. \label (inside a List) to the
       // \lx@hidden@noalign whatsit, so the alignment absorption code knows

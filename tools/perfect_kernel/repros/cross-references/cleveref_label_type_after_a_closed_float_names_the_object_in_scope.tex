@@ -1,0 +1,26 @@
+% witness: rev78p (cleveref's `\lx@cleverref@labeltype` placed by `float_to_label_for`, the kernel `\label` by
+%          `float_to_label_scoped` since 78p; math0107195 for the kernel's case)
+% oracle:  pdflatex 0 errors; "Refs: appendix section 1, appendix theorem 1 and appendix section 2." — a
+%          `\label[type]` after a closed table, after an inner equation still in its theorem, and after a
+%          `\footnote`, names the section, the theorem and the section (their steps in scope), each by the given type
+% engines: rust 78j r4 = the label on the section/theorem, its type's tags on the table/equation just closed (the
+%          references print "section 1", "Theorem 1"; the table and equation took the appendix types)
+% expect:  the type's tags on the object the label names; the table and the equation keep their own
+% status:  RED (78j r4) -> GREEN (78j r5)
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage{cleveref}
+\newtheorem{theorem}{Theorem}
+\crefname{appsec}{appendix section}{appendix sections}
+\crefname{appthm}{appendix theorem}{appendix theorems}
+\begin{document}
+\section{One}
+\begin{table}\caption{T}\end{table}\label[appsec]{s1}
+\begin{theorem}Text
+\begin{equation}c=d\end{equation}\label[appthm]{t1}
+\end{theorem}
+\section{Two}
+Text\footnote{note}\label[appsec]{s2}
+
+Refs: \cref{s1}, \cref{t1} and \cref{s2}.
+\end{document}

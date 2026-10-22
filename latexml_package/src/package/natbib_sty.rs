@@ -5,8 +5,8 @@ use crate::prelude::*;
 // Unified dispatch: callers may pass flag-only pairs (value=None) from DeclareOption
 // handlers or key=value pairs (value=Some(tokens)) from `\setcitestyle`'s getPairs.
 /// natbib's citation-style options in its declaration order (natbib.sty:238-263), the order `\ProcessOptions` runs
-/// them in.
-const NATBIB_STYLE_OPTIONS: [&str; 12] = [
+/// them in, and its ordering options (:267-271).
+const NATBIB_STYLE_OPTIONS: [&str; 15] = [
   "numbers",
   "super",
   "authoryear",
@@ -19,6 +19,9 @@ const NATBIB_STYLE_OPTIONS: [&str; 12] = [
   "colon",
   "nobibstyle",
   "bibstyle",
+  "sort",
+  "compress",
+  "sort&compress",
 ];
 
 /// Run natbib's style option `option` as its `\DeclareOption` code does (natbib.sty:238-263), the options its
@@ -48,6 +51,12 @@ fn natbib_style_option(option: &str) {
       natbib_style_option("nobibstyle");
     },
     "colon" => natbib_style_option("semicolon"),
+    "sort" => assign_value("CITE_SORT", true, None),
+    "compress" => assign_value("CITE_COMPRESS", true, None),
+    "sort&compress" => {
+      natbib_style_option("sort");
+      natbib_style_option("compress");
+    },
     "nobibstyle" => {
       Let!("\\bibstyle", "\\@gobble");
     },
@@ -583,9 +592,25 @@ LoadDefinitions!({
   DeclareOption!("bibstyle", {
     Let!("\\bibstyle", "\\@citestyle");
   });
-  DeclareOption!("sort", "");
-  DeclareOption!("sort&compress", "");
-  DeclareOption!("compress", "");
+  // natbib.sty:267-271: `sort` orders a citation's numbers, `compress` joins a run of three or more with an en dash
+  // ("[1–3]"); the `ltx:bibref`'s class says so to the post stage, which knows the numbers (sect11.rs
+  // `cite_order_class`, KNOWN_PERL_ERRORS #1072; Perl's no-ops, natbib.sty.ltxml:69-71). Guard
+  // `perfect_kernel_batch78j::natbib_sort_compress_numbers`.
+  // (:267-268 off unless an option says so, a cite.sty loaded before natbib its `sort`, :272-274)
+  AssignValue!("CITE_SORT" => lookup_bool("cite.sty_loaded"));
+  AssignValue!("CITE_COMPRESS" => false);
+  // (natbib's own order: the keys with no number after the sorted ones, natbib.sty:1185-1200, a cite.sty loaded before
+  // it or not)
+  AssignValue!("CITE_UNSORTED_FIRST" => false);
+  DeclareOption!("sort", {
+    natbib_style_option("sort");
+  });
+  DeclareOption!("sort&compress", {
+    natbib_style_option("sort&compress");
+  });
+  DeclareOption!("compress", {
+    natbib_style_option("compress");
+  });
   DeclareOption!("longnamesfirst", "");
   DeclareOption!("openbib", "");
   DeclareOption!("sectionbib", {
@@ -1136,6 +1161,18 @@ LoadDefinitions!({
       .map(|(k, v)| (k.as_str(), v.clone()))
       .collect();
     set_citation_style(&pairs);
+    // A class's own `\setcitestyle` that reads the ordering words as the options do (acmart.cls:306-345,
+    // `natbib@setcitestyle@orders`): natbib's own ignores them.
+    if lookup_bool("natbib@setcitestyle@orders") {
+      for (key, _) in &owned {
+        match key.as_str() {
+          "sort" | "compress" | "sort&compress" => natbib_style_option(key),
+          "nosort" => assign_value("CITE_SORT", false, None),
+          "nocompress" => assign_value("CITE_COMPRESS", false, None),
+          _ => {},
+        }
+      }
+    }
   });
 
   // \bibpunct
@@ -1447,7 +1484,7 @@ LoadDefinitions!({
     let key: Tokens = it.next().unwrap().into();
 
     let mut tokens = label.clone().unlist();
-    let number: Option<Tokens> = None;
+    let mut number: Option<Tokens> = None;
     let mut year: Option<Tokens> = None;
     let mut authors: Option<Tokens> = None;
     let mut fullauthors: Option<Tokens> = None;
@@ -1530,6 +1567,21 @@ LoadDefinitions!({
           }
           year_toks.push(*t);
         }
+      } else if matches!(cite_style().as_str(), "numbers" | "super")
+        && !author_toks.is_empty()
+        && !author_toks
+          .windows(2)
+          .any(|pair| pair[0] == T_OTHER!(",") && pair[1].get_catcode() == Catcode::SPACE)
+      {
+        // A label with no `(year)` and no `, ` is natbib's number itself (natbib.sty:811-817: `\NAT@bare` hands it
+        // to `\NAT@apalk` (:1005-1012), which writes it as the number when no `, <year>` follows): numbers mode prints
+        // `\bibitem[Knu84]{k}` as "[Knu84]", in the list and at a citation, where the entry counter printed "[5]".
+        // Its author-year split is Perl's (natbib.sty.ltxml:576-581), kept in the author-year modes. Guard
+        // `perfect_kernel_batch78j::natbib_numbers_prints_a_label_given`; witness 2608.05327 ("[21]" → "[FNW23]"). The whole
+        // label is the number, not the full authors too (a `\citet{k}` printed "Knu84 [Knu84]",
+        // natbib's "(author?) [Knu84]"; it now prints the number as for any entry without authors).
+        number = Some(Tokens::new(std::mem::take(&mut author_toks)));
+        rest_idx = exp_tokens.len();
       } else {
         // No paren — try splitting digits from end
         while !author_toks.is_empty() {

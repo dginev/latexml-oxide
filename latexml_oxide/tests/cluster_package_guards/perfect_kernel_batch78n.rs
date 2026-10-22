@@ -480,7 +480,8 @@ fn natbib_merge_options_raise_level() {
 /// natbib.sty:1135-1160 with revtex4-1.cls:7046 `\let\NAT@merge\thr@@`: `\cite{a,*b}` cites a and b (pdflatex "[1]",
 /// b's entry merged into a's), `\cite{[See][and Chap. 2]c}` cites c, its notes for the entry. Red (int50a; Perl alike
 /// for `*b`): the keys "*b" and "[See][andChap.2]c", missing citations. The entry merge is a residual (b stays entry 2).
-/// Witnesses 1808.00247, 1509.05768. Repro index-bib/revtex_merged_citation_key.
+/// Witnesses 1808.00247, 1509.05768. (revtex's `[sort&compress]{natbib}` puts its ordering class on the bibrefs,
+/// 78j.) Repro index-bib/revtex_merged_citation_key.
 #[test]
 fn revtex_merged_citation() {
   let xml = assert_clean(repro!("index-bib/revtex_merged_citation_key.tex"), &[]);
@@ -488,9 +489,9 @@ fn revtex_merged_citation() {
   let found: Vec<&str> = cites.find_iter(&xml).map(|m| m.as_str()).collect();
   assert_eq!(
     found.join("|"),
-    "<cite class=\"ltx_citemacro_cite\">[<bibref bibrefs=\"a,b\" separator=\",\" show=\"Number\" \
-     yyseparator=\",\"/>]</cite>|<cite class=\"ltx_citemacro_cite\">[<bibref bibrefs=\"c\" separator=\",\" \
-     show=\"Number\" yyseparator=\",\"/>]</cite>",
+    "<cite class=\"ltx_citemacro_cite\">[<bibref bibrefs=\"a,b\" class=\"ltx_cite_sort ltx_cite_compress\" \
+     separator=\",\" show=\"Number\" yyseparator=\",\"/>]</cite>|<cite class=\"ltx_citemacro_cite\">[<bibref \
+     bibrefs=\"c\" class=\"ltx_cite_sort ltx_cite_compress\" separator=\",\" show=\"Number\" yyseparator=\",\"/>]</cite>",
     "{xml}"
   );
 }

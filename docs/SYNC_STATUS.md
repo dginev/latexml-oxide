@@ -202,6 +202,9 @@ do not block the E/F rerun.
 | — | `\RequirePackage{aas_macros}` before an AASTeX 6+ `\documentclass`: pdflatex 55 errors (an unclean oracle); ours prints the class's journal names (review rev78r finding 6) | no action (main-session decision 2026-10-22: the oracle is unclean) |
 | — | algorithm2e: an algorithm's last line, closed by the environment's end rather than by `\;`, ignores the `\Indp`/`\Indm` offset (`\lx@prepend@indentation` runs only from `\lx@algo@endline`; algorithm2e_sty.rs env template): `\Indp Bb\; Cc \end{algorithm}` or `\DontPrintSemicolon … \Return Gg \end{algorithm}` sets Cc / "return Gg" at the margin, pdflatex one level in; 2508.06088's three algorithms end with `\Return` at the margin (pdflatex x 165.1, one level in). int54a and 78r alike; review rev78r2 finding 1. Fix: give the open last line its indentation before the environment's group ends (a no-op on an empty last line) | open |
 | — | algorithm2e `\DontPrintSemicolon` / `\PrintSemicolon` are assigned globally (algorithm2e_sty.rs, Perl algorithm2e.sty.ltxml:131-136 the same) where algorithm2e.sty's are a local `\renewcommand`, so a later algorithm in the same document loses every printed ";" (pdflatex "Hh;", ours "Hh"; int54a, 78r alike; review rev78r2 finding 4; SHARED) | open |
+| — | cleveref `\label[type]{…}` after a `\caption` inside a minipage panel of a figure loses its type: the panel (or the folded figure) carries the label but keeps `creftype` "fig." — `\begin{figure}\begin{minipage}{.4\linewidth}\caption{A}\label[appendix]{mp}\end{minipage}…` gives "fig. 1" where pdflatex prints "appendix 1" (0 errors; a subfigure's works, "appendix 2a"); the type's tags have no target when `\lx@cleverref@labeltype` runs (cleveref_sty.rs:61-72 `continue`s) and the panel fold moves the labels, not the type's tags. int54a and 78j alike; review rev78j5 finding 2. Fix: carry the type's tags with the labels when the panel/fold merges them, or settle the type once its owner exists | open |
+| — | A `\begingroup` left open in held text raises an Error TeX does not: an `\autoref` name `\begingroup Fig`, `\creflabelformat{equation}{\begingroup(#2#1#3)}` — pdflatex 0 errors (only "\end occurred inside a group at level 1"), ours 1 ("Attempt to end mode restricted_horizontal"); `\crefformat{figure}{\begingroup#2Fig.~#1#3}` — pdflatex 0 errors and the author's "Fig. 1", ours 1 ("leaves 1 group(s) open") and cleveref's default "fig. 1". 78j r5 (r4 raised 2); review rev78j5 finding 3. Direction: when only `\begingroup` frames are left open, `digest_in_own_group` unwinds them without an Error and keeps the form | open |
+| — | Panic: 2509.13772 "range end index 44 out of range for slice of length 43" (int54a and 78j r5 the same; outside 78j's paths; found by the 78j r5 A/B) — root-cause and fix (panic → Error with the reason) | open |
 | 25, 26, 27 | `--splitindex`/`--splitbibliography` (non-default), alignment open at `\end{document}`, lstlisting in `\parbox` | not silent, re-checked on head 2026-10-19: #26 is an honest Error (a `tabular` left open, `c & d`: 4 Errors; an `align`, `c&=d`: 3 — "Attempt to close a group that switched to mode internal_vertical"; invalid input, pdflatex errs); #27 has raised 1 Error since 64zf (CONTROL `kernel-alignment/pcol_lstlisting_parbox_CONTROL`, pdflatex 7); #25 needs a non-default option the arXiv runs never pass — open, low reach, not blocking |
 
 ## Rust Error Fixes
@@ -583,6 +586,20 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   no mark, ours too; its TL 2025 PDF's "0" is pdflatex's recovery from RR.sty's own errors (the `\xdef` of the accented
   theme name, :160-168: "Missing } inserted", "Too many }'s" close `\makeRR`'s group early, and `\thefootnote` is
   article's `\@arabic` again at :477).
+- **cleveref's reference forms: the review rev78j3's later items** (RUST-ONLY, 78j's forms, OD #845; no RED repro yet):
+  (a) a document multi format's conjunction prints inside the link — the form is whole in the link, pdflatex links only
+  `#1`, so 2609.28438's `{ and~(#2#1#3)}` puts " and " inside the second `<a>` ("Problems (P) and (P1)"); (b) internal
+  ids shift where a form holds math or a paragraph (2412.09235's math and para ids: the forms in `ltx:tags` take ids
+  first), and in a tabular's minipages a label type's tags take their place in insertion order (2609.28438: the tags'
+  order in `ltx:tags` and the ids after them shift, the HTML identical); (c) `\eqref` of a `\tag{$\star$}` walks to its parent for context ("⋆ ‣ 1", Perl's `generateRef`, not a
+  format issue); (d) a math tag form's alttext reads `{{1}}` (the number passed as one group, `cref_apply_format`'s
+  `{{<number>}}`).
+- **A cleveref format holding an undefined command raises nothing** (RUST-ONLY, 78j's forms, OD #845; found by rev78j4
+  probes n5, g5; no RED repro yet): `cref_text_token` (cleveref_sty.rs) reads a command with no definition as not text,
+  so `\crefformat{figure}{#2\undefinedfoo Fig.~#1#3}`, or `#2\color{red}Lem.~#1#3` without xcolor, builds no form and
+  each reference prints cleveref's default silently, where pdflatex raises "Undefined control sequence" at every
+  reference that prints the format (n5 1, g5 2 for two references). Fix direction: an undefined command is text that
+  errs — build the form, its held Error replayed per printing reference.
 - **A `\newtheorem{<env>}[<counter>]` checks its counter only at the first `\begin{<env>}`** (SHARED, Perl's
   `\newtheorem` reads the counter lazily; found by rev78o probe a1): pdflatex errs at the definition ("No counter
   'theorem' defined", the environment left undefined). Since acmart makes its theorems `\AtEndPreamble` (78o, OD #854),
@@ -5029,8 +5046,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (IEEEtran.cls:2570-2587, :5397) through `\fnum@<level>`; the refnum stays "I-A", an `\appendices` section keeps
   "Appendix A", its subsections "A." (KPE #1022; ~178,000 papers). (3) acmart's `\citestyle{acmnumeric}` under natbib,
   `\bibstyle@acmauthoryear` for `\citestyle{acmauthoryear}` ("[Able 2001]"), natbib's `citesep` key (acmart.cls:379-393,
-  natbib.sty:338; KPE #1023; witness 2112.15328 "[1, 2]"; open: natbib's `sort&compress`, the citation order and
-  ranges, is not modelled). (4) `\hhline` rules the columns it names, a `=` column twice, `*{n}{…}` repeats, colortbl's
+  natbib.sty:338; KPE #1023; witness 2112.15328 "[1, 2]"; natbib's `sort&compress`, the citation order and
+  ranges, modelled since 78j, OD #844). (4) `\hhline` rules the columns it names, a `=` column twice, `*{n}{…}` repeats, colortbl's
   `>{…}` skipped, one `\cline{a-b}` per run (hhline.sty:61-96; KPE #1024): alignment/colortbls' rainbow rules are double
   now. (5) AMS-TeX's `\TagsOnLeft` default sets `ltx_leqno`, `\TagsOnRight` clears it (amstex.tex:587-590; KPE #1025).
   (6) jmlr's `\acks` is "Acknowledgments" (jmlr.cls:595), jmlr2e's the heading its shipped copy prints
@@ -5313,8 +5330,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   II-B, 1809.06638 `fig:failure` the figure — all now as pdflatex; 2103.17127 below); the rest the Error removals
   above. Residuals: tabularray's body
   `\SetHline`/`\SetHlines`/`\SetVline`/`\SetVlines` stay no-ops, rule widths/dashes/colours unrendered; cleveref's
-  `\lx@cleverref@labeltype` still places a `\label[type]`'s type by `float_to_label_for` (cleveref_sty.rs:41, a one-line
-  follow-up to `float_to_label_scoped` once 78j lands); supertabular's `\tablecaption{…}\label{…}` before the table
+  `\lx@cleverref@labeltype` placed a `\label[type]`'s type by `float_to_label_for` (done in 78j r5: `float_to_label_scoped`); supertabular's `\tablecaption{…}\label{…}` before the table
   names the enclosing unit (pdflatex the table: the binding steps the counter at the table, not at `\tablecaption`,
   2103.17127; int52a named the previous table); `\left\{ … \right.` around a text tabular stays unparsed math with a
   Warning (math parked); an unused entry's unparsable formula still warns from the math parse (2104.09252).
@@ -5323,8 +5339,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   moved labels from real papers checked against pdflatex `.aux`). Folded in by the main session: `etb_patch_text` writes a space
   token as one space whatever its source text (a line end kept `\n`, so a `\patchcmd` search across a source line break never
   matched; probe int53a FAIL → int54a OK, as pdflatex), and OD #856 no longer claims `\subfloat{…}\label` names the figure when the
-  caption follows the subfloats (1504.02206). Open from the review: cleveref's `\label[type]` still places its type with
-  `float_to_label_for` (switch to `float_to_label_scoped` when 78j lands); supertabular steps `table` at the table, not at
+  caption follows the subfloats (1504.02206). Open from the review: cleveref's `\label[type]` placed its type with
+  `float_to_label_for` (switched to `float_to_label_scoped` in 78j r5); supertabular steps `table` at the table, not at
   `\tablecaption` (2103.17127, wrong before and after); a guessed header row now depends on the drawn tabularray borders (2206.04438
   7 → 3 tables). Gates int54a: nextest 6797/6797 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int53a empty. A/B
   int53a vs int54a (1,244 of 1,246: the `pop78p_*` populations + 300 random census controls, seed 54): E 7,222 → 7,044, F 71 = 71,
@@ -5623,6 +5639,144 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   two aa/mn2e controls (1506.07705, 2404.01383) and two witnesses (2303.08726, 2507.06135); 0 of 286 random controls changed;
   word loss > 1 % only in aipproc papers losing their section numbers (0910.2753, 1512.08572, hep-ex0510038), as the class
   prints none. Binding nets: 136/136, 0 documents worse (int54a vs int55b).
+
+- **78j** (quality batch 13, the sel78i selection study's items 3-5 and rider 9; r1-r5; guards `perfect_kernel_batch78j::*`, 37,
+  each RED on int50a or on an earlier 78j build, and unit tests `crossref::tests::compressed_joints_join_runs_of_three`,
+  `pdfpages_sty::tests::include_pdf_pages_reads_pdfpages_lists`; OD #844-846, KPE #1072-1075). (1) Numeric citations are sorted and
+  compressed as their package prints them: natbib's `sort`/`compress`/`sort&compress` (natbib.sty:267-271), cite.sty
+  (sorts and compresses unless `nosort`/`nocompress`), revtex4/4-1/4-2 (`[sort&compress]{natbib}`), achemso, acmart's
+  `acmnumeric` (its own `\setcitestyle` reads the ordering words), jheppub and quantumarticle — "[1–3]" where int50a
+  printed "[3, 1, 2]"; the choice is a `class` on the `ltx:bibref` (`ltx_cite_sort`, `ltx_cite_compress`), applied by
+  latexml_post `make_bibcite` where the numbers are known (a run of two keeps its separator; natbib's textual `\citet`
+  is sorted, not compressed; a superscript range stays in its superscript) (KPE #1072, OD #844). (2) cleveref prints a
+  number in its type's label format, an equation's "(1)": `\cref` "eq. (1)", `\crefrange` "eqs. (1) to (3)",
+  `\labelcref` "(1)", `\creflabelformat`/`\crefdefaultlabelformat` honoured; a `creflabel` tag only for a type whose
+  format is not plain, its diagnostics held until a reference prints it (2506.11592), the label type's format under
+  `\label[<type>]` (KPE #1073, OD #845). (3) A negative `\multirow{-n}` spans the rows above it when they are empty: its
+  content moves to the top row with `rowspan=n`, each row keeping the `\rowcolor` its first cell carried
+  (`alignmentNoalign`); over a non-empty cell it stays, with one Warning naming the cell (1509.00049: 42 Warnings → 0;
+  KPE #1074). (4) pdfpages' `\includepdf` places the pages its `pages` list names as `\includegraphics[page=N]`, one
+  paragraph a page, the list and the name expanded (a `\foreach` loop's `pages={\x}`), the page count read for an open
+  range; a PDF not found keeps Perl's "See pages … of ⟨link⟩" (OD #846). A/B (release, `--preload=ar5iv.sty`, int50a
+  vs 78j; 2,232 papers: the 576 natbib-sort papers, a seeded 600 of the cite/revtex4*/achemso papers, 100 acmart, a
+  seeded 500 cleveref and the 216 `\creflabelformat`/`\crefformat` papers, the 151 negative-`\multirow` papers, the 112
+  `\includepdf` papers, 100 random controls, 4 witnesses): E 944 → 944, F 4 → 4, W 30,028 → 29,109, no paper with more
+  Errors, Fatals or Warnings; 1,745 outputs changed (34 of the 100 controls, all citations): 5,581 citations compressed
+  to ranges in 995 papers and about 6,500 reordered; 6,398 references gained the equation parentheses in 258 cleveref
+  papers; negative-span tables 2,813 → 3,666 `rowspan`s; `\includepdf` papers 1,344 → 2,935 graphics, no "See pages"
+  left. Word counts fall only by the citation numbers a range drops (1,084 papers, -33,104 words, each checked by
+  sample: "[2, 3, 4]" → "[2–4]") and pdfpages' "See pages - of" text. Other output changes: internal ids shifted where a
+  `creflabel` tag holds math (`\tag{$\star$}`) and whitespace-only lines in footnotes. **r2** (the review rev78j; guards
+  `perfect_kernel_batch78j::*` 8 more, each RED on r1 or an r2 build; KPE #1075): (5) the document's `\crefformat`/`\Crefformat`/
+  `\crefmultiformat`/`\labelcrefformat` replace the whole reference (cleveref.sty:1851, :1886-1906): a tag form at the
+  target for each format the document set (noted as it is set, cleveref's own builders of the defaults bracketed out,
+  the derived variant and a sub-type's copy followed), which a reference prints when its target has one (crossref.rs
+  `show_alternatives`, a show `<format>|<default>` only in a document that set a format; a `\cref` list's conjunction
+  dropped before a position format that holds its own) — 2004.14422 `\crefformat{equation}{#2#1#3}` "1" (r1 "eq. (1)"),
+  2312.00252 `#2Equation~#1#3` and 2406.15983 (`\Crefformat` in a `.sty`) "Equation 5", 1409.7964/1603.08012's multi
+  formats "(1, 3)"; `\labelcref` the bare number for a type whose `\crefformat` the document set; a format that computes (2608.12136's
+  xstring calls on the label being referenced, a Fatal PushbackLimit at the target; a `\cref` in a format) or typesets
+  a numbered object (`\crefformat{footnote}{#2\footnotemark[#1]#3}`, a Fatal recursion: 1601.06262, 1711.01177,
+  2005.13962, 2008.04624) gives no form, the reference keeping cleveref's default ("footnote 1"), the fail-safe of
+  building at the target what cleveref typesets at the reference (OD #845, KPE #1073).
+  (6) Under `\label[<type>]` the label type's forms (names, label format, the document's formats) with the object's own
+  number, its refnum put in place of a mark: 2609.28438's `\label[prob]` under `\crefformat{prob}{prob.~(#2#1#3)}` printed
+  "prob. ( P 1 )" in r2, the tag's math flattened with its whitespace (r3: "prob. (P1)", the tag's math a formula). (7) A label format's plain-number test reads the definition, so the format is expanded once
+  (`\creflabelformat{enumi}{label*=\arabic*}`: 4 Warnings → 2 for one `\cref`; 2506.11592). (8) A page past the PDF's
+  last is an Error placing nothing, in pdfpages' words ("Page 13 of `…' does not exist", pdfpages.sty:909-920; r1
+  placed the last page again). (9) natbib's numbers mode prints a given non-author-year label as the number
+  (`\bibitem[Knu84]{k}`: "[Knu84, Lam86, Mil90]", r1 "[4–6]"; natbib.sty:811-817, :1005-1012; KPE #1075), never
+  compressed. (10) cite.sty prints the keys it cannot sort first (`ltx_cite_unsorted_first`, cite.sty:205-230): "[Knu84,
+  Lam86, 1]" (OD #844, KPE #1072). A/B r2 (release, `--preload=ar5iv.sty`, int51a vs 78j r2; 2,621 papers, populations saved as census
+  `pops/pop78j_{natsort,cite600,acmart100,cref500,creffmt,negmultirow,pdfpages,ctl100,wit}` (r1's) plus `pop78j_creffmt2`
+  (all 320 census papers setting a `\crefformat`/`\Crefformat`/`\crefrangeformat`/`\crefmultiformat`/
+  `\labelcrefformat`, shipped `.sty` included), `pop78j_natbib` (seeded 300) and `pop78j_wit2` (9 witnesses)): E 2,374 →
+  2,374, F 9 → 9, W 39,643 → 38,713, no paper with more Errors, Fatals or Warnings; 1,963 outputs changed (r1's
+  citations and label formats included). Every changed equation reference of the format papers checked against the
+  paper's own format: 2,930 match, 66 multi/range, the rest explained (a format in an inactive `\iffalse` or unloaded
+  file, a `\label[<type>]`'s own `\labelcrefformat`, a derived `\Cref` variant); words fall only by the names the
+  formats drop (1910.07464 -400: "Eq. 1.3" → "(1.3)") and r1's citation ranges. r1 → r2 on 593 changed papers: 393
+  identical, the rest reference texts by the document's formats (2602.03754 "fig. 1" → "1", 2207.10888 "section 5.1" →
+  "§5.1", 2409.01424 "Section 2" → "Sec. 2"), 3 natbib/cite labels ("[21]" → "[FNW23]", 2608.05327) and int51's own
+  changes (algorithm2e block ends); internal ids shift where a form holds math (`\ensuremath`, 1905.03839's equation
+  math `m1` → `m8`) or a discarded note mark took an id (1601.06262 `footnotex1` → `footnotex2`). Residuals: `\crefrangeformat`/`\Crefrangeformat` (a range's
+  format holds both numbers, `\crefstripprefix{#1}{#2}`, which a tag at one target cannot carry), `\labelcrefmultiformat`
+  and cleveref's grouping and range compression of a `\cref` list (`\cref{e3,e1,e2}`: "eqs. (1) to (3)"); a format
+  that computes or makes an object keeps cleveref's default where pdflatex prints the format (the fail-safe; a ruling
+  question: typesetting the formats at the reference instead would need the post stage to run TeX); forms are copies
+  at each target (an `\ensuremath` format's math in every equation's `ltx:tags`, its ids taken first); a section after
+  `\appendix` is our "appendix" type where TL 2025's cleveref keeps "section" in `article` (its `\appendix` patch, cleveref.sty
+  :174-287, no longer takes; older TL types it "appendix", as we do); a
+  `\creflabelformat`, `\crefformat` or `\crefmultiformat` set after its target is not seen for it (the format in force at the
+  target prints, pdflatex's at the reference; OD #845); a `\label[<type>]` inside an `{align}` row is read by
+  `\lx@eqnarray@label` (one Warning, pre-existing); achemso's numeric/superscript style is not
+  the binding's (it passes `sort&compress` alone); natbib's author-year modes keep Perl's split of a label's trailing
+  digits as a year; a row whose first cell is empty or covered loses its `\rowcolor` on the `ltx:tr` (pre-existing,
+  positive spans too); a negative `\multirow` inside a multi-column `\multicolumn` stays in its row with its Warning,
+  whose cell(i,j) counts the `\hline` rows; pdfpages' layout keys (`nup`, `landscape`, `pagecommand`) are not modelled,
+  and a PDF-only paper's pages make large outputs, the pages kept as content where Perl's link chose size (OD #846;
+  1805.02202: 133 page images, 23 MB, 1.38 s cold). **r3** (the review rev78j2; guards `perfect_kernel_batch78j::*` 7
+  more, each RED on r2, `crossref::tests::cite_sty_sort_keys_and_runs`; batch78n's merged-citation guard and
+  doc_changes_index's two index refs re-pinned): (11) a document format's form whose typesetting errs or leaves its
+  groups unbalanced gives none (frames unwound, `stomach::unwind_stack_frames_to`; the derived `\Cref` variant
+  `\MakeUppercase#2\color{blue}…` of 2008.12750's/2604.24399's `\crefformat` had left a group to the tag's `\endgroup`:
+  "Attempt to close non-boxing group", the figure unended, the reference "id1"); its diagnostics are the held tag's,
+  raised where a reference prints the form (an empty held tag stays until its target ties them, `note_empty_held_tag`),
+  a stray `&` dropped with its Error held ("F 1", 6 Errors → 1 as pdflatex). (12) A document format the target has is
+  the whole reference: siamart's `\textup{#2(#1)#3}` with `\tag{$\star$}` "(⋆)", not "( ⋆ ) ‣ Theorem E" (1905.03839, 12
+  refs; 1802.04511, 13). (13) Scan stores a tag with markup as its copy (Perl Scan.pm:269), so a reference prints the
+  tag's math as a formula: "( 1.2 )" → "(1.2)", "( i )" → "(i)" (1905.03839: 232 refs; 2510.06152), 2609.28438's
+  "Problems (P) and (P1)", 2308.16196 "(𝐇𝟏)"; a tag copy keeps its spaces (a multi format's " and (P1)"); a tag with
+  font markup keeps it (doc.sty's index refs in typewriter). (14) A `\labelcref` list of a type whose `\crefmultiformat`
+  the document set prints the default `\labelcref` format, "1 and 3" (cleveref.sty:8028-8030; role `labelcrefmulti`).
+  (15) cite.sty sorts `[prefix]number[suffix]` labels by its sort numbers ("[1, 2a, 7]") and compresses suffix runs
+  ("[4a–4c]"). (16) natbib numbers mode: a label given is not the full authors too (`\citet{k}` "Knu84 [Knu84]" →
+  "Knu84"). (17) `settle_cref_conjunctions` unwraps through `PostDocument::unwrap_node`. A/B r3 (release,
+  `--preload=ar5iv.sty`, int53a vs 78j r3, the 2,621 papers of the saved `pop78j_*` populations): E 2,374 → 2,374, F 9
+  → 9, W 39,624 → 38,694, no paper with more Errors, Fatals or Warnings; 2,001 outputs changed (r1-r2's included). r2 →
+  r3 net of int52-int53's own changes (r2's outputs on int51a, compared by reference position): 2,008 papers identical,
+  30 with reference changes of r3's own: 709 references whose text differs only by the formula's whitespace and 340
+  more, each checked (formulas in tags: 1601.01352 "(𝔹1)", 2409.09376, 2608.12136 "P(u)" ×84, "Second inequality in
+  (52):" where r2 printed "()"; 2210.14919 "Eq. (15′)" where r2 printed "Eq. (′)"; the two "(⋆)" papers), and 7
+  citations compressed where 78n's merged `*key`s now resolve (1204.4241 "[5–7]", revtex's `sort&compress`).
+  **r4** (the review rev78j3; guards `perfect_kernel_batch78j::*` 5 more, each RED on r3): (18) a form is digested in a
+  group of its own, `stomach::digest_in_own_group` (r3's `unwind_stack_frames_to` now private to it; every held tag,
+  `\lx@tag@intags@held`, and every document format, `\lx@cref@docformat`), which unwinds the frames its text leaves open
+  and puts back the alignment brace count: the derived `\Cref` form's open `{` had stayed counted, so a figure's tabular
+  of two captioned minipages read its next `&` as text (2 "Missing } inserted" + "Extra alignment tab", "p" moved into
+  the row above; rev78j3 k5) and an item's form in a cell swallowed the row's `\\` (k2). (19) Empty held tags no target
+  closed over (captioned minipages folded into figure panels; a label type's tags placed after their target closed) are
+  tied to their owner's labels (the element holding their `ltx:tags`; since r5) and removed once the document is built
+  (`settle_empty_held_tags`, before the replay): k6's `\Cref{fa}` raises its form's Error (pdflatex 2 for one runaway argument; r3 0) and no `<tag/>` is left;
+  the pending count is the job's, reset with its deferred diagnostics (a cortex_worker's next paper starts at none); a
+  held tag whose typesetting raised only Debug messages holds nothing (a plain label format's empty `creflabel` carried
+  `_deferred` for its Debug count). (20) `\egroup` in a format is text (a command let to `}`): `#2Fig.~#1#3\egroup`
+  raises pdflatex's one error at the reference; the group Error names the format, its type and the target's place. Tag
+  copies keep their spaces where Perl's `prepRefText` trims them (OD #845). A/B r4 (release, int53a / r3 / r4; the
+  2,621 `pop78j_*` papers plus `pop78j_tabfmt`, the 1,159 census papers with `\crefformat`/`\Crefformat`/`\crefname` and a
+  tabular or minipage; 3,317 comparable, 2509.13772 and 2609.30372 failing alike on all three): E 5,173 → 5,173 → 5,173,
+  F 15 → 15 → 15, W 66,280 → 65,341 → 65,341, no paper worse; r3 → r4 changed 3 outputs (2112.14232, 2503.10630,
+  2312.05616: an algorithm line's empty `creflabel` tag gone, one whitespace line less), no table row; the XML of the
+  1,576 cleveref papers holds no empty held tag (the 57 empty `ltx:tag`s left are `\item[]`'s role-less labels and two
+  bibitem `key`s).
+  Residuals: natbib's "(author?)" for a textual citation of an entry without authors; a format's `#1` in `\normalfont`
+  (OD #845); `\eqref` of a `\tag{*}` still walks to its parent for context ("* ‣ 1", Perl's `generateRef`); the review
+  rev78j3's later items (row in "Perfect-kernel RED repros without a row elsewhere"); a format closing several groups it did
+  not open raises one Error (pdflatex one per `}`), the document's groups kept.
+  **r5** (the review rev78j4, rebased onto int54; guards `perfect_kernel_batch78j::*` 3 more, each RED on r4, and the two row
+  guards now assert every row whole): (21) an empty held tag is tied to its owner only — r4 tied it to the nearest labelled
+  ancestor, so an unlabelled panel's form error was replayed at a reference to the section or the outer figure (rev78j4 m1c,
+  m1, m2: pdflatex 0, r4 2/2/1 → 0; m5 r4 3 → 1, pdflatex 2 for one runaway argument); an unlabelled owner drops the tag and
+  its diagnostics, as pdflatex never typesets that format. (22) A held tag's text that errs on its own raises no second,
+  summary Error (`\lx@tag@intags@held`, as `\lx@cref@docformat`): rev78j4 n9's `\autoref` name `\bgroup Fig` 2 → 1, as
+  pdflatex. (23) cleveref's `\lx@cleverref@labeltype` places a `\label[type]`'s type with `float_to_label_scoped`, as the
+  kernel's `\label` since 78p: after a closed table, an inner equation or a `\footnote` the type names the object in scope
+  (pdflatex "appendix section 1, appendix theorem 1 and appendix section 2"; r4 the table's and the equation's types). A/B r5 (release, int54a vs r5, all 3,319
+  `pop78j_*` papers incl. `pop78j_tabfmt`; 3,318 comparable, 2509.13772 panicking alike — "range end index 44 out of
+  range for slice of length 43", int54a too): E 5,149 = 5,149, F 16 = 16, W 66,281 → 65,342, no paper worse; r4 → r5
+  changed 93 outputs, each by int54's own label moves (81 the same line delta as int53a → int54a, 12 the same link and
+  id delta), none by r5's three rules; the XML of the 1,576 cleveref papers holds no empty held tag (the 57 empty
+  `ltx:tag`s are `\item[]`'s role-less labels and two bibitem `key`s).
 - **78g** (kernel batch: tcolorbox box labels, TCB-LABEL, user ruling 2026-10-21 item 12; + the repro stand-in licence
   audit, item 11; guards `perfect_kernel_batch78g::*`, 4, each RED on 25730beb73; OD #813, KPE #1038). (1) A label after a
   raw `\refstepcounter` names the object the step numbers, which takes the step's number: the kernel's

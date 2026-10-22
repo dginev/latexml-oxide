@@ -2743,6 +2743,50 @@ pub fn abandon_stack_frame() -> Result<()> {
 
 fn abandoned_frame_count() -> u64 { ABANDONED_FRAMES.with(Cell::get) }
 
+/// Runs `digestion` in a group of its own, as a text built ahead of its use and not read from the document: a tag a
+/// reference prints (latexml_engine tags_refnums.rs `\lx@tag@intags@held`), a form cleveref typesets only at a reference
+/// (latexml_package cleveref_sty.rs `\lx@cref@docformat`), whose text need not
+/// close what it opens — the derived `\Cref` format `\MakeUppercase#2\color{blue}…`, whose `\MakeUppercase` takes
+/// `\color` alone (2008.12750, 2604.24399). Whatever the digestion leaves is undone, so the document reads on as it
+/// was: the groups it left open are popped as [`abandon_stack_frame`] pops one, their `\aftergroup` discarded, but not
+/// counted as an abandonment, and the group is closed; the alignment brace count (tex.web's `align_state`, §789) is put
+/// back, as the `{` such a text scanned is not the document's — left counted, a figure's tabular of two captioned
+/// minipages read its next `&` as text and moved the following cell into the row above ("Missing } inserted",
+/// "Extra alignment tab"; guards `perfect_kernel_batch78j::cleveref_format_form_keeps_the_alignment_brace_count`,
+/// `::cleveref_format_form_keeps_an_alignment_row_end`). Returns the digestion's result and the group balance: the
+/// groups it left open, or, negative, how many it closed that it did not open.
+pub fn digest_in_own_group<T>(digestion: impl FnOnce() -> Result<T>) -> Result<(Result<T>, isize)> {
+  let depth = get_frame_depth();
+  let align = mark_align_group_count();
+  bgroup();
+  let value = digestion();
+  let after = get_frame_depth();
+  let balance = after as isize - (depth + 1) as isize;
+  let closed = if after > depth {
+    unwind_stack_frames_to(depth + 1).and_then(|_| egroup())
+  } else {
+    Ok(())
+  };
+  restore_align_group_count(align);
+  closed?;
+  Ok((value, balance))
+}
+
+/// Pops the groups above frame depth `depth` ([`digest_in_own_group`]). Returns how many it popped.
+fn unwind_stack_frames_to(depth: usize) -> Result<usize> {
+  let mut popped = 0;
+  while get_frame_depth() > depth {
+    let before = get_frame_depth();
+    let nonboxing = lookup_bool_sym(crate::pin!("groupNonBoxing"));
+    pop_stack_frame_with(nonboxing, false)?;
+    popped += 1;
+    if get_frame_depth() >= before {
+      break;
+    }
+  }
+  Ok(popped)
+}
+
 thread_local! {
   /// How many times the document ended inside open groups on this thread ([`end_inside_groups`]).
   static ENDS_INSIDE_GROUPS: Cell<u64> = const { Cell::new(0) };
