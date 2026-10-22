@@ -23168,7 +23168,7 @@ own (the XML's trailing nameless creator, #159) — each association with the ru
 (ledger index, span) (spans are unique only within a block; S2b's assertion that a projected range is the stamped one,
 `ledger::projected_is_stamped`, is in place and off, `ASSERT_PROJECTED_IS_STAMPED`). Nothing of it reaches the output
 (guard `perfect_kernel_batchfms2a2::resolver_leaves_the_xml_unchanged`).
-- **Resolver** (`resolver.rs`, Layer C, class-independent): rows from `Break`, columns from `Sep(And)`/alignment tabs
+- **Resolver** (`resolver/`, Layer C, class-independent; split by stage in r4): rows from `Break`, columns from `Sep(And)`/alignment tabs
   (unless the policy reads `\and` as inline); a line's type from its first ink — a mark-led line is labelled (unless it
   is the block's first line and its entries read as names whose marks a later line answers: the prefix convention), a
   column's first line or one whose name pieces each read as a name (`name_count`, `reads_as_affiliation`,
@@ -23219,7 +23219,7 @@ own (the XML's trailing nameless creator, #159) — each association with the ru
   inline: #791, #792, #807), `aa`, `inst_support`, `svjour` (`\inst` after a comma, #807), `jheppub`, `jcappub`,
   `jinstpub` (e-mail by spelling else call order, #801, #805, #809), `iopart`, `jpconf` (the same, each call a group:
   #806, #808, #841); each entry cites what it reproduces (unit test `every_entry_cites_what_it_reproduces`).
-- **Comparator** (`ab_audit fmshadow ROOT [-o PREFIX] [--keys F] [--re-resolve]`, latexml_oxide/bin/ab_audit/fmshadow.rs):
+- **Comparator** (`ab_audit fmshadow ROOT [-o PREFIX] [--keys F] [--re-resolve]`, latexml_oxide/bin/ab_audit/fmshadow/):
   per paper the shadow's tuples against the XML's (names without their `ltx:sup` marks, texts by their letters and
   digits; contacts of role `note`/`thanks` read as notes on both sides), each disagreement a row — kind (`name-split`,
   `affiliation`, `contact-owner`, `contact`, `note`, `block`), family (the policy key's binding), the deciding rule —
@@ -23344,7 +23344,7 @@ only (XML byte-identical against int54a with the switch unset and set, SYNC "FM 
   e-mail addresses of the names line read as creators or into a name (0810.4404, 1801.04987, 2405.06319, 2507.03885),
   an ORCID identifier printed as text after the name (2209.02767, 1902.02698, with the "ID" class), a later names row read as
   the affiliation of the row above (math0203226, 0908.1348, 2409.04981, 2509.10952, 2508.04012, 2208.13126, 2210.14979), a
-  name with its affiliation in one personname (1611.06737, 2601.04271, 1811.08870) — six classes (`fmshadow.rs:712-742`); the
+  name with its affiliation in one personname (1611.06737, 2601.04271, 1811.08870) — six classes (`fmshadow/classes.rs` `XML_WRONG`); the
   r3 A/B (300 census papers, the 979 repros) and the census ran on the pre-commit build `scratch_fms2a2r3/latexml_oxide.r3a`
   (stamp da23624725); review revfms2a2_3 matched its shadow dumps to the final commit's byte for byte (40 of 40); the r2 classes
   misapplied are fenced: a merged piece of one word only in a list of five or more (`Sanhueza, Patricio`, 2604.19097),
@@ -23357,6 +23357,58 @@ only (XML byte-identical against int54a with the switch unset and set, SYNC "FM 
   prefix_marks_on_a_sole_line_and_a_sole_authors_orphans, address_lists_in_author_order_and_collaborations,
   r3_shapes_leave_the_xml_unchanged}` (each red on r2); unit tests `resolver::tests::glued_labels_part_into_known_ones`,
   `fmshadow::tests::{marks_as_text_or_formulas_are_no_name_text, r3_classes_classify_their_disagreements}`.
+
+**S2a.2 r4: revtex4_support below the gate, the module split, the landing review's nits** (the r3 residual of
+revtex4_support and ams_support read against their PDFs; review revfms2a2_3). Still shadow only (XML byte-identical
+against int58a with the switch unset and set, SYNC "FM S2a.2").
+- **Module split** (no behaviour change): `observer/resolver/` by stage — `mod.rs` (the types, the state, `resolve`),
+  `labels.rs` (attribute values, mark labels and their owners, names folded, addresses, contact roles), `lines.rs`
+  (lines and entries, the names line), `blocks.rs` (a block's lines by type, the owner chain), `api.rs` (the API
+  intake), `post.rs` (the post-passes) —, and `ab_audit/fmshadow/` (`mod.rs` the tuples, `dump.rs`, `compare.rs`,
+  `classes.rs`, `driver.rs`, `tests.rs`), every file below 1,000 lines; shadow dumps byte-identical on 200 census
+  papers, the re-resolved r3 census tables identical.
+- **Today's attachment, reproduced**: an empty entry is no contact, but its authors hold its role (a later
+  `annotate=new` run stops at them: revtex's `\noaffiliation` under a collaboration, 1804.05750; an empty
+  `\affiliation{}`, 1507.03321) and it is in today's contact pile (amsart's `\email{}` before three pairs: no grid,
+  1302.1274, 1408.1840, 2009.01013); a `\lx@affiliation@withsup` line (`affiliation_calls`' marked entries, the ledger's
+  `_withsup=true`) takes its first superscript as its label wherever it stands, `\lx@sup@setlabel@affiliation`
+  (`Departments of Physics$^{4}$ and Chemistry$^{5}$`, 0812.4065; `N$^\circ$`, 2106.12584; rule `api:withsup-mark`);
+  today's contact grid (`distribute_upfront_contacts`) runs before the labels are answered, so the pile is what the
+  last author holds then — with the entries ruling 1 labels by a leading mark that today's attaches by its `annotate=`
+  (`piled`; no `\lx@affiliation@withsup`) — and its gate is today's (no earlier author requesting a pending entry of a
+  role the pile holds): 2311.04097's two `\email`s one each, the amsart upfront grids; annotations of the new authors
+  before any author are `relocate_annotations`' orphans — nothing when an author holds the same, else a sole author's,
+  else the block's (2103.04797: 17 of its 188 pre-declared `\affiliation`s; 2401.15779) — where r3 dropped them.
+- **Names**: a prefix-marked name keeps its notes and contacts (0710.4115, gr-qc0606119: the notes were lost); a link
+  to an ORCID record printing a name is that name and its ORCID (`lines::orcid_link_names`: 2312.16289's
+  `\href{https://orcid.org/…}{E. L. Gagnon}`, 2301.02927, 2602.03244); spacing before a mark (`${\,\!}^2$`) neither
+  joins nor ends the marked entries of one call (2112.13115).
+- **Lexer**: a `\thanks` inside a superscript is a note after the mark, not its label (1106.3485; 2512.05464, where
+  today's XML loses the note and the mark `2` — a content loss of today's output, recorded in SYNC); the kernel's
+  `\lx@orcidlink` is an ORCID link, its iD no ink (2602.03244); `\lx@frontmatter@mark{ltx:abstract}` prints nothing
+  (cond-mat9801109); a number or a dimension a box reads (`Float`, `Number`, `Dimension`, `Glue` parameters) and
+  `\scalebox`'s scales are no ink (`Hawai\scalebox{.7}{…\rotatebox{180}{\reflectbox{s}}}i`, 1005.4252, 2301.02699).
+- **Comparator**: a paper with an author block the rehearsal could not see (out of positions, a Fatal of its own, not
+  undone, no journal) is `unobserved`, outside the gate's denominator as a held one (BESIII's 600-name `\author`,
+  2012.14750); a footnote set in the personname explains the shadow's note of the creator (2503.10108; aastex's
+  `\altaffiltext` notes, which the shadow does not read, stay uncompared); an affiliation's formula superscript is a
+  mark, its base the text (`OR $97403^{1}$`, 2203.01892; `$299^A$`, 0707.4047); a joined XML item's label after its
+  "and" (`1Dept A and2Dept B`, 2112.13115); the XML-wrong class "legend lines (a symbol and its note) welded onto the
+  affiliation above them" (the PDF prints them apart: 2305.13575, 2012.15253, 2110.08090, 2502.01939, 2601.00327,
+  2607.22634, 2607.22703).
+- **Ledger nits** (review revfms2a2_3 5-9): the `\author` owner is held as an `Rc` and compared by `Rc::ptr_eq`; the
+  policy's state counter is read by `lookup_register_quiet` (no "expected:register" Warning under the switch); an API
+  call's attributes are written in source order, each pair as given (`get_pairs`; `attr_value` reads a repeated key's
+  last value, as `KeyVals::get_value`); `events::REF_COMMANDS` names the cross-reference commands a mark's key is read
+  off (`\ref`, `\autoref`, `\eqref`, cleveref's `\lx@cref`; not `\href`, `\nameref` — `\pageref` is `\let` to `\ref`, so
+  it reads as one); `ledger::label_text` is bounded by the tokens it visits (`LABEL_VISITS`, 1024), its macros' bodies
+  included.
+Not done (r4 residual, by class in the r4 report): revtex4_support's notes after a name's comma given to the next name
+in the XML (1705.11098, 1711.04571, nucl-ex0002003: the PDFs do not print the notes, so no XML-wrong class), large
+collaboration lists the XML reads otherwise (0807.2167, gr-qc0410007, hep-ex0103033, hep-ex0406068), unmarked address
+lines under names (cond-mat0409389, hep-ph0005026, physics0209010). Guards `perfect_kernel_batchfms2a2r4::*` (15; each
+red on r3 but the XML pin), ab_audit `fmshadow::tests::{a_note_in_the_name_is_the_creators,
+an_unobserved_block_is_outside_the_gate, welded_legends_are_an_xml_wrong_class}`.
 
 ### 840. A space a name sets before its own mark is the name's; spacing-only math, `\enskip` after a mark part names
 

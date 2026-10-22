@@ -1,0 +1,657 @@
+//! The resolver's owner chain for an author block (OXIDIZED_DESIGN_DIVERGENCES #837; the module's rules 5-9): the
+//! block's lines by type, labelled entries to the names requesting them, unlabelled lines to the row above, a
+//! line's contacts by their own mark, spelling, order, the group's only author or elimination, and its notes.
+
+use super::*;
+
+impl Resolver {
+  /// Contacts of `text` (one per printed address, ruling 3; the text whole when it holds none), owned by the chain:
+  /// the spelled ones first, then — the one address left, and the one candidate left without an address — by
+  /// elimination (R10), then the rest of the chain.
+  pub(super) fn place_line_contacts(
+    &mut self,
+    text: &str,
+    role: &str,
+    candidates: &[usize],
+    source: (usize, Option<(u16, u16)>),
+  ) {
+    let addresses = addresses_in(text);
+    if addresses.is_empty() {
+      let (owner, rule) = match candidates {
+        [only] => (Some(*only), "owner:only-author"),
+        _ => (None, "owner:block"),
+      };
+      self.attach(
+        owner,
+        Assoc {
+          role:   role.to_string(),
+          text:   text.to_string(),
+          label:  None,
+          rule:   rule.into(),
+          source: Some(source),
+        },
+        false,
+      );
+      return;
+    }
+    let spelled: Vec<Option<usize>> = addresses
+      .iter()
+      .map(|a| self.spelled(a, candidates))
+      .collect();
+    let unspelled = spelled.iter().filter(|s| s.is_none()).count();
+    let left: Vec<usize> = candidates
+      .iter()
+      .copied()
+      .filter(|c| !spelled.contains(&Some(*c)))
+      .filter(|&c| {
+        !self.out.creators[c]
+          .contacts
+          .iter()
+          .any(|a| a.role == "email")
+      })
+      .collect();
+    // (a list with one address per author that every spelled address agrees with is in author order: FIDELITY_CHARTER
+    // §4, 2026-10-21, OD #805 — `{qkv, riven, jiyicheng.cs, lihuan.cs, cwang85}@zju.edu.cn` under five names, 2603.19610;
+    // 2512.22629, 2305.12998, 2105.11174, 2412.09666)
+    let in_order = addresses.len() == candidates.len()
+      && candidates.len() >= 2
+      && spelled
+        .iter()
+        .zip(candidates)
+        .all(|(s, c)| s.is_none_or(|s| s == *c));
+    for (at, (address, spelled)) in addresses.into_iter().zip(spelled).enumerate() {
+      let (owner, rule) = match spelled {
+        Some(owner) => (Some(owner), "owner:spelled"),
+        None if in_order => (Some(candidates[at]), "owner:order"),
+        None if unspelled == 1 && candidates.len() > 1 && left.len() == 1 => {
+          (Some(left[0]), "owner:elimination")
+        },
+        None => match candidates {
+          [only] => (Some(*only), "owner:only-author"),
+          _ => self.corresponding(candidates),
+        },
+      };
+      self.attach(
+        owner,
+        Assoc {
+          role:   "email".into(),
+          text:   address,
+          label:  None,
+          rule:   s!("{rule} ruling3:one-per-print"),
+          source: Some(source),
+        },
+        false,
+      );
+    }
+  }
+
+  /// Resolve one block (its events under `policy`).
+  pub(super) fn block(
+    &mut self,
+    index: usize,
+    policy: &'static Policy,
+    cautious: bool,
+    keyvals: Option<&str>,
+    events: &[Event],
+  ) {
+    self.out.policies.push((index, policy.name));
+    let and_inline = policy.and_inline;
+    let events = &split_text_marks(&join_ordinals(&orcid_link_names(events)));
+    let lines = lines_of(events, and_inline);
+    let block_requests: Vec<String> = keyvals
+      .and_then(|kv| attr_value(kv, "annotations"))
+      .map(|labels| {
+        labels
+          .split(',')
+          .map(|l| l.trim().to_string())
+          .filter(|l| !l.is_empty())
+          .collect()
+      })
+      .unwrap_or_default();
+    let group = index;
+    let block_creators_start = self.out.creators.len();
+    // the labels the block's later mark-led lines answer (for the prefix convention)
+    let answered_below: Vec<String> = lines
+      .iter()
+      .skip(1)
+      .filter(|line| {
+        line
+          .events
+          .iter()
+          .find(|e| {
+            inked(e) && !(e.kind == EventKind::Name && !e.text.chars().any(char::is_alphanumeric))
+          })
+          .is_some_and(|e| e.kind == EventKind::Mark)
+      })
+      .flat_map(|line| entries_of(&line.events).into_iter().flat_map(|e| e.labels))
+      .collect();
+    // per column: the creators of its last names row
+    let mut row_above: Vec<(usize, Vec<usize>)> = Vec::new();
+    // the entry the previous line ended with, which an unmarked line under it continues (an address's second line:
+    // `$^1$Dept of X \\ 1-1-1 Street, City`, 0803.3589; one affiliation, as today's `\\`-joined contact)
+    let mut continues: Option<Continued> = None;
+    let mut first_in_column: Vec<usize> = Vec::new();
+    // the columns whose last line is a names row ending in a separator (a comma, "and"), which the next line continues
+    let mut open_rows: Vec<usize> = Vec::new();
+    // the columns whose names row has a line under it already (its affiliation)
+    let mut answered_rows: Vec<usize> = Vec::new();
+    // the columns whose last line was labelled entries
+    let mut labelled_last: Vec<usize> = Vec::new();
+    // an unmarked line's affiliation whose group runs on past the line (its places, where the group ends)
+    let mut open_group: Option<(u16, Vec<(usize, usize)>)> = None;
+    for (n, line) in lines.iter().enumerate() {
+      let continued = open_rows.contains(&line.column);
+      open_rows.retain(|c| *c != line.column);
+      // (the line before in the column was labelled entries: an unmarked name under them is a new row's — SYNC row 46,
+      // `$^\dagger$Univ A \quad $^\ddagger$Univ B \\ Cat Cole \\ Physics`)
+      let after_labelled = labelled_last.contains(&line.column);
+      labelled_last.retain(|c| *c != line.column);
+      let under_affiliation = answered_rows.contains(&line.column);
+      // (a line that is no names row answers the row above; a names row below takes this back)
+      if !answered_rows.contains(&line.column) && row_above.iter().any(|(c, _)| *c == line.column) {
+        answered_rows.push(line.column);
+      }
+      // (punctuation before a mark does not lead the line: `($^1$) LSIIT …`, 1004.4809)
+      let first_ink = line
+        .events
+        .iter()
+        .find(|e| {
+          inked(e) && !(e.kind == EventKind::Name && !e.text.chars().any(char::is_alphanumeric))
+        })
+        .copied();
+      let column_first = !first_in_column.contains(&line.column);
+      if column_first {
+        first_in_column.push(line.column);
+      }
+      let above = row_above
+        .iter()
+        .rev()
+        .find(|(c, _)| *c == line.column)
+        .map(|(_, r)| r.clone());
+      let above = above
+        .or_else(|| row_above.last().map(|(_, r)| r.clone()))
+        .unwrap_or_default();
+      let carried = continues.take();
+      match first_ink.map(|e| &e.kind) {
+        Some(EventKind::Mark) => {
+          let entries = entries_of(&line.events);
+          // (or the block is that one line, its affiliations the calls after it: revtex's `\author{$^{1}$Masashi Kimura
+          // and $^{2,3}$Takahiro Tanaka}`, 1805.08625; 1405.2400, 2001.00788, 0710.4115, gr-qc0606119 — its names lost)
+          let prefix = n == 0
+            && !entries.is_empty()
+            && entries.iter().all(|e| {
+              reads_as_names(&events_text(&e.events))
+                && (lines.len() == 1 || e.labels.iter().any(|l| answered_below.contains(l)))
+            });
+          if prefix {
+            let mut row = Vec::new();
+            for entry in entries {
+              let start = row.len();
+              for name in names_of(&entry.events) {
+                let c = self.new_creator(
+                  name,
+                  "line:names mark:prefix",
+                  index,
+                  [entry.labels.clone(), block_requests.clone()].concat(),
+                  group,
+                );
+                row.push(c);
+              }
+              // (the entry's notes and contacts are its name's, as a names line attaches them to the name before:
+              // `$^{1}$José Edgar Madriz Aguilar\thanks{E-mail address: …}`, 0710.4115, gr-qc0606119 — the notes were
+              // lost)
+              let owner = row[start..].last().copied();
+              for event in &entry.events {
+                match event.kind {
+                  EventKind::Note => self.note(index, event, owner, "note:adjacent"),
+                  EventKind::Contact => self.contact_event(
+                    index,
+                    event,
+                    &owner.into_iter().collect::<Vec<_>>(),
+                    "owner:adjacent",
+                  ),
+                  _ => {},
+                }
+              }
+            }
+            answered_rows.retain(|c| *c != line.column);
+            row_above.push((line.column, row));
+            continue;
+          }
+          labelled_last.push(line.column);
+          continues = self.labelled_entries(index, entries, "");
+        },
+        Some(_) => {
+          let text = events_text(&line.events);
+          let only_contacts = line
+            .events
+            .iter()
+            .filter(|e| inked(e))
+            .all(|e| e.kind == EventKind::Contact);
+          // (a column's first line that is one link printing a name is that name: `\href{https://orcid.org/…}
+          // {\includegraphics{orcid}\hspace{1mm}Amanda A. Howard}`, 2311.06483)
+          if column_first && only_contacts {
+            let links: Vec<&Event> = line
+              .events
+              .iter()
+              .copied()
+              .filter(|e| e.kind == EventKind::Contact)
+              .collect();
+            if let [link] = links.as_slice()
+              && link.role.as_deref() == Some("url")
+              && reads_as_names(&link.text)
+            {
+              let c = self.new_creator(
+                link.text.clone(),
+                "line:names link-text",
+                index,
+                block_requests.clone(),
+                group,
+              );
+              answered_rows.retain(|c| *c != line.column);
+              row_above.push((line.column, vec![c]));
+              continue;
+            }
+          }
+          // (a later line is more names when each of its pieces reads as a name: `Triantafyllos Afouras\quad\quad
+          // Himel Chowdhury …` under the first row, 2111.03635; the classify helpers on each piece, not the run of them)
+          // (a line of e-mail addresses alone is never names, a column's first line too: `\And
+          // \{sagghosh, …, niranjan\}@cs.stonybrook.edu`, 2210.05991)
+          let address_line = !addresses_in(&text).is_empty() && only_addresses(&text);
+          let names_line = !only_contacts
+            && !address_line
+            && (column_first
+              || later_line_is_names(line, continued, under_affiliation, after_labelled));
+          if names_line {
+            answered_rows.retain(|c| *c != line.column);
+            if line
+              .events
+              .iter()
+              .rev()
+              .find(|e| {
+                !matches!(
+                  e.kind,
+                  EventKind::Layout | EventKind::Contact | EventKind::Note
+                )
+              })
+              .is_some_and(|e| matches!(e.kind, EventKind::Sep(SepKind::Comma | SepKind::Word(_))))
+            {
+              open_rows.push(line.column);
+            }
+            let made = self.names_line(index, policy, cautious, line, &block_requests, group);
+            row_above.push((line.column, made.creators));
+            continue;
+          }
+          if only_contacts {
+            for contact in line.events.iter().filter(|e| e.kind == EventKind::Contact) {
+              self.contact_event(index, contact, &above, "line:contact R12:row-above");
+            }
+            continue;
+          }
+          // (a line whose marks trail their text is labelled entries: `Nanyang Technological University$^1$,
+          // Amazon$^2$`, 2507.05750)
+          // (each of its marks one a name shows on another line: a symbol after an affiliation, `Harvard
+          // University$^{*}$`, points to a note, 2307.02318)
+          let trailing = trailing_entries(&line.events);
+          let shown_elsewhere = |label: &String| {
+            lines.iter().enumerate().any(|(m, other)| {
+              m != n
+                && other.events.iter().any(|e| {
+                  e.kind == EventKind::Mark
+                    && mark_labels(e.label.as_deref().unwrap_or("")).contains(label)
+                })
+            })
+          };
+          if !trailing.is_empty()
+            && trailing
+              .iter()
+              .all(|e| e.labels.iter().any(shown_elsewhere))
+          {
+            continues = self.labelled_entries(index, trailing, " mark:trailing");
+            continue;
+          }
+          // an unmarked line under names: an address line by the owner chain, else the row above's affiliation
+          let source = (
+            index,
+            line.events.iter().find(|e| inked(e)).and_then(|e| e.span),
+          );
+          let notes: Vec<&Event> = line
+            .events
+            .iter()
+            .copied()
+            .filter(|e| e.kind == EventKind::Note)
+            .collect();
+          if text.is_empty() {
+            for note in notes {
+              self.note(index, note, above.last().copied(), "note:line-owner");
+            }
+            continue;
+          }
+          // (an unmarked line under a labelled entry continues it, as today's one `\\`-joined contact — a line holding an
+          // address beside other text too: `$^{(1)}$Dept \\ Univ \\ City. \{ann,bob\}@upc.edu`, 2509.12185; a line of
+          // addresses alone is e-mails by the owner chain, below: `$^1$Dept \\ landi@univ.trieste.it`, 0801.3376, 0810.3062)
+          // (a line inside the group an unmarked line above opened is that affiliation's: `\\ \small{\textit{Dept …,
+          // and\\ Institute …,\\ Facultad …}}`, one print unit, as today's one contact — 1012.1813)
+          let starts = source.1.map(|(start, _)| start);
+          match open_group.take() {
+            Some((until, places)) if starts.is_some_and(|start| start < until) => {
+              self.continue_entry(&Continued::Joined(places.clone()), &text);
+              open_group = Some((until, places));
+              continue;
+            },
+            _ => {},
+          }
+          if let Some(carried) =
+            carried.filter(|_| addresses_in(&text).is_empty() || !only_addresses(&text))
+          {
+            self.continue_entry(&carried, &text);
+            for note in notes {
+              self.note(index, note, above.last().copied(), "note:line-owner");
+            }
+            continues = Some(carried);
+            continue;
+          }
+          if !addresses_in(&text).is_empty() {
+            let candidates: Vec<usize> = (block_creators_start..self.out.creators.len()).collect();
+            self.place_line_contacts(&text, "email", &candidates, source);
+            continue;
+          }
+          // (each unmarked line its own contact, as each `\\` line is today's: 0707.1113, 1404.0431; ruling 3 — but under a
+          // names row whose names show marks no line answers, the lines are one affiliation of every name, as today's
+          // `\\`-joined contact: `Riemann$^1$, … \\ 1- DESY in Zeuthen \\ Platanenallee 6, …`, 0903.2366, 2303.09899; a
+          // footnote symbol is no such mark, `Marciniak$^{*}$ \\ Department … \\ Campus …` stays a contact a line,
+          // 0707.1113)
+          let joined = above.iter().any(|&c| {
+            self.out.creators[c]
+              .requests
+              .iter()
+              .any(|r| !is_symbol_label(r))
+          });
+          let mut places = Vec::new();
+          for owner in &above {
+            places.push((*owner, self.out.creators[*owner].affiliations.len()));
+            self.attach(
+              Some(*owner),
+              Assoc {
+                role:   "affiliation".into(),
+                text:   text.clone(),
+                label:  None,
+                rule:   if joined {
+                  "line:unmarked-joined R12:row-above".into()
+                } else {
+                  "line:unmarked R12:row-above".into()
+                },
+                source: Some(source),
+              },
+              false,
+            );
+          }
+          let line_end = line
+            .events
+            .iter()
+            .rev()
+            .find_map(|e| e.span)
+            .map(|(_, end)| end);
+          let group_end = line
+            .events
+            .iter()
+            .filter_map(|e| e.span)
+            .map(|(_, end)| end)
+            .max();
+          if let (Some(line_end), Some(group_end)) = (line_end, group_end)
+            && group_end > line_end
+            && !places.is_empty()
+          {
+            open_group = Some((group_end, places.clone()));
+          }
+          if joined && !places.is_empty() {
+            continues = Some(Continued::Joined(places));
+          }
+          if above.is_empty() {
+            self.attach(
+              None,
+              Assoc {
+                role:   "affiliation".into(),
+                text:   text.clone(),
+                label:  None,
+                rule:   "line:unmarked owner:block".into(),
+                source: Some(source),
+              },
+              false,
+            );
+          }
+          for note in notes {
+            self.note(index, note, above.last().copied(), "note:line-owner");
+          }
+        },
+        None => {},
+      }
+    }
+  }
+
+  /// A labelled line's entries, each pending its requests (ruling 1; ruling 2 for a symbol): an e-mail entry one
+  /// contact per address, any other one affiliation or legend. The entry an unmarked line under it continues.
+  pub(super) fn labelled_entries(
+    &mut self,
+    index: usize,
+    entries: Vec<Entry<'_>>,
+    extra: &str,
+  ) -> Option<Continued> {
+    let mut continues = None;
+    for entry in entries {
+      // (the closing half of a bracketed mark is no text of the entry: `($^1$) Univ A`, 1004.4809)
+      let text = events_text(&entry.events)
+        .trim_start_matches(|c: char| ")]-.:".contains(c) || c.is_whitespace())
+        .to_string();
+      let span = entry.events.first().and_then(|e| e.span);
+      let rule = if entry.symbol {
+        s!("ruling2:symbol-line{extra}")
+      } else {
+        s!("ruling1:request{extra}")
+      };
+      let contacts: Vec<&Event> = entry
+        .events
+        .iter()
+        .copied()
+        .filter(|e| e.kind == EventKind::Contact)
+        .collect();
+      let role = if !addresses_in(&text).is_empty()
+        && contacts
+          .iter()
+          .all(|c| c.role.as_deref() != Some("affiliation"))
+      {
+        "email"
+      } else if is_legend_text(&text) && entry.symbol {
+        "legend"
+      } else {
+        "affiliation"
+      };
+      if role == "email" {
+        for address in addresses_in(&text) {
+          self
+            .pending
+            .push((entry.labels.clone(), entry.symbol, Assoc {
+              role:   "email".into(),
+              text:   address,
+              label:  entry.labels.first().cloned(),
+              rule:   rule.clone(),
+              source: Some((index, span)),
+            }));
+        }
+        continues = None;
+      } else {
+        self
+          .pending
+          .push((entry.labels.clone(), entry.symbol, Assoc {
+            role: role.into(),
+            text,
+            label: entry.labels.first().cloned(),
+            rule: rule.clone(),
+            source: Some((index, span)),
+          }));
+        continues = Some(Continued::Pending(self.pending.len() - 1));
+      }
+    }
+    continues
+  }
+
+  /// An unmarked line continuing the entry before it: its text appended.
+  pub(super) fn continue_entry(&mut self, carried: &Continued, text: &str) {
+    let extend = |assoc: &mut Assoc| {
+      assoc.text = s!("{} {text}", assoc.text);
+      if !assoc.rule.contains("line:continued") {
+        assoc.rule.push_str(" line:continued");
+      }
+    };
+    match carried {
+      Continued::Pending(at) => {
+        if let Some((_, _, assoc)) = self.pending.get_mut(*at) {
+          extend(assoc);
+        }
+      },
+      Continued::Joined(places) => {
+        for &(c, i) in places {
+          if let Some(assoc) = self.out.creators[c].affiliations.get_mut(i) {
+            extend(assoc);
+          }
+        }
+      },
+    }
+  }
+
+  /// A Contact event (an `\email`, `\url`, an in-block `\affil`): a labelled one waits for its requests; an e-mail by
+  /// the owner chain among `owners`; any other to `owners` (the name before, the row above).
+  pub(super) fn contact_event(
+    &mut self,
+    index: usize,
+    contact: &Event,
+    owners: &[usize],
+    rule: &str,
+  ) {
+    let (role, text) = contact_parts(contact);
+    let assoc = Assoc {
+      role: role.clone(),
+      text,
+      label: contact.label.clone(),
+      rule: rule.to_string(),
+      source: Some((index, contact.span)),
+    };
+    if let Some(label) = contact.label.as_deref().filter(|_| role == "affiliation") {
+      self.pending.push((mark_labels(label), false, Assoc {
+        rule: "ruling1:request".into(),
+        ..assoc
+      }));
+      return;
+    }
+    if owners.is_empty() {
+      self.attach(
+        None,
+        Assoc {
+          rule: "owner:block".into(),
+          ..assoc
+        },
+        false,
+      );
+      return;
+    }
+    // (an e-mail given to a row of names, or printing several addresses, is placed address by address by the owner
+    // chain, ruling 3 — `\email{sfranco@kitp.ucsb.edu, ahanany@imperial.ac.uk}` under four names, 0809.3237)
+    if role == "email" && (owners.len() > 1 || addresses_in(&assoc.text).len() > 1) {
+      self.place_line_contacts(&assoc.text, "email", owners, (index, contact.span));
+      return;
+    }
+    for &owner in owners {
+      self.attach(Some(owner), assoc.clone(), false);
+    }
+  }
+
+  /// A Note event: its inner contacts to its owner; the note itself, its whole text, unless they emptied it (ruling 4).
+  pub(super) fn note(&mut self, index: usize, note: &Event, owner: Option<usize>, rule: &str) {
+    // (what is left of its text once its contacts are taken out decides only whether they emptied it: the note keeps
+    // its whole text, "Codebase is available at https://…" — review revfms2a2 finding 1; 2401.17399, 1607.05792,
+    // 2603.01292)
+    let mut rest = note.text.clone();
+    let contacts: Vec<&Event> = note
+      .inner
+      .iter()
+      .filter(|e| e.kind == EventKind::Contact)
+      .collect();
+    for inner in &contacts {
+      if !inner.text.is_empty() {
+        rest = rest.replacen(inner.text.as_str(), "", 1);
+      }
+      let (role, text) = contact_parts(inner);
+      let assoc = Assoc {
+        role,
+        text,
+        label: inner.label.clone(),
+        rule: s!("{rule} ruling4:inner-contact"),
+        source: Some((index, inner.span)),
+      };
+      // (an e-mail goes to the author it spells before the one the note is on — charter §4, by evidence: `Chauvet\thanks{…
+      // jocelyn.chauvet@…; xavier.bry@…}`, 1908.04020; 2304.00435 — read once every name is, `answer_note_emails`)
+      if assoc.role == "email" {
+        self.note_emails.push((owner, assoc));
+      } else {
+        self.attach(owner, assoc, false);
+      }
+    }
+    let emptied = !contacts.is_empty() && rest.chars().all(|c| !c.is_alphanumeric());
+    if emptied {
+      self.out.dropped.push(Assoc {
+        role:   "note".into(),
+        text:   note.text.trim().to_string(),
+        label:  note.label.clone(),
+        rule:   s!("{rule} ruling4:emptied"),
+        source: Some((index, note.span)),
+      });
+      return;
+    }
+    // (a note opening with a Mark some name requests is that label's legend: `\thanks{$^{1}$ Canizaro … Center}`
+    // under `Newaz$^{1,2,*}$`, 2311.16145 — the mark it prints, its leading Mark event; its owners by ruling 1)
+    if let Some((labels, legend)) = leading_mark(note)
+      && labels
+        .iter()
+        .any(|l| !label_owners(&self.out.creators, l).is_empty())
+    {
+      let symbol = labels.iter().all(|l| is_symbol_label(l));
+      let role = if is_legend_text(&legend) || symbol {
+        "legend"
+      } else {
+        "affiliation"
+      };
+      self.pending.push((labels.clone(), symbol, Assoc {
+        role:   role.into(),
+        text:   legend.clone(),
+        label:  labels.first().cloned(),
+        rule:   s!("{rule} note:legend ruling1:request"),
+        source: Some((index, note.span)),
+      }));
+      return;
+    }
+    let role = note
+      .role
+      .as_deref()
+      .unwrap_or("thanks")
+      .split(' ')
+      .next()
+      .unwrap_or("thanks")
+      .to_string();
+    let rule = if note.text.is_empty() && note.inner.is_empty() {
+      s!("{rule} ruling4:empty-kept")
+    } else {
+      rule.to_string()
+    };
+    self.attach(
+      owner,
+      Assoc {
+        role,
+        text: note.text.trim().to_string(),
+        label: note.label.clone(),
+        rule,
+        source: Some((index, note.span)),
+      },
+      true,
+    );
+  }
+}

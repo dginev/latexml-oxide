@@ -6,7 +6,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use latexml_core::{
-  definition::origin::DefinitionOrigin,
+  definition::{Definition, origin::DefinitionOrigin},
   gullet::{InputMark, input_mark, input_unread_since},
   token::{FIELD_PROV_POS_MASK, field_prov},
 };
@@ -201,21 +201,28 @@ pub(in crate::base_utilities) fn reset_ledger() {
 type ClassBindings = (Vec<String>, usize, bool);
 
 thread_local! {
-  /// The compiled binding that defined the current `\author` meaning, with that meaning's address
-  /// ([`note_binding_load`]), under the shadow switch only.
-  static AUTHOR_OWNER: RefCell<Option<(String, usize)>> = const { RefCell::new(None) };
+  /// The compiled binding that defined the current `\author` meaning, with that meaning itself ([`note_binding_load`];
+  /// held, so its identity is `Rc::ptr_eq`'s and no later definition can take its address), under the shadow switch
+  /// only.
+  static AUTHOR_OWNER: RefCell<Option<(String, Rc<dyn Definition>)>> = const { RefCell::new(None) };
   /// The document class's compiled bindings: the first class binding loaded outside any other binding's load, and every
   /// binding its load loaded (`report.cls`; iopart.cls's `iopart_support.sty`), in load order; and how deep the loads
   /// nest now, with whether the outermost is that class's.
   static CLASS_BINDINGS: RefCell<ClassBindings> = const { RefCell::new((Vec::new(), 0, false)) };
 }
 
-/// The address of the current `\author` meaning, if any (what [`note_binding_load`] compares).
-fn author_meaning() -> Option<(usize, DefinitionOrigin)> {
-  lookup_definition(&T_CS!("\\author"))
-    .ok()
-    .flatten()
-    .map(|d| (Rc::as_ptr(&d).cast::<()>() as usize, d.get_origin()))
+/// The current `\author` meaning, if any (what [`note_binding_load`] compares, by `Rc::ptr_eq`).
+fn author_meaning() -> Option<Rc<dyn Definition>> {
+  lookup_definition(&T_CS!("\\author")).ok().flatten()
+}
+
+/// Whether two `\author` meanings are the same definition (or both absent).
+fn same_meaning(a: Option<&Rc<dyn Definition>>, b: Option<&Rc<dyn Definition>>) -> bool {
+  match (a, b) {
+    (Some(a), Some(b)) => Rc::ptr_eq(a, b),
+    (None, None) => true,
+    _ => false,
+  }
 }
 
 /// Run a compiled binding's loader (`name`.`extension`, the binding's file: `revtex4_support.sty`), noting it as the owner of the
@@ -226,8 +233,8 @@ pub fn note_binding_load<R>(name: &str, extension: &str, load: impl FnOnce() -> 
   if !fm_shadow_enabled() {
     return load();
   }
-  let before = author_meaning().map(|(at, _)| at);
-  let owner_before = AUTHOR_OWNER.with(|o| o.borrow().as_ref().map(|(_, at)| *at));
+  let before = author_meaning();
+  let owner_before = AUTHOR_OWNER.with(|o| o.borrow().as_ref().map(|(_, defn)| Rc::clone(defn)));
   CLASS_BINDINGS.with(|c| {
     let (names, depth, in_class) = &mut *c.borrow_mut();
     if *depth == 0 && extension == "cls" && names.is_empty() {
@@ -246,11 +253,11 @@ pub fn note_binding_load<R>(name: &str, extension: &str, load: impl FnOnce() -> 
       *in_class = false;
     }
   });
-  let after = author_meaning().map(|(at, _)| at);
-  let owner_after = AUTHOR_OWNER.with(|o| o.borrow().as_ref().map(|(_, at)| *at));
+  let after = author_meaning();
+  let owner_after = AUTHOR_OWNER.with(|o| o.borrow().as_ref().map(|(_, defn)| Rc::clone(defn)));
   if let Some(after) = after
-    && before != Some(after)
-    && owner_after == owner_before
+    && !same_meaning(before.as_ref(), Some(&after))
+    && same_meaning(owner_after.as_ref(), owner_before.as_ref())
   {
     // (a pool is LaTeXML's own kernel: `kernel`, so a binding that loads it — latexml.sty — does not own its `\author`)
     let owner = if extension == "pool" {
@@ -292,18 +299,18 @@ pub(in crate::base_utilities) fn policy_binding(owner: &str) -> String {
 /// document's own `\renewcommand`), `raw` (a class or package read raw), `fallback` (OmniBus), `binding` (a binding no
 /// load noted).
 pub(in crate::base_utilities) fn author_binding() -> String {
-  let Some((at, origin)) = author_meaning() else {
+  let Some(meaning) = author_meaning() else {
     return "kernel".to_string();
   };
   if let Some(name) = AUTHOR_OWNER.with(|o| {
     o.borrow()
       .as_ref()
-      .filter(|(_, owned)| *owned == at)
+      .filter(|(_, owned)| Rc::ptr_eq(owned, &meaning))
       .map(|(name, _)| name.clone())
   }) {
     return name;
   }
-  match origin {
+  match meaning.get_origin() {
     DefinitionOrigin::Document => "document",
     DefinitionOrigin::File => "raw",
     DefinitionOrigin::Fallback | DefinitionOrigin::Stub => "fallback",
@@ -350,12 +357,7 @@ pub(in crate::base_utilities) fn record_author_call(
   // (a policy's own state, read at the call: authblk's `\c@Maxaffil`, which decides whether its notes show)
   let counter = policy::policy_for(&binding, hook)
     .state_counter
-    .and_then(|name| {
-      lookup_register(&s!("\\c@{name}"), Vec::new())
-        .ok()
-        .flatten()
-        .map(|value| value.value_of())
-    });
+    .and_then(|name| lookup_register_quiet(&s!("\\c@{name}")).map(|value| value.value_of()));
   let block = AuthorBlock {
     index: 0,
     hook,
@@ -491,21 +493,32 @@ pub(in crate::base_utilities) fn record_api_call(
     .and_then(|kv| kv.get_value("role"))
     .map(|role| role.to_string())
     .unwrap_or_default();
+  // (in source order, each pair as given: a repeated key keeps both)
   let attrs = attr
     .map(|kv| {
-      kv.get_keyvals()
-        .keys()
-        .filter_map(|key| {
-          kv.get_value(key).map(|value| match value {
-            ArgWrap::Tokens(tokens) if key == "label" => s!("{key}={}", label_text(tokens)),
-            value => s!("{key}={value}"),
-          })
+      kv.get_pairs()
+        .map(|(key, value)| match value {
+          ArgWrap::Tokens(tokens) if key == "label" => s!("{key}={}", label_text(tokens)),
+          value => s!("{key}={value}"),
         })
         .collect::<Vec<_>>()
         .join(",")
     })
     .unwrap_or_default();
-  let content = queued_affiliation_text(&last_group(command));
+  let content = last_group(command);
+  // (content `\lx@affiliation@withsup` wraps — a marked line of `affiliation_calls`, revtex's `\affiliation{$^1$…}` —
+  // takes its first superscript as its label, `\lx@sup@setlabel@affiliation`, wherever in the line: recorded for the
+  // resolver, `_withsup=true`)
+  let attrs = if wraps_withsup(&content) {
+    if attrs.is_empty() {
+      "_withsup=true".to_string()
+    } else {
+      s!("{attrs},_withsup=true")
+    }
+  } else {
+    attrs
+  };
+  let content = queued_affiliation_text(&content);
   let parent = match command.unlist_ref().as_slice() {
     [first, rest @ ..] if *first == T_CS!("\\lx@annotate@frontmatter@now") => {
       first_group(rest).to_string().trim().to_string()
@@ -555,14 +568,15 @@ pub(in crate::base_utilities) fn record_api_call(
 /// A call's label with its parameterless macros written out — `fuzzy:\lx@aas@correspondent` is "fuzzy:Bob Baker", aastex's
 /// `\email` after a `\correspondingauthor` (aastex_cls.rs `\lx@aas@email@corresp`; 2506.07978, whose label spelled no
 /// one and went to the block): the label today's `\lx@annotate@frontmatter@now` reads once the flush digests its
-/// keyvals. A pure lookup of each macro's token body (bounded), nothing run through the gullet: the shadow changes no
-/// state.
+/// keyvals. A pure lookup of each macro's token body, nothing run through the gullet: the shadow changes no state.
+/// Bounded by the tokens visited (macros expanding to nothing included, [`LABEL_VISITS`]) and the depth (8).
 fn label_text(value: &Tokens) -> String {
-  fn written(tokens: &[Token], depth: usize, out: &mut Vec<Token>) {
+  fn written(tokens: &[Token], depth: usize, visited: &mut usize, out: &mut Vec<Token>) {
     for t in tokens {
-      if out.len() > 512 {
+      if *visited >= LABEL_VISITS {
         return;
       }
+      *visited += 1;
       if depth < 8
         && t.get_catcode() == Catcode::CS
         && let Some(Stored::Expandable(defn)) = lookup_meaning(t)
@@ -571,16 +585,38 @@ fn label_text(value: &Tokens) -> String {
           .is_none_or(|p| p.get_parameters().is_empty())
         && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
       {
-        written(body.unlist_ref(), depth + 1, out);
+        written(body.unlist_ref(), depth + 1, visited, out);
       } else {
         out.push(*t);
       }
     }
   }
   let mut out = Vec::new();
-  written(value.unlist_ref(), 0, &mut out);
+  written(value.unlist_ref(), 0, &mut 0, &mut out);
   Tokens::new(out).to_string()
 }
+
+/// Whether `content` is wrapped in `\lx@affiliation@withsup` (inside the other affiliation wrapper or not), as
+/// `queued_affiliation_text` unwraps it.
+fn wraps_withsup(content: &Tokens) -> bool {
+  let mut v = content.unlist_ref().as_slice();
+  loop {
+    let wrapped = v.len() >= 3
+      && v[1].get_catcode() == Catcode::BEGIN
+      && skip_group(v, 1) == v.len()
+      && (v[0] == T_CS!("\\lx@affiliation@withinst") || v[0] == T_CS!("\\lx@affiliation@withsup"));
+    if !wrapped {
+      return false;
+    }
+    if v[0] == T_CS!("\\lx@affiliation@withsup") {
+      return true;
+    }
+    v = &v[2..v.len() - 1];
+  }
+}
+
+/// The tokens [`label_text`] visits at most, the label's own and its macros' bodies'.
+const LABEL_VISITS: usize = 1024;
 
 /// The content of the first top-level brace group of `tokens` (an annotation command's parent tag).
 fn first_group(tokens: &[Token]) -> Tokens {

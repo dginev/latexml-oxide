@@ -6330,6 +6330,50 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   bounds output tokens, not visited ones. Gates int58a: nextest 6912/6912 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int57a
   empty. A/B int57a vs int58a (597: 300 random census + 300 frontmatter-heavy revtex/amsart/IEEEtran/authblk, seed 58):
   byte-identical, 0 of 597 changed. Binding nets: 136/136, 0 documents worse.
+  **r4** (OD #837 "S2a.2 r4"; branch pk/fms2a2r4 from int58 b1118a80f1, three commits: the module split d2b81cc429,
+  the fixes fa2932c628, the docs): `observer/resolver/` split by stage (labels, lines, blocks, api, post) and
+  `ab_audit/fmshadow/` (dump, compare, classes, driver, tests), every file below 1,000 lines — shadow dumps
+  byte-identical on 200 census papers and the re-resolved r3 census tables identical against b1118a80f1; the
+  revtex4_support residual by class — an empty entry's role and its place in today's contact pile, a
+  `\lx@affiliation@withsup` line's first superscript its label (`_withsup=true`), today's contact grid before the labels
+  are answered, annotations before any author as `relocate_annotations`' orphans, a prefix-marked name's notes, ORCID
+  links printing a name, spacing before a mark; the lexer's `\thanks` inside a superscript, `\lx@orcidlink`,
+  `\lx@frontmatter@mark`, numeric box arguments and `\scalebox`'s scales; the comparator's `unobserved` bucket (a block
+  the rehearsal could not see, outside the denominator), notes in the personname, an affiliation's formula superscript,
+  a label after a joined item's "and", the XML-wrong class "legend lines welded onto the affiliation above them" (7
+  PDF-confirmed witnesses); the review's ledger nits (the `\author` owner by `Rc::ptr_eq`, `lookup_register_quiet`,
+  attributes in source order, `events::REF_COMMANDS`, `label_text` bounded by tokens visited). Guards
+  `perfect_kernel_batchfms2a2r4::*` (15, each red on r3 but the XML pin), `fmshadow::tests` (11, 3 new). Gates (the fixes commit fa2932c628; the docs commit after it changes no code): nextest
+  6930/6930, clippy/rustdoc/fmt clean, inits 0/0 with the dumps' `comm -3` against int58a 0 lines each. **A/B**
+  (release, int58a vs r4 stamped fa2932c628, int58a dumps): 300 seeded census papers (seed 4005, none of the r3 300) XML
+  identical with the variable unset and set (the temp-dir `graphicspath` instruction aside), E 13 = 13 = 13, F 0, W
+  3,279 = 3,279 = 3,279 paper by paper; the 979 sectioning-frontmatter repros XML identical (base, off, on), E 23, W 39
+  each. **Fresh census** (the 26,322 papers converted with the r4 release binary, the dump's `resolved` equal to
+  `--re-resolve`): counted 23,205 — agree 19,528, classified 1,732, unclassified 1,945 (**8.4 %**, from 9.0 %); 111
+  held, 2 unobserved; per family (gate): kernel 6,800 (15.5 %), **revtex4_support 5,639 (0.4 %: 23 papers, under the
+  class guard)**, ams_support 3,105 (0.7 %: 22), IEEEtran 2,202 (9.8 %), authblk 939 (9.7 %), elsart_support_core 818
+  (5.9 %), inst_support 786 (23.1 %), aas_support 688 (4.2 %), mn2e_support 560 (6.6 %), llncs 400 (17.0 %),
+  "binding" 317 (8.5 %), iopart_support 264 (6.1 %), sv_support 262 (12.6 %), jheppub 196 (6.0 %), jcappub 93
+  (3.9 %), ijcai 59 (72.9 %), JHEP.cls 58 (81.0 %). Against the r3 dumps resolved by the r4 code, the new dumps (the
+  lexer's changes) move 16 papers to unclassified (15 kernel: the `\thanks` inside a superscript the shadow now reads
+  and today's XML loses, below) and 30 out. **PDF precision** (classified, seeded 404, drawn from the whole census, the
+  first 60 of the draw with a PDF; pdflatex on copies or an earlier round's pages): the shadow right 52, wrong 6,
+  undecidable 2 — **89.7 %** of the decidable (wrong: 1802.03043 a legend listing every author's affiliation given to
+  its leading mark's authors, 2202.06129 a line of two marked entries given whole to the first mark's, 2404.09857 a
+  glued mark parted wrongly, 2006.12418 a shared address pattern given to the corresponding author, and two XML-wrong
+  classes misapplied: 2609.10596 an affiliation line read as names under "a later names row read as the affiliation",
+  1706.00234 a Vietnamese name with spacing accents split under "names parted by a wide space"). The revtex4_support
+  residual (23): collaboration lists read otherwise (0807.2167, gr-qc0410007, hep-ex0103033, hep-ex0406068,
+  2412.14256), notes after a name's comma given to the next name in the XML with no PDF to confirm it (1705.11098,
+  1711.04571, nucl-ex0002003), unmarked address lines (cond-mat0409389, hep-ph0005026, physics0209010), an affiliation
+  line as a creator in the XML (2001.06842), and singletons (0907.1243, 1112.1723, 1203.3894, 1309.7542, 1607.07940,
+  2008.06624, 2012.13946, 2106.12436, 2504.02039, hep-ex0607072, hep-ph9805510); ams_support (22): name lines
+  (0808.2556, 1106.0130, 1703.08733, 2006.13694, 2106.11727, 2109.14517, 2210.11574, 2311.00652, 2411.16601,
+  math0112263, math0610203), unmarked lines (1710.07902, 2506.07291, math0610612), and singletons (1005.4252,
+  1909.09152, 2108.13723, 2208.03878, 2301.00097, 2402.04675, 2506.11626, 2507.07513). Side finding (output, not fixed — shadow only): today's kernel `\author{Nataliia
+  Babina\textsuperscript{1,2\thanks{Work done …}}}` loses the mark `2` and the note (2512.05464, PDF-confirmed: a
+  silent content loss; 15 census papers: 1911.03118, 1912.00833, 2211.09622, 2305.16614, 2306.17472, 2309.12862,
+  2402.18447, 2403.04164, 2410.12564, 2501.01423, 2502.15412, 2503.05905, 2512.05464, 2603.17529, 2605.17958). Scratch `~/data/pk_wt/scratch_fms2a2r4/` (rep/final.*, pdf_verdicts.tsv).
 
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's

@@ -6,7 +6,7 @@
 //! * `ab_audit compare A_ROOT B_ROOT -o PREFIX` compares two existing output trees.
 //! * `ab_audit audit ROOT -o PREFIX` audits one tree (the seed of the end-of-queue fidelity audit).
 //! * `ab_audit fmshadow ROOT -o PREFIX` compares the frontmatter observer's shadow resolution
-//!   (`out.xml.fmshadow.json`, `LATEXML_FM_SHADOW=1`) with each paper's XML (`fmshadow.rs`).
+//!   (`out.xml.fmshadow.json`, `LATEXML_FM_SHADOW=1`) with each paper's XML (`fmshadow/`).
 //!
 //! Every report is `<prefix>.tsv` (one row per paper: tier, flags, then the columns), `<prefix>.summary.txt`
 //! (tallies, then the rows ranked regressions first) and `<prefix>.details/<key>.txt` per flagged paper.

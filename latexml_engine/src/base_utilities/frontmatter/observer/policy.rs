@@ -1,5 +1,5 @@
 //! The observer's policy table (Layer B of the design note's §2; OXIDIZED_DESIGN_DIVERGENCES #837): the association
-//! conventions a binding family applies on top of the class-independent resolver (`resolver.rs`, Layer C), keyed on
+//! conventions a binding family applies on top of the class-independent resolver (`resolver/`, Layer C), keyed on
 //! (binding, hook) as the ledger records them at the call — the binding owning the `\author` meaning
 //! (`ledger::author_binding`) and the `\lx@add@authors*` hook it called (notes decision 2: no policy keyval in the
 //! binding files). Each entry reproduces a convention today's code already applies for that family, and cites the

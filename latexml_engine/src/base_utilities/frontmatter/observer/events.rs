@@ -158,15 +158,21 @@ fn mark_event(text: String, role: &str) -> Option<Event> {
   Some(event)
 }
 
-/// The key of the `\ref` a digested mark holds (its last argument, Semiverbatim: sect11.rs `\ref OptionalMatch:*
-/// Semiverbatim`; hyperref's and cleveref's `…ref` the same), when it holds one.
+/// The cross-reference commands whose key a mark can print ([`ref_key`]): sect11.rs `\ref OptionalMatch:*
+/// Semiverbatim`, hyperref's `\autoref`, amsmath's `\eqref`, cleveref's `\lx@cref` (its `\cref`/`\Cref`) — each
+/// with the key its last argument. Not `\href` (a link, its last argument the text printed), nor `\pageref`/
+/// `\nameref` (a page or a title, never a label's mark).
+const REF_COMMANDS: &[&str] = &["\\ref", "\\autoref", "\\eqref", "\\lx@cref"];
+
+/// The key of the `\ref` a digested mark holds (its last argument, Semiverbatim), when it holds one of
+/// [`REF_COMMANDS`].
 fn ref_key(d: &Digested) -> Option<String> {
   match d.data() {
     DigestedData::List(l) => l.borrow().boxes.iter().find_map(ref_key),
     DigestedData::Whatsit(w) => {
       let w = w.borrow();
       let cs = whatsit_cs(&w);
-      if cs.trim_end().ends_with("ref")
+      if REF_COMMANDS.contains(&cs.trim_end())
         && let Some(key) = w.get_args().iter().rev().flatten().next()
       {
         let key = ink_of(key).trim().to_string();
@@ -290,6 +296,74 @@ fn deep_span(d: &Digested) -> Option<(u16, u16)> {
 fn ink_of(d: &Digested) -> String {
   let mut text = String::new();
   ink_text(d, &mut text);
+  text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// Whether a whatsit is one of the rehearsal's notes (`\thanks`, `\footnotetext`).
+fn is_note_whatsit(w: &Whatsit) -> bool {
+  matches!(
+    whatsit_cs(w).as_str(),
+    "\\lx@fm@obs@note" | "\\lx@fm@obs@notetext"
+  )
+}
+
+/// The notes a mark's script holds (`$^{1,\thanks{…}}$`), outermost first.
+fn notes_in(d: &Digested) -> Vec<Digested> {
+  fn collect(d: &Digested, out: &mut Vec<Digested>) {
+    match d.data() {
+      DigestedData::List(l) => {
+        for child in l.borrow().boxes.iter() {
+          collect(child, out);
+        }
+      },
+      DigestedData::Whatsit(w) => {
+        let w = w.borrow();
+        if is_note_whatsit(&w) {
+          out.push(d.clone());
+          return;
+        }
+        for arg in w.get_args().iter().flatten() {
+          collect(arg, out);
+        }
+        if let Ok(Some(body)) = w.get_body() {
+          collect(&body, out);
+        }
+      },
+      _ => {},
+    }
+  }
+  let mut out = Vec::new();
+  collect(d, &mut out);
+  out
+}
+
+/// [`ink_of`] a mark's script without the notes it holds ([`notes_in`]).
+fn ink_of_without_notes(d: &Digested) -> String {
+  fn ink(d: &Digested, out: &mut String) {
+    match d.data() {
+      DigestedData::List(l) => {
+        for child in l.borrow().boxes.iter() {
+          ink(child, out);
+        }
+      },
+      DigestedData::Whatsit(w) if is_note_whatsit(&w.borrow()) => {},
+      DigestedData::Whatsit(_) if notes_in(d).is_empty() => ink_text(d, out),
+      DigestedData::Whatsit(w) => {
+        let w = w.borrow();
+        for (arg, shown) in w.get_args().iter().zip(shown_arguments(&w)) {
+          if shown && let Some(arg) = arg {
+            ink(arg, out);
+          }
+        }
+        if let Ok(Some(body)) = w.get_body() {
+          ink(&body, out);
+        }
+      },
+      _ => ink_text(d, out),
+    }
+  }
+  let mut text = String::new();
+  ink(d, &mut text);
   text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
@@ -518,8 +592,15 @@ impl Walker {
         self.event(mark, d, nest);
       },
       "\\textsuperscript" | "\\@textsuperscript" => {
-        if let Some(mark) = mark_event(arg(1), "sup").or_else(|| ref_mark(w.get_arg(1), "sup")) {
+        let notes = w.get_arg(1).map(notes_in).unwrap_or_default();
+        let script = w.get_arg(1).map(ink_of_without_notes).unwrap_or_default();
+        if let Some(mark) = mark_event(script, "sup").or_else(|| ref_mark(w.get_arg(1), "sup")) {
           self.event(mark, d, nest);
+        }
+        for note in notes {
+          if let DigestedData::Whatsit(nw) = note.data() {
+            self.walk_whatsit(&note, &nw.borrow(), nest);
+          }
         }
       },
       "\\lx@fm@obs@email" | "\\lx@fm@obs@orcid" | "\\lx@fm@obs@affil" => {
@@ -553,6 +634,20 @@ impl Walker {
         contact.role = Some("url".to_string());
         contact.target = Some(raw(1).trim().to_string());
         contact.text = arg(2);
+        self.event(contact, d, nest);
+      },
+      // (the kernel's ORCID link, frontmatter_fields.rs `\lx@orcidlink{id}{content}` — orcidlink.sty's `\orcidlink`
+      // family, `\lx@add@orcid` —: a link to the iD's record, its first argument no ink; `\orcidlinki{José-María
+      // Martín-Olalla}{0000-0002-3750-9113}` printed the iD into the name, 2602.03244; a link printing only the logo
+      // is the iD, as `\lx@add@orcid`'s contact holds it)
+      "\\lx@orcidlink" => {
+        let mut contact = Event::new(EventKind::Contact);
+        let id = raw(1).trim().to_string();
+        contact.role = Some("url".to_string());
+        contact.target = Some(s!("https://orcid.org/{id}"));
+        contact.text = Some(arg(2))
+          .filter(|text| !text.trim().is_empty())
+          .unwrap_or(id);
         self.event(contact, d, nest);
       },
       "\\lx@fm@obs@annotate" => {
@@ -603,17 +698,19 @@ impl Walker {
         let cs = whatsit_cs(&w);
         if cs.contains("superscript") {
           // (the script is the last argument: `\lx@post@superscript`'s, `\lx@floating@superscript`'s)
-          let script = w
-            .get_args()
-            .iter()
-            .rev()
-            .flatten()
-            .next()
-            .map(ink_of)
-            .unwrap_or_default();
           let script_box = w.get_args().iter().rev().flatten().next();
+          let notes = script_box.map(notes_in).unwrap_or_default();
+          let script = script_box.map(ink_of_without_notes).unwrap_or_default();
           if let Some(mark) = mark_event(script, "math").or_else(|| ref_mark(script_box, "math")) {
             self.event(mark, d, nest);
+          }
+          // (a `\thanks` inside the script is a note of its own, after the mark, not the mark's text:
+          // `Liang-Jian Zou$^{1,\thanks{Correspondence author, …}}$` read "1,Correspondence author, …" as its label,
+          // 1106.3485)
+          for note in notes {
+            if let DigestedData::Whatsit(nw) = note.data() {
+              self.walk_whatsit(&note, &nw.borrow(), nest);
+            }
           }
         } else if cs.contains("subscript") {
           // a subscript is the formula's ink, not a mark
@@ -643,10 +740,18 @@ impl Walker {
     // `[t]` of `\begin{tabular}[t]{c}`, `\parbox[t]`, `\begin{minipage}[b]`, the `[l]` of `\makebox[3cm][l]`: a
     // `Position` parameter, util_text.rs `shown_arguments` —, nor keyvals or a verbatim key)
     let args = w.get_args();
-    let shown_args = KEYED_CONSTRUCTORS
+    // (nor a number or a dimension it reads, which sets it: `\scalebox{.7}`, `\rotatebox{180}`, `\raisebox{1pt}` — the
+    // ʻokina drawn as `Hawai\scalebox{.7}{\raisebox{…}{\rotatebox{180}{\reflectbox{s}}}}i` read ".7180.0" into the
+    // affiliation, 1005.4252, 2301.02699)
+    let numeric = numeric_arguments(w);
+    let shown_args: Vec<bool> = KEYED_CONSTRUCTORS
       .iter()
       .find(|(name, _)| *name == cs)
-      .map_or_else(|| shown_arguments(w), |(_, shown)| shown.to_vec());
+      .map_or_else(|| shown_arguments(w), |(_, shown)| shown.to_vec())
+      .into_iter()
+      .enumerate()
+      .map(|(i, shown)| shown && !numeric.get(i).copied().unwrap_or(false))
+      .collect();
     // (an environment's arguments are its settings, its body the content: `\begin{CJK*}{UTF8}{gbsn}张嘉懿\end{CJK*}`
     // printed "UTF8gbsn" into the name, 2607.05550, 2503.21605, 2404.12123)
     let environment = cs.starts_with("\\begin{");
@@ -670,6 +775,10 @@ impl Walker {
       let mut layout = Event::new(EventKind::Layout);
       layout.role = Some(cs.to_string());
       self.event(layout, d, nest);
+      return;
+    }
+    // (a keyed constructor showing none of its arguments prints nothing: `\lx@frontmatter@mark`)
+    if contents.is_empty() && KEYED_CONSTRUCTORS.iter().any(|(name, _)| *name == cs) {
       return;
     }
     if contents.is_empty() {
@@ -701,10 +810,48 @@ impl Walker {
   }
 }
 
+/// Which arguments of a whatsit its definition reads as a number or a dimension (`Float`, `Number`, `Dimension`,
+/// `Glue`, `TempboxaDimension`): settings of the box, never ink. All false when the parameters and the arguments do
+/// not pair up.
+fn numeric_arguments(w: &Whatsit) -> Vec<bool> {
+  let types: Vec<SymStr> = w
+    .get_definition()
+    .get_parameters()
+    .map(|params| {
+      params
+        .get_parameters()
+        .into_iter()
+        .filter(|p| !p.novalue)
+        .map(|p| p.name)
+        .collect()
+    })
+    .unwrap_or_default();
+  if types.len() != w.get_args().len() {
+    return Vec::new();
+  }
+  types
+    .iter()
+    .map(|t| {
+      with(*t, |name| {
+        ["Float", "Number", "Dimension", "Glue"]
+          .iter()
+          .any(|kind| name.contains(kind))
+      })
+    })
+    .collect()
+}
+
 /// Constructors whose argument is a key the element carries, not ink (`shown_arguments` cannot read a compiled
 /// replacement): acmart's address parts, `\lx@acm@addresspart@{institution}{SAS Institute Inc.}` an
-/// `ltx_affiliation_institution` text of the second (acmart_cls.rs; 1907.07713).
-const KEYED_CONSTRUCTORS: &[(&str, &[bool])] = &[("\\lx@acm@addresspart@", &[false, true])];
+/// `ltx_affiliation_institution` text of the second (acmart_cls.rs; 1907.07713); `\scalebox`'s scales; the frontmatter's position marker
+/// `\lx@frontmatter@mark{ltx:abstract}` (frontmatter_fields.rs), which prints nothing — an abstract begun inside a
+/// revtex `\address` read "ltx:abstract" as an affiliation, cond-mat9801109.
+const KEYED_CONSTRUCTORS: &[(&str, &[bool])] = &[
+  ("\\lx@acm@addresspart@", &[false, true]),
+  ("\\lx@frontmatter@mark", &[false]),
+  // (graphics.sty's `\scalebox{h-scale}[v-scale]{text}`, graphics_sty.rs: its scales are plain arguments)
+  ("\\scalebox", &[false, false, true]),
+];
 
 /// The natural width in em (of its font) of a spacing whatsit (`\hskip`, `\hspace`, `\kern`, `\quad` made as a
 /// skip), when it has one.
