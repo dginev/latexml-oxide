@@ -175,4 +175,35 @@ LoadDefinitions!({
   // `\url` that the aastex binding it loads installs. The `_` is kept (user ruling 2026-10-11).
   DefMacro!("\\email[]{}", "\\lx@add@email{\\lx@address@textfont{#2}}");
   DefMacro!("\\homepage[] Semiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
+  // emulateapj.cls's `{appendix}` (TL 2025, :744-797; its begin code is the `\appendix` a paper calls): the
+  // sections "A", the equations "A1" (aastex's `\@appendix`, aas_support_sty.rs), and with `[appendixfloats]` (:128-131)
+  // the figures and tables numbered within each appendix, "A1" (zeroed by each appendix section, :785), the running
+  // numbers restored at the environment's end (:791-795). The copies without the option number them as their own
+  // appendix code does, so the paper's copy decides: those that zero the counters (an uncommented
+  // `\setcounter{figure}{0}`: 11/26/04 to 08/13/06, three of four 6/22/04 copies and one of 01/26/10, 17 of 98 census
+  // copies; 0704.2079, 0801.1670, 2008.05143) number them "A1", "B1" always; those that do not (05/14/03 to
+  // 06/22/04, most 6/22/04 copies zeroing; 16 census copies: 0803.1491, 0709.1471, astro-ph0508218) put the
+  // letter before the running number, "A2", "B3", with no reset (pdflatex with 0709.1471's copy). Perl's emulateapj
+  // binding leaves the figures and tables in the running numbers (2609.30392: figures 19, 20 where the PDF prints B1,
+  // C1): KNOWN_PERL_ERRORS #1098. Guards `perfect_kernel_batch78q::{appendix_counters_emulateapj_appendixfloats,
+  // appendix_counters_follow_the_paper_s_copy}`.
+  RawTeX!(r"\newif\if@number@appendix@floats\@ifclasswith{emulateapj}{appendixfloats}{\@number@appendix@floatstrue}{}
+\newif\if@letter@appendix@floats\newcounter{remember@figure@num}\newcounter{remember@table@num}");
+  if let Some(text) = crate::shipped_class::shipped_class_text("emulateapj")?
+    .filter(|text| !crate::shipped_class::class_code_contains(text, "appendixfloats"))
+  {
+    if crate::shipped_class::class_code_contains(&text, "\\setcounter{figure}{0}") {
+      RawTeX!(r"\@number@appendix@floatstrue");
+    } else {
+      RawTeX!(r"\@letter@appendix@floatstrue");
+    }
+  }
+  RawTeX!(r"\def\appendix{\@appendix\setcounter{section}{0}\setcounter{subsection}{0}\setcounter{equation}{0}%
+  \setcounter{remember@figure@num}{\c@figure}\setcounter{remember@table@num}{\c@table}\def\thesection{\Alph{section}}%
+  \if@number@appendix@floats\setcounter{figure}{0}\setcounter{table}{0}%
+  \def\thefigure{\thesection\@arabic\c@figure}\def\thetable{\thesection\@arabic\c@table}%
+  \@addtoreset{figure}{section}\@addtoreset{table}{section}\fi
+  \if@letter@appendix@floats\def\thefigure{\thesection\@arabic\c@figure}\def\thetable{\thesection\@arabic\c@table}\fi}
+\def\endappendix{\if@number@appendix@floats
+  \setcounter{figure}{\c@remember@figure@num}\setcounter{table}{\c@remember@table@num}\fi}");
 });

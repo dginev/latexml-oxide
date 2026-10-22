@@ -371,4 +371,14 @@ LoadDefinitions!({
   DefMacro!("\\figurename", "Figure");
   DefMacro!("\\tablename", "Table");
   DefMacro!("\\partname", "Part");
+
+  // The equations are numbered within the sections, "(2.1)", plain "(1)" before the first section, the appendices'
+  // "(A.1)" (`\appendix` sets `\thesection` to `\@Alph`): JHEP.cls v2.0.3 (1201.5394's copy):675-676 and :1451,
+  // JHEP3.cls:905-906 and :1787 (0708.0971's copy), PoS.cls:771-772 and :1419 (2205.03535's copy; PoS's binding loads
+  // this one), each `\renewcommand\theequation{\ifnum\c@section=0\else\thesection.\fi\@arabic\c@equation}` and
+  // `\@addtoreset{equation}{section}`. Perl's JHEP*.cls.ltxml and PoS.cls.ltxml keep the article's "(1)", "(2)" through
+  // the paper (2205.03535: 77 equation references "2" where the PDF prints "1.2"; KNOWN_PERL_ERRORS #1097). Guard
+  // `perfect_kernel_batch78q::jhep_family_equations_within_sections`.
+  RawTeX!(r"\renewcommand\theequation{\ifnum\c@section=0\else\thesection.\fi\@arabic\c@equation}
+\@addtoreset{equation}{section}");
 });

@@ -3405,8 +3405,9 @@ fn jfm_subeqnarray() {
     0,
     "{log}"
   );
-  // the rows numbered (1a), (1b) under the group's (1)
-  for (row, id) in [("1a", "S0.E1.1.1"), ("1b", "S0.E1.2.1")] {
+  // the rows numbered (0.1a), (0.1b) under the group's (0.1): jfm numbers the equations within the sections, "0.1"
+  // before the first (jfm.cls v1.27 :573, pdflatex with the selection probe's copy; 78q, KNOWN_PERL_ERRORS #1097)
+  for (row, id) in [("0.1a", "S0.E1.1.1"), ("0.1b", "S0.E1.2.1")] {
     let tags = format!(
       "<tags>\n            <tag>({row})</tag>\n            <tag role=\"autoref\">Equation\u{a0}{row}<text xml:id=\"{id}\"/></tag>\n            <tag role=\"refnum\">{row}</tag>\n          </tags>"
     );

@@ -191,7 +191,8 @@ fn aipproc_paper_loads_aipxfm() {
     xml.contains(r#"<creator role="author"> <personname>Ann Author</personname> <contact name="Address: " role="address">Some University</contact> </creator>"#),
     "{xml}"
   );
-  assert!(xml.contains(r#"<p xml:id="S1.p1.1">Text.</p>"#), "{xml}");
+  // (the class's headings are unnumbered, `unnumberedheadings`: the section's id `Sx1`; 78q, KNOWN_PERL_ERRORS #1101)
+  assert!(xml.contains(r#"<p xml:id="Sx1.p1.1">Text.</p>"#), "{xml}");
 }
 
 /// sagej.cls (2101.10072's, 2505.13309's, 2406.06038's, 2204.02460's copies): `\sagesf`, `{refsize}`, `{biogs}`, and

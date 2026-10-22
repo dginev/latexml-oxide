@@ -238,6 +238,44 @@ LoadDefinitions!({
 \newcommand\boldit{\usefont{OT1}{cmr}{bx}{it}\fontsize{10}{\f@baselineskip}\selectfont}
 \newlength\halflineskip\setlength\halflineskip{6\p@ \@plus .5\p@ \@minus .5\p@}"
   );
+  // Every version numbers the equations within the sections, "(2.1)" (v1.23-v1.28, cond-mat0107563's, 2608.04345's and
+  // 2103.10260's copies: :615 `\renewcommand\theequation{\thesection.\@arabic\c@equation}`, `\section` itself zeroing
+  // the counter, :301-306; the FLM copies, 2604.22963's and 2507.06135's JFM-FLM_Au.cls: :1317-1318, the same
+  // `\theequation` and `\@addtoreset{equation}{section}`), and the appendices "(A 1)" (`\appendix`, :390-397 and
+  // :616-626: the section counter and the equations zeroed, `\theequation{\thesection\,\@arabic\c@equation}`). The older
+  // copies' `\nosectioneqnreset` (:297-299) numbers them through the paper, "(1)", the appendices' still reset (:303
+  // `\ifappendix \setcounter{equation}\z@\fi`). The binding's article base kept "(1)", "(2)" (2608.04345: 116 equation
+  // references; SYNC row 76; KNOWN_PERL_ERRORS #1097, Perl has no jfm binding). Guard
+  // `perfect_kernel_batch78q::jfm_equations_within_sections`.
+  RawTeX!(
+    r"\renewcommand\theequation{\thesection.\@arabic\c@equation}\@addtoreset{equation}{section}
+\def\appendix{\@appendix\setcounter{section}\z@\setcounter{equation}\z@\@addtoreset{equation}{section}%
+\renewcommand\theequation{\thesection\,\@arabic\c@equation}\global\appendixtrue}"
+  );
+  {
+    let _older = OriginGuard::new(DefinitionOrigin::Fallback);
+    RawTeX!(
+      r"\newif\ifno@eqnreset
+\newcommand\nosectioneqnreset{\global\no@eqnresettrue\renewcommand\theequation{\@arabic\c@equation}%
+\@removefromreset{equation}{section}}"
+    );
+  }
+  // jfm.cls:299-306 (v1.23-v1.28, 72 of 74 census copies; 2608.04345's): `\section` itself zeroes the equation counter,
+  // a starred one too ("(2.1)" after `\section*`, where the reset by the section counter gave "(2.3)"), only in the
+  // appendices under `\nosectioneqnreset`. The FLM copies' `\section` (JFM-FLM_Au.cls:501, the zeroing commented out
+  // at :481-487; 2507.06135 — 2505.15463's declares `JFM-FLM_Au` and is read raw) is a bare `\@startsection`, their equations reset by
+  // `\@addtoreset{equation}{section}` (:1318), numbered sections only: the paper's copy decides. Residual (review
+  // rev78q2): the appendices' `\section` is the kernel's `\@@appendix`, which the binding cannot wrap there (the locked
+  // `\section` ignores a redefinition made in the document), so an appendix `\section*` keeps the count, "A 2" where
+  // jfm.cls:303 zeroes it, "A 1". Guard `perfect_kernel_batch78q::jfm_section_star_zeroes_equations`.
+  if shipped.as_deref().is_none_or(|text| {
+    !crate::shipped_class::class_code_contains(text, "\\@addtoreset{equation}{section}")
+  }) {
+    RawTeX!(
+      r"\let\lx@jfm@section\section
+\def\section{\ifno@eqnreset\ifappendix\setcounter{equation}\z@\fi\else\setcounter{equation}\z@\fi\lx@jfm@section}"
+    );
+  }
   // jfm.cls L1498: \newcommand{\backsection}[2][\backsectionname]{...\textbf{#1.} #2...}
   // — a backmatter paragraph (Acknowledgements / Declaration of interests / Data
   // availability) with a bold title. Was undefined (Perl defines it). Render as the

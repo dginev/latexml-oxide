@@ -244,4 +244,18 @@ LoadDefinitions!({
     DefMacro!("\\ubvarrho", "\\boldsymbol{\\varrho}");
     DefMacro!("\\ubvarsigma", "\\boldsymbol{\\varsigma}");
   }
+  // interact.cls:562-573 (v1.05, 1603.08785's copy; v1.01-v1.03 alike, 44 copies) `\appendix`: the appendix sections
+  // "A", subsections "A.1", the equations, figures and tables numbered within each appendix, "A1" (reset by each
+  // appendix section). The kernel's `\appendix` (article_cls.rs `\@appendix`) runs first for the `ltx:appendix` units.
+  // Perl has no interact binding; the OmniBus base left the kernel's (equation 4, figure 2): KNOWN_PERL_ERRORS #1098.
+  // Guard `perfect_kernel_batch78q::appendix_counters_interact_elsart`.
+  RawTeX!(
+    r"\renewcommand\appendix{\@appendix
+  \setcounter{equation}{0}\renewcommand\theequation{\thesection\arabic{equation}}%
+  \setcounter{section}{0}\renewcommand\thesection{\Alph{section}}%
+  \setcounter{subsection}{0}\renewcommand\thesubsection{\thesection.\arabic{subsection}}%
+  \setcounter{table}{0}\renewcommand\thetable{\thesection\@arabic\c@table}%
+  \setcounter{figure}{0}\renewcommand\thefigure{\thesection\@arabic\c@figure}%
+  \@addtoreset{equation}{section}\@addtoreset{table}{section}\@addtoreset{figure}{section}}"
+  );
 });

@@ -554,9 +554,10 @@ fn ntheorem_renewtheorem_of_undefined_errs() {
 
 /// llncs.cls declares {theorem}; LaTeX refuses the document's `\newtheorem{theorem}{Theorem}[section]` and prints
 /// "Theorem 1.", but a binding's declaration yields to the document's (its set is in general more than its class's),
-/// so ours is "Theorem 1.1": OXIDIZED_DESIGN_DIVERGENCES #783. The document's second `\newtheorem{mylemma}` is
-/// refused, as in LaTeX. Pins the divergence (green before and after 77v r3). Repro
-/// class-bindings/llncs_document_newtheorem_over_class.
+/// so ours is "Theorem 11" (the document's declaration as the class's kernel numbers it, llncs.cls:1058's empty
+/// `\@thmcountersep`, KNOWN_PERL_ERRORS #1111; "1.1" before 78q r2): OXIDIZED_DESIGN_DIVERGENCES #783. The
+/// document's second `\newtheorem{mylemma}` is refused, as in LaTeX. Pins the divergence (green before and after 77v
+/// r3). Repro class-bindings/llncs_document_newtheorem_over_class.
 #[test]
 fn llncs_document_newtheorem_replaces_the_class() {
   let tex = include_str!(
@@ -577,7 +578,7 @@ fn llncs_document_newtheorem_replaces_the_class() {
     "{stderr}"
   );
   assert_eq!(theorem_tags(&xml), [
-    r#"<tags><tag>Theorem 1.1</tag><tag role="refnum">1.1</tag><tag role="typerefnum">Theorem 1.1</tag></tags>"#,
+    r#"<tags><tag>Theorem 11</tag><tag role="refnum">11</tag><tag role="typerefnum">Theorem 11</tag></tags>"#,
     r#"<tags><tag>Lemma 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Lemma 1</tag></tags>"#,
   ]);
 }

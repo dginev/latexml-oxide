@@ -17126,3 +17126,93 @@ reaches, so `\begin{tabular}({cc})` takes `(` as its template and every `&` is a
 trigger: `\usepackage{delarray}\begin{tabular}({cc})a&b\end{tabular}`. Fixed in Rust (78p,
 OXIDIZED_DESIGN_DIVERGENCES #858). Witnesses 1304.5109, 1106.2670; guard
 `perfect_kernel_batch78p::delarray_delimits_a_tabular`.
+
+## 1097. JHEP, JHEP3, PoS, jheppub and jfm number the equations through the paper
+
+JHEP.cls v2.0.3:675-676 and :1451, JHEP3.cls:905-906 and :1787, PoS.cls:771-772 and :1419
+(`\renewcommand\theequation{\ifnum\c@section=0\else\thesection.\fi\@arabic\c@equation}`, `\@addtoreset{equation}{section}`),
+jheppub.sty:313-314 (`\numberwithin{equation}{section}`) and every jfm.cls (v1.23-v1.28 :615 with `\section` zeroing the
+counter, :299-306, a starred `\section*` too — in the appendices ours still keeps the count after one, "A 2" for "A 1", a
+residual, review rev78q2; the FLM copies :1317-1318, reset by numbered sections only; the appendix
+form `\thesection\,\@arabic\c@equation`) number the equations within the sections, "(2.1)", "(A.1)". Perl's JHEP*.cls.ltxml, PoS.cls.ltxml and jheppub.sty.ltxml keep the article's "(1)",
+"(2)" through the paper; Perl has no jfm binding (OmniBus, the same). Minimal trigger:
+`\documentclass{JHEP3}\begin{document}\section{A}\begin{equation}x\label{e}\end{equation}\ref{e}\end{document}` —
+pdflatex "(1.1)", "1.1"; Perl "(1)", "1". Fixed in Rust (78q; jhep_cls.rs, which JHEP2, JHEP3 and PoS load,
+jheppub_sty.rs, jfm_cls.rs with the older copies' `\nosectioneqnreset`); the equation ids follow the section counter
+(`S2.E1`, OXIDIZED_DESIGN_DIVERGENCES #860). Witnesses 2205.03535 (PoS, 77 labels), 0708.0971, 2608.04345 (jfm, 116
+labels), 2112.14648; SYNC jfm row closed. Repros cross-references/{jhep3,pos,jheppub,jfm}_equations_within_sections,
+cross-references/jfm_section_star_equations, class_copies_78q/jfm_flm_copy_section_star_keeps_count; guards
+`perfect_kernel_batch78q::{jhep_family_equations_within_sections, jfm_equations_within_sections,
+jfm_section_star_zeroes_equations}`.
+
+## 1098. The journal classes' `\appendix` counters are the kernel's
+
+elsarticle.cls:1342-1353 (v1.2 to v3.4c), mnras.cls:818-833 and mn2e.cls:690-704, aa.cls (v5.01-v9.4; from v6.1 the
+`{appendix}` environment, whose begin code `\appendix` runs), interact.cls:562-573, elsart.cls:239-255 and emulateapj.cls
+(:744-797, the floats under `[appendixfloats]`, :128-131) number the equations, and most of them the figures and tables,
+within each appendix: elsarticle "Appendix A" (the section's `\ref`), "A.1", floats "A.2"; mnras/mn2e/interact/emulateapj
+"A1"; aa/elsart "A.1". Perl's bindings define no `\appendix` (aa_support.sty.ltxml:397-399 has the class's
+`\theapsection` commented out), so the kernel's numbers them on: equation 4, figure 2. Minimal trigger:
+`\documentclass{mnras}\begin{document}\section{I}\appendix\section{P}\begin{figure}\caption{F}\label{f}\end{figure}\ref{f}\end{document}`
+— pdflatex "A1", Perl "1". Fixed in Rust (78q; elsarticle_cls.rs, mn2e_support_sty.rs for mn/mn2e/mnras, aa_cls.rs,
+interact_cls.rs, elsart_cls.rs, emulateapj_cls.rs): each class's `\appendix` after the kernel's, elsarticle's heading tag
+the section number alone (as iopart's, #1078). Where the versions differ the paper's copy decides: elsarticle v1.0.1
+(2008/05/22, 22 of 297 copies) has no `\appendix`; an emulateapj copy without the `appendixfloats` option numbers the
+floats as its appendix code does: "A1", "B1" always where it zeroes them (11/26/04 to 08/13/06, three of four 6/22/04
+copies, one of 01/26/10; 17 of 98 census copies), "A2", "B3" (the letter before the running number, no reset) where the
+zeroing is commented out (05/14/03 to 06/22/04, most 6/22/04 copies zeroing; 16 census copies: 0709.1471, 0803.1491,
+astro-ph0508218)
+(OXIDIZED_DESIGN_DIVERGENCES #860). Witnesses 2609.03753,
+2608.23563 (elsarticle), 2608.17430 (mnras), 0705.0429 (mn2e), astro-ph0609025, 0705.1240 (aa), 1603.08785 (interact),
+0706.3521 (elsart), 2609.30392 (emulateapj). Repros cross-references/*_appendix_counters,
+cross-references/emulateapj_appendixfloats_counters, cross-references/class_copies_78q/; guards
+`perfect_kernel_batch78q::appendix_counters_*`.
+
+## 1099. llncs appendices are numbered within a chapter, "Appendix 0.A"
+
+llncs.cls:51 `\LoadClass[twoside]{article}`: its `\appendix` is article's (article.cls:439-442), section level, numbered
+within the document ("A"). The class also defines `\chapter` (:302, for proceedings volumes), and Perl's `beginAppendices`
+(latex_constructs.pool.ltxml:689-692) numbers appendices within the chapter whenever `\c@chapter` exists:
+"Appendix 0.A", subsections "0.A.1", ids `Pt0.A1`. Minimal trigger:
+`\documentclass{llncs}\begin{document}\section{I}\appendix\section{P}\label{a}\ref{a}\end{document}` — pdflatex "A",
+Perl "0.A". Fixed in Rust (78q, llncs_cls.rs `\@appendix` → `begin_appendices_within(section, false)`); the appendices'
+ids are `A1`, `A2` as in article (OXIDIZED_DESIGN_DIVERGENCES #860). Witnesses 2609.39362, 2303.08726. Repro
+cross-references/llncs_appendices_are_sections; guard `perfect_kernel_batch78q::llncs_appendices_are_sections`.
+
+## 1100. svjour's theorem-numbering options are ignored
+
+svjour3.cls:885-933 (1803.06644's copy) and svjour.cls:756-792 number `{theorem}` on its own counter ("Theorem 1") and
+each other class environment on its own; `envcountsame` puts them all on the theorem counter, `envcountsect` all within
+the section ("1.1"), `envcountreset` resets them by section; `numbook` is envcountsect plus equations, figures and tables
+within the section. Perl's svjour.cls.ltxml:24-26 declares the options as no-ops ("These could affect numbering") and
+sv_support.sty.ltxml:216 makes `{theorem}` within the section whatever they say. Minimal trigger:
+`\documentclass{svjour3}\begin{document}\section{S}\begin{theorem}\label{t}A\end{theorem}\ref{t}\end{document}` —
+pdflatex "1", Perl "1.1". Fixed in Rust (78q, svjour_cls.rs before its sv_support load, whose `\@ifundefined` set then
+stays svmult's; under `envcountreset` each counter is declared within the section and printed alone, ids
+`S1.Thmtheorem1`). Witnesses 1604.08616, 1803.06644. Repros
+cross-references/svjour3{,_envcountsame,_envcountsect,_envcountreset}_theorem_counters; guard
+`perfect_kernel_batch78q::svjour_theorem_counters`.
+
+## 1101. aipproc's headings are numbered
+
+aipproc.cls:252-255 and :267 (v1.2d-v1.5a): `\ExecuteOptions{…,unnumberedheadings,…}` sets `secnumdepth` to −`\maxdimen`
+at the class's end unless the paper passes `numberedheadings`, so no heading is numbered and a `\ref` to a section
+prints its empty `\@currentlabel`. Perl's aipproc.cls.ltxml:50-51 declares both options as no-ops: "1 Introduction",
+`\ref` "1". Minimal trigger: `\documentclass{aipproc}\layoutstyle{6x9}\begin{document}\section{I}\label{s}\ref{s}\end{document}`
+— pdflatex prints no number, Perl "1". Fixed in Rust (78q, aipproc_cls.rs; the sections' ids are `Sx1`, the post
+processor's `\ref` text the heading's title, LaTeXML's form for an unnumbered target). Witnesses 0710.1701,
+physics0503243. Repro
+cross-references/aipproc_headings_unnumbered; guard `perfect_kernel_batch78q::aipproc_headings_unnumbered`.
+
+## 1111. llncs and svjour join a theorem's section number to its own with a period
+
+llncs.cls:1058 (`\edef\@thmcountersep{}`) and :1141, svjour3.cls:804 and :887, svjour.cls:677 and :757 (every census
+copy: 613 llncs, 62 svjour, 5 svjour2, 187 svjour3) make the separator between a within-counter's number and a theorem's
+own empty, "." only under `envcountsect` (svjour's `numbook` too); the kernel's `\newtheorem` (latex.ltx `\@xnthm`),
+amsthm's and the classes' `\spnewtheorem` print `\the<within>\@thmcountersep\@thmcounter`, so a paper's own
+`\newtheorem{obs}{Observation}[section]` prints "Observation 11", "A1". Perl's llncs.cls.ltxml and sv_support.sty.ltxml
+keep the kernel's "." (latex_constructs.pool.ltxml:2832). Minimal trigger:
+`\documentclass{llncs}\newtheorem{obs}{Observation}[section]\begin{document}\section{S}\begin{obs}\label{o}A\end{obs}\ref{o}\end{document}`
+— pdflatex "11", Perl 0.8.8 "1.1". Fixed in Rust (78q r2, llncs_cls.rs and svjour_cls.rs define the class's separator).
+Review 78q finding 8. Repros cross-references/{llncs,svjour3}_own_theorem_separator{,_envcountsect}; guard
+`perfect_kernel_batch78q::theorem_counter_separator_is_the_class_s`.

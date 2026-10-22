@@ -1,0 +1,27 @@
+% witness: arXiv 0711.2399 (elsarticle v1.0.1, 2008/05/22: no \appendix of its own; 22 of 297 copies papers ship)
+% oracle:  pdflatex 0 errors with 0711.2399's elsarticle.cls: article's appendix, "See 1, 1, 1, 1, 2, 2.1, 2, 3, A, 4, A.1, 2, 2, B, 5, 3."
+% engines: rust (int53a) the same; with elsarticle_appendix_counters' class appendix this copy would print "Appendix A", A.1
+% expect:  0 errors; the article's appendix numbering (the paper's copy decides; elsarticle.cls here a stub of its header)
+% status:  GREEN (78q, OXIDIZED_DESIGN_DIVERGENCES #860)
+\documentclass{elsarticle}
+\usepackage{graphicx}
+\begin{document}
+\section{A}\label{sA}
+\begin{equation}a\label{e1}\end{equation}
+\begin{figure}[t]\caption{F1}\label{f1}\end{figure}
+\begin{table}[t]\caption{T1}\label{t1}\end{table}
+\section{B}\label{sB}
+\subsection{C}\label{sC}
+\begin{equation}b\label{e2}\end{equation}
+\begin{eqnarray}c&=&d\label{e3}\end{eqnarray}
+\appendix
+\section{D}\label{sD}
+\begin{equation}x\label{e4}\end{equation}
+\subsection{E}\label{sE}
+\begin{figure}[t]\caption{F2}\label{f2}\end{figure}
+\begin{table}[t]\caption{T2}\label{t2}\end{table}
+\section{G}\label{sG}
+\begin{equation}y\label{e5}\end{equation}
+\begin{figure}[t]\caption{F3}\label{f3}\end{figure}
+See \ref{sA}, \ref{e1}, \ref{f1}, \ref{t1}, \ref{sB}, \ref{sC}, \ref{e2}, \ref{e3}, \ref{sD}, \ref{e4}, \ref{sE}, \ref{f2}, \ref{t2}, \ref{sG}, \ref{e5}, \ref{f3}.
+\end{document}

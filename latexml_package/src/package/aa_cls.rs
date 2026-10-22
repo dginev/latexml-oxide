@@ -157,4 +157,18 @@ LoadDefinitions!({
   if shipped_class_text("aa")?.is_some_and(|text| class_text_loads(&text, "hyperref")) {
     RawTeX!(r"\AtBeginDocument{\@ifpackageloaded{hyperref}{}{\RequirePackage{hyperref}}}");
   }
+  // aa.cls's appendix (v9.4, 2607.25052's copy :237-262, the `{appendix}` environment, whose begin code a bare
+  // `\appendix` runs, from v6.1; v5.01-v6.0 the `\appendix` command, 0705.1240's :897-919; 372 of 377 copies papers ship
+  // alike): the sections "A", subsections "A.1", the equations, figures and tables numbered within each appendix,
+  // "A.1" (reset by each appendix section). The kernel's `\appendix` (article_cls.rs `\@appendix`) runs first for the
+  // `ltx:appendix` units. (v4.03, 5 copies of 1998, numbers "A1": not followed.) Perl's aa_support.sty.ltxml:397-399
+  // has the class's `\theapsection` commented out and leaves the kernel's (astro-ph0609025: equations 25, 26, 29 where
+  // the PDF prints A.1, A.2, A.5): KNOWN_PERL_ERRORS #1098. Guard `perfect_kernel_batch78q::appendix_counters_aa`.
+  RawTeX!(r"\def\appendix{\@appendix\par
+  \setcounter{section}{0}\setcounter{subsection}{0}\setcounter{figure}{0}\setcounter{table}{0}%
+  \renewcommand\thesection{\@Alph\c@section}\renewcommand\thesubsection{\@Alph\c@section.\@arabic\c@subsection}%
+  \renewcommand\thesubsubsection{\thesubsection.\@arabic\c@subsubsection}%
+  \renewcommand\theequation{\@Alph\c@section.\@arabic\c@equation}%
+  \renewcommand\thefigure{\@Alph\c@section.\@arabic\c@figure}\renewcommand\thetable{\@Alph\c@section.\@arabic\c@table}%
+  \@addtoreset{equation}{section}\@addtoreset{figure}{section}\@addtoreset{table}{section}}");
 });

@@ -22300,8 +22300,9 @@ theorem set is in general more than its class declares (elsart_support's `{rem}`
 prints (its number need not match: tac.cls's `\@@newthm#1[#2]#3[#4]` drops both counter arguments and numbers every
 theorem on the one `\subsection` sequence, "0.1. Theorem", "0.2. Proposition", which the tac binding does not model —
 SYNC row); telling the class's own theorems apart per binding is not done. Where the real class does declare the name, the document's
-declaration wins here and LaTeX's refusal is lost: llncs + `\newtheorem{theorem}{Theorem}[section]` gives "Theorem 1.1"
-where pdflatex prints "Theorem 1." with an error. Guard `perfect_kernel_batch77v::llncs_document_newtheorem_replaces_the_class`
+declaration wins here and LaTeX's refusal is lost: llncs + `\newtheorem{theorem}{Theorem}[section]` gives "Theorem 11"
+(the declaration as llncs's kernel numbers it, its `\@thmcountersep` empty: KNOWN_PERL_ERRORS #1111; "Theorem 1.1"
+before 78q r2) where pdflatex prints "Theorem 1." with an error. Guard `perfect_kernel_batch77v::llncs_document_newtheorem_replaces_the_class`
 (repro class-bindings/llncs_document_newtheorem_over_class).
 
 ### 784. A jfm copy's caption: its own `\@makecaption`'s label format, or caption with its options (Perl: no jfm binding, article's "Figure 1:")
@@ -23507,3 +23508,31 @@ Residuals: the math parse after digestion still warns on an unused entry's unpar
 unparsed-math Warning). glossaries-extra's `\printunsrtglossary` is read raw and typesets each field from its macros,
 raising that field's diagnostics itself. Repro index-bib/unused_glossary_entry_raises_nothing; guards
 `perfect_kernel_batch78p::{unused_glossary_entry_raises_nothing, printed_glossary_entry_raises_its_definition_errors}`.
+
+### 860. Class numbering follows the class: ids, and the paper's copy where versions differ
+
+The 78q bindings number as their classes do (KNOWN_PERL_ERRORS #1097-#1101, #1111), and the ids follow the numbers,
+where Perl's follow its kernel numbering: equations numbered within the sections (JHEP, JHEP3, PoS, jheppub, jfm;
+JHEP2's binding loads JHEP's, no JHEP2.cls copy in the census to check it against) are `S2.E1`, `S2.E2` (Perl `S2.E2`,
+`S2.E3`, the running equation number), an equation after jfm's `\section*` (which zeroes the counter) `Sx1.E1`; the
+equations, figures and tables numbered within an appendix are `A1.E1`, `A2.F1`; llncs's appendices, numbered within the
+document as article's, are `A1`, `A2` (Perl `Pt0.A1`, within the chapter llncs defines); aipproc's unnumbered sections
+are `Sx1`, `Sx2` (the kernel's ids for a section below `secnumdepth`); svjour's theorems under `envcountsect` are
+`S1.Thmtheorem1`, under `envcountreset` too (a counter reset by each section is declared within it and printed alone,
+"1", so the ids do not depend on document order), by default `Thmtheorem1`. A link into one of these papers by an old id
+breaks. l-aa (Rust-only binding over aa's) keeps l-aa.sty's own `\appendix` (:208-214): equations "A1", figures and
+tables in their running numbers (astro-ph9705112, astro-ph9607057). Where the versions of a class conflict the paper's
+copy decides (the class-family rule, one binding serving all versions): elsarticle's `\appendix` is the class's unless
+the paper ships a v1.0.1 copy (2008/05/22; 0711.2399), which has none; emulateapj's `[appendixfloats]` is the TL 2025
+class's option (most copies from 10/09/06), and a copy without it numbers the appendix floats as its own appendix code does —
+"A1", "B1" always where that code zeroes them (an uncommented `\setcounter{figure}{0}`: 11/26/04 to 08/13/06, three of
+four 6/22/04 copies, one of 01/26/10; 17 of 98 census copies; 0704.2079, 0801.1670, 2008.05143), the letter before the
+running number, "A2", "B3", with no reset where it does not (05/14/03 to 06/22/04, most 6/22/04 copies zeroing; 16 census
+copies; 0803.1491, 0709.1471, astro-ph0508218; review rev78q2); jfm's `\section` zeroes the equation counter, starred calls too (v1.23-v1.28,
+72 of 74 census copies; an appendix `\section*` still keeps the count, "A 2" where jfm.cls:303 prints "A 1": the locked
+`\section` ignores the binding's re-wrap there, a residual, rev78q2), except in an FLM copy declaring itself `jfm` (JFM-FLM_Au.cls,
+2507.06135; 2505.15463's declares `JFM-FLM_Au` and is read raw), whose
+`\@addtoreset{equation}{section}` resets it at numbered sections only. Not followed: aa.cls v4.03 (1998, 5 copies)
+numbers "A1" where every later release numbers "A.1"; an elsarticle copy shaped as elsart (2111.07466: elsart's
+`\def\appendix{\@ifstar…}`, no `\renewcommand\appendix`) keeps the kernel's numbering. Guards
+`perfect_kernel_batch78q::*`.

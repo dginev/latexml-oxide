@@ -131,7 +131,8 @@ fn jfm_legend_symbols_and_subequations() {
   );
   assert!(xml.contains(r#"tex="\blacksquare""#), "{xml}");
   assert!(xml.contains(r#"tex="\Delta x""#), "{xml}");
-  assert!(xml.contains(r#"<tag>(1b)</tag>"#), "{xml}");
+  // (jfm numbers the equations within the sections, "0.1b" before the first: 78q, KNOWN_PERL_ERRORS #1097)
+  assert!(xml.contains(r#"<tag>(0.1b)</tag>"#), "{xml}");
 }
 
 /// tac.cls (2401.05974's 2023 copy): `\mathrmdef` and its kin, `\dedication` (a pubnote, as aa's and svjour's), `\endproofbox`, `{references}` and

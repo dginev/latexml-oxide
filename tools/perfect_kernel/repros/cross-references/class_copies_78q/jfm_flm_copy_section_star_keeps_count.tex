@@ -1,0 +1,23 @@
+% witness: review 78q finding 4 (jfm.cls:299-306: \section zeroes the equation counter, starred calls too); 2608.04345
+%          the FLM copies (JFM-FLM_Au.cls of 2505.15463, 2507.06135: \section a bare \@startsection, :501; the
+%          equations reset by \@addtoreset{equation}{section}, :1318) do not zero it at \section*
+% oracle:  pdflatex 0 errors with 2507.06135's JFM-FLM_Au.cls as jfm.cls; "See 1, 1.1, 1.2, 2.1, 2.2, A, A 1."
+% engines: rust (78q r1) = the same
+% expect:  0 errors; the equation after \section* continues, 2.2 (the paper's copy decides; jfm_flm.cls here a stub
+%          of its numbering code, read as jfm.cls)
+% status:  GREEN (control for the r2 \section wrapper)
+\documentclass{jfm}
+\lefttitle{L}\righttitle{R}
+\begin{document}
+\section{A}\label{sA}
+\begin{equation}a\label{e1}\end{equation}
+\begin{equation}b\label{e2}\end{equation}
+\section{B}\label{sB}
+\begin{equation}c\label{e3}\end{equation}
+\section*{Star}
+\begin{equation}d\label{e4}\end{equation}
+\appendix
+\section{C}\label{sC}
+\begin{equation}e\label{e5}\end{equation}
+See \ref{sA}, \ref{e1}, \ref{e2}, \ref{e3}, \ref{e4}, \ref{sC}, \ref{e5}.
+\end{document}

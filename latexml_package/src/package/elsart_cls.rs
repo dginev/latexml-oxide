@@ -51,4 +51,16 @@ LoadDefinitions!({
   // elsart.cls:28 (v2.18, 0708.4004's copy; v2.20:27 "Elsevier", 0712.3870's): `\@journal` is the publisher until
   // `\journal` sets it (elsart_support_core_sty.rs).
   RawTeX!(r"\def\@journal{Elsevier Science}");
+  // elsart.cls:239-255 (0706.3521's copy; 71 copies papers ship alike) `\appendix`: the appendix sections "A", the
+  // equations, figures and tables numbered within each appendix, "A.1" (`\app@number`: zeroed, reset by each appendix
+  // section); `\appendix*` the same with the heading "Appendix" alone (`\lb@section{\appendixname}`). The kernel's
+  // `\appendix` (article_cls.rs `\@appendix`) runs first for the `ltx:appendix` units. Perl's elsart.cls.ltxml leaves
+  // the kernel's (equation 4, figure 2): KNOWN_PERL_ERRORS #1098. Guard
+  // `perfect_kernel_batch78q::appendix_counters_interact_elsart`.
+  RawTeX!(r"\def\app@number#1{\setcounter{#1}{0}\@addtoreset{#1}{section}\@namedef{the#1}{\thesection.\arabic{#1}}}
+\def\appendix{\@appendix\@ifstar{\appendix@star}{\appendix@nostar}}
+\def\appendix@nostar{\setcounter{section}{0}\def\thesection{\Alph{section}}%
+  \setcounter{subsection}{0}\setcounter{subsubsection}{0}\setcounter{paragraph}{0}%
+  \app@number{equation}\app@number{figure}\app@number{table}}
+\def\appendix@star{\appendix@nostar\gdef\fnum@appendix{\appendixname}}");
 });

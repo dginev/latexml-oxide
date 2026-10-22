@@ -312,4 +312,18 @@ LoadDefinitions!({
   // astro-ph9907099 hit `\ifCUPmtlplainloaded` undefined.
   RawTeX!(r"\newif\ifCUPmtlplainloaded");
   RawTeX!(r"\newif\iffirstta");
+
+  // mn2e.cls:690-704 (v2.2, every copy papers ship; 0705.0429's), mnras.cls:818-833 (TL 2025 v3.2, every copy alike)
+  // `\appendix`: the appendix sections "A", their subsections "A1", and the equations, figures and tables numbered
+  // within each appendix, "A1" (reset by each appendix section). The kernel's `\appendix` (article_cls.rs
+  // `\@appendix`) runs first for the `ltx:appendix` units. Perl's mn2e/mnras bindings leave the kernel's (equation 4,
+  // figure 2; 2608.17430: figures 12, 13, 14 where the PDF prints B1, C1, C2): KNOWN_PERL_ERRORS #1098. Guard
+  // `perfect_kernel_batch78q::appendix_counters_mn_family`.
+  RawTeX!(r"\newif\ifSFB@appendix
+\def\appendix{\@appendix\par\SFB@appendixtrue
+ \@addtoreset{equation}{section}\@addtoreset{table}{section}\@addtoreset{figure}{section}%
+ \setcounter{section}{0}\setcounter{equation}{0}\setcounter{figure}{0}\setcounter{table}{0}%
+ \def\thesection{\Alph{section}}\renewcommand\thesubsection{\thesection\arabic{subsection}}%
+ \renewcommand\theequation{\thesection\arabic{equation}}%
+ \renewcommand\thefigure{\thesection\@arabic\c@figure}\renewcommand\thetable{\thesection\@arabic\c@table}}");
 });

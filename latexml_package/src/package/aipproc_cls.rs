@@ -34,14 +34,21 @@ LoadDefinitions!({
   DeclareOption!("tnotealph",   None);
   DeclareOption!("tnotesymbol", None);
 
-  DeclareOption!("numberedheadings",   None);
-  DeclareOption!("unnumberedheadings", None);
+  // aipproc.cls:252-255, :267 (v1.5a, 2005/11/11): the headings are unnumbered unless the paper asks
+  // (`\ExecuteOptions{…,unnumberedheadings,…}`, `secnumdepth` −`\maxdimen` at the class's end; `numberedheadings` 3),
+  // so a `\ref` to a section prints nothing. Perl's aipproc.cls.ltxml:50-51 ignores both and numbers them "1", "2.1"
+  // (0710.1701, physics0503243): KNOWN_PERL_ERRORS #1101. Guard `perfect_kernel_batch78q::aipproc_headings_unnumbered`.
+  AssignValue!("aipproc_secnumdepth" => "-\\maxdimen");
+  DeclareOption!("numberedheadings",   { AssignValue!("aipproc_secnumdepth" => "3"); });
+  DeclareOption!("unnumberedheadings", { AssignValue!("aipproc_secnumdepth" => "-\\maxdimen"); });
 
   // Default font
   AssignValue!("aipproc_font" => "mathptmx");
 
   ProcessOptions!();
   LoadClass!("article");
+  let secnumdepth = lookup_string("aipproc_secnumdepth");
+  RawTeX!(&s!(r"\setcounter{{secnumdepth}}{{{secnumdepth}}}"));
 
   // Load the selected font package
   let font_pkg = lookup_value("aipproc_font")

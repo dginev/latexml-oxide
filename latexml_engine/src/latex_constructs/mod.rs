@@ -297,6 +297,20 @@ pub fn has_chapter_counter() -> bool {
 }
 
 pub fn begin_appendices(counter: &str) {
+  // (numbered within chapters where the class has chapters, by `\chapter` — not a `chapter` counter alone, which
+  // WileyNJD-v2.cls:2410 and WileyNJDv5.cls:5728 declare for bookmarks with no `\chapter`: "Appendix A", not "0.A",
+  // 2211.16474; `state::class_defines_chapter`)
+  begin_appendices_within(
+    counter,
+    has_chapter_counter() && class_defines_chapter() && counter != "chapter",
+  )
+}
+
+/// [`begin_appendices`] with the numbering chosen by the caller: the units `\the<counter>` within the chapter
+/// (`\thechapter.\Alph{<counter>}`) or within the document (`\Alph{<counter>}`). A class with a `\chapter` of its own
+/// whose `\appendix` is still article's section-level one (llncs.cls:51 `\LoadClass{article}`, its `\chapter` at :302
+/// for proceedings volumes; article.cls:439-442) numbers them within the document: "Appendix A", not "0.A".
+pub fn begin_appendices_within(counter: &str, within_chapter: bool) {
   let the_ctr = s!("\\the{counter}");
   let the_ctr_id = s!("\\the{counter}@ID");
   let cs_ctr = T_CS!(s!("\\{counter}"));
@@ -321,10 +335,7 @@ pub fn begin_appendices(counter: &str) {
     "ltx:appendix",
     Some(s!("ltx:{counter}")),
   );
-  // (numbered within chapters where the class has chapters, by `\chapter` — not a `chapter` counter alone, which
-  // WileyNJD-v2.cls:2410 and WileyNJDv5.cls:5728 declare for bookmarks with no `\chapter`: "Appendix A", not "0.A",
-  // 2211.16474; `state::class_defines_chapter`)
-  if has_chapter_counter() && class_defines_chapter() && counter != "chapter" {
+  if within_chapter {
     let _ = new_counter(
       counter,
       "chapter",

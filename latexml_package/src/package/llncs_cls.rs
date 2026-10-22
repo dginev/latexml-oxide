@@ -238,6 +238,13 @@ LoadDefinitions!({
   NewCounter!("chapter", "document", idprefix => "Pt", nested => vec!["section"]);
   DefMacro!("\\thechapter", "\\arabic{chapter}");
   def_macro_noop("\\chaptermark{}")?;
+  // …but the class's `\appendix` is article's (llncs.cls:51 `\LoadClass[twoside]{article}`; article.cls:439-442), the
+  // appendices sections numbered within the document, "A" (its subsections "A.1", the equations running on), not
+  // within the `\chapter` the class adds for proceedings volumes (:302): the kernel numbers them within chapters where
+  // the class defines one (`begin_appendices`), "0.A" and ids `Pt0.A1`. Perl the same (latex_constructs.pool.ltxml:689-692
+  // tests `\c@chapter`; "Appendix 0.A"; 2609.39362, 2303.08726): KNOWN_PERL_ERRORS #1099. The appendices' ids are
+  // `A1`, `A2`, … as in article. Guard `perfect_kernel_batch78q::llncs_appendices_are_sections`.
+  DefPrimitive!("\\@appendix", { engine::latex_constructs::begin_appendices_within("section", false); });
 
   // Theorem-family \xxxname definitions. The class's `\spnewtheorem` is ported further below (its branches over the
   // `\lx@spnewtheorem` primitive, via define_new_theorem), and the theorem environments are installed there with
@@ -362,7 +369,11 @@ LoadDefinitions!({
   // under envcountsect (0906.4121's "Fact 3.1"). The capfont/bodyfont pairs are the class's, the same in every
   // shipped copy: `{definition}`'s body is italic (Perl's binding, upright). The `\@ifundefined` guards are a
   // Rust-only defensive keep (skip an env a preloaded package already defined); a plain `\documentclass{llncs}`
-  // load pre-defines none of them.
+  // load pre-defines none of them. The separator between a within-counter's number and its own, `\@thmcountersep`,
+  // is the class's (llncs.cls:1058, :1141; every one of 613 census copies): empty, "." only under envcountsect, so a
+  // paper's own `\newtheorem{x}{X}[section]` prints "11", "A1", as pdflatex (KNOWN_PERL_ERRORS #1111). Guard
+  // `perfect_kernel_batch78q::theorem_counter_separator_is_the_class_s`.
+  RawTeX!(r"\def\@thmcountersep{}\if@envcntsect\def\@thmcountersep{.}\fi");
   RawTeX!(r#"\@ifundefined{theorem}{\if@envcntsect
   \spnewtheorem{theorem}{Theorem}[section]{\bfseries}{\itshape}
 \else

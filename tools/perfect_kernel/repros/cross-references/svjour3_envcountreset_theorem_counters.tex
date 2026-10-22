@@ -1,0 +1,18 @@
+% witness: review 78q finding 3 (78q r1: the appendix theorem and lemma ids Thmtheorem1a, Thmlemma1a, uniquified
+%          after section 1's); 1604.08616, 1803.06644 (svjour3 theorem options)
+% oracle:  pdflatex 0 errors with svjour3.cls v3.2 (:83, :891-892, :907-909); "See 1, 1, 1, 2, 1, 2, 1, 1."
+% engines: rust (78q r1) = the same numbers, ids Thmtheorem1, Thmlemma1, Thmtheorem2, Thmtheorem1a, Thmlemma1a
+% expect:  0 errors; numbers reset by each section, ids within the section (S1.Thmtheorem1, S2.Thmtheorem1)
+% status:  RED (78q r1, ids) -> GREEN (78q r2, KNOWN_PERL_ERRORS #1100)
+\documentclass[envcountreset]{svjour3}
+\begin{document}
+\section{One}\label{s1}
+\begin{theorem}\label{t1}A.\end{theorem}
+\begin{lemma}\label{l1}B.\end{lemma}
+\section{Two}\label{s2}
+\begin{theorem}\label{t2}C.\end{theorem}
+\begin{theorem}\label{t3}D.\end{theorem}
+\begin{lemma}\label{l2}E.\end{lemma}
+\begin{definition}\label{d1}F.\end{definition}
+See \ref{s1}, \ref{t1}, \ref{l1}, \ref{s2}, \ref{t2}, \ref{t3}, \ref{l2}, \ref{d1}.
+\end{document}

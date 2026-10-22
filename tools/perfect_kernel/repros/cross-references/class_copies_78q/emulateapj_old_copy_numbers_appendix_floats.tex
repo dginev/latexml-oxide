@@ -1,0 +1,30 @@
+% witness: arXiv 0704.2079, 0801.1670 (emulateapj copies of 11/26/04 to 08/13/06 and others whose appendix code zeroes
+%          the floats: no [appendixfloats] option, the appendix floats always numbered within the appendix; 17 of 98
+%          census copies)
+% oracle:  pdflatex 0 errors with the 11/26/04 copy (sel78q probe's): "See 1, 1, 1, 1, 2, 2.1, 2, 3, A, A1, A.1, A1, A1, B, B1, B1."
+% engines: rust (int53a) = figures and tables 2, 3 (the running numbers)
+% expect:  0 errors; floats A1, B1 without the option (the paper's copy decides; emulateapj.cls here a stub of its header
+%          and appendix code)
+% status:  RED (int53a) -> GREEN (78q, KNOWN_PERL_ERRORS #1098, OXIDIZED_DESIGN_DIVERGENCES #860)
+\documentclass{emulateapj}
+\usepackage{graphicx}
+\begin{document}
+\section{A}\label{sA}
+\begin{equation}a\label{e1}\end{equation}
+\begin{figure}[t]\caption{F1}\label{f1}\end{figure}
+\begin{table}[t]\caption{T1}\label{t1}\end{table}
+\section{B}\label{sB}
+\subsection{C}\label{sC}
+\begin{equation}b\label{e2}\end{equation}
+\begin{eqnarray}c&=&d\label{e3}\end{eqnarray}
+\appendix
+\section{D}\label{sD}
+\begin{equation}x\label{e4}\end{equation}
+\subsection{E}\label{sE}
+\begin{figure}[t]\caption{F2}\label{f2}\end{figure}
+\begin{table}[t]\caption{T2}\label{t2}\end{table}
+\section{G}\label{sG}
+\begin{equation}y\label{e5}\end{equation}
+\begin{figure}[t]\caption{F3}\label{f3}\end{figure}
+See \ref{sA}, \ref{e1}, \ref{f1}, \ref{t1}, \ref{sB}, \ref{sC}, \ref{e2}, \ref{e3}, \ref{sD}, \ref{e4}, \ref{sE}, \ref{f2}, \ref{t2}, \ref{sG}, \ref{e5}, \ref{f3}.
+\end{document}

@@ -294,6 +294,26 @@ LoadDefinitions!({
   // 2401.03908 `\newcommand\mnras{\ref@jnl{MNRAS}}`), no elsarticle release's: aas_macros' binding provides them
   // where the paper's copy defines them, and only the names still undefined
   // (`shipped_class::provide_shipped_aas_macros`, shared with PoS, svmult, svjour3 and mdpi).
+  // elsarticle.cls:1342-1353 (TL 2025 v3.4c; every v1.2 to v3.x copy papers ship alike): `\appendix` numbers the
+  // sections "Appendix A" (`\thesection{\appendixname~\@Alph\c@section}`, the `\ref` text; its subsections "Appendix
+  // A.1"), the equations within each appendix "A.1" (`\@addtoreset{equation}{section}`), the figures and tables "A.2"
+  // (the letter before the running figure number, not reset). The kernel's `\appendix` (article_cls.rs `\@appendix`)
+  // runs first for the `ltx:appendix` units, their tag the section number alone ("Appendix A", not the kernel's
+  // `\appendixname` before it; as iopart's, iopart_support_sty.rs). A v1.0.1 copy (2008/05/22; 22 of 297 copies,
+  // 0711.2399) has no `\appendix`, so the article's stands where the paper ships one. Perl's elsarticle.cls.ltxml leaves
+  // the kernel's ("A", equation 4, figure 2; 2609.03753, 2608.23563): KNOWN_PERL_ERRORS #1098. Guard
+  // `perfect_kernel_batch78q::appendix_counters_elsarticle`.
+  if crate::shipped_class::shipped_class_text("elsarticle")?
+    .as_deref()
+    .is_none_or(|text| crate::shipped_class::class_code_contains(text, "\\renewcommand\\appendix"))
+  {
+    RawTeX!(r"\renewcommand\appendix{\@appendix\par
+  \setcounter{section}{0}\setcounter{subsection}{0}\setcounter{equation}{0}%
+  \gdef\thefigure{\@Alph\c@section.\arabic{figure}}\gdef\thetable{\@Alph\c@section.\arabic{table}}%
+  \gdef\thesection{\appendixname~\@Alph\c@section}\@addtoreset{equation}{section}%
+  \gdef\theequation{\@Alph\c@section.\arabic{equation}}%
+  \gdef\fnum@appendix{\thesection}\gdef\typerefnum@appendix{\thesection}}");
+  }
   crate::shipped_class::provide_shipped_aas_macros("elsarticle")?;
   {
     let _guess = OriginGuard::new(DefinitionOrigin::Fallback);

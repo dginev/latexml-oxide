@@ -4,8 +4,8 @@
 % engines: rust c400169c19 (77w r1) = "Counter equation keeps LaTeXML's numbering": (1), (2), as a `\documentclass{jfm}`
 %          without a copy numbers them
 % expect:  0 errors, 0 warnings; (1.1), (2.1)
-% status:  RED (open, 77w r2: SYNC row "jfm copies' equation numbers" — letting a counter the binding's base class
-%          numbered yield to the copy fixes it but changed 258 of 905 A/B papers; awaiting a ruling)
+% status:  RED (open, 77w r2: SYNC row "jfm copies' equation numbers") -> GREEN (78q: the jfm binding numbers the
+%          equations as every jfm.cls version does, KNOWN_PERL_ERRORS #1097; the copy still yields to the binding)
 % preload: ar5iv.sty
 \documentclass{jfmcopy}
 \begin{document}

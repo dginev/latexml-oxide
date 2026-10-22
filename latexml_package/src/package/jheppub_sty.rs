@@ -140,4 +140,10 @@ LoadDefinitions!({
   DefMacro!("\\xtumfont{}", "\\textsc{#1}");
   Let!("\\oldthebibliography", "\\thebibliography");
   Let!("\\endoldthebibliography", "\\endthebibliography");
+
+  // jheppub.sty v.1.1227 (2112.14648's copy):313-314, :290-291 in older copies, "number equations after the sections":
+  // `\renewcommand{\theequation}{\thesection.\arabic{equation}}` and `\numberwithin{equation}{section}`, "(2.1)" and
+  // "(A.1)", as a paper's shipped copy numbers them (2112.14648, 2607.20603). Perl's jheppub.sty.ltxml keeps the
+  // article's "(1)" (KNOWN_PERL_ERRORS #1097). Guard `perfect_kernel_batch78q::jhep_family_equations_within_sections`.
+  RawTeX!(r"\renewcommand{\theequation}{\thesection.\arabic{equation}}\numberwithin{equation}{section}");
 });

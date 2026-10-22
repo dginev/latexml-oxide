@@ -1,0 +1,17 @@
+% witness: arXiv 1604.08616, 1803.06644 (copy)
+% oracle:  pdflatex 0 errors with svjour3.cls v3.2 (:886-887, :904-905); "See 1.1, 1.1, 2.1, 2.1, 2.1."
+% engines: rust (int53a) = "See 1.1, 1, 2.1, 1, 2."; Perl 0.8.8 the same (its binding sets none of these counters)
+% expect:  0 errors; envcountsect: every environment within the section, 1.1, 2.1
+% status:  RED (int53a) -> GREEN (78q, KNOWN_PERL_ERRORS #1100)
+\documentclass[envcountsect]{svjour3}
+\usepackage{graphicx}
+\begin{document}
+\section{One}\label{s1}
+\begin{theorem}\label{t1}A.\end{theorem}
+\begin{lemma}\label{l1}B.\end{lemma}
+\section{Two}\label{s2}
+\begin{theorem}\label{t2}C.\end{theorem}
+\begin{definition}\label{d1}D.\end{definition}
+\begin{lemma}\label{l2}E.\end{lemma}
+See \ref{t1}, \ref{l1}, \ref{t2}, \ref{d1}, \ref{l2}.
+\end{document}

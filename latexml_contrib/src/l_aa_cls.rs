@@ -17,6 +17,15 @@ LoadDefinitions!({
   });
   ProcessOptions!();
   LoadClass!("aa");
+  // l-aa.sty:208-214 (v3.0, the copies astro-ph9604133 and astro-ph9701125 ship): the appendix renumbers the sections
+  // "A" and the equations within them, "A1" (no dot); the figures and tables keep their running numbers, where aa.cls's
+  // (the aa binding's `\appendix`, aa_cls.rs) numbers all three "A.1". The kernel's `\@appendix` runs first for the
+  // `ltx:appendix` units. pdflatex with the copy: astro-ph9705112 "Fig. 12.", "(A1) (A2)"; astro-ph9607057 "A1" where
+  // the aa numbering gave "A.1". Guard `perfect_kernel_batch78q::appendix_counters_l_aa`.
+  RawTeX!(
+    r"\def\appendix{\@appendix\par\setcounter{section}{0}\setcounter{subsection}{0}\def\thesection{\Alph{section}}%
+  \renewcommand\theequation{\thesection\arabic{equation}}\setcounter{equation}{0}\@addtoreset{equation}{section}}"
+  );
   // l-aa.sty:453-454 `\def\thesaurus#1{\gdef\@thesaurus{#1}}`: the A&A thesaurus codes, printed in the title's head box
   // as "Your thesaurus codes are: …" (:502-516 `\makeheadbox`) — the paper's subject classification, which the `aa`
   // binding (aa.cls, whose head box has none) drops. Read as the `\def` reads it, not `\long`: a `\par` in the argument

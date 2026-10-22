@@ -1,0 +1,27 @@
+% witness: arXiv 0705.0429 (copy)
+% oracle:  pdflatex 0 errors with mn2e.cls v2.2 (0705.0429's copy, :690-704); "See 1, 1, 1, 1, 2, 2.1, 2, 3, A, A1, A1, A1, A1, B, B1, B1."
+% engines: rust (int53a) = "See 1, 1, 1, 1, 2, 2.1, 2, 3, A, 4, A.1, 2, 2, B, 5, 3."; Perl 0.8.8 the same (its binding sets none of these counters)
+% expect:  0 errors; subsections A1, equations and floats A1/B1 reset per appendix
+% status:  RED (int53a) -> GREEN (78q, KNOWN_PERL_ERRORS #1098)
+\documentclass{mn2e}
+\usepackage{graphicx}
+\begin{document}
+\section{A}\label{sA}
+\begin{equation}a\label{e1}\end{equation}
+\begin{figure}[t]\caption{F1}\label{f1}\end{figure}
+\begin{table}[t]\caption{T1}\label{t1}\end{table}
+\section{B}\label{sB}
+\subsection{C}\label{sC}
+\begin{equation}b\label{e2}\end{equation}
+\begin{eqnarray}c&=&d\label{e3}\end{eqnarray}
+\appendix
+\section{D}\label{sD}
+\begin{equation}x\label{e4}\end{equation}
+\subsection{E}\label{sE}
+\begin{figure}[t]\caption{F2}\label{f2}\end{figure}
+\begin{table}[t]\caption{T2}\label{t2}\end{table}
+\section{G}\label{sG}
+\begin{equation}y\label{e5}\end{equation}
+\begin{figure}[t]\caption{F3}\label{f3}\end{figure}
+See \ref{sA}, \ref{e1}, \ref{f1}, \ref{t1}, \ref{sB}, \ref{sC}, \ref{e2}, \ref{e3}, \ref{sD}, \ref{e4}, \ref{sE}, \ref{f2}, \ref{t2}, \ref{sG}, \ref{e5}, \ref{f3}.
+\end{document}
