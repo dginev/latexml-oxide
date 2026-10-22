@@ -6128,7 +6128,11 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   is read as the copy that decides (`\def \epsfbox #1{` with its spaces, `epsf_resets_globally`; the TL stub repro rewritten
   in TL's spelling; new repro + guard `epsfbox_tl_sty_over_a_shipped_1991_tex`: a paper shipping only a 1991 epsf.tex gets
   TL's global reset, review probe e1), the reset choice stored globally, KPE #1117 says which copy decides, the caption-name
-  fallback's ruled/boxed exception above. GATES59. A/B int58a vs int59a: AB59. Binding nets: NETS59.
+  fallback's ruled/boxed exception above. Gates int59a: nextest 6933/6933 + cortex 10/10, clippy/rustdoc clean, inits
+  0/0, dump diff vs int58a empty. A/B int58a vs int59a (2,152 of 2,160: the `pop78s_*` populations, 300 algorithm/float/minted
+  papers with caption label settings, 300 random census controls, seed 59): E 8,667 → 8,130, F 22 → 20, missing `$` 205 → 33,
+  0 papers worse (1111.1264's crash varies run to run, E 20 → 22), no word loss over 1 %; 0 of 282 random controls changed; 2
+  of 266 caption-format papers changed, both "Algorithm 1" restored (2409.05617, 2501.12231). Binding nets: 136/136, 0 documents worse (int58a vs int59a).
 
 - **split114** (task #114, user directive 2026-10-07; a pure move, before FM S2a): `latexml_engine/src/base_utilities.rs`
   (23,317 lines) is the module directory `base_utilities/` — `mod.rs` (the imports, `FRONTMATTER_ELEMENTS`,
