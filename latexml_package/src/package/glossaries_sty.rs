@@ -15,6 +15,25 @@ use crate::{
   prelude::*,
 };
 
+/// The State key of the glossary entries referenced so far (`\gls`, `\glsadd`; global).
+const GLO_REFERENCED: &str = "lx@glossaries@referenced";
+/// The State key set once a glossary is printed (`\printglossary`; global).
+const GLO_PRINTED: &str = "lx@glossaries@printed";
+
+/// The label an entry's held definition diagnostics answer to (logger.rs `defer_to_label`).
+fn glossary_entry_label(key: &str) -> String { s!("glossary:{key}") }
+
+/// An entry referenced (`\gls`, `\glsadd`): a glossary printed or yet to be prints its definition, whose held
+/// diagnostics are then raised (`\lx@glossaries@newentry`).
+fn glossary_entry_referenced(key: &str) -> Result<()> {
+  if lookup_bool(GLO_PRINTED) {
+    util::logger::note_label_use(&glossary_entry_label(key), "glossary");
+  } else {
+    push_value(GLO_REFERENCED, Stored::from(key.to_string()))?;
+  }
+  Ok(())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Pre-define \@gls@removedoption BEFORE glossaries.sty raw-loads.
@@ -79,6 +98,11 @@ LoadDefinitions!({
   DefConstructor!("\\lx@glossaries@gls@link{} ExpandedSemiverbatim {}",
     "<ltx:glossaryref inlist='#list' key='#2'>#3</ltx:glossaryref>",
     enter_horizontal => true,
+    after_digest => sub[whatsit] {
+      if let Some(key) = whatsit.get_arg(2) {
+        glossary_entry_referenced(&key.to_string())?;
+      }
+    },
     properties => sub[args] {
       // Perl: $list = ToString($_[1]); $list = 'main' unless $_[1];
       let list = args[0].as_ref().map(|t| t.to_string()).unwrap_or_default();
@@ -152,6 +176,11 @@ LoadDefinitions!({
     },
     enter_horizontal => true,
     reversion => "",
+    after_digest => sub[whatsit] {
+      if let Some(key) = whatsit.get_arg(2) {
+        glossary_entry_referenced(&key.to_string())?;
+      }
+    },
     properties => sub[args] {
       let list = args[0].as_ref().map(|t| t.to_string()).unwrap_or_default();
       let list = if list.is_empty() { "main".to_string() } else { list };
@@ -286,7 +315,34 @@ LoadDefinitions!({
   // `<ltx:glossaryphrase>` per non-empty value (matches Perl's
   // `if ToString($value)` guard).
   // Arg 2, the label `\glslabel`, is ExpandedSemiverbatim (see `\lx@glossaries@gls@link`).
-  DefConstructor!("\\lx@glossaries@newentry{} ExpandedSemiverbatim RequiredKeyVals",
+  // An entry's fields are its stored data, which LaTeX typesets only where the entry is used — in a glossary
+  // `\printglossary` prints, at a `\gls` (glossaries.sty:2341-2346 stores them by `\def`). The
+  // definition is digested here for the glossary list the post-processor builds from it, so the diagnostics of that
+  // digest are held (logger.rs `DiagnosticsHold::defer`) and raised only once a printed glossary holds the entry: a
+  // referenced entry (`glossary_entry_referenced`) and a `\printglossary` (`\lx@printglossary`). An entry never used
+  // raises nothing, as in pdflatex (2104.09252: `name={$J_p_p$}` unused, a "Double subscript" Error; Perl shares it,
+  // KNOWN_PERL_ERRORS #1093; OXIDIZED_DESIGN_DIVERGENCES #859). A use itself typesets the field from its macros and errs there, as pdflatex does.
+  // Repro index-bib/unused_glossary_entry_raises_nothing.
+  DefPrimitive!("\\lx@glossaries@newentry{}{}{}", sub[(list, key, keyvals)] {
+    let key_text = Expand!(key.clone()).to_string();
+    let mut call = vec![T_CS!("\\lx@glossaries@newentry@"), T_BEGIN!()];
+    call.extend(list.unlist());
+    call.extend([T_END!(), T_BEGIN!()]);
+    call.extend(key.unlist());
+    call.extend([T_END!(), T_BEGIN!()]);
+    call.extend(keyvals.unlist());
+    call.push(T_END!());
+    let hold = util::logger::DiagnosticsHold::begin();
+    let digested = digest(Tokens::new(call));
+    if hold.errors_raised() + hold.warnings_raised() == 0 {
+      hold.commit();
+    } else if let Some(deferred) = hold.defer() {
+      let id = util::logger::keep_deferred(deferred);
+      util::logger::defer_to_label(&glossary_entry_label(&key_text), "glossary", id);
+    }
+    Ok(vec![digested?])
+  });
+  DefConstructor!("\\lx@glossaries@newentry@{} ExpandedSemiverbatim RequiredKeyVals",
     sub[document, args, _props] {
       let list = args[0].as_ref().map(|d| d.to_string()).unwrap_or_else(|| "main".to_string());
       let key  = args[1].as_ref().map(|d| d.to_string()).unwrap_or_default();
@@ -391,6 +447,13 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       // Perl L114: noteBackmatterElement(<whatsit>, 'ltx:glossary');
       note_backmatter_element(whatsit, "ltx:glossary");
+      // the entries referenced so far (and every later one) are printed: their definitions' held diagnostics are raised
+      if !lookup_bool(GLO_PRINTED) {
+        assign_value(GLO_PRINTED, true, Some(Scope::Global));
+        for key in lookup_vecdeque(GLO_REFERENCED).unwrap_or_default() {
+          util::logger::note_label_use(&glossary_entry_label(&key.to_string()), "glossary");
+        }
+      }
     },
     before_construct => sub[doc, whatsit] {
       // Perl L117: adjustBackmatterElement($_[0], $_[1]);

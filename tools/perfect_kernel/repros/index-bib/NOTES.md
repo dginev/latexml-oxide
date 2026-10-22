@@ -636,3 +636,8 @@ up to its blank line (OXIDIZED_DESIGN_DIVERGENCES #830); the starless form keeps
 
 `natbib_citetext_keeps_its_brackets` (78k; PERL-ORIGIN, KNOWN_PERL_ERRORS #1058): natbib.sty:739 wraps `\citetext`'s
 text in `\NAT@open`/`\NAT@close`; natbib_sty.rs now does.
+
+`unused_glossary_entry_raises_nothing` (78p; PERL-ORIGIN, KNOWN_PERL_ERRORS #1093): glossaries.sty:2341-2346 stores a
+field by `\def`, typeset only where the entry is used; glossaries_sty.rs digests every field into
+`<ltx:glossarydefinition>`. Fix: `\lx@glossaries@newentry` holds the digest's diagnostics and defers them to
+`glossary:<key>`, replayed for an entry referenced in a document that prints a glossary (OXIDIZED_DESIGN_DIVERGENCES #859).

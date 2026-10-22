@@ -9701,7 +9701,7 @@ fn tblr_colspec_count_is_an_integer_expression() {
     &xml,
     "tabular",
     &["xml:id=\"p1.1\""],
-    r#"<tabular vattach="middle" xml:id="p1.1"><tbody><tr xml:id="p1.1.1"><td align="center" xml:id="p1.1.1.1">a</td><td align="center" xml:id="p1.1.1.2">b</td></tr></tbody></tabular>"#,
+    r#"<tabular vattach="middle" xml:id="p1.1"><tbody><tr xml:id="p1.1.1"><td align="center" border="b l r t" xml:id="p1.1.1.1">a</td><td align="center" border="b r t" xml:id="p1.1.1.2">b</td></tr></tbody></tabular>"#,
   );
   latexml::util::test::assert_element(
     &xml,

@@ -7523,6 +7523,23 @@ impl Document {
   /// otherwise (a numbered `{equation}`), or past an inline formula the enclosing unit, whose number `\ref` prints
   /// (OXIDIZED_DESIGN_DIVERGENCES #813). Repro `cross-references/math_box_label_climbs_to_the_display.tex`.
   pub fn float_to_label_for(&mut self, raw_step: Option<i64>) -> Option<Node> {
+    self.float_to_label_scoped(raw_step, false)
+  }
+
+  /// [`float_to_label_for`](Self::float_to_label_for) for a label that follows a counter step a group has since
+  /// undone (`after_undone_step`, `binding::counter::label_follows_an_undone_step`): it names the step still in scope,
+  /// not the object just closed beside it (Perl's last-child start, Document.pm:1103-1104), so the climb starts at the
+  /// current node. Where no ancestor takes it, Perl's fallback (:1113-1119, the last child, else the root) stays: a
+  /// label at the document's own level (lastpage's `\AtEndDocument{\label{lastpage}}`) keeps its old place, where the
+  /// root taking it gave the root an id and renumbered every generated one. Witness math0107195: a `\label` after an
+  /// inner `equation`, still inside a theorem, names the theorem ("Theorem 5.3"; Perl and int52a the equation's 16,
+  /// KNOWN_PERL_ERRORS #1092; OXIDIZED_DESIGN_DIVERGENCES #856). Repro
+  /// `cross-references/label_after_an_inner_equation_names_the_theorem.tex`.
+  pub fn float_to_label_scoped(
+    &mut self,
+    raw_step: Option<i64>,
+    after_undone_step: bool,
+  ) -> Option<Node> {
     let key = "labels";
     let may_label = |node: &Node| {
       can_node_have_attribute(node, key)
@@ -7541,7 +7558,7 @@ impl Document {
         }
     };
     // Perl: start from lastChild of current node if it's an element
-    let start = if self.node.get_type() == Some(NodeType::ElementNode) {
+    let start = if self.node.get_type() == Some(NodeType::ElementNode) && !after_undone_step {
       self
         .node
         .get_last_child()

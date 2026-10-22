@@ -473,9 +473,10 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
     `\edlabel`); an anchor in math loses its name (`$a\hypertarget{m}{}b$`); a stale `\@currentHref` names memoir pagenote
     anchors (`target-star-.3`, ucalgmthesis); glossaries-extra `\printunsrtglossary` re-digests a label's anchor into its
     `typerefnum` (`glo..fooa`); `\Hy@SaveSpaceFactor` family undefined; RED `singletons/anchor_at_paragraph_start_keeps_the_space`. A `\hypertarget` around a block in vertical mode (a `\parbox`, after `\item`, in `quote`/`minipage`/`p{}` cells) puts its destination in the paragraph after the block, one block late (59m, KPE #424: exact placement before it would need a vertical-mode destination, which `\hypertarget{n}{\section{T}}`'s in-title convention rules out).
-  - *tabularray* (57cp; `evaluate=`/`expand=` landed 59n): rules (`hlines`, `vlines`, `hline{…}`) are not drawn, so an
-    all-empty table is pruned whole (RED `alignment-bindings/tblr_all_empty_table_keeps_its_rules`; the manual's
-    `\makeEmptyTable` demo, tabularray.tex:2859-2870); a math table without a colspec is sized before `evaluate=`/`expand=` run (RED `alignment-bindings/tblr_math_columns_follow_the_expanded_body`); custom `caption-tag`/`caption-sep`
+  - *tabularray* (57cp; `evaluate=`/`expand=` landed 59n): ~~rules (`hlines`, `vlines`, `hline{…}`) are not drawn, so
+    an all-empty table is pruned whole~~ (FIXED 78p, OD #855: the rule keys and a rowspec's `|` are cell borders; open:
+    the body's `\SetHline`/`\SetHlines`/`\SetVline`/`\SetVlines` stay no-ops, rule widths, dashes and colours are not
+    rendered); a math table without a colspec is sized before `evaluate=`/`expand=` run (RED `alignment-bindings/tblr_math_columns_follow_the_expanded_body`); custom `caption-tag`/`caption-sep`
     ("Quadro 2 —", tabularray-abnt); a long/tall table in a captioned `figure`/`subfigure` nests a `table`; document
     templates print as tabularray's own (tblr-extras head, `label=none`); a math table's `tex=` holds the reduction;
     ~~`\SetCell[c=…,r=…]` spans~~ (FIXED 78l, OD #834; `cell{i}{j}={r=…,c=…}` spans open), `rownum`/`colnum`/`rowcount`/`colcount`; `cmd=`/font styles; the LoT line of a caption-less
@@ -5267,6 +5268,45 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   three authors under one address), an e-mail no name spells to a nameless creator (1309.7930, 1510.00572, 1609.09832,
   2111.06834), a `\boldsymbol` in a mark (2010.05094) and a `\label` in an `\address` (2211.03667) leave the mark
   unanswered — the same under `\documentclass{iopart}`.
+- **78p** (quality batch 13: the SYNC tabularray row and the fidelity3 audit's N12, N14, N16-N19,
+  agent_reports/2026-10-21_fidelity3_audit.md; guards `perfect_kernel_batch78p::*`, 16, each item RED on int52a; OD
+  #855-859, KPE #1091-1096). (1) tabularray's rule keys are drawn: `hlines`/`vlines`, `hline{…}`/`vline{…}` with their
+  `{<index>}{<cross>}{<style>}` values and a rowspec's `|` become the cells' `border` letters as `\hline` and `|` give
+  them, against the body's shape (after `evaluate=`/`expand=`), at the table's end (`\lx@tblr@rules`, expandable); an
+  all-empty grid is kept; no hline through a `\SetCell[r=…]` span; `text=` and white rules draw none (OD #855; the
+  tabularray row's rules item closed). (2) `\patchcmd` patches the texts etoolbox writes (`\meaning`/`\detokenize`, a
+  control word always followed by a space): `\patchcmd{\x}{|}{\mid}` keeps `\mid` before a letter, a search `\foo@bar`
+  no longer matches inside `\foo@barx` (etoolbox_sty.rs `etb_patch_text`; 2011.13897; KPE #1091). (3) A `\label` after
+  a counter step a group has undone climbs from the current node, not from the element just closed: after an inner
+  `equation` in a theorem it names the theorem (math0107195 "Theorem 5.3"; 0902.3453 `lem:bias` 3 → 6 as pdflatex), after
+  a `subequations` block's inner `align` the block's number (2505.03288 `eq:GNG` → 13), after a closed table, figure or
+  list the enclosing unit; every step records its serial in scope and as the latest (`label_stepped_counter`); caption's
+  `\captionof`, whose step LaTeX makes in the current group, keeps its float (`\lx@refstep@outlives@group`; 2402.05535);
+  where no ancestor takes the label Perl's last-child/root fallback stays (lastpage's `\AtEndDocument` label; the root
+  taking it renumbered every generated id) (OD #856, KPE #1092). (4) delarray delimits a `tabular` as an `array`:
+  `\begin{tabular}[t]\{{l}.` is the tabular in a formula between `\left\{` and `\right.` (delarray_sty.rs; 1304.5109 6
+  Errors → 0, 1106.2670 4 → 0; OD #858, KPE #1096). (5) mathabx `\curvearrowbotleftright` is U+293B (OD #857, KPE
+  #1095; 2308.12945). (6) An unused glossary entry's definition raises nothing: the definition digest's diagnostics
+  are deferred (`defer_to_label`, `glossary:<key>`) and replayed only for an entry referenced in a document that prints
+  a glossary (2104.09252, 2505.18389 18 Errors → 0; OD #859, KPE #1093). (7) `multicols` inside `algorithmic` makes no
+  pagination marker the `ltx:listing` cannot hold (`construct_multicols`, `pagination_insertable`; the run-336
+  `malformed:ltx:pagination` cluster, 38 papers, 94 Errors → 0, e.g. 1708.03274, 1405.5689: a `multicols` in
+  `algorithmic`, `\columnbreak`/`\newpage` its break; KPE #1094). A/B (release 78p vs int52a, int52a dumps,
+  `--preload=ar5iv.sty`, census populations `census/pops/pop78p_*.tsv`): 942 papers (mathabx 1, delarray 36, the run-336
+  pagination cluster 38, `\columnbreak` 61, tblr 56, glossaries 200, theorem+`\label` 200, `\patchcmd` 250, 100 random
+  controls) E 7,818 → 7,636, F 74 → 74, W 19,470 → 19,469, 0 papers worse; 133 outputs changed (129 papers): 32 tblr
+  papers' borders (and the heights they add) only; labels moved in 52 papers — into theorems from their inner
+  equations, onto `subequations` blocks, onto the enclosing section after a closed table/figure/list, `sec:`-named
+  labels onto their sections — each checked against its source and, where referenced, pdflatex's `.aux` (0902.3453
+  `lem:bias` 6, 2505.03288 `eq:GNG` 13, 2510.08379 `AgeSex` 2.1, 2106.05350 `tab:hyperparams_gan` 5, 2312.09748 `opt`
+  II-B, 1809.06638 `fig:failure` the figure — all now as pdflatex; 2103.17127 below); the rest the Error removals
+  above. Residuals: tabularray's body
+  `\SetHline`/`\SetHlines`/`\SetVline`/`\SetVlines` stay no-ops, rule widths/dashes/colours unrendered; cleveref's
+  `\lx@cleverref@labeltype` still places a `\label[type]`'s type by `float_to_label_for` (cleveref_sty.rs:41, a one-line
+  follow-up to `float_to_label_scoped` once 78j lands); supertabular's `\tablecaption{…}\label{…}` before the table
+  names the enclosing unit (pdflatex the table: the binding steps the counter at the table, not at `\tablecaption`,
+  2103.17127; int52a named the previous table); `\left\{ … \right.` around a text tabular stays unparsed math with a
+  Warning (math parked); an unused entry's unparsable formula still warns from the math parse (2104.09252).
 - **78i** (quality batch 10, the sel78i selection study's five non-frontmatter items; guards `perfect_kernel_batch78i::*`,
   9; OD #823-825, KPE #1048-1052; quality ledger rows #155 BIBLATEX-ONLY-FIELDS and #37 AMSTEX-LOCALSTY closed). (1)
   biblatex's own `.bib` fields (`journaltitle`, `location`, `urldate`, `addendum`, `maintitle`, the event fields, …: 47

@@ -1,0 +1,15 @@
+% mechanism: delarray's `\@tabarray` peek (delarray.sty:43-58) serves array.sty's `\tabular` as well as `\array`
+%   (array.sty:291, :297-310): a token other than a brace after `[pos]` is a left delimiter, the template is braced, the
+%   right delimiter follows; the binding gave `array` only, so `(` was read as the tabular's template
+% witness: 1304.5109 (`\begin{tabular}[t]\{{l}.`, 6 "Extra alignment tab"); 1106.2670
+% oracle:  pdflatex 0 errors: a 2 x 2 table between parentheses
+% engines: rust int52a = 2 x Error:unexpected:& (Extra alignment tab); Perl 0.8.8 has no delarray binding (raw-loads)
+% expect:  0 errors; a formula `\left(` tabular `\right)` whose text reads "Array[[[a], [b]], [[c], [d]]]"
+% status:  RED (int52a) -> GREEN (78p)
+\documentclass{article}
+\usepackage{delarray}
+\begin{document}
+\begin{tabular}({cc})
+a & b \\ c & d
+\end{tabular}
+\end{document}

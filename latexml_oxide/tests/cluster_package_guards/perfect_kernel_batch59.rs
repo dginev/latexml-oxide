@@ -870,7 +870,7 @@ fn tblr_evaluate_and_expand_preprocess_the_body() {
     (
       "para",
       "p1",
-      r##"<para xml:id="p1"><tabular class="ltx_guessed_headers" vattach="middle"><tbody><tr><td/><td align="left">y</td><td align="left">y</td><td align="left">y</td></tr><tr><td thead="row"/><td align="left">y</td><td align="left">y</td><td align="left">y</td></tr><tr><td/><td align="left">y</td><td align="left">y</td><td align="left">y</td></tr></tbody></tabular></para>"##,
+      r##"<para xml:id="p1"><tabular class="ltx_guessed_headers" vattach="middle"><thead><tr><td border="l r t" thead="column"/><td align="left" border="r t" thead="column">y</td><td align="left" border="r t" thead="column">y</td><td align="left" border="r t" thead="column">y</td></tr></thead><tbody><tr><td border="l r t"/><td align="left" border="r t">y</td><td align="left" border="r t">y</td><td align="left" border="r t">y</td></tr><tr><td border="b l r t"/><td align="left" border="b r t">y</td><td align="left" border="b r t">y</td><td align="left" border="b r t">y</td></tr></tbody></tabular></para>"##,
     ),
     (
       "para",
@@ -880,7 +880,7 @@ fn tblr_evaluate_and_expand_preprocess_the_body() {
     (
       "para",
       "p3",
-      r##"<para xml:id="p3"><tabular vattach="middle"><tbody><tr><td align="left">Row1</td><td align="left">1</td></tr><tr><td align="left">All</td><td align="left">All</td></tr></tbody></tabular></para>"##,
+      r##"<para xml:id="p3"><tabular vattach="middle"><tbody><tr><td align="left" border="t">Row1</td><td align="left" border="t">1</td></tr><tr><td align="left" border="b t">All</td><td align="left" border="b t">All</td></tr></tbody></tabular></para>"##,
     ),
     (
       "para",

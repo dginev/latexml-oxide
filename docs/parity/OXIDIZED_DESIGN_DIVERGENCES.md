@@ -23419,3 +23419,91 @@ block, with `acmthm` read from the class options. Repros class-bindings/acmart_a
 class-bindings/acmart_author_newtheorem_numbers_as_the_author_says; guards
 `perfect_kernel_batch78o::{acmart_author_theorem_name_wins, acmart_author_newtheorem_numbers_as_the_author_says,
 acmart_acmthm_false_makes_no_theorems}`.
+
+### 855. tabularray's rule keys are drawn as cell borders
+
+tabularray draws its rules apart from the cells (tabularray.sty:1957-2290 `\SetHline`/`\SetVline`, the inner keys
+`hlines`/`vlines` :4011-4012 and the child keys `hline{…}`/`vline{…}`, a rowspec's `|` through
+`\__tblr_parse_colrow_spec:nn`, :4003). The binding maps `tblr` to the kernel `tabular` (Perl's ar5iv stub the same,
+no rules), so only a colspec's `|` and a body `\hline` showed; an all-empty table with `hlines,vlines` (the manual's
+`\makeEmptyTable`, tabularray.tex:2859-2870) was pruned whole. Ours (78p, `latexml_contrib/src/tabularray_sty.rs`
+`tblr_rule_keys`, `tblr_rule_borders`, `tblr_draw_rules`): each rule key is read as tabularray reads its value
+(`{<index>}{<cross>}{<style>}`, `{<cross>}{<style>}`, `<style>`; `\__tblr_set_hline_aux:nn`, :2045-2055), its positions
+and cross range through tabularray's child selectors (`tblr_select`: `1,Z`, `2-4`, `odd`, `-`), against the table's
+shape (the body's rows and widest row, after `evaluate=`/`expand=` when given: `\lx@tblr@rules@shape`; a last
+one-cell row empty but for spaces and `\par`s is no row, :3722-3731), and drawn as the table ends
+(`\lx@tblr@rules` in `\lx@tblr@end`, expandable so it starts no row after a last `\\`) as the border letters the
+kernel's `\hline` and `|` give: an hline above row `i` is that row's `t` (the last one the row after a final `\\`, or
+the last row's `b`), a vline left of column `j` column `j-1`'s `r` (the first column 1's `l`); a second line at a place
+(`index` 2) is a second letter, a double rule. A letter the template's `|` already gives is not repeated (`vlines` is
+the colspec's first `|`); a body `\hline` after `hlines` is a second line, as tabularray numbers it. `text=` lines and
+white ones (`hlines={white}` on coloured rows, 2308.16907) draw none; widths, dashes and colours are not rendered. The
+kernel's header guess reads the borders as it does a `tabular`'s. Open: `\SetHline`/`\SetHlines`/`\SetVline`/
+`\SetVlines` in the body stay no-ops. Repros alignment-bindings/{tblr_all_empty_table_keeps_its_rules,
+tblr_rule_keys_become_cell_borders}; guards `perfect_kernel_batch78p::{tblr_rules_keep_an_empty_table,
+tblr_rule_keys_become_cell_borders, tblr_rules_end_a_table_with_a_cmd_column}`.
+
+### 856. A `\label` after a counter step a group has undone does not name the object that step numbered
+
+LaTeX's `\label` names `\@currentlabel` (latex.ltx:14963-14967), which a `\refstepcounter` sets locally: when the
+group of the step closes (an `equation`, a theorem, a float's caption, a list), it reverts to the step in scope. Perl's
+`floatToLabel` (Document.pm:1098-1127) starts at the current node's last child, so a label right after a closed
+element that can take one named that element: a `\label` after `\end{equation}`, still inside a theorem, labelled the
+equation (math0107195: PDF "Theorem 5.3", ours and Perl's the equation's 16; KNOWN_PERL_ERRORS #1092). Ours (78p):
+every counter step records its serial in scope (local) and as the latest made (global, `label_stepped_counter`); a
+`\label` digested where they differ (`label_follows_an_undone_step`) climbs from the current node, not its last child
+(`Document::float_to_label_scoped`, `\lx@label`'s `after_undone_step`). A label in the step's own scope is
+unchanged (`\caption{…}\label` in a float, `\item…\label`, a section's). A wrapper group of LaTeXML's own around a step
+LaTeX makes in the current group does not undo it (`\lx@refstep@outlives@group`, `keep_latest_refstep_in_scope`):
+caption's `\captionof` (caption.sty:390-391), which LaTeXML sets in a float (2402.05535
+`\captionof{figure}{…}\else…\fi\label{…}`, the figure). Where no ancestor can take the label, Perl's
+fallback (the last child, else the root) stays: the root taking lastpage's `\AtEndDocument{\label{lastpage}}` gave it an
+id and renumbered every generated `idN`. Effects against pdflatex: a label after a closed table, figure, equation or
+list names the enclosing section's (or theorem's, or item's) number, as `\ref` prints there; a label after a
+`subequations` block's inner `align` names the block's number (2505.03288 `eq:GNG` "13", int52a an unnumbered inner
+group); after `\subfloat{…}\label{…}` the figure when its `\caption` comes before the subfloats — when the caption comes
+after them pdflatex names the section (1504.02206 `fig:2c`: pdflatex 5.1, ours 2; review rev78p). cleveref's `\label[type]` constructor
+(`\lx@cleverref@labeltype`) still places its type by `float_to_label_for` (open). Repro
+cross-references/label_after_an_inner_equation_names_the_theorem; guards `perfect_kernel_batch78p::{
+label_after_an_inner_equation_names_the_theorem, label_after_a_closed_step_names_the_step_in_scope,
+label_after_captionof_names_its_float}`.
+
+### 857. mathabx's `\curvearrowbotleftright` is U+293B
+
+mathabx.dcl:639 declares `\curvearrowbotleftright` (mathb "F5": a bottom arc with an arrowhead at each end); Perl's
+binding leaves it out (mathabx.sty.ltxml:487, commented out; KNOWN_PERL_ERRORS #1095). No Unicode character draws a
+two-headed arc; ours (78p, mathabx_sty.rs) is the bottom arc ⤻ U+293B, `\curvearrowbotright`'s, with role ARROW (its
+`name` attribute keeps the command; `↔` would read as `\leftrightarrow`). Its siblings `\curvearrowbotleft`,
+`\curvearrowleftright`, `\curvearrowtop*` and `\looparrowdown*` stay undefined, as in Perl. Witness 2308.12945;
+repro package-bindings/mathabx_curvearrowbotleftright; guard `perfect_kernel_batch78p::mathabx_curvearrowbotleftright`.
+
+### 858. delarray delimits a `tabular` as it does an `array`
+
+delarray.sty:43-58 redefines `\@tabarray`, which array.sty's `\tabular` enters as `\array` does (array.sty:291,
+:297-310): `\begin{tabular}[t]\{{l}.` is a tabular between `\left\{` and `\right.`. Perl has no delarray binding and
+its `\tabular` never reaches `\@tabarray`, so the delimiter is read as the template, each `&` an "Extra alignment tab"
+(KNOWN_PERL_ERRORS #1096); the Rust binding covered `array` only. Ours (78p, delarray_sty.rs): the kernel tabular's
+argument reader `\lx@@tabular@args` peeks as delarray does; a delimited tabular is set in a formula of its own
+(`\lx@delarray@tabular@open`, array.sty's `\hbox{$…$}`, never the array's "Missing $ inserted"), `\left<l>` the
+tabular `\right<r>`, closed by `\endtabular`; a plain tabular forgets an enclosing one's right delimiter. Residual:
+`\left\{ … \right.` around a text tabular stays unparsed math with a Warning (the grammar parses no
+OPEN-ATOM-null-CLOSE; `$\left\{ x \right.$` the same; math parked). Witnesses 1304.5109 (6 Errors → 0), 1106.2670 (4
+→ 0); repro alignment-bindings/delarray_delimits_a_tabular; guards `perfect_kernel_batch78p::{delarray_delimits_a_tabular,
+delarray_plain_tabular_in_a_delimited_one}`.
+
+### 859. A glossary entry's definition raises its diagnostics only where a printed glossary holds the entry
+
+glossaries stores an entry's fields by `\def` (glossaries.sty:2341-2346) and typesets them only where the entry is
+used: at a `\gls` (the text, first or name field) and in the glossary `\printglossary` prints (name and description).
+LaTeXML digests every field at the definition for `<ltx:glossarydefinition>`, which the post-processor builds the
+glossary from, so an unused entry's broken field raised its error (2104.09252 `name={$J_p_p$}`: "Double subscript";
+2505.18389 a description's `\gls{nr}` of an entry never defined, 18 Errors; Perl the same, KNOWN_PERL_ERRORS #1093).
+Ours (78p, glossaries_sty.rs): `\lx@glossaries@newentry` digests the definition under a `DiagnosticsHold`; its
+diagnostics are deferred (logger.rs `defer_to_label`, label `glossary:<key>`) and replayed at the document's end only
+for an entry the document references (`\lx@glossaries@gls@link`, `\lx@glossaries@glsadd`) when it also prints a
+glossary (`\lx@printglossary`, before or after the reference); a use still typesets its field from the macros and errs
+there live, as pdflatex does.
+Residuals: the math parse after digestion still warns on an unused entry's unparsable formula (2104.09252's
+unparsed-math Warning). glossaries-extra's `\printunsrtglossary` is read raw and typesets each field from its macros,
+raising that field's diagnostics itself. Repro index-bib/unused_glossary_entry_raises_nothing; guards
+`perfect_kernel_batch78p::{unused_glossary_entry_raises_nothing, printed_glossary_entry_raises_its_definition_errors}`.

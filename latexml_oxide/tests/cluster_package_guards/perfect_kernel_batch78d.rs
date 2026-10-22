@@ -421,7 +421,8 @@ fn subfigure_sets_the_line_width() {
 /// mdpi.cls:1362-1373 sets the class's captions after it loads caption: a bold small label ended by a period, small
 /// text — pdflatex (2302.03012's copy) "Figure 1. Fig cap.", "Table 1. Tab cap.". Without a shipped copy the binding
 /// stands in for the class. Red (int45b): "Figure 1: " at the normal size. Repro
-/// class-bindings/mdpi_captions_end_the_label_with_a_period.
+/// class-bindings/mdpi_captions_end_the_label_with_a_period. (lastpage's `\AtEndDocument` label no longer lands on the
+/// table, closed before it with its caption's step: 78p, `Document::float_to_label_scoped`.)
 #[test]
 fn mdpi_captions_end_the_label_with_a_period() {
   assert_clean(
@@ -443,7 +444,7 @@ fn mdpi_captions_end_the_label_with_a_period() {
       (
         "table",
         "S1.T1",
-        "<table inlist=\"lot\" labels=\"LABEL:lastpage\" xml:id=\"S1.T1\"><tags><tag>Table 1</tag>\
+        "<table inlist=\"lot\" xml:id=\"S1.T1\"><tags><tag>Table 1</tag>\
   <tag role=\"autoref\">Table\u{00A0}1<text xml:id=\"S1.T1.1\"/></tag><tag role=\"creftype\">table</tag>\
   <tag role=\"creftypecap\">Table</tag><tag role=\"creftypeplural\">tables</tag>\
   <tag role=\"creftypepluralcap\">Tables</tag><tag role=\"refnum\">1</tag>\

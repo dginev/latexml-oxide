@@ -228,6 +228,7 @@ impl Alignment {
   }
 
   pub fn rows(&self) -> &VecDeque<Row> { &self.rows }
+  pub fn rows_mut(&mut self) -> &mut VecDeque<Row> { &mut self.rows }
   pub fn get_cached_height(&self) -> Option<Dimension> { self.cached_height }
   pub fn get_cached_depth(&self) -> Option<Dimension> { self.cached_depth }
   pub fn get_row_heights(&self) -> &[Dimension] { &self.row_heights }

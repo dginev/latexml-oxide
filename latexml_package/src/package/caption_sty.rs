@@ -766,6 +766,9 @@ LoadDefinitions!({
     out.push(T_END!());
     out.push(T_CS!("\\lx@caption@wrapper@done"));
     out.push(T_CS!("\\endgroup"));
+    // caption.sty's `\captionof` steps the counter in the current group: a `\label` after the wrapper names the caption's
+    // float (sect11.rs `\lx@refstep@outlives@group`; 2402.05535)
+    out.push(T_CS!("\\lx@refstep@outlives@group"));
     out.extend([T_CS!("\\lx@caption@of@after"), T_CS!("\\let"), T_CS!("\\lx@caption@of@after"), T_CS!("\\relax")]);
     Ok(Tokens::new(out))
   });

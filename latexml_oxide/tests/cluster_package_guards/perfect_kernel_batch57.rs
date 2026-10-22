@@ -1553,7 +1553,7 @@ fn tabularray_unknown_column_type() {
       (
         "para",
         "p1",
-        r##"<para xml:id="p1"><tabular vattach="middle"><tbody><tr><td align="left">Head</td><td align="left">Head</td></tr><tr><td align="left">111</td><td align="left">2.1</td></tr></tbody></tabular></para>"##,
+        r##"<para xml:id="p1"><tabular vattach="middle"><tbody><tr><td align="left" border="l r t">Head</td><td align="left" border="r t">Head</td></tr><tr><td align="left" border="b l r t">111</td><td align="left" border="b r t">2.1</td></tr></tbody></tabular></para>"##,
       ),
       (
         "para",
@@ -1593,7 +1593,7 @@ fn tabularray_table_commands_and_key_lists() {
     (
       "para",
       "p2",
-      r##"<para xml:id="p2"><tabular vattach="middle"><tbody><tr><td align="left">One</td><td align="left">Two</td><td align="left">Three</td></tr></tbody></tabular></para>"##,
+      r##"<para xml:id="p2"><tabular vattach="middle"><tbody><tr><td align="left" border="b t">One</td><td align="left" border="b t">Two</td><td align="left" border="b t">Three</td></tr></tbody></tabular></para>"##,
     ),
     (
       "para",
@@ -1608,7 +1608,7 @@ fn tabularray_table_commands_and_key_lists() {
     (
       "para",
       "p5",
-      r##"<para xml:id="p5"><tabular vattach="middle"><tbody><tr><td align="center">Head</td><td align="center">Head</td></tr><tr><td align="center">111</td><td align="center">2.1</td></tr></tbody></tabular></para>"##,
+      r##"<para xml:id="p5"><tabular vattach="middle"><tbody><tr><td align="center" border="l r t">Head</td><td align="center" border="r t">Head</td></tr><tr><td align="center" border="b l r t">111</td><td align="center" border="b r t">2.1</td></tr></tbody></tabular></para>"##,
     ),
   ]);
 }
@@ -1686,7 +1686,7 @@ fn tabularray_math_tables() {
     (
       "para",
       "p2",
-      r##"<para xml:id="p2"><p><Math mode="inline" tex="\begin{array}[]{*{2}{l}}6&amp;7\\&#10;8&amp;9\\&#10;\end{array}" text="Array[[6, 7], [8, 9]]" xml:id="p2.m1"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="left"><XMTok meaning="6" role="NUMBER">6</XMTok></XMCell><XMCell align="left"><XMTok meaning="7" role="NUMBER">7</XMTok></XMCell></XMRow><XMRow><XMCell align="left"><XMTok meaning="8" role="NUMBER">8</XMTok></XMCell><XMCell align="left"><XMTok meaning="9" role="NUMBER">9</XMTok></XMCell></XMRow></XMArray></XMath></Math></p></para>"##,
+      r##"<para xml:id="p2"><p><Math mode="inline" tex="\begin{array}[]{*{2}{l}}6&amp;7\\&#10;8&amp;9\\&#10;\end{array}" text="Array[[6, 7], [8, 9]]" xml:id="p2.m1"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="left" border="t"><XMTok meaning="6" role="NUMBER">6</XMTok></XMCell><XMCell align="left" border="t"><XMTok meaning="7" role="NUMBER">7</XMTok></XMCell></XMRow><XMRow><XMCell align="left" border="b t"><XMTok meaning="8" role="NUMBER">8</XMTok></XMCell><XMCell align="left" border="b t"><XMTok meaning="9" role="NUMBER">9</XMTok></XMCell></XMRow></XMArray></XMath></Math></p></para>"##,
     ),
     (
       "table",

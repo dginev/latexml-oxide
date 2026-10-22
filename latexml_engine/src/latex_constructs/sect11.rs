@@ -36,7 +36,10 @@ pub(crate) fn load() -> Result<()> {
   // (`\newtcbtheorem`), 2505.20088 (`\newtcolorbox[auto counter]`), 2402.06608, 2609.20563 (`\newtcblisting`).
   DefConstructor!("\\lx@label Semiverbatim", sub[document, _olabel, props] {
     let raw_step = raw_refstep_of(props);
-    if let Some(savenode) = document.float_to_label_for(raw_step.as_ref().map(|step| step.serial)) {
+    let after_undone_step = matches!(props.get("after_undone_step"), Some(Stored::Bool(true)));
+    if let Some(savenode) =
+      document.float_to_label_scoped(raw_step.as_ref().map(|step| step.serial), after_undone_step)
+    {
       let mut labels : HashMap<String,bool> = HashMap::default();
       if let Some(label) = props.get("label") {
         labels.insert(label.to_string(), true);
@@ -67,6 +70,9 @@ pub(crate) fn load() -> Result<()> {
     };
     let scope = label.replace("LABEL:","label:");
     whatsit.set_property("label", label);
+    if label_follows_an_undone_step() {
+      whatsit.set_property("after_undone_step", true);
+    }
     if let Some(step) = current_raw_refstep() {
       whatsit.set_property("raw_refstep_tags", Stored::Digested(step.tags));
       whatsit.set_property("raw_refstep_serial", Stored::Int(step.serial));
@@ -93,6 +99,11 @@ pub(crate) fn load() -> Result<()> {
   // in eqnarray/ams rearrangeable bindings prevents an infinite
   // \lx@eqnarray@save@label recursion under nested align/gather (2008.13358).
   let_i(&T_CS!("\\label"), &T_CS!("\\lx@label"), Some(Scope::Global));
+  // A wrapper group of LaTeXML's own around a counter step LaTeX makes in the current group closes without undoing it
+  // for the labels after it (`keep_latest_refstep_in_scope`).
+  DefPrimitive!("\\lx@refstep@outlives@group", {
+    keep_latest_refstep_in_scope();
+  });
   // The type a `\label[type]{key}` gives its object's references (cleveref.sty `\label[type]`), where a site that moves
   // a trailing `\label` reads the optional itself (`typed_label`). The kernel's `\label` has no type: nothing;
   // cleveref's binding reads it.

@@ -52,4 +52,36 @@ LoadDefinitions!({
     r"\lx@end@alignment\@end@array\@arrayright\lx@array@text@close"
   );
   DefMacro!("\\@arrayright", None, r"\relax");
+  // array.sty's `\tabular` enters the same `\@tabarray` (array.sty:291, :297-310 `\@tabular` … `\@tabarray`), so delarray's
+  // peek delimits a `tabular` too: `\begin{tabular}[t]\{{l}.` (1304.5109, 1106.2670). The kernel's tabular reads its
+  // `[pos]{cols}` in `\lx@@tabular@args` (sect10.rs, locked as there): a brace is the plain template; else the
+  // delimiters go around the tabular in a formula, as array.sty's `$`-built tabular has them (`\@arrayleft` before
+  // the `\vcenter`, `\@arrayright` after it), `\endtabular` closing both. A plain tabular forgets an enclosing
+  // delimited one's right delimiter and formula. Perl has no delarray binding and its `\tabular` never reaches
+  // `\@tabarray`, so the delimiter is read as the template (KNOWN_PERL_ERRORS #1096, OXIDIZED_DESIGN_DIVERGENCES #858).
+  // Repro alignment-bindings/delarray_delimits_a_tabular.
+  DefMacro!(
+    "\\lx@@tabular@args[]",
+    r"\@ifnextchar\bgroup{\let\@arrayright\relax\let\lx@array@text@close\relax\lx@delarray@tabular[#1]}{\lx@delarray@tabular@del[#1]}",
+    locked => true
+  );
+  DefMacro!(
+    "\\lx@delarray@tabular[]{}",
+    r"\@tabular@bindings{#2}[vattach=#1]\@@tabular[#1]{#2}\lx@begin@alignment\@tabular@before"
+  );
+  DefMacro!(
+    "\\lx@delarray@tabular@del[] Token {} Token",
+    r"\def\@arrayright{\right#4}\lx@delarray@tabular@open\left#2\lx@delarray@tabular[#1]{#3}"
+  );
+  // array.sty:297-301: the tabular is set in math of its own (`\leavevmode\hbox\bgroup$`), at any position — no
+  // `\vcenter` outside math, so not the array's "Missing $ inserted" (`\lx@array@text@open`).
+  DefMacro!(
+    "\\lx@delarray@tabular@open",
+    r"\ifmmode\let\lx@array@text@close\relax\else\leavevmode\lx@begin@inline@math\let\lx@array@text@close\lx@end@inline@math\fi"
+  );
+  DefMacro!(
+    "\\endtabular",
+    r"\@tabular@after\lx@end@alignment\@end@tabular\lx@raw@array@close\@arrayright\lx@array@text@close",
+    locked => true
+  );
 });

@@ -17074,3 +17074,55 @@ copy ending `\math@cr\black@\totwidth@\egroup`): 156 → 124 Errors (the rest it
 tail and bibliography back (15,382 → 43,578 words). Fixed in Rust (78o, amsmath_sty.rs, placed as in amsmath.sty).
 Repro package-bindings/amsmath_alignment_dimens_totwidth_alignsep_are_defined; guard
 `perfect_kernel_batch78o::amsmath_alignment_dimens_totwidth_alignsep_are_defined`.
+
+## 1091. etoolbox's `\patchcmd` welds a control word to the letter after it
+
+etoolbox patches text: the macro's `\meaning` and the `\detokenize`d search and replacement, every control word
+followed by a space, rescanned (etoolbox.sty:1352-1382). Perl's binding (etoolbox.sty.ltxml:1290-1318) splices
+`UnTeX` strings, which space a control word only before a letter already beside it, so a replacement ending in a control
+word joins the letter that follows the match. Minimal trigger: `\usepackage{etoolbox}\def\x{o|s}\patchcmd{\x}{|}{\mid}{}{}`
+then `$\x$`: `\mids`, undefined (pdflatex `o \mid s`); and a search `\foo@bar` matches inside `\foo@barx`. Fixed in
+Rust (78p, etoolbox_sty.rs `etb_patch_text`): the texts are written as `\meaning`/`\detokenize` write them. Witness
+2011.13897; guards `perfect_kernel_batch78p::{patchcmd_replacement_rescans_a_control_word,
+patchcmd_matches_whole_control_words}`.
+
+## 1092. A `\label` after an inner equation names the equation
+
+`\begin{theorem}…\begin{equation}a=b\end{equation}\label{thm}\end{theorem}`: pdflatex's `\ref{thm}` is the
+theorem's number (`\@currentlabel` reverts when the equation's group closes, latex.ltx:14963-14967); Perl's
+`floatToLabel` (Document.pm:1098-1127) starts at the current node's last child, the closed equation, and labels it.
+The same after a closed table, figure, list or `subequations` inner group. Fixed in Rust (78p,
+OXIDIZED_DESIGN_DIVERGENCES #856). Witness math0107195 ("Theorem 5.3", Perl 16); guard
+`perfect_kernel_batch78p::label_after_an_inner_equation_names_the_theorem`.
+
+## 1093. An unused glossary entry's fields raise their errors
+
+glossaries.sty.ltxml:52-97 digests every `\newglossaryentry` field into `<ltx:glossarydefinition>` at the definition, so
+a field LaTeX never typesets (the entry unused) raises its errors. Minimal trigger:
+`\usepackage{glossaries}\newglossaryentry{u}{name={u},description={\undefineddesc}}` and a body without `\gls{u}`:
+pdflatex 0 errors, Perl an undefined `\undefineddesc`. Fixed in Rust (78p, OXIDIZED_DESIGN_DIVERGENCES #859). Witnesses
+2104.09252 (`$J_p_p$`), 2505.18389; guard `perfect_kernel_batch78p::unused_glossary_entry_raises_nothing`.
+
+## 1094. `multicols` inside `algorithmic` puts a pagination in the listing
+
+multicol.sty.ltxml:21-30 marks a `multicols` body with `<ltx:pagination role="start_N_columns"/>` and an end marker;
+inside `algorithmic` (an `ltx:listing`, which holds no pagination and does not auto-close) the marker is
+"<ltx:pagination> isn't allowed in <ltx:listing>". Minimal trigger: `\usepackage{multicol,algorithmic}`
+`\begin{algorithmic}\begin{multicols}{2}\STATE a\columnbreak\STATE b\end{multicols}\end{algorithmic}`. Fixed in Rust
+(78p, multicol_sty.rs `construct_multicols`): a marker is made only where a pagination can go
+(`pagination_insertable`). Witnesses 1708.03274, 1405.5689 (38 papers of run 336, 94 Errors → 0); guard
+`perfect_kernel_batch78p::multicols_in_algorithmic_keeps_no_markers`.
+
+## 1095. mathabx's `\curvearrowbotleftright` is undefined
+
+mathabx.sty.ltxml:487 has `\curvearrowbotleftright` commented out (mathabx.dcl:639 declares it, mathb "F5"). Minimal
+trigger: `\usepackage{mathabx}` `$a\curvearrowbotleftright b$`. Fixed in Rust (78p, OXIDIZED_DESIGN_DIVERGENCES #857).
+Witness 2308.12945; guard `perfect_kernel_batch78p::mathabx_curvearrowbotleftright`.
+
+## 1096. delarray's delimited `tabular` reads its delimiter as the template
+
+Perl has no delarray binding; raw delarray.sty redefines `\@tabarray` (:43-58), which Perl's `\tabular[]{}` never
+reaches, so `\begin{tabular}({cc})` takes `(` as its template and every `&` is an "Extra alignment tab". Minimal
+trigger: `\usepackage{delarray}\begin{tabular}({cc})a&b\end{tabular}`. Fixed in Rust (78p,
+OXIDIZED_DESIGN_DIVERGENCES #858). Witnesses 1304.5109, 1106.2670; guard
+`perfect_kernel_batch78p::delarray_delimits_a_tabular`.

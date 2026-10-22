@@ -1,5 +1,47 @@
 use crate::prelude::*;
 
+/// A token list as etoolbox's `\patchcmd` writes it out (etoolbox.sty:1358-1371): a macro's body as `\meaning`
+/// prints it (`params_doubled`: a nested parameter `##`), the search and replacement texts as `\detokenize` prints
+/// them with `#` an other character (:1355). A control sequence whose name is a word (or a letter or `@`, which the
+/// rescan under `\makeatletter`, :1376-1382, reads as letters) is followed by a space (tex.web §262 `print_cs`), so the text
+/// rescans to the same tokens whatever follows it.
+fn etb_patch_text(tokens: &Tokens, params_doubled: bool) -> String {
+  let mut out = String::new();
+  for t in tokens.unlist_ref() {
+    match t.get_catcode() {
+      Catcode::COMMENT => {},
+      Catcode::CS => t.with_str(|text| {
+        let name = text.strip_prefix('\\').unwrap_or(text);
+        out.push('\\');
+        out.push_str(name);
+        let mut chars = name.chars();
+        let word = match (chars.next(), chars.next()) {
+          (Some(_), Some(_)) => true,
+          (Some(c), None) => c.is_alphabetic() || c == '@',
+          _ => false,
+        };
+        if word {
+          out.push(' ');
+        }
+      }),
+      Catcode::PARAM => t.with_str(|text| {
+        out.push_str(text);
+        if params_doubled {
+          out.push_str(text);
+        }
+      }),
+      // A space token is one space in `\meaning`, whatever its source text (a line end keeps `\n`): review rev78p.
+      Catcode::SPACE => out.push(' '),
+      Catcode::ARG => {
+        out.push('#');
+        t.with_str(|text| out.push_str(text));
+      },
+      _ => t.with_str(|text| out.push_str(text)),
+    }
+  }
+  out
+}
+
 LoadDefinitions!({
   // RawTeX! (not TeX!) because \etb@catcodes etc. need @ as letter at runtime.
   // TeX! tokenizes at compile time with @ = OTHER, breaking \etb@catcodes into \etb + @catcodes.
@@ -1418,33 +1460,22 @@ LoadDefinitions!({
       ExpansionBody::Tokens(t) => t.clone(),
       _ => unreachable!(),
     };
+    // etoolbox.sty:1358-1371 patches text: the macro's `\meaning` and the search and replacement texts
+    // `\detokenize`d (with `#` made other, :1355 `\@makeother\#`), then rescans the result. In that text a control
+    // word is always followed by a space (tex.web §262 `print_cs`), so `\patchcmd{\x}{|}{\mid}` on `o|s` rescans
+    // `o\mid s` and keeps `\mid` (`etb_patch_text`); `untex`'s text, which spaces a control word only before a letter
+    // already beside it, welded the replacement into `\mids` (2011.13897; Perl shares it, KNOWN_PERL_ERRORS #1091).
     // A stored body keeps a nested macro's parameter (`##1` of an inner `\def`)
-    // as one PARAM token, which `untex` writes as a single `#`; re-tokenized and
-    // packed below it became the OUTER parameter — pgfornament.sty:47-51's
-    // `\def\m ##1 ##2 {…}` in the patched `\pgf@@ornamenthan` turned into
-    // `\def\m #1 #2`, the ornament number, so every path operator of
-    // pgfornament-han missed its delimiter and the ornaments drew nothing.
-    // Written as `##`, as `\meaning` and etoolbox's own patterns do (`#1` the
-    // macro's parameter, `##1` a nested one), the round trip is exact. Perl
-    // shares the corruption (KNOWN_PERL_ERRORS #221).
-    let string = Tokens::new(
-      expansion_tokens
-        .unlist_ref()
-        .iter()
-        .flat_map(|t| {
-          if t.get_catcode() == Catcode::PARAM { vec![*t, *t] } else { vec![*t] }
-        })
-        .collect(),
-    )
-    .untex();
-    let search_string = search.untex();
-    // All characters are meant to be matched as literal, avoid regex interpretation
-    // search_string = quotemeta(search_string);
-    // let search_regex = qr/$search_string/;
+    // as one PARAM token: written as `##`, as `\meaning` writes it (`#1` the
+    // macro's parameter, `##1` a nested one), the round trip is exact —
+    // pgfornament.sty:47-51's `\def\m ##1 ##2 {…}` in the patched
+    // `\pgf@@ornamenthan` had become `\def\m #1 #2` (KNOWN_PERL_ERRORS #221).
+    let string = etb_patch_text(&expansion_tokens, true);
+    let search_string = etb_patch_text(&search, false);
     if string.contains(&search_string) {
       // Should the token substitution happen on the actual data structure?
       // string replacement is a quick&dirty way out...
-      let replace_string = replace.untex();
+      let replace_string = etb_patch_text(&replace, false);
       // Once: etoolbox's `\etb@resrvdb` is delimited by the FIRST occurrence
       // of the search text (etoolbox.sty:1365-1366), and Perl's `s///`
       // (etoolbox.sty.ltxml:1308) has no `/g`.

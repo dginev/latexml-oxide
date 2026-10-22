@@ -223,6 +223,15 @@ fn tblr_body_shape() -> Result<(usize, usize)> {
   Ok((scan.widest, scan.rows))
 }
 
+/// The widest row and the row count of a table body held in a token list ([`tblr_body_shape`]'s scan of it).
+fn tblr_shape_of(body: Vec<Token>) -> Result<(usize, usize)> {
+  let mut input = body;
+  input.extend(TokenizeInternal!("\\end{lx@tblr@body}").unlist());
+  unread(Tokens::new(input));
+  let scan = tblr_scan_body(usize::MAX)?;
+  Ok((scan.widest, scan.rows))
+}
+
 /// The table body that follows, read up to the `\end{…}` that ends it ([`tblr_body_width`]'s rule),
 /// which stays in the input: what tabularray's `+b` argument holds (tabularray.sty:3463) for its
 /// preprocessing — read whole, as tabularray reads it, without the width pre-read's cap. `None`
@@ -247,7 +256,7 @@ struct TblrBodyScan {
   tokens: Vec<Token>,
   end_at: Option<usize>,
   widest: usize,
-  /// The rows: the row ends, and a last row after the last one that holds more than spaces.
+  /// The rows: the row ends, and a last row after the last one that holds more than spaces and `\par`s.
   rows:   usize,
 }
 
@@ -289,10 +298,14 @@ fn tblr_scan_body(cap: usize) -> Result<TblrBodyScan> {
     let row_end = depth == 0
       && open_envs.is_empty()
       && (is_cs(&t, "\\\\") || is_cs(&t, "\\cr") || is_cs(&t, "\\tabularnewline"));
+    // (a last row of one cell whose text, trimmed of spaces and `\par`s, is empty is no row, tabularray.sty:3722-3731
+    // and :3739-3755: the blank line before `\end{tblr}`)
     if row_end {
       rows += 1;
       row_open = false;
-    } else if t.get_catcode() != Catcode::SPACE && !(depth == 0 && is_cs(&t, "\\end")) {
+    } else if t.get_catcode() != Catcode::SPACE
+      && !(depth == 0 && (is_cs(&t, "\\end") || is_cs(&t, "\\par")))
+    {
       row_open = true;
     }
     match t.get_catcode() {
@@ -1688,6 +1701,301 @@ fn tblr_mode_wrap(style: &TblrCellStyle, math_table: bool) -> (Vec<Token>, Vec<T
   }
 }
 
+/// The State key of the rules of the table being built ([`TblrRules`]), drawn at its end (`\lx@tblr@rules`).
+const TBLR_RULES: &str = "tblr_rules";
+
+/// One rule key of a table: an `hline{<i>}`/`hlines` or `vline{<j>}`/`vlines` key (tabularray.sty:4011-4012,
+/// :3991-3992 with the `hline{…}`/`vline{…}` child keys), or a `|` of the `rowspec` (`\__tblr_parse_colrow_spec:nn`,
+/// :4003). `positions` selects the lines (`1,Z`; `-` for every one), `cross` the columns an hline spans or the rows a
+/// vline spans; `index` is the line's number at its position (a second one is a double rule), and `drawn` is false
+/// for a `text=` line (text in place of the rule) and for a white one (invisible on the page).
+#[derive(Clone)]
+struct TblrRuleKey {
+  horizontal: bool,
+  positions:  String,
+  cross:      String,
+  index:      usize,
+  drawn:      bool,
+}
+
+/// The rules of one table and its shape: the colspec's column count (when it was read) and, from its body, the
+/// widest row and the row count (`\lx@tblr@rules@shape` recounts a body `evaluate=`/`expand=` changed).
+#[derive(Default)]
+struct TblrRules {
+  keys:  Vec<TblrRuleKey>,
+  ncols: Option<usize>,
+  shape: (usize, usize),
+}
+
+/// The top-level items of a key's value, each a braced group's text or a token's.
+fn tblr_value_items(value: &Tokens) -> (bool, Vec<String>) {
+  let tokens = value.unlist_ref();
+  let head_group = tokens
+    .iter()
+    .find(|t| t.get_catcode() != Catcode::SPACE)
+    .is_some_and(|t| t.get_catcode() == Catcode::BEGIN);
+  let mut items = Vec::new();
+  let mut depth = 0usize;
+  let mut current = Vec::new();
+  for t in tokens {
+    match t.get_catcode() {
+      Catcode::BEGIN => {
+        if depth > 0 {
+          current.push(*t);
+        }
+        depth += 1;
+      },
+      Catcode::END => {
+        depth = depth.saturating_sub(1);
+        if depth == 0 {
+          items.push(Tokens::new(std::mem::take(&mut current)).to_string());
+        } else {
+          current.push(*t);
+        }
+      },
+      Catcode::SPACE if depth == 0 => {},
+      _ if depth == 0 => items.push(Tokens::new(vec![*t]).to_string()),
+      _ => current.push(*t),
+    }
+  }
+  (head_group, items)
+}
+
+/// Whether a rule's style draws a rule (tabularray.sty:2100-2125 `hline/inner`, :2350-2375 `vline/inner`): `text=`
+/// sets text in its place (none when empty), and a white rule does not show on the page.
+fn tblr_rule_style_drawn(style: &str) -> bool {
+  style.split(',').map(str::trim).all(|item| {
+    let (name, value) = item
+      .split_once('=')
+      .map_or((item, ""), |(n, v)| (n.trim(), v.trim()));
+    !(name == "text" || name == "white" || (name == "fg" && value == "white"))
+  })
+}
+
+/// A rule key's value as tabularray reads it (`\__tblr_set_hline_aux:nn`, `\__tblr_set_every_hline_aux:n`,
+/// tabularray.sty:1983-1993, :2045-2055, and their vline twins): `{<index>}{<cross>}{<style>}` with three groups,
+/// `{<cross>}{<style>}` with a group first, else `<style>` for every cell of the line, index 1.
+fn tblr_rule_key(horizontal: bool, positions: String, value: &Tokens) -> TblrRuleKey {
+  let (head_group, items) = tblr_value_items(value);
+  let (index, cross, style) = match (head_group, &items[..]) {
+    (true, [index, cross, style]) => (
+      index.trim().parse().unwrap_or(1),
+      cross.clone(),
+      style.clone(),
+    ),
+    (true, [cross, rest @ ..]) => (1, cross.clone(), rest.join("")),
+    _ => (1, String::from("-"), value.to_string()),
+  };
+  // `text=` with no value leaves the line as it was (:2026-2031): no key at all
+  let text_only = style.split(',').any(|item| {
+    item
+      .split_once('=')
+      .is_some_and(|(n, v)| n.trim() == "text" && v.trim().is_empty())
+  });
+  TblrRuleKey {
+    horizontal,
+    positions,
+    cross: cross.trim().to_string(),
+    index: if text_only { 0 } else { index },
+    drawn: tblr_rule_style_drawn(&style),
+  }
+}
+
+/// The `|`s of a rowspec (`\__tblr_parse_colrow_spec:nn {Row}`, tabularray.sty:4003, the colspec's reader): before
+/// row `i` (and after the last) an hline, numbered at its position; a row is a letter with its `[…]`/`{…}` options,
+/// `*{<n>}{<spec>}` repeats.
+fn tblr_rowspec_rules(spec: &str, keys: &mut Vec<TblrRuleKey>, row: &mut usize, depth: usize) {
+  let b = spec.as_bytes();
+  let mut i = 0;
+  let mut at_position = 0usize;
+  while i < b.len() && depth < 8 {
+    match b[i] {
+      b'|' => {
+        i += 1;
+        let mut style = String::new();
+        if i < b.len() && b[i] == b'[' {
+          let start = i + 1;
+          if skip_bracket_group(b, &mut i).is_none() {
+            return;
+          }
+          style = spec[start..i.saturating_sub(1).max(start)].to_string();
+        }
+        at_position += 1;
+        keys.push(TblrRuleKey {
+          horizontal: true,
+          positions:  (*row + 1).to_string(),
+          cross:      String::from("-"),
+          index:      at_position,
+          drawn:      tblr_rule_style_drawn(&style),
+        });
+      },
+      b'*' => {
+        i += 1;
+        let (Some(n), Some(sub)) = (
+          parse_braced_uint(b, spec, &mut i),
+          parse_braced_group(b, spec, &mut i),
+        ) else {
+          return;
+        };
+        for _ in 0..n.min(512) {
+          tblr_rowspec_rules(&sub, keys, row, depth + 1);
+        }
+        at_position = 0;
+      },
+      c if c.is_ascii_alphabetic() => {
+        i += 1;
+        while i < b.len() && (b[i] == b'[' || b[i] == b'{') {
+          let ok = if b[i] == b'[' {
+            skip_bracket_group(b, &mut i).is_some()
+          } else {
+            parse_braced_group(b, spec, &mut i).is_some()
+          };
+          if !ok {
+            return;
+          }
+        }
+        *row += 1;
+        at_position = 0;
+      },
+      _ => i += 1,
+    }
+  }
+}
+
+/// The rule keys of a table's inner key list, in order (later keys set a line again).
+fn tblr_rule_keys(keys: &[TblrKey]) -> Vec<TblrRuleKey> {
+  let mut rules = Vec::new();
+  for key in keys {
+    let horizontal = key.name.starts_with('h');
+    match key.name.as_str() {
+      "hlines" | "vlines" => rules.push(tblr_rule_key(horizontal, String::from("-"), &key.value)),
+      "hline" | "vline" => {
+        let positions = tblr_selector_groups(&key.arg)
+          .into_iter()
+          .next()
+          .unwrap_or_default();
+        rules.push(tblr_rule_key(horizontal, positions, &key.value));
+      },
+      "rowspec" => {
+        let mut row = 0;
+        tblr_rowspec_rules(&key.value.to_string(), &mut rules, &mut row, 0);
+      },
+      _ => {},
+    }
+  }
+  rules.retain(|rule| rule.index > 0);
+  rules
+}
+
+/// The borders each cell of a `nrows` × `ncols` table takes from its rules, as the kernel's `|` and `\hline` give them
+/// (an hline above row `i` is that row's `t`, the last one row `nrows + 1`'s — the empty row after a last `\\`, which
+/// `tblr_draw_rules` makes the last row's `b` when there is none; a vline left of column `j` is column `j-1`'s `r`, the
+/// first one column 1's `l`), one letter per line at the place: `(row, column) → letters`.
+fn tblr_rule_borders(rules: &TblrRules) -> HashMap<(usize, usize), String> {
+  let (widest, nrows) = rules.shape;
+  let ncols = rules.ncols.map_or(widest, |n| n.max(widest));
+  let mut lines: HashMap<(bool, usize, usize, usize), bool> = HashMap::default();
+  for key in &rules.keys {
+    let (along, across) = if key.horizontal {
+      (nrows + 1, ncols)
+    } else {
+      (ncols + 1, nrows)
+    };
+    for position in tblr_select(&key.positions, along) {
+      for cross in tblr_select(&key.cross, across) {
+        lines.insert((key.horizontal, position, cross, key.index), key.drawn);
+      }
+    }
+  }
+  let mut borders: HashMap<(usize, usize), String> = HashMap::default();
+  let mut keys: Vec<_> = lines
+    .into_iter()
+    .filter(|(_, drawn)| *drawn)
+    .map(|(k, _)| k)
+    .collect();
+  keys.sort_unstable();
+  for (horizontal, position, cross, _) in keys {
+    let (cell, letter) = match (horizontal, position) {
+      (true, p) => ((p, cross), 't'),
+      (false, 1) => ((cross, 1), 'l'),
+      (false, p) => ((cross, p - 1), 'r'),
+    };
+    if nrows > 0 && cell.0 > 0 && cell.1 > 0 {
+      borders.entry(cell).or_default().push(letter);
+    }
+  }
+  borders
+}
+
+/// `\lx@tblr@rules`: the borders of the table's rules on its alignment's cells (`tblr_rule_borders`).
+fn tblr_draw_rules() -> Result<()> {
+  let Some(Stored::Opaque(rules)) = lookup_value(TBLR_RULES) else {
+    return Ok(());
+  };
+  let Some(rules) = rules.downcast_ref::<TblrRules>() else {
+    return Ok(());
+  };
+  let borders = tblr_rule_borders(rules);
+  if borders.is_empty() {
+    return Ok(());
+  }
+  let Some(alignment) = lookup_alignment() else {
+    return Ok(());
+  };
+  let Some(data) = alignment.alignment_cell() else {
+    return Ok(());
+  };
+  let mut data = data.borrow_mut();
+  let rows: Vec<usize> = data
+    .rows()
+    .iter()
+    .enumerate()
+    .filter(|(_, row)| !row.is_pseudo())
+    .map(|(i, _)| i)
+    .collect();
+  let nrows = rules.shape.1;
+  // The cells a spanned cell covers in the rows below it (`\lx@tblr@cell@span`'s row span, over its columns): tabularray
+  // draws no hline through a spanned cell, nor a vline inside one (tabularray.sty:2730-2750 `omit`), so a row it covers whole stays
+  // empty and is pruned as before.
+  let mut covered: HashMap<(usize, usize), ()> = HashMap::default();
+  for (r, &i) in rows.iter().enumerate() {
+    for (c, cell) in data.rows()[i].get_columns().iter().enumerate() {
+      let (down, across) = (cell.rowspan.unwrap_or(1), cell.colspan.unwrap_or(1));
+      for k in 1..down {
+        for m in 0..across {
+          covered.insert((r + 1 + k, c + 1 + m), ());
+        }
+      }
+    }
+  }
+  for ((row, column), mut letters) in borders {
+    // the last hline, with no row after the last one: that row's bottom
+    let row = if row > nrows && rows.len() <= nrows {
+      letters = letters.replace('t', "b");
+      nrows
+    } else {
+      row
+    };
+    if covered.contains_key(&(row, column)) {
+      letters.retain(|c| c != 't');
+    }
+    let Some(row) = rows.get(row - 1).and_then(|&i| data.rows_mut().get_mut(i)) else {
+      continue;
+    };
+    let Some(cell) = row.get_column_mut(column) else {
+      continue;
+    };
+    for letter in ['t', 'b', 'l', 'r'] {
+      let wanted = letters.chars().filter(|&c| c == letter).count();
+      let present = cell.border.chars().filter(|&c| c == letter).count();
+      for _ in present..wanted {
+        cell.border.push(letter);
+      }
+    }
+  }
+  Ok(())
+}
+
 LoadDefinitions!({
   RequirePackage!("booktabs");
   // `\tblr` maps to `\tabular`, but tabularray's argument is a key-value inner
@@ -1716,6 +2024,7 @@ LoadDefinitions!({
     let math = lookup_string_from_sym(pin!("MODE")).ends_with("math");
     let body_width = if math { tblr_body_width()? } else { 0 };
     let mut column_keys = Vec::new();
+    let mut colspec_ncols = None;
     let (cols, ncols) = match spec {
       Some(spec) => match parse_colspec_full(&spec, &tblr_column_type) {
         Some(parsed) => {
@@ -1725,6 +2034,7 @@ LoadDefinitions!({
             Error!("unexpected", &c.to_string(), s!("Unknown Column type {c}!"));
           }
           column_keys = parsed.keys;
+          colspec_ncols = Some(parsed.ncols);
           (parsed.cols, parsed.ncols)
         },
         // a construct the reduction does not translate: the kernel's template reads it as written
@@ -1806,8 +2116,19 @@ LoadDefinitions!({
       }
     }
     // The body is read whole (tabularray's `+b` argument, :3463) for its spanned cells (`tblr_span_cells`).
+    // The rules (`hlines`, `vline{2}`, a rowspec's `|`s; tabularray.sty:1957-2290), drawn at the table's end against
+    // its shape: the body's as read, or as `evaluate=`/`expand=` leave it (`\lx@tblr@rules@shape`).
+    let rule_keys = tblr_rule_keys(&inner_keys);
+    let mut rules = (!rule_keys.is_empty()).then_some(TblrRules {
+      keys:  rule_keys,
+      ncols: colspec_ncols,
+      shape: (0, 0),
+    });
     let body = if evaluate.is_empty() && expand.is_empty() {
       if let Some(body) = tblr_read_body()? {
+        if let Some(rules) = &mut rules {
+          rules.shape = tblr_shape_of(body.clone())?;
+        }
         let spans = body.iter().any(|t| t.get_catcode() == Catcode::CS && t.with_str(|s| s == "\\SetCell"));
         unread(Tokens::new(if spans { tblr_span_cells(body, math) } else { body }));
       }
@@ -1815,6 +2136,12 @@ LoadDefinitions!({
     } else {
       tblr_read_body()?.map(|body| tblr_span_cells(body, math))
     };
+    // a table without rules has none of an enclosing one's
+    assign_value(
+      TBLR_RULES,
+      rules.map_or(Stored::None, |rules| Stored::Opaque(Rc::new(rules))),
+      None,
+    );
     // A long or tall table in math is a box (tabularray typesets its caption and notes around
     // the math cells, "Table 1: …" in `$…$`): an `\hbox` holding them and a math `array`.
     let (open, end, mot) = match (math, portrait) {
@@ -1855,7 +2182,7 @@ LoadDefinitions!({
     out.extend(TokenizeInternal!(TeXString::assembled(format!(
       "\\ifx\\hline\\lx@tblr@hline\\else\\let\\lx@tblr@saved@hline\\hline\\let\\hline\\lx@tblr@hline\\fi\
        \\ifx\\cline\\lx@tblr@cline\\else\\let\\lx@tblr@saved@cline\\cline\\let\\cline\\lx@tblr@cline\\fi\
-       \\def\\lx@tblr@end{{{end}\\lx@tblr@after{close_box}}}\\let\\lx@tblr@mot{mot}\
+       \\def\\lx@tblr@end{{\\lx@tblr@rules{end}\\lx@tblr@after{close_box}}}\\let\\lx@tblr@mot{mot}\
        \\let\\lx@tblr@saved@do\\do\\def\\do#1{{\\expandafter\\let\\expandafter#1\\csname lx@tblr@tc@\\string#1\\endcsname}}\
        \\lx@tblr@table@commands\\let\\do\\lx@tblr@saved@do\
        \\ifdefined\\lx@tblr@diagbox\\let\\diagbox\\lx@tblr@diagbox\\let\\diagboxthree\\lx@tblr@diagboxthree\\fi"
@@ -1890,6 +2217,7 @@ LoadDefinitions!({
       out.extend([T_END!(), T_BEGIN!()]);
       out.extend(expand);
       out.push(T_END!());
+      out.push(T_CS!("\\lx@tblr@rules@shape"));
     }
     // tabularray's own alignment keeps the interline values `\\@array` zeroes (tex_tables.rs `array_zeroes_interline`)
     out.extend(
@@ -2231,6 +2559,39 @@ LoadDefinitions!({
   // an environment around the table rebinds it (longtable's row caption swallowed the table).
   RawTeX!(r"\let\lx@tblr@caption\caption\AtBeginDocument{\let\lx@tblr@caption\caption}");
   // The material after a table's end (`\lx@tblr@portrait`), in the table's group.
+  // A table's rules (`TBLR_RULES`): its body's shape once `evaluate=`/`expand=` have run (`\l__tblr_body_tl`)...
+  DefPrimitive!("\\lx@tblr@rules@shape", {
+    if let Some(Stored::Opaque(rules)) = lookup_value(TBLR_RULES)
+      && let Some(rules) = rules.downcast_ref::<TblrRules>()
+    {
+      let body = lookup_definition(&T_CS!("\\l__tblr_body_tl"))?
+        .and_then(|d| d.get_expansion().cloned())
+        .and_then(|b| match b {
+          ExpansionBody::Tokens(t) => Some(t.unlist()),
+          _ => None,
+        })
+        .unwrap_or_default();
+      let shape = tblr_shape_of(body)?;
+      let rules = TblrRules {
+        keys: rules.keys.clone(),
+        ncols: rules.ncols,
+        shape,
+      };
+      assign_value(TBLR_RULES, Stored::Opaque(Rc::new(rules)), None);
+    }
+  });
+  // ... and, at the table's end, the cells' borders: the `t`/`b`/`l`/`r` the kernel's `\hline` and
+  // `|` give (`tblr_rule_borders`), on the rows of the alignment (its `\hline`s' pseudo-rows aside), each letter not
+  // already there from the template's `|` (tabularray's `vlines` is the colspec's first `|` at a place, :2208-2240).
+  // tabularray draws its rules apart from the cells, so an all-empty table keeps its grid (the manual's
+  // `\makeEmptyTable`, tabularray.tex:2859-2870; OXIDIZED_DESIGN_DIVERGENCES #855). Guards
+  // `perfect_kernel_batch78p::{tblr_rules_keep_an_empty_table, tblr_rule_keys_become_cell_borders}`.
+  // Expandable, done as it expands: after a last `\\` the alignment's row-start scan expands it, where a primitive
+  // started a row of its own (whose first cell, with a `cmd=` column, read on past the table's end).
+  DefMacro!("\\lx@tblr@rules", {
+    tblr_draw_rules()?;
+    Ok(Tokens!())
+  });
   DefMacro!("\\lx@tblr@after", {
     Ok(match lookup_value(TBLR_AFTER) {
       Some(Stored::Tokens(tokens)) => tokens,

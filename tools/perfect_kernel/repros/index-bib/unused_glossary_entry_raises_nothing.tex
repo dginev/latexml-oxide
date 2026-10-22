@@ -1,0 +1,17 @@
+% mechanism: a glossary entry's fields are stored unexpanded (glossaries.sty:2341-2346 `\def\@glo@name`, `\def\@glo@desc`) and typeset only where the
+%   entry is used; the binding digests them for `<ltx:glossarydefinition>` at once, so an unused entry's broken field
+%   raised its error. The digest's diagnostics are now held and raised only once a printed glossary holds the entry
+%   (a reference and a `\printglossary`; logger.rs `defer_to_label`)
+% witness: 2104.09252 (`\newglossaryentry{symb:Jpp}{name={$J_p_p$},...}`, never used: its "Double subscript" Error
+%   is gone, the formula's unparsed-math Warning stays, raised by the math parse after digestion); here an undefined
+%   command in an unused description (a `name` is expanded for the sort key at definition, an error in pdflatex too)
+% oracle:  pdflatex 0 errors: "Text."
+% engines: rust int52a = Error:undefined:\undefineddesc; Perl 0.8.8 the same (KNOWN_PERL_ERRORS #1093)
+% expect:  0 errors; the entry's definition is still emitted, its description "Never" and the rest
+% status:  RED (int52a) -> GREEN (78p)
+\documentclass{article}
+\usepackage{glossaries}
+\newglossaryentry{unused}{name={unused},description={Never \undefineddesc{} used}}
+\begin{document}
+Text.
+\end{document}

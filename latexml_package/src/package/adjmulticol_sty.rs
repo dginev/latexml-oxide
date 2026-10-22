@@ -16,9 +16,15 @@ LoadDefinitions!({
   ProcessOptions!();
   RequirePackage!("multicol");
   DefEnvironment!("{adjmulticols}{}{}{}",
-    r###"<ltx:pagination role='start_#1_columns'/>#body<ltx:pagination role='end_#1_columns'/>"###,
+    // `{multicols}`'s, without its heading argument (multicol_sty.rs `construct_multicols`)
+    sub[document, args, props] {
+      multicol_sty::construct_multicols(document, &args[..1], props)
+    },
     mode => "internal_vertical");
   DefEnvironment!("{adjmulticols*}{}{}{}",
-    r###"<ltx:pagination role='start_#1_columns'/>#body<ltx:pagination role='end_#1_columns'/>"###,
+    // `{multicols}`'s, without its heading argument (multicol_sty.rs `construct_multicols`)
+    sub[document, args, props] {
+      multicol_sty::construct_multicols(document, &args[..1], props)
+    },
     mode => "internal_vertical");
 });

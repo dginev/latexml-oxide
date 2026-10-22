@@ -114,17 +114,12 @@ fn tblr_setcell_spans_columns_and_rows() {
     Some(PRELOAD),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  // the rules (`hlines,vlines`) as cell borders (78p); the kernel guesses the last row a footer, as a `tabular`'s
   assert_element(
     &xml,
-    "tbody",
+    "tabular",
     &[],
-    "<tbody><tr xml:id=\"p1.1.1\"><td align=\"center\" colspan=\"2\" xml:id=\"p1.1.1.1\">Wide</td><td \
-     align=\"center\" xml:id=\"p1.1.1.2\">C</td></tr><tr xml:id=\"p1.1.2\"><td align=\"center\" rowspan=\"2\" \
-     xml:id=\"p1.1.2.1\">Tall</td><td align=\"center\" xml:id=\"p1.1.2.2\">B2</td><td align=\"center\" \
-     xml:id=\"p1.1.2.3\">C2</td></tr><tr xml:id=\"p1.1.3\"><td align=\"center\" xml:id=\"p1.1.3.1\">B3</td><td \
-     align=\"center\" xml:id=\"p1.1.3.2\">C3</td></tr><tr xml:id=\"p1.1.4\"><td align=\"center\" \
-     xml:id=\"p1.1.4.1\">A4</td><td align=\"center\" colspan=\"2\" xml:id=\"p1.1.4.2\">Both</td></tr><tr \
-     xml:id=\"p1.1.5\"><td align=\"center\" colspan=\"3\" xml:id=\"p1.1.5.1\">All</td></tr></tbody>",
+    r#"<tabular class="ltx_guessed_headers" vattach="middle" xml:id="p1.1"><tbody><tr xml:id="p1.1.1"><td align="center" border="l r t" colspan="2" thead="row" xml:id="p1.1.1.1">Wide</td><td align="center" border="r t" xml:id="p1.1.1.2">C</td></tr><tr xml:id="p1.1.2"><td align="center" border="l r t" rowspan="2" thead="row" xml:id="p1.1.2.1">Tall</td><td align="center" border="r t" xml:id="p1.1.2.2">B2</td><td align="center" border="r t" xml:id="p1.1.2.3">C2</td></tr><tr xml:id="p1.1.3"><td align="center" border="r t" xml:id="p1.1.3.1">B3</td><td align="center" border="r t" xml:id="p1.1.3.2">C3</td></tr><tr xml:id="p1.1.4"><td align="center" border="l r t" thead="row" xml:id="p1.1.4.1">A4</td><td align="center" border="r t" colspan="2" xml:id="p1.1.4.2">Both</td></tr></tbody><tfoot><tr xml:id="p1.1.5"><td align="center" border="b l r t" colspan="3" thead="row" xml:id="p1.1.5.1">All</td></tr></tfoot></tabular>"#,
   );
 }
 

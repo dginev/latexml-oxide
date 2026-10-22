@@ -477,6 +477,11 @@ LoadDefinitions!({
   def_math_sym("\\curvearrowleft", "\u{21B6}", Some("ARROW"), None)?;
   def_math_sym("\\curvearrowright", "\u{21B7}", Some("ARROW"), None)?;
   def_math_sym("\\curvearrowbotright", "\u{293B}", Some("ARROW"), None)?;
+  // mathabx.dcl:639 `\curvearrowbotleftright` (mathb "F5"): a bottom arc with a head at each end, which no Unicode
+  // character draws; the bottom arc ⤻ (U+293B, `\curvearrowbotright`'s) is the closest (OXIDIZED_DESIGN_DIVERGENCES
+  // #857). Perl leaves it undefined (mathabx.sty.ltxml:487, commented out; KNOWN_PERL_ERRORS #1095). Witness 2308.12945 (`\underset{
+  // \curvearrowbotleftright}{\times}`, the swap of a product's factors).
+  def_math_sym("\\curvearrowbotleftright", "\u{293B}", Some("ARROW"), None)?;
   def_math_sym("\\circlearrowleft", "\u{21BA}", Some("ARROW"), None)?;
   def_math_sym("\\circlearrowright", "\u{21BB}", Some("ARROW"), None)?;
   def_math_sym("\\leftsquigarrow", "\u{21DC}", Some("RELOP"), None)?;

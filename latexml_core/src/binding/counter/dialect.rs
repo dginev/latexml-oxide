@@ -953,6 +953,36 @@ pub fn strip_counter_type_sentinel(ctype: &str) -> &str {
   ctype
 }
 
+/// The serial of the counter step in scope ([`label_stepped_counter`]; local).
+const CURRENT_REFSTEP_SERIAL: &str = "current_refstep_serial";
+/// The serial of the latest counter step made ([`label_stepped_counter`]; global).
+const LATEST_REFSTEP_SERIAL: &str = "latest_refstep_serial";
+
+/// Whether a `\label` made now follows a counter step a group has since undone: LaTeX's `\label` names
+/// `\@currentlabel` (latex.ltx:14963-14967), which reverts when the group of the step that set it closes, so a label
+/// after `\end{equation}` inside a theorem names the theorem, not the equation (math0107195, "Theorem 5.3"). Such a
+/// label never names the object that closed step numbered, however near it is (`Document::float_to_label_scoped`).
+pub fn label_follows_an_undone_step() -> bool {
+  match (
+    lookup_value(CURRENT_REFSTEP_SERIAL),
+    lookup_value(LATEST_REFSTEP_SERIAL),
+  ) {
+    (Some(Stored::Int(current)), Some(Stored::Int(latest))) => current != latest,
+    (None, Some(Stored::Int(_))) => true,
+    _ => false,
+  }
+}
+
+/// The latest counter step stays the one in scope although the group it was made in has closed: a wrapper group of
+/// LaTeXML's own (caption's `\captionof` set in a float, caption_sty.rs `\@captionof@`) around a step LaTeX makes in
+/// the current group (caption.sty:390-391 `\setcaptiontype*` then `\caption`), so a `\label` after it names the step's
+/// object (2402.05535 `\captionof{figure}{…}\fi\label{…}`).
+pub fn keep_latest_refstep_in_scope() {
+  if let Some(latest @ Stored::Int(_)) = lookup_value(LATEST_REFSTEP_SERIAL) {
+    assign_value(CURRENT_REFSTEP_SERIAL, latest, Some(Scope::Local));
+  }
+}
+
 /// The labelling half of `\refstepcounter` (latex.ltx:14956-14967, after its `\stepcounter`):
 /// `\@currentlabel`, `\@currentID`, the tags and the counter's scope, for the counter `ctr` just
 /// stepped for `ctype`. Returns the `tags` and `id` properties.
@@ -1071,6 +1101,23 @@ pub fn label_stepped_counter(ctype: &str, ctr: &str) -> Result<HashMap<Stored>> 
 
   // And install the scope (if any) for this reference number.
   assign_value("current_counter", ctr.clone(), Some(Scope::Local));
+  // The step's serial: in scope (local, as LaTeX's `\@currentlabel` is, latex.ltx:14963) and the latest one made
+  // (global). A `\label` whose scope's step is not the latest comes after a step a group has since undone
+  // ([`label_follows_an_undone_step`]).
+  let serial = match lookup_value(LATEST_REFSTEP_SERIAL) {
+    Some(Stored::Int(serial)) => serial + 1,
+    _ => 1,
+  };
+  assign_value(
+    CURRENT_REFSTEP_SERIAL,
+    Stored::Int(serial),
+    Some(Scope::Local),
+  );
+  assign_value(
+    LATEST_REFSTEP_SERIAL,
+    Stored::Int(serial),
+    Some(Scope::Global),
+  );
 
   let scope = arena::pin(format!("{ctr}:{refnum}"));
   let mut receiver = VecDeque::new();

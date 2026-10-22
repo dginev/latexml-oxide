@@ -81,3 +81,9 @@ so only the process watchdog ended it (`Fatal:timeout:wallclock` at `--timeout`,
 GREEN since 65f r2 (OD #538): a sixteenth file level is pdftex's "TeX capacity exceeded, sorry [text input levels=15]"
 (`gullet::mark_everyeof_mouth`, `MAX_IN_OPEN`), and the gullet checks the deadline every 65,536 reads. Guard
 `perfect_kernel_batch65f::self_input_stops_at_the_text_input_level_limit`.
+
+## patchcmd_replacement_rescans_a_control_word (78p)
+etoolbox.sty:1358-1374 patches the `\meaning` and `\detokenize`d texts, a control word always followed by a space, and
+rescans; etoolbox_sty.rs spliced `untex` strings, so `\patchcmd{\x}{|}{\mid}` on `o|s` gave `\mids`. PERL-ORIGIN
+(KNOWN_PERL_ERRORS #1091). GREEN since 78p: `etb_patch_text` writes the three texts as TeX does. Guard
+`perfect_kernel_batch78p::patchcmd_replacement_rescans_a_control_word`.
