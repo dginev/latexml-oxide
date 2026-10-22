@@ -6167,6 +6167,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   checks: 16 item-1 papers (OD #881); item 2's change is a class only (60 notes read); item 3 the 10 PASJ/emnlp papers
   whose marks print as the class prints them. Residuals: the unanswered-label order after a note mark (OD #881); a
   non-number `[<n>]` Warning (row 596, rule open). Scratch `~/data/pk_wt/scratch_78u/` (ab/, shadow/, pdf/).
+  **Integration (int61, 78u squashed onto int60; binary int61a):** review rev78u SHIP after the doc fold-ins (row 596's
+  decision text + its open counter-definition rule, OD #851/#880, KPE #1135/#1136, the RED repro's status; two new rows: the
+  `\numexpr…\relax`/leading-space marks, the `\protect\thanks` and printing-macro marks). Gates int61a: nextest 6959/6959 +
+  cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int60a empty. A/B int60a vs int61a (2,196 of 2,202: the
+  `pop78u_*` populations + 300 random census controls, seed 61): E 3,651 = 3,651, F 9 = 9, 0 papers worse, words +332;
+  XML changed in 84 — 28 of pop 1 (the note-in-mark fix), 55 of pop 2 (each only `role="thanks"` lines, the funding words read
+  whole; 2603.29506 counted here), 1 of pop 3 (2210.14698's `\numexpr` mark); 0 of the random controls (280 seed-61 + 92 `pop78u_rand`). FM shadow on the
+  r4 resolver (int61a unset vs `LATEXML_FM_SHADOW=1`, the 300 controls + pop 1, 332 papers): XML identical. Binding nets: 136/136, 0 documents worse (int60a vs int61a).
 
 - **split114** (task #114, user directive 2026-10-07; a pure move, before FM S2a): `latexml_engine/src/base_utilities.rs`
   (23,317 lines) is the module directory `base_utilities/` — `mod.rs` (the imports, `FRONTMATTER_ELEMENTS`,
