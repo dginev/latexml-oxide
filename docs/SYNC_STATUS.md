@@ -6263,6 +6263,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   missing graphic), 30 in 26 lose one (the glue now left out of the bodies); int61a → r5 3,813 → 3,144 (471 floats in 192
   papers lose a break, 13 in 6 gain one, OD #876). `.aux` labels matching pdflatex's last `\newlabel` (144 papers):
   6,654 (int61a) → 7,167 (r5) = 7,167 (r3); below int61a only 2511.10625 (104 → 103, the caption-text label row).
+  **Integration (int62, 78t r1-r5 squashed onto int61; binary int62a):** the user's direction 2026-10-22 (FIDELITY_CHARTER
+  §2 "Float panels": the grid first, the LaTeX widths kept; gallery vs matrix) replaced r2-r4's TeX line-breaking emulation
+  by the split (r5; grid design study `agent_reports/2026-10-22_grid_design.md`, its payloads 2-3 open rows above). Reviews
+  rev78t (r1), rev78t2, rev78t3 NO-SHIP; rev78t5 SHIP with its finding 1 fixed at integration (a body of no width without
+  its glue measured with it before the box fallback; guard `subfigure_panels_of_no_known_width_share_a_row`) and finding 2's
+  doc nit. Gates int62a: nextest 6970/6970 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int61a empty. A/B
+  int61a vs int62a (the `pop78t_*` populations + 300 random census controls, seed 62, + 2001.00288; 1,888 papers): E 6,715
+  → 6,651, F 20 = 20, 0 papers worse, no word loss over 1 %, words +44,986; XML changed in 1,032 (the 78t classes: panel
+  tags and captions, rows, the `\nonumber`/algorithm2e labels, keys taken by a later `\label`, `\psfig` sizes); 6 of the 280
+  converted seed-62 controls changed, each by a 78t class (0807.1408 panel, 1905.12895 algorithm2e label, 2005.04806 panel,
+  2205.07594 `\nonumber` label, astro-ph0312238 and physics0011046 `\psfig` sizes). 1408.2843 Fig 1 one row (as int61a and
+  its PDF). Binding nets: 136/136, 0 documents worse (int61a vs int62a).
 
 - **split114** (task #114, user directive 2026-10-07; a pure move, before FM S2a): `latexml_engine/src/base_utilities.rs`
   (23,317 lines) is the module directory `base_utilities/` — `mod.rs` (the imports, `FRONTMATTER_ELEMENTS`,
