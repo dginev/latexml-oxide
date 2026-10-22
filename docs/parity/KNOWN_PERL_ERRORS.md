@@ -17334,3 +17334,123 @@ keep the kernel's "." (latex_constructs.pool.ltxml:2832). Minimal trigger:
 — pdflatex "11", Perl 0.8.8 "1.1". Fixed in Rust (78q r2, llncs_cls.rs and svjour_cls.rs define the class's separator).
 Review 78q finding 8. Repros cross-references/{llncs,svjour3}_own_theorem_separator{,_envcountsect}; guard
 `perfect_kernel_batch78q::theorem_counter_separator_is_the_class_s`.
+
+## 1115. amsmath's `\genfrac` is not robust
+
+amsmath.sty:244 declares `\genfrac` with `\DeclareRobustCommand`; Perl's amsmath.sty.ltxml:1032 is a plain macro whose
+body opens with `\if.#1.\else\lx@left#1\fi`, so a scanner that expands its input token by token meets those
+conditionals bare. xy's matrix-entry reader is one: `\usepackage{amsmath}\usepackage[matrix,arrow]{xy}` and
+`$\xymatrix{ \genfrac{}{}{0pt}{}{a}{b} }$` — pdflatex clean, Perl 24 Errors ("Didn't expect a \fi"). Fixed in Rust
+(78s, amsmath_sty.rs `robust => true`). Witness 0704.1039 (101 Errors, then TooManyErrors: the 28-entry bibliography
+and the last section lost). `\dfrac`/`\tfrac`/`\binom` are not built on `\genfrac` in the binding; a `\genfrac` in math,
+a section title and an `{equation}` converts byte-identically. Repro ams-internals/genfrac_robust_in_xymatrix; guard
+`perfect_kernel_batch78s::genfrac_in_an_xymatrix_entry`.
+
+## 1116. `\@ifdefinable` on a group tests its first token
+
+latex.ltx:1296-1305 `\@ifdefinable#1#2` tests `\expandafter\@gobble\string #1`, the string of the whole argument: for
+`\@ifdefinable{\@nameuse{olA}}{\@namedef{olA}{…}}` the name `@nameuse{olA}` is undefined, so the definition runs. Perl's
+latex_constructs.pool.ltxml:5461 reads a DefToken, which takes `\@nameuse` alone, defined, and refuses: "undefined
+\olA". Minimal trigger: `\makeatletter\@ifdefinable{\@nameuse{olA}}{\@namedef{olA}{\overline{A}}}` then `$\olA$`.
+Fixed in Rust (78s, sect13.rs): one significant token is tested as before; more than one runs latex.ltx's own test.
+Witness 1703.00683 (23 undefined macros, `\olu`, `\calA`, …). Census: 53 papers hold a braced multi-token argument. Repro
+macro-state/ifdefinable_group_argument; guard `perfect_kernel_batch78s::ifdefinable_of_a_group_tests_its_string`.
+
+## 1117. epsf's `\epsfsize` is undefined, and `\epsfbox` keeps its size
+
+epsf.sty:648 (and epsfig.sty:60) define `\def\epsfsize#1#2{\epsfxsize}`, the scaling hook `\epsfbox` consults, so the
+common misuse `\epsfsize=0.6\textwidth` reads `=` and `0` and leaves `\epsfxsize.6\textwidth`, which sets the width.
+Perl's epsf.sty.ltxml has no `\epsfsize` (epsfig.sty.ltxml:80 a no-op): "undefined \epsfsize" and "=0.6" printed in
+each figure. Each `\epsfbox` also resets `\epsfxsize`/`\epsfysize` after its graphic, which Perl's epsf binding does
+not — and the versions differ in the reset's scope: TL's epsf.sty/epsf.tex (2.7.4, :505-506) reset `\global`ly, the
+1991 copies (22 of the 43 shipped in the `\epsfsize` and epsf-control census populations) in the current group, so
+inside `\subfigure{\epsfbox{…}}` (subfigure.sty:74 boxes its argument) the size outlives the box and the next
+sub-figure takes it too (hep-ph9404329: latex logs Fig1b.ps width=198.45662pt). Minimal trigger: `\usepackage{epsf}`
+and `\epsfsize=0.6\textwidth\epsfbox{x.eps}`. Fixed in Rust (78s, epsf_sty.rs, epsfig_sty.rs; the reset's scope that of
+the epsf.sty (on a package load) or epsf.tex the file search finds — the paper's copy, else TL's, whose `\def \epsfbox
+#1{` is read with its spaces (review rev78s2) — `epsf_resets_globally`, global as TL's without one; an `\input
+epsf.sty` reads only epsf.tex, an open row). Witnesses nucl-th0009090
+(15 Errors), hep-ph9404329 (9 sub-figure widths). Repros package-bindings/epsfsize_assigns_epsfxsize,
+epsfbox_local_reset_of_a_1991_copy, epsfbox_global_reset_of_a_tl_copy; guards
+`perfect_kernel_batch78s::{epsfsize_assigns_epsfxsize, epsfbox_resets_its_size, epsfbox_local_reset_of_a_1991_copy,
+epsfbox_global_reset_of_a_tl_copy}`.
+
+## 1118. wrapfig's `{wrapfloat}` and `wrap<type>` are undefined
+
+wrapfig.sty:40 `\def\wrapfloat#1{\def\@captype{#1}…}` is the generic environment `wrapfigure` and `wraptable` are made
+of, used with any float type (minted's newfloat `listing`); wrapfig.sty:265-301 extend float.sty's `\float@restyle` so
+that a `\newfloat` after wrapfig has its `wrap<type>`. Perl's wrapfig.sty.ltxml:21-48 defines only the two. Minimal
+trigger: `\usepackage{newfloat}\DeclareFloatingEnvironment{listing}\usepackage{wrapfig}` and
+`\begin{wrapfloat}{listing}{r}{0.3\textwidth}…\caption{C.}\end{wrapfloat}` — "undefined {wrapfloat}", "\caption outside
+any known float". Fixed in Rust (78s, wrapfig_sty.rs `{wrapfloat}`: `ltx:figure` / `ltx:table` / the float package's
+`ltx:float`; float_sty.rs `wrap<type>`). Witness 2411.16612 (3 listing references wrong). Repro
+captions-floats/wrapfloat_of_a_newfloat_type; guards `perfect_kernel_batch78s::{wrapfloat_of_a_newfloat_type,
+wrapfloat_of_figure_is_a_figure}`.
+
+## 1119. The equations.sty binding redefines only eqnarray's begin
+
+equations.sty (arXiv macros, Charles Karney 1993) :128-160 redefines eqnarray's begin (John Hobby's spacing, a raw
+`$$\halign`) and `\@@eqncr` together, so that rows start with `\if@defeqnsw`, false in its eqnarray* whose rows are
+unnumbered unless they hold `\yesnumber`. The ar5iv-bindings Perl copy (equations.sty.ltxml:66) keeps the raw begin
+against the kernel's own `\endeqnarray`: "\end@eqnarray Attempt to close a group that switched to mode display_math"
+(7 Errors on the witness; stock Perl ignores the option). Minimal trigger: `\documentstyle[equations]{article}` and
+`\begin{eqnarray}\label{x} a&=&b\nonumber\\ c&=&d\end{eqnarray}\begin{equation}\label{y}e\end{equation}` — pdflatex
+labels 1 and 2. Fixed in Rust (78s, latexml_contrib equations_sty.rs): the kernel eqnarray (its `\@@eqncr` numbering,
+OXIDIZED_DESIGN_DIVERGENCES #847) with the switch (`set_eqnarray_default_eqnsw`, `set_eqnarray_eqnsw`); `\yesnumber[x]`
+prints "(x)" and steps nothing. Witness hep-ph9904268 (8 Errors, 16 equation references wrong). Residual: a `\label` on a
+`\yesnumber[x]` row names "x", where LaTeX's names the counter's next value. Repro package-bindings/equations_sty_eqnarray;
+guards `perfect_kernel_batch78s::{equations_sty_eqnarray_numbers_as_latex, equations_sty_yesnumber_in_eqnarray_star}`.
+
+## 1120. ntheorem's `\newtheorem*` does not step its counter
+
+ntheorem.sty:824-839 `\@othm` and :870-880 `\@thm` run `\refstepcounter{#2}` for every theorem; `\newtheorem*`
+(:720-727) only selects the `nonumber` variant of the style, which prints no number. Perl's ntheorem.sty.ltxml:163-166
+declares it as the kernel's starred theorem, which steps nothing, so the theorems sharing its counter print one behind.
+Minimal trigger: `\usepackage{ntheorem}\newtheorem{thm}{Theorem}\newtheorem{lem}[thm]{Lemma}\newtheorem*{rmk}[thm]{Remark}`
+and lem, rmk, lem — pdflatex "Lemma 1", "Remark", "Lemma 3"; Perl "Lemma 2". Fixed in Rust (78s, ntheorem_sty.rs sets
+`THEOREM_UNNUMBERED_STEPS`, read by `define_new_theorem`). Witness 1606.01585 (5 references one behind). Repro
+cross-references/ntheorem_starred_steps_counter; guard `perfect_kernel_batch78s::ntheorem_starred_steps_its_counter`.
+
+## 1121. iopart's `\submitted` defines `\journal` as itself
+
+iopart.cls:277-278 `\submitted` prints "Submitted to: {\it \journal}" and leaves `\journal` alone; Perl's
+iopart_support.sty.ltxml:98-99 makes it `\submitto{\journal}`, whose `\def\journal{#1}` becomes `\def\journal{\journal}`:
+"Error:recursion:\journal". Minimal trigger: `\documentclass{iopart}` and `\submitted` before `\maketitle`. Fixed in
+Rust (78s, iopart_support_sty.rs: the journal pubnote of `\journal`'s text). Witness hep-th9910179. Repro
+sectioning-frontmatter/iopart_submitted_journal; guard `perfect_kernel_batch78s::iopart_submitted_names_the_journal`.
+
+## 1122. espcrc's `\addressmark` takes no optional key
+
+espcrc1.sty:159-162 (espcrc2.sty the same) `\addressmark[<key>]` prints the mark of the `\address[<key>]` named;
+Perl's espcrc.sty.ltxml:22 takes no argument, so the key is printed into the author's name. Minimal trigger:
+`\usepackage{espcrc2}` and `\author{A\address[E]{X} and B\addressmark[E]}` — Perl's personname "B[E]". Fixed in Rust
+(78s, espcrc_sty.rs reads and drops the key; the binding prints no address marks). Witness hep-lat0409072. Repro
+sectioning-frontmatter/espcrc_addressmark_key; guard `perfect_kernel_batch78s::espcrc_addressmark_key_not_printed`.
+
+## 1123. minted's `listing` is a figure
+
+minted.sty:1931-1939 declare `listing` as a float type of its own (`\DeclareFloatingEnvironment[fileext=lol,
+placement=tbp]{listing}` with the `newfloat` option, else float.sty's `\newfloat{listing}{tbp}{lol}` and
+`\floatname{listing}{\listingscaption}`): "Listing 1", numbered apart from the figures. The ar5iv-bindings Perl
+minted.sty.ltxml:110-111 alias `\begin{listing}` to `\begin{figure}`, so a listing prints "Figure 2" and shifts every
+later figure's number, a `\renewcommand{\listingscaption}{…}` renames nothing, and wrapfig's `{wrapfloat}{listing}`
+meets a float type with no counter. Minimal trigger: `\usepackage{minted}` and a `{figure}` then a `{listing}` with a
+`\caption`. Fixed in Rust (78s, latexml_contrib minted_sty.rs): minted.sty:284 loads newfloat or float.sty by the
+`newfloat` option and :1931-1944 declares the type by its branch, within the `section`/`chapter` option's counter
+(:157-159) — float.sty's "Listing 1: …" named by `\listingscaption` by default. Witnesses 2411.16612 (`[newfloat]`),
+2102.00527, 1902.08498 ("JSON n"), 2609.21330 ("Code snippet n"). Repros captions-floats/minted_listing_float_sty_branch,
+minted_newfloat_option_within_section; guards `perfect_kernel_batch78s::{minted_listing_is_a_float_of_its_own,
+minted_listing_is_float_sty_s_by_default, minted_newfloat_option_within_section}`.
+
+## 1124. newfloat's caption tag closes with a space
+
+newfloat.sty:59-125 make a `\DeclareFloatingEnvironment` type a kernel float, captioned by the kernel's `\@makecaption`
+("Listing 1: text", latex.ltx `\sbox\@tempboxa{#1: #2}`; caption's default label separator is the colon too). Perl's
+newfloat.sty.ltxml defines no `\format@title@<type>` for it, so the title falls back to LaTeXML's composed tag closed
+by a space: "Listing 1 text", beside "Table 1: text" in the same document. Minimal trigger:
+`\usepackage{newfloat}\DeclareFloatingEnvironment{listing}` and `\begin{listing}x\caption{C.}\end{listing}` —
+`<tag close=" ">Listing 1</tag>C.`. Fixed in Rust (78s, newfloat_sty.rs defines the kernel figure's
+`\format@title@<type>`, as float.sty's plain style has its own). Witness 2411.16612. Repro
+captions-floats/newfloat_caption_tag_closes_with_a_colon; guard
+`perfect_kernel_batch78s::newfloat_caption_tag_closes_with_a_colon`; the Perl-suite golden
+`latexml_oxide/tests/structure/floatnames.xml` now has its PDF's "Floppy 1: Something that flops" (`close=": "`).

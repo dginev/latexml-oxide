@@ -1815,17 +1815,44 @@ pub(crate) fn load() -> Result<()> {
   // Perl latex_constructs.pool.ltxml:5461-5468 tests `isDefinableLaTeX`: a CS whose
   // prior definition came from the PLAIN pool is definable too (LaTeX redefines plain
   // macros freely). Guard `perfect_kernel_batch56::ifdefinable_accepts_a_plain_macro`.
-  DefMacro!("\\@ifdefinable DefToken {}", sub[(token, iftoken)] {
-    if is_definable_latex(&token)?.0 {
-      iftoken.unlist()
-    } else {
-      let token_str = token.to_string();
-      let mut s = ExplodeText!(token_str);
-      if token_str.starts_with('\\') {
-        s.remove(0);
-      }
-      DefMacro!(T_CS!("\\reserved@a"), None, Tokens::new(s));
-      vec![T_CS!("\\@notdefinable")]
+  // The name is read as a `{}` argument: one token (spaces aside, as a DefToken) is the CS tested; more than one is
+  // tested as latex.ltx:1296-1305 does, by the `\string` of the whole argument, so `\@ifdefinable{\@nameuse{olA}}{…}`
+  // asks whether `\csname @nameuse{olA}\endcsname` is defined — it is not, and the definition runs. Perl's DefToken
+  // reads `\@nameuse` alone, which is defined: "undefined \olA" (1703.00683: 23 macros, `\olu`, `\calA`, …;
+  // KNOWN_PERL_ERRORS #1116). Guard `perfect_kernel_batch78s::ifdefinable_of_a_group_tests_its_string`.
+  DefMacro!("\\@ifdefinable {} {}", sub[(name, iftoken)] {
+    let mut significant = name.unlist_ref().iter().filter(|t| {
+      let cc = t.get_catcode();
+      cc != Catcode::SPACE && cc != Catcode::COMMENT
+    });
+    match (significant.next().copied(), significant.next()) {
+      (Some(token), None) if token.get_catcode() != Catcode::BEGIN => {
+        if is_definable_latex(&token)?.0 {
+          iftoken.unlist()
+        } else {
+          let token_str = token.to_string();
+          let mut s = ExplodeText!(token_str);
+          if token_str.starts_with('\\') {
+            s.remove(0);
+          }
+          DefMacro!(T_CS!("\\reserved@a"), None, Tokens::new(s));
+          vec![T_CS!("\\@notdefinable")]
+        }
+      },
+      (None, _) => {
+        Error!("expected", "DefToken", "Expected a DefToken parameter, found nothing.");
+        Vec::new()
+      },
+      _ => {
+        let mut tokens = TokenizeInternal!(r"\edef\reserved@a{\expandafter\@gobble\string").unlist();
+        tokens.extend(name.unlist());
+        tokens.extend(TokenizeInternal!(
+          r"}\@ifundefined\reserved@a{\edef\reserved@b{\expandafter\@carcube\reserved@a xxx\@nil}\ifx\reserved@b\@qend\@notdefinable\else\ifx\reserved@a\@qrelax\@notdefinable\else"
+        ).unlist());
+        tokens.extend(iftoken.unlist());
+        tokens.extend(TokenizeInternal!(r"\fi\fi}\@notdefinable").unlist());
+        tokens
+      },
     }
   });
 

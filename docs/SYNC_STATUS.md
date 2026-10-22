@@ -205,6 +205,11 @@ do not block the E/F rerun.
 | — | cleveref `\label[type]{…}` after a `\caption` inside a minipage panel of a figure loses its type: the panel (or the folded figure) carries the label but keeps `creftype` "fig." — `\begin{figure}\begin{minipage}{.4\linewidth}\caption{A}\label[appendix]{mp}\end{minipage}…` gives "fig. 1" where pdflatex prints "appendix 1" (0 errors; a subfigure's works, "appendix 2a"); the type's tags have no target when `\lx@cleverref@labeltype` runs (cleveref_sty.rs:61-72 `continue`s) and the panel fold moves the labels, not the type's tags. int54a and 78j alike; review rev78j5 finding 2. Fix: carry the type's tags with the labels when the panel/fold merges them, or settle the type once its owner exists | open |
 | — | A `\begingroup` left open in held text raises an Error TeX does not: an `\autoref` name `\begingroup Fig`, `\creflabelformat{equation}{\begingroup(#2#1#3)}` — pdflatex 0 errors (only "\end occurred inside a group at level 1"), ours 1 ("Attempt to end mode restricted_horizontal"); `\crefformat{figure}{\begingroup#2Fig.~#1#3}` — pdflatex 0 errors and the author's "Fig. 1", ours 1 ("leaves 1 group(s) open") and cleveref's default "fig. 1". 78j r5 (r4 raised 2); review rev78j5 finding 3. Direction: when only `\begingroup` frames are left open, `digest_in_own_group` unwinds them without an Error and keeps the form | open |
 | — | Panic: 2509.13772 "range end index 44 out of range for slice of length 43" (int54a and 78j r5 the same; outside 78j's paths; found by the 78j r5 A/B) — root-cause and fix (panic → Error with the reason) | open |
+| — | caption: a ruled/boxed float.sty float resets the label format and separator to its style's (caption.sty:864-866 `\caption@setstyle*\float@style`), so pdflatex prints "Algorithm 1 Two." under a global `labelformat=allcaps` where ours prints "ALGORITHM 1" (2106.08363 wiley-article; boxed format "[Listing] 1", 2109.00138); untyped settings should give way to the style's, typed `\captionsetup[algorithm]` still apply (LIPIcs). Review rev78s2 finding 2 | open |
+| — | caption: `\captionsetup[<type>]{name=…}` of a float.sty type does not reach `\fname@<type>` (caption.sty:882-884 calls `\floatname`; `caption_sty.rs:241` `\lx@caption@setname` sets only `\<type>name`): pdflatex "Snip 1:", ours "Listing 1" (int58a "Snip 1" for the old figure-typed listing; algorithm "Proc 1" vs "Algorithm 1" in base too). No census paper sets a non-default name. Fix: `\def\lx@caption@setname#1#2{\@ifundefined{fname@#1}{}{\@namedef{fname@#1}{#2}}\@namedef{#1name}{#2}}`; the fallback's `\ifcsname #2name` should test `\ifx…\relax` as caption does. Review rev78s2 finding 3 | open |
+| — | newfloat `\SetupFloatingEnvironment` has Perl's `OptionalKeyVals {}` signature (`newfloat_sty.rs:5`), not newfloat.sty:304's `{type}{options}`, so `\SetupFloatingEnvironment{listing}{name=Prog}` prints "name=Prog" and the name is unchanged; minted's no-op copy (`minted_sty.rs:197`) protects minted papers today — do not just drop it. 6 census papers (2306.12224, 2405.15425, 2411.16612 "List.", 2507.09840, 2510.09447 "Listagem"). Review rev78s2 finding 4 | open |
+| — | A class's caption separator set outside caption's settings (acmart's `labelsep=period` via ams_support's `\format@title@figure`; IEEEtran's "Fig. 1.") does not reach newly declared float types: listings close with ": " where the PDF prints "Listing 1." (1807.03757; IEEEtran probe, figures wrong in base too); 23 of 125 minted papers are acmart. A rule, not per class: a new float type takes the class's figure title format. Review rev78s2 finding 5 | open |
+| — | epsf via `\input epsf.sty` reads only epsf.tex for the reset scope (`\@currname` unset): 10 papers, 5 shipping a local 1991 copy (0906.1361, astro-ph0006390, astro-ph0109126, astro-ph0410051, astro-ph9701125: latex keeps the width, ours natural size); psfrag's epsf.sty (`\RequirePackage{epsfig}`, local reset; astro-ph0012205, astro-ph9611186, astro-ph9911225) is treated as global. Fix: pass the requested extension from `input_definitions`. Review rev78s2 finding 1 | open |
 | 25, 26, 27 | `--splitindex`/`--splitbibliography` (non-default), alignment open at `\end{document}`, lstlisting in `\parbox` | not silent, re-checked on head 2026-10-19: #26 is an honest Error (a `tabular` left open, `c & d`: 4 Errors; an `align`, `c&=d`: 3 — "Attempt to close a group that switched to mode internal_vertical"; invalid input, pdflatex errs); #27 has raised 1 Error since 64zf (CONTROL `kernel-alignment/pcol_lstlisting_parbox_CONTROL`, pdflatex 7); #25 needs a non-default option the arXiv runs never pass — open, low reach, not blocking |
 
 ## Rust Error Fixes
@@ -238,6 +243,14 @@ KNOWN_PERL_ERRORS cross-reference when one applies. Perl-origin defects go to `p
   its number alone ("1.2"; 1505.04294's 90 theorems, 70 census papers). Restored as thm-kv.sty:359 has it,
   `\thmt@modifycase` with the `uppercase`/`lowercase`/`anycase` options (OD #829). Guards
   `perfect_kernel_batch78k::{thmtools_unnamed_theorem_is_headed_by_its_environment, thmtools_unnamed_theorem_follows_the_case_option}`.
+- **subfig's `\newsubfloat` was a no-op (78s)**: our subfig_sty.rs stubbed it (Perl subfig.sty.ltxml:30-62 makes the
+  machinery), so a `\subfloat` in a float type other than figure and table — 2411.16612's
+  `\newsubfloat[captionskip=10pt]{listing}` for minted's `listing` — found no `\lx@subfloat@<type>` and its sub-floats were
+  lost. Made at run time since 78s (`define_subfloat`: the `sub<type>` counter, its macros and the
+  `lx@subfloat@@<type>` environment through `EnvironmentBuilder` and a parsed replacement), as subfig.sty:244-266 only for
+  a type without a `sub<type>` counter (else subfig's warning), joined to `\sf@counterlist`, its `[keys]` the
+  `\captionsetup[sub<type>]` settings (78s r2). Guards `perfect_kernel_batch78s::{newsubfloat_of_a_float_type,
+  newsubfloat_keys_and_an_existing_type}`.
 - **lamstex arrowheads print as letters** (PERL-ORIGIN, found by rev78b): a `\newCD` diagram's arrowheads and dotted
   shafts are `\char`s of the lams1-lams5 fonts (lamstex `\arrow@i\char119`, `\arrow@ii\char104`, `\arrow@iii\char13`),
   which no font map covers, so they print as "w", "h", "ﬂ" in the text font (math0005042's pullback diagram: cells
@@ -851,6 +864,16 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   the binding drops delimiters and labels alike (OD #771), so "M" and "N" are lost with 0 errors. Needs a place for a
   label spanning the block's rows (a cell of its own beside them, or an annotation of the rows). RED
   `alignment-bindings/blkarray_block_side_labels_are_dropped`.
+- **espcrc's `\address[<key>]` / `\addressmark[<key>]` do not link an author to the keyed address** (RUST-ONLY binding
+  gap, rev78s; Perl prints the key, KPE #1122): espcrc1.sty:159-162 marks the author with the `\address[<key>]` named, and
+  espcrc_sty.rs reads and drops both keys, so the marked authors have no `<contact>` where the PDF ties each to its
+  address (astro-ph0207534, hep-ph0610439; hep-lat0409072 the witness of the key no longer printed). Next: store
+  key → address at `\address[<key>]` and attach that contact at `\addressmark[<key>]`. No repro yet (review probe
+  `rev78s/p/r_espcrc_addressmark_key.tex`).
+- **wrapfig's `\float@restyle` hook is not ported** (RUST-ONLY, rare; rev78s): wrapfig.sty:286-298 hooks float.sty's
+  `\float@restyle`, so a `\restylefloat{<type>}` after wrapfig makes `wrap<type>` for a type declared before it; here
+  only `\newfloat` makes it (float_sty.rs) and `\restylefloat` is a no-op (float_sty.rs:11). Found reviewing the
+  `wrap<type>` hook of 2411.16612; reach unmeasured. No repro yet.
 - **Header re-grades pending**: `luatex-profile/xetexprobe_xevlna_shared` needs `% preload: [xetex]` (then libertinus-otf.sty:215 `\XeTeXtracingfonts` undefined is a new RED); `luatex-profile/babelmodifier_greek_polutoniko` drops its `[luatex]` line (lualatex fails too; pdfTeX 0 errors); `luatex-profile/zugferdtabular_loop` needs the witness's `unit=hour`; `graphics-tikz/calc_scbox_babel_frozen_bang_stale_oracle` becomes CONTROL.
 
 ### Fidelity audit round 2 (2026-10-08) — findings and their state
@@ -6046,6 +6069,67 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   5,044, F 12 = 12, 0 papers worse, no word loss over 1 %; 952 outputs changed, all in the 78r populations except three
   controls, each a 78r item (1005.3618, hep-th0307191: the eqnarray label's refnum-only tag; astro-ph9906362: `\nonumber`
   in `{equation}` without amsmath now numbered, as pdflatex). Binding nets: 136/136, 0 documents worse (int55b vs int56a).
+- **78s** (quality batch 16, fidelity audit round 4's binding Errors R2, R1, R13, R11, R5, R7, F5, F3; guards
+  `perfect_kernel_batch78s::*`, 13, each RED on int57a; r2 20, of its 7 new 5 RED on r1, the caption one on the r2 draft, the TL-reset one pinning the global branch; KPE #1115-1124, no OD). (1) amsmath's `\genfrac` is robust
+  (amsmath.sty:244), so xy's entry scanner no longer meets its bare `\if…\fi` (0704.1039 101 Errors + TooManyErrors →
+  0, its 28 bibitems back; 2006.11499 the same; KPE #1115). (2) `\@ifdefinable` on a group of more than one token runs
+  latex.ltx:1296-1305's `\string` test (1703.00683's 23 undefined `\olu`/`\calA`… defined; KPE #1116). (3) epsf's and
+  epsfig's `\epsfsize` is `\epsfxsize` (epsf.sty:648, epsfig.sty:60), and epsf's `\epsfbox` resets the sizes after each
+  graphic, in the scope of the epsf copy TeX would load (r2): TL's :505-506 `\global`ly, a 1991 copy's locally, so inside
+  `\subfigure{\epsfbox{…}}` the size serves the next sub-figure too (nucl-th0009090's 15 "=0.99" texts gone;
+  hep-ph9404329's 9 sub-figure widths as its latex log, Fig1b.ps 198.5pt; KPE #1117). (4) wrapfig's `{wrapfloat}{<type>}` (:40) and
+  float.sty's `wrap<type>` after wrapfig (:265-301); minted's `listing` is a float type of its own, not a `{figure}`:
+  with the `newfloat` option newfloat's, else float.sty's named `\listingscaption` (r2; minted.sty:284, :1931-1944), within
+  the `section`/`chapter` option's counter (:157-159), and newfloat's caption tag closes with ": " as the kernel's
+  (r2, KPE #1124); subfig's `\newsubfloat{<type>}` makes the type's sub-floats (it was a no-op, the Rust Error Fixes
+  entry) — 2411.16612 4 Errors → 0, its listing references 2, 3, 4, 1a, 1b as the PDF (KPE #1118, #1123). (5)
+  equations.sty keeps the kernel eqnarray with the file's `\if@defeqnsw` (eqnarray*'s rows unnumbered unless
+  `\yesnumber`; `set_eqnarray_default_eqnsw`), no raw `$$\halign` begin (hep-ph9904268 8 Errors → 0, 30/30 equation
+  labels as its `.aux`, 21 before; KPE #1119). (6) ntheorem's `\newtheorem*` steps its counter (ntheorem.sty:824-839,
+  :870; `THEOREM_UNNUMBERED_STEPS`; 1606.01585 "Lemma 7, 8, Corollary 9" as the PDF; KPE #1120). (7) iopart's `\submitted`
+  is the journal pubnote of `\journal` (iopart.cls:277-278; hep-th9910179's recursion Error gone; KPE #1121). (8) espcrc's
+  `\addressmark[<key>]` reads its key (espcrc1.sty:159-162; hep-lat0409072's "[ETHZ]"; KPE #1122). A/B (release 78s vs
+  int57a, int57a dumps, `--preload=ar5iv.sty`, `census/pops/pop78s_{witness,genfrac,ifdef,epsfsize,wrapfloat,equations,
+  ntheorem,iopart,espcrc,mintedlisting,mintedctl,newsubfloat,subfigctl,wrapfigctl,eqnarrayctl,epsfctl,ifdefctl,ctl}.tsv`,
+  1,478 papers): E 7,330 → 6,814, F 18 → 16, W 66,912 → 66,751, bibitems 57,958 → 58,014, 0 papers worse; 88 changed,
+  every one an item's (genfrac 2006.11499; 3 macros defined and 2007.16006's leaked "rg@l@chapter…" text gone; 12
+  `\epsfsize` papers lose "=x" text or gain the width; 6 equations.sty papers E 204 → 0; 10 iopart journal pubnotes; 9 espcrc names; 34 minted papers' listings, E 453 →
+  423); 1111.1264, 1912.00500, 1806.01746 crash or time out in both binaries. Census: `\@ifdefinable` with a braced
+  multi-token argument in 53 papers (scan over the 3,955 users); ntheorem papers other than the witness use no
+  `\newtheorem*` (183 unchanged); `{wrapfloat}` in a body is 2411.16612's alone (the other census hits are comments in
+  shipped wrapfig.sty copies). Residuals: a `\label` on a `\yesnumber[x]` row names "x" (LaTeX's names the next number);
+  2411.16612's apxproof headings (R12); minted's `\SetupFloatingEnvironment{}{}` no-op (Perl's, minted_sty.rs) also
+  replaces newfloat's under `[newfloat]`; a float.sty float's `autoref` tag under hyperref holds an empty `<text>`
+  (base too); acmart's `labelsep=period` reaches figures and tables only (ams_support_sty.rs's
+  `\format@title@figure`), so its float.sty and newfloat types close with ": " where the PDF prints "Listing 1."
+  (1807.03757); under floatrow a float.sty listing's tag closes with a space (2206.08452, PDF "Listing 1:"); raw minitoc's
+  end-document hints for a loaded float package leave an empty `ltx_noindent` paragraph (2512.16676). R2 (rev78s
+  findings 1-4, 7; guards `perfect_kernel_batch78s::{epsfbox_local_reset_of_a_1991_copy, epsfbox_global_reset_of_a_tl_copy,
+  minted_listing_is_float_sty_s_by_default, minted_newfloat_option_within_section, newfloat_caption_tag_closes_with_a_colon,
+  newsubfloat_keys_and_an_existing_type, caption_label_format_names_a_float_sty_type}`, 20 in all): also caption's label
+  format names a float.sty type by its `\floatname` (caption.sty:878-881 `\caption@float@setname`; caption_sty.rs
+  `\lx@caption@fnum`), which minted's float.sty `listing` exposed ("[] 1" → "Listing 4" under LIPIcs's boxed format,
+  2602.12973, 2402.14485) and which restores "Algorithm 1" in float.sty algorithm floats under a caption label format
+  (base too: 1305.3417, 1804.10044, 1706.01865, 2206.07592, as pdflatex) — except a ruled/boxed float.sty float, whose style
+  resets the label format (caption.sty:864-866 `\caption@setstyle*\float@style`): there pdflatex prints "Algorithm 1" where
+  ours keeps the global format, "ALGORITHM 1" (2106.08363), "[Listing] 1" (an open row, review rev78s2). A/B (release r2 vs int58a and vs r1, int58a
+  dumps, the 18 r1 populations + `census/pops/pop78s_{minted_all,epsfship}.tsv`, 1,540 papers): E 7,586 / 7,049 → 7,047,
+  F 19 / 17 → 17, W 67,704 / 67,509 → 67,509, 0 papers worse than int58a (1111.1264's crash varies run to run: E 20, 19,
+  20), no word loss over 1 %; 51 outputs change from r1, each an item's: hep-ph9404329's 9 widths back (198.5pt as latex,
+  byte-identical to int58a); 1305.3417 and 2211.11635 the caption name; 1111.1264, 1912.00500, 1806.01746 crash or time
+  out in every binary; 45 minted papers take float.sty's `listing` (": " tags, `\listingscaption` renames "JSON n" 1902.08498 and "Code snippet
+  n" 2609.21330, `[section]` "Listing 6.1" 2511.15479, ruled bold labels where algorithm.sty left `\floatstyle{ruled}`
+  as TeX does, hyperref's `autoref` without a name as pdflatex's "1"; 2309.04695 E 3 → 0, its `\floatstyle` from minted's
+  float.sty); `pop78s_capfloat.tsv` (80 caption-label-format papers with float/algorithm/minted): E 1,227 → 1,223, 21
+  changed, all named float tags. Caption labels against pdflatex on 12 minted papers: 10 match, 1807.03757 and
+  2206.08452 differ in the separator only (above).
+  **Integration (int59, 78s r1-r2 squashed onto int58; binary int59a):** review rev78s NO-SHIP (r1: epsf's reset global for
+  every copy, minted's `listing` always newfloat's) → r2 → rev78s2 SHIP after the main session's follow-ups: TL's epsf.sty
+  is read as the copy that decides (`\def \epsfbox #1{` with its spaces, `epsf_resets_globally`; the TL stub repro rewritten
+  in TL's spelling; new repro + guard `epsfbox_tl_sty_over_a_shipped_1991_tex`: a paper shipping only a 1991 epsf.tex gets
+  TL's global reset, review probe e1), the reset choice stored globally, KPE #1117 says which copy decides, the caption-name
+  fallback's ruled/boxed exception above. GATES59. A/B int58a vs int59a: AB59. Binding nets: NETS59.
+
 - **split114** (task #114, user directive 2026-10-07; a pure move, before FM S2a): `latexml_engine/src/base_utilities.rs`
   (23,317 lines) is the module directory `base_utilities/` — `mod.rs` (the imports, `FRONTMATTER_ELEMENTS`,
   `REPLACEABLE_FRONTMATTER_TAGS`, and `LoadDefinitions!` calling `defs::{general, frontmatter_api, frontmatter_fields,

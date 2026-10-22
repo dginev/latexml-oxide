@@ -1,0 +1,18 @@
+% witness: hep-ph9904268 (8 Errors "\end@eqnarray Attempt to close a group that switched to mode display_math", 16
+%          equation references wrong)
+% oracle:  pdflatex 0 errors (with the arXiv equations.sty, arxiv.org/macros); "See 1 and 2."
+% engines: rust (int57a) = 2 Errors, label y "3"; perl ar5iv-bindings copy (equations.sty.ltxml:66) 7 Errors on the
+%          witness, stock perl ignores the option
+% expect:  0 errors; equations labelled x and y carry refnums 1 and 2
+% mechanism: equations_sty.rs replaced eqnarray's begin with a raw `$$\halign` and kept the kernel's end; now the
+%   kernel eqnarray with equations.sty's `\if@defeqnsw` (eqnarray*'s rows unnumbered unless `\yesnumber`). KPE #1119.
+% status:  GREEN (78s)
+\documentstyle[equations]{article}
+\begin{document}
+\begin{eqnarray}\label{x}
+a&=&b\nonumber\\
+c&=&d
+\end{eqnarray}
+\begin{equation}\label{y} e \end{equation}
+See \ref{x} and \ref{y}.
+\end{document}

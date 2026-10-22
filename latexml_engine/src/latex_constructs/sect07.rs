@@ -248,8 +248,8 @@ pub(crate) fn load() -> Result<()> {
       }
     }
     prepare_equation_counter(options);
-    // latex.ltx:15754 `\global\@eqnswtrue` (eqnarray_eqncr_numbering).
-    assign_value(EQNARRAY_EQNSW, Stored::Bool(true), Some(Scope::Global));
+    // latex.ltx:15754 `\global\@eqnswtrue` (eqnarray_eqncr_numbering; equations.sty's `\if@defeqnsw`).
+    assign_value(EQNARRAY_EQNSW, Stored::Bool(eqnarray_default_eqnsw()), Some(Scope::Global));
     assign_value(EQNARRAY_EQNNUM, Stored::Bool(false), Some(Scope::Global));
     assign_value(EQNARRAY_ROW_LABELLED, Stored::Bool(false), Some(Scope::Global));
     Ok(())
@@ -382,7 +382,7 @@ pub(crate) fn load() -> Result<()> {
     // is numbered unless a `\nonumber` came since the last one (`eqnarray_eqncr_numbering`).
     let eqnsw = !matches!(lookup_value(EQNARRAY_EQNSW), Some(Stored::Bool(false)));
     assign_value(EQNARRAY_EQNNUM, Stored::Bool(eqnsw), Some(Scope::Global));
-    assign_value(EQNARRAY_EQNSW, Stored::Bool(true), Some(Scope::Global));
+    assign_value(EQNARRAY_EQNSW, Stored::Bool(eqnarray_default_eqnsw()), Some(Scope::Global));
     if let Some(alignment_digested) = lookup_alignment()
       && let Some(alignment_cell) = alignment_digested.alignment_cell()
     {

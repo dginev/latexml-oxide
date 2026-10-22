@@ -1,0 +1,17 @@
+% witness: 2602.12973 (LIPIcs's boxed caption label format on minted's float.sty `listing`: "Listing 4")
+% oracle:  pdflatex 0 errors; "[Listing] 1: One.", "[Figure] 1: Two."
+% engines: rust (78s r2 before the fix) = "[] 1" (the name argument `\listingname`, undefined for a float.sty type);
+%          rust (int57a) = the listing a {figure}; perl = a {figure} (ar5iv-bindings minted.sty.ltxml:110-111)
+% expect:  0 errors; <tag close=": ">[Listing] 1</tag>
+% mechanism: caption.sty:878-881 `\caption@float@setname`: a float.sty type's `\<type>name` is its `\fname@<type>`;
+%   caption_sty.rs `\lx@caption@fnum` falls back to it. KPE #1123.
+% status:  GREEN (78s r2)
+\documentclass{article}
+\usepackage{caption}
+\DeclareCaptionLabelFormat{boxed}{[#1]~#2}
+\captionsetup{labelformat=boxed}
+\usepackage{minted}
+\begin{document}
+\begin{listing}[h]Y\caption{One.}\end{listing}
+\begin{figure}[h]Y\caption{Two.}\end{figure}
+\end{document}

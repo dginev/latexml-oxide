@@ -933,9 +933,15 @@ LoadDefinitions!({
   // Section 4.11.3 The \genfrac command
   // Perl: amsmath.sty.ltxml lines 1016-1094
   // \genfrac{open}{close}{thickness}{style}{numerator}{denominator}
+  // Robust, as amsmath.sty:244 `\DeclareRobustCommand{\genfrac}[4]`: a scanner that expands its input token by token
+  // (xy's matrix-entry reader, xymatrix.tex) meets `\protect\genfrac` and not the body's bare `\if.#1.\else…\fi`, which
+  // leaked "Didn't expect a \fi" (0704.1039: 101 Errors, then TooManyErrors and the bibliography lost). Perl's
+  // amsmath.sty.ltxml:1032 is a plain macro too (KNOWN_PERL_ERRORS #1115). Guard
+  // `perfect_kernel_batch78s::genfrac_in_an_xymatrix_entry`.
   DefMacro!(
     "\\genfrac{}{}{}{}{}{}",
-    r"\lx@genfrac{\if.#1.\else\lx@left#1\fi}{\if.#2.\else\lx@right#2\fi}{#3}{#4}{#5}{#6}"
+    r"\lx@genfrac{\if.#1.\else\lx@left#1\fi}{\if.#2.\else\lx@right#2\fi}{#3}{#4}{#5}{#6}",
+    robust => true
   );
   DefMacro!(
     "\\lx@genfrac{}{}{}{}{}{}",

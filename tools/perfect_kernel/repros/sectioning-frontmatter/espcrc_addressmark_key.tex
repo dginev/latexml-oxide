@@ -1,0 +1,15 @@
+% witness: hep-lat0409072 ("[ETHZ]" printed inside the second author's name)
+% oracle:  pdflatex 0 errors (espcrc1.sty as espcrc2.sty, the same \address code); "Philippe de Forcrand" + mark "a"
+% engines: rust (int57a) = 0 errors, personname "Philippe de Forcrand[ETHZ]"; perl the same (espcrc.sty.ltxml:22)
+% expect:  0 errors; <personname>Philippe de Forcrand</personname>, no "[ETHZ]" text
+% mechanism: espcrc1.sty:159-162 `\addressmark[<key>]` takes the key of an `\address[<key>]`. KPE #1122.
+% status:  GREEN (78s)
+\documentclass[fleqn,twoside]{article}
+\usepackage{espcrc2}
+\begin{document}
+\title{T}
+\author{Slavo Kratochvila\address[ETHZ]{ETH Z\"urich}
+  and Philippe de Forcrand\addressmark[ETHZ]\address[CERN]{CERN}}
+\maketitle
+Text.
+\end{document}

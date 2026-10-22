@@ -1,3 +1,5 @@
+use latexml_core::{binding::def::builder::OptionValue, document::Document};
+
 use crate::{
   engine::latex_constructs::{after_float, before_untyped_float},
   prelude::*,
@@ -81,15 +83,19 @@ LoadDefinitions!({
   // guarded by \@ifundefined{c@subfigure}/\@ifundefined{c@subtable}, so
   // those calls are no-ops once our pre-bake has run — exact parity.
   //
-  // For caller-defined float types (e.g. \newsubfloat{algorithm}),
-  // Perl dynamically issues NewCounter + Let + DefMacroI + DefEnvironmentI
-  // with $name substituted. The dynamic DefEnvironmentI requires a
-  // runtime "install_environment" API that is not yet exposed in
-  // latexml_core (state::install_definition handles macros/primitives
-  // but not constructor-with-template environments). Documented as a
-  // known missing-API task rather than masked as a stub: no paper in
-  // the 7898-arxiv 2026-04-24 sandbox exercises this path.
-  def_macro_noop("\\newsubfloat[]{}")?;
+  // For a caller-defined float type (subfig.sty:239-263 `\newsubfloat{<type>}`; 2411.16612's
+  // `\newsubfloat[captionskip=10pt]{listing}` for minted's `listing`) the same machinery is made at run time
+  // (`define_subfloat`, Perl's NewCounter + Let + DefMacroI + DefEnvironmentI). Was a no-op, so a `\subfloat` in
+  // such a float found no `\lx@subfloat@<type>` and its sub-floats were lost.
+  // As subfig.sty:244-266: only for a type with no `sub<type>` counter yet (else subfig's warning, and nothing: a
+  // document's `\newsubfloat{figure}` keeps the pre-built figure machinery), listed in `\sf@counterlist`, its keys the
+  // `[sub<type>]` caption settings (`\captionsetup[sub#2]{#1}`). Guards
+  // `perfect_kernel_batch78s::{newsubfloat_makes_sub_floats_of_a_new_type, newsubfloat_keys_and_an_existing_type}`.
+  DefMacro!("\\newsubfloat[]{}",
+    r"\@ifundefined{c@sub#2}{\lx@subfig@newsubfloat{#2}\edef\sf@counterlist{\@ifundefined{sf@counterlist}{}{\sf@counterlist,}sub#2}\captionsetup[sub#2]{#1}}{\PackageWarning{subfig}{The sub#2\space type is already defined.}}");
+  DefPrimitive!("\\lx@subfig@newsubfloat{}", sub[(name)] {
+    define_subfloat(&name.to_string())?;
+  });
 
   // \subfloat — Perl L69-79
   DefMacro!("\\subfloat",
@@ -229,3 +235,76 @@ LoadDefinitions!({
   DefMacro!("\\ContinuedFloat",
     r"\addtocounter{\@captype}{\m@ne}\expandafter\caption@ContinuedFloat\expandafter{\@captype}\expandafter\lx@subfig@continue@restore\expandafter{\@captype}");
 });
+
+/// subfig.sty:239-263 `\newsubfloat{<type>}` (Perl subfig.sty.ltxml:30-62): the `sub<type>` counter (ids `sf<n>` within
+/// the float), its save counter, `\ext@sub<type>`, `\thesub<type>`, `\fnum@sub<type>` (the label format, as the
+/// pre-baked figure and table ones), `\p@sub<type>`, `\lx@subfloat@<type>` and the `lx@subfloat@@<type>` environment: an
+/// `ltx:figure`, `ltx:table` or `ltx:float` as Perl picks by the name.
+fn define_subfloat(name: &str) -> Result<()> {
+  use latexml_core::binding::def::{builder::EnvironmentBuilder, replacement};
+  let sub = s!("sub{name}");
+  NewCounter!(&sub, name, idprefix => "sf", idwithin => name);
+  NewCounter!(&s!("{sub}@save"));
+  Let!(T_CS!(s!("\\ext@{sub}")), T_CS!(s!("\\ext@{name}")));
+  let define = |cs: String, params: &str, body: String| -> Result<()> {
+    let cs = T_CS!(cs);
+    let params = if params.is_empty() {
+      None
+    } else {
+      parse_parameters(params, &cs, true)?
+    };
+    def_macro(
+      cs,
+      params,
+      mouth::tokenize_internal(TeXString::assembled(body)),
+      None,
+    )?;
+    Ok(())
+  };
+  define(s!("\\the{sub}"), "", s!("\\alph{{{sub}}}"))?;
+  define(
+    s!("\\fnum@{sub}"),
+    "",
+    s!("\\lx@subfig@fnum{{{sub}}}{{\\the{sub}}}"),
+  )?;
+  define(s!("\\p@{sub}"), "", s!("\\the{name}"))?;
+  let step = r"\iflx@donecaption\else\refstepcounter@noreset{\@captype}\fi";
+  let unstep = s!(
+    r"\iflx@donecaption\else\addtocounter{{\@captype}}{{\m@ne}}\fi\setcounter{{{sub}@save}}{{\value{{{sub}}}}}"
+  );
+  define(
+    s!("\\lx@subfloat@{name}"),
+    "[][]{}",
+    s!(r"{step}\begin{{lx@subfloat@@{name}}}#3\caption{{#1}}\end{{lx@subfloat@@{name}}}{unstep}"),
+  )?;
+  define(
+    s!("\\lx@subfloat@{name}@phantom"),
+    "{}",
+    s!(r"{step}\begin{{lx@subfloat@@{name}}}#1\phantomcaption\end{{lx@subfloat@@{name}}}{unstep}"),
+  )?;
+  let element = if name.contains("figure") {
+    "ltx:figure"
+  } else if name.contains("table") {
+    "ltx:table"
+  } else {
+    "ltx:float"
+  };
+  let ops = Rc::new(replacement::parse_replacement(&s!(
+    "^ <{element} xml:id='#id'>#tags#body</{element}>"
+  ))?);
+  let sub_for_before = sub.clone();
+  EnvironmentBuilder::new(&s!("{{lx@subfloat@@{name}}}"))?
+    .replacement(Rc::new(move |document: &mut Document, args, props| {
+      replacement::apply_ops(&ops, document, args, props)
+    }))
+    .set_option("mode", OptionValue::Str("internal_vertical".into()))?
+    .before_digest(Rc::new(move || {
+      before_untyped_float(&sub_for_before)?;
+      Ok(Vec::new())
+    }))
+    .after_digest(Rc::new(|whatsit: &mut Whatsit| {
+      after_float(whatsit);
+      Ok(Vec::new())
+    }))
+    .install()
+}

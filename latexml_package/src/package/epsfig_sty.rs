@@ -109,5 +109,7 @@ LoadDefinitions!({
   def_primitive_noop("\\epsfverbosefalse")?;
   DefRegister!("\\epsfxsize" => Dimension::new(0));
   DefRegister!("\\epsfysize" => Dimension::new(0));
-  def_primitive_noop("\\epsfsize{}{}")?;
+  // epsfig.sty:60 `\def\epsfsize#1#2{\epsfxsize}`, as epsf.sty:648 (epsf_sty.rs; Perl epsfig.sty.ltxml:80 a no-op, which
+  // printed "=0.6" for `\epsfsize=0.6\textwidth`, nucl-th0009090; KNOWN_PERL_ERRORS #1117).
+  DefMacro!("\\epsfsize{}{}", "\\epsfxsize");
 });

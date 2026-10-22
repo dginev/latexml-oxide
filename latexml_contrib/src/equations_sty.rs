@@ -9,7 +9,7 @@ LoadDefinitions!({
   DefRegister!("\\@stequation" => Tokens!());
 
   use latexml_package::engine::latex_constructs::{
-    after_equation, before_equation, prepare_equation_counter,
+    after_equation, before_equation, prepare_equation_counter, set_eqnarray_default_eqnsw, set_eqnarray_eqnsw,
   };
 
   // Perl L20-40: {eqalignno} — display_math env wrapping an alignment,
@@ -50,24 +50,30 @@ LoadDefinitions!({
     locked => true
   );
 
-  // Perl L62-124: Full RawTeX block — eqnarray, eqalign, cases, eqaligntwo,
-  // plus eqaligntwo* \@namedef. Previous Rust stub shipped only a partial
-  // extract.
+  // Perl L62-124: eqalign, cases, eqaligntwo, eqaligntwo* (and `\@@eqncr` for eqaligntwo's raw `\halign`).
+  // equations.sty:128-160 redefines eqnarray's begin (John Hobby's spacing) and `\@@eqncr` so that the rows start
+  // with `\if@defeqnsw` — false in its eqnarray*, whose rows are unnumbered unless they hold `\yesnumber`. The
+  // kernel's eqnarray is kept (its `\@@eqncr` numbering, sect07.rs) and given that switch
+  // (`set_eqnarray_default_eqnsw`); the copy's raw `$$\halign` begin left the kernel's `\endeqnarray` closing a
+  // display it had not opened (hep-ph9904268: 8 "\end@eqnarray" Errors, 16 equation references wrong; the
+  // ar5iv-bindings Perl copy, equations.sty.ltxml:66, gives 7; KNOWN_PERL_ERRORS #1119). Guards
+  // `perfect_kernel_batch78s::{equations_sty_eqnarray_numbers_as_latex, equations_sty_yesnumber_in_eqnarray_star}`.
+  DefPrimitive!("\\lx@equations@unnumbered", {
+    set_eqnarray_default_eqnsw(false);
+  });
+  DefPrimitive!("\\lx@equations@yesnumber", {
+    set_eqnarray_eqnsw(true);
+  });
+  Let!("\\lx@equations@eqnarray", "\\eqnarray");
+  DefMacro!("\\eqnarray", "\\if@defeqnsw\\else\\lx@equations@unnumbered\\fi\\lx@equations@eqnarray");
+  // equations.sty:140-152 `\yesnumber[<number>]` prints `(<number>)` and leaves the counter alone.
+  DefMacro!("\\yesnumber", "\\@ifnextchar[{\\@yesnumber}{\\global\\@eqnswtrue\\lx@equations@yesnumber}");
+  DefMacro!("\\@yesnumber[]",
+    "\\global\\@eqnswtrue\\lx@equations@yesnumber\\lx@equation@settag{\\def\\theequation{#1}\\lx@make@tags{equation}}");
   RawTeX!(
     r"\newif\if@defeqnsw \@defeqnswtrue
-
-% John Hobby's version to fix up the spacing.
-\def\eqnarray{\stepcounter{equation}\let\@currentlabel=\theequation
-\if@defeqnsw\global\@eqnswtrue\else\global\@eqnswfalse\fi
-\global\@eqnswtrue
-\tabskip\@centering\let\\=\@eqncr
-$$\halign to \displaywidth\bgroup\hfil\global\@eqcnt\z@
-  $\displaystyle\tabskip\z@{##}$&\global\@eqcnt\@ne
-  \hfil$\displaystyle{{}##{}}$\hfil
-  &\global\@eqcnt\tw@ $\displaystyle{##}$\hfil
-  \tabskip\@centering&\llap{##}\tabskip\z@\cr}
-
-\def\yesnumber{\global\@eqnswtrue}
+\@namedef{eqnarray*}{\@defeqnswfalse\eqnarray}
+\@namedef{endeqnarray*}{\endeqnarray}
 
 \def\@@eqncr{\let\@tempa\relax\global\advance\@eqcnt by \@ne
     \ifcase\@eqcnt \def\@tempa{& & & &}\or \def\@tempa{& & &}\or

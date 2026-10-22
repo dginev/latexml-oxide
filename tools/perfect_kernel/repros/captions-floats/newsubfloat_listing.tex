@@ -1,0 +1,22 @@
+% witness: 2411.16612 (`\newsubfloat[captionskip=10pt]{listing}` for minted's listing: sub-listings 1a, 1b)
+% oracle:  pdflatex 0 errors; "Listing 1: Both (a) and (b)."; "See 1, 1a, 1b."
+% engines: rust (int57a) = 0 errors, the sub-floats lost (`\newsubfloat` a no-op stub, no `\lx@subfloat@listing`);
+%          perl subfig.sty.ltxml:30-62 makes them (Rust-only gap)
+% expect:  0 errors; two ltx:float sub-floats in the listing, refnums 1a and 1b
+% mechanism: subfig.sty:239-263 `\newsubfloat{<type>}`; subfig_sty.rs `define_subfloat`.
+% status:  GREEN (78s)
+\documentclass{article}
+\usepackage{float}
+\usepackage[caption=false]{subfig}
+\newfloat{listing}{tbp}{lol}
+\floatname{listing}{Listing}
+\newsubfloat{listing}
+\begin{document}
+\begin{figure}X\caption{F.}\end{figure}
+\begin{listing}
+\subfloat[One.]{\label{a}A}
+\subfloat[Two.]{\label{b}B}
+\caption{Both \protect\subref{a} and \protect\subref{b}.}\label{l}
+\end{listing}
+See \ref{l}, \ref{a}, \ref{b}.
+\end{document}

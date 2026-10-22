@@ -1002,11 +1002,13 @@ LoadDefinitions!({
   DefMacro!("\\lx@format@caption@@{}{}", sub[(ty, text)] { caption_format_tokens(ty, text) });
   DefMacro!("\\lx@format@scaption@@{}{}", sub[(ty, text)] { caption_star_format_tokens(ty, text) });
   // caption3.sty:1468-1472 `\caption@fnum`: the label format's name argument is `\@nameuse{<type>name}`, empty when
-  // the type has none.
+  // the type has none; for a float.sty type without one, its `\floatname` (caption.sty:878-881
+  // `\caption@float@setname`: `\<type>name` is `\fname@<type>`), so minted's float.sty `listing` under LIPIcs's boxed
+  // label format reads "Listing 4" (2602.12973; guard `perfect_kernel_batch78s::caption_label_format_names_a_float_sty_type`).
   // The title takes the caption's text as caption3 does, `\long` (`\newcommand\caption@@make[2]`, caption3.sty:1488): a
   // caption with a paragraph break (1907.05060's elife figures) erred "Paragraph ended before \format@title@figure".
   // Guard `perfect_kernel_batch73a::caption_package_title_takes_a_paragraph_break`.
-  RawTeX!(r"\def\lx@caption@fnum#1#2{\expandafter\def\csname fnum@#2\endcsname{\csname caption@labelformat@#1\endcsname{\ifcsname #2name\endcsname\csname #2name\endcsname\fi}{\lx@the@@{#2}}}}
+  RawTeX!(r"\def\lx@caption@fnum#1#2{\expandafter\def\csname fnum@#2\endcsname{\csname caption@labelformat@#1\endcsname{\ifcsname #2name\endcsname\csname #2name\endcsname\else\ifcsname fname@#2\endcsname\csname fname@#2\endcsname\fi\fi}{\lx@the@@{#2}}}}
 \def\lx@caption@settitle#1#2{\expandafter\long\expandafter\def\csname format@title@#1\endcsname##1{\lx@tag[][#2]{\lx@fnum@@{#1}}##1}}
 \def\lx@caption@addfont#1#2{\@ifundefined{#1}{\@namedef{#1}{}}{}\expandafter\l@addto@macro\csname #1\endcsname{#2}}");
 

@@ -2664,6 +2664,35 @@ pub(crate) fn eqnarray_eqncr_numbering() -> bool {
 /// latex.ltx's `\if@eqnsw` ([`eqnarray_eqncr_numbering`]), global as there.
 pub(crate) const EQNARRAY_EQNSW: &str = "EQNARRAY_EQNSW";
 
+/// The value `\if@eqnsw` takes where an eqnarray begins and after each `\@@eqncr`: true in latex.ltx (:15754, :15795
+/// `\global\@eqnswtrue`); equations.sty's `\if@defeqnsw`, false in its eqnarray* (contrib equations_sty.rs;
+/// hep-ph9904268). Local; absent is true.
+const EQNARRAY_DEFAULT_EQNSW: &str = "EQNARRAY_DEFAULT_EQNSW";
+
+/// The `\if@eqnsw` an eqnarray row starts with ([`EQNARRAY_DEFAULT_EQNSW`]).
+pub(crate) fn eqnarray_default_eqnsw() -> bool {
+  !matches!(
+    lookup_value(EQNARRAY_DEFAULT_EQNSW),
+    Some(Stored::Bool(false))
+  )
+}
+
+/// Sets, locally, the `\if@eqnsw` the eqnarray rows start with: equations.sty's `\if@defeqnsw` (its eqnarray*'s
+/// `\@defeqnswfalse`, equations.sty:128-160), read where an eqnarray begins. Witness hep-ph9904268.
+pub fn set_eqnarray_default_eqnsw(numbered: bool) {
+  assign_value(
+    EQNARRAY_DEFAULT_EQNSW,
+    Stored::Bool(numbered),
+    Some(Scope::Local),
+  );
+}
+
+/// `\global\@eqnswtrue` from the document (equations.sty's `\yesnumber`): the eqnarray row being read is numbered by
+/// the `\@@eqncr` that ends it (`eqnarray_eqncr_numbering`). Witness hep-ph9904268.
+pub fn set_eqnarray_eqnsw(numbered: bool) {
+  assign_value(EQNARRAY_EQNSW, Stored::Bool(numbered), Some(Scope::Global));
+}
+
 /// Whether the `\@@eqncr` that ended the current eqnarray row printed its number ([`eqnarray_eqncr_numbering`]): set
 /// by `\lx@eqnarray@number@check`, taken by `\eqnarray@row@after@`; false or absent for a row ended by a raw `\cr`.
 pub(crate) const EQNARRAY_EQNNUM: &str = "EQNARRAY_EQNNUM";
@@ -2872,6 +2901,12 @@ pub fn clear_theorem_within_display() {
     assign_mapping::<String>(THEOREM_WITHIN_DISPLAY, &to_string(within), None);
   }
 }
+
+/// Set by a package whose unnumbered theorems still step their counter: ntheorem.sty:824-839 `\@othm` and :870-880
+/// `\@thm` run `\refstepcounter{#2}` for every theorem, its `\newtheorem*` (a `nonumber` style, :720-727) only printing
+/// no number, so `\newtheorem*{rmk}[thm]{Remark}` takes a number from `thm` (1606.01585: five references one behind).
+/// Read where a theorem is declared ([`define_new_theorem`]). Global.
+pub const THEOREM_UNNUMBERED_STEPS: &str = "lx@theorem@unnumbered@steps";
 
 pub fn define_new_theorem(
   flag: Option<Tokens>,
@@ -3237,6 +3272,7 @@ pub fn define_new_theorem(
   let thmset_for_tags = thmset_str;
   let counter_for_tags = counter;
   let is_starred_for_props = is_starred;
+  let unnumbered_steps = is_starred && lookup_bool(THEOREM_UNNUMBERED_STEPS);
   let has_type_for_props = has_type;
 
   let mut options = ConstructorOptions {
@@ -3408,6 +3444,9 @@ pub fn define_new_theorem(
           toks.extend([T_END!(), T_END!()]);
           props.insert("tags", digest(Tokens::new(toks))?.into());
         } else if is_starred_for_props {
+          if unnumbered_steps {
+            step_counter(&counter_for_tags, false)?;
+          }
           let ctr_props = ref_step_id(&counter_for_tags)?;
           for (k, v) in ctr_props.iter() {
             props.insert_sym(*k, v.clone());

@@ -1,5 +1,6 @@
 use latexml_core::document::Document;
 
+use super::wrapfig_sty;
 use crate::prelude::*;
 
 LoadDefinitions!({
@@ -84,6 +85,15 @@ LoadDefinitions!({
       mouth::tokenize_internal(TeXString::assembled(format_body)), None)?;
 
     define_float_environment(&ftype, &auxext, &within)?;
+    // wrapfig.sty:265-301, loaded after float.sty: the type's `wrap<type>` environment is `\wrapfloat{<type>}`
+    // (wrapfig_sty.rs `{wrapfloat}`; 2411.16612). wrapfig also hooks `\float@restyle` (:286-298), so a `\restylefloat`
+    // after it makes `wrap<type>` for a type declared before; `\restylefloat` is a no-op here (above), so that is not
+    // made (docs/SYNC_STATUS.md).
+    if lookup_bool(wrapfig_sty::WRAPFIG_NEWFLOAT_WRAP) {
+      let begin = mouth::tokenize_internal(TeXString::assembled(s!("\\begin{{wrapfloat}}{{{ftype}}}")));
+      def_macro(T_CS!(s!("\\wrap{ftype}")), None, begin, None)?;
+      def_macro(T_CS!(s!("\\endwrap{ftype}")), None, TokenizeInternal!(r"\end{wrapfloat}"), None)?;
+    }
   });
 });
 

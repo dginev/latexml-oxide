@@ -96,8 +96,9 @@ pub fn shipped_copy_text(ext: &str) -> Result<Option<String>> {
 }
 
 /// The text of the file `file` of type `ext` in the paper's source (not a binding), its bytes read as Latin-1
-/// characters, or the virtual file a `{filecontents}` wrote.
-fn shipped_file_text(file: &str, ext: &str) -> Option<String> {
+/// characters, or the virtual file a `{filecontents}` wrote. A binding that serves every version of a generic file
+/// reads the copy TeX would load where the versions conflict (epsf's size reset, `epsf_sty`).
+pub fn shipped_file_text(file: &str, ext: &str) -> Option<String> {
   find_file(
     file,
     Some(FindFileOptions {

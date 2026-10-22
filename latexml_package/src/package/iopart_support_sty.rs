@@ -168,7 +168,11 @@ LoadDefinitions!({
     "New. J. Phys.\\ ",
   ];
   DefMacro!("\\journal", "Institute of Physics Publishing");
-  DefMacro!("\\submitted", "\\submitto{\\journal}");
+  // iopart.cls:277-278 `\submitted` prints "Submitted to: {\it \journal}" and leaves `\journal` alone: the journal's
+  // pubnote is `\journal`'s text. Perl's `\submitto{\journal}` (iopart_support.sty.ltxml:98) runs `\def\journal{\journal}`,
+  // and the pubnote's `\journal` expands into itself (hep-th9910179: "Error:recursion:\journal"; KNOWN_PERL_ERRORS #1121).
+  // Guard `perfect_kernel_batch78s::iopart_submitted_names_the_journal`.
+  DefMacro!("\\submitted", "\\lx@add@pubnote[role=journal]{\\journal}");
   DefMacro!("\\submitto{}", "\\def\\journal{#1}\\lx@add@pubnote[role=journal]{#1}");
 
   // Perl L102-104: \jl{n} — sets \journal to journals[n]

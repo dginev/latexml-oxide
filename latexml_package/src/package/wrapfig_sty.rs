@@ -9,25 +9,13 @@ LoadDefinitions!({
     "<ltx:figure xml:id='#id' inlist='#inlist' float='#float' ?#width(width='#width')>#tags#body</ltx:figure>",
     mode => "internal_vertical",
     after_digest_begin => sub[whatsit] {
-      let dir = whatsit.get_arg(2).map(|a| a.to_string()).unwrap_or_default();
-      // Perl wrapfig.sty.ltxml L29/L43: `eq 'r'` / `eq 'l'` — exact
-      // case-sensitive match. Prior Rust also matched `R`/`L` (uppercase);
-      // drop per feedback_case_folding_parity.
-      let float_val = match dir.trim() {
-        "r" => "right",
-        "l" => "left",
-        _ => "",
-      };
-      if !float_val.is_empty() {
-        whatsit.set_property("float", Stored::String(pin(float_val)));
-      }
       // INTENTIONAL DIVERGENCE from Perl wrapfig.sty.ltxml (which captures the
       // mandatory {Dimension} wrap width as arg 4 but then DISCARDS it): emit it
       // as the figure @width (→ base-styling `width:`) so the float — image AND
       // caption — is capped to the declared wrap width instead of expanding to
       // fit a single-line caption (which leaves a small figure in an enormous
       // box). Mirrors the {minipage} width idiom. See OXIDIZED_DESIGN.
-      set_wrap_width(whatsit);
+      set_wrap_float(whatsit, 2, 4);
     },
     // The begin code opens a TeX group of its own: wrapfig.sty:58 `\vtop\bgroup`.
     tex_group => { TexGroup::Box },
@@ -39,21 +27,9 @@ LoadDefinitions!({
     "<ltx:table xml:id='#id' inlist='#inlist' float='#float' ?#width(width='#width')>#tags#body</ltx:table>",
     mode => "internal_vertical",
     after_digest_begin => sub[whatsit] {
-      let dir = whatsit.get_arg(2).map(|a| a.to_string()).unwrap_or_default();
-      // Perl wrapfig.sty.ltxml L29/L43: `eq 'r'` / `eq 'l'` — exact
-      // case-sensitive match. Prior Rust also matched `R`/`L` (uppercase);
-      // drop per feedback_case_folding_parity.
-      let float_val = match dir.trim() {
-        "r" => "right",
-        "l" => "left",
-        _ => "",
-      };
-      if !float_val.is_empty() {
-        whatsit.set_property("float", Stored::String(pin(float_val)));
-      }
       // Same intentional divergence as {wrapfigure}: cap the float to the
       // declared wrap width (Perl discards it). See OXIDIZED_DESIGN.
-      set_wrap_width(whatsit);
+      set_wrap_float(whatsit, 2, 4);
     },
     // The begin code opens a TeX group of its own: wrapfig.sty:58 `\vtop\bgroup`.
     tex_group => { TexGroup::Box },
@@ -61,11 +37,67 @@ LoadDefinitions!({
     after_digest => sub[whatsit] { after_float(whatsit); Ok(Vec::new()) }
   );
 
+  // wrapfig.sty:40 `\def\wrapfloat#1{\def\@captype{#1}…}`, the generic form `wrapfigure` and `wraptable` (:42-43) are
+  // made of: `\begin{wrapfloat}{<type>}{r}{<width>}` is the wrapped float of that type, an `ltx:figure` or
+  // `ltx:table` for those two, else the float package's `ltx:float` (float_sty.rs, `ltx_float_<type>`). Perl's
+  // wrapfig.sty.ltxml:21-48 defines only the two (2411.16612's `{wrapfloat}{listing}`: "undefined {wrapfloat}",
+  // "\caption outside any known float", three listing references wrong; KNOWN_PERL_ERRORS #1118). Guard
+  // `perfect_kernel_batch78s::wrapfloat_of_a_newfloat_type`.
+  DefEnvironment!("{wrapfloat}{} [Number] Position [Dimension] {Dimension}",
+    "?#isfigure(<ltx:figure xml:id='#id' inlist='#inlist' float='#float' ?#width(width='#width')>#tags#body</ltx:figure>)\
+     (?#istable(<ltx:table xml:id='#id' inlist='#inlist' float='#float' ?#width(width='#width')>#tags#body</ltx:table>)\
+     (<ltx:float xml:id='#id' inlist='#inlist' float='#float' class='#class' ?#width(width='#width')>#tags#body</ltx:float>))",
+    mode => "internal_vertical",
+    // The begin code opens a TeX group of its own: wrapfig.sty:58 `\vtop\bgroup`.
+    tex_group => { TexGroup::Box },
+    after_digest_begin => sub[whatsit] {
+      let ftype = whatsit.get_arg(1).map(|a| a.to_string().trim().to_string()).unwrap_or_default();
+      match ftype.as_str() {
+        "figure" => { whatsit.set_property("isfigure", Stored::Bool(true)); },
+        "table" => { whatsit.set_property("istable", Stored::Bool(true)); },
+        _ => { whatsit.set_property("class", Stored::from(s!("ltx_float_{ftype}"))); },
+      }
+      // The type's float begins here, once its argument is read (as wrapstuff_sty.rs `{wrapstuff}`).
+      before_float(&ftype, None)?;
+      set_wrap_float(whatsit, 3, 5);
+    },
+    after_digest => sub[whatsit] { after_float(whatsit); Ok(Vec::new()) }
+  );
+  // wrapfig.sty:265-301: loaded after float.sty, wrapfig extends `\float@restyle` (`\restylefloat` of the older
+  // float.sty), which `\newfloat` runs, so that each float type declared after it has its `wrap<type>` environment,
+  // `\wrapfloat{<type>}` (float_sty.rs `\lx@float@newfloat`).
+  if is_defined("\\restylefloat") {
+    AssignValue!(WRAPFIG_NEWFLOAT_WRAP => true, Some(Scope::Global));
+  }
+
   DefMacro!("\\WFclear", "\\par");
   DefRegister!("\\wrapoverhang", Dimension!("0pt"));
 });
 
-// Emit the wrapfig/wraptable mandatory {Dimension} (arg 4 = the declared wrap
+/// Set by wrapfig loaded after float.sty: `\newfloat` gives its type a `wrap<type>` environment (wrapfig.sty:265-301).
+pub(crate) const WRAPFIG_NEWFLOAT_WRAP: &str = "wrapfig_newfloat_wrap";
+
+/// The placement (argument `dir_arg`, `r` or `l`) and the wrap width (argument `width_arg`) of a wrapped float.
+fn set_wrap_float(whatsit: &mut Whatsit, dir_arg: usize, width_arg: usize) {
+  let dir = whatsit
+    .get_arg(dir_arg)
+    .map(|a| a.to_string())
+    .unwrap_or_default();
+  // Perl wrapfig.sty.ltxml L29/L43: `eq 'r'` / `eq 'l'` — exact
+  // case-sensitive match. Prior Rust also matched `R`/`L` (uppercase);
+  // drop per feedback_case_folding_parity.
+  let float_val = match dir.trim() {
+    "r" => "right",
+    "l" => "left",
+    _ => "",
+  };
+  if !float_val.is_empty() {
+    whatsit.set_property("float", Stored::String(pin(float_val)));
+  }
+  set_wrap_width(whatsit, width_arg);
+}
+
+// Emit the wrapfig/wraptable mandatory {Dimension} (the declared wrap
 // width) as the float's `width` property so it renders as a CSS `width:`,
 // capping the float (image + caption) to that width. Perl's wrapfig binding
 // discards this arg; applying it is an intentional ar5iv-rendering divergence.
@@ -79,8 +111,8 @@ LoadDefinitions!({
 // column instead of ~48%). A percentage preserves the proportion and scales.
 // This also makes wrapfig consistent with the floatfig/floatflt sibling
 // packages, which already emit `100 * dimen / \textwidth . '%'` (Perl toPercent).
-fn set_wrap_width(whatsit: &mut Whatsit) {
-  let Some(width_arg) = whatsit.get_arg(4) else {
+fn set_wrap_width(whatsit: &mut Whatsit, width_arg: usize) {
+  let Some(width_arg) = whatsit.get_arg(width_arg) else {
     return;
   };
   let v = width_arg.value_of();

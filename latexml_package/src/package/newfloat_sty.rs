@@ -90,6 +90,17 @@ LoadDefinitions!({
       T_CS!(ftf_cs), None,
       mouth::tokenize_internal("\\format@title@font@float"), None,
     )?;
+    // newfloat.sty:59-125 makes the type a kernel float (`\@float`), whose `\caption` is the kernel's `\@makecaption`
+    // "Listing 1: text" (latex.ltx `\sbox\@tempboxa{#1: #2}`): the title format of the kernel's figure and table
+    // (`\format@title@figure`, sect09.rs), as float.sty's plain style (float_sty.rs). Perl's newfloat.sty.ltxml defines
+    // none, so the tag closed with a space, "Listing 1 text", beside "Table 1: text" in the same paper (2411.16612;
+    // KNOWN_PERL_ERRORS #1124). Guard `perfect_kernel_batch78s::newfloat_caption_tag_closes_with_a_colon`.
+    let format_cs = T_CS!(s!("\\format@title@{ftype}"));
+    let format_params = parse_parameters("{}", &format_cs, true)?;
+    def_macro(
+      format_cs, format_params,
+      mouth::tokenize_internal(TeXString::assembled(s!("\\lx@tag[][: ]{{\\lx@fnum@@{{{ftype}}}}}#1"))), None,
+    )?;
   });
 
   def_macro_noop("\\ForEachFloatingEnvironment{}")?;

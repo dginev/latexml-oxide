@@ -1,0 +1,14 @@
+% witness: 0704.1039 (101 Errors -> Fatal:TooManyErrors; the 28-entry bibliography and the last section lost)
+% oracle:  pdflatex 0 errors
+% engines: rust (int57a) = 8 "Didn't expect a \fi" + 3 \else, 15 Errors; perl = 24 Errors
+% expect:  0 errors; one XMApp with an XMTok role=FRACOP mathstyle=text thickness=0.0pt in the matrix entry
+% mechanism: amsmath.sty:244 `\DeclareRobustCommand{\genfrac}`; amsmath_sty.rs (Perl amsmath.sty.ltxml:1032) was a
+%   plain macro, whose `\if.#1.\else...\fi` xy's token-by-token entry scanner met bare. KPE #1115.
+% status:  GREEN (78s)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage[matrix,arrow]{xy}
+\begin{document}
+$\xymatrix{ \genfrac{}{}{0pt}{}{a}{b} }$
+After.
+\end{document}
