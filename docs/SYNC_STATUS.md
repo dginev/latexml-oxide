@@ -5307,6 +5307,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   names the enclosing unit (pdflatex the table: the binding steps the counter at the table, not at `\tablecaption`,
   2103.17127; int52a named the previous table); `\left\{ … \right.` around a text tabular stays unparsed math with a
   Warning (math parked); an unused entry's unparsable formula still warns from the math parse (2104.09252).
+  **Integration (int54, 78p squashed 31d4f6f612 onto int53; binary int54a; 78j moves to int55 after its r4):** review rev78p
+  SHIP — the label-scoping rule never turned a `\ref` that matched pdflatex into one that does not (≈103 synthetic labels, 78
+  moved labels from real papers checked against pdflatex `.aux`). Folded in by the main session: `etb_patch_text` writes a space
+  token as one space whatever its source text (a line end kept `\n`, so a `\patchcmd` search across a source line break never
+  matched; probe int53a FAIL → int54a OK, as pdflatex), and OD #856 no longer claims `\subfloat{…}\label` names the figure when the
+  caption follows the subfloats (1504.02206). Open from the review: cleveref's `\label[type]` still places its type with
+  `float_to_label_for` (switch to `float_to_label_scoped` when 78j lands); supertabular steps `table` at the table, not at
+  `\tablecaption` (2103.17127, wrong before and after); a guessed header row now depends on the drawn tabularray borders (2206.04438
+  7 → 3 tables). Gates int54a: nextest 6797/6797 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int53a empty. A/B
+  int53a vs int54a (1,244 of 1,246: the `pop78p_*` populations + 300 random census controls, seed 54): E 7,222 → 7,044, F 71 = 71,
+  0 papers worse, 60 better, no word loss; 7 of 290 random controls changed, all label moves pdflatex makes the same way (1311.4795:
+  lastpage's end-document label names the appendix, not the closed figure before it). Binding nets (int54a) 136/136, 0 worse than int53a.
 - **78i** (quality batch 10, the sel78i selection study's five non-frontmatter items; guards `perfect_kernel_batch78i::*`,
   9; OD #823-825, KPE #1048-1052; quality ledger rows #155 BIBLATEX-ONLY-FIELDS and #37 AMSTEX-LOCALSTY closed). (1)
   biblatex's own `.bib` fields (`journaltitle`, `location`, `urldate`, `addendum`, `maintitle`, the event fields, …: 47
