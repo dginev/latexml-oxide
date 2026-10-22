@@ -32,12 +32,14 @@ When two rules below pull apart, the higher priority wins.
 - **Display toggles are honored as the PDF shows them**: blind review, anonymous, final/draft options (2026-10).
 - **Metadata the class only writes to PDF metadata** (e.g. `\icmlkeywords` → pdfkeywords) becomes RDFa, not a displayed
   block (2026-10-09).
-- **Float panels: capture the grid, not the widths** (2026-10-22, at 78t). A group of sub-figures/sub-floats is a
+- **Float panels: the grid first, and the LaTeX sizes kept** (2026-10-22, at 78t). A group of sub-figures/sub-floats is a
   logical grid: rows × columns, as many panels per row as the PDF sets, and for advanced grids the cells a panel spans.
-  That structure is the fidelity target. Concrete panel widths are not, because the browser's width varies with the
-  theme (ar5iv uses 52rem unconditionally). The exact page width of one class is not the information to model either.
-  Derive the rows from what the source states (explicit breaks; widths as fractions of the line width) rather than by
-  re-running TeX's line breaking against one page geometry.
+  Capture that structure; do not re-run TeX's line breaking against one page geometry (the browser width varies with
+  the theme — ar5iv uses 52rem unconditionally — and one class's exact page width is not the information to model).
+  Derive the rows from what the source states (explicit breaks; widths as fractions of the line width). The grid is not
+  the whole story: HTML needs well-sized images, so keep the widths the LaTeX side states (as for the PDF) as the
+  starting point for sizing. ar5iv-css sizes panels by the grid and by the image's shape (landscape, portrait, square);
+  the final sizing design is open (design study task #360).
 
 ## 3. Numbering, labels and references
 
