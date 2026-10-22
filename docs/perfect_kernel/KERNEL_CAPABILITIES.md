@@ -57,7 +57,7 @@ dedicated sessions once a large goal completes, not inside the batch that found 
 | K20 | Gullet expansion fidelity: four tex.web algorithms the gullet deviates from (column ends by command code §342/§789, `\left`/`\middle`/`\right` as primitives with `scan_delimiter` §1160/§1188-1192, §395 extra `}` in a delimited argument, peeking macros as one unexpandable step §380/§440-445/§506/§785) | C5 (study 2026-10-11) | ~400-700 arXiv papers: X1 62 IfLimit Fatals in `\xymatrix`, redefined `\span` ~127, V1b cell-head `_` ~61, part of Mouth:EoF 338; 8 REDs; queued rows 64n/64o/64v; OD #500's expansion-only residual | 2 (after P0) | OPEN, ordered G4 → G2 → G3 → G1 (user 2026-10-11) |
 | K21 | Environments as TeX does them: `Streamed` (group + element opened/closed) vs `Captured` (`#body` box) DefEnvironments, no default mode, the XML element stack independent of the save stack | C2; extends K9, K2 | M1 residual 82/150 (64y), `$$` in 64 mode-less `#body` environments (~1,700 fixed by 64ra), `\endlx@list` 839, ~5k first errors, 15 REDs, HF6 | 3 (behind P0) | OPEN; HIGH risk, staged |
 | K22 | Binding provenance and ownership: a FileIdentity per class/package load, an owned set per binding over a raw-loaded real file, the shipped-copy delta, a corpus-copy conformance audit | C1; generalizes K1 step 3 and K13 stage 3 | `undefined:` 63% of run-336 first errors (227 clusters of ≥100 papers ≈54k tasks), binding surplus over the paper (OSA abbreviations, PoS/JHEP macros, EPL `{widetext}`), 31 renamed JHEP3 copies, ~15 REDs | read-only audit in parallel with K20 | step 2 census DONE 2026-10-11 (83.6% of the not-in-TL bound families' papers ship the file); FileIdentity + owned-set overlay OPEN |
-| K23 | Frontmatter author-block event model: a lexer of author blocks into events (name, mark, separator, affiliation, contact, note, layout, group), per-binding association policy, one resolver, one emission | C4 (beyond Perl) | 49 REDs, HF2 residual 16, A2 rows, ~24 KPE / ~15 OD frontmatter entries, 20+ batches and 30+ NO-SHIP rounds | after K24's frontmatter extractor | OPEN — shadow mode first (user: needs very careful testing); step 1's observer core landed as FM S2a.1 (OD #837, `LATEXML_FM_SHADOW=1`), resolver S2a.2 next |
+| K23 | Frontmatter author-block event model: a lexer of author blocks into events (name, mark, separator, affiliation, contact, note, layout, group), per-binding association policy, one resolver, one emission | C4 (beyond Perl) | 49 REDs, HF2 residual 16, A2 rows, ~24 KPE / ~15 OD frontmatter entries, 20+ batches and 30+ NO-SHIP rounds | after K24's frontmatter extractor | OPEN — shadow mode first (user: needs very careful testing); step 1's observer core landed as FM S2a.1 (OD #837, `LATEXML_FM_SHADOW=1`); the resolver, policy table and `ab_audit fmshadow` comparator as FM S2a.2 r1-r3 (shadow only; the class guard not met yet — closest families revtex and ams, SYNC "FM S2a.2") |
 | K24 | One audited A/B comparator: stamped revisions or refuse, per-qname element counts, attribute text, canonical XML diff with mapped ids, frontmatter tuples; entry numbers allocated at integration | P0; extends K17 to arXiv; seed of the A4 audit | ≥7 missed or near-missed regressions in one week (64zc r1, 64x r1/r4, 63w4, 64k5, 64u EPL, 64b), 122 ad-hoc compare scripts, 3 renumberings | 1 | LANDED (p0 `1e47551e6c`, 2026-10-11): `ab_audit run/compare/audit` + `tools/perfect_kernel/next_entry_numbers.sh` |
 
 ## K1 — Definition provenance and raw-load-then-overlay bindings
@@ -645,6 +645,23 @@ held: the `&` constructor errs only when built), progress notes silenced in the 
 longer doubled the log's `(Processing content …` note), a block deferred for want of a journal says so. Not yet: the
 resolver and the comparator (S2a.2), any output change (S2b on). Guards `perfect_kernel_batchfms2a1::*`; SYNC_STATUS
 "FM S2a.1".
+
+**As landed (FM S2a.2, fms2a2; OD #837 "S2a.2").** Layers B and C in shadow mode: `observer/policy.rs` (the policy
+table keyed on (the binding owning `\author`, the hook), each entry citing what it reproduces) and `observer/resolver.rs`
+(rules 1-9 of the design note, each association with its rule), whose tuples the dump carries as `resolved`; the
+comparator `ab_audit fmshadow ROOT` (per-family table with the gate number, a row per classified/unclassified
+disagreement, `--re-resolve` to resolve a dump's events again offline). The class guard is not met: the census numbers
+and the PDF checks are in SYNC_STATUS "FM S2a.2". Guards `perfect_kernel_batchfms2a2::*`. r2 (review revfms2a2, three
+quarters of r1's unclassified share the resolver's own defects): the resolver fixed by defect class (whole note texts,
+whole fuzzy labels, `author:N`, Perl's prefix fallback, legends by their leading Mark, names lines by evidence, marks
+mid-line and trailing, the API intake, contact roles, authblk's `\AB@thenote`, today's joined lines and contact grid,
+a replacing `\author`), the policy key's class fallback (report/book title-page marks), and the comparator made honest
+(the block compared, joined items only, classified = an adopted ruling's change or a PDF-confirmed XML-wrong class
+listed by name; elimination counted as today's, not a change). r3 (r2's classified sample 69 % right; the revtex4_support
+and ams_support unclassified papers read against their PDFs): marked entries of one call parted by their marks, glued
+labels parted by the marks shown, fuzzy labels by surname and with their macros written out, e-mails by evidence (a
+note's by spelling, author-order lists for every class), the ORCID links, `\cite` marks and environment arguments of the
+lexer, a sole author's orphans, title notes, and six more PDF-confirmed XML-wrong classes (OD #837 "S2a.2 r3").
 
 ## K24 — One audited A/B comparator
 

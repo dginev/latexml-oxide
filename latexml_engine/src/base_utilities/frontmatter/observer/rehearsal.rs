@@ -15,7 +15,7 @@ use latexml_core::{
   token::FieldLedgerScope,
 };
 
-use super::{ledger::SkipReason, *};
+use super::{ledger::SkipReason, policy::TitleMarks, *};
 
 thread_local! {
   static REHEARSING: Cell<bool> = const { Cell::new(false) };
@@ -59,8 +59,38 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // counter's next value (`\stepcounter\@mpfn`): its `printed` property is that print, made with the counter set in a
   // group of its own, to <n> or to its value at the rehearsal's start plus the steps the block made up to it, so the
   // rehearsal steps nothing (the label is what the PDF prints when the counter at the flush is the one at
-  // `\maketitle`). A constructor, as the command it stands for: its box covers its optional argument's positions.
-  DefConstructor!("\\lx@fm@obs@footnotemark []", "", properties => sub[args] {
+  // `\maketitle`). A constructor, as the command it stands for: its box covers its optional argument's positions. A
+  // given `[<n>]` is read with `\c@footnote` at the rehearsal's start plus the steps the block made before it (local to
+  // the mark), as LaTeX reads it after the title's notes stepped the counter: `\footnotemark[\arabic{footnote}]`
+  // prints the mark of the last `\thanks` (2201.11183, 2111.13260; review rev78o2 finding 3), not of the unstepped
+  // counter.
+  DefMacro!("\\lx@fm@obs@footnotemark []", sub[(number)] {
+    // (the constructor token carries the field position of the `\footnotemark` it stands for, so the mark's box covers
+    // it as the command's own would)
+    let prov = get_current_token().map_or(0, |t| t.prov);
+    let mark = Token { prov, ..T_CS!("\\lx@fm@obs@fnmark") };
+    let Some(number) = number else {
+      return Ok(Tokens::new(vec![mark]));
+    };
+    let mut out = Vec::new();
+    let counted = FOOTNOTE_BASE_DEFINED.with(Cell::get);
+    if counted {
+      let value = FOOTNOTE_BASE
+        .with(Cell::get)
+        .saturating_add(FOOTNOTE_STEPS.with(Cell::get));
+      out.extend([T_CS!("\\begingroup"), T_CS!("\\c@footnote"), T_OTHER!("=")]);
+      out.extend(Explode!(value));
+      out.push(T_CS!("\\relax"));
+    }
+    out.extend([mark, T_OTHER!("["), T_BEGIN!()]);
+    out.extend(number.unlist());
+    out.extend([T_END!(), T_OTHER!("]")]);
+    if counted {
+      out.push(T_CS!("\\endgroup"));
+    }
+    Ok(Tokens::new(out))
+  });
+  DefConstructor!("\\lx@fm@obs@fnmark []", "", properties => sub[args] {
     let given = args.first().and_then(|a| a.as_ref()).map(|number| {
       let mut text = String::new();
       ink_text(number, &mut text);
@@ -97,6 +127,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // unless a binding declares its title's own (`TITLE_FOOTNOTE_HOOK`)
   DefMacro!("\\lx@fm@obs@thefootnote", "\\@fnsymbol\\c@footnote");
   DefConstructor!("\\lx@fm@obs@mark {}", "");
+  // a binding's request of an annotation, printing nothing (elsarticle's `\corref{cor1}`, `\fnref{fn1}`:
+  // `\lx@request@frontmatter@annotation[cor]{cor1}`, elsart_support_core_sty.rs:58-60): a mark labelled
+  // `<prefix>:<label>` (S2a.2)
+  DefConstructor!("\\lx@fm@obs@request []{}", "");
   DefConstructor!("\\lx@fm@obs@label Semiverbatim", "");
   DefConstructor!("\\lx@fm@obs@email [] Semiverbatim", "");
   DefConstructor!("\\lx@fm@obs@url Semiverbatim", "");
@@ -134,25 +168,28 @@ const ALWAYS_BOUND: &[(&str, &str)] = &[
   // (inside author content `\inst` is the affiliation request, `\lx@author@withinst`)
   ("\\inst", "\\lx@fm@obs@mark"),
   ("\\lx@annotate@frontmatter", "\\lx@fm@obs@annotate"),
+  ("\\lx@request@frontmatter@annotation", "\\lx@fm@obs@request"),
 ];
 
 /// The contact and mark commands the rehearsal binds when the document has them (an undefined one stays undefined: an
-/// error, held, as pdflatex's).
-const BOUND_WHEN_DEFINED: &[(&str, &str)] = &[
-  ("\\email", "\\lx@fm@obs@email"),
-  ("\\emailAdd", "\\lx@fm@obs@email"),
-  ("\\url", "\\lx@fm@obs@url"),
-  ("\\homepage", "\\lx@fm@obs@url"),
-  ("\\href", "\\lx@fm@obs@href"),
-  ("\\orcidlink", "\\lx@fm@obs@orcid"),
-  ("\\orcid", "\\lx@fm@obs@orcid"),
-  ("\\affil", "\\lx@fm@obs@affil"),
-  ("\\affiliation", "\\lx@fm@obs@affil"),
-  ("\\address", "\\lx@fm@obs@affil"),
-  ("\\institute", "\\lx@fm@obs@affil"),
-  ("\\IEEEauthorrefmark", "\\lx@fm@obs@mark"),
+/// error, held, as pdflatex's), and whether the command's own definition must take an argument for it: a contact
+/// command taking none is a switch, not that contact (jmlr2e's `\email`, `\name Ann \email ann@x.org`, a font change
+/// a one-argument binding read as the e-mail "a": 2412.18293, 2305.17297; S2a.2 r2) — but url.sty's `\url` reads its
+/// argument itself, its macro taking none.
+const BOUND_WHEN_DEFINED: &[(&str, &str, bool)] = &[
+  ("\\email", "\\lx@fm@obs@email", true),
+  ("\\emailAdd", "\\lx@fm@obs@email", true),
+  ("\\url", "\\lx@fm@obs@url", false),
+  ("\\homepage", "\\lx@fm@obs@url", false),
+  ("\\href", "\\lx@fm@obs@href", false),
+  ("\\orcidlink", "\\lx@fm@obs@orcid", true),
+  ("\\orcid", "\\lx@fm@obs@orcid", true),
+  ("\\affil", "\\lx@fm@obs@affil", true),
+  ("\\affiliation", "\\lx@fm@obs@affil", true),
+  ("\\address", "\\lx@fm@obs@affil", true),
+  ("\\institute", "\\lx@fm@obs@affil", true),
+  ("\\IEEEauthorrefmark", "\\lx@fm@obs@mark", true),
 ];
-
 /// The hook a binding declares its title's footnote marks with — the kernel's own, `\lx@title@thefootnote`
 /// (`latex_constructs::TITLE_THEFOOTNOTE`), which also marks the notes the title block prints: defined, the
 /// rehearsal's `\thefootnote` is it (what a bare `\footnotemark` in the block prints); undefined, the kernel
@@ -165,23 +202,28 @@ const BOUND_WHEN_DEFINED: &[(&str, &str)] = &[
 const TITLE_FOOTNOTE_HOOK: &str = crate::latex_constructs::TITLE_THEFOOTNOTE;
 
 /// Bind the Layer-B event commands, in the rehearsal's group, and the title's footnote marks: `\thefootnote` the
-/// binding-declared [`TITLE_FOOTNOTE_HOOK`] when there is one, else the kernel `\maketitle`'s `\@fnsymbol` of the
+/// declared [`TITLE_FOOTNOTE_HOOK`] when there is one; else, as the block's policy entry says (`title_marks`), the
+/// class's own `\thefootnote` (report's and book's title page: arabic) or the kernel `\maketitle`'s `\@fnsymbol` of the
 /// counter (when the format has it).
-fn install_event_bindings() -> Result<()> {
+fn install_event_bindings(title_marks: TitleMarks) -> Result<()> {
   for (cs, target) in ALWAYS_BOUND {
     let_i(&T_CS!(*cs), &T_CS!(*target), None);
   }
   if lookup_definition(&T_CS!(TITLE_FOOTNOTE_HOOK))?.is_some() {
     let_i(&T_CS!("\\thefootnote"), &T_CS!(TITLE_FOOTNOTE_HOOK), None);
-  } else if lookup_definition(&T_CS!("\\@fnsymbol"))?.is_some() {
+  } else if title_marks == TitleMarks::Fnsymbol
+    && lookup_definition(&T_CS!("\\@fnsymbol"))?.is_some()
+  {
     let_i(
       &T_CS!("\\thefootnote"),
       &T_CS!("\\lx@fm@obs@thefootnote"),
       None,
     );
   }
-  for (cs, target) in BOUND_WHEN_DEFINED {
-    if lookup_definition(&T_CS!(*cs))?.is_some() {
+  for (cs, target, needs_argument) in BOUND_WHEN_DEFINED {
+    if lookup_definition(&T_CS!(*cs))?
+      .is_some_and(|defn| !needs_argument || defn.get_num_args() > 0)
+    {
       let_i(&T_CS!(*cs), &T_CS!(*target), None);
     }
   }
@@ -209,6 +251,7 @@ pub(in crate::base_utilities) enum Rehearsal<R> {
 /// is the rehearsal's alone, discarded with its diagnostics.
 pub(in crate::base_utilities) fn rehearse<R>(
   tokens: Tokens,
+  title_marks: TitleMarks,
   inspect: impl FnOnce(&Digested) -> R,
 ) -> Result<Rehearsal<R>> {
   // (read before anything is changed: the counter the bare `\footnotemark`s print from)
@@ -256,7 +299,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
   let result = with_origin(DefinitionOrigin::File, || {
     reading_from_mouth(Mouth::default(), || -> Result<Digested> {
       bgroup();
-      install_event_bindings()?;
+      install_event_bindings(title_marks)?;
       begin_mode("text")?;
       let digested = digest(tokens)?;
       end_mode("text")?;

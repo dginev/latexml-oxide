@@ -22,13 +22,7 @@ pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
   let queue = frontmatter_queue_name();
   // (the frontmatter observer's ledger, under its shadow switch only: OXIDIZED_DESIGN_DIVERGENCES #837)
   if fm_shadow_enabled() {
-    record_api_call(
-      tag,
-      &attr
-        .and_then(|kv| kv.get_value("role"))
-        .map(|role| role.to_string())
-        .unwrap_or_default(),
-    );
+    record_api_call(tag, attr, &command);
   }
   note_document_sets_front_matter(
     tag,

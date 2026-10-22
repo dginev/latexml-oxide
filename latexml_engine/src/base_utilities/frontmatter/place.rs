@@ -346,7 +346,7 @@ fn marked_corresponding_author(
 
 /// The content of a queued affiliation's entry inside the wrappers that read its marks (`\lx@affiliation@withinst`,
 /// `\lx@affiliation@withsup`), as written.
-fn queued_affiliation_text(content: &Tokens) -> Tokens {
+pub(in crate::base_utilities) fn queued_affiliation_text(content: &Tokens) -> Tokens {
   let mut inner = content.clone();
   loop {
     let v = inner.unlist_ref();
@@ -366,7 +366,7 @@ fn queued_affiliation_text(content: &Tokens) -> Tokens {
 
 /// The content of the last top-level brace group of `tokens` (a queued frontmatter command's content argument); empty
 /// when there is none.
-fn last_group(tokens: &Tokens) -> Tokens {
+pub(in crate::base_utilities) fn last_group(tokens: &Tokens) -> Tokens {
   let v = tokens.unlist_ref();
   let mut depth = 0usize;
   let mut start = None;

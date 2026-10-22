@@ -3,9 +3,10 @@
 //! switch ([`super::shadow::fm_shadow_enabled`]) and never while the frontmatter is frozen (a replayed class setter, a
 //! speculative title-page run, the observer's own rehearsal: those calls are not the document's).
 
-use std::cell::RefCell;
+use std::{cell::RefCell, rc::Rc};
 
 use latexml_core::{
+  definition::origin::DefinitionOrigin,
   gullet::{InputMark, input_mark, input_unread_since},
   token::{FIELD_PROV_POS_MASK, field_prov},
 };
@@ -90,8 +91,17 @@ pub(in crate::base_utilities) struct AuthorBlock {
   pub index:          usize,
   /// the macro called (`\lx@add@authors@adaptive` for the kernel `\author`, `\lx@add@authors@append`, …)
   pub hook:           &'static str,
-  /// the binding policy the call runs under: `kernel` for the kernel `\author`, else the hook's own family
+  /// the policy entry the call runs under (`policy::policy_for` of `binding` and `hook`: `kernel` for every family
+  /// without one)
   pub policy:         String,
+  /// the binding the policy is keyed on ([`policy_binding`]): the `\author` owner, or the document class's binding
+  /// when that is the kernel's — with `hook`, the key of the policy table (`policy::policy_for`; S2a.2, notes decision 2)
+  pub binding:        String,
+  /// the binding owning the `\author` meaning at the call ([`author_binding`]): a compiled binding's file name
+  /// (`revtex4_support.sty`), else `kernel`, `document`, `raw` or `fallback` by its definition origin
+  pub owner:          String,
+  /// the value of the policy's state counter at the call (`policy::Policy::state_counter`), when it has one defined
+  pub counter:        Option<i64>,
   /// whether the call replaces the authors before it (`\lx@clear@frontmatter{ltx:creator}`)
   pub replace:        bool,
   /// whether the IJCAI sectioned split applies
@@ -130,7 +140,7 @@ pub(in crate::base_utilities) struct TitleStamp {
 
 /// One queued creator, contact or note of the frontmatter API (`\lx@add@frontmatter`'s and `\lx@annotate@frontmatter`'s
 /// entries): an author, an affiliation, an e-mail, a `\thanks`.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub(in crate::base_utilities) struct ApiCall {
   pub index:          usize,
   pub tag:            String,
@@ -142,6 +152,17 @@ pub(in crate::base_utilities) struct ApiCall {
   pub after_block:    Option<usize>,
   /// made by that block's own expansion (its calls), not by the input after it
   pub inside:         bool,
+  /// the entry's attributes as the call gave them (`role=affiliation,label=a,annotate=new`)
+  pub attrs:          String,
+  /// the element an annotation goes into (`\lx@annotate@frontmatter{ltx:creator}…`, `ltx:title` for a title's note),
+  /// empty for an entry of its own (`\lx@add@frontmatter`)
+  pub parent:         String,
+  /// the entry's content (its command's last argument, inside the affiliation wrappers), and its events once the
+  /// flush rehearsed it (`shadow::shadow_flush`; empty before)
+  pub content:        Tokens,
+  pub events:         Vec<Event>,
+  /// whether a flush rehearsed its content
+  pub rehearsed:      bool,
 }
 
 /// An entry of the ledger.
@@ -176,6 +197,122 @@ pub(in crate::base_utilities) fn reset_ledger() {
   with_ledger(|ledger| *ledger = Ledger::default());
 }
 
+/// The document class's bindings in load order, the binding loads' depth now, and whether the outermost is the class's.
+type ClassBindings = (Vec<String>, usize, bool);
+
+thread_local! {
+  /// The compiled binding that defined the current `\author` meaning, with that meaning's address
+  /// ([`note_binding_load`]), under the shadow switch only.
+  static AUTHOR_OWNER: RefCell<Option<(String, usize)>> = const { RefCell::new(None) };
+  /// The document class's compiled bindings: the first class binding loaded outside any other binding's load, and every
+  /// binding its load loaded (`report.cls`; iopart.cls's `iopart_support.sty`), in load order; and how deep the loads
+  /// nest now, with whether the outermost is that class's.
+  static CLASS_BINDINGS: RefCell<ClassBindings> = const { RefCell::new((Vec::new(), 0, false)) };
+}
+
+/// The address of the current `\author` meaning, if any (what [`note_binding_load`] compares).
+fn author_meaning() -> Option<(usize, DefinitionOrigin)> {
+  lookup_definition(&T_CS!("\\author"))
+    .ok()
+    .flatten()
+    .map(|d| (Rc::as_ptr(&d).cast::<()>() as usize, d.get_origin()))
+}
+
+/// Run a compiled binding's loader (`name`.`extension`, the binding's file: `revtex4_support.sty`), noting it as the owner of the
+/// `\author` meaning when its load changed it and no binding it loaded did (revtex4-2.cls's binding loads
+/// revtex4_support.sty, whose `\author` it is): the binding half of the policy key (`author_binding`). Under the
+/// shadow switch only; otherwise just the load.
+pub fn note_binding_load<R>(name: &str, extension: &str, load: impl FnOnce() -> R) -> R {
+  if !fm_shadow_enabled() {
+    return load();
+  }
+  let before = author_meaning().map(|(at, _)| at);
+  let owner_before = AUTHOR_OWNER.with(|o| o.borrow().as_ref().map(|(_, at)| *at));
+  CLASS_BINDINGS.with(|c| {
+    let (names, depth, in_class) = &mut *c.borrow_mut();
+    if *depth == 0 && extension == "cls" && names.is_empty() {
+      *in_class = true;
+    }
+    if *in_class && extension != "pool" {
+      names.push(s!("{name}.{extension}"));
+    }
+    *depth += 1;
+  });
+  let value = load();
+  CLASS_BINDINGS.with(|c| {
+    let (_, depth, in_class) = &mut *c.borrow_mut();
+    *depth = depth.saturating_sub(1);
+    if *depth == 0 {
+      *in_class = false;
+    }
+  });
+  let after = author_meaning().map(|(at, _)| at);
+  let owner_after = AUTHOR_OWNER.with(|o| o.borrow().as_ref().map(|(_, at)| *at));
+  if let Some(after) = after
+    && before != Some(after)
+    && owner_after == owner_before
+  {
+    // (a pool is LaTeXML's own kernel: `kernel`, so a binding that loads it — latexml.sty — does not own its `\author`)
+    let owner = if extension == "pool" {
+      "kernel".to_string()
+    } else {
+      s!("{name}.{extension}")
+    };
+    AUTHOR_OWNER.with(|o| *o.borrow_mut() = Some((owner, after)));
+  }
+  value
+}
+
+/// Forget the `\author` owner and the class's bindings (a conversion's start).
+pub(in crate::base_utilities) fn reset_author_owner() {
+  AUTHOR_OWNER.with(|o| *o.borrow_mut() = None);
+  CLASS_BINDINGS.with(|c| *c.borrow_mut() = (Vec::new(), 0, false));
+}
+
+/// The binding a block's policy is keyed on (S2a.2 r2, review revfms2a2's answer to question 3): the binding owning
+/// the `\author` meaning that makes the `\lx@add@authors*` call ([`author_binding`]); when that is the kernel's, the
+/// document class's binding with a policy entry (iopart.cls's `iopart_support.sty`, `jpconf.cls`, `report.cls`) — never
+/// over a package owning `\author` (authblk's stays authblk's).
+pub(in crate::base_utilities) fn policy_binding(owner: &str) -> String {
+  if owner != "kernel" {
+    return owner.to_string();
+  }
+  CLASS_BINDINGS.with(|c| {
+    c.borrow()
+      .0
+      .iter()
+      .find(|name| policy::has_entry(name))
+      .cloned()
+      .unwrap_or_else(|| owner.to_string())
+  })
+}
+
+/// The binding owning the `\author` meaning now: the compiled binding [`note_binding_load`] saw define it, while it is
+/// still that meaning; else by the meaning's origin — `kernel` (LaTeXML's pools, the format), `document` (the
+/// document's own `\renewcommand`), `raw` (a class or package read raw), `fallback` (OmniBus), `binding` (a binding no
+/// load noted).
+pub(in crate::base_utilities) fn author_binding() -> String {
+  let Some((at, origin)) = author_meaning() else {
+    return "kernel".to_string();
+  };
+  if let Some(name) = AUTHOR_OWNER.with(|o| {
+    o.borrow()
+      .as_ref()
+      .filter(|(_, owned)| *owned == at)
+      .map(|(name, _)| name.clone())
+  }) {
+    return name;
+  }
+  match origin {
+    DefinitionOrigin::Document => "document",
+    DefinitionOrigin::File => "raw",
+    DefinitionOrigin::Fallback | DefinitionOrigin::Stub => "fallback",
+    DefinitionOrigin::Binding | DefinitionOrigin::Borrowed => "binding",
+    _ => "kernel",
+  }
+  .to_string()
+}
+
 /// Whether a call now is the document's own: not one the frontmatter is frozen for (a replayed class setter, a
 /// speculative run, a rehearsal), nor one a stand-in binding's copy makes (its defaults queue).
 fn records_now() -> bool {
@@ -207,15 +344,25 @@ pub(in crate::base_utilities) fn record_author_call(
   }
   let len = stuff.unlist_ref().len();
   let real_base = usize::try_from(lookup_int("lx_field_base_2")).unwrap_or(0);
-  let policy = if hook == "\\lx@add@authors@adaptive" {
-    "kernel"
-  } else {
-    hook.trim_start_matches("\\lx@")
-  };
+  let owner = author_binding();
+  let binding = policy_binding(&owner);
+  let policy = policy::policy_for(&binding, hook).name;
+  // (a policy's own state, read at the call: authblk's `\c@Maxaffil`, which decides whether its notes show)
+  let counter = policy::policy_for(&binding, hook)
+    .state_counter
+    .and_then(|name| {
+      lookup_register(&s!("\\c@{name}"), Vec::new())
+        .ok()
+        .flatten()
+        .map(|value| value.value_of())
+    });
   let block = AuthorBlock {
     index: 0,
     hook,
     policy: policy.to_string(),
+    binding,
+    owner,
+    counter,
     replace,
     sectioned,
     cautious,
@@ -283,6 +430,13 @@ pub(in crate::base_utilities) fn note_field_stamp(field_id: u16, base: Option<us
     else {
       return;
     };
+    // (S2b's check, inactive in S2a: a binding call stamped for real takes the positions it was projected at)
+    if block.stamp == Stamp::Projected
+      && block.tokens.unlist_ref().len() == len
+      && let Some(base) = base
+    {
+      debug_assert!(projected_is_stamped(block, (base, base + len)));
+    }
     if block.hook != "\\lx@add@authors@adaptive"
       || block.stamp == Stamp::Kernel
       || block.tokens.unlist_ref().len() != len
@@ -307,13 +461,57 @@ pub(in crate::base_utilities) fn note_field_stamp(field_id: u16, base: Option<us
   });
 }
 
-/// Record a queued creator, contact or note of the frontmatter API (`queue_front_matter`), under the shadow switch
-/// only: a binding's single-author call (`\lx@add@creator`, `\lx@add@author`: authblk's unlabelled `\author{Bob}`) is
-/// an API call too, unless a block's own expansion made it.
-pub(in crate::base_utilities) fn record_api_call(tag: &str, role: &str) {
+/// S2b's assertion, inactive in S2a (notes decision 4): once the bindings' calls are stamped for real
+/// (`\lx@field@stamp`), a block's projected positions must be the stamped ones — projected spans are unique only
+/// within a block, so an event is keyed by (block index, span) until then.
+pub(in crate::base_utilities) const ASSERT_PROJECTED_IS_STAMPED: bool = false;
+
+/// Whether `block`'s positions agree with the positions `stamped` a real stamp gave its tokens (always, while
+/// [`ASSERT_PROJECTED_IS_STAMPED`] is off).
+pub(in crate::base_utilities) fn projected_is_stamped(
+  block: &AuthorBlock,
+  stamped: (usize, usize),
+) -> bool {
+  !ASSERT_PROJECTED_IS_STAMPED || block.stamp != Stamp::Projected || block.range == stamped
+}
+
+/// Record a queued creator, contact or note of the frontmatter API (`queue_front_matter`: its tag, its attributes and
+/// its command), under the shadow switch only: a binding's single-author call (`\lx@add@creator`, `\lx@add@author`:
+/// authblk's unlabelled `\author{Bob}`) is an API call too, unless a block's own expansion made it. Its content (the
+/// command's last argument, inside the affiliation wrappers) is kept for the flush to rehearse.
+pub(in crate::base_utilities) fn record_api_call(
+  tag: &str,
+  attr: Option<&KeyVals>,
+  command: &Tokens,
+) {
   if !matches!(tag, "ltx:creator" | "ltx:contact" | "ltx:note") || !records_now() {
     return;
   }
+  let role = attr
+    .and_then(|kv| kv.get_value("role"))
+    .map(|role| role.to_string())
+    .unwrap_or_default();
+  let attrs = attr
+    .map(|kv| {
+      kv.get_keyvals()
+        .keys()
+        .filter_map(|key| {
+          kv.get_value(key).map(|value| match value {
+            ArgWrap::Tokens(tokens) if key == "label" => s!("{key}={}", label_text(tokens)),
+            value => s!("{key}={value}"),
+          })
+        })
+        .collect::<Vec<_>>()
+        .join(",")
+    })
+    .unwrap_or_default();
+  let content = queued_affiliation_text(&last_group(command));
+  let parent = match command.unlist_ref().as_slice() {
+    [first, rest @ ..] if *first == T_CS!("\\lx@annotate@frontmatter@now") => {
+      first_group(rest).to_string().trim().to_string()
+    },
+    _ => String::new(),
+  };
   let queue_position = queue_length();
   with_ledger(|ledger| {
     let index = ledger.entries.len();
@@ -340,13 +538,70 @@ pub(in crate::base_utilities) fn record_api_call(tag: &str, role: &str) {
     ledger.entries.push(Entry::Api(ApiCall {
       index,
       tag: tag.to_string(),
-      role: role.to_string(),
+      role,
       epoch: ledger.flushes,
       queue_position,
       after_block,
       inside,
+      attrs,
+      parent,
+      content,
+      events: Vec::new(),
+      rehearsed: false,
     }));
   });
+}
+
+/// A call's label with its parameterless macros written out — `fuzzy:\lx@aas@correspondent` is "fuzzy:Bob Baker", aastex's
+/// `\email` after a `\correspondingauthor` (aastex_cls.rs `\lx@aas@email@corresp`; 2506.07978, whose label spelled no
+/// one and went to the block): the label today's `\lx@annotate@frontmatter@now` reads once the flush digests its
+/// keyvals. A pure lookup of each macro's token body (bounded), nothing run through the gullet: the shadow changes no
+/// state.
+fn label_text(value: &Tokens) -> String {
+  fn written(tokens: &[Token], depth: usize, out: &mut Vec<Token>) {
+    for t in tokens {
+      if out.len() > 512 {
+        return;
+      }
+      if depth < 8
+        && t.get_catcode() == Catcode::CS
+        && let Some(Stored::Expandable(defn)) = lookup_meaning(t)
+        && defn
+          .get_parameters()
+          .is_none_or(|p| p.get_parameters().is_empty())
+        && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+      {
+        written(body.unlist_ref(), depth + 1, out);
+      } else {
+        out.push(*t);
+      }
+    }
+  }
+  let mut out = Vec::new();
+  written(value.unlist_ref(), 0, &mut out);
+  Tokens::new(out).to_string()
+}
+
+/// The content of the first top-level brace group of `tokens` (an annotation command's parent tag).
+fn first_group(tokens: &[Token]) -> Tokens {
+  let mut depth = 0usize;
+  for (i, t) in tokens.iter().enumerate() {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END if depth > 0 => {
+        depth -= 1;
+        if depth == 0 {
+          let open = tokens[..i]
+            .iter()
+            .position(|t| t.get_catcode() == Catcode::BEGIN)
+            .unwrap_or(0);
+          return Tokens::new(tokens[open + 1..i].to_vec());
+        }
+      },
+      _ => {},
+    }
+  }
+  Tokens::new(Vec::new())
 }
 
 /// `tokens`, each stamped with its position in field `field_id` (`Token::prov`) from `base` on: the positions

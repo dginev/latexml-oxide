@@ -29,7 +29,7 @@ use super::*;
 
 /// The kind of a separator event.
 #[derive(Debug, Clone, PartialEq)]
-pub(in crate::base_utilities) enum SepKind {
+pub enum SepKind {
   /// `\and`, `\And`, `\AND`: a column (the command: NeurIPS's and ICLR's `\AND` starts a new row)
   And(&'static str),
   /// an alignment tab `&` read in the block (a column end of LaTeX's `\begin{tabular}[t]{c}` author line): the
@@ -49,7 +49,7 @@ pub(in crate::base_utilities) enum SepKind {
 
 /// The kind of an event.
 #[derive(Debug, Clone, PartialEq)]
-pub(in crate::base_utilities) enum EventKind {
+pub enum EventKind {
   Name,
   Mark,
   Sep(SepKind),
@@ -61,7 +61,7 @@ pub(in crate::base_utilities) enum EventKind {
 }
 
 impl EventKind {
-  pub(in crate::base_utilities) fn name(&self) -> &'static str {
+  pub fn name(&self) -> &'static str {
     match self {
       EventKind::Name => "Name",
       EventKind::Mark => "Mark",
@@ -77,7 +77,7 @@ impl EventKind {
 
 /// One event of an author block.
 #[derive(Debug, Clone, PartialEq)]
-pub(in crate::base_utilities) struct Event {
+pub struct Event {
   pub kind:       EventKind,
   /// the positions of the author field it covers, `start..end`
   pub span:       Option<(u16, u16)>,
@@ -93,14 +93,14 @@ pub(in crate::base_utilities) struct Event {
   pub role:       Option<String>,
   /// a link's target
   pub target:     Option<String>,
-  /// a note's inner contacts
+  /// a note's inner contacts, and the Mark its text opens with (`line_first`)
   pub inner:      Vec<Event>,
   /// how many layout containers enclose it
   pub nest:       u8,
 }
 
 impl Event {
-  fn new(kind: EventKind) -> Self {
+  pub fn new(kind: EventKind) -> Self {
     Event {
       kind,
       span: None,
@@ -139,7 +139,7 @@ fn is_symbol_label(text: &str) -> bool {
 /// its text; a mark printing only commas is the separator between two marks (llncs's and aa's `\fnmsep`,
 /// `\unskip$^,$`), a comma; an empty superscript prints nothing and is no mark (`\textsuperscript{}`), but a
 /// `\footnotemark` is one whatever it printed: its text is the `\thefootnote` it prints (the `printed` property of
-/// `rehearsal::load`'s `\lx@fm@obs@footnotemark`), empty where that failed (`\@fnsymbol` past 9, "Counter too
+/// `rehearsal::load`'s `\lx@fm@obs@fnmark`), empty where that failed (`\@fnsymbol` past 9, "Counter too
 /// large").
 fn mark_event(text: String, role: &str) -> Option<Event> {
   if text.is_empty() && role != "footnotemark" {
@@ -156,6 +156,43 @@ fn mark_event(text: String, role: &str) -> Option<Event> {
   };
   event.role = Some(role.to_string());
   Some(event)
+}
+
+/// The key of the `\ref` a digested mark holds (its last argument, Semiverbatim: sect11.rs `\ref OptionalMatch:*
+/// Semiverbatim`; hyperref's and cleveref's `…ref` the same), when it holds one.
+fn ref_key(d: &Digested) -> Option<String> {
+  match d.data() {
+    DigestedData::List(l) => l.borrow().boxes.iter().find_map(ref_key),
+    DigestedData::Whatsit(w) => {
+      let w = w.borrow();
+      let cs = whatsit_cs(&w);
+      if cs.trim_end().ends_with("ref")
+        && let Some(key) = w.get_args().iter().rev().flatten().next()
+      {
+        let key = ink_of(key).trim().to_string();
+        if !key.is_empty() {
+          return Some(key);
+        }
+      }
+      w.get_args()
+        .iter()
+        .flatten()
+        .find_map(ref_key)
+        .or_else(|| w.get_body().ok().flatten().as_ref().and_then(ref_key))
+    },
+    _ => None,
+  }
+}
+
+/// A mark printing only a `\ref` (A&A's `\inst{\ref{ipag}}`, 1809.08354): the reference resolves in post, so it
+/// prints nothing at digestion; its label is the `\ref`'s key, prefixed `ref:` (the resolver matches it against the
+/// `\label`s inside the labelled lines and affiliations; S2a.2, review revfms2a1_2's open question (a)).
+fn ref_mark(script: Option<&Digested>, role: &str) -> Option<Event> {
+  let key = ref_key(script?)?;
+  let mut mark = Event::new(EventKind::Mark);
+  mark.label = Some(s!("ref:{key}"));
+  mark.role = Some(s!("{role} ref"));
+  Some(mark)
 }
 
 /// The width in em of a spacing character (an interword space, a tie, the Unicode spaces `\quad`, `\enspace`, `\,`
@@ -397,10 +434,21 @@ impl Walker {
       "\\lx@fm@obs@note" | "\\lx@fm@obs@notetext" => {
         let mut note = Event::new(EventKind::Note);
         if let Some(body) = w.get_arg(2) {
-          note.text = ink_of(body);
-          for inner in lex_events(body) {
+          let events = lex_events(body);
+          // (its text as printed, its contacts' too: the rehearsal's contact constructors print nothing, so the ink
+          // of "available at \url{…}" lacks the address — 2105.10596)
+          note.text = printed_text(&events);
+          let mut inked = false;
+          for inner in events {
+            let first = !inked;
+            inked |= matches!(
+              inner.kind,
+              EventKind::Name | EventKind::Mark | EventKind::Contact | EventKind::Note
+            );
             match inner.kind {
               EventKind::Contact => note.inner.push(inner),
+              // (the Mark its text opens with, the legend's label: `\thanks{$^{1}$Unit…}`, S2a.2 r2)
+              EventKind::Mark if first => note.inner.push(inner),
               EventKind::Layout if inner.role.as_deref() == Some("label") => {
                 note.label = inner.label
               },
@@ -427,7 +475,7 @@ impl Walker {
         label.label = Some(raw(1).trim().to_string());
         self.event(label, d, nest);
       },
-      "\\lx@fm@obs@footnotemark" => {
+      "\\lx@fm@obs@fnmark" => {
         let printed = match w.get_property("printed").as_deref() {
           Some(Stored::String(printed)) => to_string(*printed),
           _ => String::new(),
@@ -437,12 +485,40 @@ impl Walker {
         }
       },
       "\\lx@fm@obs@mark" => {
-        if let Some(mark) = mark_event(arg(1), "inst") {
+        if let Some(mark) = mark_event(arg(1), "inst").or_else(|| ref_mark(w.get_arg(1), "inst")) {
           self.event(mark, d, nest);
         }
       },
+      "\\lx@fm@obs@request" => {
+        let prefix = raw(1).trim().to_string();
+        let labels: Vec<String> = raw(2)
+          .split(',')
+          .map(str::trim)
+          .filter(|label| !label.is_empty())
+          .map(|label| {
+            if prefix.is_empty() {
+              label.to_string()
+            } else {
+              s!("{prefix}:{label}")
+            }
+          })
+          .collect();
+        if !labels.is_empty() {
+          let mut mark = Event::new(EventKind::Mark);
+          mark.label = Some(labels.join(","));
+          mark.role = Some("request".to_string());
+          self.event(mark, d, nest);
+        }
+      },
+      // (a citation in a name is a mark of it, no request: revtex's `\author{Kari Enqvist\cite{byline}}` points at a
+      // bibliography note, astro-ph9907221, cond-mat0305028, gr-qc9405060 — its ink "cite[]" was read into the name)
+      "\\lx@@cite" | "\\lx@cite" => {
+        let mut mark = Event::new(EventKind::Mark);
+        mark.role = Some("cite".to_string());
+        self.event(mark, d, nest);
+      },
       "\\textsuperscript" | "\\@textsuperscript" => {
-        if let Some(mark) = mark_event(arg(1), "sup") {
+        if let Some(mark) = mark_event(arg(1), "sup").or_else(|| ref_mark(w.get_arg(1), "sup")) {
           self.event(mark, d, nest);
         }
       },
@@ -535,7 +611,8 @@ impl Walker {
             .next()
             .map(ink_of)
             .unwrap_or_default();
-          if let Some(mark) = mark_event(script, "math") {
+          let script_box = w.get_args().iter().rev().flatten().next();
+          if let Some(mark) = mark_event(script, "math").or_else(|| ref_mark(script_box, "math")) {
             self.event(mark, d, nest);
           }
         } else if cs.contains("subscript") {
@@ -566,9 +643,17 @@ impl Walker {
     // `[t]` of `\begin{tabular}[t]{c}`, `\parbox[t]`, `\begin{minipage}[b]`, the `[l]` of `\makebox[3cm][l]`: a
     // `Position` parameter, util_text.rs `shown_arguments` —, nor keyvals or a verbatim key)
     let args = w.get_args();
-    for (arg, shown) in args.iter().zip(shown_arguments(w)) {
+    let shown_args = KEYED_CONSTRUCTORS
+      .iter()
+      .find(|(name, _)| *name == cs)
+      .map_or_else(|| shown_arguments(w), |(_, shown)| shown.to_vec());
+    // (an environment's arguments are its settings, its body the content: `\begin{CJK*}{UTF8}{gbsn}张嘉懿\end{CJK*}`
+    // printed "UTF8gbsn" into the name, 2607.05550, 2503.21605, 2404.12123)
+    let environment = cs.starts_with("\\begin{");
+    for (arg, shown) in args.iter().zip(shown_args) {
       if let Some(arg) = arg
         && shown
+        && !environment
         && typesets_content(arg)
       {
         contents.push(arg.clone());
@@ -615,6 +700,11 @@ impl Walker {
     }
   }
 }
+
+/// Constructors whose argument is a key the element carries, not ink (`shown_arguments` cannot read a compiled
+/// replacement): acmart's address parts, `\lx@acm@addresspart@{institution}{SAS Institute Inc.}` an
+/// `ltx_affiliation_institution` text of the second (acmart_cls.rs; 1907.07713).
+const KEYED_CONSTRUCTORS: &[(&str, &[bool])] = &[("\\lx@acm@addresspart@", &[false, true])];
 
 /// The natural width in em (of its font) of a spacing whatsit (`\hskip`, `\hspace`, `\kern`, `\quad` made as a
 /// skip), when it has one.
@@ -848,6 +938,36 @@ impl Lexer {
     }
     events
   }
+}
+
+/// The text events print, in order: names, contacts and inner notes as their text, a comma `,`, a separating word its
+/// word, the rest a space, the marks aside (a note's text, `\lx@fm@obs@note`).
+fn printed_text(events: &[Event]) -> String {
+  let mut out = String::new();
+  for event in events {
+    let (piece, glued) = match &event.kind {
+      EventKind::Name | EventKind::Contact | EventKind::Note => (event.text.as_str(), false),
+      // (a mark is no text of the note, as the XML's `ltx:sup` is none: CDF's `With visitors from $^a$Istituto …`,
+      // 1203.3894, 1307.5202; its leading one the legend's label, `leading_mark`)
+      EventKind::Mark => continue,
+      EventKind::Sep(SepKind::Comma) => (",", true),
+      EventKind::Sep(SepKind::Word(word)) => (word.as_str(), false),
+      _ => {
+        if !out.ends_with(' ') && !out.is_empty() {
+          out.push(' ');
+        }
+        continue;
+      },
+    };
+    if piece.is_empty() {
+      continue;
+    }
+    if !glued && !out.is_empty() && !out.ends_with(' ') {
+      out.push(' ');
+    }
+    out.push_str(piece);
+  }
+  out.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 /// The events of a digested author block (a rehearsal's list), in print order.

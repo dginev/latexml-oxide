@@ -1,6 +1,7 @@
 //! The observer's shadow switch and dump (OXIDIZED_DESIGN_DIVERGENCES #837). Under `LATEXML_FM_SHADOW=1` (read once
-//! per process, at runtime) the ledger records the document's calls, the flush (`digest_front_matter`) rehearses and
-//! lexes each block not rehearsed yet, and the CLI writes `<dest>.fmshadow.json` ([`write_fm_shadow`]). Without it
+//! per process, at runtime; unset on the fleet) the ledger records the document's calls, the flush
+//! (`digest_front_matter`) rehearses and lexes each block not rehearsed yet and each API call's content, and the CLI
+//! writes `<dest>.fmshadow.json` ([`write_fm_shadow`]) with the resolver's tuples (`resolved`, S2a.2). Without it
 //! nothing of the observer runs. With it the conversion's output is the same: nothing the observer finds is used.
 
 use std::{cell::Cell, fmt::Write as _, sync::OnceLock};
@@ -8,7 +9,9 @@ use std::{cell::Cell, fmt::Write as _, sync::OnceLock};
 use super::{
   events::{Event, EventKind, SepKind, lex_events},
   ledger::{Entry, Outcome, SkipReason, Stamp, reset_ledger, stamped_block_tokens, with_ledger},
+  policy::{TitleMarks, policy_for},
   rehearsal::{Rehearsal, rehearse},
+  resolver::{Assoc, Resolved, ledger_inputs, resolve},
   *,
 };
 
@@ -19,7 +22,9 @@ thread_local! {
 }
 
 /// Whether the frontmatter observer runs: `LATEXML_FM_SHADOW=1` in the environment (a runtime read, once per process),
-/// unless a test set this thread's override ([`set_fm_shadow_override`]).
+/// unless a test set this thread's override ([`set_fm_shadow_override`]). The variable stays **unset on the fleet**
+/// (`cortex_worker` writes no dump; the shadow census runs through the local CLI: notes decision 5,
+/// OXIDIZED_DESIGN_DIVERGENCES #837).
 pub fn fm_shadow_enabled() -> bool {
   FM_SHADOW_OVERRIDE.with(Cell::get).unwrap_or_else(|| {
     *FM_SHADOW_ENV.get_or_init(|| std::env::var_os("LATEXML_FM_SHADOW").is_some_and(|v| v == "1"))
@@ -34,6 +39,7 @@ pub fn set_fm_shadow_override(on: Option<bool>) { FM_SHADOW_OVERRIDE.with(|o| o.
 /// provenance's reset).
 pub fn reset_fm_shadow() {
   reset_ledger();
+  ledger::reset_author_owner();
   rehearsal::reset_rehearsing();
 }
 
@@ -72,7 +78,8 @@ pub(in crate::base_utilities) fn shadow_flush() -> Result<()> {
     } else if block.tokens.is_empty() {
       Outcome::Skipped(SkipReason::Empty)
     } else {
-      match rehearse(stamped_block_tokens(&block), lex_events)? {
+      let title_marks = policy_for(&block.binding, block.hook).title_marks;
+      match rehearse(stamped_block_tokens(&block), title_marks, lex_events)? {
         Rehearsal::Done { value, errors, warnings } => Outcome::Events {
           events: value,
           errors,
@@ -90,6 +97,39 @@ pub(in crate::base_utilities) fn shadow_flush() -> Result<()> {
         block.outcome = outcome;
       }
     });
+  }
+  // the API calls made outside the blocks' expansions: their contents rehearsed and lexed as a block's are (the
+  // resolver reads an affiliation's leading marks and text, an e-mail's address, a creator's name from them)
+  let calls: Vec<(usize, Tokens)> = with_ledger(|ledger| {
+    ledger
+      .entries
+      .iter()
+      .enumerate()
+      .filter_map(|(i, entry)| match entry {
+        Entry::Api(call) if !call.inside && !call.rehearsed => Some((i, call.content.clone())),
+        _ => None,
+      })
+      .collect()
+  });
+  for (i, content) in calls {
+    let events = if content.is_empty() {
+      Some(Vec::new())
+    } else {
+      match rehearse(content, TitleMarks::Fnsymbol, lex_events)? {
+        Rehearsal::Done { value, .. } => Some(value),
+        // (a flush inside a speculative run: the next flush rehearses it)
+        Rehearsal::Skipped(SkipReason::JournalUnavailable) => None,
+        Rehearsal::Skipped(_) => Some(Vec::new()),
+      }
+    };
+    if let Some(events) = events {
+      with_ledger(|ledger| {
+        if let Some(Entry::Api(call)) = ledger.entries.get_mut(i) {
+          call.events = events;
+          call.rehearsed = true;
+        }
+      });
+    }
   }
   // (the flush empties the frontmatter queue: the calls after it are queued from position 0 again)
   with_ledger(|ledger| ledger.flushes += 1);
@@ -243,7 +283,7 @@ pub fn fm_shadow_json() -> String {
           json_str(&mut out, &call.role);
           let _ = write!(
             out,
-            ",\"epoch\":{},\"queue_position\":{},\"after_block\":{},\"inside\":{}}}",
+            ",\"epoch\":{},\"queue_position\":{},\"after_block\":{},\"inside\":{}",
             call.epoch,
             call.queue_position,
             call
@@ -251,6 +291,23 @@ pub fn fm_shadow_json() -> String {
               .map_or("null".to_string(), |b| b.to_string()),
             call.inside
           );
+          out.push_str(",\"attrs\":");
+          json_str(&mut out, &call.attrs);
+          if !call.parent.is_empty() {
+            out.push_str(",\"parent\":");
+            json_str(&mut out, &call.parent);
+          }
+          if call.rehearsed {
+            out.push_str(",\"events\":[");
+            for (i, event) in call.events.iter().enumerate() {
+              if i > 0 {
+                out.push(',');
+              }
+              json_event(&mut out, event);
+            }
+            out.push(']');
+          }
+          out.push('}');
         },
         Entry::Author(block) => {
           blocks += 1;
@@ -262,6 +319,13 @@ pub fn fm_shadow_json() -> String {
           json_str(&mut out, block.hook);
           out.push_str(",\"policy\":");
           json_str(&mut out, &block.policy);
+          out.push_str(",\"binding\":");
+          json_str(&mut out, &block.binding);
+          out.push_str(",\"owner\":");
+          json_str(&mut out, &block.owner);
+          if let Some(counter) = block.counter {
+            let _ = write!(out, ",\"counter\":{counter}");
+          }
           let _ = write!(
             out,
             ",\"replace\":{},\"sectioned\":{},\"cautious\":{},\"keyvals\":",
@@ -343,9 +407,11 @@ pub fn fm_shadow_json() -> String {
         },
       }
     }
+    out.push_str("],\"resolved\":");
+    json_resolved(&mut out, &resolve(&ledger_inputs(ledger)));
     let _ = write!(
       out,
-      "],\"summary\":{{\"blocks\":{blocks},\"with_events\":{with_events},\"held\":{held},\"overflow\":{overflow},\"skipped\":{{"
+      ",\"summary\":{{\"blocks\":{blocks},\"with_events\":{with_events},\"held\":{held},\"overflow\":{overflow},\"skipped\":{{"
     );
     for (i, (reason, count)) in skipped.iter().enumerate() {
       if i > 0 {
@@ -357,6 +423,77 @@ pub fn fm_shadow_json() -> String {
     out.push_str("}}}\n");
     out
   })
+}
+
+fn json_assoc(out: &mut String, assoc: &Assoc) {
+  out.push_str("{\"role\":");
+  json_str(out, &assoc.role);
+  out.push_str(",\"text\":");
+  json_str(out, &assoc.text);
+  if let Some(label) = &assoc.label {
+    out.push_str(",\"label\":");
+    json_str(out, label);
+  }
+  out.push_str(",\"rule\":");
+  json_str(out, &assoc.rule);
+  if let Some((index, span)) = assoc.source {
+    // (keyed by the block and the span: spans are unique only within a block)
+    let _ = write!(out, ",\"source\":[{index},");
+    json_span(out, span.map(|(s, e)| (usize::from(s), usize::from(e))));
+    out.push(']');
+  }
+  out.push('}');
+}
+
+fn json_assocs(out: &mut String, key: &str, assocs: &[Assoc]) {
+  let _ = write!(out, ",\"{key}\":[");
+  for (i, assoc) in assocs.iter().enumerate() {
+    if i > 0 {
+      out.push(',');
+    }
+    json_assoc(out, assoc);
+  }
+  out.push(']');
+}
+
+/// The resolver's tuples: the creators (name without marks, requests, the rule that split it out, its block) with
+/// their affiliations, contacts and notes, and the block's own.
+fn json_resolved(out: &mut String, resolved: &Resolved) {
+  out.push_str("{\"creators\":[");
+  for (i, creator) in resolved.creators.iter().enumerate() {
+    if i > 0 {
+      out.push(',');
+    }
+    out.push_str("{\"name\":");
+    json_str(out, &creator.name);
+    out.push_str(",\"requests\":[");
+    for (j, request) in creator.requests.iter().enumerate() {
+      if j > 0 {
+        out.push(',');
+      }
+      json_str(out, request);
+    }
+    out.push_str("],\"rule\":");
+    json_str(out, &creator.rule);
+    let _ = write!(out, ",\"source\":{}", creator.source);
+    json_assocs(out, "affiliations", &creator.affiliations);
+    json_assocs(out, "contacts", &creator.contacts);
+    json_assocs(out, "notes", &creator.notes);
+    out.push('}');
+  }
+  out.push(']');
+  json_assocs(out, "block", &resolved.block);
+  json_assocs(out, "dropped", &resolved.dropped);
+  out.push_str(",\"policies\":[");
+  for (i, (index, name)) in resolved.policies.iter().enumerate() {
+    if i > 0 {
+      out.push(',');
+    }
+    let _ = write!(out, "[{index},");
+    json_str(out, name);
+    out.push(']');
+  }
+  out.push_str("]}");
 }
 
 /// Why a block that has no events was not rehearsed: its skip's reason; one deferred by a flush no rehearsal could run

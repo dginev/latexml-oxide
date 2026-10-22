@@ -23160,6 +23160,204 @@ spans; engine unit test `shadow::tests::deferred_block_reports_the_journal_not_t
 design probes; `observer_rehearsal_aftergroup_stays_inside` and `observer_fill_gap_and_footnotemark_labels` GREEN, the
 review's probes), `class-bindings/gretsi_v13_shared_mark_affiliation` (2508.03934).
 
+**S2a.2: the resolver, the policy table and the comparator, still shadow only** (fms2a2; design note §2 points 1-9, §3
+S2a, §5 defaults 4, 5, 6, 8, 9; the main session's S2a.2 notes). Under the switch the dump gains `resolved`: the ledger's
+blocks and the API calls made apart from them, read into the tuples `ab_audit`'s `front.rs` extracts — each creator's
+name without its marks, its requests (the marks shown on it), its affiliations, contacts and notes, the author block's
+own (the XML's trailing nameless creator, #159) — each association with the rule that decided it and its source keyed by
+(ledger index, span) (spans are unique only within a block; S2b's assertion that a projected range is the stamped one,
+`ledger::projected_is_stamped`, is in place and off, `ASSERT_PROJECTED_IS_STAMPED`). Nothing of it reaches the output
+(guard `perfect_kernel_batchfms2a2::resolver_leaves_the_xml_unchanged`).
+- **Resolver** (`resolver.rs`, Layer C, class-independent): rows from `Break`, columns from `Sep(And)`/alignment tabs
+  (unless the policy reads `\and` as inline); a line's type from its first ink — a mark-led line is labelled (unless it
+  is the block's first line and its entries read as names whose marks a later line answers: the prefix convention), a
+  column's first line or one whose name pieces each read as a name (`name_count`, `reads_as_affiliation`,
+  `is_name_qualifier`) is a names line, a line of one link printing a name that name, a line of contacts a contact
+  line, any other unmarked; names split at the separators, a name run that only layout parts one name (revtex's
+  `\firstname{…} \surname{…}`, 1303.6104; a font switch or box never separates, decision 6d — an image does: a logo,
+  review revfms2a1_3), a run of initials not ended by a gap (`V.G.~ Kagramanova`, 0802.4349), a qualifier after a comma
+  the name's (`Robert W. Heath, Jr.`, `…, Student Member, IEEE`), an institution among the names the affiliation of the
+  name before (`Chen Jia, SI-TECH Information Technology`, 2406.02959), a lone placement letter beside a box flagged
+  (`flag:placement-letter`); a mark between a separator and a name the one nearer in the source (`Ann,$^{1}$ Bob` the
+  name before, 0705.3409; `Ann$^1$, $^{2}$Bob` the next), an `\inst` after a comma the name before under the policy;
+  ruling 1 — a mark's labels split at commas and spaces, a symbol run glued to a label two (`*1`), the name its text
+  alone, a labelled entry to every name requesting it, a `fuzzy:<name>` label (svjour's `\institute` entries) to the
+  name it spells; ruling 2 — a symbol-led line to every carrier of the character, an uncarried one the block's; an
+  unmarked line under names the row above's, each line one contact (as today's `\\` lines: 0707.1113, 1404.0431),
+  while an unmarked line under a labelled entry continues it (0803.3589); a note opening with a requested label that
+  label's legend (2311.16145); the owner chain — the address's own label, the spelled author (`NameKeys`,
+  `spelled_owners`), a class list's author at its call's place (one place per author, every spelled address at its
+  author's: `_sequence`, #805), the group's only author, elimination (the line's one unspelled address and the one
+  author without an address), the one author a note names the corresponding author (`names_correspondence`), the block;
+  one contact per printed address (a braced `{a,b}@x` written out); a note emptied into contacts dropped, `\thanks{}`
+  kept. API calls: a creator; a labelled contact (`label=`, a `labelseq=` place — a `\and`-list entry numbered piece by
+  piece, #791 —, its leading mark, a `\label` a `\ref` mark names) to its requesters, the block's when none; an
+  unlabelled one by its `annotate=` (the last author; `all`; `new`; `run[:<cap>]`, a second contact before a new author
+  the same run's), its `\email`s its owners' too; a title's note (its parent `ltx:title`) is no creator's.
+- **Lexer and rehearsal additions** (the events change only here): a mark printing only a `\ref` is a Mark labelled
+  `ref:<key>` (A&A's `\inst{\ref{ipag}}`, 1809.08354; open question (a)); `\lx@request@frontmatter@annotation[<p>]{<l>}`
+  (elsarticle's `\corref`, `\fnref`) a Mark labelled `<p>:<l>` printing nothing; a `\footnotemark[<n>]` reads <n>
+  with `\c@footnote` at the rehearsal's start plus the steps the block's notes made before it, local to the mark
+  (`\footnotemark[\arabic{footnote}]` after a `\thanks` prints that note's symbol, 2201.11183, 2111.13260; review
+  rev78o2 finding 3; guard `footnotemark_number_reads_the_stepped_counter`); each API call's content (the queued
+  command's last argument, inside the affiliation wrappers) is rehearsed and lexed at the flush, and its attributes and
+  parent recorded; the binding owning `\author` is recorded at the call — the compiled binding whose load changed the
+  meaning (`note_binding_load`, the loader seams of latexml_package and latexml_contrib `dispatch`; a pool's load is the kernel's), else
+  `kernel`/`document`/`raw`/`fallback` by its origin — and with the hook is the policy key (notes decision 2: no keyval
+  in the binding files). A bare `\footnotemark` prints the kernel title hook `\lx@title@thefootnote`
+  (`TITLE_FOOTNOTE_HOOK` = `latex_constructs::TITLE_THEFOOTNOTE`, 78o) when defined; else the policy entry's
+  `title_marks`: `Fnsymbol` (the kernel `\maketitle`'s `\@fnsymbol\c@footnote`) or `Body` (the class's own
+  `\thefootnote`: report's and book's title page, arabic). (r2: the revtex entry's inert `\frontmatter@thefootnote`
+  field is gone — revtex4-2.cls:3040-3043 is `\@fnsymbol` by default, :5976-5978 `\@booleanfalse\altaffilletter@sw`
+  after :3043's default, checked with pdflatex; `\@alph` only under `altaffilletter`.) The policy key is the binding
+  owning `\author`, or — when that is the kernel's — the document class's binding with an entry (`ledger::policy_binding`:
+  the first binding the class's load loaded that has one; iopart.cls's `iopart_support.sty`, `jpconf.cls`, `report.cls`),
+  never over a package owning `\author` (authblk); an API call runs under the policy of the block before it.
+- **Policy table** (`policy.rs`, Layer B; first match on (binding, hook), else `kernel`): `revtex`
+  (revtex4_support.sty; `annotate=new` declared by the binding's call), `authblk` (`thenote`: authblk's `\AB@thenote`
+  under ruling 1, below; `state_counter` `Maxaffil`), `report`, `book` (`title_marks: Body`), `llncs` (`\inst` after a comma, `\and`
+  inline: #791, #792, #807), `aa`, `inst_support`, `svjour` (`\inst` after a comma, #807), `jheppub`, `jcappub`,
+  `jinstpub` (e-mail by spelling else call order, #801, #805, #809), `iopart`, `jpconf` (the same, each call a group:
+  #806, #808, #841); each entry cites what it reproduces (unit test `every_entry_cites_what_it_reproduces`).
+- **Comparator** (`ab_audit fmshadow ROOT [-o PREFIX] [--keys F] [--re-resolve]`, latexml_oxide/bin/ab_audit/fmshadow.rs):
+  per paper the shadow's tuples against the XML's (names without their `ltx:sup` marks, texts by their letters and
+  digits; contacts of role `note`/`thanks` read as notes on both sides), each disagreement a row — kind (`name-split`,
+  `affiliation`, `contact-owner`, `contact`, `note`, `block`), family (the policy key's binding), the deciding rule —
+  **classified** when that rule holds an adopted ruling's change tag (`CHANGE_TAGS`) or the disagreement falls in a
+  PDF-confirmed XML-wrong class (`XML_WRONG`, by name with its witnesses; r2, below), unclassified otherwise; a paper with no rehearsed block is "no block" and one whose rehearsal held an
+  error "held", both outside the gate's denominator (notes decisions 1, 3); the block-final `]` span shortfall is not
+  compared (texts are). `--re-resolve` resolves the dump's events again with the binary's resolver. Output
+  `<prefix>.tsv`, `<prefix>.disagree.tsv`, `<prefix>.shadow.jsonl`, `<prefix>.summary.txt` (the per-family table by
+  reach with the gate number, the share of a family's counted papers with an unclassified disagreement).
+Measured (the census numbers and the PDF checks are in SYNC_STATUS "FM S2a.2"): far from the K23 class guard (under 0.5 %
+per family) on every family but the smallest; S2b waits for further resolver rounds. Guards
+`perfect_kernel_batchfms2a2::*`; engine unit tests `policy::tests::*`, `resolver::tests::*`; ab_audit unit tests
+`fmshadow::tests::*`.
+
+**S2a.2 r2: the resolver by defect class, the comparator made honest** (review revfms2a2: of 40 sampled unclassified
+disagreements 31 were the resolver's, 8 today's XML, 1 normalisation). Still shadow only (XML byte-identical with the
+switch on and off and against int53a, SYNC "FM S2a.2").
+- **Notes** keep their whole text (their contacts' texts too: a note's text is its events' printed text, the rehearsal's
+  contact constructors printing nothing); what is left once the contacts are taken out decides only ruling 4's "emptied",
+  and an emptied note goes to `Resolved.dropped` (rule `ruling4:emptied`) for the comparison (2401.17399, 1607.05792,
+  2603.01292). A note's legend label is its body's leading Mark event (the lexer adds it to the note's `inner`), never
+  the flattened text (`$^{1}$Unit` read "1Unit"; 1909.02288, 2608.06122, 1903.10543, 2407.19826); the "any word of three
+  letters" reading is gone.
+- **Labels**: a `fuzzy:<name>` label stays whole and is matched by the name's letters, a mark command's argument and a
+  formula dropped (`Luca Passalacqua (\Envelope)`, 0807.3898, 2403.09642); a creator's own `author:N` is the N-th
+  creator, matched exactly (relocate.rs:42-50; 1804.09680, astro-ph0611539); every other label by Perl's chain
+  (Base_Utility.pool.ltxml:891-900): the exact request, then past the request's prefix, the label's, both
+  (elsarticle's `fn:label1` answers `\address[label1]`, 1712.00945).
+- **Names lines by evidence** (finding 6): a later line of a column is names only after a blank line, continuing a
+  names row that ended in a comma or "and" (1403.0130), under a row with its affiliation line already when set in a font
+  of its own (1009.1429, 1108.3744) or after the row's labelled lines (SYNC row 46), with marks or notes on its names
+  (1403.5246), or as two or more name pieces — and then each piece must read as a name; one name-like piece without
+  evidence is an affiliation ("Capital Fund Management", "Google DeepMind": 2606.07382, 2307.02318, 2305.16559,
+  2609.09054); a line of e-mail addresses alone is never names (2210.05991). An IEEE ordinal before a name
+  (`1\textsuperscript{st} Sertac`) stays with it, as today's personname (2412.10792, 2202.06596).
+- **Marks in lines**: punctuation before a mark does not lead the line (`($^1$)`, 1004.4809); a mark set off by a space
+  (source positions between it and the ink before) opens an entry of its own (`$^1$Arizona State University $^2$Rider
+  University`, 2601.20069); a symbol some name shows that the lexer read as ink at a line's start is a Mark (`$\sharp$ -
+  CBCL`, 1209.1360); marks trailing their text, each shown on another line, label it (2507.05750; not a lone
+  `Harvard University$^{*}$`, 2307.02318).
+- **Lines under names**: unmarked lines under a row whose names show non-symbol marks are one affiliation of every name,
+  as today's `\\`-joined contact (0903.2366, 2303.09899; a footnote symbol is no such mark, 0707.1113); a line under a
+  labelled entry continues it unless it is addresses alone, which the owner chain places (2509.12185, 0801.3376,
+  0810.3062).
+- **API intake** takes only creators and creator annotations (`resolver::creator_call`): no MDPI `reftitle`, no
+  author-contribution note (2608.12223). **Contact roles**: the call's declared role wins over a `mailto:` link inside
+  it (2506.17875), a url printing one e-mail address is an e-mail (1409.0496); the rehearsal binds `\email`-type
+  commands only when the document's take an argument (jmlr2e's `\email` is a font switch: 2412.18293, 2305.17297);
+  acmart's address-part key is no ink (1907.07713). An annotation of the new authors (`annotate=new`/`run`/`<n>`)
+  before any creator reaches none (revtex collaboration lists declaring every `\affiliation` first, 2103.04797,
+  0704.1604); an unqualified one is the block's (0709.0811).
+- **Today's placements reproduced**: the amsart contact grid (insert.rs `distribute_upfront_contacts`; 2205.02163); a
+  replacing `\author` keeps the latest call's authors (`\lx@clear@frontmatter`; 2502.11323, 2509.11381).
+- **authblk** (`thenote`, review answer 6b): an unlabelled author requests `\AB@thenote` (the `affil` counter, stepped at
+  the first `\author` after an `\affil`), an unlabelled `\affil` is labelled by it — when the marks show (a label given,
+  or the counter past `\c@Maxaffil`, recorded at the block's call); else (block mode) the run, as the binding declares
+  (authblk.sty:114-118, 148-151; 2605.25017).
+- **Comparator honesty** (findings 8, 9, 14): the block's items are compared as a multiset (kind `block`) and `rule_of`
+  searches them; an XML item is explained by the shadow's items only when it is two or more of them joined (the word
+  "and" between allowed), no looser overlap; ORCID links compare by their identifier (the XML's `ref` href, in a contact
+  or the personname); `ruling3:one-per-print` classifies only a joined item, the owner its other tag's; elimination is
+  **not** a change — today's output applies it (#52's e-mail lines, `owners_by_elimination`, under user ruling R10 2026-10-20, 77p r10), and
+  FIDELITY_CHARTER §4's owner order is silent on it (flagged to the main session). The XML-wrong classes, each confirmed
+  on its witnesses' pdflatex PDFs: names parted by a wide space merged into one personname (2312.06207, 2303.02369,
+  2512.16241, 2511.18287), a list of names in one personname (1512.06985, 1610.06365, 2211.02638, 2411.11150), an ORCID
+  logo's glyphs read as "ID" after the name (2501.15882, 2405.19400); a name class applies only when it explains every
+  XML name. Guards `perfect_kernel_batchfms2a2::{notes_keep_their_whole_text, fuzzy_labels_stay_whole,
+  author_sequence_labels_place_their_contacts, prefix_fallback_answers_a_mismatched_label,
+  note_legends_by_their_leading_mark, institution_lines_are_not_names, contact_roles_follow_the_call_and_the_address,
+  marks_mid_line_and_trailing_label_entries, authblk_unlabelled_affil_is_its_thenote, report_title_page_marks_are_arabic,
+  a_replacing_author_call_keeps_the_latest, ams_contact_grid_is_distributed}` (each red on r1), the r1 guards pinned as
+  whole sequences; unit tests `resolver::tests::*`, `fmshadow::tests::{block_items_and_joined_pieces,
+  xml_wrong_name_classes_explain_every_name}`.
+
+**S2a.2 r3: the classified bucket's wrong classes, the pilot families' residuals** (r2's PDF sample: 18 of 59 classified
+disagreements wrong; the revtex4_support and ams_support unclassified papers each read against its PDF). Still shadow
+only (XML byte-identical against int54a with the switch unset and set, SYNC "FM S2a.2").
+- **Marked entries of one call** are parted by their marks (`resolver::mark_led_pieces`): an API affiliation whose first
+  ink is a mark, with a mark at a line start, after a break or after a separator, is an entry per mark, rule
+  `api:split-by-marks` (cond-mat0510562, 1612.09425, 1809.03738, hep-ph0408045, 2509.08362, 1506.00848); a space,
+  a break or a brace before the leading mark does not hide it (0902.0006, 2211.15148). A leading-mark entry's
+  `annotate=new` run holds the role, as today's attaches it before moving it by its mark (1506.04004), a `label=` entry
+  not (1712.00945).
+- **Glued labels** part by the marks the other side shows (`part_glued_labels`, `parted_label`, tag `ruling1:parted`): a
+  name's `12` under entries `1` and `2` (2103.10685), `1⋆` (2606.01911), an entry's `∗∗` where the name shows `∗`
+  (1505.06831) — never a label some entry or name has as written, nor a class's numbering (`labelseq`, 1005.2409);
+  a mark glued to the mark before it goes where that one went (`Oh,$^{1}$$^{,2}$`, 2306.15492).
+- **Fuzzy labels**: one spelling no name whole answers by its names' surnames, as today's #159 reading
+  (`resolver::surname_owners`, tag `fuzzy:surname`; 2011.14024, 2403.19676, 2106.12864); the ledger writes a label's
+  parameterless macros out at the call (`ledger::label_text`: aastex's `fuzzy:\lx@aas@correspondent`, 2506.07978).
+- **E-mails by evidence** (FIDELITY_CHARTER §4): a note's e-mail goes to the author it spells before the note's own
+  (`answer_note_emails`; 1908.04020, 2304.00435), else to the author carrying the note's mark (main-session decision
+  2026-10-22: the mark shown on that name is the evidence; it never goes by adjacency alone); a list with one address per author that every spelled address agrees
+  with is in author order, for every class (`owner:order`; 2603.19610, 2512.22629, 2305.12998); an e-mail Contact given
+  to a row of names, or printing several addresses, is placed address by address (0809.3237); an address's glued label
+  is no part of it (`E-mail:lcai@…`, 1807.11339); addresses a names line prints as text are e-mails, not names
+  (2507.03885).
+- **Names**: a per-author class's names line that does not read as two or more names is one name
+  (`joined_single_name`, the `\lx@add@authors@append` hook's `split_author_line_cautious`: `Sanhueza, Patricio`,
+  2604.19097); a given name alone or a name ending in an initial does not end at a gap (`name:gap-joined`: 1406.5580,
+  1612.07367, 1806.07838); a mark typed as text after a name is its request (1912.02075); "the MAST Team" among the
+  names is an author (1609.09534, astro-ph0509500); revtex names with their marks before them on the block's only line
+  (1805.08625, 1405.2400, 2001.00788, 0710.4115).
+- **The lexer** (`events.rs`): a `\cite` in a name is a mark without a label (astro-ph9907221, cond-mat0305028); an
+  environment's arguments are no ink (`\begin{CJK*}{UTF8}{gbsn}`, 2607.05550, 2503.21605); a note's text holds no marks
+  (CDF's `With visitors from $^a$…`, 1203.3894, 1307.5202).
+- **Contacts**: a link to an ORCID record is the creator's ORCID (`contact_parts`; 2307.02633, 2304.11780, 1910.01653); a
+  link inside an affiliation is its text, only the e-mails and ORCIDs its commands declare are split out (2609.39586,
+  2605.14947, 2408.13873); amsart's `\and` prints "and" in an entry (policy `ams`, `and_word`: amsart.cls:599;
+  1712.02568); a sole author's orphans are that author's, as today's (#159: 0911.5235, 0712.4133); a note made before
+  any author is the title's, kept in the block (`api:title-note`; 1603.01892, 1802.05590, cond-mat0502298); a numbered
+  legend reading as an institution is an affiliation (`is_legend_text`; `classify_thanks`'s "erc" matches "Perception",
+  2509.05368).
+- **Comparator**: a name's marks the XML holds as text (`R. Vasile 1`, 0807.4407; 1309.7542) or as a floating-superscript
+  formula (`{}^{a,\;b}`, `\,^{3}`: 1307.6166, 0804.4669) are no name text (`xml_names`, `math_mark_text`); notes compare
+  without the creator's ORCID identifier (2106.12436); an e-mail's glued label aside (2108.12329); an XML item is the
+  shadow's pieces joined with their printed labels before them (`1INFN …2Dipartimento …`, 1211.5032). Change tags added:
+  `ruling1:parted`, `role:url-as-email` (the r2 brief's item 8: 1701.01829, 2501.18366, 2506.18574), `owner:order`.
+  XML-wrong classes added, each confirmed on its witnesses' PDFs: a collaboration's whole author list in one personname
+  (2007.02542, 0710.0039, 1310.0383), names parted only by a mark or a note merged (1609.02129, 1803.06822, 2511.04278,
+  2508.08510, 2312.03108, 1412.3142), a title's note given to the first author (1603.01892, 1802.05590, cond-mat0502298),
+  e-mail addresses of the names line read as creators or into a name (0810.4404, 1801.04987, 2405.06319, 2507.03885),
+  an ORCID identifier printed as text after the name (2209.02767, 1902.02698, with the "ID" class), a later names row read as
+  the affiliation of the row above (math0203226, 0908.1348, 2409.04981, 2509.10952, 2508.04012, 2208.13126, 2210.14979), a
+  name with its affiliation in one personname (1611.06737, 2601.04271, 1811.08870) — six classes (`fmshadow.rs:712-742`); the
+  r3 A/B (300 census papers, the 979 repros) and the census ran on the pre-commit build `scratch_fms2a2r3/latexml_oxide.r3a`
+  (stamp da23624725); review revfms2a2_3 matched its shadow dumps to the final commit's byte for byte (40 of 40); the r2 classes
+  misapplied are fenced: a merged piece of one word only in a list of five or more (`Sanhueza, Patricio`, 2604.19097),
+  no address a name (2507.03885). Tried and reverted (each lost more papers than it won): an entry's inner glued marks as
+  its labels (`ECT$^*$`, BaBar's `$^a$` sub-labels), an e-mail inheriting the marked address before it, ordinals and
+  `\and` as text for every class, an API e-mail by spelling within its author group (it breaks the amsart grid,
+  0704.1449). Guards `perfect_kernel_batchfms2a2::{api_affiliation_parts_by_its_marks,
+  fuzzy_labels_by_surname_and_with_their_macros, glued_marks_part_by_the_marks_shown, a_notes_email_goes_by_spelling,
+  addresses_in_a_names_line_are_emails, orcid_links_cites_environments_and_title_notes,
+  prefix_marks_on_a_sole_line_and_a_sole_authors_orphans, address_lists_in_author_order_and_collaborations,
+  r3_shapes_leave_the_xml_unchanged}` (each red on r2); unit tests `resolver::tests::glued_labels_part_into_known_ones`,
+  `fmshadow::tests::{marks_as_text_or_formulas_are_no_name_text, r3_classes_classify_their_disagreements}`.
+
 ### 840. A space a name sets before its own mark is the name's; spacing-only math, `\enskip` after a mark part names
 
 OD #52(i) rewrites a horizontal space in an author block (`\hspace`, `\hfill`) to `\quad`, which with `\quad` and

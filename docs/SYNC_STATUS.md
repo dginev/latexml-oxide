@@ -627,7 +627,8 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
 - **The frontmatter observer labels `[\arabic{footnote}]` with the counter before the title's notes** (FM S2a.2;
   found by rev78o2): the printed mark steps with the title's `\thanks` (`\lx@title@footnote@step`, 78o r2), the
   observer's rehearsal evaluates the argument against the unstepped counter, so the two agree for a bare
-  `\footnotemark` and a literal `[<n>]` only (OD #851). For S2a.2 to fix in the observer.
+  `\footnotemark` and a literal `[<n>]` only (OD #851). Fixed in FM S2a.2 (the rehearsal reads `[<n>]` with the steps
+  the block's notes made; guard `perfect_kernel_batchfms2a2::footnotemark_number_reads_the_stepped_counter`).
 - **amsmath's alignment dimens `\totwidth@`, `\alignsep@` (and `\black@`) are undefined** (SHARED, binding; KPE #1087;
   **FIXED 78o**, amsmath.sty:1309-1317, :1364 in amsmath_sty.rs; 0912.5438 156 → 124 Errors, its tail back). Guard
   `perfect_kernel_batch78o::amsmath_alignment_dimens_totwidth_alignsep_are_defined`.
@@ -6127,6 +6128,119 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `author_user_mark_macro`; seed 52), switch unset: every XML byte-identical, E 782 = 782, F 2 = 2. The status line's
   undefined-macro and missing-file lists are now sorted (`error.rs`; Perl's order is hash order), so log diffs against
   pre-int52 bases reorder those lists. Binding nets (int52a) 136/136, 0 worse than int51a.
+- **FM S2a.2** (the frontmatter resolver, policy table and shadow comparator, shadow only; K23 row; OD #837 "S2a.2";
+  design §2 points 1-9, §3 S2a, defaults 4, 5, 6, 8, 9; the main session's S2a.2 notes): `observer/resolver.rs` reads the
+  ledger's blocks and API calls into `front.rs`'s tuples, each association with its rule (`resolved` in the dump;
+  rulings 1-4, the owner chain, the API calls' `label=`/`labelseq=`/leading mark/`annotate=`), under `observer/policy.rs`
+  (keyed on (the binding owning `\author`, the hook): revtex, authblk, llncs, aa, inst_support, svjour, jheppub, jcappub,
+  jinstpub, iopart, jpconf, each citing its OD); the lexer adds `ref:<key>` marks (A&A `\inst{\ref{…}}`) and binding
+  request marks (`\corref`, `\fnref`), a `\footnotemark[<n>]` read with the counter the block's notes stepped, the ledger the API calls' contents (rehearsed and lexed), attributes and parent,
+  and the `\author` owner (`note_binding_load`, the latexml_package and latexml_contrib `dispatch`). `ab_audit fmshadow ROOT` compares with the
+  XML per paper: kind, family, deciding rule, classified (an adopted ruling's change) or not; "no block" and "held"
+  outside the gate's denominator. Guards `perfect_kernel_batchfms2a2::*` (15), engine `policy::tests` (2), ab_audit
+  `fmshadow::tests` (4). **Measured (release `fms2a2-rel`, `--preload=ar5iv.sty`):** XML byte-identical to int52a on the 300 seeded
+  census papers with the variable unset and set (E 27 = 27, F 0 = 0, W 2,854 = 2,854; logs off = on 298/300,
+  hep-ph9612328's and 2111.06996's time-budgeted math counts) and on the 976 sectioning-frontmatter repros (off and on, XML and stderr);
+  the final binary re-run gives the same, save one warning fewer once with the variable unset (2111.06996's
+  time-budgeted ambiguous-math count; a rerun gives 35 = 35); cost `perf stat -e instructions:u` on 10 documents with blocks: off vs int52a +0.007 %, on vs off +0.071 %
+  (at most +0.48 %, hep-ex0408042). Shadow census, the whole 30k (`sel78d/census_30k.tsv`, 26,322 converted; the
+  first 12,031 with a binary lacking the `\ref` marks, the 37 of those whose blocks hold a `\ref` re-converted):
+  23,359 papers with blocks, 76,503 blocks, 76,381 lexed, 112 empty, 10 out of positions, 204 blocks holding
+  rehearsal diagnostics (111 papers, the "held" bucket); 3,000 papers "no block". `ab_audit fmshadow --re-resolve`,
+  per family (papers; agree / disagree classified / disagree unclassified; gate = unclassified share of the counted):
+  kernel 6,867 (4,618 / 355 / 1,837; 27.0 %), revtex4_support 5,639 (5,075 / 265 / 299; 5.3 %), ams_support 3,105
+  (2,563 / 41 / 500; 16.1 %), IEEEtran 2,202 (1,467 / 116 / 618; 28.1 %), authblk 939 (23.9 %), elsart_support_core 818
+  (7.0 %), inst_support 776 (35.7 %), aas_support 688 (39.8 %), mn2e_support 560 (20.4 %), "binding" 488 (38.7 %: a
+  contrib binding's `\author` before its loader seam was noted — fixed, the census predates it), llncs 400 (40.5 %),
+  iopart_support 264 (8.0 %), sv_support 262 (72.9 %), jheppub 196 (9.3 %), ijcai 59 (78.0 %), JHEP.cls 58 (82.8 %);
+  total 23,207 counted, 17,409 agree, 938 classified, 4,860 unclassified (20.9 %). Largest unclassified buckets
+  (papers): name-split by the names line 1,126, an XML-only affiliation no shadow rule explains 1,094, an XML-only
+  e-mail 699, a note beside its name 496, an unmarked line's affiliation 433. PDF checks on a stratified 200 of the
+  disagreeing 5,000-paper sample (pdflatex on copies; 17 do not compile): shadow right 36, XML right 34, both wrong 24,
+  undecidable 89 (the automated name/label/spelling checks decide only part); of the unclassified 157 judged, 30 shadow
+  wins — the gate with those subtracted ≈ 16.9 % overall (kernel 19.7 %, revtex 4.1 %, IEEEtran 23.4 %). The K23 class
+  guard (under 0.5 % per family) is far: S2b waits on further resolver rounds per family (questions in the fms2a2
+  report). Scratch `~/data/pk_wt/scratch_fms2a2/` (ab/rep/final.*, pdf/verdicts.tsv).
+  **r2** (review revfms2a2: of 40 sampled unclassified disagreements 31 were the resolver's; OD #837 "S2a.2 r2"; rebased
+  on int53 a2db6c5a86): the resolver by defect class — notes keep their whole text (an emptied one in `dropped`),
+  legends by their leading Mark, whole `fuzzy:` labels, a creator's `author:N`, Perl's prefix fallback, names lines by
+  evidence, marks mid-line and trailing, the API intake creator calls only, declared contact roles, authblk's
+  `\AB@thenote` (ruling 1), today's joined unmarked lines, contact grid and replacing `\author`, pre-creator
+  annotations; the policy key's class fallback (report/book title-page marks arabic; the inert revtex field dropped —
+  revtex4-2.cls's default is `\@fnsymbol`, :5976-5978); the comparator compares the block, explains an XML item only by
+  the shadow's pieces joined, reads ORCID links by identifier, counts elimination as today's (OD #52, R10), and
+  classifies only by an adopted ruling's tag or a PDF-confirmed XML-wrong class listed by name (wide-space names merged,
+  a name list in one personname, an ORCID logo read as "ID"). Guards `perfect_kernel_batchfms2a2::*` (27, 12 new, each
+  red on r1), engine `resolver::tests` (4), ab_audit `fmshadow::tests` (6). **A/B** (release, int53a vs r2,
+  `--preload=ar5iv.sty`, int53a dumps): 300 seeded census papers XML identical with the variable unset and set (save
+  the per-run temp-dir `graphicspath` instruction), E 32 = 32 = 32, F 0, W 3,021 = 3,021 = 3,021 paper by paper; the 979
+  sectioning-frontmatter repros XML identical (base, off, on) and stderr identical once paths, times and the binary's
+  name are normalised. **Fresh census** (the same 26,322 papers re-converted with the r2 binary, not `--re-resolve`;
+  the dump's own `resolved` equals re-resolution): counted 23,207 — agree 19,101, classified 1,312, unclassified 2,794
+  (**12.0 %**, from 20.9 %); per family (gate): kernel 6,800 (19.9 %), revtex4_support 5,639 (**2.7 %**), ams_support
+  3,105 (2.9 %), IEEEtran 2,202 (17.3 %), authblk 939 (14.3 %), elsart_support_core 818 (6.9 %), inst_support 786
+  (26.0 %), aas_support 688 (7.1 %), mn2e_support 560 (13.0 %), llncs 400 (22.2 %), "binding" 317 (11.4 %),
+  iopart_support 264 (8.0 %), sv_support 262 (17.9 %), jheppub 196 (7.7 %), jcappub 93 (3.9 %), ijcai 59 (74.6 %),
+  JHEP.cls 58 (82.8 %); the class fallback now names report (23), book (20), jinstpub (24, all held), jpconf (14).
+  Largest unclassified buckets (papers): an XML-only affiliation no shadow item explains 655, a names-line split 644,
+  a name split no rule explains 208, an XML-only e-mail 201, a block e-mail line the XML gives an author 184. PDF
+  precision samples (pdflatex, seeded; 10 of the first 75 per side do not compile, replaced): classified 60 — the
+  shadow's change right 41, wrong 18, undecidable 1 (≈ 69 %; wrong: an API affiliation holding several marked entries
+  not parted 6, a `fuzzy:` label that spells no name 4, a glued label `12`/`1⋆`/`∗∗` 3, a note's e-mail by adjacency
+  not spelling 2, a name class misapplied 2, other 1); unclassified 60 — resolver wrong 25, XML wrong 19 (mostly names
+  merged with marks or affiliations, classes not yet listed), both 5, normalisation 9, undecidable 2. The class guard
+  is not met in any family; revtex is the closest. Scratch `~/data/pk_wt/scratch_fms2a2r2/` (rep/final.*,
+  pdf/judged.tsv).
+  **r3** (OD #837 "S2a.2 r3"; rebased on int54 b232b0eed4; backup `backup/fms2a2-r2` at eb506a0d28): the classified
+  bucket's wrong classes and the pilot families' residuals — marked entries of one API call parted by their marks, glued
+  labels parted by the marks shown (`ruling1:parted`; a number into digits only under single-digit entries), fuzzy
+  labels by surname and with their macros written out (`ledger::label_text`), a note's e-mail by spelling, author-order
+  address lists for every class (`owner:order`, charter §4), e-mail Contacts placed address by address, addresses in a
+  names line as e-mails, a per-author class's single name (`Sanhueza, Patricio`), names not ending at a gap after a
+  given name or an initial, collaborations as authors, revtex prefix marks on a sole line, ORCID links (`contact_parts`),
+  `\cite` marks and environment arguments in the lexer, mark-free note texts, links kept in affiliation text, amsart's
+  worded `\and` (policy `ams`), a sole author's orphans, title notes (`api:title-note`); the comparator reads marks typed
+  as text or as floating-superscript formulas, ORCID ids out of notes, glued e-mail labels, label-prefixed joined items;
+  change tags `ruling1:parted`, `role:url-as-email`, `owner:order`; XML-wrong classes added on PDF-confirmed witnesses
+  (a later names row read as an affiliation, a name with its affiliation, a collaboration's whole list, names parted only
+  by a mark or a note, a title note on the first author, names-line addresses, an ORCID id as text) and the r2 classes
+  fenced (one-word pieces only in lists of five or more, no address a name). Guards `perfect_kernel_batchfms2a2::*` (36,
+  9 new, each red on r2), `resolver::tests` (5), `fmshadow::tests` (8). **A/B** (release, int54a vs r3, int54a dumps): 300
+  seeded census papers XML identical with the variable unset and set (one transient math-parse divergence in
+  quant-ph0206123's "on" run; two reruns each way identical), E 32 = 32 = 32, F 0, W 3,021 = 3,021 = 3,020 (the
+  transient); the 979 sectioning-frontmatter repros XML identical (base, off, on), E 23, W 39 each. **Fresh census** (the
+  26,322 papers re-converted with the r3 binary, resolved again with the final resolver): counted 23,207 — agree 19,425,
+  classified 1,688, unclassified 2,094 (**9.0 %**, from 12.0 %); per family (gate): kernel 6,800 (16.1 %),
+  **revtex4_support 5,639 (0.9 %)**, **ams_support 3,105 (1.2 %)**, IEEEtran 2,202 (12.0 %), authblk 939 (10.0 %),
+  elsart_support_core 818 (6.0 %), inst_support 786 (23.1 %), aas_support 688 (4.5 %), mn2e_support 560 (7.1 %), llncs
+  400 (17.0 %), "binding" 317 (9.1 %), iopart_support 264 (6.1 %), sv_support 262 (12.6 %), jheppub 196 (6.0 %),
+  jcappub 93 (3.9 %), ijcai 59 (72.9 %), JHEP.cls 58 (81.0 %). The five r2 buckets (10 papers each against the PDF):
+  XML-only affiliation — resolver 1, XML 6, both 2, normalisation 1; names-line split — resolver 2, XML 6, both 1,
+  undecidable 1; unexplained name split — resolver 5 (collaborations as authors: fixed), XML 3, normalisation 1,
+  undecidable 1; XML-only e-mail — resolver 6, both 2, undecidable 2 (fixed: glued `E-mail:` labels, address-by-address
+  Contacts); block e-mail line — resolver 10 (6 author-order lists: fixed; names lost or institutions read as names 4). PDF precision (pdflatex, seeded, drawn from the first
+  9,286 fresh papers, a random third; no PDF or no author block on page 1-2 replaced): classified 62 — the shadow right
+  57, wrong 3 (2407.20481 a lone unrequested label, 1501.05343 a parted `21` — fixed, 1606.05885 a name split at a line
+  end), undecidable 2: **95.0 %** of the decidable; unclassified 60 — resolver 25, XML 19, both 10, normalisation 3,
+  undecidable 3. The class guard (< 0.5 %) is not met; revtex (52) and ams (37) residuals are listed by class in the r3
+  report. Side finding (not fixed, output-changing): `author_block/notes.rs` `classify_thanks` reads "erc" inside a word
+  as funding ("Perception", 2509.05368). Scratch `~/data/pk_wt/scratch_fms2a2r3/` (rep/final.*, pdf_verdicts.tsv).
+  **Integration (int58, S2a.2 r1-r3 squashed onto int57; binary int58a; shadow only, the fleet never sets
+  `LATEXML_FM_SHADOW`):** review revfms2a2_3 LAND — unset, nothing new runs on the conversion path (every entry checks the
+  switch; 60 papers byte-identical XML + logs vs int54a; +0.034 % instructions on 10 papers × 2 runs), set, the XML is
+  unchanged (40 papers; worst time 1.13×, memory 1.06×; 2103.04797's 974 creators 0.62 s both ways), shadow dumps
+  deterministic. Folded in by the main session: OD #837 lists all six r3 XML-wrong classes with their witnesses, K23 says
+  six, the note-e-mail fallback (the author carrying the note's mark) recorded as the main-session decision of 2026-10-22,
+  and the r3 runs credited to their pre-commit build. Main-session decisions on the r3 questions: author-order address
+  lists apply to every class (OD #805); `role:url-as-email` is adopted (r2 item 8); a title's note stays in the block (the
+  first-author placement is an XML-wrong class); hand-written line labels (`1-`, `1.`) stay unread pending a user ruling
+  (0903.2366, 2303.09899). Open for S2a.2 r4 (before the S2b pilot on revtex4_support): the revtex4_support residual to < 0.5
+  %; split `observer/resolver.rs` (3,181 lines) by stage and `ab_audit/fmshadow.rs` (1,772) below 1,000 lines; the review's
+  nits — `ledger.rs:237-255` identifies the `\author` definition by raw address (keep an `Rc` and `Rc::ptr_eq`),
+  `ledger.rs:358-364` `lookup_register` warns (use `lookup_register_quiet`), `ledger.rs:520-531` writes `attrs` in hash
+  order (`get_pairs()`), `events.rs:173` `ref_key` matches any `…ref` (`\href`, `\pageref`: an explicit list), `label_text`
+  bounds output tokens, not visited ones. Gates int58a: GATES58. A/B int57a vs int58a: AB58. Binding nets: NETS58.
+
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
   parts draw, as Unicode's IPA letter, cross-checked against tipauni.sty; the `""`/`||` ligatures ˌ ǁ), so its input

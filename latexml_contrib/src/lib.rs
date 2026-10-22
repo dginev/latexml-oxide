@@ -947,7 +947,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
         .iter()
         .find(|(name, extension, _)| matches_entry_nocase(base_only, name, extension))
     })
-    .map(|(_, extension, loader)| {
+    .map(|(name, extension, loader)| {
       // K1 provenance: a binding's own definitions are `Binding`; a `.pool`
       // entry is a pool; a binding a fallback class requires stays part of its
       // guess, `Fallback` (`input_definitions`), and one a binding borrows stays
@@ -963,7 +963,11 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
       } else {
         DefinitionOrigin::Binding
       };
-      with_origin(origin, loader)
+      // (the frontmatter observer notes the binding whose load defines `\author`, the policy table's key; under its
+      // shadow switch only: OXIDIZED_DESIGN_DIVERGENCES #837 — jpconf, jcappub, jinstpub are contrib bindings)
+      ::latexml_engine::base_utilities::note_binding_load(name, extension, || {
+        with_origin(origin, loader)
+      })
     })
     // biblatex style/variant packages (`biblatex-chicago`, `biblatex-apa`,
     // `biblatex-ieee`, `biblatex-nature`, `biblatex-science`, `biblatex-mla`,
