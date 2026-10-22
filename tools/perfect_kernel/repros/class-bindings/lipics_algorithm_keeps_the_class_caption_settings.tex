@@ -1,0 +1,17 @@
+% mechanism: lipics-v2021.cls:1090-1100 (lipics-v2019.cls:871-879), in the class's `\AtBeginDocument`, gives algorithm.sty's
+%   float the float style `ruled@notop` (`\renewcommand\fst@algorithm{\fs@ruled@notop}`), for which caption declares no
+%   caption style, so the class's caption settings (`labelsep=space,font={up,small},labelfont={sf,bf}`) stand — not
+%   caption.sty:907's `ruled` style, which a ruled float takes (caption.sty:864, caption_sty.rs `float_style` reads
+%   `\fst@<type>` as caption.sty:887-893 `\float@getstyle` does). The binding ports the block (a stand-in's copy does not
+%   register its `\AtBeginDocument` code, `copy_provides_defers`).
+% witness: 2008.11837 (lipics-v2019 + algorithm; its pdflatex "Algorithm 1 …", label LMSans10-Bold, text small), 23 census
+%   LIPIcs/OASIcs papers with algorithm.sty
+% oracle:  pdflatex needs the paper's class (not in TL): 2008.11837's copy 0 errors, "Algorithm 1 One." in sans bold
+% engines: perl: no lipics binding (OmniBus); rust 78v before this fix: the label bold upright, the text normal size
+% expect:  0 errors, 0 warnings; the tag "Algorithm 1" sans-serif bold 90%, closed by a space, the text 90%
+% status:  GREEN (78v)
+\documentclass{lipics-v2021}
+\usepackage{algorithm}
+\begin{document}
+\begin{algorithm}\caption{One.}Y\end{algorithm}
+\end{document}

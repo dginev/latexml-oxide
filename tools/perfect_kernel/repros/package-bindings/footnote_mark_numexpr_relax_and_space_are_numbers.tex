@@ -1,0 +1,18 @@
+% mechanism: a footnote's `[<n>]` is read as latex.ltx:17678 `\c@footnote #1\relax` reads it, TeX's scan_int (tex.web
+%   §440-§445): its leading spaces skipped (`[ \numexpr…]`) and an e-TeX expression read whole, up to its own `\relax`
+%   (`[\numexpr\value{footnote}-1\relax]`, the common form). `footnote_number_digits` (latex_constructs/mod.rs) read
+%   `\the\numexpr…\relax\relax` as "1\relax", not a number, and a leading space stopped its `\numexpr` arm: the marks
+%   lost and the texts unpaired. Now the leftover unexpandable `\relax` is no part of the number.
+% witness: 2210.14698 (emnlp2022 `\footnotetext[\numexpr\value{footnote}-1]{…}`, the form without `\relax`); review
+%   rev78u finding 1 (probes q_relax, q_space)
+% oracle:  pdflatex 0 errors; "A1 B21 C2.", footnotes "1 One." "2 Two." "1 Again one." "2 Again two."
+% engines: perl: "Missing number, treated as zero" Warnings, the marks and the texts apart (KNOWN_PERL_ERRORS #1135);
+%   rust int61a: 4 Warnings "Missing number", the marks lost
+% expect:  0 errors, 0 warnings; the marks "1" and "2" paired with "Again one." and "Again two."
+% status:  GREEN (78v)
+\documentclass{article}
+\begin{document}
+A\footnote{One.} B\footnote{Two.}\footnotemark[\numexpr\value{footnote}-1\relax] C\footnotemark[ \numexpr\value{footnote}\relax].
+\footnotetext[\numexpr\value{footnote}-1\relax]{Again one.}
+\footnotetext[ \numexpr\value{footnote}]{Again two.}
+\end{document}

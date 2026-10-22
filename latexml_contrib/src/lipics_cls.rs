@@ -48,6 +48,20 @@ LoadDefinitions!({
     String::from("labelfont={sf,bf}"),
     s!("listof=false"),
   ]);
+  // lipics-v2021.cls:1090-1100 (lipics-v2019.cls:871-879), in the class's `\AtBeginDocument`, which a stand-in's copy
+  // does not register (`copy_provides_defers`): with algorithm.sty, the algorithm float takes the label format `boxed`
+  // and the float style `ruled@notop`, for which caption declares no style, so the class's caption settings stand
+  // (caption.sty:864 `\caption@setstyle*\float@style`; caption_sty.rs `float_style`): "■ Algorithm 1" in the class's
+  // sans-serif bold, where `ruled`'s style would reset it (2008.11837). The label format only where the paper's copy
+  // declares it (lipics-v2021.cls:719-722 `\DeclareCaptionLabelFormat{boxed}`, 1805.03253's copy).
+  RawTeX!(
+    r"\AtBeginDocument{\@ifpackageloaded{algorithm}{%
+\@ifundefined{caption@labelformat@boxed}{\captionsetup[algorithm]{name=Algorithm,position=top}}%
+  {\captionsetup[algorithm]{name=Algorithm,labelformat=boxed,position=top}}%
+\@ifundefined{fs@ruled@notop}{\def\fs@ruled@notop{\def\@fs@cfont{\bfseries}\let\@fs@capt\floatc@ruled
+  \def\@fs@pre{}\def\@fs@post{\kern2pt\hrule\relax}\def\@fs@mid{\kern2pt\hrule\kern2pt}\let\@fs@iftopcapt\iftrue}}{}%
+\@ifundefined{fst@algorithm}{}{\def\fst@algorithm{\fs@ruled@notop}}}{}}"
+  );
   RequirePackage!("rotating", options => vec![s!("figuresright")]);
   RequirePackage!("subcaption");
   RequirePackage!("xstring");

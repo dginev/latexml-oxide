@@ -24,7 +24,11 @@ use crate::{
 /// GRAPHICSPATHS + SEARCHPATHS + SOURCEDIRECTORY. Paths are returned
 /// relative to SOURCEDIRECTORY when possible, matching the Perl
 /// `pathname_relative($_, $base)` post-filter.
-pub fn image_candidates(path: &str) -> String {
+pub fn image_candidates(path: &str) -> String { image_candidates_with(path, true) }
+
+/// [`image_candidates`]; `fallbacks` says whether a name the search directories do not hold is asked of kpsewhich and,
+/// with a graphics extension, retried under its base name (off for that retry itself).
+fn image_candidates_with(path: &str, fallbacks: bool) -> String {
   let path = path.trim().trim_matches('"');
   if path.is_empty() {
     return String::new();
@@ -148,7 +152,7 @@ pub fn image_candidates(path: &str) -> String {
   // earlier Rust port instead SYNTHESIZED `<path>.png` unconditionally, so a
   // missing extensionless image got a bogus `candidates="missing.png"` (Perl
   // emits none) and `example-image-a` got the wrong `.png` instead of its `.pdf`.
-  if candidates.is_empty() && !has_graphics_extension(&name) {
+  if fallbacks && candidates.is_empty() && !has_graphics_extension(&name) {
     let png = format!("{path}.png");
     let pdf = format!("{path}.pdf");
     if let Some(found) = crate::util::pathname::kpsewhich(&[&png, &pdf]) {
@@ -174,7 +178,8 @@ pub fn image_candidates(path: &str) -> String {
   // corpus's lost figures (~27,700) — never resolved although kpsewhich finds
   // it in the texmf tree. Guard: `cluster_package_guards::graphics_kpsewhich::
   // extensioned_texmf_graphic_is_a_candidate`.
-  if candidates.is_empty()
+  if fallbacks
+    && candidates.is_empty()
     && has_extension
     && let Some(found) = crate::util::pathname::kpsewhich(&[path])
   {
@@ -183,6 +188,36 @@ pub fn image_candidates(path: &str) -> String {
       None => found,
     };
     candidates.push(rel);
+  }
+
+  // Beyond Perl (OXIDIZED_DESIGN_DIVERGENCES #882): a name with a graphics extension that names no file anywhere
+  // (`\includegraphics{recomb.eps}` where the author ran epstopdf and shipped only `recomb.pdf`) is retried under its
+  // base name, its files of a graphics type the candidates, as post's `find_graphic_file` (latexml_post graphics.rs)
+  // already finds the image: so the digestion-time sizer reads the real file and a sub-figure panel has its width
+  // (1408.2843 Fig 1-2, 1503.04804 Fig 3; KNOWN_PERL_ERRORS #1137, where Perl's Image.pm:43-56 and post both lose it). A
+  // requested file that exists, on the search paths or in the texmf tree, is found above and stays the only one.
+  if fallbacks
+    && candidates.is_empty()
+    && has_graphics_extension(&name)
+    && path.ends_with(&name)
+    && let Some(stem) = Path::new(&name)
+      .file_stem()
+      .map(|s| s.to_string_lossy().to_string())
+    && !stem.is_empty()
+  {
+    let base = format!("{}{stem}", &path[..path.len() - name.len()]);
+    candidates = image_candidates_with(&base, false)
+      .split(',')
+      .filter(|found| {
+        let found_name = found.rsplit('/').next().unwrap_or(found);
+        has_graphics_extension(found_name)
+          && Path::new(found_name)
+            .file_stem()
+            .is_some_and(|s| s.to_string_lossy().eq_ignore_ascii_case(&stem))
+      })
+      .map(str::to_string)
+      .collect();
+    in_graphics_type_order(&mut candidates);
   }
 
   // Deduplicate while preserving order
@@ -212,18 +247,81 @@ fn has_graphics_rule(name: &str) -> bool {
     .is_some_and(|ext| RULED_EXTENSIONS.iter().any(|r| ext == *r))
 }
 
-/// Whether `name` ends in an extension a graphics driver reads (pdftex.def's `\Gin@extensions`, dvips.def's,
-/// and the formats post converts), case aside — the names kpsewhich is not asked for with `.png`/`.pdf` appended.
+/// The extensions a graphics driver reads, in the order a name without one tries them: pdftex.def's `\Gin@extensions`
+/// (`.pdf,.png,.jpg,.mps,.jpeg,.jbig2,.jb2`, then their uppercase `.PDF,…,.JB2`, pdftex.def:597-600), then `.eps`
+/// (epstopdf-base.sty:498-505 appends it), dvips.def's `.ps` and the formats post converts. Written lowercase, the first
+/// [`GIN_EXTENSIONS`] pdftex.def's; [`graphics_type_rank`] places the other-case variants.
+const GRAPHICS_EXTENSIONS: [&str; 14] = [
+  "pdf", "png", "jpg", "mps", "jpeg", "jbig2", "jb2", "eps", "ps", "svg", "gif", "tif", "tiff",
+  "bmp",
+];
+
+/// How many of [`GRAPHICS_EXTENSIONS`] are pdftex.def's lowercase `\Gin@extensions` (pdftex.def:597-598).
+const GIN_EXTENSIONS: usize = 7;
+
+/// Whether `name` ends in an extension a graphics driver reads ([`GRAPHICS_EXTENSIONS`]), case aside — the names
+/// kpsewhich is not asked for with `.png`/`.pdf` appended.
 fn has_graphics_extension(name: &str) -> bool {
-  const GRAPHICS_EXTENSIONS: [&str; 14] = [
-    "pdf", "png", "jpg", "jpeg", "mps", "jbig2", "jb2", "eps", "ps", "svg", "gif", "tif", "tiff",
-    "bmp",
-  ];
-  Path::new(name).extension().is_some_and(|ext| {
-    GRAPHICS_EXTENSIONS
-      .iter()
-      .any(|g| ext.eq_ignore_ascii_case(g))
-  })
+  graphics_type_rank(name) < 4 * GRAPHICS_EXTENSIONS.len()
+}
+
+/// `candidates` in TeX's order, not the directory's: by type ([`graphics_type_rank`]: pdftex.def's
+/// `\Gin@extensions` order, pdftex.def:597-600), then by search directory (each type is looked for along the
+/// `\graphicspath`/`\input@path` entries in turn, latex.ltx:9698 `\@iffileonpath`, so
+/// `\graphicspath{{new/}{figs/}}` takes `new/plot.pdf` before `figs/plot.pdf`; the directories in the order the
+/// search listed their hits), then by name within one directory. One difference stays: LaTeX's `\IfFileExists`
+/// tries the bare name in the working directory first (latex.ltx:1095-1102), where `search_dirs` lists the source
+/// directory last (review rev78v3 finding 2; a SYNC row). The base-name retry's hits were listed as `read_dir` gave
+/// them, so 0907.3747 had `nuebar.pdf,nuebar.ps` beside `nuebar_limit.ps,nuebar_limit.pdf`, and the sizer reads the
+/// first readable one (review rev78v finding 3; rev78v2 finding 2, where a tie-break by full path put `figs/`
+/// first).
+fn in_graphics_type_order(candidates: &mut [String]) {
+  let directory = |found: &str| {
+    found
+      .rsplit_once('/')
+      .map_or("", |(dir, _)| dir)
+      .to_string()
+  };
+  let mut directories: Vec<String> = Vec::new();
+  for found in candidates.iter() {
+    let dir = directory(found);
+    if !directories.contains(&dir) {
+      directories.push(dir);
+    }
+  }
+  candidates.sort_by_cached_key(|found| {
+    let found_name = found.rsplit('/').next().unwrap_or(found);
+    let dir = directory(found);
+    (
+      graphics_type_rank(found_name),
+      directories.iter().position(|d| *d == dir),
+      found_name.to_string(),
+    )
+  });
+}
+
+/// The place of `name`'s extension in the order pdftex tries them: pdftex.def's `\Gin@extensions` lowercase, then in
+/// another case (`.PDF`, as it lists `.PDF,.PNG,…` after them, pdftex.def:597-600), then the rest of
+/// [`GRAPHICS_EXTENSIONS`] (`.eps` first, which epstopdf-base appends) lowercase, then in another case; past all four
+/// for any other extension.
+fn graphics_type_rank(name: &str) -> usize {
+  let n = GRAPHICS_EXTENSIONS.len();
+  let Some(ext) = Path::new(name).extension().map(|e| e.to_string_lossy()) else {
+    return 4 * n;
+  };
+  let Some(index) = GRAPHICS_EXTENSIONS
+    .iter()
+    .position(|g| ext.eq_ignore_ascii_case(g))
+  else {
+    return 4 * n;
+  };
+  let other_case = GRAPHICS_EXTENSIONS[index] != ext;
+  match (index < GIN_EXTENSIONS, other_case) {
+    (true, false) => index,
+    (true, true) => n + index,
+    (false, false) => 2 * n + index,
+    (false, true) => 3 * n + index,
+  }
 }
 
 /// Whether the directory entry `entry` is the image `name`: the name itself or the name and one extension of word
@@ -1588,6 +1686,83 @@ fn is_exponent(tail: &str) -> bool {
 
 /// CSS px (1/96") → TeX pt (1/72.27").
 fn px_to_pt(px: f64) -> f64 { px * 72.27 / 96.0 }
+
+#[cfg(test)]
+mod candidate_order_tests {
+  use super::*;
+
+  /// The base-name retry's hits from one directory, listed by it in either order, come out in one: by type in
+  /// `\Gin@extensions` order, its uppercase extensions after its lowercase ones (`x.jpg` before `x.PNG`, `x.pdf` before
+  /// `x.PDF`, pdftex.def:597-600), then `.eps` (appended by epstopdf-base) and the other types, a type of no graphics
+  /// rule last (0907.3747's `nuebar_limit.ps,nuebar_limit.pdf`).
+  #[test]
+  fn retry_hits_are_in_graphics_type_order_whatever_the_directory_order() {
+    let expected = [
+      "nuebar.pdf",
+      "nuebar.jpg",
+      "nuebar.PDF",
+      "nuebar.PNG",
+      "nuebar.eps",
+      "nuebar.ps",
+      "nuebar.EPS",
+      "nuebar.xyz",
+    ];
+    for listed in [
+      [
+        "nuebar.ps",
+        "nuebar.xyz",
+        "nuebar.PDF",
+        "nuebar.eps",
+        "nuebar.pdf",
+        "nuebar.PNG",
+        "nuebar.jpg",
+        "nuebar.EPS",
+      ],
+      [
+        "nuebar.PNG",
+        "nuebar.jpg",
+        "nuebar.eps",
+        "nuebar.pdf",
+        "nuebar.xyz",
+        "nuebar.PDF",
+        "nuebar.EPS",
+        "nuebar.ps",
+      ],
+    ] {
+      let mut candidates: Vec<String> = listed.iter().map(|c| c.to_string()).collect();
+      in_graphics_type_order(&mut candidates);
+      assert_eq!(candidates, expected);
+    }
+  }
+
+  /// Hits of one type in several search directories keep the directories' search order (the order the search
+  /// listed them), not their names' (`\graphicspath{{new/}{figs/}}`: `new/plot.pdf` first, as pdftex reads it; review
+  /// rev78v2 finding 2); a better type in a later directory still comes first.
+  #[test]
+  fn retry_hits_of_one_type_keep_the_search_directory_order() {
+    for (listed, expected) in [
+      (["new/plot.eps", "new/plot.pdf", "figs/plot.pdf"], [
+        "new/plot.pdf",
+        "figs/plot.pdf",
+        "new/plot.eps",
+      ]),
+      (["figs/plot.pdf", "new/plot.eps", "new/plot.pdf"], [
+        "figs/plot.pdf",
+        "new/plot.pdf",
+        "new/plot.eps",
+      ]),
+      (["b/nuebar.ps", "a/nuebar.eps", "b/nuebar.eps"], [
+        "b/nuebar.eps",
+        "a/nuebar.eps",
+        "b/nuebar.ps",
+      ]),
+    ] {
+      let mut candidates: Vec<String> = listed.iter().map(|c| c.to_string()).collect();
+      in_graphics_type_order(&mut candidates);
+      assert_eq!(candidates, expected);
+    }
+  }
+}
 
 #[cfg(test)]
 mod svg_geometry_tests {

@@ -1,0 +1,23 @@
+% mechanism: `\captionsetup[<type>]{name=…}` of a float.sty type names it with `\floatname` too (caption.sty:882-884
+%   `\caption@setname`, when `\fname@<type>` is defined), which the type's caption prints; caption_sty.rs
+%   `\lx@caption@setname` set only `\<type>name`. And a type whose `\<type>name` is `\relax` takes `\fname@<type>`
+%   (caption.sty:878-881 `\caption@float@setname`, an `\ifx…\relax` test).
+% witness: none in the census sets a non-default name (review rev78s2 finding 3, probes m10, m11; LIPIcs's typed
+%   `name=Algorithm` is the default)
+% oracle:  pdflatex 0 errors; "Snip 1: Code one.", "Proc 1 A one."
+% engines: perl: caption settings not applied (KNOWN_PERL_ERRORS #795); rust int61a: "Listing 1", "Algorithm 1"
+% expect:  0 errors, 0 warnings; the tags "Snip 1" and "Proc 1"
+% status:  GREEN (78v)
+\documentclass{article}
+\usepackage{float}
+\usepackage{algorithm}
+\floatstyle{plain}
+\newfloat{listing}{h}{lol}
+\floatname{listing}{Listing}
+\usepackage{caption}
+\captionsetup[listing]{name=Snip}
+\captionsetup[algorithm]{name=Proc}
+\begin{document}
+\begin{listing}[h]Y\caption{Code one.}\end{listing}
+\begin{algorithm}[h]Z\caption{A one.}\end{algorithm}
+\end{document}

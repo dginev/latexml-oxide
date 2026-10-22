@@ -1,0 +1,40 @@
+% mechanism: a note inside an author's mark is taken out after it (`notes_out_of_marks`, preprocess.rs): a `\protect`
+%   right before the note command goes with it (`\textsuperscript{1\protect\thanks{…}}`; left behind, the label read
+%   `1\protect`, which nothing answers, and the "1" was lost), and a macro that prints text beside a note
+%   (`\newcommand\fnA{2\footnotemark}`) is read as TeX reads it, its body in its place: the "2" a label, the note the
+%   author's (moved out whole, its "2" landed in the name text; a macro of note commands alone, `\equalcontrib`, still
+%   goes out whole). A macro whose body does more than print a label beside its note (`\thanks{…}\unskip`, a
+%   conditional, optional arguments) is taken out whole, as before (review rev78v finding 1), and so is one with a
+%   `\relax` or a `\protect` beside its label (`{\relax 5\footnotemark}`, `{\protect 5\footnotemark}`, a
+%   `\DeclareRobustCommand`'s `\protect\fnS␣`) and one written after a `\protect` (`\protect\fnA`): read in place, the
+%   label kept the `\relax`/`\protect`, which nothing answers (review rev78v2 finding 1).
+% witness: none in the census (review rev78u findings 3-4, probes p01_protect, p02_printmacro; review rev78v2 probe
+%   sh2.tex); the mechanism's witnesses
+%   2512.05464, 2309.12862, 2603.17529
+% oracle:  pdflatex 0 errors; "Ann Alpha1∗ , Bob Beta2† , Cy Gamma3 , Di Delta3‡ , Ed Eps4 , Fa Phi6§ , Gu Upsilon5¶ ,
+%   Hal Vau5‖ , Io Sigma5∗∗ , Jo Rho15†† , Ka Kappa2‡‡", footnote "∗ Prot note."
+% engines: perl: the marks dropped, no note (KNOWN_PERL_ERRORS #1136); rust int61a: Ann's note kept, her "1" lost; Bob's
+%   "2" in his name text; rust 78v r1: Di's "3" lost, Ed's "4" lost and a footnotemark invented, Fa's "6" and mark lost;
+%   rust 78v r1-r2: Gu's, Hal's and Io's "5", Jo's "1" and "5", Ka's "2" lost
+% expect:  0 errors, 0 warnings; Ann's mark "1" and her thanks note; Bob's mark "2" and his footnotemark; Di's "3" and
+%   her note; Ed's "4", no mark; Fa's "6" (in his name text, int62a's residual) and his footnotemark; Gu's, Hal's, Io's
+%   "5", Jo's "5" and mark "1", Ka's "2", each with a footnotemark (the digit in the name text, int63a's residual)
+% status:  GREEN (78v r3)
+\documentclass{article}
+\newcommand\fnA{2\footnotemark}
+\newcommand\fnD{\thanks{D note}\unskip}
+\newif\ifshow
+\newcommand\fnE{\ifshow\footnotemark\fi}
+\newcommand\fnF[1][x]{6\footnotemark}
+\newcommand\fnU{\relax 5\footnotemark}
+\newcommand\fnV{\protect 5\footnotemark}
+\DeclareRobustCommand\fnS{5\footnotemark}
+\begin{document}
+\title{T}
+\author{Ann Alpha\textsuperscript{1\protect\thanks{Prot note.}}, Bob Beta\textsuperscript{\fnA}, Cy Gamma\textsuperscript{3},
+  Di Delta\textsuperscript{3\fnD}, Ed Eps\textsuperscript{4\fnE}, Fa Phi\textsuperscript{\fnF},
+  Gu Upsilon\textsuperscript{\fnU}, Hal Vau\textsuperscript{\fnV}, Io Sigma\textsuperscript{\fnS}, Jo Rho\textsuperscript{1\fnS},
+  Ka Kappa\textsuperscript{\protect\fnA}}
+\maketitle
+Body.
+\end{document}

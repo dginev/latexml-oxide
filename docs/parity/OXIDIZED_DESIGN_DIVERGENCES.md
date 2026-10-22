@@ -24323,8 +24323,18 @@ as a footnote, so `Nataliia Babina\textsuperscript{\rm 1,\rm 2\thanks{Work done 
 \thanks{…}}}`), with its arguments, out after the mark — `\textsuperscript{\rm 1,\rm 2}\thanks{…}` — so the mark's
 labels are read as labels and the note is the author's, as one written after the mark; a macro of optional arguments
 only whose expansion holds a note command is taken out with its `[…]` the same way (`split_mark_notes`, `makes_a_note`:
-the AAAI stub `\equalcontrib`, 2603.17529; a document's
-`\newcommand*\samethanks[1][\value{footnote}]{\footnotemark[#1]}`, 2309.12862); a mark holding nothing else goes
+the AAAI stub `\equalcontrib`, 2603.17529; a document's `\newcommand*\samethanks[1][\value{footnote}]{\footnotemark[#1]}`,
+2309.12862), while a macro of no arguments that prints a label beside a note (`\newcommand\fnA{2\footnotemark}`) is read
+with its body in its place, the "2" a label (`prints_beside_a_note`, 78v) — only when its body holds no conditional and,
+its notes out, only label-safe tokens (characters, font switches, spaces, a `\protect` right before a note command,
+another such macro); any other falls back to being taken out whole, so what its body does beside the note stays TeX's
+(`\fnD{\thanks{D note}\unskip}` "Di Delta3" and the note, `\fnE{\ifshow\footnotemark\fi}` under `\showfalse` "Ed Eps4"
+and no mark, `\fnF[1][x]{6\footnotemark}`, whose "6" stays in the name text as before: 78v r2, review rev78v finding 1;
+a `\relax` or another `\protect` beside the label, `{\relax 5\footnotemark}`, `{\protect 5\footnotemark}`, a
+`\DeclareRobustCommand`'s `\protect\fnS␣`, which the label would keep and no list answers, and so one written after a
+`\protect`, `\textsuperscript{\protect\fnA}`, its "5"/"2" in the name text as before: 78v r3, review rev78v2 finding 1),
+and a `\protect` right before a note command goes out with it (`\textsuperscript{1\protect\thanks{…}}` kept the label
+`1\protect`, 78v; guard `perfect_kernel_batch78v::author_protect_thanks_and_note_macro_inside_a_mark`); a mark holding nothing else goes
 (`$^{\thanks{Topical Group Conveners}}$`, 2212.00809). The mark readers (`\lx@sup@request@affiliation`,
 `\lx@sup@setlabel@affiliation`) read a note left in an operand after the mark all the same
 (`frontmatter_sup_operand_and_notes`), for a binding that wraps a line in `\lx@author@withsup` itself. The note mark is
@@ -24349,3 +24359,29 @@ author_note_macro_inside_a_mark_keeps_the_note; guards
 author_math_mark_thanks_keeps_the_mark_and_the_note, author_footnotemark_inside_a_mark_is_kept,
 author_note_macro_inside_a_mark_keeps_the_note}`,
 `author_split_tests::notes_out_of_marks_takes_the_note_after_the_mark`.
+
+### 882. A graphic named with an extension it was not shipped under is found under its base name at digestion
+
+graphics.sty:205-231 takes `\includegraphics{recomb.eps}` as that file, and pdftex.def's `.eps` rule converts it
+(epstopdf); authors who ran epstopdf themselves often shipped only `recomb.pdf`, which arXiv's pdflatex of the time read
+(TL 2025's epstopdf asks for `recomb-eps-converted-to.pdf` instead: "File not found"). Perl's `image_candidates`
+(Util/Image.pm:43-56) searches `recomb.eps.*` and `recomb.eps` only, so the graphic has no candidates and
+`image_graphicx_sizer` no size, and its post loses the image too (KNOWN_PERL_ERRORS #1137). Ours (78v): when a name with
+a graphics extension (`has_graphics_extension`) names no file on the search paths nor in the texmf tree, `image_candidates`
+(util/image.rs) retries its base name and keeps the files of a graphics type that answer it — the rule post's
+`find_graphic_file` (latexml_post graphics.rs) already applied, which kept the HTML right — so the box has the real
+file's size and a sub-figure panel its width. A requested file that exists is found first and stays the only candidate
+(`fig.eps` beside a `fig.pdf`); an extensionless name, or one the search finds, is untouched. The retry's hits are
+listed in the order TeX tries them (`in_graphics_type_order`: by type, pdftex.def's `\Gin@extensions` order,
+pdftex.def:597-600, its uppercase `.PDF,…,.JB2` after its lowercase ones as it lists them, then `.eps`, which
+epstopdf-base.sty:498-505 appends, `.ps` and post's types, their other-case variants last; then by search directory, the `\graphicspath`/`\input@path` order each type is looked for along; then by name
+within one directory), not the directory's, since the sizer reads the first readable one (0907.3747 had
+`nuebar.pdf,nuebar.ps` beside `nuebar_limit.ps,nuebar_limit.pdf`; 78v r2, review rev78v finding 3;
+`\graphicspath{{new/}{figs/}}` takes `new/plot.pdf` first, where a tie-break by full path took `figs/plot.pdf` and sized
+the box from it: 78v r3, review rev78v2 findings 2-3, guard
+`perfect_kernel_batch78v::includegraphics_eps_retry_keeps_the_graphicspath_order`). Witnesses 1408.2843 Fig 1-2
+(`recomb.eps` → `recomb.pdf`), 1503.04804 Fig 3 (`pnt_pwpt_*.eps` → `.pdf`); 97 of the census's 26,364 graphics papers name
+such a file (in the first five per paper: 261 `.eps`, 12 `.png`, 12 `.pdf`, 1 `.ps`, 1 `.jpg` names), 77 of which gain
+candidates and sizes in the 78v A/B. Repro
+package-bindings/includegraphics_eps_shipped_only_as_pdf_is_sized; guard
+`perfect_kernel_batch78v::includegraphics_eps_shipped_only_as_pdf_is_sized`.

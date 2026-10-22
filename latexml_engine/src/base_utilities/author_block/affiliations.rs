@@ -95,9 +95,6 @@ pub fn affiliation_calls(
         if spacing_end(seg.unlist_ref()) == 0 {
           continue;
         }
-        if let Some(last) = marked_entries.last_mut() {
-          *last = trim_trailing_separator(std::mem::take(last));
-        }
         marked_entries.push(seg.unlist());
         follows_entry = true;
       }
@@ -112,6 +109,16 @@ pub fn affiliation_calls(
     }
   }
   let email_calls = place_address_runs(address_runs, &mut marked_entries, 0)?;
+  // The separator between two affiliations (`$^1$Univ A, $^2$Univ B`) is trimmed from each entry but the last once
+  // its address runs are in place: an entry is whole only then, and a run spliced at the length the entry had when the
+  // run was read (`AddressRun::under`) would otherwise land past the end of an entry trimmed before it
+  // (`\IEEEauthorrefmark{2}…Nankai University,\\ \{…\}@mail.nankai.edu.cn;\\ \IEEEauthorrefmark{3}…`, 2509.13772: a
+  // panic, "range end index 44 out of range for slice of length 43"; repro
+  // sectioning-frontmatter/affiliation_address_run_after_a_trailing_comma).
+  let last = marked_entries.len().saturating_sub(1);
+  for entry in &mut marked_entries[..last] {
+    *entry = trim_trailing_separator(std::mem::take(entry));
+  }
   for entry in marked_entries {
     let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(Tokens::new(
       entry

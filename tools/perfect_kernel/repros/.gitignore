@@ -7,3 +7,5 @@
 # a graphic fixture a repro includes (not a pdflatex output)
 !graphics-tikz/ext/fig.pdf
 !graphics-tikz/inkscape/box.pdf
+!package-bindings/eps_as_pdf_one.pdf
+!package-bindings/eps_as_pdf_two.pdf

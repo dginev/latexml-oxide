@@ -237,8 +237,11 @@ LoadDefinitions!({
     \caption@begindocumenthook\let\caption@begindocumenthook\relax
     \def\caption@AtBeginDocument{\@ifstar\@firstofone\@firstofone}%
     \caption@@begindocumenthook\let\caption@@begindocumenthook\relax}");
-  // caption3.sty:1349-1350 `\caption@setname{type}{name}` = `\@namedef{<type>name}{name}`.
-  RawTeX!(r"\def\lx@caption@setname#1#2{\@namedef{#1name}{#2}}");
+  // caption3.sty:1349-1350 `\caption@setname{type}{name}` = `\@namedef{<type>name}{name}`; for a float.sty type
+  // (`\fname@<type>` defined) caption.sty:882-884 names it with `\floatname` too, which its own caption prints
+  // (`\captionsetup[listing]{name=Snip}` of minted's float.sty `listing`: pdflatex "Snip 1:", review rev78s2 probe m10;
+  // algorithm.sty's "Proc 1", m11).
+  RawTeX!(r"\def\lx@caption@setname#1#2{\@ifundefined{fname@#1}{}{\ifdefined\floatname\floatname{#1}{#2}\fi}\@namedef{#1name}{#2}}");
   // caption3.sty:1344-1345 `\caption@SetName` is newfloat.sty:179-188 `\newfloat@setname`: the name is set, and added
   // to the current language's `\captions<language>` (babel, polyglossia), which `\begin{document}` runs and which
   // would otherwise reset it ("Figure" again under `[english]{babel}`).
@@ -246,7 +249,22 @@ LoadDefinitions!({
   \ifcsname languagename\endcsname\ifcsname captions\languagename\endcsname
   \expandafter\g@addto@macro\csname captions\languagename\endcsname{\lx@caption@setname{#1}{#2}}\fi\fi
   \endgroup}");
-  def_macro_noop("\\DeclareCaptionStyle{}[]{}")?;
+  // caption3.sty:629-637 `\DeclareCaptionStyle{<name>}[<single-line options>]{<options>}`: a named set of settings, which
+  // a float.sty float takes when its float style has that name (caption.sty:864 `\caption@setstyle*\float@style`;
+  // `float_style_setting`): the AAAI templates' `\DeclareCaptionStyle{ruled}{labelfont=normalfont,labelsep=colon,…}`
+  // makes their ruled algorithms "Algorithm 1: …" (2512.05464). The single-line options are not read (no line measure).
+  // Perl's caption.sty.ltxml:71 makes it a no-op, so a ruled float.sty float keeps the global caption format
+  // (KNOWN_PERL_ERRORS #1139; 2106.08363, 2109.00138, 2412.15287).
+  DefPrimitive!("\\DeclareCaptionStyle{} [] RequiredKeyVals:caption", sub[(name, _single, kv)] {
+    let pairs: Vec<(String, String)> = kv
+      .get_pairs()
+      .map(|(key, value)| {
+        let text = value.clone().owned_tokens().unwrap_or_default().untex_string();
+        (key.to_string(), caption_value(text.as_str()))
+      })
+      .collect();
+    declare_caption_style(name.to_string().trim(), &pairs);
+  });
   // caption3.sty:1753-1756: the public float-type API lazy-loads newfloat and
   // delegates (`\DeclareCaptionType[opts]{type}[singular][listname]`);
   // pygmentex.sty:23 `\DeclareCaptionType{pygcode}[Listagem][Lista de
@@ -1003,12 +1021,13 @@ LoadDefinitions!({
   DefMacro!("\\lx@format@scaption@@{}{}", sub[(ty, text)] { caption_star_format_tokens(ty, text) });
   // caption3.sty:1468-1472 `\caption@fnum`: the label format's name argument is `\@nameuse{<type>name}`, empty when
   // the type has none; for a float.sty type without one, its `\floatname` (caption.sty:878-881
-  // `\caption@float@setname`: `\<type>name` is `\fname@<type>`), so minted's float.sty `listing` under LIPIcs's boxed
+  // `\caption@float@setname`: `\<type>name` is `\fname@<type>` when it is undefined or `\relax`, `\expandafter\ifx
+  // \csname #1name\endcsname\relax`), so minted's float.sty `listing` under LIPIcs's boxed
   // label format reads "Listing 4" (2602.12973; guard `perfect_kernel_batch78s::caption_label_format_names_a_float_sty_type`).
   // The title takes the caption's text as caption3 does, `\long` (`\newcommand\caption@@make[2]`, caption3.sty:1488): a
   // caption with a paragraph break (1907.05060's elife figures) erred "Paragraph ended before \format@title@figure".
   // Guard `perfect_kernel_batch73a::caption_package_title_takes_a_paragraph_break`.
-  RawTeX!(r"\def\lx@caption@fnum#1#2{\expandafter\def\csname fnum@#2\endcsname{\csname caption@labelformat@#1\endcsname{\ifcsname #2name\endcsname\csname #2name\endcsname\else\ifcsname fname@#2\endcsname\csname fname@#2\endcsname\fi\fi}{\lx@the@@{#2}}}}
+  RawTeX!(r"\def\lx@caption@fnum#1#2{\expandafter\def\csname fnum@#2\endcsname{\csname caption@labelformat@#1\endcsname{\expandafter\ifx\csname #2name\endcsname\relax\ifcsname fname@#2\endcsname\csname fname@#2\endcsname\fi\else\csname #2name\endcsname\fi}{\lx@the@@{#2}}}}
 \def\lx@caption@settitle#1#2{\expandafter\long\expandafter\def\csname format@title@#1\endcsname##1{\lx@tag[][#2]{\lx@fnum@@{#1}}##1}}
 \def\lx@caption@addfont#1#2{\@ifundefined{#1}{\@namedef{#1}{}}{}\expandafter\l@addto@macro\csname #1\endcsname{#2}}");
 
@@ -1072,7 +1091,50 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@caption@option", sub[_args] { caption_option() });
   DeclareOption!(None, { caption_option()?; });
   ProcessKeyOptions!();
+  // caption.sty:904-908: without the `ruled` option (`caption_option`) a ruled float.sty float takes the caption style
+  // `ruled`, `labelfont=bf,labelsep=space,strut=0`, so "Algorithm 1 Two." under a global `labelformat=allcaps`
+  // (2106.08363, 2109.00138); with it, the settings as they are.
+  if !lookup_bool("lx@caption@ruled@option") {
+    declare_caption_style("ruled", &[
+      ("labelfont".to_string(), "bf".to_string()),
+      ("labelsep".to_string(), "space".to_string()),
+      ("strut".to_string(), "0".to_string()),
+    ]);
+  }
 });
+
+/// Record caption style `name` ([`float_style_setting`]) with its settings, `labelseparator` read as `labelsep`
+/// (caption3.sty:774-775); a redeclaration replaces it whole.
+fn declare_caption_style(name: &str, pairs: &[(String, String)]) {
+  let previous = lookup_string(&s!("CAPTION_STYLE_{name}"));
+  for key in previous.split(',').filter(|k| !k.is_empty()) {
+    assign_value(
+      &s!("CAPTION_STYLE_{name}_{key}"),
+      Stored::String(pin(String::new())),
+      Some(Scope::Global),
+    );
+  }
+  let mut keys = Vec::new();
+  for (key, value) in pairs {
+    let key = if key == "labelseparator" {
+      "labelsep"
+    } else {
+      key.as_str()
+    };
+    assign_value(
+      &s!("CAPTION_STYLE_{name}_{key}"),
+      Stored::String(pin(value.clone())),
+      Some(Scope::Global),
+    );
+    keys.push(key.to_string());
+  }
+  // (the style's keys, which also says it is declared: never empty, a style of no keys being `,`)
+  assign_value(
+    &s!("CAPTION_STYLE_{name}"),
+    Stored::String(pin(s!(",{}", keys.join(",")))),
+    Some(Scope::Global),
+  );
+}
 
 /// One option of caption's first load (caption.sty:114-147, 171-172): a v1 option sets its key, any other is a key.
 fn caption_option() -> Result<()> {
@@ -1084,7 +1146,16 @@ fn caption_option() -> Result<()> {
     "scriptsize" | "footnotesize" | "small" | "normalsize" | "large" | "Large" => {
       s!("font={option}")
     },
-    "normal" | "isu" | "hang" | "center" | "centerlast" | "nooneline" | "ruled" | "flushleft"
+    // caption.sty:141 `ruled`: no caption style `ruled` is declared (:904-908, after this binding's options).
+    "ruled" => {
+      assign_value(
+        "lx@caption@ruled@option",
+        Stored::Bool(true),
+        Some(Scope::Global),
+      );
+      String::new()
+    },
+    "normal" | "isu" | "hang" | "center" | "centerlast" | "nooneline" | "flushleft"
     | "flushright" | "oneline" | "ignoreLTcapwidth" => String::new(),
     // The option's own tokens, unexpanded, as `\caption@ProcessOptions*` passes them on (caption.sty:171-172):
     // `figurename=\textsc{Fig}` is the name, not `\textsc`'s expansion.
@@ -1136,18 +1207,74 @@ fn caption_value(value: &str) -> String {
 /// (`lx@caption@outer`, a `\captionof` of another type: caption applies a float's options when it begins and a
 /// `\captionof`'s on top, caption.sty:300-320 `\caption@@settype` → `\caption@setoptions`, so a `\captionof{subtable}`
 /// in a table under `\captionsetup[table]{labelsep=space}` is "(a) For participant 1", 2502.11752), else the general one.
+///
+/// A float.sty float's style comes between them (caption.sty:856-868 `\@float@setevery`, run as the float begins, before
+/// the type's options): `\caption@setstyle*\float@style` resets the settings to the caption style of that name when
+/// there is one ([`float_style_setting`]: `ruled`), then `\caption@setoptions\float@style` applies the style's typed
+/// options (`\captionsetup[ruled]{…}`). So a ruled algorithm.sty float under a global `labelformat=allcaps` prints
+/// "Algorithm 1 Two." (2106.08363, wiley-article; a global label format `boxed`, 2109.00138), while LIPIcs's typed
+/// `\captionsetup[algorithm]{…}` still applies (review rev78s2 probes wy, mc).
 fn caption_setting(ty: &str, key: &str) -> Option<String> {
   let outer = lookup_string("lx@caption@outer");
   let outer = (!outer.is_empty() && outer != ty).then(|| s!("CAPTION_{outer}_{key}"));
-  [
-    Some(s!("CAPTION_{ty}_{key}")),
-    outer,
-    Some(s!("CAPTION_{key}")),
-  ]
-  .iter()
-  .flatten()
-  .map(|k| lookup_string(k))
-  .find(|v| !v.is_empty())
+  let style = float_style(ty);
+  let style_options = (!style.is_empty()).then(|| s!("CAPTION_{style}_{key}"));
+  let found = [Some(s!("CAPTION_{ty}_{key}")), outer, style_options]
+    .iter()
+    .flatten()
+    .map(|k| lookup_string(k))
+    .find(|v| !v.is_empty());
+  if found.is_some() {
+    return found;
+  }
+  if let Some(reset) = float_style_setting(&style, key) {
+    return reset;
+  }
+  Some(lookup_string(&s!("CAPTION_{key}"))).filter(|v| !v.is_empty())
+}
+
+/// The float style of a float.sty type whose captions are float.sty's (`float_sty.rs` `record_float_style`, `\newfloat`
+/// and `\restylefloat`), as caption.sty:887-893 `\float@getstyle` reads it: `\fst@<type>`'s `\fs@<style>` less its
+/// `fs@` (`ruled@notop` after LIPIcs's `\renewcommand\fst@algorithm{\fs@ruled@notop}`, a style caption declares
+/// nothing for, so its settings stand: 2008.11837); empty for any other type.
+fn float_style(ty: &str) -> String {
+  if !lookup_bool(&s!("float@style@{ty}")) {
+    return String::new();
+  }
+  let Ok(Some(defn)) = lookup_definition(&T_CS!(s!("\\fst@{ty}"))) else {
+    return String::new();
+  };
+  match defn.get_expansion() {
+    Some(ExpansionBody::Tokens(body)) => match body.unlist_ref().as_slice() {
+      [cs] if cs.get_catcode() == Catcode::CS => cs
+        .with_cs_name(|name| name.strip_prefix("\\fs@").map(str::to_string))
+        .unwrap_or_default(),
+      _ => String::new(),
+    },
+    _ => String::new(),
+  }
+}
+
+/// A caption setting a float.sty float's style gives: `None` when the float style names no caption style
+/// ([`declare_caption_style`]: caption.sty's `ruled`, a document's `\DeclareCaptionStyle{ruled}{…}`; `plain`,
+/// `plaintop` and `boxed` have none) or leaves the key alone, else the style's value or, for a key it does not set, the
+/// value caption3.sty:655-662 `\caption@resetstyle` resets it to (`Some(None)`: nothing, the class's).
+fn float_style_setting(style: &str, key: &str) -> Option<Option<String>> {
+  if style.is_empty() || lookup_string(&s!("CAPTION_STYLE_{style}")).is_empty() {
+    return None;
+  }
+  let declared = lookup_string(&s!("CAPTION_STYLE_{style}_{key}"));
+  if !declared.is_empty() {
+    return Some(Some(declared));
+  }
+  match key {
+    "labelformat" => Some(Some("default".to_string())),
+    "labelsep" => Some(Some("colon".to_string())),
+    "format" | "textformat" | "font" | "labelfont" | "textfont" | "size" | "justification" => {
+      Some(None)
+    },
+    _ => None,
+  }
 }
 
 /// caption3.sty:852-858: a font option's value is a list of caption fonts (`font={small,it}`, `labelfont=bf`,

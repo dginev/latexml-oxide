@@ -1,28 +1,48 @@
 use crate::prelude::*;
 
 LoadDefinitions!({
-  // Perl: DefPrimitive('\SetupFloatingEnvironment OptionalKeyVals {}', sub { ... })
-  DefPrimitive!("\\SetupFloatingEnvironment OptionalKeyVals {}", sub[(options, ftype)] {
-    let ftype = ftype.to_string();
-    let within = options.as_ref()
-      .and_then(|o| o.get_value("within"))
-      .map(|v| v.to_string())
-      .unwrap_or_default();
-    new_counter(&ftype, &within, None)?;
-    let inlist = options.as_ref()
-      .and_then(|o| o.get_value("fileext"))
-      .map(|v| v.to_string())
-      .unwrap_or_else(|| s!("lo{ftype}"));
-    let ext_cs = s!("\\ext@{ftype}");
-    def_macro(T_CS!(ext_cs), None, Tokens::new(ExplodeText!(inlist)), None)?;
-    let name = options.as_ref()
-      .and_then(|o| o.get_value("listname"))
-      .map(|v| v.to_string())
-      .unwrap_or_else(|| s!("List of {ftype}s"));
-    let name_cs = s!("\\{ftype}name");
-    def_macro(T_CS!(name_cs), None, Tokens::new(ExplodeText!(name)), None)?;
-  });
-
+  // newfloat.sty:304-306 `\SetupFloatingEnvironment{type}{options}` sets an existing type's options
+  // (`\newfloat@setoptions`, :149-167, keys :173-271): `name` (`\newfloat@setname`, which babel's `\captions<language>`
+  // keeps, :179-188), `listname`, `fileext`, `autorefname`, `legendname`, `placement`, `within`/`without` (the counter
+  // reset and `\the<type>`, :210-245) and `chapterlistsgaps` (list spacing, nothing here). Perl's binding has
+  // `\SetupFloatingEnvironment OptionalKeyVals {}`, a second `\DeclareFloatingEnvironment` that read the type from the
+  // options' place, so `\SetupFloatingEnvironment{listing}{name=Prog}` printed "name=Prog" and the name was unchanged
+  // (KNOWN_PERL_ERRORS #1138; 2306.12224, 2405.15425, 2411.16612 "List.", 2507.09840, 2510.09447 "Listagem"; review
+  // rev78s2 probe sf). newfloat.sty:48 loads keyval.
+  RequirePackage!("keyval");
+  RawTeX!(
+    r"\def\SetupFloatingEnvironment#1#2{\def\newfloat@type{#1}%
+\let\newfloat@within@value\@undefined\setkeys{@newfloat}{#2}%
+\ifx\newfloat@within@value\@undefined\else
+\edef\@tempa{\noexpand\lx@newfloat@setwithin{#1}{\newfloat@within@value}}\@tempa\fi}
+\def\newfloat@setname#1#2{\newfloat@@setname{#1}{#2}\begingroup
+\ifcsname languagename\endcsname\ifcsname captions\languagename\endcsname
+\expandafter\g@addto@macro\csname captions\languagename\endcsname{\newfloat@@setname{#1}{#2}}\fi\fi
+\endgroup}
+\def\newfloat@@setname#1#2{\@namedef{#1name}{#2}}
+\define@key{@newfloat}{fileext}{\@namedef{ext@\newfloat@type}{#1}}
+\define@key{@newfloat}{listname}{\@namedef{list\newfloat@type name}{#1}}
+\define@key{@newfloat}{name}{\expandafter\newfloat@setname\expandafter{\newfloat@type}{#1}}
+\define@key{@newfloat}{autorefname}{\@namedef{\newfloat@type autorefname}{#1}}
+\define@key{@newfloat}{legendname}{\@namedef{fleg\newfloat@type}{#1}}
+\define@key{@newfloat}{placement}{\@namedef{fps@\newfloat@type}{#1}}
+\define@key{@newfloat}{within}{\def\newfloat@within@value{#1}}
+\define@key{@newfloat}{without}[]{\def\newfloat@within@value{none}}
+\define@key{@newfloat}{chapterlistsgaps}{}
+\def\lx@newfloat@setwithin#1#2{\ifcsname c@chapter\endcsname\@removefromreset{#1}{chapter}\fi
+\@removefromreset{#1}{section}\edef\@tempa{#2}\ifx\@tempa\@empty\def\@tempa{none}\fi
+\def\@tempb{none}\ifx\@tempa\@tempb
+  \lx@newfloat@@setwithin{#1}{}%
+\else\def\@tempb{chapter}\ifx\@tempa\@tempb
+  \@addtoreset{#1}{chapter}\lx@newfloat@@setwithin{#1}{\ifnum\c@chapter>\z@ \thechapter.\fi}%
+\else\def\@tempb{section}\ifx\@tempa\@tempb
+  \@addtoreset{#1}{section}%
+  \ifcsname c@chapter\endcsname\@addtoreset{#1}{chapter}\lx@newfloat@@setwithin{#1}{\thesection.}%
+  \else\lx@newfloat@@setwithin{#1}{\ifnum\c@section>\z@ \thesection.\fi}\fi
+\else\PackageError{newfloat}{Invalid value `#2' for option `within'}\@ehc
+\fi\fi\fi}
+\def\lx@newfloat@@setwithin#1#2{\expandafter\gdef\csname the#1\endcsname{#2\arabic{#1}}}"
+  );
   // Perl: DefPrimitive('\DeclareFloatingEnvironment OptionalKeyVals {}', sub { ... })
   //
   // Perl L64-80 creates both the `$type` and `$type*` envs with

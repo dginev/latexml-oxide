@@ -99,7 +99,7 @@ fn wileynjd_class_copy_loads_its_algorithm_packages() {
   let xml = squash(&xml);
   assert!(
     xml.contains(
-      r#"<caption><tag close=" "><text font="bold" xml:id="alg1.3">Algorithm 1</text></tag> Sum</caption>"#
+      r#"<caption><tag close=" "><text font="bold" xml:id="alg1.3">Algorithm 1</text></tag>Sum</caption>"#
     ),
     "{xml}"
   );

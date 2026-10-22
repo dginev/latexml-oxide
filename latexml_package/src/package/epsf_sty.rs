@@ -74,15 +74,23 @@ LoadDefinitions!({
 /// Does the epsf this document loads reset `\epsfxsize`/`\epsfysize` globally after each `\epsfbox`? The versions
 /// conflict: TL's epsf.sty/epsf.tex (2.7.4, :505-506) `\global \epsfxsize = 0pt`, a 1991 copy (Rokicki/Knuth, 22 of the
 /// 43 copies shipped in the `\epsfsize` and epsf-control populations: hep-ph9404329, astro-ph9605026, 0801.4912)
-/// `\epsfxsize=0pt\epsfysize=0pt` in the current group. The copy TeX would load decides: `epsf.sty` for a package
-/// load, else `epsf.tex` (`\input epsf`), followed to `epsf.tex` when the file is a wrapper with no `\epsfbox` of its
-/// own (`\input epsf.tex`: astro-ph0111238, cs0501064); global, as TL's, when there is none. A `\def` is read with the
-/// spaces TL's copy puts in it (`\def \epsfbox #1{`, epsf.tex:294), so TL's epsf.sty, found when the paper ships only an
-/// `epsf.tex`, is the copy that decides (review rev78s2).
+/// `\epsfxsize=0pt\epsfysize=0pt` in the current group. The copy TeX would read decides: the file the binding answers
+/// (`binding_request`), `epsf.sty` for a package load and for `\input epsf.sty` — which leaves `\@currname` unset, so it
+/// read only `epsf.tex`, while latex reads a shipped 1991 `./epsf.sty` (0906.1361, astro-ph0006390, astro-ph0109126,
+/// astro-ph0410051, astro-ph9701125) —, `epsf.tex` for `\input epsf`; followed to `epsf.tex` when the file is a wrapper
+/// with no `\epsfbox` of its own (`\input epsf.tex`: astro-ph0111238, cs0501064); global, as TL's, when there is none.
+/// A wrapper that loads epsfig instead (psfrag's epsf.sty, `\RequirePackage{epsfig}`: astro-ph0012205, astro-ph9611186,
+/// astro-ph9911225) has epsfig's `\epsfbox`, whose reset is local (epsfig.sty:100-101 `\epsfysize\z@ \epsfxsize\z@`
+/// after its `\egroup`). A `\def` is read with the spaces TL's copy puts in it (`\def \epsfbox #1{`, epsf.tex:294), so
+/// TL's epsf.sty, found when the paper ships only an `epsf.tex`, is the copy that decides (review rev78s2).
 fn epsf_resets_globally() -> Result<bool> {
   let currname = Expand!(Tokens!(T_CS!("\\@currname"))).to_string();
   let currext = Expand!(Tokens!(T_CS!("\\@currext"))).to_string();
-  let exts: &[&str] = if currname == "epsf" && currext == "sty" {
+  let requested_sty = match binding_request() {
+    Some(request) => request == "epsf.sty",
+    None => currname == "epsf" && currext == "sty",
+  };
+  let exts: &[&str] = if requested_sty {
     &["sty", "tex"]
   } else {
     &["tex"]
@@ -100,6 +108,18 @@ fn epsf_resets_globally() -> Result<bool> {
             .trim_start()
             .starts_with("\\epsfxsize")
         }));
+      }
+      if ["\\RequirePackage", "\\usepackage"].iter().any(|load| {
+        code.match_indices(load).any(|(at, cs)| {
+          let rest = code[at + cs.len()..].trim_start();
+          let rest = rest
+            .strip_prefix('[')
+            .and_then(|r| r.split_once(']'))
+            .map_or(rest, |(_, r)| r.trim_start());
+          rest.starts_with("{epsfig}")
+        })
+      }) {
+        return Ok(false);
       }
     }
   }

@@ -689,17 +689,33 @@ fn footnote_number_digits(given: &Digested) -> Result<Option<Tokens>> {
   {
     return Ok(Some(Tokens::new(ExplodeText!(text))));
   }
-  Ok(match expanded.unlist_ref().as_slice() {
+  // (`\c@footnote #1\relax` reads `#1` as TeX's scan_int does, tex.web §440-§445: its leading spaces skipped, as in
+  // `[ \numexpr…]`, and an internal integer read whole)
+  let toks = expanded.unlist_ref();
+  let lead = toks
+    .iter()
+    .take_while(|t| t.get_catcode() == Catcode::SPACE)
+    .count();
+  Ok(match &toks[lead..] {
     [register] if lookup_definition(register)?.is_some_and(|d| d.is_register()) => {
       Some(Expand!(Tokens!(T_CS!("\\the"), *register)))
     },
     // (an e-TeX integer expression, which `\c@footnote #1\relax` reads whole: `\footnotetext[\numexpr\value{footnote}-1]`,
-    // 2210.14698; Perl and int59a "Missing number, treated as zero", the mark lost, KNOWN_PERL_ERRORS #1135)
-    [first, ..] if *first == T_CS!("\\numexpr") => {
-      let mut the = vec![T_CS!("\\the")];
-      the.extend(expanded.unlist_ref().iter().copied());
+    // 2210.14698; Perl and int59a "Missing number, treated as zero", the mark lost, KNOWN_PERL_ERRORS #1135. The
+    // expression ends at its own `\relax` (`[\numexpr\value{footnote}-1\relax]`, the common form) or at ours, and the
+    // `\relax` left over is unexpandable, so it is not part of the number: `\the\numexpr…\relax\relax` gives "1\relax")
+    [first, rest @ ..] if *first == T_CS!("\\numexpr") => {
+      let mut the = vec![T_CS!("\\the"), *first];
+      the.extend(rest.iter().copied());
       the.push(T_CS!("\\relax"));
-      let value = Expand!(Tokens::new(the)).to_string();
+      let mut value = Expand!(Tokens::new(the)).unlist();
+      while value
+        .last()
+        .is_some_and(|t| *t == T_CS!("\\relax") || t.get_catcode() == Catcode::SPACE)
+      {
+        value.pop();
+      }
+      let value = Tokens::new(value).to_string();
       let value = value.trim();
       (!value.is_empty()
         && value

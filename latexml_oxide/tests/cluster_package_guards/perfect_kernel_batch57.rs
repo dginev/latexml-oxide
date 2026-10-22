@@ -960,7 +960,7 @@ fn collapsed_panel_keeps_the_float_geometry() {
     &xml,
     "float",
     &[r#"xml:id="algorithm1""#],
-    r#"<float class="ltx_float_algorithm ltx_minipage" framed="top" inlist="loa" labels="LABEL:alg" vattach="middle" width="345.0pt" xml:id="algorithm1"><tags><tag><text font="bold">Algorithm 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Algorithm 1</tag></tags><toccaption><tag close=" ">1</tag>Alg</toccaption><caption><tag close=" "><text font="bold">Algorithm 1</text></tag> Alg</caption><p framed="topbottom">Step.</p></float>"#,
+    r#"<float class="ltx_float_algorithm ltx_minipage" framed="top" inlist="loa" labels="LABEL:alg" vattach="middle" width="345.0pt" xml:id="algorithm1"><tags><tag><text font="bold">Algorithm 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Algorithm 1</tag></tags><toccaption><tag close=" ">1</tag>Alg</toccaption><caption><tag close=" "><text font="bold">Algorithm 1</text></tag>Alg</caption><p framed="topbottom">Step.</p></float>"#,
   );
 }
 

@@ -17368,8 +17368,11 @@ inside `\subfigure{\epsfbox{…}}` (subfigure.sty:74 boxes its argument) the siz
 sub-figure takes it too (hep-ph9404329: latex logs Fig1b.ps width=198.45662pt). Minimal trigger: `\usepackage{epsf}`
 and `\epsfsize=0.6\textwidth\epsfbox{x.eps}`. Fixed in Rust (78s, epsf_sty.rs, epsfig_sty.rs; the reset's scope that of
 the epsf.sty (on a package load) or epsf.tex the file search finds — the paper's copy, else TL's, whose `\def \epsfbox
-#1{` is read with its spaces (review rev78s2) — `epsf_resets_globally`, global as TL's without one; an `\input
-epsf.sty` reads only epsf.tex, an open row). Witnesses nucl-th0009090
+#1{` is read with its spaces (review rev78s2) — `epsf_resets_globally`, global as TL's without one; since 78v the file
+the binding answers decides, so `\input epsf.sty`, which leaves `\@currname` unset, reads the paper's epsf.sty
+(`binding_request`, binding/content.rs; 0906.1361, astro-ph0006390, astro-ph0109126, astro-ph0410051, astro-ph9701125),
+and psfrag's epsf.sty, `\RequirePackage{epsfig}`, resets locally as epsfig.sty:100-101 does (astro-ph0012205,
+astro-ph9611186, astro-ph9911225)). Witnesses nucl-th0009090
 (15 Errors), hep-ph9404329 (9 sub-figure widths). Repros package-bindings/epsfsize_assigns_epsfxsize,
 epsfbox_local_reset_of_a_1991_copy, epsfbox_global_reset_of_a_tl_copy; guards
 `perfect_kernel_batch78s::{epsfsize_assigns_epsfxsize, epsfbox_resets_its_size, epsfbox_local_reset_of_a_1991_copy,
@@ -17535,7 +17538,9 @@ raises "Missing number, treated as zero"; the mark prints nothing (`<note role="
 stands apart. Minimal trigger: `A\footnote{One.} B\footnote{Two.}\footnotemark[\numexpr\value{footnote}-1]
 \footnotetext[\numexpr\value{footnote}-1]{Again.}` (pdflatex "B21", "1 Again."; Perl 2 Warnings). Fixed in Rust (78u,
 latex_constructs/mod.rs `footnote_number_digits`: an expansion led directly by `\numexpr` with no `\relax` of its own is read
-through `\the\numexpr…\relax`; the `…\relax]` form and a leading space still fail, review rev78u, an open SYNC row).
+through `\the\numexpr…\relax`; since 78v also the `…\relax]` form, the leftover `\relax` no part of the number, and a
+`[ \numexpr…]` with its leading space, as scan_int skips it, tex.web §440-§445: guard
+`perfect_kernel_batch78v::footnote_mark_numexpr_relax_and_space_are_numbers`).
 Repro package-bindings/footnote_mark_numexpr_is_a_number; guard
 `perfect_kernel_batch78u::footnote_mark_numexpr_is_a_number`.
 
@@ -17562,5 +17567,43 @@ setting", 4 errors in 1408.2843). Perl LaTeXML finds no file at either stage. At
 $$self{graphics_types}` greps the array *reference*, never matches, and always keeps `.eps`, so `recomb.pdf` is never tried
 and the image is missing from the HTML. Minimal trigger: `\includegraphics{a.eps}` with only `a.pdf` beside the source.
 Witnesses 1408.2843 Fig 1-2, 1503.04804 Fig 3. Rust: post already drops the extension (`latexml_post/src/graphics.rs`
-`find_graphic_file`), so the HTML keeps every image; the digestion-time lookup still mirrors Perl (`util/image.rs`
-`image_candidates`) — the SYNC row "an `.eps` shipped as `.pdf` has no size at digestion" owns the fix.
+`find_graphic_file`), so the HTML keeps every image; since 78v the digestion-time lookup (`util/image.rs`
+`image_candidates`) retries the base name too, so the box has its size (OXIDIZED_DESIGN_DIVERGENCES #882; guard
+`perfect_kernel_batch78v::includegraphics_eps_shipped_only_as_pdf_is_sized`).
+
+## 1138. newfloat's `\SetupFloatingEnvironment` reads its type from the options' place
+
+newfloat.sty:304-306 `\newcommand*\SetupFloatingEnvironment[1]{…\newfloat@setoptions{#1}}` takes the type, then its
+options (`name`, `listname`, `fileext`, `autorefname`, `legendname`, `placement`, `within`/`without`,
+`chapterlistsgaps`; :149-271), as minted's documentation tells its users to (`\SetupFloatingEnvironment{listing}{name=
+Source Code}`). Perl's newfloat.sty.ltxml:36-46 has `DefPrimitive('\SetupFloatingEnvironment OptionalKeyVals {}')`, a
+second `\DeclareFloatingEnvironment` with the arguments in `\DeclareFloatingEnvironment`'s order: the braced type is read
+as the type, the options as text, so "name=Source Code" prints as a paragraph, the name stays "Listing", and the counter
+is declared anew (`NewCounter`). Minimal trigger: `\usepackage{newfloat}\DeclareFloatingEnvironment{listing}
+\SetupFloatingEnvironment{listing}{name=Prog}` and a captioned `listing` (pdflatex "Prog 1: …"). Witnesses 2306.12224
+"Source Code", 2507.09840 "Source code", 2411.16612 "List." (`within=none`), 2510.09447 "Listagem", 2405.15425. Fixed in
+Rust (78v, newfloat_sty.rs: newfloat's macro and keys; minted_sty.rs's no-op only where newfloat is not loaded). Repro
+captions-floats/newfloat_setup_floating_environment_sets_its_options; guard
+`perfect_kernel_batch78v::newfloat_setup_floating_environment_sets_its_options`.
+
+## 1139. `\DeclareCaptionStyle` and `\restylefloat` are no-ops, so a float.sty float is never in its caption style
+
+caption.sty:856-868 `\@float@setevery` formats a float.sty float in the caption style named as its float style
+(`\float@getstyle`, caption.sty:887-893, reads float.sty:40-42's `\fst@<type>`): caption.sty:904-908's `ruled`
+(`labelfont=bf,labelsep=space`) or the one a document declares, `\DeclareCaptionStyle{ruled}{labelfont=normalfont,
+labelsep=colon}` in the AAAI templates (caption3.sty:629-637), its settings reset beneath the type's own
+(caption3.sty:655-662). Perl's caption.sty.ltxml:71 makes `\DeclareCaptionStyle{}[]{}` a no-op and float.sty.ltxml:27
+`\restylefloat` one ("Ignore for now..."), and no style is recorded for a type, so a ruled float takes
+float.sty.ltxml's own format whatever the document declared (caption's keys aside, which Perl reads none of, #795).
+With caption's keys read (OXIDIZED_DESIGN #617) but no style, ours gave a ruled float the global caption format instead
+("ALGORITHM 1" under a global `labelformat=allcaps`, 2106.08363; "[Listing] 1" under a global `boxed`, 2109.00138).
+Minimal trigger: `\usepackage{float}\usepackage{caption}\captionsetup{labelfont=it,labelsep=period}
+\DeclareCaptionStyle{ruled}{labelfont=bf,labelsep=colon}\floatstyle{ruled}\newfloat{program}{h}{lop}
+\floatname{program}{Program}` and `\begin{program}[h]Z\caption{Ruled.}\end{program}`: pdflatex "Program 1: Ruled." (bold
+label), Perl 0.8.8 "Program 1 Ruled." (float.sty.ltxml's bold label and space); a plain type `\restylefloat`d beside it
+takes caption's global settings in pdflatex ("Snippet 1. Plain.", Perl "Snippet 1: Plain."). Witnesses 2106.08363,
+2109.00138, 2512.05464 (AAAI's declared style), 2412.15287 ("Algorithm 1 BoN-SFT"). Fixed in Rust (78v: caption_sty.rs
+`\DeclareCaptionStyle`, `float_style`, `float_style_setting`; float_sty.rs `\restylefloat`, `record_float_style`).
+Repros captions-floats/caption_ruled_float_sty_float_takes_its_style, caption_declared_ruled_style_formats_a_ruled_float;
+guards `perfect_kernel_batch78v::{caption_ruled_float_sty_float_takes_its_style,
+caption_declared_ruled_style_formats_a_ruled_float}`.

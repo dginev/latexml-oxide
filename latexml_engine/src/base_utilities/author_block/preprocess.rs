@@ -85,16 +85,36 @@ pub(in crate::base_utilities) fn split_mark_notes(
   operand: &[Token],
 ) -> Option<(Vec<Token>, Vec<Token>)> {
   let is_note = |t: &Token| MARK_NOTE_COMMANDS.iter().any(|cs| *t == T_CS!(*cs));
+  // (a macro that prints text as well as a note, `\newcommand\fnA{1\footnotemark}`, is read as TeX reads it, its body
+  // in its place: the "1" a label, the note the author's; pdflatex "Ann Alpha1∗")
+  let expanded;
+  let operand = if operand.iter().any(|t| prints_beside_a_note(t, 0)) {
+    expanded = note_macros_expanded(operand, 0);
+    expanded.as_slice()
+  } else {
+    operand
+  };
   if !operand.iter().any(|t| is_note(t) || makes_a_note(t, 0)) {
     return None;
   }
   let (mut mark, mut notes) = (Vec::new(), Vec::new());
   let mut i = 0;
   while i < operand.len() {
-    let end = if is_note(&operand[i]) {
-      note_command_end(operand, i)
-    } else if makes_a_note(&operand[i], 0) {
-      optional_arguments_end(operand, i + 1)
+    // (a `\protect` right before a note command is the note's, `\textsuperscript{1\protect\thanks{…}}`: left
+    // behind, the label read `1\protect`, which no list answers; pdflatex "Ann Alpha1∗")
+    let at = if operand[i] == T_CS!("\\protect")
+      && operand
+        .get(i + 1)
+        .is_some_and(|t| is_note(t) || makes_a_note(t, 0))
+    {
+      i + 1
+    } else {
+      i
+    };
+    let end = if is_note(&operand[at]) {
+      note_command_end(operand, at)
+    } else if makes_a_note(&operand[at], 0) {
+      optional_arguments_end(operand, at + 1)
     } else {
       mark.push(operand[i]);
       i += 1;
@@ -135,33 +155,111 @@ fn optional_arguments_end(tokens: &[Token], mut k: usize) -> usize {
   }
 }
 
-/// Whether `t` is a macro of optional arguments only (none, or `\newcommand`'s `[<default>]`) whose expansion holds a
-/// note command ([`MARK_NOTE_COMMANDS`]), directly or through another such macro (three deep at most).
-fn makes_a_note(t: &Token, depth: usize) -> bool {
-  if depth > 2
-    || t.get_catcode() != Catcode::CS
-    || MARK_NOTE_COMMANDS.iter().any(|cs| *t == T_CS!(*cs))
-  {
-    return false;
+/// The body of `t` when it is a macro of optional arguments only (none, or `\newcommand`'s `[<default>]`; none at all
+/// when `parameterless`), not a conditional, and is not a note command itself ([`MARK_NOTE_COMMANDS`]).
+fn note_macro_body(t: &Token, parameterless: bool) -> Option<Tokens> {
+  if t.get_catcode() != Catcode::CS || MARK_NOTE_COMMANDS.iter().any(|cs| *t == T_CS!(*cs)) {
+    return None;
   }
-  let Ok(Some(defn)) = lookup_definition(t) else {
-    return false;
-  };
+  let defn = lookup_definition(t).ok()??;
   if !defn.is_expandable()
     || lookup_conditional(t).is_some()
-    || defn
-      .get_parameters()
-      .is_some_and(|p| p.get_parameters().iter().any(|param| !param.optional))
+    || defn.get_parameters().is_some_and(|p| {
+      p.get_parameters()
+        .iter()
+        .any(|param| parameterless || !param.optional)
+    })
   {
+    return None;
+  }
+  match defn.get_expansion() {
+    Some(ExpansionBody::Tokens(body)) => Some(body.clone()),
+    _ => None,
+  }
+}
+
+/// Whether `t` is a macro of optional arguments only ([`note_macro_body`]) whose expansion holds a note command
+/// ([`MARK_NOTE_COMMANDS`]) anywhere, directly or through another such macro (three deep at most): it is taken out of
+/// the mark whole, unless it is one read with its body in place ([`prints_beside_a_note`]).
+fn makes_a_note(t: &Token, depth: usize) -> bool {
+  depth <= 2
+    && note_macro_body(t, false).is_some_and(|body| {
+      body
+        .unlist_ref()
+        .iter()
+        .any(|b| MARK_NOTE_COMMANDS.iter().any(|cs| *b == T_CS!(*cs)) || makes_a_note(b, depth + 1))
+    })
+}
+
+/// Whether `t` is a macro of no arguments whose expansion, read in the mark in its place, prints a label beside a
+/// note (`\newcommand\fnA{1\footnotemark}`): no conditional in it, and, its notes taken out (note commands with
+/// their arguments, a macro that [`makes_a_note`]), only label-safe tokens — characters, font switches
+/// ([`FONT_SWITCH`]), spaces, a `\protect` right before a note command (the note's, as [`split_mark_notes`] reads it,
+/// `{7\protect\thanks{…}}`) — or another such macro (three deep at most), with at least one character. Any other macro
+/// holding a note (`{\thanks{…}\unskip}`, `{\ifshow\footnotemark\fi}`, one of optional arguments
+/// `[1][x]{6\footnotemark}`, and one with a `\relax` or another `\protect` beside its label, `{\relax 5\footnotemark}`,
+/// `{\protect 5\footnotemark}`, a `\DeclareRobustCommand`'s `\protect\fnS␣`, which the label would keep and no list
+/// answers: review rev78v2 finding 1) is taken out whole, as [`makes_a_note`] reads it: what its body does beside the
+/// note is TeX's to do, not a label's.
+fn prints_beside_a_note(t: &Token, depth: usize) -> bool {
+  if depth > 2 {
     return false;
   }
-  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+  let Some(body) = note_macro_body(t, true) else {
     return false;
   };
-  body
-    .unlist_ref()
-    .iter()
-    .any(|b| MARK_NOTE_COMMANDS.iter().any(|cs| *b == T_CS!(*cs)) || makes_a_note(b, depth + 1))
+  let body = body.unlist_ref();
+  if body.iter().any(|b| lookup_conditional(b).is_some()) {
+    return false;
+  }
+  let (mut notes, mut prints) = (false, false);
+  let mut i = 0;
+  while i < body.len() {
+    let b = &body[i];
+    if MARK_NOTE_COMMANDS.iter().any(|cs| *b == T_CS!(*cs)) {
+      i = note_command_end(body, i);
+      notes = true;
+      continue;
+    }
+    if matches!(b.get_catcode(), Catcode::LETTER | Catcode::OTHER) {
+      prints = true;
+    } else if prints_beside_a_note(b, depth + 1) {
+      (notes, prints) = (true, true);
+    } else if makes_a_note(b, depth + 1) {
+      notes = true;
+      i = optional_arguments_end(body, i + 1);
+      continue;
+    } else if !(*b == T_SPACE!()
+      || (*b == T_CS!("\\protect")
+        && body
+          .get(i + 1)
+          .is_some_and(|n| MARK_NOTE_COMMANDS.iter().any(|cs| *n == T_CS!(*cs))))
+      || (b.get_catcode() == Catcode::CS && b.with_str(|name| FONT_SWITCH.is_match(name))))
+    {
+      return false;
+    }
+    i += 1;
+  }
+  notes && prints
+}
+
+/// `operand` with each macro that prints text beside a note ([`prints_beside_a_note`]) replaced by its body, the
+/// bodies read the same way (three deep at most). One after a `\protect` (`\textsuperscript{\protect\fnX}`) stays,
+/// to be taken out with it, the note's ([`split_mark_notes`]): replaced, its label would read `\protect 2`, which no
+/// list answers (review rev78v2 finding 1).
+fn note_macros_expanded(operand: &[Token], depth: usize) -> Vec<Token> {
+  let mut out = Vec::with_capacity(operand.len());
+  for (k, t) in operand.iter().enumerate() {
+    match note_macro_body(t, true) {
+      Some(body)
+        if prints_beside_a_note(t, depth) && (k == 0 || operand[k - 1] != T_CS!("\\protect")) =>
+      {
+        out.extend(note_macros_expanded(body.unlist_ref(), depth + 1));
+      },
+      _ => out.push(*t),
+    }
+  }
+  out
 }
 
 /// Whether a mark's operand, its notes taken out, prints nothing: braces, spaces, `\relax` and font switches only

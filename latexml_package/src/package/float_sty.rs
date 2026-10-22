@@ -7,8 +7,14 @@ LoadDefinitions!({
   // Choose the current float style (plain, plaintop, boxed, ruled)
   DefMacro!("\\float@style", None, "plain");
   DefMacro!("\\floatstyle{}", "\\def\\float@style{#1}");
-  // \restylefloat{style} — ignore
-  def_macro_noop("\\restylefloat OptionalMatch:* {}")?;
+  // float.sty:37-52 `\restylefloat{type}`: the type's style (`\fst@<type>`) is the current one, and its captions are
+  // float.sty's (`\@float@c@<type>` = `\float@caption`), which caption formats in that style (caption_sty.rs
+  // `caption_setting`); starred, the kernel's `\@caption` (:38-39), which caption formats as any. The float's layout is
+  // not restyled here. Perl's float.sty.ltxml:27 makes it a no-op, so a ruled float keeps the global caption format
+  // (KNOWN_PERL_ERRORS #1139; 2106.08363, 2109.00138, 2008.11837).
+  DefPrimitive!("\\restylefloat OptionalMatch:* {}", sub[(star, ftype)] {
+    record_float_style(&ftype.to_string(), &current_float_style(), star.is_none())?;
+  });
   // \floatplacement{style}{placement} — ignore
   def_macro_noop("\\floatplacement{}{}")?;
   // \listof{type}{title} — ignore
@@ -67,10 +73,10 @@ LoadDefinitions!({
     }
 
     // Get current float style for format@title
-    let style = digest(T_CS!("\\float@style"))
-      .map(|d| d.to_string())
-      .unwrap_or_else(|_| "plain".to_string());
+    let style = current_float_style();
     let isplain = style.starts_with("plain");
+    // (float.sty:62 `\restylefloat{#1}`: the type's style, which caption formats its captions in)
+    record_float_style(&ftype, &style, true)?;
 
     // \format@title@type{} (float.sty only, not newfloat)
     let format_cs = s!("\\format@title@{ftype}");
@@ -87,8 +93,8 @@ LoadDefinitions!({
     define_float_environment(&ftype, &auxext, &within)?;
     // wrapfig.sty:265-301, loaded after float.sty: the type's `wrap<type>` environment is `\wrapfloat{<type>}`
     // (wrapfig_sty.rs `{wrapfloat}`; 2411.16612). wrapfig also hooks `\float@restyle` (:286-298), so a `\restylefloat`
-    // after it makes `wrap<type>` for a type declared before; `\restylefloat` is a no-op here (above), so that is not
-    // made (docs/SYNC_STATUS.md).
+    // after it makes `wrap<type>` for a type declared before; `\restylefloat` here (above) records the style only, so
+    // that is not made (docs/SYNC_STATUS.md).
     if lookup_bool(wrapfig_sty::WRAPFIG_NEWFLOAT_WRAP) {
       let begin = mouth::tokenize_internal(TeXString::assembled(s!("\\begin{{wrapfloat}}{{{ftype}}}")));
       def_macro(T_CS!(s!("\\wrap{ftype}")), None, begin, None)?;
@@ -96,6 +102,35 @@ LoadDefinitions!({
     }
   });
 });
+
+/// float.sty's current float style (`\float@style`, `\floatstyle{…}`; `plain` when unset).
+fn current_float_style() -> String {
+  digest(T_CS!("\\float@style"))
+    .map(|d| d.to_string().trim().to_string())
+    .unwrap_or_else(|_| "plain".to_string())
+}
+
+/// Record the float style of float.sty type `ftype` as float.sty:40-42 does, `\fst@<type>` = `\fs@<style>`, which a
+/// class may redefine (LIPIcs's `\renewcommand\fst@algorithm{\fs@ruled@notop}`), and whether its captions are
+/// float.sty's (`float_caption`: `\@float@c@<type>` = `\float@caption`, not `\restylefloat*`'s `\@caption`), which
+/// caption reads as caption.sty:856-868 `\@float@setevery` does: `\float@getstyle\float@style{<type>}` then
+/// `\caption@setstyle*` of it (caption_sty.rs `float_style`). Witnesses 2106.08363, 2109.00138 (ruled algorithms in
+/// caption's `ruled` style), 2008.11837 (LIPIcs's `\fst@algorithm`); Perl records no style (KNOWN_PERL_ERRORS #1139).
+pub fn record_float_style(ftype: &str, style: &str, float_caption: bool) -> Result<()> {
+  let ftype = ftype.trim();
+  def_macro(
+    T_CS!(s!("\\fst@{ftype}")),
+    None,
+    Tokens::new(vec![T_CS!(s!("\\fs@{}", style.trim()))]),
+    None,
+  )?;
+  assign_value(
+    &s!("float@style@{ftype}"),
+    Stored::Bool(float_caption),
+    Some(Scope::Global),
+  );
+  Ok(())
+}
 
 /// Shared helper: creates a float environment with counter, formatting macros,
 /// and DefEnvironmentI. Used by both float.sty \newfloat and newfloat.sty

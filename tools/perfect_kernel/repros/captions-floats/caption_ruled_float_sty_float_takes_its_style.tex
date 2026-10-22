@@ -1,0 +1,28 @@
+% mechanism: caption formats a float.sty float in its float style (caption.sty:856-868 `\@float@setevery`, as the float
+%   begins and before the type's options): `\caption@setstyle*\float@style` resets the settings to the caption style of
+%   that name when there is one — `ruled`, caption.sty:907 `labelfont=bf,labelsep=space` (caption3.sty:650-657
+%   `\caption@resetstyle` first) —, then the style's typed options; the type's own `\captionsetup[<type>]` comes after.
+%   So a ruled float ignores a global `labelformat=allcaps,labelsep=quad`, and a typed `labelsep=colon` still applies.
+%   caption_sty.rs `caption_setting` read the global settings for it ("ALGORITHM 1" and a quad).
+% witness: 2106.08363 (wiley-article, its PDF "Algorithm Nonstaggered…"), 2109.00138 (a global label format `boxed`
+%   under a ruled minted listing); LIPIcs (`\captionsetup[algorithm]{…}`); review rev78s2 finding 2 (probes wy, mc)
+% oracle:  pdflatex 0 errors; "Algorithm 1 Two.", "Program 1: Four.", "FIGURE 1 Three."
+% engines: perl: caption settings not applied (KNOWN_PERL_ERRORS #795); rust int61a: "ALGORITHM 1", "PROGRAM 1:"
+% expect:  0 errors, 0 warnings; the algorithm's tag "Algorithm 1" closed by a space, the program's "Program 1" by ": ",
+%   the figure's "FIGURE 1"
+% status:  GREEN (78v)
+\documentclass{article}
+\usepackage{caption}
+\DeclareCaptionLabelFormat{allcaps}{\MakeUppercase{#1}~#2}
+\captionsetup{labelformat=allcaps,labelsep=quad}
+\usepackage{float}
+\usepackage{algorithm}
+\floatstyle{ruled}
+\newfloat{program}{h}{lop}
+\floatname{program}{Program}
+\captionsetup[program]{labelsep=colon}
+\begin{document}
+\begin{algorithm}[h]Y\caption{Two.}\end{algorithm}
+\begin{figure}[h]Y\caption{Three.}\end{figure}
+\begin{program}[h]Z\caption{Four.}\end{program}
+\end{document}

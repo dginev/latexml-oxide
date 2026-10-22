@@ -194,7 +194,14 @@ LoadDefinitions!({
   def_macro_noop("\\setminted[]{}")?;
   def_macro_noop("\\setmintedinline[]{}")?;
   def_macro_noop("\\usemintedstyle[]{}")?;
-  def_macro_noop("\\SetupFloatingEnvironment{}{}")?;
+  // A document's `\SetupFloatingEnvironment{listing}{…}` is newfloat's (newfloat_sty.rs, newfloat.sty:304), loaded with
+  // minted's `newfloat` option above or by the document; minted itself makes none (minted.sty), so on its float.sty
+  // route without newfloat it is undefined in pdflatex. The no-op here stands in only then (Perl has no minted binding):
+  // before, it replaced newfloat's on the newfloat route too (2306.12224, 2405.15425, 2411.16612, 2507.09840,
+  // 2510.09447; review rev78s2 finding 4; KNOWN_PERL_ERRORS #1138).
+  if !is_defined("\\SetupFloatingEnvironment") {
+    def_macro_noop("\\SetupFloatingEnvironment{}{}")?;
+  }
   DefMacro!("\\mint[]{}", sub[(_opts, lang)] {
     let mut out = vec![T_CS!("\\lstinline"), T_OTHER!("[")];
     out.extend(Tokenize!(MINTED_LST_RESET).unlist());

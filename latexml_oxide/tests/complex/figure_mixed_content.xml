@@ -106,7 +106,7 @@
       <tag role="typerefnum">Algorithm 1</tag>
     </tags>
     <toccaption><tag close=" ">1</tag>A Wrapped Algorithm</toccaption>
-    <caption><tag close=" "><text font="bold">Algorithm 1</text></tag> A Wrapped Algorithm</caption>
+    <caption><tag close=" "><text font="bold">Algorithm 1</text></tag>A Wrapped Algorithm</caption>
     <p framed="topbottom">1- mock algorithm with just enough textual content.<break/>2- mock algorithm with just enough textual content.<break/>3- mock algorithm with just enough textual content.</p>
   </figure>
   <paragraph inlist="toc" xml:id="S0.SS0.SSS0.Px1">
@@ -460,7 +460,7 @@
           <tag role="typerefnum">Algorithm 2</tag>
         </tags>
         <toccaption><tag close=" ">2</tag>Algorithms in minipage</toccaption>
-        <caption><tag close=" "><text font="bold">Algorithm 2</text></tag> Algorithms in minipage</caption>
+        <caption><tag close=" "><text font="bold">Algorithm 2</text></tag>Algorithms in minipage</caption>
         <listing framed="topbottom">
           <listingline xml:id="alg2.l0"><tags>
               <tag><text font="bold">Require:</text></tag>
@@ -677,7 +677,7 @@
             <tag role="typerefnum">Algorithm 3</tag>
           </tags>
           <toccaption><tag close=" ">3</tag><text color="#0000FF">line</text></toccaption>
-          <caption><tag close=" "><text font="bold">Algorithm 3</text></tag> <text color="#0000FF">line</text></caption>
+          <caption><tag close=" "><text font="bold">Algorithm 3</text></tag><text color="#0000FF">line</text></caption>
           <listing framed="topbottom">
             <listingline xml:id="alg3.l0"><tags>
                 <tag><text font="bold">Require:</text></tag>
@@ -765,7 +765,7 @@
             <tag role="typerefnum">Algorithm 4</tag>
           </tags>
           <toccaption><tag close=" ">4</tag><text color="#0000FF">line</text></toccaption>
-          <caption><tag close=" "><text font="bold">Algorithm 4</text></tag> <text color="#0000FF">line</text></caption>
+          <caption><tag close=" "><text font="bold">Algorithm 4</text></tag><text color="#0000FF">line</text></caption>
           <listing framed="topbottom">
             <listingline xml:id="alg4.l0"><tags>
                 <tag><text font="bold">Require:</text></tag>

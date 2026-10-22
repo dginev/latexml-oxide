@@ -1688,6 +1688,7 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<Opti
         }
       }
       let _in_progress_guard = InProgressGuard(request_key);
+      let _request_guard = BindingRequestGuard::enter(request);
       let result_opt = dispatcher(request);
       match result_opt {
         Some(result) => {
@@ -1706,6 +1707,33 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<Opti
     },
     None => Ok(None),
   }
+}
+
+thread_local! {
+  /// The requests the bindings now loading answer, innermost last (`epsf.sty`, `epsf.tex`): [`binding_request`].
+  static BINDING_REQUESTS: std::cell::RefCell<Vec<String>> =
+    const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// [`BINDING_REQUESTS`]' entry for one binding load, popped when the load ends however it ends.
+struct BindingRequestGuard;
+impl BindingRequestGuard {
+  fn enter(request: &str) -> Self {
+    BINDING_REQUESTS.with(|requests| requests.borrow_mut().push(request.to_string()));
+    BindingRequestGuard
+  }
+}
+impl Drop for BindingRequestGuard {
+  fn drop(&mut self) { let _ = BINDING_REQUESTS.try_with(|requests| requests.borrow_mut().pop()); }
+}
+
+/// The file request the innermost binding now loading answers, with its extension (`epsf.sty` for `\usepackage{epsf}`
+/// and for `\input epsf.sty`, `epsf.tex` for `\input epsf`): the file TeX would read, which a binding serving several
+/// spellings of one file may need to tell apart where `\@currname`/`\@currext` cannot, an `\input` leaving them unset
+/// (epsf_sty.rs `epsf_resets_globally`; 0906.1361, astro-ph0006390, astro-ph0109126, astro-ph0410051,
+/// astro-ph9701125). `None` outside a binding's load.
+pub fn binding_request() -> Option<String> {
+  BINDING_REQUESTS.with(|requests| requests.borrow().last().cloned())
 }
 
 // Factor out handling and passing loading options from input_content,
