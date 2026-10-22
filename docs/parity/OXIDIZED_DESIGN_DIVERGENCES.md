@@ -24511,7 +24511,7 @@ tables only, and IEEEtran's and acmart's not at all (KNOWN_PERL_ERRORS #1140). H
   conference bold, siggraph italic text, sigchi small figure and table captions; IEEEtran's small-caps table text and
   compsoc `\sffamily`; jfm's small-caps label; webofc's and jinstpub's bold label — are set only under the class caption
   fonts knob (caption_sty.rs `CLASS_CAPTION_FONTS`, latexml.sty's `classcaptionfonts` option ahead of the class:
-  `--preload=[classcaptionfonts]latexml.sty` as the first preload; off by default), so an HTML theme styles every caption
+  `--preload=[classcaptionfonts]latexml.sty`, not yet combinable with ar5iv.sty — SYNC_STATUS row "A preload's options do not reach a package another preload already loaded"; off by default), so an HTML theme styles every caption
   alike. Not the class's, so not behind the knob: a package's own label fonts (algorithm2e's `\fnum@font@algorithm`, as
   Perl's binding), the document's `\captionsetup` keys, and the kernel's `\normalfont` in `\lx@fnum@@`, which listings'
   labels now take as a figure's does (`<text font="serif">Listing 3</text>` in a sans context, 2409.06446).

@@ -17608,7 +17608,7 @@ Repros captions-floats/caption_ruled_float_sty_float_takes_its_style, caption_de
 guards `perfect_kernel_batch78v::{caption_ruled_float_sty_float_takes_its_style,
 caption_declared_ruled_style_formats_a_ruled_float}`.
 
-## 1140. A class's or package's caption format is not ported: acmart's caption settings, IEEEtran's `\@makecaption`, algorithm2e's separator; ams_support's under any class
+## 1140. A class's or package's caption format is not ported: acmart's caption settings, IEEEtran's `\@makecaption`, listings' fixed label, algorithm2e's separator; ams_support's under any class
 
 acmart.cls:952-984 sets caption's options by format after its `\RequirePackage{caption, float}` (:951): the journal
 formats `\captionsetup[figure]{name={Fig.}}` over caption's AMS default separator `.\enspace` (caption-ams-smf.sto:41;
@@ -17626,7 +17626,7 @@ algorithm2e.sty:2285-2289 prints `\algocf@capseparator` (":"). Perl's ams_suppor
 keeps the kernel's ": ". Minimal triggers: `\documentclass[sigconf]{acmart}` with `\begin{figure}X\caption{F.}\end{figure}`
 (pdflatex "Figure 1: F.", Perl 0.8.8 "Figure 1. F."); `\documentclass{IEEEtran}` with a captioned figure and table
 (pdflatex "Fig. 1. F." and "TABLE I" over "T.", Perl 0.8.8 "Figure 1: F.", "TABLE I: T."); `\usepackage{algorithm2e}`
-with `\begin{algorithm}\caption{A.}x\;\end{algorithm}` (pdflatex "Algorithm 1: A.", Perl "Algorithm 1 A."); and
+with `\begin{algorithm}\caption{A.}x\;\end{algorithm}` (pdflatex "Algorithm 1: A.", Perl "Algorithm 1 A."); `\documentclass{IEEEtran}\usepackage{listings}` with `\begin{lstlisting}[caption=C]x\end{lstlisting}` (pdflatex "Listing 1. C", Perl "Listing 1: C"); and
 `\documentclass{article}\usepackage{amsaddr}` with a captioned figure (pdflatex "Figure 1: F.", Perl "Figure 1. F.").
 Witness 1807.03757 (sigplan, minted's float.sty `listing`: PDF "Listing 1."; review rev78s2 finding 5). Fixed in Rust
 (78y; OXIDIZED_DESIGN_DIVERGENCES #884), as names and separators (the class's caption fonts behind a knob, off by default):
