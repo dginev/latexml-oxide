@@ -1,15 +1,17 @@
-% mechanism: K11 (raw-class title-page stores, frontmatter_stores.rs `prints_in_a_line_with_another_value`). A store
+% mechanism: K11 (raw-class title-page stores, frontmatter_stores.rs `ClassReaders::store_lines`). A store
 %   the title page prints in one line with a class value the frontmatter does not carry stays the class's line (tlp.cls:627
 %   `\@submitted`); zzfma.cls's `{\@addrfont\@address\par}` prints the address after a font macro (`\@addrfont` =
-%   `\itshape`), which the rule judges such a value, so `\address` loses its contact. Expected: the frontmatter's address.
+%   `\itshape`), which 68x's rule judged such a value, so `\address` lost its contact; since 79a a font switch prints no
+%   value. Expected: the frontmatter's address.
 %   The class-level `\fancyhead[L]{\@journal}` default prints through fancyhdr's head, which `ClassReaders::printed`
 %   does not see (OD #662): no pubnote, an accepted residual.
 % witness: review 68x r2 probe ka (TL classes with the shape: bgteubner, umich-thesis, philosophersimprint)
 % oracle:  pdflatex: 0 errors; "The Title" / "An Author" / "Dept of Probes, Somewhere" (italic); head "Journal of
 %   Default Placeholders"
-% engines: rust 68x r2, r3: no <contact role="address">, an italic body paragraph; 67int16, 68x r1: the address contact
+% engines: rust 68x r2, r3: no <contact role="address">, an italic body paragraph; 67int16, 68x r1, 79a: the address contact
 % expect:  0 errors, 0 warnings; <contact role="address">Dept of Probes, Somewhere</contact>
-% status:  RED (68x r2, r3) — open — RULED 2026-10-22: refine the line rule (only printed text is a value, font/typesetting switches are not; `\par` ends a line); no guard yet
+% status:  RED (68x r2, r3; a01d8b410f) -> GREEN (79a: only printed text is a value, `\par` and `\\` end the line;
+%   user ruling 2026-10-22, OXIDIZED_DESIGN_DIVERGENCES #662)
 % preload: ar5iv.sty
 \documentclass{zzfma}
 \title{The Title}\author{An Author}

@@ -19369,7 +19369,7 @@ placeholders `\@volume` "1 (1)", `\@journal` "TLP 1 (1): 1–000, January 20XX. 
 without `prodtf`, became pubnotes in 1209.2617 once the tlp binding's raw read went through K11 (68x r1). And a store
 the title page prints in one line with a value of the class's that the frontmatter does not carry — another
 parameterless macro a raw file defined, not a rerouted store nor a kernel field, in the innermost group around the
-store's read (`prints_in_a_line_with_another_value`; a written store, ptptex.cls:110 `\gdef\@abst{}`, is no read) — is
+store's read (`ClassReaders::store_lines`; a written store, ptptex.cls:110 `\gdef\@abst{}`, is no read) — is
 not rerouted: it is part of the class's line. tlp.cls:627 `{\it submitted \@submitted; revised \@revised; accepted
 \@accepted}` (`\submitted` is no table setter) printed "submitted 30 November 2010; revised ; accepted" with the
 other two in `<date>`s; now the line is whole, as pdflatex prints it, and the dates stay in it. So too uiucthesis.cls:177
@@ -19385,13 +19385,76 @@ token register into its `\copyrightetc` box (:1653-1663), is no longer a pubnote
 because the document disables the box (clickbait17-notebook.tex:57 `\def\@copyrightspace{\relax}`), not by the rule.
 68x's binding-read K11 also gives apa7 its `\shorttitle` as `<toctitle>` (2609.00670, 2609.02899, 2609.12869,
 2609.19448). Repro class-bindings/tlp/tlp_placeholders_and_date_line (a tlp.cls with the class's shapes: the paper
-ships it); guard `perfect_kernel_batch68x::tlp_placeholders_stay_and_its_date_line_is_whole`. Open residual, awaiting a
-ruling: the line rule judges by shape, so a class's typesetting macro reads as a value — `{\@addrfont\@address\par}`
-(`\@addrfont` an `\itshape`) and a title page in one `\vbox{…\@jinfo\par…\@address\par}` keep `\address` the class's
-(no address contact; the shape is in TL classes without a binding: bgteubner, umich-thesis, philosophersimprint); the
-narrowing to "another setter's store, no `\par` between" counts font setters' stores (paper.cls:109-111 `\st@font`,
-`\in@font`, `\sss@font`) and costs 1406.5776, 2105.09416, 2107.05207 their subtitle, affiliations and toctitle; repros
-class-bindings/title_page_typesetting/{address_after_a_font_macro, address_in_a_vbox_with_a_class_line} (RED).
+ships it); guard `perfect_kernel_batch68x::tlp_placeholders_stay_and_its_date_line_is_whole`.
+
+RULED refinement (user ruling 2026-10-22, 79a): only printed text is a value, decided by expansion, and `\par` and `\\`
+end the line. The line is the store's innermost group cut at the line breaks around the store (`ends_a_line`: `\par` —
+a blank line in the code is one —, `\endgraf`, `\\`, `\newline`, `\break`, `\linebreak`, `\cr`, and the primitive
+`\vskip`, which in horizontal mode ends the paragraph), and a macro in it is a value only when its expansion prints text
+(`prints_as_a_value`, `prints_text`, read in TeX terms down to 6 macros deep): a character or math does; a font, size or
+shape switch (a definition that carries a font, `Definition::declared_font`, and LaTeX's declarations by name,
+frontmatter_stores.rs `LAYOUT`), spacing (`\hskip`/`\vskip`/`\kern` and a register with their glue, `\vspace{…}`,
+`\quad`, `\hfill`, …), a rule (`\hrule`/`\vrule` with their `height`/`width`/`depth`, `\rule[…]{…}{…}`), `\relax`,
+`\protect`, a line break with its `*`/`[<skip>]`, and nothing do not; anything else counts as printing. So
+`{\@addrfont\@address\par}` with `\def\@addrfont{\itshape}` (review 68x r2 probe ka; the shape of bgteubner,
+umich-thesis, philosophersimprint), a title page in one `\vbox{…\@jinfo\par\@author\par \@address\par}` (probe kb) and
+`{\@jinfo\\[2pt]\@addrfont\@address}` with `\@addrfont` a font setter's store holding `\small\itshape` (paper.cls:109-111's
+shape: 1406.5776, 2105.09416, 2107.05207, the cost of the narrowing rejected in 68x) give `\address` to the frontmatter;
+`{\@jinfo, \@address\par}`, tlp.cls:627 and uiucthesis.cls:177 keep their lines.
+
+The other values of the line are judged twice (79a r2, review rev79a Q1): as the class leaves them, when it is loaded
+(`reroute_raw_class_stores`: a store in one line with printed text is not rerouted), and with the document's, when
+`\maketitle` prints the title page (`ClassReaders::store_lines` records them, `lx_store_line_values_<name>`;
+`harvest_stores` → `prints_in_a_line_with_a_value`): a store not handed on there stays un-nulled in the deposit
+(`\lx@captured@stores`), which prints the class's line whole. A store the class leaves empty, `\gdef\@submitted{}` for a
+setter no table names, prints the document's `\submitted{1 May 2026}`, so `{\itshape submitted \@submitted; e-mail
+\@email\par}` keeps the e-mail in the class's line, as pdflatex prints it (r1 handed it on and left "submitted 1 May
+2026; e-mail"). A store handed on as it is set (`\lx@store@hand`) waits for `\maketitle` when its line has such values
+(`lx_store_deferred_<name>`), and is handed on there when they print nothing (`{\itshape \@issueinfo; DOI \@doi\par}`
+without `\issueinfo`: the DOI pubnote). No static shortcut decides it: zzfmc's `\@addrfont`, an `\addressfont` setter's
+store, holds `\small\itshape` and is no value. A store a running head prints is in no line of the title page
+(`running_head_arguments`: the arguments of `\markboth`/`\markright`/`\@mkboth`, fancyhdr's and scrlayer-scrpage's head
+and foot commands, page furniture LaTeXML drops): preprint.cls's `\maketitle` `\ihead{\@shortauthor:~\@shorttitle}`
+keeps 2512.04983's `<toctitle>` (judged at `\maketitle` with the document's `\shortauthor`, the head's line had kept
+it the class's). So are titleps's `\sethead`/`\setfoot` (with their `*` and three optional arguments) and the body of a
+head or foot macro a definition there sets — `\def`/`\gdef`/`\edef`/`\xdef`/`\renewcommand` of `\@oddhead`,
+`\@evenhead`, `\@oddfoot`, `\@evenfoot` (`head_definition_body`; 79a r3, review rev79a2 finding 1: a class
+`\@maketitle`'s `{\def\@oddhead{\@shortauthor: \@shorttitle\hfil}}`, ptptex.cls's `\maketitle` head, made `\shorttitle`
+the class's and lost "Short T"), for the glued rule too (`\gdef\@evenhead{Vol.\@volume\hfil}` glues `\@volume` to no
+title-page text). A store waits for `\maketitle` only for a value that is a placeholder the document can fill
+(`may_become_a_value`, 79a r3, review rev79a2 finding 5): undefined, `\relax` (LaTeX's undefined), or a parameterless
+macro expanding to nothing — not the line's code, a macro with parameters (`\@setfontsize`, `\@ifundefined`), a
+primitive, a register or a font macro: USG.cls:1590 `\smash{\@journalfont\@journal}` deferred 2605.00042's `\journal`
+for `\@journalfont` and put its pubnote after the volume.
+
+A store glued to the class's printed text is part of a value the frontmatter does not carry, and its line stays the
+class's (79a r2, review rev79a finding 1, Q2; `glued_to_class_text`): the character token right before or after the
+occurrence is a letter or a digit, or a `.`, `/` or `-` inside a word, with no space, glue or line break between —
+piparticle-final.cls:272 `\if\@doi\relax\else{DOI: 10.4279/PIP.\@doi}\fi` (r1 handed `\@doi` on, so the pubnote read
+"020001", a DOI that does not exist, and "10.4279/PIP." was lost: 1002.3829, 1012.4507, 1503.03445, 1503.07722,
+1510.06950), ar-1col.cls:335 `https://doi.org/\@doi\endgraf` (1903.12215, 2004.12182, 2603.20393), rsos/rspa's
+`\@jname.royalsocietypublishing.org` (2005.14200, 2602.20067: "rsos" was a journal pubnote and the header read
+".royalsocietypublishing.org"). Not glued: a sentence's full stop (`\enspace\@ACMCCS.}`, CSML.cls's shape), a label's `:`
+or a bracket (`doi:\@doi`, lms, jfp1; `(\@pubyear`, mnras, new_tlp), the dimension of a skip, kern, penalty or register
+(`\hskip.5em\@kword`, jps-cp.cls; `\vskip 4ex\@subtitle`, jurabook.cls; `in_a_dimension`), an operand of `\if`, `\ifx`
+or `\ifcat` (`\if!\@subtitle`, lipics-v2021, llncs), and `\href`'s first argument, a link's target
+(`\href{mailto:\@email}`, modernposter). kluwer.cls:888 `Accepted\@accepted` is glued, but K11 hands no store there:
+`\accepted@` (:898) stores " in final form: #1", not its argument alone, so kluwer's date line is the class's either way.
+
+Accepted residuals (SYNC rows): a store printed outside any group is never in a class's line (the group bound kept from
+68x); a store kept the class's at class load is not judged again at `\maketitle`; a line whose other value the document
+leaves empty hands the store on and leaves the class's text around it ("; DOI"); a page style the class defines but never
+selects (`\ps@jhead`) still counts as printed, so zzfmb's `\@journal` default is a pubnote pdflatex does not print.
+A/B: SYNC 79a. Repros class-bindings/title_page_typesetting/{address_after_a_font_macro,
+address_in_a_vbox_with_a_class_line, address_after_a_line_break, value_in_the_line_stays_the_class_line,
+doi_glued_to_class_text, store_in_a_line_with_a_document_value, short_title_in_a_running_head,
+short_title_in_a_head_definition, store_beside_a_font_macro_keeps_its_order}; guards
+`perfect_kernel_batch79a::{
+address_after_a_font_macro_is_the_frontmatters, address_after_a_class_line_ended_by_par_is_the_frontmatters,
+address_after_a_class_line_ended_by_a_line_break_is_the_frontmatters, a_store_in_one_line_with_class_text_stays_the_class_line,
+a_store_glued_to_class_text_stays_the_class_line, a_store_in_one_line_with_a_document_value_stays_the_class_line,
+a_store_in_a_running_head_is_the_frontmatters, a_store_in_a_head_definition_is_the_frontmatters,
+a_store_beside_a_font_macro_keeps_its_order}`.
 
 ### 663. emulateapj's deluxetable keeps the rows between `\tablehead` and `\startdata` as heading rows, which TeX prints only in the continuation head or not at all (Perl: rows outside the table)
 
@@ -24467,7 +24530,8 @@ run to the next, but these sites wrote what a hash table or the filesystem liste
   `fragment_index::tests::save_lists_each_kind_in_key_order`.
 - **An image name's candidates** (`util/image.rs` `image_candidates`): the files a name answers — `fig.<ext>` for an
   extensionless `\includegraphics{fig}`, and the exact, case-folded and other-extension lists — are in TeX's order
-  (`in_graphics_type_order`, OD #882: by type in pdftex.def's `\Gin@extensions` order, pdftex.def:597-600, then by
+  (`in_graphics_type_order`, OD #882: by type in pdftex.def's `\Gin@extensions` order, pdftex.def:597-600 — since 79a
+  `\Gin@extensions` first, as TeX edits it: `\DeclareGraphicsExtensions`, grfext, epstopdf's `.eps`, OD #886 —, then by
   search directory, then by name), not `read_dir`'s, which the filesystem decides (a tmpfs lists newest first, ext4 by
   name hash) and which Perl's `pathname_findall` follows (Pathname.pm:350-371). The first candidate gives the natural
   box (`cssstyle`) and is pdflatex's choice. This also changes Perl's fixed order across search directories: Perl's
@@ -24563,8 +24627,8 @@ down its candidate list, where pdflatex reads `fig.pdf`.
 
 Ours (78z, user ruling 2026-10-22 "fix to TeX's bp"): `image_graphicx_sizer` (latexml_core util/image.rs) takes the first
 candidate whose size it can read, whatever its type — the candidates are in TeX's order (`in_graphics_type_order`, #883),
-Perl's own rule (Util/Image.pm:259-272 returns on the first candidate whose width it reads; the natural `cssstyle`'s
-`natural_display_size_pt_of_candidates` still skips a raster to the first vector, an open SYNC row) — and sizes it by kind: `read_image_size` tells a raster's pixels
+Perl's own rule (Util/Image.pm:259-272 returns on the first candidate whose width it reads; the natural `cssstyle`
+reads the same one since 79a, below) — and sizes it by kind: `read_image_size` tells a raster's pixels
 (`ImageSize::Pixels`, PNG/JPEG) from a PostScript file's bp (`ImageSize::PostScriptBp`), and a PDF page box or an SVG is
 read by `natural_size_pt` as before. A vector size (EPS/PS, PDF, SVG) is bp → pt and goes through the graphicx algebra in
 pt without quantization (`graphicx_box_pt`, the PDF branch's); a raster keeps Perl's DPI rule (100 DPI, the pixel path's
@@ -24595,3 +24659,44 @@ captions-floats/psfig_natural_panels_are_as_wide_as_their_bounding_box; guards
 psfig_natural_panels_are_as_wide_as_their_bounding_box}`, `perfect_kernel_batch64::adjustimage_includes_the_graphic`
 (its 10bp EPS 10.0pt, was 7.2pt), `util::image::sizing_characterization_tests::sizer_matrix_across_formats_and_options`
 (the EPS rows now the PDF rows), `util::image::…::read_image_dimensions_returns_pixels_for_raster_and_bp_for_eps`.
+
+The natural `cssstyle` and the box read one candidate (79a, review rev78z finding 1): `first_natural_size` (util/image.rs)
+is the first candidate any reader sizes, by its content (`natural_size`: `read_image_size`, then `natural_size_pt`), and
+both `image_graphicx_sizer` and `natural_display_size_pt_of_candidates` take it; when it is a raster there is no `em`
+size, as for any raster. 78z's `cssstyle` skipped a raster to the first vector by extension, so an extensionless
+`\includegraphics{q}` beside `q.png` (200 x 100 px) and `q.eps` (40 x 20 bp) — candidates `q.png,q.eps` — had the png's
+box (144.54pt, 100 DPI, #337) and the eps's `cssstyle` (`width:4.015em`), ~3.6 times smaller in the browser than the png
+post renders (pdflatex sets the png 200.7495pt); now no `cssstyle`. A vector first (`m.pdf` before `m.png`) keeps its
+`em` size. And the candidates follow `\Gin@extensions` (graphics.sty:206-224 tries it in turn):
+`declared_graphics_extensions` ranks its extensions first, in their order, before the driver's order (#883). The graphics
+binding seeds it as pdftex.def:597-600 sets it (79a r2, review rev79a finding 3: started `\@empty`, grfext's
+`\AppendGraphicsExtensions{.eps}` left `.eps` alone and first), and TeX's edits act on it: `\DeclareGraphicsExtensions`
+(graphics.sty:116-117), grfext's `\Append…`/`\Prepend…`/`\RemoveGraphicsExtensions` (read raw; 1711.06128's
+`\AppendGraphicsExtensions{.gif}`), pdftex.def:695's begin-document `,.eps`, and epstopdf-base.sty:498-505's
+`\AppendGraphicsExtensions{.eps}` (every `.eps` removed, one appended: `\lx@graphics@eps@last`) when `\usepackage{epstopdf}`
+loads it, or at `\begin{document}` with grfext loaded — so `\DeclareGraphicsExtensions{.pdf,.eps,.png}\usepackage{epstopdf}`
+tries `.png` first, and a preamble `\PrependGraphicsExtensions{.eps}` with grfext alone is undone, as pdflatex prints the
+png (200.7495pt); epstopdf's `prepend` option makes its load `\PrependGraphicsExtensions{.eps}` instead, and
+`\epstopdfsetup{prepend}` is one (epstopdf-base.sty:218-248, :509-515; 79a r3, review rev79a2 finding 4: pdflatex
+the eps). An extension is matched as kpathsea finds the file, the name as written, then in another case (TL's
+`texmf_casefold_search=1`; `declared_rank`, 79a r3, review rev79a2 finding 2): `\DeclareGraphicsExtensions{.pdf,.jpeg,.png}`
+beside `img/nsfnet.PNG` and `img/nsfnet.eps` is the PNG, found by the `.png` entry before the begin-document `.eps`,
+as 1608.05172's pdflatex log reads `<./img/nsfnet.PNG>` (r2 matched the case and took the eps), and
+`\RemoveGraphicsExtensions{.png}` beside `q.png` finds it by pdftex.def's `.PNG`. The seed is pdftex.def's list under
+any driver option, where TeX loads the named driver's (`[dvips]`: dvips.def:202 `.eps,.ps,.eps.gz,.ps.gz,.eps.Z,.mps`,
+so pdflatex takes `q.eps` beside `q.png`): a SYNC row (review rev79a2 finding 3). After `{.pdf,.eps,.png,.jpg,.jpeg}` a `fig`
+beside `fig.png` and `fig.eps` is the eps, box and `cssstyle` alike (2107.02597's gnuplot epslatex figures: their
+`.png` beside the `.eps`; pdflatex reads the eps, and with the png first the one-candidate rule would have dropped the
+eps's `em` size; post still renders the png, by its own desirability). Repros
+package-bindings/{natural_cssstyle_reads_the_box_candidate, declared_graphics_extensions_order_the_candidates,
+append_graphics_extensions_keeps_the_driver_order, prepend_graphics_extensions_puts_the_type_first,
+epstopdf_appends_eps_last, declared_graphics_extensions_fold_case, epstopdf_prepend_puts_eps_first}; guards
+`perfect_kernel_batch79a::{natural_cssstyle_reads_the_candidate_the_box_is_sized_from,
+declared_graphics_extensions_order_the_candidates, append_graphics_extensions_keeps_the_driver_order,
+prepend_graphics_extensions_puts_the_type_first, epstopdf_appends_eps_last, declared_graphics_extensions_fold_case,
+epstopdf_prepend_puts_eps_first}`. The `cssstyle` is the size pdflatex prints;
+post renders the candidate it finds most desirable (latexml_post/src/graphics.rs:321-371), which may be another file:
+2107.02597's 640x480 png at its eps's 36.135em x 25.294em, about 7 % out of proportion (a SYNC row).
+A/B (a01d8b410f vs 79a; 58 papers shipping a raster and a vector of one basename included extensionless, 73
+`\DeclareGraphicsExtensions` papers with a multi-type basename, 39 graphicx controls): one changed, 2107.02597 (its
+gnuplot figures' box the eps's BoundingBox 361.4pt x 252.9pt, was the png's 462.5pt; `cssstyle` the same).

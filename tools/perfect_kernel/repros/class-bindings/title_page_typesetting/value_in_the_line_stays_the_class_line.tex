@@ -1,0 +1,25 @@
+% mechanism: K11 (raw-class title-page stores, frontmatter_stores.rs `ClassReaders::store_lines`,
+%   `prints_in_a_line_with_a_value`), the control of the 79a refinement: a store printed in one line with printed text
+%   of the class's stays the class's line. zzfmd.cls prints `{\@jinfo, \@address\par}` ("Vol. 1, 2026, …": `\@jinfo` is
+%   text) and `{\itshape submitted \@submitted; e-mail \@email\par}`, where `\@submitted` is the store of a setter no
+%   table names, empty until the document sets it (tlp.cls:627's shape, 1209.2617, there with a non-empty default):
+%   judged again at `\maketitle` with the document's `\submitted{1 May 2026}`, it is printed text there, so the e-mail
+%   stays in the class's line too (review rev79a Q1).
+% witness: 79a control (tlp 1209.2617's shape); review rev79a finding 2
+% oracle:  pdflatex: 0 errors; "The Title" / "An Author" / "Vol. 1, 2026, Dept of Probes, Somewhere" / "submitted 1 May
+%   2026; e-mail ann@probes.org" (italic)
+% engines: rust a01d8b410f, int68a and 79a r1: no address contact, "Vol. 1, 2026, Dept of Probes, Somewhere" whole; the
+%   e-mail an author contact and the body line "submitted 1 May 2026; e-mail" — `\@submitted` was judged only when the
+%   class ends, empty
+% expect:  0 errors, 0 warnings; no contact; both lines whole
+% status:  GREEN (a01d8b410f, 79a r1) for the address line; the e-mail line RED (int68a, 79a r1) -> GREEN (79a r2)
+% preload: ar5iv.sty
+\documentclass{zzfmd}
+\title{The Title}\author{An Author}
+\address{Dept of Probes, Somewhere}
+\submitted{1 May 2026}
+\email{ann@probes.org}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

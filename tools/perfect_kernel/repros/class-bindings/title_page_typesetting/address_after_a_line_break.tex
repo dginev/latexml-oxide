@@ -1,0 +1,17 @@
+% mechanism: K11 (raw-class title-page stores, frontmatter_stores.rs `ClassReaders::store_lines`). zzfmc.cls
+%   prints its own line `\@jinfo` ("Vol. 1, 2026") and ends it with `\\[2pt]` before the address, which it sets in
+%   `\@addrfont` — a store of the class's `\addressfont` setter holding `\small\itshape`: `\\` ends the line, and a
+%   font is no value, so `\address` is the frontmatter's.
+% witness: 79a (the `\\` variant of review 68x r2 probes ka, kb)
+% oracle:  pdflatex: 0 errors; "The Title" / "An Author" / "Vol. 1, 2026" / "Dept of Probes, Somewhere" (small italic)
+% engines: rust a01d8b410f: no <contact role="address">
+% expect:  0 errors, 0 warnings; <contact role="address">Dept of Probes, Somewhere</contact>
+% status:  RED (a01d8b410f) -> GREEN (79a)
+% preload: ar5iv.sty
+\documentclass{zzfmc}
+\title{The Title}\author{An Author}
+\address{Dept of Probes, Somewhere}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

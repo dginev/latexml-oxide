@@ -1,0 +1,23 @@
+% mechanism: graphicx's natural `cssstyle` (graphicx_sty.rs after_construct, `natural_display_size_pt_of_candidates`)
+%   and the box (`image_graphicx_sizer`) read one candidate, the first any reader sizes (latexml_core util/image.rs
+%   `first_natural_size`). An extensionless `\includegraphics{q}` beside `q.png` (200 x 100 px) and `q.eps`
+%   (BoundingBox 40 x 20 bp) has candidates `q.png,q.eps`: the box is the png's, and so is the graphic post renders, so
+%   no `em` size (a raster has none); 78z's `cssstyle` was the eps's 4.015em, ~3.6x smaller than pdflatex's png. The
+%   control `m` (`m.pdf` 1cm square before `m.png`) keeps the pdf's `em` size.
+% files:   q.png = graphics-tikz/trimquad.png, q.eps = package-bindings/eps_as_pdf_two.eps,
+%   m.pdf = graphics-tikz/ext/fig.pdf, m.png = graphics-tikz/trimquad.png
+% witness: review rev78z finding 1 (probe rev78z/probe3)
+% oracle:  pdflatex: 0 errors; "q 200.7495pt." "m 28.45222pt."
+% engines: rust a01d8b410f: q box 144.54pt (100 DPI, OD #337), cssstyle "width:4.015em; height:2.007em"; m 28.45pt,
+%   cssstyle "width:2.845em; height:2.845em"
+% expect:  0 errors, 0 warnings; q: no cssstyle; m: cssstyle "width:2.845em; height:2.845em"
+% status:  RED (a01d8b410f) -> GREEN (79a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\sbox0{\includegraphics{q}}q \the\wd0.
+\includegraphics{q}
+\sbox0{\includegraphics{m}}m \the\wd0.
+\includegraphics{m}
+\end{document}

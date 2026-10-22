@@ -621,9 +621,10 @@ impl ClassReaders {
         continue;
       }
       let caller = key;
+      let body = body.unlist_ref();
       let mut seen = FxHashSet::default();
       let called = callees.entry(caller).or_default();
-      for read in reads_of(body.unlist_ref()) {
+      for read in reads_of(body) {
         let callee = read.get_cs_name();
         if seen.insert(callee) {
           readers.entry(callee).or_default().push(caller);
@@ -813,36 +814,41 @@ impl ClassReaders {
         .is_some_and(|readers| readers.iter().any(|cs| self.printed.contains(cs)))
   }
 
-  /// Does the title page print `store` in one line with a value of the class's the frontmatter does not carry — in the
-  /// innermost group around the store, another parameterless macro a raw file defined, not one of `carried`? Such a
-  /// store is part of the class's line and stays with it: tlp.cls:627 `{\affilsize\it submitted \@submitted; revised
-  /// \@revised; accepted \@accepted}`, where `\submitted` is no title-page setter of the table — handing on the other
-  /// two left "submitted 30 November 2010; revised ; accepted" in the body (1209.2617).
-  fn prints_in_a_line_with_another_value(
-    &self,
-    store: &Token,
-    carried: &dyn Fn(&Token) -> bool,
-  ) -> bool {
-    let uncarried_value = |t: &Token| {
+  /// How the title page prints `store` among the class's printed text, read off its code: is an occurrence glued to
+  /// the class's text ([`glued_to_class_text`]), and which other values share its lines — in the innermost group
+  /// around the store, between the line breaks around it ([`ends_a_line`]: `\par`, `\\`, `\newline`, `\break`,
+  /// `\linebreak`, `\vskip`), each other `\@` macro not one of `carried`. A store printed in one line with a value
+  /// the frontmatter does not carry is part of the class's line and stays with it: tlp.cls:627 `{\affilsize\it
+  /// submitted \@submitted; revised \@revised; accepted \@accepted}`, where `\submitted` is no title-page setter of
+  /// the table — handing on the other two left "submitted 30 November 2010; revised ; accepted" in the body
+  /// (1209.2617); uiucthesis.cls:177 `for the degree of \@degree\ in \@dept\\`. Only printed text is a value (user
+  /// ruling 2026-10-22, OXIDIZED_DESIGN_DIVERGENCES #662), decided by expansion ([`prints_as_a_value`]): a macro whose
+  /// expansion is font, size or shape switches, spacing, rules or nothing ([`prints_text`]) is the line's
+  /// typesetting, as in `{\@addrfont\@address\par}` with `\def\@addrfont{\itshape}` (review 68x r2 probe ka;
+  /// bgteubner, umich-thesis, philosophersimprint). The other values are judged twice: as the class leaves them, when
+  /// it is loaded (`reroute_raw_class_stores`), and with the document's, when `\maketitle` prints the title page
+  /// (`lx_store_line_values_<name>`, [`harvest_stores`]): a store the class leaves empty, `\gdef\@submitted{}`, prints
+  /// the document's `\submitted{1 May 2026}` there, which makes `{\itshape submitted \@submitted; e-mail
+  /// \@email\par}` one line of the class's (review rev79a Q1). A value the line ends before is in another line:
+  /// `\vbox{…\@jinfo\par\@author\par\@address\par}` (probe kb).
+  fn store_lines(&self, store: &Token, carried: &dyn Fn(&Token) -> bool) -> StoreLines {
+    let other = |t: &Token| {
       t != store
         && t.get_catcode() == Catcode::CS
         && t.with_str(|s| s.starts_with("\\@"))
         && !carried(t)
-        && match lookup_meaning(t) {
-          Some(Stored::Expandable(defn)) => {
-            defn.get_origin() == DefinitionOrigin::File
-              && defn
-                .get_parameters()
-                .is_none_or(|p| p.get_parameters().is_empty())
-              && matches!(defn.get_expansion(), Some(ExpansionBody::Tokens(_)))
-          },
-          _ => false,
-        }
     };
-    self.title_page_readers(store).iter().any(|body| {
+    let mut lines = StoreLines::default();
+    for body in self.title_page_readers(store) {
       let body = body.unlist_ref();
+      let furniture = running_head_arguments(body);
       let mut open: Vec<usize> = Vec::new();
       for (k, t) in body.iter().enumerate() {
+        // (a store a running head prints is in no line of the title page: preprint.cls's `\maketitle`
+        // `\ihead{\@shortauthor:~\@shorttitle}`, 2512.04983, whose short title is the frontmatter's `<toctitle>`)
+        if furniture.iter().any(|(from, to)| (*from..*to).contains(&k)) {
+          continue;
+        }
         // (a store written, ptptex.cls:110 `\gdef\@abst{}`, is not printed there)
         let written = || {
           body[..k]
@@ -857,19 +863,453 @@ impl ClassReaders {
             open.pop();
           },
           _ if t == store && !written() => {
+            if glued_to_class_text(body, k, open.last().copied()) {
+              lines.glued = true;
+            }
             if let Some(&start) = open.last()
               && let Some(end) = group_end(body, start)
-              && body[start..end].iter().any(uncarried_value)
             {
-              return true;
+              let from = body[start..k]
+                .iter()
+                .rposition(ends_a_line)
+                .map_or(start, |b| start + b + 1);
+              let to = body[k + 1..end]
+                .iter()
+                .position(ends_a_line)
+                .map_or(end, |b| k + 1 + b);
+              for value in body[from..to].iter().filter(|t| other(t)) {
+                if !lines.others.contains(value) {
+                  lines.others.push(*value);
+                }
+              }
             }
           },
           _ => {},
         }
       }
-      false
-    })
+    }
+    lines
   }
+}
+
+/// The spans of `body` that set page furniture — the arguments of LaTeX's marks (`\markboth`, `\markright`,
+/// `\@mkboth`), of fancyhdr's head and foot commands (`\fancyhead[<places>]{…}`, `\lhead{…}`, …), of
+/// scrlayer-scrpage's (`\ihead[<plain>]{…}`, `\ohead*{…}`, …) and of titleps's (`\sethead[…][…][…]{…}{…}{…}`,
+/// `\setfoot*{…}{…}{…}`, titleps.sty:420-433), and the bodies of the head and foot macros a definition there sets
+/// (`{\def\@oddhead{\@shortauthor: \@shorttitle\hfil}}`, `\renewcommand{\@evenfoot}{…}`; ptptex.cls's `\maketitle`
+/// head, review rev79a2 finding 1): the running heads and feet LaTeXML drops, printed on no line of the title page
+/// ([`ClassReaders::store_lines`]), and no text a store there is glued to ([`glued_to_class_text`]).
+fn running_head_arguments(body: &[Token]) -> Vec<(usize, usize)> {
+  const HEADS: &[(&str, usize)] = &[
+    ("\\markboth", 2),
+    ("\\markright", 1),
+    ("\\@mkboth", 2),
+    ("\\fancyhead", 1),
+    ("\\fancyfoot", 1),
+    ("\\fancyhf", 1),
+    ("\\lhead", 1),
+    ("\\chead", 1),
+    ("\\rhead", 1),
+    ("\\lfoot", 1),
+    ("\\cfoot", 1),
+    ("\\rfoot", 1),
+    ("\\ihead", 1),
+    ("\\ohead", 1),
+    ("\\ifoot", 1),
+    ("\\ofoot", 1),
+    ("\\lehead", 1),
+    ("\\cehead", 1),
+    ("\\rehead", 1),
+    ("\\lohead", 1),
+    ("\\cohead", 1),
+    ("\\rohead", 1),
+    ("\\lefoot", 1),
+    ("\\cefoot", 1),
+    ("\\refoot", 1),
+    ("\\lofoot", 1),
+    ("\\cofoot", 1),
+    ("\\rofoot", 1),
+    ("\\sethead", 3),
+    ("\\setfoot", 3),
+  ];
+  let mut spans = Vec::new();
+  for (i, t) in body.iter().enumerate() {
+    if let Some(span) = head_definition_body(body, i) {
+      spans.push(span);
+      continue;
+    }
+    let Some((_, nargs)) = HEADS.iter().find(|(cs, _)| cs_in(t, &[cs])) else {
+      continue;
+    };
+    let mut k = skip_spaces(body, i + 1);
+    if body.get(k) == Some(&T_OTHER!("*")) {
+      k = skip_spaces(body, k + 1);
+    }
+    // (any optional arguments: fancyhdr's `[<places>]`, scrlayer-scrpage's `[<plain>]`, titleps's three)
+    match skip_optional_arguments(body, k) {
+      Some(past) => k = past,
+      None => continue,
+    }
+    let start = k;
+    for _ in 0..*nargs {
+      match group_end(body, skip_spaces(body, k)) {
+        Some(past) => k = past,
+        None => break,
+      }
+    }
+    if k > start {
+      spans.push((start, k));
+    }
+  }
+  spans
+}
+
+/// The span of the body a definition at `body[i]` gives LaTeX's head or foot macro (`\@oddhead`, `\@evenhead`,
+/// `\@oddfoot`, `\@evenfoot`): `\def`, `\gdef`, `\edef`, `\xdef` with any parameter text, `\renewcommand` with its
+/// `*`, the name braced or not, and its `[<n>]` ([`running_head_arguments`]).
+fn head_definition_body(body: &[Token], i: usize) -> Option<(usize, usize)> {
+  const HEAD_MACROS: &[&str] = &["\\@oddhead", "\\@evenhead", "\\@oddfoot", "\\@evenfoot"];
+  let t = body.get(i)?;
+  let mut k = skip_spaces(body, i + 1);
+  if cs_in(t, &["\\def", "\\gdef", "\\edef", "\\xdef"]) {
+    if !cs_in(body.get(k)?, HEAD_MACROS) {
+      return None;
+    }
+    // (the parameter text, up to the body's brace)
+    k = k
+      + 1
+      + body[k + 1..]
+        .iter()
+        .position(|b| b.get_catcode() == Catcode::BEGIN)?;
+  } else if cs_in(t, &["\\renewcommand"]) {
+    if body.get(k) == Some(&T_OTHER!("*")) {
+      k = skip_spaces(body, k + 1);
+    }
+    if cs_in(body.get(k)?, HEAD_MACROS) {
+      k += 1;
+    } else if body.get(k)?.get_catcode() == Catcode::BEGIN
+      && body.get(k + 1).is_some_and(|name| cs_in(name, HEAD_MACROS))
+      && body
+        .get(k + 2)
+        .is_some_and(|b| b.get_catcode() == Catcode::END)
+    {
+      k += 3;
+    } else {
+      return None;
+    }
+    k = skip_optional_arguments(body, skip_spaces(body, k))?;
+  } else {
+    return None;
+  }
+  Some((k, group_end(body, k)?))
+}
+
+/// The index past the optional arguments (`[…]`, each with its braced groups whole) from `body[k]` on, spaces
+/// skipped; `None` when one never closes.
+fn skip_optional_arguments(body: &[Token], mut k: usize) -> Option<usize> {
+  while body.get(k) == Some(&T_OTHER!("[")) {
+    let mut depth = 0usize;
+    let close = body[k + 1..].iter().position(|b| {
+      match b.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth = depth.saturating_sub(1),
+        _ => {},
+      }
+      depth == 0 && *b == T_OTHER!("]")
+    })?;
+    k = skip_spaces(body, k + 1 + close + 1);
+  }
+  Some(k)
+}
+
+/// How the title page prints a store among the class's text ([`ClassReaders::store_lines`]).
+#[derive(Default)]
+struct StoreLines {
+  /// Is an occurrence glued to the class's printed text ([`glued_to_class_text`])?
+  glued:  bool,
+  /// The other `\@` macros in its lines the frontmatter does not carry, values when they print text
+  /// ([`prints_as_a_value`]).
+  others: Vec<Token>,
+}
+
+/// Is the macro `t` a value of a class's line: a parameterless macro of a raw file's or the document's whose expansion
+/// prints text ([`prints_text`]), read with its current meaning — the class's default when the class is loaded, the
+/// document's at `\maketitle`?
+fn prints_as_a_value(t: &Token) -> bool {
+  match lookup_meaning(t) {
+    Some(Stored::Expandable(defn)) => {
+      matches!(
+        defn.get_origin(),
+        DefinitionOrigin::File | DefinitionOrigin::Document
+      ) && defn
+        .get_parameters()
+        .is_none_or(|p| p.get_parameters().is_empty())
+        && matches!(defn.get_expansion(), Some(ExpansionBody::Tokens(value))
+          if prints_text(value.unlist_ref(), PRINTS_TEXT_DEPTH))
+    },
+    _ => false,
+  }
+}
+
+/// Can the macro `t`, a value of a store's line ([`ClassReaders::store_lines`]) that prints nothing as the class leaves
+/// it, print one when `\maketitle` judges it again ([`prints_as_a_value`])? Only a placeholder the document can fill:
+/// undefined, `\relax` (which LaTeX finds undefined, `\@ifundefined`, `\newcommand`: `\let\@volume\relax`), or a
+/// parameterless macro that expands to nothing (`\gdef\@submitted{}`, `\let\@shortauthor\empty`; review rev79a
+/// Q1) — a store the class never defaulted still waits for `\maketitle`. The line's typesetting code is no
+/// placeholder: a macro with parameters (`\@setfontsize`, `\@ifundefined`), a primitive, a register, or a font
+/// macro (USG.cls:1590 `\smash{\@journalfont\@journal}`, whose `\journal` deferred for it, 2605.00042's pubnote
+/// order; review rev79a2 finding 5).
+fn may_become_a_value(t: &Token) -> bool {
+  match lookup_meaning(t) {
+    None => true,
+    Some(Stored::Expandable(defn)) => {
+      defn
+        .get_parameters()
+        .is_none_or(|p| p.get_parameters().is_empty())
+        && match defn.get_expansion() {
+          // (an empty body is none)
+          None => true,
+          Some(ExpansionBody::Tokens(value)) => value.unlist_ref().iter().all(|b| {
+            matches!(
+              b.get_catcode(),
+              Catcode::SPACE | Catcode::BEGIN | Catcode::END
+            ) || cs_in(b, &["\\relax", "\\@empty", "\\empty"])
+          }),
+          _ => false,
+        }
+    },
+    meaning => meaning == lookup_meaning(&TOKEN_RELAX),
+  }
+}
+
+/// Is the occurrence of a store at `body[k]` glued to the class's printed text — the character token right before or
+/// after it a letter or a digit, or a `.`, `/` or `-` inside a word (with a letter, a digit or another of them beyond
+/// it), with no space, glue or line break between? The class's text and the store's then print as one word, which is
+/// one value the frontmatter does not carry, and the line stays the class's: piparticle-final.cls:272 `{DOI:
+/// 10.4279/PIP.\@doi}`, handed on, left "020001" as the paper's DOI (1002.3829, 1012.4507, 1503.03445, 1503.07722,
+/// 1510.06950); ar-1col.cls:335 `https://doi.org/\@doi\endgraf` (1903.12215, 2004.12182, 2603.20393). Not glued: a
+/// sentence's full stop after the store (`\enspace\@ACMCCS.}`, CSML.cls's shape, perfect_kernel_batch75a), a label's
+/// `:` or a bracket (`doi:\@doi`, lms; `(\@pubyear`, mnras), an operand of `\if`, `\ifx` or `\ifcat` (`\if!\@subtitle`,
+/// lipics-v2021, llncs), which TeX compares and does not print, and the first argument of `\href` (`open`, the
+/// innermost group's brace: `\href{mailto:\@email}`, modernposter), a link's target.
+fn glued_to_class_text(body: &[Token], k: usize, open: Option<usize>) -> bool {
+  const CONDITIONALS: &[&str] = &["\\if", "\\ifx", "\\ifcat"];
+  // (`Some(true)`: a letter or a digit; `Some(false)`: a `.`, `/` or `-`)
+  let word_char = |t: Option<&Token>| -> Option<bool> {
+    let t = t?;
+    match t.get_catcode() {
+      Catcode::LETTER => Some(true),
+      Catcode::OTHER => t.with_str(|s| {
+        let mut chars = s.chars();
+        match (chars.next(), chars.next()) {
+          (Some(c), None) if c.is_ascii_digit() => Some(true),
+          (Some('.' | '/' | '-'), None) => Some(false),
+          _ => None,
+        }
+      }),
+      _ => None,
+    }
+  };
+  let before = |j: usize| j.checked_sub(1).map(|i| &body[i]);
+  let glued_before = match word_char(before(k)) {
+    Some(true) => true,
+    Some(false) => word_char(before(k - 1)).is_some(),
+    None => false,
+  } && !in_a_dimension(body, k);
+  let glued_after = match word_char(body.get(k + 1)) {
+    Some(true) => true,
+    Some(false) => word_char(body.get(k + 2)).is_some(),
+    None => false,
+  };
+  let operand = (k >= 1 && cs_in(&body[k - 1], CONDITIONALS))
+    || (k >= 2 && cs_in(&body[k - 2], CONDITIONALS) && body[k - 1].get_catcode() != Catcode::SPACE);
+  let link_target = open.is_some_and(|start| {
+    body[..start]
+      .iter()
+      .rev()
+      .find(|b| b.get_catcode() != Catcode::SPACE)
+      .is_some_and(|b| *b == T_CS!("\\href"))
+  });
+  !operand && !link_target && (glued_before || glued_after)
+}
+
+/// Is `body[k]` in or right after the dimension a skip, kern, penalty or register assignment reads (`\hskip.5em\@kword`,
+/// jps-cp.cls; `\vskip 4ex\@subtitle`, jurabook.cls; `\hangindent 3.8pc\@keywords`, w-art.cls)? Its characters are no
+/// printed text ([`glue_end`]).
+fn in_a_dimension(body: &[Token], k: usize) -> bool {
+  const READS_A_NUMBER: &[&str] = &[
+    "\\penalty",
+    "\\raise",
+    "\\lower",
+    "\\moveleft",
+    "\\moveright",
+  ];
+  let Some(j) = body[..k]
+    .iter()
+    .rposition(|t| t.get_catcode() == Catcode::CS)
+  else {
+    return false;
+  };
+  let t = &body[j];
+  (cs_in(t, GLUE_SETTERS)
+    || cs_in(t, READS_A_NUMBER)
+    || matches!(lookup_meaning(t), Some(Stored::Register(_))))
+    && glue_end(body, j + 1).is_some_and(|end| end >= k)
+}
+
+/// Does `t` end the line TeX prints: `\par` (a blank line in the code is one; `\endgraf` is plain's `\par`), `\\`,
+/// `\newline`, `\break` and `\linebreak`, an alignment's `\cr`, and the primitive `\vskip`, which in horizontal mode
+/// ends the paragraph?
+fn ends_a_line(t: &Token) -> bool {
+  cs_in(t, &[
+    "\\par",
+    "\\endgraf",
+    "\\\\",
+    "\\newline",
+    "\\break",
+    "\\linebreak",
+    "\\cr",
+    "\\crcr",
+    "\\vskip",
+  ])
+}
+
+/// How many macros deep [`prints_text`] reads a value's expansion; past it, a macro counts as printing.
+const PRINTS_TEXT_DEPTH: usize = 6;
+
+/// Spacing, rules and breaks of TeX's and LaTeX's that print no text, taking no argument (besides [`LAYOUT`]).
+const SPACING: &[&str] = &[
+  "\\hfil",
+  "\\hfill",
+  "\\hss",
+  "\\vfil",
+  "\\vfill",
+  "\\vss",
+  "\\quad",
+  "\\qquad",
+  "\\enskip",
+  "\\enspace",
+  "\\thinspace",
+  "\\,",
+  "\\ ",
+  "\\/",
+  "\\strut",
+  "\\null",
+  "\\break",
+  "\\endgraf",
+  "\\cr",
+  "\\crcr",
+  "\\protect",
+];
+
+/// Does `code` print text — a character, math, or a command not known to print nothing? What prints nothing is a
+/// space, a group's braces, a font, size or shape switch (a command whose definition carries a font: LaTeX's
+/// `\itshape`, `\large`, and [`LAYOUT`]), spacing ([`SPACING`], [`LAYOUT_ARGS`] with their arguments, [`GLUE_SETTERS`]
+/// and a register with their glue), a rule (`\hrule`/`\vrule` with their `height`/`width`/`depth`, LaTeX's
+/// `\rule[<raise>]{<width>}{<height>}`), a line break with its `*` and `[<skip>]`, and a parameterless macro whose
+/// expansion prints nothing, read `depth` macros deep. Only printed text is a value of a class's line (user ruling
+/// 2026-10-22; [`ClassReaders::store_lines`]).
+fn prints_text(code: &[Token], depth: usize) -> bool {
+  let mut k = 0;
+  while k < code.len() {
+    let t = code[k];
+    k += 1;
+    match t.get_catcode() {
+      Catcode::SPACE | Catcode::BEGIN | Catcode::END => continue,
+      Catcode::ACTIVE if t == T_ACTIVE!('~') => continue,
+      Catcode::CS | Catcode::ACTIVE => {},
+      _ => return true,
+    }
+    if cs_in(&t, &["\\\\", "\\newline", "\\linebreak"]) {
+      // `\\*[<skip>]`, `\linebreak[<number>]`
+      k = skip_spaces(code, k);
+      if code.get(k) == Some(&T_OTHER!("*")) {
+        k = skip_spaces(code, k + 1);
+      }
+      if code.get(k) == Some(&T_OTHER!("[")) {
+        match code[k..].iter().position(|b| *b == T_OTHER!("]")) {
+          Some(close) => k += close + 1,
+          None => return true,
+        }
+      }
+      continue;
+    }
+    if cs_in(&t, LAYOUT) || cs_in(&t, SPACING) {
+      continue;
+    }
+    if let Some((_, nargs)) = LAYOUT_ARGS.iter().find(|(cs, _)| cs_in(&t, &[cs])) {
+      k = skip_spaces(code, k);
+      if code.get(k) == Some(&T_OTHER!("*")) {
+        k += 1;
+      }
+      for _ in 0..*nargs {
+        match group_end(code, skip_spaces(code, k)) {
+          Some(past) => k = past,
+          None => return true,
+        }
+      }
+      continue;
+    }
+    if t == T_CS!("\\rule") {
+      k = skip_spaces(code, k);
+      if code.get(k) == Some(&T_OTHER!("[")) {
+        match code[k..].iter().position(|b| *b == T_OTHER!("]")) {
+          Some(close) => k += close + 1,
+          None => return true,
+        }
+      }
+      for _ in 0..2 {
+        match group_end(code, skip_spaces(code, k)) {
+          Some(past) => k = past,
+          None => return true,
+        }
+      }
+      continue;
+    }
+    if cs_in(&t, &["\\hrule", "\\vrule"]) {
+      // `\hrule height 0.4pt depth 0pt width \textwidth`
+      loop {
+        let j = skip_spaces(code, k);
+        let keyword = ["height", "width", "depth"].into_iter().find(|keyword| {
+          keyword.chars().enumerate().all(|(n, c)| {
+            code.get(j + n).is_some_and(|b| {
+              b.get_catcode() == Catcode::LETTER && b.with_str(|s| s.len() == 1 && s.starts_with(c))
+            })
+          })
+        });
+        let Some(keyword) = keyword else {
+          break;
+        };
+        match glue_end(code, j + keyword.len()) {
+          Some(past) => k = past,
+          None => return true,
+        }
+      }
+      continue;
+    }
+    if cs_in(&t, GLUE_SETTERS) || matches!(lookup_meaning(&t), Some(Stored::Register(_))) {
+      // (a skip or a register's assignment prints nothing: `\vskip 12\p@`, `\parindent=0pt`; a register read some
+      // other way — a `\chardef`'d character, a count set to a number — counts as printing)
+      match glue_end(code, k) {
+        Some(past) => k = past,
+        None => return true,
+      }
+      continue;
+    }
+    if let Ok(Some(defn)) = lookup_definition(&t)
+      && defn.declared_font().is_some()
+      && defn
+        .get_parameters()
+        .is_none_or(|p| p.get_parameters().is_empty())
+    {
+      continue;
+    }
+    match parameterless_body(&t) {
+      Some(expansion) if depth > 0 && !prints_text(expansion.unlist_ref(), depth - 1) => continue,
+      _ => return true,
+    }
+  }
+  false
 }
 
 /// The class's setter `\name`, if it stores its argument for the title page ([`setter_stores`]): in its own
@@ -974,7 +1414,8 @@ pub fn reroute_raw_class_stores(cls: &str) -> Result<()> {
   let carried = |t: &Token| carried_stores.contains(t);
   for (name, api, (store, arg, store_cs)) in setters {
     let readers = readers.get_or_insert_with(ClassReaders::survey);
-    if readers.prints_in_a_line_with_another_value(&store_cs, &carried) {
+    let lines = readers.store_lines(&store_cs, &carried);
+    if lines.glued || lines.others.iter().any(prints_as_a_value) {
       Info!(
         "frontmatter",
         cls,
@@ -983,6 +1424,24 @@ pub fn reroute_raw_class_stores(cls: &str) -> Result<()> {
         )
       );
       continue;
+    }
+    // The other values of its lines print nothing as the class leaves them; `\maketitle` judges them again with the
+    // document's (`harvest_stores`), so a store handed on as it is set waits for it (`lx_store_deferred_<name>`) —
+    // when one of them is a placeholder the document can fill there ([`may_become_a_value`]), not the line's code
+    // (`\@setfontsize`, `\@journalfont`; review rev79a2 finding 5).
+    let others: Vec<Token> = lines
+      .others
+      .into_iter()
+      .filter(may_become_a_value)
+      .collect();
+    let line_values = !others.is_empty();
+    assign_value(
+      &s!("lx_store_line_values_{name}"),
+      Stored::Tokens(Tokens::new(others)),
+      Some(Scope::Global),
+    );
+    if line_values && !read_at_maketitle(name) {
+      assign_value(&s!("lx_store_deferred_{name}"), true, Some(Scope::Global));
     }
     // A store the document never set is handed on at `\maketitle` only when the title page prints it.
     assign_value(
@@ -2999,6 +3458,11 @@ pub(crate) const LAYOUT: &[&str] = &[
 /// Spacing and font commands that typeset nothing, with the number of braced arguments they take (`\vspace*` too).
 const LAYOUT_ARGS: &[(&str, usize)] = &[
   ("\\fontsize", 2),
+  ("\\fontfamily", 1),
+  ("\\fontseries", 1),
+  ("\\fontshape", 1),
+  ("\\fontencoding", 1),
+  ("\\usefont", 4),
   ("\\vspace", 1),
   ("\\addvspace", 1),
   ("\\hspace", 1),
@@ -3758,6 +4222,14 @@ fn store_value(name: &str) -> Result<Option<Tokens>> {
   })
 }
 
+/// Does the title page print the store of `\<name>` in one line with another value of the class's, as they are now:
+/// one of the other values of its lines the class left printing nothing (`lx_store_line_values_<name>`,
+/// `reroute_raw_class_stores`) prints text ([`prints_as_a_value`])?
+fn prints_in_a_line_with_a_value(name: &str) -> bool {
+  matches!(lookup_value(&s!("lx_store_line_values_{name}")),
+    Some(Stored::Tokens(values)) if values.unlist_ref().iter().any(prints_as_a_value))
+}
+
 /// At `\maketitle` (`\lx@store@defaults`), or at the frontmatter fallback in a document without
 /// one (`at_maketitle` false; again at insertion, a no-op once read): hand the captured stores not yet handed on to their
 /// frontmatter API, once — every creator-annotating or creator-making store the document set (in
@@ -3866,6 +4338,20 @@ pub fn harvest_stores(at_maketitle: bool) -> Result<Vec<Digested>> {
     if !lookup_bool(&s!("lx_store_set_{name}"))
       && !lookup_bool(&s!("lx_store_title_page_reads_{name}"))
     {
+      continue;
+    }
+    // A store the title page prints in one line with another value of the class's, now that the document has set them
+    // (`ClassReaders::store_lines`): the line stays the class's, which the deposit prints whole, the store un-nulled
+    // (`\lx@captured@stores`) — `{\itshape submitted \@submitted; e-mail \@email\par}` with the document's
+    // `\submitted{1 May 2026}` (review rev79a Q1).
+    if at_maketitle && prints_in_a_line_with_a_value(name) {
+      Info!(
+        "frontmatter",
+        "\\maketitle",
+        s!(
+          "The raw class's \\{name} stays the class's: its title page prints it in one line with another value"
+        )
+      );
       continue;
     }
     let store = store_of(name);

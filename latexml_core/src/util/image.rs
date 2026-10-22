@@ -14,6 +14,7 @@ use std::path::{Path, PathBuf};
 use crate::{
   BoxOps,
   common::{dimension::Dimension, numeric_ops::NumericOps, store::Stored},
+  definition::{Definition, ExpansionBody},
   state,
   whatsit::Whatsit,
 };
@@ -327,6 +328,7 @@ fn has_graphics_extension(name: &str) -> bool {
 /// first readable one (review rev78v finding 3; rev78v2 finding 2, where a tie-break by full path put `figs/`
 /// first).
 fn in_graphics_type_order(candidates: &mut [String]) {
+  let declared = declared_graphics_extensions();
   let directory = |found: &str| {
     found
       .rsplit_once('/')
@@ -344,11 +346,58 @@ fn in_graphics_type_order(candidates: &mut [String]) {
     let found_name = found.rsplit('/').next().unwrap_or(found);
     let dir = directory(found);
     (
+      declared_rank(found_name, &declared),
       graphics_type_rank(found_name),
       directories.iter().position(|d| *d == dir),
       found_name.to_string(),
     )
   });
+}
+
+/// The extensions `\Gin@extensions` lists, in order, each as written with its dot (`.eps`): the driver's, which
+/// graphics_sty.rs seeds as pdftex.def:597-600 and epstopdf-base's `.eps` set it ([`GRAPHICS_EXTENSIONS`]' order), as
+/// the document declared them (graphics.sty:116-117 `\DeclareGraphicsExtensions`) or edited them (grfext's
+/// `\AppendGraphicsExtensions`, `\PrependGraphicsExtensions`, `\RemoveGraphicsExtensions`); empty without the
+/// graphics binding, and then the driver's order stands ([`graphics_type_rank`]).
+fn declared_graphics_extensions() -> Vec<String> {
+  let Some(Stored::Expandable(defn)) = state::lookup_meaning(&crate::T_CS!("\\Gin@extensions"))
+  else {
+    return Vec::new();
+  };
+  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+    return Vec::new();
+  };
+  body
+    .to_string()
+    .split(',')
+    .map(|ext| ext.trim().to_string())
+    .filter(|ext| ext.starts_with('.') && ext.len() > 1)
+    .collect()
+}
+
+/// The place of `name`'s extension among the `declared` ones ([`declared_graphics_extensions`]), its case aside: TeX
+/// tries a name without an extension with each of `\Gin@extensions` in turn (graphics.sty:206-224), so after
+/// `\DeclareGraphicsExtensions{.pdf,.eps,.png}` a `fig` beside `fig.png` and `fig.eps` is `fig.eps` (2107.02597's
+/// gnuplot figures); and kpathsea finds each name as written, then in another case (TL's `texmf_casefold_search=1`),
+/// so a `.png` entry finds `nsfnet.PNG` before the `.eps` the driver appends at `\begin{document}` (1608.05172, whose
+/// pdflatex log reads `<./img/nsfnet.PNG>` beside `img/nsfnet.eps`; review rev79a2 finding 2): the place, then
+/// `false` for the entry's own case before `true` for another. An extension it does not declare comes after them
+/// (TeX does not try it). All equal when nothing was declared.
+fn declared_rank(name: &str, declared: &[String]) -> (usize, bool) {
+  declared
+    .iter()
+    .enumerate()
+    .find_map(|(place, ext)| {
+      let start = name
+        .len()
+        .checked_sub(ext.len())
+        .filter(|start| *start > 0)?;
+      let tail = name.get(start..)?;
+      tail
+        .eq_ignore_ascii_case(ext)
+        .then(|| (place, tail != ext.as_str()))
+    })
+    .unwrap_or((declared.len(), false))
 }
 
 /// The place of `name`'s extension in the order pdftex tries them: pdftex.def's `\Gin@extensions` lowercase, then in
@@ -789,6 +838,50 @@ pub fn raster_resolution_dpi(path: &str) -> Option<(f64, f64)> {
   }
 }
 
+/// A graphic's natural size as its file gives it: a raster's in pixels, a vector's (EPS/PS, PDF, SVG) a physical length
+/// in pt.
+enum Natural {
+  Pixels(f64, f64),
+  Points(f64, f64),
+}
+
+/// The natural size of the graphic file at `path`, read by its content, not its name (`None` when no reader sizes it).
+fn natural_size(path: &Path) -> Option<Natural> {
+  match read_image_size(path) {
+    Some(ImageSize::Pixels(w, h)) if w > 0 && h > 0 => Some(Natural::Pixels(w as f64, h as f64)),
+    // Beyond Perl (OXIDIZED_DESIGN_DIVERGENCES #886): an EPS/PS BoundingBox is bp, as TeX reads it (graphics.sty
+    // `\Gread@eps`; pdflatex through epstopdf), not pixels at `DPI` — Perl's Util/Image.pm:271 `$w * 72.27 / $dpi`
+    // made a 40bp figure 28.908pt where latex makes it 40.15pt, and a `\psfig` panel row (OD #876) 72.27/100 of
+    // its width (1106.2745 Figs 1-2, 7, 8, 10).
+    Some(ImageSize::PostScriptBp(w, h)) => Some(Natural::Points(bp_to_pt(w), bp_to_pt(h))),
+    // Not a raster or PostScript file (or one without a size): emulate pdfTeX and read the natural size from the
+    // file itself. pdfTeX's built-in reader takes a PDF's CropBox (its default) or MediaBox, and an SVG's viewBox —
+    // with NO external tool. (Perl-LaTeXML instead shells out to ImageMagick precisely because Image::Size can't
+    // read PDF; even then it forces `pdf:use-cropbox` to match pdfTeX. So the faithful, self-contained move is
+    // pdfTeX's, not Perl's.) `natural_size_pt` shares the same CropBox→MediaBox reader as
+    // `LaTeXML::Post::Graphics`.
+    _ => natural_size_pt(path).map(|(w, h)| Natural::Points(w, h)),
+  }
+}
+
+/// The natural size of the first of `candidates` (comma-joined, resolved against `source_dir`) whose size can be read,
+/// whatever its type: the candidates come in TeX's order (`in_graphics_type_order`, pdftex.def's `\Gin@extensions`),
+/// so beside `fig.pdf` an extensionless `fig`'s size is the `.pdf`'s, as pdflatex reads it, not a `fig.ps`'s further
+/// down the list, and beside `q.eps` a `q.png` before it is the graphic; Perl's sizer stops at the first candidate it
+/// can read too (Util/Image.pm:259-272, `return … if $w`). The box (`image_graphicx_sizer`) and the natural `cssstyle`
+/// (`natural_display_size_pt_of_candidates`) both read this one, so the `cssstyle` is the size pdflatex prints the
+/// graphic at (review rev78z finding 1). Post may render another candidate — it picks by desirability
+/// (latexml_post/src/graphics.rs:321-371) —, at that size: 2107.02597's 640x480 png at its eps's 36.135em x 25.294em,
+/// about 7 % out of proportion (a SYNC row).
+fn first_natural_size(candidates: &str, source_dir: &str) -> Option<Natural> {
+  candidates.split(',').find_map(|candidate| {
+    let candidate = candidate.trim();
+    (!candidate.is_empty())
+      .then(|| natural_size(&resolve_candidate(candidate, source_dir)))
+      .flatten()
+  })
+}
+
 /// Perl: `image_graphicx_sizer($whatsit)` (Util::Image L259-272).
 ///
 /// Reads image dimensions from `candidates`, applies the `options` string
@@ -808,40 +901,9 @@ pub fn image_graphicx_sizer(whatsit: &mut Whatsit) {
     .map(|c| c.to_string())
     .unwrap_or_default();
 
-  // The first candidate whose size can be read decides, whatever its type: the candidates come in TeX's order
-  // (`in_graphics_type_order`, pdftex.def's `\Gin@extensions`), so beside `fig.pdf` an extensionless `fig`'s box is
-  // the `.pdf`'s, as pdflatex reads it, not a `fig.ps`'s further down the list; Perl's sizer stops at the first candidate
-  // it can read too (Util/Image.pm:259-272, `return … if $w`). `natural_display_size_pt_of_candidates` (the natural
-  // `cssstyle`) still skips a raster to the first vector, so with a `q.png` before a `q.eps` the box is the png's and the
-  // `cssstyle` the eps's (SYNC_STATUS row "natural cssstyle and box read different candidates"). A raster's size is
-  // pixels, a vector's (EPS/PS, PDF, SVG) a physical length in pt.
-  enum Natural {
-    Pixels(f64, f64),
-    Points(f64, f64),
-  }
+  // The first candidate whose size can be read decides, whatever its type (`first_natural_size`).
   let source_dir = state::lookup_string("SOURCEDIRECTORY");
-  let natural = candidates.split(',').find_map(|candidate| {
-    let candidate = candidate.trim();
-    if candidate.is_empty() {
-      return None;
-    }
-    let path = resolve_candidate(candidate, &source_dir);
-    match read_image_size(&path) {
-      Some(ImageSize::Pixels(w, h)) if w > 0 && h > 0 => Some(Natural::Pixels(w as f64, h as f64)),
-      // Beyond Perl (OXIDIZED_DESIGN_DIVERGENCES #886): an EPS/PS BoundingBox is bp, as TeX reads it (graphics.sty
-      // `\Gread@eps`; pdflatex through epstopdf), not pixels at `DPI` — Perl's Util/Image.pm:271 `$w * 72.27 / $dpi`
-      // made a 40bp figure 28.908pt where latex makes it 40.15pt, and a `\psfig` panel row (OD #876) 72.27/100 of
-      // its width (1106.2745 Figs 1-2, 7, 8, 10).
-      Some(ImageSize::PostScriptBp(w, h)) => Some(Natural::Points(bp_to_pt(w), bp_to_pt(h))),
-      // Not a raster or PostScript file (or one without a size): emulate pdfTeX and read the natural size from the
-      // file itself. pdfTeX's built-in reader takes a PDF's CropBox (its default) or MediaBox, and an SVG's viewBox —
-      // with NO external tool. (Perl-LaTeXML instead shells out to ImageMagick precisely because Image::Size can't
-      // read PDF; even then it forces `pdf:use-cropbox` to match pdfTeX. So the faithful, self-contained move is
-      // pdfTeX's, not Perl's.) `natural_size_pt` shares the same CropBox→MediaBox reader as
-      // `LaTeXML::Post::Graphics`.
-      _ => natural_size_pt(&path).map(|(w, h)| Natural::Points(w, h)),
-    }
-  });
+  let natural = first_natural_size(&candidates, &source_dir);
 
   let (img_w, img_h) = match natural {
     Some(Natural::Pixels(w, h)) => (w, h),
@@ -1268,42 +1330,34 @@ fn bp_to_pt(bp: f64) -> f64 { bp * 72.27 / 72.0 }
 /// geometry can't be recovered.
 ///
 /// For a vector format this is the natural size `image_graphicx_sizer` gives the
-/// box (since 78z an EPS/PS one too, OXIDIZED_DESIGN_DIVERGENCES #886); for a
-/// raster it is `None`, where the sizer's `cached_width` runs the pixels through a
-/// device-DPI round-trip (`×72.27/DPI`, Perl's rule, #337), which is not a
-/// physical length. This function is the size a browser should reproduce, used for the
-/// font-relative (`em`) sizing of natural-size figure inclusions (#562).
-/// Extension-gated so each format is read exactly once; pure Rust, no external
-/// tool.
+/// box (since 78z an EPS/PS one too, OXIDIZED_DESIGN_DIVERGENCES #886), read by
+/// the same reader (`natural_size`, by the file's content); for a raster it is
+/// `None`, where the sizer's `cached_width` runs the pixels through a device-DPI
+/// round-trip (`×72.27/DPI`, Perl's rule, #337), which is not a physical length.
+/// This function is the size a browser should reproduce, used for the
+/// font-relative (`em`) sizing of natural-size figure inclusions (#562). Pure
+/// Rust, no external tool.
 pub fn natural_display_size_pt(path: &Path) -> Option<(f64, f64)> {
-  let ext = path
-    .extension()
-    .and_then(|e| e.to_str())
-    .map(|e| e.to_ascii_lowercase());
-  match ext.as_deref() {
-    Some("pdf") => read_pdf_page_box(path).map(|(w, h)| (bp_to_pt(w), bp_to_pt(h))),
-    Some("eps" | "ps" | "epsi" | "epsf") => match read_image_size(path)? {
-      ImageSize::PostScriptBp(w, h) => Some((bp_to_pt(w), bp_to_pt(h))),
-      ImageSize::Pixels(..) => None,
-    },
-    Some("svg" | "svgz") => read_svg_size_pt(path),
-    _ => None,
+  match natural_size(path)? {
+    Natural::Points(w, h) => Some((w, h)),
+    Natural::Pixels(..) => None,
   }
 }
 
-/// [`natural_display_size_pt`] over a comma-joined `candidates` string (the
-/// `<ltx:graphics candidates=…>` attribute), resolving each candidate against
-/// `source_dir` and returning the first that yields a size.
+/// [`natural_display_size_pt`] of the candidate the box is sized from: the first
+/// of a comma-joined `candidates` string (the `<ltx:graphics candidates=…>`
+/// attribute, resolved against `source_dir`) that any reader sizes
+/// (`first_natural_size`), `None` when that one is a raster — so a `q.png`
+/// before a `q.eps` gives no `em` size, as any raster does, rather than the
+/// eps's size for the png pdflatex prints (review rev78z finding 1).
 pub fn natural_display_size_pt_of_candidates(
   candidates: &str,
   source_dir: &str,
 ) -> Option<(f64, f64)> {
-  candidates.split(',').find_map(|c| {
-    let c = c.trim();
-    (!c.is_empty())
-      .then(|| natural_display_size_pt(&resolve_candidate(c, source_dir)))
-      .flatten()
-  })
+  match first_natural_size(candidates, source_dir)? {
+    Natural::Points(w, h) => Some((w, h)),
+    Natural::Pixels(..) => None,
+  }
 }
 
 /// pt (f64) → `Dimension` (scaled points).

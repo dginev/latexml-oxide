@@ -1,12 +1,15 @@
-% mechanism: K11 (raw-class title-page stores, frontmatter_stores.rs `prints_in_a_line_with_another_value`). zzfmb.cls
+% mechanism: K11 (raw-class title-page stores, frontmatter_stores.rs `ClassReaders::store_lines`). zzfmb.cls
 %   typesets its whole title page in one `\vbox{…\@jinfo\par\@author\par\@address\par}`: `\@jinfo` is the class's
-%   own line ("Vol. 1, 2026"), set off by `\par`, but the rule reads the whole group as one line and keeps `\address` the
-%   class's. Expected: the frontmatter's address.
+%   own line ("Vol. 1, 2026"), set off by `\par`, but 68x's rule read the whole group as one line and kept `\address` the
+%   class's; since 79a `\par` ends the line. Expected: the frontmatter's address.
 % witness: review 68x r2 probe kb
 % oracle:  pdflatex: 0 errors; "The Title" / "Vol. 1, 2026" / "An Author" / "Dept of Probes, Somewhere"
-% engines: rust 68x r2, r3: no <contact role="address">; 67int16, 68x r1: the address contact
+% engines: rust 68x r2, r3: no <contact role="address">; 67int16, 68x r1: the address contact; 79a: the address contact,
+%   "Vol. 1, 2026" a body paragraph. Accepted residual (OD #662): the unused `\ps@jhead` counts as a printing page
+%   style, so the `\@journal` default is a pubnote pdflatex does not print.
 % expect:  0 errors, 0 warnings; <contact role="address">Dept of Probes, Somewhere</contact>
-% status:  RED (68x r2, r3) — open — RULED 2026-10-22: refine the line rule (only printed text is a value, font/typesetting switches are not; `\par` ends a line); no guard yet
+% status:  RED (68x r2, r3; a01d8b410f) -> GREEN (79a: only printed text is a value, `\par` and `\\` end the line;
+%   user ruling 2026-10-22, OXIDIZED_DESIGN_DIVERGENCES #662)
 % preload: ar5iv.sty
 \documentclass{zzfmb}
 \title{The Title}\author{An Author}

@@ -352,9 +352,11 @@ LoadDefinitions!({
       // proportion as the source and scales with the reader's font-size/zoom (no
       // fixed 72-vs-96 DPI guess). The natural size is read directly as a true
       // physical length in TeX pt — a PDF page box, an EPS/PS BoundingBox, or an
-      // SVG's lengths/viewBox, all bp→pt (`natural_display_size_pt`), which
-      // returns `None` for raster formats and so gates the em path to vector
-      // figures. CSS `em` is the element's font-size exactly, so `em = size_pt /
+      // SVG's lengths/viewBox, all bp→pt (`natural_display_size_pt`), of the
+      // candidate the sizer sizes the box from (the first one any reader sizes:
+      // `natural_display_size_pt_of_candidates`), and `None` when that one is a
+      // raster, so the em path is gated to vector figures and never sizes a
+      // `q.png` by a `q.eps` after it (review rev78z finding 1). CSS `em` is the element's font-size exactly, so `em = size_pt /
       // font_pt` against the LOCAL font. Emitted as `cssstyle`, copied verbatim
       // into the `<img>`/`<object>` style by LaTeXML-common.xsl, overriding the
       // pixel `imagewidth`/`imageheight`. Author-sized (`width=`/`height=`/

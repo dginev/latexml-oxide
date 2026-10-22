@@ -1,0 +1,23 @@
+% mechanism: K11 (raw-class title-page stores, frontmatter_stores.rs `ClassReaders::store_lines`,
+%   `running_head_arguments`, `head_definition_body`). A store a head definition prints is in no line of the title
+%   page: zzfmh.cls's `\@maketitle` defines `\@oddhead` as `\@shortauthor: \@shorttitle\hfil` and `\@evenhead` as
+%   `Vol.\@volume\hfil` — page furniture LaTeXML drops, so the short title is no value of a class line beside the
+%   document's short author (`\maketitle`'s second judgement, 79a r2), and the volume is glued to no printed text of
+%   the title page: `\shorttitle` is the frontmatter's `<toctitle>`, `\volume` its pubnote. The same with titleps's
+%   `\sethead{\@shortauthor}{}{\@shorttitle}` (three arguments). Review rev79a2 finding 1 (probe zqk).
+% witness: none in the A/B population; reach ptptex.cls (TL 2025)
+% oracle:  pdflatex: 0 errors; "The Title" / "An Author" / "Body text."; no head line on the title page
+% engines: rust int68a, 79a r1: <toctitle>A Short Title</toctitle>; 79a r2: no toctitle ("\maketitle The raw class's
+%          \shorttitle stays the class's"), the volume the class's
+% expect:  0 errors, 0 warnings; <toctitle>A Short Title</toctitle>; the volume a pubnote
+% status:  RED (79a r2) -> GREEN (79a r3)
+% preload: ar5iv.sty
+\documentclass{zzfmh}
+\title{The Title}\author{An Author}
+\shorttitle{A Short Title}
+\shortauthor{Author}
+\volume{12}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

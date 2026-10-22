@@ -1,0 +1,22 @@
+% mechanism: graphicx's candidates (latexml_core util/image.rs `in_graphics_type_order`, `declared_graphics_extensions`)
+%   follow `\Gin@extensions`, which graphics_sty.rs seeds as the driver sets it (pdftex.def:597-600) and grfext's
+%   `\AppendGraphicsExtensions`/`\PrependGraphicsExtensions`/`\RemoveGraphicsExtensions` edit, read raw
+%   (epstopdf_sty.rs). Appending `.eps` keeps the driver's types first: `\includegraphics{q}` beside `q.png`
+%   (200 x 100 px) and `q.eps` (BoundingBox 40 x 20 bp) is the png. 79a r1 started the list `\@empty`, so the appended
+%   `.eps` alone was the list and ranked first.
+% files:   q.png = graphics-tikz/trimquad.png, q.eps = package-bindings/eps_as_pdf_two.eps
+% witness: review rev79a finding 3 (probe rev79a/probe2/app.tex); 1711.06128 (`\AppendGraphicsExtensions{.gif}`)
+% oracle:  pdflatex: 0 errors; "q 200.7495pt." (the png)
+% engines: rust int68a: candidates "q.png,q.eps", "q 144.54pt." (the png at 100 DPI, OD #337); 79a r1: "q.eps,q.png",
+%   "q 40.15pt."
+% expect:  0 errors, 0 warnings; candidates "q.png,q.eps", "q 144.54pt.", no cssstyle
+% status:  RED (79a r1) -> GREEN (79a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{grfext}
+\AppendGraphicsExtensions{.eps}
+\begin{document}
+\sbox0{\includegraphics{q}}q \the\wd0.
+\includegraphics{q}
+\end{document}

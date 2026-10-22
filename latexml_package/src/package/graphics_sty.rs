@@ -684,15 +684,44 @@ LoadDefinitions!({
 
   // == Gin internal macros (Perl: RawTeX block, lines 311-324) ==
 
-  // \Gin@extensions — comma-separated list of recognized image extensions.
-  // Real graphics.sty assigns this from the chosen graphics driver
-  // (.eps for dvips, .pdf,.png,.jpg for pdftex). User code rarely reads
-  // it directly, but `\graphicspath` / `\@for` loops in third-party
-  // packages (e.g. xkeyval drivers) iterate over it. Pre-define as
-  // empty to suppress "undefined" cascades — the actual driver-specific
-  // list is filled in elsewhere if a graphics driver binding loads.
-  // Driver: 2103.04594.
-  Let!("\\Gin@extensions", "\\@empty");
+  // \Gin@extensions — the extensions a name without one is tried with, in turn (graphics.sty:206-224), as pdftex.def
+  // sets it (pdftex.def:597-600), the order of `GRAPHICS_EXTENSIONS` (util/image.rs), which reads the list to order an
+  // image's candidates. It is pdftex.def's list under any driver option, where TeX's is the named driver's:
+  // `[dvips]` loads dvips.def, whose list is `.eps,.ps,.eps.gz,.ps.gz,.eps.Z,.mps` (dvips.def:202; pdflatex with
+  // `\usepackage[dvips]{graphicx}` takes `q.eps` beside `q.png`, review rev79a2 finding 3), though `\Gin@driver`
+  // below names that file (`graphics_driver`) — an open row (SYNC_STATUS "`\Gin@extensions` is seeded with
+  // pdftex.def's list"). `.eps` joins it at `\begin{document}`, or
+  // when epstopdf loads (`\lx@graphics@eps@last`). So grfext's `\AppendGraphicsExtensions{.gif}` (1711.06128) puts
+  // `.gif` after the driver's, its `\Prepend…` before, as in TeX; started `\@empty`, an appended `.eps` alone was the
+  // list and ranked first (review rev79a finding 3). `\@for` loops in third-party packages iterate over it
+  // (2103.04594: defined, no "undefined" cascade).
+  DefMacro!(
+    "\\Gin@extensions",
+    ".pdf,.png,.jpg,.mps,.jpeg,.jbig2,.jb2,.PDF,.PNG,.JPG,.JPEG,.JBIG2,.JB2"
+  );
+  // epstopdf-base.sty:498-505 `\AppendGraphicsExtensions{.eps}` (grfext.sty:153-158, :187-193: every `.eps` removed,
+  // one appended), when epstopdf-base loads and grfext is loaded: `.eps` goes last, after what the document declared
+  // before — `\DeclareGraphicsExtensions{.pdf,.eps,.png}\usepackage{epstopdf}` tries `.png` first.
+  DefPrimitive!("\\lx@graphics@eps@last", {
+    let list = match lookup_meaning(&T_CS!("\\Gin@extensions")) {
+      Some(Stored::Expandable(defn)) => match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => body.to_string(),
+        _ => String::new(),
+      },
+      _ => String::new(),
+    };
+    let mut kept: Vec<&str> = list
+      .split(',')
+      .map(str::trim)
+      .filter(|ext| !ext.is_empty() && *ext != ".eps")
+      .collect();
+    kept.push(".eps");
+    DefMacro!(
+      T_CS!("\\Gin@extensions"),
+      None,
+      Tokens!(Explode!(kept.join(",")))
+    );
+  });
   Let!("\\Gin@decode", "\\@empty");
   DefMacro!("\\Gin@exclamation", "!");
   Let!("\\Gin@page", "\\@empty");
@@ -770,7 +799,10 @@ LoadDefinitions!({
   // the last package's options processing left) is not empty, it requires pdftexcmds (epstopdf-base.sty:151-182),
   // and that iftex, which defines `\ifpdf` afresh when it loads first. A paper's earlier `\let\ifpdf\relax` is then
   // undone in TeX; kept, JINST's `\label` (JINST.cls:328-334, `\ifpdf…\fi` inside its own conditional) left a stray
-  // `\fi` that ended the caption's argument scan in a Fatal (1310.6454).
+  // `\fi` that ended the caption's argument scan in a Fatal (1310.6454). Before it, pdftex.def:695 adds `.eps` to
+  // `\Gin@extensions`, and epstopdf-base, loaded now, moves it last when grfext is loaded — which that branch loads,
+  // :178-181 — (`\lx@graphics@eps@last`): a document's `\PrependGraphicsExtensions{.eps}` in the preamble, with
+  // epstopdf not loaded, is undone, as pdflatex prints the png beside the eps.
   DefMacro!("\\lx@graphics@if@epstopdf@driver", sub[_args] {
     Ok(Tokens!(if graphics_driver_loads_epstopdf() {
       T_CS!("\\@firstoftwo")
@@ -795,7 +827,11 @@ LoadDefinitions!({
       \else
         \AtEndOfPackage{\AtBeginDocument{\ifx\includegraphics\@undefined\else\lx@graphics@if@epstopdf@driver{%
           \@ifpackageloaded{pst-pdf}{}{\@ifpackageloaded{pdftricks}{}{%
-            \ifx\@curroptions\@empty\else\lx@graphics@require@pdftexcmds\fi}}}{}\fi}}%
+            \edef\Gin@extensions{\Gin@extensions,.eps}%
+            \@ifpackageloaded{epstopdf}{}{\@ifpackageloaded{epstopdf-base}{}{%
+              \ifx\@curroptions\@empty
+                \ifx\AppendGraphicsExtensions\@undefined\else\lx@graphics@eps@last\fi
+              \else\lx@graphics@require@pdftexcmds\lx@graphics@eps@last\fi}}}}}{}\fi}}%
       \fi
     \fi"
   );

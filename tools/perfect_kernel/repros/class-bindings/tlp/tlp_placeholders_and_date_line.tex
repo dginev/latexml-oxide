@@ -4,7 +4,7 @@
 %   `prodtf` (:760-764), never by its title page: a store left at its class default is handed to the frontmatter
 %   only when the title page prints it (`ClassReaders::read_by_the_title_page`). Its date line (:627 `{\it submitted
 %   \@submitted; revised \@revised; accepted \@accepted}`) prints `\@revised`/`\@accepted` with `\@submitted`, which
-%   no table setter carries: the two stay the line's (`prints_in_a_line_with_another_value`), not "revised ; accepted".
+%   no table setter carries: the two stay the line's (`ClassReaders::store_lines`), not "revised ; accepted".
 %   This tlp.cls holds the real class's shapes (the paper ships tlp.cls; it is not in TeX Live).
 % witness: 1209.2617
 % oracle:  pdflatex: 0 errors; head "Under consideration for publication in Theory and Practice of Logic Programming";
