@@ -135,9 +135,20 @@ pub fn write_dump(
   let mut late_aliases: Vec<(String, String, String)> = Vec::new();
   let mut skipped = 0usize;
 
-  for (table, key, value) in entries {
+  // Perl TeX_Job.pool.ltxml:150,153 walks `sort @tables` and, in each, `sort keys %$table`, so
+  // every section of its dump is in (table name, key) order. The diff arrives in hash-table order,
+  // which differs from one binary to the next (det354: one key set in 55 orders across 173 dumps),
+  // and the dump is applied in file order, so the order also fixes the symbol ids of every
+  // conversion. Sorting here makes the dump a function of its content alone. A table's `Display`
+  // name is Perl's capitalized (`Catcode` .. `Value`), so it sorts as Perl's `@tables` do.
+  let mut ordered: Vec<(String, String, &(TableName, arena::SymStr, Stored))> = entries
+    .iter()
+    .map(|entry| (entry.0.to_string(), arena::to_string(entry.1), entry))
+    .collect();
+  ordered.sort_unstable_by(|a, b| (&a.0, &a.1).cmp(&(&b.0, &b.1)));
+
+  for (_, key_str, (table, _, value)) in ordered {
     let table_code = table_to_code(*table);
-    let key_str = arena::with(*key, |s| s.to_string());
 
     // Skip \ver@ package version markers (runtime metadata, not definitions)
     if key_str.starts_with("\\ver@") {
@@ -1086,6 +1097,81 @@ mod tests {
       lines[stale]
     );
     assert!(regular < stale && stale < late);
+  }
+
+  /// Perl TeX_Job.pool.ltxml:150,153 (`sort @tables`, `sort keys`): the dump is in (table, key)
+  /// order whatever order the diff came in, so a shuffled entry list writes the same bytes (det354
+  /// B1: one key set in 55 record orders across 173 dumps).
+  #[test]
+  fn a_shuffled_diff_writes_the_same_dump() {
+    use std::rc::Rc;
+
+    use crate::definition::expandable::Expandable;
+    let macro_of = |cs: &str, body: &str| {
+      Stored::Expandable(Rc::new(Expandable {
+        cs: T_CS!(cs),
+        paramlist: None,
+        expansion: Tokens::new(Explode!(body)).into(),
+        ..Expandable::default()
+      }))
+    };
+    let entries = vec![
+      (TableName::Value, arena::pin("zeta@count"), Stored::Int(3)),
+      (
+        TableName::Meaning,
+        arena::pin("\\sdbeta"),
+        macro_of("\\sdbeta", "b"),
+      ),
+      (
+        TableName::Catcode,
+        arena::pin("@"),
+        Stored::Catcode(Catcode::LETTER),
+      ),
+      (
+        TableName::Value,
+        arena::pin("alpha@flag"),
+        Stored::Bool(true),
+      ),
+      (
+        TableName::Meaning,
+        arena::pin("\\sdalpha"),
+        macro_of("\\sdalpha", "a"),
+      ),
+      (TableName::Lccode, arena::pin("A"), Stored::Int(97)),
+      (
+        TableName::Value,
+        arena::pin("mid@name"),
+        Stored::String(arena::pin("m")),
+      ),
+    ];
+    let write = |entries: &[(TableName, arena::SymStr, Stored)], tag: &str| {
+      let path = std::env::temp_dir().join(format!("sorted_{tag}_{}.dump.txt", std::process::id()));
+      write_dump(&path, entries, &[]).unwrap();
+      let text = std::fs::read_to_string(&path).unwrap();
+      let _ = std::fs::remove_file(&path);
+      text
+    };
+    let written = write(&entries, "a");
+    let mut reversed = entries.clone();
+    reversed.reverse();
+    let mut rotated = entries.clone();
+    rotated.rotate_left(3);
+    assert_eq!(write(&reversed, "b"), written);
+    assert_eq!(write(&rotated, "c"), written);
+    let rows: Vec<String> = written
+      .lines()
+      .filter(|l| !l.starts_with('#'))
+      .map(|l| l.splitn(3, '\t').take(2).collect::<Vec<_>>().join(" "))
+      .collect();
+    assert_eq!(rows, [
+      "C @",
+      "LC A",
+      "M \\sdalpha",
+      "M \\sdbeta",
+      "V alpha@flag",
+      "V mid@name",
+      "V zeta@count"
+    ]);
   }
 
   #[test]

@@ -1,0 +1,22 @@
+% mechanism: an extensionless `\includegraphics{xl_fig}` lists the files `xl_fig.<ext>` it finds (util/image.rs
+%   `image_candidates`, Perl `pathname_findall`, Pathname.pm:350-371) in TeX's order — by type (pdftex.def's
+%   `\Gin@extensions`, pdftex.def:597-600, then `.eps`, then the rest), then search directory, then name — not in the
+%   order the directory lists them, which the filesystem decides (a tmpfs lists newest first, so this shape is red only
+%   on a tmpfs `/tmp`; the unit test util::image::candidate_order_tests::
+%   extensionless_candidates_in_one_order_whatever_the_directory_lists guards the order anywhere) and which Perl's
+%   `readdir` follows. The first candidate sizes the natural box (`cssstyle`), as pdflatex reads `xl_fig.pdf`
+%   (OXIDIZED_DESIGN_DIVERGENCES #883, det354 4b).
+% witness: 2011.14197 (the one census paper whose output changes: fig3..6 `.eps,.pdf` → `.pdf,.eps`, its width set by
+%   `width=`, no size change; det354 audit, 78v r2 question); the retry's witnesses 1408.2843, 1503.04804, 0907.3747
+% oracle:  pdflatex (TL 2025, a real 200bp x 100bp page): reads `xl_fig.pdf`, the first of `\Gin@extensions`
+% engines: perl: `xl_fig.pdf,xl_fig.eps,xl_fig.ps` in `readdir` order; rust int64a on a tmpfs (files written .ps, .pdf,
+%   .eps): candidates="xl_fig.eps,xl_fig.pdf,xl_fig.ps", 4.015em wide (the 40bp .eps)
+% expect:  0 errors, 0 warnings; graphics candidates="xl_fig.pdf,xl_fig.eps,xl_fig.ps", 20.075em wide
+% files:   the guard writes xl_fig.ps (a copy of eps_as_pdf_two.eps), xl_fig.pdf (a copy of eps_as_pdf_one.pdf, 200bp x
+%   100bp) and xl_fig.eps (a copy of eps_as_pdf_two.eps, 40bp x 20bp), in that order
+% status:  GREEN (78w)
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\includegraphics{xl_fig}
+\end{document}

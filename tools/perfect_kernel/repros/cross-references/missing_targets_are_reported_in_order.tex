@@ -1,0 +1,16 @@
+% mechanism: post's CrossRef reports the references it could not resolve once, after the document (latexml_post
+%   crossref.rs `report_missing`, Perl CrossRef.pm:64-76): the severities in the fixed order `error, warn, info`, the types
+%   of each sorted, so "Entry for citation" before "Target for Label"; the ids of a type sorted too, where Perl's hash
+%   `keys` order is random. Ours walked the hash tables, both orders following their layout (det354 C1).
+% witness: none in the census (det354 probe xr.tex); output-neutral, the HTML run's log only
+% oracle:  pdflatex 0 errors (TL 2025; three undefined references, two undefined citations)
+% engines: perl (latexmlc, HTML): "Missing Entry for citation: ak2,bk1" then "Missing Target for Label:
+%   LABEL:mid,LABEL:zeta,LABEL:alpha" (ids in random order); rust int64a: "Target for Label:
+%   LABEL:mid,LABEL:zeta,LABEL:alpha" then "Entry for citation: bk1,ak2"
+% expect:  HTML: 0 errors, 2 warnings, in this order: "Missing Entry for citation: ak2,bk1", "Missing Target for Label:
+%   LABEL:alpha,LABEL:mid,LABEL:zeta"
+% status:  GREEN (78w)
+\documentclass{article}
+\begin{document}
+See \ref{zeta}, \ref{alpha}, \ref{mid} and \cite{bk1,ak2}.
+\end{document}

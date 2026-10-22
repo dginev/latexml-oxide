@@ -1677,25 +1677,11 @@ impl Document {
     op: &str,
     attributes_opt: Option<HashMap<String, String>>,
   ) -> Result<()> {
-    let mut attr_data = Vec::new();
-    if let Some(attributes) = attributes_opt {
-      let mut keys = vec!["class", "package", "options"];
-      let other_keys = attributes
-        .keys()
-        .filter(|k| k.as_str() != "class" && k.as_str() != "package" && k.as_str() != "options")
-        .map(String::as_str)
-        .collect::<Vec<_>>();
-      keys.extend(other_keys);
-      for key in keys {
-        if let Some(value) = attributes.get(key) {
-          attr_data.push(s!("{}=\"{}\"", key, value));
-        }
-      }
-    }
+    let data = attributes_opt.as_ref().map(pi_data).unwrap_or_default();
     // self.close_text_internal();  // Close any open text node
     let mut pi_node = self
       .document
-      .create_processing_instruction(op, &attr_data.join(" "))
+      .create_processing_instruction(op, &data)
       .unwrap();
     // Perl (Core/Document.pm insertPI): a PI always lands before the root
     // element. When the root already exists — a mid-body or document-final PI
@@ -8695,6 +8681,72 @@ fn is_empty_capture_mark(node: &Node) -> bool {
   node.get_type() == Some(NodeType::ElementNode)
     && node.get_first_child().is_none()
     && node.get_name().ends_with("_Capture_")
+}
+
+/// A processing instruction's data, `key="value"` pairs (Perl Document.pm:707-709 `insertPI`): the main "operator"
+/// first (`class`, `package`, `options`), each only when its value is true to Perl (`$attrib{$_} ? ($_) : ()`: not
+/// empty, not `0`), then the other keys sorted (`sort keys %attrib`), so the order is the keys' and not the hash
+/// table's (det354 C3). An operator key with a false value is left out altogether, as Perl's second list excludes the
+/// three names (review rev78w finding 6).
+fn pi_data(attributes: &HashMap<String, String>) -> String {
+  let mut other_keys: Vec<&str> = attributes
+    .keys()
+    .map(String::as_str)
+    .filter(|k| !matches!(*k, "class" | "package" | "options"))
+    .collect();
+  other_keys.sort_unstable();
+  let operator_keys = ["class", "package", "options"].into_iter().filter(|key| {
+    attributes
+      .get(*key)
+      .is_some_and(|value| !value.is_empty() && value != "0")
+  });
+  operator_keys
+    .chain(other_keys)
+    .filter_map(|key| attributes.get(key).map(|value| s!("{}=\"{}\"", key, value)))
+    .collect::<Vec<_>>()
+    .join(" ")
+}
+
+#[cfg(test)]
+mod pi_data_order {
+  use super::{HashMap, pi_data};
+
+  /// Perl Document.pm:707-708: `class`/`package`/`options` first, then the rest in key order, whatever order the map
+  /// holds them in (det354 C3).
+  #[test]
+  fn a_pi_lists_its_operator_then_its_keys_sorted() {
+    for listed in [["zeta", "alpha", "mid"], ["mid", "zeta", "alpha"], [
+      "alpha", "mid", "zeta",
+    ]] {
+      let mut attributes: HashMap<String, String> = HashMap::default();
+      for key in listed {
+        attributes.insert(key.to_string(), format!("{key}-v"));
+      }
+      attributes.insert("package".to_string(), "p".to_string());
+      assert_eq!(
+        pi_data(&attributes),
+        r#"package="p" alpha="alpha-v" mid="mid-v" zeta="zeta-v""#
+      );
+    }
+  }
+
+  /// Perl Document.pm:707 keeps `class`/`package`/`options` only when the value is true (`$attrib{$_} ? ($_) : ()`):
+  /// an empty or `0` one is left out, where it printed as `options=""` (review rev78w finding 6); another key with an
+  /// empty value stays, as Perl's `sort keys` list takes every other key.
+  #[test]
+  fn a_pi_drops_an_operator_key_perl_reads_as_false() {
+    let mut attributes: HashMap<String, String> = HashMap::default();
+    attributes.insert("class".to_string(), "article".to_string());
+    attributes.insert("options".to_string(), String::new());
+    attributes.insert("package".to_string(), "0".to_string());
+    attributes.insert("dpi".to_string(), String::new());
+    assert_eq!(pi_data(&attributes), r#"class="article" dpi="""#);
+    attributes.insert("options".to_string(), "11pt".to_string());
+    assert_eq!(
+      pi_data(&attributes),
+      r#"class="article" options="11pt" dpi="""#
+    );
+  }
 }
 
 #[cfg(test)]

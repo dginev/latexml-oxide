@@ -2144,12 +2144,15 @@ impl PostDocument {
       }
     }
 
+    // The cached ids the document lacks, sorted: Perl Post.pm:1006-1014 lists them in hash `keys` order, random
+    // from run to run (det354 C4).
     let mut missing = Vec::new();
     for id in self.idcache.keys() {
       if !doc_ids.contains_key(id) {
         missing.push(id.clone());
       }
     }
+    missing.sort_unstable();
 
     if !dups.is_empty() {
       Warn!(

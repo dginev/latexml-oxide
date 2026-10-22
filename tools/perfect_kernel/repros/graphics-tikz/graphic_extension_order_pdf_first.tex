@@ -2,9 +2,11 @@
 %          `\Gin@extensions` in order, `.pdf` before `.png` (pdftex.def:597); the candidates come in directory order, the
 %          sizer boxes the first raster one and post prefers the png)
 % oracle:  pdflatex 0 errors: ext/fig.pdf included
-% engines: rust 64c6 = "ext/fig.pdf,ext/fig.png" or the reverse (readdir order); the box from fig.png, the image fig.png
+% engines: rust 64c6 = "ext/fig.pdf,ext/fig.png" or the reverse (readdir order); the box from fig.png, the image fig.png;
+%          rust 78w = "ext/fig.pdf,ext/fig.png" whatever the directory order (OXIDIZED_DESIGN_DIVERGENCES #883), the box
+%          (`image_graphicx_sizer`, the first raster candidate) and post's image still fig.png's
 % expect:  0 errors; candidates ordered as `\Gin@extensions`, the box and the rendered image from ext/fig.pdf
-% status:  RED (64c6)
+% status:  RED (64c6; the candidate order GREEN since 78w, the box and the image open)
 \documentclass{article}
 \usepackage{graphicx}
 \begin{document}

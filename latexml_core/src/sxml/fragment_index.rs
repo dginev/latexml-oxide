@@ -89,15 +89,22 @@ impl FragmentIndex {
   /// Persist beside the segments (diagnostics / crash inspection). Line
   /// format, one record per line: `kind\tkey\tvalue`, keys percent-escaped
   /// for the three bytes that would break the framing (`%`, tab, newline).
+  /// The records of each kind are in key order, so the file is a function of the index's content and not of its hash
+  /// tables' layout (det354 C5).
   pub fn save(&self, path: &Path) -> Result<()> {
+    fn sorted<V>(map: &FxHashMap<String, V>) -> Vec<(&String, &V)> {
+      let mut rows: Vec<(&String, &V)> = map.iter().collect();
+      rows.sort_unstable_by(|a, b| a.0.cmp(b.0));
+      rows
+    }
     let mut out = String::new();
-    for (id, seg) in &self.ids {
+    for (id, seg) in sorted(&self.ids) {
       let _ = writeln!(out, "id\t{}\t{}", escape(id), seg.0);
     }
-    for (label, id) in &self.labels {
+    for (label, id) in sorted(&self.labels) {
       let _ = writeln!(out, "label\t{}\t{}", escape(label), escape(id));
     }
-    for (prefix, uri) in &self.rdfa_prefixes {
+    for (prefix, uri) in sorted(&self.rdfa_prefixes) {
       let _ = writeln!(out, "rdfa\t{}\t{}", escape(prefix), escape(uri));
     }
     fs::write(path, out).map_err(|e| index_error(format!("write {}: {e}", path.display())))
@@ -216,6 +223,41 @@ mod tests {
       "foaf",
       "http://xmlns.com/foaf/0.1/"
     )]);
+  }
+
+  /// The saved records of each kind are in key order, whatever order they were recorded in (det354 C5).
+  #[test]
+  fn save_lists_each_kind_in_key_order() {
+    let save = |ids: &[&str], tag: &str| {
+      let mut index = FragmentIndex::default();
+      for (n, id) in ids.iter().enumerate() {
+        index.record_id(id, SegmentId(n as u32));
+        index.record_label(&format!("LABEL:{id}"), id);
+        index.record_rdfa_prefix(id, "u");
+      }
+      let tmp =
+        std::env::temp_dir().join(format!("lxsxml-sorted-{tag}-{}.tsv", std::process::id()));
+      index.save(&tmp).expect("save");
+      let text = fs::read_to_string(&tmp).expect("read");
+      let _ = fs::remove_file(&tmp);
+      text
+        .lines()
+        .map(|line| line.splitn(3, '\t').take(2).collect::<Vec<_>>().join(" "))
+        .collect::<Vec<_>>()
+    };
+    let expected = [
+      "id S1.p3",
+      "id S2.p1",
+      "id S9",
+      "label LABEL:S1.p3",
+      "label LABEL:S2.p1",
+      "label LABEL:S9",
+      "rdfa S1.p3",
+      "rdfa S2.p1",
+      "rdfa S9",
+    ];
+    assert_eq!(save(&["S9", "S1.p3", "S2.p1"], "a"), expected);
+    assert_eq!(save(&["S2.p1", "S9", "S1.p3"], "b"), expected);
   }
 
   #[test]

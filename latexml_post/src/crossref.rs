@@ -2467,22 +2467,23 @@ impl CrossRef {
     }
   }
 
+  /// Perl CrossRef.pm:64-76: the severities in the fixed order `error, warn, info`, the types of
+  /// each sorted. The ids within a type are sorted too, where Perl's hash `keys` order is random,
+  /// so the report does not follow the hash table's layout (det354 C1).
   fn report_missing(&self) {
-    for (severity, types) in &self.missing {
-      for (ref_type, items) in types {
-        let keys: Vec<&String> = items.keys().collect();
-        let msg = format!(
-          "Missing {}: {}",
-          ref_type,
-          keys
-            .iter()
-            .map(|s| s.as_str())
-            .collect::<Vec<_>>()
-            .join(",")
-        );
+    for severity in ["error", "warn", "info"] {
+      let Some(types) = self.missing.get(severity) else {
+        continue;
+      };
+      let mut type_names: Vec<&String> = types.keys().collect();
+      type_names.sort_unstable();
+      for ref_type in type_names {
+        let mut keys: Vec<&str> = types[ref_type].keys().map(String::as_str).collect();
+        keys.sort_unstable();
+        let msg = format!("Missing {}: {}", ref_type, keys.join(","));
         // Perl CrossRef.pm L72-75: structured Error/Warn/Info with
         // class='expected', object='ids'. Use harness-friendly target.
-        match severity.as_str() {
+        match severity {
           "error" => Error!("expected", "ids", "{}", msg),
           "warn" => Warn!("expected", "ids", "{}", msg),
           _ => Info!("expected", "ids", "{}", msg),

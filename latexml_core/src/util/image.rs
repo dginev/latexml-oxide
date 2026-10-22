@@ -53,10 +53,6 @@ fn image_candidates_with(path: &str, fallbacks: bool) -> String {
   // extensionless, or with an extension no rule reads, `b.v0.5_x`, `c.EPS` — lists its `name.ext` files before a bare
   // file of that name, which pdflatex takes only when no extended one exists (graphics.sty:205-231); only files are
   // candidates (Perl's list defers `-f`, Pathname.pm:391, and names a directory too).
-  let mut exact_names: Vec<String> = Vec::new();
-  let mut extended_names: Vec<String> = Vec::new();
-  let mut nocase_exact_names: Vec<String> = Vec::new();
-  let mut nocase_candidates: Vec<String> = Vec::new();
   let has_extension = Path::new(path).extension().is_some();
   let source_path = if source_dir.is_empty() {
     None
@@ -80,25 +76,29 @@ fn image_candidates_with(path: &str, fallbacks: bool) -> String {
     _ => path,
   };
 
-  for dir in search_dirs.iter().filter(|_| !name.is_empty()) {
-    // Strip surrounding double-quotes from the search directory, symmetric to
-    // the `path.trim_matches('"')` above. A quoted `\graphicspath{{"./dir"}}`
-    // (or `\svgpath` / `--graphicspaths`) otherwise joins to a `"…"` path that
-    // never resolves. See OXIDIZED_DESIGN #55.
-    let dir = dir.trim().trim_matches('"');
-    let base = PathBuf::from(dir).join(relative_name);
-    let parent = base.parent().unwrap_or_else(|| Path::new("."));
-    let Ok(entries) = std::fs::read_dir(parent) else {
-      continue;
-    };
-    for entry in entries.flatten() {
+  let found = search_dirs
+    .iter()
+    .filter(|_| !name.is_empty())
+    .flat_map(|dir| {
+      // Strip surrounding double-quotes from the search directory, symmetric to
+      // the `path.trim_matches('"')` above. A quoted `\graphicspath{{"./dir"}}`
+      // (or `\svgpath` / `--graphicspaths`) otherwise joins to a `"…"` path that
+      // never resolves. See OXIDIZED_DESIGN #55.
+      let dir = dir.trim().trim_matches('"');
+      let base = PathBuf::from(dir).join(relative_name);
+      let parent = base
+        .parent()
+        .unwrap_or_else(|| Path::new("."))
+        .to_path_buf();
+      std::fs::read_dir(parent).into_iter().flatten().flatten()
+    })
+    .filter_map(|entry| {
+      // the name first, so that only an entry named as the image costs a `stat`
       let fname = entry.file_name().to_string_lossy().to_string();
-      let Some(exact) = image_file_name_match(&fname, &name, &name_lower) else {
-        continue;
-      };
+      image_file_name_match(&fname, &name, &name_lower)?;
       let full = entry.path();
       if !full.is_file() {
-        continue;
+        return None;
       }
       // Perl relativizes every hit to SOURCEDIRECTORY via pathname_relative
       // (→ File::Spec->abs2rel), which emits a `../…` path for a graphic in a
@@ -109,17 +109,14 @@ fn image_candidates_with(path: &str, fallbacks: bool) -> String {
         Some(sp) => crate::util::pathname::relative(&full.to_string_lossy(), &sp.to_string_lossy()),
         None => full.to_string_lossy().to_string(),
       };
-      if !exact && fname.to_lowercase() == name_lower {
-        nocase_exact_names.push(rel);
-      } else if !exact {
-        nocase_candidates.push(rel);
-      } else if fname == name {
-        exact_names.push(rel);
-      } else {
-        extended_names.push(rel);
-      }
-    }
-  }
+      Some((fname, rel))
+    });
+  let ImageCandidateLists {
+    exact_names,
+    extended_names,
+    mut nocase_exact_names,
+    nocase_candidates,
+  } = image_candidate_lists(found, &name);
   let graphics_name = has_graphics_rule(&name);
   let mut candidates: Vec<String> = if graphics_name && !exact_names.is_empty() {
     exact_names
@@ -232,6 +229,60 @@ fn image_candidates_with(path: &str, fallbacks: bool) -> String {
   // back to the raw path here, emitting `candidates="missing.png"` where Perl
   // emits no candidates at all. Return empty to match.
   candidates.join(",")
+}
+
+/// The files one image search found, by how each matches the image's name ([`image_candidate_lists`]).
+#[derive(Debug, Default, PartialEq)]
+struct ImageCandidateLists {
+  /// The name itself.
+  exact_names:        Vec<String>,
+  /// The name and one more extension (`fig` → `fig.pdf`).
+  extended_names:     Vec<String>,
+  /// The name itself in another case.
+  nocase_exact_names: Vec<String>,
+  /// The name and one more extension, in another case.
+  nocase_candidates:  Vec<String>,
+}
+
+/// The image `name`'s candidates among `found`: each a directory entry's file name and the path to list it under,
+/// the search directories in their search order, each directory's entries in whatever order it lists them. Each
+/// list comes out in TeX's order ([`in_graphics_type_order`]: by type, then search directory, then name), not the
+/// directory's. Beyond Perl (OXIDIZED_DESIGN_DIVERGENCES #883): Perl's `pathname_findall` returns `readdir`'s order
+/// within a directory (Pathname.pm:350-371), which the filesystem decides, and the leading directory's hits first
+/// (Pathname.pm:375); an extensionless `\includegraphics{fig}` beside `fig.png` and `fig.pdf` listed them in an order
+/// that differed from one host to the next, and the first readable one is the one the digestion-time sizer reads
+/// (det354 4b; witness 2011.14197, whose `fig3..6.eps,.pdf` are now `.pdf,.eps`). Type before directory is TeX's
+/// order: graphics.sty:206-224 runs `\@for\Gin@temp:=\Gin@extensions` outermost, the path search inside
+/// `\IfFileExists`.
+fn image_candidate_lists(
+  found: impl IntoIterator<Item = (String, String)>,
+  name: &str,
+) -> ImageCandidateLists {
+  let name_lower = name.to_lowercase();
+  let mut lists = ImageCandidateLists::default();
+  for (fname, rel) in found {
+    let Some(exact) = image_file_name_match(&fname, name, &name_lower) else {
+      continue;
+    };
+    if !exact && fname.to_lowercase() == name_lower {
+      lists.nocase_exact_names.push(rel);
+    } else if !exact {
+      lists.nocase_candidates.push(rel);
+    } else if fname == name {
+      lists.exact_names.push(rel);
+    } else {
+      lists.extended_names.push(rel);
+    }
+  }
+  for list in [
+    &mut lists.exact_names,
+    &mut lists.extended_names,
+    &mut lists.nocase_exact_names,
+    &mut lists.nocase_candidates,
+  ] {
+    in_graphics_type_order(list);
+  }
+  lists
 }
 
 /// Whether `name` ends in an extension pdftex.def has a graphics rule for (`\Gin@rule@.<ext>`, pdftex.def:601-612,
@@ -1732,6 +1783,73 @@ mod candidate_order_tests {
       let mut candidates: Vec<String> = listed.iter().map(|c| c.to_string()).collect();
       in_graphics_type_order(&mut candidates);
       assert_eq!(candidates, expected);
+    }
+  }
+
+  /// An extensionless name's candidates come out in one order whatever order each directory lists its entries in:
+  /// the same entries of `a/` and `b/` (searched in that order), fed as listed, reversed and rotated within each
+  /// directory, give one set of lists, each by type, then search directory (det354 4b, review rev78w finding 1: the
+  /// conversion guard `includegraphics_extensionless_candidates_in_type_order` passes on an ext4 `/tmp` without the
+  /// sort; witness 2011.14197's `fig3.eps,fig3.pdf`).
+  #[test]
+  fn extensionless_candidates_in_one_order_whatever_the_directory_lists() {
+    let directory = |dir: &str, names: &[&str]| -> Vec<(String, String)> {
+      names
+        .iter()
+        .map(|n| (n.to_string(), format!("{dir}/{n}")))
+        .collect()
+    };
+    let a = [
+      "fig.eps",
+      "fig",
+      "notes.txt",
+      "fig.PDF",
+      "fig.pdf",
+      "Fig.png",
+      "fig.ps",
+      "FIG",
+      "fig.old.pdf",
+    ];
+    let b = ["fig.png", "fig.eps", "fig", "fig.pdf"];
+    let reversed =
+      |names: &[&'static str]| -> Vec<&'static str> { names.iter().rev().copied().collect() };
+    let rotated = |names: &[&'static str], by: usize| -> Vec<&'static str> {
+      let mut names = names.to_vec();
+      let by = by % names.len();
+      names.rotate_left(by);
+      names
+    };
+    let expected = ImageCandidateLists {
+      exact_names:        vec!["a/fig".to_string(), "b/fig".to_string()],
+      extended_names:     [
+        "a/fig.pdf",
+        "b/fig.pdf",
+        "b/fig.png",
+        "a/fig.PDF",
+        "a/fig.eps",
+        "b/fig.eps",
+        "a/fig.ps",
+      ]
+      .map(String::from)
+      .to_vec(),
+      nocase_exact_names: vec!["a/FIG".to_string()],
+      nocase_candidates:  vec!["a/Fig.png".to_string()],
+    };
+    let listings: Vec<(Vec<&str>, Vec<&str>)> = vec![
+      (a.to_vec(), b.to_vec()),
+      (reversed(&a), reversed(&b)),
+      (rotated(&a, 3), rotated(&b, 1)),
+      (rotated(&a, 7), rotated(&b, 2)),
+    ];
+    for (listed_a, listed_b) in listings {
+      let found = directory("a", &listed_a)
+        .into_iter()
+        .chain(directory("b", &listed_b));
+      assert_eq!(
+        image_candidate_lists(found, "fig"),
+        expected,
+        "a/ listed {listed_a:?}, b/ listed {listed_b:?}"
+      );
     }
   }
 

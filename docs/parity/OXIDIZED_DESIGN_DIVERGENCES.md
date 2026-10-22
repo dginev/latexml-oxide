@@ -15513,8 +15513,9 @@ rule (`\Gin@rule@.<ext>`, pdftex.def:601-612, case as written: `.pdf .PDF .png .
 another case (kpathsea's `fig.pdf` for `fig.PDF`); any other name — extensionless, or with an extension no rule reads
 (`b.v0.5_x`, `c.EPS`, `fig.ps`) — lists its `name.ext` files before a bare file of that name, in either case tier
 (graphics.sty:211-231 appends the extensions first); files only. The kpsewhich `<path>.png`/`.pdf` query runs for any
-name without a graphics extension. Open: among several `name.ext` files the order is the directory's, where pdflatex
-tries `\Gin@extensions` in order (`.pdf` before `.png`; RED graphics-tikz/graphic_extension_order_pdf_first); an
+name without a graphics extension. Among several `name.ext` files the order is `\Gin@extensions`' since 78w (#883),
+not the directory's; open: the sizer boxes the first raster candidate and post renders its best-rated one, where
+pdflatex reads the first (`.pdf` before `.png`; RED graphics-tikz/graphic_extension_order_pdf_first); an
 exact-case `fig.eps` wins over a `Fig.pdf` kpathsea reaches first; and the box's `cssstyle` comes from the first vector
 candidate while post renders its best raster one (`natural_display_size_pt_of_candidates`), so the two can be different
 files of one figure. A name with a leading `/` that names no file is read
@@ -24385,3 +24386,54 @@ such a file (in the first five per paper: 261 `.eps`, 12 `.png`, 12 `.pdf`, 1 `.
 candidates and sizes in the 78v A/B. Repro
 package-bindings/includegraphics_eps_shipped_only_as_pdf_is_sized; guard
 `perfect_kernel_batch78v::includegraphics_eps_shipped_only_as_pdf_is_sized`.
+
+### 883. Output that followed a hash table's layout is in key order: the dump's records, CrossRef's missing-id report, a PI's keys, held-tag roles, idcheck, the fragment index, an extensionless graphic's candidates
+
+The det354 determinism audit (agent_reports/2026-10-22_det354_audit.md) found no hash order reaching output from one
+run to the next, but these sites wrote what a hash table or the filesystem listed, so their order changed from one binary
+(or host) to the next; each now sorts, by key, at the emit site (78w):
+
+- **The format dump** (`dump_writer.rs` `write_dump`): Perl TeX_Job.pool.ltxml:150,153 walks `sort @tables` and, in each,
+  `sort keys`, so its dump is in (table, key) order; ours wrote `diff_from_snapshot`'s hash order, one key set in 55
+  record orders across 173 vendor dumps, and since the dump is applied in file order that also set the symbol ids of
+  every conversion. Each section (early aliases, regular entries, late aliases) is now in (table name, key) order — a
+  table's `Display` name sorts as Perl's lowercase names do — so a dump is a function of its content. Applying a dump
+  is order-free but for one record kind (each record `assign_internal('global')` to a distinct key; a late alias names a
+  definition's own cs, never another alias), as det354 measured (20 papers byte-identical XML, HTML and logs under a
+  shuffled Section 1). The exception: a register's `M` row (`R(…)`) skips writing its address slot when that slot
+  already holds a value (`dump_reader.rs` `should_assign`, `:979`, mirroring Perl `def_register`), so it depends on
+  whether the address's `V` row came first; both orders end at the `V` row's value, and with the sort every `M` row
+  (`meaning`) loads before every `V` row (`value`), so the `V` value is the one written last (review rev78w finding 7).
+  Unit test `dump_writer::tests::a_shuffled_diff_writes_the_same_dump`.
+- **CrossRef's report of unresolved references** (latexml_post `crossref.rs` `report_missing`): Perl CrossRef.pm:64-76
+  — the severities `error, warn, info`, the types of each sorted; the ids of a type are sorted too, where Perl's hash
+  `keys` order is random. Guard `perfect_kernel_batch78w::missing_targets_are_reported_in_order`.
+- **A processing instruction's keys** (`document.rs` `insert_pi`, `pi_data`): `class`, `package`, `options` first, each
+  only when its value is true to Perl (not empty, not `0`: `$attrib{$_} ? ($_) : ()`, Document.pm:707; an
+  `options=""` used to be printed), then the rest sorted (Document.pm:708). Unit tests `document::pi_data_order`.
+- **The held-tag roles** a label answers for (latex_constructs `sect11.rs` `tie_held_tags`, `held_tag_roles`), so a
+  reference showing two roles replays their held diagnostics in the roles' order (logger.rs `replay_shown_deferred`).
+  Unit test `sect11::held_tag_role_order`.
+- **idcheck's "Cached IDs not in document"** list (latexml_post `document.rs` `idcheck`; Perl Post.pm:1006-1014 random).
+- **The streaming fragment index's side file** (`sxml/fragment_index.rs` `save`). Unit test
+  `fragment_index::tests::save_lists_each_kind_in_key_order`.
+- **An image name's candidates** (`util/image.rs` `image_candidates`): the files a name answers — `fig.<ext>` for an
+  extensionless `\includegraphics{fig}`, and the exact, case-folded and other-extension lists — are in TeX's order
+  (`in_graphics_type_order`, OD #882: by type in pdftex.def's `\Gin@extensions` order, pdftex.def:597-600, then by
+  search directory, then by name), not `read_dir`'s, which the filesystem decides (a tmpfs lists newest first, ext4 by
+  name hash) and which Perl's `pathname_findall` follows (Pathname.pm:350-371). The first candidate gives the natural
+  box (`cssstyle`) and is pdflatex's choice. This also changes Perl's fixed order across search directories: Perl's
+  list gives "precedence to leading directories" (Pathname.pm:375), all of one directory's hits before the next's,
+  where the type now comes first, so `\graphicspath{{a/}{b/}}` lists `b/fig.pdf` before `a/fig.png` — TeX's order, as
+  graphics.sty:206-224 runs `\@for\Gin@temp:=\Gin@extensions` outermost with the path search inside `\IfFileExists`
+  (review rev78w finding 4; no A/B paper has the shape). Witness 2011.14197 (`fig3..6.eps,.pdf` → `.pdf,.eps`, sized by
+  `width=`, no size change). Unit test `util::image::candidate_order_tests::
+  extensionless_candidates_in_one_order_whatever_the_directory_lists` (`image_candidate_lists`, the names of two
+  directories fed as listed, reversed and rotated; red without the sort); the conversion guard
+  `perfect_kernel_batch78w::includegraphics_extensionless_candidates_in_type_order` is the whole-output check, red on
+  int64a only on a tmpfs `/tmp` (on ext4, the CI runner's, int64a's order already passes; review rev78w finding 1);
+  repro package-bindings/includegraphics_extensionless_candidates_in_type_order.
+
+Not changed: the custom frontmatter blocks (`frontmatter/insert.rs` `custom_keys`) follow the source order, deterministic
+(Perl's `keys %$frontmatter` is random; main-session decision); the `xmlns:*` declaration order on the root is stable
+today and tracked as a SYNC row (Perl's first-use order, Document.pm:1393-1394,1874).

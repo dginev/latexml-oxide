@@ -1726,9 +1726,7 @@ fn record_bibliography_normalfont() -> Result<()> {
 /// The held diagnostics are raised if a reference shows the role (logger.rs `replay_shown_deferred`). Witness
 /// biblatex-gost-examples.
 fn tie_held_tags(node: &Node, labels: &str) {
-  let roles: Vec<String> = with_mapping_keys("type_tag_deferred", |keys| {
-    keys.into_iter().map(to_string).collect()
-  });
+  let roles = held_tag_roles(with_mapping_keys("type_tag_deferred", |keys| keys));
   if roles.is_empty() {
     return;
   }
@@ -1759,6 +1757,15 @@ fn tie_held_tags(node: &Node, labels: &str) {
       cursor = current.get_parent();
     }
   }
+}
+
+/// The roles whose tags are held (`type_tag_deferred`'s keys), sorted: the order the labels answer for them in, so the
+/// order a reference showing two of them replays their diagnostics in (logger.rs `replay_shown_deferred`) is the
+/// roles' and not the symbol table's, which follows the dump's load order (det354 B3).
+fn held_tag_roles(keys: Vec<SymStr>) -> Vec<String> {
+  let mut roles: Vec<String> = keys.into_iter().map(to_string).collect();
+  roles.sort_unstable();
+  roles
 }
 
 /// Removes the empty held tags of `node` (`note_empty_held_tag`: kept for their diagnostics, now tied to the labels
@@ -2415,4 +2422,27 @@ pub fn label_type(ty: Option<Tokens>) -> Vec<Token> {
     tokens.push(T_END!());
   }
   tokens
+}
+
+#[cfg(test)]
+mod held_tag_role_order {
+  use super::{held_tag_roles, pin};
+
+  /// The held roles come out sorted whatever order the mapping lists its keys in (det354 B3): hyperref's `autoref`
+  /// and cleveref's `creflabel` and its per-type roles.
+  #[test]
+  fn held_tag_roles_are_sorted() {
+    for listed in [["creflabel", "autoref", "cref@equation"], [
+      "cref@equation",
+      "creflabel",
+      "autoref",
+    ]] {
+      let keys = listed.into_iter().map(pin).collect();
+      assert_eq!(held_tag_roles(keys), [
+        "autoref",
+        "cref@equation",
+        "creflabel"
+      ]);
+    }
+  }
 }

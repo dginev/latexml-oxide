@@ -1,0 +1,16 @@
+% mechanism: an `.eps` graphic's box at digestion (`\wd` of `\sbox0{\includegraphics{e}}`) is its BoundingBox in bp
+%   (pdflatex converts it with epstopdf and reads the page), 40bp = 40.15pt. Ours (`image_graphicx_sizer`, util/image.rs)
+%   reads the EPS's BoundingBox through the raster path, as pixels at `DPI` 100, so 40 → 28.908pt (40 x 72.27/100), and
+%   with a `.pdf` and an `.eps`/`.ps` candidate of one name it reads the `.ps` (the first raster-readable one) where
+%   pdflatex reads the `.pdf`. Found by 78w (side finding of det354 4b); the natural `cssstyle` (4.015em) is right.
+% witness: 1106.2745 (the 78t SYNC row, OD #876); this shape is 78w's probe `scratch_78w/epsp/`
+% oracle:  pdflatex (TL 2025): "width 40.14989pt."
+% engines: perl: "width 0.0pt."; rust int64a and 78w: "width 28.908pt."
+% expect:  0 errors, 0 warnings; "width 40.14989pt."
+% files:   e.eps (a copy of eps_as_pdf_two.eps, %%BoundingBox: 0 0 40 20)
+% status:  RED (78w)
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\sbox0{\includegraphics{e.eps}}width \the\wd0.
+\end{document}
