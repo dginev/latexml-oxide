@@ -1,0 +1,21 @@
+% witness: 1808.10020 (`\def\caption#1{\splitter #1@@}`: int57a 48 "Paragraph ended before \splitter" Errors, and the
+%          repro a Fatal Mouth:EoF)
+% oracle:  pdflatex 0 errors; "See 1(a), 1(b), 1." (subfigure.sty:279-290 `\@subcaption` builds the sub-caption with
+%          `\@make<sub>caption`, never `\caption`)
+% engines: rust int57a = 1 Error, 1 Fatal (the document's `\caption` read the sub-caption); Perl 0.8.8 55 Errors
+% expect:  0 errors, 0 warnings; panels 1(a) "Left panel." and 1(b) "Right panel."
+% status:  RED (int57a) -> GREEN (78t, OXIDIZED_DESIGN_DIVERGENCES #876, KNOWN_PERL_ERRORS #1126)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{subfigure}
+\begin{document}
+\let\oldcaption\caption
+\def\splitter #1. #2@@{\oldcaption[#1]{#1. #2}}
+\def\caption#1{\splitter #1@@}
+\begin{figure}
+\subfigure[Left panel.]{\rule{1cm}{1cm}\label{a}}
+\subfigure[Right panel.]{\rule{1cm}{1cm}\label{b}}
+\caption{Main. More.}\label{f}
+\end{figure}
+See \ref{a}, \ref{b}, \ref{f}.
+\end{document}

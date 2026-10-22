@@ -1,0 +1,22 @@
+% witness: 1306.2116 (`eq:covariate`, PDF 17, int57a "3.1", the section's); census 222 papers with a `\label` and a
+%          `\nonumber` in one amsmath `{equation}`
+% oracle:  pdflatex 0 errors; "See 1, 2, 2, 2, X, 3." (amsmath.sty:2924-2932 `\incr@eqnum` steps the counter at the
+%          start, :1269-1275 `\nonumber` steps it back, the label made at the end, :2821-2830, names the stepped
+%          number; a `\nonumber` after `\tag{X}` changes nothing, the switch already off)
+% engines: rust int57a = b, c the section's 1, t unnumbered (the tag dropped); Perl 0.8.8 the same
+% expect:  0 errors, 0 warnings; b and c carry refnum 2 (no printed tag), the unlabelled one none, t "(X)"
+% status:  RED (int57a) -> GREEN (78t, OXIDIZED_DESIGN_DIVERGENCES #875, KNOWN_PERL_ERRORS #1128)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\section{S}
+\begin{equation}\label{a} x=1 \end{equation}
+\begin{equation}\label{b}\nonumber y=2 \end{equation}
+\begin{equation}\notag\label{c} z=3 \end{equation}
+\begin{equation} u=4 \nonumber\end{equation}
+\begin{equation}\label{d} w=5 \end{equation}
+\begin{equation}\tag{X}\nonumber\label{t} v=6 \end{equation}
+\begin{equation}\label{e} s=7 \end{equation}
+See \ref{a}, \ref{b}, \ref{c}, \ref{d}, \ref{t}, \ref{e}.
+\end{document}

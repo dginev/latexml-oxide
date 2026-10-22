@@ -1,0 +1,64 @@
+% witness: 1201.0008 (Figs 1-2 three 0.32\linewidth panels in a row, the pairs of Figs 3, 4, 8, 9, 12 on one row, Figs
+%          5, 6, 10 2x2: overfull rows in the PDF; 78t r2 broke them all; r3's Fig 1 still 2+1, iopart's
+%          `\footnotesize` float font); hep-ex0703011 (pairs of 2.8in `\epsfig` panels);
+%          review rev78t2 probes sp1, ep1
+% oracle:  pdflatex 0 errors; Figure 1 "(a) One" and "(b) Two" on one row ("Overfull \hbox (8.88887pt too wide)"),
+%          Figure 2 "(a) Three" "(b) Four" then "(c) Five" ("Underfull \hbox (badness 10000)"), Figure 3 "(a) Six" "(b)
+%          Seven" then "(c) Eight" ("Overfull \hbox (71.22643pt too wide)"), Figure 4 (centred) one panel per row. A
+%          float's paragraph is `\sloppy` (latex.ltx `\@arrayparboxrestore`: `\tolerance` 9999, `\emergencystretch`
+%          3em): a break before an overflowing panel is feasible only when the row's shortfall is at most 4.343 times
+%          its stretch (tex.web `badness`, r = 297 t/s <= 1290), else the final pass's artificial demerits (tex.web 854)
+%          end an overfull line after it; `\centering`'s fil stretch makes every break feasible
+% engines: rust int61a = one panel per row in all four (each measured with its caption at the column's width); 78t r2 =
+%          Figures 1 and 3 one panel per row; 78t r3 = as pdflatex (`justified_row_is_overfull`, TeX's line breaking under
+%          `\sloppy` against the float's width); 78t r5 = Figures 1 and 2 one row, 3 one per row, 4 one row (the panels'
+%          stated widths, labels and glue left out, under Perl's greedy rule; r3's line-breaking emulation removed per
+%          FIDELITY_CHARTER §2 "Float panels"); Perl 0.8.8 one panel per row in all four
+%          (the captioned box, latex_constructs.pool.ltxml:3286-3295)
+% expect:  0 errors, 0 warnings; Figure 1 no `ltx:break`, Figures 2 and 3 one before their third panel, Figure 4 one
+%          between its two
+% status:  RED (int61a, 78t r5; GREEN only in 78t r3) -- owned by the grid-rule payload (SYNC_STATUS "panel grid rule"
+%          row, grid-design payload 2): Figures 1 and 4 state the same widths and differ only by TeX's breaking (justified
+%          overfull vs centred), and Figure 2's underfull break comes from the spaces, so the source-signal rule
+%          (explicit breaks, stated widths and stated glue) sets Figures 2 and 4 on one row; whether they stay an
+%          accepted residual of the charter's "do not re-run TeX's line breaking" is the user's call (the overflow
+%          residual of the grid design study, 2026-10-22)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{subfigure}
+\begin{document}
+\begin{figure}
+\subfigure[One]{\rule{0.5\textwidth}{1cm}
+\label{a1}}
+\subfigure[Two]{\rule{0.5\textwidth}{1cm}
+\label{a2}}
+\caption{Two halves, justified.}\label{f1}
+\end{figure}
+\begin{figure}
+\subfigure[Three]{
+  \rule{0.32\linewidth}{1cm}
+}
+\subfigure[Four]{
+  \rule{0.32\linewidth}{1cm}
+}
+\subfigure[Five]{
+  \rule{0.32\linewidth}{1cm}
+}
+\caption{Thirds with spaces, justified.}\label{f2}
+\end{figure}
+\begin{figure}
+\subfigure[Six]{\rule{0.6\textwidth}{1cm}}
+\subfigure[Seven]{\rule{0.6\textwidth}{1cm}}
+\subfigure[Eight]{\rule{0.6\textwidth}{1cm}}
+\caption{Three wide ones, justified.}\label{f3}
+\end{figure}
+\begin{figure}
+\centering
+\subfigure[Nine]{\rule{0.5\textwidth}{1cm}
+\label{a9}}
+\subfigure[Ten]{\rule{0.5\textwidth}{1cm}
+\label{a10}}
+\caption{Two halves, centred.}\label{f4}
+\end{figure}
+See \ref{a1}, \ref{a2}, \ref{a9}, \ref{a10}.
+\end{document}

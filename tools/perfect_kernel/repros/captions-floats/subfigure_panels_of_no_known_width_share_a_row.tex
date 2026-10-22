@@ -1,0 +1,21 @@
+% witness: 1408.2843 (Fig 1: `\subfigure[]{⏎\includegraphics[scale=0.27]{recomb.eps}}` twice, only recomb.pdf shipped, so
+%          the graphics have no size at digestion; the PDF sets (a) (b) on one row)
+% oracle:  pdflatex 0 errors; "(a)" and "(b)" on one baseline (pdftotext -bbox y 385.8 both, x 133.8 and 140.4: the
+%          sub-captions overfull their 3.3pt-wide panels, "Overfull \hbox (7.5pt too wide)"), one row
+% engines: rust 78t r5 = one panel per row (the body without its glue measured 0, the panel fell back to its captioned
+%          box, a full line); int61a one row; Perl 0.8.8 one row (it measures the box, whose `[]` makes no caption)
+% expect:  0 errors, 0 warnings; no `ltx:break`; both panels `ltx_figure_panel`
+% status:  RED (78t r5) -> GREEN (int62: a body of no width without its glue is measured with it,
+%          `note_sub_float_body_width`; review rev78t5 finding 1)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{subfigure}
+\begin{document}
+\begin{figure}
+\subfigure[]{
+\mbox{}}
+\subfigure[]{
+\mbox{}}
+\caption{Two panels of no known width.}
+\end{figure}
+\end{document}

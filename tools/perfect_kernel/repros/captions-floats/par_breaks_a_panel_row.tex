@@ -2,7 +2,8 @@
 %          the `\par` ends TeX's first line of panels, but panel layout (`arrange_panels`,
 %          latex_constructs/mod.rs; Perl latex_constructs.pool.ltxml:3260-3345) sees only widths: since
 %          57o sizes a folded text minipage by its declared width (DIVERGENCES #343), "(b)" (13.8pt) still
-%          fits after row 1 and joins it
+%          fits after row 1 and joins it; 1110.0084 Figs 12-16 (`\subfigure[]` panels with blank lines between
+%          them: one per row in the PDF; since 78t r2's body widths, 2x2 or one row; int58a one per row by accident)
 % oracle:  pdflatex 0 errors: row 1 "(a)" + the first rule, row 2 "(b)" + the second
 % engines: rust 57m: every panel on its own row (4 rows); rust 57o: [(a) rule (b)] then the second rule
 % expect:  0 errors; a break after the first rule, "(b)" starting the second row

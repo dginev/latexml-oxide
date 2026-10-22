@@ -17455,6 +17455,76 @@ captions-floats/newfloat_caption_tag_closes_with_a_colon; guard
 `perfect_kernel_batch78s::newfloat_caption_tag_closes_with_a_colon`; the Perl-suite golden
 `latexml_oxide/tests/structure/floatnames.xml` now has its PDF's "Floppy 1: Something that flops" (`close=": "`).
 
+## 1125. subfigure's `\subfigure[]{…}` and `\subfigure{…}` make no numbered panel
+
+subfigure.sty:217 `\refstepcounter{sub\@captype}` steps the panel's counter whatever the arguments, and an explicit
+`[]` prints the "(a)" caption (:251, :257 `\ifx\@empty#3`). subfigure.sty.ltxml:138-149 calls `\caption` only for
+non-empty text, so such a panel has no number: its `\label` names the figure and the next captioned panel takes "(a)".
+Minimal trigger: `\usepackage{subfigure}` … `\begin{figure}\subfigure[]{x\label{a}}\subfigure{y\label{b}}
+\subfigure[][C]{z\label{c}}\caption{M}\end{figure}\ref{a} \ref{b} \ref{c}` — pdflatex "1(a) 1(b) 1(c)", Perl 0.8.8
+"1 1 1(a)". Fixed in Rust (78t, OXIDIZED_DESIGN_DIVERGENCES #876). Witnesses 1507.00722, 1808.10020; guard
+`perfect_kernel_batch78t::subfigure_empty_optional_is_a_numbered_panel`.
+
+## 1126. subfigure's and subfig's sub-captions go through the document's `\caption`
+
+subfigure.sty:279-290 (`\@subcaption`, `\@make<sub>caption`) and subfig.sty:384-411 (`\sf@subcaption`, caption3's
+`\caption@make`) never call `\caption`; subfigure.sty.ltxml:138-171 and subfig.sty.ltxml:45-49 do, so a document that
+redefines `\caption` reads every sub-caption with its own macro. Minimal trigger:
+`\usepackage{subfigure}\let\oldcaption\caption\def\splitter#1. #2@@{\oldcaption[#1]{#1. #2}}\def\caption#1{\splitter
+#1@@}` … `\begin{figure}\subfigure[Left panel.]{x}\caption{Main. More.}\end{figure}` — pdflatex 0 errors, Perl 0.8.8
+55 Errors on the two-panel repro (subfig: 21). Fixed in Rust (78t, #876: the kernel's caption, `\lx@caption`). Witness
+1808.10020 (int57a 48 Errors); guards `perfect_kernel_batch78t::{subfigure_caption_is_not_the_documents_caption,
+subfig_caption_is_not_the_documents_caption}`.
+
+## 1127. subfigure.sty.ltxml does not read subfigure.cfg
+
+subfigure.sty:205-208 `\InputIfFileExists{subfigure.cfg}`; TeX Live's subfigure.cfg is `\ExecuteOptions{tight,TABTOPCAP}`,
+so a table's caption is on top and a sub-table after it does not step the table counter ahead (:214). Perl reads no
+cfg (subfigure.sty.ltxml:116-118). Minimal trigger: `\usepackage{subfigure}` … `\begin{table}\caption{T}\subtable[L]{x
+\label{a}}\end{table}\ref{a}` — pdflatex "1(a)", Perl 0.8.8 "2(a)". Fixed in Rust (78t, #876). Guard
+`perfect_kernel_batch78t::subtable_after_the_caption_is_numbered_by_it`. The cfg's `TABTOPCAP` numbers a sub-table
+before a bottom `\caption` by the previous table, as pdflatex does, so the first table's panels read "0(a)":
+`\begin{table}\subtable[A]{x\label{a}}\caption{T}\end{table}\ref{a}` — pdflatex and Rust "0(a)", Perl 0.8.8 "1(a)"
+(1909.03617's `.aux` 0(a), 0(b); 1506.06418, 2012.09202, 1506.09092). That is pdflatex's numbering, not a defect.
+
+## 1128. A `\label` in an amsmath `{equation}` with `\nonumber` names the enclosing unit
+
+amsmath.sty:2924-2932 steps the equation counter at `{equation}`'s start, :1269-1275 `\nonumber` steps it back, and
+the label made at the end (:2821-2830) names the stepped number; a `\nonumber` after `\tag` changes nothing. Perl
+retracts the number (latex_constructs.pool.ltxml:2025-2057), so the label names the section, and a `\nonumber` after
+`\tag{X}` drops the tag. Minimal trigger: `\usepackage{amsmath}` … `\section{S}\begin{equation}a\end{equation}
+\begin{equation}\label{b}\nonumber y\end{equation}\begin{equation}\tag{X}\nonumber\label{t} v\end{equation}\ref{b}
+\ref{t}` — pdflatex "2 X" and "(X)" printed, Perl 0.8.8 "1 1" (the section's) and no tag. Fixed in Rust (78t, OXIDIZED_DESIGN_DIVERGENCES #875). Witness 1306.2116
+(`eq:covariate`, PDF 17); guard `perfect_kernel_batch78t::ams_equation_nonumber_label_names_the_stepped_number`.
+
+## 1129. A `\label` after an algorithm2e line's number names the algorithm
+
+algorithm2e.sty:1657-1667 `\nl` makes the line's number `\@currentlabel`; algorithm2e.sty.ltxml:180-221 gives the
+`ltx:listingline` its printed number and no refnum or id, so the label climbs to the algorithm. Minimal trigger:
+`\usepackage[ruled,linesnumbered]{algorithm2e}` … `\begin{algorithm}\caption{A}First\;Second\label{l2}\;
+\end{algorithm}\ref{l2}` — pdflatex "2", Perl 0.8.8 "1". Fixed in Rust (78t, OXIDIZED_DESIGN_DIVERGENCES #877).
+Witness 2406.05437 (`step1`, PDF 14); guard `perfect_kernel_batch78t::algorithm2e_line_label_names_the_line`.
+
+## 1130. subfig's `\subfloat[list][caption]` prints the list entry as the caption
+
+subfig.sty:350-353 `\sf@@subfloat`: with two optionals the first is the list entry, the second the caption.
+subfig.sty.ltxml:47 captions with `\caption{#1}`, the list entry. Minimal trigger: `\usepackage{subfig}` …
+`\begin{figure}\subfloat[Listed][Right panel.]{x}\caption{M}\end{figure}` — pdflatex "(a) Right panel.", Perl 0.8.8
+"(a) Listed". Fixed in Rust (78t, #876). Guard `perfect_kernel_batch78t::subfig_caption_is_not_the_documents_caption`.
+
+## 1131. Of two elements labelled with one key, the inner one wins whatever the source order
+
+LaTeX's last `\newlabel` of a key wins (latex.ltx `\@newl@bel` redefines `r@key`; "Label multiply defined"): the last
+written, which is the later in the source but for a float LaTeX defers past a later label of the key. Perl's
+`\label` adds the key to each element it labels and Post::Scan registers labels in document order, the outer element
+first (Scan.pm:196-203, ObjectDB `register` overwriting), so an element inside a later-labelled one keeps the key though
+its `\label` came first. Minimal trigger: `\usepackage{subcaption}` … `\begin{figure}\begin{subfigure}{0.4\linewidth}x
+\caption{Panel}\label{x}\end{subfigure}\caption{Main}\label{x}\end{figure}See \ref{x}.` — pdflatex "See 1.", Perl
+0.8.8 "See 1(a).". Fixed in Rust (78t r2, OXIDIZED_DESIGN_DIVERGENCES #877: a `\label` takes its key from the earlier
+holders that contain it or that it contains, `Document::release_earlier_label_holders`). Witness 2001.00288 (`\label{algo2}` on a line and on its
+algorithm); guard `perfect_kernel_batch78t::the_later_label_wins`. Not done: a deferred float's label written after a
+later one (`\begin{figure}[p]…\label{k}\end{figure}\section{Two}\label{k}`: pdflatex 1, Perl and ours 2).
+
 ## 1135. A footnote's `[\numexpr…]` is no number
 
 latex.ltx:17678-17699 `\@xfootnotemark` and `\@xfootnotenext` read `[<n>]` as `\c@footnote #1\relax`, so an e-TeX

@@ -219,6 +219,12 @@ pub struct Document {
   /// (SegmentMeta::ancestors). A `label:`/`id:`-scoped rewrite whose scope
   /// resolves to one of these covers the WHOLE fragment.
   pub fragment_ancestor_ids:     rustc_hash::FxHashSet<String>,
+  /// The object that printed a raw counter step's number itself, by the step's serial
+  /// ([`note_raw_refstep_object`](Self::note_raw_refstep_object)): an algorithm2e line. A label after the step names
+  /// it wherever the label stands ([`float_to_label_scoped`](Self::float_to_label_scoped)).
+  raw_refstep_objects:           HashMap<i64, Node>,
+  /// The keys a `\label` has placed ([`release_earlier_label_holders`](Self::release_earlier_label_holders)).
+  placed_labels:                 rustc_hash::FxHashSet<String>,
   /// Streaming pass 2 only: the recorded qname of the fragment's REAL parent
   /// (SegmentMeta::parent). `finalize_rec` substitutes it for the
   /// `ltx:_lxfragment` parse wrapper in schema decisions, so top-level
@@ -579,6 +585,8 @@ impl Document {
       spill_observer:              None,
       spill_flat:                  false,
       fragment_ancestor_ids:       rustc_hash::FxHashSet::default(),
+      raw_refstep_objects:         HashMap::default(),
+      placed_labels:               rustc_hash::FxHashSet::default(),
       fragment_parent_qname:       None,
       defer_root_after_open:       false,
       last_swept_node_boxes_len:   0,
@@ -7541,6 +7549,20 @@ impl Document {
     after_undone_step: bool,
   ) -> Option<Node> {
     let key = "labels";
+    // The object that printed the step's number itself (an algorithm2e line, `note_raw_refstep_object`) takes the
+    // label wherever it stands, as `\@currentlabel` is that number until the next step: in the line, or after it, at
+    // the start of the next line or of a block (`stmt\; \label{x}`, `\While{c}{\label{x} …}`: pdflatex the line's
+    // number). Its id is made only later (the `\lx@label` hook, sect11.rs). Witnesses 2406.05437 (`step1`, `step2`:
+    // PDF 14, 17), 1602.05866 (`algline:mainloop`, PDF 8); OXIDIZED_DESIGN_DIVERGENCES #877.
+    if let Some(object) = raw_step
+      .and_then(|serial| self.raw_refstep_objects.get(&serial))
+      .filter(|object| object.get_parent().is_some())
+      .cloned()
+    {
+      let savenode = self.node.clone();
+      self.set_node(&object);
+      return Some(savenode);
+    }
     let may_label = |node: &Node| {
       can_node_have_attribute(node, key)
         && node.has_attribute_ns("id", XML_NS)
@@ -7625,14 +7647,26 @@ impl Document {
   pub fn take_raw_refstep_number(&mut self, tags: &Digested, serial: i64) -> Result<()> {
     let mut target = self.node.clone();
     let qname = get_node_qname(&target);
-    let has_tags = target
+    let own_tags = target
       .get_child_elements()
-      .iter()
-      .any(|child| get_node_qname(child) == pin!("ltx:tags"));
-    if has_tags
-      || !can_contain_qsym(qname, pin!("ltx:tags"))
-      || can_contain_qsym(qname, pin!("ltx:title"))
-    {
+      .into_iter()
+      .find(|child| get_node_qname(child) == pin!("ltx:tags"));
+    if let Some(own_tags) = own_tags {
+      // An object that printed the step's number itself and gives no reference form (an algorithm2e line's tag:
+      // `\nl`'s `\refstepcounter{AlgoLine}` then `\algocf@printnl`, algorithm2e.sty:1662-1667) takes the step's
+      // reference forms into its tags, after the printed one: `\ref` prints `\theAlgoLine` (pdflatex 14 for
+      // 2406.05437's `step1`, which named the algorithm, 1; OXIDIZED_DESIGN_DIVERGENCES #877).
+      let numbered_here = target.get_attribute(RAW_REFSTEP_MARK) == Some(serial.to_string());
+      let has_forms = own_tags
+        .get_child_elements()
+        .iter()
+        .any(|tag| tag.has_attribute("role"));
+      if numbered_here && !has_forms {
+        self.add_reference_forms(&target, own_tags, tags)?;
+      }
+      return Ok(());
+    }
+    if !can_contain_qsym(qname, pin!("ltx:tags")) || can_contain_qsym(qname, pin!("ltx:title")) {
       return Ok(());
     }
     let before = target.get_child_nodes();
@@ -7653,6 +7687,94 @@ impl Document {
         new.unlink_node();
         first.add_prev_sibling(&mut new).ok();
       }
+    }
+    Ok(())
+  }
+
+  /// Records `object` as the one that printed the number of the raw counter step `serial` itself (an algorithm2e line:
+  /// `\nl`'s `\refstepcounter{AlgoLine}` then `\algocf@printnl`), marking it (`RAW_REFSTEP_MARK`): a label after the
+  /// step names it ([`float_to_label_scoped`](Self::float_to_label_scoped)) and takes its reference forms
+  /// ([`take_raw_refstep_number`](Self::take_raw_refstep_number)).
+  pub fn note_raw_refstep_object(&mut self, serial: i64, object: &Node) {
+    let mut object = object.clone();
+    let _ = object.set_attribute(RAW_REFSTEP_MARK, &serial.to_string());
+    self.raw_refstep_objects.insert(serial, object);
+  }
+
+  /// A `\label{key}` placed on `holder` takes `key` from the elements holding it before that contain `holder` or that it
+  /// contains: LaTeX's last `\newlabel` wins (latex.ltx `\@newl@bel`: `\global\@namedef{r@key}`, "Label multiply
+  /// defined"), where the post scan registers in document order, the outer element first (Perl Scan.pm:196-203, ours
+  /// `latexml_post/src/scan.rs` `register_scanned`), so an earlier label on an element inside a later one won: 2001.00288's
+  /// `\label{algo2}` after `\KwOut` (its line) and again after `\caption` (the algorithm) printed "Algorithm 1" for
+  /// pdflatex's "Algorithm 2" (KNOWN_PERL_ERRORS #1131, OXIDIZED_DESIGN_DIVERGENCES #877). Holders apart from each other
+  /// keep the key: pdflatex's last `\newlabel` is the last written, the later in the document but for a float LaTeX
+  /// defers past a later label of the key (not modelled: `[p]` figure then `\section{Two}\label{k}`, pdflatex the
+  /// figure), and the scan already takes the later; an element
+  /// the streaming build spilled may be one (spills are closed top-level elements, never `holder`'s ancestors or, below
+  /// the document root, its descendants), so streaming and eager builds agree. Searched only for a key placed before.
+  /// Guard `perfect_kernel_batch78t::the_later_label_wins`.
+  pub fn release_earlier_label_holders(&mut self, key: &str, holder: &Node) {
+    if self.placed_labels.insert(key.to_string()) {
+      return;
+    }
+    // The document root holds what no element took; its descendants may have been spilled.
+    let Some(parent) = holder
+      .get_parent()
+      .filter(|p| p.get_type() == Some(NodeType::ElementNode))
+    else {
+      return;
+    };
+    let mut nested = self.findnodes("descendant::*[@labels]", Some(holder));
+    let mut ancestor = Some(parent);
+    while let Some(node) = ancestor {
+      ancestor = node
+        .get_parent()
+        .filter(|p| p.get_type() == Some(NodeType::ElementNode));
+      nested.push(node);
+    }
+    for mut node in nested {
+      let Some(labels) = node.get_attribute("labels") else {
+        continue;
+      };
+      if !labels.split_whitespace().any(|label| label == key) {
+        continue;
+      }
+      let rest: Vec<&str> = labels
+        .split_whitespace()
+        .filter(|label| *label != key)
+        .collect();
+      if rest.is_empty() {
+        let _ = node.remove_attribute("labels");
+      } else {
+        let _ = node.set_attribute("labels", &rest.join(" "));
+      }
+    }
+  }
+
+  /// The reference forms of `tags` (its tags with a role: refnum, typerefnum, …) appended to `own_tags`, an `ltx:tags`
+  /// of `target` ([`take_raw_refstep_number`](Self::take_raw_refstep_number)).
+  fn add_reference_forms(
+    &mut self,
+    target: &Node,
+    mut own_tags: Node,
+    tags: &Digested,
+  ) -> Result<()> {
+    let before = target.get_child_nodes();
+    let savenode = self.node.clone();
+    self.set_node(target);
+    self.absorb(tags, None)?;
+    self.set_node(&savenode);
+    for new in target.get_child_nodes() {
+      if before.contains(&new) {
+        continue;
+      }
+      for mut tag in new.get_child_elements() {
+        if get_node_qname(&tag) == pin!("ltx:tag") && tag.has_attribute("role") {
+          tag.unlink_node();
+          own_tags.add_child(&mut tag).ok();
+        }
+      }
+      self.remove_node(new);
     }
     Ok(())
   }

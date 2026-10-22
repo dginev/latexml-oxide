@@ -1,0 +1,17 @@
+% witness: the TeX Live subfigure.cfg (`\ExecuteOptions{tight,TABTOPCAP}`), read by every pdflatex run of subfigure
+% oracle:  pdflatex 0 errors; "See 1, 1(a), 1(b)." (subfigure.sty:205-208 reads subfigure.cfg; with TABTOPCAP a
+%          sub-table does not step the table counter ahead, :214)
+% engines: rust int57a = "1, 2(a), 2(b)"; Perl 0.8.8 the same (no subfigure.cfg)
+% expect:  0 errors, 0 warnings; sub-tables 1(a) "Left" and 1(b) "Right", each captioned above its tabular
+% status:  RED (int57a) -> GREEN (78t, OXIDIZED_DESIGN_DIVERGENCES #876, KNOWN_PERL_ERRORS #1127)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{subfigure}
+\begin{document}
+\begin{table}
+\caption{Main.}\label{t}
+\subtable[Left]{\begin{tabular}{c}x\end{tabular}\label{ta}}
+\subtable[Right]{\begin{tabular}{c}y\end{tabular}\label{tb}}
+\end{table}
+See \ref{t}, \ref{ta}, \ref{tb}.
+\end{document}

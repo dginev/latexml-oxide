@@ -1,0 +1,50 @@
+% witness: 2511.21020 (Figs 7-8: one row of four in the PDF, 78t r2 3+1); 1607.02761 ((a)(b) one row, the overlays
+%          2x2; r2 one per row); 2211.12798 (`fig:dataset`, one row of three; r2 2+1); 1601.02116 (`fig:EpsW-E`, 2x2;
+%          r2 one per row)
+% oracle:  pdflatex 0 errors, no over/underfull box; Figure 1 "(a) One" and "(b) Two" on one row, Figure 2 four panels
+%          on one row; "See 1(a), 1(b), 2(a), 2(d)." (latex.ltx `\label` is `\@bsphack...\@esphack`: after a space it
+%          ignores the spaces that follow, so the body `{ \rule{...}{1cm} \label{a1} }` is as wide as without the label,
+%          `\wd\@tempboxa` 170.54pt either way in review rev78t2's sp3)
+% engines: rust 78t r2 = Figure 1 one panel per row, Figure 2 3+1 (both spaces round the label counted); int60a, int61a one
+%          panel per row in both; Perl 0.8.8 one panel per row in both (it measures the captioned box)
+% expect:  0 errors, 0 warnings; no `ltx:break`; each panel `ltx_figure_panel`
+% status:  RED (int60a, int61a, 78t r2) -> GREEN (78t r3, one of the two spaces counted; 78t r5, the panel's stated width
+%          leaves its labels and all its glue out: OXIDIZED_DESIGN_DIVERGENCES #876)
+% preload: ar5iv.sty
+\documentclass[twocolumn]{article}
+\usepackage{subfigure}
+\begin{document}
+\begin{figure*}
+\centering
+\subfigure[One]{
+        \rule{0.475\textwidth}{1cm}
+        \label{a1}
+}
+\subfigure[Two]{
+        \rule{0.475\textwidth}{1cm}
+        \label{a2}
+}
+\caption{A label between two spaces.}\label{f1}
+\end{figure*}
+\begin{figure*}
+\centering
+\subfigure[Panel 0]{
+\rule{0.23\textwidth}{1cm} \label{fa0}
+}
+\hfill
+\subfigure[Panel 1]{
+\rule{0.23\textwidth}{1cm} \label{fa1}
+}
+\hfill
+\subfigure[Panel 2]{
+\rule{0.23\textwidth}{1cm} \label{fa2}
+}
+\hfill
+\subfigure[Panel 3]{
+\rule{0.23\textwidth}{1cm} \label{fa3}
+}
+\hfill
+\caption{Four with a label after a space.}\label{f2}
+\end{figure*}
+See \ref{a1}, \ref{a2}, \ref{fa0}, \ref{fa3}.
+\end{document}

@@ -4252,6 +4252,98 @@ pub fn after_float(whatsit: &mut Whatsit) {
     Some(Scope::Global),
   );
 }
+/// A sub-float panel's stated width is its body's, never its caption's: subfigure.sty's `\@subfloat` measures the body
+/// (subfigure.sty:232-233 `\setbox\@tempboxa\hbox{#4}\@tempdima=\wd\@tempboxa`) and sets the sub-caption in a
+/// `\parbox` of that width (`\@makesubfigurecaption`), where our caption is a paragraph of the column's `\hsize`
+/// (`\lx@@caption PBoxContents`). Measured with its caption, a captioned panel took a row of its own in
+/// `arrange_panels`: `\subfigure[]{…}` panels stacked one per row (2006.08949 Figure 2, one row in the PDF;
+/// cond-mat9707225, astro-ph0205132, 2012.09475, 1110.0084, hep-ex0004031, 1703.00699). When the body has a caption,
+/// the panel is the width of the body's material less its `\lx@@caption`/`\@@toccaption`, its `\lx@label`s (a
+/// `\label` makes no box, a `\write`, where the `\lx@label` whatsit is sized by its key's text, as Perl's,
+/// Whatsit.pm:253-265: 0907.1044's `\subfigure[…]{\label{figure:mfexampleofc2} \includegraphics…}` was 96pt wider
+/// than its graphic) and all its glue (spaces, `\hskip`, `\hspace`, `\hfill`; kerns are kept): the material the
+/// source states, not how TeX sets the spaces round it (FIDELITY_CHARTER §2 "Float panels"; the panel grid of
+/// SYNC_STATUS's grid-rule row, the stated glue between panels included, is its own). A material of no width is
+/// measured again with its glue (1408.2843 Fig 1, a graphic whose file we did not find); only one 0 wide with its glue
+/// too leaves the panel its box's width (`panel_width`). Perl measured the whole box
+/// (latex_constructs.pool.ltxml:3286; OXIDIZED_DESIGN_DIVERGENCES #876). Witnesses 2511.21020 Figs 7-8, 1607.02761,
+/// 2211.12798, 1601.02116 (a label between spaces). Guard `perfect_kernel_batch78t::subfigure_panel_is_as_wide_as_its_body`.
+pub fn note_sub_float_body_width(whatsit: &mut Whatsit) {
+  let Ok(Some(body)) = whatsit.get_body() else {
+    return;
+  };
+  // The body's boxes, its lists (a group's) opened, less its captions, labels and (unless `with_glue`) glue; whether it
+  // had a caption.
+  fn material(
+    boxes: Vec<Digested>,
+    with_glue: bool,
+    kept: &mut Vec<Digested>,
+    captioned: &mut bool,
+  ) {
+    for bx in boxes {
+      match bx.data() {
+        DigestedData::List(_) => material(bx.unlist(), with_glue, kept, captioned),
+        _ if !with_glue && is_glue(&bx) => {},
+        DigestedData::Whatsit(w) => match w.borrow().get_definition().get_cs_name().as_ref() {
+          "\\lx@@caption" | "\\@@toccaption" => *captioned = true,
+          "\\lx@label" => {},
+          _ => kept.push(bx.clone()),
+        },
+        _ => kept.push(bx),
+      }
+    }
+  }
+  let (mut boxes, mut captioned) = (Vec::new(), false);
+  material(body.unlist(), false, &mut boxes, &mut captioned);
+  // No caption: the box's own width is its body's. Nothing but the caption: the panel hosts a `\captionof` whose
+  // material is outside it (caption_sty.rs `captionof_environment@subfigure`), and keeps the box's.
+  if !captioned || boxes.is_empty() {
+    return;
+  }
+  let font = match whatsit.get_property("font").as_deref() {
+    Some(Stored::Font(font)) => Some(font.clone()),
+    _ => lookup_font(),
+  };
+  let Some(font) = font else {
+    return;
+  };
+  let measure = |boxes: &[Digested]| {
+    let mut options = SymHashMap::default();
+    options.insert("mode", Stored::String(pin!("restricted_horizontal")));
+    font
+      .compute_boxes_size(boxes, options)
+      .ok()
+      .map(|(width, ..)| width)
+  };
+  let mut width = measure(&boxes);
+  // A material of no width — a graphic whose file we did not find (1408.2843 Fig 1: `\subfigure[]{⏎\includegraphics
+  // {recomb.eps}}` shipping only recomb.pdf) — is measured again with its glue, the measure before the glue was left
+  // out (int61a), so such a panel still shares its row; only a body that is 0 wide with its glue falls back to the box
+  // (`panel_width`; 1610.06413, nlin0606018). Review rev78t5 finding 1; guard
+  // `perfect_kernel_batch78t::subfigure_panels_of_no_known_width_share_a_row`.
+  if width.as_ref().is_none_or(|w| w.value_of() <= 0) {
+    let (mut with_glue, mut _captioned) = (Vec::new(), false);
+    material(body.unlist(), true, &mut with_glue, &mut _captioned);
+    width = measure(&with_glue);
+  }
+  if let Some(width) = width {
+    whatsit.set_property("panel_body_width", Stored::Dimension(width));
+  }
+}
+
+/// Is `bx` glue — a space, `\hskip`, `\hspace`, `\quad`, `\hfill` (`isSkip`, or `isSpace` and not a kern)?
+fn is_glue(bx: &Digested) -> bool {
+  fn glue(b: &impl BoxOps) -> bool {
+    b.get_property_bool("isSkip")
+      || (b.get_property_bool("isSpace") && !b.get_property_bool("isKern"))
+  }
+  match bx.data() {
+    DigestedData::TBox(b) => glue(&*b.borrow()),
+    DigestedData::Whatsit(w) => glue(&*w.borrow()),
+    _ => false,
+  }
+}
+
 /// Is `qname` a "panel break" element (Perl `figure_panel_break_names`,
 /// L3245-3251) — a break/caption/metadata child that flushes the current row
 /// rather than being a panel itself?
@@ -4309,8 +4401,17 @@ fn panel_width(document: &Document, node: &Node) -> f64 {
   if let Some(width) = box_panel_width(node) {
     return width;
   }
-  let box_width = document
-    .get_node_box(node)
+  let node_box = document.get_node_box(node);
+  // A sub-float panel's body, its caption left out (`note_sub_float_body_width`). A body of no known width (0) falls
+  // back to the box, as before the body measure: as 0 it joined every neighbour's row and, at a row's start, left the
+  // panel list (1610.06413 Figs 2, 4, hep-ex0703011, nlin0606018).
+  if let Some(DigestedData::Whatsit(w)) = node_box.as_ref().map(Digested::data)
+    && let Some(Stored::Dimension(width)) = w.borrow().get_property("panel_body_width").as_deref()
+    && width.value_of() > 0
+  {
+    return width.value_of() as f64;
+  }
+  let box_width = node_box
     .and_then(|b| b.get_width(None).ok().flatten())
     .map(|r| r.value_of() as f64)
     .unwrap_or(0.0);

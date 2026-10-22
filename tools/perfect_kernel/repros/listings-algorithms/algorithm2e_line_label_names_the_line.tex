@@ -1,0 +1,28 @@
+% witness: 2406.05437 (`step1`, `step2`: PDF 14, 17, int57a "1", the algorithm's); census 159 papers with a `\label`
+%          in an algorithm2e algorithm
+% oracle:  pdflatex 0 errors; "See lines 2, 4, 8 and 9 of 1; 2." (algorithm2e.sty:1662-1667 `\nl`: `\refstepcounter{AlgoLine}`
+%          `\gdef\@currentlabel{\theAlgoLine}`, which a `\label` after the line's `\;` or at a block's start still names,
+%          not one at the next algorithm's start, :2560-2561 `\refstepcounter{algocfline}`;
+%          with hyperref `\stepcounter` and `\algocf@nl@sethref`, :1657-1660)
+% engines: rust int57a = "See lines 1, 1, 1 and 1 of 1."; Perl 0.8.8 the same
+% expect:  0 errors, 0 warnings; the labelled lines carry their printed number and refnum 2, 4, 8 and 9; alg2 labels
+%          the second algorithm
+% status:  RED (int57a) -> GREEN (78t, OXIDIZED_DESIGN_DIVERGENCES #877, KNOWN_PERL_ERRORS #1129)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[ruled,linesnumbered]{algorithm2e}
+\begin{document}
+\begin{algorithm}
+\caption{Alg.}\label{alg}
+First line\;
+Second line \label{l2}\;
+\eIf{cond}{then part\label{l4}\;}{else part\;}
+Eighth line\; \label{l8}
+\While{cond}{\label{l9}body\;}
+\end{algorithm}
+\begin{algorithm}\label{alg2}
+Other line\;
+\caption{Two.}
+\end{algorithm}
+See lines \ref{l2}, \ref{l4}, \ref{l8} and \ref{l9} of \ref{alg}; \ref{alg2}.
+\end{document}

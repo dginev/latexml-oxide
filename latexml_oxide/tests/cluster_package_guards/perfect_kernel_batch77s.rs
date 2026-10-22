@@ -397,7 +397,8 @@ End text.
 /// fonts — where `\subfigure`'s panel keeps subfigure.sty's (footnotesize, a space). `\begin{subfigure}` called
 /// `\subfigure` with the caption's internals as its arguments: 20 errors, "subfigureFirst", the figure's caption
 /// numbered "(c)" and the text after it drawn in (2508.00020); r2's panel read "(a) First" in subfigure.sty's format
-/// (1608.05355, 1806.00503). pdflatex: 0 errors, "(a): First", "(b) SubA", "Figure 1: Whole". subfig loaded after it
+/// (1608.05355, 1806.00503). pdflatex: 0 errors, "(a): First", "(b) SubA", "Figure 1: Whole", the two panels on one row
+/// (since 78t r2 the `\subfigure[SubA]{XXX}` panel is its body's width: OXIDIZED_DESIGN_DIVERGENCES #876). subfig loaded after it
 /// makes no `subfigure` of its own (subfig.sty:298 `\@ifundefined{c@subfigure}{\newsubfloat{figure}}{}`), so its
 /// `\sf@counterlist` does not name it and caption still accepts the type (2508.00020's preamble: 52 errors at int34a,
 /// 0 now and Figs. 4-9 as the PDF numbers them). Repros captions-floats/captionof_subfigure_sty_is_a_panel,
@@ -423,7 +424,7 @@ End text.
       (
         "figure",
         "S0.F1",
-        r#"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure class="ltx_figure_panel ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.F0.sf1"><tags><tag><text fontsize="80%" xml:id="S0.F0.sf1.1">(a)</text></tag><tag role="refnum">0(a)</tag></tags><p class="ltx_figure_panel" xml:id="S0.F0.sf1.2">AAA</p><break class="ltx_break"/><toccaption><tag close=" ">(a)</tag>First</toccaption><caption><tag close=": ">(a)</tag>First</caption></figure><break class="ltx_break"/><figure class="ltx_figure_panel" xml:id="S0.F1.sf2"><tags><tag><text fontsize="80%" xml:id="S0.F1.sf2.1">(b)</text></tag><tag role="refnum">1(b)</tag></tags><p xml:id="S0.F1.sf2.2">XXX</p><toccaption><tag close=" ">(b)</tag>SubA</toccaption><caption><tag close=" "><text fontsize="80%" xml:id="S0.F1.sf2.3">(b)</text></tag><text fontsize="80%" xml:id="S0.F1.sf2.4">SubA</text></caption></figure><toccaption><tag close=" ">1</tag>Whole</toccaption><caption><tag close=": ">Figure 1</tag>Whole</caption></figure>"#,
+        r#"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure class="ltx_figure_panel ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.F0.sf1"><tags><tag><text fontsize="80%" xml:id="S0.F0.sf1.1">(a)</text></tag><tag role="refnum">0(a)</tag></tags><p class="ltx_figure_panel" xml:id="S0.F0.sf1.2">AAA</p><break class="ltx_break"/><toccaption><tag close=" ">(a)</tag>First</toccaption><caption><tag close=": ">(a)</tag>First</caption></figure><figure class="ltx_figure_panel" xml:id="S0.F1.sf2"><tags><tag><text fontsize="80%" xml:id="S0.F1.sf2.1">(b)</text></tag><tag role="refnum">1(b)</tag></tags><p xml:id="S0.F1.sf2.2">XXX</p><toccaption><tag close=" ">(b)</tag>SubA</toccaption><caption><tag close=" "><text fontsize="80%" xml:id="S0.F1.sf2.3">(b)</text></tag><text fontsize="80%" xml:id="S0.F1.sf2.4">SubA</text></caption></figure><toccaption><tag close=" ">1</tag>Whole</toccaption><caption><tag close=": ">Figure 1</tag>Whole</caption></figure>"#,
       ),
       (
         "para",

@@ -50,6 +50,14 @@ pub(crate) fn load() -> Result<()> {
       let mut sorted_labels: Vec<String> = labels.into_keys().collect();
       sorted_labels.sort();
       document.node_set_attribute("labels", &sorted_labels.join(" "))?;
+      // The later `\label` of a key wins (`release_earlier_label_holders`; witness 2001.00288's `\label{algo2}` on a
+      // line and again on its algorithm, pdflatex "Algorithm 2").
+      if let Some(label) = props.get("label").map(ToString::to_string) {
+        let holder = document.get_node().clone();
+        if holder.get_attribute("labels").is_some_and(|labels| labels.split_whitespace().any(|l| l == label)) {
+          document.release_earlier_label_holders(&label, &holder);
+        }
+      }
       if let Some(step) = raw_step {
         document.take_raw_refstep_number(&step.tags, step.serial)?;
       }
@@ -103,6 +111,11 @@ pub(crate) fn load() -> Result<()> {
   // for the labels after it (`keep_latest_refstep_in_scope`).
   DefPrimitive!("\\lx@refstep@outlives@group", {
     keep_latest_refstep_in_scope();
+  });
+  // A package's `\gdef\@currentlabel` after a raw `\refstepcounter` keeps the step for the labels after the group it was
+  // made in (`globalize_raw_refstep`; algorithm2e.sty:1663).
+  DefPrimitive!("\\lx@refstep@global", {
+    globalize_raw_refstep();
   });
   // The type a `\label[type]{key}` gives its object's references (cleveref.sty `\label[type]`), where a site that moves
   // a trailing `\label` reads the optional itself (`typed_label`). The kernel's `\label` has no type: nothing;

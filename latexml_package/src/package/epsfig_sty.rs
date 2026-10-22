@@ -68,6 +68,13 @@ LoadDefinitions!({
         }
       let options = opts.join(",");
       Ok(stored_map!("graphic" => file, "candidates" => candidates, "options" => options))
+    },
+    // Perl `sizer => \&image_graphicx_sizer` (epsfig.sty.ltxml:37), as graphicx's `\includegraphics`: the box is the
+    // file's size under the `width`/`height` keys. Without it the box was the size of its arguments, 0 for the file
+    // name the properties take out, so a `\subfigure[…]{\psfig{file=…,width=0.4\textwidth}}` panel was 0 wide and joined
+    // every row (cond-mat9707225, hep-ex0703011; guard `perfect_kernel_batch78t::psfig_panels_are_as_wide_as_their_keys`).
+    after_digest => sub[whatsit] {
+      util::image::image_graphicx_sizer(whatsit);
     });
   Let!("\\epsfig", "\\psfig");
   // No `\DeclareGraphicsExtensions` of its own: epsfig.sty defines none, and Perl's `DefConstructor(…, '')`

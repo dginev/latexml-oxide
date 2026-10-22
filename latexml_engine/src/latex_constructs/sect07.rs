@@ -40,13 +40,30 @@ fn amsmath_nonumber() -> bool {
     || lookup_bool("amsmath.sty_raw_loaded")
 }
 
+/// The `EQUATION_NUMBERING` key of amsmath's `{equation}` (amsmath.sty:2913-2932, where amsmath is loaded:
+/// [`amsmath_nonumber`]), whose `\nonumber` leaves its labels the number it stepped. `\incr@eqnum` is
+/// `\refstepcounter{equation}` at the start, which sets `\@currentlabel`; `\nonumber` (amsmath.sty:1269-1275) only
+/// steps the counter back, and the display's `\label` is made at its end (`\endmathdisplay@a`, :2821-2830), so it names
+/// the stepped number — the next equation's, which no equation of the two prints. Perl retracts the number and the
+/// label names the enclosing unit; so did this port (1306.2116's `eq:covariate`: PDF 17, ours "3.1"). The equation
+/// keeps the number's reference forms (`eqnarray_next_number_tags`, no printed tag, the eqnarray form of
+/// OXIDIZED_DESIGN_DIVERGENCES #847) when it holds a label ([`NEXT_NUMBER_EQUATION`]). OXIDIZED_DESIGN_DIVERGENCES #875,
+/// KNOWN_PERL_ERRORS #1128. Guard `perfect_kernel_batch78t::ams_equation_nonumber_label_names_the_stepped_number`.
+const AMS_EQUATION: &str = "ams_equation";
+
+/// The whatsit property of an amsmath `{equation}` whose `\nonumber` left it the stepped number's reference forms
+/// ([`AMS_EQUATION`]): the `ltx:equation` drops them when it closes without a label.
+const NEXT_NUMBER_EQUATION: &str = "next_number_equation";
+
 /// The numbering of LaTeX's `{equation}`, for its own binding and for a class's `{equation}` that sets it as LaTeX
 /// does (mn2e/mnras's and old aa's, which only let a `$` in it, mn2e_support_sty.rs and aa_support_sty.rs): numbered and
 /// preset, and its number kept whatever a `\nonumber` said unless amsmath is loaded (`LATEX_EQNNUM`,
 /// `amsmath_nonumber`).
 pub fn prepare_latex_equation_counter() {
   if amsmath_nonumber() {
-    prepare_equation_counter(stored_map!("numbered" => true, "preset" => true));
+    prepare_equation_counter(
+      stored_map!("numbered" => true, "preset" => true, AMS_EQUATION => true),
+    );
   } else {
     prepare_equation_counter(
       stored_map!("numbered" => true, "preset" => true, LATEX_EQNNUM => true),
@@ -161,13 +178,18 @@ pub(crate) fn load() -> Result<()> {
   // Perl: latex_constructs.pool.ltxml lines 2039-2057
   DefMacro!("\\nonumber", "\\lx@equation@nonumber");
   DefPrimitive!("\\lx@equation@nonumber", {
-    let (in_equation, defer_retract, eqnnum) = with_value("EQUATION_NUMBERING", |v| match v {
+    let (in_equation, defer_retract, eqnnum, ams_equation) = with_value("EQUATION_NUMBERING", |v| match v {
       Some(Stored::HashStored(n)) => (
         matches!(n.get("in_equation"), Some(&Stored::Bool(true))),
         matches!(n.get("deferretract"), Some(&Stored::Bool(true))),
         matches!(n.get(LATEX_EQNNUM), Some(&Stored::Bool(true))),
+        matches!(n.get(AMS_EQUATION), Some(&Stored::Bool(true))),
       ),
-      _ => (false, false, false),
+      _ => (false, false, false, false),
+    });
+    // (the number this `\nonumber` takes back is still the one it stepped: amsmath's `\if@eqnsw`)
+    let stepped = with_value("EQUATIONROW_TAGS", |v| {
+      matches!(v, Some(Stored::HashStored(t)) if matches!(t.get("preset"), Some(&Stored::Bool(true))))
     });
     if eqnarray_eqncr_numbering() {
       // latex.ltx:15775 `\global\@eqnswfalse`: the next `\@@eqncr` prints no number (`eqnarray_eqncr_numbering`).
@@ -175,6 +197,21 @@ pub(crate) fn load() -> Result<()> {
     } else if in_equation && eqnnum {
       // LaTeX's `{equation}` prints its number whatever `\nonumber` said (`LATEX_EQNNUM`): the switch it clears is
       // eqnarray's, which `\eqnarray` sets again.
+    } else if in_equation && ams_equation {
+      // amsmath's `{equation}`: the number goes, its labels keep naming it (`AMS_EQUATION`). Once it is gone — a
+      // second `\nonumber`, or one after a `\tag`, which took the number back itself (`\tag@in@display`) — the
+      // switch is already off and amsmath's `\nonumber` changes nothing: the tag stays (`\tag{X}\nonumber`, pdflatex
+      // "(X)"; this port dropped it).
+      if stepped {
+        let next_number = eqnarray_next_number_tags()?;
+        retract_equation();
+        with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
+          if let Some(Stored::HashStored(tags)) = tags_opt {
+            tags.insert("tags", Stored::Digested(next_number));
+            tags.insert(NEXT_NUMBER_EQUATION, true.into());
+          }
+        });
+      }
     } else if in_equation {
       if defer_retract {
         with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
@@ -526,6 +563,17 @@ pub(crate) fn load() -> Result<()> {
   // `<Math>`-presence test is too strict: a pure-text display equation
   // (`\[\text{…}\]`) legitimately carries no `<ltx:Math>` child yet must be kept
   // (cluster_cli::display_math_renders_on_one_line_without_clipping).
+  // An amsmath `{equation}` its `\nonumber` left the stepped number's reference forms (`AMS_EQUATION`) keeps them only
+  // for its labels.
+  Tag!("ltx:equation", after_close => sub[document, node, whatsit] {
+    if whatsit.is_some_and(|w| w.get_property_bool(NEXT_NUMBER_EQUATION)) && !node.has_attribute("labels") {
+      for tags in node.get_child_elements() {
+        if document::get_node_qname(&tags) == pin!("ltx:tags") {
+          document.remove_node(tags);
+        }
+      }
+    }
+  });
   Tag!("ltx:equation", after_close_late => sub[document, node] {
     if node.get_first_child().is_none() {
       document.remove_node(node.clone());

@@ -599,6 +599,23 @@ pub fn note_raw_refstep(counter: &str, props: &HashMap<Stored>) {
   }
 }
 
+/// The raw step recorded now ([`note_raw_refstep`]) stays recorded after the group it was made in: a package that
+/// makes `\@currentlabel` global after its `\refstepcounter` (algorithm2e.sty:1663 `\gdef\@currentlabel{\theAlgoLine}`,
+/// :1659 with hyperref), so that a `\label` after the group (`\While{c}{\label{x} …}`, the line's number made in the
+/// header's group) still names the step (`\lx@refstep@global`, algorithm2e_sty.rs). Witness 1602.05866
+/// (`algline:mainloop`, PDF 8).
+pub fn globalize_raw_refstep() {
+  if let Some((tags, counter, serial)) = recorded_raw_refstep() {
+    assign_value(
+      RAW_REFSTEP_TAGS,
+      Stored::Digested(tags),
+      Some(Scope::Global),
+    );
+    assign_value(RAW_REFSTEP_COUNTER, counter, Some(Scope::Global));
+    assign_value(RAW_REFSTEP_SERIAL, Stored::Int(serial), Some(Scope::Global));
+  }
+}
+
 /// The raw step current now, as recorded ([`note_raw_refstep`]).
 fn recorded_raw_refstep() -> Option<(crate::Digested, String, i64)> {
   let Some(Stored::Digested(tags)) = lookup_value(RAW_REFSTEP_TAGS) else {

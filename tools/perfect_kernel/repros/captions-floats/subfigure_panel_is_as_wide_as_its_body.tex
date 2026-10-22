@@ -1,0 +1,34 @@
+% witness: 2006.08949 (Figure 2's `\subfigure[]` panels (a)-(d): one row in the PDF, four in 78t r1); cond-mat9707225,
+%          astro-ph0205132, 2012.09475, 1110.0084, hep-ex0004031, 1703.00699 (28 A/B papers with more panel breaks);
+%          0907.1044 (`\subfigure[…]{\label{…} \includegraphics…}` pairs: one row in int58a and the PDF)
+% oracle:  pdflatex 0 errors; Figure 1 one row of four panels, Figure 2 "(a) Left" and "(b) Right" on a row and "(c)
+%          Wide" under them, Table 1 one row (subfigure.sty:232-233 `\setbox\@tempboxa\hbox{#4}\@tempdima=\wd\@tempboxa`:
+%          the panel is its body's width, the sub-caption a `\parbox` of it)
+% engines: rust int58a = 5 breaks (a `\subfigure[text]` panel a row of its own); 78t r1 6; Perl 0.8.8 a row per
+%          captioned panel; a `\label` in a panel's body makes no box (0907.1044: measured by its key's text, a panel
+%          96pt wider than its graphic)
+% expect:  0 errors, 0 warnings; one `ltx:break`, before "(c) Wide"
+% status:  RED (int58a, 78t r1) -> GREEN (78t r2, OXIDIZED_DESIGN_DIVERGENCES #876)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{subfigure}
+\begin{document}
+\begin{figure}
+\subfigure{\rule{1cm}{1cm}}
+\subfigure[]{\rule{1cm}{1cm}}
+\subfigure[Third]{\rule{1cm}{1cm}}
+\subfigure[List][Fourth]{\rule{1cm}{1cm}}
+\caption{Main.}
+\end{figure}
+\begin{figure}
+\subfigure[Left]{\label{fig:left-panel-of-two} \rule{0.45\linewidth}{1cm}}
+\subfigure[Right]{\rule{0.45\linewidth}{1cm}}
+\subfigure[Wide]{\rule{0.8\linewidth}{1cm}}
+\caption{Two.}
+\end{figure}
+\begin{table}
+\caption{Tab.}
+\subtable[A]{\begin{tabular}{c}x\end{tabular}}
+\subtable[B]{\begin{tabular}{c}y\end{tabular}}
+\end{table}
+\end{document}

@@ -13,10 +13,20 @@
       <tag role="refnum">1</tag>
       <tag role="typerefnum">Figure 1</tag>
     </tags>
-    <figure class="ltx_figure_panel" xml:id="S0.F1.fig1">
+    <figure class="ltx_figure_panel" xml:id="S0.F1.sf1">
+      <tags>
+        <tag><text fontsize="80%">(a)</text></tag>
+        <tag role="autoref">1(a)</tag>
+        <tag role="refnum">1(a)</tag>
+      </tags>
       <p>example-a</p>
     </figure>
-    <figure class="ltx_figure_panel" xml:id="S0.F1.fig2">
+    <figure class="ltx_figure_panel" xml:id="S0.F1.sf2">
+      <tags>
+        <tag><text fontsize="80%">(b)</text></tag>
+        <tag role="autoref">1(b)</tag>
+        <tag role="refnum">1(b)</tag>
+      </tags>
       <p>example-b</p>
     </figure>
     <toccaption><tag close=" ">1</tag>caption text</toccaption>

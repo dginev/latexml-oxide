@@ -23723,7 +23723,7 @@ eqnarray_nonumber_row_label_names_next_number, eqnarray_nonumber_holds_until_eqn
 eqnarray_empty_numbered_row_numbers_the_equation_above, eqnarray_cr_row_label_names_next_number,
 eqnarray_nonumber_row_label_names_next_number, eqnarray_nonumber_holds_until_eqncr}`,
 `perfect_kernel_batch65o::eqnarray_number_column` ("(1)", unnumbered "(star)" row, "(2)", as pdflatex). Witnesses also
-0806.3762, 0910.0753, nucl-th9807024.
+0806.3762, 0910.0753, nucl-th9807024. The same reference forms name the stepped number of a labelled amsmath `{equation}` whose `\nonumber` removed it (78t, #875).
 
 ### 848. A class's `\@xnthm` may print a theorem's within-counter its own way
 
@@ -24015,7 +24015,169 @@ where amsmath's local `\let\print@eqnum\@empty` ends with the block (2407.10017 
 same). Repros cross-references/equation_nonumber_without_amsmath_keeps_the_number,
 equation_nonumber_with_amsmath_removes_the_number; guards
 `perfect_kernel_batch78r::{equation_nonumber_without_amsmath_keeps_the_number,
-equation_nonumber_with_amsmath_removes_the_number}`.
+equation_nonumber_with_amsmath_removes_the_number}`. A `\label` in an amsmath `{equation}` with `\nonumber` names the number the equation stepped, and a `\nonumber` after a `\tag` keeps the tag (78t, #875); in the residual's `aligned`/`split` case the label so names pdflatex's number while the equation still prints none.
+
+### 875. A `\label` in an amsmath `{equation}` with `\nonumber` names the number the equation stepped
+
+amsmath's `{equation}` (amsmath.sty:2913-2932) steps the counter at its start (`\incr@eqnum`, `\refstepcounter`, which
+sets `\@currentlabel`); its `\nonumber` (:1269-1275) steps the counter back only while `\if@eqnsw` holds, and the
+display's `\label` is made at its end (`\label@in@display`, `\endmathdisplay@a` :2821-2830), so it names the stepped
+number, the next equation's, which neither equation prints. A `\nonumber` after a `\tag` (or a second one) finds the
+switch off and changes nothing: `\tag{X}\nonumber` prints "(X)". Perl retracts the number and the label names the
+enclosing unit (latex_constructs.pool.ltxml:2025-2057), and a `\nonumber` after `\tag` retracted the tag too. Ours
+(78t, sect07.rs): amsmath's `{equation}` marks its numbering (`AMS_EQUATION`, set by `prepare_latex_equation_counter`
+where amsmath is loaded, OD #865); `\lx@equation@nonumber` there digests the stepped number's reference forms before it
+retracts the number (`eqnarray_next_number_tags`, the eqnarray form of #847: refnum, typerefnum, … and no printed tag),
+and does nothing once the number is gone; the `ltx:equation` drops them when it closes without a label
+(`NEXT_NUMBER_EQUATION`). `{equation*}` and `\[…\]` step nothing: their labels name the enclosing unit as before, which is
+pdflatex's `\@currentlabel` there (the display's group undoes an inner step). A `\nonumber` inside an `aligned`/`split`
+of an `{equation}` reaches the same branch: the label now names the stepped number as pdflatex's does, while the
+equation's own number is still removed (the #865 residual). Witness 1306.2116 (`eq:covariate`, PDF 17, int57a "3.1";
+`.aux` equation numbers 75 → 77 of 77). A cleveref quirk stays: cleveref's `\label` writes its `@cref` entry from the
+counter as it stands at the label (cleveref.sty `\cref@currentlabel`), after `\nonumber` stepped it back, so pdflatex's
+`\cref{e2}` prints "eq. (1)" (`\newlabel{e2@cref}{{[equation][1][]1}…}`) where `\ref` and `\eqref` print 2; ours prints
+"(2)" for both, the number the label names (probe `\begin{equation} b=2 \nonumber\label{e2}\end{equation}` after an
+`{equation}` 1, amsmath + hyperref + cleveref). KNOWN_PERL_ERRORS #1128. Repro
+cross-references/ams_equation_nonumber_label_names_the_stepped_number; guard
+`perfect_kernel_batch78t::ams_equation_nonumber_label_names_the_stepped_number`.
+
+### 876. subfigure's panels are numbered whatever their arguments, with the kernel's caption; subfigure.cfg is read
+
+subfigure.sty:208-262: `\subfigure` (and `\subtable`, its `\let`) always `\refstepcounter{sub\@captype}`; an absent
+optional is `\@empty` and prints no caption, an explicit `[]` prints the "(a)" caption (`\ifx\@empty#3`), and
+`[list][caption]` captions with the second. Perl captions only non-empty text (subfigure.sty.ltxml:138-171
+`\ifx.#2.\ifx.#1.\else\caption{#1}\fi`), so `\subfigure[]{…\label{a}}` and `\subfigure{…\label{a}}` named the figure and
+every later panel was one letter behind (1507.00722: PDF 1(a), 1(b), int57a "1", "1"). The sub-caption is built by
+`\@subcaption`/`\@make<sub>caption` (:279-290; subfig's by `\sf@subcaption`, caption3's `\caption@make`,
+subfig.sty:384-411), never by `\caption`, so a document's `\def\caption#1{\splitter #1@@}` does not read it (1808.10020:
+int57a 48 "Paragraph ended before \splitter" Errors, its repro a Fatal; Perl 55). subfigure.sty:205-208 reads
+subfigure.cfg (TeX Live's: `\ExecuteOptions{tight,TABTOPCAP}`), so a sub-table after its table's `\caption` does not
+step the table counter ahead (1(a), not 2(a)) and is captioned above its tabular. Ours (78t): subfigure_sty.rs's
+`\subfigure`/`\subtable` read their optionals as given (`subfloat_tokens`) — `\lx@caption[list]{caption}`,
+`\lx@caption{caption}`, or the counter's step alone (`\@@add@caption@counters`, as `\phantomcaption`) — through the
+kernel's `\caption` under its own name (`\lx@caption`, sect09.rs), and the binding inputs subfigure.cfg before
+`\ProcessOptions`; subfig_sty.rs's `\subfloat[list][caption]` the same, for the pre-built figure and table types and a
+`\newsubfloat` type's (`define_subfloat`) alike (Perl's `\caption{#1}` printed the list entry).
+subcaption's `\subcaption` keeps `\caption` (subcaption.sty:240-251 `\subcaption@newabbreviation\subcaption\caption`:
+the document's `\caption` is what pdflatex calls too). `.aux` figure numbers: 1507.00722 7 → 8 of 9 (the 9th, a label
+before the main `\caption`, pdflatex's empty `\@currentlabel`), 1808.10020 275 → 379 of 385 (the rest labels after a
+`\subfigure` group, which pdflatex gives the section's number). Reading subfigure.cfg works the other way too, as pdflatex
+does: under its `TABTOPCAP` a sub-table before a bottom `\caption` (and under `FIGTOPCAP` a sub-figure before one) does
+not step ahead either, so it takes the previous float's number, "0(a)" in the first table
+(`\begin{table}\subtable[A]{x\label{a}}\caption{T}\end{table}\ref{a}`: pdflatex and ours "0(a)", Perl "1(a)"; a second
+such table's panels 1(a); 1909.03617's `.aux` 0(a), 0(b); 1506.06418, 2012.09202, 1506.09092; KNOWN_PERL_ERRORS #1127)
+— pdflatex's numbering, not a defect to fix.
+
+A panel's stated width is its body's, never its caption's: subfigure.sty:232-233 measures the body
+(`\setbox\@tempboxa\hbox{#4}\@tempdima=\wd\@tempboxa`) and sets the sub-caption in a `\parbox` of that width, where our
+caption is a paragraph of the column's `\hsize` (`\lx@@caption PBoxContents`), so a captioned panel measured whole took a
+row of its own in `arrange_panels` — `\subfigure[text]` panels always (Perl the same: latex_constructs.pool.ltxml:3286
+measures the panel's box), and with the "(a)" captions above the `[]` panels too (78t r1: 28 of the A/B's 1,607 papers
+gained breaks, 129 → 232 in the panel figures; 2006.08949 Figure 2, one row in the PDF, four; cond-mat9707225,
+astro-ph0205132; 1208.0688's `\subfigure[text]` pairs). `{@subfigure}`/`{@subtable}` record their body's width less its
+`\lx@@caption`/`\@@toccaption`, its `\lx@label`s and all its glue (spaces, `\hskip`, `\hspace`, `\quad`, `\hfill`; kerns
+are kept) — `panel_body_width`, `note_sub_float_body_width` (latex_constructs/mod.rs) — which `panel_width` takes when it
+is above 0: the width the source states, the LaTeX-side width FIDELITY_CHARTER §2 "Float panels" keeps. A `\label` makes
+no box (a `\write`), where the `\lx@label` whatsit is sized by its key's text (0907.1044's `\subfigure[…]{\label{…}
+\includegraphics…}` panels 96pt too wide); with the glue left out a `\label` between spaces counts nothing either
+(2511.21020 Figs 7-8 one row of four, 1607.02761, 2211.12798, 1601.02116; 78t r2 counted both spaces and split them 3+1).
+A body of no known width (0) leaves the panel its box's width, as before the body measure (78t r2 took the 0: such panels
+joined every row and, starting one, left the panel list, so 1610.06413's two-panel figures had no flex row; nlin0606018);
+epsfig's `\psfig` is sized by its keys and its file, Perl's `sizer => \&image_graphicx_sizer` (epsfig.sty.ltxml:37,
+epsfig_sty.rs), so hep-ex0703011's `\mbox` pairs of 2.8in panels are sized, cond-mat9707225's too; an EPS's natural or
+`scale=` size comes out at 72.27/100 of TeX's through that sizer (1106.2745 Figs 1-2, 7, 8, 10; SYNC_STATUS row), and a
+`\psfig` is a `\vbox` (psfig.sty:944) that starts a paragraph, Perl's too (astro-ph0512442 Fig 2). A body holding only a
+caption (a `\captionof{subfigure}` host) keeps the box's width.
+
+The rows are Perl's greedy rule (latex_constructs.pool.ltxml:3287-3295, `arrange_panels`) fed by these widths. 78t r3
+emulated TeX's line breaking for a justified float (`justified_row_is_overfull`: `\sloppy`'s badness with 3em of
+emergency stretch and tex.web §854's overfull line, for subfigure.sty's in-paragraph panels; a `\label`'s
+`\@bsphack…\@esphack` space rule); 78t r5 removed it, as the charter directs (user 2026-10-22: the panels are a logical
+grid derived from what the source states; do not re-run TeX's line breaking against one page geometry, the browser's
+width varies; grid design study 2026-10-22, Q5). The grid rule — explicit breaks (`\\`, a blank line or `\par`,
+`\newline`, a `{center}` boundary, `\vskip`), the stated widths and the stated glue between panels against the line, the
+geometry's `\Gm@tw` — is the next payload, the markup that says rows × columns the one after, on the user's ruling
+(SYNC_STATUS "panel grid rule" and "panel grid markup" rows; RED `captions-floats/par_breaks_a_panel_row` and
+`a_justified_row_keeps_its_overfull_panel`). Until then the rows miss what the tree does not hold: the glue and `\par`
+between sub-figures (our sub-figures are digested in vertical mode until something starts a paragraph: 0706.4410 Figs 3,
+5, an `\hspace{1in}` between two 0.45\textwidth panels, two rows in the PDF, one here; 2207.14807 Fig 9's `}%`; 1110.0084
+Figs 12-16, 27, 29), TeX's overfull and underfull lines (1201.0008 Figs 1-2: the PDF's three in a row, overfull, here
+2+1; hep-ex0703011's `\mbox` pairs), the geometry (1508.01788 Figs 19-22, 1411.5428 Figs 6-7, 2111.05508), a `\\` in
+`{center}` (0912.4528, 1206.5015), the panels a `tabular` held (lifted out of it: 1309.3581, astro-ph0205132) and a
+two-column document's `figure*`, measured against a `\columnwidth` that is our `\textwidth`, as Perl's
+(latex_constructs.pool.ltxml:321: 1707.00190, nucl-ex0511052, 2502.05562, astro-ph0205132; REVTeX 3's 345pt text,
+cond-mat9707225) — SYNC_STATUS rows. Rows per float against the PDF's (pdflatex box dumps) on the grid design study's
+oracle set, 453 multi-panel floats in 108 papers: int61a 300, 78t r3 344, r5 354 (exact shapes 282, 330, 336); the 9
+floats int61a set right and r5 does not are set so by r3 too, where int61a's full-width captions broke the rows by
+accident: the unseen glue and `\par` between panels (0706.4410 Figs 3, 5; 1110.0084 Figs 27, 29), TeX's spaces round and
+between near-half panels, which the stated widths leave out (1601.02116 Figs 7-8, two `0.48\textwidth` graphics with a
+space on each side; 1107.3402 Fig 5; 1511.03368 Fig 3) and a panel of no stated width (1012.1425 Fig 4). Witnesses of the PDF verdicts: 1411.5428 Figs 6-7, 0706.4410 Fig 4, 1508.01788
+Figs 19-22, 1304.1952 Fig 14, 2209.01559 Fig 7. Over the r5 A/B (int61a → r5, 1,888 papers) the sub-float figures' row breaks are 3,813 → 3,144: 471 floats in 192
+papers lose a break, 13 floats in 6 papers gain one — 2401.07345 as its PDF, and the geometry, lifted-`tabular` and
+REVTeX 3 rows above (1309.3581, astro-ph0205132, cond-mat9707225, nucl-ex0511052), and 1408.2843 Fig 1, whose captioned
+panels' graphics are missing, so their bodies have no width and fall back to the captioned box (1503.04804 Fig 3 the
+same against r3, which counted the body's leading space; SYNC_STATUS grid-rule row).
+KNOWN_PERL_ERRORS #1125-#1127, #1130. Repros
+captions-floats/{subfigure_empty_optional_is_a_numbered_panel, subfigure_caption_is_not_the_documents_caption,
+subtable_after_the_caption_is_numbered_by_it, subfig_caption_is_not_the_documents_caption,
+subfigure_panel_is_as_wide_as_its_body, a_label_between_spaces_counts_one, psfig_panels_are_as_wide_as_their_keys}
+(and the RED a_justified_row_keeps_its_overfull_panel, the grid rule's); guards
+`perfect_kernel_batch78t::{subfigure_empty_optional_is_a_numbered_panel, subfigure_caption_is_not_the_documents_caption,
+subtable_after_the_caption_is_numbered_by_it, subfig_caption_is_not_the_documents_caption,
+subfigure_panel_is_as_wide_as_its_body, a_label_between_spaces_counts_one, psfig_panels_are_as_wide_as_their_keys}`.
+
+### 877. A `\label` after an algorithm2e line's number names the line
+
+algorithm2e.sty:1657-1667: `\nl` is `\refstepcounter{AlgoLine}\gdef\@currentlabel{\theAlgoLine}` (with hyperref
+`\stepcounter{AlgoLine}` and `\algocf@nl@sethref{\theAlgoLine}`) then `\algocf@printnl`, so a `\label` after a line's
+number names that line until the next number: in the line, after its `\;` (`stmt\; \label{x}`, the label then at the
+next line's start), or at a block's start (`\While{c}{\label{x} …}`, the `\gdef` outliving the header's group). Perl's
+line carries the printed number alone and the label names the algorithm (algorithm2e.sty.ltxml:180-221). Ours (78t):
+`\algocf@printnl@i` records the line as the object of its number's raw step (`Document::note_raw_refstep_object`,
+marking it `RAW_REFSTEP_MARK`; the kernel's record of a `\refstepcounter` no constructor took, #813), made global as the
+`\gdef` makes `\@currentlabel` (`\lx@refstep@global`, `globalize_raw_refstep`), and forgotten in the next algorithm's
+group, whose `\@algocf@init` steps `algocfline` (algorithm2e.sty:2560-2561: a label at its start names that algorithm,
+2010.00626's `alg:F_cycle`, PDF 2); with hyperref, `\algocf@nl@sethref`
+records that step (`\lx@refstepcounter@label{AlgoLine}`) when the number is `\theAlgoLine` (`\nlset`'s own text records
+none). A label after the step goes to that line wherever it stands (`Document::float_to_label_scoped`; its id is made at
+its close), and the line, which printed the number itself, takes the step's reference forms into its tags
+(`Document::take_raw_refstep_number`); `renumber_algo_lines` renumbers them with the printed number (the over-stepped
+`AlgoLine` counter). Witnesses 2406.05437 (`step1`, `step2`: PDF 14, 17, int57a "1"; `.aux` 37 → 39 of 40), 1602.05866
+(`algline:mainloop`, PDF 8). Residuals: `\nlset{text}` lines take no reference form; a labelled line's id is made at its
+close, out of its listing's order (`algorithm1.1` in `algorithm1.5`); `renumber_algo_lines` restarts each listing at 1
+where a paper continues the count across algorithms (1311.7635: PDF 9-11, ours 2-4; int57a the algorithm's number);
+`\enl` (algorithm2e.sty:1671-1679) steps `AlgoLine` and makes it `\@currentlabel` globally but never calls
+`\algocf@printnl`, so its line is recorded as no step's object and a label after it names the algorithm, as before.
+
+The later `\label` of a key wins. With a line able to take a label, one key labels two elements where a paper repeats it:
+2001.00288's `\label{algo2}` at a block's start (its line) and after `\caption` (the algorithm). LaTeX's last `\newlabel`
+wins (latex.ltx `\@newl@bel`: `\global\@namedef{r@key}`, "Label multiply defined"; pdflatex "Algorithm 2"), while the
+post scan registers in document order, the outer element first, so the inner, earlier one won (Perl Scan.pm:196-203, ours
+scan.rs `register_scanned`; 78t r1 "Algorithm 1", a line). Ours (78t r2): a `\label` placed on its element takes the key
+from the earlier holders that contain it or that it contains (`Document::release_earlier_label_holders`, from the
+`\lx@label` constructor, only for a key placed before). Holders apart from each other keep it: pdflatex's last
+`\newlabel` is the last written, which is the later in the document but for a float LaTeX defers past a later label of
+the key (below), and the scan takes the later already; the streaming build may have spilled the earlier
+(a closed top-level element, never an ancestor of the holder nor, below the root, a descendant), so the streaming and
+eager builds agree (`114_streaming_graphics`: graphrot's two tables labelled `tb:tab3`).
+Perl keeps both, the inner winning (`\caption{Panel}\label{x}` in a subcaption `{subfigure}`, then `\caption{Main}
+\label{x}`: Perl "1(a)", pdflatex 1; KNOWN_PERL_ERRORS #1131). In the 1,608-paper A/B 15 earlier holders in 10 papers
+gave their key up (1908.05655's `fig:rule_example` on five displays inside its figure, then after the figure's
+`\caption`: the figure, as pdflatex), no key left the document, and the `.aux` labels matching pdflatex's last
+`\newlabel` over 144 papers are 6,582 (int58a) → 7,094 (r1) → 7,095 (r2).
+Witnesses 2001.00288 (`.aux` 13 → 14 of 19 matching, int58a's 14), 1611.06737, 1711.00112, 1804.00071, 2010.05861,
+2209.06323, 2511.10625, astro-ph0512093. Residual:
+algorithm2e sets a caption's text in a box it places at the style's caption position (`\global\sbox\algocf@capbox`,
+algorithm2e.sty:2305-2336: the bottom for `plain`/`boxed`, the top for the ruled family), and a `\label` in it is written
+there, so in 2511.10625's `plain` algorithm the caption-text `\label{alg:general_astar}` is written after the same key's
+`\label` after the last line and names the algorithm (pdflatex 1, ours the line, 13, as 78t r1; int58a 1). And a float
+LaTeX defers writes its `\newlabel` when it is placed, after a later label of the same key, and wins in pdflatex:
+`\begin{figure}[p]\caption{Deferred}\label{k}\end{figure}\section{Two}\label{k}See \ref{k}.` — pdflatex "See 1." (the
+figure, written on page 2), ours and int58a "See 2." (review rev78t2's lb2; SYNC_STATUS row).
+
+KNOWN_PERL_ERRORS #1129, #1131. Repros listings-algorithms/algorithm2e_line_label_names_the_line,
+cross-references/the_later_label_wins; guards `perfect_kernel_batch78t::{algorithm2e_line_label_names_the_line,
+the_later_label_wins}`.
 
 ### 880. `classify_thanks` reads its funding words as words
 

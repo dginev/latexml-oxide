@@ -210,8 +210,9 @@ fn renumber_algo_lines(document: &mut Document) {
       document.remove_node(stale.clone());
     }
   }
-  // Collect the numeric number-tag nodes in document order.
-  let mut numeric_tags: Vec<Node> = Vec::new();
+  // Collect the numeric number-tag nodes in document order: the printed (role-less) ones, each with the reference forms
+  // its line took from its step (`\algocf@printnl@i`), which name the same number.
+  let mut numeric_tags: Vec<(Node, Vec<Node>)> = Vec::new();
   for line in listing.get_child_elements() {
     if document::get_node_qname(&line) != pin!("ltx:listingline") {
       continue;
@@ -220,11 +221,14 @@ fn renumber_algo_lines(document: &mut Document) {
       if document::get_node_qname(&tags) != pin!("ltx:tags") {
         continue;
       }
-      for tag in tags.get_child_elements() {
-        if document::get_node_qname(&tag) == pin!("ltx:tag")
-          && tag.get_content().trim().parse::<i64>().is_ok()
-        {
-          numeric_tags.push(tag);
+      let (printed, forms): (Vec<Node>, Vec<Node>) = tags
+        .get_child_elements()
+        .into_iter()
+        .filter(|tag| document::get_node_qname(tag) == pin!("ltx:tag"))
+        .partition(|tag| !tag.has_attribute("role"));
+      for tag in printed {
+        if tag.get_content().trim().parse::<i64>().is_ok() {
+          numeric_tags.push((tag, forms.clone()));
         }
       }
     }
@@ -233,12 +237,51 @@ fn renumber_algo_lines(document: &mut Document) {
   let already_sequential = numeric_tags
     .iter()
     .enumerate()
-    .all(|(i, t)| t.get_content().trim() == (i + 1).to_string());
+    .all(|(i, (t, _))| t.get_content().trim() == (i + 1).to_string());
   if already_sequential {
     return;
   }
-  for (i, tag) in numeric_tags.into_iter().enumerate() {
-    set_number_tag_text(&tag, &(i + 1).to_string());
+  for (i, (tag, forms)) in numeric_tags.into_iter().enumerate() {
+    let old = tag.get_content().trim().to_string();
+    let new = (i + 1).to_string();
+    set_number_tag_text(&tag, &new);
+    // A reference form prints the line's number as the line does (`\theAlgoLine`), so it is renumbered with it.
+    for form in forms {
+      replace_number_in_form(&form, &old, &new);
+    }
+  }
+}
+
+/// The number `old` a line's reference form (`<ltx:tag role="refnum">3</ltx:tag>`, a cleveref form's "line 3") prints,
+/// as the form's last word, made `new` ([`renumber_algo_lines`]).
+fn replace_number_in_form(form: &Node, old: &str, new: &str) {
+  // (the form's last text, past any empty element after it: autoref's "line 3" ends in an empty `ltx:text`)
+  fn last_text(node: &Node) -> Option<Node> {
+    let mut child = node.get_last_child();
+    while let Some(current) = child {
+      match current.get_type() {
+        Some(NodeType::TextNode) if !current.get_content().trim().is_empty() => {
+          return Some(current);
+        },
+        Some(NodeType::ElementNode) => {
+          if let Some(text) = last_text(&current) {
+            return Some(text);
+          }
+        },
+        _ => {},
+      }
+      child = current.get_prev_sibling();
+    }
+    None
+  }
+  let Some(mut target) = last_text(form) else {
+    return;
+  };
+  let text = target.get_content();
+  if let Some(head) = text.strip_suffix(old)
+    && (head.is_empty() || head.ends_with(|c: char| c.is_whitespace() || c == '\u{a0}'))
+  {
+    let _ = target.set_content(&format!("{head}{new}"));
   }
 }
 
@@ -360,6 +403,11 @@ LoadDefinitions!({
           Let!("\\\\", "\\lx@algo@cr");
           // {procedure}/{function}: their own caption (see `\lx@algocf@proccaption`).
           $( DigestIf!(T_CS!($setup))?; )?
+          // algorithm2e.sty:2560-2561 `\@algocf@init`'s `\refstepcounter{algocfline}` makes `\@currentlabel` the
+          // algorithm's in its group, so a `\label` before the first line's number does not name the previous
+          // algorithm's last line, whose `\gdef\@currentlabel` is global (`\lx@refstep@global`): it names the
+          // algorithm, as before (2010.00626's `alg:F_cycle`, PDF 2).
+          forget_raw_refstep();
         },
         // A floating algorithm starts at the body size (`\@floatboxreset`, `reset_float_box`);
         // `[H]` exactly is a minipage (algorithm2e.sty:2661-2666, :2689 `\equal{#1}{H}`) and resets nothing.
@@ -976,8 +1024,17 @@ LoadDefinitions!({
   // instead — we chose content-start timing, so we restore the real-sty wrap.)
   // Matches the pdflatex golden. Guard: `cluster_algorithm2e_uniform_line_number_font`.
   // Split into a macro (wraps `\NlSty` before digestion) feeding the constructor.
-  DefMacro!("\\algocf@printnl{}", "\\algocf@printnl@i{\\NlSty{#1}}");
-  DefConstructor!("\\algocf@printnl@i{}", sub[document, args] {
+  // (`\lx@refstep@global`: `\nl`'s `\gdef\@currentlabel{\theAlgoLine}`, algorithm2e.sty:1663, :1659, keeps the
+  // line's step for a label after the line's group, `\While{c}{\label{x} …}`; 1602.05866)
+  DefMacro!("\\algocf@printnl{}", "\\lx@refstep@global\\algocf@printnl@i{\\NlSty{#1}}");
+  // The line is the object `\nl`'s step numbers (`\refstepcounter{AlgoLine}\gdef\@currentlabel{\theAlgoLine}`,
+  // algorithm2e.sty:1662-1667): it is recorded as the step's (`Document::note_raw_refstep_object`), so that a `\label`
+  // after the number — in the line, or after its `\;` and at the start of a block until the next number — names the
+  // line and gives it the step's reference forms (`Document::take_raw_refstep_number`), as `\ref` prints
+  // `\theAlgoLine` in pdflatex. Perl's line has no refnum, and the label named the algorithm (2406.05437's `step1`: PDF
+  // 14, ours 1; KNOWN_PERL_ERRORS #1129, OXIDIZED_DESIGN_DIVERGENCES #877). Guard
+  // `perfect_kernel_batch78t::algorithm2e_line_label_names_the_line`.
+  DefConstructor!("\\algocf@printnl@i{}", sub[document, args, props] {
     // A line behind a list item takes no number: `\@item` empties `\everypar`, so pdflatex numbers no line there,
     // and floating the tags out landed them on the item (2001.00288, 1804.09120).
     if !matches!(line_reach(document), LineReach::Line) {
@@ -1002,8 +1059,23 @@ LoadDefinitions!({
     for child in saved.iter_mut() {
       line.add_child(child)?;
     }
+    if let Some(Stored::Int(serial)) = props.get("raw_refstep_serial") {
+      document.note_raw_refstep_object(*serial, &line);
+    }
     if let Some(sn) = savenode { document.set_node(&sn); }
+  },
+  properties => {
+    match current_raw_refstep() {
+      Some(step) => stored_map!("raw_refstep_serial" => Stored::Int(step.serial)),
+      None => stored_map!(),
+    }
   });
+  // With hyperref, `\nl` and `\enl` step `AlgoLine` with `\stepcounter` and make `\@currentlabel` the number in
+  // `\algocf@nl@sethref` (algorithm2e.sty:1657-1660, :1665, :1676): that is the step `\refstepcounter` records
+  // (`\lx@refstepcounter@label`), when the number is `\theAlgoLine` (not `\nlset`'s own text).
+  RawTeX!(r"\@ifundefined{algocf@nl@sethref}{}{\let\lx@algocf@nl@sethref\algocf@nl@sethref
+\def\algocf@nl@sethref#1{\lx@algocf@nl@sethref{#1}\def\lx@algocf@tempa{#1}\def\lx@algocf@tempb{\theAlgoLine}%
+\ifx\lx@algocf@tempa\lx@algocf@tempb\lx@refstepcounter@label{AlgoLine}\fi}}");
 
   // A list ends its paragraph (latex.ltx `\@endparenv`), so the text after it is a new algorithm2e line; inside the
   // list the line sat behind its barrier, where its `\par`s only broke lines (`line_reach`; 1709.07249, 2203.03384).

@@ -186,13 +186,22 @@ LoadDefinitions!({
   DefMacro!("\\p@subfigure", "\\thefigure");
   DefMacro!("\\p@subtable", "\\thetable");
 
+  // The sub-caption is the kernel's (`\lx@caption`), not the document's `\caption`: subfig.sty:384-411 builds it with
+  // `\sf@subcaption` (caption3's `\caption@make`), so a document's `\def\caption` does not reach it (the 1808.10020
+  // mechanism; KNOWN_PERL_ERRORS #1126). `[list][caption]` captions with the second (subfig.sty:350-353 `\sf@@subfloat`,
+  // the list entry the first); Perl's `\caption{#1}` printed the list entry (subfig.sty.ltxml:47; KNOWN_PERL_ERRORS #1130,
+  // OXIDIZED_DESIGN_DIVERGENCES #876). Guard
+  // `perfect_kernel_batch78t::subfig_caption_is_not_the_documents_caption`.
   // \lx@subfloat@figure — Perl L45-60. Perl's afterDigest on the inner
   // environment copies the final subfigure counter into subfigure@save so
   // \ContinuedFloat can restore it. Rust embeds `\setcounter{subfigure@save}
   // {\value{subfigure}}` at the end of the expansion; runs at the same
   // moment (after caption digests, so sub counter is final).
-  DefMacro!("\\lx@subfloat@figure[][]{}",
-    "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@figure}#3\\caption{#1}\\end{lx@subfloat@@figure}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi\\setcounter{subfigure@save}{\\value{subfigure}}");
+  DefMacro!("\\lx@subfloat@figure[][]{}", sub[(list, caption, body)] {
+    Ok(subfloat_tokens("\\lx@subfloat@figure@", list, caption, body))
+  });
+  DefMacro!("\\lx@subfloat@figure@{}{}",
+    "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@figure}#2#1\\end{lx@subfloat@@figure}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi\\setcounter{subfigure@save}{\\value{subfigure}}");
   DefMacro!("\\lx@subfloat@figure@phantom{}",
     "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@figure}#1\\phantomcaption\\end{lx@subfloat@@figure}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi\\setcounter{subfigure@save}{\\value{subfigure}}");
   // Perl L58-60: beforeDigest=>{beforeFloat('subfigure')}, afterDigest=>
@@ -209,8 +218,11 @@ LoadDefinitions!({
   );
 
   // \lx@subfloat@table — Perl L45-60 (table variant)
-  DefMacro!("\\lx@subfloat@table[][]{}",
-    "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@table}#3\\caption{#1}\\end{lx@subfloat@@table}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi\\setcounter{subtable@save}{\\value{subtable}}");
+  DefMacro!("\\lx@subfloat@table[][]{}", sub[(list, caption, body)] {
+    Ok(subfloat_tokens("\\lx@subfloat@table@", list, caption, body))
+  });
+  DefMacro!("\\lx@subfloat@table@{}{}",
+    "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@table}#2#1\\end{lx@subfloat@@table}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi\\setcounter{subtable@save}{\\value{subtable}}");
   DefMacro!("\\lx@subfloat@table@phantom{}",
     "\\iflx@donecaption\\else\\refstepcounter@noreset{\\@captype}\\fi\\begin{lx@subfloat@@table}#1\\phantomcaption\\end{lx@subfloat@@table}\\iflx@donecaption\\else\\addtocounter{\\@captype}{\\m@ne}\\fi\\setcounter{subtable@save}{\\value{subtable}}");
   DefEnvironment!("{lx@subfloat@@table}",
@@ -272,10 +284,27 @@ fn define_subfloat(name: &str) -> Result<()> {
   let unstep = s!(
     r"\iflx@donecaption\else\addtocounter{{\@captype}}{{\m@ne}}\fi\setcounter{{{sub}@save}}{{\value{{{sub}}}}}"
   );
+  // The kernel caption with the arguments as read, as the pre-built figure and table ones (`subfloat_tokens`;
+  // 2411.16612's `\newsubfloat` types, OXIDIZED_DESIGN_DIVERGENCES #876).
+  let builder = s!("\\lx@subfloat@{name}@");
+  let cs = T_CS!(s!("\\lx@subfloat@{name}"));
+  def_macro(
+    cs,
+    parse_parameters("[][]{}", &cs, true)?,
+    Some(ExpansionBody::Closure(Rc::new(
+      move |args: Vec<ArgWrap>| {
+        let mut args = args.into_iter().map(ArgWrap::owned_tokens);
+        let (list, caption) = (args.next().flatten(), args.next().flatten());
+        let body = args.next().flatten().unwrap_or_default();
+        Ok(subfloat_tokens(&builder, list, caption, body))
+      },
+    ))),
+    None,
+  )?;
   define(
-    s!("\\lx@subfloat@{name}"),
-    "[][]{}",
-    s!(r"{step}\begin{{lx@subfloat@@{name}}}#3\caption{{#1}}\end{{lx@subfloat@@{name}}}{unstep}"),
+    s!("\\lx@subfloat@{name}@"),
+    "{}{}",
+    s!(r"{step}\begin{{lx@subfloat@@{name}}}#2#1\end{{lx@subfloat@@{name}}}{unstep}"),
   )?;
   define(
     s!("\\lx@subfloat@{name}@phantom"),
@@ -307,4 +336,33 @@ fn define_subfloat(name: &str) -> Result<()> {
       Ok(Vec::new())
     }))
     .install()
+}
+
+/// `<builder>{<caption>}{<body>}` for subfig's `\subfloat[list][caption]{body}` as read (subfig.sty:350-353): the
+/// kernel caption `\lx@caption[list]{caption}` with both, `\lx@caption{list}` with one (`\sf@subfloat` sends only a
+/// `\subfloat` with an optional here).
+fn subfloat_tokens(
+  builder: &str,
+  list: Option<Tokens>,
+  caption: Option<Tokens>,
+  body: Tokens,
+) -> Tokens {
+  let mut tokens = vec![T_CS!(builder), T_BEGIN!(), T_CS!("\\lx@caption")];
+  let list = list.unwrap_or_default();
+  match caption {
+    Some(caption) => {
+      tokens.push(T_OTHER!("["));
+      tokens.extend(list.unlist());
+      tokens.extend([T_OTHER!("]"), T_BEGIN!()]);
+      tokens.extend(caption.unlist());
+    },
+    None => {
+      tokens.push(T_BEGIN!());
+      tokens.extend(list.unlist());
+    },
+  }
+  tokens.extend([T_END!(), T_END!(), T_BEGIN!()]);
+  tokens.extend(body.unlist());
+  tokens.push(T_END!());
+  Tokens::new(tokens)
 }
