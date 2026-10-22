@@ -43,7 +43,17 @@ fn calc_assign(variable: ArgWrap, expression: Tokens, kind: &str) -> Result<()> 
   if let ArgWrap::RegisterDefinition(dbox) = variable {
     let (rtoken, params) = *dbox;
     if let Some(defn) = rtoken.to_register() {
+      let stated = expression.clone();
       let (value, tail) = evaluate(kind, expression)?;
+      // What a length's assignment states, for a float's width read through the register (the panel grid rule,
+      // `note_setlength`).
+      if kind != "Number" && params.is_empty() {
+        engine::latex_constructs::note_setlength(
+          &defn.get_cs_name(),
+          &stated,
+          value.clone().value_of(),
+        );
+      }
       defn.set_value(value, None, params);
       unread_vec(tail);
     }

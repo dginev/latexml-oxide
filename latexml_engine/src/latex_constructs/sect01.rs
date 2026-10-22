@@ -814,7 +814,10 @@ pub(crate) fn load() -> Result<()> {
         let tag = document::get_node_qname(&context);
         let capture_block = pin!("ltx:_CaptureBlock_");
         if tag == capture_block {
-          // skip, if in insertBlock
+          // skip, if in insertBlock — except between a float's panels in a `{center}`, where it ends their row (the
+          // panel grid rule, `note_panel_separator`; 0912.4528 Fig 4, 1206.5015 Fig 3): `\@centercr`, whose `\par`
+          // ends the paragraph (`cr`)
+          note_panel_separator(document, "cr", None)?;
         } else if tag == pin!("ltx:p") {
           // Close <p> if parent is _CaptureBlock_
           if let Some(parent) = context.get_parent() {
@@ -836,7 +839,11 @@ pub(crate) fn load() -> Result<()> {
   );
   Let!("\\\\", "\\lx@newline");
 
-  DefConstructor!("\\newline", "?#isMath(<ltx:XMHint name='newline'/>)(<ltx:break/>)",
+  // latex.ltx:9256 `\DeclareRobustCommand\newline{\@normalcr\relax}`: `\newline` stays the justified break where
+  // `\centering`, `\raggedright` and `{center}` let `\\` to `\@centercr`, so an `\hspace` after it is a line's start,
+  // discarded at the break, never a paragraph's (the panel grid rule's `arrange_panels`, `PANEL_NORMALCR`; review
+  // rev78x4 finding 1: n3 F4, n7 F1). The internal attribute is gone from the markup at the document's end.
+  DefConstructor!("\\newline", "?#isMath(<ltx:XMHint name='newline'/>)(<ltx:break _normalcr='1'/>)",
     reversion  => Tokens!(T_CS!("\\newline"), T_CR!()),
     properties => { Ok(stored_map!("isBreak" => true)) },
   );

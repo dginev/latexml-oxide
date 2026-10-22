@@ -1,0 +1,15 @@
+% witness: review rev78x finding 11 (a float's begin let `\linebreak` and `\vspace` over any redefinition)
+% oracle:  pdflatex 0 errors, 0 overfull; "A[V]B[H]C"
+% engines: rust int67a = "A[V]B[H]C"; 78x r1 = the `\vspace` the panel rule's (no "[V]"); Perl 0.8.8 "A[V]B[H]C"
+% expect:  0 errors, 0 warnings; the paragraph "A[V]B[H]C"
+% status:  RED (78x r1) -> GREEN (78x r2, OXIDIZED_DESIGN_DIVERGENCES #885: let only while the kernel's meaning)
+% preload: ar5iv.sty
+\documentclass{article}
+\renewcommand{\vspace}[1]{[V]}
+\renewcommand{\hspace}[1]{[H]}
+\begin{document}
+\begin{figure}
+A\vspace{1em}B\hspace{1em}C
+\caption{Spacing.}
+\end{figure}
+\end{document}

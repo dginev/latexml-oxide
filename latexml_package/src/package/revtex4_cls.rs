@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{engine::latex_constructs::is_document_class, prelude::*};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -131,6 +131,30 @@ LoadDefinitions!({
   assign_value("revtex_cite_style", pin("numbers"), Some(Scope::Global));
   ProcessOptions!();
   LoadClass!("article");
+  // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`): REVTeX's, as
+  // pdflatex gives it — 510pt in two 246pt columns under `twocolumn` (and revtex4-2's `reprint`; REVTeX 4.0 has no
+  // such option), one column of 510pt otherwise; `preprint` (`manuscript`) sets 468pt, in two 229pt columns where
+  // `twocolumn` or a `reprint` given before it sets two (`[preprint,twocolumn]`; review rev78x2 finding 4), a later
+  // `reprint` undoing it — the options as given, the last standing; `\onecolumngrid`/`\twocolumngrid` regions follow
+  // (revtex4_support_sty.rs). Witnesses 1702.02527, 2504.07193 (one column), 2308.02289 (absolute widths against the
+  // 246pt column), 2504.20901, 2504.06175 (`\onecolumngrid` regions).
+  {
+    let reprint: &[&str] = if is_document_class("revtex4") { &[] } else { &["reprint"] };
+    let preprint = matches!(
+      last_class_option(&[&["preprint", "manuscript"], reprint].concat()),
+      Some("preprint" | "manuscript")
+    );
+    let twocolumn = matches!(
+      last_class_option(&[&["twocolumn", "onecolumn"], reprint].concat()),
+      Some("twocolumn" | "reprint")
+    );
+    let (column, text) = if preprint { (229.0, 468.0) } else { (246.0, 510.0) };
+    declare_panel_page(column, text, twocolumn);
+  }
+  // REVTeX's floats are centred (revtex4-2.cls:6770-6772, revtex4.cls:5355-5357
+  // `\appdef\@xfloat@prep{\appdef\@parboxrestore{\centering}}`): a `\\` in them is `\@centercr`
+  // (`declare_panel_floats_centred`).
+  declare_panel_floats_centred();
   // Queue the citation style onto natbib rather than pre-loading natbib here.
   // `numbers` gives the numeric `[N]` refnum + square/comma inline; `author-year`
   // leaves natbib's own author-year (round/semicolon) default. `\PassOptionsToPackage`

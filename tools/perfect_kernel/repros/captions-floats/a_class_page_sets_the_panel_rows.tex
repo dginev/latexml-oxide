@@ -1,0 +1,33 @@
+% witness: 2308.02289, 1104.5578, 2005.13806 (REVTeX two-column: absolute widths against the real 246pt column and
+%          510pt text, where the binding keeps the kernel's 345pt line); review rev78x §3 (the per-class rows geometry)
+% oracle:  pdflatex 0 errors, 0 overfull (\columnwidth 246pt, \textwidth 510pt); Figure 1 2+1, Figure 2 one row of three
+% engines: rust int67a = Figure 1 one row, Figure 2 2+1 (every width against Perl's 345pt `\hsize`); 78x r1 = one row
+%          each (the 345pt line taken as the column, twice it and `\columnsep` as the text); Perl 0.8.8 as int67a
+% expect:  0 errors, 0 warnings; one `ltx:break` in Figure 1, none in Figure 2
+% status:  RED (78x r1) -> GREEN (78x r2, OXIDIZED_DESIGN_DIVERGENCES #885: the class binding declares its page,
+%          `declare_panel_page`)
+% preload: ar5iv.sty
+\documentclass[aps,prl,twocolumn]{revtex4-2}
+\usepackage{graphicx}
+\begin{document}
+\title{T}
+\author{A}
+\begin{abstract}An abstract.\end{abstract}
+\maketitle
+\section{One}
+Text in the first column.
+\begin{figure}
+\centering
+\includegraphics[width=1.5in]{example-image}
+\includegraphics[width=1.5in]{example-image}
+\includegraphics[width=1.5in]{example-image}
+\caption{Three panels in a column.}
+\end{figure}
+\begin{figure*}
+\centering
+\includegraphics[width=2.2in]{example-image}
+\includegraphics[width=2.2in]{example-image}
+\includegraphics[width=2.2in]{example-image}
+\caption{Three panels across the page.}
+\end{figure*}
+\end{document}

@@ -119,6 +119,19 @@ LoadDefinitions!({
   assign_value("revtex_cite_style", pin("numbers"), Some(Scope::Global));
   ProcessOptions!();
   LoadClass!("article");
+  // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`), as revtex4_cls.rs:
+  // 510pt in two 246pt columns under `twocolumn` or `reprint`, one column of 510pt otherwise; `preprint` sets 468pt,
+  // in two 229pt columns where `twocolumn` or a `reprint` given before it sets two (review rev78x2 finding 4).
+  // Witnesses 2005.13806 (`reprint`), 1104.5578 (`twocolumn`).
+  {
+    let preprint = matches!(last_class_option(&["preprint", "manuscript", "reprint"]), Some("preprint" | "manuscript"));
+    let twocolumn = matches!(last_class_option(&["twocolumn", "onecolumn", "reprint"]), Some("twocolumn" | "reprint"));
+    let (column, text) = if preprint { (229.0, 468.0) } else { (246.0, 510.0) };
+    declare_panel_page(column, text, twocolumn);
+  }
+  // REVTeX's floats are centred (revtex4-1.cls:6749-6751 `\appdef\@xfloat@prep{\appdef\@parboxrestore{\centering}}`):
+  // a `\\` in them is `\@centercr` (`declare_panel_floats_centred`).
+  declare_panel_floats_centred();
   // Queue the citation style onto natbib (numbers → numeric `[N]`; author-year →
   // natbib's default). `\PassOptionsToPackage` on purpose, not a direct
   // `RequirePackage("natbib", [numbers])`: pre-loading natbib here flips it ahead

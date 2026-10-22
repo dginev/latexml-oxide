@@ -1,0 +1,27 @@
+% witness: 1703.09474 Fig 13, 2503.09651 Fig 1 (`width=0.23\linewidth,height=0.23\linewidth` ×4 in a two-column
+%          `figure*`); review rev78x finding 1 (a `\resizebox` whose body states `width=\textwidth`)
+% oracle:  pdflatex 0 errors, 0 overfull; Figure 1 one row of four, Figure 2 one row of two
+% engines: rust int67a = one row each; 78x r1 = 2+2 and 1+1 (every register read while its arguments were read
+%          counted towards the width: the height key, the box's body); Perl 0.8.8 one row each
+% expect:  0 errors, 0 warnings; no `ltx:break` in either float
+% status:  RED (78x r1) -> GREEN (78x r2, OXIDIZED_DESIGN_DIVERGENCES #885: a construct's stated width is the argument
+%          or key its binding declares, `declare_panel_width`)
+% preload: ar5iv.sty
+\documentclass[twocolumn]{article}
+\usepackage{graphicx}
+\begin{document}
+\begin{figure*}
+\centering
+\includegraphics[width=0.23\linewidth,height=0.23\linewidth]{example-image}
+\includegraphics[width=0.23\linewidth,height=0.23\linewidth]{example-image}
+\includegraphics[width=0.23\linewidth,height=0.23\linewidth]{example-image}
+\includegraphics[width=0.23\linewidth,height=0.23\linewidth]{example-image}
+\caption{Widths and heights.}
+\end{figure*}
+\begin{figure*}
+\centering
+\resizebox{0.45\textwidth}{!}{\includegraphics[width=\textwidth]{example-image}}
+\resizebox{0.45\textwidth}{!}{\includegraphics[width=\textwidth]{example-image}}
+\caption{Resized boxes.}
+\end{figure*}
+\end{document}

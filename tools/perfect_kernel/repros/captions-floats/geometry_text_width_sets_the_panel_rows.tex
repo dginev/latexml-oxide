@@ -1,0 +1,26 @@
+% witness: 1508.01788 Figs 19-22, 1411.5428 Figs 6-7, 2111.05508 (the geometry's text width); 1007.5406 (a4wide)
+% oracle:  pdflatex 0 errors (\textwidth 469.75pt); Figure 1 three panels then one, Figure 2 one row
+% engines: rust int65a = Figure 1 one row (`0.3\textwidth` at Perl's 345pt against the geometry's 469.75pt line);
+%          Perl 0.8.8 Figure 1 one row, Figure 2 two rows (geometry.sty.ltxml makes every key a no-op)
+% expect:  0 errors, 0 warnings; one `ltx:break`, before Figure 1's fourth panel
+% status:  RED (int65a) -> GREEN (78x, OXIDIZED_DESIGN_DIVERGENCES #885: the stated widths at the geometry's width)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[letterpaper,margin=1in]{geometry}
+\usepackage{graphicx}
+\begin{document}
+\begin{figure}
+\centering
+\rule{0.3\textwidth}{1cm}
+\rule{0.3\textwidth}{1cm}
+\rule{0.3\textwidth}{1cm}
+\rule{0.3\textwidth}{1cm}
+\caption{Four panels of three tenths.}
+\end{figure}
+\begin{figure}
+\centering
+\includegraphics[width=3in]{example-image}
+\includegraphics[width=3in]{example-image}
+\caption{Two panels of three inches.}
+\end{figure}
+\end{document}

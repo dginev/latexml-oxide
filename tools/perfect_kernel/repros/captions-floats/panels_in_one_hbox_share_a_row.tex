@@ -1,0 +1,17 @@
+% witness: cond-mat0610021 Fig 11 (two `width=200pt` graphics in one subfigure.sty `\subfigure`, whose body is one
+%          `\hbox`, subfigure.sty:232)
+% oracle:  pdflatex 0 errors, 1 overfull `\hbox` (55pt): one row of two
+% engines: rust int67a = two rows; 78x r1 the same; Perl 0.8.8 two rows
+% expect:  0 errors, 0 warnings; no `ltx:break` in the sub-figure
+% status:  RED (int67a) -> GREEN (78x r2, OXIDIZED_DESIGN_DIVERGENCES #885: a sub-float's `\hbox` body is one row)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\begin{document}
+\begin{figure}
+\centering
+\subfigure[Two in one]{\includegraphics[width=200pt]{example-image}\includegraphics[width=200pt]{example-image}}
+\caption{One sub-figure, one box.}
+\end{figure}
+\end{document}

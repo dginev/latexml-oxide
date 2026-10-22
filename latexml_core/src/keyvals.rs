@@ -52,6 +52,9 @@ pub struct KeyVals {
   cached_pairs:         Vec<(String, ArgWrap)>,
   cached_hash:          HashMap<String, Vec<ArgWrap>>,
   cached_hash_digested: HashMap<String, Vec<Digested>>,
+  /// The tokens each typed length value states (`width=0.48\textwidth`), in the order given, kept under
+  /// `parameter::KEEP_STATED_LENGTHS` ([`Self::stated_entry`]).
+  stated:               Vec<(String, Tokens)>,
 }
 
 impl Default for KeyVals {
@@ -69,6 +72,7 @@ impl Default for KeyVals {
       cached_pairs:         Vec::new(),
       cached_hash:          HashMap::default(),
       cached_hash_digested: HashMap::default(),
+      stated:               Vec::new(),
     }
   }
 }
@@ -407,6 +411,18 @@ impl KeyVals {
   // Public accessors of all the values
   //======================================================================
   // Note: The API of this need to be stable, as people may be using it
+
+  /// The tokens the last of `keys` given states as its length value (`width=0.48\textwidth`), where they were kept
+  /// (`parameter::KEEP_STATED_LENGTHS`), with the key that stated them (`width`, `totalheight`; the value they gave is
+  /// [`Self::get_value`]'s): a key given again replaces its value.
+  pub fn stated_entry(&self, keys: &[&str]) -> Option<(&str, &Tokens)> {
+    self
+      .stated
+      .iter()
+      .rev()
+      .find(|(key, _)| keys.contains(&key.as_str()))
+      .map(|(key, tokens)| (key.as_str(), tokens))
+  }
 
   /// return the value of a given key. If multiple values are given, return the last one.
   pub fn get_value(&self, key: &str) -> Option<&ArgWrap> {
@@ -1099,6 +1115,8 @@ impl KeyVals {
       None,
     );
 
+    // the typed lengths' stated tokens kept (`stated_entry`)
+    let mut stated: Vec<(String, Tokens)> = Vec::new();
     let punct_tks = Tokens!(T_OTHER!(","));
     let until_tks = Tokens!(until);
     // iterate over all the key-value pairs to read
@@ -1175,6 +1193,12 @@ impl KeyVals {
             let stripped_toks = self.replace_pointers(keyset, raw_toks)?;
             if !stripped_toks.is_empty() {
               if let Some(Stored::Parameter(ref keytype)) = keytype_opt {
+                // a length's tokens as stated, where they are kept (`stated_entry`)
+                if (keytype.name == crate::pin!("Dimension") || keytype.name == crate::pin!("Glue"))
+                  && state::lookup_bool(crate::parameter::KEEP_STATED_LENGTHS)
+                {
+                  stated.push((key.to_string(), stripped_toks.clone()));
+                }
                 value = keytype.reparse(stripped_toks)?;
               } else {
                 value = ArgWrap::Tokens(stripped_toks);
@@ -1235,6 +1259,7 @@ impl KeyVals {
       }
     }
 
+    self.stated.extend(stated);
     // rebuild and return nothing
     self.rebuild(None);
 

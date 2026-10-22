@@ -161,6 +161,46 @@ LoadDefinitions!({
 
   // Load article as base
   LoadClass!("article");
+  // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`): IEEEtran.cls's
+  // (:1734-1811), as pdflatex gives it — 516pt (43pc) in two 252pt columns (`\columnsep` 1pc); compsoc's 7in + 12bp,
+  // 517.935pt in two of 252.945pt (12bp apart), and with `conference` the paper less 1.5in (`\IEEEsettextwidth{0.75in}
+  // {0.75in}`: 505.89pt on letter paper, in two of 243.911pt 0.25in apart); under a draft option the paper less 2in
+  // (469.755pt on letter, 452.968pt on A4, 460.721pt on cspaper less 1.5in), its columns the mode's `\columnsep` apart —
+  // set in one column under `onecolumn`/`peerreview`, whose `\if@twocolumn` this binding keeps true (below). The class's
+  // `\ProcessOptions` (:376) runs the options in their declaration order. Witnesses 2211.03584, 1604.07648, 1404.3152,
+  // 1809.02562, 2103.06618 (`onecolumn`), 1010.0060 (`conference`, absolute widths against the 252pt column); review
+  // rev78x2 finding 4 (`[conference,compsoc]`, `draftcls` with `a4paper`).
+  {
+    let paper = match last_declared_class_option(&["letterpaper", "a4paper", "cspaper"]) {
+      Some("a4paper") => 597.50787,
+      Some("cspaper") => 569.12625,
+      _ => 614.295,
+    };
+    let draft = matches!(
+      last_declared_class_option(&["draft", "draftcls", "draftclsnofoot", "final"]),
+      Some("draft" | "draftcls" | "draftclsnofoot")
+    );
+    let compsoc = last_declared_class_option(&["comsoc", "compsoc", "transmag"]) == Some("compsoc");
+    let mode = last_declared_class_option(&["journal", "conference", "technote", "peerreview", "peerreviewca"]);
+    let conference = mode == Some("conference");
+    let columnsep = match (compsoc, conference) {
+      (true, true) => 18.0675,
+      (true, false) => 12.045,
+      _ => 12.0,
+    };
+    let text = if draft {
+      paper - 144.54
+    } else if compsoc && conference {
+      paper - 108.405
+    } else if compsoc {
+      517.935
+    } else {
+      516.0
+    };
+    let one_column = last_declared_class_option(&["onecolumn", "twocolumn"]) == Some("onecolumn")
+      || matches!(mode, Some("peerreview" | "peerreviewca"));
+    declare_panel_page((text - columnsep) / 2.0, text, !one_column);
+  }
 
   // `\@ptsize` as the size options set it (IEEEtran.cls:290-293), which article's own setting replaced.
   RawTeX!(r"\ifnum\CLASSOPTIONpt=11 \def\@ptsize{1}\fi\ifnum\CLASSOPTIONpt=12 \def\@ptsize{2}\fi");

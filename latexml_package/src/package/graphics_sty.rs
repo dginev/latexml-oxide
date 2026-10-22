@@ -472,6 +472,8 @@ LoadDefinitions!({
       }
     }
   });
+  // The width it states is a float panel's (the panel grid rule, `declare_panel_width`).
+  declare_panel_width("\\Gscale@@box", 2, &[], &[]);
 
   // == Rotation ==
 

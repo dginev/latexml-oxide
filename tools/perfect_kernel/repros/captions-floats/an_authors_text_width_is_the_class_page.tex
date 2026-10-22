@@ -1,0 +1,19 @@
+% witness: 2211.03584 Figs 7-11 (IEEEtran `12pt,onecolumn,draftclsnofoot` with `\textwidth 7.2in` in the preamble);
+%          review rev78x §3
+% oracle:  pdflatex 0 errors, 0 overfull (\textwidth 520.34pt); one row of two
+% engines: rust int67a = one row; 78x r1 = two rows; Perl 0.8.8 one row
+% expect:  0 errors, 0 warnings; no `ltx:break`
+% status:  RED (78x r1) -> GREEN (78x r2, OXIDIZED_DESIGN_DIVERGENCES #885: a declared page only while `\textwidth` is
+%          the binding's)
+% preload: ar5iv.sty
+\documentclass[12pt,onecolumn,draftclsnofoot]{IEEEtran}
+\usepackage{graphicx}
+\textwidth 7.2in
+\begin{document}
+\begin{figure}
+\centering
+\includegraphics[width=3.3in]{example-image}
+\includegraphics[width=3.3in]{example-image}
+\caption{Two panels on the author's page.}
+\end{figure}
+\end{document}

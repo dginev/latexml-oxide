@@ -51,6 +51,7 @@ fn assign_braced_length(target: Tokens, length: Tokens, add: bool) -> Result<()>
   }) else {
     return Ok(());
   };
+  let length_tokens = length.clone();
   let mut stream = target.unlist();
   stream.push(T_SPACE!());
   stream.extend(length.unlist());
@@ -116,6 +117,14 @@ fn assign_braced_length(target: Tokens, length: Tokens, add: bool) -> Result<()>
       let oldlength = defn.value_of(params.clone()).unwrap_or_default();
       defn.set_value(oldlength.add(value), None, params);
     } else {
+      // What it states, for a float's width read through the register (the panel grid rule, `note_setlength`).
+      if params.is_empty() {
+        note_setlength(
+          &defn.get_cs_name(),
+          &length_tokens,
+          value.clone().value_of(),
+        );
+      }
       defn.set_value(value, None, params);
     }
   }
@@ -142,6 +151,7 @@ pub(crate) fn load() -> Result<()> {
     }
   });
   DefPrimitive!("\\linebreak[]");
+  Let!("\\lx@kernel@linebreak", "\\linebreak");
   DefPrimitive!("\\nolinebreak[]");
   DefPrimitive!("\\-"); // We don't do hyphenation.
   // \hyphenation in TeX.pool
@@ -183,6 +193,8 @@ pub(crate) fn load() -> Result<()> {
   // `latex_constructs_rust_only.rs` (Rust-only addition).
 
   DefPrimitive!("\\newlength DefToken", sub[(cs)] {
+    // (the document's register, the panel grid rule: `note_length_allocated`)
+    note_length_allocated(&cs);
     DefRegister!(cs, None, Glue::new(0), allocate => "\\skip");
     Ok(vec![])
   });
@@ -257,6 +269,124 @@ pub(crate) fn load() -> Result<()> {
       stored_map!("width" => length, "isSpace" => true, "isSkip" => star.is_none()))
   });
 
+  Let!("\\lx@kernel@hspace", "\\hspace");
+  // Directly in a float's own group (or a `{center}`'s in it), the glue `\hspace` states between two panels counts towards their row (the panel
+  // grid rule, `note_panel_separator`): the float's begin lets `\hspace` to `\lx@panel@hspace` while it has this
+  // meaning, which there is `\lx@panel@hskip` — the same glue, absorbed as the kernel's box is, whose absorption notes
+  // the separator, so `\unskip` removes both (`Left\hspace{3em}\unskip Right` is `LeftRight`) — and the kernel's
+  // `\hspace` elsewhere: an environment, a box, a cell or math, whose material a separator would join (an alignment
+  // cell's `@{\hspace{…}}`, 2602.02905; a listing line's indentation, 1908.05655; algorithm2e's `\hspace{1.5mm}Compute`,
+  // 1610.04467, 1712.10197, 1901.07422, 1901.07434, 2009.06170, 2011.13396, 2405.17108, 2410.15995, 2605.09653). Its
+  // stated glue is evaluated at the class's real geometry too (`PANEL_GLUE_DELTA`; 2311.18531 Fig 1). Review rev78x
+  // findings 3, 4; OXIDIZED_DESIGN_DIVERGENCES #885.
+  DefPrimitive!("\\lx@panel@hspace", {
+    // (the float's own group, or a `{center}`-like environment's directly in it, whose lines are the float's rows as
+    // they are for `\hskip` and `\quad`, `note_panel_separator`; review rev78x2 finding 6)
+    let float_frame = match lookup_value("lx@float@frame") {
+      Some(Stored::Number(n)) => Some(n.0 as u64),
+      _ => None,
+    };
+    let frame_id = |frame: usize| match value_in_frame("lx@frame@id", frame) {
+      Some(Stored::Number(n)) => Some(n.0 as u64),
+      _ => None,
+    };
+    let in_aligning_environment = || {
+      matches!(lookup_string("current_environment").as_str(), "center" | "flushleft" | "flushright")
+        && frame_of_binding("current_environment", 0) == Some(0)
+        && float_frame.is_some()
+        && frame_id(1) == float_frame
+    };
+    let panel_glue = !lookup_bool("IN_MATH")
+      && (float_frame == Some(current_frame_id()) || in_aligning_environment());
+    unread_vec(vec![if panel_glue { T_CS!("\\lx@panel@hskip") } else { T_CS!("\\lx@kernel@hspace") }]);
+  });
+  DefConstructor!("\\lx@panel@hskip OptionalMatch:* {SetlengthGlue}", sub[document, args, props] {
+    let length = match args.get(1).and_then(|a| a.as_ref()).map(|d| d.data()) {
+      Some(DigestedData::RegisterValue(v)) => Dimension::new(v.clone().value_of()),
+      _ => Dimension::default(),
+    };
+    if length.value_of() != 0 {
+      let delta = match props.get(PANEL_GLUE_DELTA) {
+        Some(Stored::Dimension(d)) => d.value_of(),
+        _ => 0,
+      };
+      // (`\hspace*`'s glue, which a line break does not discard: `glue*`)
+      let kind = if args.first().is_some_and(|a| a.is_some()) { "glue*" } else { "glue" };
+      note_panel_separator(document, kind, Some(length.value_of() + delta))?;
+    }
+    // The spaces of the font it was digested in, as the kernel's box has them (`dimension_to_spaces` at digestion; a
+    // construction-time read took the document's last font: 2011.13396's svjour3 listing lines).
+    let font = match props.get("font") {
+      Some(Stored::Font(f)) => Rc::clone(f),
+      _ => Rc::new(Font::text_default()),
+    };
+    let s = crate::tex_glue::dimension_to_spaces(length, Some(&font));
+    if !s.is_empty() {
+      document.open_text(&s, &font)?;
+    }
+  },
+  sizer => sub[whatsit] {
+    let width = match whatsit.get_property("width").as_deref() {
+      Some(Stored::Dimension(d)) => *d,
+      _ => Dimension::default(),
+    };
+    match whatsit.get_property("font").as_deref() {
+      Some(Stored::Font(f)) => {
+        let s = crate::tex_glue::dimension_to_spaces(width, Some(f));
+        Ok(f.compute_string_size(&s, SymHashMap::default()))
+      },
+      _ => Ok((Dimension::default(), Dimension::default(), Dimension::default())),
+    }
+  },
+  reversion => sub[_whatsit, args] {
+    let skip = match args.get(1).and_then(|a| a.as_ref()).map(|d| d.data()) {
+      Some(DigestedData::RegisterValue(v)) => v.revert()?,
+      _ => Tokens!(),
+    };
+    Ok(Invocation!(T_CS!("\\hskip"), vec![skip]))
+  },
+  properties => sub[args] {
+    let length = match args.get(1).and_then(|a| a.as_ref()).map(|d| d.data()) {
+      Some(DigestedData::RegisterValue(v)) => Dimension::new(v.clone().value_of()),
+      _ => Dimension::default(),
+    };
+    Ok(stored_map!("width" => length, "isSpace" => true, "isSkip" => args.first().is_none_or(|a| a.is_none()),
+      PANEL_GLUE_DELTA => Stored::Dimension(Dimension::default())))
+  });
+  declare_panel_width("\\lx@panel@hskip", 2, &[], &[]);
+  // A binding that sizes a box of its own accord, not by a width the source states, keeps none (the panel grid rule,
+  // `KEEP_STATED_LENGTHS`): `\lx@panel@unstated` stops keeping them in the current group, `\lx@panel@stated` keeps them
+  // again as before it (subcaption's `\subfloat`, `\begingroup\lx@panel@unstated\begin{subfigure}{\columnwidth}
+  // \lx@panel@stated…`).
+  // A constructor in between is marked as stating none (`WITHHOLD_STATED_LENGTHS`): its given width is the binding's,
+  // not unknown (review rev78x4 finding 3, n6 F1: two `\subfloat`s of 4.5cm graphics in a REVTeX twocolumn float,
+  // two lines in the PDF).
+  DefPrimitive!("\\lx@panel@unstated", {
+    assign_value("lx@keep@stated@saved", lookup_bool(KEEP_STATED_LENGTHS), Some(Scope::Local));
+    assign_value(KEEP_STATED_LENGTHS, false, Some(Scope::Local));
+    assign_value(WITHHOLD_STATED_LENGTHS, true, Some(Scope::Local));
+  });
+  DefPrimitive!("\\lx@panel@stated", {
+    assign_value(KEEP_STATED_LENGTHS, lookup_bool("lx@keep@stated@saved"), Some(Scope::Local));
+    assign_value(WITHHOLD_STATED_LENGTHS, false, Some(Scope::Local));
+  });
+  // A class's one- and two-column regions (REVTeX's and AASTeX's `\onecolumngrid`, `\twocolumngrid`,
+  // `\restorecolumngrid`, revtex4_support_sty.rs): the page a float's panels are set in rows against
+  // (`declare_panel_page`) is in one or two columns from here on.
+  DefPrimitive!("\\lx@panel@page@onecolumn", { set_panel_page_twocolumn(false); });
+  DefPrimitive!("\\lx@panel@page@twocolumn", { set_panel_page_twocolumn(true); });
+  DefPrimitive!("\\lx@panel@page@restore", { restore_panel_page_twocolumn(); });
+  // (a one-column passage, REVTeX's `{widetext}`: its end puts back the setting it began with)
+  DefPrimitive!("\\lx@panel@page@push@onecolumn", {
+    push_value("lx@panel@page@stack", Stored::Bool(lookup_bool("lx@panel@page@twocolumn")))?;
+    set_panel_page_twocolumn(false);
+  });
+  DefPrimitive!("\\lx@panel@page@pop", {
+    if let Some(Stored::Bool(twocolumn)) = pop_value("lx@panel@page@stack")? {
+      set_panel_page_twocolumn(twocolumn);
+    }
+  });
+
   // Perl: DefMacro('\vspace OptionalMatch:* {}', '\vskip #2\relax');
   //
   // Restored Perl-faithful expansion 2026-04-28. The earlier no-op
@@ -268,6 +398,12 @@ pub(crate) fn load() -> Result<()> {
   // ntheorem_test, plus the simpler `bigskip_test`, both confirm the
   // Perl-faithful expansion produces the expected sibling layout.
   DefMacro!("\\vspace OptionalMatch:* {}", "\\vskip #2\\relax");
+  // In a float, `\vspace` between panels is TeX's in a paragraph (latex.ltx:9361-9370 `\@vspace`: `\vadjust`
+  // outside vertical mode), which breaks no line, where a `\vskip` there ends the paragraph: the float's begin lets
+  // `\vspace` to this, whose `\vskip` (`\lx@vspace@mark`) is no row break (the panel grid rule, `note_panel_separator`).
+  DefPrimitive!("\\lx@vspace@mark", { assign_value("lx@vspace@mark", true, None); });
+  DefMacro!("\\lx@panel@vspace OptionalMatch:* {}", "\\lx@vspace@mark\\vskip #2\\relax");
+  Let!("\\lx@kernel@vspace", "\\vspace");
   def_primitive_noop("\\addvspace {}")?;
   def_primitive_noop("\\addpenalty {}")?;
   def_primitive_noop("\\@endparenv")?;
@@ -364,6 +500,8 @@ pub(crate) fn load() -> Result<()> {
       Ok(props)
     }
   );
+  // The width it states is a float panel's (the panel grid rule, `declare_panel_width`).
+  declare_panel_width("\\@makebox", 1, &[], &[]);
 
   DefRegister!("\\fboxrule", Dimension!(".4pt"));
   DefRegister!("\\fboxsep", Dimension!("3pt"));
@@ -516,6 +654,8 @@ pub(crate) fn load() -> Result<()> {
       }
     }
   );
+  // The width it states is a float panel's (the panel grid rule, `declare_panel_width`).
+  declare_panel_width("\\@framebox", 1, &[], &[]);
 
   AssignValue!("SAVEBOX", 100);
   TeX!(
@@ -596,6 +736,7 @@ pub(crate) fn load() -> Result<()> {
       let mut attr = string_map!("class" => "ltx_parbox");
       if let Some(w) = props.get("width") { attr.insert("width".to_string(), w.to_attribute()); }
       if let Some(v) = props.get("vattach") { attr.insert("vattach".to_string(), v.to_string()); }
+      note_panel_width_delta(props, &mut attr);
       // Between paragraphs the parbox starts one (`enter_horizontal` below).
       insert_block_in_paragraph(document, body, attr, props)?;
     },
@@ -693,6 +834,8 @@ pub(crate) fn load() -> Result<()> {
       end_caption_box(whatsit)?;
     }
   );
+  // The width it states is a float panel's (the panel grid rule, `declare_panel_width`).
+  declare_panel_parbox_width("\\lx@parbox", 4);
   // INTENTIONAL DIVERGENCE from Perl (empty stub, latex_constructs.pool
   // L4767): the kernel's \@parboxrestore = \@arrayparboxrestore (see
   // latex_base.rs for the ported body and rationale — the load-bearing
@@ -722,6 +865,7 @@ pub(crate) fn load() -> Result<()> {
       let mut attr = string_map!("class" => "ltx_minipage");
       if !width.is_empty() { attr.insert("width".to_string(), width); }
       attr.insert("vattach".to_string(), vattach.to_string());
+      note_panel_width_delta(props, &mut attr);
       if let Some(Stored::Digested(body)) = props.get("body") {
         // Between paragraphs the minipage starts one (`enter_horizontal` below).
         insert_block_in_paragraph(document, body, attr, props)?;
@@ -783,6 +927,8 @@ pub(crate) fn load() -> Result<()> {
         }
     }
   );
+  // The width it states is a float panel's (the panel grid rule, `declare_panel_width`).
+  declare_panel_parbox_width("\\begin{minipage}", 4);
   // Locked against the class and package files (`:locked@files`, state.rs `is_name_locked`), as Perl locks `\tabular`
   // and `\endtabular` against everyone (latex_constructs.pool.ltxml:3666-3671). A raw file's own `\endminipage` closes
   // the kernel minipage's `\setbox\@tempboxa\vbox\bgroup\color@begingroup` and `\@iiiparbox\@mpargs` (latex.ltx:
@@ -819,6 +965,8 @@ pub(crate) fn load() -> Result<()> {
       ))
     }
   );
+  // The width it states is a float panel's (the panel grid rule, `declare_panel_width`).
+  declare_panel_width("\\rule", 2, &[], &[]);
   // Perl latex_constructs.pool.ltxml:4800-4802: `\raisebox` has NO
   // beforeDigest — the outer T_MATH binding persists — and enterHorizontal => 1
   // (latex.ltx:16373-16374 `\leavevmode`).

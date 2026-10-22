@@ -482,7 +482,15 @@ LoadDefinitions!({
   DefMacro!("\\facilities{}", "\\lx@add@pubnote[role=thanks,name={Facilities:~}]{#1}");
 
   // 2.11 Appendices — Perl aas_support.sty.ltxml L247-249
-  DefMacro!("\\appendix", "\\@appendix");
+  // aastex631.cls:1336-1342: in a two-column document the appendix is set in one column (`\onecolumngrid`) unless
+  // the class option `twocolappendix` asks for two: the page a float's panels are set in rows against follows (the
+  // panel grid rule, `set_panel_page_twocolumn`; 2605.22754 A1.F6, two `0.48\textwidth` panels on a one-column page).
+  DefPrimitive!("\\lx@aas@appendix@columns", {
+    if !crate::shipped_class::class_option_given("twocolappendix")? {
+      set_panel_page_twocolumn(false);
+    }
+  });
+  DefMacro!("\\appendix", "\\lx@aas@appendix@columns\\@appendix");
   // `\@appendix` starts section-numbered appendices, then re-scopes the
   // equation counter to reset within each appendix section. Perl uses
   // `scope => 'global'` on the `\theequation` redefinition so the new

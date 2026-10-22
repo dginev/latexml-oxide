@@ -28,6 +28,9 @@ LoadDefinitions!({
   });
   ProcessOptions!();
   LoadClass!("article");
+  // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`): aa.cls's, as
+  // pdflatex gives it — 523.531pt in two 256.075pt columns, one column under `onecolumn`. Witness 1510.07016.
+  declare_panel_page(256.0748, 523.5307, last_class_option(&["onecolumn", "twocolumn"]) != Some("onecolumn"));
   RequirePackage!("aa_support");
   // Raw aa.cls unconditionally loads natbib (not just for bibnumber/bibauthoryear options).
   // Many aa papers use \citep/\citet without explicit \usepackage{natbib}.

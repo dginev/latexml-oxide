@@ -4575,10 +4575,12 @@ on documents that do not use it. A paper-class binding that omitted geometry as
 Because the panels become geometry-sized but the figure's float width
 (`arrange_panels`, div. #62 / WISDOM #62) is captured from `\hsize` in the HTML
 flow (345pt), the two bases would disagree and two `0.495\linewidth` boxes that
-sit side-by-side in the PDF would wrap to separate rows. `after_float`
-(`latex_constructs.rs`) therefore captures the **arrangement** float width as
-`\Gm@tw` when the float spans the full text width — the row threshold only, the
-float's HTML content stays class-default.
+sit side-by-side in the PDF would wrap to separate rows. The rows are therefore
+set against the geometry's `\Gm@tw` — the row threshold only, the float's HTML
+content stays class-default — with every panel's stated width taken at that
+geometry too (#885, `install_panel_line`; before #885 `after_float` took
+`\Gm@tw` as the row width while the HTML-flow panels kept their 345pt-based
+widths, 2605.03152 S3.F2 3 | 1 for pdflatex's 2 | 2).
 
 **Known residual**: a `\ttfamily` code box (2605.29955 Fig 1 right card) can
 still poke a few px past its border — the browser's monospace is wider than
@@ -24298,11 +24300,13 @@ row of its own in `arrange_panels` — `\subfigure[text]` panels always (Perl th
 measures the panel's box), and with the "(a)" captions above the `[]` panels too (78t r1: 28 of the A/B's 1,607 papers
 gained breaks, 129 → 232 in the panel figures; 2006.08949 Figure 2, one row in the PDF, four; cond-mat9707225,
 astro-ph0205132; 1208.0688's `\subfigure[text]` pairs). `{@subfigure}`/`{@subtable}` record their body's width less its
-`\lx@@caption`/`\@@toccaption`, its `\lx@label`s and all its glue (spaces, `\hskip`, `\hspace`, `\quad`, `\hfill`; kerns
-are kept) — `panel_body_width`, `note_sub_float_body_width` (latex_constructs/mod.rs) — which `panel_width` takes when it
+`\lx@@caption`/`\@@toccaption`, its `\lx@label`s and its spaces, the glue it states (`\hskip`, `\hspace`, `\quad`; an
+`\hfill` is 0 wide) adding its natural width (78x r4, as the panel grid rule counts stated glue between panels, OD #885:
+1307.3388 Fig 3's `\subfigure[]{⏎\hspace{-0.4cm}⏎\includegraphics…}` pairs, 2+2 in the PDF; kerns are kept) —
+`panel_body_width`, `note_sub_float_body_width` (latex_constructs/mod.rs) — which `panel_width` takes when it
 is above 0: the width the source states, the LaTeX-side width FIDELITY_CHARTER §2 "Float panels" keeps. A `\label` makes
 no box (a `\write`), where the `\lx@label` whatsit is sized by its key's text (0907.1044's `\subfigure[…]{\label{…}
-\includegraphics…}` panels 96pt too wide); with the glue left out a `\label` between spaces counts nothing either
+\includegraphics…}` panels 96pt too wide); with the spaces left out a `\label` between spaces counts nothing either
 (2511.21020 Figs 7-8 one row of four, 1607.02761, 2211.12798, 1601.02116; 78t r2 counted both spaces and split them 3+1).
 A body of no known width (0) leaves the panel its box's width, as before the body measure (78t r2 took the 0: such panels
 joined every row and, starting one, left the panel list, so 1610.06413's two-panel figures had no flex row; nlin0606018);
@@ -24320,9 +24324,10 @@ emergency stretch and tex.web §854's overfull line, for subfigure.sty's in-para
 grid derived from what the source states; do not re-run TeX's line breaking against one page geometry, the browser's
 width varies; grid design study 2026-10-22, Q5). The grid rule — explicit breaks (`\\`, a blank line or `\par`,
 `\newline`, a `{center}` boundary, `\vskip`), the stated widths and the stated glue between panels against the line, the
-geometry's `\Gm@tw` — is the next payload, the markup that says rows × columns the one after, on the user's ruling
-(SYNC_STATUS "panel grid rule" and "panel grid markup" rows; RED `captions-floats/par_breaks_a_panel_row` and
-`a_justified_row_keeps_its_overfull_panel`). Until then the rows miss what the tree does not hold: the glue and `\par`
+geometry's `\Gm@tw`, the class's real line — landed with 78x (#885; RED `captions-floats/par_breaks_a_panel_row` turned
+green, `a_justified_row_keeps_its_overfull_panel` an accepted residual), the markup that says rows × columns is the next
+payload, on the user's ruling (SYNC_STATUS "panel grid markup" row). Before #885 the rows missed what the tree did not
+hold: the glue and `\par`
 between sub-figures (our sub-figures are digested in vertical mode until something starts a paragraph: 0706.4410 Figs 3,
 5, an `\hspace{1in}` between two 0.45\textwidth panels, two rows in the PDF, one here; 2207.14807 Fig 9's `}%`; 1110.0084
 Figs 12-16, 27, 29), TeX's overfull and underfull lines (1201.0008 Figs 1-2: the PDF's three in a row, overfull, here
@@ -24611,6 +24616,192 @@ tests/structure/algorithm2e_{frames,linenumbers}.xml "Algorithm 1" closed by ": 
 `perfect_kernel_batch73a::ieeeaccess_figure_is_a_figure`, `perfect_kernel_batch78a::jfm_copy_*`,
 `perfect_kernel_batch78e::{webofc_sidecaption_keeps_its_caption, jinstpub_frontmatter_is_jheppub_s}`.
 
+### 885. A float's panels are set in rows from what the source states, against the class's real line
+
+User rulings 2026-10-22 (FIDELITY_CHARTER §2 "Float panels"; grid design study `agent_reports/2026-10-22_grid_design.md`
+Q3): a float's rows come from what the source states, not from TeX's line breaking against one page geometry. Perl's
+`arrange_panels_and_breaks` (latex_constructs.pool.ltxml:3229-3349) fills a row greedily with the panels' box widths
+against the float's `\hsize`, and sees no more than the tree: our panels (as Perl's) are digested in vertical mode, where
+TeX's are in a paragraph (subfigure.sty's `\@subfloat`, graphicx's `\leavevmode`), so a blank line, a `\vskip` or the
+glue between two panels leaves nothing to set the rows by; a `\\` in a `{center}` is skipped in its capture
+(`\lx@newline`, Perl the same: "skip, if in insertBlock"); and every width is measured against Perl's `\columnwidth` =
+`\textwidth` (latex_constructs.pool.ltxml:321), so a two-column document's `figure*` of `0.74\columnwidth` pairs broke
+where the PDF sets one row. Ours (78x), `arrange_panels` (latex_constructs/mod.rs) keeping Perl's greedy rule, its merges
+and its standalone blocks:
+
+- **An explicit break always breaks.** The source's row separators are recorded where they are constructed, as an
+  internal `ltx:break` (`note_panel_separator`, attribute `_panelsep`) in the float's own list or the capture of a
+  `{center}`-like environment directly in it (`aligning_environment`, `in_aligning_capture`, a count in the document's
+  state; never a box's, whose capture would settle differently): a source `\par` (not the one leaving horizontal mode
+  inserts, 2605.00347), a `{center}`/`{flushleft}`/`{flushright}` boundary, a `\\` in such a capture, a `\vskip` (not
+  `\vspace`'s or `\medskip`'s: in a paragraph latex.ltx:9361-9370 `\@vspace` is a `\vadjust`, no line break), a forced
+  `\linebreak`. `arrange_panels` keeps one between two panels as the row's `<ltx:break class="ltx_break"/>` and drops
+  the rest; `settle_float_paragraphs` drops any no float took. The float's begin lets `\vspace`, `\linebreak` and
+  `\hspace` to the rule's `\lx@panel@vspace`/`\lx@panel@linebreak`/`\lx@panel@hspace` only while they have the kernel's
+  meaning (`\lx@kernel@…`): an author's or a package's own stands.
+- **The stated glue counts.** `\hskip` (so `\quad`, `\qquad`) and `\hspace` between two panels add their natural width to
+  the row; plain spaces, `\label`s and `\hfill` count 0. A row that begins a paragraph (the float's first, one after a
+  `\par`, a `{center}` boundary, a `\vskip`, a caption, or a centred `\\`) keeps the glue stated before its first
+  panel, as TeX keeps glue at a paragraph's start — under `\centering`, `\raggedright`, `\raggedleft` and in a
+  `{center}`/`{flushleft}`/`{flushright}` a `\\` is `\@centercr`, whose `\par` ends the paragraph (a direct `ltx:break`
+  carrying the alignment's class, the capture's separator `cr`), and so in every float of a class that centres its
+  floats (`declare_panel_floats_centred`: REVTeX's `\appdef\@xfloat@prep{\appdef\@parboxrestore{\centering}}`,
+  revtex4-2.cls:6770-6772; review rev78x3 finding 3, `p7.tex` F1, `p1.tex` F10: `\\\hspace{-0.05\columnwidth}` before
+  three 0.34\columnwidth panels, one line in the PDF; not AASTeX's or emulateapj's, which `\def\@xfloat@prep` again
+  without `\centering`, aastex701.cls:8066, emulateapj.cls:949, `withdraw_panel_floats_centred`; a `\newline` never,
+  latex.ltx:9256's `\@normalcr` in every context, its break marked `_normalcr`: review rev78x4 findings 1-2, `n3.tex`
+  F4, `n7.tex` F1, `n5.tex`); after a justified `\\` or a `\linebreak` only an `\hspace*`'s (separator `glue*`: latex.ltx's
+  `\vrule width\z@\nobreak\hskip`, which a line break does not discard), after a computed break none (2212.03198 Figs 6,
+  10-12, 15: `\hspace*{-0.5cm}` before three sub-figures, one row in the PDF, 2+1 when it was dropped once 78z sized
+  the EPS panels in bp). Directly in the float's own group (`lx@float@frame`), or in a `{center}`-like environment's
+  directly in it (whose lines are the float's rows, as they are for `\hskip`; review rev78x2 finding 6), `\hspace`
+  is `\lx@panel@hskip`, a constructor absorbed exactly as the kernel's `\hspace` box is (the same spaces, size and
+  `isSkip`), whose absorption notes the separator: `\unskip` removes glue and separator together, and nothing joins a
+  cell's, a box's, a listing's or math's material (an alignment cell's `@{\hspace{…}}`, 2602.02905; a listing line's
+  indentation, 1908.05655; algorithm2e's `\hspace{1.5mm}Compute`, 1610.04467, 1712.10197, 1901.07422, 1901.07434,
+  2009.06170, 2011.13396, 2405.17108, 2410.15995, 2605.09653). An uncaptioned sub-figure is its body's material too
+  (`note_sub_float_body_width`, OD #876: spaces and `\lx@label`s left out, its stated glue counted; 1007.2355 Figs 1, 3;
+1307.3388 Fig 3).
+- **A row TeX sets in one `\hbox` stays one row** (`note_panel_hbox`): a sub-float whose body is one (subfigure.sty's
+  `\subfigure`, subfigure.sty:232; cond-mat0610021 Fig 11, two `width=200pt` graphics in one sub-figure, one overfull
+  `\hbox` in pdflatex), and the sub-floats begun in one `\hbox` (an adjustbox's or a `\resizebox`'s sub-figures, 2311.18531
+  A7.F5/F6), as a binding's fixed row (`_gridrow`) — keyed on the group that set the box's restricted horizontal mode
+  (`state::frame_of_binding`), not the group a sub-float is begun in: subcaption's `\subfloat` begins each in a
+  `\begingroup` of its own (review rev78x2 finding 3).
+- **The line is the class's real one, for rows only** (`install_panel_line`, at a float not inside another,
+  `panel_page`): in two columns a `figure`'s line is the column, a `figure*`'s the text width. A class binding declares
+  its real page (`declare_panel_page`: column and text widths as pdflatex gives them, and whether it is set in two
+  columns now) — IEEEtran (IEEEtran.cls:1734-1811, its `\ProcessOptions` running the options in their declaration order,
+  `last_declared_class_option`) 43pc = 516pt in two 252pt columns, compsoc's 7in + 12bp = 517.935pt in two of 252.945pt,
+  compsoc `conference` the paper less 1.5in (505.89pt in two of 243.911pt 0.25in apart on letter paper), a draft option
+  the paper less 2in (469.755pt on letter, 452.968pt on A4) in two columns the mode's `\columnsep` apart, one column
+  under `onecolumn` or `peerreview` (whose `\if@twocolumn` the binding keeps true); REVTeX 4.x 246/510pt in two columns
+  under `twocolumn` (and `reprint` from 4.1 on), one column of 510pt otherwise, and `preprint` (`manuscript`) 468pt, in
+  two 229pt columns where `twocolumn` (or an earlier `reprint`) sets two — the options as given, a later `reprint`
+  undoing it (review rev78x2 finding 4, values by pdflatex `\showthe`); AASTeX 6.x 242.3/513.1pt under
+  `twocolumn` (its appendix in one column unless `twocolappendix`, aastex631.cls:1336-1342); mnras 244/508pt; aa
+  256.1/523.5pt — and REVTeX's `\onecolumngrid`/`\twocolumngrid`/`\restorecolumngrid` and `{widetext}` regions follow
+  (`set_panel_page_twocolumn`). A declared page holds only while `\textwidth` is still the binding's (an author's
+  `\textwidth 7.2in` is the page: 2211.03584). A float whose binding sets its own `\hsize` after its begin (a
+  wrapfigure's width, wrapfig_sty.rs) keeps it as its line (`PANEL_LINE_HSIZE`: 2609.34643 S3.SS3.fig1, a
+  `0.27\textwidth` wrapfigure set against the page's line, its picture and pagination wrapped in one block). Without a declaration: `\textwidth`, or the geometry's `\Gm@tw` while
+  `\textwidth` is still the class's `\Gm@doctw` (a later `\setlength{\textwidth}{15cm}` is the page: 1704.03351 Figs 16,
+  35, 36), in two columns (`\if@twocolumn`) the column `(\textwidth − \columnsep)/2`, or for a binding that keeps the
+  kernel's 345pt line that line as the column and twice it and `\columnsep` as the text. The registers keep Perl's
+  values; this replaces the geometry's arrangement width of OD #99, which a float with no real line keeps (below).
+- **Each panel's stated width is taken at that geometry.** Where a register differs from its real value, the float keeps
+  the tokens its body states for widths (`parameter::KEEP_STATED_LENGTHS`, in its group): a constructor's braced or
+  bracketed typed arguments (`Parameter::stated`, read once by `reparse_argument`, on the whatsit as `STATED_LENGTHS`)
+  and a `KeyVals`' length values (`KeyVals::stated_entry`, the last given of a key: 2601.01508's
+  `width=0.33\textwidth,width=2.3in`). A binding declares which is a construct's width (`declare_panel_width`:
+  `{minipage}`'s fourth argument, `\parbox`'s, `\makebox`/`\framebox`'s, `\rule`'s, `\resizebox`'s, subcaption's
+  `{subfigure}`s', `\includegraphics`' `width` key — never a height, never a box's body: 1703.09474 Fig 13, 2503.09651
+  Fig 1; a graphic that states only its height keeps its aspect ratio, so the height scales its natural width,
+  2209.01559 Fig 6); one that sizes a box of its own accord keeps none (`\lx@panel@unstated`: subcaption's `\subfloat`, whose
+  `{\columnwidth}` made a `figure*`'s first sub-float 0 wide, 2602.06569 S4.F1/F2, 1902.05392 S3.F3), and its
+  constructor is marked as stating none (`WITHHOLD_STATED_LENGTHS` → `STATED_LENGTHS_WITHHELD`), not an unknown width
+  (review rev78x4 finding 3, `n6.tex` F1: two 4.5cm `\subfloat`s, two lines of REVTeX's 246pt column). At the float's
+  end, inside its group (`after_float` → `note_stated_widths`, its body the box list being built: a width macro the
+  float defines, or one a later `\renewcommand` changes, is read with the meaning it has there; review rev78x2 finding 1,
+  where r2 evaluated as the element opened, after the group ended), each stated width is evaluated twice in a group and
+  a mouth of its own, at the registers' values and at the real ones (`\textwidth`, `\columnwidth`, `\linewidth`,
+  `\hsize`; calc's evaluator where loaded; its diagnostics, the source's when first read, not reported again), and the
+  box records what the real one adds in the ratio of the two (`PANEL_WIDTH_DELTA`): the width the construct gave its box
+  (a positional argument's digested value; a graphic's box, its rotation included) times `real/ours − 1`, so a width
+  the body narrowed (`\setlength\linewidth{…}` before `0.9\linewidth`) scales as TeX's does; a `\scalebox` or
+  `\resizebox` of no width of its own scales its content's by its `xscale`, and a rotation (`angle`) turns its content's
+  width and height deltas (review rev78x2 finding 2: four `\scalebox{0.5}` of `0.6\columnwidth` graphics, four
+  `angle=90` ones, four `\rotatebox{90}` boxes, 3+1 each in REVTeX's column). A length register a stated width reads
+  is what its `\setlength` stated, evaluated at the same geometry while the register still holds the value it gave
+  (`note_setlength`: sect12.rs's and calc's `\setlength` record the tokens in the assignment's scope); a register the
+  document allocated (`\newlength`, `\newdimen`, `\newskip`: `note_length_allocated`) whose value no `\setlength`
+  recorded (`\figu=0.48\columnwidth`, `\settowidth`, an `\addtolength` since) holds a value of the registers' geometry
+  the real one cannot re-evaluate (`Unevaluable`); so is a stated width or height the float's end cannot read (a macro
+  of a group that has ended, `{\def\w{0.48\columnwidth}…}`, read as an undefined `\w`, 0) or that does not give again
+  there, within 4sp, the value the construct gave its box (`StatedSize::given`: a positional argument's digested value,
+  a `width=`/`height=`'s digested value; an outer `\def\w{0.2\textwidth}` an inner one shadowed), and a length a box
+  was given whose tokens were not kept (a box built before the float). Such a float is arranged exactly as before the
+  rule (`after_float`): at its `\hsize`, or, under geometry, for a full-column float (`\hsize` = `\Gm@doctw` <
+  `\Gm@tw`) at the geometry's text width, OD #99's arrangement width (`PANEL_FALLBACK_LINE`; review rev78x3 findings
+  1-2, `p1.tex` F1-F2, `p8.tex` F1, and `p2.tex` F2-F4: four `\figw=3.8cm` panels under `[a4paper,margin=1in]{geometry}`,
+  one row as in the PDF, 3+1 against the 345pt `\hsize` in r3) — never worse than that; the kernel's and the bindings' registers (`\tabcolsep`, `\columnsep`, `\p@`) stand as they are.
+  Nothing is recorded while a format is built (`--init`, a dump); inside a parbox of a stated width (`declare_panel_parbox_width`: a `{minipage}`, a `\parbox`,
+  subcaption's sub-figures, whose content's `\linewidth`, `\hsize`, `\textwidth`, `\columnwidth` are that width,
+  latex.ltx `\@iiiminipage`) its content is evaluated against that width (a child's `\linewidth` is its parent's
+  evaluated width; an `\hbox`'s content, `\makebox[w]`, `\resizebox{w}{!}`, at the enclosing line), and the box's panels are set against it (2504.07193 Fig 5, a
+  `{minipage}{\textwidth}` of sub-figures); an `\hspace`'s glue the same way (`PANEL_GLUE_DELTA`; 2311.18531 Fig 1,
+  `0.48 + 3×0.24\textwidth` with `−0.25\textwidth` of `\hspace` under geometry, one row of 4); a sub-float's line is its
+  stated width at the real geometry (2605.03152 S3.F2), or the float's real line where it kept the float's
+  (subfigure.sty's in-line panels, their content evaluated as the float's: 1902.04580 Figs 15-16). A panel's real width
+  is its box's plus its own or its contents' outermost difference (`panel_width_delta`; a minipage folded into its
+  lone child carries it as `_panelwidthdelta`, 2007.15568 Tables 2-3); a row with no real line of its own (a paragraph
+  of floats settled into a row, `settle_float_paragraph`) is set at the registers' widths (2202.03884). No gullet, constructor-time,
+  conditional or keyval geometry: 78x r1's shadow geometry (every shadowed register read while an argument was read,
+  thread-local, review rev78x findings 1, 7) is gone. A plain `\hskip` (not braced) keeps its value at the registers' geometry.
+
+Rows per float against the PDF's (pdflatex box dumps) on the grid design study's oracle set, 453 multi-panel floats in
+108 papers: int61a 300, 78t r3 344, int65a 354, 78x r1 410, r2 428, 78x r3 429, 78x r4 429, **78x r5 429** (exact shapes
+336 → 399 → 420 → 422 → 422 → 422, r4's rows r3's on all 453 and r5's r4's; r3 on int68a, so with 78z's EPS boxes in bp, under which a leading `\hspace*`
+had to count: 2212.03198). A/B int69b → 78x r5, one binary, the same 1,907 papers: E/F/W and every fingerprint equal, the
+same 750 changed floats in 313 papers and 19 worse in 13 (below), the float-free papers identical; r4 → r5 one paper
+byte-changed and no top-level float's rows (2504.20901 A1.F8: a minipage's two `\subfloat`s separated by `\\`, two rows
+again as in r3 and the PDF; review rev78x4 finding 3). A/B int69b → 78x r4 (rebased on int69), one binary, the same 1,907 papers: E 6,680 = 6,680, F
+20 = 20, W 59,351 = 59,351, every fingerprint identical; 328 papers byte-changed, 750 floats in 313 papers change rows,
+against the PDF 424 better, 19 worse in 13 papers (r3's, below; none new), 25 both wrong, 66 the same count, 216
+unverifiable; the 162 float-free papers identical; no float's rows differ from r3's (the r4 shapes are review rev78x3's
+probes'; 1307.3388 Fig 3, split 2+1+1 by an interim r4 once a centred `\\` kept its row's leading glue, is 2+2 as the
+PDF since a sub-float body's stated glue counts). A/B int68a →
+78x r3, one binary over 78x r1's population (1,907 papers: census pop78t + 300 seeded controls): E 6,680 = 6,680, F 20 =
+20, W 59,351 = 59,351, words, bibitems, tabulars and tex/font fingerprints identical; 329 papers byte-changed: 750
+floats in 313 papers change rows, against the PDF 424 better, 19 worse in 13 papers, 25 both wrong, 66 the same count,
+216 unverifiable (173 no PDF, 28 PDF without image panels, 15 unaligned); the 16 others change only rows nested in a
+sub-float, a break before a caption (1109.3733 Fig 13: a graphic and its caption `\parbox` side by side on REVTeX's
+468pt preprint page, as the PDF; 1906.08196 Table 7.2: a `0.49 + 0.69\textwidth` pair of minipages on a pdflscape
+page whose 650pt line we do not have) or a zero-width panel at a row's start (1705.04732: the picture alone in its
+`{center}`'s row, the caption's error markers apart; 2012.03147: an `ERROR` of an undefined `\@makecaption` after a
+stated break is no panel, Perl's rule, latex_constructs.pool.ltxml:3331-3333). The 19 worse are all r2's residual rows
+(0809.3275 ×4 and 2208.08007 ×2 a `\label`'s width; 2008.06630 ×2 a sub-float body's `\hspace`; 1911.11519, 2502.05562
+sub-figures in a `tabular` cell; 2109.08525, 2310.04470 undeclared pages; 1108.5543, 1712.01536, 2009.04593, 2406.05437
+rows TeX keeps tight or overfull) and three the scorer counts wrong (2310.05307 ×2, 2609.14985: the PDF row counts image
+panels only); r2's 1010.0060 Fig 5 now has the PDF's two rows (4+1 for 3+2: TeX counts each sub-figure body's two
+spaces, the rule none), and 2202.03884's settled row (S4.SS1.fig1) and 2403.19113 are as int68a. The 162 papers without a float (93 census, 69
+controls) identical. Cost: instructions:u int68a → r3 +0.08 % (1010.0060) and +0.07..+0.14 % (2212.03198; base-vs-base
+noise 0.07 %). Witnesses (PDF verdicts):
+0706.4410 Figs 3, 5, 1110.0084 Figs 1, 27, 29, 1107.3402 Fig 5, 1206.5015 Fig 3 (6/6/5), 1007.2355 Figs 1, 3, 1705.10798,
+2601.01508, 1707.00190 Fig 2, nucl-ex0511052 Fig 13; r2's 2211.03584, 1604.07648, 1404.3152, 1809.02562, 2103.06618,
+1702.02527, 2504.07193, 2504.20901, 2504.06175, 2605.22754, 2005.13806, 2308.02289, 1104.5578, 1510.07016,
+1902.04580, 1704.03351, 2311.18531, 2602.06569, 1902.05392, 1703.09474, 2503.09651, 2209.01559, 2007.15568; r3's 2212.03198, 2609.34643, 1109.3733, cond-mat0610021 Fig 11 (one overfull row per
+sub-figure as the PDF, now its EPS panels are their bp size, 78z). Residuals
+(SYNC_STATUS rows): the deliberate overfill pulled together by negative glue (2301.02117) and the tight or overfull rows
+TeX keeps (1108.5543, 1712.01536, 2009.04593, 1703.09165, 2406.05437; accepted, FIDELITY_CHARTER §2; and the panels TeX
+cannot break between, with no glue among them, one overfull line where the rule breaks: `p7.tex` F2), TeX's line
+breaking itself (`a_justified_row_keeps_its_overfull_panel`, RED by the charter; the `figure_mixed_content` fixture's
+0.56/0.42 minipages with `\hspace{8px}`, one overfull line in pdflatex, two rows here), a `\label` sized by its key text
+in a box (0809.3275) or as an empty sub-float (2208.08007), a sub-float body's `\hspace` left out of its width
+(2008.06630), sub-figures in a `tabular` cell (1911.11519, 2502.05562), classes that declare no page (iopart 2109.08525,
+2310.04470), a plain `\hskip` at the registers' geometry; a width macro the float defines in a group of its own inside
+it (gone at its end: the float is arranged as before the rule, never worse, not as the PDF); a raster graphic's
+explicit `width=` sized 72/72.27 of it and rounded up to a pixel (`image_graphicx_sizer` reads graphicx's bp as pt, as
+Perl Util/Image.pm:230-237 `ceil($a1 * $dppt)` with `$dppt = DPI/72.27`: two `width=114.6pt` PNG panels are 2 ×
+114.187pt, one row of REVTeX's `[preprint,twocolumn]` 229pt column where pdflatex breaks them; review rev78x3 finding 6);
+a register a `\setlength` set in a region of another column setting (REVTeX's frontmatter before
+its two-column grid) evaluated at the float's geometry; a register the document assigned otherwise (its float at the
+registers' line, as int68a: never worse); graphicx's `keepaspectratio` with both keys, a `\resizebox{!}{h}`'s content
+scaled by its `xscale` (approximations of the box's real size); a pdflscape page's line. Repros captions-floats/{par_breaks_a_panel_row,
+glue_between_panels_counts_towards_their_row, two_column_floats_set_rows_against_the_column,
+a_center_and_its_breaks_end_a_panel_row, vskip_ends_a_panel_row_vspace_does_not, geometry_text_width_sets_the_panel_rows,
+an_uncaptioned_subfigure_is_as_wide_as_its_body, a_panel_states_its_width_not_its_height_or_body,
+a_subfloat_states_no_width, stated_glue_at_the_real_geometry, a_later_text_width_is_the_page,
+panel_glue_is_the_kernels_glue, an_authors_spacing_commands_stand_in_a_float, panels_in_one_hbox_share_a_row,
+subfigures_in_an_adjustbox_share_a_row, a_class_page_sets_the_panel_rows, a_one_column_class_option_sets_the_panel_rows,
+an_authors_text_width_is_the_class_page, a_graphics_height_scales_its_width, stated_widths_are_evaluated_in_the_float,
+a_width_read_through_a_length_register, a_transformed_panel_scales_its_width, subfloats_in_a_box_share_a_row,
+an_hspace_in_a_center_counts_towards_its_row, a_wrapfigure_keeps_its_own_line, glue_at_a_paragraph_start_counts,
+ieeetran_compsoc_conference_page, ieeetran_draftcls_a4paper_page, revtex_preprint_twocolumn_page,
+a_width_the_float_cannot_read_again_keeps_the_line_before_the_rule, an_unevaluable_width_keeps_the_geometry_line,
+an_hspace_after_a_centred_newline_begins_its_row, revtex_floats_are_centred, a_sub_float_bodys_stated_glue_counts,
+a_newline_is_a_justified_break, aastex_floats_are_not_centred, subfloats_of_a_stated_width_in_a_revtex_column}; guards
+`perfect_kernel_batch78x::{…}` (33).
 
 ### 886. An EPS graphic's box is its BoundingBox in bp; the first readable candidate sizes the box whatever its type
 
@@ -24650,10 +24841,11 @@ EPS now scales its true natural size — cond-mat0211312's `xscale` 1.0008 → 0
 the inline-block, rotated-figure and picture sizes around one), the natural `cssstyle` from the BoundingBox in 5
 (0710.5533, cond-mat0603833, hep-th0701149, nucl-th0411072 by 0.1em; hep-ex0703011 above), panel rows in 3: 1012.3355
 Fig 2 now (a)(b) | (c)(d) as latex sets it (was (a)(b)(c) | (d)); 1106.2745 Fig 2 2+2 (was 3+1; latex one per row in
-aa's 255.8pt column, ours lays panels against the 523.5pt text width: the two-column geometry row); cond-mat0610021 Fig
+aa's 255.8pt column, which int67a did not have; since 78x one per row as latex, against aa's declared column, OD #885,
+and Figs 1 and 3 as latex too, 1 | 1 | 1 | 1 | 1 and 3+1); cond-mat0610021 Fig
 11 a break between a sub-figure's two graphics, whose `\subfigure` body TeX sets in one overfull `\hbox` (the grid rule
-breaks such a body whenever its stated widths exceed the line: int67a does so for two `width=200pt` graphics too; a SYNC
-row). Witnesses 1106.2745, hep-ex0703011, 1012.3355. Repros package-bindings/includegraphics_eps_box_is_its_bounding_box,
+broke such a body whenever its stated widths exceeded the line: int67a did so for two `width=200pt` graphics too; since
+78x one row, `note_panel_hbox`, OD #885). Witnesses 1106.2745, hep-ex0703011, 1012.3355. Repros package-bindings/includegraphics_eps_box_is_its_bounding_box,
 captions-floats/psfig_natural_panels_are_as_wide_as_their_bounding_box; guards
 `perfect_kernel_batch78z::{includegraphics_eps_box_is_its_bounding_box,
 psfig_natural_panels_are_as_wide_as_their_bounding_box}`, `perfect_kernel_batch64::adjustimage_includes_the_graphic`

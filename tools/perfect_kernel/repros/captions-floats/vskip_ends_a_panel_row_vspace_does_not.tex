@@ -1,0 +1,26 @@
+% witness: the grid design study 2026-10-22 (20 `\vskip` breaks among its 453 floats); latex.ltx:9361-9370 `\@vspace`
+%          (`\vadjust` outside vertical mode: no line break)
+% oracle:  pdflatex 0 errors; Figure 1 one row of three (`\vspace`, `\medskip`), Figure 2 one panel per row (`\vskip`,
+%          `\linebreak`)
+% engines: rust int65a = one row in both (vertical glue between panels leaves nothing; `\linebreak` a no-op);
+%          Perl 0.8.8 the same
+% expect:  0 errors, 0 warnings; Figure 1 no `ltx:break`, Figure 2 one after each of its first two panels
+% status:  RED (int65a) -> GREEN (78x, OXIDIZED_DESIGN_DIVERGENCES #885)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{figure}
+\centering
+\rule{0.3\textwidth}{1cm}\vspace{2mm}
+\rule{0.3\textwidth}{1cm}\medskip
+\rule{0.3\textwidth}{1cm}
+\caption{Vertical space in a line of panels.}
+\end{figure}
+\begin{figure}
+\centering
+\rule{0.3\textwidth}{1cm}\vskip 2mm
+\rule{0.3\textwidth}{1cm}\linebreak
+\rule{0.3\textwidth}{1cm}
+\caption{A skip and a line break.}
+\end{figure}
+\end{document}

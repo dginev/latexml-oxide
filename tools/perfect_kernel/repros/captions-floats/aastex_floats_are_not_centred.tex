@@ -1,0 +1,22 @@
+% witness: review rev78x4 finding 2 (probe n5.tex: AASTeX 6.x and 7.x load revtex4-1, then `\def\@xfloat@prep` again
+%          without its `\centering`, aastex701.cls:8066; emulateapj.cls:949 the same; AASTeX 5.x is `article`'s)
+% oracle:  pdflatex 0 errors (aastex701: \columnwidth 513.117pt): two lines, 1 | 3 (the line after `\\` begins without
+%          the `\hspace`, `\rightskip` 0); emulateapj (the guard's variant) the same at its 245.267pt column
+% engines: rust int69b = 1 | 3; 78x r4 = 1 | 2 | 1 (REVTeX's centred floats); Perl 0.8.8 as int69b
+% expect:  0 errors, 0 warnings; one `ltx:break`, three panels after it
+% status:  RED (78x r4) -> GREEN (78x r5: the AASTeX binding withdraws REVTeX's declaration,
+%          `withdraw_panel_floats_centred`)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\usepackage{graphicx}
+\begin{document}
+Text.
+\begin{figure}
+\includegraphics[width=0.3\columnwidth]{example-image}\\
+\hspace{0.15\columnwidth}%
+\includegraphics[width=0.3\columnwidth]{example-image}\hfill
+\includegraphics[width=0.3\columnwidth]{example-image}\hfill
+\includegraphics[width=0.3\columnwidth]{example-image}
+\caption{A float's line break.}
+\end{figure}
+\end{document}

@@ -1,0 +1,36 @@
+% witness: review rev78x2 finding 2 (probe q3.tex: a scaled or rotated panel's delta not scaled)
+% oracle:  pdflatex 0 errors, 0 overfull (\columnwidth 246pt): each figure 3+1 (four 73.8pt scaled boxes, four
+%          64.58pt rotated graphics, four 64.58pt rotated boxes, \hfill between)
+% engines: rust int68a = 3+1 each (Perl's 345pt line and boxes); 78x r2 = one row of four each (the graphic's
+%          real-minus-ours width added unscaled to the box); Perl 0.8.8 as int68a
+% expect:  0 errors, 0 warnings; one `ltx:break` in each figure, before its fourth panel
+% status:  RED (78x r2) -> GREEN (78x r3: the ratio form, a `\scalebox` scales its content's, a rotation turns it)
+% preload: ar5iv.sty
+\documentclass[twocolumn]{revtex4-2}
+\usepackage{graphicx}
+\begin{document}
+\title{T}
+\maketitle
+Text.
+\begin{figure}
+\scalebox{0.5}{\includegraphics[width=0.6\columnwidth]{example-image}}\hfill
+\scalebox{0.5}{\includegraphics[width=0.6\columnwidth]{example-image}}\hfill
+\scalebox{0.5}{\includegraphics[width=0.6\columnwidth]{example-image}}\hfill
+\scalebox{0.5}{\includegraphics[width=0.6\columnwidth]{example-image}}
+\caption{Scaled boxes.}
+\end{figure}
+\begin{figure}
+\includegraphics[width=0.35\columnwidth,angle=90]{example-image}\hfill
+\includegraphics[width=0.35\columnwidth,angle=90]{example-image}\hfill
+\includegraphics[width=0.35\columnwidth,angle=90]{example-image}\hfill
+\includegraphics[width=0.35\columnwidth,angle=90]{example-image}
+\caption{Rotated graphics.}
+\end{figure}
+\begin{figure}
+\rotatebox{90}{\includegraphics[width=0.35\columnwidth]{example-image}}\hfill
+\rotatebox{90}{\includegraphics[width=0.35\columnwidth]{example-image}}\hfill
+\rotatebox{90}{\includegraphics[width=0.35\columnwidth]{example-image}}\hfill
+\rotatebox{90}{\includegraphics[width=0.35\columnwidth]{example-image}}
+\caption{Rotated boxes.}
+\end{figure}
+\end{document}

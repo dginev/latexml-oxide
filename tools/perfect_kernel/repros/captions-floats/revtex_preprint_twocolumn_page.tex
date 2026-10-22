@@ -1,0 +1,25 @@
+% witness: review rev78x2 finding 4 (`[preprint,twocolumn]{revtex4-2}`: the binding declared 468pt (one preprint column))
+% oracle:  pdflatex 0 errors, 0 overfull (\showthe in a float: 229pt column, 468pt text; preprint's text in two columns): Figure 1 two
+%          rows (2 x 115pt), Figure 2 one row (2 x 114pt)
+% engines: rust int68a = one row each (Perl's 345pt line); 78x r2 = one row each (the declared 468pt (one preprint column));
+%          Perl 0.8.8 as int68a
+% expect:  0 errors, 0 warnings; one `ltx:break` in Figure 1, none in Figure 2
+% status:  RED (78x r2) -> GREEN (78x r3: the class binding declares the page its options give, `declare_panel_page`)
+% preload: ar5iv.sty
+\documentclass[preprint,twocolumn]{revtex4-2}
+\usepackage{graphicx}
+\begin{document}
+\title{T}
+\maketitle
+Text.
+\begin{figure}
+\includegraphics[width=115pt]{example-image}\hfill
+\includegraphics[width=115pt]{example-image}
+\caption{Two 115pt panels.}
+\end{figure}
+\begin{figure}
+\includegraphics[width=114pt]{example-image}\hfill
+\includegraphics[width=114pt]{example-image}
+\caption{Two 114pt panels.}
+\end{figure}
+\end{document}

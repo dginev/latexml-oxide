@@ -4635,6 +4635,28 @@ pub fn value_in_frame(key: &str, frame: usize) -> Option<Stored> {
   state.value.get(&key_sym).and_then(|v| v.get(p)).cloned()
 }
 
+/// The stack frame (0 = innermost) that made the `n`-th newest binding of `key` (0 = the binding in force), for
+/// [`value_in_frame`]: which group a value was set in.
+pub fn frame_of_binding(key: &str, n: usize) -> Option<usize> {
+  let key_sym = arena::pin(key);
+  let state = state!();
+  let mut seen = 0;
+  for (frame, f) in state.undo.iter().enumerate() {
+    let bound = f
+      .table(TableName::Value)
+      .get(&key_sym)
+      .copied()
+      .unwrap_or(0);
+    if bound > 0 {
+      if seen + bound > n {
+        return Some(frame);
+      }
+      seen += bound;
+    }
+  }
+  None
+}
+
 //======================================================================
 /// Lookup & assign a character's Catcode
 pub fn lookup_catcode(c: char) -> Option<Catcode> {

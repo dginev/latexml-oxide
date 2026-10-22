@@ -170,6 +170,11 @@ LoadDefinitions!({
       }
       if !prop_bool!(props, "noop") {
         document.maybe_close_element("ltx:p")?;
+        // A source paragraph break between a float's panels ends their row (the panel grid rule,
+        // `note_panel_separator`); not the one leaving horizontal mode inserts (2605.00347, below).
+        if !prop_bool!(props, "internal_par") {
+          crate::latex_constructs::note_panel_separator(document, "par", None)?;
+        }
         let element = document.get_element();
         if let Some(mut node) = element {
           let qname = document::get_node_qname(&node);

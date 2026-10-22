@@ -1,0 +1,40 @@
+% witness: 0912.4528 Fig 4 (`\subfigure…\subfigure} \\ \subfigure…` in `{center}`: 2+1 in the PDF, one row in
+%          int65a); 1206.5015 Fig 3 (6/6/5 in the PDF, int65a 9/8)
+% oracle:  pdflatex 0 errors; Figures 1 and 2 two panels then one, Figure 3 one then two
+% engines: rust int65a = one row in all three (`\\` in a `{center}` is skipped in its capture, a blank line digested in
+%          vertical mode, the environment's lines run together); Perl 0.8.8 the same
+% expect:  0 errors, 0 warnings; one `ltx:break` per figure, after the second panel in Figures 1-2 and after the first
+%          in Figure 3
+% status:  RED (int65a) -> GREEN (78x, OXIDIZED_DESIGN_DIVERGENCES #885)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{subfigure}
+\begin{document}
+\begin{figure}
+\begin{center}
+\subfigure[One]{\rule{0.3\textwidth}{1cm}}
+\subfigure[Two]{\rule{0.3\textwidth}{1cm}} \\
+\subfigure[Three]{\rule{0.3\textwidth}{1cm}}
+\end{center}
+\caption{A break inside a centre.}
+\end{figure}
+\begin{figure}
+\begin{center}
+\rule{0.3\textwidth}{1cm}
+\rule{0.3\textwidth}{1cm}
+
+\rule{0.3\textwidth}{1cm}
+\end{center}
+\caption{A blank line inside a centre.}
+\end{figure}
+\begin{figure}
+\begin{center}
+\rule{0.3\textwidth}{1cm}
+\end{center}
+\begin{center}
+\rule{0.3\textwidth}{1cm}
+\rule{0.3\textwidth}{1cm}
+\end{center}
+\caption{Two centres.}
+\end{figure}
+\end{document}

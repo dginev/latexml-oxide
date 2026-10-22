@@ -445,6 +445,13 @@ LoadDefinitions!({
         }
     }
   );
+  // The width it states is a float panel's (the panel grid rule, `declare_panel_width`): its `width`, not its height
+  // (1703.09474 Fig 13, 2503.09651 Fig 1), which scales its width where it states none (graphicx has no `totalwidth`
+  // key, review rev78x2 finding 7).
+  declare_panel_width("\\@includegraphicx", 2, &["width"], &[
+    "height",
+    "totalheight",
+  ]);
 });
 
 /// A file name's characters as written, whatever their catcodes (a subscript `_` is `_`, not its display rendering);

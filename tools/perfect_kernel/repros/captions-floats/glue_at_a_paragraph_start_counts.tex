@@ -1,0 +1,37 @@
+% witness: 2212.03198 Figs 6, 10-12, 15 (`\hspace*{-0.5cm}` before three sub-figures pulls their row in: one row in
+%          the PDF; `\\\hspace*{-1.1cm}` before Fig 10's second row of four)
+% oracle:  pdflatex 0 errors, 0 overfull: Figure 1 one row (3 x 120.75pt less 0.5cm and 2 x 0.2cm = 336.7pt in
+%          345pt); Figure 2 1 | 2 | 1 (after `\\` TeX discards the row's leading `\hspace`: 350.9pt does not fit);
+%          Figure 3 1 | 3 (an `\hspace*` it keeps: 336.6pt)
+% engines: rust int68a = Figure 1 2+1 (no glue counted), Figures 2-3 1 | 2 | 1; 78x r2 = the same (the glue before a
+%          row's first panel dropped); Perl 0.8.8 as int68a
+% expect:  0 errors, 0 warnings; Figure 1 no `ltx:break`, Figure 2 two, Figure 3 one
+% status:  RED (78x r2) -> GREEN (78x r3: a row that begins a paragraph keeps the glue stated before its first panel)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\begin{figure}
+\hspace*{-0.5cm}%
+\includegraphics[width=0.35\textwidth]{example-image}\hspace*{-0.2cm}%
+\includegraphics[width=0.35\textwidth]{example-image}\hspace*{-0.2cm}%
+\includegraphics[width=0.35\textwidth]{example-image}
+\caption{Glue at a paragraph's start.}
+\end{figure}
+\begin{figure}
+\includegraphics[width=0.35\textwidth]{example-image}\\
+\hspace{-0.5cm}%
+\includegraphics[width=0.35\textwidth]{example-image}\hspace{-0.2cm}%
+\includegraphics[width=0.35\textwidth]{example-image}\hspace{-0.2cm}%
+\includegraphics[width=0.35\textwidth]{example-image}
+\caption{Glue after a line break.}
+\end{figure}
+\begin{figure}
+\includegraphics[width=0.35\textwidth]{example-image}\\
+\hspace*{-0.5cm}%
+\includegraphics[width=0.35\textwidth]{example-image}\hspace{-0.2cm}%
+\includegraphics[width=0.35\textwidth]{example-image}\hspace{-0.2cm}%
+\includegraphics[width=0.35\textwidth]{example-image}
+\caption{Starred glue after a line break.}
+\end{figure}
+\end{document}

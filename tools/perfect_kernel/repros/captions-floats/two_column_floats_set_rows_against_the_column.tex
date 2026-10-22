@@ -1,0 +1,40 @@
+% witness: 1707.00190 Fig 2, nucl-ex0511052 Fig 13, 2502.05562 Fig 6, astro-ph0205132 Figs 2, 4, 5 (`0.74\columnwidth`
+%          pairs in a two-column `figure*`: one row in the PDF, two in int65a); 1705.10798 (4cm pairs in a REVTeX
+%          column); 2205.01906 Figs 6-8 (`1.04\columnwidth` in a `figure*`); 2601.01508 Figs 4-5, 9, 11, 13-14 (a
+%          width key given twice)
+% oracle:  pdflatex 0 errors (\textwidth 469pt, \columnwidth 229.5pt); Figure 1 one row, Figure 2 one panel per row,
+%          Figures 3 and 4 one row
+% engines: rust int65a = Figure 1 two rows, Figure 2 one row (every width against Perl's `\columnwidth` =
+%          `\textwidth`, latex_constructs.pool.ltxml:321); Perl 0.8.8 the same
+% expect:  0 errors, 0 warnings; an `ltx:break` in Figure 2 only
+% status:  RED (int65a) -> GREEN (78x, OXIDIZED_DESIGN_DIVERGENCES #885: a two-column `figure` sets its rows against
+%          the column, a `figure*` against the text width, the registers kept)
+% preload: ar5iv.sty
+\documentclass[twocolumn]{article}
+\usepackage{graphicx}
+\begin{document}
+\begin{figure*}
+\centering
+\rule{0.74\columnwidth}{1cm}
+\rule{0.74\columnwidth}{1cm}
+\caption{Column-wide panels in a starred float.}
+\end{figure*}
+\begin{figure}
+\centering
+\rule{0.45\textwidth}{1cm}
+\rule{0.45\textwidth}{1cm}
+\caption{Text-wide panels in a column.}
+\end{figure}
+\begin{figure}
+\centering
+\includegraphics[width=0.45\linewidth]{example-image}
+\includegraphics[width=0.45\linewidth]{example-image}
+\caption{Line-wide panels in a column.}
+\end{figure}
+\begin{figure}
+\centering
+\includegraphics[width=0.45\textwidth,width=1.5in]{example-image}
+\includegraphics[width=0.45\textwidth,width=1.5in]{example-image}
+\caption{A width given twice.}
+\end{figure}
+\end{document}

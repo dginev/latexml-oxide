@@ -7,6 +7,10 @@ LoadDefinitions!({
   // Perl: mnras.cls.ltxml
 
   LoadClass!("mn");
+  // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`): mnras.cls's, as
+  // pdflatex gives it — 508pt in two 244pt columns, one column under `onecolumn` — where the `mn` → article chain
+  // keeps article's one-column `\if@twocolumn`. Witness 1902.04580 Figs.
+  declare_panel_page(244.0, 508.0, last_class_option(&["onecolumn", "twocolumn"]) != Some("onecolumn"));
   RequirePackage!("hyperref");
   // MNRAS papers often use \color{ForestGreen} / \color{NavyBlue}
   // from the dvipsnames palette AND \cellcolor (colortbl, loaded via

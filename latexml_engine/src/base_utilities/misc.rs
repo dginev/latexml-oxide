@@ -31,11 +31,17 @@ pub fn aligning_environment(
   props: &SymHashMap<Stored>,
 ) -> Result<()> {
   if let Some(Stored::Digested(body)) = props.get("body") {
+    // In a float, the environment's lines are rows of their own (the panel grid rule, `note_panel_separator`).
+    crate::latex_constructs::note_panel_separator(document, "env", None)?;
     // Add class attribute to new nodes.
     // (a list environment, no TeX box: its text is body text for a field's print, OXIDIZED_DESIGN #715)
-    for mut node in insert_block_as(document, body, HashMap::default(), false, false)?.into_iter() {
+    let nodes = crate::latex_constructs::in_aligning_capture(|| {
+      insert_block_as(document, body, HashMap::default(), false, false)
+    })?;
+    for mut node in nodes.into_iter() {
       set_align_or_class(document, &mut node, align, class)?;
     }
+    crate::latex_constructs::note_panel_separator(document, "env", None)?;
   }
   Ok(())
 }

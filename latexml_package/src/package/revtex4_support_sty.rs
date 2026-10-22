@@ -189,8 +189,11 @@ LoadDefinitions!({
   DefMacro!("\\published[]{}", "\\lx@add@date[role=published]{#2}");
 
   // 5.3 Widetext
-  def_macro_noop("\\widetext")?;
-  def_macro_noop("\\endwidetext")?;
+  // A wide passage is set in one column (ltxgrid's `\onecolumngrid` inside it, revtex4-2.cls:7440-7460): the page a
+  // float's panels are set in rows against follows (the panel grid rule, `set_panel_page_twocolumn`; 2504.20901's
+  // appendix figures in `{widetext}`).
+  DefMacro!("\\widetext", "\\lx@panel@page@push@onecolumn");
+  DefMacro!("\\endwidetext", "\\lx@panel@page@pop");
   def_macro_noop("\\narrowtext")?;
   def_macro_noop("\\endnarrowtext")?;
   def_macro_noop("\\mediumtext")?;
@@ -228,9 +231,10 @@ LoadDefinitions!({
 
   // Grid / column macros
   DefMacro!("\\thepagegrid", "one");
-  def_macro_noop("\\onecolumngrid")?;
-  def_macro_noop("\\twocolumngrid")?;
-  def_macro_noop("\\restorecolumngrid")?;
+  // (a one-column region of a declared two-column page, the panel grid rule: `set_panel_page_twocolumn`)
+  DefMacro!("\\onecolumngrid", "\\lx@panel@page@onecolumn");
+  DefMacro!("\\twocolumngrid", "\\lx@panel@page@twocolumn");
+  DefMacro!("\\restorecolumngrid", "\\lx@panel@page@restore");
   // revtex4-1.cls L4388: \do@columngrid{layout}{N}. Layout-only.
   // Witness 2406.02666 (revtex4-1 with explicit \onecolumngrid call
   // before our stub binding loads).

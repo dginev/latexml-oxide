@@ -17,12 +17,12 @@
 %          (the captioned box, latex_constructs.pool.ltxml:3286-3295)
 % expect:  0 errors, 0 warnings; Figure 1 no `ltx:break`, Figures 2 and 3 one before their third panel, Figure 4 one
 %          between its two
-% status:  RED (int61a, 78t r5; GREEN only in 78t r3) -- owned by the grid-rule payload (SYNC_STATUS "panel grid rule"
-%          row, grid-design payload 2): Figures 1 and 4 state the same widths and differ only by TeX's breaking (justified
-%          overfull vs centred), and Figure 2's underfull break comes from the spaces, so the source-signal rule
-%          (explicit breaks, stated widths and stated glue) sets Figures 2 and 4 on one row; whether they stay an
-%          accepted residual of the charter's "do not re-run TeX's line breaking" is the user's call (the overflow
-%          residual of the grid design study, 2026-10-22)
+% status:  RED, an accepted residual (int61a, 78t r5, 78x; GREEN only in 78t r3): under the grid rule (78x,
+%          OXIDIZED_DESIGN_DIVERGENCES #885; user rulings 2026-10-22, FIDELITY_CHARTER §2 "Float panels": the rows from
+%          the explicit breaks and the stated widths and glue, not TeX's line breaking against one page geometry)
+%          Figures 1 and 4 state the same widths and differ only by TeX's breaking (justified overfull vs centred), and
+%          Figure 2's underfull break comes from the spaces: 78x sets Figures 1, 2 and 4 on one row and Figure 3 one
+%          panel per row (0.6 + 0.6 past the line), where pdflatex sets 1 | 2+1 | 2+1 | 1+1
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{subfigure}

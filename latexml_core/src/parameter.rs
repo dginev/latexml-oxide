@@ -97,7 +97,33 @@ pub struct Parameter {
   /// `(OptionalMatch…, Until…)` of `name`, worked out on the first read (lazily: `name` is set
   /// by struct update after `Default`), so a read pays no interner lookup.
   pub name_kind:          Cell<Option<(bool, bool)>>,
+  /// A braced or bracketed argument's tokens as the source states them (`{0.48\textwidth}`), kept for the reader that
+  /// asked for them ([`Parameters::read_arguments_and_digest`] under [`KEEP_STATED_LENGTHS`]): `Some` while asked
+  /// for, holding them once [`Parameters::reparse_argument`] has read them.
+  pub stated:             RefCell<Option<Tokens>>,
 }
+
+/// The state value that asks a constructor to keep the tokens its braced or bracketed typed arguments state
+/// (`{Dimension}`, `[TempboxaDimension]`, `{SetlengthDimension}`, …) on its whatsit ([`STATED_LENGTHS`]), and a
+/// `KeyVals` the tokens of its typed length values (`KeyVals::stated_entry`): what the source states, which a reader
+/// may evaluate again under other register values (latexml_engine's panel rows, a float's panels set against the
+/// class's real line; OXIDIZED_DESIGN_DIVERGENCES #885). Assigned in a group (a float's), so it ends with it.
+pub const KEEP_STATED_LENGTHS: &str = "lx@keep@stated@lengths";
+
+/// The whatsit property holding the tokens its typed arguments state ([`KEEP_STATED_LENGTHS`]): a
+/// `Stored::VecDequeStored` aligned with the whatsit's arguments, `Stored::Tokens` for a kept one, else `Stored::None`.
+pub const STATED_LENGTHS: &str = "stated_lengths";
+
+/// The state value with which a binding that sizes a box of its own accord withholds the tokens of the lengths it
+/// gives a constructor ([`KEEP_STATED_LENGTHS`] off in its group; latexml_engine's `\lx@panel@unstated`, subcaption's
+/// `\subfloat`): the source states no such length, which differs from one given where none are kept (a box built
+/// outside a float). Assigned in a group, so it ends with it.
+pub const WITHHOLD_STATED_LENGTHS: &str = "lx@withhold@stated@lengths";
+
+/// The whatsit property marking a constructor whose length arguments' tokens were withheld
+/// ([`WITHHOLD_STATED_LENGTHS`]): it states none.
+pub const STATED_LENGTHS_WITHHELD: &str = "stated_lengths_withheld";
+
 impl Default for Parameter {
   fn default() -> Self {
     Parameter {
@@ -124,6 +150,7 @@ impl Default for Parameter {
       before_digest:      Vec::new(),
       after_digest:       Vec::new(),
       name_kind:          Cell::new(None),
+      stated:             RefCell::new(None),
     }
   }
 }
@@ -849,7 +876,25 @@ impl Parameters {
     Ok(Some(args))
   }
 
-  pub fn read_arguments_and_digest(&self, fordefn: &Constructor) -> Result<Vec<Option<Digested>>> {
+  /// The tokens its one parameter reads ([`Parameter::stated`]), when this is the inner spec of a braced or bracketed
+  /// argument (`{Dimension}`, `[TempboxaDimension]`, `{GraphixDimension}`).
+  fn stated_argument_cell(&self) -> Option<&RefCell<Option<Tokens>>> {
+    match self.0.as_slice() {
+      [only] => Some(&only.stated),
+      _ => None,
+    }
+  }
+
+  /// Read and digest a constructor's arguments. Under [`KEEP_STATED_LENGTHS`], `stated` receives the tokens each
+  /// braced or bracketed typed argument states (a length's `{0.48\textwidth}`), with its index among the returned
+  /// arguments; `withheld` is set when it has such an argument and a binding withheld their tokens
+  /// ([`WITHHOLD_STATED_LENGTHS`]).
+  pub fn read_arguments_and_digest(
+    &self,
+    fordefn: &Constructor,
+    stated: &mut Vec<(usize, Tokens)>,
+    withheld: &mut bool,
+  ) -> Result<Vec<Option<Digested>>> {
     let mut args = Vec::with_capacity(self.0.len());
     // `LXML_TRACE_ARGS=\cs` prints every argument this constructor reads, as
     // reverted tokens, before it is digested — a bisect aid for "which tokens
@@ -863,13 +908,31 @@ impl Parameters {
     // in their slot until the box, the last argument, is digested.
     let mut after_box: Vec<(usize, &Parameter, ArgWrap)> = Vec::new();
     let last = self.0.len().saturating_sub(1);
+    // whether the lengths' stated tokens are kept, looked up at the first such parameter
+    let mut keep: Option<bool> = None;
     for (index, parameter) in self.0.iter().enumerate() {
       let measures = parameter.measures_the_box();
+      let stated_cell = parameter
+        .inner
+        .as_ref()
+        .and_then(Parameters::stated_argument_cell)
+        .filter(|_| *keep.get_or_insert_with(|| lookup_bool(KEEP_STATED_LENGTHS)));
+      if let Some(cell) = stated_cell {
+        cell.replace(Some(Tokens::new(Vec::new())));
+      }
       let value = if measures {
         parameter.read_with(None, Some(fordefn))?
       } else {
         parameter.read(Some(fordefn))?
       };
+      // (a size read with the box set is re-parsed below, and its tokens taken there)
+      if !measures
+        && let Some(tokens) = stated_cell.and_then(|cell| cell.take())
+        && !tokens.is_empty()
+        && !parameter.novalue
+      {
+        stated.push((args.len(), tokens));
+      }
       if traced {
         let shown = value.revert().map(|t| t.to_string()).unwrap_or_default();
         eprintln!(
@@ -909,7 +972,16 @@ impl Parameters {
       within_tempboxa(content.as_ref(), || {
         for (slot, parameter, raw) in after_box {
           let inner = parameter.inner.as_ref().expect("measures_the_box");
+          let cell = inner.stated_argument_cell().filter(|_| keep == Some(true));
+          if let Some(cell) = cell {
+            cell.replace(Some(Tokens::new(Vec::new())));
+          }
           let mut values = inner.reparse_argument(raw)?;
+          if let Some(tokens) = cell.and_then(|cell| cell.take())
+            && !tokens.is_empty()
+          {
+            stated.push((slot, tokens));
+          }
           let value = if values.is_empty() {
             ArgWrap::None
           } else {
@@ -923,6 +995,8 @@ impl Parameters {
     if let Some(tails) = tails {
       tails.hand_back(Some(fordefn));
     }
+    // (looked up only for a constructor with a length argument whose tokens were not kept)
+    *withheld = keep == Some(false) && lookup_bool(WITHHOLD_STATED_LENGTHS);
     Ok(args)
   }
 
@@ -944,7 +1018,15 @@ impl Parameters {
     }
     let length = self.braced_length_type();
     let calc = length.and_then(|_| gullet::braced_length_evaluator());
-    let (values, tail) = read_braced(value.revert()?, || {
+    let tokens = value.revert()?;
+    // the tokens the source states, for a reader that asked for them (`Parameter::stated`)
+    if let [only] = self.0.as_slice()
+      && let Ok(mut stated) = only.stated.try_borrow_mut()
+      && stated.is_some()
+    {
+      *stated = Some(tokens.clone());
+    }
+    let (values, tail) = read_braced(tokens, || {
       if let Some((kind, true)) = length
         && let Some(value) = read_through_redefined_setlength(kind)?
       {

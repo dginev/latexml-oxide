@@ -2,8 +2,15 @@ use std::collections::VecDeque;
 
 use latexml_core::{
   alignment::template::TemplateConfig,
-  common::{error::emit_warn, xml::is_descendant_or_self},
+  common::{
+    error::{IgnoreDiagnosticsScope, emit_warn},
+    xml::is_descendant_or_self,
+  },
   digested::DigestedData,
+  parameter::{
+    KEEP_STATED_LENGTHS, STATED_LENGTHS, STATED_LENGTHS_WITHHELD, WITHHOLD_STATED_LENGTHS,
+    read_braced,
+  },
 };
 
 ///**********************************************************************
@@ -3908,6 +3915,7 @@ fn begin_float(
   .ok();
   // Scoped to the float's group: a `\caption` digested with `\@captype` set but
   // without this marker is outside any float (sect09.rs `\lx@@caption`).
+  let in_float = lookup_bool("lx@in@float");
   assign_value("lx@in@float", true, Some(Scope::Local));
   // The float's own frame: latex.ltx's `\@endfloatbox` closes a float box only when a raw
   // opener made one on top of it (sect09.rs).
@@ -3923,6 +3931,23 @@ fn begin_float(
   // Perl #2775: rebind \\ to \lx@newline in floats to prevent
   // alignment-token early-return when floats are inside tabulars.
   Let!("\\\\", "\\lx@newline");
+  // Between a float's panels (the panel grid rule), while each has the kernel's meaning — an author's or a package's
+  // own stands (review rev78x finding 11): a forced `\linebreak` ends their row as `\\` does (`\lx@panel@linebreak`,
+  // sect09.rs); a `\vspace` does not (`\lx@panel@vspace`, sect12.rs), a `\vskip` does; the glue an `\hspace` states
+  // counts towards their row (`\lx@panel@hspace`, sect12.rs).
+  for (name, kernel, panel) in [
+    (
+      "\\linebreak",
+      "\\lx@kernel@linebreak",
+      "\\lx@panel@linebreak",
+    ),
+    ("\\vspace", "\\lx@kernel@vspace", "\\lx@panel@vspace"),
+    ("\\hspace", "\\lx@kernel@hspace", "\\lx@panel@hspace"),
+  ] {
+    if x_equals(&T_CS!(name), &T_CS!(kernel)) {
+      let_definition(&T_CS!(name), &T_CS!(panel), None);
+    }
+  }
   // Perl: AssignRegister('\hsize' => LookupDimension($options{double} ? '\textwidth' :
   // '\columnwidth'));
   let dim_name = if double {
@@ -3932,6 +3957,12 @@ fn begin_float(
   };
   let dim_val = lookup_dimension(dim_name).unwrap_or_default();
   assign_register("\\hsize", dim_val.into(), None, Vec::new()).ok();
+  // The real line the float's panels are set in rows against (`install_panel_line`), in a float not inside another.
+  if !in_float {
+    install_panel_line(double);
+  } else {
+    note_panel_hbox();
+  }
   // Perl: if (my $main = $options{preincrement}) {
   //   if (($type ne (LookupValue('LAST_FLOATTYPE') || ''))
   //     && !IfCondition('\iflx@donecaption')) {
@@ -3956,6 +3987,900 @@ fn begin_float(
   }
   Ok(())
 }
+/// The state value (and the whatsit property `after_float` copies it to) of the real line a float's panels are set in
+/// rows against, and the frame of the float that installed it.
+const PANEL_LINE: &str = "panel_line_width";
+const PANEL_LINE_FRAME: &str = "lx@panel@line@frame";
+/// The whatsit property of the line a float with no real line (`PANEL_LINE`) is arranged at under geometry
+/// (`after_float`): `\Gm@tw`, as before the panel grid rule.
+const PANEL_FALLBACK_LINE: &str = "panel_fallback_line";
+/// The state value of the float's `\hsize` as `install_panel_line` found it: one its binding sets afterwards (a
+/// wrapfigure's width, wrapfig_sty.rs) is the float's own line, which the class's page does not replace
+/// (`after_float`; 2609.34643 S3.SS3.fig1, a 0.27\textwidth wrapfigure).
+const PANEL_LINE_HSIZE: &str = "lx@panel@line@hsize";
+/// The state value of the geometry a float's stated widths are evaluated at (`install_panel_line`): the registers' own
+/// values and the real ones, `\textwidth`, `\columnwidth`, the line (`\linewidth`, `\hsize`), in scaled points.
+const PANEL_GEOMETRY: &str = "lx@panel@geometry";
+/// The whatsit property a panel's box carries once its stated width is evaluated (`note_stated_widths`): what the
+/// real geometry adds to it (scaled points, a `Dimension`), for `arrange_panels` alone.
+const PANEL_WIDTH_DELTA: &str = "panel_width_delta";
+/// The whatsit property of an `\hspace` between a float's panels (`\lx@panel@hskip`): what the real geometry adds to
+/// its natural width.
+pub(crate) const PANEL_GLUE_DELTA: &str = "panel_glue_delta";
+
+/// The kernel's `\textwidth` (latex_constructs.pool.ltxml:1038 `DefRegister('\textwidth' => Dimension('345pt'))`).
+const KERNEL_TEXTWIDTH: i64 = 345 * 65536;
+
+/// A class binding's declaration of the page its panels are set in rows against (`declare_panel_page`): the column
+/// and text widths of the class's real page and the binding's own `\textwidth` (scaled points), and whether the page is
+/// set in two columns now.
+const PANEL_PAGE: &str = "lx@panel@page";
+const PANEL_PAGE_TWOCOLUMN: &str = "lx@panel@page@twocolumn";
+
+/// The panel grid rule's line (user ruling 2026-10-22, FIDELITY_CHARTER §2 "Float panels"): a float's panels are set in
+/// rows against the class's real line (`panel_page`: a class binding's declared page, else the registers' and the
+/// geometry's) — in two columns a `figure` against the column, a `figure*` (`double`) against the text width. The
+/// registers keep Perl's values (latex_constructs.pool.ltxml:321 `\columnwidth` = `\textwidth`), so where the real
+/// line differs the float keeps the widths its body states as tokens (`KEEP_STATED_LENGTHS`) and evaluates them once
+/// more at the real geometry as its element opens (`note_stated_widths`), for `arrange_panels` alone. Witnesses 1707.00190
+/// Fig 2, nucl-ex0511052 Fig 13, 2502.05562 Fig 6, astro-ph0205132 (`0.74\columnwidth` pairs in a two-column
+/// `figure*`, one row in the PDF); 1508.01788 Figs 19-22, 1411.5428 Figs 6-7, 2111.05508 (the geometry's width).
+/// OXIDIZED_DESIGN_DIVERGENCES #885.
+fn install_panel_line(double: bool) {
+  let register = |name: &str| lookup_dimension(name).map(|d| d.value_of());
+  let (Some(textwidth), Some(columnwidth), Some(hsize)) = (
+    register("\\textwidth"),
+    register("\\columnwidth"),
+    register("\\hsize"),
+  ) else {
+    return;
+  };
+  let linewidth = register("\\linewidth").unwrap_or(hsize);
+  let (real_text, real_column) = panel_page(textwidth);
+  let real_line = if double { real_text } else { real_column };
+  assign_value(
+    PANEL_LINE,
+    Stored::Dimension(Dimension::new(real_line)),
+    Some(Scope::Local),
+  );
+  assign_value(
+    PANEL_LINE_FRAME,
+    Stored::Number(Number(current_frame_id() as i64)),
+    Some(Scope::Local),
+  );
+  assign_value(
+    PANEL_LINE_HSIZE,
+    Stored::Dimension(Dimension::new(hsize)),
+    Some(Scope::Local),
+  );
+  // Where every register is already the real one, the stated widths add nothing.
+  if [
+    (textwidth, real_text),
+    (columnwidth, real_column),
+    (linewidth, real_line),
+    (hsize, real_line),
+  ]
+  .iter()
+  .all(|(ours, real)| ours == real)
+  {
+    return;
+  }
+  let geometry = [
+    textwidth,
+    columnwidth,
+    linewidth,
+    hsize,
+    real_text,
+    real_column,
+    real_line,
+  ];
+  assign_value(
+    PANEL_GEOMETRY,
+    Stored::VecDequeStored(
+      geometry
+        .iter()
+        .map(|v| Stored::Dimension(Dimension::new(*v)))
+        .collect(),
+    ),
+    Some(Scope::Local),
+  );
+  assign_value(KEEP_STATED_LENGTHS, true, Some(Scope::Local));
+}
+
+/// The state values (and whatsit properties, `after_float`) of a sub-float set in a TeX `\hbox` (the panel grid rule):
+/// its body is one (`PANEL_HBOX_BODY`: subfigure.sty's `\subfigure`, whose body `\@subfloat` sets in an `\hbox`,
+/// subfigure.sty:232), or it is begun in one, with the group of that box it is begun in (`PANEL_HBOX_ROW`: the
+/// sub-figures of an adjustbox, one `\hbox` in TeX, 2311.18531 A7.F5/F6). TeX breaks no line inside an `\hbox`, so
+/// `arrange_panels` keeps such panels on one row however wide they add up, as a binding's fixed row (`_gridrow`);
+/// overfull, they are TeX's overfull box (cond-mat0610021 Fig 11: two `width=200pt` graphics in one sub-figure).
+const PANEL_HBOX_BODY: &str = "panel_hbox_body";
+const PANEL_HBOX_ROW: &str = "panel_hbox_row";
+
+/// A sub-float's `\hbox` (`PANEL_HBOX_BODY`, `PANEL_HBOX_ROW`), as it begins: its own mode (its environment's) and the
+/// mode of the group it is begun in. The box is the group that set that mode, not the group the sub-float is begun
+/// in: subcaption's `\subfloat` begins its sub-figure in a `\begingroup` of its own (subcaption_sty.rs
+/// `subfloat_tokens`), so four `\subfloat`s in an `adjustbox` or a `\resizebox`, one `\hbox` in TeX, were four
+/// groups and four rows (review rev78x2 finding 3; 2311.18531 A7.F5/F6 the environment form).
+fn note_panel_hbox() {
+  let modes = value_history("MODE", 2);
+  let horizontal_box = |mode: Option<&String>| mode.is_some_and(|m| m == "restricted_horizontal");
+  assign_value(
+    PANEL_HBOX_BODY,
+    horizontal_box(modes.first()),
+    Some(Scope::Local),
+  );
+  if horizontal_box(modes.get(1))
+    && let Some(frame) = frame_of_binding("MODE", 1)
+    && let Some(group) = value_in_frame("lx@frame@id", frame)
+  {
+    assign_value(
+      PANEL_HBOX_ROW,
+      Stored::String(pin(group.to_string())),
+      Some(Scope::Local),
+    );
+  } else {
+    assign_value(PANEL_HBOX_ROW, Stored::None, Some(Scope::Local));
+  }
+}
+
+/// The class's real text and column widths for panel rows (scaled points). The text width is `\textwidth`, or the
+/// geometry's `\Gm@tw` where it computed one and `\textwidth` is still the class's (`\Gm@doctw`), or a class binding's
+/// declared page (`declare_panel_page`) while `\textwidth` is still the binding's (an author's `\textwidth 7.2in` is
+/// the page: 2211.03584). In two columns — the declared page's setting, else `\if@twocolumn` — the column is the
+/// declared one on the declared page, else `(text − \columnsep)/2` as latex.ltx's `\twocolumn` sets `\columnwidth`, the
+/// declared page's separation between its columns where it has one. A two-column binding that keeps the kernel's 345pt
+/// line and declares no page states no page of its own: that line is the column, the text width two of them and the
+/// column separation (1705.10798's 4cm pairs in a REVTeX column, one row in the PDF).
+fn panel_page(textwidth: i64) -> (i64, i64) {
+  let register = |name: &str| lookup_dimension(name).map(|d| d.value_of());
+  let declared = match lookup_value(PANEL_PAGE) {
+    Some(Stored::VecDequeStored(page)) => match (page.front(), page.get(1), page.get(2)) {
+      (
+        Some(Stored::Dimension(column)),
+        Some(Stored::Dimension(text)),
+        Some(Stored::Dimension(own)),
+      ) => Some((column.value_of(), text.value_of(), own.value_of())),
+      _ => None,
+    },
+    _ => None,
+  };
+  let mut real_text = textwidth;
+  let geometry = match (register("\\Gm@tw"), register("\\Gm@doctw")) {
+    (Some(gm), Some(doc)) if gm > 0 && gm != doc && textwidth == doc => Some(gm),
+    _ => None,
+  };
+  if let Some(gm) = geometry {
+    real_text = gm;
+  } else if let Some((_, text, own)) = declared
+    && textwidth == own
+  {
+    real_text = text;
+  }
+  let two_column = match declared {
+    Some(_) => lookup_bool(PANEL_PAGE_TWOCOLUMN),
+    None => if_condition(&T_CS!("\\if@twocolumn")).ok().flatten() == Some(true),
+  };
+  let columnsep = match declared {
+    Some((column, text, _)) => text - 2 * column,
+    None => register("\\columnsep").unwrap_or(0),
+  };
+  if !two_column {
+    (real_text, real_text)
+  } else if let Some((column, text, _)) = declared
+    && real_text == text
+  {
+    (text, column)
+  } else if declared.is_none() && real_text == KERNEL_TEXTWIDTH {
+    (2 * real_text + columnsep, real_text)
+  } else {
+    (real_text, (real_text - columnsep) / 2)
+  }
+}
+
+/// A class binding declares its real page for panel rows (§3 of the panel grid rule, OXIDIZED_DESIGN_DIVERGENCES
+/// #885): the column and text widths of the class's page in points (`column_pt`, `text_pt`, as pdflatex's
+/// `\the\columnwidth`/`\the\textwidth` in a two-column float give them for the options given), and whether the page
+/// is set in two columns now (`twocolumn`; `set_panel_page_twocolumn` follows a one-column region). The registers keep
+/// the binding's values; only the rows are set against this page. Without a declaration the rows follow the registers
+/// (`panel_page`).
+pub fn declare_panel_page(column_pt: f64, text_pt: f64, twocolumn: bool) {
+  let sp = |pt: f64| Stored::Dimension(Dimension::new((pt * 65536.0).round() as i64));
+  // (and the binding's own `\textwidth`, while which the page is the declared one: `panel_page`)
+  let own = lookup_dimension("\\textwidth").unwrap_or_default();
+  assign_value(
+    PANEL_PAGE,
+    Stored::VecDequeStored(VecDeque::from([
+      sp(column_pt),
+      sp(text_pt),
+      Stored::Dimension(own),
+    ])),
+    Some(Scope::Global),
+  );
+  assign_value(PANEL_PAGE_TWOCOLUMN_CLASS, twocolumn, Some(Scope::Global));
+  set_panel_page_twocolumn(twocolumn);
+}
+
+/// A class binding that loaded another's declaration (`declare_panel_page`; AASTeX over REVTeX's) whose page it does
+/// not know withdraws it: its rows follow the registers.
+pub fn withdraw_panel_page() { assign_value(PANEL_PAGE, Stored::None, Some(Scope::Global)); }
+
+/// The state value of a class whose floats are centred (`declare_panel_floats_centred`).
+const PANEL_FLOATS_CENTRED: &str = "lx@panel@floats@centred";
+
+/// A class binding declares that its floats are centred, every `\\` in them `\@centercr` (REVTeX's `\@xfloat@prep`,
+/// revtex4-2.cls:6770-6772 `\appdef\@parboxrestore{\centering}`), where the registers' floats are not: an `\hspace`
+/// after such a `\\` begins a paragraph, whose glue a float's row keeps (`arrange_panels`; review rev78x3 finding 3,
+/// `p1.tex` F10). The markup is not changed.
+pub fn declare_panel_floats_centred() {
+  assign_value(PANEL_FLOATS_CENTRED, true, Some(Scope::Global));
+}
+
+/// A class binding that loaded REVTeX's (`declare_panel_floats_centred`) whose floats are not centred withdraws the
+/// declaration: AASTeX 6.x and 7.x load revtex4-1 and then `\def\@xfloat@prep` again without `\centering`
+/// (aastex63.cls:1450, aastex701.cls:8066, "without it, captions are centered"), as emulateapj.cls:949 does; AASTeX 5.x
+/// is `article`'s (aastex.cls:129). Review rev78x4 finding 2 (n5: aastex701, `\\\hspace{0.15\columnwidth}` before
+/// three 0.3\columnwidth panels, two lines in the PDF).
+pub fn withdraw_panel_floats_centred() {
+  assign_value(PANEL_FLOATS_CENTRED, false, Some(Scope::Global));
+}
+
+/// The document's class options, as given (`\@classoptionslist`), for a binding's `declare_panel_page`.
+pub fn given_class_options() -> Vec<String> {
+  let given = match lookup_definition(&T_CS!("\\@classoptionslist")) {
+    Ok(Some(defn)) => match defn.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => body.to_string(),
+      _ => String::new(),
+    },
+    _ => String::new(),
+  };
+  given.split(',').map(|o| o.trim().to_string()).collect()
+}
+
+/// Which of `options` the document's class options give last (`\@classoptionslist`, a later option overriding an
+/// earlier one), for a binding's `declare_panel_page`.
+pub fn last_class_option<'a>(options: &[&'a str]) -> Option<&'a str> {
+  given_class_options()
+    .iter()
+    .rev()
+    .find_map(|g| options.iter().find(|o| **o == g).copied())
+}
+
+/// Which of `options` (in the order the class declares them) the document's class options give, the last declared:
+/// the one that stands where `\ProcessOptions` runs the options in their declaration order (latex.ltx's
+/// `\ProcessOptions`, as IEEEtran.cls's :376), for a binding's `declare_panel_page`.
+pub fn last_declared_class_option<'a>(options: &[&'a str]) -> Option<&'a str> {
+  let given = given_class_options();
+  options
+    .iter()
+    .rev()
+    .find(|o| given.iter().any(|g| g == **o))
+    .copied()
+}
+
+/// The declared page (`declare_panel_page`) is set in two columns from here on, or in one (a class's `onecolumn`, a
+/// one-column region: REVTeX's and AASTeX's `\onecolumngrid`/`\twocolumngrid`).
+pub fn set_panel_page_twocolumn(twocolumn: bool) {
+  assign_value(PANEL_PAGE_TWOCOLUMN, twocolumn, Some(Scope::Global));
+}
+
+/// The declared page's own column setting (`declare_panel_page`), which a region's end restores (REVTeX's
+/// `\restorecolumngrid`).
+const PANEL_PAGE_TWOCOLUMN_CLASS: &str = "lx@panel@page@twocolumn@class";
+
+pub(crate) fn restore_panel_page_twocolumn() {
+  set_panel_page_twocolumn(lookup_bool(PANEL_PAGE_TWOCOLUMN_CLASS));
+}
+
+/// The state value naming where a construct's stated width is (`declare_panel_width`), by the construct's control
+/// sequence.
+fn panel_width_key(cs: &str) -> String { s!("lx@panel@width@{cs}") }
+
+/// A binding declares where a construct states its width (the panel grid rule, `note_stated_widths`): its argument
+/// `arg` (1-based: `{minipage}{0.48\textwidth}`'s 4, `\resizebox`'s first), or, with `keys`, the last of those keys
+/// given in its `KeyVals` argument `arg` (`\includegraphics[width=0.48\linewidth]`), and with `height_keys` the keys
+/// whose value scales its natural width when it states none of `keys` (an aspect-keeping graphic's `height`). `cs` is
+/// the construct's control sequence as its whatsit names it (`\begin{minipage}` for an environment).
+pub fn declare_panel_width(cs: &str, arg: usize, keys: &[&str], height_keys: &[&str]) {
+  let spec = if keys.is_empty() {
+    arg.to_string()
+  } else {
+    s!("{arg}:{}|{}", keys.join(","), height_keys.join(","))
+  };
+  assign_value(
+    &panel_width_key(cs),
+    Stored::String(pin(&spec)),
+    Some(Scope::Global),
+  );
+}
+
+/// The state value marking a construct that sets its content in a parbox of the width it states
+/// (`declare_panel_parbox_width`), by the construct's control sequence.
+fn panel_parbox_key(cs: &str) -> String { s!("lx@panel@parbox@{cs}") }
+
+/// A binding declares a construct that states its width as its argument `arg` (`declare_panel_width`) and sets its
+/// content in a parbox of that width — a `{minipage}`, a `\parbox`, a sub-figure — whose `\linewidth`, `\hsize`,
+/// `\textwidth` and `\columnwidth` are that width (latex.ltx:16312-16313 `\@iiiminipage`; for a `\parbox`, Perl's
+/// latex_constructs.pool.ltxml:4746 `\hsize=#4\textwidth\hsize\columnwidth\hsize`, where latex.ltx:16249-16253
+/// `\@iiiparbox` sets only `\hsize` and, by `\@parboxrestore`, `\linewidth`: the widths are evaluated as we digest
+/// the box): its content's stated widths are evaluated against it (`note_stated_widths_in`). An `\hbox`'s
+/// (`\makebox[w]`, `\resizebox{w}{!}`) content is set at the enclosing line.
+pub fn declare_panel_parbox_width(cs: &str, arg: usize) {
+  declare_panel_width(cs, arg, &[], &[]);
+  assign_value(&panel_parbox_key(cs), true, Some(Scope::Global));
+}
+
+/// What a construct states its size with (`declare_panel_width`), where it was kept (`KEEP_STATED_LENGTHS`): the tokens
+/// of its width and of its height, and whether it keeps its aspect ratio (a graphic), so that one of them alone scales
+/// the other — an `\includegraphics[height=0.21\linewidth]`'s natural width (2209.01559 Fig 6) — and with graphicx's
+/// `keepaspectratio` both bound it. A `{minipage}{0.48\textwidth}` or a `\resizebox{0.5\textwidth}{!}` states a
+/// width only (a `\resizebox{!}{2cm}` none: its content's, scaled, `note_stated_widths_in`).
+struct StatedSize {
+  width:       Option<Tokens>,
+  height:      Option<Tokens>,
+  aspect:      bool,
+  keep_within: bool,
+  /// The width a positional argument gave the box (its digested value: the box is set at it), where the ratio of the
+  /// real geometry to the registers' scales it (`note_stated_widths_in`).
+  value:       Option<f64>,
+  /// The width and the height the construct was given (a positional argument's digested value, a `width=`'s, a
+  /// `height=`'s), which the stated tokens must give again at the registers' geometry (`note_stated_widths_in`).
+  given:       (Option<f64>, Option<f64>),
+  /// The construct sets its content in a parbox of its stated width (`declare_panel_parbox_width`).
+  parbox:      bool,
+}
+
+/// What `whatsit` states its size with (`StatedSize`), if its binding declared where (`declare_panel_width`). A width or
+/// height it was given whose tokens were not kept (a box built outside the float, `\sbox` … `\usebox`) is
+/// `Unevaluable`: what it states is unknown.
+fn stated_size_of(whatsit: &Whatsit) -> std::result::Result<Option<StatedSize>, Unevaluable> {
+  let cs = whatsit.get_definition().get_cs_name().into_owned();
+  let key = panel_width_key(&cs);
+  let Some(Stored::String(spec)) = lookup_value(&key) else {
+    return Ok(None);
+  };
+  let spec = to_string(spec);
+  let (arg, keys) = match spec.split_once(':') {
+    Some((arg, keys)) => (arg, Some(keys)),
+    None => (spec.as_str(), None),
+  };
+  let Some(index) = arg.parse::<usize>().ok().and_then(|a| a.checked_sub(1)) else {
+    return Ok(None);
+  };
+  let args = whatsit.get_args();
+  let argument = args.get(index).and_then(Option::as_ref).map(Digested::data);
+  match keys {
+    None => {
+      // a positional width (`!` for none)
+      let value = match argument {
+        Some(DigestedData::RegisterValue(v)) => Some(v.clone().value_of() as f64),
+        _ => None,
+      };
+      let tokens = match whatsit.get_property(STATED_LENGTHS).as_deref() {
+        Some(Stored::VecDequeStored(lengths)) => match lengths.get(index) {
+          Some(Stored::Tokens(tokens)) => Some(tokens.clone()),
+          _ => None,
+        },
+        _ => None,
+      };
+      match tokens {
+        Some(tokens) if tokens.to_string().trim() != "!" => Ok(Some(StatedSize {
+          width: Some(tokens),
+          height: None,
+          aspect: false,
+          keep_within: false,
+          value,
+          given: (value, None),
+          parbox: lookup_bool(&panel_parbox_key(&cs)),
+        })),
+        Some(_) => Ok(None),
+        // (a length given whose tokens were not kept: a box built before the float; one a binding gave and withheld,
+        // `WITHHOLD_STATED_LENGTHS`, states none — subcaption's `\subfloat`, review rev78x4 finding 3)
+        None if value.is_some() && !whatsit.get_property_bool(STATED_LENGTHS_WITHHELD) => {
+          Err(Unevaluable)
+        },
+        None => Ok(None),
+      }
+    },
+    Some(keys) => {
+      let (widths, heights) = keys.split_once('|').unwrap_or((keys, ""));
+      let widths: Vec<&str> = widths.split(',').collect();
+      let heights: Vec<&str> = heights.split(',').filter(|h| !h.is_empty()).collect();
+      let Some(DigestedData::KeyVals(kv)) = argument else {
+        return Ok(None);
+      };
+      // (a width or height given and not kept: what it states is unknown)
+      let width = kv.stated_entry(&widths);
+      let height = kv.stated_entry(&heights);
+      if (width.is_none() && widths.iter().any(|w| kv.has_key(w)))
+        || (height.is_none() && heights.iter().any(|h| kv.has_key(h)))
+      {
+        return Err(Unevaluable);
+      }
+      // (the value the key gave the box)
+      let given = |entry: Option<(&str, &Tokens)>| {
+        entry.and_then(
+          |(key, _)| match kv.get_value_digested(key).map(Digested::data) {
+            Some(DigestedData::RegisterValue(v)) => Some(v.clone().value_of() as f64),
+            _ => None,
+          },
+        )
+      };
+      Ok((width.is_some() || height.is_some()).then(|| StatedSize {
+        width:       width.map(|(_, tokens)| tokens.clone()),
+        height:      height.map(|(_, tokens)| tokens.clone()),
+        aspect:      true,
+        keep_within: kv.has_key("keepaspectratio"),
+        value:       None,
+        given:       (given(width), given(height)),
+        parbox:      false,
+      }))
+    },
+  }
+}
+
+/// The registers a stated length is evaluated with: `\textwidth`, `\columnwidth`, `\linewidth`, `\hsize`.
+const LINE_REGISTERS: [&str; 4] = ["\\textwidth", "\\columnwidth", "\\linewidth", "\\hsize"];
+
+/// A format is being built (`--init`, a dump): what the panel grid rule records of a document's lengths
+/// (`note_setlength`, `note_length_allocated`) is not recorded, so no dump holds it.
+fn building_a_format() -> bool {
+  static INI_MODE: std::sync::LazyLock<bool> =
+    std::sync::LazyLock::new(|| std::env::var_os("LATEXML_INI_MODE").is_some());
+  *INI_MODE || crate::dump_paths::building_format()
+}
+
+/// The state value in which a `\setlength` of a length register keeps what it stated (`note_setlength`), by the
+/// register's name: the tokens of the length and the value they gave.
+fn setlength_key(name: &str) -> String { s!("lx@panel@setlength@{name}") }
+
+/// The state value marking a length register the document allocated (`note_length_allocated`), by its name.
+fn allocated_length_key(name: &str) -> String { s!("lx@panel@allocated@{name}") }
+
+/// A `\setlength` gave the length register `name` the `value` that `tokens` state (sect12.rs `assign_braced_length`,
+/// calc's `\setlength`), recorded in the assignment's scope: a float's width read through the register
+/// (`\setlength\figw{0.48\columnwidth}` … `\includegraphics[width=\figw]`) is evaluated at the class's real geometry as
+/// that `\setlength` is there (`evaluate_stated_length`), while the register holds the value it gave. Review rev78x2
+/// finding 1 (`q1.tex`/`q2.tex`: a register set in the preamble, in the body, in the float).
+pub fn note_setlength(name: &str, tokens: &Tokens, value: i64) {
+  if building_a_format() {
+    return;
+  }
+  assign_value(
+    &setlength_key(name),
+    Stored::VecDequeStored(VecDeque::from([
+      Stored::Tokens(tokens.clone()),
+      Stored::Int(value),
+    ])),
+    None,
+  );
+}
+
+/// The document allocated the length register `cs` (`\newlength`; `\newdimen`'s `\dimendef`, `\newskip`'s `\skipdef`,
+/// tex_registers.rs): a value no `\setlength` recorded (`\figw=0.48\columnwidth`, `\settowidth`) is one of the
+/// registers' geometry, which a float's stated width that reads it cannot evaluate at the real one
+/// (`evaluate_stated_length`). The kernel's and the bindings' registers (`\tabcolsep`, `\columnsep`, `\p@`) are not
+/// the document's.
+pub fn note_length_allocated(cs: &Token) {
+  if building_a_format() {
+    return;
+  }
+  assign_value(
+    &allocated_length_key(&cs.with_cs_name(ToString::to_string)),
+    true,
+    Some(Scope::Global),
+  );
+}
+
+/// A stated length the real geometry cannot evaluate (`evaluate_stated_length`): it reads a length register the
+/// document allocated whose value no `\setlength` recorded (or one changed since), a value of the registers' geometry;
+/// or it cannot be read at the float's end, or does not give the box's value again there (`note_stated_widths_in`); or
+/// a box was given a length whose tokens were not kept (`stated_size_of`). Its float's rows fall back to the line
+/// before the rule, the geometry's included (`after_float`) — never worse than that (review rev78x2 finding 1,
+/// rev78x3 findings 1-2).
+struct Unevaluable;
+
+/// The length registers the length `tokens` state reads besides the line's (`LINE_REGISTERS`), expanded as their read
+/// expands them (`\newcommand\w{\figw}`).
+fn stated_length_registers(tokens: &Tokens) -> Vec<Rc<Register>> {
+  let _quiet = IgnoreDiagnosticsScope::new();
+  begingroup();
+  let found = read_braced(tokens.clone(), || {
+    let mut found = Vec::new();
+    while let Some(token) = read_x_token(None, false, None)? {
+      if let Some(register) = lookup_register_definition(&token)
+        && matches!(
+          register.register_type(),
+          Some(RegisterType::Dimension | RegisterType::Glue)
+        )
+        && !LINE_REGISTERS.contains(&register.get_cs_name().as_ref())
+      {
+        found.push(register);
+      }
+    }
+    Ok(found)
+  })
+  .map(|(found, _)| found)
+  .unwrap_or_default();
+  endgroup().ok();
+  found
+}
+
+/// Evaluate the length `tokens` state (a glue's natural width with `glue`) with the line registers at `registers`
+/// (`LINE_REGISTERS`), in a group and a mouth of its own, as a braced length argument is read (calc's evaluator where
+/// it is loaded, `Parameters::reparse_argument`). A length register it reads is what its `\setlength` stated, evaluated
+/// at the same geometry (`note_setlength`); one the document allocated whose value no `\setlength` recorded makes it
+/// `Unevaluable`. Its diagnostics were the source's when it was first read and are not reported again; one it cannot
+/// read gives `None`.
+fn evaluate_stated_length(
+  tokens: &Tokens,
+  registers: [i64; 4],
+  glue: bool,
+) -> std::result::Result<Option<i64>, Unevaluable> {
+  evaluate_stated_length_at(tokens, registers, glue, 0)
+}
+
+fn evaluate_stated_length_at(
+  tokens: &Tokens,
+  registers: [i64; 4],
+  glue: bool,
+  depth: usize,
+) -> std::result::Result<Option<i64>, Unevaluable> {
+  let mut reads = Vec::new();
+  for register in stated_length_registers(tokens) {
+    let name = register.get_cs_name().into_owned();
+    let current = register.value_of(Vec::new()).map(|v| v.value_of());
+    match lookup_value(&setlength_key(&name)) {
+      Some(Stored::VecDequeStored(record)) => match (record.front(), record.get(1)) {
+        (Some(Stored::Tokens(stated)), Some(Stored::Int(value)))
+          if current == Some(*value) && depth < 4 =>
+        {
+          let is_glue = register.register_type() == Some(RegisterType::Glue);
+          let value =
+            evaluate_stated_length_at(stated, registers, is_glue, depth + 1)?.ok_or(Unevaluable)?;
+          reads.push((register, is_glue, value));
+        },
+        _ => return Err(Unevaluable),
+      },
+      _ if lookup_bool(&allocated_length_key(&name)) => return Err(Unevaluable),
+      _ => {},
+    }
+  }
+  let _quiet = IgnoreDiagnosticsScope::new();
+  let kind = if glue {
+    RegisterType::Glue
+  } else {
+    RegisterType::Dimension
+  };
+  begingroup();
+  let value = (|| {
+    for (name, value) in LINE_REGISTERS.iter().zip(registers) {
+      assign_register(name, Dimension::new(value).into(), None, Vec::new())?;
+    }
+    for (register, is_glue, value) in &reads {
+      let value: RegisterValue = if *is_glue {
+        Glue::new(*value).into()
+      } else {
+        Dimension::new(*value).into()
+      };
+      register.set_value(value, None, Vec::new());
+    }
+    let (value, _tail) = read_braced(tokens.clone(), || match braced_length_evaluator() {
+      Some(evaluate) => Ok(evaluate(kind)?.value_of()),
+      None if glue => Ok(read_glue()?.value_of()),
+      None => Ok(read_dimension()?.value_of()),
+    })?;
+    Ok::<i64, Error>(value)
+  })();
+  endgroup().ok();
+  Ok(value.ok())
+}
+
+/// The line a stated width is evaluated against: the registers' values (`ours`: `\textwidth`, `\columnwidth`, the
+/// line) and the real ones.
+#[derive(Clone, Copy)]
+struct PanelLineContext {
+  ours: [i64; 4],
+  real: [i64; 4],
+}
+
+impl PanelLineContext {
+  /// Inside a box of `ours`/`real` width (a minipage sets `\textwidth`, `\columnwidth`, `\hsize` and `\linewidth` to
+  /// its width, latex.ltx `\@iiiminipage`).
+  fn inside(ours: i64, real: i64) -> Self {
+    PanelLineContext {
+      ours: [ours; 4],
+      real: [real; 4],
+    }
+  }
+}
+
+/// What the real geometry adds to a box's width and height (scaled points), for `note_stated_widths`: a transformed
+/// box's from its content's (a `\scalebox` scales it, a rotation turns its axes).
+#[derive(Clone, Copy, Default)]
+struct PanelDelta {
+  width:  f64,
+  height: f64,
+}
+
+impl PanelDelta {
+  /// Two boxes side by side: their widths add, the taller's height stands (the one the geometry changes most).
+  fn beside(self, other: PanelDelta) -> PanelDelta {
+    PanelDelta {
+      width:  self.width + other.width,
+      height: if other.height.abs() > self.height.abs() {
+        other.height
+      } else {
+        self.height
+      },
+    }
+  }
+}
+
+/// A box's size property `key` (a `Dimension`, as its sizer or after-digest code recorded it), in scaled points.
+fn box_dimension(whatsit: &Whatsit, key: &str) -> Option<f64> {
+  whatsit
+    .get_property(key)
+    .and_then(|s| Option::<RegisterValue>::from(s.as_ref()))
+    .map(|v| v.value_of() as f64)
+}
+
+/// A box's numeric property `key` (`xscale`, `angle`, as its after-digest code recorded it).
+fn box_number(whatsit: &Whatsit, key: &str) -> Option<f64> {
+  whatsit
+    .get_property(key)
+    .and_then(|s| s.to_string().trim().parse::<f64>().ok())
+}
+
+/// Inside the outermost float's group, at its end (`after_float`; its body is the box list being built, and every
+/// macro and register the body defined is in force, review rev78x2 finding 1): every width a construct in it states
+/// (`declare_panel_width`, kept as tokens under `KEEP_STATED_LENGTHS`) is evaluated at the registers' values and at
+/// the real geometry (`install_panel_line`), and the box records what the real one adds (`PANEL_WIDTH_DELTA`) in the
+/// ratio of the two — its width times `real/ours − 1`, so a width the body narrowed (`\setlength\linewidth{…}` before
+/// `0.9\linewidth`) or a box a rotation turned scales as it does; a box's content is evaluated against its own width
+/// (a child's `\linewidth` is its parent's evaluated width), an `\hspace`'s glue the same way (`PANEL_GLUE_DELTA`;
+/// 2311.18531 Fig 1, `0.48 + 3×0.24\textwidth` with `−0.25\textwidth` of `\hspace` under geometry, one row of 4 in
+/// the PDF), and a sub-float's line is its stated width at the real geometry (`{subfigure}{0.48\textwidth}`;
+/// 2605.03152 S3.F2), or the float's real line where it kept the float's (subfigure.sty's in-line panels). A
+/// `\scalebox` or `\resizebox` without a width of its own scales its content's (`xscale`), a rotation turns its axes
+/// (`angle`; review rev78x2 finding 2, `q3.tex`). A box's own material is no width it states (1703.09474 Fig 13,
+/// 2503.09651 Fig 1: `width=0.23\linewidth,height=0.23\linewidth`). Nothing is recorded, and `false` returned, when a
+/// width cannot be evaluated (`Unevaluable`): the float's rows are set as before the rule (`after_float`). Review
+/// rev78x findings 1, 3; rev78x3 findings 1-2.
+fn note_stated_widths(boxes: &[Digested], geometry: &VecDeque<Stored>) -> bool {
+  let geometry: Vec<i64> = geometry
+    .iter()
+    .map(|v| match v {
+      Stored::Dimension(d) => d.value_of(),
+      _ => 0,
+    })
+    .collect();
+  let [
+    textwidth,
+    columnwidth,
+    linewidth,
+    hsize,
+    real_text,
+    real_column,
+    real_line,
+  ] = geometry[..]
+  else {
+    return true;
+  };
+  let context = PanelLineContext {
+    ours: [textwidth, columnwidth, linewidth, hsize],
+    real: [real_text, real_column, real_line, real_line],
+  };
+  let mut notes = Vec::new();
+  for bx in boxes {
+    if note_stated_widths_in(bx, context, &mut notes).is_err() {
+      return false;
+    }
+  }
+  for (bx, key, value) in notes {
+    if let DigestedData::Whatsit(w) = bx.data() {
+      w.borrow_mut().set_property(key, value);
+    }
+  }
+  true
+}
+
+/// How far (scaled points) a stated length evaluated again at the registers' geometry may be from the value it gave
+/// the box (`note_stated_widths_in`): the rounding of a value written out and read back (a graphic's `width=`).
+const STATED_LENGTH_TOLERANCE: f64 = 4.0;
+
+/// The properties `note_stated_widths` sets, once every width in the float is evaluated.
+type PanelNotes = Vec<(Digested, &'static str, Stored)>;
+
+fn note_stated_widths_in(
+  bx: &Digested,
+  context: PanelLineContext,
+  notes: &mut PanelNotes,
+) -> std::result::Result<PanelDelta, Unevaluable> {
+  let note = |notes: &mut PanelNotes, key: &'static str, value: f64| {
+    notes.push((
+      bx.clone(),
+      key,
+      Stored::Dimension(Dimension::new(value.round() as i64)),
+    ));
+  };
+  let ratio = |ours: i64, real: i64| {
+    if ours != 0 {
+      real as f64 / ours as f64
+    } else {
+      1.0
+    }
+  };
+  let w = match bx.data() {
+    DigestedData::List(_) => {
+      let mut delta = PanelDelta::default();
+      for item in bx.unlist() {
+        let inner = note_stated_widths_in(&item, context, notes)?;
+        delta = delta.beside(inner);
+      }
+      return Ok(delta);
+    },
+    DigestedData::Whatsit(w) => w,
+    _ => return Ok(PanelDelta::default()),
+  };
+  let (stated, glue) = {
+    let w = w.borrow();
+    (stated_size_of(&w)?, w.has_property(PANEL_GLUE_DELTA))
+  };
+  // A stated length evaluated at the registers' geometry and at the real one. Either one it cannot read (a macro
+  // defined in a group that has ended, `{\def\w{0.48\columnwidth}…}`), or one that does not give again the value the
+  // box was given (`given`: a macro the float redefined since, an outer `\def\w` an inner one shadowed), is
+  // `Unevaluable` (review rev78x3 finding 1, `p1.tex` F1-F2, `p8.tex` F1).
+  let evaluate = |tokens: &Tokens,
+                  inside: PanelLineContext,
+                  is_glue: bool,
+                  given: Option<f64>|
+   -> std::result::Result<(i64, i64), Unevaluable> {
+    let ours = evaluate_stated_length(tokens, inside.ours, is_glue)?.ok_or(Unevaluable)?;
+    let real = evaluate_stated_length(tokens, inside.real, is_glue)?.ok_or(Unevaluable)?;
+    match given {
+      Some(given) if (ours as f64 - given).abs() > STATED_LENGTH_TOLERANCE => Err(Unevaluable),
+      _ => Ok((ours, real)),
+    }
+  };
+  // An `\hspace` between panels (`\lx@panel@hskip`): its glue, at the real geometry.
+  if glue {
+    if let Some(StatedSize { width: Some(tokens), given, .. }) = stated {
+      let width = box_dimension(&w.borrow(), "width");
+      let (ours, real) = evaluate(&tokens, context, true, given.0.or(width))?;
+      note(
+        notes,
+        PANEL_GLUE_DELTA,
+        width.unwrap_or(ours as f64) * (ratio(ours, real) - 1.0),
+      );
+    }
+    return Ok(PanelDelta::default());
+  }
+  let mut inner = context;
+  let mut own: Option<PanelDelta> = None;
+  let mut stated_width = false;
+  if let Some(stated) = stated {
+    let width = match &stated.width {
+      Some(tokens) => Some(evaluate(tokens, context, false, stated.given.0)?),
+      None => None,
+    };
+    let height = match &stated.height {
+      Some(tokens) => Some(evaluate(tokens, context, false, stated.given.1)?),
+      None => None,
+    };
+    // The box as it was sized at the registers' geometry: the width its argument gave it, or a graphic's box (its
+    // rotation included).
+    let box_width = stated.value.unwrap_or_else(|| {
+      bx.get_width(None)
+        .ok()
+        .flatten()
+        .map(|v| v.value_of() as f64)
+        .unwrap_or(0.0)
+    });
+    // How much the real geometry scales the box across and down.
+    let scale = match (width, height) {
+      // graphicx's `keepaspectratio`: the larger box within both, bound by the height where the width did not
+      // reach its stated value
+      (Some((wo, wr)), Some((ho, hr))) if stated.keep_within => {
+        let across = if box_width + 65536.0 < wo as f64 {
+          ratio(ho, hr).min(wr as f64 / box_width.max(1.0))
+        } else {
+          ratio(wo, wr).min(ratio(ho, hr))
+        };
+        Some((across, across))
+      },
+      (Some((wo, wr)), Some((ho, hr))) => Some((ratio(wo, wr), ratio(ho, hr))),
+      (Some((wo, wr)), None) if stated.aspect => Some((ratio(wo, wr), ratio(wo, wr))),
+      (Some((wo, wr)), None) => Some((ratio(wo, wr), 1.0)),
+      (None, Some((ho, hr))) if stated.aspect => Some((ratio(ho, hr), ratio(ho, hr))),
+      _ => None,
+    };
+    if let Some((across, down)) = scale {
+      // (its height and depth, for a rotation round it, where the geometry scales them: a graphic's)
+      let box_height = if down == 1.0 {
+        0.0
+      } else {
+        let explicit = {
+          let w = w.borrow();
+          box_dimension(&w, "height").zip(box_dimension(&w, "depth"))
+        };
+        match explicit {
+          Some((height, depth)) => height + depth,
+          None => bx
+            .compute_size(SymHashMap::default())
+            .map(|(_, height, depth)| (height.value_of() + depth.value_of()) as f64)
+            .unwrap_or(0.0),
+        }
+      };
+      let delta = PanelDelta {
+        width:  box_width * (across - 1.0),
+        height: box_height * (down - 1.0),
+      };
+      note(notes, PANEL_WIDTH_DELTA, delta.width);
+      own = Some(delta);
+    }
+    // (and a parbox's panels are set against its own width at the real geometry: a `{minipage}{\textwidth}` of
+    // sub-figures, 2504.07193 Fig 5; an `\hbox`'s content is set at the enclosing line, `declare_panel_parbox_width`)
+    if let Some((ours, real)) = width {
+      note(notes, PANEL_LINE, real as f64);
+      if stated.parbox {
+        inner = PanelLineContext::inside(ours, real);
+      }
+      stated_width = true;
+    }
+  }
+  // A sub-float (its `after_float` recorded its `\hsize`): its line is its stated width at the real geometry, or the
+  // float's real line where it kept the float's (subfigure.sty's in-line panels, whose content is evaluated as the
+  // float's: 1902.04580 Figs 15-16, `0.45\textwidth` graphics in `\subfigure`s of an mnras column).
+  let (args, body, floatwidth, xscale, yscale, angle) = {
+    let w = w.borrow();
+    (
+      w.get_args().to_vec(),
+      w.get_body().ok().flatten(),
+      w.get_property("floatwidth")
+        .and_then(|s| Option::<RegisterValue>::from(s.as_ref()))
+        .map(|r| r.value_of()),
+      box_number(&w, "xscale"),
+      box_number(&w, "yscale"),
+      box_number(&w, "angle"),
+    )
+  };
+  if let Some(hsize) = floatwidth
+    && !stated_width
+    && hsize == context.ours[3]
+  {
+    note(notes, PANEL_LINE, context.real[3] as f64);
+  }
+  let mut content = PanelDelta::default();
+  for arg in args.iter().flatten().chain(body.as_ref()) {
+    let delta = note_stated_widths_in(arg, inner, notes)?;
+    content = content.beside(delta);
+  }
+  if let Some(own) = own {
+    return Ok(own);
+  }
+  // A transformed box of no stated width of its own: its content's, scaled (`\scalebox`, `\reflectbox`) or turned.
+  let mut delta = content;
+  if xscale.is_some() || yscale.is_some() {
+    let xs = xscale.unwrap_or(1.0).abs();
+    let ys = yscale.or(xscale).unwrap_or(1.0).abs();
+    delta = PanelDelta {
+      width:  content.width * xs,
+      height: content.height * ys,
+    };
+  }
+  if let Some(angle) = angle {
+    let (s, c) = angle.to_radians().sin_cos();
+    delta = PanelDelta {
+      width:  c.abs() * delta.width + s.abs() * delta.height,
+      height: s.abs() * delta.width + c.abs() * delta.height,
+    };
+  }
+  if (xscale.is_some() || yscale.is_some() || angle.is_some()) && delta.width != 0.0 {
+    note(notes, PANEL_WIDTH_DELTA, delta.width);
+  }
+  Ok(delta)
+}
+
 /// A caption's pending state, which `\@@add@caption@counters` (sect09) stores globally for its float's
 /// `after_float` to take: `<captype>_tags`, `_id` and `_inlist` (Perl RescueCaptionCounters,
 /// latex_constructs.pool.ltxml:3203-3214).
@@ -4226,30 +5151,56 @@ pub fn after_float(whatsit: &mut Whatsit) {
   // column/textwidth). `arrange_panels` reads this back from the box in the
   // afterClose hook to size the per-row layout — NOT the ambient \hsize at
   // construction time, which may have been restored to an unrelated value.
-  if let Ok(Some(hsize)) = lookup_register("\\hsize", Vec::new()) {
-    // geometry SVG-scope (geometry_sty / OXIDIZED_DESIGN #99): when the page
-    // geometry defined a wider text width than the class default (`\Gm@tw`) and
-    // this float spans the full text width, size the PANEL ARRANGEMENT to that
-    // width. The panels are geometry-sized SVG pictures (their `\linewidth` was
-    // raised inside the picture), so the per-row overflow threshold must be on
-    // the same basis or two `0.495\linewidth` boxes that sit side-by-side in the
-    // PDF would wrap to separate rows. Only the arrangement threshold changes —
-    // the float's HTML content keeps the class-default width.
-    let mut floatwidth = hsize.clone();
-    if let (Ok(Some(gm_tw)), Ok(Some(doctw))) = (
+  let hsize = lookup_register("\\hsize", Vec::new()).ok().flatten();
+  if let Some(hsize) = hsize.clone() {
+    whatsit.set_property("floatwidth", Stored::from(hsize));
+  }
+  // The real line its panels are set in rows against (`install_panel_line`), the float's own when it is not inside
+  // another, once the widths its body states are evaluated at the real geometry — here, in the float's group, its body
+  // the box list being built (`note_stated_widths`; a sub-float's line with them). A width that cannot be evaluated
+  // there, or an `\hsize` its binding set (a wrapfigure's), leaves the float the registers' line.
+  if let Some(Stored::Dimension(line)) = lookup_value(PANEL_LINE)
+    && lookup_value(PANEL_LINE_FRAME) == lookup_value("lx@float@frame")
+    && matches!(lookup_value(PANEL_LINE_HSIZE), Some(Stored::Dimension(begun))
+      if hsize.as_ref().is_some_and(|h| h.clone().value_of() == begun.value_of()))
+  {
+    let evaluated = match lookup_value(PANEL_GEOMETRY) {
+      Some(Stored::VecDequeStored(geometry)) => {
+        let body = with_box_list(<[Digested]>::to_vec);
+        note_stated_widths(&body, &geometry)
+      },
+      _ => true,
+    };
+    if evaluated {
+      whatsit.set_property(PANEL_LINE, Stored::Dimension(line));
+    }
+  }
+  // A float whose rows are not set against the real line (a width it states cannot be evaluated, a float inside
+  // another, a binding's `\hsize`) is arranged as before the rule (review rev78x3 finding 2, `p2.tex` F2-F4: four
+  // `\figw=3.8cm` panels under `[a4paper,margin=1in]{geometry}`, one row in the PDF). Under geometry (geometry_sty /
+  // OXIDIZED_DESIGN #99), a full-column float (its `\hsize` the class-default `\Gm@doctw`, not the live `\textwidth`,
+  // which a minipage sets) whose page the geometry widened (`\Gm@tw`) is arranged at that width: its panels are
+  // geometry-sized SVG pictures (their `\linewidth` raised inside the picture), so two `0.495\linewidth` boxes that
+  // sit side by side in the PDF stay one row. Only the arrangement changes — the float's HTML content keeps the
+  // class-default width.
+  if !whatsit.has_property(PANEL_LINE)
+    && let Some(hsize) = hsize
+    && let (Ok(Some(gm_tw)), Ok(Some(doctw))) = (
       lookup_register("\\Gm@tw", Vec::new()),
       lookup_register("\\Gm@doctw", Vec::new()),
-    ) {
-      // Full-column float only: compare against the class-default column width
-      // \Gm@doctw (captured at geometry load), not the live \textwidth — a
-      // minipage sets \textwidth=\linewidth locally, so the live compare would
-      // mis-fire inside one.
-      let (h, g, d) = (hsize.value_of(), gm_tw.clone().value_of(), doctw.value_of());
-      if h == d && g > h {
-        floatwidth = gm_tw;
-      }
+    )
+  {
+    let (h, g, d) = (hsize.value_of(), gm_tw.clone().value_of(), doctw.value_of());
+    if h == d && g > h {
+      whatsit.set_property(PANEL_FALLBACK_LINE, Stored::from(gm_tw));
     }
-    whatsit.set_property("floatwidth", Stored::from(floatwidth));
+  }
+  // A sub-float set in an `\hbox` (`note_panel_hbox`).
+  if lookup_bool(PANEL_HBOX_BODY) {
+    whatsit.set_property(PANEL_HBOX_BODY, true);
+  }
+  if let Some(Stored::String(group)) = lookup_value(PANEL_HBOX_ROW) {
+    whatsit.set_property(PANEL_HBOX_ROW, Stored::String(group));
   }
   // A sub-float's tags — `sub<type>` of a float type (it has a list, `\ext@<type>`) — are its panel number (a
   // sub-caption, `\phantomcaption`, a bare `\subfloat`):
@@ -4273,13 +5224,15 @@ pub fn after_float(whatsit: &mut Whatsit) {
 /// `\parbox` of that width (`\@makesubfigurecaption`), where our caption is a paragraph of the column's `\hsize`
 /// (`\lx@@caption PBoxContents`). Measured with its caption, a captioned panel took a row of its own in
 /// `arrange_panels`: `\subfigure[]{…}` panels stacked one per row (2006.08949 Figure 2, one row in the PDF;
-/// cond-mat9707225, astro-ph0205132, 2012.09475, 1110.0084, hep-ex0004031, 1703.00699). When the body has a caption,
-/// the panel is the width of the body's material less its `\lx@@caption`/`\@@toccaption`, its `\lx@label`s (a
+/// cond-mat9707225, astro-ph0205132, 2012.09475, 1110.0084, hep-ex0004031, 1703.00699). The panel, captioned or not
+/// (1007.2355, OXIDIZED_DESIGN_DIVERGENCES #885), is the width of the body's material less its
+/// `\lx@@caption`/`\@@toccaption`, its `\lx@label`s (a
 /// `\label` makes no box, a `\write`, where the `\lx@label` whatsit is sized by its key's text, as Perl's,
 /// Whatsit.pm:253-265: 0907.1044's `\subfigure[…]{\label{figure:mfexampleofc2} \includegraphics…}` was 96pt wider
-/// than its graphic) and all its glue (spaces, `\hskip`, `\hspace`, `\hfill`; kerns are kept): the material the
-/// source states, not how TeX sets the spaces round it (FIDELITY_CHARTER §2 "Float panels"; the panel grid of
-/// SYNC_STATUS's grid-rule row, the stated glue between panels included, is its own). A material of no width is
+/// than its graphic) and its spaces, with the natural width of the glue it states (`\hskip`, `\hspace`, `\quad`; an
+/// `\hfill`'s is 0; kerns are kept): the material and glue the source states, not how TeX sets the spaces round it
+/// (FIDELITY_CHARTER §2 "Float panels"; the panel grid of SYNC_STATUS's grid-rule row counts the stated glue between
+/// panels the same way; 1307.3388 Fig 3, guard `perfect_kernel_batch78x::a_sub_float_bodys_stated_glue_counts`). A material of no width is
 /// measured again with its glue (1408.2843 Fig 1, a graphic whose file we did not find); only one 0 wide with its glue
 /// too leaves the panel its box's width (`panel_width`). Perl measured the whole box
 /// (latex_constructs.pool.ltxml:3286; OXIDIZED_DESIGN_DIVERGENCES #876). Witnesses 2511.21020 Figs 7-8, 1607.02761,
@@ -4288,32 +5241,30 @@ pub fn note_sub_float_body_width(whatsit: &mut Whatsit) {
   let Ok(Some(body)) = whatsit.get_body() else {
     return;
   };
-  // The body's boxes, its lists (a group's) opened, less its captions, labels and (unless `with_glue`) glue; whether it
-  // had a caption.
-  fn material(
-    boxes: Vec<Digested>,
-    with_glue: bool,
-    kept: &mut Vec<Digested>,
-    captioned: &mut bool,
-  ) {
+  // The body's boxes, its lists (a group's) opened, less its captions, labels and (unless `with_glue`) glue; the glue it
+  // states (`\hspace`, `\hskip`, `\quad`; an `\hfill` is 0 wide), not its spaces, adds its natural width (`stated`), as
+  // between panels (1307.3388 Fig 3's `\subfigure[]{⏎\hspace{-0.4cm}⏎\includegraphics…}` pairs, 2+2 in the PDF;
+  // 2008.06630 Figs 1, 7).
+  fn material(boxes: Vec<Digested>, with_glue: bool, kept: &mut Vec<Digested>, stated: &mut i64) {
     for bx in boxes {
       match bx.data() {
-        DigestedData::List(_) => material(bx.unlist(), with_glue, kept, captioned),
-        _ if !with_glue && is_glue(&bx) => {},
+        DigestedData::List(_) => material(bx.unlist(), with_glue, kept, stated),
+        _ if !with_glue && is_glue(&bx) => *stated += stated_glue_width(&bx),
         DigestedData::Whatsit(w) => match w.borrow().get_definition().get_cs_name().as_ref() {
-          "\\lx@@caption" | "\\@@toccaption" => *captioned = true,
-          "\\lx@label" => {},
+          "\\lx@@caption" | "\\@@toccaption" | "\\lx@label" => {},
           _ => kept.push(bx.clone()),
         },
         _ => kept.push(bx),
       }
     }
   }
-  let (mut boxes, mut captioned) = (Vec::new(), false);
-  material(body.unlist(), false, &mut boxes, &mut captioned);
-  // No caption: the box's own width is its body's. Nothing but the caption: the panel hosts a `\captionof` whose
-  // material is outside it (caption_sty.rs `captionof_environment@subfigure`), and keeps the box's.
-  if !captioned || boxes.is_empty() {
+  let (mut boxes, mut stated) = (Vec::new(), 0);
+  material(body.unlist(), false, &mut boxes, &mut stated);
+  // Nothing but the caption: the panel hosts a `\captionof` whose material is outside it (caption_sty.rs
+  // `captionof_environment@subfigure`), and keeps the box's. An uncaptioned body is its material too: its spaces and
+  // `\label`s count nothing (the panel grid rule; 1007.2355 Figs 1, 3: `\subfigure{⏎\includegraphics[width=0.45
+  // \textwidth]{…}⏎\label{…}}` pairs, one row in the PDF, measured with the spaces and the label's key text).
+  if boxes.is_empty() {
     return;
   }
   let font = match whatsit.get_property("font").as_deref() {
@@ -4338,12 +5289,36 @@ pub fn note_sub_float_body_width(whatsit: &mut Whatsit) {
   // (`panel_width`; 1610.06413, nlin0606018). Review rev78t5 finding 1; guard
   // `perfect_kernel_batch78t::subfigure_panels_of_no_known_width_share_a_row`.
   if width.as_ref().is_none_or(|w| w.value_of() <= 0) {
-    let (mut with_glue, mut _captioned) = (Vec::new(), false);
-    material(body.unlist(), true, &mut with_glue, &mut _captioned);
+    let mut with_glue = Vec::new();
+    material(body.unlist(), true, &mut with_glue, &mut 0);
     width = measure(&with_glue);
+  } else if let Some(material) = width.as_mut()
+    && material.value_of() + stated > 0
+  {
+    // (with the glue it states, where that leaves it a width)
+    *material = Dimension::new(material.value_of() + stated);
   }
   if let Some(width) = width {
     whatsit.set_property("panel_body_width", Stored::Dimension(width));
+  }
+}
+
+/// The natural width (scaled points) of the glue `bx` the source states — `\hskip`, `\hspace`, `\quad` (`isSkip`, its
+/// `width`; an `\hfill`'s is 0) — and 0 for a space.
+fn stated_glue_width(bx: &Digested) -> i64 {
+  fn width(b: &impl BoxOps) -> i64 {
+    if b.get_property_bool("isSkip") {
+      b.get_property("width")
+        .and_then(|w| Option::<RegisterValue>::from(w.as_ref()))
+        .map_or(0, |w| w.value_of())
+    } else {
+      0
+    }
+  }
+  match bx.data() {
+    DigestedData::TBox(b) => width(&*b.borrow()),
+    DigestedData::Whatsit(w) => width(&*w.borrow()),
+    _ => 0,
   }
 }
 
@@ -4447,8 +5422,8 @@ fn panel_width(document: &Document, node: &Node) -> f64 {
 /// 16305-16312), so a folded `ltx:p` is a panel of that width, not a paragraph on its own row:
 /// Perl's `%standalone_panel_names` and its box-width sizing (latex_constructs.pool.ltxml:3225-3227,
 /// 3277, 3286, 3335) stacked text minipages one per row, each at its text's natural width (KPE #310;
-/// witnesses 2605.27134 S5.F8, 2605.17146 S4.F4). A source `\par` between rows is not seen here (RED
-/// `captions-floats/par_breaks_a_panel_row`).
+/// witnesses 2605.27134 S5.F8, 2605.17146 S4.F4). A source `\par` between rows is a row separator of its own
+/// (`note_panel_separator`; `captions-floats/par_breaks_a_panel_row`).
 fn box_panel_width(node: &Node) -> Option<f64> {
   let class = node.get_attribute("class")?;
   if !class
@@ -4509,8 +5484,9 @@ fn insert_break_before(document: &Document, child: &mut Node) -> Result<Node> {
 }
 
 /// Perl L3231: `($whatsit->getProperty('floatwidth') || Dimension('345pt'))->valueOf()`.
-/// The row-layout threshold is the float's captured `\hsize` (see `after_float`),
-/// read from the box the afterClose hook receives; 345pt when absent.
+/// The float's captured `\hsize` (see `after_float`), read from the box the
+/// afterClose hook receives; 345pt when absent. The rows' line is the real one
+/// where `after_float` recorded it (`panel_line_of`).
 fn float_width_of(whatsit: Option<&Digested>) -> f64 {
   whatsit
     .and_then(|w| w.get_property("floatwidth"))
@@ -4518,6 +5494,146 @@ fn float_width_of(whatsit: Option<&Digested>) -> f64 {
     .map(|r| r.value_of() as f64)
     .filter(|w| *w > 0.0)
     .unwrap_or(345.0 * 65536.0)
+}
+
+/// The real line a float's panels are set in rows against (`install_panel_line`), when it recorded one.
+fn panel_line_of(whatsit: Option<&Digested>) -> Option<f64> {
+  panel_dimension_of(whatsit, PANEL_LINE)
+}
+
+/// A float's positive dimension property `key` (scaled points).
+fn panel_dimension_of(whatsit: Option<&Digested>, key: &str) -> Option<f64> {
+  whatsit
+    .and_then(|w| w.get_property(key))
+    .and_then(|s| Option::<RegisterValue>::from(s.as_ref()))
+    .map(|r| r.value_of() as f64)
+    .filter(|w| *w > 0.0)
+}
+
+/// What the real geometry adds to a panel's stated width (scaled points, `note_stated_widths`): its own construct's
+/// (`{minipage}{0.48\columnwidth}`, `\includegraphics[width=0.48\columnwidth]`), else the sum over its contents'
+/// outermost ones (a sub-figure's graphic). 0 where no width it states names a register whose real value differs.
+fn panel_width_delta(document: &Document, node: &Node) -> f64 {
+  if let Some(delta) = node
+    .get_attribute(PANEL_DELTA_ATTRIBUTE)
+    .and_then(|d| d.parse::<f64>().ok())
+  {
+    return delta;
+  }
+  if let Some(bx) = document.get_node_box(node)
+    && let Some(delta) = bx.get_property(PANEL_WIDTH_DELTA)
+    && let Some(delta) = Option::<RegisterValue>::from(delta.as_ref())
+  {
+    return delta.value_of() as f64;
+  }
+  node
+    .get_child_elements()
+    .iter()
+    .map(|child| panel_width_delta(document, child))
+    .sum()
+}
+
+/// The internal attribute a minipage or `\parbox` carries what the real geometry adds to its stated width on
+/// (`PANEL_WIDTH_DELTA`), which survives its fold into its lone child (`insert_block_as`: a `{minipage}{0.83\linewidth}`
+/// holding one `\scalebox`, 2007.15568 Tables 2-3).
+const PANEL_DELTA_ATTRIBUTE: &str = "_panelwidthdelta";
+
+/// Put a box's `PANEL_WIDTH_DELTA` (`props`) on the attributes of the element it makes (`PANEL_DELTA_ATTRIBUTE`).
+pub(crate) fn note_panel_width_delta(
+  props: &SymHashMap<Stored>,
+  attr: &mut HashMap<String, String>,
+) {
+  if let Some(Stored::Dimension(delta)) = props.get(PANEL_WIDTH_DELTA) {
+    attr.insert(
+      PANEL_DELTA_ATTRIBUTE.to_string(),
+      delta.value_of().to_string(),
+    );
+  }
+}
+
+/// The `\hbox` group a sub-float panel was begun in (`PANEL_HBOX_ROW`, `note_panel_hbox`).
+fn hbox_row(document: &Document, node: &Node) -> Option<SymStr> {
+  match document
+    .get_node_box(node)?
+    .get_property(PANEL_HBOX_ROW)
+    .as_deref()
+  {
+    Some(Stored::String(group)) => Some(*group),
+    _ => None,
+  }
+}
+
+/// The state value counting the `{center}`-like environments whose bodies are being built (`aligning_environment`): a
+/// row separator in their capture is the float's (`note_panel_separator`). In the document's state, so it ends with it.
+const ALIGNING_CAPTURES: &str = "lx@aligning@captures";
+
+/// Build an aligning environment's body (`build`), its capture's row separators the float's (`note_panel_separator`).
+pub fn in_aligning_capture<T>(build: impl FnOnce() -> T) -> T {
+  let depth = aligning_captures();
+  assign_value(
+    ALIGNING_CAPTURES,
+    Stored::Int(depth + 1),
+    Some(Scope::Global),
+  );
+  let result = build();
+  assign_value(ALIGNING_CAPTURES, Stored::Int(depth), Some(Scope::Global));
+  result
+}
+
+fn aligning_captures() -> i64 {
+  match lookup_value(ALIGNING_CAPTURES) {
+    Some(Stored::Int(n)) => n,
+    _ => 0,
+  }
+}
+
+/// The internal attribute of a row separator the source states between a float's panels (`note_panel_separator`):
+/// `par` (a blank line or `\par`), `env` (a `{center}`/`{flushleft}`/`{flushright}` boundary), `vskip`, `cr` (a `\\`
+/// in such an environment: `\@centercr`, which ends the paragraph), `break` (a `\linebreak`, which ends a line of it),
+/// `glue` (`\hskip`, `\hspace`, `\quad`; its natural width in `PANEL_GLUE`; `glue*` an `\hspace*`'s, which a line break
+/// keeps).
+/// `arrange_panels` turns a break between two panels into the row's `ltx:break` and drops the rest.
+pub(crate) const PANEL_SEPARATOR: &str = "_panelsep";
+const PANEL_GLUE: &str = "_panelglue";
+
+/// The internal attribute of a `\newline`'s break (sect01.rs): `\@normalcr`, the justified break in every context
+/// (latex.ltx:9256 `\DeclareRobustCommand\newline{\@normalcr\relax}`), where a `\\` under `\centering` or in a
+/// `{center}` is `\@centercr`. `arrange_panels` reads it as a line's end, not a paragraph's.
+const PANEL_NORMALCR: &str = "_normalcr";
+
+/// Record a row separator the source states at the current insertion point, when that is a float's own panel list
+/// (the float, or the capture of a `{center}`-like environment directly in it) — the panel grid rule (user ruling
+/// 2026-10-22, FIDELITY_CHARTER §2 "Float panels"): an explicit break always breaks, and the glue the source states
+/// between two panels counts towards their row's width (plain spaces and `\hfill` count 0). Our panels are digested
+/// in vertical mode, where TeX's are in a paragraph (subfigure.sty's `\@subfloat`, graphicx's `\leavevmode`), so a
+/// `\par` or the glue between them leaves nothing in the tree to set the rows by. A `\par` that leaving horizontal
+/// mode inserts is not the source's (2605.00347: one per inter-panel `\hfill` broke a 4-panel row into four).
+/// Witnesses 1110.0084 Figs 12-16, 27, 29 (a blank line between sub-figures), 0706.4410 Figs 3, 5 (`\hspace{1in}`
+/// between two 0.45\textwidth panels: two rows in the PDF). OXIDIZED_DESIGN_DIVERGENCES #885.
+pub fn note_panel_separator(document: &mut Document, kind: &str, glue: Option<i64>) -> Result<()> {
+  let Some(context) = document.get_element() else {
+    return Ok(());
+  };
+  // The float's own list, or the capture of a `{center}`-like environment directly in it (its lines are the float's
+  // rows; `aligning_environment`), never a box's: a separator in a minipage's capture changed how the capture settles.
+  let qname = document::get_node_qname(&context);
+  let at_float = with(qname, |q| PANEL_FLOATS.contains(&q))
+    || (aligning_captures() > 0
+      && document::is_capture_block(&context)
+      && context.get_parent().is_some_and(|parent| {
+        with(document::get_node_qname(&parent), |q| {
+          PANEL_FLOATS.contains(&q)
+        })
+      }));
+  if !at_float {
+    return Ok(());
+  }
+  let mut attributes = map!(PANEL_SEPARATOR => kind.to_string());
+  if let Some(width) = glue {
+    attributes.insert(PANEL_GLUE.to_string(), width.to_string());
+  }
+  document.insert_element("ltx:break", Vec::new(), Some(attributes))?;
+  Ok(())
 }
 
 /// A paragraph of nothing but float-boxes (57g; user rulings 2026-09-27): boxes that became floats
@@ -4681,32 +5797,64 @@ pub(crate) fn settle_float_paragraph(document: &mut Document, para: &Node) -> Re
 /// holds a handle into a paragraph any more (settling at a paragraph's close freed nodes a
 /// `{center}` still held, dropping its alignment — 57g review).
 pub fn settle_float_paragraphs(document: &mut Document, root: &Node) -> Result<()> {
-  fn collect(node: &Node, paras: &mut Vec<Node>) {
+  // (and the row separators no float's `arrange_panels` took: those of a box's own content, `note_panel_separator`)
+  fn collect(node: &Node, paras: &mut Vec<Node>, separators: &mut Vec<Node>) {
     for child in node.get_child_elements() {
-      collect(&child, paras);
-      if with(document::get_node_qname(&child), |q| q == "ltx:para") {
+      collect(&child, paras, separators);
+      let qname = document::get_node_qname(&child);
+      if with(qname, |q| q == "ltx:para") {
         paras.push(child);
+      } else if with(qname, |q| q == "ltx:break") && child.get_attribute(PANEL_SEPARATOR).is_some()
+      {
+        separators.push(child);
       }
     }
   }
-  let mut paras = Vec::new();
-  collect(root, &mut paras);
+  let (mut paras, mut separators) = (Vec::new(), Vec::new());
+  collect(root, &mut paras, &mut separators);
+  for separator in separators {
+    document.remove_node(separator);
+  }
   for para in paras {
     settle_float_paragraph(document, &para)?;
   }
   Ok(())
 }
 
-/// Faithful port of Perl's `arrange_panels_and_breaks`
+/// Port of Perl's `arrange_panels_and_breaks`
 /// (latex_constructs.pool.ltxml L3229-3349): partition a figure/table/float's
 /// children into rows, inserting `<ltx:break>` where the accumulated panel WIDTH
-/// would overflow the float width — mirroring the PDF's per-row arrangement
-/// rather than trusting the source's line/paragraph structure. Author-deposited
-/// breaks and captions/metadata flush the current row. Panels are marked with
-/// `ltx_figure_panel` only when the figure has more than one.
-fn arrange_panels(document: &mut Document, node: &mut Node, float_width: f64) -> Result<()> {
+/// would overflow the float width. Author-deposited breaks and captions/metadata
+/// flush the current row. Panels are marked with `ltx_figure_panel` only when the
+/// figure has more than one. Beyond Perl, the panel grid rule (user rulings
+/// 2026-10-22, OXIDIZED_DESIGN_DIVERGENCES #885): the row separators the source
+/// states (`note_panel_separator`: a `\par`, a `{center}` boundary, `\vskip`,
+/// glue) break the row or count towards it, and the widths and the line are the
+/// class's real geometry's (`install_panel_line`, `panel_width_delta`).
+fn arrange_panels(
+  document: &mut Document,
+  node: &mut Node,
+  whatsit: Option<&Digested>,
+) -> Result<()> {
+  // The rows are set against the real line (`install_panel_line`): a panel's width is its stated width at the real
+  // geometry, the width its box has at the registers' values plus what the real values add (`panel_width_delta`).
+  // The float's `\hsize` (Perl's `floatwidth`) is what a panel with no width of its own fills.
+  // A row with no real line of its own (a paragraph of floats settled into a row, `settle_float_paragraph`) is set at
+  // the registers' widths, as before the rule (2202.03884 S4.SS1.fig1).
+  // A float with no real line is arranged as before the rule: at its `\hsize`, or the geometry's text width
+  // (`PANEL_FALLBACK_LINE`, `after_float`), which a panel with no width of its own then fills.
+  let real_line = panel_line_of(whatsit);
+  let float_width = real_line
+    .or_else(|| panel_dimension_of(whatsit, PANEL_FALLBACK_LINE))
+    .unwrap_or_else(|| float_width_of(whatsit));
+  let hsize = if real_line.is_some() {
+    float_width_of(whatsit)
+  } else {
+    float_width
+  };
   // Perl L3233: 0.03125x min width => at most 32 panels per row.
   let min_panel_width = 0.03125 * float_width;
+  let hbox_body = whatsit.is_some_and(|w| w.get_property_bool(PANEL_HBOX_BODY));
 
   let note_qname = pin!("ltx:note");
   let caption_qname = pin!("ltx:caption");
@@ -4716,6 +5864,34 @@ fn arrange_panels(document: &mut Document, node: &mut Node, float_width: f64) ->
   let mut all_panels: Vec<Node> = Vec::new();
   // Bookkeeping triples for the current row: (node, qname, width).
   let mut row: Vec<(Node, SymStr, f64)> = Vec::new();
+  // The source's row separators (`note_panel_separator`): the glue stated since the row's last panel, and a row break
+  // the source stated after it, kept only when another panel follows before the next break or caption.
+  let mut pending_glue: f64 = 0.0;
+  let mut pending_break: Option<Node> = None;
+  // A row that begins a paragraph (the float's first, one after a `\par`, a `{center}` boundary, a `\vskip`, a
+  // caption, or a centred `\\`) keeps the glue stated before its first panel, as TeX keeps glue at a paragraph's start;
+  // a row after a justified `\\` or a `\linebreak` keeps only an `\hspace*`'s (`glue*`: latex.ltx's `\vrule
+  // width\z@\nobreak\hskip`, which a line break does not discard) and a computed break none (2212.03198 Figs 6, 10-12,
+  // 15: `\hspace*{-0.5cm}` before three sub-figures, one row in the PDF; `\\\hspace*{-1.1cm}` before a second row of
+  // four). Under `\centering`, `\raggedright`, `\raggedleft` and in a `{center}`, `{flushleft}` or `{flushright}`, `\\`
+  // is `\@centercr` (latex.ltx `\let\\\@centercr`), whose `\par` ends the paragraph, so an `\hspace` after it starts
+  // the next one and is kept (review rev78x3 finding 3, `p7.tex` F1: `\\\hspace{-0.05\columnwidth}` before three
+  // 0.34\columnwidth panels, one line in the PDF); so is every `\\` in a class's centred floats (`PANEL_FLOATS_CENTRED`).
+  // A `\newline` is `\@normalcr` in every context (latex.ltx:9256), a justified break, whatever alignment class its
+  // break took (`PANEL_NORMALCR`; review rev78x4 finding 1: n3 F4 `\centering`, n7 F1 `{center}`,
+  // `\newline\hspace{0.15\columnwidth}` before three 0.3\columnwidth panels, two lines in the PDF).
+  let floats_centred = whatsit.is_some() && lookup_bool(PANEL_FLOATS_CENTRED);
+  let centred_break = |node: &Node| {
+    node.get_attribute(PANEL_NORMALCR).is_none()
+      && (floats_centred
+        || node.get_attribute("class").is_some_and(|class| {
+          class
+            .split_whitespace()
+            .any(|c| matches!(c, "ltx_centering" | "ltx_align_left" | "ltx_align_right"))
+        }))
+  };
+  let mut paragraph_start = true;
+  let mut leading_glue: f64 = 0.0;
 
   for mut child in node.get_child_elements() {
     let child_name = document::get_node_qname(&child);
@@ -4733,11 +5909,56 @@ fn arrange_panels(document: &mut Document, node: &mut Node, float_width: f64) ->
       continue;
     }
 
+    // A separator the source states between panels: glue counts towards the row's width, a break ends the row
+    // before the next panel; one before the row's first panel or after its last is dropped.
+    if let Some(kind) = child.get_attribute(PANEL_SEPARATOR) {
+      if kind == "glue" || kind == "glue*" {
+        let width = child
+          .get_attribute(PANEL_GLUE)
+          .and_then(|w| w.parse::<f64>().ok())
+          .unwrap_or(0.0);
+        if !row.is_empty() && pending_break.is_none() {
+          pending_glue += width;
+        } else if paragraph_start || kind == "glue*" {
+          leading_glue += width;
+        }
+        document.remove_node(child);
+      } else if row.is_empty() || pending_break.is_some() {
+        if kind != "break" && pending_break.is_none() {
+          paragraph_start = true;
+          leading_glue = 0.0;
+        }
+        document.remove_node(child);
+      } else {
+        // The row's break, as a computed one: an alignment's class stamped on the separator (`\centering`) is not its.
+        // (a `\linebreak` begins no paragraph, a centred `\\`, `cr`, does)
+        paragraph_start = kind != "break";
+        child.remove_attribute(PANEL_SEPARATOR).ok();
+        child.set_attribute("class", "ltx_break").ok();
+        pending_break = Some(child);
+      }
+      continue;
+    }
+
     if is_panel_break_name(child_name) {
       // Perl L3269-3275: a break/caption/meta flushes the current row.
+      if let Some(stated) = pending_break.take() {
+        document.remove_node(stated);
+      }
+      pending_glue = 0.0;
+      leading_glue = 0.0;
+      // (a caption is a paragraph of its own; a justified `\\` ends a line of the paragraph, a centred one the
+      // paragraph)
+      paragraph_start = child_name != pin!("ltx:break") || centred_break(&child);
       current_width = 0.0;
       row.clear();
       continue;
+    }
+    // A row break the source stated before this panel: the row ends there.
+    if pending_break.take().is_some() {
+      pending_glue = 0.0;
+      current_width = 0.0;
+      row.clear();
     }
 
     // Perl L3277-3284: a standalone block on its own row — break first.
@@ -4753,27 +5974,36 @@ fn arrange_panels(document: &mut Document, node: &mut Node, float_width: f64) ->
     // \hsize (it has no explicit `{width}`), so it would take its own row. When
     // it wraps a single narrower graphic, size it to that graphic so sibling
     // panels share a row — an explicit-width `{subfigure}{W}` already does.
-    if child_width >= float_width
+    if child_width >= hsize
       && let Some(inner) = sole_graphic_width(document, &child)
       && inner < child_width
     {
       child_width = inner;
     }
+    if real_line.is_some() {
+      child_width = (child_width + panel_width_delta(document, &child)).max(0.0);
+    }
+    // The glue the source states between this panel and the row's previous one.
+    let glue = std::mem::take(&mut pending_glue);
 
     // A row a binding fixed (AASTeX's `\gridline`, a `\hbox to\hsize` of panels: `_gridrow`) stays one row however
     // wide its panels add up (2609.09897's two 0.53\textwidth panels and a third, beside negative `\hspace`s).
-    let same_fixed_row = row.last().is_some_and(|(prev, ..)| {
-      prev
-        .get_attribute("_gridrow")
-        .is_some_and(|r| child.get_attribute("_gridrow").as_ref() == Some(&r))
-    });
-    if !row.is_empty() && !same_fixed_row && (current_width + child_width > float_width) {
+    // So does a row TeX sets in one `\hbox` (`note_panel_hbox`): a sub-float's body, the sub-floats of one box.
+    let same_fixed_row = hbox_body
+      || row.last().is_some_and(|(prev, ..)| {
+        prev
+          .get_attribute("_gridrow")
+          .is_some_and(|r| child.get_attribute("_gridrow").as_ref() == Some(&r))
+          || hbox_row(document, prev).is_some_and(|r| hbox_row(document, &child) == Some(r))
+      });
+    if !row.is_empty() && !same_fixed_row && (current_width + glue + child_width > float_width) {
       // Perl L3287-3295: row overflow — break before this child, start a new row.
       insert_break_before(document, &mut child)?;
       document.add_class(&mut child, "ltx_figure_panel")?;
       all_panels.push(child.clone());
       row = vec![(child, child_name, child_width)];
       current_width = child_width;
+      paragraph_start = false;
     } else if let Some((mut prev_node, prev_name, prev_width0)) = row.pop() {
       // Perl L3296-3330: try to merge into the previous panel, else append.
       let prev_width = if prev_width0 > 0.0 {
@@ -4851,9 +6081,10 @@ fn arrange_panels(document: &mut Document, node: &mut Node, float_width: f64) ->
         all_panels.push(child.clone());
         row.push((child, child_name, child_width));
       }
-      current_width += child_width;
+      current_width += glue + child_width;
     } else {
       // Perl L3331-3333: no previous panel in the row — just add this child.
+      paragraph_start = false;
       if child_width > 0.0 {
         all_panels.push(child.clone());
       }
@@ -4862,7 +6093,17 @@ fn arrange_panels(document: &mut Document, node: &mut Node, float_width: f64) ->
         // row and forces a break before the next sibling (unless that sibling is
         // itself a break/caption/meta), so subsequent content starts a new row.
         if let Some(mut trailer) = child.get_next_sibling() {
-          let trailer_name = document::get_node_qname(&trailer);
+          // (a row separator the source states is passed over: what follows it decides)
+          let mut next = Some(trailer.clone());
+          while let Some(node) = next
+            .as_ref()
+            .filter(|n| n.get_attribute(PANEL_SEPARATOR).is_some())
+          {
+            next = node.get_next_sibling();
+          }
+          let trailer_name = next
+            .as_ref()
+            .map_or(pin!("ltx:caption"), document::get_node_qname);
           if !is_panel_break_name(trailer_name) {
             insert_break_before(document, &mut trailer)?;
           }
@@ -4879,12 +6120,15 @@ fn arrange_panels(document: &mut Document, node: &mut Node, float_width: f64) ->
       } else {
         row.push((child, child_name, child_width));
         // Perl L3343: the row was empty (current_width is 0), so this seeds
-        // the accumulator with the child's width.
-        current_width += child_width;
+        // the accumulator with the child's width (and the glue its paragraph's start keeps).
+        current_width += child_width + std::mem::take(&mut leading_glue);
       }
     }
   }
 
+  if let Some(stated) = pending_break {
+    document.remove_node(stated);
+  }
   // Perl L3346-3348: only mark panels when the figure is complex (>1 panel).
   if all_panels.len() > 1 {
     for panel in &mut all_panels {

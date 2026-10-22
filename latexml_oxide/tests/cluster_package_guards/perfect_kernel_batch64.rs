@@ -964,7 +964,8 @@ fn aastex_bare_fig_panels_keep_numbering() {
 }
 
 /// 64e review r1: each `\gridline` stays one row — inside `{center}` (2103.16579) and when its panels add up wider than
-/// the float (2609.09897). Repro captions-floats/aastex_gridline_rows_kept.
+/// the float (2609.09897); the break between the two `\gridline`s in the `{center}` is a row break the source states
+/// (OXIDIZED_DESIGN_DIVERGENCES #885). Repro captions-floats/aastex_gridline_rows_kept.
 #[test]
 fn aastex_gridline_rows_kept() {
   let tex = include_str!(
@@ -975,7 +976,7 @@ fn aastex_gridline_rows_kept() {
     &xml,
     "figure",
     &["xml:id=\"S0.F1\""],
-    "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig1\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g1\"/><caption fontsize=\"80%\">(a)</caption></figure><figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig2\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g2\"/><caption fontsize=\"80%\">(b)</caption></figure><break class=\"ltx_break ltx_centering\"/><figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig3\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g3\"/><caption fontsize=\"80%\">(c)</caption></figure><figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig4\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g4\"/><caption fontsize=\"80%\">(d)</caption></figure><toccaption><tag close=\" \">1</tag>Centered rows.</toccaption><caption><tag close=\": \">Figure 1</tag>Centered rows.</caption></figure>",
+    "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig1\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g1\"/><caption fontsize=\"80%\">(a)</caption></figure><figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig2\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g2\"/><caption fontsize=\"80%\">(b)</caption></figure><break class=\"ltx_break\"/><figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig3\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g3\"/><caption fontsize=\"80%\">(c)</caption></figure><figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.fig4\"><graphics candidates=\"figs/a.eps\" graphic=\"figs/a.eps\" options=\"width=103.50105pt,keepaspectratio=true\" xml:id=\"S0.F1.g4\"/><caption fontsize=\"80%\">(d)</caption></figure><toccaption><tag close=\" \">1</tag>Centered rows.</toccaption><caption><tag close=\": \">Figure 1</tag>Centered rows.</caption></figure>",
   );
   assert_element(
     &xml,

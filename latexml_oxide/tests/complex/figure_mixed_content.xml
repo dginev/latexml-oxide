@@ -35,6 +35,7 @@
         </tbody>
       </tabular>
     </inline-block>
+    <break class="ltx_break"/>
     <inline-block class="ltx_figure_panel" depth="7.3pt" height="10.9pt" width="124.2pt" xscale="0.900015259021897" xtranslate="-6.9pt" yscale="0.900015259021897" ytranslate="1.0pt">
       <tabular class="ltx_minipage" vattach="middle" width="138.0pt">
         <tbody>
@@ -669,6 +670,7 @@
 </listingline>
         </listing>
       </float>
+      <break class="ltx_break"/>
       <figure class="ltx_figure_panel ltx_minipage" vattach="middle" width="144.9pt" xml:id="S0.SS0.SSS0.Px1.fig2">
         <float class="ltx_figure_panel ltx_float_algorithm" framed="top" inlist="loa" labels="LABEL:alg:rpc" placement="H" xml:id="alg3">
           <tags>

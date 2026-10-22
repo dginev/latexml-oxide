@@ -1,0 +1,34 @@
+% witness: review rev78x2 finding 3 (probe q4.tex Figs 2-3: subcaption's \subfloat, begun in a \begingroup of its
+%          own, inside an adjustbox or a \resizebox); 2311.18531 A7.F5/F6 (the environment form)
+% oracle:  pdflatex 0 errors (the four sub-floats in one \hbox each figure: one row)
+% engines: rust int68a = five rows each (Perl's greedy rule at the box's line); 78x r2 = the box's paragraph, then
+%          3+1 (each sub-float keyed on its own group); Perl 0.8.8 as int68a
+% expect:  0 errors, 0 warnings; one `ltx:break` in each figure (the box's own paragraph before the row of four)
+% status:  RED (78x r2) -> GREEN (78x r3: the row is the group that set the box's restricted horizontal mode)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{adjustbox}
+\usepackage{subcaption}
+\begin{document}
+\begin{figure}
+\centering
+\begin{adjustbox}{width=\linewidth,center}
+\subfloat[x]{\includegraphics[width=0.3\linewidth]{example-image}}\hfill
+\subfloat[y]{\includegraphics[width=0.3\linewidth]{example-image}}\hfill
+\subfloat[z]{\includegraphics[width=0.3\linewidth]{example-image}}\hfill
+\subfloat[w]{\includegraphics[width=0.3\linewidth]{example-image}}
+\end{adjustbox}
+\caption{Sub-floats in an adjustbox.}
+\end{figure}
+\begin{figure}
+\centering
+\resizebox{\linewidth}{!}{%
+\subfloat[x]{\includegraphics[width=0.3\linewidth]{example-image}}\hfill
+\subfloat[y]{\includegraphics[width=0.3\linewidth]{example-image}}\hfill
+\subfloat[z]{\includegraphics[width=0.3\linewidth]{example-image}}\hfill
+\subfloat[w]{\includegraphics[width=0.3\linewidth]{example-image}}}
+\caption{Sub-floats in a resizebox.}
+\end{figure}
+\end{document}

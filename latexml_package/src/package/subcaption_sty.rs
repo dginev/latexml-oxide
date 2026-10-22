@@ -291,6 +291,8 @@ LoadDefinitions!({
       after_digest_begin => sub[whatsit] { subfloat_minipage_width(whatsit)?; },
       after_digest => sub[whatsit] { after_float(whatsit); }
     );
+    // The width its last argument states is the panel's (the panel grid rule, `declare_panel_width`).
+    declare_panel_parbox_width("\\begin{subfigure}", 4);
   }
 
   // Perl L77: `{subfigure*}` passes double => 1, widening \hsize to
@@ -308,6 +310,7 @@ LoadDefinitions!({
     after_digest_begin => sub[whatsit] { subfloat_minipage_width(whatsit)?; },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
+  declare_panel_parbox_width("\\begin{subfigure*}", 4);
 
   // subcaption v1.3+ added `{subcaptionblock}` as a sibling of `{subfigure}`
   // — same signature and semantics, just a more-generic name. Witness
@@ -325,6 +328,7 @@ LoadDefinitions!({
     after_digest_begin => sub[whatsit] { subfloat_minipage_width(whatsit)?; },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
+  declare_panel_parbox_width("\\begin{subcaptionblock}", 4);
   DefEnvironment!("{subcaptionblock*}[][][]{SetlengthDimension}",
     "^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
       #tags\
@@ -338,6 +342,7 @@ LoadDefinitions!({
     after_digest_begin => sub[whatsit] { subfloat_minipage_width(whatsit)?; },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
+  declare_panel_parbox_width("\\begin{subcaptionblock*}", 4);
 
   // Same `\newenvironment` guard for `\subtable` (subfigure.sty's `\subtable`
   // macro), for the same reason as `\subfigure` above.
@@ -359,6 +364,7 @@ LoadDefinitions!({
       after_digest_begin => sub[whatsit] { subfloat_minipage_width(whatsit)?; },
       after_digest => sub[whatsit] { after_float(whatsit); }
     );
+    declare_panel_parbox_width("\\begin{subtable}", 4);
   }
 
   // Perl L97: `{subtable*}` passes double => 1 (see {subfigure*} above).
@@ -375,6 +381,7 @@ LoadDefinitions!({
     after_digest_begin => sub[whatsit] { subfloat_minipage_width(whatsit)?; },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
+  declare_panel_parbox_width("\\begin{subtable*}", 4);
 
   //======================================================================
   // \subfloat — a sub-float with its caption. subcaption.sty:278-291 reads `[list][caption]{body}`
@@ -454,9 +461,22 @@ fn subfloat_tokens(list: Tokens, caption: Option<Tokens>, body: Tokens) -> Resul
     }
   }
   let env = Tokens!(T_BEGIN!(), Explode!(s!("sub{}", ctype)), T_END!());
-  let mut tokens = vec![T_CS!("\\begin")];
+  // The `{\columnwidth}` is the binding's, not a width the source states: subcaption's `\subfloat` boxes its body
+  // at its natural width (subcaption.sty:293-300 `\sbox\subcaption@box`), so the panel grid rule keeps nothing of it
+  // (`\lx@panel@unstated`; it made a `figure*`'s first `\subfloat` 0 wide against a two-column class's real column,
+  // review rev78x finding 1: 2602.06569 S4.F1/F2, 1902.05392 S3.F3), and its body's widths are the float's.
+  let mut tokens = vec![
+    T_CS!("\\begingroup"),
+    T_CS!("\\lx@panel@unstated"),
+    T_CS!("\\begin"),
+  ];
   tokens.extend(env.clone().unlist());
-  tokens.extend([T_BEGIN!(), T_CS!("\\columnwidth"), T_END!()]);
+  tokens.extend([
+    T_BEGIN!(),
+    T_CS!("\\columnwidth"),
+    T_END!(),
+    T_CS!("\\lx@panel@stated"),
+  ]);
   tokens.extend(body.unlist());
   match caption {
     Some(caption) => {
@@ -473,5 +493,6 @@ fn subfloat_tokens(list: Tokens, caption: Option<Tokens>, body: Tokens) -> Resul
   }
   tokens.push(T_CS!("\\end"));
   tokens.extend(env.unlist());
+  tokens.push(T_CS!("\\endgroup"));
   Ok(Tokens::new(tokens))
 }

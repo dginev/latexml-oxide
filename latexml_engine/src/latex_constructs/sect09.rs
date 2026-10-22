@@ -233,21 +233,44 @@ pub(crate) fn load() -> Result<()> {
   before_digest => {
     Error!("unexpected", "\\caption", "Use of \\caption outside any known float"); });
 
+  // A forced `\linebreak` (`\linebreak[4]`, its default: latex.ltx `\@no@lnbk`'s `\penalty-\@M`) between a float's
+  // panels ends their row (`note_panel_separator`, the panel grid rule; OXIDIZED_DESIGN_DIVERGENCES #885): the float's
+  // begin lets `\linebreak` to `\lx@panel@linebreak` while it has the kernel's meaning.
+  // `\linebreak` directly in the float's own group (as `\hspace`'s glue, latex_constructs sect12.rs): elsewhere — a
+  // caption, a cell, a box — it stays the no-op it is (sect12.rs `\linebreak[]`), so nothing joins their material.
+  DefPrimitive!("\\lx@panel@linebreak[]", sub[(priority)] {
+    let forced = priority.as_ref().is_none_or(|n| {
+      let n = n.to_string();
+      n.trim().is_empty() || n.trim() == "4"
+    });
+    if forced
+      && !lookup_bool("IN_MATH")
+      && matches!(lookup_value("lx@float@frame"), Some(Stored::Number(n)) if n.0 as u64 == current_frame_id())
+    {
+      unread_vec(vec![T_CS!("\\lx@panel@linebreak@mark")]);
+    }
+  });
+  DefConstructor!("\\lx@panel@linebreak@mark", sub[document, _args, _props] {
+    note_panel_separator(document, "break", None)?;
+  },
+  sizer => { Ok((Dimension::default(), Dimension::default(), Dimension::default())) },
+  reversion => Tokens!(T_CS!("\\linebreak")));
+
   // Note that even without \caption, we'd probably like to have xml:id.
   // Perl: BuildPanelsAndID + collapseFloat (afterClose hooks)
   Tag!("ltx:figure", after_close => sub[document, node, whatsit] {
     document.generate_id(node, "fig")?;
-    arrange_panels(document, node, float_width_of(whatsit))?;
+    arrange_panels(document, node, whatsit)?;
     collapse_float(document, node)?;
   });
   Tag!("ltx:table",  after_close => sub[document, node, whatsit] {
     document.generate_id(node, "tab")?;
-    arrange_panels(document, node, float_width_of(whatsit))?;
+    arrange_panels(document, node, whatsit)?;
     collapse_float(document, node)?;
   });
   Tag!("ltx:float",  after_close => sub[document, node, whatsit] {
     document.generate_id(node, "tab")?;
-    arrange_panels(document, node, float_width_of(whatsit))?;
+    arrange_panels(document, node, whatsit)?;
     collapse_float(document, node)?;
   });
 

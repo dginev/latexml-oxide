@@ -1,0 +1,52 @@
+% witness: review rev78x3 finding 3 (probe p7.tex F1: under `\centering` a `\\` is `\@centercr`, whose `\par` ends the
+%          paragraph, so the `\hspace` after it begins the next one and TeX keeps it)
+% oracle:  pdflatex 0 errors (\columnwidth 229.5pt): Figures 1, 3, 4 two rows, 1 | 3 (the second line keeps the
+%          `\glue -11.4757` and its three 78.03pt panels fit); Figure 2 (justified) two rows, its second overfull by
+%          4.59pt (TeX discards the leading `\hspace` and finds no break between the three)
+% engines: rust int68a = Figures 1, 2, 4 1 | 2 | 1, Figure 3 3+1; 78x r3 = 1 | 2 | 1 each; Perl 0.8.8 as int68a
+% expect:  0 errors, 0 warnings; Figures 1, 3, 4 one `ltx:break`, three panels after it; Figure 2 two `ltx:break`s
+%          (TeX's overfull line is ours split, as base)
+% status:  RED (78x r3: Figures 1, 3, 4) -> GREEN (78x r4: a centred `\\` begins a paragraph, whose leading glue its
+%          row keeps; a justified one keeps only an `\hspace*`'s)
+% preload: ar5iv.sty
+\documentclass[twocolumn]{article}
+\usepackage{graphicx}
+\begin{document}
+Text.
+\begin{figure}
+\centering
+\includegraphics[width=0.3\columnwidth]{example-image}\\
+\hspace{-0.05\columnwidth}%
+\includegraphics[width=0.34\columnwidth]{example-image}%
+\includegraphics[width=0.34\columnwidth]{example-image}%
+\includegraphics[width=0.34\columnwidth]{example-image}
+\caption{Centred.}
+\end{figure}
+\begin{figure}
+\includegraphics[width=0.3\columnwidth]{example-image}\\
+\hspace{-0.05\columnwidth}%
+\includegraphics[width=0.34\columnwidth]{example-image}%
+\includegraphics[width=0.34\columnwidth]{example-image}%
+\includegraphics[width=0.34\columnwidth]{example-image}
+\caption{Justified.}
+\end{figure}
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.3\columnwidth]{example-image}\\
+\hspace{-0.05\columnwidth}%
+\includegraphics[width=0.34\columnwidth]{example-image}%
+\includegraphics[width=0.34\columnwidth]{example-image}%
+\includegraphics[width=0.34\columnwidth]{example-image}
+\end{center}
+\caption{In a center.}
+\end{figure}
+\begin{figure}
+\raggedright
+\includegraphics[width=0.3\columnwidth]{example-image}\\
+\hspace{-0.05\columnwidth}%
+\includegraphics[width=0.34\columnwidth]{example-image}%
+\includegraphics[width=0.34\columnwidth]{example-image}%
+\includegraphics[width=0.34\columnwidth]{example-image}
+\caption{Ragged right.}
+\end{figure}
+\end{document}

@@ -389,9 +389,12 @@ impl Constructor {
     let ismath = lookup_bool_sym(crate::pin!("IN_MATH"));
     // info!(target: "constructor", "invoke for {:?} ({:?})", self.get_cs(), ismath);
     // Parse AND digest the arguments to the Constructor
+    // (and the tokens its length arguments state, where they are kept: `parameter::KEEP_STATED_LENGTHS`)
+    let mut stated: Vec<(usize, Tokens)> = Vec::new();
+    let mut withheld = false;
     let mut args: Vec<Option<Digested>> = match self.get_parameters() {
       None => Vec::new(),
-      Some(params) => params.read_arguments_and_digest(self)?,
+      Some(params) => params.read_arguments_and_digest(self, &mut stated, &mut withheld)?,
     };
     // info!($self->tracingArgs(@args) . "\n" if $tracing && @args;
     let nargs = self.get_num_args();
@@ -427,6 +430,26 @@ impl Constructor {
     });
     if in_paragraph {
       properties.insert("in_paragraph", Stored::Bool(true));
+    }
+    if !stated.is_empty() {
+      let mut lengths: std::collections::VecDeque<Stored> = std::iter::repeat_with(|| Stored::None)
+        .take(args.len())
+        .collect();
+      for (index, tokens) in stated {
+        if let Some(slot) = lengths.get_mut(index) {
+          *slot = Stored::Tokens(tokens);
+        }
+      }
+      properties.insert(
+        crate::parameter::STATED_LENGTHS,
+        Stored::VecDequeStored(lengths),
+      );
+    }
+    if withheld {
+      properties.insert(
+        crate::parameter::STATED_LENGTHS_WITHHELD,
+        Stored::Bool(true),
+      );
     }
     // A TeX box's constructor outside math (a declared `restricted_horizontal`): the element it opens is marked for a
     // frontmatter field's print (core `document::FIELD_BOX_PROPERTY`, OXIDIZED_DESIGN #715).

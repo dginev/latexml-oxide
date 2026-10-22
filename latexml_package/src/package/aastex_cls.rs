@@ -1,4 +1,5 @@
 use crate::{
+  engine::latex_constructs::is_document_class,
   prelude::*,
   shipped_class::{class_code_contains, shipped_class_text},
 };
@@ -48,6 +49,21 @@ LoadDefinitions!({
   // 5.x:1076-1093, aastex63.cls:1117), so the REVTeX class's (`revtex4_support_sty::define_section_numbers`) are not set.
   assign_value("lx@revtex@sections@by@class", true, Some(Scope::Global));
   LoadClass!("revtex4");
+  // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`), over REVTeX's:
+  // AASTeX 6.x's, as pdflatex gives it for aastex631.cls — 513.117pt in two 242.267pt columns under `twocolumn`, one
+  // column otherwise; `\onecolumngrid` regions follow (revtex4_support_sty.rs). Witness 2605.22754. The other
+  // versions' pages are not known here: their rows follow the registers.
+  if ["aastex62", "aastex63", "aastex631"].iter().any(|class| is_document_class(class)) {
+    declare_panel_page(242.26653, 513.11743, last_class_option(&["twocolumn", "onecolumn"]) == Some("twocolumn"));
+  } else {
+    withdraw_panel_page();
+  }
+  // No AASTeX's floats are centred, where REVTeX's are (`declare_panel_floats_centred`, revtex4_cls.rs): 6.x and 7.x
+  // `\def\@xfloat@prep` again after revtex4-1, without its `\centering` (aastex6.cls:1042, aastex61.cls:1300,
+  // aastex62.cls:1373, aastex63.cls:1450, aastex631.cls:1550, aastex7.cls:8134, aastex701.cls:8066), as
+  // emulateapj.cls:949 does (emulateapj_cls.rs loads this); 5.x is `article`'s (aastex.cls:129). So a `\\` in them is
+  // `\@normalcr` (review rev78x4 finding 2).
+  withdraw_panel_floats_centred();
   // Every AASTeX numbers its sections in arabic (aastex.cls 5.x:1076-1093, aastex63.cls:1117, aastex701.cls:7629-7636),
   // as does emulateapj.cls:676, where revtex4's are Roman (revtex4_support_sty.rs `\thesection`): every AAS paper's
   // section numbers and `\ref`s read "I", "I.1" (2609.21324, astro-ph/0003209; Perl the same: aastex.cls.ltxml:44 +
