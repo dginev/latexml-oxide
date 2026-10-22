@@ -6374,6 +6374,23 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   Babina\textsuperscript{1,2\thanks{Work done …}}}` loses the mark `2` and the note (2512.05464, PDF-confirmed: a
   silent content loss; 15 census papers: 1911.03118, 1912.00833, 2211.09622, 2305.16614, 2306.17472, 2309.12862,
   2402.18447, 2403.04164, 2410.12564, 2501.01423, 2502.15412, 2503.05905, 2512.05464, 2603.17529, 2605.17958). Scratch `~/data/pk_wt/scratch_fms2a2r4/` (rep/final.*, pdf_verdicts.tsv).
+  **Integration (int60, S2a.2 r4 squashed onto int59; binary int60a; shadow only):** review revfms2a2_4 LAND — unset, nothing
+  new runs on the conversion path (60 papers byte-identical XML + logs; −0.003 % instructions on 10 papers × 2 runs), set, the
+  XML is unchanged (40 papers; 1302.1274's one difference is the load-dependent ASF second-chance deadline, byte-identical run
+  alone), the split moves code only (shadow dumps byte-identical on 30 papers), the census comes from the committed code (40
+  dumps byte-identical). Main-session decisions on the r4 questions: the `\textsuperscript{1,2\thanks{…}}` content loss is an
+  output fix (batch 78u); the two misapplied r3 XML-wrong classes are tightened in r5; notes after a name's comma stay
+  unclassified; S2b pilots on revtex4_support once classified precision is back ≥ 95 %. Open for r5 (the review's findings):
+  `fmshadow/compare.rs:316-320` never flags an XML name note the shadow lacks — 63 "agree" papers hold one (kernel 55,
+  `Name\footnotemark[1]` + a later `\footnotetext`, 1108.5155, 1404.2124), which S2b would drop: make it a disagreement and
+  correct OD #837's "aastex `\altaffiltext`" sentence; the `unobserved` bucket drops a whole paper for one skipped block and
+  three of its four reasons are rehearsal failures (count per reason, compare the observed blocks, S2b falls back to today's
+  output for an unobserved block); `events.rs:161-165` comment vs `\pageref`/`\namecref`; `events.rs` 1,133 lines; a sole
+  author's pre-author note lands in `contacts` (`resolver/post.rs` `held_before_creators`); `spacing_before_a_mark_parts_the_entries`
+  pins a U+200B in the name; a vacuous `.all(…)` at `perfect_kernel_batchfms2a2r4.rs:152-164`; the welded-legend witnesses'
+  source evidence into OD #837. Gates int60a: nextest 6951/6951 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs
+  int59a empty. A/B int59a vs int60a (597: 300 random + 300 revtex/amsart census, seed 60): byte-identical, 0 of 597. Binding
+  nets: 136/136, 0 documents worse (int59a vs int60a).
 
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
