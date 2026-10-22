@@ -5600,6 +5600,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (0810.5501), an unnumbered target's `\ref` text is its title where pdflatex prints nothing (LaTeXML's crossref form),
   old svjour "Appendix 1" (1109.2662), aa.cls v4.03's "A1" (not followed), jfm's `\oneappendix` title, report's and
   article's double-`\appendix` numbering.
+  **Integration (int55, 78q r1-r2 squashed onto int54; binary int55b):** review rev78q SHIP after r2 (r1 NO-SHIP: l-aa
+  inherited aa's `\appendix`), rev78q2 SHIP with doc follow-ups folded in by the main session: emulateapj's non-zeroing
+  copies are 05/14/03 to 06/22/04 (16 census copies), 2505.15463's JFM-FLM_Au class is read raw (not a jfm-binding witness),
+  and jfm's appendix `\section*` keeping the equation count ("A 2" for pdflatex's "A 1", jfm.cls:303) is a residual — the
+  binding's re-wrap of `\section` inside `\appendix` is ignored ("Ignoring redefinition of \section": the locked `\section`
+  refuses a document-time redefinition), so `perfect_kernel_batch78q::jfm_section_star_zeroes_equations` pins e6 at "A 2".
+  Gates int55b: nextest 6812/6812 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int54a empty. A/B int54a vs
+  int55b (2,815: the `pop78q_*` populations + 300 random census controls, seed 55): E 2,839 = 2,839, F 13 = 13, 0 papers
+  worse; 1,075 outputs changed, all in the 78q populations (pop1 257, pop2b 597, pop3 145, pop4 48, pop5 22, pop6 2) plus
+  two aa/mn2e controls (1506.07705, 2404.01383) and two witnesses (2303.08726, 2507.06135); 0 of 286 random controls changed;
+  word loss > 1 % only in aipproc papers losing their section numbers (0910.2753, 1512.08572, hep-ex0510038), as the class
+  prints none. Binding nets: 136/136, 0 documents worse (int54a vs int55b).
 - **78g** (kernel batch: tcolorbox box labels, TCB-LABEL, user ruling 2026-10-21 item 12; + the repro stand-in licence
   audit, item 11; guards `perfect_kernel_batch78g::*`, 4, each RED on 25730beb73; OD #813, KPE #1038). (1) A label after a
   raw `\refstepcounter` names the object the step numbers, which takes the step's number: the kernel's
