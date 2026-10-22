@@ -39,7 +39,11 @@ When two rules below pull apart, the higher priority wins.
   Derive the rows from what the source states (explicit breaks; widths as fractions of the line width). The grid is not
   the whole story: HTML needs well-sized images, so keep the widths the LaTeX side states (as for the PDF) as the
   starting point for sizing. ar5iv-css sizes panels by the grid and by the image's shape (landscape, portrait, square);
-  the final sizing design is open (design study task #360).
+  the final sizing design is open (design study task #360, `agent_reports/2026-10-22_grid_design.md`).
+  Two abstractions (user 2026-10-22): a **gallery** — independent, usually sub-captioned panels whose order matters but
+  whose position does not, so reflow by whole rows on a narrow screen is harmless — and a **matrix** — panels whose row
+  and column carry meaning (uniform rows/columns, row or column labels, one caption, a `tabular`-built grid), which keep
+  their columns at any width (cells shrink, then scroll) and never reflow.
 
 ## 3. Numbering, labels and references
 
