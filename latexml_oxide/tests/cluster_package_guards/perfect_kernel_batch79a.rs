@@ -271,8 +271,10 @@ fn a_store_in_a_running_head_is_the_frontmatters() {
 /// head) — page furniture as a running head is (`running_head_arguments`, `head_definition_body`), so the short title
 /// is no value of a class line beside the short author and the volume is glued to no printed text: `\shorttitle` is
 /// the frontmatter's `<toctitle>`, `\volume` its pubnote; the same with `\renewcommand{\@oddhead}{…}` and titleps's
-/// `\sethead{…}{…}{…}`/`\setfoot*{…}{…}{…}`. pdflatex prints no head line on the title page. Red (79a r2, review
-/// rev79a2 finding 1, probe zqk): no toctitle (`\maketitle The raw class's \shorttitle stays the class's`), no volume.
+/// `\sethead{…}{…}{…}`/`\setfoot*{…}{…}{…}`, and with the stores in titleps's optional (even-page) arguments,
+/// `\sethead[\@shortauthor: \@shorttitle][][]{}{}{\thepage}`. pdflatex prints no head line on the title page. Red (79a
+/// r2, review rev79a2 finding 1, probe zqk): no toctitle (`\maketitle The raw class's \shorttitle stays the class's`),
+/// no volume; the optional-argument form red on r3 too (review rev79a3 finding 1, probe zr3b).
 #[test]
 fn a_store_in_a_head_definition_is_the_frontmatters() {
   const FRONTMATTER: &str = "<toctitle>A Short Title</toctitle>";
@@ -296,7 +298,17 @@ fn a_store_in_a_head_definition_is_the_frontmatters() {
       def_heads,
       "\\sethead{\\@shortauthor}{}{\\@shorttitle}\\setfoot*{Vol.\\@volume}{}{}%",
     );
-  for cls in [cls, renewed.as_str(), titleps.as_str()] {
+  let titleps_optional = titleps.replace(
+    "\\sethead{\\@shortauthor}{}{\\@shorttitle}\\setfoot*{Vol.\\@volume}{}{}%",
+    "\\sethead[\\@shortauthor: \\@shorttitle][][]{}{}{\\thepage}\\setfoot[Vol.\\@volume][][]{}{}{}%",
+  );
+  assert_ne!(titleps_optional, titleps);
+  for cls in [
+    cls,
+    renewed.as_str(),
+    titleps.as_str(),
+    titleps_optional.as_str(),
+  ] {
     let xml = convert_with_class(tex, "zzfmh.cls", cls);
     assert_element(&xml, "toctitle", &[], FRONTMATTER);
     assert_element(&xml, "pubnote", &[r#"role="volume""#], VOLUME);

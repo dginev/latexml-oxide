@@ -24682,7 +24682,10 @@ the eps). An extension is matched as kpathsea finds the file, the name as writte
 `texmf_casefold_search=1`; `declared_rank`, 79a r3, review rev79a2 finding 2): `\DeclareGraphicsExtensions{.pdf,.jpeg,.png}`
 beside `img/nsfnet.PNG` and `img/nsfnet.eps` is the PNG, found by the `.png` entry before the begin-document `.eps`,
 as 1608.05172's pdflatex log reads `<./img/nsfnet.PNG>` (r2 matched the case and took the eps), and
-`\RemoveGraphicsExtensions{.png}` beside `q.png` finds it by pdftex.def's `.PNG`. The seed is pdftex.def's list under
+`\RemoveGraphicsExtensions{.png}` beside `q.png` finds it by pdftex.def's `.PNG`. Residual (review rev79a3 finding 2):
+the candidate sort key puts the case fold ahead of the `\graphicspath` directory, where TeX runs one `\IfFileExists`
+per directory and kpathsea folds the case inside each, so an exact-case `dirB/q.png` wins over a folded `dirA/q.PNG`
+(TeX takes `dirA/q.PNG`; only when one base name sits in two search directories in different cases). The seed is pdftex.def's list under
 any driver option, where TeX loads the named driver's (`[dvips]`: dvips.def:202 `.eps,.ps,.eps.gz,.ps.gz,.eps.Z,.mps`,
 so pdflatex takes `q.eps` beside `q.png`): a SYNC row (review rev79a2 finding 3). After `{.pdf,.eps,.png,.jpg,.jpeg}` a `fig`
 beside `fig.png` and `fig.eps` is the eps, box and `cssstyle` alike (2107.02597's gnuplot epslatex figures: their

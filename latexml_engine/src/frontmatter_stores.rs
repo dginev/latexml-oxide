@@ -945,12 +945,13 @@ fn running_head_arguments(body: &[Token]) -> Vec<(usize, usize)> {
     if body.get(k) == Some(&T_OTHER!("*")) {
       k = skip_spaces(body, k + 1);
     }
-    // (any optional arguments: fancyhdr's `[<places>]`, scrlayer-scrpage's `[<plain>]`, titleps's three)
+    // The span starts before any optional arguments: titleps's three are the even-page heads, scrlayer-scrpage's
+    // `[<plain>]` and fancyhdr's old `\lhead[<even>]` are printed heads too (fancyhdr's `[<places>]` hold no stores).
+    let start = k;
     match skip_optional_arguments(body, k) {
       Some(past) => k = past,
       None => continue,
     }
-    let start = k;
     for _ in 0..*nargs {
       match group_end(body, skip_spaces(body, k)) {
         Some(past) => k = past,
