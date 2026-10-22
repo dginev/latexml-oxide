@@ -6434,6 +6434,18 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   540, F 2 = 2, W 5,698 = 5,698, words equal, 0 worse; XML changed in 20 (controls 0): box sizes 12, the natural
   `cssstyle` 5, panel rows 3 (1012.3355 now as latex; 1106.2745 2+2, the two-column geometry row; cond-mat0610021 the
   grid row's `\hbox` residual). Scratch `~/data/pk_wt/scratch_78z/`.
+  **Integration (int68, 03d1df4718 fast-forwarded onto 8576e7a97d + fold-ins a01d8b410f; binary int68a):** review rev78z
+  SHIP (its own A/B check: 452 compared, E/F/W equal, 0 worse, 20 changed; sizer probes — `(atend)`, negative and float
+  boxes, a HiRes line first, a DOS-binary EPS, a pdf beside a png, a page-sized pdf beside an eps — each within 0.0001pt of
+  pdflatex and latex+dvips; rasters byte-identical to base; no measurable cost, 39 EPS-heavy papers 34,112 → 33,625 ms);
+  fold-ins: the sizer comment and OD #886 say what `natural_display_size_pt_of_candidates` really does (finding 1 → the
+  open row "The natural `cssstyle` and the box read different candidates", queued in 79a), the EPS DPI round-trip
+  wording (graphicx_sty.rs, OD #107), the sp deltas quoted, hep-ex0703011 named, KPE #1141 (Perl sizes a vector graphic
+  as device pixels), the open row for graphicx `bb=`/`natwidth=`/`hiresbb` (finding 5). Gates int68a: nextest 7059/7059 +
+  cortex 10/10, fmt/clippy/rustdoc clean, inits 0/0, dump content diff vs int67a empty. A/B int67a → int68a
+  (`ab_66bundle/popint68a.tsv` = the writer's 453): E 540 = 540, F 2 = 2, words equal, 0 worse; XML byte-changed in the
+  same 20, and both sides byte-identical to the writer's run on all 452 compared. Binding nets (int68a) 136/136, 0 worse
+  than int67a.
 
 - **split114** (task #114, user directive 2026-10-07; a pure move, before FM S2a): `latexml_engine/src/base_utilities.rs`
   (23,317 lines) is the module directory `base_utilities/` — `mod.rs` (the imports, `FRONTMATTER_ELEMENTS`,
