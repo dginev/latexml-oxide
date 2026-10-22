@@ -5777,6 +5777,19 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   changed 93 outputs, each by int54's own label moves (81 the same line delta as int53a → int54a, 12 the same link and
   id delta), none by r5's three rules; the XML of the 1,576 cleveref papers holds no empty held tag (the 57 empty
   `ltx:tag`s are `\item[]`'s role-less labels and two bibitem `key`s).
+  **Integration (int57, 78j r1-r5 squashed onto int56; binary int57a):** reviews rev78j/rev78j2/rev78j3/rev78j4 NO-SHIP
+  (fix rounds r2-r5), rev78j5 SHIP with doc follow-ups folded in by the main session: OD #856 no longer says cleveref's
+  label type is placed by `float_to_label_for`; witness 2205.00263 on `settle_empty_held_tags`; new open rows: a
+  `\label[type]` after a `\caption` in a minipage panel keeps the figure's type, a `\begingroup` left open in held text
+  raises an Error TeX does not, and the 2509.13772 slice panic (int54a the same). Main-session decision: one Error per
+  runaway fault (rev78j4 m5, k6: 1 where pdflatex reports 2 from one runaway argument). Gates int57a: nextest 6861/6861 +
+  cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int56a empty. A/B int56a vs int57a (3,581 of 3,585: the
+  `pop78j_*` populations + 300 random census controls, seed 57): E 5,146 = 5,146, F 18 = 18, 0 papers worse, words
+  +181k; 3,119 outputs changed — the 78j populations and 116 of 266 random controls, classified: 103 numeric citations
+  carrying `ltx_cite_sort ltx_cite_compress` (REVTeX's / natbib's `sort&compress`, as pdflatex prints them), `\bibitem[…]`
+  labels printed as given (1808.01513 "[AMR88]", cond-mat9912070 "[*]", as the PDF), 10 cleveref/autoref tags; word loss
+  > 1 % only in 46 pdfpages papers whose "See pages 1-15 of x.pdf" placeholder is now the included pages as graphics
+  (1006.4647, 1805.10685). Binding nets: 136/136, 0 documents worse (int56a vs int57a).
 - **78g** (kernel batch: tcolorbox box labels, TCB-LABEL, user ruling 2026-10-21 item 12; + the repro stand-in licence
   audit, item 11; guards `perfect_kernel_batch78g::*`, 4, each RED on 25730beb73; OD #813, KPE #1038). (1) A label after a
   raw `\refstepcounter` names the object the step numbers, which takes the step's number: the kernel's
