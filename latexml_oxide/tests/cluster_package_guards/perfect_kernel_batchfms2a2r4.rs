@@ -149,17 +149,22 @@ fn a_withsup_line_takes_its_first_superscript() {
     "  a Univ C, Village | api:leading-mark",
   ]);
   let entries = dump(&revtex(WITHSUP))["entries"].clone();
+  let affiliations: Vec<&Value> = entries
+    .as_array()
+    .expect("entries")
+    .iter()
+    .filter(|e| {
+      e["attrs"]
+        .as_str()
+        .is_some_and(|a| a.contains("role=affiliation"))
+    })
+    .collect();
+  // (the count first, so the `all` below is not vacuous: review revfms2a2_4 finding 7)
+  assert_eq!(affiliations.len(), 3, "{entries}");
   assert!(
-    entries
-      .as_array()
-      .expect("entries")
-      .iter()
-      .filter(|e| e["attrs"]
-        .as_str()
-        .is_some_and(|a| a.contains("role=affiliation")))
-      .all(|e| e["attrs"]
-        .as_str()
-        .is_some_and(|a| a.ends_with(",_withsup=true"))),
+    affiliations.iter().all(|e| e["attrs"]
+      .as_str()
+      .is_some_and(|a| a.ends_with(",_withsup=true"))),
     "{entries}"
   );
 }
@@ -291,12 +296,14 @@ fn spacing_before_a_mark_parts_the_entries() {
     tuples(&revtex(
       "\\author{Ann Able${\\,\\!}^{1,2}$}\n\\author{Bob Baker${\\,\\!}^1$}\n\\affiliation{${\\,\\!}^1$Department of Mathematics\\\\ and ${\\,\\!}^2$Department of Physics, Univ A, City}"
     )),
+    // (no zero-width space in a name or an entry: the lexer reads none as ink, and a name keeps no piece printing no
+    // letter or digit — review revfms2a2_4 finding 6, FM S2a.2 r5)
     [
-      "C Ann Able \u{200b} [1,2] | line:names",
-      "  a \u{200b} Department of Mathematics | api:leading-mark api:split-by-marks",
+      "C Ann Able [1,2] | line:names",
+      "  a Department of Mathematics | api:leading-mark api:split-by-marks",
       "  a Department of Physics, Univ A, City | api:leading-mark api:split-by-marks",
-      "C Bob Baker \u{200b} [1] | line:names",
-      "  a \u{200b} Department of Mathematics | api:leading-mark api:split-by-marks",
+      "C Bob Baker [1] | line:names",
+      "  a Department of Mathematics | api:leading-mark api:split-by-marks",
     ]
   );
 }

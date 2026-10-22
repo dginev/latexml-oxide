@@ -17,7 +17,7 @@ pub struct XmlWrong {
 #[derive(Clone, Copy)]
 pub(super) enum NameFault {
   /// two or more of the shadow's names, consecutive, joined into one XML name, each after the first split out by a
-  /// rule `parted` accepts (given that rule and the name before it)
+  /// rule `parted` accepts (given that rule and the name before it), each a whole name ([`is_whole_name`])
   Merged(fn(&str, &TCreator) -> bool),
   /// a shadow name with the letters "ID" after it (an ORCID logo's glyphs read as text)
   OrcidLetters,
@@ -25,6 +25,11 @@ pub(super) enum NameFault {
   Addresses,
   /// a shadow name with its own affiliations after it in one XML name
   WithAffiliation,
+  /// the separator printed between two names (an `&`, the word "and") read as an XML creator of its own, or into the
+  /// name before it
+  Separator,
+  /// a name written surname first (`Blanchet, J.`) read as two XML creators, parted at its comma
+  Reversed,
 }
 
 /// Whether an XML-only affiliation (`<name>: xml-only <text>`) is one of the shadow's affiliations of that creator with
@@ -126,6 +131,36 @@ pub(super) fn legends_welded_on(shadow: &Tuples, detail: &str) -> bool {
   })
 }
 
+/// Whether a shadow name is a name's words as written: opening with a letter (or a digit, a bracket), no spacing accent
+/// glyph in it (`´`, `` ` ``,
+/// `¨`, `ˆ`, `˜`, `¸`, `˙`, `ˇ`, `˘`, `¯`, `˚`, `˝`: an accent a document drew beside its letter, 1706.00234).
+pub(super) fn is_whole_name(name: &str) -> bool {
+  // (a number or a bracket may open it: an IEEE ordinal's `1 Felix Neubauer`, 2508.05192; `)and I. Siutsou(`,
+  // 1306.4792)
+  name
+    .trim()
+    .chars()
+    .next()
+    .is_some_and(|c| c.is_alphanumeric() || "()[]".contains(c))
+    && !name.chars().any(|c| {
+      matches!(
+        c,
+        '\u{00B4}'
+          | '`'
+          | '\u{00A8}'
+          | '\u{02C6}'
+          | '\u{02DC}'
+          | '\u{00B8}'
+          | '\u{02D9}'
+          | '\u{02C7}'
+          | '\u{02D8}'
+          | '\u{00AF}'
+          | '\u{02DA}'
+          | '\u{02DD}'
+      )
+    })
+}
+
 /// Whether a text is e-mail addresses alone (brackets, braces and separators aside).
 pub(super) fn is_addresses(text: &str) -> bool {
   let words: Vec<&str> = text
@@ -179,6 +214,32 @@ pub(super) fn names_explained(shadow: &Tuples, xml: &Tuples, fault: NameFault) -
         }
         return false;
       },
+      NameFault::Reversed => {
+        if i < sn.len()
+          && let Some((surname, initials)) = shadow.creators[i].name.split_once(", ")
+          && xn[j] == norm(surname)
+          && xn.get(j + 1).is_some_and(|x| *x == norm(initials))
+        {
+          (i, j, used) = (i + 1, j + 2, true);
+          continue;
+        }
+        return false;
+      },
+      NameFault::Separator => {
+        // (`Sonja Hohloch \quad$\&$ \quadPedro Santos`: a creator "&", 2411.16601; `Seema Kushwaha$^{3}$ AND
+        // \\Sumit Kumar Upadhyay`: "Seema Kushwaha AND", 2106.11727)
+        // (an XML creator that is the separator alone: not any symbol, a `*` creator is another fault, 2207.10791)
+        let raw = xml.creators[j].name.trim().to_lowercase();
+        if matches!(raw.as_str(), "&" | "," | ";" | "and") {
+          (j, used) = (j + 1, true);
+          continue;
+        }
+        if i < sn.len() && xn[j].strip_prefix(sn[i].as_str()) == Some("and") {
+          (i, j, used) = (i + 1, j + 1, true);
+          continue;
+        }
+        return false;
+      },
       NameFault::Addresses => {
         let raw = &xml.creators[j].name;
         if is_addresses(raw) {
@@ -204,8 +265,9 @@ pub(super) fn names_explained(shadow: &Tuples, xml: &Tuples, fault: NameFault) -
         let mut at = 0usize;
         let mut k = i;
         while k < sn.len() && at < x.len() {
-          // (no address is a name, 2507.03885)
-          if shadow.creators[k].name.contains('@') {
+          // (no address is a name, 2507.03885; nor the glyphs of an accent a document drew apart, a piece opening with
+          // no letter or holding a spacing accent: `TI\EES N-S\OW N PH\d{A}M` parted "TIÊ ´N-SO | . N PHẠM", 1706.00234)
+          if shadow.creators[k].name.contains('@') || !is_whole_name(&shadow.creators[k].name) {
             return false;
           }
           if k > i
@@ -286,9 +348,27 @@ pub(super) fn names_lost_to_affiliations(shadow: &Tuples, xml: &Tuples) -> Vec<S
     .filter(|i| !pairs.iter().any(|(a, _)| a == i))
     .map(|i| sn[i].clone())
     .collect();
-  if lost
-    .iter()
-    .all(|n| n.len() >= 6 && held.iter().any(|h| h.contains(n.as_str())))
+  // (a row reading as institutions — a lost name holding an acronym, a word of two or more capitals that is no roman
+  // numeral, as the resolver's `later_line_is_names` reads it — is no names row: `Bhanwar Gupta \\ IBM India, IBM CIO`,
+  // 2609.10596, where the shadow read the affiliation line as names)
+  let acronym = |word: &str| {
+    let word = word.trim_matches(|c: char| !c.is_alphanumeric());
+    word.chars().count() >= 2
+      && word.chars().all(|c| c.is_ascii_uppercase())
+      && !word.chars().all(|c| "IVXLC".contains(c))
+  };
+  // (in a name not set in capitals: `MARTHA D. FERREIRA`'s words are no acronyms, 2202.13867)
+  let institutions = (0..sn.len())
+    .filter(|i| !pairs.iter().any(|(a, _)| a == i))
+    .any(|i| {
+      // (the name without the qualifier after its comma: `Chuanhou Gao, Senior Member, IEEE`, 2303.17769)
+      let name = shadow.creators[i].name.split(',').next().unwrap_or("");
+      name.chars().any(char::is_lowercase) && name.split_whitespace().any(acronym)
+    });
+  if !institutions
+    && lost
+      .iter()
+      .all(|n| n.len() >= 6 && held.iter().any(|h| h.contains(n.as_str())))
   {
     lost
   } else {
@@ -311,14 +391,21 @@ pub const XML_WRONG: &[XmlWrong] = &[
     },
   },
   XmlWrong {
-    name:      "a list of names (commas, \"and\") in one personname",
-    witnesses: &["1512.06985", "1610.06365", "2211.02638", "2411.11150"],
+    name:      "a list of names (commas, \"and\", `\\and`) in one personname",
+    witnesses: &[
+      "1512.06985",
+      "1610.06365",
+      "2211.02638",
+      "2411.11150",
+      "2006.13694",
+    ],
     applies:   |c| {
       c.kind == "name-split"
         && names_explained(
           c.shadow,
           c.xml,
-          // (a list's names parted by commas and "and", a wide space between two of them too: 2007.02542)
+          // (a list's names parted by commas and "and", a wide space between two of them too: 2007.02542; by the `\and`
+          // that opened a column, `sep:column`: 2006.13694)
           NameFault::Merged(|rule, _| rule.contains("sep:")),
         )
     },
@@ -418,6 +505,24 @@ pub const XML_WRONG: &[XmlWrong] = &[
                 .iter()
                 .any(|x| norm(&x.name).contains(text.trim()))
             }))
+    },
+  },
+  XmlWrong {
+    name:      "the separator between two names (an ampersand, the word \"and\") read as a creator or into a name",
+    witnesses: &["2411.16601", "2106.11727"],
+    applies:   |c| c.kind == "name-split" && names_explained(c.shadow, c.xml, NameFault::Separator),
+  },
+  XmlWrong {
+    name:      "a name written surname first (\"Blanchet, J.\") read as two creators",
+    witnesses: &["1503.08374", "1609.07297"],
+    applies:   |c| {
+      c.kind == "name-split"
+        && c.shadow.creators.iter().any(|s| {
+          s.rules
+            .get("name")
+            .is_some_and(|r| r.contains("name:reversed"))
+        })
+        && names_explained(c.shadow, c.xml, NameFault::Reversed)
     },
   },
   XmlWrong {

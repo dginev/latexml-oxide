@@ -9,6 +9,8 @@ pub(super) struct Line<'a> {
   pub(super) column:      usize,
   pub(super) events:      Vec<&'a Event>,
   pub(super) after_blank: bool,
+  /// the break before it is inside a braced group or argument (role `group`): one print unit with the line before
+  pub(super) group_break: bool,
 }
 
 /// A labelled entry of a labelled line: its labels, its events, whether a symbol leads it.
@@ -24,12 +26,16 @@ pub(super) fn lines_of<'a>(events: &'a [Event], and_inline: bool) -> Vec<Line<'a
     column,
     events: Vec::new(),
     after_blank: false,
+    group_break: false,
   };
   let mut lines = vec![new(0)];
   let mut column = 0usize;
   for event in events {
     match &event.kind {
-      EventKind::Break => lines.push(new(column)),
+      EventKind::Break => lines.push(Line {
+        group_break: event.role.as_deref() == Some("group"),
+        ..new(column)
+      }),
       EventKind::Sep(SepKind::And(_) | SepKind::Column(_)) if !and_inline => {
         column += 1;
         lines.push(new(column));
@@ -311,11 +317,51 @@ pub(super) fn mark_led_pieces(events: &[Event]) -> Vec<Vec<Event>> {
   if first_ink.is_none_or(|e| e.kind != EventKind::Mark) {
     return Vec::new();
   }
+  // (a mark glued to the ink before it that labels as the leading mark does — a number after numbers, a letter after
+  // letters — with a name right after it opens the next entry: `\institution{$^{1}$University of Illinois …, USA
+  // $^{2}$Amazon.com Inc, CA, USA}` lexed "USA" "2" "Amazon.com Inc" — the call's content has no positions to show the
+  // space —, 2202.06129, given whole to the first mark's authors; `ECT$^*$`'s symbol and BaBar's `$^a$` sub-labels after
+  // numbers stay the entry's)
+  let kind = |e: &Event| -> Option<bool> {
+    let labels = mark_labels(e.label.as_deref().unwrap_or(""));
+    if e.symbol || labels.is_empty() {
+      None
+    } else if labels.iter().all(|l| l.chars().all(|c| c.is_ascii_digit())) {
+      Some(true)
+    } else if labels
+      .iter()
+      .all(|l| l.chars().count() <= 2 && l.chars().all(char::is_alphabetic))
+    {
+      Some(false)
+    } else {
+      None
+    }
+  };
+  let lead_kind = first_ink.and_then(kind);
+  let name_follows = |at: usize| {
+    events[at + 1..]
+      .iter()
+      .find(|e| e.kind != EventKind::Layout)
+      .is_some_and(|e| {
+        e.kind == EventKind::Name && e.text.chars().next().is_some_and(char::is_alphabetic)
+      })
+  };
   let mut pieces: Vec<Vec<Event>> = vec![Vec::new()];
   let mut after_sep = true;
   let mut ink = false;
-  for event in events {
+  for (at, event) in events.iter().enumerate() {
     match &event.kind {
+      EventKind::Mark
+        if ink
+          && !after_sep
+          && lead_kind.is_some()
+          && kind(event) == lead_kind
+          && name_follows(at) =>
+      {
+        pieces.push(vec![event.clone()]);
+        ink = false;
+        continue;
+      },
       EventKind::Mark if after_sep && ink => {
         pieces.push(vec![event.clone()]);
         ink = false;
@@ -491,6 +537,32 @@ pub(super) fn joins_previous(events: &[&Event], i: usize) -> bool {
       .is_some_and(|e| e.kind == EventKind::Name)
 }
 
+/// Whether `gap`, the separator before the Name at `i`, is inside a word: one source token (a command) printed it with
+/// the end of the Name before and the start of the Name at `i`, each of which runs on past that token — a glyph a
+/// document builds of boxes in the middle of a name (`S\OW N`, 1706.00234). A gap of two calls' spaces (`\redact{Ann
+/// Able} \redact{Bob Baker}`, 2605.30896) or a macro printing two whole names (`Ann Able\quad Bob Baker` from one
+/// `\authorlist`) is a separator.
+pub(super) fn gap_inside_one_command(events: &[&Event], i: usize, gap: &Event) -> bool {
+  let EventKind::Sep(SepKind::Gap { .. }) = gap.kind else {
+    return false;
+  };
+  let before = events[..i]
+    .iter()
+    .rev()
+    .find(|e| !matches!(e.kind, EventKind::Layout | EventKind::Sep(_)))
+    .filter(|e| e.kind == EventKind::Name);
+  match (before.and_then(|e| e.span), gap.span, events[i].span) {
+    (Some((before_start, before_end)), Some((gap_start, gap_end)), Some((start, end))) => {
+      gap_end == gap_start + 1
+        && before_start < gap_start
+        && before_end == gap_end
+        && start == gap_start
+        && end > gap_end
+    },
+    _ => false,
+  }
+}
+
 /// Whether a Layout event is an image (a logo, an affiliation marker: 2503.08161; review revfms2a1_3): it parts the
 /// runs beside it, as a separator, never joins them into one name.
 pub(super) fn is_image(event: &Event) -> bool {
@@ -547,6 +619,7 @@ impl Resolver {
       column:      line.column,
       events:      owned.iter().collect(),
       after_blank: line.after_blank,
+      group_break: line.group_break,
     };
     let made = self.names_line_events(index, policy, line, block_requests, group);
     if !addresses.is_empty() {
@@ -569,9 +642,15 @@ impl Resolver {
     // the separator before the next name, and whether a mark after a comma waits for the next name
     let mut last_sep: Option<&Event> = None;
     let mut waiting: Vec<String> = Vec::new();
+    // (of them, the labels a `\footnotemark` printed: `fn_requests`)
+    let mut waiting_fn: Vec<String> = Vec::new();
+    let mut waiting_parted: Vec<String> = Vec::new();
     let mut waiting_notes: Vec<&Event> = Vec::new();
     // the mark before, where it ends in the source and whether it went to the next name
     let mut last_mark: Option<(u16, bool)> = None;
+    // the institution a names line read as the affiliation of the name before (`classify:institution`): its creator and
+    // place, which the pieces after it continue
+    let mut institution: Option<(usize, usize)> = None;
     let split_rule = |sep: Option<&Event>| match sep.map(|e| &e.kind) {
       Some(EventKind::Sep(SepKind::Comma)) => "line:names sep:comma",
       Some(EventKind::Sep(SepKind::Word(_))) => "line:names sep:word",
@@ -598,6 +677,21 @@ impl Resolver {
           self.out.creators[c]
             .requests
             .extend(mark_labels(&event.text));
+          last_sep = None;
+        },
+        // (a gap the command printing the ink on both its sides made, inside its expansion, is no space the source put
+        // between two names: Vietnamese accents drawn with `\raise\hbox{…}` by a document's `\EES`, `\OW` —
+        // `TI\EES N-S\OW N PH\d{A}M`, 1706.00234, parted "TIÊ ´N-SO | . N PHẠM" at `\OW`'s spacing)
+        EventKind::Name
+          if !made.is_empty()
+            && last_sep.is_some_and(|gap| gap_inside_one_command(events, i, gap)) =>
+        {
+          let c = *made.last().expect("a name");
+          let creator = &mut self.out.creators[c];
+          creator.name = s!("{} {}", creator.name, event.text);
+          if !creator.rule.contains("name:macro-joined") {
+            creator.rule.push_str(" name:macro-joined");
+          }
           last_sep = None;
         },
         // (a lone placement letter beside a box is no name: `shown_arguments` reads every argument as shown when a
@@ -647,6 +741,31 @@ impl Resolver {
             creator.rule.push_str(" name:layout-joined");
           }
         },
+        // (initials after a comma and a surname are that name's, written surname first: `Santucho, V., Luparello, H.
+        // E., Lares, M.`, mn2e, 2005.00053; `Blanchet, J., Glynn, P. and Thorisson, H.`, 1503.08374; `Della Valle, M.`,
+        // 1609.07297 — each piece was a creator)
+        EventKind::Name
+          if !made.is_empty()
+            && last_sep.is_some_and(|s| s.kind == EventKind::Sep(SepKind::Comma))
+            && initials_only(&event.text)
+            && !event.text.chars().any(char::is_lowercase)
+            && {
+              // (a surname alone before it, a word or two and no initial: not `X.W. Shu, D. Elbaz`, 1512.00167; nor a
+              // degree after a name, `Luluk Muthoharoh, S.Si., M.Si.`, 2605.07811, whose initials hold small letters)
+              let before = &self.out.creators[*made.last().expect("a name")].name;
+              !before.contains(',')
+                && before.split_whitespace().count() <= 2
+                && before.split_whitespace().all(|w| !initials_only(w))
+            } =>
+        {
+          let c = *made.last().expect("a name");
+          let creator = &mut self.out.creators[c];
+          creator.name = s!("{}, {}", creator.name, event.text);
+          if !creator.rule.contains("name:reversed") {
+            creator.rule.push_str(" name:reversed");
+          }
+          last_sep = None;
+        },
         // (a qualifier after a comma is the name's: `Robert W. Heath, Jr.`, `Matthew Nokleby, Student Member, IEEE`,
         // printed after the name, comma-separated — name_text.rs `is_name_qualifier`; 1106.5253, 1203.0695)
         EventKind::Name if !made.is_empty() && is_name_qualifier(&event.text) => {
@@ -671,6 +790,7 @@ impl Resolver {
             && !is_collaboration(&event.text) =>
         {
           let c = *made.last().expect("a name");
+          institution = Some((c, self.out.creators[c].affiliations.len()));
           self.attach(
             Some(c),
             Assoc {
@@ -684,7 +804,24 @@ impl Resolver {
           );
           last_sep = None;
         },
+        // (a piece after an institution's comma that does not read as names is the institution's address, as today's
+        // one affiliation: `Frank Schadt, Pforzheim University of Applied Sciences, Germany`, 1106.0130; `Ilse Fischer,
+        // Institut für Mathematik der Universität Klagenfurt, Universitätsstrasse 65-67, A-9020 Klagenfurt, Austria`,
+        // math0112263 — the street, the town and the country were authors)
+        EventKind::Name
+          if institution.is_some()
+            && last_sep.is_some_and(|s| s.kind == EventKind::Sep(SepKind::Comma))
+            && !reads_as_names(&event.text) =>
+        {
+          if let Some((c, at)) = institution
+            && let Some(affiliation) = self.out.creators[c].affiliations.get_mut(at)
+          {
+            affiliation.text = s!("{}, {}", affiliation.text, event.text);
+          }
+          last_sep = None;
+        },
         EventKind::Name => {
+          institution = None;
           let requests = [std::mem::take(&mut waiting), block_requests.to_vec()].concat();
           let c = self.new_creator(
             event.text.clone(),
@@ -694,6 +831,14 @@ impl Resolver {
             group,
           );
           made.push(c);
+          self
+            .fn_requests
+            .extend(std::mem::take(&mut waiting_fn).into_iter().map(|l| (c, l)));
+          self.parted.extend(
+            std::mem::take(&mut waiting_parted)
+              .into_iter()
+              .map(|l| (c, l)),
+          );
           for note in std::mem::take(&mut waiting_notes) {
             self.note(index, note, Some(c), "note:adjacent");
           }
@@ -739,9 +884,35 @@ impl Resolver {
                 && !(inst && policy.inst_after_comma))
           });
           last_mark = event.span.map(|(_, end)| (end, to_next));
+          let footnote = event
+            .role
+            .as_deref()
+            .is_some_and(|r| r.starts_with("footnotemark"));
+          // (a mark the lexer parted from the footnote mark glued to it, `\inst{1, 2\footnotemark[1]}` printing
+          // "1, 2∗": ruling 1's reading, the marks shown apart — 2404.09857)
+          if event
+            .role
+            .as_deref()
+            .is_some_and(|r| r.ends_with(" parted"))
+          {
+            let owner = if to_next { None } else { made.last().copied() };
+            if let Some(c) = owner {
+              self.parted.extend(labels.iter().map(|l| (c, l.clone())));
+            } else {
+              waiting_parted.extend(labels.iter().cloned());
+            }
+          }
           if to_next {
+            if footnote {
+              waiting_fn.extend(labels.iter().cloned());
+            }
             waiting.extend(labels);
           } else if let Some(&c) = made.last() {
+            if footnote {
+              self
+                .fn_requests
+                .extend(labels.iter().map(|l| (c, l.clone())));
+            }
             self.out.creators[c].requests.extend(labels);
             if after_comma {
               let rule = if inst && policy.inst_after_comma {
@@ -775,6 +946,12 @@ impl Resolver {
       && let Some(&c) = made.last()
     {
       self.out.creators[c].requests.extend(waiting);
+      self
+        .fn_requests
+        .extend(waiting_fn.into_iter().map(|l| (c, l)));
+      self
+        .parted
+        .extend(waiting_parted.into_iter().map(|l| (c, l)));
     }
     NamesLine { creators: made }
   }

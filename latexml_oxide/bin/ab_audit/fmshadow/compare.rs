@@ -311,13 +311,15 @@ pub fn compare(shadow: &Tuples, xml: &Tuples) -> Vec<Disagreement> {
       }
       n
     };
+    // (the XML's notes of the creator: its note contacts and notes, and the footnotes set in its personname — the
+    // text of a `\footnotemark` the name shows, `relocate_footnote`'s: `Steven Delvaux\footnotemark[1]` and the body's
+    // `\footnotetext[1]{…}`, 1108.5155, 1404.2124; revtex's `\footnotetext[1]{E-mail: …}`, 2503.10108 — each compared:
+    // one the shadow lacks is a disagreement, review revfms2a2_4 finding 1)
     let snotes = multiset(sc.notes.iter().map(without_orcids));
     let xnotes = multiset(xc.notes.iter().map(without_orcids));
-    let in_name: Vec<String> = xc.name_notes.iter().map(without_orcids).collect();
-    for text in minus(&snotes, &xnotes)
-      .into_iter()
-      .filter(|text| !in_name.contains(text))
-    {
+    let in_name = multiset(xc.name_notes.iter().map(without_orcids));
+    let unmatched = multiset(minus(&snotes, &xnotes).into_iter());
+    for text in minus(&unmatched, &in_name) {
       push(
         "note",
         sc.rules.get(&format!("note\t{text}")).cloned(),
@@ -329,6 +331,13 @@ pub fn compare(shadow: &Tuples, xml: &Tuples) -> Vec<Disagreement> {
         "note",
         rule_of(shadow, "note", &text),
         format!("{}: xml-only {text}", sc.name),
+      );
+    }
+    for text in minus(&in_name, &unmatched) {
+      push(
+        "note",
+        rule_of(shadow, "note", &text),
+        format!("{}: xml-only {text} (in the name)", sc.name),
       );
     }
   }

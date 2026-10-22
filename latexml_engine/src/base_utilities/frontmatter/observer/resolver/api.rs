@@ -81,10 +81,12 @@ impl Resolver {
     // 2605.14947; 2308.00495, 2111.07288)
     // (the contacts its commands declare, `\email`, `\orcid`: a link is text there, an e-mail address or an ORCID
     // record it points to too — amsart's `\address{… \\ \href{mailto:…}{…}}`, 2408.13873, 2305.04702)
+    // (and an ORCID inside an e-mail call, another kind of contact: `\email{giulio.pascale@unina.it \orcidlink{…}}`,
+    // 2402.04675 — the e-mail read "giulio.pascale@unina.it0000-0003-1680-3425")
     let split_out = |e: &Event| {
-      splits_contacts
-        && e.kind == EventKind::Contact
-        && matches!(e.role.as_deref(), Some("email" | "orcid"))
+      e.kind == EventKind::Contact
+        && ((splits_contacts && matches!(e.role.as_deref(), Some("email" | "orcid")))
+          || (tag != "ltx:creator" && role == "email" && contact_parts(e).0 == "orcid"))
     };
     let refs: Vec<&Event> = events.iter().filter(|e| !split_out(e)).collect();
     let text = events_text(&refs);
@@ -106,14 +108,24 @@ impl Resolver {
       })
       .collect();
     if tag == "ltx:creator" {
+      // (its `annotations=`, and the marks its name shows — ruling 1: `\author{Ann Able$^{1}$}` under acmart requests
+      // 1, as a block's names line reads it; 2202.06129's shape)
       let requests: Vec<String> = attr_value(attrs, "annotations")
         .map(|l| {
           l.split(',')
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
-            .collect()
+            .collect::<Vec<_>>()
         })
-        .unwrap_or_default();
+        .unwrap_or_default()
+        .into_iter()
+        .chain(
+          events
+            .iter()
+            .filter(|e| e.kind == EventKind::Mark)
+            .flat_map(|e| mark_labels(e.label.as_deref().unwrap_or(""))),
+        )
+        .collect();
       if !text.is_empty() {
         let start = self.out.creators.len();
         self.new_creator(text, "api:creator", index, requests, index);
@@ -293,10 +305,18 @@ impl Resolver {
           ..assoc
         }));
       }
-      if label_rule.starts_with("api:leading-mark") && !withsup {
+      if label_rule.starts_with("api:leading-mark") {
         let owners = self.annotate_owners(attr_value(attrs, "annotate").unwrap_or(""), role);
         for at in first_pending..self.pending.len() {
-          self.piled.push((at, owners.clone()));
+          if !withsup {
+            self.piled.push((at, owners.clone()));
+            // (where an unshown label leaves it: the run its declared `annotate=` reached, today's attachment before
+            // the label moves it — revtex's `\affiliation{$^{1}$…}` under unmarked names; not a `\lx@affiliation@withsup`
+            // line, labelled at once, nor a call declaring no run)
+            if !attr_value(attrs, "annotate").unwrap_or("").is_empty() {
+              self.annotated.push((at, owners.clone()));
+            }
+          }
         }
       }
       // (today's call attaches the entry to its `annotate=new` run first and moves it by its label after: the run's
@@ -340,10 +360,15 @@ impl Resolver {
       // `relocate_annotations` keeps one: nothing when an author holds the same, else a sole author's, else the
       // block's (`held_before_creators`: 17 of 2103.04797's 188 are no author's and stay under the names; 2401.15779);
       // an unqualified one is the block's, 0709.0811)
+      // (a note's rule says so, `api:note`: `held_before_creators` gives it to a sole author as a note)
       self.attach(
         None,
         Assoc {
-          rule: "api:no-creator owner:block".into(),
+          rule: if note {
+            "api:no-creator owner:block api:note".into()
+          } else {
+            "api:no-creator owner:block".into()
+          },
           ..assoc.clone()
         },
         note,

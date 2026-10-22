@@ -36,7 +36,7 @@
 //! `\author` call (OXIDIZED_DESIGN_DIVERGENCES #837's r2 paragraph).
 
 use super::{
-  events::{Event, EventKind, SepKind},
+  events::{self, Event, EventKind, SepKind},
   policy::{EmailOwner, Policy, policy_for},
   *,
 };
@@ -107,6 +107,15 @@ pub enum Input {
     attrs:  String,
     events: Vec<Event>,
   },
+  /// a footnote's text the document made (`\footnotetext[<n>]{…}`, `ledger::NoteText`): its printed mark and its
+  /// body's events
+  NoteText {
+    index:  usize,
+    /// the frontmatter flushes before it (`ledger::NoteText::epoch`)
+    epoch:  usize,
+    mark:   String,
+    events: Vec<Event>,
+  },
 }
 
 mod api;
@@ -173,6 +182,15 @@ struct Resolver {
   piled:            Vec<(usize, Vec<usize>)>,
   /// the empty entries today's attaches (their ledger index, role and authors), in its pile for `distribute_upfront`
   empty_piled:      Vec<(usize, String, Vec<usize>)>,
+  /// the pending entries labelled by a leading mark (their place in `pending`) with the authors their `annotate=`
+  /// reaches, where today's attaches them when no name shows a mark of their kind (`answer_pending`)
+  annotated:        Vec<(usize, Vec<usize>)>,
+  /// the requests a `\footnotemark` made (creator, label): a footnote's mark, answered by a note, never by a labelled
+  /// affiliation (`Kui Wu\inst{3\footnotemark[1]}` under `\institute{A \and B …}`, 2404.09857)
+  fn_requests:      Vec<(usize, String)>,
+  /// the footnote texts the document made (ledger index, flushes before it, printed mark, text), each read where a
+  /// name shows its mark (`answer_note_texts`)
+  note_texts:       Vec<(usize, usize, String, String)>,
 }
 
 /// authblk's `\AB@thenote` state (authblk.sty:114-118, 148-151), read in call order: the `affil` counter, stepped at
@@ -190,6 +208,35 @@ struct TheNote {
 }
 
 impl Resolver {
+  fn new() -> Self {
+    Resolver {
+      out:              Resolved::default(),
+      roles:            Vec::new(),
+      sequence:         Vec::new(),
+      pending:          Vec::new(),
+      group:            Vec::new(),
+      sequenced:        Vec::new(),
+      sequence_calls:   0,
+      last_run:         None,
+      order:            Vec::new(),
+      thenote:          TheNote {
+        newaffil: true,
+        ..TheNote::default()
+      },
+      thenote_requests: Vec::new(),
+      epoch_of:         Vec::new(),
+      replaced:         Vec::new(),
+      note_emails:      Vec::new(),
+      parted:           Vec::new(),
+      splitting:        false,
+      piled:            Vec::new(),
+      empty_piled:      Vec::new(),
+      annotated:        Vec::new(),
+      fn_requests:      Vec::new(),
+      note_texts:       Vec::new(),
+    }
+  }
+
   fn new_creator(
     &mut self,
     name: String,
@@ -198,6 +245,17 @@ impl Resolver {
     requests: Vec<String>,
     group: usize,
   ) -> usize {
+    // (a piece of the name printing no letter or digit is none of it — a dash, a stray symbol: review revfms2a2_4
+    // finding 6 — unless it holds a bracket, half of a pair around a piece that has: `Jiayi Zhang ( 张嘉懿)`)
+    let name = name
+      .split_whitespace()
+      .filter(|piece| {
+        piece
+          .chars()
+          .any(|c| c.is_alphanumeric() || "()[]{}<>".contains(c))
+      })
+      .collect::<Vec<_>>()
+      .join(" ");
     self.out.creators.push(RCreator {
       name,
       requests,
@@ -265,29 +323,7 @@ impl Resolver {
 
 /// Resolve a document's ledger (its inputs in call order).
 pub fn resolve(inputs: &[Input]) -> Resolved {
-  let mut resolver = Resolver {
-    out:              Resolved::default(),
-    roles:            Vec::new(),
-    sequence:         Vec::new(),
-    pending:          Vec::new(),
-    group:            Vec::new(),
-    sequenced:        Vec::new(),
-    sequence_calls:   0,
-    last_run:         None,
-    order:            Vec::new(),
-    thenote:          TheNote {
-      newaffil: true,
-      ..TheNote::default()
-    },
-    thenote_requests: Vec::new(),
-    epoch_of:         Vec::new(),
-    replaced:         Vec::new(),
-    note_emails:      Vec::new(),
-    parted:           Vec::new(),
-    splitting:        false,
-    piled:            Vec::new(),
-    empty_piled:      Vec::new(),
-  };
+  let mut resolver = Resolver::new();
   let mut policy: &'static Policy = &policy::KERNEL;
   for input in inputs {
     match input {
@@ -338,6 +374,11 @@ pub fn resolve(inputs: &[Input]) -> Resolved {
         attrs,
         events,
       } => resolver.api(*index, tag, role, attrs, events, policy),
+      Input::NoteText { index, epoch, mark, events } => {
+        resolver
+          .note_texts
+          .push((*index, *epoch, mark.clone(), events::printed_text(events)))
+      },
     }
   }
   resolver.thenote_finish();
@@ -347,11 +388,23 @@ pub fn resolve(inputs: &[Input]) -> Resolved {
   resolver.distribute_upfront();
   resolver.answer_note_emails();
   resolver.answer_pending();
+  resolver.answer_note_texts();
   resolver.answer_sequence();
   resolver.held_before_creators();
   resolver.sole_author_takes_the_block();
   let mut out = resolver.out;
   if !resolver.replaced.is_empty() {
+    // (and the block's own items of a replaced call: today's `\lx@clear@frontmatter` keeps nothing of it — 2510.26354's
+    // first `\author`, whose `firstname.lastname@h-its.org` the second call's addresses write out)
+    let replaced_blocks: Vec<usize> = resolver
+      .replaced
+      .iter()
+      .map(|&c| out.creators[c].source)
+      .collect();
+    out.block.retain(|a| {
+      a.source
+        .is_none_or(|(index, _)| !replaced_blocks.contains(&index))
+    });
     let mut at = 0usize;
     out.creators.retain(|_| {
       at += 1;
@@ -389,6 +442,12 @@ pub(in crate::base_utilities) fn ledger_inputs(ledger: &ledger::Ledger) -> Vec<I
           attrs:  call.attrs.clone(),
           events: call.events.clone(),
         }),
+      ledger::Entry::NoteText(text) => inputs.push(Input::NoteText {
+        index:  text.index,
+        epoch:  text.epoch,
+        mark:   text.mark.clone(),
+        events: text.events.clone(),
+      }),
       _ => {},
     }
   }
@@ -459,6 +518,15 @@ mod tests {
       fold_name(&tex_letters("Jean-Ren\\'e Chazottes\\inst{2}")),
       "jeanrenechazottes"
     );
+    // (FM S2a.2 r5: the kernel's accent commands written out, their names glued to the next letters, 2205.11550)
+    assert_eq!(
+      fold_name(&tex_letters("Gizem \\lxaccentc{S}eng\\lxaccentumlautor")),
+      "gizemsengor"
+    );
+    assert_eq!(
+      fold_name(&tex_letters("Luca Passalacqua (\\@chooseSymbol{'014})")),
+      "lucapassalacqua"
+    );
   }
 
   /// FM S2a.2 r3 item 1c: a glued label as the known labels written together, the fewest pieces; a symbol run on its
@@ -483,9 +551,43 @@ mod tests {
     assert_eq!(parted_label("7", &known(&["7"]), true), None);
   }
 
+  /// FM S2a.2 r5 (review revfms2a2_4 finding 5): an annotation made before the authors that is a note (`api:note`) is
+  /// a sole author's note, not a contact holding a role; a name keeps no piece printing no letter or digit (finding 6).
+  #[test]
+  fn a_sole_authors_note_made_before_it_is_its_note() {
+    let mut resolver = Resolver::new();
+    resolver.new_creator("Ann \u{200b} Able ‐".into(), "line:names", 1, Vec::new(), 1);
+    resolver.out.block.push(Assoc {
+      role:   "thanks".into(),
+      text:   "Supported by X.".into(),
+      label:  None,
+      rule:   "api:no-creator owner:block api:note".into(),
+      source: None,
+    });
+    resolver.held_before_creators();
+    let ann = &resolver.out.creators[0];
+    assert_eq!(ann.name, "Ann Able");
+    assert_eq!(
+      ann
+        .notes
+        .iter()
+        .map(|n| n.text.as_str())
+        .collect::<Vec<_>>(),
+      ["Supported by X."]
+    );
+    assert!(ann.contacts.is_empty() && resolver.roles[0].is_empty());
+    assert!(resolver.out.block.is_empty());
+  }
+
   #[test]
   fn address_lines() {
     assert!(only_addresses("E-mail: {ann,bob}@x.org, cat@y.org"));
+    // (FM S2a.2 r5: an address before a braced group is the list's too, 1808.08866)
+    assert_eq!(addresses_in("dan@z.org; {ann,bob}@x.org"), [
+      "dan@z.org",
+      "ann@x.org",
+      "bob@x.org"
+    ]);
     assert!(!only_addresses("Barcelona, SPAIN. ann@x.org"));
     assert!(is_one_address("mailto:ann@x.org"));
     assert!(!is_one_address("https://x.org"));

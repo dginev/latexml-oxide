@@ -92,6 +92,17 @@ pub fn json_inputs(dump: &Value) -> Vec<FmInput> {
             .collect(),
         })
       },
+      Some("notetext") => inputs.push(FmInput::NoteText {
+        index:  e["index"].as_u64().unwrap_or(0) as usize,
+        epoch:  e["epoch"].as_u64().unwrap_or(0) as usize,
+        mark:   s(&e["mark"]),
+        events: e["events"]
+          .as_array()
+          .into_iter()
+          .flatten()
+          .map(json_event)
+          .collect(),
+      }),
       _ => {},
     }
   }

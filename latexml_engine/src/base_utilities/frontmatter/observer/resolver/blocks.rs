@@ -59,6 +59,7 @@ impl Resolver {
         .iter()
         .zip(candidates)
         .all(|(s, c)| s.is_none_or(|s| s == *c));
+    let address_count = addresses.len();
     for (at, (address, spelled)) in addresses.into_iter().zip(spelled).enumerate() {
       let (owner, rule) = match spelled {
         Some(owner) => (Some(owner), "owner:spelled"),
@@ -68,6 +69,14 @@ impl Resolver {
         },
         None => match candidates {
           [only] => (Some(*only), "owner:only-author"),
+          // (an address pattern, `\{FirstName.LastName\}@SIT.Fraunhofer.de` under three names, is every author's
+          // address and no one's own: the block's, as today's — not the corresponding author's, 2006.12418; where
+          // order or elimination places it, as today's too, 2110.05663)
+          _ if is_pattern_address(&address) => (None, "owner:pattern"),
+          // (the corresponding author's address is one printed alone: an address left over in a print of several is
+          // another author's — `{hong3924.cs10, evan20010126.cs12, …}@nycu.edu.tw` under a corresponding Ching-Chun
+          // Huang, 2512.08223; `{congjing, ryanflin}@uw.edu chris20030909@gmail.com`, 2602.04785; 2604.14972)
+          _ if address_count > 1 => (None, "owner:block"),
           _ => self.corresponding(candidates),
         },
       };
@@ -139,7 +148,16 @@ impl Resolver {
     let mut labelled_last: Vec<usize> = Vec::new();
     // an unmarked line's affiliation whose group runs on past the line (its places, where the group ends)
     let mut open_group: Option<(u16, Vec<(usize, usize)>)> = None;
+    // the places of the unmarked affiliation the line before made, which a line after a break inside the same braced
+    // group continues
+    let mut unmarked_before: Option<Vec<(usize, usize)>> = None;
+    // the last line an address list read on to (`place_line_contacts` over the lines of one list)
+    let mut skip_to = 0usize;
     for (n, line) in lines.iter().enumerate() {
+      if n > 0 && n <= skip_to {
+        continue;
+      }
+      let unmarked_above = unmarked_before.take();
       let continued = open_rows.contains(&line.column);
       open_rows.retain(|c| *c != line.column);
       // (the line before in the column was labelled entries: an unmarked name under them is a new row's — SYNC row 46,
@@ -279,6 +297,15 @@ impl Resolver {
               open_rows.push(line.column);
             }
             let made = self.names_line(index, policy, cautious, line, &block_requests, group);
+            // (a later column's first name is parted from the name before by the `\and` (or `&`) that opened the
+            // column: `Chris Kapulkin \arxivortac{\and}{and} Peter LeFanu Lumsdaine`, 2006.13694)
+            if line.column > 0
+              && column_first
+              && let Some(&first) = made.creators.first()
+              && !self.out.creators[first].rule.contains("sep:")
+            {
+              self.out.creators[first].rule.push_str(" sep:column");
+            }
             row_above.push((line.column, made.creators));
             continue;
           }
@@ -332,6 +359,21 @@ impl Resolver {
           // addresses alone is e-mails by the owner chain, below: `$^1$Dept \\ landi@univ.trieste.it`, 0801.3376, 0810.3062)
           // (a line inside the group an unmarked line above opened is that affiliation's: `\\ \small{\textit{Dept …,
           // and\\ Institute …,\\ Facultad …}}`, one print unit, as today's one contact — 1012.1813)
+          // (a line after a break inside the braced group the unmarked line above is in continues its affiliation, one
+          // print unit, as today's one contact: `Xuhui Peng \\ {\em\tiny College of Mathematics …,\\ Changsha, Hunan
+          // 410081, P. R. China}`, 1710.07902; `\textsl{Pure Mathematics\\University of Waterloo\\…}`, math0610612 — no
+          // line of addresses alone)
+          if line.group_break
+            && let Some(places) = unmarked_above
+            && (addresses_in(&text).is_empty() || !only_addresses(&text))
+          {
+            self.continue_entry(&Continued::Joined(places.clone()), &text);
+            for note in notes {
+              self.note(index, note, above.last().copied(), "note:line-owner");
+            }
+            unmarked_before = Some(places);
+            continue;
+          }
           let starts = source.1.map(|(start, _)| start);
           match open_group.take() {
             Some((until, places)) if starts.is_some_and(|start| start < until) => {
@@ -352,6 +394,28 @@ impl Resolver {
             continue;
           }
           if !addresses_in(&text).is_empty() {
+            // (a list of addresses running on over the next lines — the line ending in a comma, each next line addresses
+            // alone — is one print: `E-mails: 202010106047@mail.scut.edu.cn, \\ scbingli@scut.edu.cn`, whose second
+            // address spells Bing Li, leaving the first to Bo Wang by elimination, 2312.05446)
+            let mut text = text.clone();
+            let mut last = n;
+            while lines[last]
+              .events
+              .iter()
+              .rev()
+              .find(|e| !matches!(e.kind, EventKind::Layout))
+              .is_some_and(|e| matches!(e.kind, EventKind::Sep(SepKind::Comma)))
+              && let Some(next) = lines.get(last + 1)
+              && next.column == line.column
+            {
+              let next_text = events_text(&next.events);
+              if addresses_in(&next_text).is_empty() || !only_addresses(&next_text) {
+                break;
+              }
+              text = s!("{text} {next_text}");
+              last += 1;
+            }
+            skip_to = last;
             let candidates: Vec<usize> = (block_creators_start..self.out.creators.len()).collect();
             self.place_line_contacts(&text, "email", &candidates, source);
             continue;
@@ -403,6 +467,9 @@ impl Resolver {
             && !places.is_empty()
           {
             open_group = Some((group_end, places.clone()));
+          }
+          if !places.is_empty() {
+            unmarked_before = Some(places.clone());
           }
           if joined && !places.is_empty() {
             continues = Some(Continued::Joined(places));
@@ -609,10 +676,27 @@ impl Resolver {
     }
     // (a note opening with a Mark some name requests is that label's legend: `\thanks{$^{1}$ Canizaro … Center}`
     // under `Newaz$^{1,2,*}$`, 2311.16145 — the mark it prints, its leading Mark event; its owners by ruling 1)
+    // (one whose text holds a later mark of other requested labels, none of the first's, is the legends of several
+    // entries, no one label's: IEEEtran's `\IEEEcompsocitemizethanks{\IEEEcompsocthanksitem \Mark{1}College …
+    // \IEEEcompsocthanksitem \Mark{2}College …}` was given whole to the authors of mark 1, 1802.03043 — a note of the
+    // name before, as today's; a later `\textsuperscript{1,2}` sharing the first's label keeps the first's reading, as
+    // today's, 2507.07006)
     if let Some((labels, legend)) = leading_mark(note)
       && labels
         .iter()
         .any(|l| !label_owners(&self.out.creators, l).is_empty())
+      && !note
+        .inner
+        .iter()
+        .filter(|e| e.kind == EventKind::Mark && !e.line_first)
+        .map(|e| mark_labels(e.label.as_deref().unwrap_or("")))
+        .any(|later| {
+          !later.is_empty()
+            && later.iter().all(|l| !labels.contains(l))
+            && later
+              .iter()
+              .any(|l| !label_owners(&self.out.creators, l).is_empty())
+        })
     {
       let symbol = labels.iter().all(|l| is_symbol_label(l));
       let role = if is_legend_text(&legend) || symbol {

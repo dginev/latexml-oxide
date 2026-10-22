@@ -34,7 +34,7 @@ impl Resolver {
   /// An annotation of the new authors made before any creator is an orphan (`relocate_annotations`): nothing when an
   /// author holds one of the same role and text (2103.04797: 171 of its 188 `\affiliation`s declared ahead of the
   /// authors are given again under them), else a sole author's (an affiliation too, whatever it holds: 2401.15779's
-  /// `\affiliation{https://ifisr.net}`), else the block's.
+  /// `\affiliation{https://ifisr.net}`; a note as its note, `api:note`), else the block's.
   pub(super) fn held_before_creators(&mut self) {
     let before = |a: &Assoc| a.rule.starts_with("api:no-creator");
     let held = |a: &Assoc, creators: &[RCreator]| {
@@ -52,8 +52,10 @@ impl Resolver {
       let mut kept = Vec::new();
       for assoc in std::mem::take(&mut self.out.block) {
         if before(&assoc) {
+          // (a note made before the author is its note, not a contact: review revfms2a2_4 finding 5)
+          let note = assoc.rule.split_whitespace().any(|t| t == "api:note");
           let rule = s!("{} owner:sole-author", assoc.rule);
-          self.attach(Some(0), Assoc { rule, ..assoc }, false);
+          self.attach(Some(0), Assoc { rule, ..assoc }, note);
         } else {
           kept.push(assoc);
         }
@@ -445,11 +447,155 @@ impl Resolver {
     }
   }
 
+  /// The footnote texts the document made, each a note of the names showing its mark by a `\footnotemark` — the mark
+  /// the PDF prints on the name and before the text (`Steven Delvaux\footnotemark[1], \quad Holger Dette\footnotemark[2]`
+  /// and, after `\maketitle`, `\footnotetext[1]{Department of …}` under `\fnsymbol`: 1108.5155, 1404.2124) —, as today's
+  /// `relocate_footnote` pairs them (latex_constructs/mod.rs; marks compared without their spaces, `\fnsymbol`'s `∥` and
+  /// `∗` as `\@fnsymbol`'s `‖` and `*`: 2002.11721), a mark taking one text and being a mark no more: a text built
+  /// after the names (made after the flush that digests their block) goes into every mark of its print not yet paired,
+  /// `Seo\footnotemark[3] \and Zhang\footnotemark[3]` (1405.4582; a second `\footnotetext` printing the same `*` finds
+  /// none, 2507.22611); the texts built before them (made before that flush, `\footnotetext[1]{…}` before `\maketitle`)
+  /// go, joined, into the first such mark alone, the next marks finding them gone (1703.09134; 1211.5488's two
+  /// `\footnotetext[1]`). A text no name's footnote mark shows is not read — by its counter value alone, today's
+  /// fallback where the title's `∗` stands for the body's `1`, no mark shows: not the evidence (1404.2124's
+  /// affiliations, 0909.2782) —, nor one a block read already (`Bob\footnotemark\footnotetext{…}` inside the
+  /// `\author`: the note beside the name).
+  pub(super) fn answer_note_texts(&mut self) {
+    let folded = |text: &str| -> String {
+      text
+        .chars()
+        .filter(|c| c.is_alphanumeric())
+        .flat_map(char::to_lowercase)
+        .collect()
+    };
+    let mark_key = |mark: &str| -> String {
+      mark
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .map(|c| match c {
+          '\u{2217}' => '*',
+          '\u{2225}' => '‖',
+          c => c,
+        })
+        .collect()
+    };
+    let texts = std::mem::take(&mut self.note_texts);
+    // the marks not yet paired: (creator, key), in creator order
+    let mut marks: Vec<(usize, String)> = self
+      .fn_requests
+      .iter()
+      .map(|(c, label)| (*c, mark_key(label)))
+      .collect();
+    marks.sort_by_key(|(c, _)| *c);
+    let mut read: Vec<String> = self
+      .out
+      .creators
+      .iter()
+      .flat_map(|c| c.notes.iter().chain(&c.contacts))
+      .chain(&self.out.block)
+      .chain(&self.out.dropped)
+      .map(|a| folded(&a.text))
+      .collect();
+    // (built before the names: those of one print joined, into the first mark of it)
+    let mut before: Vec<(String, usize, String)> = Vec::new();
+    let mut after: Vec<(String, usize, String)> = Vec::new();
+    for (index, epoch, mark, text) in texts {
+      let key = mark_key(&mark);
+      let text = text.trim().to_string();
+      if key.is_empty() || folded(&text).is_empty() || read.contains(&folded(&text)) {
+        continue;
+      }
+      read.push(folded(&text));
+      let built_before = marks
+        .iter()
+        .find(|(_, k)| *k == key)
+        .is_some_and(|&(c, _)| {
+          self
+            .epoch_of
+            .get(c)
+            .copied()
+            .flatten()
+            .is_some_and(|e| epoch <= e)
+        });
+      if built_before {
+        match before.iter_mut().find(|(k, ..)| *k == key) {
+          Some((_, _, joined)) => {
+            joined.push(' ');
+            joined.push_str(&text);
+          },
+          None => before.push((key, index, text)),
+        }
+      } else {
+        after.push((key, index, text));
+      }
+    }
+    let mut pair = |resolver: &mut Resolver, key: &str, index: usize, text: String, first: bool| {
+      let mut owners: Vec<usize> = Vec::new();
+      marks.retain(|(c, k)| {
+        let take = k == key && (!first || owners.is_empty()) && !owners.contains(c);
+        if take {
+          owners.push(*c);
+        }
+        !take
+      });
+      for owner in owners {
+        // (a footnote mark the lexer parted from the mark it was glued to: ruling 1's reading, `ruling1:parted`)
+        let parted = resolver
+          .parted
+          .iter()
+          .any(|(c, label)| *c == owner && mark_key(label) == key);
+        resolver.attach(
+          Some(owner),
+          Assoc {
+            role:   "footnotetext".into(),
+            text:   text.clone(),
+            label:  Some(key.to_string()),
+            rule:   if parted {
+              "note:footnotetext-mark ruling1:parted".into()
+            } else {
+              "note:footnotetext-mark".into()
+            },
+            source: Some((index, None)),
+          },
+          true,
+        );
+      }
+    };
+    for (key, index, text) in before {
+      pair(self, &key, index, text, true);
+    }
+    for (key, index, text) in after {
+      pair(self, &key, index, text, false);
+    }
+  }
+
   /// The labelled entries, each to every creator requesting one of its labels (ruling 1; ruling 2 for a symbol), or
   /// the block's.
   pub(super) fn answer_pending(&mut self) {
     self.part_glued_labels();
-    for (labels, symbol, assoc) in std::mem::take(&mut self.pending) {
+    let pending = std::mem::take(&mut self.pending);
+    // (the marks the names show, by kind — numbers, letters: a labelled entry of a kind no name shows is unlabelled
+    // to the reader, `answer_pending`'s annotate fallback)
+    let kind = |label: &str| -> Option<bool> {
+      let bare = unprefixed(label).unwrap_or(label);
+      if !bare.is_empty() && bare.chars().all(|c| c.is_ascii_digit()) {
+        Some(true)
+      } else if !bare.is_empty()
+        && bare.chars().count() <= 2
+        && bare.chars().all(char::is_alphabetic)
+      {
+        Some(false)
+      } else {
+        None
+      }
+    };
+    let shown_kinds: Vec<bool> = self
+      .out
+      .creators
+      .iter()
+      .flat_map(|c| c.requests.iter().filter_map(|r| kind(r)))
+      .collect();
+    for (at, (labels, symbol, assoc)) in pending.into_iter().enumerate() {
       let mut owners: Vec<usize> = Vec::new();
       for label in &labels {
         for owner in label_owners(&self.out.creators, label) {
@@ -459,6 +605,26 @@ impl Resolver {
         }
       }
       owners.sort_unstable();
+      // (a numbered affiliation answers no request a `\footnotemark` made: that number is its footnote's — `Kui
+      // Wu\inst{3\footnotemark[1]}` is not Peking University's, `\institute`'s first entry, 2404.09857; a symbol line
+      // is ruling 2's, every carrier of its character)
+      if !symbol && matches!(assoc.role.as_str(), "affiliation" | "address") {
+        owners.retain(|&owner| {
+          labels.iter().any(|label| {
+            let asked = self.out.creators[owner]
+              .requests
+              .iter()
+              .filter(|r| label_matches(r, label))
+              .count();
+            let by_footnote = self
+              .fn_requests
+              .iter()
+              .filter(|(c, r)| *c == owner && label_matches(r, label))
+              .count();
+            asked > by_footnote
+          })
+        });
+      }
       // (a `fuzzy:<name>` label — svjour's `\institute` entries after `\at`, Perl's fuzzy label of a creator, Tag
       // ltx:creator — names the creator whose name, without its marks, it spells: ruling 1)
       let (owners, assoc) = match labels.iter().find_map(|l| l.strip_prefix("fuzzy:")) {
@@ -486,6 +652,31 @@ impl Resolver {
         _ => (owners, assoc),
       };
       let note = assoc.role == "legend";
+      // (an entry labelled by a mark of a kind no name shows — `$^{1}$School of Physics, Liaoning University` under
+      // names printing no number, 2407.20481, 2005.13493, 1305.3804 — is the reader's unlabelled entry: today's
+      // placement by its `annotate=`, not the block)
+      if owners.is_empty()
+        && !symbol
+        && matches!(assoc.role.as_str(), "affiliation" | "address")
+        && labels
+          .iter()
+          .filter_map(|l| kind(l))
+          .any(|k| !shown_kinds.contains(&k))
+        && let Some((_, annotated)) = self.annotated.iter().find(|(p, _)| *p == at)
+        && !annotated.is_empty()
+      {
+        for owner in annotated.clone() {
+          self.attach(
+            Some(owner),
+            Assoc {
+              rule: s!("{} label:unshown owner:annotate", assoc.rule),
+              ..assoc.clone()
+            },
+            false,
+          );
+        }
+        continue;
+      }
       if owners.is_empty() {
         let rule = if symbol {
           "ruling2:uncarried owner:block"

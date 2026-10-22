@@ -378,6 +378,176 @@ fn an_unobserved_block_is_outside_the_gate() {
     (row.status.as_str(), row.family.as_str()),
     ("unobserved", "revtex4_support.sty")
   );
+  assert_eq!(row.unobserved, ["unstamped: out of positions"]);
+}
+
+/// FM S2a.2 r5 (review revfms2a2_4 finding 2): an unobserved paper's observed blocks are compared all the same — the
+/// names only the XML has (the unseen block's) are no disagreement, an observed block's own disagreement is kept —, and
+/// a paper whose only block is unseen is `unobserved`, not "no block".
+#[test]
+fn an_unobserved_papers_observed_blocks_are_compared() {
+  let root = std::env::temp_dir().join(format!("fmshadow_observed_{}", std::process::id()));
+  let write = |key: &str, xml: &str, entries: &str, creators: &str| {
+    let dir = root.join(key);
+    fs::create_dir_all(&dir).expect("dir");
+    fs::write(dir.join("out.xml"), format!("{HEAD}{xml}</document>")).expect("xml");
+    fs::write(
+      dir.join("out.xml.fmshadow.json"),
+      format!(
+        r#"{{"entries":[{entries}],"resolved":{{"creators":[{creators}],"block":[],"dropped":[],"policies":[]}}}}"#
+      ),
+    )
+    .expect("json");
+  };
+  let skipped = r#"{"index":1,"kind":"author","hook":"\\lx@add@authors@append","binding":"revtex4_support.sty","status":"skipped","reason":"unstamped: out of positions"}"#;
+  let observed = r#"{"index":0,"kind":"author","hook":"\\lx@add@authors@append","binding":"revtex4_support.sty","status":"events","errors":0,"events":[]}"#;
+  let ann = r#"{"name":"Ann Able","requests":[],"rule":"line:names","source":0,"affiliations":[{"role":"affiliation","text":"Univ A","rule":"api:annotate:new"}],"contacts":[],"notes":[]}"#;
+  let xml = r#"<creator role="author"><personname>Ann Able</personname><contact role="affiliation">Univ B</contact></creator><creator role="author"><personname>Bob Baker</personname></creator>"#;
+  write("1406.2912", xml, &format!("{observed},{skipped}"), ann);
+  write("2012.14750", xml, skipped, "");
+  let row = compare_paper(&root, "1406.2912", false);
+  let only = compare_paper(&root, "2012.14750", false);
+  fs::remove_dir_all(&root).expect("cleanup");
+  assert_eq!(row.status, "unobserved");
+  assert_eq!(
+    row
+      .disagreements
+      .iter()
+      .map(|d| (d.kind, d.detail.as_str()))
+      .collect::<Vec<_>>(),
+    [
+      ("affiliation", "Ann Able: shadow-only univa"),
+      ("affiliation", "Ann Able: xml-only univb")
+    ]
+  );
+  assert_eq!(only.status, "unobserved");
+}
+
+/// FM S2a.2 r5 (review revfms2a2_4 finding 1): a note set in the XML's personname that the shadow lacks is a `note`
+/// disagreement of its own, unclassified (the text of `Steven Delvaux\footnotemark[1]` and the body's
+/// `\footnotetext[1]{…}`, 1108.5155: S2b would drop it); one the shadow holds agrees.
+#[test]
+fn a_name_note_the_shadow_lacks_is_a_disagreement() {
+  let xml = xml_tuples(
+    format!(
+      r#"{HEAD}<creator role="author"><personname>Steven Delvaux<note mark="*" role="footnote"><tags><tag>*</tag></tags>Department of Mathematics, KU Leuven.</note></personname></creator></document>"#
+    )
+    .as_bytes(),
+  )
+  .expect("xml");
+  let shadow = Tuples {
+    creators: vec![creator("Steven Delvaux", &[], "")],
+    ..Tuples::default()
+  };
+  let found = compare(&shadow, &xml);
+  assert_eq!(
+    found
+      .iter()
+      .map(|d| (d.kind, d.classified, d.detail.as_str()))
+      .collect::<Vec<_>>(),
+    [(
+      "note",
+      false,
+      "Steven Delvaux: xml-only departmentofmathematicskuleuven (in the name)"
+    )]
+  );
+}
+
+/// FM S2a.2 r5: the two r3 XML-wrong classes the r4 sample found misapplied, tightened — a row whose names hold an
+/// acronym is no later names row (`IBM India, IBM CIO`, 2609.10596), a name opening with no letter or holding a
+/// spacing accent is no name a wide space parted (`TIÊ ´N-SO | . N PHẠM`, 1706.00234) — and the new separator class
+/// (`&` a creator, 2411.16601; `Seema Kushwaha AND`, 2106.11727).
+#[test]
+fn r5_classes_are_fenced_and_the_separator_class() {
+  let names = |names: &[(&str, &str)]| Tuples {
+    creators: names
+      .iter()
+      .map(|(n, rule)| {
+        let mut c = creator(n, &[], "");
+        c.rules.insert("name".into(), (*rule).into());
+        c
+      })
+      .collect(),
+    ..Tuples::default()
+  };
+  let with_affiliation = |name: &str, affiliation: &str| Tuples {
+    creators: vec![creator(name, &[affiliation], "")],
+    ..Tuples::default()
+  };
+  let classes = |shadow: &Tuples, xml: &Tuples| {
+    compare(shadow, xml)
+      .into_iter()
+      .map(|d| d.class)
+      .collect::<Vec<_>>()
+  };
+  // (a later names row read as the affiliation: classified for names, not for an acronym row)
+  let row = "a later names row read as the affiliation of the row above";
+  assert!(
+    classes(
+      &names(&[
+        ("Eric S. Egge", "line:names"),
+        ("Toufik Mansour", "line:names")
+      ]),
+      &with_affiliation("Eric S. Egge", "Toufik Mansour LaBRI")
+    )
+    .contains(&Some(row))
+  );
+  assert!(
+    !classes(
+      &names(&[
+        ("Bhanwar Gupta", "line:names"),
+        ("IBM India", "line:names"),
+        ("IBM CIO", "line:names sep:comma")
+      ]),
+      &with_affiliation("Bhanwar Gupta", "IBM India, IBM CIO")
+    )
+    .contains(&Some(row))
+  );
+  // (a wide space: whole names parted, not an accent's glyphs)
+  let wide =
+    "names parted by a wide space (\\quad, \\enspace, \\hspace, spaces) merged into one personname";
+  assert_eq!(
+    classes(
+      &names(&[
+        ("Ann Able", "line:names"),
+        ("Bob Baker", "line:names sep:gap")
+      ]),
+      &names(&[("Ann Able Bob Baker", "")])
+    ),
+    [Some(wide)]
+  );
+  assert_eq!(
+    classes(
+      &names(&[
+        ("TIÊ ´N-SO", "line:names"),
+        (". N PHẠM", "line:names sep:gap")
+      ]),
+      &names(&[("TIÊ´N-SO .N PHẠM", "")])
+    ),
+    [None]
+  );
+  // (the separator between names read as a creator or into a name)
+  let separator = "the separator between two names (an ampersand, the word \"and\") read as a creator or into a name";
+  assert_eq!(
+    classes(
+      &names(&[
+        ("Sonja Hohloch", "line:names"),
+        ("Pedro Santos", "line:names sep:word")
+      ]),
+      &names(&[("Sonja Hohloch", ""), ("&", ""), ("Pedro Santos", "")])
+    ),
+    [Some(separator)]
+  );
+  assert_eq!(
+    classes(
+      &names(&[
+        ("Seema Kushwaha", "line:names"),
+        ("Sumit Kumar Upadhyay", "line:names sep:word")
+      ]),
+      &names(&[("Seema Kushwaha AND", ""), ("Sumit Kumar Upadhyay", "")])
+    ),
+    [Some(separator)]
+  );
 }
 
 /// FM S2a.2 r4: the XML-wrong class "legend lines welded onto the affiliation above them" — the XML's affiliation is

@@ -268,6 +268,14 @@ pub(crate) fn load() -> Result<()> {
     props.insert("role", s!("{note_type}text").into());
     Ok(props)
   },
+  // (the frontmatter observer reads a footnote's text for the `\footnotemark` an author block printed, under its shadow
+  // switch only: OXIDIZED_DESIGN_DIVERGENCES #837 "S2a.2 r5"; witness 1108.5155, `Name\footnotemark[1]` and a
+  // later `\footnotetext`)
+  after_digest => sub[whatsit] {
+    if fm_shadow_enabled() {
+      fm_record_note_text(whatsit);
+    }
+  },
   reversion => "");
 
   DefConstructor!("\\lx@note@live OptionalSemiverbatim {} OptionalUndigested",

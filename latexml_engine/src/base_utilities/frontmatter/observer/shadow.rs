@@ -276,6 +276,24 @@ pub fn fm_shadow_json() -> String {
             overflow += 1;
           }
         },
+        Entry::NoteText(text) => {
+          let _ = write!(
+            out,
+            "{{\"index\":{},\"kind\":\"notetext\",\"epoch\":{},\"mark\":",
+            text.index, text.epoch
+          );
+          json_str(&mut out, &text.mark);
+          out.push_str(",\"value\":");
+          json_opt_str(&mut out, text.value.as_deref());
+          out.push_str(",\"events\":[");
+          for (i, event) in text.events.iter().enumerate() {
+            if i > 0 {
+              out.push(',');
+            }
+            json_event(&mut out, event);
+          }
+          out.push_str("]}");
+        },
         Entry::Api(call) => {
           let _ = write!(out, "{{\"index\":{},\"kind\":\"api\",\"tag\":", call.index);
           json_str(&mut out, &call.tag);

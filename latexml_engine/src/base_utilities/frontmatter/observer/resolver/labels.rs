@@ -200,16 +200,32 @@ pub(super) fn tex_letters(source: &str) -> String {
     }
     let mut word = String::new();
     while let Some(&n) = chars.peek() {
-      if n.is_ascii_alphabetic() {
+      if n.is_ascii_alphabetic() || n == '@' {
         word.push(n);
         chars.next();
       } else {
         break;
       }
     }
-    if word.is_empty() {
+    if word.contains('@') {
+      // (an internal command, its argument with it: what a symbol macro writes out to, `\Envelope` as
+      // `\@chooseSymbol{'014}` once `ledger::label_text` expands the label, 0807.3898 — the digits were read as letters)
+      while chars.peek() == Some(&' ') {
+        chars.next();
+      }
+      skip_group(&mut chars);
+    } else if word.is_empty() {
       // (an accent command, `\'`, `\"`, `\~`: its character dropped, the letter after it kept)
       chars.next();
+    } else if let Some(rest) = word.strip_prefix("lxaccent") {
+      // (an accent written out as the kernel's inner command, `\lxaccentumlaut`, `\lxaccentc` — `accent_inner_name`,
+      // setup_binding_language.rs —, the letters glued after its name the label's: `Gizem \lxaccentc{S}eng\lxaccentumlautor`
+      // spells "Gizem Sengor", 2205.11550)
+      let tail = ["acute", "dot", "macron", "umlaut", "hat", "grave", "tilde"]
+        .iter()
+        .find_map(|name| rest.strip_prefix(name))
+        .unwrap_or_else(|| rest.get(1..).unwrap_or(""));
+      out.push_str(tail);
     } else if matches!(
       word.as_str(),
       "l" | "o" | "ss" | "ae" | "oe" | "aa" | "i" | "j" | "L" | "O"
@@ -264,7 +280,8 @@ pub(super) fn leading_mark(note: &Event) -> Option<(Vec<String>, String)> {
 /// 0803.3838, is the affiliation's) or comes after the row's labelled lines (`$^\dagger$Univ A \quad $^\ddagger$Univ B
 /// \\ Cat Cole \\ Physics`, SYNC row 46), or its names show marks or notes (`Ann Able$^{1}$ Bob Baker$^{2}$`, `Irina Gheorghiciuc\thanks{…}`,
 /// 1403.5246: a Mark or a Note right after a Name), or it is a row of two or more name pieces parted
-/// by separators (`Triantafyllos Afouras\quad\quad Himel Chowdhury …` under the first row, 2111.03635); and then each
+/// by separators (`Triantafyllos Afouras\quad\quad Himel Chowdhury …` under the first row, 2111.03635), none holding
+/// an acronym (`IBM India, IBM CIO`, 2609.10596: institutions); and then each
 /// of its pieces must read as a name (the classify helpers). One piece with no evidence — "Capital Fund Management",
 /// "Google DeepMind" (2606.07382, 2307.02318, 2305.16559, 2609.09054) — is the names' affiliation line, whatever its
 /// text reads as.
@@ -289,11 +306,24 @@ pub(super) fn later_line_is_names(
     .iter()
     .take_while(|e| !inked(e))
     .any(|e| e.kind == EventKind::Layout && e.role.as_deref() == Some("font"));
+  // (a row whose pieces each hold an acronym — a word of two or more capitals, no roman numeral — reads as
+  // institutions, and its pieces alone are no evidence: `Bhanwar Gupta \\ IBM India, IBM CIO \\ …`, 2609.10596)
+  let acronym = |word: &str| {
+    let word = word.trim_matches(|c: char| !c.is_alphanumeric());
+    word.chars().count() >= 2
+      && word.chars().all(|c| c.is_ascii_uppercase())
+      && !word.chars().all(|c| "IVXLC".contains(c))
+  };
+  // (in a piece not set in capitals: `MARTHA D. FERREIRA`'s words are no acronyms, 2202.13867)
+  let institutions = names
+    .iter()
+    .filter(|e| !is_name_qualifier(&e.text))
+    .any(|e| e.text.chars().any(char::is_lowercase) && e.text.split_whitespace().any(acronym));
   let evidence = line.after_blank
     || continued
     || (under_affiliation && (own_font || after_labelled))
     || marked
-    || pieces >= 2;
+    || (pieces >= 2 && !institutions);
   evidence
     && !names.is_empty()
     && names
@@ -303,8 +333,9 @@ pub(super) fn later_line_is_names(
 
 /// Whether a labelled entry's text is a legend (a note on its authors) rather than their affiliation: what
 /// `classify_thanks` reads as correspondence, a contribution, an address change or funding — funding only when the text
-/// does not read as an institution (its "erc" test matches "Perception": `2 Guangdong Laboratory of Machine Perception
-/// and Intelligent Computing`, 2509.05368).
+/// does not read as an institution (an institution named for its funder is an affiliation; before batch 78u's
+/// whole-word match `classify_thanks`'s "erc" test also matched inside "Perception": `2 Guangdong Laboratory of Machine
+/// Perception and Intelligent Computing`, 2509.05368).
 pub(super) fn is_legend_text(text: &str) -> bool {
   match classify_thanks(text) {
     "note" => false,
@@ -354,6 +385,9 @@ pub fn addresses_in(text: &str) -> Vec<String> {
     };
     let after = &rest[close + 1..];
     if let Some(domain) = after.strip_prefix('@') {
+      // (the addresses printed before the group are the list's too: `wulijun3@mail2.sysu.edu.cn; stsljh@…;
+      // \{fetia,taoqin,tyliu\}@microsoft.com`, 1808.08866 — they were lost)
+      out.extend(plain_addresses(&rest[..open]));
       let domain: String = domain
         .chars()
         .take_while(|c| !c.is_whitespace() && !",;()<>{}".contains(*c))
@@ -544,4 +578,37 @@ pub(super) fn parted_label(label: &str, known: &[String], symbols: bool) -> Opti
   }
   parts.reverse();
   Some(parts)
+}
+
+/// Whether an e-mail address is a pattern for the authors' addresses, not one of them: its local part is only the words
+/// of a name template (`FirstName.LastName@SIT.Fraunhofer.de`, `{firstname.lastname}@…`, `name.surname@…`; 2006.12418).
+pub(super) fn is_pattern_address(address: &str) -> bool {
+  let Some((local, _)) = address.split_once('@') else {
+    return false;
+  };
+  let words: Vec<String> = local
+    .split(|c: char| !c.is_alphanumeric())
+    .filter(|w| !w.is_empty())
+    .map(str::to_lowercase)
+    .collect();
+  !words.is_empty()
+    && words.iter().all(|w| {
+      matches!(
+        w.as_str(),
+        "first"
+          | "last"
+          | "firstname"
+          | "lastname"
+          | "name"
+          | "surname"
+          | "givenname"
+          | "familyname"
+          | "given"
+          | "family"
+          | "initial"
+          | "initials"
+          | "fname"
+          | "lname"
+      )
+    })
 }

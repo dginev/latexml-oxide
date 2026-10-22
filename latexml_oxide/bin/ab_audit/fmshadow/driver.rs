@@ -25,6 +25,9 @@ pub struct PaperRow {
   pub disagreements: Vec<Disagreement>,
   /// the shadow's tuples, for `<prefix>.shadow.jsonl` (disagreeing papers: the PDF checks read them)
   pub shadow:        Option<Tuples>,
+  /// why the rehearsal could not see a block of the paper ([`UNOBSERVED`]), one per such block: the paper is
+  /// `unobserved`, its observed blocks compared all the same (their disagreements kept, outside the gate)
+  pub unobserved:    Vec<String>,
 }
 
 impl PaperRow {
@@ -68,22 +71,30 @@ pub fn compare_paper(root: &Path, key: &str, re_resolve: bool) -> PaperRow {
       }
     })
     .unwrap_or_else(|| "none".into());
+  // (a block the rehearsal could not see — out of positions, BESIII's 600-name `\author`, 2012.14750 — leaves the
+  // shadow without its names, which the XML has: the paper is outside the gate's denominator, as a held one; its
+  // observed blocks are compared all the same, 1406.2912, and the summary counts the papers by reason — review
+  // revfms2a2_4 finding 2; S2b keeps today's output for such a block)
+  row.unobserved = dump["entries"]
+    .as_array()
+    .into_iter()
+    .flatten()
+    .filter(|e| e["kind"] == "author" && e["status"] == "skipped")
+    .filter_map(|e| e["reason"].as_str())
+    .filter(|reason| UNOBSERVED.contains(reason))
+    .map(str::to_string)
+    .collect();
   if blocks.is_empty() {
-    row.status = "no-block".into();
+    row.status = if row.unobserved.is_empty() {
+      "no-block"
+    } else {
+      "unobserved"
+    }
+    .into();
     return row;
   }
   if blocks.iter().any(|b| b["errors"].as_u64().unwrap_or(0) > 0) {
     row.status = "held".into();
-    return row;
-  }
-  // (a block the rehearsal could not see — out of positions, BESIII's 600-name `\author`, 2012.14750 — leaves the
-  // shadow without its names, which the XML has: outside the gate's denominator, as a held one)
-  if dump["entries"].as_array().into_iter().flatten().any(|e| {
-    e["kind"] == "author"
-      && e["status"] == "skipped"
-      && UNOBSERVED.contains(&e["reason"].as_str().unwrap_or(""))
-  }) {
-    row.status = "unobserved".into();
     return row;
   }
   let resolved = if re_resolve {
@@ -100,6 +111,18 @@ pub fn compare_paper(root: &Path, key: &str, re_resolve: bool) -> PaperRow {
   };
   let shadow = shadow_tuples(&resolved);
   row.disagreements = compare(&shadow, &xml);
+  if !row.unobserved.is_empty() {
+    // (the unobserved blocks' names are the XML's alone: a name split where every shadow name is the XML's is theirs)
+    let sn: Vec<String> = shadow.creators.iter().map(|c| norm(&c.name)).collect();
+    if align(&sn, &xml_names(&shadow, &xml)).len() == sn.len() {
+      row.disagreements.retain(|d| d.kind != "name-split");
+    }
+    row.status = "unobserved".into();
+    if !row.disagreements.is_empty() {
+      row.shadow = Some(shadow);
+    }
+    return row;
+  }
   row.status = if row.disagreements.is_empty() {
     "agree"
   } else {
@@ -310,6 +333,24 @@ pub fn run(
       0.0
     }
   )?;
+  // (the unobserved papers by reason, and how many of them disagree unclassified in their observed blocks: outside the
+  // gate, never silently)
+  writeln!(
+    summary,
+    "\nunobserved_reason\tpapers\tobserved_blocks_unclassified"
+  )?;
+  for reason in UNOBSERVED {
+    let with: Vec<&PaperRow> = rows
+      .iter()
+      .filter(|r| r.unobserved.iter().any(|u| u == reason))
+      .collect();
+    writeln!(
+      summary,
+      "{reason}\t{}\t{}",
+      with.len(),
+      with.iter().filter(|r| r.unclassified()).count()
+    )?;
+  }
   writeln!(summary, "\nxml_wrong_class\tpapers\twitnesses")?;
   for class in XML_WRONG {
     let papers = rows

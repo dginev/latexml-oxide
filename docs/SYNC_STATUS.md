@@ -6533,6 +6533,69 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   source evidence into OD #837. Gates int60a: nextest 6951/6951 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs
   int59a empty. A/B int59a vs int60a (597: 300 random + 300 revtex/amsart census, seed 60): byte-identical, 0 of 597. Binding
   nets: 136/136, 0 documents worse (int59a vs int60a).
+  **r5** (OD #837 "S2a.2 r5"; branch pk/fms2a2r5 from int60 3cba36f53d; review revfms2a2_4 findings 1-9): the r4 sample's
+  six wrong papers fixed by class (a note of several legends no one label's, 1802.03043; a glued same-kind mark opening
+  an API entry, 2202.06129; a `\footnotemark` inside an `\inst` a mark of its own, 2404.09857; an address pattern the
+  block's, 2006.12418; an acronym row no names row, 2609.10596; a gap inside an accent macro, 1706.00234) and both
+  misapplied r3 XML-wrong classes fenced; the comparator's name-note gap (finding 1) — the ledger records each
+  `\footnotetext` (`\lx@notetext`'s after-digest hook, under the switch) and the resolver pairs it with the names'
+  `\footnotemark` as today's `relocate_footnote` does (by the printed mark: 55 of the 63 "agree" papers read; the 8 paired
+  by counter value alone, or a second text of a used mark, stay unclassified: 1404.2124, 0909.2782, 1111.4983, 1706.00602,
+  1812.04149, 2210.05617, 2507.22611, 2608.04206); the `unobserved` bucket per reason, observed blocks compared (finding 2); ams_support's residual (group
+  breaks, an institution's address, ORCIDs in scripts and e-mails, `\and` columns); the nits (events/ split, comments,
+  `api:note`, zero-width ink, guard counts). Then the r5 classified sample's own wrong classes (a first draw: 12 of 59):
+  unshown-kind labels at their `annotate=` run, no corresponding owner in a multi-address print, address lists over
+  lines and before a braced group (26 kernel papers' lost addresses), surname-first names (XML-wrong class
+  1503.08374, 1609.07297), API creators' marks, fuzzy labels with kernel accents and internal commands. Guards
+  `perfect_kernel_batchfms2a2r5::*` (12, each red on r4 but the XML pin), `resolver::tests` (+1 and 3 assertions),
+  `fmshadow::tests` (+3); the r2/r4 guards updated (`sep:column`, no U+200B, counts). **A/B** (release, int60a vs r5 —
+  the 300 seeded census papers, seed 5005, none of r4's, and the 981 sectioning-frontmatter repros, the r5 binaries
+  stamped f6fd12c4da and 99f35d6bce, int60a dumps): XML identical with the variable unset and set (the temp-dir
+  `graphicspath` instruction aside), E 42 = 42 = 42, F 0, W 3,082 each, paper by paper; repros E 23, W 39 each. **Fresh
+  census** (the 26,322 papers converted with the release binary stamped 99f35d6bce, the commit's code; the dumps'
+  `resolved` equal to `--re-resolve`): counted 23,205 — agree 19,603, classified 1,693, unclassified 1,909 (**8.2 %**,
+  from 8.4 %); 111 held, 10 unobserved (all "out of positions", 0 of them disagreeing unclassified in their observed
+  blocks); per family (gate): kernel 6,800 (15.1 %), **revtex4_support 5,639 (0.4 %: 24)**, **ams_support 3,105 (0.4 %:
+  13, from 22: under the class guard)**, IEEEtran 2,202 (9.8 %), authblk 939 (9.2 %), elsart_support_core 818 (6.0 %),
+  inst_support 786 (23.2 %), aas_support 688 (4.4 %), mn2e_support 560 (7.3 %), llncs 400 (17.0 %), "binding" 317
+  (8.2 %), iopart_support 264 (6.1 %), sv_support 262 (12.6 %), jheppub 196 (4.9 %), jcappub 93 (3.9 %), ijcai 59
+  (72.9 %), JHEP.cls 58 (81.0 %). 170 papers changed status against r4. **PDF precision** (classified only, a seeded
+  hash-ordered draw from the whole census — `sha256("505:"+key)`, stable under small changes of the classified set, the
+  first 60 with page text; pdflatex on copies): right 46, wrong 10, undecidable 4 — **82.1 %** of the decidable
+  (informational since decision 1 below: the gate is per family). The wrong ones: four apply ruling 4's "a note's inner contacts its owner's" to a note whose links
+  are another author's or the paper's (2001.02600, 1803.04996, 2504.08644, 2602.13176: main-session decision 2 below), two
+  give a mixed legend or a symbol entry to the wrong name (2306.14857, 2304.07838), and one each a names-run address to
+  the corresponding author (2207.11290), a two-name correspondent to the first only (2410.19543), glued non-footnote
+  symbols unparted (2510.17795), "for the Milagro Collaboration" as an affiliation (astro-ph0611457). The earlier draws of
+  this round (each fixed by class before this one) found 12 of 59 and 4 of 57 wrong. All 11 revtex4_support papers of
+  the sample are right (r4: 19 of 19 — one of them, 1412.5812, judged against a wrong r4 shadow and re-checked right
+  under r5 by the landing review: r4's method missed 1 in 19; 30 of 30 holds for the r5 code). Residuals — revtex4_support (24): r4's 23 less nothing, plus hep-th0302032 (a
+  footnote paired by counter value); ams_support (13): 0808.2556, 1005.4252, 1703.08733, 1909.09152, 2108.13723,
+  2109.14517, 2208.03878, 2210.11574, 2301.00097, 2311.00652, 2507.07513, math0112263, math0610203. Side findings
+  (output, not fixed — shadow only): today's XML loses an ORCID link set in a name's superscript
+  (`Zhiyuan Yao$^{\orcidlink{…}}$`, 2208.11385; 10 census papers) and a `\thanks` inside an `\inst` (`M.~Briquet\inst{6,
+  \thanks{…}}` prints "Belgium" in a `sup`, 1307.5791) — the 78u content-loss class. Scratch `~/data/pk_wt/scratch_fms2a2r5/`
+  (rep/final.*, pdf_verdicts.tsv, verdict_db.json).
+  **Integration (int63, S2a.2 r5 squashed onto int62; binary int63a; shadow only):** landing review revfms2a2_5 LAND —
+  unset, nothing new runs on the conversion path (the only addition, `\lx@notetext`'s after-digest hook, one cached
+  check); 40 papers outside the writer's 300 byte-identical across base, unset and set; the census and its per-family
+  table reproduced byte for byte. Main-session decisions on the writer's four questions (2026-10-22): **(1)** S2b gates per
+  family — a family migrates when its own seeded classified-precision sample (n ≥ 30) is ≥ 95 % right and its unclassified
+  rate < 0.5 %, the cross-family bucket informational: revtex4_support qualifies (30/30, 0.4 %) and is the S2b pilot;
+  ams_support meets the unclassified bar only (5 papers in r5's draw, 3 right, 2 undecidable — no sample of its own yet).
+  **(2)** a note's inner contacts go to its owner only when they spell the owner or are its only link, the rest stay in the
+  note text (user ruling 2026-10-20 #4, no guessing) — the code still gives every inner contact to the owner
+  (`blocks.rs` `note()`, `ruling4:inner-contact`): r6 target, witnesses 2001.02600, 1803.04996, 2504.08644, 2602.13176.
+  **(3)** a braced `{a,b,c}@x` group in an `\institute`/`\affil` entry is written out and each address goes to the author
+  it spells, an unspelled one to the block's shared creator (user rulings 2026-10-20 #4/#8/#10; ~115 llncs/inst_support
+  papers then move from agree to classified) — r6. **(4)** the corresponding-author fallback only for an address printed
+  alone — consistent with user ruling 2026-10-21 #14, confirmed. Review findings for r6: a replaced `\author` call's block
+  items are dropped (`resolver/mod.rs:396-407`, 2510.26354 — undocumented, unguarded) and `answer_note_texts`
+  (`post.rs:463ff`) still pairs a footnote text with a replaced creator's mark; `new_creator` drops name pieces with no
+  letter or digit (visible ink: a printed U+2010) while the join paths keep them — decide printed text vs normalised key;
+  `NoteText.value` is dead data; an address-list continuation skips its lines' notes and contacts (`blocks.rs` `skip_to`).
+  Side finding (both engines): revtex's `\altaffiliation` is `annotate=new` (Perl revtex4_support.sty.ltxml:61), so
+  cond-mat0310516's "Present address" goes to all six authors before it where the PDF marks Mikami only — a SYNC row.
 
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's

@@ -69,8 +69,8 @@ pub struct TCreator {
   pub rules:        BTreeMap<String, String>,
   /// the shadow's marks shown on the name (its requests, prefixes aside), normalised
   pub marks:        Vec<String>,
-  /// the XML's notes set inside the personname (a footnote on the name), which explain a shadow note of the creator
-  /// and are not compared otherwise (aastex's `\altaffiltext` notes, which the shadow does not read, are there too)
+  /// the XML's notes set inside the personname (a footnote on the name: the text of a `\footnotemark` it shows,
+  /// `\footnotetext[1]{…}` after `\maketitle`, 1108.5155), compared as the creator's notes are
   pub name_notes:   Vec<String>,
 }
 
@@ -190,6 +190,17 @@ pub fn xml_tuples(xml: &[u8]) -> Result<Tuples, String> {
         }
       } else if is_ltx(child, "contact") {
         let role = child.attribute("role").unwrap_or("").to_string();
+        // (an ORCID link inside an e-mail contact, `\email{… \orcidlink{…}}`, is the creator's ORCID too, as the shadow
+        // reads it: 2402.04675)
+        if role == "email" {
+          for link in child.descendants().filter(|n| is_ltx(*n, "ref")) {
+            if let Some(href) = link.attribute("href").filter(|h| h.contains("orcid.org/")) {
+              creator
+                .contacts
+                .push(("orcid".into(), orcid_id(href).to_string()));
+            }
+          }
+        }
         let mut text = if role == "affiliation" || role == "address" {
           affiliation_text(child)
         } else {

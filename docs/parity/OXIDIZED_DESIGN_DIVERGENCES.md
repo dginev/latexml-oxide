@@ -23392,8 +23392,10 @@ against int58a with the switch unset and set, SYNC "FM S2a.2").
   `\scalebox`'s scales are no ink (`Hawai\scalebox{.7}{…\rotatebox{180}{\reflectbox{s}}}i`, 1005.4252, 2301.02699).
 - **Comparator**: a paper with an author block the rehearsal could not see (out of positions, a Fatal of its own, not
   undone, no journal) is `unobserved`, outside the gate's denominator as a held one (BESIII's 600-name `\author`,
-  2012.14750); a footnote set in the personname explains the shadow's note of the creator (2503.10108; aastex's
-  `\altaffiltext` notes, which the shadow does not read, stay uncompared); an affiliation's formula superscript is a
+  2012.14750); a footnote set in the personname explains the shadow's note of the creator (2503.10108; r4 left the
+  ones the shadow lacks uncompared, taking them for aastex's `\altaffiltext` notes — they are the texts of a
+  `\footnotemark` the name shows, `Name\footnotemark[1]` and a later `\footnotetext`, 63 "agree" papers: compared since
+  r5, below); an affiliation's formula superscript is a
   mark, its base the text (`OR $97403^{1}$`, 2203.01892; `$299^A$`, 0707.4047); a joined XML item's label after its
   "and" (`1Dept A and2Dept B`, 2112.13115); the XML-wrong class "legend lines (a symbol and its note) welded onto the
   affiliation above them" (the PDF prints them apart: 2305.13575, 2012.15253, 2110.08090, 2502.01939, 2601.00327,
@@ -23411,6 +23413,116 @@ collaboration lists the XML reads otherwise (0807.2167, gr-qc0410007, hep-ex0103
 lines under names (cond-mat0409389, hep-ph0005026, physics0209010). Guards `perfect_kernel_batchfms2a2r4::*` (15; each
 red on r3 but the XML pin), ab_audit `fmshadow::tests::{a_note_in_the_name_is_the_creators,
 an_unobserved_block_is_outside_the_gate, welded_legends_are_an_xml_wrong_class}`.
+
+**S2a.2 r5: the r4 sample's wrong classes, the comparator's name-note gap, the unobserved bucket, the landing review's
+nits** (r4's classified PDF sample: 6 wrong of 58 decidable; review revfms2a2_4 findings 1-9). Still shadow only (XML
+byte-identical against int60a with the switch unset and set, SYNC "FM S2a.2").
+- **The resolver, by the sample's wrong classes**: a note whose text holds the marks of other requested labels after its
+  first is the legends of several entries, no one label's — the note of the name before, as today's (IEEEtran's
+  `\IEEEcompsocitemizethanks{\IEEEcompsocthanksitem \Mark{1}College … \IEEEcompsocthanksitem \Mark{2}…}`, 1802.03043;
+  2110.15237, 2403.09196, 2607.23515; the lexer keeps a note's later Marks in its `inner`, not leading); in an API call's
+  marked content a mark glued to the ink before it that labels as the leading mark does (a number after numbers, a
+  letter after letters), a name right after it, opens the next entry (`\institution{$^{1}$University of Illinois …, USA
+  $^{2}$Amazon.com Inc, CA, USA}`: the content has no positions to show the space, 2202.06129; 1901.06399, 1910.02760,
+  2511.12613, 1607.08533 — a symbol and BaBar's `$^a$` sub-labels after numbers stay the entry's); a `\footnotemark`
+  inside a mark's script is a mark of its own after it (role `footnotemark parted`, the script's `<role> parted`: the
+  PDF prints `2∗`, ruling 1 reads them apart, `ruling1:parted`) and a numbered affiliation answers no request a
+  `\footnotemark` made (`fn_requests`; a symbol line still every carrier's, ruling 2) — `Kui Wu\inst{3\footnotemark[1]}`
+  printed "31", parted into 3 and 1, had Peking University, entry 1 (2404.09857; 2601.13137, whose
+  `\textsuperscript{1,2,\footnotemark[1]}` notes today's XML loses); an address whose local part is only a name
+  template's words (`\{FirstName.LastName\}@SIT.Fraunhofer.de`) is no one's own, the block's (`owner:pattern`, as today's;
+  it went to the corresponding author, 2006.12418; where order or elimination places it, as today's, 2110.05663); a row whose piece (not a qualifier, not set in capitals) holds an
+  acronym — a word of two or more capitals, no roman numeral — reads as institutions, and its pieces alone are no
+  evidence of a later names row (`Bhanwar Gupta \\ IBM India, IBM CIO`, 2609.10596; `Allianz Investment Management, LMU
+  Munich`, 1002.2573; `Google Brain, UC Berkeley`, 1707.01932; 2105.07830, 2609.11495, hep-th0302144); a gap one source
+  token printed inside a word — its span one token, the Name before ending with that token and the Name after starting
+  at it, both running on past it — is no separator (`name:macro-joined`: Vietnamese accents drawn with
+  `\raise\hbox{…}`, `TI\EES N-S\OW N PH\d{A}M`, 1706.00234; `\redact{Ann} \redact{Bob}`'s gap of two calls, 2605.30896,
+  and a macro printing two whole names stay separators).
+- **The r5 classified sample's own wrong classes** (a first draw of 60: 12 wrong): an entry labelled by a mark of a
+  kind no name shows (numbers under unmarked names) is where its call's declared `annotate=` run put it, as today's
+  (`label:unshown owner:annotate`; revtex's `\affiliation{$^{1}$School of Physics, Liaoning University}`, 2407.20481,
+  2005.13493 — not a `\lx@affiliation@withsup` line, nor a call declaring no run: 0802.0249, 1811.08580 keep the
+  block, as today's); an address left over in a print of several is no corresponding author's (`owner:block`:
+  `{hong3924.cs10, evan20010126.cs12, …}@nycu.edu.tw` under a corresponding Ching-Chun Huang, 2512.08223; 2602.04785,
+  2604.14972 — today's gives such an address to the corresponding author in some papers, 2409.17728, and to the block in
+  others: the census's 10 kernel papers of the first kind are unclassified); an address
+  list running on over the next lines (the line ending in a comma) is one print (`E-mails: 202010106047@…, \\
+  scbingli@…`: Bo Wang's by elimination, 2312.05446); the addresses printed before a braced group are the list's too
+  (`wulijun3@…; stsljh@…; \{fetia,taoqin,tyliu\}@microsoft.com` lost its first two, 1808.08866 and 25 more); initials
+  after a comma and a surname alone are that name's, written surname first (`name:reversed`: `Santucho, V., Luparello,
+  H. E.`, 2005.00053; `Blanchet, J., Glynn, P.`, 1503.08374; `Della Valle, M.`, 1609.07297 — not `X.W. Shu, D. Elbaz`,
+  1512.00167, nor a degree, `Muthoharoh, S.Si.`, 2605.07811); an API creator requests the marks its name shows (acmart's
+  `\author{Ann Able$^{1}$}`); a fuzzy label reads the kernel's accent commands written out (`Gizem
+  \lxaccentc{S}eng\lxaccentumlautor`, 2205.11550) and drops an internal command with its argument
+  (`\@chooseSymbol{'014}`, \Envelope written out, 0807.3898); a note's later mark sharing the first's label keeps the
+  first's legend reading (`\textsuperscript{1}… \textsuperscript{1,2}…`, 2507.07006). Added XML-wrong class, PDF-confirmed
+  on its witnesses: a name written surname first read as two creators (1503.08374, 1609.07297).
+- **The two misapplied r3 XML-wrong classes, fenced**: "a later names row read as the affiliation" never when a lost name
+  holds an acronym, as the resolver reads it (2609.10596; a name set in capitals, `MARTHA D. FERREIRA`, 2202.13867, and
+  a qualifier, `Chuanhou Gao, Senior Member, IEEE`, 2303.17769, aside); every merged-name class requires each piece to
+  be a whole name, opening with a letter and holding no spacing accent glyph (`´`, `` ` ``, `¨`, `ˆ`, `˜`, `¸`, `˙`, `ˇ`,
+  `˘`, `¯`, `˚`, `˝`: `fmshadow/classes.rs` `is_whole_name`; 1706.00234's "TIÊ ´N-SO | . N PHẠM"). Added, each
+  confirmed on its witnesses' pdflatex PDFs: the separator between two names (an `&`, the word "and") read as a creator
+  or into a name (`Sonja Hohloch \quad$\&$ \quadPedro Santos`, 2411.16601; `Seema Kushwaha$^{3}$ AND`, 2106.11727); the
+  list-of-names class reads a name a later column's `\and` parted (`sep:column`, the first name of a column's first
+  line: `Chris Kapulkin \arxivortac{\and}{and} Peter LeFanu Lumsdaine`, 2006.13694). The welded-legend class's source
+  evidence (review finding 8): the legends are separate `\\` lines inside the `\author`, `…, USA.\\
+  $^{\ast}$These authors contributed equally to this work.\\ $^{\dagger}$Corresponding author: yi@virginia.edu}`
+  (2305.13575 main.tex:38-40; 2607.22703 main_arxiv.tex:43-56), which the XML welds onto the affiliation above.
+- **Footnote texts by their marks** (review finding 1): under the switch the ledger records each footnote text the
+  document makes after an author block (`ledger::NoteText`: the kernel `\lx@notetext`'s after-digest hook, sect03.rs —
+  its printed mark, its counter value, the flushes before it, and its body's events lexed from its own digestion, nothing
+  rehearsed; fancyvrb's `\lx@notetext@live` is not read); the resolver gives each to the names showing its mark by a
+  `\footnotemark` (`answer_note_texts`, rule `note:footnotetext-mark`), as today's `relocate_footnote` pairs them (marks
+  compared without spaces, `\fnsymbol`'s `∥`/`∗` as `\@fnsymbol`'s `‖`/`*`; a mark takes one text and is a mark no
+  more): a text built after the names (made after the flush digesting their block) into every unpaired mark of its print
+  (1108.5155, 1405.4582; a second text of the same print finds none, 2507.22611), the texts built before them (before
+  that flush) joined into the first such mark alone (1703.09134; 1211.5488's two `\footnotetext[1]`); a text a block
+  already read is not read again. A text paired only by its counter value — today's fallback, where the title's `∗`
+  stands for the body's `1`: no mark the PDF prints pairs them — is not read, and its XML name note stays an
+  unclassified disagreement (1404.2124, 0909.2782, 1111.4983, 1706.00602, 1812.04149, 2210.05617, 2608.04206,
+  hep-th0302032). The comparator compares the XML's personname notes as the creator's notes (`fmshadow/compare.rs`; one
+  the shadow lacks is a `note` disagreement, detail "(in the name)").
+- **The `unobserved` bucket** (review finding 2): a paper with an unseen block (`fmshadow/driver.rs` `UNOBSERVED`) stays
+  outside the gate's denominator, but its observed blocks are compared (the unseen block's names, the XML's alone, are no
+  name split) and its rows written; the summary counts the papers per reason with how many disagree unclassified in their
+  observed blocks; a paper whose only block is unseen is `unobserved`, no longer "no block" (8 of r4's 3,000). S2b falls
+  back to today's output for an unobserved block.
+- **ams_support's residual**: a break inside a braced group or argument (the lexer's Break role `group`, a list deeper
+  than the block's own) parts lines of one print unit — an unmarked line after it continues the unmarked affiliation
+  above, as today's one contact (`Xuhui Peng \\ {\em\tiny College …,\\ Changsha, …}`, 1710.07902; `\textsl{Pure
+  Mathematics\\University of Waterloo\\…}`, math0610612; 2506.07291); a piece after an institution's comma that reads as
+  no name is that institution's address (`Frank Schadt, Pforzheim University of Applied Sciences, Germany`, 1106.0130;
+  math0112263's street and town were authors); an ORCID link inside a mark's script is an event of its own after the
+  mark, the name's ORCID (`Martin Bachratý$^{\orcidlink{0000-0002-4300-7507},1,\ast}$`, 2506.11626: it was lost), and
+  one inside an e-mail call a contact of its own (`\email{giulio.pascale@unina.it \orcidlink{…}}` read
+  "giulio.pascale@unina.it0000-0003-1680-3425", 2402.04675; the comparator reads an ORCID link inside the XML's e-mail
+  contact as the creator's ORCID).
+- **The review's nits** (findings 3-9): `events.rs` is `events/` (`mod.rs`, the walk; `lexer.rs`, the second pass), each
+  below 1,000 lines; `REF_COMMANDS`'s comment says `\pageref` is `\let` to `\ref` and why `\namecref`
+  (`\lx@cref{creftype}{x}`) is never a `ref:` mark (the rehearsal prints its show list); a pre-author annotation given to a
+  sole author keeps whether it is a note (`api:note`; unreachable today — a note before any author is the title's,
+  `api:title-note` — but `held_before_creators` no longer files a note as a contact); the lexer reads zero-width
+  characters as no ink and a name keeps no piece printing no letter or digit (a bracket's half aside, `Jiayi Zhang (
+  张嘉懿)`): no U+200B in a name, guard `spacing_before_a_mark_parts_the_entries` fixed; the r4 guard's `.all` asserts its
+  count first; the census and A/B binaries are built from committed trees.
+Not done (r5 residual, in the r5 report): the counter-value footnote pairs above; ams_support's names lines
+(0808.2556's "by", 1703.08733's `\endnote` text, 2109.14517's `\cbt` accent, math0610203's `M\textsuperscript{c}Kernan`)
+and its singletons. Guards `perfect_kernel_batchfms2a2r5::*` (each red on r4 but the XML pin), the r4/r2 guards'
+`sep:column` tags, engine unit test `resolver::tests::a_sole_authors_note_made_before_it_is_its_note`, ab_audit
+`fmshadow::tests::{an_unobserved_papers_observed_blocks_are_compared, a_name_note_the_shadow_lacks_is_a_disagreement,
+r5_classes_are_fenced_and_the_separator_class}`. (`is_legend_text`'s funding exception stays: batch 78u, int61, makes
+`classify_thanks` match funding words whole, so its "erc"-in-"Perception" witness, 2509.05368, no longer needs it.)
+
+**S2a.2 r5 at landing (int63, main-session decisions 2026-10-22).** S2b gates per family: a family migrates when its
+own seeded classified-precision sample (n ≥ 30) is ≥ 95 % right and its unclassified rate < 0.5 % (revtex4_support, the
+pilot: 30/30, 0.4 %); the cross-family classified bucket is informational. A note's inner contacts go to its owner only
+when they spell the owner or are its only link (no guessing, user ruling 2026-10-20 #4) — r6; a braced `{a,b,c}@x` group in
+an `\institute`/`\affil` entry is written out and each address goes to the author it spells, an unspelled one to the block's
+shared creator (#4/#8/#10) — r6; the corresponding-author fallback holds only for an address printed alone (user ruling
+2026-10-21 #14). The resolver drops a replaced `\author` call's block items with its creators (`resolver/mod.rs`, 2510.26354);
+its footnote-text pairing does not yet skip the replaced creators' marks (r6, SYNC "FM S2a.2" int63).
 
 ### 840. A space a name sets before its own mark is the name's; spacing-only math, `\enskip` after a mark part names
 

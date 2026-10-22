@@ -11,7 +11,10 @@ use latexml_core::{
   token::{FIELD_PROV_POS_MASK, field_prov},
 };
 
-use super::{events::Event, *};
+use super::{
+  events::{Event, lex_events},
+  *,
+};
 
 /// How a block's tokens got their positions in the author field.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -165,12 +168,29 @@ pub(in crate::base_utilities) struct ApiCall {
   pub rehearsed:      bool,
 }
 
+/// One `\footnotetext` the document made (the kernel's `\lx@notetext`, a footnote's text): its printed mark, the footnote
+/// counter value it stands for (`_fnvalue`), and its body's events, lexed from its own digestion — the text of a
+/// `\footnotemark` an author block printed (`\author{Steven Delvaux\footnotemark[1], …}` and the body's
+/// `\footnotetext[1]{Department of …}`, 1108.5155, 1404.2124), which today's `relocate_footnote` sets in that name by
+/// the mark (FM S2a.2 r5, review revfms2a2_4 finding 1).
+#[derive(Debug, Clone, PartialEq)]
+pub(in crate::base_utilities) struct NoteText {
+  pub index:  usize,
+  /// the frontmatter flushes before it: made before the flush that digests a block, it is built before that block's
+  /// creators (today's pairs it with the first mark only), after it, after them (with every mark)
+  pub epoch:  usize,
+  pub mark:   String,
+  pub value:  Option<String>,
+  pub events: Vec<Event>,
+}
+
 /// An entry of the ledger.
 #[derive(Debug, Clone)]
 pub(in crate::base_utilities) enum Entry {
   Author(Box<AuthorBlock>),
   Title(TitleStamp),
   Api(ApiCall),
+  NoteText(NoteText),
 }
 
 /// The ledger of one conversion.
@@ -561,6 +581,42 @@ pub(in crate::base_utilities) fn record_api_call(
       content,
       events: Vec::new(),
       rehearsed: false,
+    }));
+  });
+}
+
+/// Record a footnote's text (`\lx@notetext`'s whatsit, once digested: `\footnotetext[<n>]{…}`), under the shadow switch
+/// only, after an author block: its printed mark, its counter value and its body's events (the body is digested for
+/// real, so nothing is rehearsed — only read).
+pub fn record_note_text(whatsit: &Whatsit) {
+  if !records_now()
+    || !with_ledger(|ledger| ledger.entries.iter().any(|e| matches!(e, Entry::Author(_))))
+  {
+    return;
+  }
+  let printed = |key: &str| match whatsit.get_property(key).as_deref() {
+    Some(Stored::Digested(d)) => {
+      let mut text = String::new();
+      ink_text(d, &mut text);
+      Some(text.trim().to_string())
+    },
+    Some(Stored::String(s)) => Some(to_string(*s).trim().to_string()),
+    _ => None,
+  };
+  if printed("role").as_deref() != Some("footnotetext") {
+    return;
+  }
+  let mark = printed("mark").unwrap_or_default();
+  let value = printed("fnvalue");
+  let events = whatsit.get_arg(4).map(lex_events).unwrap_or_default();
+  with_ledger(|ledger| {
+    let index = ledger.entries.len();
+    ledger.entries.push(Entry::NoteText(NoteText {
+      index,
+      epoch: ledger.flushes,
+      mark,
+      value,
+      events,
     }));
   });
 }

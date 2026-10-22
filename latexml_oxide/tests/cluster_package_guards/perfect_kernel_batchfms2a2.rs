@@ -105,9 +105,9 @@ fn symbol_lines_go_to_their_carriers() {
       [
         "C Ann Able [†] | line:names",
         "  a Univ A | ruling2:symbol-line",
-        "C Bob Baker [‡] | line:names",
+        "C Bob Baker [‡] | line:names sep:column",
         "  a Univ B | ruling2:symbol-line",
-        "C Cat Cole [†] | line:names",
+        "C Cat Cole [†] | line:names sep:column",
         "  a Univ A | ruling2:symbol-line",
       ],
       "{lines}"
@@ -328,7 +328,7 @@ fn sync_row_shapes_47_48_links() {
     [
       "C Hua Wei [] | line:names",
       "  c url Huawei | line:contact R12:row-above",
-      "C Hua Wu [] | line:names",
+      "C Hua Wu [] | line:names sep:column",
       "  a HW | line:unmarked R12:row-above",
     ]
   );
@@ -390,9 +390,9 @@ fn notes_labels_and_contacts() {
     "C Ann Able [] | line:names",
     "  c email office@x.org | owner:corresponding ruling3:one-per-print",
     "  n Corresponding author. | note:adjacent",
-    "C Bob Baker [] | line:names",
+    "C Bob Baker [] | line:names sep:column",
     "  c url https://b.org | note:adjacent ruling4:inner-contact",
-    "C Cat Cole [] | line:names",
+    "C Cat Cole [] | line:names sep:column",
     "  n  | note:adjacent ruling4:empty-kept",
     "D note https://b.org | note:adjacent ruling4:emptied",
   ]);
@@ -450,7 +450,7 @@ fn footnotemark_number_reads_the_stepped_counter() {
     [
       "C Ann Able [] | line:names",
       "  n Equal. | note:adjacent",
-      "C Bob Baker [*] | line:names",
+      "C Bob Baker [*] | line:names sep:column",
     ]
   );
 }
@@ -517,7 +517,7 @@ fn notes_keep_their_whole_text() {
     "C Ann Able [] | line:names",
     "  c url https://x.org/c | note:adjacent ruling4:inner-contact",
     "  n Code is available at https://x.org/c . | note:adjacent",
-    "C Bob Baker [] | line:names",
+    "C Bob Baker [] | line:names sep:column",
     "  c url https://b.org | note:adjacent ruling4:inner-contact",
     "D note https://b.org | note:adjacent ruling4:emptied",
   ]);
@@ -611,7 +611,7 @@ fn institution_lines_are_not_names() {
       "C Ann Able [] | line:names",
       "  a Capital Fund Management | line:unmarked R12:row-above",
       "  a 23 Rue X, Paris | line:unmarked R12:row-above",
-      "C Bob Baker [] | line:names",
+      "C Bob Baker [] | line:names sep:column",
       "  a Google DeepMind | line:unmarked R12:row-above",
       "  c email bob@g.com | owner:spelled ruling3:one-per-print",
     ]
@@ -694,7 +694,7 @@ fn report_title_page_marks_are_arabic() {
   assert_eq!(tuples(&json), [
     "C Ann Able [] | line:names",
     "  n First. | note:adjacent",
-    "C Bob Baker [2] | line:names",
+    "C Bob Baker [2] | line:names sep:column",
   ]);
   assert_eq!(json["policies"][0][1], "report");
 }
@@ -710,7 +710,7 @@ fn a_replacing_author_call_keeps_the_latest() {
     [
       "C Ann Able [] | line:names",
       "  n Funded. | note:adjacent",
-      "C Bob Baker [] | line:names",
+      "C Bob Baker [] | line:names sep:column",
     ]
   );
 }
@@ -867,10 +867,10 @@ fn a_notes_email_goes_by_spelling() {
       "C Ann Able [] | line:names",
       "  c email ann.able@x.org | note:adjacent ruling4:inner-contact",
       "  n Univ A. ann.able@x.org, cat.cole@x.org | note:adjacent",
-      "C Bob Baker [] | line:names",
+      "C Bob Baker [] | line:names sep:column",
       "  c email bob.baker@y.org | note:adjacent ruling4:inner-contact",
       "  n Univ B. bob.baker@y.org | note:adjacent",
-      "C Cat Cole [] | line:names",
+      "C Cat Cole [] | line:names sep:column",
       "  c email cat.cole@x.org | note:adjacent ruling4:inner-contact owner:spelled",
     ]
   );

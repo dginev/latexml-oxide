@@ -4,7 +4,8 @@
 //!
 //! - [`ledger`]: a block per `\author`-family call (the kernel `\author`, the bindings' `\lx@add@authors*` calls) with
 //!   its stamped position range, its options and its place in the frontmatter queue; the S1 stamp of each `\title`;
-//!   the contact/affiliation API calls (`\lx@annotate@frontmatter`'s queue entries).
+//!   the contact/affiliation API calls (`\lx@annotate@frontmatter`'s queue entries); the footnote texts made after a
+//!   block (`\footnotetext`, read for the `\footnotemark` a name shows).
 //! - [`rehearsal`]: a block's stamped tokens digested in a group of Layer-B event bindings (`\and` a separator, `\\` a
 //!   break, `\thanks` a note, the contact commands contacts), through the speculative-run engine: assignments rolled
 //!   back, diagnostics held, output muted, the frontmatter frozen; the digested list handed to the lexer, then
@@ -31,10 +32,10 @@ pub(in crate::base_utilities) mod shadow;
 
 // (for `ab_audit fmshadow`, which re-resolves a dump's events offline; prefixed, as the prelude re-exports these)
 pub use events::{Event as FmEvent, EventKind as FmEventKind, SepKind as FmSepKind};
-pub use ledger::note_binding_load;
 pub(in crate::base_utilities) use ledger::{
   field_stamped, note_field_stamp, record_api_call, record_author_call,
 };
+pub use ledger::{note_binding_load, record_note_text as fm_record_note_text};
 pub use resolver::{
   Assoc as FmAssoc, Input as FmInput, RCreator as FmCreator, Resolved as FmResolved,
   creator_call as fm_creator_call, resolve as fm_resolve,

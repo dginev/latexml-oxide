@@ -10,9 +10,10 @@
 //!   printed `\&`), a gap (a spacing run of two or more items, of a space wider than an interword one, or holding
 //!   fill glue `\hfil`/`\hfill`: its item count, its natural width in em of the box's font, and whether it fills);
 //! - **Break**: a row (`\\`, `\newline`, `\linebreak`, `\par`; the kernel's `\lx@newline` a `\centering` or a box
-//!   rebinds `\\` to; an alignment's row end);
+//!   rebinds `\\` to; an alignment's row end, role `row`; one inside a braced group or argument, role `group`);
 //! - **Contact**: `\email`, `\url`, `\href`, `\orcidlink`, an in-block `\affil`/`\address`, the frontmatter API;
-//! - **Note**: `\thanks`/`\footnote`/`\footnotetext`, with its label (a `\label` inside it) and its inner contacts;
+//! - **Note**: `\thanks`/`\footnote`/`\footnotetext`, with its label (a `\label` inside it), its inner contacts and its
+//!   Marks (the one it opens with `line_first`);
 //! - **Layout**: a box or a styling container (its command), an alignment cell, a change of font between runs (a
 //!   run's first font against the previous run's: a switch inside a run shows at the next run, not where it was).
 //!
@@ -26,6 +27,9 @@ use latexml_core::{
 };
 
 use super::*;
+
+mod lexer;
+use lexer::Lexer;
 
 /// The kind of a separator event.
 #[derive(Debug, Clone, PartialEq)]
@@ -93,7 +97,7 @@ pub struct Event {
   pub role:       Option<String>,
   /// a link's target
   pub target:     Option<String>,
-  /// a note's inner contacts, and the Mark its text opens with (`line_first`)
+  /// a note's inner contacts and Marks (the one its text opens with `line_first`, the others not)
   pub inner:      Vec<Event>,
   /// how many layout containers enclose it
   pub nest:       u8,
@@ -159,9 +163,12 @@ fn mark_event(text: String, role: &str) -> Option<Event> {
 }
 
 /// The cross-reference commands whose key a mark can print ([`ref_key`]): sect11.rs `\ref OptionalMatch:*
-/// Semiverbatim`, hyperref's `\autoref`, amsmath's `\eqref`, cleveref's `\lx@cref` (its `\cref`/`\Cref`) — each
-/// with the key its last argument. Not `\href` (a link, its last argument the text printed), nor `\pageref`/
-/// `\nameref` (a page or a title, never a label's mark).
+/// Semiverbatim` (`\pageref` is `\let` to it, sect11.rs:164, so it reads as one), hyperref's `\autoref`, amsmath's
+/// `\eqref`, cleveref's `\lx@cref` (its `\cref`/`\Cref`, cleveref_sty.rs) — each with the key its last argument. Not
+/// `\href` (a link, its last argument the text printed), nor `\nameref` (a title, never a label's mark). cleveref's
+/// `\namecref{x}` is `\lx@cref{creftype}{x}` too (cleveref_sty.rs:312), a type's name, not a number: the key is read
+/// only off a mark printing nothing at digestion ([`ref_mark`]), and in the rehearsal `\lx@cref` prints its show list
+/// ("creftype", "creftype~creflabel"), so a `\namecref` mark is that text, never `ref:x`.
 const REF_COMMANDS: &[&str] = &["\\ref", "\\autoref", "\\eqref", "\\lx@cref"];
 
 /// The key of the `\ref` a digested mark holds (its last argument, Semiverbatim), when it holds one of
@@ -299,15 +306,23 @@ fn ink_of(d: &Digested) -> String {
   text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// Whether a whatsit is one of the rehearsal's notes (`\thanks`, `\footnotetext`).
+/// Whether a whatsit is one of the rehearsal's notes (`\thanks`, `\footnotetext`), footnote marks (`\footnotemark`) or
+/// ORCID links (the rehearsal's `\orcidlink`/`\orcid`, the kernel's `\lx@orcidlink`): inside a mark's script, each is
+/// an event of its own after the mark, not the mark's text (`Martin Bachratý$^{\orcidlink{0000-0002-4300-7507},1,\ast}$`,
+/// 2506.11626: the ORCID was lost).
 fn is_note_whatsit(w: &Whatsit) -> bool {
   matches!(
     whatsit_cs(w).as_str(),
-    "\\lx@fm@obs@note" | "\\lx@fm@obs@notetext"
+    "\\lx@fm@obs@note"
+      | "\\lx@fm@obs@notetext"
+      | "\\lx@fm@obs@fnmark"
+      | "\\lx@fm@obs@orcid"
+      | "\\lx@orcidlink"
   )
 }
 
-/// The notes a mark's script holds (`$^{1,\thanks{…}}$`), outermost first.
+/// The notes and footnote marks a mark's script holds (`$^{1,\thanks{…}}$`, `\inst{3\footnotemark[1]}`), outermost
+/// first.
 fn notes_in(d: &Digested) -> Vec<Digested> {
   fn collect(d: &Digested, out: &mut Vec<Digested>) {
     match d.data() {
@@ -335,6 +350,21 @@ fn notes_in(d: &Digested) -> Vec<Digested> {
   let mut out = Vec::new();
   collect(d, &mut out);
   out
+}
+
+/// A script mark's role: `role`, with ` parted` when the script held a footnote mark the lexer parted from it
+/// (`\inst{1, 2\footnotemark[1]}`, 2404.09857).
+fn parted_role(role: &'static str, notes: &[Digested]) -> &'static str {
+  let parted = notes.iter().any(|note| match note.data() {
+    DigestedData::Whatsit(w) => whatsit_cs(&w.borrow()) == "\\lx@fm@obs@fnmark",
+    _ => false,
+  });
+  match (role, parted) {
+    ("inst", true) => "inst parted",
+    ("sup", true) => "sup parted",
+    ("math", true) => "math parted",
+    _ => role,
+  }
 }
 
 /// [`ink_of`] a mark's script without the notes it holds ([`notes_in`]).
@@ -404,6 +434,8 @@ fn font_key(d: &Digested) -> Option<String> {
 #[derive(Default)]
 struct Walker {
   atoms: Vec<Atom>,
+  /// how many lists enclose the box being walked (the block's own is one; a braced group or argument inside it more)
+  lists: usize,
 }
 
 impl Walker {
@@ -445,9 +477,11 @@ impl Walker {
         }
       },
       DigestedData::List(l) => {
+        self.lists += 1;
         for child in l.borrow().boxes.iter() {
           self.walk(child, nest);
         }
+        self.lists -= 1;
       },
       DigestedData::Whatsit(w) => self.walk_whatsit(d, &w.borrow(), nest),
       DigestedData::Alignment(a) => {
@@ -490,7 +524,14 @@ impl Walker {
       "\\lx@fm@obs@and" => self.event(Event::new(EventKind::Sep(SepKind::And("\\and"))), d, nest),
       "\\lx@fm@obs@And" => self.event(Event::new(EventKind::Sep(SepKind::And("\\And"))), d, nest),
       "\\lx@fm@obs@AND" => self.event(Event::new(EventKind::Sep(SepKind::And("\\AND"))), d, nest),
-      "\\lx@fm@obs@break" => self.event(Event::new(EventKind::Break), d, nest),
+      // (a break inside a braced group or argument — `\\ {\em College …,\\ City}`, `\textsl{Pure Mathematics\\University
+      // of Waterloo\\…}` — is role `group`: the lines it parts are one print unit, as today's reads them, 1710.07902,
+      // math0610612)
+      "\\lx@fm@obs@break" => {
+        let mut row = Event::new(EventKind::Break);
+        row.role = (self.lists > 1).then(|| "group".to_string());
+        self.event(row, d, nest)
+      },
       // The kernel's own line breaks, where the block rebinds `\\` past the rehearsal's binding: `\centering`,
       // `\raggedright`, `\raggedleft` let it be `\@normalcr` (sect06.rs, latex.ltx `\let\\\@centercr`), a
       // minipage `\lx@newline` (sect12.rs `{minipage}`), a parbox's body `\lx@parboxnewline` (sect12.rs), each the
@@ -521,8 +562,14 @@ impl Walker {
             );
             match inner.kind {
               EventKind::Contact => note.inner.push(inner),
-              // (the Mark its text opens with, the legend's label: `\thanks{$^{1}$Unit…}`, S2a.2 r2)
-              EventKind::Mark if first => note.inner.push(inner),
+              // (the Mark its text opens with, the legend's label: `\thanks{$^{1}$Unit…}`, S2a.2 r2; its later Marks
+              // too, never leading — a note of several marked entries is no one label's legend, IEEEtran's
+              // `\IEEEcompsocthanksitem \Mark{1}College … \IEEEcompsocthanksitem \Mark{2}College …`, 1802.03043)
+              EventKind::Mark => {
+                let mut mark = inner;
+                mark.line_first = first;
+                note.inner.push(mark);
+              },
               EventKind::Layout if inner.role.as_deref() == Some("label") => {
                 note.label = inner.label
               },
@@ -559,9 +606,16 @@ impl Walker {
         }
       },
       "\\lx@fm@obs@mark" => {
-        if let Some(mark) = mark_event(arg(1), "inst").or_else(|| ref_mark(w.get_arg(1), "inst")) {
+        // (a `\footnotemark` inside the mark is a mark of its own after it, its footnote's: `Kui Wu\inst{3\footnotemark[1]}`
+        // printed "31", parted into "3" and "1" — llncs, 2404.09857)
+        let notes = w.get_arg(1).map(notes_in).unwrap_or_default();
+        let script = w.get_arg(1).map(ink_of_without_notes).unwrap_or_default();
+        if let Some(mark) =
+          mark_event(script, parted_role("inst", &notes)).or_else(|| ref_mark(w.get_arg(1), "inst"))
+        {
           self.event(mark, d, nest);
         }
+        self.walk_notes(&notes, nest);
       },
       "\\lx@fm@obs@request" => {
         let prefix = raw(1).trim().to_string();
@@ -594,14 +648,12 @@ impl Walker {
       "\\textsuperscript" | "\\@textsuperscript" => {
         let notes = w.get_arg(1).map(notes_in).unwrap_or_default();
         let script = w.get_arg(1).map(ink_of_without_notes).unwrap_or_default();
-        if let Some(mark) = mark_event(script, "sup").or_else(|| ref_mark(w.get_arg(1), "sup")) {
+        if let Some(mark) =
+          mark_event(script, parted_role("sup", &notes)).or_else(|| ref_mark(w.get_arg(1), "sup"))
+        {
           self.event(mark, d, nest);
         }
-        for note in notes {
-          if let DigestedData::Whatsit(nw) = note.data() {
-            self.walk_whatsit(&note, &nw.borrow(), nest);
-          }
-        }
+        self.walk_notes(&notes, nest);
       },
       "\\lx@fm@obs@email" | "\\lx@fm@obs@orcid" | "\\lx@fm@obs@affil" => {
         let mut contact = Event::new(EventKind::Contact);
@@ -677,6 +729,25 @@ impl Walker {
     }
   }
 
+  /// The notes and footnote marks a mark's script held ([`notes_in`]), each an event of its own after the mark; a
+  /// footnote mark so parted from the script says so (role `footnotemark parted`), as the script's mark does
+  /// ([`parted_role`]): the PDF prints them glued, `2∗`, and ruling 1 reads them apart.
+  fn walk_notes(&mut self, notes: &[Digested], nest: u8) {
+    for note in notes {
+      if let DigestedData::Whatsit(nw) = note.data() {
+        let at = self.atoms.len();
+        self.walk_whatsit(note, &nw.borrow(), nest);
+        for atom in &mut self.atoms[at..] {
+          if let Atom::Event(event) = atom
+            && event.role.as_deref() == Some("footnotemark")
+          {
+            event.role = Some("footnotemark parted".to_string());
+          }
+        }
+      }
+    }
+  }
+
   /// A formula: its scripts are marks (`$^{1}$`, `Szabo$^3$`); its other ink is text (`$\dagger$` a symbol).
   fn walk_math(&mut self, d: &Digested, w: &Whatsit, nest: u8) {
     let Ok(Some(body)) = w.get_body() else {
@@ -701,17 +772,15 @@ impl Walker {
           let script_box = w.get_args().iter().rev().flatten().next();
           let notes = script_box.map(notes_in).unwrap_or_default();
           let script = script_box.map(ink_of_without_notes).unwrap_or_default();
-          if let Some(mark) = mark_event(script, "math").or_else(|| ref_mark(script_box, "math")) {
+          if let Some(mark) =
+            mark_event(script, parted_role("math", &notes)).or_else(|| ref_mark(script_box, "math"))
+          {
             self.event(mark, d, nest);
           }
           // (a `\thanks` inside the script is a note of its own, after the mark, not the mark's text:
           // `Liang-Jian Zou$^{1,\thanks{Correspondence author, …}}$` read "1,Correspondence author, …" as its label,
           // 1106.3485)
-          for note in notes {
-            if let DigestedData::Whatsit(nw) = note.data() {
-              self.walk_whatsit(&note, &nw.borrow(), nest);
-            }
-          }
+          self.walk_notes(&notes, nest);
         } else if cs.contains("subscript") {
           // a subscript is the formula's ink, not a mark
           self.atoms.push(Atom::Ink {
@@ -870,226 +939,9 @@ fn whatsit_width_em(d: &Digested, w: &Whatsit) -> Option<f64> {
   Some((pt / em_pt(d)).max(0.0))
 }
 
-/// The lexer's second pass: the atoms into events.
-#[derive(Default)]
-struct Lexer {
-  events:      Vec<Event>,
-  /// the name run being read: its characters with their spans, its font, its nest
-  run:         Vec<(char, Option<(u16, u16)>)>,
-  run_font:    Option<String>,
-  run_nest:    u8,
-  /// the spacing run since the last ink: items, width, fill, span
-  gap_items:   usize,
-  gap_width:   f64,
-  gap_fill:    bool,
-  gap_span:    Option<(u16, u16)>,
-  /// the line has shown ink (a name, a mark, a contact) since its last break
-  line_inked:  bool,
-  /// the font of the last name run
-  last_font:   Option<String>,
-  /// the symbol mark being read (consecutive footnote-symbol characters)
-  symbol:      String,
-  symbol_span: Option<(u16, u16)>,
-}
-
-impl Lexer {
-  fn gap_is_separator(&self) -> bool {
-    self.gap_fill || self.gap_items >= 2 || (self.gap_items == 1 && self.gap_width > INTERWORD)
-  }
-
-  fn clear_gap(&mut self) {
-    self.gap_items = 0;
-    self.gap_width = 0.0;
-    self.gap_fill = false;
-    self.gap_span = None;
-  }
-
-  /// Emit the pending gap when it separates (else it is dropped: an interword space at a boundary).
-  fn flush_gap(&mut self) {
-    if self.gap_is_separator() {
-      let mut gap = Event::new(EventKind::Sep(SepKind::Gap {
-        items: self.gap_items,
-        width: (self.gap_width * 1000.0).round() / 1000.0,
-        fill:  self.gap_fill,
-      }));
-      gap.span = self.gap_span;
-      self.events.push(gap);
-    }
-    self.clear_gap();
-  }
-
-  fn flush_symbol(&mut self) {
-    if self.symbol.is_empty() {
-      return;
-    }
-    let mut mark = Event::new(EventKind::Mark);
-    mark.text = std::mem::take(&mut self.symbol);
-    mark.label = Some(mark.text.clone());
-    mark.symbol = true;
-    mark.role = Some("text".to_string());
-    mark.span = self.symbol_span.take();
-    mark.line_first = !self.line_inked;
-    self.line_inked = true;
-    self.events.push(mark);
-  }
-
-  /// End the name run: a Name, split at the words "and" and `&` (Sep events), each piece with its own span.
-  fn flush_run(&mut self) {
-    let run = std::mem::take(&mut self.run);
-    let font = self.run_font.take();
-    // the run's words, each with the span of its characters
-    let mut words: Vec<(String, Option<(u16, u16)>)> = Vec::new();
-    let mut word = String::new();
-    let mut word_span = None;
-    for (c, span) in run.into_iter().chain(std::iter::once((' ', None))) {
-      if c == ' ' {
-        if !word.is_empty() {
-          words.push((std::mem::take(&mut word), word_span.take()));
-        }
-      } else {
-        word.push(c);
-        word_span = join_span(word_span, span);
-      }
-    }
-    if words.is_empty() {
-      return;
-    }
-    if font.is_some() && self.last_font.is_some() && font != self.last_font {
-      let mut layout = Event::new(EventKind::Layout);
-      layout.role = Some("font".to_string());
-      layout.nest = self.run_nest;
-      self.events.push(layout);
-    }
-    if font.is_some() {
-      self.last_font = font;
-    }
-    let mut name: Option<Event> = None;
-    for (word, span) in words {
-      if word.eq_ignore_ascii_case("and") || word == "&" {
-        self.events.extend(name.take());
-        let mut sep = Event::new(EventKind::Sep(SepKind::Word(word)));
-        sep.span = span;
-        sep.nest = self.run_nest;
-        self.events.push(sep);
-        continue;
-      }
-      let name = name.get_or_insert_with(|| {
-        let mut name = Event::new(EventKind::Name);
-        name.nest = self.run_nest;
-        name
-      });
-      if !name.text.is_empty() {
-        name.text.push(' ');
-      }
-      name.text.push_str(&word);
-      name.span = join_span(name.span, span);
-    }
-    self.events.extend(name);
-    self.line_inked = true;
-  }
-
-  fn push_event(&mut self, mut event: Event) {
-    self.flush_symbol();
-    self.flush_run();
-    match event.kind {
-      EventKind::Break => {
-        self.clear_gap();
-        self.line_inked = false;
-      },
-      EventKind::Mark => {
-        self.flush_gap();
-        event.line_first = !self.line_inked;
-        self.line_inked = true;
-      },
-      EventKind::Contact | EventKind::Note => {
-        self.flush_gap();
-        self.line_inked = true;
-      },
-      EventKind::Sep(SepKind::And(_) | SepKind::Column(_)) => self.clear_gap(),
-      _ => self.flush_gap(),
-    }
-    self.events.push(event);
-  }
-
-  fn ink(&mut self, text: &str, span: Option<(u16, u16)>, font: Option<String>, nest: u8) {
-    for c in text.chars() {
-      if is_fnsymbol(c) {
-        self.flush_run();
-        self.flush_gap();
-        self.symbol.push(c);
-        self.symbol_span = join_span(self.symbol_span, span);
-        continue;
-      }
-      self.flush_symbol();
-      if c == ',' || c == ';' {
-        self.flush_run();
-        self.clear_gap();
-        let mut comma = Event::new(EventKind::Sep(SepKind::Comma));
-        comma.span = span;
-        comma.nest = nest;
-        self.events.push(comma);
-        continue;
-      }
-      if c.is_whitespace() {
-        self.gap_items += 1;
-        self.gap_width += space_width(c);
-        self.gap_span = join_span(self.gap_span, span);
-        continue;
-      }
-      if self.gap_items > 0 {
-        if self.gap_is_separator() || self.run.is_empty() {
-          self.flush_run();
-          self.flush_gap();
-        } else {
-          self.run.push((' ', None));
-          self.clear_gap();
-        }
-      }
-      // (a font switched inside the run does not end it: the run is one Name whatever fonts its characters are in —
-      // gretsi's `first \textsc{last}`, 2508.03934 —, and the Layout event, `flush_run`, compares the runs' first
-      // fonts: OXIDIZED_DESIGN_DIVERGENCES #837's departures)
-      if self.run.is_empty() {
-        self.run_font = font.clone();
-        self.run_nest = nest;
-      }
-      self.run.push((c, span));
-    }
-  }
-
-  fn space(&mut self, width: f64, fill: bool, span: Option<(u16, u16)>) {
-    self.flush_symbol();
-    self.gap_items = self.gap_items.saturating_add(1);
-    self.gap_width += width;
-    self.gap_fill |= fill;
-    self.gap_span = join_span(self.gap_span, span);
-  }
-
-  fn finish(mut self) -> Vec<Event> {
-    self.flush_symbol();
-    self.flush_run();
-    self.clear_gap();
-    // a `\label` outside a note labels the note before it
-    let mut events: Vec<Event> = Vec::with_capacity(self.events.len());
-    for event in self.events {
-      if event.kind == EventKind::Layout && event.role.as_deref() == Some("label") {
-        if let Some(note) = events.iter_mut().rev().find(|e| e.kind == EventKind::Note)
-          && note.label.is_none()
-        {
-          note.label = event.label;
-          continue;
-        }
-        events.push(event);
-        continue;
-      }
-      events.push(event);
-    }
-    events
-  }
-}
-
 /// The text events print, in order: names, contacts and inner notes as their text, a comma `,`, a separating word its
 /// word, the rest a space, the marks aside (a note's text, `\lx@fm@obs@note`).
-fn printed_text(events: &[Event]) -> String {
+pub(in crate::base_utilities) fn printed_text(events: &[Event]) -> String {
   let mut out = String::new();
   for event in events {
     let (piece, glued) = match &event.kind {
