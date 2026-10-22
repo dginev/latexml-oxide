@@ -32,6 +32,12 @@ When two rules below pull apart, the higher priority wins.
 - **Display toggles are honored as the PDF shows them**: blind review, anonymous, final/draft options (2026-10).
 - **Metadata the class only writes to PDF metadata** (e.g. `\icmlkeywords` → pdfkeywords) becomes RDFa, not a displayed
   block (2026-10-09).
+- **Float panels: capture the grid, not the widths** (2026-10-22, at 78t). A group of sub-figures/sub-floats is a
+  logical grid: rows × columns, as many panels per row as the PDF sets, and for advanced grids the cells a panel spans.
+  That structure is the fidelity target. Concrete panel widths are not, because the browser's width varies with the
+  theme (ar5iv uses 52rem unconditionally). The exact page width of one class is not the information to model either.
+  Derive the rows from what the source states (explicit breaks; widths as fractions of the line width) rather than by
+  re-running TeX's line breaking against one page geometry.
 
 ## 3. Numbering, labels and references
 
