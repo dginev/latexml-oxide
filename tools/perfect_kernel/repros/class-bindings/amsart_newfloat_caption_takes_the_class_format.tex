@@ -1,0 +1,22 @@
+% mechanism: amsart.cls:1386-1410 `\@makecaption` "#1.\enspace #2" makes every kernel float's caption, a newfloat
+%   type's too (`\lx@makecaption`); float.sty's own plain style and longtable's `\LT@makecaption` close with ": ".
+% witness: review rev78s2 finding 5 (the 78v caption-separator row)
+% oracle:  pdflatex 0 errors; "Figure 1. Fig one.", "Table 1. Tab one.", "Listing 1. Code one.", "Program 1: Prog one.", "Table 2: Long one."
+% engines: perl: caption settings not applied (KNOWN_PERL_ERRORS #795); rust int65a: "Listing 1: ", "Table 2. "
+% expect:  0 errors, 0 warnings; figure, table, listing ". "; program, longtable ": "
+% status:  GREEN (78y)
+\documentclass{amsart}
+\usepackage{newfloat}
+\DeclareFloatingEnvironment[name=Listing]{listing}
+\usepackage{float}
+\floatstyle{plain}
+\newfloat{program}{tbp}{lop}
+\floatname{program}{Program}
+\usepackage{longtable}
+\begin{document}
+\begin{figure}[h]X\caption{Fig one.}\end{figure}
+\begin{table}[h]\caption{Tab one.}Y\end{table}
+\begin{listing}[h]Z\caption{Code one.}\end{listing}
+\begin{program}[h]W\caption{Prog one.}\end{program}
+\begin{longtable}{c}\caption{Long one.}\\ Y\\ \end{longtable}
+\end{document}

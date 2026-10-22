@@ -24484,3 +24484,57 @@ run to the next, but these sites wrote what a hash table or the filesystem liste
 Not changed: the custom frontmatter blocks (`frontmatter/insert.rs` `custom_keys`) follow the source order, deterministic
 (Perl's `keys %$frontmatter` is random; main-session decision); the `xmlns:*` declaration order on the root is stable
 today and tracked as a SYNC row (Perl's first-use order, Document.pm:1393-1394,1874).
+
+### 884. A class's `\@makecaption` reaches every caption it makes, as names and separators; caption replaces it
+
+LaTeX makes a kernel float's caption with the class's `\@makecaption` whatever its type — a figure, a table, a newfloat
+type (newfloat.sty:59-125 `\@float`), a listings caption (listings.sty:1675 `\lst@makecaption`) — while float.sty's own
+styles (`\floatc@plain`) and longtable (longtable.sty:475-483 `\LT@makecaption`, "Table 1: text") make theirs
+themselves; caption, once loaded, replaces `\@makecaption` and formats float.sty's and longtable's captions too
+(caption.sty:856-868, :1167), its default separator the class's (caption3.sty:1125-1171: caption-ams-smf.sto:41's
+`.\enspace` under an AMS class, else :787's colon). Perl's bindings give each type a fixed format (`\format@title@figure`
+"Figure 1: ", listings' "Listing 1: ", newfloat's none, KNOWN_PERL_ERRORS #1124), so a class's format reached figures and
+tables only, and IEEEtran's and acmart's not at all (KNOWN_PERL_ERRORS #1140). Here:
+
+- **`\lx@makecaption{<type>}{<text>}`** (latex_constructs_rust_only.rs, the kernel's "Figure 1: text") is the class's
+  `\@makecaption`: newfloat's types (newfloat_sty.rs) and listings (listings_sty.rs) take it, and a class whose
+  `\@makecaption` is its own redefines it with its figure's and table's formats — the AMS classes' ". " (ams_support_sty.rs
+  `ams_class_caption_format`, from ams_core_cls.rs and amsbook_cls.rs, not from ams_support, which amsaddr and the
+  `\curraddr`/`\subjclass` autoloads bring to article: there the kernel's "Figure 1: " stays) and, through
+  `caption_sty::class_makecaption` (installed at `\begin{document}` unless caption is loaded; caption's kernel alone,
+  floatrow's, keeps it), IEEEtran's by mode ("Fig. 1. text", "TABLE I" over its text, compsoc's arabic tables and
+  conferences' "Figure"), ieeeaccess's, ieeeoj's and ieeetj's one-line "FIGURE 1. text" / "TABLE 1. text" (their
+  `\figurename` and arabic `\thetable`, ieeeaccess Roman under `jtehm`), jfm's, webofc's and jinstpub's
+  (`class_makecaption_label`). A figure or table float.sty restyled (`\restylefloat{table}`) keeps float.sty's format
+  (`\lx@class@floatsty@kept`: 2006.08364's "TABLE I: List of …").
+- **Names and separators only** (user ruling 2026-10-22): the class's caption fonts — acmart's journal small sans serif,
+  conference bold, siggraph italic text, sigchi small figure and table captions; IEEEtran's small-caps table text and
+  compsoc `\sffamily`; jfm's small-caps label; webofc's and jinstpub's bold label — are set only under the class caption
+  fonts knob (caption_sty.rs `CLASS_CAPTION_FONTS`, latexml.sty's `classcaptionfonts` option ahead of the class:
+  `--preload=[classcaptionfonts]latexml.sty` as the first preload; off by default), so an HTML theme styles every caption
+  alike. Not the class's, so not behind the knob: a package's own label fonts (algorithm2e's `\fnum@font@algorithm`, as
+  Perl's binding), the document's `\captionsetup` keys, and the kernel's `\normalfont` in `\lx@fnum@@`, which listings'
+  labels now take as a figure's does (`<text font="serif">Listing 3</text>` in a sans context, 2409.06446).
+- **caption** (caption_sty.rs) lets `\lx@makecaption` be its own at `\begin{document}`, in the class's default
+  separator (`CAPTION_DEFAULT_LABELSEP`, an AMS class known by its `\@captionheadfont`), and gives a float.sty type that
+  separator when nothing sets one (acmart's journal formats "Program 1. …"), its label in caption's fonts, not float.sty's
+  `\@fs@cfont` (`\rmfamily`: acmart sigchi-a's "Program 1" in the sans body); listings' captions are caption's
+  (`\lx@format@caption@@`), as caption formats them.
+- **A package that makes its captions itself** marks its type (`lx@caption@own@<type>`), which caption then formats
+  not at all: algorithm2e's `algorithm` (algorithm2e.sty:2287-2318 `\algocf@makecaption`; 1908.06049, 2205.14076), whose
+  label closes with `\algocf@capseparator` (":", :2285-2289) — unless float.sty made the type (algorithm.sty's
+  `\newfloat{algorithm}` beside `[algo2e]`: caption's "Algorithm 1 Leakage Removal", 2204.02306, 1812.03871, 2408.08621).
+- **longtable** keeps its own "Table 1: " (`\lx@longtable@format`) without caption, unless a binding ports its class's or
+  package's own `\LT@makecaption` as its table format (`\lx@longtable@classformat`: emulateapj.cls:1303-1313,
+  caption2.sty:338).
+
+Not ported: IEEEtran's `\footnotesize` and `captionsoff` (IEEEtran.cls:2800-2808 prints the label only; the captions are
+kept), caption's AMS default fonts (`\@captionheadfont` labels), and float.sty's style formats on a `\restylefloat`ed
+kernel float (a ruled figure's "Fig. 1 text" keeps the kernel's ": "; float_sty.rs records the style only). The Perl
+golden tests/complex/acm_aria.xml (`acmsmall`) now reads `<tag close=". ">Fig. 1</tag>caption text`, and
+tests/structure/algorithm2e_{frames,linenumbers}.xml "Algorithm 1" closed by ": ". Witnesses
+1807.03757, 1910.07402 (ieeeaccess), 2608.19980 (ieeeoj), 2510.05542 (ieeetj), 2006.08364 (`\restylefloat`). Guards
+`perfect_kernel_batch78y::*` (the knob on: `*_with_class_caption_fonts`),
+`perfect_kernel_batch73a::ieeeaccess_figure_is_a_figure`, `perfect_kernel_batch78a::jfm_copy_*`,
+`perfect_kernel_batch78e::{webofc_sidecaption_keeps_its_caption, jinstpub_frontmatter_is_jheppub_s}`.
+

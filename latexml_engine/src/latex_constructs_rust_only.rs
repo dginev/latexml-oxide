@@ -114,6 +114,16 @@ LoadDefinitions!({
     r"\lx@written@copy\let\lx@note\lx@note@gobble\let\lx@notemark\lx@notemark@gobble\let\lx@notetext\lx@notetext@gobble\let\lx@current@footnote\lx@note@standard\let\lx@current@footnotetext\lx@notetext@standard\let\label\lx@gobble@om\let\lx@caption@postlabel\@gobble\let\lx@label@type\@gobble\let\index\lx@gobble@som\let\glossary\lx@gobble@om"
   );
 
+  // The class's `\@makecaption{<label>}{<text>}` for a caption of type `#1`: latex.ltx's "Figure 1: text" (the
+  // `\sbox\@tempboxa{#1: #2}` of `\@makecaption`, the format of the kernel's figure and table, sect09.rs). A
+  // `\@float` of any other type is made by it too — newfloat's types (newfloat_sty.rs), listings' `\lst@makecaption`
+  // (listings.sty:1675) — so a class whose `\@makecaption` is its own redefines this, its figure's and table's
+  // formats with it (amsart's ". ", ams_support_sty.rs `ams_class_caption_format`; IEEEtran's "Fig. 1." and "TABLE I"
+  // above, ieeetran_cls.rs). float.sty's own styles make their captions themselves (float_sty.rs), and caption, when
+  // loaded, its own (acmart's: sigplan's minted `listing` "Listing 1.", 1807.03757). Guards
+  // `perfect_kernel_batch78y::{ieeetran_*, amsart_newfloat_caption_takes_the_class_format}`.
+  DefMacro!("\\lx@makecaption{}{}", r"\lx@tag[][: ]{\lx@fnum@@{#1}}#2");
+
   //======================================================================
   // 0. The part internals `\@part[#1]#2` / `\@spart#1` — the sectioning hook
   //

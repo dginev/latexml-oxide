@@ -50,14 +50,14 @@ LoadDefinitions!({
   // copies without caption print "Figure 1." with the label in small caps from their own `\@makecaption` (0712.2739's
   // :953-958 `{\normalfont\scshape #1\ifrem@fullpt\else .\fi} #2`, `\removefullpoint` dropping the period once),
   // which the kernel's caption keeps out (`\@makecaption keeps LaTeXML's definition`): its label format is the
-  // figure's and table's title format, as amsart's (ams_support_sty.rs `\format@title@figure`), its font the label
-  // font (`\fnum@font@<type>`, sect09.rs). The document's caption package — or subcaption's or subfig's, which load it
-  // — replaces the class's `\@makecaption` ("Figure 1:" in the text font; 1711.01065, 2205.10181, 2507.07213
-  // subcaption, 1805.00129 subfig), the old subfigure package does not, nor floatrow, which loads caption's kernel
-  // alone (floatrow.sty:39 `caption3`, whose stand-in is our caption binding: `\lx@caption@kernel@only`; 2312.13002,
-  // 2111.12004): so the format is the class's only where caption is not loaded by `\begin{document}`;
-  // `\removefullpoint` is the copy's either way. Before, both gave
-  // "Figure 1:" (OXIDIZED_DESIGN_DIVERGENCES #784; guards `perfect_kernel_batch78a::{
+  // figure's and table's title format, as amsart's (ams_support_sty.rs `ams_class_caption_format`), its font the label
+  // font (`\fnum@font@<type>`, sect09.rs) under the class caption fonts knob alone. The document's caption package —
+  // or subcaption's or subfig's, which load it — replaces the class's `\@makecaption` ("Figure 1:" in the text font;
+  // 1711.01065, 2205.10181, 2507.07213 subcaption, 1805.00129 subfig), the old subfigure package does not, nor
+  // floatrow, which loads caption's kernel alone (floatrow.sty:39 `caption3`, whose stand-in is our caption binding:
+  // `\lx@caption@kernel@only`; 2312.13002, 2111.12004): so the format is the class's only where caption is not loaded
+  // by `\begin{document}`; `\removefullpoint` is the copy's either way. Before, both gave "Figure 1:"
+  // (OXIDIZED_DESIGN_DIVERGENCES #784; guards `perfect_kernel_batch78a::{
   // jfm_copy_captions_end_the_label_with_a_period, jfm_copy_caption_package_keeps_its_options,
   // jfm_copy_caption_yields_to_caption_loaders, jfm_copy_caption_kept_with_subfigure,
   // jfm_copy_caption_kept_with_floatrow}`).
@@ -80,14 +80,18 @@ LoadDefinitions!({
       if crate::shipped_class::class_code_contains(text, "\\@makecaption")
         && crate::shipped_class::class_code_contains(text, "rem@fullpt")
       {
-        RawTeX!(
-          r"\def\lx@jfm@captionformat{%
-\def\fnum@font@figure{\scshape}\def\fnum@font@table{\scshape}%
-\def\format@title@figure##1{\lx@tag[][\ifrem@fullpt\space\else. \fi]{\lx@fnum@@{figure}}##1\global\rem@fullptfalse}%
-\def\format@title@table##1{\lx@tag[][\ifrem@fullpt\space\else. \fi]{\lx@fnum@@{table}}##1\global\rem@fullptfalse}}
-\AtBeginDocument{\@ifpackageloaded{caption}%
-{\@ifundefined{lx@caption@kernel@only}{}{\lx@jfm@captionformat}}{\lx@jfm@captionformat}}"
-        );
+        // (the class's `\@makecaption` for every kernel float, a newfloat type's as a figure's: `\lx@makecaption`; its
+        // small-caps label under the class caption fonts knob alone, caption_sty.rs `CLASS_CAPTION_FONTS`)
+        let fonts = if caption_sty::class_caption_fonts() {
+          r"\def\fnum@font@float{\scshape}\def\fnum@font@figure{\scshape}\def\fnum@font@table{\scshape}%"
+        } else {
+          ""
+        };
+        caption_sty::class_makecaption(&s!(
+          r"{fonts}
+\long\def\lx@makecaption##1##2{{\lx@tag[][\ifrem@fullpt\space\else. \fi]{{\lx@fnum@@{{##1}}}}##2\global\rem@fullptfalse}}%
+\long\def\format@title@figure##1{{\lx@makecaption{{figure}}{{##1}}}}\long\def\format@title@table##1{{\lx@makecaption{{table}}{{##1}}}}"
+        ))?;
       }
     },
   }

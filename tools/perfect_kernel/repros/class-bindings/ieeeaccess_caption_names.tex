@@ -1,0 +1,16 @@
+% mechanism: ieeeaccess.cls:244-262 (`\thetable` arabic unless `jtehm`; `\figurename` "FIGURE"), over IEEEtran's
+%   "Fig." and Roman tables, with the class's one-line `\@makecaption` "<label>. <text>" for figures and tables alike
+%   (a figure through the class's `\Figure`, which sets the `\xfigwd` that `\@makecaption` reads).
+% witness: 1910.07402 (the class copy pdflatex ran with); review rev78y finding 3
+% oracle:  pdflatex with 1910.07402's ieeeaccess.cls, 0 errors; "FIGURE 1. Fig one.", "TABLE 1. Tab one."
+% engines: perl 0.8.8: no binding (IEEEtran's "Figure 1: ", "TABLE I: "); rust 78y r1: "Fig. 1. ", "TABLE I. "
+% expect:  0 errors, 0 warnings; "FIGURE 1" and "TABLE 1", each closed by ". "
+% status:  RED (78y r1) -> GREEN (78y r2)
+% preload: ar5iv.sty
+\documentclass{ieeeaccess}
+\usepackage{graphicx}
+\begin{document}
+\Figure[t!](topskip=0pt, botskip=0pt, midskip=0pt)[scale=0.1]{example-image-a.png}{Fig one.}
+\begin{table}[h]\caption{Tab one.}\centering\begin{tabular}{c}Y\end{tabular}\end{table}
+Text.\EOD
+\end{document}

@@ -11,7 +11,7 @@
       <tag role="refnum">1</tag>
     </tags>
     <toccaption><tag close=" ">1</tag>line numbering with a side comment</toccaption>
-    <caption><tag close=" "><text font="bold">Algorithm 1</text></tag>line numbering with a side comment</caption>
+    <caption><tag close=": "><text font="bold">Algorithm 1</text></tag>line numbering with a side comment</caption>
     <listing class="ltx_lst_numbers_left" framed="topbottom">
       <listingline><text font="bold">Input :</text> a value</listingline>
       <listingline><text font="bold">Output :</text> a result</listingline>

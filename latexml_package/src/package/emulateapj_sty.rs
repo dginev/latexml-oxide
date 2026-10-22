@@ -44,4 +44,7 @@ LoadDefinitions!({
   DefMacro!("\\format@title@subsection{}", "\\lx@tag[][.\\space]{\\thesubsection}#1");
   DefMacro!("\\format@title@figure{}",     "\\lx@tag[][.\\lx@emdash\\space]{\\lx@fnum@@{figure}}#1");
   DefMacro!("\\format@title@table{}",      "\\lx@tag{\\lx@fnum@@{table}}#1");
+  // emulateapj.cls:1303-1313 `\LT@makecaption` prints a longtable's caption as the table's, "Table 4~~Galaxies"
+  // (longtable_sty.rs `\lx@longtable@format`). Guard `perfect_kernel_batch68y::emulateapj_deluxetable_is_open_from_its_head`.
+  RawTeX!(r"\def\lx@longtable@classformat{}");
 });

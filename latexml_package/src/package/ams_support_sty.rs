@@ -329,8 +329,8 @@ LoadDefinitions!({
     )?;
   }
 
-  DefMacro!("\\format@title@figure{}", "\\lx@tag[][. ]{\\lx@fnum@@{figure}}#1");
-  DefMacro!("\\format@title@table{}", "\\lx@tag[][. ]{\\lx@fnum@@{table}}#1");
+  // (The AMS classes' caption format, `\format@title@figure`/`\format@title@table` in Perl's binding here,
+  // ams_support.sty.ltxml:192-193, is the classes' own: `ams_class_caption_format`.)
 
   // Excersise environments ??:
   // xca "must be defined with \theoremstyle{definition} and \newtheorem ???
@@ -514,6 +514,24 @@ pub fn amsart_uppercase_nonmath() -> Result<()> {
   \@ifnotempty{#2}{\toks@\@xp{\the\toks@\(#2\)}\@xskipmath\@empty}}%
 "
   );
+  Ok(())
+}
+
+/// amsart.cls:1386-1410 (amsbook.cls:1282, amsproc.cls:1322) `\@makecaption`: "#1.\enspace #2" for every caption type, a
+/// newfloat type's and a listing's as a figure's (`\lx@makecaption`, latex_constructs_rust_only.rs), the `\enspace` a
+/// space here; and the fonts it sets them in (amsart.cls:1354-1355), whose `\@captionheadfont` tells caption the class is
+/// an AMS one (caption_sty.rs `CAPTION_DEFAULT_LABELSEP`, caption3.sty:1138). The classes' own, so their bindings call
+/// it (ams_core_cls.rs, amsbook_cls.rs; lmcs and acmart through amsart), not ams_support, which amsaddr and the
+/// `\curraddr`/`\subjclass` autoloads bring to any class: under article the captions keep the kernel's "Figure 1:",
+/// "Listing 1:", and under caption "Program 1:" (pdflatex), where Perl's ams_support.sty.ltxml:192-193 gives figures
+/// and tables ". " there too (KNOWN_PERL_ERRORS #1140). Guards
+/// `perfect_kernel_batch78y::{amsart_newfloat_caption_takes_the_class_format, caption_*, amsaddr_*}`.
+pub fn ams_class_caption_format() -> Result<()> {
+  DefMacro!("\\@captionheadfont", "\\scshape");
+  DefMacro!("\\@captionfont", "\\normalfont");
+  DefMacro!("\\lx@makecaption{}{}", "\\lx@tag[][. ]{\\lx@fnum@@{#1}}#2");
+  DefMacro!("\\format@title@figure{}", "\\lx@makecaption{figure}{#1}");
+  DefMacro!("\\format@title@table{}", "\\lx@makecaption{table}{#1}");
   Ok(())
 }
 

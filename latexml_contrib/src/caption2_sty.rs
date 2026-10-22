@@ -77,6 +77,9 @@ LoadDefinitions!({
   RawTeX!(r"\def\lx@captiontwo@close{{\captionlabeldelim}\ifx\captionlabelsep\@empty\else\space\fi}");
   DefMacro!("\\format@title@figure{}", "\\lx@tag[][\\lx@captiontwo@close]{\\lx@fnum@@{figure}}#1");
   DefMacro!("\\format@title@table{}", "\\lx@tag[][\\lx@captiontwo@close]{\\lx@fnum@@{table}}#1");
+  // caption2.sty:338 `\renewcommand\LT@makecaption`: a longtable's caption is caption2's too (longtable_sty.rs
+  // `\lx@longtable@format`).
+  RawTeX!(r"\def\lx@longtable@classformat{}");
   // caption2.sty:133-142: the predefined styles, each a caption3 layout (`\caption@make{<layout>}`),
   // which is presentation: named so `\captionstyle`/`\renewcaptionstyle` find them, never typeset.
   RawTeX!(r"\providecommand*\caption@make[1]{}

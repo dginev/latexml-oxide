@@ -339,6 +339,20 @@ LoadDefinitions!({
   DefMacro!("\\fnum@algorithm", "\\algorithmcfname\\nobreakspace\\thealgorithm");
   DefMacro!("\\fnum@font@algorithm", "\\bf");
   DefMacro!("\\ext@algorithm", "loa");
+  // algorithm2e makes its algorithms' captions itself (`\algocf@makecaption`, algorithm2e.sty:2287-2318), not through
+  // `\@makecaption`, so caption's settings reach none of them: under acmart's `\captionsetup{labelfont={sf, small},…}`
+  // the PDF's "Algorithm 1: …" keeps algorithm2e's fonts (1908.06049, 2205.14076; caption_sty.rs `caption_format_tokens`).
+  // Guard `perfect_kernel_batch78y::algorithm2e_caption_is_not_caption_s`.
+  AssignValue!("lx@caption@own@algorithm" => true, Scope::Global);
+  // algorithm2e.sty:2285-2289 `\algocf@captiontext`: "Algorithm 1: text", the label closed by `\algocf@typo` (a space
+  // under the `french` option, :1154) and `\algocf@capseparator` (":", `\SetAlgoCaptionSeparator`), then
+  // `\nobreakspace`. Perl's binding defines none, so its label closes with the tag's space ("Algorithm 1 text";
+  // KNOWN_PERL_ERRORS #1140).
+  // A type float.sty made first keeps its own (algorithm.sty's `\newfloat{algorithm}` beside `[algo2e]`, whose
+  // captions caption formats: caption_sty.rs `caption_format_tokens`). Guards
+  // `perfect_kernel_batch78y::{algorithm2e_caption_is_not_caption_s, algorithm2e_caption_closes_with_its_separator}`.
+  RawTeX!(r"\@ifundefined{format@title@algorithm}{\long\def\format@title@algorithm#1{%
+\lx@tag[][\algocf@typo\algocf@capseparator\space]{\lx@fnum@@{algorithm}}#1}}{}");
 
   // {algorithm}, {algorithm*}, {algorithm2e}, {algorithm2e*} environments.
   // Perl algorithm2e.sty.ltxml L62-64 loops a FULL `DefEnvironment` over each

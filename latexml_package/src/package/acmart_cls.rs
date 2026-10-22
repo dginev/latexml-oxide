@@ -5,6 +5,7 @@ use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 use crate::{
   engine::latex_constructs::{after_float, before_float},
   float_description::{define_float_description, float_description_tokens},
+  package::caption_sty,
   prelude::*,
 };
 
@@ -891,6 +892,46 @@ yysep={,},notesep={, }}}
     if format == "sigchi-a" {
       RawTeX!(r"\@ACM@sigchiamodetrue\renewcommand{\familydefault}{\sfdefault}");
     }
+  }
+  // acmart.cls:214-254: the manuscript, journal and bibstrip flags by format, the journal formats manuscript, acmsmall,
+  // acmlarge, acmtog and acmcp (the class's own tests, and papers', read them: the caption settings below, the
+  // placeholder conference further down).
+  RawTeX!(r"\ifnum\ACM@format@nr=0\relax\@ACM@manuscripttrue\else\@ACM@manuscriptfalse\fi
+\ifcase\ACM@format@nr\relax\@ACM@journaltrue\or\@ACM@journaltrue\or\@ACM@journaltrue
+\or\@ACM@journaltrue\@ACM@journal@bibstrip@or@togtrue\or\@ACM@journalfalse\or\@ACM@journalfalse\or\@ACM@journalfalse
+\or\@ACM@journalfalse\or\@ACM@journalfalse\or\@ACM@journalfalse\@ACM@engagetrue\or\@ACM@journaltrue\fi
+\if@ACM@journal\@ACM@journal@bibstriptrue\@ACM@journal@bibstrip@or@togtrue\else\@ACM@journal@bibstripfalse\fi");
+  // acmart.cls:952-984, after its `\RequirePackage{caption, float}` (:951): caption's settings by format, which every
+  // caption type takes alike — figure, table, a float.sty or newfloat type (minted's `listing`: sigplan's "Listing
+  // 1.", 1807.03757) and the class's own — over caption's AMS default ". " (caption-ams-smf.sto; acmart is amsart's,
+  // caption_sty.rs `CAPTION_DEFAULT_LABELSEP`): the journal formats "Fig. 1. text", sigconf and the other conference
+  // formats "Figure 1: text", sigplan "Figure 1. text". Before, every format read ". " from amsart's `\@makecaption`
+  // and a float.sty type ": " (review rev78s2 finding 5). The names and separators only: the class's caption fonts —
+  // the journals' small sans serif, the conferences' bold, siggraph's italic text, sigchi's small figure and table
+  // captions — are set under the class caption fonts knob alone (caption_sty.rs `CLASS_CAPTION_FONTS`, off by
+  // default; OXIDIZED_DESIGN_DIVERGENCES #884). Guards `perfect_kernel_batch78y::acmart_*`.
+  if caption_sty::class_caption_fonts() {
+    RawTeX!(r"\captionsetup[table]{position=top}
+\if@ACM@journal
+  \captionsetup{labelfont={sf, small},textfont={sf, small}, margin=\z@}\captionsetup[figure]{name={Fig.}}
+\else
+  \captionsetup{labelfont={bf},textfont={bf}, labelsep=colon, margin=\z@}
+  \ifcase\ACM@format@nr\relax\or\or\or\or
+  \or\captionsetup{textfont={it}}
+  \or\captionsetup{labelfont={bf},textfont={normalfont}, labelsep=period, margin=\z@}
+  \or\captionsetup[figure]{labelfont={bf, small},textfont={bf, small}}\captionsetup[table]{labelfont={bf, small},textfont={bf, small}}
+  \or\captionsetup[figure]{labelfont={bf, small},textfont={bf, small}}\captionsetup[table]{labelfont={bf, small},textfont={bf, small}}
+  \or\or
+  \fi
+\fi");
+  } else {
+    RawTeX!(r"\captionsetup[table]{position=top}
+\if@ACM@journal
+  \captionsetup{margin=\z@}\captionsetup[figure]{name={Fig.}}
+\else
+  \captionsetup{labelsep=colon, margin=\z@}
+  \ifnum\ACM@format@nr=6 \captionsetup{labelsep=period}\fi
+\fi");
   }
   // The class's title-block fonts by format, which papers set their own title lines in (`\@titlefont`: 12 papers that
   // ship acmart.cls, 2 on TeX Live's: 2006.07812, 2201.00614, 2201.05893; `\@authorfont`/`\@affiliationfont`:

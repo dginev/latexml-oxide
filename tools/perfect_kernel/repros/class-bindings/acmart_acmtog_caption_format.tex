@@ -1,0 +1,28 @@
+% mechanism: acmart.cls:952-984 (TL 2025 v2.16) sets caption's settings by format, which every caption type takes alike:
+%   the journal formats `labelfont={sf, small},textfont={sf, small}` and `\captionsetup[figure]{name={Fig.}}` over
+%   caption's AMS default separator `.\enspace` (caption-ams-smf.sto:41; acmart loads amsart). acmart_cls.rs issued none
+%   and never set `\if@ACM@journal` (acmart.cls:214-254), so figure and table read amsart's ". ", a newfloat or
+%   float.sty type the kernel's ": ".
+% witness: 1807.03757 (sigplan, minted's float.sty `listing`: PDF "Listing 1."); review rev78s2 finding 5
+% oracle:  pdflatex 0 errors; "Fig. 1. Fig one.", "Table 1. Tab one.", "Listing 1. Code one.", "Program 1. Prog one."
+% engines: perl 0.8.8: caption settings not applied (KNOWN_PERL_ERRORS #795): "Figure 1. ", "Table 1. ", "List of
+%   listings 1 " (KPE #1124), "Program 1: ";
+%   rust int65a: "Figure 1"/"Table 1" ". ", "Listing 1"/"Program 1" ": ", no caption fonts
+% expect:  0 errors, 0 warnings; the labels "Fig. 1", "Table 1", "Listing 1", "Program 1" closed by ". ";
+%   no caption fonts (the class's under the class caption fonts knob alone: caption_sty.rs `CLASS_CAPTION_FONTS`, user ruling 2026-10-22)
+% status:  GREEN (78y; the fonts behind the knob since 78y r2)
+\documentclass[acmtog,nonacm]{acmart}
+\usepackage{newfloat}
+\DeclareFloatingEnvironment[name=Listing]{listing}
+\floatstyle{plain}
+\newfloat{program}{tbp}{lop}
+\floatname{program}{Program}
+\begin{document}
+\title{T}
+\author{A}
+\maketitle
+\begin{figure}[h]\centering X\caption{Fig one.}\end{figure}
+\begin{table}[h]\caption{Tab one.}\centering\begin{tabular}{c}Y\end{tabular}\end{table}
+\begin{listing}[h]Z\caption{Code one.}\end{listing}
+\begin{program}[h]W\caption{Prog one.}\end{program}
+\end{document}

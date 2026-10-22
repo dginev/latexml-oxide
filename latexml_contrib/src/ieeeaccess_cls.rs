@@ -8,6 +8,18 @@ use crate::shipped_class::{class_option_given, shipped_class_loads_or};
 
 LoadDefinitions!({
   LoadClass!("IEEEtran");
+  // ieeeaccess.cls:212-245 (1910.07402's copy) `\@makecaption`: a table's caption "TABLE 1. text" on one line, as a
+  // figure's "FIGURE 1. text", in place of IEEEtran's label over the text (ieeetran_cls.rs); caption, when loaded,
+  // replaces it (caption_sty.rs). The names and numbers (:244-262): figures "FIGURE", tables arabic, Roman under the
+  // `jtehm` option, in place of IEEEtran's "Fig." and Roman tables. The label's `\figcapheadfont` (bold sans serif in
+  // the class's blue) is not set (caption_sty.rs `CLASS_CAPTION_FONTS`). Guards
+  // `perfect_kernel_batch73a::ieeeaccess_figure_is_a_figure`, `perfect_kernel_batch78y::ieeeaccess_caption_names`.
+  caption_sty::class_makecaption_label("", ". ", false)?;
+  if class_option_given("jtehm")? {
+    RawTeX!(r"\def\thetable{\@Roman\c@table}\def\figurename{FIGURE}");
+  } else {
+    RawTeX!(r"\def\thetable{\@arabic\c@table}\def\figurename{FIGURE}");
+  }
   RequirePackage!("ifpdf");
   // ieeeaccess.cls:121-131 (1901.05553's copy; 241, 251 in others): `\RequirePackage{color}`, then, unless the
   // `jtehm` option (:36), `\RequirePackage{spotcolor}` for the PANTONE blue, whose `\NewSpotColorSpace`/`\AddSpotColor`/

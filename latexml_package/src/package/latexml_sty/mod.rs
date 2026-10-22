@@ -36,6 +36,14 @@ LoadDefinitions!({
   DeclareOption!("nocomments", {
     AssignValue!("INCLUDE_COMMENTS" => false, Scope::Global);
   });
+  // RUST-ONLY: the class caption fonts knob, off by default (caption_sty.rs `CLASS_CAPTION_FONTS`; user ruling
+  // 2026-10-22). Read as the class loads, so set ahead of it (`--preload=[classcaptionfonts]latexml.sty`).
+  DeclareOption!("classcaptionfonts", {
+    AssignValue!(caption_sty::CLASS_CAPTION_FONTS => true, Scope::Global);
+  });
+  DeclareOption!("noclasscaptionfonts", {
+    AssignValue!(caption_sty::CLASS_CAPTION_FONTS => false, Scope::Global);
+  });
 
   // 'nobibtex': used for arXiv-like build harnesses where only ".bbl" is available
   // (bibtex will not be ran). 'bibtex' is the default (try bib, fall back to bbl).

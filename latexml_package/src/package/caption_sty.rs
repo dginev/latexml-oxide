@@ -2,6 +2,24 @@ use latexml_core::{definition::ExpansionBody, mouth::tokenize};
 
 use crate::prelude::*;
 
+/// The label separator `labelsep=default` (or none set) names: caption's default for the document class
+/// (`default` under an AMS class, else `colon`), set as caption loads.
+const CAPTION_DEFAULT_LABELSEP: &str = "lx@caption@default@labelsep";
+
+/// The class caption fonts knob (user ruling 2026-10-22), off by default: a class binding ports its caption format as
+/// names and separators ("Fig. 1. text", "TABLE I" over the text), and the fonts the class sets its caption labels and
+/// text in (acmart's bold or small sans serif, IEEEtran's small caps and compsoc sans serif, jfm's small caps, webofc's
+/// and jinstpub's bold label) only with this set, so an HTML theme styles every caption alike. Set by latexml.sty's
+/// `classcaptionfonts` option ahead of the class: `--preload=[classcaptionfonts]latexml.sty` as the first preload (a
+/// repeat load of latexml.sty, after ar5iv.sty's, finds the option's handler spent: docs/SYNC_STATUS.md);
+/// `noclasscaptionfonts` clears it. Readers: [`class_caption_fonts`]. Not the class's, so not behind it: a package's own caption fonts (algorithm2e's
+/// `\fnum@font@algorithm`) and the document's `\captionsetup` keys. OXIDIZED_DESIGN_DIVERGENCES #884. Guards
+/// `perfect_kernel_batch78y::*_with_class_caption_fonts`.
+pub const CLASS_CAPTION_FONTS: &str = "CLASS_CAPTION_FONTS";
+
+/// Whether a class binding sets its caption fonts ([`CLASS_CAPTION_FONTS`]), read as the class loads.
+pub fn class_caption_fonts() -> bool { lookup_bool(CLASS_CAPTION_FONTS) }
+
 /// Environments whose body is read VERBATIM from the raw input, so `\captionof`
 /// must not open one to host its caption — the terminator it would need is in
 /// the token stream, where such an environment never looks. See
@@ -321,6 +339,25 @@ LoadDefinitions!({
   // the deprecated call (RUST-ONLY: Perl seeds no separators). Guard:
   // `perfect_kernel_batch56::caption_lsep_default_keeps_magyar_off_the_removed_internal`.
   RawTeX!(r"\newcommand*\caption@lsep@default{\caption@labelseparator@default\caption@labelsep}");
+  // caption3.sty:1125-1171 reads the document class for its defaults: an AMS or SMF class (`\@captionheadfont`
+  // defined: amsart, amsbook, amsproc and the classes built on them, acmart; ams_support_sty.rs) loads
+  // caption-ams-smf.sto, whose `\DeclareCaptionLabelSeparator{default}{.\enspace}` (:41) is the default separator
+  // ("Program 1. …" for a float.sty type, where amsart alone prints float.sty's "Program 1: …"; the `\enspace` the space
+  // amsart's own format has, ams_support_sty.rs); any other class here takes caption3.sty:787
+  // `\SetCaptionDefault{labelseparator}{colon}` (the KOMA, memoir and beamer stand-ins default to ": " as well).
+  // Caption replaces the class's `\@makecaption` (`\lx@makecaption`, latex_constructs_rust_only.rs) with its own, in
+  // that separator, so a newfloat type's caption and a listing's are "Listing 1: …", not IEEEtran's "Listing 1. …";
+  // caption's kernel alone keeps the class's (`\lx@caption@kernel@only`, which a later full load clears). Guards
+  // `perfect_kernel_batch78y::{ieeetran_caption_yields_to_caption, caption_settings_reach_a_listing,
+  // caption_under_an_ams_class_closes_every_type_with_a_period}`.
+  if is_defined("\\@captionheadfont") {
+    RawTeX!(r"\DeclareCaptionLabelSeparator{default}{. }\long\def\lx@caption@makecaption#1#2{\lx@tag[][. ]{\lx@fnum@@{#1}}#2}");
+    AssignValue!(CAPTION_DEFAULT_LABELSEP => "default", Scope::Global);
+  } else {
+    RawTeX!(r"\long\def\lx@caption@makecaption#1#2{\lx@tag[][: ]{\lx@fnum@@{#1}}#2}");
+    AssignValue!(CAPTION_DEFAULT_LABELSEP => "colon", Scope::Global);
+  }
+  RawTeX!(r"\AtBeginDocument{\@ifundefined{lx@caption@kernel@only}{\let\lx@makecaption\lx@caption@makecaption}{}}");
   // caption3.sty:830-836 `\DeclareCaptionFont[<package>]{name}{code}`: `\caption@font@<name>`, a one-argument macro
   // (the value of `name=value`, as `color=blue`) a font option (`font=`, `labelfont=`, `textfont=`) runs
   // (`caption_font_tokens`). The predefined ones, caption3.sty:860-950 and :1365-1375; the spacing ones are layout.
@@ -1443,29 +1480,46 @@ fn caption_text_is_empty(text: &Tokens) -> bool {
 /// (`name=`), its label format (`labelformat=`, the type's `\fnum@<type>` for `original`/`default`), its label
 /// separator (`labelsep=`, none for an empty caption, :1680-1683), its fonts (`font=` for the whole caption,
 /// `labelfont=` for the label, `textfont=` for the text) and its text format (`textformat=`). With none set the
-/// caption is the class's (`\lx@format@title@@`). Sub-captions keep their packages' formats (subcaption_sty.rs,
-/// subfig_sty.rs).
+/// caption is the class's (`\lx@format@title@@`), whose `\@makecaption` caption has replaced by its own
+/// (`\lx@caption@makecaption`) — but a float.sty float's, which float.sty makes itself and caption makes instead
+/// (caption.sty:856-868), takes caption's default separator for the class (`CAPTION_DEFAULT_LABELSEP`: acmart's journal
+/// formats "Program 1. …", review rev78s2 finding 5), except after caption's kernel alone (`\lx@caption@kernel@only`:
+/// floatrow, subfig's `caption=false`), which formats nothing. Sub-captions keep their packages' formats
+/// (subcaption_sty.rs, subfig_sty.rs).
 fn caption_format_tokens(ty: Tokens, text: Tokens) -> Result<Tokens> {
   let ty_name = ty.to_string().trim().to_string();
   let text_empty = caption_text_is_empty(&text);
   // A `\captionof` panel a binding hosts (`\lx@caption@hosted`, `\@captionof@`) is caption's `\caption` of that
-  // type, so caption formats it as any other: its default separator `colon` (caption3.sty:787
+  // type, so caption formats it as any other, after caption's kernel alone too: its default separator (caption3.sty:787
   // `\SetCaptionDefault{labelseparator}{colon}`), its `labelformat=` (`empty`: no label, 2605.30420) and its own fonts
   // in place of the sub-float package's (1608.05355, 1806.00503).
   let hosted = lookup_bool("lx@caption@hosted");
   let get = |key: &str| caption_setting(&ty_name, key);
   let format = get("labelformat").filter(|f| f != "default" && f != "original");
-  let separator = get("labelsep")
-    .filter(|s| s != "default")
-    .or_else(|| hosted.then(|| "colon".to_string()));
+  let float_sty_caption =
+    lookup_bool(&s!("float@style@{ty_name}")) && !is_defined("\\lx@caption@kernel@only");
+  let separator = get("labelsep").filter(|s| s != "default").or_else(|| {
+    (hosted || float_sty_caption).then(|| {
+      let default = lookup_string(CAPTION_DEFAULT_LABELSEP);
+      if default.is_empty() {
+        "colon".to_string()
+      } else {
+        default
+      }
+    })
+  });
   let (font, label_font, text_font) = (get("font"), get("labelfont"), get("textfont"));
   // caption3.sty:1680-1683: an empty text also takes the `simple` text format (`textformat=period` adds no ".").
   let text_format = get("textformat").filter(|f| f != "simple" && f != "default" && !text_empty);
   let name = lookup_tokens(&s!("CAPTION_{ty_name}_name@tokens"));
   let mut tokens = Vec::new();
   let mut line_break: Vec<Token> = Vec::new();
-  // No type (a caption whose type an argument scan lost) has nothing to format.
+  // No type (a caption whose type an argument scan lost) has nothing to format, nor a type whose package makes its
+  // captions itself (`lx@caption@own@<type>`: algorithm2e's `algorithm`, algorithm2e_sty.rs) — unless float.sty made
+  // the type, whose captions caption makes (algorithm.sty's `\newfloat{algorithm}` beside `[algo2e]{algorithm2e}`:
+  // "Algorithm 1 Leakage Removal", 2204.02306, 1812.03871, 2408.08621).
   let passthrough = ty_name.is_empty()
+    || (lookup_bool(&s!("lx@caption@own@{ty_name}")) && !float_sty_caption)
     || (ty_name.starts_with("sub") && !hosted)
     || (format.is_none()
       && separator.is_none()
@@ -1483,8 +1537,11 @@ fn caption_format_tokens(ty: Tokens, text: Tokens) -> Result<Tokens> {
   };
   if !passthrough {
     tokens.push(T_CS!("\\begingroup"));
-    if hosted {
-      // caption3.sty:1686 `\caption@applyfont`: caption's fonts, not subfigure.sty's `\subcapsize\subcaplabelfont`.
+    // caption3.sty:1686 `\caption@applyfont`: caption's fonts, not subfigure.sty's `\subcapsize\subcaplabelfont` — nor
+    // float.sty's `\@fs@cfont` (`\rmfamily` for the plain styles, float_sty.rs `\fnum@font@<type>`), as caption makes a
+    // float.sty caption with its own `\caption@@make` (caption.sty:860-861): acmart sigchi-a's "Program 1" in the sans
+    // body, not serif (review rev78y finding 5).
+    if hosted || float_sty_caption {
       for font_cs in [s!("fnum@font@{ty_name}"), s!("format@title@font@{ty_name}")] {
         tokens.extend([T_CS!("\\let"), T_CS!(&s!("\\{font_cs}")), T_CS!("\\@empty")]);
       }
@@ -1693,36 +1750,62 @@ pub fn sub_label_tokens(keys: &[String], default: &str, number: Tokens) -> Resul
 /// A class's own `\@makecaption` whose label is set in `font` and closed by `close`, the close set in the label's font
 /// too when `close_in_font`: "**Figure 1.** …", the period in the bold (webofc.cls:788-812 `\@CaptionTitleFont #1
 /// \@FloatCounterEnd\@FloatCounterSep` in one group, `\@FloatCounterSep` ". ", :786), or "**Figure 1**. …", the period
-/// after it (jinstpub.sty:362-378 `\textbf{\figurename\nobreakspace\thefigure}` with `#1. #2`): the figure's and
-/// table's title format (`\format@title@<type>`, its label font `\fnum@font@<type>`, sect09.rs; as amsart's,
-/// ams_support_sty.rs, and jfm's, jfm_cls.rs, which drops its period on `\removefullpoint`), set at `\begin{document}`
-/// unless the document loaded caption, which replaces the class's `\@makecaption` — caption's kernel alone
-/// (`\lx@caption@kernel@only`: floatrow.sty:39, subfig's `caption=false`) keeps it. The kernel's caption keeps
+/// after it (jinstpub.sty:362-378 `\textbf{\figurename\nobreakspace\thefigure}` with `#1. #2`): the class's caption
+/// format `\lx@makecaption` (latex_constructs_rust_only.rs), which the figure's and table's title formats
+/// (`\format@title@<type>`, their label font `\fnum@font@<type>`, sect09.rs) and every other kernel float's
+/// (newfloat_sty.rs, listings_sty.rs) take, installed as [`class_makecaption`] installs it. The kernel's caption keeps
 /// LaTeXML's own `\@makecaption`, so the class's label format was "Figure 1:" (2610.23498 webofc, 2006.05543 jinstpub).
+/// The font is the class's caption font, set only under [`CLASS_CAPTION_FONTS`]; without it the label is unstyled and
+/// its close the tag's ("Figure 1" closed by ". ").
 pub fn class_makecaption_label(font: &str, close: &str, close_in_font: bool) -> Result<()> {
+  let font = if class_caption_fonts() { font } else { "" };
   // (the label, `\lx@fnum@@`'s own group in `font`; with the close's text after it in a group of that font, its trailing
   // space the tag's close)
-  let title = |kind: &str| {
-    let (label, close) = if close_in_font {
-      let text = close.trim_end();
-      (
-        s!(r"{{{font}\lx@fnum@@{{{kind}}}{text}}}"),
-        &close[text.len()..],
-      )
-    } else {
-      (s!(r"\lx@fnum@@{{{kind}}}"), close)
-    };
-    s!(r"\def\format@title@{kind}##1{{\lx@tag[][{close}]{{{label}}}##1}}")
+  let (label, close) = if close_in_font && !font.is_empty() {
+    let text = close.trim_end();
+    (
+      s!(r"{{{font}\lx@fnum@@{{##1}}{text}}}"),
+      &close[text.len()..],
+    )
+  } else {
+    (s!(r"\lx@fnum@@{{##1}}"), close)
   };
+  class_makecaption(&s!(
+    r"\def\fnum@font@float{{{font}}}\def\fnum@font@figure{{{font}}}\def\fnum@font@table{{{font}}}%
+\long\def\lx@makecaption##1##2{{\lx@tag[][{close}]{{{label}}}##2}}%
+\long\def\format@title@figure##1{{\lx@makecaption{{figure}}{{##1}}}}%
+\long\def\format@title@table##1{{\lx@makecaption{{table}}{{##1}}}}"
+  ))
+}
+
+/// Install `code`, a class's own `\@makecaption` (its `\lx@makecaption`, latex_constructs_rust_only.rs, and the figure's
+/// and table's formats, `\format@title@<type>`, with their fonts; a macro parameter written `##1`), at
+/// `\begin{document}` unless the document loaded caption, which replaces the class's `\@makecaption` — caption's kernel
+/// alone (`\lx@caption@kernel@only`: floatrow.sty:39, subfig's `caption=false`) keeps it. Callers:
+/// [`class_makecaption_label`] (webofc, jinstpub, ieeeaccess, ieeeoj, ieeetj), jfm_cls.rs, ieeetran_cls.rs. Guards
+/// `perfect_kernel_batch78a::jfm_copy_caption_yields_to_caption_loaders`,
+/// `perfect_kernel_batch78y::ieeetran_caption_yields_to_caption`.
+///
+/// A figure or table that float.sty restyled (`\restylefloat{table}`, float_sty.rs `record_float_style`) keeps the
+/// format it had: its captions are float.sty's `\float@caption` (float.sty:37-52), not the class's `\@makecaption`
+/// (2006.08364 under IEEEtran: "TABLE I: List of …" on one line; `\lx@class@floatsty@kept`).
+pub fn class_makecaption(code: &str) -> Result<()> {
+  // (the restyled types' formats, saved before the class's code and restored after it)
+  DefMacro!("\\lx@class@floatsty@kept{}", sub[(code)] {
+    let restyled: Vec<&str> =
+      ["figure", "table"].into_iter().filter(|ty| lookup_bool(&s!("float@style@{ty}"))).collect();
+    let keep = |from: &str, to: &str| -> String {
+      restyled.iter().map(|ty| s!(r"\let\{to}{ty}\{from}{ty}")).collect()
+    };
+    let mut tokens = TokenizeInternal!(TeXString::assembled(keep("format@title@", "lx@floatsty@format@"))).unlist();
+    tokens.extend(code.unlist());
+    tokens.extend(TokenizeInternal!(TeXString::assembled(keep("lx@floatsty@format@", "format@title@"))).unlist());
+    Ok(Tokens::new(tokens))
+  });
   RawTeX!(&s!(
-    r"\def\lx@class@captionformat{{%
-\def\fnum@font@figure{{{font}}}\def\fnum@font@table{{{font}}}%
-{}%
-{}}}
+    r"\def\lx@class@captionformat{{\lx@class@floatsty@kept{{{code}}}}}
 \AtBeginDocument{{\@ifpackageloaded{{caption}}%
-{{\@ifundefined{{lx@caption@kernel@only}}{{}}{{\lx@class@captionformat}}}}{{\lx@class@captionformat}}}}",
-    title("figure"),
-    title("table")
+{{\@ifundefined{{lx@caption@kernel@only}}{{}}{{\lx@class@captionformat}}}}{{\lx@class@captionformat}}}}"
   ));
   Ok(())
 }

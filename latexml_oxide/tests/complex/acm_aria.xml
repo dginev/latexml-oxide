@@ -30,6 +30,6 @@
       <p>example-b</p>
     </figure>
     <toccaption><tag close=" ">1</tag>caption text</toccaption>
-    <caption><tag close=". ">Figure 1</tag>caption text<note class="ltx_nodisplay ltx_acm_description_short" xml:id="acmlabel1-short">Fly 1 and Fly 2 look identical</note><note class="ltx_nodisplay ltx_acm_description" xml:id="acmlabel1">Fly 1 and fly 2 comparison shows identical length, wingspan, and overall bodily structure.</note></caption>
+    <caption><tag close=". ">Fig. 1</tag>caption text<note class="ltx_nodisplay ltx_acm_description_short" xml:id="acmlabel1-short">Fly 1 and Fly 2 look identical</note><note class="ltx_nodisplay ltx_acm_description" xml:id="acmlabel1">Fly 1 and fly 2 comparison shows identical length, wingspan, and overall bodily structure.</note></caption>
   </figure>
 </document>

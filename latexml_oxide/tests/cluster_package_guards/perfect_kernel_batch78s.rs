@@ -475,7 +475,7 @@ fn caption_label_format_names_a_float_sty_type() {
     &xml,
     "caption",
     &[],
-    "<caption><tag close=\": \">[Listing]\u{a0}1</tag> One.</caption>",
+    "<caption><tag close=\": \">[Listing]\u{a0}1</tag>One.</caption>",
   );
   assert!(
     xml.contains("<caption><tag close=\": \">[Figure]\u{a0}1</tag>Two.</caption>"),

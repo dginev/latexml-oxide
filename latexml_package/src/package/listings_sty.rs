@@ -3367,13 +3367,19 @@ LoadDefinitions!({
 
   // Caption macros. The list entry is the `[short]`, or the caption without one, chosen as the kernel's
   // `\@caption@@@` does (a `[short]` opening with a conditional, KNOWN_PERL_ERRORS #468).
+  // listings.sty:1675 `\def\lst@makecaption{\def\@captype{lstlisting}\@makecaption}`: the caption is the class's
+  // `\@makecaption`'s (`\lx@makecaption`, latex_constructs_rust_only.rs: "Listing 1: text", amsart's and IEEEtran's
+  // "Listing 1. text"), and caption's when caption is loaded, which formats listings' captions as a float's
+  // (`\lx@format@caption@@`, caption_sty.rs; caption.sty supports listings), where Perl's binding keeps
+  // "Listing 1: text" for every class (listings.sty.ltxml:221-227). Guards
+  // `perfect_kernel_batch78y::{ieeetran_listings_caption_takes_the_figure_format, caption_settings_reach_a_listing}`.
   DefMacro!("\\lstlisting@makecaption[]{}",
     "\\def\\@captype{lstlisting}\
      \\@@add@caption@counters\
      \\@@toccaption{\\lx@format@toctitle@@{lstlisting}{\\lx@toc@copy@text{#1}{#2}}}\
-     \\lx@@caption{\\lx@format@title@@{lstlisting}{#2}}");
+     \\lx@@caption{\\lx@format@caption@@{lstlisting}{#2}}");
   DefMacro!("\\fnum@lstlisting", "\\lstlistingname\\nobreakspace\\thelstlisting");
-  DefMacro!("\\format@title@lstlisting{}", "\\lx@tag[][: ]{\\fnum@lstlisting}#1");
+  DefMacro!("\\format@title@lstlisting{}", "\\lx@makecaption{lstlisting}{#1}");
   // The toc copy is digested with notes and `\label` neutralized (DIVERGENCES #399; 2605.15775).
   DefMacro!("\\lstlisting@maketitle{}", "\\@@toccaption{{\\lx@toc@copy@neutralize\\lx@reread@copy#1}}\\lx@@caption{#1}");
   DefMacro!("\\lstlisting@maketoctitle{}", "\\@@toccaption{{\\lx@toc@copy@neutralize#1}}");

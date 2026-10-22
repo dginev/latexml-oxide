@@ -17607,3 +17607,31 @@ takes caption's global settings in pdflatex ("Snippet 1. Plain.", Perl "Snippet 
 Repros captions-floats/caption_ruled_float_sty_float_takes_its_style, caption_declared_ruled_style_formats_a_ruled_float;
 guards `perfect_kernel_batch78v::{caption_ruled_float_sty_float_takes_its_style,
 caption_declared_ruled_style_formats_a_ruled_float}`.
+
+## 1140. A class's or package's caption format is not ported: acmart's caption settings, IEEEtran's `\@makecaption`, algorithm2e's separator; ams_support's under any class
+
+acmart.cls:952-984 sets caption's options by format after its `\RequirePackage{caption, float}` (:951): the journal
+formats `\captionsetup[figure]{name={Fig.}}` over caption's AMS default separator `.\enspace` (caption-ams-smf.sto:41;
+acmart is amsart's), sigconf and the other conference formats `labelsep=colon`, sigplan `labelsep=period` (with the fonts:
+the journals' small sans serif, the conferences' bold, siggraph's italic text, sigchi's small figure and table). Perl's
+acmart.cls.ltxml loads caption, whose keys it reads none of (#795), so every format prints amsart's "Figure 1. " for
+figures and tables. IEEEtran.cls:2731-2797 `\@makecaption` prints a figure — and every caption type but `table`, a
+newfloat type's or a listing's — "Fig. 1. text", a table's label over its text ("TABLE I" / "TAB ONE."; compsoc journals
+arabic tables, compsoc conferences "TABLE 1. TEXT" on one line and figures "Figure"); Perl's IEEEtran.cls.ltxml keeps the
+kernel's "Figure 1: text" and "TABLE I: text". Perl's listings.sty.ltxml:227 fixes `\format@title@lstlisting` to "Listing
+1: " under every class, where listings.sty:1675 makes its caption with the class's `\@makecaption`. Perl's
+algorithm2e.sty.ltxml defines no `\format@title@algorithm`, so its label closes with the tag's space where
+algorithm2e.sty:2285-2289 prints `\algocf@capseparator` (":"). Perl's ams_support.sty.ltxml:192-193 defines amsart's
+". " figure and table formats in the support package, which amsaddr.sty.ltxml:20 loads under article too, where pdflatex
+keeps the kernel's ": ". Minimal triggers: `\documentclass[sigconf]{acmart}` with `\begin{figure}X\caption{F.}\end{figure}`
+(pdflatex "Figure 1: F.", Perl 0.8.8 "Figure 1. F."); `\documentclass{IEEEtran}` with a captioned figure and table
+(pdflatex "Fig. 1. F." and "TABLE I" over "T.", Perl 0.8.8 "Figure 1: F.", "TABLE I: T."); `\usepackage{algorithm2e}`
+with `\begin{algorithm}\caption{A.}x\;\end{algorithm}` (pdflatex "Algorithm 1: A.", Perl "Algorithm 1 A."); and
+`\documentclass{article}\usepackage{amsaddr}` with a captioned figure (pdflatex "Figure 1: F.", Perl "Figure 1. F.").
+Witness 1807.03757 (sigplan, minted's float.sty `listing`: PDF "Listing 1."; review rev78s2 finding 5). Fixed in Rust
+(78y; OXIDIZED_DESIGN_DIVERGENCES #884), as names and separators (the class's caption fonts behind a knob, off by default):
+acmart_cls.rs issues the settings, ieeetran_cls.rs installs the format (ieeeaccess, ieeeoj, ieeetj with their one-line
+tables and names), algorithm2e_sty.rs its separator, the AMS class bindings their format. Repros
+class-bindings/acmart_*_caption_format, ieeetran_*_caption_format, algorithm2e_caption_closes_with_its_separator,
+amsaddr_article_keeps_the_kernel_caption_format*; guards `perfect_kernel_batch78y::*`.
+

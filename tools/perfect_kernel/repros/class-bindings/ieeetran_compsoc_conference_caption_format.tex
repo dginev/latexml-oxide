@@ -1,0 +1,26 @@
+% mechanism: IEEEtran.cls:2733-2750 (compsoc conference), :2609 ("Figure") and :2826-2831 (arabic tables)
+%   `\@makecaption`: a table's label over its text (one line in compsoc conferences), every other kernel float's — a figure, a
+%   newfloat type — "<label>. <text>"; a float.sty type keeps float.sty's own ": ".
+%   ieeetran_cls.rs kept the kernel's ": " for all (Perl's IEEEtran.cls.ltxml alike).
+% witness: review rev78s2 finding 5 (IEEEtran probe)
+% oracle:  pdflatex 0 errors; "Figure 1. Fig one.", "TABLE 1. TAB ONE." (small caps), "Listing 1. Code one.", "Program 1: Prog one."
+% engines: perl 0.8.8: "Figure 1: ", "TABLE I: ", the newfloat type "List of listings 1 " (KPE #1124); rust int65a: every label closed by ": ", compsoc tables Roman
+% expect:  0 errors, 0 warnings; the PDF's labels and separators, "TABLE 1" closed by ". " before its text;
+%   no caption fonts (the class's under the class caption fonts knob alone: caption_sty.rs `CLASS_CAPTION_FONTS`, user ruling 2026-10-22)
+% status:  GREEN (78y; the fonts behind the knob since 78y r2)
+\documentclass[compsoc,conference]{IEEEtran}
+\usepackage{newfloat}
+\DeclareFloatingEnvironment[name=Listing]{listing}
+\usepackage{float}
+\floatstyle{plain}
+\newfloat{program}{tbp}{lop}
+\floatname{program}{Program}
+\begin{document}
+\title{T}
+\author{A}
+\maketitle
+\begin{figure}[h]\centering X\caption{Fig one.}\end{figure}
+\begin{table}[h]\caption{Tab one.}\centering\begin{tabular}{c}Y\end{tabular}\end{table}
+\begin{listing}[h]Z\caption{Code one.}\end{listing}
+\begin{program}[h]W\caption{Prog one.}\end{program}
+\end{document}

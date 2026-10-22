@@ -50,6 +50,7 @@ LoadDefinitions!({
   RequirePackage!("ams_support");
   ams_support_sty::amsart_author_storage()?;
   ams_support_sty::amsart_uppercase_nonmath()?;
+  ams_support_sty::ams_class_caption_format()?;
   // amsbook.cls carries amsart's internals line for line (:616 `\newbox\abstractbox`, :638-649 `\@setabstract`/
   // `\@setabstracta`, :1090-1121 the contents lines, `\except`/`\for`, `\@keywords`, `\copyrightinfo`): memo-l.cls
   // (`\LoadClass{amsbook}`, its `\tableofcontents` tests `\ifvoid\abstractbox`; 2412.15928, 2511.16188, 1512.07128)

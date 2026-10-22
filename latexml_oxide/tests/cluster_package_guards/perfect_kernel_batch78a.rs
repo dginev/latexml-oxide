@@ -31,8 +31,9 @@ fn assert_clean(tex: &str, files: &[(&str, &str)], expected: &[(&str, &str, &str
   xml
 }
 
-/// A jfm copy without caption sets its own `\@makecaption` (0712.2739's jfm.cls:953-958): "Figure 1." with the label
-/// in small caps, and `\removefullpoint` drops the period once. Red (int40c): `<tag close=": ">` upright. Repro
+/// A jfm copy without caption sets its own `\@makecaption` (0712.2739's jfm.cls:953-958): "Figure 1.", and
+/// `\removefullpoint` drops the period once (the label's small caps under the class caption fonts knob alone, user
+/// ruling 2026-10-22: `perfect_kernel_batch78y::jfm_with_class_caption_fonts`). Red (int40c): `<tag close=": ">` upright. Repro
 /// class-bindings/jfm_caption. (The empty `<text xml:id=…/>` closing the `autoref` tag is not the class's: every
 /// hyperref figure's autoref tag has it, an article's too — the `\null` that ends hyperref's autoref text,
 /// `\lx@autorefnum@@`, hyperref_sty.rs; a known artifact, pinned as it is.)
@@ -45,19 +46,19 @@ fn jfm_copy_captions_end_the_label_with_a_period() {
       (
         "figure",
         "S0.F1",
-        "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag><text font=\"smallcaps\" xml:id=\"S0.F1.1\">Figure \
-         1</text></tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.2\"/></tag><tag role=\"refnum\">1</tag><tag \
+        "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure \
+         1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag><tag \
          role=\"typerefnum\">Figure 1</tag></tags><toccaption><tag close=\" \">1</tag>Schematic.</toccaption><caption>\
-         <tag close=\". \"><text font=\"smallcaps\" xml:id=\"S0.F1.3\">Figure 1</text></tag>Schematic.</caption>\
+         <tag close=\". \">Figure 1</tag>Schematic.</caption>\
          </figure>",
       ),
       (
         "table",
         "S0.T1",
-        "<table inlist=\"lot\" xml:id=\"S0.T1\"><tags><tag><text font=\"smallcaps\" xml:id=\"S0.T1.1\">Table \
-         1</text></tag><tag role=\"autoref\">Table\u{a0}1<text xml:id=\"S0.T1.2\"/></tag><tag role=\"refnum\">1</tag><tag \
+        "<table inlist=\"lot\" xml:id=\"S0.T1\"><tags><tag>Table \
+         1</tag><tag role=\"autoref\">Table\u{a0}1<text xml:id=\"S0.T1.1\"/></tag><tag role=\"refnum\">1</tag><tag \
          role=\"typerefnum\">Table 1</tag></tags><toccaption><tag close=\" \">1</tag>Values.</toccaption><caption>\
-         <tag close=\" \"><text font=\"smallcaps\" xml:id=\"S0.T1.3\">Table 1</text></tag>Values.</caption></table>",
+         <tag close=\" \">Table 1</tag>Values.</caption></table>",
       ),
     ],
   );
@@ -337,23 +338,23 @@ fn jfm_copy_caption_kept_with_subfigure() {
       (
         "figure",
         "S0.F1",
-        "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag><text font=\"smallcaps\" xml:id=\"S0.F1.1\">Figure \
-         1</text></tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.2\"/></tag><tag role=\"refnum\">1</tag>\
+        "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure \
+         1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag>\
          <tag role=\"typerefnum\">Figure 1</tag></tags><figure xml:id=\"S0.F1.sf1\"><tags><tag><text fontsize=\"80%\" \
          xml:id=\"S0.F1.sf1.1\">(a)</text></tag><tag role=\"autoref\">1(a)<text xml:id=\"S0.F1.sf1.2\"/></tag><tag \
          role=\"refnum\">1(a)</tag></tags><p xml:id=\"S0.F1.sf1.3\">x</p><toccaption><tag close=\" \">(a)</tag>Left.\
          </toccaption><caption><tag close=\" \"><text fontsize=\"80%\" xml:id=\"S0.F1.sf1.4\">(a)</text></tag><text \
          fontsize=\"80%\" xml:id=\"S0.F1.sf1.5\">Left.</text></caption></figure><toccaption><tag close=\" \">1</tag>\
-         Schematic.</toccaption><caption><tag close=\". \"><text font=\"smallcaps\" xml:id=\"S0.F1.3\">Figure 1</text>\
+         Schematic.</toccaption><caption><tag close=\". \">Figure 1\
          </tag>Schematic.</caption></figure>",
       ),
       (
         "table",
         "S0.T1",
-        "<table inlist=\"lot\" xml:id=\"S0.T1\"><tags><tag><text font=\"smallcaps\" xml:id=\"S0.T1.1\">Table \
-         1</text></tag><tag role=\"autoref\">Table\u{a0}1<text xml:id=\"S0.T1.2\"/></tag><tag role=\"refnum\">1</tag>\
+        "<table inlist=\"lot\" xml:id=\"S0.T1\"><tags><tag>Table \
+         1</tag><tag role=\"autoref\">Table\u{a0}1<text xml:id=\"S0.T1.1\"/></tag><tag role=\"refnum\">1</tag>\
          <tag role=\"typerefnum\">Table 1</tag></tags><toccaption><tag close=\" \">1</tag>Values.</toccaption><caption>\
-         <tag close=\" \"><text font=\"smallcaps\" xml:id=\"S0.T1.3\">Table 1</text></tag>Values.</caption></table>",
+         <tag close=\" \">Table 1</tag>Values.</caption></table>",
       ),
     ],
   );
@@ -372,19 +373,19 @@ fn jfm_copy_caption_kept_with_floatrow() {
       (
         "figure",
         "S0.F1",
-        "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag><text font=\"smallcaps\" xml:id=\"S0.F1.1\">Figure \
-         1</text></tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.2\"/></tag><tag role=\"refnum\">1</tag>\
+        "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure \
+         1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag>\
          <tag role=\"typerefnum\">Figure 1</tag></tags><toccaption><tag close=\" \">1</tag>Schematic.</toccaption>\
-         <caption><tag close=\". \"><text font=\"smallcaps\" xml:id=\"S0.F1.3\">Figure 1</text></tag>Schematic.\
+         <caption><tag close=\". \">Figure 1</tag>Schematic.\
          </caption></figure>",
       ),
       (
         "table",
         "S0.T1",
-        "<table inlist=\"lot\" xml:id=\"S0.T1\"><tags><tag><text font=\"smallcaps\" xml:id=\"S0.T1.1\">Table \
-         1</text></tag><tag role=\"autoref\">Table\u{a0}1<text xml:id=\"S0.T1.2\"/></tag><tag role=\"refnum\">1</tag>\
+        "<table inlist=\"lot\" xml:id=\"S0.T1\"><tags><tag>Table \
+         1</tag><tag role=\"autoref\">Table\u{a0}1<text xml:id=\"S0.T1.1\"/></tag><tag role=\"refnum\">1</tag>\
          <tag role=\"typerefnum\">Table 1</tag></tags><toccaption><tag close=\" \">1</tag>Values.</toccaption><caption>\
-         <tag close=\" \"><text font=\"smallcaps\" xml:id=\"S0.T1.3\">Table 1</text></tag>Values.</caption></table>",
+         <tag close=\" \">Table 1</tag>Values.</caption></table>",
       ),
     ],
   );
@@ -482,21 +483,21 @@ fn jfm_copy_caption_kept_with_subfig_without_caption() {
       (
         "figure",
         "S0.F1",
-        "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag><text font=\"smallcaps\" xml:id=\"S0.F1.1\">Figure \
-         1</text></tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.2\"/></tag><tag role=\"refnum\">1</tag>\
+        "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure \
+         1</tag><tag role=\"autoref\">Figure\u{a0}1<text xml:id=\"S0.F1.1\"/></tag><tag role=\"refnum\">1</tag>\
          <tag role=\"typerefnum\">Figure 1</tag></tags><figure xml:id=\"S0.F1.sf1\"><tags><tag>(a)</tag><tag \
          role=\"autoref\">1a<text xml:id=\"S0.F1.sf1.1\"/></tag><tag role=\"refnum\">1a</tag></tags><p \
          xml:id=\"S0.F1.sf1.2\">A</p><toccaption><tag close=\" \">a</tag>Left.</toccaption><caption><tag close=\" \">\
          (a)</tag>Left.</caption></figure><toccaption><tag close=\" \">1</tag>Schematic.</toccaption><caption><tag \
-         close=\". \"><text font=\"smallcaps\" xml:id=\"S0.F1.3\">Figure 1</text></tag>Schematic.</caption></figure>",
+         close=\". \">Figure 1</tag>Schematic.</caption></figure>",
       ),
       (
         "table",
         "S0.T1",
-        "<table inlist=\"lot\" xml:id=\"S0.T1\"><tags><tag><text font=\"smallcaps\" xml:id=\"S0.T1.1\">Table \
-         1</text></tag><tag role=\"autoref\">Table\u{a0}1<text xml:id=\"S0.T1.2\"/></tag><tag role=\"refnum\">1</tag>\
+        "<table inlist=\"lot\" xml:id=\"S0.T1\"><tags><tag>Table \
+         1</tag><tag role=\"autoref\">Table\u{a0}1<text xml:id=\"S0.T1.1\"/></tag><tag role=\"refnum\">1</tag>\
          <tag role=\"typerefnum\">Table 1</tag></tags><toccaption><tag close=\" \">1</tag>Values.</toccaption><caption>\
-         <tag close=\". \"><text font=\"smallcaps\" xml:id=\"S0.T1.3\">Table 1</text></tag>Values.</caption></table>",
+         <tag close=\". \">Table 1</tag>Values.</caption></table>",
       ),
     ],
   );

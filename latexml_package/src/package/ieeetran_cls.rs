@@ -5,6 +5,7 @@ use crate::{
     base_utilities::names_continue,
     latex_constructs::{FontUnit, set_theorem_within_display, symbol_box_size},
   },
+  package::caption_sty,
   prelude::*,
 };
 
@@ -374,9 +375,40 @@ LoadDefinitions!({
   DefPrimitive!("\\ltx@ieeetran@sc", None, font => { shape => "smallcaps", family => "serif", series => "medium" }, locked => true);
   DefMacro!("\\format@title@font@section", "\\ltx@ieeetran@sc");
   DefMacro!("\\format@title@font@subsection", "\\ltx@ieeetran@it");
+  // IEEEtran.cls:2607-2609 the names, compsoc conferences' figures "Figure"; :2826-2831 compsoc's tables arabic
+  // ("TABLE 1"), the other modes' Roman ("TABLE I").
   DefMacro!("\\figurename", "Fig.");
   DefMacro!("\\tablename", "TABLE");
-  DefMacro!("\\thetable", "\\Roman{table}");
+  RawTeX!(r"\ifCLASSOPTIONcompsoc\ifCLASSOPTIONconference\def\figurename{Figure}\fi\def\thetable{\arabic{table}}
+\else\def\thetable{\Roman{table}}\fi");
+  // IEEEtran.cls:2731-2797 `\@makecaption`, by mode: a table's label over its text — compsoc conferences "TABLE 1.
+  // text" on one line — and every other caption "Fig. 1. text" (`\lx@makecaption`, latex_constructs_rust_only.rs: a
+  // newfloat type's and a listing's too, "Listing 1. text"; the traditional form's two `\nobreakspace` one space here).
+  // The names and separators only: the class's caption fonts — the table text's `\scshape`, compsoc journals' `\sffamily`
+  // for every caption, the `\footnotesize` — are set under the class caption fonts knob alone (caption_sty.rs
+  // `CLASS_CAPTION_FONTS`, off by default; OXIDIZED_DESIGN_DIVERGENCES #884). Installed unless the document loads
+  // caption, which replaces it ("Fig. 1: text", "TABLE I: text": caption_sty.rs `class_makecaption`); a float.sty type
+  // keeps float.sty's "Program 1: text" (float_sty.rs), as a `\restylefloat`ed table does ("TABLE I: text", 2006.08364),
+  // longtable its "TABLE I: text" (longtable_sty.rs). The `captionsoff` option's caption-less floats are not ported: the
+  // captions are kept. Perl's binding keeps the kernel's ": " for every type (IEEEtran.cls.ltxml; KNOWN_PERL_ERRORS
+  // #1140). Guards `perfect_kernel_batch78y::ieeetran_*`.
+  RawTeX!(r"\def\@IEEEtablestring{table}");
+  let fonts = caption_sty::class_caption_fonts();
+  let (table_font, compsoc_font) =
+    if fonts { (r"\scshape ", r"\def\fnum@font@float{\sffamily}\def\format@title@font@float{\sffamily}%") } else { ("", "") };
+  caption_sty::class_makecaption(&s!(
+    r"\long\def\lx@makecaption##1##2{{\lx@tag[][. ]{{\lx@fnum@@{{##1}}}}##2}}%
+\long\def\format@title@figure##1{{\lx@makecaption{{figure}}{{##1}}}}%
+\ifCLASSOPTIONcompsoc
+  \ifCLASSOPTIONconference
+    \long\def\format@title@table##1{{\lx@tag[][. ]{{\lx@fnum@@{{table}}}}{table_font}##1}}%
+  \else{compsoc_font}
+    \long\def\format@title@table##1{{\lx@tag{{\lx@fnum@@{{table}}}}\\##1}}%
+  \fi
+\else
+  \long\def\format@title@table##1{{\lx@tag{{\lx@fnum@@{{table}}}}\\{table_font}##1}}%
+\fi"
+  ))?;
 
   // The QED symbols and `{IEEEproof}` (Perl IEEEtran.cls.ltxml:194-222), shared with the IEEEtrantools binding, whose
   // package carries the same code (IEEEtrantools.sty:2726-2747).

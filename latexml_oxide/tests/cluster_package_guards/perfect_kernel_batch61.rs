@@ -2426,7 +2426,7 @@ after compact\;
     &xml,
     "caption",
     &[],
-    "<caption><tag close=\" \"><text font=\"bold\">Algorithm\u{a0}1</text></tag>Demo <Math mode=\"inline\" tex=\"a\\\\&#10;b\" text=\"a * b\" xml:id=\"algorithm1.m2\"><XMath><XMApp><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok></XMApp></XMath></Math> first<break/>second</caption>",
+    "<caption><tag close=\": \"><text font=\"bold\">Algorithm\u{a0}1</text></tag>Demo <Math mode=\"inline\" tex=\"a\\\\&#10;b\" text=\"a * b\" xml:id=\"algorithm1.m2\"><XMath><XMApp><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok></XMApp></XMath></Math> first<break/>second</caption>",
   );
 }
 

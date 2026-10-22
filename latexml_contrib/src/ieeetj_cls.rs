@@ -12,6 +12,12 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("IEEEtran");
+  // ieeetj.cls:1792-1810 (2510.05542's copy) `\@makecaption`: a table's caption "TABLE 1. text" on one line, as a
+  // figure's "FIGURE 1. text", in place of IEEEtran's label over the text (ieeetran_cls.rs); caption, when loaded,
+  // replaces it (caption_sty.rs). The names and numbers (:1650, 1850-1852): figures "FIGURE", tables arabic, in place of
+  // IEEEtran's "Fig." and Roman tables. Guard `perfect_kernel_batch78y::ieeetj_caption_names`.
+  caption_sty::class_makecaption_label("", ". ", false)?;
+  RawTeX!(r"\def\thetable{\@arabic\c@table}\def\figurename{FIGURE}");
   // The author list is flat, with `\\` as a line break inside it (2405.01673);
   // inst_support's `\author` reads it that way, as under OmniBus.
   RequirePackage!("inst_support");

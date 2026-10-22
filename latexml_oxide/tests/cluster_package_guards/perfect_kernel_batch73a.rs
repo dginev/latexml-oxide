@@ -163,7 +163,9 @@ fn cnodeput_reads_its_coordinate() {
   );
 }
 
-/// ieeeaccess.cls:270-300 `\Figure` is a figure with its image and caption (1803.04935, 1910.07402).
+/// ieeeaccess.cls:270-300 `\Figure` is a figure with its image and caption (1803.04935, 1910.07402), the caption
+/// closed by ". " as the class's `\@makecaption` closes it (ieeeaccess.cls:212-245; ": " before 78y), the figure named
+/// "FIGURE" (:261; "Fig." before 78y r2).
 #[test]
 fn ieeeaccess_figure_is_a_figure() {
   let xml = clean(include_str!(
@@ -173,7 +175,7 @@ fn ieeeaccess_figure_is_a_figure() {
     &xml,
     "figure",
     &[],
-    r#"<figure inlist="lof" labels="LABEL:block_diagram" placement="t!" xml:id="S0.F1"><tags><tag>Fig. 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Fig. 1</tag></tags><graphics candidates="../../usr/local/texlive/2025/texmf-dist/tex/latex/mwe/example-image-a.png" class="ltx_centering" graphic="example-image-a.png" options="scale=0.1" xml:id="S0.F1.g1"/><toccaption class="ltx_centering"><tag close=" ">1</tag>Block diagram of the passband system.</toccaption><caption class="ltx_centering"><tag close=": ">Fig. 1</tag>Block diagram of the passband system.</caption></figure>"#,
+    r#"<figure inlist="lof" labels="LABEL:block_diagram" placement="t!" xml:id="S0.F1"><tags><tag>FIGURE 1</tag><tag role="refnum">1</tag><tag role="typerefnum">FIGURE 1</tag></tags><graphics candidates="../../usr/local/texlive/2025/texmf-dist/tex/latex/mwe/example-image-a.png" class="ltx_centering" graphic="example-image-a.png" options="scale=0.1" xml:id="S0.F1.g1"/><toccaption class="ltx_centering"><tag close=" ">1</tag>Block diagram of the passband system.</toccaption><caption class="ltx_centering"><tag close=". ">FIGURE 1</tag>Block diagram of the passband system.</caption></figure>"#,
   );
 }
 

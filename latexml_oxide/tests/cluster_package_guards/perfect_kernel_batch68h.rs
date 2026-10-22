@@ -314,11 +314,12 @@ fn processoptions_reads_as_protected_edef() {
 
 /// ieeeaccess.cls:121-133 and :75-79: the class's `accessblue` (here the PANTONE 3015 C spot colour's CMYK alternate,
 /// 1 0.3 0 0.2) and caption fonts, which papers name in their caption setup (2405.14505, 2205.15416); since caption's
-/// keys take effect (68h) a missing colour or `\figcapfont` is an Error per caption (pdflatex 0 on the witness).
+/// keys take effect (68h) a missing colour or `\figcapfont` is an Error per caption (pdflatex 0 on the witness). The
+/// label's name is the class's `\figurename` "FIGURE" (ieeeaccess.cls:261; "Fig." before 78y r2).
 #[test]
 fn ieeeaccess_caption_class_colour() {
   let xml = clean!("class-bindings/ieeeaccess_caption_class_colour.tex");
-  let caption = r##"<caption><tag close=": "><text color="#0080CC" font="sansserif bold" fontsize="70%" xml:id="S0.F1.1">Fig.1</text></tag>One</caption>"##;
+  let caption = r##"<caption><tag close=": "><text color="#0080CC" font="sansserif bold" fontsize="70%" xml:id="S0.F1.1">FIGURE1</text></tag>One</caption>"##;
   assert!(xml.contains(caption), "{caption}\n{xml}");
 }
 

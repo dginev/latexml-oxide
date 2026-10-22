@@ -1,0 +1,15 @@
+% mechanism: algorithm2e.sty:2285-2289 `\algocf@captiontext`: the label "Algorithm 1" closed by `\algocf@typo` and
+%   `\algocf@capseparator` (":", `\SetAlgoCaptionSeparator{<sep>}`), then `\nobreakspace` (algorithm2e_sty.rs
+%   `\format@title@algorithm`).
+% witness: review rev78y finding 4 (pdflatex probes c0-c2: "Algorithm 1:" in every case)
+% oracle:  pdflatex 0 errors; "Algorithm 1: Alg one.", "Algorithm 2. Alg two."
+% engines: perl 0.8.8: "Algorithm 1 " (no format: the tag's space; KNOWN_PERL_ERRORS #1140); rust 78y r1: "Algorithm 1 "
+% expect:  0 errors, 0 warnings; "Algorithm 1" closed by ": ", "Algorithm 2" by ". "
+% status:  RED (78y r1) -> GREEN (78y r2)
+\documentclass{article}
+\usepackage[ruled]{algorithm2e}
+\begin{document}
+\begin{algorithm}[h]\caption{Alg one.}x\;\end{algorithm}
+\SetAlgoCaptionSeparator{.}
+\begin{algorithm}[h]\caption{Alg two.}y\;\end{algorithm}
+\end{document}

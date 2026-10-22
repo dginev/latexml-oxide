@@ -1,0 +1,17 @@
+% mechanism: caption formats listings' and longtable's captions (caption.sty:1167, its listings support),
+%   the IEEEtran format not installed.
+% witness: review rev78s2 finding 5 (the 78v caption-separator row)
+% oracle:  pdflatex 0 errors; "Listing 1: Code one.", "TABLE I: Long one."
+% engines: perl: caption settings not applied (KNOWN_PERL_ERRORS #795); rust int65a: the same
+% expect:  0 errors, 0 warnings; both closed by ": "
+% status:  GREEN (78y; guard)
+\documentclass[onecolumn]{IEEEtran}
+\usepackage{caption}
+\usepackage{listings}
+\usepackage{longtable}
+\begin{document}
+\begin{lstlisting}[caption={Code one.}]
+x = 1
+\end{lstlisting}
+\begin{longtable}{c}\caption{Long one.}\\ Y\\ \end{longtable}
+\end{document}

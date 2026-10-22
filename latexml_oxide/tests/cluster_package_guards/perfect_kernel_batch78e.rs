@@ -63,9 +63,11 @@ fn webofc_authors_take_their_institutes() {
 }
 
 /// webofc's `\sidecaption` sets the float's body beside its caption (webofc.cls:824-857): the caption stays the
-/// figure's `<caption>`, which carries the label, and the class's `\@makecaption` (:788-812) gives the labels and their
-/// period bold, "**Figure 1.**". Red (int45b): "Figure 1. Side caption text." typeset as text in a `\parbox`, no
-/// `<caption>`, the label on the section; "Table 1:" upright; 78e r1: the period outside the bold. Witness 2610.23498
+/// figure's `<caption>`, which carries the label, and the class's `\@makecaption` (:788-812) closes the labels with ". "
+/// ("**Figure 1.**", the bold under the class caption fonts knob alone, user ruling 2026-10-22:
+/// `perfect_kernel_batch78y::webofc_with_class_caption_fonts`). Red (int45b): "Figure 1. Side caption text." typeset as
+/// text in a `\parbox`, no `<caption>`, the label on the section; "Table 1:" upright; 78e r1: the period outside the
+/// bold. Witness 2610.23498
 /// (html_feedback). Repro class-bindings/webofc/webofc_sidecaption_keeps_its_caption.
 #[test]
 fn webofc_sidecaption_keeps_its_caption() {
@@ -77,21 +79,19 @@ fn webofc_sidecaption_keeps_its_caption() {
     &xml,
     "figure",
     &["xml:id=\"S1.F1\""],
-    "<figure inlist=\"lof\" labels=\"LABEL:f1\" placement=\"t\" xml:id=\"S1.F1\"> <tags> <tag>\
-     <text font=\"bold\" xml:id=\"S1.F1.1\">Figure 1</text></tag> <tag role=\"refnum\">1</tag> \
-     <tag role=\"typerefnum\">Figure 1</tag> </tags> <rule height=\"28.5pt\" width=\"56.9pt\"/> <toccaption>\
-     <tag close=\" \">1</tag>Side caption text.</toccaption> <caption><tag close=\" \">\
-     <text font=\"bold\" xml:id=\"S1.F1.2\">Figure 1.</text></tag>Side caption text.</caption> </figure>",
+    "<figure inlist=\"lof\" labels=\"LABEL:f1\" placement=\"t\" xml:id=\"S1.F1\"> <tags> <tag>Figure 1</tag> \
+     <tag role=\"refnum\">1</tag> <tag role=\"typerefnum\">Figure 1</tag> </tags> \
+     <rule height=\"28.5pt\" width=\"56.9pt\"/> <toccaption><tag close=\" \">1</tag>Side caption text.</toccaption> \
+     <caption><tag close=\". \">Figure 1</tag>Side caption text.</caption> </figure>",
   );
   assert_element(
     &xml,
     "table",
     &["xml:id=\"S1.T1\""],
-    "<table inlist=\"lot\" placement=\"b\" xml:id=\"S1.T1\"> <tags> <tag>\
-     <text font=\"bold\" xml:id=\"S1.T1.1\">Table 1</text></tag> <tag role=\"refnum\">1</tag> \
-     <tag role=\"typerefnum\">Table 1</tag> </tags> <toccaption><tag close=\" \">1</tag>Values.</toccaption> \
-     <caption><tag close=\" \"><text font=\"bold\" xml:id=\"S1.T1.2\">Table 1.</text></tag>Values.</caption> \
-     </table>",
+    "<table inlist=\"lot\" placement=\"b\" xml:id=\"S1.T1\"> <tags> <tag>Table 1</tag> \
+     <tag role=\"refnum\">1</tag> <tag role=\"typerefnum\">Table 1</tag> </tags> \
+     <toccaption><tag close=\" \">1</tag>Values.</toccaption> \
+     <caption><tag close=\". \">Table 1</tag>Values.</caption> </table>",
   );
 }
 
@@ -154,7 +154,8 @@ fn aa_thanks_email_leaves_no_empty_note() {
 
 /// jinstpub.sty's frontmatter is jheppub's (jinstpub.sty:111-140): the labelled affiliations on their authors, the
 /// e-mail and the `\note` the first author's contacts, the keywords; its equations are numbered within sections (:335)
-/// and its caption label is bold with a period (:362-378). The copy's `\maketitle` ends with the table of contents (its
+/// and its caption label closed by a period (:362-378; the label's bold under the class caption fonts knob alone,
+/// `perfect_kernel_batch78y::jinstpub_with_class_caption_fonts`). The copy's `\maketitle` ends with the table of contents (its
 /// default, :241-249), which the family's rule drops, as jheppub's binding (Perl jheppub.sty.ltxml:97; a SYNC row
 /// awaits a ruling); the stock header line is page furniture, no pubnote. Red (int45b; the package read raw): the
 /// affiliations an itemize, the e-mail and the keywords paragraphs, "Corresponding author." inside the personname,
@@ -204,7 +205,7 @@ fn jinstpub_frontmatter_is_jheppub_s() {
     &xml,
     "caption",
     &[],
-    "<caption><tag close=\". \"><text font=\"bold\" xml:id=\"S1.F1.3\">Figure 1</text></tag>A box.</caption>",
+    "<caption><tag close=\". \">Figure 1</tag>A box.</caption>",
   );
   assert!(!xml.contains("<TOC"), "{xml}");
   assert!(!xml.contains("<pubnote"), "{xml}");

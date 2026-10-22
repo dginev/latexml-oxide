@@ -140,15 +140,14 @@ fn caption_ruled_float_sty_float_takes_its_style() {
 /// caption.sty:882-884: `\captionsetup[<type>]{name=…}` of a float.sty type is its `\floatname` too, which its caption
 /// prints: "Snip 1", "Proc 1". Red (int61a): "Listing 1", "Algorithm 1". Review rev78s2 finding 3. Repro
 /// captions-floats/caption_typed_name_of_a_float_sty_type.
-/// Known residual pinned here: the plain float.sty float's caption keeps a double space after its tag (`</tag> Code
-/// one.`; pdflatex sets one, which the CSS renders alike), removed in 78v for ruled floats only (review rev78v
-/// finding 4).
+/// The plain float.sty float's caption had a double space after its tag (`</tag> Code one.`), removed in 78v for ruled
+/// floats only (review rev78v finding 4) and in 78y for every float.sty float under caption, which formats it.
 #[test]
 fn caption_typed_name_of_a_float_sty_type() {
   assert_captions(
     repro!("captions-floats/caption_typed_name_of_a_float_sty_type.tex"),
     &[
-      r#"<caption><tag close=": ">Snip 1</tag> Code one.</caption>"#,
+      r#"<caption><tag close=": ">Snip 1</tag>Code one.</caption>"#,
       r#"<caption><tag close=" "><text font="bold" xml:id="algorithm1.3">Proc 1</text></tag>A one.</caption>"#,
     ],
   );
