@@ -6376,6 +6376,14 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   in 2, the PI only (`\usepackage{}` in 1106.3485: `<?latexml package=""?>` → `<?latexml ?>`; `\usepackage[utf8]{}` in
   2511.15479: `package="" options="utf8"` → `options="utf8"`, as Perl). Scratch `~/data/pk_wt/scratch_78w/` (ab/, ab2/,
   init/, init2/).
+  **Integration (int65, 78w r1-r2 squashed onto 9e00bdd0f5; binary int65a):** review rev78w SHIP after r2 (its findings 1-3:
+  the extensionless-order guard red only on a tmpfs → a unit guard over permuted listings; the EPS row merged into the 78t
+  row; the A/B figures; nits 4-7 folded). The dump content checked by the main session (`LC_ALL=C` sorted `comm -3` vs
+  int64a: 0 + 0 lines, 1,007 / 24,253). Gates int65a: nextest 7008/7008 + cortex 10/10, fmt/clippy/rustdoc clean, inits
+  0/0, dump content diff vs int64a empty. A/B int64a vs int65a (`poprand61` + `pop78u_1` + `pop78v_eps` + 300 seed-65 census
+  controls, 724 converted): E 169 = 169, F 1 = 1, words equal, 0 worse; XML byte-changed in 4, all 78w classes — the PI's
+  empty `package` (1106.3485, 2511.15479) and an extensionless graphic's candidates in type order (2011.14197
+  `fig3.pdf,fig3.eps`; 1812.05867 `images/EUflag.jpg,images/EUflag.eps`; sizes from `options=`, unchanged). Binding nets (int66a, covering int65 + int66) 136/136, 0 worse than int64a.
 
 - **split114** (task #114, user directive 2026-10-07; a pure move, before FM S2a): `latexml_engine/src/base_utilities.rs`
   (23,317 lines) is the module directory `base_utilities/` — `mod.rs` (the imports, `FRONTMATTER_ELEMENTS`,
@@ -6747,7 +6755,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   2511.07187 `--`, 2511.18580 `⋅` — marks or separators the lexer does not read as such). Side finding (output, not fixed):
   today's XML loses a `\thanks` set inside `\vphantom` after an author block's last address (2406.07529). Scratch
   `~/data/pk_wt/scratch_fms2a2r6/` (rep/final.*, rep/int63_rr.*, rt60.txt, d3_10.txt).
-  **Landing (int66, r6 squashed onto int65):** review revfms2a2_6 LAND — shadow-only proven again (no hook added; the
+  **Landing (int66, r6 squashed onto int65; binary int66a):** gates int66a: nextest 7017/7017 + cortex 10/10, fmt/clippy/rustdoc
+  clean, inits 0/0, dump diff vs int65a empty; A/B int65a → int66a on int65's 724 papers byte-identical with `LATEXML_FM_SHADOW`
+  unset AND set (E 169 = 169, F 1 = 1, words equal). Binding nets 136/136, 0 worse than int64a. Review revfms2a2_6 LAND — shadow-only proven again (no hook added; the
   policy table read only after `records_now()`; 40 papers, seed `rev6-77` + 10 witnesses, XML identical base/unset/set);
   census, revtex4_support (the same 24 unclassified as r5) and the 158 moves reproduced byte for byte; 5 of the 38 revtex
   "right" and 3 of decision 3's 10 confirmed against arXiv PDFs. Main-session decisions on the writer's questions: (1)
