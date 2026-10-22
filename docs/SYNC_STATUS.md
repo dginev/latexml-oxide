@@ -6239,7 +6239,9 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   nits — `ledger.rs:237-255` identifies the `\author` definition by raw address (keep an `Rc` and `Rc::ptr_eq`),
   `ledger.rs:358-364` `lookup_register` warns (use `lookup_register_quiet`), `ledger.rs:520-531` writes `attrs` in hash
   order (`get_pairs()`), `events.rs:173` `ref_key` matches any `…ref` (`\href`, `\pageref`: an explicit list), `label_text`
-  bounds output tokens, not visited ones. Gates int58a: GATES58. A/B int57a vs int58a: AB58. Binding nets: NETS58.
+  bounds output tokens, not visited ones. Gates int58a: nextest 6912/6912 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int57a
+  empty. A/B int57a vs int58a (597: 300 random census + 300 frontmatter-heavy revtex/amsart/IEEEtran/authblk, seed 58):
+  byte-identical, 0 of 597 changed. Binding nets: 136/136, 0 documents worse.
 
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
