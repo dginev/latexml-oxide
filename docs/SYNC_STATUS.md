@@ -5868,6 +5868,16 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   REVTeX 3's "??" labels; `\RequirePackage{aas_macros}` before an AASTeX 6+ class). (r1's third residual, a single
   relation column whose rows join one numbered equation keeping such a label on that number, does not trigger: 11
   probed shapes, `= a \\ = b \label{k}\nonumber` among them, give pdflatex's next number.)
+  **Integration (int56, 78r r1-r2 squashed onto int55; binary int56a):** review rev78r NO-SHIP (r1's `\Indm` popped the
+  block stack: the flush-left Input idiom indented every later line, 2102.06989) → r2 → rev78r2 SHIP with doc follow-ups
+  folded in by the main session: witnesses at the mn2e/aa `{equation}` call sites; the REVTeX 3 "??" and `aas_macros`
+  rows restated as decided (main-session decisions 2026-10-22: keep the resolved number; no action, the oracle unclean);
+  new open rows for an algorithm's last line ignoring the `\Indp` offset (2508.06088) and the global `\DontPrintSemicolon`
+  (SHARED with Perl). Gates int56a: nextest 6821/6821 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int55b
+  empty. A/B int55b vs int56a (2,060 of 2,064: the `pop78r_*` populations + 300 random census controls, seed 56): E 5,044 =
+  5,044, F 12 = 12, 0 papers worse, no word loss over 1 %; 952 outputs changed, all in the 78r populations except three
+  controls, each a 78r item (1005.3618, hep-th0307191: the eqnarray label's refnum-only tag; astro-ph9906362: `\nonumber`
+  in `{equation}` without amsmath now numbered, as pdflatex). Binding nets: 136/136, 0 documents worse (int55b vs int56a).
 - **split114** (task #114, user directive 2026-10-07; a pure move, before FM S2a): `latexml_engine/src/base_utilities.rs`
   (23,317 lines) is the module directory `base_utilities/` — `mod.rs` (the imports, `FRONTMATTER_ELEMENTS`,
   `REPLACEABLE_FRONTMATTER_TAGS`, and `LoadDefinitions!` calling `defs::{general, frontmatter_api, frontmatter_fields,
