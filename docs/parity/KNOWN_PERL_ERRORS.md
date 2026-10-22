@@ -17480,3 +17480,17 @@ and 2211.09622 by hand, 4 losing nothing: 1911.03118, 1912.00833, 2211.09622, 23
 2309.12862, 2402.18447, 2403.04164, 2410.12564, 2501.01423, 2502.15412, 2503.05905, 2603.17529, 2605.17958, …). Minimal
 trigger: the `\author` above in `article`. Fixed in Rust (78u, OXIDIZED_DESIGN_DIVERGENCES #881: the note is taken out
 after the mark). Repro sectioning-frontmatter/author_thanks_inside_a_mark_keeps_the_mark_and_the_note.
+
+## 1137. An `.eps` the source names but ships only as `.pdf` has no size, and post loses the image
+
+Authors who run epstopdf locally keep `\includegraphics{recomb.eps}` and ship only `recomb.pdf`; arXiv's pdflatex of the
+time used `recomb.pdf` (TL 2025's epstopdf looks for `recomb-eps-converted-to.pdf` instead: "File not found: using draft
+setting", 4 errors in 1408.2843). Perl LaTeXML finds no file at either stage. At digestion `image_candidates`
+(Util/Image.pm:43-56) searches `recomb.eps.*` and `recomb.eps` only, so the graphic has no candidates and
+`image_graphicx_sizer` gives it no size (a sub-figure panel then measures 0 wide). In post, `findGraphicFile`
+(Post/Graphics.pm:141-151) means to drop a known graphics extension, but `grep { $_ eq lc($reqtype) }
+$$self{graphics_types}` greps the array *reference*, never matches, and always keeps `.eps`, so `recomb.pdf` is never tried
+and the image is missing from the HTML. Minimal trigger: `\includegraphics{a.eps}` with only `a.pdf` beside the source.
+Witnesses 1408.2843 Fig 1-2, 1503.04804 Fig 3. Rust: post already drops the extension (`latexml_post/src/graphics.rs`
+`find_graphic_file`), so the HTML keeps every image; the digestion-time lookup still mirrors Perl (`util/image.rs`
+`image_candidates`) — the SYNC row "an `.eps` shipped as `.pdf` has no size at digestion" owns the fix.
