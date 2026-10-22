@@ -6596,6 +6596,10 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `NoteText.value` is dead data; an address-list continuation skips its lines' notes and contacts (`blocks.rs` `skip_to`).
   Side finding (both engines): revtex's `\altaffiliation` is `annotate=new` (Perl revtex4_support.sty.ltxml:61), so
   cond-mat0310516's "Present address" goes to all six authors before it where the PDF marks Mikami only — a SYNC row.
+  Gates int63a: nextest 6986/6986 + cortex 10/10, clippy/rustdoc clean, inits 0/0, dump diff vs int62a empty. A/B int62a
+  vs int63a (300 random census controls, seed 63, + `pop78u_1` + 200 of `pop78u_2`; 528 of 531 converted): XML byte-identical
+  on all 531, E 149 = 149, F 1 = 1; FM shadow (int63a unset vs `LATEXML_FM_SHADOW=1`, the same 531): XML identical. Binding
+  nets: 136/136, 0 documents worse (int62a vs int63a).
 
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
