@@ -29,7 +29,10 @@ pub struct Disagreement {
 /// - an emptied note dropped, a note's inner contacts its contacts, `\thanks{}` kept: `ruling4:`;
 /// - a url whose text is one e-mail address is an e-mail (`role:url-as-email`: the S2a.2 r2 brief's item 8, adopted);
 /// - a list with one address per author that every spelled address agrees with is in author order (`owner:order`:
-///   charter §4's owner order, 2026-10-21, OD #805 — for every class, not only the sequenced lists).
+///   charter §4's owner order, 2026-10-21, OD #805 — for every class, not only the sequenced lists);
+/// - several addresses an entry's e-mail call prints (a braced `{a,b,c}@x` group in an `\institute`/`\affil` entry)
+///   are written out, each the author's it spells, an unspelled one the block's (`ruling3:written-out`: the main
+///   session's decision 3 of 2026-10-22, user rulings 2026-10-20 #4, #8, #10).
 ///
 /// Elimination (`owner:elimination`, the one address left to the one name left) is NOT a change: today's output
 /// applies it too (OXIDIZED_DESIGN_DIVERGENCES #52's e-mail lines, `owners_by_elimination`, under user ruling R10
@@ -49,6 +52,7 @@ pub(super) const CHANGE_TAGS: &[&str] = &[
   "ruling2:uncarried",
   "owner:corresponding",
   "ruling3:one-per-print",
+  "ruling3:written-out",
   "ruling4:",
 ];
 
@@ -167,6 +171,52 @@ pub(super) fn rule_of(shadow: &Tuples, kind: &str, text: &str) -> Option<String>
     Some((count, _, first)) if count >= 2 => Some(format!("overlaps {first}")),
     _ => None,
   }
+}
+
+/// The shadow rule that explains an XML e-mail printing several addresses (`raw`, as the XML holds it: today's whole
+/// `{ann,bob,info}@x.org` group on every author of an `\institute` entry) by the shadow's addresses written out of it
+/// (`ruling3:written-out`, decision 3 of 2026-10-22): every address of it is a shadow e-mail so tagged, somewhere — the
+/// first one's rule (`overlaps …`).
+pub(super) fn written_out_rule(shadow: &Tuples, raw: &str) -> Option<String> {
+  let addresses = fm_addresses_in(raw);
+  if addresses.len() < 2 {
+    return None;
+  }
+  let rules: Vec<&String> = addresses
+    .iter()
+    .map(|a| {
+      let key = format!("email\t{}", norm(a));
+      rule_maps(shadow)
+        .find_map(|rules| rules.get(&key))
+        .filter(|rule| rule.contains("ruling3:written-out"))
+    })
+    .collect::<Option<_>>()?;
+  rules.first().map(|rule| format!("overlaps {rule}"))
+}
+
+/// A normalised text without the ORCID iDs it holds (`0000000283879887`: 16 characters opening with `000`, the last a
+/// digit or `x`, no digit on either side).
+pub(super) fn without_orcid_ids(text: &str) -> String {
+  let chars: Vec<char> = text.chars().collect();
+  let is_id = |at: usize| {
+    at + 16 <= chars.len()
+      && chars[at..at + 3].iter().all(|c| *c == '0')
+      && chars[at + 3..at + 15].iter().all(char::is_ascii_digit)
+      && (chars[at + 15].is_ascii_digit() || chars[at + 15] == 'x')
+      && (at == 0 || !chars[at - 1].is_ascii_digit())
+      && chars.get(at + 16).is_none_or(|c| !c.is_ascii_digit())
+  };
+  let mut out = String::with_capacity(text.len());
+  let mut at = 0;
+  while at < chars.len() {
+    if is_id(at) {
+      at += 16;
+    } else {
+      out.push(chars[at]);
+      at += 1;
+    }
+  }
+  out
 }
 
 /// Whether `rest` is the marks `marks` written one after another (`12` the marks `1`, `2`; `ab`).
@@ -288,8 +338,14 @@ pub fn compare(shadow: &Tuples, xml: &Tuples) -> Vec<Disagreement> {
       }
       for item in minus(&xm, &sm) {
         let (role, text) = item.split_once('\t').unwrap_or(("", &item));
+        let raw = xc
+          .contacts
+          .iter()
+          .find(|(r, t)| r == role && address(r, t) == text)
+          .map(|(_, t)| t.as_str());
         let rule = match (role, rule_of(shadow, role, text)) {
           ("url", None) => rule_of(shadow, "email", text).map(|r| format!("{r} role:url-as-email")),
+          ("email", None) => raw.and_then(|raw| written_out_rule(shadow, raw)),
           (_, rule) => rule,
         };
         push(kind, rule, format!("{}: xml-only {item}", sc.name));
@@ -304,12 +360,14 @@ pub fn compare(shadow: &Tuples, xml: &Tuples) -> Vec<Disagreement> {
       .map(|(_, t)| norm(t))
       .filter(|t| !t.is_empty())
       .collect();
+    // (and an ORCID link a note keeps in its text, no one's contact — decision 2 of 2026-10-22: the XML's note prints
+    // its logo, the shadow's its iD — `S. Donahue \orcidlink{…} is with …`, 2602.13176)
     let without_orcids = |n: &String| {
       let mut n = norm(n);
       for id in &orcids {
         n = n.replace(id.as_str(), "");
       }
-      n
+      without_orcid_ids(&n)
     };
     // (the XML's notes of the creator: its note contacts and notes, and the footnotes set in its personname — the
     // text of a `\footnotemark` the name shows, `relocate_footnote`'s: `Steven Delvaux\footnotemark[1]` and the body's
@@ -360,11 +418,14 @@ pub fn compare(shadow: &Tuples, xml: &Tuples) -> Vec<Disagreement> {
   }
   for item in minus(&xb, &sb) {
     let (role, text) = item.split_once('\t').unwrap_or(("", &item));
-    push(
-      "block",
-      rule_of(shadow, role, text),
-      format!("block: xml-only {item}"),
-    );
+    let rule = rule_of(shadow, role, text).or_else(|| {
+      xml
+        .block
+        .iter()
+        .find(|(r, x)| r == role && r == "email" && norm(x) == text)
+        .and_then(|(_, x)| written_out_rule(shadow, x))
+    });
+    push("block", rule, format!("block: xml-only {item}"));
   }
   out
     .into_iter()

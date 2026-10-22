@@ -104,6 +104,7 @@ impl Resolver {
     events: &[Event],
   ) {
     self.out.policies.push((index, policy.name));
+    self.notes_marked = !policy.unmarked_notes;
     let and_inline = policy.and_inline;
     let events = &split_text_marks(&join_ordinals(&orcid_link_names(events)));
     let lines = lines_of(events, and_inline);
@@ -418,6 +419,18 @@ impl Resolver {
             skip_to = last;
             let candidates: Vec<usize> = (block_creators_start..self.out.creators.len()).collect();
             self.place_line_contacts(&text, "email", &candidates, source);
+            // (the notes of the list's lines are the block's: a line of addresses is no one name's, so no place makes
+            // its note a name's — the lines read on to were skipped after, and their notes went unread, review
+            // revfms2a2_5 finding 6; 2406.07529's `\vphantom{\thanks{Equal contribution.}}` after the last address,
+            // which today's XML loses. Their Contact events' addresses are the list's text, placed above)
+            let notes: Vec<&Event> = lines[n..=last]
+              .iter()
+              .flat_map(|l| l.events.iter().copied())
+              .filter(|e| e.kind == EventKind::Note)
+              .collect();
+            for note in notes {
+              self.note(index, note, None, "note:address-line");
+            }
             continue;
           }
           // (each unmarked line its own contact, as each `\\` line is today's: 0707.1113, 1404.0431; ruling 3 — but under a
@@ -632,7 +645,8 @@ impl Resolver {
     }
   }
 
-  /// A Note event: its inner contacts to its owner; the note itself, its whole text, unless they emptied it (ruling 4).
+  /// A Note event: its inner contacts to its owner when they spell it or are its only link (decision 2), the rest left in
+  /// its text; the note itself, its whole text, unless its contacts emptied it and were all taken out (ruling 4).
   pub(super) fn note(&mut self, index: usize, note: &Event, owner: Option<usize>, rule: &str) {
     // (what is left of its text once its contacts are taken out decides only whether they emptied it: the note keeps
     // its whole text, "Codebase is available at https://…" — review revfms2a2 finding 1; 2401.17399, 1607.05792,
@@ -643,10 +657,21 @@ impl Resolver {
       .iter()
       .filter(|e| e.kind == EventKind::Contact)
       .collect();
+    // (main-session decision 2 of 2026-10-22, user ruling 2026-10-20 #4 — no guessing: a note's inner contact is its
+    // owner's only when it spells the owner, or is the note's only link with the note's mark shown on the owner; the rest
+    // stay in the note's text. A note holding several links names others or the paper as often as its owner — a
+    // co-author's homepage, a video, data records, four co-authors' ORCIDs all went to the last author: 2001.02600,
+    // 1803.04996, 2504.08644, 2602.13176 —, and a class printing no note marks places a note by position alone,
+    // `Policy::unmarked_notes`)
+    let fallback = contacts.len() == 1 && self.notes_marked;
+    let group: Vec<usize> = match owner {
+      Some(at) => (0..self.out.creators.len())
+        .filter(|&c| self.group[c] == self.group[at])
+        .collect(),
+      None => Vec::new(),
+    };
+    let mut all_taken = true;
     for inner in &contacts {
-      if !inner.text.is_empty() {
-        rest = rest.replacen(inner.text.as_str(), "", 1);
-      }
       let (role, text) = contact_parts(inner);
       let assoc = Assoc {
         role,
@@ -657,13 +682,34 @@ impl Resolver {
       };
       // (an e-mail goes to the author it spells before the one the note is on — charter §4, by evidence: `Chauvet\thanks{…
       // jocelyn.chauvet@…; xavier.bry@…}`, 1908.04020; 2304.00435 — read once every name is, `answer_note_emails`)
-      if assoc.role == "email" {
-        self.note_emails.push((owner, assoc));
-      } else {
+      let taken = if assoc.role == "email" {
+        let spelled = !group.is_empty() && self.spelled(&assoc.text, &group).is_some();
+        self.note_emails.push((owner, assoc, fallback));
+        fallback || spelled
+      } else if fallback
+        || (assoc.role == "url"
+          && owner.is_some()
+          && self.spelled(link_letters(&assoc.text), &group) == owner)
+      {
+        let assoc = if fallback {
+          assoc
+        } else {
+          Assoc {
+            rule: s!("{} owner:spelled", assoc.rule),
+            ..assoc
+          }
+        };
         self.attach(owner, assoc, false);
+        true
+      } else {
+        false
+      };
+      all_taken &= taken;
+      if taken && !inner.text.is_empty() {
+        rest = rest.replacen(inner.text.as_str(), "", 1);
       }
     }
-    let emptied = !contacts.is_empty() && rest.chars().all(|c| !c.is_alphanumeric());
+    let emptied = !contacts.is_empty() && all_taken && rest.chars().all(|c| !c.is_alphanumeric());
     if emptied {
       self.out.dropped.push(Assoc {
         role:   "note".into(),

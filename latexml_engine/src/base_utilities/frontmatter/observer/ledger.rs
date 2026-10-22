@@ -180,6 +180,10 @@ pub(in crate::base_utilities) struct NoteText {
   /// creators (today's pairs it with the first mark only), after it, after them (with every mark)
   pub epoch:  usize,
   pub mark:   String,
+  /// the footnote counter value it stands for — diagnostic only (review revfms2a2_5 finding 5): no resolver input
+  /// (`resolver::Input::NoteText` has none, as the PDF's marks pair a text, not the counter), written to the dump so a
+  /// census can count the texts today's `relocate_footnote` pairs by counter value alone (the r5 residual: 1404.2124,
+  /// 0909.2782, hep-th0302032)
   pub value:  Option<String>,
   pub events: Vec<Event>,
 }

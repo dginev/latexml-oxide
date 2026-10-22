@@ -62,6 +62,10 @@ pub struct Policy {
   /// `\and` inside an annotation prints the word "and" (amsart.cls:599 `\def\and{\unskip{ }\@@and{ }\ignorespaces}`):
   /// the entry's text holds it
   pub and_word:         bool,
+  /// the title's notes print no mark (IEEEtran.cls:4756 `\def\thefootnote{}` in `\maketitle`, "the \thanks{} mark type
+  /// is empty"): a note stands beside a name only by its place, so its inner contacts are a name's only by spelling
+  /// (main-session decision 2 of 2026-10-22, user ruling 2026-10-20 #4)
+  pub unmarked_notes:   bool,
   /// what the entry reproduces
   pub cite:             &'static str,
 }
@@ -80,6 +84,7 @@ pub const KERNEL: Policy = Policy {
   thenote:          false,
   state_counter:    None,
   and_word:         false,
+  unmarked_notes:   false,
   cite:             "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); FIDELITY_CHARTER §4",
 };
 
@@ -147,6 +152,16 @@ pub const POLICIES: &[Policy] = &[
     binding: "ams_support.sty",
     and_word: true,
     cite: "amsart.cls:599 `\\def\\and`; Perl ams_support.sty.ltxml:94 `\\lx@author@conj`; 1712.02568",
+    ..KERNEL
+  },
+  // IEEEtran (and the classes the binding serves, ieeeconf.cls:3592, ieeecolor2.cls:3903 the same `\def\thefootnote{}`):
+  // the title's `\thanks` print no mark, so a note's link is no name's by its place (2001.02600, 1803.04996, 2504.08644,
+  // 2602.13176: a co-author's homepage, a video, data records, four co-authors' ORCIDs given to the last author)
+  Policy {
+    name: "IEEEtran",
+    binding: "IEEEtran.cls",
+    unmarked_notes: true,
+    cite: "IEEEtran.cls:4756 `\\def\\thefootnote{}`; OD #837 S2a.2 r6 (2001.02600, 1803.04996, 2504.08644, 2602.13176)",
     ..KERNEL
   },
   // the JHEP family: `\emailAdd` addresses printed as one shared line, placed by spelling, else by author order

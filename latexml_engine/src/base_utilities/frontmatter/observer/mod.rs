@@ -38,7 +38,7 @@ pub(in crate::base_utilities) use ledger::{
 pub use ledger::{note_binding_load, record_note_text as fm_record_note_text};
 pub use resolver::{
   Assoc as FmAssoc, Input as FmInput, RCreator as FmCreator, Resolved as FmResolved,
-  creator_call as fm_creator_call, resolve as fm_resolve,
+  addresses_in as fm_addresses_in, creator_call as fm_creator_call, resolve as fm_resolve,
 };
 pub(in crate::base_utilities) use shadow::shadow_flush;
 pub use shadow::{

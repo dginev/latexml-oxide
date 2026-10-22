@@ -222,6 +222,7 @@ do not block the E/F rerun.
 | — | An author's mark whose label holds any control sequence prints nothing: the mark reader reads the label from the operand's unexpanded text (`author_macros.rs:198` `clean_frontmatter_labels(&operand.to_string(),…)`), which no list answers, so `\textsuperscript{\relax 3}` loses its "3" (pdflatex "Ann Alpha3"), `\textsuperscript{\one}` and `\textsuperscript{\protect 2}` their "1" and "2", `\textsuperscript{\relax 1\thanks{a}}` and `\textsuperscript{\protect 2\thanks{b}}` keep the note but lose the label, as do `1\protect\protect\thanks{b}`, `{\protect}1\thanks{f}` and `\protect\protect\thanks{c}`, and `1,\protect\one\thanks{n}` gives `<sup>1</sup>` where pdflatex prints "1,1". No error is reported. int62a, int63a and 78v alike (older than 78v); synthetic, no census paper. Fix: read the label from what it typesets (expand macros, drop an unexpandable `\relax`/`\protect`) before matching it. Review rev78v2 finding 6a, widened by rev78v3 finding 3 (probes `rev78v3/q/pl.tex`, `pra.tex`, `prc.tex`, `rev78v2/p/sh3.tex`); RED repro `sectioning-frontmatter/author_mark_relax_before_its_label` | open |
 | — | A note macro reached through four macros (`\fnM→\fnN→\fnO→\fnP{8\footnotemark}`) inside an author's mark loses both its "8" and the footnotemark (pdflatex "Di Delta8†"): `makes_a_note`/`prints_beside_a_note` (author_block/preprocess.rs) look three deep at most, so the macro is neither taken out nor read in place and stays in a label nothing answers. int62a, int63a and 78v alike; synthetic. Fix: past the depth bound, fall back to taking the macro out whole (the int62a behaviour for a note macro). Review rev78v2 finding 6b; RED repro `sectioning-frontmatter/author_mark_four_deep_note_macro_chain` | open |
 | — | Author marks: inside a note macro's body, a `\protect` before another note-making macro (`\newcommand\fnL{\footnotemark}`, `\newcommand\fnB{7\protect\fnL}`, `Lu L\textsuperscript{\fnB}`) is not label-safe, so the macro is taken out whole and its "7" lands in the name text: `L7[mark]` where 78v r2 gave `L[mark]<sup>7</sup>` (pdflatex "L7§"). `prints_beside_a_note` (`author_block/preprocess.rs:233-236`) lets a `\protect` through only before a note command, where `split_mark_notes` (`:105-108`) also takes one before a note-making macro. Markup only, nothing printed lost; 78v r3 = int63a; synthetic, no census paper. Fix: accept a `\protect` before a `makes_a_note` macro in the body loop as `split_mark_notes` does, a row in `perfect_kernel_batch78v::author_protect_thanks_and_note_macro_inside_a_mark`, OD #881 "before a note command or note macro". Review rev78v3 finding 1 (probe `rev78v3/q/prb.tex`) | open |
+| — | Frontmatter e-mail ↔ name spelling: an address that spells an author with an umlaut written out (`ü` as `ue`, `duerrschnabel@` for Dürrschnabel, 1911.11496) is not matched, so it goes unspelled (to the block). The spelling helper is shared by today's output and the FM S2 shadow. Fix: fold the German umlaut transliterations (ä→ae, ö→oe, ü→ue, ß→ss) into the comparison when the plain fold fails. FM S2a.2 r6 decision 3 sample | open |
 | — | Graphics search order: LaTeX's `\IfFileExists` tries the bare name in the working directory first (kpathsea, latex.ltx:1095-1102) and only then the `\input@path`/`\graphicspath` entries (`\@iffileonpath`, latex.ltx:9698), where `image_candidates` (`util/image.rs:36-41`, Perl Image.pm:46-48 alike) lists `\graphicspath` entries first and SOURCEDIRECTORY last: with `\graphicspath{{../up/}{./}}` and a `u.pdf` in both, pdflatex reads `./u.pdf`, ours `../up/u.pdf` (for the extensionless name and the `.eps`-retry alike). Older than 78v (int63a the same). Also `graphics_type_rank` ranks `.MPS` among the uppercase types, which pdftex.def:599 does not list (no practical effect). Review rev78v3 findings 2 and 4 (probe `rev78v3/g/sub/g3.tex`) | open |
 | — | caption: a ruled/boxed float.sty float resets the label format and separator to its style's (caption.sty:864-866 `\caption@setstyle*\float@style`), so pdflatex prints "Algorithm 1 Two." under a global `labelformat=allcaps` where ours prints "ALGORITHM 1" (2106.08363 wiley-article; boxed format "[Listing] 1", 2109.00138); untyped settings should give way to the style's, typed `\captionsetup[algorithm]` still apply (LIPIcs). Review rev78s2 finding 2 | FIXED 78v (a float.sty type's style recorded, `\DeclareCaptionStyle` a caption style, caption.sty's `ruled` declared unless its `ruled` option; `caption_setting`, `float_style_setting`; guards `perfect_kernel_batch78v::{caption_ruled_float_sty_float_takes_its_style, caption_declared_ruled_style_formats_a_ruled_float}`; residual: under `[ruled]{caption}` a ruled float's label font adds caption's `labelfont` to float.sty's bold, pdflatex caption's alone, base too) |
 | — | caption: `\captionsetup[<type>]{name=…}` of a float.sty type does not reach `\fname@<type>` (caption.sty:882-884 calls `\floatname`; `caption_sty.rs:241` `\lx@caption@setname` sets only `\<type>name`): pdflatex "Snip 1:", ours "Listing 1" (int58a "Snip 1" for the old figure-typed listing; algorithm "Proc 1" vs "Algorithm 1" in base too). No census paper sets a non-default name. Fix: `\def\lx@caption@setname#1#2{\@ifundefined{fname@#1}{}{\@namedef{fname@#1}{#2}}\@namedef{#1name}{#2}}`; the fallback's `\ifcsname #2name` should test `\ifx…\relax` as caption does. Review rev78s2 finding 3 | FIXED 78v (`\lx@caption@setname` calls `\floatname`, `\lx@caption@fnum` tests `\ifx…\relax`; guard `perfect_kernel_batch78v::caption_typed_name_of_a_float_sty_type`) |
@@ -6700,6 +6701,67 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   vs int63a (300 random census controls, seed 63, + `pop78u_1` + 200 of `pop78u_2`; 528 of 531 converted): XML byte-identical
   on all 531, E 149 = 149, F 1 = 1; FM shadow (int63a unset vs `LATEXML_FM_SHADOW=1`, the same 531): XML identical. Binding
   nets: 136/136, 0 documents worse (int62a vs int63a).
+  **r6** (OD #837 "S2a.2 r6"; branch pk/fms2a2r6 from int63 410a2a85e8; review revfms2a2_5 findings 1, 2, 5, 6 and the
+  main session's decisions 2-3): a replaced `\author` call keeps nothing — the post-passes read the live creators only
+  (`Resolver::live`: the footnote-text pairing, a sole author's orphans, the address list's order, the upfront grid; the
+  replaced call's block items go with it, 2510.26354); a resolved name is its printed text (`new_creator`'s piece filter
+  removed); a note's inner contact is its owner's only as the note's only link with its mark shown on the owner, or by
+  spelling the owner — the rest stay in the note's text (decision 2), and IEEEtran's title notes print no mark
+  (IEEEtran.cls:4756 `\def\thefootnote{}`; policy `IEEEtran`, `unmarked_notes`), so there only spelling places a link
+  (2001.02600, 1803.04996, 2504.08644, 2602.13176 now agree); an entry's `\email` printing several addresses (`\{a,b,c\}@x`)
+  is written out, each to the author it spells among the document's, an unspelled one to the block (decision 3,
+  `ruling3:written-out`, a comparator change tag; 1904.07206, 2302.05745); `NoteText.value` documented as diagnostic; an
+  address list's lines place their notes, the block's (`note:address-line`). Guards `perfect_kernel_batchfms2a2r6::*` (7,
+  each red on r5 but the XML pin), `resolver::tests` (the U+2010 kept), `fmshadow::tests` (+2). **A/B** (release, int63a
+  vs r6 stamped a5bad80abe, int63a dumps): 300 seeded census papers (seed 6006, none of the earlier rounds' 300s nor the
+  r5 review's 40) XML identical with the variable unset and set (the temp-dir `graphicspath` instruction aside), E 103 =
+  103 = 103, F 0, W 4,284 each, paper by paper; the 985 sectioning-frontmatter repros XML identical (base, off, on), E 23,
+  W 39 each. **Fresh census on int63** (the 26,322 papers converted with the release binary stamped a5bad80abe; the dumps'
+  `resolved` equal to `--re-resolve`, tsv byte-identical): counted 23,205 — agree 19,505, classified 1,820, unclassified
+  1,880 (**8.1 %**; the same dumps under the int63 resolver, `ab_audit` built from 410a2a85e8: 19,620 / 1,695 / 1,890 —
+  int63's XML side, 78u, moved 20 papers against r5's int60a census, 14 kernel and 2 IEEEtran unclassified → agree); 111
+  held, 10 unobserved; per family (gate): kernel 6,800
+  (14.8 %), **revtex4_support 5,639 (0.4 %: 24, r5's list unchanged)**, **ams_support 3,105 (0.4 %: 13)**, IEEEtran 2,202
+  (9.6 %), authblk 939 (9.2 %), elsart_support_core 818 (6.0 %), inst_support 786 (23.1 %), aas_support 688 (4.4 %),
+  mn2e_support 560 (7.5 %), llncs 400 (15.0 %, from 17.0 %), "binding" 317 (8.2 %), iopart_support 264 (6.1 %),
+  sv_support 262 (11.8 %), jheppub 196 (4.9 %), jcappub 93 (3.9 %), ijcai 59 (72.9 %), JHEP.cls 58 (81.0 %). Against the
+  int63 resolver, 158 papers move: decision 3 moves 130 agree → classified (llncs 109, inst_support 16, sv_support 4,
+  authblk 1) and 11 unclassified → classified (llncs 8, sv_support 2, inst_support 1); decision 2 moves 14 classified →
+  agree (IEEEtran 12, kernel 1, authblk 1); finding 1 moves 1611.08655 unclassified → agree (a replacing call's sole
+  author takes the block's address); 2 move classified → unclassified (2406.07529:
+  the `\vphantom{\thanks{Equal contribution.}}` today's XML loses, now the block's note in the shadow; 2407.21626: the
+  name ": Matilde Barberi-Squarotti", r5's piece filter having hidden the split's colon). Decision 3's PDF sample (10 of
+  the 130, seeded, pdflatex on copies; 2109.08655's garbled page text replaced): right 9 — two of them leave a
+  human-evident address to the block as the no-guessing rule requires (1307.2669 `vpest283@`, 2302.05745 `guyam@`
+  shared by two Guys) —, wrong 1 (1911.11496: `duerrschnabel@` unspelled for Dürrschnabel, `ü` written `ue`).
+  **revtex4_support precision** (decision 1's gate; a fresh seeded draw, `sha256("606:"+key)` over its 381 classified-only
+  papers, the first 41, two without a PDF): right 38 of 39 — 2308.13439, 1710.04348, 2506.05954, 2101.11090, 2605.28357,
+  2102.01842, cond-mat0207129, 0909.4814, 0812.0321, 1111.5058, 1603.06794, 1503.02813, 1905.08661, 2008.10319,
+  1406.0038, 2605.26378, cond-mat0502298, cond-mat0404120, 0812.1531, 1607.08533, 0707.1549, 0906.2758, 1512.06435,
+  1310.1663, 2406.18974, 2012.09251, 2501.04244, 2003.03434, 0804.4669, 2101.02613, 1901.05740, 2310.04763, 2209.05548,
+  2602.20526, 2203.06767, 1812.04462, 2412.05291, 2210.15537 —, wrong 1 (1607.07280: a `\footnote[1]` mark on a name
+  answering `\affiliation{\footnotemark[1]…}`, left to the block); no PDF: cond-mat0007316, hep-ph0002275; the rows of
+  all 41 identical on the r5 dumps re-resolved. **revtex4_support passes the S2b gate on int63** (97.4 % ≥ 95 %, 0.4 % <
+  0.5 %). Residuals: the two classes above (1607.07280; 1911.11496); a name's edge glyphs the split leaves, visible since
+  the filter's removal (7 census names: 0806.2911 `∥`, 0907.1243 `⋄`, 2003.01448, 2311.00652 `|`, 2407.21626 `:`,
+  2511.07187 `--`, 2511.18580 `⋅` — marks or separators the lexer does not read as such). Side finding (output, not fixed):
+  today's XML loses a `\thanks` set inside `\vphantom` after an author block's last address (2406.07529). Scratch
+  `~/data/pk_wt/scratch_fms2a2r6/` (rep/final.*, rep/int63_rr.*, rt60.txt, d3_10.txt).
+  **Landing (int66, r6 squashed onto int65):** review revfms2a2_6 LAND — shadow-only proven again (no hook added; the
+  policy table read only after `records_now()`; 40 papers, seed `rev6-77` + 10 witnesses, XML identical base/unset/set);
+  census, revtex4_support (the same 24 unclassified as r5) and the 158 moves reproduced byte for byte; 5 of the 38 revtex
+  "right" and 3 of decision 3's 10 confirmed against arXiv PDFs. Main-session decisions on the writer's questions: (1)
+  an unmarked-notes class (`IEEEtran` policy) links a note's address to an author only by spelling — confirmed; (2) the
+  7 edge glyphs are r7's (the lexer reads them as the marks/separators they are); (3) an address matches any author of
+  the document (1904.07206) — confirmed; (4) `ü` written `ue` (1911.11496) is an output row (shared spelling helper).
+  **r7 queue** (before the S2b pilot): `answer_sequence`'s `in_order` compares a live place with an all-creators index
+  (`post.rs:100-103`; a replacing `\author` under a `SpelledElseOrder` class) — fix + guard; a url that spells a co-author
+  goes to that author as an e-mail does (`blocks.rs:689-693` vs `post.rs:446ff`; 2001.02600 Peng Xu's homepage — main
+  session: route urls through the spelled-author pass); `note()` decides an e-mail "taken" before the whole block is read
+  (`blocks.rs:666-688`; `\author{Ann\thanks{ann@x.org, bob@x.org} \and Bob}` would print both twice under S2b) — defer to
+  `answer_note_emails`; `label_owners`' `author:N` indexes all creators where `place.rs:94` numbers the live ones; the 7
+  edge glyphs; 1607.07280 (`\footnote[1]` mark not read as `\affiliation{\footnotemark[1]…}`'s request); and a census on
+  the int66 binary to re-confirm the revtex4_support gate (int64's 78v changed the XML side).
 
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's

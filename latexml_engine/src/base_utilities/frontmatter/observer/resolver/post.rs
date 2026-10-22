@@ -8,12 +8,16 @@ impl Resolver {
   /// A sole author's orphans are that author's, as Perl attaches them (OXIDIZED_DESIGN_DIVERGENCES #159, relocate.rs):
   /// amsart's `\address` or `\dedicatory` written before the `\author` (0911.5235, 1102.3253, 0712.4133); its
   /// affiliations only when it holds none (an author whose marks request one is not given the one no one marks). A note
-  /// of the title (`api:title-note`) stays the block's.
+  /// of the title (`api:title-note`) stays the block's. The sole author is the sole live one: a replacing `\author`
+  /// call's author takes the block (1611.08655).
   pub(super) fn sole_author_takes_the_block(&mut self) {
-    if self.out.creators.len() != 1 || self.out.block.is_empty() {
+    let [sole] = self.live()[..] else {
+      return;
+    };
+    if self.out.block.is_empty() {
       return;
     }
-    let affiliated = !self.out.creators[0].affiliations.is_empty();
+    let affiliated = !self.out.creators[sole].affiliations.is_empty();
     let mut kept = Vec::new();
     for assoc in std::mem::take(&mut self.out.block) {
       let institute = matches!(assoc.role.as_str(), "affiliation" | "address");
@@ -26,7 +30,7 @@ impl Resolver {
         continue;
       }
       let rule = s!("{} owner:sole-author", assoc.rule);
-      self.attach(Some(0), Assoc { rule, ..assoc }, note);
+      self.attach(Some(sole), Assoc { rule, ..assoc }, note);
     }
     self.out.block = kept;
   }
@@ -37,7 +41,7 @@ impl Resolver {
   /// `\affiliation{https://ifisr.net}`; a note as its note, `api:note`), else the block's.
   pub(super) fn held_before_creators(&mut self) {
     let before = |a: &Assoc| a.rule.starts_with("api:no-creator");
-    let held = |a: &Assoc, creators: &[RCreator]| {
+    let held = |a: &Assoc, creators: &[&RCreator]| {
       creators.iter().any(|c| {
         c.affiliations
           .iter()
@@ -46,16 +50,20 @@ impl Resolver {
           .any(|b| b.role == a.role && b.text.trim() == a.text.trim())
       })
     };
-    let creators = &self.out.creators;
-    self.out.block.retain(|a| !(before(a) && held(a, creators)));
-    if self.out.creators.len() == 1 {
+    let live = self.live();
+    let creators: Vec<&RCreator> = live.iter().map(|&c| &self.out.creators[c]).collect();
+    self
+      .out
+      .block
+      .retain(|a| !(before(a) && held(a, &creators)));
+    if let [sole] = live[..] {
       let mut kept = Vec::new();
       for assoc in std::mem::take(&mut self.out.block) {
         if before(&assoc) {
           // (a note made before the author is its note, not a contact: review revfms2a2_4 finding 5)
           let note = assoc.rule.split_whitespace().any(|t| t == "api:note");
           let rule = s!("{} owner:sole-author", assoc.rule);
-          self.attach(Some(0), Assoc { rule, ..assoc }, note);
+          self.attach(Some(sole), Assoc { rule, ..assoc }, note);
         } else {
           kept.push(assoc);
         }
@@ -83,7 +91,7 @@ impl Resolver {
   /// the one corresponding author, the block.
   pub(super) fn answer_sequence(&mut self) {
     let list = std::mem::take(&mut self.sequenced);
-    let all: Vec<usize> = (0..self.out.creators.len()).collect();
+    let all = self.live();
     let spelled: Vec<Option<usize>> = list.iter().map(|(a, ..)| self.spelled(a, &all)).collect();
     // (one place per author, the places the calls': an author's two addresses in one call share it, OD #805)
     let mut places: Vec<usize> = list.iter().map(|(_, _, _, place)| *place).collect();
@@ -98,8 +106,14 @@ impl Resolver {
     for ((address, assoc, group, place), spelled) in list.into_iter().zip(spelled) {
       let (owner, rule) = match spelled {
         Some(owner) => (Some(owner), "owner:spelled"),
-        None if in_order => (place_of(place), "owner:order"),
-        None => match group.as_slice() {
+        None if in_order => (place_of(place).map(|p| all[p]), "owner:order"),
+        None => match group
+          .iter()
+          .copied()
+          .filter(|c| !self.replaced.contains(c))
+          .collect::<Vec<_>>()
+          .as_slice()
+        {
           [only] => (Some(*only), "owner:only-author"),
           _ => self.corresponding(&all),
         },
@@ -204,10 +218,13 @@ impl Resolver {
   /// `\author{A and B}` then `\address{…}\email{…}` twice), K = N·m of them, their roles periodic with period m, the
   /// j-th group of m is the j-th author's. Any other pile stays as it is.
   pub(super) fn distribute_upfront(&mut self) {
-    let n = self.out.creators.len();
-    if n < 2 || self.order[..n - 1].iter().any(|o| !o.is_empty()) {
+    // (the authors today's holds: a replaced `\author` call's are none of them)
+    let live = self.live();
+    let n = live.len();
+    if n < 2 || live[..n - 1].iter().any(|&c| !self.order[c].is_empty()) {
       return;
     }
+    let last_at = live[n - 1];
     // today's pile: what the last author holds — its contacts, and the entries ruling 1 labels by a leading mark that
     // today's attached to it (`piled`), in call order; one such entry on another author is no pile
     if self
@@ -215,7 +232,7 @@ impl Resolver {
       .iter()
       .map(|(_, owners)| owners)
       .chain(self.empty_piled.iter().map(|(_, _, owners)| owners))
-      .any(|owners| owners.iter().any(|&c| c != n - 1))
+      .any(|owners| owners.iter().any(|&c| c != last_at))
     {
       return;
     }
@@ -225,7 +242,7 @@ impl Resolver {
       Piled(usize),
       Empty(usize),
     }
-    let last = &self.out.creators[n - 1];
+    let last = &self.out.creators[last_at];
     let held_assoc = |aff: bool, i: usize| {
       if aff {
         &last.affiliations[i]
@@ -233,7 +250,7 @@ impl Resolver {
         &last.contacts[i]
       }
     };
-    let mut pile: Vec<(usize, Item)> = self.order[n - 1]
+    let mut pile: Vec<(usize, Item)> = self.order[last_at]
       .iter()
       .map(|&(aff, i)| {
         (
@@ -243,7 +260,7 @@ impl Resolver {
       })
       .collect();
     for (at, owners) in &self.piled {
-      if owners.contains(&(n - 1)) {
+      if owners.contains(&last_at) {
         pile.push((
           self.pending[*at].2.source.map_or(0, |s| s.0),
           Item::Piled(*at),
@@ -251,7 +268,7 @@ impl Resolver {
       }
     }
     for (at, (index, _, owners)) in self.empty_piled.iter().enumerate() {
-      if owners.contains(&(n - 1)) {
+      if owners.contains(&last_at) {
         pile.push((*index, Item::Empty(at)));
       }
     }
@@ -273,19 +290,22 @@ impl Resolver {
     }
     // (nor when another author is to receive one of their kind by its label: its mark requests a labelled entry of a
     // role the pile holds, which `answer_pending` gives it after this — today's gate, insert.rs `answered_later`)
-    let answered_later = self.out.creators[..n - 1].iter().any(|c| {
-      c.requests.iter().any(|request| {
-        self
-          .pending
-          .iter()
-          .enumerate()
-          .any(|(at, (labels, _, assoc))| {
-            !self.piled.iter().any(|(p, _)| *p == at)
-              && roles.contains(&assoc.role)
-              && labels.iter().any(|l| label_matches(request, l))
-          })
-      })
-    });
+    let answered_later = live[..n - 1]
+      .iter()
+      .map(|&c| &self.out.creators[c])
+      .any(|c| {
+        c.requests.iter().any(|request| {
+          self
+            .pending
+            .iter()
+            .enumerate()
+            .any(|(at, (labels, _, assoc))| {
+              !self.piled.iter().any(|(p, _)| *p == at)
+                && roles.contains(&assoc.role)
+                && labels.iter().any(|l| label_matches(request, l))
+            })
+        })
+      });
     if answered_later {
       return;
     }
@@ -306,7 +326,7 @@ impl Resolver {
         }
       }
     }
-    let last = &mut self.out.creators[n - 1];
+    let last = &mut self.out.creators[last_at];
     let affiliations: Vec<Assoc> = keep
       .iter()
       .filter(|(aff, _)| *aff)
@@ -321,9 +341,9 @@ impl Resolver {
     last.contacts = contacts;
     for (j, assoc, aff) in moved {
       if aff {
-        self.out.creators[j].affiliations.push(assoc);
+        self.out.creators[live[j]].affiliations.push(assoc);
       } else {
-        self.out.creators[j].contacts.push(assoc);
+        self.out.creators[live[j]].contacts.push(assoc);
       }
     }
   }
@@ -427,22 +447,25 @@ impl Resolver {
   }
 
   /// A note's e-mails: each to the author of the note's block it spells (FIDELITY_CHARTER §4: ownership by evidence —
-  /// the spelling before the note's place), else the author the note is on (its mark is shown on that name: the
-  /// main-session decision of 2026-10-22 recorded in OXIDIZED_DESIGN_DIVERGENCES #837).
+  /// the spelling before the note's place), else the author the note is on when it is the note's only link (its mark is
+  /// shown on that name: the main-session decision of 2026-10-22 recorded in OXIDIZED_DESIGN_DIVERGENCES #837, narrowed
+  /// by its decision 2), else none: the address stays in the note's text.
   pub(super) fn answer_note_emails(&mut self) {
-    for (owner, assoc) in std::mem::take(&mut self.note_emails) {
+    for (owner, assoc, fallback) in std::mem::take(&mut self.note_emails) {
       let candidates: Vec<usize> = match owner {
         Some(at) => (0..self.out.creators.len())
           .filter(|&c| self.group[c] == self.group[at])
           .collect(),
-        None => (0..self.out.creators.len()).collect(),
+        None => self.live(),
       };
       match self.spelled(&assoc.text, &candidates) {
         Some(spelled) if Some(spelled) != owner => {
           let rule = s!("{} owner:spelled", assoc.rule);
           self.attach(Some(spelled), Assoc { rule, ..assoc }, false);
         },
-        _ => self.attach(owner, assoc, false),
+        Some(_) => self.attach(owner, assoc, false),
+        None if fallback => self.attach(owner, assoc, false),
+        None => {},
       }
     }
   }
@@ -480,10 +503,14 @@ impl Resolver {
         .collect()
     };
     let texts = std::mem::take(&mut self.note_texts);
-    // the marks not yet paired: (creator, key), in creator order
+    // the marks not yet paired: (creator, key), in creator order — a replaced `\author` call's none (its creators are
+    // deleted with it, `resolve`: a text built before the names went to the first mark, a replaced creator's, and was
+    // lost with it — `\author{A\footnotemark[1]}` twice, `\footnotetext[1]` before `\maketitle`; review revfms2a2_5
+    // finding 1, 2510.26354's replacing call)
     let mut marks: Vec<(usize, String)> = self
       .fn_requests
       .iter()
+      .filter(|(c, _)| !self.replaced.contains(c))
       .map(|(c, label)| (*c, mark_key(label)))
       .collect();
     marks.sort_by_key(|(c, _)| *c);
@@ -651,6 +678,21 @@ impl Resolver {
         },
         _ => (owners, assoc),
       };
+      // (an address an entry's e-mail call printed among several, written out: to the author it spells, else the
+      // block's shared creator — decision 3 of 2026-10-22, user rulings 2026-10-20 #4, #8, #10: `\institute{Univ A \\
+      // \email{\{ann,support\}@x.org}}` went whole to every author of entry 1. Any author of the document, not only the
+      // entry's: llncs prints its `\institute` list as one block, `\{jzhao,qfu,chu,syue\}@lincoln.ac.uk` closing entry 3
+      // under entry 1's authors, 1904.07206; an entry no name requests too, `\{guyam, osherm, tomz, guykatz,
+      // schapiram\}@cs.huji.ac.il` under unmarked names, 2302.05745)
+      if assoc.rule.contains("ruling3:written-out") {
+        let (owner, tag) = match self.spelled(&assoc.text, &self.live()) {
+          Some(owner) => (Some(owner), "owner:spelled"),
+          None => (None, "owner:block"),
+        };
+        let rule = s!("{} {tag}", assoc.rule);
+        self.attach(owner, Assoc { rule, ..assoc }, false);
+        continue;
+      }
       let note = assoc.role == "legend";
       // (an entry labelled by a mark of a kind no name shows — `$^{1}$School of Physics, Liaoning University` under
       // names printing no number, 2407.20481, 2005.13493, 1305.3804 — is the reader's unlabelled entry: today's

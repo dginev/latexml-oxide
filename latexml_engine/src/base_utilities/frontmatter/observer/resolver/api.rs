@@ -293,11 +293,25 @@ impl Resolver {
       // attaches the entry where its `annotate=` puts it — what its contact grid sees, `distribute_upfront`)
       let first_pending = self.pending.len();
       for contact in inner {
-        self.pending.push((labels.clone(), false, Assoc {
-          rule: s!("{label_rule} api:inner-contact"),
-          label: labels.first().cloned(),
-          ..contact
-        }));
+        // (an e-mail call printing several addresses, a braced group `\email{\{ann,bob\}@x.org}` in an `\institute`
+        // entry: each address written out, to the author of the document it spells — `answer_pending`)
+        let addresses = written_out(&contact);
+        if addresses.is_empty() {
+          self.pending.push((labels.clone(), false, Assoc {
+            rule: s!("{label_rule} api:inner-contact"),
+            label: labels.first().cloned(),
+            ..contact
+          }));
+          continue;
+        }
+        for address in addresses {
+          self.pending.push((labels.clone(), false, Assoc {
+            rule: s!("{label_rule} api:inner-contact ruling3:written-out"),
+            label: labels.first().cloned(),
+            text: address,
+            ..contact.clone()
+          }));
+        }
       }
       if !text.is_empty() {
         self.pending.push((labels, false, Assoc {
@@ -461,6 +475,33 @@ impl Resolver {
     } else {
       owners.into_iter().map(Some).collect()
     };
+    // (several addresses one e-mail call prints, written out: each to the author it spells, else the block's shared
+    // creator — decision 3 of 2026-10-22, user rulings 2026-10-20 #4, #8, #10; `answer_pending` for a labelled entry)
+    let reached = owners.iter().any(Option::is_some);
+    let candidates = self.live();
+    let mut kept_inner = Vec::new();
+    for contact in inner {
+      let addresses = written_out(&contact);
+      if addresses.is_empty() || !reached {
+        kept_inner.push(contact);
+        continue;
+      }
+      for address in addresses {
+        let (owner, tag) = match self.spelled(&address, &candidates) {
+          Some(owner) => (Some(owner), "owner:spelled"),
+          None => (None, "owner:block"),
+        };
+        self.attach(
+          owner,
+          Assoc {
+            rule: s!("{rule} api:inner-contact ruling3:written-out {tag}"),
+            text: address,
+            ..contact.clone()
+          },
+          false,
+        );
+      }
+    }
     for owner in owners {
       if !text.is_empty() || note {
         self.attach(
@@ -472,7 +513,7 @@ impl Resolver {
           note,
         );
       }
-      for contact in &inner {
+      for contact in &kept_inner {
         self.attach(
           owner,
           Assoc {
@@ -483,5 +524,19 @@ impl Resolver {
         );
       }
     }
+  }
+}
+
+/// The addresses an entry's e-mail contact prints when it prints several (a braced group of local parts before a
+/// shared domain, `{ann,bob}@x.org`, or a list): each one written out (ruling 3); none for one address or another role.
+fn written_out(contact: &Assoc) -> Vec<String> {
+  if contact.role != "email" {
+    return Vec::new();
+  }
+  let addresses = addresses_in(&contact.text);
+  if addresses.len() > 1 {
+    addresses
+  } else {
+    Vec::new()
   }
 }

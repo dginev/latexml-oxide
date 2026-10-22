@@ -23505,8 +23505,9 @@ byte-identical against int60a with the switch unset and set, SYNC "FM S2a.2").
   (`\lx@cref{creftype}{x}`) is never a `ref:` mark (the rehearsal prints its show list); a pre-author annotation given to a
   sole author keeps whether it is a note (`api:note`; unreachable today — a note before any author is the title's,
   `api:title-note` — but `held_before_creators` no longer files a note as a contact); the lexer reads zero-width
-  characters as no ink and a name keeps no piece printing no letter or digit (a bracket's half aside, `Jiayi Zhang (
-  张嘉懿)`): no U+200B in a name, guard `spacing_before_a_mark_parts_the_entries` fixed; the r4 guard's `.all` asserts its
+  characters as no ink: no U+200B in a name, guard `spacing_before_a_mark_parts_the_entries` fixed (r5 also dropped a
+  name's pieces printing no letter or digit in `new_creator`; r6 removed that filter — a resolved name is its printed
+  text, review revfms2a2_5 finding 2); the r4 guard's `.all` asserts its
   count first; the census and A/B binaries are built from committed trees.
 Not done (r5 residual, in the r5 report): the counter-value footnote pairs above; ams_support's names lines
 (0808.2556's "by", 1703.08733's `\endnote` text, 2109.14517's `\cbt` accent, math0610203's `M\textsuperscript{c}Kernan`)
@@ -23523,7 +23524,53 @@ when they spell the owner or are its only link (no guessing, user ruling 2026-10
 an `\institute`/`\affil` entry is written out and each address goes to the author it spells, an unspelled one to the block's
 shared creator (#4/#8/#10) — r6; the corresponding-author fallback holds only for an address printed alone (user ruling
 2026-10-21 #14). The resolver drops a replaced `\author` call's block items with its creators (`resolver/mod.rs`, 2510.26354);
-its footnote-text pairing does not yet skip the replaced creators' marks (r6, SYNC "FM S2a.2" int63).
+its footnote-text pairing skips the replaced creators' marks since r6 (below).
+
+**S2a.2 r6: the landing review's findings, decisions 2 and 3** (review revfms2a2_5 findings 1, 2, 5, 6; the main
+session's decisions of 2026-10-22). Still shadow only (XML byte-identical against int63a with the switch unset and set,
+SYNC "FM S2a.2").
+- **A replaced `\author` call keeps nothing** (finding 1): the post-passes that count the authors or pick one read the
+  live creators only (`Resolver::live`, no replaced call's) — the footnote-text pairing (`answer_note_texts`: a
+  `\footnotetext[1]` built before `\maketitle` went into the first mark of its print, a replaced creator's, and was
+  deleted with it — `\author{A\footnotemark[1]}` twice), a sole author's orphans and pre-author annotations, the class's
+  address list (`answer_sequence`'s author order and spelling), today's upfront contact grid (`distribute_upfront`), a
+  note's e-mail with no owner; the block's own items of the replaced call go with its creators (2510.26354's first
+  `\author`, whose `firstname.lastname@h-its.org` the second call's addresses write out).
+- **A resolved name is its printed text** (finding 2, the main session's decision): `new_creator` keeps a piece printing
+  no letter or digit (r5's filter, review revfms2a2_4 finding 6, removed), its spaces collapsed, as the join paths keep
+  it (1706.00234's "TIÊ ´N-SO . N PHẠM"); a zero-width character never reaches it (the lexer's `is_zero_width`).
+- **A note's inner contacts** (decision 2, user ruling 2026-10-20 #4): an inner contact is its owner's when it is the
+  note's only link and the note's mark is shown on the owner, or when it spells the owner (an e-mail by the owner chain's
+  spelling, a url by its letters after the scheme and `www.`, `link_letters`: `owner:spelled`); an e-mail spelling
+  another author of the block is that author's, as before (1908.04020); any other stays in the note's text, no contact,
+  and a note whose contacts are not all taken out is never emptied (ruling 4's drop). A class printing no note marks —
+  IEEEtran's `\maketitle` sets `\def\thefootnote{}` (IEEEtran.cls:4756; ieeeconf.cls:3592, ieeecolor2.cls:3903 the same)
+  — places a note beside the last name by its place alone, so there a link is a name's only by spelling (policy entry
+  `IEEEtran`, `Policy::unmarked_notes`): a co-author's homepage (2001.02600), a video (1803.04996), data records
+  (2504.08644) and four co-authors' ORCIDs (2602.13176) went to the last author. The comparator strips ORCID iDs from
+  the notes it compares (`without_orcid_ids`: the XML's note prints an ORCID link's logo, the shadow's its iD).
+- **A braced address group in an entry** (decision 3, user rulings 2026-10-20 #4, #8, #10): an `\email` an
+  `\institute`/`\affil` entry holds that prints several addresses (`\{a,b,c\}@x`, or a list) is written out, each address
+  the author's it spells among the document's authors (llncs prints its `\institute` list as one block:
+  `\{jzhao,qfu,chu,syue\}@lincoln.ac.uk` closes entry 3 under entry 1's authors, 1904.07206), an unspelled one the
+  block's shared creator (`ruling3:written-out owner:spelled|owner:block`, a comparator change tag); one address stays
+  the entry's owners', as today's. The comparator explains today's whole group by the shadow's addresses written out of
+  it (`written_out_rule`).
+- **The nits**: `ledger::NoteText::value` is documented as diagnostic (no resolver input; the dump keeps it so a census
+  can count the texts today's pairs by counter value alone, finding 5); an address list running on over the next lines
+  places its lines' notes, the block's — a line of addresses is no one name's (`note:address-line`; 2406.07529's
+  `\vphantom{\thanks{Equal contribution.}}` after its last address, which today's XML loses), finding 6.
+Measured on int63 (SYNC "FM S2a.2" r6): revtex4_support passes the per-family S2b gate (unclassified 0.4 %, a fresh
+seeded classified sample 38 of 39 right). Not done (r6 residual): a `\footnote`'s printed mark on a name is not read as
+the request a `\footnotemark[1]`-led entry answers (revtex's `\author{Shun'ya Mizoguchi\footnote[1]{E-mail:…}}` and
+`\affiliation{\footnotemark[1]Theory Center, …}`: the shadow leaves both affiliations to the block, 1607.07280); an
+address spelled with `ue` for the name's `ü` is unspelled (`duerrschnabel@` for Dominik Dürrschnabel, 1911.11496 —
+`spelled_owners` is today's too); the counter-value footnote pairs (r5's list); a name's edge punctuation the
+split leaves (`MeerKLASS Collaboration: Matilde …` reads ": Matilde Barberi-Squarotti", 2407.21626 — r5's filter hid it;
+six more census names keep a mark glyph or separator at an edge: 0806.2911 `∥`, 0907.1243 `⋄`, 2003.01448 `J . Van
+Saders`, 2311.00652 `| PhD`, 2511.07187 `--`, 2511.18580 `⋅`). Guards `perfect_kernel_batchfms2a2r6::*` (each red on r5
+but the XML pin), engine unit test `resolver::tests::a_sole_authors_note_made_before_it_is_its_note` (the printed U+2010
+kept), ab_audit `fmshadow::tests::{a_written_out_address_group_is_classified, a_notes_orcid_id_is_no_note_text}`.
 
 ### 840. A space a name sets before its own mark is the name's; spacing-only math, `\enskip` after a mark part names
 

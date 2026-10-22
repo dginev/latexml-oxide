@@ -171,8 +171,11 @@ struct Resolver {
   /// per creator of a block: that block's queue (its `epoch`); the creators a later block replaced
   epoch_of:         Vec<Option<usize>>,
   replaced:         Vec<usize>,
-  /// a note's e-mails (the creator the note is on, the contact), placed once every name is read
-  note_emails:      Vec<(Option<usize>, Assoc)>,
+  /// a note's e-mails (the creator the note is on, the contact, whether that creator takes it when no name spells it:
+  /// the note's only link, its mark shown on the name — decision 2), placed once every name is read
+  note_emails:      Vec<(Option<usize>, Assoc, bool)>,
+  /// whether the block being read prints its notes' marks (`Policy::unmarked_notes`)
+  notes_marked:     bool,
   /// the requests a glued mark was parted into (creator, request), `part_glued_labels`
   parted:           Vec<(usize, String)>,
   /// while an API call's marked entries are resolved one by one (`mark_led_pieces`)
@@ -227,6 +230,7 @@ impl Resolver {
       epoch_of:         Vec::new(),
       replaced:         Vec::new(),
       note_emails:      Vec::new(),
+      notes_marked:     true,
       parted:           Vec::new(),
       splitting:        false,
       piled:            Vec::new(),
@@ -245,17 +249,11 @@ impl Resolver {
     requests: Vec<String>,
     group: usize,
   ) -> usize {
-    // (a piece of the name printing no letter or digit is none of it — a dash, a stray symbol: review revfms2a2_4
-    // finding 6 — unless it holds a bracket, half of a pair around a piece that has: `Jiayi Zhang ( 张嘉懿)`)
-    let name = name
-      .split_whitespace()
-      .filter(|piece| {
-        piece
-          .chars()
-          .any(|c| c.is_alphanumeric() || "()[]{}<>".contains(c))
-      })
-      .collect::<Vec<_>>()
-      .join(" ");
+    // (a resolved name is its printed text, its spaces collapsed: a visible glyph printing no letter or digit stays — a
+    // printed U+2010, the `·` between the parts of a name —, as the join paths keep it and today's XML prints it,
+    // 1706.00234's "TIÊ ´N-SO . N PHẠM"; a zero-width character is no ink already, the lexer's `is_zero_width` — main-
+    // session decision on review revfms2a2_5 finding 2, superseding r5's piece filter of revfms2a2_4 finding 6)
+    let name = name.split_whitespace().collect::<Vec<_>>().join(" ");
     self.out.creators.push(RCreator {
       name,
       requests,
@@ -288,6 +286,14 @@ impl Resolver {
       },
       None => self.out.block.push(assoc),
     }
+  }
+
+  /// The creators today's output holds: those of no replaced `\author` call (`resolve` deletes them at the end; the
+  /// post-passes that count the authors, or pick one, read these — review revfms2a2_5 finding 1; 2510.26354, 1611.08655).
+  fn live(&self) -> Vec<usize> {
+    (0..self.out.creators.len())
+      .filter(|c| !self.replaced.contains(c))
+      .collect()
   }
 
   /// The one candidate an address spells (`spelled_owners`), if one.
@@ -552,11 +558,12 @@ mod tests {
   }
 
   /// FM S2a.2 r5 (review revfms2a2_4 finding 5): an annotation made before the authors that is a note (`api:note`) is
-  /// a sole author's note, not a contact holding a role; a name keeps no piece printing no letter or digit (finding 6).
+  /// a sole author's note, not a contact holding a role; a name is its printed text, a visible U+2010 kept, its spaces
+  /// collapsed (r6: review revfms2a2_5 finding 2 — a zero-width character never reaches it, the lexer's `is_zero_width`).
   #[test]
   fn a_sole_authors_note_made_before_it_is_its_note() {
     let mut resolver = Resolver::new();
-    resolver.new_creator("Ann \u{200b} Able ‐".into(), "line:names", 1, Vec::new(), 1);
+    resolver.new_creator("Ann  Able ‐".into(), "line:names", 1, Vec::new(), 1);
     resolver.out.block.push(Assoc {
       role:   "thanks".into(),
       text:   "Supported by X.".into(),
@@ -566,7 +573,7 @@ mod tests {
     });
     resolver.held_before_creators();
     let ann = &resolver.out.creators[0];
-    assert_eq!(ann.name, "Ann Able");
+    assert_eq!(ann.name, "Ann Able ‐");
     assert_eq!(
       ann
         .notes

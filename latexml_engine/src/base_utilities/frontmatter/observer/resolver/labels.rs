@@ -462,6 +462,20 @@ pub(super) fn contact_parts(event: &Event) -> (String, String) {
   )
 }
 
+/// A link's text without its scheme and a `www.` host prefix: what a name may spell in it (`http://www.pengxu.net/` is
+/// Peng Xu's, 2001.02600).
+pub(super) fn link_letters(link: &str) -> &str {
+  let link = link.trim();
+  let link = link.split_once("://").map_or(link, |(scheme, rest)| {
+    if scheme.chars().all(char::is_alphabetic) {
+      rest
+    } else {
+      link
+    }
+  });
+  link.strip_prefix("www.").unwrap_or(link)
+}
+
 /// Whether `text` is one e-mail address alone (a `mailto:` before it aside).
 pub(super) fn is_one_address(text: &str) -> bool {
   let text = text.trim().trim_start_matches("mailto:");
