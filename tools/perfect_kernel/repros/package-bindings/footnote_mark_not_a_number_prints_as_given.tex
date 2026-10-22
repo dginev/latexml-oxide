@@ -1,0 +1,20 @@
+% mechanism: a footnote's `[<n>]` that is no number (`\footnotemark[$\dagger$]`, `\footnotetext[$\dagger$]{…}`) is an
+%   error under LaTeX's `\@xfootnotemark`/`\@xfootnotenext` (latex.ltx:17678-17699 `\c@footnote #1\relax`: "Missing
+%   number, treated as zero", the note marked 0, the `[<n>]` typeset before it). Ours prints the mark as given (OD #851,
+%   the author's intent), with no diagnostic, as Perl — kept by the main session's decision at 78u's integration
+%   (2026-10-22, Option 3) because the Warning first decided false-alarmed: 78u's A/B found that 15 of the 19 census papers it would warn are PASJ papers whose class reads the mark as text
+%   (pasj00.cls:2237-2239, pasj01.cls:2308-2310 `\protected@edef\@thefnmark{#1}`; also emulateapj.cls:558-570 and
+%   ecai.cls:480 in an author), which our locked `\footnotemark` does not see. Open (SYNC row 596): warn only when the
+%   definition in force is LaTeX's counter-setting \@xfootnotemark/\@xfootnotenext/\@xfootnote.
+% witness: SYNC row 596 residual (78o); 0705.2678, 1408.6230, 1509.08479 (pasj00, PDF "∗"/"†" marks, no "0");
+%   2505.09883 (ecai)
+% oracle:  pdflatex (article) 2 errors ("Missing number, treated as zero" twice); "Text†0 more", footnote "0 Dagger
+%          note."
+% engines: perl: "†" mark and text paired, no diagnostic; rust 78u: the same
+% expect:  0 errors, 0 warnings, "†" paired (today's, by decision); the counter-definition rule would add a Warning
+% status:  RED (SYNC row 596's open counter-definition rule)
+\documentclass{article}
+\begin{document}
+Text\footnotemark[$\dagger$] more.
+\footnotetext[$\dagger$]{Dagger note.}
+\end{document}

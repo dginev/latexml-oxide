@@ -631,3 +631,65 @@ fn rewrite_symbol_superscripts_splits_a_glued_symbol() {
     );
   }
 }
+
+/// 78u: `classify_thanks` reads its funding words as words — "erc" in "Perception" (2509.05368), "nsf" in "transfer",
+/// "fund" in "Fundamental" and "Recherche"'s "erc" are an institution's or a note's, not funding.
+#[test]
+fn classify_thanks_reads_funding_words_whole() {
+  for note in [
+    "Guangdong Laboratory of Machine Perception and Intelligent Computing",
+    "Tata Institute of Fundamental Research, Mumbai",
+    "Centre de Recherche en Informatique",
+    "Work done during an internship on transfer learning",
+    "Nihon University, Tokyo",
+    "Konrad-Zuse-Zentrum",
+  ] {
+    assert_eq!(classify_thanks(note), "note", "{note}");
+  }
+  for funding in [
+    "Supported by the ERC Starting Grant 12345",
+    "This work was funded by NSFC (No. 62276)",
+    "Partially supported by NSF grant DMS-1234",
+    "NIH R01 award",
+    "ONR N00014",
+    "DARPA program",
+    "Research grants from Google",
+    "Financiado por la Fundación BBVA",
+    "SNSF Postdoctoral Fellow",
+    "Chercheur qualifié FNRS",
+    "NSERC Discovery",
+  ] {
+    assert_eq!(classify_thanks(funding), "funding", "{funding}");
+  }
+  assert_eq!(classify_thanks("Corresponding author"), "correspondence");
+  assert_eq!(
+    classify_thanks("These authors contributed equally"),
+    "contribution"
+  );
+}
+
+/// 78u: a note written inside a mark is taken out after it, the mark's labels left (2512.05464), and a mark holding
+/// only a note goes (2212.00809).
+#[test]
+fn notes_out_of_marks_takes_the_note_after_the_mark() {
+  setup();
+  let out = |s: &'static str| notes_out_of_marks(tk(s)).to_string();
+  let tk = |s: &'static str| tk(s).to_string();
+  assert_eq!(
+    out(r"Ann\textsuperscript{\rm 1,\rm 2\thanks{Work {done}.}}, Bob"),
+    tk(r"Ann\textsuperscript{\rm 1,\rm 2}\thanks{Work {done}.}, Bob")
+  );
+  assert_eq!(
+    out(r"Ann$^{\mathbf{1,\thanks{Equal.}}}$ and Cy$^{\thanks{Convener.}}$"),
+    tk(r"Ann$^{\mathbf{1,}}\thanks{Equal.}$ and Cy$\thanks{Convener.}$")
+  );
+  assert_eq!(
+    out(r"Ann$^{1\footnotemark[1]}$"),
+    tk(r"Ann$^{1}\footnotemark[1]$")
+  );
+  // (a note after the mark, and a mark holding none, are left as they are)
+  assert_eq!(
+    out(r"Ann$^{1}$\thanks{X}, Bob\textsuperscript{2}"),
+    tk(r"Ann$^{1}$\thanks{X}, Bob\textsuperscript{2}")
+  );
+}

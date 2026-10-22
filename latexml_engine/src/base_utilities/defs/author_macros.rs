@@ -191,14 +191,22 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // `\lx@end@inline@math` against it ("Attempt to end mode math"), arbitrarily
   // deep for `$^\text{$...$}$` markers. Both engines erred (SHARED-FAILURE);
   // reading the whole operand keeps the surrounding math balanced.
+  // A note the operand holds (`\textsuperscript{1,2\thanks{…}}`) is no part of a label: it is read after the mark, the
+  // note its author's or its line's (2512.05464; an author block takes it out before, `notes_out_of_marks`).
   DefPrimitive!(T_CS!("\\lx@sup@request@affiliation"), None, {
-    let operand = read_frontmatter_sup_operand()?;
+    let (operand, notes) = frontmatter_sup_operand_and_notes()?;
     let label = clean_frontmatter_labels(&operand.to_string(), "affiliation").join(",");
     add_annotation_labels(label, true);
+    if let Some(notes) = notes {
+      unread(notes);
+    }
     Ok(Vec::new())
   });
   DefPrimitive!(T_CS!("\\lx@sup@setlabel@affiliation"), None, {
-    let operand = read_frontmatter_sup_operand()?;
+    let (operand, notes) = frontmatter_sup_operand_and_notes()?;
+    if let Some(notes) = notes {
+      unread(notes);
+    }
     // A line's first mark is its label; a later superscript in it is its text, shown (`$^{2}$Laboratory for
     // $^{3}$He`: the isotope's, 63i review; repro affiliation_line_inner_superscript_is_its_text).
     let mut labelled = false;

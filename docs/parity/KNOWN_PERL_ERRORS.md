@@ -17454,3 +17454,29 @@ by a space: "Listing 1 text", beside "Table 1: text" in the same document. Minim
 captions-floats/newfloat_caption_tag_closes_with_a_colon; guard
 `perfect_kernel_batch78s::newfloat_caption_tag_closes_with_a_colon`; the Perl-suite golden
 `latexml_oxide/tests/structure/floatnames.xml` now has its PDF's "Floppy 1: Something that flops" (`close=": "`).
+
+## 1135. A footnote's `[\numexpr…]` is no number
+
+latex.ltx:17678-17699 `\@xfootnotemark` and `\@xfootnotenext` read `[<n>]` as `\c@footnote #1\relax`, so an e-TeX
+expression is the number it evaluates to: `\footnotemark[\numexpr\value{footnote}-1]` is the previous note's mark and
+`\footnotetext[\numexpr\value{footnote}-1]{…}` its text (2210.14698, emnlp2022). Perl's `\lx@notemark` and
+`\lx@notetext` (latex_constructs.pool.ltxml:468-484) digest the `[<n>]` as the mark's text, where `\numexpr` alone
+raises "Missing number, treated as zero"; the mark prints nothing (`<note role="footnotemark">`, no `mark`) and the text
+stands apart. Minimal trigger: `A\footnote{One.} B\footnote{Two.}\footnotemark[\numexpr\value{footnote}-1]
+\footnotetext[\numexpr\value{footnote}-1]{Again.}` (pdflatex "B21", "1 Again."; Perl 2 Warnings). Fixed in Rust (78u,
+latex_constructs/mod.rs `footnote_number_digits`: an expansion led directly by `\numexpr` with no `\relax` of its own is read
+through `\the\numexpr…\relax`; the `…\relax]` form and a leading space still fail, review rev78u, an open SYNC row).
+Repro package-bindings/footnote_mark_numexpr_is_a_number; guard
+`perfect_kernel_batch78u::footnote_mark_numexpr_is_a_number`.
+
+## 1136. A `\thanks` inside an author's superscript is lost
+
+Base_Utility.pool.ltxml:729-734 `\lx@author@withsup` lets `\textsuperscript` and `^` be
+`\lx@request@frontmatter@annotation`, which reads the whole operand as the affiliation label it requests. A note command
+inside the operand (`\author{Bob Beta\textsuperscript{1,2\thanks{Work done at X.}}}`, pdflatex "Bob Beta1,2∗" and the
+footnote) becomes part of the label `2\thanks{Work done at X.}`: nothing answers it, nothing prints, and the note is
+lost without a diagnostic (2512.05464 and the 31 other census papers holding a note in a mark, 28 of them changed by the fix
+and 2211.09622 by hand, 4 losing nothing: 1911.03118, 1912.00833, 2211.09622, 2305.16614, 2306.17472,
+2309.12862, 2402.18447, 2403.04164, 2410.12564, 2501.01423, 2502.15412, 2503.05905, 2603.17529, 2605.17958, …). Minimal
+trigger: the `\author` above in `article`. Fixed in Rust (78u, OXIDIZED_DESIGN_DIVERGENCES #881: the note is taken out
+after the mark). Repro sectioning-frontmatter/author_thanks_inside_a_mark_keeps_the_mark_and_the_note.

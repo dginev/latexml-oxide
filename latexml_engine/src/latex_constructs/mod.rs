@@ -601,8 +601,11 @@ pub(crate) fn enter_title_footnotes() -> Result<()> {
 /// :17694-17699 `\@xfootnotenext` set the counter to `<n>` in a group and mark the note `\thefootnote` there, so under
 /// `\renewcommand\thefootnote{\fnsymbol{footnote}}` (or footmisc's `symbol`) `\footnotetext[1]` is "∗", as the
 /// `\footnotemark` it answers. A mark that is not a number (`\footnotemark[$\dagger$]`, an error in LaTeX: "Missing
-/// number") is printed as given, as before and as in Perl (KNOWN_PERL_ERRORS #1060, OXIDIZED_DESIGN_DIVERGENCES #851).
-/// `number` is the one `given_footnote_number` read for the note; a minipage's notes are `footnote_tag`'s.
+/// number, treated as zero", the note marked 0) is printed as given, as before and as in Perl (KNOWN_PERL_ERRORS #1060,
+/// OXIDIZED_DESIGN_DIVERGENCES #851), with no diagnostic: a class may read the mark as text (pasj00.cls:2237-2239 and
+/// emulateapj.cls:558-563 `\@xfootnotemark` set `\@thefnmark{#1}`, ecai.cls:480 its author `\footnotemark[\dagger]`),
+/// which our locked `\footnotemark` does not see (78u, SYNC). `number` is the one `given_footnote_number` read for the
+/// note; a minipage's notes are `footnote_tag`'s.
 pub(crate) fn numbered_footnote_mark(
   given: &Digested,
   number: &FootnoteNumber,
@@ -686,9 +689,24 @@ fn footnote_number_digits(given: &Digested) -> Result<Option<Tokens>> {
   {
     return Ok(Some(Tokens::new(ExplodeText!(text))));
   }
-  Ok(match expanded.unlist().as_slice() {
+  Ok(match expanded.unlist_ref().as_slice() {
     [register] if lookup_definition(register)?.is_some_and(|d| d.is_register()) => {
       Some(Expand!(Tokens!(T_CS!("\\the"), *register)))
+    },
+    // (an e-TeX integer expression, which `\c@footnote #1\relax` reads whole: `\footnotetext[\numexpr\value{footnote}-1]`,
+    // 2210.14698; Perl and int59a "Missing number, treated as zero", the mark lost, KNOWN_PERL_ERRORS #1135)
+    [first, ..] if *first == T_CS!("\\numexpr") => {
+      let mut the = vec![T_CS!("\\the")];
+      the.extend(expanded.unlist_ref().iter().copied());
+      the.push(T_CS!("\\relax"));
+      let value = Expand!(Tokens::new(the)).to_string();
+      let value = value.trim();
+      (!value.is_empty()
+        && value
+          .trim_start_matches('-')
+          .chars()
+          .all(|c| c.is_ascii_digit()))
+      .then(|| Tokens::new(ExplodeText!(value)))
     },
     _ => None,
   })

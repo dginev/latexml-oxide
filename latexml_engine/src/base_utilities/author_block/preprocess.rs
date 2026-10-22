@@ -37,6 +37,200 @@ pub(in crate::base_utilities) fn math_active_scripts(stuff: Tokens) -> Tokens {
   )
 }
 
+/// The note commands a mark's operand may carry (`Ann\textsuperscript{1,2\thanks{Work done at X.}}`): each prints
+/// its own mark inside the superscript, after the labels, and its text as a footnote (latex.ltx:17215 `\thanks`,
+/// :17649 `\footnote`, :17677 `\footnotemark`).
+const MARK_NOTE_COMMANDS: [&str; 3] = ["\\thanks", "\\footnote", "\\footnotemark"];
+
+/// The index after the note command at `i` ([`MARK_NOTE_COMMANDS`]): its `[<n>]`, and the braced text of a `\thanks`
+/// or `\footnote` (`\footnotemark` has none).
+fn note_command_end(tokens: &[Token], i: usize) -> usize {
+  let skip_spaces = |mut k: usize| {
+    while tokens.get(k) == Some(&T_SPACE!()) {
+      k += 1;
+    }
+    k
+  };
+  let mut k = skip_spaces(i + 1);
+  if tokens.get(k) == Some(&T_OTHER!("[")) {
+    let mut depth = 0i32;
+    while k < tokens.len() {
+      match tokens[k].get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth -= 1,
+        _ if depth == 0 && tokens[k] == T_OTHER!("]") => break,
+        _ => {},
+      }
+      k += 1;
+    }
+    k = (k + 1).min(tokens.len());
+  }
+  if tokens[i] == T_CS!("\\footnotemark") {
+    return k;
+  }
+  let text = skip_spaces(k);
+  if text < tokens.len() {
+    skip_group(tokens, text).min(tokens.len())
+  } else {
+    k
+  }
+}
+
+/// A mark's operand (`1,\rm 2\thanks{…}`, `\mathbf{1,\thanks{…}}`) parted into the labels it prints and the notes it
+/// holds, at any depth, with their arguments ([`MARK_NOTE_COMMANDS`]), or a macro that makes one, with its `[…]`
+/// arguments ([`makes_a_note`]: the AAAI stub `\equalcontrib` in `\textsuperscript{\rm 1,2,\equalcontrib}`, 2603.17529;
+/// a document's `\newcommand*\samethanks[1][\value{footnote}]{\footnotemark[#1]}` in `\textsuperscript{1\samethanks}`,
+/// 2309.12862); `None` when it holds none.
+pub(in crate::base_utilities) fn split_mark_notes(
+  operand: &[Token],
+) -> Option<(Vec<Token>, Vec<Token>)> {
+  let is_note = |t: &Token| MARK_NOTE_COMMANDS.iter().any(|cs| *t == T_CS!(*cs));
+  if !operand.iter().any(|t| is_note(t) || makes_a_note(t, 0)) {
+    return None;
+  }
+  let (mut mark, mut notes) = (Vec::new(), Vec::new());
+  let mut i = 0;
+  while i < operand.len() {
+    let end = if is_note(&operand[i]) {
+      note_command_end(operand, i)
+    } else if makes_a_note(&operand[i], 0) {
+      optional_arguments_end(operand, i + 1)
+    } else {
+      mark.push(operand[i]);
+      i += 1;
+      continue;
+    };
+    notes.extend_from_slice(&operand[i..end]);
+    i = end;
+  }
+  Some((mark, notes))
+}
+
+/// The index after the `[…]` arguments from `k` (spaces before each skipped).
+fn optional_arguments_end(tokens: &[Token], mut k: usize) -> usize {
+  loop {
+    let open = k
+      + tokens[k.min(tokens.len())..]
+        .iter()
+        .take_while(|t| **t == T_SPACE!())
+        .count();
+    if tokens.get(open) != Some(&T_OTHER!("[")) {
+      return k;
+    }
+    let mut depth = 0i32;
+    let mut close = open;
+    while close < tokens.len() {
+      match tokens[close].get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth -= 1,
+        _ if depth == 0 && tokens[close] == T_OTHER!("]") => break,
+        _ => {},
+      }
+      close += 1;
+    }
+    if close >= tokens.len() {
+      return k;
+    }
+    k = close + 1;
+  }
+}
+
+/// Whether `t` is a macro of optional arguments only (none, or `\newcommand`'s `[<default>]`) whose expansion holds a
+/// note command ([`MARK_NOTE_COMMANDS`]), directly or through another such macro (three deep at most).
+fn makes_a_note(t: &Token, depth: usize) -> bool {
+  if depth > 2
+    || t.get_catcode() != Catcode::CS
+    || MARK_NOTE_COMMANDS.iter().any(|cs| *t == T_CS!(*cs))
+  {
+    return false;
+  }
+  let Ok(Some(defn)) = lookup_definition(t) else {
+    return false;
+  };
+  if !defn.is_expandable()
+    || lookup_conditional(t).is_some()
+    || defn
+      .get_parameters()
+      .is_some_and(|p| p.get_parameters().iter().any(|param| !param.optional))
+  {
+    return false;
+  }
+  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+    return false;
+  };
+  body
+    .unlist_ref()
+    .iter()
+    .any(|b| MARK_NOTE_COMMANDS.iter().any(|cs| *b == T_CS!(*cs)) || makes_a_note(b, depth + 1))
+}
+
+/// Whether a mark's operand, its notes taken out, prints nothing: braces, spaces, `\relax` and font switches only
+/// (`^{\thanks{…}}`, `^{\mathbf{}}`).
+pub(in crate::base_utilities) fn mark_prints_nothing(mark: &[Token]) -> bool {
+  mark.iter().all(|t| {
+    matches!(
+      t.get_catcode(),
+      Catcode::BEGIN | Catcode::END | Catcode::SPACE
+    ) || *t == T_CS!("\\relax")
+      || (t.get_catcode() == Catcode::CS && t.with_str(|name| FONT_SWITCH.is_match(name)))
+  })
+}
+
+/// An author block's notes written inside a mark (`Nataliia Babina\textsuperscript{\rm 1,\rm 2\thanks{Work done …}}`,
+/// `Ann$^{1,\thanks{Corresponding author.}}$`, `$^{1\footnotemark[1]}$`) taken out after it: LaTeX prints the labels
+/// and the note's own mark in the superscript, its text as a footnote, so the note is the author's as one written
+/// after the mark is (`\textsuperscript{\rm 1,\rm 2}\thanks{…}`), and the mark's labels are read without the note's
+/// text in them — the request was the label `2\thanks{…}`, which no list answers and which printed nothing, so the
+/// mark `2` and the note were lost (2512.05464, 1911.03118, 1912.00833, 2211.09622, 2305.16614, 2306.17472,
+/// 2309.12862, 2402.18447, 2403.04164, 2410.12564, 2501.01423, 2502.15412, 2503.05905, 2603.17529, 2605.17958). A
+/// mark holding nothing else (`$^{\thanks{Topical Group Conveners}}$`, 2212.00809) goes, its note kept. The mark
+/// readers keep any note left in an operand all the same ([`split_mark_notes`], `\lx@sup@request@affiliation`). A
+/// macro the mark holds that makes a note is taken out too (`\rm 1,2,\equalcontrib`, 2603.17529; `1\samethanks`,
+/// 2309.12862). Perl reads the operand as the label too (Base_Utility.pool.ltxml:729-734; KNOWN_PERL_ERRORS #1136,
+/// OXIDIZED_DESIGN_DIVERGENCES #881).
+pub(in crate::base_utilities) fn notes_out_of_marks(stuff: Tokens) -> Tokens {
+  let v = stuff.unlist_ref();
+  if !v
+    .iter()
+    .any(|t| t.get_catcode() == Catcode::CS && !is_author_mark(t))
+    || !v.iter().any(is_author_mark)
+  {
+    return stuff;
+  }
+  let mut out: Vec<Token> = Vec::with_capacity(v.len());
+  let mut changed = false;
+  let mut i = 0;
+  while i < v.len() {
+    if is_author_mark(&v[i]) {
+      let open = i + 1 + v[i + 1..].iter().take_while(|t| **t == T_SPACE!()).count();
+      if v
+        .get(open)
+        .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+      {
+        let close = skip_group(v, open);
+        if close <= v.len()
+          && v[close - 1].get_catcode() == Catcode::END
+          && let Some((mark, notes)) = split_mark_notes(&v[open + 1..close - 1])
+        {
+          if !mark_prints_nothing(&mark) {
+            out.push(v[i]);
+            out.push(T_BEGIN!());
+            out.extend(mark);
+            out.push(T_END!());
+          }
+          out.extend(notes);
+          i = close;
+          changed = true;
+          continue;
+        }
+      }
+    }
+    out.push(v[i]);
+    i += 1;
+  }
+  if changed { Tokens::new(out) } else { stuff }
+}
+
 /// An author block's `\begin{footnote}{text}…\end{footnote}` as LaTeX reads it: `\begin{footnote}` runs `\footnote`,
 /// which takes the braced text after it as its argument, so what follows up to `\end{footnote}` is the author line's
 /// (`Velibor \v{Z}eli\begin{footnote}{Linn\'{e} FLOW Centre, …},\end{footnote} Du\v{s}an Zorica\begin{footnote}…`,

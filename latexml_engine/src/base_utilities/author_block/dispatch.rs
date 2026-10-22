@@ -25,6 +25,9 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
 ) -> Result<Tokens> {
   // (a `\let` alias of a mark command is the command: `\let\up\textsuperscript`, 2209.14855; [`unalias_mark_commands`])
   let stuff = unalias_mark_commands(expand_separator_macros(expand_sole_author_macro(stuff)));
+  // (a note written inside a mark is taken out after it, the mark's labels read without it: `\textsuperscript{\rm 1,\rm
+  // 2\thanks{…}}`, 2512.05464; [`notes_out_of_marks`])
+  let stuff = notes_out_of_marks(stuff);
   // (an empty mark prints nothing and is no mark: `\textsuperscript{}Univ. Grenoble Alpes…` leaves the block unmarked,
   // its line every name's; [`drop_empty_marks`])
   let stuff = drop_empty_marks(stuff);

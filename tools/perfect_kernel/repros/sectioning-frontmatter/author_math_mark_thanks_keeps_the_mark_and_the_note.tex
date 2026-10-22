@@ -1,0 +1,16 @@
+% mechanism: a `\thanks` inside a math mark (`$^{1,\thanks{…}}$`), also under a font command (`$^{\mathbf{2,\thanks{…}}}$`)
+%   or alone in it (`$^{\thanks{…}}$`): the labels stay the mark, the note is the author's (`notes_out_of_marks`); a mark
+%   holding only the note goes, its note kept.
+% witness: 2501.01423, 2605.17958 (`$^{1,\thanks{…}}$`); 2402.13113 (`^{\mathbf{1,\thanks{…}}}`); 2212.00809, 2209.05352
+%   (`^{\thanks{…}}`); 2305.16614
+% oracle:  pdflatex 0 errors; "Ann Alpha1,∗", "Bob Beta2,†", "Cy Gamma‡"; footnotes ∗ † ‡
+% engines: perl: the marks dropped, no note; rust int59a: Ann "1", Bob "2", Cy nothing, no note
+% expect:  0 errors, 0 warnings; the marks 1 and 2, and each author's note
+% status:  GREEN (78u)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Alpha$^{1,\thanks{Corresponding author.}}$ \and Bob Beta$^{\mathbf{2,\thanks{Equal contribution.}}}$ \and Cy Gamma$^{\thanks{Topical group convener.}}$}
+\maketitle
+Body.
+\end{document}

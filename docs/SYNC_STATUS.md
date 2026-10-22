@@ -205,6 +205,8 @@ do not block the E/F rerun.
 | — | cleveref `\label[type]{…}` after a `\caption` inside a minipage panel of a figure loses its type: the panel (or the folded figure) carries the label but keeps `creftype` "fig." — `\begin{figure}\begin{minipage}{.4\linewidth}\caption{A}\label[appendix]{mp}\end{minipage}…` gives "fig. 1" where pdflatex prints "appendix 1" (0 errors; a subfigure's works, "appendix 2a"); the type's tags have no target when `\lx@cleverref@labeltype` runs (cleveref_sty.rs:61-72 `continue`s) and the panel fold moves the labels, not the type's tags. int54a and 78j alike; review rev78j5 finding 2. Fix: carry the type's tags with the labels when the panel/fold merges them, or settle the type once its owner exists | open |
 | — | A `\begingroup` left open in held text raises an Error TeX does not: an `\autoref` name `\begingroup Fig`, `\creflabelformat{equation}{\begingroup(#2#1#3)}` — pdflatex 0 errors (only "\end occurred inside a group at level 1"), ours 1 ("Attempt to end mode restricted_horizontal"); `\crefformat{figure}{\begingroup#2Fig.~#1#3}` — pdflatex 0 errors and the author's "Fig. 1", ours 1 ("leaves 1 group(s) open") and cleveref's default "fig. 1". 78j r5 (r4 raised 2); review rev78j5 finding 3. Direction: when only `\begingroup` frames are left open, `digest_in_own_group` unwinds them without an Error and keeps the form | open |
 | — | Panic: 2509.13772 "range end index 44 out of range for slice of length 43" (int54a and 78j r5 the same; outside 78j's paths; found by the 78j r5 A/B) — root-cause and fix (panic → Error with the reason) | open |
+| — | A footnote mark `[\numexpr\value{footnote}-1\relax]` (the `\relax` form, the common one) or `[ \numexpr…]` (a leading space) is not read as a number: 2 "Missing number" Warnings, the mark lost, the text unpaired, where pdflatex gives 0 errors and "A1 B21 C." (`latex_constructs/mod.rs:698-710` evaluates `\the\numexpr…\relax\relax` → "1\relax"; the space stops the arm). Fix: skip leading spaces, drop trailing unexpandable `\relax` before the digit test. Review rev78u finding 1 | open |
+| — | Author marks: `\textsuperscript{1\protect\thanks{…}}` keeps the note but drops the label (the left-behind label is `1\protect`; pdflatex "Ann Alpha1∗"), and a macro whose body prints text plus a note (`\newcommand\fnA{1\footnotemark}`) is moved out whole, its "1" landing in the name (`author_block/preprocess.rs:84, :140`; synthetic, no census paper). Fix: carry a `\protect` before a note command out with it; a macro counts as a note only when its body is note commands alone. Review rev78u findings 3-4 | open |
 | — | caption: a ruled/boxed float.sty float resets the label format and separator to its style's (caption.sty:864-866 `\caption@setstyle*\float@style`), so pdflatex prints "Algorithm 1 Two." under a global `labelformat=allcaps` where ours prints "ALGORITHM 1" (2106.08363 wiley-article; boxed format "[Listing] 1", 2109.00138); untyped settings should give way to the style's, typed `\captionsetup[algorithm]` still apply (LIPIcs). Review rev78s2 finding 2 | open |
 | — | caption: `\captionsetup[<type>]{name=…}` of a float.sty type does not reach `\fname@<type>` (caption.sty:882-884 calls `\floatname`; `caption_sty.rs:241` `\lx@caption@setname` sets only `\<type>name`): pdflatex "Snip 1:", ours "Listing 1" (int58a "Snip 1" for the old figure-typed listing; algorithm "Proc 1" vs "Algorithm 1" in base too). No census paper sets a non-default name. Fix: `\def\lx@caption@setname#1#2{\@ifundefined{fname@#1}{}{\@namedef{fname@#1}{#2}}\@namedef{#1name}{#2}}`; the fallback's `\ifcsname #2name` should test `\ifx…\relax` as caption does. Review rev78s2 finding 3 | open |
 | — | newfloat `\SetupFloatingEnvironment` has Perl's `OptionalKeyVals {}` signature (`newfloat_sty.rs:5`), not newfloat.sty:304's `{type}{options}`, so `\SetupFloatingEnvironment{listing}{name=Prog}` prints "name=Prog" and the name is unchanged; minted's no-op copy (`minted_sty.rs:197`) protects minted papers today — do not just drop it. 6 census papers (2306.12224, 2405.15425, 2411.16612 "List.", 2507.09840, 2510.09447 "Listagem"). Review rev78s2 finding 4 | open |
@@ -590,15 +592,24 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   `[\value{footnote}]` is the counter), article's/report's/book's title block marks in `\@fnsymbol`, its `\thanks` and
   `\footnote` step the counter (78o r2) and it resets the counter, a mark and a text pair by printed mark, else by
   counter value when one is in the title block or neither prints a mark — across the counter reset, by value only
-  between notes naming their number and by printed mark unless both are numbered from the counter (78o r3). Witnesses 2507.05750, 2412.20504, 0903.0014,
-  2006.14582, 2201.11183, 2111.13260, 2606.03847; guards `perfect_kernel_batch78o`. Residuals: the frontmatter digests
-  the fields in the order the preamble set them, so a title `\thanks` set after `\author` steps after the authors' (the
-  title's first in pdflatex); a `[<n>]` that is not a number (`\footnotemark[$\dagger$]`, pdflatex "Missing number,
-  treated as zero") is printed as given with no diagnostic, as in Perl — an honest-diagnostic gap (a Warning?) left for a
-  ruling. 0707.3986 is classified, not a residual: RR.sty:141 `\footnotetext[0]` under RR.sty:445's `\fnsymbol` prints
-  no mark, ours too; its TL 2025 PDF's "0" is pdflatex's recovery from RR.sty's own errors (the `\xdef` of the accented
-  theme name, :160-168: "Missing } inserted", "Too many }'s" close `\makeRR`'s group early, and `\thefootnote` is
-  article's `\@arabic` again at :477).
+  between notes naming their number and by printed mark unless both are numbered from the counter (78o r3). Witnesses
+  2507.05750, 2412.20504, 0903.0014, 2006.14582, 2201.11183, 2111.13260, 2606.03847; guards `perfect_kernel_batch78o`.
+  Residuals: the frontmatter digests the fields in the order the preamble set them, so a title `\thanks` set after
+  `\author` steps after the authors' (the title's first in pdflatex); a `[<n>]` that is not a number
+  (`\footnotemark[$\dagger$]`, pdflatex "Missing number, treated as zero") is printed as given with no diagnostic, as in
+  Perl — and stays so (main-session decision 2026-10-22, at 78u's integration: no diagnostic for now, Option 3; the Warning
+  first decided false-alarmed). The faithful rule is the open part of this row: warn only when the definition in force is
+  LaTeX's counter-setting `\@xfootnotemark`/`\@xfootnotenext`/`\@xfootnote` (the PASJ/emulateapj bindings defining their
+  class's versions, aa/arximspdf no longer passing text marks through `\footnotemark[…]`). 78u's census A/B found that 15 of the 19 papers it would warn
+  are PASJ papers whose class reads the mark as text (pasj00.cls:2237-2239, pasj01.cls:2308-2310
+  `\protected@edef\@thefnmark{#1}`; so do emulateapj.cls:558-570 and ecai.cls:480's author `\footnotemark[\dagger]`),
+  which our locked `\footnotemark` does not see, and three binding paths pass text marks through `\footnotemark[…]`
+  (aa's `\tablefootmark`, arximspdf's `\freefootnotetext`, a cleveref format's `\lx@therefnum@@`): the Warning is not
+  landed, a rule is open (78u report; RED repro package-bindings/footnote_mark_not_a_number_prints_as_given).
+  `[\numexpr…]` is a number since 78u (KPE #1135). 0707.3986 is classified, not a residual: RR.sty:141
+  `\footnotetext[0]` under RR.sty:445's `\fnsymbol` prints no mark, ours too; its TL 2025 PDF's "0" is pdflatex's
+  recovery from RR.sty's own errors (the `\xdef` of the accented theme name, :160-168: "Missing } inserted", "Too many
+  }'s" close `\makeRR`'s group early, and `\thefootnote` is article's `\@arabic` again at :477).
 - **cleveref's reference forms: the review rev78j3's later items** (RUST-ONLY, 78j's forms, OD #845; no RED repro yet):
   (a) a document multi format's conjunction prints inside the link — the form is whole in the link, pdflatex links only
   `#1`, so 2609.28438's `{ and~(#2#1#3)}` puts " and " inside the second `<a>` ("Problems (P) and (P1)"); (b) internal
@@ -6134,6 +6145,29 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   0 papers worse (1111.1264's crash varies run to run, E 20 → 22), no word loss over 1 %; 0 of 282 random controls changed; 2
   of 266 caption-format papers changed, both "Algorithm 1" restored (2409.05617, 2501.12231). Binding nets: 136/136, 0 documents worse (int58a vs int59a).
 
+- **78u** (frontmatter content loss: the FM S2a.2 r3/r4 side findings and SYNC row 596's residual; guards
+  `perfect_kernel_batch78u::*`, 6, each RED on int59a, and
+  `author_split_tests::{notes_out_of_marks_takes_the_note_after_the_mark, classify_thanks_reads_funding_words_whole}`;
+  OD #880-881, KPE #1135-1136). (1) A note written inside an author's mark is taken out after it (`notes_out_of_marks`,
+  OD #881, KPE #1136): `Nataliia Babina\textsuperscript{\rm 1,\rm 2\thanks{Work done …}}` lost the mark `2` and the
+  note, the label `2\thanks{…}` answering nothing (2512.05464, PDF-confirmed); `$^{1,\thanks{…}}$`,
+  `^{\mathbf{1,\thanks{…}}}`, `$^{\thanks{…}}$`, `$^{1\footnotemark[1]}$`, and a macro of optional arguments that makes
+  a note (AAAI's `\equalcontrib`, 2603.17529; a document's `\samethanks`, 2309.12862) the same; the mark readers keep a
+  note left in an operand too. (2) `classify_thanks` reads its funding words as words (`funding_word`, OD #880): "erc"
+  in "Perception" (2509.05368), "Recherche", "Merced", "nsf" in "transferred" (the IEEE copyright notice), "fund" in
+  "Fundamental" no longer make a note or an institution line funding; SNSF, FNRS, NSERC, SERC kept as funders. (3) A
+  footnote's `[\numexpr…]` is a number (KPE #1135; 2210.14698's text pairs with its mark "3"); the Warning for a
+  non-number `[<n>]` decided for row 596 is NOT landed: the census A/B found 15 of its 19 papers PASJ papers whose class
+  reads the mark as text, a rule is open (row 596, 78u report). A/B (release int59a vs 78u, int59a dumps,
+  `--preload=ar5iv.sty`; `census/pops/pop78u_{1,2,3,rand}.tsv`, 32 + 1,441 + 364 + 100 papers, 5 without a main file): E
+  3,585 = 3,585, F 10 = 10, W 21,155 → 21,154, 0 papers worse; XML changed in 28 of pop 1 (notes 76 → 110, words +332),
+  55 of pop 2 (class only, funding → note), 2 of pop 3 (2210.14698's `\numexpr` mark paired, W 2 → 1; 2309.12862), 1 of
+  the 100 random controls (2603.29506, the IEEE notice's class). FM shadow (the S2a.2 300 seeded census papers, 78u
+  binary): XML identical with `LATEXML_FM_SHADOW` unset and set (modulo the zip temp-dir `graphicspath`), E/F equal. PDF
+  checks: 16 item-1 papers (OD #881); item 2's change is a class only (60 notes read); item 3 the 10 PASJ/emnlp papers
+  whose marks print as the class prints them. Residuals: the unanswered-label order after a note mark (OD #881); a
+  non-number `[<n>]` Warning (row 596, rule open). Scratch `~/data/pk_wt/scratch_78u/` (ab/, shadow/, pdf/).
+
 - **split114** (task #114, user directive 2026-10-07; a pure move, before FM S2a): `latexml_engine/src/base_utilities.rs`
   (23,317 lines) is the module directory `base_utilities/` — `mod.rs` (the imports, `FRONTMATTER_ELEMENTS`,
   `REPLACEABLE_FRONTMATTER_TAGS`, and `LoadDefinitions!` calling `defs::{general, frontmatter_api, frontmatter_fields,
@@ -6311,7 +6345,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   57, wrong 3 (2407.20481 a lone unrequested label, 1501.05343 a parted `21` — fixed, 1606.05885 a name split at a line
   end), undecidable 2: **95.0 %** of the decidable; unclassified 60 — resolver 25, XML 19, both 10, normalisation 3,
   undecidable 3. The class guard (< 0.5 %) is not met; revtex (52) and ams (37) residuals are listed by class in the r3
-  report. Side finding (not fixed, output-changing): `author_block/notes.rs` `classify_thanks` reads "erc" inside a word
+  report. Side finding (**fixed 78u**, OD #880): `author_block/notes.rs` `classify_thanks` read "erc" inside a word
   as funding ("Perception", 2509.05368). Scratch `~/data/pk_wt/scratch_fms2a2r3/` (rep/final.*, pdf_verdicts.tsv).
   **Integration (int58, S2a.2 r1-r3 squashed onto int57; binary int58a; shadow only, the fleet never sets
   `LATEXML_FM_SHADOW`):** review revfms2a2_3 LAND — unset, nothing new runs on the conversion path (every entry checks the
@@ -6370,7 +6404,7 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   2008.06624, 2012.13946, 2106.12436, 2504.02039, hep-ex0607072, hep-ph9805510); ams_support (22): name lines
   (0808.2556, 1106.0130, 1703.08733, 2006.13694, 2106.11727, 2109.14517, 2210.11574, 2311.00652, 2411.16601,
   math0112263, math0610203), unmarked lines (1710.07902, 2506.07291, math0610612), and singletons (1005.4252,
-  1909.09152, 2108.13723, 2208.03878, 2301.00097, 2402.04675, 2506.11626, 2507.07513). Side finding (output, not fixed — shadow only): today's kernel `\author{Nataliia
+  1909.09152, 2108.13723, 2208.03878, 2301.00097, 2402.04675, 2506.11626, 2507.07513). Side finding (output; FIXED by 78u at int61, OD #881): today's kernel `\author{Nataliia
   Babina\textsuperscript{1,2\thanks{Work done …}}}` loses the mark `2` and the note (2512.05464, PDF-confirmed: a
   silent content loss; 15 census papers: 1911.03118, 1912.00833, 2211.09622, 2305.16614, 2306.17472, 2309.12862,
   2402.18447, 2403.04164, 2410.12564, 2501.01423, 2502.15412, 2503.05905, 2512.05464, 2603.17529, 2605.17958). Scratch `~/data/pk_wt/scratch_fms2a2r4/` (rep/final.*, pdf_verdicts.tsv).

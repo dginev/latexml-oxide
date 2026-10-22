@@ -190,6 +190,17 @@ pub(in crate::base_utilities) fn read_frontmatter_sup_operand() -> Result<Tokens
   Ok(Tokens::new(vec![first]))
 }
 
+/// [`read_frontmatter_sup_operand`], parted into the mark and the notes it holds ([`split_mark_notes`]): the notes'
+/// tokens, if any, for the reader to read after the mark.
+pub(in crate::base_utilities) fn frontmatter_sup_operand_and_notes()
+-> Result<(Tokens, Option<Tokens>)> {
+  let operand = read_frontmatter_sup_operand()?;
+  Ok(match split_mark_notes(operand.unlist_ref()) {
+    Some((mark, notes)) => (Tokens::new(mark), Some(Tokens::new(notes))),
+    None => (operand, None),
+  })
+}
+
 /// A mark's font switch, no part of it: `$^{\bf{1}}$`, 1109.3726; `\textsuperscript{\normalfont{1},}` inside a bold
 /// name, 2604.24532; Perl strips `\rm` only, Base_Utility.pool.ltxml:365 — OXIDIZED_DESIGN #34.
 pub(in crate::base_utilities) static FONT_SWITCH: std::sync::LazyLock<Regex> =

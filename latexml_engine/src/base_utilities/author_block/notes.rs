@@ -7,6 +7,9 @@ use super::*;
 /// affects core semantics. Keyword-matched over the flattened, lowercased note text.
 /// Order matters: correspondence and equal-contribution are checked before funding
 /// (a "supported by …" note is funding; "contributed equally" is contribution).
+/// The funding words are read as words (`funding_word`), not inside one: "erc" in "Perception" or "Commerce", "nsf"
+/// in "transfer", "fund" in "Fundamental" read an institution as a funder, so its line was no affiliation (2509.05368
+/// "Machine Perception", OXIDIZED_DESIGN_DIVERGENCES #880).
 /// Witnesses: arXiv 2512.24601 (correspondence), 1510.02728 (funding),
 /// 2506.06941 "Equal contribution" (contribution). Explicitly best-effort.
 pub(in crate::base_utilities) fn classify_thanks(text: &str) -> &'static str {
@@ -17,19 +20,30 @@ pub(in crate::base_utilities) fn classify_thanks(text: &str) -> &'static str {
     "contribution"
   } else if t.contains("now at") || t.contains("present address") || t.contains("current address") {
     "address"
-  } else if t.contains("support")
-    || t.contains("grant")
-    || t.contains("fund")
-    || t.contains("nsf")
-    || t.contains("nih")
-    || t.contains("onr")
-    || t.contains("darpa")
-    || t.contains("erc")
-  {
+  } else if t.split(|c: char| !c.is_alphanumeric()).any(funding_word) {
     "funding"
   } else {
     "note"
   }
+}
+
+/// Whether a lowercased word of a note names funding ([`classify_thanks`]): "support" and its forms ("supported",
+/// "supporting"), "grant" and "grants", "fund" and its forms ("funded", "funding", "funds"; not "fundamental"), a
+/// funder's acronym on its own (NSF and China's NSFC, NIH, ONR, DARPA, ERC, and the funders the in-word reading also
+/// caught: Switzerland's SNSF, Belgium's FNRS, Canada's NSERC, the UK's SERC — "SNSF Postdoctoral Fellow",
+/// 2507.18869; "Chercheur qualifié FNRS", cond-mat0504758) or its grant number glued to it ("nsf1234").
+fn funding_word(word: &str) -> bool {
+  const ACRONYMS: [&str; 10] = [
+    "nsf", "nsfc", "nih", "onr", "darpa", "erc", "snsf", "fnrs", "nserc", "serc",
+  ];
+  word.starts_with("support")
+    || matches!(word, "grant" | "grants" | "granted")
+    || (word.starts_with("fund") && !word.starts_with("fundament"))
+    || ACRONYMS.iter().any(|acronym| {
+      word
+        .strip_prefix(acronym)
+        .is_some_and(|rest| rest.chars().all(|c| c.is_ascii_digit()))
+    })
 }
 
 /// The body a creator's note (`\lx@add@thanks`, `\lx@add@note`) digests: its leading marks as the author line reads

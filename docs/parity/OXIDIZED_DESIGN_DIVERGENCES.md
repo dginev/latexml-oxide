@@ -6931,7 +6931,9 @@ kind. Requires: adding `ltx:note` to `ltx:creator`'s content model
 and the note detaches; and an XSLT addition rendering the creator's `ltx:note` child as a
 name-sibling (`LaTeXML-structure-xhtml.xsl`). A surpass over the shared inline-contact behavior.
 
-**Why it's safe.** The classifier only picks a CSS hook, never core semantics. The note attaches
+**Why it's safe.** The classifier only picks a CSS hook, never core semantics (since then the author block's line
+readers also ask it whether a line is a note rather than an institution, and the frontmatter observer's resolver reads
+it; its funding words are read as words, #880). The note attaches
 to the same creator the contact did (verified: note is inside `<creator>`); title-scope
 `\thanks` (a pubnote) and affiliation contacts are untouched. Only golden change:
 `tests/structure/authors.xml` (contact → note). The `frontmatter_ieee_membership_no_phantom`,
@@ -23331,8 +23333,8 @@ only (XML byte-identical against int54a with the switch unset and set, SYNC "FM 
   2605.14947, 2408.13873); amsart's `\and` prints "and" in an entry (policy `ams`, `and_word`: amsart.cls:599;
   1712.02568); a sole author's orphans are that author's, as today's (#159: 0911.5235, 0712.4133); a note made before
   any author is the title's, kept in the block (`api:title-note`; 1603.01892, 1802.05590, cond-mat0502298); a numbered
-  legend reading as an institution is an affiliation (`is_legend_text`; `classify_thanks`'s "erc" matches "Perception",
-  2509.05368).
+  legend reading as an institution is an affiliation (`is_legend_text`; `classify_thanks`'s "erc" matched "Perception"
+  until 78u, #880, 2509.05368).
 - **Comparator**: a name's marks the XML holds as text (`R. Vasile 1`, 0807.4407; 1309.7542) or as a floating-superscript
   formula (`{}^{a,\;b}`, `\,^{3}`: 1307.6166, 0804.4669) are no name text (`xml_names`, `math_mark_text`); notes compare
   without the creator's ORCID identifier (2106.12436); an e-mail's glued label aside (2108.12329); an XML item is the
@@ -23751,7 +23753,11 @@ latex_constructs/mod.rs): `numbered_footnote_mark` prints `[<n>]` through `\thef
 when it expands to digits (`2`, `\arabic{footnote}`) or is a count register (`\value{footnote}` — digested on its own
 it was a register assignment, "Missing number, treated as zero", and the mark printed nothing), and any other mark
 (`\footnotemark[$\dagger$]`, "Missing number" in LaTeX) is printed as given, as before and as Perl does, with no
-diagnostic; `given_footnote_number` reads `[<n>]` for a number once per note, its diagnostics held, and the mark and
+diagnostic (main-session decision 2026-10-22: no diagnostic for now, the Warning false-alarmed on classes that read the
+mark as text; the faithful counter-definition rule is SYNC row 596's open part); an e-TeX expression
+(`[\numexpr\value{footnote}-1]`) is a number since 78u (KNOWN_PERL_ERRORS #1135; the `…\relax]` and leading-space forms not
+yet, review rev78u); `given_footnote_number` reads
+`[<n>]` for a number once per note, its diagnostics held, and the mark and
 `_fnvalue` reuse it, so a `[<n>]` whose expansion errs (`\footnotemark[\the\relax]`) is no number and the mark's
 digestion reports the error once, as pdflatex (review probes rev78o2 valerr, val: 78o r2 2 and 3 errors) (read so, a `\footnotetext[<mark>]{…}` no longer drops the space after it, which the digested argument
 lost: `perfect_kernel_batch68y::aa_tablefootmark_sets_the_mark_in_text`). `declare_fnsymbol_title_block` (called by the article, report, book, extarticle, extreport, extbook
@@ -24010,3 +24016,62 @@ same). Repros cross-references/equation_nonumber_without_amsmath_keeps_the_numbe
 equation_nonumber_with_amsmath_removes_the_number; guards
 `perfect_kernel_batch78r::{equation_nonumber_without_amsmath_keeps_the_number,
 equation_nonumber_with_amsmath_removes_the_number}`.
+
+### 880. `classify_thanks` reads its funding words as words
+
+`classify_thanks` (author_block/notes.rs, #156) names an author note's kind for its `ltx_thanks_<kind>` class, and the
+author block's line readers (line_kinds.rs `weldable_line`, `reads_as_place`, `institution_beside_labelled`,
+`reads_as_institution`, `labelled_institution`) and the frontmatter observer's resolver ask it whether a line is a note
+rather than an institution. Its funding test matched substrings, so "erc" in "Perception", "Recherche", "Commerce",
+"Merced", "supercomputing", "nsf" in "transferred" and "fund" in "Fundamental" read an institution or a copyright notice
+as funding (2509.05368 "Guangdong Laboratory of Machine Perception…", 1609.09226 "Intelligent Perception" (CRIPAC); 2310.19455
+"Tata Institute of Fundamental Research", the IEEE notice "Copyright may be transferred…" of 2603.29506 and 9 more). Ours (78u): the words
+of the lowercased text (`funding_word`) — "support…", "grant(s)"/"granted", "fund…" but not "fundament…", and a funder's
+acronym on its own or with its number glued (NSF, NSFC, NIH, ONR, DARPA, ERC, and SNSF, FNRS, NSERC, SERC, which the
+in-word reading also caught: "SNSF Postdoctoral Fellow", 2507.18869; "Chercheur qualifié FNRS", cond-mat0504758).
+Correspondence, contribution and address are read as before. Perl has no classifier (the note is a contact there). A/B
+(`census/pops/pop78u_2.tsv`: the 1,441 census papers whose author-block text the old and the new reading class
+differently; release int59a vs 78u): 1,437 converted, E 3,046 = 3,046, F 6 = 6, W and words equal, 55 papers changed,
+every one a `ltx_thanks_funding` → `ltx_thanks_note` on an institution, a position or the IEEE copyright notice (60
+notes, read one by one); no affiliation reading moved. Guards
+`perfect_kernel_batch78u::thanks_institution_with_erc_in_a_word_is_no_funding`,
+`author_split_tests::classify_thanks_reads_funding_words_whole`.
+
+### 881. A note written inside an author's mark is taken out after it
+
+latex.ltx:17215 `\thanks` (and `\footnote`, `\footnotemark`) inside a superscript prints its own mark there and its text
+as a footnote, so `Nataliia Babina\textsuperscript{\rm 1,\rm 2\thanks{Work done during internship at Integral AI.}}` is
+"Nataliia Babina1,2∗" with a note (2512.05464). Perl's `\lx@author@withsup` (Base_Utility.pool.ltxml:729-734) lets
+`\textsuperscript` and `^` be the annotation request, which reads the whole operand as its label, so the label
+`2\thanks{…}` answered nothing and printed nothing: the mark `2` and the note were lost, in Perl and ours alike
+(KNOWN_PERL_ERRORS #1136). Ours (78u): `notes_out_of_marks` (author_block/preprocess.rs, first in
+`add_authors_calls_sectioned`) takes every note command a mark's braced operand holds, at any depth (`^{\mathbf{1,
+\thanks{…}}}`), with its arguments, out after the mark — `\textsuperscript{\rm 1,\rm 2}\thanks{…}` — so the mark's
+labels are read as labels and the note is the author's, as one written after the mark; a macro of optional arguments
+only whose expansion holds a note command is taken out with its `[…]` the same way (`split_mark_notes`, `makes_a_note`:
+the AAAI stub `\equalcontrib`, 2603.17529; a document's
+`\newcommand*\samethanks[1][\value{footnote}]{\footnotemark[#1]}`, 2309.12862); a mark holding nothing else goes
+(`$^{\thanks{Topical Group Conveners}}$`, 2212.00809). The mark readers (`\lx@sup@request@affiliation`,
+`\lx@sup@setlabel@affiliation`) read a note left in an operand after the mark all the same
+(`frontmatter_sup_operand_and_notes`), for a binding that wraps a line in `\lx@author@withsup` itself. The note mark is
+printed after the mark rather than inside it (the size of the mark only). Residual (order): a label no list answers is
+shown by `show_unanswered_marks` at the end of the name, so a `\footnotemark` taken out of `$^{1 \footnotemark[1]}$`
+precedes it ("Ann Alpha∗1", pdflatex "Ann Alpha1∗"; 2403.04164, 2203.10085); the same holds today for
+`Ann$^{1}$\footnotemark[1]` written so (the census: 223 mark-then-`\footnotemark` adjacencies in 135 papers, 23 the
+other way in 15). Census (`census/pops/pop78u_1.tsv`: every census paper with a note command, or a macro making one,
+inside a name block's `\textsuperscript{…}`/`^{…}`; 32 papers): A/B release int59a vs 78u, XML changed in 28, every one
+a regained note or mark (notes 76 → 110, words +332), E/F/W equal; the other 4 are a false hit (2503.05186's
+`\corresponding` is a symbol), a block whose note was kept already (2604.18459, authblk), one with no creator either way
+(2012.01602) and 2211.09622, whose main file the harness missed (its `main.tex` by hand: "corresponding author"
+regained). PDF (arXiv) checked for 16: 2512.05464, 1911.03118, 1912.00833, 2306.17472, 2309.12862, 2403.04164,
+2410.12564, 2502.15412, 2503.05905, 2402.13113, 1310.0294, 2211.09622, 2402.18447, 2501.01423, 2605.17958, 2603.17529 —
+notes present, marks as printed; unchanged residuals there: a symbol inside a mark (`\textsuperscript{\rm 1,2,$^{*}$}`,
+1911.03118) or glued to a label (`\textsuperscript{\rm 1*}`, 1912.00833; `$^{{2*}…}$`, 2305.16614) prints nothing, the
+glued one losing its affiliation too, and an inline affiliation row parted only by its marks stays one contact
+(2305.16614). Repros sectioning-frontmatter/author_thanks_inside_a_mark_keeps_the_mark_and_the_note,
+author_math_mark_thanks_keeps_the_mark_and_the_note, author_footnotemark_inside_a_mark_is_kept,
+author_note_macro_inside_a_mark_keeps_the_note; guards
+`perfect_kernel_batch78u::{author_thanks_inside_a_mark_keeps_the_mark_and_the_note,
+author_math_mark_thanks_keeps_the_mark_and_the_note, author_footnotemark_inside_a_mark_is_kept,
+author_note_macro_inside_a_mark_keeps_the_note}`,
+`author_split_tests::notes_out_of_marks_takes_the_note_after_the_mark`.
