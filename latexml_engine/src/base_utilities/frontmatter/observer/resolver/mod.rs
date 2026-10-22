@@ -171,9 +171,11 @@ struct Resolver {
   /// per creator of a block: that block's queue (its `epoch`); the creators a later block replaced
   epoch_of:         Vec<Option<usize>>,
   replaced:         Vec<usize>,
-  /// a note's e-mails (the creator the note is on, the contact, whether that creator takes it when no name spells it:
-  /// the note's only link, its mark shown on the name — decision 2), placed once every name is read
-  note_emails:      Vec<(Option<usize>, Assoc, bool)>,
+  /// a note's links, and the notes they may empty, placed once every name is read (`answer_note_links`)
+  note_links:       Vec<NoteLink>,
+  /// the marks a name's notes show on it (creator, label: `Ann\footnote[1]{…}` shows `∗`), what an entry led by the
+  /// same `\footnotemark` answers (`answer_pending`; 1607.07280)
+  note_marks:       Vec<(usize, String)>,
   /// whether the block being read prints its notes' marks (`Policy::unmarked_notes`)
   notes_marked:     bool,
   /// the requests a glued mark was parted into (creator, request), `part_glued_labels`
@@ -194,6 +196,28 @@ struct Resolver {
   /// the footnote texts the document made (ledger index, flushes before it, printed mark, text), each read where a
   /// name shows its mark (`answer_note_texts`)
   note_texts:       Vec<(usize, usize, String, String)>,
+}
+
+/// A note's link placed once every name of the document is read (`Resolver::answer_note_links`; main-session decisions
+/// of int66, review revfms2a2_6 findings 2, 3, FM S2a.2 r7): an e-mail or a url of a note, with the creator the note is
+/// on and whether that creator takes it when no name spells it (the note's only link, its mark shown on the name —
+/// decision 2); or a note whose links are all its text holds besides punctuation, kept or dropped (ruling 4) once they
+/// are placed — at the note, a name after it in the block is not read yet (`\author{Ann\thanks{ann@x.org, bob@x.org}
+/// \and Bob}`: the note was kept beside both addresses as contacts).
+enum NoteLink {
+  Link {
+    owner:    Option<usize>,
+    assoc:    Assoc,
+    fallback: bool,
+  },
+  Note {
+    index:    usize,
+    note:     Event,
+    owner:    Option<usize>,
+    rule:     String,
+    links:    Vec<Assoc>,
+    fallback: bool,
+  },
 }
 
 /// authblk's `\AB@thenote` state (authblk.sty:114-118, 148-151), read in call order: the `affil` counter, stepped at
@@ -229,7 +253,8 @@ impl Resolver {
       thenote_requests: Vec::new(),
       epoch_of:         Vec::new(),
       replaced:         Vec::new(),
-      note_emails:      Vec::new(),
+      note_links:       Vec::new(),
+      note_marks:       Vec::new(),
       notes_marked:     true,
       parted:           Vec::new(),
       splitting:        false,
@@ -392,7 +417,7 @@ pub fn resolve(inputs: &[Input]) -> Resolved {
   // a label places are no part of the pile — 2311.04097's two `\email`s under `\author{A$^1$ and B$^2$}` with their
   // affiliations marked; the amsart upfront grids 1302.1274, 1610.05835, 2204.13910, 2205.05923, 2507.07513)
   resolver.distribute_upfront();
-  resolver.answer_note_emails();
+  resolver.answer_note_links();
   resolver.answer_pending();
   resolver.answer_note_texts();
   resolver.answer_sequence();
@@ -501,12 +526,22 @@ mod tests {
       creator("Bob", &["fn:label1"]),
       creator("Cat", &["2"]),
     ];
-    assert_eq!(label_owners(&creators, "author:2"), [1]);
-    assert_eq!(label_owners(&creators, "author:9"), Vec::<usize>::new());
-    assert_eq!(label_owners(&creators, "1"), [0]);
-    assert_eq!(label_owners(&creators, "label1"), [1]);
-    assert_eq!(label_owners(&creators, "affiliation:2"), [2]);
-    assert_eq!(label_owners(&creators, "institute:1"), [0]);
+    let live = [0, 1, 2];
+    assert_eq!(label_owners(&creators, &live, "author:2"), [1]);
+    assert_eq!(
+      label_owners(&creators, &live, "author:9"),
+      Vec::<usize>::new()
+    );
+    assert_eq!(label_owners(&creators, &live, "1"), [0]);
+    assert_eq!(label_owners(&creators, &live, "label1"), [1]);
+    assert_eq!(label_owners(&creators, &live, "affiliation:2"), [2]);
+    assert_eq!(label_owners(&creators, &live, "institute:1"), [0]);
+    // (FM S2a.2 r7, review revfms2a2_6 finding 4: the N-th live creator — a replaced first one shifts no label)
+    assert_eq!(label_owners(&creators, &[1, 2], "author:1"), [1]);
+    assert_eq!(
+      label_owners(&creators, &[1, 2], "author:3"),
+      Vec::<usize>::new()
+    );
   }
 
   /// Item 2: a `fuzzy:` label and a `\ref` key stay whole; the name's letters skip its marks.

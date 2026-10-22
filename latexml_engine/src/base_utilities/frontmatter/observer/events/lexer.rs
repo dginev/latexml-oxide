@@ -1,6 +1,7 @@
 //! The lexer's second pass (OXIDIZED_DESIGN_DIVERGENCES #837): the walk's atoms — ink, spacing items, finished
-//! events — into the block's events: name runs split at the words "and" and `&`, footnote-symbol characters a Mark,
-//! commas a separator, a spacing run a Gap when it separates, a font change between runs a Layout event.
+//! events — into the block's events: name runs split at the words "and" and `&` and at a separator glyph standing alone
+//! (`is_separator_word`), footnote-symbol characters and the other mark glyphs (`is_mark_glyph`) a Mark, commas a
+//! separator, a spacing run a Gap when it separates, a font change between runs a Layout event.
 
 use super::*;
 
@@ -21,7 +22,7 @@ pub(super) struct Lexer {
   line_inked:        bool,
   /// the font of the last name run
   last_font:         Option<String>,
-  /// the symbol mark being read (consecutive footnote-symbol characters)
+  /// the symbol mark being read (consecutive footnote-symbol characters and mark glyphs)
   symbol:            String,
   symbol_span:       Option<(u16, u16)>,
 }
@@ -59,7 +60,8 @@ impl Lexer {
     let mut mark = Event::new(EventKind::Mark);
     mark.text = std::mem::take(&mut self.symbol);
     mark.label = Some(mark.text.clone());
-    mark.symbol = true;
+    // (a footnote symbol only when every character is one: a mark glyph, `⋄`, is a mark of no `\@fnsymbol` kind)
+    mark.symbol = mark.text.chars().all(is_fnsymbol);
     mark.role = Some("text".to_string());
     mark.span = self.symbol_span.take();
     mark.line_first = !self.line_inked;
@@ -67,7 +69,11 @@ impl Lexer {
     self.events.push(mark);
   }
 
-  /// End the name run: a Name, split at the words "and" and `&` (Sep events), each piece with its own span.
+  /// End the name run: a Name, split at the words "and" and `&` and at a separator glyph standing alone (Sep events:
+  /// `Chiara Simeoni -- \url{…}`'s `--`, 2511.07187), each piece with its own span. A dash inside a word stays as typed
+  /// (`F.~M\"uller--S\'anchez`, 2003.01448; the XML prints the ligature's `–`): the classify helpers today's split
+  /// shares read `--` as a hyphen and an en dash as no letter — `H. Strecker and H. V. Klapdor--Kleingrothaus`, an
+  /// elsarticle per-author line, read as one name with the en dash (hep-ex9811040, FM S2a.2 r7's census).
   fn flush_run(&mut self) {
     let run = std::mem::take(&mut self.run);
     let font = self.run_font.take();
@@ -99,7 +105,7 @@ impl Lexer {
     }
     let mut name: Option<Event> = None;
     for (word, span) in words {
-      if word.eq_ignore_ascii_case("and") || word == "&" {
+      if word.eq_ignore_ascii_case("and") || word == "&" || is_separator_word(&word) {
         self.events.extend(name.take());
         let mut sep = Event::new(EventKind::Sep(SepKind::Word(word)));
         sep.span = span;
@@ -158,7 +164,7 @@ impl Lexer {
       if is_zero_width(c) {
         continue;
       }
-      if is_fnsymbol(c) {
+      if is_fnsymbol(c) || is_mark_glyph(c) {
         self.flush_run();
         self.flush_gap();
         self.symbol.push(c);
@@ -238,4 +244,71 @@ fn is_zero_width(c: char) -> bool {
     c,
     '\u{200B}' | '\u{200C}' | '\u{200D}' | '\u{2060}' | '\u{FEFF}'
   )
+}
+
+/// LaTeX's `\@fnsymbol` characters (latex.ltx `\@fnsymbol`: `*`, `\dagger`, `\ddagger`, `\mathsection`,
+/// `\mathparagraph`, `\|`, and their doubles), with the math asterisk; `\|` as the kernel prints it in a formula, `∥`
+/// (U+2225, `$\|$`: `R.~E.~Hughes$\|$` under `\address{$\|$ The Ohio State University …}`, 0806.2911 — FM S2a.2 r7) as
+/// well as `\textbardbl`'s `‖`.
+pub(super) fn is_fnsymbol(c: char) -> bool {
+  matches!(
+    c,
+    '*' | '\u{2217}' | '†' | '‡' | '§' | '¶' | '‖' | '\u{2225}'
+  )
+}
+
+/// A glyph a document prints as an author's mark that is no `\@fnsymbol` character: the symbols set beside a name to
+/// point at its affiliation or note, read as the marks they are, never as the name's ink (`A. \v Siber $\diamond$` under
+/// `$\diamond$ Institute of Physics …`, 0907.1243; `A.~A.~Moiseev$\sharp$`, 0806.2911; `R. Podgornik $\dagger$$\star$`
+/// — FM S2a.2 r7, main-session decision 2 of int66: the marks the lexer did not read as such once a name became its
+/// printed text). Not a dot, a bullet or a bar (separators, [`is_separator_word`]), nor a degree sign or a ring.
+pub(super) fn is_mark_glyph(c: char) -> bool {
+  matches!(
+    c,
+    '♯'
+      | '♭'
+      | '♮'
+      | '⋄'
+      | '◇'
+      | '◆'
+      | '♢'
+      | '♦'
+      | '⋆'
+      | '★'
+      | '☆'
+      | '♣'
+      | '♠'
+      | '♡'
+      | '♥'
+      | '⊕'
+      | '⊖'
+      | '⊗'
+      | '⊘'
+      | '⊙'
+      | '⊛'
+      | '⊎'
+      | '△'
+      | '▽'
+      | '▲'
+      | '▼'
+      | '♀'
+      | '♂'
+      | '✝'
+      | '✠'
+      | '※'
+      | '⁎'
+  )
+}
+
+/// Whether a word of a name run is a separator glyph printed between two names, or between a name and its contact or
+/// degree, standing alone: a bar, a colon, the math dot `\cdot` or a bullet, a dash (`Tom Y. Zhao$^{\dagger}$ | PhD`,
+/// 2311.00652; `MeerKLASS Collaboration\thanks{…}: Matilde Barberi-Squarotti`, 2407.21626; `Chiara Simeoni --
+/// \url{…}`, 2511.07187; `Christopher Hojny\myorcidlink{…} $\cdot$ Mathieu Besançon`, 2511.18580 — FM S2a.2 r7): the
+/// lexer reads it as the word separator it is, as it reads "and" and `&`. Not the text middle dot `·`, which a name
+/// prints between its parts as often (`Ann \textperiodcentered{} Able`, `perfect_kernel_batchfms2a2r6`).
+pub(in crate::base_utilities) fn is_separator_word(word: &str) -> bool {
+  !word.is_empty()
+    && word
+      .chars()
+      .all(|c| matches!(c, '|' | ':' | '⋅' | '•' | '∙' | '-' | '–' | '—'))
 }

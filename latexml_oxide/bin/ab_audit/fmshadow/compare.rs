@@ -103,7 +103,8 @@ pub(super) fn rule_maps(shadow: &Tuples) -> impl Iterator<Item = &BTreeMap<Strin
 /// The shadow rule that decided an item of `kind` with normalised text `text`, anywhere in the shadow (a creator's or the
 /// block's): the item of that text (`moved …`), else — when the text is two or more of the shadow's items of that kind
 /// joined, as today's one contact of two symbol lines `†Univ A‡Univ B` is the shadow's two — the rule of its first piece
-/// (`overlaps …`). No looser overlap: a text that only shares a part with an item is the shadow's to explain.
+/// (`overlaps …`), else one line of an item the shadow joined from continuation lines (`part …`, `line:continued`). No
+/// looser overlap: any other text that only shares a part with an item is the shadow's to explain.
 pub(super) fn rule_of(shadow: &Tuples, kind: &str, text: &str) -> Option<String> {
   let key = format!("{kind}\t{text}");
   if let Some(rule) = rule_maps(shadow).find_map(|rules| rules.get(&key)) {
@@ -169,8 +170,39 @@ pub(super) fn rule_of(shadow: &Tuples, kind: &str, text: &str) -> Option<String>
   }
   match best[n] {
     Some((count, _, first)) if count >= 2 => Some(format!("overlaps {first}")),
-    _ => None,
+    // (or one line of a shadow item that its continuation lines joined into one affiliation (`line:continued`): today's
+    // one contact a line where the shadow reads the lines as one entry — `$\dagger$ Laboratory of Physical and
+    // Structural Biology, NICHD, Bld. 9, Rm. 1E116 \\ National Institutes of Health, …` under the `†` carriers once the
+    // lexer reads `$\diamond$` as a mark, 0907.1243, FM S2a.2 r7 — the joined item's rule, `part …`)
+    _ => pieces
+      .iter()
+      .filter(|(piece, rule)| {
+        rule.contains("line:continued")
+          && text.len() >= 8
+          && piece.len() > text.len()
+          && piece.contains(text)
+      })
+      .map(|(_, rule)| format!("part {rule}"))
+      .next(),
   }
+}
+
+/// The shadow rule that decided an XML note's text ([`rule_of`]): a note of the shadow's, or an entry's legend it read as
+/// that label's affiliation (`note:legend`, the note opening with a mark its requesters show: `\thanks{$\star$
+/// Communications and Information Theory Group, …}` under the `⋆` authors, 1803.05754, 2607.19263 — FM S2a.2 r7).
+pub(super) fn note_rule_of(shadow: &Tuples, text: &str) -> Option<String> {
+  rule_of(shadow, "note", text)
+    .or_else(|| rule_of(shadow, "affiliation", text).filter(|rule| rule.contains("note:legend")))
+}
+
+/// The shadow rule that decided an XML affiliation's text ([`rule_of`]): an affiliation of the shadow's, or a labelled
+/// line's entry it read as a legend, a note (`ruling1:request`, `ruling2:symbol-line`: `$^{\$}$These authors contributed
+/// equally to this work.` under the names marked `$`, 1910.10432 — FM S2a.2 r7, a legend's mark a symbol).
+pub(super) fn affiliation_rule_of(shadow: &Tuples, text: &str) -> Option<String> {
+  rule_of(shadow, "affiliation", text).or_else(|| {
+    rule_of(shadow, "note", text)
+      .filter(|rule| rule.contains("ruling1:request") || rule.contains("ruling2:symbol-line"))
+  })
 }
 
 /// The shadow rule that explains an XML e-mail printing several addresses (`raw`, as the XML holds it: today's whole
@@ -295,7 +327,7 @@ pub fn compare(shadow: &Tuples, xml: &Tuples) -> Vec<Disagreement> {
     for text in minus(&xa, &sa) {
       push(
         "affiliation",
-        rule_of(shadow, "affiliation", &text),
+        affiliation_rule_of(shadow, &text),
         format!("{}: xml-only {text}", sc.name),
       );
     }
@@ -387,14 +419,14 @@ pub fn compare(shadow: &Tuples, xml: &Tuples) -> Vec<Disagreement> {
     for text in minus(&xnotes, &snotes) {
       push(
         "note",
-        rule_of(shadow, "note", &text),
+        note_rule_of(shadow, &text),
         format!("{}: xml-only {text}", sc.name),
       );
     }
     for text in minus(&in_name, &unmatched) {
       push(
         "note",
-        rule_of(shadow, "note", &text),
+        note_rule_of(shadow, &text),
         format!("{}: xml-only {text} (in the name)", sc.name),
       );
     }
@@ -418,7 +450,12 @@ pub fn compare(shadow: &Tuples, xml: &Tuples) -> Vec<Disagreement> {
   }
   for item in minus(&xb, &sb) {
     let (role, text) = item.split_once('\t').unwrap_or(("", &item));
-    let rule = rule_of(shadow, role, text).or_else(|| {
+    let rule = if role == "note" {
+      note_rule_of(shadow, text)
+    } else {
+      rule_of(shadow, role, text)
+    };
+    let rule = rule.or_else(|| {
       xml
         .block
         .iter()

@@ -33,9 +33,10 @@ pub(super) enum NameFault {
 }
 
 /// Whether an XML-only affiliation (`<name>: xml-only <text>`) is one of the shadow's affiliations of that creator with
-/// legend lines the shadow reads as ruling 2's symbol lines welded on after it (`… 55441, USA.∗These authors
-/// contributed equally to this work.†Corresponding author: yi@virginia.edu`, 2305.13575): the rest of its text is a
-/// sequence of those lines' notes (kept, or dropped by ruling 4 once their e-mail became a contact).
+/// legend lines the shadow reads as ruling 2's symbol lines (or ruling 1's, a mark glyph's) welded on after it (`…
+/// 55441, USA.∗These authors contributed equally to this work.†Corresponding author: yi@virginia.edu`, 2305.13575): the
+/// rest of its text is a sequence of those lines' notes (kept, or dropped by ruling 4 once their e-mail became a
+/// contact), an "and" between two of them.
 pub(super) fn legends_welded_on(shadow: &Tuples, detail: &str) -> bool {
   let Some((name, text)) = detail.split_once(": xml-only ") else {
     return false;
@@ -47,10 +48,12 @@ pub(super) fn legends_welded_on(shadow: &Tuples, detail: &str) -> bool {
       c.notes
         .iter()
         .map(|n| norm(n))
+        // (a legend line led by a mark glyph of no `\@fnsymbol` kind is ruling 1's: `${\star}$ to whom correspondence
+        // should be addressed` under `Pace,$^{2,\star}$`, 2401.00056 — FM S2a.2 r7)
         .filter(|n| {
           c.rules
             .get(&format!("note\t{n}"))
-            .is_some_and(|r| r.contains("ruling2:symbol-line"))
+            .is_some_and(|r| r.contains("ruling2:symbol-line") || r.contains("ruling1:request"))
         })
         .collect::<Vec<_>>()
     })
@@ -107,9 +110,18 @@ pub(super) fn legends_welded_on(shadow: &Tuples, detail: &str) -> bool {
       if !reach[at] {
         continue;
       }
-      for legend in &legends {
-        if rest[at..].starts_with(legend.as_str()) {
-          reach[at + legend.len()] = true;
+      // (a legend after the first may follow the word "and" the source printed between them: `\# authors contributed
+      // equally and ${\star}$ to whom correspondence …`, 2401.00056)
+      let starts = if at > 0 && rest[at..].starts_with("and") {
+        vec![at, at + 3]
+      } else {
+        vec![at]
+      };
+      for start in starts {
+        for legend in &legends {
+          if rest[start..].starts_with(legend.as_str()) {
+            reach[start + legend.len()] = true;
+          }
         }
       }
       for address in &addresses {

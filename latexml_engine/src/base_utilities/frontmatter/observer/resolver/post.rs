@@ -98,11 +98,13 @@ impl Resolver {
     places.sort_unstable();
     places.dedup();
     let place_of = |place: usize| places.iter().position(|p| *p == place);
+    // (a place is among the live creators, a spelled owner an index into all of them: compared as the live creator at
+    // that place — a replacing `\author` under a `SpelledElseOrder` class, its spelled first author at place 0 but index
+    // 1, read the list as out of order; review revfms2a2_6 finding 1, FM S2a.2 r7)
     let in_order = places.len() == all.len()
-      && list
-        .iter()
-        .zip(&spelled)
-        .all(|((_, _, _, place), owner)| owner.is_none_or(|o| place_of(*place) == Some(o)));
+      && list.iter().zip(&spelled).all(|((_, _, _, place), owner)| {
+        owner.is_none_or(|o| place_of(*place).map(|p| all[p]) == Some(o))
+      });
     for ((address, assoc, group, place), spelled) in list.into_iter().zip(spelled) {
       let (owner, rule) = match spelled {
         Some(owner) => (Some(owner), "owner:spelled"),
@@ -446,28 +448,77 @@ impl Resolver {
     }
   }
 
-  /// A note's e-mails: each to the author of the note's block it spells (FIDELITY_CHARTER §4: ownership by evidence —
-  /// the spelling before the note's place), else the author the note is on when it is the note's only link (its mark is
-  /// shown on that name: the main-session decision of 2026-10-22 recorded in OXIDIZED_DESIGN_DIVERGENCES #837, narrowed
-  /// by its decision 2), else none: the address stays in the note's text.
-  pub(super) fn answer_note_emails(&mut self) {
-    for (owner, assoc, fallback) in std::mem::take(&mut self.note_emails) {
-      let candidates: Vec<usize> = match owner {
-        Some(at) => (0..self.out.creators.len())
-          .filter(|&c| self.group[c] == self.group[at])
-          .collect(),
-        None => self.live(),
-      };
-      match self.spelled(&assoc.text, &candidates) {
-        Some(spelled) if Some(spelled) != owner => {
-          let rule = s!("{} owner:spelled", assoc.rule);
-          self.attach(Some(spelled), Assoc { rule, ..assoc }, false);
+  /// A note's links, once every name is read: each e-mail or url to the author of the note's block it spells (a url by
+  /// its letters past the scheme, `link_letters`; FIDELITY_CHARTER §4: ownership by evidence — the spelling before the
+  /// note's place), else the author the note is on when it is the note's only link (its mark is shown on that name: the
+  /// main-session decision of 2026-10-22 recorded in OXIDIZED_DESIGN_DIVERGENCES #837, narrowed by its decision 2), else
+  /// none: the link stays in the note's text. A url goes to the co-author it spells as an e-mail does (main-session
+  /// decision on review revfms2a2_6 finding 2: `http://www.pengxu.net/` in the note on Liang Wang is Peng Xu's,
+  /// 2001.02600). A note its links may empty is kept, or dropped once they all became contacts (ruling 4), here — the
+  /// names after it in its block read (review revfms2a2_6 finding 3).
+  pub(super) fn answer_note_links(&mut self) {
+    for item in std::mem::take(&mut self.note_links) {
+      match item {
+        NoteLink::Link { owner, assoc, fallback } => {
+          self.place_note_link(owner, assoc, fallback);
         },
-        Some(_) => self.attach(owner, assoc, false),
-        None if fallback => self.attach(owner, assoc, false),
-        None => {},
+        NoteLink::Note {
+          index,
+          note,
+          owner,
+          rule,
+          links,
+          fallback,
+        } => {
+          let mut all_taken = true;
+          for assoc in links {
+            all_taken &= self.place_note_link(owner, assoc, fallback);
+          }
+          if all_taken {
+            self.drop_emptied_note(index, &note, &rule);
+          } else {
+            self.keep_note(index, &note, owner, &rule);
+          }
+        },
       }
     }
+  }
+
+  /// One of a note's links ([`Resolver::answer_note_links`]); whether a creator took it.
+  fn place_note_link(&mut self, owner: Option<usize>, assoc: Assoc, fallback: bool) -> bool {
+    let candidates: Vec<usize> = match owner {
+      Some(at) => (0..self.out.creators.len())
+        .filter(|&c| self.group[c] == self.group[at])
+        .collect(),
+      None => self.live(),
+    };
+    let url = assoc.role == "url";
+    let letters = if url {
+      link_letters(&assoc.text).to_string()
+    } else {
+      assoc.text.clone()
+    };
+    // (a url printing addresses — a group of local parts before one domain set as a link, `\url{sosk, unno, tsuboi,
+    // ichi@preferred.jp}` — is no co-author's by the first spelling it holds: it goes to the name it is on only, as
+    // before r7 — 1407.7882, 1810.11748, 2001.10403 went whole to one author of the group)
+    let spelled = self
+      .spelled(&letters, &candidates)
+      .filter(|spelled| !(url && assoc.text.contains('@')) || Some(*spelled) == owner);
+    match spelled {
+      Some(spelled) if Some(spelled) != owner => {
+        let rule = s!("{} owner:spelled", assoc.rule);
+        self.attach(Some(spelled), Assoc { rule, ..assoc }, false);
+      },
+      // (a url spelling the name it is on, not as the note's only link, says so: `owner:spelled`)
+      Some(_) if url && !fallback => {
+        let rule = s!("{} owner:spelled", assoc.rule);
+        self.attach(owner, Assoc { rule, ..assoc }, false);
+      },
+      Some(_) => self.attach(owner, assoc, false),
+      None if fallback => self.attach(owner, assoc, false),
+      None => return false,
+    }
+    true
   }
 
   /// The footnote texts the document made, each a note of the names showing its mark by a `\footnotemark` — the mark
@@ -622,20 +673,32 @@ impl Resolver {
       .iter()
       .flat_map(|c| c.requests.iter().filter_map(|r| kind(r)))
       .collect();
+    let live = self.live();
     for (at, (labels, symbol, assoc)) in pending.into_iter().enumerate() {
       let mut owners: Vec<usize> = Vec::new();
       for label in &labels {
-        for owner in label_owners(&self.out.creators, label) {
+        for owner in label_owners(&self.out.creators, &live, label) {
           if !owners.contains(&owner) {
             owners.push(owner);
+          }
+        }
+      }
+      // (an entry a `\footnotemark` leads answers the same print on a name: a footnote's mark, `\footnotemark[1]` or the
+      // mark a `\footnote[1]` shows — `Shun'ya Mizoguchi\footnote[1]{…}` under `\affiliation{\footnotemark[1]Theory
+      // Center, …}`, 1607.07280 (FM S2a.2 r7): ruling 1, the marks shown on a name are its requests)
+      let footnote_led = assoc.rule.split_whitespace().any(|t| t == "mark:footnote");
+      if footnote_led {
+        for (c, mark) in &self.note_marks {
+          if labels.contains(mark) && !owners.contains(c) {
+            owners.push(*c);
           }
         }
       }
       owners.sort_unstable();
       // (a numbered affiliation answers no request a `\footnotemark` made: that number is its footnote's — `Kui
       // Wu\inst{3\footnotemark[1]}` is not Peking University's, `\institute`'s first entry, 2404.09857; a symbol line
-      // is ruling 2's, every carrier of its character)
-      if !symbol && matches!(assoc.role.as_str(), "affiliation" | "address") {
+      // is ruling 2's, every carrier of its character; an entry a `\footnotemark` leads is that footnote's print)
+      if !symbol && !footnote_led && matches!(assoc.role.as_str(), "affiliation" | "address") {
         owners.retain(|&owner| {
           labels.iter().any(|label| {
             let asked = self.out.creators[owner]

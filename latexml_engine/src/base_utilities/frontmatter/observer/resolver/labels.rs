@@ -37,14 +37,17 @@ pub(super) fn split_top_commas(text: &str) -> Vec<&str> {
   parts
 }
 
-/// LaTeX's `\@fnsymbol` characters, the math asterisk as `*`.
+/// LaTeX's `\@fnsymbol` characters, the math asterisk as `*`, the kernel's formula `\|` (`∥`, 0806.2911) as `‖`.
 pub(super) fn is_symbol_char(c: char) -> bool {
-  matches!(c, '*' | '\u{2217}' | '†' | '‡' | '§' | '¶' | '‖')
+  matches!(
+    c,
+    '*' | '\u{2217}' | '†' | '‡' | '§' | '¶' | '‖' | '\u{2225}'
+  )
 }
 
 /// One mark's labels (ruling 1's split): at commas and spaces; a run of one footnote symbol is one label (`**`), a
 /// symbol glued to a label another (`*1` → `*`, `1`); parentheses and brackets around a label dropped (`(a)`); the
-/// math asterisk `∗` read as `*`.
+/// math asterisk `∗` read as `*`, the formula `\|`'s `∥` as `‖` (0806.2911).
 pub fn mark_labels(label: &str) -> Vec<String> {
   // (a `\ref` mark's key, and a `fuzzy:<name>` label — svjour's `\institute` entry after `\at`, a name with its
   // spaces — are one label each, never split: review revfms2a2 finding 2, 0807.3898, 2403.09642)
@@ -56,7 +59,11 @@ pub fn mark_labels(label: &str) -> Vec<String> {
     let part = part.trim_matches(|c: char| "()[]{}".contains(c));
     let mut run = String::new();
     let mut rest = String::new();
-    for c in part.chars().map(|c| if c == '\u{2217}' { '*' } else { c }) {
+    for c in part.chars().map(|c| match c {
+      '\u{2217}' => '*',
+      '\u{2225}' => '‖',
+      c => c,
+    }) {
       if is_symbol_char(c) {
         if !rest.is_empty() {
           labels.push(std::mem::take(&mut rest));
@@ -89,15 +96,17 @@ pub(super) fn unprefixed(label: &str) -> Option<&str> {
 /// request and it agree without both prefixes, the first that finds any (elsarticle's `\fnref{label1}`, `fn:label1`,
 /// answers `\address[label1]`: 1712.00945; `\inst{1}`'s `affiliation:1` the entry `1`). A creator's own role-sequence
 /// label `author:N` (the N-th author, `\lx@add@frontmatter@now`'s `_annotations`) is matched exactly and never by
-/// that fallback (OD #159, relocate.rs:42-50: a shared `affiliation:1` must not reach the first author by number).
-pub(super) fn label_owners(creators: &[RCreator], label: &str) -> Vec<usize> {
+/// that fallback (OD #159, relocate.rs:42-50: a shared `affiliation:1` must not reach the first author by number) — the
+/// N-th of the `live` creators, as today's numbers the authors it holds (`place.rs`'s `author:{n}`: a replaced `\author`
+/// call's creators are none of them, so they shift no later label; review revfms2a2_6 finding 4, FM S2a.2 r7).
+pub(super) fn label_owners(creators: &[RCreator], live: &[usize], label: &str) -> Vec<usize> {
   if let Some(n) = label.strip_prefix("author:") {
     return n
       .trim()
       .parse::<usize>()
       .ok()
       .and_then(|n| n.checked_sub(1))
-      .filter(|at| *at < creators.len())
+      .and_then(|at| live.get(at).copied())
       .into_iter()
       .collect();
   }
@@ -342,6 +351,25 @@ pub(super) fn is_legend_text(text: &str) -> bool {
     "funding" => !reads_as_affiliation(&text_tokens(text)),
     _ => true,
   }
+}
+
+/// The mark a Note event shows on its name (`\thanks`/`\footnote`'s `\thefootnote`, the rehearsal's `printed`), as the
+/// lexer writes it last into the note's role (`thanks mark=1 shows=∗`), if one (FM S2a.2 r7, 1607.07280).
+pub(super) fn note_shows(note: &Event) -> Option<&str> {
+  note
+    .role
+    .as_deref()?
+    .split_once(" shows=")
+    .map(|(_, mark)| mark.trim())
+    .filter(|mark| !mark.is_empty())
+}
+
+/// Whether a Mark event is one a `\footnotemark` printed (its role `footnotemark`, `footnotemark parted`).
+pub(super) fn printed_by_footnotemark(event: &Event) -> bool {
+  event
+    .role
+    .as_deref()
+    .is_some_and(|r| r.starts_with("footnotemark"))
 }
 
 /// Whether a label is a footnote symbol (ruling 2).

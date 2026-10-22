@@ -621,3 +621,89 @@ fn a_notes_orcid_id_is_no_note_text() {
   );
   assert_eq!(without_orcid_ids("x000900021234567xy"), "xy");
 }
+
+/// FM S2a.2 r7: today's one contact a line of an entry the shadow reads with its continuation line as one affiliation
+/// (`line:continued`) is that item's line — classified by the joined item's rule (`part …`), not left unexplained
+/// (0907.1243: `$\dagger$ Laboratory …, Rm. 1E116 \\ National Institutes of Health, …` under the `†` carriers once
+/// `$\diamond$` is a mark; each line went to every author in today's).
+#[test]
+fn a_line_of_a_continued_entry_is_its_part() {
+  let tex = "\\documentclass[aps,pra]{revtex4-2}\n\\begin{document}\n\\title{T}\n\\author{Ann Able $\\diamond$, Bob Baker $\\dagger$ \\\\ $\\diamond$ Univ A, City \\\\ $\\dagger$ Laboratory B, Bld. 9 \\\\ Institute C, Town}\n\\begin{abstract}\nAbstract.\n\\end{abstract}\n\\maketitle\nBody.\n\\end{document}\n";
+  let (xml, dump) = convert(tex);
+  let shadow = shadow_tuples(&json_resolved(&dump["resolved"]));
+  let rows = compare(&shadow, &xml_tuples(xml.as_bytes()).expect("xml"));
+  assert!(rows.iter().all(|d| d.classified), "{rows:?}");
+  let parts: Vec<&str> = rows
+    .iter()
+    .filter(|d| d.rule.starts_with("part "))
+    .map(|d| d.detail.as_str())
+    .collect();
+  assert_eq!(parts, [
+    "Ann Able: xml-only institutectown",
+    "Ann Able: xml-only laboratorybbld9",
+    "Bob Baker: xml-only institutectown",
+    "Bob Baker: xml-only laboratorybbld9",
+  ]);
+}
+
+/// FM S2a.2 r7: today's note the shadow reads as an entry's legend, the affiliation of the names showing its leading
+/// mark (`note:legend`: a note opening with `$\star$` under the `⋆` authors once the lexer reads `⋆` as a mark,
+/// 1803.05754, 2607.19263), is explained by that rule — it was looked up among the shadow's notes alone.
+#[test]
+fn a_note_read_as_a_legend_affiliation_is_explained() {
+  let tex = "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^\\star$, Bob Baker$^\\star$ and Cat Cole\\thanks{$\\star$ Univ A, City.}}\n\\maketitle\nBody.\n\\end{document}\n";
+  let (xml, dump) = convert(tex);
+  let shadow = shadow_tuples(&json_resolved(&dump["resolved"]));
+  let rows = compare(&shadow, &xml_tuples(xml.as_bytes()).expect("xml"));
+  assert!(
+    !rows.is_empty() && rows.iter().all(|d| d.classified),
+    "{rows:?}"
+  );
+  assert!(
+    rows
+      .iter()
+      .any(|d| d.kind == "note" && d.rule.contains("note:legend") && d.detail.contains("xml-only")),
+    "{rows:?}"
+  );
+}
+
+/// FM S2a.2 r7: legend lines welded onto the affiliation above them, one led by a mark glyph of no `\@fnsymbol` kind
+/// (`${\star}$`, ruling 1's legend once the lexer reads `⋆` as a mark) and the word "and" between two of them, are the
+/// PDF-confirmed XML-wrong class (2401.00056).
+#[test]
+fn welded_legends_of_a_mark_glyph_are_the_xml_wrong_class() {
+  let tex = "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able,$^{1,\\#}$ Bob Baker,$^{2,\\#}$ Cat Cole$^{2,\\star}$\\\\ $^1$Univ A, City.\\\\ $^2$Univ B, Town.\\\\ \\normalsize{\\# authors contributed equally and ${\\star}$ to whom correspondence should be addressed.}}\n\\maketitle\nBody.\n\\end{document}\n";
+  let (xml, dump) = convert(tex);
+  let shadow = shadow_tuples(&json_resolved(&dump["resolved"]));
+  let rows = compare(&shadow, &xml_tuples(xml.as_bytes()).expect("xml"));
+  assert!(rows.iter().all(|d| d.classified), "{rows:?}");
+  let welded: Vec<&str> = rows
+    .iter()
+    .filter(|d| d.class.is_some_and(|c| c.starts_with("legend lines")))
+    .map(|d| d.detail.as_str())
+    .collect();
+  assert_eq!(welded, [
+    "Bob Baker: xml-only univbtownauthorscontributedequallyandtowhomcorrespondenceshouldbeaddressed",
+    "Cat Cole: xml-only univbtownauthorscontributedequallyandtowhomcorrespondenceshouldbeaddressed",
+  ]);
+}
+
+/// FM S2a.2 r7: today's affiliation the shadow reads as legend lines, notes (`$^{\$}$These authors contributed equally to
+/// this work. \\ $^*$Corresponding author` welded into one contact, 1910.10432 — a legend's mark is a symbol, `$` too),
+/// is explained by those entries' rule; it was looked up among the shadow's affiliations alone.
+#[test]
+fn an_affiliation_read_as_legend_notes_is_explained() {
+  let tex = "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^{1,\\$}$, Bob Baker$^{1,\\$}$, Cat Cole$^{1,*}$\\\\ $^1$Univ A, City.\\\\ $^\\$$These authors contributed equally to this work.\\\\ $^*$Corresponding author}\n\\maketitle\nBody.\n\\end{document}\n";
+  let (xml, dump) = convert(tex);
+  let shadow = shadow_tuples(&json_resolved(&dump["resolved"]));
+  let rows = compare(&shadow, &xml_tuples(xml.as_bytes()).expect("xml"));
+  assert!(rows.iter().all(|d| d.classified), "{rows:?}");
+  assert_eq!(
+    rows
+      .iter()
+      .filter(|d| d.kind == "affiliation" && d.rule == "overlaps ruling1:request")
+      .count(),
+    2,
+    "{rows:?}"
+  );
+}

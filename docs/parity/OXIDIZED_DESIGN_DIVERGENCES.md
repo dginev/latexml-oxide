@@ -23379,7 +23379,7 @@ only (XML byte-identical against int54a with the switch unset and set, SYNC "FM 
   (`resolver::surname_owners`, tag `fuzzy:surname`; 2011.14024, 2403.19676, 2106.12864); the ledger writes a label's
   parameterless macros out at the call (`ledger::label_text`: aastex's `fuzzy:\lx@aas@correspondent`, 2506.07978).
 - **E-mails by evidence** (FIDELITY_CHARTER §4): a note's e-mail goes to the author it spells before the note's own
-  (`answer_note_emails`; 1908.04020, 2304.00435), else to the author carrying the note's mark (main-session decision
+  (`answer_note_emails`, r7's `answer_note_links`; 1908.04020, 2304.00435), else to the author carrying the note's mark (main-session decision
   2026-10-22: the mark shown on that name is the evidence; it never goes by adjacency alone); a list with one address per author that every spelled address agrees
   with is in author order, for every class (`owner:order`; 2603.19610, 2512.22629, 2305.12998); an e-mail Contact given
   to a row of names, or printing several addresses, is placed address by address (0809.3237); an address's glued label
@@ -23636,6 +23636,65 @@ six more census names keep a mark glyph or separator at an edge: 0806.2911 `∥`
 Saders`, 2311.00652 `| PhD`, 2511.07187 `--`, 2511.18580 `⋅`). Guards `perfect_kernel_batchfms2a2r6::*` (each red on r5
 but the XML pin), engine unit test `resolver::tests::a_sole_authors_note_made_before_it_is_its_note` (the printed U+2010
 kept), ab_audit `fmshadow::tests::{a_written_out_address_group_is_classified, a_notes_orcid_id_is_no_note_text}`.
+
+**S2a.2 r7: the r6 landing review's findings, the int66 decisions** (review revfms2a2_6 findings 1-4; the main session's
+decision 2 of int66 and its decision on finding 2). Still shadow only (XML byte-identical against int69b with the switch
+unset and set, SYNC "FM S2a.2").
+- **Live places against live creators** (finding 1): `answer_sequence`'s author-order test compares the live creator at
+  an address's place with its spelled owner (an index into all creators) — a replacing `\author` under a
+  `SpelledElseOrder` class read its list as out of order; `label_owners`' `author:N` is the N-th live creator, as
+  `place.rs` numbers the authors today's holds (finding 4; `\lx@add@contact@placed`'s `ContactOwner::Author`).
+- **A note's links once every name is read** (findings 2 and 3, the main session's decision on 2): a note's e-mails and
+  urls are placed after the blocks (`answer_note_links`, `NoteLink`) — each to the author of the note's block it spells
+  (a url by `link_letters`), else to the note's owner as its only marked link (decision 2), else left in the note's text;
+  a url spelling a co-author is that author's as an e-mail is (2001.02600's `http://www.pengxu.net/` in Liang Wang's
+  note, Peng Xu's; 2503.02954's `mengyuest.github.io`), but a url printing addresses (`\url{sosk, unno, tsuboi,
+  ichi@preferred.jp}`) goes to the name it is on only, as before (1407.7882, 1810.11748, 2001.10403 went whole to one
+  author of the group). A note its links may empty (nothing but punctuation besides them) is kept or dropped (ruling 4)
+  there, not at the note: `\author{Ann\thanks{ann@x.org, bob@x.org} \and Bob}` kept the note beside both addresses as
+  contacts, Bob not read yet. An ownerless note's url (an address line's) is no longer the block's by default: it goes
+  to its speller or stays in the text, as an e-mail does (2103.05251's repository url, its sole author's).
+- **A name's edge glyphs are the marks and separators they print** (decision 2 of int66; the 7 census names r6's
+  printed-text rule exposed): the formula `\|` prints `∥` (U+2225), `\@fnsymbol`'s `‖` (`is_fnsymbol`; `mark_labels`
+  folds it; 0806.2911's `R.~E.~Hughes$\|$`); the glyphs documents set beside a name as marks of no `\@fnsymbol` kind
+  (`⋄`, `♯`, `⋆`, `⊕`, … `is_mark_glyph`) are Marks (`symbol` false: 0907.1243's `A. \v Siber $\diamond$`,
+  `R. Podgornik $\dagger$$\star$`; 0806.2911's `$\sharp$`), and a legend line led by one is a legend, a note (a legend's
+  mark is a symbol: 2401.00056's `${\star}$ to whom correspondence should be addressed`, 1910.10432's `$^{\$}$`); a
+  separator glyph standing alone in a name run — a bar, a colon, the math dot, a bullet, a dash (`is_separator_word`) —
+  is a word separator as "and" is (2311.00652's `| PhD`, the degree then the name's qualifier; 2407.21626's
+  `Collaboration\thanks{…}: Matilde …`; 2511.07187's `Chiara Simeoni -- \url{…}`, which opens no row; 2511.18580's
+  `$\cdot$`), the text middle dot `·` excepted (a name's own glyph as often). A dash inside a word stays as typed: the
+  classify helpers today's split shares read `--` as a hyphen and the ligature's en dash as no letter (hep-ex9811040's
+  `H. Strecker and H. V. Klapdor--Kleingrothaus` read as one name with it; 2003.01448's `M\"uller--S\'anchez`, and its
+  `J .~Van~Saders` the source's own print).
+- **A note's mark answers a footnote-mark entry** (1607.07280, r6's revtex4_support sample): the rehearsal's
+  `\lx@fm@obs@note` computes the mark a `\thanks`/`\footnote` shows (`\thefootnote` at its given or stepped number, as
+  `\lx@fm@obs@fnmark` does — `note_mark_quietly`: its diagnostics set aside, and a print that fails unwound where it
+  stopped, the note then showing none: eleven `\thanks` pass `\@fnsymbol`'s nine, and jpconf.cls:153's `\@fnsymbol`
+  reads `\thefootnote` while the rehearsal's `\thefootnote` is `\@fnsymbol\c@footnote` — 1105.2659's
+  `\footnote[3]{Speaker}` recursed, left 12,000 conditionals open and its conversion Fatal on the first build, 0709.0673
+  lost its name; a resource Fatal that is no runaway stays one); the lexer writes it last into the note's role
+  (`thanks mark=1 shows=∗`, `note_shows`); a note beside a name records it (`note_marks`), and an entry a `\footnotemark`
+  leads (`mark:footnote`, an API call's leading marks or a labelled line's) answers those names besides its requesters,
+  the numbered-affiliation gate (a footnote's number is no affiliation's, 2404.09857) not applying to it:
+  `Shun'ya Mizoguchi\footnote[1]{…}` under `\affiliation{\footnotemark[1]Theory Center, …}` (1607.07280,
+  hep-th0302032, nucl-th9803030, 2608.27295). A note's mark is no request otherwise (no symbol line, no label answers it).
+- **The comparator** explains today's one contact a line of an entry the shadow joined with its continuation lines
+  (`line:continued`) by that item's rule (`part …`, `rule_of`: 0907.1243's `$\dagger$ Laboratory … \\ National
+  Institutes of Health …`), today's note the shadow reads as a legend affiliation (`note_rule_of`, `note:legend`:
+  1803.05754's `\thanks{$\star$ Communications and Information Theory Group, …}` under the `⋆` authors) and today's
+  affiliation it reads as legend notes (`affiliation_rule_of`: 1910.10432, 1506.04458); the welded-legends class takes
+  ruling 1's legends and an "and" between two of them (2401.00056).
+Not done (r7 residual): a glued run of two symbols one entry and one name show as written (`§†`) is read as two marks,
+each line to every carrier of either (0907.1243, the one census paper); a repository url under an author's account goes
+to that author (2008.12970's `github.com/KuangenZhang/…`, 2511.08416's `github.com/qin-jingyun/…`) — the spelling rule as
+decided; a superscript inside a surname (`M$^{\rm c}$Hardy`, 2003.01448) parts it (r5's `M\textsuperscript{c}Kernan`
+class). Guards `perfect_kernel_batchfms2a2r7::*` (12; each red on int69b or on r7's first build but the XML pin: the
+resolver-level two re-resolved through int69b's `ab_audit`, the convert shapes by int69b's own shadow dump), the r1-r3
+guard `glued_marks_part_by_the_marks_shown` (its `⋆` legend a note), engine unit test
+`resolver::tests::label_owners_exact_then_unprefixed` (live `author:N`), ab_audit
+`fmshadow::tests::{a_line_of_a_continued_entry_is_its_part, a_note_read_as_a_legend_affiliation_is_explained,
+an_affiliation_read_as_legend_notes_is_explained, welded_legends_of_a_mark_glyph_are_the_xml_wrong_class}`.
 
 ### 840. A space a name sets before its own mark is the name's; spacing-only math, `\enskip` after a mark part names
 

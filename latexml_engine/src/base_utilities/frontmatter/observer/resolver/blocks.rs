@@ -283,6 +283,21 @@ impl Resolver {
               || later_line_is_names(line, continued, under_affiliation, after_labelled));
           if names_line {
             answered_rows.retain(|c| *c != line.column);
+            // (a separator glyph before the line's contact parts the name from it, and ends no row: `Chiara Simeoni --
+            // \url{…}`, 2511.07187 — only one the line ends with opens it)
+            let ends_open = |e: &&Event| match &e.kind {
+              EventKind::Sep(SepKind::Comma) => true,
+              EventKind::Sep(SepKind::Word(word)) => {
+                !events::is_separator_word(word)
+                  || line
+                    .events
+                    .iter()
+                    .rev()
+                    .find(|e| e.kind != EventKind::Layout)
+                    .is_some_and(|last| std::ptr::eq(*last, *e))
+              },
+              _ => false,
+            };
             if line
               .events
               .iter()
@@ -293,7 +308,7 @@ impl Resolver {
                   EventKind::Layout | EventKind::Contact | EventKind::Note
                 )
               })
-              .is_some_and(|e| matches!(e.kind, EventKind::Sep(SepKind::Comma | SepKind::Word(_))))
+              .is_some_and(ends_open)
             {
               open_rows.push(line.column);
             }
@@ -524,6 +539,17 @@ impl Resolver {
         .trim_start_matches(|c: char| ")]-.:".contains(c) || c.is_whitespace())
         .to_string();
       let span = entry.events.first().and_then(|e| e.span);
+      // (an entry a `\footnotemark` leads: what a name's footnote mark answers, `mark:footnote` — 1607.07280)
+      let footnote = entry
+        .events
+        .iter()
+        .find(|e| e.kind == EventKind::Mark)
+        .is_some_and(|e| printed_by_footnotemark(e));
+      let extra = if footnote {
+        s!("{extra} mark:footnote")
+      } else {
+        extra.to_string()
+      };
       let rule = if entry.symbol {
         s!("ruling2:symbol-line{extra}")
       } else {
@@ -541,7 +567,15 @@ impl Resolver {
           .all(|c| c.role.as_deref() != Some("affiliation"))
       {
         "email"
-      } else if is_legend_text(&text) && entry.symbol {
+      // (a legend's mark is a symbol: a footnote symbol, or a mark glyph of no `\@fnsymbol` kind — `${\star}$ to whom
+      // correspondence should be addressed` under `Pace,$^{2,\star}$`, 2401.00056, FM S2a.2 r7)
+      } else if is_legend_text(&text)
+        && (entry.symbol
+          || entry
+            .labels
+            .iter()
+            .all(|l| !l.is_empty() && !l.chars().any(char::is_alphanumeric)))
+      {
         "legend"
       } else {
         "affiliation"
@@ -646,8 +680,20 @@ impl Resolver {
   }
 
   /// A Note event: its inner contacts to its owner when they spell it or are its only link (decision 2), the rest left in
-  /// its text; the note itself, its whole text, unless its contacts emptied it and were all taken out (ruling 4).
+  /// its text — its e-mails and urls placed once every name is read, to the author they spell (`answer_note_links`); the
+  /// note itself, its whole text, unless its contacts emptied it and were all taken out (ruling 4), decided there when
+  /// its links may empty it. The mark it shows on the name it is beside, its request of an entry led by the same
+  /// `\footnotemark` (`note_marks`, 1607.07280).
   pub(super) fn note(&mut self, index: usize, note: &Event, owner: Option<usize>, rule: &str) {
+    if rule == "note:adjacent"
+      && self.notes_marked
+      && let Some(at) = owner
+      && let Some(shows) = note_shows(note)
+    {
+      for label in mark_labels(shows) {
+        self.note_marks.push((at, label));
+      }
+    }
     // (what is left of its text once its contacts are taken out decides only whether they emptied it: the note keeps
     // its whole text, "Codebase is available at https://…" — review revfms2a2 finding 1; 2401.17399, 1607.05792,
     // 2603.01292)
@@ -664,12 +710,7 @@ impl Resolver {
     // 1803.04996, 2504.08644, 2602.13176 —, and a class printing no note marks places a note by position alone,
     // `Policy::unmarked_notes`)
     let fallback = contacts.len() == 1 && self.notes_marked;
-    let group: Vec<usize> = match owner {
-      Some(at) => (0..self.out.creators.len())
-        .filter(|&c| self.group[c] == self.group[at])
-        .collect(),
-      None => Vec::new(),
-    };
+    let mut links: Vec<Assoc> = Vec::new();
     let mut all_taken = true;
     for inner in &contacts {
       let (role, text) = contact_parts(inner);
@@ -680,46 +721,61 @@ impl Resolver {
         rule: s!("{rule} ruling4:inner-contact"),
         source: Some((index, inner.span)),
       };
-      // (an e-mail goes to the author it spells before the one the note is on — charter §4, by evidence: `Chauvet\thanks{…
-      // jocelyn.chauvet@…; xavier.bry@…}`, 1908.04020; 2304.00435 — read once every name is, `answer_note_emails`)
-      let taken = if assoc.role == "email" {
-        let spelled = !group.is_empty() && self.spelled(&assoc.text, &group).is_some();
-        self.note_emails.push((owner, assoc, fallback));
-        fallback || spelled
-      } else if fallback
-        || (assoc.role == "url"
-          && owner.is_some()
-          && self.spelled(link_letters(&assoc.text), &group) == owner)
-      {
-        let assoc = if fallback {
-          assoc
-        } else {
-          Assoc {
-            rule: s!("{} owner:spelled", assoc.rule),
-            ..assoc
-          }
-        };
+      // (an e-mail or a url goes to the author it spells before the one the note is on — charter §4, by evidence:
+      // `Chauvet\thanks{… jocelyn.chauvet@…; xavier.bry@…}`, 1908.04020; 2304.00435; a co-author's homepage, 2001.02600
+      // — read once every name is, `answer_note_links`: the names after the note in its block are not read yet)
+      let link = matches!(assoc.role.as_str(), "email" | "url");
+      if link {
+        links.push(assoc);
+      } else if fallback {
         self.attach(owner, assoc, false);
-        true
       } else {
-        false
-      };
-      all_taken &= taken;
-      if taken && !inner.text.is_empty() {
+        all_taken = false;
+        continue;
+      }
+      if !inner.text.is_empty() {
         rest = rest.replacen(inner.text.as_str(), "", 1);
       }
     }
-    let emptied = !contacts.is_empty() && all_taken && rest.chars().all(|c| !c.is_alphanumeric());
-    if emptied {
-      self.out.dropped.push(Assoc {
-        role:   "note".into(),
-        text:   note.text.trim().to_string(),
-        label:  note.label.clone(),
-        rule:   s!("{rule} ruling4:emptied"),
-        source: Some((index, note.span)),
+    let emptiable = !contacts.is_empty() && all_taken && rest.chars().all(|c| !c.is_alphanumeric());
+    if emptiable && !links.is_empty() {
+      // (whether its links all become contacts, and it is dropped, once every name is read)
+      self.note_links.push(NoteLink::Note {
+        index,
+        note: note.clone(),
+        owner,
+        rule: rule.to_string(),
+        links,
+        fallback,
       });
       return;
     }
+    for assoc in links {
+      self
+        .note_links
+        .push(NoteLink::Link { owner, assoc, fallback });
+    }
+    if emptiable {
+      self.drop_emptied_note(index, note, rule);
+      return;
+    }
+    self.keep_note(index, note, owner, rule);
+  }
+
+  /// A note its contacts emptied, all taken out (ruling 4): dropped, its text kept for the comparison.
+  pub(super) fn drop_emptied_note(&mut self, index: usize, note: &Event, rule: &str) {
+    self.out.dropped.push(Assoc {
+      role:   "note".into(),
+      text:   note.text.trim().to_string(),
+      label:  note.label.clone(),
+      rule:   s!("{rule} ruling4:emptied"),
+      source: Some((index, note.span)),
+    });
+  }
+
+  /// A note kept: a legend of the label its leading mark names, else a note of `owner`, its whole text.
+  pub(super) fn keep_note(&mut self, index: usize, note: &Event, owner: Option<usize>, rule: &str) {
+    let live = self.live();
     // (a note opening with a Mark some name requests is that label's legend: `\thanks{$^{1}$ Canizaro … Center}`
     // under `Newaz$^{1,2,*}$`, 2311.16145 — the mark it prints, its leading Mark event; its owners by ruling 1)
     // (one whose text holds a later mark of other requested labels, none of the first's, is the legends of several
@@ -730,7 +786,7 @@ impl Resolver {
     if let Some((labels, legend)) = leading_mark(note)
       && labels
         .iter()
-        .any(|l| !label_owners(&self.out.creators, l).is_empty())
+        .any(|l| !label_owners(&self.out.creators, &live, l).is_empty())
       && !note
         .inner
         .iter()
@@ -741,7 +797,7 @@ impl Resolver {
             && later.iter().all(|l| !labels.contains(l))
             && later
               .iter()
-              .any(|l| !label_owners(&self.out.creators, l).is_empty())
+              .any(|l| !label_owners(&self.out.creators, &live, l).is_empty())
         })
     {
       let symbol = labels.iter().all(|l| is_symbol_label(l));

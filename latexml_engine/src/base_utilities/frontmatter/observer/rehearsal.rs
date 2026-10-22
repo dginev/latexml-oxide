@@ -52,7 +52,28 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     }
     Ok(Tokens::new(out))
   });
-  DefConstructor!("\\lx@fm@obs@note []{}", "");
+  // (its `printed` property the mark it shows on the name, `\thefootnote` at its number — the given one, or the counter's
+  // value the `\lx@fm@obs@thanks` step reached —, as `\lx@fm@obs@fnmark` prints its: a name's note mark is the request
+  // an entry led by the same `\footnotemark` answers, `Shun'ya Mizoguchi\footnote[1]{…}` under
+  // `\affiliation{\footnotemark[1]Theory Center, …}`, 1607.07280 — FM S2a.2 r7)
+  DefConstructor!("\\lx@fm@obs@note []{}", "", properties => sub[args] {
+    let given = args.first().and_then(|a| a.as_ref()).map(|number| {
+      let mut text = String::new();
+      ink_text(number, &mut text);
+      text.trim().to_string()
+    });
+    let value = match given {
+      Some(text) => match text.parse::<i64>() {
+        Ok(value) => value,
+        Err(_) => return Ok(stored_map!("printed" => Stored::String(pin(&text)))),
+      },
+      None => FOOTNOTE_BASE
+        .with(Cell::get)
+        .saturating_add(FOOTNOTE_STEPS.with(Cell::get)),
+    };
+    let printed = note_mark_quietly(value)?;
+    Ok(stored_map!("printed" => Stored::String(pin(&printed))))
+  });
   // `\footnotetext`: the text of a mark printed elsewhere, no step
   DefConstructor!("\\lx@fm@obs@notetext []{}", "");
   // `\footnotemark[<n>]` prints `\thefootnote` at <n> (latex.ltx `\@xfootnotemark`), a bare `\footnotemark` at the
@@ -110,17 +131,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
         FOOTNOTE_BASE.with(Cell::get).saturating_add(steps)
       },
     };
-    let printed = if FOOTNOTE_BASE_DEFINED.with(Cell::get) {
-      let mut print = vec![T_BEGIN!(), T_CS!("\\c@footnote")];
-      print.extend(Explode!(value));
-      print.extend([T_CS!("\\relax"), T_CS!("\\thefootnote"), T_END!()]);
-      let mut text = String::new();
-      ink_text(&digest(Tokens::new(print))?, &mut text);
-      text.trim().to_string()
-    } else {
-      // (no LaTeX footnote counter: the number printed as it is)
-      value.to_string()
-    };
+    let printed = printed_footnote_mark(value)?;
     Ok(stored_map!("printed" => Stored::String(pin(&printed))))
   });
   // the marks the kernel `\maketitle` prints (latex.ltx/article.cls `\renewcommand\thefootnote{\@fnsymbol\c@footnote}`),
@@ -139,6 +150,68 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefConstructor!("\\lx@fm@obs@affil []{}", "");
   DefConstructor!("\\lx@fm@obs@annotate {}{}[]{}", "");
   Ok(())
+}
+
+/// The footnote mark `\thefootnote` prints with the counter at `value`, in a group of its own (the rehearsal steps
+/// nothing); the number as it is where the format has no LaTeX footnote counter.
+fn printed_footnote_mark(value: i64) -> Result<String> {
+  if !FOOTNOTE_BASE_DEFINED.with(Cell::get) {
+    return Ok(value.to_string());
+  }
+  let mut print = vec![T_BEGIN!(), T_CS!("\\c@footnote")];
+  print.extend(Explode!(value));
+  print.extend([T_CS!("\\relax"), T_CS!("\\thefootnote"), T_END!()]);
+  let mut text = String::new();
+  ink_text(&digest(Tokens::new(print))?, &mut text);
+  Ok(text.trim().to_string())
+}
+
+/// The mark a note shows ([`printed_footnote_mark`]), read for the resolver alone: its diagnostics set aside — the
+/// conversion's own `\thanks` raises what the document raises —, and a print that fails unwound where it stopped, the
+/// note then showing no mark: a mark past `\@fnsymbol`'s nine ("Counter too large", eleven `\thanks` in one
+/// `\author`) must not hold the block's rehearsal, nor a runaway print end it (jpconf.cls:153 `\def\@fnsymbol#1{\ifnum
+/// \thefootnote=99…}` under the rehearsal's `\thefootnote`, `\@fnsymbol\c@footnote`, recurses: 1105.2659's
+/// `\footnote[3]{Speaker}` left 12,000 conditionals open and the conversion Fatal). A resource Fatal that is no runaway
+/// stays one.
+fn note_mark_quietly(value: i64) -> Result<String> {
+  let hold = util::logger::DiagnosticsHold::begin();
+  let latched_before = resource_fatal_latched();
+  let depth = get_frame_depth();
+  let boxes = box_lists_mark();
+  let conditionals = if_stack_depth();
+  let printed = printed_footnote_mark(value);
+  let failed = hold.errors_raised() > 0;
+  match printed {
+    Ok(printed) => {
+      hold.discard();
+      Ok(if failed { String::new() } else { printed })
+    },
+    Err(err) => {
+      if resource_fatal_latched() && !latched_before && !unlatch_runaway_fatal() {
+        hold.commit();
+        return Err(err);
+      }
+      let unwound = reading_from_mouth(Mouth::default(), || {
+        new_local_box_list();
+        while get_frame_depth() > depth {
+          let before = get_frame_depth();
+          let nobox = lookup_bool("groupNonBoxing");
+          if pop_stack_frame(nobox).is_err() || get_frame_depth() >= before {
+            break;
+          }
+        }
+        expire_local_box_list();
+        Ok(())
+      });
+      unwind_box_lists_to(boxes);
+      while if_stack_depth() > conditionals {
+        pop_if_frame();
+      }
+      hold.discard();
+      unwound?;
+      Ok(String::new())
+    },
+  }
 }
 
 thread_local! {

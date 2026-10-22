@@ -6986,6 +6986,37 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   `answer_note_emails`; `label_owners`' `author:N` indexes all creators where `place.rs:94` numbers the live ones; the 7
   edge glyphs; 1607.07280 (`\footnote[1]` mark not read as `\affiliation{\footnotemark[1]…}`'s request); and a census on
   the int66 binary to re-confirm the revtex4_support gate (int64's 78v changed the XML side).
+  **r7** (OD #837 "S2a.2 r7"; branch pk/fms2a2r7 from int69 f24574e043; the r7 queue above): `answer_sequence` compares
+  the live creator at a place with its spelled owner, `label_owners`' `author:N` is the N-th live creator; a note's
+  e-mails and urls are placed once every name is read (`answer_note_links`): a url spelling a co-author is that author's
+  as an e-mail is (2001.02600 Peng Xu), an address-group url only its own name's (1407.7882), and a note its links may
+  empty is kept or dropped there; the lexer reads `∥` (`$\|$`) as `\@fnsymbol`'s `‖`, the mark glyphs (`⋄ ♯ ⋆ ⊕ …`) as
+  marks of no footnote-symbol kind (their legend lines legends), a bar, colon, math dot, bullet or dash standing alone as
+  a word separator (6 of the 7 edge-glyph names; 2003.01448's `J .` is the source's print, a dash inside a word stays as
+  typed — hep-ex9811040); a `\footnote[1]`'s mark answers `\affiliation{\footnotemark[1]…}` (`note_marks`,
+  `mark:footnote`: 1607.07280, hep-th0302032, nucl-th9803030, 2608.27295 now right) — its print read by
+  `note_mark_quietly`, which unwinds a runaway (jpconf.cls:153's `\@fnsymbol`: 1105.2659 went Fatal and 0709.0673 lost
+  its name on the first r7 build, found by this census) and holds no rehearsal past `\@fnsymbol`'s nine; the comparator
+  explains a line of a continued entry (`part …`), a legend note against today's affiliation and back. Guards
+  `perfect_kernel_batchfms2a2r7::*` (12), ab_audit `fmshadow::tests` (+4), the r1-r3 guard's `⋆` legend a note.
+  **Shadow-only proof** (release 5895eedfeb, int69b vendor dumps): int65's 724 papers (725 zips) and the 989
+  sectioning-frontmatter repros XML byte-identical int69b → r7 with `LATEXML_FM_SHADOW` unset AND set (E 179 = 179, F 1,
+  W 8,425 each, words 9,802,513 each; repros E 23, W 39 each); the census's 26,323 papers int69b-set vs r7-set XML
+  identical paper by paper but 2109.00764's printed clock time, E 5,759 / F 18 / W 333,911 both. **Census on int69b**
+  (int69b binary, shadow set): byte-identical to r6's (0 status moves, the disagreement rows identical; 2509.13772 now
+  converts) — 78v/78y/79a moved no paper. **r7 census** (26,323, the dumps' `resolved` = `--re-resolve`): agree 19,502,
+  classified 1,888, unclassified 1,816 (**7.8 %**, r6 8.1 %); the comparator alone (r7's on int69b's dumps) moves 62
+  unclassified → classified (157 rows `part`, 97 `moved` legend rows, 4 `overlaps`), the resolver and lexer 7 more
+  (IEEEtran 4 agree → classified, the url rule; kernel 1402.2255 agree → classified, `♯` lines; ams_support
+  2311.00652 unclassified → agree; mn2e 2407.21626 unclassified → classified) and the rows of 40 papers in all, none
+  to unclassified; 111 held, 10 unobserved as before. Per family (gate): kernel 14.4 %, **revtex4_support 5,639
+  (0.4 %: 23, r6's 24 less 0907.1243)**, ams_support 0.4 % (12), IEEEtran 8.4 %, authblk 8.9 %, mn2e 7.3 %, the rest
+  unchanged. **revtex4_support gate**: the seeded `sha256("606:"+key)` draw over its 382 classified-only papers gives
+  r6's 41 again; 40 have the rows they had, 1607.07280's changed and now matches the PDF — **39 of 39 right**
+  (cond-mat0007316, hep-ph0002275 no PDF): passes (≥ 95 %, 0.4 % < 0.5 %). Residuals: a glued two-symbol run one line
+  and one name show as written (`§†`, 0907.1243 — each line to every carrier of either; the one census paper),
+  repository urls under an author's account become that author's (2008.12970, 2511.08416 — the url rule as decided),
+  `M$^{\rm c}$Hardy` (2003.01448) parted.
 
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's

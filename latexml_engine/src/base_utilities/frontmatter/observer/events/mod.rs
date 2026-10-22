@@ -29,7 +29,8 @@ use latexml_core::{
 use super::*;
 
 mod lexer;
-use lexer::Lexer;
+pub(in crate::base_utilities) use lexer::is_separator_word;
+use lexer::{Lexer, is_fnsymbol};
 
 /// The kind of a separator event.
 #[derive(Debug, Clone, PartialEq)]
@@ -118,12 +119,6 @@ impl Event {
       nest: 0,
     }
   }
-}
-
-/// LaTeX's `\@fnsymbol` characters (latex.ltx `\@fnsymbol`: `*`, `\dagger`, `\ddagger`, `\mathsection`,
-/// `\mathparagraph`, `\|`, and their doubles), with the math asterisk.
-fn is_fnsymbol(c: char) -> bool {
-  matches!(c, '*' | '\u{2217}' | '†' | '‡' | '§' | '¶' | '‖')
 }
 
 /// Whether a mark's printed text is a footnote symbol (only `\@fnsymbol` characters, commas and spaces aside).
@@ -583,11 +578,23 @@ impl Walker {
         } else {
           "thanks"
         };
-        note.role = Some(if mark.is_empty() {
+        let mut role = if mark.is_empty() {
           source.to_string()
         } else {
           s!("{source} mark={mark}")
-        });
+        };
+        // (the mark a `\thanks` or `\footnote` shows on the name, last: `thanks mark=1 shows=∗` — FM S2a.2 r7,
+        // 1607.07280; the resolver's `note_shows`)
+        if source == "thanks"
+          && let Some(Stored::String(printed)) = w.get_property("printed").as_deref()
+        {
+          let printed = to_string(*printed);
+          if !printed.trim().is_empty() {
+            role.push_str(" shows=");
+            role.push_str(printed.trim());
+          }
+        }
+        note.role = Some(role);
         self.event(note, d, nest);
       },
       "\\lx@fm@obs@label" => {

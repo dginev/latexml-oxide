@@ -817,7 +817,8 @@ const AAS_CORRESPONDENT: &str = "\\documentclass{aastex701}\n\\begin{document}\n
 
 /// Item 1c: glued labels part by the marks the other side shows — `12` under entries `1` and `2` (2103.10685), `1⋆`
 /// (2606.01911) — each found owner tagged `ruling1:parted`; and a mark glued to the mark before it goes where that one
-/// went (`Oh,$^{1}$$^{,2}$ Nordlander`, mn2e, 2306.15492).
+/// went (`Oh,$^{1}$$^{,2}$ Nordlander`, mn2e, 2306.15492). (FM S2a.2 r7: the `⋆` line's text is a legend, a note of
+/// the name showing the mark — a legend's mark is a symbol, a mark glyph of no `\@fnsymbol` kind too, 2401.00056.)
 #[test]
 fn glued_marks_part_by_the_marks_shown() {
   assert_eq!(
@@ -831,7 +832,7 @@ fn glued_marks_part_by_the_marks_shown() {
       "  a Univ B | ruling1:request ruling1:parted",
       "C Bob Baker [1,⋆] | line:names sep:comma mark:parted",
       "  a Univ A | ruling1:request ruling1:parted",
-      "  a Equal contribution. | ruling1:request ruling1:parted",
+      "  n Equal contribution. | ruling1:request ruling1:parted",
       "C Cat Cole [2] | line:names sep:comma",
       "  a Univ B | ruling1:request",
     ]

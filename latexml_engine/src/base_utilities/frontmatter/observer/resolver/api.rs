@@ -48,7 +48,7 @@ impl Resolver {
     let split = self.splitting;
     let withsup = attr_value(attrs, "_withsup") == Some("true");
     // its leading marks (`\affil{$^1$Univ X}`), its `\label`s, its text
-    let lead: Vec<String> = events
+    let lead_marks: Vec<&Event> = events
       .iter()
       // (a space or a break before the mark does not part it from the content: `\affiliation{ $^a$Fermilab, $^b$UC
       // Davis}`, 0902.0006)
@@ -61,8 +61,14 @@ impl Resolver {
       })
       .take_while(|e| matches!(e.kind, EventKind::Mark | EventKind::Layout))
       .filter(|e| e.kind == EventKind::Mark)
+      .collect();
+    let lead: Vec<String> = lead_marks
+      .iter()
       .flat_map(|e| mark_labels(e.label.as_deref().unwrap_or("")))
       .collect();
+    // (marks a `\footnotemark` printed: what a name's footnote mark answers — the same print, `mark:footnote`, 1607.07280)
+    let lead_footnote =
+      !lead_marks.is_empty() && lead_marks.iter().all(|e| printed_by_footnotemark(e));
     let keys: Vec<String> = events
       .iter()
       .filter(|e| e.kind == EventKind::Layout && e.role.as_deref() == Some("label"))
@@ -261,10 +267,11 @@ impl Resolver {
       label_rule = "api:labelseq";
     } else if !lead.is_empty() {
       labels = lead;
-      label_rule = if split {
-        "api:leading-mark api:split-by-marks"
-      } else {
-        "api:leading-mark"
+      label_rule = match (split, lead_footnote) {
+        (true, true) => "api:leading-mark api:split-by-marks mark:footnote",
+        (true, false) => "api:leading-mark api:split-by-marks",
+        (false, true) => "api:leading-mark mark:footnote",
+        (false, false) => "api:leading-mark",
       };
     } else if let Some(first) = events
       .iter()
