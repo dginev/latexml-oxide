@@ -44,6 +44,16 @@ When two rules below pull apart, the higher priority wins.
   whose position does not, so reflow by whole rows on a narrow screen is harmless — and a **matrix** — panels whose row
   and column carry meaning (uniform rows/columns, row or column labels, one caption, a `tabular`-built grid), which keep
   their columns at any width (cells shrink, then scroll) and never reflow.
+  Ruled 2026-10-22 (grid study questions): the markup is **today's elements plus attributes** — `panelwidth`/`panelspan`
+  on each panel, `panelrows`/`panelcols` and a class `ltx_panels_gallery`/`ltx_panels_matrix` on the float, mapped by the
+  XSLT to CSS custom properties (no row wrapper, no table for non-`tabular` grids); rows are computed against the class's
+  **real line width** (a two-column `figure` → the column, `figure*` → the text width), the `\columnwidth` register
+  staying Perl's for everything else; a group is a matrix only on **strong signals** (an author-built `tabular`, or ≥ 2
+  rows each with the same column count and equal panel widths), else a gallery. **Sizing keeps the panels' relative
+  sizes within one figure**: capping each image separately at its LaTeX size skews the read-out against the PDF, so
+  the group scales as a whole (precomputed sizing values carried in the XML as CSS custom properties is the direction;
+  the exact design is still open). A deliberate overfill pulled together by negative glue (2301.02117) is an accepted
+  residual.
 
 ## 3. Numbering, labels and references
 
