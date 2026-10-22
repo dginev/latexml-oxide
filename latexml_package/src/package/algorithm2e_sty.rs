@@ -2,6 +2,45 @@
 //! Perl: algorithm2e.sty.ltxml — complex package with custom line management
 use crate::prelude::*;
 
+/// The `\Indp`/`\Indm` offset in levels (`\lx@algo@indentoffset`, algorithm2e.sty:1626-1629's `\leftskip`).
+fn algo_indent_offset() -> i64 {
+  match LookupRegister!("\\lx@algo@indentoffset") {
+    RegisterValue::Number(n) => n.0,
+    _ => 0,
+  }
+}
+
+/// `\Indp` (`1`) and `\Indm` (`-1`): the offset moves by a level, locally as `\advance\leftskip` does.
+fn shift_algo_indent_offset(by: i64) -> Result<()> {
+  let offset = algo_indent_offset() + by;
+  assign_register(
+    "\\lx@algo@indentoffset",
+    RegisterValue::Number(Number::new(offset)),
+    None,
+    vec![],
+  )
+}
+
+/// The levels a line ends with: the open blocks' (`\lx@algo@indentation`, one token a level), then a positive
+/// `\Indp`/`\Indm` offset's plain levels after their rules (a block's rule is `\moveright`ed, which `\leftskip` does not
+/// move, algorithm2e.sty:1780), or a negative one's removing the innermost; none at the least.
+fn algo_line_indentation() -> Vec<Token> {
+  let mut levels = match LookupRegister!("\\lx@algo@indentation") {
+    RegisterValue::Tokens(toks) => toks.unlist(),
+    _ => Vec::new(),
+  };
+  let offset = algo_indent_offset();
+  if offset >= 0 {
+    levels.extend((0..offset).map(|_| T_CS!("\\lx@algo@indent")));
+  } else {
+    let keep = levels
+      .len()
+      .saturating_sub(usize::try_from(-offset).unwrap_or(usize::MAX));
+    levels.truncate(keep);
+  }
+  levels
+}
+
 /// Does an `<ltx:listingline>` hold real content, or only its line-number
 /// `<ltx:tags>` and indentation `<ltx:rule>`s? A blank line produced by the
 /// `\lx@strippar` block terminator (three `\lx@algo@parx`) still carries the
@@ -652,14 +691,14 @@ LoadDefinitions!({
   // listing line that box code closed the capture block twice (8×
   // `_CaptureBlock_ … isn't open`, a capture bug Perl shares when the renewal
   // runs).
-  DefMacro!("\\algocf@Vline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advline \\lx@strippar{#1}\\lx@algo@pop@indentation", locked => true);
-  DefMacro!("\\algocf@Vsline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advline \\lx@strippar{#1}\\lx@algo@pop@indentation", locked => true);
+  DefMacro!("\\algocf@Vline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advline \\lx@algo@block{#1}", locked => true);
+  DefMacro!("\\algocf@Vsline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advline \\lx@algo@block{#1}", locked => true);
   // algorithm2e.sty:1851-1860: a `noline` block sets its body in a box of its own (`\algocf@push` inside the box,
   // `\algocf@pop{\skiprule}` after it), so the line after the block is at the block's level again: the level pushed
   // is popped as `\algocf@Vline`'s is. Perl's algorithm2e.sty.ltxml:120 never pops it, so every later line went one
   // level deeper per block (KNOWN_PERL_ERRORS #1062, OXIDIZED_DESIGN_DIVERGENCES #852). Witness 1410.4452 (`noline`,
   // its listing indented as its PDF); guard `perfect_kernel_batch78o::algorithm2e_noline_block_pops_its_indentation`.
-  DefMacro!("\\algocf@Noline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advlevel \\lx@strippar{#1}\\lx@algo@pop@indentation", locked => true);
+  DefMacro!("\\algocf@Noline{}", "\\lx@algo@endline\\lx@algo@startline\\lx@algo@advlevel \\lx@algo@block{#1}", locked => true);
 
   // Semicolon handling
   DefMacro!("\\algocf@endline", sub[_args] {
@@ -713,6 +752,41 @@ LoadDefinitions!({
   DefMacro!("\\lx@algo@indent", "\\hskip\\skiprule\\hskip\\skiptext");
   DefMacro!("\\lx@algo@indentline", "\\hskip\\skiprule\\lx@algo@rule\\hskip\\skiptext");
   DefConstructor!("\\lx@algo@rule", "<ltx:rule width='1px' height='100%'/>");
+
+  // algorithm2e.sty:1626-1629 `\Indp`/`\Indm` are `\advance\leftskip by \algoskipindent` (`\skiprule` + `\skiptext` +
+  // 0.4pt, :1621-1623) and by `-\algoskipindent`: the lines a paragraph ends after them are set one level in or out,
+  // without a rule, until the group they were made in ends — a block's (its body is set in `\hbox{\vtop{…}}`,
+  // :1826-1860), or the algorithm's. Here a signed offset in levels (`\lx@algo@indentoffset`, assigned locally as
+  // `\leftskip` is), apart from the blocks' stack (`\lx@algo@indentation`): a block saves it when it opens and
+  // restores it when it closes (`\lx@algo@block`), and a line takes `blocks + offset` levels at its end
+  // (`\lx@prepend@indentation`), at least none. The blocks' rules stay where the blocks put them (`\moveright` ignores
+  // `\leftskip`, :1780), so a positive offset is plain levels after them and a negative one drops the innermost. Perl's
+  // binding leaves the raw `\leftskip` arithmetic, which a listing line never reads: the lines stayed at the block's
+  // level (KNOWN_PERL_ERRORS #1107). Witnesses 2102.06989, 1412.1462, 2106.03753, 2508.14614 (the flush-left
+  // `\Indm\Indmm \KwIn{…} \KwOut{…} \Indp\Indpp` idiom: the body at the margin, as their PDFs) and 1903.06418 (a
+  // balanced `\Indp`…`\Indm`). `\Indpp`/`\Indmm` (0.5em) and `\Indentp` stay raw `\leftskip` arithmetic, which a line
+  // never reads. Guards `perfect_kernel_batch78r::{algorithm2e_indp_indm_indent_the_lines_between,
+  // algorithm2e_indm_before_the_input_keeps_the_body_at_the_margin, algorithm2e_indm_in_a_block_ends_with_the_block}`.
+  DefRegister!("\\lx@algo@indentoffset" => Number(0));
+  DefPrimitive!("\\Indp", {
+    shift_algo_indent_offset(1)?;
+  });
+  DefPrimitive!("\\Indm", {
+    shift_algo_indent_offset(-1)?;
+  });
+  // A block's body: the offset it opens with, restored when it closes (the block's group).
+  DefMacro!("\\lx@algo@block{}", sub[args] {
+    let mut out = vec![T_CS!("\\lx@strippar"), T_BEGIN!()];
+    out.extend(args[0].clone().unlist());
+    out.extend([T_END!(), T_CS!("\\lx@algo@pop@indentation"), T_CS!("\\lx@algo@restore@indentoffset"), T_BEGIN!()]);
+    out.extend(Explode!(algo_indent_offset().to_string()));
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  }, locked => true);
+  DefPrimitive!("\\lx@algo@restore@indentoffset{}", sub[(offset)] {
+    let offset = offset.to_string().trim().parse::<i64>().unwrap_or(0);
+    assign_register("\\lx@algo@indentoffset", RegisterValue::Number(Number::new(offset)), None, vec![])?;
+  }, locked => true);
 
   // Register for tracking indentation — Perl L156-163
   DefRegister!("\\lx@algo@indentation" => Tokens!());
@@ -831,7 +905,13 @@ LoadDefinitions!({
   // opens when a listing is wrapped in `\colorbox{…}{…}`) so the following
   // `\lx@algo@@endline` closes cleanly. Witnesses 1911.01815, 1903.04631
   // (algorithm2e inside `\colorbox`/`\hbox`).
-  DefMacro!("\\lx@prepend@indentation", "\\lx@prepend@indentation@{\\the\\lx@algo@indentation}");
+  // The line's levels: the open blocks' and the `\Indp`/`\Indm` offset's (`algo_line_indentation`).
+  DefMacro!("\\lx@prepend@indentation", sub[_args] {
+    let mut out = vec![T_CS!("\\lx@prepend@indentation@"), T_BEGIN!()];
+    out.extend(algo_line_indentation());
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  });
   DefConstructor!("\\lx@prepend@indentation@{}", sub[document, args] {
     if !matches!(line_reach(document), LineReach::Line) {
       return Ok(());

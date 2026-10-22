@@ -1,0 +1,28 @@
+% witness: 1602.03553 (`eqn:zeta01`, PDF 5, int54a "1", the section's), 2301.00760 (`comorph*`, PDF 54, int54a 5.10, the
+%          lemma's), 1303.3431 (`appa3` in an eqnarray*); census 662 papers with such a label, 247 reference it
+% oracle:  pdflatex 0 errors; "See 2, 2, 4 and 4." (latex.ltx:15750-15752 `\stepcounter{equation}`,
+%          `\def\@currentlabel{\p@equation\theequation}`, stepped by each printing `\@@eqncr` :15795 and back at the end
+%          :15768-15771: a label with no numbered row after it names the counter's next value, the next equation's)
+% engines: rust int54a = "See S0.Ex1, S0.Ex2, 3 and S0.Ex4." (raw ids, the group's number); Perl 0.8.8 raw ids
+% expect:  0 errors, 0 warnings; x and y name 2, z and w name 4 (no printed tag on their rows)
+% status:  RED (int54a) -> GREEN (78r, OXIDIZED_DESIGN_DIVERGENCES #847)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{eqnarray}
+a &=& b \\
+c &=& d \label{x}\nonumber
+\end{eqnarray}
+\begin{eqnarray*}
+e &=& f \label{y}
+\end{eqnarray*}
+\begin{equation}
+g = h
+\end{equation}
+\begin{eqnarray}
+k &=& l \\
+  &=& m \label{z}\nonumber \\
+n &=& o \label{w}\nonumber
+\end{eqnarray}
+See \ref{x}, \ref{y}, \ref{z} and \ref{w}.
+\end{document}

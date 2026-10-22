@@ -17204,6 +17204,46 @@ processor's `\ref` text the heading's title, LaTeXML's form for an unnumbered ta
 physics0503243. Repro
 cross-references/aipproc_headings_unnumbered; guard `perfect_kernel_batch78q::aipproc_headings_unnumbered`.
 
+## 1105. AASTeX 6+ print aas_macros' journal abbreviations, not their own
+
+aastex6.cls:1303, aastex631.cls:1838-1900 and aastex701.cls:8310-8373 define their own journal abbreviations, which
+differ from the ADS aas_macros.sty in 28 names (`\apjl` "ApJL", `\prd` "PhRvD", `\ssr` "SSRv", `\aapr` "A&A~Rv",
+`\jcap` "JCAP", `\physrep` "PhR" …); Perl's aastex.cls.ltxml:45 loads aas_support, whose aas_macros
+(aas_support.sty.ltxml:28, aas_macros.sty.ltxml:33) sets the ADS forms ("ApJ", "Phys.~Rev.~D", …) for every version. Minimal trigger: `\documentclass{aastex701}`
+`\begin{document}\apjl, \prd.\end{document}` (pdflatex "ApJL, PhRvD."; Perl "ApJ, Phys. Rev. D."). Fixed in Rust (78r,
+aastex_cls.rs `AASTEX6_JOURNALS`, under `aastex6_plus`; aas_macros then counts as not loaded, so a document's own
+`\usepackage{aas_macros}` puts the ADS names back as the file's `\def`s do in pdflatex). Witness 1701.04641 ("ApJL" three
+times); census 346 aastex6+ papers. Guards `perfect_kernel_batch78r::{aastex6_journal_abbreviations_are_the_class_s,
+aas_macros_after_aastex6_restores_the_ads_names}`.
+
+## 1106. A `\label` in an eqnarray row with no numbered row after it names no number
+
+latex.ltx:15750-15752 steps the equation counter at `\eqnarray`'s start and defines `\@currentlabel` as
+`\p@equation\theequation`, each printing `\@@eqncr` steps it again (:15795) and the end steps it back (:15768-15771), so
+a `\label` in a `\nonumber` row with no numbered row after it, or in an `eqnarray*`, names the counter's next value —
+the next equation's number. Perl leaves every label on its row (latex_constructs.pool.ltxml `rearrangeEqnarray`), and a
+row with no number gives the `\ref` its raw id. Minimal trigger: `\begin{eqnarray}a&=&b\\ c&=&d\label{x}\nonumber
+\end{eqnarray}\begin{eqnarray*}e&=&f\label{y}\end{eqnarray*} \ref{x} \ref{y}` (pdflatex "2 2"; Perl "S0.Ex1 S0.Ex2").
+Fixed in Rust (78r, OXIDIZED_DESIGN_DIVERGENCES #847: the row keeps the next number's reference forms). Witnesses
+1602.03553, 2301.00760, 1303.3431; guard
+`perfect_kernel_batch78r::eqnarray_label_with_no_numbered_row_after_it_names_the_next_number`.
+
+## 1107. algorithm2e's `\Indp`/`\Indm` do not indent the listing
+
+algorithm2e.sty:1626-1629 `\Indp`/`\Indm` advance `\leftskip` by `\algoskipindent` and back; Perl's algorithm2e
+binding keeps the raw definitions, and no listing line reads `\leftskip`, so every line stays at its block's level.
+Minimal trigger: `\usepackage{algorithm2e}\begin{algorithm}a\;\Indp b\;\Indm c\;\end{algorithm}` (pdflatex "b;" one
+level in). Fixed in Rust (78r, algorithm2e_sty.rs): a signed offset in levels (`\lx@algo@indentoffset`), apart from the
+blocks' stack, which a block saves when it opens and restores when it closes (its `\hbox{\vtop{…}}` group,
+algorithm2e.sty:1826-1860); a line ends with `blocks + offset` levels (`\lx@algo@indent` after the blocks' rules, or the
+innermost dropped), none at the least. (78r r1 pushed and popped the blocks' own stack, so the flush-left
+`\Indm\Indmm \KwIn{…} \KwOut{…} \Indp\Indpp` idiom set every later line a level in — 2102.06989's 13 lines, 1412.1462,
+2106.03753, 2508.14614 — and an `\Indm` in a nested block popped the outer block's level at its end; review rev78r
+finding 1.) `\Indpp`/`\Indmm` (0.5em) and `\Indentp` stay raw `\leftskip` arithmetic, which no line reads. Witnesses
+2102.06989, 1412.1462, 2106.03753, 2508.14614, 1903.06418 (balanced). Census 78 papers; guards
+`perfect_kernel_batch78r::{algorithm2e_indp_indm_indent_the_lines_between,
+algorithm2e_indm_before_the_input_keeps_the_body_at_the_margin, algorithm2e_indm_in_a_block_ends_with_the_block}`.
+
 ## 1111. llncs and svjour join a theorem's section number to its own with a period
 
 llncs.cls:1058 (`\edef\@thmcountersep{}`) and :1141, svjour3.cls:804 and :887, svjour.cls:677 and :757 (every census

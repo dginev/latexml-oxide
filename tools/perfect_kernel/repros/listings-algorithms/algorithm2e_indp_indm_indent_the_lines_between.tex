@@ -1,0 +1,20 @@
+% witness: census 78 papers using \Indp/\Indm in algorithm2e listings; found by rev78o probe g1
+% oracle:  pdflatex 0 errors; "indented;" and "deeper;" one and two levels in, "back;" at the margin
+%          (algorithm2e.sty:1626-1629 advance \leftskip by \algoskipindent)
+% engines: rust int54a = every line at the margin; Perl the same (the raw \leftskip, which no listing line reads)
+% expect:  0 errors, 0 warnings; an en and an em space per level (\lx@algo@indent)
+% status:  RED (int54a) -> GREEN (78r, KNOWN_PERL_ERRORS #1107)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[ruled]{algorithm2e}
+\begin{document}
+\begin{algorithm}
+first\;
+\Indp
+indented\;
+\Indp deeper\;
+\Indm\Indm
+back\;
+\caption{A}
+\end{algorithm}
+\end{document}

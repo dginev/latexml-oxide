@@ -1,0 +1,13 @@
+% witness: 1701.04641 (aastex61: the PDF prints "ApJL" three times, int54a none); census 346 aastex6+ papers whose
+%          .tex/.bbl use one of the 28 names (\apjl 313, \prd 60, \ssr 58, \aapr 46, \prl 45)
+% oracle:  pdflatex 0 errors; "J: ApJL, PhRvD, SSRv, A&A Rv, JCAP, PhR, ApJ, ApJL, ZA." (aastex701.cls:8310-8373; aastex6.cls
+%          :1303 and aastex631.cls:1838-1900 the same)
+% engines: rust int54a = "J: ApJ, Phys. Rev. D, Space Sci. Rev., A&A Rev., J. Cosmology Astropart. Phys, Phys. Rep., ApJ,
+%          ApJ, ZAp." (aas_macros' ADS names); Perl the same (aas_macros.sty.ltxml:33)
+% expect:  0 errors, 0 warnings; the class's names
+% status:  RED (int54a) -> GREEN (78r, KNOWN_PERL_ERRORS #1105)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\begin{document}
+J: \apjl, \prd, \ssr, \aapr, \jcap, \physrep, \apj, \apjlett, \zap.
+\end{document}

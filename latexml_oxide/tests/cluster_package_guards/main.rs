@@ -298,6 +298,7 @@ mod perfect_kernel_batch78n;
 mod perfect_kernel_batch78o;
 mod perfect_kernel_batch78p;
 mod perfect_kernel_batch78q;
+mod perfect_kernel_batch78r;
 mod perfect_kernel_batchfms1;
 mod perfect_kernel_batchfms2a1;
 mod perfect_kernel_batchint19;

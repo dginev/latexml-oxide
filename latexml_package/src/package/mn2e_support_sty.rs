@@ -276,14 +276,16 @@ LoadDefinitions!({
   // raised Error:expected:$ Missing $ closing display math at every
   // occurrence. Matches the identical port in aa_support_sty.
   use crate::engine::latex_constructs::{
-    after_equation, before_equation, prepare_equation_counter,
+    after_equation, before_equation, prepare_equation_counter, prepare_latex_equation_counter,
   };
   DefEnvironment!(
     "{equation}",
     "<ltx:equation xml:id='#id'>#tags<ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
     mode => "display_math",
     before_digest => {
-      prepare_equation_counter(stored_map!("numbered" => true, "preset" => true));
+      // LaTeX's numbering: a `\nonumber` removes the number only where amsmath is loaded (OXIDIZED_DESIGN_DIVERGENCES #865;
+      // witnesses 1210.2963, astro-ph0503435, astro-ph9901366).
+      prepare_latex_equation_counter();
       before_equation()?;
       Let!(T_MATH!(), "\\lx@dollar@in@mathmode");
     },

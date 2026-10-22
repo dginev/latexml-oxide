@@ -18,6 +18,51 @@ fn equation_hook() -> Result<()> {
   Ok(())
 }
 
+/// The `EQUATION_NUMBERING` key of LaTeX's own `{equation}` (latex.ltx:15737-15739 `\def\endequation{\eqno
+/// \hbox{\@eqnnum}…}`): its number is printed whatever a `\nonumber` in it said — `\nonumber` (:15775
+/// `\global\@eqnswfalse`) is eqnarray's switch, which the next `\eqnarray` sets again. Perl lets `\nonumber` remove the
+/// number of any `{equation}` (latex_constructs.pool.ltxml:1915-1916, "even though stock LaTeX provides no means to
+/// override them"), which is amsmath's `\nonumber` (amsmath.sty:1268-1269) and so stays where amsmath is loaded
+/// ([`amsmath_nonumber`]). hep-ph9710521 (`\nl` in `\beq`) printed every number from (3.22) on one behind its PDF;
+/// nucl-th0404042's `j-sum1` and `l-sum1` (PDF 20, 23) were unnumbered. REVTeX 3's aps.sty:401-450 and iopart.cls:771-776
+/// print the number as LaTeX does. OXIDIZED_DESIGN_DIVERGENCES #865.
+pub(crate) const LATEX_EQNNUM: &str = "latex_eqnnum";
+
+/// Whether amsmath is loaded, as `\@ifpackageloaded{amsmath}` asks (`\ver@amsmath.sty`) — its binding or the real
+/// file; not a binding's load beyond its original (`amsmath_loaded_beyond_original`, the old aa.cls's), which counts as
+/// not loaded — so that its `\nonumber` (amsmath.sty:1268-1269) removes an `{equation}`'s number ([`LATEX_EQNNUM`]).
+/// `\ver@amsmath.sty` and not only the loaded flag: aa.cls's binding clears that flag after today's aa.cls loads amsmath
+/// (`aa_cls.rs`, Perl aa.cls.ltxml:57), so that a document's own `\usepackage{amsmath}` runs the binding again
+/// (1712.01010, 1812.04463, 2501.07980 ship that aa.cls).
+fn amsmath_nonumber() -> bool {
+  is_defined("\\ver@amsmath.sty")
+    || lookup_bool("amsmath.sty_loaded")
+    || lookup_bool("amsmath.sty_raw_loaded")
+}
+
+/// The numbering of LaTeX's `{equation}`, for its own binding and for a class's `{equation}` that sets it as LaTeX
+/// does (mn2e/mnras's and old aa's, which only let a `$` in it, mn2e_support_sty.rs and aa_support_sty.rs): numbered and
+/// preset, and its number kept whatever a `\nonumber` said unless amsmath is loaded (`LATEX_EQNNUM`,
+/// `amsmath_nonumber`).
+pub fn prepare_latex_equation_counter() {
+  if amsmath_nonumber() {
+    prepare_equation_counter(stored_map!("numbered" => true, "preset" => true));
+  } else {
+    prepare_equation_counter(
+      stored_map!("numbered" => true, "preset" => true, LATEX_EQNNUM => true),
+    );
+  }
+}
+
+/// Whether the current equation numbering retracts its rows' preset numbers (`retract=1`: eqnarray*'s), so that a row
+/// it numbers is left unnumbered at its end (`after_equation`).
+fn equation_numbering_retracts() -> bool {
+  with_value(
+    "EQUATION_NUMBERING",
+    |v| matches!(v, Some(Stored::HashStored(n)) if matches!(n.get("retract"), Some(&Stored::Bool(true)))),
+  )
+}
+
 #[rustfmt::skip]
 pub(crate) fn load() -> Result<()> {
   // ======================================================================
@@ -85,7 +130,10 @@ pub(crate) fn load() -> Result<()> {
     "<ltx:equation xml:id='#id'>#tags<ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
     mode => "display_math",
     before_digest => {
-      prepare_equation_counter(stored_map!("numbered" => true, "preset" => true));
+      // latex.ltx:15737-15739: `{equation}` always prints `\@eqnnum`, and `\nonumber` (:15775, `\global\@eqnswfalse`)
+      // is eqnarray's; amsmath's `\nonumber` (amsmath.sty:1268-1269) is what removes the number of an `{equation}`
+      // (`LATEX_EQNNUM`; witnesses hep-ph9710521, nucl-th0404042).
+      prepare_latex_equation_counter();
       before_equation()?;
       equation_hook()?;
     },
@@ -113,16 +161,20 @@ pub(crate) fn load() -> Result<()> {
   // Perl: latex_constructs.pool.ltxml lines 2039-2057
   DefMacro!("\\nonumber", "\\lx@equation@nonumber");
   DefPrimitive!("\\lx@equation@nonumber", {
-    let (in_equation, defer_retract) = with_value("EQUATION_NUMBERING", |v| match v {
+    let (in_equation, defer_retract, eqnnum) = with_value("EQUATION_NUMBERING", |v| match v {
       Some(Stored::HashStored(n)) => (
         matches!(n.get("in_equation"), Some(&Stored::Bool(true))),
         matches!(n.get("deferretract"), Some(&Stored::Bool(true))),
+        matches!(n.get(LATEX_EQNNUM), Some(&Stored::Bool(true))),
       ),
-      _ => (false, false),
+      _ => (false, false, false),
     });
     if eqnarray_eqncr_numbering() {
       // latex.ltx:15775 `\global\@eqnswfalse`: the next `\@@eqncr` prints no number (`eqnarray_eqncr_numbering`).
       assign_value(EQNARRAY_EQNSW, Stored::Bool(false), Some(Scope::Global));
+    } else if in_equation && eqnnum {
+      // LaTeX's `{equation}` prints its number whatever `\nonumber` said (`LATEX_EQNNUM`): the switch it clears is
+      // eqnarray's, which `\eqnarray` sets again.
     } else if in_equation {
       if defer_retract {
         with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
@@ -199,6 +251,7 @@ pub(crate) fn load() -> Result<()> {
     // latex.ltx:15754 `\global\@eqnswtrue` (eqnarray_eqncr_numbering).
     assign_value(EQNARRAY_EQNSW, Stored::Bool(true), Some(Scope::Global));
     assign_value(EQNARRAY_EQNNUM, Stored::Bool(false), Some(Scope::Global));
+    assign_value(EQNARRAY_ROW_LABELLED, Stored::Bool(false), Some(Scope::Global));
     Ok(())
   });
 
@@ -215,6 +268,15 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\eqnarray@row@after@", {
     let eqncr = eqnarray_eqncr_numbering();
     let numbered = !eqncr || matches!(remove_value(EQNARRAY_EQNNUM), Some(Stored::Bool(true)));
+    // A labelled row: should it be left unnumbered (by `\@@eqncr`, or an eqnarray*'s retraction), its label names the
+    // counter's next value, its preset number until `after_equation` retracts it (`eqnarray_next_number_tags`).
+    // Only for a row left unnumbered: `\@@eqncr` printed no number, or the environment retracts its rows' (eqnarray*).
+    let labelled = matches!(remove_value(EQNARRAY_ROW_LABELLED), Some(Stored::Bool(true)));
+    let next_number_tags = if eqncr && labelled && (!numbered || equation_numbering_retracts()) {
+      Some(eqnarray_next_number_tags()?)
+    } else {
+      None
+    };
     if !numbered {
       with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
         if let Some(Stored::HashStored(tags)) = tags_opt {
@@ -240,6 +302,11 @@ pub(crate) fn load() -> Result<()> {
           row
             .properties
             .insert(UNNUMBERED_EQNCR_ROW_ATTRIBUTE.to_string(), Stored::from("true"));
+          if let Some(tags) = next_number_tags {
+            row
+              .properties
+              .insert(NEXT_NUMBER_TAGS_PROPERTY.to_string(), Stored::Digested(tags));
+          }
         } else if previous_numbered == Some(false) {
           row
             .properties
@@ -275,8 +342,13 @@ pub(crate) fn load() -> Result<()> {
   // Witness 2311.02006.
   DefMacro!(
     "\\lx@eqnarray@label [OptionalSemiverbatim] Semiverbatim",
-    "\\lx@hidden@noalign{\\lx@eqnarray@save@label{#2}}"
+    "\\lx@hidden@noalign{\\lx@eqnarray@save@label{#2}\\lx@eqnarray@row@labelled}"
   );
+
+  // (the row holds a label: `\eqnarray@row@after@` gives an unnumbered one the next number's reference forms)
+  DefPrimitive!("\\lx@eqnarray@row@labelled", {
+    assign_value(EQNARRAY_ROW_LABELLED, Stored::Bool(true), Some(Scope::Global));
+  });
 
   // Perl: latex_constructs.pool.ltxml lines 2262-2335
   // eqnarray and eqnarray* — alignment-based environments

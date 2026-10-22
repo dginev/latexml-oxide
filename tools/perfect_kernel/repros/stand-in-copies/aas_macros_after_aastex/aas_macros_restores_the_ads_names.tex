@@ -1,0 +1,13 @@
+% witness: 1803.01278, 1804.08035, 2002.05892, 2011.04502, 2203.13406, 2208.01612, 2602.22415 (aastex6+ papers that
+%          load their copy of aas_macros.sty, the ADS file this directory holds, 2002.05892's)
+% oracle:  pdflatex 0 errors; "J: ApJ, Phys. Rev. D, A&A Rev., ApJ." (the file's \def's replace the class's names)
+% engines: rust int54a = the same (the class's names were never set); 78r before the unmarking = "J: ApJL, PhRvD,
+%          A&A Rv, ApJL." (aas_macros counted loaded, the document's load skipped)
+% expect:  0 errors, 0 warnings; the ADS names
+% status:  GREEN (int54a) -> GREEN (78r, guard of the class's names)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\usepackage{aas_macros}
+\begin{document}
+J: \apjl, \prd, \aapr, \apjlett.
+\end{document}

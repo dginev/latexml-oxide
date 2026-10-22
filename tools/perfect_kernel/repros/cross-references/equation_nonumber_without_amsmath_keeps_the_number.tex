@@ -1,0 +1,15 @@
+% witness: hep-ph9710521 (`\nl` in `\beq`: every number from (3.22) on one behind its PDF, 45/56 labels matching),
+%          nucl-th0404042 (`j-sum1`, `l-sum1`: PDF 20, 23, int54a unnumbered); census 123 papers
+% oracle:  pdflatex 0 errors; (1) (2) (3), "See 1, 2, 3." (latex.ltx:15737-15739 `{equation}` always prints `\@eqnnum`;
+%          `\nonumber` :15775 is eqnarray's switch)
+% engines: rust int54a = (1), unnumbered, (2), "See 1, [e2], 2."; Perl the same (latex_constructs.pool.ltxml:1915-1916)
+% expect:  0 errors, 0 warnings; three numbered equations
+% status:  RED (int54a) -> GREEN (78r, OXIDIZED_DESIGN_DIVERGENCES #865)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{equation}a=b\label{e1}\end{equation}
+\begin{equation}c=d\nonumber\label{e2}\end{equation}
+\begin{equation}e=f\label{e3}\end{equation}
+See \ref{e1}, \ref{e2}, \ref{e3}.
+\end{document}

@@ -193,8 +193,15 @@ do not block the E/F rerun.
 | — | `\shortstack` eats the space after its argument (`A \shortstack[r]{x} Body.` → `…</inline-block>Body.`): the trailing `OptionalMatch:* [Dimension]` of the prototype reads past it; Perl the same | open, KNOWN_PERL_ERRORS #996 |
 | — | a `{titlepage}` whose class `\@maketitle` prints a paragraph after the title and author: the paragraph is re-homed before the title (`<para>…Printed cover text…</para><title>T</title>`), the PDF prints it after them; base, 77o r1-r3 alike | open (77o r2 review finding 9; guard `perfect_kernel_batch56::unwound_titlepage_rehomes_a_printed_paragraph` asserts the paragraph alone) |
 | — | natbib merged citations (`\cite{a,*b}` under `mcite`/`merge`/`elide`, REVTeX 4.1/4.2 unless `nomerge`): since 78n the keys are a and b, but the merged entry is not folded into the one before it (natbib.sty:841-860 `\NAT@b*@key`), so the citation prints "[1, 2]" for pdflatex's "[1]", the bibliography keeps b as an entry of its own and every later entry is numbered one higher per merge; the `[pre][post]` notes are not added to the entry (`\nat@keyopt@open`/`\nat@keyopt@shut`). 1808.00247, 1509.05768, 1206.6986, 1209.2422; KPE #1081, guard `perfect_kernel_batch78n::revtex_merged_citation` | open (78n r1-r3 residual; a wrong reference number, content kept) |
-| — | eqnarray label with no numbered row after it (pre-existing; review rev78n2): a `\label` in a trailing `\nonumber` row or in an `eqnarray*` stays on its unnumbered row, and its `\ref` prints a wrong number with no diagnostic — the group's (5 for pdflatex's 6), a section's (iopart: "1" for 2), or a raw id ("S0.Ex5" for 7); LaTeX's `\ref` names the counter's next value. Fix: give such a label a refnum-only tag holding the counter's next value (OD #847). Witness 1303.3431 `appa3`; probes `/home/deyan/.claude/jobs/356a0c47/tmp/rev78n2/p/q1.tex`, `iop/q8.tex` (copy into a repro). | open |
-| — | `\nonumber` inside `{equation}` removes the number (Perl's extension; LaTeX without amsmath still prints it): hep-ph9710521 (`\nl` inside `\beq`) has every number from (3.22) on one behind its PDF, 45/56 matching (78n r3 report). | open |
+| — | eqnarray label with no numbered row after it (pre-existing; review rev78n2): a `\label` in a trailing `\nonumber` row or in an `eqnarray*` stays on its unnumbered row, and its `\ref` prints a wrong number with no diagnostic — the group's (5 for pdflatex's 6), a section's (iopart: "1" for 2), or a raw id ("S0.Ex5" for 7); LaTeX's `\ref` names the counter's next value. Fix: give such a label a refnum-only tag holding the counter's next value (OD #847). Witness 1303.3431 `appa3`; probes `/home/deyan/.claude/jobs/356a0c47/tmp/rev78n2/p/q1.tex`, `iop/q8.tex` (copy into a repro). | **FIXED 78r** (OD #847, KPE #1106): the label's row keeps the next number's reference forms (refnum, typerefnum …, no printed tag) and stands as its own equation; guard `perfect_kernel_batch78r::eqnarray_label_with_no_numbered_row_after_it_names_the_next_number` |
+| — | `\nonumber` inside `{equation}` removes the number (Perl's extension; LaTeX without amsmath still prints it): hep-ph9710521 (`\nl` inside `\beq`) has every number from (3.22) on one behind its PDF, 45/56 matching (78n r3 report). | **FIXED 78r** (OD #865): a no-op in LaTeX's `{equation}` unless amsmath is loaded; guards `perfect_kernel_batch78r::{equation_nonumber_without_amsmath_keeps_the_number, equation_nonumber_with_amsmath_removes_the_number}` |
+| — | eqnarray: a continuation-only row (`&&+ 2,`, nothing before its relation column) under a numbered row joins that equation though both rows are numbered, and the join keeps the last number: the first row's number is lost and a `\label` on it names the second's (1310.2253 `eqn:zg`, PDF 11, ours 12; Perl `rearrangeEqnarray` the same; found by 78r's `.aux` check) | open |
+| — | `\nonumber` inside an amsmath inner block of an `{equation}` (`aligned`, `split`) removes the equation's number; amsmath's `\let\print@eqnum\@empty` is local to the block, so pdflatex prints it (2407.10017 `eq:chainMapHam`, PDF 41; int54a the same; found by 78r's `.aux` check, OD #865) | open |
+| — | IEEEeqnarray: a `\label` in an unnumbered row does not name the counter's next value as IEEEtrantools' does (`a &=& b \\ c &=& d \label{ie1}\nonumber`: ours "1", pdflatex "2"; `\label{ie2}` in an `IEEEeqnarray*` before the next equation: ours the raw id "S0.Ex2", pdflatex "2"; int54a and 78r alike; review rev78r finding 6) | open |
+| — | REVTeX 3 (aps.sty:473-487): `\nonumber` and `eqnarray*` redefine `\label` to an error or a warning, so pdflatex leaves such labels "??"; ours since 78r resolves an `eqnarray*` label to the next number (the label's content kept, a reference pdflatex does not print; review rev78r finding 6) | open — main-session decision 2026-10-22: keep the resolved number (no visible loss), not PDF-literal "??" |
+| — | `\RequirePackage{aas_macros}` before an AASTeX 6+ `\documentclass`: pdflatex 55 errors (an unclean oracle); ours prints the class's journal names (review rev78r finding 6) | no action (main-session decision 2026-10-22: the oracle is unclean) |
+| — | algorithm2e: an algorithm's last line, closed by the environment's end rather than by `\;`, ignores the `\Indp`/`\Indm` offset (`\lx@prepend@indentation` runs only from `\lx@algo@endline`; algorithm2e_sty.rs env template): `\Indp Bb\; Cc \end{algorithm}` or `\DontPrintSemicolon … \Return Gg \end{algorithm}` sets Cc / "return Gg" at the margin, pdflatex one level in; 2508.06088's three algorithms end with `\Return` at the margin (pdflatex x 165.1, one level in). int54a and 78r alike; review rev78r2 finding 1. Fix: give the open last line its indentation before the environment's group ends (a no-op on an empty last line) | open |
+| — | algorithm2e `\DontPrintSemicolon` / `\PrintSemicolon` are assigned globally (algorithm2e_sty.rs, Perl algorithm2e.sty.ltxml:131-136 the same) where algorithm2e.sty's are a local `\renewcommand`, so a later algorithm in the same document loses every printed ";" (pdflatex "Hh;", ours "Hh"; int54a, 78r alike; review rev78r2 finding 4; SHARED) | open |
 | 25, 26, 27 | `--splitindex`/`--splitbibliography` (non-default), alignment open at `\end{document}`, lstlisting in `\parbox` | not silent, re-checked on head 2026-10-19: #26 is an honest Error (a `tabular` left open, `c & d`: 4 Errors; an `align`, `c&=d`: 3 — "Attempt to close a group that switched to mode internal_vertical"; invalid input, pdflatex errs); #27 has raised 1 Error since 64zf (CONTROL `kernel-alignment/pcol_lstlisting_parbox_CONTROL`, pdflatex 7); #25 needs a non-default option the arXiv runs never pass — open, low reach, not blocking |
 
 ## Rust Error Fixes
@@ -581,9 +588,13 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   'theorem' defined", the environment left undefined). Since acmart makes its theorems `\AtEndPreamble` (78o, OD #854),
   `\documentclass{acmart}\newtheorem{remark}[theorem]{Remark}` is silently "Remark 1.2" on the class's theorem counter
   in ours, an error in pdflatex; with no counter at all (`[foo]`) ours and Perl err at the `\begin{remark}`.
-- **algorithm2e's `\Indp`/`\Indm` do not indent the lines after them** (SHARED, binding, pre-existing; found by rev78o
-  probe g1): algorithm2e.sty:1626-1629 `\Indp` advances `\leftskip` by `\algoskipindent` until `\Indm` (pdflatex
-  "indented;" one level in); ours and Perl set the line at the block's level (int52a the same).
+- ~~**algorithm2e's `\Indp`/`\Indm` do not indent the lines after them**~~ (SHARED, binding, pre-existing; found by
+  rev78o probe g1): algorithm2e.sty:1626-1629 `\Indp` advances `\leftskip` by `\algoskipindent` until `\Indm` (pdflatex
+  "indented;" one level in); ours and Perl set the line at the block's level (int52a the same). **FIXED 78r** (KPE
+  #1107): a signed offset in levels that a block saves and restores (r2; r1's push/pop of the blocks' stack set the
+  flush-left `\Indm … \KwIn … \Indp` idiom's body a level in, 2102.06989); guards
+  `perfect_kernel_batch78r::{algorithm2e_indp_indm_indent_the_lines_between,
+  algorithm2e_indm_before_the_input_keeps_the_body_at_the_margin, algorithm2e_indm_in_a_block_ends_with_the_block}`.
 - **A body `\footnotetext` pairs with a mark printing the same number far away** (PERL-ORIGIN rule, Perl's
   printed-mark `relocateFootnote`; found by rev78o2): 2509.17784's `\footnotetext[\value{footnote}]{Results are based
   on Gemini 2.0…}` (main.tex:134, "1" since 78o r2 reads `[<n>]` as the counter) moves into the appendix's COAT
@@ -5816,7 +5827,47 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   E 190 = 190, the 3 changed are eqnarray labels. Residuals: a label in an unnumbered row with no numbered row after it
   in its group (an `eqnarray*`, a trailing `\nonumber` row) stays there, where LaTeX's `\ref` names the counter's next
   value (1303.3431's `appa3`); a `\nonumber` inside `{equation}` still unnumbers it (Perl's extension; LaTeX without
-  amsmath prints the number: hep-ph9710521's `\nl` in a `\beq`, one behind from 3.22).
+  amsmath prints the number: hep-ph9710521's `\nl` in a `\beq`, one behind from 3.22). (Both FIXED 78r.)
+- **78r** (quality batch 15, the sel78q selection study's items 4, 5, 6, 10; r1 + r2 after review rev78r; guards
+  `perfect_kernel_batch78r::*`, 9, each item RED on int54a or r1; OD #865 and the OD #847 amendment, KPE #1105-1107).
+  (1) AASTeX 6+ set their own journal abbreviations (aastex6.cls:1303, aastex631.cls:1838-1900, aastex701.cls:8310-8373:
+  `\apjl` "ApJL", `\prd` "PhRvD", 28 names differing from aas_macros' ADS forms; aastex_cls.rs `AASTEX6_JOURNALS` under
+  `aastex6_plus`), and aas_macros then counts as not loaded, so a document's own `\usepackage{aas_macros}` restores the
+  ADS names as in pdflatex (the 7 census papers that do; 1701.04641 "ApJL" 0 → 3; KPE #1105). (2) An eqnarray `\label`
+  with no numbered row after it names the counter's next value: the row keeps that number's reference forms (no printed
+  tag) and stands as its own equation (`eqnarray_next_number_tags`, digested only for a row left unnumbered,
+  `NEXT_NUMBER_TAGS_PROPERTY`; OD #847 amended, KPE #1106; the SYNC row closed). (3) `\nonumber` in LaTeX's `{equation}`
+  is a no-op unless amsmath is loaded (`\ver@amsmath.sty` or its loaded flag; latex.ltx:15737-15739; `LATEX_EQNNUM`; OD
+  #865; the SYNC row closed), through one helper, `prepare_latex_equation_counter`, for LaTeX's `{equation}` and the
+  mn2e/mnras/mn and aa bindings' own (r2, review finding 2). (4) algorithm2e's `\Indp`/`\Indm` are a signed offset in
+  levels that a block saves and restores (its `\hbox{\vtop{…}}` group); a line ends with `blocks + offset` levels, none at
+  the least (r2, review finding 1: r1 pushed and popped the blocks' own stack, which set the flush-left
+  `\Indm\Indmm \KwIn … \Indp\Indpp` idiom's body a level in — 2102.06989, 1412.1462, 2106.03753, 2508.14614 — and an
+  `\Indm` in a nested block popped the outer block's level; KPE #1107; the RED row closed). `.aux` equation `\ref`
+  numbers (int54a → 78r): 1602.03553 68 → 89 of 89, 2301.00760 37 → 58 of 58, 1303.3431 64 → 65 of 65, 20 more item-2
+  papers 676 → 702 of 704; hep-ph9710521 61 → 74 of 74, nucl-th0404042 15 → 17 of 17, 20 item-3 papers (13 build) 92 →
+  273 of 274, 19 REVTeX 4.x papers 370 → 560 of 561. A/B (release 78r r2 vs int54a and vs r1, int54a dumps,
+  `--preload=ar5iv.sty`, `census/pops/pop78r_{1,2,2ctl,3,3ctl,3rvx,3cls,4,aasm,alg2ectl,ctl}.tsv`, 1,781 papers converted
+  by all three): E 5,039 = 5,039 = 5,039, F 12 = 12 = 12, W 31,912 → 31,938 → 31,938; no paper gains an Error or a Fatal
+  anywhere. Item 1, 468 papers: 273 changed, bibliography journal names only (165 papers lose words, the short names).
+  Item 2, 801: 569 changed, W 18,514 → 18,540 (math-parse Warnings, unparsed or ambiguous, of 122 continuation rows split
+  in 84 papers; the TeX of every visible cell kept, rev78r). Item 3, 323 + 19 REVTeX 4.x + 18 mn2e/mnras/aa papers with a
+  `\nonumber` in an `{equation}` (`pop78r_3cls`): 102 + 18 + 5 changed, numbers gained where no amsmath is loaded (of
+  the 5, r1 → r2 the 3 mn2e papers without amsmath, 1210.2963, astro-ph0503435, astro-ph9901366, one number each; 0705.0429
+  and 1511.06770 are item 2's eqnarray rows); the aa papers that ship today's aa.cls (it loads amsmath: 1712.01010,
+  1812.04463, 2501.07980) unchanged. Item 4, 78 `\Indp`/`\Indm` papers: 21
+  changed vs int54a (r1 26), 0 words lost, line levels only; r1 → r2 8 changed (the 4 Input-idiom papers and 1903.06418
+  back to int54a's levels, which their PDFs print; 1905.03814's unbalanced `\Indp` in a block ends with the block;
+  2410.03035, 2602.20199 the same levels with the block's rule before the offset). Their line levels against pdflatex's
+  `-bbox` x positions: 2007.00596, 2010.00626, 2006.01085, 1908.06049, 1803.03622 (`\pushline` = `\Indp`), 1801.01253
+  match the PDF where int54a set the lines at the block's level; 2102.06989, 1903.06418 match it as int54a did. 30
+  algorithm2e papers without `\Indp`/`\Indm` (`pop78r_alg2ectl`): byte-identical; 100 + 150 + 200 random controls:
+  5 + 17 + 15 changed by items 1-3 only (r1 → r2 byte-identical). Residuals: `\Indpp`/`\Indmm` (0.5em) and `\Indentp` are not read, and a negative offset at the
+  algorithm's level is the margin (pdflatex sets the line left of it); the open rows above (eqnarray continuation-only
+  rows under a numbered row; `\nonumber` in an `aligned` inside `{equation}`; IEEEeqnarray labels in an unnumbered row;
+  REVTeX 3's "??" labels; `\RequirePackage{aas_macros}` before an AASTeX 6+ class). (r1's third residual, a single
+  relation column whose rows join one numbered equation keeping such a label on that number, does not trigger: 11
+  probed shapes, `= a \\ = b \label{k}\nonumber` among them, give pdflatex's next number.)
 - **split114** (task #114, user directive 2026-10-07; a pure move, before FM S2a): `latexml_engine/src/base_utilities.rs`
   (23,317 lines) is the module directory `base_utilities/` — `mod.rs` (the imports, `FRONTMATTER_ELEMENTS`,
   `REPLACEABLE_FRONTMATTER_TAGS`, and `LoadDefinitions!` calling `defs::{general, frontmatter_api, frontmatter_fields,

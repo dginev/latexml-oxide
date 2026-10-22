@@ -2130,8 +2130,10 @@ fn author_and_tied_to_the_last_name_splits() {
   );
 }
 
-/// 63j review: an empty row holding `\label` but no number (eqnarray's `\nonumber`, align*) names no number, so it is
-/// still dropped and its label left unresolved, while align's numbered one keeps (2). Repro
+/// 63j review: an empty row holding `\label` but no number is dropped and its label left unresolved in an align*
+/// (pdflatex "??"), while align's numbered one keeps (2). In an eqnarray the label names the counter's next value,
+/// pdflatex's 2: since 78r its row stands with that number's reference forms and no printed tag (OD #847, KPE #1106;
+/// `perfect_kernel_batch78r::eqnarray_label_with_no_numbered_row_after_it_names_the_next_number`). Repro
 /// alignment/unnumbered_empty_labelled_row_stays_unresolved.
 #[test]
 fn unnumbered_empty_labelled_row_stays_unresolved() {
@@ -2159,10 +2161,12 @@ fn unnumbered_empty_labelled_row_stays_unresolved() {
   assert_eq!(
     (
       labelled,
+      tags_of_labelled_equation(&xml, "LABEL:un").as_deref(),
       tags_of_labelled_equation(&xml, "LABEL:nu").as_deref()
     ),
     (
-      vec!["LABEL:nu"],
+      vec!["LABEL:un", "LABEL:nu"],
+      Some("<tags><tag role=\"refnum\">2</tag></tags>"),
       Some("<tags><tag>(2)</tag><tag role=\"refnum\">2</tag></tags>")
     ),
     "{xml}"

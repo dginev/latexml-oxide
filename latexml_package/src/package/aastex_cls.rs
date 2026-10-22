@@ -89,6 +89,24 @@ LoadDefinitions!({
     revtex4_support_sty::define_float_repair()?;
   }
   RequirePackage!("aas_support");
+  // AASTeX 6+ set the journal abbreviations of their own (aastex6.cls:1303, aastex631.cls:1838-1900 in the copy
+  // 2505.20669 ships, aastex701.cls:8310-8373): the ADS forms of aas_macros.sty, which aas_support's aas_macros binding
+  // defines as AASTeX 5.x did, in 28 names (`\apjl` "ApJL", the binding's "ApJ"; 1701.04641's PDF "ApJL" three times,
+  // ours none: KNOWN_PERL_ERRORS #1105). The other 32 (and jaavso/psj, which aastex62 and earlier lack) read the same.
+  // None of these classes loads aas_macros.sty, so it counts as not loaded (`mark_unloaded`): a document's own
+  // `\usepackage{aas_macros}` loads its binding again, whose ADS names then replace the class's as the file's `\def`s
+  // do in pdflatex (1803.01278, 2002.05892, 2208.01612). Journal abbreviations are text names a binding declares
+  // (ruling 17; aas_macros_sty.rs `declare_copy_text_names`). Guard
+  // `perfect_kernel_batch78r::aastex6_journal_abbreviations_are_the_class_s`.
+  if aastex6_plus {
+    for (name, abbreviation) in AASTEX6_JOURNALS {
+      DefMacro!(T_CS!(*name), None, TokenizeInternal!(TeXString::assembled(s!("\\ref@jnl{{{abbreviation}}}"))));
+    }
+    // (aastex631.cls:6165-6168 `\let\apjlett=\apjl`, `\let\applopt=\ao` after them)
+    Let!("\\apjlett", "\\apjl");
+    Let!("\\applopt", "\\ao");
+    mark_unloaded("aas_macros.sty");
+  }
   // `\dataset[text]{url}` links the text to the data set, from AASTeX 6 on — aastex6.cls:5488-5490 and aastex61.cls:5872-5874
   // `\href{#2}{[#1]}` (`[DATASET]` without the text), aastex62.cls:6036-6042 through aastex701.cls:12656-12661
   // `\href{#2}{#1}` (`[DATASET]` when the text is empty), with `\doi{…}` the bare address while it reads (the class's
@@ -221,6 +239,40 @@ LoadDefinitions!({
   // aastex701.cls:11756, 13690 — the offsets a table is moved by on its page (`\movetabledown=2cm`, 2609.00308).
   RawTeX!(r"\newdimen\movetabledown\newdimen\movetableright");
 });
+
+/// The journal abbreviations AASTeX 6 and later define where aas_macros.sty's (aas_macros_sty.rs) differ: aastex6.cls
+/// :1303 on, aastex631.cls:1838-1900, aastex701.cls:8310-8373 (`\newcommand\apjl{\ref@jnl{ApJL}}`), the same in every
+/// release from 6.0.
+const AASTEX6_JOURNALS: &[(&str, &str)] = &[
+  ("\\apjl", "ApJL"),
+  ("\\ao", "ApOpt"),
+  ("\\aapr", "A\\&A~Rv"),
+  ("\\pra", "PhRvA"),
+  ("\\prb", "PhRvB"),
+  ("\\prc", "PhRvC"),
+  ("\\prd", "PhRvD"),
+  ("\\pre", "PhRvE"),
+  ("\\prl", "PhRvL"),
+  ("\\solphys", "SoPh"),
+  ("\\ssr", "SSRv"),
+  ("\\zap", "ZA"),
+  ("\\iaucirc", "IAUC"),
+  ("\\bain", "BAN"),
+  ("\\fcp", "FCPh"),
+  ("\\gca", "GeoCoA"),
+  ("\\jcp", "JChPh"),
+  ("\\jqsrt", "JQSRT"),
+  ("\\nphysa", "NuPhA"),
+  ("\\physrep", "PhR"),
+  ("\\physscr", "PhyS"),
+  ("\\actaa", "AcA"),
+  ("\\caa", "ChA\\&A"),
+  ("\\cjaa", "ChJA\\&A"),
+  ("\\jcap", "JCAP"),
+  ("\\na", "NewA"),
+  ("\\nar", "NewAR"),
+  ("\\rmxaa", "RMxAA"),
+];
 
 /// Whether the paper ships an `aastex.cls` that is an AASTeX 6+ class under the old name — one that defines `\gridline`
 /// (aastex6.cls:85 `\ProvidesClass{aastex}`); TeX Live has none, so the file found is the paper's own.

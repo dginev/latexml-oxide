@@ -23266,11 +23266,26 @@ id with it, in a single-column eqnarray too (Perl removes empty rows and their n
 numbered equation, the trailing `\\` of `a &=& b \\ \end{eqnarray}`, is still removed, its number consumed as in
 LaTeX). Equation `\ref` numbers against pdflatex's `.aux` (int52a / 78n r2 / r3): 2112.13115 30 / 63 / 112 of 112,
 1206.6051 66 / 79 / 98 of 98, 1011.0523 7 / 12 / 12 of 12, 0910.0753 14 / 35 / 35 of 35, 0708.0012 0 / 28 / 28 of 29 and
-0806.3762 3 / 15 / 15 of 16 (each miss a label defined twice); 35 changed papers 805 / 933 / 1,066 of 1,151. Residual: a
-label with no numbered row after it in its group stays on its unnumbered row (1303.3431's `eqnarray*` `appa3`), so its
-`\ref` prints a wrong number with no diagnostic — the group's number (a trailing `\nonumber` row: pdflatex the next, 6
-for our 5), a section's (iopart, a `\nonumber\cr` row held into the last row: "1" for pdflatex's 2), or the raw id
-(`eqnarray*`: "S0.Ex5" for pdflatex's 7); review rev78n2, SYNC row "eqnarray label with no numbered row after it". Repros
+0806.3762 3 / 15 / 15 of 16 (each miss a label defined twice); 35 changed papers 805 / 933 / 1,066 of 1,151. A label
+with no numbered row after it in its group (an `eqnarray*`, a trailing `\nonumber` row) names the counter's next value,
+the next equation's number, which no row of the group prints (78r; KNOWN_PERL_ERRORS #1106): `\lx@eqnarray@label` marks
+the row labelled (`EQNARRAY_ROW_LABELLED`), `\eqnarray@row@after@` digests that value's reference forms while the row's
+preset number still holds it (`eqnarray_next_number_tags`: every `tag_forms` role a reference prints — refnum,
+typerefnum, autoref, the cleveref forms — and no printed tag), and `rearrange_eqnarray` keeps them on a row whose labels
+did not move on, counting it numbered and labelled: it stands as its own equation (a continuation row of a numbered
+equation is split from it, so that equation's number does not take the label), except in a single relation column whose
+rows all join one equation with a number of its own, which keeps the label (the residual). Before 78r its `\ref`
+printed a wrong number with no diagnostic — the group's (a trailing `\nonumber` row: pdflatex the next, 6 for our 5), a
+section's (iopart, a `\nonumber\cr` row held into the last row: "1" for pdflatex's 2), or the raw id (`eqnarray*`:
+"S0.Ex5" for pdflatex's 7); review rev78n2. Equation `\ref` numbers against pdflatex's `.aux` (int54a / 78r):
+1602.03553 68 / 89 of 89 (`eqn:zeta01` 5, int54a "1"), 2301.00760 37 / 58 of 58 (`comorph*` 54), 1303.3431 64 / 65 of 65
+(`appa3` 66); 20 more changed census papers (19 build) 676 / 704 → 702 / 704 (the 2 misses no eqnarray's: an amsmath
+`equation*` label, 1508.00199; a `$$…\label…$$`, gr-qc0201061). The split costs math grouping: 84 of the 569 changed
+papers of the 801-paper census population split 122 continuation rows (their math-parse Warnings 18,514 → 18,540).
+Open (pre-existing, Perl's rearrangement): a row holding only a continuation (`&&+ 2,`) under a numbered row joins it
+though both are numbered, the join keeping the last number, so a `\label` on the first names the second's
+(1310.2253 `eqn:zg`, PDF 11, ours 12). Repro cross-references/eqnarray_label_with_no_numbered_row_after_it; guard
+`perfect_kernel_batch78r::eqnarray_label_with_no_numbered_row_after_it_names_the_next_number`. Repros
 cross-references/eqnarray_cr_row_is_unnumbered, eqnarray_cr_then_empty_numbered_row, eqnarray_cr_row_label_names_next_number,
 eqnarray_nonumber_row_label_names_next_number, eqnarray_nonumber_holds_until_eqncr, alignment/eqnarray_cr_row_unnumbered
 (65o review); guards `perfect_kernel_batch78n::{eqnarray_row_ended_by_cr_is_unnumbered,
@@ -23536,3 +23551,32 @@ copies; 0803.1491, 0709.1471, astro-ph0508218; review rev78q2); jfm's `\section`
 numbers "A1" where every later release numbers "A.1"; an elsarticle copy shaped as elsart (2111.07466: elsart's
 `\def\appendix{\@ifstar…}`, no `\renewcommand\appendix`) keeps the kernel's numbering. Guards
 `perfect_kernel_batch78q::*`.
+
+### 865. `\nonumber` removes an `{equation}`'s number only where amsmath is loaded
+
+latex.ltx:15737-15739 `{equation}` always prints `\@eqnnum`; `\nonumber` (:15775 `\global\@eqnswfalse`) is eqnarray's
+switch, which the next `\eqnarray` sets again, and amsmath's `\nonumber` (amsmath.sty:1268-1269) is what removes an
+`{equation}`'s number. Perl gives every `{equation}` amsmath's behaviour on purpose (latex_constructs.pool.ltxml:1915-1916,
+"even though stock LaTeX provides no means to override them"), so a paper without amsmath that writes `\nonumber` in an
+`{equation}` lost the number pdflatex prints, and every later number was one behind (hep-ph9710521's `\nl` in a `\beq`,
+45 of 56 labels matching its PDF; nucl-th0404042's `j-sum1` and `l-sum1`, PDF 20 and 23, unnumbered). Ours (78r,
+sect07.rs): LaTeX's `{equation}` marks its numbering `LATEX_EQNNUM` unless amsmath is loaded (`amsmath_nonumber`:
+`\@ifpackageloaded{amsmath}`'s `\ver@amsmath.sty`, or the binding's or the raw file's loaded flag; a binding's load
+beyond its original, `amsmath_loaded_beyond_original`, counts as not loaded; `\ver@` because aa.cls's binding clears the
+flag after today's aa.cls loads amsmath, aa_cls.rs), and `\lx@equation@nonumber` does nothing in such an equation. One
+helper, `prepare_latex_equation_counter` (sect07.rs), sets that numbering for LaTeX's `{equation}` and for the class
+bindings that redefine it only to let a `$` in it: mn2e/mnras/mn (mn2e_support_sty.rs) and aa (aa_support_sty.rs, the
+old aa.cls without amsmath; a shipped aa.cls that loads it keeps amsmath's `\nonumber`, 1712.01010, 1812.04463,
+2501.07980). `\documentclass{mnras}` with a `\nonumber` in an `{equation}`: pdflatex (1) (2), "See 1; 2."; int54a and 78r
+r1 removed the first number (78r r2 review finding 2; repro class-bindings/mnras_equation_nonumber_keeps_the_number,
+guard `perfect_kernel_batch78r::mnras_equation_nonumber_keeps_the_number`). REVTeX 3's aps.sty:401-450, REVTeX 4.x (which loads
+amsmath only under its `amsmath` option, revtex4-2.cls:6132-6140) and iopart.cls:771-776 print the number as LaTeX does
+(28 REVTeX 3 and 8 iopart papers of the 123 census papers; 19 more REVTeX 4.x papers). Equation `\ref` numbers against
+pdflatex's `.aux` (int54a / 78r): hep-ph9710521 61 / 74 of 74, nucl-th0404042 15 / 17 of 17; 13 changed census papers
+92 / 274 → 273 / 274 (7 more do not build under TL 2025); the 19 REVTeX 4.x papers 370 / 561 → 560 / 561. Residual: a
+`\nonumber` inside an amsmath inner block of an `{equation}` (`aligned`, `split`) still removes the equation's number,
+where amsmath's local `\let\print@eqnum\@empty` ends with the block (2407.10017 `eq:chainMapHam`, PDF 41; int54a the
+same). Repros cross-references/equation_nonumber_without_amsmath_keeps_the_number,
+equation_nonumber_with_amsmath_removes_the_number; guards
+`perfect_kernel_batch78r::{equation_nonumber_without_amsmath_keeps_the_number,
+equation_nonumber_with_amsmath_removes_the_number}`.

@@ -2304,11 +2304,20 @@ fn install_eqnarray_alignment(columns: Vec<Cell>, equation_columns: usize) -> Re
       }
       // Extract tags (Digested) before converting to string props
       let tags_digested = props.remove("tags");
+      // (the next number's reference forms of a labelled unnumbered row, `NEXT_NUMBER_TAGS_PROPERTY`, which
+      // `rearrange_eqnarray` keeps or drops)
+      let next_number_tags = props.remove(NEXT_NUMBER_TAGS_PROPERTY);
+      if next_number_tags.is_some() {
+        props.insert(NEXT_NUMBER_ROW_ATTRIBUTE.to_string(), Stored::from("true"));
+      }
       let str_props: HashMap<String, String> =
         props.into_iter().map(|(k, v)| (k, v.to_string())).collect();
       document.open_element("ltx:equation", Some(str_props), None)?;
       // If we have digested tags, absorb them into the opened element
       if let Some(Stored::Digested(d)) = tags_digested {
+        document.absorb(&d, None)?;
+      }
+      if let Some(Stored::Digested(d)) = next_number_tags {
         document.absorb(&d, None)?;
       }
       Ok(())
@@ -2374,6 +2383,7 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
     labelled:         bool,
     tagged:           bool,
     unnumbered_eqncr: bool,
+    next_number:      bool,
   }
 
   // Scan the equations (rows). Perl reads the eqnarray's three columns; an `\IEEEeqnarray` has as many as its
@@ -2408,7 +2418,10 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
     let last_m = if ncols >= 3 { ncols - 1 } else { ncols };
     let has_m = cells.iter().take(last_m).skip(1).any(used);
     let has_r = ncols >= 3 && cells.get(ncols - 1).is_some_and(used);
-    let numbered = !document.findnodes("ltx:tags", Some(&rownode)).is_empty();
+    // (a labelled unnumbered row's tags are the next number's reference forms, `NEXT_NUMBER_ROW_ATTRIBUTE`: no number
+    // of its own)
+    let next_number = rownode.get_attribute(NEXT_NUMBER_ROW_ATTRIBUTE).is_some();
+    let numbered = !next_number && !document.findnodes("ltx:tags", Some(&rownode)).is_empty();
     // OXIDIZED_DESIGN #54: Perl checks hasAttribute('label') (singular), but
     // LaTeXML only ever sets the plural 'labels' attribute (LaTeXML-common.rnc
     // L134) — so the author's documented "Separately numbered AND labeled? must
@@ -2423,6 +2436,7 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
       .get_attribute(UNNUMBERED_EQNCR_ROW_ATTRIBUTE)
       .is_some();
     let _ = rownode.remove_attribute(UNNUMBERED_EQNCR_ROW_ATTRIBUTE);
+    let _ = rownode.remove_attribute(NEXT_NUMBER_ROW_ATTRIBUTE);
     rows.push(EqRow {
       node: rownode,
       cols: cells,
@@ -2433,13 +2447,13 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
       labelled,
       tagged,
       unnumbered_eqncr,
+      next_number,
     });
   }
   // Every `\label` names the number the next printing `\@@eqncr` prints ([`eqnarray_eqncr_numbering`]): an unnumbered
-  // row's labels move to the next numbered row, and stay when none follows (an eqnarray* row, a trailing `\nonumber`
-  // row: LaTeX's `\ref` names the counter's next value, which no row here prints, so our `\ref` prints a wrong
-  // number — the group's, a section's, or a raw id — with no diagnostic; SYNC row "eqnarray label with no numbered row
-  // after it", 1303.3431's appa3).
+  // row's labels move to the next numbered row; when none follows (an eqnarray* row, a trailing `\nonumber` row) they
+  // name the counter's next value, which no row of the group prints, and stay on their row with that value's
+  // reference forms (`NEXT_NUMBER_TAGS_PROPERTY`; 1303.3431's appa3, 1602.03553, 2301.00760).
   let mut pending: Vec<usize> = Vec::new();
   for index in 0..rows.len() {
     if rows[index].numbered && !pending.is_empty() {
@@ -2462,7 +2476,6 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
       pending.push(index);
     }
   }
-
   // The columns any row uses.
   let used_columns: Vec<usize> = (0..ncols)
     .filter(|&c| {
@@ -2474,6 +2487,40 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
       })
     })
     .collect();
+
+  // A single column used, which some row begins with a RELOP: every row joins one equation (below).
+  let begins_with_relop = match used_columns[..] {
+    [keepcol] => rows.iter().any(|row| {
+      row
+        .cols
+        .get(keepcol)
+        .and_then(|c| {
+          c.get_child_elements()
+            .into_iter()
+            .next()
+            .and_then(|first| first.get_attribute("role").map(|r| r == "RELOP"))
+        })
+        .unwrap_or(false)
+    }),
+    _ => false,
+  };
+  // A labelled row with no numbered row after it keeps its next number's reference forms and counts as numbered and
+  // labelled — its own equation, as a separately numbered and labelled row is below, so that no number of the group
+  // takes its label — unless every row joins one equation that prints a number of its own (a single column of
+  // relations, below), whose number then stands. A row whose labels moved on drops them.
+  let printed_number = rows.iter().any(|row| row.numbered);
+  for (index, row) in rows.iter_mut().enumerate() {
+    if !row.next_number {
+      continue;
+    }
+    if pending.contains(&index) && row.labelled && !(printed_number && begins_with_relop) {
+      row.numbered = true;
+    } else {
+      for tags in document.findnodes("ltx:tags", Some(&row.node)) {
+        document.safe_unlink(tags);
+      }
+    }
+  }
 
   // Only a single column was used
   if let [keepcol] = used_columns[..] {
@@ -2489,19 +2536,6 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
       }
     }
     // Check if any column begins with a RELOP → join rows
-    let begins_with_relop = rows.iter().any(|row| {
-      row
-        .cols
-        .get(keepcol)
-        .and_then(|c| {
-          c.get_child_elements()
-            .into_iter()
-            .next()
-            .and_then(|first| first.get_attribute("role").map(|r| r == "RELOP"))
-        })
-        .unwrap_or(false)
-    });
-
     if begins_with_relop {
       let nodes: Vec<Node> = rows.into_iter().map(|r| r.node).collect();
       equationgroup_join_rows(document, equationgroup, nodes)?;
@@ -2559,7 +2593,8 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
       // join the equation above, or stand as their own when that one has a number already (Perl
       // latex_constructs.pool.ltxml:2366-2369 notes the rows lost; 1011.4399, hep-th9412215, 1305.3072; repro
       // alignment/eqnarray_empty_labelled_row_keeps_number). The labels of an unnumbered row move to the next numbered row
-      // (`rearrange_eqnarray`); only a label with no numbered row after it stays, flagged. So does a row whose only
+      // (`rearrange_eqnarray`); a label with no numbered row after it stays, its row numbered by the next number's
+      // reference forms (`NEXT_NUMBER_TAGS_PROPERTY`), so an empty one is an equation of its own here. So does a row whose only
       // content is its author's tag: Scientific Word's `… \nonumber \\ && \TCItag{27}` numbers the equation above it
       // (pdflatex prints (27) on the tag's row; nlin0106009's 11 such rows; OXIDIZED_DESIGN_DIVERGENCES #591,
       // KNOWN_PERL_ERRORS #682) — in a multi-column eqnarray; a single-column one returned above, where the tagged row
@@ -2609,14 +2644,16 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
 /// nucl-th9903062). `\@currentlabel` is `\p@equation\theequation`, the counter `\eqnarray`'s `\stepcounter` and each
 /// printing `\@@eqncr` step, so every `\label` names the number the next printing `\@@eqncr` prints: the labels of an
 /// unnumbered row move to the next numbered row in `rearrange_eqnarray` (`UNNUMBERED_EQNCR_ROW_ATTRIBUTE`; a `\label`
-/// in a `\nonumber` row, 1206.6051's NA3; in a `\cr` row, 0708.0012), and stay where they are when none follows. A
+/// in a `\nonumber` row, 1206.6051's NA3; in a `\cr` row, 0708.0012), and stay where they are when none follows, with
+/// the counter's next value's reference forms ([`eqnarray_next_number_tags`]; 1303.3431's `appa3`, 1602.03553). A
 /// number `\@@eqncr` prints on an empty row of its own under an unnumbered one (`x &=& y \cr \end{eqnarray}`,
 /// `\cr &&\\`, `\nonumber\\ \end{eqnarray}`) is that equation's (`NUMBER_ROW_PROPERTY`; 0708.0012, nucl-th9807024,
 /// 1206.6051). For the environments that opt in with `eqncr=1`: latex.ltx's eqnarray and eqnarray*. Rust-only (Perl
 /// numbers each row unless it holds `\nonumber`: OXIDIZED_DESIGN_DIVERGENCES #847). Witnesses also 0806.3762,
 /// 0910.0753. Guards `perfect_kernel_batch78n::{eqnarray_row_ended_by_cr_is_unnumbered,
 /// eqnarray_empty_numbered_row_numbers_the_equation_above, eqnarray_cr_row_label_names_next_number,
-/// eqnarray_nonumber_row_label_names_next_number, eqnarray_nonumber_holds_until_eqncr}`.
+/// eqnarray_nonumber_row_label_names_next_number, eqnarray_nonumber_holds_until_eqncr}`,
+/// `perfect_kernel_batch78r::eqnarray_label_with_no_numbered_row_after_it_names_the_next_number`.
 pub(crate) fn eqnarray_eqncr_numbering() -> bool {
   with_value(
     "EQUATION_NUMBERING",
@@ -2635,6 +2672,41 @@ pub(crate) const EQNARRAY_EQNNUM: &str = "EQNARRAY_EQNNUM";
 /// its labels name the next printed number. Set by `\eqnarray@row@after@` (sect07.rs), read and removed by
 /// `rearrange_eqnarray`.
 pub(crate) const UNNUMBERED_EQNCR_ROW_ATTRIBUTE: &str = "_unnumbered_eqncr";
+
+/// Whether a `\label` was digested in the current eqnarray row (`\lx@eqnarray@label` sets it, `\eqnarray@row@after@`
+/// takes it).
+pub(crate) const EQNARRAY_ROW_LABELLED: &str = "EQNARRAY_ROW_LABELLED";
+
+/// The row property of a labelled eqnarray row its `\@@eqncr` state left unnumbered: the reference forms (refnum,
+/// typerefnum, …; no printed tag) of the number `\@currentlabel` names in it, the counter's next value
+/// ([`eqnarray_next_number_tags`]). `rearrange_eqnarray` keeps them when no numbered row follows, so the label names that
+/// number.
+pub(crate) const NEXT_NUMBER_TAGS_PROPERTY: &str = "next_number_tags";
+
+/// The row attribute marking the tags of a row as its [`NEXT_NUMBER_TAGS_PROPERTY`] (not a number of its own); read and
+/// removed by `rearrange_eqnarray`.
+pub(crate) const NEXT_NUMBER_ROW_ATTRIBUTE: &str = "_next_number";
+
+/// The reference forms of the number a `\label` in an eqnarray row names (latex.ltx:15750-15752 `\stepcounter{equation}`
+/// and `\def\@currentlabel{\p@equation\theequation}`, stepped again by each printing `\@@eqncr`, :15795): the counter's
+/// value while the row is digested, which its preset number holds until the row's end retracts it. Every tag role a
+/// reference prints (`tag_forms`), none printed on the row. Witnesses 1602.03553 (`eqn:zeta01`, PDF 5), 2301.00760
+/// (54), 1303.3431 (`appa3`).
+pub(crate) fn eqnarray_next_number_tags() -> Result<Digested> {
+  let counter = with_value("EQUATION_NUMBERING", |v| match v {
+    Some(Stored::HashStored(n)) => n.get("counter").map(ToString::to_string),
+    _ => None,
+  })
+  .unwrap_or_else(|| String::from("equation"));
+  let mut tokens = vec![T_CS!("\\lx@tags"), T_BEGIN!()];
+  for (printed_here, form) in tag_forms(&Tokens::new(Explode!(counter)))? {
+    if !printed_here {
+      tokens.extend(form.unlist());
+    }
+  }
+  tokens.push(T_END!());
+  digest(Tokens::new(tokens))
+}
 
 /// The trailing run of empty cells past an eqnarray row's `equation_columns` (latex.ltx's number column, :15764, and
 /// any an extra `&` opened) is dropped, and a span reaching into it (a `\lefteqn`'s, over the empty cells after it)
@@ -6398,6 +6470,7 @@ mod sect11;
 mod sect12;
 mod sect13;
 pub use sect04::toc_select;
+pub use sect07::prepare_latex_equation_counter;
 pub use sect08::declare_bound_text_symbols;
 pub use sect10::math_array_bindings;
 pub use sect11::{label_type, typed_label};
