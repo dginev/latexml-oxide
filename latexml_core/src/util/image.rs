@@ -810,8 +810,11 @@ pub fn image_graphicx_sizer(whatsit: &mut Whatsit) {
 
   // The first candidate whose size can be read decides, whatever its type: the candidates come in TeX's order
   // (`in_graphics_type_order`, pdftex.def's `\Gin@extensions`), so beside `fig.pdf` an extensionless `fig`'s box is
-  // the `.pdf`'s, as pdflatex reads it, not a `fig.ps`'s further down the list (as `natural_display_size_pt_of_candidates`
-  // reads them). A raster's size is pixels, a vector's (EPS/PS, PDF, SVG) a physical length in pt.
+  // the `.pdf`'s, as pdflatex reads it, not a `fig.ps`'s further down the list; Perl's sizer stops at the first candidate
+  // it can read too (Util/Image.pm:259-272, `return … if $w`). `natural_display_size_pt_of_candidates` (the natural
+  // `cssstyle`) still skips a raster to the first vector, so with a `q.png` before a `q.eps` the box is the png's and the
+  // `cssstyle` the eps's (SYNC_STATUS row "natural cssstyle and box read different candidates"). A raster's size is
+  // pixels, a vector's (EPS/PS, PDF, SVG) a physical length in pt.
   enum Natural {
     Pixels(f64, f64),
     Points(f64, f64),
@@ -1050,7 +1053,8 @@ fn read_image_size_uncached(path: &Path) -> Option<ImageSize> {
 /// `%%HiResBoundingBox` only when there is no `%%BoundingBox` (where TeX finds no size at all), as post reads the file
 /// (latexml_post graphics.rs `read_postscript_bounding_box_full`). `None` for an empty box. Until 78z the high-resolution
 /// box came first, rounded: a file with `%%BoundingBox: 0 0 200 100` and `%%HiResBoundingBox: 0.4 0.3 199.3 99.4` was
-/// 199bp x 99bp where latex and pdflatex make it 200.75pt x 100.375pt.
+/// 199bp x 99bp where latex and pdflatex make it 200.75pt x 100.375pt; hep-ex0703011's `eeggmet.eps` carries a stale
+/// full-page `%%HiResBoundingBox` (612x792) beside its 540x522 `%%BoundingBox`.
 pub fn read_postscript_size_bp(path: &Path) -> Option<(f64, f64)> {
   let boxes = read_postscript_boxes(path)?;
   let (llx, lly, urx, ury) = boxes.bounding_box.or(boxes.hires_bounding_box)?;

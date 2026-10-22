@@ -4861,8 +4861,8 @@ pt — a PDF page box, an EPS/PS `%%BoundingBox`, or an SVG's lengths/viewBox, a
 bp→pt (`latexml_core::util::image::natural_display_size_pt`, which returns `None`
 for raster formats and so gates the em path to vector figures). It is read fresh at
 `<ltx:graphics>` construction rather than reused from `image_graphicx_sizer`'s
-`cached_width`, which runs EPS/raster sizes through a device-DPI round-trip and is
-not a physical length. `em = size_pt / font_pt` against the LOCAL font
+`cached_width`, which runs raster sizes through a device-DPI round-trip (an EPS's is bp
+since 78z, #886) and is not a physical length. `em = size_pt / font_pt` against the LOCAL font
 (`graphicx_sty.rs` `after_construct`), emitted as `cssstyle="width:Nem; height:Nem"`
 — copied verbatim into the `<img>`/`<object>` style by `LaTeXML-common.xsl`, where
 CSS overrides the pixel `imagewidth`/`imageheight` fallback (which is retained). No
@@ -24563,7 +24563,8 @@ down its candidate list, where pdflatex reads `fig.pdf`.
 
 Ours (78z, user ruling 2026-10-22 "fix to TeX's bp"): `image_graphicx_sizer` (latexml_core util/image.rs) takes the first
 candidate whose size it can read, whatever its type — the candidates are in TeX's order (`in_graphics_type_order`, #883),
-as `natural_display_size_pt_of_candidates` reads them — and sizes it by kind: `read_image_size` tells a raster's pixels
+Perl's own rule (Util/Image.pm:259-272 returns on the first candidate whose width it reads; the natural `cssstyle`'s
+`natural_display_size_pt_of_candidates` still skips a raster to the first vector, an open SYNC row) — and sizes it by kind: `read_image_size` tells a raster's pixels
 (`ImageSize::Pixels`, PNG/JPEG) from a PostScript file's bp (`ImageSize::PostScriptBp`), and a PDF page box or an SVG is
 read by `natural_size_pt` as before. A vector size (EPS/PS, PDF, SVG) is bp → pt and goes through the graphicx algebra in
 pt without quantization (`graphicx_box_pt`, the PDF branch's); a raster keeps Perl's DPI rule (100 DPI, the pixel path's

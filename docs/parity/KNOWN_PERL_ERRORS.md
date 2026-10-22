@@ -17635,3 +17635,14 @@ tables and names), algorithm2e_sty.rs its separator, the AMS class bindings thei
 class-bindings/acmart_*_caption_format, ieeetran_*_caption_format, algorithm2e_caption_closes_with_its_separator,
 amsaddr_article_keeps_the_kernel_caption_format*; guards `perfect_kernel_batch78y::*`.
 
+## 1141. A vector graphic's box is sized as device pixels: an EPS is 72.27/100 of TeX's (0pt without ImageMagick)
+
+Perl's `image_graphicx_sizer` (Util/Image.pm:259-272) turns every image size into pt as pixels at `DPI` (`$w * 72.27 /
+$dpi`, :271, DPI 100): a raster's and, through ImageMagick's 72-dpi read of the BoundingBox, a vector's alike, where TeX
+reads an EPS's `%%BoundingBox` as bp (graphics.sty `\Gread@eps`, :52, :365-399; epstopdf's page for pdflatex). Without
+ImageMagick Perl reads no EPS size at all. Minimal trigger: `\documentclass{article}\usepackage{graphicx}` with
+`\sbox0{\includegraphics{e.eps}}\showthe\wd0`, `e.eps` carrying `%%BoundingBox: 0 0 40 40`: pdflatex 40.14989pt, latex
+40.15pt, Perl 28.908pt (0pt without ImageMagick); `scale=0.565` of a larger EPS: latex 260.88pt, Perl 187.90pt. Since a
+`\psfig`/`\includegraphics` box sizes panel rows, natural-size EPS panels fit too many to a row (1106.2745 Figs 1-2, 7, 8,
+10). Fixed in Rust (78z; OXIDIZED_DESIGN_DIVERGENCES #886): a vector candidate is bp → pt, a raster keeps the DPI rule
+(#337). Repro package-bindings/includegraphics_eps_box_is_its_bounding_box; guards `perfect_kernel_batch78z::*`.

@@ -362,8 +362,9 @@ LoadDefinitions!({
       // author's absolute choice, not the figure's intrinsic size. Converges with
       // the upstream font-relative sizing rework rather than committing an
       // absolute px factor. NB `natural_display_size_pt` is read fresh here rather
-      // than reused from the sizer's `cached_width`, which runs EPS/raster sizes
-      // through a device-DPI round-trip and is not a physical length.
+      // than reused from the sizer's `cached_width`, which runs raster sizes
+      // through a device-DPI round-trip (an EPS's is bp since 78z,
+      // OXIDIZED_DESIGN_DIVERGENCES #886) and is not a physical length.
       let options = whatsit.get_property("options").map(|v| v.to_string()).unwrap_or_default();
       let is_natural = !options.split(',').any(|o| {
         matches!(
