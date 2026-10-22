@@ -1,16 +1,46 @@
 % mechanism: an `.eps` graphic's box at digestion (`\wd` of `\sbox0{\includegraphics{e}}`) is its BoundingBox in bp
 %   (pdflatex converts it with epstopdf and reads the page), 40bp = 40.15pt. Ours (`image_graphicx_sizer`, util/image.rs)
-%   reads the EPS's BoundingBox through the raster path, as pixels at `DPI` 100, so 40 → 28.908pt (40 x 72.27/100), and
-%   with a `.pdf` and an `.eps`/`.ps` candidate of one name it reads the `.ps` (the first raster-readable one) where
-%   pdflatex reads the `.pdf`. Found by 78w (side finding of det354 4b); the natural `cssstyle` (4.015em) is right.
-% witness: 1106.2745 (the 78t SYNC row, OD #876); this shape is 78w's probe `scratch_78w/epsp/`
-% oracle:  pdflatex (TL 2025): "width 40.14989pt."
-% engines: perl: "width 0.0pt."; rust int64a and 78w: "width 28.908pt."
-% expect:  0 errors, 0 warnings; "width 40.14989pt."
-% files:   e.eps (a copy of eps_as_pdf_two.eps, %%BoundingBox: 0 0 40 20)
-% status:  RED (78w)
+%   read the EPS's BoundingBox through the raster path, as pixels at `DPI` 100, so 40 → 28.908pt (40 x 72.27/100), and
+%   with a `.pdf` and an `.eps`/`.ps` candidate of one name it read the `.ps` (the first raster-readable one) where
+%   pdflatex reads the `.pdf`. Now a vector candidate (EPS/PS, PDF, SVG) is sized by bp → pt and the first readable
+%   candidate decides, whatever its type; the BoundingBox is the `%%BoundingBox`, as graphics.sty's `\Gread@eps`
+%   (graphics.sty:391-399) and epstopdf read it, not a `%%HiResBoundingBox` beside it (`hiresbb` aside). A raster
+%   (PNG/JPEG) keeps Perl's DPI rule (OXIDIZED_DESIGN_DIVERGENCES #337): 200px at 100 DPI = 144.54pt, where pdflatex
+%   reads a PNG without a resolution at 72 DPI (200.7495pt). Found by 78w (side finding of det354 4b); the natural
+%   `cssstyle` (4.015em) was right.
+% witness: 1106.2745 (the 78t SYNC row, OD #876; `\psfig` panels sized by this sizer); this shape is 78w's probe
+%   `scratch_78w/epsp/`
+% oracle:  pdflatex (TL 2025): "natural 40.14989pt 20.07494pt." "scale 22.68478pt 11.34238pt." "width 100.0pt
+%   50.00171pt." "height 144.5729pt 72.26999pt." "viewport 20.075pt 10.03749pt." "angle 20.07494pt 40.14989pt."
+%   "hires 200.7495pt 100.37474pt." "pdf beside ps 200.7495pt 100.37474pt." "png 200.7495pt 100.37474pt." "png scale
+%   100.37474pt 50.18736pt." "psfig 100.0pt 50.00171pt."; latex + dvips (the EPS lines): "natural 40.15pt 20.075pt."
+%   "scale 22.68483pt 11.3424pt." "width 100.0pt 50.00186pt." "height 144.5733pt 72.26999pt." "viewport 20.075pt
+%   10.03749pt." "angle 20.075pt 40.15pt." "hires 200.75pt 100.375pt." (TeX's 40bp is 40.15pt; pdfTeX's image
+%   arithmetic lands 7sp under it.) pdflatex run on a copy whose `fig.pdf` is a real 200bp x 100bp page.
+% engines: perl: "width 0.0pt." throughout (no sizer reads an EPS without ImageMagick); rust int67a: "natural 28.908pt
+%   14.454pt." "scale 16.6221pt 8.6724pt." "width 99.7326pt 49.8663pt." "height 144.54pt 72.27pt." "viewport 20.2356pt
+%   10.1178pt." "angle 14.454pt 28.908pt." "hires 143.8173pt 71.5473pt." "pdf beside ps 28.908pt 14.454pt." "psfig
+%   99.7326pt 49.8663pt." (the PNG lines as now)
+% expect:  0 errors, 0 warnings; "natural 40.15pt 20.075pt." "scale 22.68475pt 11.34238pt." "width 100.0pt 50.0pt."
+%   "height 144.53998pt 72.26999pt." "viewport 20.075pt 10.03749pt." "angle 20.075pt 40.15pt." "hires 200.75pt
+%   100.375pt." "pdf beside ps 200.75pt 100.375pt." "png 144.54pt 72.27pt." "png scale 72.27pt 36.135pt." "psfig 100.0pt
+%   50.0pt."
+% files:   e.eps (a copy of eps_as_pdf_two.eps, %%BoundingBox: 0 0 40 20), hr.eps (eps_bounding_box_hires.eps:
+%   %%BoundingBox: 0 0 200 100 and %%HiResBoundingBox: 0.4 0.3 199.3 99.4), fig.pdf (eps_as_pdf_one.pdf, 200bp x 100bp) beside fig.ps (eps_as_pdf_two.eps),
+%   r.png (graphics-tikz/trimquad.png, 200 x 100 px)
+% status:  RED (78w, int67a) -> GREEN (78z, OXIDIZED_DESIGN_DIVERGENCES #886)
 \documentclass{article}
-\usepackage{graphicx}
+\usepackage{epsfig}
 \begin{document}
-\sbox0{\includegraphics{e.eps}}width \the\wd0.
+\sbox0{\includegraphics{e.eps}}natural \the\wd0\ \the\ht0.
+\sbox0{\includegraphics[scale=0.565]{e.eps}}scale \the\wd0\ \the\ht0.
+\sbox0{\includegraphics[width=100pt]{e.eps}}width \the\wd0\ \the\ht0.
+\sbox0{\includegraphics[height=1in]{e.eps}}height \the\wd0\ \the\ht0.
+\sbox0{\includegraphics[viewport=0 0 20 10,clip]{e.eps}}viewport \the\wd0\ \the\ht0.
+\sbox0{\includegraphics[angle=90]{e.eps}}angle \the\wd0\ \the\ht0.
+\sbox0{\includegraphics{hr.eps}}hires \the\wd0\ \the\ht0.
+\sbox0{\includegraphics{fig}}pdf beside ps \the\wd0\ \the\ht0.
+\sbox0{\includegraphics{r.png}}png \the\wd0\ \the\ht0.
+\sbox0{\includegraphics[scale=0.5]{r.png}}png scale \the\wd0\ \the\ht0.
+\sbox0{\psfig{figure=e.eps,width=100pt}}psfig \the\wd0\ \the\ht0.
 \end{document}

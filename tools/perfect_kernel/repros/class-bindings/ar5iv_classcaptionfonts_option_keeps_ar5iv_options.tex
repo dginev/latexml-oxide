@@ -1,0 +1,19 @@
+% mechanism: with the class caption fonts knob given to ar5iv.sty (`--preload=[classcaptionfonts]ar5iv.sty`),
+%   ar5iv's own options to latexml.sty still hold: `rawclasses` reads TeX Live's paper.cls raw ("Fig. 1"), `ids` and
+%   `magnify`/`zoomout` stay. The recipe it replaces, `--preload=[classcaptionfonts]latexml.sty --preload=ar5iv.sty`,
+%   lost them: latexml.sty took its own options alone and ar5iv's repeat load had none to apply (core_interface.rs
+%   puts a preload's options in `opt@<name>.<ext>` only; content.rs `apply_repeat_options`), so `\documentclass{paper}`
+%   fell to OmniBus. Review rev78y2 finding 1 (its probe k2.tex).
+% oracle:  pdflatex (TL 2025) 0 errors: "Fig. 1: Fig one."
+% engines: rust int67a, `[classcaptionfonts]latexml.sty` then `ar5iv.sty`: "Warning:missing_file:paper Can't find
+%   binding for class paper (using OmniBus)"
+% expect:  0 errors, 0 warnings; `<?latexml class="paper"?>`, the magnify/zoomout PIs, `xml:id="section1.p1"`;
+%   `<caption><tag close=": ">Fig. 1</tag>Fig one.</caption>`
+% status:  GREEN (78z, OXIDIZED_DESIGN_DIVERGENCES #884)
+% preload: [classcaptionfonts]ar5iv.sty
+\documentclass{paper}
+\begin{document}
+\section{S}
+Hello.
+\begin{figure}[h]X\caption{Fig one.}\end{figure}
+\end{document}

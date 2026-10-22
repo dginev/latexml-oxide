@@ -1,0 +1,20 @@
+% mechanism: under caption's `ruled` option caption.sty declares no `ruled` style (caption.sty:904-909), so a float.sty
+%   ruled float's caption takes caption's own settings, its label in caption's `labelfont` alone — not float.sty's
+%   `\@fs@cfont` bold beside it (caption_sty.rs `float_sty_caption` resets the label font, caption.sty:860-861); a boxed
+%   float alike. Without caption's `ruled` option, its `ruled` style (caption.sty:907, `labelfont=bf,labelsep=space`)
+%   makes "Program 1 Prog one." in bold. The 78v residual of the SYNC row "caption: a ruled/boxed float.sty float resets
+%   the label format", resolved by 78y r2. Review rev78y2 finding 4 (its probe rl.tex).
+% oracle:  pdflatex (TL 2025) 0 errors: "Program 1: Prog one." and "Snip 1: Snip one.", the labels in CMTI10 only (no
+%   CMBX10 in the PDF)
+% engines: rust int67a the same; 78v-78y r1 a bold italic label
+% expect:  0 errors, 0 warnings; both labels `font="italic"`, closed by ": "
+% status:  GREEN (78y r2; guarded since 78z)
+\documentclass{article}
+\usepackage{float}
+\usepackage[ruled,labelfont=it]{caption}
+\floatstyle{ruled}\newfloat{program}{tbp}{lop}\floatname{program}{Program}
+\floatstyle{boxed}\newfloat{snip}{tbp}{los}\floatname{snip}{Snip}
+\begin{document}
+\begin{program}[h]W\caption{Prog one.}\end{program}
+\begin{snip}[h]V\caption{Snip one.}\end{snip}
+\end{document}

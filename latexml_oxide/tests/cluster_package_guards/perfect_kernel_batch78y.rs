@@ -365,7 +365,10 @@ fn amsaddr_article_keeps_the_kernel_caption_format_without_caption() {
 
 /// A `\restylefloat{table}` under IEEEtran makes the table's captions float.sty's (float.sty:37-52): "TABLE I: Tab one."
 /// on one line, the figure the class's "Fig. 1. Fig one." (pdflatex; caption_sty.rs `\lx@class@floatsty@kept`). Red
-/// (78y r1): "TABLE I" over "TAB ONE.". Witness 2006.08364. Repro class-bindings/ieeetran_restylefloat_table_keeps_float_sty_format.
+/// (78y r1): "TABLE I" over "TAB ONE.". A `\restylefloat{figure}` figure is float.sty's too, "Fig. 1: Fig one.", and a
+/// `\restylefloat*{table}` table keeps LaTeX's `\@caption` (float.sty:38-39), so the class's "TABLE I" over its text
+/// (pdflatex; review rev78y2 finding 2, repro class-bindings/ieeetran_restylefloat_figure_and_starred_table). Witness
+/// 2006.08364. Repro class-bindings/ieeetran_restylefloat_table_keeps_float_sty_format.
 #[test]
 fn ieeetran_restylefloat_table_keeps_float_sty_format() {
   assert_captions(
@@ -373,6 +376,13 @@ fn ieeetran_restylefloat_table_keeps_float_sty_format() {
     &[
       r#"<caption><tag close=". ">Fig. 1</tag>Fig one.</caption>"#,
       r#"<caption><tag close=": ">TABLE I</tag>Tab one.</caption>"#,
+    ],
+  );
+  assert_captions(
+    repro!("ieeetran_restylefloat_figure_and_starred_table.tex"),
+    &[
+      r#"<caption><tag close=": ">Fig. 1</tag>Fig one.</caption>"#,
+      r#"<caption><tag>TABLE I</tag><break/>Tab one.</caption>"#,
     ],
   );
 }

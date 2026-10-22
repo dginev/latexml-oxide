@@ -523,8 +523,9 @@ fn graphic_name_with_dots() {
 
 /// 64c (HF10 F4): adjustbox's `\adjustimage`/`\adjincludegraphics` call `\Gin@i`, the body of `\includegraphics`
 /// (adjustbox.sty:275-280) — no longer read as nothing (2410.09019) — through graphicx's dispatch, so the graphic is
-/// sized as `\adjustbox{…}{\includegraphics{…}}` sizes it, not as its file name's text (64c review r1).
-/// Repro graphics-tikz/adjustimage_includes_the_graphic.
+/// sized as `\adjustbox{…}{\includegraphics{…}}` sizes it, not as its file name's text (64c review r1): the box is the
+/// EPS's 10bp BoundingBox, 10.0375pt (7.2pt, the bp read as pixels at 100 DPI, until 78z, OXIDIZED_DESIGN_DIVERGENCES
+/// #886). Repro graphics-tikz/adjustimage_includes_the_graphic.
 #[test]
 fn adjustimage_includes_the_graphic() {
   let tex = include_str!(
@@ -535,7 +536,7 @@ fn adjustimage_includes_the_graphic() {
     &xml,
     "para",
     &["xml:id=\"p1\""],
-    "<para xml:id=\"p1\"><inline-block depth=\"0.0pt\" height=\"7.2pt\" width=\"7.2pt\" xml:id=\"p1.1\" xscale=\"1\" xtranslate=\"0.0pt\" yscale=\"1\" ytranslate=\"0.0pt\"><p xml:id=\"p1.1.1\"><text xml:id=\"p1.1.1.1\"><graphics candidates=\"figs/a.eps\" cssstyle=\"width:1.004em; height:1.004em\" graphic=\"figs/a.eps\" xml:id=\"p1.g1\"/></text></p></inline-block><inline-block depth=\"0.0pt\" height=\"7.2pt\" width=\"7.2pt\" xml:id=\"p1.2\" xscale=\"1\" xtranslate=\"0.0pt\" yscale=\"1\" ytranslate=\"0.0pt\"><p xml:id=\"p1.2.1\"><text xml:id=\"p1.2.1.1\"><graphics candidates=\"figs/a.eps\" cssstyle=\"width:1.004em; height:1.004em\" graphic=\"figs/a.eps\" xml:id=\"p1.g2\"/></text></p></inline-block></para>",
+    "<para xml:id=\"p1\"><inline-block depth=\"0.0pt\" height=\"10.0pt\" width=\"10.0pt\" xml:id=\"p1.1\" xscale=\"1\" xtranslate=\"0.0pt\" yscale=\"1\" ytranslate=\"0.0pt\"><p xml:id=\"p1.1.1\"><text xml:id=\"p1.1.1.1\"><graphics candidates=\"figs/a.eps\" cssstyle=\"width:1.004em; height:1.004em\" graphic=\"figs/a.eps\" xml:id=\"p1.g1\"/></text></p></inline-block><inline-block depth=\"0.0pt\" height=\"10.0pt\" width=\"10.0pt\" xml:id=\"p1.2\" xscale=\"1\" xtranslate=\"0.0pt\" yscale=\"1\" ytranslate=\"0.0pt\"><p xml:id=\"p1.2.1\"><text xml:id=\"p1.2.1.1\"><graphics candidates=\"figs/a.eps\" cssstyle=\"width:1.004em; height:1.004em\" graphic=\"figs/a.eps\" xml:id=\"p1.g2\"/></text></p></inline-block></para>",
   );
 }
 

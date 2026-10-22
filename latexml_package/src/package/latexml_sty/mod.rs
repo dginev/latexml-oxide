@@ -37,7 +37,9 @@ LoadDefinitions!({
     AssignValue!("INCLUDE_COMMENTS" => false, Scope::Global);
   });
   // RUST-ONLY: the class caption fonts knob, off by default (caption_sty.rs `CLASS_CAPTION_FONTS`; user ruling
-  // 2026-10-22). Read as the class loads, so set ahead of it (`--preload=[classcaptionfonts]latexml.sty`).
+  // 2026-10-22). Read as the class loads, so set ahead of it: `--preload=[classcaptionfonts]latexml.sty`, or under ar5iv
+  // `--preload=[classcaptionfonts]ar5iv.sty`, which passes it here with its own options (ar5iv_sty.rs; a second
+  // latexml.sty preload beside ar5iv.sty's sets no knob or loses ar5iv's options, caption_sty.rs).
   DeclareOption!("classcaptionfonts", {
     AssignValue!(caption_sty::CLASS_CAPTION_FONTS => true, Scope::Global);
   });

@@ -381,7 +381,7 @@ fn the_later_label_wins() {
 
 /// The rows of the float `id`: its sub-floats' letters (the last letter of their ids, `sf1` → `a`), `|` for each
 /// `ltx:break`, the panels marked `ltx_figure_panel` in capitals.
-fn float_rows(xml: &str, id: &str) -> String {
+pub(super) fn float_rows(xml: &str, id: &str) -> String {
   let start = xml
     .find(&format!("xml:id=\"{id}\">"))
     .unwrap_or_else(|| panic!("no {id}: {xml}"));

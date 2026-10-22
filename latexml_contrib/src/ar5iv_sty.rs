@@ -97,6 +97,22 @@ LoadDefinitions!({
   // 1010.5994; run 329: ~35% of the erroring papers ran on OmniBus over a class they ship) and, since 67v, a class in
   // TeX Live (paper, ptptex, nature, jpsj2, apa6, jacow, smfart, artikel1, …: 3,362 run-353 papers fell to OmniBus;
   // raw, error-free 1,485 → 3,079). Every binding, exact or alternate, still comes first (`load_class`).
+  //
+  // RUST-ONLY (OXIDIZED_DESIGN_DIVERGENCES #884): the class caption fonts knob (caption_sty.rs `CLASS_CAPTION_FONTS`, off
+  // by default) as ar5iv.sty's own option, handed to latexml.sty with the options below, as a LaTeX package would
+  // (`\DeclareOption{classcaptionfonts}{\PassOptionsToPackage{\CurrentOption}{latexml}}`):
+  // `--preload=[classcaptionfonts]ar5iv.sty` sets the knob and keeps ar5iv's options. A second preload of latexml.sty
+  // cannot: a preload's options go to `opt@<name>.<ext>` only (core_interface.rs, the preload loop), so the repeat load
+  // has no new options to apply (content.rs `apply_repeat_options`) — `[classcaptionfonts]latexml.sty` after ar5iv.sty
+  // sets no knob, and before it latexml.sty takes its options alone and ar5iv's are lost (`rawclasses`: a class read
+  // raw under ar5iv falls to OmniBus, `Warning:missing_file`). Perl alike (Core.pm:333-335, Package.pm:2357,
+  // :2586-2590); docs/SYNC_STATUS.md. Guard `perfect_kernel_batch78z::ar5iv_classcaptionfonts_option_sets_the_knob`.
+  for option in ["classcaptionfonts", "noclasscaptionfonts"] {
+    DeclareOption!(option, {
+      pass_options("latexml", "sty", vec![option.to_string()])?;
+    });
+  }
+  ProcessOptions!();
   pass_options("latexml", "sty", vec![
     s!("ids"),
     s!("rawstyles"),

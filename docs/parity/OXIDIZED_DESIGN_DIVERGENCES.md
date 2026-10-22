@@ -24245,7 +24245,8 @@ A body of no known width (0) leaves the panel its box's width, as before the bod
 joined every row and, starting one, left the panel list, so 1610.06413's two-panel figures had no flex row; nlin0606018);
 epsfig's `\psfig` is sized by its keys and its file, Perl's `sizer => \&image_graphicx_sizer` (epsfig.sty.ltxml:37,
 epsfig_sty.rs), so hep-ex0703011's `\mbox` pairs of 2.8in panels are sized, cond-mat9707225's too; an EPS's natural or
-`scale=` size comes out at 72.27/100 of TeX's through that sizer (1106.2745 Figs 1-2, 7, 8, 10; SYNC_STATUS row), and a
+`scale=` size came out at 72.27/100 of TeX's through that sizer until 78z, which reads its BoundingBox in bp (#886;
+1106.2745 Figs 1-2, 7, 8, 10), and a
 `\psfig` is a `\vbox` (psfig.sty:944) that starts a paragraph, Perl's too (astro-ph0512442 Fig 2). A body holding only a
 caption (a `\captionof{subfigure}` host) keeps the box's width.
 
@@ -24510,9 +24511,17 @@ tables only, and IEEEtran's and acmart's not at all (KNOWN_PERL_ERRORS #1140). H
 - **Names and separators only** (user ruling 2026-10-22): the class's caption fonts — acmart's journal small sans serif,
   conference bold, siggraph italic text, sigchi small figure and table captions; IEEEtran's small-caps table text and
   compsoc `\sffamily`; jfm's small-caps label; webofc's and jinstpub's bold label — are set only under the class caption
-  fonts knob (caption_sty.rs `CLASS_CAPTION_FONTS`, latexml.sty's `classcaptionfonts` option ahead of the class:
-  `--preload=[classcaptionfonts]latexml.sty`, not yet combinable with ar5iv.sty — SYNC_STATUS row "A preload's options do not reach a package another preload already loaded"; off by default), so an HTML theme styles every caption
-  alike. Not the class's, so not behind the knob: a package's own label fonts (algorithm2e's `\fnum@font@algorithm`, as
+  fonts knob (caption_sty.rs `CLASS_CAPTION_FONTS`, latexml.sty's `classcaptionfonts` option ahead of the class; off by
+  default), so an HTML theme styles every caption alike. Under ar5iv the route is `--preload=[classcaptionfonts]ar5iv.sty`
+  (78z, Rust-only like the knob): ar5iv.sty declares `classcaptionfonts`/`noclasscaptionfonts` and passes the one given
+  to latexml.sty with its own options (ar5iv_sty.rs `pass_options`), as a LaTeX package's
+  `\DeclareOption{…}{\PassOptionsToPackage{\CurrentOption}{latexml}}` would. A second preload of latexml.sty beside
+  ar5iv.sty's cannot: a preload's options go to `opt@<name>.<ext>` only (core_interface.rs, the preload loop), so after
+  ar5iv.sty the repeat load has no new options to apply (content.rs `apply_repeat_options` returns at its first test),
+  and before it latexml.sty takes its options alone and ar5iv's are lost (`rawclasses`: TeX Live's paper.cls fell to
+  OmniBus). Perl alike for a repeat load (Core.pm:333-335, Package.pm:2357, :2586-2590); the general behaviour is the SYNC_STATUS row
+  "A preload's options do not reach a package another preload already loaded". Guards `perfect_kernel_batch78z::{ar5iv_classcaptionfonts_option_sets_the_knob,
+  ar5iv_classcaptionfonts_option_keeps_ar5iv_options}` (review rev78y2 finding 1). Not the class's, so not behind the knob: a package's own label fonts (algorithm2e's `\fnum@font@algorithm`, as
   Perl's binding), the document's `\captionsetup` keys, and the kernel's `\normalfont` in `\lx@fnum@@`, which listings'
   labels now take as a figure's does (`<text font="serif">Listing 3</text>` in a sans context, 2409.06446).
 - **caption** (caption_sty.rs) lets `\lx@makecaption` be its own at `\begin{document}`, in the class's default
@@ -24538,3 +24547,50 @@ tests/structure/algorithm2e_{frames,linenumbers}.xml "Algorithm 1" closed by ": 
 `perfect_kernel_batch73a::ieeeaccess_figure_is_a_figure`, `perfect_kernel_batch78a::jfm_copy_*`,
 `perfect_kernel_batch78e::{webofc_sidecaption_keeps_its_caption, jinstpub_frontmatter_is_jheppub_s}`.
 
+
+### 886. An EPS graphic's box is its BoundingBox in bp; the first readable candidate sizes the box whatever its type
+
+TeX reads an EPS's `%%BoundingBox` as bp: graphics.sty's `\Gread@eps` (`\Gread@BBox`, graphics.sty:52, read at
+:365-399; `%%HiResBoundingBox` only under the `hiresbb` option, :56-57) for latex + dvips, epstopdf's page for pdflatex,
+so a 40bp-wide EPS is a 40.15pt box (pdflatex 40.14989pt). Perl's `image_graphicx_sizer` (Util/Image.pm:259-272) turns
+every image size into pt as device pixels at `DPI` (`$w * 72.27 / $dpi`, :271), a raster's and, through ImageMagick's
+72-dpi read, a vector's alike, so an EPS is 72.27/100 of TeX's (without ImageMagick Perl reads no EPS size at all: 0pt).
+Ours did the same through its raster reader (`read_image_dimensions`, the BoundingBox handed back as pixels): 28.908pt for
+the 40bp figure, `scale=0.565` of an EPS 187.90pt where latex makes it 260.88pt, and since 78t's `\psfig` sizer (#876)
+a natural-size `\psfig` panel row of 72.27/100 the width (1106.2745 Figs 1-2, 7, 8, 10). It also read the first
+*raster-readable* candidate, so beside `fig.pdf` an extensionless `\includegraphics{fig}` was sized by a `fig.ps` further
+down its candidate list, where pdflatex reads `fig.pdf`.
+
+Ours (78z, user ruling 2026-10-22 "fix to TeX's bp"): `image_graphicx_sizer` (latexml_core util/image.rs) takes the first
+candidate whose size it can read, whatever its type — the candidates are in TeX's order (`in_graphics_type_order`, #883),
+as `natural_display_size_pt_of_candidates` reads them — and sizes it by kind: `read_image_size` tells a raster's pixels
+(`ImageSize::Pixels`, PNG/JPEG) from a PostScript file's bp (`ImageSize::PostScriptBp`), and a PDF page box or an SVG is
+read by `natural_size_pt` as before. A vector size (EPS/PS, PDF, SVG) is bp → pt and goes through the graphicx algebra in
+pt without quantization (`graphicx_box_pt`, the PDF branch's); a raster keeps Perl's DPI rule (100 DPI, the pixel path's
+`ceil`; #337 for its crop). One code path, no package names: `\includegraphics`, `\psfig`/`\epsfig` (epsfig_sty.rs) and
+adjustbox's `\adjincludegraphics` share it. An EPS's size is its `%%BoundingBox` (`read_postscript_size_bp`), its
+`%%HiResBoundingBox` only when it has none, as post already read it (latexml_post graphics.rs
+`read_postscript_bounding_box_full`): the high-resolution box came first, rounded, so a file with a stale page-sized
+HiRes box (hep-ex0703011's `eeggmet.eps`: BoundingBox 540x522, HiRes 612x792) had a natural `cssstyle` of 61.4em x 79.5em
+for an image post renders at 54.2em x 52.4em. Measured (pdflatex / latex, TL 2025; ours): natural 40.14989 / 40.15 /
+40.15pt; `scale=0.565` 22.68478 / 22.68483 / 22.68475pt; `width=100pt` height 50.00171 / 50.00186 / 50.0pt; the HiRes
+file 200.7495 / 200.75 / 200.75pt; `fig` beside `fig.pdf` (200bp) and `fig.ps` (40bp) 200.7495 / - / 200.75pt; a
+200x100 px PNG 200.7495pt / - / 144.54pt (100 DPI, unchanged). Not read (Perl alike): graphicx's `bb=`/`bbllx=`…,
+`natwidth=`/`natheight=` and `hiresbb`, which set the natural size in TeX (cond-mat0610021's `bb=0in 0in 2in 2in`).
+
+A/B (release int67a vs 78z, both on int67a's dumps; census `package:epsfig|package:psfig|cs:psfig|cs:epsfbox|cs:epsffile|cs:epsfig`
+300 seed 78, 80 pre-2008 graphicx papers, 59 random controls, 14 witnesses; 452 compared): E 540 = 540, F 2 = 2, W 5,698
+= 5,698, words equal, 0 worse; XML changed in 20 (0 controls): box sizes in 12 (a `\resizebox` or `\scalebox` around an
+EPS now scales its true natural size — cond-mat0211312's `xscale` 1.0008 → 0.7206 of a 478.8pt figure into 345pt — and
+the inline-block, rotated-figure and picture sizes around one), the natural `cssstyle` from the BoundingBox in 5
+(0710.5533, cond-mat0603833, hep-th0701149, nucl-th0411072 by 0.1em; hep-ex0703011 above), panel rows in 3: 1012.3355
+Fig 2 now (a)(b) | (c)(d) as latex sets it (was (a)(b)(c) | (d)); 1106.2745 Fig 2 2+2 (was 3+1; latex one per row in
+aa's 255.8pt column, ours lays panels against the 523.5pt text width: the two-column geometry row); cond-mat0610021 Fig
+11 a break between a sub-figure's two graphics, whose `\subfigure` body TeX sets in one overfull `\hbox` (the grid rule
+breaks such a body whenever its stated widths exceed the line: int67a does so for two `width=200pt` graphics too; a SYNC
+row). Witnesses 1106.2745, hep-ex0703011, 1012.3355. Repros package-bindings/includegraphics_eps_box_is_its_bounding_box,
+captions-floats/psfig_natural_panels_are_as_wide_as_their_bounding_box; guards
+`perfect_kernel_batch78z::{includegraphics_eps_box_is_its_bounding_box,
+psfig_natural_panels_are_as_wide_as_their_bounding_box}`, `perfect_kernel_batch64::adjustimage_includes_the_graphic`
+(its 10bp EPS 10.0pt, was 7.2pt), `util::image::sizing_characterization_tests::sizer_matrix_across_formats_and_options`
+(the EPS rows now the PDF rows), `util::image::…::read_image_dimensions_returns_pixels_for_raster_and_bp_for_eps`.

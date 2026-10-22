@@ -808,53 +808,41 @@ pub fn image_graphicx_sizer(whatsit: &mut Whatsit) {
     .map(|c| c.to_string())
     .unwrap_or_default();
 
-  // Try to read actual image dimensions from file
-  let mut img_w: f64 = 0.0;
-  let mut img_h: f64 = 0.0;
+  // The first candidate whose size can be read decides, whatever its type: the candidates come in TeX's order
+  // (`in_graphics_type_order`, pdftex.def's `\Gin@extensions`), so beside `fig.pdf` an extensionless `fig`'s box is
+  // the `.pdf`'s, as pdflatex reads it, not a `fig.ps`'s further down the list (as `natural_display_size_pt_of_candidates`
+  // reads them). A raster's size is pixels, a vector's (EPS/PS, PDF, SVG) a physical length in pt.
+  enum Natural {
+    Pixels(f64, f64),
+    Points(f64, f64),
+  }
   let source_dir = state::lookup_string("SOURCEDIRECTORY");
-  for candidate in candidates.split(',') {
+  let natural = candidates.split(',').find_map(|candidate| {
     let candidate = candidate.trim();
     if candidate.is_empty() {
-      continue;
+      return None;
     }
-    let full_path = if Path::new(candidate).is_absolute() {
-      PathBuf::from(candidate)
-    } else if !source_dir.is_empty() {
-      PathBuf::from(&source_dir).join(candidate)
-    } else {
-      PathBuf::from(candidate)
-    };
-    if let Some((w, h)) = read_image_dimensions(&full_path) {
-      img_w = w as f64;
-      img_h = h as f64;
-      break;
+    let path = resolve_candidate(candidate, &source_dir);
+    match read_image_size(&path) {
+      Some(ImageSize::Pixels(w, h)) if w > 0 && h > 0 => Some(Natural::Pixels(w as f64, h as f64)),
+      // Beyond Perl (OXIDIZED_DESIGN_DIVERGENCES #886): an EPS/PS BoundingBox is bp, as TeX reads it (graphics.sty
+      // `\Gread@eps`; pdflatex through epstopdf), not pixels at `DPI` — Perl's Util/Image.pm:271 `$w * 72.27 / $dpi`
+      // made a 40bp figure 28.908pt where latex makes it 40.15pt, and a `\psfig` panel row (OD #876) 72.27/100 of
+      // its width (1106.2745 Figs 1-2, 7, 8, 10).
+      Some(ImageSize::PostScriptBp(w, h)) => Some(Natural::Points(bp_to_pt(w), bp_to_pt(h))),
+      // Not a raster or PostScript file (or one without a size): emulate pdfTeX and read the natural size from the
+      // file itself. pdfTeX's built-in reader takes a PDF's CropBox (its default) or MediaBox, and an SVG's viewBox —
+      // with NO external tool. (Perl-LaTeXML instead shells out to ImageMagick precisely because Image::Size can't
+      // read PDF; even then it forces `pdf:use-cropbox` to match pdfTeX. So the faithful, self-contained move is
+      // pdfTeX's, not Perl's.) `natural_size_pt` shares the same CropBox→MediaBox reader as
+      // `LaTeXML::Post::Graphics`.
+      _ => natural_size_pt(&path).map(|(w, h)| Natural::Points(w, h)),
     }
-  }
+  });
 
-  if img_w <= 0.0 || img_h <= 0.0 {
-    // The raster readers (PNG/JPEG/EPS, like Perl's `imgsize`) couldn't measure
-    // the asset. Before giving up, emulate pdfTeX: read the natural size from the
-    // file itself. pdfTeX's built-in reader takes a PDF's CropBox (its default)
-    // or MediaBox, and an SVG's viewBox — with NO external tool. (Perl-LaTeXML
-    // instead shells out to ImageMagick precisely because Image::Size can't read
-    // PDF; even then it forces `pdf:use-cropbox` to match pdfTeX. So the faithful,
-    // self-contained move is pdfTeX's, not Perl's.) `natural_size_pt` shares the
-    // same CropBox→MediaBox reader as `LaTeXML::Post::Graphics`.
-    //
-    // Whatever we decide, we MUST set `cached_width`: without it, `compute_size`
-    // falls through to summing the whatsit's ARGUMENT boxes — and one of them is
-    // the Semiverbatim *filename* — so a bare `arrange_panels` would wrap figure
-    // rows by path length (arXiv:2409.16471 fig 2: 12 uniform 0.245\textwidth
-    // panels split 3/3/2/3/1 by filename, not 3 rows of 4).
-    let source_dir = state::lookup_string("SOURCEDIRECTORY");
-    let natural = candidates.split(',').find_map(|candidate| {
-      let candidate = candidate.trim();
-      if candidate.is_empty() {
-        return None;
-      }
-      natural_size_pt(&resolve_candidate(candidate, &source_dir))
-    });
-    if let Some((nw_pt, nh_pt)) = natural {
+  let (img_w, img_h) = match natural {
+    Some(Natural::Pixels(w, h)) => (w, h),
+    Some(Natural::Points(nw_pt, nh_pt)) => {
       // pdfTeX/graphics.sty box sizing in pt (verified against `\the\wd` under
       // pdflatex): with an explicit `width=`, the box width IS the request and
       // the natural size only fills in the height via the aspect ratio.
@@ -863,29 +851,37 @@ pub fn image_graphicx_sizer(whatsit: &mut Whatsit) {
       whatsit.set_property("cached_height", Stored::Dimension(bh));
       whatsit.set_property("cached_depth", Stored::Dimension(Dimension::default()));
       return;
-    }
-    // Last resort — a PDF whose page box is buried in a compressed object stream
-    // (where pdfTeX's full parser would still succeed but our byte reader can't),
-    // or an unreadable SVG. Honor an EXPLICIT `width=`/`height=` request (the
-    // display size LaTeXML already emits), else 0 (Perl-without-ImageMagick
-    // parity). Still set `cached_width` so the filename is never summed.
-    let mut ew: Option<Dimension> = None;
-    let mut eh: Option<Dimension> = None;
-    for opt in options.split(',') {
-      let opt = opt.trim();
-      if let Some(val) = opt.strip_prefix("width=") {
-        ew = <Dimension as std::str::FromStr>::from_str(val.trim()).ok();
-      } else if let Some(val) = opt.strip_prefix("height=") {
-        eh = <Dimension as std::str::FromStr>::from_str(val.trim()).ok();
-      } else if let Some(val) = opt.strip_prefix("totalheight=") {
-        eh = <Dimension as std::str::FromStr>::from_str(val.trim()).ok();
+    },
+    None => {
+      // Whatever we decide, we MUST set `cached_width`: without it, `compute_size`
+      // falls through to summing the whatsit's ARGUMENT boxes — and one of them is
+      // the Semiverbatim *filename* — so a bare `arrange_panels` would wrap figure
+      // rows by path length (arXiv:2409.16471 fig 2: 12 uniform 0.245\textwidth
+      // panels split 3/3/2/3/1 by filename, not 3 rows of 4).
+      //
+      // Last resort — a PDF whose page box is buried in a compressed object stream
+      // (where pdfTeX's full parser would still succeed but our byte reader can't),
+      // or an unreadable SVG. Honor an EXPLICIT `width=`/`height=` request (the
+      // display size LaTeXML already emits), else 0 (Perl-without-ImageMagick
+      // parity). Still set `cached_width` so the filename is never summed.
+      let mut ew: Option<Dimension> = None;
+      let mut eh: Option<Dimension> = None;
+      for opt in options.split(',') {
+        let opt = opt.trim();
+        if let Some(val) = opt.strip_prefix("width=") {
+          ew = <Dimension as std::str::FromStr>::from_str(val.trim()).ok();
+        } else if let Some(val) = opt.strip_prefix("height=") {
+          eh = <Dimension as std::str::FromStr>::from_str(val.trim()).ok();
+        } else if let Some(val) = opt.strip_prefix("totalheight=") {
+          eh = <Dimension as std::str::FromStr>::from_str(val.trim()).ok();
+        }
       }
-    }
-    whatsit.set_property("cached_width", Stored::Dimension(ew.unwrap_or_default()));
-    whatsit.set_property("cached_height", Stored::Dimension(eh.unwrap_or_default()));
-    whatsit.set_property("cached_depth", Stored::Dimension(Dimension::default()));
-    return;
-  }
+      whatsit.set_property("cached_width", Stored::Dimension(ew.unwrap_or_default()));
+      whatsit.set_property("cached_height", Stored::Dimension(eh.unwrap_or_default()));
+      whatsit.set_property("cached_depth", Stored::Dimension(Dimension::default()));
+      return;
+    },
+  };
 
   // Apply graphicx options (height, width, scale, keepaspectratio)
   // Perl: image_graphicx_size applies parsed transformations
@@ -956,18 +952,36 @@ fn open_file_resilient(path: &Path) -> Option<std::fs::File> {
 }
 
 /// Read image dimensions (width, height) in pixels from a file.
-/// Supports PNG, JPEG, and EPS (PostScript BoundingBox).
+/// Supports PNG, JPEG, and EPS (PostScript BoundingBox, its bp rounded to whole units).
 ///
 /// This is a narrow replacement for `Image::Size::imgsize` (Perl
 /// `image_size` at Util::Image L86-97). Only a few formats are needed
 /// for typical arXiv graphics inclusions — anything else returns `None`
 /// so the caller skips sizing (mirroring Perl's `return unless $w`).
 pub fn read_image_dimensions(path: &Path) -> Option<(u32, u32)> {
+  read_image_size(path).map(|size| match size {
+    ImageSize::Pixels(w, h) => (w, h),
+    ImageSize::PostScriptBp(w, h) => (w.round() as u32, h.round() as u32),
+  })
+}
+
+/// What [`read_image_size`] measures: a raster's pixel count, or a PostScript file's bounding box in bp — a physical
+/// size, which needs no resolution.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ImageSize {
+  /// A PNG's or JPEG's width and height in pixels.
+  Pixels(u32, u32),
+  /// An EPS/PS file's `%%BoundingBox` width and height in bp ([`read_postscript_size_bp`]).
+  PostScriptBp(f64, f64),
+}
+
+/// The size of a PNG, JPEG or EPS/PS file, sniffed from its header ([`ImageSize`]), read once per path and conversion.
+pub fn read_image_size(path: &Path) -> Option<ImageSize> {
   IMAGE_DIMENSIONS_MEMO.with(|m| {
     if let Some(hit) = m.borrow().get(path) {
       return *hit;
     }
-    let value = read_image_dimensions_uncached(path);
+    let value = read_image_size_uncached(path);
     m.borrow_mut().insert(path.to_path_buf(), value);
     value
   })
@@ -984,7 +998,7 @@ pub fn read_image_dimensions(path: &Path) -> Option<(u32, u32)> {
 // `cluster_package_guards::graphics_asset_memo::repeated_inclusions_of_one_asset_read_it_once`.
 type SizeMemo<T> = std::cell::RefCell<rustc_hash::FxHashMap<PathBuf, Option<T>>>;
 std::thread_local! {
-  static IMAGE_DIMENSIONS_MEMO: SizeMemo<(u32, u32)> =
+  static IMAGE_DIMENSIONS_MEMO: SizeMemo<ImageSize> =
     std::cell::RefCell::new(rustc_hash::FxHashMap::default());
   static PDF_PAGE_BOX_MEMO: SizeMemo<[f64; 4]> =
     std::cell::RefCell::new(rustc_hash::FxHashMap::default());
@@ -999,7 +1013,7 @@ pub fn clear_image_size_memo() {
   PDF_PAGE_COUNT_MEMO.with(|m| m.borrow_mut().clear());
 }
 
-fn read_image_dimensions_uncached(path: &Path) -> Option<(u32, u32)> {
+fn read_image_size_uncached(path: &Path) -> Option<ImageSize> {
   use std::io::Read;
   let mut file = open_file_resilient(path)?;
   let mut header = [0u8; 32];
@@ -1009,37 +1023,39 @@ fn read_image_dimensions_uncached(path: &Path) -> Option<(u32, u32)> {
   if &header[0..8] == b"\x89PNG\r\n\x1a\n" {
     let width = u32::from_be_bytes([header[16], header[17], header[18], header[19]]);
     let height = u32::from_be_bytes([header[20], header[21], header[22], header[23]]);
-    return Some((width, height));
+    return Some(ImageSize::Pixels(width, height));
   }
 
   // JPEG: the frame header (SOF) gives the size; walk the segments to it,
   // seeking past each one rather than reading the file.
   if header[0] == 0xFF && header[1] == 0xD8 {
-    return read_jpeg_frame_size(&mut file);
+    return read_jpeg_frame_size(&mut file).map(|(w, h)| ImageSize::Pixels(w, h));
   }
 
-  // EPS: PostScript BoundingBox comment. Perl: LaTeXML::Util::Image reads
-  // the leading `%%BoundingBox: llx lly urx ury` (values in bp, 1bp=1/72").
-  // `%%HiResBoundingBox:` is preferred when present (float precision).
+  // EPS: PostScript BoundingBox comment, in bp (1bp = 1/72").
   if (header[0] == b'%' && (header[1] == b'!' || header[1] == b'%'))
     || header.starts_with(b"\xc5\xd0\xd3\xc6")
   // EPS with binary preview header
   {
-    let boxes = read_postscript_boxes(path)?;
-    let (llx, lly, urx, ury) = boxes.hires_bounding_box.or(boxes.bounding_box)?;
-    let w = (urx - llx).max(0.0);
-    let h = (ury - lly).max(0.0);
-    if w > 0.0 && h > 0.0 {
-      // EPS BoundingBox is in bp (1bp = 1/72"). Return as pixels at the
-      // same bp-per-pixel rate the caller expects (it divides by dppt =
-      // dpi/72.27 downstream). Using 1:1 means callers get bp-sized
-      // pixels, consistent with Perl's `image_size` returning bp for
-      // EPS (LaTeXML::Util::Image::image_size L45-L60).
-      return Some((w.round() as u32, h.round() as u32));
-    }
+    let (w, h) = read_postscript_size_bp(path)?;
+    return Some(ImageSize::PostScriptBp(w, h));
   }
 
   None
+}
+
+/// A PostScript file's size in bp, as TeX reads it: the `%%BoundingBox`, graphics.sty's `\Gread@eps` reading
+/// (`\Gread@BBox`, graphics.sty:52, read at :365-399; the `hiresbb` option, :56-57, aside) and epstopdf's, which
+/// pdflatex then reads as the page; a
+/// `%%HiResBoundingBox` only when there is no `%%BoundingBox` (where TeX finds no size at all), as post reads the file
+/// (latexml_post graphics.rs `read_postscript_bounding_box_full`). `None` for an empty box. Until 78z the high-resolution
+/// box came first, rounded: a file with `%%BoundingBox: 0 0 200 100` and `%%HiResBoundingBox: 0.4 0.3 199.3 99.4` was
+/// 199bp x 99bp where latex and pdflatex make it 200.75pt x 100.375pt.
+pub fn read_postscript_size_bp(path: &Path) -> Option<(f64, f64)> {
+  let boxes = read_postscript_boxes(path)?;
+  let (llx, lly, urx, ury) = boxes.bounding_box.or(boxes.hires_bounding_box)?;
+  let (w, h) = ((urx - llx).max(0.0), (ury - lly).max(0.0));
+  (w > 0.0 && h > 0.0).then_some((w, h))
 }
 
 /// Parse `"llx lly urx ury"` from a BoundingBox comment body.
@@ -1247,10 +1263,11 @@ fn bp_to_pt(bp: f64) -> f64 { bp * 72.27 / 72.0 }
 /// formats — a pixel count is not a physical size without a DPI — and when the
 /// geometry can't be recovered.
 ///
-/// This is deliberately NOT `image_graphicx_sizer`'s `cached_width`: that runs
-/// EPS/raster dimensions through a device-DPI round-trip (`×72.27/DPI`), which is
-/// right for the box model's device-pixel sizing but wrong as a physical length.
-/// This function is the size a browser should reproduce, used for the
+/// For a vector format this is the natural size `image_graphicx_sizer` gives the
+/// box (since 78z an EPS/PS one too, OXIDIZED_DESIGN_DIVERGENCES #886); for a
+/// raster it is `None`, where the sizer's `cached_width` runs the pixels through a
+/// device-DPI round-trip (`×72.27/DPI`, Perl's rule, #337), which is not a
+/// physical length. This function is the size a browser should reproduce, used for the
 /// font-relative (`em`) sizing of natural-size figure inclusions (#562).
 /// Extension-gated so each format is read exactly once; pure Rust, no external
 /// tool.
@@ -1261,10 +1278,10 @@ pub fn natural_display_size_pt(path: &Path) -> Option<(f64, f64)> {
     .map(|e| e.to_ascii_lowercase());
   match ext.as_deref() {
     Some("pdf") => read_pdf_page_box(path).map(|(w, h)| (bp_to_pt(w), bp_to_pt(h))),
-    // read_image_dimensions returns an EPS/PS BoundingBox 1:1 in bp.
-    Some("eps" | "ps" | "epsi" | "epsf") => read_image_dimensions(path)
-      .filter(|&(w, h)| w > 0 && h > 0)
-      .map(|(w, h)| (bp_to_pt(w as f64), bp_to_pt(h as f64))),
+    Some("eps" | "ps" | "epsi" | "epsf") => match read_image_size(path)? {
+      ImageSize::PostScriptBp(w, h) => Some((bp_to_pt(w), bp_to_pt(h))),
+      ImageSize::Pixels(..) => None,
+    },
     Some("svg" | "svgz") => read_svg_size_pt(path),
     _ => None,
   }
@@ -2114,9 +2131,10 @@ mod svg_geometry_tests {
 /// Characterization tests for the engine-side image sizing pipeline.
 ///
 /// **These pin behaviour, not correctness.** Several of the numbers below are
-/// known to disagree with pdflatex — an EPS BoundingBox is read as pixels, a
-/// PNG is assumed to be 100 dpi, an SVG 96 dpi, and a box is quantized to whole
-/// device pixels. They are recorded exactly as they are today so that the
+/// known to disagree with pdflatex — a PNG is assumed to be 100 dpi (Perl's
+/// rule, DIVERGENCES #337), an SVG 96 dpi, and a raster box is quantized to whole
+/// device pixels. An EPS BoundingBox was read as pixels too until 78z; it is bp
+/// now, as TeX reads it (DIVERGENCES #886). They are recorded exactly as they are today so that the
 /// planned unification of the sizing pipeline (one probe, one resolution
 /// policy, one graphicx algebra) has to declare every change it makes instead
 /// of drifting silently. When a value here changes, that is a decision, and the
@@ -2128,7 +2146,7 @@ mod svg_geometry_tests {
 /// | source              | pdflatex   | Perl LaTeXML | here       |
 /// |---------------------|------------|--------------|------------|
 /// | PNG 200x100 px      | 200.7495pt | 144.54pt     | 144.54pt   |
-/// | EPS BBox 200x100 bp | -          | (no sizer)   | 144.54pt   |
+/// | EPS BBox 200x100 bp | 200.7495pt | (no sizer)   | 200.75pt   |
 /// | PDF 200x100 bp      | 200.7495pt | (no sizer)   | 200.75pt   |
 /// | SVG viewBox 200x100 | -          | (no sizer)   | 150.5625pt |
 #[cfg(test)]
@@ -2391,9 +2409,10 @@ mod sizing_characterization_tests {
   }
 
   /// PNG and JPEG report true device pixels; EPS reports **bp** through the
-  /// same `(u32, u32)` channel. Nothing in the type distinguishes them, which
-  /// is the defect the unification is meant to remove — pinned here so the
-  /// removal is visible.
+  /// same `(u32, u32)` channel. `read_image_size` tells them apart
+  /// (`ImageSize::Pixels` / `ImageSize::PostScriptBp`, 78z), which is what the
+  /// digestion-time sizer reads; this projection is pinned so its callers'
+  /// numbers stay visible.
   #[test]
   fn read_image_dimensions_returns_pixels_for_raster_and_bp_for_eps() {
     let png = fixture("dims.png", &png_header(200, 100));
@@ -2413,7 +2432,8 @@ mod sizing_characterization_tests {
       "EPS bp-as-px"
     );
 
-    // HiResBoundingBox wins over BoundingBox when both are present.
+    // The BoundingBox decides when both are present, as graphics.sty's `\Gread@eps` and epstopdf read it (latex and
+    // pdflatex 200.75pt x 100.375pt); until 78z the HiResBoundingBox won, rounded, (200, 99).
     let hires = fixture(
       "hires.eps",
       b"%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 200 100\n\
@@ -2421,8 +2441,21 @@ mod sizing_characterization_tests {
     );
     assert_eq!(
       read_image_dimensions(&hires),
-      Some((200, 99)),
-      "HiRes wins, rounded"
+      Some((200, 100)),
+      "the BoundingBox wins"
+    );
+    assert_eq!(
+      read_image_size(&hires),
+      Some(ImageSize::PostScriptBp(200.0, 100.0))
+    );
+    // Only without a BoundingBox does the HiResBoundingBox size the file, unrounded.
+    let hires_only = fixture(
+      "hires_only.eps",
+      b"%!PS-Adobe-3.0 EPSF-3.0\n%%HiResBoundingBox: 0 0 199.5 99.4\n%%EndComments\n",
+    );
+    assert_eq!(
+      read_image_size(&hires_only),
+      Some(ImageSize::PostScriptBp(199.5, 99.4))
     );
 
     // Formats this reader does not know stay `None` — that is what routes a
@@ -2713,11 +2746,12 @@ mod sizing_characterization_tests {
   /// What each surprising row records:
   ///
   /// * **Four resolutions.** With no options the same figure is 144.54pt as a
-  ///   PNG or EPS (100 dpi), 200.75pt as a PDF (72 dpi, i.e. bp), 150.5625pt as
-  ///   an SVG (96 dpi, CSS px), and 0 as a PDF whose page box sits in an object
-  ///   stream. pdflatex says 200.7495pt for the PNG and the PDF alike.
-  /// * **Two algebras.** PNG/EPS take the px-space branch, PDF/SVG the pt-space
-  ///   `graphicx_box_pt` fallback. They answer `width=100pt` differently:
+  ///   PNG (100 dpi), 200.75pt as a PDF or EPS (bp; the EPS was 144.54pt, read
+  ///   as 100 dpi pixels, until 78z), 150.5625pt as an SVG (96 dpi, CSS px), and
+  ///   0 as a PDF whose page box sits in an object stream. pdflatex says
+  ///   200.7495pt for the PNG, the EPS and the PDF alike.
+  /// * **Two algebras.** PNG takes the px-space branch, PDF/EPS/SVG the pt-space
+  ///   `graphicx_box_pt` one. They answer `width=100pt` differently:
   ///   99.7326 vs 100.0, because the px branch quantizes the box to a whole
   ///   device pixel (100pt -> 99.6265bp -> 137.848 px -> ceil 138 -> 99.7326pt).
   /// * **A single dimension always preserves aspect**, on both branches, as
@@ -2747,7 +2781,7 @@ mod sizing_characterization_tests {
     // (source, options, expected width pt, expected height pt)
     #[rustfmt::skip]
     let matrix: &[(&str, &str, f64, f64)] = &[
-      // px-space branch: raster pixels, and an EPS BoundingBox read as pixels.
+      // px-space branch: raster pixels.
       ("png", "",                                 144.5400,  72.2700),
       ("png", "width=100pt,keepaspectratio=true",  99.7326,  49.8663),
       ("png", "width=100pt",                       99.7326,  49.8663),
@@ -2756,15 +2790,16 @@ mod sizing_characterization_tests {
       ("png", "width=100pt,height=80pt",           99.7326,  80.2197),
       ("png", "width=1in,keepaspectratio=true",    72.2700,  36.1350),
       ("png", "angle=90",                          72.2700, 144.5400),
-      ("eps", "",                                 144.5400,  72.2700),
-      ("eps", "width=100pt,keepaspectratio=true",  99.7326,  49.8663),
-      ("eps", "width=100pt",                       99.7326,  49.8663),
-      ("eps", "scale=0.5",                         72.2700,  36.1350),
-      ("eps", "height=25pt,keepaspectratio=true",  49.8663,  25.2945),
-      ("eps", "width=100pt,height=80pt",           99.7326,  80.2197),
+      // pt-space branch: the vector formats, no quantization — an EPS BoundingBox
+      // in bp (78z; it was read as pixels, 144.54pt for the natural size).
+      ("eps", "",                                 200.7500, 100.3750),
+      ("eps", "width=100pt,keepaspectratio=true", 100.0000,  50.0000),
+      ("eps", "width=100pt",                      100.0000,  50.0000),
+      ("eps", "scale=0.5",                        100.3750,  50.1875),
+      ("eps", "height=25pt,keepaspectratio=true",  50.0000,  25.0000),
+      ("eps", "width=100pt,height=80pt",          100.0000,  80.0000),
       ("eps", "width=1in,keepaspectratio=true",    72.2700,  36.1350),
-      ("eps", "angle=90",                          72.2700, 144.5400),
-      // pt-space branch: the `natural_size_pt` fallback, no quantization.
+      ("eps", "angle=90",                         100.3750, 200.7500),
       ("pdf", "",                                 200.7500, 100.3750),
       ("pdf", "width=100pt,keepaspectratio=true", 100.0000,  50.0000),
       ("pdf", "width=100pt",                      100.0000,  50.0000),

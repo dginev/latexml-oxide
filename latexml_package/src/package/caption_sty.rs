@@ -10,8 +10,11 @@ const CAPTION_DEFAULT_LABELSEP: &str = "lx@caption@default@labelsep";
 /// names and separators ("Fig. 1. text", "TABLE I" over the text), and the fonts the class sets its caption labels and
 /// text in (acmart's bold or small sans serif, IEEEtran's small caps and compsoc sans serif, jfm's small caps, webofc's
 /// and jinstpub's bold label) only with this set, so an HTML theme styles every caption alike. Set by latexml.sty's
-/// `classcaptionfonts` option ahead of the class: `--preload=[classcaptionfonts]latexml.sty` as the first preload (a
-/// repeat load of latexml.sty, after ar5iv.sty's, finds the option's handler spent: docs/SYNC_STATUS.md);
+/// `classcaptionfonts` option ahead of the class, which ar5iv.sty takes too and passes on with its own options
+/// (ar5iv_sty.rs): `--preload=[classcaptionfonts]ar5iv.sty`, or `--preload=[classcaptionfonts]latexml.sty` without
+/// ar5iv. Not a second preload of latexml.sty beside ar5iv.sty's: a preload's options go to `opt@<name>.<ext>` only
+/// (core_interface.rs), so after ar5iv.sty a repeat load has no new options to apply (content.rs
+/// `apply_repeat_options`), and before it latexml.sty takes its options alone and ar5iv's are lost (docs/SYNC_STATUS.md);
 /// `noclasscaptionfonts` clears it. Readers: [`class_caption_fonts`]. Not the class's, so not behind it: a package's own caption fonts (algorithm2e's
 /// `\fnum@font@algorithm`) and the document's `\captionsetup` keys. OXIDIZED_DESIGN_DIVERGENCES #884. Guards
 /// `perfect_kernel_batch78y::*_with_class_caption_fonts`.

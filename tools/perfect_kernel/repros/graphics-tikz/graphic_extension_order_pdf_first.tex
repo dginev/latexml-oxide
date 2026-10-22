@@ -4,9 +4,11 @@
 % oracle:  pdflatex 0 errors: ext/fig.pdf included
 % engines: rust 64c6 = "ext/fig.pdf,ext/fig.png" or the reverse (readdir order); the box from fig.png, the image fig.png;
 %          rust 78w = "ext/fig.pdf,ext/fig.png" whatever the directory order (OXIDIZED_DESIGN_DIVERGENCES #883), the box
-%          (`image_graphicx_sizer`, the first raster candidate) and post's image still fig.png's
+%          (`image_graphicx_sizer`, the first raster candidate) and post's image still fig.png's; rust 78z = the box from
+%          ext/fig.pdf, the first readable candidate whatever its type (a 200bp page 200.75pt, int67a's 144.54pt the
+%          200 px png at 100 DPI; OXIDIZED_DESIGN_DIVERGENCES #886), post's image still fig.png's
 % expect:  0 errors; candidates ordered as `\Gin@extensions`, the box and the rendered image from ext/fig.pdf
-% status:  RED (64c6; the candidate order GREEN since 78w, the box and the image open)
+% status:  RED (64c6; the candidate order GREEN since 78w, the box since 78z, the rendered image open)
 \documentclass{article}
 \usepackage{graphicx}
 \begin{document}

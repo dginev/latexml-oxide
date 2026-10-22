@@ -1,0 +1,16 @@
+% mechanism: the class caption fonts knob (caption_sty.rs `CLASS_CAPTION_FONTS`, off by default; user ruling 2026-10-22)
+%   as ar5iv.sty's own option: `--preload=[classcaptionfonts]ar5iv.sty` passes it to latexml.sty with ar5iv's options
+%   (ar5iv_sty.rs), so acmart's sigconf captions carry their bold label and text and ar5iv's `ids` still holds. A second
+%   preload of latexml.sty cannot set it: a preload's options go to `opt@<name>.<ext>` only (core_interface.rs), so a
+%   repeat load has none to apply (content.rs `apply_repeat_options`); before ar5iv.sty it takes its options alone and
+%   ar5iv's are lost (repro ar5iv_classcaptionfonts_option_keeps_ar5iv_options). Review rev78y2 finding 1.
+% oracle:  pdflatex (TL 2025) 0 errors: "Figure 1: Fig one." "Table 1: Tab one." in LinLibertineTB (bold)
+% engines: rust int67a with `[classcaptionfonts]ar5iv.sty`: no caption fonts (the option ignored)
+% expect:  0 errors, 0 warnings; both captions' label and text `font="bold"`, with ids; without the option no font
+% status:  RED (int67a) -> GREEN (78z, OXIDIZED_DESIGN_DIVERGENCES #884)
+% preload: [classcaptionfonts]ar5iv.sty
+\documentclass[sigconf]{acmart}
+\begin{document}
+\begin{figure}X\caption{Fig one.}\end{figure}
+\begin{table}\caption{Tab one.}X\end{table}
+\end{document}
