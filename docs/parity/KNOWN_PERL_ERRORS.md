@@ -17646,3 +17646,14 @@ ImageMagick Perl reads no EPS size at all. Minimal trigger: `\documentclass{arti
 `\psfig`/`\includegraphics` box sizes panel rows, natural-size EPS panels fit too many to a row (1106.2745 Figs 1-2, 7, 8,
 10). Fixed in Rust (78z; OXIDIZED_DESIGN_DIVERGENCES #886): a vector candidate is bp → pt, a raster keeps the DPI rule
 (#337). Repro package-bindings/includegraphics_eps_box_is_its_bounding_box; guards `perfect_kernel_batch78z::*`.
+
+## 1142. A raster graphic's stated size is graphicx's bp read as pt and rounded up to a whole pixel
+
+Perl's `image_graphicx_sizer` (Util/Image.pm:223 `$dppt = DPI/72.27`, :237 `ceil($a1 * $dppt)`) turns a `scale-to` request into
+pixels per pt from values graphicx's options parser gives in bp (`to_bp`, :162-163), then rounds up to a whole pixel, so a raster's
+explicit `width=`/`height=` box is 72/72.27 of TeX's plus up to one pixel: `\includegraphics[width=114.6pt,height=1cm]{x.png}` is
+114.187pt (158 px at DPI 100) where TeX's box is 114.6pt. Two such panels then fit one row of REVTeX `[preprint,twocolumn]`'s 229pt
+column where pdflatex breaks them. Minimal trigger: `\documentclass[preprint,twocolumn]{revtex4-2}` with
+`\begin{figure}\includegraphics[width=114.6pt]{a.png}\includegraphics[width=114.6pt]{b.png}\end{figure}` (pdflatex: each box 114.6pt,
+2 rows; Perl: each box 114.187pt; ours the same box, so 1 row). Ours keeps Perl's rule for rasters (OD #337; the vector branch is TeX's since 78z, OD #886); SYNC row "A raster graphic's
+explicit size comes out at 72/72.27 of it" (review rev78x3 finding 6, probes `rvpt.tex`, `rvpt2.tex`).

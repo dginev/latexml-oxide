@@ -24772,7 +24772,9 @@ noise 0.07 %). Witnesses (PDF verdicts):
 1702.02527, 2504.07193, 2504.20901, 2504.06175, 2605.22754, 2005.13806, 2308.02289, 1104.5578, 1510.07016,
 1902.04580, 1704.03351, 2311.18531, 2602.06569, 1902.05392, 1703.09474, 2503.09651, 2209.01559, 2007.15568; r3's 2212.03198, 2609.34643, 1109.3733, cond-mat0610021 Fig 11 (one overfull row per
 sub-figure as the PDF, now its EPS panels are their bp size, 78z). Residuals
-(SYNC_STATUS rows): the deliberate overfill pulled together by negative glue (2301.02117) and the tight or overfull rows
+(SYNC_STATUS rows): centred floats are declared by bindings, so a raw-loaded copy class built on revtex4-1 that redefines
+`\@xfloat@prep` without `\centering` is still read as centred (review rev78x5 finding 5; not seen in the population); the
+deliberate overfill pulled together by negative glue (2301.02117) and the tight or overfull rows
 TeX keeps (1108.5543, 1712.01536, 2009.04593, 1703.09165, 2406.05437; accepted, FIDELITY_CHARTER §2; and the panels TeX
 cannot break between, with no glue among them, one overfull line where the rule breaks: `p7.tex` F2), TeX's line
 breaking itself (`a_justified_row_keeps_its_overfull_panel`, RED by the charter; the `figure_mixed_content` fixture's
