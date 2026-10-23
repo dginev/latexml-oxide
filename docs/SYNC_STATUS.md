@@ -6544,6 +6544,30 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   (the five fragment pubnotes), 0 worse; XML byte-changed in 14, both sides byte-identical to the writer's r3 run on 952 of 954
   (2605.17443, 2609.01974: a relative `candidates` path's depth, the workdir's). Binding nets (int69b) 136/136, 0 worse than int68a.
 
+- **78x** (the panel grid rule, user rulings 2026-10-22: rows from what the source states, against the class's real line width; the
+  row "**Panel grid rule**" above holds the rule, numbers and residuals; OD #885, #876, #886; KPE #1142; guards `perfect_kernel_batch78x::*`,
+  33): r1 9e0fb5a83c (kernel shadow geometry — review rev78x NO-SHIP: the delta counted height keys, box bodies and package reads), r2
+  e53cad5110 (no shadow hooks: a panel's stated width tokens recorded as read — `Parameter::stated`, `KeyVals` `stated_value`, gated by
+  `KEEP_STATED_LENGTHS` — and evaluated against the real geometry; per-class rows pages, `declare_panel_page`: IEEEtran, REVTeX, AASTeX
+  6.x, mnras, aa; rev78x2 NO-SHIP), r3 f57449342f (evaluation inside the float's group, scaled/rotated deltas, the `\hbox` row key, page
+  values for compsoc conference / draft a4 / REVTeX preprint+twocolumn, document `\setlength` records, row-start glue; rev78x3 NO-SHIP),
+  r4 fef469477b (an unevaluable or inconsistent width falls back to the base's line, geometry included; a centred `\\` starts a
+  paragraph; rev78x4 NO-SHIP), r5 cc1f05a97b (`\newline` is `\@normalcr`; AASTeX/emulateapj floats not centred; subcaption `\subfloat`
+  withheld lengths; rev78x5 SHIP), r6 861a819dd7 (the integration's binding-net catch, 1710.06503 0 → 8 Errors: a panel row
+  separator's `ltx:break` was taken for a `{center}` capture's first content node by `insert_block_as`, so a leading `\hspace*`/`\hskip`
+  hoisted the `\parbox` panels out as `logical-block`s and kept the caption in the row's `ltx:block`; separators are now marks, not
+  content — `block_insertion.rs`, `is_panel_separator`; guard `an_hspace_star_opens_the_row_paragraph`). Oracle (453 floats against the arXiv PDFs' box dumps): rows 410 (r1) → 429, shapes 399 → 422. Writer
+  A/B r5 (one binary, 1,907 papers): E 6,680 = 6,680, F 20 = 20, W 59,351 = 59,351; 750 floats in 313 papers change rows — 424 better, 19
+  worse in 13 papers (each in a filed residual row: `\label` key-text widths, subfig `\subfloat` body glue, sub-figures in a tabular cell,
+  undeclared class pages, rows TeX keeps tight or overfull, the scorer's image-only count), 25 both wrong, 66 same count, 216 unverifiable.
+  **Integration (int70, cc1f05a97b fast-forwarded onto f24574e043 + fold-ins 9193b0a596 + r6 861a819dd7; binaries int70a, int70b):** fold-ins: KPE #1142, the
+  adjustbox-around-`\subfloat` RED row (rev78x5 finding 1), the tight nested `\subfloat` and a raw revtex4-1 copy class's floats as
+  residuals. Gates int70a: nextest 7108/7108; int70b: nextest 7109/7109 + cortex 10/10, fmt/clippy/rustdoc clean, inits 0/0, dump content diff vs
+  int69b empty.
+  A/B int69b → int70a (`ab_66bundle/popint70a.tsv` = the writer's 1,907): E 6,680 = 6,680, F 20 = 20, words equal, 0 worse; XML
+  byte-changed in 328, byte-identical to the writer's r5 outputs on all 1,907; int70b byte-identical to int70a on all 1,907. Binding nets:
+  int70a 135/136 (1710.06503, ws-procs961x669: 0 → 8 Errors, the r6 catch); int70b 136/136, 0 worse than int69b.
+
 - **split114** (task #114, user directive 2026-10-07; a pure move, before FM S2a): `latexml_engine/src/base_utilities.rs`
   (23,317 lines) is the module directory `base_utilities/` — `mod.rs` (the imports, `FRONTMATTER_ELEMENTS`,
   `REPLACEABLE_FRONTMATTER_TAGS`, and `LoadDefinitions!` calling `defs::{general, frontmatter_api, frontmatter_fields,
