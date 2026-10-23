@@ -2337,7 +2337,7 @@ fn bare_subfloat_has_a_phantom_caption() {
     "figure",
     &[r#"xml:id="S0.F1""#],
     &format!(
-      r#"<figure xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags>{}{}</figure>"#,
+      r#"<figure class="ltx_panels_gallery" panelcols="2" panelrows="1" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags>{}{}</figure>"#,
       panel("1", "a", "A"),
       panel("2", "b", "C")
     ),
@@ -2467,7 +2467,7 @@ fn captionof_in_a_float_keeps_the_float_type() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r#"<figure inlist="lof" labels="LABEL:fig:a" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p class="ltx_figure_panel">x</p><toccaption><tag close=" ">1</tag>Fig cap</toccaption><caption><tag close=": ">Figure 1</tag>Fig cap</caption><table class="ltx_figure_panel" inlist="lot" labels="LABEL:tab:a" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Tab cap</toccaption><caption><tag close=": ">Table 1</tag>Tab cap</caption></table></figure>"#,
+    r#"<figure class="ltx_panels_gallery" inlist="lof" labels="LABEL:fig:a" panelcols="1" panelrows="2" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p class="ltx_figure_panel">x</p><toccaption><tag close=" ">1</tag>Fig cap</toccaption><caption><tag close=": ">Figure 1</tag>Fig cap</caption><table class="ltx_figure_panel" inlist="lot" labels="LABEL:tab:a" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Tab cap</toccaption><caption><tag close=": ">Table 1</tag>Tab cap</caption></table></figure>"#,
   );
   // `\setcaptiontype{figure}` after a `\captionof{table}`: the figure's own caption is Figure 1.
   let tex = "\\documentclass{article}\n\\usepackage{caption}\n\\begin{document}\n\\begin{figure}\n\\captionof{table}{Tab cap}\n\\setcaptiontype{figure}\nx\n\\caption{Fig cap}\\label{fig:a}\n\\end{figure}\n\\end{document}\n";
@@ -2478,7 +2478,7 @@ fn captionof_in_a_float_keeps_the_float_type() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r#"<figure inlist="lof" labels="LABEL:fig:a" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><table class="ltx_figure_panel" inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Tab cap</toccaption><caption><tag close=": ">Table 1</tag>Tab cap</caption></table><break class="ltx_break"/><p class="ltx_figure_panel">x</p><toccaption><tag close=" ">1</tag>Fig cap</toccaption><caption><tag close=": ">Figure 1</tag>Fig cap</caption></figure>"#,
+    r#"<figure class="ltx_panels_gallery" inlist="lof" labels="LABEL:fig:a" panelcols="1" panelrows="2" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><table class="ltx_figure_panel" inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Tab cap</toccaption><caption><tag close=": ">Table 1</tag>Tab cap</caption></table><break class="ltx_break"/><p class="ltx_figure_panel">x</p><toccaption><tag close=" ">1</tag>Fig cap</toccaption><caption><tag close=": ">Figure 1</tag>Fig cap</caption></figure>"#,
   );
 }
 
@@ -2563,7 +2563,7 @@ fn collapsed_panel_content_stays_in_place() {
     &xml,
     "figure",
     &[],
-    r#"<figure xml:id="fig2"><p class="ltx_figure_panel">Before</p><break class="ltx_break"/><p class="ltx_figure_panel">Inner</p><break class="ltx_break"/><p class="ltx_figure_panel">After</p></figure>"#,
+    r#"<figure class="ltx_panels_gallery" panelcols="1" panelrows="3" xml:id="fig2"><p class="ltx_figure_panel">Before</p><break class="ltx_break"/><p class="ltx_figure_panel">Inner</p><break class="ltx_break"/><p class="ltx_figure_panel">After</p></figure>"#,
   );
 }
 

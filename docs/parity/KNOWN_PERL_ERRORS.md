@@ -17674,3 +17674,25 @@ does (`sv_support_sty::define_bold_vectors`; batch 79b). Reach in the census: ll
 `class-bindings/{llncs_vec_is_bold_italic, svjour3_vec_is_upright_bold, svmult_vec_is_the_class_s_bold}`; guards
 `perfect_kernel_batch79b::{llncs_vec_is_bold_italic, svjour3_vec_is_upright_bold, svmult_vec_is_the_class_s_bold,
 svmult_vec_options_as_the_copy_reads_them}`.
+
+## 1144. A `\label` is sized by its key's text: a box holding one is wider than TeX's, an empty sub-float is a panel
+
+TeX's `\label` is a `\write` to the aux file (latex.ltx `\label`, `\protected@write\@auxout`): a whatsit of no width. Perl's
+`\lx@label` constructor (latex_constructs.pool.ltxml:3782-3805) has no sizer, so `Whatsit::computeSize` (Whatsit.pm:253-265)
+sums its arguments, the key's text, and every box holding a label is that much wider: a panel holding
+`\fbox{\label{fig:110raw-base}\includegraphics…}` is a few em wider than its graphic, and a sub-float holding nothing but
+a label (`\subfloat{\label{…}}`, tex.stackexchange 255790's trick for sub-figure labels) is a panel of the key's width.
+Minimal trigger: `\documentclass[aps,prl,twocolumn]{revtex4-2}\usepackage{graphicx}\usepackage[caption=false]{subfig}`,
+`\newcommand{\labelphantom}[1]{\subfloat{\label{#1}}}` and a figure of `\centering\labelphantom{a}\labelphantom{b}
+\labelphantom{c}\includegraphics[width=\linewidth]{example-image}`: pdflatex sets one line, the graphic; Perl 0.8.8 makes
+each empty sub-float a panel on a row of its own (3 `ltx:break`s). With the real 246pt REVTeX column (OD #885) the width
+shows in rows too: four `\subfigure[]{\fbox{\label{…}\includegraphics[width=0.23\textwidth]{…}}}` with `\fboxsep` 0.3mm
+are 2+2 in the PDF, one per row in ours (0809.3275 Figs 2-6). Perl's alignments lean on the width: an amsmath `{gather}`
+row holding only a `\label` (`c \\ \label{ga}`) is not empty because its math is the key's width.
+
+Fixed in Rust (79c): `\lx@label` (sect11.rs) and cleveref's `\lx@cleverref@labeltype` are `sizer => 0`; an alignment cell
+holding a label at any depth (`holds_preserved_box`: its `alignmentPreserve` box in the cell's math) is not empty, as it was
+by its width (normalize.rs; repro `alignment/align_empty_labelled_row_keeps_number`); a sub-float holding nothing but its
+number is no panel and takes no place in a row (`holds_only_its_number`, `arrange_panels`; 2208.08007 Figs 1, 2, S2, S5).
+Repros `captions-floats/a_label_makes_no_box`, `a_label_only_sub_float_is_no_panel`; guards
+`perfect_kernel_batch79c::{a_label_makes_no_box, a_label_only_sub_float_is_no_panel}`.

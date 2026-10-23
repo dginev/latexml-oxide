@@ -43,7 +43,7 @@ fn subfigure_empty_optional_is_a_numbered_panel() {
     "figure",
     &["xml:id=\"S0.F1.sf1\""],
     &format!(
-      "<figure class=\"ltx_figure_panel\" labels=\"LABEL:a\" xml:id=\"S0.F1.sf1\">{}\
+      "<figure class=\"ltx_figure_panel\" labels=\"LABEL:a\" panelwidth=\"0.082\" xml:id=\"S0.F1.sf1\">{}\
        <rule height=\"28.5pt\" width=\"28.5pt\"/><toccaption><tag close=\" \">(a)</tag></toccaption>\
        <caption><tag close=\" \"><text fontsize=\"80%\" xml:id=\"S0.F1.sf1.2\">(a)</text></tag></caption></figure>",
       panel_tags("S0.F1.sf1", "a", "1(a)")
@@ -54,7 +54,7 @@ fn subfigure_empty_optional_is_a_numbered_panel() {
     "figure",
     &["xml:id=\"S0.F1.sf2\""],
     &format!(
-      "<figure class=\"ltx_figure_panel\" labels=\"LABEL:b\" xml:id=\"S0.F1.sf2\">{}\
+      "<figure class=\"ltx_figure_panel\" labels=\"LABEL:b\" panelwidth=\"0.082\" xml:id=\"S0.F1.sf2\">{}\
        <rule height=\"28.5pt\" width=\"28.5pt\"/></figure>",
       panel_tags("S0.F1.sf2", "b", "1(b)")
     ),
@@ -64,7 +64,7 @@ fn subfigure_empty_optional_is_a_numbered_panel() {
     "figure",
     &["xml:id=\"S0.F1.sf3\""],
     &format!(
-      "<figure class=\"ltx_figure_panel\" labels=\"LABEL:c\" xml:id=\"S0.F1.sf3\">{}\
+      "<figure class=\"ltx_figure_panel\" labels=\"LABEL:c\" panelwidth=\"0.082\" xml:id=\"S0.F1.sf3\">{}\
        <rule height=\"28.5pt\" width=\"28.5pt\"/><toccaption><tag close=\" \">(c)</tag>Third panel</toccaption>\
        <caption><tag close=\" \"><text fontsize=\"80%\" xml:id=\"S0.F1.sf3.2\">(c)</text></tag>\
        <text fontsize=\"80%\" xml:id=\"S0.F1.sf3.3\">Third panel</text></caption></figure>",
@@ -89,7 +89,7 @@ fn subfigure_caption_is_not_the_documents_caption() {
       "figure",
       &[&format!("xml:id=\"{id}\"")],
       &format!(
-        "<figure class=\"ltx_figure_panel\" labels=\"LABEL:{label}\" xml:id=\"{id}\">{}\
+        "<figure class=\"ltx_figure_panel\" labels=\"LABEL:{label}\" panelwidth=\"0.082\" xml:id=\"{id}\">{}\
          <rule height=\"28.5pt\" width=\"28.5pt\"/><toccaption><tag close=\" \">({letter})</tag>{text}</toccaption>\
          <caption><tag close=\" \"><text fontsize=\"80%\" xml:id=\"{id}.2\">({letter})</text></tag>\
          <text fontsize=\"80%\" xml:id=\"{id}.3\">{text}</text></caption></figure>",
@@ -288,14 +288,15 @@ fn subfigure_panel_is_as_wide_as_its_body() {
   let xml = convert_clean(repro!(
     "captions-floats/subfigure_panel_is_as_wide_as_its_body.tex"
   ));
-  let panel = |n: u32, letter: &str, width: &str, text: &str| {
+  let panel = |n: u32, letter: &str, width: &str, fraction: &str, text: &str| {
     let labels = if n == 1 {
       " labels=\"LABEL:fig:left-panel-of-two\""
     } else {
       ""
     };
     format!(
-      "<figure class=\"ltx_figure_panel\"{labels} xml:id=\"S0.F2.sf{n}\">{}<rule height=\"28.5pt\" width=\"{width}\"/>\
+      "<figure class=\"ltx_figure_panel\"{labels} panelwidth=\"{fraction}\" xml:id=\"S0.F2.sf{n}\">{}<rule \
+       height=\"28.5pt\" width=\"{width}\"/>\
        <toccaption><tag close=\" \">({letter})</tag>{text}</toccaption>\
        <caption><tag close=\" \"><text fontsize=\"80%\" xml:id=\"S0.F2.sf{n}.2\">({letter})</text></tag>\
        <text fontsize=\"80%\" xml:id=\"S0.F2.sf{n}.3\">{text}</text></caption></figure>",
@@ -307,13 +308,13 @@ fn subfigure_panel_is_as_wide_as_its_body() {
     "figure",
     &["xml:id=\"S0.F2\""],
     &format!(
-      "<figure inlist=\"lof\" xml:id=\"S0.F2\"><tags><tag>Figure 2</tag><tag role=\"refnum\">2</tag>\
+      "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"2\" panelfill=\"0.9\" panelline=\"1\" panelrows=\"2\" xml:id=\"S0.F2\"><tags><tag>Figure 2</tag><tag role=\"refnum\">2</tag>\
        <tag role=\"typerefnum\">Figure 2</tag></tags>{}{}<break class=\"ltx_break\"/>{}\
        <toccaption><tag close=\" \">2</tag>Two.</toccaption><caption><tag close=\": \">Figure 2</tag>Two.</caption>\
        </figure>",
-      panel(1, "a", "155.3pt", "Left"),
-      panel(2, "b", "155.3pt", "Right"),
-      panel(3, "c", "276.0pt", "Wide")
+      panel(1, "a", "155.3pt", "0.45", "Left"),
+      panel(2, "b", "155.3pt", "0.45", "Right"),
+      panel(3, "c", "276.0pt", "0.8", "Wide")
     ),
   );
   // Figure 1's four panels and Table 1's two each share a row: that break is the only one.
@@ -436,7 +437,8 @@ fn a_label_between_spaces_counts_one() {
   ));
   let panel = |n: u32, letter: &str, text: &str| {
     format!(
-      "<figure align=\"center\" class=\"ltx_figure_panel\" labels=\"LABEL:a{n}\" xml:id=\"S0.F1.sf{n}\">{}\
+      "<figure align=\"center\" class=\"ltx_figure_panel\" labels=\"LABEL:a{n}\" panelwidth=\"0.475\" \
+       xml:id=\"S0.F1.sf{n}\">{}\
        <rule height=\"28.5pt\" width=\"163.9pt\"/><toccaption><tag close=\" \">({letter})</tag>{text}</toccaption>\
        <caption><tag close=\" \"><text fontsize=\"80%\" xml:id=\"S0.F1.sf{n}.2\">({letter})</text></tag>\
        <text fontsize=\"80%\" xml:id=\"S0.F1.sf{n}.3\">{text}</text></caption></figure>",
@@ -448,7 +450,7 @@ fn a_label_between_spaces_counts_one() {
     "figure",
     &["xml:id=\"S0.F1\""],
     &format!(
-      "<figure inlist=\"lof\" labels=\"LABEL:f1\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag>\
+      "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" labels=\"LABEL:f1\" panelcols=\"2\" panelfill=\"0.95\" panelline=\"2\" panelrows=\"1\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag>\
        <tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags>{}{}\
        <toccaption class=\"ltx_centering\"><tag close=\" \">1</tag>A label between two spaces.</toccaption>\
        <caption class=\"ltx_centering\"><tag close=\": \">Figure 1</tag>A label between two spaces.</caption></figure>",
@@ -472,7 +474,7 @@ fn psfig_panels_are_as_wide_as_their_keys() {
   ));
   let panel = |n: u32, letter: &str, text: &str| {
     format!(
-      "<figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.sf{n}\">{}\
+      "<figure align=\"center\" class=\"ltx_figure_panel\" panelwidth=\"0.4\" xml:id=\"S0.F1.sf{n}\">{}\
        <graphics graphic=\"panel\" options=\"width=137.9979pt\" xml:id=\"S0.F1.sf{n}.g1\"/>\
        <toccaption><tag close=\" \">({letter})</tag>{text}</toccaption>\
        <caption><tag close=\" \"><text fontsize=\"80%\" xml:id=\"S0.F1.sf{n}.2\">({letter})</text></tag>\
@@ -485,7 +487,7 @@ fn psfig_panels_are_as_wide_as_their_keys() {
     "figure",
     &["xml:id=\"S0.F1\""],
     &format!(
-      "<figure inlist=\"lof\" labels=\"LABEL:f1\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag>\
+      "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" labels=\"LABEL:f1\" panelcols=\"2\" panelfill=\"0.8\" panelline=\"1\" panelrows=\"2\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag>\
        <tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags>{}{}<break class=\"ltx_break\"/>{}\
        <toccaption class=\"ltx_centering\"><tag close=\" \">1</tag>Three psfig panels.</toccaption>\
        <caption class=\"ltx_centering\"><tag close=\": \">Figure 1</tag>Three psfig panels.</caption></figure>",

@@ -826,7 +826,7 @@ See \ref{inner}, \ref{outer}.
     &xml,
     "figure",
     &["xml:id=\"S0.F3\""],
-    r#"<figure inlist="lof" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><inline-block align="center" class="ltx_figure_panel" depth="7.3pt" height="11.8pt" width="124.2pt" xml:id="S0.F3.1" xscale="0.9" xtranslate="-6.9pt" yscale="0.9" ytranslate="1.1pt"><figure class="ltx_minipage" inlist="lof" vattach="middle" width="138.0pt" xml:id="S0.F3.sf1"><tags><tag><text fontsize="90%" xml:id="S0.F3.sf1.1">(a)</text></tag><tag role="refnum">3a</tag></tags><p xml:id="S0.F3.sf1.2">Panel A.</p><toccaption><tag close=" ">a</tag>Sub A</toccaption><caption><tag close=" "><text fontsize="90%" xml:id="S0.F3.sf1.3">(a)</text></tag><text fontsize="90%" xml:id="S0.F3.sf1.4">Sub A</text></caption></figure></inline-block><inline-block align="center" class="ltx_figure_panel" depth="7.3pt" height="11.8pt" width="124.2pt" xml:id="S0.F3.2" xscale="0.9" xtranslate="-6.9pt" yscale="0.9" ytranslate="1.1pt"><figure class="ltx_minipage" inlist="lof" vattach="middle" width="138.0pt" xml:id="S0.F3.sf2"><tags><tag><text fontsize="90%" xml:id="S0.F3.sf2.1">(b)</text></tag><tag role="refnum">3b</tag></tags><p xml:id="S0.F3.sf2.2">Panel B.</p><toccaption><tag close=" ">b</tag>Sub B</toccaption><caption><tag close=" "><text fontsize="90%" xml:id="S0.F3.sf2.3">(b)</text></tag><text fontsize="90%" xml:id="S0.F3.sf2.4">Sub B</text></caption></figure></inline-block><toccaption class="ltx_centering"><tag close=" ">3</tag>Whole</toccaption><caption class="ltx_centering"><tag close=": ">Figure 3</tag>Whole</caption></figure>"#,
+    r#"<figure class="ltx_panels_gallery" inlist="lof" panelcols="2" panelfill="0.72" panelline="1" panelrows="1" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><inline-block align="center" class="ltx_figure_panel" depth="7.3pt" height="11.8pt" panelwidth="0.36" width="124.2pt" xml:id="S0.F3.1" xscale="0.9" xtranslate="-6.9pt" yscale="0.9" ytranslate="1.1pt"><figure class="ltx_minipage" inlist="lof" vattach="middle" width="138.0pt" xml:id="S0.F3.sf1"><tags><tag><text fontsize="90%" xml:id="S0.F3.sf1.1">(a)</text></tag><tag role="refnum">3a</tag></tags><p xml:id="S0.F3.sf1.2">Panel A.</p><toccaption><tag close=" ">a</tag>Sub A</toccaption><caption><tag close=" "><text fontsize="90%" xml:id="S0.F3.sf1.3">(a)</text></tag><text fontsize="90%" xml:id="S0.F3.sf1.4">Sub A</text></caption></figure></inline-block><inline-block align="center" class="ltx_figure_panel" depth="7.3pt" height="11.8pt" panelwidth="0.36" width="124.2pt" xml:id="S0.F3.2" xscale="0.9" xtranslate="-6.9pt" yscale="0.9" ytranslate="1.1pt"><figure class="ltx_minipage" inlist="lof" vattach="middle" width="138.0pt" xml:id="S0.F3.sf2"><tags><tag><text fontsize="90%" xml:id="S0.F3.sf2.1">(b)</text></tag><tag role="refnum">3b</tag></tags><p xml:id="S0.F3.sf2.2">Panel B.</p><toccaption><tag close=" ">b</tag>Sub B</toccaption><caption><tag close=" "><text fontsize="90%" xml:id="S0.F3.sf2.3">(b)</text></tag><text fontsize="90%" xml:id="S0.F3.sf2.4">Sub B</text></caption></figure></inline-block><toccaption class="ltx_centering"><tag close=" ">3</tag>Whole</toccaption><caption class="ltx_centering"><tag close=": ">Figure 3</tag>Whole</caption></figure>"#,
   );
 }
 
@@ -923,7 +923,8 @@ After text.
   let outer = element_at(
     &xml,
     xml
-      .find(r#"<figure xml:id="fig1">"#)
+      .find(r#"xml:id="fig1">"#)
+      .and_then(|at| xml[..at].rfind("<figure"))
       .expect("the outer figure"),
   );
   let rotated = element_at(outer, outer.find("<inline-block").expect("the rotated box"));

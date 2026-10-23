@@ -797,7 +797,7 @@ fn cleveref_format_errors_in_minipage_panels() {
     &xml,
     "figure",
     &["xml:id=\"S0.F1\""],
-    r##"<figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:fa" vattach="middle" width="113.8pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="crefformat"><text color="#0000FF" xml:id="S0.F1.1">Fig. 1</text></tag><tag role="creftype">fig.</tag><tag role="creftypecap">Figure</tag><tag role="creftypeplural">figs.</tag><tag role="creftypepluralcap">Figures</tag><tag role="labelcrefformat">1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S0.F1.2">x</p><toccaption><tag close=" ">1</tag>left</toccaption><caption><tag close=": ">Figure 1</tag>left</caption></figure>"##,
+    r##"<figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:fa" panelwidth="0.33" vattach="middle" width="113.8pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="crefformat"><text color="#0000FF" xml:id="S0.F1.1">Fig. 1</text></tag><tag role="creftype">fig.</tag><tag role="creftypecap">Figure</tag><tag role="creftypeplural">figs.</tag><tag role="creftypepluralcap">Figures</tag><tag role="labelcrefformat">1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S0.F1.2">x</p><toccaption><tag close=" ">1</tag>left</toccaption><caption><tag close=": ">Figure 1</tag>left</caption></figure>"##,
   );
 }
 
@@ -922,7 +922,7 @@ fn cleveref_format_of_an_unlabelled_panel_raises_nothing() {
     &xml,
     "figure",
     &["xml:id=\"S1.F1\""],
-    r##"<figure class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="113.8pt" xml:id="S1.F1"><tags><tag>Figure 1</tag><tag role="crefformat"><text color="#0000FF" xml:id="S1.F1.1">Fig. 1</text></tag><tag role="creftype">fig.</tag><tag role="creftypecap">Figure</tag><tag role="creftypeplural">figs.</tag><tag role="creftypepluralcap">Figures</tag><tag role="labelcrefformat">1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S1.F1.2">x</p><toccaption><tag close=" ">1</tag>left</toccaption><caption><tag close=": ">Figure 1</tag>left</caption></figure>"##,
+    r##"<figure class="ltx_figure_panel ltx_minipage" inlist="lof" panelwidth="0.33" vattach="middle" width="113.8pt" xml:id="S1.F1"><tags><tag>Figure 1</tag><tag role="crefformat"><text color="#0000FF" xml:id="S1.F1.1">Fig. 1</text></tag><tag role="creftype">fig.</tag><tag role="creftypecap">Figure</tag><tag role="creftypeplural">figs.</tag><tag role="creftypepluralcap">Figures</tag><tag role="labelcrefformat">1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S1.F1.2">x</p><toccaption><tag close=" ">1</tag>left</toccaption><caption><tag close=": ">Figure 1</tag>left</caption></figure>"##,
   );
 }
 

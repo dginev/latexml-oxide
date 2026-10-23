@@ -126,9 +126,9 @@ fn figure_box_rows_settle_alike_when_streamed() {
   assert!(segments > 0, "streaming pass 1 engaged (segments staged)");
   assert_eq!(warnings, 0, "the fixture converts clean when streamed");
   for row in [
-    r#"<figure xml:id="p2">"#,
-    r#"<figure xml:id="S1.p2">"#,
-    r#"<figure xml:id="S2.p2">"#,
+    r#"<figure class="ltx_panels_gallery" panelcols="2" panelrows="1" xml:id="p2">"#,
+    r#"<figure class="ltx_panels_gallery" panelcols="2" panelrows="1" xml:id="S1.p2">"#,
+    r#"<figure class="ltx_panels_gallery" panelcols="2" panelrows="1" xml:id="S2.p2">"#,
   ] {
     assert!(eager_xml.contains(row), "{row}:\n{eager_xml}");
   }

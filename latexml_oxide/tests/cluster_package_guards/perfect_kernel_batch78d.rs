@@ -380,7 +380,7 @@ fn subfigure_sets_the_line_width() {
       (
         "figure",
         "S0.F1",
-        "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"refnum\">1</tag>\
+        "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"2\" panelrows=\"1\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"refnum\">1</tag>\
  <tag role=\"typerefnum\">Figure 1</tag></tags>\
  <figure class=\"ltx_figure_panel\" inlist=\"lof\" placement=\"t\" xml:id=\"S0.F1.sf1\"><tags><tag>\
  <text fontsize=\"90%\" xml:id=\"S0.F1.sf1.1\">(a)</text></tag><tag role=\"refnum\">1a</tag></tags>\
@@ -388,7 +388,7 @@ fn subfigure_sets_the_line_width() {
  <tag close=\" \">a</tag>A</toccaption><caption><tag close=\" \">\
  <text fontsize=\"90%\" xml:id=\"S0.F1.sf1.3\">(a)</text></tag>\
  <text fontsize=\"90%\" xml:id=\"S0.F1.sf1.4\">A</text></caption></figure>\
- <p class=\"ltx_figure_panel ltx_minipage\" vattach=\"top\" width=\"69.0pt\" xml:id=\"S0.F1.1\">68.99895pt</p>\
+ <p class=\"ltx_figure_panel ltx_minipage\" panelwidth=\"0.2\" vattach=\"top\" width=\"69.0pt\" xml:id=\"S0.F1.1\">68.99895pt</p>\
  <toccaption><tag close=\" \">1</tag>Main</toccaption><caption>\
  <tag close=\": \">Figure 1</tag>Main</caption></figure>",
       ),

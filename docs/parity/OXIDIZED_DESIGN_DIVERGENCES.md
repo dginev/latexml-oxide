@@ -24432,8 +24432,8 @@ astro-ph0205132; 1208.0688's `\subfigure[text]` pairs). `{@subfigure}`/`{@subtab
 1307.3388 Fig 3's `\subfigure[]{⏎\hspace{-0.4cm}⏎\includegraphics…}` pairs, 2+2 in the PDF; kerns are kept) —
 `panel_body_width`, `note_sub_float_body_width` (latex_constructs/mod.rs) — which `panel_width` takes when it
 is above 0: the width the source states, the LaTeX-side width FIDELITY_CHARTER §2 "Float panels" keeps. A `\label` makes
-no box (a `\write`), where the `\lx@label` whatsit is sized by its key's text (0907.1044's `\subfigure[…]{\label{…}
-\includegraphics…}` panels 96pt too wide); with the spaces left out a `\label` between spaces counts nothing either
+no box (a `\write`), where the `\lx@label` whatsit was sized by its key's text (0907.1044's `\subfigure[…]{\label{…}
+\includegraphics…}` panels 96pt too wide; since 79c it is 0 wide everywhere, KNOWN_PERL_ERRORS #1144); with the spaces left out a `\label` between spaces counts nothing either
 (2511.21020 Figs 7-8 one row of four, 1607.02761, 2211.12798, 1601.02116; 78t r2 counted both spaces and split them 3+1).
 A body of no known width (0) leaves the panel its box's width, as before the body measure (78t r2 took the 0: such panels
 joined every row and, starting one, left the panel list, so 1610.06413's two-panel figures had no flex row; nlin0606018);
@@ -24911,7 +24911,7 @@ TeX keeps (1108.5543, 1712.01536, 2009.04593, 1703.09165, 2406.05437; accepted, 
 cannot break between, with no glue among them, one overfull line where the rule breaks: `p7.tex` F2), TeX's line
 breaking itself (`a_justified_row_keeps_its_overfull_panel`, RED by the charter; the `figure_mixed_content` fixture's
 0.56/0.42 minipages with `\hspace{8px}`, one overfull line in pdflatex, two rows here), a `\label` sized by its key text
-in a box (0809.3275) or as an empty sub-float (2208.08007), a sub-float body's `\hspace` left out of its width
+in a box (0809.3275) or as an empty sub-float (2208.08007; both fixed in 79c, KNOWN_PERL_ERRORS #1144), a sub-float body's `\hspace` left out of its width
 (2008.06630), sub-figures in a `tabular` cell (1911.11519, 2502.05562), classes that declare no page (iopart 2109.08525,
 2310.04470), a plain `\hskip` at the registers' geometry; a width macro the float defines in a group of its own inside
 it (gone at its end: the float is arranged as before the rule, never worse, not as the PDF); a raster graphic's
@@ -25029,3 +25029,89 @@ post renders the candidate it finds most desirable (latexml_post/src/graphics.rs
 A/B (a01d8b410f vs 79a; 58 papers shipping a raster and a vector of one basename included extensionless, 73
 `\DeclareGraphicsExtensions` papers with a multi-type basename, 39 graphicx controls): one changed, 2107.02597 (its
 gnuplot figures' box the eps's BoundingBox 361.4pt x 252.9pt, was the png's 462.5pt; `cssstyle` the same).
+
+### 887. A float's panel grid is stated in the XML: its rows and columns, gallery or matrix, each panel's width, its line and fill
+
+User rulings 2026-10-22 (FIDELITY_CHARTER §2 "Float panels"; grid design study `agent_reports/2026-10-22_grid_design.md`
+Q4 option (a); SYNC_STATUS row "Panel grid markup"). Perl's `arrange_panels_and_breaks` (latex_constructs.pool.ltxml:3229-3349)
+sets a float's panels in rows with `ltx:break`s and marks them `ltx_figure_panel` (more than one), and says no more: the
+rows are only the runs between breaks, a panel's stated width is lost (subcaption.sty.ltxml:60-66 stores a
+`{subfigure}`'s `width` as a property its template never emits), and nothing tells a gallery of independent panels from
+a matrix whose rows and columns mean something. Ours (79c), once `arrange_panels` set the rows and `collapse_float` ran
+(`annotate_panel_grid`, latex_constructs/mod.rs; the three float `after_close` tags, sect09.rs):
+
+- **On a float of two or more panels**: `panelrows` (the rows that hold a panel, as the HTML sets them: runs of
+  `ltx_figure_panel`s between breaks and captions), `panelcols` (the most columns a row takes) and the class
+  `ltx_panels_matrix` or `ltx_panels_gallery`. A float of one panel states none of it.
+- **On each panel**: `panelwidth`, the width the row rule set it at as a fraction of its row's line (3 decimals), only
+  where that width is the real geometry's — the float's line is the class's real one with every stated width evaluated
+  there (`install_panel_line`, `note_stated_widths`, OD #885), or the registers are the real geometry already
+  (`PANEL_REGISTERS_REAL`: a sub-float's own `\hsize`, a wrapfigure's) — and the source states it (`panel_width_is_stated`,
+  `states_its_width`: a graphic's, a rule's, a picture's, a box's of a declared width, or theirs side by side in a
+  sub-float or a merged block; not our measure of a paragraph of text, a tabular, a list: 1807.05122 S2.F2's text panel
+  measured 9.7 lines wide; not a sub-float set at the float's whole `\hsize` with no body width, subfig's `\subfloat`).
+  A float arranged at the fallback line (a width it could not evaluate, OD #885) states no `panelwidth`: never a guess.
+  A graphic panel whose `\includegraphics` states only a `width=` takes that width, not its box's, where the two are
+  within 1% and a point (`graphic_rounding`: a raster's box is 72/72.27 of it rounded up to a pixel, KNOWN_PERL_ERRORS
+  #1142; 2208.08007 S0.F1.g1's `width=\linewidth` stated 0.997; review rev79c finding 4).
+- **The float's line and fill** (user ruling 2026-10-23), where every panel states its `panelwidth`: `panelline`, the
+  line its rows are set against as a fraction of the PDF's running-text column at the float (`PANEL_COLUMN`,
+  `install_panel_line`: the class's real column in two columns, its text width in one — 1 for a `figure`, 2.073 for
+  REVTeX's `figure*` (510pt of the 246pt column), 0.5 for a `{wrapfigure}{r}{0.5\textwidth}`, under 1 for a float in a
+  minipage), and `panelfill`, the widest row's sum of its panels' `panelwidth` (fractions of the float's own line; 3
+  decimals each). **Rendering rule**: a panel renders at `panelwidth × panelline` of the theme's column, divided by
+  `max(1, panelfill × panelline)` — so a `figure*` fills the column and a narrow float stays narrow; the converter knows
+  only the PDF's column and the float's line, never a theme constant (no rem/pt value is emitted).
+- **A matrix only on strong signals**: an author-built `tabular` of panels — the float's one content a `tabular` (or a
+  box holding only it: `\resizebox`, `adjustbox`) two or more of whose cells hold a graphic; `panelrows`/`panelcols`
+  are its rows and the most columns a row takes (`colspan` counted), its cells keep their `colspan`/`rowspan`
+  (`tabular_panel_grid`; 1403.6637 S4.F6/F8, 0908.0534 Figs 1-2, 2008.05524 Tables 11-16, 1104.5469). A cell counts
+  only for a graphic or picture of a panel's size, 24pt or more both wide and tall (`is_panel_graphic`,
+  `PANEL_GRAPHIC_LEAST`): a data table's icons, bars and sparklines make no matrix (review rev79c finding 1: 2608.05898
+  S4.T2/T5's 102pt x 6.69pt bars, 2506.23665 Ch3.T4/T5, Ch5.T4/T5's 18pt-high sparklines, 2411.16612 S7.T1/T2's 8pt
+  icons, 2501.18280 S4.T3/A4.T6, 1509.07152 S10.T23, 1805.10096 Sx4.T1, 2504.02271 S2.T1: 13 of r1's 253 `tabular`
+  matrices in the 1,907-paper population; the larger dimension alone would keep the bars and sparklines; 2502.08151
+  S7.T3's 491pt x 29pt image strips stay one) — or two or more rows that agree
+  panel for panel (the most panels a row takes, two or more; each width within 0.01 of the line of the other row's),
+  every other row taking all those columns, each of its panels as wide as the columns it spans (`panelspan` when two or
+  more), and whose panels' own captions are none or exactly one whole row's (`matrix_spans`; main-session decision 3,
+  2026-10-23, review rev79c finding 2, checked on the PDFs): captions on one whole row label its columns (2209.01559
+  Figs 3, 5; 1404.0431 Fig 1; 2212.03198 Figs 7, 10, 13, 14; 1811.02385 S4.F3-F6); captions on every panel, on more
+  than one row, or on some panels of a row make the panels a gallery's, independent, their order not their place
+  (2503.15158 S4.F7, 2404.12123 S3.F6, 2106.04682 A2.F4 (a)-(e) and a legend, 1808.10020 chapter5.figure11, 2602.17978
+  Ch4.F2/F3). 1401.5657 Fig 2's `0.316 + 3×0.21` columns are a matrix. Every other float of two or more panels is a
+  gallery.
+- **Nested groups**: a sub-float holding panels of its own is a flex figure of its own in HTML and states its own grid
+  (its panels' widths fractions of its line); as a panel of its float it states its width there too. `collapse_float`
+  gives a lone inner float's grid to the float it becomes; an inner float beside other content leaves its grid behind and
+  drops its panels' widths (fractions of the inner's line), the float's own grid made of its panels — also beside
+  content of no width, where the inner was the float's only panel (review rev79c finding 3; repro
+  `captions-floats/panel_grid_collapse_drops_inner_widths`).
+- **Schema**: `Panel.attributes` (`panelwidth` `xsd:decimal`, `panelspan` `xsd:nonNegativeInteger`) in
+  `Common.attributes` — a panel is any element a float sets in rows (`ltx:graphics`, `ltx:p`, `ltx:tabular`,
+  `ltx:block`, a sub-float…) — and `PanelGrid.attributes` (`panelrows`, `panelcols` `xsd:nonNegativeInteger`,
+  `panelline`, `panelfill` `xsd:decimal`) on `figure`, `table`, `float` (LaTeXML-common.rnc, LaTeXML-para.rnc, their
+  `.rng`, and the runtime `LaTeXML.model`, edited to match: 154 elements, 3 floats; the model carries no types).
+- **XSLT**: `base-styling` (LaTeXML-common.xsl) maps a float's `panelrows`/`panelcols`/`panelline`/`panelfill` to
+  `--ltx-panel-rows`/`--ltx-panel-cols`/`--ltx-panel-line`/`--ltx-panel-fill` on its own element, inherited by the flex
+  rows and cells inside (and present on a `tabular` matrix, which has none); `build_subfigure` (LaTeXML-para-xhtml.xsl)
+  maps a panel's `panelwidth`/`panelspan` to `--ltx-panel-width`/`--ltx-panel-span` on the `div.ltx_flex_cell` holding
+  it, the flex item they size. Each only for a numeric value, written as `number()` of it, never the attribute's text
+  (review rev79c finding 5: crafted XML cannot inject into `style`). The classes pass through as every class does. No
+  CSS rule reads them yet (the CSS is the goal-end item); the HTML is otherwise unchanged.
+
+The grid study's oracle (453 multi-panel floats, the study's labels from the PDF rows, sub-captions, a `tabular` and
+text between rows): study matrix 42 — ours matrix 20 (10 of 11 `tabular` grids, 10 of 15 uniform uncaptioned grids),
+gallery 22 (16 matrices labelled by text rows or columns, `ltx:p` panels the rule does not read as columns; 5 uniform
+grids whose panels are text or of unequal widths row to row; 1 `tabular` beside two sub-figures); study gallery 411 —
+ours gallery 405, matrix 5 (two-row grids captioned on one row only, 1404.0431 Fig 1, 2212.03198 Figs 7, 10, 13, 14),
+none 1. Rows and shapes unchanged (429 and 422 of 453). Round 2 (review rev79c, the
+line and fill): the oracle's confusion table, rows and shapes are unchanged (its five one-row-captioned grids are the
+matrices decision 3 keeps; 2411.16612 S7.T1/T2, outside its categories, lose their `tabular` matrix). In the 1,907-paper
+population, r1 → r2: 13 `tabular` data tables lose `ltx_panels_matrix` (finding 1), the 6 partly captioned grids become
+galleries (finding 2), 115 floats' panel widths move by KPE #1142's rounding (finding 4), 5,079 floats gain
+`panelline`/`panelfill`; with the grid markup stripped every paper is byte-identical. Guards `perfect_kernel_batch79c::*`
+(repros `captions-floats/panel_grid_markup`, `panel_grid_markup_of_an_unevaluable_width`, `panel_grid_matrix_signals`,
+`panel_grid_line_and_fill`, `panel_grid_collapse_drops_inner_widths`),
+`integration::{panel_grid_markup_reaches_the_html_as_custom_properties, panel_grid_markup_states_only_numbers}`
+(latexml_post).

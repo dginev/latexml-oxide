@@ -827,7 +827,7 @@ fn hypertarget_block_text_keeps_a_visible_destination() {
     (
       "figure",
       "S0.F1",
-      r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="autoref">Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><rule class="ltx_figure_panel" height="28.5pt" width="28.5pt"/><break class="ltx_break"/><p class="ltx_figure_panel"><anchor xml:id="f"/></p><toccaption><tag close=" ">1</tag>C</toccaption><caption><tag close=": ">Figure 1</tag>C</caption></figure>"##,
+      r##"<figure class="ltx_panels_gallery" inlist="lof" panelcols="1" panelrows="2" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="autoref">Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><rule class="ltx_figure_panel" height="28.5pt" panelwidth="0.082" width="28.5pt"/><break class="ltx_break"/><p class="ltx_figure_panel"><anchor xml:id="f"/></p><toccaption><tag close=" ">1</tag>C</toccaption><caption><tag close=": ">Figure 1</tag>C</caption></figure>"##,
     ),
     (
       "para",

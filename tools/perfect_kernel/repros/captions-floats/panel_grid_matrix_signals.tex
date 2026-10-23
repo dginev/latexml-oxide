@@ -1,0 +1,54 @@
+% witness: review rev79c findings 1-2 (main-session decision 3, 2026-10-23): a data table with small icons is no
+%          matrix (2608.05898 S4.T2, 2411.16612 S7.T1/T2, 2501.18280 S4.T3, 2506.23665 Ch3.T4, 1509.07152 S10.T23); a
+%          tabular of panel-sized graphics is (1403.6637 S4.F6/F8, 2008.05524 T11-16, 0908.0534, 1104.5469); sub-captions
+%          on exactly one whole row label the columns (2209.01559 Figs 3, 5; 1404.0431 Fig 1; 2212.03198 Figs 7, 10, 13,
+%          14; 1811.02385 S4.F3-F6), on some panels of a row make a gallery (2503.15158 S4.F7, 2404.12123 S3.F6,
+%          2106.04682 A2.F4, 1808.10020 chapter5.figure11, 2602.17978 Ch4.F2/F3)
+% oracle:  pdflatex 0 errors (`\showbox` of the float boxes): T1 one box (the tabular), F1 one box (the tabular), F2
+%          3+3, F3 2+2
+% engines: rust 79c r1 = T1 `ltx_panels_matrix` 3x3, F1 matrix 2x2, F2 matrix 2x3, F3 matrix 2x2; Perl 0.8.8 = the
+%          same rows, no grid markup
+% expect:  0 errors, 0 warnings; T1 no grid markup (two 8pt icons are no panels); F1 matrix 2x2 (72pt graphics);
+%          F2 matrix 2x3 (captions on the whole second row only); F3 gallery 2x2 ((a)(b)(c) and an uncaptioned legend)
+% status:  RED (79c r1) -> GREEN (79c r2, OXIDIZED_DESIGN_DIVERGENCES #887)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\begin{document}
+\begin{table}
+  \centering
+  \caption{A data table with two small icons.}
+  \begin{tabular}{lcc}
+    Tool & Correct & Time \\
+    A & \includegraphics[height=8pt]{example-image} & 1.2 \\
+    B & 17 & \includegraphics[height=8pt]{example-image} \\
+  \end{tabular}
+\end{table}
+\begin{figure}
+  \centering
+  \begin{tabular}{cc}
+    \includegraphics[width=72pt]{example-image} & \includegraphics[width=72pt]{example-image} \\
+    \includegraphics[width=72pt]{example-image} & \includegraphics[width=72pt]{example-image} \\
+  \end{tabular}
+  \caption{A tabular of four 72pt graphics.}
+\end{figure}
+\begin{figure}
+  \centering
+  \includegraphics[width=0.3\textwidth]{example-image}
+  \includegraphics[width=0.3\textwidth]{example-image}
+  \includegraphics[width=0.3\textwidth]{example-image}\\
+  \begin{subfigure}{0.3\textwidth}\includegraphics[width=\linewidth]{example-image}\caption{First}\end{subfigure}
+  \begin{subfigure}{0.3\textwidth}\includegraphics[width=\linewidth]{example-image}\caption{Second}\end{subfigure}
+  \begin{subfigure}{0.3\textwidth}\includegraphics[width=\linewidth]{example-image}\caption{Third}\end{subfigure}
+  \caption{Two rows of three, the sub-captions of the second label the columns.}
+\end{figure}
+\begin{figure}
+  \centering
+  \begin{subfigure}{0.45\textwidth}\includegraphics[width=\linewidth]{example-image}\caption{A}\end{subfigure}
+  \begin{subfigure}{0.45\textwidth}\includegraphics[width=\linewidth]{example-image}\caption{B}\end{subfigure}\\
+  \begin{subfigure}{0.45\textwidth}\includegraphics[width=\linewidth]{example-image}\caption{C}\end{subfigure}
+  \includegraphics[width=0.45\textwidth]{example-image}
+  \caption{Three sub-captioned panels and an uncaptioned legend.}
+\end{figure}
+\end{document}

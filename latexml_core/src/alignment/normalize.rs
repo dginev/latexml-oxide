@@ -15,7 +15,7 @@ use crate::{
     object::Object,
     store::Stored,
   },
-  digested::Digested,
+  digested::{Digested, DigestedData},
   list::List,
 };
 
@@ -116,9 +116,12 @@ pub fn normalize_cell_sizes(alignment: &mut Alignment) -> Result<()> {
               || b.is_comment()
               || b.is_strut()
           });
-        // Perl L457-462: ((fullw_small AND ch_cd_small) OR isrule) AND !preserved
+        // Perl L457-462: ((fullw_small AND ch_cd_small) OR isrule) AND !preserved — a preserved box anywhere in the
+        // cell: a `\label` makes no box (KNOWN_PERL_ERRORS #1144), so a cell holding one in its math (amsmath's
+        // `{gather}` row `c \\ \label{ga}`) is 0 wide, where Perl's was its key text's width and so not empty.
         let empty = ((fullw.value_of() < 1 && (ch.value_of() < 1 && cd.value_of() < 1)) || isrule)
-          && preserved_boxes(Some(boxes)).is_empty();
+          && preserved_boxes(Some(boxes)).is_empty()
+          && !holds_preserved_box(boxes);
         let skippable = empty || boxes.is_skippable();
         cell.cached_width = Some(w);
         cell.cached_height = Some(h);
@@ -1084,6 +1087,27 @@ pub fn normalize_sum_sizes(alignment: &mut Alignment) -> Result<()> {
   }
 
   Ok(())
+}
+
+/// Does `boxes` hold a box an alignment preserves (`alignmentPreserve`: a `\label`) at any depth — in a list, a
+/// whatsit's arguments or body (a cell's math)?
+fn holds_preserved_box(boxes: &Digested) -> bool {
+  if boxes.get_property_bool("alignmentPreserve") {
+    return true;
+  }
+  match boxes.data() {
+    DigestedData::List(_) => boxes.unlist().iter().any(holds_preserved_box),
+    DigestedData::Whatsit(w) => {
+      let w = w.borrow();
+      w.get_args().iter().flatten().any(holds_preserved_box)
+        || w
+          .get_body()
+          .ok()
+          .flatten()
+          .is_some_and(|body| holds_preserved_box(&body))
+    },
+    _ => false,
+  }
 }
 
 fn preserved_boxes(boxes_opt: Option<&Digested>) -> Vec<Digested> {

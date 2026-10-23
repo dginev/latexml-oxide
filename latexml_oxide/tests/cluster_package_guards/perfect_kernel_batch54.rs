@@ -4364,7 +4364,7 @@ Figure body text.
     &xml,
     "figure",
     &[],
-    "<figure xml:id=\"fig1\"><p class=\"ltx_figure_panel\">Figure body text.</p><break class=\"ltx_break\"/><inline-sectional-block class=\"ltx_figure_panel\"><paragraph inlist=\"toc\" xml:id=\"S0.SS1.SSS0.Px1\"><title>Notes</title><para xml:id=\"S0.SS1.SSS0.Px1.p1\"><p>inside the figure.</p></para></paragraph></inline-sectional-block></figure>",
+    "<figure class=\"ltx_panels_gallery\" panelcols=\"1\" panelrows=\"2\" xml:id=\"fig1\"><p class=\"ltx_figure_panel\">Figure body text.</p><break class=\"ltx_break\"/><inline-sectional-block class=\"ltx_figure_panel\"><paragraph inlist=\"toc\" xml:id=\"S0.SS1.SSS0.Px1\"><title>Notes</title><para xml:id=\"S0.SS1.SSS0.Px1.p1\"><p>inside the figure.</p></para></paragraph></inline-sectional-block></figure>",
   );
 }
 

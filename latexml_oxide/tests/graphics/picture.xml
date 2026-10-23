@@ -1086,7 +1086,7 @@ for binary32, binary64 and binary128.</toccaption>
 interchange formats for binary32, binary64 and binary128
 (previously single, double and quad precision).</caption>
     </figure>
-    <table inlist="lot" placement="h" xml:id="S4.T1">
+    <table class="ltx_panels_matrix" inlist="lot" panelcols="4" panelrows="25" placement="h" xml:id="S4.T1">
       <tags>
         <tag>Table 1</tag>
         <tag role="refnum">1</tag>

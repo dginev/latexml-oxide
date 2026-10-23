@@ -106,6 +106,8 @@ LoadDefinitions!({
     }
   },
   reversion => "",
+  // (a label makes no box, as the kernel's `\lx@label`: KNOWN_PERL_ERRORS #1144)
+  sizer => 0,
   properties => sub[args] {
     let ty = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
     let ty = Tokens::new(ExplodeText!(ty.trim()));

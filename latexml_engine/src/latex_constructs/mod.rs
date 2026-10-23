@@ -3994,6 +3994,10 @@ const PANEL_LINE_FRAME: &str = "lx@panel@line@frame";
 /// The whatsit property of the line a float with no real line (`PANEL_LINE`) is arranged at under geometry
 /// (`after_float`): `\Gm@tw`, as before the panel grid rule.
 const PANEL_FALLBACK_LINE: &str = "panel_fallback_line";
+/// The state value (and the whatsit property `after_float` copies it to) of the real running-text column at the float
+/// (`install_panel_line`: the class's real column in two columns, its text width in one) that the float's line is a
+/// fraction of (`panelline`, `annotate_panel_grid`).
+const PANEL_COLUMN: &str = "panel_column_width";
 /// The state value of the float's `\hsize` as `install_panel_line` found it: one its binding sets afterwards (a
 /// wrapfigure's width, wrapfig_sty.rs) is the float's own line, which the class's page does not replace
 /// (`after_float`; 2609.34643 S3.SS3.fig1, a 0.27\textwidth wrapfigure).
@@ -4001,6 +4005,9 @@ const PANEL_LINE_HSIZE: &str = "lx@panel@line@hsize";
 /// The state value of the geometry a float's stated widths are evaluated at (`install_panel_line`): the registers' own
 /// values and the real ones, `\textwidth`, `\columnwidth`, the line (`\linewidth`, `\hsize`), in scaled points.
 const PANEL_GEOMETRY: &str = "lx@panel@geometry";
+/// The whatsit property of a float whose panels' widths are the real ones though it has no real line of its own
+/// (`after_float`): the registers are the real geometry where it is set.
+const PANEL_REGISTERS_REAL: &str = "panel_registers_real";
 /// The whatsit property a panel's box carries once its stated width is evaluated (`note_stated_widths`): what the
 /// real geometry adds to it (scaled points, a `Dimension`), for `arrange_panels` alone.
 const PANEL_WIDTH_DELTA: &str = "panel_width_delta";
@@ -4038,6 +4045,11 @@ fn install_panel_line(double: bool) {
   let linewidth = register("\\linewidth").unwrap_or(hsize);
   let (real_text, real_column) = panel_page(textwidth);
   let real_line = if double { real_text } else { real_column };
+  assign_value(
+    PANEL_COLUMN,
+    Stored::Dimension(Dimension::new(real_column)),
+    Some(Scope::Local),
+  );
   assign_value(
     PANEL_LINE,
     Stored::Dimension(Dimension::new(real_line)),
@@ -5175,6 +5187,22 @@ pub fn after_float(whatsit: &mut Whatsit) {
       whatsit.set_property(PANEL_LINE, Stored::Dimension(line));
     }
   }
+  // A float whose panels' widths are the real ones without an evaluation: in a float that set its line
+  // (`install_panel_line`, this one or the one it is in) where every register is the real geometry already
+  // (`PANEL_GEOMETRY` unset) — a sub-float's own `\hsize`, a wrapfigure's — for the grid's markup
+  // (`annotate_panel_grid`).
+  if !whatsit.has_property(PANEL_LINE)
+    && lookup_value(PANEL_LINE).is_some()
+    && lookup_value(PANEL_GEOMETRY).is_none()
+  {
+    whatsit.set_property(PANEL_REGISTERS_REAL, true);
+  }
+  // The running-text column its line is a fraction of, where its widths are the real ones (`annotate_panel_grid`).
+  if (whatsit.has_property(PANEL_LINE) || whatsit.get_property_bool(PANEL_REGISTERS_REAL))
+    && let Some(Stored::Dimension(column)) = lookup_value(PANEL_COLUMN)
+  {
+    whatsit.set_property(PANEL_COLUMN, Stored::Dimension(column));
+  }
   // A float whose rows are not set against the real line (a width it states cannot be evaluated, a float inside
   // another, a binding's `\hsize`) is arranged as before the rule (review rev78x3 finding 2, `p2.tex` F2-F4: four
   // `\figw=3.8cm` panels under `[a4paper,margin=1in]{geometry}`, one row in the PDF). Under geometry (geometry_sty /
@@ -5227,8 +5255,9 @@ pub fn after_float(whatsit: &mut Whatsit) {
 /// cond-mat9707225, astro-ph0205132, 2012.09475, 1110.0084, hep-ex0004031, 1703.00699). The panel, captioned or not
 /// (1007.2355, OXIDIZED_DESIGN_DIVERGENCES #885), is the width of the body's material less its
 /// `\lx@@caption`/`\@@toccaption`, its `\lx@label`s (a
-/// `\label` makes no box, a `\write`, where the `\lx@label` whatsit is sized by its key's text, as Perl's,
-/// Whatsit.pm:253-265: 0907.1044's `\subfigure[…]{\label{figure:mfexampleofc2} \includegraphics…}` was 96pt wider
+/// `\label` makes no box, a `\write`, where the `\lx@label` whatsit was sized by its key's text, as Perl's,
+/// Whatsit.pm:253-265 (0 wide since 79c, KNOWN_PERL_ERRORS #1144; left out here all the same): 0907.1044's
+/// `\subfigure[…]{\label{figure:mfexampleofc2} \includegraphics…}` was 96pt wider
 /// than its graphic) and its spaces, with the natural width of the glue it states (`\hskip`, `\hspace`, `\quad`; an
 /// `\hfill`'s is 0; kerns are kept): the material and glue the source states, not how TeX sets the spaces round it
 /// (FIDELITY_CHARTER §2 "Float panels"; the panel grid of SYNC_STATUS's grid-rule row counts the stated glue between
@@ -5840,7 +5869,7 @@ fn arrange_panels(
   document: &mut Document,
   node: &mut Node,
   whatsit: Option<&Digested>,
-) -> Result<()> {
+) -> Result<PanelLayout> {
   // The rows are set against the real line (`install_panel_line`): a panel's width is its stated width at the real
   // geometry, the width its box has at the registers' values plus what the real values add (`panel_width_delta`).
   // The float's `\hsize` (Perl's `floatwidth`) is what a panel with no width of its own fills.
@@ -5897,6 +5926,26 @@ fn arrange_panels(
   };
   let mut paragraph_start = true;
   let mut leading_glue: f64 = 0.0;
+  // The width each panel was set at, and whether the source states it (`panel_width_is_stated`), for the grid's
+  // markup (`annotate_panel_grid`); a merged block's, its parts'.
+  let mut widths: Vec<(Node, f64, bool)> = Vec::new();
+  let stated_of = |widths: &[(Node, f64, bool)], node: &Node| {
+    widths
+      .iter()
+      .find(|(n, ..)| n == node)
+      .is_some_and(|(.., stated)| *stated)
+  };
+  let record =
+    |widths: &mut Vec<(Node, f64, bool)>, node: &Node, width: f64, stated: bool| match widths
+      .iter_mut()
+      .find(|(n, ..)| n == node)
+    {
+      Some(entry) => {
+        entry.1 = width;
+        entry.2 = stated;
+      },
+      None => widths.push((node.clone(), width, stated)),
+    };
 
   for mut child in node.get_child_elements() {
     let child_name = document::get_node_qname(&child);
@@ -5959,6 +6008,11 @@ fn arrange_panels(
       row.clear();
       continue;
     }
+    // A sub-float holding nothing but its number — `\subfloat{\label{…}}`, a label's anchor (2208.08007's
+    // `\labelphantom`) — makes no box: it is no panel and takes no place in a row (a `\label` is a `\write`).
+    if holds_only_its_number(&child) {
+      continue;
+    }
     // A row break the source stated before this panel: the row ends there.
     if pending_break.take().is_some() {
       pending_glue = 0.0;
@@ -5979,12 +6033,15 @@ fn arrange_panels(
     // \hsize (it has no explicit `{width}`), so it would take its own row. When
     // it wraps a single narrower graphic, size it to that graphic so sibling
     // panels share a row — an explicit-width `{subfigure}{W}` already does.
+    let mut sole_graphic = false;
     if child_width >= hsize
       && let Some(inner) = sole_graphic_width(document, &child)
       && inner < child_width
     {
       child_width = inner;
+      sole_graphic = true;
     }
+    let child_stated = sole_graphic || panel_width_is_stated(document, &child, child_width, hsize);
     if real_line.is_some() {
       child_width = (child_width + panel_width_delta(document, &child)).max(0.0);
     }
@@ -6006,6 +6063,7 @@ fn arrange_panels(
       insert_break_before(document, &mut child)?;
       document.add_class(&mut child, "ltx_figure_panel")?;
       all_panels.push(child.clone());
+      record(&mut widths, &child, child_width, child_stated);
       row = vec![(child, child_name, child_width)];
       current_width = child_width;
       paragraph_start = false;
@@ -6049,6 +6107,8 @@ fn arrange_panels(
         if reuse_prev {
           child.unlink_node();
           prev_node.add_child(&mut child).ok();
+          let stated = stated_of(&widths, &prev_node) && child_stated;
+          record(&mut widths, &prev_node, merged_width, stated);
           row.push((prev_node, prev_name, merged_width));
         } else if reuse_child {
           // The previous panel goes FIRST in the block, keeping source order.
@@ -6066,6 +6126,8 @@ fn arrange_panels(
             },
           }
           all_panels.push(child.clone());
+          let stated = stated_of(&widths, &prev_node) && child_stated;
+          record(&mut widths, &child, merged_width, stated);
           row.push((child, child_name, merged_width));
         } else {
           // The wrapper is the panel now: a row-start box already marked one (overflow, Perl
@@ -6075,13 +6137,18 @@ fn arrange_panels(
             all_panels.pop();
           }
           document.remove_class(&mut prev_node, "ltx_figure_panel");
+          let stated = stated_of(&widths, &prev_node) && child_stated;
           if let Some(block) = document.wrap_nodes("ltx:block", vec![prev_node, child])? {
             all_panels.push(block.clone());
+            record(&mut widths, &block, merged_width, stated);
             row.push((block, block_qname, merged_width));
           }
         }
       } else {
         // Perl L3327-3330: keep the previous panel, append this one as a sibling.
+        let prev_stated = stated_of(&widths, &prev_node);
+        record(&mut widths, &prev_node, prev_width, prev_stated);
+        record(&mut widths, &child, child_width, child_stated);
         row.push((prev_node, prev_name, prev_width));
         all_panels.push(child.clone());
         row.push((child, child_name, child_width));
@@ -6090,6 +6157,7 @@ fn arrange_panels(
     } else {
       // Perl L3331-3333: no previous panel in the row — just add this child.
       paragraph_start = false;
+      record(&mut widths, &child, child_width, child_stated);
       if child_width > 0.0 {
         all_panels.push(child.clone());
       }
@@ -6140,8 +6208,466 @@ fn arrange_panels(
       document.add_class(panel, "ltx_figure_panel")?;
     }
   }
+  // The widths are the real ones where the float's line is (`install_panel_line`, `note_stated_widths`), or where the
+  // registers are the real geometry already (`PANEL_REGISTERS_REAL`); a float arranged at the registers' line or the
+  // geometry's fallback (a width it could not evaluate) states none for its markup.
+  let evaluated =
+    real_line.is_some() || whatsit.is_some_and(|w| w.get_property_bool(PANEL_REGISTERS_REAL));
+  Ok(PanelLayout {
+    widths,
+    line: float_width,
+    column: panel_dimension_of(whatsit, PANEL_COLUMN).filter(|_| evaluated),
+    evaluated,
+  })
+}
+/// What `arrange_panels` decided a float's panels are set at, for its grid's markup (`annotate_panel_grid`): each
+/// panel's width (scaled points; a merged block's its parts'), the line its rows were set against, the real
+/// running-text column at the float (`PANEL_COLUMN`, where the widths are the real geometry's), and whether those are
+/// the real geometry's (`evaluated`: the float's line is the class's real one, or the registers are it).
+pub(crate) struct PanelLayout {
+  widths:    Vec<(Node, f64, bool)>,
+  line:      f64,
+  column:    Option<f64>,
+  evaluated: bool,
+}
+
+/// A sub-float holding nothing but its number (`ltx:tags`): `\subfloat{\label{…}}` (2208.08007's
+/// `\newcommand{\labelphantom}[1]{\subfloat{\label{#1}}}`, five or six before the one graphic that draws every
+/// panel). TeX sets it as an empty box (a `\label` is a `\write`), so it is no panel of its float.
+fn holds_only_its_number(node: &Node) -> bool {
+  with(document::get_node_qname(node), |q| {
+    PANEL_FLOATS.contains(&q)
+  }) && node
+    .get_child_nodes()
+    .iter()
+    .all(|child| match child.get_type() {
+      Some(NodeType::ElementNode) => document::get_node_qname(child) == pin!("ltx:tags"),
+      Some(NodeType::TextNode) => child.get_content().trim().is_empty(),
+      _ => true,
+    })
+}
+
+/// The panel grid's attributes on a float (`annotate_panel_grid`).
+const PANEL_GRID_ATTRIBUTES: [&str; 4] = ["panelrows", "panelcols", "panelline", "panelfill"];
+
+/// How far apart (a fraction of the line) two panel widths may be and still be one column's (`annotate_panel_grid`).
+const PANEL_WIDTH_TOLERANCE: f64 = 0.01;
+
+/// The panel grid's markup (user rulings 2026-10-22, FIDELITY_CHARTER §2 "Float panels"; grid design study option
+/// (a)): the float `arrange_panels` set in rows says them — `panelrows`, `panelcols` (the most columns a row takes),
+/// and `ltx_panels_matrix` or `ltx_panels_gallery` — and each panel its width as a fraction of the row's line
+/// (`panelwidth`, 3 decimals) where that width is one the source states (`states_its_width`: a graphic's, a rule's,
+/// a box's of a declared width, or theirs side by side; not a measure of our own setting of text, a tabular, a list)
+/// taken at the real geometry (none where the float could not take its widths there, `PanelLayout`: never a guess),
+/// and, in a matrix, the columns it spans when 2 or more (`panelspan`); where every panel states its width, the float
+/// its line as a fraction of the PDF's running-text column at the float (`panelline`: the class's real column in two
+/// columns, its text width in one; 1 for a `figure`, about 2.07 for a two-column class's `figure*`, under 1 for a
+/// wrapfigure) and its widest row's sum of `panelwidth` (`panelfill`, fractions of its own line) — user ruling
+/// 2026-10-23: a panel renders at `panelwidth` × `panelline` of the theme's column, divided by max(1, `panelfill` ×
+/// `panelline`), so a `figure*` fills the column and a narrow float stays narrow; the converter knows only the PDF's
+/// column and the float's line, never a theme constant. A matrix only on strong signals: an
+/// author-built `tabular` of panels (`tabular_panel_grid`, its cells' `colspan` and `rowspan` kept), or 2 or more rows
+/// of the same columns — as many panels, each as wide as the other row's (within `PANEL_WIDTH_TOLERANCE`), another
+/// row's panel as wide as the columns it spans — whose panels' own captions are none or exactly one whole row's, its
+/// columns' labels (captioned panels elsewhere are a gallery's: independent, their order not their place;
+/// `matrix_spans`). A float of one panel states none of it. A
+/// sub-float group states its own (its panels' widths a fraction of its line), as it is a flex figure of its own in
+/// HTML; as a panel of its float it states its width there too. Perl emits none of this
+/// (latex_constructs.pool.ltxml:3229-3349; subcaption.sty.ltxml:60-66 stores `width`, never emits it).
+/// OXIDIZED_DESIGN_DIVERGENCES #887.
+pub(crate) fn annotate_panel_grid(
+  document: &mut Document,
+  node: &mut Node,
+  layout: &PanelLayout,
+) -> Result<()> {
+  // A lone inner float's grid, the float's since `collapse_float` made the inner's panels its own.
+  if node.get_attribute("panelrows").is_some() {
+    return Ok(());
+  }
+  // The rows, as the HTML sets them: runs of panels between breaks and captions.
+  let mut rows: Vec<Vec<Node>> = vec![Vec::new()];
+  for child in node.get_child_elements() {
+    if is_panel_break_name(document::get_node_qname(&child)) {
+      rows.push(Vec::new());
+    } else if child
+      .get_attribute("class")
+      .is_some_and(|class| class.split_whitespace().any(|c| c == "ltx_figure_panel"))
+      && let Some(row) = rows.last_mut()
+    {
+      row.push(child);
+    }
+  }
+  rows.retain(|row| !row.is_empty());
+  if rows.iter().map(Vec::len).sum::<usize>() < 2 {
+    if let Some((rows, cols)) = tabular_panel_grid(document, node) {
+      document.add_class(node, "ltx_panels_matrix")?;
+      document.set_attribute(node, "panelrows", &rows.to_string())?;
+      document.set_attribute(node, "panelcols", &cols.to_string())?;
+    }
+    return Ok(());
+  }
+  let line = layout.line;
+  let width_of = |panel: &Node| {
+    layout
+      .widths
+      .iter()
+      .find(|(n, ..)| n == panel)
+      .filter(|(_, w, stated)| *stated && layout.evaluated && line > 0.0 && *w > 0.0)
+      .map(|(_, w, _)| *w * graphic_rounding(document, panel) / line)
+  };
+  let widths: Vec<Vec<Option<f64>>> = rows
+    .iter()
+    .map(|row| row.iter().map(width_of).collect())
+    .collect();
+  let spans = matrix_spans(&rows, &widths);
+  let cols = match &spans {
+    Some(spans) => spans
+      .iter()
+      .map(|row| row.iter().sum::<usize>())
+      .max()
+      .unwrap_or(0),
+    None => rows.iter().map(Vec::len).max().unwrap_or(0),
+  };
+  for (r, row) in rows.iter_mut().enumerate() {
+    for (c, panel) in row.iter_mut().enumerate() {
+      if let Some(width) = widths[r][c] {
+        document.set_attribute(panel, "panelwidth", &panel_fraction(width))?;
+      }
+      if let Some(span) = spans.as_ref().map(|s| s[r][c]).filter(|span| *span >= 2) {
+        document.set_attribute(panel, "panelspan", &span.to_string())?;
+      }
+    }
+  }
+  let class = if spans.is_some() {
+    "ltx_panels_matrix"
+  } else {
+    "ltx_panels_gallery"
+  };
+  document.add_class(node, class)?;
+  document.set_attribute(node, "panelrows", &rows.len().to_string())?;
+  document.set_attribute(node, "panelcols", &cols.to_string())?;
+  // Where every panel states its width: the line as a fraction of the running-text column (`panelline`), and the
+  // widest row's sum of the widths its panels state (`panelfill`, fractions of the float's own line).
+  if let Some(column) = layout.column.filter(|c| *c > 0.0)
+    && widths.iter().flatten().all(Option::is_some)
+  {
+    let stated = |width: f64| (width * 1000.0).round() / 1000.0;
+    let fill = widths
+      .iter()
+      .map(|row| row.iter().flatten().map(|w| stated(*w)).sum::<f64>())
+      .fold(0.0, f64::max);
+    document.set_attribute(node, "panelline", &panel_fraction(line / column))?;
+    document.set_attribute(node, "panelfill", &panel_fraction(fill))?;
+  }
   Ok(())
 }
+
+/// What a graphic panel's box lost to its image's pixel rounding, as a factor of its width (`annotate_panel_grid`; the
+/// row rule scales the box to the real geometry, `note_stated_widths_in`, so the factor holds there too): the width its
+/// `\includegraphics` states (`width=`, its only size) over its box's, where the two are within 1% and a point
+/// (KNOWN_PERL_ERRORS #1142: a raster image's box is 72/72.27 of the stated width rounded up to a whole pixel, so
+/// 2208.08007 S0.F1.g1's `width=\linewidth` stated 0.997; review rev79c finding 4); 1 for any other panel, or a graphic
+/// its options size otherwise (a height, a scale, an angle).
+fn graphic_rounding(document: &Document, panel: &Node) -> f64 {
+  if document::get_node_qname(panel) != pin!("ltx:graphics") {
+    return 1.0;
+  }
+  let Some(options) = panel.get_attribute("options") else {
+    return 1.0;
+  };
+  let mut stated = None;
+  for option in options.split(',') {
+    let (key, value) = option.split_once('=').unwrap_or((option, ""));
+    match key.trim() {
+      "width" => stated = Dimension::spec_to_f64(value.trim()).ok(),
+      "height" | "totalheight" | "scale" | "angle" | "viewport" | "bb" | "natwidth"
+      | "natheight" => return 1.0,
+      _ => {},
+    }
+  }
+  let boxed = document
+    .get_node_box(panel)
+    .and_then(|b| b.get_width(None).ok().flatten())
+    .map_or(0.0, |w| w.value_of() as f64);
+  match stated {
+    Some(stated)
+      if stated > 0.0 && boxed > 0.0 && (stated - boxed).abs() <= 0.01 * stated + 65536.0 =>
+    {
+      stated / boxed
+    },
+    _ => 1.0,
+  }
+}
+
+/// A fraction of a line, as `panelwidth` states it: 3 decimals, no trailing zeros.
+fn panel_fraction(width: f64) -> String {
+  let fixed = format!("{width:.3}");
+  fixed
+    .trim_end_matches('0')
+    .trim_end_matches('.')
+    .to_string()
+}
+
+/// The columns each panel spans when the rows are a matrix (`annotate_panel_grid`), else `None`. The columns are those
+/// of 2 or more rows that agree panel for panel (the most panels a row takes, 2 or more; each width within
+/// `PANEL_WIDTH_TOLERANCE` of the other row's), and every other row takes them all, each panel as wide as the columns
+/// it spans; every width is known; and the panels' own captions (`holds_a_caption`) are none, or exactly one whole
+/// row's — they label its columns (main-session decision 3, 2026-10-23, review rev79c finding 2, checked on the PDFs:
+/// 2209.01559 Figs 3, 5; 1404.0431 Fig 1; 2212.03198 Figs 7, 10, 13, 14; 1811.02385 S4.F3-F6). Captions on every
+/// panel, on more than one row, or on some panels of a row make the panels a gallery's — independent, their order
+/// not their place (2503.15158 S4.F7, 2404.12123 S3.F6, 2106.04682 A2.F4 (a)-(e) and a legend, 1808.10020
+/// chapter5.figure11 and a blank panel, 2602.17978 Ch4.F2/F3).
+fn matrix_spans(rows: &[Vec<Node>], widths: &[Vec<Option<f64>>]) -> Option<Vec<Vec<usize>>> {
+  if rows.len() < 2 {
+    return None;
+  }
+  // (each row's captioned panels, and its panels)
+  let captioned: Vec<(usize, usize)> = rows
+    .iter()
+    .map(|row| {
+      (
+        row.iter().filter(|panel| holds_a_caption(panel)).count(),
+        row.len(),
+      )
+    })
+    .collect();
+  let some_of_a_row = captioned.iter().any(|(c, n)| *c > 0 && c < n);
+  let whole_rows = captioned.iter().filter(|(c, n)| c == n).count();
+  let any = captioned.iter().any(|(c, _)| *c > 0);
+  if any && (some_of_a_row || whole_rows != 1) {
+    return None;
+  }
+  let known: Vec<Vec<f64>> = widths
+    .iter()
+    .map(|row| row.iter().copied().collect())
+    .collect::<Option<_>>()?;
+  let agree = |a: &[f64], b: &[f64]| {
+    a.len() == b.len()
+      && a
+        .iter()
+        .zip(b)
+        .all(|(x, y)| (x - y).abs() <= PANEL_WIDTH_TOLERANCE)
+  };
+  let most = known.iter().map(Vec::len).max().unwrap_or(0);
+  if most < 2 {
+    return None;
+  }
+  let columns = known
+    .iter()
+    .filter(|row| row.len() == most)
+    .find(|row| known.iter().filter(|other| agree(row, other)).count() >= 2)?;
+  // Each row's panels over the columns, in order: a panel spans the fewest columns whose widths add up to its own.
+  known
+    .iter()
+    .map(|row| {
+      let mut at = 0;
+      let mut spans = Vec::with_capacity(row.len());
+      for width in row {
+        let mut sum = 0.0;
+        let span = (at..columns.len()).position(|column| {
+          sum += columns[column];
+          (sum - width).abs() <= PANEL_WIDTH_TOLERANCE
+        })?
+          + 1;
+        spans.push(span);
+        at += span;
+      }
+      (at == columns.len()).then_some(spans)
+    })
+    .collect()
+}
+
+/// Is the width `arrange_panels` set a panel at (`width`, against the float's `hsize`) one the source states
+/// (`annotate_panel_grid`): a box of a declared width (`box_panel_width`), or a panel that states its width
+/// (`states_its_width`) — except a sub-float set at the float's whole `\hsize` with no body width of its own
+/// (`panel_body_width`): it states none, its box takes the line (subfig's `\subfloat`, Perl's measure; the PDF's box is
+/// its content's).
+fn panel_width_is_stated(document: &Document, panel: &Node, width: f64, hsize: f64) -> bool {
+  if box_panel_width(panel).is_some() {
+    return true;
+  }
+  let sub_float = with(document::get_node_qname(panel), |q| {
+    PANEL_FLOATS.contains(&q)
+  });
+  let body_width = matches!(
+    document.get_node_box(panel).as_ref().map(Digested::data),
+    Some(DigestedData::Whatsit(w))
+      if matches!(w.borrow().get_property("panel_body_width").as_deref(), Some(Stored::Dimension(d)) if d.value_of() > 0)
+  );
+  if sub_float && !body_width && width >= hsize {
+    return false;
+  }
+  states_its_width(panel)
+}
+
+/// Is a panel's width one the source states (`annotate_panel_grid`), not a measure of our own setting of its material:
+/// a graphic's (its stated size, or its image's), a rule's, a picture's, a box's of a declared width (a minipage, a
+/// `\parbox`: `box_panel_width`), or a container's whose every part is one of those, side by side (a sub-float's body,
+/// a merged block; its tags, captions and breaks aside). A paragraph of text, a tabular, a list, a listing, math: our
+/// measure of their natural width is no width TeX sets them at (a paragraph is the line; 1807.05122 S2.F2's text
+/// panel measured 9.7 lines wide).
+fn states_its_width(panel: &Node) -> bool {
+  let qname = document::get_node_qname(panel);
+  if with(qname, |q| {
+    matches!(q, "ltx:graphics" | "ltx:rule" | "ltx:picture")
+  }) || box_panel_width(panel).is_some()
+  {
+    return true;
+  }
+  if !with(qname, |q| {
+    matches!(
+      q,
+      "ltx:figure"
+        | "ltx:table"
+        | "ltx:float"
+        | "ltx:block"
+        | "ltx:inline-block"
+        | "ltx:p"
+        | "ltx:text"
+    )
+  }) {
+    return false;
+  }
+  let mut parts = 0;
+  for child in panel.get_child_nodes() {
+    match child.get_type() {
+      Some(NodeType::TextNode) if !child.get_content().trim().is_empty() => return false,
+      Some(NodeType::ElementNode) => {
+        let name = document::get_node_qname(&child);
+        if is_panel_break_name(name) || with(name, |q| matches!(q, "ltx:note" | "ltx:indexmark")) {
+          continue;
+        }
+        if !states_its_width(&child) {
+          return false;
+        }
+        parts += 1;
+      },
+      _ => {},
+    }
+  }
+  parts > 0
+}
+
+/// A panel with a caption of its own (a sub-float's, a captioned minipage's), anywhere in it.
+fn holds_a_caption(panel: &Node) -> bool {
+  panel
+    .get_child_elements()
+    .iter()
+    .any(|child| document::get_node_qname(child) == pin!("ltx:caption") || holds_a_caption(child))
+}
+
+/// The least size (scaled points) a graphic or picture in a `tabular` cell has, both wide and tall (its width and its
+/// height plus depth), to be a panel of a matrix (`tabular_panel_grid`): 24pt, two lines of text. A data table's icons,
+/// bars and sparklines are small or thin in one of them (review rev79c finding 1: 2608.05898 S4.T2/T5's 102pt x
+/// 6.69pt bars, 2506.23665 Ch3.T4/T5, Ch5.T4/T5's 18pt-high sparklines, 2411.16612 S7.T1/T2's 8pt icons, 2501.18280
+/// S4.T3/A4.T6, 1509.07152 S10.T23, 1805.10096 Sx4.T1, 2504.02271 S2.T1); a matrix's panels are not (1403.6637 S4.F6,
+/// S4.F8's 22-30pt x 38pt, 2008.05524 T11-16 72pt, 0908.0534 Figs 1-2, 1104.5469; 2502.08151 S7.T3's 491pt x 29pt
+/// image strips). Of the 253 `tabular` matrices r1 found in the 1,907-paper population this keeps 240: the larger
+/// dimension alone kept 246, the bars and sparklines among them.
+const PANEL_GRAPHIC_LEAST: f64 = 24.0 * 65536.0;
+
+/// Is `node` a graphic or a picture of a panel's size (`PANEL_GRAPHIC_LEAST`), each dimension its box's or its
+/// element's stated `width`/`height` (a picture's, in points), the larger.
+fn is_panel_graphic(document: &Document, node: &Node) -> bool {
+  if !with(document::get_node_qname(node), |q| {
+    matches!(q, "ltx:graphics" | "ltx:picture")
+  }) {
+    return false;
+  }
+  let size = |value: Option<RegisterValue>| value.map_or(0.0, |v| v.value_of() as f64);
+  let (boxed_width, boxed_height) = document.get_node_box(node).map_or((0.0, 0.0), |b| {
+    (
+      size(b.get_width(None).ok().flatten()),
+      size(b.get_height()) + size(b.get_depth()),
+    )
+  });
+  let stated = |name: &str| {
+    node.get_attribute(name).map_or(0.0, |value| {
+      let value = value.trim();
+      match value.strip_suffix("pt").unwrap_or(value).parse::<f64>() {
+        Ok(points) => points * 65536.0,
+        Err(_) => Dimension::spec_to_f64(value).unwrap_or(0.0),
+      }
+    })
+  };
+  boxed_width
+    .max(stated("width"))
+    .min(boxed_height.max(stated("height")))
+    >= PANEL_GRAPHIC_LEAST
+}
+
+/// An author-built `tabular` of panels (`annotate_panel_grid`): the float's one content is a `tabular` (alone, or in
+/// a box of nothing else: `\resizebox`, `adjustbox`) 2 or more of whose cells hold a graphic of a panel's size
+/// (`is_panel_graphic`; a data table's icons, bars and sparklines make no matrix). Its rows and the most columns a row
+/// takes (cells' `colspan` counted).
+fn tabular_panel_grid(document: &Document, node: &Node) -> Option<(usize, usize)> {
+  let content = |node: &Node| -> Vec<Node> {
+    node
+      .get_child_elements()
+      .into_iter()
+      .filter(|child| {
+        let qname = document::get_node_qname(child);
+        !is_panel_break_name(qname) && !with(qname, |q| matches!(q, "ltx:note" | "ltx:indexmark"))
+      })
+      .collect()
+  };
+  let mut children = content(node);
+  let tabular = loop {
+    let [only] = children.as_slice() else {
+      return None;
+    };
+    let qname = document::get_node_qname(only);
+    if qname == pin!("ltx:tabular") {
+      break only.clone();
+    }
+    if qname != pin!("ltx:inline-block") {
+      return None;
+    }
+    children = content(only);
+  };
+  // (its own rows and cells, not a nested tabular's)
+  fn own(node: &Node, qname: &str, out: &mut Vec<Node>) {
+    for child in node.get_child_elements() {
+      let name = document::get_node_qname(&child);
+      if with(name, |n| n == qname) {
+        out.push(child);
+      } else if !with(name, |n| n == "ltx:tabular") {
+        own(&child, qname, out);
+      }
+    }
+  }
+  fn holds_graphic(document: &Document, node: &Node) -> bool {
+    node
+      .get_child_elements()
+      .iter()
+      .any(|child| is_panel_graphic(document, child) || holds_graphic(document, child))
+  }
+  let mut rows = Vec::new();
+  own(&tabular, "ltx:tr", &mut rows);
+  let mut graphic_cells = 0;
+  let mut cols = 0;
+  for row in &rows {
+    let mut cells = Vec::new();
+    own(row, "ltx:td", &mut cells);
+    graphic_cells += cells
+      .iter()
+      .filter(|cell| holds_graphic(document, cell))
+      .count();
+    cols = cols.max(
+      cells
+        .iter()
+        .map(|cell| {
+          cell
+            .get_attribute("colspan")
+            .and_then(|c| c.parse::<usize>().ok())
+            .unwrap_or(1)
+        })
+        .sum::<usize>(),
+    );
+  }
+  (graphic_cells >= 2).then_some((rows.len(), cols))
+}
+
 /// Perl: collapseFloat (latex_constructs.pool.ltxml:3437-3464)
 /// If a figure/table/float contains exactly one inner float child,
 /// and they don't BOTH have captions, collapse the inner into the outer.
@@ -6225,12 +6751,27 @@ fn collapse_float(document: &mut Document, float: &mut Node) -> Result<()> {
     if name == "xml:id" || name == "id" {
       continue;
     }
+    // (nor its panel grid's markup, `annotate_panel_grid`: the float's own is made of its panels, the inner's among
+    // them; a lone inner's grid is the float's)
     if beside_content && matches!(name.as_str(), "width" | "height" | "depth" | "vattach") {
+      continue;
+    }
+    if (beside_content && PANEL_GRID_ATTRIBUTES.contains(&name.as_str()))
+      || matches!(name.as_str(), "panelwidth" | "panelspan")
+    {
       continue;
     }
     if name == "class" {
       for class in value.split_whitespace() {
-        if !(beside_content && matches!(class, "ltx_minipage" | "ltx_parbox" | "ltx_figure_panel"))
+        if !(beside_content
+          && matches!(
+            class,
+            "ltx_minipage"
+              | "ltx_parbox"
+              | "ltx_figure_panel"
+              | "ltx_panels_gallery"
+              | "ltx_panels_matrix"
+          ))
         {
           document.add_class(float, class)?;
         }
@@ -6286,6 +6827,14 @@ fn collapse_float(document: &mut Document, float: &mut Node) -> Result<()> {
       !is_panel_break_name(qname) && !with(qname, |q| matches!(q, "ltx:note" | "ltx:indexmark"))
     };
     child.unlink_node();
+    // (a panel's width there was a fraction of the inner's line, not the float's: dropped beside other content, the
+    // inner a panel of the float or not — beside content of no width it was the float's only panel, its children then
+    // the float's, review rev79c finding 3; a lone inner's grid, its widths with it, is the float's)
+    if beside_content && child.is_element_node() {
+      for attribute in ["panelwidth", "panelspan"] {
+        child.remove_attribute(attribute).ok();
+      }
+    }
     // The number an inner float brings to a float without one (a captioned minipage beside other content,
     // `end_caption_box`) heads it, where a float's own template puts its tags.
     if !float_has_tags

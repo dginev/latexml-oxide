@@ -42,7 +42,7 @@
     <para xml:id="S0.SS0.SSS0.Px2.p1">
       <p>Two figures, <ref labelref="LABEL:fig:B-one"/> and <ref labelref="LABEL:fig:B-two"/>.</p>
     </para>
-    <figure placement="ht" xml:id="S0.SS0.SSS0.Px2.fig1">
+    <figure class="ltx_panels_gallery" panelcols="2" panelrows="1" placement="ht" xml:id="S0.SS0.SSS0.Px2.fig1">
       <figure align="center" class="ltx_figure_panel" labels="LABEL:fig:B-one" xml:id="S0.F3.sf1">
         <tags>
           <tag><text font="bold" fontsize="80%">(a)</text></tag>
@@ -68,7 +68,7 @@
     <para xml:id="S0.SS0.SSS0.Px3.p1">
       <p>Two figures, <ref labelref="LABEL:fig:C"/></p>
     </para>
-    <figure inlist="lof" labels="LABEL:fig:C" placement="ht" xml:id="S0.F3">
+    <figure class="ltx_panels_gallery" inlist="lof" labels="LABEL:fig:C" panelcols="2" panelrows="1" placement="ht" xml:id="S0.F3">
       <tags>
         <tag>Figure 3</tag>
         <tag role="refnum">3</tag>
@@ -98,7 +98,7 @@
       <p>Two figures, <ref labelref="LABEL:fig:D-one"/> and <ref labelref="LABEL:fig:D-two"/>,
 and collectively as <ref labelref="LABEL:fig:D"/>.</p>
     </para>
-    <figure inlist="lof" labels="LABEL:fig:D" placement="ht" xml:id="S0.F4">
+    <figure class="ltx_panels_gallery" inlist="lof" labels="LABEL:fig:D" panelcols="2" panelrows="1" placement="ht" xml:id="S0.F4">
       <tags>
         <tag>Figure 4</tag>
         <tag role="refnum">4</tag>
@@ -131,7 +131,7 @@ and collectively as <ref labelref="LABEL:fig:D"/>.</p>
     <para xml:id="S0.SS0.SSS0.Px5.p1">
       <p>Two tables, <ref labelref="LABEL:tab:B-one"/> and <ref labelref="LABEL:tab:B-two"/>.</p>
     </para>
-    <table placement="ht" xml:id="S0.SS0.SSS0.Px5.tab1">
+    <table class="ltx_panels_gallery" panelcols="2" panelrows="1" placement="ht" xml:id="S0.SS0.SSS0.Px5.tab1">
       <table align="center" class="ltx_figure_panel" labels="LABEL:tab:B-one" xml:id="S0.T0.st1">
         <tags>
           <tag><text font="bold" fontsize="80%">(a)</text></tag>
@@ -157,7 +157,7 @@ and collectively as <ref labelref="LABEL:fig:D"/>.</p>
     <para xml:id="S0.SS0.SSS0.Px6.p1">
       <p>Two tables, <ref labelref="LABEL:tab:C"/></p>
     </para>
-    <table inlist="lot" labels="LABEL:tab:C" placement="ht" xml:id="S0.T1">
+    <table class="ltx_panels_gallery" inlist="lot" labels="LABEL:tab:C" panelcols="2" panelrows="1" placement="ht" xml:id="S0.T1">
       <tags>
         <tag>Table 1</tag>
         <tag role="refnum">1</tag>
@@ -187,7 +187,7 @@ and collectively as <ref labelref="LABEL:fig:D"/>.</p>
       <p>Two tables, <ref labelref="LABEL:tab:D-one"/> and <ref labelref="LABEL:tab:D-two"/>,
 and collectively as <ref labelref="LABEL:tab:D"/>.</p>
     </para>
-    <table inlist="lot" labels="LABEL:tab:D" placement="ht" xml:id="S0.T2">
+    <table class="ltx_panels_gallery" inlist="lot" labels="LABEL:tab:D" panelcols="2" panelrows="1" placement="ht" xml:id="S0.T2">
       <tags>
         <tag>Table 2</tag>
         <tag role="refnum">2</tag>

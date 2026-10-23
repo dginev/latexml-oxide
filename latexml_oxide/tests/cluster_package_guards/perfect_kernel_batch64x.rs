@@ -408,7 +408,7 @@ Able, A. 1990, ApJ, 1
     &xml,
     "figure",
     &[],
-    r#"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="autoref">Figure 1<text xml:id="S0.F1.1"/></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><block class="ltx_figure_panel ltx_minipage" vattach="middle" width="142.3pt" xml:id="S0.F1.2"><graphics graphic="p1" xml:id="S0.F1.g1"/></block><bibitem class="ltx_figure_panel" xml:id="bib.bibx4"><bibblock><inline-block class="ltx_minipage" vattach="middle" width="142.3pt" xml:id="bib.bibx4.1"><graphics graphic="p2" xml:id="bib.bibx4.g1"/></inline-block></bibblock></bibitem><toccaption><tag close=" ">1</tag>Panels.</toccaption><caption><tag close=": ">Figure 1</tag>Panels.</caption></figure>"#,
+    r#"<figure class="ltx_panels_gallery" inlist="lof" panelcols="2" panelrows="1" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="autoref">Figure 1<text xml:id="S0.F1.1"/></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><block class="ltx_figure_panel ltx_minipage" panelwidth="0.412" vattach="middle" width="142.3pt" xml:id="S0.F1.2"><graphics graphic="p1" xml:id="S0.F1.g1"/></block><bibitem class="ltx_figure_panel" xml:id="bib.bibx4"><bibblock><inline-block class="ltx_minipage" vattach="middle" width="142.3pt" xml:id="bib.bibx4.1"><graphics graphic="p2" xml:id="bib.bibx4.g1"/></inline-block></bibblock></bibitem><toccaption><tag close=" ">1</tag>Panels.</toccaption><caption><tag close=": ">Figure 1</tag>Panels.</caption></figure>"#,
   );
   let xml = convert_clean(
     r#"\documentclass{article}\usepackage{graphicx}

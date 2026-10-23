@@ -2151,7 +2151,7 @@ See \doiurl{10.1214/09-AOS1} and \arxivurl{math.PR/0603300}.
     &xml,
     "table",
     &[],
-    "<table angle=\"90\" depth=\"0.0pt\" height=\"550.0pt\" inlist=\"lot\" innerdepth=\"36.0pt\" innerheight=\"6.8pt\" innerwidth=\"550.0pt\" width=\"42.8pt\" xml:id=\"S0.T1\" xtranslate=\"-253.6pt\" ytranslate=\"-253.6pt\"><tags><tag>Table 1</tag><tag role=\"autoref\">Table\u{a0}1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><toccaption><tag close=\" \">1</tag>Data</toccaption><caption><tag close=\": \">Table 1</tag>Data</caption><tabular class=\"ltx_figure_panel\" vattach=\"middle\"><tbody><tr><td align=\"left\">A<sup>a</sup></td></tr></tbody></tabular><break class=\"ltx_break\"/><p class=\"ltx_figure_panel\"><sup>a</sup>A note.</p></table>",
+    "<table angle=\"90\" class=\"ltx_panels_gallery\" depth=\"0.0pt\" height=\"550.0pt\" inlist=\"lot\" innerdepth=\"36.0pt\" innerheight=\"6.8pt\" innerwidth=\"550.0pt\" panelcols=\"1\" panelrows=\"2\" width=\"42.8pt\" xml:id=\"S0.T1\" xtranslate=\"-253.6pt\" ytranslate=\"-253.6pt\"><tags><tag>Table 1</tag><tag role=\"autoref\">Table\u{a0}1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><toccaption><tag close=\" \">1</tag>Data</toccaption><caption><tag close=\": \">Table 1</tag>Data</caption><tabular class=\"ltx_figure_panel\" vattach=\"middle\"><tbody><tr><td align=\"left\">A<sup>a</sup></td></tr></tbody></tabular><break class=\"ltx_break\"/><p class=\"ltx_figure_panel\"><sup>a</sup>A note.</p></table>",
   );
   assert_element(
     &xml,
@@ -3566,7 +3566,7 @@ See \ref{a} and \ref{b}.
   for (body, panel) in [
     (
       r"Above.\caption{Mid.}Below.",
-      r#"<figure class="ltx_figure_panel" inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p class="ltx_figure_panel" xml:id="S0.F1.1">Above.</p><toccaption><tag close=" ">1</tag>Mid.</toccaption><caption><tag close=": ">Figure 1</tag>Mid.</caption><p class="ltx_figure_panel" xml:id="S0.F1.2">Below.</p></figure>"#,
+      r#"<figure class="ltx_figure_panel ltx_panels_gallery" inlist="lof" panelcols="1" panelrows="2" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p class="ltx_figure_panel" xml:id="S0.F1.1">Above.</p><toccaption><tag close=" ">1</tag>Mid.</toccaption><caption><tag close=": ">Figure 1</tag>Mid.</caption><p class="ltx_figure_panel" xml:id="S0.F1.2">Below.</p></figure>"#,
     ),
     (
       r"\caption{Top caption.}Body below caption.",
@@ -3585,7 +3585,7 @@ See \ref{a} and \ref{b}.
       (0, 0),
       "{body}: {log}"
     );
-    assert_element(&xml, "figure", &["class=\"ltx_figure_panel\""], panel);
+    assert_element(&xml, "figure", &["xml:id=\"S0.F1\""], panel);
   }
   // A math `array` is an alignment too: the caption stays in its cell, a panel in the cell's text.
   let (log, xml) = convert_with(
@@ -3711,7 +3711,7 @@ fn captioned_minipages_are_their_own_floats() {
     &[(
       "figure",
       "fig1",
-      r#"<figure xml:id="fig1"><figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:a" vattach="middle" width="138.0pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S0.F1.1">X</p><toccaption><tag close=" ">1</tag>Left.</toccaption><caption><tag close=": ">Figure 1</tag>Left.</caption></figure><figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:b" vattach="middle" width="138.0pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p xml:id="S0.F2.1">Y</p><toccaption><tag close=" ">2</tag>Right.</toccaption><caption><tag close=": ">Figure 2</tag>Right.</caption></figure></figure>"#,
+      r#"<figure class="ltx_panels_gallery" panelcols="2" panelfill="0.8" panelline="1" panelrows="1" xml:id="fig1"><figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:a" panelwidth="0.4" vattach="middle" width="138.0pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S0.F1.1">X</p><toccaption><tag close=" ">1</tag>Left.</toccaption><caption><tag close=": ">Figure 1</tag>Left.</caption></figure><figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:b" panelwidth="0.4" vattach="middle" width="138.0pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p xml:id="S0.F2.1">Y</p><toccaption><tag close=" ">2</tag>Right.</toccaption><caption><tag close=": ">Figure 2</tag>Right.</caption></figure></figure>"#,
     )],
   );
   assert_elements(
@@ -3723,7 +3723,7 @@ fn captioned_minipages_are_their_own_floats() {
     &[(
       "figure",
       "S0.F3",
-      r#"<figure inlist="lof" labels="LABEL:c" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:a" vattach="middle" width="138.0pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S0.F1.1">X</p><toccaption><tag close=" ">1</tag>Left.</toccaption><caption><tag close=": ">Figure 1</tag>Left.</caption></figure><figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:b" vattach="middle" width="138.0pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p xml:id="S0.F2.1">Y</p><toccaption><tag close=" ">2</tag>Right.</toccaption><caption><tag close=": ">Figure 2</tag>Right.</caption></figure><toccaption><tag close=" ">3</tag>Overall.</toccaption><caption><tag close=": ">Figure 3</tag>Overall.</caption></figure>"#,
+      r#"<figure class="ltx_panels_gallery" inlist="lof" labels="LABEL:c" panelcols="2" panelfill="0.8" panelline="1" panelrows="1" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:a" panelwidth="0.4" vattach="middle" width="138.0pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S0.F1.1">X</p><toccaption><tag close=" ">1</tag>Left.</toccaption><caption><tag close=": ">Figure 1</tag>Left.</caption></figure><figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:b" panelwidth="0.4" vattach="middle" width="138.0pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p xml:id="S0.F2.1">Y</p><toccaption><tag close=" ">2</tag>Right.</toccaption><caption><tag close=": ">Figure 2</tag>Right.</caption></figure><toccaption><tag close=" ">3</tag>Overall.</toccaption><caption><tag close=": ">Figure 3</tag>Overall.</caption></figure>"#,
     )],
   );
   assert_elements(
@@ -3736,7 +3736,7 @@ fn captioned_minipages_are_their_own_floats() {
     &[(
       "table",
       "tab1",
-      r#"<table xml:id="tab1"><table class="ltx_figure_panel ltx_minipage" inlist="lot" labels="LABEL:a" vattach="middle" width="138.0pt" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>TL.</toccaption><caption><tag close=": ">Table 1</tag>TL.</caption><tabular vattach="middle" xml:id="S0.T1.1"><tbody><tr xml:id="S0.T1.1.1"><td align="center" xml:id="S0.T1.1.1.1">1</td></tr></tbody></tabular></table><table class="ltx_figure_panel ltx_minipage" inlist="lot" labels="LABEL:b" vattach="middle" width="138.0pt" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>TR.</toccaption><caption><tag close=": ">Table 2</tag>TR.</caption><tabular vattach="middle" xml:id="S0.T2.1"><tbody><tr xml:id="S0.T2.1.1"><td align="center" xml:id="S0.T2.1.1.1">2</td></tr></tbody></tabular></table></table>"#,
+      r#"<table class="ltx_panels_gallery" panelcols="2" panelfill="0.8" panelline="1" panelrows="1" xml:id="tab1"><table class="ltx_figure_panel ltx_minipage" inlist="lot" labels="LABEL:a" panelwidth="0.4" vattach="middle" width="138.0pt" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>TL.</toccaption><caption><tag close=": ">Table 1</tag>TL.</caption><tabular vattach="middle" xml:id="S0.T1.1"><tbody><tr xml:id="S0.T1.1.1"><td align="center" xml:id="S0.T1.1.1.1">1</td></tr></tbody></tabular></table><table class="ltx_figure_panel ltx_minipage" inlist="lot" labels="LABEL:b" panelwidth="0.4" vattach="middle" width="138.0pt" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>TR.</toccaption><caption><tag close=": ">Table 2</tag>TR.</caption><tabular vattach="middle" xml:id="S0.T2.1"><tbody><tr xml:id="S0.T2.1.1"><td align="center" xml:id="S0.T2.1.1.1">2</td></tr></tbody></tabular></table></table>"#,
     )],
   );
   // A box around the minipage (`\fbox`, `lrbox` + `\usebox`) makes no panel of it: the float keeps the number and
@@ -5883,7 +5883,7 @@ fn caption_after_framed_text_keeps_the_reading_order() {
     &[(
       "figure",
       "S0.F1",
-      "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><p class=\"ltx_figure_panel\" xml:id=\"S0.F1.1\"><text cssstyle=\"padding:3.0pt\" framecolor=\"#000000\" framed=\"rectangle\" xml:id=\"S0.F1.1.1\">A</text>  <text cssstyle=\"padding:3.0pt\" framecolor=\"#000000\" framed=\"rectangle\" xml:id=\"S0.F1.1.2\">B</text> text</p><toccaption><tag close=\" \">1</tag>Two</toccaption><caption><tag close=\": \">Figure 1</tag>Two</caption><p class=\"ltx_figure_panel\" xml:id=\"S0.F1.2\"><text cssstyle=\"padding:3.0pt\" framecolor=\"#000000\" framed=\"rectangle\" xml:id=\"S0.F1.2.1\">C</text> after</p></figure>",
+      "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"1\" panelrows=\"2\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><p class=\"ltx_figure_panel\" xml:id=\"S0.F1.1\"><text cssstyle=\"padding:3.0pt\" framecolor=\"#000000\" framed=\"rectangle\" xml:id=\"S0.F1.1.1\">A</text>  <text cssstyle=\"padding:3.0pt\" framecolor=\"#000000\" framed=\"rectangle\" xml:id=\"S0.F1.1.2\">B</text> text</p><toccaption><tag close=\" \">1</tag>Two</toccaption><caption><tag close=\": \">Figure 1</tag>Two</caption><p class=\"ltx_figure_panel\" xml:id=\"S0.F1.2\"><text cssstyle=\"padding:3.0pt\" framecolor=\"#000000\" framed=\"rectangle\" xml:id=\"S0.F1.2.1\">C</text> after</p></figure>",
     )],
   );
 }

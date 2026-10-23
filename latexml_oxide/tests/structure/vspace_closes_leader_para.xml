@@ -4,13 +4,13 @@
 <document xmlns="http://dlmf.nist.gov/LaTeXML">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
-  <figure xml:id="fig1">
-    <p class="ltx_figure_panel"><text class="ltx_leader"><rule height="1px" width="100%"/></text></p>
+  <figure class="ltx_panels_gallery" panelcols="1" panelrows="2" xml:id="fig1">
+    <p class="ltx_figure_panel" panelwidth="0.01"><text class="ltx_leader"><rule height="1px" width="100%"/></text></p>
     <break class="ltx_break"/>
     <p class="ltx_figure_panel">Second</p>
   </figure>
-  <figure xml:id="fig2">
-    <p class="ltx_figure_panel"><text class="ltx_leader"><rule height="1px" width="100%"/></text></p>
+  <figure class="ltx_panels_gallery" panelcols="1" panelrows="2" xml:id="fig2">
+    <p class="ltx_figure_panel" panelwidth="0.01"><text class="ltx_leader"><rule height="1px" width="100%"/></text></p>
     <break class="ltx_break"/>
     <p class="ltx_figure_panel">Third</p>
   </figure>

@@ -39,9 +39,17 @@ fn figure_captions(n: u32, class: &str, text: &str) -> String {
   )
 }
 
-/// A `\rule` panel `width` wide and 1cm high, centred.
-fn rule_panel(width: &str) -> String {
-  format!("<rule align=\"center\" class=\"ltx_figure_panel\" height=\"28.5pt\" width=\"{width}\"/>")
+/// A `\rule` panel `width` wide and 1cm high, centred, `fraction` of its row's line (`panelwidth`, batch 79c; none
+/// where empty).
+fn rule_panel(width: &str, fraction: &str) -> String {
+  let panel = if fraction.is_empty() {
+    String::new()
+  } else {
+    format!(" panelwidth=\"{fraction}\"")
+  };
+  format!(
+    "<rule align=\"center\" class=\"ltx_figure_panel\" height=\"28.5pt\"{panel} width=\"{width}\"/>"
+  )
 }
 
 /// The `ltx:break`s directly in the float `id` (the rows' separators), in order, as their markup.
@@ -77,7 +85,7 @@ fn par_breaks_a_panel_row() {
   let xml = convert_clean(repro!("captions-floats/par_breaks_a_panel_row.tex"));
   let row = |n: u32, label: &str| {
     format!(
-      "<block class=\"ltx_figure_panel\" xml:id=\"S0.F1.{n}\"><p class=\"ltx_minipage\" vattach=\"middle\" \
+      "<block class=\"ltx_figure_panel\" panelwidth=\"0.94\" xml:id=\"S0.F1.{n}\"><p class=\"ltx_minipage\" vattach=\"middle\" \
        width=\"13.8pt\" xml:id=\"S0.F1.{n}.1\">({label})</p><rule class=\"ltx_minipage\" height=\"56.9pt\" \
        vattach=\"middle\" width=\"310.5pt\"/></block>"
     )
@@ -87,7 +95,7 @@ fn par_breaks_a_panel_row() {
     "figure",
     &["xml:id=\"S0.F1\""],
     &format!(
-      "<figure inlist=\"lof\" xml:id=\"S0.F1\">{}{}<break class=\"ltx_break\"/>{}{}</figure>",
+      "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"1\" panelfill=\"0.94\" panelline=\"1\" panelrows=\"2\" xml:id=\"S0.F1\">{}{}<break class=\"ltx_break\"/>{}{}</figure>",
       figure_tags(1),
       row(1, "a"),
       row(2, "b"),
@@ -110,10 +118,10 @@ fn glue_between_panels_counts_towards_their_row() {
     "figure",
     &["xml:id=\"S0.F1\""],
     &format!(
-      "<figure inlist=\"lof\" xml:id=\"S0.F1\">{}{}<break class=\"ltx_break\"/>{}{}</figure>",
+      "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"1\" panelfill=\"0.45\" panelline=\"1\" panelrows=\"2\" xml:id=\"S0.F1\">{}{}<break class=\"ltx_break\"/>{}{}</figure>",
       figure_tags(1),
-      rule_panel("155.3pt"),
-      rule_panel("155.3pt"),
+      rule_panel("155.3pt", "0.45"),
+      rule_panel("155.3pt", "0.45"),
       figure_captions(1, " class=\"ltx_centering\"", "Stated glue past the line.")
     ),
   );
@@ -122,11 +130,11 @@ fn glue_between_panels_counts_towards_their_row() {
     "figure",
     &["xml:id=\"S0.F3\""],
     &format!(
-      "<figure inlist=\"lof\" xml:id=\"S0.F3\">{}{}{}{}{}</figure>",
+      "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"3\" panelfill=\"0.9\" panelline=\"1\" panelrows=\"1\" xml:id=\"S0.F3\">{}{}{}{}{}</figure>",
       figure_tags(3),
-      rule_panel("103.5pt"),
-      rule_panel("103.5pt"),
-      rule_panel("103.5pt"),
+      rule_panel("103.5pt", "0.3"),
+      rule_panel("103.5pt", "0.3"),
+      rule_panel("103.5pt", "0.3"),
       figure_captions(3, " class=\"ltx_centering\"", "Quads within the line.")
     ),
   );
@@ -151,10 +159,10 @@ fn two_column_floats_set_rows_against_the_column() {
     "figure",
     &["xml:id=\"S0.F1\""],
     &format!(
-      "<figure inlist=\"lof\" xml:id=\"S0.F1\">{}{}{}{}</figure>",
+      "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"2\" panelfill=\"0.74\" panelline=\"2\" panelrows=\"1\" xml:id=\"S0.F1\">{}{}{}{}</figure>",
       figure_tags(1),
-      rule_panel("255.3pt"),
-      rule_panel("255.3pt"),
+      rule_panel("255.3pt", "0.37"),
+      rule_panel("255.3pt", "0.37"),
       figure_captions(
         1,
         " class=\"ltx_centering\"",
@@ -168,10 +176,10 @@ fn two_column_floats_set_rows_against_the_column() {
     "figure",
     &["xml:id=\"S0.F2\""],
     &format!(
-      "<figure inlist=\"lof\" xml:id=\"S0.F2\">{}{}<break class=\"ltx_break\"/>{}{}</figure>",
+      "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"1\" panelfill=\"0.9\" panelline=\"1\" panelrows=\"2\" xml:id=\"S0.F2\">{}{}<break class=\"ltx_break\"/>{}{}</figure>",
       figure_tags(2),
-      rule_panel("155.3pt"),
-      rule_panel("155.3pt"),
+      rule_panel("155.3pt", "0.9"),
+      rule_panel("155.3pt", "0.9"),
       figure_captions(
         2,
         " class=\"ltx_centering\"",
@@ -194,7 +202,7 @@ fn a_center_and_its_breaks_end_a_panel_row() {
   ));
   let centred = |width: &str| {
     format!(
-      "<rule align=\"center\" class=\"ltx_figure_panel\" height=\"28.5pt\" width=\"{width}\"/>"
+      "<rule align=\"center\" class=\"ltx_figure_panel\" height=\"28.5pt\" panelwidth=\"0.3\" width=\"{width}\"/>"
     )
   };
   assert_element(
@@ -202,7 +210,7 @@ fn a_center_and_its_breaks_end_a_panel_row() {
     "figure",
     &["xml:id=\"S0.F2\""],
     &format!(
-      "<figure inlist=\"lof\" xml:id=\"S0.F2\">{}{}{}<break class=\"ltx_break\"/>{}{}</figure>",
+      "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"2\" panelfill=\"0.6\" panelline=\"1\" panelrows=\"2\" xml:id=\"S0.F2\">{}{}{}<break class=\"ltx_break\"/>{}{}</figure>",
       figure_tags(2),
       centred("103.5pt"),
       centred("103.5pt"),
@@ -215,7 +223,7 @@ fn a_center_and_its_breaks_end_a_panel_row() {
     "figure",
     &["xml:id=\"S0.F3\""],
     &format!(
-      "<figure inlist=\"lof\" xml:id=\"S0.F3\">{}{}<break class=\"ltx_break\"/>{}{}{}</figure>",
+      "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"2\" panelfill=\"0.6\" panelline=\"1\" panelrows=\"2\" xml:id=\"S0.F3\">{}{}<break class=\"ltx_break\"/>{}{}{}</figure>",
       figure_tags(3),
       centred("103.5pt"),
       centred("103.5pt"),
@@ -249,12 +257,12 @@ fn vskip_ends_a_panel_row_vspace_does_not() {
     "figure",
     &["xml:id=\"S0.F2\""],
     &format!(
-      "<figure inlist=\"lof\" xml:id=\"S0.F2\">{}{}<break class=\"ltx_break\"/>{}<break class=\"ltx_break\"/>{}{}\
+      "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"1\" panelfill=\"0.3\" panelline=\"1\" panelrows=\"3\" xml:id=\"S0.F2\">{}{}<break class=\"ltx_break\"/>{}<break class=\"ltx_break\"/>{}{}\
        </figure>",
       figure_tags(2),
-      rule_panel("103.5pt"),
-      rule_panel("103.5pt"),
-      rule_panel("103.5pt"),
+      rule_panel("103.5pt", "0.3"),
+      rule_panel("103.5pt", "0.3"),
+      rule_panel("103.5pt", "0.3"),
       figure_captions(2, " class=\"ltx_centering\"", "A skip and a line break.")
     ),
   );
@@ -275,12 +283,12 @@ fn geometry_text_width_sets_the_panel_rows() {
     "figure",
     &["xml:id=\"S0.F1\""],
     &format!(
-      "<figure inlist=\"lof\" xml:id=\"S0.F1\">{}{}{}{}<break class=\"ltx_break\"/>{}{}</figure>",
+      "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"3\" panelfill=\"0.9\" panelline=\"1\" panelrows=\"2\" xml:id=\"S0.F1\">{}{}{}{}<break class=\"ltx_break\"/>{}{}</figure>",
       figure_tags(1),
-      rule_panel("103.5pt"),
-      rule_panel("103.5pt"),
-      rule_panel("103.5pt"),
-      rule_panel("103.5pt"),
+      rule_panel("103.5pt", "0.3"),
+      rule_panel("103.5pt", "0.3"),
+      rule_panel("103.5pt", "0.3"),
+      rule_panel("103.5pt", "0.3"),
       figure_captions(
         1,
         " class=\"ltx_centering\"",
@@ -302,7 +310,8 @@ fn an_uncaptioned_subfigure_is_as_wide_as_its_body() {
   ));
   let panel = |n: u32, letter: &str, label: &str| {
     format!(
-      "<figure align=\"center\" class=\"ltx_figure_panel\" labels=\"LABEL:fig:{label}\" xml:id=\"S0.F1.sf{n}\">\
+      "<figure align=\"center\" class=\"ltx_figure_panel\" labels=\"LABEL:fig:{label}\" panelwidth=\"0.45\" \
+       xml:id=\"S0.F1.sf{n}\">\
        <tags><tag><text fontsize=\"80%\" xml:id=\"S0.F1.sf{n}.1\">({letter})</text></tag>\
        <tag role=\"refnum\">1({letter})</tag></tags><rule height=\"28.5pt\" width=\"155.3pt\"/></figure>"
     )
@@ -312,7 +321,7 @@ fn an_uncaptioned_subfigure_is_as_wide_as_its_body() {
     "figure",
     &["xml:id=\"S0.F1\""],
     &format!(
-      "<figure inlist=\"lof\" xml:id=\"S0.F1\">{}{}{}{}</figure>",
+      "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"2\" panelfill=\"0.9\" panelline=\"1\" panelrows=\"1\" xml:id=\"S0.F1\">{}{}{}{}</figure>",
       figure_tags(1),
       panel(1, "a", "left"),
       panel(2, "b", "right"),
@@ -383,17 +392,18 @@ fn a_subfloat_states_no_width() {
     ["<break class=\"ltx_break\"/>"],
     "{xml}"
   );
-  for (float, n, label) in [
-    (1, 1, "a"),
-    (1, 2, "b"),
-    (1, 3, "c"),
-    (2, 1, "d"),
-    (2, 2, "e"),
+  // (each the width of its one graphic, `sole_graphic_width`, a fraction of its line: batch 79c)
+  for (float, n, label, fraction) in [
+    (1, 1, "a", "0.229"),
+    (1, 2, "b", "0.229"),
+    (1, 3, "c", "0.229"),
+    (2, 1, "d", "0.508"),
+    (2, 2, "e", "0.508"),
   ] {
     assert!(
       xml.contains(&format!(
         "<figure align=\"center\" class=\"ltx_figure_panel\" inlist=\"lof\" labels=\"LABEL:fig:{label}\" \
-         xml:id=\"S0.F{float}.sf{n}\">"
+         panelwidth=\"{fraction}\" xml:id=\"S0.F{float}.sf{n}\">"
       )),
       "{xml}"
     );
@@ -880,7 +890,7 @@ fn subfloats_of_a_stated_width_in_a_revtex_column() {
   for n in [1, 2] {
     assert!(
       xml.contains(&format!(
-        "<figure class=\"ltx_figure_panel\" inlist=\"lof\" xml:id=\"S0.F1.sf{n}\">"
+        "<figure class=\"ltx_figure_panel\" inlist=\"lof\" panelwidth=\"0.52\" xml:id=\"S0.F1.sf{n}\">"
       )),
       "{xml}"
     );

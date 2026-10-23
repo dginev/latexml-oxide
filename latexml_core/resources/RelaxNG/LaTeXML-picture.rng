@@ -162,9 +162,13 @@ NOTE: Eventually we will drop these subset elements and incorporate SVG itself.<
       <ref name="picture_model"/>
     </element>
   </define>
+  <!--
+    `Labelled.attributes` (for `ID.attributes`) and `tags` added by latexml-oxide (OXIDIZED_DESIGN #813): a box drawn
+    as a picture carries the label of the counter step made inside it, and that step's number (`\refstepcounter` in a
+    tcolorbox, or in a `\put`), as a float carries its caption's.
+  -->
   <define name="picture_attributes">
     <a:documentation>Attributes for \elementref{picture}.</a:documentation>
-    <!-- `Labelled.attributes` (for `ID.attributes`) and `tags` added by latexml-oxide (OXIDIZED_DESIGN #813) -->
     <ref name="Common.attributes"/>
     <ref name="Labelled.attributes"/>
     <ref name="Picture.attributes"/>

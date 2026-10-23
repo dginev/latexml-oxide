@@ -260,18 +260,21 @@ pub(crate) fn load() -> Result<()> {
   // Perl: BuildPanelsAndID + collapseFloat (afterClose hooks)
   Tag!("ltx:figure", after_close => sub[document, node, whatsit] {
     document.generate_id(node, "fig")?;
-    arrange_panels(document, node, whatsit)?;
+    let layout = arrange_panels(document, node, whatsit)?;
     collapse_float(document, node)?;
+    annotate_panel_grid(document, node, &layout)?;
   });
   Tag!("ltx:table",  after_close => sub[document, node, whatsit] {
     document.generate_id(node, "tab")?;
-    arrange_panels(document, node, whatsit)?;
+    let layout = arrange_panels(document, node, whatsit)?;
     collapse_float(document, node)?;
+    annotate_panel_grid(document, node, &layout)?;
   });
   Tag!("ltx:float",  after_close => sub[document, node, whatsit] {
     document.generate_id(node, "tab")?;
-    arrange_panels(document, node, whatsit)?;
+    let layout = arrange_panels(document, node, whatsit)?;
     collapse_float(document, node)?;
+    annotate_panel_grid(document, node, &layout)?;
   });
 
   // # These may need to float up to where they're allowed,

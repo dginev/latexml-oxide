@@ -380,7 +380,7 @@ End text.
       (
         "figure",
         "S0.F2",
-        r#"<figure inlist="lof" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="138.0pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S0.F1.1">AAA</p><toccaption><tag close=" ">1</tag>First</toccaption><caption><tag close=": ">Figure 1</tag>First</caption></figure><break class="ltx_break"/><figure class="ltx_figure_panel" xml:id="S0.F2.sf1"><tags><tag>(a)</tag><tag role="refnum">2a</tag></tags><p xml:id="S0.F2.sf1.1">XXX</p><toccaption><tag close=" ">a</tag>SubA</toccaption><caption><tag close=" ">(a)</tag>SubA</caption></figure><toccaption><tag close=" ">2</tag>Whole</toccaption><caption><tag close=": ">Figure 2</tag>Whole</caption></figure>"#,
+        r#"<figure class="ltx_panels_gallery" inlist="lof" panelcols="1" panelrows="2" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure class="ltx_figure_panel ltx_minipage" inlist="lof" panelwidth="0.4" vattach="middle" width="138.0pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S0.F1.1">AAA</p><toccaption><tag close=" ">1</tag>First</toccaption><caption><tag close=": ">Figure 1</tag>First</caption></figure><break class="ltx_break"/><figure class="ltx_figure_panel" xml:id="S0.F2.sf1"><tags><tag>(a)</tag><tag role="refnum">2a</tag></tags><p xml:id="S0.F2.sf1.1">XXX</p><toccaption><tag close=" ">a</tag>SubA</toccaption><caption><tag close=" ">(a)</tag>SubA</caption></figure><toccaption><tag close=" ">2</tag>Whole</toccaption><caption><tag close=": ">Figure 2</tag>Whole</caption></figure>"#,
       ),
       (
         "para",
@@ -424,7 +424,7 @@ End text.
       (
         "figure",
         "S0.F1",
-        r#"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure class="ltx_figure_panel ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.F0.sf1"><tags><tag><text fontsize="80%" xml:id="S0.F0.sf1.1">(a)</text></tag><tag role="refnum">0(a)</tag></tags><p class="ltx_figure_panel" xml:id="S0.F0.sf1.2">AAA</p><break class="ltx_break"/><toccaption><tag close=" ">(a)</tag>First</toccaption><caption><tag close=": ">(a)</tag>First</caption></figure><figure class="ltx_figure_panel" xml:id="S0.F1.sf2"><tags><tag><text fontsize="80%" xml:id="S0.F1.sf2.1">(b)</text></tag><tag role="refnum">1(b)</tag></tags><p xml:id="S0.F1.sf2.2">XXX</p><toccaption><tag close=" ">(b)</tag>SubA</toccaption><caption><tag close=" "><text fontsize="80%" xml:id="S0.F1.sf2.3">(b)</text></tag><text fontsize="80%" xml:id="S0.F1.sf2.4">SubA</text></caption></figure><toccaption><tag close=" ">1</tag>Whole</toccaption><caption><tag close=": ">Figure 1</tag>Whole</caption></figure>"#,
+        r#"<figure class="ltx_panels_gallery" inlist="lof" panelcols="2" panelrows="1" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure class="ltx_figure_panel ltx_minipage" panelwidth="0.4" vattach="middle" width="138.0pt" xml:id="S0.F0.sf1"><tags><tag><text fontsize="80%" xml:id="S0.F0.sf1.1">(a)</text></tag><tag role="refnum">0(a)</tag></tags><p class="ltx_figure_panel" xml:id="S0.F0.sf1.2">AAA</p><break class="ltx_break"/><toccaption><tag close=" ">(a)</tag>First</toccaption><caption><tag close=": ">(a)</tag>First</caption></figure><figure class="ltx_figure_panel" xml:id="S0.F1.sf2"><tags><tag><text fontsize="80%" xml:id="S0.F1.sf2.1">(b)</text></tag><tag role="refnum">1(b)</tag></tags><p xml:id="S0.F1.sf2.2">XXX</p><toccaption><tag close=" ">(b)</tag>SubA</toccaption><caption><tag close=" "><text fontsize="80%" xml:id="S0.F1.sf2.3">(b)</text></tag><text fontsize="80%" xml:id="S0.F1.sf2.4">SubA</text></caption></figure><toccaption><tag close=" ">1</tag>Whole</toccaption><caption><tag close=": ">Figure 1</tag>Whole</caption></figure>"#,
       ),
       (
         "para",
@@ -452,7 +452,7 @@ End text.
     &[(
       "figure",
       "S0.F0.sf1",
-      r#"<figure class="ltx_figure_panel ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.F0.sf1"><tags><tag><text fontsize="80%" xml:id="S0.F0.sf1.1">(a)</text></tag><tag role="refnum">0a</tag></tags><p class="ltx_figure_panel" xml:id="S0.F0.sf1.2">AAA</p><break class="ltx_break"/><toccaption><tag close=" ">a</tag>First</toccaption><caption><tag close=": ">(a)</tag>First</caption></figure>"#,
+      r#"<figure class="ltx_figure_panel ltx_minipage" panelwidth="0.4" vattach="middle" width="138.0pt" xml:id="S0.F0.sf1"><tags><tag><text fontsize="80%" xml:id="S0.F0.sf1.1">(a)</text></tag><tag role="refnum">0a</tag></tags><p class="ltx_figure_panel" xml:id="S0.F0.sf1.2">AAA</p><break class="ltx_break"/><toccaption><tag close=" ">a</tag>First</toccaption><caption><tag close=": ">(a)</tag>First</caption></figure>"#,
     )],
   );
 }
@@ -488,7 +488,7 @@ End text.
       (
         "figure",
         "S0.F0.sf1",
-        r#"<figure class="ltx_figure_panel ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.F0.sf1"><tags><tag><text fontsize="80%" xml:id="S0.F0.sf1.1">(a)</text></tag><tag role="refnum">0(a)</tag></tags><p class="ltx_figure_panel" xml:id="S0.F0.sf1.2">AAA</p><break class="ltx_break"/><toccaption><tag close=" ">(a)</tag>First</toccaption><caption>First</caption></figure>"#,
+        r#"<figure class="ltx_figure_panel ltx_minipage" panelwidth="0.4" vattach="middle" width="138.0pt" xml:id="S0.F0.sf1"><tags><tag><text fontsize="80%" xml:id="S0.F0.sf1.1">(a)</text></tag><tag role="refnum">0(a)</tag></tags><p class="ltx_figure_panel" xml:id="S0.F0.sf1.2">AAA</p><break class="ltx_break"/><toccaption><tag close=" ">(a)</tag>First</toccaption><caption>First</caption></figure>"#,
       ),
       (
         "figure",
@@ -538,7 +538,7 @@ Out \captionof{subfigure}{Loose} end.
       (
         "table",
         "S0.T1",
-        r#"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><figure class="ltx_figure_panel ltx_minipage" vattach="middle" width="138.0pt" xml:id="S0.T0.st1"><tags><tag><text fontsize="80%" xml:id="S0.T0.st1.1">(a)</text></tag><tag role="refnum">0(a)</tag></tags><p class="ltx_figure_panel" xml:id="S0.T0.st1.2">AAA</p><break class="ltx_break"/><toccaption><tag close=" ">(a)</tag>For one</toccaption><caption><tag close=" "><text font="bold" xml:id="S0.T0.st1.3">(a)</text></tag>For one</caption></figure><figure class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="138.0pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p class="ltx_figure_panel" xml:id="S0.F1.1">BBB</p><break class="ltx_break"/><toccaption><tag close=" ">1</tag>Fig in table</toccaption><caption><tag close=". "><text font="bold" xml:id="S0.F1.2">Figure 1</text></tag>Fig in table</caption></figure><toccaption><tag close=" ">1</tag>Whole</toccaption><caption><tag close=" "><text font="bold" xml:id="S0.T1.1">Table 1</text></tag>Whole</caption></table>"#,
+        r#"<table class="ltx_panels_gallery" inlist="lot" panelcols="2" panelfill="0.8" panelline="1" panelrows="1" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><figure class="ltx_figure_panel ltx_minipage" panelwidth="0.4" vattach="middle" width="138.0pt" xml:id="S0.T0.st1"><tags><tag><text fontsize="80%" xml:id="S0.T0.st1.1">(a)</text></tag><tag role="refnum">0(a)</tag></tags><p class="ltx_figure_panel" xml:id="S0.T0.st1.2">AAA</p><break class="ltx_break"/><toccaption><tag close=" ">(a)</tag>For one</toccaption><caption><tag close=" "><text font="bold" xml:id="S0.T0.st1.3">(a)</text></tag>For one</caption></figure><figure class="ltx_figure_panel ltx_minipage" inlist="lof" panelwidth="0.4" vattach="middle" width="138.0pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p class="ltx_figure_panel" xml:id="S0.F1.1">BBB</p><break class="ltx_break"/><toccaption><tag close=" ">1</tag>Fig in table</toccaption><caption><tag close=". "><text font="bold" xml:id="S0.F1.2">Figure 1</text></tag>Fig in table</caption></figure><toccaption><tag close=" ">1</tag>Whole</toccaption><caption><tag close=" "><text font="bold" xml:id="S0.T1.1">Table 1</text></tag>Whole</caption></table>"#,
       ),
       (
         "figure",

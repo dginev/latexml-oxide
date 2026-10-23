@@ -260,10 +260,10 @@ fn includegraphics_eps_shipped_only_as_pdf_is_sized() {
   assert_eq!(
     all_elements(&xml, "graphics"),
     [
-      r#"<graphics candidates="eps_as_pdf_one.pdf" class="ltx_figure_panel" graphic="eps_as_pdf_one.eps" options="scale=0.5" xml:id="S0.F1.g1"/>"#,
-      r#"<graphics candidates="eps_as_pdf_two.eps" class="ltx_figure_panel" cssstyle="width:4.015em; height:2.007em" graphic="eps_as_pdf_two.eps" xml:id="S0.F1.g2"/>"#,
-      r#"<graphics candidates="eps_as_pdf_three.pdf,eps_as_pdf_three.ps" class="ltx_figure_panel" cssstyle="width:20.075em; height:10.037em" graphic="eps_as_pdf_three.eps" xml:id="S0.F1.g3"/>"#,
-      r#"<graphics candidates="eps_as_pdf_four.pdf,eps_as_pdf_four.ps" class="ltx_figure_panel" cssstyle="width:20.075em; height:10.037em" graphic="eps_as_pdf_four.eps" xml:id="S0.F1.g4"/>"#,
+      r#"<graphics candidates="eps_as_pdf_one.pdf" class="ltx_figure_panel" graphic="eps_as_pdf_one.eps" options="scale=0.5" panelwidth="0.291" xml:id="S0.F1.g1"/>"#,
+      r#"<graphics candidates="eps_as_pdf_two.eps" class="ltx_figure_panel" cssstyle="width:4.015em; height:2.007em" graphic="eps_as_pdf_two.eps" panelwidth="0.116" xml:id="S0.F1.g2"/>"#,
+      r#"<graphics candidates="eps_as_pdf_three.pdf,eps_as_pdf_three.ps" class="ltx_figure_panel" cssstyle="width:20.075em; height:10.037em" graphic="eps_as_pdf_three.eps" panelwidth="0.582" xml:id="S0.F1.g3"/>"#,
+      r#"<graphics candidates="eps_as_pdf_four.pdf,eps_as_pdf_four.ps" class="ltx_figure_panel" cssstyle="width:20.075em; height:10.037em" graphic="eps_as_pdf_four.eps" panelwidth="0.582" xml:id="S0.F1.g4"/>"#,
     ],
     "{xml}"
   );

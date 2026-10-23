@@ -1,0 +1,28 @@
+% witness: review rev78x3 findings 1-2 (`p2.tex` F2-F4: a `\figw=3.8cm` register a float cannot evaluate at the real
+%          geometry, arranged as before the grid rule)
+% oracle:  pdflatex 0 errors (`\showbox` of the float boxes): both floats one line of two (\hsize 229.5pt)
+% engines: rust int71a = one row each, no grid markup; Perl 0.8.8 = one row each, no grid markup
+% expect:  0 errors, 0 warnings; both `ltx_panels_gallery` 1x2; F1's panels no `panelwidth` (`\figw` assigned without
+%          `\setlength`: unevaluable, never a guess), F2's 0.45 (of the 229.5pt column)
+% status:  RED (int71a) -> GREEN (79c, OXIDIZED_DESIGN_DIVERGENCES #887)
+% preload: ar5iv.sty
+\documentclass[twocolumn]{article}
+\usepackage{graphicx}
+\newlength\figw
+\begin{document}
+\figw=0.45\columnwidth
+Some text.
+
+\begin{figure}
+  \centering
+  \rule{\figw}{1cm}
+  \rule{\figw}{1cm}
+  \caption{Two panels whose width is a register the document assigned without \texttt{\textbackslash setlength}.}
+\end{figure}
+\begin{figure}
+  \centering
+  \rule{0.45\columnwidth}{1cm}
+  \rule{0.45\columnwidth}{1cm}
+  \caption{The same two panels, their width stated.}
+\end{figure}
+\end{document}

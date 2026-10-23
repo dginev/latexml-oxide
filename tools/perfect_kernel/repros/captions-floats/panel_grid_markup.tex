@@ -1,0 +1,81 @@
+% witness: the grid design study's oracle set (agent_reports/2026-10-22_grid_design.md Q1-Q4; option (a), ruled
+%          2026-10-22); 1403.6637 S4.F6 (a `tabular`-built matrix with row labels)
+% oracle:  pdflatex 0 errors (`\showbox` of the float boxes): F1 2+2, F2 3+3+3, F3 3+2, F4 3+3+2, F5 one box (the
+%          tabular), F6 one graphic, F7 (a `{wrapfigure}{r}{0.5\textwidth}`) one line of two
+% engines: rust int71a = the same rows, no grid markup; Perl 0.8.8 = the same rows (its 345pt line), no grid markup
+% expect:  0 errors, 0 warnings; F1 `ltx_panels_gallery` 2x2, `panelwidth` 0.45 (sub-captioned: a gallery); F2
+%          `ltx_panels_matrix` 3x3, 0.3; F3 gallery 2 rows x 3 (ragged); F4 matrix 3x3, the last row's first panel
+%          `panelspan` 2; F5 matrix 3 rows x 2 (the tabular's, cells unchanged, no `panelwidth`); F6 none; F1-F4
+%          `panelline` 1 (a one-column `figure`), `panelfill` 0.9; F7 gallery 1x2, `panelline` 0.5 (79c r2)
+% status:  RED (int71a) -> GREEN (79c, OXIDIZED_DESIGN_DIVERGENCES #887)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{wrapfig}
+\begin{document}
+\begin{figure}
+  \centering
+  \begin{subfigure}{0.45\textwidth}\rule{\linewidth}{1cm}\caption{A}\end{subfigure}
+  \begin{subfigure}{0.45\textwidth}\rule{\linewidth}{1cm}\caption{B}\end{subfigure}
+  \begin{subfigure}{0.45\textwidth}\rule{\linewidth}{1cm}\caption{C}\end{subfigure}
+  \begin{subfigure}{0.45\textwidth}\rule{\linewidth}{1cm}\caption{D}\end{subfigure}
+  \caption{A gallery: sub-captioned panels, two rows of two.}
+\end{figure}
+\begin{figure}
+  \centering
+  \rule{0.3\textwidth}{1cm}
+  \rule{0.3\textwidth}{1cm}
+  \rule{0.3\textwidth}{1cm}\\
+  \rule{0.3\textwidth}{1cm}
+  \rule{0.3\textwidth}{1cm}
+  \rule{0.3\textwidth}{1cm}\\
+  \rule{0.3\textwidth}{1cm}
+  \rule{0.3\textwidth}{1cm}
+  \rule{0.3\textwidth}{1cm}
+  \caption{A matrix: three rows of three equal panels, one caption.}
+\end{figure}
+\begin{figure}
+  \centering
+  \rule{0.3\textwidth}{1cm}
+  \rule{0.3\textwidth}{1cm}
+  \rule{0.3\textwidth}{1cm}\\
+  \rule{0.45\textwidth}{1cm}
+  \rule{0.45\textwidth}{1cm}
+  \caption{Ragged rows: three, then two wider.}
+\end{figure}
+\begin{figure}
+  \centering
+  \rule{0.3\textwidth}{1cm}
+  \rule{0.3\textwidth}{1cm}
+  \rule{0.3\textwidth}{1cm}\\
+  \rule{0.3\textwidth}{1cm}
+  \rule{0.3\textwidth}{1cm}
+  \rule{0.3\textwidth}{1cm}\\
+  \rule{0.6\textwidth}{1cm}
+  \rule{0.3\textwidth}{1cm}
+  \caption{A matrix whose last row holds a panel two columns wide.}
+\end{figure}
+\begin{figure}
+  \centering
+  \begin{tabular}{cc}
+    & \textbf{after} \\
+    \includegraphics[width=0.4\textwidth]{example-image} & \includegraphics[width=0.4\textwidth]{example-image} \\
+    \includegraphics[width=0.4\textwidth]{example-image} & \includegraphics[width=0.4\textwidth]{example-image} \\
+  \end{tabular}
+  \caption{A matrix the author built as a tabular.}
+\end{figure}
+\begin{figure}
+  \centering
+  \includegraphics[width=0.5\textwidth]{example-image}
+  \caption{One panel.}
+\end{figure}
+\begin{wrapfigure}{r}{0.5\textwidth}
+  \centering
+  \rule{0.45\linewidth}{1cm}
+  \rule{0.45\linewidth}{1cm}
+  \caption{A wrapped figure of two panels.}
+\end{wrapfigure}
+A paragraph the wrapped figure sits beside. A paragraph the wrapped figure sits beside. A paragraph the wrapped figure
+sits beside. A paragraph the wrapped figure sits beside. A paragraph the wrapped figure sits beside.
+\end{document}

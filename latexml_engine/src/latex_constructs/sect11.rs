@@ -67,6 +67,13 @@ pub(crate) fn load() -> Result<()> {
   // Perl L3847-3848: disappear in tex=/content-tex unless outside DUAL_BRANCH.
   // Empty reversion: \label contributes no visible content to tex= attributes.
   reversion => "",
+  // A label makes no box: TeX's `\label` is a `\write` (latex.ltx `\label`, `\protected@write\@auxout`), a whatsit of
+  // no width. Perl gives the constructor no sizer, so it is measured by its key's text (Whatsit.pm:253-265): every box
+  // holding one was that much wider than TeX's, and a sub-float holding only a `\label` a panel of the key's width —
+  // four `\subfigure[]{\fbox{\label{…}\includegraphics[width=0.23\textwidth]{…}}}` in a REVTeX column, 2+2 in the
+  // PDF, set one per row (0809.3275 Figs 2-6), 2208.08007's `\newcommand{\labelphantom}[1]{\subfloat{\label{#1}}}`
+  // panels a row of their own. KNOWN_PERL_ERRORS #1144; guards `perfect_kernel_batch79c::a_label_makes_no_box*`.
+  sizer => 0,
   properties => {stored_map!("alignmentSkippable" => true, "alignmentPreserve" => true)},
   after_digest => sub[whatsit] {
     if let Some(arg1) = whatsit.get_arg(1) {

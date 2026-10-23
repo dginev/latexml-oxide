@@ -1,0 +1,26 @@
+% witness: 2208.08007 Figs 1, 2, S2, S5 (`\newcommand{\labelphantom}[1]{\subfloat{\label{#1}}}`, five or six before the
+%          one graphic that draws every panel: tex.stackexchange 255790's trick for sub-figure labels)
+% oracle:  pdflatex 0 errors (`\showbox` of the float box: one line, the graphic; each `\subfloat{\label{…}}` an empty box)
+% engines: rust int71a = the 2nd and 3rd empty sub-floats panels beside the graphic (3 panels in one row); Perl 0.8.8 =
+%          every empty sub-float a panel of its label key's width, each a row of its own (3 `ltx:break`s)
+% expect:  0 errors, 0 warnings; the empty sub-floats stay (their numbers and labels: `\ref{fig:setupc}` is 1c), no
+%          `ltx_figure_panel`, no `ltx:break`, no panel grid markup (one panel)
+% status:  RED (int71a) -> GREEN (79c: a sub-float holding nothing but its number is no panel; KNOWN_PERL_ERRORS #1144)
+% preload: ar5iv.sty
+\documentclass[aps,prl,twocolumn]{revtex4-2}
+\usepackage{graphicx}
+\usepackage[caption=false]{subfig}
+\newcommand{\labelphantom}[1]{\subfloat{\label{#1}}}
+\begin{document}
+\title{Panels}\maketitle
+Some text, citing panels \ref{fig:setupa} and \ref{fig:setupc}.
+
+\begin{figure}[htb!]
+  \centering
+  \labelphantom{fig:setupa}
+  \labelphantom{fig:setupb}
+  \labelphantom{fig:setupc}
+  \includegraphics[width=\linewidth]{example-image}
+  \caption{A figure whose panels are drawn in its one graphic.}
+\end{figure}
+\end{document}

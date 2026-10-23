@@ -718,7 +718,7 @@ fn floatrow_floatfoot_in_plain_figure_keeps_its_text() {
   assert_elements(tex, RAW, (0, 0), &[(
     "figure",
     "S0.F1",
-    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><rule align="center" class="ltx_figure_panel" height="28.5pt" width="56.9pt"/><toccaption class="ltx_centering"><tag close=" ">1</tag>PlainCap</toccaption><caption class="ltx_centering"><tag close=": ">Figure 1</tag>PlainCap</caption><p align="center" class="ltx_figure_panel" vattach="bottom"><text fontsize="80%">Plain foot.</text></p></figure>"##,
+    r##"<figure class="ltx_panels_gallery" inlist="lof" panelcols="1" panelrows="2" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><rule align="center" class="ltx_figure_panel" height="28.5pt" panelwidth="0.165" width="56.9pt"/><toccaption class="ltx_centering"><tag close=" ">1</tag>PlainCap</toccaption><caption class="ltx_centering"><tag close=": ">Figure 1</tag>PlainCap</caption><p align="center" class="ltx_figure_panel" vattach="bottom"><text fontsize="80%">Plain foot.</text></p></figure>"##,
   )]);
 }
 
@@ -734,7 +734,10 @@ fn floatrow_floatfoot_in_new_float_type_keeps_its_text() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let xml = xml.split_whitespace().collect::<Vec<_>>().join(" ");
   for (open, foot) in [
-    ("<float class=\"ltx_float_chart\"", "Chart foot."),
+    (
+      "<float class=\"ltx_float_chart ltx_panels_gallery\"",
+      "Chart foot.",
+    ),
     ("<table ", "Tab foot."),
   ] {
     let float = xml.split(open).nth(1).unwrap_or_default();

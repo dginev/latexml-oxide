@@ -1,0 +1,29 @@
+% witness: user ruling 2026-10-23 (the reference width is the PDF's running-text column at the float; the theme maps
+%          it to its own column): a panel-grid float states its line as a fraction of that column (`panelline`) and its
+%          widest row's sum of `panelwidth` (`panelfill`)
+% oracle:  pdflatex 0 errors (`\showbox` of the float boxes, `\the\textwidth` 510pt, `\the\columnwidth` 246pt): F1 (a column
+%          figure) one line of two at \hsize = \columnwidth, F2 (`figure*`) one line of two at \hsize = \textwidth
+% engines: rust 79c r1 = both `ltx_panels_gallery` 1x2, `panelwidth` 0.45, no line or fill; Perl 0.8.8 = the same
+%          rows, no grid markup
+% expect:  0 errors, 0 warnings; F1 `panelline` 1 (the 246pt column), `panelfill` 0.9; F2 `panelline` 2.073 (510pt
+%          of the 246pt column), `panelfill` 0.9
+% status:  RED (79c r1) -> GREEN (79c r2, OXIDIZED_DESIGN_DIVERGENCES #887)
+% preload: ar5iv.sty
+\documentclass[aps,twocolumn]{revtex4-1}
+\usepackage{graphicx}
+\begin{document}
+Some text.
+
+\begin{figure}
+  \centering
+  \rule{0.45\columnwidth}{1cm}
+  \rule{0.45\columnwidth}{1cm}
+  \caption{A column figure of two panels.}
+\end{figure}
+\begin{figure*}
+  \centering
+  \rule{0.45\textwidth}{1cm}
+  \rule{0.45\textwidth}{1cm}
+  \caption{A page-wide figure of two panels.}
+\end{figure*}
+\end{document}
