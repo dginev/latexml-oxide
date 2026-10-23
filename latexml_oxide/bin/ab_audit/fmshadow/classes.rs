@@ -4,8 +4,8 @@
 use super::*;
 
 /// A class of disagreement where today's XML is wrong and the shadow right, confirmed against the PDFs of its witnesses
-/// (FM S2a.2 r2: a disagreement is classified only by an adopted ruling's change, [`CHANGE_TAGS`], or by one of these,
-/// listed by name).
+/// (FM S2a.2 r2: a disagreement is classified only by an adopted ruling's change,
+/// [`CHANGE_TAGS`](latexml_engine::base_utilities::FM_CHANGE_TAGS), or by one of these, listed by name).
 pub struct XmlWrong {
   pub name:      &'static str,
   /// the arXiv papers whose PDF confirmed it

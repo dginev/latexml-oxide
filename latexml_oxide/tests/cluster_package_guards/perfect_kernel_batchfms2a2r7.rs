@@ -450,7 +450,8 @@ fn a_runaway_note_mark_is_unwound() {
   ]);
 }
 
-/// The r7 shapes leave the XML byte-identical with the switch on and off (shadow only).
+/// The r7 shapes leave the XML byte-identical with the switch on and off (shadow only) — but `FOOTNOTE_MARK`, a
+/// REVTeX paper the writer writes (FM S2b, `perfect_kernel_batchfms2b::footnote_marked_affiliations_go_to_their_names`).
 #[test]
 fn r7_shapes_leave_the_xml_unchanged() {
   let many = many_thanks();
@@ -460,7 +461,6 @@ fn r7_shapes_leave_the_xml_unchanged() {
     EMPTIED,
     GLYPHS,
     SEPARATORS,
-    FOOTNOTE_MARK,
     many.as_str(),
     RUNAWAY_MARK,
     GLYPH_LEGEND,

@@ -1,0 +1,130 @@
+//! Red/green guards for FM S2b r1 (OXIDIZED_DESIGN_DIVERGENCES #837 "S2b"; user frontmatter rulings 2026-10-17, M3
+//! observer): for a family whose policy entry is `written` — the pilot, revtex4_support's `revtex` — the observer's
+//! reading is written into the document once today's frontmatter is placed, where every difference from today's is
+//! one of the writer's operations (`observer::writer`). Under the shadow switch only (`LATEXML_FM_SHADOW=1`): unset,
+//! the XML is today's (the shadow-neutral guards of the families not switched stay byte-identical, batchfms2a2r7/r8).
+//! Each guard converts with the switch on and off and asserts every creator whole.
+use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
+use latexml_engine::base_utilities::set_fm_shadow_override;
+
+/// Convert `tex` with the shadow switch `on`, asserting a clean conversion; its creators, each with the whitespace
+/// between its tags removed.
+fn creators(tex: &str, on: bool) -> Vec<String> {
+  let (log, xml, ()) = convert_with_setup_then(
+    tex,
+    Some("ar5iv.sty"),
+    move || set_fm_shadow_override(Some(on)),
+    |_| (),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let mut found = Vec::new();
+  let mut rest = xml.as_str();
+  while let Some(start) = rest.find("<creator ") {
+    let end =
+      rest[start..].find("</creator>").expect("a closed creator") + start + "</creator>".len();
+    let mut compact = String::new();
+    let mut pending_space = false;
+    for part in rest[start..end].split('\n') {
+      let part = part.trim_start();
+      if pending_space && !part.starts_with('<') {
+        compact.push(' ');
+      }
+      compact.push_str(part);
+      pending_space = !part.ends_with('>');
+    }
+    found.push(compact);
+    rest = &rest[end..];
+  }
+  found
+}
+
+/// A footnote mark's tags as the revtex binding writes them.
+fn mark_tags(n: u32, id: &str) -> String {
+  format!(
+    "<tags><tag>{n}</tag><tag role=\"autoref\">footnote\u{a0}{n}<text xml:id=\"{id}.1\"/></tag><tag role=\"refnum\">{n}</tag>\
+     <tag role=\"typerefnum\">footnote {n}</tag></tags>"
+  )
+}
+
+/// Operation 3 (owners by mark): REVTeX's `\affiliation` after a name list is every name's (revtex4-2.cls's grouping,
+/// today's reading), but the affiliations open with the `\footnotemark` the names' `\footnote[n]` printed — in the PDF
+/// Ann's mark 1 stands at Univ A and Univ B, Bob's 2 at Univ C. Written: each affiliation goes to the name showing
+/// its mark, its mark kept as it prints (was: Ann Univ A alone, Bob all three — Univ A twice). Shape
+/// `perfect_kernel_batchfms2a2r7::FOOTNOTE_MARK`.
+#[test]
+fn footnote_marked_affiliations_go_to_their_names() {
+  let tex = r"\documentclass[aps,pra,preprint]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able\footnote[1]{E-mail: ann.able@example.org} and Bob Baker\footnote[2]{E-mail: bob.baker@example.org}}
+\affiliation{\footnotemark[1]Univ A, City}
+\affiliation{\footnotemark[1]Univ B, Town}
+\affiliation{\footnotemark[2]Univ C, Village}
+\begin{abstract}
+Abstract.
+\end{abstract}
+\maketitle
+Text.
+\end{document}";
+  let affiliation = |n: u32, id: &str, text: &str| {
+    format!(
+      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><note mark=\"{n}\" role=\"footnotemark\" xml:id=\"{id}\">{}\
+       </note>{text}</contact>",
+      mark_tags(n, id)
+    )
+  };
+  assert_eq!(creators(tex, true), [
+    format!(
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Note:\u{a0}\" role=\"note\">E-mail: \
+       ann.able@example.org</contact>{}{}</creator>",
+      affiliation(1, "footnotex1", "Univ A, City"),
+      affiliation(1, "footnotex2a", "Univ B, Town")
+    ),
+    format!(
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Note:\u{a0}\" \
+       role=\"note\">E-mail: bob.baker@example.org</contact>{}</creator>",
+      affiliation(2, "footnotex3", "Univ C, Village")
+    ),
+  ]);
+  // (unset, today's reading: the writer does not run)
+  let today = creators(tex, false);
+  assert_eq!(today.len(), 2);
+  assert!(
+    today[1].contains("Univ A, City") && today[1].contains("Univ B, Town"),
+    "{today:?}"
+  );
+}
+
+/// Operations 1 and 3 (split by marks, a legend made a note): one `\affiliation{$^1$Univ A, City \\ $^\star${…}}` under
+/// `Ann Able$^{1}$, Bob Baker$^{1,\star}$` is cut at its marks — Univ A both names', the starred legend a
+/// correspondence note of Bob, who shows the star, its ink kept as styled label markup (the label-text ruling). Was:
+/// the whole call, legend and all, both names' affiliation. Shape `perfect_kernel_batchfms2a2r8::API_LEGEND`.
+#[test]
+fn a_marked_affiliation_is_cut_at_its_marks() {
+  let tex = r"\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{1,\star}$}
+\affiliation{$^1$Univ A, City \\ $^\star${corresponding author, e-mail: bob@x.org}}
+\begin{abstract}
+Abstract.
+\end{abstract}
+\maketitle
+Text.
+\end{document}";
+  assert_eq!(creators(tex, true), [
+    "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text>\
+     </sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ A, City\
+     </contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" \
+     xml:id=\"id3.1\">1,⋆</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup \
+     xml:id=\"id4\">1</sup>Univ A, City</contact><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" \
+     role=\"thanks\" xml:id=\"id5\"><sup xml:id=\"id5.1\">⋆</sup>corresponding author, e-mail: bob@x.org</note>\
+     </creator>",
+  ]);
+  let today = creators(tex, false);
+  assert!(
+    today.iter().all(|c| c.contains("corresponding author")),
+    "{today:?}"
+  );
+}

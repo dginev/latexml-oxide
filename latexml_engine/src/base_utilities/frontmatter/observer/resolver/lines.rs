@@ -685,7 +685,7 @@ impl Resolver {
     let made = self.names_line_events(index, policy, line, block_requests, group);
     if !addresses.is_empty() {
       let source = (index, line.events.first().and_then(|e| e.span));
-      self.place_line_contacts(&addresses.join(", "), "email", &made.creators, source);
+      self.place_line_contacts(&addresses.join(", "), "email", &made.creators, source, None);
     }
     made
   }

@@ -97,6 +97,60 @@ pub struct Resolved {
   pub continued: Option<Vec<Vec<String>>>,
 }
 
+/// The rule tags whose purpose is a change of today's output — an adopted ruling's (FIDELITY_CHARTER §4, 2026-10-21;
+/// the S2a.2 brief's one contact per print event and emptied notes): a disagreement a rule holding one of them decided
+/// is classified (`ab_audit fmshadow`), and the only difference the writer (FM S2b, `writer/`) writes.
+///
+/// - ruling 1, the marks shown on a name are its requests: `ruling1:request` (a labelled line's entry, or a note's
+///   legend opening with its Mark event), `ruling1:fuzzy-label`, `ruling1:thenote` (authblk's printed number), `ruling1:parted` (a glued mark read as the marks it is: `12`
+///   under entries `1` and `2`), `api:leading-mark` (an API entry's leading Mark
+///   events: by construction only a real Mark, `resolver/api.rs` `api`), the `\ref`-mark keys (`api:ref-label`, `ref:`);
+///   an API entry a symbol leads that reads as a legend, not an affiliation, a legend note of the names showing it
+///   (`api:legend`: the role change, its own tag — review revfms2a2_8 finding 2, FM S2a.2 r9);
+/// - ruling 2, a footnote-symbol line labels the line for its carriers: `ruling2:symbol-line`, `ruling2:uncarried`;
+/// - the corresponding author (charter §4's e-mail owner order): `owner:corresponding`;
+/// - one contact per print event (`ruling3:one-per-print`): counted only where the XML holds the pieces joined into one
+///   item (an `overlaps` rule), the change the ruling makes — the owner of each address is its other tag's;
+/// - an emptied note dropped, a note's inner contacts its contacts, `\thanks{}` kept: `ruling4:`;
+/// - a url whose text is one e-mail address is an e-mail (`role:url-as-email`: the S2a.2 r2 brief's item 8, adopted);
+/// - a list with one address per author that every spelled address agrees with is in author order (`owner:order`:
+///   charter §4's owner order, 2026-10-21, OD #805 — for every class, not only the sequenced lists);
+/// - several addresses an entry's e-mail call prints (a braced `{a,b,c}@x` group in an `\institute`/`\affil` entry)
+///   are written out, each the author's it spells, an unspelled one the block's (`ruling3:written-out`: the main
+///   session's decision 3 of 2026-10-22, user rulings 2026-10-20 #4, #8, #10).
+///
+/// Elimination (`owner:elimination`, the one address left to the one name left) is NOT a change: today's output
+/// applies it too (OXIDIZED_DESIGN_DIVERGENCES #52's e-mail lines, `owners_by_elimination`, under user ruling R10
+/// 2026-10-20, 77p r10;
+/// FIDELITY_CHARTER §4's owner order is silent on it), so its disagreements are the shadow's to explain.
+pub const CHANGE_TAGS: &[&str] = &[
+  "ruling1:request",
+  "ruling1:fuzzy-label",
+  "ruling1:thenote",
+  "ruling1:parted",
+  "role:url-as-email",
+  "owner:order",
+  "api:leading-mark",
+  "api:legend",
+  "api:ref-label",
+  "ref:",
+  "ruling2:symbol-line",
+  "ruling2:uncarried",
+  "owner:corresponding",
+  "ruling3:one-per-print",
+  "ruling3:written-out",
+  "ruling4:",
+];
+
+/// Whether a shadow rule holds one of [`CHANGE_TAGS`] (`ruling3:one-per-print` only on a joined item's `overlaps`
+/// rule).
+pub fn is_change_rule(rule: &str) -> bool {
+  let joined = rule.starts_with("overlaps ");
+  rule.split_whitespace().any(|tag| {
+    CHANGE_TAGS.iter().any(|c| tag.starts_with(c)) && (joined || tag != "ruling3:one-per-print")
+  })
+}
+
 /// A resolver input: an author block (its events as the lexer gave them) or an API call made apart from the blocks.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Input {
@@ -138,6 +192,7 @@ mod labels;
 mod lines;
 mod post;
 
+pub(in crate::base_utilities::frontmatter::observer) use api::split_pieces;
 // (named, as the prelude has its own of these names: the resolver's shadow them)
 pub use labels::{addresses_in, mark_labels};
 use labels::{text_tokens, *};
@@ -705,7 +760,8 @@ mod tests {
     assert_eq!(link_page("index.html"), "index.html");
     // (FM S2a.2 r9, review revfms2a2_8 finding 5: a page right under the host spells its owner; a `@user` path is a page)
     assert_eq!(link_page("http://www.cs.x.edu/jsmith.html"), "jsmith");
-    assert_eq!(link_page("https://medium.com/@jsmith"), "@jsmith");
+    // (FM S2b r1, review revfms2a2_9 finding 4: a `@user` page is the user's name, which an owner can spell)
+    assert_eq!(link_page("https://medium.com/@jsmith"), "jsmith");
     assert!(addresses_in("medium.com/@jsmith").is_empty());
     assert!(!addresses_in("brunnerj, edemaine, dylanhen, wellman@mit.edu").is_empty());
   }

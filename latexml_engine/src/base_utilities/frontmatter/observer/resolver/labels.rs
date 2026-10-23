@@ -536,7 +536,12 @@ pub(super) fn link_letters(link: &str) -> &str {
 /// `insti.physics.sunysb.edu/~siegel/plan.html`, `www.pengxu.net/` (2301.03638, 1409.7028, 2601.07017, 1603.02588,
 /// 2001.02600) —; a repository or a file under an account does not: `github.com/<user>/<repo>`, `…/resolution.git`,
 /// `<user>.github.io/<project>`, `…/<name>/accvideo.mp4` (2008.12970, 2511.08416, 2103.05251, 2503.02954, 2509.01952).
-pub(super) fn link_page(link: &str) -> &str {
+/// A page named with a leading `@` (`medium.com/@jjones`) is the name after it: the owner spelling splits an address at
+/// its `@`, which left the page no letters to spell (review revfms2a2_9 finding 4).
+pub(super) fn link_page(link: &str) -> &str { link_segment(link).trim_start_matches('@') }
+
+/// [`link_page`]'s segment, as the link writes it.
+fn link_segment(link: &str) -> &str {
   let rest = link_letters(link);
   let rest = rest.split(['?', '#']).next().unwrap_or("");
   let mut parts: Vec<&str> = rest.split('/').filter(|p| !p.is_empty()).collect();

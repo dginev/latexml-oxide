@@ -91,6 +91,9 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   relocate_annotations(document)?;
   show_unanswered_marks(document, &answered)?;
   flag_merged_creators(document)?;
+  // (FM S2b: a written family's paper, where it differs from the observer's reading by the writer's operations alone,
+  // written as the reading has it — under the shadow switch only; OXIDIZED_DESIGN_DIVERGENCES #837 "S2b")
+  write_observed_frontmatter(document)?;
   Ok(())
 }
 
@@ -359,7 +362,10 @@ pub fn insert_late_frontmatter(document: &mut Document) -> Result<()> {
 
 /// Insert one frontmatter entry `[tag, {attr}, @content]`.
 /// Perl: insertFrontMatter_rec($document, $item) for the ARRAY case.
-fn insert_frontmatter_entry(document: &mut Document, entry: &TagData) -> Result<()> {
+pub(in crate::base_utilities) fn insert_frontmatter_entry(
+  document: &mut Document,
+  entry: &TagData,
+) -> Result<()> {
   let TagData { tag, attr, content } = entry;
   DebugFeature!("frontmatter", "FRONT Inserting {}", show_frontmatter(entry));
   // token-locators: frontmatter elements (e.g. <ltx:title> from `\title{…}`)

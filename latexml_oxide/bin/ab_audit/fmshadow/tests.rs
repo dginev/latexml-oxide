@@ -735,7 +735,7 @@ fn note_order_is_compared() {
   assert_eq!(rows.len(), 1, "{rows:?}");
   assert_eq!(
     (rows[0].kind, rows[0].classified, rows[0].rule.as_str()),
-    ("note-order", false, "order note:adjacent")
+    ("note-order", false, "order-of:note:adjacent")
   );
   assert_eq!(
     rows[0].detail,
@@ -760,6 +760,41 @@ fn note_order_is_compared() {
       true,
       "order note:adjacent note:legend ruling1:request"
     )]
+  );
+  // (review revfms2a2_9 finding 3: only a rule that places by order excuses the order — a note whose tag says whose it
+  // is, not where it sits, does not; nor a legend the XML does not have last, where today's relocation puts it)
+  let mut owned = with_notes(&["ann@x.org", "Supported by X."]);
+  owned.creators[0].rules.insert(
+    "note\tannxorg".into(),
+    "note:adjacent ruling4:inner-contact owner:spelled".into(),
+  );
+  let rows = compare(&owned, &with_notes(&["Supported by X.", "ann@x.org"]));
+  assert_eq!(
+    rows
+      .iter()
+      .map(|d| (d.kind, d.classified, d.rule.as_str()))
+      .collect::<Vec<_>>(),
+    [(
+      "note-order",
+      false,
+      "order-of:note:adjacent+ruling4:inner-contact+owner:spelled"
+    )]
+  );
+  let mut legend = with_notes(&["Supported by X.", "Corresponding author.", "Third note."]);
+  legend.creators[0].rules.insert(
+    "note\tcorrespondingauthor".into(),
+    "note:adjacent note:legend ruling1:request".into(),
+  );
+  let rows = compare(
+    &legend,
+    &with_notes(&["Corresponding author.", "Third note.", "Supported by X."]),
+  );
+  assert_eq!(
+    rows
+      .iter()
+      .map(|d| (d.kind, d.classified, d.rule.as_str()))
+      .collect::<Vec<_>>(),
+    [("note-order", false, "order-of:note:adjacent")]
   );
 }
 
@@ -827,7 +862,7 @@ fn note_order_drops_the_ruling_placed_notes_first() {
       .iter()
       .map(|d| (d.kind, d.classified, d.rule.as_str()))
       .collect::<Vec<_>>(),
-    [("note-order", false, "order note:adjacent")],
+    [("note-order", false, "order-of:note:adjacent")],
     "{rows:?}"
   );
   let rows = compare(

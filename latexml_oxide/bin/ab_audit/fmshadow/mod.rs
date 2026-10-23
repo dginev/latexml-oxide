@@ -6,8 +6,8 @@
 //! author block's own (the XML's trailing nameless creator, OD #159), compared as a multiset too. Each disagreement is
 //! classified by its kind (`name-split`, `affiliation`, `contact-owner`, `contact`, `note`, `block`), the family (the
 //! policy key's binding) and the shadow rule that decided it; a disagreement is **classified** when that rule holds an
-//! adopted ruling's change tag ([`CHANGE_TAGS`]: the output S2b is meant to change) or it falls in a PDF-confirmed
-//! XML-wrong class ([`XML_WRONG`], listed by name with its witnesses), and **unclassified** otherwise: a place the
+//! adopted ruling's change tag ([`CHANGE_TAGS`](latexml_engine::base_utilities::FM_CHANGE_TAGS): the output S2b is
+//! meant to change) or it falls in a PDF-confirmed XML-wrong class ([`XML_WRONG`], listed by name with its witnesses), and **unclassified** otherwise: a place the
 //! shadow was meant to reproduce today's output and does not (FM S2a.2 r2, review revfms2a2 findings 8, 9).
 //! A paper whose ledger has no rehearsed block is "no block" (a binding's single-author calls: outside the gate's
 //! denominator, notes decision 1); one whose rehearsal held diagnostics is "held" (notes decision 3).

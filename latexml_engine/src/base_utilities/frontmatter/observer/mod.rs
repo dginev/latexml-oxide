@@ -19,7 +19,12 @@
 //! - [`shadow`]: the switch, the runtime environment variable `LATEXML_FM_SHADOW=1`, under which the flush
 //!   (`digest_front_matter`) rehearses and lexes each block and the CLI writes `<dest>.fmshadow.json`. Without it no
 //!   part of the observer runs, and with it the conversion's output is the same: the observer decides nothing yet
-//!   (the resolver is stage S2a.2).
+//!   (the resolver is stage S2a.2) — but for a family whose policy entry is `written` (FM S2b):
+//! - [`writer`] (S2b): once today's frontmatter is in the document (`insert_frontmatter`), the paper of a written
+//!   family is compared with the resolver's reading, and where every difference is one of the writer's operations —
+//!   an entry given to the authors the reading gives it, one call's marked entries cut apart, a legend made a note,
+//!   a url printing an address made an e-mail — those are written, from the tokens the document queued; any other
+//!   difference leaves the paper as today's.
 
 use super::*;
 
@@ -29,6 +34,7 @@ pub(in crate::base_utilities) mod policy;
 pub(in crate::base_utilities) mod rehearsal;
 pub(in crate::base_utilities) mod resolver;
 pub(in crate::base_utilities) mod shadow;
+pub(in crate::base_utilities) mod writer;
 
 // (for `ab_audit fmshadow`, which re-resolves a dump's events offline; prefixed, as the prelude re-exports these)
 pub use events::{Event as FmEvent, EventKind as FmEventKind, SepKind as FmSepKind};
@@ -37,10 +43,12 @@ pub(in crate::base_utilities) use ledger::{
 };
 pub use ledger::{note_binding_load, record_note_text as fm_record_note_text};
 pub use resolver::{
-  Assoc as FmAssoc, Input as FmInput, RCreator as FmCreator, Resolved as FmResolved,
-  addresses_in as fm_addresses_in, creator_call as fm_creator_call, resolve as fm_resolve,
+  Assoc as FmAssoc, CHANGE_TAGS as FM_CHANGE_TAGS, Input as FmInput, RCreator as FmCreator,
+  Resolved as FmResolved, addresses_in as fm_addresses_in, creator_call as fm_creator_call,
+  is_change_rule as fm_is_change_rule, resolve as fm_resolve,
 };
 pub(in crate::base_utilities) use shadow::shadow_flush;
 pub use shadow::{
   fm_shadow_enabled, fm_shadow_json, reset_fm_shadow, set_fm_shadow_override, write_fm_shadow,
 };
+pub(in crate::base_utilities) use writer::write_observed_frontmatter;

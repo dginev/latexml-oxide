@@ -131,31 +131,16 @@ Text.
 /// `api:legend`.
 #[test]
 fn an_api_legend_holding_an_institution_is_an_affiliation() {
-  let tuples = tuples(IEEE_LEGEND);
-  let ann = tuples
-    .iter()
-    .skip_while(|t| !t.starts_with("C Ann Able"))
-    .take_while(|t| !t.starts_with("C Bob"))
-    .cloned()
-    .collect::<Vec<_>>();
-  assert!(
-    ann
-      .iter()
-      .any(|t| t.starts_with("  a Equal Contribution") && t.contains("Univ A")),
-    "{tuples:#?}"
-  );
-  assert!(ann.iter().all(|t| !t.starts_with("  n ")), "{tuples:#?}");
-  let cat = tuples
-    .iter()
-    .skip_while(|t| !t.starts_with("C Cat Cole"))
-    .cloned()
-    .collect::<Vec<_>>();
-  assert!(
-    cat
-      .iter()
-      .any(|t| t.starts_with("  n These authors contributed equally") && t.ends_with("api:legend")),
-    "{tuples:#?}"
-  );
+  // (the whole tuple list, Bob's and the institutions' text included — review revfms2a2_9 finding 2: a substring test
+  // passed with an institution or the addresses out of the affiliation, and never read Bob)
+  assert_eq!(tuples(IEEE_LEGEND), [
+    "C Ann Able [*] | line:names",
+    "  a Equal Contribution Univ A National Center in Town {ann, bob}@x.org | api:leading-mark",
+    "C Bob Baker [*] | line:names sep:comma",
+    "  a Equal Contribution Univ A National Center in Town {ann, bob}@x.org | api:leading-mark",
+    "C Cat Cole [†] | line:names",
+    "  n These authors contributed equally E-mail: cat@x.org | api:leading-mark api:legend",
+  ]);
 }
 
 /// The rehearsal leaves the conversion as it found it (the SYNC row "FM shadow rehearsal leaks into the conversion"):

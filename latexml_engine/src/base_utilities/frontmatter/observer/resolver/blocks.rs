@@ -14,6 +14,7 @@ impl Resolver {
     role: &str,
     candidates: &[usize],
     source: (usize, Option<(u16, u16)>),
+    anchor: Option<&Assoc>,
   ) {
     let addresses = addresses_in(text);
     if addresses.is_empty() {
@@ -61,6 +62,9 @@ impl Resolver {
         .zip(candidates)
         .all(|(s, c)| s.is_none_or(|s| s == *c));
     let address_count = addresses.len();
+    // (a link printing one address: its anchor the contact's text, its address the target — position 2, review
+    // revfms2a2_9 finding 5; 1607.00911's `\href{mailto: edremets@…}{* edremets@…}`)
+    let anchor = anchor.filter(|_| address_count == 1);
     for (at, (address, spelled)) in addresses.into_iter().zip(spelled).enumerate() {
       let (owner, rule) = match spelled {
         Some(owner) => (Some(owner), "owner:spelled"),
@@ -85,11 +89,11 @@ impl Resolver {
         owner,
         Assoc {
           role:   "email".into(),
-          text:   address,
+          text:   anchor.map_or_else(|| address.clone(), |a| a.text.clone()),
           label:  None,
           rule:   s!("{rule} ruling3:one-per-print"),
           source: Some(source),
-          target: None,
+          target: anchor.and_then(|a| a.target.clone()),
         },
         false,
       );
@@ -435,7 +439,7 @@ impl Resolver {
             }
             skip_to = last;
             let candidates: Vec<usize> = (block_creators_start..self.out.creators.len()).collect();
-            self.place_line_contacts(&text, "email", &candidates, source);
+            self.place_line_contacts(&text, "email", &candidates, source, None);
             // (the notes of the list's lines are the block's: a line of addresses is no one name's, so no place makes
             // its note a name's — the lines read on to were skipped after, and their notes went unread, review
             // revfms2a2_5 finding 6; 2406.07529's `\vphantom{\thanks{Equal contribution.}}` after the last address,
@@ -695,10 +699,14 @@ impl Resolver {
     }
     // (an e-mail given to a row of names, or printing several addresses, is placed address by address by the owner
     // chain, ruling 3 — `\email{sfranco@kitp.ucsb.edu, ahanany@imperial.ac.uk}` under four names, 0809.3237)
-    // (a link to an address by its address, not the anchor it prints: `\href{mailto:…}{…}`, FM S2a.2 r9)
-    let addresses = assoc.target.as_deref().unwrap_or(&assoc.text);
+    // (a link to an address by its address, not the anchor it prints: `\href{mailto:…}{…}`, FM S2a.2 r9 — only a
+    // `mailto:` link's: an `\href{http://…}{a@x.org}` is read by the address its text prints, review revfms2a2_9 finding
+    // 5; a link printing one address keeps its anchor as the text, as the single-owner path does)
+    let mailto = contact.target.as_deref().and_then(mailto_address);
+    let addresses = mailto.unwrap_or(&assoc.text);
     if role == "email" && (owners.len() > 1 || addresses_in(addresses).len() > 1) {
-      self.place_line_contacts(addresses, "email", owners, (index, contact.span));
+      let anchor = mailto.is_some().then_some(&assoc);
+      self.place_line_contacts(addresses, "email", owners, (index, contact.span), anchor);
       return;
     }
     for &owner in owners {

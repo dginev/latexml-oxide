@@ -4,6 +4,31 @@
 
 use super::*;
 
+/// An API call's marked entries as [`Resolver::api`] cuts them ([`mark_led_pieces`]), each with the text it resolves
+/// to under `role` (the e-mails and ORCIDs an affiliation's commands declare taken out, as `api` takes them): the
+/// writer's map from the entries of one call to their events, and through their spans to the tokens the document
+/// queued (FM S2b, `writer/`).
+pub(in crate::base_utilities::frontmatter::observer) fn split_pieces(
+  events: &[Event],
+  role: &str,
+) -> Vec<(String, Vec<Event>)> {
+  let splits_contacts = matches!(role, "affiliation" | "address" | "altaffiliation");
+  mark_led_pieces(events)
+    .into_iter()
+    .map(|piece| {
+      let refs: Vec<&Event> = piece
+        .iter()
+        .filter(|e| {
+          !(splits_contacts
+            && e.kind == EventKind::Contact
+            && matches!(e.role.as_deref(), Some("email" | "orcid")))
+        })
+        .collect();
+      (events_text(&refs), piece)
+    })
+    .collect()
+}
+
 impl Resolver {
   /// An empty entry's authors hold its role, as today's attaches the empty contact to them (`annotate=`: the last
   /// author, all, the run of new ones, the last N) — part of today's contact pile too (`distribute_upfront`: amsart's

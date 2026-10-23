@@ -450,11 +450,12 @@ fn an_unlabelled_entry_is_no_legend() {
   assert!(tuples.iter().all(|t| !t.contains(" legend ")), "{tuples:?}");
 }
 
-/// The r8 shapes leave the XML byte-identical with the switch on and off (shadow only).
+/// The r8 shapes leave the XML byte-identical with the switch on and off (shadow only) — but `API_LEGEND`, a REVTeX
+/// paper the writer writes (FM S2b, `perfect_kernel_batchfms2b::a_marked_affiliation_is_cut_at_its_marks`).
 #[test]
 fn r8_shapes_leave_the_xml_unchanged() {
   let jpfnx = JPCONF_CLASS.replace("\\ProvidesClass{jpconf}", "\\ProvidesClass{jpfnx}");
-  let shapes: [(&str, Vec<(&str, &str)>); 11] = [
+  let shapes: [(&str, Vec<(&str, &str)>); 10] = [
     (ORDER, vec![]),
     (ORDER_CONTACTS, vec![]),
     (OWNERLESS_ONE, vec![]),
@@ -464,7 +465,6 @@ fn r8_shapes_leave_the_xml_unchanged() {
     (JPCONF, vec![("jpconf.cls", JPCONF_CLASS)]),
     (JPFNX, vec![("jpfnx.cls", jpfnx.as_str())]),
     (GLUED, vec![]),
-    (API_LEGEND, vec![]),
     (TEXT_GLYPH, vec![]),
   ];
   for (tex, files) in shapes {

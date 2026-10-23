@@ -14,58 +14,16 @@ pub struct Disagreement {
   pub detail:     String,
 }
 
-/// The rule tags whose purpose is a change of today's output — an adopted ruling's (FIDELITY_CHARTER §4, 2026-10-21;
-/// the S2a.2 brief's one contact per print event and emptied notes): a disagreement a rule holding one of them decided
-/// is classified.
-///
-/// - ruling 1, the marks shown on a name are its requests: `ruling1:request` (a labelled line's entry, or a note's
-///   legend opening with its Mark event), `ruling1:fuzzy-label`, `ruling1:thenote` (authblk's printed number), `ruling1:parted` (a glued mark read as the marks it is: `12`
-///   under entries `1` and `2`), `api:leading-mark` (an API entry's leading Mark
-///   events: by construction only a real Mark, `resolver/api.rs` `api`), the `\ref`-mark keys (`api:ref-label`, `ref:`);
-///   an API entry a symbol leads that reads as a legend, not an affiliation, a legend note of the names showing it
-///   (`api:legend`: the role change, its own tag — review revfms2a2_8 finding 2, FM S2a.2 r9);
-/// - ruling 2, a footnote-symbol line labels the line for its carriers: `ruling2:symbol-line`, `ruling2:uncarried`;
-/// - the corresponding author (charter §4's e-mail owner order): `owner:corresponding`;
-/// - one contact per print event (`ruling3:one-per-print`): counted only where the XML holds the pieces joined into one
-///   item (an `overlaps` rule), the change the ruling makes — the owner of each address is its other tag's;
-/// - an emptied note dropped, a note's inner contacts its contacts, `\thanks{}` kept: `ruling4:`;
-/// - a url whose text is one e-mail address is an e-mail (`role:url-as-email`: the S2a.2 r2 brief's item 8, adopted);
-/// - a list with one address per author that every spelled address agrees with is in author order (`owner:order`:
-///   charter §4's owner order, 2026-10-21, OD #805 — for every class, not only the sequenced lists);
-/// - several addresses an entry's e-mail call prints (a braced `{a,b,c}@x` group in an `\institute`/`\affil` entry)
-///   are written out, each the author's it spells, an unspelled one the block's (`ruling3:written-out`: the main
-///   session's decision 3 of 2026-10-22, user rulings 2026-10-20 #4, #8, #10).
-///
-/// Elimination (`owner:elimination`, the one address left to the one name left) is NOT a change: today's output
-/// applies it too (OXIDIZED_DESIGN_DIVERGENCES #52's e-mail lines, `owners_by_elimination`, under user ruling R10
-/// 2026-10-20, 77p r10;
-/// FIDELITY_CHARTER §4's owner order is silent on it), so its disagreements are the shadow's to explain.
-pub(super) const CHANGE_TAGS: &[&str] = &[
-  "ruling1:request",
-  "ruling1:fuzzy-label",
-  "ruling1:thenote",
-  "ruling1:parted",
-  "role:url-as-email",
-  "owner:order",
-  "api:leading-mark",
-  "api:legend",
-  "api:ref-label",
-  "ref:",
-  "ruling2:symbol-line",
-  "ruling2:uncarried",
-  "owner:corresponding",
-  "ruling3:one-per-print",
-  "ruling3:written-out",
-  "ruling4:",
-];
+// The rule tags whose purpose is a change of today's output, and the test of a rule for one: the engine's, which the
+// observer's writer reads too (FM S2b: a difference is written only when one of them decided it).
+pub(crate) use latexml_engine::base_utilities::fm_is_change_rule as is_change_rule;
 
-/// Whether a shadow rule holds one of [`CHANGE_TAGS`] (`ruling3:one-per-print` only on a joined item's `overlaps`
-/// rule).
-pub fn is_change_rule(rule: &str) -> bool {
-  let joined = rule.starts_with("overlaps ");
-  rule.split_whitespace().any(|tag| {
-    CHANGE_TAGS.iter().any(|c| tag.starts_with(c)) && (joined || tag != "ruling3:one-per-print")
-  })
+/// Whether a note's rule placed it by its order: a legend ruling 1 gives by its label (`ruling1:request`) or a note read
+/// as a legend (`note:legend`) — today's relocation puts such a note last (review revfms2a2_9 finding 3).
+fn places_by_order(rule: &str) -> bool {
+  rule
+    .split_whitespace()
+    .any(|tag| matches!(tag, "ruling1:request" | "note:legend"))
 }
 
 /// A disagreement's context for the [`XML_WRONG`] classes.
@@ -528,29 +486,46 @@ pub fn compare(shadow: &Tuples, xml: &Tuples) -> Vec<Disagreement> {
       );
     }
     // (the notes both hold, in the order each prints them: a note the shadow placed late came after the ones the source
-    // gives later — review revfms2a2_7 finding 1, FM S2a.2 r8. The notes a ruling placed (a change tag: a legend ruling 1
-    // places by its label is today's last, relocated, where the shadow keeps the source's order — `$\dagger$Corresponding
-    // author` before the funding note, 2607.03557) taken out of both, the rest must agree in order: then the first placed
-    // note's rule explains it; else the first of the rest out of today's order, a rule of no change — review revfms2a2_8
-    // finding 3a, FM S2a.2 r9: `[L, A, B]` against `[B, A, L]` was the legend's)
+    // gives later — review revfms2a2_7 finding 1, FM S2a.2 r8. The notes a ruling placed by their order (a legend ruling 1
+    // places by its label, `ruling1:request`, or a note read as a legend, `note:legend`: today's relocates it last, where
+    // the shadow keeps the source's order — `$\dagger$Corresponding author` before the funding note, 2607.03557) taken
+    // out of both, when the XML has them last, the rest must agree in order: then the first placed note's rule explains
+    // it; else the first of the rest out of today's order, a rule of no change — review revfms2a2_8 finding 3a, FM S2a.2
+    // r9: `[L, A, B]` against `[B, A, L]` was the legend's. A tag that says whose note it is (`owner:spelled`,
+    // `ruling4:inner-contact`) says nothing of where it sits: no excuse — review revfms2a2_9 finding 3, FM S2b r1)
     if let Some((shadow_order, xml_order)) = note_orders(&snotes, &xnotes, sc, xc, &without_orcids)
     {
       let note_rule = |key: &String| sc.rules.get(&format!("note\t{key}")).cloned();
-      let placed = |key: &&String| note_rule(key).is_some_and(|rule| is_change_rule(&rule));
+      let by_order = |key: &&String| note_rule(key).is_some_and(|rule| places_by_order(&rule));
+      // (today's relocation puts the placed notes after the rest)
+      let last_in_xml = xml_order
+        .iter()
+        .position(|k| by_order(&k))
+        .is_none_or(|at| xml_order[at..].iter().all(|k| by_order(&k)));
+      let placed = |key: &&String| last_in_xml && by_order(key);
       let shadow_rest: Vec<&String> = shadow_order.iter().filter(|k| !placed(k)).collect();
       let xml_rest: Vec<&String> = xml_order.iter().filter(|k| !placed(k)).collect();
-      let first = if shadow_rest == xml_rest {
-        shadow_order.iter().find(|k| placed(k))
+      let rule = if shadow_rest == xml_rest {
+        shadow_order
+          .iter()
+          .find(|k| placed(k))
+          .and_then(note_rule)
+          .map(|rule| format!("order {rule}"))
       } else {
+        // (the first of the rest out of today's order: whatever its tags say of whose note it is, none placed it there —
+        // its rule written as one word, `order-of:<tag>+<tag>`, no change tag)
         shadow_rest
           .iter()
           .zip(&xml_rest)
           .find(|(a, b)| a != b)
-          .map(|(a, _)| *a)
+          .and_then(|(a, _)| note_rule(a))
+          .map(|rule| {
+            format!(
+              "order-of:{}",
+              rule.split_whitespace().collect::<Vec<_>>().join("+")
+            )
+          })
       };
-      let rule = first
-        .and_then(note_rule)
-        .map(|rule| format!("order {rule}"));
       push(
         "note-order",
         rule,

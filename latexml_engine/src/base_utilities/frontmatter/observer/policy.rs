@@ -66,6 +66,11 @@ pub struct Policy {
   /// is empty"): a note stands beside a name only by its place, so its inner contacts are a name's only by spelling
   /// (main-session decision 2 of 2026-10-22, user ruling 2026-10-20 #4)
   pub unmarked_notes:   bool,
+  /// the observer writes this family's frontmatter (FM S2b, `writer/`): the family passed its per-family gate — its own
+  /// seeded classified-precision sample ≥ 95 % right and its unclassified rate < 0.5 % (main-session decision at int63,
+  /// OXIDIZED_DESIGN_DIVERGENCES #837 "S2a.2 r5 at landing"); a paper is written only when every place its output and
+  /// the observer's reading differ is one of the writer's operations (`writer::plan`)
+  pub written:          bool,
   /// what the entry reproduces
   pub cite:             &'static str,
 }
@@ -85,6 +90,7 @@ pub const KERNEL: Policy = Policy {
   state_counter:    None,
   and_word:         false,
   unmarked_notes:   false,
+  written:          false,
   cite:             "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); FIDELITY_CHARTER §4",
 };
 
@@ -98,6 +104,8 @@ pub const POLICIES: &[Policy] = &[
   Policy {
     name: "revtex",
     binding: "revtex4_support.sty",
+    // (the S2b pilot: 0.4 % unclassified, a seeded classified sample 39 of 39 right — SYNC "FM S2a.2" r9)
+    written: true,
     cite: "revtex4_support_sty.rs:79-105 `\\lx@add@affiliation[annotate=new]` (Perl revtex4_support.sty.ltxml); \
            0911.0568",
     ..KERNEL
