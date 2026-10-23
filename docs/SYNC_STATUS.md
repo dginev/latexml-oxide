@@ -6581,6 +6581,24 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   byte-changed in 328, byte-identical to the writer's r5 outputs on all 1,907; int70b byte-identical to int70a on all 1,907. Binding nets:
   int70a 135/136 (1710.06503, ws-procs961x669: 0 → 8 Errors, the r6 catch); int70b 136/136, 0 worse than int69b.
 
+- **79b** (audit #363, `agent_reports/extracted_356a0c47/2026-10-23T011644_a95c8312ad38d03b1.md`: class begin-document code the
+  bindings drop; the silent-loss row "Class begin-document code the bindings drop" above holds the fix, witnesses and residual rows;
+  KPE #1143; guards `perfect_kernel_batch79b::*`, 7, and `shipped_class::tests::class_code_ends_a_line_at_a_carriage_return`): r1
+  1e4a3cdd9d (sn-jnl's `{appendices}` as appendix.sty `[title]` re-dressed by the class's begin-document code, lettered floats and
+  equations; `shipped_class::class_code` ends a line at CR, LF or CR LF; the llncs/svjour/svjour3/svmult/svproc bold `\vec` under each
+  copy's own conditions, `sv_support_sty::define_bold_vectors`; rev79b SHIP after fold-ins), r2 d4fceeef29 (tests and docs only: every
+  `\vec` guard a whole-element `assert_element`, the KPE number, the sn-jnl repro's "Figure A1", five residual rows — cleveref's
+  `appendix` type for `{appendices}` units, adjacent `\vec`s merged into one identifier (math parked), capital Greek upright in the
+  bold-italic forms, the internal name in llncs's text-mode `\vec` warning, svmono/SNmult copies not read). Main-session decisions:
+  +7 `ambiguous_math` Warnings in 4 papers accepted (`\vec v(t)` parses as `\mathbf{v}(t)` does), 2608.10941's section-less
+  `{appendices}` unwrapped as the kernel's `\appendix`, `\vec{kr}` one bold identifier.
+  **Integration (int71, d4fceeef29 cherry-picked onto 79469473fb as bef26c401a; binary int71a):** gates int71a nextest 7117/7117 +
+  cortex 10/10, fmt/clippy/rustdoc clean, inits 0/0, dump content diff vs int70b empty. A/B int70b → int71a (`ab_66bundle/popint71a.tsv`
+  = the writer's 362: sn-jnl, llncs, svjour, svjour3, svmult, svproc and controls): E 1,178 → 1,177, F 4 = 4, 0 worse, words −3,454 in
+  the 9 papers over 1 % (arrow accents → bold letters, invisible times, section numbers → appendix letters; no authored text lost, the
+  review's sample against the PDFs), 125 changed; both sides byte-identical to the writer's r1 outputs on all 362. Binding nets int71a
+  136/136, 0 worse than int70b.
+
 - **split114** (task #114, user directive 2026-10-07; a pure move, before FM S2a): `latexml_engine/src/base_utilities.rs`
   (23,317 lines) is the module directory `base_utilities/` — `mod.rs` (the imports, `FRONTMATTER_ELEMENTS`,
   `REPLACEABLE_FRONTMATTER_TAGS`, and `LoadDefinitions!` calling `defs::{general, frontmatter_api, frontmatter_fields,
