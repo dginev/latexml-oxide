@@ -64,6 +64,13 @@ LoadDefinitions!({
 
   ProcessOptions!();
   LoadClass!("article");
+  // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`) of the EPJ layout
+  // (svepj.clo:30 `\ExecuteOptions{final,twocolumn,10pt}`, :74 `\textwidth{180mm}`, :290 `\columnsep{4mm}`), the
+  // journal option papers use (72 of 97 svjour papers in the census), as pdflatex gives it: 512pt in two 250.309pt
+  // columns. The other journal styles' pages are not known here: their rows follow the registers.
+  if is_document_class("svjour") && given_class_options().iter().any(|option| option == "epj") {
+    declare_panel_page(250.30945, 512.0, true);
+  }
   RequireResource!("ltx-svjour.css");
   // svjour.cls:89-99 (0710.3184's), svjour2.cls:142-152, svjour3.cls:147-157 (every census copy, after the journal option
   // file) `\DeclareMathSymbol{\Gamma}{\mathalpha}{letters}{"00}`…: the capital Greek letters are the math italic's,

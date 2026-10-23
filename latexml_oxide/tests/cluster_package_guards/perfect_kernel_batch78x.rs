@@ -148,7 +148,9 @@ fn glue_between_panels_counts_towards_their_row() {
 /// `0.74\columnwidth` panels share a starred float's row, two `0.45\textwidth` ones do not share a column's, two
 /// `0.45\linewidth` graphics do, and a width key given twice counts its last value (pdflatex). Red (int65a: Figure 1
 /// two rows, Figure 2 one). Witnesses 1707.00190 Fig 2, nucl-ex0511052 Fig 13, 2502.05562 Fig 6, astro-ph0205132,
-/// 1705.10798, 2601.01508. Repro captions-floats/two_column_floats_set_rows_against_the_column.
+/// 1705.10798, 2601.01508. The starred float is set against article.cls's two-column page (79f,
+/// `standard_class_twocolumn_page`: `0.74\columnwidth` = 169.8pt of the 469pt text, 2.044 of the 229.5pt column; 0.37
+/// and 2 before, against the registers' 345pt doubled). Repro captions-floats/two_column_floats_set_rows_against_the_column.
 #[test]
 fn two_column_floats_set_rows_against_the_column() {
   let xml = convert_clean(repro!(
@@ -159,10 +161,10 @@ fn two_column_floats_set_rows_against_the_column() {
     "figure",
     &["xml:id=\"S0.F1\""],
     &format!(
-      "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"2\" panelfill=\"0.74\" panelline=\"2\" panelrows=\"1\" xml:id=\"S0.F1\">{}{}{}{}</figure>",
+      "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"2\" panelfill=\"0.724\" panelline=\"2.044\" panelrows=\"1\" xml:id=\"S0.F1\">{}{}{}{}</figure>",
       figure_tags(1),
-      rule_panel("255.3pt", "0.37"),
-      rule_panel("255.3pt", "0.37"),
+      rule_panel("255.3pt", "0.362"),
+      rule_panel("255.3pt", "0.362"),
       figure_captions(
         1,
         " class=\"ltx_centering\"",
@@ -170,16 +172,17 @@ fn two_column_floats_set_rows_against_the_column() {
       )
     ),
   );
-  // The panels keep Perl's sizes: `0.45\textwidth` is 155.3pt, the register at 345pt.
+  // The panels keep Perl's sizes: `0.45\textwidth` is 155.3pt, the register at 345pt; at the real page 211.05pt, 0.92
+  // of the 229.5pt column.
   assert_element(
     &xml,
     "figure",
     &["xml:id=\"S0.F2\""],
     &format!(
-      "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"1\" panelfill=\"0.9\" panelline=\"1\" panelrows=\"2\" xml:id=\"S0.F2\">{}{}<break class=\"ltx_break\"/>{}{}</figure>",
+      "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"1\" panelfill=\"0.92\" panelline=\"1\" panelrows=\"2\" xml:id=\"S0.F2\">{}{}<break class=\"ltx_break\"/>{}{}</figure>",
       figure_tags(2),
-      rule_panel("155.3pt", "0.9"),
-      rule_panel("155.3pt", "0.9"),
+      rule_panel("155.3pt", "0.92"),
+      rule_panel("155.3pt", "0.92"),
       figure_captions(
         2,
         " class=\"ltx_centering\"",
@@ -381,7 +384,9 @@ fn a_panel_states_its_width_not_its_height_or_body() {
 /// states (`\lx@panel@unstated`), nor an unknown one (`STATED_LENGTHS_WITHHELD`): every sub-float stays a panel, the
 /// three of the `figure*` one row, the two 4.5cm ones of a 247pt column two (pdflatex). Red (78x r1: the first
 /// `\subfloat` 0 wide against the real column, out of the panel list; 78x r4: Figure 2 one row, the float unevaluable).
-/// Witnesses 2602.06569 S4.F1/F2, 1902.05392 S3.F3; review rev78x finding 1, rev78x4 finding 3. Repro
+/// Witnesses 2602.06569 S4.F1/F2, 1902.05392 S3.F3; review rev78x finding 1, rev78x4 finding 3. The column is the
+/// author's 42pc less article.cls's 10pt separation, halved (247pt, as pdflatex; 79f: the declared page's separation
+/// while `\columnsep` is the binding's; 252pt before, Perl's 0 `\columnsep`): a 4.5cm graphic is 0.518 of it. Repro
 /// captions-floats/a_subfloat_states_no_width.
 #[test]
 fn a_subfloat_states_no_width() {
@@ -397,8 +402,8 @@ fn a_subfloat_states_no_width() {
     (1, 1, "a", "0.229"),
     (1, 2, "b", "0.229"),
     (1, 3, "c", "0.229"),
-    (2, 1, "d", "0.508"),
-    (2, 2, "e", "0.508"),
+    (2, 1, "d", "0.518"),
+    (2, 2, "e", "0.518"),
   ] {
     assert!(
       xml.contains(&format!(

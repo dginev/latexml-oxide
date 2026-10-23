@@ -9,6 +9,15 @@ LoadDefinitions!({
   // `load_class("aastex", Vec::new(), ...)` silently dropped the user's
   // `\documentclass[...]{emulateapj}` options before they reached aastex.
   LoadClass!("aastex", withoptions => true);
+  // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`), over the AASTeX
+  // binding's withdrawn one: emulateapj.cls:334-335 `\textwidth=7.1in`, `\columnsep=0.3125in`, as pdflatex gives it —
+  // 513.117pt in two 245.267pt columns, one column under `onecolumn` (:81-82, the later declared of the two;
+  // `preprint`, `apjl`, `iop` and the size options alike). `\onecolumngrid` regions follow (revtex4_support_sty.rs).
+  declare_panel_page(
+    245.26653,
+    513.11743,
+    last_declared_class_option(&["twocolumn", "onecolumn"]) != Some("onecolumn"),
+  );
   RequireResource!("ltx-apj.css");
   RequirePackage!("emulateapj");
   // emulateapj.cls is a revtex4 class of its own (:165-167 `\LoadClass…{\@revtex@cls}`), not an AASTeX version: it has

@@ -857,10 +857,13 @@ pub(crate) fn load() -> Result<()> {
   // list was never closed and held the rest of the document (1212.6177, 1710.00867, 1609.00969, 1407.2279: "<ltx:section>
   // isn't allowed in <ltx:item>"). The page geometry `\twocolumn` also sets (`\columnwidth`, `\linewidth`,
   // `\col@number`) is left alone. KNOWN_PERL_ERRORS #901; guard
-  // `perfect_kernel_batch69b::twocolumn_sets_the_twocolumn_flag`.
+  // `perfect_kernel_batch69b::twocolumn_sets_the_twocolumn_flag`. A class's declared page (`declare_panel_page`, the
+  // panel grid rule) is in two columns from here on, or in one after `\onecolumn` (latex.ltx:20430-20465
+  // `\columnwidth\textwidth`): a `[twocolumn]` article's `\onecolumn` appendix sets its floats against the 469pt text.
   DefMacro!("\\twocolumn[]", sub[args] {
     let header: Option<Tokens> = args.into_iter().next().unwrap().into();
-    let mut tokens = vec![T_CS!("\\global"), T_CS!("\\@twocolumntrue"), T_CS!("\\par")];
+    let mut tokens =
+      vec![T_CS!("\\global"), T_CS!("\\@twocolumntrue"), T_CS!("\\lx@panel@page@twocolumn"), T_CS!("\\par")];
     if let Some(header) = header.filter(|header| !header.is_empty()) {
       tokens.extend([T_BEGIN!(), T_CS!("\\noindent")]);
       tokens.extend(header.unlist());
@@ -869,7 +872,7 @@ pub(crate) fn load() -> Result<()> {
     Ok(Tokens::new(tokens))
   });
   // Perl: DefMacro('\onecolumn', '\par'); latex.ltx:20430-20437 `\global\@twocolumnfalse` (see `\twocolumn`).
-  DefMacro!("\\onecolumn", "\\global\\@twocolumnfalse\\par");
+  DefMacro!("\\onecolumn", "\\global\\@twocolumnfalse\\lx@panel@page@onecolumn\\par");
   DefMacro!("\\@onecolumna", "", locked => true);
   DefMacro!("\\@twocolumna", "", locked => true);
 

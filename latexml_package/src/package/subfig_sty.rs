@@ -1,7 +1,7 @@
 use latexml_core::{binding::def::builder::OptionValue, document::Document};
 
 use crate::{
-  engine::latex_constructs::{after_float, before_untyped_float},
+  engine::latex_constructs::{after_float, before_untyped_float, note_sub_float_body_width},
   prelude::*,
 };
 
@@ -210,11 +210,18 @@ LoadDefinitions!({
   // sub-counter and emits sub-id labels. afterFloat finalizes caption
   // properties on the whatsit. The subfigure@save counter sync is still
   // handled in the macro-body `\setcounter{subfigure@save}{\value{subfigure}}`.
+  // The panel is its body's width, its caption left out, with the glue the body states: subfig.sty:375-376 sets the
+  // body in an `\hbox` and measures it (`\setbox\@tempboxa\hbox{#4}\@tempdima=\wd\@tempboxa`), the sub-caption set
+  // in a box of that width (`note_sub_float_body_width`, OXIDIZED_DESIGN_DIVERGENCES #876, #885). Measured as the box
+  // the environment builds, a body's `\hspace{-3mm}` was left out: 2008.06630 Figs 1, 7, three
+  // `\subfloat{\includegraphics[width=0.16\textwidth]{…}\hspace{-3mm}}` in a 237pt column, one row in the PDF (subfig
+  // ends each with `\ignorespaces`, :424, so no glue between them), set 2+1.
   DefEnvironment!("{lx@subfloat@@figure}",
     "^ <ltx:figure xml:id='#id'>#tags#body</ltx:figure>",
     mode => "internal_vertical",
     before_digest => { before_untyped_float("subfigure")?; },
-    after_digest  => sub[whatsit] { after_float(whatsit); }
+    after_digest  => sub[whatsit] { after_float(whatsit); },
+    after_digest_body => sub[whatsit] { note_sub_float_body_width(whatsit); }
   );
 
   // \lx@subfloat@table — Perl L45-60 (table variant)
@@ -229,7 +236,8 @@ LoadDefinitions!({
     "^ <ltx:table xml:id='#id'>#tags#body</ltx:table>",
     mode => "internal_vertical",
     before_digest => { before_untyped_float("subtable")?; },
-    after_digest  => sub[whatsit] { after_float(whatsit); }
+    after_digest  => sub[whatsit] { after_float(whatsit); },
+    after_digest_body => sub[whatsit] { note_sub_float_body_width(whatsit); }
   );
 
   // \ContinuedFloat — Perl L98-102
@@ -333,6 +341,10 @@ fn define_subfloat(name: &str) -> Result<()> {
     }))
     .after_digest(Rc::new(|whatsit: &mut Whatsit| {
       after_float(whatsit);
+      Ok(Vec::new())
+    }))
+    .after_digest_body(Rc::new(|whatsit: &mut Whatsit| {
+      note_sub_float_body_width(whatsit);
       Ok(Vec::new())
     }))
     .install()

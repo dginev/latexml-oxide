@@ -38,6 +38,7 @@ LoadDefinitions!({
 
   ProcessOptions!();
   LoadClass!("article");
+  declare_mn_page();
   RequirePackage!("mn2e_support");
   // mn2e.cls:1370, after its natbib load (:1201-1203): the reference list prints no label, `\def\@biblabel#1{}`
   // (with natbib or without), as mnras.cls:1636 (mnras_cls.rs). Without natbib a
@@ -215,4 +216,21 @@ fn shipped_journal_abbreviations(text: &str) -> String {
     out.push('\n');
   }
   out
+}
+
+/// The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`) of mn2e.cls and
+/// mn.cls (mn.sty), as pdflatex gives it: 504pt (42pc) in two 240pt columns 2pc apart (mn2e.cls:15-22, :470-484;
+/// mn.sty:73-79, :895-903), one column under `onecolumn` or `referee` (`\ds@referee`, mn2e.cls:57-60, whose text is
+/// 39pc = 468pt), the options as given. The registers' 345pt read as the page set a `figure` against 345pt and a
+/// `figure*` against the same line (review rev79c2 finding 1).
+pub(crate) fn declare_mn_page() {
+  let referee = given_class_options()
+    .iter()
+    .any(|option| option == "referee");
+  let text = if referee { 468.0 } else { 504.0 };
+  let twocolumn = !matches!(
+    last_class_option(&["onecolumn", "twocolumn", "referee"]),
+    Some("onecolumn" | "referee")
+  );
+  declare_panel_page((text - 24.0) / 2.0, text, twocolumn);
 }

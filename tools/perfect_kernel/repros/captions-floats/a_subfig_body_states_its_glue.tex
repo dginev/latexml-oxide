@@ -1,0 +1,20 @@
+% witness: 2008.06630 Figs 1, 7 (`\subfloat{\includegraphics[width=0.16\textwidth]{…}\hspace{-3mm}}` triples in a
+%          237pt column, one row each in the PDF)
+% oracle:  pdflatex 0 errors, 0 overfull: subfig sets each body in an `\hbox` (subfig.sty:375-376; 112pt: a 120pt
+%          rule less 8pt) and ends each sub-float with `\ignorespaces` (:424): one row of three in the 345pt line
+% engines: rust int75a = three rows (each sub-float measured as its box, which takes the float's line; no
+%          `panelwidth`); Perl 0.8.8 = three rows (the same box measure)
+% expect:  0 errors, 0 warnings; no `ltx:break` in Figure 1; three sub-figures
+% status:  RED (int75a) -> GREEN (79f: subfig's sub-float is its body's width, `note_sub_float_body_width`)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{subfig}
+\begin{document}
+\begin{figure}
+\centering
+\subfloat{\rule{120pt}{1cm}\hspace{-8pt}}
+\subfloat{\rule{120pt}{1cm}\hspace{-8pt}}
+\subfloat{\rule{120pt}{1cm}\hspace{-8pt}}
+\caption{Three sub-floats.}
+\end{figure}
+\end{document}

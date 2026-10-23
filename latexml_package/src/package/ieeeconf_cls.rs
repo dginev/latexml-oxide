@@ -5,6 +5,24 @@ LoadDefinitions!({
   // Perl: ieeeconf.cls.ltxml
   // LoadClass('IEEEtran');
   LoadClass!("IEEEtran");
+  // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`), over IEEEtran's
+  // 516pt (ieeetran_cls.rs): ieeeconf.cls:1163-1164 `\textwidth 7.0in`, `\columnsep 0.2in` — 505.89pt in two
+  // 245.718pt columns as pdflatex gives it on letter and A4 paper — under a draft option the paper less 2in
+  // (:1257-1259; 469.755pt on letter, 452.968pt on A4), one column under `onecolumn` (:749-751, the later declared of
+  // the two). The class's `\ProcessOptions` runs the options in their declaration order.
+  if is_document_class("ieeeconf") {
+    let paper = match last_declared_class_option(&["letterpaper", "a4paper"]) {
+      Some("a4paper") => 597.50787,
+      _ => 614.295,
+    };
+    let draft = matches!(
+      last_declared_class_option(&["draft", "draftcls", "draftclsnofoot", "final"]),
+      Some("draft" | "draftcls" | "draftclsnofoot")
+    );
+    let text = if draft { paper - 144.54 } else { 505.89 };
+    let twocolumn = last_declared_class_option(&["onecolumn", "twocolumn"]) != Some("onecolumn");
+    declare_panel_page((text - 14.454) / 2.0, text, twocolumn);
+  }
   // ieeeconf.cls:4096-4118: the switch between "Appendix I" (the default) and "Appendix A" numbering, which
   // documents set (2609.16300), read by its own `\appendices` in place of IEEEtran's `romanappendices` option. Perl
   // only loads IEEEtran (KNOWN_PERL_ERRORS #491). Guard

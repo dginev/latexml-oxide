@@ -887,6 +887,18 @@ yysep={,},notesep={, }}}
     let number = ["manuscript", "acmsmall", "acmlarge", "acmtog", "sigconf", "siggraph", "sigplan", "sigchi",
       "sigchi-a", "acmengage", "acmcp"].iter().position(|f| *f == format).unwrap_or(0);
     RawTeX!(&s!("\\def\\ACM@format{{{format}}}\\def\\ACM@format@nr{{{number}}}"));
+    // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`): the format's
+    // geometry (acmart.cls:701-779), as pdflatex gives it after `\maketitle`, which sets the two-column formats in two
+    // columns (:2464-2486 `\twocolumn[\box\mktitle@bx]`) — sigconf, siggraph, sigchi and acmengage 506.295pt in two
+    // 241.147pt columns 2pc apart, sigplan 505.89pt in two of 240.945pt, acmtog 510.295pt in two of 243.147pt (24pt
+    // apart). The registers' 345pt read as the page made a sigconf `figure*` one column wide where the PDF sets it 2.100
+    // (review rev79c2 finding 1). The one-column formats are the registers' page.
+    match format.as_str() {
+      "sigconf" | "siggraph" | "sigchi" | "acmengage" => declare_panel_page(241.14749, 506.295, true),
+      "sigplan" => declare_panel_page(240.94499, 505.89, true),
+      "acmtog" => declare_panel_page(243.14749, 510.295, true),
+      _ => {},
+    }
     // sigchi-a sets `\@ACM@sigchiamodetrue` (acmart.cls:238-240) and with it a sans body (:888-890
     // `\renewcommand{\familydefault}{\sfdefault}`; OXIDIZED_DESIGN_DIVERGENCES #779); aamas.cls passes its format on.
     if format == "sigchi-a" {

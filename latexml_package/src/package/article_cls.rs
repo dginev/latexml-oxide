@@ -55,6 +55,11 @@ LoadDefinitions!( {
   DeclareOption!("oneside", r"\@twosidefalse\@mparswitchfalse");
   DeclareOption!("twoside", r"\@twosidetrue\@mparswitchtrue");
   ProcessOptions!();
+  // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`): article.cls's in two
+  // columns, as its size file sets it for the paper and size options (`standard_class_twocolumn_page`: 229.5pt
+  // columns of a 469pt text on letter paper, 221/452pt on A4), when article is the document's class (review rev79c2
+  // finding 1: a `figure*` stated 2 columns where the PDF gives 2.044). One column is the registers' page.
+  declare_standard_class_page("article");
 
   //**********************************************************************
   // Document structure.

@@ -3980,6 +3980,18 @@ pub fn reset_float_box() -> Result<()> {
 /// (:3377), so a `width=\linewidth` image in a `{subfigure}{.28\textwidth}` took the page's width (KNOWN_PERL_ERRORS
 /// #1028; witness 2509.19464 A1.F6). Guard `perfect_kernel_batch78d::subfigure_sets_the_line_width`.
 pub fn set_minipage_width(width: Dimension) -> Result<()> {
+  // The page outside the outermost such box (`PANEL_BOX_PAGE`), which a float held in it is a fraction of.
+  if lookup_value(PANEL_BOX_PAGE).is_none() {
+    let register = |name: &str| Stored::Dimension(lookup_dimension(name).unwrap_or_default());
+    assign_value(
+      PANEL_BOX_PAGE,
+      Stored::VecDequeStored(VecDeque::from([
+        register("\\textwidth"),
+        register("\\columnwidth"),
+      ])),
+      Some(Scope::Local),
+    );
+  }
   let rv: RegisterValue = width.into();
   for register in ["\\hsize", "\\textwidth", "\\columnwidth", "\\linewidth"] {
     assign_register(register, rv.clone(), None, Vec::new())?;
@@ -4129,6 +4141,9 @@ const KERNEL_TEXTWIDTH: i64 = 345 * 65536;
 /// set in two columns now.
 const PANEL_PAGE: &str = "lx@panel@page";
 const PANEL_PAGE_TWOCOLUMN: &str = "lx@panel@page@twocolumn";
+/// The state value of the page outside the outermost box that set the width registers (`set_minipage_width`: a
+/// `{minipage}`), its `\textwidth` and `\columnwidth` (scaled points), for a float held in it (`install_panel_line`).
+const PANEL_BOX_PAGE: &str = "lx@panel@box@page";
 
 /// The panel grid rule's line (user ruling 2026-10-22, FIDELITY_CHARTER §2 "Float panels"): a float's panels are set in
 /// rows against the class's real line (`panel_page`: a class binding's declared page, else the registers' and the
@@ -4149,11 +4164,38 @@ fn install_panel_line(double: bool) {
     return;
   };
   let linewidth = register("\\linewidth").unwrap_or(hsize);
-  let (real_text, real_column) = panel_page(textwidth);
-  let real_line = if double { real_text } else { real_column };
+  // A float held in a box that set the width registers (a `{minipage}`, latex.ltx `\@iiiminipage`: `\textwidth`,
+  // `\columnwidth` and `\hsize` are its width) is set against that box's line, a fraction of the running-text column
+  // outside it (`PANEL_BOX_PAGE`): a `[H]` figure in a `{minipage}{0.5\textwidth}` states `panelline` 0.5 as the PDF
+  // gives it (review rev79c2 finding 2; the box's `\textwidth` read as the page stated 1). Only where the registers
+  // outside the box are the real page are the box's registers real; elsewhere its real width is not known, and the
+  // float is arranged at its `\hsize`, as before the rule, stating no line (never a guess).
+  let box_page = match lookup_value(PANEL_BOX_PAGE) {
+    Some(Stored::VecDequeStored(page)) => match (page.front(), page.get(1)) {
+      (Some(Stored::Dimension(text)), Some(Stored::Dimension(column))) => {
+        Some((text.value_of(), column.value_of()))
+      },
+      _ => None,
+    },
+    _ => None,
+  };
+  let (real_text, real_column, real_line, page_column) = match box_page {
+    Some((outer_text, outer_column)) => {
+      let (page_text, page_column) = panel_page(outer_text);
+      if page_text != outer_text || page_column != outer_column {
+        return;
+      }
+      (textwidth, columnwidth, hsize, page_column)
+    },
+    None => {
+      let (real_text, real_column) = panel_page(textwidth);
+      let real_line = if double { real_text } else { real_column };
+      (real_text, real_column, real_line, real_column)
+    },
+  };
   assign_value(
     PANEL_COLUMN,
-    Stored::Dimension(Dimension::new(real_column)),
+    Stored::Dimension(Dimension::new(page_column)),
     Some(Scope::Local),
   );
   assign_value(
@@ -4252,13 +4294,21 @@ fn note_panel_hbox() {
 fn panel_page(textwidth: i64) -> (i64, i64) {
   let register = |name: &str| lookup_dimension(name).map(|d| d.value_of());
   let declared = match lookup_value(PANEL_PAGE) {
-    Some(Stored::VecDequeStored(page)) => match (page.front(), page.get(1), page.get(2)) {
-      (
-        Some(Stored::Dimension(column)),
-        Some(Stored::Dimension(text)),
-        Some(Stored::Dimension(own)),
-      ) => Some((column.value_of(), text.value_of(), own.value_of())),
-      _ => None,
+    Some(Stored::VecDequeStored(page)) => {
+      match (page.front(), page.get(1), page.get(2), page.get(3)) {
+        (
+          Some(Stored::Dimension(column)),
+          Some(Stored::Dimension(text)),
+          Some(Stored::Dimension(own)),
+          Some(Stored::Dimension(own_columnsep)),
+        ) => Some((
+          column.value_of(),
+          text.value_of(),
+          own.value_of(),
+          own_columnsep.value_of(),
+        )),
+        _ => None,
+      }
     },
     _ => None,
   };
@@ -4269,7 +4319,7 @@ fn panel_page(textwidth: i64) -> (i64, i64) {
   };
   if let Some(gm) = geometry {
     real_text = gm;
-  } else if let Some((_, text, own)) = declared
+  } else if let Some((_, text, own, _)) = declared
     && textwidth == own
   {
     real_text = text;
@@ -4278,13 +4328,18 @@ fn panel_page(textwidth: i64) -> (i64, i64) {
     Some(_) => lookup_bool(PANEL_PAGE_TWOCOLUMN),
     None => if_condition(&T_CS!("\\if@twocolumn")).ok().flatten() == Some(true),
   };
+  // (the declared page's separation while `\columnsep` is still the binding's: a style that sets its own page, as
+  // 2008.06630's 3dv.sty over `[twocolumn]{article}`, `\textwidth 6.875in` 0.3125in apart, sets its separation)
+  let columnsep_register = register("\\columnsep").unwrap_or(0);
   let columnsep = match declared {
-    Some((column, text, _)) => text - 2 * column,
-    None => register("\\columnsep").unwrap_or(0),
+    Some((column, text, _, own_columnsep)) if columnsep_register == own_columnsep => {
+      text - 2 * column
+    },
+    _ => columnsep_register,
   };
   if !two_column {
     (real_text, real_text)
-  } else if let Some((column, text, _)) = declared
+  } else if let Some((column, text, ..)) = declared
     && real_text == text
   {
     (text, column)
@@ -4303,14 +4358,17 @@ fn panel_page(textwidth: i64) -> (i64, i64) {
 /// (`panel_page`).
 pub fn declare_panel_page(column_pt: f64, text_pt: f64, twocolumn: bool) {
   let sp = |pt: f64| Stored::Dimension(Dimension::new((pt * 65536.0).round() as i64));
-  // (and the binding's own `\textwidth`, while which the page is the declared one: `panel_page`)
+  // (and the binding's own `\textwidth`, while which the page is the declared one, and `\columnsep`, while which its
+  // columns are the declared ones apart: `panel_page`)
   let own = lookup_dimension("\\textwidth").unwrap_or_default();
+  let own_columnsep = lookup_dimension("\\columnsep").unwrap_or_default();
   assign_value(
     PANEL_PAGE,
     Stored::VecDequeStored(VecDeque::from([
       sp(column_pt),
       sp(text_pt),
       Stored::Dimension(own),
+      Stored::Dimension(own_columnsep),
     ])),
     Some(Scope::Global),
   );
@@ -4321,6 +4379,62 @@ pub fn declare_panel_page(column_pt: f64, text_pt: f64, twocolumn: bool) {
 /// A class binding that loaded another's declaration (`declare_panel_page`; AASTeX over REVTeX's) whose page it does
 /// not know withdraws it: its rows follow the registers.
 pub fn withdraw_panel_page() { assign_value(PANEL_PAGE, Stored::None, Some(Scope::Global)); }
+
+/// The two-column page of LaTeX's standard classes (`declare_panel_page`), as `size10.clo`/`size11.clo`/`size12.clo`
+/// (and `bk1x.clo`) set it for the document's class options: in two columns `\textwidth` is the paper's width less
+/// 2in, at most twice the size's one-column 345/360/390pt, `\@settopoint`ed; `\columnwidth` is half of it less the
+/// classes' 10pt `\columnsep` (article.cls:627, latex.ltx `\twocolumn`). The paper is the last declared of the
+/// classes' paper options (article.cls:53-77, `landscape` swapping its sides), the size the last of `10pt`/`11pt`/
+/// `12pt` (`\ProcessOptions` runs them in their declaration order); under 2.09 compatibility (`\documentstyle`) the
+/// size files set 410pt (size10.clo `\if@compatibility\if@twocolumn\setlength\textwidth{410\p@}`). Returns (column,
+/// text) in points; pdflatex gives 229.5/469pt on letter paper, 221/452pt on A4, 200/410pt for `\documentstyle`.
+pub fn standard_class_twocolumn_page() -> (f64, f64) {
+  if lookup_bool("2.09_COMPATIBILITY") {
+    return (200.0, 410.0);
+  }
+  let (width, height) = match last_declared_class_option(&[
+    "a4paper",
+    "a5paper",
+    "b5paper",
+    "letterpaper",
+    "legalpaper",
+    "executivepaper",
+  ]) {
+    Some("a4paper") => (597.50787, 845.04684),
+    Some("a5paper") => (421.10078, 597.50787),
+    Some("b5paper") => (500.76849, 711.31892),
+    Some("legalpaper") => (614.295, 1011.78),
+    Some("executivepaper") => (523.9575, 758.835),
+    _ => (614.295, 794.97),
+  };
+  let width = if given_class_options().iter().any(|o| o == "landscape") {
+    height
+  } else {
+    width
+  };
+  let one_column = match last_declared_class_option(&["10pt", "11pt", "12pt"]) {
+    Some("11pt") => 360.0,
+    Some("12pt") => 390.0,
+    _ => 345.0,
+  };
+  let text = (width - 144.54_f64).min(2.0 * one_column).floor();
+  ((text - 10.0) / 2.0, text)
+}
+
+/// A standard class (article, report, book) that is the document's (`is_document_class`) declares its page in two
+/// columns (`standard_class_twocolumn_page`) under `twocolumn` (the last declared of `onecolumn`/`twocolumn`): its
+/// `figure` is set against the 229.5pt column, its `figure*` against the 469pt text on letter paper, where the
+/// registers' 345pt read as the column and twice it as the text (`panel_page`; rev79c2: `figure*` `panelline` 2 for
+/// the PDF's 2.044). A class loading it (OmniBus, elsarticle, REVTeX) is not it: its page is its own. One column is
+/// the registers' page.
+pub fn declare_standard_class_page(class: &str) {
+  if is_document_class(class)
+    && last_declared_class_option(&["onecolumn", "twocolumn"]) == Some("twocolumn")
+  {
+    let (column, text) = standard_class_twocolumn_page();
+    declare_panel_page(column, text, true);
+  }
+}
 
 /// The state value of a class whose floats are centred (`declare_panel_floats_centred`).
 const PANEL_FLOATS_CENTRED: &str = "lx@panel@floats@centred";
@@ -4840,6 +4954,16 @@ fn note_stated_widths_in(
     DigestedData::Whatsit(w) => w,
     _ => return Ok(PanelDelta::default()),
   };
+  // A caption is no panel and sets none (`arrange_panels` ends a row at it): the widths its text states stand as they
+  // are, so a box it cannot read again leaves the float's panels evaluated (1307.6961 A2.F8: isotope.sty's
+  // `\makebox[\@tempdimb]` of a `\settowidth` in a group that has ended, in the caption of three `\resizebox{11.3cm}`
+  // panels on AASTeX 5's 469.755pt page).
+  if matches!(
+    w.borrow().get_definition().get_cs_name().as_ref(),
+    "\\lx@@caption" | "\\@@toccaption"
+  ) {
+    return Ok(PanelDelta::default());
+  }
   let (stated, glue) = {
     let w = w.borrow();
     (stated_size_of(&w)?, w.has_property(PANEL_GLUE_DELTA))
@@ -5517,6 +5641,19 @@ fn is_standalone_panel_name(qname: SymStr) -> bool {
   })
 }
 
+/// A sub-float panel's measured body width (scaled points; `note_sub_float_body_width`), where it has one above 0.
+fn panel_body_width_of(document: &Document, node: &Node) -> Option<f64> {
+  match document.get_node_box(node).as_ref().map(Digested::data) {
+    Some(DigestedData::Whatsit(w)) => {
+      match w.borrow().get_property("panel_body_width").as_deref() {
+        Some(Stored::Dimension(width)) if width.value_of() > 0 => Some(width.value_of() as f64),
+        _ => None,
+      }
+    },
+    _ => None,
+  }
+}
+
 /// Width (in scaled points) of the box that produced `node`, or 0 if unknown.
 /// Perl: `$document->getNodeBox($child)->getWidth->valueOf()`. When the node has
 /// no tracked box width (e.g. a minipage/parbox, whose set width rides on the
@@ -5527,16 +5664,13 @@ fn panel_width(document: &Document, node: &Node) -> f64 {
   if let Some(width) = box_panel_width(node) {
     return width;
   }
-  let node_box = document.get_node_box(node);
   // A sub-float panel's body, its caption left out (`note_sub_float_body_width`). A body of no known width (0) falls
   // back to the box, as before the body measure: as 0 it joined every neighbour's row and, at a row's start, left the
   // panel list (1610.06413 Figs 2, 4, hep-ex0703011, nlin0606018).
-  if let Some(DigestedData::Whatsit(w)) = node_box.as_ref().map(Digested::data)
-    && let Some(Stored::Dimension(width)) = w.borrow().get_property("panel_body_width").as_deref()
-    && width.value_of() > 0
-  {
-    return width.value_of() as f64;
+  if let Some(width) = panel_body_width_of(document, node) {
+    return width;
   }
+  let node_box = document.get_node_box(node);
   let box_width = node_box
     .and_then(|b| b.get_width(None).ok().flatten())
     .map(|r| r.value_of() as f64)
@@ -6140,12 +6274,16 @@ fn arrange_panels(
     // it wraps a single narrower graphic, size it to that graphic so sibling
     // panels share a row — an explicit-width `{subfigure}{W}` already does.
     let mut sole_graphic = false;
-    if child_width >= hsize
-      && let Some(inner) = sole_graphic_width(document, &child)
-      && inner < child_width
-    {
-      child_width = inner;
-      sole_graphic = true;
+    if let Some(inner) = sole_graphic_width(document, &child) {
+      if child_width >= hsize && inner < child_width {
+        child_width = inner;
+        sole_graphic = true;
+      } else {
+        // (a sub-float measured by its body, `panel_body_width` — subfig's and subfigure.sty's — that holds one graphic
+        // states its width as the one the full-`\hsize` box did above, its body's in the row: 1903.10543 S4.F7,
+        // `\subfloat[…]{\begin{tabular}{c}\includegraphics[width=5.6cm]{…}\end{tabular}}`, 79f)
+        sole_graphic = panel_body_width_of(document, &child).is_some();
+      }
     }
     let child_stated = sole_graphic || panel_width_is_stated(document, &child, child_width, hsize);
     if real_line.is_some() {
@@ -6595,11 +6733,7 @@ fn panel_width_is_stated(document: &Document, panel: &Node, width: f64, hsize: f
   let sub_float = with(document::get_node_qname(panel), |q| {
     PANEL_FLOATS.contains(&q)
   });
-  let body_width = matches!(
-    document.get_node_box(panel).as_ref().map(Digested::data),
-    Some(DigestedData::Whatsit(w))
-      if matches!(w.borrow().get_property("panel_body_width").as_deref(), Some(Stored::Dimension(d)) if d.value_of() > 0)
-  );
+  let body_width = panel_body_width_of(document, panel).is_some();
   if sub_float && !body_width && width >= hsize {
     return false;
   }

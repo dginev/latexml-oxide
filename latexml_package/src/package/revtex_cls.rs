@@ -52,6 +52,9 @@ LoadDefinitions!({
   });
   ProcessOptions!();
   LoadClass!("article");
+  if is_document_class("revtex") {
+    declare_revtex3_page();
+  }
   RequirePackage!("natbib", options => vec![String::from("numbers")]);
   RequirePackage!("revtex3_support");
   // After ProcessOptions, load the tracked package list.
@@ -62,3 +65,20 @@ LoadDefinitions!({
     RequirePackage!("amssymb");
   }
 });
+
+/// The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`): REVTeX 3's, as
+/// pdflatex gives it for `aps` (aps.sty, aps10.sty) — 510pt, in two 246pt columns under `twocolumn`; `preprint` (or
+/// `manuscript`, `revtex3@preprint`) 468pt, in two of 229pt under `twocolumn`; the options as given, from
+/// `\documentclass{revtex}` (revtex_cls.rs) or `\documentstyle{revtex}` (revtex_sty.rs). The registers' 345pt read as
+/// the column made a `figure*` twice it (review rev79c2 finding 1; 128 of the census's 668 REVTeX 3 papers are
+/// `twocolumn`).
+pub(crate) fn declare_revtex3_page() {
+  let preprint = lookup_bool("revtex3@preprint");
+  let text = if preprint { 468.0 } else { 510.0 };
+  let column = if preprint { 229.0 } else { 246.0 };
+  declare_panel_page(
+    column,
+    text,
+    last_class_option(&["onecolumn", "twocolumn"]) == Some("twocolumn"),
+  );
+}

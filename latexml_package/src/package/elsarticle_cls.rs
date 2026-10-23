@@ -142,6 +142,11 @@ LoadDefinitions!({
   // geometry binding, which sizes measured SVG pictures by them (OXIDIZED_DESIGN #99); the two-column layouts
   // (5p, and 3p with `twocolumn`) keep the class default, since our geometry has no column model and a full-width
   // picture there is a column wide (OXIDIZED_DESIGN #561).
+  // (`1p` is set in one column whatever the options: elsarticle.cls:1265 `\if@twocolumn\global\@twocolumnfalse\fi`,
+  // and :86-87 `\AtBeginDocument{\@twocolumnfalse}`)
+  if jtype == 1 {
+    Digest!("\\global\\@twocolumnfalse")?;
+  }
   if matches!(jtype, 1 | 3 | 5) {
     RequirePackage!("geometry");
     let twocolumn = jtype == 5 || if_condition(&T_CS!("\\if@twocolumn"))?.unwrap_or(false);
@@ -151,6 +156,24 @@ LoadDefinitions!({
         "\\geometry{{twoside,paperwidth=210mm,paperheight=297mm,textheight={textheight},\
          textwidth={textwidth},centering,headheight=50pt,headsep=12pt,footskip={footskip}}}"
       ))))?;
+    }
+  }
+  // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`) in the two-column
+  // layouts, which keep the class default above: as pdflatex gives it, `5p` 522pt in two 252pt columns 18pt apart
+  // (elsarticle.cls:1282-1296), `3p` with `twocolumn` 468pt in two 222pt columns 2pc apart (:1268-1280), and the
+  // default `preprint` with `twocolumn` article's page (`standard_class_twocolumn_page`: 469pt in two of 229.5pt on
+  // letter paper, elsarticle executing no paper option of article's). The registers' 345pt read as the page made a
+  // `5p` `figure*` one column wide where the PDF sets it 2.071 (review rev79c2 finding 1). The one-column layouts
+  // are the geometry's page (`1p` 384pt, `3p` 468pt).
+  if if_condition(&T_CS!("\\if@twocolumn"))?.unwrap_or(false) || jtype == 5 {
+    match jtype {
+      5 => declare_panel_page(252.0, 522.0, true),
+      3 => declare_panel_page(222.0, 468.0, true),
+      1 => {},
+      _ => {
+        let (column, text) = standard_class_twocolumn_page();
+        declare_panel_page(column, text, true);
+      },
     }
   }
   RequirePackage!("graphicx");

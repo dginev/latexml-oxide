@@ -7,6 +7,13 @@ LoadDefinitions!({
   // Perl: svjour3.cls.ltxml
   // Intended to cover svjour.cls, svjour1.cls, svjour2.cls & svjour3.cls
   LoadClass!("svjour");
+  // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`) under `twocolumn`
+  // (svjour3.cls:42, :1414 `\columnsep{1.5cc}`), as pdflatex gives it: 495pt in two 238.964pt columns, where the
+  // registers' 345pt read as the column and twice it as the text (review rev79c2 finding 1). One column (347pt,
+  // `smallextended` 338pt, within 2% of the registers') is the registers' page.
+  if is_document_class("svjour3") && given_class_options().iter().any(|option| option == "twocolumn") {
+    declare_panel_page(238.96417, 495.0, true);
+  }
   // What editions of svjour3.cls papers ship add (run 347: 42 svjour3 papers), a copy without one leaving it to the
   // paper (`DefinitionOrigin::Fallback`):
   // - the economics edition's `\JEL{codes}` (6 copies, v3.2 and v3.3, 1402.2599's :314-317 "JEL Classification", its

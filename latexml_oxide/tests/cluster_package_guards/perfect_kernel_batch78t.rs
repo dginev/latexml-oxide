@@ -132,8 +132,9 @@ fn subtable_after_the_caption_is_numbered_by_it() {
 
 /// subfig.sty:350-411: the sub-caption is `\sf@subcaption`'s (caption3's `\caption@make`), not the document's
 /// `\caption`, and `[list][caption]` captions with the second (pdflatex 0 errors, "See 1a, 1b, 1c, 1."). Red (int57a):
-/// 1 Error and a Fatal (KNOWN_PERL_ERRORS #1126; the list entry as the caption, #1130). Repro
-/// captions-floats/subfig_caption_is_not_the_documents_caption.
+/// 1 Error and a Fatal (KNOWN_PERL_ERRORS #1126; the list entry as the caption, #1130). Each sub-float is its body's
+/// width, 28.5pt of the 345pt line (subfig.sty:375-376 measures the body's `\hbox`; 79f, `note_sub_float_body_width`).
+/// Repro captions-floats/subfig_caption_is_not_the_documents_caption.
 #[test]
 fn subfig_caption_is_not_the_documents_caption() {
   let xml = convert_clean(repro!(
@@ -150,7 +151,7 @@ fn subfig_caption_is_not_the_documents_caption() {
       "figure",
       &[&format!("xml:id=\"{id}\"")],
       &format!(
-        "<figure class=\"ltx_figure_panel\" labels=\"LABEL:{letter}\" xml:id=\"{id}\">\
+        "<figure class=\"ltx_figure_panel\" labels=\"LABEL:{letter}\" panelwidth=\"0.082\" xml:id=\"{id}\">\
          <tags><tag>({letter})</tag><tag role=\"refnum\">1{letter}</tag></tags>\
          <rule height=\"28.5pt\" width=\"28.5pt\"/><toccaption><tag close=\" \">{letter}</tag>{list}</toccaption>\
          <caption><tag close=\" \">({letter})</tag>{text}</caption></figure>"
@@ -429,7 +430,9 @@ pub(super) fn float_rows(xml: &str, id: &str) -> String {
 /// with ` \label`s and `\hfill`s share a row (pdflatex: both figures one row, "See 1(a), 1(b), 2(a), 2(d)."): the
 /// panel's stated width leaves its labels and its glue out (`note_sub_float_body_width`, 78t r5). Red (78t r2: both
 /// spaces counted, Figure 1 one panel per row, Figure 2 3+1; int60a one per row). Witnesses 2511.21020 Figs 7-8, 1607.02761, 2211.12798
-/// `fig:dataset`, 1601.02116 `fig:EpsW-E`. Repro captions-floats/a_label_between_spaces_counts_one.
+/// `fig:dataset`, 1601.02116 `fig:EpsW-E`. The `figure*` of the `[twocolumn]` article is 2.044 of its column (469 of
+/// 229.5pt, article.cls's page: 79f, `standard_class_twocolumn_page`; 2 before, the registers' 345pt doubled). Repro
+/// captions-floats/a_label_between_spaces_counts_one.
 #[test]
 fn a_label_between_spaces_counts_one() {
   let xml = convert_clean(repro!(
@@ -450,7 +453,7 @@ fn a_label_between_spaces_counts_one() {
     "figure",
     &["xml:id=\"S0.F1\""],
     &format!(
-      "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" labels=\"LABEL:f1\" panelcols=\"2\" panelfill=\"0.95\" panelline=\"2\" panelrows=\"1\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag>\
+      "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" labels=\"LABEL:f1\" panelcols=\"2\" panelfill=\"0.95\" panelline=\"2.044\" panelrows=\"1\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag>\
        <tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags>{}{}\
        <toccaption class=\"ltx_centering\"><tag close=\" \">1</tag>A label between two spaces.</toccaption>\
        <caption class=\"ltx_centering\"><tag close=\": \">Figure 1</tag>A label between two spaces.</caption></figure>",

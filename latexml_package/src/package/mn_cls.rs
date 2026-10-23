@@ -34,6 +34,8 @@ LoadDefinitions!({
   ProcessOptions!();
   LoadClass!("article");
   RequirePackage!("mn2e_support");
+  // mn.sty's page, mn2e's (`declare_mn_page`).
+  mn2e_cls::declare_mn_page();
 
   // And some stuff not in the later version...
   def_macro_noop("\\NewSymbolFont{}{}")?;

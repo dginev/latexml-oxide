@@ -90,6 +90,14 @@ LoadDefinitions!({
     .strip_prefix("aastex")
     .is_some_and(|version| version.starts_with(|c: char| c.is_ascii_digit()))
     || bundled_aastex_is_6_plus();
+  // AASTeX 5.x's page (aastex.cls:588 `\textwidth{6.5in}`; :93-95 `preprint2` sets two columns, :2026
+  // `\columnsep{0.5in}`), as pdflatex gives it: 469.755pt, in two 216.81pt columns under `preprint2` (the last declared
+  // of `manuscript`, `preprint`, `preprint2`). The registers' 345pt read as the page set its floats against a line 0.73
+  // of the PDF's.
+  if is_document_class("aastex") && !aastex6_plus {
+    let twocolumn = last_declared_class_option(&["manuscript", "preprint", "preprint2"]) == Some("preprint2");
+    declare_panel_page(if twocolumn { 216.81 } else { 469.75499 }, 469.75499, twocolumn);
+  }
   // aastex7.cls:11484 / aastex701.cls:11416 `\usepackage[figuresright]{rotating}`, ahead of their own `\rotate`
   // (:12264 / :12196), which a deluxetable's `\rotate` (deluxetable_sty.rs) must stay; aastex631 and earlier do not load
   // it. Loaded here for every AASTeX 7 name, direct (`aastex7`, `aastex70`) or through the versioned fallback

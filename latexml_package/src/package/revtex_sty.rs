@@ -11,4 +11,6 @@ LoadDefinitions!({
   RequirePackage!("natbib", options => vec!["numbers".to_string()]);
   // Perl L23: RequirePackage('revtex3_support', withoptions => 1)
   require_package_with_options("revtex3_support")?;
+  // REVTeX 3's page (`revtex_cls::declare_revtex3_page`), as under `\documentclass{revtex}`.
+  revtex_cls::declare_revtex3_page();
 });
