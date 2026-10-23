@@ -1,0 +1,19 @@
+% witness: synthetic (review rev79d finding 1's class: cleveref's `\appendix` with chapters)
+% oracle:  pdflatex 0 errors, with TL 2025's first aid for cleveref removed as below (the arXiv PDFs' cleveref):
+%          "See appendix A, appendix A.1, appendix A.1.1 and chapter 1." (cleveref.sty:232-284: with chapters the
+%          patched `\appendix` aliases chapter, section, subsection to appendix, subappendix, subsubappendix, whose
+%          default names are all "appendix", :4055-4057)
+% engines: rust int72a, 79d r1 = "appendix A", "section A.1", "section A.1.1"; Perl 0.8.8 the same
+% expect:  0 errors, 0 warnings; creftype "appendix" for a:one, a:sec, a:sub; "chapter" for c:i
+% status:  RED (79d r1) -> GREEN (79d r2)
+% preload: ar5iv.sty
+\documentclass{book}
+\RemoveFromHook{package/cleveref/after}[firstaid]\usepackage{cleveref}
+\begin{document}
+\chapter{Intro}\label{c:i}
+See \cref{a:one}, \cref{a:sec}, \cref{a:sub} and \cref{c:i}.
+\appendix
+\chapter{One}\label{a:one}
+\section{Sec}\label{a:sec}
+\subsection{Sub}\label{a:sub}
+\end{document}

@@ -6,7 +6,12 @@ use crate::prelude::*;
 LoadDefinitions!({
   // Perl: svmult.cls.ltxml
   // svmono, svmult's monograph twin (lib.rs), from the name the binding serves (read before the classes it loads).
-  let svmono = Expand!(Tokens!(T_CS!("\\@currname"))).to_string() == "svmono";
+  let served = Expand!(Tokens!(T_CS!("\\@currname"))).to_string();
+  let svmono = served == "svmono";
+  // The class this load serves, whose copy the binding reads where versions differ (`\vec`, the running heads): svmono
+  // and SNmult papers ship `svmono.cls`/`SNmult.cls`, not `svmult.cls` (review rev79b finding 8).
+  let served_class =
+    if svmono || served.eq_ignore_ascii_case("SNmult") { served.clone() } else { String::from("svmult") };
 
   RawTeX!(r"\newif\if@numart\@numarttrue");
   // Generally ignorable options
@@ -77,7 +82,7 @@ LoadDefinitions!({
   // copies define the bold italic alone, no options (1405.1421's). A copy without its own picks the first. Witnesses
   // 2512.18788, hep-ex0701025 (16 of 76 census papers use `\vec`; audit #363).
   {
-    let copy = crate::shipped_class::shipped_class_text("svmult")?;
+    let copy = crate::shipped_class::shipped_class_text(&served_class)?;
     let has = |code: &str| {
       copy
         .as_deref()
@@ -141,18 +146,21 @@ LoadDefinitions!({
   DefMath!("\\upi",    "\u{03C0}", font => { shape => "upright", forceshape => true });
   DefMath!("\\utau",   "\u{03C4}", font => { shape => "upright", forceshape => true });
 
-  // Italic var-Greek letters
-  DefMath!("\\varDelta",   "\u{0394}", font => { shape => "italic" });
-  DefMath!("\\varGamma",   "\u{0393}", font => { shape => "italic" });
-  DefMath!("\\varLambda",  "\u{039B}", font => { shape => "italic" });
-  DefMath!("\\varOmega",   "\u{03A9}", font => { shape => "italic" });
-  DefMath!("\\varPhi",     "\u{03A6}", font => { shape => "italic" });
-  DefMath!("\\varPi",      "\u{03A0}", font => { shape => "italic" });
-  DefMath!("\\varPsi",     "\u{03A8}", font => { shape => "italic" });
-  DefMath!("\\varSigma",   "\u{03A3}", font => { shape => "italic" });
-  DefMath!("\\varTheta",   "\u{0398}", font => { shape => "italic" });
-  DefMath!("\\varUpsilon", "\u{03A5}", font => { shape => "italic" });
-  DefMath!("\\varXi",      "\u{039E}", font => { shape => "italic" });
+  // The var-Greek letters: svmult.cls:982-993 (v5.x; 0812.2480's, 2401.17237's, 2605.10553's copies) declares them from
+  // `operators`, "the upright forms are defined here as \var<Character>", where its capital Greek are `letters`'
+  // italics (:971-981; the reverse of amsmath's `\varGamma`). Perl's binding (svmult.cls.ltxml:56-66) makes them
+  // italic, which a capital Greek letter's default shape overrode anyway (`Font::specialize`); review rev79b finding 4.
+  DefMath!("\\varDelta",   "\u{0394}");
+  DefMath!("\\varGamma",   "\u{0393}");
+  DefMath!("\\varLambda",  "\u{039B}");
+  DefMath!("\\varOmega",   "\u{03A9}");
+  DefMath!("\\varPhi",     "\u{03A6}");
+  DefMath!("\\varPi",      "\u{03A0}");
+  DefMath!("\\varPsi",     "\u{03A8}");
+  DefMath!("\\varSigma",   "\u{03A3}");
+  DefMath!("\\varTheta",   "\u{0398}");
+  DefMath!("\\varUpsilon", "\u{03A5}");
+  DefMath!("\\varXi",      "\u{039E}");
 
   // Blackboard bold letters (identical \bbbX cluster to llncs_cls.rs).
   // Perl: DefPrimitiveI('\bbbc', undef, "\x{2102}");
@@ -369,7 +377,7 @@ see SVMono documentation -}\begin{quotation}}{\end{quotation}}"#);
   {
     let _class = OriginGuard::new(DefinitionOrigin::Fallback);
     // (v1.x asks for running heads with its option, v5.x asks to drop them with its own)
-    let asks_for_runheads = crate::shipped_class::shipped_class_text("svmult")?
+    let asks_for_runheads = crate::shipped_class::shipped_class_text(&served_class)?
       .is_some_and(|text| crate::shipped_class::class_code_contains(&text, "\\DeclareOption{runningheads}"));
     let runhead = if asks_for_runheads {
       crate::shipped_class::class_option_given("runningheads")?

@@ -22,7 +22,7 @@ fn convert_clean(tex: &str) -> String {
 }
 
 /// Every `<equation>` in document order as `labels@xml:id:<tags>…</tags>`, `-` for one without tags.
-fn equation_heads(xml: &str) -> String {
+pub(super) fn equation_heads(xml: &str) -> String {
   let re = regex::Regex::new(r#"(?s)<equation ([^>]*)>\s*(<tags>.*?</tags>)?"#).unwrap();
   let labels = regex::Regex::new(r#"labels="([^"]*)""#).unwrap();
   let id = regex::Regex::new(r#"xml:id="([^"]*)""#).unwrap();
@@ -45,10 +45,14 @@ fn equation_heads(xml: &str) -> String {
 }
 
 /// A numbered equation's tags: the printed `(n)` and the refnum.
-fn tags(n: u32) -> String { format!("<tags><tag>({n})</tag><tag role=\"refnum\">{n}</tag></tags>") }
+pub(super) fn tags(n: u32) -> String {
+  format!("<tags><tag>({n})</tag><tag role=\"refnum\">{n}</tag></tags>")
+}
 
 /// The reference forms alone of the number `n`, which no row prints.
-fn reference_tags(n: u32) -> String { format!("<tags><tag role=\"refnum\">{n}</tag></tags>") }
+pub(super) fn reference_tags(n: u32) -> String {
+  format!("<tags><tag role=\"refnum\">{n}</tag></tags>")
+}
 
 /// aastex6.cls:1303, aastex631.cls:1838-1900, aastex701.cls:8310-8373: AASTeX 6+'s journal abbreviations, which differ
 /// from aas_macros.sty's ADS forms in 28 names (pdflatex "J: ApJL, PhRvD, SSRv, A&A Rv, JCAP, PhR, ApJ, ApJL, ZA.").

@@ -5679,8 +5679,10 @@ fn physics_operator_leaves_a_sized_bracket() {
 
 /// 62zg: the witnesses' shape — a sized bracket that a row break splits, in `align` and in `eqnarray` (`\tr`): each row
 /// keeps its half, `\\` ends the row as in pdflatex. 12 errors before (the size read took `\Bigg`, the power read the
-/// `[…]` across the `\\`; 2609.12812, 39468). The 5 warnings are the cells holding half a bracket pair, which no math
-/// parse spans (math parsing is a separate stream).
+/// `[…]` across the `\\`; 2609.12812, 39468). The warnings are the cells holding half a bracket pair, which no math
+/// parse spans (math parsing is a separate stream). 79d: the eqnarray's second row prints a number of its own (pdflatex
+/// (3) and (4)), so it is an equation of its own (OXIDIZED_DESIGN_DIVERGENCES #888), whose formula `B\big]` is a sixth
+/// half pair.
 #[test]
 fn physics_operator_bracket_across_a_row_break() {
   let (log, xml) = convert_with(
@@ -5692,8 +5694,8 @@ fn physics_operator_bracket_across_a_row_break() {
 \end{document}",
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 5), "{log}");
-  assert_eq!(log.matches("Warning:unparsed_math:").count(), 5, "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 6), "{log}");
+  assert_eq!(log.matches("Warning:unparsed_math:").count(), 6, "{log}");
   assert_element(
     &xml,
     "Math",

@@ -1312,7 +1312,13 @@ pub fn def_constructor(
   );
 
   if declared_mode.require_math {
-    let cs_name_cloned = cs_name.clone();
+    // (named as the command it reverts as, its `alias`, where it stands in for one: the Springer classes' `\vec` is
+    // `\lx@sv@vec@boldmath`, and pdflatex's "Missing $ inserted" is the author's `\vec`'s; probe rev79b/ltext)
+    let cs_name_cloned = options
+      .alias
+      .clone()
+      .filter(|alias| alias.starts_with('\\') && alias.len() > 1)
+      .unwrap_or_else(|| cs_name.clone());
     let require_math_closure = before_digest_simple!({ requireMath!(cs_name_cloned) });
     before_digest_closures.push(require_math_closure);
   }

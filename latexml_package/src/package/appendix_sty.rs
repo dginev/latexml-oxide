@@ -64,6 +64,10 @@ LoadDefinitions!({
   // (by the class's chapters, as appendix.sty:38's `\@ifundefined{chapter}` — not a `chapter` counter alone, which
   // WileyNJD-v2.cls:2410, WileyNJDv5.cls:5728 and MRM.cls:2160 declare with no `\chapter`: "Appendix A";
   // `state::class_defines_chapter`, OXIDIZED_DESIGN #179)
+  // The environment never calls `\appendix`, which is all cleveref patches (cleveref.sty:174-176), so a `\cref` to its
+  // sections prints their counter's name, "Sec. A" (2507.16108, 2511.19260; also 2203.14452, 2502.21249, 2508.04603,
+  // 2608.04513), unless the document called `\appendix` before or inside it (1810.06583, 1904.07153, 2112.09636,
+  // 2208.03406: "appendix A"); cleveref_sty.rs `cref_type`.
   DefPrimitive!("\\lx@pp@appendix@begin", {
     if has_chapter_counter() && class_defines_chapter() {
       begin_appendices("chapter");

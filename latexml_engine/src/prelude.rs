@@ -115,8 +115,9 @@ pub use crate::tex::def_autoload;
 pub use crate::{
   base_parameter_types::{tex_file_name, with_unexpandable_protect},
   latex_constructs::{
-    begin_appendices, declare_bound_text_symbols, declare_panel_floats_centred, declare_panel_page,
-    declare_panel_parbox_width, declare_panel_width, end_appendices, has_chapter_counter,
+    EQUATIONROW_HOLDS, SUBEQUATION_ROLLBACK, begin_appendices, declare_bound_text_symbols,
+    declare_panel_floats_centred, declare_panel_page, declare_panel_parbox_width,
+    declare_panel_width, end_appendices, has_chapter_counter, keep_pending_next_numbers,
     kernel_chapter_with_warning, last_class_option, last_declared_class_option, make_note_tags,
     note_size_in_line, only_preamble, out_of_line_size, relocate_footnote, set_minipage_width,
     set_panel_page_twocolumn, start_appendices, tabular_bindings, withdraw_panel_floats_centred,

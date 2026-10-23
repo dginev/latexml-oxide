@@ -198,14 +198,21 @@ pub fn define_ieeeeqnarray() -> Result<()> {
   // columns overran it: `{rCCCl}`'s `a & = & b & = & c` was "Extra alignment tab" and its scripts "can only appear in
   // math mode" (2508.03314, 2011.14178, 1309.2819). The rows are numbered and rearranged as the eqnarray's
   // (`\IEEEyesnumber` and the rest below). The `<decl>` (struts, `\IEEEeqnarraydecl` overrides) is not modelled.
+  // `labelnext=1`: the package pre-advances the counter for the next row and points `\@currentlabel` at it
+  // (:1986-1991, :2072-2117), so a `\label` in a row `\IEEEnonumber` (:1405) or the star leaves unnumbered names the
+  // next numbered row's number, or the counter's next value when none follows (`a &=& b \\ c &=& d \label{ie1}\nonumber`:
+  // pdflatex "2", ours "1" before; in an `IEEEeqnarray*` the next equation's, ours the raw id "S0.Ex2"), as latex.ltx's
+  // eqnarray (OXIDIZED_DESIGN_DIVERGENCES #847); witnesses 1201.2315 (6 labels as the PDF's), 1202.0204 (4). Repro
+  // cross-references/ieeeeqnarray_unnumbered_row_label_names_next_number. `subnumbers=1`: the rows record the
+  // sub-equation number each pre-advance resets, for `\IEEEyessubnumber` (below; KNOWN_PERL_ERRORS #1146).
   DefMacro!("\\IEEEeqnarray[]{}",
     "\\@IEEEeqnarray@bindings{#2}\\@@eqnarray\
-     \\@equationgroup@numbering{numbered=1,preset=1,deferretract=1,grouped=1,aligned=1}\
+     \\@equationgroup@numbering{numbered=1,preset=1,deferretract=1,grouped=1,aligned=1,labelnext=1,subnumbers=1}\
      \\lx@begin@alignment");
   Let!("\\endIEEEeqnarray", "\\endeqnarray");
   DefMacro!("\\csname IEEEeqnarray*\\endcsname []{}",
     "\\@IEEEeqnarray@bindings{#2}\\@@eqnarray\
-     \\@equationgroup@numbering{numbered=1,preset=1,retract=1,grouped=1,aligned=1}\
+     \\@equationgroup@numbering{numbered=1,preset=1,retract=1,grouped=1,aligned=1,labelnext=1,subnumbers=1}\
      \\lx@begin@alignment");
   Let!("\\endIEEEeqnarray*", "\\endeqnarray*");
   DefPrimitive!("\\@IEEEeqnarray@bindings{}", sub[(cols)] {
@@ -244,9 +251,15 @@ pub fn define_ieeeeqnarray() -> Result<()> {
     Ok(Tokens::new(out))
   });
 
-  // IEEEnonumber/yesnumber/(no)subnumber (Perl IEEEtran.cls.ltxml L245-289):
-  // flip the EQUATION_NUMBERING (starred) or EQUATIONROW_TAGS (unstarred)
-  // retract/counter keys in place.
+  // IEEEnonumber/yesnumber/(no)subnumber (Perl IEEEtran.cls.ltxml L245-289): flip the EQUATION_NUMBERING (starred,
+  // the default of the rows to come) or EQUATIONROW_TAGS (unstarred, this row) retract/counter keys in place; in an
+  // IEEEeqnarray's rows (`subnumbers=1`, `ieee_eqnarray_row`) they move the counters as IEEEtrantools.sty:1393-1437 does. Its rows
+  // are pre-advanced (`\@IEEEeqnarray`, :1985-1987; `\@@IEEEeqnarraycr`, :2086-2112): a row's number is the next
+  // equation's, or the next sub-equation's after a sub-equation row under `\IEEEyessubnumber*`, and
+  // `\IEEEyessubnumber` on a pre-advanced equation number backs it out, so the row is the last printed number's next
+  // sub-equation (:1413-1414: "1, 1a, 1b", where this port printed "1, 2a, 3a", int72a and 79d r1; 2012.02697 `eq:XHp`,
+  // `eq:Q2`, PDF 11a and 11b). `\IEEEyesnumber` makes a sub-equation row the next equation (:1396-1398),
+  // `\IEEEnosubnumber` a printed one (:1431). Repro cross-references/ieeeeqnarray_sub_numbers_follow_the_last_number.
   DefPrimitive!("\\IEEEnonumber OptionalMatch:*", sub[(star)] {
     let key = if star.is_some() { "EQUATION_NUMBERING" } else { "EQUATIONROW_TAGS" };
     with_value_mut(key, |v| {
@@ -255,18 +268,15 @@ pub fn define_ieeeeqnarray() -> Result<()> {
         m.remove("counter");
       }
     });
+    // (`\global\@eqnswfalse`: whatever an `\IEEEyesnumber` before it on the row said)
+    if ieee_eqnarray_row() {
+      ieee_row_tags(|tags| {
+        tags.remove("noretract");
+      });
+    }
     Ok(())
   });
   DefPrimitive!("\\IEEEyesnumber OptionalMatch:*", sub[(star)] {
-    let subeq = with_value("EQUATION_NUMBERING", |v| {
-      if let Some(Stored::HashStored(m)) = v {
-        matches!(m.get("counter"),
-          Some(Stored::String(s)) if to_string(*s) == "subequation")
-      } else { false }
-    });
-    if subeq {
-      RefStepCounter!("equation", false)?;
-    }
     if star.is_some() {
       with_value_mut("EQUATION_NUMBERING", |v| {
         if let Some(Stored::HashStored(m)) = v {
@@ -274,40 +284,114 @@ pub fn define_ieeeeqnarray() -> Result<()> {
           m.remove("counter");
         }
       });
+    }
+    if ieee_eqnarray_row() {
+      if ieee_row_is_subequation()? {
+        RefStepCounter!("equation", false)?;
+      }
+      ieee_row_tags(|tags| {
+        tags.insert("counter", Stored::String(pin!("equation")));
+        ieee_row_prints_its_number(tags);
+      });
     } else {
-      with_value_mut("EQUATIONROW_TAGS", |v| {
+      // (elsewhere, as Perl's binding: a sub-equation numbering goes on to the next equation)
+      let subeq = with_value("EQUATION_NUMBERING", |v| {
         if let Some(Stored::HashStored(m)) = v {
-          m.insert("noretract", Stored::Bool(true));
-          m.remove("counter");
+          matches!(m.get("counter"), Some(Stored::String(s)) if to_string(*s) == "subequation")
+        } else {
+          false
         }
       });
+      if subeq {
+        RefStepCounter!("equation", false)?;
+      }
+      if star.is_none() {
+        ieee_row_tags(|tags| {
+          tags.insert("noretract", Stored::Bool(true));
+          tags.remove("counter");
+        });
+      }
     }
     Ok(())
   });
   DefPrimitive!("\\IEEEyessubnumber OptionalMatch:*", sub[(star)] {
-    let key = if star.is_some() { "EQUATION_NUMBERING" } else { "EQUATIONROW_TAGS" };
-    with_value_mut(key, |v| {
-      if let Some(Stored::HashStored(m)) = v {
-        m.insert("counter", Stored::String(pin!("subequation")));
+    if star.is_some() {
+      with_value_mut("EQUATION_NUMBERING", |v| {
+        if let Some(Stored::HashStored(m)) = v {
+          m.insert("counter", Stored::String(pin!("subequation")));
+        }
+      });
+    }
+    if ieee_eqnarray_row() {
+      if !ieee_row_is_subequation()? {
+        let rollback = with_value("EQUATIONROW_TAGS", |v| match v {
+          Some(Stored::HashStored(tags)) => match tags.get(SUBEQUATION_ROLLBACK) {
+            Some(Stored::Int(rollback)) => Some(*rollback),
+            _ => None,
+          },
+          _ => None,
+        });
+        if let Some(rollback) = rollback {
+          // (:1413-1414: the pre-advanced equation number backed out; the row's id is the sub-equation's, as the next
+          // row's pre-advance takes the equation's again)
+          add_to_counter("equation", Number::new(-1))?;
+          let current = counter_value("subequation")?.value_of();
+          add_to_counter("subequation", Number::new(rollback - current))?;
+          let stepped = RefStepCounter!("subequation", true)?;
+          ieee_row_tags(|tags| {
+            if let Some(id) = stepped.get("id") {
+              tags.insert("id", id.clone());
+            }
+          });
+          keep_pending_next_numbers();
+        } else {
+          RefStepCounter!("subequation", false)?;
+        }
       }
-    });
-    let preset = with_value("EQUATION_NUMBERING", |v| {
-      matches!(v, Some(Stored::HashStored(m)) if m.contains_key("preset"))
-    }) || with_value("EQUATIONROW_TAGS", |v| {
-      matches!(v, Some(Stored::HashStored(m)) if m.contains_key("preset"))
-    });
-    if preset {
-      RefStepCounter!("subequation", false)?;
+      ieee_row_tags(|tags| {
+        tags.insert("counter", Stored::String(pin!("subequation")));
+        ieee_row_prints_its_number(tags);
+      });
+    } else {
+      // (elsewhere, as Perl's binding: the row, or the numbering, counts sub-equations from the preset number)
+      if star.is_none() {
+        ieee_row_tags(|tags| {
+          tags.insert("counter", Stored::String(pin!("subequation")));
+        });
+      }
+      let preset = with_value("EQUATION_NUMBERING", |v| {
+        matches!(v, Some(Stored::HashStored(m)) if m.contains_key("preset"))
+      }) || with_value("EQUATIONROW_TAGS", |v| {
+        matches!(v, Some(Stored::HashStored(m)) if m.contains_key("preset"))
+      });
+      if preset {
+        RefStepCounter!("subequation", false)?;
+      }
     }
     Ok(())
   });
   DefPrimitive!("\\IEEEnosubnumber OptionalMatch:*", sub[(star)] {
-    let key = if star.is_some() { "EQUATION_NUMBERING" } else { "EQUATIONROW_TAGS" };
-    with_value_mut(key, |v| {
-      if let Some(Stored::HashStored(m)) = v {
-        m.insert("counter", Stored::String(pin!("equation")));
+    if star.is_some() {
+      with_value_mut("EQUATION_NUMBERING", |v| {
+        if let Some(Stored::HashStored(m)) = v {
+          m.insert("counter", Stored::String(pin!("equation")));
+        }
+      });
+    }
+    if ieee_eqnarray_row() {
+      // (:1430-1431: only on a row that prints its number, `\if@eqnsw`)
+      if ieee_row_is_subequation()? && !ieee_row_retracts() {
+        RefStepCounter!("equation", false)?;
       }
-    });
+      ieee_row_tags(|tags| {
+        tags.insert("counter", Stored::String(pin!("equation")));
+        tags.remove(SUBEQUATION_ROLLBACK);
+      });
+    } else if star.is_none() {
+      ieee_row_tags(|tags| {
+        tags.insert("counter", Stored::String(pin!("equation")));
+      });
+    }
     Ok(())
   });
 
@@ -839,4 +923,59 @@ pub fn define_ied_lists() -> Result<()> {
 \newif\ifIEEEnocalcleftmargin \IEEEnocalcleftmarginfalse
 \newif\ifIEEEnolabelindentfactor \IEEEnolabelindentfactorfalse");
   Ok(())
+}
+
+/// Runs `f` on the current equation row's tags (`EQUATIONROW_TAGS`), if any.
+fn ieee_row_tags(f: impl FnOnce(&mut SymHashMap<Stored>)) {
+  with_value_mut("EQUATIONROW_TAGS", |v| {
+    if let Some(Stored::HashStored(tags)) = v {
+      f(tags);
+    }
+  });
+}
+
+/// Whether the current equation row is an IEEEeqnarray's (the numbering key `subnumbers=1`) and preset: IEEEtrantools'
+/// `\if@IEEEeqnarrayISinner`, where alone the commands alter the counters (:1395, :1410, :1428).
+fn ieee_eqnarray_row() -> bool {
+  with_value(
+    "EQUATION_NUMBERING",
+    |v| matches!(v, Some(Stored::HashStored(n)) if matches!(n.get("subnumbers"), Some(&Stored::Bool(true)))),
+  ) && with_value(
+    "EQUATIONROW_TAGS",
+    |v| matches!(v, Some(Stored::HashStored(tags)) if matches!(tags.get("preset"), Some(&Stored::Bool(true)))),
+  )
+}
+
+/// IEEEtrantools' `\ifnum\c@IEEEsubequation>0`: the row's number is a sub-equation's (the kernel's `subequation`
+/// counter, which every step of `equation` resets).
+fn ieee_row_is_subequation() -> Result<bool> { Ok(counter_value("subequation")?.value_of() > 0) }
+
+/// `\global\@eqnswtrue` and `\global\@IEEEeqnumpreadvfalse` (:1420-1423): the row prints its number, and no
+/// longer a pre-advance, it is not backed out again; a `\nonumber` or `\IEEEnonumber` after it leaves the counters
+/// where they are, for the next row to print (`EQUATIONROW_HOLDS`).
+fn ieee_row_prints_its_number(tags: &mut SymHashMap<Stored>) {
+  tags.insert("noretract", Stored::Bool(true));
+  tags.insert(EQUATIONROW_HOLDS, Stored::Bool(true));
+  tags.remove("retract");
+  tags.remove(SUBEQUATION_ROLLBACK);
+}
+
+/// Whether the current row will be left unnumbered (IEEEtrantools' `\if@eqnsw` false): its own `retract`, or the
+/// numbering's on its preset number, unless it says `noretract`.
+fn ieee_row_retracts() -> bool {
+  with_value("EQUATION_NUMBERING", |numbering| {
+    with_value("EQUATIONROW_TAGS", |tags| {
+      let set = |v: Option<&Stored>| matches!(v, Some(&Stored::Bool(true)));
+      match (numbering, tags) {
+        (Some(Stored::HashStored(numbering)), Some(Stored::HashStored(tags))) => {
+          !set(tags.get("noretract"))
+            && (set(tags.get("retract"))
+              || (set(numbering.get("retract"))
+                && set(numbering.get("preset"))
+                && set(tags.get("preset"))))
+        },
+        _ => false,
+      }
+    })
+  })
 }

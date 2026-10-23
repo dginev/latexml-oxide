@@ -1,0 +1,25 @@
+% witness: 1810.06583, 1904.07153, 2208.03406 (`\appendix` then `\begin{appendices}`); review rev79d finding 1
+%          (probe rev79d/app/a1nf)
+% oracle:  pdflatex 0 errors, with TL 2025's first aid for cleveref removed as below (the arXiv PDFs' cleveref):
+%          "See appendix A, appendix A.1, appendix A.1.1 and section 1." (cleveref.sty:174-287: the patched
+%          `\appendix` aliases section, subsection, subsubsection to appendix, subappendix, subsubappendix for the rest
+%          of the document, by counter name, so the `{appendices}` opened after it inherits it)
+% engines: rust 79d r1 = "section A" (the environment's units kept their counter's type), the subsections "section"
+%          before 79d r2; int72a "appendix A" and "section A.1"; Perl 0.8.8 "appendix" for the section (KNOWN_PERL_ERRORS
+%          #1145)
+% expect:  0 errors, 0 warnings; creftype "appendix" for a:one, a:sub, a:subsub; "section" for s:i
+% status:  RED (79d r1) -> GREEN (79d r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{appendix}
+\RemoveFromHook{package/cleveref/after}[firstaid]\usepackage{cleveref}
+\begin{document}
+\section{Intro}\label{s:i}
+See \cref{a:one}, \cref{a:sub}, \cref{a:subsub} and \cref{s:i}.
+\appendix
+\begin{appendices}
+\section{One}\label{a:one}
+\subsection{Sub}\label{a:sub}
+\subsubsection{SubSub}\label{a:subsub}
+\end{appendices}
+\end{document}

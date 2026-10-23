@@ -71,12 +71,54 @@ pub fn prepare_latex_equation_counter() {
   }
 }
 
-/// Whether the current equation numbering retracts its rows' preset numbers (`retract=1`: eqnarray*'s), so that a row
-/// it numbers is left unnumbered at its end (`after_equation`).
-fn equation_numbering_retracts() -> bool {
+/// Whether the current equation row will be left unnumbered at its end (`after_equation`'s retraction): its own
+/// `retract` (a deferred `\nonumber`, `\IEEEnonumber`) or the numbering's (`retract=1`: eqnarray*'s, IEEEeqnarray*'s)
+/// on a preset number, unless the row says `noretract` (`\IEEEyesnumber`).
+fn equation_row_retracts() -> bool {
+  with_value("EQUATION_NUMBERING", |v| {
+    let Some(Stored::HashStored(numbering)) = v else {
+      return false;
+    };
+    with_value("EQUATIONROW_TAGS", |t| {
+      let Some(Stored::HashStored(tags)) = t else {
+        return false;
+      };
+      let set = |m: &SymHashMap<Stored>, key: &str| matches!(m.get(key), Some(&Stored::Bool(true)));
+      !set(tags, "noretract")
+        && (set(tags, "retract")
+          || (set(numbering, "retract") && set(numbering, "preset") && set(tags, "preset")))
+    })
+  })
+}
+
+/// Whether a `\label` in a row its numbering leaves unnumbered names the next printed number (the numbering key
+/// `labelnext=1`; implied by `eqncr=1`): IEEEtrantools.sty's `\@IEEEeqnarray` and `\@@IEEEeqnarraycr` (:1986-1991,
+/// :2072-2117) pre-advance the equation counter and set `\@currentlabel` to it for the next row, and `\IEEEnonumber`
+/// (:1405, `\global\@eqnswfalse`) prints no number and steps nothing, so as in latex.ltx's eqnarray
+/// ([`eqnarray_eqncr_numbering`]) the label names the number the next numbered row prints, or the counter's next
+/// value (rolled back at the end, :2022-2023) when none does.
+fn eqnarray_label_names_next_number() -> bool {
+  eqnarray_eqncr_numbering()
+    || with_value(
+      "EQUATION_NUMBERING",
+      |v| matches!(v, Some(Stored::HashStored(n)) if matches!(n.get("labelnext"), Some(&Stored::Bool(true)))),
+    )
+}
+
+/// Whether the current equation numbering numbers IEEEtrantools' sub-equations (the numbering key `subnumbers=1`,
+/// IEEEeqnarray's): its rows record [`SUBEQUATION_ROLLBACK`].
+fn eqnarray_subnumbers() -> bool {
   with_value(
     "EQUATION_NUMBERING",
-    |v| matches!(v, Some(Stored::HashStored(n)) if matches!(n.get("retract"), Some(&Stored::Bool(true)))),
+    |v| matches!(v, Some(Stored::HashStored(n)) if matches!(n.get("subnumbers"), Some(&Stored::Bool(true)))),
+  )
+}
+
+/// Whether the current equation numbering presets its rows with `counter` (`\IEEEyessubnumber*`'s `subequation`).
+fn equation_numbering_counts(counter: &str) -> bool {
+  with_value(
+    "EQUATION_NUMBERING",
+    |v| matches!(v, Some(Stored::HashStored(n)) if n.get("counter").is_some_and(|c| c.to_string() == counter)),
   )
 }
 
@@ -214,9 +256,15 @@ pub(crate) fn load() -> Result<()> {
       }
     } else if in_equation {
       if defer_retract {
+        // (in an IEEEeqnarray's row, `\global\@eqnswfalse` whatever an `\IEEEyesnumber` or `\IEEEyessubnumber` before
+        // it said, as `\IEEEnonumber` there, ieeetrantools_sty.rs: the last one wins)
+        let ieee_row = eqnarray_subnumbers() && stepped;
         with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
           if let Some(Stored::HashStored(tags)) = tags_opt {
             tags.insert("retract", true.into());
+            if ieee_row {
+              tags.remove("noretract");
+            }
           }
         });
       } else {
@@ -285,6 +333,7 @@ pub(crate) fn load() -> Result<()> {
       }
     }
     prepare_equation_counter(options);
+    remove_value(EQUATIONROW_CARRY);
     // latex.ltx:15754 `\global\@eqnswtrue` (eqnarray_eqncr_numbering; equations.sty's `\if@defeqnsw`).
     assign_value(EQNARRAY_EQNSW, Stored::Bool(eqnarray_default_eqnsw()), Some(Scope::Global));
     assign_value(EQNARRAY_EQNNUM, Stored::Bool(false), Some(Scope::Global));
@@ -293,8 +342,69 @@ pub(crate) fn load() -> Result<()> {
   });
 
   // Perl: latex_constructs.pool.ltxml lines 2282-2285
+  // Under `subnumbers=1` (IEEEeqnarray) a row whose number is a pre-advance of `equation` records the sub-equation
+  // number that step reset, IEEEtrantools' `\@IEEEsubeqnnumrollback` (:1985, :2094, :2109), for `\IEEEyessubnumber`
+  // to back out to (ieeetrantools_sty.rs) and for the row's retraction to restore (below).
+  // A row after a retracted row that held its counters (`EQUATIONROW_CARRY`) prints their value, stepping nothing, as
+  // IEEEtrantools pre-advances only after a printed number (:2086-2112).
   DefPrimitive!("\\eqnarray@row@before@", {
-    before_equation()?;
+    let carry = if eqnarray_subnumbers() {
+      match remove_value(EQUATIONROW_CARRY) {
+        Some(Stored::String(counter)) => Some(counter),
+        _ => None,
+      }
+    } else {
+      None
+    };
+    let rollback = if carry.is_none() && eqnarray_subnumbers() && !equation_numbering_counts("subequation") {
+      Some(counter_value("subequation")?.value_of())
+    } else {
+      None
+    };
+    if let Some(counter) = carry {
+      // (the preset steps the carried counter back to the value it holds; `equation` only when no sub-equation number
+      // is set, so its step resets nothing that was not zero. The ids are the number's: `\@equation@ID` is set again
+      // from the counter, as the retraction's unnumbered id had replaced it)
+      add_to_counter("equation", Number::new(0))?;
+      add_to_counter(&to_string(counter), Number::new(-1))?;
+      let numbering_counter = with_value_mut("EQUATION_NUMBERING", |v| match v {
+        Some(Stored::HashStored(n)) => {
+          let previous = n.get("counter").cloned();
+          n.insert("counter", Stored::String(counter));
+          previous
+        },
+        _ => None,
+      });
+      before_equation()?;
+      with_value_mut("EQUATION_NUMBERING", |v| {
+        if let Some(Stored::HashStored(n)) = v {
+          if let Some(previous) = numbering_counter {
+            n.insert("counter", previous);
+          } else {
+            n.remove("counter");
+          }
+        }
+      });
+      with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
+        if let Some(Stored::HashStored(tags)) = tags_opt
+          && matches!(tags.get("preset"), Some(&Stored::Bool(true)))
+        {
+          tags.insert("counter", Stored::String(counter));
+          tags.insert(EQUATIONROW_HOLDS, Stored::Bool(true));
+        }
+      });
+    } else {
+      before_equation()?;
+    }
+    if let Some(rollback) = rollback {
+      with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
+        if let Some(Stored::HashStored(tags)) = tags_opt
+          && matches!(tags.get("preset"), Some(&Stored::Bool(true)))
+        {
+          tags.insert(SUBEQUATION_ROLLBACK, Stored::Int(rollback));
+        }
+      });
+    }
   });
   // An eqnarray row is numbered as `\@@eqncr`'s state says (`eqnarray_eqncr_numbering`): unnumbered rows retract the
   // number `\eqnarray@row@before@` preset, and are marked for `rearrange_eqnarray` (their labels name the next
@@ -304,12 +414,13 @@ pub(crate) fn load() -> Result<()> {
   // nucl-th9807024, 2112.13115, 1206.6051; Rust-only (OXIDIZED_DESIGN_DIVERGENCES #847).
   DefPrimitive!("\\eqnarray@row@after@", {
     let eqncr = eqnarray_eqncr_numbering();
+    let label_next = eqnarray_label_names_next_number();
     let numbered = !eqncr || matches!(remove_value(EQNARRAY_EQNNUM), Some(Stored::Bool(true)));
-    // A labelled row: should it be left unnumbered (by `\@@eqncr`, or an eqnarray*'s retraction), its label names the
-    // counter's next value, its preset number until `after_equation` retracts it (`eqnarray_next_number_tags`).
-    // Only for a row left unnumbered: `\@@eqncr` printed no number, or the environment retracts its rows' (eqnarray*).
+    // A labelled row: should it be left unnumbered (by `\@@eqncr`, a `\nonumber`/`\IEEEnonumber`, or a starred
+    // environment's retraction), its label names the counter's next value, its preset number until `after_equation`
+    // retracts it (`eqnarray_next_number_tags`).
     let labelled = matches!(remove_value(EQNARRAY_ROW_LABELLED), Some(Stored::Bool(true)));
-    let next_number_tags = if eqncr && labelled && (!numbered || equation_numbering_retracts()) {
+    let next_number_tags = if label_next && labelled && (!numbered || equation_row_retracts()) {
       Some(eqnarray_next_number_tags()?)
     } else {
       None
@@ -321,8 +432,9 @@ pub(crate) fn load() -> Result<()> {
         }
       });
     }
+    // (a retracted pre-advance of `equation` gives back the sub-equation number its step reset, `retract_equation`)
     after_equation(None)?;
-    if eqncr
+    if label_next
       && let Some(alignment_digested) = lookup_alignment()
       && let Some(alignment_cell) = alignment_digested.alignment_cell()
     {
@@ -344,7 +456,7 @@ pub(crate) fn load() -> Result<()> {
               .properties
               .insert(NEXT_NUMBER_TAGS_PROPERTY.to_string(), Stored::Digested(tags));
           }
-        } else if previous_numbered == Some(false) {
+        } else if eqncr && previous_numbered == Some(false) {
           row
             .properties
             .insert(NUMBER_ROW_PROPERTY.to_string(), Stored::from("true"));

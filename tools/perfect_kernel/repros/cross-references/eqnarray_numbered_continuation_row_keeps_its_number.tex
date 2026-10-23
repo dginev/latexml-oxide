@@ -1,0 +1,23 @@
+% witness: 1310.2253 (`eqn:zg`: `\begin{eqnarray}\label{eqn:zg} \log &&\frac{…}{…} = … \\ &&+ 0.8184(\log\mstar)^2 …`,
+%          PDF (11) and (12), the label 11; int72a joined both rows into one equation numbered 12)
+% oracle:  pdflatex 0 errors; rows (1) (2), (3) (4) (5); "See 1, 3 and 4." (latex.ltx:15795 `\@@eqncr` prints and steps
+%          the number of every row it ends while `\if@eqnsw` holds; the label names the number of the row that states it)
+% engines: rust int72a = "See 2, 3 and 5." (a continuation row with only its last column joined the numbered equation
+%          above, keeping the last number; numbers 1 and 4 lost); Perl 0.8.8 the same (rearrangeEqnarray,
+%          latex_constructs.pool.ltxml:2357-2364: a third-column row stays separate only when it is labelled too)
+% expect:  0 errors, 0 warnings; five equations numbered 1-5, zg on 1, a1 on 3, a2 on 4
+% status:  RED (int72a) -> GREEN (79d, OXIDIZED_DESIGN_DIVERGENCES #888)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{eqnarray}\label{zg}
+\log &&\frac{a}{b} = 27.76 - 7.056\log c \\
+&&+ 0.8184(\log c)^2,
+\end{eqnarray}
+\begin{eqnarray}
+x &=& y \label{a1}\\
+&=& z \label{a2}\\
+&& + w
+\end{eqnarray}
+See \ref{zg}, \ref{a1} and \ref{a2}.
+\end{document}

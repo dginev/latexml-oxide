@@ -74,17 +74,43 @@ fn orcid_given_as_url_is_the_id() {
   assert!(!xml.contains("orcid.org/http"), "{xml}");
 }
 
-/// cleveref.sty:1277-1278 `\crefalias{<counter>}{<type>}`: "section 1, supplement A, step 1, item 1" (1810.01223,
-/// 1706.03576, 2210.04778).
+/// cleveref.sty:1277-1278 `\crefalias{<counter>}{<type>}`: "section 1, supplement A, step 1, item 1" (2002.10118,
+/// 2106.14806, 1706.03576, 2210.04778). After `\appendix` the section is an `appendix` whatever its counter's alias
+/// (cleveref.sty:183-193 reads only `\cref@appendix@alias`; the arXiv PDFs' first-aid-off pdflatex "appendix A",
+/// 1810.01223; review rev79d finding 1).
 #[test]
 fn cleveref_crefalias_names_the_type() {
-  let xml = clean!("package-bindings/cleveref_crefalias_names_the_type.tex");
-  let types: Vec<&str> = xml
-    .split(r#"<tag role="creftype">"#)
-    .skip(1)
-    .filter_map(|rest| rest.split("</tag>").next())
-    .collect();
-  assert_eq!(types, ["section", "step", "item", "supplement"], "{xml}");
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/package-bindings/cleveref_crefalias_names_the_type.tex"
+  );
+  let types = |tex: &str| {
+    let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    let xml = squash(&xml);
+    let types: Vec<String> = xml
+      .split(r#"<tag role="creftype">"#)
+      .skip(1)
+      .filter_map(|rest| rest.split("</tag>").next())
+      .map(String::from)
+      .collect();
+    (types, xml)
+  };
+  let (environment, xml) = types(tex);
+  assert_eq!(
+    environment,
+    ["section", "step", "item", "supplement"],
+    "{xml}"
+  );
+  let (after_appendix, xml) = types(
+    &tex
+      .replace("\\begin{appendices}\n", "\\appendix\n")
+      .replace("\\end{appendices}\n", ""),
+  );
+  assert_eq!(
+    after_appendix,
+    ["section", "step", "item", "appendix"],
+    "{xml}"
+  );
 }
 
 /// graphics.sty:66-107: `\Gin@driver` is pdftex.def for PDF output, so trimclip reads tc-pdftex.def and no pgf

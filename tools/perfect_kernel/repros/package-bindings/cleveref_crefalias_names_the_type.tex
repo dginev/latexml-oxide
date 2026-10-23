@@ -1,12 +1,18 @@
 % witness: 68h: cleveref's `\crefalias{<counter>}{<type>}` (cleveref.sty:1277-1278) makes a label stepped by the
 %          counter a reference to the type; the binding's no-op (cleveref_sty.rs:132; Perl cleveref.sty.ltxml:114-117,
-%          KNOWN_PERL_ERRORS #796) kept the counter's name (1810.01223 `\crefalias{section}{appsec}`, 1706.03576
-%          and 2210.04778 `\addtotheorempostheadhook[theorem]{\crefalias{thmlisti}{theorem}}`)
-% oracle:  pdflatex 0 errors: "See section 1, supplement A, step 1, item 1."
-% engines: rust 68h base (67int8) and perl: "section 1, appendix A, item 1, item 1"
-% expect:  0 errors; the creftype tags are section, step, item, supplement
-% status:  GREEN (68h)
+%          KNOWN_PERL_ERRORS #796) kept the counter's name (2002.10118, 2106.14806 `\crefalias{section}{appsec}` in
+%          appendix.sty's `{appendices}`; 1810.01223 the same after `\appendix`; 1706.03576 and 2210.04778
+%          `\addtotheorempostheadhook[theorem]{\crefalias{thmlisti}{theorem}}`)
+% oracle:  pdflatex 0 errors: "See section 1, supplement A, step 1, item 1." (with and without TL 2025's first aid for
+%          cleveref). After `\appendix` instead of `{appendices}`, the first-aid-off pdflatex of the arXiv PDFs prints
+%          "appendix A": cleveref's patched `\appendix` reads only `\cref@appendix@alias` (cleveref.sty:183-193; review
+%          rev79d finding 1); TL 2025's first aid "supplement A"
+% engines: rust 68h base (67int8) and perl: "section 1, appendix A, item 1, item 1"; 68h-79d r1 "supplement A" after
+%          `\appendix` too
+% expect:  0 errors; the creftype tags are section, step, item, supplement ("appendix" after `\appendix`)
+% status:  GREEN (68h; the `\appendix` form 79d r2)
 \documentclass{article}
+\usepackage{appendix}
 \usepackage{cleveref}
 \crefname{appsec}{supplement}{supplements}
 \crefname{step}{step}{steps}
@@ -19,8 +25,9 @@
 \item Plain\label{i2}
 \end{enumerate}
 See \cref{s1}, \cref{s2}, \cref{i1}, \cref{i2}.
-\appendix
+\begin{appendices}
 \crefalias{section}{appsec}
 \section{Extra}\label{s2}
 Text.
+\end{appendices}
 \end{document}

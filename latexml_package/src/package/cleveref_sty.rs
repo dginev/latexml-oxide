@@ -195,6 +195,24 @@ LoadDefinitions!({
 \let\lx@cref@raw@labelcrefformat\labelcrefformat
 \def\labelcrefformat#1{\lx@cref@noteformat{labelcref}{#1}{format}\lx@cref@raw@labelcrefformat{#1}}
 \AtBeginDocument{\lx@cref@building{0}}");
+  // cleveref's `\appendix` (cleveref.sty:174-287; its hyperref form :2063-2175 and its revtex4/revtex4-1 form
+  // :2276-2367, each wrapping the `\appendix` it found, `\cref@old@appendix`) aliases the sectioning counters to the
+  // appendix types, by counter name, never undone: a section stepped after it is an `appendix` (a subsection a
+  // `subappendix`, …; in a class with chapters the chapter is the `appendix`) wherever it is, inside appendix.sty's
+  // `{appendices}` too, whether the environment was opened after it (1810.06583, 1904.07153, 2208.03406) or around it
+  // (2112.09636); before it, or with no `\appendix` at all, a section keeps its counter's type (2507.16108,
+  // 2511.19260). The call is noted by a wrapper of the patched `\appendix`, as cleveref wraps the one it found, with
+  // the branch it takes (`\@ifundefined{chapter}`); `cref_type` reads it (KNOWN_PERL_ERRORS #1145). The note is global;
+  // cleveref's redefinition is global only in the form without hyperref or chapters (:178 `\gdef\refstepcounter@noarg`):
+  // its chapter form (:227) and every hyperref and revtex form (:2066, :2115, :2279, :2319 `\def\H@refstepcounter`)
+  // are local, which differs only for a unit stepped after the group holding `\appendix` closes (not modelled; not
+  // checked against pdflatex, whose hyperref plug TL 2025 breaks with the first aid off; review rev79d2 finding 5).
+  DefPrimitive!("\\lx@cref@appendix@aliases{}", sub[(top)] {
+    assign_value(CREF_APPENDIX_ALIASES, top.to_string(), Some(Scope::Global));
+  });
+  RawTeX!(r"\@ifundefined{appendix}{}{\let\lx@cref@patched@appendix\appendix
+\def\appendix{\@ifundefined{chapter}{\lx@cref@appendix@aliases{section}}{\lx@cref@appendix@aliases{chapter}}%
+\lx@cref@patched@appendix}}");
 
   // Perl L29-30: AtBeginDocument(sub { Let('\label', '\lx@cleverref@label') })
   // Deferred so any later package's `\label` redefinition lands BEFORE
@@ -217,11 +235,12 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
   // `\crefalias{<counter>}{<type>}` is raw cleveref's (cleveref.sty:1277-1278, `\def\cref@<counter>@alias{<type>}`),
-  // read by `cref_type`: a label stepped by the counter is referenced as the type (`\crefalias{section}{appendix}`
-  // after `\appendix`, enumitem lists in a theorem through thmtools' hooks). The binding's no-op (Perl's
+  // read by `cref_type`: a label stepped by the counter is referenced as the type (`\crefalias{section}{appsec}` in
+  // appendix.sty's `{appendices}` — after `\appendix` the type is the appendix's alias, `\crefalias{appendix}{…}` —,
+  // enumitem lists in a theorem through thmtools' hooks). The binding's no-op (Perl's
   // cleveref.sty.ltxml:114-117 alike; KNOWN_PERL_ERRORS #796) kept every such label its counter's name. Witnesses
   // 1706.03576, 2210.04778, 2002.10700 (`\addtotheorempostheadhook[theorem]{\crefalias{thmlisti}{theorem}}`),
-  // 1810.01223 (`\crefalias{section}{appsec}`), 2506.14950 (`\crefalias{lemma}{theorem}`).
+  // 2002.10118, 2106.14806 and 1810.01223 (`\crefalias{section}{appsec}`), 2506.14950 (`\crefalias{lemma}{theorem}`).
 
   // Helper: produces the literal `~` (U+007E) as text — a CS so an active `~`
   // can't collapse to a space during tokenization, and a direct Tbox string so
@@ -712,6 +731,14 @@ fn note_cref_doc_format(prefix: &str, ctype: &str, kind: &str) {
   }
 }
 
+/// The top sectioning counter (`section`, or `chapter` in a class with chapters) once the document has called
+/// cleveref's patched `\appendix`, which aliases the sectioning counters to the appendix types for the rest of the
+/// document (cleveref.sty:174-287): set by `\lx@cref@appendix@aliases`, global and never cleared, read by `cref_type`.
+/// (cleveref's redefinition is a `\gdef` only without hyperref or chapters, :178; its chapter form, :227, and its
+/// hyperref and revtex forms, :2066, :2115, :2279, :2319, are local `\def`s, which differ only for a unit stepped
+/// after the group holding `\appendix` closes.)
+const CREF_APPENDIX_ALIASES: &str = "cleveref_appendix_aliases";
+
 /// cleveref's copies of a type's formats for its sub-types at `\begin{document}` (cleveref.sty:8035-8046
 /// `\@crefcopyformats`), made when the sub-type has no names or label format of its own.
 const CREF_COPIED_FORMATS: [(&str, &str); 11] = [
@@ -998,12 +1025,40 @@ fn cleverref_type_name(
 
 /// Perl: crefType($type) — resolve type alias. cleveref keys an alias by the counter (`\cref@<counter>@alias`,
 /// cleveref.sty:1277-1278, read at `\refstepcounter`, :147-170): a type with no alias of its own takes its
-/// counter's (`counter_for_type`: an appendix section is stepped by `section`, so `\crefalias{section}{appsec}` after
-/// `\appendix` names it, as pdflatex prints).
+/// counter's (`counter_for_type`: a section of appendix.sty's `{appendices}` is stepped by `section`, so
+/// `\crefalias{section}{appsec}` there names it, as pdflatex prints; 2002.10118, 2106.14806, 1810.01223).
+///
+/// After cleveref's `\appendix` ([`CREF_APPENDIX_ALIASES`]) a sectioning unit's counter is aliased to its appendix type
+/// (`appendix_type`, cleveref.sty:183-224, :232-284), else an appendix unit is its counter's type: appendix.sty's
+/// `{appendices}` letters the sections without `\appendix`, so pdflatex names such a section "Sec. A" (2507.16108,
+/// 2511.19260), and once `\appendix` has run every section is an `appendix`, inside the environment or not ("appendix
+/// A": 1810.06583, 1904.07153, 2112.09636, 2208.03406; KNOWN_PERL_ERRORS #1145).
 fn cref_type(ctype: &str) -> String {
   let counter: Option<String> = lookup_mapping("counter_for_type", ctype)
     .as_ref()
     .map(String::from);
+  let top = lookup_string(CREF_APPENDIX_ALIASES);
+  if !top.is_empty() {
+    if let Some(appendix_type) = appendix_type(&top, counter.as_deref().unwrap_or(ctype)) {
+      let alias_cs = s!("\\cref@{}@alias", appendix_type);
+      if has_meaning(&T_CS!(&alias_cs))
+        && let Ok(expanded) = do_expand(Tokens!(T_CS!(&alias_cs)))
+      {
+        return expanded.to_string();
+      }
+      return appendix_type.to_string();
+    }
+  } else if ctype == "appendix"
+    && let Some(counter) = counter
+  {
+    let alias_cs = s!("\\cref@{}@alias", counter);
+    if has_meaning(&T_CS!(&alias_cs))
+      && let Ok(expanded) = do_expand(Tokens!(T_CS!(&alias_cs)))
+    {
+      return expanded.to_string();
+    }
+    return counter;
+  }
   for key in std::iter::once(ctype.to_string()).chain(counter) {
     let alias_cs = s!("\\cref@{}@alias", key);
     if has_meaning(&T_CS!(&alias_cs))
@@ -1013,6 +1068,26 @@ fn cref_type(ctype: &str) -> String {
     }
   }
   ctype.to_string()
+}
+
+/// The appendix type cleveref's patched `\appendix` gives a sectioning counter's labels (cleveref.sty:183-224 without
+/// chapters, `top` `section`; :232-284 with them, `top` `chapter`); other counters keep their own.
+fn appendix_type(top: &str, counter: &str) -> Option<&'static str> {
+  const TYPES: [&str; 4] = [
+    "appendix",
+    "subappendix",
+    "subsubappendix",
+    "subsubsubappendix",
+  ];
+  let levels: &[&str] = if top == "chapter" {
+    &["chapter", "section", "subsection", "subsubsection"]
+  } else {
+    &["section", "subsection", "subsubsection"]
+  };
+  levels
+    .iter()
+    .position(|level| *level == counter)
+    .map(|i| TYPES[i])
 }
 
 /// Perl: crefMulti($starred, $labels, $showtype, $capitalized)

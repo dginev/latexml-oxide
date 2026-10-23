@@ -1,0 +1,24 @@
+% witness: 2112.09636 (`{appendices}`, then `\appendix` from Appendix_tangential_vectors.tex:1); review rev79d
+%          finding 1 (probe rev79d/app/a2nf)
+% oracle:  pdflatex 0 errors, with TL 2025's first aid for cleveref removed as below (the arXiv PDFs' cleveref):
+%          "See section A and appendix A." (cleveref.sty:174-287: a section stepped before the patched `\appendix`
+%          keeps its counter's type, one after it is an `appendix`; latex.ltx's `\appendix` resets the section
+%          counter, so the second is "A" again — ours "B", the kernel's `\@appendix` being `\relax` inside the
+%          environment)
+% engines: rust 79d r1 = "section" for both (the environment's flag, never cleared by the inner `\appendix`); int72a
+%          "appendix" for both; Perl 0.8.8 "appendix" for both (KNOWN_PERL_ERRORS #1145)
+% expect:  0 errors, 0 warnings; creftype "section" for a:one, "appendix" for a:two
+% status:  RED (79d r1) -> GREEN (79d r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{appendix}
+\RemoveFromHook{package/cleveref/after}[firstaid]\usepackage{cleveref}
+\begin{document}
+\section{Intro}
+See \cref{a:one} and \cref{a:two}.
+\begin{appendices}
+\section{One}\label{a:one}
+\appendix
+\section{Two}\label{a:two}
+\end{appendices}
+\end{document}

@@ -24065,9 +24065,11 @@ section's (iopart, a `\nonumber\cr` row held into the last row: "1" for pdflatex
 (`appa3` 66); 20 more changed census papers (19 build) 676 / 704 → 702 / 704 (the 2 misses no eqnarray's: an amsmath
 `equation*` label, 1508.00199; a `$$…\label…$$`, gr-qc0201061). The split costs math grouping: 84 of the 569 changed
 papers of the 801-paper census population split 122 continuation rows (their math-parse Warnings 18,514 → 18,540).
-Open (pre-existing, Perl's rearrangement): a row holding only a continuation (`&&+ 2,`) under a numbered row joins it
-though both are numbered, the join keeping the last number, so a `\label` on the first names the second's
-(1310.2253 `eqn:zg`, PDF 11, ours 12). Repro cross-references/eqnarray_label_with_no_numbered_row_after_it; guard
+A row holding only a continuation (`&&+ 2,`) under a numbered row joined it though both are numbered, the join keeping
+the last number, so a `\label` on the first named the second's (1310.2253 `eqn:zg`, PDF 11, ours 12; Perl's
+rearrangement): its own equation since 79d (#888). IEEEeqnarray follows the same label rule since 79d (numbering key
+`labelnext=1`: IEEEtrantools.sty:1986-1991, :2072-2117 pre-advance the counter and point `\@currentlabel` at it; guard
+`perfect_kernel_batch79d::ieeeeqnarray_unnumbered_row_label_names_next_number`). Repro cross-references/eqnarray_label_with_no_numbered_row_after_it; guard
 `perfect_kernel_batch78r::eqnarray_label_with_no_numbered_row_after_it_names_the_next_number`. Repros
 cross-references/eqnarray_cr_row_is_unnumbered, eqnarray_cr_then_empty_numbered_row, eqnarray_cr_row_label_names_next_number,
 eqnarray_nonumber_row_label_names_next_number, eqnarray_nonumber_holds_until_eqncr, alignment/eqnarray_cr_row_unnumbered
@@ -25120,3 +25122,32 @@ galleries (finding 2), 115 floats' panel widths move by KPE #1142's rounding (fi
 `panel_grid_line_and_fill`, `panel_grid_collapse_drops_inner_widths`),
 `integration::{panel_grid_markup_reaches_the_html_as_custom_properties, panel_grid_markup_states_only_numbers}`
 (latexml_post).
+
+### 888. An eqnarray continuation row that prints a number of its own is its own equation
+
+latex.ltx:15789-15797: `\@@eqncr` prints the number of every row it ends while `\if@eqnsw` holds (#847), whatever the
+row holds. Perl's `rearrangeEqnarray` (latex_constructs.pool.ltxml:2357-2364) joins a row with only its third column
+(`&&+ 2,`, a continued right-hand side) to the equation above: its rule keeps the row separate when both are numbered
+*and* the row is labelled, but that label test reads `hasAttribute('label')`, which LaTeXML never sets (#54,
+KNOWN_PERL_ERRORS #46), so Perl always joins these rows; and `equationgroupJoinRows` keeps the last row's tags: so in
+`\log &&\frac{a}{b} = … \\ &&+ 0.8184(\log c)^2,` both rows' numbers become one equation with the second's, the first's
+is lost, and a `\label` on the first names the second's (1310.2253 `eqn:zg`: PDF 11, ours and Perl 12). Ours (79d): a
+third-column-only row that is numbered under a numbered equation stands as its own equation, as a numbered
+relation-column continuation (`&=& z`) already does in Perl's rule (:2353-2354), so each row keeps its number and a
+label the row that states it. A continuation under an unnumbered row, or itself unnumbered (`\nonumber`, a `\cr` row),
+still joins. The single-column relation join (:2333-2335) is unchanged (its RELOP test reads a cell's first child, the
+`Math` wrapper in the repro's `p = q \\ = r` cells, and did not fire). The split costs the joined formula of each such
+pair (two equations, the second its right-hand side alone), as #847's split of a labelled continuation does. Repro
+cross-references/eqnarray_numbered_continuation_row_keeps_its_number; guard
+`perfect_kernel_batch79d::eqnarray_numbered_continuation_row_keeps_its_number`.
+
+### 889. A constructor's `require_math` warning names the command it reverts as
+
+Perl's `requireMath` (Package.pm:1466) warns with the definition's own name. A constructor defined with an `alias`
+stands in for another command — the Springer classes' `\vec` is `\lx@sv@vec@boldmath` reverting as `\vec`
+(sv_support_sty.rs), fourier's `\math@bb` reverts as `\mathbb` (fourier_sty.rs:15) — so its text-mode warning named an
+internal macro the author never wrote, where pdflatex's "Missing $ inserted" is at the author's command. Ours (79d,
+dialect.rs `def_constructor`): the warning names the `alias` when it is a control sequence ("\vec should only appear in
+math mode", "\mathbb …"); an empty alias (latexml_sty's `alias => ""` entries) keeps the definition's name. No robust
+constructor uses `require_math`. Repro class-bindings/llncs_text_mode_vec_warns_as_vec; guard
+`perfect_kernel_batch79d::llncs_text_mode_vec_warns_as_vec`.

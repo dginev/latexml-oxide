@@ -1,0 +1,22 @@
+% witness: 2507.16108 (`\crefname{section}{Sec.}`, ~8 "Sec. A…" in the PDF), 2511.19260 ("Section A" twice); also
+%          2203.14452, 2502.21249, 2508.04603, 2608.04513 (review rev79b finding 1)
+% oracle:  pdflatex 0 errors; "See Sec. A, Sec. B and Sec. 1; Sec. A.1." (cleveref.sty:174-287 aliases the sectioning
+%          counters to `appendix` only in its patched `\appendix`; appendix.sty's `{appendices}` never calls it)
+% engines: rust int72a = "appendix A", "appendix B" (`<tag role="creftype">appendix</tag>`); Perl 0.8.8 the same
+%          (cleveref.sty.ltxml crefType, appendix.sty.ltxml beginAppendices; KNOWN_PERL_ERRORS #1145)
+% expect:  0 errors, 0 warnings; every creftype tag "Sec."
+% status:  RED (int72a) -> GREEN (79d)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{appendix}
+\usepackage{cleveref}
+\crefname{section}{Sec.}{Secs.}
+\begin{document}
+\section{Intro}\label{s:intro}
+See \cref{a:one}, \cref{a:two} and \cref{s:intro}; \Cref{a:sub}.
+\begin{appendices}
+\section{One}\label{a:one}
+\subsection{Sub}\label{a:sub}
+\section{Two}\label{a:two}
+\end{appendices}
+\end{document}

@@ -14001,14 +14001,15 @@ declarecaptionsubtype_numbers_the_subtype}`.
 
 cleveref.sty:1277-1278 `\crefalias{<counter>}{<type>}` defines `\cref@<counter>@alias`, which names every later label
 the counter steps; Perl redefines it as a no-op (cleveref.sty.ltxml:114-117, "No, this isn't quite the same thing"),
-though its own `crefType` reads the alias. The idioms it breaks: `\appendix\crefalias{section}{appsec}` (1810.01223,
-2002.10118, 2106.14806), enumitem lists in theorems through thmtools' hooks
-(`\addtotheorempostheadhook[theorem]{\crefalias{thmlisti}{theorem}}`, 1706.03576, 2210.04778, 2002.10700), shared
-counters (`\crefalias{lemma}{theorem}`, 2506.14950). Minimal trigger:
+though its own `crefType` reads the alias. The idioms it breaks: `\crefalias{section}{appsec}` in appendix.sty's
+`{appendices}` (2002.10118, 2106.14806; after `\appendix`, 1810.01223, the alias is not read: cleveref's patched
+`\appendix` names the section by `\cref@appendix@alias` alone, cleveref.sty:183-193, KNOWN_PERL_ERRORS #1145), enumitem
+lists in theorems through thmtools' hooks (`\addtotheorempostheadhook[theorem]{\crefalias{thmlisti}{theorem}}`,
+1706.03576, 2210.04778, 2002.10700), shared counters (`\crefalias{lemma}{theorem}`, 2506.14950). Minimal trigger:
 tools/perfect_kernel/repros/package-bindings/cleveref_crefalias_names_the_type.tex: pdflatex "section 1, supplement A,
-step 1, item 1", Perl "section 1, appendix A, item 1, item 1". Rust keeps raw cleveref's `\crefalias` and resolves a
-type's alias, else its counter's (`cref_type`; an appendix section's counter is `section`). Guard
-`perfect_kernel_batch68h::cleveref_crefalias_names_the_type`.
+step 1, item 1", Perl "section 1, appendix A, item 1, item 1" (the alias in `{appendices}` since 79d r2). Rust keeps raw
+cleveref's `\crefalias` and resolves a type's alias, else its counter's (`cref_type`; an appendix section's counter is
+`section`). Guard `perfect_kernel_batch68h::cleveref_crefalias_names_the_type`.
 
 ## 797. `\Gin@driver` is empty, so trimclip falls back to its PGF driver
 
@@ -17696,3 +17697,70 @@ by its width (normalize.rs; repro `alignment/align_empty_labelled_row_keeps_numb
 number is no panel and takes no place in a row (`holds_only_its_number`, `arrange_panels`; 2208.08007 Figs 1, 2, S2, S5).
 Repros `captions-floats/a_label_makes_no_box`, `a_label_only_sub_float_is_no_panel`; guards
 `perfect_kernel_batch79c::{a_label_makes_no_box, a_label_only_sub_float_is_no_panel}`.
+
+## 1145. cleveref names a section of appendix.sty's `{appendices}` "appendix"
+
+cleveref.sty:174-287 patches `\appendix` (and only it): it `\gdef`s the sectioning counters' label types, by counter
+name, for the rest of the document — after it a section is an `appendix`, a subsection a `subappendix`, a subsubsection
+a `subsubappendix` (with chapters, :232-284, the chapter is the `appendix` and each level below one step down), named by
+`\cref@appendix@alias` and the rest, never by the counter's own `\crefalias` (:183-193) —, so `\cref` prints "appendix
+A". appendix.sty's `{appendices}` (appendix.sty:204-264, `{subappendices}` :265-) letters the sections without calling
+`\appendix`, so in pdflatex a label inside it keeps its counter's type: "Sec. A" under
+`\crefname{section}{Sec.}{Secs.}`, "section A" by default — unless the document called `\appendix` before the
+environment or inside it, whose aliasing then holds for every section stepped after it. Perl's appendix.sty.ltxml:66-83
+opens the units with `beginAppendices`, whose `ltx:appendix` units are type `appendix`, and cleveref.sty.ltxml:122-125
+`crefType` names that type, so every such reference reads "appendix A", and a subsection after `\appendix` is a
+"section". Minimal trigger: `\documentclass{article}\usepackage{appendix}\usepackage{cleveref}\begin{document}
+\cref{a}\begin{appendices}\section{X}\label{a}\end{appendices}\end{document}` (pdflatex "section A"; Perl "appendix A").
+Ours (79d r2): cleveref_sty.rs wraps the `\appendix` cleveref patched, as cleveref wraps the one it found
+(`\lx@cref@appendix@aliases`, recording `section` or `chapter` as cleveref's `\@ifundefined{chapter}` branches), a
+global flag never cleared; `cref_type` gives every sectioning unit its appendix type (`appendix_type`) once it is set,
+and before it names an appendix unit by its counter (`counter_for_type`) and that counter's alias. Witnesses 2507.16108
+(~8 "Sec. A…" in the PDF), 2511.19260 ("Section A" twice); also 2203.14452, 2502.21249, 2508.04603, 2608.04513 (sn-jnl's
+`{appendices}`, appendix.sty's since 79b); "appendix" after `\appendix`: 1810.06583, 1904.07153, 2208.03406 (`\appendix`
+then `{appendices}`), 2112.09636 (`\appendix` inside it, from Appendix_tangential_vectors.tex:1). TL 2025's first aid
+for cleveref (latex2e-first-aid-for-external-files.ltx, `\firstaid@cref@updatelabeldata`) reads the type from
+`\@currentcounter` and drops the `\appendix` patch's aliasing, so a TL 2025 pdflatex prints "section A" after
+`\appendix` as well; the arXiv PDFs of earlier years, and ours, keep "appendix A" there (the repros' oracles are
+pdflatex with `\RemoveFromHook{package/cleveref/after}[firstaid]`). Not modelled: cleveref's redefinition is global
+only in its form without hyperref or chapters (:178 `\gdef\refstepcounter@noarg`); its chapter form (:227), its
+hyperref form (:2066, :2115) and its revtex4/revtex4-1 form (:2279, :2319) are local `\def`s (`\H@refstepcounter`), so
+most arXiv cleveref papers have the local one; it differs only for a unit stepped after the group holding `\appendix`
+has closed (not checked against pdflatex: TL 2025's hyperref plug breaks with the first aid off; review rev79d2
+finding 5).
+Repros cross-references/{cleveref_appendices_environment_keeps_section_type,
+cleveref_appendix_before_appendices_names_appendix, cleveref_appendix_inside_appendices_names_appendix,
+cleveref_appendix_in_a_book_aliases_its_sections}; guards
+`perfect_kernel_batch79d::{cleveref_appendices_environment_keeps_section_type,
+cleveref_appendix_before_appendices_names_appendix, cleveref_appendix_inside_appendices_names_appendix,
+cleveref_appendix_in_a_book_aliases_its_sections}`, `perfect_kernel_batch68h::cleveref_crefalias_names_the_type`.
+
+## 1146. IEEEeqnarray's `\IEEEyessubnumber` numbers the row a sub-equation of the next equation
+
+IEEEtrantools.sty pre-advances the equation counter for each row (`\@IEEEeqnarray`, :1985-1987; `\@@IEEEeqnarraycr`,
+:2086-2112), and `\@IEEEyessubnumber` (:1408-1424) on a row whose number is such a pre-advance backs it out
+(`\global\advance\c@equation\m@ne`) and steps the sub-equation from the number the pre-advance reset
+(`\@IEEEsubeqnnumrollback`): "subequations that follow plain equations carry the same equation number e.g, 5, 5a rather
+than 5, 6a" (:2101-2102). Perl's IEEEtran.cls.ltxml:269-278 steps `subequation` on the row's preset number, so the row
+is the next equation's first sub-equation. Minimal trigger: `\documentclass{IEEEtran}\begin{document}
+\begin{IEEEeqnarray}{rCl}a &=& b \label{k1}\\ c &=& d \IEEEyessubnumber\label{k2}\end{IEEEeqnarray}See \ref{k1},
+\ref{k2}.\end{document}` (pdflatex "See 1, 1a."; Perl "1, 2a"). Fixed in Rust (79d r2, ieeetrantools_sty.rs: the
+numbering key `subnumbers=1` records the rollback, `SUBEQUATION_ROLLBACK`, `\eqnarray@row@before@`; `\IEEEyessubnumber`
+backs out a pre-advanced row, `\IEEEyesnumber` and `\IEEEnosubnumber` make a sub-equation row the next equation as
+:1396-1398 and :1431 do; a retracted row gives back the number its pre-advance reset; a `\label` in an `\IEEEnonumber`
+row before a backed-out row keeps the number it named, `keep_pending_next_numbers`). Witness 2012.02697 (`eq:XHp`,
+`eq:Q2`: PDF 11a, 11b; int72a a raw id and "13a", 79d r1 "13a" both). Also Perl's: its `\IEEEyesnumber` sets the
+row's `noretract`, which a later `\nonumber` on the row cannot undo, where both are `\global\@eqnswfalse`/`true`
+switches and the last one wins (`a &=& b \\ c &=& d \IEEEyesnumber\nonumber \\ e &=& f`: pdflatex "(1)", nothing,
+"(2)"; Perl numbers all three). Fixed in Rust (79d r3, review rev79d2 findings 1-2): in an IEEEeqnarray row `\nonumber`
+drops `noretract` as `\IEEEnonumber` does; a row whose counters `\IEEEyesnumber`/`\IEEEyessubnumber` set
+(`EQUATIONROW_HOLDS`, latex_constructs/mod.rs) keeps them when it is then left unnumbered, and the next row prints
+them without a step (`EQUATIONROW_CARRY`; IEEEtrantools pre-advances only after a printed number, :2086-2112), so
+`\IEEEyessubnumber\IEEEnonumber` after "(4)" leaves "(4a)" to the next row (r2 "(4)" again); and every retraction gives
+back the sub-equation number its pre-advance reset (`retract_equation`; an `IEEEeqnarray*` `\nonumber` row before an
+`\IEEEyessubnumber` row, pdflatex "0f", r2 "0a"). Witnesses 2012.02697 (`lcmpc.tex:123-136`, `eq:fpar`/`eq:par`
+14a/14b as the `.aux`, r2 14b/14c), 1610.06458 (`paper.tex:1260-1266`, `eq:inq3` 36c, r2 36a). Repros
+cross-references/{ieeeeqnarray_sub_numbers_follow_the_last_number, ieeeeqnarray_nonumber_after_yessubnumber_wins,
+ieeeeqnarray_starred_nonumber_gives_back_the_sub_number}; guards
+`perfect_kernel_batch79d::{ieeeeqnarray_sub_numbers_follow_the_last_number,
+ieeeeqnarray_nonumber_after_yessubnumber_wins, ieeeeqnarray_starred_nonumber_gives_back_the_sub_number}`.
