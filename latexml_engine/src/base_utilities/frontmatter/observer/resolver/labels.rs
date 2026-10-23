@@ -504,6 +504,28 @@ pub(super) fn link_letters(link: &str) -> &str {
   link.strip_prefix("www.").unwrap_or(link)
 }
 
+/// The part of a link that says whose page it is ([`link_letters`]'s host and path, a query or a fragment aside): its
+/// last path segment, an `index.*` or `*.html` page after it aside; its host when its path holds nothing else
+/// (main-session decision 1 on FM S2a.2 r7, review revfms2a2_7 finding 3). A homepage spells its owner there —
+/// `sites.google.com/view/<name>`, `tu.berlin/disco/klimm`, `…/MarcinPitera`, `portal.research.lu.se/en/persons/<name>`,
+/// `insti.physics.sunysb.edu/~siegel/plan.html`, `www.pengxu.net/` (2301.03638, 1409.7028, 2601.07017, 1603.02588,
+/// 2001.02600) —; a repository or a file under an account does not: `github.com/<user>/<repo>`, `…/resolution.git`,
+/// `<user>.github.io/<project>`, `…/<name>/accvideo.mp4` (2008.12970, 2511.08416, 2103.05251, 2503.02954, 2509.01952).
+pub(super) fn link_page(link: &str) -> &str {
+  let rest = link_letters(link);
+  let rest = rest.split(['?', '#']).next().unwrap_or("");
+  let mut parts: Vec<&str> = rest.split('/').filter(|p| !p.is_empty()).collect();
+  if parts.len() >= 2
+    && let Some(last) = parts.last()
+  {
+    let page = last.to_ascii_lowercase();
+    if page.starts_with("index.") || page.ends_with(".html") || page.ends_with(".htm") {
+      parts.pop();
+    }
+  }
+  parts.last().copied().unwrap_or("")
+}
+
 /// Whether `text` is one e-mail address alone (a `mailto:` before it aside).
 pub(super) fn is_one_address(text: &str) -> bool {
   let text = text.trim().trim_start_matches("mailto:");

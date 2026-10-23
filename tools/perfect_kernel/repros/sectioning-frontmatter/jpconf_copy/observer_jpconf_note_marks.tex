@@ -1,0 +1,23 @@
+% IOP's jpconf.cls prints its notes' marks as the body's arabic `\thefootnote` set as a superscript (:139, 153
+% `\@thefnmark`, `\def\@fnsymbol#1{\ifnum\thefootnote=99\hbox{*}\else^{\thefootnote}\fi\relax}`; this directory's
+% jpconf.cls is a stand-in keeping those lines): the frontmatter observer's rehearsal must read a note's mark and a bare
+% `\footnotemark` as that print, not as the kernel `\maketitle`'s `\@fnsymbol\c@footnote`, which recurses through
+% `\thefootnote` there (FM S2a.2 r8, review revfms2a2_7 finding 4).
+% witness: 1105.2659 (`Christoph Bobeth$^{1,}$\footnote[3]{Speaker}`: the PDF prints "3"), 0709.0673
+% oracle:  pdflatex 0 errors; "Ann Ablea1 , Bob Bakerb,3 and Cat Cole", "a Univ A, City", "b Univ B, Town"
+% engines: perl (no observer) n/a; rust fms2a2r7 (shadow on) the block's rehearsal ended in a Fatal error (the bare
+%          `\footnotemark`), the block unobserved; the XML unchanged by the switch
+% expect:  0 errors, 0 warnings; the XML byte-identical with LATEXML_FM_SHADOW on and off; the shadow reads Bob's note
+%          showing "3", Ann's bare `\footnotemark` "1", and the block rehearsed
+% status:  RED (fms2a2r7) -> GREEN (fms2a2r8: jpconf's policy entry `TitleMarks::Body`, the `\footnotemark` print read
+%          quietly)
+% preload: ar5iv.sty
+\documentclass{jpconf}
+\begin{document}
+\title{T}
+\author{Ann Able$^{a}$\footnotemark, Bob Baker$^{b,}$\footnote[3]{Speaker} and Cat Cole}
+\address{$^a$ Univ A, City}
+\address{$^b$ Univ B, Town}
+\begin{abstract}Abs.\end{abstract}
+\section{S} Body.
+\end{document}

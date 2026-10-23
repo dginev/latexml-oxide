@@ -180,7 +180,8 @@ fn a_notes_links_are_its_owners_by_spelling_or_as_its_only_link() {
 /// Decision 2 under a class printing no note marks (IEEEtran.cls:4756 `\def\thefootnote{}`, `Policy::unmarked_notes`): a
 /// note stands beside the last name by its place alone, so even its only link is a name's only by spelling — a
 /// co-author's homepage (2001.02600), a video (1803.04996), data records (2504.08644), the co-authors' ORCIDs (2602.13176)
-/// all went to the last author.
+/// all went to the last author. (FM S2a.2 r8, main-session decision 1 on r7: a url is spelled by its page, the last path
+/// segment — `example.org/ann` is Ann Able's, its whole letters "exampleorgann" spelled no one.)
 #[test]
 fn an_unmarked_notes_link_is_a_names_only_by_spelling() {
   let dump = dump(IEEE);
@@ -190,6 +191,7 @@ fn an_unmarked_notes_link_is_a_names_only_by_spelling() {
   );
   assert_eq!(tuples(IEEE), [
     "C Ann Able [] | line:names",
+    "  c url https://example.org/ann | note:adjacent ruling4:inner-contact owner:spelled",
     "C Bob Baker [] | line:names sep:word",
     "  c url https://www.bobbaker.org/ | note:adjacent ruling4:inner-contact owner:spelled",
     "  n A. Able is with Univ A (homepage https://example.org/ann ). | note:adjacent",

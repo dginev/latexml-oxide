@@ -371,7 +371,9 @@ fn sync_row_shapes_62_64_authblk() {
 
 /// A `\label` in a `\thanks` labels the note (78f item 4, design §5 default 9); a `\thanks` whose content became
 /// contacts is dropped (ruling 4), an empty `\thanks{}` kept; an e-mail line no name spells goes to the one author a
-/// note marks as the corresponding author (FIDELITY_CHARTER §4, 2026-10-21).
+/// note marks as the corresponding author (FIDELITY_CHARTER §4, 2026-10-21). (FM S2a.2 r8, main-session decision 1 on
+/// r7: a url is an author's only as the page it spells — `https://b.org` spells no one, so it stays in Bob's note, which
+/// is kept.)
 #[test]
 fn notes_labels_and_contacts() {
   let (log, _, json) = convert_with_setup_then(
@@ -391,10 +393,9 @@ fn notes_labels_and_contacts() {
     "  c email office@x.org | owner:corresponding ruling3:one-per-print",
     "  n Corresponding author. | note:adjacent",
     "C Bob Baker [] | line:names sep:column",
-    "  c url https://b.org | note:adjacent ruling4:inner-contact",
+    "  n https://b.org | note:adjacent",
     "C Cat Cole [] | line:names sep:column",
     "  n  | note:adjacent ruling4:empty-kept",
-    "D note https://b.org | note:adjacent ruling4:emptied",
   ]);
 }
 
@@ -509,17 +510,16 @@ const AUTHBLK_THENOTE: &str = "\\documentclass{article}\n\\usepackage{authblk}\n
 /// amsart's `\author{A and B}` with the contacts after (2205.02163).
 const AMS_GRID: &str = "\\documentclass{amsart}\n\\begin{document}\n\\title{T}\n\\author{Ann Able and Bob Baker}\n\\address{Univ A}\n\\email{aable@x.org}\n\\address{Univ B}\n\\email{bbaker@y.org}\n\\maketitle\nText.\n\\end{document}\n";
 
-/// Item 1: a note keeps its whole text; its link is also its contact (ruling 4's inner contact), and a note its contacts
-/// emptied is dropped, kept in `dropped` for the comparison (ruling 4).
+/// Item 1: a note keeps its whole text (2401.17399, 1607.05792, 2603.01292). (FM S2a.2 r8, main-session decision 1 on
+/// r7: its url is no one's contact unless its page spells an author — neither `https://x.org/c` nor `https://b.org`
+/// does, so both stay in their notes, and Bob's is not emptied; r2-r7 made each its note's owner's as the only link.)
 #[test]
 fn notes_keep_their_whole_text() {
   assert_eq!(tuples(&resolved(NOTE_URL, Some("ar5iv.sty"))), [
     "C Ann Able [] | line:names",
-    "  c url https://x.org/c | note:adjacent ruling4:inner-contact",
     "  n Code is available at https://x.org/c . | note:adjacent",
     "C Bob Baker [] | line:names sep:column",
-    "  c url https://b.org | note:adjacent ruling4:inner-contact",
-    "D note https://b.org | note:adjacent ruling4:emptied",
+    "  n https://b.org | note:adjacent",
   ]);
 }
 
@@ -932,7 +932,8 @@ fn orcid_links_cites_environments_and_title_notes() {
 
 /// Item 2: revtex names with their marks before them on the block's only line, the affiliations its calls
 /// (1805.08625, 1405.2400, 2001.00788, 0710.4115: no creator was made); a sole author's orphans are that author's, as
-/// today's (OD #159: amsart's `\address` and `\dedicatory` before the `\author`, 0911.5235, 0712.4133).
+/// today's (OD #159: amsart's `\address` and `\dedicatory` before the `\author`, 0911.5235, 0712.4133) — in source order
+/// (FM S2a.2 r8, review revfms2a2_7 finding 1: the `\dedicatory` before the `\email`).
 #[test]
 fn prefix_marks_on_a_sole_line_and_a_sole_authors_orphans() {
   assert_eq!(
@@ -958,8 +959,8 @@ fn prefix_marks_on_a_sole_line_and_a_sole_authors_orphans() {
     [
       "C Ann Able [] | line:names",
       "  a Dept of Math, Univ A, City | api:owner:block owner:sole-author",
-      "  c email aable@x.org | api:annotate:last",
       "  c dedicatory To Cat. | api:owner:block owner:sole-author",
+      "  c email aable@x.org | api:annotate:last",
     ]
   );
 }

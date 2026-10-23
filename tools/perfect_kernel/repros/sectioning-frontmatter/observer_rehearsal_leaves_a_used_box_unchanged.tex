@@ -1,0 +1,22 @@
+% The frontmatter observer's rehearsal (LATEXML_FM_SHADOW=1) must leave the conversion as it was: a box register an
+% author block prints with `\usebox` comes out of the rehearsal changed — the XML wraps its content in an `ltx:text`
+% with the switch on and not with it off (FM S2a.2 r8's census, unset vs set: pre-existing, int69b and r7 alike).
+% witness: 2405.14627 (`Junichi Haruna\,\href{https://orcid.org/…}{\usebox{\ORCIDicon}}`), 2603.26792 (an ORCID
+%          `\includegraphics` in an `\href` through a macro); 2409.10200 (siamart220329: algorithmic's `\AND` prints a
+%          plain "and" after the rehearsal, not `\textbf{and}` — a class copy is needed to reproduce it)
+% oracle:  pdflatex 0 errors; "Ann Able" and the 9pt rule after it
+% engines: perl (no observer) n/a; rust fms2a2r8 (int69b, fms2a2r7 alike) the XML differs between LATEXML_FM_SHADOW
+%          unset (`<ref …><rule …/></ref>`) and set (`<ref …><text xml:id="id1"><rule …/></text></ref>`)
+% expect:  0 errors, 0 warnings; the XML byte-identical with LATEXML_FM_SHADOW unset and set
+% status:  RED (fms2a2r8)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\newsavebox{\ORCIDicon}
+\sbox{\ORCIDicon}{\rule{9pt}{9pt}}
+\begin{document}
+\title{T}
+\author{Ann Able\,\href{https://orcid.org/0000-0002-1828-8183}{\usebox{\ORCIDicon}}}
+\maketitle
+Text.
+\end{document}

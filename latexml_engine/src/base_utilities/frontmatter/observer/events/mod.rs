@@ -102,6 +102,9 @@ pub struct Event {
   pub inner:      Vec<Event>,
   /// how many layout containers enclose it
   pub nest:       u8,
+  /// a mark's run of footnote symbols that a line of its block leads with and a name shows, written together (`§†`):
+  /// one label, as `††` is (the resolver's `glue_shown_runs`; main-session decision 2 on FM S2a.2 r7, 0907.1243)
+  pub glued:      bool,
 }
 
 impl Event {
@@ -117,6 +120,7 @@ impl Event {
       target: None,
       inner: Vec::new(),
       nest: 0,
+      glued: false,
     }
   }
 }

@@ -146,5 +146,11 @@ pub fn json_resolved(v: &Value) -> FmResolved {
   }
   out.block = assocs(&v["block"]);
   out.dropped = assocs(&v["dropped"]);
+  out.continued = v["continued"]
+    .as_array()
+    .into_iter()
+    .flatten()
+    .map(|lines| lines.as_array().into_iter().flatten().map(s).collect())
+    .collect();
   out
 }

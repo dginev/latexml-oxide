@@ -707,3 +707,79 @@ fn an_affiliation_read_as_legend_notes_is_explained() {
     "{rows:?}"
   );
 }
+
+/// FM S2a.2 r8 (review revfms2a2_7 finding 1): the notes a creator's two sides both hold are compared in order — a
+/// note the shadow placed after the ones the source gives later is a `note-order` disagreement (the multisets hid it),
+/// unclassified unless the first note out of today's place is one a ruling placed (a legend by its label: today's
+/// relocates it last, 2607.03557).
+#[test]
+fn note_order_is_compared() {
+  let with_notes = |notes: &[&str]| {
+    let mut c = creator("Ann Able", &[], "");
+    for n in notes {
+      c.notes.push(n.to_string());
+      c.rules
+        .insert(format!("note\t{}", norm(n)), "note:adjacent".into());
+    }
+    Tuples {
+      creators: vec![c],
+      ..Tuples::default()
+    }
+  };
+  let xml = with_notes(&["ann@x.org, zed@y.org", "Second note."]);
+  assert_eq!(
+    compare(&with_notes(&["ann@x.org, zed@y.org", "Second note."]), &xml),
+    vec![]
+  );
+  let rows = compare(&with_notes(&["Second note.", "ann@x.org, zed@y.org"]), &xml);
+  assert_eq!(rows.len(), 1, "{rows:?}");
+  assert_eq!(
+    (rows[0].kind, rows[0].classified, rows[0].rule.as_str()),
+    ("note-order", false, "order note:adjacent")
+  );
+  assert_eq!(
+    rows[0].detail,
+    "Ann Able: shadow [secondnote | annxorgzedyorg] xml [annxorgzedyorg | secondnote]"
+  );
+  let mut legend = with_notes(&["Corresponding author.", "Supported by X."]);
+  legend.creators[0].rules.insert(
+    "note\tcorrespondingauthor".into(),
+    "note:adjacent note:legend ruling1:request".into(),
+  );
+  let rows = compare(
+    &legend,
+    &with_notes(&["Supported by X.", "Corresponding author."]),
+  );
+  assert_eq!(
+    rows
+      .iter()
+      .map(|d| (d.kind, d.classified, d.rule.as_str()))
+      .collect::<Vec<_>>(),
+    [(
+      "note-order",
+      true,
+      "order note:adjacent note:legend ruling1:request"
+    )]
+  );
+}
+
+/// FM S2a.2 r8 (review revfms2a2_7 finding 5): a `part` is one line of an entry the shadow joined from its continuation
+/// lines, or a run of them, as the dump holds the lines — the middle of a line explains nothing; a dump made before r8
+/// (no lines) keeps r7's reading.
+#[test]
+fn a_part_is_a_line_or_a_run_of_lines() {
+  let piece = "laboratorybbld9institutectowncountryd";
+  let shadow = Tuples {
+    continued: vec![vec![
+      "laboratorybbld9".into(),
+      "institutectown".into(),
+      "countryd".into(),
+    ]],
+    ..Tuples::default()
+  };
+  assert!(is_line_run(&shadow, piece, "institutectown"));
+  assert!(is_line_run(&shadow, piece, "institutectowncountryd"));
+  assert!(!is_line_run(&shadow, piece, "bbld9institutec"));
+  assert!(!is_line_run(&shadow, piece, "institute"));
+  assert!(is_line_run(&Tuples::default(), piece, "bbld9institutec"));
+}

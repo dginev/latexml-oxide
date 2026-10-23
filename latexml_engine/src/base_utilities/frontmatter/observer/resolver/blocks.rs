@@ -106,7 +106,7 @@ impl Resolver {
     self.out.policies.push((index, policy.name));
     self.notes_marked = !policy.unmarked_notes;
     let and_inline = policy.and_inline;
-    let events = &split_text_marks(&join_ordinals(&orcid_link_names(events)));
+    let events = &glue_shown_runs(&split_text_marks(&join_ordinals(&orcid_link_names(events))));
     let lines = lines_of(events, and_inline);
     let block_requests: Vec<String> = keyvals
       .and_then(|kv| attr_value(kv, "annotations"))
@@ -339,10 +339,10 @@ impl Resolver {
           let shown_elsewhere = |label: &String| {
             lines.iter().enumerate().any(|(m, other)| {
               m != n
-                && other.events.iter().any(|e| {
-                  e.kind == EventKind::Mark
-                    && mark_labels(e.label.as_deref().unwrap_or("")).contains(label)
-                })
+                && other
+                  .events
+                  .iter()
+                  .any(|e| e.kind == EventKind::Mark && event_labels(e).contains(label))
             })
           };
           if !trailing.is_empty()
@@ -568,13 +568,15 @@ impl Resolver {
       {
         "email"
       // (a legend's mark is a symbol: a footnote symbol, or a mark glyph of no `\@fnsymbol` kind — `${\star}$ to whom
-      // correspondence should be addressed` under `Pace,$^{2,\star}$`, 2401.00056, FM S2a.2 r7)
+      // correspondence should be addressed` under `Pace,$^{2,\star}$`, 2401.00056, FM S2a.2 r7; an entry of no label
+      // has none, review revfms2a2_7 finding 7)
       } else if is_legend_text(&text)
         && (entry.symbol
-          || entry
-            .labels
-            .iter()
-            .all(|l| !l.is_empty() && !l.chars().any(char::is_alphanumeric)))
+          || (!entry.labels.is_empty()
+            && entry
+              .labels
+              .iter()
+              .all(|l| !l.is_empty() && !l.chars().any(char::is_alphanumeric))))
       {
         "legend"
       } else {
@@ -609,9 +611,14 @@ impl Resolver {
     continues
   }
 
-  /// An unmarked line continuing the entry before it: its text appended.
+  /// An unmarked line continuing the entry before it: its text appended, and the entry's lines kept
+  /// ([`Resolved::continued`]).
   pub(super) fn continue_entry(&mut self, carried: &Continued, text: &str) {
-    let extend = |assoc: &mut Assoc| {
+    let mut sources: Vec<(Option<Source>, String)> = Vec::new();
+    let mut extend = |assoc: &mut Assoc| {
+      if !sources.iter().any(|(s, _)| *s == assoc.source) {
+        sources.push((assoc.source, assoc.text.clone()));
+      }
       assoc.text = s!("{} {text}", assoc.text);
       if !assoc.rule.contains("line:continued") {
         assoc.rule.push_str(" line:continued");
@@ -630,6 +637,17 @@ impl Resolver {
           }
         }
       },
+    }
+    for (source, before) in sources {
+      let Some(source) = source else {
+        continue;
+      };
+      match self.continued.iter_mut().find(|(s, _)| *s == source) {
+        Some((_, lines)) => lines.push(text.to_string()),
+        None => self
+          .continued
+          .push((source, vec![before, text.to_string()])),
+      }
     }
   }
 
@@ -709,8 +727,12 @@ impl Resolver {
     // co-author's homepage, a video, data records, four co-authors' ORCIDs all went to the last author: 2001.02600,
     // 1803.04996, 2504.08644, 2602.13176 —, and a class printing no note marks places a note by position alone,
     // `Policy::unmarked_notes`)
-    let fallback = contacts.len() == 1 && self.notes_marked;
-    let mut links: Vec<Assoc> = Vec::new();
+    // (a note no name holds — a line's, an address list's — has no owner to fall back to: its link goes to the author it
+    // spells, or stays in its text, never the block's — main-session decision 4 on FM S2a.2 r7, review revfms2a2_7
+    // finding 2; the block's url went on to a sole author by `sole_author_takes_the_block`)
+    let fallback = contacts.len() == 1 && self.notes_marked && owner.is_some();
+    // (each link with its target: a url's page is what says whose it is, `place_note_link`)
+    let mut links: Vec<(Assoc, Option<String>)> = Vec::new();
     let mut all_taken = true;
     for inner in &contacts {
       let (role, text) = contact_parts(inner);
@@ -726,7 +748,7 @@ impl Resolver {
       // — read once every name is, `answer_note_links`: the names after the note in its block are not read yet)
       let link = matches!(assoc.role.as_str(), "email" | "url");
       if link {
-        links.push(assoc);
+        links.push((assoc, inner.target.clone()));
       } else if fallback {
         self.attach(owner, assoc, false);
       } else {
@@ -750,10 +772,10 @@ impl Resolver {
       });
       return;
     }
-    for assoc in links {
+    for (assoc, target) in links {
       self
         .note_links
-        .push(NoteLink::Link { owner, assoc, fallback });
+        .push(NoteLink::Link { owner, assoc, target, fallback });
     }
     if emptiable {
       self.drop_emptied_note(index, note, rule);

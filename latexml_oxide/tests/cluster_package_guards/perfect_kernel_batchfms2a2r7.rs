@@ -397,16 +397,17 @@ Text.
 /// Decision 2 of int66 on a legend line: a mark glyph mid-line opens an entry of its own (`${\star}$`), and a legend's
 /// text led by a symbol of no `\@fnsymbol` kind is a legend, a note of the names showing it (2401.00056's `\# authors
 /// contributed equally and ${\star}$ to whom correspondence should be addressed`, the `⋆` line an affiliation of Pace
-/// and Ahrar before).
+/// and Ahrar before). The `#` parted from the line's text is no footnote symbol either: ruling 1's (FM S2a.2 r8, review
+/// revfms2a2_7 finding 6 — it was read as ruling 2's symbol line).
 #[test]
 fn a_mark_glyphs_legend_is_a_note() {
   assert_eq!(tuples(GLYPH_LEGEND), [
     "C Ann Able [1,#] | line:names mark:after-comma",
     "  a Univ A, City. | ruling1:request",
-    "  n authors contributed equally | ruling2:symbol-line",
+    "  n authors contributed equally | ruling1:request",
     "C Bob Baker [2,#] | line:names sep:comma mark:after-comma",
     "  a Univ B, Town. | ruling1:request",
-    "  n authors contributed equally | ruling2:symbol-line",
+    "  n authors contributed equally | ruling1:request",
     "C Cat Cole [2,⋆] | line:names sep:comma",
     "  a Univ B, Town. | ruling1:request",
     "  n to whom correspondence should be addressed. | ruling1:request",

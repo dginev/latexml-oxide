@@ -406,6 +406,7 @@ pub fn fm_shadow_json() -> String {
                   target:     None,
                   inner:      Vec::new(),
                   nest:       0,
+                  glued:      false,
                 });
               },
               _ => {},
@@ -502,6 +503,21 @@ fn json_resolved(out: &mut String, resolved: &Resolved) {
   out.push(']');
   json_assocs(out, "block", &resolved.block);
   json_assocs(out, "dropped", &resolved.dropped);
+  out.push_str(",\"continued\":[");
+  for (i, lines) in resolved.continued.iter().enumerate() {
+    if i > 0 {
+      out.push(',');
+    }
+    out.push('[');
+    for (j, line) in lines.iter().enumerate() {
+      if j > 0 {
+        out.push(',');
+      }
+      json_str(out, line);
+    }
+    out.push(']');
+  }
+  out.push(']');
   out.push_str(",\"policies\":[");
   for (i, (index, name)) in resolved.policies.iter().enumerate() {
     if i > 0 {

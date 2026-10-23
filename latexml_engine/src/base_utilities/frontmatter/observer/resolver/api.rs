@@ -288,8 +288,22 @@ impl Resolver {
       labels = keys.clone();
       label_rule = "api:ref-label";
     }
+    // (an affiliation entry a symbol leads — a footnote symbol or a mark glyph — whose text names the corresponding
+    // author or an equal contribution is that legend, a note of the names showing the mark, as a block's labelled line
+    // reads it (`labelled_entries`): revtex's `\affiliation{$^1$Dept … \\ $^\star${corresponding author, e-mail:
+    // stefano@duke.edu}}` under `Curtarolo$^{1,\star}$` was his affiliation, 0812.1531 — review revfms2a2_7 finding 8;
+    // acmart's `\country{$^1$SJTU, $^2$Infinigence-AI, $^*$Equal contributions}`, 2409.11440. Only those: the call
+    // declares an affiliation, and an address change is one, and a funding word is an institution's name as often —
+    // `$^\dagger$Science \& Finance, Capital Fund Management, 6 Bd Haussmann, …`, 0710.0802)
+    let legend = label_rule.starts_with("api:leading-mark")
+      && matches!(role, "affiliation" | "address" | "altaffiliation")
+      && !labels.is_empty()
+      && labels
+        .iter()
+        .all(|l| !l.is_empty() && !l.chars().any(char::is_alphanumeric))
+      && matches!(classify_thanks(&text), "correspondence" | "contribution");
     let assoc = Assoc {
-      role:   role.to_string(),
+      role:   if legend { "legend" } else { role }.to_string(),
       text:   text.clone(),
       label:  labels.first().cloned(),
       rule:   String::new(),

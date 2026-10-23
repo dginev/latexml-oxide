@@ -131,7 +131,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
         FOOTNOTE_BASE.with(Cell::get).saturating_add(steps)
       },
     };
-    let printed = printed_footnote_mark(value)?;
+    // (read quietly too: a bare `\footnotemark` under a class whose `\@fnsymbol` reads `\thefootnote` must not end the
+    // block's rehearsal — review revfms2a2_7 finding 4, jpconf.cls:153)
+    let printed = note_mark_quietly(value)?;
     Ok(stored_map!("printed" => Stored::String(pin(&printed))))
   });
   // the marks the kernel `\maketitle` prints (latex.ltx/article.cls `\renewcommand\thefootnote{\@fnsymbol\c@footnote}`),

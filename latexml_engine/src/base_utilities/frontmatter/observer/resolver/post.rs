@@ -449,18 +449,21 @@ impl Resolver {
   }
 
   /// A note's links, once every name is read: each e-mail or url to the author of the note's block it spells (a url by
-  /// its letters past the scheme, `link_letters`; FIDELITY_CHARTER §4: ownership by evidence — the spelling before the
-  /// note's place), else the author the note is on when it is the note's only link (its mark is shown on that name: the
+  /// its page, [`link_page`] — its last path segment or its host —, an e-mail link by its letters past the scheme,
+  /// `link_letters`; FIDELITY_CHARTER §4: ownership by evidence — the spelling before the note's place), else, an
+  /// e-mail, the author the note is on when it is the note's only link (its mark is shown on that name: the
   /// main-session decision of 2026-10-22 recorded in OXIDIZED_DESIGN_DIVERGENCES #837, narrowed by its decision 2), else
   /// none: the link stays in the note's text. A url goes to the co-author it spells as an e-mail does (main-session
   /// decision on review revfms2a2_6 finding 2: `http://www.pengxu.net/` in the note on Liang Wang is Peng Xu's,
-  /// 2001.02600). A note its links may empty is kept, or dropped once they all became contacts (ruling 4), here — the
-  /// names after it in its block read (review revfms2a2_6 finding 3).
+  /// 2001.02600), and to any author only when its page spells them — a homepage, not a repository or a file under an
+  /// account (main-session decision 1 on FM S2a.2 r7, review revfms2a2_7 finding 3: 2008.12970, 2511.08416, 2103.05251,
+  /// 2503.02954, 2509.01952). A note its links may empty is kept, or dropped once they all became contacts (ruling 4),
+  /// here — the names after it in its block read (review revfms2a2_6 finding 3).
   pub(super) fn answer_note_links(&mut self) {
     for item in std::mem::take(&mut self.note_links) {
       match item {
-        NoteLink::Link { owner, assoc, fallback } => {
-          self.place_note_link(owner, assoc, fallback);
+        NoteLink::Link { owner, assoc, target, fallback } => {
+          self.place_note_link(owner, assoc, target.as_deref(), fallback);
         },
         NoteLink::Note {
           index,
@@ -471,8 +474,8 @@ impl Resolver {
           fallback,
         } => {
           let mut all_taken = true;
-          for assoc in links {
-            all_taken &= self.place_note_link(owner, assoc, fallback);
+          for (assoc, target) in links {
+            all_taken &= self.place_note_link(owner, assoc, target.as_deref(), fallback);
           }
           if all_taken {
             self.drop_emptied_note(index, &note, &rule);
@@ -485,7 +488,13 @@ impl Resolver {
   }
 
   /// One of a note's links ([`Resolver::answer_note_links`]); whether a creator took it.
-  fn place_note_link(&mut self, owner: Option<usize>, assoc: Assoc, fallback: bool) -> bool {
+  fn place_note_link(
+    &mut self,
+    owner: Option<usize>,
+    assoc: Assoc,
+    target: Option<&str>,
+    fallback: bool,
+  ) -> bool {
     let candidates: Vec<usize> = match owner {
       Some(at) => (0..self.out.creators.len())
         .filter(|&c| self.group[c] == self.group[at])
@@ -493,7 +502,18 @@ impl Resolver {
       None => self.live(),
     };
     let url = assoc.role == "url";
-    let letters = if url {
+    let link = target
+      .filter(|t| !t.trim().is_empty())
+      .unwrap_or(&assoc.text)
+      .trim();
+    // (a url linking a page, spelled by that page alone; a link to an address, or printing addresses, is the address,
+    // read by its letters as an e-mail is, the note's only link its owner's — `\href{mailto:tsamak@clemson.edu}{tsamak}`,
+    // 2309.10007; 2008.07668, 2312.06540, 2010.15033; `\url{brunnerj, edemaine, dylanhen, wellman@mit.edu}`, 2010.09271,
+    // 1407.7882)
+    let page = url && !link.starts_with("mailto:") && !assoc.text.contains('@');
+    let letters = if page {
+      link_page(link).to_string()
+    } else if url {
       link_letters(&assoc.text).to_string()
     } else {
       assoc.text.clone()
@@ -515,7 +535,8 @@ impl Resolver {
         self.attach(owner, Assoc { rule, ..assoc }, false);
       },
       Some(_) => self.attach(owner, assoc, false),
-      None if fallback => self.attach(owner, assoc, false),
+      // (a page no name's spells is no one's, the note's only link too: `\thanks{Code: \url{https://github.com/…}}`)
+      None if fallback && !page => self.attach(owner, assoc, false),
       None => return false,
     }
     true

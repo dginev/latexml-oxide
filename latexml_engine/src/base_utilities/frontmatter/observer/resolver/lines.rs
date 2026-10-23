@@ -157,7 +157,9 @@ pub(super) fn split_text_marks(events: &[Event]) -> Vec<Event> {
           let mut mark = Event::new(EventKind::Mark);
           mark.label = Some(first.to_string());
           mark.text = first.to_string();
-          mark.symbol = true;
+          // (a footnote symbol only when every character is one, as the lexer reads a mark: `#` and a `★` set in text
+          // are marks of no `\@fnsymbol` kind — main-session decision 3 on FM S2a.2 r7, review revfms2a2_7 finding 6)
+          mark.symbol = first.chars().all(is_symbol_char);
           mark.line_first = true;
           mark.role = Some("text".to_string());
           mark.span = event.span;
@@ -183,6 +185,65 @@ pub(super) fn split_text_marks(events: &[Event]) -> Vec<Event> {
   out
 }
 
+/// The block's events with each run of footnote symbols written together (`§†`) that a line leads with and a name
+/// shows read as one mark ([`Event::glued`]), as a run of one symbol (`††`) is: 0907.1243's `W.Y.~Ching$^{\S\dagger}$`
+/// under the line `$^{\S\dagger}$Department of Physics, University of Missouri …` is that line's alone, not every `§`
+/// and `†` carrier's, and the lines `$^{\S}$DuPont …`, `$^{\dagger}$Laboratory …` are not Ching's (main-session
+/// decision 2 on FM S2a.2 r7). A run no line leads with stays the marks it is written of (`R.~Podgornik$^{\dagger\star}$`).
+pub(super) fn glue_shown_runs(events: &[Event]) -> Vec<Event> {
+  let run_of = |e: &Event| -> Option<String> {
+    if e.kind != EventKind::Mark {
+      return None;
+    }
+    let run: String = mark_text_symbols(e.label.as_deref().unwrap_or(""));
+    let first = run.chars().next()?;
+    (run.chars().count() >= 2 && run.chars().all(is_symbol_char) && run.chars().any(|c| c != first))
+      .then_some(run)
+  };
+  let led: Vec<String> = events
+    .iter()
+    .filter(|e| e.line_first)
+    .filter_map(run_of)
+    .collect();
+  let glued: Vec<String> = events
+    .iter()
+    .filter(|e| !e.line_first)
+    .filter_map(run_of)
+    .filter(|run| led.contains(run))
+    .collect();
+  events
+    .iter()
+    .map(|e| {
+      let mut e = e.clone();
+      e.glued = run_of(&e).is_some_and(|run| glued.contains(&run));
+      e
+    })
+    .collect()
+}
+
+/// A mark's label as [`mark_labels`] reads its characters (trimmed, the math asterisk `∗` as `*`, the formula `\|`'s `∥`
+/// as `‖`).
+fn mark_text_symbols(label: &str) -> String {
+  label
+    .trim()
+    .chars()
+    .map(|c| match c {
+      '\u{2217}' => '*',
+      '\u{2225}' => '‖',
+      c => c,
+    })
+    .collect()
+}
+
+/// A Mark event's labels: [`mark_labels`] of its label, a glued run ([`glue_shown_runs`]) one label.
+pub(super) fn event_labels(event: &Event) -> Vec<String> {
+  if event.glued {
+    vec![mark_text_symbols(event.label.as_deref().unwrap_or(""))]
+  } else {
+    mark_labels(event.label.as_deref().unwrap_or(""))
+  }
+}
+
 /// The labelled entries of a line whose marks trail their text (`Nanyang Technological University$^1$, Amazon$^2$`,
 /// 2507.05750): each mark after a Name closes an entry of the ink since the entry before; the line must end in a mark.
 pub(super) fn trailing_entries<'a>(line: &[&'a Event]) -> Vec<Entry<'a>> {
@@ -192,7 +253,7 @@ pub(super) fn trailing_entries<'a>(line: &[&'a Event]) -> Vec<Entry<'a>> {
   for event in line {
     match &event.kind {
       EventKind::Mark => {
-        let labels = mark_labels(event.label.as_deref().unwrap_or(""));
+        let labels = event_labels(event);
         if run.iter().any(|e| e.kind == EventKind::Name) {
           while run
             .last()
@@ -243,7 +304,7 @@ pub(super) fn entries_of<'a>(line: &[&'a Event]) -> Vec<Entry<'a>> {
         {
           after_sep = true;
         }
-        let labels = mark_labels(event.label.as_deref().unwrap_or(""));
+        let labels = event_labels(event);
         let symbol =
           event.symbol || (!labels.is_empty() && labels.iter().all(|l| is_symbol_label(l)));
         let open = entries.last().is_some_and(|e| e.events.is_empty());
@@ -846,7 +907,7 @@ impl Resolver {
         },
         EventKind::Sep(_) => last_sep = Some(event),
         EventKind::Mark => {
-          let labels = mark_labels(event.label.as_deref().unwrap_or(""));
+          let labels = event_labels(event);
           let next_is_name = events[i + 1..]
             .iter()
             .find(|e| !matches!(e.kind, EventKind::Layout | EventKind::Mark))

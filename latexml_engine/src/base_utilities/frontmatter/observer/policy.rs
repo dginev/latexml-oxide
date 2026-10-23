@@ -213,12 +213,18 @@ pub const POLICIES: &[Policy] = &[
     cite: "book.cls:217 (OD #851, `declare_fnsymbol_title_block`)",
     ..KERNEL
   },
+  // jpconf: its notes print the body's arabic `\thefootnote` as a superscript (jpconf.cls:139, 153 `\@thefnmark`,
+  // `\def\@fnsymbol#1{…^{\thefootnote}…}`; no `\maketitle` of its own changes `\thefootnote`): 1105.2659's
+  // `\footnote[3]{Speaker}` shows "3" — the kernel's `\@fnsymbol\c@footnote` there recurses through `\thefootnote`
+  // (review revfms2a2_7 finding 4)
   Policy {
     name: "jpconf",
     binding: "jpconf.cls",
     email_owner: EmailOwner::SpelledElseOrder,
     call_is_group: true,
-    cite: "jpconf.cls:104-110 (iopart's `\\address`/`\\ead`); OD #841 (0705.0202, 1011.0523)",
+    title_marks: TitleMarks::Body,
+    cite: "jpconf.cls:104-110 (iopart's `\\address`/`\\ead`), :139, 153 (its notes' marks); OD #841 (0705.0202, \
+           1011.0523)",
     ..KERNEL
   },
 ];

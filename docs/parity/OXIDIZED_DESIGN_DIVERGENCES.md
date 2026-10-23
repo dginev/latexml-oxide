@@ -23648,12 +23648,13 @@ unset and set, SYNC "FM S2a.2").
   urls are placed after the blocks (`answer_note_links`, `NoteLink`) — each to the author of the note's block it spells
   (a url by `link_letters`), else to the note's owner as its only marked link (decision 2), else left in the note's text;
   a url spelling a co-author is that author's as an e-mail is (2001.02600's `http://www.pengxu.net/` in Liang Wang's
-  note, Peng Xu's; 2503.02954's `mengyuest.github.io`), but a url printing addresses (`\url{sosk, unno, tsuboi,
+  note, Peng Xu's), but a url printing addresses (`\url{sosk, unno, tsuboi,
   ichi@preferred.jp}`) goes to the name it is on only, as before (1407.7882, 1810.11748, 2001.10403 went whole to one
   author of the group). A note its links may empty (nothing but punctuation besides them) is kept or dropped (ruling 4)
   there, not at the note: `\author{Ann\thanks{ann@x.org, bob@x.org} \and Bob}` kept the note beside both addresses as
-  contacts, Bob not read yet. An ownerless note's url (an address line's) is no longer the block's by default: it goes
-  to its speller or stays in the text, as an e-mail does (2103.05251's repository url, its sole author's).
+  contacts, Bob not read yet. (An ownerless note's url — an address line's — was meant to go to its speller or stay in
+  the text, as an e-mail does; r7's `fallback` asked no owner, so a note's only link still went to the block and on to a
+  sole author — r8 makes it so, below.)
 - **A name's edge glyphs are the marks and separators they print** (decision 2 of int66; the 7 census names r6's
   printed-text rule exposed): the formula `\|` prints `∥` (U+2225), `\@fnsymbol`'s `‖` (`is_fnsymbol`; `mark_labels`
   folds it; 0806.2911's `R.~E.~Hughes$\|$`); the glyphs documents set beside a name as marks of no `\@fnsymbol` kind
@@ -23686,15 +23687,82 @@ unset and set, SYNC "FM S2a.2").
   affiliation it reads as legend notes (`affiliation_rule_of`: 1910.10432, 1506.04458); the welded-legends class takes
   ruling 1's legends and an "and" between two of them (2401.00056).
 Not done (r7 residual): a glued run of two symbols one entry and one name show as written (`§†`) is read as two marks,
-each line to every carrier of either (0907.1243, the one census paper); a repository url under an author's account goes
-to that author (2008.12970's `github.com/KuangenZhang/…`, 2511.08416's `github.com/qin-jingyun/…`) — the spelling rule as
-decided; a superscript inside a surname (`M$^{\rm c}$Hardy`, 2003.01448) parts it (r5's `M\textsuperscript{c}Kernan`
+each line to every carrier of either (0907.1243, the one census paper — r8, below); a repository url under an author's
+account goes to that author (2008.12970's `github.com/KuangenZhang/…`, 2511.08416's `github.com/qin-jingyun/…` — r8's url
+rule, below); a superscript inside a surname (`M$^{\rm c}$Hardy`, 2003.01448) parts it (r5's `M\textsuperscript{c}Kernan`
 class). Guards `perfect_kernel_batchfms2a2r7::*` (12; each red on int69b or on r7's first build but the XML pin: the
 resolver-level two re-resolved through int69b's `ab_audit`, the convert shapes by int69b's own shadow dump), the r1-r3
 guard `glued_marks_part_by_the_marks_shown` (its `⋆` legend a note), engine unit test
 `resolver::tests::label_owners_exact_then_unprefixed` (live `author:N`), ab_audit
 `fmshadow::tests::{a_line_of_a_continued_entry_is_its_part, a_note_read_as_a_legend_affiliation_is_explained,
 an_affiliation_read_as_legend_notes_is_explained, welded_legends_of_a_mark_glyph_are_the_xml_wrong_class}`.
+
+**S2a.2 r8: the r7 landing review's findings, the main session's decisions on r7's questions** (review revfms2a2_7
+findings 1-8; decisions 1-4). Still shadow only (XML byte-identical against int69b with the switch unset and set, SYNC
+"FM S2a.2").
+- **Source order** (finding 1): a note `answer_note_links` keeps once every name is read came after the notes the source
+  gives later (`\author{Ann Able\thanks{\url{ann@x.org}, \url{zed@y.org}}\thanks{Second note.} \and Bob Baker}` read
+  `[Second note., ann@x.org, zed@y.org]`, int69b the source's order) — and a deferred link after the contacts of the lines
+  under it. Once `resolve` ends each creator's notes and contacts, and the block's own, are in source order
+  (`in_source_order`: ledger index, then span start; an item with no source keeps its place). The comparator sees note
+  order now: the notes both sides hold, each side's in its order (`note_orders`), a `note-order` row when they differ,
+  its rule the first out-of-place shadow note's (`order …`): unclassified unless a ruling placed that note — a legend
+  ruling 1 places by its label is today's last, relocated, where the shadow keeps the source's order (2607.03557's
+  `\textsuperscript{$\dagger$}Corresponding author` before its funding note).
+- **An ownerless note's link** (finding 2, decision 4): `fallback` asks for an owner — a note no name holds (an address
+  line's, a line's) gives its link to the author it spells or leaves it in its text, never to the block (the only link of
+  `ann@x.org, bob@x.org\thanks{Code: \url{…}}` was a block url, and a sole author's by `sole_author_takes_the_block`).
+- **A url is an author's only as the page it spells** (finding 3, decision 1): a url is spelled by its page
+  (`link_page`: its last path segment, an `index.*` or `*.html` page after it aside, else its host), read from the link's
+  target (an `\href`'s first argument) in all four placements — a co-author's, the note's owner's (`owner:spelled`), the
+  only-link fallback, and so an ownerless one (the sole-author move sees none, above). A homepage
+  (`sites.google.com/view/<name>`, `tu.berlin/disco/klimm`, `…/MarcinPitera`, `portal.research.lu.se/en/persons/<name>`,
+  `insti.physics.sunysb.edu/~siegel/plan.html`, `www.pengxu.net/`: 2301.03638, 1409.7028, 2601.07017, 1603.02588,
+  2001.02600; `academics.aut.ac.nz/robin.hankin` behind `\href{…}{work}`, 2210.15991) goes to the author it spells; a
+  repository, a project or a file under an account stays in the note's text (`github.com/<user>/<repo>`,
+  `…/resolution.git`, `<user>.github.io/<project>`, `…/<name>/accvideo.mp4`: 2008.12970, 2511.08416, 2103.05251,
+  2503.02954, 2509.01952), and a page no name spells is no one's, the note's only link too (r2-r7's fallback made
+  `\thanks{Code is available at \url{…}}` its owner's contact: 2409.18582, 2511.12997, 1607.05792, 1908.10122's doi,
+  2509.14694's springer.com; 1401.0489's `people.cs.uchicago.edu/~laci`, a nickname, too). A link to an address
+  (`\href{mailto:tsamak@clemson.edu}{tsamak}`, 2309.10007) or printing addresses (`\url{brunnerj, edemaine, dylanhen,
+  wellman@mit.edu}`, 2010.09271, 1407.7882) is the address: read by its letters, the note's only link its owner's.
+- **jpconf's note marks** (finding 4): jpconf prints them as the body's arabic `\thefootnote` set as a superscript
+  (jpconf.cls:139, 153), its policy entry `TitleMarks::Body` — 1105.2659's `\footnote[3]{Speaker}` shows "3", as its PDF
+  (the kernel's `\@fnsymbol\c@footnote` recursed through jpconf's `\@fnsymbol`); a bare `\footnotemark`'s print is read
+  quietly as a note's (`note_mark_quietly` in `\lx@fm@obs@fnmark`): under a class whose `\@fnsymbol` reads `\thefootnote`
+  with no policy entry it ran away and ended the block's rehearsal, the block unobserved.
+- **A glued symbol run a line leads with is one mark** (decision 2): `glue_shown_runs` marks a mark's run of two or more
+  different footnote symbols (`§†`) that a line of its block leads with and a name shows (`Event::glued`), read as one
+  label (`event_labels`) as a run of one symbol (`††`) is — 0907.1243's `W.Y.~Ching$^{\S\dagger}$` has only the line
+  `$^{\S\dagger}$…Missouri…`, `R.H.~French$^{\S}$` only DuPont's; a run no line leads with stays the marks it is written
+  of (`R.~Podgornik$^{\dagger\star}$`).
+- **Nits** (findings 5-8, decision 3): a mark `split_text_marks` parts from a line's text is a footnote symbol only when
+  its characters are `\@fnsymbol`'s (`#`, a `★` set in text: marks of no such kind, their legend ruling 1's); an entry of
+  no label is no legend (`.all()` of none); an API entry a symbol leads (`api:leading-mark`) whose text names the
+  corresponding author or an equal contribution is that legend, a note of the names showing its mark (0812.1531's
+  `$^\star${corresponding author, e-mail: …}` in revtex's `\affiliation` was Curtarolo's affiliation; 1902.02631,
+  2205.09074, 2504.15015, 1412.0709, 2409.11440) — only those: the call declares an affiliation, an address change is
+  one, and a funding word names an institution as often (`$^\dagger$Science \& Finance, Capital Fund Management, …`,
+  0710.0802); the comparator's `part` is one line, or a run of lines, of the joined entry (`Resolved::continued`, the
+  dump's `continued`, `is_line_run`; a dump made before r8, no lines, keeps r7's substring), today's one contact of an
+  API call's affiliations and its legend is their sequence (`affiliation_rule_of`'s `pieces_rule`: 2409.11440, 2306.16240,
+  2608.17299), and of two shadow items of one kind and text the rule kept is a ruling's change (ruling 3's second print,
+  2509.23109: its order no longer decides it).
+Not done (r8 residual): jpconf's `\footnote[<n>]` sets the counter (jpconf.cls:145-146) where the rehearsal's binding
+does not, so a bare `\footnotemark` after it shows the kernel's count (`Cat Cole\footnotemark` after `\footnote[3]`: the
+PDF's 4, the shadow's 1); a homepage spelled by no name's spelling (1401.0489's `~laci`) stays in the note; and, found by
+r8's census unset vs set, pre-existing: the rehearsal leaves a box register an author block `\usebox`es changed (its
+content then wrapped in an `ltx:text`: 2405.14627, 2603.26792) and, under siamart, algorithmic's `\AND` printing a plain
+"and" (2409.10200) — the switch is not yet output-neutral there (SYNC row "FM shadow rehearsal leaks", RED repro
+`sectioning-frontmatter/observer_rehearsal_leaves_a_used_box_unchanged.tex`). Guards
+`perfect_kernel_batchfms2a2r8::*` (10; each red on r7 but the XML pin and the address-line positive control: the
+convert shapes by r7's own shadow dump, the resolver-level unlabelled entry by its code), the re-pinned
+`perfect_kernel_batchfms2a2::{notes_keep_their_whole_text, notes_labels_and_contacts,
+prefix_marks_on_a_sole_line_and_a_sole_authors_orphans}`, `perfect_kernel_batchfms2a2r6::an_unmarked_notes_link_is_a_names_only_by_spelling`,
+`perfect_kernel_batchfms2a2r7::a_mark_glyphs_legend_is_a_note`; engine unit tests
+`resolver::tests::{a_links_page_is_its_last_segment_or_its_host, items_in_source_order}`; ab_audit
+`fmshadow::tests::{note_order_is_compared, a_part_is_a_line_or_a_run_of_lines}`; the repro
+`sectioning-frontmatter/jpconf_copy/observer_jpconf_note_marks.tex` (the stand-in class gains jpconf.cls:130-153).
 
 ### 840. A space a name sets before its own mark is the name's; spacing-only math, `\enskip` after a mark part names
 

@@ -41,6 +41,10 @@ use super::{
   *,
 };
 
+/// Where an association came from: the ledger index of its block or API call, and its span (unique only within a
+/// block).
+pub(super) type Source = (usize, Option<(u16, u16)>);
+
 /// One association the resolver made: a contact, an affiliation or a note, with its text, its label and the rule.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Assoc {
@@ -73,14 +77,17 @@ pub struct RCreator {
 /// A document's resolution.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Resolved {
-  pub creators: Vec<RCreator>,
+  pub creators:  Vec<RCreator>,
   /// what no creator owns: the author block's own (a trailing nameless creator in the XML, OD #159)
-  pub block:    Vec<Assoc>,
+  pub block:     Vec<Assoc>,
   /// what the rulings dropped: a note whose content all became contacts (ruling 4), with its text — kept for the
   /// comparison, which reads today's note there as the ruling's change
-  pub dropped:  Vec<Assoc>,
+  pub dropped:   Vec<Assoc>,
   /// per block (ledger index): the policy entry it ran under
-  pub policies: Vec<(usize, &'static str)>,
+  pub policies:  Vec<(usize, &'static str)>,
+  /// the lines of each entry that unmarked lines under it continued (`line:continued`), each as printed — what today's
+  /// prints as one contact a line (the comparison's `part`, review revfms2a2_7 finding 5)
+  pub continued: Vec<Vec<String>>,
 }
 
 /// A resolver input: an author block (its events as the lexer gave them) or an API call made apart from the blocks.
@@ -196,6 +203,8 @@ struct Resolver {
   /// the footnote texts the document made (ledger index, flushes before it, printed mark, text), each read where a
   /// name shows its mark (`answer_note_texts`)
   note_texts:       Vec<(usize, usize, String, String)>,
+  /// the entries unmarked lines continued (their source) with their lines (`continue_entry`, `Resolved::continued`)
+  continued:        Vec<(Source, Vec<String>)>,
 }
 
 /// A note's link placed once every name of the document is read (`Resolver::answer_note_links`; main-session decisions
@@ -208,6 +217,8 @@ enum NoteLink {
   Link {
     owner:    Option<usize>,
     assoc:    Assoc,
+    /// the link's target (a `\url`'s text, an `\href`'s first argument)
+    target:   Option<String>,
     fallback: bool,
   },
   Note {
@@ -215,7 +226,7 @@ enum NoteLink {
     note:     Event,
     owner:    Option<usize>,
     rule:     String,
-    links:    Vec<Assoc>,
+    links:    Vec<(Assoc, Option<String>)>,
     fallback: bool,
   },
 }
@@ -263,6 +274,7 @@ impl Resolver {
       annotated:        Vec::new(),
       fn_requests:      Vec::new(),
       note_texts:       Vec::new(),
+      continued:        Vec::new(),
     }
   }
 
@@ -424,6 +436,11 @@ pub fn resolve(inputs: &[Input]) -> Resolved {
   resolver.held_before_creators();
   resolver.sole_author_takes_the_block();
   let mut out = resolver.out;
+  out.continued = resolver
+    .continued
+    .into_iter()
+    .map(|(_, lines)| lines)
+    .collect();
   if !resolver.replaced.is_empty() {
     // (and the block's own items of a replaced call: today's `\lx@clear@frontmatter` keeps nothing of it — 2510.26354's
     // first `\author`, whose `firstname.lastname@h-its.org` the second call's addresses write out)
@@ -442,7 +459,33 @@ pub fn resolve(inputs: &[Input]) -> Resolved {
       !resolver.replaced.contains(&(at - 1))
     });
   }
+  // (each creator's notes and contacts, and the block's own, in source order — the order the PDF prints them: a note
+  // and a link placed once every name is read (`answer_note_links`) came after the ones the source gives later,
+  // `\author{Ann Able\thanks{\url{ann@x.org}, \url{zed@y.org}}\thanks{Second note.} \and Bob Baker}` read `[Second
+  // note., ann@x.org, zed@y.org]` — review revfms2a2_7 finding 1, FM S2a.2 r8)
+  for creator in &mut out.creators {
+    in_source_order(&mut creator.notes);
+    in_source_order(&mut creator.contacts);
+  }
+  in_source_order(&mut out.block);
   out
+}
+
+/// `items` in source order: those with a source sorted by it (its block or API call's ledger index, then its span's
+/// start — spans are positions within one block), stably, in the places they held; one without a source stays where it
+/// is.
+fn in_source_order(items: &mut [Assoc]) {
+  let slots: Vec<usize> = (0..items.len())
+    .filter(|&i| items[i].source.is_some())
+    .collect();
+  let mut sourced: Vec<Assoc> = slots.iter().map(|&i| items[i].clone()).collect();
+  sourced.sort_by_key(|a| {
+    a.source
+      .map(|(index, span)| (index, span.map(|(start, _)| start)))
+  });
+  for (slot, assoc) in slots.into_iter().zip(sourced) {
+    items[slot] = assoc;
+  }
 }
 
 /// The resolver's inputs from the ledger: each block rehearsed (its events), and each API call made apart from a
@@ -619,6 +662,61 @@ mod tests {
     );
     assert!(ann.contacts.is_empty() && resolver.roles[0].is_empty());
     assert!(resolver.out.block.is_empty());
+  }
+
+  /// FM S2a.2 r8 (main-session decision 1 on r7, review revfms2a2_7 finding 3): a link's page is its last path segment, an
+  /// `index.*` or `*.html` page after it aside, else its host.
+  #[test]
+  fn a_links_page_is_its_last_segment_or_its_host() {
+    assert_eq!(link_page("http://www.pengxu.net/"), "pengxu.net");
+    assert_eq!(
+      link_page("https://sites.google.com/view/kschewior"),
+      "kschewior"
+    );
+    assert_eq!(
+      link_page("http://insti.physics.sunysb.edu/~siegel/plan.html"),
+      "~siegel"
+    );
+    assert_eq!(
+      link_page("https://example.org/~cole/index.php?x=1#top"),
+      "~cole"
+    );
+    assert_eq!(
+      link_page("https://github.com/KuangenZhang/StructuredRL"),
+      "StructuredRL"
+    );
+    assert_eq!(
+      link_page("https://mengyuest.github.io/gnn_vae_coord/"),
+      "gnn_vae_coord"
+    );
+    assert_eq!(
+      link_page("https://staff.aist.go.jp/kamimura.a/accvideo.mp4"),
+      "accvideo.mp4"
+    );
+    assert_eq!(link_page("index.html"), "index.html");
+  }
+
+  /// FM S2a.2 r8 (review revfms2a2_7 finding 1): items in source order, by ledger index then span; one without a source
+  /// keeps its place.
+  #[test]
+  fn items_in_source_order() {
+    let item = |text: &str, source: Option<(usize, Option<(u16, u16)>)>| Assoc {
+      role: "thanks".into(),
+      text: text.into(),
+      label: None,
+      rule: String::new(),
+      source,
+    };
+    let mut items = vec![
+      item("b", Some((3, Some((40, 50))))),
+      item("x", None),
+      item("c", Some((7, None))),
+      item("a", Some((3, Some((10, 20))))),
+    ];
+    in_source_order(&mut items);
+    assert_eq!(items.iter().map(|a| a.text.as_str()).collect::<Vec<_>>(), [
+      "a", "x", "b", "c"
+    ]);
   }
 
   #[test]

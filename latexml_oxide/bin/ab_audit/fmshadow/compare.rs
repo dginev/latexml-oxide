@@ -110,14 +110,28 @@ pub(super) fn rule_of(shadow: &Tuples, kind: &str, text: &str) -> Option<String>
   if let Some(rule) = rule_maps(shadow).find_map(|rules| rules.get(&key)) {
     return Some(format!("moved {rule}"));
   }
-  let prefix = format!("{kind}\t");
-  let pieces: Vec<(&str, &str)> = rule_maps(shadow)
-    .flat_map(|rules| {
-      rules.iter().filter_map(|(k, rule)| {
-        k.strip_prefix(prefix.as_str())
-          .filter(|p| !p.is_empty() && *p != text)
-          .map(|p| (p, rule.as_str()))
-      })
+  pieces_rule(shadow, &[(kind, &|_| true)], text)
+}
+
+/// A kind of shadow item and the rules of it a lookup takes ([`pieces_rule`]).
+pub(super) type PieceKind<'a> = (&'a str, &'a dyn Fn(&str) -> bool);
+
+/// [`rule_of`]'s sequences and parts: `text` as two or more of the shadow's items of the `kinds` (each with the rules it
+/// takes) written together, else one line or a run of lines of an item its continuation lines joined.
+pub(super) fn pieces_rule(shadow: &Tuples, kinds: &[PieceKind<'_>], text: &str) -> Option<String> {
+  let pieces: Vec<(&str, &str)> = kinds
+    .iter()
+    .flat_map(|(kind, takes)| {
+      let prefix = format!("{kind}\t");
+      rule_maps(shadow)
+        .flat_map(|rules| {
+          rules.iter().filter_map(|(k, rule)| {
+            k.strip_prefix(prefix.as_str())
+              .filter(|p| !p.is_empty() && *p != text && takes(rule))
+              .map(|p| (p, rule.as_str()))
+          })
+        })
+        .collect::<Vec<_>>()
     })
     .collect();
   // (the text as a sequence of two or more pieces: the first piece's rule, the shortest such sequence)
@@ -173,7 +187,9 @@ pub(super) fn rule_of(shadow: &Tuples, kind: &str, text: &str) -> Option<String>
     // (or one line of a shadow item that its continuation lines joined into one affiliation (`line:continued`): today's
     // one contact a line where the shadow reads the lines as one entry — `$\dagger$ Laboratory of Physical and
     // Structural Biology, NICHD, Bld. 9, Rm. 1E116 \\ National Institutes of Health, …` under the `†` carriers once the
-    // lexer reads `$\diamond$` as a mark, 0907.1243, FM S2a.2 r7 — the joined item's rule, `part …`)
+    // lexer reads `$\diamond$` as a mark, 0907.1243, FM S2a.2 r7 — the joined item's rule, `part …`: its lines, one or
+    // a run of them, as the dump holds them, `continued`; FM S2a.2 r8, review revfms2a2_7 finding 5 — the middle of
+    // a line explained nothing)
     _ => pieces
       .iter()
       .filter(|(piece, rule)| {
@@ -181,10 +197,26 @@ pub(super) fn rule_of(shadow: &Tuples, kind: &str, text: &str) -> Option<String>
           && text.len() >= 8
           && piece.len() > text.len()
           && piece.contains(text)
+          && is_line_run(shadow, piece, text)
       })
       .map(|(_, rule)| format!("part {rule}"))
       .next(),
   }
+}
+
+/// Whether `text` is one line, or a run of lines, of a shadow entry its continuation lines joined into `piece`
+/// ([`Tuples::continued`]); any part of it when the dump holds no lines (one made before FM S2a.2 r8).
+pub(super) fn is_line_run(shadow: &Tuples, piece: &str, text: &str) -> bool {
+  if shadow.continued.is_empty() {
+    return true;
+  }
+  shadow
+    .continued
+    .iter()
+    .filter(|lines| lines.concat() == piece)
+    .any(|lines| {
+      (0..lines.len()).any(|i| (i + 1..=lines.len()).any(|j| lines[i..j].concat() == text))
+    })
 }
 
 /// The shadow rule that decided an XML note's text ([`rule_of`]): a note of the shadow's, or an entry's legend it read as
@@ -198,11 +230,31 @@ pub(super) fn note_rule_of(shadow: &Tuples, text: &str) -> Option<String> {
 /// The shadow rule that decided an XML affiliation's text ([`rule_of`]): an affiliation of the shadow's, or a labelled
 /// line's entry it read as a legend, a note (`ruling1:request`, `ruling2:symbol-line`: `$^{\$}$These authors contributed
 /// equally to this work.` under the names marked `$`, 1910.10432 — FM S2a.2 r7, a legend's mark a symbol).
+/// An API entry's too, led by its symbol (`api:leading-mark`: `\affiliation{… \\ $^\star${corresponding author, e-mail:
+/// …}}`, 0812.1531 — FM S2a.2 r8, review revfms2a2_7 finding 8).
+///
+/// Or the shadow's affiliations and an API entry's legend notes written together: today's one contact of a call's
+/// affiliations and its legend (`\country{$^1$SJTU, $^2$Infinigence-AI, $^*$Equal contributions}`, 2409.11440; elsarticle's
+/// `\address{$^1$… \\ $^*$Corresponding author …}`, 2306.16240) — the first piece's rule (`overlaps …`); a block's
+/// legend lines welded on are the PDF-confirmed class (`legends_welded_on`).
 pub(super) fn affiliation_rule_of(shadow: &Tuples, text: &str) -> Option<String> {
-  rule_of(shadow, "affiliation", text).or_else(|| {
-    rule_of(shadow, "note", text)
-      .filter(|rule| rule.contains("ruling1:request") || rule.contains("ruling2:symbol-line"))
-  })
+  let legend = |rule: &str| {
+    rule.contains("ruling1:request")
+      || rule.contains("ruling2:symbol-line")
+      || rule.contains("api:leading-mark")
+  };
+  rule_of(shadow, "affiliation", text)
+    .or_else(|| rule_of(shadow, "note", text).filter(|rule| legend(rule)))
+    .or_else(|| {
+      pieces_rule(
+        shadow,
+        &[
+          ("affiliation", &|_| true),
+          ("note", &|rule| rule.contains("api:leading-mark")),
+        ],
+        text,
+      )
+    })
 }
 
 /// The shadow rule that explains an XML e-mail printing several addresses (`raw`, as the XML holds it: today's whole
@@ -430,6 +482,31 @@ pub fn compare(shadow: &Tuples, xml: &Tuples) -> Vec<Disagreement> {
         format!("{}: xml-only {text} (in the name)", sc.name),
       );
     }
+    // (the notes both hold, in the order each prints them: a note the shadow placed late came after the ones the source
+    // gives later — review revfms2a2_7 finding 1, FM S2a.2 r8 —, the rule of the first the shadow holds out of today's
+    // place: a legend ruling 1 places by its label is today's last, relocated, where the shadow keeps the source's order
+    // (`$\dagger$Corresponding author` before the funding note, 2607.03557))
+    if let Some((shadow_order, xml_order)) = note_orders(&snotes, &xnotes, sc, xc, &without_orcids)
+    {
+      let first = shadow_order
+        .iter()
+        .zip(&xml_order)
+        .find(|(a, b)| a != b)
+        .map(|(a, _)| a.clone());
+      let rule = first
+        .and_then(|key| sc.rules.get(&format!("note\t{key}")))
+        .map(|rule| format!("order {rule}"));
+      push(
+        "note-order",
+        rule,
+        format!(
+          "{}: shadow [{}] xml [{}]",
+          sc.name,
+          shadow_order.join(" | "),
+          xml_order.join(" | ")
+        ),
+      );
+    }
   }
   // the block's own (the XML's nameless creator, OD #159), compared as a multiset as the creators' items are
   let block = |t: &Tuples| {
@@ -450,10 +527,10 @@ pub fn compare(shadow: &Tuples, xml: &Tuples) -> Vec<Disagreement> {
   }
   for item in minus(&xb, &sb) {
     let (role, text) = item.split_once('\t').unwrap_or(("", &item));
-    let rule = if role == "note" {
-      note_rule_of(shadow, text)
-    } else {
-      rule_of(shadow, role, text)
+    let rule = match role {
+      "note" => note_rule_of(shadow, text),
+      "affiliation" => affiliation_rule_of(shadow, text),
+      _ => rule_of(shadow, role, text),
     };
     let rule = rule.or_else(|| {
       xml
@@ -488,6 +565,37 @@ pub fn compare(shadow: &Tuples, xml: &Tuples) -> Vec<Disagreement> {
       }
     })
     .collect()
+}
+
+/// The notes a creator's two sides both hold (`shadow` and `xml`, as multisets), each side's in its order, when the
+/// orders differ.
+pub(super) fn note_orders(
+  shadow: &BTreeMap<String, usize>,
+  xml: &BTreeMap<String, usize>,
+  sc: &TCreator,
+  xc: &TCreator,
+  key: &dyn Fn(&String) -> String,
+) -> Option<(Vec<String>, Vec<String>)> {
+  let common: BTreeMap<String, usize> = shadow
+    .iter()
+    .filter_map(|(k, n)| xml.get(k).map(|m| (k.clone(), (*n).min(*m))))
+    .collect();
+  let order = |notes: &[String]| {
+    let mut left = common.clone();
+    notes
+      .iter()
+      .map(key)
+      .filter(|k| {
+        left.get_mut(k).is_some_and(|n| {
+          let take = *n > 0;
+          *n = n.saturating_sub(1);
+          take
+        })
+      })
+      .collect::<Vec<_>>()
+  };
+  let (s, x) = (order(&sc.notes), order(&xc.notes));
+  (s != x).then_some((s, x))
 }
 
 /// The matched `(shadow, xml)` index pairs of two name lists, in order.

@@ -237,6 +237,7 @@ do not block the E/F rerun.
 | — | An author's mark whose label holds any control sequence prints nothing: the mark reader reads the label from the operand's unexpanded text (`author_macros.rs:198` `clean_frontmatter_labels(&operand.to_string(),…)`), which no list answers, so `\textsuperscript{\relax 3}` loses its "3" (pdflatex "Ann Alpha3"), `\textsuperscript{\one}` and `\textsuperscript{\protect 2}` their "1" and "2", `\textsuperscript{\relax 1\thanks{a}}` and `\textsuperscript{\protect 2\thanks{b}}` keep the note but lose the label, as do `1\protect\protect\thanks{b}`, `{\protect}1\thanks{f}` and `\protect\protect\thanks{c}`, and `1,\protect\one\thanks{n}` gives `<sup>1</sup>` where pdflatex prints "1,1". No error is reported. int62a, int63a and 78v alike (older than 78v); synthetic, no census paper. Fix: read the label from what it typesets (expand macros, drop an unexpandable `\relax`/`\protect`) before matching it. Review rev78v2 finding 6a, widened by rev78v3 finding 3 (probes `rev78v3/q/pl.tex`, `pra.tex`, `prc.tex`, `rev78v2/p/sh3.tex`); RED repro `sectioning-frontmatter/author_mark_relax_before_its_label` | open |
 | — | A note macro reached through four macros (`\fnM→\fnN→\fnO→\fnP{8\footnotemark}`) inside an author's mark loses both its "8" and the footnotemark (pdflatex "Di Delta8†"): `makes_a_note`/`prints_beside_a_note` (author_block/preprocess.rs) look three deep at most, so the macro is neither taken out nor read in place and stays in a label nothing answers. int62a, int63a and 78v alike; synthetic. Fix: past the depth bound, fall back to taking the macro out whole (the int62a behaviour for a note macro). Review rev78v2 finding 6b; RED repro `sectioning-frontmatter/author_mark_four_deep_note_macro_chain` | open |
 | — | Author marks: inside a note macro's body, a `\protect` before another note-making macro (`\newcommand\fnL{\footnotemark}`, `\newcommand\fnB{7\protect\fnL}`, `Lu L\textsuperscript{\fnB}`) is not label-safe, so the macro is taken out whole and its "7" lands in the name text: `L7[mark]` where 78v r2 gave `L[mark]<sup>7</sup>` (pdflatex "L7§"). `prints_beside_a_note` (`author_block/preprocess.rs:233-236`) lets a `\protect` through only before a note command, where `split_mark_notes` (`:105-108`) also takes one before a note-making macro. Markup only, nothing printed lost; 78v r3 = int63a; synthetic, no census paper. Fix: accept a `\protect` before a `makes_a_note` macro in the body loop as `split_mark_notes` does, a row in `perfect_kernel_batch78v::author_protect_thanks_and_note_macro_inside_a_mark`, OD #881 "before a note command or note macro". Review rev78v3 finding 1 (probe `rev78v3/q/prb.tex`) | open |
+| — | **FM shadow rehearsal leaks into the conversion** (FM S2a.2 r8's census, unset vs set; pre-existing — int69b and r7 alike; r7's proof compared set with set): a box register an author block prints with `\usebox` comes out wrapped in an `ltx:text` with `LATEXML_FM_SHADOW` set (2405.14627's ORCID icon `\usebox{\ORCIDicon}`, 2603.26792's `\includegraphics` in an `\href`); under siamart220329 algorithmic's `\AND` prints a plain "and" after the rehearsal (2409.10200). RED repro `sectioning-frontmatter/observer_rehearsal_leaves_a_used_box_unchanged.tex`. 3 of 26,323 census papers, none revtex4_support; blocks S2b beyond its pilot family (and any pilot paper that prints a box) | open |
 | — | Frontmatter e-mail ↔ name spelling: an address that spells an author with an umlaut written out (`ü` as `ue`, `duerrschnabel@` for Dürrschnabel, 1911.11496) is not matched, so it goes unspelled (to the block). The spelling helper is shared by today's output and the FM S2 shadow. Fix: fold the German umlaut transliterations (ä→ae, ö→oe, ü→ue, ß→ss) into the comparison when the plain fold fails. FM S2a.2 r6 decision 3 sample | open |
 | — | Graphics search order: LaTeX's `\IfFileExists` tries the bare name in the working directory first (kpathsea, latex.ltx:1095-1102) and only then the `\input@path`/`\graphicspath` entries (`\@iffileonpath`, latex.ltx:9698), where `image_candidates` (`util/image.rs:36-41`, Perl Image.pm:46-48 alike) lists `\graphicspath` entries first and SOURCEDIRECTORY last: with `\graphicspath{{../up/}{./}}` and a `u.pdf` in both, pdflatex reads `./u.pdf`, ours `../up/u.pdf` (for the extensionless name and the `.eps`-retry alike). Older than 78v (int63a the same). Also `graphics_type_rank` ranks `.MPS` among the uppercase types, which pdftex.def:599 does not list (no practical effect). Review rev78v3 findings 2 and 4 (probe `rev78v3/g/sub/g3.tex`) | open |
 | — | caption: a ruled/boxed float.sty float resets the label format and separator to its style's (caption.sty:864-866 `\caption@setstyle*\float@style`), so pdflatex prints "Algorithm 1 Two." under a global `labelformat=allcaps` where ours prints "ALGORITHM 1" (2106.08363 wiley-article; boxed format "[Listing] 1", 2109.00138); untyped settings should give way to the style's, typed `\captionsetup[algorithm]` still apply (LIPIcs). Review rev78s2 finding 2 | FIXED 78v (a float.sty type's style recorded, `\DeclareCaptionStyle` a caption style, caption.sty's `ruled` declared unless its `ruled` option; `caption_setting`, `float_style_setting`; guards `perfect_kernel_batch78v::{caption_ruled_float_sty_float_takes_its_style, caption_declared_ruled_style_formats_a_ruled_float}`; residual resolved by 78y r2's `float_sty_caption` label-font reset, caption.sty:860-861: under `[ruled,labelfont=it]{caption}` a ruled and a boxed float's labels are italic only, pdflatex's CMTI10 alone, re-measured on int67a 78z, review rev78y2 finding 4; guard `perfect_kernel_batch78z::caption_ruled_option_ruled_float_takes_caption_label_font`) |
@@ -6994,7 +6995,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   marks of no footnote-symbol kind (their legend lines legends), a bar, colon, math dot, bullet or dash standing alone as
   a word separator (6 of the 7 edge-glyph names; 2003.01448's `J .` is the source's print, a dash inside a word stays as
   typed — hep-ex9811040); a `\footnote[1]`'s mark answers `\affiliation{\footnotemark[1]…}` (`note_marks`,
-  `mark:footnote`: 1607.07280, hep-th0302032, nucl-th9803030, 2608.27295 now right) — its print read by
+  `mark:footnote`: 1607.07280, hep-th0302032, nucl-th9803030, 2608.27295 — their affiliations now right;
+  hep-th0302032 keeps 2 unclassified rows, the e-mails its names hold as footnotes, and stays among revtex's 23) — its print read by
   `note_mark_quietly`, which unwinds a runaway (jpconf.cls:153's `\@fnsymbol`: 1105.2659 went Fatal and 0709.0673 lost
   its name on the first r7 build, found by this census) and holds no rehearsal past `\@fnsymbol`'s nine; the comparator
   explains a line of a continued entry (`part …`), a legend note against today's affiliation and back. Guards
@@ -7014,8 +7016,8 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   unchanged. **revtex4_support gate**: the seeded `sha256("606:"+key)` draw over its 382 classified-only papers gives
   r6's 41 again; 40 have the rows they had, 1607.07280's changed and now matches the PDF — **39 of 39 right**
   (cond-mat0007316, hep-ph0002275 no PDF): passes (≥ 95 %, 0.4 % < 0.5 %). Residuals: a glued two-symbol run one line
-  and one name show as written (`§†`, 0907.1243 — each line to every carrier of either; the one census paper),
-  repository urls under an author's account become that author's (2008.12970, 2511.08416 — the url rule as decided),
+  and one name show as written (`§†`, 0907.1243 — each line to every carrier of either; the one census paper; r8),
+  repository urls under an author's account become that author's (2008.12970, 2511.08416 — r8's page rule),
   `M$^{\rm c}$Hardy` (2003.01448) parted.
   **Landing (int72, 458382f335 cherry-picked onto int71 d56a5027de as 83c5f9ee04; binary int72a):** review revfms2a2_7 LAND
   (shadow-only proven again on 40 papers, seed `rev7-` + 10 witnesses incl. 1105.2659 and 0709.0673; the main-session decisions
@@ -7023,6 +7025,46 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   nextest 7133/7133 + cortex 10/10, fmt/clippy/rustdoc clean, inits 0/0, dump content diff vs int71a empty; A/B int71a → int72a
   on int65's 724 papers byte-identical with `LATEXML_FM_SHADOW` unset AND set (E 169 = 169, F 1 = 1, words equal, 0 changed).
   Binding nets 136/136, 0 worse than int71a.
+  **r8** (OD #837 "S2a.2 r8"; branch pk/fms2a2r8 from r7 458382f335; review revfms2a2_7 findings 1-8 and the main
+  session's decisions 1-4 on r7's questions): a creator's notes and contacts, and the block's own, in source order once
+  `resolve` ends (`in_source_order` — a note kept once every name is read came after the later ones,
+  `[Second note., ann@x.org, zed@y.org]`), and the comparator sees note order (`note-order` rows, unclassified unless a
+  ruling placed the first note out of today's place); an ownerless note's link to its speller or left in its text, never
+  the block's (`fallback` asks an owner); a url an author's only as the page it spells (`link_page`: the last path
+  segment, an `index.*`/`*.html` page aside, else the host; read from an `\href`'s target) — repositories, projects and
+  files under an account stay in the note (2008.12970, 2511.08416, 2103.05251, 2503.02954, 2509.01952), the 21 homepages
+  of 12 census papers stay their authors' (1409.7028, 1603.02588, 1909.06689, 2001.02600, 2103.04211, 2210.15991,
+  2301.03638, 2601.07017, 2604.11526, 2609.10517), and a page no name spells is no one's, the note's only link too
+  (1401.0489's `~laci` among them); an address link is the address (`\href{mailto:…}`, an address-group `\url`);
+  jpconf's note marks its arabic `\thefootnote` (`TitleMarks::Body`: 1105.2659 shows "3", its PDF's) and a bare
+  `\footnotemark`'s print read quietly; a glued symbol run a line leads with and a name shows one mark
+  (`glue_shown_runs`: 0907.1243's Ching has only the Missouri line, French only DuPont, as the PDF — still classified,
+  its other rows today's every-line-to-everyone); a text mark a footnote symbol only of `\@fnsymbol`'s characters; an
+  unlabelled entry no legend; an API entry's correspondence or equal-contribution legend a note (0812.1531, 2605.28357,
+  2501.04244; not a funding word, 0710.0802's Capital Fund Management); the comparator's `part` line-exact (the dump's
+  `continued`), an API call's affiliations-plus-legend one contact explained as their sequence, a collision of two
+  items of one text keeping a ruling's rule (2509.23109). Guards `perfect_kernel_batchfms2a2r8::*` (10), five re-pinned
+  (fms2a2 3, r6 1, r7 1), engine unit tests (2), ab_audit `fmshadow::tests` (+2). **Shadow-only proof** (the r8 release's
+  code, int69b vendor dumps): int65's 725 papers and the 989 sectioning-frontmatter repros XML byte-identical
+  int69b → r8 with `LATEXML_FM_SHADOW` unset AND set (E 179, F 1, W 8,425 each, words 9,802,513 each; repros E 23,
+  W 39 each, one `\today` past midnight); the census's 26,323 papers r8-set and r8-unset each against int69b-set: set
+  identical but 2109.00764 and 2208.11989 (a printed clock, `\today`), E 5,759 / F 18 / W 333,911 all three; unset the
+  same plus 2109.00445 (a time-budgeted math parse; three reruns give the base) and three papers whose XML int69b and r7
+  print differently with the switch unset and set — a pre-existing rehearsal leak (row below; r7's proof compared
+  int69b-set with r7-set only). **r8 census** (26,323, `--re-resolve`; the same rows as r8's resolver on r7's dumps):
+  agree 19,510, classified 1,882, unclassified 1,814 (**7.8 %**, r7 1,816): 30 papers moved, none to unclassified — 18
+  classified → agree (the url rule: repositories, projects and fallback urls left in their notes), 10 agree →
+  classified (API legends as notes 8, 2206.14396's the block's; a homepage behind `\href{…}{work}`, 2210.15991;
+  2607.03557's note order), 2 unclassified → classified (1802.05992's block legend explained as today's affiliation,
+  1910.01401's second ORCID print by its ruling-4 rule); one `note-order` row in the census, 2607.03557's (classified: today's relocates
+  the legend last). Per family as r7 but kernel 14.3 % (967), elsart_support_core 6.0 %, binding 8.2 %. **revtex4_support
+  gate**: 5,639 papers, **23 unclassified (0.4 %)**, the same 23 as r7 (hep-th0302032 among them); 383 classified-only
+  (1412.0709 joins, an API legend); the seeded `sha256("606:"+key)` draw gives r7's 41: 38 with their r7 rows, 3 with
+  roles changed only — 0812.1531, 2605.28357, 2501.04244's `†`/`∗` correspondence and equal-contribution entries now
+  legend notes, as their PDFs print them — **39 of 39 right**. 0907.1243 classified, Ching and French now as the PDF.
+  Residuals: jpconf's `\footnote[<n>]` sets the counter where the rehearsal's binding does not (a later bare
+  `\footnotemark` shows the kernel's count); a homepage no name's spelling reaches (1401.0489's `~laci`) stays in its
+  note.
 
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's

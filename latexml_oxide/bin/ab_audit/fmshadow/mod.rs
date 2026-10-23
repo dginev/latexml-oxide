@@ -46,6 +46,9 @@ pub struct Tuples {
   pub block_rules: BTreeMap<String, String>,
   /// the shadow's rules for what the rulings dropped (an emptied note, ruling 4): `note\ttext` → rule
   pub dropped:     BTreeMap<String, String>,
+  /// the shadow's entries that unmarked lines continued, each its lines normalised (`FmResolved::continued`; empty for
+  /// a dump made before FM S2a.2 r8)
+  pub continued:   Vec<Vec<String>>,
 }
 
 /// The role a block item is compared under: an affiliation or an address `affiliation`, a note of any role `note`, a
@@ -264,13 +267,23 @@ fn orcid_id(text: &str) -> &str {
 /// comparison does not tell a note given as a contact from a note.
 fn is_note_role(role: &str) -> bool { matches!(role, "note" | "thanks") }
 
+/// An item's rule, by its kind and text; of two items of one kind and text (ruling 3: one per print event — an address in
+/// a note and on the line under it, 2509.23109), the rule of a ruling's change, the reason the shadow holds the second,
+/// whatever their order (FM S2a.2 r8 sorts a creator's contacts by source).
 fn assoc_rule(rules: &mut BTreeMap<String, String>, kind: &str, assoc: &FmAssoc) {
   let text = if kind == "orcid" {
     orcid_id(&assoc.text)
   } else {
     &assoc.text
   };
-  rules.insert(format!("{kind}\t{}", norm(text)), assoc.rule.clone());
+  let key = format!("{kind}\t{}", norm(text));
+  if rules
+    .get(&key)
+    .is_some_and(|held| is_change_rule(held) && !is_change_rule(&assoc.rule))
+  {
+    return;
+  }
+  rules.insert(key, assoc.rule.clone());
 }
 
 /// The shadow's tuples, from a resolution.
@@ -315,6 +328,11 @@ pub fn shadow_tuples(resolved: &FmResolved) -> Tuples {
     }
     out.creators.push(creator);
   }
+  out.continued = resolved
+    .continued
+    .iter()
+    .map(|lines| lines.iter().map(|l| norm(l)).collect())
+    .collect();
   for a in &resolved.dropped {
     out
       .dropped
