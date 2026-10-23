@@ -324,27 +324,7 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   AMS-TeX's active `@` (KNOWN_PERL_ERRORS #1018, landed with it: math0005042 28 errors → 0, no Fatal). Repros
   `kernel-alignment/everycr_*`, `amstex/amstex_active_at_reads_the_arrows` (GREEN); guards `perfect_kernel_batch78b::*`.
 
-- **subcaption sets the main caption at 90 %** (PERL-ORIGIN; found by rev78a2; **FIXED 78c**, KNOWN_PERL_ERRORS #1021:
-  the sub-captions alone are `\small`, the guards re-pinned to the normal size): subcaption_sty.rs's
-  `\fnum@font@float`/`\format@title@font@float` are `\small` (Perl subcaption.sty.ltxml:34-35), so with subcaption loaded
-  every figure's and table's label and caption text read `fontsize="90%"`; pdflatex sets them in the text font (CMR10,
-  checked in jfm and in plain article + subcaption). Pinned as it is in
-  `perfect_kernel_batch78a::{jfm_copy_caption_yields_to_caption_loaders,
-  jfm_copy_caption_yields_to_caption_loaders_after_floatrow}` (repro
-  `class-bindings/jfm_caption/jfm_copy_caption_yields_to_subcaption`); open, small: drop the two `\small`s, then
-  re-pin the guards and the captions-floats goldens. 78c r2: a `\usepackage[<options>]{caption}` after subcaption (the
-  binding's caption load is the first) runs its options as caption3.sty:416-429 does (`caption.sty_keyval_setter`;
-  witness 1602.00134). Open (KPE #1021): sub-captions stay `\small` whatever `\captionsetup[sub]{font=…}`,
-  subcaption's `font=` or caption's global `font=small` (→ `smaller`, 8 pt) say (caption_sty.rs `passthrough`).
 
-- **svmult's main-matter `\appendix` starts the appendices** (PERL-ORIGIN, svmult_cls.rs:56 `\@appendix` + `\gdef\@chapapp
-  {\appendixname}`; found by rev78a3; **FIXED 78c**, KNOWN_PERL_ERRORS #1026: the main-matter `\appendix` is `\par`, the
-  sections are `\@arabic\c@section` without the chapter's reset until a `\title`, svm_app now "Chapter 2 After", "3 N"):
-  svmult.cls:713's `\appendix` is only `\par` — the main matter's sections keep
-  counting (78a r3 keeps that) and its chapters stay "Chapter N"; here a later `\backmatter\chapter{After}` prints
-  "Appendix A", "A.1" where pdflatex prints "Chapter 2 After", "3 N" (probe `svm_app`; int40c, 78a r1-r3 the same; none
-  of the 8 corpus svm papers with `\appendix` changes). Open, small: svmult's `\appendix` a `\par` outside the back
-  matter, its back-matter `\bppendix` as 78a r3 ports it.
 
 - **An svmult volume of several contributions numbers only the first** (GENUINE-RUST-ONLY kernel shape, predates 78c;
   rev78c finding 6, KNOWN_PERL_ERRORS #1026 open): the kernel's `\lx@maketitle@cleanup` (sect05.rs) lets `\title` and
@@ -361,19 +341,6 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   `\cref@currentlabel` keeps the enclosing item's type, as `\@currentlabel` its number). Fix: the `creftype…` tags of an
   `\item[…]` that takes another counter's label are that counter's type (not one line: the role-less and `typerefnum`
   tags stay the item's own). RED `list-structure/cref_to_a_description_item_in_an_enumerate`.
-- **biblatex-only `.bib` fields are digested under natbib/BibTeX** (GENUINE-RUST-ONLY, predates 77a; 77a r5 review
-  finding 3): 47 field handlers of latexml_engine/src/bibtex.rs, none in Perl's BibTeX.pool — the block at :1962-2172
-  (19 defaults: `journaltitle`, `location`, `urldate`, `titleaddon`, `addendum`, `maintitle`, `mainsubtitle`,
-  `maintitleaddon`, `booksubtitle`, `booktitleaddon`, `issuetitle`, `issuesubtitle`, `eventtitle`, `eventtitleaddon`,
-  `venue`, `eventdate`, `editora`, `editorb`, `editorc`; 27 per-type variants: `inbook|incollection@location`,
-  `inbook|incollection|inproceedings@maintitle|mainsubtitle|maintitleaddon`, the book/proceedings host variants) and
-  `annotation` (:2337) — exist for the biblatex `.bib` route but are defined on every route, so natbib + plainnat
-  prints content the PDF does not have: pdflatex "Ann Able. Paper. J Real, 3:1–2, 2001." 0 errors; we print
-  "Main Work Title . Paper . Addon Words . J Real, \undefinedmacro Jt 3, pp. 1–2. Note: An addendum text Accessed:
-  2020-01-01" and `Error:undefined:\undefinedmacro` (Perl keeps the fields raw, `\bib@field@default@default`).
-  **FIXED 78i** (OD #823; quality ledger #155): the handlers moved next to the `shorthand`/`labelalpha` handlers the
-  biblatex binding defines after its `LoadPool!("BibTeX")` (biblatex_sty.rs); witnesses 2602.10008, 2606.11822; GREEN
-  `index-bib/natbib_biblatex_only_fields_are_raw_data` (77a r5 review probe n7) and its biblatex twin.
 
 - **etna's `\remark` ends by the class's `\@endtheorem`, which the native `\endtheorem` never runs** (SHARED, Perl 2; 70b
   E4): etna.cls:288-326 defines `\remark` as `{…\@begintheorem…}` (its `}` closes `\@begintheorem`'s `\bgroup`, its
@@ -493,15 +460,6 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   the note: "(restate=…)" in the title, the restated copy undefined. FIXED 77v: the key stores the theorem as
   `{restatable}` does (KNOWN_PERL_ERRORS #1006; repro package-bindings/thmtools_restate_key, guard
   `perfect_kernel_batch77v::thmtools_restate_key`).
-- **A restated theorem prints a reference, not its statement** (SHARED, Perl the same for `{restatable}`:
-  thm-restate.sty.ltxml:28 `\lx@thm@restate{}` = "See \ref{restatable:#1}"; 77v review finding 1): thm-restate's
-  `\<name>`/`\<name>*` (thm-restate.sty:103-184 `thmt@restatable`: `\thmt@stored@<name>` re-typesets the collected
-  body) restate the theorem in full, its head and statement again, numbered as the original; ours print "See ⟨ref⟩" —
-  the restated statement text is lost against the PDF wherever a paper restates (`{restatable}` and the `restate=` key;
-  2108.11527, 2602.09462, 2402.14202). **FIXED 78i** (KNOWN_PERL_ERRORS #1048): the store collects the body, `\<name>*`
-  replays it numbered as the original, `\<name>` as a new theorem, and `{restatable*}` (r2; 1702.04225) prints its
-  theorem with the later `\<name>`'s number by reference; guards `perfect_kernel_batch78i::{restated_theorem_prints_its_statement,
-  restatable_star_takes_the_later_number}`, `perfect_kernel_batch77v::thmtools_restate_key` (the restated statement).
 - **`\ifinner` is false in a display's array cell** (SHARED, Perl the same; 77k review Q3): an array cell's math is a
   formula of its own, so TeX's `\ifinner` is true there, inside `\[…\]` too (pdflatex "aI"; tex.web §1138-1145); we
   and Perl report false ("aD"). `\ifmmode` false at a cell's first token is TeX's own (it expands that token looking for
@@ -755,3 +713,262 @@ says otherwise.
 - **First-mechanism cascade study:** `\endgroup` 131 any / 5 sole, `\lx@begin@alignment` 54, TooManyErrors 46,
   `misdefined:#` 33 (int19 census).
 - **physics `\fbraces`/`\lparen`/`\rparen`** (physics.sty:158, :31-32; witness 2005.03021): the int20 open (d) row.
+
+### Archived-narrative residuals (digest 2026-10-23)
+
+The open items the batch and integration narratives 63a–int73 named ("Residual:", "Open:", RED repros, "follow-up", rulings
+awaited) when they moved to [`archive/SYNC_SESSIONS_2026-10.md`](../archive/SYNC_SESSIONS_2026-10.md) § "Moved 2026-10-23": 464
+extracted, 292 still open (74 fixed later, 78 covered by a live row, 10 accepted by a ruling, 10 not open items), merged
+by mechanism into the rows below; each status names its source batch and digest tag. Math rows are listed, not worked
+(parked, user directive 2026-10-02). Rows awaiting a ruling: FM-6, FM-13, FM-14, FM-15, FM-24, FM-31, BIB-5, BIB-9, KRN-7,
+KRN-15, KRN-17, KRN-28, KRN-40, CLS-36, REF-6. Keyword-mined: an item stated without any open-item word can be missing.
+
+
+#### Frontmatter / FM S2
+
+| # | Row | Status |
+|---|---|---|
+| — | `$^{*}$` the kernel shows itself (keepsup, an e-mail line) keeps ASCII `*` where pdflatex prints `∗`; `show_unanswered_marks` (base_utilities/frontmatter/insert.rs). Witness 1910.00401 (probe hb) | open (from 65e; digest FM-1) |
+| — | titling `\theauthor` empty under llncs, acmart, elsarticle, svjour3, aastex: their `\author` stores no `\@author` and calls no slot. RED `package-bindings/titling_setter_llncs` | open (from 65z; digest FM-2) |
+| — | authblk internals papers' `\affil` copies read are not kept (`\AB@las`, `\AB@au@str`, `\AB@thenote`), and an `\affil` copy's extra text (an `\email` written to `\AB@affillist`) is not in the frontmatter | open (from 65z; digest FM-3) |
+| — | IEEEtran author pre-scan: an empty affiliation contact from the skipped `\if` branch (2606.17718); same family RED `sectioning-frontmatter/ieeetran_authorrowbreak_leaves_no_empty_affiliation` (one empty affiliation contact) and RED `sectioning-frontmatter/authblk_ieeemembership_after_comma_affiliation_twice` (IEEEtran + authblk) | open (from 66f, 62zt, 62zk; digest FM-4) |
+| — | a `\par` in a frontmatter note pulls the formula after it into the styled text before it (`\lx@add@frontmatter{ltx:note}{{\bfseries Head:}\par\noindent $x$ -- v}` → `<text font="bold">Head:<Math/></text>`); kluwer's "Nomenclature:" heading (kluwer.cls:958-960) run in. RED `sectioning-frontmatter/frontmatter_note_par_then_math` | open (from 67y; digest FM-5) |
+| — | a creator's fuzzy name label keeps the commas of its shown marks (`Simon Lepage1,2` → `fuzzy:Simon_Lepage1` + a stray `2` that requests a shared mark's affiliation): 2508.03934 (David Picard loses LIGM), jheppub 1912.00557, svjour3 1810.10167; base_utilities/defs/author_macros.rs, Perl Base_Utility.pool.ltxml:870-876; needs one rule (shown marks as the requests for labelled affiliations) — **ruling pending**. RED `class-bindings/gretsi_v13_shared_mark_affiliation`; quality ledger rank 93 | open, ruling (from 68k, 77t (93); digest FM-6) |
+| — | the kernel's cautious name split keeps as one creator a names line holding `\footnotemark` (math0211283, math0301047, math0304096, math0405036), `,\ \&\ ` separators (math0408166, math0410384) or a `\footnotetext` in the list (0711.1928 + 6) | open (from 68r; digest FM-7) |
+| — | AMS-TeX author block: `\thanks…\endthanks` inside `\author` is garbled ("Ann Oneartially supported." + a note "P"); `\footnote""{…}` is a "”" note and a paragraph (math0207223); an `\hbox`/`\vtop` author layout gives `<p>`s inside the personname (cond-mat9911046) | open (from 68r; digest FM-8) |
+| — | a mark after a comma and a space (`\author{S. G. Claudepierre, \altaffilmark{1,2} S. R. Elkington, …}`) goes to the next name (kernel author split). Witness 1010.3998 (aguplus) | open (from 68x; digest FM-9) |
+| — | fms1 residual missed lifts r7, r8, r14, r15 (finding 6, OD #715); `\hypersetup{pdftitle=\@title}` records RDF `dcterms:title` as the literal `\@title`, and our `\pdfstringdef` is a `\gdef`, so a copy made before `\maketitle` empties the store (Perl the same) | open (from fms1; digest FM-10) |
+| — | cmfne.cls (2210.02246): an empty `<para class="ltx_align_left"><p><text xoffset="36.0pt"/>` before the TOC since 74a — the class's `\@maketitle` finds `\abstractbox` non-void after the begin-code replay (cmfne.cls:777-791); no content lost, root cause open (low, one paper) | open (from 74a (d); digest FM-11) |
+| — | a class `\gdef\Title{#1}` stored by a refused `\title` and printed by the document renders empty (int26 review probe p2; re-measure since the replay runs the setter before filing as silent loss) | open (from int26; digest FM-12) |
+| — | a heading below section level inside an abstract stays inside it (OD #755's ruling covers section level only) — **needs a ruling** | open, ruling (from int26; digest FM-13) |
+| — | a class setter that stores into the kernel's `\@author` (jfpc.cls:188-191 builds `\def\@author` from its stores, 1503.05530) — **ruling needed** before the 75a generic off-table-store follow-up | open, ruling (from 75a; digest FM-14) |
+| — | vmsta 2018+ `\author@optarg` records each author under a `\csname`-made name and its list holds names, so #759's "holds the argument" test misses it; once #757 replays its `\maketitle` the author line, a duplicate of the creators and the e-mail line twice print (1806.03850, 1810.09667, 2012.03249) — **NEEDS A RULING**; vmsta2's local `\author` redefinitions under the lock (deferred, 1 paper) | open, ruling (from 75a (e), 62zj; digest FM-15) |
+| — | in a labelled block a name whose only mark is a footnote symbol continues the line before it (`Bob Baker$^{2}$\quad Cat Cole$^{\S}$`, base too); a comma-only mark between two names leaves one creator (1312.1414's shape) — FM S2b | open (from 78m; digest FM-16) |
+| — | iopart_support/jpconf routing: an `\address` of an unmarked block goes to the last author (1110.0674), an e-mail no name spells to a nameless creator (1309.7930, 1510.00572, 1609.09832, 2111.06834), a `\boldsymbol` in a mark (2010.05094) or a `\label` in an `\address` (2211.03667) leaves the mark unanswered | open (from 78m; digest FM-17) |
+| — | `\fnsymbol` (Perl's table) prints "∥" where `\@fnsymbol` prints "‖" for 6 (output; the FM S2a.2 r7 lexer reads both) | open (from 78o; digest FM-18) |
+| — | siamltex1213 (a raw class) marks its title as body | open (from 78o; digest FM-19) |
+| — | e-mail placement residuals: an `\ead` inside an `\address` takes the address's labels (1205.6797, 1607.05491); name keys drop `\l`/`ø` (2212.09776 `inalecz@`, 2205.06148) and read no split surname (1911.06133 `ledou@` for Le Doussal); an address spelling two authors equally goes by order or to the block (1710.06069 `sjkim0305@`, 2607.04241) | open (from 78f; digest FM-20) |
+| — | OD #809 residual: notes apart from the names get no counter number (probes a2, a4b) | open (from 78f r3; digest FM-21) |
+| — | unanswered-label order after a note mark (OD #881); the decided Warning for a non-number `[<n>]` is not landed — 15 of its 19 census papers are PASJ papers whose class reads the mark as text, the counter-definition rule is open (row 596, 78u report) | open (from 78u; digest FM-22) |
+| — | sig-alternate rehearsals hold the class's own diagnostics (`\alignauthor`, `\end{tabular}\begin{tabular}` at sig-alternate.cls:274 with no tabular open; 4 errors each): 1102.4021, 1611.03298, 2208.01741; `\alignauthor` gaps 1609.00045, 1608.06253 (62m, DIVERGENCES #445) | open (from FM S2a.1, 62m; digest FM-23) |
+| — | hand-written line labels (`1-`, `1.`) stay unread — **pending a user ruling** (0903.2366, 2303.09899) | open, ruling (from FM S2a.2 r3; digest FM-24) |
+| — | **output losses found by the shadow** (not fixed, shadow only): an ORCID link set in a name's superscript is lost (`Zhiyuan Yao$^{\orcidlink{…}}$`, 2208.11385); a `\thanks` inside `\vphantom` after a block's last address is lost (2406.07529) | open (from FM S2a.2 r5/r6; digest FM-25) |
+| — | shadow residuals: jpconf's `\footnote[<n>]` sets the counter where the rehearsal's binding does not; a homepage no name's spelling reaches stays in its note (1401.0489 `~laci`); `M$^{\rm c}$Hardy` parted (2003.01448); name edge glyphs the split leaves (0806.2911 `∥`, 0907.1243 `⋄`, 2311.00652 `|`, 2407.21626 `:`, 2511.07187 `--`, 2511.18580 `⋅`); classes of 1607.07280, 1911.11496 | open (from FM S2a.2 r7/r8; digest FM-26) |
+| — | llncs: a `\texttt{ann@x.org, bob@x.org}` line under the names makes two creators (L8); an `\inst` list's line under the names is a creator (L11) | open (from 77t; digest FM-27) |
+| — | `\author{A (1) and B (2)}` with parenthesised marks stays one creator | open (from 67b; digest FM-28) |
+| — | per-author marked-affiliation linking still open: revtex all `\author`s then `$^{a}$`-marked `\affiliation`s (2011.01984, 2301.08449; OD #459) and OD #459's open REDs (shared-label names on own lines, unanswered labels, "and"-joined marked names, name-shaped affiliations at an `\and` group's head, stacked unmarked names, amsart `\address` after a split `\author`, glued initials) | open (from 63g, 63e; digest FM-29) |
+| — | RED `sectioning-frontmatter/affiliation_line_inner_superscript_is_its_text`; svjour3 REDs `svjour3_name_only_piece_shares_the_next_institute`, `author_svjour3_mbox_list_splits`, `author_collaboration_name_with_and_stays_one`; svjour3's empty creator for an unmarked `\institute` with several authors (sv_support) | open (from 63i, 63h, 68k; digest FM-30) |
+| — | neurips: a camera-ready workshop paper's workshop name is not output (no venue note of the binding's own; DIVERGENCES #448) — **a workshop-only note awaits a ruling** | open, ruling (from 62s; digest FM-31) |
+| — | a raw `_` in an e-mail (`\lx@add@email`) prints OT1's dot accent (catcode-12 `_` in roman OT1; classes setting the address with url.sty/typewriter/T1 need the binding to say so); math-mode `^`/`_` in 2609.13401 | open (from 62t; digest FM-32) |
+| — | `\thanks` legends: RED `thanks_with_several_legends_goes_to_each_legends_authors` (2609.39576); RED `author_symbol_legend_line_links_its_starred_author` (a `$^*$Corresponding author` line continues the affiliation before it — `rewrite_symbol_superscripts` makes the `$^*$` visible before the split; Perl links it); RED `author_concatenated_digit_marks_link_each_affiliation` (`$^{23}$` for affiliations 2 and 3, 2609.37343) | open (from 62zq, 62zp; digest FM-33) |
+| — | a block-wide `{center}` followed by more tokens (`\begin{center}Ann \and Bob\end{center}\thanks{…}`) is not unwrapped, its authors kept together | open (from 62zt; digest FM-34) |
+| — | raw-loaded copernicus.cls drops `\affil` and its equal-contribution note (typeset only by its non-replayed `\maketitle`, `\citati@nbyarticlenumber`): 2609.05557, 07363, 08383, 12496, 13482, 17175, 21633, 36077 | open (from 62za; digest FM-35) |
+| — | revtex supplement: with no heading and no bibliography before the supplement the seal (`seal_digested_frontmatter`, queue_digest.rs) never runs, so a second `{abstract}` replaces the first (synthetic, no reach in 6,000) | open, low (from silent-loss #9; digest FM-36) |
+| — | a store that IS handed on reads as empty in the deposit: ptptex/jpsj2 `\@ifundefined{@recdate}{}{(Received\space\@recdate)}` (jpsj2.cls:740-741) leaves an orphan "(Received )" paragraph beside `<date role="received">` (0708.3877, 1203.5392) | open (from silent-loss #23b; digest FM-37) |
+| — | pnas-new `\theabstract` (the class's stored abstract; 2602.21299 reprints it) | open (from 68k; digest FM-38) |
+| — | inst_support: a second `\author` keeps both (accumulating; pdflatex atlasdoc keeps the last); aamas 1702.08222 E 4 → 6 (`\alignauthor` tabular in `\author`); a copy's `\cal` (svjour3.cls:1145, aamas2017.cls:646) is `font="caligraphic"` L in XML but ℒ in MathML | open (from 72a (h)(u); digest FM-39) |
+| — | cjs-rcs `{englishabstract}` (2608.13762) not kept | open (from 68w; digest FM-40) |
+
+#### Floats / panels / graphics
+
+| # | Row | Status |
+|---|---|---|
+| — | figure-panel wrap for refused caption hoists (task #193): the panel figure inside a `\scalebox`'s `ltx:inline-block` stays schema-invalid (2 jing lines); labels/numbers GREEN 78o (`subcaption_labels_in_scaled_panels_stay_on_their_panels`, OD #853) | open (from 65a; digest FLT-1) |
+| — | sectioning units in floats: RED `sectioning-frontmatter/unnumbered_unit_in_float_pins_the_float_id` (Ax1.F1 for A1.F1); RED `sectioning-frontmatter/chapter_star_in_float_is_an_inline_block` (`malformed:ltx:chapter` in report) | open (from 66f; digest FLT-2) |
+| — | quote containment: RED `sectioning-frontmatter/subsection_in_quote_in_proof`; a display unit in a quote inside a theorem/proof closes the theorem too (heading, text and proof tail leave it; OD #678); amsrefs `{bibdiv}` in a quote errs (not placed by `adjust_backmatter_element`); a quote holding a bibliography or heading inside a list item or outside its minipage errs | open (from 69a; digest FLT-3) |
+| — | the climb's stops are per-tag (list, alignment, float): a box in a `quote` still leaks — the lift moves the insertion point past the open quote and the text after the box escapes it. RED `boxes-groups/bibliography_in_minipage_in_quote_keeps_the_quote`; Perl `floatToElement` restores the insertion point (likely single rule; xebaposter/juradiss hoists must keep working, own A/B) | open (from 62zd; digest FLT-4) |
+| — | tabularray `talltblr` caption set at the float's `\hsize`, so a talltblr beside another table is a row of its own (OD #769 residual; `perfect_kernel_batch57::tabularray_tall_table_in_a_*`) | open (from 77k; digest FLT-5) |
+| — | subfigure.sty `\subfigure[]{CCC}` drops its "(a)"; a minipage with two `\subcaption`s numbers no panel; RED `captions-floats/subcaption_before_caption_numbers_its_figure` (sub-figures captioned before the figure's `\caption` read "0a"/the previous figure's number; pdflatex "1a") | open (from 77s, 78o, 62zg; digest FLT-6) |
+| — | hhline: the guard's `thead` is the header heuristic's — `\hhline{|=|…}` after a header row loses its `<thead>` as `\hline\hline` does (1706.03044, 2207.13493); an `\hhline` longer than the row is silent where pdflatex errs (KPE #1024) | open (from 78c; digest FLT-7) |
+| — | 2603.09495's TikZ figure 0.5 % shorter than read raw (226.5 → 225.3pt; caption box label format), 2103.15405 rotated figure `innerdepth` 26.0 → 23.8pt (rev78e finding 11) | open, low (from 78e; digest FLT-8) |
+| — | tabularray: a guessed header row depends on the drawn borders (2206.04438 7 → 3 tables); `halign` and inner keys unrendered (`\multicolumn` dropped rules: 2408.02133, 2403.06461); `cell{i}{j}={r=,c=}` spans, `\SetCells`, a row span over a non-empty cell below, a math table's `tex=` after a span | open (from 78p, 78l; digest FLT-9) |
+| — | trimclip's PGF fall-back under `[dvipdfmx]`/`[dvipdf]`: adjustbox ships tc-pdftex/dvips/xetex/luatex only, so `\clipbox` becomes an `ltx:picture` (svg:clipPath, text in foreignObject) where pdftex/dvips give `ltx:text` (68h review finding 8) | open (from 68h; digest FLT-10) |
+| — | panel-grid evaluation limits: a width macro defined in a group inside the float, a register set in a region of another column setting, `keepaspectratio` with both keys, `\resizebox{!}{h}` (78x residuals) | open (from silent-loss panel grid; digest FLT-11) |
+| — | 1404.0027 and 2108.03515 keep a `caption`/`toccaption`/`para` in `ltx:block` error (a figure's) | open (from 74a; digest FLT-12) |
+| — | `\multirow{3}{*}{\textsc{X}}` under a size change nests its fonts differently (2509.09853, rendering unchanged) | open, low (from 69a; digest FLT-13) |
+
+#### Numbering / refs / captions
+
+| # | Row | Status |
+|---|---|---|
+| — | RED `package-bindings/hypertarget_math_anchor_keeps_its_id`: a math anchor's `xml:id` is generated, so `\hyperlink` dangles and the anchor parses as an operand | open (from 66f; digest REF-1) |
+| — | autart's caption period sits outside the bold (autart.cls:568-569 `{\bfseries #1.}`) | open (from 67l; digest REF-2) |
+| — | 69b's `\lx@robustify@ltxprotect` does not cover `\robustify{\ref}` (a constructor has no `CODE(`/`Stored[` in its `\meaning`): 2205.09799 2 Errors | open (from 70a R1; digest REF-3) |
+| — | a heading's `[short]` toc title digests at the heading and raises its errors there (2304.03934, 1 Error; pdflatex 0). Faithful design not built: expand at the heading as `\addcontentsline` → `\protected@write` does, then `defer_print("toc", …)` resolved by every printed contents; `\caption[short]`'s lof copy the same shape | open (from 73b (b); digest REF-4) |
+| — | cleveref: a name wrapped in `\text{…}` gives no creftype tag (`\Crefname{figure}{\text{Fig.}}`; 2206.03535's `\cref{fig}` no name); a `\crefformat` for a type with no `\crefname` not modelled (bare number for "prob. (1)"); `\label[type]` in amsmath `align` drops the type with a Warning and gives it to the display in `split` (pdflatex "??") | open (from int35, 77s; digest REF-5) |
+| — | cleveref range/list forms: `\crefrangeformat`/`\Crefrangeformat`, `\labelcrefmultiformat`, grouping and range compression of a `\cref` list; a format that computes or makes an object keeps cleveref's default (**ruling question**: typesetting formats at the reference needs post to run TeX); a section after `\appendix` is our "appendix" type where TL 2025's cleveref keeps "section" in `article`; a `\creflabelformat`/`\crefformat`/`\crefmultiformat` set after its target is not seen; a format closing several groups it did not open raises one Error (pdflatex one per `}`) | open (from 78j; digest REF-6) |
+| — | `\label` right after a `$$…$$` in a caption labels the display, not the float (Perl the same); a preamble `\@captype` definition makes every `\captionof` outside floats take that type's options (no corpus case) | open, low (from 77k, 77s; digest REF-7) |
+| — | lipics-v2021 `labelformat=boxed`: an algorithm2e caption takes caption's format (rule box, "1 Title") where pdflatex prints algorithm2e's "Algorithm 1 Title" — the word "Algorithm" lost (2002.11064, 1809.08822, 1811.06803) | open (from 77s; digest REF-8) |
+| — | OD #784 residual: any `caption3` load before a document's `\usepackage{caption}` keeps the copy's caption. RED `class-bindings/jfm_caption/jfm_copy_caption_package_after_subfig_without_caption` | open (from 78a; digest REF-9) |
+| — | appendix refs: a `\ref` to an `\appendix*` appendix prints "Appendix" where pdflatex prints nothing (KPE #1027); OD #793 residual: an IEEEtran `\appendix` followed by a non-printing command or a float | open (from 78d; digest REF-10) |
+| — | supertabular's `\tablecaption{…}\label{…}` before the table names the enclosing unit (the binding steps `table` at the table, not at `\tablecaption`; 2103.17127, wrong before and after) | open (from 78p; digest REF-11) |
+| — | thm-restate residuals: after a `{restatable}` a `\<name>*` before a later `\<name>` prints the original's number (pdflatex the `.aux`'s); a `{restatable*}`'s equations number on the current counter; a `{restatable*}` no `\<name>` follows prints an empty missing-label reference with a Warning (pdflatex "??") | open (from 78i; digest REF-12) |
+| — | footnote symbol machinery: `\setfnsymbol`/`\DefineFNsymbols` stay no-ops (5 of 30k); footmisc `[symbol]` marks from 10 on follow our radix `\fnsymbol`, `perpage` not emulated (KPE #1057; 0807.1434); a `.bib`-only paper's `\bibentry` prints nothing and warns (2512.12049, tufte-book) | open (from 78k, 65z; digest REF-13) |
+| — | jfm's appendix `\section*` keeps the equation count ("A 2" for pdflatex's "A 1", jfm.cls:303): the locked `\section` refuses the binding's re-wrap; pinned by `perfect_kernel_batch78q::jfm_section_star_zeroes_equations` | open (from 78q; digest REF-14) |
+| — | 78q pre-existing numbering residuals, each its own row: labels after no counter step (`\label{lastpage}`, labels in prose); aipproc `{ltxtable}` label on the section (0810.5501); an unnumbered target's `\ref` text is its title where pdflatex prints nothing (LaTeXML's crossref form); old svjour "Appendix 1" (1109.2662); aa.cls v4.03's "A1" (not followed); report's and article's double-`\appendix` numbering | open (from 78q; digest REF-15) |
+| — | a tcolorbox box whose listing numbers its lines keeps the label on the numbered first line (its line number printed) | open (from 78g; digest REF-16) |
+| — | algorithm2e: `\Indpp`/`\Indmm` (0.5em) and `\Indentp` not read, a negative offset at the algorithm's level is the margin; `\nlset{text}` lines take no reference form; a labelled line's id is made at its close (out of order); `renumber_algo_lines` restarts each listing at 1 where a paper continues the count (1311.7635); a `\label` after a `\subfigure{…}` group names the figure (pdflatex the section) | open (from 78r, 78t; digest REF-17) |
+| — | a `\label` on a `\yesnumber[x]` row names "x" (LaTeX's names the next number) | open (from 78s; digest REF-18) |
+| — | tocbibind: `\tocsection` numbers `\tocfile`'s heading in a class without chapters (pdflatex "1 List of Algorithms"; the bibliography's number is OD #620's residual) | open (from 68i; digest REF-19) |
+| — | caption residuals: sub-captions keep their packages' formats (general keys do not reach them); `\captionof{subfigure}` in a minipage reads the caption as the sub-figure's width (2002.04564); `\captionsetup[longtable]` not read; `\caption*` takes no font and no text format; a `\DeclareCaptionSubType` after subcaption makes no `{sub<type>}` environment (subcaption.sty:109-111) | open (from 68h; digest REF-20) |
+| — | R7 of the rawclasses regression study: caption machinery from class hooks (7 papers; agent_reports/2026-10-15_rc_rawcls_regressions.md) | open (from 67v; digest REF-21) |
+| — | RED `\caption[<number>]` (62l) | open (from 62l; digest REF-22) |
+| — | class caption residuals of 78y: IEEEtran's `captionsoff` (captions kept) and caption sizes; ieeetaes/ieeeaerospace/ieeeojcsys/smc_ieeeconf take IEEEtran's format unverified; acmcp untested; float.sty's plain-style text after a stray space without caption (Perl float.sty.ltxml:52) | open (from silent-loss caption-separator row; digest REF-23) |
+| — | `\@makecaption` from a paper's own hangcaption.sty (interact 2208.03568, svjour3 1702.06262: G1) | open (from 68k; digest REF-24) |
+| — | 78s residuals: 2411.16612's apxproof headings (R12); a float.sty float's `autoref` tag under hyperref holds an empty `<text>` (base too); under floatrow a float.sty listing's tag closes with a space (2206.08452, PDF "Listing 1:"); raw minitoc's end-document hints leave an empty `ltx_noindent` paragraph (2512.16676) | open (from 78s; digest REF-25) |
+| — | algorithm lines: `{quote}`/`{center}`/`{flushleft}` end no algorithm line (the text after them stays on their line); a statement inside `\href` breaks inside the link (`ltx:ref` does not auto-close) | open (from 62d/62e; digest REF-26) |
+
+#### Bibliography
+
+| # | Row | Status |
+|---|---|---|
+| — | a `.bbl` call of a raw class's `\doi` adds a second DOI pubnote (1710.01977) | open (from 65m; digest BIB-1) |
+| — | RED `package-bindings/biblatex_natbib_capitalized_cite_commands` (`\Citet` undefined; blx-natbib.def:49) | open (from 66f; digest BIB-2) |
+| — | a deluxetable inside `thebibliography` (0908.4271, 12 → 13; the 68y review's bibitem-in-td class) | open (from 68z; digest BIB-3) |
+| — | 70c bibitem-label rows: (a) pasj01's own `\@lbibitem` (pasj01.cls:1600-1628 author/year parse) not emulated — its display tag typesets a `\citeauthoryear` label (1801.05986, 1610.05396); (c) the bibliography XSLT shows a refnum when no role-less tag exists (mn2e/mnras cited entry shows its label in HTML; a 4-line patch in `tags_refnums.rs` exists but diverges from Perl's `removeEmptyElement`); (d) `\@lbibitem`'s `\write` expansion not run (an undefined command in an uncited label loses its Error); (e) acmlarge.cls:1054-1058's `\citeauthoryear` inside its own `\cite` never runs under our locked `\cite` (1710.09074, 1508.03599, 1 Error each); (f) html.sty `\htmlcite` builds its `ltx:bibref` without `cite_prints_keys` | open (from 70c; digest BIB-4) |
+| — | **rulings needed** (77j study): bibliography/citation commands a paper redefines through `\@citex`/`\@lbibitem` and the Rust-only locked `\cite` (6 papers); front-matter fields the class never typesets (revtex `\thanks` in `\author`, aastex running heads) | open, ruling (from 77j; digest BIB-5) |
+| — | OD #786 residuals: labeltitle, nameless `\citeauthor` | open (from 78a; digest BIB-6) |
+| — | natbib's "(author?)" for a textual citation of an entry without authors | open (from 78j; digest BIB-7) |
+| — | RED `sectioning-frontmatter/bibitems_in_a_list_keep_the_lists_settings`: what the list sets before its first `\bibitem` is undone with the list's group | open (from 62zn; digest BIB-8) |
+| — | MathSciNet: `MRREVIEWER` macros (6 papers) and Perl's MathReview synthesis digesting the reviewer (the always-on stub retracted 2026-07-27, latex_constructs_rust_only.rs) — **NEEDS A RULING** | open, ruling (from 62zj, 62za; digest BIB-9) |
+| — | RED `index-bib/ifbibmacroundef_knows_the_standard_bibmacros`: the binding's `\ifbibmacroundef` always answers undefined, so acmauthoryear.bbx prints a "bibmacro missing" warning pdflatex does not (2609.32652, 58 papers in 2609) | open (from 62zi; digest BIB-10) |
+| — | bib parts end with "." where TeX prints ";" (a `\moreref` part's), and "Sci.." doubles the period (68r review comparison, not root-caused) | open (from 68r; digest BIB-11) |
+
+#### Kernel / TeX primitives
+
+| # | Row | Status |
+|---|---|---|
+| — | RED `sectioning-frontmatter/section_title_errors_reported_twice`: the toc digestion re-raises the heading's diagnostics (shared with Perl) | open (from 64zf; digest KRN-1) |
+| — | RED `loader/plain_input_defining_documentstyle_routes_plain` (hep-lat9301012; compile_route CLASS_IN_USE) | open (from 64zf; digest KRN-2) |
+| — | setspace group-end diagnostics: REDs `boxes-groups/{lrbox_doublespace_group_end, abstract_begingroup_doublespace_group_end}` (under-report) and `{plain_group_around_itemize_doublespace, doublespace_end_in_a_nested_plain_group}` (over-report, errs toward flagging by decision) | open (from 64zf; digest KRN-3) |
+| — | RED `boxes-groups/right_inside_an_argument_drops_the_argument` (`\left`/`\right` K20 family, OD #530) | open (from 65d; digest KRN-4) |
+| — | still Fatal on their own regained content (upstream defects not reduced): 1211.3050 (`align`s left open, Configurations.tex:288, ObtainingConf.tex:1207), 2210.11107 (stray `&` of a tabular left open, main_arxiv.tex:2979) | open, low (from 65i; digest KRN-5) |
+| — | known gap: the template reader expands a column type and does not run it, so a rewrite assigning `\@temptokena` and ending in `\NC@find` (array.sty:372-379) leaves `Unrecognized tabular template` warnings; pinned by `kernel-alignment/column_rewrite_reads_temptokena_empty` (3 Warnings) | open, low (from 65i; digest KRN-6) |
+| — | eqnarray REDs: `alignment/eqnarray_cr_row_column_count` (a raw `\cr` skips `\@@eqncr`; TeX counts on into "Too many columns", we as Perl count afresh); `alignment/lefteqn_overprint_keeps_template_material` (`\multicolumn{1}{l}` drops column 1's `@{…}`/`|`, TeX's `\rlap` keeps them); `alignment/eqnarray_side_content_only_cell` (KPE #625: a cell holding only an `\index`/anchor measures < 1pt and is never absorbed; a row join drops a floated indexmark) — **rule proposed for the main session**: size never decides dropping content, only `Digested::is_skippable` | open, ruling (from 65o; digest KRN-7) |
+| — | raw alignment code calling array's internals: `\col@sep`, `\@acol`, `\NC@list`, `\extratabsurround` (raw eqnarray.sty, ltxutil.sty, dgruyter), then the rest of `\@mkpream` (`\prepnext@tok`, `\@classx`, `\@classz`, `\d@llarbegin`, `\NC@do`) undefined | open (from 65z; digest KRN-8) |
+| — | `\@itemlabel` is still the kernel no-op | open (from 65z; digest KRN-9) |
+| — | 1905.04581's own `\begin{paracol}` after pgfplots figures raises paracol's `\ifinner` "Not in outer par mode" (2 errors; a mode left inner upstream, not reduced) | open (from 66c; digest KRN-10) |
+| — | run-340 Fatal origins round 2 still open (`run340/fatal/fatal_rootcauses.md`): R7 xargs robustness (~21), R8 `\enddocument` tail (~21), R11 qbordermatrix IfLimit, R14-R16 singletons — re-measure on head | open (from 66d; digest KRN-11) |
+| — | AMS-TeX: RED `amstex/amstex_pictex_sb_newline` (`\Sb … \\ … \endSb` after `\input pictex`; 1012.3760 E 101 + TooManyErrors); RED `amstex/amstex_align_intertext`; RED `amstex/amstex_align_unclosed_at_enddocument` (open row's last cells dropped silently); RED `amstex/amstex_display_unclosed_at_enddocument` (`\enddocument` in the formula's `tex`); `$$\gather … \tag 1\\ … \endgather$$` keeps both tags on one equation (gathered not split into rows) | open (from 66e; digest KRN-12) |
+| — | AMS-TeX `\tag` edges: an unbraced inner alignment in a row tag (`\tag 1\matrix a\cr b\endmatrix\\`) stops at the inner `\cr` and errs; `\let~\\` does not end a row tag (`amstex_tag_row_end`'s `Catcode::CS` gate); a `\par` in `$$\align … \endalign$$` raises no "Paragraph ended before \align was complete" | open, low (from 66e; digest KRN-13) |
+| — | RED `fonts-nfss/mathversion_normal_restores_the_normal_version`; RED `fonts-nfss/declared_math_version_defines_its_mv_macro` (70b held the fix: with `\mv@chem` defined, chemist's `\mathversion{chem}` (:899-909) changes); mathastext: a declared math version changes no font (sect13.rs `\mathversion`) | open (from 66f, 70b, 68c; digest KRN-14) |
+| — | `\item[]` excluded from the OD #189 item bridge (2606.00118) — **awaits a ruling** | open, ruling (from 66f N10; digest KRN-15) |
+| — | RED `boxes-groups/easybmat_lastbox_alignment_rows`: easybmat's `\@easy@buildbox` peels the `\halign`'s rows with `\lastbox` after `\unvbox`; our alignment is one whatsit, not TeX's row hboxes (§799) → 2 `malformed` per BMAT (sigma 0907.2394 0 → 8; run-367 C7, 2 papers) | open (from 68q, runs 366/367 C7; digest KRN-16) |
+| — | `\unvbox`/`\lastbox` residuals: OD #637 (a box on the main vertical list / in a float, note, minipage, mode-setting env, `\vadjust`/`\insert`, math goes back whole) **awaiting R6 and a ruling**; `boxes-groups/unvbox_lastbox_peel_loop` p1 RED (R7: no interline glue, pinned `[1:h,2:h,3]`); raw Paul Taylor `diagrams` loops — our `end_graf` keeps a line where TeX's paragraph is null (§1096), so `\reformatmatrix`'s `\lastbox` loop keeps finding an hbox (math0301370, probe scratch_68q/wm03/d2.tex) | open, ruling (from 68q; digest KRN-17) |
+| — | proof.sty premise row `tex=` reads `\\[t]u` (re-read as a row skip); after a `\\` outside amsmath displays LaTeX's `\@xarraycr` skips spaces before `[` (latex.ltx:16585) where we keep ` [t]` as text (no content lost) | open, low (from 77r; digest KRN-18) |
+| — | 1603.09649 (`\input{\Ref{…}}`, pdflatex 121 errors + PDF) ends in Fatal Timeout:Recursion: after the l3 expandable error the l3hook file-hook code re-enters it (`\__hook_prop_gput_labeled_cleanup`); 101 errors vs pdflatex 7 on `\documentclass{article}\newcommand{\Ref}[1]{#1}\input{\Ref{foo_def}}` | open (from 77r; digest KRN-19) |
+| — | RED `macro-state/counter_alias_macro_to_register` (`\newcommand*{\c@thmlemma}{\c@theorem}`, math0701082's own theorem.sty) | open (from 68c; digest KRN-20) |
+| — | 1902.02884 times out since 65n (math-group recovery at partie_geometrique.tex:6430 `\begin{remark}`: "Missing $ inserted", nine "Missing \endgroup inserted", then a stall; stomach.rs `insert_dollar_sign`/`off_save_closer`, tex_math.rs `end_math_or_defer`) | open (from run 351; digest KRN-21) |
+| — | kernel `\DeclareSymbolFont` makes `\sym<name>` a `\let` to `\z@` (sect08.rs) where latex.ltx's `\new@mathgroup` allocates a `\chardef` family (`\the\symupright`: 0.0pt vs 4) | open (from 67q; digest KRN-22) |
+| — | RED `alignment/ieeeeqnarray_rule_rows_keep_rules_and_numbers` (KPE #710 residual: in `{IEEEeqnarray}` a rule row keeps its number but not its rule, a separator row is removed with its number) — ruled 2026-10-15: rows stay numbered with their rules, kernel-wide for the eqnarray family, batch "68e" with its own A/B (never run) | open, ruled (from 67x; digest KRN-23) |
+| — | RED `math-parse/quad_tex_after_a_later_size_change`: a font-size change after a formula rewrites its `tex=` (`$a\quad b$` then `\footnotesize` → `tex="a\hskip 10.00002ptb"`); amsart's `\bibliofont` triggers it (2105.14892, 2307.14222, 2609.15658, 2312.03234) | open (from 67y; digest KRN-24) |
+| — | U symbol font of another family stays undecoded (no U map: 2306.04672 `\shuffle`, stmaryrd `\boxslash`; OD #645) | open (from 68v; digest KRN-25) |
+| — | `pmatrix`/`cases`/IEEEeqnarraybox `\omit` cells still math (KNOWN_PERL_ERRORS #662 residual) | open (from 68z; digest KRN-26) |
+| — | L2 `\endlist` tests "an `internal_vertical` frame open", not "a list open": a stray `\endlist` in a minipage/figure ends that frame (then `\end{minipage}` errs; pdflatex none); needs a list-frame name (KPE #898) | open (from 69b (a); digest KRN-27) |
+| — | **coupled E3 change (own A/B)**: read the token after a display's closing `$` under the enclosing mode AND recover as tex.web §1197 (finish the display, `back_error`) for every "Missing $ closing display math." — RED residual `expansion-primitives/display_closing_dollar_read_in_the_enclosing_mode` (`$$y=2$\ifmmode$\fi G`), guard `perfect_kernel_batch69b::display_closing_dollar_enclosing_mode_residual`; alg-geom9411003 (64 → 3) and 2304.12827 (977 → 202, +9k words) return with it; also the 69b (b) recovery ruling | open, ruling (from int19, 69b (b); digest KRN-28) |
+| — | a cell ending inside a mode-switching constructor's argument (`\textbf{$\bgroup\let\\=\crcr\egroup$}` in an `{align}` cell; pdflatex 30 errors) leaves that constructor's frames open past the alignment, so the rest of the document errs | open (from int19; digest KRN-29) |
+| — | a cell with a net stray `}` (`a} &=& b`) leaves the alignment count at −1 and unravels (pdflatex 1, before 2, now 17; §1127 `align_error` not modelled) | open (from 69c; digest KRN-30) |
+| — | cond-mat9806166 72 → 81: the kernel `{subequations}` with a plain `\pmatrix{d\cr s\cr}` in an `equation` breaks the display (A1 adds "Missing } inserted" at the `\cr`; jpsj.sty's own `\subequations` the same) | open (from int20 (a); digest KRN-31) |
+| — | revtex4/differ.tex 8 → 9 (int20 net): docs.sty `\cmd\documentstyle` writes `\index{documentstyle=\string\cmd…}`; fix is the index write/re-read order (expand before the re-read) | open (from int20 (b); digest KRN-32) |
+| — | `$$` in restricted horizontal mode (tex.web §1138, `\mbox{\[…}`, 1508.07482) dropped: MODE is restricted_horizontal where TeX is not (a beamer frame, a stale `\lx@tag` or in-math-text frame left by an earlier error: 1301.0681 0 → 4, 1111.0674 244 → 313, 2312.14898, 2406.05750) — needs a box-level test | open (from 73b (a); digest KRN-33) |
+| — | encodings: T4's own quote/guillemet ligatures (fcr10.tfm: `,,`, `<<`/`>>` reversed) not modelled; T3 glyphs Unicode lacks print nothing with a Warning (hooktop, Celtic palatalization, tone-letter parts outside tone.sty, Viby/left-hooktop long letters, `\textoverw`); a box accent (`\sups`, `\Upperaccent` `b` form) keeps t3enc.def's stacked boxes; a T3 accent in a formula loses its mark (`$\textsubring{n}$`); a T3 accent over a math group or `\\` prints TeX source (apply_accent should mark only a character run); a combining-mark slot with no letter before it attaches to the preceding space (2604.00122); `{\accent19\selectfont\'e}` gives é́; `\textdoublebaresh` bars as rules without a Warning | open, low (from 77u, 77x; digest KRN-34) |
+| — | 1711.05227 55 → 58 errors: the `\thmrelevance*` replay at proofs.tex:45 inside a math frame left open at :23 and an alignment open since magic.tex:150-155 | open, low (from 78i; digest KRN-35) |
+| — | a `\ref` keeps its reversion, a structured formula or `\scalebox` its source in `tex=` | open, low (from 78l; digest KRN-36) |
+| — | pdflatex's `\@xnthm` "Command `\theX' already defined" warning for a `\newtheorem` over a shared counter is not emitted | open, low (from 77v; digest KRN-37) |
+| — | Row B: a preamble `\begingroup` around `\begin{document}` (~38 papers, 1 Error, content kept): faithful unwinding pops the document frame and the author's group beneath it, then re-establishes the document frame (latex.ltx:9490) | open (from 66x; digest KRN-38) |
+| — | §1046 math-token-reopens-math not done (66i draft parked: over 1,235 papers errors 9,542 → 8,361, Fatals 40 → 32, but 20 papers lost > 1 % words where an earlier wrong-mode bug puts a script in text — 2104.00361 `\scalebox{1}{$b_1$}` in `\substack`; root-causer report 2026-10-14_k1_wordloss_triggers.md); left in hep-th9402135: `$\bull$` with a blank line in `\bull`'s body (as pdflatex), `\References` non-long `\par` errors | open, parked (from 66w, 66h K1; digest KRN-39) |
+| — | K9 Stage 1 general frame-ownership rule and Stage 2 (L 126, B 38 papers) and the study's six ruling questions | open, ruling (from 66t, 66r; digest KRN-40) |
+| — | `\endgroup` report residuals E2, E7, E10, E11 (E3 = 66o); `\endgroup` study R2 diagrams stub body read raw in a cell (~51; a binding since 67d — re-measure), R4/R5 singletons | open (from 66m, 66c; digest KRN-41) |
+| — | a mid-paragraph `\footnote` or `\marginpar` in a measured `\vbox` counts as two lines (parameter digester's mode repair repacks the line; `notes_measure_as_their_mark` case 3 pinned at 18.83pt; shared, KPE #663) | open, low (from 66l; digest KRN-42) |
+| — | RED `alignment/start_align_under_redressed_alignat` (K6, 2601.10843, 2602.04048): `\start@align` must open the alignment in a group whose `\egroup` ends it, with `\black@`/`\totwidth@` (amsmath.sty:1364/:1316) defined — the 66h r1 binding-alignment attempt turned the Fatal into an Error over the same truncated document and was reverted | open (from 66h; digest KRN-43) |
+| — | 1309.7562's `$$` meeting an open `{` (13 Errors on every binary, pdflatex 1) | open (from 66h; digest KRN-44) |
+| — | 2609.13328's `\def\year{\pdfprimitive\year}` (ieeeaccess `\def\year#1` workaround) loops — `\pdfprimitive` is `#1` (pdftex.rs:611, Perl pdfTeX.pool.ltxml:208); faithful needs the engine's primitive meanings kept in State past the TeX pools (deferred, one paper) | open, low (from 62y; digest KRN-45) |
+| — | side risk: any genuine `\@ifnextchar` autoload in a plain document still replaces the document's macros through the dump apply | open (from 62f; digest KRN-46) |
+| — | `{fmffile}` opened in the preamble and closed in the body is an environment-nesting error (hep-ph0206138) | open, low (from 65z; digest KRN-47) |
+| — | babel's `[english]` turns `~` into a plain space: babel.def's `~` shorthand reaches `\lx@NBSP` as `\normal@char~` but sets a space (every non-breaking space of 2609.08425; base the same) | open (from 72a (d); digest KRN-48) |
+| — | `{filecontents}` named `\jobname`/`\jobname.tex` under `[overwrite]` (latex.ltx:19005-19021 "Trying to overwrite `\jobname.tex'") and the "Writing or overwriting file" Warning under `[force]`/`[overwrite]` not modelled | open, low (from 77s; digest KRN-49) |
+
+#### Class / package bindings
+
+| # | Row | Status |
+|---|---|---|
+| — | RED `babel-lang/shorthandoff_quote_in_english_is_no_shorthand` (under-report) | open (from 64zf; digest CLS-1) |
+| — | 65k first errors that are not stub gaps: lmcs's `\titlecomment` under `\documentclass{LMCS}` (upper-case name, no binding: 1103.0510); tabu's `|[width]` rule spec (1907.07986) | open (from 65k; digest CLS-2) |
+| — | jfm `\oneappendix` keeps the appendix letter / its title (78q) | open (from 65v, 78q; digest CLS-3) |
+| — | a `\Cr` before its `\Cl` prints LaTeX's first-run "C^st ??" with a warning (no `.aux` round trip; 1307.4858) | open, low (from 65y; digest CLS-4) |
+| — | `\usepackage{arabtex}` sets the whole body italic (its `\all@wcmd` font wrappers; pdflatex cmr10) — RED follow-up not filed yet. Witnesses 2105.08579, 2201.05363 | open (from 66c; digest CLS-5) |
+| — | R12 shipped core-file copies (run-340 Fatal origins) — re-measure | open (from 66d; digest CLS-6) |
+| — | 2605/2606 report items still open: C3 nomencl glossary in a float (66j "still open"); C8 bigfoot listing in a footnote | open (from 66f, 66j; digest CLS-7) |
+| — | Paul Taylor diagrams: pullback corners (`\SEpbk`, a visible ⌟; CSS-placed corner proposed for the end-of-goal CSS review), `\HonV`/`\VonH` draw nothing; `eqno=`, `\diagraminline`, the dotted `.` not implemented; a vertical arrow's left label leaves its cell unparsed (`ltx_math_unparsed`, as amscd's `@VfVV`) | open (from 67d; digest CLS-8) |
+| — | 67j residuals: plain TeX's `\settabs\+` under the LaTeX route (alg-geom9410018, hep-th9306053); amsppt internals papers copy (`\textonlyfont@`, `\ifsyntax@`, `\eightrm`: funct-an9706006, math0002200); imsart `{supplement}` without imsart.sty (1602.02055) | open (from 67j; digest CLS-9) |
+| — | loader: a nested dependency scan reads as "no copy" (`content.rs::require_dependencies_filtered` returns `false` under its re-entrancy guard, so ICML forces the pair over a shipped copy loaded from an unbound class's scan); the pnas-new, siamltex and icml2019 raw-read paths have no guard | open (from 67l; digest CLS-10) |
+| — | emulateapj deluxetable begun inside an open one's `\startdata` (1704.06321's shape): the inner table's first `\colhead` is lost and the alignment cascades (10 errors; repro `class-bindings/emulateapj_deluxetable_in_deluxetable`, RED part — header status line reads GREEN, check the RED half); begun before it, the inner `\tablecaption` replaces the outer's stored caption | open (from 77r C6 / 68y; digest CLS-11) |
+| — | 1102.2440 copies emulateapj's longtable `\tablehead` (`\@table@not@headedfalse`, `\kill`, `\endfirsthead`) into its preamble, which a deluxetable does not run (16 errors) | open (from 68y; digest CLS-12) |
+| — | wasysym `\textwasy`/`\wasyfamily` text is the raw letters, not the wasy glyphs | open (from 68c; digest CLS-13) |
+| — | theorem/proof head fonts: jmlr2e's claimed `{proof}` is amsthm's italic "Proof." ∎ where jmlr2e prints bold "Proof" ■; the proof head's font and punctuation are the binding's, not the class's (isamms.cls small caps, smfart's " — "); informs3/4 `\TheoremHeaderFont`/`\ExampleHeaderFont` do not reach the heads (informs3.cls:1810-1845; theorem_sty.rs keeps one global `\theorem@headerfont`) and informs3's `\mdseries\scshape` head font (:1857-1859); the amsthm binding ignores a `\newtheoremstyle` head spec (lmcs `thmC` drops the note's parentheses) | open (from 68c, 67s, 67z, 62t; digest CLS-14) |
+| — | stix and amsmath `\make@display@tag` internals not started (`\collect@body` landed: amsmath_sty.rs `\lx@ams@collect@body`) | open (from 68c; digest CLS-15) |
+| — | sn-jnl with no shipped copy loads none of the class's packages (rotating…) | open (from 67z; digest CLS-16) |
+| — | arximspdf's own `{aligned}` (:1209) | open (from 67z, 68k; digest CLS-17) |
+| — | tac: theorems stay theorem environments (the class's are `\subsection` headings); under tac + amsthm the binding's amsthm keeps tac's non-refusing `\newtheorem` (amsthm_sty.rs:18; amsthm.sty:77 restores a refusing one); theorem.sty's binding `\newtheorem` refuses nothing; tac numbers every theorem on one `\subsection` sequence ("0.1. Proposition") while the binding uses each declaration's counter (2407.21129); a tac theorem's `\autoref` tag has no type name (" 1") | open (from 68a, 77v; digest CLS-18) |
+| — | WileyNJD v2/v5 `\xleftrightarrow` via amsmath's `\ext@arrow` renders as → | open (from 67w; digest CLS-19) |
+| — | `\citen` under nic-series.cls (5) and `\documentstyle[…jltp]{article}` (2) left undefined after the rawclasses lever | open, low (from 68v; digest CLS-20) |
+| — | 72a stand-in copy residuals: 2506.08397's `sort` the only non-subset (per-binding calls left open); (n) latex.ltx's two-`\LoadClass` Error (:18800, `\@twoloadclasserror` :18938-18942) not emulated — a document's own second `\LoadClass` still loads the class (scr2 probe Fatal); (o) where the slot still fires: Perl's svmult binding loads book where svmult.cls/svmono.cls `\LoadClass{article}` (numbering "0.1" vs "1"), daj's binding emulates tocbase (not in TL) over article; (r) `atlasdoc_cls::main_class` keys on the copy's version, not on the class its `\LoadClass` names (no witness) | open (from 72a; digest CLS-21) |
+| — | 2508.01496 (KOMA): appendix chapter "Appendix A" where the PDF has "Appendix" — book's `no_number_chapters` would unnumber it but not reset counters within it as KOMA ≥3.15 does (scrbook.cls:5590-5600; 16 appendix figures off by one) | open (from 72a; digest CLS-22) |
+| — | (s) siamart 1703.08345 `hypdvips: Wrong hyperref driver` (siamart.cls:1269-1272 `\ifpdf` false under `\pdfoutput=0`, K6 ruling, while the hyperref driver is pdftex's) | open (from 72a; digest CLS-23) |
+| — | siunitx: 2607.19972's `:` uncertainty divide (siunitx.sty:780-800); 2511.08682's 15 "expected to find complex number" | open (from 71a; digest CLS-24) |
+| — | cimento.cls `\PACSes`/`\instlist` for papers not shipping the class (1012.2907, 1208.1260, 0907.0634) fall to OmniBus — a stand-in port of cimento's frontmatter needed; also the stand-in licence audit could not locate the sources of three reduced models (cimento's author list, aip-cp, neurips_2026) | open (from 73a, 78g; digest CLS-25) |
+| — | a standalone raw class's own `\chapter` body is LaTeXML's chapter (the lock, as Perl), where TeX typesets the class's | open, low (from 72b; digest CLS-26) |
+| — | RED: a Fortran listing line that is a comment (`C(i) = …` with `language=Fortran`, 1106.5908) ends with a stray "C" pdflatex does not print (base too): `\lstset{escapechar=\%,language=Fortran}` + `  C(i) = val(j) * %B(col\verb._.idx(j))%` | open (from 73b (d); digest CLS-27) |
+| — | fleqn siblings: extarticle, extreport, extbook, memoir, aastex701 and other classes `\input{fleqn.clo}` for `fleqn` but only article/report/book/slides/sigma/iopart/pasj are wired to `fleqn_clo` | open (from 73b (e); digest CLS-28) |
+| — | bm: the split sees only top-level `$`; a `$` inside a braced subgroup of a `\bm` argument (bm.sty:252-256, `\mathchoice\hbox`) gets no in-hbox treatment | open (from 73b (f); digest CLS-29) |
+| — | cryptocode's measuring pass sums amsmath's `\maxcolumn@widths`, which the binding leaves empty — one `Warning:expected:<number>` per pseudocode without `width=` | open, low (from 76a; digest CLS-30) |
+| — | svmult: figure/table/equation numbering under `\title*`, `\ds@numart`'s `\@takefromreset`, stays book's (KPE #1026) | open (from 78c; digest CLS-31) |
+| — | todonotes: `\todo`'s `author=` name, printed before the text, is not kept; 2602.24285 +1 Error from its `\if\todo[…]{…` comment hack (pdflatex's `\todo` peeks by `\futurelet`, its `\if` true) | open (from 77v, 68i; digest CLS-32) |
+| — | blkarray's own `>{…}`/`<{…}` preamble tokens read only where array is loaded | open (from 68b; digest CLS-33) |
+| — | amsthm's `\QED@stack`/`\math@qedhere`: a document's own `\qedhere` over amsthm's token stack needs the QED stack as amsthm's macro, not the binding's native one (1801.02767, 1710.02246, 1809.07440, 1908.10510, 1908.03268) | open (from 68b; digest CLS-34) |
+| — | option-list rows (68h re-reviews): subfig passes a key's value unexpanded where subfig.sty:217/:220 `\edef` it (latent; OD #617); a stored `\ProcessOptions` list drops `\protect` before a robust/optional-argument command (pdflatex `[beta=\protect \textbf {x}]`); caption v1 keywords given by a `\protected` macro (pdflatex bold label) or a `\DeclareRobustCommand` (pdflatex 2 errors, ours 0); ltkeys' `\ProcessKeyOptions` sees an expanded option list (`\textsc {Y}Bob` vs `\textsc {Y}\nm`; content.rs `pass_options`/`option_argument_tokens`) | open (from 68h; digest CLS-35) |
+| — | a local `my<binding>.sty` loads the binding instead (content.rs `find_file_fallback`, Perl Package.pm:2186-2221 `rw|my|preprint` prefix; `\usepackage{mypgf}` → pgf, the local `\showmypgf` undefined; SHARED) — **ruling needed**: keep Perl's binding-wins order (1206.0536 mysvjour3 → svjour3, astro-ph0005021) or prefer the document's own file | open, ruling (from 68h; digest CLS-36) |
+| — | 68u still open: thcc.sty:81-91 `\th@ccproof` (theorem.sty's binding does not run a raw style's `\@begintheorem`: cc's proofs are numbered theorems "Proof 1", pdflatex "Proof.", 14 papers; RED `class-bindings/cc_proof_style_unnumbered_thcc`); smfart/nrc/letter/saj.sty addresses stay class-typeset body text (semantic only); a plain-locked name a file `\let`-clears and redefines (eulerpx.sty:130-132 `\mathscr`: 2311.14793, 2501.10505, 2510.26876, 1 Error each, pdflatex 0; would extend OD #569) | open (from 68u; digest CLS-37) |
+| — | 66l residuals: `\opt@` string re-tokenized (2407.02071); ytableau after `\omit` (2308.07459); two xy-pic gaps (1012.0388, 1103.1294); eqnarray.sty `\eqnnum`/`\yesnumber`, fleqn and `[pos]` not modelled | open (from 66l; digest CLS-38) |
+| — | RED `loader/etextools_translations_begin_document` (2606.06323's second error, etextools + translations at `\begin{document}`) | open (from 66j; digest CLS-39) |
+| — | thm-restate does not load thmtools' `\declaretheorem` (2606.01187) — verify on head | open (from 62t; digest CLS-40) |
+| — | GENERALIZATION: class bindings hand-copy their class's package list, which drifts by class version and drops options (fairmeta's `[numbers,sort&compress]{natbib}`); the general form — every class binding scanning its class file — stays open | open (from 62t, 62zc; digest CLS-41) |
+| — | informs: 2609.28451's own informs3 copy comments out `\ECSwitch`'s `\ECHowTheorems` call (:2753), so `\ECHowTheorems` undefined is ours alone; the `THkey`/`EXkey` theorem styles (head = optional argument alone) revert to plain with a warning (21433, 28451) | open (from 62zk; digest CLS-42) |
+| — | an apa7 binding (`\authorsnames`/`\authorsaffiliations`/`\authornote`/`\addORCIDlink`; 4 papers) | open (from 62zj; digest CLS-43) |
+| — | REDs `list-structure/enumitem_declares_labelindent`, `sectioning-frontmatter/ieeekeywords_redefined_with_quotation_in_one_column` | open (from 62zj; digest CLS-44) |
+| — | the IEEEojcsys binding maps `\authornote` to `role=authornote` and `\receiveddate` to a note and lacks the other setters (not checked against IEEEojcsys.cls) | open (from 62zj; digest CLS-45) |
+| — | RED `singletons/lstinline_in_text_reverts_as_written`: `\text{\lstinline|w|}`'s `tex=` carries the listing's internal setup macros | open (from 62zg; digest CLS-46) |
+| — | acmart's teaser rewrite (acmart_cls.rs `\lx@relocate@teaser`) never matches (the abstract precedes the teaser; moving it would break the schema) — retire or rethink | open (from 62za; digest CLS-47) |
+| — | aastex: a `\colhead` over a `D` column covers its integer half only (the class spans both, :12027-12028 `\CheckNumberAndSwitch`; no witness), and the class's `d` (:12011) hidden pair prints as `D` (as Perl) | open, low (from 62x; digest CLS-48) |
+| — | tcolorbox listing residuals (OD #768; reach 0 each): `blend into=listings`, `before title=`, `attach title to upper` not captured; `adjusted title`'s `\vphantom` a hidden span with width; a `text only` listing still shows its code; comment modes' comment not typeset (tcolorbox_sty.rs ~:103-123); a `text only` `\newtcbinputlisting` drops its `label=`; `listing remove caption=false` with a listings caption loses the box title (listings_sty.rs ~:2519-2526); `{ O{} s m }` with `*` reads the star as the mandatory argument (tcolorbox_sty.rs ~:562-564); a listing environment's executed text runs into the next paragraph (`\lx@lstenv@body`) | open, low (from silent-loss #16; digest CLS-49) |
+| — | 72a (b) a shipped file of the stood-in name that is another file (hep-ph9609379's diagrams.sty, 2411.02780's annotate-equations.sty as equations.sty) is not read at all, where TeX reads it raw; (c) extras defined inside an owned body stay unreachable (neurips `\TEST` 2406.07381, `\ADDRESS` 1909.08174; spconf's `\thetitle` from its `\title` wrapper, 2311.11306) | open (from 72a; digest CLS-50) |
+| — | `{dgroup*}`'s options are read and dropped (a `label` names the first equation in pdflatex, `\grp@setnumber` :1794; no witness); our amsmath binding never defines `\iffirstchoice@` (amstext.sty:43; no witness since 77q) | open, low (from 68b; digest CLS-51) |
+| — | 78a standard-class derivative residuals (synthetic, no corpus paper): a copy's size commands do not yield (binding primitives; `\small` 75 % vs pdflatex 91.7 %, rev77w3 probe5); a copy's `\newcounter{figure}[subsection]` finer than the binding's id scope gives suffixed ids (`S1.F1a`, probe6) | open, low (from silent-loss "standard-class derivatives"; digest CLS-52) |
+| — | A shipped copy's one-line extra definitions its binding lacks (jmlr2e `{assumption}`, spconf `\names`, aa `\jaavso`, aastex `\acceptjournal`, JHEP3 `\mathph`, wiley one-copy names; ~200 corpus uses): rulings 2026-10-17 (the binding wins; grow it from real released versions) and 2026-10-21 (a copy supplies only its binding's declared text names) leave no copy route — add each to its binding where a released version defines it; a private edit stays unsupported | open (from 68a/68c/68k/67w; digest C107/C126/C128/C426) |
+
+#### Math (parked — user directive 2026-10-02; listed, not for the worklist)
+
+| # | Row | Status |
+|---|---|---|
+| — | math readings of ambiguous formulas flip between builds with no input change (2205.06656, 2503.00718, 1708.09355; also the int29 "math-parse nondeterminism") | parked (from 65b; digest MATH-1) |
+| — | the parser does not pair `⦀` fences (RED `math-parse/fourier_vert_fences`) | parked (from 65y; digest MATH-2) |
+| — | empheq: a cell opening with the empty fence `\left\{\right.` is not parsed — KNOWN GAP pinned by `batch68v_empheq_lbrace_empty_fence_known_gap` (7 warnings) | parked (from 68v; digest MATH-3) |
+| — | `\left\{ … \right.` around a text tabular stays unparsed math with a Warning; an unused glossary entry's unparsable formula still warns from the math parse (2104.09252) | parked (from 78p; digest MATH-4) |
+| — | `\argmax` (`\mathop{\rm arg\,max}`, `\operatorname*{arg\,max}`) parses as "arg × max" | parked (from 62zk; digest MATH-5) |
+| — | `\underaccent{$\text{.}$}` (deferred) | parked (from 62zg (H); digest MATH-6) |
+| — | two adjacent sized bars of different sizes merge into one `‖` (`\Bigl\lvert\bigl\lvert y…`; RED `math-parse/sized_bars_do_not_merge_into_a_norm`); `\reDeclarePairedDelimiterInnerWrapper` writes wrappers the X forms do not read | parked (from 62z; digest MATH-7) |
+
+#### Fleet / infra / perf
+
+| # | Row | Status |
+|---|---|---|
+| — | under a watchdog sharing the deadline, the gullet's cooperative `Fatal:Timeout:Convert` and the watchdog race: a run may end in the cooperative Fatal with its XML or the watchdog's with none (OD #538; grace: task #205) | open (from 65f; digest OPS-1) |
+| — | libmarpa `marpa_g_new` aborts on allocation failure with no Fatal line (SIGABRT) — fix in the marpa-asf fork: an overridable OOM hook → `Fatal:oom:alloc_failed` | open (from runs 346/347; digest OPS-2) |
+| — | memory/CPU outliers: a 2.7-3.1 GB peak RSS for 4-10 s papers (runs 346/347); math0701165 +30 % CPU, +1.13 GB (4.87 GB peak) since 67d converts its diagrams; 1410.2418, 2311.11318, 2402.17444 still out of memory (no semantic.sty), math0301370 OOM → Timeout:Convert; 2605.12601 at the 180 s timeout (62w) | open (from runs 346/347, run 351, 68q, 62w; digest OPS-3) |
+| — | a hook whose sweep itself fails to allocate exits without finishing it (67m exit reports) | open, low (from 67m; digest OPS-4) |
+| — | measure the respawn cost of the 3 GiB child recycle on the next rerun (spawn count and wall time vs run 353) | open (from 67o; digest OPS-5) |
+| — | fleet ops: journald drops ~1M lines per 30 s (every child streams its whole log); `/opt/cortex-scratch` holds 565,483 leaked `cortex_task*` input trees (434 GB since 2026-07) — **awaiting a user-approved cleanup** | open, user (from run 351; digest OPS-6) |
+| — | temp-tree residuals (62zh): the page-render children (`LATEXML_RENDER_JOBS` > 1, off by default) have no watchdog and are not killed by the parent's watchdog exit (orphans over a deleted spill); a harness SIGKILL (cortex_worker.rs), cgroup/systemd-oomd kill or a `panic = "abort"` maxperf panic still leaves the trees — a per-slot `TMPDIR` wiped on respawn would cover these; the graphics-cache unit tests leave one `gcache-shared-<nanos>` dir per test process (graphics_cache.rs `static`) | open (from 62zh; digest OPS-7) |
+| — | pericortex 0.2.8 `harness.rs:642-670`'s unresponsive-worker watchdog SIGKILLs IDLE workers (a 60 s idle poll uses under one clock tick, so the tick count never advances; seen 2026-10-19 09:41Z) — respawn churn while the fleet is idle; upstream fix: arm the watchdog only while a task is leased | open, upstream (from runs 366/367 side finding; digest OPS-8) |
+| — | Verify on head ("fixed later" inferred by the digest, not stated): amsthm vs a document's own `{proof}` (67ps); svmult `\subfigures` (68k); math0012150 active `@` (78b); R9 `\H@refstepcounter` (77r); standalone sub-preamble (int29 r3); 0706.4029 amsgen check (int32); latex209 `\usepackage` trap (int20); nomencl `$` in an equation (73a) | open (digest C010/C033/C047/C052/C067/C097/C169/C176) |
+| — | Repro headers that disagree with the record: `macro-state/declare_math_alphabet_scopes_its_argument` says RED though OD #823 is FIXED 78i; `class-bindings/emulateapj_deluxetable_in_deluxetable` GREEN while 77r calls a part RED; `alignment/tabularcalc_pcell_ifnum_cr` GREEN for the witness shape, SILENT for 64zf's — re-run and fix the headers | open (digest ambiguity 3) |
