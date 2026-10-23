@@ -5489,8 +5489,10 @@ pub fn remove_meaning_global(token: &Token) {
 /// ([`AssignmentJournalGuard::keep`]; also on drop, so a panic leaves no journal open): a transaction over the binding
 /// tables, of every assignment however scoped and of the in-place edits of the tables (`push_value`,
 /// `assign_mapping`, `lookup_value_mut`, `checkout_value`/`checkin_value`, named-scope activation,
-/// `rebind_let_copies`, the graphics path list). Not of what lives outside the tables: a font's parameter array
-/// (`Stored::FontDimens`, edited in place) and the fallback/provide-only name sets. Made for the replay of a refused
+/// `rebind_let_copies`, the graphics path list) and of a name's standing in the fallback-guess set
+/// (`AssignmentJournal::fallback`, FM S2a.2 r9: siamart's `\AND`, 2409.10200). Not of what lives outside the tables: a
+/// font's parameter array (`Stored::FontDimens`, edited in place) and the provide-only and stand-in name sets, which
+/// change only while a package or class loads. Made for the replay of a refused
 /// frontmatter setter (sect05.rs `replay_class_setter`), which a setter that errs half-way must not leave half-done
 /// (jsty3-author.sty:542's expl3 author list, which its printer then looped over: 2607.24171). `None`, recording
 /// nothing, while one is already open (journals do not nest); a journal its guard could not close (the state was
