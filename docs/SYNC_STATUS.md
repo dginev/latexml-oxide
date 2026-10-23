@@ -7065,6 +7065,16 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   Residuals: jpconf's `\footnote[<n>]` sets the counter where the rehearsal's binding does not (a later bare
   `\footnotemark` shows the kernel's count); a homepage no name's spelling reaches (1401.0489's `~laci`) stays in its
   note.
+  **Landing (int73, 412f9d4dd1 cherry-picked onto int72 dc5b58276a as 6604bc49cf; binary int73a):** review revfms2a2_8 LAND
+  (shadow-only proven again on 40 papers, seed `rev8-` + 10 witnesses; the main-session decisions — contacts sorted with the
+  notes, the strict url fallback, the rehearsal leak its own round — stand; S2b on revtex4_support GO once a link contact
+  carries its target). Its findings go to r9: a link contact keeps the link's anchor text, not its target (2210.15991 `url
+  work`, 2309.10007 `url tsamak`; a `mailto:` stays role `url`) — blocks S2b's first written XML; the API legend rule takes a
+  whole affiliation entry for a legend (1903.06934); the comparator's note-order check reads only the first differing note and a
+  same-text collision keeps one rule per key; nits (`continued` optional, `link_page` edges, span-less order, `is_symbol_char`).
+  Gates int73a: nextest 7147/7147 + cortex 10/10, fmt/clippy/rustdoc clean, inits 0/0, dump content diff vs int72a empty; A/B
+  int72a → int73a on int65's 724 papers byte-identical with `LATEXML_FM_SHADOW` unset AND set (E 169 = 169, F 1 = 1, words equal,
+  0 changed). Binding nets 136/136, 0 worse than int72a.
 
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
