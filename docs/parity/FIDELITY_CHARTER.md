@@ -51,8 +51,11 @@ When two rules below pull apart, the higher priority wins.
   staying Perl's for everything else; a group is a matrix only on **strong signals** (an author-built `tabular`, or ≥ 2
   rows each with the same column count and equal panel widths), else a gallery. **Sizing keeps the panels' relative
   sizes within one figure**: capping each image separately at its LaTeX size skews the read-out against the PDF, so
-  the group scales as a whole (precomputed sizing values carried in the XML as CSS custom properties is the direction;
-  the exact design is still open). A deliberate overfill pulled together by negative glue (2301.02117) is an accepted
+  the group scales as a whole. Ruled 2026-10-23: **sizes are fractions of the PDF's running-text column at the float**
+  (`\columnwidth` in two-column mode, `\textwidth` in one) — the float states `panelline` (its line ÷ that column: 1 for a
+  column figure, ≈ 2.07 for a `figure*`, < 1 for a wrapfigure) and `panelfill` (the widest row's Σ `panelwidth`); the
+  theme maps that column to its own width, so the converter emits no rem/pt constant (OD #887's rendering rule). A
+  deliberate overfill pulled together by negative glue (2301.02117) is an accepted
   residual.
 
 ## 3. Numbering, labels and references
@@ -84,6 +87,11 @@ When two rules below pull apart, the higher priority wins.
 ## 5. Bindings and shipped copies
 
 - **A binding defines a macro where the original package or class defines it**, under its conditions (2026-10-17).
+- **Math letters follow the class's declarations** (2026-10-23): where a class declares the capital Greek letters
+  `\mathalpha` from `letters` (llncs, svmult, svjour3) they print italic, as Latin letters do, and a math alphabet still
+  overrides (`\mathrm{\Omega}` upright); a package that declares the same (fixmath; mathptmx/newtxmath/cmbright under
+  `slantedGreek`) follows the same rule. Keyed on the declaring command, not the character (svmult's `\var<Greek>` stay
+  upright).
 - **A binding wins over a shipped copy, for markup and for typography** (2026-10-17, 2026-10-21): bindings are the ground
   truth for the XML. A copy may supply only the **text names its binding declares** — the kernel's default list of the
   standard `\…name` macros (`\figurename`, `\tablename`, `\abstractname`, `\refname`, …), extended per binding (journal

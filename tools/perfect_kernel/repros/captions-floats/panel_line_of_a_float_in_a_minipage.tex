@@ -1,0 +1,21 @@
+% witness: rev79c2 finding 2 (probe p1 F3); no corpus paper in popint70a (its 2 minipage-held floats are 345pt wide)
+% oracle:  pdflatex 0 errors: inside the `{minipage}{0.5\textwidth}` `\hsize` = `\textwidth` = `\columnwidth` = 172.5pt,
+%          against the page's 345pt column, so the float's line is 0.5 of the running-text column
+% engines: rust 79c r2 = `panelline="1"` (the minipage sets `\textwidth`, as latex.ltx `\@iiiminipage` does, and
+%          `panel_page` takes it as the page); Perl 0.8.8 = no grid markup
+% expect:  0 errors, 0 warnings; the figure `ltx_panels_gallery` 1x2, `panelwidth` 0.45 each, `panelline` 0.5,
+%          `panelfill` 0.9
+% status:  RED (79c r2, OXIDIZED_DESIGN_DIVERGENCES #887: take the column from the page outside any box)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{float}
+\begin{document}
+\begin{minipage}{0.5\textwidth}
+\begin{figure}[H]
+  \centering
+  \rule{0.45\linewidth}{1cm}\hfill\rule{0.45\linewidth}{1cm}
+  \caption{Two panels in a half-width minipage.}
+\end{figure}
+\end{minipage}
+\end{document}

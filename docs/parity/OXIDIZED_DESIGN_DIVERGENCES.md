@@ -25057,11 +25057,16 @@ a matrix whose rows and columns mean something. Ours (79c), once `arrange_panels
 - **The float's line and fill** (user ruling 2026-10-23), where every panel states its `panelwidth`: `panelline`, the
   line its rows are set against as a fraction of the PDF's running-text column at the float (`PANEL_COLUMN`,
   `install_panel_line`: the class's real column in two columns, its text width in one — 1 for a `figure`, 2.073 for
-  REVTeX's `figure*` (510pt of the 246pt column), 0.5 for a `{wrapfigure}{r}{0.5\textwidth}`, under 1 for a float in a
-  minipage), and `panelfill`, the widest row's sum of its panels' `panelwidth` (fractions of the float's own line; 3
+  REVTeX's `figure*` (510pt of the 246pt column), 0.5 for a `{wrapfigure}{r}{0.5\textwidth}`; a float held in a minipage still states 1, against the PDF's
+  0.5 for a half-width minipage, because the minipage sets `\textwidth` and `panel_page` takes it as the page — RED
+  `captions-floats/panel_line_of_a_float_in_a_minipage`), and `panelfill`, the widest row's sum of its panels' `panelwidth` (fractions of the float's own line; 3
   decimals each). **Rendering rule**: a panel renders at `panelwidth × panelline` of the theme's column, divided by
   `max(1, panelfill × panelline)` — so a `figure*` fills the column and a narrow float stays narrow; the converter knows
   only the PDF's column and the float's line, never a theme constant (no rem/pt value is emitted).
+  The column is OD #885's page model: a two-column class with no declared page (article/report/book `[twocolumn]`,
+  acmart's two-column formats, elsarticle `5p`, emulateapj, svjour3 `[twocolumn]`, mn2e) is read against the binding's
+  345pt `\textwidth`, so its `figure*` states 2 (article, PDF 2.044) or 1 (acmart sigconf, PDF 2.100) and its absolute
+  widths are fractions of 345pt (SYNC row "Class pages not declared for the panel rows").
 - **A matrix only on strong signals**: an author-built `tabular` of panels — the float's one content a `tabular` (or a
   box holding only it: `\resizebox`, `adjustbox`) two or more of whose cells hold a graphic; `panelrows`/`panelcols`
   are its rows and the most columns a row takes (`colspan` counted), its cells keep their `colspan`/`rowspan`
