@@ -887,3 +887,44 @@ fn subfloats_of_a_stated_width_in_a_revtex_column() {
   }
   assert_eq!(last_row_panels(&xml, "S0.F1"), 1, "{xml}");
 }
+
+/// captions-floats/an_hspace_star_opens_the_row_paragraph: `\hspace*{5pt}` (Fig 2: `\hskip 5pt`) first in a float's
+/// `{center}`, then two `\parbox` panels holding a `\par` — the leading glue's row separator (`note_panel_separator`) is
+/// a mark for `arrange_panels`, not the capture's content (`insert_block_as`): the parboxes stay inline blocks of one
+/// row and each caption is its figure's (pdflatex one line per float). Red (int70a, 78x r5; the ws-procs961x669 binding
+/// net's 1710.06503 Fig 1, 0 → 8 Errors): the separator chose the capture's container, the parboxes were hoisted out as
+/// vertical `ltx:logical-block`s and the caption kept inside the row's `ltx:block`.
+#[test]
+fn an_hspace_star_opens_the_row_paragraph() {
+  let xml = convert_clean(repro!(
+    "captions-floats/an_hspace_star_opens_the_row_paragraph.tex"
+  ));
+  assert!(!xml.contains("<logical-block"), "{xml}");
+  for (n, labels, width, text) in [
+    (1, " labels=\"LABEL:ICHEP\"", "200.0pt", "Cap."),
+    (2, "", "100.0pt", "Cap two."),
+  ] {
+    let panel = |m: u32, label: char| {
+      format!(
+        "<block class=\"ltx_parbox\" vattach=\"middle\" width=\"151.8pt\" xml:id=\"S0.F{n}.1.{m}\">\
+         <rule height=\"10.0pt\" width=\"{width}\"/><p align=\"center\" xml:id=\"S0.F{n}.1.{m}.1\">\
+         <text fontsize=\"80%\" xml:id=\"S0.F{n}.1.{m}.1.1\">({label})</text></p></block>"
+      )
+    };
+    let first = if n == 1 { 'a' } else { 'c' };
+    let second = if n == 1 { 'b' } else { 'd' };
+    assert_element(
+      &xml,
+      "figure",
+      &[&format!("xml:id=\"S0.F{n}\"")],
+      &format!(
+        "<figure inlist=\"lof\"{labels} placement=\"t\" xml:id=\"S0.F{n}\">{}<block xml:id=\"S0.F{n}.1\">{}{}</block>{}\
+         </figure>",
+        figure_tags(n),
+        panel(1, first),
+        panel(2, second),
+        figure_captions(n, "", text)
+      ),
+    );
+  }
+}

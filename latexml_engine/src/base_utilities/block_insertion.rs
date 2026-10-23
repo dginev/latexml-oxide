@@ -89,7 +89,15 @@ pub(super) fn insert_block_as(
   }
   document.absorb(contents, None)?;
 
+  // The row separators the panel grid rule records in a float's `{center}`-like capture (`note_panel_separator`) are
+  // marks for the float's `arrange_panels`, not the box's content: they choose no container, are hoisted nowhere and
+  // stay where they are — reaching the float where the capture unwraps into it, and leaving with a capture that stays
+  // a container (`drop_panel_separators`), in which they separate none of the float's panels. As content, a leading
+  // `\hspace*{5pt}`'s (or `\hskip`'s) `ltx:break` chose the inline candidate that holds it: the `\parbox` panels
+  // after it were hoisted out as `logical-block`s and the caption kept in the capture's `ltx:block` (1710.06503 Fig 1,
+  // the ws-procs961x669 binding net; repro captions-floats/an_hspace_star_opens_the_row_paragraph).
   let mut nodes = content_nodes(&container);
+  nodes.retain(|node| !crate::latex_constructs::is_panel_separator(node));
   let mut node_tags = nodes
     .iter()
     .map(document::get_node_qname)
@@ -509,6 +517,7 @@ pub(super) fn insert_block_as(
       && !with(nc, |s| s.starts_with("svg:"))
     {
       // rename the capture to that container
+      drop_panel_separators(document, &container);
       document.rename_node_qsym(container, nc, true)?;
       return Ok(nodes);
     }
@@ -517,6 +526,7 @@ pub(super) fn insert_block_as(
   // the in-conditional-assignments from Perl.
 
   // Otherwise, rename the capture
+  drop_panel_separators(document, &container);
   // MAY need foreignObject wrapper
   if is_svg
     && node_tags
@@ -707,4 +717,14 @@ pub(super) fn insert_block_as(
     document.rename_node(container, "ltx:block", true)?;
   }
   Ok(nodes)
+}
+
+/// The row separators a capture that stays a container holds (`insert_block_as`): inside it they separate none of the
+/// float's panels, and a container the model chose without them may not hold an `ltx:break`.
+fn drop_panel_separators(document: &mut Document, container: &Node) {
+  for child in container.get_child_elements() {
+    if crate::latex_constructs::is_panel_separator(&child) {
+      document.remove_node(child);
+    }
+  }
 }

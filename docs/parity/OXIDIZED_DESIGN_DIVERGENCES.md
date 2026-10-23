@@ -24636,7 +24636,12 @@ and its standalone blocks:
   inserts, 2605.00347), a `{center}`/`{flushleft}`/`{flushright}` boundary, a `\\` in such a capture, a `\vskip` (not
   `\vspace`'s or `\medskip`'s: in a paragraph latex.ltx:9361-9370 `\@vspace` is a `\vadjust`, no line break), a forced
   `\linebreak`. `arrange_panels` keeps one between two panels as the row's `<ltx:break class="ltx_break"/>` and drops
-  the rest; `settle_float_paragraphs` drops any no float took. The float's begin lets `\vspace`, `\linebreak` and
+  the rest; `settle_float_paragraphs` drops any no float took. A separator is a mark, not content: a capture's
+  container is chosen without the separators it holds (`insert_block_as`), which reach the float where the capture
+  unwraps into it and leave with a capture that stays a container (`drop_panel_separators`; 78x r6: a leading
+  `\hspace*{5pt}` or `\hskip` in a `{center}` chose the inline candidate holding its `ltx:break`, the `\parbox` panels
+  after it hoisted out as `logical-block`s and the caption kept in the row's `ltx:block`, 1710.06503 Fig 1, the
+  ws-procs961x669 binding net; guard `an_hspace_star_opens_the_row_paragraph`). The float's begin lets `\vspace`, `\linebreak` and
   `\hspace` to the rule's `\lx@panel@vspace`/`\lx@panel@linebreak`/`\lx@panel@hspace` only while they have the kernel's
   meaning (`\lx@kernel@…`): an author's or a package's own stands.
 - **The stated glue counts.** `\hskip` (so `\quad`, `\qquad`) and `\hspace` between two panels add their natural width to

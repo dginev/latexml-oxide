@@ -5596,6 +5596,11 @@ fn aligning_captures() -> i64 {
 pub(crate) const PANEL_SEPARATOR: &str = "_panelsep";
 const PANEL_GLUE: &str = "_panelglue";
 
+/// A row separator `note_panel_separator` recorded: a mark for the float's `arrange_panels`, not content.
+pub(crate) fn is_panel_separator(node: &Node) -> bool {
+  node.get_attribute(PANEL_SEPARATOR).is_some()
+}
+
 /// The internal attribute of a `\newline`'s break (sect01.rs): `\@normalcr`, the justified break in every context
 /// (latex.ltx:9256 `\DeclareRobustCommand\newline{\@normalcr\relax}`), where a `\\` under `\centering` or in a
 /// `{center}` is `\@centercr`. `arrange_panels` reads it as a line's end, not a paragraph's.
