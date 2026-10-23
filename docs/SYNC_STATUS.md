@@ -7017,6 +7017,12 @@ space where it is digested (1601.02132), and arxbj's IMS markup through a bindin
   and one name show as written (`§†`, 0907.1243 — each line to every carrier of either; the one census paper),
   repository urls under an author's account become that author's (2008.12970, 2511.08416 — the url rule as decided),
   `M$^{\rm c}$Hardy` (2003.01448) parted.
+  **Landing (int72, 458382f335 cherry-picked onto int71 d56a5027de as 83c5f9ee04; binary int72a):** review revfms2a2_7 LAND
+  (shadow-only proven again on 40 papers, seed `rev7-` + 10 witnesses incl. 1105.2659 and 0709.0673; the main-session decisions
+  on the url homepage rule, glued symbol runs, mark glyphs and ownerless notes went to r8 with its findings 1-4). Gates int72a:
+  nextest 7133/7133 + cortex 10/10, fmt/clippy/rustdoc clean, inits 0/0, dump content diff vs int71a empty; A/B int71a → int72a
+  on int65's 724 papers byte-identical with `LATEXML_FM_SHADOW` unset AND set (E 169 = 169, F 1 = 1, words equal, 0 changed).
+  Binding nets 136/136, 0 worse than int71a.
 
 - **77x** (T3 font map, user ruling 2026-10-20: phonetic symbols are author content; guards
   `perfect_kernel_batch77x::*`, 6; OD #781, KPE #1004). tipa's T3 has a map (t3_fontmap.rs: each slot the glyph tipa.mf's
