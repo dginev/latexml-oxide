@@ -1,0 +1,30 @@
+% witness: 2609.24634, 2609.11123, 2609.04047 (sn-jnl.cls:1365 `\usepackage[title]{appendix}`, :1409-1426 of
+%          2609.33801's copy, in all 164 census copies: `\AtBeginDocument{\let\oldappendices\appendices …
+%          \renewenvironment{appendices}{\setcounter{figure}{0}… \begin{oldappendices}\gdef\thefigure
+%          {\@Alph\c@section\arabic{figure}}…}{\end{oldappendices}}}`; audit #363)
+% oracle:  pdflatex 0 errors with 2609.33801's sn-jnl.cls: "Appendix A App", "Fig. A1 y", "Table A1 t", "(A1)",
+%          "Appendix B App2", "(B2)"; the refs "A1, A1, A1, A"
+% engines: rust int70a = 0 errors, "§2" (a plain section 2), "Figure 2", "Table 1", "(2)", "(3)": the binding's own
+%          `{appendices}` was a bare `<ltx:appendix>` wrapper and the class hook was never run; Perl: no binding,
+%          OmniBus scans the class (appendix.sty.ltxml), the hook is not read
+% expect:  0 errors, 0 warnings; appendix "Appendix A" holding figure "Figure A1" (the figure name without a class
+%          copy, as before 79b: pdflatex's "Fig." is the class's name, read from a copy), table "Table A1", "(A1)";
+%          equation "(B2)" in appendix "Appendix B"
+% status:  RED (int70a) -> GREEN (79b)
+% preload: ar5iv.sty
+\documentclass{sn-jnl}
+\begin{document}
+\title{T}\maketitle
+\section{Intro}
+See \ref{f2}, \ref{t2}, \ref{e2}, \ref{s2}.
+\begin{figure}\caption{x}\label{f1}\end{figure}
+\begin{equation}a\label{e1}\end{equation}
+\begin{appendices}
+\section{App}\label{s2}
+\begin{figure}\caption{y}\label{f2}\end{figure}
+\begin{table}\caption{t}\label{t2}\begin{tabular}{c}z\end{tabular}\end{table}
+\begin{equation}b\label{e2}\end{equation}
+\section{App2}
+\begin{equation}c\end{equation}
+\end{appendices}
+\end{document}

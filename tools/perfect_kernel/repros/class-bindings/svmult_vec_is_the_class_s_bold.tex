@@ -1,0 +1,16 @@
+% witness: 2512.18788, hep-ex0701025 (svmult.cls:1015-1030 of 2605.10553's copy: `\AtBeginDocument{\ifx\vec@style
+%          \fig@type\else\@ifundefined{vec@style}{\def\vec#1{\ensuremath{\mathchoice{\mbox{\boldmath$\displaystyle
+%          \mathbf{#1}$}}…}}}{…\boldmath$\displaystyle#1$…}\fi}`; 16 of the census's 76 svmult papers use `\vec`; audit #363)
+% oracle:  pdflatex 0 errors with 2605.10553's svmult.cls: "v + ω = x_k", "F = ma", v, k, F, a in CMBX (upright bold),
+%          ω in CMMIB (bold italic); with `vecphys` all in CMMIB; with `vecarrow` too (the class's `\fig@type` is
+%          `figure` by `\begin{document}`, :1890)
+% engines: rust int70a = 0 errors, every `\vec` the kernel's OVERACCENT arrow; Perl: the arrow (svmult.cls.ltxml
+%          ignores `vecphys`/`vecarrow` and defines no `\vec`: KNOWN_PERL_ERRORS #1143)
+% expect:  0 errors, 0 warnings; XMTok v font="bold", ω font="bold italic", no OVERACCENT
+% status:  RED (int70a) -> GREEN (79b)
+% preload: ar5iv.sty
+\documentclass{svmult}
+\begin{document}
+$\vec{v} + \vec{\omega} = x_{\vec{k}}$
+\[ \vec{F} = m\vec{a} \]
+\end{document}

@@ -11,8 +11,11 @@ LoadDefinitions!({
   DeclareOption!("envcountsame", "\\let\\if@envcntsame\\iftrue");
   DeclareOption!("envcountsect", "\\let\\if@envcntsect\\iftrue");
   DeclareOption!("runningheads", "\\let\\if@runhead\\iftrue");
+  // llncs.cls:29-30 `\let\if@custvec\iftrue`, `orivec` false: the class's `\vec` (below) or the kernel's.
+  RawTeX!(r"\let\if@custvec\iftrue");
+  DeclareOption!("orivec", "\\let\\if@custvec\\iffalse");
   for option in [
-    "citeauthoryear", "oribibl", "orivec",
+    "citeauthoryear", "oribibl",
   ].iter() {
     DeclareOption!(*option, None);
   }
@@ -27,6 +30,12 @@ LoadDefinitions!({
   // printed number ("7.0.1") that the PDF never shows. Witness 2605.16562
   // ("Author contributions.").
   SetCounter!("secnumdepth", Number::new(2));
+  // llncs.cls:393-397 (TL 2025, v2.26; `\def\vec` in 367 of the census's 587 copies, the robust command in 213):
+  // `\vec{x}` is `\mbox{\boldmath$x$}`, the bold italic letter (CMMIB10 in pdflatex), not the kernel's arrow accent,
+  // unless `orivec` (Perl's binding ignores it: KNOWN_PERL_ERRORS #1143). In maths only, as there (no `\ensuremath`).
+  // 44 of the census's 690 llncs papers use it (2607.20650, 2607.18197, 2604.00509).
+  sv_support_sty::define_bold_vectors()?;
+  RawTeX!(r"\if@custvec\def\vec#1{\lx@sv@vec@boldmath{#1}}\fi");
 
   RequirePackage!("multicol");
   // LLNCS authors routinely use \boldsymbol (amsbsy) and \mathbb / \mathfrak

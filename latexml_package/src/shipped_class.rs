@@ -293,10 +293,14 @@ pub fn class_code_argument(text: &str, call: &str) -> Option<String> {
   })
 }
 
-/// `text` without its comments (`%` to the end of the line).
+/// `text` without its comments (`%` to the end of the line). A line ends where TeX Live's TeX ends it, at a carriage
+/// return, a line feed or the pair: a copy saved with classic Mac line ends (23 of the census's 164 sn-jnl.cls:
+/// 2609.04047's, 2106.13602's), which pdflatex reads line by line (2609.04047's "Table A1"), was read here as one
+/// comment, and none of the code a binding looks for in it was found.
 pub fn class_code(text: &str) -> String {
   text
-    .lines()
+    .split("\r\n")
+    .flat_map(|chunk| chunk.split(['\n', '\r']))
     .map(|line| line.split('%').next().unwrap_or_default())
     .collect::<Vec<_>>()
     .join("\n")
@@ -393,7 +397,21 @@ pub fn read_raw(spec: &RawRead) -> Result<bool> {
 
 #[cfg(test)]
 mod tests {
-  use super::class_text_loads;
+  use super::{class_code_contains, class_text_loads};
+
+  /// A copy with classic Mac line ends (2609.04047's sn-jnl.cls) is code line by line, as TeX reads it: a comment ends
+  /// at its carriage return, and the code after it is found (batch 79b).
+  #[test]
+  fn class_code_ends_a_line_at_a_carriage_return() {
+    let class = "%% sn-jnl.cls\r\\usepackage[title]{appendix}%\r\\let\\oldappendices\\appendices%\r%\\def\\x{}\r\n\\def\\y{}";
+    assert!(class_text_loads(class, "appendix"));
+    assert!(class_code_contains(
+      class,
+      "\\let\\oldappendices\\appendices"
+    ));
+    assert!(class_code_contains(class, "\\def\\y{}"));
+    assert!(!class_code_contains(class, "\\def\\x{}"));
+  }
 
   #[test]
   fn class_text_loads_reads_the_load_commands() {

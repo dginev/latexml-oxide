@@ -11,7 +11,7 @@ LoadDefinitions!({
   RawTeX!(r"\newif\if@numart\@numarttrue");
   // Generally ignorable options
   for option in [
-    "nospthms", "vecphys", "vecarrow", "norunningheads", "referee", "oribibl",
+    "nospthms", "norunningheads", "referee", "oribibl",
     "chaprefs", "footinfo", "openany", "sechang", "deutsch", "francais",
     // These could affect numbering...
     "envcountresetchap", "envcountresetsect", "envcountsame",
@@ -23,6 +23,9 @@ LoadDefinitions!({
   // svmult.cls:182-208 (svmono.cls:183-210): `graybox` loads color and framed and sets `{svgraybox}` and
   // `{svtintedbox}` shaded; without it they are a quotation-like list (svmult.cls:822-850).
   DeclareOption!("graybox", { AssignValue!("svmult_graybox" => true); });
+  // svmult.cls:112-113 the `\vec` options (below)
+  DeclareOption!("vecphys", "\\def\\vec@style{phys}");
+  DeclareOption!("vecarrow", "\\def\\vec@style{arrow}");
   // :1034, :1044 the numbering options, which an unstarred or starred `\title` sets again
   DeclareOption!("numart", "\\@numarttrue");
   DeclareOption!("book", "\\@numartfalse");
@@ -64,6 +67,38 @@ LoadDefinitions!({
     DefMacro!("\\backmatter", "\\let\\appendix\\lx@svmult@bppendix");
   }
   RequirePackage!("sv_support");
+  // `\vec` (KNOWN_PERL_ERRORS #1143: Perl's binding ignores the options and keeps the kernel's arrow accent): svmult.cls
+  // :1015-1030 of 2605.10553's copy (and 8 of the census's 65 copies) redefines it in its begin-document code to the
+  // upright bold `\mbox{\boldmath$\mathbf{#1}$}` — "v + ω" in CMBX10 and CMMIB10 — or, with `vecphys`, the bold italic
+  // `\mbox{\boldmath$#1$}`; `vecarrow` keeps the accent where its test (`\ifx\vec@style\fig@type`) compares `arrow`
+  // with `arrow`, but by `\begin{document}` the class has made `\fig@type` `figure` (:1890), so pdflatex prints the bold
+  // italic there too. 37 copies run the same test in the class body, where `\fig@type` is still `arrow` (0812.2480's),
+  // and 10 in the hook against a `\vec@type` of their own (2401.17237's): there `vecarrow` is the arrow. 10 older
+  // copies define the bold italic alone, no options (1405.1421's). A copy without its own picks the first. Witnesses
+  // 2512.18788, hep-ex0701025 (16 of 76 census papers use `\vec`; audit #363).
+  {
+    let copy = crate::shipped_class::shipped_class_text("svmult")?;
+    let has = |code: &str| {
+      copy
+        .as_deref()
+        .is_some_and(|text| crate::shipped_class::class_code_contains(text, code))
+    };
+    if has("\\def\\vec#1{\\mathchoice") {
+      RawTeX!(r"\def\vec#1{\lx@sv@vec@boldmath{#1}}");
+    } else if copy.is_none() || has("\\ifx\\vec@style\\fig@type") || has("\\ifx\\vec@style\\vec@type") {
+      let arrow_compares =
+        has("\\vec@type") || (copy.is_some() && !has("\\AtBeginDocument{\\ifx\\vec@style\\fig@type"));
+      let in_hook = copy.is_none() || has("\\AtBeginDocument{\\ifx\\vec@style");
+      let choice = [
+        r"\def\lx@sv@vec@type{",
+        if arrow_compares { "arrow" } else { "figure" },
+        r"}\ifx\vec@style\lx@sv@vec@type\else\@ifundefined{vec@style}",
+        r"{\def\vec#1{\ensuremath{\lx@sv@vec@mathbf{#1}}}}{\def\vec#1{\ensuremath{\lx@sv@vec@boldmath{#1}}}}\fi",
+      ]
+      .concat();
+      raw_tex(&if in_hook { s!("\\AtBeginDocument{{{choice}}}") } else { choice })?;
+    }
+  }
   RequirePackage!("url");
   // svmult.cls v1.0:939/942 (CR line ends), svmultln.cls:1810/1813: `\newtoks\tocauthor`, `\newtoks\toctitle`, the
   // table-of-contents forms of the author and title — token registers, as in llncs (llncs_cls.rs), so

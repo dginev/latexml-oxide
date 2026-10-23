@@ -1,4 +1,22 @@
 use crate::prelude::*;
+
+/// The journal options whose `sv<option>.clo` turns `\if@mathematic` off or sets `\vec` to `\ensuremath{\mathbf{#1}}`
+/// at the class's end, as every copy of it the census's svjour and svjour3 papers ship has it (svepj.clo: 46 of 53
+/// copies leave `\vec` the class's; svepjST.clo 5 of 5, svepj-spec.clo 3, svepjCONF.clo 3, svwebconf.clo 1 set it;
+/// 1504.01694's svepjST.clo:213-238, CMBX in its PDF): `(option, \if@mathematic, \vec is \mathbf)`, for a paper that does
+/// not ship the file.
+const JOURNAL_VECTORS: [(&str, bool, bool); 9] = [
+  ("epj", false, false),
+  ("epjST", false, true),
+  ("epj-spec", false, true),
+  ("epjCONF", false, true),
+  ("webconf", false, true),
+  ("epj-ND", false, false),
+  ("jog", false, false),
+  ("cmp", false, false),
+  ("arma", false, false),
+];
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: svjour.cls.ltxml — covers svjour.cls, svjour1.cls, svjour2.cls & svjour3.cls
@@ -75,6 +93,42 @@ LoadDefinitions!({
 \lx@svjour@theorem{property}{Property}\lx@svjour@theorem{proposition}{Proposition}\lx@svjour@theorem{question}{Question}%
 \lx@svjour@theorem{solution}{Solution}\lx@svjour@theorem{remark}{Remark}");
   RequirePackage!("sv_support");
+  // svjour.cls:546-556 (svjour3.cls:631-641): `\vec`, upright bold letters (`\mbox{\boldmath$\mathbf{#1}$}`) or, without
+  // `\if@mathematic` (svjour.cls:38, svjour3.cls:45: true), bold italic (`\mbox{\boldmath$#1$}`), not the kernel's arrow
+  // accent (KNOWN_PERL_ERRORS #1143) — pdflatex prints "v + ω" in CMBX and CMMIB (2609.05466, 2509.03659, 2207.14807;
+  // 28 svjour3 and 25 svjour papers of the census use it). The journal file of an option (svjour.cls:78-81
+  // `\input{sv\CurrentOption.clo}`) may turn `\if@mathematic` off, and may set `\vec` itself at the class's end
+  // (`\AtEndOfClass{… \def\vec#1{\ensuremath{\mathbf{#1}}}}`, Greek left medium): the paper's copy says which; without
+  // one, the census's copies (`JOURNAL_VECTORS`). The older svjour copies set `\ensuremath{\mathbf{#1}}` under
+  // `\if@mathematic` (17 of 73: 0710.3184's), Greek left medium: the paper's copy says which.
+  RawTeX!(r"\let\if@mathematic\iftrue");
+  let plain_mathbf = |text: &str| crate::shipped_class::class_code_contains(text, "\\def\\vec#1{\\ensuremath{\\mathbf{#1}}}");
+  let class_mathbf = crate::shipped_class::shipped_class_text("svjour")?.is_some_and(|text| plain_mathbf(&text));
+  let mut journal_mathbf = false;
+  for option in crate::shipped_class::class_options()? {
+    let (mathematic, mathbf) = match crate::shipped_class::shipped_file_text(&s!("sv{option}"), "clo") {
+      Some(text) => (
+        !crate::shipped_class::class_code_contains(&text, "\\let\\if@mathematic\\iffalse"),
+        plain_mathbf(&text),
+      ),
+      None => JOURNAL_VECTORS
+        .iter()
+        .find(|(name, ..)| *name == option)
+        .map_or((true, false), |&(_, mathematic, mathbf)| (mathematic, mathbf)),
+    };
+    if !mathematic {
+      RawTeX!(r"\let\if@mathematic\iffalse");
+    }
+    journal_mathbf |= mathbf;
+  }
+  if journal_mathbf {
+    RawTeX!(r"\def\vec#1{\ensuremath{\mathbf{#1}}}");
+  } else {
+    let upright = if class_mathbf { r"\mathbf" } else { r"\lx@sv@vec@mathbf" };
+    raw_tex(&s!(
+      r"\if@mathematic\def\vec#1{{\ensuremath{{{upright}{{#1}}}}}}\else\def\vec#1{{\ensuremath{{\lx@sv@vec@boldmath{{#1}}}}}}\fi"
+    ))?;
+  }
   // svjour.cls:61-62 and svjour3.cls:392-393 (v3.3): `\preprint{<number>}`, the report number `\makeheadbox` sets
   // at the title page's top right (svjour.cls:489-492) — a publication note, as REVTeX's (1801.06113, 1605.08256,
   // 2305.07696).

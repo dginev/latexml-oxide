@@ -1,0 +1,13 @@
+% witness: 2607.20650, 2607.18197, 2604.00509 (llncs.cls:393-397, TL 2025 v2.26: `\if@custvec\DeclareRobustCommand
+%          \vec[1]{\mathchoice{\mbox{\boldmath$\displaystyle#1$}}…}\fi`, `\if@custvec` true unless `orivec`, :29-30; 44 of
+%          the census's 690 llncs papers use `\vec`)
+% oracle:  pdflatex 0 errors: "v + ω = x_k" with v, ω, k in CMMIB (bold italic); with `orivec` the arrow accent (CMMI)
+% engines: rust int70a = 0 errors, the kernel's OVERACCENT arrow; Perl: the arrow (llncs.cls.ltxml ignores `orivec`
+%          and defines no `\vec`: KNOWN_PERL_ERRORS #1143)
+% expect:  0 errors, 0 warnings; XMTok v and ω font="bold italic", no OVERACCENT
+% status:  RED (int70a) -> GREEN (79b)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+$\vec{v} + \vec{\omega} = x_{\vec{k}}$
+\end{document}

@@ -1,5 +1,20 @@
 use crate::prelude::*;
 
+/// The Springer classes' bold vectors, the two forms their `\vec` takes (KNOWN_PERL_ERRORS #1143): `\lx@sv@vec@mathbf`
+/// is `\mbox{\boldmath$\mathbf{#1}$}` (svjour3.cls:631-636, svjour.cls:546-551 under `\if@mathematic`; svmult.cls:1015-1030
+/// and svproc.cls:389-404 by default), upright bold letters and bold italic Greek ("v + ω", CMBX10 and CMMIB10 in
+/// pdflatex); `\lx@sv@vec@boldmath` is `\mbox{\boldmath$#1$}` (llncs.cls:393-397 under `\if@custvec`, the svjour classes
+/// without `\if@mathematic`, svmult and svproc under `vecphys`), bold italic (CMMIB10). Each reverts as `\vec`; the class
+/// wraps the first in `\ensuremath` where it does. Their `\mathchoice` of four `\mbox`es, one per style, is the
+/// bold font of the current style here. Witnesses 2512.18788, hep-ex0701025 (svmult), 2609.05466 (svjour3).
+pub fn define_bold_vectors() -> Result<()> {
+  DefConstructor!("\\lx@sv@vec@mathbf{}", "#1", bounded => true, require_math => true,
+    font => { series => "bold", family => "serif", shape => "upright", forcebold => true }, alias => "\\vec");
+  DefConstructor!("\\lx@sv@vec@boldmath{}", "#1", bounded => true, require_math => true,
+    font => { forcebold => true }, alias => "\\vec");
+  Ok(())
+}
+
 LoadDefinitions!({
   // Perl: sv_support.sty.ltxml
   // Support package for svjour class variants
@@ -348,6 +363,8 @@ LoadDefinitions!({
   Let!("\\squareforqed", "\\qed");
 
   DefMacro!("\\tens{}", "\\ensuremath{\\mathsf{#1}}");
+  // The bold vectors the classes' `\vec` sets, which each class binding defines where its class does.
+  define_bold_vectors()?;
 
   //======================================================================
   // Random text

@@ -17657,3 +17657,20 @@ column where pdflatex breaks them. Minimal trigger: `\documentclass[preprint,two
 `\begin{figure}\includegraphics[width=114.6pt]{a.png}\includegraphics[width=114.6pt]{b.png}\end{figure}` (pdflatex: each box 114.6pt,
 2 rows; Perl: each box 114.187pt; ours the same box, so 1 row). Ours keeps Perl's rule for rasters (OD #337; the vector branch is TeX's since 78z, OD #886); SYNC row "A raster graphic's
 explicit size comes out at 72/72.27 of it" (review rev78x3 finding 6, probes `rvpt.tex`, `rvpt2.tex`).
+
+## 1143. The Springer classes' `\vec` is the kernel's arrow accent, not the class's bold vector
+
+llncs.cls:393-397 (`\if@custvec`, true unless `orivec`), svjour.cls:546-556 and svjour3.cls:631-641 (`\if@mathematic`, true
+unless an option's journal file turns it off: svepj.clo and eight others, four of which also set `\vec` to
+`\ensuremath{\mathbf{#1}}` at the class's end), svmult.cls:1015-1030 (`vecphys`/`vecarrow`, in its
+begin-document code) and svproc.cls:389-404 redefine `\vec{x}` as a bold vector: `\mbox{\boldmath$\mathbf{x}$}`, upright bold
+letters and bold italic Greek, or `\mbox{\boldmath$x$}`, all bold italic (llncs; `vecphys`). Perl's llncs.cls.ltxml:18 and
+svmult.cls.ltxml:19 declare the options as ignorable, and none of llncs.cls.ltxml, svjour.cls.ltxml, svjour3.cls.ltxml,
+svmult.cls.ltxml or sv_support.sty.ltxml defines `\vec` (sv_support.sty.ltxml:264 has the class's `\tens` beside it), so every
+`\vec` stays the kernel's OVERACCENT arrow. Minimal trigger: `\documentclass{llncs}\begin{document}$\vec{v}$\end{document}`
+(pdflatex: a bold italic v in CMMIB10; Perl: v under an arrow). Ours defines the class's form in each binding where the class
+does (`sv_support_sty::define_bold_vectors`; batch 79b). Reach in the census: llncs 44 of 690 papers, svjour3 28 of 203, svjour
+25 of 97, svmult 16 of 76 (2607.20650, 2609.05466, 0710.1789, 2512.18788, hep-ex0701025). Repros
+`class-bindings/{llncs_vec_is_bold_italic, svjour3_vec_is_upright_bold, svmult_vec_is_the_class_s_bold}`; guards
+`perfect_kernel_batch79b::{llncs_vec_is_bold_italic, svjour3_vec_is_upright_bold, svmult_vec_is_the_class_s_bold,
+svmult_vec_options_as_the_copy_reads_them}`.

@@ -22,6 +22,10 @@ LoadDefinitions!({
   // OmniBus outcome. Witness 2004.07524 (svproc proceedings with `\includegraphics`).
   RequirePackage!("graphicx");
   RequirePackage!("sv_support");
+  // svproc.cls:389-404 (every copy of the census's 17): `\vec` is the upright bold `\mbox{\boldmath$\mathbf{#1}$}`, not
+  // the kernel's arrow accent (KNOWN_PERL_ERRORS #1143). Its `vecphys` (bold italic) and `vecarrow` (the accent) options,
+  // :36-37, are not read: this binding declares no options, and no census paper passes them or uses `\vec`.
+  RawTeX!(r"\def\vec#1{\ensuremath{\lx@sv@vec@mathbf{#1}}}");
   // svproc.cls loads no amsmath (103 copies in a 1/20 arXiv sample): amsmath's commands for papers that use them
   // unloaded, its "Old form" error once the paper loads it; the paper's copy decides
   // (`amsmath_sty::require_amsmath_beyond_original`, KNOWN_PERL_ERRORS #993).

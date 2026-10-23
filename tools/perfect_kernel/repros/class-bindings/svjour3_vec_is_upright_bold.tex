@@ -1,0 +1,14 @@
+% witness: 2609.05466, 2509.03659, 2207.14807 (svjour3.cls:631-641 of 2609.05466's copy: `\if@mathematic\def\vec#1{
+%          \ensuremath{\mathchoice{\mbox{\boldmath$\displaystyle\mathbf{#1}$}}…}}\else…\boldmath$\displaystyle#1$…\fi`,
+%          `\if@mathematic` true, :45; 28 of the census's 203 svjour3 papers use `\vec`)
+% oracle:  pdflatex 0 errors with 2609.05466's svjour3.cls and svglov3.clo: "v + ω = x_k and text w." with v, k, w in
+%          CMBX (upright bold), ω in CMMIB
+% engines: rust int70a = 0 errors, the kernel's OVERACCENT arrow (and an arrow over w in text); Perl: the arrow
+%          (svjour3.cls.ltxml defines no `\vec`: KNOWN_PERL_ERRORS #1143)
+% expect:  0 errors, 0 warnings; XMTok v and w font="bold", ω font="bold italic", no OVERACCENT
+% status:  RED (int70a) -> GREEN (79b)
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+$\vec{v} + \vec{\omega} = x_{\vec{k}}$ and text \vec{w}.
+\end{document}
