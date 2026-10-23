@@ -111,6 +111,7 @@ impl Resolver {
         label:  None,
         rule:   String::new(),
         source: Some((index, e.span)),
+        target: link_target(e),
       })
       .collect();
     if tag == "ltx:creator" {
@@ -232,6 +233,7 @@ impl Resolver {
         label:  None,
         rule:   String::new(),
         source: Some((index, None)),
+        target: None,
       };
       self.sequence_calls += 1;
       let place = attr_value(attrs, "_sequence")
@@ -295,19 +297,33 @@ impl Resolver {
     // acmart's `\country{$^1$SJTU, $^2$Infinigence-AI, $^*$Equal contributions}`, 2409.11440. Only those: the call
     // declares an affiliation, and an address change is one, and a funding word is an institution's name as often —
     // `$^\dagger$Science \& Finance, Capital Fund Management, 6 Bd Haussmann, …`, 0710.0802)
+    // (and only when no piece of it reads as an affiliation — what `is_legend_text`'s funding branch asks of a text, of
+    // each name and contact it prints, an address and its label reading as none —, or when it is one piece its marks
+    // split an entry into: a legend line nested in an entry holding institutions is no legend of the whole, IEEEtran's
+    // `\IEEEauthorblockA{{*Equal Contribution}\\ \IEEEauthorblockA{Tsinghua University} \IEEEauthorblockA{National
+    // Supercomputing Center in Wuxi} …}` became one legend note, both institutions out of the affiliation role,
+    // 1903.06934 — review revfms2a2_8 finding 2, FM S2a.2 r9; the role change its own tag, `api:legend`; 0812.1531's
+    // `corresponding author, e-mail: stefano@duke.edu` and 1902.02631's `These authors contributed equally to this
+    // work \\ E-mail: …` stay legends)
+    let entry_affiliation = events
+      .iter()
+      .filter(|e| matches!(e.kind, EventKind::Name | EventKind::Contact))
+      .any(|e| reads_as_affiliation(&text_tokens(&e.text)));
     let legend = label_rule.starts_with("api:leading-mark")
       && matches!(role, "affiliation" | "address" | "altaffiliation")
       && !labels.is_empty()
       && labels
         .iter()
         .all(|l| !l.is_empty() && !l.chars().any(char::is_alphanumeric))
-      && matches!(classify_thanks(&text), "correspondence" | "contribution");
+      && matches!(classify_thanks(&text), "correspondence" | "contribution")
+      && (split || !entry_affiliation);
     let assoc = Assoc {
       role:   if legend { "legend" } else { role }.to_string(),
       text:   text.clone(),
       label:  labels.first().cloned(),
       rule:   String::new(),
       source: Some((index, None)),
+      target: None,
     };
     if !labels.is_empty() {
       // (a leading mark of content no `\lx@affiliation@withsup` wraps is ruling 1's reading, not today's: today's
@@ -336,7 +352,11 @@ impl Resolver {
       }
       if !text.is_empty() {
         self.pending.push((labels, false, Assoc {
-          rule: label_rule.to_string(),
+          rule: if legend {
+            s!("{label_rule} api:legend")
+          } else {
+            label_rule.to_string()
+          },
           ..assoc
         }));
       }

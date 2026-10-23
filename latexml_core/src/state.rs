@@ -267,8 +267,13 @@ pub type Table = HashMap<SymStr, VecDeque<Stored>>;
 #[derive(Debug, Default)]
 pub struct AssignmentJournal {
   /// the ids of the frames open when it began, from the bottom of the stack
-  frames: Vec<u64>,
-  saved:  rustc_hash::FxHashMap<(TableName, SymStr), JournalEntry>,
+  frames:   Vec<u64>,
+  saved:    rustc_hash::FxHashMap<(TableName, SymStr), JournalEntry>,
+  /// each meaning's standing as a fallback guess, a kernel stub or a borrowed package's then (`fallback_meanings`),
+  /// which an assignment changes beside the meaning and no group end puts back: the meaning a rehearsal `\let`s and
+  /// rolls back keeps it (an OmniBus `\AND`, which algorithmic's `\newcommand{\AND}` may replace — siamart220329,
+  /// 2409.10200; FM S2a.2 r9)
+  fallback: rustc_hash::FxHashMap<SymStr, Option<crate::definition::origin::DefinitionOrigin>>,
 }
 /// A key's values in its table (`None`: unbound) and its assignment counts by frame id.
 type JournalEntry = (Option<VecDeque<Stored>>, Vec<(u64, usize)>);
@@ -1047,8 +1052,13 @@ impl State {
       .filter(|frame| journal.frames.contains(&frame.id))
       .filter_map(|frame| frame.table(table_name).get(&key).map(|n| (frame.id, *n)))
       .collect();
+    let standing =
+      (table_name == TableName::Meaning).then(|| self.fallback_meanings.get(&key).copied());
     if let Some(journal) = self.journal.as_mut() {
       journal.saved.insert((table_name, key), (values, counts));
+      if let Some(standing) = standing {
+        journal.fallback.insert(key, standing);
+      }
     }
   }
 
@@ -1105,8 +1115,9 @@ impl State {
     mut scope_opt: Option<Scope>,
   ) {
     // (a meaning a fallback class, a kernel stub or a borrowed package installs, until anything else assigns the name:
-    // `fallback_meanings`)
+    // `fallback_meanings`; an open journal records the standing first)
     if table_name == TableName::Meaning {
+      self.journal_touch(table_name, key);
       let origin = crate::definition::origin::current_origin();
       if matches!(
         origin,
@@ -5493,6 +5504,7 @@ pub fn begin_assignment_journal() -> Option<AssignmentJournalGuard> {
   state.journal = Some(AssignmentJournal {
     frames,
     saved: rustc_hash::FxHashMap::default(),
+    fallback: rustc_hash::FxHashMap::default(),
   });
   JOURNAL_GUARD_LIVE.set(true);
   Some(AssignmentJournalGuard { open: true })
@@ -5567,6 +5579,16 @@ impl AssignmentJournalGuard {
         if let Some((_, n)) = counts.iter().find(|(at, _)| *at == id) {
           frame_table.insert(key, *n);
         }
+      }
+    }
+    for (key, standing) in journal.fallback {
+      match standing {
+        Some(origin) => {
+          state.fallback_meanings.insert(key, origin);
+        },
+        None => {
+          state.fallback_meanings.remove(&key);
+        },
       }
     }
     true
@@ -7706,6 +7728,35 @@ mod let_copy_tests {
 #[cfg(test)]
 mod assignment_journal_tests {
   use super::*;
+
+  /// A rollback puts back a meaning's standing as a fallback guess with the meaning (`fallback_meanings`): a group-local
+  /// `\let` of it under the journal cleared the standing, which the group's end does not put back (FM S2a.2 r9: the
+  /// observer rehearsal's `\let\AND`, OmniBus's `\AND` under the siamart binding, 2409.10200); and a name the journal
+  /// saw become a guess is none after it.
+  #[test]
+  fn rollback_restores_a_fallback_standing() {
+    use crate::definition::origin::{DefinitionOrigin, with_origin};
+    let guess = T_CS!("\\r9_fallback_standing_probe");
+    let fresh = T_CS!("\\r9_fallback_fresh_probe");
+    with_origin(DefinitionOrigin::Fallback, || {
+      let_i(&guess, &T_LETTER!("x"), Some(Scope::Global))
+    });
+    assert!(is_fallback_meaning(&guess));
+    let journal = begin_assignment_journal().expect("no journal open");
+    push_frame();
+    let_i(&guess, &T_LETTER!("y"), None);
+    with_origin(DefinitionOrigin::Fallback, || {
+      let_i(&fresh, &T_LETTER!("z"), Some(Scope::Global))
+    });
+    assert!(pop_frame().is_ok());
+    assert!(
+      !is_fallback_meaning(&guess),
+      "the group's end leaves the standing cleared"
+    );
+    assert!(journal.rollback(), "the frames it began with are open");
+    assert!(is_fallback_meaning(&guess), "the rollback puts it back");
+    assert!(!is_fallback_meaning(&fresh) && lookup_meaning(&fresh).is_none());
+  }
 
   /// A rollback puts back a global and a local assignment made since the journal began; a kept journal keeps them.
   #[test]

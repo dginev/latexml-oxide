@@ -38,17 +38,19 @@ use crate::{
 /// One side's tuples.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Tuples {
-  pub creators:    Vec<TCreator>,
+  pub creators:        Vec<TCreator>,
   /// the author block's own contacts and notes, `(role, text)` — role `affiliation` for an affiliation or address,
   /// `note` for a note ([`block_role`])
-  pub block:       Vec<(String, String)>,
+  pub block:           Vec<(String, String)>,
   /// the shadow's rules for the block's items: `role\ttext` → rule (the XML's empty)
-  pub block_rules: BTreeMap<String, String>,
+  pub block_rules:     BTreeMap<String, String>,
+  /// every rule of the block's items of one key, in their order ([`TCreator::all_rules`])
+  pub block_all_rules: BTreeMap<String, Vec<String>>,
   /// the shadow's rules for what the rulings dropped (an emptied note, ruling 4): `note\ttext` → rule
-  pub dropped:     BTreeMap<String, String>,
-  /// the shadow's entries that unmarked lines continued, each its lines normalised (`FmResolved::continued`; empty for
+  pub dropped:         BTreeMap<String, String>,
+  /// the shadow's entries that unmarked lines continued, each its lines normalised (`FmResolved::continued`; `None` for
   /// a dump made before FM S2a.2 r8)
-  pub continued:   Vec<Vec<String>>,
+  pub continued:       Option<Vec<Vec<String>>>,
 }
 
 /// The role a block item is compared under: an affiliation or an address `affiliation`, a note of any role `note`, a
@@ -71,6 +73,10 @@ pub struct TCreator {
   pub notes:        Vec<String>,
   /// the shadow's rules, by item: `name` the split rule; else `role\ttext` → rule
   pub rules:        BTreeMap<String, String>,
+  /// every rule of the shadow's items of one key (`role\ttext`), in their order: the copies of one text (ruling 3: an
+  /// address in a note and on the line under it, 2509.23109; 1910.01401's two ORCID copies) each with its own, which
+  /// the comparison gives the copies the XML lacks one by one (`surplus_rules` — review revfms2a2_8 finding 3b)
+  pub all_rules:    BTreeMap<String, Vec<String>>,
   /// the shadow's marks shown on the name (its requests, prefixes aside), normalised
   pub marks:        Vec<String>,
   /// the XML's notes set inside the personname (a footnote on the name: the text of a `\footnotemark` it shows,
@@ -270,13 +276,20 @@ fn is_note_role(role: &str) -> bool { matches!(role, "note" | "thanks") }
 /// An item's rule, by its kind and text; of two items of one kind and text (ruling 3: one per print event — an address in
 /// a note and on the line under it, 2509.23109), the rule of a ruling's change, the reason the shadow holds the second,
 /// whatever their order (FM S2a.2 r8 sorts a creator's contacts by source).
-fn assoc_rule(rules: &mut BTreeMap<String, String>, kind: &str, assoc: &FmAssoc) {
+/// Every rule is kept as well, by key (`TCreator::all_rules`).
+fn assoc_rule(creator: &mut TCreator, kind: &str, assoc: &FmAssoc) {
   let text = if kind == "orcid" {
     orcid_id(&assoc.text)
   } else {
     &assoc.text
   };
   let key = format!("{kind}\t{}", norm(text));
+  creator
+    .all_rules
+    .entry(key.clone())
+    .or_default()
+    .push(assoc.rule.clone());
+  let rules = &mut creator.rules;
   if rules
     .get(&key)
     .is_some_and(|held| is_change_rule(held) && !is_change_rule(&assoc.rule))
@@ -306,12 +319,12 @@ pub fn shadow_tuples(resolved: &FmResolved) -> Tuples {
       .collect();
     for a in &c.affiliations {
       creator.affiliations.push(a.text.clone());
-      assoc_rule(&mut creator.rules, "affiliation", a);
+      assoc_rule(&mut creator, "affiliation", a);
     }
     for a in &c.contacts {
       if is_note_role(&a.role) {
         creator.notes.push(a.text.clone());
-        assoc_rule(&mut creator.rules, "note", a);
+        assoc_rule(&mut creator, "note", a);
       } else {
         let text = if a.role == "orcid" {
           orcid_id(&a.text).to_string()
@@ -319,20 +332,21 @@ pub fn shadow_tuples(resolved: &FmResolved) -> Tuples {
           a.text.clone()
         };
         creator.contacts.push((a.role.clone(), text));
-        assoc_rule(&mut creator.rules, &a.role, a);
+        assoc_rule(&mut creator, &a.role, a);
       }
     }
     for a in &c.notes {
       creator.notes.push(a.text.clone());
-      assoc_rule(&mut creator.rules, "note", a);
+      assoc_rule(&mut creator, "note", a);
     }
     out.creators.push(creator);
   }
-  out.continued = resolved
-    .continued
-    .iter()
-    .map(|lines| lines.iter().map(|l| norm(l)).collect())
-    .collect();
+  out.continued = resolved.continued.as_ref().map(|all| {
+    all
+      .iter()
+      .map(|lines| lines.iter().map(|l| norm(l)).collect())
+      .collect()
+  });
   for a in &resolved.dropped {
     out
       .dropped
@@ -340,9 +354,13 @@ pub fn shadow_tuples(resolved: &FmResolved) -> Tuples {
   }
   for a in &resolved.block {
     let role = block_role(&a.role);
+    let key = format!("{role}\t{}", norm(&a.text));
     out
-      .block_rules
-      .insert(format!("{role}\t{}", norm(&a.text)), a.rule.clone());
+      .block_all_rules
+      .entry(key.clone())
+      .or_default()
+      .push(a.rule.clone());
+    out.block_rules.insert(key, a.rule.clone());
     out.block.push((role, a.text.clone()));
   }
   out

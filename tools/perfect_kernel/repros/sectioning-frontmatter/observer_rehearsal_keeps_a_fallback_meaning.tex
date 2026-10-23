@@ -1,0 +1,23 @@
+% The frontmatter observer's rehearsal (LATEXML_FM_SHADOW=1) binds `\and`, `\And` and `\AND` to its event commands in a
+% group and rolls the group's assignments back; a meaning's standing as a fallback class's guess (core `state`
+% `fallback_meanings`: OmniBus's `\AND`, which the siamart binding loads) is no assignment a group end puts back, and the
+% rehearsal's `\let` cleared it: algorithmic.sty:161's `\newcommand{\AND}{\algorithmicand{} }` was then refused
+% ("Ignoring redefinition"), and its `\AND` printed the author separator's plain "and", not `\textbf{and}` (FM S2a.2 r9).
+% witness: 2409.10200 (siamart220329, `\WHILE{… \AND …}`; the PDF's bold "and")
+% oracle:  pdflatex 0 errors with 2409.10200's siamart220329.cls in place of the binding (TL 2025 ships no siamart):
+%          "a and b" with "and" in CMBX10
+% engines: perl (no observer) n/a; rust fms2a2r8 bold "and" with LATEXML_FM_SHADOW unset, a plain "and" with it set
+% expect:  0 errors, 0 warnings; the XML byte-identical with LATEXML_FM_SHADOW unset and set; `<text font="bold" …>and`
+% status:  RED (fms2a2r8) -> GREEN (fms2a2r9: an assignment journal saves a meaning's fallback standing with its
+%          bindings and its rollback restores it, core `state::AssignmentJournal::fallback`)
+% preload: ar5iv.sty
+\documentclass{siamart}
+\usepackage{algorithmic}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\maketitle
+\begin{algorithmic}
+\STATE $a$ \AND $b$
+\end{algorithmic}
+\end{document}

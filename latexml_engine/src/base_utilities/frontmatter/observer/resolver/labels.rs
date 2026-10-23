@@ -37,13 +37,10 @@ pub(super) fn split_top_commas(text: &str) -> Vec<&str> {
   parts
 }
 
-/// LaTeX's `\@fnsymbol` characters, the math asterisk as `*`, the kernel's formula `\|` (`∥`, 0806.2911) as `‖`.
-pub(super) fn is_symbol_char(c: char) -> bool {
-  matches!(
-    c,
-    '*' | '\u{2217}' | '†' | '‡' | '§' | '¶' | '‖' | '\u{2225}'
-  )
-}
+/// LaTeX's `\@fnsymbol` characters, the math asterisk as `*`, the kernel's formula `\|` (`∥`, 0806.2911) as `‖`: the
+/// lexer's own reading of them (`events::is_fnsymbol`), which r8's decision 3 relies on the two sharing (review
+/// revfms2a2_8 finding 7).
+pub(super) fn is_symbol_char(c: char) -> bool { events::is_fnsymbol(c) }
 
 /// One mark's labels (ruling 1's split): at commas and spaces; a run of one footnote symbol is one label (`**`), a
 /// symbol glued to a label another (`*1` → `*`, `1`); parentheses and brackets around a label dropped (`(a)`); the
@@ -474,6 +471,8 @@ pub(super) fn contact_role(role: Option<&str>, text: &str) -> String {
 /// (`\href{https://orcid.org/0000-0001-7461-3342}{\includegraphics{orcid}}`, 2307.02633; an ORCID logo drawn by TikZ
 /// whose path is the link's text, 2304.11780, 1910.01653 — as the XML's `<ref href>` in the name); any other its
 /// [`contact_role`] and its text.
+/// A link to an address (`mailto:`) is an e-mail, whatever it prints (`\href{mailto:tsamak@clemson.edu}{tsamak}`,
+/// 2309.10007 — review revfms2a2_8 finding 1, FM S2a.2 r9).
 pub(super) fn contact_parts(event: &Event) -> (String, String) {
   if let Some(id) = event
     .target
@@ -484,10 +483,36 @@ pub(super) fn contact_parts(event: &Event) -> (String, String) {
   {
     return ("orcid".into(), id.to_string());
   }
+  if event.target.as_deref().and_then(mailto_address).is_some() {
+    return ("email".into(), event.text.clone());
+  }
   (
     contact_role(event.role.as_deref(), &event.text),
     event.text.clone(),
   )
+}
+
+/// A Contact event's link target, where the link points ([`Assoc::target`]): an `\href`'s first argument, a `\url`'s
+/// text, the address of a `mailto:` link (its scheme and a `?subject=…` query aside, [`mailto_address`]); none for a
+/// contact no link printed (review revfms2a2_8 finding 1, FM S2a.2 r9: the anchor text alone was kept —
+/// `\href{https://academics.aut.ac.nz/robin.hankin}{work}` read "work", 2210.15991).
+pub(super) fn link_target(event: &Event) -> Option<String> {
+  let target = event.target.as_deref()?.trim();
+  if target.is_empty() {
+    return None;
+  }
+  Some(mailto_address(target).unwrap_or(target).to_string())
+}
+
+/// The address a `mailto:` link points to, if it is one (`mailto:ann@x.org?subject=Hi` "ann@x.org").
+pub(super) fn mailto_address(target: &str) -> Option<&str> {
+  let target = target.trim();
+  let rest = target
+    .get(..7)
+    .filter(|scheme| scheme.eq_ignore_ascii_case("mailto:"))
+    .map(|_| &target[7..])?;
+  let address = rest.split('?').next().unwrap_or("").trim();
+  (!address.is_empty()).then_some(address)
 }
 
 /// A link's text without its scheme and a `www.` host prefix: what a name may spell in it (`http://www.pengxu.net/` is
@@ -516,10 +541,21 @@ pub(super) fn link_page(link: &str) -> &str {
   let rest = rest.split(['?', '#']).next().unwrap_or("");
   let mut parts: Vec<&str> = rest.split('/').filter(|p| !p.is_empty()).collect();
   if parts.len() >= 2
-    && let Some(last) = parts.last()
+    && let Some(&last) = parts.last()
   {
     let page = last.to_ascii_lowercase();
-    if page.starts_with("index.") || page.ends_with(".html") || page.ends_with(".htm") {
+    if page.starts_with("index.") {
+      parts.pop();
+    } else if let Some(stem) = [".html", ".htm"]
+      .iter()
+      .find(|ext| page.ends_with(*ext))
+      .map(|ext| &last[..last.len() - ext.len()])
+    {
+      // (a page right under the host is the page that spells its owner, `host/jsmith.html`; one under a segment is that
+      // segment's, `…/~siegel/plan.html` — review revfms2a2_8 finding 5, FM S2a.2 r9)
+      if parts.len() == 2 && !stem.is_empty() {
+        return stem;
+      }
       parts.pop();
     }
   }

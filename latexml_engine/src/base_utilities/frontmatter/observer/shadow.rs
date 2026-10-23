@@ -455,6 +455,11 @@ fn json_assoc(out: &mut String, assoc: &Assoc) {
   }
   out.push_str(",\"rule\":");
   json_str(out, &assoc.rule);
+  // (a link's target, where it points: FM S2a.2 r9)
+  if let Some(target) = &assoc.target {
+    out.push_str(",\"target\":");
+    json_str(out, target);
+  }
   if let Some((index, span)) = assoc.source {
     // (keyed by the block and the span: spans are unique only within a block)
     let _ = write!(out, ",\"source\":[{index},");
@@ -504,7 +509,7 @@ fn json_resolved(out: &mut String, resolved: &Resolved) {
   json_assocs(out, "block", &resolved.block);
   json_assocs(out, "dropped", &resolved.dropped);
   out.push_str(",\"continued\":[");
-  for (i, lines) in resolved.continued.iter().enumerate() {
+  for (i, lines) in resolved.continued.iter().flatten().enumerate() {
     if i > 0 {
       out.push(',');
     }

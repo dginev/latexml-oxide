@@ -29,6 +29,7 @@ impl Resolver {
           label:  None,
           rule:   rule.into(),
           source: Some(source),
+          target: None,
         },
         false,
       );
@@ -88,6 +89,7 @@ impl Resolver {
           label:  None,
           rule:   s!("{rule} ruling3:one-per-print"),
           source: Some(source),
+          target: None,
         },
         false,
       );
@@ -474,6 +476,7 @@ impl Resolver {
                   "line:unmarked R12:row-above".into()
                 },
                 source: Some(source),
+                target: None,
               },
               false,
             );
@@ -511,6 +514,7 @@ impl Resolver {
                 label:  None,
                 rule:   "line:unmarked owner:block".into(),
                 source: Some(source),
+                target: None,
               },
               false,
             );
@@ -592,6 +596,7 @@ impl Resolver {
               label:  entry.labels.first().cloned(),
               rule:   rule.clone(),
               source: Some((index, span)),
+              target: None,
             }));
         }
         continues = None;
@@ -604,6 +609,7 @@ impl Resolver {
             label: entry.labels.first().cloned(),
             rule: rule.clone(),
             source: Some((index, span)),
+            target: None,
           }));
         continues = Some(Continued::Pending(self.pending.len() - 1));
       }
@@ -667,6 +673,7 @@ impl Resolver {
       label: contact.label.clone(),
       rule: rule.to_string(),
       source: Some((index, contact.span)),
+      target: link_target(contact),
     };
     if let Some(label) = contact.label.as_deref().filter(|_| role == "affiliation") {
       self.pending.push((mark_labels(label), false, Assoc {
@@ -688,8 +695,10 @@ impl Resolver {
     }
     // (an e-mail given to a row of names, or printing several addresses, is placed address by address by the owner
     // chain, ruling 3 — `\email{sfranco@kitp.ucsb.edu, ahanany@imperial.ac.uk}` under four names, 0809.3237)
-    if role == "email" && (owners.len() > 1 || addresses_in(&assoc.text).len() > 1) {
-      self.place_line_contacts(&assoc.text, "email", owners, (index, contact.span));
+    // (a link to an address by its address, not the anchor it prints: `\href{mailto:…}{…}`, FM S2a.2 r9)
+    let addresses = assoc.target.as_deref().unwrap_or(&assoc.text);
+    if role == "email" && (owners.len() > 1 || addresses_in(addresses).len() > 1) {
+      self.place_line_contacts(addresses, "email", owners, (index, contact.span));
       return;
     }
     for &owner in owners {
@@ -731,8 +740,9 @@ impl Resolver {
     // spells, or stays in its text, never the block's — main-session decision 4 on FM S2a.2 r7, review revfms2a2_7
     // finding 2; the block's url went on to a sole author by `sole_author_takes_the_block`)
     let fallback = contacts.len() == 1 && self.notes_marked && owner.is_some();
-    // (each link with its target: a url's page is what says whose it is, `place_note_link`)
-    let mut links: Vec<(Assoc, Option<String>)> = Vec::new();
+    // (each link with its target, `Assoc::target`: a url's page is what says whose it is, an e-mail link's address,
+    // `place_note_link`)
+    let mut links: Vec<Assoc> = Vec::new();
     let mut all_taken = true;
     for inner in &contacts {
       let (role, text) = contact_parts(inner);
@@ -742,13 +752,14 @@ impl Resolver {
         label: inner.label.clone(),
         rule: s!("{rule} ruling4:inner-contact"),
         source: Some((index, inner.span)),
+        target: link_target(inner),
       };
       // (an e-mail or a url goes to the author it spells before the one the note is on — charter §4, by evidence:
       // `Chauvet\thanks{… jocelyn.chauvet@…; xavier.bry@…}`, 1908.04020; 2304.00435; a co-author's homepage, 2001.02600
       // — read once every name is, `answer_note_links`: the names after the note in its block are not read yet)
       let link = matches!(assoc.role.as_str(), "email" | "url");
       if link {
-        links.push((assoc, inner.target.clone()));
+        links.push(assoc);
       } else if fallback {
         self.attach(owner, assoc, false);
       } else {
@@ -772,10 +783,10 @@ impl Resolver {
       });
       return;
     }
-    for (assoc, target) in links {
+    for assoc in links {
       self
         .note_links
-        .push(NoteLink::Link { owner, assoc, target, fallback });
+        .push(NoteLink::Link { owner, assoc, fallback });
     }
     if emptiable {
       self.drop_emptied_note(index, note, rule);
@@ -792,6 +803,7 @@ impl Resolver {
       label:  note.label.clone(),
       rule:   s!("{rule} ruling4:emptied"),
       source: Some((index, note.span)),
+      target: None,
     });
   }
 
@@ -834,6 +846,7 @@ impl Resolver {
         label:  labels.first().cloned(),
         rule:   s!("{rule} note:legend ruling1:request"),
         source: Some((index, note.span)),
+        target: None,
       }));
       return;
     }
@@ -858,6 +871,7 @@ impl Resolver {
         label: note.label.clone(),
         rule,
         source: Some((index, note.span)),
+        target: None,
       },
       true,
     );

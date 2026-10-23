@@ -770,11 +770,11 @@ fn note_order_is_compared() {
 fn a_part_is_a_line_or_a_run_of_lines() {
   let piece = "laboratorybbld9institutectowncountryd";
   let shadow = Tuples {
-    continued: vec![vec![
+    continued: Some(vec![vec![
       "laboratorybbld9".into(),
       "institutectown".into(),
       "countryd".into(),
-    ]],
+    ]]),
     ..Tuples::default()
   };
   assert!(is_line_run(&shadow, piece, "institutectown"));
@@ -782,4 +782,149 @@ fn a_part_is_a_line_or_a_run_of_lines() {
   assert!(!is_line_run(&shadow, piece, "bbld9institutec"));
   assert!(!is_line_run(&shadow, piece, "institute"));
   assert!(is_line_run(&Tuples::default(), piece, "bbld9institutec"));
+  // (FM S2a.2 r9, review revfms2a2_8 finding 4: an r8 dump with no continued entries is no old dump — nothing is a
+  // part; a dump without the key is one)
+  let none = Tuples {
+    continued: Some(Vec::new()),
+    ..Tuples::default()
+  };
+  assert!(!is_line_run(&none, piece, "bbld9institutec"));
+  assert_eq!(json_resolved(&serde_json::json!({})).continued, None);
+  assert_eq!(
+    json_resolved(&serde_json::json!({"continued": []})).continued,
+    Some(Vec::new())
+  );
+}
+
+/// FM S2a.2 r9 (review revfms2a2_8 finding 3a): the notes a ruling placed taken out of both sides, the rest must agree
+/// in order — shadow `[L, A, B]` against today's `[B, A, L]` (L a legend ruling 1 places) was explained by L's rule, A
+/// and B swapped; it is unclassified now, the rule the first of the rest out of order. With the rest in order, the placed
+/// note's rule explains it (2607.03557's shape).
+#[test]
+fn note_order_drops_the_ruling_placed_notes_first() {
+  let side = |notes: &[&str]| {
+    let mut c = creator("Ann Able", &[], "");
+    for n in notes {
+      c.notes.push(n.to_string());
+      let rule = if *n == "Corresponding author." {
+        "note:adjacent note:legend ruling1:request"
+      } else {
+        "note:adjacent"
+      };
+      c.rules.insert(format!("note\t{}", norm(n)), rule.into());
+    }
+    Tuples {
+      creators: vec![c],
+      ..Tuples::default()
+    }
+  };
+  let rows = compare(
+    &side(&["Corresponding author.", "First.", "Second."]),
+    &side(&["Second.", "First.", "Corresponding author."]),
+  );
+  assert_eq!(
+    rows
+      .iter()
+      .map(|d| (d.kind, d.classified, d.rule.as_str()))
+      .collect::<Vec<_>>(),
+    [("note-order", false, "order note:adjacent")],
+    "{rows:?}"
+  );
+  let rows = compare(
+    &side(&["Corresponding author.", "First.", "Second."]),
+    &side(&["First.", "Second.", "Corresponding author."]),
+  );
+  assert_eq!(
+    rows
+      .iter()
+      .map(|d| (d.kind, d.classified, d.rule.as_str()))
+      .collect::<Vec<_>>(),
+    [(
+      "note-order",
+      true,
+      "order note:adjacent note:legend ruling1:request"
+    )],
+    "{rows:?}"
+  );
+}
+
+/// FM S2a.2 r9 (review revfms2a2_8 finding 3b): every rule of a key is kept, and each copy the XML lacks takes one, the
+/// copies it holds taking those that reproduce today's first — 1910.01401's two ORCID copies, one placed by
+/// `owner:adjacent` and one by the ruling, the XML holding none: one row classified, one not (the ruling's rule stood for
+/// both). With the XML holding one copy, the copy it lacks is the ruling's.
+#[test]
+fn each_surplus_copy_takes_its_own_rule() {
+  let id = "0000-0001-8509-009X";
+  let shadow = |rules: &[&str]| {
+    let mut c = creator("Konrad Schrempf", &[], "");
+    for rule in rules {
+      c.contacts.push(("orcid".into(), id.into()));
+      c.all_rules
+        .entry(format!("orcid\t{}", norm(id)))
+        .or_default()
+        .push(rule.to_string());
+    }
+    c.rules.insert(
+      format!("orcid\t{}", norm(id)),
+      "note:adjacent ruling4:inner-contact".into(),
+    );
+    Tuples {
+      creators: vec![c],
+      ..Tuples::default()
+    }
+  };
+  let xml = |copies: usize| Tuples {
+    creators: vec![TCreator {
+      name: "Konrad Schrempf".into(),
+      contacts: vec![("orcid".to_string(), id.to_string()); copies],
+      ..TCreator::default()
+    }],
+    ..Tuples::default()
+  };
+  let two = shadow(&["owner:adjacent", "note:adjacent ruling4:inner-contact"]);
+  let rows = compare(&two, &xml(0));
+  assert_eq!(
+    rows
+      .iter()
+      .map(|d| (d.classified, d.rule.as_str()))
+      .collect::<Vec<_>>(),
+    [
+      (false, "owner:adjacent"),
+      (true, "note:adjacent ruling4:inner-contact")
+    ],
+    "{rows:?}"
+  );
+  let rows = compare(&two, &xml(1));
+  assert_eq!(
+    rows
+      .iter()
+      .map(|d| (d.classified, d.rule.as_str()))
+      .collect::<Vec<_>>(),
+    [(true, "note:adjacent ruling4:inner-contact")],
+    "{rows:?}"
+  );
+}
+
+/// FM S2a.2 r9 (review revfms2a2_8 finding 2): today's affiliation the shadow reads as an API entry's legend note is
+/// explained by the legend's own tag, `api:legend`, not by the leading mark that labels any API entry.
+#[test]
+fn an_api_legend_is_explained_by_its_own_tag() {
+  let text = "Corresponding author.";
+  let with_rule = |rule: &str| {
+    let mut c = creator("Ann Able", &[], "");
+    c.notes.push(text.into());
+    c.rules.insert(format!("note\t{}", norm(text)), rule.into());
+    Tuples {
+      creators: vec![c],
+      ..Tuples::default()
+    }
+  };
+  assert_eq!(
+    affiliation_rule_of(&with_rule("api:leading-mark api:legend"), &norm(text)),
+    Some("moved api:leading-mark api:legend".to_string())
+  );
+  assert_eq!(
+    affiliation_rule_of(&with_rule("api:leading-mark"), &norm(text)),
+    None
+  );
 }

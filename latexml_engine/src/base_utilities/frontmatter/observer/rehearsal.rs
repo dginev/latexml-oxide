@@ -1,9 +1,11 @@
 //! The observer's rehearsal: a block's stamped tokens digested as the article `\author` line prints them, with
 //! Layer-B event bindings (Perl's `@authorsplits`, Base_Utility.pool.ltxml:676-683: `\and` a column, `\\` a row; the
 //! notes and contacts as events), through the speculative-run engine (sect05.rs `speculative_title_page_run`):
-//! assignments rolled back (`AssignmentJournalGuard`), diagnostics held (`DiagnosticsHold`), terminal output muted, the
-//! frontmatter frozen (`lx_replaying_class_setter`: nothing is queued), the field ledger put back
-//! (`FieldLedgerScope`), progress notes silenced (an `\input` in the field: `SilenceProgressNotesGuard`). The
+//! assignments rolled back (`AssignmentJournalGuard`, a meaning's fallback standing with it: FM S2a.2 r9, 2409.10200),
+//! diagnostics held (`DiagnosticsHold`), terminal output muted, the frontmatter frozen (`lx_replaying_class_setter`:
+//! nothing is queued), the field ledger put back and the boxes it stamped unstamped (`FieldLedgerScope`: a register's
+//! box `\usebox` hands back, FM S2a.2 r9, 2405.14627, 2603.26792), progress notes silenced (an `\input` in the field:
+//! `SilenceProgressNotesGuard`). The
 //! digested list is handed to a callback before it is discarded. Not LaTeX's `\begin{tabular}[t]{c}` around the
 //! line: no alignment machinery runs, and a stray `&` is digested as a whatsit that errs only when built into the
 //! document (tex_tables.rs `&`), never here: nothing is held for it, and the lexer reads it as a column separator.

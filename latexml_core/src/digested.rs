@@ -587,6 +587,26 @@ impl Digested {
     }
   }
 
+  /// Remove a property unless the box is borrowed (false then), as [`Self::try_set_property`] sets one.
+  pub(crate) fn try_remove_property(&self, key: &str) -> bool {
+    use DigestedData::*;
+    match *self.0 {
+      TBox(ref b) => b
+        .try_borrow_mut()
+        .map(|mut b| b.get_properties_mut().remove(key))
+        .is_ok(),
+      List(ref l) => l
+        .try_borrow_mut()
+        .map(|mut l| l.get_properties_mut().remove(key))
+        .is_ok(),
+      Whatsit(ref w) => w
+        .try_borrow_mut()
+        .map(|mut w| w.get_properties_mut().remove(key))
+        .is_ok(),
+      _ => true,
+    }
+  }
+
   /// immutably borrow the inner Digested data
   pub fn data(&self) -> &DigestedData { &self.0 }
 

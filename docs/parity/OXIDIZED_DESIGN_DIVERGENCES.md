@@ -23725,7 +23725,8 @@ findings 1-8; decisions 1-4). Still shadow only (XML byte-identical against int6
   `\thanks{Code is available at \url{…}}` its owner's contact: 2409.18582, 2511.12997, 1607.05792, 1908.10122's doi,
   2509.14694's springer.com; 1401.0489's `people.cs.uchicago.edu/~laci`, a nickname, too). A link to an address
   (`\href{mailto:tsamak@clemson.edu}{tsamak}`, 2309.10007) or printing addresses (`\url{brunnerj, edemaine, dylanhen,
-  wellman@mit.edu}`, 2010.09271, 1407.7882) is the address: read by its letters, the note's only link its owner's.
+  wellman@mit.edu}`, 2010.09271, 1407.7882) is the address: read by its letters, the note's only link its owner's (r9:
+  a `mailto:` link an e-mail read by the address it points to, every link contact carrying its target — below).
 - **jpconf's note marks** (finding 4): jpconf prints them as the body's arabic `\thefootnote` set as a superscript
   (jpconf.cls:139, 153), its policy entry `TitleMarks::Body` — 1105.2659's `\footnote[3]{Speaker}` shows "3", as its PDF
   (the kernel's `\@fnsymbol\c@footnote` recursed through jpconf's `\@fnsymbol`); a bare `\footnotemark`'s print is read
@@ -23763,6 +23764,72 @@ prefix_marks_on_a_sole_line_and_a_sole_authors_orphans}`, `perfect_kernel_batchf
 `resolver::tests::{a_links_page_is_its_last_segment_or_its_host, items_in_source_order}`; ab_audit
 `fmshadow::tests::{note_order_is_compared, a_part_is_a_line_or_a_run_of_lines}`; the repro
 `sectioning-frontmatter/jpconf_copy/observer_jpconf_note_marks.tex` (the stand-in class gains jpconf.cls:130-153).
+
+**S2a.2 r9: the r8 landing review's findings, the rehearsal's isolation** (review revfms2a2_8 findings 1-7; the SYNC row
+"FM shadow rehearsal leaks"). Shadow only, and now so with the switch set too: int65's 725 papers, the 992 sectioning-frontmatter repros
+and the 26,323-paper census byte-identical int73a → r9 unset and r9 unset → set (but a clock paper, 2109.00764, and a
+time-budgeted math parse, 1001.0023, whose reruns agree).
+- **A link contact carries its target** (finding 1): `Assoc::target` (the dump's `target`), where the link points — an
+  `\href`'s first argument, a `\url`'s text, a `mailto:` link's address (`link_target`, `mailto_address`: its scheme and a
+  `?subject=` query aside) —, its `text` the anchor it prints: Hankin's `\href{https://academics.aut.ac.nz/robin.hankin}
+  {work}` was a url contact "work", the url lost (2210.15991). A `mailto:` link is an e-mail (`contact_parts`), placed by
+  the address — its note's link by `place_note_link`, a block's contact by the owner chain on the address
+  (`contact_event` → `place_line_contacts`) —, not the anchor (2309.10007's `tsamak`, `csamak`, `vkrovi`). S2b has the
+  target to write; the comparison still reads the anchor, today's note text.
+- **The API legend reads the text** (finding 2): an API entry a symbol leads is a legend note (r8) only when no piece of it
+  reads as an affiliation (`reads_as_affiliation` of each name and contact it prints — an address and its label read as
+  none —, not of the joined text, where any address answers "no") or when it is one piece its marks split an entry into
+  (`api:split-by-marks`); the role change carries its own tag, `api:legend` (a change tag; `affiliation_rule_of` explains
+  today's affiliation by it, not by `api:leading-mark`). IEEEtran's `\IEEEauthorblockA{{*Equal Contribution} \\
+  \IEEEauthorblockA{Tsinghua University} \IEEEauthorblockA{National Supercomputing Center in Wuxi} …}` was one legend
+  note of the starred names, both institutions out of the affiliation role (1903.06934); it is their affiliation again,
+  as r7 read it (the entry whole — today's has the nested calls apart: unclassified, residual). 0812.1531, 1902.02631 and
+  the census's other API legends stay legends.
+- **Comparator honesty** (finding 3): the notes a ruling placed (a change tag) are taken out of both sides' orders and
+  the rest must agree (`compare`'s `note-order`): `[L, A, B]` against `[B, A, L]` was explained by the legend L, A and B
+  swapped; now unclassified, its rule the first of the rest out of order. Every rule of a (kind, text) key is kept
+  (`TCreator::all_rules`, `Tuples::block_all_rules`) and each copy the XML lacks takes one, the copies it holds taking the
+  rules that reproduce today's first (`surplus_rules`): 1910.01401's second ORCID copy, placed by `owner:adjacent`, read
+  as the ruling's `note:adjacent ruling4:inner-contact` — unclassified now (the shadow is right: the ORCID is printed
+  beside the name and in the note, today's holds it in the block alone; residual).
+- **Rehearsal isolation** (the SYNC leak row; 2405.14627, 2603.26792, 2409.10200): two kinds of state the rehearsal
+  changed and nothing put back. (1) A box the stomach stamped with a field provenance (`fieldProv`/`fieldSerial`,
+  `invoke_token`) is stamped only when it has none; `\copy`/`\usebox` hands back the register's box itself, so the
+  rehearsal's print stamped the shared box with a serial its `FieldLedgerScope` then dropped, and the conversion's print,
+  finding it stamped, did not stamp it again — its field ink then wrapped it in an `ltx:text` with an id. The scope now
+  journals the boxes stamped while it is open (`token::field_stamp_noted`) and unstamps them when it closes
+  (`Digested::try_remove_property`): a stamp on a box that had none is all the stomach writes. (2) A meaning's standing as
+  a fallback guess, kernel stub or borrowed package's (`state::fallback_meanings`, which a `\newcommand` may replace,
+  `is_definable_latex`) is changed by an assignment beside the meaning and put back by no group end: the rehearsal's
+  group-local `\let\AND\lx@fm@obs@AND` cleared OmniBus's `\AND` (the siamart binding loads OmniBus), so
+  algorithmic.sty:161's `\newcommand{\AND}{\algorithmicand{} }` was refused and `\AND` printed the separator's plain
+  "and". An assignment journal now saves a meaning's standing with its bindings at its first assignment
+  (`AssignmentJournal::fallback`) and its rollback restores it — every speculative run's, not the rehearsal's alone.
+- **Nits** (findings 4-7): the dump's `continued` optional (`Resolved::continued: Option`; a missing key an old dump, "any
+  part" — an r8 dump's empty list no longer); `link_page` reads a `*.html` page right under the host as the page that
+  spells its owner (`host/jsmith.html` "jsmith"; one under a segment stays that segment's, `~siegel/plan.html`), and a
+  url is "printing addresses" only when it holds one (`addresses_in`), not any `@` (`medium.com/@user` a page);
+  `in_source_order` sorts a span-less item after its block's spanned ones; `is_symbol_char` is the lexer's
+  `is_fnsymbol`.
+Measured on the census (26,323 papers, switch set): 19,510 agree, 1,880 classified, 1,816 unclassified (7.8 %; r8 19,510 /
+1,882 / 1,814); two papers moved, both classified → unclassified (1607.00911, 1910.01401: the honest readings above);
+revtex4_support 23 of 5,639 unclassified (0.4 %), the same 23, its seeded 41-paper draw unchanged but for the `api:legend`
+tag on three rows (0812.1531, 2605.28357, 2501.04244).
+Not done (r9 residuals, SYNC/OPEN_ROWS): 1903.06934's nested `\IEEEauthorblockA` entry joined into one affiliation
+where today's has the nested calls apart; 1910.01401's ORCID beside the name, today's in the block; 1607.00911's
+`\href{mailto: edremets@…}{* edremets@…}` line under the last row, an e-mail the owner chain reads among the row
+above only (none spells it: the block's; the PDF's `*` on Dremetsika); with r8's (jpconf's `\footnote[<n>]` counter,
+1401.0489's `~laci`). Guards `perfect_kernel_batchfms2a2r9::{a_link_contact_carries_its_target,
+an_api_legend_holding_an_institution_is_an_affiliation, the_rehearsal_leaves_the_conversion_unchanged,
+r9_shapes_leave_the_xml_unchanged}` (each red on int73a: the dump's url contacts "work"/"tsamak" with no target, the
+IEEE entry a legend note, the three repros' XML different with the switch set), the re-pinned
+`perfect_kernel_batchfms2a2r8::{a_notes_url_is_an_authors_only_as_their_page, an_api_entrys_legend_is_a_note}`; core
+`state::assignment_journal_tests::rollback_restores_a_fallback_standing`; engine `resolver::tests::{
+a_links_page_is_its_last_segment_or_its_host, items_in_source_order}` (extended); ab_audit `fmshadow::tests::{
+note_order_drops_the_ruling_placed_notes_first, each_surplus_copy_takes_its_own_rule,
+an_api_legend_is_explained_by_its_own_tag, a_part_is_a_line_or_a_run_of_lines}`; repros
+`sectioning-frontmatter/{observer_rehearsal_leaves_a_used_box_unchanged (GREEN),
+observer_rehearsal_leaves_a_shared_box_unchanged, observer_rehearsal_keeps_a_fallback_meaning}.tex`.
 
 ### 840. A space a name sets before its own mark is the name's; spacing-only math, `\enskip` after a mark part names
 

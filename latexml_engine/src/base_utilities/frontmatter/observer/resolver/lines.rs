@@ -860,6 +860,7 @@ impl Resolver {
               label:  None,
               rule:   "line:names classify:institution".into(),
               source: Some((index, event.span)),
+              target: None,
             },
             false,
           );

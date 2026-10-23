@@ -56,6 +56,11 @@ pub struct Assoc {
   /// the event it came from: (ledger index of its block or API call, its span) — spans are unique only within a
   /// block (notes decision 4)
   pub source: Option<(usize, Option<(u16, u16)>)>,
+  /// a link's target, where the link points — what the contact holds, its `text` the anchor it prints: an `\href`'s
+  /// url (`\href{https://academics.aut.ac.nz/robin.hankin}{work}`, 2210.15991), a `\url`'s text, a `mailto:` link's
+  /// address (`\href{mailto:tsamak@clemson.edu}{tsamak}` an e-mail, 2309.10007; `link_target`) — review revfms2a2_8
+  /// finding 1, FM S2a.2 r9; none for a contact no link printed
+  pub target: Option<String>,
 }
 
 /// One resolved creator.
@@ -86,8 +91,10 @@ pub struct Resolved {
   /// per block (ledger index): the policy entry it ran under
   pub policies:  Vec<(usize, &'static str)>,
   /// the lines of each entry that unmarked lines under it continued (`line:continued`), each as printed — what today's
-  /// prints as one contact a line (the comparison's `part`, review revfms2a2_7 finding 5)
-  pub continued: Vec<Vec<String>>,
+  /// prints as one contact a line (the comparison's `part`, review revfms2a2_7 finding 5); `None` read from a dump made
+  /// before FM S2a.2 r8, which holds none (review revfms2a2_8 finding 4: an r8 dump's may be empty, `continue_entry`
+  /// skipping an item with no source — no old dump's "any part")
+  pub continued: Option<Vec<Vec<String>>>,
 }
 
 /// A resolver input: an author block (its events as the lexer gave them) or an API call made apart from the blocks.
@@ -216,9 +223,8 @@ struct Resolver {
 enum NoteLink {
   Link {
     owner:    Option<usize>,
+    /// (its target, `Assoc::target`: a `\url`'s text, an `\href`'s first argument, a `mailto:` link's address)
     assoc:    Assoc,
-    /// the link's target (a `\url`'s text, an `\href`'s first argument)
-    target:   Option<String>,
     fallback: bool,
   },
   Note {
@@ -226,7 +232,7 @@ enum NoteLink {
     note:     Event,
     owner:    Option<usize>,
     rule:     String,
-    links:    Vec<(Assoc, Option<String>)>,
+    links:    Vec<Assoc>,
     fallback: bool,
   },
 }
@@ -436,11 +442,13 @@ pub fn resolve(inputs: &[Input]) -> Resolved {
   resolver.held_before_creators();
   resolver.sole_author_takes_the_block();
   let mut out = resolver.out;
-  out.continued = resolver
-    .continued
-    .into_iter()
-    .map(|(_, lines)| lines)
-    .collect();
+  out.continued = Some(
+    resolver
+      .continued
+      .into_iter()
+      .map(|(_, lines)| lines)
+      .collect(),
+  );
   if !resolver.replaced.is_empty() {
     // (and the block's own items of a replaced call: today's `\lx@clear@frontmatter` keeps nothing of it — 2510.26354's
     // first `\author`, whose `firstname.lastname@h-its.org` the second call's addresses write out)
@@ -472,8 +480,8 @@ pub fn resolve(inputs: &[Input]) -> Resolved {
 }
 
 /// `items` in source order: those with a source sorted by it (its block or API call's ledger index, then its span's
-/// start — spans are positions within one block), stably, in the places they held; one without a source stays where it
-/// is.
+/// start — spans are positions within one block; one with no span after its block's spanned ones, review revfms2a2_8
+/// finding 6), stably, in the places they held; one without a source stays where it is.
 fn in_source_order(items: &mut [Assoc]) {
   let slots: Vec<usize> = (0..items.len())
     .filter(|&i| items[i].source.is_some())
@@ -481,7 +489,7 @@ fn in_source_order(items: &mut [Assoc]) {
   let mut sourced: Vec<Assoc> = slots.iter().map(|&i| items[i].clone()).collect();
   sourced.sort_by_key(|a| {
     a.source
-      .map(|(index, span)| (index, span.map(|(start, _)| start)))
+      .map(|(index, span)| (index, span.map_or((1, 0), |(start, _)| (0, start))))
   });
   for (slot, assoc) in slots.into_iter().zip(sourced) {
     items[slot] = assoc;
@@ -648,6 +656,7 @@ mod tests {
       label:  None,
       rule:   "api:no-creator owner:block api:note".into(),
       source: None,
+      target: None,
     });
     resolver.held_before_creators();
     let ann = &resolver.out.creators[0];
@@ -694,6 +703,11 @@ mod tests {
       "accvideo.mp4"
     );
     assert_eq!(link_page("index.html"), "index.html");
+    // (FM S2a.2 r9, review revfms2a2_8 finding 5: a page right under the host spells its owner; a `@user` path is a page)
+    assert_eq!(link_page("http://www.cs.x.edu/jsmith.html"), "jsmith");
+    assert_eq!(link_page("https://medium.com/@jsmith"), "@jsmith");
+    assert!(addresses_in("medium.com/@jsmith").is_empty());
+    assert!(!addresses_in("brunnerj, edemaine, dylanhen, wellman@mit.edu").is_empty());
   }
 
   /// FM S2a.2 r8 (review revfms2a2_7 finding 1): items in source order, by ledger index then span; one without a source
@@ -706,6 +720,7 @@ mod tests {
       label: None,
       rule: String::new(),
       source,
+      target: None,
     };
     let mut items = vec![
       item("b", Some((3, Some((40, 50))))),
@@ -716,6 +731,17 @@ mod tests {
     in_source_order(&mut items);
     assert_eq!(items.iter().map(|a| a.text.as_str()).collect::<Vec<_>>(), [
       "a", "x", "b", "c"
+    ]);
+    // (FM S2a.2 r9, review revfms2a2_8 finding 6: a span-less item after its block's spanned ones)
+    let mut items = vec![
+      item("n", Some((3, None))),
+      item("b", Some((3, Some((40, 50))))),
+      item("a", Some((3, Some((10, 20))))),
+      item("p", Some((2, None))),
+    ];
+    in_source_order(&mut items);
+    assert_eq!(items.iter().map(|a| a.text.as_str()).collect::<Vec<_>>(), [
+      "p", "a", "b", "n"
     ]);
   }
 

@@ -250,7 +250,7 @@ fn is_zero_width(c: char) -> bool {
 /// `\mathparagraph`, `\|`, and their doubles), with the math asterisk; `\|` as the kernel prints it in a formula, `∥`
 /// (U+2225, `$\|$`: `R.~E.~Hughes$\|$` under `\address{$\|$ The Ohio State University …}`, 0806.2911 — FM S2a.2 r7) as
 /// well as `\textbardbl`'s `‖`.
-pub(super) fn is_fnsymbol(c: char) -> bool {
+pub(in crate::base_utilities) fn is_fnsymbol(c: char) -> bool {
   matches!(
     c,
     '*' | '\u{2217}' | '†' | '‡' | '§' | '¶' | '‖' | '\u{2225}'

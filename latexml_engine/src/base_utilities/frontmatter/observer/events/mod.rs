@@ -29,8 +29,8 @@ use latexml_core::{
 use super::*;
 
 mod lexer;
-pub(in crate::base_utilities) use lexer::is_separator_word;
-use lexer::{Lexer, is_fnsymbol};
+use lexer::Lexer;
+pub(in crate::base_utilities) use lexer::{is_fnsymbol, is_separator_word};
 
 /// The kind of a separator event.
 #[derive(Debug, Clone, PartialEq)]

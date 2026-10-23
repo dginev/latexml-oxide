@@ -4131,6 +4131,7 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
             if let Some(serial) = serial {
               digested.try_set_property(crate::document::FIELD_SERIAL_PROPERTY, i64::from(serial));
             }
+            crate::token::field_stamp_noted(digested);
           }
         }
       }

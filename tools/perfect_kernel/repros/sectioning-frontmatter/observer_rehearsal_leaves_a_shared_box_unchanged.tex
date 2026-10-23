@@ -1,0 +1,25 @@
+% The frontmatter observer's rehearsal (LATEXML_FM_SHADOW=1) must leave a box register the author block prints several
+% times as it was: one `\sbox` printed by every author's ORCID link, in rows and columns, and once more in the body —
+% each print of the rehearsal stamped the one shared box, and the conversion's prints, finding it stamped, wrapped it in
+% an `ltx:text` with an id (FM S2a.2 r9; the r8 census's unset-vs-set differences).
+% witness: 2603.26792 (`\newbox{\orcid}\sbox{\orcid}{\includegraphics[scale=0.06]{figures/orcid.pdf}}`, then
+%          `\href{https://orcid.org/…}{\usebox{\orcid}}~{Adán José-García}` four times across `\\` and `\and`),
+%          2405.14627
+% oracle:  pdflatex 0 errors; "Ann Able", "Bob Baker", "Cat Cole", each after its 6pt rule; "Text" and the rule
+% engines: perl (no observer) n/a; rust fms2a2r8 the XML differs between LATEXML_FM_SHADOW unset and set (`<text
+%          xml:id=…>` around the rules)
+% expect:  0 errors, 0 warnings; the XML byte-identical with LATEXML_FM_SHADOW unset and set
+% status:  RED (fms2a2r8) -> GREEN (fms2a2r9: core `token::FieldLedgerScope` unstamps the boxes the rehearsal stamped)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\newsavebox{\orcidbox}
+\sbox{\orcidbox}{\rule{6pt}{6pt}}
+\begin{document}
+\title{T}
+\author{\href{https://orcid.org/0000-0003-2623-5206}{\usebox{\orcidbox}}~{Ann Able}\\
+  \href{https://orcid.org/0000-0002-1825-0097}{\usebox{\orcidbox}}~{Bob Baker} \and
+  \href{https://orcid.org/0000-0001-5109-3700}{\usebox{\orcidbox}}~{Cat Cole}}
+\maketitle
+Text \usebox{\orcidbox}.
+\end{document}

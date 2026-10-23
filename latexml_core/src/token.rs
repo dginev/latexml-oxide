@@ -1008,11 +1008,36 @@ pub fn field_ledger_entry(serial: u32) -> Option<FieldLedgerEntry> {
 /// flag put back, and the gate of field stamping (`document::field_prov_stamped`: a `\title` the rehearsal
 /// stamps) as it was (on drop). Its serials are read while it is open ([`field_ledger_entry`]); a print the document
 /// makes later is numbered as if it had never run.
+///
+/// The boxes the stomach stamped with a field provenance meanwhile (`fieldProv`/`fieldSerial`, `invoke_token`) are
+/// unstamped on drop as well (`field_stamp_noted`): a box the run did not make — a register's, `\copy`/`\usebox`
+/// handing back the stored box itself — would otherwise keep the run's serial, which the ledger no longer holds, and
+/// the document's own print of it, finding it stamped, would not stamp it again (FM S2a.2 r9: `\usebox{\ORCIDicon}` in
+/// an `\author`, wrapped in an `ltx:text` with an id with `LATEXML_FM_SHADOW` set: 2405.14627, 2603.26792; repro
+/// `sectioning-frontmatter/observer_rehearsal_leaves_a_used_box_unchanged`).
 pub struct FieldLedgerScope {
   len:     usize,
   pending: FieldCover,
   settled: bool,
   stamped: bool,
+  /// The enclosing scope's stamp journal (none outside every scope).
+  outer:   Option<Vec<Digested>>,
+}
+
+thread_local! {
+  /// The boxes stamped with a field provenance while a [`FieldLedgerScope`] is open (none outside one).
+  static FIELD_STAMPED_BOXES: std::cell::RefCell<Option<Vec<Digested>>> =
+    const { std::cell::RefCell::new(None) };
+}
+
+/// Note that the stomach stamped `digested` with a field provenance (`fieldProv`/`fieldSerial`), which had none: a
+/// [`FieldLedgerScope`] open now takes the stamp off again when it closes.
+pub(crate) fn field_stamp_noted(digested: &Digested) {
+  FIELD_STAMPED_BOXES.with(|boxes| {
+    if let Some(boxes) = boxes.borrow_mut().as_mut() {
+      boxes.push(digested.clone());
+    }
+  });
 }
 
 impl FieldLedgerScope {
@@ -1024,6 +1049,7 @@ impl FieldLedgerScope {
       pending: FIELD_COVER_PENDING.replace(FieldCover::default()),
       settled: FIELD_LEDGER_SETTLED.replace(false),
       stamped: crate::document::field_prov_stamped(),
+      outer: FIELD_STAMPED_BOXES.with(|boxes| boxes.replace(Some(Vec::new()))),
     }
   }
 }
@@ -1034,6 +1060,11 @@ impl Drop for FieldLedgerScope {
     FIELD_COVER_PENDING.set(self.pending);
     FIELD_LEDGER_SETTLED.set(self.settled);
     crate::document::restore_field_prov_stamped(self.stamped);
+    let stamped = FIELD_STAMPED_BOXES.with(|boxes| boxes.replace(self.outer.take()));
+    for digested in stamped.into_iter().flatten() {
+      digested.try_remove_property(crate::document::FIELD_PROV_PROPERTY);
+      digested.try_remove_property(crate::document::FIELD_SERIAL_PROPERTY);
+    }
   }
 }
 

@@ -232,7 +232,9 @@ Text.
 /// `sites.google.com/view/catcole`, Dan's `~dole/index.html`; a repository under Ann's account
 /// (`github.com/annable/tool`: 2008.12970, 2511.08416), a project under Cat's (`cole.github.io/project`: 2503.02954) and
 /// a file under Dan's (`dandole/talk.mp4`: 2509.01952) stay in the note's text. A link to an address is the address
-/// (`\href{mailto:…}{dan.dole}`, 2309.10007's shape): Dan's by its letters.
+/// (`\href{mailto:…}{dan.dole}`, 2309.10007's shape): Dan's by its letters — an e-mail, read by the address it points to
+/// (FM S2a.2 r9, review revfms2a2_8 finding 1: it was a url read by its anchor; `perfect_kernel_batchfms2a2r9::
+/// a_link_contact_carries_its_target` pins the target).
 #[test]
 fn a_notes_url_is_an_authors_only_as_their_page() {
   assert_eq!(tuples(HOMEPAGE), [
@@ -246,7 +248,7 @@ fn a_notes_url_is_an_authors_only_as_their_page() {
     "  c url https://sites.google.com/view/catcole | note:adjacent ruling4:inner-contact owner:spelled",
     "C Dan Dole [] | line:names sep:column",
     "  c url https://example.org/~dole/index.html | note:adjacent ruling4:inner-contact owner:spelled",
-    "  c url dan.dole | note:adjacent ruling4:inner-contact owner:spelled",
+    "  c email dan.dole | note:adjacent ruling4:inner-contact owner:spelled",
   ]);
 }
 
@@ -374,7 +376,8 @@ Text.
 
 /// Review revfms2a2_7 finding 8: an API entry a symbol leads whose text is a legend is that legend, a note of the names
 /// showing the mark, as a block's labelled line reads it — 0812.1531's `$^\star${corresponding author, e-mail: …}` in
-/// revtex's `\affiliation` was Curtarolo's affiliation.
+/// revtex's `\affiliation` was Curtarolo's affiliation (the role change tagged `api:legend`: FM S2a.2 r9, review
+/// revfms2a2_8 finding 2).
 #[test]
 fn an_api_entrys_legend_is_a_note() {
   assert_eq!(tuples(API_LEGEND), [
@@ -382,7 +385,7 @@ fn an_api_entrys_legend_is_a_note() {
     "  a Univ A, City | api:leading-mark api:split-by-marks",
     "C Bob Baker [1,⋆] | line:names sep:comma",
     "  a Univ A, City | api:leading-mark api:split-by-marks",
-    "  n corresponding author, e-mail: bob@x.org | api:leading-mark api:split-by-marks",
+    "  n corresponding author, e-mail: bob@x.org | api:leading-mark api:split-by-marks api:legend",
   ]);
 }
 

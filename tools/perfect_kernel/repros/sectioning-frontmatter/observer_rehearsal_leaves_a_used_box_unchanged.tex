@@ -8,7 +8,10 @@
 % engines: perl (no observer) n/a; rust fms2a2r8 (int69b, fms2a2r7 alike) the XML differs between LATEXML_FM_SHADOW
 %          unset (`<ref …><rule …/></ref>`) and set (`<ref …><text xml:id="id1"><rule …/></text></ref>`)
 % expect:  0 errors, 0 warnings; the XML byte-identical with LATEXML_FM_SHADOW unset and set
-% status:  RED (fms2a2r8)
+% status:  RED (fms2a2r8) -> GREEN (fms2a2r9: the boxes the rehearsal stamped with a field provenance are unstamped
+%          when its field-ledger scope closes, core `token::FieldLedgerScope` / `field_stamp_noted`; `\usebox` hands back
+%          the register's box itself, which kept the rehearsal's dropped ledger serial, and the conversion's own print of
+%          it, finding it stamped, did not stamp it again)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{hyperref}

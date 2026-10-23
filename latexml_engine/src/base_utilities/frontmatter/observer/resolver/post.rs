@@ -462,8 +462,8 @@ impl Resolver {
   pub(super) fn answer_note_links(&mut self) {
     for item in std::mem::take(&mut self.note_links) {
       match item {
-        NoteLink::Link { owner, assoc, target, fallback } => {
-          self.place_note_link(owner, assoc, target.as_deref(), fallback);
+        NoteLink::Link { owner, assoc, fallback } => {
+          self.place_note_link(owner, assoc, fallback);
         },
         NoteLink::Note {
           index,
@@ -474,8 +474,8 @@ impl Resolver {
           fallback,
         } => {
           let mut all_taken = true;
-          for (assoc, target) in links {
-            all_taken &= self.place_note_link(owner, assoc, target.as_deref(), fallback);
+          for assoc in links {
+            all_taken &= self.place_note_link(owner, assoc, fallback);
           }
           if all_taken {
             self.drop_emptied_note(index, &note, &rule);
@@ -488,13 +488,7 @@ impl Resolver {
   }
 
   /// One of a note's links ([`Resolver::answer_note_links`]); whether a creator took it.
-  fn place_note_link(
-    &mut self,
-    owner: Option<usize>,
-    assoc: Assoc,
-    target: Option<&str>,
-    fallback: bool,
-  ) -> bool {
+  fn place_note_link(&mut self, owner: Option<usize>, assoc: Assoc, fallback: bool) -> bool {
     let candidates: Vec<usize> = match owner {
       Some(at) => (0..self.out.creators.len())
         .filter(|&c| self.group[c] == self.group[at])
@@ -502,28 +496,34 @@ impl Resolver {
       None => self.live(),
     };
     let url = assoc.role == "url";
-    let link = target
+    let link = assoc
+      .target
+      .as_deref()
       .filter(|t| !t.trim().is_empty())
       .unwrap_or(&assoc.text)
-      .trim();
-    // (a url linking a page, spelled by that page alone; a link to an address, or printing addresses, is the address,
-    // read by its letters as an e-mail is, the note's only link its owner's — `\href{mailto:tsamak@clemson.edu}{tsamak}`,
-    // 2309.10007; 2008.07668, 2312.06540, 2010.15033; `\url{brunnerj, edemaine, dylanhen, wellman@mit.edu}`, 2010.09271,
-    // 1407.7882)
-    let page = url && !link.starts_with("mailto:") && !assoc.text.contains('@');
+      .trim()
+      .to_string();
+    // (a url linking a page, spelled by that page alone; one printing addresses is read by its letters as an e-mail is;
+    // a link to an address is an e-mail, read by the address it points to, not the anchor it prints, the note's only
+    // link its owner's — `\href{mailto:tsamak@clemson.edu}{tsamak}`, 2309.10007; 2008.07668, 2312.06540, 2010.15033
+    // (`contact_parts`, review revfms2a2_8 finding 1, FM S2a.2 r9); `\url{brunnerj, edemaine, dylanhen,
+    // wellman@mit.edu}`, 2010.09271, 1407.7882)
+    // (printing addresses, not merely an `@`: `medium.com/@user` is a page — review revfms2a2_8 finding 5, FM S2a.2 r9)
+    let prints_addresses = url && !addresses_in(&assoc.text).is_empty();
+    let page = url && !prints_addresses;
     let letters = if page {
-      link_page(link).to_string()
+      link_page(&link).to_string()
     } else if url {
       link_letters(&assoc.text).to_string()
     } else {
-      assoc.text.clone()
+      link
     };
     // (a url printing addresses — a group of local parts before one domain set as a link, `\url{sosk, unno, tsuboi,
     // ichi@preferred.jp}` — is no co-author's by the first spelling it holds: it goes to the name it is on only, as
     // before r7 — 1407.7882, 1810.11748, 2001.10403 went whole to one author of the group)
     let spelled = self
       .spelled(&letters, &candidates)
-      .filter(|spelled| !(url && assoc.text.contains('@')) || Some(*spelled) == owner);
+      .filter(|spelled| !prints_addresses || Some(*spelled) == owner);
     match spelled {
       Some(spelled) if Some(spelled) != owner => {
         let rule = s!("{} owner:spelled", assoc.rule);
@@ -655,6 +655,7 @@ impl Resolver {
               "note:footnotetext-mark".into()
             },
             source: Some((index, None)),
+            target: None,
           },
           true,
         );

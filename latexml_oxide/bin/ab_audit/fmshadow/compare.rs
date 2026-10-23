@@ -22,6 +22,8 @@ pub struct Disagreement {
 ///   legend opening with its Mark event), `ruling1:fuzzy-label`, `ruling1:thenote` (authblk's printed number), `ruling1:parted` (a glued mark read as the marks it is: `12`
 ///   under entries `1` and `2`), `api:leading-mark` (an API entry's leading Mark
 ///   events: by construction only a real Mark, `resolver/api.rs` `api`), the `\ref`-mark keys (`api:ref-label`, `ref:`);
+///   an API entry a symbol leads that reads as a legend, not an affiliation, a legend note of the names showing it
+///   (`api:legend`: the role change, its own tag — review revfms2a2_8 finding 2, FM S2a.2 r9);
 /// - ruling 2, a footnote-symbol line labels the line for its carriers: `ruling2:symbol-line`, `ruling2:uncarried`;
 /// - the corresponding author (charter §4's e-mail owner order): `owner:corresponding`;
 /// - one contact per print event (`ruling3:one-per-print`): counted only where the XML holds the pieces joined into one
@@ -46,6 +48,7 @@ pub(super) const CHANGE_TAGS: &[&str] = &[
   "role:url-as-email",
   "owner:order",
   "api:leading-mark",
+  "api:legend",
   "api:ref-label",
   "ref:",
   "ruling2:symbol-line",
@@ -205,13 +208,13 @@ pub(super) fn pieces_rule(shadow: &Tuples, kinds: &[PieceKind<'_>], text: &str) 
 }
 
 /// Whether `text` is one line, or a run of lines, of a shadow entry its continuation lines joined into `piece`
-/// ([`Tuples::continued`]); any part of it when the dump holds no lines (one made before FM S2a.2 r8).
+/// ([`Tuples::continued`]); any part of it when the dump has no lines (one made before FM S2a.2 r8: `None` — an r8
+/// dump's list may be empty, review revfms2a2_8 finding 4).
 pub(super) fn is_line_run(shadow: &Tuples, piece: &str, text: &str) -> bool {
-  if shadow.continued.is_empty() {
+  let Some(continued) = &shadow.continued else {
     return true;
-  }
-  shadow
-    .continued
+  };
+  continued
     .iter()
     .filter(|lines| lines.concat() == piece)
     .any(|lines| {
@@ -237,11 +240,14 @@ pub(super) fn note_rule_of(shadow: &Tuples, text: &str) -> Option<String> {
 /// affiliations and its legend (`\country{$^1$SJTU, $^2$Infinigence-AI, $^*$Equal contributions}`, 2409.11440; elsarticle's
 /// `\address{$^1$… \\ $^*$Corresponding author …}`, 2306.16240) — the first piece's rule (`overlaps …`); a block's
 /// legend lines welded on are the PDF-confirmed class (`legends_welded_on`).
+///
+/// An API entry's legend is one by its own tag, `api:legend` (the role change, review revfms2a2_8 finding 2, FM S2a.2 r9),
+/// not by the leading mark that labels it.
 pub(super) fn affiliation_rule_of(shadow: &Tuples, text: &str) -> Option<String> {
   let legend = |rule: &str| {
     rule.contains("ruling1:request")
       || rule.contains("ruling2:symbol-line")
-      || rule.contains("api:leading-mark")
+      || rule.contains("api:legend")
   };
   rule_of(shadow, "affiliation", text)
     .or_else(|| rule_of(shadow, "note", text).filter(|rule| legend(rule)))
@@ -250,11 +256,48 @@ pub(super) fn affiliation_rule_of(shadow: &Tuples, text: &str) -> Option<String>
         shadow,
         &[
           ("affiliation", &|_| true),
-          ("note", &|rule| rule.contains("api:leading-mark")),
+          ("note", &|rule| rule.contains("api:legend")),
         ],
         text,
       )
     })
+}
+
+/// The shadow-only items of a side (`items`, keyed by `key`), each with its rule: when the shadow holds several copies of
+/// one key (`all`, every copy's rule in order), the copies the XML holds take the rules that reproduce today's (no
+/// change tag) first and the copies it lacks the rest, one each — never one rule standing for every copy (review
+/// revfms2a2_8 finding 3b: 1910.01401's second ORCID copy, placed by `owner:adjacent`, read as the ruling's
+/// `note:adjacent ruling4:inner-contact`); a key with no rules list its one rule (`rules`).
+pub(super) fn surplus_rules(
+  items: Vec<String>,
+  key: impl Fn(&str) -> String,
+  rules: &BTreeMap<String, String>,
+  all: &BTreeMap<String, Vec<String>>,
+) -> Vec<(String, Option<String>)> {
+  let mut surplus: BTreeMap<String, usize> = BTreeMap::new();
+  for item in &items {
+    *surplus.entry(key(item)).or_default() += 1;
+  }
+  let mut taken: BTreeMap<String, usize> = BTreeMap::new();
+  items
+    .into_iter()
+    .map(|item| {
+      let k = key(&item);
+      let n = taken.entry(k.clone()).or_default();
+      let at = *n;
+      *n += 1;
+      let count = surplus[&k];
+      let rule = match all.get(&k) {
+        Some(copies) if copies.len() >= count && copies.len() > 1 => {
+          let mut ordered: Vec<&String> = copies.iter().filter(|r| !is_change_rule(r)).collect();
+          ordered.extend(copies.iter().filter(|r| is_change_rule(r)));
+          ordered.get(copies.len() - count + at).map(|r| (*r).clone())
+        },
+        _ => rules.get(&k).cloned(),
+      };
+      (item, rule)
+    })
+    .collect()
 }
 
 /// The shadow rule that explains an XML e-mail printing several addresses (`raw`, as the XML holds it: today's whole
@@ -369,10 +412,11 @@ pub fn compare(shadow: &Tuples, xml: &Tuples) -> Vec<Disagreement> {
     let (sc, xc) = (&shadow.creators[i], &xml.creators[j]);
     let sa = multiset(sc.affiliations.iter().map(|a| norm(a)));
     let xa = multiset(xc.affiliations.iter().map(|a| norm(a)));
-    for text in minus(&sa, &xa) {
+    let affiliation_key = |text: &str| format!("affiliation\t{text}");
+    for (text, rule) in surplus_rules(minus(&sa, &xa), affiliation_key, &sc.rules, &sc.all_rules) {
       push(
         "affiliation",
-        sc.rules.get(&format!("affiliation\t{text}")).cloned(),
+        rule,
         format!("{}: shadow-only {text}", sc.name),
       );
     }
@@ -410,8 +454,7 @@ pub fn compare(shadow: &Tuples, xml: &Tuples) -> Vec<Disagreement> {
           .iter()
           .any(|(r, t)| r == "url" && norm(t) == text)
       };
-      for item in minus(&sm, &xm) {
-        let rule = sc.rules.get(&item).cloned();
+      for (item, rule) in surplus_rules(minus(&sm, &xm), str::to_string, &sc.rules, &sc.all_rules) {
         let rule = match item.split_once('\t') {
           Some(("email", text)) if as_url(xc, text) => {
             Some(format!("{} role:url-as-email", rule.unwrap_or_default()))
@@ -461,12 +504,14 @@ pub fn compare(shadow: &Tuples, xml: &Tuples) -> Vec<Disagreement> {
     let xnotes = multiset(xc.notes.iter().map(without_orcids));
     let in_name = multiset(xc.name_notes.iter().map(without_orcids));
     let unmatched = multiset(minus(&snotes, &xnotes).into_iter());
-    for text in minus(&unmatched, &in_name) {
-      push(
-        "note",
-        sc.rules.get(&format!("note\t{text}")).cloned(),
-        format!("{}: shadow-only {text}", sc.name),
-      );
+    let note_key = |text: &str| format!("note\t{text}");
+    for (text, rule) in surplus_rules(
+      minus(&unmatched, &in_name),
+      note_key,
+      &sc.rules,
+      &sc.all_rules,
+    ) {
+      push("note", rule, format!("{}: shadow-only {text}", sc.name));
     }
     for text in minus(&xnotes, &snotes) {
       push(
@@ -483,18 +528,28 @@ pub fn compare(shadow: &Tuples, xml: &Tuples) -> Vec<Disagreement> {
       );
     }
     // (the notes both hold, in the order each prints them: a note the shadow placed late came after the ones the source
-    // gives later — review revfms2a2_7 finding 1, FM S2a.2 r8 —, the rule of the first the shadow holds out of today's
-    // place: a legend ruling 1 places by its label is today's last, relocated, where the shadow keeps the source's order
-    // (`$\dagger$Corresponding author` before the funding note, 2607.03557))
+    // gives later — review revfms2a2_7 finding 1, FM S2a.2 r8. The notes a ruling placed (a change tag: a legend ruling 1
+    // places by its label is today's last, relocated, where the shadow keeps the source's order — `$\dagger$Corresponding
+    // author` before the funding note, 2607.03557) taken out of both, the rest must agree in order: then the first placed
+    // note's rule explains it; else the first of the rest out of today's order, a rule of no change — review revfms2a2_8
+    // finding 3a, FM S2a.2 r9: `[L, A, B]` against `[B, A, L]` was the legend's)
     if let Some((shadow_order, xml_order)) = note_orders(&snotes, &xnotes, sc, xc, &without_orcids)
     {
-      let first = shadow_order
-        .iter()
-        .zip(&xml_order)
-        .find(|(a, b)| a != b)
-        .map(|(a, _)| a.clone());
+      let note_rule = |key: &String| sc.rules.get(&format!("note\t{key}")).cloned();
+      let placed = |key: &&String| note_rule(key).is_some_and(|rule| is_change_rule(&rule));
+      let shadow_rest: Vec<&String> = shadow_order.iter().filter(|k| !placed(k)).collect();
+      let xml_rest: Vec<&String> = xml_order.iter().filter(|k| !placed(k)).collect();
+      let first = if shadow_rest == xml_rest {
+        shadow_order.iter().find(|k| placed(k))
+      } else {
+        shadow_rest
+          .iter()
+          .zip(&xml_rest)
+          .find(|(a, b)| a != b)
+          .map(|(a, _)| *a)
+      };
       let rule = first
-        .and_then(|key| sc.rules.get(&format!("note\t{key}")))
+        .and_then(note_rule)
         .map(|rule| format!("order {rule}"));
       push(
         "note-order",
@@ -518,12 +573,13 @@ pub fn compare(shadow: &Tuples, xml: &Tuples) -> Vec<Disagreement> {
     )
   };
   let (sb, xb) = (block(shadow), block(xml));
-  for item in minus(&sb, &xb) {
-    push(
-      "block",
-      shadow.block_rules.get(&item).cloned(),
-      format!("block: shadow-only {item}"),
-    );
+  for (item, rule) in surplus_rules(
+    minus(&sb, &xb),
+    str::to_string,
+    &shadow.block_rules,
+    &shadow.block_all_rules,
+  ) {
+    push("block", rule, format!("block: shadow-only {item}"));
   }
   for item in minus(&xb, &sb) {
     let (role, text) = item.split_once('\t').unwrap_or(("", &item));

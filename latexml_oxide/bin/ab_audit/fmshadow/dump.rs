@@ -117,6 +117,7 @@ pub fn json_resolved(v: &Value) -> FmResolved {
     label:  a["label"].as_str().map(str::to_string),
     rule:   s(&a["rule"]),
     source: None,
+    target: a["target"].as_str().map(str::to_string),
   };
   let assocs = |a: &Value| {
     a.as_array()
@@ -146,11 +147,13 @@ pub fn json_resolved(v: &Value) -> FmResolved {
   }
   out.block = assocs(&v["block"]);
   out.dropped = assocs(&v["dropped"]);
-  out.continued = v["continued"]
-    .as_array()
-    .into_iter()
-    .flatten()
-    .map(|lines| lines.as_array().into_iter().flatten().map(s).collect())
-    .collect();
+  // (a dump made before FM S2a.2 r8 has no `continued`: `None`, not an r8 dump's empty list — review revfms2a2_8
+  // finding 4)
+  out.continued = v.get("continued").and_then(Value::as_array).map(|all| {
+    all
+      .iter()
+      .map(|lines| lines.as_array().into_iter().flatten().map(s).collect())
+      .collect()
+  });
   out
 }
