@@ -41,7 +41,7 @@ LoadDefinitions!({
   );
   DefMacro!("\\affilmark[]{}", "\\textsuperscript{#2}");
 
-  // `\appendices` is IEEEtran's (IEEEojcsys.cls:4058-4080, the copy 2206.03535 ships, is IEEEtran.cls:5755's code):
+  // `\appendices` is IEEEtran's (IEEEojcsys.cls:4058-4086, the copy 2206.03535 ships, is IEEEtran.cls:5755's code):
   // it letters the sections itself and never calls `\appendix`, so cleveref's patched `\appendix` does not run and a
   // section after it keeps its `section` type (cleveref_sty.rs). Inherited from the IEEEtran binding, which reaches the
   // kernel's `\appendix` through its own copy (`\lx@IEEE@appendix`); this binding let it be `\appendix`.

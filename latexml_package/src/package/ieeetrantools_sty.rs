@@ -379,13 +379,19 @@ pub fn define_ieeeeqnarray() -> Result<()> {
       });
     }
     if ieee_eqnarray_row() {
-      // (:1430-1431: only on a row that prints its number, `\if@eqnsw`)
-      if ieee_row_is_subequation()? && !ieee_row_retracts() {
+      // (:1428-1434: only on a row that prints its number, `\if@eqnsw`, which also clears the pre-advance, so a
+      // `\nonumber` after it leaves the counters where they are, `EQUATIONROW_HOLDS`, as after `\IEEEyesnumber`;
+      // review rev79d3 finding 1, probe `\IEEEnosubnumber\nonumber`: pdflatex (1) (1a) (2) (2a))
+      let acts = !ieee_row_retracts();
+      if acts && ieee_row_is_subequation()? {
         RefStepCounter!("equation", false)?;
       }
       ieee_row_tags(|tags| {
         tags.insert("counter", Stored::String(pin!("equation")));
         tags.remove(SUBEQUATION_ROLLBACK);
+        if acts {
+          tags.insert(EQUATIONROW_HOLDS, Stored::Bool(true));
+        }
       });
     } else if star.is_none() {
       ieee_row_tags(|tags| {

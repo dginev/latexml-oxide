@@ -257,7 +257,8 @@ pub(crate) fn load() -> Result<()> {
     } else if in_equation {
       if defer_retract {
         // (in an IEEEeqnarray's row, `\global\@eqnswfalse` whatever an `\IEEEyesnumber` or `\IEEEyessubnumber` before
-        // it said, as `\IEEEnonumber` there, ieeetrantools_sty.rs: the last one wins)
+        // it said, as `\IEEEnonumber` there, ieeetrantools_sty.rs: the last one wins; witness 2012.02697 `lcmpc.tex:123-136`,
+        // `eq:fpar`/`eq:par` 14a/14b as the `.aux`)
         let ieee_row = eqnarray_subnumbers() && stepped;
         with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
           if let Some(Stored::HashStored(tags)) = tags_opt {
@@ -346,7 +347,7 @@ pub(crate) fn load() -> Result<()> {
   // number that step reset, IEEEtrantools' `\@IEEEsubeqnnumrollback` (:1985, :2094, :2109), for `\IEEEyessubnumber`
   // to back out to (ieeetrantools_sty.rs) and for the row's retraction to restore (below).
   // A row after a retracted row that held its counters (`EQUATIONROW_CARRY`) prints their value, stepping nothing, as
-  // IEEEtrantools pre-advances only after a printed number (:2086-2112).
+  // IEEEtrantools pre-advances only after a printed number (:2086-2112; witnesses 2012.02697, 1610.06458 `eq:inq3` 36c).
   DefPrimitive!("\\eqnarray@row@before@", {
     let carry = if eqnarray_subnumbers() {
       match remove_value(EQUATIONROW_CARRY) {

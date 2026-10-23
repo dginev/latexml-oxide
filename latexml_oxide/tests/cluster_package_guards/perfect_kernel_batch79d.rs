@@ -191,6 +191,39 @@ fn ieeeeqnarray_starred_nonumber_gives_back_the_sub_number() {
   );
 }
 
+/// IEEEtrantools.sty:1428-1434: `\IEEEnosubnumber` on a row that prints its number steps `equation` out of the
+/// sub-equations and clears the pre-advance, so a `\nonumber` after it leaves the counters for the next row, or, last in
+/// its environment, skips a number (pdflatex (1) (1a) (2) (2a) (3) (5) (6) (6a) (7)). Red (79d r3): (1) (1a) (1a) (1b)
+/// (2) (3) (4) (4a) (5) — the `\nonumber` backed the counters out (review rev79d3 finding 1, probe `eq/w.tex`). The
+/// class of 2012.02697's `\IEEEyessubnumber ... \nonumber` rows (`ieeeeqnarray_nonumber_after_yessubnumber_wins`). Repro
+/// cross-references/ieeeeqnarray_nonumber_after_nosubnumber_holds.
+#[test]
+fn ieeeeqnarray_nonumber_after_nosubnumber_holds() {
+  let xml = convert_clean(repro!(
+    "cross-references/ieeeeqnarray_nonumber_after_nosubnumber_holds.tex"
+  ));
+  assert_eq!(
+    equation_heads(&xml),
+    [
+      ("LABEL:g0", "S0.E1", printed("1")),
+      ("LABEL:g1", "S0.E1.E1", printed("1a")),
+      ("", "S0.Ex1", "-".to_string()),
+      ("LABEL:g3", "S0.E2", printed("2")),
+      ("LABEL:g4", "S0.E2.E1", printed("2a")),
+      ("LABEL:h1", "S0.E3", printed("3")),
+      ("", "S0.Ex2", "-".to_string()),
+      ("LABEL:h3", "S0.E5", printed("5")),
+      ("LABEL:i1", "S0.E6", printed("6")),
+      ("LABEL:i2", "S0.E6.E1", printed("6a")),
+      ("", "S0.Ex3", "-".to_string()),
+      ("LABEL:i4", "S0.E7", printed("7")),
+    ]
+    .map(|(labels, id, tags)| format!("{labels}@{id}:{tags}"))
+    .join("|"),
+    "{xml}"
+  );
+}
+
 /// A sectioning unit's cleveref type forms under `\crefname{section}{Sec.}{Secs.}`.
 fn sec_forms() -> &'static str {
   r#"<tag role="creftype">Sec.</tag><tag role="creftypecap">Sec.</tag><tag role="creftypeplural">Secs.</tag><tag role="creftypepluralcap">Secs.</tag>"#
@@ -406,11 +439,13 @@ fn svmono_vec_reads_its_own_copy() {
   );
 }
 
-/// IEEEojcsys.cls:4058-4080 (2206.03535's copy; IEEEtran.cls:5755's code) letters the appendices itself and never calls
+/// IEEEojcsys.cls:4058-4086 (2206.03535's copy; IEEEtran.cls:5755's code) letters the appendices itself and never calls
 /// `\appendix`, so cleveref's patched `\appendix` does not run and an appendix keeps the `section` type (pdflatex with
 /// the class copy and the first aid removed: "See section I and section A.", the heading "Appendix A One"). Red (79d
 /// r2): "appendix A" and the heading "Appendix" — the binding let `\appendices` be `\appendix` (review rev79d2
-/// finding 9). Repro cross-references/ieeeojcsys_appendices_keep_the_section_type.
+/// finding 9). The empty `<text xml:id="A1.1"/>` inside the autoref tag is a known artifact (hyperref with this class;
+/// `section I<text xml:id="S1.1"/>` alike, plain IEEEtran without hyperref has none; rev79d3 finding 7), pinned as is.
+/// Repro cross-references/ieeeojcsys_appendices_keep_the_section_type.
 #[test]
 fn ieeeojcsys_appendices_keep_the_section_type() {
   let xml = convert_clean(repro!(

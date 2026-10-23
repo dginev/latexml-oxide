@@ -17761,6 +17761,9 @@ back the sub-equation number its pre-advance reset (`retract_equation`; an `IEEE
 `\IEEEyessubnumber` row, pdflatex "0f", r2 "0a"). Witnesses 2012.02697 (`lcmpc.tex:123-136`, `eq:fpar`/`eq:par`
 14a/14b as the `.aux`, r2 14b/14c), 1610.06458 (`paper.tex:1260-1266`, `eq:inq3` 36c, r2 36a). Repros
 cross-references/{ieeeeqnarray_sub_numbers_follow_the_last_number, ieeeeqnarray_nonumber_after_yessubnumber_wins,
-ieeeeqnarray_starred_nonumber_gives_back_the_sub_number}; guards
+ieeeeqnarray_starred_nonumber_gives_back_the_sub_number, ieeeeqnarray_nonumber_after_nosubnumber_holds}; guards
 `perfect_kernel_batch79d::{ieeeeqnarray_sub_numbers_follow_the_last_number,
-ieeeeqnarray_nonumber_after_yessubnumber_wins, ieeeeqnarray_starred_nonumber_gives_back_the_sub_number}`.
+ieeeeqnarray_nonumber_after_yessubnumber_wins, ieeeeqnarray_starred_nonumber_gives_back_the_sub_number,
+ieeeeqnarray_nonumber_after_nosubnumber_holds}`. `\IEEEnosubnumber` (:1428-1434) clears the pre-advance too where it
+acts, so it holds the counters as `\IEEEyesnumber` does (int75 follow-up, review rev79d3 finding 1: a
+`\IEEEnosubnumber\nonumber` row after "(1a)", pdflatex (2) (2a) next; r3 "(1a)" again).
