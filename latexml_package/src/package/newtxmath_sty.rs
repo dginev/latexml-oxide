@@ -48,7 +48,40 @@ LoadDefinitions!({
     DefMath!("\\widebar Digested", "\u{00AF}", operator_role => "OVERACCENT");
   }
   def_newtx_math_symbols()?;
+  // newtxmath.sty:246-247 `uprightGreek` (the default) and `slantedGreek`, and :251, :354 `frenchmath` upright; :277
+  // `\ProcessOptions` runs them in declaration order (latex.ltx `\ProcessOptions`, as `ProcessOptions!()` does:
+  // `process_options(false, …)` walks `@declaredoptions`), so `slantedGreek` wins over `uprightGreek` whatever order
+  // the user writes; :1015-1039 then re-declares the capital Greek letters from `letters` or `lettersA` (witness
+  // 2508.05134, newpxmath `slantedGreek`).
+  declare_newtx_greek_options()?;
+  ProcessOptions!();
+  newtx_capital_greek()?;
 });
+
+/// newtxmath.sty:246-247, :251 (newpxmath.sty:173-175): the Greek options its binding reads, recorded for
+/// `newtx_capital_greek` after the options are processed. Any other option is not the binding's concern.
+pub fn declare_newtx_greek_options() -> Result<()> {
+  // In newtxmath.sty's order (:246 before :247; newpxmath.sty:173 before :174), which `\ProcessOptions` follows.
+  DeclareOption!("uprightGreek", {
+    AssignValue!("newtx_slanted_greek" => false);
+  });
+  DeclareOption!("slantedGreek", {
+    AssignValue!("newtx_slanted_greek" => true);
+  });
+  DeclareOption!("frenchmath", {
+    AssignValue!("newtx_french_math" => true);
+  });
+  DeclareOption!(None, {});
+  Ok(())
+}
+
+/// newtxmath.sty:354 and :1015-1039 (newpxmath.sty:212, :595-619): `frenchmath` implies `uprightGreek`; under
+/// `slantedGreek` the capital Greek letters are the `letters` italics, italic as a Latin letter unless a math alphabet
+/// is in force (KNOWN_PERL_ERRORS #1147), else the upright ones of `lettersA` — over a class's italic ones (llncs).
+pub fn newtx_capital_greek() -> Result<()> {
+  let slanted = lookup_bool("newtx_slanted_greek") && !lookup_bool("newtx_french_math");
+  declare_capital_greek("", slanted.then_some(LettersClass::Variable))
+}
 
 /// newtxmath's own symbol layer over txfonts (newtxmath.sty:695-706, :928-988, 1165-1167, 1216, 1399-1497, 1744,
 /// 2072-2183, 2344, 2466-2577, 2866, 3191). newpxmath.sty is newtxmath's Palatino twin: the same helpers and the same

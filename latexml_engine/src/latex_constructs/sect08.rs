@@ -834,6 +834,11 @@ pub(crate) fn load() -> Result<()> {
       }
       decl_font = Some(decl.clone());
     }
+    let math_italic = encoding == "OML"
+      && decl_font
+        .as_ref()
+        .and_then(|font| font.get_shape())
+        .is_some_and(|shape| matches!(shape.as_ref(), "it" | "sl" | "italic" | "slanted"));
     let (glyph, _font) = font_decode(code.value_of() as i32, Some(&encoding), decl_font);
     // latex.ltx `\mathchar@type`: the class is a `\math…` cs OR its number
     // 0-7 (oz.sty:261 `\DeclareMathDelimiter\ulcorner{4}{AMSa}{"70}…`).
@@ -895,6 +900,14 @@ pub(crate) fn load() -> Result<()> {
     let mut opts = MathPrimitiveOptions::default();
     if let Some(r) = role {
       opts.role = Some(r.to_string());
+    }
+    // A glyph of a math italic symbol font — OML-encoded, italic or slanted, as fontmath.ltx:60 declares `letters`
+    // (`{OML}{cmm}{m}{it}`), not newtxmath's upright-Greek `lettersA` (`{U}{ntxmia}`) — takes its class's shape
+    // (`Font::specialize_letters`): llncs.cls:379-389 `\DeclareMathSymbol{\Gamma}{\mathalpha}{letters}{"00}` makes a
+    // capital Greek letter italic as a Latin letter is, as a raw copy of the class or of fixmath.sty does here
+    // (witness 1002.2350, fixmath raw).
+    if math_italic {
+      opts.letters_class = letters_class(sym_type.to_string().trim());
     }
     def_math(cs, None, presentation, opts)?;
   });
@@ -2228,4 +2241,82 @@ fn decode_slot(code: i64, encoding: &str) -> Option<SymStr> {
       .map(pin_char),
     Err(_) => None,
   }
+}
+
+/// The math-italic class of a `\DeclareMathSymbol` math class (`\mathchar@type`: a `\math…` name or its number):
+/// `\mathalpha` (7) follows a math alphabet, `\mathord` (0) does not; the other classes are no letters.
+fn letters_class(sym_type: &str) -> Option<LettersClass> {
+  match sym_type {
+    "\\mathalpha" | "7" => Some(LettersClass::Variable),
+    "\\mathord" | "0" => Some(LettersClass::Fixed),
+    _ => None,
+  }
+}
+
+/// The capital Greek letters of the math italic symbol font, `letters` (OML slots "00-"0A), by name.
+const LETTERS_CAPITAL_GREEK: [(&str, &str); 11] = [
+  ("Gamma", "\u{0393}"),
+  ("Delta", "\u{0394}"),
+  ("Theta", "\u{0398}"),
+  ("Lambda", "\u{039B}"),
+  ("Xi", "\u{039E}"),
+  ("Pi", "\u{03A0}"),
+  ("Sigma", "\u{03A3}"),
+  ("Upsilon", "\u{03A5}"),
+  ("Phi", "\u{03A6}"),
+  ("Psi", "\u{03A8}"),
+  ("Omega", "\u{03A9}"),
+];
+
+/// A binding's `\DeclareMathSymbol{\<prefix><Letter>}{<class>}{<font>}{"00…"0A}` of the eleven capital Greek letters,
+/// where its original declares them. From `letters` (`Some(class)`): a `\mathalpha` letter (`LettersClass::Variable`)
+/// is italic unless a math alphabet is in force, as a Latin letter (llncs.cls:379-389, svmult.cls:971-981,
+/// svjour3.cls:147-157, fixmath.sty:27-37, the `slantedGreek` option of mathptmx.sty:80-92, newtxmath.sty:1015-1026
+/// and cmbright.sty:66-78), a `\mathord` one (`LettersClass::Fixed`) italic whatever the alphabet (amsmath.sty:384-395
+/// `\varGamma`). From an upright font (`None`: fontmath.ltx:204-214 `operators`, newtxmath.sty:1028-1038 `lettersA`,
+/// stix.sty:117-127, libertinust1math.sty:484-497 `\upGamma`), the kernel's upright letter, over a class's italic one.
+/// Each is the kernel's `DefMath` of `\Gamma` (math_common), not `\DeclareMathSymbol`'s, which would give it an ID role.
+/// Witnesses 2606.09074 (llncs), 2101.03721 (svjour3), 0812.2480 (svmult), 2508.05134 (newpxmath `slantedGreek`),
+/// 1701.03426, 2407.01655 (amsmath `\var…`). Guards: `perfect_kernel_batch79e`.
+pub fn declare_capital_greek(prefix: &str, class: Option<LettersClass>) -> Result<()> {
+  declare_capital_greek_by(prefix, class, None, false)
+}
+
+/// A package's own capital Greek glyphs, `\DeclareMathSymbol{\<prefix><Letter>}{\mathord}{<font>}{…}` from an upright
+/// font (`None`) — mathptmx.sty:93-103 `\upGamma`… (`operators`), mathpazo.sty:134-144 (`upright`), eulervm.sty:97-98
+/// `\upDelta`, `\upOmega` (`letters`, the upright Euler font): each keeps the letter's name (`name => "Gamma"`) and its
+/// own control sequence, so `tex=` reads the source's `\upGamma`, and its shape does not follow the `\Gamma` a class
+/// declares italic (llncs.cls:379-389), as a `\let\upGamma\Gamma` (Perl's mathptmx.sty.ltxml) does. `letters`
+/// names the subset a package declares (all eleven when `None`). Guards: `perfect_kernel_batch79e`.
+pub fn declare_capital_greek_named(
+  prefix: &str,
+  class: Option<LettersClass>,
+  letters: Option<&[&str]>,
+) -> Result<()> {
+  declare_capital_greek_by(prefix, class, letters, true)
+}
+
+fn declare_capital_greek_by(
+  prefix: &str,
+  class: Option<LettersClass>,
+  letters: Option<&[&str]>,
+  keep_name: bool,
+) -> Result<()> {
+  for (letter, glyph) in LETTERS_CAPITAL_GREEK {
+    if letters.is_some_and(|only| !only.contains(&letter)) {
+      continue;
+    }
+    let opts = MathPrimitiveOptions {
+      letters_class: class,
+      name: keep_name.then(|| letter.to_string()),
+      ..MathPrimitiveOptions::default()
+    };
+    def_math(
+      T_CS!(&format!("\\{prefix}{letter}")),
+      None,
+      glyph.to_string(),
+      opts,
+    )?;
+  }
+  Ok(())
 }

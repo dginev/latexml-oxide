@@ -27,4 +27,16 @@ LoadDefinitions!({
   DefMath!("\\ulblacktriangle",        "\u{25E4}", role => "ID"); // ◤
   DefMath!("\\urblacktriangle",        "\u{25E5}", role => "ID"); // ◥
   DefMath!("\\mdblksquare",            "\u{25FC}", role => "ID"); // ◼ medium black square
+  // stix.sty:117-127 `\stix@MathSymbol{\Gamma}{\mathalpha}{operators}{"00}`…: the capital Greek letters upright, over a
+  // class's italic ones (llncs.cls:379-389; KNOWN_PERL_ERRORS #1147), unless `nomath` leaves the math fonts alone
+  // (:39, :57-572). Review rev79e finding 1 (probe rev79e/p/lncsstix; witness 2606.09074). Any other option is not the
+  // binding's concern.
+  DeclareOption!("nomath", {
+    AssignValue!("stix_nomath" => true);
+  });
+  DeclareOption!(None, {});
+  ProcessOptions!();
+  if !lookup_bool("stix_nomath") {
+    declare_capital_greek("", None)?;
+  }
 });

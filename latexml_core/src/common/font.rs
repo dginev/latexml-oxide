@@ -560,6 +560,16 @@ pub fn decode_fontname(name: &str, at_opt: Option<f64>, scaled_opt: Option<f64>)
   }
 }
 
+/// The math class of a glyph `\DeclareMathSymbol`'d from the math italic symbol font (`letters`), which decides the
+/// shape a capital Greek letter takes (`Font::specialize_letters`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LettersClass {
+  /// `\mathalpha`, class 7 (variable family): follows a math alphabet in force, else italic, as a Latin letter.
+  Variable,
+  /// `\mathord`, class 0: the math italic whatever the alphabet, as a lowercase Greek letter.
+  Fixed,
+}
+
 /// A data structure containing Font information, but also related textual properties (such as
 /// color)
 ///
@@ -1231,6 +1241,44 @@ impl Font {
     if text.is_empty() {
       return new; // ?
     }
+    let (deffamily, defseries, defshape) = self.specialize_defaults();
+    if LATIN_LETTER_RE.is_match(text) {
+      // Latin Letter
+      new.specialize_as_latin_letter();
+    } else if GREEK_LETTER_RE.is_match(text) {
+      // Single Greek character?
+      if UPPER_LETTER_RE.is_match(text) {
+        // Uppercase
+        if new.family.is_none() || (new.family.as_ref().unwrap() == "math") {
+          new.family = Some(deffamily);
+          if new.shape.is_some() && (new.shape != Some(DEFSHAPE.into())) {
+            new.shape = Some(defshape); // if ANY shape, must be default
+          }
+        }
+      } else {
+        // Lowercase
+        new.specialize_as_lowercase_greek(self, deffamily, defseries);
+      }
+    } else if DIGIT_LETTER_RE.is_match(text) {
+      // Digit
+      if new.family.is_none() || (new.family.as_ref().unwrap() == "math") {
+        new.family = Some(deffamily);
+        new.shape = Some(defshape); // defaults, always.
+      }
+    } else {
+      // Other Symbol
+      new.family = Some(deffamily);
+      new.shape = Some(defshape); // defaults, always.
+      if new.series.is_some() && (new.series.as_ref().unwrap() != DEFSERIES) {
+        new.series = Some(defseries);
+      } // defaults, always.
+    }
+    new
+  }
+
+  /// Perl `specialize`'s `$deffamily`, `$defseries`, `$defshape`: the font's own value where its `force*` flag
+  /// holds it, else the default.
+  fn specialize_defaults(&self) -> (Cow<'static, str>, Cow<'static, str>, Cow<'static, str>) {
     let deffamily = if self.forcefamily.unwrap_or(false) {
       self.family.clone().unwrap_or_else(|| DEFFAMILY.into())
     } else {
@@ -1246,47 +1294,59 @@ impl Font {
     } else {
       DEFSHAPE.into()
     };
-    if LATIN_LETTER_RE.is_match(text) {
-      // Latin Letter
-      if new.shape.is_none() && new.family.is_none() {
-        new.shape = Some("italic".into());
-      }
-    } else if GREEK_LETTER_RE.is_match(text) {
-      // Single Greek character?
-      if UPPER_LETTER_RE.is_match(text) {
-        // Uppercase
-        if new.family.is_none() || (new.family.as_ref().unwrap() == "math") {
-          new.family = Some(deffamily);
-          if new.shape.is_some() && (new.shape != Some(DEFSHAPE.into())) {
-            new.shape = Some(defshape); // if ANY shape, must be default
-          }
-        }
-      } else {
-        // Lowercase
-        if new.family.is_none() || (new.family.as_deref() != Some(DEFFAMILY)) {
-          new.family = Some(deffamily);
-        }
-        // Perl: $shape = 'italic' if !$shape || !($flags & $FLAG_FORCE_SHAPE);
-        if new.shape.is_none() || !self.forceshape.unwrap_or(false) {
-          new.shape = Some("italic".into());
-        }
-        if new.series.is_some() && (new.series != Some(DEFSERIES.into())) {
-          new.series = Some(defseries);
-        }
-      }
-    } else if DIGIT_LETTER_RE.is_match(text) {
-      // Digit
-      if new.family.is_none() || (new.family.as_ref().unwrap() == "math") {
-        new.family = Some(deffamily);
-        new.shape = Some(defshape); // defaults, always.
-      }
-    } else {
-      // Other Symbol
-      new.family = Some(deffamily);
-      new.shape = Some(defshape); // defaults, always.
-      if new.series.is_some() && (new.series.as_ref().unwrap() != DEFSERIES) {
-        new.series = Some(defseries);
-      } // defaults, always.
+    (deffamily, defseries, defshape)
+  }
+
+  /// Perl `specialize`'s Latin-letter rule: italic unless a shape or a family (a math alphabet) is in force.
+  fn specialize_as_latin_letter(&mut self) {
+    if self.shape.is_none() && self.family.is_none() {
+      self.shape = Some("italic".into());
+    }
+  }
+
+  /// Perl `specialize`'s lowercase-Greek rule: the default family, italic unless a forced shape holds, the default
+  /// series unless a forced one holds. `orig` is the font before specialization (its `force*` flags).
+  fn specialize_as_lowercase_greek(
+    &mut self,
+    orig: &Font,
+    deffamily: Cow<'static, str>,
+    defseries: Cow<'static, str>,
+  ) {
+    if self.family.is_none() || (self.family.as_deref() != Some(DEFFAMILY)) {
+      self.family = Some(deffamily);
+    }
+    // Perl: $shape = 'italic' if !$shape || !($flags & $FLAG_FORCE_SHAPE);
+    if self.shape.is_none() || !orig.forceshape.unwrap_or(false) {
+      self.shape = Some("italic".into());
+    }
+    if self.series.is_some() && (self.series != Some(DEFSERIES.into())) {
+      self.series = Some(defseries);
+    }
+  }
+
+  /// `specialize` for a glyph `\DeclareMathSymbol`'d from the math italic symbol font, `letters` (OML `cmm/m/it`,
+  /// fontmath.ltx:60): a capital Greek letter takes the rule of the fontmath.ltx glyphs of the same class, which
+  /// Perl's `specialize` encodes — a `\mathalpha` (class 7, variable family) one the Latin letters' (fontmath.ltx:87-138
+  /// `\DeclareMathSymbol{a}{\mathalpha}{letters}{`a}`): italic unless a math alphabet is in force (`\mathrm`,
+  /// `\mathbf` upright; `\boldmath`, `\boldsymbol`, `\bm` bold italic), as TeX's class 7 takes `\fam` (tex.web
+  /// §1151); a `\mathord` (class 0) one the lowercase Greek letters' (fontmath.ltx:175-203 `\DeclareMathSymbol{\alpha}
+  /// {\mathord}{letters}{"0B}`): italic whatever the alphabet. The capitals follow an alphabet to the same letter
+  /// because OT1, the alphabets' encoding, holds them at OML's slots "00-"0A; lowercase Greek has no OT1 slot (an
+  /// alphabet prints a ligature there), so every other glyph keeps `specialize`'s own rule. llncs.cls:379-389,
+  /// svmult.cls:971-981, svjour3.cls:147-157, fixmath.sty:27-37, amsmath.sty:384-395 (`\varGamma`, class 0).
+  /// Witnesses 2606.09074 (llncs), 2101.03721 (svjour3), 0812.2480 (svmult), 1002.2350 (fixmath), 2508.05134 (newpxmath
+  /// `slantedGreek`), 1701.03426 and 2407.01655 (amsmath `\var…`).
+  pub fn specialize_letters(&self, text: &str, class: LettersClass) -> Self {
+    if !(GREEK_LETTER_RE.is_match(text) && UPPER_LETTER_RE.is_match(text)) {
+      return self.specialize(text);
+    }
+    let mut new = self.clone();
+    match class {
+      LettersClass::Variable => new.specialize_as_latin_letter(),
+      LettersClass::Fixed => {
+        let (deffamily, defseries, _) = self.specialize_defaults();
+        new.specialize_as_lowercase_greek(self, deffamily, defseries);
+      },
     }
     new
   }

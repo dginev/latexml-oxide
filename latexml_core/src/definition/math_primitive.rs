@@ -3,11 +3,11 @@ use std::borrow::Cow;
 use libxml::tree::Node;
 
 use super::SizingClosure;
-// use crate::common::font::Font;
-use crate::common::arena::SymHashMap as HashMap;
 use crate::{
   Digested,
-  common::{error::*, object::Object, store::Stored},
+  common::{
+    arena::SymHashMap as HashMap, error::*, font::LettersClass, object::Object, store::Stored,
+  },
   definition::{
     BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective,
     PrimitiveClosure, Reversion,
@@ -83,6 +83,9 @@ pub struct MathPrimitiveOptions {
   pub revert_as:              Option<Cow<'static, str>>,
   pub lpadding:               Option<usize>,
   pub rpadding:               Option<usize>,
+  /// A glyph `\DeclareMathSymbol`'d from the math italic symbol font (`letters`), with its math class: the token's
+  /// font is specialized by `Font::specialize_letters` (a capital Greek letter italic as the class says).
+  pub letters_class:          Option<LettersClass>,
 }
 impl PartialEq for MathPrimitiveOptions {
   fn eq(&self, other: &MathPrimitiveOptions) -> bool {

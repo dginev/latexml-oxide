@@ -1,0 +1,16 @@
+% witness: 79d report question 1, user ruling 2026-10-23 (Option A); llncs.cls:379-389
+%          `\DeclareMathSymbol{\Gamma}{\mathalpha}{letters}{"00}`…; probe scratch_79e/g/lncs; arXiv 2606.09074 (llncs,
+%          Δ Π CMMI10 in its PDF), 2101.03721 (svjour3), 0812.2480 (svmult)
+% oracle:  pdflatex 0 errors; \showbox: $\Omega$ OML/cmm/m/it, \mathrm{\Omega} OT1/cmr/m/n, \mathbf{\Omega}
+%          OT1/cmr/bx/n, \boldsymbol{\Omega} and \bm{\Omega} OML/cmm/b/it, \mathit{\Omega} OT1/cmr/m/it, \varOmega and
+%          \mathrm{\varOmega} OML/cmm/m/it, \vec{\Omega} (\mbox{\boldmath$\Omega$}) OML/cmm/b/it
+% engines: rust int75 = every plain, \boldsymbol, \bm and \vec Omega upright (`<mi mathvariant="normal">Ω</mi>`, 𝛀),
+%          \varOmega upright; Perl 0.8.8: the same, its \vec the arrow accent (KNOWN_PERL_ERRORS #1147, #1143)
+% expect:  0 errors, 0 warnings; MathML Ω, Ω(normal), 𝛀, 𝜴, 𝜴, Ω, Ω, Ω, 𝜴
+% status:  RED (int75) -> GREEN (79e)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\usepackage{amsmath,bm}
+\begin{document}
+$\Omega\ \mathrm{\Omega}\ \mathbf{\Omega}\ \boldsymbol{\Omega}\ \bm{\Omega}\ \mathit{\Omega}\ \varOmega\ \mathrm{\varOmega}\ \vec{\Omega}$
+\end{document}

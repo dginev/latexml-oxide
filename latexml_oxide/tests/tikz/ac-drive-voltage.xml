@@ -9,9 +9,9 @@
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
   <para xml:id="p1">
-    <picture height="191.5" width="310.08" xml:id="p1.pic1">
-      <svg:svg height="191.5" overflow="visible" version="1.1" viewBox="0 0 310.08 191.5" width="310.08">
-        <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,191.5) matrix(1 0 0 -1 0 0) translate(49.2,0) translate(0,23.34)">
+    <picture height="191.5" width="309.92" xml:id="p1.pic1">
+      <svg:svg height="191.5" overflow="visible" version="1.1" viewBox="0 0 309.92 191.5" width="309.92">
+        <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,191.5) matrix(1 0 0 -1 0 0) translate(49.04,0) translate(0,23.34)">
           <svg:path d="M 0 0 L 235.58 0" style="fill:none"/>
           <svg:g stroke-dasharray="none" stroke-dashoffset="0.0pt" stroke-linecap="round" stroke-linejoin="round" stroke-width="0.32pt" transform="matrix(1.0 0.0 0.0 1.0 235.58 0)">
             <svg:path d="M -1.66 2.21 C -1.52 1.38 0 0.14 0.42 0 C 0 -0.14 -1.52 -1.38 -1.66 -2.21" style="fill:none"/>
@@ -52,8 +52,8 @@
           <svg:g stroke-dasharray="none" stroke-dashoffset="0.0pt" stroke-linecap="round" stroke-linejoin="round" stroke-width="0.32pt" transform="matrix(0.0 1.0 -1.0 0.0 0 156.84)">
             <svg:path d="M -1.66 2.21 C -1.52 1.38 0 0.14 0.42 0 C 0 -0.14 -1.52 -1.38 -1.66 -2.21" style="fill:none"/>
           </svg:g>
-          <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -44.59 154.1)">
-            <svg:foreignObject height="12.15" overflow="visible" style="--ltx-fo-width:2.87em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.19em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.46)" width="39.7"><Math mode="inline" tex="U_{s},\varPsi_{s}" text="list@(U _ s, varPsi _ s)" xml:id="p1.pic1.m2">
+          <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -44.43 154.1)">
+            <svg:foreignObject height="12.15" overflow="visible" style="--ltx-fo-width:2.86em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.19em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.46)" width="39.54"><Math mode="inline" tex="U_{s},\varPsi_{s}" text="list@(U _ s, varPsi _ s)" xml:id="p1.pic1.m2">
                 <XMath>
                   <XMDual>
                     <XMApp>
@@ -70,7 +70,7 @@
                       <XMTok role="PUNCT">,</XMTok>
                       <XMApp xml:id="p1.pic1.m2.2">
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                        <XMTok name="varPsi" role="UNKNOWN">Ψ</XMTok>
+                        <XMTok font="italic" name="varPsi" role="UNKNOWN">Ψ</XMTok>
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok>
                       </XMApp>
                     </XMWrap>
@@ -100,12 +100,12 @@
             <svg:path d="M 0 118.11 L 78.74 118.11 C 96.46 100.39 157.48 39.37 236.22 39.37" style="fill:none"/>
           </svg:g>
           <svg:path d="M 98.43 118.11" style="fill:none"/>
-          <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 90.09 114.42)">
-            <svg:foreignObject height="11.53" overflow="visible" style="--ltx-fo-width:1.21em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.15em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.46)" width="16.68"><Math mode="inline" tex="\varPsi_{s}" text="varPsi _ s" xml:id="p1.pic1.m4">
+          <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 90.16 114.42)">
+            <svg:foreignObject height="11.53" overflow="visible" style="--ltx-fo-width:1.19em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.15em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.46)" width="16.52"><Math mode="inline" tex="\varPsi_{s}" text="varPsi _ s" xml:id="p1.pic1.m4">
                 <XMath>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                    <XMTok name="varPsi" role="UNKNOWN">Ψ</XMTok>
+                    <XMTok font="italic" name="varPsi" role="UNKNOWN">Ψ</XMTok>
                     <XMTok font="italic" fontsize="70%" role="UNKNOWN">s</XMTok>
                   </XMApp>
                 </XMath>

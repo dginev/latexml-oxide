@@ -30,6 +30,11 @@ LoadDefinitions!({
   // printed number ("7.0.1") that the PDF never shows. Witness 2605.16562
   // ("Author contributions.").
   SetCounter!("secnumdepth", Number::new(2));
+  // llncs.cls:379-389 `\DeclareMathSymbol{\Gamma}{\mathalpha}{letters}{"00}`…: the capital Greek letters are the math
+  // italic's, italic as a Latin letter unless a math alphabet is in force (`$\Omega$` CMMI10, `\mathrm{\Omega}` CMR10,
+  // `\vec{\Omega}` CMMIB10 in pdflatex; Perl's binding leaves them upright, KNOWN_PERL_ERRORS #1147). Witnesses
+  // 2606.09074 (Δ, Π CMMI10/CMMI7 in its PDF), 2604.00509, 2607.20650.
+  declare_capital_greek("", Some(LettersClass::Variable))?;
   // llncs.cls:393-397 (TL 2025, v2.26; `\def\vec` in 367 of the census's 587 copies, the robust command in 213):
   // `\vec{x}` is `\mbox{\boldmath$x$}`, the bold italic letter (CMMIB10 in pdflatex), not the kernel's arrow accent,
   // unless `orivec` (Perl's binding ignores it: KNOWN_PERL_ERRORS #1143). In maths only, as there (no `\ensuremath`).

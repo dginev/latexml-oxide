@@ -3,17 +3,21 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: mathpazo.sty.ltxml
-  Let!("\\upDelta",   "\\Delta");
-  Let!("\\upGamma",   "\\Gamma");
-  Let!("\\upLambda",  "\\Lambda");
-  Let!("\\upOmega",   "\\Omega");
-  Let!("\\upPhi",     "\\Phi");
-  Let!("\\upPi",      "\\Pi");
-  Let!("\\upPsi",     "\\Psi");
-  Let!("\\upSigma",   "\\Sigma");
-  Let!("\\upTheta",   "\\Theta");
-  Let!("\\upUpsilon", "\\Upsilon");
-  Let!("\\upXi",      "\\Xi");
+  // mathpazo.sty:35 `slantedGreek`; the binding reads no other option (:33-37).
+  DeclareOption!("slantedGreek", { AssignValue!("pazo_slanted_greek" => true); });
+  DeclareOption!(None, {});
+  ProcessOptions!();
+  // mathpazo.sty:109-133: the capital Greek letters from `letters` under `slantedGreek`, italic as a Latin letter
+  // unless a math alphabet is in force, else from `upright` (Palatino's), over a class's italic ones
+  // (llncs.cls:379-389; KNOWN_PERL_ERRORS #1147); :134-144 `\DeclareMathSymbol{\upGamma}{\mathord}{upright}{0}`…:
+  // upright glyphs of their own whatever the option, `tex=` reading the source's `\upGamma` (review rev79e finding 2;
+  // no census paper writes them in math: 2310.12571 ships the .sty).
+  if lookup_bool("pazo_slanted_greek") {
+    declare_capital_greek("", Some(LettersClass::Variable))?;
+  } else {
+    declare_capital_greek("", None)?;
+  }
+  declare_capital_greek_named("up", None, None)?;
 
   DefConstructor!("\\mathbb{}", "#1",
     bounded => true, require_math => true,

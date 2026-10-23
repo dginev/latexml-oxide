@@ -1959,18 +1959,14 @@ LoadDefinitions!({
   DefMath!("\\idotsint", "\u{222B}\u{22EF}\u{222B}", role => "INTOP",
     meaning => "multiple-integral", variablesize_op => true);
 
-  // Perl: amsmath.sty.ltxml L1283-1293 — italic Greek capitals
-  DefMath!("\\varGamma", "\u{0393}", font => { shape => "italic" });
-  DefMath!("\\varDelta", "\u{0394}", font => { shape => "italic" });
-  DefMath!("\\varTheta", "\u{0398}", font => { shape => "italic" });
-  DefMath!("\\varLambda", "\u{039B}", font => { shape => "italic" });
-  DefMath!("\\varXi", "\u{039E}", font => { shape => "italic" });
-  DefMath!("\\varPi", "\u{03A0}", font => { shape => "italic" });
-  DefMath!("\\varSigma", "\u{03A3}", font => { shape => "italic" });
-  DefMath!("\\varUpsilon", "\u{03A5}", font => { shape => "italic" });
-  DefMath!("\\varPhi", "\u{03A6}", font => { shape => "italic" });
-  DefMath!("\\varPsi", "\u{03A8}", font => { shape => "italic" });
-  DefMath!("\\varOmega", "\u{03A9}", font => { shape => "italic" });
+  // amsmath.sty:384-395 `\@ifundefined{varGamma}{\DeclareMathSymbol{\varGamma}{\mathord}{letters}{"00}`…}: the math
+  // italic's capital Greek letters whatever the alphabet (CMMI10 in pdflatex), unless a class declared them first
+  // (svmult.cls:982-993's upright `\var…`). Perl's amsmath.sty.ltxml:1294-1304 defines them unconditionally with
+  // `font => { shape => 'italic' }`, which a capital Greek letter's default shape overrides: upright (KNOWN_PERL_ERRORS
+  // #1147). Witnesses 1701.03426 (6 italic `\varLambda` in its PDF), 2407.01655. Guard `perfect_kernel_batch79e`.
+  if !is_defined("\\varGamma") {
+    declare_capital_greek("var", Some(LettersClass::Fixed))?;
+  }
 
   // Perl: amsmath.sty.ltxml L1311-1319 — misc stubs
   def_macro_noop("\\mintagsep")?;

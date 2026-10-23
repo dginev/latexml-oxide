@@ -1,0 +1,16 @@
+% witness: review rev79e finding 1 (probe rev79e/p/lncsstix); stix.sty:117-127 and stix2.sty:116-126
+%          `\stix@MathSymbol{\Gamma}{\mathalpha}{operators}{"00}`…, libertinust1math.sty:484-497 `\let\Gamma\upGamma`
+%          (`\mathalpha` from `operators`, :312) unless `slantedGreek`; llncs.cls:379-389 (2606.09074, 2604.00509)
+% oracle:  pdflatex 0 errors; \showbox under llncs + stix: $\Omega$, $\Gamma$, \mathbf{\Omega} LS1/stix/m/n (and
+%          stix2's LS1/stix2/m/n, libertinust1math's LS1/libertinust1math/m/n), over llncs.cls's italic ones;
+%          libertinust1math[slantedGreek] LS1/libertinust1math/m/it, its \mathrm m/n
+% engines: rust int75a = upright (Ω normal); rust 79e r1 = italic `<mi>Ω</mi>` (the class's letters left in force);
+%          Perl 0.8.8: upright (every capital Greek letter is, KNOWN_PERL_ERRORS #1147)
+% expect:  0 errors, 0 warnings; MathML Ω(normal), Γ(normal)
+% status:  RED (79e r1) -> GREEN (79e r2)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\usepackage{stix}
+\begin{document}
+$\Omega\Gamma$
+\end{document}

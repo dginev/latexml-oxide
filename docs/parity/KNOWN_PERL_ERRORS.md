@@ -17767,3 +17767,47 @@ ieeeeqnarray_nonumber_after_yessubnumber_wins, ieeeeqnarray_starred_nonumber_giv
 ieeeeqnarray_nonumber_after_nosubnumber_holds}`. `\IEEEnosubnumber` (:1428-1434) clears the pre-advance too where it
 acts, so it holds the counters as `\IEEEyesnumber` does (int75 follow-up, review rev79d3 finding 1: a
 `\IEEEnosubnumber\nonumber` row after "(1a)", pdflatex (2) (2a) next; r3 "(1a)" again).
+
+## 1147. A capital Greek letter declared from the math italic `letters` font stays upright
+
+latex.ltx's `\DeclareMathSymbol` sets a math code whose class and symbol font decide the glyph: fontmath.ltx:204-214
+declares `\Gamma`…`\Omega` `\mathalpha` (class 7, variable family) from `operators`, upright, but llncs.cls:379-389,
+svmult.cls:971-981 (svmono, SNmult), svjour.cls:89-99 (0710.3184's), svjour2.cls:142-152, svjour3.cls:147-157 and
+svproc.cls:369-379 re-declare them
+from `letters` (OML `cmm/m/it`), as do fixmath.sty:27-37 and, under `slantedGreek`, mathptmx.sty:80-92,
+mathpple.sty:91-103, ccfonts.sty:62-74, cmbright.sty:66-78, newtxmath.sty:1015-1039 and newpxmath.sty:595-619: the
+letter is the math italic and, being class 7, follows a math alphabet in force (tex.web §1151), as a Latin letter
+(`$\Omega$` CMMI10, `\mathrm{\Omega}` CMR10, `\mathbf{\Omega}` CMBX10, `\boldsymbol{\Omega}`/`\bm`/`\boldmath` CMMIB10).
+amsmath.sty:384-395 `\@ifundefined{varGamma}` declares `\varGamma`…`\varOmega` `\mathord` (class 0) from `letters`:
+italic whatever the alphabet; apjfonts.sty:342-352 the same from its `cmletters`. Perl's `\DeclareMathSymbol`
+(latex_constructs.pool.ltxml:2697-2705) defines the glyph with no font, and its `Font::specialize` (Font.pm:1001-1005)
+gives every capital Greek letter the default upright shape, a requested italic one included, so the classes' and
+packages' letters (none of their Perl bindings declares them) and amsmath's and apjfonts' `\var…` (`font => {shape =>
+'italic'}`, amsmath.sty.ltxml:1294-1304, unconditional; apjfonts.sty.ltxml:21-31) are all upright. Minimal trigger:
+`\documentclass{llncs}\usepackage{amsmath}\begin{document}$\Omega\ \varOmega$\end{document}` (pdflatex CMMI10 both;
+Perl `<mi mathvariant="normal">Ω</mi>` both). Fixed in Rust (79e; user ruling 2026-10-23, Option A "follow the
+class"): `Font::specialize_letters` gives a capital Greek glyph of a math italic symbol font the rule of the fontmath.ltx
+glyphs of its class — `\mathalpha` the Latin letters' (italic unless a family or a shape is in force), `\mathord` the
+lowercase Greek letters' (italic always) — through `MathPrimitiveOptions::letters_class`, set by the kernel's
+`\DeclareMathSymbol` for an OML-encoded italic or slanted symbol font (a raw class or package copy; not newtxmath's
+upright-Greek `lettersA`, U-encoded) and by `declare_capital_greek` in each binding where its original declares them:
+llncs, svmult, svjour, svproc; mathptmx, mathpple, ccfonts, cmbright under `slantedGreek`; newtxmath and newpxmath
+(`slantedGreek`, `uprightGreek`, `frenchmath`; their default re-declares them upright over a class's italic ones) and
+mathpazo (`slantedGreek`, else Palatino's upright); eulervm, euler and fourier re-declare them upright (Euler, `futm`);
+amsmath (`\@ifundefined`, so svmult's upright `\var…` stand) and apjfonts. Lowercase Greek keeps its own rule (OT1, the
+alphabets' encoding, has no lowercase Greek slots). MathML: an italic capital `<mi>Ω</mi>`, bold italic `<mi>𝜴</mi>`.
+Repros fonts-nfss/{llncs_capital_greek_is_the_math_italic, declare_math_symbol_from_letters_takes_the_class_shape,
+amsmath_var_capital_greek_is_italic, newtxmath_greek_options_follow_the_package}; guards `perfect_kernel_batch79e`.
+The packages that re-declare the letters upright over a class's italic ones also include stix.sty:117-127 and
+stix2.sty:116-126 (`\stix@MathSymbol{\Gamma}{\mathalpha}{operators}{"00}`…, not under `nomath`) and
+libertinust1math.sty:484-497 (`\let\Gamma\upGamma`, from `operators`; `\let\Gamma\itGamma`, from `letters`, under
+`slantedGreek` or `ISO`, not `frenchmath`): their Perl bindings are stubs (ar5iv-bindings' stix.sty.ltxml) or absent,
+and Perl's upright letters match TeX there only by the defect above (79e r2, review rev79e finding 1).
+mathptmx.sty:93-103 declares `\upGamma`…`\upOmega` `\mathord` from `operators` (mathpazo.sty:134-144 from `upright`,
+eulervm.sty:97-98 `\upDelta`, `\upOmega` from its Euler `letters`): upright glyphs of their own, where Perl's
+mathptmx.sty.ltxml:22 and mathpazo.sty.ltxml:21 `Let('\upGamma', '\Gamma')`: `tex="\Gamma"` for the author's `\upGamma`,
+and under llncs the class's letter (italic once the defect above is fixed). Minimal trigger:
+`\documentclass{llncs}\usepackage{mathptmx}\begin{document}$\upOmega\Omega$\end{document}` (pdflatex OT1/ztmcm/m/n,
+OML/ztmcm/m/it). Fixed in Rust (`declare_capital_greek_named`: the letter's name, its own control sequence, the kernel's
+upright rule; main-session decision 1). Repros fonts-nfss/{upright_capital_greek_packages_over_the_class,
+mathptmx_up_capital_greek_keeps_its_name}.

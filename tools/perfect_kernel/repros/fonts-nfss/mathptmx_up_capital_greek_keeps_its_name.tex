@@ -1,0 +1,15 @@
+% witness: review rev79e finding 2 (probe rev79e/p/lncsptm), main-session decision 1 (`tex=` reads the source's
+%          `\upGamma`); mathptmx.sty:93-103 `\DeclareMathSymbol{\upGamma}{\mathord}{operators}{0}`…; llncs.cls:379-389
+%          (2606.09074)
+% oracle:  pdflatex 0 errors; \showbox under llncs + mathptmx: \upOmega, \upGamma OT1/ztmcm/m/n (upright), \Omega
+%          OML/ztmcm/m/it (llncs.cls's italic letter; mathptmx re-declares \Omega only under `slantedGreek`)
+% engines: rust int75a = all three upright, tex="\Omega\Omega\Gamma"; rust 79e r1 = all three italic (the binding's
+%          `\let\upOmega\Omega` takes the class's letter), the same tex=; Perl 0.8.8: upright, tex="\Omega\Omega\Gamma"
+% expect:  0 errors, 0 warnings; tex="\upOmega\upGamma\Omega"; MathML Ω(normal), Γ(normal), Ω
+% status:  RED (79e r1) -> GREEN (79e r2)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\usepackage{mathptmx}
+\begin{document}
+$\upOmega\upGamma\Omega$
+\end{document}

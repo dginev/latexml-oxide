@@ -1,0 +1,16 @@
+% witness: 79e brief (raw-loaded classes and packages that run \DeclareMathSymbol themselves: fixmath.sty:27-37, a
+%          shipped llncs.cls copy; arXiv 1002.2350, fixmath); fontmath.ltx:60
+%          `\DeclareSymbolFont{letters}{OML}{cmm}{m}{it}`, tex.web §1151
+% oracle:  pdflatex 0 errors; \showbox: \Xi OML/cmm/m/it, \mathrm{\Xi} OT1/cmr/m/n, \Psi and \mathrm{\Psi}
+%          OML/cmm/m/it, \Phi OT1/cmr/m/n
+% engines: rust int75 = \Xi and \Psi upright (`mathvariant="normal"`); Perl 0.8.8: the same (KNOWN_PERL_ERRORS #1147)
+% expect:  0 errors, 0 warnings; MathML Ξ, Ξ(normal), Ψ, Ψ, Φ(normal)
+% status:  RED (int75) -> GREEN (79e)
+% preload: ar5iv.sty
+\documentclass{article}
+\DeclareMathSymbol{\Xi}{\mathalpha}{letters}{"04}
+\DeclareMathSymbol{\Psi}{\mathord}{letters}{"09}
+\DeclareMathSymbol{\Phi}{\mathalpha}{operators}{"08}
+\begin{document}
+$\Xi\ \mathrm{\Xi}\ \Psi\ \mathrm{\Psi}\ \Phi$
+\end{document}

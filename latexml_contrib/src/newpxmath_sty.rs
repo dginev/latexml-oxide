@@ -16,7 +16,10 @@
 //! Witnesses 1709.08558, 1902.06558, 2001.06387, 2003.04827, 2003.05278, 2305.12589, 2508.05134, 2603.09013.
 //! Guards: `perfect_kernel_batch68j::newpxmath_carries_its_symbol_set`, `::newpxmath_coloneq_over_mathtools`.
 use latexml_package::{
-  package::{newtxmath_sty::def_newtx_math_symbols, txfonts_sty::def_txfonts_symbols},
+  package::{
+    newtxmath_sty::{declare_newtx_greek_options, def_newtx_math_symbols, newtx_capital_greek},
+    txfonts_sty::def_txfonts_symbols,
+  },
   prelude::*,
 };
 
@@ -40,4 +43,10 @@ LoadDefinitions!({
   Let!("\\vmathbb", "\\varmathbb");
   Let!("\\vvmathbb", "\\varmathbb");
   Let!("\\vvarmathbb", "\\varmathbb");
+  // newpxmath.sty:173-175, :212 and :595-619: its Greek options and capital Greek letters, as newtxmath's; but :188
+  // `\ProcessOptions*` runs them in the order given, so the last of `slantedGreek`/`uprightGreek` wins (pdflatex:
+  // `[slantedGreek,uprightGreek]` U/npxmia, the upright `lettersA`). Witness 2508.05134 (`slantedGreek`).
+  declare_newtx_greek_options()?;
+  ProcessOptions!(*);
+  newtx_capital_greek()?;
 });

@@ -146,6 +146,10 @@ LoadDefinitions!({
   DefMath!("\\upi",    "\u{03C0}", font => { shape => "upright", forceshape => true });
   DefMath!("\\utau",   "\u{03C4}", font => { shape => "upright", forceshape => true });
 
+  // svmult.cls:971-981 (svmono.cls and SNmult.cls the same; every census copy) "Springer likes them as italics to depict
+  // variables": the capital Greek letters are the math italic's, italic as a Latin letter unless a math alphabet is in
+  // force (Perl's binding leaves them upright, KNOWN_PERL_ERRORS #1147). Witnesses 0812.2480, 2401.17237, 2605.10553.
+  declare_capital_greek("", Some(LettersClass::Variable))?;
   // The var-Greek letters: svmult.cls:982-993 (v5.x; 0812.2480's, 2401.17237's, 2605.10553's copies) declares them from
   // `operators`, "the upright forms are defined here as \var<Character>", where its capital Greek are `letters`'
   // italics (:971-981; the reverse of amsmath's `\varGamma`). Perl's binding (svmult.cls.ltxml:56-66) makes them

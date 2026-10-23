@@ -22,6 +22,10 @@ LoadDefinitions!({
   // OmniBus outcome. Witness 2004.07524 (svproc proceedings with `\includegraphics`).
   RequirePackage!("graphicx");
   RequirePackage!("sv_support");
+  // svproc.cls:369-379 (every census copy, 1705.10638's) `\DeclareMathSymbol{\Gamma}{\mathalpha}{letters}{"00}`…: the
+  // capital Greek letters are the math italic's, italic as a Latin letter unless a math alphabet is in force (KNOWN_PERL_ERRORS
+  // #1147).
+  declare_capital_greek("", Some(LettersClass::Variable))?;
   // svproc.cls:389-404 (every copy of the census's 17): `\vec` is the upright bold `\mbox{\boldmath$\mathbf{#1}$}`, not
   // the kernel's arrow accent (KNOWN_PERL_ERRORS #1143). Its `vecphys` (bold italic) and `vecarrow` (the accent) options,
   // :36-37, are not read: this binding declares no options, and no census paper passes them or uses `\vec`.

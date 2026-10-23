@@ -930,6 +930,7 @@ pub fn def_math_primitive(
   let shared_options = Rc::new(options.clone());
   let variablesize_op = shared_options.variablesize_op;
   let dynamic_scriptpos = shared_options.dynamic_scriptpos;
+  let letters_class = shared_options.letters_class;
   // Perl defmath_prim (Package.pm:1831): the box reverts to the alias when there is one
   // (`\{` is `\lx@math@lbrace` with alias `\{`).
   let reversion_cs = options.alias.as_deref().map_or(cs, Token::from);
@@ -974,13 +975,16 @@ pub fn def_math_primitive(
         } else {
           None
         };
+        // A glyph declared from the `letters` symbol font takes its class's shape (`Font::specialize_letters`).
+        let specialize = |font: &Font| match letters_class {
+          Some(class) => font.specialize_letters(&presentation, class),
+          None => font.specialize(&presentation),
+        };
         let font = Rc::new(if let Some(ref reqfont) = reqfont_opt {
           let this_reqfont = reqfont.get_font(None)?;
-          state_font
-            .merge_ref(&this_reqfont)
-            .specialize(&presentation)
+          specialize(&state_font.merge_ref(&this_reqfont))
         } else {
-          state_font.specialize(&presentation)
+          specialize(&state_font)
         });
 
         Ok(vec![Digested::from(Tbox {
@@ -2277,6 +2281,7 @@ fn transfer_common_constructor_options(
   // tests/parse/math_lexemes.tex#defmath_accent_takes_the_digestion_font.
   let presentation_for_font = presentation.to_owned();
   let mathstyle_for_font = options.mathstyle;
+  let letters_class = options.letters_class;
   // Perl `scriptpos => \&doScriptpos` (TeX_Math.pool.ltxml:350): `mid` in display, else `post`,
   // read with the other code properties — a starred `\DeclareMathOperator` puts its limits
   // below in display (amsopn.sty.ltxml:26).
@@ -2297,10 +2302,11 @@ fn transfer_common_constructor_options(
         ..Font::default()
       }));
     }
-    properties.insert(
-      "font",
-      Stored::Font(Rc::new(font.specialize(&presentation_for_font))),
-    );
+    let font = match letters_class {
+      Some(class) => font.specialize_letters(&presentation_for_font, class),
+      None => font.specialize(&presentation_for_font),
+    };
+    properties.insert("font", Stored::Font(Rc::new(font)));
     Ok(properties)
   });
 }

@@ -65,6 +65,11 @@ LoadDefinitions!({
   ProcessOptions!();
   LoadClass!("article");
   RequireResource!("ltx-svjour.css");
+  // svjour.cls:89-99 (0710.3184's), svjour2.cls:142-152, svjour3.cls:147-157 (every census copy, after the journal option
+  // file) `\DeclareMathSymbol{\Gamma}{\mathalpha}{letters}{"00}`…: the capital Greek letters are the math italic's,
+  // italic as a Latin letter unless a math alphabet is in force (Perl's binding leaves them upright, KNOWN_PERL_ERRORS
+  // #1147). Witnesses 2101.03721 (Ψ CMMI10 in its PDF), 0710.3184, 2609.05466.
+  declare_capital_greek("", Some(LettersClass::Variable))?;
   // The class's theorem set (svjour3.cls:885-933, svjour.cls:756-792), numbered as the options say: `{theorem}`
   // within the section ("1.1") under envcountsect, else on its own ("1") and reset by each section under
   // envcountreset; the others on the theorem counter under envcountsame ("Theorem 1, Lemma 2"), within the section

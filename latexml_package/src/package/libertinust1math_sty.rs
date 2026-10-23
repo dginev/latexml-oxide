@@ -11,15 +11,31 @@
 //!
 //! Perl LaTeXML never raw-loads libertinust1math.sty (Perl-default
 //! `INCLUDE_STYLES=false`), so the kernel `\prime`/`\sum`/... stay
-//! intact. Match that behaviour: no-op binding. Font choice is moot for
+//! intact. Match that behaviour: the binding re-declares only the capital
+//! Greek letters, whose shape the package sets (:484-497). Font choice is moot for
 //! XML/HTML output. Witness 2406.04255, 2406.04389, 2407.16071
 //! (~28 papers cumulative, up to 501 `\prime` errors per paper).
 use crate::prelude::*;
 
 LoadDefinitions!({
-  // libertinust1math.sty:59 reads its options with `\ProcessOptionsX`, which marks them processed: `\@curroptions` stays as it was.
-  key_options_processed()?;
-  // Kernel math chars are authoritative: the binding re-declares none of them.
+  // libertinust1math.sty:59 reads its options with `\ProcessOptionsX`, in the order given, which marks them processed:
+  // `\@curroptions` stays as it was. The binding reads the Greek ones (:47-49, :62-65): `slantedGreek`, `uprightGreek`,
+  // `frenchmath` (upright) and `ISO` (slanted, after `frenchmath`).
+  DeclareOption!("slantedGreek", {
+    AssignValue!("libus_slanted_greek" => true);
+  });
+  DeclareOption!("uprightGreek", {
+    AssignValue!("libus_slanted_greek" => false);
+  });
+  DeclareOption!("frenchmath", {
+    AssignValue!("libus_french_math" => true);
+  });
+  DeclareOption!("ISO", {
+    AssignValue!("libus_iso" => true);
+  });
+  DeclareOption!(None, {});
+  ProcessKeyOptions!(*);
+  // Kernel math chars are authoritative: the binding re-declares none of them but the capital Greek letters (below).
   //
   // libertinust1math.sty:7 `\RequirePackage{xkeyval,etoolbox}` and :75 `\RequirePackage{amsmath}` (stubs load real
   // dependencies): a document's `\DeclareMathOperator`/`\operatorname`/`\text` came from these (2110.09723,
@@ -73,4 +89,11 @@ LoadDefinitions!({
   if !is_defined("\\oiint") {
     DefMath!("\\oiint", None, "\u{222F}", role => "INTOP", meaning => "surface-integral", variablesize_op => true);
   }
+  // :484-497 `\let\Gamma\upGamma` (:312, `\mathalpha` from `operators`): the capital Greek letters upright, over a
+  // class's italic ones (llncs.cls:379-389; KNOWN_PERL_ERRORS #1147), or under `slantedGreek` (:62-65: not with
+  // `frenchmath`, always with `ISO`) `\let\Gamma\itGamma` (:400, `\mathalpha` from `letters`), italic as a Latin letter
+  // unless a math alphabet is in force. Review rev79e finding 1 (witness 2606.09074).
+  let slanted = (lookup_bool("libus_slanted_greek") && !lookup_bool("libus_french_math"))
+    || lookup_bool("libus_iso");
+  declare_capital_greek("", slanted.then_some(LettersClass::Variable))?;
 });

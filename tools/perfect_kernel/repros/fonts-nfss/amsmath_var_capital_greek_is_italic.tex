@@ -1,0 +1,14 @@
+% witness: review rev79d decision 1 (probe ~/.claude/jobs/356a0c47/tmp/rev79d/greek/g1); arXiv 1701.03426,
+%          2407.01655 (amsmath `\var…`); amsmath.sty:384-395
+%          `\@ifundefined{varGamma}{\DeclareMathSymbol{\varGamma}{\mathord}{letters}{"00}`…}
+% oracle:  pdflatex 0 errors; \showbox: \varOmega and \mathrm{\varOmega} OML/cmm/m/it, \Omega OT1/cmr/m/n
+% engines: rust int75 = \varOmega upright (the binding's `font => {shape => italic}` lost to Font::specialize);
+%          Perl 0.8.8: the same (KNOWN_PERL_ERRORS #1147)
+% expect:  0 errors, 0 warnings; MathML Ω, Ω, Ω(normal)
+% status:  RED (int75) -> GREEN (79e)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+$\varOmega\ \mathrm{\varOmega}\ \Omega$
+\end{document}
