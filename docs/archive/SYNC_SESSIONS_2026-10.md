@@ -7824,3 +7824,33 @@ declared pages for two-column classes, a minipage-held float's `panelline`, a su
 `~/data/pk_agents/main/briefs/79f.md`) and `pk/fms2b` `e1fff9a9f5` (worktree `~/data/pk_wt/fms2b`; FM S2b pilot on revtex4_support, the
 r9 review's restated plan; brief `briefs/fms2b_r1.md`; r9's census tooling kept in `~/data/pk_wt/scratch_fms2a2r9/`). Next: finish each
 from its WIP (or restart from its brief), review, integrate as int78.
+
+**int78** (2026-10-24; 79f → 99007fa08e, main-session follow-ups 612f3f423d, 97bbc8520c): the panel page model (OD #885, #887) —
+the standard classes declare their `[twocolumn]` page as size10/11/12.clo set it (`standard_class_twocolumn_page`: 469/229.5pt
+letter, 452/221pt A4), and acmart's two-column formats, elsarticle 3p/5p, emulateapj, ieeeconf, iopart, mn2e/mn, REVTeX 3, svjour/
+svjour3 and AASTeX 5.x declare theirs (`declare_standard_class_page`, `declare_panel_page`); `\twocolumn`/`\onecolumn` switch it; a
+float held in a `{minipage}` is a fraction of the page outside the box (`PANEL_BOX_PAGE`: RED
+`captions-floats/panel_line_of_a_float_in_a_minipage` GREEN, `panelline` 0.5); subfig's `\subfloat` is its body's width with the
+glue the body states (2008.06630 Figs 1, 7: three per row as the PDF). The 79f writer was interrupted by quota (WIP on pk/79f);
+finished, rebased and integrated in the main session. Its first gates (int78a, 3 of 7,199 failing) exposed a `\parbox` defect the
+declared pages made visible: the macro read its width as a value (Perl's `{Dimension}`), so `\lx@parbox` kept no tokens to read at
+the declared page and a `\parbox{\linewidth}` table note stated 1.503 of a two-column article's column (1.407 under emulateapj).
+Fixed: `\parbox` hands `\lx@parbox` the width as the source states it, read outside the box as latex.ltx:16252 does, the box's
+registers set inside it (`\lx@parbox@restore`; its `[height]` read outside too, latex.ltx:16255 — a rotated
+`\parbox[c][\textwidth]` is 345pt tall, not 550pt); deluxetable's notes are `\parbox{\linewidth}` (aastex701.cls:8627-8636,
+emulateapj.cls:1571-1580). Re-pinned to TeX's reading: batch77s (a `.4\textwidth` minipage and the measured `\subfloat` on one
+row), gemini (bare subfig sub-floats state their 1cm), batch65a (the rotated parbox's height). Gates int78b 7200/7200, inits 0/0,
+dumps unchanged. A/B int77a → int78b over popint78b (943: 79f's 747 class/option draw + 200 census `\parbox` users): E 1,033 =
+1,033, F 5 = 5, words equal, 0 worse; 138 byte-changed, all byte-identical with the panel attributes, gallery/matrix classes and
+breaks stripped. 13 papers newly state a panel wider than 1: 9 are widths the PDF also overflows (absolute or `0.8\textwidth`
+graphics against the real column: 1201.1687, 1305.5332, 1501.02589, 1602.02759, 1704.02886, 2006.03073, 2306.06108, 2404.08533,
+astro-ph0311528); 4 were AASTeX's `\plotone` (the binding's `\textwidth`, Perl's, read as 2.092 of an emulateapj column; the
+class's `0.85\linewidth`, aastex701.cls:8178-8189) → `\plotone`/`\plottwo` at `\linewidth` (guard
+`perfect_kernel_batch79f::an_aastex_plot_is_set_at_the_line`). Gates int78c 7201/7201. A/B int78b → int78c over popint78c (267:
+emulateapj, aastex5, controls, witnesses, the 13, 120 census `\plotone` users): E 194 = 194, F 1 = 1, 0 worse; 5 byte-changed, the
+emulateapj `\plotone` figures' `panelwidth`/`panelfill` 2.092 → 1 (1406.6363, 1408.6903, 1712.03384, astro-ph0605087,
+astro-ph0609442). Nets 136/136, 0 worse (int77a → int78c).
+
+Rows removed as landed (int78):
+| — | A sub-float body's stated `\hspace` is left out of its measured width: subfig's `\subfloat` (2008.06630 Figs 1, 7: `\subfloat{\includegraphics[width=0.16\textwidth]{…}\hspace{-3mm}}` triples in a 237pt column, 3 per row in the PDF, 2+1 here; its body is not measured by `note_sub_float_body_width`). subfigure.sty's `\subfigure` counts it since 78x r4 (OD #876, the glue it states, not its spaces: 1307.3388 Fig 3; guard `perfect_kernel_batch78x::a_sub_float_bodys_stated_glue_counts`). Fix: the same measure for subfig's body | open (subfigure.sty FIXED 78x r4) |
+| — | Class pages not declared for the panel rows (`declare_panel_page`, OD #885): the binding's 345pt `\textwidth` is taken as the page — iopart (446.4pt at 12pt: 2109.08525 Fig 3, two `height=6cm` graphics with `\qquad`, one row in the PDF, two here), a style that sets `\textwidth` to one column (2310.04470 Fig 6), aastex7 (withdrawn: not measured), ieeeconf, IEE-CTA, elsarticle `5p`; the panel attributes (OD #887) inherit it — measured pages (`\textwidth`/`\columnwidth`, pdflatex; rev79c2): article/report/book `[twocolumn]` 469/229.5 letter, 452/221 a4 (`figure*` 2.044, ours 2; 21 papers / 84 floats of popint70a); acmart two-column formats 506.295/241.147 (`figure*` 2.100, ours 1; 30 papers / 90 floats — first); elsarticle `5p` 522/252 (2.071, ours 1); emulateapj, svjour3 `[twocolumn]`, mn2e (14 papers) to measure. Not `\columnsep` alone (Perl's 0, latex_base.pool.ltxml:309; still 700/345). Extend by declaration, values from pdflatex | open |
