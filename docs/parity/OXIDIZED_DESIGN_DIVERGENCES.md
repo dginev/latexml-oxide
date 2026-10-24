@@ -14849,7 +14849,15 @@ FindFile, they see `\input@path` too, which pdfTeX's do not: `\openin` finds suc
 would report it missing; accepted, as more files are found and none lost. 71 papers in 2609 set `\input@path`.
 Witness 2609.02998 (its class style, whose natbib every `\citep` needed).
 
-**Guard**: `perfect_kernel_batch61::input_path_finds_a_style_in_a_subdirectory`.
+Graphics are looked up the same way (79g): graphics.sty's `\Gin@getbase` tests each name with `\IfFileExists`
+(graphics.sty:211-231), so the image search (image.rs `image_candidates_with`) takes the `\input@path` entries after
+`\graphicspath`, the search paths and the source directory (1112.0840's 8 figures in `graphics/` under its class's
+`\csdef{input@path}{{style/}{graphics/}{}}`), and looks a name up unquoted, as `\set@curr@file`'s `\unquote@name`
+drops every `"` (latex.ltx:9654-9666; `{"Figure_1".jpg}` is `Figure_1.jpg`, 1907.03916, 2005.11727; Perl stripped
+none). The `graphic` attribute keeps the name as written; `candidates` names the file found.
+
+**Guard**: `perfect_kernel_batch61::input_path_finds_a_style_in_a_subdirectory`;
+`perfect_kernel_batch79g::{includegraphics_looks_under_the_input_path, includegraphics_finds_a_quoted_name_unquoted}`.
 
 ### 455. The closing float-up (`^^`) climbs only open nodes (compensates for a paragraph Perl has already closed)
 
@@ -25244,3 +25252,47 @@ dialect.rs `def_constructor`): the warning names the `alias` when it is a contro
 math mode", "\mathbb …"); an empty alias (latexml_sty's `alias => ""` entries) keeps the definition's name. No robust
 constructor uses `require_math`. Repro class-bindings/llncs_text_mode_vec_warns_as_vec; guard
 `perfect_kernel_batch79d::llncs_text_mode_vec_warns_as_vec`.
+
+### 890. `\subfile` loads the subfile by `\subimport`, so its own directory is searched first (Perl: `\input`)
+
+subfiles.sty:120-131 makes `\subfile{f}` `\subimport{\filename@area}{\filename@base}` (import.sty, which it requires;
+the base keeps its extension) and `\subfileinclude` the same through `\subincludefrom`: what the subfile inputs and the
+figures it names are found in its own directory, as pdflatex finds them. Perl's subfiles.sty.ltxml binds `\subfile` as
+`\input`, so 2209.05589's `\subfile{./sub/OPA_v2.tex}` lost all 11 figures (`\includegraphics{FigScheme.eps}`, in
+`sub/`) to `ltx_missing_image`. Ours (subfiles_sty.rs): `\subfile` splits its argument at the last `/` and calls our
+`\subimport`. The group `\subfiles@subfile` opens around the load is not taken, as Perl takes none: a subfile's own
+definitions stay visible after it. Repro package-bindings/subfile_figure_in_its_directory; guard
+`perfect_kernel_batch79g::a_subfile_finds_the_figures_in_its_directory`.
+
+### 891. xr's `\externaldocument` imports the other document's labels: `\ref` prints its numbers (Perl: no binding)
+
+xr.sty (v6; xr-hyper.sty alike) reads the other document's `.aux`, and every `.aux` it `\@input`s, defining
+`\r@<prefix><label>` from each `\newlabel` (`\XR@test`), so `\ref{fig:s1}` prints "S1". Perl ships no binding, and the
+raw package's `\r@…` never reach a `\ref` that post resolves: every such reference was an `ltx_missing_label`
+(1307.3388's 40 references to its supplement, 1608.05314's 73; in the census, 21 of the 125 papers that call
+`\externaldocument` ship the external `.aux` — the others print "??" in pdflatex too — and 15 of the 21 now resolve every
+external reference). Ours (contrib xr_sty.rs, for xr and xr-hyper; siamart loads it as siamart220329.cls:1266
+does): `\externaldocument[prefix][nocite]{file}[url]` records each imported label's reference text (sect11.rs
+`record_external_label`), and `\ref`/`\eqref` print it in an `ltx:ref` of class `ltx_ref_external` that keeps its
+`labelref` (an `href` to the URL's anchor where the URL is given; the default `file.pdf` names no page of ours). Post
+does not mark such a reference missing, and where this document holds the label after all it drops the imported text
+and fills the reference from the target here, as LaTeX's own `.aux`, read at `\begin{document}`, redefines the
+`\r@<label>` xr made in the preamble. A missing `.aux` warns, as xr does ("No file supp.aux; labels not imported").
+The text is the field as written, its braces dropped: an IEEEtran `\mbox {IV-A.1}` prints raw (open, 79h). Not
+imported: the `\bibcite`s v6 also reads, and cleveref's `@cref` records: `\cref` and `\autoref` to another document
+stay missing labels (2412.14256, 2402.05535, 2508.18808, 2608.12136; SYNC row "Complete breakage"). Repro package-bindings/xr_external_document_labels; guards
+`perfect_kernel_batch79g::{xr_prints_the_other_documents_numbers, xr_yields_to_a_label_of_this_document}`.
+
+### 892. `\begin{thebibliography}` takes one token as its argument when no brace follows (Perl: a braced argument only)
+
+LaTeX's `thebibliography` takes one undelimited argument, the widest label (revtex4.cls:5549 `[1]`, revtex4-1.cls:7308
+`\thebibliography@nogroup#1`, natbib.sty:1063, latex.ltx's `\thebibliography#1`), so a bare token after
+`\begin{thebibliography}` is that argument. Perl's `\thebibliography` reads the argument only when a `{` follows ("in
+some perverse situations (revtex?) it seems to be allowable to omit the argument"), so 1203.4144's placeholder line —
+`\bibitem` then `\bibitem{Moffatt} Dormy E., …` — gave the bare `\bibitem` the next `\bibitem` as its key: the entry and
+its citation were lost (`<ltx:bibitem> isn't allowed in <ltx:tag>`), where pdflatex prints "[1] Dormy E., …" with 0
+errors. Ours (sect11.rs `\thebibliography`): with no brace, a character token is the argument, and so is a `\bibitem`
+that opens no entry (not followed by `{` or `[`); a `\bibitem{x}` or any other command stays, keeping Perl's leniency where
+TeX would take the `\bibitem` as the width and print the entry's key as text. 32 of the census's 35,942 papers have an
+unbraced `thebibliography`. Repro index-bib/thebibliography_placeholder_bibitem_is_the_width; guard
+`perfect_kernel_batch79g::a_placeholder_bibitem_is_the_bibliography_width`.

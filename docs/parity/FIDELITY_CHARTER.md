@@ -17,7 +17,8 @@ When two rules below pull apart, the higher priority wins.
 **Where to stop** (user 2026-10-24): a completely readable HTML rendering is essential to a reader, so priorities 1 and 2
 — content preservation and the semantic XML and HTML markup — are held to 100 %. Secondary details of priority 3 (sizing:
 widths, heights, panel fractions, box dimensions) are done once 90-95 % of their issues are handled; the rest stay
-one-line SYNC rows, not payloads.
+one-line SYNC rows, not payloads. Complete breakage counts as readability and is held to 100 % too (user 2026-10-24): a
+missing image, a broken `\ref` or `\cite`, and the like — the fixes are usually coverage gaps.
 
 ## 2. Content
 

@@ -7869,3 +7869,19 @@ removed duplicates (1409.8253: one 7-institution `\affiliation` block on 23 name
 showing its mark; 2602.16003: Romera's mark 2 answers no affiliation, today's gave Romera Torres's corresponding-author
 line). Nets 136/136, 0 worse (int78c → int79a). Next (SYNC row "FM S2b"): the full revtex census off vs on with PDF checks, then the switch on by
 default for revtex4_support.
+
+**int80** (2026-10-24; 79g, breakage at 100 % → a2ac401f9b): the first breakage batch (user 2026-10-24: a missing image,
+a `\ref` or `\cite` with no target, is a readability failure). Fixed: images under `\input@path` and named with quotes
+(OD #454; 1112.0840, 1907.03916, 2005.11727); `\subfile` by `\subimport`, the name unquoted first (OD #890; 2209.05589,
+2409.12749 — the first cut split `"./counterExample"` with the quote in both halves, E 4→6, words −40 %, caught by the
+A/B); xr's `\externaldocument` imports the other document's labels for `\ref`/`\eqref` (OD #891; 1307.3388, 1608.05314;
+siamart's xr-hyper); `\begin{thebibliography}` takes one token as its argument (OD #892; 1203.4144). Gates int79c
+7209/7209 (int79b failed clippy only: items after sect11's test module, a collapsible `if`), inits 0/0. A/B int79a → int79b
+over popint79g (823: the census's `\externaldocument`, `\subfile`, `\input@path` and quoted-graphics papers + the
+breakage witnesses): changed 295, E 5,416 → 5,239, F 14 = 14, Ebetter 20, Eworse 1 (2409.12749, fixed in int79c), words
++152,939, Math +5,500. A/B int79b → int79c over popint79h (853 = popint79g + the 30 other unbraced-`thebibliography`
+census papers): 4 byte-changed, 0 worse — 1203.4144 and 2409.12749 the fixes, 1505.01689 and 1908.02523 a stray `9`/`:`
+after `\begin{thebibliography}` now the width where it was an empty bibitem. Nets 136/136, 0 worse (int79a → int79c).
+Found after the A/B, fixed next (79h): the imported text is printed as written (IEEEtran's `\mbox {IV-A.1}` printed
+raw, 45 references), and `\cref`/`\autoref` to the other document stay missing labels.
+

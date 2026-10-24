@@ -108,8 +108,8 @@ const SUPP_AUX: &str = "\\relax\n\\newlabel{fig:s1}{{S1}{3}}\n\\newlabel{eq:s2}{
 
 /// xr's `\externaldocument{supp}` imports the labels of `supp.aux`: `\ref` and `\eqref` print the numbers pdflatex
 /// prints ("See Fig. S1, Eq. (S2) and Section 1."), and a label of this document stays a reference post resolves. Red
-/// (int79a): xr was a stub, so both references were missing labels. Witness 2412.14256 (its appendix labels in the
-/// shipped `supplemental_aux.aux`). Repro package-bindings/xr_external_document_labels.
+/// (int79a): xr was a stub, so both references were missing labels. Witnesses 1307.3388 (40 references to its
+/// supplement's labels), 1608.05314 (73). Repro package-bindings/xr_external_document_labels.
 #[test]
 fn xr_prints_the_other_documents_numbers() {
   let (log, xml) = convert_files_with(
