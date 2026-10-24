@@ -23831,6 +23831,26 @@ an_api_legend_is_explained_by_its_own_tag, a_part_is_a_line_or_a_run_of_lines}`;
 `sectioning-frontmatter/{observer_rehearsal_leaves_a_used_box_unchanged (GREEN),
 observer_rehearsal_leaves_a_shared_box_unchanged, observer_rehearsal_keeps_a_fallback_meaning}.tex`.
 
+**S2b r1 (int79, 2026-10-24): the observer writes one family, under the switch.** For a family whose policy entry is
+`written` — the pilot, revtex4_support's `revtex` — `observer::writer::write_observed_frontmatter` runs at the end of
+`insert_frontmatter` with `LATEXML_FM_SHADOW=1`: the paper's creators are read back as the comparator reads them
+(`writer::dom`), compared with the resolver's reading, and written only when every difference is one of the writer's
+operations (`writer::plan`): an entry given to the names the reading gives it (owners by mark), one call's marked entries
+cut apart at their marks (pieces mapped to the call's queued tokens by a stamped rehearsal, the mark kept as styled label
+ink), a legend made a note of the names showing its mark, a url printing an address made an e-mail. Each operation is a
+rule holding an adopted ruling's change tag (`resolver::CHANGE_TAGS`, shared with `ab_audit fmshadow`); any other
+difference leaves the paper as today's, and what was written is read back against the reading (a Warning names the
+writer's own defect). Unset, nothing of it runs. Measured: unset 367/367 byte-identical to int78c (300 census revtex
+papers + controls); set, 23 of the 300 revtex papers written, controls unchanged, E/F equal, no distinct frontmatter word
+lost or gained in any of the 23 and every byte after the frontmatter identical — the word count falls (−3,061) where a
+whole marked affiliation list was every name's (1409.8253: one 7-institution block on 23 names, now each institution on
+the names showing its mark) and a starred legend leaves the affiliations for a correspondence note (2602.16003: Romera's
+mark 2 answers no affiliation in the PDF, today's gave Romera Torres's corresponding-author line). Guards
+`perfect_kernel_batchfms2b::{footnote_marked_affiliations_go_to_their_names, a_marked_affiliation_is_cut_at_its_marks}`;
+the shadow-neutral guards of batchfms2a2r7/r8 keep the families not switched. Next: the full 5,639-paper revtex census
+switched off vs on with PDF checks on a seeded draw, then the switch on by default for revtex4_support; then the next
+family by the per-family gate.
+
 ### 840. A space a name sets before its own mark is the name's; spacing-only math, `\enskip` after a mark part names
 
 OD #52(i) rewrites a horizontal space in an author block (`\hspace`, `\hfill`) to `\quad`, which with `\quad` and

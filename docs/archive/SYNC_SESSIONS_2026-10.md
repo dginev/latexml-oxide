@@ -7854,3 +7854,18 @@ astro-ph0609442). Nets 136/136, 0 worse (int77a → int78c).
 Rows removed as landed (int78):
 | — | A sub-float body's stated `\hspace` is left out of its measured width: subfig's `\subfloat` (2008.06630 Figs 1, 7: `\subfloat{\includegraphics[width=0.16\textwidth]{…}\hspace{-3mm}}` triples in a 237pt column, 3 per row in the PDF, 2+1 here; its body is not measured by `note_sub_float_body_width`). subfigure.sty's `\subfigure` counts it since 78x r4 (OD #876, the glue it states, not its spaces: 1307.3388 Fig 3; guard `perfect_kernel_batch78x::a_sub_float_bodys_stated_glue_counts`). Fix: the same measure for subfig's body | open (subfigure.sty FIXED 78x r4) |
 | — | Class pages not declared for the panel rows (`declare_panel_page`, OD #885): the binding's 345pt `\textwidth` is taken as the page — iopart (446.4pt at 12pt: 2109.08525 Fig 3, two `height=6cm` graphics with `\qquad`, one row in the PDF, two here), a style that sets `\textwidth` to one column (2310.04470 Fig 6), aastex7 (withdrawn: not measured), ieeeconf, IEE-CTA, elsarticle `5p`; the panel attributes (OD #887) inherit it — measured pages (`\textwidth`/`\columnwidth`, pdflatex; rev79c2): article/report/book `[twocolumn]` 469/229.5 letter, 452/221 a4 (`figure*` 2.044, ours 2; 21 papers / 84 floats of popint70a); acmart two-column formats 506.295/241.147 (`figure*` 2.100, ours 1; 30 papers / 90 floats — first); elsarticle `5p` 522/252 (2.071, ours 1); emulateapj, svjour3 `[twocolumn]`, mn2e (14 papers) to measure. Not `\columnsep` alone (Perl's 0, latex_base.pool.ltxml:309; still 700/345). Extend by declaration, values from pdflatex | open |
+
+**int79** (2026-10-24; FM S2b r1 → 240b16e0d4, shadow switch only): the observer writes the frontmatter for one family,
+revtex4_support (OD #837 "S2b r1"). The S2b r1 writer was interrupted by quota 2026-10-23 (WIP on pk/fms2b); resumed in
+the main session rebased on 5148762bd6: the shadow-neutral guards of batchfms2a2r7/r8 keep only the families not switched
+(their REVTeX shapes, `FOOTNOTE_MARK` and `API_LEGEND`, now pinned to the written reading in
+`perfect_kernel_batchfms2b`: footnote-marked affiliations go to the names showing the mark; one marked
+`\affiliation` cut at its marks, the starred legend Bob's correspondence note), an `ab_audit` import used only by doc
+links dropped (clippy), review revfms2a2_9 findings 2-5 confirmed in the tree. Gates int79a 7203/7203, inits 0/0, dumps
+unchanged. A/B int78c → int79a over popint79a (367: 300 census revtex papers + controls/witnesses): unset 0 byte-changed;
+with `LATEXML_FM_SHADOW=1` on both sides, 23 of the 300 written, controls unchanged, E 127 = 127, F 0 = 0, no distinct
+frontmatter word lost or gained in any of the 23 and every byte after the frontmatter identical; words −3,061 from
+removed duplicates (1409.8253: one 7-institution `\affiliation` block on 23 names, now each institution on the names
+showing its mark; 2602.16003: Romera's mark 2 answers no affiliation, today's gave Romera Torres's corresponding-author
+line). Nets 136/136, 0 worse (int78c → int79a). Next (SYNC row "FM S2b"): the full revtex census off vs on with PDF checks, then the switch on by
+default for revtex4_support.
