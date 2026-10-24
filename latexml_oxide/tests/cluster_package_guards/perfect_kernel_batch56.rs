@@ -11181,8 +11181,8 @@ fn orcidlink_starts_the_paragraph() {
 }
 
 /// 57i (K13 stage-2 finding): `\externaldocument[prefix][nocite]{file}[url]` reads its trailing
-/// `[url]` (xr.sty:47, xr-hyper.sty:41); it was left as text. The binding announces its stub (one
-/// warning, `xr.sty is not implemented`).
+/// `[url]` (xr.sty:47, xr-hyper.sty:41); it was left as text. With no `supp.aux` to import, the one
+/// warning is xr's own (`No file supp.aux`, 79g; it was the stub's `xr.sty is not implemented`).
 #[test]
 fn xr_externaldocument_reads_its_url() {
   let (stderr, xml) = convert_with(
@@ -11193,20 +11193,25 @@ fn xr_externaldocument_reads_its_url() {
   );
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 1, "{stderr}");
-  assert!(stderr.contains("Warning:missing_file:xr.sty"), "{stderr}");
+  assert!(stderr.contains("Warning:missing_file:supp.aux"), "{stderr}");
   latexml::util::test::assert_element(
     &xml,
     "para",
     &[r#"xml:id="p1""#],
     r#"<para xml:id="p1"><p>See the supplement.</p></para>"#,
   );
-  // siamart loads xr-hyper (siamart220329.cls:1266); its binding's copy reads the same `[url]`.
+  // siamart loads xr-hyper (siamart220329.cls:1266), which reads the same `[url]` and warns of the missing
+  // `ex_supplement.aux`, as pdflatex's xr-hyper does.
   let (stderr, xml) = convert_with(
     "\\documentclass{siamart}\n\\externaldocument[][nocite]{ex_supplement}[https://example.org/ex_supp.pdf]\n\\begin{document}\nSee the supplement.\n\\end{document}\n",
     None,
   );
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert!(
+    stderr.contains("Warning:missing_file:ex_supplement.aux"),
+    "{stderr}"
+  );
   latexml::util::test::assert_element(
     &xml,
     "para",

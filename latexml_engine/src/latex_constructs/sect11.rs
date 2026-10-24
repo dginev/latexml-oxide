@@ -155,15 +155,19 @@ pub(crate) fn load() -> Result<()> {
   // # * is added to accommodate hyperref
   // Perl latex_constructs.pool.ltxml L3873-3878: sizer => '()',
   //   robust => 1, enterHorizontal => 1.
+  // A label only another document holds prints the text xr imported for it (`external_ref_properties`).
   DefConstructor!("\\ref OptionalMatch:* Semiverbatim",
-    "<ltx:ref ?#1(class='ltx_nolink')() labelref='#label' _force_font='true'/>",
+    "?#reftext(<ltx:ref class='#refclass' labelref='#label' ?#refhref(href='#refhref')() _force_font='true'>#reftext</ltx:ref>)\
+     (<ltx:ref ?#1(class='ltx_nolink')() labelref='#label' _force_font='true'/>)",
     sizer => "()",
     robust => true,
     enter_horizontal => true,
     properties => sub[args] {
-      unpack_opt_ref!(args => _star, label_opt);
-      let label = label_opt.as_ref().unwrap().to_string();
-      Ok(stored_map!("label" => Stored::String(pin(clean_label(&label, None)))))
+      unpack_opt_ref!(args => star, label_opt);
+      let label = clean_label(&label_opt.as_ref().unwrap().to_string(), None).into_owned();
+      let mut props = stored_map!("label" => Stored::String(pin(&label)));
+      external_ref_properties(&label, star.is_some(), &mut props);
+      Ok(props)
   });
 
   // "page" does not make sense in xml.  If the user really wants, they will need:
@@ -2451,5 +2455,43 @@ mod held_tag_role_order {
         "creflabel"
       ]);
     }
+  }
+}
+
+/// Records a label of another document that xr's `\externaldocument` imported from that document's `.aux`
+/// (xr_sty.rs): the reference text its `\newlabel` gives and, where the document's URL was given, the link to its
+/// anchor. Global, as xr's `\protected@xdef\r@<label>` is (xr.sty `\XR@test`).
+pub fn record_external_label(label: &str, text: &str, href: Option<&str>) {
+  assign_value(
+    &s!("xr@label@{label}"),
+    Stored::String(pin(text)),
+    Some(Scope::Global),
+  );
+  if let Some(href) = href {
+    assign_value(
+      &s!("xr@href@{label}"),
+      Stored::String(pin(href)),
+      Some(Scope::Global),
+    );
+  }
+}
+
+/// Adds to a reference's properties the text a label of another document prints (`record_external_label`), as pdflatex
+/// prints the `\r@<label>` xr defined: `reftext`, `refclass` (`ltx_ref_external`, after `ltx_nolink` for a starred
+/// reference) and `refhref`. Post drops the text and the class where this document holds the label after all, as
+/// LaTeX's own `.aux`, read at `\begin{document}`, redefines the `\r@<label>` xr made in the preamble.
+pub fn external_ref_properties(label: &str, star: bool, props: &mut SymHashMap<Stored>) {
+  let Some(Stored::String(text)) = lookup_value(&s!("xr@label@{label}")) else {
+    return;
+  };
+  props.insert("reftext", Stored::String(text));
+  let class = if star {
+    "ltx_nolink ltx_ref_external"
+  } else {
+    "ltx_ref_external"
+  };
+  props.insert("refclass", Stored::String(pin(class)));
+  if let Some(Stored::String(href)) = lookup_value(&s!("xr@href@{label}")) {
+    props.insert("refhref", Stored::String(href));
   }
 }

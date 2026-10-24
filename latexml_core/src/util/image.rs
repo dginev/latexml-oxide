@@ -30,7 +30,11 @@ pub fn image_candidates(path: &str) -> String { image_candidates_with(path, true
 /// [`image_candidates`]; `fallbacks` says whether a name the search directories do not hold is asked of kpsewhich and,
 /// with a graphics extension, retried under its base name (off for that retry itself).
 fn image_candidates_with(path: &str, fallbacks: bool) -> String {
-  let path = path.trim().trim_matches('"');
+  // `\IfFileExists` looks a name up unquoted: `\set@curr@file`'s `\unquote@name` drops every `"` (latex.ltx:9654-9666),
+  // so graphics.sty's `\Gin@getbase` finds `{"Figure_1".jpg}` as `Figure_1.jpg` (1907.03916, 2005.11727), as it finds a
+  // name quoted whole.
+  let unquoted = path.replace('"', "");
+  let path = unquoted.trim();
   if path.is_empty() {
     return String::new();
   }

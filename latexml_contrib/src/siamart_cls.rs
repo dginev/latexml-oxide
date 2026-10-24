@@ -70,15 +70,10 @@ LoadDefinitions!({
     "\\fundingsource{}",
     "\\@add@frontmatter{ltx:note}[role=funding-source]{#1}"
   );
-  // siamart papers often \externaldocument supplement/article before
-  // loading xr — pre-stub. siamart loads xr-hyper (not xr), which
-  // supports `\externaldocument[prefix][nocite]{file}` (two optional
-  // args). Semiverbatim on the file arg neutralizes `_` so paper-
-  // bundled filenames like `ex_supplement` don't trip text-mode `_`
-  // errors. Witness 2402.12241. The trailing `[url]` is xr-hyper's too
-  // (xr-hyper.sty:38-41; siamart220329.cls:1266 loads it), as in xr_sty.rs.
-  def_macro_noop("\\externaldocument[][] Semiverbatim OptionalSemiverbatim")?;
-  def_macro_noop("\\externalcitedocument[][] Semiverbatim OptionalSemiverbatim")?;
+  // siamart220329.cls:1266 loads xr-hyper, whose `\externaldocument[][nocite]{ex_supplement}` (the SIAM template's
+  // article ↔ supplement idiom) imports the other document's labels from its `.aux` (xr_sty.rs; a file name with `_`
+  // stays Semiverbatim, witness 2402.12241).
+  RequirePackage!("xr-hyper");
   // siamart220329 L1130: \funding{...} writes a marked line in the
   // titlepage. Preserve as a frontmatter ltx:acknowledgements via
   // \@add@frontmatter so the element lands at top-level no matter

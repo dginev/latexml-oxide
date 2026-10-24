@@ -62,6 +62,30 @@ LoadDefinitions!({
     );
   });
 
-  // Define \subfile to be \input
-  Let!("\\subfile", "\\input");
+  // subfiles.sty:120-131 — `\subfile{f}` is `\subimport{\filename@area}{\filename@base}` (import.sty, which it
+  // requires), the base keeping its extension (`\subfiles@split`'s `\filename@simple`), and `\subfileinclude` the
+  // same through `\subincludefrom`: the subfile's own directory is searched first for what it inputs and the figures it
+  // names, as pdflatex finds them (2209.05589's `\subfile{./sub/OPA_v2.tex}`, whose `\includegraphics{FigScheme.eps}`
+  // live in `sub/`). Perl binds `\subfile` as `\input` (subfiles.sty.ltxml), so those figures were missing. The group
+  // `\subfiles@subfile` opens around the load is not taken, as in Perl's binding: a subfile's definitions stay.
+  RequirePackage!("import");
+  DefMacro!("\\subfile{}", sub[(file)] { Ok(subfile_import("\\subimport", &Expand!(file).to_string())) });
+  DefMacro!("\\subfileinclude{}", sub[(file)] {
+    Ok(subfile_import("\\subincludefrom", &Expand!(file).to_string()))
+  });
 });
+
+/// `\subfiles@split` (subfiles.sty:111-116): the area of `file` up to its last `/` and the rest, given to `loader`
+/// (`\subimport` or `\subincludefrom`) as its two arguments.
+fn subfile_import(loader: &str, file: &str) -> Tokens {
+  let file = file.trim();
+  let (area, base) = file
+    .rfind('/')
+    .map_or(("", file), |slash| (&file[..=slash], &file[slash + 1..]));
+  let mut out = vec![T_CS!(loader), T_BEGIN!()];
+  out.extend(Explode!(area));
+  out.extend([T_END!(), T_BEGIN!()]);
+  out.extend(Explode!(base));
+  out.push(T_END!());
+  Tokens::new(out)
+}

@@ -1,0 +1,15 @@
+% witness: 2412.14256 (`\externaldocument{supplemental_aux}`, its appendix labels in the shipped `supplemental_aux.aux`)
+% oracle:  pdflatex 0 errors, "See Fig. S1, Eq. (S2) and Section 1." (xr.sty `\XR@test`: each `\newlabel` of
+%          `supp.aux` defines `\r@<label>`); the guard supplies `supp.aux`
+% engines: rust int79a = both references `ltx_missing_label` (xr raw-loaded; its `\r@…` never reach `\ref`); Perl the same
+% expect:  0 errors, 0 warnings; `\ref{fig:s1}` prints S1, `\eqref{eq:s2}` (S2), `\ref{sec:main}` stays a reference here
+% status:  RED (int79a) -> GREEN (79g)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{xr}
+\externaldocument{supp}
+\begin{document}
+\section{Main}\label{sec:main}
+See Fig.~\ref{fig:s1}, Eq.~\eqref{eq:s2} and Section~\ref{sec:main}.
+\end{document}

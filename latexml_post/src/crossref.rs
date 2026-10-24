@@ -1864,9 +1864,30 @@ impl CrossRef {
               id = Some(resolved_id.to_string());
             }
           }
-          if id.is_none() {
+          // A reference printing the text xr imported for another document's label (`ltx_ref_external`, sect11.rs
+          // `external_ref_properties`) is not missing; where this document holds the label after all, the text and the
+          // class go and the reference is filled from the target here, as LaTeX's own `.aux` redefines the `\r@<label>`
+          // xr made in the preamble.
+          let classes = ref_node.get_attribute("class").unwrap_or_default();
+          let external = classes
+            .split_whitespace()
+            .any(|class| class == "ltx_ref_external");
+          if id.is_none() && !external {
             self.note_missing("warn", "Target for Label", &label);
             PostDocument::add_class(&mut ref_mut, "ltx_missing_label");
+          } else if id.is_some() && external {
+            let kept: Vec<&str> = classes
+              .split_whitespace()
+              .filter(|class| *class != "ltx_ref_external")
+              .collect();
+            if kept.is_empty() {
+              ref_mut.remove_attribute("class").ok();
+            } else {
+              ref_mut.set_attribute("class", &kept.join(" ")).ok();
+            }
+            ref_mut.remove_attribute("href").ok();
+            let children: Vec<Node> = ref_mut.get_child_nodes();
+            doc.remove_nodes(&children);
           }
         }
       }

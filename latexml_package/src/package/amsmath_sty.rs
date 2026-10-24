@@ -1906,13 +1906,17 @@ LoadDefinitions!({
   // \eqref is the first token in a paragraph), opening <ltx:p>
   // before the parenthesized ref instead of emitting bare text in
   // vertical mode.
+  // A label only another document holds prints the text xr imported for it, as `\ref` does.
   DefConstructor!("\\eqref Semiverbatim",
-    "(<ltx:ref labelref='#label' _force_font='true'/>)",
+    "(?#reftext(<ltx:ref class='#refclass' labelref='#label' ?#refhref(href='#refhref')() _force_font='true'>#reftext</ltx:ref>)\
+     (<ltx:ref labelref='#label' _force_font='true'/>))",
     mode => "restricted_horizontal", enter_horizontal => true,
     properties => sub[args] {
       unpack_opt_ref!(args => label_opt);
-      let label = label_opt.as_ref().unwrap().to_string();
-      Ok(stored_map!("label" => Stored::String(pin(clean_label(&label, None)))))
+      let label = clean_label(&label_opt.as_ref().unwrap().to_string(), None).into_owned();
+      let mut props = stored_map!("label" => Stored::String(pin(&label)));
+      latexml_engine::latex_constructs::external_ref_properties(&label, false, &mut props);
+      Ok(props)
   });
   DefMacro!("\\thetag{}", "{\\rm #1}");
 

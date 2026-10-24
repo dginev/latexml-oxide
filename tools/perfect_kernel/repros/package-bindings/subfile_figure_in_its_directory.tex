@@ -1,0 +1,13 @@
+% witness: 2209.05589 (`\subfile{./sub/OPA_v2.tex}`, whose `\includegraphics{FigScheme.eps}` … live in `sub/`)
+% oracle:  pdflatex 0 errors, `<use sub/sf_plot.pdf>`: subfiles.sty:120-131 loads a subfile by `\subimport` (import.sty),
+%          so the subfile's directory is searched first; the guard supplies `sub/part.tex` and `sub/sf_plot.pdf`
+% engines: rust int79a = no candidates, `ltx_missing_image` (`\subfile` bound as `\input`, Perl's binding)
+% expect:  0 errors, 0 warnings; the subfile's graphic's candidates name sub/sf_plot.pdf
+% status:  RED (int79a) -> GREEN (79g)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{subfiles}
+\begin{document}
+\subfile{sub/part.tex}
+\end{document}
