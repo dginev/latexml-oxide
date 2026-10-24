@@ -7996,3 +7996,19 @@ over popint89a (400 siunitx census papers, the witness among them): E 2,999 → 
 byte-identical, 2504.01955 better (210 → 0 errors, 8 dangling citations → 0), 2010.00953 converted on neither side (an
 `.ltx` main file). Nets 136/136, 0 worse (int88e → int89a). 1506.05333 has no breakage left; math-ph0209020's
 `\bemlabel` writes `\newlabel` to the aux only (1 census paper).
+
+**int90** (2026-10-24; 79t → 0848995732): brk89 re-ran brk86's 64 residual papers on int89a (`scratch_356a0c47/brk89/`:
+dangling `\ref` 384 → 310, `\cite` 29 → 21, graphics 45 = 45, 19 papers clean, 0 worse). Three of its residuals:
+aastex701.cls:11516/:11614 `\longdeluxetable`/`\endlongdeluxetable` (the long table `\deluxetable` turns to after
+`\startlongtable`) make `{longdeluxetable}` an environment, undefined here and in Perl, so its caption and `\label` were
+lost; aas_support_sty.rs makes it `\startlongtable`'s flag + `\deluxetable` (KNOWN_PERL_ERRORS #1156; the PDF's caption
+prints "Table" with no number, ours "Table 2", the `\ref` 2 in both). xcolor reads its name files with `\input`
+(xcolor.sty:193); our deduplicated `InputDefinitions` left xcolor without the dvips names when `color` had read
+`dvipsnam.def` first for a global `dvipsnames` (lipics-v2021: `color` at class time, xcolor at `\begin{document}`), now
+`reloadable` (#1157). pdfTeX's `\pdfinterwordspaceon`/`\pdfinterwordspaceoff`/`\pdffakespace` are no-ops (#1158).
+Gates int90a 7228/7228. A/B int89a → int90a over popint90a (97 lipics, 150 color+xcolor, 80 aastex7, 18 dgruyter census
+papers + 3 witnesses): E 1,475 → 1,389, F 3 = 3, 0 worse; 340 byte-identical, 2608.15711 and 2407.14159 better, and
+2301.07931 (TooManyErrors on both sides: one error fewer at load moves the 101st error, so the output stops later). Nets
+136/136, 0 worse (int89a → int90a). Residuals ruled not ours: main-file guesses of the harness (2104.01753, 2204.10370,
+2407.14159's references), stale `.bbl` (2205.10368), `\ignore` before its definition (1605.04559), an unshipped listings
+file (2009.11389).
