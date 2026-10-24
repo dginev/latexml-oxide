@@ -17879,3 +17879,16 @@ ends in a Fatal. Minimal trigger: `\usepackage{polytable}`, `\(\begin{pboxed}\co
 the package does; `\newcolumntype` rewriting (`\NC@find`) stays out, so a raw `\@mkpream` sees only built-in column
 letters. Witnesses 2307.11194 (171 errors, 10 dangling references → 0), 1705.09704 (153, 3 → 0). Repro
 package-bindings/polytable_code_block; guard `perfect_kernel_batch79p::polytable_code_block_keeps_its_lines`.
+
+## 1153. soul's commands digest a `\\` in their argument as it stands, so in a table cell it ends the row
+
+soul.sty:263/348: the scanner behind `\so`, `\caps`, `\ul`, `\st` and `\hl` sets a `\\` in the argument as a forced
+line break (`\unskip\nobreak\hfil\break`), never the end of an alignment row. Perl's soul.sty.ltxml makes them
+constructors that digest the argument as it stands, so in a `p{}` cell `\\` is the tabular's row end, read inside the
+command's group: "Attempt to close a group that switched to mode horizontal", the cell's later lines and the rest of
+the table lost. Minimal trigger: `\usepackage{xcolor,soul}`, `\begin{tabular}{p{5cm}}\hl{one \\ two}\\\end{tabular}`
+(pdflatex 0 errors). Fixed in Rust (79q): soul_sty.rs `soul_line_breaks` lets `\\` be `\newline` while the argument
+digests, local to the command's group (`\textst` is now `bounded` like the others). Witnesses 2310.07652 (40 errors →
+0, words 6,688 → 13,453, 4 dangling references → 0), 2406.17962 (40 → 0). Repro
+package-bindings/soul_newline_in_table_cell; guard
+`perfect_kernel_batch79q::a_soul_line_break_in_a_table_cell_is_a_line_break`.
