@@ -2023,6 +2023,11 @@ pub fn substitute_file_request(request: &str) -> Option<String> {
 /// in which case we may really want to load a binding.
 /// Note that generic style files (non-latex) often have a .tex extension.
 pub fn input(request: &str, options: InputOptions) -> Result<()> {
+  // A name's surrounding blanks are no part of it: tex.web §526 `scan_file_name` skips the leading ones and a blank
+  // ends the name, and LaTeX's `\input{ x.tex}` / `\input{dir/x }` read `x.tex` and `dir/x.tex` (pdflatex finds both).
+  // Perl's `Input` keeps them and finds no file (2109.01356 `\input{ data_table.tex}`, 2509.24347 `\input{paper/encoding
+  // }`; KNOWN_PERL_ERRORS #1151).
+  let request = request.trim();
   // unwrap if in quotes \input{"file name"} — Perl parity:
   // `$request =~ s/^("+)(.+)\g1$/$2/;` (single-pass strip of a matching
   // leading+trailing run of quotes). The previous `while` loop checked

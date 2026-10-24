@@ -17851,3 +17851,15 @@ into the classification. Minimal trigger: `\documentclass{amsart}` … `\subjcla
 (79m): the five are `short => true` (OXIDIZED_DESIGN_DIVERGENCES #782). Witness 2212.11488 (81 of 153 references
 dangling). Repro sectioning-frontmatter/ams_subjclass_unclosed; guard
 `perfect_kernel_batch79m::an_unclosed_subjclass_ends_at_the_paragraph`.
+
+## 1151. A blank inside the braces of `\input`/`\include` is read as part of the file name
+
+TeX's `scan_file_name` (tex.web §526) skips the blanks before a name and ends it at a blank, and LaTeX's
+`\set@curr@file` reads the name as an undelimited argument: `\input{ data_table.tex}`, `\input{paper/encoding }` and
+`\include{ chapter}` read `data_table.tex`, `paper/encoding.tex` and `chapter.tex` (pdflatex 0 errors). Perl's `Input`
+(Package.pm:2265) and `\IfFileExists` keep the blanks: "Can't find TeX file  data_table.tex", and an `\include`'s
+`\InputIfFileExists` falls to its "No file" branch, the chapter silently dropped. Minimal trigger: a `data_table.tex`
+beside `\input{ data_table.tex}`. Fixed in Rust (79n): `content::input`, `\IfFileExists`, `\InputIfFileExists` and
+`\include` trim the name. Witnesses 2109.01356, 2509.24347, 1804.08035, 2410.05458, 2407.11677, 2002.10466 (dangling
+references → 0). Repro loader/input_name_surrounding_blanks; guard
+`perfect_kernel_batch79n::a_file_names_surrounding_blanks_are_no_part_of_it`.

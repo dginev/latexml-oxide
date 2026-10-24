@@ -1278,8 +1278,11 @@ pub(crate) fn load() -> Result<()> {
     // siunitx, physics … never loaded (arXiv 2605.05505, 2605.24122 flooded
     // into `Fatal:TooManyErrors`). Guard:
     // `perfect_kernel_batch56::include_strips_a_tex_extension`.
+    // The name's surrounding blanks are no part of it (`\include{ dir/x}` reads `dir/x.tex` in pdflatex; was a silent
+    // "No file  dir/x.tex", the chapter dropped; KNOWN_PERL_ERRORS #1151).
     let expanded = ::latexml_core::gullet::expand_as_csname_text(path)?.to_string();
-    let path_str = expanded.strip_suffix(".tex").unwrap_or(&expanded).to_string();
+    let expanded = expanded.trim();
+    let path_str = expanded.strip_suffix(".tex").unwrap_or(expanded).to_string();
     // Check if \includeonly restricts inclusion
     let table = lookup_value("including@only");
     let should_include = match table {

@@ -1747,8 +1747,11 @@ pub(crate) fn load() -> Result<()> {
 
   // The file name is expanded as `\set@curr@file` (latex.ltx) does, inside a
   // `\csname` (`gullet::expand_as_csname_text`), as `\input` does it.
+  // The name's surrounding blanks are no part of it (latex.ltx `\set@curr@file` reads it as `\@firstofone#1`, an
+  // undelimited argument, and pdflatex finds `x.tex` for `\input{ x.tex}` and `\input{dir/x }`; `content::input`).
   DefMacro!("\\IfFileExists{}{}{}", sub[(file, if_tks, else_tks)] {
     let file_string = ::latexml_core::gullet::expand_as_csname_text(file)?.to_string();
+    let file_string = file_string.trim().to_string();
     // latex.ltx:19794 file substitution applies before the existence test.
     let file_string = substitute_file_request(&file_string).unwrap_or(file_string);
     // Disk-search variant first (matches Perl FindFile default).
@@ -1786,7 +1789,8 @@ pub(crate) fn load() -> Result<()> {
 
   DefMacro!("\\InputIfFileExists{}{}{}", sub[(file, if_tks, else_tks)] {
     let file_tks = ::latexml_core::gullet::expand_as_csname_text(file)?;
-    let file_string = file_tks.to_string();
+    // (surrounding blanks no part of the name, as `\IfFileExists`)
+    let file_string = file_tks.to_string().trim().to_string();
     // latex.ltx:19794 file substitution applies before the existence test;
     // `input()` re-applies it to the name we hand `\ltx@input`.
     let file_string = substitute_file_request(&file_string).unwrap_or(file_string);
