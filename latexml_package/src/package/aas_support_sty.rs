@@ -603,9 +603,14 @@ LoadDefinitions!({
   // 2.14 Electronic Art
   DefMacro!("\\figurenum{}", "\\def\\thefigure{#1}");
   def_macro_noop("\\epsscale{}")?;
-  DefMacro!("\\plotone Semiverbatim", "\\includegraphics[width=\\textwidth]{#1}");
+  // The plots are set at the line (aastex701.cls:8178-8189, emulateapj.cls:1040-1051: `0.85\linewidth`, `0.425\linewidth`
+  // each, times `\epsscale`), here a whole line each (Perl's aas_support.sty.ltxml:317-319 `\textwidth`, the same width
+  // where the page is not declared): against a two-column class's declared page (`declare_panel_page`) a one-column
+  // figure's plot is the column, not 2.09 of it (emulateapj: 1408.6903 Fig 3, astro-ph0609442 Fig 1). The class's
+  // 0.85 and `\epsscale` stay unmodelled, as in Perl.
+  DefMacro!("\\plotone Semiverbatim", "\\includegraphics[width=\\linewidth]{#1}");
   DefMacro!("\\plottwo Semiverbatim Semiverbatim",
-    "\\hbox{\\includegraphics[width=\\textwidth]{#1}\\includegraphics[width=\\textwidth]{#2}}");
+    "\\hbox{\\includegraphics[width=\\linewidth]{#1}\\includegraphics[width=\\linewidth]{#2}}");
   DefMacro!("\\plotfiddle Semiverbatim {}{}{}{}{}{}",
     "\\includegraphics[width=#4pt,height=#5pt]{#1}");
 

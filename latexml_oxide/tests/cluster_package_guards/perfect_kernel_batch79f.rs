@@ -326,3 +326,30 @@ fn a_parbox_states_its_width_against_the_page() {
     );
   }
 }
+
+/// AASTeX's `\plotone` is set at the line (aastex701.cls:8178-8183, emulateapj.cls:1040-1045 `0.85\linewidth`; the
+/// binding a whole line): two plots in an emulateapj figure are two rows of one column each, not 2.09 of it (int78b:
+/// the binding's `\textwidth`, Perl's, read at emulateapj's declared page). Witnesses 1408.6903 Fig 3, astro-ph0609442
+/// Fig 1.
+#[test]
+fn an_aastex_plot_is_set_at_the_line() {
+  let xml = convert_clean(
+    "\\documentclass{emulateapj}\n\\begin{document}\n\\begin{figure}\n\\plotone{a.png}\n\\plotone{b.png}\n\
+     \\caption{Two plots.}\n\\end{figure}\n\\end{document}\n",
+  );
+  assert!(
+    xml.contains(&gallery("S0.F1", 2, 1, "1", "1")),
+    "two rows of one column: {xml}"
+  );
+  for (n, name) in [(1, "a.png"), (2, "b.png")] {
+    assert_element(
+      &xml,
+      "graphics",
+      &[&format!("xml:id=\"S0.F1.g{n}\"")],
+      &format!(
+        "<graphics class=\"ltx_figure_panel\" graphic=\"{name}\" options=\"width=345.0pt,keepaspectratio=true\" \
+         panelwidth=\"1\" xml:id=\"S0.F1.g{n}\"/>"
+      ),
+    );
+  }
+}
