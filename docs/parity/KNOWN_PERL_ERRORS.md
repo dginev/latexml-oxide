@@ -17863,3 +17863,19 @@ beside `\input{ data_table.tex}`. Fixed in Rust (79n): `content::input`, `\IfFil
 `\include` trim the name. Witnesses 2109.01356, 2509.24347, 1804.08035, 2410.05458, 2407.11677, 2002.10466 (dangling
 references → 0). Repro loader/input_name_surrounding_blanks; guard
 `perfect_kernel_batch79n::a_file_names_surrounding_blanks_are_no_part_of_it`.
+
+## 1152. array's binding drops array.sty's preamble builder, so a raw `\@mkpream` call meets the kernel's class macros
+
+array.sty:54-200 and :382-423 replace the kernel's preamble builder: a global `\@addtopreamble` (`\xdef`, the
+kernel's is a local `\edef`), its own `\@testpach`, `\@mkpream` and column classes (`\@classz`, `\@classi`…`\@classx`,
+`\insert@column`, `\save@decl`, `\prepnext@tok`), `\d@llarbegin`/`\d@llarend` and `\do@row@strut`. Perl's
+array.sty.ltxml defines none of them (its tables read their templates themselves), so after `\usepackage{array}` a raw
+`\@mkpream` is the kernel's (latex_dump.pool.ltxml:2264), whose `\@classiv`/`\@classz` exist only inside `\@tabular`
+and `\array` (latex.ltx:16550/:16561): "undefined `\@classiv`". polytable.sty (lhs2TeX's code blocks) builds a
+one-column preamble that way and splits it at `\@sharp` into the material around a cell (:557, :588-607); each code
+block then fails with "Illegal character in array arg" and polytable's "Illegal preamble (no columns)", and the file
+ends in a Fatal. Minimal trigger: `\usepackage{polytable}`, `\(\begin{pboxed}\column{B}{@{}l@{}}\column{E}{@{}l@{}}`
+`\>[B]{}x{}\<[E]\end{pboxed}\)` (pdflatex 0 errors). Fixed in Rust (79p): array_sty.rs defines array.sty's builder as
+the package does; `\newcolumntype` rewriting (`\NC@find`) stays out, so a raw `\@mkpream` sees only built-in column
+letters. Witnesses 2307.11194 (171 errors, 10 dangling references → 0), 1705.09704 (153, 3 → 0). Repro
+package-bindings/polytable_code_block; guard `perfect_kernel_batch79p::polytable_code_block_keeps_its_lines`.
