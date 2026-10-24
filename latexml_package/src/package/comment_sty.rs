@@ -8,6 +8,7 @@ LoadDefinitions!({
     let name = args.remove(0).owned_tokens().unwrap();
     let name_str = name.to_string();
     let begin_mark = format!("\\begin{{{name_str}}}");
+    let begin_mark_let = begin_mark.clone();
     let name_clone = name_str.clone();
     DefConstructor!(T_CS!(begin_mark), None, None,
     after_digest => {
@@ -54,6 +55,16 @@ LoadDefinitions!({
     });
     DefMacro!(T_CS!(format!("\\end{{{name_str}}}")), None, Tokens!());
     DefMacro!(T_CS!(format!("\\end{name_str}")), None, Tokens!());
+    // comment.sty's own name for the environment (`\csarg\def{#1}`, comment.sty:241-248): a kernel-style `\begin`
+    // that looks up only `\<name>` — arabtex's alatex.sty:113 — finds it, where Perl's binding (only `\begin{<name>}`)
+    // left "Environment comment undefined" and typeset the comment (KNOWN_PERL_ERRORS #1148; 2104.08110's commented-out
+    // figure, 4 missing images).
+    // Guard: `perfect_kernel_batch79k::a_comment_under_a_kernel_begin_is_skipped`.
+    let_i(
+      &T_CS!(format!("\\{name_str}")),
+      &T_CS!(begin_mark_let),
+      None,
+    );
     Ok(Vec::new())
   });
 
@@ -87,6 +98,17 @@ LoadDefinitions!({
       T_CS!(s!("\\end{{{name}}}")),
       None,
       Tokens::new(after_tokens)
+    );
+    // comment.sty's own names (`\csarg\def{#1}`, comment.sty:234-240), as for an excluded comment above
+    let_i(
+      &T_CS!(s!("\\{name}")),
+      &T_CS!(s!("\\begin{{{name}}}")),
+      None,
+    );
+    let_i(
+      &T_CS!(s!("\\end{name}")),
+      &T_CS!(s!("\\end{{{name}}}")),
+      None,
     );
     Ok(Vec::new())
   }));

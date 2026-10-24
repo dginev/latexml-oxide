@@ -17811,3 +17811,16 @@ and under llncs the class's letter (italic once the defect above is fixed). Mini
 OML/ztmcm/m/it). Fixed in Rust (`declare_capital_greek_named`: the letter's name, its own control sequence, the kernel's
 upright rule; main-session decision 1). Repros fonts-nfss/{upright_capital_greek_packages_over_the_class,
 mathptmx_up_capital_greek_keeps_its_name}.
+
+## 1148. comment.sty's environments are not named `\<name>`, so a kernel-style `\begin` typesets the comment
+
+comment.sty defines each environment by its own name (`\csarg\def{#1}`, comment.sty:234-248, for
+`\excludecomment`/`\includecomment`/`\specialcomment` and the default `comment`), which LaTeX's `\begin` looks up.
+Perl's comment.sty.ltxml:30-50 defines only the LaTeXML-specific `\begin{<name>}` (and `\end{<name>}`), so a package
+that redefines `\begin` as the LaTeX2e kernel's — arabtex's alatex.sty:113 — finds no `\comment`: "Environment comment
+undefined", and the comment's body is typeset. Minimal trigger: `\usepackage{comment}` then a kernel-style
+`\def\begin#1{\@ifundefined{#1}{…}{…\csname #1\endcsname}…}` (alatex.sty:113-119) and `\begin{comment}X\end{comment}`
+(pdflatex: nothing). Fixed in Rust (79k): `define_excluded`/`define_included` also `\let` `\<name>` (and
+`\end<name>`) to the `\begin{<name>}`/`\end{<name>}` they define. Witness 2104.08110 (arabtex + comment: a
+commented-out figure typeset, its 4 images missing). Repro package-bindings/comment_under_kernel_begin; guard
+`perfect_kernel_batch79k::a_comment_under_a_kernel_begin_is_skipped`.

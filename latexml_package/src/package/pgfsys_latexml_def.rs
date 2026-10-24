@@ -1540,11 +1540,17 @@ LoadDefinitions!({
   DefMacro!("\\pgfsys@defineimage",
     "\\edef\\pgf@image{\\lxSVG@includegraphics{\\pgf@imagewidth}{\\pgf@imageheight}{\\pgf@filename}}");
 
-  // Perl L597-623: \lxSVG@includegraphics — simplified
-  // The full Perl version has complex beforeConstruct/afterConstruct for foreignObject
-  // wrapping. For now, just emit the graphics element.
+  // Perl L597-628: \lxSVG@includegraphics, pgf's image — `\pgfimage`, and the file tikz's `external` library
+  // includes for a picture (`mode=graphics if exists`, tikzlibraryexternal_code_tex.rs). Its candidates are the files
+  // the graphics search finds (Perl `pathname_findall($graphic, types => ['*'], paths => GRAPHICSPATHS)` relative to
+  // the source directory: `image_candidates`), and its box is the file's size under the width/height keys (`sizer =>
+  // \&image_graphicx_sizer`). Red (int83a): no candidates, so post had no file to render and every externalized
+  // figure was an `ltx_missing_image` (2302.00752: 18 figures shipped as `SFTforPDE-figure<N>.pdf`; 1905.03839,
+  // 1506.05333). Perl's beforeConstruct/afterConstruct open an svg:foreignObject when none is open; here the
+  // document auto-opens one inside a picture, and outside a picture none is wanted (Perl's errs: "<svg:foreignObject>
+  // isn't allowed in <ltx:p>"). Guard: `perfect_kernel_batch79k::an_externalized_tikz_figure_finds_its_file`.
   DefConstructor!("\\lxSVG@includegraphics{}{} Semiverbatim",
-    "<ltx:graphics graphic='#3' options='#options'/>",
+    "<ltx:graphics graphic='#graphic' candidates='#candidates' options='#options'/>",
     properties => sub[args] {
       let w = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       let h = args.get(1).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
@@ -1553,9 +1559,13 @@ LoadDefinitions!({
       if !w.is_empty() { options_parts.push(format!("width={}", w)); }
       if !h.is_empty() { options_parts.push(format!("height={}", h)); }
       let options = options_parts.join(",");
-      let candidates = graphic.clone();
+      let candidates = util::image::image_candidates(&graphic);
       Ok(stored_map!("graphic" => graphic, "candidates" => candidates, "options" => options))
-    }
+    },
+    after_digest => sub[whatsit] {
+      util::image::image_graphicx_sizer(whatsit);
+    },
+    alias => "\\includegraphics"
   );
 
   //===================================================================

@@ -1,0 +1,19 @@
+% witness: 2302.00752 (`\tikzexternalize[prefix=./]`, 18 figures shipped as `SFTforPDE-figure<N>.pdf`), 1905.03839,
+%          1506.05333
+% oracle:  pdflatex -no-shell-escape 0 errors with `t-figure0.pdf` beside it: tikz's external library includes the file
+%          for the picture (`<./t-figure0.pdf>`), and `\pgfimage` its `pgfplot.pdf`
+% engines: rust int83a = no candidates on either graphic, an `ltx_missing_image` each (pgfsys-latexml's
+%          `\lxSVG@includegraphics` searched for no file); Perl = candidates t-figure0.pdf, pgfplot.pdf
+% expect:  0 errors, 0 warnings; each graphic's candidates name its file, the box sized from the file
+% status:  RED (int83a) -> GREEN (79k)
+% preload: ar5iv.sty
+% files:   t-figure0.pdf = package-bindings/eps_as_pdf_one.pdf, pgfplot.pdf = package-bindings/eps_as_pdf_one.pdf
+\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{external}
+\tikzexternalize[prefix=./]
+\begin{document}
+Externalized: \begin{tikzpicture}\draw (0,0) -- (1,1);\end{tikzpicture}
+
+Image: \pgfimage[width=2cm]{pgfplot}
+\end{document}

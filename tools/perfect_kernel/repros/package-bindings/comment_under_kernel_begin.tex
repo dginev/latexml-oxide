@@ -1,0 +1,28 @@
+% witness: 2104.08110 (arabtex + comment: a figure inside \begin{comment} typeset, its 4 images missing)
+% oracle:  pdflatex 0 errors: comment.sty names the environment `\comment` (`\csarg\def{#1}`, comment.sty:241-248),
+%          which arabtex's kernel-style `\begin` (alatex.sty:113, copied here) looks up; the comment is skipped and
+%          the included one kept ("A KEPT B")
+% engines: rust int83a = "Environment comment undefined" x2, HIDDEN typeset; Perl the same (comment.sty.ltxml
+%          defines only `\begin{comment}`)
+% expect:  0 errors, 0 warnings; no HIDDEN, KEPT kept
+% status:  RED (int83a) -> GREEN (79k)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{comment}
+\includecomment{keep}
+\makeatletter
+\def\end#1{\csname end#1\endcsname\@checkend{#1}\if@endpe\aftergroup\@doendpe\fi\endgroup}
+\def\begin#1{\@ifundefined{#1}{\def\reserved@a{\@latex@error{Environment #1 undefined}\@eha}}%
+  {\def\reserved@a{\def\@currenvir{#1}\edef\@currenvline{\on@line}\csname #1\endcsname}}%
+  \@ignorefalse\begingroup\@endpefalse\reserved@a}
+\makeatother
+\begin{document}
+A
+\begin{comment}
+HIDDEN
+\end{comment}
+\begin{keep}
+KEPT
+\end{keep}
+B
+\end{document}
