@@ -1241,8 +1241,10 @@ pub(crate) fn load() -> Result<()> {
   // The file name is expanded as `\set@curr@file` (latex.ltx) does it, inside a
   // `\csname` (`\ifincsname` true): underscore's first-aid `_` stays `_` there
   // (arXiv 2606.31852 `\input{sections/logic_T}`).
+  // It runs latex.ltx's file hooks around the file (`content::input_content_with_file_hooks`; 2110.08325).
   DefPrimitive!("\\ltx@input {}", sub[(arg)] {
-    Input!(&::latexml_core::gullet::expand_as_csname_text(arg)?.to_string());
+    let name = ::latexml_core::gullet::expand_as_csname_text(arg)?.to_string();
+    input(&name, InputOptions { file_hooks: true, ..InputOptions::default() })?;
   });
   DefMacro!("\\input", "\\@ifnextchar\\bgroup\\@iinput\\@@input");
   Let!("\\@iinput", "\\ltx@input");

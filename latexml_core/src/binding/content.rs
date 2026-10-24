@@ -1933,6 +1933,9 @@ pub struct InputOptions {
   pub noerror:    bool,
   pub reloadable: bool,
   pub file_type:  Option<String>,
+  /// LaTeX's `\input{…}` (`\@iinput`, `\InputIfFileExists`): a content file runs the file hooks around it
+  /// (`input_content_with_file_hooks`); TeX's `\@@input` runs none.
+  pub file_hooks: bool,
 }
 
 /// Input for cases when the file (or data)
@@ -2258,7 +2261,7 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
     // still error (PLANS P66) where Perl skips the whole body. Guards:
     // `input_routing_and_bbx::document_body_sty_input_is_content_catcodes`,
     // `perfect_kernel_batch52::input_rereads_loaded_sty`.
-    load_tex_content(&path, options)
+    input_content_with_file_hooks(&clean_req, &path, options)
   } else {
     // Perl heuristic: if the file has no directory, and is a .tex or no extension,
     // try loading it as definitions (which checks for binding dispatchers).
@@ -2286,6 +2289,58 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
     );
     Ok(())
   }
+}
+
+/// latex.ltx:19646-19673 `\InputIfFileExists`, around a content file LaTeX's `\input{…}` reads (`\@iinput`; TeX's
+/// `\@@input` runs no hooks): the file's names are pushed on ltfilehook's stack and set (`\CurrentFile`, `\CurrentFilePath` and their `Used` twins), `file/before` and
+/// `file/<name>/before` run, the file is read, its names are set again for `file/<name>/after` and `file/after`, and
+/// the stack pops back to the enclosing file's. The hooks run where the file's tokens are read — the before part ahead
+/// of them in the file's own input level, the after part after them in the enclosing one — since `\input` expands.
+/// Package and class loads run the same hooks (`use_load_hooks`). Perl fires none (Package.pm `Input`), so
+/// filehook's `file/before` code never ran and currfile's `\currfiledir` stayed the main file's inside an `\input`
+/// file: 2110.08325's `\edef\path{\currfiledir}` + `\input{\path/settings}` read `/settings` (missing; its TikZ
+/// figures undefined).
+fn input_content_with_file_hooks(request: &str, path: &str, options: InputOptions) -> Result<()> {
+  let assign = T_CS!("\\@expl@@@filehook@file@pop@assign@@nnnn");
+  if !options.file_hooks || !load_hooks_active(request)? || lookup_definition(&assign)?.is_none() {
+    return load_tex_content(path, options);
+  }
+  // `\__filehook_file_parse_full_name:nN`: the directory without its last `/`, the name with `.tex` when the request
+  // has no extension
+  let (dir, base) = match request.rsplit_once('/') {
+    Some((dir, base)) => (dir, base),
+    None => ("", request),
+  };
+  let name = if base.contains('.') {
+    base.to_string()
+  } else {
+    s!("{base}.tex")
+  };
+  let set = s!("\\@expl@@@filehook@file@pop@assign@@nnnn{{{dir}}}{{{name}}}{{{dir}}}{{{name}}}");
+  let pop = lookup_definition(&T_CS!("\\@expl@@@filehook@file@pop@@"))?.is_some();
+  let push = lookup_definition(&T_CS!("\\@expl@@@filehook@file@push@@"))?.is_some() && pop;
+  let after = s!(
+    "{set}\\UseOneTimeHook{{file/{name}/after}}\\UseHook{{file/after}}{}",
+    if push {
+      "\\@expl@@@filehook@file@pop@@"
+    } else {
+      ""
+    }
+  );
+  gullet::unread_expansion(crate::mouth::tokenize_internal(TeXString::assembled(after)));
+  load_tex_content(path, options)?;
+  let before = s!(
+    "{}{set}\\UseHook{{file/before}}\\UseOneTimeHook{{file/{name}/before}}",
+    if push {
+      "\\@expl@@@filehook@file@push@@"
+    } else {
+      ""
+    }
+  );
+  gullet::unread_expansion(crate::mouth::tokenize_internal(TeXString::assembled(
+    before,
+  )));
+  Ok(())
 }
 
 thread_local! {
