@@ -221,6 +221,26 @@ fn nice_merge_opts(a: Option<Tokens>, b: Option<Tokens>) -> Tokens {
   Tokens::new(out)
 }
 
+/// nicematrix.sty:1953 `t \CodeBefore`: whether a `\CodeBefore … \Body` pre-layer opens the matrix, spaces skipped,
+/// before the matrix's own alignment starts. ltcmd tests it with an expl3 peek, which runs between
+/// `\group_align_safe_begin:` and `_end:` (expl3-code.tex:9730; l3basics' `\if_false: { \fi:` brace, which tex.web
+/// §342 counts), so a `&` it meets is no tab of an alignment around the matrix. Peeked (`peek_token`, alignment-safe
+/// in the same way), not read as `\@ifnextchar`'s `\futurelet` does: a first row that starts with `&`
+/// (`\begin{pNiceArray}{cc}[first-row]` + newline + `& \text{$i$th} & …`) inside `align` gave that `&` to the align
+/// (12 errors, the matrix broken, pdflatex 0; 2302.00928, 2406.05750, 2207.07825). Guard
+/// `perfect_kernel_batch79o::a_matrix_row_that_starts_with_a_tab_is_the_matrixs`.
+fn nice_code_before_follows() -> Result<bool> {
+  loop {
+    match ::latexml_core::gullet::peek_token()? {
+      Some(t) if t.get_catcode() == Catcode::SPACE => {
+        let _ = ::latexml_core::gullet::read_token()?;
+      },
+      Some(t) => return Ok(t == T_CS!("\\CodeBefore")),
+      None => return Ok(false),
+    }
+  }
+}
+
 /// `\begin{NiceTabular…}[opts]{colspec}[opts]` → `\lx@nice@setopts{opts}
 /// \lx@nice@array@begin{<starter>{colspec'}}` with the rule-only column
 /// options stripped from the colspec (see `\NiceTabular` below), and a `c`
@@ -374,7 +394,7 @@ LoadDefinitions!({
   // `\cmidrule` lands mid-cell ("\noalign cannot be used here" — the
   // exemplar manual's last error). Recorded rects are simply not painted for
   // text tabulars (color overlay is styling; the content is what matters).
-  DefMacro!("\\NiceTabular OptionalBalanced {} OptionalBalanced", sub[(opts, pream, post)] {
+  DefMacro!("\\NiceTabular OptionalBalanced {} OptionalBalancedNoSkip", sub[(opts, pream, post)] {
     let opts_toks = nice_merge_opts(opts.map(|o| Tokens!(o.revert())), post.map(|o| Tokens!(o.revert())));
     nice_tabular_expansion(opts_toks, pream.revert(), vec![T_CS!("\\tabular")], true)
   }, locked => true);
@@ -396,7 +416,7 @@ LoadDefinitions!({
   // witness nicematrix.tex `\begin{NiceTabularX}{\linewidth}{l||*{\LastDay}{X}}`)
   // and `NiceTabular*` a `\tabular*` — the fixed total width is print layout.
   RequirePackage!("tabularx");
-  DefMacro!(T_CS!("\\NiceTabular*"), "{} OptionalBalanced {} OptionalBalanced", sub[(width, opts, pream, post)] {
+  DefMacro!(T_CS!("\\NiceTabular*"), "{} OptionalBalanced {} OptionalBalancedNoSkip", sub[(width, opts, pream, post)] {
     let mut starter = vec![T_CS!("\\tabular*"), T_BEGIN!()];
     starter.extend(width.revert()?.unlist());
     starter.push(T_END!());
@@ -411,7 +431,7 @@ LoadDefinitions!({
     None,
     "\\endtabular*\\lx@nicematrix@materializenodes"
   );
-  DefMacro!("\\NiceTabularX{} OptionalBalanced {} OptionalBalanced", sub[(width, opts, pream, post)] {
+  DefMacro!("\\NiceTabularX{} OptionalBalanced {} OptionalBalancedNoSkip", sub[(width, opts, pream, post)] {
     let mut starter = vec![T_CS!("\\tabularx"), T_BEGIN!()];
     starter.extend(width.revert());
     starter.push(T_END!());
@@ -690,13 +710,16 @@ LoadDefinitions!({
   // (nicematrix.sty:1642/1765 give them their own `\__nicematrix_…` bodies):
   // `\let` to `\relax`, `\@ifnextchar\CodeBefore` — a meaning comparison —
   // matched any `\relax`-meaning token at a matrix start and the
-  // `Until:\Body` grab ran to EoF (the nicematrix manual's Fatal). Guard:
+  // `Until:\Body` grab ran to EoF (the nicematrix manual's Fatal); the test
+  // (`nice_code_before_follows`) now compares the token itself. Guard:
   // `perfect_kernel_batch54::nicematrix_relax_at_matrix_start_is_not_codebefore`.
   DefMacro!("\\CodeBefore OptionalBalanced", "", locked => true);
   DefMacro!("\\Body", "", locked => true);
+  DefMacro!("\\lx@nice@matrix@begin{}", sub[(keys)] {
+    let grab = if nice_code_before_follows()? { "\\lx@nice@grabcode" } else { "\\lx@ams@matrix" };
+    Tokens!(T_CS!(grab), T_BEGIN!(), keys, T_END!())
+  });
   RawTeX!(concat!(
-    r"\def\lx@nice@matrix@begin#1{",
-    r"\@ifnextchar\CodeBefore{\lx@nice@grabcode{#1}}{\lx@ams@matrix{#1}}}",
     r"\long\def\lx@nice@grabcode#1#2\Body{",
     r"\begingroup",
     r"\let\rectanglecolor\lx@nice@rectanglecolor",
@@ -826,27 +849,27 @@ LoadDefinitions!({
   // The MATRIX family: `\<x>NiceMatrix[opts]` → set opts, then reduce to the
   // amsmath matrix flavour for delimiter <x>; `\end<x>NiceMatrix` closes the array
   // and paints the recorded colors. Mirrors amsmath_sty.rs:393-427.
-  DefMacro!("\\NiceMatrix OptionalBalanced",
+  DefMacro!("\\NiceMatrix OptionalBalancedNoSkip",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=NiceMatrix,datameaning=matrix}",
     locked => true);
   DefMacro!("\\endNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
-  DefMacro!("\\pNiceMatrix OptionalBalanced",
+  DefMacro!("\\pNiceMatrix OptionalBalancedNoSkip",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=pNiceMatrix,datameaning=matrix,left=\\lx@left(,right=\\lx@right)}",
     locked => true);
   DefMacro!("\\endpNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
-  DefMacro!("\\bNiceMatrix OptionalBalanced",
+  DefMacro!("\\bNiceMatrix OptionalBalancedNoSkip",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=bNiceMatrix,datameaning=matrix,left=\\lx@left[,right=\\lx@right]}",
     locked => true);
   DefMacro!("\\endbNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
-  DefMacro!("\\BNiceMatrix OptionalBalanced",
+  DefMacro!("\\BNiceMatrix OptionalBalancedNoSkip",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=BNiceMatrix,datameaning=matrix,left=\\lx@left\\{,right=\\lx@right\\}}",
     locked => true);
   DefMacro!("\\endBNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
-  DefMacro!("\\vNiceMatrix OptionalBalanced",
+  DefMacro!("\\vNiceMatrix OptionalBalancedNoSkip",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=vNiceMatrix,delimitermeaning=determinant,datameaning=matrix,left=\\lx@left|,right=\\lx@right|}",
     locked => true);
   DefMacro!("\\endvNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
-  DefMacro!("\\VNiceMatrix OptionalBalanced",
+  DefMacro!("\\VNiceMatrix OptionalBalancedNoSkip",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=VNiceMatrix,delimitermeaning=norm,datameaning=matrix,left=\\lx@left\\|,right=\\lx@right\\|}",
     locked => true);
   DefMacro!("\\endVNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
@@ -861,9 +884,14 @@ LoadDefinitions!({
   // Reduce exactly that way, through the SAME `\CodeBefore … \Body`
   // pre-layer grabber and post-paint hook as the matrix family, so cell
   // colors work identically.
+  DefMacro!("\\lx@nice@array@begin{}", sub[(starter)] {
+    if nice_code_before_follows()? {
+      Tokens!(T_CS!("\\lx@nice@grabcode@arr"), T_BEGIN!(), starter, T_END!())
+    } else {
+      starter
+    }
+  });
   RawTeX!(concat!(
-    r"\def\lx@nice@array@begin#1{",
-    r"\@ifnextchar\CodeBefore{\lx@nice@grabcode@arr{#1}}{#1}}",
     r"\long\def\lx@nice@grabcode@arr#1#2\Body{",
     r"\begingroup",
     r"\let\rectanglecolor\lx@nice@rectanglecolor",
@@ -890,14 +918,14 @@ LoadDefinitions!({
   // nicematrix.tex:409). A signature without the leading one bound `[t]` as
   // the preamble ("Unrecognized tabular template [", 57 extra `&` + the
   // `Until:\Body` EOF fatal that aborted the rest of the manual).
-  DefMacro!("\\NiceArray[]{}[]", "\\NiceArrayWithDelims.{.}[#1]{#2}[#3]", locked => true);
+  DefMacro!("\\NiceArray[]{} OptionalBalancedNoSkip", "\\NiceArrayWithDelims.{.}[#1]{#2}[#3]", locked => true);
   DefMacro!("\\endNiceArray", "\\endNiceArrayWithDelims", locked => true);
   // Closure form: `[first-col]`/`[last-col]` add LABEL cells to every source
   // row, so the colspec must grow a `c` on that side or each row overflows
   // the template ("Extra alignment tab"). first-row needs no preamble change
   // (row count is unconstrained). nicematrix.sty does the analogue in its
   // preamble parser.
-  DefMacro!("\\NiceArrayWithDelims{}{}[]{}[]", sub[(l, r, opts1, pream, opts2)] {
+  DefMacro!("\\NiceArrayWithDelims{}{}[]{} OptionalBalancedNoSkip", sub[(l, r, opts1, pream, opts2)] {
     let opts_toks = nice_merge_opts(opts1.map(|o| Tokens!(o.revert())), opts2.map(|o| Tokens!(o.revert())));
     let opts_str = opts_toks.to_string();
     let mut out: Vec<Token> = Vec::new();
@@ -929,15 +957,15 @@ LoadDefinitions!({
   }, locked => true);
   DefMacro!("\\endNiceArrayWithDelims",
     "\\endarray\\expandafter\\right\\lx@nice@awd@right\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
-  DefMacro!("\\pNiceArray[]{}[]", "\\NiceArrayWithDelims({)}[#1]{#2}[#3]", locked => true);
+  DefMacro!("\\pNiceArray[]{} OptionalBalancedNoSkip", "\\NiceArrayWithDelims({)}[#1]{#2}[#3]", locked => true);
   DefMacro!("\\endpNiceArray", "\\endNiceArrayWithDelims", locked => true);
-  DefMacro!("\\bNiceArray[]{}[]", "\\NiceArrayWithDelims[{]}[#1]{#2}[#3]", locked => true);
+  DefMacro!("\\bNiceArray[]{} OptionalBalancedNoSkip", "\\NiceArrayWithDelims[{]}[#1]{#2}[#3]", locked => true);
   DefMacro!("\\endbNiceArray", "\\endNiceArrayWithDelims", locked => true);
-  DefMacro!("\\BNiceArray[]{}[]", "\\NiceArrayWithDelims\\{{\\}}[#1]{#2}[#3]", locked => true);
+  DefMacro!("\\BNiceArray[]{} OptionalBalancedNoSkip", "\\NiceArrayWithDelims\\{{\\}}[#1]{#2}[#3]", locked => true);
   DefMacro!("\\endBNiceArray", "\\endNiceArrayWithDelims", locked => true);
-  DefMacro!("\\vNiceArray[]{}[]", "\\NiceArrayWithDelims|{|}[#1]{#2}[#3]", locked => true);
+  DefMacro!("\\vNiceArray[]{} OptionalBalancedNoSkip", "\\NiceArrayWithDelims|{|}[#1]{#2}[#3]", locked => true);
   DefMacro!("\\endvNiceArray", "\\endNiceArrayWithDelims", locked => true);
-  DefMacro!("\\VNiceArray[]{}[]", "\\NiceArrayWithDelims\\|{\\|}[#1]{#2}[#3]", locked => true);
+  DefMacro!("\\VNiceArray[]{} OptionalBalancedNoSkip", "\\NiceArrayWithDelims\\|{\\|}[#1]{#2}[#3]", locked => true);
   DefMacro!("\\endVNiceArray", "\\endNiceArrayWithDelims", locked => true);
 
   // AutoNiceMatrix family: automated matrix population with delimiter variants.

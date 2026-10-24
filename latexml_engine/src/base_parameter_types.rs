@@ -787,6 +787,51 @@ LoadDefinitions!({
     Ok(Tokens::new(tks))
   });
 
+  // xparse's `!O{}`: the optional argument only when its `[` is the very next token — no space skipped (ltcmd's `!`
+  // prefix). Peeked (`peek_token`), not read, as ltcmd's expl3 peek runs inside `\group_align_safe_begin:`
+  // (expl3-code.tex:9730), so a row's leading `&` after a newline stays the matrix's own and never ends the enclosing
+  // alignment's cell: nicematrix.sty:1953 `\NewDocumentEnvironment{NiceArrayWithDelims}{m m O{} m !O{} …}`,
+  // :3715/:3729 the NiceMatrix family's `!O{}`, :3747-3801 NiceTabular's. `OptionalBalanced` skips spaces and reads
+  // the next token: a `\begin{pNiceMatrix}` with no options + newline + `& x \\` inside `align` gave the `&` to the
+  // align (11 errors, the matrix lost; pdflatex 0). Guard
+  // `perfect_kernel_batch79o::a_matrix_row_that_starts_with_a_tab_is_the_matrixs`.
+  DefParameterType!(OptionalBalancedNoSkip, sub[_inner, _extra] {
+    let open = T_OTHER!("[");
+    match ::latexml_core::gullet::peek_token()? {
+      Some(t) if t == open => {
+        let _ = read_token()?;
+        let close = T_OTHER!("]");
+        let mut depth = 0i32;
+        let mut toks: Vec<Token> = Vec::new();
+        while let Some(tok) = read_token()? {
+          if tok == close {
+            if depth == 0 {
+              break;
+            }
+            depth -= 1;
+          } else if tok == open {
+            depth += 1;
+          } else if tok.get_catcode() == Catcode::BEGIN {
+            toks.push(tok);
+            toks.extend(read_balanced(ExpansionLevel::Off, false, false)?.unlist());
+            toks.push(T_END!());
+            continue;
+          }
+          toks.push(tok);
+        }
+        Ok(ArgWrap::Tokens(Tokens::new(toks)))
+      },
+      _ => Ok(ArgWrap::None),
+    }
+  },
+  optional => true,
+  reversion => sub[arg, _inner, _extra] {
+    let mut tks = vec![T_OTHER!("[")];
+    tks.extend(arg.into_iter().map(Token::revert));
+    tks.push(T_OTHER!("]"));
+    Ok(Tokens::new(tks))
+  });
+
   //  This reads a braced tokens list, expanding as it goes,
   // but expanding \the-like commands only once.
   DefParameterType!(Expanded, sub[_inner, _untils] {
