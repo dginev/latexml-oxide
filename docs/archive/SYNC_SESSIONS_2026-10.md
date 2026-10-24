@@ -7907,3 +7907,14 @@ in `labels`, the rest by `xml:id` shifts and `refnum` tags of the newly labelled
 before `\enddata` now a row (as in pdflatex), 2604.19910 an empty `<p><text/></p>` before an enumerate a remark's
 `\label` opens. Nets 136/136, 0 worse (int81a → int82a).
 
+**int83** (2026-10-24; 79j → be67c8d3da): `\label` locked against the class and package files (OD #893), as the kernel
+minipage is: a raw class with no binding redefining `\label` as the kernel's `.aux` write (SIAM's siamltex-derived
+CMSLATEX.CLS, siuro210301.cls; jasatex.cls, myajour.cls) recorded no label. Gates int83a 7212/7212, inits 0/0. A/B
+int82a → int83a over popint83 (320: the 5 witnesses, 68 census papers using raw `\label`-wrapping packages — showlabels,
+theoremref, refcheck, smartref, zref — and 250 of the census's 2,019 papers shipping an unbound class): 7 byte-changed,
+E 338 = 338, F 0 = 0, 0 worse, dangling references 959 → 0 (0905.4047 426 → 0, 1607.06796 207 → 0, 1504.01662 131 → 0,
+2310.04977 95 → 0, 2412.10948 54 → 0, 1009.5642 42 → 0, 1408.4114 4 → 0), changed only in `labels`, ids and the newly
+labelled objects' `refnum` tags; the wrapper-package papers byte-identical. Nets 136/136, 0 worse (int82a → int83a).
+math-ph0209020 is another shape: its labels sit on `\item`s of jfa.sty's own list (`\usecounter{numcount}` with a saved
+`\@currentlabel`), 31 dangling (SYNC row "Complete breakage").
+
