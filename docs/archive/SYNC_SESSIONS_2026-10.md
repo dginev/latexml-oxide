@@ -7964,3 +7964,22 @@ parameter type serves the 16 `!O{}` signatures. Gates int87b 7221/7221 (int87a i
 run). A/B int86b → int87b over popint87b (498 `\input`/`\include` census papers + 177 nicematrix census papers + the 6
 file-name witnesses): E 4,477 → 4,143, F 7 = 7, 0 worse, 14 better; 667 byte-identical, the 14 that differ exactly the
 14 better (+82k words). Nets 136/136, 0 worse (int86b → int87b).
+
+**int88** (2026-10-24; 79p → 3f723d51b6, 79q → 270f176009, 79r → 712b3cc693): three brk86 residuals. 79p: polytable
+builds its preamble with the kernel's `\@mkpream`, which our array.sty binding left to LaTeX's local `\edef`
+`\@addtopreamble`, so `\@preamble` came back empty; array.sty v2.6n's builder (`\@addtopreamble` with `\xdef`,
+`\@testpach`, `\@classz`/`\@classx`, `\insert@column`, `\@startpbox`, `\NC@ecs`…) is now raw TeX in `array_sty.rs`
+(KNOWN_PERL_ERRORS #1152). 79q: soul's `\so`/`\ul`/`\st`/`\hl` set their argument with `\\` let to `\newline`, as
+soul.sty's `\SOUL@` does; a `\\` in a table cell's `\hl{…}` ended the row (KNOWN_PERL_ERRORS #1153). 79r:
+cases.sty:73 `\let\\\@eqncr`, whose `{\ifnum0=`}\fi` keeps the next row's `&` from the `*`/`[` test; our
+`\@numcases@newline[]` read it as an ordinary argument, so an empty first cell's `&` ended the row early. The row end is
+read as `\lx@alignment@newline` reads it (`alignment_newline_then`), and `\lx@numcases@inlhs`, a cell-local mark before
+the repeated left-hand side, makes a `\\` there the outer one (cases.sty sets it once, before its `\let`;
+KNOWN_PERL_ERRORS #1154). Settled: a group around the left-hand side (int88d) let `#1` = `\mathrm` of a `{numcases}`
+with no `{…}` take the closing `\endgroup` (2412.05950 0 → 56 errors). Gates int88a 7222/7222, int88b 7223/7223,
+int88e 7224/7224. A/B int87b → int88a over popint88a (300 `\@mkpream` + 19 polytable census papers): polytable E 2,093
+→ 42, F 10 → 0, words 138k → 270k; 299/300 byte-identical (hep-th9607237 Fatal → 0). A/B int88a → int88b (350 soul
+census papers + 2 witnesses): the 350 byte-identical, the witnesses E 80 → 0. A/B int88b → int88e (64 numcases census
+papers + 249 seeded alignment papers): numcases E 316 → 23, F 1 → 0, +45k words, 0 worse; the 249 byte-identical.
+Nets 136/136, 0 worse at each step. Breakage residuals ruled not ours: 1711.02733 (`\def\label{\label}`; TL 2025
+pdflatex loops), 2509.06285 (stale shipped `.bbl`).
