@@ -114,6 +114,14 @@ pub(crate) fn load() -> Result<()> {
   // in eqnarray/ams rearrangeable bindings prevents an infinite
   // \lx@eqnarray@save@label recursion under nested align/gather (2008.13358).
   let_i(&T_CS!("\\label"), &T_CS!("\\lx@label"), Some(Scope::Global));
+  // Locked against the class and package files (`:locked@files`, state.rs `is_name_locked`), as the kernel minipage
+  // is (sect12.rs): a raw class's own `\label` is the kernel's write of `\newlabel` to the `.aux` (latex.ltx's
+  // `\label`), which pdflatex reads back on its next run and LaTeXML never does, so taking it over recorded no label
+  // and left every reference of the document missing — CMSLATEX.CLS:736 and siuro210301.cls (SIAM's), jasatex.cls,
+  // myajour.cls (1607.06796, 2412.10948, 1504.01662, 1009.5642, math-ph0209020). A file's wrapper of `\label` loses
+  // its extras (showlabels' margin key, refcheck's marks); the label stays recorded. The document's own `\label`
+  // definitions stay its own, as in LaTeX.
+  AssignValue!("\\label:locked@files" => true, Some(Scope::Global));
   // A wrapper group of LaTeXML's own around a counter step LaTeX makes in the current group closes without undoing it
   // for the labels after it (`keep_latest_refstep_in_scope`).
   DefPrimitive!("\\lx@refstep@outlives@group", {

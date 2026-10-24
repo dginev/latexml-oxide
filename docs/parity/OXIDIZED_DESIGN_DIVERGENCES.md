@@ -25309,3 +25309,18 @@ that opens no entry (not followed by `{` or `[`); a `\bibitem{x}` or any other c
 TeX would take the `\bibitem` as the width and print the entry's key as text. 32 of the census's 35,942 papers have an
 unbraced `thebibliography`. Repro index-bib/thebibliography_placeholder_bibitem_is_the_width; guard
 `perfect_kernel_batch79g::a_placeholder_bibitem_is_the_bibliography_width`.
+
+### 893. `\label` is locked against the class and package files, as the kernel minipage is (Perl: not locked)
+
+LaTeX's `\label` writes `\newlabel{key}{{\@currentlabel}{\thepage}}` to the `.aux` (latex.ltx), which the next run
+reads back to define `\r@key`; LaTeXML has no next run and records the label itself (`\lx@label`, sect11.rs). A raw
+class that redefines `\label` — most often as the same `.aux` write, SIAM's siamltex-derived CMSLATEX.CLS:736 and
+siuro210301.cls, jasatex.cls, myajour.cls — therefore left every label of the document unrecorded and every reference
+missing (1607.06796 71, 1504.01662 57, math-ph0209020 31, 1009.5642 28, 2412.10948 27 dangling references). Ours
+(sect11.rs): `\label:locked@files`, the lock OD #453 gives the kernel minipage, so the class and package files'
+redefinitions are refused ("Ignoring redefinition of \label") while the document's own stay its own, as in LaTeX. A raw
+package's wrapper of `\label` loses its extra behaviour with it (showlabels' margin keys, refcheck's marks, smartref's
+page records; 25, 15 and 2 of the census's 35,942 papers); the packages whose wrappers matter have bindings
+(showkeys, lineno, titleref, threeparttable, caption, cleveref, hyperref, amsmath). A shipped copy of a bound class
+was already held to the copy by OD #731 (79i). Repro package-bindings/raw_class_redefines_label; guard
+`perfect_kernel_batch79j::a_raw_class_redefining_label_keeps_the_documents_labels`.

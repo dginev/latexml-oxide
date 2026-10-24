@@ -14,9 +14,10 @@ macro_rules! repro {
 }
 
 /// A shipped aastex7.cls redefines `\label` to write the label to the `.aux` file (aastex7.cls:635), which pdflatex
-/// reads back and LaTeXML never does: the copy's definition holds inside the copy's own code only, as for every name
-/// LaTeXML's semantic layer owns — here a pool `\let` to its own `\lx@label` (state.rs `owned_by_the_semantic_layer`) —
-/// so the document's labels are recorded and its references resolve. Red (int81a): the copy's `\label` stood for the
+/// reads back and LaTeXML never does: the copy's definition does not stand for the document — a name LaTeXML's semantic
+/// layer owns, a pool `\let` to its own `\lx@label` (state.rs `owned_by_the_semantic_layer`), and since 79j locked
+/// against the files (sect11.rs `\label:locked@files`) — so the document's labels are recorded and its references
+/// resolve. Red (int81a): the copy's `\label` stood for the
 /// document, every `\label` wrote nothing, and each `\ref` was a missing label. Witnesses 2508.00291, 2510.05388,
 /// 2604.27071 (aastex7.cls, aastex701.cls shipped). Repro stand-in-copies/labels/copy_redefines_label.
 #[test]
@@ -29,8 +30,7 @@ fn a_copy_redefining_label_keeps_the_documents_labels() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(
     log.contains(
-      "Info:provide:\\label \\label keeps LaTeXML's definition: the paper's aastex7.cls redefines it for its own code \
-       only"
+      "Info:provide:\\label \\label keeps LaTeXML's locked definition: the paper's aastex7.cls redefines it"
     ),
     "{log}"
   );
