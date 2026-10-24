@@ -17925,3 +17925,35 @@ an `S`/`s` column with a pending prefix marks it (`\lx@si@column@prefix`, `Templ
 rest as before. Witness 2504.01955 (`*{20}{>{\centering\arraybackslash}Z}`, `Z` = `S[table-format=2.1]`: 210 errors
 → 0, 8 dangling citations → 0). Repro package-bindings/siunitx_s_column_prefix; guard
 `perfect_kernel_batch79s::an_s_column_prefix_is_taken_as_given`.
+
+## 1156. AASTeX 7's `{longdeluxetable}` is not defined
+
+aastex701.cls:11516 `\def\longdeluxetable#1` and :11614 `\def\endlongdeluxetable` are the long table `\deluxetable`
+turns to after `\startlongtable` (:11316 `\let\go\longdeluxetable`); called directly, `\begin{longdeluxetable}{ll}` is
+that table. Perl has no AASTeX `longdeluxetable` (nor `\startlongtable`): the environment is undefined, its rows
+misplaced ("\noalign cannot be used here") and its caption and `\label` lost, so every `\ref` to it dangles. Minimal
+trigger: `\documentclass{aastex701}`, `\begin{longdeluxetable}{ll}\tablecaption{C.\label{t}}\startdata 1&2\\\enddata
+\end{longdeluxetable}\ref{t}` (pdflatex 0 errors). Fixed in Rust (79t): aas_support_sty.rs `\longdeluxetable{…}` =
+`\global\lx@deluxe@longtrue\deluxetable{…}`, `\endlongdeluxetable` = `\enddeluxetable`; numbered among the tables, as
+the PDF's `\ref` is (the PDF's caption prints "Table" without its number). Witness 2608.15711 (1 dangling reference →
+0). Repro class-bindings/aastex_longdeluxetable; guard
+`perfect_kernel_batch79t::a_long_deluxetable_keeps_its_caption_and_label`.
+
+## 1157. xcolor's name sets are loaded once: after `color` read them, xcolor has none
+
+xcolor reads a names file with `\input` (xcolor.sty:193 `\XC@declarenames`), whether or not it was read before. Perl's
+xcolor.sty.ltxml:52-53 `InputDefinitions('dvipsnam', type => 'def')` is deduplicated, so with a global `dvipsnames`
+and `color` loaded first (color.sty.ltxml:27-28 reads `dvipsnam.def` into color's names), xcolor's own read is a no-op
+and its names lack the dvips set: "Can't find color named 'RoyalBlue'". lipics-v2021 loads `color` at class time and
+xcolor at `\begin{document}`. Minimal trigger: `\documentclass[dvipsnames]{article}\usepackage{color}
+\usepackage{xcolor}`, `\textcolor{RoyalBlue}{x}` (pdflatex 0 errors). Fixed in Rust (79t): xcolor_sty.rs reads
+`dvipsnam`, `svgnam` and `x11nam` with `reloadable => true`. Witness 2407.14159 (69 errors → 0). Repro
+package-bindings/xcolor_dvipsnames_after_color; guard
+`perfect_kernel_batch79t::xcolor_reads_the_dvips_names_after_color_has`.
+
+## 1158. pdfTeX's `\pdfinterwordspaceon`, `\pdfinterwordspaceoff`, `\pdffakespace` are undefined
+
+pdfTeX 1.40.15 primitives that fake interword spaces in the PDF's text layer; Perl's pdfTeX.pool defines none of them,
+so a package that turns them on (dgruyter.sty:1226) raises "undefined". Fixed in Rust (79t): pdftex.rs no-op
+primitives. Witness 2205.10368. Repro expansion-primitives/pdftex_interwordspace_primitives; guard
+`perfect_kernel_batch79t::pdftex_interword_space_primitives_typeset_nothing`.

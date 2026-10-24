@@ -649,6 +649,12 @@ LoadDefinitions!({
   // \pdfstartthread / \pdfendthread — thread spec; no-op stubs
   def_primitive_noop("\\pdfstartthread")?;
   def_primitive_noop("\\pdfendthread")?;
+  // \pdfinterwordspaceon / \pdfinterwordspaceoff / \pdffakespace (pdfTeX 1.40.15): fake interword spaces in the PDF's
+  // text layer, for copy and paste; nothing to do in XML. dgruyter.sty:1226 `\pdfinterwordspaceon` (2205.10368; Perl's
+  // pdfTeX.pool has none either).
+  def_primitive_noop("\\pdfinterwordspaceon")?;
+  def_primitive_noop("\\pdfinterwordspaceoff")?;
+  def_primitive_noop("\\pdffakespace")?;
   // Per-font extension codes (match \lpcode / \rpcode pattern)
   DefRegister!("\\lpfcode Token Number", Number::new(0));
   DefRegister!("\\rpfcode Token Number", Number::new(0));

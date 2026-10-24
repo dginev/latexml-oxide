@@ -700,23 +700,27 @@ LoadDefinitions!({
     DeclareOption!(option, None);
   }
 
-  // Loading sets of names
+  // Loading sets of names. xcolor reads the names file whether or not it was read before (xcolor.sty:193
+  // `\XC@declarenames`, an `\input`, not a package load): a `color` loaded first by the paper or its class
+  // (lipics-v2021's `\RequirePackage{color}`, then xcolor at `\begin{document}`) has read `dvipsnam.def` for a global
+  // `dvipsnames` into its own names, and the load-dedup left xcolor without them ("Can't find color named
+  // 'RoyalBlue'", 2407.14159; pdflatex 0 errors).
   for option in &["dvipsnames", "dvipsnames*"] {
     DeclareOption!(*option, {
-      InputDefinitions!("dvipsnam", extension => Some(Cow::Borrowed("def")));
+      InputDefinitions!("dvipsnam", extension => Some(Cow::Borrowed("def")), reloadable => true);
     });
   }
   DeclareOption!("svgnames", {
-    InputDefinitions!("svgnam", extension => Some(Cow::Borrowed("def")));
+    InputDefinitions!("svgnam", extension => Some(Cow::Borrowed("def")), reloadable => true);
   });
   DeclareOption!("svgnames*", {
-    InputDefinitions!("svgnam", extension => Some(Cow::Borrowed("def")));
+    InputDefinitions!("svgnam", extension => Some(Cow::Borrowed("def")), reloadable => true);
   });
   DeclareOption!("x11names", {
-    InputDefinitions!("x11nam", extension => Some(Cow::Borrowed("def")));
+    InputDefinitions!("x11nam", extension => Some(Cow::Borrowed("def")), reloadable => true);
   });
   DeclareOption!("x11names*", {
-    InputDefinitions!("x11nam", extension => Some(Cow::Borrowed("def")));
+    InputDefinitions!("x11nam", extension => Some(Cow::Borrowed("def")), reloadable => true);
   });
   // table option — loads colortbl
   DeclareOption!("table", {

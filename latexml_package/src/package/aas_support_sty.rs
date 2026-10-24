@@ -686,6 +686,12 @@ LoadDefinitions!({
   // deluxetable's: a long table, whose caption the class always prints (deluxetable_sty.rs `\lx@deluxe@print@caption`,
   // aastex701.cls:11568/:11575), until it ends (:11609).
   DefMacro!("\\startlongtable", r"\global\lx@deluxe@longtrue");
+  // aastex701.cls:11516 `\def\longdeluxetable#1` / :11614 `\def\endlongdeluxetable` are the long table `\deluxetable`
+  // goes to after `\startlongtable` (:11316 `\let\go\longdeluxetable`); called as an environment
+  // (`\begin{longdeluxetable}{ll}`) it is that table without the flag. Undefined, the environment was lost with its
+  // caption and `\label` (2608.15711; pdflatex 0 errors, its `\ref` 2 as the table's number here).
+  DefMacro!("\\longdeluxetable{}", r"\global\lx@deluxe@longtrue\deluxetable{#1}");
+  DefMacro!("\\endlongdeluxetable", r"\enddeluxetable");
 
   // Perl L373: Let('\savedollar' => T_MATH). The hidden 'h' column type
   // used by aas deluxetable tokenizes literal `$` from the template, so

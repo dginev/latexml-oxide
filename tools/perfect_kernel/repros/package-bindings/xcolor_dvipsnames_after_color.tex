@@ -1,0 +1,14 @@
+% witness: 2407.14159 (`\documentclass[…,dvipsnames]{lipics-v2021}`: the class loads color, xcolor follows at
+%          `\begin{document}`; 69 × "Can't find color named 'RoyalBlue'"; brk89)
+% oracle:  pdflatex 0 errors: xcolor.sty:193 `\XC@declarenames` reads dvipsnam.def with `\input`, whether or not
+%          color read it before for the same global option
+% engines: rust int89a = 1 error ("Can't find color named 'RoyalBlue'; assuming Black"), the text black
+% expect:  0 errors, 0 warnings; the text in RoyalBlue (#0080FF)
+% status:  RED (int89a) -> GREEN (79t)
+% preload: ar5iv.sty
+\documentclass[dvipsnames]{article}
+\usepackage{color}
+\AtBeginDocument{\RequirePackage{xcolor}}
+\begin{document}
+\textcolor{RoyalBlue}{Blue words.}
+\end{document}

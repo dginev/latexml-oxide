@@ -1,0 +1,11 @@
+% witness: 2205.10368 (dgruyter.sty:1226 `\pdfinterwordspaceon`; brk89)
+% oracle:  pdflatex 0 errors: pdfTeX 1.40.15's `\pdfinterwordspaceon`, `\pdfinterwordspaceoff` and `\pdffakespace` fake
+%          interword spaces in the PDF's text layer and typeset nothing
+% engines: rust int89a = 3 errors (each primitive undefined); Perl's pdfTeX.pool has none of them
+% expect:  0 errors, 0 warnings; the words, nothing in between
+% status:  RED (int89a) -> GREEN (79t)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Before \pdfinterwordspaceon fake\pdffakespace spaces\pdfinterwordspaceoff{} after.
+\end{document}

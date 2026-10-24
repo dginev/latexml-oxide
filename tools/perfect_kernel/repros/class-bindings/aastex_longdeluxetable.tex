@@ -1,0 +1,34 @@
+% witness: 2608.15711 (`\begin{longdeluxetable}{llllllll}` with `\tablecaption{…\label{tab:candidates}}`; brk89)
+% oracle:  pdflatex 0 errors: aastex701.cls:11516 `\def\longdeluxetable#1`, :11614 `\def\endlongdeluxetable` (the long
+%          table `\deluxetable` turns to after `\startlongtable`) make `{longdeluxetable}` an environment; the three
+%          references resolve to 1, 2 and 3
+% engines: rust int89a = 2 errors ("The environment {longdeluxetable} is not defined", "\noalign cannot be used
+%          here"), the long table's caption and label lost
+% expect:  0 errors, 0 warnings; three tables, each with its caption and label, the long one numbered 2
+% status:  RED (int89a) -> GREEN (79t)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\begin{document}
+\begin{deluxetable}{ll}
+\tablecaption{First table.\label{tab:a}}
+\tablehead{\colhead{A} & \colhead{B}}
+\startdata
+1 & 2 \\
+\enddata
+\end{deluxetable}
+\begin{longdeluxetable}{ll}
+\tablecaption{Second table.\label{tab:b}}
+\tablehead{\colhead{A} & \colhead{B}}
+\startdata
+3 & 4 \\
+\enddata
+\end{longdeluxetable}
+\begin{deluxetable}{ll}
+\tablecaption{Third table.\label{tab:c}}
+\tablehead{\colhead{A} & \colhead{B}}
+\startdata
+5 & 6 \\
+\enddata
+\end{deluxetable}
+See Tables~\ref{tab:a}, \ref{tab:b} and~\ref{tab:c}.
+\end{document}
