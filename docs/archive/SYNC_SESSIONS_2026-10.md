@@ -7950,3 +7950,17 @@ taken the document: 76 of 84 references dangling → 0. The AMS classes' `\title
 A/B int85a → int86b over popint86 (400 REVTeX `\email`/`\homepage` + 400 AMS-class topmatter census papers + the 2
 witnesses): the 800 byte-identical, the witnesses better (E 198 → 1; 0712.3811's "lost" words the raw TeX the contact
 held, now math and prose). Nets 136/136, 0 worse (int85a → int86b).
+
+**int87** (2026-10-24; 79n → f0251258f1, 79o → 78b3ff3d29): brk86 re-ran the 114 brk82 breakage papers on int86b
+(vs int82a: missing graphics 275 → 45, dangling `\ref` 1,060 → 384, dangling `\cite` 29 = 29, 0 worse; 64 papers with a
+residual, `scratch_356a0c47/brk86/cls.txt`). 79n: a blank inside the braces of `\input`/`\include` is no part of the file
+name (tex.web §526 `scan_file_name` skips leading blanks and a blank ends the name; KNOWN_PERL_ERRORS #1151):
+`content::input`, `\IfFileExists`/`\InputIfFileExists` and `\include` trim it; 6 witnesses' dangling references → 0.
+79o: nicematrix tests for `\CodeBefore` (nicematrix.sty:1953 `t \CodeBefore`) and reads `!O{}` options with ltcmd's
+expl3 peeks, inside `\group_align_safe_begin:` (expl3-code.tex:9730), so a first row's leading `&` is the matrix's;
+the binding's `\@ifnextchar` and space-skipping `OptionalBalanced` read it at the enclosing `align`'s level (34 errors
+on the repro, the matrices lost). `nice_code_before_follows` peeks with `peek_token`, and a new `OptionalBalancedNoSkip`
+parameter type serves the 16 `!O{}` signatures. Gates int87b 7221/7221 (int87a invalid: a source edit during the
+run). A/B int86b → int87b over popint87b (498 `\input`/`\include` census papers + 177 nicematrix census papers + the 6
+file-name witnesses): E 4,477 → 4,143, F 7 = 7, 0 worse, 14 better; 667 byte-identical, the 14 that differ exactly the
+14 better (+82k words). Nets 136/136, 0 worse (int86b → int87b).
