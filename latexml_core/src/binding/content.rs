@@ -5253,11 +5253,36 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
 /// subdirectory (`\def\input@path{{styles/}}`, 71 papers in 2609; 2609.02998's class style, whose natbib every
 /// `\citep` needed) loaded none of them.
 fn find_on_input_path(file: &str) -> Option<String> {
-  let Some(Stored::Expandable(defn)) = lookup_meaning(&T_CS!("\\input@path")) else {
+  let entries = input_path_entries();
+  if entries.is_empty() {
     return None;
+  }
+  let paths = get_search_paths();
+  entries.into_iter().find_map(|dir| {
+    // (l3file makes an empty entry `/`, the filesystem root; the local paths, searched already, stand in for it)
+    let candidate = if dir.is_empty() || dir.ends_with('/') {
+      s!("{dir}{file}")
+    } else {
+      s!("{dir}/{file}")
+    };
+    if crate::binding::virtual_files::vfs_exists(&candidate) {
+      return Some(candidate);
+    }
+    pathname::find(&candidate, PathnameFindOptions {
+      paths: Some(paths.clone()),
+      ..PathnameFindOptions::default()
+    })
+  })
+}
+
+/// The entries of `\input@path` (each brace group one directory, as `\tl_map_tokens:Nn` takes them; latex.ltx's
+/// `\@iffileonpath` and l3file's `\file_full_name:n` look a file up under each in turn); none where it is undefined.
+pub fn input_path_entries() -> Vec<String> {
+  let Some(Stored::Expandable(defn)) = lookup_meaning(&T_CS!("\\input@path")) else {
+    return Vec::new();
   };
   let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
-    return None;
+    return Vec::new();
   };
   // `\tl_map_tokens:Nn` takes each brace group as one entry (a bare token would be an entry of its own, never a
   // directory).
@@ -5284,22 +5309,7 @@ fn find_on_input_path(file: &str) -> Option<String> {
       _ => {},
     }
   }
-  let paths = get_search_paths();
-  entries.into_iter().find_map(|dir| {
-    // (l3file makes an empty entry `/`, the filesystem root; the local paths, searched already, stand in for it)
-    let candidate = if dir.is_empty() || dir.ends_with('/') {
-      s!("{dir}{file}")
-    } else {
-      s!("{dir}/{file}")
-    };
-    if crate::binding::virtual_files::vfs_exists(&candidate) {
-      return Some(candidate);
-    }
-    pathname::find(&candidate, PathnameFindOptions {
-      paths: Some(paths.clone()),
-      ..PathnameFindOptions::default()
-    })
-  })
+  entries
 }
 
 //======================================================================

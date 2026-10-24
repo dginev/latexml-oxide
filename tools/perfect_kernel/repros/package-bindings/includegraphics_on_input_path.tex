@@ -1,0 +1,17 @@
+% witness: 1112.0840 (arxstspdf + style/arxiv-general.cfg: `\csdef{input@path}{{style/}{graphics/}{}}`, 8 figures
+%          named without their `graphics/` directory)
+% oracle:  pdflatex 0 errors: graphics.sty:211-231 `\Gin@getbase` tests the name with `\IfFileExists`, whose
+%          `\@iffileonpath` (latex.ltx:9698) looks it up under each `\input@path` entry: figs/ip_plot.pdf is drawn
+% engines: rust int79a = "No graphic source found", `ltx_missing_image` (the search took `\graphicspath`, the search
+%          paths and the source directory, never `\input@path`); Perl 0.8.8 the same
+% expect:  0 errors, 0 warnings; the graphic's candidates name figs/ip_plot.pdf
+% status:  RED (int79a) -> GREEN (79g)
+% preload: ar5iv.sty
+\makeatletter
+\def\input@path{{figs/}}
+\makeatother
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\includegraphics{ip_plot}
+\end{document}

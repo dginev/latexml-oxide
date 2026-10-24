@@ -40,6 +40,28 @@ fn image_candidates_with(path: &str, fallbacks: bool) -> String {
   if !source_dir.is_empty() {
     search_dirs.push(source_dir.clone());
   }
+  // Then each `\input@path` entry (a directory relative to the source): graphics.sty's `\Gin@getbase` tests every
+  // name with `\IfFileExists` (graphics.sty:211-231), whose `\@iffileonpath` looks it up under each `\input@path`
+  // entry (latex.ltx:9698), so pdflatex finds a `\includegraphics{502f01a.eps}` in `graphics/` under
+  // `\def\input@path{{style/}{graphics/}{}}` (1112.0840's `arxiv-general.cfg`, 8 figures). After the directories above,
+  // so a name they hold keeps its first candidate.
+  for entry in crate::binding::content::input_path_entries() {
+    let entry = entry.trim().trim_matches('"');
+    if entry.is_empty() {
+      continue;
+    }
+    let dir = if Path::new(entry).is_absolute() || source_dir.is_empty() {
+      entry.to_string()
+    } else {
+      PathBuf::from(&source_dir)
+        .join(entry)
+        .to_string_lossy()
+        .to_string()
+    };
+    if !search_dirs.contains(&dir) {
+      search_dirs.push(dir);
+    }
+  }
   if search_dirs.is_empty() {
     search_dirs.push(".".to_string());
   }
