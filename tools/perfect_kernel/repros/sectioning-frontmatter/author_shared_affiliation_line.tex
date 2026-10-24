@@ -1,0 +1,22 @@
+% witness: 1704.03168, 1301.5612, 1401.6981, 0712.1016 (sig-alternate.cls: the ACM template's
+%          `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}` in \author; 11-21 dangling references each)
+% oracle:  pdflatex 0 errors: the class sets \author inside its own tabular, which \sharedaffiliation closes and
+%          reopens; "Section 1", "(1)" print
+% engines: rust int83a = 6 errors, the author's \begin{tabular} left open, its affiliation lost, and every later
+%          \label of the document lost (the item's local `\label` binding never popped); the refs dangle
+% expect:  0 errors, 0 warnings; the author A One with the affiliation Dept; the section and the equation keep their
+%          labels
+% status:  RED (int83a) -> GREEN (79l)
+% preload: ar5iv.sty
+\documentclass{article}
+\def\sharedaffiliation{%
+\end{tabular}
+\begin{tabular}{c}}
+\begin{document}
+\title{T}
+\author{A One \sharedaffiliation Dept}
+\maketitle
+\section{Intro}\label{sec:a}
+See \ref{sec:a} and \ref{eq:b}.
+\begin{equation}x\label{eq:b}\end{equation}
+\end{document}

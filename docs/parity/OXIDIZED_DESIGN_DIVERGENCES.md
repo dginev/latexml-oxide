@@ -25324,3 +25324,19 @@ page records; 25, 15 and 2 of the census's 35,942 papers); the packages whose wr
 (showkeys, lineno, titleref, threeparttable, caption, cleveref, hyperref, amsmath). A shipped copy of a bound class
 was already held to the copy by OD #731 (79i). Repro package-bindings/raw_class_redefines_label; guard
 `perfect_kernel_batch79j::a_raw_class_redefining_label_keeps_the_documents_labels`.
+
+### 894. An author block's tabular juggle is the line break it prints (Perl: digested, a tabular left open)
+
+LaTeX sets `\author` inside the title page's own tabular (article.cls `\@maketitle`, sig-alternate.cls), so a class or
+template macro that closes it and opens another — the ACM SIG template's
+`\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`, set between the names and their shared affiliation; the
+class's own `\alignauthor` juggles the same way — breaks the block into columns. LaTeXML digests the author outside any
+tabular: the juggle closed a tabular nothing opened ("Attempt to close a group that switched to mode
+restricted_horizontal") and left one open, whose lines — the affiliation — were lost, and the item's unclosed group
+kept its `\label` binding for the rest of the document (every reference dangling; the group itself now closes with
+the item, queue_digest.rs `digest_in_own_group`, a Rust-only fix as Perl's `egroup` runs after the item's errors).
+Ours (author_block separators.rs `tabular_juggles_as_line_breaks`): a parameterless macro of the author block whose
+expansion begins `\end{tabular}` is read as the `\\` it prints, so the names and the affiliation split as lines; the
+author separators (`\alignauthor`) stay for the splitter. Witnesses 1704.03168, 1301.5612, 1401.6981, 0712.1016
+(sig-alternate; 21 census papers write `\sharedaffiliation`). Repros sectioning-frontmatter/author_shared_affiliation_line,
+sectioning-frontmatter/author_group_left_open_keeps_labels; guards `perfect_kernel_batch79l`.

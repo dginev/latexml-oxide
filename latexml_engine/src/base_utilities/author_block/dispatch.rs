@@ -106,6 +106,7 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
   let stuff = strip_linebreak_options(stuff);
   let stuff = note_environments_as_commands(stuff);
   let stuff = math_active_scripts(stuff);
+  let stuff = tabular_juggles_as_line_breaks(stuff);
   let stuff = unbrace_acm_author_columns(stuff);
   let stuff = unwrap_alignment_environment(stuff);
   // Beyond-Perl (OXIDIZED_DESIGN #52), two composable normalizations applied

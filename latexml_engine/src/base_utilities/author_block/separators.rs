@@ -729,6 +729,64 @@ pub(in crate::base_utilities) fn unwrap_alignment_environment(tokens: Tokens) ->
   Tokens::new(toks)
 }
 
+/// An author block's parameterless macro whose expansion closes the title page's tabular and opens another — the ACM
+/// SIG template's `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`, set inside the class's own author tabular
+/// (sig-alternate.cls:283's `\alignauthor` juggles the same way) — is the line break it prints between the names
+/// above and the affiliation below: digested, it closed a tabular no author block opens and left one open, whose
+/// lines (the shared affiliation) were lost (1704.03168, 1301.5612, 1401.6981, 0712.1016). The author separators
+/// (`\alignauthor`) stay for the splitter.
+pub(in crate::base_utilities) fn tabular_juggles_as_line_breaks(tokens: Tokens) -> Tokens {
+  let separators = author_and_splits();
+  let juggles = |t: &Token| {
+    if t.get_catcode() != Catcode::CS
+      || separators
+        .iter()
+        .any(|s| matches!(s, SplitDelim::Token(d) if d == t))
+    {
+      return false;
+    }
+    let Ok(Some(defn)) = lookup_definition(t) else {
+      return false;
+    };
+    if !defn.is_expandable()
+      || defn
+        .get_parameters()
+        .is_some_and(|p| !p.get_parameters().is_empty())
+    {
+      return false;
+    }
+    let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+      return false;
+    };
+    let body: Vec<Token> = body
+      .unlist_ref()
+      .iter()
+      .filter(|t| t.get_catcode() != Catcode::SPACE)
+      .copied()
+      .collect();
+    body.first() == Some(&T_CS!("\\end"))
+      && body
+        .get(1)
+        .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+      && body[2..]
+        .iter()
+        .take_while(|t| t.get_catcode() != Catcode::END)
+        .map(|t| t.to_string())
+        .collect::<String>()
+        == "tabular"
+  };
+  let toks = tokens.unlist();
+  if !toks.iter().any(juggles) {
+    return Tokens::new(toks);
+  }
+  Tokens::new(
+    toks
+      .into_iter()
+      .map(|t| if juggles(&t) { T_CS!("\\\\") } else { t })
+      .collect(),
+  )
+}
+
 /// The ACM SIG classes' author columns (DIVERGENCES #445), read through their own commands: the brace group that
 /// follows `\alignauthor` and is the whole column — sigchi.cls writes each column as one, `\alignauthor{Name\\ \affaddr{…}\\ \email{…}}` — is
 /// its content, so the column's `\\` lines split (1906.01122); and an `\affaddr{…}` is its content, so a mark that

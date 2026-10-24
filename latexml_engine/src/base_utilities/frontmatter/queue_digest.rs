@@ -58,7 +58,13 @@ pub(in crate::base_utilities) fn digest_frontmatter_item(
   // `DigestText`, with the item's own paragraph breaks noted in its text mode's frame (`frontmatter_paragraph_break`)
   begin_mode("text")?;
   note_frontmatter_paragraphs(tag);
-  let digested = digest(item);
+  // What the item leaves open closes with it (`digest_in_own_group`), as Perl's `egroup` after the item closes its group
+  // whatever the item's own `Error`s: the ACM SIG template's `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`
+  // in `\author` — which the class sets inside its own tabular — opens a tabular here that nothing closes, so the
+  // text mode could not end, this group was never popped, and its `\label` (`\lx@set@frontmatter@label`) took every
+  // later `\label` of the document: each reference dangled (1704.03168, 1301.5612, 1401.6981, 0712.1016, sig-alternate).
+  // Guard: `perfect_kernel_batch79l::an_author_left_open_keeps_the_documents_labels`.
+  let (digested, _) = digest_in_own_group(|| digest(item))?;
   end_mode("text")?;
   egroup()?;
   digested
