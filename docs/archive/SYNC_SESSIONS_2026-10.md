@@ -7885,3 +7885,13 @@ after `\begin{thebibliography}` now the width where it was an empty bibitem. Net
 Found after the A/B, fixed next (79h): the imported text is printed as written (IEEEtran's `\mbox {IV-A.1}` printed
 raw, 45 references), and `\cref`/`\autoref` to the other document stay missing labels.
 
+**int81** (2026-10-24; 79h → 80fad70898): xr's imported text is typeset as TeX (IEEEtran's `\mbox {IV-A.1}` printed raw
+in int80: 2510.26552's 49 references, 1312.7580's 2), and `\cref`/`\autoref` to the other document name its type from
+cleveref's `<label>@cref` records and hyperref's anchors (OD #891): 2412.14256 19 → 0 unresolved references, 2508.18808
+88 → 0, 2402.05535 41 → 14, 2608.12136 64 → 22 (the rest name labels the shipped `.aux` lacks, or `\clonelabel`'s aux
+round trip). Hyperref's `\null` after the number is `\relax` in the external text (no empty element; it still ends a
+`~#1\null` name). Gates int81a 7210/7210, inits 0/0 (the gates' status lines were lost to a redirect and re-derived from
+the nextest/cortex/init logs, fmt/clippy/doc rerun green). A/B int79c → int81a over popint81 (733 census papers: 141
+`\externaldocument`, 250 `\cref`, 193 `\autoref`, 149 `\ref` controls): 6 byte-changed, all xr witnesses, E 436 = 436,
+F 0 = 0, 0 worse, the controls byte-identical. Nets 136/136, 0 worse (int79c → int81a).
+
