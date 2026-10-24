@@ -1,0 +1,33 @@
+% witness: 2510.01717, 1709.02454 (`{subnumcases}` rows `& $…$ \label{…} \\` with an empty first cell; brk86);
+%          2202.06960 (`\begin{numcases}{M_0=0\Rightarrow \\}`, a `\\` in the left-hand side);
+%          2412.05950 (`\begin{numcases}` with no `{…}`: the left-hand side is the next token, `\mathrm`)
+% oracle:  pdflatex 0 errors: cases.sty:73 `\let\\\@eqncr`, whose `{\ifnum0=`}\fi` (latex.ltx:15776-15777) keeps the
+%          next row's `&` from the `*`/`[` test; the left-hand side is set once, before that `\let` (cases.sty:73);
+%          seven numbered rows, every reference resolved
+% engines: rust int88b = 2 errors ("\lx@hidden@egroup Attempt to close a group that switched to mode math",
+%          "\endgroup Attempt to close non-boxing group"); int88c = the `\\`-in-LHS case re-enters itself (Fatal);
+%          int88d = the no-`{…}` case's `\mathrm` takes the closing group token as its argument (8 errors)
+% expect:  0 errors, 0 warnings; the seven numbered rows, each with its own label
+% status:  RED (int88b) -> GREEN (79r)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath,cases}
+\begin{document}
+\begin{subnumcases}{x\Leftrightarrow}
+   & $a \leq b$, \label{eq:a} \\
+   & $c \geq d$. \label{eq:b}
+\end{subnumcases}
+\begin{numcases}{f(x)=}
+1, & if $x>0$ \label{eq:c}\\
+0, & otherwise \label{eq:d}
+\end{numcases}
+\begin{numcases}{M_0=0\Rightarrow \\}
+a=b, \label{eq:e}\\
+c=d \label{eq:f}
+\end{numcases}
+\begin{numcases}
+\mathrm{d}\rho = f\,dt \label{eq:g} \\
+\rho_0 \text{ is given.} \nonumber
+\end{numcases}
+See \eqref{eq:a}, \eqref{eq:b}, \eqref{eq:c}, \eqref{eq:d}, \eqref{eq:e}, \eqref{eq:f} and \eqref{eq:g}.
+\end{document}

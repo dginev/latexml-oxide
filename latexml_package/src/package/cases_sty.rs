@@ -121,7 +121,15 @@ fn numcases_bindings(lhs: Tokens) -> Result<()> {
   });
   assign_alignment(alignment, None);
   let_i(&T_MATH!(), &T_CS!("\\lx@dollar@in@mathmode"), None);
-  let mut lhs_expansion = lhs.unlist();
+  // cases.sty sets the left-hand side once, in `\box\z@`, before its `\let\\\@eqncr` (cases.sty:73): a `\\` in it
+  // keeps its outer meaning and ends no row. We repeat it in each row, so `\lx@numcases@inlhs` marks the first cell as
+  // the left-hand side (a local flag, gone with the cell's group) and `\@numcases@newline` there is the outer `\\`
+  // (`\begin{numcases}{M_0=0\Rightarrow \\}`, 2202.06960: each row's left-hand side ended the row and re-inserted
+  // itself — the loop detector's Fatal, then an out-of-memory one). The mark goes before the left-hand side, where no
+  // argument it leaves open can take it (`\begin{numcases}` with no `{…}`: `#1` = `\mathrm`, 2412.05950).
+  let_i(&T_CS!("\\lx@numcases@outer@cr"), &T_CS!("\\\\"), None);
+  let mut lhs_expansion = vec![T_CS!("\\lx@numcases@inlhs")];
+  lhs_expansion.extend(lhs.unlist());
   lhs_expansion.push(T_ALIGN!());
   def_macro(
     T_CS!("\\@numcases@LHS"),
@@ -213,8 +221,19 @@ LoadDefinitions!({
     }
   });
 
-  DefMacro!("\\@numcases@newline[]",
-    "\\ifx.#1.\\lx@alignment@newline\\else\\lx@alignment@newline[#1]\\fi\\@numcases@LHS");
+  // Perl cases.sty.ltxml:111 `DefMacro('\@numcases@newline[]', …)` reads the `[` test as an ordinary argument, so a
+  // row whose first cell is empty (`\\` + newline + `& $x$`) gave its `&` to the alignment before the row ended
+  // ("\lx@hidden@egroup Attempt to close a group that switched to mode math"). cases.sty:73 `\let\\\@eqncr`, whose
+  // `{\ifnum0=`}\fi` keeps the row's tabs from the `*`/`[` test (latex.ltx:15776-15777): read as
+  // `\lx@alignment@newline` reads it, then the left-hand side (KNOWN_PERL_ERRORS #1154; 2510.01717, 1709.02454).
+  DefMacro!("\\@numcases@newline", {
+    if lookup_bool("numcases_in_lhs") {
+      Tokens!(T_CS!("\\lx@numcases@outer@cr"))
+    } else {
+      engine::tex_tables::alignment_newline_then(true, &[T_CS!("\\@numcases@LHS")])?
+    }
+  });
+  DefPrimitive!("\\lx@numcases@inlhs", { assign_value("numcases_in_lhs", true, None); });
   DefMacro!("\\@numcases@cr", "\\lx@alignment@cr\\@numcases@LHS");
 
   DefConstructor!("\\@@numcases SkipSpaces DigestedBody", "#1",

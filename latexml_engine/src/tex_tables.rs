@@ -563,21 +563,13 @@ LoadDefinitions!({
 
   // This is the internal macro for \\[dim] used by LaTeX for various arrays, tabular, etc
   DefMacro!("\\lx@alignment@newline", {
-    let (_star, optional) = read_newline_args(true)?;
-    if inside_cell_group() {
-      return Ok(in_cell_newline(optional));
-    }
-    alignment_newline_tokens(optional)?
+    alignment_newline_then(true, &[])?
   });
   // However, the above will skip spaces --AND a newline! -- looking for [],
   // which is kinda weird in math, since there may be a reasonable math [ in the 1st column!
   // AMS kindly avoids that, by using a special version of \\
   DefMacro!("\\lx@alignment@newline@noskip", {
-    let (_star, optional) = read_newline_args(false)?;
-    if inside_cell_group() {
-      return Ok(in_cell_newline(optional));
-    }
-    alignment_newline_tokens(optional)?
+    alignment_newline_then(false, &[])?
   });
   // These are the markers that produce \\ in the reversion,
   // and (eventually will) add vertical space to the row!
@@ -1986,6 +1978,20 @@ fn alignment_newline_tokens(optional: Option<Tokens>) -> Result<Tokens> {
     tokens.push(T_CS!("\\lx@alignment@newline@marker"));
   }
   tokens.push(T_END!());
+  Ok(Tokens::new(tokens))
+}
+
+/// An alignment's `\\`, expanded: its `*` and `[<dim>]` read with the alignment's tabs disabled (`read_newline_args`,
+/// latex.ltx's `{\ifnum0=`}\fi` guard), then the row end, followed by `then` — or, inside a group in a cell, a line break
+/// (no row end, no `then`). `\lx@alignment@newline` and `@noskip` follow it with nothing; `{numcases}`'s `\\` with the
+/// left-hand side that opens each row (cases_sty.rs).
+pub fn alignment_newline_then(skipspaces: bool, then: &[Token]) -> Result<Tokens> {
+  let (_star, optional) = read_newline_args(skipspaces)?;
+  if inside_cell_group() {
+    return Ok(in_cell_newline(optional));
+  }
+  let mut tokens = alignment_newline_tokens(optional)?.unlist();
+  tokens.extend_from_slice(then);
   Ok(Tokens::new(tokens))
 }
 

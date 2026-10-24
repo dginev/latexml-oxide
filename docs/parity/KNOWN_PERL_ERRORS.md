@@ -17892,3 +17892,20 @@ digests, local to the command's group (`\textst` is now `bounded` like the other
 0, words 6,688 → 13,453, 4 dangling references → 0), 2406.17962 (40 → 0). Repro
 package-bindings/soul_newline_in_table_cell; guard
 `perfect_kernel_batch79q::a_soul_line_break_in_a_table_cell_is_a_line_break`.
+
+## 1154. `{numcases}`'s `\\` reads its `[` test as an ordinary argument, so an empty first cell's `&` ends the row early
+
+cases.sty:73 `\let\\\@eqncr`; latex.ltx:15776-15777 `\@eqncr` opens with `{\ifnum0=`}\fi`, which keeps the next row's
+`&` from the `\@ifstar`/`[` test (tex.web §342 counts the brace). Perl's cases.sty.ltxml:111
+`DefMacro('\@numcases@newline[]', …)` reads the optional argument as an ordinary one, so a row after `\\` whose first
+cell is empty (`& $c \geq d$, \label{b}`) gives that `&` to the alignment before the row has ended: "\lx@hidden@egroup
+Attempt to close a group that switched to mode math", "\endgroup Attempt to close non-boxing group". Minimal trigger:
+`\usepackage{cases}`, `\begin{numcases}{x=}& $a$ \\ & $c$\end{numcases}` (pdflatex 0 errors). Fixed in Rust (79r):
+`\@numcases@newline` reads the row end as `\lx@alignment@newline` does (tex_tables.rs `alignment_newline_then`, the
+alignment's tabs disabled while `*`/`[` is tested), then the left-hand side, in which `\\` keeps its outer meaning:
+cases.sty sets `#1` once, in `\box\z@`, before its `\let\\\@eqncr`, while Perl and we repeat it in each row, so
+`\begin{numcases}{M_0=0\Rightarrow \\}` re-entered itself row after row (2202.06960: Perl-style a digestion-loop
+Fatal → 0 errors). A cell-local mark placed before the left-hand side (`\lx@numcases@inlhs`) makes `\\` there the
+outer one; a group around it would not do, since a `{numcases}` with no `{…}` has `#1` = the next token, which can take
+the group's closing token as its argument (2412.05950, `\mathrm`). Witnesses 2510.01717 (7 errors → 0, 4 dangling references → 0), 1709.02454 (4 → 0, 1 → 0). Repro alignment-bindings/numcases_row_with_empty_first_cell; guard
+`perfect_kernel_batch79r::a_numcases_row_with_an_empty_first_cell_ends_cleanly`.
