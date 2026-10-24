@@ -2271,15 +2271,18 @@ fn french_high_punctuation_unskips_the_space() {
 #[test]
 fn bare_subfloat_has_a_phantom_caption() {
   let body = "\\documentclass{article}\n\\usepackage{graphicx}\n\\usepackage{PKG}\n\\begin{document}\n\\begin{figure}\n\\subfloat{\\rule{1cm}{1cm}}\n\\subfloat[]{\\rule{1cm}{1cm}}\n\\subfloat[Cap C]{\\rule{1cm}{1cm}}\n\\caption{Main}\n\\end{figure}\n\\end{document}\n";
-  // subcaption sets its sub-captions small and lists them; subfig does neither.
+  // subcaption sets its sub-captions small and lists them; subfig does neither. subfig measures the body
+  // (subfig.sty:375-376 `\sbox\@tempboxa{#2}`), so its panels state their 1cm (`note_sub_float_body_width`), three on
+  // a line as pdflatex sets them; subcaption's `\subfloat` sizes its box of its own accord and states none.
   let rule = r#"<rule height="28.5pt" width="28.5pt"/>"#;
-  for (pkg, small, inlist) in [
+  for (pkg, small, inlist, panel) in [
     (
       "subcaption",
       (r#"<text fontsize="90%">"#, "</text>"),
       r#" inlist="lof""#,
+      "",
     ),
-    ("subfig", ("", ""), ""),
+    ("subfig", ("", ""), "", r#" panelwidth="0.082""#),
   ] {
     let (stderr, xml) = convert(&body.replace("PKG", pkg), true);
     assert_eq!(error_count(&stderr), 0, "{pkg}: {stderr}");
@@ -2291,7 +2294,7 @@ fn bare_subfloat_has_a_phantom_caption() {
       "figure",
       &[r#"xml:id="S0.F1.sf1""#],
       &format!(
-        r#"<figure class="ltx_figure_panel" xml:id="S0.F1.sf1"><tags><tag>{open}(a){close}</tag><tag role="refnum">1a</tag></tags>{rule}</figure>"#
+        r#"<figure class="ltx_figure_panel"{panel} xml:id="S0.F1.sf1"><tags><tag>{open}(a){close}</tag><tag role="refnum">1a</tag></tags>{rule}</figure>"#
       ),
     );
     // Control (passed before the fix): the captioned third sub-figure.
@@ -2301,11 +2304,12 @@ fn bare_subfloat_has_a_phantom_caption() {
       &[r#"xml:id="S0.F1.sf3""#],
       &format!(
         concat!(
-          r#"<figure class="ltx_figure_panel"{inlist} xml:id="S0.F1.sf3"><tags><tag>{open}(c){close}</tag><tag role="refnum">1c</tag></tags>"#,
+          r#"<figure class="ltx_figure_panel"{inlist}{panel} xml:id="S0.F1.sf3"><tags><tag>{open}(c){close}</tag><tag role="refnum">1c</tag></tags>"#,
           r#"{rule}<toccaption><tag close=" ">c</tag>Cap C</toccaption>"#,
           r#"<caption><tag close=" ">{open}(c){close}</tag>{open}Cap C{close}</caption></figure>"#
         ),
         inlist = inlist,
+        panel = panel,
         open = open,
         close = close,
         rule = rule

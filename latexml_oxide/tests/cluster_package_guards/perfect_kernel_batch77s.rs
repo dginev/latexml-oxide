@@ -350,7 +350,8 @@ End.
 /// caption's own sub-types: `\captionof{subfigure}{First}` in a minipage is the figure's "Figure 1: First" and the
 /// `\subfloat` is "(a)" (it was panel (a), the `\subfloat` (b)). Outside any float the `\caption` it falls back to is
 /// `\caption@OutsideFloat` (caption.sty:200-207): a second error and the text dropped, "CCC" alone ("CCCLone" printed).
-/// pdflatex: 3 errors, "Figure 1: First", "(a) SubA", "Figure 2: Whole", "CCC", "End text." (KNOWN_PERL_ERRORS #999).
+/// pdflatex: 3 errors, "Figure 1: First", "(a) SubA", "Figure 2: Whole", "CCC", "End text." (KNOWN_PERL_ERRORS #999);
+/// the `.4\textwidth` minipage and the `\subfloat` on one line, as subfig measures its body (`note_sub_float_body_width`).
 /// Repro captions-floats/captionof_subfig_subfloat_is_refused.
 #[test]
 fn captionof_subfig_subfloat_is_refused() {
@@ -380,7 +381,7 @@ End text.
       (
         "figure",
         "S0.F2",
-        r#"<figure class="ltx_panels_gallery" inlist="lof" panelcols="1" panelrows="2" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure class="ltx_figure_panel ltx_minipage" inlist="lof" panelwidth="0.4" vattach="middle" width="138.0pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S0.F1.1">AAA</p><toccaption><tag close=" ">1</tag>First</toccaption><caption><tag close=": ">Figure 1</tag>First</caption></figure><break class="ltx_break"/><figure class="ltx_figure_panel" xml:id="S0.F2.sf1"><tags><tag>(a)</tag><tag role="refnum">2a</tag></tags><p xml:id="S0.F2.sf1.1">XXX</p><toccaption><tag close=" ">a</tag>SubA</toccaption><caption><tag close=" ">(a)</tag>SubA</caption></figure><toccaption><tag close=" ">2</tag>Whole</toccaption><caption><tag close=": ">Figure 2</tag>Whole</caption></figure>"#,
+        r#"<figure class="ltx_panels_gallery" inlist="lof" panelcols="2" panelrows="1" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure class="ltx_figure_panel ltx_minipage" inlist="lof" panelwidth="0.4" vattach="middle" width="138.0pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S0.F1.1">AAA</p><toccaption><tag close=" ">1</tag>First</toccaption><caption><tag close=": ">Figure 1</tag>First</caption></figure><figure class="ltx_figure_panel" xml:id="S0.F2.sf1"><tags><tag>(a)</tag><tag role="refnum">2a</tag></tags><p xml:id="S0.F2.sf1.1">XXX</p><toccaption><tag close=" ">a</tag>SubA</toccaption><caption><tag close=" ">(a)</tag>SubA</caption></figure><toccaption><tag close=" ">2</tag>Whole</toccaption><caption><tag close=": ">Figure 2</tag>Whole</caption></figure>"#,
       ),
       (
         "para",

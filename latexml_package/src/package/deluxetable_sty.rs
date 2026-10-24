@@ -388,13 +388,17 @@ LoadDefinitions!({
     reversion => "\\tablenotetext{#1}{#2}");
   DefMacro!("\\tablenotetext{}{}", "\\lx@deluxe@tablenotetext{#1}{#2}");
 
+  // The notes and references are set at the line, `\parbox{\linewidth}` (aastex701.cls:8627-8636, emulateapj.cls:1571-
+  // 1580; Perl's deluxetable.sty.ltxml:117-127 `\textwidth`, the same width where the page is not declared): against a
+  // two-column class's declared page (`declare_panel_page`) a one-column table's note is the column, not the page
+  // (guard `perfect_kernel_batch68y::emulateapj_deluxetable_is_open_from_its_head`).
   // Perl uses AddToMacro to accumulate into \tblnote@list
   // We use \g@addto@macro which does the same at the TeX level
   DefMacro!("\\tablerefs{}", "\\g@addto@macro\\tblnote@list{\\@tableref{#1}\\let\\email\\@@email}");
-  DefMacro!("\\@tableref{}", "\\par\n \\vspace*{3ex}%\n {\\parbox{\\textwidth}{\\hskip1em\\rmfamily References. --- #1}\\par}");
+  DefMacro!("\\@tableref{}", "\\par\n \\vspace*{3ex}%\n {\\parbox{\\linewidth}{\\hskip1em\\rmfamily References. --- #1}\\par}");
 
   DefMacro!("\\tablecomments{}", "\\g@addto@macro\\tblnote@list{\\@tablecom{#1}}");
-  DefMacro!("\\@tablecom{}", "\\par \n \\vspace*{3ex}% \n {\\parbox{\\textwidth}{\\hskip1em\\rmfamily Note. --- #1}\\par}");
+  DefMacro!("\\@tablecom{}", "\\par \n \\vspace*{3ex}% \n {\\parbox{\\linewidth}{\\hskip1em\\rmfamily Note. --- #1}\\par}");
 
   DefMacro!("\\spew@tblnotes",
     "\\@tablenotes{\\tblnote@list}\\global\\let\\tblnote@list\\@empty");

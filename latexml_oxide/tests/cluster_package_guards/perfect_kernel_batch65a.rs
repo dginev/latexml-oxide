@@ -552,7 +552,9 @@ Text \cite{a}.
 
 /// A `\caption` closing a `\parbox` in a `\rotatebox` in a figure (heria.cls:737-745 `SidewaysFigure`): the rotated
 /// inline block holds no figure, so the box is a block for its leading text and its caption goes to the figure it is
-/// in, after it, which keeps the number and the label; the document is schema-valid. Repro
+/// in, after it, which keeps the number and the label; the document is schema-valid. The box's `[\textwidth]` height
+/// is read outside it, 345pt (latex.ltx:16255 `\setlength\@tempdimb{#2}` after the `\vbox` that set `\hsize`), not
+/// the 550pt of Perl's `\textwidth\hsize` set before it. Repro
 /// captions-floats/caption_in_a_rotated_parbox_stays_with_its_figure.
 #[test]
 fn caption_in_a_rotated_parbox_stays_with_its_figure() {
@@ -570,7 +572,7 @@ fn caption_in_a_rotated_parbox_stays_with_its_figure() {
       <tag role="refnum">1</tag>
       <tag role="typerefnum">Figure 1</tag>
     </tags>
-    <inline-block angle="90" depth="0.0pt" height="550.0pt" innerdepth="272.5pt" innerheight="277.5pt" innerwidth="550.0pt" width="550.0pt" xtranslate="0.0pt" ytranslate="0.0pt" xml:id="S0.F1.1">
+    <inline-block angle="90" depth="0.0pt" height="550.0pt" innerdepth="170.0pt" innerheight="175.0pt" innerwidth="550.0pt" width="345.0pt" xtranslate="-102.5pt" ytranslate="-102.5pt" xml:id="S0.F1.1">
       <p class="ltx_parbox" vattach="middle" width="550.0pt" xml:id="S0.F1.1.1">The impact tableau.</p>
     </inline-block>
     <toccaption><tag close=" ">1</tag>Impact summary tableau</toccaption>

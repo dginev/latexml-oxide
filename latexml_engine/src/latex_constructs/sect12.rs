@@ -726,11 +726,21 @@ pub(crate) fn load() -> Result<()> {
   // "incomplete \ifx") must not meet the wrapper's own `\else` — Perl's
   // form (:4748) raised `Extra \else` (SHARED). Guard:
   // `perfect_kernel_batch56::parbox_body_dangling_conditional_is_not_the_wrappers`.
+  // The width is read as the source states it, at the registers outside the box, as latex.ltx:16252 reads it
+  // (`\setlength\@tempdima{#4}` before the `\vbox`), and the box's own registers are set inside it (`\hsize\@tempdima`,
+  // :16253), where `\lx@parbox@restore` reads the width again: `\lx@parbox` keeps the tokens a float's panel states
+  // (`declare_panel_parbox_width`), so a `\parbox{\linewidth}` table note against a two-column class's declared page
+  // is a whole column, not the 345pt Perl's registers give it over the real 229.5pt (`perfect_kernel_batch79f`;
+  // Perl's `{Dimension}` macro, latex_constructs.pool.ltxml:4745, handed `\lx@parbox` the value).
   DefMacro!(
-    "\\parbox[] [] [] {SetlengthDimension}{}",
-    r"\lx@hidden@bgroup\hsize=#4\textwidth\hsize\columnwidth\hsize\linewidth\hsize\parindent\z@\parskip\z@skip\lx@restore@interline\ifx.#2.\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{\lx@parbox[#1]{#4}{#5}}{\lx@parbox[#1][#2][#3]{#4}{#5}}\lx@hidden@egroup"
+    "\\parbox[] [] [] {}{}",
+    r"\lx@hidden@bgroup\ifx.#2.\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{\lx@parbox[#1]{#4}{\lx@parbox@restore{#4}#5}}{\lx@parbox[#1][#2][#3]{#4}{\lx@parbox@restore{#4}#5}}\lx@hidden@egroup"
   );
-  DefConstructor!("\\lx@parbox OptionalPosition [TempboxaDimension] OptionalUndigested {Dimension} VBoxContents",
+  DefMacro!(
+    "\\lx@parbox@restore{}",
+    r"\setlength\hsize{#1}\textwidth\hsize\columnwidth\hsize\linewidth\hsize\parindent\z@\parskip\z@skip\lx@restore@interline"
+  );
+  DefConstructor!("\\lx@parbox OptionalPosition [TempboxaDimension] OptionalUndigested {SetlengthDimension} VBoxContents",
     sub[document, args, props] {
       let body = args[4].as_ref().unwrap();
       let mut attr = string_map!("class" => "ltx_parbox");

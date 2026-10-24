@@ -5,7 +5,8 @@
 //! emulateapj, mn2e and mn, svjour3 `twocolumn`, svjour `epj`, ieeeconf, REVTeX 3, AASTeX 5.x, and iopart's one
 //! column; `\onecolumn`/`\twocolumn` set the declared page's column setting; a declared page's separation holds only
 //! while `\columnsep` is the binding's; a float held in a minipage is a fraction of the page outside it; and subfig's
-//! sub-float is its body's width, the glue the body states counted. Each guard converts its repro under
+//! sub-float is its body's width, the glue the body states counted; a `\parbox` reads the width its source states,
+//! outside the box. Each guard converts its repro under
 //! `tools/perfect_kernel/repros/captions-floats/` (pdflatex-checked: `\the\columnwidth`/`\the\textwidth` in each
 //! float), asserts the diagnostics by count and the floats whole where the markup is the class's own.
 //! OXIDIZED_DESIGN_DIVERGENCES #885, #887.
@@ -298,4 +299,30 @@ fn a_subfig_body_states_its_glue() {
       figure_captions(1, "Three sub-floats.")
     ),
   );
+}
+
+/// A `\parbox` is set at the width the source states, read where latex.ltx:16252 reads it (`\setlength\@tempdima{#4}`,
+/// outside the box): against a two-column page a one-column table's `\parbox{\linewidth}` note is a whole column and
+/// `\parbox{0.5\columnwidth}` half of it (pdflatex: 229.5pt and 114.75pt in the letter page's 229.5pt column). Red
+/// (int78a: 1.503 and 0.752, the macro handing `\lx@parbox` the value of Perl's 345pt registers, no tokens to read at
+/// the declared page). Repro captions-floats/a_parbox_states_its_width_against_the_page.
+#[test]
+fn a_parbox_states_its_width_against_the_page() {
+  let xml = convert_clean(repro!(
+    "captions-floats/a_parbox_states_its_width_against_the_page.tex"
+  ));
+  for (id, panelwidth, width, text) in [
+    ("S0.T1", "1", "345.0pt", "A note across the column."),
+    ("S0.T2", "0.5", "172.5pt", "Half."),
+  ] {
+    assert_element(
+      &xml,
+      "p",
+      &[&format!("xml:id=\"{id}.2\"")],
+      &format!(
+        "<p class=\"ltx_figure_panel ltx_parbox\" panelwidth=\"{panelwidth}\" vattach=\"middle\" width=\"{width}\" \
+         xml:id=\"{id}.2\">{text}</p>"
+      ),
+    );
+  }
 }
