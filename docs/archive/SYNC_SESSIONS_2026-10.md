@@ -7938,3 +7938,15 @@ int84 groups, 72 sig-alternate + 8 `\sharedaffiliation` census papers, 382 contr
 0 worse, 23 better; the controls 1 byte-changed of 380 (2505.20064, 55 dangling → 0); the sig group labels restored
 (1301.5612 7 → 56, 1801.02123 2 → 22) and body footnotes back in place (1401.6981 7, 1802.01191 11, taken into the
 author block as "contacts" before). Nets 136/136, 0 worse (int83a → int85a).
+
+**int86** (2026-10-24; 79m → 787787235d, r2 1663e5e07b): REVTeX's `\email` and `\homepage` read the address with
+`%` other, as revtex4.cls:4476-4490's `\begingroup\sanitize@url` does (KNOWN_PERL_ERRORS #1149): a Rust-only
+`UrlSemiverbatim` parameter type, so `\email[]{}` stays one call for the author-block line reader (r1's
+`\begingroup\sanitize@url\@email{#1}` left the address outside the call: an empty affiliation and a second empty
+e-mail contact in two guards, gates int86a). 0712.3811's `\homepage{…/%7Emilton}` had commented out its own `}` and
+taken the document: 76 of 84 references dangling → 0. The AMS classes' `\title`, `\subjclass`, `\keywords`,
+`\dedicatory`, `\translator` are not `\long` (amsart.cls:457/551-568) and now read short (KPE #1150, OD #782), so
+2212.11488's unclosed `\subjclass{…` stops at the blank line, 81 dangling → 0, E 197 → 1. Gates int86b 7219/7219.
+A/B int85a → int86b over popint86 (400 REVTeX `\email`/`\homepage` + 400 AMS-class topmatter census papers + the 2
+witnesses): the 800 byte-identical, the witnesses better (E 198 → 1; 0712.3811's "lost" words the raw TeX the contact
+held, now math and prose). Nets 136/136, 0 worse (int85a → int86b).
