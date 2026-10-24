@@ -445,6 +445,19 @@ pub(crate) fn load() -> Result<()> {
       skip_spaces()?;
       if if_next(T_BEGIN!())? {
         read_arg(ExpansionLevel::Off)?;
+      } else if let Some(token) = read_token()? {
+        // TeX takes one token as the undelimited argument (revtex4.cls:5549 `[1]`, revtex4-1.cls:7308, natbib.sty:1063):
+        // 1203.4144's placeholder `\bibitem` before `\bibitem{Moffatt}` is the widest label, as is
+        // `\begin{thebibliography}9`'s 9. A `\bibitem` that opens an entry, or any other command, stays: Perl's
+        // leniency for an omitted argument, where TeX would take the `\bibitem` and print the entry's key as text.
+        let width = if token == T_CS!("\\bibitem") {
+          !(if_next(T_BEGIN!())? || if_next(T_OTHER!("["))?)
+        } else {
+          matches!(token.get_catcode(), Catcode::LETTER | Catcode::OTHER)
+        };
+        if !width {
+          unread_one(token);
+        }
       }
       // The heading first, then the preamble, then the list's redirection — the order natbib's
       // `thebibliography` typesets them (natbib.sty:1063-1066), so a font switch in the preamble

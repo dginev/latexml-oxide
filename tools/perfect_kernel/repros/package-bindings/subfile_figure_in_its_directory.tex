@@ -1,8 +1,10 @@
 % witness: 2209.05589 (`\subfile{./sub/OPA_v2.tex}`, whose `\includegraphics{FigScheme.eps}` … live in `sub/`)
 % oracle:  pdflatex 0 errors, `<use sub/sf_plot.pdf>`: subfiles.sty:120-131 loads a subfile by `\subimport` (import.sty),
-%          so the subfile's directory is searched first; the guard supplies `sub/part.tex` and `sub/sf_plot.pdf`
+%          so the subfile's directory is searched first; the guard supplies `sub/part.tex`, `sub/part2.tex` and the two
+%          figures. The quoted `\subfile{"sub/part2"}` (2409.12749's `\subfile{"./counterExample"}`) is loaded and its figure
+%          drawn, with 1 error: `\subfiles@split` keeps the quote in the area ("Unbalanced quotes in file name")
 % engines: rust int79a = no candidates, `ltx_missing_image` (`\subfile` bound as `\input`, Perl's binding)
-% expect:  0 errors, 0 warnings; the subfile's graphic's candidates name sub/sf_plot.pdf
+% expect:  0 errors, 0 warnings; the subfiles' graphics' candidates name sub/sf_plot.pdf and sub/sf_plot2.pdf
 % status:  RED (int79a) -> GREEN (79g)
 % preload: ar5iv.sty
 \documentclass{article}
@@ -10,4 +12,5 @@
 \usepackage{subfiles}
 \begin{document}
 \subfile{sub/part.tex}
+\subfile{"sub/part2"}
 \end{document}

@@ -60,17 +60,24 @@ fn includegraphics_finds_a_quoted_name_unquoted() {
 
 /// The subfile `subfiles`' `\subfile` loads (subfiles.sty:120-131, by import.sty's `\subimport`) finds the figures it
 /// names in its own directory, as pdflatex does. Red (int79a): no candidates — `\subfile` was `\input` (Perl's binding).
-/// Witness 2209.05589 (`\subfile{./sub/OPA_v2.tex}`, its 11 figures in `sub/`). Repro
+/// Witnesses 2209.05589 (`\subfile{./sub/OPA_v2.tex}`, its 11 figures in `sub/`), 2409.12749 (`\subfile{"./conclusion"}`,
+/// quoted, which 79g's first cut split with the quote in both halves). Repro
 /// package-bindings/subfile_figure_in_its_directory.
 #[test]
 fn a_subfile_finds_the_figures_in_its_directory() {
   const PART: &str = "\\documentclass[../main.tex]{subfiles}\n\\begin{document}\nPart text. \\includegraphics{sf_plot}\n\\end{document}\n";
+  const PART2: &str = "\\documentclass[../main.tex]{subfiles}\n\\begin{document}\nSecond part. \\includegraphics{sf_plot2}\n\\end{document}\n";
   let (log, xml) = convert_files_with(
     repro!("package-bindings/subfile_figure_in_its_directory.tex"),
     &[
       ("sub/part.tex", PART),
       (
         "sub/sf_plot.pdf",
+        repro!("package-bindings/eps_as_pdf_one.pdf"),
+      ),
+      ("sub/part2.tex", PART2),
+      (
+        "sub/sf_plot2.pdf",
         repro!("package-bindings/eps_as_pdf_one.pdf"),
       ),
     ],
@@ -83,7 +90,17 @@ fn a_subfile_finds_the_figures_in_its_directory() {
     &["graphic=\"sf_plot\""],
     r#"<graphics candidates="sub/sf_plot.pdf" cssstyle="width:20.075em; height:10.037em" graphic="sf_plot" xml:id="p1.g1"/>"#,
   );
-  assert!(xml.contains("Part text."), "{xml}");
+  // the quoted `\subfile{"sub/part2"}` (2409.12749) names the same subfile unquoted
+  assert_element(
+    &xml,
+    "graphics",
+    &["graphic=\"sf_plot2\""],
+    r#"<graphics candidates="sub/sf_plot2.pdf" cssstyle="width:20.075em; height:10.037em" graphic="sf_plot2" xml:id="p1.g2"/>"#,
+  );
+  assert!(
+    xml.contains("Part text.") && xml.contains("Second part."),
+    "{xml}"
+  );
 }
 
 /// The other document's `.aux`, as xr's `\externaldocument` reads it.
@@ -165,4 +182,32 @@ fn html_of(tex: &str, files: &[(&str, &str)]) -> String {
   let log = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   std::fs::read_to_string(workdir.path().join("t.html")).expect("read t.html")
+}
+
+/// `\begin{thebibliography}` takes one token as its argument, as TeX does (revtex4.cls:5549 `[1]`): a placeholder
+/// `\bibitem` that opens no entry is the widest label, and the entries after it keep their keys. Red (int79b): the
+/// bibliography read only a braced argument (Perl's leniency), so the bare `\bibitem` took the next `\bibitem` as its key,
+/// entry a was lost (`<ltx:bibitem> isn't allowed in <ltx:tag>`) and `\cite{a}` left without a target. A `\bibitem{x}`
+/// right after `\begin{thebibliography}` still opens its entry. Witness 1203.4144 (`\bibitem` then `\bibitem{Moffatt}`).
+/// Repro index-bib/thebibliography_placeholder_bibitem_is_the_width.
+#[test]
+fn a_placeholder_bibitem_is_the_bibliography_width() {
+  let (log, xml) = convert_files_with(
+    repro!("index-bib/thebibliography_placeholder_bibitem_is_the_width.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "bibitem",
+    &["key=\"a\""],
+    r#"<bibitem key="a" xml:id="bib.bib1"><tags><tag role="number">1</tag><tag role="refnum">[1]</tag><tag role="key">a</tag></tags><bibblock> Entry A.</bibblock></bibitem>"#,
+  );
+  assert_element(
+    &xml,
+    "bibitem",
+    &["key=\"b\""],
+    r#"<bibitem key="b" xml:id="bib.bib2"><tags><tag role="number">2</tag><tag role="refnum">[2]</tag><tag role="key">b</tag></tags><bibblock> Entry B.</bibblock></bibitem>"#,
+  );
 }

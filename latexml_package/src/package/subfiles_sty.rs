@@ -76,9 +76,13 @@ LoadDefinitions!({
 });
 
 /// `\subfiles@split` (subfiles.sty:111-116): the area of `file` up to its last `/` and the rest, given to `loader`
-/// (`\subimport` or `\subincludefrom`) as its two arguments.
+/// (`\subimport` or `\subincludefrom`) as its two arguments. The name is unquoted first (2409.12749's
+/// `\subfile{"./counterExample"}`): `\subfiles@split` parses it as written, so pdflatex's area keeps the quote (`"./`) and
+/// a figure the subfile names fails with "Unbalanced quotes in file name"; a quoted name is one name, which TeX's own
+/// lookups read unquoted (`\unquote@name`, latex.ltx:9654-9666).
 fn subfile_import(loader: &str, file: &str) -> Tokens {
-  let file = file.trim();
+  let unquoted = file.replace('"', "");
+  let file = unquoted.trim();
   let (area, base) = file
     .rfind('/')
     .map_or(("", file), |slash| (&file[..=slash], &file[slash + 1..]));
