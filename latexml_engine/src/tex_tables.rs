@@ -884,22 +884,27 @@ LoadDefinitions!({
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // And the general alignment processing.
-/// What a longtable caption's row holds besides the caption, a `\footnote` on it (`\caption{…}\footnote{…}\\`), is set
-/// after the caption's text, where longtable sets it in the caption's one spanning cell (longtable.sty:476
-/// `\LT@makecaption`): the row is dropped with the caption, and the note was lost with it (2201.11330, 0 errors).
+/// A note in a longtable caption's row, a `\footnote` on the caption (`\caption{…}\footnote{…}\\`), is set after the
+/// caption's text, its mark where longtable's caption cell has it (longtable.sty:476 `\LT@makecaption`): the row is
+/// dropped with the caption, and the note was lost with it (2201.11330, 0 errors). Only notes: text before the caption
+/// in its row is pdflatex's "Misplaced \noalign" (`\begin{longtable*}{lc}[t]`'s stray `[t]`, 1009.4206), dropped with
+/// the row as before.
 fn caption_row_keeps_its_content(row: &Row) {
-  // (what the cell typesets, out of a `p` column's box: it joins the caption's text)
+  // (the notes the cells hold, inside a `p` column's box too)
   fn shown(d: &Digested, out: &mut Vec<Digested>) {
     match d.data() {
       DigestedData::List(list) => list.borrow().boxes.iter().for_each(|b| shown(b, out)),
-      DigestedData::Whatsit(w)
-        if w.borrow().get_definition().get_cs_name() == "\\lx@tabular@p@" =>
-      {
-        if let Some(Some(body)) = w.borrow().get_args().get(2) {
+      DigestedData::Whatsit(w) => {
+        let w_ref = w.borrow();
+        let cs_name = w_ref.get_definition().get_cs_name().to_string();
+        if cs_name.starts_with("\\lx@note") {
+          out.push(d.clone());
+        } else if cs_name == "\\lx@tabular@p@"
+          && let Some(Some(body)) = w_ref.get_args().get(2)
+        {
           shown(body, out);
         }
       },
-      _ if typesets_content(d) => out.push(d.clone()),
       _ => {},
     }
   }
