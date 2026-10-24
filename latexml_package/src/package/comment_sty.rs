@@ -54,17 +54,24 @@ LoadDefinitions!({
       Ok(Vec::new())
     });
     DefMacro!(T_CS!(format!("\\end{{{name_str}}}")), None, Tokens!());
-    DefMacro!(T_CS!(format!("\\end{name_str}")), None, Tokens!());
+    // (an empty name, `\excludecomment{}` or `\includecomment{}` written by mistake — 2508.09827:687 — names no command
+    // of the document, comment.sty's being `\csname\endcsname`: `\<name>` would be read as `\\`, every later line break
+    // reading the rest of its line raw, and `\end<name>` would be `\end`)
+    if !name_str.is_empty() {
+      DefMacro!(T_CS!(format!("\\end{name_str}")), None, Tokens!());
+    }
     // comment.sty's own name for the environment (`\csarg\def{#1}`, comment.sty:241-248): a kernel-style `\begin`
     // that looks up only `\<name>` — arabtex's alatex.sty:113 — finds it, where Perl's binding (only `\begin{<name>}`)
     // left "Environment comment undefined" and typeset the comment (KNOWN_PERL_ERRORS #1148; 2104.08110's commented-out
     // figure, 4 missing images).
     // Guard: `perfect_kernel_batch79k::a_comment_under_a_kernel_begin_is_skipped`.
-    let_i(
-      &T_CS!(format!("\\{name_str}")),
-      &T_CS!(begin_mark_let),
-      None,
-    );
+    if !name_str.is_empty() {
+      let_i(
+        &T_CS!(format!("\\{name_str}")),
+        &T_CS!(begin_mark_let),
+        None,
+      );
+    }
     Ok(Vec::new())
   });
 
@@ -99,17 +106,20 @@ LoadDefinitions!({
       None,
       Tokens::new(after_tokens)
     );
-    // comment.sty's own names (`\csarg\def{#1}`, comment.sty:234-240), as for an excluded comment above
-    let_i(
-      &T_CS!(s!("\\{name}")),
-      &T_CS!(s!("\\begin{{{name}}}")),
-      None,
-    );
-    let_i(
-      &T_CS!(s!("\\end{name}")),
-      &T_CS!(s!("\\end{{{name}}}")),
-      None,
-    );
+    // comment.sty's own names (`\csarg\def{#1}`, comment.sty:234-240), as for an excluded comment above, and none for
+    // an empty name
+    if !name.is_empty() {
+      let_i(
+        &T_CS!(s!("\\{name}")),
+        &T_CS!(s!("\\begin{{{name}}}")),
+        None,
+      );
+      let_i(
+        &T_CS!(s!("\\end{name}")),
+        &T_CS!(s!("\\end{{{name}}}")),
+        None,
+      );
+    }
     Ok(Vec::new())
   }));
 

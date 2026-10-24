@@ -64,3 +64,20 @@ fn a_comment_under_a_kernel_begin_is_skipped() {
   assert!(!xml.contains("HIDDEN"), "{xml}");
   assert_element(&xml, "p", &[], r#"<p xml:id="p1.1">A KEPT B</p>"#);
 }
+
+/// `\includecomment{}` with an empty name (a mistyped line, 2508.09827:687) names no command of the document: comment.sty's
+/// name is `\csname\endcsname`, and the binding's `\<name>`/`\end<name>` are made only for a name. Red (79k r1): the
+/// empty `\<name>` was read as `\\`, so every later line break read the rest of its line raw (2508.09827: 7 more errors,
+/// 2,800 words lost; here the second row and "After."). Repro package-bindings/includecomment_empty_name.
+#[test]
+fn an_empty_comment_name_leaves_end_alone() {
+  let (log, xml) = convert_files_with(
+    repro!("package-bindings/includecomment_empty_name.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains("<itemize"), "{xml}");
+  assert_eq!(xml.matches("<tr").count(), 2, "{xml}");
+  assert!(xml.contains("After."), "{xml}");
+}
