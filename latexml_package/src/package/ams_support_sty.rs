@@ -148,8 +148,15 @@ LoadDefinitions!({
   // `titlepage_class_call`, as revtex4_support's: gr-qc9404034).
   // The class's refused `\title` runs first for its side effects, as under the kernel's (sect05.rs `\title`,
   // OXIDIZED_DESIGN #482: the cvpr template's `\thetitle` under acmart, 2506.01799).
+  // amsart.cls:457 (amsbook.cls:436, amsproc.cls:435) `\renewcommand*{\title}`, :551-568 `\def\dedicatory#1`,
+  // `\def\keywords#1`, `\def\translator#1`, :555 `\newcommand*\subjclass`: none is `\long`, so a paragraph's end in
+  // the argument ends the call, "Paragraph ended before \subjclass was complete" (tex.web §396), and the paragraphs
+  // after it stay the document's. A `\subjclass{…: 65N12, 74G65` whose `}` never comes took the rest of the document
+  // into the classification, every `\label` with it (2212.11488, 81 of 153 references dangling). Guard
+  // `perfect_kernel_batch79m::an_unclosed_subjclass_ends_at_the_paragraph`.
   DefMacro!("\\title[]{}",
-    "\\lx@titlepage@class@call{title}{#1}{#2}{\\lx@replay@class@setter{title}{#1}{#2}\\gdef\\@shorttitle{#1}\\gdef\\@title{#2}\\ifx.#1.\\else\\lx@add@toctitle{#1}\\fi\\lx@add@title{#2}}");
+    "\\lx@titlepage@class@call{title}{#1}{#2}{\\lx@replay@class@setter{title}{#1}{#2}\\gdef\\@shorttitle{#1}\\gdef\\@title{#2}\\ifx.#1.\\else\\lx@add@toctitle{#1}\\fi\\lx@add@title{#2}}",
+    short => true);
 
   DefMacro!("\\lx@author@sep", ",\\ ");
   DefMacro!("\\lx@author@conj", "\\ and\\ ");   // \@@and
@@ -190,7 +197,7 @@ LoadDefinitions!({
     "\\lx@add@email[name={\\emailaddrname\\ifx.#1.\\else{, #1}~\\fi:\\ }]{\\lx@address@urlfont{#2}}");
   DefMacro!("\\urladdr[]{}",
     "\\lx@add@url[name={\\urladdrname\\ifx.#1.\\else{, #1}~\\fi:\\ }]{\\lx@address@urlfont{#2}}");
-  DefMacro!("\\dedicatory{}",   "\\lx@add@contact[role=dedicatory]{#1}");
+  DefMacro!("\\dedicatory{}",   "\\lx@add@contact[role=dedicatory]{#1}", short => true);
   // amsart's raw `\maketitle` internals, reached when a derivative class
   // redefines `\maketitle`/`\@maketitle` on top of `\LoadClass{amsart}`
   // (resphilosophica.cls:323 `\author@andify\authors`, :358 `\ifx\@empty
@@ -206,8 +213,8 @@ LoadDefinitions!({
   DefMacro!("\\author@andify{}", "");
   DefMacro!("\\@setabstract", "");
   DefMacro!("\\dateposted{}",   "\\lx@add@date[role=posted]{#1}");
-  DefMacro!("\\translator[]{}", "\\lx@add@translator[name={\\translname~}]{#2}");
-  DefMacro!("\\keywords{}",     "\\lx@add@keywords[name={\\keywordsname:~}]{#1}");
+  DefMacro!("\\translator[]{}", "\\lx@add@translator[name={\\translname~}]{#2}", short => true);
+  DefMacro!("\\keywords{}",     "\\lx@add@keywords[name={\\keywordsname:~}]{#1}", short => true);
 
   // \thanks{} ( == ack, not latex's \thanks, not in author)
   // make a throwaway optional argument available for OmniBus use
@@ -248,7 +255,8 @@ LoadDefinitions!({
   // (`\subjclass{{\sc AMS Subject Classification:} 06B05}`).
   DefMacro!("\\subjclass[Default:\\@subjclassyear]{}",
     "\\ifx.#1.\\else\\xdef\\@subjclassyear{#1}\\fi\
-     \\lx@add@classification[scheme={#1 Mathematics Subject Classification},name={\\subjclassname:~}]{#2}");
+     \\lx@add@classification[scheme={#1 Mathematics Subject Classification},name={\\subjclassname:~}]{#2}",
+    short => true);
 
   // amsart.cls:723-725 `\@setcopyright` prints the copyright only with a year (`\ifx\@empty\copyrightyear\else`; and
   // only with a series logo, `\ifx\@empty\@serieslogo`, which the frontmatter keeps as metadata): a class's
