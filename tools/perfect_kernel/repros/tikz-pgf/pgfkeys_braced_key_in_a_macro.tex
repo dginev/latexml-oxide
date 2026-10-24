@@ -1,0 +1,21 @@
+% witness: 2110.08325 (tikz/definitions.tex:3-15 `\newcommand{\drawGridVertex}[1][node]{\def\RelayedType{{#1}}…}`,
+%          `\node[\RelayedType, #1]` with `\tikzstyle{node} = […]`; reached once 79v found its `\input` files)
+% oracle:  pdflatex 0 errors: pgfkeys.code.tex:369-371 `\edef`s the key to `{node}`, and `\pgfkeys@addpath#1\relax`
+%          (:540-543) takes it as a delimited argument, which loses the one brace group: the key is /tikz/node
+% engines: rust int92a = "I do not know the key '/tikz/node'" for every vertex (pgfkeys_code_tex.rs `dispatch_item`
+%          added the path to `{node}`); a key starting with `/` keeps its text, as pgfkeys' `\pgfkeys@nevermind` does
+% expect:  0 errors, 0 warnings; both nodes drawn with the style's circle
+% status:  RED (int92a) -> GREEN (79w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tikz}
+\tikzstyle{node} = [circle, draw]
+\newcommand{\vertex}[1][node]{\def\RelayedType{{#1}}\vertexrelay}
+\newcommand{\vertexrelay}[3][black]{\node[\RelayedType, draw=#1] at (#2, #3) {v};}
+\begin{document}
+\begin{tikzpicture}
+\vertex{0}{0}
+\vertex[node]{1}{0}
+\end{tikzpicture}
+Done.
+\end{document}

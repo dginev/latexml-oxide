@@ -1,0 +1,34 @@
+% witness: 2502.06786 (TabsNFigs/Teaser_Fig.tex:51-58 `\newenvironment{subcolumns}` = `\valign\bgroup…\cr` …
+%          `\crcr\egroup`, the teaser figure's three panels in two columns; brk89)
+% oracle:  pdflatex 0 errors: tex.web §768-812 sets each line a `\cr` ends as a column, its `&` entries stacked from
+%          the top in internal vertical mode (§785), so a column's `\par` starts a new paragraph in it
+% engines: rust int92a = "File ended while scanning text of \valign" for the environment (its `\egroup` is no `}`),
+%          the figure's panels, caption and label and every later word lost, and the explicit `\valign{…}`'s entries
+%          dropped; Perl's `DefMacro('\valign','')` leaves the template's bare `#` in the stream
+% expect:  0 errors, 0 warnings; one table per `\valign`, its columns side by side (a1/a2 over b1/b2/b3), the column's
+%          two paragraphs kept apart; the figure's caption, label and reference; "After" kept
+% status:  RED (int92a) -> GREEN (79w)
+% preload: ar5iv.sty
+\documentclass{article}
+\newenvironment{subcolumns}[1][\columnwidth]
+ {\valign\bgroup\hsize=#1\vfil##\vfil\cr}
+ {\crcr\egroup}
+\newcommand{\nextsubcolumn}{\cr\noalign{\hfill}}
+\begin{document}
+Text \valign{\hbox{#}&\hbox{#}&\hbox{#}\cr a1&a2\cr b1&b2&b3\cr} between.
+
+\valign{\hsize=3cm\vfil#\vfil\cr
+First column top.\par Still first column.\cr
+\noalign{\hfill}
+Second column.\cr}
+
+\begin{figure}
+\begin{subcolumns}[0.3\textwidth]
+Panel A text.
+\nextsubcolumn
+Panel B text.
+\end{subcolumns}
+\caption{The two panels.}\label{fig:panels}
+\end{figure}
+After, see Figure~\ref{fig:panels}.
+\end{document}

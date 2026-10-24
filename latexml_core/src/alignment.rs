@@ -229,6 +229,42 @@ impl Alignment {
 
   pub fn rows(&self) -> &VecDeque<Row> { &self.rows }
   pub fn rows_mut(&mut self) -> &mut VecDeque<Row> { &mut self.rows }
+
+  /// Turns the rows read into the table's columns: `\valign`'s body is read as `\halign`'s is, but each line its `\cr`
+  /// ends is a column of the table, its `&`-separated entries stacked from the top (tex.web §768, §785), and a span
+  /// covers rows. A column shorter than the longest ends in empty cells; the material a `\noalign` put between
+  /// columns opens the first row.
+  pub fn transpose(&mut self) {
+    let columns: Vec<Row> = self.rows.drain(..).collect();
+    let height = columns
+      .iter()
+      .map(|column| column.get_columns().len())
+      .max()
+      .unwrap_or(0);
+    let mut rows: Vec<Row> = (0..height)
+      .map(|_| {
+        let mut row = self.template.clone();
+        row.get_columns_mut().clear();
+        row
+      })
+      .collect();
+    for mut column in columns {
+      if let Some(first) = rows.first_mut() {
+        first.before.append(&mut column.before);
+        first.before.append(&mut column.after);
+      }
+      let mut cells = std::mem::take(column.get_columns_mut()).into_iter();
+      for row in &mut rows {
+        let mut cell = cells
+          .next()
+          .unwrap_or_else(|| Cell { empty: true, ..Cell::default() });
+        std::mem::swap(&mut cell.colspan, &mut cell.rowspan);
+        std::mem::swap(&mut cell.colspanned, &mut cell.rowspanned);
+        row.get_columns_mut().push(cell);
+      }
+    }
+    self.rows = rows.into();
+  }
   pub fn get_cached_height(&self) -> Option<Dimension> { self.cached_height }
   pub fn get_cached_depth(&self) -> Option<Dimension> { self.cached_depth }
   pub fn get_row_heights(&self) -> &[Dimension] { &self.row_heights }

@@ -166,7 +166,7 @@ fn alignment_brace_is_scanned() {
 
 /// 60j: the box primitives find their `{` after the box specification as tex.web §645 `scan_spec`'s §403
 /// `scan_left_brace` — `\hbox\relax\mac` with `\def\mac{{bravo}}` is a box of "bravo"; skipping to the next `{`
-/// unexpanded dropped the rest of the document. `\valign` swallows its alignment after the same scan. Repro
+/// unexpanded dropped the rest of the document. `\valign` finds its `{` the same way and, since 79w, sets its column. Repro
 /// boxes-groups/box_brace_is_scanned.
 #[test]
 fn box_brace_is_scanned() {
@@ -203,7 +203,7 @@ fn box_brace_is_scanned() {
       (
         "para",
         "p6",
-        r##"<para class="ltx_noindent" xml:id="p6"><p>Hotel  juliet.</p></para>"##,
+        r##"<para class="ltx_noindent" xml:id="p6"><p>Hotel <tabular><tr><td align="left" class="ltx_nopad_l ltx_nopad_r"><inline-block vattach="bottom"><p>india</p></inline-block></td></tr></tabular> juliet.</p></para>"##,
       ),
     ],
   );

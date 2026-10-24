@@ -490,27 +490,7 @@ LoadDefinitions!({
   // Perl TeX_Tables L159-184: \halign BoxSpecification
   DefConstructor!("\\halign BoxSpecification", "#alignment",
   halign_primitive => true,
-  reversion => sub[whatsit, _args] {
-    let mut tks = vec![T_CS!("\\halign")];
-    if let Some(spec) = whatsit.get_arg(1) {
-      tks.extend(spec.revert()?.unlist());
-    }
-    tks.push(T_BEGIN!());
-    if let Some(Stored::Tokens(template_tks)) = whatsit.get_property("template_tokens").as_deref() {
-      tks.extend_from_slice(template_tks.unlist_ref());
-    }
-    tks.push(T_CS!("\\cr"));
-    if let Some(Stored::Digested(alignment_d)) = whatsit.get_property("alignment").as_deref()
-      && let DigestedData::Alignment(data) = alignment_d.data() {
-        // Mirror line-30 fix: tolerate a re-entrant borrow during
-        // reversion rather than panic. See comment there.
-        if let Ok(d) = data.try_borrow() {
-          tks.extend(d.revert()?.unlist());
-        }
-      }
-    tks.push(T_END!());
-    Ok(Tokens::new(tks))
-  },
+  reversion => sub[whatsit, _args] { alignment_primitive_reversion(whatsit, T_CS!("\\halign")) },
   bounded => true,
   leave_horizontal => true,
   sizer => sub[whatsit] {
@@ -551,18 +531,53 @@ LoadDefinitions!({
   // \valign           c  begins the vertical alignment of material (i.e., makes a table containing
   // columns).
 
-  // TeX §768-812: `\valign<box spec>{<alignment>}` — a vertical alignment
-  // renders nothing here, but it must CONSUME its alignment material: Perl's
-  // `DefMacro('\valign','')` (TeX_Tables.pool.ltxml:555) leaves the template
-  // group in the stream, whose bare `#` reaches the stomach — fancyvrb.sty:570
-  // `\FancyVerbTab` = `\valign{\vfil##\vfil\cr…}`, one error per displayed
-  // `Verbatim` line with a tab under `showtabs` (pygmentex_demo). KPE #142.
-  // Guard: `perfect_kernel_batch54::valign_swallows_its_alignment`. Its `{` is found as §403 `scan_left_brace`
-  // (§774 `init_align`), as `\halign`'s: `\valign\relax{…}` swallowed the `\relax` as its argument and set the
-  // alignment as text.
-  DefPrimitive!("\\valign BoxSpecification", {
-    scan_left_brace()?;
-    read_balanced_text(ExpansionLevel::Off, false)?;
+  // TeX §768-812: `\valign<box spec>{<alignment>}` sets each line its `\cr` ends as a column of the table, its
+  // `&`-separated entries stacked from the top, each built in internal vertical mode and packed as a vbox (§785
+  // `init_span`, §796 `fin_col`). The body is read as `\halign`'s is (`halign_after_digest`, its `{` found as §403
+  // `scan_left_brace`, `\valign\relax{…}` too), each template column inside a `\vbox`, and the lines read are turned
+  // into the table's columns (`Alignment::transpose`). It is horizontal material: in vertical mode it starts a
+  // paragraph (§1090 `vmode+valign`: `back_to_hmode`), so it closes none. Perl's `DefMacro('\valign','')`
+  // (TeX_Tables.pool.ltxml:555) leaves the template in the stream, whose bare `#` reaches the stomach — fancyvrb.sty:570
+  // `\FancyVerbTab` = `\valign{\vfil##\vfil\cr…}`, one error per displayed `Verbatim` line with a tab under `showtabs`
+  // (pygmentex_demo, KPE #142); consuming the body unread dropped its entries and, for a body closed by `\egroup`
+  // (an environment's begin `\valign\bgroup…\cr`, its end `\crcr\egroup`), the rest of the file: 2502.06786's teaser
+  // figure with its caption and label ("File ended while scanning text of \valign"). Guards
+  // `perfect_kernel_batch54::valign_swallows_its_alignment`, `perfect_kernel_batch79w::valign_*`.
+  DefConstructor!("\\valign BoxSpecification", "#alignment",
+  reversion => sub[whatsit, _args] { alignment_primitive_reversion(whatsit, T_CS!("\\valign")) },
+  bounded => true,
+  sizer => sub[whatsit] {
+    match whatsit.get_property("alignment").as_deref() { Some(Stored::Digested(alignment_d)) => {
+      let (w, h, d, _, _, _) = alignment_d.clone().get_size(None)?;
+      Ok((w, h, d))
+    } _ => {
+      Ok((Dimension::default(), Dimension::default(), Dimension::default()))
+    }}
+  },
+  after_digest => sub[whatsit] {
+    halign_after_digest(whatsit, HashMap::default(), |mut template, xml_attrs| {
+      let in_vbox = |cell: &mut Cell| {
+        let mut before = vec![T_CS!("\\vbox"), T_CS!("\\bgroup")];
+        before.extend(cell.before.take().map(Tokens::unlist).unwrap_or_default());
+        cell.before = Some(Tokens::new(before));
+        let mut after = cell.after.take().map(Tokens::unlist).unwrap_or_default();
+        after.push(T_CS!("\\egroup"));
+        cell.after = Some(Tokens::new(after));
+      };
+      template.get_columns_mut().iter_mut().for_each(in_vbox);
+      template.get_repeated_mut().iter_mut().for_each(in_vbox);
+      alignment_bindings(template, String::new(), SymHashMap::default(), xml_attrs);
+      with_value("Alignment", |v| {
+        if let Some(Stored::Digested(d)) = v
+          && let DigestedData::Alignment(alignment) = d.data() {
+            alignment.borrow_mut().is_halign = true;
+          }
+      });
+    })?;
+    if let Some(Stored::Digested(alignment_d)) = whatsit.get_property("alignment").as_deref()
+      && let DigestedData::Alignment(alignment) = alignment_d.data() {
+        alignment.borrow_mut().transpose();
+      }
   });
 
   // VERY tricky (and mostly Wrong).
@@ -943,6 +958,30 @@ fn caption_row_keeps_its_content(row: &Row) {
 /// matrices, must not be). ONE implementation: the SVG copy once kept an
 /// unconditional decrement after the tabular one gained this guard (batch
 /// 54), and every tikz-cd inside an amsmath cell left the cell's math open.
+/// The reversion of an `\halign` or `\valign`: the primitive, its box specification, the template and the rows.
+fn alignment_primitive_reversion(whatsit: &Whatsit, primitive: Token) -> Result<Tokens> {
+  let mut tks = vec![primitive];
+  if let Some(spec) = whatsit.get_arg(1) {
+    tks.extend(spec.revert()?.unlist());
+  }
+  tks.push(T_BEGIN!());
+  if let Some(Stored::Tokens(template_tks)) = whatsit.get_property("template_tokens").as_deref() {
+    tks.extend_from_slice(template_tks.unlist_ref());
+  }
+  tks.push(T_CS!("\\cr"));
+  if let Some(Stored::Digested(alignment_d)) = whatsit.get_property("alignment").as_deref()
+    && let DigestedData::Alignment(data) = alignment_d.data()
+  {
+    // Mirror line-30 fix: tolerate a re-entrant borrow during
+    // reversion rather than panic. See comment there.
+    if let Ok(d) = data.try_borrow() {
+      tks.extend(d.revert()?.unlist());
+    }
+  }
+  tks.push(T_END!());
+  Ok(Tokens::new(tks))
+}
+
 pub fn halign_after_digest(
   whatsit: &mut Whatsit,
   mut xml_attrs: HashMap<String, String>,

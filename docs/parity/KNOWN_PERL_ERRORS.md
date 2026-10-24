@@ -5180,9 +5180,13 @@ its `{<alignment>}` material, whose template `#` then reaches the stomach:
 fancyvrb.sty:566-575 `showtabs` renders each tab through `\FancyVerbTab` =
 `\valign{\vfil##\vfil\cr…}` — one "The token # should never reach Stomach"
 per displayed `Verbatim` line containing a tab (pygmentex_demo ×3). Trigger:
-`\begin{Verbatim}[showtabs,tabsize=1]` with a literal tab in a line. Rust:
-`\valign BoxSpecification {}` reads and discards the alignment (tex.web
-§768). Guard: `perfect_kernel_batch54::valign_swallows_its_alignment`.
+`\begin{Verbatim}[showtabs,tabsize=1]` with a literal tab in a line. Rust
+(79w, superseding the earlier read-and-discard): `\valign` is an alignment, its body read as `\halign`'s, each entry
+in a `\vbox` (tex.web §785, §796), the lines read turned into the table's columns (`Alignment::transpose`). Discarding
+the body dropped its entries, and a body closed by `\egroup` (an environment's begin `\valign\bgroup…\cr`, its end
+`\crcr\egroup`) read to the end of the file: 2502.06786's teaser figure, caption and label and the rest of its file
+("File ended while scanning text of \valign"). Guards: `perfect_kernel_batch54::valign_swallows_its_alignment`,
+`perfect_kernel_batch79w::valign_sets_its_columns_side_by_side`; repro kernel-alignment/valign_columns_side_by_side.
 
 ## 143. A second `\begin{document}` re-fires the begin-document hooks (Rust fixes)
 

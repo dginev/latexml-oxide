@@ -2349,9 +2349,10 @@ fn declare_caption_type_makes_a_float() {
   assert!(!xml.contains("[Listagem][Lista"), "{xml}");
 }
 
-/// KNOWN_PERL_ERRORS #142: `\valign{…}` consumes its alignment
+/// KNOWN_PERL_ERRORS #142: `\valign{…}` reads its template and entries
 /// (fancyvrb.sty:570 `\FancyVerbTab`: one `#`-reaches-stomach error per
-/// tab-bearing `Verbatim` line under `showtabs`, pygmentex_demo).
+/// tab-bearing `Verbatim` line under `showtabs`, pygmentex_demo); since 79w
+/// the tab mark's three symbols are the alignment's columns.
 #[test]
 fn valign_swallows_its_alignment() {
   let tex = "\\documentclass{article}
