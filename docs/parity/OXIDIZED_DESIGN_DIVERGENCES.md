@@ -22361,9 +22361,12 @@ came (KNOWN_PERL_ERRORS #1012).
 
 **Rust** (77v): `ExpandableOptions::short` — a binding's macro made with `short => true` checks its arguments for
 `\par` as #442's TeX-declared macros do, wherever it is made (`Expandable::checks_par`, expandable.rs). amsppt_sty.rs's
-`\footnote` and `\footnotetext` are such macros, handing the text to the note constructors. No other binding is
-changed: a binding's macros stay `\long` unless the original's non-`\long` reading is the point. Guard
-`perfect_kernel_batch77v::amsppt_footnote_argument_runs_past_par`.
+`\footnote` and `\footnotetext` are such macros, handing the text to the note constructors. 79m: ams_support_sty.rs's
+`\title`, `\subjclass`, `\keywords`, `\dedicatory`, `\translator` (amsart.cls:457/551-568, amsbook.cls, amsproc.cls:
+`\renewcommand*`, `\newcommand*`, `\def`), so a `\subjclass{…` whose `}` never comes stops at the paragraph's end
+(KNOWN_PERL_ERRORS #1150; 2212.11488). No other binding is changed: a binding's macros stay `\long` unless the
+original's non-`\long` reading is the point. Guards `perfect_kernel_batch77v::amsppt_footnote_argument_runs_past_par`,
+`perfect_kernel_batch79m::an_unclosed_subjclass_ends_at_the_paragraph`.
 
 ### 783. A document's `\newtheorem` replaces a binding's theorem of the name, also where the real class declares it (Perl: replaced, every `\newtheorem` redefining)
 

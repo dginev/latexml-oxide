@@ -17824,3 +17824,30 @@ undefined", and the comment's body is typeset. Minimal trigger: `\usepackage{com
 `\end<name>`) to the `\begin{<name>}`/`\end{<name>}` they define. Witness 2104.08110 (arabtex + comment: a
 commented-out figure typeset, its 4 images missing). Repro package-bindings/comment_under_kernel_begin; guard
 `perfect_kernel_batch79k::a_comment_under_a_kernel_begin_is_skipped`.
+
+## 1149. REVTeX's `\email` and `\homepage` read a `%` in the address as a comment
+
+revtex4.cls:4476-4490 (revtex4-1.cls:2378-2392, revtex4-2.cls:2399-2413) read the address under `\begingroup
+\sanitize@url`, which makes `%`, `~` and `_` other: `\homepage{http://www.nhn.ou.edu/%7Emilton}` is that address,
+printed "URL: http://www.nhn.ou.edu/%7Emilton". Perl's `DefMacro('\homepage[] Semiverbatim', …)`
+(revtex4_support.sty.ltxml:56, `\email` alike) reads with Semiverbatim's SPECIALS, which lack `%`: the `%` comments
+out the line's `}`, and the argument runs on through the document (everything after it inside the contact, every
+later `\label` lost). Minimal trigger: `\documentclass{revtex4}` … `\author{A}\homepage{http://x.org/%7Ea}` …
+`\section{S}\label{s} \ref{s}` (pdflatex 0 errors, "Sec. I"). Fixed in Rust (79m): `\email`/`\homepage` are
+`\begingroup\sanitize@url\@email{#1}` as the class writes them, the binding's `\@email`/`\@homepage` closing the group
+(revtex4_support_sty.rs). Witness 0712.3811 (76 of 84 references dangling → 0). Repro
+sectioning-frontmatter/revtex_homepage_percent; guard `perfect_kernel_batch79m::a_percent_in_a_revtex_address_is_the_address`.
+
+## 1150. The AMS classes' `\title`, `\subjclass`, `\keywords`, `\dedicatory`, `\translator` read their argument `\long`
+
+amsart.cls:457 `\renewcommand*{\title}`, :555 `\newcommand*\subjclass`, :551-568 `\def\dedicatory#1`,
+`\def\keywords#1`, `\def\translator#1` (amsbook.cls:436-514, amsproc.cls:435-544 alike): none is `\long`, so a `\par`
+in the argument ends the call, "Paragraph ended before \subjclass was complete" (tex.web §396), and the paragraphs
+after it stay the document's. Perl's `DefMacro('\subjclass[Default:\@subjclassyear]{}', …)` (ams_support.sty.ltxml:141,
+the others alike) reads to the closing brace, and a `\subjclass{…` whose `}` never comes takes the rest of the file
+into the classification. Minimal trigger: `\documentclass{amsart}` … `\subjclass{65N12` + blank line +
+`\section{Intro}\label{s} \ref{s}` … `\end{document}` (before `\maketitle`: pdflatex 1 error, the section kept; after it,
+`\@cleartopmattertags` has made `\subjclass` `\relax`, amsart.cls:620-630, and the text prints in place). Fixed in Rust
+(79m): the five are `short => true` (OXIDIZED_DESIGN_DIVERGENCES #782). Witness 2212.11488 (81 of 153 references
+dangling). Repro sectioning-frontmatter/ams_subjclass_unclosed; guard
+`perfect_kernel_batch79m::an_unclosed_subjclass_ends_at_the_paragraph`.

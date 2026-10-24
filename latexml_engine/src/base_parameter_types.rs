@@ -871,6 +871,20 @@ LoadDefinitions!({
     },
     semiverbatim => Some(Vec::new()));
 
+  // Rust-only: a Semiverbatim whose `%` is other too, for an address a class reads under its own sanitizer —
+  // revtex4.cls:4476-4490 `\begingroup\sanitize@url\@email{#1}` (`\@makeother\%`, `\~`, `\_`): an
+  // `\homepage{http://x.org/%7Ea}` is that address, where Semiverbatim's SPECIALS (no `%`) made the `%` a comment
+  // that took the line's `}` and the argument ran on through the document (KNOWN_PERL_ERRORS #1149; 0712.3811).
+  DefParameterType!(UrlSemiverbatim,
+    sub[_inner, _extra] { read_arg(ExpansionLevel::Off) },
+    reversion => sub[arg, _inner, _extra] {
+      let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
+      read_tokens.extend(arg.iter().map(|t| t.revert()));
+      read_tokens.push(T_END!());
+      Ok(Tokens::new(read_tokens))
+    },
+    semiverbatim => Some(vec!['%']));
+
   // Semiverbatim variant for FILE-NAME arguments that may arrive as
   // expandable tokens: tokenize PLAIN at the CURRENT catcodes (so an expl3
   // `\l_..._tl` class name stays ONE control sequence — the real kernel's

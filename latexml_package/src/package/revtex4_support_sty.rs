@@ -109,13 +109,15 @@ LoadDefinitions!({
   // (revtex4-1.cls:1959-1961, 2383-2391), its `_` as typed (revtex4_cls.rs sets REVTeX 4.0's in typewriter type;
   // 2301.03570, 2301.03067)
   // revtex4-1.cls:2383-2392 (revtex4.cls:4481-4491, revtex4-2.cls:2404-2413): `\email` is `\begingroup\sanitize@url
-  // \@email{#1}`, and `\@email{label}{address}` closes that group, so the address is read with `%` other, as typed:
+  // \@email{#1}`, so the address is read with `%` other, as typed (`UrlSemiverbatim`):
   // `\homepage{http://www.nhn.ou.edu/%7Emilton}` (0712.3811) is the address, where a `%` comment swallowed the rest
-  // of the document, every `\label` with it. A class that re-dresses `\email` over them (cej.cls:88
+  // of the document, every `\label` with it (KNOWN_PERL_ERRORS #1149). One call `\email[]{}`, as an author-block line
+  // reads it (`perfect_kernel_batch64::email_command_option_on_author_line`).
+  DefMacro!("\\email[] UrlSemiverbatim",    "\\lx@add@email[name={#1}]{\\lx@address@textfont{#2}}");
+  DefMacro!("\\homepage[] UrlSemiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
+  // `\@email{label}{address}` closes the class's group. A class that re-dresses `\email` over them (cej.cls:88
   // `\renewcommand*\email[1][E-mail: ]{\begingroup\sanitize@url\@email{#1}}`; 0710.1022, 1201.4230 and 5 more) left
   // the group open without them, `%` other to the end of the document.
-  DefMacro!("\\email[]",    "\\begingroup\\sanitize@url\\@email{#1}");
-  DefMacro!("\\homepage[]", "\\begingroup\\sanitize@url\\@homepage{#1}");
   DefMacro!("\\@email{} Semiverbatim",    "\\endgroup\\lx@add@email[name={#1}]{\\lx@address@textfont{#2}}");
   DefMacro!("\\@homepage{} Semiverbatim", "\\endgroup\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
   DefMacro!("\\thanks[]{}",              "\\lx@add@contact[role=thanks,name={#1}]{#2}");
