@@ -8686,7 +8686,8 @@ pub use sect07::prepare_latex_equation_counter;
 pub use sect08::{declare_bound_text_symbols, declare_capital_greek, declare_capital_greek_named};
 pub use sect10::math_array_bindings;
 pub use sect11::{
-  external_ref_properties, label_type, record_external_label, settle_empty_held_tags, typed_label,
+  external_label_field, external_label_tex, external_ref_properties, external_ref_properties_with,
+  label_type, record_external_cref, record_external_label, settle_empty_held_tags, typed_label,
 };
 pub use sect13::nfss_selected_font;
 

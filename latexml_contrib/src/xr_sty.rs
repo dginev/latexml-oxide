@@ -3,7 +3,7 @@ use latexml_core::{
   binding::content::{FindFileOptions, find_file},
   common::error::emit_warn,
 };
-use latexml_engine::latex_constructs::record_external_label;
+use latexml_engine::latex_constructs::{record_external_cref, record_external_label};
 use latexml_package::prelude::*;
 
 #[rustfmt::skip]
@@ -11,10 +11,11 @@ LoadDefinitions!({
   // xr.sty:44-47 (v6; xr-hyper.sty:38-41 alike): `\externaldocument[prefix][nocite]{file}[url]` reads `file.aux` and
   // every `.aux` it `\@input`s, each `\newlabel{l}{{text}{page}…}` defining `\r@<prefix>l` (`\XR@test`), so `\ref{l}`
   // prints the other document's number. The raw package's `\r@…` never reached our `\ref`, a constructor post resolves:
-  // each such reference was a missing label where pdflatex prints "Fig. S3" (2412.14256; 21 of the census's 125
+  // each such reference was a missing label where pdflatex prints "Fig. S3" (1307.3388, 1608.05314; 21 of the census's 125
   // `\externaldocument` papers ship the external `.aux`, the rest print "??" in pdflatex too). The labels are recorded
-  // for `\ref` and `\eqref` (sect11.rs `record_external_label`); the `\bibcite`s v6 imports too (unless the second
-  // argument says `nocite`) are not. Where the URL is given its anchors are linked; the default, `file.pdf`, names no
+  // for `\ref` and `\eqref`, their text typeset as TeX (sect11.rs `record_external_label`), and cleveref's `<label>@cref`
+  // records and hyperref's anchors for `\cref` and `\autoref`, which name the type (2412.14256, 2508.18808, 2402.05535);
+  // the `\bibcite`s v6 imports too (unless the second argument says `nocite`) are not. Where the URL is given its anchors are linked; the default, `file.pdf`, names no
   // page of ours. The file is Semiverbatim so a name with `_` (`ex_supplement`) does not leak the underscore into text
   // mode (witness 2402.12241); xr v5 read `[prefix]{file}` only (xr-2023-07-04.sty:46-48), which this reads too.
   DefPrimitive!("\\externaldocument[][] Semiverbatim OptionalSemiverbatim", sub[(prefix, _nocite, file, url)] {
@@ -60,27 +61,30 @@ fn import_external_document(prefix: &str, file: &str, url: Option<&str>) {
           continue;
         };
         let fields: Vec<&str> = brace_groups(value).collect();
-        let reftext = fields
-          .first()
-          .map(|field| ref_text(field))
-          .unwrap_or_default();
-        if reftext.is_empty() {
+        let Some(text) = fields.first().map(|text| text.trim()) else {
+          continue;
+        };
+        // cleveref's own record of the label, `\newlabel{<label>@cref}{{[<type>][<n>][<parents>]<number>}…}`
+        // (cleveref.sty `\cref@label`), is what `\cref` reads (`\r@<label>@cref`)
+        if let Some(key) = key.strip_suffix("@cref") {
+          if let Some((ty, number)) = cref_record(text) {
+            let name = s!("{prefix}{key}");
+            record_external_cref(&clean_label(&name, None), ty, number);
+          }
           continue;
         }
         // hyperref's `\newlabel` holds the anchor fourth (`{text}{page}{title}{anchor}{}`)
-        let href = url.filter(|url| !url.is_empty()).map(|url| {
-          match fields
-            .get(3)
-            .map(|anchor| anchor.trim())
-            .filter(|anchor| !anchor.is_empty())
-          {
-            Some(anchor) => s!("{url}#{anchor}"),
-            None => url.to_string(),
-          }
+        let anchor = fields
+          .get(3)
+          .map(|anchor| anchor.trim())
+          .filter(|anchor| !anchor.is_empty());
+        let href = url.filter(|url| !url.is_empty()).map(|url| match anchor {
+          Some(anchor) => s!("{url}#{anchor}"),
+          None => url.to_string(),
         });
         let name = s!("{prefix}{key}");
         let label = clean_label(&name, None);
-        record_external_label(&label, &reftext, href.as_deref());
+        record_external_label(&label, text, anchor, href.as_deref());
       } else if let Some(rest) = line.trim_start().strip_prefix("\\@input")
         && let Some(name) = brace_groups(rest).next()
       {
@@ -120,15 +124,15 @@ fn brace_groups(text: &str) -> impl Iterator<Item = &str> {
   })
 }
 
-/// The text `\ref` prints for a label's first field: its groups unwrapped and `\relax` dropped (`{{S2.5}}`, `{4\relax }`
-/// print "S2.5", "4").
-fn ref_text(field: &str) -> String {
-  field
-    .replace("\\relax", "")
-    .chars()
-    .filter(|c| *c != '{' && *c != '}')
-    .collect::<String>()
-    .split_whitespace()
-    .collect::<Vec<_>>()
-    .join(" ")
+/// The type and the number of a cleveref record, `[<type>][<n>][<parents>]<number>` (cleveref.sty `\cref@label`).
+fn cref_record(text: &str) -> Option<(&str, &str)> {
+  let mut rest = text.trim_start();
+  let mut groups = Vec::new();
+  for _ in 0..3 {
+    let inner = rest.strip_prefix('[')?;
+    let close = inner.find(']')?;
+    groups.push(&inner[..close]);
+    rest = &inner[close + 1..];
+  }
+  Some((groups[0].trim(), rest.trim()))
 }

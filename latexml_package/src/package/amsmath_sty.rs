@@ -1915,7 +1915,7 @@ LoadDefinitions!({
       unpack_opt_ref!(args => label_opt);
       let label = clean_label(&label_opt.as_ref().unwrap().to_string(), None).into_owned();
       let mut props = stored_map!("label" => Stored::String(pin(&label)));
-      latexml_engine::latex_constructs::external_ref_properties(&label, false, &mut props);
+      latexml_engine::latex_constructs::external_ref_properties(&label, false, &mut props)?;
       Ok(props)
   });
   DefMacro!("\\thetag{}", "{\\rm #1}");

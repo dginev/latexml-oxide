@@ -3,7 +3,10 @@ use latexml_core::{
   common::error::Result as CoreResult,
   document::{Document, can_contain_qsym, get_node_qname},
 };
-use latexml_engine::setup_binding_language::{accent_composite, accent_inner_name};
+use latexml_engine::{
+  latex_constructs::{external_label_field, external_label_tex, external_ref_properties_with},
+  setup_binding_language::{accent_composite, accent_inner_name},
+};
 use libxml::tree::NodeType;
 
 use crate::{package::url_sty::LEADING_BACKSLASH_RE, prelude::*};
@@ -969,13 +972,28 @@ LoadDefinitions!({
   // `\NewDocumentCommand\autoref{s}{\leavevmode…}`): a paragraph-initial `\autoref` starts the
   // paragraph, so the space after it is an inter-word space, not skipped in vertical mode
   // (tex.web §1045; 33 papers of the 3,003-paper A/B, witness 2605.02640).
+  // A label only another document holds prints what hyperref prints there from the text and anchor xr imported for it
+  // (`external_autoref_text`).
   DefConstructor!("\\autoref OptionalMatch:* Semiverbatim",
-  "<ltx:ref ?#1(class='ltx_refmacro_autoref ltx_nolink')(class='ltx_refmacro_autoref')
-    show='autoref' labelref='#label' _force_font='true'/>",
+  "?#reftext(<ltx:ref class='#refclass' show='autoref' labelref='#label' ?#refhref(href='#refhref')() _force_font='true'>\
+   #reftext</ltx:ref>)(<ltx:ref ?#1(class='ltx_refmacro_autoref ltx_nolink')(class='ltx_refmacro_autoref')
+    show='autoref' labelref='#label' _force_font='true'/>)",
   enter_horizontal => true,
   properties => sub[args] {
     let refarg = &args[1];
-    Ok(stored_map!("label" => clean_label(&refarg.as_ref().unwrap().to_string(), None).to_string()))
+    let label = clean_label(&refarg.as_ref().unwrap().to_string(), None).to_string();
+    let mut props = stored_map!("label" => label.clone());
+    if let Some(text) = external_autoref_text(&label)? {
+      let star = args[0].is_some();
+      external_ref_properties_with(&label, star, text, &mut props);
+      let class = if star {
+        "ltx_refmacro_autoref ltx_nolink ltx_ref_external"
+      } else {
+        "ltx_refmacro_autoref ltx_ref_external"
+      };
+      props.insert("refclass", Stored::String(pin(class)));
+    }
+    Ok(props)
   });
 
   // hyperref.sty:8183-8203 `\autopageref{label}` = `\hyperref[{label}]
@@ -2415,4 +2433,48 @@ pub fn define_hyper_urls(href: bool, url: bool) -> Result<()> {
     sizer     => "#5",
     reversion => "#1#2#4#3");
   Ok(())
+}
+
+/// What `\autoref` prints for a label only another document holds, from the `\r@<label>` xr imported
+/// (`record_external_label`): hyperref's name of the anchor's type, `\<type>autorefname` or `\<type>name` (a trailing
+/// `*` stripped next), before an active `~`, then the label's text and `\null` (hyperref.sty:8211-8278
+/// `\HyRef@autosetref`, `\HyRef@testreftype`, the type being the anchor up to its first `.`: `theorem.3`, `figure.caption.1`).
+/// A name that is no name noun is not run, as at a target of this document (`\lx@autorefnum@@`); a label with no anchor
+/// (the other document without hyperref) prints its text alone, as pdflatex does with "No autoref name". Witness
+/// 2402.05535 (`\autoref*` to its `srds-` labels).
+fn external_autoref_text(label: &str) -> Result<Option<Digested>> {
+  let Some(text) = external_label_tex(label, "label") else {
+    return Ok(None);
+  };
+  // (`\null`, the empty box after the number, prints nothing: `\relax` here, so it leaves no empty element, and it still
+  // ends a name's `~#1\null` argument, a delimiter being matched by the token)
+  let mut tokens = vec![
+    T_CS!("\\begingroup"),
+    T_CS!("\\let"),
+    T_CS!("\\null"),
+    T_CS!("\\relax"),
+  ];
+  let anchor = external_label_field(label, "anchor").unwrap_or_default();
+  let ty = anchor.split('.').next().unwrap_or_default();
+  if !ty.is_empty() {
+    let unstarred = ty.strip_suffix('*').unwrap_or(ty);
+    let name = [
+      s!("\\{ty}autorefname"),
+      s!("\\{ty}name"),
+      s!("\\{unstarred}autorefname"),
+      s!("\\{unstarred}name"),
+    ]
+    .into_iter()
+    .find(|cs| is_defined(cs));
+    match name {
+      Some(cs) if cs.ends_with("autorefname") || is_name_noun_cs(&cs) => {
+        tokens.extend([T_CS!(cs), T_ACTIVE!('~')])
+      },
+      Some(_) => tokens.push(T_ACTIVE!('~')),
+      None => {},
+    }
+  }
+  tokens.extend(text.unlist());
+  tokens.extend([T_CS!("\\null"), T_CS!("\\endgroup")]);
+  Ok(Some(digest(Tokens::new(tokens))?))
 }

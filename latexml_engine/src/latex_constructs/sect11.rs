@@ -166,7 +166,7 @@ pub(crate) fn load() -> Result<()> {
       unpack_opt_ref!(args => star, label_opt);
       let label = clean_label(&label_opt.as_ref().unwrap().to_string(), None).into_owned();
       let mut props = stored_map!("label" => Stored::String(pin(&label)));
-      external_ref_properties(&label, star.is_some(), &mut props);
+      external_ref_properties(&label, star.is_some(), &mut props)?;
       Ok(props)
   });
 
@@ -2449,40 +2449,80 @@ pub fn label_type(ty: Option<Tokens>) -> Vec<Token> {
 }
 
 /// Records a label of another document that xr's `\externaldocument` imported from that document's `.aux`
-/// (xr_sty.rs): the reference text its `\newlabel` gives and, where the document's URL was given, the link to its
-/// anchor. Global, as xr's `\protected@xdef\r@<label>` is (xr.sty `\XR@test`).
-pub fn record_external_label(label: &str, text: &str, href: Option<&str>) {
-  assign_value(
-    &s!("xr@label@{label}"),
-    Stored::String(pin(text)),
-    Some(Scope::Global),
-  );
-  if let Some(href) = href {
+/// (xr_sty.rs): the TeX its `\newlabel` gives as the reference text, the hyperref anchor it names (whose type `\autoref`
+/// prints) and, where the document's URL was given, the link to that anchor. Global, as xr's `\protected@xdef\r@<label>`
+/// is (xr.sty `\XR@test`).
+pub fn record_external_label(label: &str, text: &str, anchor: Option<&str>, href: Option<&str>) {
+  for (field, value) in [("label", Some(text)), ("anchor", anchor), ("href", href)] {
+    if let Some(value) = value {
+      assign_value(
+        &s!("xr@{field}@{label}"),
+        Stored::String(pin(value)),
+        Some(Scope::Global),
+      );
+    }
+  }
+}
+
+/// Records the cleveref type and number of another document's label, its `\newlabel{<label>@cref}{{[<type>][<n>]
+/// [<parents>]<number>}…}` (cleveref.sty `\cref@label`), which `\cref` prints (cleveref_sty.rs `external_cref_text`).
+pub fn record_external_cref(label: &str, ty: &str, number: &str) {
+  for (field, value) in [("creftype", ty), ("crefnum", number)] {
     assign_value(
-      &s!("xr@href@{label}"),
-      Stored::String(pin(href)),
+      &s!("xr@{field}@{label}"),
+      Stored::String(pin(value)),
       Some(Scope::Global),
     );
   }
+}
+
+/// A field xr recorded for a label of another document (`record_external_label`, `record_external_cref`): `label`, the
+/// reference text; `anchor`; `href`; `creftype`; `crefnum`.
+pub fn external_label_field(label: &str, field: &str) -> Option<String> {
+  match lookup_value(&s!("xr@{field}@{label}")) {
+    Some(Stored::String(value)) => Some(to_string(value)),
+    _ => None,
+  }
+}
+
+/// The TeX of a field xr recorded (`external_label_field`), read as the `.aux` it comes from is, `@` a letter: IEEEtran's
+/// `\newlabel{sec:a}{{\mbox {II-A}}…}` prints "II-A", as pdflatex typesets the `\r@<label>` xr defined.
+pub fn external_label_tex(label: &str, field: &str) -> Option<Tokens> {
+  external_label_field(label, field)
+    .map(|text| mouth::tokenize_internal(TeXString::assembled(text)))
 }
 
 /// Adds to a reference's properties the text a label of another document prints (`record_external_label`), as pdflatex
 /// prints the `\r@<label>` xr defined: `reftext`, `refclass` (`ltx_ref_external`, after `ltx_nolink` for a starred
 /// reference) and `refhref`. Post drops the text and the class where this document holds the label after all, as
 /// LaTeX's own `.aux`, read at `\begin{document}`, redefines the `\r@<label>` xr made in the preamble.
-pub fn external_ref_properties(label: &str, star: bool, props: &mut SymHashMap<Stored>) {
-  let Some(Stored::String(text)) = lookup_value(&s!("xr@label@{label}")) else {
-    return;
-  };
-  props.insert("reftext", Stored::String(text));
+pub fn external_ref_properties(
+  label: &str,
+  star: bool,
+  props: &mut SymHashMap<Stored>,
+) -> Result<()> {
+  if let Some(text) = external_label_tex(label, "label") {
+    external_ref_properties_with(label, star, digest(text)?, props);
+  }
+  Ok(())
+}
+
+/// `external_ref_properties` with the text the reference prints given: `\cref`'s and `\autoref`'s, which name the type.
+pub fn external_ref_properties_with(
+  label: &str,
+  star: bool,
+  text: Digested,
+  props: &mut SymHashMap<Stored>,
+) {
+  props.insert("reftext", Stored::Digested(text));
   let class = if star {
     "ltx_nolink ltx_ref_external"
   } else {
     "ltx_ref_external"
   };
   props.insert("refclass", Stored::String(pin(class)));
-  if let Some(Stored::String(href)) = lookup_value(&s!("xr@href@{label}")) {
-    props.insert("refhref", Stored::String(href));
+  if let Some(href) = external_label_field(label, "href") {
+    props.insert("refhref", Stored::String(pin(&href)));
   }
 }
 

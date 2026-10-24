@@ -25273,15 +25273,23 @@ raw package's `\r@…` never reach a `\ref` that post resolves: every such refer
 `\externaldocument` ship the external `.aux` — the others print "??" in pdflatex too — and 15 of the 21 now resolve every
 external reference). Ours (contrib xr_sty.rs, for xr and xr-hyper; siamart loads it as siamart220329.cls:1266
 does): `\externaldocument[prefix][nocite]{file}[url]` records each imported label's reference text (sect11.rs
-`record_external_label`), and `\ref`/`\eqref` print it in an `ltx:ref` of class `ltx_ref_external` that keeps its
+`record_external_label`), and `\ref`/`\eqref` print it, typeset as TeX (IEEEtran's `\mbox {IV-A.1}` prints "IV-A.1";
+2510.26552, 1312.7580), in an `ltx:ref` of class `ltx_ref_external` that keeps its
 `labelref` (an `href` to the URL's anchor where the URL is given; the default `file.pdf` names no page of ours). Post
 does not mark such a reference missing, and where this document holds the label after all it drops the imported text
 and fills the reference from the target here, as LaTeX's own `.aux`, read at `\begin{document}`, redefines the
 `\r@<label>` xr made in the preamble. A missing `.aux` warns, as xr does ("No file supp.aux; labels not imported").
-The text is the field as written, its braces dropped: an IEEEtran `\mbox {IV-A.1}` prints raw (open, 79h). Not
-imported: the `\bibcite`s v6 also reads, and cleveref's `@cref` records: `\cref` and `\autoref` to another document
-stay missing labels (2412.14256, 2402.05535, 2508.18808, 2608.12136; SYNC row "Complete breakage"). Repro package-bindings/xr_external_document_labels; guards
-`perfect_kernel_batch79g::{xr_prints_the_other_documents_numbers, xr_yields_to_a_label_of_this_document}`.
+`\cref` and `\autoref` name the type as pdflatex does (79h): xr also records cleveref's `<label>@cref` record
+(`{[<type>][<n>][<parents>]<number>}`) and hyperref's anchor, so `\cref` prints this document's `\crefname` of the type
+and the number in the type's label format, or the document's `\crefformat` for it (cleveref_sty.rs
+`external_cref_text`), and `\autoref` the anchor's type's `\<type>autorefname` (hyperref_sty.rs
+`external_autoref_text`, hyperref.sty `\HyRef@testreftype`): "fig. S1", "Equation (S2)", "subsection II-A". A label with
+no `@cref` record prints "??" under `\cref` in pdflatex and stays a missing label here. 2412.14256 19 → 0 unresolved
+references, 2508.18808 88 → 0, 2402.05535 41 → 14, 2608.12136 64 → 22 (the rest name labels the shipped `.aux` lacks, or
+an `\aux` round trip, `\clonelabel`, which pdflatex resolves on its second run). Not imported: the `\bibcite`s v6 also
+reads. Repros package-bindings/xr_external_document_labels, package-bindings/xr_external_cref_autoref; guards
+`perfect_kernel_batch79g::{xr_prints_the_other_documents_numbers, xr_yields_to_a_label_of_this_document}`,
+`perfect_kernel_batch79h::xr_cref_and_autoref_name_the_other_documents_types`.
 
 ### 892. `\begin{thebibliography}` takes one token as its argument when no brace follows (Perl: a braced argument only)
 

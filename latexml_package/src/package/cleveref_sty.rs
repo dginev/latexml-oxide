@@ -1,3 +1,7 @@
+use latexml_engine::latex_constructs::{
+  external_label_field, external_label_tex, external_ref_properties_with,
+};
+
 use crate::prelude::*;
 
 // Perl: cleveref.sty.ltxml — cleveref cross-referencing
@@ -274,13 +278,21 @@ LoadDefinitions!({
 
   // \lx@cref: the core constructor for cleveref references
   // Perl: DefConstructor('\lx@cref OptionalMatch:* HyperVerbatim Semiverbatim', ...)
+  // A label only another document holds prints what cleveref prints there from the type and number xr imported for it
+  // (`external_cref_text`).
   DefConstructor!("\\lx@cref OptionalMatch:* {} Semiverbatim",
-    "<ltx:ref labelref='#label' show='#2' ?#1(class='ltx_nolink')() _force_font='true'/>",
+    "?#reftext(<ltx:ref class='#refclass' labelref='#label' show='#2' ?#refhref(href='#refhref')() _force_font='true'>\
+     #reftext</ltx:ref>)(<ltx:ref labelref='#label' show='#2' ?#1(class='ltx_nolink')() _force_font='true'/>)",
     enter_horizontal => true,
     properties => sub[args] {
       let raw = args[2].as_ref().map(|a| a.to_string()).unwrap_or_default();
       let label = clean_label(raw.trim(), None).to_string();
-      Ok(stored_map!("label" => label))
+      let show = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      let mut props = stored_map!("label" => label.clone());
+      if let Some(text) = external_cref_text(&show, &label)? {
+        external_ref_properties_with(&label, args[0].is_some(), text, &mut props);
+      }
+      Ok(props)
     });
 
   // Where a `\label[<type>]`'s number forms print the object's number (`\lx@cleverref@labeltype` puts its refnum there).
@@ -1009,7 +1021,12 @@ fn cleverref_type_name(
   suffix: &str,
   theorem_fallback: bool,
 ) -> Tokens {
-  let ctype = cref_type(type_arg);
+  cref_name_of(&cref_type(type_arg), prefix, suffix, theorem_fallback)
+}
+
+/// `\<prefix>@<ctype>@<suffix>`, cleveref's name of the type `ctype`, else (`theorem_fallback`) the type's own name
+/// (`\lx@name@<ctype>`), else nothing.
+fn cref_name_of(ctype: &str, prefix: &str, suffix: &str, theorem_fallback: bool) -> Tokens {
   let cs = s!("\\{}@{}@{}", prefix, ctype, suffix);
   if has_meaning(&T_CS!(&cs)) {
     return Tokens!(T_CS!(&cs));
@@ -1140,6 +1157,60 @@ fn split_label_tokens(tokens: Tokens) -> Vec<Tokens> {
     .map(trim_space_tokens)
     .filter(|g| !g.is_empty())
     .collect()
+}
+
+/// What `\cref` prints for a label only another document holds, from the type and number of its `\r@<label>@cref`, which
+/// xr imports (`record_external_cref`): the roles of the reference's show string in turn — the type's names from this
+/// document's `\crefname`s (`creftype`, …), the number in the type's label format (`creflabel`) or as it is (`refnum`),
+/// the format the document set for the type (`crefformat`, `crefformatcap`, `labelcrefformat`) — as cleveref builds the
+/// reference from the label's type and number (cleveref.sty:1047-1071 `\@@setcref`). The first alternative whose roles
+/// can all be given is printed (the document's format where it set one, else cleveref's default). A label of the other
+/// document with no cleveref record prints "??" in pdflatex, and is left a missing label. Witnesses 2412.14256,
+/// 2508.18808, 2608.12136 (their supplements' `\cref` targets).
+fn external_cref_text(show: &str, label: &str) -> Result<Option<Digested>> {
+  let (Some(ctype), Some(number)) = (
+    external_label_field(label, "creftype"),
+    external_label_tex(label, "crefnum"),
+  ) else {
+    return Ok(None);
+  };
+  let show = show.replace("\\lx@tilde", "~").replace("\\lx@cref@or", "|");
+  'alternatives: for alternative in show.split('|') {
+    let mut tokens = Vec::new();
+    for (index, role) in alternative.split('~').enumerate() {
+      if index > 0 {
+        tokens.push(T_ACTIVE!('~'));
+      }
+      let part = match role.trim() {
+        "creftype" => cref_name_of(&ctype, "cref", "name", true),
+        "creftypeplural" => cref_name_of(&ctype, "cref", "name@plural", false),
+        "creftypecap" => cref_name_of(&ctype, "Cref", "name", true),
+        "creftypepluralcap" => cref_name_of(&ctype, "Cref", "name@plural", false),
+        "creflabel" if cref_label_format_is_plain(&ctype) => number.clone(),
+        "creflabel" => cref_label_format(&ctype, number.clone()),
+        "refnum" => number.clone(),
+        role @ ("crefformat" | "crefformatcap" | "labelcrefformat") => {
+          let prefix = match role {
+            "crefformatcap" => "Cref",
+            "labelcrefformat" => "labelcref",
+            _ => "cref",
+          };
+          let format = T_CS!(s!("\\{prefix}@{ctype}@format"));
+          if !(cref_doc_format_set(prefix, &ctype, "format")
+            && cref_defined(&format)
+            && cref_format_is_text(&format))
+          {
+            continue 'alternatives;
+          }
+          cref_apply_format(format, number.clone())
+        },
+        _ => continue 'alternatives,
+      };
+      tokens.extend(part.unlist());
+    }
+    return Ok(Some(digest(Tokens::new(tokens))?));
+  }
+  Ok(None)
 }
 
 fn cref_multi(
