@@ -189,9 +189,13 @@ pub(crate) fn load() -> Result<()> {
   // Perl #2798: footnotes are inline blocks — internal_vertical, no leaveHorizontal.
   mode         => "inline_internal_vertical",
   sizer        => sub[whatsit] { note_size_in_line(whatsit) },
+  // The note's text is set by `\@footnotetext`'s `\@parboxrestore` (latex.ltx:17663, :16288), so its `\\` is the
+  // line break `\@normalcr` whatever the surrounding `\\` is: a note in a `p` cell or a longtable caption row
+  // (2201.11330's `\caption{…}\footnote{… seconds.\\ calls: …}` in {xltabular}) ended the row there, the table lost.
   before_digest => {
     enter_title_footnotes()?;
     neutralize_font();
+    Let!("\\\\", "\\@normalcr");
     digest(Tokens!(T_CS!("\\lx@note@reset")))?; },
   properties   => sub [args] {
     let arg1 = args[0].as_ref();
@@ -249,6 +253,7 @@ pub(crate) fn load() -> Result<()> {
   sizer      => sub[_whatsit] { Ok(out_of_line_size()) },
   before_digest => {
     enter_title_footnotes()?;
+    Let!("\\\\", "\\@normalcr"); // (`\@parboxrestore`, as `\lx@note`'s)
     digest(Tokens!(T_CS!("\\lx@note@reset")))?;
   },
   properties => sub [args] {
@@ -284,6 +289,7 @@ pub(crate) fn load() -> Result<()> {
   before_digest => {
     neutralize_font();
     begin_mode("inline_internal_vertical")?;
+    Let!("\\\\", "\\@normalcr"); // (`\@parboxrestore`, as `\lx@note`'s)
     digest(Tokens!(T_CS!("\\lx@note@reset")))?;
   },
   properties   => sub [args] {
@@ -307,6 +313,7 @@ pub(crate) fn load() -> Result<()> {
   before_digest => {
     neutralize_font();
     begin_mode("inline_internal_vertical")?;
+    Let!("\\\\", "\\@normalcr"); // (`\@parboxrestore`, as `\lx@note`'s)
     digest(Tokens!(T_CS!("\\lx@note@reset")))?;
   },
   properties => sub [args] {

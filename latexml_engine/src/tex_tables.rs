@@ -7,7 +7,10 @@ use std::{
   collections::VecDeque,
 };
 
-use latexml_core::alignment::{read_alignment_template, template::TemplateConfig};
+use latexml_core::alignment::{
+  read_alignment_template,
+  template::{Row, TemplateConfig},
+};
 
 use crate::prelude::*;
 
@@ -242,30 +245,41 @@ LoadDefinitions!({
   // Perl: l/c/r column types do NOT set `align` explicitly.
   // Alignment is derived from \hfil fills during extractAlignmentColumn:
   //   \hfil after  → left,  \hfil before+after → center,  \hfil before → right
+  // Under a `>{…}` prefix the cell is array.sty's `\d@llarbegin\insert@column\d@llarend` (array.sty:146-152, a group in a
+  // tabular, :279), so the prefix and the `<{…}` suffix run inside it: the hidden-column idiom
+  // `>{\lrbox0}l<{\endlrbox}` closes that group first (latex.ltx `\lrbox`'s `\endgroup`) and reopens it in the box
+  // (2106.01404's `H` column; pdflatex 0 errors). Perl's columns have no such group: "\endgroup Attempt to close
+  // non-boxing group", the table lost.
+  fn text_column(template: &mut Template, fill_before: bool, fill_after: bool) {
+    let grouped = template.has_pending_prefix();
+    let mut before = Vec::new();
+    if fill_before {
+      before.push(T_CS!("\\hfil"));
+    }
+    if grouped {
+      before.push(T_CS!("\\begingroup"));
+    }
+    let mut after = Vec::new();
+    if grouped {
+      after.push(T_CS!("\\endgroup"));
+    }
+    if fill_after {
+      after.push(T_CS!("\\hfil"));
+    }
+    template.add_column(Cell {
+      before: (!before.is_empty()).then(|| Tokens::new(before)),
+      after: (!after.is_empty()).then(|| Tokens::new(after)),
+      ..Cell::default()
+    })
+  }
   DefColumnType!("l", {
-    with_building_template(|template| {
-      template.add_column(Cell {
-        after: Some(Tokens!(T_CS!("\\hfil"))),
-        ..Cell::default()
-      })
-    });
+    with_building_template(|template| text_column(template, false, true));
   });
   DefColumnType!("c", {
-    with_building_template(|template| {
-      template.add_column(Cell {
-        before: Some(Tokens!(T_CS!("\\hfil"))),
-        after: Some(Tokens!(T_CS!("\\hfil"))),
-        ..Cell::default()
-      })
-    });
+    with_building_template(|template| text_column(template, true, true));
   });
   DefColumnType!("r", {
-    with_building_template(|template| {
-      template.add_column(Cell {
-        before: Some(Tokens!(T_CS!("\\hfil"))),
-        ..Cell::default()
-      })
-    });
+    with_building_template(|template| text_column(template, true, false));
   });
 
   // Perl TeX_Tables L69-74: p{Dimension} builds the cell as a *VBox* via
@@ -870,6 +884,48 @@ LoadDefinitions!({
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // And the general alignment processing.
+/// What a longtable caption's row holds besides the caption, a `\footnote` on it (`\caption{…}\footnote{…}\\`), is set
+/// after the caption's text, where longtable sets it in the caption's one spanning cell (longtable.sty:476
+/// `\LT@makecaption`): the row is dropped with the caption, and the note was lost with it (2201.11330, 0 errors).
+fn caption_row_keeps_its_content(row: &Row) {
+  // (what the cell typesets, out of a `p` column's box: it joins the caption's text)
+  fn shown(d: &Digested, out: &mut Vec<Digested>) {
+    match d.data() {
+      DigestedData::List(list) => list.borrow().boxes.iter().for_each(|b| shown(b, out)),
+      DigestedData::Whatsit(w)
+        if w.borrow().get_definition().get_cs_name() == "\\lx@tabular@p@" =>
+      {
+        if let Some(Some(body)) = w.borrow().get_args().get(2) {
+          shown(body, out);
+        }
+      },
+      _ if typesets_content(d) => out.push(d.clone()),
+      _ => {},
+    }
+  }
+  let mut rest = Vec::new();
+  for column in row.get_columns() {
+    if let Some(boxes) = &column.boxes {
+      shown(boxes, &mut rest);
+    }
+  }
+  if rest.is_empty() {
+    return;
+  }
+  if let Some(Stored::VecDigested(mut captions)) = lookup_value("LONGTABLE_CAPTIONS")
+    && let Some(caption) = captions.pop()
+  {
+    let mut boxes = vec![caption];
+    boxes.extend(rest);
+    captions.push(List::new(boxes).into());
+    assign_value(
+      "LONGTABLE_CAPTIONS",
+      Stored::VecDigested(captions),
+      Some(Scope::Global),
+    );
+  }
+}
+
 // If the Template is appropriately constructed, either by \halign or various \begin{tabular}
 // the body of the alignment is processed the same way.
 
@@ -1175,7 +1231,9 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit, runs_everycr: bool) -> Resul
         alignment_cell.borrow_mut().remove_row();
       } else if lookup_bool("LONGTABLE_CAPTION_ROW") {
         remove_value("LONGTABLE_CAPTION_ROW");
-        alignment_cell.borrow_mut().remove_row();
+        if let Some(row) = alignment_cell.borrow_mut().remove_row() {
+          caption_row_keeps_its_content(&row);
+        }
       }
       if !hidden {
         reversion.push(next.unwrap());

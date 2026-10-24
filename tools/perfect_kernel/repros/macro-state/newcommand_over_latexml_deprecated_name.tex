@@ -1,0 +1,24 @@
+% witness: 1804.03034 (`\newcommand{\DUAL}{{\PRIMAL}^{\sharp}}`, its last `{multline}` row ending in `\DUAL`; brk89)
+% oracle:  pdflatex 0 errors: `\DUAL`, `\FCN` and `\ROLE` do not exist in LaTeX, so `\newcommand` defines them
+% engines: rust int90a = 7 errors ("Ignoring redefinition (\newcommand) of \DUAL", `\DUAL` = LaTeXML's deprecated
+%          `\lx@dual`: "\endgroup Attempt to close non-boxing group", the {multline} and {proposition} unclosed,
+%          "After." lost); Perl the same (Base_Deprecated.pool.ltxml:202, latex_constructs.pool.ltxml:2521)
+% expect:  0 errors, 0 warnings; the document's three definitions; "After." kept
+% status:  RED (int90a) -> GREEN (79u)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\newtheorem{proposition}{Proposition}
+\newcommand{\DUAL}{{X}^{\sharp}}
+\newcommand{\FCN}{\mathcal{F}}
+\newcommand{\ROLE}[1]{\mathrm{role}(#1)}
+\begin{document}
+\begin{proposition}
+We have
+\begin{multline}
+  a = \FCN + \ROLE{b} \\
+  c \in \DUAL
+\end{multline}
+\end{proposition}
+After.
+\end{document}

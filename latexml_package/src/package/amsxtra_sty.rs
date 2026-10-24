@@ -13,9 +13,12 @@ LoadDefinitions!({
   DefMacro!("\\spcheck", "^{\\vee}");
   // Perl L25: Tokens(T_SUPER, T_OTHER('~')) — superscript + literal tilde.
   DefMacro!("\\sptilde", None, Tokens!(T_SUPER!(), T_OTHER!("~")));
-  DefMacro!("\\spdot", "^{\\dot}");
-  DefMacro!("\\spddot", "^{\\dot\\dot}");
-  DefMacro!("\\spdddot", "^{\\dot\\dot\\dot}");
+  // amsxtra.sty:32-34 superscripts text-font periods in a box (`^{\hbox{\raise\ex@\hbox{\normalfont .}}}`; the raise
+  // is presentation). Perl's `^{\dot}` gave the accent the group's `}` as its argument: "Missing { inserted" at the next
+  // `&`, the alignment unclosed (0907.3938's `\rbar1{(\T\lm)\spdot}` in {align*}).
+  DefMacro!("\\spdot", "^{\\hbox{\\normalfont .}}");
+  DefMacro!("\\spddot", "^{\\hbox{\\normalfont ..}}");
+  DefMacro!("\\spdddot", "^{\\hbox{\\normalfont ...}}");
   DefMacro!("\\spbreve", "^{\\smile}");
 
   DefMacro!("\\fracwithdelims[]{}{}{}{}",

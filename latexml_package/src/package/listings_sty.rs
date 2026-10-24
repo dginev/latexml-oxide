@@ -439,7 +439,10 @@ pub fn settle_verbatim_brace_ledger(init: Option<&Token>, close_counted: bool) {
 /// `labelstuff.tex`, `addcontentslineforlistoflabels.tex`, which the package
 /// does not ship). Guard: `package_leads_56::missing_listing_file_is_an_io_error`.
 pub fn listings_read_raw_file(file: &str) -> Result<Option<String>> {
-  let filename = file.to_string();
+  // TeX's file name skips the blanks before it and ends at the first one after it (tex.web §526), so
+  // `\lstinputlisting{⏎ examples/simple-correct.c⏎ }` reads `examples/simple-correct.c` (2511.21509; pdflatex
+  // finds it). Perl keeps the end-of-line spaces in the name and cannot find the file.
+  let filename = file.trim().to_string();
   // A file that exists only in the session's virtual file store — written by
   // `\write` emulations such as tcolorbox's `\tcbverbatimwrite` (the
   // `tcblisting` body goes to `\jobname.listing`, tcblistingscore.code.tex
@@ -450,7 +453,7 @@ pub fn listings_read_raw_file(file: &str) -> Result<Option<String>> {
   // `listing only` box (sim-os-menus' terminal windows; ~33 low-recall
   // manuals round-trip a listing file) rendered an EMPTY listing at 0
   // errors — Perl, with no virtual store, reports "Can't read listings file".
-  if let Some(text) = vfs_read(filename.trim()) {
+  if let Some(text) = vfs_read(&filename) {
     return Ok(Some(if text.contains('\r') {
       text.replace("\r\n", "\n").replace('\r', "\n")
     } else {

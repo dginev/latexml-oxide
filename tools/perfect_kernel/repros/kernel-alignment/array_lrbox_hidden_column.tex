@@ -1,0 +1,21 @@
+% witness: 2106.01404 (paper-empowerment.tex:105 `\newcolumntype{H}{@{}>{\lrbox0}l<{\endlrbox}}`, 05_table_discrete.tex;
+%          brk89)
+% oracle:  pdflatex 0 errors: array.sty:146-152 sets an l/c/r cell as `\d@llarbegin\insert@column\d@llarend`, a group
+%          in a tabular (:279); `\lrbox`'s `\endgroup` closes it and reopens one in `\box0`, `\endlrbox` and
+%          `\d@llarend` close that: the column is hidden
+% engines: rust int90a = 7 errors ("\endgroup Attempt to close non-boxing group", "\noalign cannot be used here",
+%          "\@end@tabular Attempt to close boxing group"; "Done." lost); Perl's columns have no such group either
+% expect:  0 errors, 0 warnings; the visible cells, the hidden ones not shown; "Done." kept
+% status:  RED (int90a) -> GREEN (79u)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{array}
+\newcolumntype{H}{@{}>{\lrbox0}l<{\endlrbox}}
+\begin{document}
+\begin{tabular}{lHc}
+a & hidden & b \\
+\hline
+c & gone & d \\
+\end{tabular}
+Done.
+\end{document}
