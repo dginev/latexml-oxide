@@ -17957,3 +17957,59 @@ pdfTeX 1.40.15 primitives that fake interword spaces in the PDF's text layer; Pe
 so a package that turns them on (dgruyter.sty:1226) raises "undefined". Fixed in Rust (79t): pdftex.rs no-op
 primitives. Witness 2205.10368. Repro expansion-primitives/pdftex_interwordspace_primitives; guard
 `perfect_kernel_batch79t::pdftex_interword_space_primitives_typeset_nothing`.
+
+## 1159. LaTeXML's deprecated `\DUAL`, `\FCN`, `\ROLE` refuse a document's `\newcommand`
+
+Base_Deprecated.pool.ltxml:161-203 defines the letter names `\FCN`, `\ROLE` and `\DUAL` (`\lx@dual`), which LaTeX does
+not have; latex_constructs.pool.ltxml:2521 `\newcommand` then logs "Ignoring redefinition" and keeps LaTeXML's. A paper
+that defines `\DUAL` for its own notation gets `\lx@dual` instead. Minimal trigger: `\newcommand{\DUAL}{{X}^{\sharp}}`,
+`\begin{multline} a \\ c \in \DUAL \end{multline}` inside a theorem: "\endgroup Attempt to close non-boxing group", the
+`{multline}` and theorem unclosed, the rest of the section lost (pdflatex 0 errors). Fixed in Rust (79u):
+base_deprecated.rs defines the three as kernel stubs (`DefinitionOrigin::Stub`), which a document's or raw file's
+`\newcommand` defines (latex_constructs `is_definable_latex`). Witness 1804.03034 (17 dangling references). Repro
+macro-state/newcommand_over_latexml_deprecated_name; guard
+`perfect_kernel_batch79u::a_document_newcommand_defines_a_deprecated_latexml_name`.
+
+## 1160. A listings file name keeps the blanks around it
+
+`\lstinputlisting[…]{⏎ examples/simple-correct.c⏎ }` names `examples/simple-correct.c`: TeX's file name scanner skips
+the blanks before a name and ends it at the first blank after (tex.web §526). listings.sty.ltxml:324
+`ToString(Expand($file))` keeps the end-of-line spaces, so the file is not found ("Can't read listings file") and the
+listing is empty, its `\label`s inside lost. Fixed in Rust (79u): listings_sty.rs `listings_read_raw_file` trims the
+name (minted already did). Witness 2511.21509 (8 dangling line references). Repro
+listings-algorithms/listings_input_file_name_spaced; guard
+`perfect_kernel_batch79u::a_listings_file_name_between_blanks_is_read`.
+
+## 1161. amsxtra's `\spdot` gives `\dot` the group's `}` as its argument
+
+amsxtra.sty.ltxml:27-29 `\spdot` = `^{\dot}` (and `\spddot`, `\spdddot`): the accent reads the `}` that closes the
+superscript as its argument. amsxtra.sty:32-34 superscripts text-font periods (`^{\hbox{\raise\ex@\hbox{\normalfont
+.}}}`), as Perl's own AMS-TeX pool does (`^{.}`). Minimal trigger: `\usepackage{amsxtra}`, `\begin{align*} 0 &= f\spdot
+\\ &= g \end{align*}`: "Missing { inserted" at the `\\`, the alignment unclosed (pdflatex 0 errors). Fixed in Rust
+(79u): amsxtra_sty.rs `^{\hbox{\normalfont .}}` (two and three periods for the others). Witness 0907.3938 (8 dangling
+references). Repro package-bindings/amsxtra_spdot_in_alignment; guard
+`perfect_kernel_batch79u::amsxtra_superscript_periods_keep_the_alignment`.
+
+## 1162. A tabular cell under a `>{…}` prefix has no group
+
+array.sty:146-152 sets an `l`/`c`/`r` cell as `\d@llarbegin\insert@column\d@llarend`, a `\begingroup`/`\endgroup` in a
+tabular (:279), with the `>{…}` and `<{…}` material inside. TeX_Tables.pool.ltxml's column templates have no such group,
+so the hidden-column idiom `\newcolumntype{H}{@{}>{\lrbox0}l<{\endlrbox}}` (latex.ltx `\lrbox` closes a group first and
+reopens one in the box) closes the alignment's own frame: "\endgroup Attempt to close non-boxing group", "\noalign
+cannot be used here", the table lost (pdflatex 0 errors, the column hidden). Fixed in Rust (79u): tex_tables.rs
+`text_column` brackets an l/c/r cell with `\begingroup`/`\endgroup` when a `>{…}` prefix waits for it. Witness
+2106.01404 (6 dangling references). Repro kernel-alignment/array_lrbox_hidden_column; guard
+`perfect_kernel_batch79u::an_lrbox_hidden_column_hides_its_cells`.
+
+## 1163. A note's `\\` is the surrounding one
+
+`\@footnotetext` sets the note's text with `\@parboxrestore` (latex.ltx:17663), which makes `\\` the line break
+`\@normalcr` (:16288). latex_constructs.pool.ltxml:454 `\lx@note` does not, so in a `p` cell or a longtable caption row
+the note's `\\` is the alignment's and ends the row inside the note: "} Attempt to close a group that switched to mode
+horizontal", the table lost (pdflatex 0 errors). Separately, a `\footnote` after a longtable `\caption`
+(`\caption{…}\footnote{…}\\`) was dropped with the caption's row at 0 errors (Rust's #103 row removal). Fixed in Rust
+(79u): sect03.rs lets `\\` be `\@normalcr` in every note's text; tex_tables.rs `caption_row_keeps_its_content` sets the
+notes the caption's row holds after the caption's text, as longtable sets the mark in the caption's spanning cell
+(longtable.sty:476); text before the caption in its row (pdflatex's "Misplaced \noalign", 1009.4206's stray `[t]`) is
+dropped with the row as before. Witness 2201.11330 (3 dangling references). Repro captions-floats/footnote_with_newline_in_table;
+guard `perfect_kernel_batch79u::a_note_in_a_table_keeps_its_line_break_and_the_caption_its_note`.

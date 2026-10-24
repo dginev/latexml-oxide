@@ -8012,3 +8012,26 @@ papers + 3 witnesses): E 1,475 → 1,389, F 3 = 3, 0 worse; 340 byte-identical, 
 136/136, 0 worse (int89a → int90a). Residuals ruled not ours: main-file guesses of the harness (2104.01753, 2204.10370,
 2407.14159's references), stale `.bbl` (2205.10368), `\ignore` before its definition (1605.04559), an unshipped listings
 file (2009.11389).
+
+**int91** (2026-10-24; 79u → ad803fbe07 + r2 2d03976b99): brk89 residuals, five fixed. LaTeXML's deprecated letter
+names `\FCN`/`\ROLE`/`\DUAL` (Base_Deprecated.pool.ltxml) refused a document's `\newcommand`, so 1804.03034's `\DUAL`
+became `\lx@dual` and left its `{multline}` and proposition unclosed; base_deprecated.rs defines the three as kernel
+stubs (`DefinitionOrigin::Stub`), which a `\newcommand` defines as in LaTeX (KNOWN_PERL_ERRORS #1159). A listings file
+name keeps no blanks around it (tex.web §526; #1160; 2511.21509). amsxtra's `\spdot`/`\spddot`/`\spdddot` superscript
+boxed text periods (amsxtra.sty:32-34); Perl's `^{\dot}` gave the accent the group's `}` (#1161; 0907.3938,
+hep-th0603145 15 errors → 0 in the A/B). An `l`/`c`/`r` cell under a `>{…}` prefix is array.sty's
+`\d@llarbegin…\d@llarend` group (array.sty:146-152, :279), which the hidden-column idiom `>{\lrbox0}l<{\endlrbox}`
+closes and reopens in its box (#1162; 2106.01404). A note's `\\` is `\@normalcr` (`\@footnotetext`'s
+`\@parboxrestore`), and a `\footnote` on a longtable `\caption` moves into the caption instead of being dropped with the
+caption's row at 0 errors (#1163; 2201.11330); r2 limits the move to notes, after the int91a A/B showed 1009.4206's
+stray `[t]` (`\begin{longtable*}{lc}[t]`, text before the caption: pdflatex's "Misplaced \noalign") joining the
+caption. Gates int91a 7233/7233, int91b 7233/7233. A/B int90a → int91a over popint91 (250 array, 150 longtable, 100
+`\lstinputlisting`, 60 amsxtra, 4 `\DUAL`/`\FCN`/`\ROLE`, 150 `\footnote` census papers + 6 witnesses; 705 converted):
+E 3,028 → 2,896, F 8 = 8, 0 worse, words +78k; 697 byte-identical, 8 changed (5 witnesses, hep-th0603145 better,
+2011.05979's misused `\tablefoottext{f}\\` in a header row now holds a `<break/>`, 1009.4206 fixed by r2). A/B int91a →
+int91b over the 150 longtable papers + 3: 150 byte-identical, 1009.4206 back to int90a's caption. Nets 136/136, 0 worse
+(int90a → int91a). Not ours: 2208.03817 (splitidx + showidx: pdflatex Emergency stop; its dangling labels sit in
+commented-out `\input`s), 2404.00467 (main-file guess `diff.tex`). Residuals: 2410.10450 (a value `\renewcommand` of
+`\description`: OD #500 keeps environments locked — ruling needed), 0705.0608 (easyeqn's `{EQA}` drops `\label` and
+number), 2110.08325 (`\currfiledir` empty inside `\input` files: `\AddToHook`/`\UseHook` are no-ops here, so currfile's
+filehook push never runs).
