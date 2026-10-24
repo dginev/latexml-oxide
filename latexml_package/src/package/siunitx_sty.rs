@@ -1794,14 +1794,32 @@ fn six_format_list(bracketed: bool, items: Vec<Tokens>) -> Tokens {
 /// as it comes. siunitx collects without expanding; read with expansion, a `\relax` a macro yields ends it too. csvsimple ends each row's command with one (csvsimple-legacy.sty:289-293 `\csv@body\relax`); read
 /// on, the expansion unrolled its next-line loop without end, the `\read` never run (2108.13640, `PushbackLimit`).
 /// Perl reads to the column's end (`XUntil`, siunitx.sty.ltxml:1414; KPE #474).
+///
+/// A column with a `>{…}` prefix (`>{\centering\arraybackslash}S`) has it between the column's own tokens and the
+/// `\ignorespaces` array.sty's `\insert@column` puts before the cell; siunitx takes it as given, unexpanded
+/// (siunitx.sty:5625 `\__siunitx_table_collect_begin:w #1 \ignorespaces`), so it reaches the cell as leading material
+/// (`\lx@si@column@prefix` marks it, `add_si_column`). Read with expansion, `\arraybackslash`'s `\let\\\tabularnewline`
+/// ran the `\\` inside the cell: the row ended before the cell's content, "Missing { inserted" in every row (2504.01955;
+/// pdflatex 0 errors; KNOWN_PERL_ERRORS #1155), and `\centering`'s `\\` opened every cell with a line break.
 fn read_si_cell() -> Result<Tokens> {
+  let mut prefix = Vec::new();
+  // the marker is the template's own token, pushed back with the column's: looked at in place, as the alignment's
+  // count must not be touched before the cell is read
+  if peek_upcoming_tokens(0, 0, 1).next() == Some(T_CS!("\\lx@si@column@prefix")) {
+    read_token()?;
+    prefix = read_until_token(T_CS!("\\ignorespaces"))?.unlist();
+  }
   let (cell, stop) = with_unexpandable_protect(|| {
     read_x_until_any(&[T_CS!("\\lx@si@column@end"), T_CS!("\\relax")])
   })?;
   if stop == Some(T_CS!("\\relax")) {
     unread_one(T_CS!("\\relax"));
   }
-  Ok(cell)
+  if prefix.is_empty() {
+    return Ok(cell);
+  }
+  prefix.extend(cell.unlist());
+  Ok(Tokens::new(prefix))
 }
 
 /// Perl siunitx.sty.ltxml L1379-1399 `DefColumnType('S'|'s' Optional, …)`: add
@@ -1827,6 +1845,9 @@ fn add_si_column(kv: Option<Tokens>, parse_cs: &str) {
   let after = Tokens!(T_CS!("\\lx@si@column@end"), T_END!());
   with_current_build_template(|template_opt| {
     if let Some(t) = template_opt {
+      if t.has_pending_prefix() {
+        before.push(T_CS!("\\lx@si@column@prefix"));
+      }
       t.add_column(Cell {
         before: Some(Tokens::new(before.clone())),
         after: Some(after.clone()),
@@ -3679,6 +3700,8 @@ LoadDefinitions!({
     Ok(Tokens!())
   });
   DefPrimitive!("\\lx@si@column@end", {});
+  // marks a column's `>{…}` prefix for `read_si_cell`, which takes it away; a no-op wherever else it is met
+  DefPrimitive!("\\lx@si@column@prefix", {});
   // Perl L1414-1451 `\lx@SI@column@parse` (the `S`, number column): read the
   // cell up to `\lx@si@column@end`, peel leading "surrounding material" —
   // spaces, leading non-symbol control sequences (formatting like `\bfseries`,

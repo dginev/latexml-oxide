@@ -17909,3 +17909,19 @@ Fatal → 0 errors). A cell-local mark placed before the left-hand side (`\lx@nu
 outer one; a group around it would not do, since a `{numcases}` with no `{…}` has `#1` = the next token, which can take
 the group's closing token as its argument (2412.05950, `\mathrm`). Witnesses 2510.01717 (7 errors → 0, 4 dangling references → 0), 1709.02454 (4 → 0, 1 → 0). Repro alignment-bindings/numcases_row_with_empty_first_cell; guard
 `perfect_kernel_batch79r::a_numcases_row_with_an_empty_first_cell_ends_cleanly`.
+
+## 1155. siunitx's `S` cell is read with expansion, so the column's `>{…}` prefix runs inside the reader
+
+siunitx collects an `S` cell token by token, unexpanded, and takes what array.sty's `\insert@column` puts between its
+own `\siunitx_cell_begin:w` and the `\ignorespaces` before the cell — the column's `>{…}` tokens — as given
+(siunitx.sty:5625 `\__siunitx_table_collect_begin:w #1 \ignorespaces`). Perl's siunitx.sty.ltxml:1414
+`\lx@SI@column@parse` reads the cell with `XUntil`, and the `>{…}` tokens come after the column's own before-tokens
+(Template.pm:93-94), so they are expanded inside the reader: `>{\arraybackslash}`'s `\let\\\tabularnewline` leaves
+`\let` and expands the `\\`, which ends the row inside the cell ("Missing { inserted" in every row, then the table
+never closes), and `>{\centering}`'s `\\` opens every cell with a line break. Minimal trigger: `\usepackage{siunitx,array}`,
+`\begin{tabular}{l >{\arraybackslash}S}A & Wall \\ B & 1.5 \\\end{tabular}` (pdflatex 0 errors). Fixed in Rust (79s):
+an `S`/`s` column with a pending prefix marks it (`\lx@si@column@prefix`, `Template::has_pending_prefix`), and
+`read_si_cell` takes the tokens up to that `\ignorespaces` unexpanded, as leading cell material, before reading the
+rest as before. Witness 2504.01955 (`*{20}{>{\centering\arraybackslash}Z}`, `Z` = `S[table-format=2.1]`: 210 errors
+→ 0, 8 dangling citations → 0). Repro package-bindings/siunitx_s_column_prefix; guard
+`perfect_kernel_batch79s::an_s_column_prefix_is_taken_as_given`.

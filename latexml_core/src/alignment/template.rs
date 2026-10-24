@@ -305,6 +305,10 @@ impl Template {
     }
   }
 
+  /// Whether a `>{…}` prefix waits for the next column (`add_column` puts it after that column's own `before`,
+  /// followed by `\ignorespaces`).
+  pub fn has_pending_prefix(&self) -> bool { !self.save_before.is_empty() }
+
   // These add material before & after the current column
   pub fn add_before_column(&mut self, mut new: VecDeque<Token>) {
     let current_sb = self.save_before.drain(..);
