@@ -7895,3 +7895,15 @@ the nextest/cortex/init logs, fmt/clippy/doc rerun green). A/B int79c → int81a
 `\externaldocument`, 250 `\cref`, 193 `\autoref`, 149 `\ref` controls): 6 byte-changed, all xr witnesses, E 436 = 436,
 F 0 = 0, 0 worse, the controls byte-identical. Nets 136/136, 0 worse (int79c → int81a).
 
+**int82** (2026-10-24; 79i → 748544a1cb): the proj98 breakage sweep on int81a (`scratch_356a0c47/brk81/`: 3,000
+E/F-sample papers; 186 with a dangling `\ref`, 114 of them non-Fatal with the `\label` in the source) found shipped
+copies of bound classes redefining `\label` to write the `.aux` (aastex7.cls:635, aastex701, siamltex, emulateapj,
+jasatex): the copy's `\label` stood for the document, so no label was recorded. A pool `\let` to one of LaTeXML's `\lx@`
+internals (`\let\label\lx@label`) now counts as owned by the semantic layer (OD #731), so the copy's definition holds
+inside the copy only. Gates int82a 7211/7211, inits 0/0. A/B int81a → int82a over popint82 (875: census papers shipping
+copies of 21 bound classes + the 24 label witnesses): E 1,533 = 1,533, F 5 = 5, 0 worse; 49 byte-changed, dangling
+references ≈ 4,000 → 6 (1205.2995 159 → 0, 1406.0089 192 → 4, 1607.04625 252 → 0, 1802.07322 183 → 0); 39 changed only
+in `labels`, the rest by `xml:id` shifts and `refnum` tags of the newly labelled objects, 2510.05388's lone-`\label` row
+before `\enddata` now a row (as in pdflatex), 2604.19910 an empty `<p><text/></p>` before an enumerate a remark's
+`\label` opens. Nets 136/136, 0 worse (int81a → int82a).
+
