@@ -7983,3 +7983,16 @@ census papers + 2 witnesses): the 350 byte-identical, the witnesses E 80 → 0. 
 papers + 249 seeded alignment papers): numcases E 316 → 23, F 1 → 0, +45k words, 0 worse; the 249 byte-identical.
 Nets 136/136, 0 worse at each step. Breakage residuals ruled not ours: 1711.02733 (`\def\label{\label}`; TL 2025
 pdflatex loops), 2509.06285 (stale shipped `.bbl`).
+
+**int89** (2026-10-24; 79s → b7e4cd0b93): siunitx collects an `S` cell unexpanded and takes the column's `>{…}` tokens,
+which array.sty's `\insert@column` puts before the cell's `\ignorespaces`, as given (siunitx.sty:5625
+`\__siunitx_table_collect_begin:w #1 \ignorespaces`); our `read_si_cell` read them with expansion (Perl's `XUntil`), so
+`>{\arraybackslash}` ran its `\\` inside the cell ("Missing { inserted" in every row, the table never closed) and
+`>{\centering}` opened every cell with a line break. A column with a pending prefix (`Template::has_pending_prefix`)
+marks it with `\lx@si@column@prefix`, and the reader takes the tokens up to the `\ignorespaces` unexpanded
+(KNOWN_PERL_ERRORS #1155). Settled: looking for the marker with `peek_token` (align-safe read) broke the next cell of a
+plain `S` column; `peek_upcoming_tokens` looks at the pushback in place. Gates int89a 7225/7225. A/B int88e → int89a
+over popint89a (400 siunitx census papers, the witness among them): E 2,999 → 2,789, F 62 = 62, 0 worse; 398
+byte-identical, 2504.01955 better (210 → 0 errors, 8 dangling citations → 0), 2010.00953 converted on neither side (an
+`.ltx` main file). Nets 136/136, 0 worse (int88e → int89a). 1506.05333 has no breakage left; math-ph0209020's
+`\bemlabel` writes `\newlabel` to the aux only (1 census paper).
