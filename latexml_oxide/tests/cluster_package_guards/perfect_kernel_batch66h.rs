@@ -95,7 +95,9 @@ fn svjour3_doubled_at_left_in_text_closes_once() {
   ));
   assert_eq!(
     (error_count(&log), warning_count(&log), fatal_count(&log)),
-    (3, 2, 0),
+    // (the affiliation's open `\left` group closes with the item since 79l, `digest_in_own_group`: no "Attempt to end
+    // mode" errors nor open groups at `\end{document}`)
+    (1, 1, 0),
     "{log}"
   );
   assert_eq!(

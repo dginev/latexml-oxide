@@ -616,7 +616,9 @@ fn font_switch_inside_a_run_keeps_the_name() {
     "\\documentclass{article}\n\\title{T}\n\\author{Ann Able\\begingroup\\bfseries Bob \\and Carl}\n\\begin{document}\n\\maketitle\nBody after.\n\\end{document}\n",
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (4, 1), "{log}");
+  // (the unclosed `\begingroup` closes with the author item since 79l, `digest_in_own_group`: its own Error only, the
+  // body not bold)
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
   assert_eq!(blocks(&json), [[
     "N:Ann AbleBob",
     "S:and",
@@ -716,7 +718,7 @@ fn shadow_switch_leaves_the_xml_unchanged() {
     ),
     (
       doc("", r"Ann Able\begingroup\bfseries Bob \and Carl", "Body after."),
-      (4, 1),
+      (1, 0),
     ),
     (
       doc(
