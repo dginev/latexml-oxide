@@ -20030,7 +20030,12 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    LaTeXML's own, its guesses included (`Fallback`: the OmniBus base a class binding loads, whose `\received`
    WileyNJDv5.cls:5071 replaced, dropping 2609.19994's dated frontmatter — OD #408's yielding is to the document, and
    the copy is not the document), or its meaning is a definition made under that very name at origin `Unknown`, `Pool`
-   or `Binding` (a pool's `\maketitle`, another binding's `\citep`); an environment is owned when `\begin{X}` or
+   or `Binding` (a pool's `\maketitle`, another binding's `\citep`), or under one of the semantic layer's own `\lx@`
+   names (79i: the pool's `\let\label\lx@label`, sect11.rs — no file defines an `\lx@` name; a shipped aastex7.cls's
+   `\def\label` writing the `.aux`, aastex7.cls:635, aastex701.cls, siamltex.cls, emulateapj.cls, jasatex.cls, stood
+   for the document and recorded no label: 2508.00291, 2510.05388, 2604.27071, 1205.2995, 1409.5957, 1412.0148; 16 of
+   24 such proj98 papers now resolve every reference, 519 → 158 dangling; guard
+   `perfect_kernel_batch79i::a_copy_redefining_label_keeps_the_documents_labels`); an environment is owned when `\begin{X}` or
    `\end{X}` is, or `\X` or `\endX` with them, and its names are decided together (r5): once the copy's code has kept
    one aside, the others it defines are kept too, though the first now carries the copy's meaning (cimart.cls:295-315's
    `\newtheorem{theorem}` left the binding's `\begin{theorem}` with the copy's `\end{theorem}`, a group open at the

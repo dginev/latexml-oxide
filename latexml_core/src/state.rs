@@ -3279,7 +3279,13 @@ fn owned_by_the_semantic_layer(token: &Token) -> bool {
         // `\received` keeps OmniBus's dated frontmatter, 2609.19994)
         ours(origin) || origin == DefinitionOrigin::Fallback
       } else {
-        ours(origin) && definition_cs(&meaning) == Some(*token)
+        // (or a `\let` the pool made to one of the semantic layer's own internals, `\let\label\lx@label`
+        // (sect11.rs): no file defines an `\lx@` name, so the object is LaTeXML's construct — a copy's `\def\label`
+        // writing the `.aux` (aastex7.cls:635, aastex701.cls, siamltex.cls, emulateapj.cls) left every label of the
+        // document unrecorded: 2508.00291, 2510.05388, 2604.27071)
+        ours(origin)
+          && definition_cs(&meaning)
+            .is_some_and(|cs| cs == *token || cs.with_cs_name(|name| name.starts_with("\\lx@")))
       }
     })
   })

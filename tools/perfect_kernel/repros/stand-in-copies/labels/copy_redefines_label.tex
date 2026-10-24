@@ -1,0 +1,13 @@
+% witness: 2508.00291, 2510.05388, 2604.27071 (aastex7.cls / aastex701.cls shipped; every \ref to a section dangles)
+% oracle:  pdflatex 0 errors, "See Section 1 and Section 1.1." (the copy's \label writes the .aux that LaTeX reads back)
+% engines: rust int81a = both references `ltx_missing_label`: the copy's \label (a write to the .aux, which LaTeXML
+%          never reads back) replaced LaTeXML's \lx@label for the document, so no label was recorded
+% expect:  0 errors, 0 warnings; the section and subsection carry their labels, both references resolve
+% status:  RED (int81a) -> GREEN (79i)
+% preload: ar5iv.sty
+\documentclass{aastex7}
+\begin{document}
+\section{Introduction}\label{sec:intro}
+\subsection{Sub}\label{sec:sub}
+See Section~\ref{sec:intro} and Section~\ref{sec:sub}.
+\end{document}

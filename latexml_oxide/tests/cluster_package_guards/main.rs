@@ -316,6 +316,7 @@ mod perfect_kernel_batch79e;
 mod perfect_kernel_batch79f;
 mod perfect_kernel_batch79g;
 mod perfect_kernel_batch79h;
+mod perfect_kernel_batch79i;
 mod perfect_kernel_batchfms1;
 mod perfect_kernel_batchfms2a1;
 mod perfect_kernel_batchfms2a2;
