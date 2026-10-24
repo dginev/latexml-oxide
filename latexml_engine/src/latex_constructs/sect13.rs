@@ -1689,9 +1689,11 @@ pub(crate) fn load() -> Result<()> {
     Ok(Tokens::new(result))
   }, peeks_by_futurelet => true);
 
-  // latex.ltx:1775 `\def\@ifstar#1{\@ifnextchar *{\@firstoftwo{#1}}}`.
+  // latex.ltx:1775 `\def\@ifstar#1{\@ifnextchar *{\@firstoftwo{#1}}}`, so it lets `\@let@token` as `\@ifnextchar`
+  // does ([`let_peeked_token`]).
   DefMacro!("\\@ifstar {}{}", sub[(if_toks,else_toks)] {
     let next_opt = read_non_space()?;
+    let_peeked_token(next_opt.as_ref());
     if next_opt == Some(T_OTHER!("*")) {
       Ok(if_toks)
     } else {
@@ -2264,9 +2266,12 @@ pub(crate) fn load() -> Result<()> {
   // latex.ltx:1756-1760 peeks by `\futurelet` behind an unexpandable `\let`,
   // so a number scan ends at it (`peeks_by_futurelet`; egpeirce-doc lost its
   // document to a `\psset` → `\XKV@ifstar` read inside `\ifodd`'s scan).
-  // Guard: `ifnextchar_scans::a_number_scan_ends_at_ifnextchar`.
+  // Guard: `ifnextchar_scans::a_number_scan_ends_at_ifnextchar`. The peek is
+  // `\futurelet\@let@token\@ifnch`, so the next token is left in
+  // `\@let@token` for the branch to test ([`let_peeked_token`]).
   DefMacro!("\\@ifnextchar DefToken {}{}", sub[(token, t_if, t_else)] {
     let next = read_non_space()?;
+    let_peeked_token(next.as_ref());
     let next_test = match next {
       Some(ref n) => XEquals!(&token, n),
       None => XEquals!(&token, &*TOKEN_END)
@@ -2332,6 +2337,18 @@ pub(crate) fn load() -> Result<()> {
   // bootstrap → dump → constructs flow, guarantees our impl wins.
   Let!("\\documentstyle", "\\lx@documentstyle@impl");
   Ok(())
+}
+
+/// latex.ltx:1756-1771 `\@ifnextchar` peeks by `\futurelet\@let@token\@ifnch` (`\@xifnch` peeks again past a
+/// space): the first token after the spaces is left `\let` to `\@let@token` (a local assignment), which the branch taken
+/// may test. tikz-timing.sty:1156-1170 `\tikztimingtable@checkrow` takes `\@ifnextchar\end`'s false branch and asks
+/// `\ifx\@let@token\extracode`; without it each `\extracode` was read as a table row up to the end of the file
+/// (2409.18120). Perl's closure (latex_constructs.pool.ltxml:5636-5642) sets nothing: KPE #1165. Guard
+/// `perfect_kernel_batch79x::ifnextchar_leaves_the_next_token_in_let_token`.
+fn let_peeked_token(next: Option<&Token>) {
+  if let Some(next) = next {
+    let_i(&T_CS!("\\@let@token"), next, None);
+  }
 }
 
 /// The `(x, y)` of a `Pair` argument of a picture constructor; `(0, 0)` when

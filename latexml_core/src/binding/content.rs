@@ -1860,7 +1860,7 @@ fn before_input_handle_options(
           _ => {},
         }
       }
-      zap_space(&pieces.join(","))
+      pieces.join(",")
     },
     None => String::new(),
   });
@@ -1885,10 +1885,29 @@ fn before_input_handle_options(
   def_macro(
     T_CS!(s!("\\opt@{}.{}", name, as_type)),
     None,
-    crate::mouth::tokenize_internal(TeXString::assembled(current_opt_val)),
+    zapped_options(current_opt_val)?,
     None,
   )?;
   Ok(pushpop)
+}
+
+/// The option list stored in `\opt@<file>`: latex.ltx:18514-18517 `\protected@xdef` of `\zap@space#2 \@empty`. Under
+/// the kernel's `\zap@space` (sect01.rs keeps a copy, `\lx@kernel@zap@space`) that is [`zap_space`]; a package that lets
+/// its own `\zap@space` around a load is honored by expanding the list as latex.ltx does: tikz-timing.sty:2331-2341
+/// `\let\zap@space\tikztiming@zap@space` (`#1 \@empty{#1}`, the list as given) around `\RequirePackage[…]{tikz-timing-…}`,
+/// so `\usetikztiminglibrary[rising arrows]{clockarrows}` stores `rising arrows`, the key the library declares (witness
+/// 2409.18120; the zapped `risingarrows` was an unknown key). Guard
+/// `perfect_kernel_batch79x::a_package_zap_space_keeps_the_option_spaces`.
+fn zapped_options(options: String) -> Result<Tokens> {
+  if options.is_empty() || x_equals(&T_CS!("\\zap@space"), &T_CS!("\\lx@kernel@zap@space")) {
+    return Ok(crate::mouth::tokenize_internal(TeXString::assembled(
+      zap_space(&options),
+    )));
+  }
+  let mut list = vec![T_CS!("\\zap@space")];
+  list.extend(crate::mouth::tokenize_internal(TeXString::assembled(options)).unlist());
+  list.extend([T_SPACE!(), T_CS!("\\@empty")]);
+  do_expand(Tokens::new(list))
 }
 
 /// latex.ltx:18695-18698 `\zap@space`, as latex.ltx:18517/18757 apply it to the option list stored in `\opt@<file>`

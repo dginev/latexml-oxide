@@ -1,0 +1,28 @@
+% witness: 2409.18120 (`\usetikztiminglibrary[rising arrows]{clockarrows}`: tikz-timing.sty:2331-2341 lets its own
+%          `\zap@space` (`#1 \@empty{#1}`) around `\RequirePackage[…]{tikz-timing-clockarrows}`, whose keys are
+%          `rising arrows` etc.)
+% oracle:  pdflatex 0 errors: latex.ltx:18514-18517 stores `\opt@<file>` as the `\protected@xdef` of
+%          `\zap@space#2 \@empty`, with whatever `\zap@space` means then: "Spaced: [rising arrows,falling edge]."
+%          under the package's own, "Kernel: [sharecounter,xy]." under the kernel's (every blank outside braces goes)
+% engines: rust int92c = "Spaced: [risingarrows,fallingedge]." (content.rs `zap_space` ignored the redefinition;
+%          tikz-timing then reported "I do not know the key '/tikz/timing/c/risingarrows'"); Perl stores the list
+%          as given in both
+% expect:  0 errors, 0 warnings; both lines as pdflatex prints them
+% status:  RED (int92c) -> GREEN (79x)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\def\my@zap@space#1 \@empty{#1}
+\let\my@kernel@zap@space\zap@space
+\let\zap@space\my@zap@space
+\RequirePackage[rising arrows,falling edge]{spacedopts}
+\let\zap@space\my@kernel@zap@space
+\RequirePackage[share counter, x y]{zappedopts}
+\edef\spacedlist{\csname opt@spacedopts.sty\endcsname}
+\edef\kernellist{\csname opt@zappedopts.sty\endcsname}
+\makeatother
+\begin{document}
+Spaced: [\spacedlist].
+
+Kernel: [\kernellist].
+\end{document}

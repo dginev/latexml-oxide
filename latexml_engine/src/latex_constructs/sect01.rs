@@ -716,6 +716,7 @@ pub(crate) fn load() -> Result<()> {
   #1%
   \ifx#2\@empty\else\expandafter\zap@space\fi
   #2}
+\let\lx@kernel@zap@space\zap@space
 \def\@unexpandable@protect{\noexpand\protect\noexpand}
 \def\x@protect#1{%
    \ifx\protect\@typeset@protect\else

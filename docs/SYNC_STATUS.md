@@ -264,6 +264,12 @@ KNOWN_PERL_ERRORS cross-reference when one applies. Perl-origin defects go to `p
   takes it as a delimited argument that loses one brace group: `\def\RelayedType{{node}}` … `\node[\RelayedType]` was
   "I do not know the key '/tikz/node'" (2110.08325's grids, 501 errors and the runaway Fatal; pdflatex 0). Perl runs the
   raw loop. Guard `perfect_kernel_batch79w::a_braced_key_in_a_macro_names_its_style`.
+- **A package's own `\zap@space` around a load (79x)**: content.rs zapped the option list stored in `\opt@<file>` with
+  the kernel's rule whatever `\zap@space` meant, where latex.ltx:18514-18517 expands `\zap@space#2 \@empty` with the
+  current meaning: tikz-timing.sty:2331-2341 lets its own (`#1 \@empty{#1}`) around its library loads, so
+  `\usetikztiminglibrary[rising arrows]{clockarrows}` stored "risingarrows", an unknown key (2409.18120; pdflatex 0).
+  `zapped_options` expands the list when `\zap@space` is not the kernel's copy (`\lx@kernel@zap@space`, sect01.rs).
+  Perl stores the list unzapped. Guard `perfect_kernel_batch79x::a_package_zap_space_keeps_the_option_spaces`.
 
 ## Current status
 

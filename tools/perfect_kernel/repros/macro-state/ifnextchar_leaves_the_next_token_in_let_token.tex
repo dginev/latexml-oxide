@@ -1,0 +1,38 @@
+% witness: 2409.18120 (media/tikztiming.tex: a tikztimingtable whose rows end before `\extracode`;
+%          tikz-timing.sty:1156-1170 `\tikztimingtable@checkrow` takes `\@ifnextchar\end`'s false branch and asks
+%          `\ifx\@let@token\extracode`)
+% oracle:  pdflatex 0 errors: latex.ltx:1756-1771 `\@ifnextchar` peeks by `\futurelet\@let@token\@ifnch` (past spaces),
+%          so the branch taken sees `\@let@token` = the next token, as does `\@ifstar` (:1775): "Next is the marker"
+%          twice, "Starless, next is the marker", the list's two rows, its extra code and "After."
+% engines: rust int92c = "Next is something else" ×3 and a row scanner that reads `\extracode` as a row up to the end
+%          of the file ("File ended while scanning use of a Until:\\ argument", Fatal; the rows and "After." lost);
+%          Perl's `\@ifnextchar` closure (latex_constructs.pool.ltxml:5636-5642) sets nothing either
+% expect:  0 errors, 0 warnings; the three peeks name the marker, "Row: first.", "Row: second.", "Extra code.", "After."
+% status:  RED (int92c) -> GREEN (79x)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\def\marker{M}
+\def\peek{\@ifnextchar\end{}{\ifx\@let@token\marker Next is the marker.\else Next is something else.\fi}}
+\def\peekstar{\@ifstar{}{\ifx\@let@token\marker Starless, next is the marker.\else Starless, next is something
+  else.\fi}}
+\newenvironment{rowlist}{\par\checkrow}{\par}
+\def\checkrow{\@ifnextchar\end{}{\ifx\@let@token\extracode \let\next\relax \else \let\next\row \fi \next}}
+\long\def\row#1\\{Row: #1.\par\checkrow}
+\def\extracode{Extra code.\par\checkrow}
+\makeatother
+\begin{document}
+\peek\marker
+
+\peek
+  \marker
+
+\peekstar\marker
+
+\begin{rowlist}
+first\\
+second\\
+\extracode
+\end{rowlist}
+After.
+\end{document}

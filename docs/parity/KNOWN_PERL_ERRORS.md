@@ -18030,3 +18030,24 @@ figure styles and every grid figure). Fixed in Rust (79v): content.rs `input_con
 hooks around a content file read by `\ltx@input` (LaTeX's `\input{}`/`\InputIfFileExists`), not by TeX's
 `\@@input`. Repro loader/currfile_dir_inside_input; guard
 `perfect_kernel_batch79v::currfile_knows_the_input_file_it_is_in`.
+
+## 1165. `\@ifnextchar` and `\@ifstar` leave `\@let@token` unset
+
+latex.ltx:1756-1771 `\@ifnextchar` peeks by `\futurelet\@let@token\@ifnch` (again past a space, `\@xifnch`), and
+`\@ifstar` (:1775) is `\@ifnextchar*`, so the branch taken finds the next token in `\@let@token`. Packages test it
+there: tikz-timing.sty:1156-1170 `\tikztimingtable@checkrow` takes `\@ifnextchar\end`'s false branch and asks
+`\ifx\@let@token\extracode`. latex_constructs.pool.ltxml:5636-5642's `\@ifnextchar` closure picks the branch without
+any assignment, so `\@let@token` keeps whatever an earlier peek left; the check fails and `\extracode` is read as a
+table row up to the end of the file ("File ended while scanning use of `\tikztimingtable@row`", the figure and the
+rest of the paper lost; 2409.18120). Minimal trigger:
+
+```latex
+\makeatletter\def\marker{M}
+\def\peek{\@ifnextchar\end{}{\ifx\@let@token\marker yes\else no\fi}}
+\makeatother
+\peek\marker   % pdflatex "yes"; Perl "no"
+```
+
+Fixed in Rust (79x): sect13.rs `let_peeked_token` lets `\@let@token` to the peeked token in both native peeks. Repro
+macro-state/ifnextchar_leaves_the_next_token_in_let_token; guard
+`perfect_kernel_batch79x::ifnextchar_leaves_the_next_token_in_let_token`.
