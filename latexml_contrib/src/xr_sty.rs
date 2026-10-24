@@ -81,10 +81,10 @@ fn import_external_document(prefix: &str, file: &str, url: Option<&str>) {
         let name = s!("{prefix}{key}");
         let label = clean_label(&name, None);
         record_external_label(&label, &reftext, href.as_deref());
-      } else if let Some(rest) = line.trim_start().strip_prefix("\\@input") {
-        if let Some(name) = brace_groups(rest).next() {
-          queue.push(s!("{area}{name}"));
-        }
+      } else if let Some(rest) = line.trim_start().strip_prefix("\\@input")
+        && let Some(name) = brace_groups(rest).next()
+      {
+        queue.push(s!("{area}{name}"));
       }
     }
   }

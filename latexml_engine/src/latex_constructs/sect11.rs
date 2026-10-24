@@ -2435,29 +2435,6 @@ pub fn label_type(ty: Option<Tokens>) -> Vec<Token> {
   tokens
 }
 
-#[cfg(test)]
-mod held_tag_role_order {
-  use super::{held_tag_roles, pin};
-
-  /// The held roles come out sorted whatever order the mapping lists its keys in (det354 B3): hyperref's `autoref`
-  /// and cleveref's `creflabel` and its per-type roles.
-  #[test]
-  fn held_tag_roles_are_sorted() {
-    for listed in [["creflabel", "autoref", "cref@equation"], [
-      "cref@equation",
-      "creflabel",
-      "autoref",
-    ]] {
-      let keys = listed.into_iter().map(pin).collect();
-      assert_eq!(held_tag_roles(keys), [
-        "autoref",
-        "cref@equation",
-        "creflabel"
-      ]);
-    }
-  }
-}
-
 /// Records a label of another document that xr's `\externaldocument` imported from that document's `.aux`
 /// (xr_sty.rs): the reference text its `\newlabel` gives and, where the document's URL was given, the link to its
 /// anchor. Global, as xr's `\protected@xdef\r@<label>` is (xr.sty `\XR@test`).
@@ -2493,5 +2470,28 @@ pub fn external_ref_properties(label: &str, star: bool, props: &mut SymHashMap<S
   props.insert("refclass", Stored::String(pin(class)));
   if let Some(Stored::String(href)) = lookup_value(&s!("xr@href@{label}")) {
     props.insert("refhref", Stored::String(href));
+  }
+}
+
+#[cfg(test)]
+mod held_tag_role_order {
+  use super::{held_tag_roles, pin};
+
+  /// The held roles come out sorted whatever order the mapping lists its keys in (det354 B3): hyperref's `autoref`
+  /// and cleveref's `creflabel` and its per-type roles.
+  #[test]
+  fn held_tag_roles_are_sorted() {
+    for listed in [["creflabel", "autoref", "cref@equation"], [
+      "cref@equation",
+      "creflabel",
+      "autoref",
+    ]] {
+      let keys = listed.into_iter().map(pin).collect();
+      assert_eq!(held_tag_roles(keys), [
+        "autoref",
+        "cref@equation",
+        "creflabel"
+      ]);
+    }
   }
 }
