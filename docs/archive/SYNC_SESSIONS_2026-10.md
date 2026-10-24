@@ -7918,3 +7918,23 @@ labelled objects' `refnum` tags; the wrapper-package papers byte-identical. Nets
 math-ph0209020 is another shape: its labels sit on `\item`s of jfa.sty's own list (`\usecounter{numcount}` with a saved
 `\@currentlabel`), 31 dangling (SYNC row "Complete breakage").
 
+**int84** (2026-10-24; 79k → a95f7c0a12, r2 93d79e217f): pgf's `\lxSVG@includegraphics` (the image an externalized
+TikZ figure or `\pgfimage` draws) emitted a `graphics` with no `candidates`, so the file was never found (Perl
+pgfsys-latexml.def.ltxml:597-628 lists them and sizes the image as `\includegraphics`): 2302.00752 18, 1905.03839 12,
+1506.05333 47, 1706.08946 142 missing graphics → 0. comment.sty's `\includecomment{x}`/`\excludecomment{x}` also define
+`\x`/`\endx` (KPE #1148), so a comment under a kernel `\begin` is skipped (2104.08110); r2: an empty name defines
+nothing, where `\\` had become the comment's end and every line break read raw lines (2508.09827: E 4 → 11 in the
+first A/B). Gates int84a 7214/7214. A/B int83a → int84a over popint84 (445: 135 pgf-image, 298 comment.sty, 12 arabtex
+census papers): 0 worse; the arabtex word losses are the comment bodies pdflatex hides; the pgf group's 27 changed
+papers sizing attributes (panel fractions, `foreignObject` sizes, `\resizebox` scales). Nets 136/136, 0 worse.
+
+**int85** (2026-10-24; 79l → 0be96498f3, test counts f107f6d7f5): a front matter item that leaves a group open
+(sig-alternate's `\author{A \end{tabular}\begin{tabular}{c} Dept}` via `\sharedaffiliation`) could not end its text
+mode, so its group was never popped and its `\label` (`\lx@set@frontmatter@label`) took every later `\label` of the
+document. The item is now digested in its own group (`digest_in_own_group`), and a parameterless macro expanding to
+`\end{tabular}`… in an author is the line break it prints (OD #894). Gates int85a 7217/7217 after three guard counts
+fell (66h, fms2a1: fewer leak-induced errors; "Body after." no longer bold). A/B int83a → int85a over popint85 (907: the
+int84 groups, 72 sig-alternate + 8 `\sharedaffiliation` census papers, 382 controls): E 11,508 → 11,365, F 26 = 26,
+0 worse, 23 better; the controls 1 byte-changed of 380 (2505.20064, 55 dangling → 0); the sig group labels restored
+(1301.5612 7 → 56, 1801.02123 2 → 22) and body footnotes back in place (1401.6981 7, 1802.01191 11, taken into the
+author block as "contacts" before). Nets 136/136, 0 worse (int83a → int85a).
