@@ -8035,3 +8035,28 @@ commented-out `\input`s), 2404.00467 (main-file guess `diff.tex`). Residuals: 24
 `\description`: OD #500 keeps environments locked — ruling needed), 0705.0608 (easyeqn's `{EQA}` drops `\label` and
 number), 2110.08325 (`\currfiledir` empty inside `\input` files: `\AddToHook`/`\UseHook` are no-ops here, so currfile's
 filehook push never runs).
+
+**int92** (2026-10-24; 79v → 211e946af6, 79w → 4aeb2c8901): brk89 residuals, two kernel capabilities. LaTeX's
+`\input{…}` (`\@iinput` = `\ltx@input`, and `\InputIfFileExists`) runs latex.ltx's file hooks around a content file
+(:19646-19673): content.rs `input_content_with_file_hooks` sets `\CurrentFile`/`\CurrentFilePath`, pushes the filehook
+stack and runs `file/before`, `file/<name>/before`, then after the file `file/<name>/after`, `file/after` and the pop;
+TeX's `\@@input` runs none (KNOWN_PERL_ERRORS #1164). The int91 note that `\AddToHook`/`\UseHook` are no-ops was
+wrong: lthooks runs in LaTeX documents, the gap was the `\input` that ran no file hooks. currfile now knows the file it
+is in: 2110.08325's `\input{\currfiledir settings}` and grid figures found; with them its `\drawGridVertex`
+(`\def\RelayedType{{#1}}` … `\node[\RelayedType]`) reached a Rust-only pgfkeys defect — our native `dispatch_item`
+added the default path to the expanded key `{node}` where `\pgfkeys@addpath#1\relax` loses the one brace group (Rust
+Error Fixes, 79w). `\valign` is an alignment (tex_tables.rs: `\halign`'s reader, each template column in a `\vbox`,
+§785/§796, the lines read turned into columns by `Alignment::transpose`); reading the body unread had dropped its
+entries, and an environment's `\valign\bgroup…\cr` … `\crcr\egroup` read to the end of the file (2502.06786's teaser
+figure, caption and label; KPE #142 updated, fancyvrb's `showtabs` mark now its three symbols). Gates int92a
+7234/7234 (rustdoc fixed after: a private intra-doc link), int92b 1 red (`perfect_kernel_batch60::box_brace_is_scanned`
+pinned the old "`\valign` set as nothing"; pdflatex sets "india", the expectation follows) + 2 clippy
+`extend_with_drain`, int92c 7236/7236. A/B int91b → int92a over popint92 (2110.08325, 26 currfile, 3 filehook, 400
+`\input`, 100 `\include`, 80 `\AddToHook`, 80 subfiles/standalone/import; 679 converted): 2 changed, 2110.08325 501
+errors at the pgfkeys defect. A/B int91b → int92b over popint92b (+ 74 `\valign`, 293 TikZ, 87 `\tikzstyle`; 1,133
+converted): E 7,892 → 7,869, F 17 = 17, 0 worse, words +13k; 1,126 byte-identical, 7 changed, all fixes (2110.08325
+21 errors → 0, 0 of 116 refs dangling; 2502.06786; 2010.05066 and 2012.07452 graphics under `\currfiledir`;
+2111.14643 and 2302.00833 per-file labels and images; cond-mat9410110's `\valign` table filled). Nets 136/136, 0 worse
+(int91a → int92a, int92a → int92c). Not ours: 2402.06576, 1911.02564, 2103.08199, 1012.2852 (TL 2025's kernel `\Ref`).
+Residuals: listings' `\btHL` (2104.08012, 2006.16205), math-ph0209020 (an aux-only `\newlabel`), 0802.3014 (pretex
+macro system), plus 2410.10450 and 0705.0608 from int91.

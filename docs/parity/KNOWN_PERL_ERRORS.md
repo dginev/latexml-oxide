@@ -18017,3 +18017,16 @@ notes the caption's row holds after the caption's text, as longtable sets the ma
 (longtable.sty:476); text before the caption in its row (pdflatex's "Misplaced \noalign", 1009.4206's stray `[t]`) is
 dropped with the row as before. Witness 2201.11330 (3 dangling references). Repro captions-floats/footnote_with_newline_in_table;
 guard `perfect_kernel_batch79u::a_note_in_a_table_keeps_its_line_break_and_the_caption_its_note`.
+
+## 1164. `\input{…}` runs no file hooks, so currfile's names are the main file's
+
+latex.ltx's `\input{…}` is `\@iinput` = `\InputIfFileExists` (:19646-19673), which sets `\CurrentFile`/`\CurrentFilePath`
+and runs the `file/before` and `file/<name>/before` hooks ahead of the file's tokens and `file/after` after them, with
+the filehook stack pushed and popped around them. currfile (through filehook, filehook-2020.sty:280-285) records the
+file names there, so `\currfiledir` inside an `\input` file is that file's directory. latex_constructs.pool.ltxml's
+`\input` loads the content directly: `\currfiledir` stays empty inside the file, `\input{\currfiledir sibling}` reads
+`/sibling` ("Can't find TeX file"), and every file a paper reaches that way is lost (2110.08325: 5 files, the
+figure styles and every grid figure). Fixed in Rust (79v): content.rs `input_content_with_file_hooks` runs the file
+hooks around a content file read by `\ltx@input` (LaTeX's `\input{}`/`\InputIfFileExists`), not by TeX's
+`\@@input`. Repro loader/currfile_dir_inside_input; guard
+`perfect_kernel_batch79v::currfile_knows_the_input_file_it_is_in`.
