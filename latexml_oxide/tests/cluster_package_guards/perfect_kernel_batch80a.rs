@@ -7,7 +7,7 @@
 //! `\newcommand`, a longtable's label key and a `\cref` list expanded, the conditional guard's Fatal salvaged), 80l
 //! (siunitx's unit commands, aa's `\longtab`, an eqnarray's trailing label), 80m (a preloaded class's hook stack) and 80n
 //! (a skipped branch ends at a column's v-part, `\maketitle` calls a redefined `\twocolumn`, acronym's protected
-//! commands). Each guard converts its repro under `tools/perfect_kernel/repros/`, asserts the diagnostics by count and the elements.
+//! commands), 80o (iucr.cls's `\hcaption`). Each guard converts its repro under `tools/perfect_kernel/repros/`, asserts the diagnostics by count and the elements.
 use latexml::util::test::convert_files_with;
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -635,4 +635,35 @@ fn acronym_commands_pass_a_siunitx_column_whole() {
     "{xml}"
   );
   assert!(xml.contains("After the table."), "{xml}");
+}
+
+/// 80o: iucr.cls's `\hcaption` is the caption. The class (shipped by its papers, not in TeX Live) stores the caption
+/// with `\gdef\captionbox` (iucr.cls:6645-6890) for its own float end code (:3828-3840), which the kernel's float
+/// bindings own, so the caption and its `\label` were lost. Red (int103a): no caption, the `\ref` dangling. Witness
+/// 1707.09045. The stand-in class keeps the real one's shape.
+#[test]
+fn iucr_hcaption_is_the_caption() {
+  let (log, xml) = convert_files_with(
+    r"\documentclass{iucr}
+\begin{document}
+\begin{table}
+\begin{tabular}{ll} a & b \end{tabular}
+\hcaption{The model.\label{model:direct}}
+\end{table}
+See Table~\ref{model:direct}.
+\end{document}
+",
+    &[(
+      "iucr.cls",
+      r"\NeedsTeXFormat{LaTeX2e}\ProvidesClass{iucr}\LoadClass{article}
+\newcommand{\hcaption}[1]{\gdef\captionbox{\par\noindent{\bfseries Table \thetable}\par\noindent #1}}
+\renewenvironment{table}{\begin{center}\refstepcounter{table}}{\end{center}\captionbox}
+",
+    )],
+    None,
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  let table = xml.find(r#"labels="LABEL:model:direct""#).expect(&xml);
+  assert!(xml[table..].contains("The model."), "{xml}");
+  assert!(xml.contains("<caption"), "{xml}");
 }

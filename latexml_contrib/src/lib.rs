@@ -191,6 +191,7 @@ pub mod informs_cls;
 pub mod interact_cls;
 pub mod interspeech_cls;
 pub mod interspeech_sty;
+pub mod iucr_cls;
 pub mod jabbrv_sty;
 pub mod jair_sty;
 pub mod jcappub_sty;
@@ -772,6 +773,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("imsart", "cls", imsart_cls::load_definitions),
   ("informs", "cls", informs_cls::load_definitions),
   ("interact", "cls", interact_cls::load_definitions),
+  ("iucr", "cls", iucr_cls::load_definitions),
   // Interspeech20YY.cls resolve here by version-suffix stripping (find_file_fallback).
   ("Interspeech", "cls", interspeech_cls::load_definitions),
   ("ieeetj", "cls", ieeetj_cls::load_definitions),

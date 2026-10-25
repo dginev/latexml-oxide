@@ -217,6 +217,7 @@ pub const AUTHOR_FILE_STAND_INS: &[&str] = &[
   "interact.cls",
   "iopams.sty",
   "iopart.cls",
+  "iucr.cls",
   "jabbrv.sty",
   "jair.sty",
   "jcappub.sty",
