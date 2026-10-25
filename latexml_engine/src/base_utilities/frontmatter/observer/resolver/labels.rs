@@ -81,6 +81,24 @@ pub fn mark_labels(label: &str) -> Vec<String> {
   labels
 }
 
+/// A name mark's labels with a number range spelled out: `1-4` requests 1, 2, 3 and 4 (`Bauer$^{1-4}$`, 2012.15817 —
+/// read as its ends, the 2 and 3 entries were not hers). A falling range, or one of more than 50 numbers, stays as
+/// written.
+pub(super) fn spelled_ranges(labels: Vec<String>) -> Vec<String> {
+  labels
+    .into_iter()
+    .flat_map(|label| {
+      let range = label
+        .split_once(['-', '\u{2013}', '\u{2212}'])
+        .and_then(|(a, b)| Some((a.trim().parse::<u32>().ok()?, b.trim().parse::<u32>().ok()?)));
+      match range {
+        Some((a, b)) if a < b && b - a <= 50 => (a..=b).map(|n| n.to_string()).collect(),
+        _ => vec![label],
+      }
+    })
+    .collect()
+}
+
 /// A label without its prefix (`affiliation:1` "1", `fn:label1` "label1"), Perl's `s/^[^:]*://`; `None` when it has
 /// none.
 pub(super) fn unprefixed(label: &str) -> Option<&str> {

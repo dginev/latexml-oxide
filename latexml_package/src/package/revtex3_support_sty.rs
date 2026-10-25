@@ -99,6 +99,11 @@ LoadDefinitions!({
   //======================================================================
   // Additional or different definitions from revtex4_support
 
+  // REVTeX 3's own `\address` (aps.sty v3.1), the address of the author group before it (the group rule,
+  // `annotate=run`, KNOWN_PERL_ERRORS #1190); revtex4's is its obsolete alias of `\affiliation`
+  // (revtex4_support_sty.rs).
+  DefMacro!("\\address{}", "\\lx@add@address[annotate=run]{#1}");
+
   DefConditional!("\\ifpreprintsty");
   DefConditional!("\\ifsecnumbers");
   DefConditional!("\\ifsegabssty");

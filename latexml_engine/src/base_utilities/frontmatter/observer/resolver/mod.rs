@@ -650,6 +650,15 @@ mod tests {
     );
   }
 
+  /// FM S2b r3: a name's number range is every number in it; a falling or long range stays as written (2012.15817).
+  #[test]
+  fn number_ranges_are_spelled_out() {
+    let spelled = |labels: &[&str]| spelled_ranges(labels.iter().map(|l| l.to_string()).collect());
+    assert_eq!(spelled(&["1-4", "a"]), ["1", "2", "3", "4", "a"]);
+    assert_eq!(spelled(&["2\u{2013}3"]), ["2", "3"]);
+    assert_eq!(spelled(&["4-1", "1-99", "a-c"]), ["4-1", "1-99", "a-c"]);
+  }
+
   /// Item 2: a `fuzzy:` label and a `\ref` key stay whole; the name's letters skip its marks.
   #[test]
   fn fuzzy_labels_and_their_letters() {

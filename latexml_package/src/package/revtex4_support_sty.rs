@@ -104,8 +104,10 @@ LoadDefinitions!({
   DefMacro!("\\noaffiliation", "\\lx@add@affiliation[annotate=run]{}");
   DefMacro!("\\affil OptionalSemiverbatim {}",
     "\\lx@add@affiliation[annotate={\\ifx.#1.new\\else 1\\fi},label={#1}]{#2}");
-  // \address provides an address to the previous \author — revtex4-2.cls:7519 makes it `\affiliation`: the group rule
-  DefMacro!("\\address{}", "\\lx@add@address[annotate=run]{#1}");
+  // revtex4-2.cls:7519 (revtex4.cls:5964, revtex4-1.cls:7498): the obsolete `\address` becomes `\affiliation`, its
+  // mark-led lines going to the names showing their marks (Perl's `\lx@add@address` had no mark path, 0806.3762),
+  // as `\altaddress` becomes `\altaffiliation` below.
+  RawTeX!(r"\def\address{\replace@command\address\affiliation}");
   // These add contacts to most recent author
   // The optional arguments here are a sort of prefix to the footnote. (NOT label)
   // REVTeX 4.1/4.2 set the address with `\href`, without hyperref `\@href`: in the current font

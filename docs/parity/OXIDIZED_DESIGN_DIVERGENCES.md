@@ -23882,8 +23882,14 @@ carries a `radix_alpha` suffix, the subtrees' ids paired in order, `idref`s foll
 `footnotex2a`); (3) revtex's group rule (KNOWN_PERL_ERRORS #1190), which left an unmarked line inside a marked list
 (1303.7097's `\affiliation{CONICET La Plata, …}` after the `$^\flat$` one) on the last name only, written or not. PDF
 checks (a seeded draw of 20 written papers, 17 compiled): 15 match the PDF name by name; 1303.7097 was (3); 2012.15817's
-`Bauer$^{1-4}$` requests only the range's ends. Guards `perfect_kernel_batchfms2b::{a_mark_in_paren_math_is_cut_whole,
-footnote_marked_affiliations_go_to_their_names}`, `perfect_kernel_batch80a::revtex_group_affiliations_reach_every_name`.
+`Bauer$^{1-4}$` requests only the range's ends. Census again on int110b (80u): 279 written, E 2,620 = 2,620, F 3 = 3,
+script errors equal, 0 distinct words lost or gained in the 299 byte-changed papers (159 lose only duplicates), jing
+errors equal in all 316 (67 = 67), no suffixed id left without its plain one; the 9 papers whose mark consistency the
+counter scored lower are corrections (an equal-contribution or corresponding-author line made the note of the names
+showing its mark: 1107.2956, 1604.02459, 2401.02294, 2605.28357). Default output (unset) int109c → int110b: 428 of
+5,917 changed, E equal, 0 words lost, 0 named affiliations lost, 123 papers gain them (the group rule). Guards
+`perfect_kernel_batchfms2b::{a_mark_in_paren_math_is_cut_whole, footnote_marked_affiliations_go_to_their_names}`,
+`perfect_kernel_batch80a::revtex_group_affiliations_reach_every_name`.
 
 ### 840. A space a name sets before its own mark is the name's; spacing-only math, `\enskip` after a mark part names
 

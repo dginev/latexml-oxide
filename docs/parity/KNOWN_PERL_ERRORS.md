@@ -18573,3 +18573,11 @@ authors with none yet, and each further line before a new author the same run's)
 `annotate=new` (aastex701.cls shares the `\move@AU` machinery; not yet confirmed against a PDF). Repro
 sectioning-frontmatter/author_revtex_group_affiliations_reach_every_name; guard
 `perfect_kernel_batch80a::revtex_group_affiliations_reach_every_name`.
+
+Also revtex4's obsolete `\address`: revtex4-2.cls:7519 (revtex4-1.cls:7498, revtex4.cls:5964) defines it as
+`\replace@command\address\affiliation`, but revtex4_support.sty.ltxml:52 makes it `\lx@add@address[annotate=new]`, a
+contact of role address with no mark path: `\author{Gia Dvali$^{a,b}$, Oriol Pujolas$^b$ and Michele Redi$^c$}` over
+`\address{$^a$…}\address{$^b$…}\address{$^c$…}` (0806.3762) gave every name the first line and Redi all three.
+Fixed in Rust (80v): revtex4_support_sty.rs defines `\address` as the class does (its marked lines go by mark, as
+`\affiliation`'s); revtex3_support_sty.rs keeps REVTeX 3's own `\address` (role address, the group rule). Repro
+sectioning-frontmatter/author_revtex_marked_address_by_mark; guard `perfect_kernel_batch80a::revtex_marked_address_goes_by_mark`.

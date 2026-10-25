@@ -908,7 +908,7 @@ impl Resolver {
         },
         EventKind::Sep(_) => last_sep = Some(event),
         EventKind::Mark => {
-          let labels = event_labels(event);
+          let labels = spelled_ranges(event_labels(event));
           let next_is_name = events[i + 1..]
             .iter()
             .find(|e| !matches!(e.kind, EventKind::Layout | EventKind::Mark))

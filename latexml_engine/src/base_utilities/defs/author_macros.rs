@@ -384,9 +384,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // output any frontmatter that was accumulated.
 
   // Add a annotation target based on the name for fuzzy matching of annotations.
+  // (one label: `_annotations` is a comma list, and a name's text holds the commas of its marks — Perl's
+  // Base_Utility.pool.ltxml:873 left `Gia Dvali$^{a,b}$` the labels `fuzzy:Gia_Dvalia` and `b`, which
+  // `relocate_annotations` read as Dvali's own request of the `$^b$` line, so Pujolas, marked `b` too, lost it: 0806.3762)
   Tag!("ltx:creator", after_close => sub[document, creator] {
     if let Some(person) = document.findnode("ltx:personname", Some(&*creator)) {
-      let label = clean_label(&person.get_content(), Some("fuzzy")).into_owned();
+      let label = clean_label(&person.get_content(), Some("fuzzy")).replace(',', "_");
       let labels = creator.get_attribute("_annotations").unwrap_or_default();
       let value = if labels.is_empty() { label } else { s!("{labels},{label}") };
       document.set_attribute(creator, "_annotations", &value)?;

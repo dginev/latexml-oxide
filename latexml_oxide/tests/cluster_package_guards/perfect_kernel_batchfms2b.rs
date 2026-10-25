@@ -275,3 +275,29 @@ Text.
   holds(&on, "Bob Baker", &["Univ A", "Univ B"], &[]);
   holds(&on, "Cat Cole", &["Univ B"], &["Univ A"]);
 }
+
+/// FM S2b r3: a number range a name shows requests every number in it — `Ann Able$^{1-3}$` the entries 1, 2 and 3.
+/// Red (80u): the range read as its ends, Ann kept Univ A and Univ C, not Univ B. Witness 2012.15817
+/// (`Bauer$^{1-4}$`, `Wieschaus$^{2-4}$`).
+#[test]
+fn a_number_range_requests_every_number_in_it() {
+  let tex = r"\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1-3}$, Bob Baker$^{2}$ and Cat Cole$^{1,4}$}
+\affiliation{$^1$Univ A, City\\ $^2$Univ B, Town\\ $^3$Univ C, Village\\ $^4$Univ D, Hamlet}
+\maketitle
+Text.
+\end{document}
+";
+  let on = creators(tex, true);
+  holds(&on, "Ann Able", &["Univ A", "Univ B", "Univ C"], &[
+    "Univ D",
+  ]);
+  holds(&on, "Bob Baker", &["Univ B"], &[
+    "Univ A", "Univ C", "Univ D",
+  ]);
+  holds(&on, "Cat Cole", &["Univ A", "Univ D"], &[
+    "Univ B", "Univ C",
+  ]);
+}

@@ -884,3 +884,37 @@ fn revtex_group_affiliations_reach_every_name() {
     "{xml}"
   );
 }
+
+/// revtex4's obsolete `\address` is `\affiliation` (revtex4-2.cls:7519, revtex4-1.cls:7498, revtex4.cls:5964
+/// `\replace@command\address\affiliation`), as the binding's `\altaddress` is `\altaffiliation`: mark-led lines go to the
+/// names showing their marks. Red (80u): Perl's `\lx@add@address` had no mark path, and under the group rule every line
+/// was every name's. Witness 0806.3762. Repro sectioning-frontmatter/author_revtex_marked_address_by_mark.
+#[test]
+fn revtex_marked_address_goes_by_mark() {
+  let (log, xml) = convert_files_with(
+    repro!("sectioning-frontmatter/author_revtex_marked_address_by_mark.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  let creators: Vec<&str> = xml
+    .split("<creator ")
+    .skip(1)
+    .map(|c| &c[..c.find("</creator>").expect("a closed creator")])
+    .collect();
+  let places = |c: &str| -> Vec<&str> {
+    ["CERN", "CCPP", "ITPP"]
+      .into_iter()
+      .filter(|p| c.contains(p))
+      .collect()
+  };
+  assert_eq!(
+    creators.iter().map(|c| places(c)).collect::<Vec<_>>(),
+    [vec!["CERN", "CCPP"], vec!["CCPP"], vec!["ITPP"]],
+    "{xml}"
+  );
+  assert!(
+    creators.iter().all(|c| !c.contains("role=\"address\"")),
+    "{xml}"
+  );
+}
