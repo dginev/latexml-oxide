@@ -76,11 +76,14 @@ LoadDefinitions!({
   DefMacro!("\\author[]{}",    "\\lx@add@authors@append[annotations={#1}]{#2}\\lx@author@after{#2}");
   // An `\affiliation` that starts with a letter or number mark (all `\author{Name$^{a}$}`s first, then `$^{a}$`-marked
   // lines: 2011.01984, 2301.08449) is labelled by its marks under marked authors, and goes to the authors showing them
-  // (relocate_annotations); any other is revtex's group rule, every author before it without one (`annotate=new`): a
-  // superscript inside the line (`Laboratory for $^{3}$He`) or a symbol (`$^{\dagger}$`) is no mark, and an
-  // interleaved `\author{A$^{1}$}\affiliation{$^{1}$…}` group keeps the group rule, exact there (63i review).
+  // (relocate_annotations); any other is revtex's group rule, every author of the group before it (`annotate=run`: the
+  // run of authors with none yet, and each further line before a new author the same run's — revtex4-2.cls
+  // `\move@AU\move@AF`; Perl's `annotate=new`, Base_Utility.pool.ltxml:521, gave a group's second line to its last
+  // author only, KNOWN_PERL_ERRORS #1190, 1303.7097): a superscript inside the line (`Laboratory for $^{3}$He`) or a
+  // symbol (`$^{\dagger}$`) is no mark, and an interleaved `\author{A$^{1}$}\affiliation{$^{1}$…}` group keeps the
+  // group rule, exact there (63i review).
   DefMacro!("\\affiliation{}", sub[(content)] {
-    let attr = Some(mouth::tokenize_internal("annotate=new"));
+    let attr = Some(mouth::tokenize_internal("annotate=run"));
     let cs = if leads_with_mark(&content)
       && !queued_group_shares_the_mark(&content)
     {
@@ -97,12 +100,12 @@ LoadDefinitions!({
   // 2609.05602, 2609.07025).
   def_macro_noop("\\move@AU")?;
   def_macro_noop("\\move@AF")?;
-  DefMacro!("\\@affiliation{}", "\\endgroup\\lx@add@affiliation[annotate=new]{#1}");
-  DefMacro!("\\noaffiliation", "\\lx@add@affiliation[annotate=new]{}");
+  DefMacro!("\\@affiliation{}", "\\endgroup\\lx@add@affiliation[annotate=run]{#1}");
+  DefMacro!("\\noaffiliation", "\\lx@add@affiliation[annotate=run]{}");
   DefMacro!("\\affil OptionalSemiverbatim {}",
     "\\lx@add@affiliation[annotate={\\ifx.#1.new\\else 1\\fi},label={#1}]{#2}");
-  // \address provides an address to the previous \author
-  DefMacro!("\\address{}", "\\lx@add@address[annotate=new]{#1}");
+  // \address provides an address to the previous \author — revtex4-2.cls:7519 makes it `\affiliation`: the group rule
+  DefMacro!("\\address{}", "\\lx@add@address[annotate=run]{#1}");
   // These add contacts to most recent author
   // The optional arguments here are a sort of prefix to the footnote. (NOT label)
   // REVTeX 4.1/4.2 set the address with `\href`, without hyperref `\@href`: in the current font

@@ -50,7 +50,9 @@ fn mark_tags(n: &str, id: &str) -> String {
 /// Operation 3 (owners by mark): REVTeX's `\affiliation` after a name list is every name's (revtex4-2.cls's grouping,
 /// today's reading), but the affiliations open with the `\footnotemark` the names' `\footnote[n]` printed — in the PDF
 /// Ann's mark 1 stands at Univ A and Univ B, Bob's 2 at Univ C. Written: each affiliation goes to the name showing
-/// its mark, its mark kept as it prints (was: Ann Univ A alone, Bob all three — Univ A twice). Shape
+/// its mark, its mark kept as it prints (today's: all three both names', the group rule; before 80u, Ann Univ A alone,
+/// Bob all three). Bob's Univ C is the copy today's numbered `footnotex3a`; Ann's, taken, gives it back its id
+/// (`footnotex3`; red, 80u before `reclaim_ids`: `footnotex3a` alone, no `footnotex3` in the document). Shape
 /// `perfect_kernel_batchfms2a2r7::FOOTNOTE_MARK`.
 #[test]
 fn footnote_marked_affiliations_go_to_their_names() {
@@ -79,7 +81,7 @@ Text.
       "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Note:\u{a0}\" role=\"note\">E-mail: \
        ann.able@example.org</contact>{}{}</creator>",
       affiliation("*", "footnotex1", "Univ A, City"),
-      affiliation("*", "footnotex2a", "Univ B, Town")
+      affiliation("*", "footnotex2", "Univ B, Town")
     ),
     format!(
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Note:\u{a0}\" \
@@ -251,4 +253,25 @@ Text.
   let on = creators(tex, true);
   holds(&on, "Ann Bera", &["Univ P", "Univ I"], &[]);
   holds(&on, "Pat Shukla", &["Univ P"], &["Univ I"]);
+}
+
+/// FM S2b r3 (the off-vs-on census): a mark set in `\( … \)` is cut whole — the pieces of `\affiliation{\( ^{1}
+/// \)Univ A \\ \( ^{2} \)Univ B}` open at the `\(`, as at a `$`. Red (80t): the cut took the script and left `\(` in
+/// the piece before, so each piece re-digested `^{1} \)Univ A \\ \(`: "Script ^ can only appear in math mode" and
+/// "Attempt to end mode math". Witnesses hep-ph0110378, 2307.12984 (`\({}^{a}\)`).
+#[test]
+fn a_mark_in_paren_math_is_cut_whole() {
+  let tex = r"\documentclass[aps,prd]{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able\( ^{1} \), Bob Baker\protect\( ^{1,2} \) and Cat Cole\({}^{2}\)}
+\affiliation{\( ^{1} \)Univ A, City\\ \({}^{2}\)Univ B, Town}
+\maketitle
+Text.
+\end{document}
+";
+  let on = creators(tex, true);
+  holds(&on, "Ann Able", &["Univ A"], &["Univ B"]);
+  holds(&on, "Bob Baker", &["Univ A", "Univ B"], &[]);
+  holds(&on, "Cat Cole", &["Univ B"], &["Univ A"]);
 }

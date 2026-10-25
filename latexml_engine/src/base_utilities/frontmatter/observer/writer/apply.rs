@@ -1,7 +1,8 @@
 //! The writer's operations on today's frontmatter (FM S2b): copies of today's items for the authors the reading gives
 //! them, the items made from queued tokens (a cut entry's pieces, a legend's note) digested as today's digests an
 //! entry (`digest_frontmatter_item`) and inserted as today's inserts one (`insert_frontmatter_entry`), roles set, and
-//! today's items taken away — in that order, so a copy is made before its source goes.
+//! today's items taken away — in that order, so a copy is made before its source goes, and a copy that stays takes back
+//! the ids of the one taken.
 
 use super::{
   dom::Front,
@@ -119,6 +120,50 @@ fn make(
   Ok(())
 }
 
+/// The elements of `node`'s subtree that carry an `xml:id`, with it, in document order.
+fn subtree_ids(document: &mut Document, node: &Node) -> Vec<(Node, String)> {
+  document
+    .findnodes("descendant-or-self::*[@xml:id]", Some(node))
+    .into_iter()
+    .filter_map(|n| n.get_attribute_ns("id", XML_NS).map(|id| (n, id)))
+    .collect()
+}
+
+/// A taken item's ids given back to a copy of it that stays. Today's numbers each creator's copy of an item it places
+/// under several (`footnotex3`, then `modify_id`'s `footnotex3a`), and a copy the writer makes is numbered so too: taking
+/// the copy that held the plain id left the other's suffixed one standing alone (`footnotex3a`, no `footnotex3`). The
+/// copy is the element named as the taken subtree's first id-holder whose id is that one's with a `radix_alpha` suffix
+/// (a contact holds no id, the footnote mark in it does), its subtree's ids paired in order with the taken subtree's,
+/// and references to them follow.
+fn reclaim_ids(document: &mut Document, taken: &[(SymStr, String)]) -> Result<()> {
+  let Some(&(qname, ref id)) = taken.first() else {
+    return Ok(());
+  };
+  if document.lookup_id(id).is_some() {
+    return Ok(());
+  }
+  let Some(copy) = (1..=702).find_map(|n| {
+    document
+      .lookup_id(&s!("{id}{}", radix::radix_alpha(n)))
+      .filter(|c| c.get_parent().is_some() && document::get_node_qname(c) == qname)
+      .cloned()
+  }) else {
+    return Ok(());
+  };
+  let copy_ids = subtree_ids(document, &copy);
+  if copy_ids.len() != taken.len() || taken.iter().any(|(_, id)| document.lookup_id(id).is_some()) {
+    return Ok(());
+  }
+  for ((mut node, old), (_, new)) in copy_ids.into_iter().zip(taken) {
+    document.unrecord_id(&old);
+    document.set_attribute(&mut node, "xml:id", new)?;
+    for mut reference in document.findnodes(&s!("//*[@idref='{old}']"), None) {
+      document.set_attribute(&mut reference, "idref", new)?;
+    }
+  }
+  Ok(())
+}
+
 /// Carry out `plan` on the document.
 pub(super) fn apply(document: &mut Document, front: &Front, plan: &Plan) -> Result<()> {
   let mut block: Option<Node> = None;
@@ -162,10 +207,21 @@ pub(super) fn apply(document: &mut Document, front: &Front, plan: &Plan) -> Resu
       }
     }
   }
+  // (the items taken, with their ids: a copy of one that stays takes them back)
+  let mut taken = Vec::new();
   for op in &plan.ops {
     if let Op::Remove { node } = op {
+      // (named while attached: a detached element's name no longer resolves its prefix)
+      let ids: Vec<(SymStr, String)> = subtree_ids(document, node)
+        .into_iter()
+        .map(|(holder, id)| (document::get_node_qname(&holder), id))
+        .collect();
       document.remove_node(node.clone());
+      taken.push(ids);
     }
+  }
+  for ids in &taken {
+    reclaim_ids(document, ids)?;
   }
   // (a nameless creator the operations emptied is gone, as `coalesce_empty_creators` drops one)
   for creator in front.nameless.iter().map(|c| c.node.clone()).chain(block) {

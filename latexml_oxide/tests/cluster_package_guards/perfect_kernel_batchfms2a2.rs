@@ -430,9 +430,9 @@ fn revtex_name_parts_are_one_name() {
   );
   assert_eq!(tuples(&json_out), [
     "C Francesco Parisen Toldin [] | line:names name:layout-joined",
-    "  a Univ A | api:annotate:new",
+    "  a Univ A | api:annotate:run",
     "C Ann Able [] | line:names",
-    "  a Univ A | api:annotate:new",
+    "  a Univ A | api:annotate:run",
   ]);
   assert_eq!(json_out["policies"][0][1], "revtex");
 }
@@ -910,10 +910,10 @@ fn orcid_links_cites_environments_and_title_notes() {
     ),
     [
       "C Ann Able [] | line:names",
-      "  a Univ A, City | api:annotate:new",
+      "  a Univ A, City | api:annotate:run",
       "  c orcid 0000-0001-7461-3342 | owner:adjacent",
       "C Bob Baker [] | line:names",
-      "  a Univ B, Town | api:annotate:new",
+      "  a Univ B, Town | api:annotate:run",
       "B thanks Supported by the X Foundation. | api:owner:block api:title-note",
     ]
   );
@@ -925,7 +925,7 @@ fn orcid_links_cites_environments_and_title_notes() {
     ),
     [
       "C Jiayi Zhang ( 张嘉懿) [] | line:names name:layout-joined",
-      "  a Univ A | api:annotate:new",
+      "  a Univ A | api:annotate:run",
     ]
   );
 }

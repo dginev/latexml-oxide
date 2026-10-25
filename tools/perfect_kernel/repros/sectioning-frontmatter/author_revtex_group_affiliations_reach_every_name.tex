@@ -1,0 +1,19 @@
+% revtex's group rule (revtex4-2.cls `\affiliation`, `\move@AU\move@AF`): every `\affiliation` after a group of
+% `\author`s is each author's of the group. pdflatex prints Ann Able and Bob Baker over Univ X and Univ Y, Cat Cole
+% over Univ Z. Red: Perl's `annotate=new` (Base_Utility.pool.ltxml:521) gave Univ Y to Bob only. Witness 1303.7097.
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\affiliation{Univ X, City}
+\affiliation{Univ Y, Town}
+\author{Cat Cole}
+\affiliation{Univ Z, Village}
+\affiliation{Univ W, Hamlet}
+\begin{abstract}
+Abstract.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

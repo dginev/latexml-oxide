@@ -18549,3 +18549,27 @@ observer's rehearsal carries the footnote steps of the `\author` blocks rehearse
 stepped the counter itself, so the names show ∗, †, ‡ as TeX steps them. Guards
 `perfect_kernel_batchfms2b::author_footnote_symbols_carry_their_affiliations`,
 `perfect_kernel_batch77n::revtex_footnotetext_among_names_is_the_names`.
+
+## 1190. revtex's second affiliation of an author group reaches its last author only
+
+revtex4_support.sty.ltxml:47 maps `\affiliation{}` to `\lx@add@affiliation[annotate=new]`. Perl's `new`
+(Base_Utility.pool.ltxml:521-531) walks back from the last author and stops at the first that already has the role, so
+the group's first `\affiliation` reaches every author of the group and each later one only the last. revtex4-2.cls's
+`\affiliation` (`\move@AU\move@AF`) files every pending author with each affiliation: the whole group holds every line,
+as the PDF prints the names over the group's affiliations. Witness 1303.7097 (eleven names, five affiliations: Perl gave
+the first ten names one line each, the last all five). Minimal trigger:
+
+```latex
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}\author{Ann}\author{Bob}\affiliation{Univ X}\affiliation{Univ Y}\maketitle
+\end{document}
+% pdflatex: "Ann and Bob" over "Univ X and Univ Y"; Perl: Ann Univ X, Bob Univ X and Univ Y
+```
+
+Fixed in Rust (80u): revtex4_support_sty.rs's `\affiliation`, `\@affiliation`, `\noaffiliation` and `\address`
+(revtex4-2.cls:7519 makes it `\affiliation`) take `annotate=run` (OXIDIZED_DESIGN_DIVERGENCES #459, KNOWN_PERL_ERRORS #551: the run of
+authors with none yet, and each further line before a new author the same run's). aastex's `\affiliation` keeps
+`annotate=new` (aastex701.cls shares the `\move@AU` machinery; not yet confirmed against a PDF). Repro
+sectioning-frontmatter/author_revtex_group_affiliations_reach_every_name; guard
+`perfect_kernel_batch80a::revtex_group_affiliations_reach_every_name`.

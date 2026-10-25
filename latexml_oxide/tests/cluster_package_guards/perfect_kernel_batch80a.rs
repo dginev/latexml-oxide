@@ -840,3 +840,47 @@ Body.
   }
   assert!(!xml.contains("Running"), "{xml}");
 }
+
+/// revtex's group rule: every `\affiliation` after a group of `\author`s is each author's of the group (revtex4-2.cls's
+/// `\affiliation`, `\move@AU\move@AF` filing the pending authors with each), `annotate=run` — the run of new authors,
+/// and a second contact before any new author the same run's. Red (int109c): Perl's `annotate=new`
+/// (Base_Utility.pool.ltxml:521) gave the group's second affiliation to its last author only — Ann lost Univ Y
+/// (KNOWN_PERL_ERRORS #1190). Witness 1303.7097. Repro sectioning-frontmatter/author_revtex_group_affiliations_reach_every_name.
+#[test]
+fn revtex_group_affiliations_reach_every_name() {
+  let (log, xml) = convert_files_with(
+    repro!("sectioning-frontmatter/author_revtex_group_affiliations_reach_every_name.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let creators: Vec<&str> = xml
+    .split("<creator ")
+    .skip(1)
+    .map(|c| &c[..c.find("</creator>").expect("a closed creator")])
+    .collect();
+  let affiliations = |c: &str| -> Vec<String> {
+    c.split("role=\"affiliation\">")
+      .skip(1)
+      .map(|a| {
+        a[..a.find("</contact>").expect("a closed contact")]
+          .trim()
+          .to_string()
+      })
+      .collect()
+  };
+  let read: Vec<(bool, Vec<String>)> = creators
+    .iter()
+    .map(|c| (c.contains("<personname"), affiliations(c)))
+    .collect();
+  let named = |aff: &[&str]| (true, aff.iter().map(|a| a.to_string()).collect::<Vec<_>>());
+  assert_eq!(
+    read,
+    [
+      named(&["Univ X, City", "Univ Y, Town"]),
+      named(&["Univ X, City", "Univ Y, Town"]),
+      named(&["Univ Z, Village", "Univ W, Hamlet"]),
+    ],
+    "{xml}"
+  );
+}

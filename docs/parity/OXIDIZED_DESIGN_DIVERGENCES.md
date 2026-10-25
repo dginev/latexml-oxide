@@ -15105,7 +15105,8 @@ per-class rule:
   prints the affiliation first). A second names line must be a comma list: `Meta FAIR \& Inria Rennes`
   (2402.14904) stays an affiliation (`author_ampersand_affiliation_line_is_not_names`).
 - **Residual:** `annotate=new` (Perl Base_Utility.pool.ltxml:521) gives a second contact to the last author only, so after
-  `\author{A}\author{B}` (revtex, aastex) the first `\affiliation` is both names' and a second B's alone. amsart's
+  `\author{A}\author{B}` (aastex) the first `\affiliation` is both names' and a second B's alone; revtex's takes
+  `annotate=run` since 80u (KNOWN_PERL_ERRORS #1190). amsart's
   `\address` stays the last author's (Perl's default): after a split `\author{Klemens Fellner and Bao Quoc Tang}` one
   `\address{Graz}` is Tang's only, where the merged creator held it (repro
   sectioning-frontmatter/author_amsart_address_reaches_every_name, open); `annotate=new` there would break the up-front
@@ -23866,6 +23867,23 @@ mark 2 answers no affiliation in the PDF, today's gave Romera Torres's correspon
 the shadow-neutral guards of batchfms2a2r7/r8 keep the families not switched. Next: the full 5,639-paper revtex census
 switched off vs on with PDF checks on a seeded draw, then the switch on by default for revtex4_support; then the next
 family by the per-family gate.
+
+**S2b r3 (80u, 2026-10-25): the census's residuals.** The 5,917-paper revtex census switched off vs on (int109c): 272
+papers written, 0 distinct frontmatter words lost or gained (148 lose only duplicated words), schema errors equal in all
+315 byte-changed papers (jing, 67 = 67), at creator level 165 better and the 32 the counter flagged all corrections (a
+"These authors contributed equally" line made the notes of the names showing its mark; a block of every name's
+affiliations given by mark). Three defects, fixed: (1) a mark set in `\( … \)` was cut without its `\(` (`piece_tokens`
+counts LaTeX's `\(`/`\)` as the shifts they spell, with the spaces inside them, and a `\protect` before), so each piece
+re-digested `^{1} \)Univ A \\ \(` — 2 errors in each of hep-ph0110378 and 2307.12984, now 0 and both cut as the PDF
+prints; (2) an item today's places under several names is numbered once per copy (`footnotex3`, `modify_id`'s
+`footnotex3a`), and taking the copy that held the plain id left the suffixed one standing alone — the copy that stays
+takes back the taken one's ids (`apply::reclaim_ids`: the element named as the taken subtree's first id-holder whose id
+carries a `radix_alpha` suffix, the subtrees' ids paired in order, `idref`s following; 1606.04500 `m24a`, 1607.07280
+`footnotex2a`); (3) revtex's group rule (KNOWN_PERL_ERRORS #1190), which left an unmarked line inside a marked list
+(1303.7097's `\affiliation{CONICET La Plata, …}` after the `$^\flat$` one) on the last name only, written or not. PDF
+checks (a seeded draw of 20 written papers, 17 compiled): 15 match the PDF name by name; 1303.7097 was (3); 2012.15817's
+`Bauer$^{1-4}$` requests only the range's ends. Guards `perfect_kernel_batchfms2b::{a_mark_in_paren_math_is_cut_whole,
+footnote_marked_affiliations_go_to_their_names}`, `perfect_kernel_batch80a::revtex_group_affiliations_reach_every_name`.
 
 ### 840. A space a name sets before its own mark is the name's; spacing-only math, `\enskip` after a mark part names
 

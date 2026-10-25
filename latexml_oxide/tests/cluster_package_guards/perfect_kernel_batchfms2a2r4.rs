@@ -127,10 +127,10 @@ fn prefix_marked_names_keep_their_notes() {
 fn an_empty_entry_holds_its_run() {
   assert_eq!(tuples(&revtex(EMPTY_ENTRY)), [
     "C Ann Able [] | line:names",
-    "  a Univ A, City | api:annotate:new",
+    "  a Univ A, City | api:annotate:run",
     "C The X Collaboration [] | line:names",
     "C Bob Baker [] | line:names",
-    "  a Univ B, Town | api:annotate:new",
+    "  a Univ B, Town | api:annotate:run",
   ]);
 }
 
@@ -189,10 +189,10 @@ fn a_thanks_in_a_superscript_is_a_note() {
 fn orcid_links_printing_the_name() {
   assert_eq!(tuples(ORCID_NAMES), [
     "C Ann Able [] | line:names",
-    "  a Univ A, City | api:annotate:new",
+    "  a Univ A, City | api:annotate:run",
     "  c orcid 0000-0002-3750-9113 | owner:adjacent",
     "C Bob Baker [] | line:names",
-    "  a Univ B, Town | api:annotate:new",
+    "  a Univ B, Town | api:annotate:run",
     "  c orcid 0000-0003-4811-7913 | owner:adjacent",
   ]);
 }
@@ -203,7 +203,7 @@ fn orcid_links_printing_the_name() {
 fn the_frontmatter_marker_prints_nothing() {
   assert_eq!(tuples(FM_MARK), [
     "C Ann Able [] | line:names",
-    "  a Univ A, City | api:annotate:new",
+    "  a Univ A, City | api:annotate:run",
   ]);
 }
 
@@ -214,9 +214,9 @@ fn the_frontmatter_marker_prints_nothing() {
 fn annotations_before_the_authors_are_the_blocks_unless_held() {
   assert_eq!(tuples(&revtex(BEFORE_AUTHORS)), [
     "C Ann Able [] | line:names",
-    "  a Univ A, City | api:annotate:new",
+    "  a Univ A, City | api:annotate:run",
     "C Bob Baker [] | line:names",
-    "  a Univ A, City | api:annotate:new",
+    "  a Univ A, City | api:annotate:run",
     "B affiliation Univ Z, Elsewhere | api:no-creator owner:block",
   ]);
 }
@@ -281,7 +281,7 @@ fn a_sole_authors_annotations_before_it() {
     )),
     [
       "C Ann Able [] | line:names",
-      "  a Univ A, City | api:annotate:new",
+      "  a Univ A, City | api:annotate:run",
       "  a https://example.org | api:no-creator owner:block owner:sole-author",
       "  c email ann@example.org | api:owner:block owner:sole-author",
     ]
@@ -338,7 +338,7 @@ fn api_attributes_in_source_order() {
   assert_eq!(attrs, [
     "role=author,annotations=",
     "annotate=new,role=affiliation,name=Also at ",
-    "role=affiliation,annotate=new",
+    "role=affiliation,annotate=run",
   ]);
 }
 

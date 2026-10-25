@@ -205,7 +205,8 @@ fn api_call(index: usize) -> Option<ApiCall> {
 /// switches that open the group it sits in, when it sits inside one (`{\bf $^1$Univ A, $^2$Univ B}`: each piece keeps
 /// the `\bf`) —, or `None` when no balanced run of tokens holds it. A mark's formula covers its script, not the `$`
 /// and braces around it (`${}^*$Blackett …` opens at the `^`): the math shifts, braces and script characters just
-/// before the span are the piece's, and the closing braces and shifts just after it that balance them.
+/// before the span are the piece's, and the closing braces and shifts just after it that balance them — LaTeX's `\(`
+/// and `\)` as the shifts they spell, with the spaces inside them (`\( ^{1} \)Univ A`: hep-ph0110378, 2307.12984).
 fn piece_tokens(
   content: &[Token],
   (start, end): (usize, usize),
@@ -230,18 +231,34 @@ fn piece_tokens(
     {
       // (an empty group a floating script hangs on, `{}^*`)
       start -= 2;
+    } else if let Some(open) = (floor..start)
+      .rev()
+      .find(|&i| content[i].get_catcode() != Catcode::SPACE)
+      && is_cs(&content[open], "\\(")
+    {
+      start = open;
+      if start > floor && is_cs(&content[start - 1], "\\protect") {
+        start -= 1;
+      }
     } else {
       break;
     }
   }
-  let balance = |s: usize, e: usize| -> Option<(i32, usize)> {
-    let mut depth = 0i32;
+  let balance = |s: usize, e: usize| -> Option<(i32, usize, i32)> {
+    let (mut depth, mut parens) = (0i32, 0i32);
     for t in &content[s..e] {
       match t.get_catcode() {
         Catcode::BEGIN => depth += 1,
         Catcode::END => {
           depth -= 1;
           if depth < 0 {
+            return None;
+          }
+        },
+        _ if is_cs(t, "\\(") => parens += 1,
+        _ if is_cs(t, "\\)") => {
+          parens -= 1;
+          if parens < 0 {
             return None;
           }
         },
@@ -252,16 +269,17 @@ fn piece_tokens(
       .iter()
       .filter(|t| t.get_catcode() == Catcode::MATH)
       .count();
-    Some((depth, shifts))
+    Some((depth, shifts, parens))
   };
   loop {
-    let (depth, shifts) = balance(start, end)?;
-    if depth == 0 && shifts % 2 == 0 {
+    let (depth, shifts, parens) = balance(start, end)?;
+    if depth == 0 && shifts % 2 == 0 && parens == 0 {
       break;
     }
-    match content.get(end).map(Token::get_catcode) {
-      Some(Catcode::END) if depth > 0 => end += 1,
-      Some(Catcode::MATH) if shifts % 2 == 1 => end += 1,
+    match content.get(end) {
+      Some(t) if t.get_catcode() == Catcode::END && depth > 0 => end += 1,
+      Some(t) if t.get_catcode() == Catcode::MATH && shifts % 2 == 1 => end += 1,
+      Some(t) if parens > 0 && (t.get_catcode() == Catcode::SPACE || is_cs(t, "\\)")) => end += 1,
       _ => return None,
     }
   }
@@ -290,6 +308,11 @@ fn piece_tokens(
   }
   tokens.extend_from_slice(&content[start..end]);
   Some((Tokens::new(tokens), end))
+}
+
+/// Whether `t` is the control sequence `name`.
+fn is_cs(t: &Token, name: &str) -> bool {
+  t.get_catcode() == Catcode::CS && t.with_cs_name(|n| n == name)
 }
 
 /// One call's content cut into the reading's entries: each piece's text (normalised), its tokens.
