@@ -8201,3 +8201,15 @@ prints its deferred `\captionbox` never runs under the kernel's float bindings (
 reference resolved). Gates int104b 7270/7270 (int104a caught the unlisted stand-in), clippy 0, doc 0, inits 0. A/B
 int103a → int104b over popint104b (302: the iucr census papers, 300 random float users): 1 changed (the witness, +2k
 words), E/F unchanged. Nets 136/136.
+
+**int105 (2026-10-25; 80p → d1797b7f41).** The brk104/brk106 tails. 80p: amsmath's `\collect@body` defined as
+amsmath.sty:1410-1434 does (KPE #1186; 2305.01517, 1409.7964, 1603.08012, 1806.11124, 2312.10816, 2406.19360,
+2502.05135: each 101 errors and a Fatal → 0); the tex.web §1090 horizontal commands met in vertical mode are backed up
+with `\everypar` inserted ahead of them (gr-qc9505014: 101 errors and a Fatal → 33, 0 dangling); `\begin{X}` of a
+`\newtheorem` environment the document redefined runs the redefinition, `\end{X}` following (KPE #1187; 2509.20478: 4
+errors, 5 dangling → 0, four restatements back; 1502.00944; 2008.11631's shipped agn_basic.sty `\renewenvironment{example}`
+now wraps `markedexample` with its end mark). Gates int105a 7273/7273, clippy 0, doc 0, inits 0. A/B int104b →
+int105a over popint105a (1,344: 598 `\everypar` users and 289 random byte-identical, 65 `\collect@body`, 150 environ,
+238 `\renewenvironment`+`\newtheorem`, witnesses): E 5,980 → 5,198, F 20 → 12, +315k words, none worse. Nets 136/136.
+Rulings: kernel-newer commands → legacy-TL compatibility mode (1307.5170); post-title amsart `\keywords` keep their
+markup, error-free where pdflatex is (2204.07665, open).
