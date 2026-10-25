@@ -723,6 +723,24 @@ says otherwise.
   `misdefined:#` 33 (int19 census).
 - **physics `\fbraces`/`\lparen`/`\rparen`** (physics.sty:158, :31-32; witness 2005.03021): the int20 open (d) row.
 
+### Breakage residuals (SYNC row "Complete breakage at 100 %")
+
+The papers the breakage sweeps (brk81, brk86, brk89, brk94; `scratch_356a0c47/brk<NN>/`) left with a missing image or a
+dangling `\ref`/`\cite` that pdflatex resolves, once the fixes of 79g–80d landed. Each row: witness, cause, state.
+
+| # | Row | Status |
+|---|---|---|
+| — | 2201.04974 (cernall.sty + cernyrep.cls, raw): `\institute{\naff{X}{…}…}` is rerouted to the affiliation API (frontmatter_stores.rs), so its rows (`\refstepcounter{affiliation}\label{aff:X}$^{\arabic{affiliation}}$&#2\\`) are digested out of the class's `longtable`: one "Stray alignment" error, the `\label`s land on no element (25 `\aff{X}` = `$^{\ref{aff:X}}$` dangling), the affiliations form an author-less creator, and a mark after the separating comma (`Ann One,\aff{A} Bob Two`) joins the next author's name. Repro: a 10-line raw class with that `\naff` and `\@maketitle` printing `\@institute` in a `tabular` (pdflatex "Ann One,1 Bob Two2", the numbered list). 2 of 35,942 census papers use `\naff` | open, FM S2 (from brk94) |
+| — | 2408.09583: 13 errors from its standalone sub-preambles `\input{../../preamble/preamble}`, read against the main directory (standalone's `\input@path` is the sub-file's; OD #63) | open (from 80c) |
+| — | math-ph0209020: jfa.sty's `nummer` list does `\let\label\bemlabel` in each `\item`, an aux-only `\newlabel` write (3 of 300 sampled `\newlabel` users write it from their own `.tex`) | open, low (from 79j) |
+| — | 0705.0608: easyeqn's `{EQA}` loses its `\label` and number, even alone (2 census papers) | open (from 79u) |
+| — | 2410.10450: `\renewcommand{\description}{…}` used as a value in math; OD #500 keeps an environment's begin macro locked | awaits a ruling (from 79u) |
+| — | 1012.2852: TL 2025's latex.ltx:14983 `\NewDocumentCommand\Ref` refuses the 2010 paper's `\newcommand{\Ref}` (pdflatex 2 errors too); a ruling could let a document's `\newcommand` take over kernel commands newer than the paper | awaits a ruling (from 79w) |
+| — | tikz-timing's `\value{tikztimingtrans}` in an `\edef` before `\newcounter` warns "Counter … not defined": latex.ltx's `\value` is `\csname c@#1\endcsname`, which defines it `\relax`, where ours warns and makes it a register (warning only, no breakage) | open, low (from 79x) |
+| — | 1506.05333: no breakage left (79k); its 620 errors come from the shipped pgf 3.0.1a copies meeting our pgfkeys (an E/F item, 1 paper) | open, E/F (from 79s) |
+| — | subfig's `\subref` shows the sub-float's refnum ("1a") where subfig prints its `sub@` entry ("(a)", starred "a"): the link resolves (80d, KPE #1172), the text form differs; subcaption's and subfigure's `\subref` share it | open, low (from 80d) |
+| — | the brk94 tail (2,000 fresh papers on int94a, `scratch_356a0c47/brk94/`: 61 with breakage): `classify.py` calls 3 OURS (2408.09583, fixed 80c; 2004.00833 and 2507.01293 a stale `.bbl`), 9 ABSENT (a file not shipped) and 49 UNDEF — no `\label`/`\bibitem` of that key written in the source, which a label a macro makes looks like too: 4 spot-checked were ours (1802.05913 and 2304.09615 subfig, 1706.01884 ctable: fixed 80d; 2201.04974 above). 6 of the 49 dangle only mn2e's page range `\pageref{firstpage}`–`\pageref{lastpage}`, labels the source never writes (pdflatex prints "??" too; 0802.3453, 0804.3904, 0906.3191, 1211.1071, 1609.07297, 2105.09351): not ours; the rest unread | open (from brk94) |
+
 ### Archived-narrative residuals (digest 2026-10-23)
 
 The open items the batch and integration narratives 63a–int73 named ("Residual:", "Open:", RED repros, "follow-up", rulings

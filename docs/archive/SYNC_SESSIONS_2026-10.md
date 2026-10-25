@@ -8073,3 +8073,37 @@ A/B int92c → int93a (1,950: 898 `\@let@token` users, the int92 set, tikz-timin
 content), four fvextra `breakautoindent` indents. A/B int93a → int93b (901 eqnarray/`{aligned}`/`{split}` users): one
 change, 0902.2869 (6 errors → 0). Nets int92c → int93b 136/136. Classified not ours: funct-an9311001, 1603.00954,
 2311.01729, 2205.00263 (stale `.bbl`).
+
+**int94 (2026-10-24; 79z → 8eb3ead38d, 80a → 9f4a4aea7b, 80b → 50eebcc647, 80c → f409e4b669).** Breakage residuals
+from brk89 and the first fresh-sample sweep. 79z: a listings markup style opens its own group (`{style{…}}`,
+listings.sty:596-611, KPE #1166) and an escape is tried before the other delimiters (:1288, KPE #1167) — the `\btHL`
+"Attempt to end mode" family (2104.08012 77 → 0, 2006.16205 46 → 0 errors). 80a: latex_constructs declares a
+`\l@<language>` only where the format left it undefined, so `\l@english` stays 0 (KPE #1168; 0802.3014's languages.sty
+check). 80b: a style value is a class name only as a bare word, and the token being output is in
+`\lst@token`/`\lst@length` while its style runs (KPE #1169/#1170; 1907.13012 150 → 0, which 79z's doubled braces had
+taken to 218, 1908.11343 10 → 5). 80c: import.sty's path model — `\import@path` reset by `\import`, extended by
+`\subimport`, the file read as `\import@path<file>`, `\input@path` saved and restored around it — and a directory is
+no file (pathname.rs `find`, kpathsea's `READABLE`; KPE #1171; 2408.09583 23 → 985 references resolved, its chapters
+back; 2604.09744, 2603.04457, 2605.20598 unchanged). Gates int94a 7240/7240, int94b and int94c 7243/7243 (int94c's
+clippy caught a needless borrow, fixed in 80c before the A/B). A/B int93b → int94c over popint94d (2,046: 906 listings
+users, babel and language users, 170 `\import` users, 55 brk94 papers): E 6,345 → 5,564, F 12 → 11, 0 newly Fatal,
+words +116k, 23 changed. Of the 3 worse, 2408.09583 is 80c's witness (8 → 21 errors from its standalone sub-preambles,
+15k → 117k words); 1409.7023 and 1605.04692 ship the imported file beside the main file and were lost to 80c's
+`\import@path<file>` (TL 2025's v6.2 reading) — fixed by 80e. The 11 changed at equal errors are 9 `\lstinline`
+`tex=` strings carrying 79z's group, 2309.11151's escaped highlights (better) and 2104.14511's graphics losing a
+duplicate `sections/../` candidate. Nets int94a → int94c 136/136. Classified not ours: 0802.3014 (its shipped pretex
+`units.sty`, a namesake of TL's — ruling 2026-10-17 H1), 2004.00833 and 2507.01293 (a stale shipped `.bbl`, ruling
+2026-10-24), the six mn2e page ranges whose `\label{lastpage}` the source never writes.
+
+**int95 (2026-10-24; 80d → c97a1299ec, 80e → 6e47c76ea4).** brk94 (2,000 fresh papers on int94a,
+`scratch_356a0c47/brk94/`): 61 with breakage, `classify.py` 3 OURS / 49 UNDEF / 9 ABSENT; reading the UNDEF ones found
+labels a macro makes. 80d: our native `\ctable` skips spaces before its options as ctable.sty's `\newcommand`'s
+`\@ifnextchar[` does (Rust Error Fixes; 1706.01884 35 errors, 12 dangling → 0); subfig's `\subref`/`\subref*` refer
+to the sub-float's own label, where Perl's `\ref{sub@#1}` names an entry no sub-float carries (KPE #1172; 1802.05913
+98 dangling → 0, 2304.09615 10 → 0; 85 of the census's 35,942 papers use subfig's `\subref`). 80e: an `\import` whose
+`\import@path<file>` does not exist reads the bare name, as import.sty before v6 did (KPE #1171 updated; 1409.7023,
+1605.04692). 2201.04974's labelled raw-class affiliation table (cernall's `\naff`) is an OPEN_ROWS residual (FM S2).
+Gates int95a 7245/7245, int95b 7246/7246, clippy 0, doc 0, inits 0. A/B int94c → int95b over popint95b (936: 791
+subfig/ctable census papers with all 85 `\subref` and 60 ctable users, 141 `\import` users, witnesses): E 3,300 →
+3,257, F 14 = 14, 0 worse; 53 byte-changed, all fixes — 49 papers' `sub@` references (A) resolved (B: none left),
+1006.5793 and 1706.01884 ctable, 1409.7023 and 1605.04692 the bare-name import. Nets int94c → int95b 136/136.
