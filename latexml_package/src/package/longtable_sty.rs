@@ -274,8 +274,12 @@ LoadDefinitions!({
   // before a `\caption`), so the table keeps them all: a notation table's `\label` per row with a `\pageref` beside it
   // (2211.06081: 3 dangling). Perl's `AssignValue(LONGTABLE_LABEL => …)` (longtable.sty.ltxml:134-135) kept the last
   // (KNOWN_PERL_ERRORS #1175).
+  // The key is expanded, as LaTeX's `\label` writes it (`\protected@write\@auxout{}{\string\newlabel{#1}…}`): a key
+  // built from macros (`\label{\FloatPre t:\ltbcp}`, 1703.09144's table chapters) labelled every such table with the
+  // macro names, so each `\ref{MCSt:WBS}` dangled. Perl takes `ToString` of the unexpanded key (longtable.sty.ltxml:135;
+  // KNOWN_PERL_ERRORS #1179).
   DefPrimitive!("\\lx@longtable@label [] Semiverbatim", sub[(ty, label)] {
-    let label = clean_label(&label.to_string(), None).into_owned();
+    let label = clean_label(&Expand!(label).to_string(), None).into_owned();
     let labels = match lookup_value("LONGTABLE_LABEL") {
       Some(Stored::String(previous)) => {
         let previous = to_string(previous);

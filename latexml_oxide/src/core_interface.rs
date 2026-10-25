@@ -429,9 +429,16 @@ fn digest_step_guarded(boxes: &mut Vec<Digested>) -> Result<bool> {
       // in an `<ERROR>` box — so there is no loop to re-enter, and the
       // current level is honest content (the paragraph in progress). Input
       // after the Fatal stays unread, as in Perl.
-      let drop_innermost = match e.target {
-        ErrorTarget::Stomach => Some(true),
-        ErrorTarget::TooManyErrors => Some(false),
+      //
+      // The conditional guard (`Timeout:IfLimit`) keeps the levels around the construct that tripped it, which is
+      // dropped like the stomach guard's runaway level. Unlike `Timeout:Recursion` it cannot revive the loop: the count
+      // stays over the limit, so any conditional the build re-enters fails at once. A finite figure-heavy paper reaches
+      // the limit as surely as a loop: 2006.14937's 24 matplotlib `.pgf` figures (5.3 MB) trip it at the ninth, and the
+      // whole paper was a 39-byte stub.
+      let drop_innermost = match (&e.target, &e.category) {
+        (ErrorTarget::Stomach, _) => Some(true),
+        (ErrorTarget::TooManyErrors, _) => Some(false),
+        (ErrorTarget::Timeout, ErrorCategory::IfLimit) => Some(true),
         _ => None,
       };
       if let Some(drop_innermost) = drop_innermost {

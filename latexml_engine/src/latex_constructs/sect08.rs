@@ -1546,6 +1546,10 @@ pub(crate) fn load() -> Result<()> {
   // declarations do not claim their names while it runs (`GUESSING_NEWTHEOREM`), so the document's own later
   // `\newtheorem` of the name replaces the guess rather than being refused. Callers: OmniBus `theorem_preload`,
   // neurips_sty.rs and tac_cls.rs `\AtBeginDocument` sets.
+  // The guess is a fallback's (`DefinitionOrigin::Fallback`): what it defines yields to the document's own
+  // `\newcommand`/`\newenvironment` too (`state::is_fallback_meaning`), as in LaTeX, where the class never defined the
+  // name — 2606.17122's `\newcommand{\result}[2]{#1{\(\pm\,#2\)}}` after the neurips binding's guessed `{result}`
+  // was refused, and its table cells became theorems (87 errors, Fatal).
   DefPrimitive!("\\lx@guess@newtheorem OptionalMatch:* [] {}[]{}[]", sub[(flag, style_opt, thmset, otherthmset, typ, reset)] {
     let optional = |tokens: &mut Vec<Token>, arg: Option<Tokens>| {
       if let Some(arg) = arg.filter(|a| !a.is_empty()) {
@@ -1569,7 +1573,9 @@ pub(crate) fn load() -> Result<()> {
     optional(&mut call, reset);
     let outer = lookup_bool(GUESSING_NEWTHEOREM);
     assign_value(GUESSING_NEWTHEOREM, true, Some(Scope::Global));
-    let declared = Digest!(Tokens::new(call));
+    let declared = definition::origin::with_origin(definition::origin::DefinitionOrigin::Fallback, || {
+      Digest!(Tokens::new(call))
+    });
     assign_value(GUESSING_NEWTHEOREM, outer, Some(Scope::Global));
     Ok(vec![declared?])
   });

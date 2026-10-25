@@ -3,8 +3,9 @@
 //! (ctable's options past a line end, subfig's `\subref`), 80e-80g (the bare-name `\import`, cleveref's braced comma,
 //! subeqnarray's `\slabel`, a longtable's labels, autonum), 80h (`\newlabel` records, theoremref), 80i (acronym options,
 //! caption3's `\captionbox`, nicematrix's `\tabularnote` label, autonum's reference patcher), 80j (`\pdfstrcmp` on shown
-//! token lists, an ignored character keeps the blank skip). Each guard converts its repro under
-//! `tools/perfect_kernel/repros/`, asserts the diagnostics by count and the elements.
+//! token lists, an ignored character keeps the blank skip), 80k (a binding's guessed theorem yields to the document's
+//! `\newcommand`, a longtable's label key and a `\cref` list expanded, the conditional guard's Fatal salvaged). Each
+//! guard converts its repro under `tools/perfect_kernel/repros/`, asserts the diagnostics by count and the elements.
 use latexml::util::test::convert_files_with;
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -397,5 +398,91 @@ fn ignored_character_keeps_skipping_after_control_word() {
   assert!(
     xml.contains(r#"<p xml:id="p1.1">A:18.B:EQ.C:8.</p>"#),
     "{xml}"
+  );
+}
+
+/// 80k: a binding's guessed theorem (`\lx@guess@newtheorem`, neurips' `\AtBeginDocument` set) is a fallback guess, so
+/// the document's own `\newcommand` of the name defines it, as in LaTeX where the class never defined it. Red (int98a):
+/// `\newcommand{\result}` was refused and every `\result{…}{…}` cell opened a theorem (6 errors; 2606.17122: 87, Fatal).
+/// The guessed `{lemma}` stays a theorem. Repro class-bindings/neurips_guessed_theorem_yields_to_document_newcommand.
+#[test]
+fn neurips_guessed_theorem_yields_to_document_newcommand() {
+  let (log, xml) = convert_files_with(
+    repro!("class-bindings/neurips_guessed_theorem_yields_to_document_newcommand.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml
+      .contains(r#"<td align="center" xml:id="p1.1.1.2">99.54<Math mode="inline" tex="\pm\,0.04""#),
+    "{xml}"
+  );
+  assert!(xml.contains("ltx_theorem_lemma"), "{xml}");
+}
+
+/// 80k: a `\label` in a longtable's caption writes its key expanded, as LaTeX's `\label` does. Red (int99a): the key's
+/// macros were kept (`\FloatPret:\ltbcp` on both tables; KNOWN_PERL_ERRORS #1179). Witness 1703.09144. Repro
+/// cross-references/longtable_label_key_is_expanded.
+#[test]
+fn longtable_label_key_is_expanded() {
+  let (log, xml) = convert_files_with(
+    repro!("cross-references/longtable_label_key_is_expanded.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for label in ["MCSt:A", "MCSt:B", "MCSt:BC"] {
+    assert!(
+      xml.contains(&format!(r#"labels="LABEL:{label}""#)),
+      "{label}: {xml}"
+    );
+  }
+  assert!(!xml.contains("FloatPre"), "{xml}");
+}
+
+/// 80k: `\cref` splits its label list once expanded, as cleveref's `\edef\@tempa{#2}` does. Red (int99a): a macro or an
+/// expl3 sequence holding the list was one label (`LABEL:def:a,def:c`; KNOWN_PERL_ERRORS #1180). Witness 2108.04620.
+/// Repro cross-references/cleveref_label_list_is_expanded.
+#[test]
+fn cleveref_label_list_is_expanded() {
+  let (log, xml) = convert_files_with(
+    repro!("cross-references/cleveref_label_list_is_expanded.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let refs: Vec<&str> = xml
+    .match_indices(r#"labelref="LABEL:"#)
+    .map(|(i, _)| &xml[i + 16..i + 21])
+    .collect();
+  assert_eq!(
+    refs,
+    ["def:a", "def:c", "def:a", "def:b", "def:a", "def:b"],
+    "{xml}"
+  );
+  assert!(!xml.contains("def:a,def:"), "{xml}");
+}
+
+/// 80k: the conditional guard's Fatal keeps what was digested before it, as Perl's `hardYankProcessing` keeps it for
+/// every Fatal. Red (int99a): only the Stomach and TooManyErrors Fatals were salvaged, so `Timeout:IfLimit` left a
+/// 39-byte document — the whole of 2006.14937, whose 24 matplotlib figures reach the limit at the ninth. Repro
+/// expansion-primitives/iflimit_fatal_keeps_the_document_before_it.
+#[test]
+fn iflimit_fatal_keeps_the_document_before_it() {
+  let (log, xml) = convert_files_with(
+    repro!("expansion-primitives/iflimit_fatal_keeps_the_document_before_it.tex"),
+    &[],
+    None,
+  );
+  assert!(log.contains("Fatal:Timeout:IfLimit"), "{log}");
+  assert_eq!(error_count(&log), 1, "{log}");
+  assert!(
+    xml.contains("Kept</title>") && xml.contains("Text before the runaway."),
+    "{xml}"
+  );
+  assert!(
+    !xml.contains("Inside"),
+    "the runaway's level is dropped: {xml}"
   );
 }

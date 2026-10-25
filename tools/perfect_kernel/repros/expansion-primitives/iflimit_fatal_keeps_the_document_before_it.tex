@@ -1,0 +1,16 @@
+% witness: 2006.14937 (24 matplotlib `.pgf` figures, 5.3 MB: the conditional guard trips at the ninth, finite as the
+%          figures are, and the whole paper was a 39-byte stub)
+% oracle:  pdflatex never ends (an infinite loop of conditionals); a document whose text precedes the runaway
+% engines: rust int99a = Fatal Timeout:IfLimit and an empty document: only the Stomach and TooManyErrors Fatals kept
+%          what was digested before them, where Perl's hardYankProcessing keeps it for every Fatal
+%          (Common/Error.pm:336-338)
+% expect:  1 (the Fatal Timeout:IfLimit); the section and its text kept, the runaway's center dropped
+% status:  RED (int99a) -> GREEN (80k: core_interface.rs salvages for Timeout:IfLimit)
+\documentclass{article}
+\usepackage[iflimit=300000]{latexml}
+\begin{document}
+\section{Kept}
+Text before the runaway.
+\def\spin{\ifnum1=1 \expandafter\spin\fi}
+\begin{center}Inside \spin\end{center}
+\end{document}

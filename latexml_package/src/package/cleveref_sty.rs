@@ -1146,7 +1146,12 @@ fn trim_space_tokens(tokens: Tokens) -> Tokens {
 /// `\@cref@stack@top#1,#2\@nil` (cleveref.sty:388), which matches only a comma at brace depth 0, so
 /// `\Cref{claim:copy_K_{2,4}}` names the one label `\label{claim:copy_K_{2,4}}` (2304.09155). Perl's `splitLabels`
 /// (cleveref.sty.ltxml:42-45) splits the string at every comma (KPE #1173).
-fn split_label_tokens(tokens: Tokens) -> Vec<Tokens> {
+///
+/// The list is split once expanded: cleveref pushes `\edef\@tempa{#2}` onto its stack (cleveref.sty:947), so a macro
+/// holding a list names each label in it — 2108.04620's `\cref{\seq_use:Nn \g_cflist_pending {,}}` (12 dangling
+/// references to `def:dist:set,def:norm` and the like as one label). Perl splits `ToString` of the unexpanded tokens (KPE #1180).
+fn split_label_tokens(tokens: Tokens) -> Result<Vec<Tokens>> {
+  let tokens = Expand!(tokens);
   let mut groups: Vec<Tokens> = Vec::new();
   let mut cur: Vec<Token> = Vec::new();
   let mut depth = 0usize;
@@ -1163,11 +1168,13 @@ fn split_label_tokens(tokens: Tokens) -> Vec<Tokens> {
     }
   }
   groups.push(Tokens::new(cur));
-  groups
-    .into_iter()
-    .map(trim_space_tokens)
-    .filter(|g| !g.is_empty())
-    .collect()
+  Ok(
+    groups
+      .into_iter()
+      .map(trim_space_tokens)
+      .filter(|g| !g.is_empty())
+      .collect(),
+  )
 }
 
 /// What `\cref` prints for a label only another document holds, from the type and number of its `\r@<label>@cref`, which
@@ -1231,7 +1238,7 @@ fn cref_multi(
   capitalized: bool,
   number: &str,
 ) -> Result<Tokens> {
-  let labels = split_label_tokens(label_tokens);
+  let labels = split_label_tokens(label_tokens)?;
   let n = labels.len();
   let mut out: Vec<Token> = Vec::new();
 

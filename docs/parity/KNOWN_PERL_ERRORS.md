@@ -18293,3 +18293,45 @@ Fatal runaway). Minimal trigger:
 
 Fixed in Rust (80j): pdftex.rs compares the `writable_tokens` of each text. Repro
 expansion-primitives/pdfstrcmp_compares_shown_token_lists; guard `perfect_kernel_batch80a::pdfstrcmp_compares_shown_token_lists`.
+
+## 1179. A longtable's `\label` keeps the macros of its key
+
+LaTeX's `\label` writes its key expanded (`\protected@write\@auxout{}{\string\newlabel{#1}…}`), so a key built from
+macros names the label it expands to. longtable.sty.ltxml:134-135 `\lx@longtable@label` (the longtable's `\label`)
+reads the key Semiverbatim and takes `CleanLabel(ToString(...))` of the unexpanded tokens, so every table labelled
+`\label{\FloatPre t:\ltbcp}` is `LABEL:\FloatPret:\ltbcp` and each `\ref{MCSt:A}` dangles (1703.09144: 17 dangling).
+The kernel `\label` (a constructor) digests its argument and is not affected. Minimal trigger:
+
+```latex
+\documentclass{article}\usepackage{longtable}
+\newcommand{\pre}{MCS}
+\begin{document}
+\begin{longtable}{l}\caption{One\label{\pre t:A}}\\ a\\ \end{longtable}
+See \ref{MCSt:A}.
+\end{document}
+% pdflatex: "See 1."; Perl: "See ??" (label LABEL:\pret:A)
+```
+
+Fixed in Rust (80k): longtable_sty.rs `\lx@longtable@label` cleans the expanded key. Repro
+cross-references/longtable_label_key_is_expanded; guard `perfect_kernel_batch80a::longtable_label_key_is_expanded`.
+
+## 1180. cleveref's `\cref` splits its label list before expanding it
+
+cleveref pushes the fully expanded list onto its stack (`\edef\@tempa{#2}`, cleveref.sty:947) and takes the labels off
+it at its commas, so a macro holding a list names each label in it. cleveref.sty.ltxml:42-45 `splitLabels` splits
+`ToString` of the unexpanded tokens, and `\lx@cref` then digests the whole list as one label:
+`\cref{\seq_use:Nn \g_cflist_pending {,}}` (2108.04620: 12 dangling references) is one reference to `LABEL:def:a,def:c`. Minimal
+trigger:
+
+```latex
+\documentclass{article}\usepackage{cleveref}
+\newcommand{\pair}{sec:a,sec:b}
+\begin{document}
+\section{A}\label{sec:a} \section{B}\label{sec:b}
+See \cref{\pair}.
+\end{document}
+% pdflatex: "See sections 1 and 2."; Perl: one reference to LABEL:sec:a,sec:b
+```
+
+Fixed in Rust (80k): cleveref_sty.rs `split_label_tokens` expands the list before splitting it. Repro
+cross-references/cleveref_label_list_is_expanded; guard `perfect_kernel_batch80a::cleveref_label_list_is_expanded`.
