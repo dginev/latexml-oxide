@@ -8174,3 +8174,22 @@ swallowed unit commands met outside a unit argument: 1503.08089 and 1912.10146 c
 since v3 drops `version-1-compatibility`; pdflatex alike), 2001.10886 uses a declared `\solm` bare in math, 2108.09405's
 `\SIrange[… close-bracket = ]]` ends its option list early (both `\ERROR` in pdflatex too); 1710.01722 timed out on
 int100c (rc 124 at 180 s) and finished on int101a. Nets int100c → int101a 136/136.
+
+**int102 (2026-10-25; 80m → e07d029f9c).** latexml_post `end_on_libxml_oom`: an XPath evaluation failing with
+`XML_ERR_NO_MEMORY` and no message (glibc malloc spent in a reused cortex child) ends through the allocation-failure hook
+(one `Fatal:oom`, exit 137, the child recycled and the paper retried) instead of an Error per node until TooManyErrors
+(runs 362/363; SYNC XP); R4 (`--preload=<cls>` hook stack) re-verified resolved and guarded. Gates int102a 7266/7266,
+clippy 0, doc 0, inits 0. A/B int101a → int102a over popint102a (698 random census papers): 0 changed. Nets 136/136.
+
+**int103 (2026-10-25; 80n → 292057a507).** From the brk102 tail and brk104 (1,200 fresh papers on int101a,
+`scratch_356a0c47/brk104/`: 44 with breakage, 5 with OURS keys). 80n: a tab, `\cr` or `\span` met at align_state 0
+while a false branch is skipped ends the cell, as tex.web's `pass_text` does through `get_next` (§342, §789) — the
+hide-column template `>{\iffalse}c<{\fi}` (1504.08100: 5 errors → 0, 7 dangling → 0; KPE #1183); the hidden ends stand
+for LaTeX's `\\` and are passed, and mathtools' `\ArrowBetweenLines`/`\shortvdotswithin` choose their branch before its
+tabs are read. `\maketitle` calls a document's redefined `\twocolumn` where LaTeX's two-column `\maketitle` calls
+`\twocolumn[\@maketitle]` — the ICRA/IROS teaser figure (2305.16369, 2204.05509, 2512.09851; KPE #1184). acronym's 23
+`\WithSuffix` commands are `\protected` (suffix.sty:53), so a siunitx `S` cell keeps `\ac{MAE}` whole (2607.15705: 3
+errors → 0; 2603.08854: 4 → 0; KPE #1185). Gates int103a 7269/7269, clippy 0, doc 0, inits 0. A/B int102a → int103a
+over popint103a (961: 695 random alignment users byte-identical, 247 acronym, 12 mathtools arrow/vdots, 4 `\twocolumn`
+redefiners, witnesses): E 2,994 → 2,982, F 6 → 6, +7.4k words, none worse. Nets 136/136. Dismissed: 2306.09209
+(stale `.bbl`), 1307.5170 (the kernel's `\Ref`, awaiting a ruling); open: 2510.17333 (dgruyter.sty's raw `\@array`).
