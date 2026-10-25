@@ -86,12 +86,20 @@ LoadDefinitions!({
     enter_import_path(path);
   });
 
-  // `\@import`'s read (import.sty:86-88): `<command>{\import@path <file>}`.
+  // `\@import`'s read (import.sty:86-88): `<command>{\import@path <file>}`. Where that file does not exist but the
+  // bare name does, the bare name, as import.sty before v6 read it (`#1{#7}` with `\import@path` first on
+  // `\input@path`; TeX tries the working directory first): an archive whose `\import{pictures/}{cantor.pdf_tex}`
+  // ships `cantor.pdf_tex` at its top (1409.7023) or whose `\subimport{SM_quarkgluon/}{quarkgluon_main}` ships the
+  // chapter beside the main file (1605.04692) compiled so on arXiv; TL 2025's v6.2 stops ("File not found").
   DefMacro!("\\lx@import@input{}{}", sub[(command, file)] {
     let mut toks = command.unlist();
     toks.push(T_BEGIN!());
     let path = import_path();
-    if !path.is_empty() {
+    let name = Expand!(file.clone()).to_string();
+    let name = name.trim();
+    if !path.is_empty()
+      && (find_file(&s!("{path}{name}"), None).is_some() || find_file(name, None).is_none())
+    {
       toks.extend(ExplodeText!(path));
     }
     toks.extend(file.unlist());

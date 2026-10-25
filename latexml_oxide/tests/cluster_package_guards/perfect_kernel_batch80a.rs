@@ -141,3 +141,24 @@ fn a_subfig_subref_names_the_subfloat() {
   }
   assert!(!xml.contains("sub@"), "{xml}");
 }
+
+/// 80e: an `\import` whose `\import@path<file>` does not exist reads the bare name, as import.sty before v6 did
+/// (`#1{#7}` with the import path first on `\input@path`), so an archive that ships the file beside the main file
+/// keeps it. Red (int94c): 80c read only `pictures/importflat/part` (TL 2025's v6.2), "Can't find TeX file" and the
+/// part lost. Witnesses 1409.7023, 1605.04692. Repro loader/import_missing_directory_reads_the_bare_name.
+#[test]
+fn an_import_from_a_missing_directory_reads_the_bare_name() {
+  let (log, xml) = convert_files_with(
+    repro!("loader/import_missing_directory_reads_the_bare_name.tex"),
+    &[(
+      "importflat/part.tex",
+      include_str!("../../../tools/perfect_kernel/repros/loader/importflat/part.tex"),
+    )],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains("A part shipped beside the main file."),
+    "{xml}"
+  );
+}

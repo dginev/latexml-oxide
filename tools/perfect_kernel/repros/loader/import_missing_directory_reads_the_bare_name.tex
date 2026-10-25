@@ -1,0 +1,16 @@
+% witness: 1409.7023 (`\import{pictures/}{cantor.pdf_tex}` with `cantor.pdf_tex` shipped at the archive's top, 5
+%          figures), 1605.04692 (`\subimport{SM_quarkgluon/}{quarkgluon_main}` with the chapter beside the main file)
+% oracle:  import.sty before v6 (`#1{#7}`, `\import@path` first on `\input@path`, the working directory tried first):
+%          the part is read, as arXiv compiled both papers; TL 2025's v6.2 reads only `pictures/importflat/part`
+%          ("File not found", Emergency stop)
+% engines: rust int94c = 1 error ("Can't find TeX file pictures/importflat/part"), the part lost (80c followed v6.2;
+%          int93b and Perl read the bare name through the search path)
+% expect:  0 errors, 0 warnings; the part's text
+% status:  RED (int94c) -> GREEN (80e: import_sty.rs `\lx@import@input` reads the bare name when
+%          `\import@path<file>` does not exist)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{import}
+\begin{document}
+Before. \import{pictures/}{importflat/part} After.
+\end{document}

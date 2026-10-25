@@ -18162,7 +18162,12 @@ any directory entry of that name, so the directory `chapters/intro` is opened as
 chapter is lost; the `\subimport{}{…}` statement files are not found at all (2408.09583: 22 of 23 references
 dangling, every chapter gone). Fixed in Rust (80c): import_sty.rs follows import.sty's path model, and pathname.rs
 `find` skips directories as kpathsea's `READABLE` does. Repro loader/import_nested_absolute_import; guard
-`perfect_kernel_batch80a::a_nested_import_reads_its_files_as_import_sty_finds_them`.
+`perfect_kernel_batch80a::a_nested_import_reads_its_files_as_import_sty_finds_them`. Where `\import@path<file>` does
+not exist but the bare name does, the bare name is read (80e), as import.sty before v6 read `#1{#7}`: archives that
+ship the file beside the main file compiled so on arXiv (1409.7023's five `\import{pictures/}{…pdf_tex}` figures,
+1605.04692's `\subimport{SM_quarkgluon/}{quarkgluon_main}`), where TL 2025's v6.2 stops. Repro
+loader/import_missing_directory_reads_the_bare_name; guard
+`perfect_kernel_batch80a::an_import_from_a_missing_directory_reads_the_bare_name`.
 
 ## 1172. subfig's `\subref` names a `sub@` label no sub-float carries
 
