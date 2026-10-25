@@ -23903,7 +23903,17 @@ not the marks (63i review r2: `\author{Ann$^{\mathrm a}$}\author{Bob}\affiliatio
 `\author{Cat Cole$^2$}\affiliation{$^3$Univ B}` Cat's). Cost: none measurable — the int110b census, writer off vs on,
 6,208 s vs 6,171 s over 5,914 papers, none 5 s slower. Guards whose expectations follow the default:
 `perfect_kernel_batch77n::{revtex_footnotetext_among_names_is_the_names, revtex3_glue_after_names_is_no_name}` (Bob's
-`1a` requests Univ A; REVTeX 3's address block cut by marks).
+`1a` requests Univ A; REVTeX 3's address block cut by marks). Census int110f → int110g (11,322 papers): 123 changed, all
+revtex-family (raw classes, `us`, pop67o byte-identical), E/F equal, 0 words lost; three regressions from `_grouped`,
+fixed (80z r2): `_grouped` is a one-mark line's (a line holding several marked entries is a marked list, 2209.05548), an
+interleaved group's only where the affiliation before the names followed an author (`interleaved_group_shares_the_mark`;
+2510.16137's front `\affiliation{…}` made every later `$^1$` line the whole group's), and a symbol glued before a number
+is that number (`\textsuperscript{*3}`, whose `*` left no mark and let revtex's shared-mark test pass vacuously,
+2412.01183). Guards `perfect_kernel_batchfms2b::{a_marked_list_after_an_empty_affiliation_goes_by_marks,
+one_mark_lines_after_a_front_affiliation_go_by_marks}`, `perfect_kernel_batch80a::marked_list_marks_link_however_spelt`.
+Open (a ruling): the mark-picked path's lines do not show their mark (it is their label); the writer's cut pieces do,
+and Perl keeps a typed mark in the content — 80v/80x moved 65 papers onto that path (0710.0246's `$^{1}$Physikalisches
+Institut` reads "Physikalisches Institut"); keeping the ink there changes every marked-path affiliation (219 guards).
 
 ### 840. A space a name sets before its own mark is the name's; spacing-only math, `\enskip` after a mark part names
 

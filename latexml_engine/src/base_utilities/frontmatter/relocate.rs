@@ -529,9 +529,12 @@ pub(in crate::base_utilities) fn script_marks(script: &str) -> Vec<String> {
   items
     .into_iter()
     .filter_map(|item| {
-      // (a number in brackets or parentheses is the number: `$^{[1],[2]}$` against the line's `$^1$`, 1803.06822)
+      // (a number in brackets or parentheses is the number: `$^{[1],[2]}$` against the line's `$^1$`, 1803.06822; so is
+      // one after a footnote symbol glued to it, `\textsuperscript{*3}`, 2412.01183)
       let item: String = past_mark_switches(item)
-        .trim_start_matches(['[', '('])
+        .trim_start_matches(|c: char| {
+          matches!(c, '[' | '(' | '*') || (!c.is_ascii() && !c.is_alphanumeric())
+        })
         .chars()
         .filter(|c| !matches!(c, '{' | '}') && !c.is_whitespace())
         .collect();
@@ -667,6 +670,17 @@ fn superscript_scripts(tex: &str) -> Vec<Vec<String>> {
   scripts
 }
 
+/// The distinct marks of the superscripts in `content`, read from its TeX spelling (`$^1$X $^2$Y`: 1 and 2).
+pub fn content_marks(content: &Tokens) -> Vec<String> {
+  let mut marks: Vec<String> = Vec::new();
+  for mark in superscript_scripts(content.clone().untex_string().as_ref()).concat() {
+    if !marks.contains(&mark) {
+      marks.push(mark);
+    }
+  }
+  marks
+}
+
 /// Is the affiliation `content` the group's, as revtex's group rule gives it? So it is when an author was queued since
 /// a previous affiliation (interleaved `\author`/`\affiliation` groups, whatever their marks say: a mark no author shows
 /// is still its group's, as the PDF pairs it), and when the first affiliation carries one mark that every author
@@ -674,6 +688,18 @@ fn superscript_scripts(tex: &str) -> Vec<Vec<String>> {
 /// affiliations after them are no such group, and an affiliation holding several marked lines (`$^1$… \\ $^2$…`,
 /// 1205.4587) is a marked list (63i review).
 pub fn queued_group_shares_the_mark(content: &Tokens) -> bool {
+  group_shares_the_mark(content, false)
+}
+
+/// [`queued_group_shares_the_mark`], an interleaved group only where the affiliation before the authors itself followed
+/// an author (`\author{A}\affiliation{X}\author{B}…`), not names after an affiliation given before the first
+/// `\author` (2510.16137, 2209.05548: those names' marked lines are a marked list's): the group a binding declares to
+/// the frontmatter observer (revtex's `_grouped=true`, FM S2b).
+pub fn interleaved_group_shares_the_mark(content: &Tokens) -> bool {
+  group_shares_the_mark(content, true)
+}
+
+fn group_shares_the_mark(content: &Tokens, alternating: bool) -> bool {
   let mut marks: Vec<String> = superscript_scripts(&content.to_string()).concat();
   marks.dedup();
   with_value("frontmatter_raw", |v| match v {
@@ -687,7 +713,9 @@ pub fn queued_group_shares_the_mark(content: &Tokens) -> bool {
         .take_while(|entry| !is_affiliation(entry))
         .filter(|entry| entry.0 == "ltx:creator")
         .collect();
-      if !since.is_empty() && queue.iter().any(is_affiliation) {
+      let previous = queue.iter().rposition(is_affiliation);
+      let follows_an_author = |at: usize| queue[..at].iter().any(|entry| entry.0 == "ltx:creator");
+      if !since.is_empty() && previous.is_some_and(|at| !alternating || follows_an_author(at)) {
         return true;
       }
       let [mark] = marks.as_slice() else {

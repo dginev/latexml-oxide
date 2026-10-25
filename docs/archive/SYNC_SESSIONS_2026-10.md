@@ -8248,3 +8248,17 @@ census found). Gates int109c 7281/7281. Default census int108a → int109b over 
 front-matter note's mark now as the PDF prints it (1807.01940, 1903.03290, hep-th0302032 `2` → `†`, 1906.08093's
 `mark="0"` gone), E/F equal; writer-on census int108a → int109c at creator level: 1 changed, better (1608.06509). Nets
 136/136.
+
+**int110 (2026-10-25; 80u → a5eeef6501, 80v–80y → 249aa33de5, 80z committed).** FM S2b r3, from the off-vs-on census
+and its PDF checks. 80u: revtex's group rule (`annotate=run`, KPE #1190, 1303.7097); a `\( … \)` mark cut whole
+(hep-ph0110378, 2307.12984: 2 errors each → 0); the writer's kept copy takes back the taken one's ids (`reclaim_ids`;
+the user flagged a lone `footnotex3a` in the guard). Census int110b: 279 written, E/F/script errors equal, 0 words
+lost, jing equal over 316 papers; default int109c → int110b 428 changed, 0 words or affiliations lost. 80v: revtex4's
+`\address` is `\affiliation` (0806.3762), the fuzzy name label one label, a name's number range spelled out
+(2012.15817). 80w: the reading records an `annotate=run` call's run whichever path attaches it (1303.7097 was
+declined). 80x: `\altaffiliation` role `altaffiliation` on the author last given (KPE #1191, cond-mat0209262). 80y: by-mark
+linking however marks are spelt (`\rm`, spacing, brackets; the gaps the fuzzy fragment had masked: 2008.00493,
+1307.6166, hep-th0410034, 2311.14432, 1803.06822). Gates int110b–g green (7,283–7,289). A/B int110b → int110f over
+11,322 papers: 310 changed, E equal, F one timeout both sides, 0 distinct words lost; nets 136/136. PDF draw (seeded 40
+over the revtex population): 35 of 36 checkable match name by name. 80z: the default switch (`LATEXML_FM_SHADOW`
+tri-state; `_grouped=true` for a marked line revtex's interleaved group takes, 63i).

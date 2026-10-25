@@ -331,3 +331,62 @@ Text.
     "Univ B",
   ]);
 }
+
+/// FM S2b default: a marked list after an interleaved group is still cut by its marks — `_grouped` is a one-mark
+/// line's (`\author{Cat$^2$}\affiliation{$^3$…}`), not a line holding several marked entries. Red (80z): an empty
+/// `\affiliation{}` before the names made the list an interleaved group's, `_grouped` kept today's run, and every name
+/// held all four pieces. Witness 2209.05548.
+#[test]
+fn a_marked_list_after_an_empty_affiliation_goes_by_marks() {
+  let tex = r"\documentclass[prx]{revtex4-2}
+\begin{document}
+\title{T}
+\affiliation{}
+\author{Ann Able$^{1,2}$}
+\author{Bob Baker$^{3,4}$}
+\author{Cat Cole$^{3}$}
+\affiliation{
+  $^1$\mbox{Univ A, City}
+  $^2$\mbox{Univ B, Town}
+  $^3$\mbox{Univ C, Village},\\
+  $^4$\mbox{Univ D, Hamlet},\\
+}
+\maketitle
+Text.
+\end{document}
+";
+  let on = creators(tex, true);
+  holds(&on, "Ann Able", &["Univ A", "Univ B"], &[
+    "Univ C", "Univ D",
+  ]);
+  holds(&on, "Bob Baker", &["Univ C", "Univ D"], &[
+    "Univ A", "Univ B",
+  ]);
+  holds(&on, "Cat Cole", &["Univ C"], &[
+    "Univ A", "Univ B", "Univ D",
+  ]);
+}
+
+/// FM S2b default: names given after an affiliation that came before the first `\author` are no interleaved group —
+/// their one-mark lines are cut by their marks. Red (80z): the front `\affiliation{…}` made every later `$^1$` line the
+/// whole group's, `_grouped` kept today's run, and the names marked 2 and 3 held line 1. Witnesses 2510.16137,
+/// 2412.01183.
+#[test]
+fn one_mark_lines_after_a_front_affiliation_go_by_marks() {
+  let tex = r"\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\affiliation{Faculty F, Capital}
+\author{Ann Able$^1$, Bob Baker$^2$, Cat Cole$^3$}
+\affiliation{$^1$Univ A, City}
+\affiliation{$^2$Univ B, Town}
+\affiliation{$^3$Univ C, Village}
+\maketitle
+Text.
+\end{document}
+";
+  let on = creators(tex, true);
+  holds(&on, "Ann Able", &["Univ A"], &["Univ B", "Univ C"]);
+  holds(&on, "Bob Baker", &["Univ B"], &["Univ A", "Univ C"]);
+  holds(&on, "Cat Cole", &["Univ C"], &["Univ A", "Univ B"]);
+}

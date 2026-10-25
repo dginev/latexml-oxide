@@ -953,7 +953,8 @@ fn revtex_altaffiliation_keeps_the_group() {
 
 /// A marked list's marks link to the names showing them however the marks are spelt: a font switch glued to the mark
 /// (`$^{\rm a}$`, whose tokens read `\rma` as a string), spacing inside or before the script (`${}^{a,\;b}$`,
-/// `${}^{\rm b,\ c}$`, `$\,{}^{b,c}$`), brackets around a number (`$^{[1]}$` against the line's `$^1$`). Red (80v): no
+/// `${}^{\rm b,\ c}$`, `$\,{}^{b,c}$`), brackets around a number (`$^{[1]}$` against the line's `$^1$`), a symbol glued
+/// before a number (`\textsuperscript{*3}`, 2412.01183). Red (80v): no
 /// line carried the mark it is, or no name showed one, and every line went to the block — the leaked comma fragment of
 /// a name's fuzzy label had matched some of them by accident (`Bob$^{\rm b,a}$` took Univ A, Ann none). Witnesses
 /// 2008.00493, 1307.6166, hep-th0410034, 2311.14432, 1803.06822.
@@ -1010,6 +1011,13 @@ fn marked_list_marks_link_however_spelt() {
     want(&["Univ A", "Univ B"], &["Univ B", "Univ C"], &[
       "Univ A", "Univ C"
     ])
+  );
+  assert_eq!(
+    names(&doc(
+      r"Ann Able\textsuperscript{1}, Bob Baker\textsuperscript{1,2}, Cat Cole\textsuperscript{*3}",
+      r"\textsuperscript{1}Univ A, City\\ \textsuperscript{2}Univ B, Town\\ \textsuperscript{3}Univ C, Village"
+    )),
+    want(&["Univ A"], &["Univ A", "Univ B"], &["Univ C"])
   );
   assert_eq!(
     names(&doc(
