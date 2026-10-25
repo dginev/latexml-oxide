@@ -950,3 +950,72 @@ fn revtex_altaffiliation_keeps_the_group() {
     "{xml}"
   );
 }
+
+/// A marked list's marks link to the names showing them however the marks are spelt: a font switch glued to the mark
+/// (`$^{\rm a}$`, whose tokens read `\rma` as a string), spacing inside or before the script (`${}^{a,\;b}$`,
+/// `${}^{\rm b,\ c}$`, `$\,{}^{b,c}$`), brackets around a number (`$^{[1]}$` against the line's `$^1$`). Red (80v): no
+/// line carried the mark it is, or no name showed one, and every line went to the block — the leaked comma fragment of
+/// a name's fuzzy label had matched some of them by accident (`Bob$^{\rm b,a}$` took Univ A, Ann none). Witnesses
+/// 2008.00493, 1307.6166, hep-th0410034, 2311.14432, 1803.06822.
+#[test]
+fn marked_list_marks_link_however_spelt() {
+  let names = |tex: &str| -> Vec<(String, Vec<&'static str>)> {
+    let (log, xml) = convert_files_with(tex, &[], Some(PRELOAD));
+    assert_eq!(error_count(&log), 0, "{log}");
+    xml
+      .split("<creator ")
+      .skip(1)
+      .map(|c| &c[..c.find("</creator>").expect("a closed creator")])
+      .map(|c| {
+        let named = c.contains("<personname");
+        let places = ["Univ A", "Univ B", "Univ C"]
+          .into_iter()
+          .filter(|p| c.contains(p))
+          .collect();
+        (
+          if named {
+            "name".to_string()
+          } else {
+            "block".to_string()
+          },
+          places,
+        )
+      })
+      .collect()
+  };
+  let doc = |authors: &str, lines: &str| {
+    format!(
+      "\\documentclass[aps,prd]{{revtex4-1}}\n\\begin{{document}}\n\\title{{T}}\n\\author{{{authors}}}\n\\affiliation{{{lines}}}\n\\maketitle\nText.\n\\end{{document}}\n"
+    )
+  };
+  let want = |a: &[&'static str], b: &[&'static str], c: &[&'static str]| {
+    vec![
+      ("name".to_string(), a.to_vec()),
+      ("name".to_string(), b.to_vec()),
+      ("name".to_string(), c.to_vec()),
+    ]
+  };
+  assert_eq!(
+    names(&doc(
+      r"Ann Able$^{\rm a}$, Bob Baker$^{\rm b,a}$, Cat Cole$^{\rm c}$",
+      r"$^{\rm a}$Univ A, City\\ $^{\rm b}$Univ B, Town\\ $^{\rm c}$Univ C, Village"
+    )),
+    want(&["Univ A"], &["Univ A", "Univ B"], &["Univ C"])
+  );
+  assert_eq!(
+    names(&doc(
+      r"Ann Able${}^{a,\;b}$, Bob Baker$\,{}^{b,c}$, Cat Cole${}^{\rm a,\ c}$",
+      r"$^{a}$Univ A, City\\ $^{b}$Univ B, Town\\ $^{c}$Univ C, Village"
+    )),
+    want(&["Univ A", "Univ B"], &["Univ B", "Univ C"], &[
+      "Univ A", "Univ C"
+    ])
+  );
+  assert_eq!(
+    names(&doc(
+      r"Ann Able$^{[1]}$, Bob Baker$^{[1],[2]}$, Cat Cole$^{[3]}$",
+      r"$^1$Univ A, City\\ $^2$Univ B, Town\\ $^3$Univ C, Village"
+    )),
+    want(&["Univ A"], &["Univ A", "Univ B"], &["Univ C"])
+  );
+}

@@ -478,8 +478,8 @@ pub(in crate::base_utilities) fn shown_marks(
     .collect();
   for math in document.findnodes("ltx:personname//ltx:Math", Some(creator)) {
     let tex = math.get_attribute("tex").unwrap_or_default();
-    if tex
-      .trim()
+    // (past the spacing before it: `$\,{}^{a,b}$`, 2311.14432)
+    if past_mark_spacing(tex.trim())
       .trim_start_matches("{}")
       .trim_start()
       .starts_with('^')
@@ -529,14 +529,16 @@ pub(in crate::base_utilities) fn script_marks(script: &str) -> Vec<String> {
   items
     .into_iter()
     .filter_map(|item| {
+      // (a number in brackets or parentheses is the number: `$^{[1],[2]}$` against the line's `$^1$`, 1803.06822)
       let item: String = past_mark_switches(item)
+        .trim_start_matches(['[', '('])
         .chars()
         .filter(|c| !matches!(c, '{' | '}') && !c.is_whitespace())
         .collect();
       let lead: String = item.chars().take_while(|c| c.is_alphanumeric()).collect();
       let rest = &item[lead.len()..];
       let symbol_after = rest.is_empty()
-        || rest.starts_with(['*', '\\', ')'])
+        || rest.starts_with(['*', '\\', ')', ']'])
         || rest.starts_with(|c: char| !c.is_ascii() && !c.is_alphanumeric());
       (!lead.is_empty() && symbol_after).then_some(lead)
     })
@@ -581,18 +583,53 @@ pub(in crate::base_utilities) const MARK_SWITCHES: [&str; 32] = [
   "\\textstyle",
 ];
 
-/// `text` past the switches it opens with ([`MARK_SWITCHES`]), with the braces and spaces around them.
-fn past_mark_switches(text: &str) -> &str {
+/// The spacing a mark is set apart with (`{}^{a,\;b}`, `{}^{\rm b,\ c}`, `\,{}^{b,c}`: 1307.6166, hep-th0410034,
+/// 2311.14432), which no mark is: the control words; the control symbols `\,` `\;` `\:` `\!` `\ ` and the tie besides.
+const MARK_SPACING: [&str; 4] = ["\\quad", "\\qquad", "\\thinspace", "\\enspace"];
+
+/// `text` past the spacing it opens with ([`MARK_SPACING`], the spacing control symbols, ties and spaces).
+fn past_mark_spacing(text: &str) -> &str {
   let mut rest = text;
   loop {
-    rest = rest.trim_start_matches(|c: char| c == '{' || c.is_whitespace());
+    rest = rest.trim_start_matches(|c: char| c == '~' || c.is_whitespace());
     let Some(after) = rest.strip_prefix('\\') else {
       return rest;
     };
+    if after.starts_with([',', ';', ':', '!', ' ']) {
+      rest = &after[1..];
+      continue;
+    }
     let len = after
       .find(|c: char| !c.is_ascii_alphabetic())
       .unwrap_or(after.len());
-    if len == 0 || !MARK_SWITCHES.contains(&&rest[..=len]) {
+    if len == 0 || !MARK_SPACING.contains(&&rest[..=len]) {
+      return rest;
+    }
+    rest = &after[len..];
+  }
+}
+
+/// `text` past the switches it opens with ([`MARK_SWITCHES`]) and the spacing ([`MARK_SPACING`]), with the braces and
+/// spaces around them.
+fn past_mark_switches(text: &str) -> &str {
+  let mut rest = text;
+  loop {
+    rest = rest.trim_start_matches(|c: char| c == '{' || c == '~' || c.is_whitespace());
+    let Some(after) = rest.strip_prefix('\\') else {
+      return rest;
+    };
+    if let Some(symbol) = after.chars().next()
+      && matches!(symbol, ',' | ';' | ':' | '!' | ' ')
+    {
+      rest = &after[1..];
+      continue;
+    }
+    let len = after
+      .find(|c: char| !c.is_ascii_alphabetic())
+      .unwrap_or(after.len());
+    if len == 0
+      || !(MARK_SWITCHES.contains(&&rest[..=len]) || MARK_SPACING.contains(&&rest[..=len]))
+    {
       return rest;
     }
     rest = &after[len..];

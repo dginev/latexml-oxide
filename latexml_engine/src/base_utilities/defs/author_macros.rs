@@ -220,8 +220,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     let label = clean_frontmatter_labels(&operand.to_string(), "affiliation")
       .into_iter()
       .next();
-    // the marks it is (`\mathrm{a}`: a), as the authors' are read (relocate_annotations)
-    let keys = script_marks(&operand.to_string()).join(",");
+    // the marks it is (`\mathrm{a}`: a), as the authors' are read (relocate_annotations) — from its TeX spelling, which
+    // keeps the boundary after a control word (`{\rm a}`'s tokens join to `\rma`: 2008.00493)
+    let keys = script_marks(operand.clone().untex_string().as_ref()).join(",");
     with_pending_entry_attr(move |attr| match label {
       Some(label) => {
         DebugFeature!("frontmatter", "FRONT set label {label}");

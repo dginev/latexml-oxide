@@ -219,7 +219,12 @@ KNOWN_PERL_ERRORS cross-reference when one applies. Perl-origin defects go to `p
   `fuzzy:<name text>` to the comma list `_annotations`, as Perl does (Base_Utility.pool.ltxml:873); a name showing
   `$^{a,b}$` left the bare label `b`, which our by-mark respelling in `relocate_annotations` (Rust-only) read as that
   name's own claim on the `$^b$` line, so a second name marked `b` lost it (0806.3762: Pujolas). The label is one label
-  now (its commas `_`). Guard `perfect_kernel_batch80a::revtex_marked_address_goes_by_mark`.
+  now (its commas `_`). Guard `perfect_kernel_batch80a::revtex_marked_address_goes_by_mark`. The leak had masked three
+  by-mark gaps, fixed with it (80y): a marked line's key was read from its tokens joined without the boundary after a
+  control word (`$^{\rm a}$` → `\rma`, no key: `\lx@sup@setlabel@affiliation` reads the TeX spelling now, 2008.00493);
+  spacing in or before a name's script was no mark (`{}^{a,\;b}`, `{}^{\rm b,\ c}`, `\,{}^{b,c}`: `past_mark_spacing`,
+  1307.6166, hep-th0410034, 2311.14432); a bracketed number was none (`$^{[1]}$` against `$^1$`, 1803.06822). Guard
+  `perfect_kernel_batch80a::marked_list_marks_link_however_spelt`.
 - **The FM writer left a lone suffixed id (80u)**: an item today's frontmatter places under several creators is numbered
   once per copy (`footnotex3`, `modify_id`'s `footnotex3a`); the writer taking the copy that held the plain id left the
   other's suffix standing alone (1606.04500, 1607.07280). `writer::apply::reclaim_ids` gives the taken ids back to the
