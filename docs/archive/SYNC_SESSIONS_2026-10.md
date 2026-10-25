@@ -8227,3 +8227,13 @@ papers, 250 random): E 969 → 594, F 2 → 1, missing `$` 29 → 0; 15 dgruyter
 title page's labels now `name` attributes ("Received", "Keywords:", "Abstract:"), its furniture dropped ("Research
 Article", "Open Access", placeholder `https://doi.org/…`), its itemize glyph `–` the kernel's `•`. Nets 133/136, the
 three (dgruyter 2007.00557, breakurl 1712.02392, sidecap 2101.08688, all dgruyter papers) the same classification.
+
+**int108 (2026-10-25; 80s → 0556e6aef3).** FM S2b r2 on the census's 35 "worse" revtex papers: re-read per author
+against their marks, 28 were corrections the named-affiliation count read as losses, 1 ambiguous, 6 real; three fixed by
+general mechanisms — `parted_label` takes the most known pieces first and lets one letter stand alone (`†♮♯`
+1004.1402, `1{\rm a}` 1904.02582), and a mark between a comma and a name goes to the side a printed space sets it
+against (`space_before`/`space_after`, 1603.00635). Gates int108a 7279/7279; default output identical (writer off);
+census int107c → int108a with `LATEXML_FM_SHADOW=1` over the 5,917 revtex papers: at creator level (`orphans.py` over
+`~/data/pk_agents/ab_66bundle/work_rint108rv`) exactly 4 changed, all better (the three witnesses and 2201.11098's
+`1a`), none other moved; nets 136/136. (The A/B's hash and word columns cannot see an affiliation moved between
+creators: a frontmatter writer change is measured at creator level.)
