@@ -18148,3 +18148,18 @@ colours an identifier by its first letter. The Perl binding styles each token it
 so `\id@style` takes the `\relax` for its first argument and reads the listing as its second, up to the next
 `\relax`. Fixed in Rust (80b): listings_sty.rs sets `\lst@token`/`\lst@length` to the word around its styled output
 and empties them after. Same repro and guard as #1169.
+
+## 1171. A nested `\import` reads the directory beside its file, or nothing
+
+import.sty:49-95 keeps `\import@path`: `\import{dir}{file}` resets it to `dir/`, `\subimport{dir}{file}` appends
+`dir/` to it, and the file read is `\import@path file`, with `\input@path` = `{\import@path}` followed by the
+enclosing import's entries, each resolved against the working directory. So `\import{intro}{intro}` inside a file
+read by `\import{chapters/}{chapters}` reads `intro/intro`, found as `chapters/intro/intro.tex` through the enclosing
+entry, and `\subimport{}{statements/x.tex}` there reads `intro/statements/x.tex`. import.sty.ltxml:20-47 instead
+prepends the directory to `SEARCHPATHS` (`\subimport` replacing the first entry with the concatenation) and reads
+`\input{file}`: the nested name is looked for as `intro` alone, and Pathname.pm:321-392 `candidate_pathnames` takes
+any directory entry of that name, so the directory `chapters/intro` is opened as the file ("Is a directory") and the
+chapter is lost; the `\subimport{}{…}` statement files are not found at all (2408.09583: 22 of 23 references
+dangling, every chapter gone). Fixed in Rust (80c): import_sty.rs follows import.sty's path model, and pathname.rs
+`find` skips directories as kpathsea's `READABLE` does. Repro loader/import_nested_absolute_import; guard
+`perfect_kernel_batch80a::a_nested_import_reads_its_files_as_import_sty_finds_them`.

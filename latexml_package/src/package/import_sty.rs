@@ -2,6 +2,45 @@ use latexml_core::util::pathname;
 
 use crate::prelude::*;
 
+/// import.sty:147-151 `\import@path@fix`: a non-empty directory ends in exactly one `/` (`\@ensure@one@trailing@slash`);
+/// an empty one stays empty.
+fn import_path_fix(path: &str) -> String {
+  let path = path.trim();
+  if path.is_empty() {
+    String::new()
+  } else {
+    s!("{}/", path.trim_end_matches('/'))
+  }
+}
+
+/// The current `\import@path` (import.sty:142, empty outside any import).
+fn import_path() -> String { lookup_string("lx@import@path") }
+
+/// import.sty:82-85 `\@import`: `\import@path` becomes `path`, and `\input@path` gets it in front of the enclosing
+/// entries (TeX resolves each entry against the working directory, here the source directory). The `*` forms are
+/// the same (import.sty:60-62 "Consume now-meaningless `*`"); Perl's `*` searched only the import's directory, which
+/// loses the source directory the joined name is relative to (`\subimport*{nested/}{outer.tex}` reads
+/// `nested/outer.tex`).
+fn enter_import_path(path: String) {
+  assign_value("lx@import@path", Stored::String(pin(&path)), None);
+  let mut new_paths = Vec::new();
+  if !path.is_empty() {
+    let dir = if pathname::is_absolute(&path) {
+      path.clone()
+    } else {
+      let source_dir = lookup_string("SOURCEDIRECTORY");
+      if source_dir.is_empty() {
+        path.clone()
+      } else {
+        pathname::concat(&source_dir, &path)
+      }
+    };
+    new_paths.push(pathname::canonical(&dir));
+  }
+  new_paths.extend(get_search_paths());
+  set_search_paths_local(new_paths);
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: import.sty.ltxml — `AssignValue(SEARCHPATHS => …)`, local-by-default.
@@ -10,66 +49,54 @@ LoadDefinitions!({
   // `\subimport{Chapter/}{File}` calls each start from the base paths (the
   // second must NOT concat Chapter/ onto the first call's Chapter/). Witnesses:
   // arXiv:2604.09744, 2603.04457.
+  //
+  // The import's file is found as import.sty finds it (:82-88): `\import@path` is the directory, reset by `\import`
+  // (:49) and extended by `\subimport` (:55, `\import@path#3`), and the file read is `\import@path #7`, with
+  // `\input@path` = `{\import@path}` + the enclosing import's entries. A nested `\import{intro}{intro}` inside
+  // `\import{chapters/}{chapters}` reads `intro/intro`, found under the enclosing entry as
+  // `chapters/intro/intro.tex`, and a `\subimport{}{statements/x.tex}` there reads `intro/statements/x.tex`
+  // (2408.09583: its chapters, then its statement files). Perl's `\input{#3}` against a search path made of the
+  // first entry and the new directory (import.sty.ltxml:20-47) found neither (KPE #1171).
 
-  // Perl import.sty.ltxml L20-29: \lx@set@path OptionalMatch:* {}
-  //   path = ToString(Expand(#2)); if relative, resolve vs SOURCEDIRECTORY.
-  //   If * → replace SEARCHPATHS with [canonical(path)]
-  //   else → prepend canonical(path) to existing SEARCHPATHS.
-  DefPrimitive!("\\lx@set@path OptionalMatch:* {}", sub[(star, path_tks)] {
-    let raw = Expand!(path_tks).to_string();
-    let mut path = raw.trim().to_string();
-    if path.is_empty() { return Ok(Vec::new()); }
-    if !pathname::is_absolute(&path) {
-      let source_dir = lookup_string("SOURCEDIRECTORY");
-      if !source_dir.is_empty() {
-        path = pathname::concat(&source_dir, &path);
-      }
-    }
-    let canonical = pathname::canonical(&path);
-    // LOCAL, restored by `\lx@import@save`/`\lx@import@restore` around the input,
-    // matching Perl's default-local `AssignValue(SEARCHPATHS…)`.
-    if star.is_some() {
-      set_search_paths_local(vec![canonical]);
-    } else {
-      let mut new_paths = vec![canonical];
-      new_paths.extend(get_search_paths());
-      set_search_paths_local(new_paths);
-    }
+  // Perl import.sty.ltxml L20-29: \lx@set@path OptionalMatch:* {} — `\import`'s directory, relative to the source
+  // directory unless absolute.
+  DefPrimitive!("\\lx@set@path OptionalMatch:* {}", sub[(_star, path_tks)] {
+    let path = import_path_fix(&Expand!(path_tks).to_string());
+    enter_import_path(path);
   });
 
-  // Perl import.sty.ltxml L31-42: \lx@append@path OptionalMatch:* {}
-  //   If SEARCHPATHS has entries, concat the first with path:
-  //   new_lead = concat(lead_path, path); star → [new_lead], else → [new_lead, ...rest].
-  //   If SEARCHPATHS is empty, this is a no-op (matches Perl's early-return).
+  // Perl import.sty.ltxml L31-42: \lx@append@path OptionalMatch:* {} — `\subimport`'s directory, appended to the
+  // current `\import@path`.
   //   DIVERGENCE (OXIDIZED_DESIGN #137): an absolute `path` is used verbatim
   //   rather than concatenated, to match real LaTeX — see the body.
-  DefPrimitive!("\\lx@append@path OptionalMatch:* {}", sub[(star, path_tks)] {
+  DefPrimitive!("\\lx@append@path OptionalMatch:* {}", sub[(_star, path_tks)] {
     let raw = Expand!(path_tks).to_string();
-    let path = raw.trim().to_string();
-    if path.is_empty() { return Ok(Vec::new()); }
-    let mut paths = get_search_paths();
-    if paths.is_empty() { return Ok(Vec::new()); }
-    let lead = paths.remove(0);
+    let raw = raw.trim();
     // OXIDIZED_DESIGN #137 — surpass Perl to match real LaTeX (pdflatex,
     // verified): an ABSOLUTE directory arg is used verbatim, not concatenated
-    // onto the lead search path (which yields an unresolvable `<lead>//abs/…`).
+    // onto the current import path (which yields an unresolvable `<lead>//abs/…`).
     // Perl's \lx@append@path (import.sty.ltxml L31-42) ALWAYS concats, so both
     // engines fail `\subimport*{/abs/}{file}` where pdflatex succeeds — issue
     // #697. \lx@set@path already special-cases absolute; mirror it here.
-    // Relative args are unchanged (the common `\subimport*{sub/}{file}` case).
-    let new_lead = if pathname::is_absolute(&path) {
-      pathname::canonical(&path)
+    let path = if pathname::is_absolute(raw) {
+      import_path_fix(raw)
     } else {
-      pathname::concat(&lead, &path)
+      import_path_fix(&s!("{}{raw}", import_path()))
     };
-    // LOCAL (see `\lx@set@path`): restored after the input.
-    if star.is_some() {
-      set_search_paths_local(vec![new_lead]);
-    } else {
-      let mut new_paths = vec![new_lead];
-      new_paths.extend(paths);
-      set_search_paths_local(new_paths);
+    enter_import_path(path);
+  });
+
+  // `\@import`'s read (import.sty:86-88): `<command>{\import@path <file>}`.
+  DefMacro!("\\lx@import@input{}{}", sub[(command, file)] {
+    let mut toks = command.unlist();
+    toks.push(T_BEGIN!());
+    let path = import_path();
+    if !path.is_empty() {
+      toks.extend(ExplodeText!(path));
     }
+    toks.extend(file.unlist());
+    toks.push(T_END!());
+    Ok(Tokens::new(toks))
   });
 
   // No group around the input (import.sty:65-92): `\@sub@import` closes its own
@@ -80,9 +107,10 @@ LoadDefinitions!({
   // loaded-flags are global — was popped at the `}`: `\subimport{}{macros}` left
   // the paper's macros undefined, and a package loaded there (hyperref → etoolbox)
   // was "already loaded" but gone when biblatex asked for `\newbool` (arXiv
-  // 2605.20598, `Fatal:TooManyErrors`). The search paths are saved before and
-  // restored after the input instead, so each sibling `\subimport{Chapter/}{…}`
-  // still starts from the base paths (witnesses 2604.09744, 2603.04457).
+  // 2605.20598, `Fatal:TooManyErrors`). The search paths and `\import@path` are
+  // saved before and restored after the input instead (import.sty:92-95), so each
+  // sibling `\subimport{Chapter/}{…}` still starts from the base paths (witnesses
+  // 2604.09744, 2603.04457).
   // OXIDIZED_DESIGN #280.
   //
   // KNOWN_PERL_ERRORS #56: `\includefrom`/`\subincludefrom` take TWO arguments
@@ -101,24 +129,27 @@ LoadDefinitions!({
       _ => VecDeque::new(),
     };
     stack.push_front(saved);
+    stack.push_front(Stored::String(pin(import_path())));
     assign_value("lx@import@saved@paths", Stored::VecDequeStored(stack), Some(Scope::Global));
   });
   DefPrimitive!("\\lx@import@restore", {
     if let Some(Stored::VecDequeStored(mut stack)) = lookup_value("lx@import@saved@paths")
+      && let Some(saved_import_path) = stack.pop_front()
       && let Some(saved) = stack.pop_front()
     {
       assign_value("lx@import@saved@paths", Stored::VecDequeStored(stack), Some(Scope::Global));
       assign_value("SEARCHPATHS", saved, Some(Scope::Local));
+      assign_value("lx@import@path", saved_import_path, None);
     }
   });
   DefMacro!("\\import OptionalMatch:* {}{}",
-    "\\lx@import@save\\lx@set@path #1{#2} \\input{#3}\\lx@import@restore");
+    "\\lx@import@save\\lx@set@path #1{#2} \\lx@import@input{\\input}{#3}\\lx@import@restore");
   DefMacro!("\\includefrom OptionalMatch:* {}{}",
-    "\\lx@import@save\\lx@set@path #1{#2} \\include{#3}\\lx@import@restore");
+    "\\lx@import@save\\lx@set@path #1{#2} \\lx@import@input{\\include}{#3}\\lx@import@restore");
   DefMacro!("\\subimport OptionalMatch:* {}{}",
-    "\\lx@import@save\\lx@append@path #1{#2} \\input{#3}\\lx@import@restore");
+    "\\lx@import@save\\lx@append@path #1{#2} \\lx@import@input{\\input}{#3}\\lx@import@restore");
   DefMacro!("\\subincludefrom OptionalMatch:* {}{}",
-    "\\lx@import@save\\lx@append@path #1{#2} \\include{#3}\\lx@import@restore");
+    "\\lx@import@save\\lx@append@path #1{#2} \\lx@import@input{\\include}{#3}\\lx@import@restore");
   Let!("\\inputfrom", "\\import");
   Let!("\\subinputfrom", "\\subimport");
 });

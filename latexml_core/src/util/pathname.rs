@@ -835,9 +835,12 @@ pub fn find(pathname: &str, options: PathnameFindOptions) -> Option<String> {
   }
   let paths = candidate_pathnames(pathname, options);
   // Pass 1: strict-case existence check (the fast path; matches Perl's
-  // `$local_file =~ m/$regex/` strict regex).
+  // `$local_file =~ m/$regex/` strict regex). A directory is no candidate: kpathsea's `READABLE` (`!S_ISDIR`) never
+  // takes one, so `\input{intro}` beside a directory `intro/` looks further (2408.09583's
+  // `chapters/introduction/introduction.tex`, where `chapters/introduction` was read as the file and its chapter
+  // lost; Perl's `candidate_pathnames` takes any matching directory entry, KPE #1171).
   for path in &paths {
-    if Path::new(path).exists() {
+    if is_readable_file(path) {
       return Some(path.clone());
     }
   }
@@ -861,12 +864,19 @@ pub fn find(pathname: &str, options: PathnameFindOptions) -> Option<String> {
     for entry in entries.flatten() {
       if let Some(name) = entry.file_name().to_str()
         && name.eq_ignore_ascii_case(target)
+        && !entry.path().is_dir()
       {
         return entry.path().to_str().map(String::from);
       }
     }
   }
   None
+}
+
+/// A path TeX could open as a file: it exists and is not a directory (kpathsea's `READABLE`).
+pub fn is_readable_file(path: &str) -> bool {
+  let p = Path::new(path);
+  p.exists() && !p.is_dir()
 }
 
 /// transform to a canonical file name, via `Path::file_name`

@@ -1,5 +1,5 @@
 //! Red/green guards for batch 80a (the hyphenation languages the format numbers keep their numbers) and 80b (a
-//! listings style that is a control sequence runs, with the token in `\lst@token`). Each guard
+//! listings style that is a control sequence runs, with the token in `\lst@token`) and 80c (import.sty's path model). Each guard
 //! converts its repro under `tools/perfect_kernel/repros/`, asserts the diagnostics by count and the elements.
 use latexml::util::test::convert_files_with;
 
@@ -57,4 +57,44 @@ fn a_listings_identifier_style_reads_the_token() {
     assert!(xml[open..at].contains(&element), "{word} {color}: {xml}");
   }
   assert!(xml.contains("After."), "{xml}");
+}
+
+/// 80c: import.sty's own path model (import_sty.rs) — `\import` resets `\import@path`, `\subimport` extends it, the
+/// file read is `\import@path <file>` with the enclosing imports' directories still searched — and a directory is no
+/// file (pathname.rs, kpathsea's `READABLE`). Red (int94b): the nested `\import{intro}{intro}` read the directory
+/// importnest/intro ("Is a directory"), the section, its `\subimport{}{parts/part.tex}` part and the label lost
+/// (KPE #1171). Witness 2408.09583. Repro loader/import_nested_absolute_import.
+#[test]
+fn a_nested_import_reads_its_files_as_import_sty_finds_them() {
+  let (log, xml) = convert_files_with(
+    repro!("loader/import_nested_absolute_import.tex"),
+    &[
+      (
+        "importnest/chapters.tex",
+        include_str!("../../../tools/perfect_kernel/repros/loader/importnest/chapters.tex"),
+      ),
+      (
+        "importnest/intro/intro.tex",
+        include_str!("../../../tools/perfect_kernel/repros/loader/importnest/intro/intro.tex"),
+      ),
+      (
+        "importnest/intro/parts/part.tex",
+        include_str!("../../../tools/perfect_kernel/repros/loader/importnest/intro/parts/part.tex"),
+      ),
+    ],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for text in [
+    "The introduction text.",
+    "A part of the introduction.",
+    "Back in the chapters file.",
+  ] {
+    assert!(xml.contains(text), "{text}: {xml}");
+  }
+  assert!(xml.contains(r#"labels="LABEL:sec:intro""#), "{xml}");
+  assert!(
+    xml.contains(r#"<ref labelref="LABEL:sec:intro"/>"#),
+    "{xml}"
+  );
 }

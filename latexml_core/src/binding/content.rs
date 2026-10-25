@@ -5182,7 +5182,7 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
     // LaTeXML binding latexml-oxide can never read. Binding availability is
     // decided by the DISPATCHER (compiled + Rhai) in the relative-path branch's
     // `notex` fast-path, not by a file on disk.
-    if Path::new(file).exists() {
+    if pathname::is_readable_file(file) {
       Some(file.to_string())
     } else {
       None
