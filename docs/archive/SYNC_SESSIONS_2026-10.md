@@ -8193,3 +8193,11 @@ errors → 0; 2603.08854: 4 → 0; KPE #1185). Gates int103a 7269/7269, clippy 0
 over popint103a (961: 695 random alignment users byte-identical, 247 acronym, 12 mathtools arrow/vdots, 4 `\twocolumn`
 redefiners, witnesses): E 2,994 → 2,982, F 6 → 6, +7.4k words, none worse. Nets 136/136. Dismissed: 2306.09209
 (stale `.bbl`), 1307.5170 (the kernel's `\Ref`, awaiting a ruling); open: 2510.17333 (dgruyter.sty's raw `\@array`).
+
+**int104 (2026-10-25; 80o → baf29c42fd).** From brk106 (1,200 fresh papers on int102a, `scratch_356a0c47/brk106/`: 38
+with breakage, 6 with OURS keys). 80o: latexml_contrib iucr_cls.rs, a stand-in for the IUCr class papers ship
+(`AUTHOR_FILE_STAND_INS`), reads the class as it is and lets `\hcaption` be `\caption` — the class's float end code that
+prints its deferred `\captionbox` never runs under the kernel's float bindings (1707.09045: 0 captions → 13, the table
+reference resolved). Gates int104b 7270/7270 (int104a caught the unlisted stand-in), clippy 0, doc 0, inits 0. A/B
+int103a → int104b over popint104b (302: the iucr census papers, 300 random float users): 1 changed (the witness, +2k
+words), E/F unchanged. Nets 136/136.
