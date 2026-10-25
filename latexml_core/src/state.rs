@@ -4053,6 +4053,8 @@ pub fn if_stack_depth() -> usize { state!().if_stack.len() }
 pub fn if_limit() -> i64 { state!().if_limit }
 /// Set [`if_limit`] (Perl `latexml.sty.ltxml:101`).
 pub fn set_if_limit(limit: i64) { state_mut!().if_limit = limit; }
+/// The conditionals counted so far ([`State::if_count`]).
+pub fn if_count() -> i64 { state!().if_count }
 /// Perl `Object.pm:163-168`: bump the global absorb counter and return it
 /// (see [`State::absorb_count`]).
 pub fn next_absorb_id() -> i64 {

@@ -306,9 +306,11 @@ KNOWN_PERL_ERRORS cross-reference when one applies. Perl-origin defects go to `p
   every Fatal (Common/Error.pm:336-338); `Timeout:IfLimit` wrote a 39-byte document. A finite figure-heavy paper reaches
   the 48M limit as surely as a loop: 2006.14937's 24 matplotlib `.pgf` figures (5.3 MB) trip it at the ninth, once 80j's
   `\pdfstrcmp` let its datatool preamble through (int98a's TooManyErrors salvage had kept 6,821 words). The guard's Fatal
-  now keeps the levels around the tripping construct and drops that construct, as the stomach guard does; the count stays
-  over the limit, so a conditional the build re-enters fails at once. Guard
-  `perfect_kernel_batch80a::iflimit_fatal_keeps_the_document_before_it`.
+  now keeps every level, as TooManyErrors does (a run of conditionals adds no boxes; with the loop in the body's own
+  paragraph the innermost level is the whole body), and leaves the resource-fatal latch: kept, the document was still
+  lost in the build, where the first formula the math parser could not read (`(a,b`) took the latched Fatal for its own
+  (`take_last_resource_fatal`, parser.rs) and the converter wrote an empty file. The phases after digestion get the
+  guard's budget afresh. Guard `perfect_kernel_batch80a::iflimit_fatal_keeps_the_document_before_it`.
 
 ## Current status
 

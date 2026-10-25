@@ -3,14 +3,16 @@
 % oracle:  pdflatex never ends (an infinite loop of conditionals); a document whose text precedes the runaway
 % engines: rust int99a = Fatal Timeout:IfLimit and an empty document: only the Stomach and TooManyErrors Fatals kept
 %          what was digested before them, where Perl's hardYankProcessing keeps it for every Fatal
-%          (Common/Error.pm:336-338)
-% expect:  1 (the Fatal Timeout:IfLimit); the section and its text kept, the runaway's center dropped
-% status:  RED (int99a) -> GREEN (80k: core_interface.rs salvages for Timeout:IfLimit)
+%          (Common/Error.pm:336-338). Kept, the document was still lost in the build: the latched Fatal was taken by
+%          the first formula the math parser could not read (`(a,b`, 2006.14937's `p_{2}(X_{1},X_{2},Y)\cdot`) as its
+%          own, and the converter wrote an empty file.
+% expect:  1 (the Fatal Timeout:IfLimit); the section, its text, both formulas and the center's "Inside" kept
+% status:  RED (int99a, int100a) -> GREEN (80k: core_interface.rs salvages for Timeout:IfLimit and leaves the latch)
 \documentclass{article}
 \usepackage[iflimit=300000]{latexml}
 \begin{document}
 \section{Kept}
-Text before the runaway.
+Text before the runaway, with $p_{2}(X_{1},X_{2},Y)\cdot$ and $(a,b$.
 \def\spin{\ifnum1=1 \expandafter\spin\fi}
 \begin{center}Inside \spin\end{center}
 \end{document}

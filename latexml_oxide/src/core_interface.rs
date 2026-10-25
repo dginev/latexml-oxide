@@ -430,17 +430,30 @@ fn digest_step_guarded(boxes: &mut Vec<Digested>) -> Result<bool> {
       // current level is honest content (the paragraph in progress). Input
       // after the Fatal stays unread, as in Perl.
       //
-      // The conditional guard (`Timeout:IfLimit`) keeps the levels around the construct that tripped it, which is
-      // dropped like the stomach guard's runaway level. Unlike `Timeout:Recursion` it cannot revive the loop: the count
-      // stays over the limit, so any conditional the build re-enters fails at once. A finite figure-heavy paper reaches
-      // the limit as surely as a loop: 2006.14937's 24 matplotlib `.pgf` figures (5.3 MB) trip it at the ninth, and the
-      // whole paper was a 39-byte stub.
+      //
+      // The conditional guard (`Timeout:IfLimit`) keeps everything too: a run of conditionals adds no boxes of its own,
+      // so the current level is the document's (for a loop in the body's own paragraph, the whole body), and the
+      // salvage's own ceiling still refuses a loop that piles up boxes. A finite figure-heavy paper reaches the limit as
+      // surely as a loop: 2006.14937's 24 matplotlib `.pgf` figures (5.3 MB) trip it at the ninth, and the whole paper
+      // was a 39-byte stub.
       let drop_innermost = match (&e.target, &e.category) {
         (ErrorTarget::Stomach, _) => Some(true),
-        (ErrorTarget::TooManyErrors, _) => Some(false),
-        (ErrorTarget::Timeout, ErrorCategory::IfLimit) => Some(true),
+        (ErrorTarget::TooManyErrors, _) | (ErrorTarget::Timeout, ErrorCategory::IfLimit) => {
+          Some(false)
+        },
         _ => None,
       };
+      // What is kept still has to be built. The Fatal is announced and its document kept, so it leaves the latch the math
+      // parser reads a resource Fatal from (`take_last_resource_fatal`): left there, the first formula a semantic action
+      // rejects took it for its own and dropped the document; `resource_fatal_latched` stays set. A conditional of the
+      // build (a rewrite's, a constructor's) would trip the spent guard again, so the phases after digestion get its
+      // budget afresh, and a loop the build re-enters still ends at the limit.
+      if matches!(e.category, ErrorCategory::IfLimit) {
+        error::take_last_resource_fatal();
+        if state::if_limit() > 0 {
+          state::set_if_limit(state::if_count() + state::if_limit());
+        }
+      }
       if let Some(drop_innermost) = drop_innermost {
         let salvaged = stomach::salvage_pending_box_lists(drop_innermost);
         if !salvaged.is_empty() {

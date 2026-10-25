@@ -465,9 +465,10 @@ fn cleveref_label_list_is_expanded() {
 }
 
 /// 80k: the conditional guard's Fatal keeps what was digested before it, as Perl's `hardYankProcessing` keeps it for
-/// every Fatal. Red (int99a): only the Stomach and TooManyErrors Fatals were salvaged, so `Timeout:IfLimit` left a
-/// 39-byte document — the whole of 2006.14937, whose 24 matplotlib figures reach the limit at the ninth. Repro
-/// expansion-primitives/iflimit_fatal_keeps_the_document_before_it.
+/// every Fatal, and the kept document is built. Red (int99a): only the Stomach and TooManyErrors Fatals were salvaged,
+/// so `Timeout:IfLimit` left a 39-byte document — the whole of 2006.14937, whose 24 matplotlib figures reach the limit
+/// at the ninth; red (int100a): kept, the document was lost in the build, where the first formula the math parser could
+/// not read took the latched Fatal for its own. Repro expansion-primitives/iflimit_fatal_keeps_the_document_before_it.
 #[test]
 fn iflimit_fatal_keeps_the_document_before_it() {
   let (log, xml) = convert_files_with(
@@ -478,11 +479,16 @@ fn iflimit_fatal_keeps_the_document_before_it() {
   assert!(log.contains("Fatal:Timeout:IfLimit"), "{log}");
   assert_eq!(error_count(&log), 1, "{log}");
   assert!(
-    xml.contains("Kept</title>") && xml.contains("Text before the runaway."),
+    xml.contains("Kept</title>") && xml.contains("Text before the runaway"),
     "{xml}"
   );
+  assert_eq!(
+    xml.matches("<Math ").count(),
+    2,
+    "both formulas kept: {xml}"
+  );
   assert!(
-    !xml.contains("Inside"),
-    "the runaway's level is dropped: {xml}"
+    xml.contains("Inside"),
+    "the level the loop ran in is kept: {xml}"
   );
 }
