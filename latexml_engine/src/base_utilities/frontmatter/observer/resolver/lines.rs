@@ -922,11 +922,18 @@ impl Resolver {
             .find(|e| e.kind == EventKind::Name)
             .and_then(|e| e.span)
             .map(|s| s.0);
-          let nearer_next = match (last_sep.and_then(|s| s.span), event.span, next_start) {
-            (Some((_, sep_end)), Some((start, end)), Some(next)) => {
-              next.saturating_sub(end) < start.saturating_sub(sep_end)
+          // (TeX's output decides first, where it sets the mark apart on one side only: `Han,${}^1$ Thibault` prints
+          // "Han,¹ Thibault", the mark the name before's — measured in the source from the script, the empty base `{}`
+          // put it nearer the next name, 1603.00635; else the source distances)
+          let nearer_next = match (event.space_before, event.space_after) {
+            (false, true) => false,
+            (true, false) => true,
+            _ => match (last_sep.and_then(|s| s.span), event.span, next_start) {
+              (Some((_, sep_end)), Some((start, end)), Some(next)) => {
+                next.saturating_sub(end) < start.saturating_sub(sep_end)
+              },
+              _ => false,
             },
-            _ => false,
           };
           let inst = event.role.as_deref().is_some_and(|r| r.starts_with("inst"));
           // (a mark glued to the mark before it goes where that one went: `Oh,$^{1}$$^{,2}$ Nordlander`, mn2e,

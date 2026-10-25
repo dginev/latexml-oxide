@@ -83,28 +83,32 @@ impl EventKind {
 /// One event of an author block.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Event {
-  pub kind:       EventKind,
+  pub kind:         EventKind,
   /// the positions of the author field it covers, `start..end`
-  pub span:       Option<(u16, u16)>,
+  pub span:         Option<(u16, u16)>,
   /// its ink: a name's text, a mark's printed text, a contact's or a note's shown text
-  pub text:       String,
+  pub text:         String,
   /// a mark's label, a note's `\label`, a contact's optional label
-  pub label:      Option<String>,
+  pub label:        Option<String>,
   /// a mark printed as a footnote symbol
-  pub symbol:     bool,
+  pub symbol:       bool,
   /// a mark that is its line's first ink
-  pub line_first: bool,
+  pub line_first:   bool,
   /// a contact's role, a mark's or a layout's source (`sup`, `math`, `inst`, `text`; the container's command)
-  pub role:       Option<String>,
+  pub role:         Option<String>,
   /// a link's target
-  pub target:     Option<String>,
+  pub target:       Option<String>,
   /// a note's inner contacts and Marks (the one its text opens with `line_first`, the others not)
-  pub inner:      Vec<Event>,
+  pub inner:        Vec<Event>,
   /// how many layout containers enclose it
-  pub nest:       u8,
+  pub nest:         u8,
   /// a mark's run of footnote symbols that a line of its block leads with and a name shows, written together (`§†`):
   /// one label, as `††` is (the resolver's `glue_shown_runs`; main-session decision 2 on FM S2a.2 r7, 0907.1243)
-  pub glued:      bool,
+  pub glued:        bool,
+  /// a mark set off by a printed space from the ink or separator before it, and from the name after it: which of the
+  /// two TeX's output sets it next to (the resolver's `nearer_next`; `Han,${}^1$ Thibault` prints "Han,¹ Thibault")
+  pub space_before: bool,
+  pub space_after:  bool,
 }
 
 impl Event {
@@ -121,6 +125,8 @@ impl Event {
       inner: Vec::new(),
       nest: 0,
       glued: false,
+      space_before: false,
+      space_after: false,
     }
   }
 }

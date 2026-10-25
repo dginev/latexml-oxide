@@ -25,6 +25,8 @@ pub(super) struct Lexer {
   /// the symbol mark being read (consecutive footnote-symbol characters and mark glyphs)
   symbol:            String,
   symbol_span:       Option<(u16, u16)>,
+  /// a printed space before the symbol mark being read
+  symbol_space:      bool,
 }
 
 impl Lexer {
@@ -64,6 +66,7 @@ impl Lexer {
     mark.symbol = mark.text.chars().all(is_fnsymbol);
     mark.role = Some("text".to_string());
     mark.span = self.symbol_span.take();
+    mark.space_before = std::mem::take(&mut self.symbol_space);
     mark.line_first = !self.line_inked;
     self.line_inked = true;
     self.events.push(mark);
@@ -137,6 +140,7 @@ impl Lexer {
         self.line_inked = false;
       },
       EventKind::Mark => {
+        event.space_before = self.gap_items > 0;
         self.flush_gap();
         event.line_first = !self.line_inked;
         self.line_inked = true;
@@ -166,6 +170,9 @@ impl Lexer {
       }
       if is_fnsymbol(c) || is_mark_glyph(c) {
         self.flush_run();
+        if self.symbol.is_empty() {
+          self.symbol_space = self.gap_items > 0;
+        }
         self.flush_gap();
         self.symbol.push(c);
         self.symbol_span = join_span(self.symbol_span, span);
@@ -188,6 +195,13 @@ impl Lexer {
         continue;
       }
       if self.gap_items > 0 {
+        // (a printed space between a mark and the ink after it: `space_after`)
+        if self.run.is_empty()
+          && let Some(last) = self.events.last_mut()
+          && last.kind == EventKind::Mark
+        {
+          last.space_after = true;
+        }
         if self.gap_is_separator() || self.run.is_empty() {
           self.flush_run();
           self.flush_gap();

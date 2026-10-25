@@ -128,3 +128,80 @@ Text.
     "{today:?}"
   );
 }
+
+/// The creator holding `name`, and whether it lists each of `has` and none of `lacks`.
+fn holds(creators: &[String], name: &str, has: &[&str], lacks: &[&str]) {
+  let creator = creators
+    .iter()
+    .find(|c| c.contains(name))
+    .unwrap_or_else(|| panic!("{name}: {creators:#?}"));
+  for text in has {
+    assert!(creator.contains(text), "{name} lacks {text}: {creator}");
+  }
+  for text in lacks {
+    assert!(!creator.contains(text), "{name} holds {text}: {creator}");
+  }
+}
+
+/// FM S2b r2 (the census's worse 35): a mark glued of several symbols is the marks it spells — `$^{\dagger\natural
+/// \sharp}$` under entries `†`, `♮`, `♯` (`parted_label`: the most known pieces before the fewest). Red (r1): only `†`
+/// matched, the `♮` and `♯` affiliations left to the block. Witness 1004.1402.
+#[test]
+fn glued_symbol_marks_part_into_their_affiliations() {
+  let tex = r"\documentclass[aps,prd]{revtex4-1}
+\begin{document}
+\title{T}
+\author{David Lowe$^{\dagger}$ and Shubho Roy$^{\dagger\natural\sharp}$}
+\affiliation{$^{\dagger}$Univ A, City}
+\affiliation{$^{\natural}$Univ B, City}
+\affiliation{$^{\sharp}$Univ C, City}
+\maketitle
+Text.
+\end{document}
+";
+  let on = creators(tex, true);
+  assert!(on.iter().all(|c| c.contains("<personname")), "{on:#?}");
+  holds(&on, "Roy", &["Univ A", "Univ B", "Univ C"], &[]);
+  holds(&on, "Lowe", &["Univ A"], &["Univ B", "Univ C"]);
+}
+
+/// FM S2b r2: a number with a letter glued to it requests the number, the letter a note's mark — `$^{1{\rm a}}$` under
+/// entries `1`, `2`. Red (r1): `1a` matched no entry, Han and Hu kept no affiliation. Witness 1904.02582.
+#[test]
+fn a_number_with_a_glued_letter_requests_the_number() {
+  let tex = r"\documentclass[aps,prb]{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{1{\rm a}}$, Cat Cole$^{2{\rm a}}$}
+\affiliation{$^{1}$Univ A, City}
+\affiliation{$^{2}$Univ B, City}
+\maketitle
+Text.
+\end{document}
+";
+  let on = creators(tex, true);
+  holds(&on, "Bob Baker", &["Univ A"], &["Univ B"]);
+  holds(&on, "Cat Cole", &["Univ B"], &["Univ A"]);
+}
+
+/// FM S2b r2: a mark after a name's comma is that name's when it stands nearer the comma, its formula's base and math
+/// shifts counted — `Han,${}^1$ Vogt`: measured from the script, the empty base `{}` put the mark nearer the next name.
+/// Red (r1): Han kept no affiliation. Witness 1603.00635.
+#[test]
+fn a_mark_after_the_comma_with_an_empty_base_is_the_name_before() {
+  let tex = r"\documentclass[aps,pra]{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able,${}^1$ Bob Baker,${}^{1,2}$ and Cat Cole${}^{1,3}$}
+\affiliation{${}^1$Univ A, City}
+\affiliation{${}^2$Univ B, City}
+\affiliation{${}^3$Univ C, City}
+\maketitle
+Text.
+\end{document}
+";
+  let on = creators(tex, true);
+  holds(&on, "Ann Able", &["Univ A"], &["Univ B", "Univ C"]);
+  holds(&on, "Bob Baker", &["Univ A", "Univ B"], &["Univ C"]);
+  holds(&on, "Cat Cole", &["Univ A", "Univ C"], &["Univ B"]);
+}

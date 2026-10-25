@@ -696,6 +696,20 @@ mod tests {
     );
     assert_eq!(parted_label("ab", &known(&["1"]), true), None);
     assert_eq!(parted_label("7", &known(&["7"]), true), None);
+    // a run of symbols is parted into the known labels it spells, before it stands alone as one symbol piece
+    // (`$^{\dagger\natural\sharp}$` under entries `†`, `♮`, `♯`: 1004.1402)
+    assert_eq!(
+      parted_label("†♮♯", &known(&["†", "♮", "♯"]), true),
+      Some(vec!["†".into(), "♮".into(), "♯".into()])
+    );
+    // a known number with a single letter glued to it, the letter a note's mark (`$^{1{\rm a}}$` under entries `1`,
+    // `2`: 1904.02582); letters alone part nothing
+    assert_eq!(
+      parted_label("1a", &known(&["1", "2"]), true),
+      Some(vec!["1".into(), "a".into()])
+    );
+    assert_eq!(parted_label("1a", &known(&["1", "2"]), false), None);
+    assert_eq!(parted_label("ab", &known(&["1", "2"]), true), None);
   }
 
   /// FM S2a.2 r5 (review revfms2a2_4 finding 5): an annotation made before the authors that is a note (`api:note`) is

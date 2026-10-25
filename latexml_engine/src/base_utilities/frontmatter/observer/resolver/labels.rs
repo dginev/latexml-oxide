@@ -639,8 +639,11 @@ pub(super) fn surname_owners(creators: &[RCreator], letters: &str) -> Vec<usize>
   owners
 }
 
-/// `label` as two or more labels of `known` written together, the fewest pieces (`12` → `1`, `2`); with `symbols`, a
-/// run of characters that are no letter or digit may stand alone too (`1⋆` → `1`, `⋆`), as long as one piece is known.
+/// `label` as two or more labels of `known` written together (`12` → `1`, `2`); with `symbols`, a run of characters that
+/// are no letter or digit may stand alone too (`1⋆` → `1`, `⋆`), and so may one letter (`1a` → `1`, `a`: the letter a
+/// note's mark, `$^{1{\rm a}}$`, 1904.02582), as long as one piece is known. The most known pieces win, then the fewest
+/// pieces: a symbol run spelling known labels is parted into them before it stands alone as one piece (`†♮♯` under
+/// entries `†`, `♮`, `♯`: `$^{\dagger\natural\sharp}$`, 1004.1402).
 pub(super) fn parted_label(label: &str, known: &[String], symbols: bool) -> Option<Vec<String>> {
   let chars: Vec<(usize, char)> = label.char_indices().collect();
   let n = chars.len();
@@ -659,12 +662,14 @@ pub(super) fn parted_label(label: &str, known: &[String], symbols: bool) -> Opti
       let piece = &label[at(i)..at(j)];
       let is_known = known.iter().any(|k| k == piece);
       let is_symbol = symbols && piece.chars().all(|c| !c.is_alphanumeric());
-      if !is_known && !is_symbol {
+      let is_letter =
+        symbols && piece.chars().count() == 1 && piece.chars().all(char::is_alphabetic);
+      if !is_known && !is_symbol && !is_letter {
         continue;
       }
       let candidate = (count + 1, hits + usize::from(is_known), i);
       if best[j].is_none_or(|(c, h, _)| {
-        (candidate.0, std::cmp::Reverse(candidate.1)) < (c, std::cmp::Reverse(h))
+        (std::cmp::Reverse(candidate.1), candidate.0) < (std::cmp::Reverse(h), c)
       }) {
         best[j] = Some(candidate);
       }
