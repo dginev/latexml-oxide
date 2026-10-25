@@ -8213,3 +8213,17 @@ int105a over popint105a (1,344: 598 `\everypar` users and 289 random byte-identi
 238 `\renewenvironment`+`\newtheorem`, witnesses): E 5,980 → 5,198, F 20 → 12, +315k words, none worse. Nets 136/136.
 Rulings: kernel-newer commands → legacy-TL compatibility mode (1307.5170); post-title amsart `\keywords` keep their
 markup, error-free where pdflatex is (2204.07665, open).
+
+**int106 + int107 (2026-10-25; 80q → bb455e3049, 80r → 98334fdbe9).** 80q: after amsart's `\maketitle` (whose
+`\@cleartopmattertags`, amsart.cls:620-629, lets the topmatter commands `\relax`) a `\keywords`, `\subjclass` or
+`\dedicatory` whose short argument would run into a `\par` takes pdflatex's reading, a well-formed one keeps its markup
+(ruling 2026-10-25; KPE #1188; 2204.07665, 2212.11488, 2402.08633: 1 error → 0). Gates int106a 7274/7274; A/B int105a
+→ int106a over popint106a (893: 698 AMS topmatter users, 193 random): 3 changed, none worse; nets 136/136. 80r:
+dgruyter.sty a stand-in (`AUTHOR_FILE_STAND_INS`): under the ar5iv preload its copy of array.sty's `\@array` and
+`\let\@@array\@array` (dgruyter.sty:2003-2046) had taken over the pool's array path; now they hold only inside the copy
+(OD #731), and the binding declares dgruyter's title-page frontmatter (2510.17333: 274 errors → 0; 2301.07931: 101
+errors and a Fatal → 0). Gates int107c 7276/7276; A/B int106a → int107c over popint107c (269: the 18 census dgruyter
+papers, 250 random): E 969 → 594, F 2 → 1, missing `$` 29 → 0; 15 dgruyter papers lose 2-10 words each, classified: the
+title page's labels now `name` attributes ("Received", "Keywords:", "Abstract:"), its furniture dropped ("Research
+Article", "Open Access", placeholder `https://doi.org/…`), its itemize glyph `–` the kernel's `•`. Nets 133/136, the
+three (dgruyter 2007.00557, breakurl 1712.02392, sidecap 2101.08688, all dgruyter papers) the same classification.
