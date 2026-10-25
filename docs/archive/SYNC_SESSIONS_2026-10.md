@@ -8237,3 +8237,14 @@ census int107c → int108a with `LATEXML_FM_SHADOW=1` over the 5,917 revtex pape
 `~/data/pk_agents/ab_66bundle/work_rint108rv`) exactly 4 changed, all better (the three witnesses and 2201.11098's
 `1a`), none other moved; nets 136/136. (The A/B's hash and word columns cannot see an affiliation moved between
 creators: a frontmatter writer change is measured at creator level.)
+
+**int109 (2026-10-25; 80t → 91d8556fde).** revtex's front-matter footnote marks (`\frontmatter@thefootnote`: the
+counter's symbols, letters under `altaffilletter`; KPE #1189), declared the title block's mark, the block's contacts
+under it too (hep-th0302032's `\affiliation{\footnotemark[2]… \footnotetext[2]{…}}` pairs with the author's mark); the
+observer's rehearsal carries the footnote steps of the `\author` blocks before it while the conversion has not stepped
+the counter; a note's printed mark carries a symbol-labelled affiliation (ruling 2) for a name that shows no mark of its
+own (1608.06509 fixed; 2406.01694's `Shukla$^\dagger$\footnote{…}` keeps its note's `∗` the note's, a refinement the
+census found). Gates int109c 7281/7281. Default census int108a → int109b over the 5,917 revtex papers: 7 changed, each a
+front-matter note's mark now as the PDF prints it (1807.01940, 1903.03290, hep-th0302032 `2` → `†`, 1906.08093's
+`mark="0"` gone), E/F equal; writer-on census int108a → int109c at creator level: 1 changed, better (1608.06509). Nets
+136/136.
