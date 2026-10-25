@@ -1,0 +1,19 @@
+% witness: 0902.2869's shape (a cell's `}` before a macro argument whose `{` the `&` meets) in a kernel `{tabular}`
+% oracle:  pdflatex 0 errors without array.sty: latex.ltx:16666-16675 `\@tabclassz` braces every column,
+%   `{\hskip1sp\ignorespaces\@sharp\unskip\hfil}`, so the cell's `}` closes the template's `{`, the `&` meets
+%   `\textbf`'s argument at align state 0 and ends the cell (tex.web §342), and the v-part's `}` ends the argument:
+%   "pq", "r", "s", "t", "After the table."; with array.sty (`\d@llarbegin` = `\begingroup`, no brace) pdflatex
+%   stops: "Extra }, or forgotten \endgroup", "File ended while scanning use of \textbf"
+% engines: rust int92c and 79y = 1 error ("Gullet->readBalanced ran out of input"): the shared alignment template
+%   (alignment/template.rs `add_column`) has no cell braces, so `\textbf`'s argument runs past the cell — the
+%   array.sty reading; the kernel's needs the column braces as eqnarray's (`\lx@template@bgroup`/`egroup`)
+% expect:  0 errors; four cells and the text after the table
+% status:  RED (int92c; the kernel-without-array.sty reading, OPEN_ROWS "tabular cell braces")
+\documentclass{article}
+\begin{document}
+\begin{tabular}{ll}
+p} \textbf{q & r\\
+s & t
+\end{tabular}
+After the table.
+\end{document}

@@ -2670,6 +2670,23 @@ pub fn read_balanced_with_close(
             tokens.push(next_t); // Pass on NEXT token, unchanged.
           }
         },
+        // The v-part's `}` of a template that braces its cells (latex.ltx:15760-15763 `{eqnarray}`'s
+        // `$\displaystyle{##}$`, amsmath's templates), carried as latexml_engine tex_box.rs `\lx@template@egroup`:
+        // an argument read when a column end fires at alignment count 0 meets it (the cell's `}` closed the
+        // template's `{`, so the argument's `{` holds the count at 0, tex.web §342), and as the explicit `}` it is in
+        // TeX it closes the argument (§392). `a^{b}_c} - \frac{x}{y_{d}&=& 0.` in an eqnarray: `\frac`'s second
+        // argument is `y_{d}`, as in pdflatex (0 errors); before, the argument ran past the template to the end of the
+        // document (0902.2869, from line 409). The count is left as the primitive leaves it: the template's braces
+        // are invisible to it (§324 resets it after the u-part). Guard
+        // `perfect_kernel_batch69c::eqnarray_cell_braces_balance_across_the_template`.
+        Catcode::CS if token.text == pin!("\\lx@template@egroup") => {
+          level -= 1;
+          if level <= 0 {
+            close = Some(T_END!());
+            break;
+          }
+          tokens.push(T_END!());
+        },
         Catcode::END => {
           // Perl Gullet.pm L476: track ALIGN_STATE for } inside readBalanced
           decrement_align_group_count();

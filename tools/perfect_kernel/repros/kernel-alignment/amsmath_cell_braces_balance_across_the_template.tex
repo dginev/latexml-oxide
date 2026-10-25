@@ -1,13 +1,19 @@
-% witness: the rc_struct3 U1 shape (agent_reports/2026-10-17_rc_struct3.md) in amsmath's `{aligned}`
+% witness: the rc_struct3 U1 shape (agent_reports/2026-10-17_rc_struct3.md) in amsmath's `{aligned}`; the last display
+%   is 0902.2869's shape (a cell's `{` that opens a macro's argument, `\frac{x}{y_{d} &`) in `{aligned}`
 % oracle:  pdflatex 0 errors; amsmath's templates brace their cells like eqnarray's (amsmath.sty:1483 `\start@aligned`,
 %   1576 `{gather}`, 2350 `\align@preamble`, 2424 `{split}`: `$\m@th\displaystyle{##}$`), so a cell's `}` closes the
 %   template's `{` and the v-part's `}` a cell's `{` (tex.web §324, §789). `{aligned}` reads its body directly; `{align}`,
 %   `{gather}` and `{split}` collect theirs as an argument first (amsmath.sty:1412-1434 `\collect@body`), where such a
 %   cell is pdflatex's "Argument of \align* has an extra }" — so only well-balanced cells reach their templates
+%   The `&` that meets an argument's `{` at align state 0 ends the cell (§342) and the v-part's `}` ends the
+%   argument: `\frac{x}{y_{d}}`, then `w=z`, then the text after the display
 % engines: rust 67int18b = 0 errors but each cell's `}` and `\hfil` swallowed into the superscript and the rows'
-%   formulas lost; perl = 0 the same way (KNOWN_PERL_ERRORS #908)
-% expect:  0 errors; each row's formula kept, `e^{…}` a superscript to the cell end
-% status:  RED (67int18b) -> GREEN (69c: `\lx@template@bgroup`/`\lx@template@egroup` in amsmath_sty.rs templates)
+%   formulas lost; perl = 0 the same way (KNOWN_PERL_ERRORS #908); rust int92c (the last display) = 1 error,
+%   `\frac`'s argument read to the end of the document, "After the display." lost
+% expect:  0 errors; each row's formula kept, `e^{…}` a superscript to the cell end, `\frac{x}{y_{d}}`, the text after
+% status:  RED (67int18b) -> GREEN (69c: `\lx@template@bgroup`/`\lx@template@egroup` in amsmath_sty.rs templates);
+%   last display RED (int92c) -> GREEN (79y: gullet.rs `read_balanced_with_close` closes an argument at the v-part's
+%   `\lx@template@egroup`)
 \documentclass{article}
 \usepackage{amsmath}
 \begin{document}
@@ -17,4 +23,6 @@ u &= }v+w^{z.
 \end{aligned}
 \end{equation*}
 \[\begin{aligned} G &= }\det(h)-e^{\frac{a}{2}g_t. \\ b&=c \end{aligned}\]
+\[\begin{aligned} u &= }v - \frac{x}{y_{d} & w &= z \end{aligned}\]
+After the display.
 \end{document}

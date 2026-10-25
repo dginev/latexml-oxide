@@ -270,6 +270,14 @@ KNOWN_PERL_ERRORS cross-reference when one applies. Perl-origin defects go to `p
   `\usetikztiminglibrary[rising arrows]{clockarrows}` stored "risingarrows", an unknown key (2409.18120; pdflatex 0).
   `zapped_options` expands the list when `\zap@space` is not the kernel's copy (`\lx@kernel@zap@space`, sect01.rs).
   Perl stores the list unzapped. Guard `perfect_kernel_batch79x::a_package_zap_space_keeps_the_option_spaces`.
+- **An argument a template's cell brace closes (79y)**: 69c carries `{eqnarray}`'s and amsmath's cell braces
+  (`$\displaystyle{##}$`) as `\lx@template@bgroup`/`\lx@template@egroup`, which a balanced read took for ordinary
+  tokens; when a cell's `}` has closed the template's `{` and a macro argument's `{` holds the alignment count at 0, the
+  `&` ends the cell mid-argument (tex.web §342) and the v-part's `}` must end the argument. gullet.rs
+  `read_balanced_with_close` closes it at the egroup: `a^{b}_c} - \frac{x}{y_{d}&=& 0.` is `\frac{x}{y_{d}}` (0902.2869:
+  6 errors → 0, lines 409-1043 back in the document). The kernel `{tabular}` reading is an OPEN_ROWS residual.
+  Guards `perfect_kernel_batch69c::{eqnarray_cell_braces_balance_across_the_template,
+  amsmath_aligned_cell_braces_balance_across_the_template}`.
 
 ## Current status
 

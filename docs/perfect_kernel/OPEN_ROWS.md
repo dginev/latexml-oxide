@@ -240,6 +240,15 @@ here is open unless its status says otherwise; when a row closes, delete it here
 The open RED repros of `tools/perfect_kernel/repros/` that no other row names; headers re-checked 2026-10-02 (scope:
 PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary). Each row: defect, classification, repro path.
 
+- **Tabular cell braces: a kernel `{tabular}` cell's `}` before a macro argument whose `{` the `&` meets** (RUST-ONLY
+  model gap, opened 79y; Perl's templates have no braces either, KPE #908): latex.ltx:16666-16675 `\@tabclassz`
+  braces every column, so in pdflatex `p} \textbf{q & r` ends the cell at the `&` (align state 0, tex.web §342) and
+  the v-part's `}` ends `\textbf`'s argument (0 errors); with array.sty (`\d@llarbegin` = `\begingroup`) pdflatex
+  stops instead ("File ended while scanning use of \textbf"). Our shared template (alignment/template.rs `add_column`)
+  carries no cell braces, which is the array.sty reading; the kernel's needs eqnarray's
+  `\lx@template@bgroup`/`\lx@template@egroup` on tabular columns when array.sty is not loaded (79y made the argument
+  reader close at the egroup). Repro kernel-alignment/tabular_cell_braces_balance_across_the_template.
+
 - **A footnote's numeric `[<n>]` is not marked `\thefootnote`, so symbol marks leave a mark and its text apart**
   (PERL-ORIGIN, KPE #1060; **FIXED 78o**, OD #851): `[n]` prints `\thefootnote` at `n` (read undigested, so
   `[\value{footnote}]` is the counter), article's/report's/book's title block marks in `\@fnsymbol`, its `\thanks` and
