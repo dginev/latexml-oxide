@@ -18220,3 +18220,19 @@ See (\ref{bl}).      % pdflatex "See (1a)."; Perl a dangling reference
 Fixed in Rust (80f): subeqnarray_sty.rs makes `\slabel` the row's `\label` (each row is a subnumbered equation),
 locked over the raw file. Repro cross-references/subeqnarray_slabel_names_the_row; guard
 `perfect_kernel_batch80a::a_subeqnarray_slabel_names_the_row`.
+
+## 1175. A longtable keeps only its last `\label`
+
+Every `\label` in a longtable names the table: `\@currentlabel` there is the table's number after a `\caption`, the
+enclosing unit's before one. longtable.sty.ltxml:134-135 stores each `\label` as the one `LONGTABLE_LABEL`
+(`AssignValue(… 'global')`), which the table's `labels` takes at its end, so a table that labels more than once keeps
+the last: a notation table with a `\label` and a `\pageref` per row dangles all but one (2211.06081: 3). Minimal trigger:
+
+```latex
+\usepackage{longtable}
+\begin{longtable}{cc} $x$\label{a} & \pageref{a}\\ $y$\label{b} & \pageref{b}\\ \end{longtable}
+% pdflatex: both pages; Perl: labels="LABEL:b", \pageref{a} dangling
+```
+
+Fixed in Rust (80g): longtable_sty.rs `\lx@longtable@label` adds each label to the table's. Repro
+cross-references/longtable_keeps_every_label; guard `perfect_kernel_batch80a::a_longtable_keeps_every_label`.

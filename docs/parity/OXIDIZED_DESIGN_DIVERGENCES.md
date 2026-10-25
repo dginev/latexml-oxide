@@ -25343,3 +25343,17 @@ expansion begins `\end{tabular}` is read as the `\\` it prints, so the names and
 author separators (`\alignauthor`) stay for the splitter. Witnesses 1704.03168, 1301.5612, 1401.6981, 0712.1016
 (sig-alternate; 21 census papers write `\sharedaffiliation`). Repros sectioning-frontmatter/author_shared_affiliation_line,
 sectioning-frontmatter/author_group_left_open_keeps_labels; guards `perfect_kernel_batch79l`.
+
+### 895. autonum numbers every equation; its package code is not loaded (Perl: no binding, raw-loaded)
+
+autonum.sty numbers only the equations a reference names: its patched `\ref`/`\eqref`/`\cref` record the labels they
+name in the aux file (autonum.sty:330-345), and on the next run the display environments it renews at
+`\begin{document}` (:127-140, :186-280) drop the other equations' numbers. A single pass has no earlier run to read,
+and raw-loaded the renewals reach only the environments no binding locks: `{split}`'s ran inside our locked `{align}`,
+whose own renewal — the one that restores `\label` globally at its end (`\autonum@restoreSubcommands`) — did not, so the
+display's `\label` stayed global and every later `\label` failed ("\lx@ams@display@outer@label undefined", the label
+lost; 1905.00606: 20 errors, 6 dangling). Ours (latexml_contrib autonum_sty.rs): autonum's packages and its hyperref
+option load, its code does not; every equation keeps its number, as without autonum, so a reference to an equation
+that follows an unreferenced one prints a later number than the PDF (31 census papers load autonum). Repro
+cross-references/autonum_split_in_align_keeps_later_labels; guard
+`perfect_kernel_batch80a::autonum_leaves_the_displays_their_labels`.

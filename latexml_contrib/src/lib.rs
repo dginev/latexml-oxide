@@ -173,6 +173,7 @@ pub mod ifacconf_cls;
 pub mod alggeom_cls;
 pub mod assoccnt_sty;
 pub mod atlasdoc_cls;
+pub mod autonum_sty;
 pub mod bidi_sty;
 pub mod bmvc2k_natbib_sty;
 pub mod cecs_cls;
@@ -408,6 +409,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   // biblatex citation wiring runs even in bare mode (see apxproof_sty.rs).
   ("apxproof", "sty", apxproof_sty::load_definitions),
   ("ascmac", "sty", ascmac_sty::load_definitions),
+  ("autonum", "sty", autonum_sty::load_definitions),
   ("bussproofs", "sty", bussproofs_sty::load_definitions),
   ("capt-of", "sty", capt_of_sty::load_definitions),
   ("centernot", "sty", centernot_sty::load_definitions),

@@ -1,6 +1,7 @@
 //! Red/green guards for batch 80a (the hyphenation languages the format numbers keep their numbers) and 80b (a
 //! listings style that is a control sequence runs, with the token in `\lst@token`) and 80c (import.sty's path model) and 80d
-//! (ctable's options past a line end, subfig's `\subref`). Each guard
+//! (ctable's options past a line end, subfig's `\subref`), 80e-80g (the bare-name `\import`, cleveref's braced comma,
+//! subeqnarray's `\slabel`, a longtable's labels, autonum). Each guard
 //! converts its repro under `tools/perfect_kernel/repros/`, asserts the diagnostics by count and the elements.
 use latexml::util::test::convert_files_with;
 
@@ -208,6 +209,40 @@ fn a_subeqnarray_slabel_names_the_row() {
     );
     assert!(
       xml.contains(&format!(r#"<ref labelref="LABEL:{label}"/>"#)),
+      "{label}: {xml}"
+    );
+  }
+}
+
+/// 80g: every `\label` in a longtable names the table, which keeps them all. Red (int96a): one `LONGTABLE_LABEL`, each
+/// label replacing the one before (longtable.sty.ltxml:134-135; KPE #1175). Witness 2211.06081. Repro
+/// cross-references/longtable_keeps_every_label.
+#[test]
+fn a_longtable_keeps_every_label() {
+  let (log, xml) = convert_files_with(
+    repro!("cross-references/longtable_keeps_every_label.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains(r#"labels="LABEL:a LABEL:b LABEL:c""#), "{xml}");
+}
+
+/// 80g: autonum's binding leaves the displays to amsmath's binding, so a `{split}` row in `{align}` does not leave the
+/// display's `\label` behind it. Red (int96a): the raw package renewed `{split}` but not our locked `{align}`, whose
+/// renewal restores `\label`; the next `\label` was undefined and lost (OXIDIZED_DESIGN_DIVERGENCES #895). Witness
+/// 1905.00606. Repro cross-references/autonum_split_in_align_keeps_later_labels.
+#[test]
+fn autonum_leaves_the_displays_their_labels() {
+  let (log, xml) = convert_files_with(
+    repro!("cross-references/autonum_split_in_align_keeps_later_labels.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for label in ["eq:one", "eq:two", "sec:b"] {
+    assert!(
+      xml.contains(&format!(r#"labels="LABEL:{label}""#)),
       "{label}: {xml}"
     );
   }

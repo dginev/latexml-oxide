@@ -1,0 +1,27 @@
+% witness: 1905.00606 (`\usepackage{autonum}`; a `{split}` row in `{align}`, then `\section{…}\label{…}`: 20 errors,
+%          6 dangling)
+% oracle:  pdflatex 0 errors: "See eq. (1), (2) and section 1." — autonum numbers the referenced equations
+% engines: rust int96a = 1 error ("\lx@ams@display@outer@label undefined"), "See eq. (1), (1) and .": raw-loaded,
+%          autonum renewed `{split}` but not our locked `{align}`, whose renewal restores `\label` at its end
+%          (`\autonum@restoreSubcommands`), so the display's `\label` stayed global after the display
+% expect:  0 errors, 0 warnings; eq:one, eq:two, sec:b each labelled and referred to
+% status:  RED (int96a) -> GREEN (80g: contrib autonum_sty.rs, OXIDIZED_DESIGN_DIVERGENCES #895)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{cleveref}
+\usepackage{autonum}
+\begin{document}
+\begin{align}
+\label{eq:one}
+a ={}& b, \\
+\begin{split}
+\label{eq:two}
+c ={}& d
+\\
+& + e
+\end{split}
+\end{align}
+\section{Second}\label{sec:b}
+See \cref{eq:one}, \eqref{eq:two} and \cref{sec:b}.
+\end{document}

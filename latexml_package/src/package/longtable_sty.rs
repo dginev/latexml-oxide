@@ -270,10 +270,24 @@ LoadDefinitions!({
   // trailing `\label` into a caption give it (sect11.rs `typed_label`; KNOWN_PERL_ERRORS #998; 2508.14936, 30 Errors
   // -> 0). Without cleveref the type is read too (OXIDIZED_DESIGN #552). Guard
   // `perfect_kernel_batch77s::label_type_in_caption_text`.
+  // Every `\label` in the table names it (LaTeX's `\@currentlabel` there is the table's number, or the enclosing unit's
+  // before a `\caption`), so the table keeps them all: a notation table's `\label` per row with a `\pageref` beside it
+  // (2211.06081: 3 dangling). Perl's `AssignValue(LONGTABLE_LABEL => …)` (longtable.sty.ltxml:134-135) kept the last
+  // (KNOWN_PERL_ERRORS #1175).
   DefPrimitive!("\\lx@longtable@label [] Semiverbatim", sub[(ty, label)] {
-    // Perl: AssignValue(LONGTABLE_LABEL => CleanLabel(ToString($label)), 'global')
     let label = clean_label(&label.to_string(), None).into_owned();
-    assign_value("LONGTABLE_LABEL", Stored::String(pin(label)), Some(Scope::Global));
+    let labels = match lookup_value("LONGTABLE_LABEL") {
+      Some(Stored::String(previous)) => {
+        let previous = to_string(previous);
+        if previous.split(' ').any(|known| known == label) {
+          previous
+        } else {
+          s!("{previous} {label}")
+        }
+      },
+      _ => label,
+    };
+    assign_value("LONGTABLE_LABEL", Stored::String(pin(labels)), Some(Scope::Global));
     assign_value("LONGTABLE_LABEL_TYPE", ty.map_or(Stored::None, Stored::Tokens), Some(Scope::Global));
     Ok(())
   });
