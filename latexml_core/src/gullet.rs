@@ -3389,15 +3389,14 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
 /// reads and discards tokens, until it encounters a conditional, if any.
 /// Perl: skipConditionalBody inner loop (Conditional.pm L127-133) reads tokens directly
 /// from pushback/mouth (NOT through readToken) and manually tracks
-/// `$LaTeXML::ALIGN_STATE` for `{` and `}`. Critically, this bypasses the
-/// "alignment-template trigger" check that fires `handleTemplate` on `&`/`\cr`
-/// when align_group_count==0 — that check belongs to digestion, not to
-/// `\else`-skip. Rust's `read_token` includes the trigger; calling it from
-/// here would let pmatrix's `&` get treated as the OUTER alignment's
+/// `$LaTeXML::ALIGN_STATE` for `{` and `}`. This loop does not call `read_token` either:
+/// its expansion and comment handling belong to digestion, and calling it from
+/// here once let pmatrix's `&` get treated as the OUTER alignment's
 /// column-end during `\ifx.#1.\else…\fi` skip when `#1` contains
 /// `\begin{pmatrix}…&…\end{pmatrix}`. (REG-2 / math-ph0501074: the 9-line
-/// `\nonumber+\lefteqn+\pmatrix` repro.) Use `read_internal_token` instead
-/// and track BEGIN/END manually, matching Perl byte-for-byte.
+/// `\nonumber+\lefteqn+\pmatrix` repro.) It does take a column end at a zero count
+/// for the cell's end, as tex.web's `pass_text` does through `get_next` (§342) and
+/// Perl does not (KNOWN_PERL_ERRORS #1183).
 pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
   loop {
     // The FOURTH reader loop over the combined checked read (the `\else`/`\fi`
@@ -3416,6 +3415,24 @@ pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
           Catcode::BEGIN => increment_align_group_count(),
           Catcode::END => decrement_align_group_count(),
           _ => {},
+        }
+        // tex.web §342: `pass_text` reads through `get_next`, so a tab or `\cr` met at align_state 0 while a false
+        // branch is skipped ends the cell all the same: the column's v-part goes in ahead of it (§789,
+        // `handle_template` raises the count to 1000000) and the skip reads on through it, where its `\fi` can end
+        // the skip — the hide-column template `>{\iffalse}c<{\fi}` (witness 1504.08100). A column end inside a brace
+        // group of the skipped text is at a nonzero count and is skipped, as the pmatrix `&` above is. The hidden
+        // ends (`\lx@hidden@cr`, `\lx@hidden@align`) stand for LaTeX's `\\` and amsmath's tabs, whose `\cr` or `&`
+        // TeX reaches only by expansion, behind `\relax\iffalse{\fi` (latex.ltx `\@arraycr`), so a skip passes
+        // them (`\ifnum1<\nb\\\hline\fi`, tabularcalc.sty:428). Guard
+        // `perfect_kernel_batch80a::a_false_conditional_in_a_template_ends_at_its_v_part`.
+        if align_group_count() == 0
+          && has_reading_alignment()
+          && let Some((_, atype, false)) = is_column_end(&token)
+          && let Some(reading_alignment) = get_reading_alignment()
+          && let DigestedData::Alignment(data) = reading_alignment.data()
+        {
+          handle_template(data.borrow_mut(), token, atype, false)?;
+          continue;
         }
         if cc.is_active_or_cs()
           && let Some(cond_type) = lookup_conditional(&token)

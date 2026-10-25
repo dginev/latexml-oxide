@@ -830,18 +830,20 @@ LoadDefinitions!({
   // rearrangement drops an empty row, as Perl amsmath.sty.ltxml:400-415 does, so the XML reads (1),
   // (3). Repro alignment-bindings/arrow_rows_in_align_are_numbered.
   // Perl's empty expansions (mathtools.sty.ltxml:644-654) dropped the arrow and left the starred
-  // `*[\Downarrow]` as cell text (a `\csname …*\endcsname` the source cannot reach).
+  // `*[\Downarrow]` as cell text (a `\csname …*\endcsname` the source cannot reach). The branch is chosen
+  // before its tabs are read (`\@firstoftwo`/`\@secondoftwo`): a tab in the skipped branch of a conditional
+  // would end the cell (tex.web §342, KNOWN_PERL_ERRORS #1183), where mathtools passes it braced (`{&}`).
   RawTeX!(r"\def\lx@mt@notag@unless@inner{\expandafter\in@\expandafter{\@currenvir}{alignedat,aligned,gathered}%
   \ifin@\else\notag\fi}");
   DefMacro!("\\ArrowBetweenLines OptionalMatch:* [Default:\\Updownarrow]",
-    "\\lx@mt@notag@unless@inner\\\\\\lx@mt@notag@unless@inner\\ifx.#1.#2\\quad\\else&&\\quad#2\\fi\\\\");
+    "\\lx@mt@notag@unless@inner\\\\\\lx@mt@notag@unless@inner\\ifx.#1.\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi{#2\\quad}{&&\\quad#2}\\\\");
   DefMacro!("\\vdotswithin{}",
     "\\mathmakebox[\\widthof{\\ensuremath{{}#1{}}}][c]{\\vdots}");
   // mathtools.sty:1338-1344 `\shortvdotswithin` is `\@ifstar`: starred `\vdotswithin{#2}&`, else
   // `&\vdotswithin{#2}`; Perl's `\csname shortvdotswithin*\endcsname` (mathtools.sty.ltxml:650-654)
   // is unreachable from the source, which read `*` as the argument.
   DefMacro!("\\shortvdotswithin OptionalMatch:* {}",
-    "\\MTFlushSpaceAbove\\ifx.#1.&\\vdotswithin{#2}\\else\\vdotswithin{#2}&\\fi\\MTFlushSpaceBelow");
+    "\\MTFlushSpaceAbove\\ifx.#1.\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi{&\\vdotswithin{#2}}{\\vdotswithin{#2}&}\\MTFlushSpaceBelow");
   DefMacro!("\\MTFlushSpaceAbove", None);
   DefMacro!("\\MTFlushSpaceBelow", "\\\\");
 

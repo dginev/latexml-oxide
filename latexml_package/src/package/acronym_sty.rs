@@ -387,4 +387,21 @@ LoadDefinitions!({
   );
   Let!("\\acroplural", "\\acrodefplural");
   Let!("\\newacroplural", "\\acrodefplural");
+
+  // acronym.sty gives these commands their starred forms with suffix.sty's `\WithSuffix` (acronym.sty:596-…), which
+  // redefines each one `\protected\def` (suffix.sty:53): they pass an expanding read whole. siunitx's `S` cell
+  // `\protected@edef`s its text (siunitx.sty:5730-5741), and `\ac{MAE}` there expanded its star test and `\newif`
+  // switch: "Missing `\fi`", the table left open (witness 2607.15705). The capital forms are let to these at
+  // `\begin{document}` (above) and keep the flag. Guard
+  // `perfect_kernel_batch80a::acronym_commands_pass_a_siunitx_column_whole`.
+  for name in [
+    "ac", "Ac", "acf", "Acf", "acfi", "Acfi", "acfip", "Acfip", "acfp", "Acfp", "acl", "Acl",
+    "aclp", "Aclp", "aclu", "Aclu", "acp", "Acp", "acs", "acsp", "acsu", "iac", "Iac",
+  ] {
+    if let Some(Stored::Expandable(definition)) = lookup_meaning(&T_CS!(&format!("\\{name}"))) {
+      let mut definition = (*definition).clone();
+      definition.is_protected = true;
+      install_definition(definition, None);
+    }
+  }
 });

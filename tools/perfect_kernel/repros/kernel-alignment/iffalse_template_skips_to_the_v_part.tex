@@ -1,0 +1,18 @@
+% A u-part that opens a false conditional and a v-part that closes it (the hide-column trick,
+% `\newcolumntype{I}{>{\iffalse}c<{\fi}@{~}}`): TeX skips the cell's text and meets the cell's `&`
+% at align_state 0 while it skips, so it inserts the v-part there (tex.web §342, §789) and its `\fi`
+% ends the skip. pdflatex: A B / C D, 0 errors. Witness 1504.08100.
+\documentclass{article}
+\usepackage{array}
+\newcolumntype{I}{>{\iffalse}c<{\fi}@{~}}
+\begin{document}
+\begin{tabular}{cIc}
+A & hidden & B\\
+C & gone & D
+\end{tabular}
+
+\halign{#\tabskip1em&\iffalse#\fi&#\cr
+E&skipped&F\cr}
+
+After the table.
+\end{document}

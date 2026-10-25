@@ -1,0 +1,14 @@
+% A two-column class's \maketitle calls \twocolumn[\@maketitle] (latex.ltx/article.cls, IEEEtran.cls,
+% ieeeconf.cls:3589-3605), so a document that redefines \twocolumn adds a full-width block under the title:
+% the teaser-figure trick of ICRA/IROS papers. pdflatex: the figure under the title, "See Figure 1.", 0 errors.
+% Witness 2305.16369 (ieeeconf).
+\documentclass[twocolumn]{article}
+\usepackage{caption}
+\title{The Title}\author{An Author}
+\begin{document}
+\let\oldtwocolumn\twocolumn
+\renewcommand\twocolumn[1][]{\oldtwocolumn[{#1}{\begin{center}\rule{1cm}{1cm}
+  \captionof{figure}{The teaser.}\label{fig:teaser}\end{center}}]}
+\maketitle
+See Figure~\ref{fig:teaser}.
+\end{document}

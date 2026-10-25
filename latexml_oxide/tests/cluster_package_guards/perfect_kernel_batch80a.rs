@@ -4,8 +4,10 @@
 //! subeqnarray's `\slabel`, a longtable's labels, autonum), 80h (`\newlabel` records, theoremref), 80i (acronym options,
 //! caption3's `\captionbox`, nicematrix's `\tabularnote` label, autonum's reference patcher), 80j (`\pdfstrcmp` on shown
 //! token lists, an ignored character keeps the blank skip), 80k (a binding's guessed theorem yields to the document's
-//! `\newcommand`, a longtable's label key and a `\cref` list expanded, the conditional guard's Fatal salvaged). Each
-//! guard converts its repro under `tools/perfect_kernel/repros/`, asserts the diagnostics by count and the elements.
+//! `\newcommand`, a longtable's label key and a `\cref` list expanded, the conditional guard's Fatal salvaged), 80l
+//! (siunitx's unit commands, aa's `\longtab`, an eqnarray's trailing label), 80m (a preloaded class's hook stack) and 80n
+//! (a skipped branch ends at a column's v-part, `\maketitle` calls a redefined `\twocolumn`, acronym's protected
+//! commands). Each guard converts its repro under `tools/perfect_kernel/repros/`, asserts the diagnostics by count and the elements.
 use latexml::util::test::convert_files_with;
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -565,4 +567,72 @@ fn preloaded_class_keeps_the_hook_stack() {
     );
     assert!(xml.contains("Hello."), "{class}: {xml}");
   }
+}
+
+/// 80n: a false conditional that a column's u-part opens ends at its v-part's `\fi` — while TeX skips the cell's text
+/// it meets the cell's `&` at align_state 0 and inserts the v-part there (tex.web §342 in `get_next`, which
+/// `pass_text` reads through; §789). Red (int102a): the skip read past the `&` to the end of the table ("expected
+/// `\fi`"), the rest of the document lost. Witness 1504.08100. Repro
+/// kernel-alignment/iffalse_template_skips_to_the_v_part.
+#[test]
+fn a_false_conditional_in_a_template_ends_at_its_v_part() {
+  let (log, xml) = convert_files_with(
+    repro!("kernel-alignment/iffalse_template_skips_to_the_v_part.tex"),
+    &[],
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for cell in ["A", "B", "C", "D", "E", "F"] {
+    assert!(xml.contains(&format!(">{cell}</td>")), "{cell}: {xml}");
+  }
+  assert!(
+    !xml.contains("hidden") && !xml.contains("gone") && !xml.contains("skipped"),
+    "{xml}"
+  );
+  assert!(xml.contains("After the table."), "{xml}");
+}
+
+/// 80n: a two-column class's `\maketitle` calls `\twocolumn[\@maketitle]` (latex.ltx/article.cls, IEEEtran.cls,
+/// ieeeconf.cls:3589-3605), so a document's redefinition of `\twocolumn` runs there and adds its full-width block under
+/// the title — the ICRA/IROS teaser figure. Red (int102a): the frontmatter `\maketitle` called no `\twocolumn`, the
+/// figure and its label were lost (`\ref` dangling). Witness 2305.16369. Repro
+/// cross-references/maketitle_calls_a_redefined_twocolumn.
+#[test]
+fn maketitle_calls_a_redefined_twocolumn() {
+  let (log, xml) = convert_files_with(
+    repro!("cross-references/maketitle_calls_a_redefined_twocolumn.tex"),
+    &[],
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let title = xml.find("<title>The Title</title>").expect(&xml);
+  let figure = xml.find(r#"labels="LABEL:fig:teaser""#).expect(&xml);
+  assert!(title < figure, "{xml}");
+  assert!(xml.contains("The teaser."), "{xml}");
+  assert!(
+    xml.contains(r#"<ref labelref="LABEL:fig:teaser"/>"#),
+    "{xml}"
+  );
+}
+
+/// 80n: acronym.sty's `\ac` & co. are `\protected` (their starred forms come from suffix.sty's `\WithSuffix`, which
+/// `\protected\def`s the command, suffix.sty:53), so a siunitx `S` cell's expanding read keeps `\ac{MAE}` whole. Red
+/// (int102a): the binding's plain macros expanded there — the star test's `\ifx` and the `\newif` switch — "Missing
+/// `\fi`", the table left open and the rest of the document inside it. Witness 2607.15705. Repro
+/// package-bindings/acronym_commands_pass_a_siunitx_column_whole.
+#[test]
+fn acronym_commands_pass_a_siunitx_column_whole() {
+  let (log, xml) = convert_files_with(
+    repro!("package-bindings/acronym_commands_pass_a_siunitx_column_whole.tex"),
+    &[],
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let table = &xml[xml.find("<tabular").expect(&xml)..xml.find("</tabular>").expect(&xml)];
+  assert_eq!(table.matches("<tr").count(), 2, "{xml}");
+  assert!(
+    table.contains(r#"<glossaryref inlist="acronym" key="MAE""#),
+    "{xml}"
+  );
+  assert!(xml.contains("After the table."), "{xml}");
 }

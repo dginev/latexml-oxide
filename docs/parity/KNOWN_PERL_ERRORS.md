@@ -18382,3 +18382,71 @@ Fixed in Rust (80l): tex_tables.rs `digest_alignment_column` keeps the trailing 
 (`alignmentPreserve`) on the last row's after-list, absorbed in that row's equation. Repro
 cross-references/eqnarray_star_label_after_the_last_row; guard
 `perfect_kernel_batch80a::eqnarray_star_label_after_the_last_row`.
+
+## 1183. A column end met while a false branch is skipped does not end the cell
+
+TeX's `pass_text` (tex.web §494) reads the skipped text through `get_next`, whose alignment check (§342) applies to
+it: a tab or `\cr` at align_state 0 inserts the column's v-part (§789) and the skip reads on through it. So a column
+whose u-part opens a false conditional and whose v-part closes it hides the cell — the hide-column template
+`\newcolumntype{I}{>{\iffalse}c<{\fi}@{~}}`. Conditional.pm:127-133 (`skipConditionalBody`) reads from the pushback
+and the mouth directly and counts only braces, so the skip runs past the `&` to the end of the table ("Missing `\fi`",
+"Attempt to close boxing group") and takes what follows with it (1504.08100: the labels after the table lost, seven
+`\ref`s dangling). Minimal trigger:
+
+```latex
+\documentclass{article}\usepackage{array}
+\newcolumntype{I}{>{\iffalse}c<{\fi}@{~}}
+\begin{document}
+\begin{tabular}{cIc} A & hidden & B \end{tabular} After.
+\end{document}
+% pdflatex: "A B After.", 0 errors; Perl: the skip runs off the table
+```
+
+Fixed in Rust (80n): gullet.rs `read_next_conditional` takes a column end at a zero count for the cell's end
+(`handle_template`) and skips on through the v-part. Repro kernel-alignment/iffalse_template_skips_to_the_v_part;
+guard `perfect_kernel_batch80a::a_false_conditional_in_a_template_ends_at_its_v_part`.
+
+## 1184. `\maketitle` does not call a document's `\twocolumn`
+
+LaTeX's `\maketitle` in two-column mode calls `\twocolumn[\@maketitle]` (article.cls, IEEEtran.cls, ieeeconf.cls:3589-3605),
+so a document that redefines `\twocolumn` adds a full-width block under the title — the teaser figure of ICRA/IROS
+papers (`\let\oldtwocolumn\twocolumn \renewcommand\twocolumn[1][]{\oldtwocolumn[{#1}{<figure>}]}`).
+latex_constructs.pool.ltxml:1099-1105 deposits the frontmatter and never calls `\twocolumn`, so the block, its image
+and its label are lost (2305.16369: the pipeline figure gone, `Fig.~\ref{fig:pipeline}` dangling). Minimal trigger:
+
+```latex
+\documentclass[twocolumn]{article}\usepackage{caption}\title{T}\author{A}
+\begin{document}
+\let\oldtwocolumn\twocolumn
+\renewcommand\twocolumn[1][]{\oldtwocolumn[{#1}{\captionof{figure}{Teaser.}\label{t}}]}
+\maketitle See \ref{t}.
+\end{document}
+% pdflatex: "Figure 1: Teaser." under the title, "See 1."; Perl: no figure, the reference dangling
+```
+
+Fixed in Rust (80n): sect05.rs `\lx@maketitle@twocolumn`, run by `\lx@maketitle@body` after the frontmatter deposit,
+calls `\twocolumn[]` when `\if@twocolumn` holds and `\twocolumn` is a macro other than the kernel's. Repro
+cross-references/maketitle_calls_a_redefined_twocolumn; guard
+`perfect_kernel_batch80a::maketitle_calls_a_redefined_twocolumn`.
+
+## 1185. acronym's `\ac` & co. are not `\protected`
+
+acronym.sty gives `\ac`, `\acs`, `\acl`, `\acf`, `\acp`, `\iac` and their siblings their starred forms with suffix.sty's
+`\WithSuffix` (acronym.sty:596-…), which redefines each command `\protected\def` (suffix.sty:53), so an expanding read
+keeps it whole. acronym.sty.ltxml:95 (`DefMacro('\ac OptionalMatch:*', '\ifx.#1.\AC@starredfalse…')`) and its
+siblings are plain macros: siunitx's `S` cell `\protected@edef`s its text (siunitx.sty:5730-5741) and expanded the star
+test and the `\newif` switch ("Missing `\fi`", the table left open with the rest of the document inside it; 2607.15705,
+two `\ref`s dangling). Minimal trigger:
+
+```latex
+\documentclass{article}\usepackage{acronym}\usepackage{siunitx}
+\begin{document}
+\begin{acronym}\acro{MAE}{mean absolute error}\end{acronym}
+\begin{tabular}{lS} Model & \ac{MAE} \\ Base & 355.3 \end{tabular} After.
+\end{document}
+% pdflatex: two rows, 0 errors; Perl: the cell's expansion runs off the table
+```
+
+Fixed in Rust (80n): acronym_sty.rs marks the 23 `\WithSuffix` commands protected. Repro
+package-bindings/acronym_commands_pass_a_siunitx_column_whole; guard
+`perfect_kernel_batch80a::acronym_commands_pass_a_siunitx_column_whole`.

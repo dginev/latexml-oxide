@@ -871,6 +871,23 @@ pub(crate) fn load() -> Result<()> {
     }
     Ok(Tokens::new(tokens))
   });
+  // LaTeX's `\maketitle` calls `\twocolumn[\@maketitle]` in two-column mode (latex.ltx's article.cls, IEEEtran.cls,
+  // ieeeconf.cls:3589-3605), so a document that redefines `\twocolumn` adds its full-width block there: the ICRA/IROS
+  // teaser figure under the title (`\let\oldtwocolumn\twocolumn \renewcommand\twocolumn[1][]{\oldtwocolumn[{#1}{…}]}`,
+  // witness 2305.16369). The frontmatter's `\maketitle` makes the call (`\lx@maketitle@body`) with the title left out,
+  // as the frontmatter carries it; a `\twocolumn` still the kernel's, or no macro (revtex's no-op), is not called.
+  // Guard `perfect_kernel_batch80a::maketitle_calls_a_redefined_twocolumn`.
+  Let!("\\lx@kernel@twocolumn", "\\twocolumn");
+  DefMacro!("\\lx@maketitle@twocolumn", sub[_args] {
+    let twocolumn = T_CS!("\\twocolumn");
+    let redefined = matches!(lookup_meaning(&twocolumn), Some(Stored::Expandable(_)))
+      && !x_equals(&twocolumn, &T_CS!("\\lx@kernel@twocolumn"));
+    Ok(if redefined && x_equals(&T_CS!("\\if@twocolumn"), &T_CS!("\\iftrue")) {
+      Tokens!(twocolumn, T_OTHER!("["), T_OTHER!("]"))
+    } else {
+      Tokens::default()
+    })
+  });
   // Perl: DefMacro('\onecolumn', '\par'); latex.ltx:20430-20437 `\global\@twocolumnfalse` (see `\twocolumn`).
   DefMacro!("\\onecolumn", "\\global\\@twocolumnfalse\\lx@panel@page@onecolumn\\par");
   DefMacro!("\\@onecolumna", "", locked => true);
@@ -1540,7 +1557,7 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\lx@maketitle@begin", "");
   DefMacro!(
     "\\lx@maketitle@body",
-    r"\lx@maketitle@begin\lx@maketitle@supersede\lx@author@tail\lx@store@defaults\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\lx@store@untypeset\global\let\thanks\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\lx@maketitle@clear@and\global\let\lx@maketitle@opts\relax\lx@maketitle@cleanup",
+    r"\lx@maketitle@begin\lx@maketitle@supersede\lx@author@tail\lx@store@defaults\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\lx@maketitle@twocolumn\lx@store@untypeset\global\let\thanks\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\lx@maketitle@clear@and\global\let\lx@maketitle@opts\relax\lx@maketitle@cleanup",
     locked => true
   );
   // article.cls's `\maketitle` ends by disabling itself and the setters
