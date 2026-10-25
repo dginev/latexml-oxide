@@ -628,8 +628,14 @@ LoadDefinitions!({
   // — content with its caption in a box (below by default). Same idiom as
   // subcaption's `\subcaptionbox`; the width/inner position are layout only.
   // Witness tikz-mirror-lens (both bindings lacked it).
-  DefMacro!("\\captionbox []{}[][]{}",
-    "\\begingroup#5\\caption{#2}\\ifx.#1.\\else\\lx@caption@addinlist{#1}\\fi\\endgroup");
+  // caption.sty's `\newcommand*` leaves a `\captionbox` already defined alone (caption3 defines none): ws-jmrr.cls:675's
+  // `\newbox\captionbox`, which its `\tbl` measures (`\ifdim\wd\captionbox<…`), stays the class's box under
+  // `\usepackage[caption=false]{subfig}` and floatrow, which load caption3 alone (2303.09686: "Expected a relational
+  // token … \begingroup" at each `\tbl`).
+  if !is_defined("\\captionbox") {
+    DefMacro!("\\captionbox []{}[][]{}",
+      "\\begingroup#5\\caption{#2}\\ifx.#1.\\else\\lx@caption@addinlist{#1}\\fi\\endgroup");
+  }
   DefConstructor!("\\lx@caption@addinlist{}", "", properties => sub[args] {
     let list = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
     Ok(stored_map!("inlist" => list))

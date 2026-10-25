@@ -25358,7 +25358,9 @@ that follows an unreferenced one prints a later number than the PDF (31 census p
 `<env>+` forms — the environment as amsmath left it (autonum.sty:176-183 `\autonum@renameEnvironment`) — are aliases of
 the environments, for `equation`, `gather`, `multline`, `flalign`, `align`, `alignat`, `split` (1405.2249,
 1904.08614: `{align+}`, undefined without them). Its `\[`, redefined as an `{equation}` numbered only when referenced,
-stays unnumbered. Repro cross-references/autonum_split_in_align_keeps_later_labels; guard
+stays unnumbered. Its reference patchers (`\autonum@generatePatchedReference{cmd}`, `…CSL`, `…General`, autonum.sty:302-322),
+which a document may call for its own reference commands (2211.09537's `{autoref}`), are no-ops: there is nothing to
+mark. Repro cross-references/autonum_split_in_align_keeps_later_labels; guard
 `perfect_kernel_batch80a::autonum_leaves_the_displays_their_labels`.
 
 ### 896. A `\newlabel` record names its label; a record written to the `.aux` is read back as written (Perl: stubs)

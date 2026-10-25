@@ -1,9 +1,10 @@
 //! Red/green guards for batch 80a (the hyphenation languages the format numbers keep their numbers) and 80b (a
 //! listings style that is a control sequence runs, with the token in `\lst@token`) and 80c (import.sty's path model) and 80d
 //! (ctable's options past a line end, subfig's `\subref`), 80e-80g (the bare-name `\import`, cleveref's braced comma,
-//! subeqnarray's `\slabel`, a longtable's labels, autonum), 80h (`\newlabel`
-//! records, theoremref). Each guard
-//! converts its repro under `tools/perfect_kernel/repros/`, asserts the diagnostics by count and the elements.
+//! subeqnarray's `\slabel`, a longtable's labels, autonum), 80h (`\newlabel` records, theoremref), 80i (acronym options,
+//! caption3's `\captionbox`, nicematrix's `\tabularnote` label, autonum's reference patcher), 80j (`\pdfstrcmp` on shown
+//! token lists, an ignored character keeps the blank skip). Each guard converts its repro under
+//! `tools/perfect_kernel/repros/`, asserts the diagnostics by count and the elements.
 use latexml::util::test::convert_files_with;
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -232,7 +233,8 @@ fn a_longtable_keeps_every_label() {
 /// 80g: autonum's binding leaves the displays to amsmath's binding, so a `{split}` row in `{align}` does not leave the
 /// display's `\label` behind it. Red (int96a): the raw package renewed `{split}` but not our locked `{align}`, whose
 /// renewal restores `\label`; the next `\label` was undefined and lost (OXIDIZED_DESIGN_DIVERGENCES #895). Witness
-/// 1905.00606. Repro cross-references/autonum_split_in_align_keeps_later_labels.
+/// 1905.00606. The repro's own `\autonum@generatePatchedReference{autoref}` (2211.09537) was undefined until 80i.
+/// Repro cross-references/autonum_split_in_align_keeps_later_labels.
 #[test]
 fn autonum_leaves_the_displays_their_labels() {
   let (log, xml) = convert_files_with(
@@ -295,6 +297,105 @@ fn theoremref_thref_names_the_theorem() {
     xml.contains(
       r#"By <ref labelref="LABEL:main" show="typerefnum"/>, and <ref labelref="LABEL:aux" show="typerefnum"/> and <ref labelref="LABEL:main" show="typerefnum"/>."#
     ),
+    "{xml}"
+  );
+}
+
+/// 80i: acronym's `[smaller]` loads relsize, so the document's own `\smaller` prints, and `\acro` is the acronym
+/// environment's alone. Red (int98a): no option read, `\acro` = `\acrodef` everywhere (KNOWN_PERL_ERRORS #1176).
+/// Witness 1806.02261. Repro package-bindings/acronym_smaller_option_loads_relsize.
+#[test]
+fn acronym_smaller_loads_relsize() {
+  let (log, xml) = convert_files_with(
+    repro!("package-bindings/acronym_smaller_option_loads_relsize.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains(r#"<text fontsize="83%" xml:id="p1.1.1">KLD</text>"#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"<glossaryref inlist="acronym" key="BD" show="long"/>"#),
+    "{xml}"
+  );
+  assert!(xml.contains(r#"labels="LABEL:e""#), "{xml}");
+}
+
+/// 80i: the caption binding leaves a `\captionbox` the class defined alone, as caption.sty's `\newcommand*` does (and
+/// caption3, which subfig `[caption=false]` and floatrow load, defines none). Red (int98a): the binding's macro replaced
+/// ws-jmrr.cls's `\newbox\captionbox` ("Expected a relational token"). Witness 2303.09686. Repro
+/// captions-floats/caption3_keeps_a_class_captionbox.
+#[test]
+fn caption3_keeps_a_class_captionbox() {
+  let (log, xml) = convert_files_with(
+    repro!("captions-floats/caption3_keeps_a_class_captionbox.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains(r#"<p xml:id="p1.1">yes</p>"#), "{xml}");
+}
+
+/// 80i: nicematrix's `\tabularnote[label]{text}` marks the note with its label. Red (int98a): the bracket-stripped
+/// label was passed as `\footnote#1`, so `[x]` became the note's text and `[$\star$]` opened math that closed nowhere
+/// (17 errors; 2602.00629 lost every section after the table). Repro
+/// alignment-bindings/nicematrix_tabularnote_label_kept.
+#[test]
+fn nicematrix_tabularnote_label_kept() {
+  let (log, xml) = convert_files_with(
+    repro!("alignment-bindings/nicematrix_tabularnote_label_kept.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains(r#"B<note mark="x" role="footnote" xml:id="footnotex1">"#),
+    "{xml}"
+  );
+  assert!(xml.contains(r#"</tags>note one</note></td>"#), "{xml}");
+  assert!(
+    xml.contains(r#"(D<note mark="$\star$" role="footnote" xml:id="footnotex2">"#),
+    "{xml}"
+  );
+  assert!(xml.contains(r#"</tags>note two</note>)</td>"#), "{xml}");
+  assert!(xml.contains(r#"<p xml:id="p2.1">After.</p>"#), "{xml}");
+}
+
+/// 80j: `\pdfstrcmp` compares its texts as `show_token_list` writes them — a control word with its trailing space —
+/// so expl3's `\str_if_eq:nn` tells a compiled regex variable by its meaning and `\regex_replace_case_once:nN` uses it
+/// (datatool's numeric parser, `\DTLmax`). Red (int98a): the plain token text ("NE"; the variable compiled as a
+/// pattern, "Invalid character '_' following '\c' escape"; KNOWN_PERL_ERRORS #1178). Witness 2006.14937. Repro
+/// expansion-primitives/pdfstrcmp_compares_shown_token_lists.
+#[test]
+fn pdfstrcmp_compares_shown_token_lists() {
+  let (log, xml) = convert_files_with(
+    repro!("expansion-primitives/pdfstrcmp_compares_shown_token_lists.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains("<p xml:id=\"p1.1\">A:EQ.\nB:EQ.[xby]\nMax: 58.18.</p>"),
+    "{xml}"
+  );
+}
+
+/// 80j: an ignored character after a control word leaves the tokenizer skipping blanks (tex.web §344), so under
+/// `\ExplSyntaxOn` the `~` of `\foo ~` is skipped. Red (int98a): the skip ended at the ignored space and the `~` became a
+/// space token ("A:19. B:NE."; KNOWN_PERL_ERRORS #1177). Repro
+/// string-mouth/ignored_character_keeps_skipping_after_control_word.
+#[test]
+fn ignored_character_keeps_skipping_after_control_word() {
+  let (log, xml) = convert_files_with(
+    repro!("string-mouth/ignored_character_keeps_skipping_after_control_word.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains(r#"<p xml:id="p1.1">A:18.B:EQ.C:8.</p>"#),
     "{xml}"
   );
 }

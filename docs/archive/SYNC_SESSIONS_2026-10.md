@@ -8118,3 +8118,21 @@ A/B int95b → int96a over popint96a (734: 700 cleveref and all 34 subeqnarray c
 `\slabel` labels (0909.3056, 1507.02405, 1611.06697), and 1802.10440, whose `\includegraphics{log}` lists the A/B
 workdir's own `log.A`/`log.B` (a harness artifact). Nets int95b → int96a 136/136. Left: `\pageref{LastPage}` (page
 furniture; lastpage.sty's `LastPage` against the bindings' `lastpage`).
+
+**int97 + int98 (2026-10-25; 80g → 20dd6704b4, 80h → 9796270337; pushed together).** brk96 (2,000 fresh papers on
+int96a, `scratch_356a0c47/brk96/`): 59 with breakage, `classify.py` 12 OURS / 45 UNDEF / 2 ABSENT. 80g: a longtable
+keeps every `\label` of its rows (KPE #1175), and a contrib autonum binding loads autonum's packages and leaves the
+displays to amsmath's binding — every equation keeps its number (OD #895; 1905.00606 20 errors, 30 dangling → 0,
+2203.12360 4 → 0). 80h: a `\newlabel{name}{{text}{page}…}` record names its label, and a record written to the `.aux`
+(`\write`, `\protected@write`) is read back as written (OD #896; 2503.03625's `\customlabel`, 1608.05314's and
+2608.10941's companion records, 1004.2872, 0902.1427); a contrib theoremref binding makes `\thlabel` a `\label` and
+`\thref` name the theorem by type and number (1211.4329 5 → 0); autonum's `<env>+` forms alias the environments (int97a
+A/B: 1405.2249, 1606.06219 and net 1904.08614's `{align+}`). Gates int97a 7250/7250, int98a 7252/7252, clippy 0, doc 0,
+inits 0. A/B int96a → int97a over popint97a (632: 600 longtable and 31 autonum census papers, witness): E 879 → 881,
+F 3 = 3; the four autonum papers worse were the `<env>+` errors (fixed in 80h) and two that lost the numbers raw
+autonum gave every `\[…\]` (1807.10150, 2105.05016 — labelled equations keep theirs). A/B int96a → int98a over
+popint98a (2,343: 882 `\newlabel`, 505 longtable, 463 `\protected@write`, 435 `.aux`-writing, 28 autonum, 21
+theoremref census papers, witnesses): E 5,777 → 5,754, F 19 = 19, 0 Fatal worse, 42 changed; two papers one error
+worse — 2211.09537 calls autonum's internal `\autonum@generatePatchedReference{autoref}` (a no-op since 80i), and
+2605.27097 hits a pre-existing etextools × translations defect under the ar5iv preload that raw autonum's load order
+had hidden (OPEN_ROWS). Nets int96a → int98a 136/136.

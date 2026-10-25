@@ -1,0 +1,21 @@
+% witness: 1806.02261 (`\usepackage[nolist,smaller]{acronym}`; `\newcommand{\KLD}{\acro{\smaller KLD}}` in display
+%          superscripts: `\smaller` undefined, 9 alignment errors, 4 dangling labels)
+% oracle:  pdflatex: `[smaller]` loads relsize (acronym.sty:84-86), so `\smaller` prints; `\acro` exists only inside
+%          `{acronym}` (acronym.sty:254)
+% engines: rust int98a = the binding declared no options and let `\acro` = `\acrodef` everywhere (Perl
+%          acronym.sty.ltxml:189)
+% expect:  0 errors, 0 warnings; "KLD" in a smaller font, the acronym defined in the environment printed, the
+%          equation's label kept
+% status:  RED (int98a) -> GREEN (80i: acronym_sty.rs options + `\acro` in `{acronym}` only)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage[nolist,smaller]{acronym}
+\begin{document}
+\begin{acronym}
+\acro{BD}{beta divergence}
+\end{acronym}
+Text {\smaller KLD} and \ac{BD}.
+\begin{equation}\ell^{\smaller KLD}(y)=1\label{e}\end{equation}
+See \eqref{e}.
+\end{document}

@@ -5,12 +5,15 @@
 %          autonum renewed `{split}` but not our locked `{align}`, whose renewal restores `\label` at its end
 %          (`\autonum@restoreSubcommands`), so the display's `\label` stayed global after the display
 % expect:  0 errors, 0 warnings; eq:one, eq:two, sec:b each labelled and referred to
-% status:  RED (int96a) -> GREEN (80g: contrib autonum_sty.rs, OXIDIZED_DESIGN_DIVERGENCES #895)
+% status:  RED (int96a) -> GREEN (80g: contrib autonum_sty.rs, OXIDIZED_DESIGN_DIVERGENCES #895); the document's own
+%          `\autonum@generatePatchedReference{autoref}` (2211.09537, autonum.sty:302) RED (int98a: undefined) ->
+%          GREEN (80i: a no-op, every equation keeps its number)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{amsmath}
 \usepackage{cleveref}
 \usepackage{autonum}
+\makeatletter\autonum@generatePatchedReference{autoref}\makeatother
 \begin{document}
 \begin{align}
 \label{eq:one}

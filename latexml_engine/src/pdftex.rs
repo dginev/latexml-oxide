@@ -762,8 +762,15 @@ LoadDefinitions!({
 
   DefMacro!("\\expanded XGeneralText", "#1");
 
+  // pdftex.web `compare_strings`: each text is fully expanded and made a string by `tokens_to_string`, i.e. by
+  // `show_token_list` (tex.web §292): a control word is written with `\escapechar` and a trailing space (§262
+  // print_cs), a parameter character doubled. With the plain token text, `\relax` and `\string\relax\space` differed,
+  // so expl3's `\str_if_eq:nn` failed l3regex's test for a compiled regex variable (`\__regex_compile_use_aux:w`
+  // compares its meaning with `macro:->\__regex_branch:n`), and `\regex_replace_case_once:nN { \c_..._regex {…} }`
+  // compiled the variable's name as a pattern ("Invalid character '_' following '\c' escape": datatool's numeric
+  // parser, 2006.14937). Perl compares `ToString` (pdfTeX.pool.ltxml:277; KNOWN_PERL_ERRORS #1178).
   DefMacro!("\\pdfstrcmp XGeneralText XGeneralText", sub[(first,second)] {
-    match first.to_string().cmp(&second.to_string()) {
+    match writable_tokens(&first).cmp(&writable_tokens(&second)) {
      Ordering::Greater => Tokens!(T_OTHER!("1")),
      Ordering::Equal => Tokens!(T_OTHER!("0")),
      Ordering::Less => Tokens!(T_OTHER!("-"), T_OTHER!("1"))

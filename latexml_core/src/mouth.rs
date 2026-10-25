@@ -1230,7 +1230,10 @@ impl Mouth {
           )));
         }
       }
-      // In state::S, skip spaces
+      // In state::S, skip spaces — and ignored characters, which leave the state as it is (tex.web §344
+      // `any_state_plus(ignore)`): under `\ExplSyntaxOn` the (ignored) space of `\foo ~` kept TeX skipping, so the
+      // `~` (a spacer) is skipped too, where stopping at the ignored character made it a space token
+      // (`\str_if_eq:nnTF { \foo ~ } { \foo }` false). Perl Mouth.pm skips CC_SPACE only (KNOWN_PERL_ERRORS #1177).
       if self.skipping_spaces {
         let mut cc = None;
         // This is very awkward as a loop,
@@ -1238,11 +1241,14 @@ impl Mouth {
         // tokenizer/verb.tex depends on it.
         while let Some((_, ncc)) = self.get_next_char() {
           cc = Some(ncc);
-          if ncc != Catcode::SPACE {
+          if !matches!(ncc, Catcode::SPACE | Catcode::IGNORE) {
             break;
           }
         }
-        if self.colno <= self.nchars && cc.is_some() && cc != Some(Catcode::SPACE) {
+        if self.colno <= self.nchars
+          && cc.is_some()
+          && !matches!(cc, Some(Catcode::SPACE | Catcode::IGNORE))
+        {
           self.colno -= 1;
         }
         if cc == Some(Catcode::EOL) {

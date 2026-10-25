@@ -18236,3 +18236,60 @@ the last: a notation table with a `\label` and a `\pageref` per row dangles all 
 
 Fixed in Rust (80g): longtable_sty.rs `\lx@longtable@label` adds each label to the table's. Repro
 cross-references/longtable_keeps_every_label; guard `perfect_kernel_batch80a::a_longtable_keeps_every_label`.
+
+## 1176. acronym's `\acro` is defined outside `{acronym}`, and its options are not read
+
+acronym.sty provides `\acro` only inside the `acronym` environment (acronym.sty:254 `\providecommand*{\acro}{\AC@acro}`
+in `\acronym`, local to its group) and reads its options (:44-84), `smaller` loading relsize for `\textsmaller`
+(:84-86). acronym.sty.ltxml:189 lets `\acro` = `\acrodef` everywhere and declares no option, so an `\acro` outside the
+environment reads the tokens after it as the acronym's short and long forms, and `\smaller` stays undefined:
+1806.02261's `\newcommand{\KLD}{\acro{\smaller KLD}}`, used in display superscripts, broke its IEEEeqnarray rows (9
+alignment errors) and lost four labels. Minimal trigger:
+
+```latex
+\usepackage[smaller]{acronym}
+\newcommand{\KLD}{\acro{\smaller KLD}}
+\begin{equation}\ell^{\KLD}(y)=1\label{e}\end{equation}
+% pdflatex: \acro undefined (error), "KLD" smaller; Perl: \smaller undefined, \acrodef eats "(y)=1\label{e}"
+```
+
+Fixed in Rust (80i): acronym_sty.rs declares acronym.sty's options (`smaller` loads relsize and sets `\acsfont`) and
+leaves `\acro` to the environment. Repro package-bindings/acronym_smaller_option_loads_relsize; guard
+`perfect_kernel_batch80a::acronym_smaller_loads_relsize`.
+
+## 1177. An ignored character after a control word ends the blank skip
+
+After a control word TeX's tokenizer skips blanks (state S), and an ignored character (catcode 9) leaves the state as it
+is (tex.web §344 `any_state_plus(ignore)`): under `\ExplSyntaxOn`, where the space is ignored and `~` is a spacer, the
+`~` of `\foo ~` is skipped. Mouth.pm:338 skips CC_SPACE only, so the ignored space ends the skip and the `~` becomes a
+space token: `\str_count:n {\__regex_branch:n ~}` counts 19 where TeX counts 18, and `\str_if_eq:nnTF { \foo ~ } { \foo }`
+is false. Minimal trigger:
+
+```latex
+\ExplSyntaxOn
+\str_if_eq:nnTF { \foo ~ } { \foo } {EQ} {NE}
+% pdflatex: EQ; Perl: NE
+```
+
+Fixed in Rust (80j): mouth.rs skips IGNORE characters in state S too. Repro
+string-mouth/ignored_character_keeps_skipping_after_control_word; guard
+`perfect_kernel_batch80a::ignored_character_keeps_skipping_after_control_word`.
+
+## 1178. `\pdfstrcmp` compares the plain token text, not the shown token list
+
+pdfTeX's `\pdfstrcmp` (pdftex.web `compare_strings`) expands each text and makes it a string with `tokens_to_string`,
+i.e. `show_token_list` (tex.web §292): a control word is written with `\escapechar` and a trailing space (§262
+print_cs), a parameter character doubled. pdfTeX.pool.ltxml:277 compares `ToString` of each, which writes a control word
+without its space, so `\relax` and `\string\relax\space` differ. expl3's `\str_if_eq:nn` is `\pdfstrcmp`, and l3regex
+tells a compiled regex variable by comparing its meaning with `macro:->\__regex_branch:n` (`\__regex_compile_use_aux:w`):
+the test failed, `\regex_replace_case_once:nN { \c_..._regex {…} }` compiled the variable's name as a pattern ("Invalid
+character '_' following '\c' escape"), and datatool's numeric parser called "0" non-numerical (2006.14937: 501 errors,
+Fatal runaway). Minimal trigger:
+
+```latex
+\ifnum\pdfstrcmp{\relax}{\string\relax\space}=0 EQ\else NE\fi
+% pdflatex: EQ; Perl: NE
+```
+
+Fixed in Rust (80j): pdftex.rs compares the `writable_tokens` of each text. Repro
+expansion-primitives/pdfstrcmp_compares_shown_token_lists; guard `perfect_kernel_batch80a::pdfstrcmp_compares_shown_token_lists`.

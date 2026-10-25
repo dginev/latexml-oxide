@@ -21,6 +21,12 @@ LoadDefinitions!({
   // autonum.sty:127-133, 176-183: each display environment it renews is kept as `<env>+`, the environment as amsmath
   // left it (`\newenvironment{#1+}[#2]{\csuse{autonum@#1Old}}{\csuse{autonum@end#1Old}}`): 1405.2249's `{align+}`.
   // A constructor (`\begin{equation}`) is aliased as one, a macro pair (`\align`/`\endalign`) as a pair.
+  // autonum.sty:302-322: `\autonum@generatePatchedReference{cmd}` makes a reference command mark the labels it names,
+  // for a document's own reference commands too (2211.09537's `\autonum@generatePatchedReference{autoref}`). Every
+  // equation keeps its number here, so a reference marks nothing and the command stays as it is.
+  DefMacro!("\\autonum@generatePatchedReference{}", "");
+  DefMacro!("\\autonum@generatePatchedReferenceCSL{}", "");
+  DefMacro!("\\autonum@generatePatchedReferenceGeneral{}{}", "");
   for env in [
     "equation", "gather", "multline", "flalign", "align", "alignat", "split",
   ] {

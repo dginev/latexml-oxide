@@ -1126,7 +1126,22 @@ LoadDefinitions!({
   DefMacro!("\\Hspace OptionalMatch:* {}", "\\hspace#1{#2}", locked => true);
   DefMacro!("\\Hbrace OptionalBalanced {}{}", "#3", locked => true);
   DefMacro!("\\Vbrace OptionalBalanced {}{}", "#3", locked => true);
-  DefMacro!("\\tabularnote OptionalBalanced {}", "\\footnote#1{#2}", locked => true);
+  // `\tabularnote[label]{text}` (nicematrix.sty:577, `{ o m }`): the label is the note's mark in place of its number
+  // (:627), as `\footnote[mark]`'s. The parameter strips the brackets, so the label is passed back inside them: as
+  // `\footnote#1` a `[x]` label became the note's text and the text fell into the cell, and a `[$\star$]` one opened
+  // math in the note's argument that closed nowhere, losing every section after the table (2602.00629).
+  DefMacro!("\\tabularnote OptionalBalanced {}", sub[(label, text)] {
+    let mut tokens = vec![T_CS!("\\footnote")];
+    if let Some(label) = label {
+      tokens.push(T_OTHER!("["));
+      tokens.extend(label.revert());
+      tokens.push(T_OTHER!("]"));
+    }
+    tokens.push(T_BEGIN!());
+    tokens.extend(text.revert());
+    tokens.push(T_END!());
+    Ok(Tokens::new(tokens))
+  }, locked => true);
   NewCounter!("iRow");
   NewCounter!("jCol");
   NewCounter!("tabularnote");

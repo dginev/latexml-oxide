@@ -22,6 +22,21 @@ LoadDefinitions!({
 
   def_macro_noop("\\AC@placelabel{}")?;
 
+  // acronym.sty:44-84: the options set their switches; `smaller` also loads relsize, whose `\textsmaller` sets the
+  // short forms (`\acsfont`) and whose `\smaller` the document may use itself (1806.02261's `\acro{\smaller KLD}`).
+  DeclareOption!("footnote", "\\AC@footnotetrue");
+  DeclareOption!("nohyperlinks", "\\AC@nohyperlinkstrue");
+  DeclareOption!("printonlyused", "\\AC@printonlyusedtrue");
+  DeclareOption!("withpage", "\\AC@withpagetrue");
+  DeclareOption!("smaller", "\\AC@smallertrue");
+  DeclareOption!("dua", "\\AC@duatrue");
+  DeclareOption!("nolist", "\\AC@nolisttrue\\AC@nohyperlinkstrue");
+  for option in ["printonlyreused", "nolinebreak", "noacroprefix"] {
+    DeclareOption!(option, None);
+  }
+  ProcessOptions!();
+  RawTeX!(r"\ifAC@smaller\RequirePackage{relsize}\def\acsfont#1{\textsmaller{#1}}\fi");
+
   //======================================================================
   // Whether an acronym is used or not
   DefPrimitive!("\\lx@AC@used{}", sub[(id)] {
@@ -338,7 +353,10 @@ LoadDefinitions!({
   });
 
   Let!("\\newacro", "\\acrodef");
-  Let!("\\acro", "\\acrodef");
+  // `\acro` is the acronym environment's (acronym.sty:254 `\providecommand*{\acro}{\AC@acro}` in `\acronym`, its
+  // group), undefined outside it as in pdflatex: Perl's `\acro` = `\acrodef` here (acronym.sty.ltxml:189) took the
+  // tokens after an outside `\acro{\smaller KLD}` for its long form, in a display's superscript (1806.02261: the
+  // IEEEeqnarray rows broken, four labels lost). KNOWN_PERL_ERRORS #1176.
 
   // Non-standard definite articles
   DefMacro!(

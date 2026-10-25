@@ -1,0 +1,15 @@
+% witness: 2303.09686 (ws-jmrr.cls:675 `\newbox\captionbox`, measured by its `\tbl`; `\usepackage[caption=false]{subfig}`
+%          and floatrow load caption3 only)
+% oracle:  pdflatex 0 errors: caption3 defines no `\captionbox` and caption.sty's is a `\newcommand*` (caption.sty:454),
+%          so the class's box register stands; "yes"
+% engines: rust int98a = the caption binding (caption3's stand-in) defined its `\captionbox` macro over the box: "Expected
+%          a relational token … \begingroup" at `\ifdim\wd\captionbox`
+% expect:  0 errors, 0 warnings; "yes"
+% status:  RED (int98a) -> GREEN (80i: caption_sty.rs `\captionbox` only where undefined)
+% preload: ar5iv.sty
+\documentclass{article}
+\newbox\captionbox
+\usepackage[caption=false]{subfig}
+\begin{document}
+\setbox\captionbox\hbox{x}\ifdim\wd\captionbox>0pt yes\else no\fi
+\end{document}
