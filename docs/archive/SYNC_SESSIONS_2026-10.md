@@ -8136,3 +8136,26 @@ theoremref census papers, witnesses): E 5,777 → 5,754, F 19 = 19, 0 Fatal wors
 worse — 2211.09537 calls autonum's internal `\autonum@generatePatchedReference{autoref}` (a no-op since 80i), and
 2605.27097 hits a pre-existing etextools × translations defect under the ar5iv preload that raw autonum's load order
 had hidden (OPEN_ROWS). Nets int96a → int98a 136/136.
+
+**int99 + int100 (2026-10-25; 80i+80j → 1032620cd2, 80k → 20cc6535a8, 80k r2 → 904694ccc2; pushed together).** The
+brk96 tail. 80i: acronym's options (`[smaller]` loads relsize; `\acro` only inside `{acronym}`, KPE #1176; 1806.02261),
+caption3's `\captionbox` only where a class has none (2303.09686), nicematrix's `\tabularnote[label]` re-bracketed as
+`\footnote[label]` (2602.00629: 54 errors and every section after the table → 0), autonum's reference patchers as
+no-ops (OD #895; 2211.09537). 80j: `\pdfstrcmp` compares the shown token lists (KPE #1178; 2006.14937's datatool
+501 errors → 0) and an ignored character keeps the blank skip after a control word (KPE #1177). 80k: a binding's guessed
+theorem runs as a fallback, so the document's `\newcommand` of the name replaces it (2606.17122: Fatal, 101 errors →
+0/0); a longtable `\label` cleans its expanded key (KPE #1179; 1703.09144 17 dangling → 0); `\cref` splits its label
+list once expanded (KPE #1180; 2108.04620 12 dangling → 0); the conditional guard's Fatal keeps what was digested
+before it (r2: every level, and the resource-fatal latch consumed, else the math parser took it for its own on the
+first formula it could not read and the document was written empty). Gates int99a 7257/7257, int100a 7261/7261,
+int100c 7261/7261 (int100b's clippy caught an unneeded qualification), clippy 0, doc 0, inits 0. A/B int98a → int99a
+over popint99a (2,219: acronym, caption, datatool, expl3, nicematrix, siunitx and random census papers, witnesses):
+E 7,889 → 7,201, F 22 = 22, 0 worse; 2006.14937 lost its 6,821 words — past its preamble now, it reached its 24
+matplotlib figures and the IfLimit Fatal kept nothing (fixed in 80k). A/B int99a → int100a over popint100a (1,575: 500
+cleveref, 397 longtable, 280 neurips/tac, 387 random census papers, witnesses, the brk81 IfLimit papers): E 3,341 →
+3,240, F 11 → 10, 0 worse. A/B int100a → int100b over the same set: E and F equal, 3 changed — IfLimit papers keeping
+their documents (2006.14937 0 → 18,523 words, 1611.07444 0 → 26,049, 2302.07562 0 → 16,313); 1409.4725 (now
+TooManyErrors) and 2411.05049 (a loop after babel's errors) stop in the preamble. Nets int98a → int99a, int99a →
+int100a, int100a → int100c 136/136. Left (OPEN_ROWS brk96 row): 2202.08157's solarphysics `tabular*`, theoremref's `\thnameref`, the
+etextools × translations error under the ar5iv preload (5 census papers), 1406.0089's `\part`, and kernel commands newer
+than the paper (1102.2873, 1308.3100; a ruling).
