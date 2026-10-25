@@ -301,3 +301,33 @@ Text.
     "Univ B", "Univ C",
   ]);
 }
+
+/// FM S2b r3: the reading records the run of a call today's attaches at once, as `frontmatter_api.rs` does — revtex's
+/// symbol-led `\affiliation{$^\flat$…}` —, so an unmarked line after it continues that run (the group rule): every name's.
+/// Red (80u): the reading's run began afresh at the unmarked line and stopped at the names the marked lines reached,
+/// the last name alone; today's gave every name the line, and the writer declined the paper. Witness 1303.7097.
+#[test]
+fn an_unmarked_line_after_symbol_led_ones_is_the_groups() {
+  let tex = r"\documentclass[aps,prl]{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{*}$, Bob Baker$^{\flat}$, Cat Cole$^{*,\S}$}
+\affiliation{$^*$ Univ A, City}
+\affiliation{$^\flat$ Univ B, Town}
+\affiliation{Council C, Village}
+\affiliation{$^\S$ Univ D, Hamlet}
+\maketitle
+Text.
+\end{document}
+";
+  let on = creators(tex, true);
+  holds(&on, "Ann Able", &["Univ A", "Council C"], &[
+    "Univ B", "Univ D",
+  ]);
+  holds(&on, "Bob Baker", &["Univ B", "Council C"], &[
+    "Univ A", "Univ D",
+  ]);
+  holds(&on, "Cat Cole", &["Univ A", "Univ D", "Council C"], &[
+    "Univ B",
+  ]);
+}

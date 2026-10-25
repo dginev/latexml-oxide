@@ -399,7 +399,10 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
     }
     // re-assign: the reading's owners by a ruling's change, today's item copied there and taken from the rest
     if !wants.iter().any(|(_, a)| writes(a)) {
-      return Ok(declined("an owner change no ruling decided"));
+      let rules: Vec<&str> = wants.iter().map(|(_, a)| a.rule.as_str()).collect();
+      return Ok(declined(&s!(
+        "an owner change no ruling decided: {key:?}, reading {w:?} ({rules:?}), today's {h:?}"
+      )));
     }
     let Some(from) = holds
       .iter()

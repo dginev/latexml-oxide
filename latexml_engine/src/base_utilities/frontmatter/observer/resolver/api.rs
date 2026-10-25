@@ -60,6 +60,37 @@ impl Resolver {
     }
   }
 
+  /// The authors an `annotate=run[:<cap>]` contact reaches, as `frontmatter_api.rs` records its run: the run of the
+  /// contact of the role before it while no author came since (the same count of authors), else the authors back from
+  /// the last to one holding the role, at most <cap> — and the run recorded for the next. Only a call today's attaches
+  /// at once records it: a mark-picked line (`_withsup`) waits for its label, and its run is not taken.
+  pub(super) fn record_run(&mut self, annotate: &str, role: &str) -> Vec<usize> {
+    let n = self.out.creators.len();
+    let cap = annotate
+      .split_once(':')
+      .and_then(|(_, c)| c.trim().parse::<usize>().ok())
+      .filter(|c| *c >= 1);
+    let run = match &self.last_run {
+      Some((r, count, run)) if r == role && *count == n => run.clone(),
+      _ => {
+        let mut run = Vec::new();
+        for c in (0..n).rev() {
+          if !run.is_empty() && self.roles[c].iter().any(|r| r == role) {
+            break;
+          }
+          if cap.is_some_and(|cap| run.len() >= cap) {
+            break;
+          }
+          run.push(c);
+        }
+        run.reverse();
+        run
+      },
+    };
+    self.last_run = Some((role.to_string(), n, run.clone()));
+    run
+  }
+
   /// An API call made apart from the blocks.
   pub(super) fn api(
     &mut self,
@@ -385,8 +416,18 @@ impl Resolver {
           ..assoc
         }));
       }
+      // (a run today's records for a call it attaches at once — revtex's symbol-led `\affiliation{$^\flat$…}` —, which an
+      // unmarked line after it continues: 1303.7097's `\affiliation{CONICET La Plata, …}`, every name's)
+      let run = (label_rule.starts_with("api:leading-mark")
+        && !withsup
+        && attr_value(attrs, "annotate")
+          .unwrap_or("")
+          .starts_with("run"))
+      .then(|| self.record_run(attr_value(attrs, "annotate").unwrap_or(""), role));
       if label_rule.starts_with("api:leading-mark") {
-        let owners = self.annotate_owners(attr_value(attrs, "annotate").unwrap_or(""), role);
+        let owners = run.clone().unwrap_or_else(|| {
+          self.annotate_owners(attr_value(attrs, "annotate").unwrap_or(""), role)
+        });
         for at in first_pending..self.pending.len() {
           if !withsup {
             self.piled.push((at, owners.clone()));
@@ -408,7 +449,7 @@ impl Resolver {
       if label_rule.starts_with("api:leading-mark")
         && (annotate == "new" || annotate.starts_with("run"))
       {
-        for c in self.new_run(role) {
+        for c in run.unwrap_or_else(|| self.new_run(role)) {
           self.roles[c].push(role.to_string());
         }
       }
@@ -473,30 +514,11 @@ impl Resolver {
       // the same, and a second such contact before any new author the same run's, at most <cap> authors —
       // frontmatter_api.rs `annotate=run`, authblk's `\AB@thenote` group)
       let run_rule = annotate.starts_with("run");
-      let cap = annotate
-        .split_once(':')
-        .and_then(|(_, c)| c.trim().parse::<usize>().ok())
-        .filter(|c| *c >= 1);
-      let run = match &self.last_run {
-        Some((r, count, run)) if run_rule && r == role && *count == n => run.clone(),
-        _ => {
-          let mut run = Vec::new();
-          for c in (0..n).rev() {
-            if !run.is_empty() && self.roles[c].iter().any(|r| r == role) {
-              break;
-            }
-            if cap.is_some_and(|cap| run.len() >= cap) {
-              break;
-            }
-            run.push(c);
-          }
-          run.reverse();
-          run
-        },
+      let run = if run_rule {
+        self.record_run(annotate, role)
+      } else {
+        self.new_run(role)
       };
-      if run_rule {
-        self.last_run = Some((role.to_string(), n, run.clone()));
-      }
       if run_rule && thenote_affil {
         // (its `\AB@thenote`: when the marks show it is the label, `thenote_finish`)
         let tag = s!("thenote:{}", self.thenote.affils.len());
