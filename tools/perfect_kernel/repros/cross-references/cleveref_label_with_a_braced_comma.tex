@@ -1,0 +1,19 @@
+% witness: 2304.09155 (`\label{claim:copy_K_{2,4}}` and `\Cref{claim:copy_K_{2,4}}`)
+% oracle:  pdflatex 0 errors: "By Claim 1 and ?? 1?? 2." (cleveref has no name for the type `claim': its "??" and
+%          format warnings) — it takes each label off its stack with the delimited `\@cref@stack@top#1,#2\@nil`
+%          (cleveref.sty:388), which matches only a comma at brace depth 0
+% engines: rust int95b = "By  and 1 and 2.", 1 warning — the label list was split at the braced comma too
+%          (cleveref.sty.ltxml:42-45 `splitLabels` splits the string at every comma), naming `claim:copy_K_{2` and
+%          `4}`, so the reference dangled
+% expect:  0 errors, 0 warnings; both references resolve to their claims
+% status:  RED (int95b) -> GREEN (80f: cleveref_sty.rs `split_label_tokens` splits at brace depth 0)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage{cleveref}
+\newtheorem{claim}{Claim}
+\begin{document}
+\begin{claim}\label{claim:copy_K_{2,4}}\label{c1}A claim.\end{claim}
+\begin{claim}\label{c2}Another.\end{claim}
+By \Cref{claim:copy_K_{2,4}} and \cref{c1,c2}.
+\end{document}

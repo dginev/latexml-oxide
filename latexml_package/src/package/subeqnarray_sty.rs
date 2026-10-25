@@ -23,4 +23,9 @@ LoadDefinitions!({
     locked => true);
 
   InputDefinitions!("subeqnarray", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  // subeqnarray.sty:66-75 `\slabel{key}` names the row's subequation by writing `\newlabel{key}{{\thesubequation}…}`
+  // to the aux file, which a single LaTeXML pass never reads back, so every `\ref` to it dangled (1612.09273's
+  // `\slabel{bl}`, `\slabel{bt}`). The row is our subnumbered equation, so the key is its `\label`; locked over the
+  // raw file's definition.
+  DefMacro!("\\slabel{}", "\\label{#1}", locked => true);
 });

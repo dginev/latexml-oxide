@@ -18186,3 +18186,37 @@ See \subref{fig:l}.     % pdflatex "See (a)."; Perl a dangling reference
 Fixed in Rust (80d): subfig_sty.rs `\sf@subref` and `\sf@@subref` are `\ref{#1}`, as subcaption's and subfigure's
 `\subref` are, showing the sub-float's refnum ("1a") where subfig prints "(a)"/"a". Repro
 cross-references/subfig_subref_names_the_subfloat; guard `perfect_kernel_batch80a::a_subfig_subref_names_the_subfloat`.
+
+## 1173. cleveref's label list is split at a comma inside braces
+
+cleveref takes each label off its stack with the delimited `\@cref@stack@top#1,#2\@nil` (cleveref.sty:388), which
+matches only a comma at brace depth 0, so `\Cref{claim:copy_K_{2,4}}` names the one label
+`\label{claim:copy_K_{2,4}}`. cleveref.sty.ltxml:42-45 `splitLabels` splits `ToString($labels)` at every comma, so the
+reference names `claim:copy_K_{2` and `4}`, neither of which exists (2304.09155: a dangling reference rendered as
+" and "). Minimal trigger:
+
+```latex
+\usepackage{amsthm,cleveref}\newtheorem{claim}{Claim}
+\begin{claim}\label{claim:copy_K_{2,4}}A claim.\end{claim}
+By \Cref{claim:copy_K_{2,4}}.     % pdflatex "By Claim 1."; Perl a dangling reference
+```
+
+Fixed in Rust (80f): cleveref_sty.rs `split_label_tokens` splits at brace depth 0. Repro
+cross-references/cleveref_label_with_a_braced_comma; guard
+`perfect_kernel_batch80a::a_cleveref_label_keeps_its_braced_comma`.
+
+## 1174. subeqnarray's `\slabel` names nothing
+
+subeqnarray.sty:66-75 `\slabel{key}` writes `\newlabel{key}{{\thesubequation}{\thepage}}` to the aux file, from which
+the next pdflatex run defines the label; subeqnarray.sty.ltxml raw-loads that definition, and a single LaTeXML pass
+never reads the aux file back, so every `\ref`/`\eqref` to an `\slabel` dangles (1612.09273). Minimal trigger:
+
+```latex
+\usepackage{subeqnarray}
+\begin{subeqnarray} a &=& b \slabel{bl} \end{subeqnarray}
+See (\ref{bl}).      % pdflatex "See (1a)."; Perl a dangling reference
+```
+
+Fixed in Rust (80f): subeqnarray_sty.rs makes `\slabel` the row's `\label` (each row is a subnumbered equation),
+locked over the raw file. Repro cross-references/subeqnarray_slabel_names_the_row; guard
+`perfect_kernel_batch80a::a_subeqnarray_slabel_names_the_row`.

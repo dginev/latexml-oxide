@@ -162,3 +162,53 @@ fn an_import_from_a_missing_directory_reads_the_bare_name() {
     "{xml}"
   );
 }
+
+/// 80f: a comma inside braces is part of a cleveref label: `\Cref{claim:copy_K_{2,4}}` names the one label (cleveref's
+/// delimited `\@cref@stack@top#1,#2\@nil` matches only a comma at brace depth 0). Red (int95b): the list was split at
+/// the braced comma too (Perl's `splitLabels`), the reference dangled (KPE #1173). Witness 2304.09155. Repro
+/// cross-references/cleveref_label_with_a_braced_comma.
+#[test]
+fn a_cleveref_label_keeps_its_braced_comma() {
+  let (log, xml) = convert_files_with(
+    repro!("cross-references/cleveref_label_with_a_braced_comma.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  // The label key drops the braces (`CleanLabel`): `\label{claim:copy_K_{2,4}}` is `LABEL:claim:copy_K_2,4`.
+  assert!(
+    xml.contains(r#"labels="LABEL:c1 LABEL:claim:copy_K_2,4""#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"<ref labelref="LABEL:claim:copy_K_2,4" show="creftypecap~creflabel"/>"#),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"<ref labelref="LABEL:c1" show="creftypeplural~creflabel"/>"#),
+    "{xml}"
+  );
+}
+
+/// 80f: subeqnarray's `\slabel` names its row: our rows are subnumbered equations, so it is `\label`. Red (int95b): the
+/// raw `\slabel` (subeqnarray.sty:66-75) only writes `\newlabel` to the aux file, so every reference dangled (KPE
+/// #1174). Witness 1612.09273. Repro cross-references/subeqnarray_slabel_names_the_row.
+#[test]
+fn a_subeqnarray_slabel_names_the_row() {
+  let (log, xml) = convert_files_with(
+    repro!("cross-references/subeqnarray_slabel_names_the_row.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for label in ["bl", "bt"] {
+    assert!(
+      xml.contains(&format!(r#"labels="LABEL:{label}""#)),
+      "{label}: {xml}"
+    );
+    assert!(
+      xml.contains(&format!(r#"<ref labelref="LABEL:{label}"/>"#)),
+      "{label}: {xml}"
+    );
+  }
+}

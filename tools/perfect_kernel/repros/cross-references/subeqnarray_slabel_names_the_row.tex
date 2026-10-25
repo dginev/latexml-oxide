@@ -1,0 +1,17 @@
+% witness: 1612.09273 (`\slabel{bl}`, `\slabel{bt}` in a {subeqnarray}, each `\eqref`'d twice)
+% oracle:  pdflatex 0 errors: "See (1a) and 1b." — subeqnarray.sty:66-75 `\slabel` writes
+%          `\newlabel{key}{{\thesubequation}{\thepage}}` to the aux file
+% engines: rust int95b = "See () and .", 1 warning: the raw `\slabel` only writes to the aux file, which one pass
+%          never reads (subeqnarray.sty.ltxml raw-loads the same definition)
+% expect:  0 errors, 0 warnings; the rows' labels bl and bt, referred to
+% status:  RED (int95b) -> GREEN (80f: subeqnarray_sty.rs `\slabel` = `\label`, locked)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{subeqnarray}
+\begin{document}
+\begin{subeqnarray}
+a &=& b, \slabel{bl} \\
+c &=& d. \slabel{bt}
+\end{subeqnarray}
+See (\ref{bl}) and \ref{bt}.
+\end{document}

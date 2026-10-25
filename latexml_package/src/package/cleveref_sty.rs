@@ -1141,11 +1141,22 @@ fn trim_space_tokens(tokens: Tokens) -> Tokens {
 /// Keeping the original tokens and splicing them straight into the `\lx@cref`
 /// invocation (as Perl's `Invocation(T_CS('\lx@cref'), …, $label_tokens)` does)
 /// avoids the round-trip entirely. Witness 1704.05859.
+///
+/// A comma inside braces is part of its label: cleveref takes each label off its stack with the delimited
+/// `\@cref@stack@top#1,#2\@nil` (cleveref.sty:388), which matches only a comma at brace depth 0, so
+/// `\Cref{claim:copy_K_{2,4}}` names the one label `\label{claim:copy_K_{2,4}}` (2304.09155). Perl's `splitLabels`
+/// (cleveref.sty.ltxml:42-45) splits the string at every comma (KPE #1173).
 fn split_label_tokens(tokens: Tokens) -> Vec<Tokens> {
   let mut groups: Vec<Tokens> = Vec::new();
   let mut cur: Vec<Token> = Vec::new();
+  let mut depth = 0usize;
   for t in tokens.unlist() {
-    if t.get_catcode() == Catcode::OTHER && t.with_str(|s| s == ",") {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ => {},
+    }
+    if depth == 0 && t.get_catcode() == Catcode::OTHER && t.with_str(|s| s == ",") {
       groups.push(Tokens::new(std::mem::take(&mut cur)));
     } else {
       cur.push(t);
