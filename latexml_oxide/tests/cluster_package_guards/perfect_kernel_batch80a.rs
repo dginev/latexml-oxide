@@ -548,3 +548,21 @@ fn eqnarray_star_label_after_the_last_row() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(xml.contains(r#"<equation labels="LABEL:c""#), "{xml}");
 }
+
+/// 80m (SYNC R4): a class preloaded (`--preload=article.cls`) leaves LaTeX's hook stack balanced — once "Extra
+/// \PopDefaultHookLabel" (the class pushed with the pre-pool `\@pushfilename`); clean since, re-verified on int101a
+/// for article, report, book, amsart and revtex4-2.
+#[test]
+fn preloaded_class_keeps_the_hook_stack() {
+  for class in ["article", "amsart"] {
+    let tex =
+      format!("\\documentclass{{{class}}}\n\\begin{{document}}\nHello.\n\\end{{document}}\n");
+    let (log, xml) = convert_files_with(&tex, &[], Some(&format!("{class}.cls")));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{class}: {log}"
+    );
+    assert!(xml.contains("Hello."), "{class}: {xml}");
+  }
+}
