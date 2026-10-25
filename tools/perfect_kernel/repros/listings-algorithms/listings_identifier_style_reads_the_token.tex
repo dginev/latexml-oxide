@@ -1,0 +1,26 @@
+% witness: 1907.13012 (paper.tex:81-93 `\idstyle` = `\expandafter\id@style\the\lst@token\relax`, colouring an
+%          identifier by its first letter; `identifierstyle=\idstyle` in its graphql language)
+% oracle:  pdflatex 0 errors: "Query" in blue, "field" and "value" in red — listings.sty:734 runs the style as markup
+%          inside `{\lst@thestyle{…}}` (:579-585) with the token's characters in `\lst@token` (:481)
+% engines: rust int94a = 6 "Attempt to close boxing group" + 2 listingline errors: `\idstyle` ends in "style", so it was
+%          taken for the name of a class `\ids` and never ran, while the `}}` the default empty identifierstyle had set
+%          stayed (listings.sty.ltxml:490-502 shares both); `\lst@token` empty (the binding never set it)
+% expect:  0 errors, 0 warnings; Query #0000FF, field and value #FF0000
+% status:  RED (int94a) -> GREEN (80b: listings_sty.rs `lst_set_class_style` + `\lst@token` around a styled word)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{listings,xcolor}
+\makeatletter
+\newcommand*\idstyle{\expandafter\id@style\the\lst@token\relax}
+\def\id@style#1#2\relax{%
+  \ifcat#1\relax\else
+    \ifnum`#1=\uccode`#1\color{blue}\else\color{red}\fi
+  \fi}
+\makeatother
+\lstset{identifierstyle=\idstyle}
+\begin{document}
+\begin{lstlisting}
+Query field = value
+\end{lstlisting}
+After.
+\end{document}

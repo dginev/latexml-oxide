@@ -887,18 +887,22 @@ fn lst_set_class_style(class: &str, style: Option<Tokens>, props: Vec<(&str, &st
   // Get or create the class entry
   if let Some(style_toks) = &style {
     let stylestring = style_toks.to_string().trim().to_string();
-    if stylestring.ends_with("style") || {
-      let re = Regex::new(r"style\d*$").unwrap();
-      re.is_match(&stylestring)
-    } {
+    // A style names another class's style only as a bare word, as listings' families do
+    // (lstmisc.sty:667 `\lst@InstallFamily k{keywords}{keywordstyle}\bfseries{keywordstyle}`); a control
+    // sequence is markup that runs, whatever its name ends in: `identifierstyle=\idstyle` (1907.13012) was taken
+    // for a class `\ids` and never ran (KPE #1169).
+    if !stylestring.contains('\\') && Regex::new(r"style\d*$").unwrap().is_match(&stylestring) {
       // If names a style, convert into indirect class reference
       let classref = Regex::new(r"style(\d*)$")
         .unwrap()
         .replace(&stylestring, "s$1")
         .to_string();
-      // remove explicit styling (begin)
+      // remove explicit styling, both ends: an `end` left from an earlier markup style closed groups no `begin`
+      // opened ("Attempt to close boxing group" after every token; KPE #1169)
       let begin_key = s!("{map_key}@{class}@begin");
       assign_value(&begin_key, Stored::None, None);
+      let end_key = s!("{map_key}@{class}@end");
+      assign_value(&end_key, Stored::None, None);
       // add indirect to class
       let class_key = s!("{map_key}@{class}@class");
       assign_value(&class_key, Stored::String(pin(&classref)), None);
@@ -2168,9 +2172,38 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>, outer_clas
 
       ctx.lsttokens.extend(pre_tokens);
       if let Some(cname) = classname {
+        // listings.sty:481 and :579-585: the token being output is in `\lst@token` (its length in `\lst@length`)
+        // while its style runs, and `\lst@ResetToken` empties both after it. A style that reads the token
+        // (`\expandafter\id@style\the\lst@token\relax`, 1907.13012's identifier colours) found it empty, so its
+        // `\relax`-delimited argument ran past the token's group ("Attempt to close boxing group").
+        let length = word.chars().count().to_string();
+        ctx.lsttokens.push(T_CS!("\\lst@token"));
+        ctx.lsttokens.push(T_BEGIN!());
+        ctx.lsttokens.extend(word.chars().map(|c| {
+          let s = c.to_string();
+          if c.is_alphabetic() {
+            T_LETTER!(&s)
+          } else {
+            T_OTHER!(&s)
+          }
+        }));
+        ctx.lsttokens.push(T_END!());
+        ctx.lsttokens.push(T_CS!("\\lst@length"));
+        ctx
+          .lsttokens
+          .extend(length.chars().map(|c| T_OTHER!(&c.to_string())));
+        ctx.lsttokens.push(T_CS!("\\relax"));
         ctx.lsttokens.extend(lst_class_begin(&cname));
         ctx.lsttokens.extend(styled_tokens);
         ctx.lsttokens.extend(lst_class_end(&cname));
+        ctx.lsttokens.extend([
+          T_CS!("\\lst@token"),
+          T_BEGIN!(),
+          T_END!(),
+          T_CS!("\\lst@length"),
+          T_OTHER!("0"),
+          T_CS!("\\relax"),
+        ]);
       } else {
         // Perl: outerclass branch — emit identifier tokens without their own
         // class wrap; they live inside the enclosing delim's wrapper.

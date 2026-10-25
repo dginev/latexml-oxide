@@ -18115,3 +18115,36 @@ number 0.", 0802.3014). Minimal trigger:
 
 Fixed in Rust (80a): sect13.rs declares only the names the format left undefined. Repro
 babel-lang/language_numbers_follow_the_format; guard `perfect_kernel_batch80a::the_format_language_numbers_stand`.
+
+## 1169. A listings style that is a macro named `…style` never runs, and leaves a stray `}`
+
+listings runs a style value as markup (listings.sty:734 `\def\lst@identifierstyle{#1}`, applied as
+`{\lst@thestyle{…}}` at :579-585); only listings' own keyword families name another style, as a bare word
+(lstmisc.sty:667 `\lst@InstallFamily k{keywords}{keywordstyle}\bfseries{keywordstyle}`). listings.sty.ltxml:490-502
+`lstSetClassStyle` takes any value whose string ends in `style` for such a name: `identifierstyle=\idstyle` becomes a
+reference to a class `\ids`, so `\idstyle` never runs, and the branch deletes the class's `begin` but not the `end` an
+earlier markup style set (the default empty `identifierstyle` gives `{`/`}`), so every identifier is followed by a
+`}` that closes a group nothing opened ("Attempt to close boxing group", the listing lines unclosed; 1907.13012: 150
+errors). Minimal trigger:
+
+```latex
+\newcommand*\idstyle{\color{blue}}
+\lstset{identifierstyle=\idstyle}
+\begin{lstlisting}
+Query field
+\end{lstlisting}       % pdflatex: blue identifiers, 0 errors; Perl: no colour, one error per identifier
+```
+
+Fixed in Rust (80b): listings_sty.rs `lst_set_class_style` takes only a bare word for a style name and clears both
+ends when it does. Repro listings-algorithms/listings_identifier_style_reads_the_token; guard
+`perfect_kernel_batch80a::a_listings_identifier_style_reads_the_token`.
+
+## 1170. `\lst@token` is empty while a listings style runs
+
+listings collects the characters of the token it outputs in `\lst@token` (listings.sty:481, a toks register, with its
+length in `\lst@length`) and runs the style around the output with that register still set; `\lst@ResetToken`
+empties it afterwards. Styles read it: 1907.13012's `\idstyle` is `\expandafter\id@style\the\lst@token\relax`, which
+colours an identifier by its first letter. The Perl binding styles each token itself and never assigns `\lst@token`,
+so `\id@style` takes the `\relax` for its first argument and reads the listing as its second, up to the next
+`\relax`. Fixed in Rust (80b): listings_sty.rs sets `\lst@token`/`\lst@length` to the word around its styled output
+and empties them after. Same repro and guard as #1169.
