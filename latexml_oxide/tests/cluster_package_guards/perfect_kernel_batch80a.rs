@@ -1,5 +1,6 @@
 //! Red/green guards for batch 80a (the hyphenation languages the format numbers keep their numbers) and 80b (a
-//! listings style that is a control sequence runs, with the token in `\lst@token`) and 80c (import.sty's path model). Each guard
+//! listings style that is a control sequence runs, with the token in `\lst@token`) and 80c (import.sty's path model) and 80d
+//! (ctable's options past a line end, subfig's `\subref`). Each guard
 //! converts its repro under `tools/perfect_kernel/repros/`, asserts the diagnostics by count and the elements.
 use latexml::util::test::convert_files_with;
 
@@ -97,4 +98,46 @@ fn a_nested_import_reads_its_files_as_import_sty_finds_them() {
     xml.contains(r#"<ref labelref="LABEL:sec:intro"/>"#),
     "{xml}"
   );
+}
+
+/// 80d: ctable.sty:206's `\newcommand{\ctable}[4][]` finds its options past spaces (`\@ifnextchar[`), so
+/// `\begin{ctable}` + a line end + `[caption=…,label=…]` keeps its caption and label. Red (int94c): the native
+/// binding's `OptionalKeyVals` stopped at the space, read `[` as the column spec ("Extra alignment tab"), and the label
+/// was lost. Witness 1706.01884. Repro package-bindings/ctable_env_options_after_a_line_end.
+#[test]
+fn a_ctable_environment_reads_its_options_after_a_line_end() {
+  let (log, xml) = convert_files_with(
+    repro!("package-bindings/ctable_env_options_after_a_line_end.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains(r#"labels="LABEL:T:res""#), "{xml}");
+  assert!(xml.contains("</tag>Results</caption>"), "{xml}");
+  assert!(xml.contains(r#"<ref labelref="LABEL:T:res"/>"#), "{xml}");
+}
+
+/// 80d: subfig's `\subref`/`\subref*` refer to the sub-float's own label, as subcaption's do. Red (int94c):
+/// `\ref{sub@<label>}` (subfig.sty.ltxml:93-94) named the `sub@` entry subfig.sty's `\label` writes, which no sub-float
+/// here carries, so every `\subref` dangled (KPE #1172). Witnesses 1802.05913, 2304.09615. Repro
+/// cross-references/subfig_subref_names_the_subfloat.
+#[test]
+fn a_subfig_subref_names_the_subfloat() {
+  let (log, xml) = convert_files_with(
+    repro!("cross-references/subfig_subref_names_the_subfloat.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for label in ["fig:l", "fig:r"] {
+    assert!(
+      xml.contains(&format!(r#"labels="LABEL:{label}""#)),
+      "{label}: {xml}"
+    );
+    assert!(
+      xml.contains(&format!(r#"<ref labelref="LABEL:{label}"/>"#)),
+      "{label}: {xml}"
+    );
+  }
+  assert!(!xml.contains("sub@"), "{xml}");
 }

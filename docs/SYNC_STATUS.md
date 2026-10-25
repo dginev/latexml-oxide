@@ -278,6 +278,12 @@ KNOWN_PERL_ERRORS cross-reference when one applies. Perl-origin defects go to `p
   6 errors → 0, lines 409-1043 back in the document). The kernel `{tabular}` reading is an OPEN_ROWS residual.
   Guards `perfect_kernel_batch69c::{eqnarray_cell_braces_balance_across_the_template,
   amsmath_aligned_cell_braces_balance_across_the_template}`.
+- **ctable's options after a line end (80d)**: our native `\ctable` (ctable_sty.rs; Perl has no binding and raw-loads
+  ctable.sty) read its options with `OptionalKeyVals`, which stops at a space, where ctable.sty:206's
+  `\newcommand{\ctable}[4][]` looks past it (`\@ifnextchar[`): `\begin{ctable}` + a line end + `[caption=…,label=…]`
+  took `[` for the column spec ("Extra alignment tab", no caption, the label lost; 1706.01884: 35 errors and 12
+  dangling `\ref` → 0). `SkipSpaces` before the options since 80d. Guard
+  `perfect_kernel_batch80a::a_ctable_environment_reads_its_options_after_a_line_end`.
 
 ## Current status
 

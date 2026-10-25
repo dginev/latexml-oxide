@@ -117,10 +117,14 @@ LoadDefinitions!({
   // \subfloat so the subfloat machinery still kicks in. Witness 2309.00194.
   DefMacro!("\\sidesubfloat", "\\subfloat");
 
-  // \subref — Perl L82-84
+  // \subref — Perl L82-84. subfig.sty:558-563 refers to the `sub@<label>` entry its `\label` writes beside
+  // `<label>` (:524-557, the sub-float number alone: "(a)", starred "a"); a sub-float here carries only `<label>`, so
+  // `\ref{sub@#1}` (Perl's, subfig.sty.ltxml:93-94) dangled, "??" for every `\subref` (KPE #1172). It refers to
+  // `<label>` itself, as subcaption's and subfigure's `\subref` do, and shows the sub-float's refnum ("1a").
+  // Witnesses 1802.05913 (98 dangling), 2304.09615.
   DefMacro!("\\subref",       "\\@ifstar\\sf@@subref\\sf@subref");
-  DefMacro!("\\sf@subref{}",  "\\ref{sub@#1}");
-  DefMacro!("\\sf@@subref{}", "\\pageref{sub@#1}");
+  DefMacro!("\\sf@subref{}",  "\\ref{#1}");
+  DefMacro!("\\sf@@subref{}", "\\ref{#1}");
 
   // Caption setup stubs — Perl L86-90
   def_macro_noop("\\DeclareCaptionListOfFormat{}{}")?;

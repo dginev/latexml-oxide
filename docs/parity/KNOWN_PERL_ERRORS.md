@@ -18163,3 +18163,21 @@ chapter is lost; the `\subimport{}{…}` statement files are not found at all (2
 dangling, every chapter gone). Fixed in Rust (80c): import_sty.rs follows import.sty's path model, and pathname.rs
 `find` skips directories as kpathsea's `READABLE` does. Repro loader/import_nested_absolute_import; guard
 `perfect_kernel_batch80a::a_nested_import_reads_its_files_as_import_sty_finds_them`.
+
+## 1172. subfig's `\subref` names a `sub@` label no sub-float carries
+
+subfig.sty:524-557 has `\label` inside a sub-float write two entries, `<label>` (the full number, "1a") and
+`sub@<label>` (the sub-float number alone: "(a)" in the reference slot, "a" in the page slot), and `\subref` /
+`\subref*` (:558-563) are `\ref{sub@#1}` / `\pageref{sub@#1}`. subfig.sty.ltxml:93-94 keeps those two definitions,
+but its sub-float carries only `<label>`, so every `\subref` dangles ("??"; 1802.05913: 98 references, 2304.09615:
+10). Minimal trigger:
+
+```latex
+\usepackage{subfig}
+\begin{figure}\subfloat[Left]{\label{fig:l}L}\caption{Pair}\end{figure}
+See \subref{fig:l}.     % pdflatex "See (a)."; Perl a dangling reference
+```
+
+Fixed in Rust (80d): subfig_sty.rs `\sf@subref` and `\sf@@subref` are `\ref{#1}`, as subcaption's and subfigure's
+`\subref` are, showing the sub-float's refnum ("1a") where subfig prints "(a)"/"a". Repro
+cross-references/subfig_subref_names_the_subfloat; guard `perfect_kernel_batch80a::a_subfig_subref_names_the_subfloat`.

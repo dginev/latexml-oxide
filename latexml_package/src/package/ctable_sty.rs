@@ -123,8 +123,13 @@ LoadDefinitions!({
     "\\leavevmode\\hbox{\\textsuperscript{\\normalfont\\textit{#1}}}\\,#2\\par"
   );
 
+  // ctable.sty:206 `\newcommand{\ctable}[4][]` looks for its options with `\@ifnextchar[`, past spaces:
+  // `\begin{ctable}` + a line end + `[caption=…,label=…]` (1706.01884) reads them. `OptionalKeyVals` alone
+  // (Perl's `ifNext`, Base_ParameterTypes.pool.ltxml:542-546) stopped at the space and took `[` for the column
+  // spec: "Extra alignment tab", no caption, the label lost. Guard
+  // `perfect_kernel_batch80a::a_ctable_environment_reads_its_options_after_a_line_end`.
   DefMacro!(
-    "\\ctable OptionalKeyVals:CT {}{}{}",
+    "\\ctable SkipSpaces OptionalKeyVals:CT {}{}{}",
     sub[(kv, cols, notes, table)] {
       let mut is_figure = false;
       let mut is_starred = false;
