@@ -8060,3 +8060,16 @@ converted): E 7,892 → 7,869, F 17 = 17, 0 worse, words +13k; 1,126 byte-identi
 (int91a → int92a, int92a → int92c). Not ours: 2402.06576, 1911.02564, 2103.08199, 1012.2852 (TL 2025's kernel `\Ref`).
 Residuals: listings' `\btHL` (2104.08012, 2006.16205), math-ph0209020 (an aux-only `\newlabel`), 0802.3014 (pretex
 macro system), plus 2410.10450 and 0705.0608 from int91.
+
+**int93 (2026-10-24, breakage hunt continued).** 79x: the native `\@ifnextchar`/`\@ifstar` let `\@let@token` to the
+peeked token as latex.ltx's `\futurelet\@let@token\@ifnch` does (sect13.rs `let_peeked_token`, KPE #1165, Perl shares
+it), and `\opt@<file>` follows a package's own `\zap@space` (content.rs `zapped_options` against the kernel copy
+`\lx@kernel@zap@space`). 79y: the balanced reader closes an argument at the v-part's `\lx@template@egroup` (eqnarray's
+and amsmath's cell braces, 69c), the align-state case of a cell `}` before an argument's `{` (tex.web §342);
+red/green rows added to the existing 69c repros at the user's request, the kernel-tabular reading left RED (array.sty
+wraps cells in `\begingroup`, where pdflatex stops too). Gates int93a and int93b 7238/7238, clippy 0, doc 0, inits 0.
+A/B int92c → int93a (1,950: 898 `\@let@token` users, the int92 set, tikz-timing, residual witnesses): E 10,677 →
+10,670, F 25 → 24, 0 worse, 1,944 byte-identical; the 6 changed: 2409.18120 (figure back), nucl-th0203047 (Fatal →
+content), four fvextra `breakautoindent` indents. A/B int93a → int93b (901 eqnarray/`{aligned}`/`{split}` users): one
+change, 0902.2869 (6 errors → 0). Nets int92c → int93b 136/136. Classified not ours: funct-an9311001, 1603.00954,
+2311.01729, 2205.00263 (stale `.bbl`).
