@@ -1,0 +1,15 @@
+% witness: 0802.3014 (its shipped languages.sty/languages.cfg check `\l@english` against 0: "Inconsistent language
+%          numbering. The language english was given number 90 during dumping, now it is given number 0.")
+% oracle:  pdflatex 0 errors: "English: 0, 2." — TeX Live's language.dat numbers `\l@english` 0, the language TeX
+%          starts in, and `\l@nohyphenation` 2
+% engines: rust int94a = "other: 90, 94." (latex_constructs re-runs `\newlanguage` over every name the format already
+%          numbered; Perl's latex_constructs.pool.ltxml:5778-5830 does the same)
+% expect:  0 errors, 0 warnings; "English: 0, 2."
+% status:  RED (int94a) -> GREEN (80a: sect13.rs declares only the languages the format left undefined)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\begin{document}
+\ifnum\language=\l@english English\else other\fi: \number\l@english,
+\number\l@nohyphenation.
+\end{document}

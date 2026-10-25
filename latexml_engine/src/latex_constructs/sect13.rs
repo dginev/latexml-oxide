@@ -1957,60 +1957,73 @@ pub(crate) fn load() -> Result<()> {
   // `latex_constructs_rust_only.rs`. Identical-body duplicate removed here.
 
   //======================================================================
-  // Perl latex_constructs.pool.ltxml L5836-5886: language declarations
+  // Perl latex_constructs.pool.ltxml:5778-5830: language declarations
   // Pre-declare hyphenation languages for babel's \iflanguage checks
   //======================================================================
-  TeX!(
-    r"\newlanguage\l@english
-\newlanguage\l@usenglishmax
-\newlanguage\l@USenglish
-\newlanguage\l@dumylang
-\newlanguage\l@nohyphenation
-\newlanguage\l@arabic
-\newlanguage\l@basque
-\newlanguage\l@bulgarian
-\newlanguage\l@coptic
-\newlanguage\l@welsh
-\newlanguage\l@czech
-\newlanguage\l@slovak
-\newlanguage\l@german
-\newlanguage\l@ngerman
-\newlanguage\l@danish
-\newlanguage\l@esperanto
-\newlanguage\l@spanish
-\newlanguage\l@catalan
-\newlanguage\l@galician
-\newlanguage\l@estonian
-\newlanguage\l@farsi
-\newlanguage\l@finnish
-\newlanguage\l@french
-\newlanguage\l@greek
-\newlanguage\l@monogreek
-\newlanguage\l@ancientgreek
-\newlanguage\l@croatian
-\newlanguage\l@hungarian
-\newlanguage\l@interlingua
-\newlanguage\l@ibycus
-\newlanguage\l@indonesian
-\newlanguage\l@icelandic
-\newlanguage\l@italian
-\newlanguage\l@latin
-\newlanguage\l@mongolian
-\newlanguage\l@dutch
-\newlanguage\l@norsk
-\newlanguage\l@polish
-\newlanguage\l@portuguese
-\newlanguage\l@pinyin
-\newlanguage\l@romanian
-\newlanguage\l@russian
-\newlanguage\l@slovenian
-\newlanguage\l@uppersorbian
-\newlanguage\l@serbian
-\newlanguage\l@swedish
-\newlanguage\l@turkish
-\newlanguage\l@ukenglish
-\newlanguage\l@ukrainiane"
-  );
+  // Perl declares these so that the `\l@<language>` names babel checks for exist ("modern pdflatex seems to come
+  // with hyphenation tables predefined for many languages"), and its `\newlanguage` runs over every name: one the
+  // format already numbered is numbered again past the format's table. The format does number them — TeX Live's
+  // language.dat read into latex.ltx gives `\l@english` 0 (the language TeX starts in, `\language` 0) and
+  // `\l@nohyphenation` 2, and the dump keeps that table — so the re-allocation made `\l@english` 90: a package
+  // comparing `\language` with `\l@english` without babel took the wrong branch, and languages.sty's check
+  // ("Inconsistent language numbering", 0802.3014) failed where pdflatex's 0 passes. Only a name the format left
+  // undefined is declared (KPE #1168).
+  for name in [
+    "english",
+    "usenglishmax",
+    "USenglish",
+    "dumylang",
+    "nohyphenation",
+    "arabic",
+    "basque",
+    "bulgarian",
+    "coptic",
+    "welsh",
+    "czech",
+    "slovak",
+    "german",
+    "ngerman",
+    "danish",
+    "esperanto",
+    "spanish",
+    "catalan",
+    "galician",
+    "estonian",
+    "farsi",
+    "finnish",
+    "french",
+    "greek",
+    "monogreek",
+    "ancientgreek",
+    "croatian",
+    "hungarian",
+    "interlingua",
+    "ibycus",
+    "indonesian",
+    "icelandic",
+    "italian",
+    "latin",
+    "mongolian",
+    "dutch",
+    "norsk",
+    "polish",
+    "portuguese",
+    "pinyin",
+    "romanian",
+    "russian",
+    "slovenian",
+    "uppersorbian",
+    "serbian",
+    "swedish",
+    "turkish",
+    "ukenglish",
+    "ukrainiane",
+  ] {
+    let cs = T_CS!(s!("\\l@{name}"));
+    if lookup_meaning(&cs).is_none() {
+      digest(Tokens!(T_CS!("\\newlanguage"), cs))?;
+    }
+  }
 
   // Perl latex_constructs: \protected@write
   DefPrimitive!("\\protected@write{Number}{}{}", sub[(_port, prelude, _tokens)] {

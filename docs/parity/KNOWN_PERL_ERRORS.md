@@ -18094,3 +18094,24 @@ Line~\ref{line:n} sets N.   % pdflatex "Line 1 sets N."
 Fixed in Rust (79z): listings_sty.rs places the escape opens first in the alternation. Repro
 listings-algorithms/listings_escapeinside_before_comment; guard
 `perfect_kernel_batch79z::an_escape_is_tried_before_a_comment_sharing_its_character`.
+
+## 1168. latex_constructs renumbers the languages the format already numbered
+
+latex.ltx reads TeX Live's language.dat when the format is built: `\l@english` is 0, the language TeX starts in
+(`\language` 0), `\l@nohyphenation` 2, and so on through the table. latex_constructs.pool.ltxml:5778-5830 declares
+49 `\l@<language>` names so that babel's checks find them, but runs `\newlanguage` over every one, including those the
+format already numbered: each is given the next free number past the format's table (`\l@english` 90). A package that
+compares `\language` with `\l@english` without babel takes the wrong branch, and languages.sty's consistency check
+fails ("Inconsistent language numbering. The language english was given number 90 during dumping, now it is given
+number 0.", 0802.3014). Minimal trigger:
+
+```latex
+\documentclass{article}
+\makeatletter
+\begin{document}
+\ifnum\language=\l@english English\else other\fi: \number\l@english   % pdflatex "English: 0"; Perl "other: 90"
+\end{document}
+```
+
+Fixed in Rust (80a): sect13.rs declares only the names the format left undefined. Repro
+babel-lang/language_numbers_follow_the_format; guard `perfect_kernel_batch80a::the_format_language_numbers_stand`.
