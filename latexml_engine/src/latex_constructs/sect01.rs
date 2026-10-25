@@ -320,6 +320,12 @@ pub(crate) fn load() -> Result<()> {
     assign_value("document:indirected", Stored::Bool(true), None);
     Ok(Vec::new())
   });
+  // `\begin{X}` took LaTeX's indirection for an environment the document declared and redefined (see `\begin`):
+  // recorded inside the group it opens, for `\end{X}` to follow.
+  DefPrimitive!("\\lx@env@indirected{}", sub[(name)] {
+    assign_value(&s!("lx@env@indirected@{}", name.to_string()), Stored::Bool(true), None);
+    Ok(Vec::new())
+  });
   DefPrimitive!("\\lx@document@direct", {
     assign_value("document:indirected", Stored::Bool(false), None);
     Ok(Vec::new())
@@ -573,6 +579,25 @@ pub(crate) fn load() -> Result<()> {
       tks.push(T_CS!("\\document"));
       return Ok(Tokens::new(tks));
     }
+    // The same indirection for an environment the document declared with `\newtheorem` (`lx@newtheorem@document@X`)
+    // and then redefined at `\X`: `\renewenvironment` (environ's `\RenewEnviron`), or a wrapper around the saved
+    // start (`\let\@lem\lem \def\lem{\@lem\label{…}}`). LaTeX's `\begin{X}` is `\begingroup\csname X\endcsname`, so the
+    // redefinition runs; the constructor ran regardless (Perl's `\begin` looks up `\begin{X}` first), and 2509.20478's
+    // `\makerestatable` never stored its restatements (three "No restatable environment" errors, five theorem labels
+    // dangling), 1502.00944's `\label` in the wrapper was lost. A `\X` still the constructor — or restored to it, an
+    // etoolbox `\csletcs` — keeps the constructor. KNOWN_PERL_ERRORS #1187; guard
+    // `perfect_kernel_batch80a::newtheorem_follows_a_redefined_start`.
+    if name != "document"
+      && has_value(&s!("lx@newtheorem@document@{name}"))
+      && is_defined(&begin_name)
+      && is_user_document_macro(&T_CS!(s!("\\{name}")), &T_CS!(begin_name.clone()))
+    {
+      let mut tks = begin_environment_by_macro(&name, env.clone())?;
+      let start = tks.pop();
+      tks.extend(Invocation!(T_CS!("\\lx@env@indirected"), vec![env]).unlist());
+      tks.extend(start);
+      return Ok(Tokens::new(tks));
+    }
     if is_defined(&begin_name) {
       let mut tks = before_opt.map(Tokens::unlist).unwrap_or_default();
       tks.extend(use_hook("before"));
@@ -689,7 +714,10 @@ pub(crate) fn load() -> Result<()> {
       }
       return Ok(Tokens::new(tks));
     }
-    if is_defined_token(&t) {
+    if name != "document" && lookup_bool(&s!("lx@env@indirected@{name}")) {
+      // the begin took LaTeX's indirection (see `\begin`): `\endX`, then the begin's group closes
+      out_tokens = end_environment_by_macro(&name);
+    } else if is_defined_token(&t) {
       // Magic CS! (its constructor fires `env/NAME/end` inside the group)
       out_tokens.push(t);
       out_tokens.extend(use_hook("after"));

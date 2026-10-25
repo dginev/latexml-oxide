@@ -1,0 +1,18 @@
+% A document builds an environment on amsmath's \collect@body (amsmath.sty:1410-1434): the body up to the
+% matching \end, nested \begin...\end counted, is handed to the macro as one argument. pdflatex: the split
+% equation (1), "See (1).", 0 errors. Witness 2305.01517 (\splitequation, 101 errors and a Fatal).
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\def\@spliteq#1{\begin{equation}\begin{split}#1\end{split}\end{equation}}
+\def\splitequation{\collect@body\@spliteq}
+\def\endsplitequation{\ignorespacesafterend}
+\makeatother
+\begin{document}
+\begin{splitequation}
+\label{eq:a}
+a &= b \\
+  &= c \begin{matrix} x & y \end{matrix}
+\end{splitequation}
+See \eqref{eq:a}.
+\end{document}

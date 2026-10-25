@@ -7,7 +7,9 @@
 //! `\newcommand`, a longtable's label key and a `\cref` list expanded, the conditional guard's Fatal salvaged), 80l
 //! (siunitx's unit commands, aa's `\longtab`, an eqnarray's trailing label), 80m (a preloaded class's hook stack) and 80n
 //! (a skipped branch ends at a column's v-part, `\maketitle` calls a redefined `\twocolumn`, acronym's protected
-//! commands), 80o (iucr.cls's `\hcaption`). Each guard converts its repro under `tools/perfect_kernel/repros/`, asserts the diagnostics by count and the elements.
+//! commands), 80o (iucr.cls's `\hcaption`), 80p (amsmath's `\collect@body`, `\everypar` ahead of a horizontal command, a
+//! redefined `\newtheorem` start). Each guard converts its repro under `tools/perfect_kernel/repros/`, asserts the
+//! diagnostics by count and the elements.
 use latexml::util::test::convert_files_with;
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -666,4 +668,66 @@ See Table~\ref{model:direct}.
   let table = xml.find(r#"labels="LABEL:model:direct""#).expect(&xml);
   assert!(xml[table..].contains("The model."), "{xml}");
   assert!(xml.contains("<caption"), "{xml}");
+}
+
+/// 80p: amsmath's `\collect@body` (amsmath.sty:1410-1434) is defined, so a document's environment built on it — the
+/// body up to the matching `\end`, nested environments counted, handed to a macro — typesets. Red (int104b): the binding
+/// (as Perl's amsmath.sty.ltxml) reads its own displays' bodies another way and never defined it, "undefined
+/// `\collect@body`", the body's `&` and `^` stray, 101 errors and a Fatal. Witness 2305.01517 (66 census papers call
+/// it). Repro package-bindings/amsmath_collect_body_builds_an_environment.
+#[test]
+fn amsmath_collect_body_builds_an_environment() {
+  let (log, xml) = convert_files_with(
+    repro!("package-bindings/amsmath_collect_body_builds_an_environment.tex"),
+    &[],
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains(r#"<equation labels="LABEL:eq:a""#), "{xml}");
+  assert!(xml.contains("<XMArray"), "{xml}");
+}
+
+/// 80p: a horizontal command met in vertical mode (`\ `, `\leavevmode`, `\hskip`, …) is backed up while `\everypar` is
+/// inserted in front of it, as a character is (tex.web §1090-1091), so a hook that opens a box for the line's material
+/// holds it. Red (int104b): the hook was digested in place, its `\hbox\bgroup` under the paragraph's mode switch — one
+/// "Attempt to close a group that switched to mode horizontal" per line (gr-qc9505014's Maple transcripts: 100 errors and
+/// a Fatal). Repro paragraph-mode/everypar_box_holds_a_line_opened_by_a_control_space.
+#[test]
+fn everypar_box_holds_a_line_opened_by_a_control_space() {
+  let (log, xml) = convert_files_with(
+    repro!("paragraph-mode/everypar_box_holds_a_line_opened_by_a_control_space.tex"),
+    &[],
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let mut at = 0;
+  for line in ["A", "B", "C", "D", "After."] {
+    at += xml[at..].find(&format!("{line}</p>")).expect(&xml);
+  }
+}
+
+/// 80p: `\begin{X}` of an environment the document declared with `\newtheorem` runs a `\X` the document then redefined,
+/// as LaTeX's `\begin` (`\begingroup\csname X\endcsname`, latex.ltx:15346-15362) does — `\renewenvironment` (environ's
+/// `\RenewEnviron`) or a wrapper around the saved start (`\let\@lem\lem \def\lem{\@lem\label{…}}`); `\end{X}` follows
+/// the same decision. Red (int104b): the theorem's constructor ran regardless, the renewal and the wrapper's `\label`
+/// lost (2509.20478: `\makerestatable` never stored its restatements, three "No restatable environment" errors and five
+/// theorem labels; 1502.00944). Repro cross-references/newtheorem_follows_a_redefined_start.
+#[test]
+fn newtheorem_follows_a_redefined_start() {
+  let (log, xml) = convert_files_with(
+    repro!("cross-references/newtheorem_follows_a_redefined_start.tex"),
+    &[],
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains("[START] x [END]"), "{xml}");
+  let lemma = xml.find(r#"labels="LABEL:lem:wrapped""#).expect(&xml);
+  assert!(
+    xml[..lemma].contains("<theorem") || xml[lemma..].contains("Wrapped."),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"<ref labelref="LABEL:lem:wrapped"/>"#),
+    "{xml}"
+  );
 }

@@ -1190,6 +1190,23 @@ LoadDefinitions!({
     egroup()?;
   });
 
+  // amsmath.sty:1410-1434, as amsmath defines it: `\collect@body\macro` hands the body up to the matching `\end` (the
+  // nested `\begin…\end` pairs counted by `\push@begins`) to `\macro` as one argument. The display environments below
+  // read their bodies their own way, so Perl's amsmath.sty.ltxml never defined it, and a document's environment built on
+  // it failed: `\def\splitequation{\collect@body\@spliteq}` (2305.01517: 101 errors, a Fatal; 66 census papers call
+  // it; KNOWN_PERL_ERRORS #1186). Guard `perfect_kernel_batch80a::amsmath_collect_body_builds_an_environment`.
+  DefRegister!("\\@envbody" => Tokens!());
+  RawTeX!(
+    r"\def\addto@envbody#1{\global\@envbody\@xp{\the\@envbody#1}}%
+\def\collect@body#1{\@envbody{\@xp#1\@xp{\the\@envbody}}\edef\process@envbody{\the\@envbody\@nx\end{\@currenvir}}%
+\@envbody\@emptytoks \def\begin@stack{b}\begingroup\@xp\let\csname\@currenvir\endcsname\collect@@body
+\edef\process@envbody{\@xp\@nx\csname\@currenvir\endcsname}\process@envbody}%
+\def\push@begins#1\begin#2{\ifx\end#2\else b\@xp\push@begins\fi}%
+\def\collect@@body#1\end#2{\edef\begin@stack{\push@begins#1\begin\end \@xp\@gobble\begin@stack}%
+\ifx\@empty\begin@stack\endgroup\@checkend{#2}\addto@envbody{#1}\else\addto@envbody{#1\end{#2}}\fi
+\process@envbody}"
+  );
+
   // amsmath's display environments read their body with `\collect@body` before typesetting it
   // (amsmath.sty:1412-1434): `\collect@@body#1\end#2` takes the body as an argument delimited by `\end`, and a
   // delimited argument that is exactly one braced group loses that group (tex.web §400, :8162-8166). So

@@ -1759,6 +1759,46 @@ fn back_input_for_new_graf(token: Token) -> bool {
   true
 }
 
+/// tex.web §1090: the commands that, met in vertical mode, are backed up while `new_graf` (§1091) puts `\everypar`
+/// in front of them, as a character is ([`back_input_for_new_graf`]) — `hskip` (`\hskip`, `\hfil`, `\hfill`, `\hss`,
+/// `\hfilneg`), `un_hbox` (`\unhbox`, `\unhcopy`, and `\leavevmode`, plain's and LaTeX's `\unhbox\voidb@x`), `vrule`,
+/// `char_num`, `accent`, `discretionary` (`\-`), `ex_space` (`\ `), `valign`, `no_boundary`. A hook that opens a box
+/// for the paragraph's material — a Maple session transcript's `\everypar{\setbox0=\hbox\bgroup}`, closed by its
+/// active end of line (`\leavevmode\egroup\box0\par`) — then holds the command too; digested in place, ahead of the
+/// command's own mode switch, it left the box's group under the paragraph's ("Attempt to close a group that switched to
+/// mode horizontal" at every line opening with a space, gr-qc9505014: 100 errors and a Fatal). `\indent`/`\noindent`
+/// (`start_par`) list their indent box first ([`enter_horizontal_listed_indent`]); math shift and the constructors keep
+/// the in-place hook ([`fire_everypar`]), as does the rule a `\leaders` reads. Matched by the definition's own name, so
+/// a `\let` copy is the same command.
+/// Guard `perfect_kernel_batch80a::everypar_box_holds_a_line_opened_by_a_control_space`.
+fn starts_new_graf(cs: &Token) -> bool {
+  lookup_string_from_sym(crate::pin!("MODE")).ends_with("vertical")
+    && cs.with_str(|name| {
+      matches!(
+        name,
+        "\\hskip"
+          | "\\hfil"
+          | "\\hfill"
+          | "\\hss"
+          | "\\hfilneg"
+          | "\\unhbox"
+          | "\\unhcopy"
+          | "\\leavevmode"
+          | "\\vrule"
+          | "\\char"
+          | "\\accent"
+          | "\\discretionary"
+          | "\\-"
+          | "\\ "
+          | "\\valign"
+          | "\\noboundary"
+      )
+    })
+    // the rule `\leaders` reads is a rule specification, not a command (tex.web §1078, §1084: `scan_box` reads it, and
+    // it starts no paragraph); `\leaders` marks it (tex_box.rs)
+    && !lookup_bool("lx@leaders@rule")
+}
+
 /// Switch to horizontal mode without stacking the mode.
 /// Can only switch from vertical|internal_vertical to horizontal.
 /// Perl: sub enterHorizontal.
@@ -4037,6 +4077,11 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
         drop(_token_guard); // expire current token via RAII
         continue;
       },
+      Some(Stored::Constructor(meaning))
+        if starts_new_graf(&meaning.get_cs()) && back_input_for_new_graf(token) =>
+      {
+        // `\hskip`, `\vrule`, `\valign`: `\everypar`, then this token again, in horizontal mode (tex.web §1090).
+      },
       Some(Stored::Constructor(meaning)) => {
         // Perl Stomach.pm L187-189: deactivate T_ALIGN to `\relax` LOCAL
         // on first non-table encounter, to prevent error flood. The
@@ -4062,6 +4107,11 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
         if !meaning.is_prefix() {
           clear_prefixes(); // Clear prefixes unless we just set one.
         }
+      },
+      Some(Stored::Primitive(meaning))
+        if starts_new_graf(&meaning.get_cs()) && back_input_for_new_graf(token) =>
+      {
+        // `\everypar`, then this token again, in horizontal mode (tex.web §1090).
       },
       Some(Stored::Primitive(meaning)) => {
         // Otherwise, a normal primitive or constructor

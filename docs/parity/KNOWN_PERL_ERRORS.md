@@ -18450,3 +18450,52 @@ two `\ref`s dangling). Minimal trigger:
 Fixed in Rust (80n): acronym_sty.rs marks the 23 `\WithSuffix` commands protected. Repro
 package-bindings/acronym_commands_pass_a_siunitx_column_whole; guard
 `perfect_kernel_batch80a::acronym_commands_pass_a_siunitx_column_whole`.
+
+## 1186. amsmath's `\collect@body` is not defined
+
+amsmath.sty:1410-1434 defines `\collect@body\macro`, which hands an environment's body up to the matching `\end` (the
+nested `\begin…\end` pairs counted by `\push@begins`) to `\macro` as one argument; amsmath's displays use it, and
+documents build environments on it (66 census papers). amsmath.sty.ltxml reads its displays' bodies its own way and
+defines none of `\collect@body`, `\collect@@body`, `\push@begins`, `\addto@envbody`, `\@envbody`, so a document's
+`\def\splitequation{\collect@body\@spliteq}` met an undefined `\collect@body` and its body's `&`, `^` and `_` ran loose
+(2305.01517: 101 errors and a Fatal, three section labels past them lost). Minimal trigger:
+
+```latex
+\documentclass{article}\usepackage{amsmath}
+\makeatletter\def\spl#1{\begin{equation}\begin{split}#1\end{split}\end{equation}}
+\def\spleq{\collect@body\spl}\def\endspleq{}\makeatother
+\begin{document}
+\begin{spleq} a &= b \\ &= c \end{spleq}
+\end{document}
+% pdflatex: one split equation, 0 errors; Perl: \collect@body undefined
+```
+
+Fixed in Rust (80p): amsmath_sty.rs defines them as amsmath.sty does. Repro
+package-bindings/amsmath_collect_body_builds_an_environment; guard
+`perfect_kernel_batch80a::amsmath_collect_body_builds_an_environment`.
+
+## 1187. `\begin{X}` ignores a redefined `\X` of a `\newtheorem` environment
+
+LaTeX's `\begin{X}` is `\begingroup\csname X\endcsname` (latex.ltx:15346-15362), so a document that declares a theorem
+with `\newtheorem` and then redefines its start runs the redefinition: `\renewenvironment{X}` (environ's `\RenewEnviron`
+is one), or a wrapper around the saved start (`\let\@X\X \def\X{\@X\label{…}}`). latex_constructs.pool.ltxml's `\begin`
+looks up the `\begin{X}` constructor `\newtheorem` defined first and runs it regardless: the renewal and anything the
+wrapper adds are lost (2509.20478: its `\makerestatable` wraps each theorem through `\RenewEnviron` into thmtools'
+`restatable`, which never ran, so `\restatetheorem` found no restatement — three `\errmessage`s, four restatements and
+five labels lost; 1502.00944: a wrapper's `\label`). Minimal trigger:
+
+```latex
+\documentclass{article}
+\newtheorem{theorem}{Theorem}
+\renewenvironment{theorem}{[START]}{[END]}
+\begin{document}
+\begin{theorem} x \end{theorem}
+\end{document}
+% pdflatex: "[START] x [END]"; Perl: Theorem 1. x
+```
+
+Fixed in Rust (80p): sect01.rs `\begin` takes LaTeX's indirection for an environment the document declared with
+`\newtheorem` (`lx@newtheorem@document@X`) whose `\X` the document redefined as a macro, recording it in the group
+(`\lx@env@indirected`) for `\end` to follow; a `\X` still the constructor, or restored to it, keeps the constructor
+(the `document` indirection of OXIDIZED_DESIGN_DIVERGENCES #232, extended). Repro
+cross-references/newtheorem_follows_a_redefined_start; guard `perfect_kernel_batch80a::newtheorem_follows_a_redefined_start`.
