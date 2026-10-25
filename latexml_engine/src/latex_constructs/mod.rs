@@ -594,9 +594,12 @@ pub fn declare_fnsymbol_title_block(class: &str, titlepage_default: Option<bool>
 /// `declare_fnsymbol_title_block`): `\thefootnote` is that one for the rest of the field, as in the class's
 /// `\maketitle` group.
 pub(crate) fn enter_title_footnotes() -> Result<()> {
+  // (the title block's contacts too — an affiliation, an address: the class prints them inside its title, under the same
+  // marks; revtex's `\affiliation{\footnotemark[2]Lab … \footnotetext[2]{\tt volkov@…}}` answers the `\author{Mikhail S.
+  // Volkov\footnotemark[2]}` above it with the same †, hep-th0302032)
   if matches!(
     lookup_string("lx_frontmatter_item").as_str(),
-    "ltx:creator" | "ltx:title" | "ltx:date"
+    "ltx:creator" | "ltx:title" | "ltx:date" | "ltx:contact"
   ) && has_meaning(&T_CS!(TITLE_THEFOOTNOTE))
   {
     let_i(&T_CS!("\\thefootnote"), &T_CS!(TITLE_THEFOOTNOTE), None);

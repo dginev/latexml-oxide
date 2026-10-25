@@ -349,7 +349,9 @@ fn footnote_environment_is_its_names_note() {
   ]);
 }
 
-/// A `\footnotetext` among revtex4-1 names (2201.11098): three authors, the note and the mark "1a" Bob Baker's.
+/// A `\footnotetext` among revtex4-1 names (2201.11098): three authors, the note and the mark "1a" Bob Baker's. The
+/// note shows no mark: revtex's front-matter mark is `\@fnsymbol` of the counter (`\frontmatter@thefootnote`), at 0
+/// nothing — was `mark="0"`, the arabic number (80t).
 #[test]
 fn revtex_footnotetext_among_names_is_the_names() {
   let xml = convert_repro!("author_revtex_footnotetext_among_names.tex");
@@ -362,7 +364,7 @@ fn revtex_footnotetext_among_names_is_the_names() {
     ),
     creator(
       false,
-      r#"Bob Baker <note mark="0" role="footnotetext" xml:id="footnotex1">On leave from Univ C, City</note> <sup xml:id="id2"><text font="italic" xml:id="id2.1">1a</text></sup>"#,
+      r#"Bob Baker <note role="footnotetext" xml:id="footnotex1">On leave from Univ C, City</note> <sup xml:id="id2"><text font="italic" xml:id="id2.1">1a</text></sup>"#,
       ""
     ),
     creator(

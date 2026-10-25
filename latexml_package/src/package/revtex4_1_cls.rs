@@ -5,7 +5,7 @@ LoadDefinitions!({
   for option in ["overload", "showpacs", "noshowpacs",
     "showkeys", "noshowkeys", "balancelastpage", "nobalancelastpage",
     "bibnotes", "nobibnotes",
-    "footinbib", "nofootinbib", "altaffilletter", "altaffilsymbol",
+    "footinbib", "nofootinbib",
     "superbib", "citeautoscript", "raggedbottom", "flushbottom",
     "tightenlines", "lengthcheck",
     "fleqn", "floats", "endfloats",
@@ -21,6 +21,15 @@ LoadDefinitions!({
   {
     DeclareOption!(*option, None);
   }
+  // The front matter's footnote marks (revtex4_support_sty.rs `\frontmatter@thefootnote`): letters under
+  // `altaffilletter`, symbols by default and under `altaffilsymbol` (revtex4-1.cls:5955-5957, revtex4.cls:3934-3937,
+  // revtex4-2.cls:5976-5978).
+  DeclareOption!("altaffilletter", {
+    assign_value("revtex@altaffilletter", true, Some(Scope::Global));
+  });
+  DeclareOption!("altaffilsymbol", {
+    assign_value("revtex@altaffilletter", false, Some(Scope::Global));
+  });
   // The options that decide whether the class prints the `\preprint` numbers (revtex4-1.cls:5856-5909, revtex4.cls
   // :3847-3892, revtex4-2.cls alike): `preprint` (and `manuscript`, `checkin`) set the preprint style, which prints
   // them unless `nopreprintnumbers`; `preprintnumbers` prints them in any style (revtex4_support_sty.rs

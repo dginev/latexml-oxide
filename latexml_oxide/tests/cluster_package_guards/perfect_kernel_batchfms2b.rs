@@ -38,8 +38,9 @@ fn creators(tex: &str, on: bool) -> Vec<String> {
   found
 }
 
-/// A footnote mark's tags as the revtex binding writes them.
-fn mark_tags(n: u32, id: &str) -> String {
+/// A footnote mark's tags as the revtex binding writes them: `n` as revtex's front matter prints it
+/// (`\frontmatter@thefootnote`, the counter's symbols: 1 `*`, 2 `†`, KNOWN_PERL_ERRORS #1189).
+fn mark_tags(n: &str, id: &str) -> String {
   format!(
     "<tags><tag>{n}</tag><tag role=\"autoref\">footnote\u{a0}{n}<text xml:id=\"{id}.1\"/></tag><tag role=\"refnum\">{n}</tag>\
      <tag role=\"typerefnum\">footnote {n}</tag></tags>"
@@ -66,7 +67,7 @@ Abstract.
 \maketitle
 Text.
 \end{document}";
-  let affiliation = |n: u32, id: &str, text: &str| {
+  let affiliation = |n: &str, id: &str, text: &str| {
     format!(
       "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><note mark=\"{n}\" role=\"footnotemark\" xml:id=\"{id}\">{}\
        </note>{text}</contact>",
@@ -77,13 +78,13 @@ Text.
     format!(
       "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Note:\u{a0}\" role=\"note\">E-mail: \
        ann.able@example.org</contact>{}{}</creator>",
-      affiliation(1, "footnotex1", "Univ A, City"),
-      affiliation(1, "footnotex2a", "Univ B, Town")
+      affiliation("*", "footnotex1", "Univ A, City"),
+      affiliation("*", "footnotex2a", "Univ B, Town")
     ),
     format!(
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Note:\u{a0}\" \
        role=\"note\">E-mail: bob.baker@example.org</contact>{}</creator>",
-      affiliation(2, "footnotex3", "Univ C, Village")
+      affiliation("†", "footnotex3", "Univ C, Village")
     ),
   ]);
   // (unset, today's reading: the writer does not run)
@@ -204,4 +205,50 @@ Text.
   holds(&on, "Ann Able", &["Univ A"], &["Univ B", "Univ C"]);
   holds(&on, "Bob Baker", &["Univ A", "Univ B"], &["Univ C"]);
   holds(&on, "Cat Cole", &["Univ A", "Univ C"], &["Univ B"]);
+}
+
+/// FM S2b r2: revtex marks its front matter's footnotes with symbols (revtex4.cls:5020-5022 `\frontmatter@thefootnote`,
+/// `\@fnsymbol` of the counter; the binding declares it the title block's), each `\author`'s note stepping the counter:
+/// the names show ∗, †, ‡, and an affiliation those symbols lead is their names' (ruling 2: a symbol line's carriers, a
+/// note's printed mark among them). Red (r1): the rehearsal began every `\author` block at the unstepped counter, all
+/// three notes showed `∗`, and no name carried a symbol: both affiliations went to the block. Witness 1608.06509.
+#[test]
+fn author_footnote_symbols_carry_their_affiliations() {
+  let tex = r"\documentclass{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able\footnote{ann@x.org}}
+\author{Bob Baker\footnote{bob@x.org}}
+\author{Cat Cole\footnote{cat@x.org}}
+\affiliation{$^{\ast, \ddagger}$ Univ A, City}
+\affiliation{$^{\dagger}$ Univ B, City}
+\maketitle
+Text.
+\end{document}
+";
+  let on = creators(tex, true);
+  assert!(on.iter().all(|c| c.contains("<personname")), "{on:#?}");
+  holds(&on, "Ann Able", &["Univ A"], &["Univ B"]);
+  holds(&on, "Bob Baker", &["Univ B"], &["Univ A"]);
+  holds(&on, "Cat Cole", &["Univ A"], &["Univ B"]);
+}
+
+/// FM S2b r2: a note's printed mark labels a name only when the name shows no mark of its own — Shukla shows `†` and
+/// his e-mail's footnote `∗` (revtex's first front-matter mark), Bera shows `†∗`: the `∗` affiliation is Bera's, Shukla
+/// keeps his `†` one alone. Red (80t before the refinement): Shukla's note mark took Bera's `∗` affiliation. Witness
+/// 2406.01694.
+#[test]
+fn a_named_mark_holder_keeps_its_note_mark_as_the_notes() {
+  let tex = r"\documentclass[aps,prd]{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Bera$^{\dagger,\ast}$, Pat Shukla$^\dagger$ \footnote{E-mail: pat@x.org}}
+\affiliation{$^\dagger$Univ P, City \\ $^\ast$Univ I, Town}
+\maketitle
+Text.
+\end{document}
+";
+  let on = creators(tex, true);
+  holds(&on, "Ann Bera", &["Univ P", "Univ I"], &[]);
+  holds(&on, "Pat Shukla", &["Univ P"], &["Univ I"]);
 }

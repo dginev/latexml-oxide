@@ -18525,3 +18525,27 @@ look-ahead) takes pdflatex's reading; a well-formed one keeps its frontmatter ma
 sectioning-frontmatter/amsart_post_title_keywords_one_brace_short; guards
 `perfect_kernel_batch80a::amsart_post_title_keywords_one_brace_short`,
 `perfect_kernel_batch79m::an_unclosed_subjclass_ends_at_the_paragraph`.
+
+## 1189. revtex's front-matter footnote marks are numbered
+
+REVTeX marks the notes of its front matter — an `\author`'s `\footnote` or `\thanks`, a title's note — with
+`\frontmatter@thefootnote`: the footnote counter's symbols (`\@fnsymbol`: ∗, †, ‡, …), its letters (`\@alph`) under the
+`altaffilletter` option (revtex4.cls:5020-5022, :3934-3937; revtex4-1.cls:3019-3022, :5955-5957; revtex4-2.cls:3040-3043,
+:5976-5978). revtex4_support.sty.ltxml numbers them as the body's notes (arabic), so the marks differ from the PDF, and
+an affiliation the authors' symbols label (`\affiliation{$^{\ast,\ddagger}$Univ A}` under three `\author{…\footnote{…}}`,
+1608.06509) matches no mark a name shows. Minimal trigger:
+
+```latex
+\documentclass{revtex4}
+\begin{document}
+\title{T}\author{Ann\footnote{ann@x.org}}\author{Bob\footnote{bob@x.org}}\maketitle
+\end{document}
+% pdflatex: "Ann∗, Bob†"; Perl: notes marked 1, 2
+```
+
+Fixed in Rust (80t): revtex4_support_sty.rs defines `\frontmatter@thefootnote` (the class options set the letter
+switch) and declares it the title block's footnote mark (`latex_constructs::TITLE_THEFOOTNOTE`); the frontmatter
+observer's rehearsal carries the footnote steps of the `\author` blocks rehearsed before while the conversion has not
+stepped the counter itself, so the names show ∗, †, ‡ as TeX steps them. Guards
+`perfect_kernel_batchfms2b::author_footnote_symbols_carry_their_affiliations`,
+`perfect_kernel_batch77n::revtex_footnotetext_among_names_is_the_names`.

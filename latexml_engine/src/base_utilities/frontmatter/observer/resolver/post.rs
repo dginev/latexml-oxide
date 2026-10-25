@@ -708,10 +708,20 @@ impl Resolver {
       // (an entry a `\footnotemark` leads answers the same print on a name: a footnote's mark, `\footnotemark[1]` or the
       // mark a `\footnote[1]` shows — `Shun'ya Mizoguchi\footnote[1]{…}` under `\affiliation{\footnotemark[1]Theory
       // Center, …}`, 1607.07280 (FM S2a.2 r7): ruling 1, the marks shown on a name are its requests)
+      // (and a footnote-symbol line's carriers are the names its symbol shows on, a note's printed mark among them
+      // (ruling 2): `\author{Sudipto Bhattacharjee\footnote{…}}` prints "Bhattacharjee∗" under revtex's symbol marks,
+      // the name `\affiliation{$^{\ast,\ddagger}$Department …}` labels, 1608.06509)
       let footnote_led = assoc.rule.split_whitespace().any(|t| t == "mark:footnote");
-      if footnote_led {
+      let symbol_labelled =
+        symbol || (!labels.is_empty() && labels.iter().all(|l| is_symbol_label(l)));
+      // (a note's mark carries a symbol line only for a name that shows no mark of its own: there the authors' footnote
+      // symbols are their labels, 1608.06509; a name showing its own marks keeps them as its requests, and its note's mark
+      // is the note's — `Pramod Shukla$^\dagger$\footnote{E-mail…}` prints "Shukla†∗", the ∗ its e-mail's, not the
+      // `{^\ast}` affiliation Swagata Bera shows, 2406.01694)
+      if footnote_led || symbol_labelled {
         for (c, mark) in &self.note_marks {
-          if labels.contains(mark) && !owners.contains(c) {
+          let carries = footnote_led || self.out.creators[*c].requests.is_empty();
+          if carries && labels.contains(mark) && !owners.contains(c) {
             owners.push(*c);
           }
         }
@@ -720,7 +730,10 @@ impl Resolver {
       // (a numbered affiliation answers no request a `\footnotemark` made: that number is its footnote's — `Kui
       // Wu\inst{3\footnotemark[1]}` is not Peking University's, `\institute`'s first entry, 2404.09857; a symbol line
       // is ruling 2's, every carrier of its character; an entry a `\footnotemark` leads is that footnote's print)
-      if !symbol && !footnote_led && matches!(assoc.role.as_str(), "affiliation" | "address") {
+      if !symbol_labelled
+        && !footnote_led
+        && matches!(assoc.role.as_str(), "affiliation" | "address")
+      {
         owners.retain(|&owner| {
           labels.iter().any(|label| {
             let asked = self.out.creators[owner]

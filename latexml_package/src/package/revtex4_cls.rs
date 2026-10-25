@@ -11,7 +11,7 @@ LoadDefinitions!({
     "overload", "showpacs", "noshowpacs",
     "showkeys", "noshowkeys", "balancelastpage", "nobalancelastpage",
     "bibnotes", "nobibnotes",
-    "footinbib", "nofootinbib", "altaffilletter", "altaffilsymbol",
+    "footinbib", "nofootinbib",
     "superbib", "citeautoscript", "raggedbottom", "flushbottom", "tightenlines",
     "lengthcheck", "fleqn", "floats", "endfloats",
     "titlepage", "notitlepage", "groupedaddress", "unsortedaddress", "runinaddress",
@@ -25,6 +25,15 @@ LoadDefinitions!({
   ].iter() {
     DeclareOption!(*option, None);
   }
+  // The front matter's footnote marks (revtex4_support_sty.rs `\frontmatter@thefootnote`): letters under
+  // `altaffilletter`, symbols by default and under `altaffilsymbol` (revtex4-1.cls:5955-5957, revtex4.cls:3934-3937,
+  // revtex4-2.cls:5976-5978).
+  DeclareOption!("altaffilletter", {
+    assign_value("revtex@altaffilletter", true, Some(Scope::Global));
+  });
+  DeclareOption!("altaffilsymbol", {
+    assign_value("revtex@altaffilletter", false, Some(Scope::Global));
+  });
   // REVTeX 4.2's `aapm` society (aapm4-2.rtx; REVTeX 4.0 has no aapm.rtx). The society and journal, which the section
   // numbers depend on (the `rmp` journal, apsrmp4-2.rtx:124-148, revtex4's rmp.rtx:113-122; `aapm`, aapm4-2.rtx:290-314;
   // PRL's and AIP `cp`'s `secnumdepth`), are read from the options as the class reads them

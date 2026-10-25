@@ -125,6 +125,16 @@ LoadDefinitions!({
   // `\author`'s optional notes, a mark shared by identical texts; documents call it for a note on several authors
   // (`\newcommand{\equalcontrib}{\frontmatter@footnote{…contributed equally…}}`, 2605.04155). Each author keeps it.
   DefMacro!("\\frontmatter@footnote{}",  "\\lx@add@contact[role=thanks]{#1}");
+  // revtex4-2.cls:3040-3043 (revtex4-1.cls:3019-3022, revtex4.cls:5020-5022): the front matter's footnote marks — the
+  // footnote counter's symbols (`\@fnsymbol`), its letters (`\@alph`) under `altaffilletter` — declared as the title
+  // block's (`latex_constructs::TITLE_THEFOOTNOTE`): the marks the notes of the authors, the title and the date show, as
+  // the PDF prints them, and the ones the frontmatter observer labels, so an affiliation the authors' footnote symbols
+  // mark finds its names (`\author{Ann\footnote{…}}` "Ann∗", `\affiliation{$^{\ast,\ddagger}$Univ A}`: 1608.06509).
+  DefMacro!("\\frontmatter@thefootnote", sub[_args] {
+    let style = if lookup_bool("revtex@altaffilletter") { "\\@alph" } else { "\\@fnsymbol" };
+    Ok(Tokens!(T_CS!(style), T_BEGIN!(), T_CS!("\\csname"), T_LETTER!("c"), T_OTHER!("@"), T_CS!("\\@mpfn"), T_CS!("\\endcsname"), T_END!()))
+  });
+  Let!("\\lx@title@thefootnote", "\\frontmatter@thefootnote");
   // revtex4-2.cls:2120/2160/2236 `\@AF@join{note}`: the join every `\email`, `\homepage`, `\thanks` and
   // `\altaffiliation` ends in (:2404-2421), dispatched to the title, author or affiliation last given. A class that
   // re-dresses `\@email` calls it directly (JASA.cls:1232-1238 `\def\@email#1#2{\endgroup\@AF@join{#1\href{mailto:#2}

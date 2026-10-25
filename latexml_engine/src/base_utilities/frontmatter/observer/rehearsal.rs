@@ -334,11 +334,21 @@ pub(in crate::base_utilities) fn rehearse<R>(
   // (read before anything is changed: the counter the bare `\footnotemark`s print from)
   let footnotes = lookup_definition(&T_CS!("\\c@footnote"))?.is_some()
     && lookup_definition(&T_CS!("\\thefootnote"))?.is_some();
-  let base = if footnotes {
+  let counter = if footnotes {
     counter_value("footnote")?.value_of()
   } else {
     0
   };
+  // (and the steps the blocks rehearsed before made, while the conversion has not stepped the counter since: notes a
+  // binding keeps as contacts — revtex's `\author{Ann\footnote{…}}`, one `\author` a block — print `\thefootnote` at
+  // the counter TeX stepped for each, ∗, †, ‡ across the authors, 1608.06509; a counter the conversion moved itself,
+  // stepped for the notes it made, starts the count afresh)
+  let carried = if footnotes && lookup_int("lx_fm_obs_counter_seen") == counter {
+    lookup_int("lx_fm_obs_steps_carried")
+  } else {
+    0
+  };
+  let base = counter + carried;
   let Some(journal) = begin_assignment_journal() else {
     return Ok(Rehearsal::Skipped(SkipReason::JournalUnavailable));
   };
@@ -410,6 +420,19 @@ pub(in crate::base_utilities) fn rehearse<R>(
   let undone = journal.rollback();
   for (flag, value) in FLAGS.iter().zip(saved) {
     assign_value(flag, value, Some(Scope::Global));
+  }
+  if footnotes {
+    let steps = carried + FOOTNOTE_STEPS.with(Cell::get);
+    assign_value(
+      "lx_fm_obs_counter_seen",
+      Stored::from(counter),
+      Some(Scope::Global),
+    );
+    assign_value(
+      "lx_fm_obs_steps_carried",
+      Stored::from(steps),
+      Some(Scope::Global),
+    );
   }
   if let Err(err) = result {
     if !undone || (resource_fatal_latched() && !resource_fatal_before && !unlatch_runaway_fatal()) {
