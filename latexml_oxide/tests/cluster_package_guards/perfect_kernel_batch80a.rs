@@ -918,3 +918,35 @@ fn revtex_marked_address_goes_by_mark() {
     "{xml}"
   );
 }
+
+/// revtex's `\altaffiliation` is its author's own (revtex4-2.cls:2420 `\@AF@join{#1#2}`, as `\email` and `\thanks`),
+/// role `altaffiliation` as aastex's binding has it, and not one of the group's affiliations: the `\affiliation` after
+/// the group still files every author of it. Red (80w): Perl's `annotate=new,role=affiliation` counted it as Ann's
+/// affiliation, and the group's run stopped before her — Ann lost Univ M (OPEN_ROWS frontmatter singleton f). Witness
+/// cond-mat0209262. Repro sectioning-frontmatter/author_revtex_altaffiliation_keeps_the_group.
+#[test]
+fn revtex_altaffiliation_keeps_the_group() {
+  let (log, xml) = convert_files_with(
+    repro!("sectioning-frontmatter/author_revtex_altaffiliation_keeps_the_group.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  let creators: Vec<&str> = xml
+    .split("<creator ")
+    .skip(1)
+    .map(|c| &c[..c.find("</creator>").expect("a closed creator")])
+    .collect();
+  assert_eq!(creators.len(), 2, "{xml}");
+  assert!(
+    creators[0]
+      .contains("<contact name=\"Also at: \" role=\"altaffiliation\">Institute X, Town</contact>")
+      && creators[0].contains("role=\"affiliation\">Univ M, City</contact>"),
+    "{xml}"
+  );
+  assert!(
+    creators[1].contains("role=\"affiliation\">Univ M, City</contact>")
+      && !creators[1].contains("Institute X"),
+    "{xml}"
+  );
+}

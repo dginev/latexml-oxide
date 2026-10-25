@@ -337,7 +337,7 @@ fn api_attributes_in_source_order() {
     .collect();
   assert_eq!(attrs, [
     "role=author,annotations=",
-    "annotate=new,role=affiliation,name=Also at ",
+    "role=altaffiliation,name=Also at ",
     "role=affiliation,annotate=run",
   ]);
 }

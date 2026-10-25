@@ -150,7 +150,13 @@ LoadDefinitions!({
   DefMacro!("\\orcid[]{}",               "\\lx@add@orcid[name={#1}]{#2}"); // ?
 
   DefMacro!("\\collaboration{}",    "\\author{#1}");
-  DefMacro!("\\altaffiliation[]{}", "\\lx@add@contact[annotate=new,role=affiliation,name={#1}]{#2}");
+  // revtex4-2.cls:2420 `\newcommand*\altaffiliation[2][]{\@AF@join{#1#2}}` (revtex4-1.cls, revtex4.cls alike): the
+  // author's own note, joined to the author last given as `\email` and `\thanks` are — not one of the group's
+  // affiliations `\affiliation` files (`\move@AU\move@AF`), so it neither reaches the authors before it nor ends the
+  // group's run: role `altaffiliation`, as aastex's binding has it. Perl's `annotate=new,role=affiliation`
+  // (revtex4_support.sty.ltxml:61) cost the author before it the group's affiliation (cond-mat0209262; 78 of 5,934
+  // revtex papers write an `\altaffiliation` inside a group).
+  DefMacro!("\\altaffiliation[]{}", "\\lx@add@contact[role=altaffiliation,name={#1}]{#2}");
 
   def_macro_noop("\\firstname")?;
   DefConstructor!("\\surname{}", "#1", enter_horizontal => true);

@@ -652,7 +652,10 @@ says otherwise.
     \altaffiliation[Also at: ]{…}\author{A. K. Geim}\affiliation{Manchester}` (cond-mat0209262) — revtex4-2.cls's
     `\affiliation` files every pending author (`\move@AU`), Dubonos and Geim, but the alt contact's role is
     `affiliation` too (Perl revtex4_support.sty.ltxml:61), so `annotate=run` stops at Dubonos, who loses Manchester.
-    Same writer off and on. A fix gives the alt contact a role or mark the run does not count.
+    Same writer off and on. FIXED 80x: role `altaffiliation`, attached to the author last given (revtex4-2.cls:2420
+    `\@AF@join`), as aastex's binding has it. CSS review (end of goal): ar5iv.css's `.ltx_role_affiliation` rules
+    (ar5iv.css:403-426, the breakout and the spacing between consecutive affiliations) do not cover
+    `.ltx_role_altaffiliation`, which aastex already emits.
   - (f) cs0204041 loads the hyperref binding twice through a local myHyperref.sty.
 - **59p class sweep** (scratch_59p/cls/, 299 classes). M3 S5 (in-place display) may subsume both:
   - (a) webquiz: a deposit dropped for showing nothing loses its paragraph end, so `\AtBeginDocument` text and the

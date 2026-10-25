@@ -18581,3 +18581,26 @@ contact of role address with no mark path: `\author{Gia Dvali$^{a,b}$, Oriol Puj
 Fixed in Rust (80v): revtex4_support_sty.rs defines `\address` as the class does (its marked lines go by mark, as
 `\affiliation`'s); revtex3_support_sty.rs keeps REVTeX 3's own `\address` (role address, the group rule). Repro
 sectioning-frontmatter/author_revtex_marked_address_by_mark; guard `perfect_kernel_batch80a::revtex_marked_address_goes_by_mark`.
+
+## 1191. revtex's `\altaffiliation` is read as one of the group's affiliations
+
+revtex4_support.sty.ltxml:61 maps `\altaffiliation[]{}` to `\lx@add@contact[annotate=new,role=affiliation,name={#1}]`.
+revtex4-2.cls:2420 (revtex4-1.cls, revtex4.cls alike) defines it as `\@AF@join{#1#2}`, the join `\email`, `\homepage`
+and `\thanks` end in: the author's own note, joined to the author last given, never filed with the group's
+affiliations (`\affiliation`'s `\move@AU\move@AF`). As a role-`affiliation` contact under `annotate=new` it reaches
+every author before it that has none yet, and it counts as its author's affiliation, so the group's `\affiliation`
+after it stops short of that author. 78 of 5,934 revtex papers write an `\altaffiliation` inside an author group.
+Minimal trigger:
+
+```latex
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}\author{Ann}\altaffiliation[Also at ]{Inst X}\author{Bob}\affiliation{Univ M}\maketitle
+\end{document}
+% pdflatex: "Ann* and Bob" over Univ M, footnote "*Also at Inst X"; Perl: Ann holds Inst X only, Bob Univ M
+```
+
+Fixed in Rust (80x): revtex4_support_sty.rs gives `\altaffiliation` role `altaffiliation` (aastex's binding's, Perl
+aas_support.sty.ltxml:133) on the author last given. Witness cond-mat0209262. Repro
+sectioning-frontmatter/author_revtex_altaffiliation_keeps_the_group; guard
+`perfect_kernel_batch80a::revtex_altaffiliation_keeps_the_group`.

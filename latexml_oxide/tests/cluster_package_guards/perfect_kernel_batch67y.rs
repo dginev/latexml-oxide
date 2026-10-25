@@ -93,7 +93,7 @@ fn revtex4_2_class_internals_are_defined() {
   let xml = clean!("class-bindings/revtex4_2_class_internals.tex");
   assert!(
     xml.contains(
-      r#"<contact name="Affiliation: " role="affiliation">Univ</contact> <contact name="Affiliation: " role="affiliation">Elsewhere</contact>"#
+      r#"<contact name="Affiliation: " role="affiliation">Univ</contact> <contact name="Alternate Affiliation: " role="altaffiliation">Elsewhere</contact>"#
     ),
     "{xml}"
   );

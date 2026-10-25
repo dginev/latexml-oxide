@@ -1,0 +1,16 @@
+% revtex4-2.cls:2420 `\newcommand*\altaffiliation[2][]{\@AF@join{#1#2}}`: an alternate affiliation is the author's own
+% note, joined to the author last given as `\email` and `\thanks` are, not one of the group's affiliations that
+% `\affiliation` files (`\move@AU\move@AF`). pdflatex: "Ann Able* and Bob Baker" over Univ M, the footnote "*Also at:
+% Institute X". Red: Perl's `\lx@add@contact[annotate=new,role=affiliation]` counted it as Ann's affiliation, so the
+% group's `\affiliation` run stopped before her: Ann lost Univ M. Witness cond-mat0209262.
+\documentclass[aps,prb]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\altaffiliation[Also at: ]{Institute X, Town}
+\author{Bob Baker}
+\email{bob@x.org}
+\affiliation{Univ M, City}
+\maketitle
+Text.
+\end{document}
