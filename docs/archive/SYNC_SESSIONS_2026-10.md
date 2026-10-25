@@ -8107,3 +8107,14 @@ Gates int95a 7245/7245, int95b 7246/7246, clippy 0, doc 0, inits 0. A/B int94c �
 subfig/ctable census papers with all 85 `\subref` and 60 ctable users, 141 `\import` users, witnesses): E 3,300 →
 3,257, F 14 = 14, 0 worse; 53 byte-changed, all fixes — 49 papers' `sub@` references (A) resolved (B: none left),
 1006.5793 and 1706.01884 ctable, 1409.7023 and 1605.04692 the bare-name import. Nets int94c → int95b 136/136.
+
+**int96 (2026-10-24; 80f → 19882e0589).** The brk94 tail read in full (OPEN_ROWS § "Breakage residuals"): of the 49
+UNDEF papers four more were ours, the rest a key no `\label`/`\bibitem` of the document holds. 80f: cleveref splits a
+label list at brace depth 0, as its delimited `\@cref@stack@top#1,#2\@nil` does (KPE #1173; 2304.09155's
+`\Cref{claim:copy_K_{2,4}}`), and subeqnarray's `\slabel` is the row's `\label` — the raw definition only writes to
+the aux file (KPE #1174; 1612.09273, "See (1a) and 1b." as pdflatex). Gates int96a 7248/7248, clippy 0, doc 0, inits 0.
+A/B int95b → int96a over popint96a (734: 700 cleveref and all 34 subeqnarray census papers, witnesses): E 2,938 =
+2,938, F 6 = 6, 0 worse; 6 byte-changed — the two witnesses, three subeqnarray papers whose rows now carry their
+`\slabel` labels (0909.3056, 1507.02405, 1611.06697), and 1802.10440, whose `\includegraphics{log}` lists the A/B
+workdir's own `log.A`/`log.B` (a harness artifact). Nets int95b → int96a 136/136. Left: `\pageref{LastPage}` (page
+furniture; lastpage.sty's `LastPage` against the bindings' `lastpage`).
