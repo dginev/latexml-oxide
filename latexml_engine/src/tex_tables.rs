@@ -1601,7 +1601,24 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
     let last_is_end = last_token.as_ref().map(is_right_brace).unwrap_or(false)
       || last_token == Some(T_CS!("\\lx@close@alignment"));
     if last_token.is_none() || last_is_end {
-      expire_local_box_list();
+      // Material between the last row and the alignment's end — a `\label` after the final `\\` (`… \\ \label{c}
+      // \end{eqnarray*}`, 1206.1393, where `\eqnarray` set `\@currentlabel` and pdflatex resolves it) — has no next
+      // cell to carry it: the row above keeps what must reach the document (`alignmentPreserve`), as `\noalign`
+      // material after the last row stays in the list after it. Perl drops it (KNOWN_PERL_ERRORS #1182).
+      let trailing: Vec<Digested> = expire_local_box_list()
+        .into_iter()
+        .filter(|item| item.get_property_bool("alignmentPreserve"))
+        .collect();
+      if !trailing.is_empty()
+        && let Some(row) = alignment
+          .borrow_mut()
+          .rows_mut()
+          .iter_mut()
+          .rev()
+          .find(|row| !row.is_pseudo())
+      {
+        row.after.extend(trailing);
+      }
       return Ok((None, last_token, None, false));
     }
     // Next column, unless spanning (then combine columns)

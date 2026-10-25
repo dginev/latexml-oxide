@@ -492,3 +492,59 @@ fn iflimit_fatal_keeps_the_document_before_it() {
     "the level the loop ran in is kept: {xml}"
   );
 }
+
+/// 80l: siunitx's unit commands are its own business: a name siunitx never declared (`\yb`, version-1 only) stays
+/// undefined, its own free ones are `\protected` `\ERROR` from `\begin{document}`. Red (int100c): `\DeclareSIUnit` let
+/// every declared one `\relax` (KNOWN_PERL_ERRORS #1181), and tikz's math library read `\tikzmath{\yb = 0.6;}` as
+/// the keyword `\yb` (1,001 errors). Witness 2409.01115. Repro
+/// package-bindings/siunitx_unit_commands_stay_undefined_outside_units.
+#[test]
+fn siunitx_unit_commands_stay_undefined_outside_units() {
+  let (log, xml) = convert_files_with(
+    repro!("package-bindings/siunitx_unit_commands_stay_undefined_outside_units.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains(r#"<p xml:id="p1.1">B. D."#),
+    "\\yb undefined, \\metre defined: {xml}"
+  );
+  assert!(xml.contains("<picture") && xml.contains("km"), "{xml}");
+}
+
+/// 80l: aa.cls v9.1's `\longtab[opt]{body}` keeps its body, where the older classes' `\longtab{N}{body}` drops the
+/// number. Red (int100c): the binding gobbled the first argument, the v9.1 body, and the table with its label was lost
+/// (1811.02197). Repro class-bindings/aa_v9_longtab_keeps_its_body.
+#[test]
+fn aa_v9_longtab_keeps_its_body() {
+  let (log, xml) = convert_files_with(
+    repro!("class-bindings/aa_v9_longtab_keeps_its_body.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for label in ["tab:new", "tab:old"] {
+    assert!(
+      xml.contains(&format!(r#"labels="LABEL:{label}""#)),
+      "{label}: {xml}"
+    );
+  }
+  for cell in ["a", "b", "c", "d"] {
+    assert!(xml.contains(&format!(">{cell}</td>")), "{cell}: {xml}");
+  }
+}
+
+/// 80l: a `\label` after an alignment's last row (`… \\ \label{c} \end{eqnarray*}`) labels that row, as `\eqnarray` set
+/// `\@currentlabel` and pdflatex resolves it. Red (int100c): its `\lx@hidden@noalign` had no next cell to carry it and
+/// was dropped (KNOWN_PERL_ERRORS #1182; 1206.1393). Repro cross-references/eqnarray_star_label_after_the_last_row.
+#[test]
+fn eqnarray_star_label_after_the_last_row() {
+  let (log, xml) = convert_files_with(
+    repro!("cross-references/eqnarray_star_label_after_the_last_row.tex"),
+    &[],
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains(r#"<equation labels="LABEL:c""#), "{xml}");
+}

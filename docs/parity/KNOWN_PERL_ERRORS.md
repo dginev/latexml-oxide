@@ -18335,3 +18335,50 @@ See \cref{\pair}.
 
 Fixed in Rust (80k): cleveref_sty.rs `split_label_tokens` expands the list before splitting it. Repro
 cross-references/cleveref_label_list_is_expanded; guard `perfect_kernel_batch80a::cleveref_label_list_is_expanded`.
+
+## 1181. siunitx's `\DeclareSIUnit` lets the unit's command `\relax` at once
+
+siunitx keeps a unit's definition to its unit arguments: `\__siunitx_unit_set_symbolic:Nnnn` stores it as
+`\__siunitx_unit_<name>:w` (siunitx.sty:6620-6631), which `\unit`/`\qty` map their argument through. Only at
+`\begin{document}` does `\siunitx_command_create:` give the commands the document leaves free a meaning — the
+`free-standing-units` ones their units, every other one `\protected` `\ERROR` (siunitx.sty:8369-8378) — so a name siunitx
+never declared stays undefined (`\yb`, yoctobarn, is siunitx-version-1.cfg's only). siunitx.sty.ltxml:1352 lets every
+declared command `\relax` at declaration (`Let($cs, T_CS('\relax')) unless LookupMeaning($cs)`): `free-standing-units`
+with `overwrite-functions=false` (`six_enableUnitMacros`, which skips defined commands) never replaces the placeholders,
+and a binding that declares more units than siunitx (ours declares the version-1 ones always) defines them in every
+document: tikz's math library, which takes a defined non-macro for a keyword, builds
+`\csname tikz@math@process@keyword@\yb…` from `\tikzmath{\yb = 0.6;}` (2409.01115: 1,001 errors, Fatal). Minimal
+trigger:
+
+```latex
+\documentclass{article}\usepackage{siunitx}
+\begin{document}
+\ifdefined\yb A\else B\fi \meaning\metre
+\end{document}
+% pdflatex: "B \protected macro:->\ERROR"; Perl: \metre and (with the version-1 units) \yb are \relax
+```
+
+Fixed in Rust (80l): siunitx_sty.rs's declarations leave the command alone, `\lx@six@initialize` makes the free ones of
+siunitx's own declarations `\protected` `\ERROR` after the free-standing units (`six_command_create`), and an `s`
+column's expanding read lets the still-undefined ones `\relax` for its duration (`read_si_unit_cell`). Repro
+package-bindings/siunitx_unit_commands_stay_undefined_outside_units; guard
+`perfect_kernel_batch80a::siunitx_unit_commands_stay_undefined_outside_units`.
+
+## 1182. A `\label` after an alignment's last row is dropped
+
+In an `eqnarray`-family display LaTeXML routes `\label` through `\lx@hidden@noalign`, material between rows that the
+next cell carries to its row. After the final `\\` there is no next cell: `\end{eqnarray*}` ends the alignment while
+the column scan holds the hidden noalign in its list, and TeX_Tables.pool.ltxml:396-401 (`digestAlignmentColumn`)
+returns without it. LaTeX's `\eqnarray` stepped the counter and set `\@currentlabel` at its start, starred or not
+(latex.ltx:15750-15753, :15798), so pdflatex resolves the label (1206.1393: two `(\ref{c})` dangling). Minimal trigger:
+
+```latex
+\begin{eqnarray*} z &=& 3 \\ \label{c} \end{eqnarray*}
+See \ref{c}.
+% pdflatex: "See 1."; Perl: the label lost
+```
+
+Fixed in Rust (80l): tex_tables.rs `digest_alignment_column` keeps the trailing material that must reach the document
+(`alignmentPreserve`) on the last row's after-list, absorbed in that row's equation. Repro
+cross-references/eqnarray_star_label_after_the_last_row; guard
+`perfect_kernel_batch80a::eqnarray_star_label_after_the_last_row`.

@@ -2736,37 +2736,91 @@ fn decode_unit_defn_from_encoded_sym(
   Some(defn)
 }
 
-/// Perl: six_enableUnitMacros — let each unit CS point to its lx@six@ implementation
-pub(crate) fn six_enable_unit_macros(overwrite: bool) {
+/// Each declared unit, prefix, qualifier and power name (`register_unit_macro_name`).
+fn for_each_unit_macro_name(mut f: impl FnMut(&str)) {
   // with_value avoids the Stored::String envelope clone; we only need
   // the inner SymStr stringified for iteration.
   let names_str = with_value("siunitx_macro_names", |v| match v {
     Some(Stored::String(s)) => with(*s, |s| s.to_string()),
     _ => String::new(),
   });
-  for name in names_str.split(',') {
-    if name.is_empty() {
-      continue;
-    }
+  for name in names_str.split(',').filter(|name| !name.is_empty()) {
+    f(name);
+  }
+}
+
+/// Perl: six_enableUnitMacros — let each unit CS point to its lx@six@ implementation
+pub(crate) fn six_enable_unit_macros(overwrite: bool) {
+  for_each_unit_macro_name(|name| {
     let cs = T_CS!(&format!("\\{name}"));
     let impl_cs = T_CS!(&format!("\\lx@six@{name}"));
     if overwrite || !has_meaning(&cs) {
       let_i(&cs, &impl_cs, None);
     }
+  });
+}
+
+/// The `s` column's cell, read with expansion (`read_si_cell`, Perl's `XUntil`) while each unit command still undefined
+/// is `\relax`: the cell's unit names are mapped in afterwards, where the expanding read would take an undefined one for
+/// an error. siunitx's own commands are `\protected` by then (`six_command_create`) and pass through; this covers the
+/// version-1 units declared beside them, which stay undefined outside the read.
+fn read_si_unit_cell() -> Result<Tokens> {
+  push_frame();
+  for_each_unit_macro_name(|name| {
+    let cs = T_CS!(&format!("\\{name}"));
+    if !has_meaning(&cs) {
+      let_i(&cs, &T_CS!("\\relax"), None);
+    }
+  });
+  let cell = read_si_cell();
+  pop_frame()?;
+  cell
+}
+
+/// Register a unit macro name for six_enableUnitMacros, and for `six_command_create` unless it is one of the
+/// version-1 units this binding declares beside siunitx's own (`lx@six@surplus@units`).
+fn register_unit_macro_name(name: &str) {
+  append_name_list("siunitx_macro_names", name);
+  if !lookup_bool("lx@six@surplus@units") {
+    append_name_list("siunitx_command_names", name);
   }
 }
 
-/// Register a unit macro name for six_enableUnitMacros
-fn register_unit_macro_name(name: &str) {
-  let existing = with_value("siunitx_macro_names", |v| {
-    v.map(|s| s.to_string()).unwrap_or_default()
-  });
+fn append_name_list(key: &str, name: &str) {
+  let existing = with_value(key, |v| v.map(|s| s.to_string()).unwrap_or_default());
   let new = if existing.is_empty() {
     name.to_string()
   } else {
     format!("{existing},{name}")
   };
-  assign_value("siunitx_macro_names", Stored::from(new), None);
+  assign_value(key, Stored::from(new), None);
+}
+
+/// siunitx.sty:8369-8378 `\siunitx_command_create:` (`\AtBeginDocument`): each unit, prefix, power and qualifier
+/// siunitx declared whose command the document leaves free (`\cs_if_free:N`, LaTeX's `\@ifundefined`) becomes
+/// `\protected` and means `\ERROR` — an error where it is used outside a unit argument, and a protected macro to an
+/// alignment's look-ahead and an expanding read (an `s` column's cell). The version-1 units declared here beside
+/// siunitx's own stay undefined: `\tikzmath{\yb = .6;}` assigns a variable (2409.01115).
+fn six_command_create() -> Result<()> {
+  let names = with_value("siunitx_command_names", |v| {
+    v.map(|s| s.to_string()).unwrap_or_default()
+  });
+  let relax = T_CS!("\\relax");
+  for name in names.split(',').filter(|name| !name.is_empty()) {
+    let cs = T_CS!(&format!("\\{name}"));
+    if has_meaning(&cs) && !x_equals(&cs, &relax) {
+      continue;
+    }
+    let mut error = Expandable::new(
+      cs,
+      None,
+      Some(ExpansionBody::Tokens(Tokens!(T_CS!("\\ERROR")))),
+      None,
+    )?;
+    error.is_protected = true;
+    install_definition(error, None);
+  }
+  Ok(())
 }
 
 /// Define a macro dynamically (CS, no params, expansion tokens)
@@ -2894,10 +2948,8 @@ fn declare_si_power(cs: &Token, power: &Tokens, kind: &str) -> Result<()> {
     T_CS!(&format!("\\lx@six@{name}")),
     make_unitobject_expansion(&name),
   )?;
-  // Let \cs = \relax if not yet defined (prevents "undefined" errors)
-  if !has_meaning(cs) {
-    let_i(cs, &T_CS!("\\relax"), None);
-  }
+  // The command itself is left alone: siunitx's unit commands mean something only inside a unit argument
+  // (`six_enable_unit_macros`); see `\DeclareSIUnit`.
   Ok(())
 }
 
@@ -3147,6 +3199,7 @@ LoadDefinitions!({
     if six_get_bool_sym(six_pin!("free-standing-units")) {
       six_enable_unit_macros(six_get_bool_sym(six_pin!("overwrite-functions")));
     }
+    six_command_create()?;
   });
 
   at_begin_document(TokenizeInternal!(r"\lx@six@initialize"))?;
@@ -3262,10 +3315,14 @@ LoadDefinitions!({
     // Perl L1350-1351: Uses collapsible form to enable alias resolution
     define_macro_simple(T_CS!(&newcs_name), make_collapsible_expansion(&name, &presentation))?;
 
-    // Let \cs = \relax if not yet defined
-    if !has_meaning(&cs) {
-      let_i(&cs, &T_CS!("\\relax"), None);
-    }
+    // The unit's command is not defined here: siunitx keeps a unit to its unit arguments (siunitx.sty:6620-6631
+    // `\__siunitx_unit_set_symbolic:Nnnn` stores it as `\__siunitx_unit_<name>:w`, which `\unit` maps its argument
+    // through), `free-standing-units` defines the commands the document leaves free (`six_enable_unit_macros`), and
+    // `\begin{document}` makes the rest `\protected` `\ERROR` (`six_command_create`). Perl lets an undefined one
+    // `\relax` at once (siunitx.sty.ltxml:1352, KNOWN_PERL_ERRORS #1181), so free-standing units never replaced the
+    // placeholders, and this binding's version-1 units (`\yb`, siunitx-version-1.cfg only) were defined in every
+    // document: tikz's math library, which takes a defined non-macro for a keyword, read 2409.01115's
+    // `\tikzmath{… \yb = .6;}` as the keyword `\yb` (1,001 errors).
   });
 
   // \DeclareSIPrefix [kv] \cs {presentation} {power}
@@ -3285,9 +3342,7 @@ LoadDefinitions!({
 
     // Perl L1264: Uses collapsible form for prefix declarations
     define_macro_simple(T_CS!(&newcs_name), make_collapsible_expansion(&name, &presentation))?;
-    if !has_meaning(&cs) {
-      let_i(&cs, &T_CS!("\\relax"), None);
-    }
+    // (the command itself is left alone, as for `\DeclareSIUnit`)
   });
 
   // \DeclareSIPrePower [kv] \cs {power}
@@ -3344,9 +3399,7 @@ LoadDefinitions!({
     register_unit_macro_name(&name);
 
     define_macro_simple(T_CS!(&newcs_name), make_unitobject_expansion(&name))?;
-    if !has_meaning(&cs) {
-      let_i(&cs, &T_CS!("\\relax"), None);
-    }
+    // (the command itself is left alone, as for `\DeclareSIUnit`)
   });
 
   // \DeclareBinaryPrefix [kv] \cs {presentation} {power}
@@ -3364,9 +3417,7 @@ LoadDefinitions!({
     register_unit_macro_name(&name);
 
     define_macro_simple(T_CS!(&newcs_name), make_unitobject_expansion(&name))?;
-    if !has_meaning(&cs) {
-      let_i(&cs, &T_CS!("\\relax"), None);
-    }
+    // (the command itself is left alone, as for `\DeclareSIUnit`)
   });
 
   //======================================================================
@@ -3795,7 +3846,7 @@ LoadDefinitions!({
   // wraps the whole cell (Perl L1479-1481: `{\color{c} pre result post }`).
   DefMacro!("\\lx@si@column@parse", sub[_args] {
     use latexml_core::token::Catcode;
-    let mut tokens: Vec<Token> = read_si_cell()?.unlist();
+    let mut tokens: Vec<Token> = read_si_unit_cell()?.unlist();
     let color = six_get_tokens_sym(six_pin!("color"));
     let mut pre: Vec<Token> = Vec::new();
     loop {
@@ -4252,7 +4303,8 @@ LoadDefinitions!({
   // picm, micm, Sec, mics, cmc, cubiccentimetre, cubicdecimetre, etc.).
   // We always declare them — the names don't conflict with v3's
   // DeclareSIUnit set above, so the cost is just a few extra entries.
-  // Driver: 2007.02084 \cubiccentimetre R=1 → R=0.
+  // Driver: 2007.02084 \cubiccentimetre R=1 → R=0. Their commands are not siunitx's (`six_command_create`).
+  assign_value("lx@six@surplus@units", true, None);
   RawTeX!(r#"
 \DeclareSIUnit \BAR        { \bar }
 \DeclareSIUnit \bbar       { \bar }
@@ -4314,6 +4366,7 @@ LoadDefinitions!({
 \DeclareSIUnit \zeptobarn  { \zepto \barn }
 \DeclareSIUnit \yoctobarn  { \yocto \barn }
 "#);
+  assign_value("lx@six@surplus@units", false, None);
 
   DefMacro!("\\highlight{}", "#1");
   DefMacro!("\\of{}", "(#1)");

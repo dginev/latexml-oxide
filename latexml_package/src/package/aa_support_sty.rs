@@ -263,11 +263,23 @@ LoadDefinitions!({
   // it calls `\longtab` (latex.ltx:15371-15377). No DefEnvironment: it trips the
   // mode-switch on `\end{...}` matching. Guard:
   // `perfect_kernel_batch65::aa_longtab_environment_wraps_its_longtable`.
+  // aa.cls v9.1 (2016) :1280-1286 takes `\newcommand\longtab[2][]` — `[opt]{body}`, the body set at the document's end
+  // (`\aalongfloat`) — where the older classes' first argument is the table's number: a digits-only first argument is
+  // that number, dropped, any other is the body, set here. Gobbling it lost the whole table (1811.02197's three
+  // `\longtab{\begin{landscape}…}` tables, their `\label`s dangling). Guard:
+  // `perfect_kernel_batch80a::aa_v9_longtab_keeps_its_body`.
   DefMacro!("\\longtab", sub[_args] {
     if Expand!(T_CS!("\\@currenvir")).to_string() == "longtab" {
-      vec![]
+      return Ok(Tokens::new(vec![]));
+    }
+    let optional = read_optional(None)?;
+    let first = read_arg(ExpansionLevel::Off)?;
+    let text = first.to_string();
+    let number = !text.trim().is_empty() && text.trim().chars().all(|c| c.is_ascii_digit());
+    if number && optional.is_none() {
+      Ok(Tokens::new(vec![]))
     } else {
-      vec![T_CS!("\\@gobble")]
+      Ok(first)
     }
   });
   DefMacro!("\\endlongtab", "");
