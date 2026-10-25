@@ -18051,3 +18051,46 @@ rest of the paper lost; 2409.18120). Minimal trigger:
 Fixed in Rust (79x): sect13.rs `let_peeked_token` lets `\@let@token` to the peeked token in both native peeks. Repro
 macro-state/ifnextchar_leaves_the_next_token_in_let_token; guard
 `perfect_kernel_batch79x::ifnextchar_leaves_the_next_token_in_let_token`.
+
+## 1166. A listings markup style has no group of its own
+
+listings.sty:579-585 `\lst@OutputToken` sets each output unit as `{\lst@thestyle{…}}`: the style runs inside a group
+and the unit is the brace group after it. The "btHL" highlighting idiom relies on both braces:
+`moredelim=**[is][\btHL]{`}{`}` with `\btHL` = `\begin{btHighlight}\bgroup\aftergroup\bt@HL@endenv`, where the `}`
+closing the style's argument ends the `lrbox` and draws the highlight. listings.sty.ltxml:490-502
+`lstSetClassStyle` gives a markup style `<style>{` … `}`, and :596-611 `lstAddDelimiter` prepends the bare style to
+the open delimiter: the highlight box is never closed ("Attempt to close a group that switched to mode
+restricted_horizontal", "\hbox Attempt to end mode"), the box swallows the rest of the listing and later
+`\label`s are lost (2006.16205: 46 errors, 2 dangling references; 2104.08012). Minimal trigger: the btHL definitions of
+repro listings-algorithms/listings_bthl_delimiter_style_group with
+
+```latex
+\lstset{moredelim=**[is][\btHL]{`}{`}}
+\begin{lstlisting}
+int x = `highlighted` + 1;
+\end{lstlisting}
+```
+
+Fixed in Rust (79z): listings_sty.rs `lst_set_class_style` and `lst_add_delimiter` open a markup style as
+`{<style>{` and close it with `}}`. Guard `perfect_kernel_batch79z::a_bthl_delimiter_style_closes_its_box`.
+
+## 1167. A listings escape loses to a comment sharing its first character
+
+listings chains each delimiter onto the meaning its first character already had (lstmisc.sty `\lst@DefDelimB`), and
+the escape is installed last, by the `SelectCharTable` hook (lstmisc.sty:337-347 `\lst@DefEsc`), so it is tested
+before the language's delimiters: `escapeinside={\#*}{*}` under `language=python` runs `#*\label{line:n}*` as TeX.
+listings.sty.ltxml:1288 builds the delimiter alternation from the delimiter keys sorted lexically, so `#` (Python's
+comment) precedes `#*` and wins: the line prints `#*\label{line:n}*` as a comment, the label is never made and every
+`\ref` to it dangles (2104.08012: 6 line labels). Minimal trigger:
+
+```latex
+\lstset{language=python,numbers=left,escapeinside={\#*}{*}}
+\begin{lstlisting}
+N = 32 #*\label{line:n}*
+\end{lstlisting}
+Line~\ref{line:n} sets N.   % pdflatex "Line 1 sets N."
+```
+
+Fixed in Rust (79z): listings_sty.rs places the escape opens first in the alternation. Repro
+listings-algorithms/listings_escapeinside_before_comment; guard
+`perfect_kernel_batch79z::an_escape_is_tried_before_a_comment_sharing_its_character`.

@@ -1,0 +1,21 @@
+% witness: 2104.08012 (paper.tex:47 `escapeinside={\#*}{*}`, :246 `` `fs*degree = 3` #*\label{line:degree}* ``
+%          under `language=python`, :494 "line \ref{line:degree}")
+% oracle:  pdflatex 0 errors: the escape (lstmisc.sty:337-347 `\lst@DefEsc`, installed after the language's
+%          comment delimiters) is tested before Python's `#` comment, so `#*\label{line:n}*` labels line 1:
+%          "Line 1 sets N."
+% engines: rust int93b = the line printed as a comment `N = 32 #*\label{line:n}*`, the label never made, the
+%          reference dangling (the delimiter alternation sorted lexically puts `#` before `#*`; Perl's
+%          listings.sty.ltxml:1288 sorts the same way)
+% expect:  0 errors, 0 warnings; no `\label` text in the listing; line 1 labelled `line:n` and the reference to it
+% status:  RED (int93b) -> GREEN (79z: listings_sty.rs escapes before the other delimiters)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{listings}
+\lstset{language=python,numbers=left,escapeinside={\#*}{*}}
+\begin{document}
+\begin{lstlisting}
+N = 32 #*\label{line:n}*
+x = 1  # a comment
+\end{lstlisting}
+Line~\ref{line:n} sets N.
+\end{document}

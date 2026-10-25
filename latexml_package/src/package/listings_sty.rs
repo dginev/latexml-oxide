@@ -903,20 +903,28 @@ fn lst_set_class_style(class: &str, style: Option<Tokens>, props: Vec<(&str, &st
       let class_key = s!("{map_key}@{class}@class");
       assign_value(&class_key, Stored::String(pin(&classref)), None);
     } else {
-      // Otherwise, it's presumably TeX styling.
-      // Perl #2819: wrap the styling in a brace group —
-      //   begin => Tokens($style, T_BEGIN); end => T_END
-      // so a multi-token style (e.g. `\bfseries\underbar`) applies to the whole
-      // class content as a group, not just the first token. The matching T_END
-      // is collected by `lst_class_end` (which now walks the full class chain).
+      // Otherwise, it's presumably TeX styling, applied as listings.sty:579-585
+      // `\lst@OutputToken` does: `{\lst@thestyle{…output…}}`. The inner brace
+      // group is the argument of a style whose last macro takes one
+      // (`\bfseries\underbar`, Perl #2819 `Tokens($style, T_BEGIN)`); the outer
+      // one closes a group the style itself opens: the btHL idiom
+      // `\begin{btHighlight}\bgroup\aftergroup\bt@HL@endenv` is closed by the
+      // `}` after the argument, which ends the highlight box (2006.16205,
+      // 2104.08012; Perl's `begin` lacks the outer `{`, KPE #1166). The matching
+      // `}}` is collected by `lst_class_end` (which walks the full class chain).
       let class_key = s!("{map_key}@{class}@class");
       assign_value(&class_key, Stored::None, None);
       let begin_key = s!("{map_key}@{class}@begin");
-      let mut begin_toks = style_toks.unlist_ref().clone();
+      let mut begin_toks = vec![T_BEGIN!()];
+      begin_toks.extend(style_toks.unlist_ref().iter().copied());
       begin_toks.push(T_BEGIN!());
       assign_value(&begin_key, Stored::Tokens(Tokens::new(begin_toks)), None);
       let end_key = s!("{map_key}@{class}@end");
-      assign_value(&end_key, Stored::Tokens(Tokens::new(vec![T_END!()])), None);
+      assign_value(
+        &end_key,
+        Stored::Tokens(Tokens::new(vec![T_END!(), T_END!()])),
+        None,
+      );
     }
   }
   // Set cssclass based on class name
@@ -1217,34 +1225,32 @@ fn lst_add_delimiter(
     // Register this delimiter in the delimiter list
     lst_push_value_locally("LST_DELIM_KEYS", vec![T_OTHER!(&open_str)]);
 
-    // Perl L593-607: lstSetClassStyle with openTeX/closeTeX.
-    // If style is TeX markup (not a style name), prepend it to open tokens.
+    // Perl listings.sty.ltxml:596-611: lstSetClassStyle with openTeX/closeTeX.
+    // If style is TeX markup (not a style name), it opens the class as listings.sty:579-585 applies a style,
+    // `{\lst@thestyle{…}}` (`lst_set_class_style`): `{<style>{` before the open delimiter, `}}` after the close one,
+    // so the style's last macro may take the delimited text as its argument and a group the style opens is closed
+    // after it (the btHL idiom, `moredelim=**[is][\btHL]{`}{`}`; 2006.16205, 2104.08012). Perl prepends the bare style
+    // (`Tokens($styleTeX->unlist, $open)`), KPE #1166.
     let style_is_markup =
       !style_re.is_match(style) && !style.is_empty() && style != "None" && style.contains('\\'); // TeX markup contains backslash
-    let style_tokens = if style_is_markup {
-      mouth::tokenize_internal(TeXString::assembled(style.to_string()))
-    } else {
-      Tokens!()
-    };
-    let open_tex = if invisible {
-      if style_is_markup {
-        style_tokens
-      } else {
-        Tokens!()
-      }
-    } else if style_is_markup {
-      // Perl: Tokens($styleTeX->unlist, $open)
-      let mut toks = style_tokens.unlist();
-      toks.push(T_OTHER!(&open_str));
-      Tokens::new(toks)
-    } else {
-      Tokens::new(vec![T_OTHER!(&open_str)])
-    };
-    let close_tex = if invisible || close_str.is_empty() {
-      Tokens!()
-    } else {
-      Tokens::new(vec![T_OTHER!(&close_str)])
-    };
+    let mut open_toks = Vec::new();
+    if style_is_markup {
+      open_toks.push(T_BEGIN!());
+      open_toks.extend(mouth::tokenize_internal(TeXString::assembled(style.to_string())).unlist());
+      open_toks.push(T_BEGIN!());
+    }
+    if !invisible {
+      open_toks.push(T_OTHER!(&open_str));
+    }
+    let open_tex = Tokens::new(open_toks);
+    let mut close_toks = Vec::new();
+    if !invisible && !close_str.is_empty() {
+      close_toks.push(T_OTHER!(&close_str));
+    }
+    if style_is_markup {
+      close_toks.extend([T_END!(), T_END!()]);
+    }
+    let close_tex = Tokens::new(close_toks);
 
     // Set parent class (Perl: class => $oldclass)
     let class_key = s!("LST_CLASSES@{class}@class");
@@ -1618,7 +1624,7 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
   {
     all_delim_keys.push("$".to_string());
   }
-  // Perl listings.sty.ltxml:1283
+  // Perl listings.sty.ltxml:1288
   //   local $LaTeXML::DELIM_RE = join('|', map { $$delimiters{$_}{open} } sort keys %$delimiters);
   // The lexical sort matters: leftmost-first regex alternation means short
   // prefixes that sort before longer ones win, e.g. `<` (XML tag) is matched
@@ -1631,13 +1637,19 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
     let open_key = s!("LST_DELIM@{key}@open");
     if let Some(Stored::String(open_sym)) = lookup_value(&open_key) {
       let open_re = with(open_sym, |s| s.to_string());
-      delim_opens.push(open_re.clone());
       let escape_key = s!("LST_DELIM@{key}@escape");
       if matches!(lookup_value(&escape_key), Some(Stored::Bool(true))) {
         escape_opens.push(open_re);
+      } else {
+        delim_opens.push(open_re);
       }
     }
   }
+  // An escape is tried before the other delimiters: listings chains each delimiter onto the meaning its first character
+  // had (lstmisc.sty `\lst@DefDelimB`), and the escape (`\lst@DefEsc`, installed last) is tested first, so
+  // `escapeinside={\#*}{*}` under Python's `#` comments escapes `#*\label{line:degree}*` (2104.08012; pdflatex resolves
+  // `line \ref{line:degree}`), where the lexical order took `#` for a comment and printed the `\label` (KPE #1167).
+  let delim_opens: Vec<String> = escape_opens.iter().cloned().chain(delim_opens).collect();
   let delim_re = if delim_opens.is_empty() {
     None
   } else {
