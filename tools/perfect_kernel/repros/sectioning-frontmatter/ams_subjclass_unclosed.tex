@@ -6,10 +6,11 @@
 %          ended before \subjclass was complete"
 % engines: rust int85a = the argument read to the end of the document: 6 errors, the section inside the
 %          classification, its label lost and the reference dangling
-% expect:  1 error (Paragraph ended before \subjclass was complete), 0 warnings; the classification's text is dropped
-%          with the call (pdflatex prints it, `\subjclass` being `\relax` there); the section, its label and the
+% expect:  0 errors, 1 warning (\end occurred inside a group at level 1, as pdflatex); the classification's text
+%          printed in place, as pdflatex prints it (`\subjclass` is `\relax` there: the binding takes that reading
+%          where its short argument would run into the `\par`, ruling 2026-10-25); the section, its label and the
 %          math after it are the document's
-% status:  RED (int85a) -> GREEN (79m)
+% status:  RED (int85a) -> 1 error (79m) -> GREEN (80q)
 % preload: ar5iv.sty
 \documentclass{amsart}
 \begin{document}

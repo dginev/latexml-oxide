@@ -8,7 +8,7 @@
 //! (siunitx's unit commands, aa's `\longtab`, an eqnarray's trailing label), 80m (a preloaded class's hook stack) and 80n
 //! (a skipped branch ends at a column's v-part, `\maketitle` calls a redefined `\twocolumn`, acronym's protected
 //! commands), 80o (iucr.cls's `\hcaption`), 80p (amsmath's `\collect@body`, `\everypar` ahead of a horizontal command, a
-//! redefined `\newtheorem` start). Each guard converts its repro under `tools/perfect_kernel/repros/`, asserts the
+//! redefined `\newtheorem` start), 80q (a post-title amsart `\keywords` a brace short). Each guard converts its repro under `tools/perfect_kernel/repros/`, asserts the
 //! diagnostics by count and the elements.
 use latexml::util::test::convert_files_with;
 
@@ -728,6 +728,28 @@ fn newtheorem_follows_a_redefined_start() {
   );
   assert!(
     xml.contains(r#"<ref labelref="LABEL:lem:wrapped"/>"#),
+    "{xml}"
+  );
+}
+
+/// 80q: after amsart's `\maketitle` its topmatter commands are `\relax` (`\@cleartopmattertags`, amsart.cls:620-629),
+/// so pdflatex never reads a later `\keywords{…}` as an argument. A well-formed one keeps its keywords markup (ruling
+/// 2026-10-25); one whose short argument would run into a `\par` (a brace short, 2204.07665) is read as pdflatex reads
+/// it — an open group, no error. Red (int105a): "Paragraph ended before `\keywords` was complete", the labels inside
+/// lost. Repro sectioning-frontmatter/amsart_post_title_keywords_one_brace_short.
+#[test]
+fn amsart_post_title_keywords_one_brace_short() {
+  let (log, xml) = convert_files_with(
+    repro!("sectioning-frontmatter/amsart_post_title_keywords_one_brace_short.tex"),
+    &[],
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let keywords = xml.find("<keywords").expect(&xml);
+  assert!(xml[keywords..].contains("well, formed"), "{xml}");
+  assert!(xml.contains("Key Words.") && xml.contains("a, b."), "{xml}");
+  assert!(
+    xml.contains(r#"labels="LABEL:eq:a""#) && xml.contains("Intro</title>"),
     "{xml}"
   );
 }

@@ -1,0 +1,16 @@
+% After amsart's \maketitle, \@cleartopmattertags (amsart.cls:620-629) lets \keywords, \subjclass, \dedicatory ...
+% be \relax, so pdflatex never reads a later \keywords{...} as an argument. A well-formed one keeps its keywords
+% markup here (ruling 2026-10-25); one a brace short (2204.07665: \keywords{\small{ ... }) is read as pdflatex reads
+% it, an open group, with no error and the labels inside kept. pdflatex: 0 errors, "See (1).".
+\documentclass{amsart}
+\title{T}\author{A}
+\begin{document}
+\maketitle
+\keywords{well, formed}
+{\bf Key Words.}\keywords{\small{ a, b.}
+\section{Intro}
+Some text.
+
+\begin{equation}x\label{eq:a}\end{equation}
+See \eqref{eq:a}.}
+\end{document}

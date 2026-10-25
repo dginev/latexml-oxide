@@ -197,7 +197,8 @@ LoadDefinitions!({
     "\\lx@add@email[name={\\emailaddrname\\ifx.#1.\\else{, #1}~\\fi:\\ }]{\\lx@address@urlfont{#2}}");
   DefMacro!("\\urladdr[]{}",
     "\\lx@add@url[name={\\urladdrname\\ifx.#1.\\else{, #1}~\\fi:\\ }]{\\lx@address@urlfont{#2}}");
-  DefMacro!("\\dedicatory{}",   "\\lx@add@contact[role=dedicatory]{#1}", short => true);
+  DefMacro!("\\lx@ams@dedicatory{}", "\\lx@add@contact[role=dedicatory]{#1}", short => true);
+  DefMacro!("\\dedicatory", sub[_args] { post_title_topmatter("\\lx@ams@dedicatory") });
   // amsart's raw `\maketitle` internals, reached when a derivative class
   // redefines `\maketitle`/`\@maketitle` on top of `\LoadClass{amsart}`
   // (resphilosophica.cls:323 `\author@andify\authors`, :358 `\ifx\@empty
@@ -214,7 +215,8 @@ LoadDefinitions!({
   DefMacro!("\\@setabstract", "");
   DefMacro!("\\dateposted{}",   "\\lx@add@date[role=posted]{#1}");
   DefMacro!("\\translator[]{}", "\\lx@add@translator[name={\\translname~}]{#2}", short => true);
-  DefMacro!("\\keywords{}",     "\\lx@add@keywords[name={\\keywordsname:~}]{#1}", short => true);
+  DefMacro!("\\lx@ams@keywords{}", "\\lx@add@keywords[name={\\keywordsname:~}]{#1}", short => true);
+  DefMacro!("\\keywords", sub[_args] { post_title_topmatter("\\lx@ams@keywords") });
 
   // \thanks{} ( == ack, not latex's \thanks, not in author)
   // make a throwaway optional argument available for OmniBus use
@@ -253,7 +255,8 @@ LoadDefinitions!({
   // mangled `\sc AMS` into `\scAMS` by losing the trailing-space-after-CS
   // rule). Driver paper: arXiv:1902.09816
   // (`\subjclass{{\sc AMS Subject Classification:} 06B05}`).
-  DefMacro!("\\subjclass[Default:\\@subjclassyear]{}",
+  DefMacro!("\\subjclass", sub[_args] { post_title_topmatter("\\lx@ams@subjclass") });
+  DefMacro!("\\lx@ams@subjclass[Default:\\@subjclassyear]{}",
     "\\ifx.#1.\\else\\xdef\\@subjclassyear{#1}\\fi\
      \\lx@add@classification[scheme={#1 Mathematics Subject Classification},name={\\subjclassname:~}]{#2}",
     short => true);
@@ -671,4 +674,66 @@ pub fn amsart_class_internals() -> Result<()> {
   // amsart.cls:645: `\@maketitle` runs `\@setabstract` after the title (here `\lx@maketitle@body`, sect05.rs).
   AddToMacro!("\\lx@maketitle@body", "\\@setabstract");
   Ok(())
+}
+
+/// amsart.cls:620-629 `\@cleartopmattertags`: once its `\maketitle` has run, amsart lets `\keywords`, `\subjclass`,
+/// `\dedicatory` (and the other topmatter commands) be `\relax`, so pdflatex typesets a later `\keywords{…}` as the
+/// text it is and never reads it as an argument. The binding goes on reading it, for its frontmatter markup (ruling
+/// 2026-10-25), except where that short argument would run away — a `\par` (tex.web §392 `par_token`) or the end of the
+/// look-ahead's input before its closing brace, which pdflatex never meets: there the call is pdflatex's `\relax`, and the
+/// group is read as text (2204.07665: `\keywords{\small{ … }` a brace short after a first `\maketitle`; "Paragraph
+/// ended before `\keywords` was complete", the two labels inside it lost). After the title our cleanup has let
+/// `\maketitle` be `\relax` too, as amsart's does. Guard `perfect_kernel_batch80a::amsart_post_title_keywords_one_brace_short`.
+fn post_title_topmatter(setter: &str) -> Result<Tokens> {
+  let title_done = x_equals(&T_CS!("\\maketitle"), &T_CS!("\\relax"));
+  if title_done && short_argument_runs_away() {
+    return Ok(Tokens!());
+  }
+  Ok(Tokens!(T_CS!(setter)))
+}
+
+/// Whether the argument ahead — an optional `[…]`, then a braced group — meets a `\par` before its group closes, or
+/// is still open where the look-ahead ends (a bounded peek: nothing is read).
+fn short_argument_runs_away() -> bool {
+  let mut tokens = peek_upcoming_tokens(120, 48_000, 12_000)
+    .filter(|t| t.get_catcode() != Catcode::SPACE)
+    .peekable();
+  let par = T_CS!("\\par");
+  if tokens.peek() == Some(&T_OTHER!("[")) {
+    // the optional argument, to its `]` outside braces
+    let mut depth = 0usize;
+    loop {
+      match tokens.next() {
+        None => return false,
+        Some(t) if t == par => return false,
+        Some(t) if t.get_catcode() == Catcode::BEGIN => depth += 1,
+        Some(t) if t.get_catcode() == Catcode::END => depth = depth.saturating_sub(1),
+        Some(t) if depth == 0 && t == T_OTHER!("]") => break,
+        Some(_) => {},
+      }
+    }
+  }
+  if !tokens
+    .next()
+    .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+  {
+    return false;
+  }
+  let mut depth = 1usize;
+  for t in tokens {
+    if t == par {
+      return true;
+    }
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => {
+        depth -= 1;
+        if depth == 0 {
+          return false;
+        }
+      },
+      _ => {},
+    }
+  }
+  true
 }

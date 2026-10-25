@@ -18499,3 +18499,29 @@ Fixed in Rust (80p): sect01.rs `\begin` takes LaTeX's indirection for an environ
 (`\lx@env@indirected`) for `\end` to follow; a `\X` still the constructor, or restored to it, keeps the constructor
 (the `document` indirection of OXIDIZED_DESIGN_DIVERGENCES #232, extended). Repro
 cross-references/newtheorem_follows_a_redefined_start; guard `perfect_kernel_batch80a::newtheorem_follows_a_redefined_start`.
+
+## 1188. A post-title amsart topmatter command a brace short runs away
+
+After its `\maketitle`, amsart lets the topmatter commands be `\relax` (`\@cleartopmattertags`, amsart.cls:620-629:
+`\keywords`, `\subjclass`, `\dedicatory`, `\address`, `\email`, …), so pdflatex typesets a later `\keywords{…}` as text
+and never reads it as an argument. ams_support.sty.ltxml keeps them frontmatter readers with short (non-`\long`)
+arguments, so one whose braces do not balance before a blank line raises "Paragraph ended before `\keywords` was
+complete" where pdflatex raises nothing, and what the argument read is lost with it (2204.07665: `\keywords{\small{ … }`
+a brace short after a first `\maketitle`, two labels; 2212.11488: an unclosed `\subjclass{…`). Minimal trigger:
+
+```latex
+\documentclass{amsart}\title{T}\author{A}
+\begin{document}\maketitle
+\keywords{\small{ a, b.}
+
+Text.}
+\end{document}
+% pdflatex: "a, b. Text.", 0 errors; Perl: Paragraph ended before \keywords was complete
+```
+
+Fixed in Rust (80q): ams_support_sty.rs `post_title_topmatter` — after the title (`\maketitle` is `\relax`), a
+`\keywords`, `\subjclass` or `\dedicatory` whose argument would meet a `\par` before its closing brace (a bounded
+look-ahead) takes pdflatex's reading; a well-formed one keeps its frontmatter markup (ruling 2026-10-25). Repro
+sectioning-frontmatter/amsart_post_title_keywords_one_brace_short; guards
+`perfect_kernel_batch80a::amsart_post_title_keywords_one_brace_short`,
+`perfect_kernel_batch79m::an_unclosed_subjclass_ends_at_the_paragraph`.

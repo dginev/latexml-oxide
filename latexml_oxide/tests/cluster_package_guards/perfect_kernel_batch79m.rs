@@ -49,11 +49,13 @@ fn a_percent_in_a_revtex_address_is_the_address() {
   );
 }
 
-/// amsart's `\subjclass` is not `\long` (amsart.cls:555 `\newcommand*\subjclass`; ams_support_sty.rs `short => true`,
-/// with `\title`, `\keywords`, `\dedicatory`, `\translator`): a `\subjclass{…: 65N12, 74G65` whose `}` never comes
-/// ends at the blank line, "Paragraph ended before \subjclass was complete", and the section after it keeps its place
-/// and its label. Red (int85a): the argument ran to the end of the document, 6 errors, the section inside the
-/// classification and its reference dangling. Witness 2212.11488 (81 of 153 references dangling). Repro
+/// A post-title `\subjclass{…: 65N12, 74G65` whose `}` never comes: after amsart's `\maketitle` the command is `\relax`
+/// (amsart.cls:620-629 `\@cleartopmattertags`), so pdflatex prints the text in place, in a group the document never
+/// closes ("\end occurred inside a group at level 1"), and the section after it keeps its place and its label; the
+/// binding takes that reading where its own short argument would run into the `\par` (80q, ruling 2026-10-25). Red
+/// (int85a): the argument ran to the end of the document, 6 errors, the section inside the classification and its
+/// reference dangling; 79m stopped it at the blank line with "Paragraph ended before \subjclass was complete", which
+/// pdflatex does not raise. Witness 2212.11488 (81 of 153 references dangling). Repro
 /// sectioning-frontmatter/ams_subjclass_unclosed.
 #[test]
 fn an_unclosed_subjclass_ends_at_the_paragraph() {
@@ -62,10 +64,16 @@ fn an_unclosed_subjclass_ends_at_the_paragraph() {
     &[],
     Some(PRELOAD),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
-    log.contains("Paragraph ended before \\subjclass was complete"),
+    log.contains("\\end occurred inside a group at level 1"),
     "{log}"
+  );
+  assert!(
+    xml.contains(
+      r#"<text font="bold" xml:id="p1.1.1">AMS Subject Classification</text>: 65N12, 74G65</p>"#
+    ),
+    "{xml}"
   );
   assert!(
     xml.contains(r#"<section inlist="toc" labels="LABEL:sec:a" xml:id="S1">"#),
