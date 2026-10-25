@@ -259,6 +259,8 @@ struct Resolver {
   /// the pending entries labelled by a leading mark (their place in `pending`) with the authors their `annotate=`
   /// reaches, where today's attaches them when no name shows a mark of their kind (`answer_pending`)
   annotated:        Vec<(usize, Vec<usize>)>,
+  /// the pending entries whose marked line the binding attached by its group rule (`_grouped=true` at the call)
+  grouped:          Vec<usize>,
   /// the requests a `\footnotemark` made (creator, label): a footnote's mark, answered by a note, never by a labelled
   /// affiliation (`Kui Wu\inst{3\footnotemark[1]}` under `\institute{A \and B …}`, 2404.09857)
   fn_requests:      Vec<(usize, String)>,
@@ -333,6 +335,7 @@ impl Resolver {
       piled:            Vec::new(),
       empty_piled:      Vec::new(),
       annotated:        Vec::new(),
+      grouped:          Vec::new(),
       fn_requests:      Vec::new(),
       note_texts:       Vec::new(),
       continued:        Vec::new(),

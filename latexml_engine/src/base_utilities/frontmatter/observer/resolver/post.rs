@@ -697,6 +697,28 @@ impl Resolver {
       .collect();
     let live = self.live();
     for (at, (labels, symbol, assoc)) in pending.into_iter().enumerate() {
+      // (a letter or number line the binding attached by its group rule (`_grouped=true`) is the group's, as today's
+      // placed it: revtex's interleaved `\author{Ann$^{\mathrm a}$}\author{Bob}\affiliation{$^{\mathrm a}$Univ A}` both
+      // names', `\author{Cat Cole$^2$}\affiliation{$^3$Univ B}` Cat's though no name shows 3 — 63i review r2; a symbol
+      // line stays ruling 2's, 1303.7097)
+      if !symbol
+        && matches!(assoc.role.as_str(), "affiliation" | "address")
+        && self.grouped.contains(&at)
+        && let Some((_, annotated)) = self.annotated.iter().find(|(p, _)| *p == at)
+        && !annotated.is_empty()
+      {
+        for owner in annotated.clone() {
+          self.attach(
+            Some(owner),
+            Assoc {
+              rule: s!("{} owner:group", assoc.rule),
+              ..assoc.clone()
+            },
+            false,
+          );
+        }
+        continue;
+      }
       let mut owners: Vec<usize> = Vec::new();
       for label in &labels {
         for owner in label_owners(&self.out.creators, &live, label) {

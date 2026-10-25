@@ -23891,6 +23891,20 @@ showing its mark: 1107.2956, 1604.02459, 2401.02294, 2605.28357). Default output
 `perfect_kernel_batchfms2b::{a_mark_in_paren_math_is_cut_whole, footnote_marked_affiliations_go_to_their_names}`,
 `perfect_kernel_batch80a::revtex_group_affiliations_reach_every_name`.
 
+**S2b default (80z, 2026-10-25): the writer on by default for revtex4_support.** The shadow switch has three states
+(`observer::shadow::FmShadow`): `LATEXML_FM_SHADOW=1`, the census (every family read, the dump written); `=0`, off
+(today's frontmatter, nothing of the observer runs); unset, the default and the fleet's — the ledger records every
+paper, and only a paper whose recorded author blocks are all a `written` family's is rehearsed, read and written, with no
+dump. A family not written keeps today's output in every state; tests choose a state per thread
+(`set_fm_shadow_override`). Before the switch: 80w — the reading records an `annotate=run` call's run whichever path
+attaches its entry (1303.7097 was declined); 80z — a marked line revtex's binding gives its group (an interleaved group,
+`queued_group_shares_the_mark`) is declared so at the call (`_grouped=true`) and the reading keeps today's run for it,
+not the marks (63i review r2: `\author{Ann$^{\mathrm a}$}\author{Bob}\affiliation{$^{\mathrm a}$Univ A}` both names';
+`\author{Cat Cole$^2$}\affiliation{$^3$Univ B}` Cat's). Cost: none measurable — the int110b census, writer off vs on,
+6,208 s vs 6,171 s over 5,914 papers, none 5 s slower. Guards whose expectations follow the default:
+`perfect_kernel_batch77n::{revtex_footnotetext_among_names_is_the_names, revtex3_glue_after_names_is_no_name}` (Bob's
+`1a` requests Univ A; REVTeX 3's address block cut by marks).
+
 ### 840. A space a name sets before its own mark is the name's; spacing-only math, `\enskip` after a mark part names
 
 OD #52(i) rewrites a horizontal space in an author block (`\hspace`, `\hfill`) to `\quad`, which with `\quad` and

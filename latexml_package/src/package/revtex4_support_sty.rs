@@ -82,11 +82,17 @@ LoadDefinitions!({
   // author only, KNOWN_PERL_ERRORS #1190, 1303.7097): a superscript inside the line (`Laboratory for $^{3}$He`) or a
   // symbol (`$^{\dagger}$`) is no mark, and an interleaved `\author{A$^{1}$}\affiliation{$^{1}$…}` group keeps the
   // group rule, exact there (63i review).
+  // (a marked line the group takes is declared so at the call, `_grouped=true`, which the frontmatter observer's
+  // reading honours: today's run, not the marks — FM S2b, 63i review r2)
   DefMacro!("\\affiliation{}", sub[(content)] {
-    let attr = Some(mouth::tokenize_internal("annotate=run"));
-    let cs = if leads_with_mark(&content)
-      && !queued_group_shares_the_mark(&content)
-    {
+    let marked = leads_with_mark(&content);
+    let grouped = marked && queued_group_shares_the_mark(&content);
+    let attr = Some(mouth::tokenize_internal(if grouped {
+      "annotate=run,_grouped=true"
+    } else {
+      "annotate=run"
+    }));
+    let cs = if marked && !grouped {
       T_CS!("\\lx@add@affiliation@marked")
     } else {
       T_CS!("\\lx@add@affiliation")

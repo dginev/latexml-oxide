@@ -1,8 +1,10 @@
-//! The observer's shadow switch and dump (OXIDIZED_DESIGN_DIVERGENCES #837). Under `LATEXML_FM_SHADOW=1` (read once
-//! per process, at runtime; unset on the fleet) the ledger records the document's calls, the flush
-//! (`digest_front_matter`) rehearses and lexes each block not rehearsed yet and each API call's content, and the CLI
-//! writes `<dest>.fmshadow.json` ([`write_fm_shadow`]) with the resolver's tuples (`resolved`, S2a.2). Without it
-//! nothing of the observer runs. With it the conversion's output is the same: nothing the observer finds is used.
+//! The observer's shadow switch and dump (OXIDIZED_DESIGN_DIVERGENCES #837). Three states ([`FmShadow`]):
+//! `LATEXML_FM_SHADOW=1` (read once per process, at runtime) — the census: the ledger records the document's calls,
+//! the flush (`digest_front_matter`) rehearses and lexes each block not rehearsed yet and each API call's content, the
+//! CLI writes `<dest>.fmshadow.json` ([`write_fm_shadow`]) with the resolver's tuples (`resolved`, S2a.2), and a
+//! written family's paper is written; `=0` — off, nothing of the observer runs; unset — the default (FM S2b): the
+//! ledger records every paper, and only a paper whose author blocks are all a `written` family's (revtex4_support) is
+//! rehearsed, read and written, with no dump. A family not written keeps today's output in every state.
 
 use std::{cell::Cell, fmt::Write as _, sync::OnceLock};
 
@@ -15,20 +17,58 @@ use super::{
   *,
 };
 
-static FM_SHADOW_ENV: OnceLock<bool> = OnceLock::new();
+/// The shadow switch's states (module docs).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FmShadow {
+  /// `LATEXML_FM_SHADOW=1`: every family read, the dump written (the census).
+  On,
+  /// `LATEXML_FM_SHADOW=0`: nothing of the observer runs (today's frontmatter).
+  Off,
+  /// Unset: every paper recorded, a written family's read and written (FM S2b's default; the fleet).
+  Default,
+}
+
+static FM_SHADOW_ENV: OnceLock<FmShadow> = OnceLock::new();
 
 thread_local! {
   static FM_SHADOW_OVERRIDE: Cell<Option<bool>> = const { Cell::new(None) };
 }
 
-/// Whether the frontmatter observer runs: `LATEXML_FM_SHADOW=1` in the environment (a runtime read, once per process),
-/// unless a test set this thread's override ([`set_fm_shadow_override`]). The variable stays **unset on the fleet**
-/// (`cortex_worker` writes no dump; the shadow census runs through the local CLI: notes decision 5,
-/// OXIDIZED_DESIGN_DIVERGENCES #837).
-pub fn fm_shadow_enabled() -> bool {
-  FM_SHADOW_OVERRIDE.with(Cell::get).unwrap_or_else(|| {
-    *FM_SHADOW_ENV.get_or_init(|| std::env::var_os("LATEXML_FM_SHADOW").is_some_and(|v| v == "1"))
-  })
+/// The shadow switch: this thread's test override ([`set_fm_shadow_override`]: on, off), else `LATEXML_FM_SHADOW` (a
+/// runtime read, once per process). Unset on the fleet: `cortex_worker` runs the default and writes no dump.
+pub fn fm_shadow_mode() -> FmShadow {
+  match FM_SHADOW_OVERRIDE.with(Cell::get) {
+    Some(true) => FmShadow::On,
+    Some(false) => FmShadow::Off,
+    None => *FM_SHADOW_ENV.get_or_init(|| match std::env::var_os("LATEXML_FM_SHADOW") {
+      Some(v) if v == "1" => FmShadow::On,
+      Some(v) if v == "0" => FmShadow::Off,
+      _ => FmShadow::Default,
+    }),
+  }
+}
+
+/// Whether the frontmatter observer records (the ledger, the binding loads, a footnote's text): unless switched off.
+pub fn fm_shadow_enabled() -> bool { fm_shadow_mode() != FmShadow::Off }
+
+/// Whether the flush rehearses and the writer reads: under the census every paper; by default a paper whose recorded
+/// author blocks are all a written family's (as `writer::written_resolution` requires); off, none.
+fn reads_now() -> bool {
+  match fm_shadow_mode() {
+    FmShadow::On => true,
+    FmShadow::Off => false,
+    FmShadow::Default => with_ledger(|ledger| {
+      let mut blocks = ledger.entries.iter().filter_map(|entry| match entry {
+        Entry::Author(block) => Some(block),
+        _ => None,
+      });
+      let mut any = false;
+      blocks.all(|block| {
+        any = true;
+        policy_for(&block.binding, block.hook).written
+      }) && any
+    }),
+  }
 }
 
 /// Set (`Some`) or clear (`None`) this thread's override of the shadow switch (tests: the environment is read-only
@@ -48,7 +88,7 @@ pub fn reset_fm_shadow() {
 /// (a journal already open: the flush is itself inside a speculative run) waits for the next flush, deferred: left so
 /// at the end, the dump reports that reason (`JournalUnavailable`), not "no flush after the call".
 pub(in crate::base_utilities) fn shadow_flush() -> Result<()> {
-  if !fm_shadow_enabled() || rehearsal::rehearsing() {
+  if !reads_now() || rehearsal::rehearsing() {
     return Ok(());
   }
   let pending: Vec<usize> = with_ledger(|ledger| {
@@ -554,10 +594,10 @@ fn bump<'a>(counts: &mut Vec<(&'a str, usize)>, reason: &'a str) {
   }
 }
 
-/// Write the ledger ([`fm_shadow_json`]) to `<destination>.fmshadow.json`, under the shadow switch only (the CLI, after
+/// Write the ledger ([`fm_shadow_json`]) to `<destination>.fmshadow.json`, under the census switch only (the CLI, after
 /// the conversion's output is written). Its directory is the destination's own.
 pub fn write_fm_shadow(destination: &str) -> std::io::Result<()> {
-  if !fm_shadow_enabled() {
+  if fm_shadow_mode() != FmShadow::On {
     return Ok(());
   }
   std::fs::write(s!("{destination}.fmshadow.json"), fm_shadow_json())

@@ -176,9 +176,9 @@ fn a_withsup_line_takes_its_first_superscript() {
 fn a_thanks_in_a_superscript_is_a_note() {
   assert_eq!(tuples(&revtex(SUP_THANKS)), [
     "C Ann Able [1] | line:names",
-    "  a Univ A, City | api:leading-mark",
+    "  a Univ A, City | api:leading-mark owner:group",
     "C Bob Baker [1] | line:names sep:comma",
-    "  a Univ A, City | api:leading-mark",
+    "  a Univ A, City | api:leading-mark owner:group",
     "  n Correspondingauthor, Electronicmail:bob@example.org | note:adjacent",
   ]);
 }

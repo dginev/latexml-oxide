@@ -351,7 +351,8 @@ fn footnote_environment_is_its_names_note() {
 
 /// A `\footnotetext` among revtex4-1 names (2201.11098): three authors, the note and the mark "1a" Bob Baker's. The
 /// note shows no mark: revtex's front-matter mark is `\@fnsymbol` of the counter (`\frontmatter@thefootnote`), at 0
-/// nothing — was `mark="0"`, the arabic number (80t).
+/// nothing — was `mark="0"`, the arabic number (80t). Bob's `1a` requests Univ A, its letter the note's (FM S2b r2's
+/// glued-letter rule): written by default since 80z — was no affiliation of Bob's.
 #[test]
 fn revtex_footnotetext_among_names_is_the_names() {
   let xml = convert_repro!("author_revtex_footnotetext_among_names.tex");
@@ -365,7 +366,7 @@ fn revtex_footnotetext_among_names_is_the_names() {
     creator(
       false,
       r#"Bob Baker <note role="footnotetext" xml:id="footnotex1">On leave from Univ C, City</note> <sup xml:id="id2"><text font="italic" xml:id="id2.1">1a</text></sup>"#,
-      ""
+      &affiliation("Univ A, City")
     ),
     creator(
       false,
@@ -457,7 +458,8 @@ fn orcid_logo(xml: &str) -> &str {
 }
 
 /// REVTeX 3 letter-marked names with `\vskip 0.3in` after them (hep-ph0107182): three authors, each with its mark and
-/// the address block under them.
+/// the address block's lines its marks label (written by default since 80z, FM S2b's cut by marks: `ab` is a and b —
+/// was the whole block under every name).
 #[test]
 fn revtex3_glue_after_names_is_no_name() {
   let xml = convert_repro!("author_revtex3_letter_marks_glue_after.tex");
@@ -465,22 +467,26 @@ fn revtex3_glue_after_names_is_no_name() {
   let sup = |id: usize, mark: &str| {
     format!(r#"<sup xml:id="id{id}"><text font="italic" xml:id="id{id}.1">{mark}</text></sup>"#)
   };
-  // (the address block, its four lines each with its mark, ids from `first`)
-  let addresses = |first: usize| {
-    let lines: Vec<String> = ["a", "b", "c", "d"]
-      .iter()
-      .enumerate()
-      .map(|(k, mark)| format!("{}Univ {}", sup(first + k, mark), mark.to_uppercase()))
-      .collect();
+  // (one address line, its mark's id `id`)
+  let address = |id: usize, mark: &str| {
     format!(
-      r#"<contact name="Address: " role="address">{}</contact>"#,
-      lines.join("<break/>")
+      r#"<contact name="Address: " role="address">{}Univ {}</contact>"#,
+      sup(id, mark),
+      mark.to_uppercase()
     )
   };
   assert_eq!(creators(&xml), [
-    creator(true, &format!("Ann Able{}", sup(1, "ab")), &addresses(2)),
-    creator(false, &format!("Bob Baker{}", sup(6, "c")), &addresses(7)),
-    creator(false, &format!("Cat Cole{}", sup(11, "d")), &addresses(12)),
+    creator(
+      true,
+      &format!("Ann Able{}", sup(1, "ab")),
+      &format!("{} {}", address(2, "a"), address(3, "b"))
+    ),
+    creator(
+      false,
+      &format!("Bob Baker{}", sup(4, "c")),
+      &address(5, "c")
+    ),
+    creator(false, &format!("Cat Cole{}", sup(6, "d")), &address(7, "d")),
   ]);
 }
 

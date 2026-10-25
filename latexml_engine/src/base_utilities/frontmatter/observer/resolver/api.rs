@@ -436,6 +436,11 @@ impl Resolver {
             // line, labelled at once, nor a call declaring no run)
             if !attr_value(attrs, "annotate").unwrap_or("").is_empty() {
               self.annotated.push((at, owners.clone()));
+              // (a marked line the binding attached by its group rule, declared at the call: revtex's interleaved
+              // group, `queued_group_shares_the_mark`)
+              if attr_value(attrs, "_grouped") == Some("true") {
+                self.grouped.push(at);
+              }
             }
           }
         }
