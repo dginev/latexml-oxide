@@ -18,4 +18,19 @@ LoadDefinitions!({
   RequirePackage!("amsmath");
   RequirePackage!("textpos", options => vec![String::from("absolute")]);
   RequirePackage!("letltxmacro");
+  // autonum.sty:127-133, 176-183: each display environment it renews is kept as `<env>+`, the environment as amsmath
+  // left it (`\newenvironment{#1+}[#2]{\csuse{autonum@#1Old}}{\csuse{autonum@end#1Old}}`): 1405.2249's `{align+}`.
+  // A constructor (`\begin{equation}`) is aliased as one, a macro pair (`\align`/`\endalign`) as a pair.
+  for env in [
+    "equation", "gather", "multline", "flalign", "align", "alignat", "split",
+  ] {
+    let (constructor, end) = (s!("\\begin{{{env}}}"), s!("\\end{{{env}}}"));
+    if is_defined(&constructor) {
+      Let!(T_CS!(s!("\\begin{{{env}+}}")), T_CS!(constructor));
+      Let!(T_CS!(s!("\\end{{{env}+}}")), T_CS!(end));
+    } else if is_defined(&s!("\\{env}")) {
+      Let!(T_CS!(s!("\\{env}+")), T_CS!(s!("\\{env}")));
+      Let!(T_CS!(s!("\\end{env}+")), T_CS!(s!("\\end{env}")));
+    }
+  }
 });

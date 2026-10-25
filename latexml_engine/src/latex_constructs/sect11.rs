@@ -2489,6 +2489,98 @@ pub fn record_external_cref(label: &str, ty: &str, number: &str) {
   }
 }
 
+/// One `\newlabel{<name>}{<value>}`, the record of a label an `.aux` file holds (latex.ltx `\newlabel` → `\@newl@bel`,
+/// `\global\@namedef{r@<name>}{<value>}`): the value's first group is the text `\ref` prints, hyperref's fourth the
+/// anchor; a `<label>@cref` record is cleveref's type and number (cleveref.sty `\cref@label`). `url` is the document
+/// the anchors are in, where one is given (xr's `\externaldocument[…]{…}[url]`). Records are kept as xr's are
+/// (`record_external_label`): references to a label this document holds after all print its own.
+pub fn record_newlabel(name: &str, value: &str, url: Option<&str>) {
+  let fields: Vec<&str> = brace_groups(value).collect();
+  let Some(text) = fields.first().map(|text| text.trim()) else {
+    return;
+  };
+  if let Some(key) = name.strip_suffix("@cref") {
+    if let Some((ty, number)) = cref_record(text) {
+      record_external_cref(&clean_label(key, None), ty, number);
+    }
+    return;
+  }
+  let anchor = fields
+    .get(3)
+    .map(|anchor| anchor.trim())
+    .filter(|anchor| !anchor.is_empty());
+  let href = url.filter(|url| !url.is_empty()).map(|url| match anchor {
+    Some(anchor) => s!("{url}#{anchor}"),
+    None => url.to_string(),
+  });
+  record_external_label(&clean_label(name, None), text, anchor, href.as_deref());
+}
+
+/// The `\newlabel{<name>}{<value>}` records of text written to an `.aux` file, which LaTeX reads back at the next
+/// run's `\begin{document}`, before any reference (latex.ltx `\document`, `\@input{\jobname.aux}`). A single run reads
+/// each as it is written, for the references after it: a document's own label macros write them — 2503.03625's
+/// `\customlabel{eq:TC-1}{TC-1}` (`\protected@write\@auxout{}{\string\newlabel{#1}{{#2}…}}`), 1004.2872's
+/// `\phantomequation` (`\immediate\write\@auxout`), theoremref's `\thlabel` — and Perl, which reads no `.aux`, leaves
+/// their references missing.
+pub fn read_back_aux_text(text: &str) -> Result<()> {
+  let mut rest = text;
+  while let Some(at) = rest.find("\\newlabel") {
+    rest = &rest[at + "\\newlabel".len()..];
+    let mut groups = brace_groups(rest);
+    if let (Some(name), Some(value)) = (groups.next(), groups.next()) {
+      let name = name.trim();
+      record_newlabel(name, value, None);
+      // read as the `.aux` is, `@` a letter
+      let value = mouth::tokenize_internal(TeXString::assembled(value.to_string()));
+      DefMacro!(T_CS!(s!("\\r@{name}")), None, value, scope => Some(Scope::Global));
+    }
+  }
+  Ok(())
+}
+
+/// The balanced `{…}` groups at the start of `text`, their contents without the outer braces; a `\{` or `\}` does not
+/// count.
+pub fn brace_groups(text: &str) -> impl Iterator<Item = &str> {
+  let mut rest = text;
+  std::iter::from_fn(move || {
+    let start = rest.find(|c: char| !c.is_whitespace())?;
+    if !rest[start..].starts_with('{') {
+      return None;
+    }
+    let (mut depth, mut escaped) = (0usize, false);
+    for (offset, c) in rest[start..].char_indices() {
+      match c {
+        _ if escaped => escaped = false,
+        '\\' => escaped = true,
+        '{' => depth += 1,
+        '}' => {
+          depth -= 1;
+          if depth == 0 {
+            let group = &rest[start + 1..start + offset];
+            rest = &rest[start + offset + 1..];
+            return Some(group);
+          }
+        },
+        _ => {},
+      }
+    }
+    None
+  })
+}
+
+/// The type and the number of a cleveref record, `[<type>][<n>][<parents>]<number>` (cleveref.sty `\cref@label`).
+fn cref_record(text: &str) -> Option<(&str, &str)> {
+  let mut rest = text.trim_start();
+  let mut groups = Vec::new();
+  for _ in 0..3 {
+    let inner = rest.strip_prefix('[')?;
+    let close = inner.find(']')?;
+    groups.push(&inner[..close]);
+    rest = &inner[close + 1..];
+  }
+  Some((groups[0].trim(), rest.trim()))
+}
+
 /// A field xr recorded for a label of another document (`record_external_label`, `record_external_cref`): `label`, the
 /// reference text; `anchor`; `href`; `creftype`; `crefnum`.
 pub fn external_label_field(label: &str, field: &str) -> Option<String> {

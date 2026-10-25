@@ -301,6 +301,7 @@ pub mod tagpdf_sty;
 pub mod tex_label_sty;
 pub mod textpos_sty;
 pub mod tgpagella_sty;
+pub mod theoremref_sty;
 pub mod titleps_sty;
 pub mod titleref_sty;
 pub mod tocbasic_sty;
@@ -671,6 +672,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("nag", "sty", nag_sty::load_definitions),
   ("oldlfont", "sty", oldlfont_sty::load_definitions),
   ("titleref", "sty", titleref_sty::load_definitions),
+  ("theoremref", "sty", theoremref_sty::load_definitions),
   ("mdframed", "sty", mdframed_sty::load_definitions),
   ("memoir", "cls", memoir_cls::load_definitions),
   ("mhchem", "sty", mhchem_sty::load_definitions),

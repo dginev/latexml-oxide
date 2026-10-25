@@ -204,7 +204,13 @@ LoadDefinitions!({
        filename.to_string()
     } else { String::new() });
     if !target.is_empty() {
-      vfs_append_line(&target, &tokens.untex());
+      let text = tokens.untex();
+      vfs_append_line(&target, &text);
+      // An `.aux` file's labels are read back as they are written: LaTeX reads the file at the next run's
+      // `\begin{document}` (sect11.rs `read_back_aux_text`).
+      if target.ends_with(".aux") {
+        crate::latex_constructs::read_back_aux_text(&text)?;
+      }
     } else if port < 0 {
       NoteLog!(tokens.untex());
     } else {

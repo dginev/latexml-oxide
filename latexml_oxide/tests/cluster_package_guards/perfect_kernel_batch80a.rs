@@ -1,7 +1,8 @@
 //! Red/green guards for batch 80a (the hyphenation languages the format numbers keep their numbers) and 80b (a
 //! listings style that is a control sequence runs, with the token in `\lst@token`) and 80c (import.sty's path model) and 80d
 //! (ctable's options past a line end, subfig's `\subref`), 80e-80g (the bare-name `\import`, cleveref's braced comma,
-//! subeqnarray's `\slabel`, a longtable's labels, autonum). Each guard
+//! subeqnarray's `\slabel`, a longtable's labels, autonum), 80h (`\newlabel`
+//! records, theoremref). Each guard
 //! converts its repro under `tools/perfect_kernel/repros/`, asserts the diagnostics by count and the elements.
 use latexml::util::test::convert_files_with;
 
@@ -246,4 +247,54 @@ fn autonum_leaves_the_displays_their_labels() {
       "{label}: {xml}"
     );
   }
+}
+
+/// 80h: a `\newlabel` record names what its references print, whether the document makes it, writes it to the `.aux`
+/// by `\protected@write` or by `\write` (LaTeX reads the file back at the next `\begin{document}`). Red (int97a): Perl's
+/// aux stubs — `\newlabel` a no-op, `\protected@write` writing nothing, the written text never read — left all three
+/// missing (OXIDIZED_DESIGN_DIVERGENCES #896). Witnesses 2503.03625, 1004.2872, 1608.05314. Repro
+/// cross-references/newlabel_records_name_their_references.
+#[test]
+fn a_newlabel_record_names_its_references() {
+  let (log, xml) = convert_files_with(
+    repro!("cross-references/newlabel_records_name_their_references.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for (label, text) in [("tc:one", "TC-1"), ("eq:ph", "7"), ("ext:fig", "S3")] {
+    assert!(
+      xml.contains(&format!(
+        r#"<ref class="ltx_ref_external" labelref="LABEL:{label}">{text}</ref>"#
+      )),
+      "{label}: {xml}"
+    );
+  }
+  assert!(xml.contains(r#"<ref labelref="LABEL:sec:a"/>"#), "{xml}");
+}
+
+/// 80h: theoremref's `\thlabel` labels the theorem and `\thref` names it by its type and number. Red (int97a): raw,
+/// `\thlabel` only wrote its `.aux` record, so every `\thref` printed "?THM?" before a missing label. Witness
+/// 1211.4329. Repro cross-references/theoremref_thref_names_the_theorem.
+#[test]
+fn theoremref_thref_names_the_theorem() {
+  let (log, xml) = convert_files_with(
+    repro!("cross-references/theoremref_thref_names_the_theorem.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(!xml.contains("?THM?"), "{xml}");
+  for label in ["main", "aux"] {
+    assert!(
+      xml.contains(&format!(r#"labels="LABEL:{label}""#)),
+      "{label}: {xml}"
+    );
+  }
+  assert!(
+    xml.contains(
+      r#"By <ref labelref="LABEL:main" show="typerefnum"/>, and <ref labelref="LABEL:aux" show="typerefnum"/> and <ref labelref="LABEL:main" show="typerefnum"/>."#
+    ),
+    "{xml}"
+  );
 }

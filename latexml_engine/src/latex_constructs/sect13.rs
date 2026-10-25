@@ -1921,7 +1921,18 @@ pub(crate) fn load() -> Result<()> {
   def_macro_noop("\\bibcite{}{}")?;
   def_macro_noop("\\citation{}")?;
   def_macro_noop("\\contentsline{}{}{}")?;
-  def_macro_noop("\\newlabel{}{}")?;
+  // latex.ltx `\newlabel` (`\@newl@bel r`): `\global\@namedef{r@<name>}{<value>}`, the record an `.aux` file gives a
+  // label, which `\ref` prints. Perl stubs it (LaTeXML reads no `.aux`), and a document's own — the labels of a
+  // companion paper written into its source (1608.05314's `\newlabel{cohadj:eq:horn-1}{{1.1.2}…}`, 2608.10941's
+  // supplement table), or made by its own label macros (0902.1427) — left every reference to them missing; pdflatex
+  // prints the record's text. Recorded as xr records another document's (sect11.rs `record_newlabel`).
+  // OXIDIZED_DESIGN_DIVERGENCES #896.
+  DefPrimitive!("\\newlabel{}{}", sub[(name, value)] {
+    let name = Expand!(name).to_string();
+    let name = name.trim();
+    record_newlabel(name, &value.clone().untex(), None);
+    DefMacro!(T_CS!(s!("\\r@{name}")), None, value, scope => Some(Scope::Global));
+  });
 
   // Perl L5804-5806
   Let!("\\mathgroup", "\\fam");
@@ -2025,11 +2036,27 @@ pub(crate) fn load() -> Result<()> {
     }
   }
 
-  // Perl latex_constructs: \protected@write
-  DefPrimitive!("\\protected@write{Number}{}{}", sub[(_port, prelude, _tokens)] {
+  // Perl latex_constructs: \protected@write — the prelude only; nothing is written. A label record written to the
+  // `.aux` file is written as latex.ltx writes it (`\let\protect\@unexpandable@protect`, `\write#1{#3}`), so that it
+  // is read back (tex_file_io.rs `\write`, sect11.rs `read_back_aux_text`): 2503.03625's
+  // `\customlabel{eq:TC-1}{TC-1}`, `\protected@write\@auxout{}{\string\newlabel{#1}{{#2}{\thepage}{#2}{#1}{}}}`,
+  // names what `\ref{eq:TC-1}` prints. No other record of the file is read back, and other writes stay unwritten.
+  DefPrimitive!("\\protected@write{Number}{}{}", sub[(port, prelude, tokens)] {
     bgroup();
     Let!("\\thepage", "\\relax");
     let _digested = digest(prelude)?;
+    let port = port.value_of();
+    let to_aux = lookup_string(&s!("output_file:{port}")).ends_with(".aux");
+    let newlabel = T_CS!("\\newlabel");
+    if to_aux && tokens.unlist_ref().contains(&newlabel) {
+      Let!("\\protect", "\\@unexpandable@protect");
+      let mut write = vec![T_CS!("\\write")];
+      write.extend(ExplodeText!(port.to_string()));
+      write.push(T_BEGIN!());
+      write.extend(tokens.unlist());
+      write.push(T_END!());
+      digest(Tokens::new(write))?;
+    }
     egroup()?;
   });
 

@@ -1,0 +1,23 @@
+% witness: 2503.03625 (`\customlabel{eq:TC-1}{TC-1}` writes its `\newlabel` to the .aux: 3 dangling), 1004.2872
+%          (`\phantomequation`: `\immediate\write\@auxout`), 1608.05314 (a companion paper's `\newlabel`s in the source)
+% oracle:  pdflatex 0 errors: "Item TC-1 holds. See TC-1, 7, S3 and 1." — the written records are read back from the
+%          .aux, the preamble's `\newlabel` defines `\r@ext:fig` at once
+% engines: rust int97a = all three missing labels: `\newlabel` a no-op (Perl's aux stub), `\protected@write` writes
+%          nothing (Perl), `\write`'s text never read back
+% expect:  0 errors, 0 warnings; tc:one prints "TC-1", eq:ph "7", ext:fig "S3"; sec:a refers to the section
+% status:  RED (int97a) -> GREEN (80h: sect13.rs `\newlabel`/`\protected@write`, tex_file_io.rs `\write`, sect11.rs
+%          `read_back_aux_text`)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\newcommand{\customlabel}[2]{%
+  \protected@write\@auxout{}{\string\newlabel{#1}{{#2}{\thepage}{#2}{#1}{}}}#2}
+\newcommand{\phantomlabel}[2]{%
+  \immediate\write\@auxout{\string\newlabel{#1}{{#2}{\thepage}}}}
+\makeatother
+\newlabel{ext:fig}{{S3}{2}{}{figure.S3}{}}
+\begin{document}
+\section{A}\label{sec:a}
+Item \customlabel{tc:one}{TC-1} holds.\phantomlabel{eq:ph}{7}
+See \ref{tc:one}, \ref{eq:ph}, \ref{ext:fig} and \ref{sec:a}.
+\end{document}

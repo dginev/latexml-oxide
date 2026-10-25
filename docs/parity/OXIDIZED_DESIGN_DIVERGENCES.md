@@ -25354,6 +25354,28 @@ whose own renewal — the one that restores `\label` globally at its end (`\auto
 display's `\label` stayed global and every later `\label` failed ("\lx@ams@display@outer@label undefined", the label
 lost; 1905.00606: 20 errors, 6 dangling). Ours (latexml_contrib autonum_sty.rs): autonum's packages and its hyperref
 option load, its code does not; every equation keeps its number, as without autonum, so a reference to an equation
-that follows an unreferenced one prints a later number than the PDF (31 census papers load autonum). Repro
-cross-references/autonum_split_in_align_keeps_later_labels; guard
+that follows an unreferenced one prints a later number than the PDF (31 census papers load autonum). autonum's own
+`<env>+` forms — the environment as amsmath left it (autonum.sty:176-183 `\autonum@renameEnvironment`) — are aliases of
+the environments, for `equation`, `gather`, `multline`, `flalign`, `align`, `alignat`, `split` (1405.2249,
+1904.08614: `{align+}`, undefined without them). Its `\[`, redefined as an `{equation}` numbered only when referenced,
+stays unnumbered. Repro cross-references/autonum_split_in_align_keeps_later_labels; guard
 `perfect_kernel_batch80a::autonum_leaves_the_displays_their_labels`.
+
+### 896. A `\newlabel` record names its label; a record written to the `.aux` is read back as written (Perl: stubs)
+
+LaTeX keeps a label as `\newlabel{<name>}{{<text>}{<page>}…}` (latex.ltx `\newlabel` → `\@newl@bel r`,
+`\global\@namedef{r@<name>}{…}`): `\label` writes it to the `.aux` file, the next run reads it at `\begin{document}`,
+and `\ref` prints the text. Perl stubs `\newlabel` (latex_constructs.pool.ltxml L5796-5800), its `\protected@write`
+writes nothing, and nothing written to the `.aux` is read — LaTeXML labels through its own `\label`. A document's own
+records were therefore lost: the labels of a companion paper written into the source (1608.05314's
+`\newlabel{cohadj:eq:horn-1}{{1.1.2}…}`, 2608.10941's supplement table), and label macros that write their record to
+the `.aux` themselves (2503.03625's `\customlabel{eq:TC-1}{TC-1}`, `\protected@write\@auxout{}{\string\newlabel…}`;
+1004.2872's `\phantomequation`, `\immediate\write\@auxout`) — about 57 of the census's 35,942 papers, every reference
+to them missing where pdflatex prints the text. Ours: `\newlabel` defines `\r@<name>` and records the label as xr
+records another document's (sect11.rs `record_newlabel`, `ltx_ref_external`: post fills the reference from this
+document's own label where it has one); a `\write` to an `.aux` file reads each `\newlabel` it holds back as it is
+written (tex_file_io.rs, sect11.rs `read_back_aux_text`), and `\protected@write` writes a text holding a `\newlabel` to
+the `.aux` as latex.ltx does (`\let\protect\@unexpandable@protect`), other texts still unwritten. A single run reads a
+record at its write, so a reference before it stays missing (every witness refers after the record). Repro
+cross-references/newlabel_records_name_their_references; guard
+`perfect_kernel_batch80a::a_newlabel_record_names_its_references`.

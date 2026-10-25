@@ -3,7 +3,7 @@ use latexml_core::{
   binding::content::{FindFileOptions, find_file},
   common::error::emit_warn,
 };
-use latexml_engine::latex_constructs::{record_external_cref, record_external_label};
+use latexml_engine::latex_constructs::{brace_groups, record_newlabel};
 use latexml_package::prelude::*;
 
 #[rustfmt::skip]
@@ -57,34 +57,9 @@ fn import_external_document(prefix: &str, file: &str, url: Option<&str>) {
     for line in text.lines() {
       if let Some(rest) = line.trim_start().strip_prefix("\\newlabel") {
         let mut groups = brace_groups(rest);
-        let (Some(key), Some(value)) = (groups.next(), groups.next()) else {
-          continue;
-        };
-        let fields: Vec<&str> = brace_groups(value).collect();
-        let Some(text) = fields.first().map(|text| text.trim()) else {
-          continue;
-        };
-        // cleveref's own record of the label, `\newlabel{<label>@cref}{{[<type>][<n>][<parents>]<number>}…}`
-        // (cleveref.sty `\cref@label`), is what `\cref` reads (`\r@<label>@cref`)
-        if let Some(key) = key.strip_suffix("@cref") {
-          if let Some((ty, number)) = cref_record(text) {
-            let name = s!("{prefix}{key}");
-            record_external_cref(&clean_label(&name, None), ty, number);
-          }
-          continue;
+        if let (Some(key), Some(value)) = (groups.next(), groups.next()) {
+          record_newlabel(&s!("{prefix}{key}"), value, url);
         }
-        // hyperref's `\newlabel` holds the anchor fourth (`{text}{page}{title}{anchor}{}`)
-        let anchor = fields
-          .get(3)
-          .map(|anchor| anchor.trim())
-          .filter(|anchor| !anchor.is_empty());
-        let href = url.filter(|url| !url.is_empty()).map(|url| match anchor {
-          Some(anchor) => s!("{url}#{anchor}"),
-          None => url.to_string(),
-        });
-        let name = s!("{prefix}{key}");
-        let label = clean_label(&name, None);
-        record_external_label(&label, text, anchor, href.as_deref());
       } else if let Some(rest) = line.trim_start().strip_prefix("\\@input")
         && let Some(name) = brace_groups(rest).next()
       {
@@ -92,47 +67,4 @@ fn import_external_document(prefix: &str, file: &str, url: Option<&str>) {
       }
     }
   }
-}
-
-/// The balanced `{…}` groups at the start of `text`, their contents without the outer braces; a `\{` or `\}` does not
-/// count.
-fn brace_groups(text: &str) -> impl Iterator<Item = &str> {
-  let mut rest = text;
-  std::iter::from_fn(move || {
-    let start = rest.find(|c: char| !c.is_whitespace())?;
-    if !rest[start..].starts_with('{') {
-      return None;
-    }
-    let (mut depth, mut escaped) = (0usize, false);
-    for (offset, c) in rest[start..].char_indices() {
-      match c {
-        _ if escaped => escaped = false,
-        '\\' => escaped = true,
-        '{' => depth += 1,
-        '}' => {
-          depth -= 1;
-          if depth == 0 {
-            let group = &rest[start + 1..start + offset];
-            rest = &rest[start + offset + 1..];
-            return Some(group);
-          }
-        },
-        _ => {},
-      }
-    }
-    None
-  })
-}
-
-/// The type and the number of a cleveref record, `[<type>][<n>][<parents>]<number>` (cleveref.sty `\cref@label`).
-fn cref_record(text: &str) -> Option<(&str, &str)> {
-  let mut rest = text.trim_start();
-  let mut groups = Vec::new();
-  for _ in 0..3 {
-    let inner = rest.strip_prefix('[')?;
-    let close = inner.find(']')?;
-    groups.push(&inner[..close]);
-    rest = &inner[close + 1..];
-  }
-  Some((groups[0].trim(), rest.trim()))
 }
