@@ -8159,3 +8159,18 @@ TooManyErrors) and 2411.05049 (a loop after babel's errors) stop in the preamble
 int100a, int100a → int100c 136/136. Left (OPEN_ROWS brk96 row): 2202.08157's solarphysics `tabular*`, theoremref's `\thnameref`, the
 etextools × translations error under the ar5iv preload (5 census papers), 1406.0089's `\part`, and kernel commands newer
 than the paper (1102.2873, 1308.3100; a ruling).
+
+**int101 (2026-10-25; 80l → fac5f462d6).** brk100 (2,000 fresh papers on int100c, `scratch_356a0c47/brk100/`): 78 with
+breakage, 17 with OURS keys; every missing image a file not shipped, every dangling cite a key no `\bibitem` holds.
+80l: siunitx's unit commands are its own — its declarations no longer let the command `\relax` (Perl
+siunitx.sty.ltxml:1352, KPE #1181), `\begin{document}` makes siunitx's own free ones `\protected` `\ERROR` as
+`\siunitx_command_create:` does, and this binding's version-1 units stay undefined (2409.01115's `\tikzmath{\yb = .6;}`:
+1,001 errors and a Fatal → 0; 2405.03767 the same); aa.cls v9.1's `\longtab[opt]{body}` keeps its body (1811.02197's
+three tables, 3 dangling → 0; 1710.04616, 1807.04250); a `\label` after an eqnarray's last row labels that row
+(1206.1393, KPE #1182). Gates int101a 7264/7264, clippy 0, doc 0, inits 0. A/B int100c → int101a over popint101a
+(1,791: 900 siunitx, 27 `\tikzmath`, 278 aa + `\longtab`, 297 `eqnarray*`, 288 random census papers, witnesses): E
+8,874 → 6,888, F 15 → 13, +256k words; four siunitx papers gained errors, all honest — the `\relax` placeholders had
+swallowed unit commands met outside a unit argument: 1503.08089 and 1912.10146 call siunitx v1's `\newunit` (undefined
+since v3 drops `version-1-compatibility`; pdflatex alike), 2001.10886 uses a declared `\solm` bare in math, 2108.09405's
+`\SIrange[… close-bracket = ]]` ends its option list early (both `\ERROR` in pdflatex too); 1710.01722 timed out on
+int100c (rc 124 at 180 s) and finished on int101a. Nets int100c → int101a 136/136.
