@@ -8,7 +8,8 @@
 //! (siunitx's unit commands, aa's `\longtab`, an eqnarray's trailing label), 80m (a preloaded class's hook stack) and 80n
 //! (a skipped branch ends at a column's v-part, `\maketitle` calls a redefined `\twocolumn`, acronym's protected
 //! commands), 80o (iucr.cls's `\hcaption`), 80p (amsmath's `\collect@body`, `\everypar` ahead of a horizontal command, a
-//! redefined `\newtheorem` start), 80q (a post-title amsart `\keywords` a brace short). Each guard converts its repro under `tools/perfect_kernel/repros/`, asserts the
+//! redefined `\newtheorem` start), 80q (a post-title amsart `\keywords` a brace short), 80r (dgruyter.sty a stand-in).
+//! Each guard converts its repro under `tools/perfect_kernel/repros/`, asserts the
 //! diagnostics by count and the elements.
 use latexml::util::test::convert_files_with;
 
@@ -752,4 +753,90 @@ fn amsart_post_title_keywords_one_brace_short() {
     xml.contains(r#"labels="LABEL:eq:a""#) && xml.contains("Intro</title>"),
     "{xml}"
   );
+}
+
+/// 80r: dgruyter.sty (De Gruyter's style, shipped by its papers, not in TeX Live) is a stand-in: the paper's copy is
+/// read after it, and its definitions of names the kernel's semantic layer owns — its copy of array.sty's `\@array`
+/// (dgruyter.sty:2003-2029, which calls array.sty's `\@arrayleft`), its `\let\@@array\@array` (:2031) and wrapper (:2046) —
+/// hold only inside its own code, while its extras stand. Red (int106a): read raw under the ar5iv preload with no binding, the copy's `\@array` took over every
+/// `array` ("undefined `\@arrayleft`", the cells loose in math). Witness 2510.17333 (274 errors). The stand-in copy
+/// keeps the real one's shape.
+#[test]
+fn dgruyter_copy_keeps_the_native_array() {
+  let (log, xml) = convert_files_with(
+    r"\documentclass{article}
+\usepackage{dgruyter}
+\begin{document}
+\begin{equation}\label{eq:a}
+\left(\begin{array}{c|c} a & b \\ \hline c & \dgextra \end{array}\right)
+\end{equation}
+See (\ref{eq:a}).
+\end{document}
+",
+    &[(
+      "dgruyter.sty",
+      r"\NeedsTeXFormat{LaTeX2e}\ProvidesPackage{dgruyter}
+\RequirePackage{array}
+\newcommand\dgextra{d}
+\def\@array[#1]#2{\@arrayleft\if #1t\vtop \else \if#1b\vbox \else \vcenter \fi \fi\bgroup\@preamble}
+\let\@@array\@array
+\let\orig@@array\@@array
+\def\@@array[#1]#2{\orig@@array[#1]{#2}}
+",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert!(xml.contains(r#"<equation labels="LABEL:eq:a""#), "{xml}");
+  assert!(xml.contains("<XMArray"), "{xml}");
+  assert!(xml.contains(">d</XMTok>"), "{xml}");
+}
+
+/// 80r: the dgruyter stand-in declares the frontmatter dgruyter.sty stores for its title page (dgruyter.sty:2665-2760),
+/// as the copy's `\maketitle` is the kernel's: the subtitle, keywords, classification, history dates, communication
+/// and dedication notes are the frontmatter's elements; the running heads are page furniture. Red (int107a, the
+/// stand-in without them): the copy's stores never printed, 13 of the 18 census dgruyter papers lost their subtitle and
+/// keywords (2204.05056).
+#[test]
+fn dgruyter_frontmatter_is_kept() {
+  let (log, xml) = convert_files_with(
+    r"\documentclass{article}
+\usepackage{dgruyter}
+\begin{document}
+\title{T}
+\subtitle{The subtitle}
+\runningtitle{Running}
+\author{A}
+\keywords{alpha, beta}
+\classification[PACS]{01.01}
+\received{May 1}
+\accepted{June 2}
+\maketitle
+Body.
+\end{document}
+",
+    &[(
+      "dgruyter.sty",
+      r"\NeedsTeXFormat{LaTeX2e}\ProvidesPackage{dgruyter}
+\def\keywords#1{\gdef\@keywords{#1}}
+\def\received#1{\gdef\@received{#1}}
+\def\accepted#1{\gdef\@accepted{#1}}
+\def\runningtitle#1{\gdef\@runningtitle{#1}}
+\def\subtitle#1{\gdef\@subtitle{#1}}
+\newcommand\classification[2][PACS]{\gdef\@classification{#2}}
+",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  for element in [
+    "<subtitle>The subtitle</subtitle>",
+    ">alpha, beta</keywords>",
+    "01.01</classification>",
+    "<date name=\"Received\u{a0}\" role=\"received\">May 1</date>",
+    "<date name=\"accepted\u{a0}\" role=\"accepted\">June 2</date>",
+  ] {
+    assert!(xml.contains(element), "{element}: {xml}");
+  }
+  assert!(!xml.contains("Running"), "{xml}");
 }

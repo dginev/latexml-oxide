@@ -167,6 +167,7 @@ pub const AUTHOR_FILE_STAND_INS: &[&str] = &[
   "deepseek.cls",
   "deluxe.sty",
   "deluxetable.sty",
+  "dgruyter.sty",
   "diagrams.sty",
   "diagrams.tex",
   "dmtcs-episciences.cls",

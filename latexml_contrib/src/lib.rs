@@ -114,6 +114,7 @@ pub mod datetime_sty;
 pub mod dblfloatfix_sty;
 pub mod deluxe_sty;
 pub mod derivative_sty;
+pub mod dgruyter_sty;
 pub mod dhucs_sty;
 pub mod diagrams_sty;
 pub mod diagrams_tex;
@@ -449,6 +450,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("jurabib", "sty", jurabib_sty::load_definitions),
   ("tex-label", "sty", tex_label_sty::load_definitions),
   ("derivative", "sty", derivative_sty::load_definitions),
+  ("dgruyter", "sty", dgruyter_sty::load_definitions),
   ("diagrams", "sty", diagrams_sty::load_definitions),
   ("directory", "sty", directory_sty::load_definitions),
   ("figbib", "sty", figbib_sty::load_definitions),
