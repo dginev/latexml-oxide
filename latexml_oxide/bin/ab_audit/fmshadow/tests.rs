@@ -262,10 +262,23 @@ fn r3_classes_classify_their_disagreements() {
     &shadow,
     &one(r#"<creator><personname>Ann Able</personname><note>Supported.</note></creator>"#),
   );
+  let title_note = Some(
+    "a note made in the title (before any author) given to the first author or left in a nameless creator",
+  );
   assert!(
-    d.len() == 2
-      && d.iter().all(|d| d.class
-        == Some("a note made in the title (before any author) given to the first author")),
+    d.len() == 2 && d.iter().all(|d| d.class == title_note),
+    "{d:?}"
+  );
+  // (today's nameless creator, the note under its mark's entry role: an `\altaffiltext` the title's `\altaffilmark`
+  // requests, 1801.03570)
+  let d = compare(
+    &shadow,
+    &one(
+      r#"<creator><personname>Ann Able</personname></creator><creator><contact role="altaffiliation">Supported.</contact></creator>"#,
+    ),
+  );
+  assert!(
+    d.len() == 2 && d.iter().all(|d| d.class == title_note),
     "{d:?}"
   );
   let shadow = Tuples {

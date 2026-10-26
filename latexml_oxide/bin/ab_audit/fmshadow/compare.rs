@@ -570,6 +570,15 @@ pub fn compare(shadow: &Tuples, xml: &Tuples) -> Vec<Disagreement> {
         .find(|(r, x)| r == role && r == "email" && norm(x) == text)
         .and_then(|(_, x)| written_out_rule(shadow, x))
     });
+    // (or a note the shadow gave the title, which today's left in a nameless creator under the role its mark's entry
+    // took — `\altaffilmark` in `\title`, its `\altaffiltext` an altaffiliation, 1801.03570)
+    let rule = rule.or_else(|| {
+      shadow
+        .block_rules
+        .get(&format!("note\t{text}"))
+        .filter(|r| r.contains("api:title-note"))
+        .map(|r| format!("moved {r}"))
+    });
     push("block", rule, format!("block: xml-only {item}"));
   }
   out

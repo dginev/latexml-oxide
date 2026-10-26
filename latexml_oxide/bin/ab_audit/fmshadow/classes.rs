@@ -533,8 +533,8 @@ pub const XML_WRONG: &[XmlWrong] = &[
     applies:   |c| c.kind == "affiliation" && legends_welded_on(c.shadow, c.detail),
   },
   XmlWrong {
-    name:      "a note made in the title (before any author) given to the first author",
-    witnesses: &["1603.01892", "1802.05590", "cond-mat0502298"],
+    name:      "a note made in the title (before any author) given to the first author or left in a nameless creator",
+    witnesses: &["1603.01892", "1802.05590", "cond-mat0502298", "1801.03570"],
     applies:   |c| matches!(c.kind, "note" | "block") && c.rule.contains("api:title-note"),
   },
   XmlWrong {
