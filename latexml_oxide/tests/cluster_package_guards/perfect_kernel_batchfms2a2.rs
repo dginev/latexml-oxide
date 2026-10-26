@@ -1153,3 +1153,21 @@ fn an_endnote_mark_on_a_name_is_no_name_text() {
   ));
   assert_eq!(names, ["Ann Able", "Bob Baker"]);
 }
+
+/// FM S2b ams precision sample: a labelled address no name requests that opens with an author's whole name (`$^1$Lior
+/// Alon, School of Mathematics, …` under unmarked names, 2106.06096) is that author's, as the page reads it. Red: both
+/// went to the block (`label:unrequested`), where today's output gives each its author.
+#[test]
+fn an_unrequested_address_opening_with_a_name_is_that_authors() {
+  assert_eq!(
+    reading_affiliations(&document(
+      "amsart",
+      "",
+      "\\author{Ann Able}\n\\author{Bob Baker}\n\\address{$^1$Ann Able, Univ A, City}\n\\address{$^2$Bob Baker, Univ B, Town}"
+    )),
+    [
+      "Ann Able: Ann Able, Univ A, City",
+      "Bob Baker: Bob Baker, Univ B, Town"
+    ]
+  );
+}

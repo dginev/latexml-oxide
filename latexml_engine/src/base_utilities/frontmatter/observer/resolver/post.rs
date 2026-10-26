@@ -860,6 +860,23 @@ impl Resolver {
         }
         continue;
       }
+      // (an address no name requests that opens with one author's whole name is that author's, as the page reads it:
+      // `$^1$Lior Alon, School of Mathematics, …` under unmarked names, 2106.06096 — today's output gives it them too)
+      if owners.is_empty()
+        && !symbol
+        && matches!(assoc.role.as_str(), "affiliation" | "address")
+        && let Some(head) = assoc.text.split(',').next().map(fold_name)
+        && let [owner] = live
+          .iter()
+          .copied()
+          .filter(|&c| !head.is_empty() && fold_name(&self.out.creators[c].name) == head)
+          .collect::<Vec<_>>()
+          .as_slice()
+      {
+        let rule = s!("{} label:unrequested owner:named", assoc.rule);
+        self.attach(Some(*owner), Assoc { rule, ..assoc }, false);
+        continue;
+      }
       if owners.is_empty() {
         let rule = if symbol {
           "ruling2:uncarried owner:block"
