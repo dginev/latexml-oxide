@@ -1354,3 +1354,30 @@ fn an_unmarked_line_under_a_run_of_names_rows_is_every_names() {
     );
   }
 }
+
+/// FM S2b aas census: a line with an address beside other text keeps that text — an institution line with its
+/// address under marked names (`1. Chester F. Carlson Center …; JHK's email: jhk@cis.rit.edu`, astro-ph0202139) is an
+/// unmarked line, every name's of the run (its hand-written `1.` unread, OPEN_ROWS FM-24), and a labelled entry
+/// (`$^1$Univ A, City; ann@a.edu`) keeps its institution beside the address. Red: both kept the addresses alone.
+#[test]
+fn an_address_beside_an_institution_keeps_the_institution() {
+  let unlabelled = reading_affiliations(&tuples_of(
+    "\\documentclass{aastex}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^1$, Bob Baker$^2$, and Cy Cole$^1$ \\\\\n\\small\n1. University A, City; Ann's email: ann@a.edu \\\\\n2. University B, Town; bob@b.edu}\n\\maketitle\nText.\n\\end{document}\n",
+  ));
+  assert!(
+    unlabelled.len() == 3
+      && unlabelled
+        .iter()
+        .all(|a| a.contains("University A") && a.contains("University B")),
+    "{unlabelled:#?}"
+  );
+  let labelled = reading_affiliations(&tuples_of(
+    "\\documentclass{aastex}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^1$, Bob Baker$^2$ \\\\\n$^1$University A, City; ann@a.edu \\\\\n$^2$University B, Town; bob@b.edu}\n\\maketitle\nText.\n\\end{document}\n",
+  ));
+  assert!(
+    labelled.len() == 2
+      && labelled[0].contains("University A")
+      && labelled[1].contains("University B"),
+    "{labelled:#?}"
+  );
+}

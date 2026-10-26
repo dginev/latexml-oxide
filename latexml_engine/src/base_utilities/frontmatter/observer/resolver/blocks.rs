@@ -442,7 +442,18 @@ impl Resolver {
             continues = Some(carried);
             continue;
           }
-          if !addresses_in(&text).is_empty() {
+          // (an institution line with its address beside it is an unmarked line, the address in its text, as a continued
+          // line's is — `1. Chester F. Carlson Center …, NY 14623; JHK's email: jhk@cis.rit.edu` under marked names,
+          // astro-ph0202139, whose institutions the address branch lost; its hand-written `1.` stays unread, OPEN_ROWS
+          // FM-24)
+          let beside: String = text
+            .split_whitespace()
+            .filter(|w| !w.contains('@'))
+            .collect::<Vec<_>>()
+            .join(" ");
+          if !addresses_in(&text).is_empty()
+            && (only_addresses(&text) || !reads_as_affiliation(&text_tokens(&beside)))
+          {
             // (a list of addresses running on over the next lines — the line ending in a comma, each next line addresses
             // alone — is one print: `E-mails: 202010106047@mail.scut.edu.cn, \\ scbingli@scut.edu.cn`, whose second
             // address spells Bing Li, leaving the first to Bo Wang by elimination, 2312.05446)
@@ -596,7 +607,11 @@ impl Resolver {
         .copied()
         .filter(|e| e.kind == EventKind::Contact)
         .collect();
+      // (an entry of addresses alone is e-mails; one with other text beside its address is that text's affiliation, the
+      // address in it, as a continued line's is — `1. Chester F. Carlson Center …, NY 14623; JHK's email:
+      // jhk@cis.rit.edu`, astro-ph0202139, whose institutions were lost)
       let role = if !addresses_in(&text).is_empty()
+        && only_addresses(&text)
         && contacts
           .iter()
           .all(|c| c.role.as_deref() != Some("affiliation"))
