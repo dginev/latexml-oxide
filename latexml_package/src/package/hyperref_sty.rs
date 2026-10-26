@@ -1036,6 +1036,8 @@ LoadDefinitions!({
   // `register_counter_alias`) is the counter `\refstepcounter` is passed, so hyperref's type is the alias and the
   // names are its own: "Lemma 2" under llncs's envcountsame (2202.10090), and no name for an aliascnt lemma without a
   // `\lemmaautorefname`/`\lemmaname`, as pdflatex prints it; the root's "Theorem" never.
+  // plain.tex's `\null`, which the autoref tag runs whatever the document made of `\null` (below)
+  DefMacro!("\\lx@autoref@null", "\\hbox{}");
   DefMacro!("\\lx@autorefnum@@{}", sub[(ttype)] {
     let type_s  = ttype.unwrap().to_string();
     let counter_str = with_mapping("counter_for_type",&type_s, |mapping_opt|
@@ -1056,7 +1058,20 @@ LoadDefinitions!({
     ]
     .into_iter()
     .find(|cs| is_defined(cs));
-    let mut tokens = match name {
+    // The trailing `\null` is the kernel's empty box whatever the author made of it (`\lx@autoref@null`): this text is
+    // built at every target, where pdflatex runs `\null` only where an `\autoref` prints, so `\def\null0{…}` hiding a
+    // subsection (1501.00090) ran its `\subsection` in every `\section`'s tag, a Fatal recursion. The token still ends
+    // a name's `~#1\null` argument, a delimiter being matched by the token. The document's `\null` is saved and put
+    // back by `\let`, with no group, which a name opening a `\bgroup` would meet (78j).
+    let mut tokens = vec![
+      T_CS!("\\let"),
+      T_CS!("\\lx@autoref@savednull"),
+      T_CS!("\\null"),
+      T_CS!("\\let"),
+      T_CS!("\\null"),
+      T_CS!("\\lx@autoref@null"),
+    ];
+    tokens.extend(match name {
       Some(cs) if cs.ends_with("autorefname") || is_name_noun_cs(&cs) => vec![T_CS!(cs), T_ACTIVE!('~')],
       // hyperref sets the first defined name before the `~` whatever it is: amsthm's `\let\thmname\@iden`
       // (amsthm.sty:152) takes the `~` and prints it back, "~1.1", as here; the name itself is not run, since it is
@@ -1064,7 +1079,7 @@ LoadDefinitions!({
       // in pdflatex ("Hh1") and " 1" here, traded for never running a drawing command.
       Some(_) => vec![T_ACTIVE!('~')],
       None => Vec::new(),
-    };
+    });
 
     let pcounter = T_CS!(s!("\\p@{counter_str}",));
     let thecounter = T_CS!(s!("\\the{counter_str}"));
@@ -1072,7 +1087,12 @@ LoadDefinitions!({
       tokens.push(pcounter);
     }
     tokens.push(thecounter);
-    tokens.push(T_CS!("\\null"));
+    tokens.extend([
+      T_CS!("\\null"),
+      T_CS!("\\let"),
+      T_CS!("\\null"),
+      T_CS!("\\lx@autoref@savednull"),
+    ]);
     Tokens::new(tokens)
   });
 

@@ -1,0 +1,14 @@
+% witness: arXiv 1501.00090 (bertinitensor_crelle4.tex:1306, `\def\null0{` hiding a subsection; amsart + hyperref)
+% oracle:  pdflatex 0 errors; "1 A 2 B Text." (hyperref runs `\null` only where an `\autoref` prints)
+% engines: rust (int110h) = Fatal Stomach:Recursion (\@@numbered@section, \lx@tags, \lx@tag@intags) + 39 errors, the
+%          author's body run in the autoref tag every numbered target builds; Perl's formatter ends with no `\null`
+% expect:  0 errors; section B's autoref tag "section 2"
+% status:  RED (int110h) -> GREEN (81b)
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\section{A}
+\def\null0{\subsection{Hidden} text}
+\section{B}
+Text.
+\end{document}
