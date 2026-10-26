@@ -447,7 +447,10 @@ fn an_unlabelled_entry_is_no_legend() {
     ],
   }];
   let tuples = resolved_tuples(&fm_resolve(&inputs));
-  assert!(tuples.iter().all(|t| !t.contains(" legend ")), "{tuples:?}");
+  assert_eq!(tuples, [
+    "C Ann Able [1] | line:names",
+    "  a Corresponding author. | ruling1:request label:unrequested owner:block owner:sole-author",
+  ]);
 }
 
 /// The r8 shapes leave the XML byte-identical with the switch on and off (shadow only) — but `API_LEGEND`, a REVTeX

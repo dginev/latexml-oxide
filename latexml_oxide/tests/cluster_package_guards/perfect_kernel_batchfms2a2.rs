@@ -1178,26 +1178,21 @@ fn an_unrequested_address_opening_with_a_name_is_that_authors() {
 /// (`perfect_kernel_batch64zc::typewriter_address_split_keeps_its_link`).
 #[test]
 fn an_uncarried_symbol_on_a_contact_call_keeps_its_place() {
-  let tuples = document(
-    "amsart",
-    "",
-    "\\author{Ann Able}\n\\email{$^\\dagger$ ann@a.edu}\n\\author{Bob Baker}\n\\email{bob@b.edu}",
+  // (the address's text keeps its frozen formula, `$^ $`: a Semiverbatim address freezes its math, the open RED
+  // `sectioning-frontmatter/semiverbatim_address_freezes_math`, KNOWN_PERL_ERRORS #515)
+  assert_eq!(
+    document(
+      "amsart",
+      "",
+      "\\author{Ann Able}\n\\email{$^\\dagger$ ann@a.edu}\n\\author{Bob Baker}\n\\email{bob@b.edu}",
+    ),
+    [
+      "C Ann Able [] | line:names",
+      "  c email $^ $ ann@a.edu | api:leading-mark ruling2:uncarried owner:annotate",
+      "C Bob Baker [] | line:names",
+      "  c email bob@b.edu | api:annotate:last",
+    ]
   );
-  let ann = tuples
-    .iter()
-    .position(|t| t.starts_with("C Ann Able"))
-    .expect("Ann");
-  let bob = tuples
-    .iter()
-    .position(|t| t.starts_with("C Bob Baker"))
-    .expect("Bob");
-  assert!(
-    tuples[ann..bob]
-      .iter()
-      .any(|t| t.starts_with("  c email") && t.contains("ann@a.edu")),
-    "{tuples:#?}"
-  );
-  assert!(!tuples.iter().any(|t| t.starts_with("B ")), "{tuples:#?}");
 }
 
 /// FM S2b ams written: a footnote-symbol line under names that show no symbol mark at all is a mark of a kind no name
@@ -1224,21 +1219,21 @@ fn a_symbol_line_under_names_showing_no_symbols_keeps_its_place() {
 /// author, were an unclassified disagreement.
 #[test]
 fn an_altaffiltext_by_its_marks_is_ruling_one() {
-  let tuples = document(
-    "aastex631",
-    "",
-    "\\author{Ann Able\\altaffilmark{1}, Bob Baker\\altaffilmark{2,3}, and Cat Cole\\altaffilmark{1}}\n\\altaffiltext{1}{Univ A}\n\\altaffiltext{2}{Univ B}\n\\altaffiltext{3}{Univ C}",
-  );
-  let bob = tuples
-    .iter()
-    .position(|t| t.starts_with("C Bob Baker"))
-    .expect("Bob");
-  assert!(
-    tuples[bob..]
-      .iter()
-      .take(4)
-      .any(|t| t.contains("Univ B") && t.contains("ruling1:request")),
-    "{tuples:#?}"
+  assert_eq!(
+    document(
+      "aastex631",
+      "",
+      "\\author{Ann Able\\altaffilmark{1}, Bob Baker\\altaffilmark{2,3}, and Cat Cole\\altaffilmark{1}}\n\\altaffiltext{1}{Univ A}\n\\altaffiltext{2}{Univ B}\n\\altaffiltext{3}{Univ C}",
+    ),
+    [
+      "C Ann Able [altaffil:1] | line:names",
+      "  c altaffiliation Univ A | api:label ruling1:request",
+      "C Bob Baker [altaffil:2,altaffil:3] | line:names sep:comma",
+      "  c altaffiliation Univ B | api:label ruling1:request",
+      "  c altaffiliation Univ C | api:label ruling1:request",
+      "C Cat Cole [altaffil:1] | line:names sep:word",
+      "  c altaffiliation Univ A | api:label ruling1:request",
+    ]
   );
 }
 
@@ -1248,30 +1243,20 @@ fn an_altaffiltext_by_its_marks_is_ruling_one() {
 /// `\altaffiltext{*}`/`\altaffiltext{**}` corresponding-author notes.
 #[test]
 fn a_prefixed_symbol_label_keeps_its_prefix() {
-  let tuples = document(
-    "aastex631",
-    "",
-    "\\author{Ann Able\\altaffilmark{1,*}, and Bob Baker\\altaffilmark{1,**}}\n\\altaffiltext{1}{Univ A}\n\\altaffiltext{**}{Corresponding author: bob@b.edu}\n\\altaffiltext{*}{Corresponding author: ann@a.edu}",
-  );
-  let ann = tuples
-    .iter()
-    .position(|t| t.starts_with("C Ann Able"))
-    .expect("Ann");
-  let bob = tuples
-    .iter()
-    .position(|t| t.starts_with("C Bob Baker"))
-    .expect("Bob");
-  assert!(
-    tuples[ann..bob].iter().any(|t| t.contains("ann@a.edu")),
-    "{tuples:#?}"
-  );
-  assert!(
-    !tuples[ann..bob].iter().any(|t| t.contains("bob@b.edu")),
-    "{tuples:#?}"
-  );
-  assert!(
-    tuples[bob..].iter().any(|t| t.contains("bob@b.edu")),
-    "{tuples:#?}"
+  assert_eq!(
+    document(
+      "aastex631",
+      "",
+      "\\author{Ann Able\\altaffilmark{1,*}, and Bob Baker\\altaffilmark{1,**}}\n\\altaffiltext{1}{Univ A}\n\\altaffiltext{**}{Corresponding author: bob@b.edu}\n\\altaffiltext{*}{Corresponding author: ann@a.edu}",
+    ),
+    [
+      "C Ann Able [altaffil:1,altaffil:*] | line:names",
+      "  c altaffiliation Univ A | api:label ruling1:request",
+      "  c altaffiliation Corresponding author: ann@a.edu | api:label ruling1:request",
+      "C Bob Baker [altaffil:1,altaffil:**] | line:names sep:word",
+      "  c altaffiliation Univ A | api:label ruling1:request",
+      "  c altaffiliation Corresponding author: bob@b.edu | api:label ruling1:request",
+    ]
   );
 }
 
@@ -1281,15 +1266,17 @@ fn a_prefixed_symbol_label_keeps_its_prefix() {
 /// the block as an affiliation (`label:unrequested`, 0801.1670, 0808.0471, 1006.1591, 1010.0340).
 #[test]
 fn an_entry_the_title_requests_is_the_titles_note() {
-  let tuples = tuples_of(
-    "\\documentclass{aastex631}\n\\begin{document}\n\\title{T\\altaffilmark{1}}\n\\author{Ann Able\\altaffilmark{2}}\n\\author{Bob Baker\\altaffilmark{3}}\n\\altaffiltext{1}{Based on observations.}\n\\altaffiltext{2}{Univ A}\n\\altaffiltext{3}{Univ B}\n\\maketitle\nText.\n\\end{document}\n",
-  );
-  assert!(
-    tuples
-      .iter()
-      .any(|t| t.starts_with("B note Based on observations.")
-        && t.contains("api:title-note owner:title")),
-    "{tuples:#?}"
+  assert_eq!(
+    tuples_of(
+      "\\documentclass{aastex631}\n\\begin{document}\n\\title{T\\altaffilmark{1}}\n\\author{Ann Able\\altaffilmark{2}}\n\\author{Bob Baker\\altaffilmark{3}}\n\\altaffiltext{1}{Based on observations.}\n\\altaffiltext{2}{Univ A}\n\\altaffiltext{3}{Univ B}\n\\maketitle\nText.\n\\end{document}\n",
+    ),
+    [
+      "C Ann Able [altaffil:2] | line:names",
+      "  c altaffiliation Univ A | api:label ruling1:request",
+      "C Bob Baker [altaffil:3] | line:names",
+      "  c altaffiliation Univ B | api:label ruling1:request",
+      "B note Based on observations. | api:label api:title-note owner:title",
+    ]
   );
 }
 
@@ -1301,10 +1288,19 @@ fn tuples_of(tex: &str) -> Vec<String> { tuples(&resolved(tex, Some("ar5iv.sty")
 /// the next — astro-ph0601584. Red: no mark was read (the label all commas), and the two names were one.
 #[test]
 fn a_request_of_a_separator_still_parts_the_names() {
-  let names = reading_names(&tuples_of(
-    "\\documentclass{aastex631}\n\\begin{document}\n\\title{T}\n\\author{Ann Able\\altaffilmark{1},\nBob Baker\\altaffilmark, Cy Cole,\nDee Dunn}\n\\altaffiltext{1}{Univ A}\n\\maketitle\nText.\n\\end{document}\n",
-  ));
-  assert_eq!(names, ["Ann Able", "Bob Baker", "Cy Cole", "Dee Dunn"]);
+  // (Bob's mark is one of no label: `[]`, his name ended by it)
+  assert_eq!(
+    tuples_of(
+      "\\documentclass{aastex631}\n\\begin{document}\n\\title{T}\n\\author{Ann Able\\altaffilmark{1},\nBob Baker\\altaffilmark, Cy Cole,\nDee Dunn}\n\\altaffiltext{1}{Univ A}\n\\maketitle\nText.\n\\end{document}\n",
+    ),
+    [
+      "C Ann Able [altaffil:1] | line:names",
+      "  c altaffiliation Univ A | api:label ruling1:request",
+      "C Bob Baker [] | line:names sep:comma",
+      "C Cy Cole [] | line:names",
+      "C Dee Dunn [] | line:names sep:comma",
+    ]
+  );
 }
 
 /// FM S2b aas census: emulateapj's `\footnotemark[n]` and `\footnotetext[n]` print n itself (emulateapj.cls:558-571
@@ -1313,16 +1309,17 @@ fn a_request_of_a_separator_still_parts_the_names() {
 /// (revtex4's `\frontmatter@thefootnote`), the text "2", and the reading lost the note.
 #[test]
 fn emulateapj_title_marks_print_the_given_number() {
-  let tuples = tuples_of(
-    "\\documentclass{emulateapj}\n\\begin{document}\n\\title{T}\n\\author{Ann Able, Bob Baker \\footnotemark[2]}\n\\footnotetext[2]{Sloan Fellow}\n\\affil{Univ A}\n\\maketitle\nText.\n\\end{document}\n",
-  );
-  let bob = tuples
-    .iter()
-    .position(|t| t.starts_with("C Bob Baker"))
-    .expect("Bob Baker");
-  assert!(
-    tuples[bob].contains("[2]") && tuples[bob..].iter().any(|t| t.contains("Sloan Fellow")),
-    "{tuples:#?}"
+  assert_eq!(
+    tuples_of(
+      "\\documentclass{emulateapj}\n\\begin{document}\n\\title{T}\n\\author{Ann Able, Bob Baker \\footnotemark[2]}\n\\footnotetext[2]{Sloan Fellow}\n\\affil{Univ A}\n\\maketitle\nText.\n\\end{document}\n",
+    ),
+    [
+      "C Ann Able [] | line:names",
+      "  a Univ A | api:annotate:new",
+      "C Bob Baker [2] | line:names sep:comma",
+      "  a Univ A | api:annotate:new",
+      "  n Sloan Fellow | note:footnotetext-mark",
+    ]
   );
 }
 
@@ -1332,25 +1329,37 @@ fn emulateapj_title_marks_print_the_given_number() {
 /// Factory)`. Red: the line went to the last row's names alone.
 #[test]
 fn an_unmarked_line_under_a_run_of_names_rows_is_every_names() {
-  for author in [
-    "Ann Able$^{1}$, Bob Baker$^{2}$ \\\\ Cy Cole$^{1}$ \\\\ The X University",
-    "Ann Able\\altaffilmark{1}, Bob Baker\\altaffilmark{2} \\\\ Cy Cole\\altaffilmark{1} \\\\ (The X Factory)",
+  for (author, line, marks) in [
+    (
+      "Ann Able$^{1}$, Bob Baker$^{2}$ \\\\ Cy Cole$^{1}$ \\\\ The X University",
+      "The X University",
+      ["1", "2", "1"],
+    ),
+    (
+      "Ann Able\\altaffilmark{1}, Bob Baker\\altaffilmark{2} \\\\ Cy Cole\\altaffilmark{1} \\\\ (The X Factory)",
+      "(The X Factory)",
+      ["altaffil:1", "altaffil:2", "altaffil:1"],
+    ),
   ] {
     let tuples = tuples_of(&format!(
       "\\documentclass{{aastex}}\n\\begin{{document}}\n\\title{{T}}\n\\author{{{author}}}\n\\altaffiltext{{1}}{{Univ A}}\n\\altaffiltext{{2}}{{Univ B}}\n\\maketitle\nText.\n\\end{{document}}\n"
     ));
-    let line = if author.contains("Factory") {
-      "(The X Factory)"
-    } else {
-      "The X University"
-    };
+    let unmarked = format!("  a {line} | line:unmarked-joined R12:row-above");
+    let alt = |univ: &str| format!("  c altaffiliation {univ} | api:label ruling1:request");
     assert_eq!(
-      reading_affiliations(&tuples)
-        .iter()
-        .filter(|a| a.contains(line))
-        .count(),
-      3,
-      "{tuples:#?}"
+      tuples,
+      [
+        format!("C Ann Able [{}] | line:names", marks[0]),
+        unmarked.clone(),
+        alt("Univ A"),
+        format!("C Bob Baker [{}] | line:names sep:comma", marks[1]),
+        unmarked.clone(),
+        alt("Univ B"),
+        format!("C Cy Cole [{}] | line:names", marks[2]),
+        unmarked.clone(),
+        alt("Univ A"),
+      ],
+      "{author}"
     );
   }
 }
@@ -1361,24 +1370,32 @@ fn an_unmarked_line_under_a_run_of_names_rows_is_every_names() {
 /// (`$^1$Univ A, City; ann@a.edu`) keeps its institution beside the address. Red: both kept the addresses alone.
 #[test]
 fn an_address_beside_an_institution_keeps_the_institution() {
-  let unlabelled = reading_affiliations(&tuples_of(
-    "\\documentclass{aastex}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^1$, Bob Baker$^2$, and Cy Cole$^1$ \\\\\n\\small\n1. University A, City; Ann's email: ann@a.edu \\\\\n2. University B, Town; bob@b.edu}\n\\maketitle\nText.\n\\end{document}\n",
-  ));
-  assert!(
-    unlabelled.len() == 3
-      && unlabelled
-        .iter()
-        .all(|a| a.contains("University A") && a.contains("University B")),
-    "{unlabelled:#?}"
+  // (the reading's text parts its pieces with commas, as the lexer reads `;`; the writer matches today's nodes by their
+  // letters, so the output keeps the `;`)
+  let joined = "  a 1. University A, City, Ann’s email: ann@a.edu 2. University B, Town, bob@b.edu | line:unmarked-joined R12:row-above line:continued";
+  assert_eq!(
+    tuples_of(
+      "\\documentclass{aastex}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^1$, Bob Baker$^2$, and Cy Cole$^1$ \\\\\n\\small\n1. University A, City; Ann's email: ann@a.edu \\\\\n2. University B, Town; bob@b.edu}\n\\maketitle\nText.\n\\end{document}\n",
+    ),
+    [
+      "C Ann Able [1] | line:names",
+      joined,
+      "C Bob Baker [2] | line:names sep:comma",
+      joined,
+      "C Cy Cole [1] | line:names sep:word",
+      joined,
+    ]
   );
-  let labelled = reading_affiliations(&tuples_of(
-    "\\documentclass{aastex}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^1$, Bob Baker$^2$ \\\\\n$^1$University A, City; ann@a.edu \\\\\n$^2$University B, Town; bob@b.edu}\n\\maketitle\nText.\n\\end{document}\n",
-  ));
-  assert!(
-    labelled.len() == 2
-      && labelled[0].contains("University A")
-      && labelled[1].contains("University B"),
-    "{labelled:#?}"
+  assert_eq!(
+    tuples_of(
+      "\\documentclass{aastex}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^1$, Bob Baker$^2$ \\\\\n$^1$University A, City; ann@a.edu \\\\\n$^2$University B, Town; bob@b.edu}\n\\maketitle\nText.\n\\end{document}\n",
+    ),
+    [
+      "C Ann Able [1] | line:names",
+      "  a University A, City, ann@a.edu | ruling1:request",
+      "C Bob Baker [2] | line:names sep:comma",
+      "  a University B, Town, bob@b.edu | ruling1:request",
+    ]
   );
 }
 
@@ -1387,14 +1404,16 @@ fn an_address_beside_an_institution_keeps_the_institution() {
 /// observations …}` (1111.4983, astro-ph0701636), which today's keeps in the title. Red: the reading lost it.
 #[test]
 fn a_footnote_text_the_title_shows_is_the_titles_note() {
-  let tuples = tuples_of(
-    "\\documentclass{emulateapj}\n\\begin{document}\n\\title{T\\footnotemark[1]}\n\\footnotetext[1]{Based on observations.}\n\\author{Ann Able \\footnotemark[2]}\n\\footnotetext[2]{Sloan Fellow}\n\\affil{Univ A}\n\\maketitle\nText.\n\\end{document}\n",
-  );
-  assert!(
-    tuples
-      .iter()
-      .any(|t| t.starts_with("B note Based on observations.") && t.contains("api:title-note")),
-    "{tuples:#?}"
+  assert_eq!(
+    tuples_of(
+      "\\documentclass{emulateapj}\n\\begin{document}\n\\title{T\\footnotemark[1]}\n\\footnotetext[1]{Based on observations.}\n\\author{Ann Able \\footnotemark[2]}\n\\footnotetext[2]{Sloan Fellow}\n\\affil{Univ A}\n\\maketitle\nText.\n\\end{document}\n",
+    ),
+    [
+      "C Ann Able [2] | line:names",
+      "  a Univ A | api:annotate:new",
+      "  n Sloan Fellow | note:footnotetext-mark",
+      "B note Based on observations. | note:footnotetext-mark api:title-note owner:title",
+    ]
   );
 }
 
@@ -1404,25 +1423,27 @@ fn a_footnote_text_the_title_shows_is_the_titles_note() {
 /// the correspondent went to one author.
 #[test]
 fn a_corresponding_author_list_names_each_author() {
-  for (list, a, b) in [
-    ("Ann Able, Bob Baker", "Ann Able", "Bob Baker"),
-    ("Ann Able \\& Bob Baker", "Ann Able", "Bob Baker"),
+  for (list, printed) in [
+    ("Ann Able, Bob Baker", "Ann Able, Bob Baker"),
+    ("Ann Able \\& Bob Baker", "Ann Able & Bob Baker"),
   ] {
-    let tuples = tuples_of(&format!(
-      "\\documentclass{{aastex631}}\n\\begin{{document}}\n\\title{{T}}\n\\author{{Ann Able}}\n\\affiliation{{Univ A}}\n\\author{{Bob Baker}}\n\\affiliation{{Univ B}}\n\\author{{Cy Cole}}\n\\affiliation{{Univ C}}\n\\correspondingauthor{{{list}}}\n\\maketitle\nText.\n\\end{{document}}\n"
-    ));
-    let owners: Vec<&str> = tuples
-      .iter()
-      .enumerate()
-      .filter(|(_, t)| t.contains("correspondent"))
-      .filter_map(|(i, _)| {
-        tuples[..i]
-          .iter()
-          .rev()
-          .find_map(|t| t.strip_prefix("C "))
-          .map(|c| c.split(" [").next().unwrap_or(c))
-      })
-      .collect();
-    assert_eq!(owners, [a, b], "{list}: {tuples:#?}");
+    let correspondent =
+      format!("  c correspondent {printed} | api:label ruling1:fuzzy-label fuzzy:surname");
+    assert_eq!(
+      tuples_of(&format!(
+        "\\documentclass{{aastex631}}\n\\begin{{document}}\n\\title{{T}}\n\\author{{Ann Able}}\n\\affiliation{{Univ A}}\n\\author{{Bob Baker}}\n\\affiliation{{Univ B}}\n\\author{{Cy Cole}}\n\\affiliation{{Univ C}}\n\\correspondingauthor{{{list}}}\n\\maketitle\nText.\n\\end{{document}}\n"
+      )),
+      [
+        "C Ann Able [] | line:names".to_string(),
+        "  a Univ A | api:annotate:new".to_string(),
+        correspondent.clone(),
+        "C Bob Baker [] | line:names".to_string(),
+        "  a Univ B | api:annotate:new".to_string(),
+        correspondent,
+        "C Cy Cole [] | line:names".to_string(),
+        "  a Univ C | api:annotate:new".to_string(),
+      ],
+      "{list}"
+    );
   }
 }

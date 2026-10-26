@@ -237,11 +237,13 @@ fn the_contact_grid_comes_before_the_labels() {
     "  c email second@example.org | api:annotate:last",
   ]);
   let ams = "\\documentclass{amsart}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^{1,2}$, Bob Baker$^{1,2}$ and Cat Cole$^{1,2}$}\n\\address{$^{1}$Univ A, City}\n\\address{$^{2}$Univ B, Town}\n\\email{first@example.org}\n\\email{second@example.org}\n\\email{third@example.org}\n\\maketitle\nText.\n\\end{document}\n";
-  let cat: Vec<String> = tuples(ams)
-    .into_iter()
-    .skip_while(|t| !t.starts_with("C Cat Cole"))
-    .collect();
-  assert_eq!(cat, [
+  assert_eq!(tuples(ams), [
+    "C Ann Able [1,2] | line:names",
+    "  a Univ A, City | api:leading-mark",
+    "  a Univ B, Town | api:leading-mark",
+    "C Bob Baker [1,2] | line:names sep:comma",
+    "  a Univ A, City | api:leading-mark",
+    "  a Univ B, Town | api:leading-mark",
     "C Cat Cole [1,2] | line:names sep:word",
     "  a Univ A, City | api:leading-mark",
     "  a Univ B, Town | api:leading-mark",
