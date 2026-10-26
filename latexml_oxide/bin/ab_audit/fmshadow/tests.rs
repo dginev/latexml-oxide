@@ -550,6 +550,60 @@ fn r5_classes_are_fenced_and_the_separator_class() {
   );
 }
 
+/// The XML-wrong class "the address groups written after all the authors … given to the last author": the shadow parts
+/// the groups among the authors in order (`owner:upfront-grid`), the XML gives them all to the last name (2507.07513,
+/// 1812.04979, 2010.11440, each PDF-confirmed); not when an earlier XML creator holds one of them.
+#[test]
+fn address_groups_given_to_the_last_author_are_an_xml_wrong_class() {
+  let grid = "the address groups written after all the authors, one per author in order, given to the last author";
+  let mut ann = creator(
+    "Ann Able",
+    &["Univ A, City"],
+    "api:annotate:last owner:upfront-grid",
+  );
+  ann.contacts.push(("email".into(), "ann@a.edu".into()));
+  ann.rules.insert(
+    "email\tannaedu".into(),
+    "api:annotate:last owner:upfront-grid".into(),
+  );
+  let mut bob = creator("Bob Baker", &["Univ B, Town"], "api:annotate:last");
+  bob.contacts.push(("email".into(), "bob@b.edu".into()));
+  bob
+    .rules
+    .insert("email\tbobbedu".into(), "api:annotate:last".into());
+  let shadow = Tuples {
+    creators: vec![ann, bob],
+    ..Tuples::default()
+  };
+  let mut piled = creator("Bob Baker", &["Univ A, City", "Univ B, Town"], "");
+  piled.contacts = vec![
+    ("email".into(), "ann@a.edu".into()),
+    ("email".into(), "bob@b.edu".into()),
+  ];
+  let xml = Tuples {
+    creators: vec![creator("Ann Able", &[], ""), piled.clone()],
+    ..Tuples::default()
+  };
+  let classes: Vec<_> = compare(&shadow, &xml)
+    .into_iter()
+    .map(|d| d.class)
+    .collect();
+  assert!(
+    !classes.is_empty() && classes.iter().all(|c| *c == Some(grid)),
+    "{classes:?}"
+  );
+  // (an earlier creator holding one of the groups is no pile on the last)
+  let xml = Tuples {
+    creators: vec![creator("Ann Able", &["Univ A, City"], ""), piled],
+    ..Tuples::default()
+  };
+  assert!(
+    compare(&shadow, &xml)
+      .into_iter()
+      .all(|d| d.class != Some(grid))
+  );
+}
+
 /// FM S2a.2 r4: the XML-wrong class "legend lines welded onto the affiliation above them" — the XML's affiliation is
 /// the shadow's with the symbol lines' notes after it, an e-mail legend's label words before its address (2305.13575,
 /// 2012.15253, 2110.08090 …, each PDF-confirmed).

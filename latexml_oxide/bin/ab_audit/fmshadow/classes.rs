@@ -388,6 +388,41 @@ pub(super) fn names_lost_to_affiliations(shadow: &Tuples, xml: &Tuples) -> Vec<S
   }
 }
 
+/// Whether the XML gives its last creator every address and contact the shadow gives the authors as the groups printed
+/// after all the names, one group per author in order (`owner:upfront-grid`, by `api:annotate:last`), and no earlier
+/// creator any of them, the disagreement's item one of them: amsart's `\address`/`\email` written after the last
+/// `\author`, each group printed with its author's name or mark (`(Dinh Tien Dat) Department of …`, 2507.07513).
+pub(super) fn grid_given_to_the_last(shadow: &Tuples, xml: &Tuples, detail: &str) -> bool {
+  let grid: Vec<&str> = shadow
+    .creators
+    .iter()
+    .flat_map(|c| c.rules.iter())
+    .filter(|(key, rule)| key.as_str() != "name" && rule.contains("api:annotate:last"))
+    .map(|(key, _)| key.as_str())
+    .collect();
+  let Some((last, earlier)) = xml.creators.split_last() else {
+    return false;
+  };
+  let holds = |c: &TCreator, key: &str| match key.split_once('\t') {
+    Some(("affiliation", text)) => c.affiliations.iter().any(|a| norm(a) == text),
+    Some((role, text)) => c.contacts.iter().any(|(r, t)| r == role && norm(t) == text),
+    None => false,
+  };
+  let item = detail
+    .split_once("-only ")
+    .map_or("", |(_, item)| item.trim());
+  let text = item.rsplit('\t').next().unwrap_or(item);
+  shadow
+    .creators
+    .iter()
+    .flat_map(|c| c.rules.values())
+    .any(|rule| rule.contains("owner:upfront-grid"))
+    && grid
+      .iter()
+      .all(|key| holds(last, key) && !earlier.iter().any(|c| holds(c, key)))
+    && grid.iter().any(|key| key.rsplit('\t').next() == Some(text))
+}
+
 /// The PDF-confirmed XML-wrong classes (FM S2a.2 r2; each witness's pdflatex PDF read against both sides).
 pub const XML_WRONG: &[XmlWrong] = &[
   XmlWrong {
@@ -535,6 +570,14 @@ pub const XML_WRONG: &[XmlWrong] = &[
             .is_some_and(|r| r.contains("name:reversed"))
         })
         && names_explained(c.shadow, c.xml, NameFault::Reversed)
+    },
+  },
+  XmlWrong {
+    name:      "the address groups written after all the authors, one per author in order, given to the last author",
+    witnesses: &["2507.07513", "1812.04979", "2010.11440"],
+    applies:   |c| {
+      matches!(c.kind, "affiliation" | "contact-owner")
+        && grid_given_to_the_last(c.shadow, c.xml, c.detail)
     },
   },
   XmlWrong {
