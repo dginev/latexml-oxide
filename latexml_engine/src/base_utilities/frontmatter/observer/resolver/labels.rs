@@ -257,7 +257,13 @@ pub(super) fn tex_letters(source: &str) -> String {
       }
       skip_group(&mut chars);
     } else if word.is_empty() {
-      // (an accent command, `\'`, `\"`, `\~`: its character dropped, the letter after it kept)
+      // (a control symbol printing its character keeps it: `\correspondingauthor{Jiacheng Meng \& Cheng Li}` names two,
+      // 2008.13733; an accent command, `\'`, `\"`, `\~`: its character dropped, the letter after it kept)
+      if let Some(&n) = chars.peek()
+        && "&%#_".contains(n)
+      {
+        out.push(n);
+      }
       chars.next();
     } else if let Some(rest) = word.strip_prefix("lxaccent") {
       // (an accent written out as the kernel's inner command, `\lxaccentumlaut`, `\lxaccentc` — `accent_inner_name`,

@@ -223,7 +223,14 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
           .and_then(|person| surname_key(&person.get_content()))
       })
       .collect();
-    for label in &institutes {
+    // (any fuzzy orphan, an institute's or a contact's: `\correspondingauthor{Weipeng Lin, Lin Tang}`'s correspondent is
+    // both authors', 2408.02230, 2404.14129, 2410.19543, 2008.13733 — it had been orphaned with a Warning)
+    let fuzzy_orphans: Vec<&String> = orphan_labels
+      .iter()
+      .filter(|(label, _)| label.starts_with("fuzzy:") && !owners.contains_key(label))
+      .map(|(label, _)| label)
+      .collect();
+    for label in &fuzzy_orphans {
       let Some(names) = label.strip_prefix("fuzzy:") else {
         continue;
       };
@@ -275,9 +282,14 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
   }
   let mut shared_creator: Option<Node> = None;
   // An orphan's owners among the authors (below), by its label and role.
+  // (several owners for an institute, or for a person's note whose fuzzy label names them each — a correspondent
+  // naming two; not an institute's `\email`/`\url` that inherited its label, which stays shared, 1205.6171)
   let owned_by = |label: &str, note: &Node| {
+    let role = note.get_attribute("role").unwrap_or_default();
     owners.get(label).filter(|named| {
-      named.len() == 1 || is_institute_role(&note.get_attribute("role").unwrap_or_default())
+      named.len() == 1
+        || is_institute_role(&role)
+        || (label.starts_with("fuzzy:") && !is_shared_contact_role(&role))
     })
   };
   // The annotations an author takes, by kind and text, with their labels: a copy of one under another label that no
@@ -374,7 +386,10 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
           placed.push(note.clone());
           continue;
         }
-        if !unlabelled && !shared_orphan(&note) {
+        // (none for an orphan whose fuzzy label names its owners: a correspondent naming two authors, placed below; a
+        // sole author's orphan still warns, 63h)
+        let named_by_label = label.starts_with("fuzzy:") && owned_by(&label, &note).is_some();
+        if !unlabelled && !shared_orphan(&note) && !named_by_label {
           let mut known: Vec<&String> = labeltable.keys().collect();
           known.sort();
           Warn!(

@@ -1397,3 +1397,32 @@ fn a_footnote_text_the_title_shows_is_the_titles_note() {
     "{tuples:#?}"
   );
 }
+
+/// FM S2b aas precision sample: a `\correspondingauthor` naming several authors (`Weipeng Lin, Lin Tang`, `Jiacheng
+/// Meng \& Cheng Li`) names each of them — 2408.02230, 2404.14129, 2410.19543, 2008.13733. Red: the ledger wrote the
+/// call's label unbraced and its comma cut it after the first name, and `\&` was read as an accent, the two names one;
+/// the correspondent went to one author.
+#[test]
+fn a_corresponding_author_list_names_each_author() {
+  for (list, a, b) in [
+    ("Ann Able, Bob Baker", "Ann Able", "Bob Baker"),
+    ("Ann Able \\& Bob Baker", "Ann Able", "Bob Baker"),
+  ] {
+    let tuples = tuples_of(&format!(
+      "\\documentclass{{aastex631}}\n\\begin{{document}}\n\\title{{T}}\n\\author{{Ann Able}}\n\\affiliation{{Univ A}}\n\\author{{Bob Baker}}\n\\affiliation{{Univ B}}\n\\author{{Cy Cole}}\n\\affiliation{{Univ C}}\n\\correspondingauthor{{{list}}}\n\\maketitle\nText.\n\\end{{document}}\n"
+    ));
+    let owners: Vec<&str> = tuples
+      .iter()
+      .enumerate()
+      .filter(|(_, t)| t.contains("correspondent"))
+      .filter_map(|(i, _)| {
+        tuples[..i]
+          .iter()
+          .rev()
+          .find_map(|t| t.strip_prefix("C "))
+          .map(|c| c.split(" [").next().unwrap_or(c))
+      })
+      .collect();
+    assert_eq!(owners, [a, b], "{list}: {tuples:#?}");
+  }
+}

@@ -528,7 +528,16 @@ pub(in crate::base_utilities) fn record_api_call(
     .map(|kv| {
       kv.get_pairs()
         .map(|(key, value)| match value {
-          ArgWrap::Tokens(tokens) if key == "label" => s!("{key}={}", label_text(tokens)),
+          // (braced when it holds a comma, which would part it: `\correspondingauthor{Weipeng Lin, Lin Tang}`'s
+          // `label={fuzzy:…}`, 2408.02230)
+          ArgWrap::Tokens(tokens) if key == "label" => {
+            let label = label_text(tokens);
+            if label.contains(',') {
+              s!("{key}={{{label}}}")
+            } else {
+              s!("{key}={label}")
+            }
+          },
           value => s!("{key}={value}"),
         })
         .collect::<Vec<_>>()
