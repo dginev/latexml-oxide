@@ -64,8 +64,8 @@ fn gretsi_frontmatter_follows_the_release() {
   );
   assert_all(&xml, &[
     "<title>Méthode du point proximal</title>",
-    r#"<personname>Ziad <text font="smallcaps" xml:id="id1">Naja<sup xml:id="id1.1"><text font="upright" xml:id="id1.1.1">1</text></sup></text></personname> <contact name="Affiliation: " role="affiliation">Univ Paris-Sud 11</contact> </creator>"#,
-    r#"<personname>Pierre <text font="smallcaps" xml:id="id2">Duhamel<sup xml:id="id2.1"><text font="upright" xml:id="id2.1.1">2</text></sup></text></personname> <contact name="Email: " role="email">ziad.naja@lss.fr</contact> <contact name="Affiliation: " role="affiliation">CNRS<break/>Gif-sur-Yvette</contact> </creator>"#,
+    r#"<personname>Ziad <text font="smallcaps" xml:id="id1">Naja<sup xml:id="id1.1"><text font="upright" xml:id="id1.1.1">1</text></sup></text></personname> <contact name="Affiliation: " role="affiliation">Univ Paris-Sud 11</contact> <contact name="Email: " role="email">ziad.naja@lss.fr</contact> </creator>"#,
+    r#"<personname>Pierre <text font="smallcaps" xml:id="id2">Duhamel<sup xml:id="id2.1"><text font="upright" xml:id="id2.1.1">2</text></sup></text></personname> <contact name="Affiliation: " role="affiliation">CNRS<break/>Gif-sur-Yvette</contact> </creator>"#,
     r#"<abstract inlist="toc" name="Résumé" xml:id="abstract1"> <p xml:id="abstract1.1">Cet article est basé sur la méthode.</p> </abstract> <abstract inlist="toc" name="Abstract" xml:id="abstract2"> <p xml:id="abstract2.1"><text xml:lang="en" xml:id="abstract2.1.1">This paper recalls the proximal point method.</text></p> </abstract>"#,
     r#"<caption class="ltx_centering"><tag close=": ">Figure 1</tag>Une figure.</caption>"#,
   ]);

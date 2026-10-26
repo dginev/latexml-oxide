@@ -505,6 +505,7 @@ pub fn resolve(inputs: &[Input]) -> Resolved {
   resolver.answer_pending();
   resolver.answer_note_texts();
   resolver.answer_sequence();
+  resolver.respell_emails();
   resolver.held_before_creators();
   resolver.sole_author_takes_the_block();
   let mut out = resolver.out;

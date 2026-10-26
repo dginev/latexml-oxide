@@ -89,11 +89,79 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   distribute_upfront_contacts(document)?;
   let answered = answered_labels(document);
   relocate_annotations(document)?;
+  respell_emails(document)?;
   show_unanswered_marks(document, &answered)?;
   flag_merged_creators(document)?;
   // (FM S2b: a written family's paper, where it differs from the observer's reading by the writer's operations alone,
   // written as the reading has it — under the shadow switch only; OXIDIZED_DESIGN_DIVERGENCES #837 "S2b")
   write_observed_frontmatter(document)?;
+  Ok(())
+}
+
+/// FIDELITY_CHARTER §4, "ownership by evidence, never by bare position": an e-mail contact one address alone fills,
+/// on an author it does not spell, goes to the one author it spells — an `\email` call placed by its `annotate=last`
+/// after a one-call author list (AASTeX 5's `\author{Ann Able and Bob Baker}\email{able@x.org}`: 0911.3506
+/// `bourouaine@mps.mpg.de` on Eckart Marsch, 1506.04035, 1203.1317, 0904.0560 — 92 of the 688 aas census papers); a copy
+/// the author it spells holds already is dropped. An address that spells no one, or several, stays (`spelled_owner`).
+/// Guard `perfect_kernel_batch81::an_email_call_goes_to_the_author_it_spells`.
+fn respell_emails(document: &mut Document) -> Result<()> {
+  let authors = document.findnodes("//ltx:creator[@role='author'][ltx:personname]", None);
+  if authors.len() < 2 {
+    return Ok(());
+  }
+  let keys: Vec<NameKeys> = authors
+    .iter()
+    .map(|author| {
+      let name = document
+        .findnode("ltx:personname", Some(author))
+        .map(|person| person.get_content())
+        .unwrap_or_default();
+      NameKeys::of(&Tokens::new(ExplodeText!(&name)))
+    })
+    .collect();
+  let mut moves: Vec<(Node, usize)> = Vec::new();
+  for (at, author) in authors.iter().enumerate() {
+    for contact in document.findnodes("ltx:contact[@role='email']", Some(author)) {
+      // (one a mark's label placed — a marked e-mail line — is no bare position: `*baker@x.org` under `A. Able*`; a fuzzy
+      // label, a name, that placed it nowhere left it at the call's position: `\correspondingauthor{…}\email{…}`,
+      // 2003.00016, 2003.11098, 2204.06937)
+      if contact
+        .get_attribute("_label")
+        .is_some_and(|label| !label.is_empty() && !label.starts_with("fuzzy:"))
+      {
+        continue;
+      }
+      // (its one address, a lead word aside: `\email{Email: pdrew@utexas.edu}`, 2003.00016)
+      let text = contact.get_content();
+      if text.matches('@').count() != 1 {
+        continue;
+      }
+      let Some(address) = text
+        .split_whitespace()
+        .find(|word| word.contains('@'))
+        .map(|word| word.trim_matches(|c: char| !c.is_alphanumeric()))
+      else {
+        continue;
+      };
+      if let Some(owner) = spelled_owner(&keys, address)
+        && owner != at
+      {
+        moves.push((contact, owner));
+      }
+    }
+  }
+  for (contact, owner) in moves {
+    let address = contact.get_content();
+    let held = document
+      .findnodes("ltx:contact[@role='email']", Some(&authors[owner]))
+      .iter()
+      .any(|c| c.get_content().trim() == address.trim());
+    if !held {
+      let mut target = authors[owner].clone();
+      document.append_clone(&mut target, vec![contact.clone()])?;
+    }
+    document.remove_node(contact);
+  }
   Ok(())
 }
 

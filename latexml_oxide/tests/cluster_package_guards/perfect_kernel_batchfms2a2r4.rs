@@ -271,14 +271,16 @@ fn the_contact_grid_comes_before_the_labels() {
 fn an_empty_entry_is_in_todays_pile() {
   let tex = "\\documentclass{amsart}\n\\begin{document}\n\\title{T}\n\\author{Ann Able, Bob Baker and Cat Cole}\n\\email{}\n\\address{Univ A, City}\n\\email{ann@example.org}\n\\address{Univ B, Town}\n\\email{bob@example.org}\n\\address{Univ C, Village}\n\\email{cat@example.org}\n\\maketitle\nText.\n\\end{document}\n";
   assert_eq!(tuples(tex), [
+    // (the e-mails each to the author it spells, FIDELITY_CHARTER §4, never by bare position — 82x; the addresses stay
+    // in the pile, no grid)
     "C Ann Able [] | line:names",
+    "  c email ann@example.org | api:annotate:last owner:spelled",
     "C Bob Baker [] | line:names sep:comma",
+    "  c email bob@example.org | api:annotate:last owner:spelled",
     "C Cat Cole [] | line:names sep:word",
     "  a Univ A, City | api:annotate:last",
     "  a Univ B, Town | api:annotate:last",
     "  a Univ C, Village | api:annotate:last",
-    "  c email ann@example.org | api:annotate:last",
-    "  c email bob@example.org | api:annotate:last",
     "  c email cat@example.org | api:annotate:last",
   ]);
 }

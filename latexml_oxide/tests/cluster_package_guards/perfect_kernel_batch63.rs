@@ -1812,14 +1812,15 @@ fn svjour3_at_piece_naming_several_authors() {
 /// sectioning-frontmatter/revtex_marked_affiliations_link_by_mark.
 #[test]
 fn revtex_marked_affiliations_link_by_mark() {
+  // (the corresponding author's address Ann's, which it spells — FIDELITY_CHARTER §4, not the last author's, 82x)
   assert_creators(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_marked_affiliations_link_by_mark.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><contact name=\"Email:\u{a0}\" role=\"email\">Corresponding author: ann@a.org</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">b</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">a</text></sup></personname><contact name=\"Email:\u{a0}\" role=\"email\">Corresponding author: ann@a.org</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
     ],
   );
 }
@@ -4370,9 +4371,10 @@ fn store_set_before_a_superseding_author_list() {
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/store_set_before_a_superseding_author_list.tex"
   );
   let xml = assert_elements(tex, RAW, (0, 0), &[]);
+  // (Alice's address hers by its spelling, FIDELITY_CHARTER §4 — not Bob's by its position, 82x)
   assert_eq!(creators_in(&xml), vec![
-    "<creator role=\"author\">\n    <personname>Alice A</personname>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Bob B</personname>\n    <contact name=\"Address: \" role=\"address\">Shared</contact>\n    <contact name=\"Email: \" role=\"email\">alice@a.org</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Alice A</personname>\n    <contact name=\"Email: \" role=\"email\">alice@a.org</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob B</personname>\n    <contact name=\"Address: \" role=\"address\">Shared</contact>\n  </creator>",
   ]);
 }
 

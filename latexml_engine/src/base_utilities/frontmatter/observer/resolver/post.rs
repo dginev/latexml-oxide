@@ -350,6 +350,51 @@ impl Resolver {
     }
   }
 
+  /// FIDELITY_CHARTER §4, "ownership by evidence, never by bare position": an e-mail one address alone fills, placed by
+  /// its call's position (`api:annotate:*`, the upfront grid's included), goes to the one author its address spells — an
+  /// AASTeX 5 `\email{able@x.org}` after `\author{Ann Able and Bob Baker}` (0911.3506, 1506.04035: 92 of the 688 aas
+  /// census papers); a copy that author holds already is dropped; one a label placed stays. After the grid and the
+  /// labels, as today's `insert::respell_emails`.
+  pub(super) fn respell_emails(&mut self) {
+    let live = self.live();
+    if live.len() < 2 {
+      return;
+    }
+    let mut moves: Vec<(usize, usize, usize)> = Vec::new();
+    for &c in &live {
+      for (i, a) in self.out.creators[c].contacts.iter().enumerate() {
+        let text = a.text.trim();
+        if a.role != "email"
+          || a.label.is_some()
+          || !a.rule.contains("api:annotate")
+          || text.matches('@').count() != 1
+        {
+          continue;
+        }
+        if let [address] = addresses_in(text).as_slice()
+          && let Some(owner) = self.spelled(address, &live)
+          && owner != c
+        {
+          moves.push((c, i, owner));
+        }
+      }
+    }
+    let mut taken: Vec<(usize, Assoc)> = Vec::new();
+    for &(c, i, owner) in moves.iter().rev() {
+      taken.push((owner, self.out.creators[c].contacts.remove(i)));
+    }
+    for (owner, mut assoc) in taken.into_iter().rev() {
+      let held = self.out.creators[owner]
+        .contacts
+        .iter()
+        .any(|x| x.role == "email" && x.text.trim() == assoc.text.trim());
+      if !held {
+        assoc.rule.push_str(" owner:spelled");
+        self.out.creators[owner].contacts.push(assoc);
+      }
+    }
+  }
+
   /// Glued labels parted by the marks the other side shows (ruling 1: the marks shown on a name are its requests, read
   /// as the reader reads them): a name's mark that no entry labels, but that is two or more of the entries' labels
   /// written together — `12` under entries `1` and `2` (2103.10685), `1⋆` under `1` and a symbol (2606.01911), `∗123`

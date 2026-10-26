@@ -212,3 +212,26 @@ fn an_aastex61_collaboration_takes_one_argument() {
     "{xml}"
   );
 }
+
+/// FIDELITY_CHARTER §4, "ownership by evidence, never by bare position": an `\email` call's address that spells one
+/// author goes to that author, not to the one its `annotate=last` names — an AASTeX 5 `\email{…}` after a one-call author
+/// list (0911.3506, 1506.04035, 1203.1317, 0904.0560: 92 of the 688 aas census papers). Red: on the last author, as
+/// Perl. Repro sectioning-frontmatter/email_call_goes_to_the_author_it_spells.
+#[test]
+fn an_email_call_goes_to_the_author_it_spells() {
+  let (log, xml) = convert_files_with(
+    repro!("sectioning-frontmatter/email_call_goes_to_the_author_it_spells.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let creators = super::perfect_kernel_batch61::creators_of(&xml);
+  assert_eq!(
+    creators,
+    [
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">able@x.org</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+    ],
+    "{xml}"
+  );
+}
