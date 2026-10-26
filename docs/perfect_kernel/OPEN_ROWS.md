@@ -656,6 +656,9 @@ says otherwise.
     `\@AF@join`), as aastex's binding has it. CSS review (end of goal): ar5iv.css's `.ltx_role_affiliation` rules
     (ar5iv.css:403-426, the breakout and the spacing between consecutive affiliations) do not cover
     `.ltx_role_altaffiliation`, which aastex already emits.
+  - (g) A duplicate `xml:id` inside a formula: 2007.15460's `S6.E23.m3.10` appears twice (writer off and on alike; seen
+    in the FM S2b default census, 2026-10-25). Duplicate or suffixed ids are a symptom (user rule 2026-10-25): root-cause
+    the math construction that builds the node twice. Math is parked; RED finding only.
   - (f) cs0204041 loads the hyperref binding twice through a local myHyperref.sty.
 - **59p class sweep** (scratch_59p/cls/, 299 classes). M3 S5 (in-place display) may subsume both:
   - (a) webquiz: a deposit dropped for showing nothing loses its paragraph end, so `\AtBeginDocument` text and the
