@@ -796,6 +796,27 @@ impl Resolver {
           };
           (fuzzy, Assoc { rule, ..assoc })
         },
+        // (a label no mark requests that spells an author's whole name names that author, as a `fuzzy:` one does:
+        // amsart's `\address[Martin Br\"uckerhoff]{…}` prints "(MARTIN BRÜCKERHOFF) UNIVERSITÄT MÜNSTER", its optional
+        // argument the author's name, 2103.03620)
+        // (the label's words, read as one: a name's words are several labels, `mark_labels`)
+        None if owners.is_empty() => {
+          let spelled = fold_name(&tex_letters(&labels.concat()));
+          let named: Vec<usize> = self
+            .out
+            .creators
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| !spelled.is_empty() && fold_name(&c.name) == spelled)
+            .map(|(i, _)| i)
+            .collect();
+          if named.is_empty() {
+            (owners, assoc)
+          } else {
+            let rule = s!("{} ruling1:fuzzy-label", assoc.rule);
+            (named, Assoc { rule, ..assoc })
+          }
+        },
         _ => (owners, assoc),
       };
       // (an address an entry's e-mail call printed among several, written out: to the author it spells, else the

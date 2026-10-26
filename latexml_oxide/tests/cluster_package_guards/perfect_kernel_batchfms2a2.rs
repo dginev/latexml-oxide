@@ -1068,3 +1068,75 @@ fn a_superscript_inside_a_word_is_the_name() {
   ));
   assert_eq!(names, ["Ann Able", "James McKernan"]);
 }
+
+/// Each creator of the reading with its affiliations: `<name>: <affiliation>; <affiliation>`.
+fn reading_affiliations(tuples: &[String]) -> Vec<String> {
+  let mut out: Vec<String> = Vec::new();
+  for t in tuples {
+    if let Some(c) = t.strip_prefix("C ") {
+      out.push(format!("{}:", c.split(" [").next().unwrap_or(c)));
+    } else if let Some(a) = t.strip_prefix("  a ")
+      && let Some(last) = out.last_mut()
+    {
+      let text = a.split(" | ").next().unwrap_or(a);
+      last.push_str(if last.ends_with(':') { " " } else { "; " });
+      last.push_str(text);
+    }
+  }
+  out
+}
+
+/// FM S2b ams precision sample (2026-10-25): a list of symbol marks leading an address, `$\dagger,\;\ast$`, requests
+/// each of them, the address text starting after the list. Red: only `†` was read, the address kept ", Univ A" and
+/// Cat Cole (∗) got nothing (math-ph0404036).
+#[test]
+fn a_leading_list_of_symbol_marks_requests_each() {
+  assert_eq!(
+    reading_affiliations(&document(
+      "amsart",
+      "",
+      "\\author{Ann Able$^{\\dagger}$}\n\\author{Bob Baker$^{\\ddagger}$}\n\\author{Cat Cole$^{\\ast}$}\n\\address{$\\dagger,\\;\\ast$\\;Univ A, City}\n\\address{$\\ddagger$ Univ B, Town}"
+    )),
+    [
+      "Ann Able: Univ A, City",
+      "Bob Baker: Univ B, Town",
+      "Cat Cole: Univ A, City"
+    ]
+  );
+}
+
+/// FM S2b ams precision sample: a range of marks set with an en-dash (`$^{1\text{--}3}$`, `\textsuperscript{1--3}`)
+/// requests every number in it, as a hyphen's does (80v `spelled_ranges`). Red: only its ends, 1 and 3, were requested
+/// and 2 went to the other name alone (2507.06232's `$^{1\text{--}5}$`).
+#[test]
+fn an_en_dash_range_requests_every_number_in_it() {
+  for marks in ["$^{1\\text{--}3}$", "\\textsuperscript{1--3}"] {
+    assert_eq!(
+      reading_affiliations(&document(
+        "amsart",
+        "",
+        &format!(
+          "\\author{{Ann Able{marks} and Bob Baker$^{{2}}$}}\n\\address{{$^1$Univ A\\\\ $^2$Univ B\\\\ $^3$Univ C}}"
+        )
+      )),
+      ["Ann Able: Univ A; Univ B; Univ C", "Bob Baker: Univ B"],
+      "{marks}"
+    );
+  }
+}
+
+/// FM S2b ams precision sample: amsart's `\address[<author>]{…}` names its author, printed in parentheses before the
+/// address ("(MARTIN BRÜCKERHOFF) UNIVERSITÄT MÜNSTER"), so the address is that author's wherever it is written — here
+/// inside the `\author` argument after each name. Red: the optional argument was read as a label no mark requests and
+/// both addresses went to the block (2103.03620).
+#[test]
+fn an_ams_address_naming_its_author_is_that_authors() {
+  assert_eq!(
+    reading_affiliations(&document(
+      "amsart",
+      "",
+      "\\author{Ann Able \\address[Ann Able]{Univ A, City} \\email{ann@a.edu} \\hspace*{0.5cm} Bob Baker \\address[Bob Baker]{Univ B, Town} \\email{bob@b.edu}}"
+    )),
+    ["Ann Able: Univ A, City", "Bob Baker: Univ B, Town"]
+  );
+}
