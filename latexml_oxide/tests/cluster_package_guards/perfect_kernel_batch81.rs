@@ -99,3 +99,18 @@ fn a_display_math_shift_closes_a_group_opened_in_it() {
   assert_eq!(xml.matches("<equation").count(), 2, "{xml}");
   assert!(xml.contains(r#"tex="z""#), "{xml}");
 }
+
+/// latex.ltx:1156 `\new@command#1{\@testopt{\@newcommand#1}0}`: `\newcommand{\two[5]}{…}` hands `\two[5]` to
+/// `\@testopt`, which sees the body's `{` and inserts `[{0}]` — five arguments, the first optional with default 0 (the
+/// `LaTeXDefToken` parameter). Red (int110o): five plain arguments, the next token swallowed (1312.5793: 90 script
+/// errors and the error-limit Fatal). Repro macro-state/newcommand_nargs_inside_the_braces.
+#[test]
+fn newcommand_nargs_inside_the_braces_take_the_testopt_default() {
+  let (log, xml) = convert_files_with(
+    repro!("macro-state/newcommand_nargs_inside_the_braces.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert!(xml.contains("[a b c d] x"), "{xml}");
+}

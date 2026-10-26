@@ -18604,3 +18604,26 @@ Fixed in Rust (80x): revtex4_support_sty.rs gives `\altaffiliation` role `altaff
 aas_support.sty.ltxml:133) on the author last given. Witness cond-mat0209262. Repro
 sectioning-frontmatter/author_revtex_altaffiliation_keeps_the_group; guard
 `perfect_kernel_batch80a::revtex_altaffiliation_keeps_the_group`.
+
+## 1192. `\newcommand{\cs[n]}{…}` with the argument count inside the braces takes n plain arguments
+
+Base_ParameterTypes.pool.ltxml:255 `DefToken` reads the braced token and puts the rest of the braces back, so
+`\newcommand{\two[5]}{…}` reads `[5]` as the argument count and no default. latex.ltx:1156 `\new@command#1{\@testopt
+{\@newcommand#1}0}` hands `\two[5]` to `\@testopt`, which sees the body's `{` and inserts `[{0}]` (:1735): five
+arguments, the first optional with default 0 — the author's body then uses `#2`…`#5`. With five plain arguments a call
+`\two{a}{b}{c}{d}` swallows the token after it. Minimal trigger:
+
+```latex
+\documentclass{article}
+\newcommand{\two[5]}{[#2 #3 #4 #5]}
+\begin{document}
+\two{a}{b}{c}{d} x
+\end{document}
+% pdflatex: "[a b c d] x"; Perl: "[b c d x]" (the 5th argument the following token)
+```
+
+Fixed in Rust (82h): `\newcommand`, `\renewcommand` and `\providecommand` read their token as `LaTeXDefToken`, which
+appends `[{0}]` after a bracket the braces held unless a `[` follows them (base_parameter_types.rs). Witness 1312.5793
+(`\smalltwomatrix`: 90 script errors, the error-limit Fatal → 0 errors). Repro
+macro-state/newcommand_nargs_inside_the_braces; guard
+`perfect_kernel_batch81::newcommand_nargs_inside_the_braces_take_the_testopt_default`.

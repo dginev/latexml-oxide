@@ -58,7 +58,7 @@ pub(crate) fn load() -> Result<()> {
   // `\par` (tex.web §392): `tex_declared` for the starred forms with arguments — here and in `\DeclareRobustCommand`,
   // `\newenvironment`, `\renewenvironment` below. The unstarred ones stay unchecked (their `\long`, latex.ltx:1281, is
   // not recorded, as in Perl). Witness 1001.1670; guards `scanner_status::a_starred_*`.
-  DefPrimitive!("\\newcommand OptionalMatch:* SkipSpaces DefToken [Number][]{}",
+  DefPrimitive!("\\newcommand OptionalMatch:* SkipSpaces LaTeXDefToken [Number][]{}",
   sub[(star,cs_token,nargs,opt,body)] {
     let nargs = nargs.value_of() as usize;
     let (definable, plain_origin) = is_definable_latex(&cs_token)?;
@@ -107,7 +107,7 @@ pub(crate) fn load() -> Result<()> {
     DefMacro!(cs_token, macro_args, body, tex_declared => { star.is_some() && nargs > 0 });
   });
 
-  DefPrimitive!("\\renewcommand OptionalMatch:* DefToken [Number][]{}",
+  DefPrimitive!("\\renewcommand OptionalMatch:* LaTeXDefToken [Number][]{}",
   sub[(star, cs, nargs_num, opt, body)] {
     let nargs = nargs_num.value_of() as usize;
     if opt.is_some() {
@@ -147,7 +147,7 @@ pub(crate) fn load() -> Result<()> {
     DefMacro!(cs, macro_args, body);
   });
 
-  DefPrimitive!("\\providecommand OptionalMatch:* DefToken [Number][]{}",
+  DefPrimitive!("\\providecommand OptionalMatch:* LaTeXDefToken [Number][]{}",
   sub[(star, cs, nargs, opt, body)] {
     // Use `is_definable_latex` (honors the `:autoload` flag) rather than the bare
     // `IsDefinable!`, for the same reason as `\newcommand`/`\newenvironment`: an

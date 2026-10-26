@@ -1194,6 +1194,53 @@ LoadDefinitions!({
     read_arg(ExpansionLevel::Off)?.pack_parameters() },
   predigest => sub[arg]{ Ok(arg.undigested()) });
 
+  // The token a LaTeX declarator defines (`\newcommand`, `\renewcommand`, `\providecommand`): DefToken, and when its
+  // braces held more after the token (`\newcommand{\two[5]}{…}`), latex.ltx:1156 `\new@command#1{\@testopt
+  // {\@newcommand#1}0}` hands that rest to `\@newcommand` and `\@testopt` (:1735, `\kernel@ifnextchar[`) inserts
+  // `[{0}]` unless a `[` follows the braces — so `[5]` then `[0]` read as five arguments, the first optional with default
+  // 0, which the author's body takes as `#2`-`#5` (1312.5793's `\smalltwomatrix`: 90 errors, the error-limit Fatal).
+  DefParameterType!(LaTeXDefToken, sub[_inner, _extra] {
+    let mut token_opt = read_token()?;
+    while let Some(token) = token_opt
+      && token.get_catcode() == Catcode::SPACE
+    {
+      token_opt = read_token()?;
+    }
+    if let Some(token) = token_opt
+      && token.get_catcode() == Catcode::BEGIN
+    {
+      let mut toks: Vec<Token> = read_balanced(ExpansionLevel::Off, false, false)?
+        .unlist()
+        .into_iter()
+        .filter(|t| !matches!(t.get_catcode(), Catcode::SPACE | Catcode::COMMENT))
+        .collect();
+      if toks.is_empty() {
+        Error!("expected", "DefToken", "Expected a DefToken parameter, found nothing.");
+        return Ok(ArgWrap::None);
+      }
+      let cs = toks.remove(0);
+      if !toks.is_empty() {
+        let bracket = |t: &Token| t.get_catcode() == Catcode::OTHER && t.to_string() == "[";
+        if toks.first().is_some_and(bracket) {
+          skip_spaces()?;
+          let follows_bracket = peek_token()?.as_ref().is_some_and(bracket);
+          if !follows_bracket {
+            toks.extend([T_OTHER!("["), T_BEGIN!(), T_OTHER!("0"), T_END!(), T_OTHER!("]")]);
+          }
+        }
+        unread_vec(toks);
+      }
+      return Ok(ArgWrap::Token(cs));
+    }
+    match token_opt {
+      Some(t) => Ok(ArgWrap::Token(t)),
+      None => {
+        Error!("expected", "DefToken", "Expected a DefToken parameter, found nothing.");
+        Ok(ArgWrap::None)
+      }
+    }
+  });
+
   // Read a token as used when defining it, ie. it may be enclosed in braces.
   // tex.web §1215 `get_r_token` skips blanks before the token being defined
   // (Perl's `DefToken`, Base_ParameterTypes.pool.ltxml:255, does not — a
