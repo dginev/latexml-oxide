@@ -857,6 +857,37 @@ impl Resolver {
         }
         continue;
       }
+      // (a footnote-symbol line under names that show no symbol mark at all is a mark of a kind no name shows too:
+      // ruling 2 gives the line to the names carrying its symbol, and none does, so it keeps its call's placement, as
+      // an unshown number does below — 1610.06222's `\address{$^*$Also affiliated with …}`, `\address{$\dag$Also
+      // affiliated with FAMNIT …}` under four unmarked names stayed Verret's, not a nameless creator's)
+      if owners.is_empty()
+        && symbol_labelled
+        && matches!(assoc.role.as_str(), "affiliation" | "address")
+        && !live.iter().any(|&c| {
+          self.out.creators[c]
+            .requests
+            .iter()
+            .any(|r| is_symbol_label(r))
+        })
+        && let Some((_, placed)) = self.piled.iter().find(|(p, _)| *p == at)
+        && !placed.is_empty()
+      {
+        for owner in placed.clone() {
+          self.attach(
+            Some(owner),
+            Assoc {
+              rule: s!(
+                "{} ruling2:uncarried label:unshown owner:annotate",
+                assoc.rule
+              ),
+              ..assoc.clone()
+            },
+            false,
+          );
+        }
+        continue;
+      }
       // (an entry labelled by a mark of a kind no name shows — `$^{1}$School of Physics, Liaoning University` under
       // names printing no number, 2407.20481, 2005.13493, 1305.3804 — is the reader's unlabelled entry: today's
       // placement by its `annotate=`, not the block)

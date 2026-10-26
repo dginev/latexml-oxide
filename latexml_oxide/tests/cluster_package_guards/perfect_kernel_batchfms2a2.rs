@@ -1199,3 +1199,21 @@ fn an_uncarried_symbol_on_a_contact_call_keeps_its_place() {
   );
   assert!(!tuples.iter().any(|t| t.starts_with("B ")), "{tuples:#?}");
 }
+
+/// FM S2b ams written: a footnote-symbol line under names that show no symbol mark at all is a mark of a kind no name
+/// shows (`label:unshown`), so it keeps its call's placement, as an unshown number does — ruling 2 gives a symbol line to
+/// the names carrying it, and none does. Red (ams written, census int110m): 1610.06222's `\address{$^*$Also
+/// affiliated with …}` and `\address{$\dag$Also affiliated with FAMNIT …}` left Verret for a nameless creator.
+#[test]
+fn a_symbol_line_under_names_showing_no_symbols_keeps_its_place() {
+  let tuples = document(
+    "amsart",
+    "",
+    "\\author{Ann Able}\n\\author{Bob Baker}\n\\address{Univ A}\n\\address{$^*$Also at X}\n\\address{$\\dag$Also at Y}",
+  );
+  assert!(!tuples.iter().any(|t| t.starts_with("B ")), "{tuples:#?}");
+  assert_eq!(reading_affiliations(&tuples), [
+    "Ann Able:",
+    "Bob Baker: Univ A; Also at X; Also at Y"
+  ]);
+}
