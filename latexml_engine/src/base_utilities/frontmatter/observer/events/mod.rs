@@ -622,6 +622,17 @@ impl Walker {
           self.event(mark, d, nest);
         }
       },
+      // (a note mark of another kind — endnotes.sty's `\endnotemark[1]`, the kernel's `\lx@notemark{endnote}[1]` — is a
+      // mark showing its printed tag, its type argument no ink: 1703.08733's names read "Adel Alahmadi endnote")
+      "\\lx@notemark" => {
+        let printed = match w.get_property("mark").as_deref() {
+          Some(Stored::Digested(mark)) => ink_of(mark),
+          _ => String::new(),
+        };
+        if let Some(mark) = mark_event(printed, "footnotemark") {
+          self.event(mark, d, nest);
+        }
+      },
       "\\lx@fm@obs@mark" => {
         // (a `\footnotemark` inside the mark is a mark of its own after it, its footnote's: `Kui Wu\inst{3\footnotemark[1]}`
         // printed "31", parted into "3" and "1" — llncs, 2404.09857)

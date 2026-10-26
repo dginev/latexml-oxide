@@ -1140,3 +1140,16 @@ fn an_ams_address_naming_its_author_is_that_authors() {
     ["Ann Able: Univ A, City", "Bob Baker: Univ B, Town"]
   );
 }
+
+/// FM S2b ams gate: a note mark of another kind on a name — endnotes.sty's `\endnotemark[1]`, the kernel's
+/// `\lx@notemark{endnote}[1]` — is a mark showing its printed tag, its type argument no ink. Red: the names read "Ann
+/// Able endnote" and a lone "endnote" name (1703.08733).
+#[test]
+fn an_endnote_mark_on_a_name_is_no_name_text() {
+  let names = reading_names(&document(
+    "amsart",
+    "\\usepackage{endnotes}",
+    "\\author{Ann Able\\protect\\endnotemark[1], Bob Baker\\protect\\endnotemark[1]$^,$\\protect\\endnotemark[2]}",
+  ));
+  assert_eq!(names, ["Ann Able", "Bob Baker"]);
+}
