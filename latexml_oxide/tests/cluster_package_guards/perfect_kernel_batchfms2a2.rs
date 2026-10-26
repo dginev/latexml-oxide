@@ -1306,3 +1306,22 @@ fn a_request_of_a_separator_still_parts_the_names() {
   ));
   assert_eq!(names, ["Ann Able", "Bob Baker", "Cy Cole", "Dee Dunn"]);
 }
+
+/// FM S2b aas census: emulateapj's `\footnotemark[n]` and `\footnotetext[n]` print n itself (emulateapj.cls:558-571
+/// `\@thefnmark{#1}`), not revtex's front-matter symbol — "Bob Baker 2" and "2 Sloan Fellow" as pdflatex prints them —,
+/// so the name's mark and the text's are one, and the text is the name's note (1111.4983). Red: the name showed "†"
+/// (revtex4's `\frontmatter@thefootnote`), the text "2", and the reading lost the note.
+#[test]
+fn emulateapj_title_marks_print_the_given_number() {
+  let tuples = tuples_of(
+    "\\documentclass{emulateapj}\n\\begin{document}\n\\title{T}\n\\author{Ann Able, Bob Baker \\footnotemark[2]}\n\\footnotetext[2]{Sloan Fellow}\n\\affil{Univ A}\n\\maketitle\nText.\n\\end{document}\n",
+  );
+  let bob = tuples
+    .iter()
+    .position(|t| t.starts_with("C Bob Baker"))
+    .expect("Bob Baker");
+  assert!(
+    tuples[bob].contains("[2]") && tuples[bob..].iter().any(|t| t.contains("Sloan Fellow")),
+    "{tuples:#?}"
+  );
+}

@@ -20,6 +20,13 @@ LoadDefinitions!({
   );
   RequireResource!("ltx-apj.css");
   RequirePackage!("emulateapj");
+  // emulateapj's `\footnotemark[n]` and `\footnotetext[n]` print n itself (emulateapj.cls:558-571 `\@thefnmark{#1}`;
+  // in the front matter `\altaffilmark{#1}`/`\altaffiltext{#1}`, :491-494), not the front-matter symbol of the REVTeX
+  // class under it (revtex4.cls:5020-5022, the title block's marks the REVTeX binding declares): the title block's marks
+  // are the counter's arabic value — `\author{… D. Clowe \footnotemark[2]}` with `\footnotetext[2]{Sloan Fellow}`
+  // prints "D. Clowe 2" and "2 Sloan Fellow", one mark (1111.4983). Guard
+  // `perfect_kernel_batchfms2a2::emulateapj_title_marks_print_the_given_number`.
+  DefMacro!("\\lx@title@thefootnote", "\\@arabic\\c@footnote");
   // emulateapj.cls is a revtex4 class of its own (:165-167 `\LoadClass…{\@revtex@cls}`), not an AASTeX version: it has
   // no AASTeX 6 `\fig` family or `\gridline` (which the aastex binding defines for a 6+ class only, aastex_cls.rs), so a
   // paper's own `\fig` is its own (astro-ph/0503342 `\newcommand{\fig}`; KNOWN_PERL_ERRORS #557). The 5.x
