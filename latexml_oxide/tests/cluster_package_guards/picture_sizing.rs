@@ -228,3 +228,50 @@ fn nested_picture_in_aligned_node() {
     r##"<picture height="40.59" width="51.75" xml:id="p2.pic1"><svg:svg height="40.59" overflow="visible" version="1.1" viewBox="0 0 51.75 40.59" width="51.75"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,40.59) matrix(1 0 0 -1 0 0) translate(25.88,0) translate(0,20.29) matrix(1.0 0.0 0.0 1.0 -21.26 -15.68)"><svg:g class="ltx_tikzmatrix" transform="matrix(1 0 0 -1 0 31.36)"><svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 21.76)"><svg:g class="ltx_tikzmatrix_col ltx_nopad_r" transform="matrix(1 0 0 -1 0 0)"><svg:g class="ltx_tikzmatrix" transform="matrix(1 0 0 -1 0 21.76)"><svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 9.46)"><svg:g class="ltx_tikzmatrix_col ltx_nopad_r" transform="matrix(1 0 0 -1 9.54 0)"><svg:foreignObject height="12.15" overflow="visible" style="--ltx-fo-width:1.78em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.19em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.46)" width="24.6">Top</svg:foreignObject></svg:g></svg:g><svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 21.76)"><svg:g class="ltx_tikzmatrix_col ltx_nopad_r" transform="matrix(1 0 0 -1 0 0)"><svg:g class="ltx_nestedsvg" fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="matrix(1 0 0 1 0 0) translate(2.77,0) translate(0,2.77)"><svg:path d="M 0 0 M 2.77 0 C 2.77 1.53 1.53 2.77 0 2.77 C -1.53 2.77 -2.77 1.53 -2.77 0 C -2.77 -1.53 -1.53 -2.77 0 -2.77 C 1.53 -2.77 2.77 -1.53 2.77 0 Z M 0 0" style="stroke:none"/></svg:g><svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:2.34em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="32.38">mid <picture height="4.7" width="4.7" xml:id="p2.pic1.pic1"><svg:svg height="4.7" overflow="visible" version="1.1" viewBox="0 0 4.7 4.7" width="4.7"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,4.7) matrix(1 0 0 -1 0 0) translate(0.28,0) translate(0,0.28)"><svg:path d="M 0 0 M 0 0 L 0 4.15 L 4.15 4.15 L 4.15 0 Z M 4.15 4.15" style="fill:none"/></svg:g></svg:svg></picture></svg:foreignObject></svg:g></svg:g></svg:g></svg:g></svg:g><svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 31.37)"><svg:g class="ltx_tikzmatrix_col ltx_nopad_r" transform="matrix(1 0 0 -1 8.87 0)"><svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:1.79em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="24.79">End</svg:foreignObject></svg:g></svg:g></svg:g></svg:g></svg:svg></picture>"##,
   );
 }
+
+/// A TikZ matrix puts its LAST row's baseline at the matrix origin: Perl `openTikzAlignment`
+/// (pgfsys-latexml.def.ltxml L952-975) sets `y = (h + d) - rowdepths[-1]`, from the row depths
+/// Alignment.pm passes to `openContainer` (L321-323). Without the last row's depth, every
+/// tikz-cd cell sat that depth above its arrows (issue 785). So each matrix translation equals
+/// its last row's offset, under raw loading and the bindings alike, at the Perl oracle's values
+/// -- including the issue's own example (a rotated last-row cell; a `\large` last row). Repro
+/// `graphics-tikz/tikzcd_matrix_last_row_baseline.tex`.
+#[test]
+fn tikz_matrix_places_last_row_baseline_at_origin() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/graphics-tikz/tikzcd_matrix_last_row_baseline.tex"
+  );
+  for raw in [true, false] {
+    let (stderr, xml) = convert(tex, raw);
+    assert_eq!(error_count(&stderr), 0, "raw={raw}: {stderr}");
+    assert_eq!(warning_count(&stderr), 0, "raw={raw}: {stderr}");
+    // The matrix and row groups' transforms, in document order (columns excluded).
+    let transforms: Vec<&str> = xml
+      .match_indices("<svg:g class=\"ltx_tikzmatrix")
+      .filter_map(|(i, _)| {
+        let tag = &xml[i..i + xml[i..].find('>')?];
+        if tag.contains("ltx_tikzmatrix_col") {
+          return None;
+        }
+        let t = tag.find("transform=\"")? + "transform=\"".len();
+        Some(&tag[t..t + tag[t..].find('"')?])
+      })
+      .collect();
+    assert_eq!(
+      transforms,
+      [
+        "matrix(1 0 0 -1 0 59.01)",
+        "matrix(1 0 0 1 0 14.52)",
+        "matrix(1 0 0 1 0 59.01)",
+        "matrix(1 0 0 -1 0 11.02)",
+        "matrix(1 0 0 1 0 11.02)",
+        "matrix(1 0 0 -1 0 61.59)",
+        "matrix(1 0 0 1 0 14.52)",
+        "matrix(1 0 0 1 0 61.59)",
+        "matrix(1 0 0 -1 0 16.41)",
+        "matrix(1 0 0 1 0 16.41)",
+      ],
+      "raw={raw}: matrix, then row transforms:\n{xml}"
+    );
+  }
+}

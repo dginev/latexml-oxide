@@ -216,7 +216,7 @@ fn tikz_alignment_bindings(
 
   let alignment = Alignment::new(AlignmentConfig {
     template: Some(template),
-    // Perl L947-969: openTikzAlignment — creates container <svg:g> with Y-flip transform
+    // Perl L952-975: openTikzAlignment — creates container <svg:g> with Y-flip transform
     open_container: Rc::new(|document, props| {
       let mut attrs = props;
       attrs.insert("class".to_string(), "ltx_tikzmatrix".to_string());
@@ -234,7 +234,14 @@ fn tikz_alignment_bindings(
         .remove("cwidth")
         .and_then(|s| s.parse().ok())
         .unwrap_or(0.0);
-      let y = h + d;
+      // Perl: @rowdepths defaults to (Dimension(0)); only the last row's depth is used.
+      let last_row_depth: f64 = attrs
+        .remove("rowdepths")
+        .and_then(|s| s.rsplit(',').next().and_then(|v| v.parse().ok()))
+        .unwrap_or(0.0);
+      attrs.remove("rowheights");
+      attrs.remove("columnwidths");
+      let y = (h + d) - last_row_depth; // Baseline of LAST row
       attrs
         .entry("transform".to_string())
         .or_insert_with(|| format!("matrix(1 0 0 -1 0 {})", fmt_px(y)));
