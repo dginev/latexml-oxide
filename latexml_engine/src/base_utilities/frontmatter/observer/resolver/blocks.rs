@@ -143,6 +143,11 @@ impl Resolver {
       .collect();
     // per column: the creators of its last names row
     let mut row_above: Vec<(usize, Vec<usize>)> = Vec::new();
+    // per column: the creators of its run of names rows, each directly under the one before with no line answering it
+    // (an unmarked institution under them is every name's of the run, user ruling R12: `A$^{1}$, B$^{2}$\\ C$^{3}$\\
+    // Univ` gives Univ to all three, as today's splitter does — 1511.01102's four rows over `(The Nearby Supernova
+    // Factory)`)
+    let mut run_above: Vec<(usize, Vec<usize>)> = Vec::new();
     // the entry the previous line ended with, which an unmarked line under it continues (an address's second line:
     // `$^1$Dept of X \\ 1-1-1 Street, City`, 0803.3589; one affiliation, as today's `\\`-joined contact)
     let mut continues: Option<Continued> = None;
@@ -196,6 +201,13 @@ impl Resolver {
       let above = above
         .or_else(|| row_above.last().map(|(_, r)| r.clone()))
         .unwrap_or_default();
+      let run = run_above
+        .iter()
+        .rev()
+        .find(|(c, _)| *c == line.column)
+        .or_else(|| run_above.last())
+        .map(|(_, r)| r.clone())
+        .unwrap_or_default();
       let carried = continues.take();
       match first_ink.map(|e| &e.kind) {
         Some(EventKind::Mark) => {
@@ -240,6 +252,7 @@ impl Resolver {
               }
             }
             answered_rows.retain(|c| *c != line.column);
+            run_above.push((line.column, row.clone()));
             row_above.push((line.column, row));
             continue;
           }
@@ -274,6 +287,7 @@ impl Resolver {
                 group,
               );
               answered_rows.retain(|c| *c != line.column);
+              run_above.push((line.column, vec![c]));
               row_above.push((line.column, vec![c]));
               continue;
             }
@@ -328,6 +342,19 @@ impl Resolver {
             {
               self.out.creators[first].rule.push_str(" sep:column");
             }
+            // (a names row directly under the column's last, no line between answering it, goes on with its run)
+            let mut names_run = if under_affiliation {
+              Vec::new()
+            } else {
+              run_above
+                .iter()
+                .rev()
+                .find(|(c, _)| *c == line.column)
+                .map(|(_, r)| r.clone())
+                .unwrap_or_default()
+            };
+            names_run.extend(made.creators.iter().copied());
+            run_above.push((line.column, names_run));
             row_above.push((line.column, made.creators));
             continue;
           }
@@ -459,14 +486,14 @@ impl Resolver {
           // `\\`-joined contact: `Riemann$^1$, … \\ 1- DESY in Zeuthen \\ Platanenallee 6, …`, 0903.2366, 2303.09899; a
           // footnote symbol is no such mark, `Marciniak$^{*}$ \\ Department … \\ Campus …` stays a contact a line,
           // 0707.1113)
-          let joined = above.iter().any(|&c| {
+          let joined = run.iter().any(|&c| {
             self.out.creators[c]
               .requests
               .iter()
               .any(|r| !is_symbol_label(r))
           });
           let mut places = Vec::new();
-          for owner in &above {
+          for owner in &run {
             places.push((*owner, self.out.creators[*owner].affiliations.len()));
             self.attach(
               Some(*owner),

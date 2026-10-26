@@ -1325,3 +1325,32 @@ fn emulateapj_title_marks_print_the_given_number() {
     "{tuples:#?}"
   );
 }
+
+/// FM S2b aas census: an unmarked institution under a run of names rows — each directly under the one before, no line
+/// between answering it — is every name's of the run (user ruling R12: `A$^{1}$, B$^{2}$\\ C$^{3}$\\ Univ` gives Univ to
+/// all three, as today's splitter does); 1511.01102's four rows of `\altaffilmark`ed names over `(The Nearby Supernova
+/// Factory)`. Red: the line went to the last row's names alone.
+#[test]
+fn an_unmarked_line_under_a_run_of_names_rows_is_every_names() {
+  for author in [
+    "Ann Able$^{1}$, Bob Baker$^{2}$ \\\\ Cy Cole$^{1}$ \\\\ The X University",
+    "Ann Able\\altaffilmark{1}, Bob Baker\\altaffilmark{2} \\\\ Cy Cole\\altaffilmark{1} \\\\ (The X Factory)",
+  ] {
+    let tuples = tuples_of(&format!(
+      "\\documentclass{{aastex}}\n\\begin{{document}}\n\\title{{T}}\n\\author{{{author}}}\n\\altaffiltext{{1}}{{Univ A}}\n\\altaffiltext{{2}}{{Univ B}}\n\\maketitle\nText.\n\\end{{document}}\n"
+    ));
+    let line = if author.contains("Factory") {
+      "(The X Factory)"
+    } else {
+      "The X University"
+    };
+    assert_eq!(
+      reading_affiliations(&tuples)
+        .iter()
+        .filter(|a| a.contains(line))
+        .count(),
+      3,
+      "{tuples:#?}"
+    );
+  }
+}
