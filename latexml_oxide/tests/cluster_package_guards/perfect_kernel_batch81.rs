@@ -65,3 +65,19 @@ fn a_latex_picture_inside_pictex_keeps_latex_put() {
   assert!(xml.contains("<picture"), "{xml}");
   assert!(xml.contains(">Text.</p>"), "{xml}");
 }
+
+/// xy_sty.rs's `\xy` wrapper (`\if\inxy@\lx@xy@svgnested\else\lx@xy@svg\fi\lx@xy@original`, LaTeXML's own, not xy.tex's)
+/// opens with `\relax`, as its `\endxy` does: at an `\xymatrix` cell head the alignment's peek stops there and the
+/// wrapper's conditional runs inside the cell. Red (int110o): expanded by the peek, its conditional was lost before its
+/// `\else` — 10 errors, and a conditional-limit Fatal in 1109.4916 and 1611.07444. Repro
+/// package-bindings/xymatrix_cell_opening_with_xy.
+#[test]
+fn an_xymatrix_cell_may_open_with_xy() {
+  let (log, xml) = convert_files_with(
+    repro!("package-bindings/xymatrix_cell_opening_with_xy.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert!(xml.contains("<picture"), "{xml}");
+}

@@ -1,0 +1,12 @@
+% witness: arXiv 1109.4916 (`\xymatrix@C=40pt{\xy … **\crv{…}…\endxy}`), 1611.07444 (`\xymatrix{\hspace*{-.2cm}\xy …`):
+%          both conditional-limit Fatals
+% oracle:  pdflatex 0 errors
+% engines: rust (int110o) = 10 errors "Didn't expect \else/\fi": the cell-head peek expanded our `\xy` wrapper's
+%          `\if\inxy@…` and the conditional it opened was lost before its `\else` (xymatrix's two-pass `\halign`)
+% expect:  0 errors
+% status:  RED (int110o) -> GREEN (82f)
+\documentclass{article}
+\usepackage[all]{xy}
+\begin{document}
+$\xymatrix{\xy *{a} \endxy & b}$
+\end{document}

@@ -387,7 +387,10 @@ LoadDefinitions!({
   if !is_defined("\\lx@xy@original") {
     Let!("\\lx@xy@original", "\\xy");
     Let!("\\end@lx@xy@original", "\\endxy");
-    DefMacro!("\\xy", "\\if\\inxy@\\lx@xy@svgnested\\else\\lx@xy@svg\\fi\\lx@xy@original");
+    // (opening with `\relax`, as `\endxy` does: at an `\xymatrix` cell head the alignment's peek stops there and the
+    // conditional runs inside the cell; expanded by the peek, its conditional was lost before its `\else` — 1109.4916,
+    // 1611.07444, conditional-limit Fatals)
+    DefMacro!("\\xy", "\\relax\\if\\inxy@\\lx@xy@svgnested\\else\\lx@xy@svg\\fi\\lx@xy@original");
     DefMacro!("\\endxy", "\\relax\\lx@xy@capturerange\\end@lx@xy@original");
   }
 
