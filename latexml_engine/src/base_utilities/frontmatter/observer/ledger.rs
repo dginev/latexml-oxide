@@ -510,7 +510,13 @@ pub(in crate::base_utilities) fn record_api_call(
   attr: Option<&KeyVals>,
   command: &Tokens,
 ) {
-  if !matches!(tag, "ltx:creator" | "ltx:contact" | "ltx:note") || !records_now() {
+  // (and the title, whose marks request labelled entries too — aastex's `\title{…\altaffilmark{1}}` and
+  // `\altaffiltext{1}{Based on observations …}`, the title's note: 0801.1670)
+  if !matches!(
+    tag,
+    "ltx:creator" | "ltx:contact" | "ltx:note" | "ltx:title"
+  ) || !records_now()
+  {
     return;
   }
   let role = attr

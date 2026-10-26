@@ -1274,3 +1274,24 @@ fn a_prefixed_symbol_label_keeps_its_prefix() {
     "{tuples:#?}"
   );
 }
+
+/// FM S2b aas census: an entry only the title's marks request is the title's note, the document's — aastex's
+/// `\title{…\altaffilmark{1}}` with `\altaffiltext{1}{Based on observations …}`, which today's keeps in the title
+/// (`api:title-note owner:title`; the ledger records the title for its marks). Red: a label no name requests went to
+/// the block as an affiliation (`label:unrequested`, 0801.1670, 0808.0471, 1006.1591, 1010.0340).
+#[test]
+fn an_entry_the_title_requests_is_the_titles_note() {
+  let tuples = tuples_of(
+    "\\documentclass{aastex631}\n\\begin{document}\n\\title{T\\altaffilmark{1}}\n\\author{Ann Able\\altaffilmark{2}}\n\\author{Bob Baker\\altaffilmark{3}}\n\\altaffiltext{1}{Based on observations.}\n\\altaffiltext{2}{Univ A}\n\\altaffiltext{3}{Univ B}\n\\maketitle\nText.\n\\end{document}\n",
+  );
+  assert!(
+    tuples
+      .iter()
+      .any(|t| t.starts_with("B note Based on observations.")
+        && t.contains("api:title-note owner:title")),
+    "{tuples:#?}"
+  );
+}
+
+/// The resolved tuples of a whole document `tex`.
+fn tuples_of(tex: &str) -> Vec<String> { tuples(&resolved(tex, Some("ar5iv.sty"))) }

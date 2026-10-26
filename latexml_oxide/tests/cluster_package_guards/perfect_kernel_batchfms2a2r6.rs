@@ -187,7 +187,8 @@ fn an_unmarked_notes_link_is_a_names_only_by_spelling() {
   let dump = dump(IEEE);
   assert_eq!(
     dump["resolved"]["policies"],
-    serde_json::json!([[1, "IEEEtran"]])
+    // (the block is the ledger's second entry, after the title: the title is recorded for its marks)
+    serde_json::json!([[2, "IEEEtran"]])
   );
   assert_eq!(tuples(IEEE), [
     "C Ann Able [] | line:names",

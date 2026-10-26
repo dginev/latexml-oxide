@@ -203,6 +203,17 @@ fn text_without(node: Node<'_, '_>, scripts: bool) -> String {
 pub fn xml_tuples(xml: &[u8]) -> Result<Tuples, String> {
   let doc = parse(xml)?;
   let mut out = Tuples::default();
+  // (a note set in the title is the document's, as the shadow's title note in the block is: aastex's
+  // `\title{…\altaffilmark{1}}` and its `\altaffiltext{1}{…}`, 0801.1670)
+  for note in doc
+    .root_element()
+    .descendants()
+    .filter(|n| is_ltx(*n, "note") && n.ancestors().any(|a| is_ltx(a, "title")))
+  {
+    out
+      .block
+      .push(("note".to_string(), text_without_marks(note)));
+  }
   for node in doc
     .root_element()
     .descendants()

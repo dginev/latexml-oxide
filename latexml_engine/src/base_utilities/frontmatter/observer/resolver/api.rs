@@ -101,6 +101,16 @@ impl Resolver {
     events: &[Event],
     policy: &'static Policy,
   ) {
+    // (the title gives no creator or contact; its marks are requests: aastex's `\title{…\altaffilmark{1}}`, whose
+    // `\altaffiltext{1}{Based on observations …}` is the title's note, 0801.1670)
+    if tag == "ltx:title" {
+      for e in events.iter().filter(|e| e.kind == EventKind::Mark) {
+        self
+          .title_requests
+          .extend(mark_labels(e.label.as_deref().unwrap_or("")));
+      }
+      return;
+    }
     let split = self.splitting;
     let withsup = attr_value(attrs, "_withsup") == Some("true");
     // its leading marks (`\affil{$^1$Univ X}`), its `\label`s, its text

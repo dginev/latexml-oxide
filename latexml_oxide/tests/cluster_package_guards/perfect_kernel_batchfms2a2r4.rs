@@ -333,6 +333,7 @@ fn api_attributes_in_source_order() {
     .as_array()
     .expect("entries")
     .iter()
+    .filter(|e| e["tag"] != "ltx:title")
     .filter_map(|e| e["attrs"].as_str().map(str::to_string))
     .collect();
   assert_eq!(attrs, [

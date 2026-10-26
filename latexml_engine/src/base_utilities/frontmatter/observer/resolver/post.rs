@@ -835,6 +835,24 @@ impl Resolver {
         continue;
       }
       let note = assoc.role == "legend";
+      // (an entry only the title's marks request is the title's note, the document's, as today's keeps it in the title:
+      // aastex's `\title{…\altaffilmark{1}}` with `\altaffiltext{1}{Based on observations …}`, 0801.1670, 1006.1591)
+      if owners.is_empty()
+        && labels
+          .iter()
+          .any(|l| self.title_requests.iter().any(|r| label_matches(r, l)))
+      {
+        self.attach(
+          None,
+          Assoc {
+            role: "note".into(),
+            rule: s!("{} api:title-note owner:title", assoc.rule),
+            ..assoc
+          },
+          true,
+        );
+        continue;
+      }
       // (a contact call — an `\email`, a URL, an ORCID — led by a footnote symbol no name carries is outside ruling 2,
       // which labels affiliation and legend lines (user ruling 2026-10-21 #2): it stays by its `annotate=`, as today's —
       // amsart's `\email{$^\dagger$ ann@a.edu}` after Ann's `\author` is hers, not a nameless creator's)

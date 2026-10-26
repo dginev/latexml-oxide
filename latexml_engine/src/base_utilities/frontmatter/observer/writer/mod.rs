@@ -40,7 +40,10 @@ fn written_resolution() -> Option<Resolved> {
             return None;
           }
         },
-        Entry::Api(call) if !call.inside && !call.rehearsed => return None,
+        // (the title is recorded for its marks alone: it never holds the writing back)
+        Entry::Api(call) if !call.inside && !call.rehearsed && call.tag != "ltx:title" => {
+          return None;
+        },
         _ => {},
       }
     }

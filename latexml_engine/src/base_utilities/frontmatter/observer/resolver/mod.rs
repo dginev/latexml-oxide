@@ -237,6 +237,9 @@ struct Resolver {
   thenote:          TheNote,
   /// the requests authblk's printed `\AB@thenote` made (creator, label): what ruling 1 reads off the PDF's marks
   thenote_requests: Vec<(usize, String)>,
+  /// the labels the title's marks request (aastex's `\title{…\altaffilmark{1}}`): an entry they alone ask for is the
+  /// title's note
+  title_requests:   Vec<String>,
   /// per creator of a block: that block's queue (its `epoch`); the creators a later block replaced
   epoch_of:         Vec<Option<usize>>,
   replaced:         Vec<usize>,
@@ -325,6 +328,7 @@ impl Resolver {
         ..TheNote::default()
       },
       thenote_requests: Vec::new(),
+      title_requests:   Vec::new(),
       epoch_of:         Vec::new(),
       replaced:         Vec::new(),
       note_links:       Vec::new(),
@@ -574,14 +578,18 @@ pub(in crate::base_utilities) fn ledger_inputs(ledger: &ledger::Ledger) -> Vec<I
           });
         }
       },
-      ledger::Entry::Api(call) if !call.inside && creator_call(&call.tag, &call.parent) => inputs
-        .push(Input::Api {
+      // (and the title, for the labels its marks request: `Resolver::api`'s `ltx:title`)
+      ledger::Entry::Api(call)
+        if !call.inside && (creator_call(&call.tag, &call.parent) || call.tag == "ltx:title") =>
+      {
+        inputs.push(Input::Api {
           index:  call.index,
           tag:    call.tag.clone(),
           role:   call.role.clone(),
           attrs:  call.attrs.clone(),
           events: call.events.clone(),
-        }),
+        })
+      },
       ledger::Entry::NoteText(text) => inputs.push(Input::NoteText {
         index:  text.index,
         epoch:  text.epoch,

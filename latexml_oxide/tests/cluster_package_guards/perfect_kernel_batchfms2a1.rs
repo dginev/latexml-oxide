@@ -123,7 +123,8 @@ fn api_calls(json: &Value) -> Vec<(String, bool, u64, u64)> {
     .as_array()
     .expect("entries")
     .iter()
-    .filter(|entry| entry["kind"] == "api")
+    // (the title is recorded for its marks: no creator's call)
+    .filter(|entry| entry["kind"] == "api" && entry["tag"] != "ltx:title")
     .map(|call| {
       (
         call["role"].as_str().unwrap_or("").to_string(),
