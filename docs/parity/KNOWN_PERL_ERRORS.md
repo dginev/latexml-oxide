@@ -18622,8 +18622,10 @@ arguments, the first optional with default 0 — the author's body then uses `#2
 % pdflatex: "[a b c d] x"; Perl: "[b c d x]" (the 5th argument the following token)
 ```
 
-Fixed in Rust (82h): `\newcommand`, `\renewcommand` and `\providecommand` read their token as `LaTeXDefToken`, which
-appends `[{0}]` after a bracket the braces held unless a `[` follows them (base_parameter_types.rs). Witness 1312.5793
+Fixed in Rust (82h, r3): `\newcommand` reads its token as `LaTeXDefToken`, which appends `[{0}]` after a bracket the
+braces held unless a `[` follows them (base_parameter_types.rs); `\renewcommand` and `\providecommand` keep DefToken, as
+latex.ltx's `\renew@command#1`/`\provide@command#1` hand `\new@command` the argument unbraced (plain arguments: pdflatex
+"[RJ: Dynamical]" for `\providecommand{\com[2]}{[#1: #2]}`, 1504.03761). Witness 1312.5793
 (`\smalltwomatrix`: 90 script errors, the error-limit Fatal → 0 errors). Repro
 macro-state/newcommand_nargs_inside_the_braces; guard
 `perfect_kernel_batch81::newcommand_nargs_inside_the_braces_take_the_testopt_default`.

@@ -23932,16 +23932,50 @@ that author, `ruling1:fuzzy-label`); seed 82 on int110k, 30 right, 2 wrong, 1 un
 name requests that opens with one author's whole name is that author's (`owner:named`, 2106.06096, as today's);
 open, 1610.06222 (an address's own names line carries the marks, `Glasby∗ and Gabriel Verret†`, the `∗`/`†` lines go
 to the block); undecidable, 1305.3804 (marks printed only in an address's names line). int110l: 11 unclassified (0.38 %); seed 83,
-34 judged, 33 right, 0 wrong, 1 undecidable — the gate met. Guards
+34 judged, 33 right, 0 wrong, 1 undecidable — the gate met. **ams_support written (82b).** Before the switch, a
+contact call — an `\email`, a URL, an ORCID — led by a footnote symbol no name carries keeps its call's place (82a:
+ruling 2 labels affiliation and legend lines; amsart's `\email{$^\dagger$ ann@a.edu}` became a nameless creator).
+Off/on census int110l → int110m (default mode): 46 ams papers changed, revtex none, E/F equal, no distinct word lost,
+ids and validity unchanged; one regression read off the creators and fixed (82e): a symbol line under names that show
+no symbol mark keeps its call's placement (`ruling2:uncarried label:unshown owner:annotate`, 1610.06222), as an
+unshown number does. Guards
 `perfect_kernel_batchfms2a2::{a_bylines_by_is_no_name, a_superscript_inside_a_word_is_the_name,
 a_leading_list_of_symbol_marks_requests_each, an_en_dash_range_requests_every_number_in_it,
 an_ams_address_naming_its_author_is_that_authors, an_endnote_mark_on_a_name_is_no_name_text,
-an_unrequested_address_opening_with_a_name_is_that_authors}`,
+an_unrequested_address_opening_with_a_name_is_that_authors, an_uncarried_symbol_on_a_contact_call_keeps_its_place,
+a_symbol_line_under_names_showing_no_symbols_keeps_its_place}`,
 `fmshadow::tests::address_groups_given_to_the_last_author_are_an_xml_wrong_class`. Unclassified residuals, one-offs
 read and left: 1005.4252 (an ʻokina drawn by `\rotatebox`/`\reflectbox` over an IPA glyph), 1201.2976 (`\today` on its
 own line in `\author` read as an affiliation), 1211.3996 (an `\address` brace never closed), 2109.14517 (`\cb t`, a
 tabular in the name), math0112263 (the block set in a `\vbox` register used before its `\newbox`), 2210.11574 (ORCID
 glyphs and "(Uppsala University)" in today's name), 1909.09152, 2108.13723, 2208.03878, math0603701.
+
+**S2b third family: aas_support (82k-82m, 2026-10-26).** Census of the 688 aas papers of the S2a.2 r9 census
+(`fms_aas/`): int110p 30 unclassified of 634 (4.7 %) → int110s 22 (3.5 %). 82k: an API entry its call labels (aastex's
+`\altaffiltext{n}`, elsarticle's `\address[l1]`) placed by the names' marks is ruling 1 (`ruling1:request`), not for the
+kernel's own `author:N` label. 82l: `mark_labels` splits a `prefix:` part on its rest and puts the prefix back on each
+piece (`altaffil:**` one label; split off, every starred label shared a bare `altaffil:` and 0911.4695's notes swapped).
+82m: the ledger records the title call (`ltx:title`, passed by `ledger_inputs`), whose marks are the title's requests
+(`title_requests`); an entry only they request is the document's note, as today's keeps it in the title
+(`api:title-note owner:title`; aastex's `\title{…\altaffilmark{1}}`, 0801.1670); the comparator counts a note set in the
+title as the document's, and the title never holds the writer back. Census int110u: 8 unclassified (1.3 %), then
+(comparator 82n: today's nameless-creator copy of a title note under its mark's entry role, 1801.03570) 7 (1.1 %).
+82o: a request whose argument is a separator alone is a mark of no label (`J. Edelstein\altaffilmark, E. Korpela`:
+TeX hands the comma to `\altaffilmark`, printed superscripted; astro-ph0601584's names had merged). 82p: emulateapj's
+title marks are the number given (emulateapj.cls:558-571 `\@thefnmark{#1}`), not the REVTeX binding's `\@fnsymbol`
+(1111.4983: "D. Clowe 2" / "2 Sloan Fellow", today's "†"; the reading had lost the note). 82r: an unmarked line under
+a run of names rows, each directly under the one before with no line answering it, is every name's of the run (R12's
+`A$^{1}$, B$^{2}$\\ C$^{3}$\\ Univ`; 1511.01102's four rows over `(The Nearby Supernova Factory)` had given it to the
+last row). 82s: an address beside an institution keeps the institution — a labelled entry is e-mails only when it is
+addresses alone, and an unlabelled institution line with its address is an unmarked line (astro-ph0202139's `1. Chester
+F. Carlson Center …; JHK's email: …`, whose institutions were lost; its hand-written `1.` unread, OPEN_ROWS FM-24).
+Comparator 82q: a formula's superscript inside a word is its letters (`I. M. M$^{\rm c}$Hardy`, 2003.01448), an
+XML-only block item the shadow holds under another role takes its rule (1903.08299's `\correspondingauthor{\email{…}}`),
+a collaboration's list in one personname may hold an affiliation the reading gave a name (0910.4381). Guards
+`perfect_kernel_batchfms2a2::{an_altaffiltext_by_its_marks_is_ruling_one, a_prefixed_symbol_label_keeps_its_prefix,
+an_entry_the_title_requests_is_the_titles_note, a_request_of_a_separator_still_parts_the_names,
+emulateapj_title_marks_print_the_given_number, an_unmarked_line_under_a_run_of_names_rows_is_every_names,
+an_address_beside_an_institution_keeps_the_institution}`.
 
 ### 840. A space a name sets before its own mark is the name's; spacing-only math, `\enskip` after a mark part names
 
