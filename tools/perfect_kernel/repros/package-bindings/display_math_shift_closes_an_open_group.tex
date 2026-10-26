@@ -1,0 +1,18 @@
+% witness: arXiv 1309.7562 (tertiaryCS.tex:310, `$$ \rar H^k{X,\C/\Z) \rar … $$`, a `{` typed for a `(`)
+% oracle:  pdflatex 1 error ("Missing } inserted"); "A H k X, a) → b. B x C y D 1 S E z."
+% engines: rust (int110o) = 5 errors, the display never closed (the paper: 99 "Missing $ closing display math", then
+%          the error-limit Fatal): the closing `$$` was deferred to the group's end, which never comes
+% expect:  1 error; the section and the later formulas as typed
+% status:  RED (int110o) -> GREEN (82g)
+\documentclass{article}
+\begin{document}
+A
+$$
+H^k{X,a) \to b.
+$$
+B $x$ C
+$$ y $$
+D
+\section{S}
+E $z$.
+\end{document}

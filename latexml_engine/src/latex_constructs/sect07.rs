@@ -139,8 +139,14 @@ pub(crate) fn load() -> Result<()> {
     "<ltx:equation xml:id='#id'><ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
     reversion    => Tokens!(T_MATH!(), T_MATH!()),
     before_digest => {
+      let in_alignment = lookup_alignment().is_some();
       // begin_mode handles \everydisplay injection (Stomach.pm lines 504-507)
       begin_mode("display_math")?;
+      // (the display a math shift ends through the groups opened in it, outside alignments: tex_math.rs
+      // `DISPLAY_FORMULA`)
+      if !in_alignment {
+        assign_frame_value(DISPLAY_FORMULA, true);
+      }
     },
     properties   => { ref_step_id("equation") },
     capture_body => true);

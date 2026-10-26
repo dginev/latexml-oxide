@@ -81,3 +81,21 @@ fn an_xymatrix_cell_may_open_with_xy() {
   assert_eq!(error_count(&log), 0, "{log}");
   assert!(xml.contains("<picture"), "{xml}");
 }
+
+/// tex.web §1193 + §1064-1065 `off_save`: a math shift arriving while a group opened inside the formula is open inserts
+/// that group's closer and is read again — in a display opened by `$$` as in an inline formula (OXIDIZED_DESIGN #553).
+/// Red (int110o): the display's `$$` was deferred to the group's end, which a typo'd `H^k{X,a)` never reaches — 5
+/// errors here, 99 and the error-limit Fatal in 1309.7562 (pdflatex 1). Repro
+/// package-bindings/display_math_shift_closes_an_open_group.
+#[test]
+fn a_display_math_shift_closes_a_group_opened_in_it() {
+  let (log, xml) = convert_files_with(
+    repro!("package-bindings/display_math_shift_closes_an_open_group.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!(error_count(&log), 1, "{log}");
+  assert!(xml.contains("<section"), "{xml}");
+  assert_eq!(xml.matches("<equation").count(), 2, "{xml}");
+  assert!(xml.contains(r#"tex="z""#), "{xml}");
+}

@@ -495,7 +495,14 @@ fn end_math_or_defer(mode: &str, ender: &str) -> Result<()> {
     // Perl's ("Attempt to end mode math"). Before, the end was deferred to that group's end, which an unbalanced paper
     // never reaches, and the rest of it was digested as math. OXIDIZED_DESIGN #553. Guard
     // `perfect_kernel_batch65n::math_shift_closes_a_group_opened_in_the_formula`.
-    if let Some(closer) = off_save_closer().filter(|_| inline_formula_reachable()) {
+    // (a display opened by `$$` too, its groups the author's: 1309.7562's `$$ H^k{X,\C/\Z) … $$`, a `{` typed for a
+    // `(`, left the display open to the error limit — pdflatex 1 error)
+    let reachable = if mode == "display_math" {
+      formula_reachable(DISPLAY_FORMULA)
+    } else {
+      inline_formula_reachable()
+    };
+    if let Some(closer) = off_save_closer().filter(|_| reachable) {
       Error!(
         "expected",
         closer.to_string(),
@@ -830,8 +837,13 @@ LoadDefinitions!({
     before_digest => {
       // Perl: $_[0]->enterHorizontal; (TeX_Math.pool.ltxml line 134)
       enter_horizontal();
+      let in_alignment = lookup_alignment().is_some();
       // begin_mode handles \everydisplay injection (Stomach.pm lines 504-507)
       begin_mode("display_math")?;
+      // (the display a math shift ends through the groups opened in it, outside alignments: `DISPLAY_FORMULA`)
+      if !in_alignment {
+        assign_frame_value(DISPLAY_FORMULA, true);
+      }
     },
     // Perl #2798: display math carries padtop=\abovedisplayskip,
     // padbottom=\belowdisplayskip — the S5 padding mechanism adds these to the

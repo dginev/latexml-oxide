@@ -2994,11 +2994,20 @@ pub const INLINE_FORMULA: &str = "lx@inline@formula";
 /// inserts closes those groups (§1193 + §1064-1065) and then the formula. A formula held by a frame LaTeXML's
 /// machinery opened (a constructor's argument, an environment, an alignment inside it) is not reached, nor is a
 /// formula in an alignment, unmarked (latexml_engine tex_math.rs `\lx@begin@inline@math`).
-pub fn inline_formula_reachable() -> bool {
+pub fn inline_formula_reachable() -> bool { formula_reachable(INLINE_FORMULA) }
+
+/// Marks the frame of a display `$$…$$` opened by `\lx@begin@display@math` outside an alignment (latexml_engine
+/// tex_math.rs, latex_constructs sect07.rs): the display a math shift ends through the groups opened in it (tex.web
+/// §1193 + §1064-1065), as [`INLINE_FORMULA`] marks an inline formula.
+pub const DISPLAY_FORMULA: &str = "lx@display@formula";
+
+/// Whether the innermost mode is a formula whose frame carries `flag` ([`INLINE_FORMULA`], [`DISPLAY_FORMULA`]) and
+/// every group opened inside it is one `off_save` closes on the way (`off_save_closer_at`).
+pub fn formula_reachable(flag: &str) -> bool {
   let depth = get_frame_depth();
   for n in 0..depth {
     if is_value_bound("BOUND_MODE", Some(n)) {
-      return is_value_bound(INLINE_FORMULA, Some(n));
+      return is_value_bound(flag, Some(n));
     }
     if off_save_closer_at(n).is_none() {
       return false;
