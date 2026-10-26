@@ -175,7 +175,26 @@ LoadDefinitions!({
 
   // Expandable Commands
   DefMacro!("\\pdftexrevision", "19");
-  def_macro_noop("\\pdftexbanner")?;
+  // pdfTeX's banner, of the runtime tree's TeX Live year (Perl's is empty, pdfTeX.pool.ltxml:93): documents parse it
+  // for that year — 2309.17381's `\def\gettexliveversion#1(#2 #3 #4#5#6#7#8)#9\relax{#4#5#6#7}` chose a command's
+  // arity by it, and an empty banner ran its argument off the paragraph (the error-limit Fatal). The pdfTeX and kpathsea
+  // versions are each year's TeX Live release's.
+  DefMacro!("\\pdftexbanner", sub[_args] {
+    let year = crate::dump_paths::detect_ambient_texlive_year().unwrap_or(2025);
+    let (revision, kpathsea) = match year {
+      ..=2018 => ("19", "6.3.0"),
+      2019 => ("20", "6.3.1"),
+      2020 => ("21", "6.3.2"),
+      2021 => ("22", "6.3.3"),
+      2022 => ("24", "6.3.4"),
+      2023 => ("25", "6.3.5"),
+      2024 => ("26", "6.4.0"),
+      _ => ("28", "6.4.1"),
+    };
+    ExplodeText!(s!(
+      "This is pdfTeX, Version 3.141592653-2.6-1.40.{revision} (TeX Live {year}) kpathsea version {kpathsea}"
+    ))
+  });
   // pdfTeX manual §8.11: `\pdfcreationdate` expands to the PDF date string
   // `D:YYYYMMDDhhmmss±hh'mm'` of the job start. datetime2.sty:46-48 seeds
   // `\dtm@pdfcreationdate` from it and its `\@dtm@parsepdfdate` splits the

@@ -1,0 +1,14 @@
+% witness: arXiv 2309.17381 (preamble.tex:64-66, `\def\gettexliveversion#1(#2 #3 #4#5#6#7#8)#9\relax{#4#5#6#7}`
+%          over `\pdftexbanner`, to choose `\SkipTocEntry`'s arity)
+% oracle:  pdflatex 0 errors; `\pdftexbanner` = "This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025)
+%          kpathsea version 6.4.1"; "NEW"
+% engines: rust (int110o) = `\pdftexbanner` empty (as Perl's, pdfTeX.pool.ltxml:93): "Paragraph ended before
+%          \gettexliveversion was complete", `\texliveversion` undefined (the paper: the error-limit Fatal)
+% expect:  0 errors; "NEW"
+% status:  RED (int110o) -> GREEN (82i)
+\documentclass{article}
+\def\gettexliveversion#1(#2 #3 #4#5#6#7#8)#9\relax{#4#5#6#7}
+\edef\texliveversion{\expandafter\gettexliveversion\pdftexbanner\relax}
+\begin{document}
+\ifnum\texliveversion<2022 OLD\else NEW\fi
+\end{document}

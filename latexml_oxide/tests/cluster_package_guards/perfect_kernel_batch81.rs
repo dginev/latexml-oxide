@@ -114,3 +114,18 @@ fn newcommand_nargs_inside_the_braces_take_the_testopt_default() {
   assert_eq!(error_count(&log), 0, "{log}");
   assert!(xml.contains("[a b c d] x"), "{xml}");
 }
+
+/// pdfTeX's `\pdftexbanner` names its TeX Live year ("This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025)
+/// kpathsea version 6.4.1"), which documents parse to branch on the year; ours says the runtime tree's. Red (int110o):
+/// empty, as Perl's — "Paragraph ended before \gettexliveversion was complete" and the error-limit Fatal in 2309.17381.
+/// Repro expansion-primitives/pdftexbanner_names_the_texlive_year.
+#[test]
+fn pdftexbanner_names_the_texlive_year() {
+  let (log, xml) = convert_files_with(
+    repro!("expansion-primitives/pdftexbanner_names_the_texlive_year.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert!(xml.contains("NEW"), "{xml}");
+}
