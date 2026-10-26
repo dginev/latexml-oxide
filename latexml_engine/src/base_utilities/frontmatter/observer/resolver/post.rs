@@ -835,6 +835,28 @@ impl Resolver {
         continue;
       }
       let note = assoc.role == "legend";
+      // (a contact call — an `\email`, a URL, an ORCID — led by a footnote symbol no name carries is outside ruling 2,
+      // which labels affiliation and legend lines (user ruling 2026-10-21 #2): it stays by its `annotate=`, as today's —
+      // amsart's `\email{$^\dagger$ ann@a.edu}` after Ann's `\author` is hers, not a nameless creator's)
+      // (its placement the one today's gave it, declared or the default: `piled`, api.rs)
+      if owners.is_empty()
+        && symbol_labelled
+        && matches!(assoc.role.as_str(), "email" | "url" | "orcid")
+        && let Some((_, placed)) = self.piled.iter().find(|(p, _)| *p == at)
+        && !placed.is_empty()
+      {
+        for owner in placed.clone() {
+          self.attach(
+            Some(owner),
+            Assoc {
+              rule: s!("{} ruling2:uncarried owner:annotate", assoc.rule),
+              ..assoc.clone()
+            },
+            false,
+          );
+        }
+        continue;
+      }
       // (an entry labelled by a mark of a kind no name shows — `$^{1}$School of Physics, Liaoning University` under
       // names printing no number, 2407.20481, 2005.13493, 1305.3804 — is the reader's unlabelled entry: today's
       // placement by its `annotate=`, not the block)

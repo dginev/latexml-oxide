@@ -1171,3 +1171,31 @@ fn an_unrequested_address_opening_with_a_name_is_that_authors() {
     ]
   );
 }
+
+/// FM S2b ams written: a contact call led by a footnote symbol no name carries stays where its call puts it (ruling 2
+/// labels affiliation and legend lines, user ruling 2026-10-21 #2). Red (ams written): amsart's `\email{$^\dagger$
+/// ann@a.edu}` after Ann's `\author` went to the block, which the writer printed as a nameless creator
+/// (`perfect_kernel_batch64zc::typewriter_address_split_keeps_its_link`).
+#[test]
+fn an_uncarried_symbol_on_a_contact_call_keeps_its_place() {
+  let tuples = document(
+    "amsart",
+    "",
+    "\\author{Ann Able}\n\\email{$^\\dagger$ ann@a.edu}\n\\author{Bob Baker}\n\\email{bob@b.edu}",
+  );
+  let ann = tuples
+    .iter()
+    .position(|t| t.starts_with("C Ann Able"))
+    .expect("Ann");
+  let bob = tuples
+    .iter()
+    .position(|t| t.starts_with("C Bob Baker"))
+    .expect("Bob");
+  assert!(
+    tuples[ann..bob]
+      .iter()
+      .any(|t| t.starts_with("  c email") && t.contains("ann@a.edu")),
+    "{tuples:#?}"
+  );
+  assert!(!tuples.iter().any(|t| t.starts_with("B ")), "{tuples:#?}");
+}
