@@ -32,3 +32,19 @@ fn an_authors_null_stays_out_of_the_autoref_tag() {
   );
   assert!(!xml.contains("Hidden"), "{xml}");
 }
+
+/// xargs.sty:205-212: a `\newcommandx` command with an optional argument is `\@protected@testopt(@xargs)\cs…`, which
+/// stays unexpanded (`\@x@protect`) whenever `\protect` is not `\@typeset@protect` — inside ifthen's `\xdef` of a test
+/// (ifthen.sty:92-117) an `\equal` argument holding such a command keeps it as a token. Red (int110m): `\sequence`
+/// expanded there and ran its own `\ifthenelse`, Fatal "File ended while scanning use of a Until:\NOT argument"
+/// (2002.09653). Repro package-bindings/xargs_optional_command_is_protected_in_ifthen_test.
+#[test]
+fn an_xargs_optional_command_is_protected_in_an_ifthen_test() {
+  let (log, xml) = convert_files_with(
+    repro!("package-bindings/xargs_optional_command_is_protected_in_ifthen_test.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains(r#"tex="\{a\mid(1)\}""#), "{xml}");
+}

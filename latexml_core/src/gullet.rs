@@ -1842,12 +1842,17 @@ impl Drop for ExpandDepthGuard {
 /// `\protect` is not `\@typeset@protect` — literally
 /// `\@protected@testopt`'s test. Cheap: the parameter check is a slice
 /// peek; the state lookups run only for leading-Optional definitions
-/// under partial expansion.
+/// under partial expansion. A first parameter flagged
+/// [`Parameter::testopt`](crate::parameter::Parameter::testopt) is a protected command
+/// too: xargs's `\newcommandx` with any optional argument
+/// (`\@protected@testopt@xargs`, xargs.sty:20-25, 205-212), whose first
+/// argument may be a plain one.
 fn optional_arg_protected(defn: &std::rc::Rc<dyn Definition>) -> bool {
   match defn.get_parameters() {
     Some(params) => match params.get_parameters().first() {
       Some(p) => {
-        p.name == crate::pin!("Optional") && !super::definition::expandable::protect_is_typeset()
+        (p.name == crate::pin!("Optional") || p.testopt)
+          && !super::definition::expandable::protect_is_typeset()
       },
       None => false,
     },
