@@ -1,0 +1,20 @@
+% witness: arXiv 1301.4518 (Report_aleph_1.tex:1953, `\put{$\begin{picture}(50,50) \put(3,0){\framebox(58,25){$T$}} \end{picture}$} at 3.5 -1`)
+% oracle:  pdflatex 0 errors (postpictex.tex:39-46 redefines `\@picture` to give a LaTeX picture LaTeX's `\put` back)
+% engines: rust (int110m) = Fatal Mouth:EoF "File ended while scanning use of a Until: at  argument" (the full paper a
+%          pushback-limit Fatal): our picture environment does not pass through `\@picture`, so PiCTeX's `\put` read
+%          the inner `\put(3,0)` and looked for its `at`
+% expect:  0 errors; the inner picture's framebox holds T
+% status:  RED (int110m) -> GREEN (82d)
+\documentclass{article}
+\usepackage{pictexwd}
+\begin{document}
+$${\beginpicture
+\setcoordinatesystem units <0.5cm,0.3cm>
+\setplotarea x from 0 to 8, y from -1 to -1
+\put{$\bullet$} at  1 2
+\put{$\begin{picture}(50,50)
+\put(3,0){\framebox(58,25){$T$}}
+\end{picture}$} at 3.5 -1
+\endpicture}$$
+Text.
+\end{document}

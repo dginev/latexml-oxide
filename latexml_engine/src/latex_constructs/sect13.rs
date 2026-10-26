@@ -216,6 +216,22 @@ pub(crate) fn load() -> Result<()> {
     before_digest => {
       // Perl: before_picture — Let \raisebox to \pic@raisebox
       Let!("\\raisebox", "\\pic@raisebox");
+      // PiCTeX's `\beginpicture` takes `\put`, `\multiput`, `\frame` and `\linethickness` over, and its `\@picture`
+      // (postpictex.tex:39-46, saving the kernel's as `\!latex@picture`) gives a LaTeX picture LaTeX's back; this
+      // environment does not pass through `\@picture`, so it makes those `\let`s itself: a LaTeX picture inside a PiCTeX
+      // `\put{…} at x y` read its own `\put(3,0)` as PiCTeX's, which scanned to the input's end for `at` (1301.4518)
+      if lookup_meaning(&T_CS!("\\!latex@picture")).is_some() {
+        for (cs, latex) in [
+          ("\\put", "\\!latexput"),
+          ("\\multiput", "\\!latexmultiput"),
+          ("\\frame", "\\!latexframe"),
+          ("\\linethickness", "\\!latexlinethickness"),
+        ] {
+          if lookup_meaning(&T_CS!(latex)).is_some() {
+            let_i(&T_CS!(cs), &T_CS!(latex), None);
+          }
+        }
+      }
     },
     properties => sub[args] {
       let unit = unitlength_pt()?;

@@ -48,3 +48,20 @@ fn an_xargs_optional_command_is_protected_in_an_ifthen_test() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(xml.contains(r#"tex="\{a\mid(1)\}""#), "{xml}");
 }
+
+/// postpictex.tex:39-46: PiCTeX's `\beginpicture` takes `\put`, `\multiput`, `\frame` and `\linethickness` over and its
+/// `\@picture` gives a LaTeX picture LaTeX's back; our `{picture}` does not pass through `\@picture`, so it makes the same
+/// `\let`s when PiCTeX saved them. Red (int110m): a LaTeX picture inside a PiCTeX `\put{…} at x y` read its own
+/// `\put(3,0)` as PiCTeX's, which scanned to the end of the input for its `at` — Fatal (1301.4518). Repro
+/// package-bindings/pictex_latex_picture_inside_put_keeps_latex_put.
+#[test]
+fn a_latex_picture_inside_pictex_keeps_latex_put() {
+  let (log, xml) = convert_files_with(
+    repro!("package-bindings/pictex_latex_picture_inside_put_keeps_latex_put.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert!(xml.contains("<picture"), "{xml}");
+  assert!(xml.contains(">Text.</p>"), "{xml}");
+}
