@@ -223,13 +223,13 @@ fn jheppub_emails_by_spelling_else_call_order() {
   ));
   assert_eq!(out, [
     "C Ann Able [a] | line:names",
-    "  a Univ A | api:label",
+    "  a Univ A | api:label ruling1:request",
     "  c email zq1@x.org | api:sequence owner:order",
     "C Bob Baker [a] | line:names",
-    "  a Univ A | api:label",
+    "  a Univ A | api:label ruling1:request",
     "  c email bbaker@x.org | api:sequence owner:spelled",
     "C Cat Cole [b] | line:names",
-    "  a Univ B | api:label",
+    "  a Univ B | api:label ruling1:request",
     "  c email wy7@y.org | api:sequence owner:order",
     "  c email cat2@y.org | api:sequence owner:spelled",
   ]);
@@ -348,7 +348,7 @@ fn sync_row_shapes_62_64_authblk() {
     ),
     [
       "C Ann [1] | line:names",
-      "  a Univ X | api:label",
+      "  a Univ X | api:label ruling1:request",
       "  a Univ Y | api:thenote ruling1:request",
       "C Bob [1] | api:creator",
       "  a Univ X | api:label ruling1:thenote",
@@ -579,7 +579,7 @@ fn prefix_fallback_answers_a_mismatched_label() {
     [
       "C Ann Able [fn:l1] | line:names",
       "  a Univ B | api:annotate:run",
-      "  a Univ A | api:label",
+      "  a Univ A | api:label ruling1:request",
       "C Bob Baker [] | line:names",
       "  a Univ B | api:annotate:run",
     ]
@@ -676,7 +676,7 @@ fn authblk_unlabelled_affil_is_its_thenote() {
   let json = resolved(AUTHBLK_THENOTE, Some("ar5iv.sty"));
   assert_eq!(tuples(&json), [
     "C Ann [a] | line:names",
-    "  a Univ X | api:label",
+    "  a Univ X | api:label ruling1:request",
     "C Bob [1] | api:creator",
     "  a Univ Y | api:thenote ruling1:request",
   ]);
@@ -1216,4 +1216,28 @@ fn a_symbol_line_under_names_showing_no_symbols_keeps_its_place() {
     "Ann Able:",
     "Bob Baker: Univ A; Also at X; Also at Y"
   ]);
+}
+
+/// FM S2b aas census: an API entry its call labels (aastex's `\altaffiltext{n}{…}`) given to the names whose marks
+/// request it is ruling 1 (user 2026-10-21 #1), as a labelled line inside an author block is: `ruling1:request`.
+/// Red: plain `api:label`, so 0707.2093's alt affiliations, by `Woods\altaffilmark{5,6}` where today's gave them the last
+/// author, were an unclassified disagreement.
+#[test]
+fn an_altaffiltext_by_its_marks_is_ruling_one() {
+  let tuples = document(
+    "aastex631",
+    "",
+    "\\author{Ann Able\\altaffilmark{1}, Bob Baker\\altaffilmark{2,3}, and Cat Cole\\altaffilmark{1}}\n\\altaffiltext{1}{Univ A}\n\\altaffiltext{2}{Univ B}\n\\altaffiltext{3}{Univ C}",
+  );
+  let bob = tuples
+    .iter()
+    .position(|t| t.starts_with("C Bob Baker"))
+    .expect("Bob");
+  assert!(
+    tuples[bob..]
+      .iter()
+      .take(4)
+      .any(|t| t.contains("Univ B") && t.contains("ruling1:request")),
+    "{tuples:#?}"
+  );
 }

@@ -964,6 +964,16 @@ impl Resolver {
         if by_parted && !assoc.rule.contains("ruling1:parted") {
           assoc.rule.push_str(" ruling1:parted");
         }
+        // (an API entry its call labels — aastex's `\altaffiltext{5}{…}` — to the names whose marks request it: ruling 1,
+        // user 2026-10-21 #1, as a labelled line inside an author block is; 0707.2093's `Woods\altaffilmark{5,6}`, whose
+        // two entries today's gave the last author)
+        // (not the kernel's own `author:N` label, the N-th author's: no mark asked for it)
+        if assoc.rule.split_whitespace().next() == Some("api:label")
+          && !assoc.rule.contains("ruling1:")
+          && labels.iter().any(|l| !l.starts_with("author:"))
+        {
+          assoc.rule.push_str(" ruling1:request");
+        }
         self.attach(Some(owner), assoc, note);
       }
     }
