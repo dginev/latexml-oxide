@@ -199,6 +199,21 @@ fn marks_as_text_or_formulas_are_no_name_text() {
   assert_eq!(compare(&shadow, &xml), vec![]);
 }
 
+/// A lowercase superscript inside a word is the word's letters, a formula's too, its markup's spacing aside:
+/// `I. M. M$^{\rm c}$Hardy` (2003.01448), `M\textsuperscript{c}Kernan` (math0610203).
+#[test]
+fn a_superscript_inside_a_word_is_its_letters() {
+  let xml = xml_tuples(
+    format!(
+      "{HEAD}<creator><personname>I. M. M<sup><Math tex=\"\\rm c\" text=\"c\">\n  <XMath>\n    <XMTok>c</XMTok>\n  </XMath>\n</Math></sup>Hardy</personname></creator><creator><personname>James M<sup>c</sup>Kernan</personname></creator></document>"
+    )
+    .as_bytes(),
+  )
+  .expect("xml");
+  let names: Vec<&str> = xml.creators.iter().map(|c| c.name.as_str()).collect();
+  assert_eq!(names, ["I. M. McHardy", "James McKernan"]);
+}
+
 /// FM S2a.2 r3 classes: names parted only by a mark or a note merged into one personname (1609.02129); a url whose text is an
 /// e-mail address read as an e-mail (r2 item 8, 1701.01829); a title's note on the first author (1603.01892); the
 /// addresses of a names line in the personname (2405.06319) — each disagreement classified, by its class or its tag.
@@ -279,6 +294,31 @@ fn r3_classes_classify_their_disagreements() {
   );
   assert!(
     d.len() == 2 && d.iter().all(|d| d.class == title_note),
+    "{d:?}"
+  );
+  // (today's address twice beside an empty correspondent, the shadow's one correspondent of it, by a ruling:
+  // `\correspondingauthor{\email{…}}`, 1903.08299)
+  let mut shadow = Tuples {
+    creators: vec![named("Ann Able", "line:names")],
+    ..Tuples::default()
+  };
+  shadow
+    .block
+    .push(("correspondent".into(), "ann@x.org".into()));
+  shadow.block_rules.insert(
+    "correspondent\tannxorg".into(),
+    "api:label ruling1:fuzzy-label fuzzy:surname label:unrequested owner:block".into(),
+  );
+  let d = compare(
+    &shadow,
+    &one(
+      r#"<creator><personname>Ann Able</personname></creator><creator><contact role="email">ann@x.org</contact><contact role="correspondent"/><contact role="email">ann@x.org</contact></creator>"#,
+    ),
+  );
+  assert!(
+    d.len() == 3
+      && d.iter().all(|d| d.classified)
+      && d.iter().filter(|d| d.rule.starts_with("moved ")).count() == 2,
     "{d:?}"
   );
   let shadow = Tuples {
@@ -515,6 +555,31 @@ fn r5_classes_are_fenced_and_the_separator_class() {
       &with_affiliation("Bhanwar Gupta", "IBM India, IBM CIO")
     )
     .contains(&Some(row))
+  );
+  // (a collaboration's whole list in one personname, with the text of an affiliation the shadow gave a name: MAGIC's
+  // `J.~Zapatero$^{5}$ (The MAGIC Collaboration), A.~Falcone…`, 0910.4381)
+  let mut magic = names(&[
+    ("Ann Able", "line:names"),
+    ("Bob Baker", "line:names sep:comma"),
+    ("Cy Cole", "line:names sep:comma"),
+    ("Dee Dunn", "line:names sep:comma"),
+    ("Eve Ernst", "line:names sep:comma"),
+  ]);
+  magic.creators[2]
+    .affiliations
+    .push("(The MAGIC Collaboration)".into());
+  assert_eq!(
+    classes(
+      &magic,
+      &names(&[(
+        "Ann Able, Bob Baker, Cy Cole (The MAGIC Collaboration), Dee Dunn Eve Ernst",
+        ""
+      )])
+    )
+    .first()
+    .copied()
+    .flatten(),
+    Some("a collaboration's whole author list read into one personname")
   );
   // (a wide space: whole names parted, not an accent's glyphs)
   let wide =

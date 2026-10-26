@@ -315,9 +315,10 @@ pub(super) fn names_explained(shadow: &Tuples, xml: &Tuples, fault: NameFault) -
   used && i == sn.len()
 }
 
-/// Whether the XML's one creator holds the shadow's names, five or more, in order (the word "and" between two allowed)
-/// and more after them: a collaboration's whole author block — its names, marks and affiliations — read into one
-/// personname (BESIII, 2007.02542, 0710.0039; LIGO, 1310.0383).
+/// Whether the XML's one creator holds the shadow's names, five or more, in order (the word "and" between two allowed,
+/// and after a name the text of an affiliation the shadow gave it: MAGIC's `J.~Zapatero$^{5}$ (The MAGIC
+/// Collaboration), A.~Falcone…`, 0910.4381) and more after them: a collaboration's whole author block — its names,
+/// marks and affiliations — read into one personname (BESIII, 2007.02542, 0710.0039; LIGO, 1310.0383).
 pub(super) fn block_in_one_name(shadow: &Tuples, xml: &Tuples) -> bool {
   let [only] = xml.creators.as_slice() else {
     return false;
@@ -335,6 +336,14 @@ pub(super) fn block_in_one_name(shadow: &Tuples, xml: &Tuples) -> bool {
       at += 3 + n.len();
     } else {
       return false;
+    }
+    if let Some(a) = c
+      .affiliations
+      .iter()
+      .map(|a| norm(a))
+      .find(|a| !a.is_empty() && x[at..].starts_with(a.as_str()))
+    {
+      at += a.len();
     }
   }
   true
@@ -491,7 +500,7 @@ pub const XML_WRONG: &[XmlWrong] = &[
   },
   XmlWrong {
     name:      "a collaboration's whole author list read into one personname",
-    witnesses: &["2007.02542", "0710.0039", "1310.0383"],
+    witnesses: &["2007.02542", "0710.0039", "1310.0383", "0910.4381"],
     applies:   |c| c.kind == "name-split" && block_in_one_name(c.shadow, c.xml),
   },
   XmlWrong {

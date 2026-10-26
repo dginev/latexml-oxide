@@ -570,14 +570,20 @@ pub fn compare(shadow: &Tuples, xml: &Tuples) -> Vec<Disagreement> {
         .find(|(r, x)| r == role && r == "email" && norm(x) == text)
         .and_then(|(_, x)| written_out_rule(shadow, x))
     });
-    // (or a note the shadow gave the title, which today's left in a nameless creator under the role its mark's entry
-    // took — `\altaffilmark` in `\title`, its `\altaffiltext` an altaffiliation, 1801.03570)
+    // (or the shadow's block item of that text under another role, whose rule decided the role: a note the shadow gave
+    // the title that today's left in a nameless creator under its mark's entry role — `\altaffilmark` in `\title`, its
+    // `\altaffiltext` an altaffiliation, 1801.03570; `\correspondingauthor{\email{…}}`, today's address twice beside
+    // an empty correspondent, the shadow's one correspondent, 1903.08299)
     let rule = rule.or_else(|| {
       shadow
         .block_rules
-        .get(&format!("note\t{text}"))
-        .filter(|r| r.contains("api:title-note"))
-        .map(|r| format!("moved {r}"))
+        .iter()
+        .find(|(key, _)| {
+          key
+            .split_once('\t')
+            .is_some_and(|(r, t)| r != role && t == text)
+        })
+        .map(|(_, r)| format!("moved {r}"))
     });
     push("block", rule, format!("block: xml-only {item}"));
   }

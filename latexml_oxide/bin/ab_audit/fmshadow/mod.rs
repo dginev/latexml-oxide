@@ -142,14 +142,21 @@ fn math_base(math: Node<'_, '_>) -> Option<String> {
   .then(|| base.to_string())
 }
 
-/// A superscript of lowercase letters glued on both sides to letters (`James M<sup>c</sup>Kernan`, math0610203): part
-/// of the word, as the frontmatter observer's lexer reads it.
-fn inside_a_word(sup: Node<'_, '_>) -> bool {
-  let text: String = sup
+/// The letters a superscript prints: its text without the spacing of its markup (a formula's `<XMath>` layout).
+fn sup_letters(sup: Node<'_, '_>) -> String {
+  sup
     .descendants()
     .filter(|n| n.is_text())
     .filter_map(|n| n.text())
-    .collect();
+    .flat_map(str::chars)
+    .filter(|c| !c.is_whitespace())
+    .collect()
+}
+
+/// A superscript of lowercase letters glued on both sides to letters (`James M<sup>c</sup>Kernan`, math0610203; a
+/// formula's, `I. M. M$^{\rm c}$Hardy`, 2003.01448): part of the word, as the frontmatter observer's lexer reads it.
+fn inside_a_word(sup: Node<'_, '_>) -> bool {
+  let text = sup_letters(sup);
   let glued = |side: Option<Node<'_, '_>>, last: bool| {
     side
       .filter(|n| n.is_text())
@@ -181,7 +188,7 @@ fn text_without(node: Node<'_, '_>, scripts: bool) -> String {
         out.push_str(&text);
       } else if is_ltx(child, "sup") && inside_a_word(child) {
         // (a lowercase superscript inside a word is the word's letters, no mark: `M\textsuperscript{c}Kernan`)
-        walk(child, scripts, out);
+        out.push_str(&sup_letters(child));
       } else if child.is_element()
         && !is_ltx(child, "sup")
         && !is_ltx(child, "note")
