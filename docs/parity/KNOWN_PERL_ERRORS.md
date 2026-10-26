@@ -18629,3 +18629,27 @@ latex.ltx's `\renew@command#1`/`\provide@command#1` hand `\new@command` the argu
 (`\smalltwomatrix`: 90 script errors, the error-limit Fatal → 0 errors). Repro
 macro-state/newcommand_nargs_inside_the_braces; guard
 `perfect_kernel_batch81::newcommand_nargs_inside_the_braces_take_the_testopt_default`.
+
+## 1193. AASTeX 6.1's one-argument `\collaboration` takes the next `\author` as its name
+
+Perl's aas_support.sty.ltxml:126-127 binds AASTeX 6.3+'s `\collaboration{n}{name}` and `\nocollaboration{n}`
+(aastex701.cls:13355, :13377). AASTeX 6.1's are REVTeX's: `\collaboration{name}` (revtex4-1's `\@author@def`) and an
+argument-less `\nocollaboration` (aastex61.cls:6298). A 6.1 paper's `\collaboration{(Spitzer Team)}\author{P. Mr\'{o}z}`
+gives the collaboration the name `\author`, and the author's name becomes a paragraph after the abstract. Minimal
+trigger:
+
+```latex
+\documentclass{aastex61}
+\begin{document}
+\author{Ann Able}\affiliation{Univ A}
+\collaboration{(Spitzer Team)}
+\author{Bob Baker}\affiliation{Univ B}
+\maketitle
+\end{document}
+% pdflatex: authors Ann Able, Bob Baker; "(Spitzer Team)" under Ann Able. Perl: Bob Baker a paragraph
+```
+
+Fixed in Rust (82u): one binding reads both forms by the call's shape — a second group after `\collaboration`'s, a group
+after `\nocollaboration`, is the 6.3 form (aas_support_sty.rs). Witness 1802.09023. Repro
+package-bindings/aastex61_collaboration_takes_one_argument; guard
+`perfect_kernel_batch81::an_aastex61_collaboration_takes_one_argument`.

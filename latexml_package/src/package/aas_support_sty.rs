@@ -165,8 +165,20 @@ LoadDefinitions!({
 
   // \collaboration{n}{name} applies to previous authors w/o collab; n is how many to SHOW
   // \nocollaboration{n} ditto, but says they are not in a collaboration group.
-  DefMacro!("\\collaboration{}{}", "\\lx@add@contact[role=collaboration,annotate=new]{#2}");
-  DefMacro!("\\nocollaboration{}", "\\lx@add@contact[role=collaboration,annotate=new]{}");
+  // That is AASTeX 6.3+'s (aastex701.cls:13355 `\def\nocollaboration#1`, :13377 `\def\collaboration#1#2`); AASTeX 6.1's
+  // are REVTeX's, `\collaboration{name}` and an argument-less `\nocollaboration` (aastex61.cls:6298, revtex4-1's
+  // `\@author@def`; aastex701.cls:1942 before its 6.3 redefinition). One binding serves both, by the call's shape: a
+  // second group after `\collaboration`'s, a group after `\nocollaboration`, is the 6.3 form — Perl's two-argument
+  // `\collaboration` (aas_support.sty.ltxml:126) took the `\author` after a 6.1 `\collaboration{(Spitzer Team)}` as
+  // the name, and "P. Mróz" became a paragraph (1802.09023; KNOWN_PERL_ERRORS). Guard
+  // `perfect_kernel_batch81::an_aastex61_collaboration_takes_one_argument`.
+  DefMacro!("\\collaboration{}",
+    "\\@ifnextchar\\bgroup{\\lx@aas@collaboration@count{#1}}{\\lx@aas@collaboration@name{#1}}");
+  DefMacro!("\\lx@aas@collaboration@count{}{}", "\\lx@add@contact[role=collaboration,annotate=new]{#2}");
+  DefMacro!("\\lx@aas@collaboration@name{}", "\\lx@add@contact[role=collaboration,annotate=new]{#1}");
+  DefMacro!("\\nocollaboration",
+    "\\@ifnextchar\\bgroup{\\lx@aas@nocollaboration}{\\lx@add@contact[role=collaboration,annotate=new]{}}");
+  DefMacro!("\\lx@aas@nocollaboration{}", "\\lx@add@contact[role=collaboration,annotate=new]{}");
 
   // Older aas versions: put mark within \author, text will be attached
   DefMacro!("\\altaffilmark Semiverbatim",

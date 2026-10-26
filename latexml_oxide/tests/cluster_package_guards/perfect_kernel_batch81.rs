@@ -183,3 +183,32 @@ A \comrj{Dynamical} B
   assert_eq!(error_count(&log), 0, "{log}");
   assert!(xml.contains("A [RJ: Dynamical] B"), "{xml}");
 }
+
+/// AASTeX 6.1's `\collaboration{name}` takes REVTeX's one argument and its `\nocollaboration` none (aastex61.cls,
+/// revtex4-1's `\@author@def`); AASTeX 6.3+'s `\collaboration{n}{name}` and `\nocollaboration{n}` one more
+/// (aastex701.cls:13355, :13377) — read by the call's shape. Red: the two-argument binding (Perl's
+/// aas_support.sty.ltxml:126, KNOWN_PERL_ERRORS) took the next `\author` as the name, the author "P. Mróz" a stray
+/// paragraph (1802.09023). Repro package-bindings/aastex61_collaboration_takes_one_argument.
+#[test]
+fn an_aastex61_collaboration_takes_one_argument() {
+  let (log, xml) = convert_files_with(
+    repro!("package-bindings/aastex61_collaboration_takes_one_argument.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  for name in ["Ann Able", "Bob Baker", "Cy Cole"] {
+    assert!(
+      xml.contains(&format!("<personname>{name}</personname>")),
+      "{name}: {xml}"
+    );
+  }
+  assert!(
+    xml.contains("(Spitzer Team)") && xml.contains("(OGLE Collaboration)"),
+    "{xml}"
+  );
+  assert!(
+    !xml.contains("<p>Bob Baker") && !xml.contains("<p>Cy Cole"),
+    "{xml}"
+  );
+}

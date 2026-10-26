@@ -1,0 +1,21 @@
+% AASTeX 6.1's \collaboration{name} and \nocollaboration take REVTeX's arguments (aastex61.cls, revtex4-1's
+% \@author@def: one name; \nocollaboration none), AASTeX 6.3+'s \collaboration{n}{name} and \nocollaboration{n} one
+% more (aastex701.cls:13355, :13377). Witness 1802.09023: `\collaboration{(Spitzer Team)}\author{P. Mr\'{o}z}`.
+\documentclass{aastex61}
+\begin{document}
+\title{Collaboration arguments}
+\author{Ann Able}
+\affiliation{Univ A}
+\collaboration{(Spitzer Team)}
+\author{Bob Baker}
+\affiliation{Univ B}
+\nocollaboration
+\author{Cy Cole}
+\affiliation{Univ C}
+\collaboration{1}{(OGLE Collaboration)}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\maketitle
+Body.
+\end{document}
