@@ -1206,22 +1206,26 @@ LoadDefinitions!({
     {
       token_opt = read_token()?;
     }
-    if let Some(token) = token_opt
-      && token.get_catcode() == Catcode::BEGIN
-    {
+    // (brace layers stripped one by one, as DefToken does — `\newcommand{{\datanum}}{…}`, 2407.13761 — the
+    // `\@testopt` step on the outermost layer's rest only)
+    let mut outermost = true;
+    while let Some(token) = token_opt {
+      if token.get_catcode() != Catcode::BEGIN {
+        break;
+      }
       let mut toks: Vec<Token> = read_balanced(ExpansionLevel::Off, false, false)?
         .unlist()
         .into_iter()
         .filter(|t| !matches!(t.get_catcode(), Catcode::SPACE | Catcode::COMMENT))
         .collect();
       if toks.is_empty() {
-        Error!("expected", "DefToken", "Expected a DefToken parameter, found nothing.");
-        return Ok(ArgWrap::None);
+        token_opt = None;
+        break;
       }
-      let cs = toks.remove(0);
+      let head = toks.remove(0);
       if !toks.is_empty() {
         let bracket = |t: &Token| t.get_catcode() == Catcode::OTHER && t.to_string() == "[";
-        if toks.first().is_some_and(bracket) {
+        if outermost && toks.first().is_some_and(bracket) {
           skip_spaces()?;
           let follows_bracket = peek_token()?.as_ref().is_some_and(bracket);
           if !follows_bracket {
@@ -1230,7 +1234,8 @@ LoadDefinitions!({
         }
         unread_vec(toks);
       }
-      return Ok(ArgWrap::Token(cs));
+      outermost = false;
+      token_opt = Some(head);
     }
     match token_opt {
       Some(t) => Ok(ArgWrap::Token(t)),

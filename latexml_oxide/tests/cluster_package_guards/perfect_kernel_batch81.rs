@@ -144,3 +144,22 @@ fn a_package_by_its_installed_path_uses_its_binding() {
   assert_eq!(error_count(&log), 0, "{log}");
   assert!(xml.contains(r#"angle="90""#), "{xml}");
 }
+
+/// `LaTeXDefToken` strips brace layers one by one, as DefToken does: `\newcommand{{\datanum}}{…}` defines `\datanum`
+/// (LaTeX: `\@newcommand#1` reads `{\datanum}`'s content). Red (82h r1): the token was the inner `{` and the document
+/// ran to the error limit (2407.13761, nets eccv/llncs/wasysym).
+#[test]
+fn newcommand_of_a_doubly_braced_name_defines_the_name() {
+  let (log, xml) = convert_files_with(
+    r"\documentclass{article}
+\newcommand{{\datanum}}{2,565}
+\newcommand{\two[5]}{[#2 #3 #4 #5]}
+\begin{document}
+\datanum{} \two{a}{b}{c}{d} x
+\end{document}",
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert!(xml.contains("2,565 [a b c d] x"), "{xml}");
+}
