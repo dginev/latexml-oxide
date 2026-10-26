@@ -1,0 +1,11 @@
+% witness: arXiv 2309.12794 (FSS-ver-Sept22-.tex:37 `\usepackage{graphics/graphicx}`, then `\rotatebox[origin=c]{90}{\big\{}`)
+% oracle:  pdflatex 0 errors (the installed graphicx.sty either way; a "requested package" name warning)
+% engines: rust (int110o) = out of memory (rc 137) at the first `\rotatebox`: the path found no binding, so the raw
+%          graphicx.sty ran over our graphics binding
+% expect:  0 errors; the rotated box
+% status:  RED (int110o) -> GREEN (82j)
+\documentclass{article}
+\usepackage{graphics/graphicx}
+\begin{document}
+x \rotatebox{90}{y} z
+\end{document}

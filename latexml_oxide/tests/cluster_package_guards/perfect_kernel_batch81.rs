@@ -129,3 +129,18 @@ fn pdftexbanner_names_the_texlive_year() {
   assert_eq!(error_count(&log), 0, "{log}");
   assert!(xml.contains("NEW"), "{xml}");
 }
+
+/// A package requested by an installed path (`\usepackage{graphics/graphicx}`) that resolves to the same file as its
+/// basename is the package the binding of that name serves (`source_tree_basename`, OXIDIZED_DESIGN #177's rerouting
+/// widened). Red (int110o): the raw graphicx.sty ran over our graphics binding and the first `\rotatebox` exhausted
+/// memory (2309.12794). Repro loader/package_by_installed_path_uses_its_binding.
+#[test]
+fn a_package_by_its_installed_path_uses_its_binding() {
+  let (log, xml) = convert_files_with(
+    repro!("loader/package_by_installed_path_uses_its_binding.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert!(xml.contains(r#"angle="90""#), "{xml}");
+}

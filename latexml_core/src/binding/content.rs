@@ -3645,11 +3645,28 @@ impl Default for RequireOptions {
 /// MISS is rerouted: a path that resolves (a paper's own `./mypkg`,
 /// arXiv 0906.3507) still loads the local file. Guard:
 /// `perfect_kernel_batch54::relative_package_path_falls_back_to_basename`.
+/// A path that resolves to the very file its basename does (`\usepackage{graphics/graphicx}`, kpathsea's
+/// `tex/latex/graphics/graphicx.sty`) is that package, and loads through the basename's binding when it has one:
+/// the raw graphicx.sty over our graphics binding exhausted memory at the first `\rotatebox` (2309.12794).
 fn source_tree_basename<'a>(name: &'a str, ext: &str) -> Cow<'a, str> {
-  if !name.contains('/') || find_file(&s!("{name}.{ext}"), None).is_some() {
+  if !name.contains('/') {
     return Cow::Borrowed(name);
   }
   let base = name.rsplit('/').next().unwrap_or(name);
+  if let Some(path) = find_file(&s!("{name}.{ext}"), None) {
+    if !base.is_empty()
+      && binding_exists(base, ext)
+      && find_file(&s!("{base}.{ext}"), None).as_deref() == Some(path.as_str())
+    {
+      Info!(
+        "loading",
+        name,
+        s!("'{name}.{ext}' is the installed '{base}.{ext}'; loading it as '{base}'")
+      );
+      return Cow::Owned(base.to_string());
+    }
+    return Cow::Borrowed(name);
+  }
   if base.is_empty() || find_file(&s!("{base}.{ext}"), None).is_none() {
     return Cow::Borrowed(name);
   }
