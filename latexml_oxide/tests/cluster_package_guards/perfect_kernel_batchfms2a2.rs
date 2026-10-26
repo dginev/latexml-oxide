@@ -1035,3 +1035,36 @@ fn r3_shapes_leave_the_xml_unchanged() {
     );
   }
 }
+
+/// The creators of a reading: each `C` line's name.
+fn reading_names(tuples: &[String]) -> Vec<String> {
+  tuples
+    .iter()
+    .filter_map(|t| t.strip_prefix("C "))
+    .map(|t| t.split(" [").next().unwrap_or(t).to_string())
+    .collect()
+}
+
+/// FM S2b ams gate (2026-10-25): a byline's "by" opening a names line is no name, as today's split reads it
+/// (`without_leading_by`). Red: the reading's first name was "by David Harari" (0808.2556).
+#[test]
+fn a_bylines_by_is_no_name() {
+  let names = reading_names(&document(
+    "amsart",
+    "",
+    "\\author{by Ann Able and Bob Baker}",
+  ));
+  assert_eq!(names, ["Ann Able", "Bob Baker"]);
+}
+
+/// FM S2b ams gate: a lowercase superscript glued inside a word is the word's letters, not a mark between two names —
+/// `M\textsuperscript{c}Kernan` (math0610203). Red: the reading parted "James M" from "Kernan".
+#[test]
+fn a_superscript_inside_a_word_is_the_name() {
+  let names = reading_names(&document(
+    "amsart",
+    "",
+    "\\author{Ann Able}\n\\author{James M\\textsuperscript{c}Kernan}",
+  ));
+  assert_eq!(names, ["Ann Able", "James McKernan"]);
+}

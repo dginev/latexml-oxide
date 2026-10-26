@@ -107,8 +107,15 @@ impl Lexer {
       self.last_font = font;
     }
     let mut name: Option<Event> = None;
-    for (word, span) in words {
-      if word.eq_ignore_ascii_case("and") || word == "&" || is_separator_word(&word) {
+    // (a byline's "by", in any case, opening a line before names is no name — today's `without_leading_by`:
+    // `\author{by David Harari and Tam\'as Szamuely}`, 0808.2556)
+    let byline = !self.line_inked && words.len() > 1 && words[0].0.eq_ignore_ascii_case("by");
+    for (at, (word, span)) in words.into_iter().enumerate() {
+      if word.eq_ignore_ascii_case("and")
+        || word == "&"
+        || is_separator_word(&word)
+        || (at == 0 && byline)
+      {
         self.events.extend(name.take());
         let mut sep = Event::new(EventKind::Sep(SepKind::Word(word)));
         sep.span = span;
@@ -235,7 +242,7 @@ impl Lexer {
     self.clear_gap();
     // a `\label` outside a note labels the note before it
     let mut events: Vec<Event> = Vec::with_capacity(self.events.len());
-    for event in self.events {
+    for event in glue_in_word_marks(self.events) {
       if event.kind == EventKind::Layout && event.role.as_deref() == Some("label") {
         if let Some(note) = events.iter_mut().rev().find(|e| e.kind == EventKind::Note)
           && note.label.is_none()
@@ -250,6 +257,39 @@ impl Lexer {
     }
     events
   }
+}
+
+/// A lowercase mark glued on both sides inside a word is the word's letters, not a mark between two names: `James
+/// M\textsuperscript{c}Kernan` is one name, "James McKernan" (math0610203). A Name, a Mark of one or two lowercase
+/// letters set with no space before or after it, and a Name are one Name.
+fn glue_in_word_marks(events: Vec<Event>) -> Vec<Event> {
+  let mut out: Vec<Event> = Vec::with_capacity(events.len());
+  let mut events = events.into_iter().peekable();
+  while let Some(event) = events.next() {
+    let letters = event.label.as_deref().unwrap_or("");
+    let in_word = event.kind == EventKind::Mark
+      && !event.symbol
+      && !event.space_before
+      && !event.space_after
+      && (1..=2).contains(&letters.chars().count())
+      && letters.chars().all(char::is_lowercase)
+      && out.last().is_some_and(|e| {
+        e.kind == EventKind::Name && e.text.chars().next_back().is_some_and(char::is_alphabetic)
+      })
+      && events.peek().is_some_and(|e| {
+        e.kind == EventKind::Name && e.text.chars().next().is_some_and(char::is_alphabetic)
+      });
+    if in_word {
+      let next = events.next().expect("peeked");
+      let name = out.last_mut().expect("checked");
+      name.text.push_str(letters);
+      name.text.push_str(&next.text);
+      name.span = join_span(join_span(name.span, event.span), next.span);
+      continue;
+    }
+    out.push(event);
+  }
+  out
 }
 
 /// A character printing nothing: the zero-width space, non-joiner and joiner, the word joiner and the byte-order mark.

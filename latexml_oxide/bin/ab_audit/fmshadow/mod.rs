@@ -142,6 +142,33 @@ fn math_base(math: Node<'_, '_>) -> Option<String> {
   .then(|| base.to_string())
 }
 
+/// A superscript of lowercase letters glued on both sides to letters (`James M<sup>c</sup>Kernan`, math0610203): part
+/// of the word, as the frontmatter observer's lexer reads it.
+fn inside_a_word(sup: Node<'_, '_>) -> bool {
+  let text: String = sup
+    .descendants()
+    .filter(|n| n.is_text())
+    .filter_map(|n| n.text())
+    .collect();
+  let glued = |side: Option<Node<'_, '_>>, last: bool| {
+    side
+      .filter(|n| n.is_text())
+      .and_then(|n| n.text())
+      .is_some_and(|t| {
+        let c = if last {
+          t.chars().next_back()
+        } else {
+          t.chars().next()
+        };
+        c.is_some_and(char::is_alphabetic)
+      })
+  };
+  (1..=2).contains(&text.chars().count())
+    && text.chars().all(char::is_lowercase)
+    && glued(sup.prev_sibling(), true)
+    && glued(sup.next_sibling(), false)
+}
+
 fn text_without(node: Node<'_, '_>, scripts: bool) -> String {
   fn walk(node: Node<'_, '_>, scripts: bool, out: &mut String) {
     for child in node.children() {
@@ -152,6 +179,9 @@ fn text_without(node: Node<'_, '_>, scripts: bool) -> String {
           math_mark_text(child).or_else(|| scripts.then(|| math_base(child)).flatten())
       {
         out.push_str(&text);
+      } else if is_ltx(child, "sup") && inside_a_word(child) {
+        // (a lowercase superscript inside a word is the word's letters, no mark: `M\textsuperscript{c}Kernan`)
+        walk(child, scripts, out);
       } else if child.is_element()
         && !is_ltx(child, "sup")
         && !is_ltx(child, "note")
