@@ -23915,6 +23915,34 @@ Open (a ruling): the mark-picked path's lines do not show their mark (it is thei
 and Perl keeps a typed mark in the content — 80v/80x moved 65 papers onto that path (0710.0246's `$^{1}$Physikalisches
 Institut` reads "Physikalisches Institut"); keeping the ink there changes every marked-path affiliation (219 guards).
 
+**S2b next family: the ams_support gate (81a–81f, 2026-10-25).** The census (`LATEXML_FM_SHADOW=1`) of 3,000 seeded
+amsart/amsproc/amsbook papers (`fms_ams/`, popams110.tsv), scored by `ab_audit fmshadow`. int110h: 2,903 ams_support
+papers, 17 unclassified (0.6 %, gate < 0.5 %). Fixed: a byline's "by" opening a names line is a separator word, as the
+token splitter's `without_leading_by` (81a, 0808.2556); a Mark of one or two lowercase letters glued to letters on
+both sides is the word's letters (`James M\textsuperscript{c}Kernan`, math0610203), in the lexer and in both
+comparators' mark-free text (81a); `\lx@notemark{endnote}[1]` (endnotes.sty's `\endnotemark`) is a Mark showing its
+printed tag, its type argument no ink (81e, 1703.08733). A comparator class (81c, PDF-confirmed): amsart's address
+groups written after the last `\author`, one per author in print order (`owner:upfront-grid`), which today's XML gives
+the last author (2507.07513, 1812.04979, 2010.11440). int110k: 11 unclassified (0.38 %). Classified precision, PDF-
+judged seeded samples: seed 81, 30 right of 33, the three wrong fixed (81d) — a list of symbol marks leading an address
+(`$\dagger,\;\ast$\;Dept`, math-ph0404036: the lead run spans the list's separators, which are no text), an en-dash
+range (`$^{1\text{--}5}$`, 2507.06232: `spelled_ranges` takes a run of dashes, `--` before its ligature), amsart's
+`\address[<author>]{…}` inside `\author` (2103.03620: a label no mark requests that spells an author's whole name names
+that author, `ruling1:fuzzy-label`); seed 82 on int110k, 30 right, 2 wrong, 1 undecidable — fixed 81f, an address no
+name requests that opens with one author's whole name is that author's (`owner:named`, 2106.06096, as today's);
+open, 1610.06222 (an address's own names line carries the marks, `Glasby∗ and Gabriel Verret†`, the `∗`/`†` lines go
+to the block); undecidable, 1305.3804 (marks printed only in an address's names line). int110l: 11 unclassified (0.38 %); seed 83,
+34 judged, 33 right, 0 wrong, 1 undecidable — the gate met. Guards
+`perfect_kernel_batchfms2a2::{a_bylines_by_is_no_name, a_superscript_inside_a_word_is_the_name,
+a_leading_list_of_symbol_marks_requests_each, an_en_dash_range_requests_every_number_in_it,
+an_ams_address_naming_its_author_is_that_authors, an_endnote_mark_on_a_name_is_no_name_text,
+an_unrequested_address_opening_with_a_name_is_that_authors}`,
+`fmshadow::tests::address_groups_given_to_the_last_author_are_an_xml_wrong_class`. Unclassified residuals, one-offs
+read and left: 1005.4252 (an ʻokina drawn by `\rotatebox`/`\reflectbox` over an IPA glyph), 1201.2976 (`\today` on its
+own line in `\author` read as an affiliation), 1211.3996 (an `\address` brace never closed), 2109.14517 (`\cb t`, a
+tabular in the name), math0112263 (the block set in a `\vbox` register used before its `\newbox`), 2210.11574 (ORCID
+glyphs and "(Uppsala University)" in today's name), 1909.09152, 2108.13723, 2208.03878, math0603701.
+
 ### 840. A space a name sets before its own mark is the name's; spacing-only math, `\enskip` after a mark part names
 
 OD #52(i) rewrites a horizontal space in an author block (`\hspace`, `\hfill`) to `\quad`, which with `\quad` and
