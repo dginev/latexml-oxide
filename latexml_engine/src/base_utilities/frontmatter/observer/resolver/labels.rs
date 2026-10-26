@@ -54,6 +54,20 @@ pub fn mark_labels(label: &str) -> Vec<String> {
   let mut labels = Vec::new();
   for part in label.split(|c: char| c == ',' || c == ';' || c.is_whitespace()) {
     let part = part.trim_matches(|c: char| "()[]{}".contains(c));
+    // (a binding's prefix — aastex's `altaffil:` — stays on each piece: `altaffil:*` is one label, `altaffil:**`
+    // another; split off, every starred label shared a bare `altaffil:` and 0911.4695's `*`/`**` notes swapped)
+    if let Some((prefix, rest)) = part.split_once(':')
+      && !prefix.is_empty()
+      && prefix.chars().all(|c| c.is_ascii_alphabetic() || c == '@')
+      && !rest.is_empty()
+    {
+      labels.extend(
+        mark_labels(rest)
+          .into_iter()
+          .map(|piece| s!("{prefix}:{piece}")),
+      );
+      continue;
+    }
     let mut run = String::new();
     let mut rest = String::new();
     for c in part.chars().map(|c| match c {

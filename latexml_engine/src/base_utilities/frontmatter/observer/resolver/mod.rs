@@ -660,6 +660,12 @@ mod tests {
     assert_eq!(spelled(&["1-4", "a"]), ["1", "2", "3", "4", "a"]);
     assert_eq!(spelled(&["2\u{2013}3"]), ["2", "3"]);
     assert_eq!(spelled(&["1--3"]), ["1", "2", "3"]);
+    // (a binding's prefix stays on each piece of a mark: aastex's `altaffil:`, 0911.4695)
+    assert_eq!(mark_labels("altaffil:2,altaffil:**"), [
+      "altaffil:2",
+      "altaffil:**"
+    ]);
+    assert_eq!(mark_labels("altaffil:*1"), ["altaffil:*", "altaffil:1"]);
     assert_eq!(spelled(&["4-1", "1-99", "a-c"]), ["4-1", "1-99", "a-c"]);
   }
 

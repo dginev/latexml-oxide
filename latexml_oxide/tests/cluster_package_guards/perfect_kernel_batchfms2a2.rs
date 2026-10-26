@@ -1241,3 +1241,36 @@ fn an_altaffiltext_by_its_marks_is_ruling_one() {
     "{tuples:#?}"
   );
 }
+
+/// FM S2b aas census: a prefixed mark label keeps its prefix on each piece ruling 1 parts it into — `altaffil:*` is one
+/// label, `altaffil:**` another (`\@fnsymbol`'s 7th). Red: the symbol run split off its prefix, every starred label
+/// shared a bare `altaffil:`, and 0911.4695's `Aliu\altaffilmark{2,*}`/`Wakely\altaffilmark{18,**}` swapped their
+/// `\altaffiltext{*}`/`\altaffiltext{**}` corresponding-author notes.
+#[test]
+fn a_prefixed_symbol_label_keeps_its_prefix() {
+  let tuples = document(
+    "aastex631",
+    "",
+    "\\author{Ann Able\\altaffilmark{1,*}, and Bob Baker\\altaffilmark{1,**}}\n\\altaffiltext{1}{Univ A}\n\\altaffiltext{**}{Corresponding author: bob@b.edu}\n\\altaffiltext{*}{Corresponding author: ann@a.edu}",
+  );
+  let ann = tuples
+    .iter()
+    .position(|t| t.starts_with("C Ann Able"))
+    .expect("Ann");
+  let bob = tuples
+    .iter()
+    .position(|t| t.starts_with("C Bob Baker"))
+    .expect("Bob");
+  assert!(
+    tuples[ann..bob].iter().any(|t| t.contains("ann@a.edu")),
+    "{tuples:#?}"
+  );
+  assert!(
+    !tuples[ann..bob].iter().any(|t| t.contains("bob@b.edu")),
+    "{tuples:#?}"
+  );
+  assert!(
+    tuples[bob..].iter().any(|t| t.contains("bob@b.edu")),
+    "{tuples:#?}"
+  );
+}
