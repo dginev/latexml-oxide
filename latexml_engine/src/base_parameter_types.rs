@@ -1194,11 +1194,14 @@ LoadDefinitions!({
     read_arg(ExpansionLevel::Off)?.pack_parameters() },
   predigest => sub[arg]{ Ok(arg.undigested()) });
 
-  // The token a LaTeX declarator defines (`\newcommand`, `\renewcommand`, `\providecommand`): DefToken, and when its
+  // The token `\newcommand` defines: DefToken, and when its
   // braces held more after the token (`\newcommand{\two[5]}{…}`), latex.ltx:1156 `\new@command#1{\@testopt
   // {\@newcommand#1}0}` hands that rest to `\@newcommand` and `\@testopt` (:1735, `\kernel@ifnextchar[`) inserts
   // `[{0}]` unless a `[` follows the braces — so `[5]` then `[0]` read as five arguments, the first optional with default
   // 0, which the author's body takes as `#2`-`#5` (1312.5793's `\smalltwomatrix`: 90 errors, the error-limit Fatal).
+  // Not `\renewcommand`/`\providecommand`: `\renew@command#1` and `\provide@command#1` hand `\new@command` their
+  // argument unbraced, so it takes the command alone and `\@testopt` meets the `[n]` — plain arguments, as DefToken
+  // reads them (pdflatex: `\providecommand{\com[2]}{[#1: #2]}` then `\com{RJ}{x}` prints "[RJ: x]", 1504.03761).
   DefParameterType!(LaTeXDefToken, sub[_inner, _extra] {
     let mut token_opt = read_token()?;
     while let Some(token) = token_opt

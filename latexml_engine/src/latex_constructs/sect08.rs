@@ -107,7 +107,7 @@ pub(crate) fn load() -> Result<()> {
     DefMacro!(cs_token, macro_args, body, tex_declared => { star.is_some() && nargs > 0 });
   });
 
-  DefPrimitive!("\\renewcommand OptionalMatch:* LaTeXDefToken [Number][]{}",
+  DefPrimitive!("\\renewcommand OptionalMatch:* DefToken [Number][]{}",
   sub[(star, cs, nargs_num, opt, body)] {
     let nargs = nargs_num.value_of() as usize;
     if opt.is_some() {
@@ -147,7 +147,7 @@ pub(crate) fn load() -> Result<()> {
     DefMacro!(cs, macro_args, body);
   });
 
-  DefPrimitive!("\\providecommand OptionalMatch:* LaTeXDefToken [Number][]{}",
+  DefPrimitive!("\\providecommand OptionalMatch:* DefToken [Number][]{}",
   sub[(star, cs, nargs, opt, body)] {
     // Use `is_definable_latex` (honors the `:autoload` flag) rather than the bare
     // `IsDefinable!`, for the same reason as `\newcommand`/`\newenvironment`: an

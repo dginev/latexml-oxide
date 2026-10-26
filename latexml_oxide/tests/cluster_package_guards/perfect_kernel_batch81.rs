@@ -163,3 +163,23 @@ fn newcommand_of_a_doubly_braced_name_defines_the_name() {
   assert_eq!(error_count(&log), 0, "{log}");
   assert!(xml.contains("2,565 [a b c d] x"), "{xml}");
 }
+
+/// `\renewcommand`/`\providecommand` take no `\@testopt` default from a count inside the braces: latex.ltx's
+/// `\renew@command#1` and `\provide@command#1` hand `\new@command` their argument unbraced, which takes the command alone,
+/// and `\@testopt` then meets the `[2]` — two plain arguments (pdflatex "A [RJ: Dynamical] B"). Red (82h): the
+/// declarators shared `\newcommand`'s `LaTeXDefToken` and printed "[0: RJ]Dynamical" (1504.03761).
+#[test]
+fn providecommand_nargs_inside_the_braces_are_plain() {
+  let (log, xml) = convert_files_with(
+    r"\documentclass{article}
+\providecommand{\com[2]}{[#1: #2]}
+\providecommand{\comrj[1]}{\com{RJ}{#1}}
+\begin{document}
+A \comrj{Dynamical} B
+\end{document}",
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert!(xml.contains("A [RJ: Dynamical] B"), "{xml}");
+}
