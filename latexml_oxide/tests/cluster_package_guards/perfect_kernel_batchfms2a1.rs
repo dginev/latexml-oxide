@@ -13,6 +13,34 @@ use latexml::util::test::{
 use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
 use serde_json::Value;
 
+/// The shadow JSON of a conversion, parsed; for a written family's paper (revtex, ams) the writer must have kept the
+/// reading — its outcome `same` (today's reads so already) or `written` — so every reading a written family's guard
+/// pins is the XML users see: `declined: …` (a difference no writer operation explains, today's kept) or
+/// `written-different: …` (the writer's own defect) fails the guard (test audit 2026-10-26).
+pub(super) fn parsed(json: &str) -> Value {
+  let value: Value = serde_json::from_str(json).unwrap_or_else(|e| panic!("{e}: {json}"));
+  if let Some(outcome) = value["writer"].as_str() {
+    assert!(
+      matches!(outcome, "same" | "written"),
+      "the writer's outcome for a written family's paper: {outcome}"
+    );
+  }
+  value
+}
+
+/// The shadow JSON of a written family's paper the writer holds back, parsed: its outcome `declined: <why>…` — a
+/// reading the writer has no operation for, today's XML kept, which the guard pins as such (the written-family
+/// writer gaps in OPEN_ROWS).
+pub(super) fn parsed_held(json: &str, why: &str) -> Value {
+  let value: Value = serde_json::from_str(json).unwrap_or_else(|e| panic!("{e}: {json}"));
+  let outcome = value["writer"].as_str().unwrap_or("none");
+  assert!(
+    outcome.starts_with(&format!("declined: {why}")),
+    "the writer's outcome: {outcome}"
+  );
+  value
+}
+
 /// Convert `tex` (with `preload`) under the shadow switch: the log, the XML, and the shadow ledger as JSON.
 pub(super) fn shadow(tex: &str, preload: Option<&str>) -> (String, String, Value) {
   let (log, xml, json) = convert_with_setup_then(
@@ -21,7 +49,7 @@ pub(super) fn shadow(tex: &str, preload: Option<&str>) -> (String, String, Value
     || set_fm_shadow_override(Some(true)),
     |_| fm_shadow_json(),
   );
-  let json: Value = serde_json::from_str(&json).unwrap_or_else(|e| panic!("{e}: {json}"));
+  let json: Value = parsed(&json);
   (log, xml, json)
 }
 

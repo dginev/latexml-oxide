@@ -79,11 +79,18 @@ fn is(node: &Node, qname: &str) -> bool {
 fn math_mark_text(math: &Node) -> Option<String> {
   let tex = math.get_attribute("tex")?;
   let mut tex = tex.trim();
-  while let Some(rest) = [r"\,", r"\;", r"\!", r"\ ", "~", "{}"]
-    .iter()
-    .find_map(|p| tex.strip_prefix(p))
-  {
-    tex = rest.trim_start();
+  // (spacing before the script, braced too: `\,^{3}`, `{\,\!}^{1,2}` — 2112.13115's empty base)
+  loop {
+    if let Some(rest) = [r"\,", r"\;", r"\!", r"\ ", "~", "{}"]
+      .iter()
+      .find_map(|p| tex.strip_prefix(p))
+    {
+      tex = rest.trim_start();
+    } else if let Some(rest) = spacing_group(tex) {
+      tex = rest.trim_start();
+    } else {
+      break;
+    }
   }
   if tex.starts_with('^') {
     return Some(String::new());
@@ -97,6 +104,20 @@ fn math_mark_text(math: &Node) -> Option<String> {
     }
   }
   None
+}
+
+/// `tex` after a leading brace group holding spacing alone (`{\,\!}`), if it opens with one.
+fn spacing_group(tex: &str) -> Option<&str> {
+  let inner = tex.strip_prefix('{')?;
+  let close = inner.find('}')?;
+  let mut group = inner[..close].trim();
+  while let Some(rest) = [r"\,", r"\;", r"\!", r"\ ", "~"]
+    .iter()
+    .find_map(|p| group.strip_prefix(p))
+  {
+    group = rest.trim_start();
+  }
+  group.is_empty().then(|| &inner[close + 1..])
 }
 
 /// A formula `<base>^{…}` whose base is a word or a number: that base (an affiliation's `OR $97403^{1}$`).

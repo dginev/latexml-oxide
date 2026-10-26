@@ -481,7 +481,10 @@ pub fn fm_shadow_json() -> String {
       json_str(&mut out, reason);
       let _ = write!(out, ":{count}");
     }
-    out.push_str("}}}\n");
+    // (the writer's outcome for a written family's paper: `same`, `written`, `declined: …`, `written-different: …`)
+    out.push_str("}},\"writer\":");
+    json_opt_str(&mut out, ledger.writer.as_deref());
+    out.push_str("}\n");
     out
   })
 }

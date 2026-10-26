@@ -12,7 +12,10 @@ use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
 use serde_json::Value;
 
 /// Convert `tex` under the shadow switch, asserting a clean conversion: the whole dump.
-fn dump(tex: &str) -> Value {
+fn dump(tex: &str) -> Value { dump_as(tex, None) }
+
+/// [`dump`], of a written family's paper the writer holds back (`declined: <why>`): today's XML kept.
+fn dump_as(tex: &str, held: Option<&str>) -> Value {
   let (log, _, json) = convert_with_setup_then(
     tex,
     Some("ar5iv.sty"),
@@ -20,13 +23,21 @@ fn dump(tex: &str) -> Value {
     |_| fm_shadow_json(),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  serde_json::from_str(&json).unwrap_or_else(|e| panic!("{e}: {json}"))
+  match held {
+    Some(why) => super::perfect_kernel_batchfms2a1::parsed_held(&json, why),
+    None => super::perfect_kernel_batchfms2a1::parsed(&json),
+  }
 }
 
 /// The resolved tuples compactly, as `perfect_kernel_batchfms2a2::tuples` writes them: `C <name> [<requests>] <rule>`,
 /// then its `a` affiliations, `c <role>` contacts, `n` notes; `B <role>` the block's, `D <role>` what was dropped.
-fn tuples(tex: &str) -> Vec<String> {
-  let resolved = dump(tex)["resolved"].clone();
+fn tuples(tex: &str) -> Vec<String> { tuples_in(&dump(tex)) }
+
+/// [`tuples`] of a written family's paper the writer holds back, its reading never written (`declined: <why>`).
+fn tuples_held(tex: &str, why: &str) -> Vec<String> { tuples_in(&dump_as(tex, Some(why))) }
+
+fn tuples_in(dump: &Value) -> Vec<String> {
+  let resolved = dump["resolved"].clone();
   let mut out = Vec::new();
   let item = |prefix: &str, a: &Value, role: bool| {
     let rule = a["rule"].as_str().unwrap_or("");
@@ -294,10 +305,15 @@ fn a_sole_authors_annotations_before_it() {
 /// join the marked entries of one call, nor end one (2112.13115: `${\,\!}^1$Dept A\\ and ${\,\!}^2$Dept B`).
 #[test]
 fn spacing_before_a_mark_parts_the_entries() {
+  // (written family, held back: the writer does not cut today's one contact at its `{\,\!}^{2}` mark — OPEN_ROWS
+  // "written-family writer gaps"; today's XML keeps "1Department of Mathematics and 2Department of Physics, …" on both)
   assert_eq!(
-    tuples(&revtex(
-      "\\author{Ann Able${\\,\\!}^{1,2}$}\n\\author{Bob Baker${\\,\\!}^1$}\n\\affiliation{${\\,\\!}^1$Department of Mathematics\\\\ and ${\\,\\!}^2$Department of Physics, Univ A, City}"
-    )),
+    tuples_held(
+      &revtex(
+        "\\author{Ann Able${\\,\\!}^{1,2}$}\n\\author{Bob Baker${\\,\\!}^1$}\n\\affiliation{${\\,\\!}^1$Department of Mathematics\\\\ and ${\\,\\!}^2$Department of Physics, Univ A, City}"
+      ),
+      "Affiliation departmentofmathematics"
+    ),
     // (no zero-width space in a name or an entry: the lexer reads none as ink, and a name keeps no piece printing no
     // letter or digit — review revfms2a2_4 finding 6, FM S2a.2 r5)
     [

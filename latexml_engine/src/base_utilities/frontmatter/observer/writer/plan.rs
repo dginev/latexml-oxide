@@ -134,12 +134,16 @@ fn wanted(resolved: &Resolved) -> BTreeMap<Key, Vec<(Owner, &Assoc)>> {
 /// Today's items: (owner, kind, text) with the node and whether it may move (`dom::Item::movable`).
 fn held(front: &Front, pairs: &BTreeMap<usize, usize>) -> BTreeMap<Key, Vec<(Owner, Node, bool)>> {
   let mut out: BTreeMap<Key, Vec<(Owner, Node, bool)>> = BTreeMap::new();
+  // (an item of no text is no content to place, a named creator's as a nameless one's: today's empty contact of an
+  // `\email{}`, an endnote mark's empty note — the comparison reads none, and the paper was held back for it)
   for (&i, &j) in pairs {
     for item in &front.creators[j].items {
-      out
-        .entry((item.kind.clone(), item.key.clone()))
-        .or_default()
-        .push((Owner::Creator(i), item.node.clone(), item.movable));
+      if !item.key.is_empty() {
+        out
+          .entry((item.kind.clone(), item.key.clone()))
+          .or_default()
+          .push((Owner::Creator(i), item.node.clone(), item.movable));
+      }
     }
   }
   for creator in &front.nameless {

@@ -26,7 +26,7 @@ fn resolved(tex: &str, preload: Option<&str>) -> Value {
     |_| fm_shadow_json(),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let json: Value = serde_json::from_str(&json).unwrap_or_else(|e| panic!("{e}: {json}"));
+  let json: Value = super::perfect_kernel_batchfms2a1::parsed(&json);
   json["resolved"].clone()
 }
 

@@ -99,12 +99,24 @@ pub fn norm(text: &str) -> String {
 /// for any other formula (its text kept).
 fn math_mark_text(math: Node<'_, '_>) -> Option<String> {
   let mut tex = math.attribute("tex")?.trim();
-  // (spacing before the script: `\,^{3}`, 0804.4669)
-  while let Some(rest) = [r"\,", r"\;", r"\!", r"\ ", "~", "{}"]
-    .iter()
-    .find_map(|p| tex.strip_prefix(p))
-  {
-    tex = rest.trim_start();
+  // (spacing before the script, braced too: `\,^{3}`, 0804.4669; `{\,\!}^{1,2}`, 2112.13115)
+  loop {
+    if let Some(rest) = [r"\,", r"\;", r"\!", r"\ ", "~", "{}"]
+      .iter()
+      .find_map(|p| tex.strip_prefix(p))
+    {
+      tex = rest.trim_start();
+    } else if let Some(rest) = tex.strip_prefix('{').and_then(|inner| {
+      let close = inner.find('}')?;
+      let group = inner[..close]
+        .replace([',', ';', '!', '~'], "")
+        .replace('\\', "");
+      group.trim().is_empty().then(|| &inner[close + 1..])
+    }) {
+      tex = rest.trim_start();
+    } else {
+      break;
+    }
   }
   if tex.starts_with('^') {
     return Some(String::new());

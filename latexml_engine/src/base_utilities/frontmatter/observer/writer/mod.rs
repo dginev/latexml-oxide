@@ -61,20 +61,26 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
     return Ok(());
   };
   let front = dom::read(document);
+  let before = plan::difference(&resolved, &front);
   let Some(plan) = plan::plan(&resolved, &front)? else {
+    let outcome = before.map_or_else(|| "same".to_string(), |d| s!("declined: {d}"));
+    with_ledger(|ledger| ledger.writer = Some(outcome));
     return Ok(());
   };
   DebugFeature!("frontmatter", "FRONT writer: {} operations", plan.ops.len());
   apply::apply(document, &front, &plan)?;
   // (what was written must read as the observer reads it: anything else is the writer's own defect, reported)
   let after = dom::read(document);
-  if let Some(difference) = plan::difference(&resolved, &after) {
+  let difference = plan::difference(&resolved, &after);
+  if let Some(difference) = &difference {
     Warn!(
       "unexpected",
       "frontmatter",
       s!("The frontmatter written from the observer's reading differs from it: {difference}")
     );
   }
+  let outcome = difference.map_or_else(|| "written".to_string(), |d| s!("written-different: {d}"));
+  with_ledger(|ledger| ledger.writer = Some(outcome));
   Ok(())
 }
 

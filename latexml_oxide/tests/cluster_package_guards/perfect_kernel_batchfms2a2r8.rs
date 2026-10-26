@@ -24,7 +24,7 @@ fn dump_with(tex: &str, files: &[(&str, &str)]) -> Value {
     |_| fm_shadow_json(),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  serde_json::from_str(&json).unwrap_or_else(|e| panic!("{e}: {json}"))
+  super::perfect_kernel_batchfms2a1::parsed(&json)
 }
 
 /// One association compactly: `<prefix> [<role> ]<text> | <rule>`.

@@ -12,7 +12,10 @@ use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
 use serde_json::Value;
 
 /// Convert `tex` under the shadow switch, asserting a clean conversion: the whole dump.
-fn dump(tex: &str) -> Value {
+fn dump(tex: &str) -> Value { dump_as(tex, None) }
+
+/// [`dump`], of a written family's paper the writer holds back (`declined: <why>`): today's XML kept.
+fn dump_as(tex: &str, held: Option<&str>) -> Value {
   let (log, _, json) = convert_with_setup_then(
     tex,
     Some("ar5iv.sty"),
@@ -20,13 +23,21 @@ fn dump(tex: &str) -> Value {
     |_| fm_shadow_json(),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  serde_json::from_str(&json).unwrap_or_else(|e| panic!("{e}: {json}"))
+  match held {
+    Some(why) => super::perfect_kernel_batchfms2a1::parsed_held(&json, why),
+    None => super::perfect_kernel_batchfms2a1::parsed(&json),
+  }
 }
 
 /// The resolved tuples compactly, as `perfect_kernel_batchfms2a2::tuples` writes them: `C <name> [<requests>] <rule>`,
 /// then its `a` affiliations, `c <role>` contacts, `n` notes; `B <role>` the block's, `D <role>` what was dropped.
-fn tuples(tex: &str) -> Vec<String> {
-  let resolved = dump(tex)["resolved"].clone();
+fn tuples(tex: &str) -> Vec<String> { tuples_in(&dump(tex)) }
+
+/// [`tuples`] of a written family's paper the writer holds back, its reading never written (`declined: <why>`).
+fn tuples_held(tex: &str, why: &str) -> Vec<String> { tuples_in(&dump_as(tex, Some(why))) }
+
+fn tuples_in(dump: &Value) -> Vec<String> {
+  let resolved = dump["resolved"].clone();
   let mut out = Vec::new();
   let item = |prefix: &str, a: &Value, role: bool| {
     let rule = a["rule"].as_str().unwrap_or("");
@@ -339,7 +350,8 @@ fn footnote_texts_are_the_notes_of_their_marks() {
 /// is its address (`Frank Schadt, Pforzheim University of Applied Sciences, Germany`, 1106.0130).
 #[test]
 fn group_lines_and_an_institutions_address() {
-  assert_eq!(tuples(GROUP), [
+  // (written family, held back: the reading's names are not today's — OPEN_ROWS "written-family writer gaps")
+  assert_eq!(tuples_held(GROUP, "the creators' names"), [
     "C Ann Able [] | line:names",
     "  a College of X, Univ A, City, Country | line:unmarked R12:row-above line:continued",
     "C Bob Baker [] | line:names",
