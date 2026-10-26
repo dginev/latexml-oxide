@@ -159,6 +159,9 @@ pub const POLICIES: &[Policy] = &[
     name: "ams",
     binding: "ams_support.sty",
     and_word: true,
+    // (the second family: 0.38 % unclassified over 2,903 census papers, a seeded classified sample 33 of 34 right, none
+    // wrong — SYNC "FM S2b next family: ams_support", int110l)
+    written: true,
     cite: "amsart.cls:599 `\\def\\and`; Perl ams_support.sty.ltxml:94 `\\lx@author@conj`; 1712.02568",
     ..KERNEL
   },
