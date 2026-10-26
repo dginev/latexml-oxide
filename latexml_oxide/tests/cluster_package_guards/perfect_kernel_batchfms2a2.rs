@@ -1295,3 +1295,14 @@ fn an_entry_the_title_requests_is_the_titles_note() {
 
 /// The resolved tuples of a whole document `tex`.
 fn tuples_of(tex: &str) -> Vec<String> { tuples(&resolved(tex, Some("ar5iv.sty"))) }
+
+/// FM S2b aas census: a request whose argument is a separator (`J. Edelstein\altaffilmark, E. Korpela`: TeX hands the
+/// comma to `\altaffilmark` as its argument, printed as a superscript) still marks the name before it, and parts it from
+/// the next — astro-ph0601584. Red: no mark was read (the label all commas), and the two names were one.
+#[test]
+fn a_request_of_a_separator_still_parts_the_names() {
+  let names = reading_names(&tuples_of(
+    "\\documentclass{aastex631}\n\\begin{document}\n\\title{T}\n\\author{Ann Able\\altaffilmark{1},\nBob Baker\\altaffilmark, Cy Cole,\nDee Dunn}\n\\altaffiltext{1}{Univ A}\n\\maketitle\nText.\n\\end{document}\n",
+  ));
+  assert_eq!(names, ["Ann Able", "Bob Baker", "Cy Cole", "Dee Dunn"]);
+}

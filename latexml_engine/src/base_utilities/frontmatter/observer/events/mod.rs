@@ -659,9 +659,11 @@ impl Walker {
             }
           })
           .collect();
-        if !labels.is_empty() {
+        // (a request of a separator alone is still a mark, of no label: `J. Edelstein\altaffilmark, E. Korpela` hands
+        // the comma to `\altaffilmark`, which prints it superscripted after the name — astro-ph0601584)
+        if !labels.is_empty() || !raw(2).trim().is_empty() {
           let mut mark = Event::new(EventKind::Mark);
-          mark.label = Some(labels.join(","));
+          mark.label = (!labels.is_empty()).then(|| labels.join(","));
           mark.role = Some("request".to_string());
           self.event(mark, d, nest);
         }
