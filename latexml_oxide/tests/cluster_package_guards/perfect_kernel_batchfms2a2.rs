@@ -1381,3 +1381,19 @@ fn an_address_beside_an_institution_keeps_the_institution() {
     "{labelled:#?}"
   );
 }
+
+/// FM S2b aas census: a footnote text whose mark only the title shows is the title's note, as an entry only the
+/// title's marks request is (82m) — emulateapj's `\title{…\footnotemark[1]}` with `\footnotetext[1]{Based on
+/// observations …}` (1111.4983, astro-ph0701636), which today's keeps in the title. Red: the reading lost it.
+#[test]
+fn a_footnote_text_the_title_shows_is_the_titles_note() {
+  let tuples = tuples_of(
+    "\\documentclass{emulateapj}\n\\begin{document}\n\\title{T\\footnotemark[1]}\n\\footnotetext[1]{Based on observations.}\n\\author{Ann Able \\footnotemark[2]}\n\\footnotetext[2]{Sloan Fellow}\n\\affil{Univ A}\n\\maketitle\nText.\n\\end{document}\n",
+  );
+  assert!(
+    tuples
+      .iter()
+      .any(|t| t.starts_with("B note Based on observations.") && t.contains("api:title-note")),
+    "{tuples:#?}"
+  );
+}

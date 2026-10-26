@@ -105,6 +105,13 @@ impl Resolver {
     // `\altaffiltext{1}{Based on observations …}` is the title's note, 0801.1670)
     if tag == "ltx:title" {
       for e in events.iter().filter(|e| e.kind == EventKind::Mark) {
+        // (a footnote mark, by the mark it prints: `\title{…\footnotemark[1]}` and its `\footnotetext[1]{…}`,
+        // 1111.4983)
+        if printed_by_footnotemark(e)
+          && let Some(mark) = e.label.as_deref()
+        {
+          self.title_fn_marks.push(mark.to_string());
+        }
         self
           .title_requests
           .extend(mark_labels(e.label.as_deref().unwrap_or("")));

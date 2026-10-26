@@ -598,6 +598,7 @@ impl Resolver {
     // (built before the names: those of one print joined, into the first mark of it)
     let mut before: Vec<(String, usize, String)> = Vec::new();
     let mut after: Vec<(String, usize, String)> = Vec::new();
+    let mut title_notes: Vec<(String, usize, String)> = Vec::new();
     for (index, epoch, mark, text) in texts {
       let key = mark_key(&mark);
       let text = text.trim().to_string();
@@ -605,6 +606,15 @@ impl Resolver {
         continue;
       }
       read.push(folded(&text));
+      // (a text only the title's footnote mark shows is the title's note, as an entry only the title's marks request
+      // is: emulateapj's `\title{…\footnotemark[1]}` with `\footnotetext[1]{Based on observations …}`, 1111.4983,
+      // astro-ph0701636)
+      if !marks.iter().any(|(_, k)| *k == key)
+        && self.title_fn_marks.iter().any(|m| mark_key(m) == key)
+      {
+        title_notes.push((key, index, text));
+        continue;
+      }
       let built_before = marks
         .iter()
         .find(|(_, k)| *k == key)
@@ -666,6 +676,20 @@ impl Resolver {
     }
     for (key, index, text) in after {
       pair(self, &key, index, text, false);
+    }
+    for (key, index, text) in title_notes {
+      self.attach(
+        None,
+        Assoc {
+          role: "note".into(),
+          text,
+          label: Some(key),
+          rule: "note:footnotetext-mark api:title-note owner:title".into(),
+          source: Some((index, None)),
+          target: None,
+        },
+        true,
+      );
     }
   }
 

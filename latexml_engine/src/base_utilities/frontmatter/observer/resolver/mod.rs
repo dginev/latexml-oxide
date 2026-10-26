@@ -240,6 +240,9 @@ struct Resolver {
   /// the labels the title's marks request (aastex's `\title{…\altaffilmark{1}}`): an entry they alone ask for is the
   /// title's note
   title_requests:   Vec<String>,
+  /// the footnote marks the title shows (`\title{…\footnotemark[1]}`): a footnote text only they show is the title's
+  /// note (`answer_note_texts`)
+  title_fn_marks:   Vec<String>,
   /// per creator of a block: that block's queue (its `epoch`); the creators a later block replaced
   epoch_of:         Vec<Option<usize>>,
   replaced:         Vec<usize>,
@@ -329,6 +332,7 @@ impl Resolver {
       },
       thenote_requests: Vec::new(),
       title_requests:   Vec::new(),
+      title_fn_marks:   Vec::new(),
       epoch_of:         Vec::new(),
       replaced:         Vec::new(),
       note_links:       Vec::new(),

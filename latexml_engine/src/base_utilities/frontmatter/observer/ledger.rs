@@ -596,11 +596,18 @@ pub(in crate::base_utilities) fn record_api_call(
 }
 
 /// Record a footnote's text (`\lx@notetext`'s whatsit, once digested: `\footnotetext[<n>]{…}`), under the shadow switch
-/// only, after an author block: its printed mark, its counter value and its body's events (the body is digested for
-/// real, so nothing is rehearsed — only read).
+/// only, after an author block or the title (whose `\footnotemark` it may answer: `\title{…\footnotemark[1]}`
+/// `\footnotetext[1]{Based on observations …}`, 1111.4983): its printed mark, its counter value and its body's events
+/// (the body is digested for real, so nothing is rehearsed — only read).
 pub fn record_note_text(whatsit: &Whatsit) {
   if !records_now()
-    || !with_ledger(|ledger| ledger.entries.iter().any(|e| matches!(e, Entry::Author(_))))
+    || !with_ledger(|ledger| {
+      ledger.entries.iter().any(|e| match e {
+        Entry::Author(_) => true,
+        Entry::Api(call) => call.tag == "ltx:title",
+        _ => false,
+      })
+    })
   {
     return;
   }
