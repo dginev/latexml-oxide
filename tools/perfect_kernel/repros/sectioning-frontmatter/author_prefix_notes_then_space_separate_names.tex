@@ -1,0 +1,21 @@
+% Names led by their notes: a space before the next name's note parts the names, each note its own name's (the
+% mirror of a name's marks and the space after them, author_mark_then_space_separates_names).
+% witness: 2406.12338 (`\thanks{Carla Schenker is with …} {Carla Schenker,} ⏎\thanks{Xiulin Wang is with …} {Xiulin
+%          Wang,} …`)
+% oracle:  pdflatex 0 errors: "∗Ann Able, †Bob Baker, ‡Cat Cole", each note under its mark
+% engines: rust int111d = one creator "Ann Able, Bob Baker, Cat Cole" holding the three notes, 1
+%          Error:frontmatter:merged_creators; Perl the same
+% expect:  0 errors, 0 warnings; three creators, each with its own note
+% status:  RED (int111d) -> GREEN (84a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{
+\thanks{Ann Able is with Univ A.} {Ann Able,}
+\thanks{Bob Baker is with Univ B.} {Bob Baker,}
+\thanks{Cat Cole is with Univ C.} {Cat Cole}
+}
+\maketitle
+x
+\end{document}

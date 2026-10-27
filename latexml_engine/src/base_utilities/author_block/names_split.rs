@@ -60,9 +60,11 @@ pub(in crate::base_utilities) fn split_author_line_cautious(line: Tokens) -> Vec
 /// ([`spaced_name_separators`]): `{\bf Ann Able\break and Bob Baker}`, `Ann Able\thanks{…}and Bob Baker` are two, as
 /// pdflatex prints them, where their text alone ("Ann Ableand Bob Baker") reads as one; so is `\parbox[t]{\textwidth}{
 /// Philip F.~Hopkins\altaffilmark{1}, \&\ Jonathan Squire\altaffilmark{1}}` (1801.10166).
+/// Names parted by horizontal space alone count as the split reads them too ([`space_parted_names`]: `J.
+/// Wang\altaffilmark{1} Y. F. Mao \altaffilmark{1} and J. Y. Wei`, aastex 0811.3255).
 fn separated_name_count(line: &Tokens) -> usize {
   name_count(&visible_name_text(
-    spaced_name_separators(line.clone()).unlist_ref(),
+    space_parted_names(spaced_name_separators(line.clone())).unlist_ref(),
   ))
 }
 
@@ -115,7 +117,11 @@ fn split_author_names(line: Tokens) -> Vec<(Vec<Token>, Tokens)> {
   // (`By~~{\scshape Vitaly~Bergelson}~~and~~{\scshape Florian~K.~Richter}`, 2603.25922, 2604.12864)
   let line = without_leading_and(&line).unwrap_or(line);
   let line = without_leading_by(&line).unwrap_or(line);
-  let line = marks_before_glued_commas(spaced_name_separators(hoist_wrapped_separators(line)));
+  // (names parted by horizontal space alone, a wide space or a name's marks and the space after them, are parted as
+  // by a comma: [`space_parted_names`])
+  let line = marks_before_glued_commas(space_parted_names(spaced_name_separators(
+    hoist_wrapped_separators(line),
+  )));
   let top = split(line.clone());
   // a piece that is one wrapper holding names, its marks or notes after it (`\textbf{Cat Cole$^1$, Dan Dorn$^2$}\thanks{…}`,
   // 2303.16563; `\scalebox{.9}{…}`, 2412.05271; `\href{…}{A, B}`, 2312.07592): its names, each in the wrapper
@@ -131,7 +137,9 @@ fn split_author_names(line: Tokens) -> Vec<(Vec<Token>, Tokens)> {
   }
   if let Some((cmd, inner)) = whole_line_cs_wrapper(&line) {
     // the marks after commas inside the wrapper are its names' too (`\textbf{Todd M. Tripp,\altaffilmark{2} …}`)
-    let inner_split = split(marks_before_glued_commas(spaced_name_separators(inner)));
+    let inner_split = split(marks_before_glued_commas(space_parted_names(
+      spaced_name_separators(inner),
+    )));
     if inner_split.len() > 1 {
       return inner_split
         .into_iter()
@@ -151,7 +159,9 @@ fn split_author_names(line: Tokens) -> Vec<(Vec<Token>, Tokens)> {
   if let Some((declarations, inner)) = whole_line_group(&line)
     && separated_name_count(&inner) >= 2
   {
-    let inner_split = split(marks_before_glued_commas(spaced_name_separators(inner)));
+    let inner_split = split(marks_before_glued_commas(space_parted_names(
+      spaced_name_separators(inner),
+    )));
     if inner_split.len() > 1 {
       return inner_split
         .into_iter()

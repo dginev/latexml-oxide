@@ -263,11 +263,12 @@ x
 }
 
 /// Names parted only by their marks and jfm's `\ns` (1911.02873: `FLORIAN REETZ$^1$ \ns PRIYA SUBRAMANIAN$^{2,3}$ \ns
-/// \& \ns TOBIAS M.\ns SCHNEIDER$^1$`) stay one creator, and the merge check, reading a mark as ending the name before
-/// it, flags it: exactly one `Error:frontmatter:merged_creators`, the `\&` still parting the last name (77d r1 dropped
-/// the Error, a silent merge).
+/// \& \ns TOBIAS M.\ns SCHNEIDER$^1$`) are three creators, as pdflatex sets them apart: a name's marks and the space
+/// after them part it from the next name (84a, `space_parted_names`, OXIDIZED_DESIGN_DIVERGENCES #897). Before 84a
+/// they stayed one creator and the merge check flagged it with one `Error:frontmatter:merged_creators` (77d r1 had
+/// dropped that Error, a silent merge); now no Error, and the `\&` still parts the last name.
 #[test]
-fn names_parted_only_by_marks_are_flagged() {
+fn names_parted_only_by_marks_are_split() {
   let (log, xml) = convert_with(
     r"\documentclass{jfm}
 \begin{document}
@@ -280,28 +281,16 @@ x
 \end{document}",
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
-  assert_eq!(
-    log
-      .lines()
-      .filter(|l| l.contains("Error:frontmatter:merged_creators"))
-      .count(),
-    1,
-    "{log}"
-  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let xml = squash(&xml);
   let found = creators(&xml);
-  assert_eq!(found.len(), 2, "{xml}");
-  assert!(
-    found[0].starts_with(
-      r#"<creator role="author"> <personname>FLORIAN REETZ<sup xml:id="id1">1</sup> PRIYA SUBRAMANIAN<sup"#
-    ),
-    "{xml}"
-  );
-  assert!(
-    found[1].starts_with(
-      r#"<creator before=" " role="author"> <personname>TOBIAS M. SCHNEIDER<sup xml:id="id3">1</sup></personname>"#
-    ),
+  assert_eq!(
+    found,
+    [
+      r#"<creator role="author"> <personname>FLORIAN REETZ<sup xml:id="id1">1</sup></personname> </creator>"#,
+      r#"<creator before=" " role="author"> <personname>PRIYA SUBRAMANIAN<sup xml:id="id2"><text font="italic" xml:id="id2.1">2,3</text></sup></personname> </creator>"#,
+      r#"<creator before=" " role="author"> <personname>TOBIAS M. SCHNEIDER<sup xml:id="id3">1</sup></personname> </creator>"#,
+    ],
     "{xml}"
   );
 }

@@ -1,0 +1,17 @@
+% A wide `\kern` between two marked names parts them (llncs).
+% witness: 1909.09562 (`Sergio Antoy\inst{1} ⏎\kern1em ⏎Michael Hanus\inst{2}`)
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker2", then the two institutes with their e-mails
+% engines: rust int111d = one creator "Ann Able Bob Baker" holding both institutes, 0 errors (silent); Perl the same
+% expect:  0 errors, 0 warnings; two creators, each with its institute and e-mail
+% status:  RED (int111d) -> GREEN (84a)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1}
+\kern1em
+Bob Baker\inst{2}}
+\institute{Univ A\\ \email{aa@x.edu} \and Univ B\\ \email{bb@y.edu}}
+\maketitle
+x
+\end{document}

@@ -1,0 +1,18 @@
+% Negative control: a narrow space with no mark before it stays inside a name (`Florian P.\ Busch`, 2212.12575;
+% `J.\enskip Smith`, 78m), and an institution a wide space parts from a marked name is no name.
+% witness: 2212.12575 (`Florian P.\ Busch\textsuperscript{+}`); 77n r2's ecai negative
+%          (author_ecai_space_parted_names_stay_one)
+% oracle:  pdflatex 0 errors: "Florian P. Busch1", "J. Smith1", "Bob Baker2 University of Somewhere", then the
+%          universities
+% engines: rust int111d = as expected; Perl "Bob BakerUniversity of Somewhere" one name
+% expect:  0 errors, 0 warnings; three creators, University of Somewhere an affiliation of Bob Baker
+% status:  GREEN (int111d)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Florian P.\ Busch$^{1}$ \and J.\enskip Smith$^{1}$ \and Bob Baker$^{2}$ \quad University of Somewhere\\
+$^1$Univ A \\ $^2$Univ B}
+\maketitle
+x
+\end{document}

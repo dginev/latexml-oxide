@@ -1,0 +1,19 @@
+% A name's marks or notes and any space after them part it from the next name, as pdflatex sets them apart: `\:`,
+% `\ `, a line ending in `\` (a control return), a tie, `\,` after `$^{…}$`, `\thanks{…}`, `\textsuperscript{…}`.
+% witness: 2406.07115 (`Sijia Chen$^{1,2,3,*}$ \: Yibo Wang$^{1,2,3,}$\thanks{…} \: …`), 2609.32353 (`Junxian
+%          Li$^{1}$\thanks{…} \⏎Ruixuan Yang$^{2*}$ \⏎…`), 2310.15398 (`Li Lucy\textsuperscript{2} \, Su Lin Blodgett`)
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker2∗ Cat Cole1 Dan Dorn2 Eve Ess1,2 Fay Fox2", then "1 Univ A 2 Univ B"
+% engines: rust int111d = one creator holding the six names, both universities and the note, 0 errors (silent); Perl
+%          the same, every affiliation repeated per mark
+% expect:  0 errors, 0 warnings; six creators, each with the universities its marks name, the note Bob Baker's
+% status:  RED (int111d) -> GREEN (84a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \: Bob Baker$^{2}$\thanks{Equal contribution.} \ Cat Cole$^{1}$ \
+Dan Dorn\textsuperscript{2}~Eve Ess$^{1,2}$ \, Fay Fox$^{2}$\\
+$^1$Univ A \quad $^2$Univ B}
+\maketitle
+x
+\end{document}

@@ -1,0 +1,18 @@
+% A wide space inside a wrapper around the names (`\quad`, `\hskip2em`) parts them, as the comma there does.
+% witness: 2312.06613 (`\normalsize{Georgios Milis\textsuperscript{1} \quad Panagiotis P. Filntisis\textsuperscript{1,2}
+%          \quad …}`), 2002.09131 (`\hskip2em` between the names)
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker1,2 Cat Cole2", then "1 Univ A", "2 Univ B"
+% engines: rust int111d = one creator "Ann Able Bob Baker Cat Cole" with both universities, 0 errors (silent); Perl
+%          the same
+% expect:  0 errors, 0 warnings; three creators, each with the universities its marks name
+% status:  RED (int111d) -> GREEN (84a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\normalsize{Ann Able\textsuperscript{1} \quad Bob Baker\textsuperscript{1,2} \hskip2em Cat Cole\textsuperscript{2}} \\
+\footnotesize{\textsuperscript{1}Univ A} \\
+\footnotesize{\textsuperscript{2}Univ B}}
+\maketitle
+x
+\end{document}

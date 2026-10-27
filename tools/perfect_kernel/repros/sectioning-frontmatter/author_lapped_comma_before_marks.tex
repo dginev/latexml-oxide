@@ -1,0 +1,17 @@
+% A comma set in no width before a name's marks (`\rlap,`) parts the names as the comma it prints; the marks and the
+% note after it are the name's before it.
+% witness: hep-ph0411288 (ptptex: `Tatsuo~{\sc Kobayashi}\rlap,${}^{1,}$\footnote{…}⏎Hiroaki~{\sc Nakano}\rlap,…`)
+% oracle:  pdflatex 0 errors: "Ann Able,1,* Bob Baker2,†" with the two notes
+% engines: rust int111d = Ann Able without her mark, Bob Baker's mark "1,2" (silent; hep-ph0411288 also shifted the
+%          notes); 84a r1 = the marks moved before the `\rlap`'s comma, `\rlap$` breaking the math (3 Errors)
+% expect:  0 errors, 0 warnings; two creators, each with its own mark and note
+% status:  RED (int111d) -> RED (84a r1) -> GREEN (84a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann~{\sc Able}\rlap,${}^{1,}$\footnote{E-mail: aa@x.edu}
+Bob~{\sc Baker}${}^{2,}$\footnote{E-mail: bb@y.edu}}
+\maketitle
+x
+\end{document}

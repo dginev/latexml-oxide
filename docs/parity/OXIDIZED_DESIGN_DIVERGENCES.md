@@ -25491,3 +25491,38 @@ the `.aux` as latex.ltx does (`\let\protect\@unexpandable@protect`), other texts
 record at its write, so a reference before it stays missing (every witness refers after the record). Repro
 cross-references/newlabel_records_name_their_references; guard
 `perfect_kernel_batch80a::a_newlabel_record_names_its_references`.
+
+### 897. Names parted by horizontal space alone are separate creators (Perl: one author holds them)
+
+pdflatex sets names apart that an author line separates only by horizontal space: a wide space (`\quad`, `\qquad`, a
+group of them `{\quad}`, `\hspace{…}`, `\hskip`/`\kern` a length of 4pt or more, `\enspace`, `\enskip`, `\hfill`),
+marked names or not, or a name's marks or notes followed by any space (` `, `\ `, `\:`, `\,`, `\;`, `~`, a line
+ending in `\`). Perl's `SplitTokens` splits at commas and "and" only, so one creator held them all — or, where the
+classifier read the run as a continuation, the names after the first were lost: 2207.06953 kept 2 of its 7 authors,
+2411.14257 1 of 4, 2406.12338 1 of 5 (`\thanks{…} {Carla Schenker,}` — each note leads its name), 2604.17501 lost
+Ruiyao Xu and Mihir Parmar. Ours: `space_parted_names` (author_block/space_parted.rs) writes each such space as the
+comma the split reads, at the line's top level, outside `$…$` and `\(…\)` math, after a name letter, and only where
+every piece then reads as a name or qualifies one and two or more read as names (`name_count`): `John Smith\quad Bell
+Labs` and `Mc\kern1pt Donald` stay as written, a narrow space with no mark before it parts nothing (`Florian P.\
+Busch`, 2212.12575; ecai's `Ann Able \ Bob Baker`, #52(o)'s 77n r2 negative), and a run of two or more narrow spaces
+stays #52(o)'s. In a line whose marks lead its names, a space parts two names before the next name's marks
+(`$^{1}$Ann Able \: $^{2}$Bob Baker`) or a wide space before a name. A brace group of spacing with a `\quad` in it is
+that spacing (`spacing_math_unwrapped`: `Byeongjun Park$^{1}${\quad} Byung-Hoon Kim…`, 2609.03563); a names line
+continued after a wide space on its first name's printed line is more names (`space_parts_names`: `\textbf{Ruiyao
+Xu}$^{\star}$ \quad \textbf{Mihir Parmar}…`, 2604.17501; 2212.12575). Witnesses 2406.07115 (`\:`), 2609.32353
+(`\thanks{…} \ `), 2310.15398 (`\textsuperscript{2} \,`), 2609.03563, 2212.12575, 1909.09562 (llncs `\kern1em`),
+2312.06613 (inside `\normalsize{…}`), 2207.06953, 2102.12470, 2002.09131, 2411.14257, 2308.08563 (`$^{1,2,*}$ Defu
+Lian`), 0811.3255 and 1311.0077 (aastex `\altaffilmark`), 0806.3855 (A&A `\inst{1}\fnmsep\thanks{…}`), 2406.12338,
+1911.02873 (jfm `\ns`: before 84a one creator and an `Error:frontmatter:merged_creators`, now three creators and no
+Error). Repros `sectioning-frontmatter/author_{mark_then_space_separates_names, wide_space_after_marked_name_separates,
+braced_quad_separates_names, kern_separates_names, wide_space_inside_wrapper_separates,
+aastex_mark_then_space_separates, prefix_marks_then_space_separate_names, prefix_notes_then_space_separate_names,
+space_inside_a_name_stays}`; guards `perfect_kernel_batch84a::*`, `perfect_kernel_batch77d::
+names_parted_only_by_marks_are_split`, `perfect_kernel_batchfms2b::a_mark_in_paren_math_is_cut_whole` (a mark's space
+inside `\( ^{1} \)` parts nothing). A comma set in no width before a name's marks, `\rlap,`/`\llap,`, is written as
+the comma it prints where the line is cut: kept, the marks the split moves before a glued comma became `\rlap`'s
+argument (hep-ph0411288's ptptex `Tatsuo~{\sc Kobayashi}\rlap,${}^{1,}$\footnote{…}`: 6 math Errors in 84a r1; int111d
+had given each author the next one's mark and note) — repro `author_lapped_comma_before_marks`, guard
+`perfect_kernel_batch84a::author_lapped_comma_before_marks`. A group holding only marks is the name's marks
+(`Jia-Bin Huang{$^{2}$} ~ David W. Jacobs{$^{2}$}`, 2406.09417; repro and guard
+`author_grouped_marks_then_space_separate_names`).

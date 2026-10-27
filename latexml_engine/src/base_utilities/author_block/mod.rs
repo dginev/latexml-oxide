@@ -10,6 +10,8 @@ mod preprocess;
 pub(super) use preprocess::*;
 mod names_split;
 pub use names_split::*;
+mod space_parted;
+pub(super) use space_parted::*;
 mod separators;
 pub use separators::*;
 mod marks;

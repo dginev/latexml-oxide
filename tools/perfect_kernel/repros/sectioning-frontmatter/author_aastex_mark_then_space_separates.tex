@@ -1,0 +1,19 @@
+% A per-author class reads `\author` cautiously; a mark and the space after it part two names there too (emulateapj
+% here; aastex.cls is not in TeX Live).
+% witness: 0811.3255 (aastex `J. Wang\altaffilmark{1} Y. F. Mao \altaffilmark{1} and J. Y. Wei\altaffilmark{1}`),
+%          1311.0077 (`\textsc{Francesco Tombesi}\altaffilmark{3,4}⏎\textsc{Demosthenes Kazanas}\altaffilmark{3},`)
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob B. Baker 1 and Cat Cole2", then the two affiliations
+% engines: rust int111d = creators "Ann Able Bob B. Baker" (Univ A) and "Cat Cole" (Univ B), 0 errors (silent); Perl
+%          one creator "Ann Able Bob B. Baker and Cat Cole"
+% expect:  0 errors, 0 warnings; three creators, Ann Able and Bob B. Baker with Univ A, Cat Cole with Univ B
+% status:  RED (int111d) -> GREEN (84a)
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{Ann Able\altaffilmark{1} Bob B. Baker \altaffilmark{1} and Cat Cole\altaffilmark{2}}
+\altaffiltext{1}{Univ A}
+\altaffiltext{2}{Univ B}
+\maketitle
+x
+\end{document}

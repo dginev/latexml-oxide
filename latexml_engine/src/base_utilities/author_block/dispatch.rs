@@ -386,6 +386,23 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
                 }
                 continue;
               }
+              // (a line of names that horizontal space alone parts from the name before it, on that name's printed
+              // line, is more names, as pdflatex sets them apart: `Matej Ze\v{c}evi\'c\textsuperscript{\rm $\dagger$}
+              // \quad Moritz Willig \quad Jonas Seng \quad Florian P.\ Busch\textsuperscript{+}`, 2212.12575;
+              // `\textbf{Ruiyao Xu}$^{\star}$ \quad \textbf{Mihir Parmar}$^{\diamond}$ \quad …`, 2604.17501;
+              // `\textbf{Senthooran Rajamanoharan}\quad\quad \textbf{Neel Nanda}`, 2411.14257 — welded, one creator
+              // held them; OXIDIZED_DESIGN_DIVERGENCES #897)
+              if !finishes_an_address
+                && continued + 1 == entries.len()
+                && entries[continued].0 == AuthorLineKind::Author
+                && space_parts_names(&delimiter, &entries[continued].1, &line)
+              {
+                last_names = Some(line.clone());
+                for author in split_author_line(line) {
+                  entries.push((AuthorLineKind::Author, author));
+                }
+                continue;
+              }
               let last = &mut entries[continued];
               let mut appended = last.1.clone().unlist();
               appended.extend(delimiter);

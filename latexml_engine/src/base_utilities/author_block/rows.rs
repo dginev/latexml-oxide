@@ -361,7 +361,10 @@ fn space_before_own_mark(src: &[Token], start: usize) -> Option<usize> {
 
 /// `tokens` with each math group of its top level that holds only spacing — `$\qquad$` — written as that spacing,
 /// outside math, which the separators read as written so (`Michael J. Wilber$^{1,2}$ $\qquad$ Vitaly
-/// Shmatikov$^{1,2}$ $\qquad$ Serge Belongie$^{1,2}$`, 1602.04504, whose three names read as one).
+/// Shmatikov$^{1,2}$ $\qquad$ Serge Belongie$^{1,2}$`, 1602.04504, whose three names read as one); and so each brace
+/// group of its top level that holds only spacing with a `\quad` or `\qquad` in it, no command's argument (`Byeongjun
+/// Park$^{1}${\quad} Byung-Hoon Kim$^{1,2,*}${\quad} …\\ $^{1}$EverEx{\quad}$^{2}$Yonsei University`, 2609.03563:
+/// one creator, its institutions one; a glue's group changes nothing, OXIDIZED_DESIGN_DIVERGENCES #897).
 fn spacing_math_unwrapped(tokens: Vec<Token>) -> Vec<Token> {
   let spacing = |t: &Token| {
     t.get_catcode() == Catcode::SPACE
@@ -375,6 +378,34 @@ fn spacing_math_unwrapped(tokens: Vec<Token>) -> Vec<Token> {
   while i < tokens.len() {
     let t = tokens[i];
     match t.get_catcode() {
+      Catcode::BEGIN
+        if depth == 0
+          && !in_math
+          && !out.last().is_some_and(|p: &Token| {
+            p.get_catcode() == Catcode::CS || *p == T_OTHER!("*") || *p == T_OTHER!("]")
+          }) =>
+      {
+        let end = skip_group(&tokens, i);
+        let inner = &tokens[i + 1..end.saturating_sub(1).max(i + 1)];
+        if end <= tokens.len()
+          && tokens[end - 1].get_catcode() == Catcode::END
+          && !inner.is_empty()
+          && inner.iter().all(spacing)
+          && inner
+            .iter()
+            .any(|u| u.with_str(|s| matches!(s, "\\quad" | "\\qquad")))
+        {
+          out.extend(
+            inner
+              .iter()
+              .copied()
+              .filter(|u| u.get_catcode() != Catcode::SPACE),
+          );
+          i = end;
+          continue;
+        }
+        depth += 1;
+      },
       Catcode::BEGIN => depth += 1,
       Catcode::END => depth = depth.saturating_sub(1),
       Catcode::MATH if depth == 0 && !in_math => {

@@ -1,0 +1,22 @@
+% In a marked block a name that a wide space alone parts from the marked name before it is another author, whether
+% it carries a mark of its own (a footnote symbol, no affiliation mark) or none: it was welded onto that name.
+% witness: 2604.17501 (`\textbf{Ruiyao Xu}$^{\star}$ \quad \textbf{Mihir Parmar}$^{\diamond}$ \quad …`), 2212.12575
+%          (`Matej Ze\v{c}evi\'c\textsuperscript{\rm $\dagger$} \quad Moritz Willig \quad Jonas Seng \quad Florian P.\
+%          Busch\textsuperscript{+}`), 2411.14257 (`\textbf{Senthooran Rajamanoharan}\quad\quad \textbf{Neel Nanda}`);
+%          OPEN_ROWS FM-16's `Bob Baker$^{2}$\quad Cat Cole$^{\S}$` (1312.1414)
+% oracle:  pdflatex 0 errors: the five names apart, "Ann Able⋆", "Bob Baker⋄", "Cat Cole", "Dan Dorn", "Eve Ess1",
+%          then "1 Univ A"
+% engines: rust int111d = creators "Ann Able⋆ Bob Baker⋄ Cat Cole Dan Dorn" and "Eve Ess", 1
+%          Error:frontmatter:merged_creators; Perl "Ann Able", "Bob BakerCat ColeDan Dorn", "Eve Ess", 0 errors
+% expect:  0 errors, 0 warnings; five creators, the symbols shown on Ann Able and Bob Baker, Univ A Eve Ess's
+% status:  RED (int111d) -> GREEN (84a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\textbf{Ann Able}$^{\star}$ \quad \textbf{Bob Baker}$^{\diamond}$ \quad Cat Cole \quad
+\textbf{Dan Dorn}\quad\quad \textbf{Eve Ess}\textsuperscript{\rm 1}\\
+$^1$Univ A}
+\maketitle
+x
+\end{document}
