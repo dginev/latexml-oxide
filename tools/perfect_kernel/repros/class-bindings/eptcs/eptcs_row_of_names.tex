@@ -1,0 +1,28 @@
+% mechanism: one eptcs `\author` cell may hold a row of names (`A and B`); each institute under it is every name's
+%   affiliation, and each address of an e-mail line is the author it spells (FIDELITY_CHARTER §4), a list of one address
+%   per name in their order the name at its place (`row_email_owners`).
+% witness: 2109.08295 ("Tobias Grubenmann and Jens Lehmann \institute{…} \email{\{grubenmann, jens.lehmann\}@…}
+%   \institute{…} \email{jens.lehmann@…}"), 1101.4424 (`Yiorgos Stavrinos \qquad Anastasia Veneti`, one address each)
+% oracle:  pdflatex with eptcs.cls beside it: 0 errors; "Carl Cole and Dan Dorn" over "Univ C", "{cole, dorn}@c.edu",
+%   "Lab D", "dorn@d.org"; "Eve Eng \qquad Fay Fox" over "Univ E" and "e.eng@e.org \qquad fx1@e.org"
+% engines: rust int111d = personnames "Carl Cole" and "Dan Dorn Univ C {cole, dorn}@c.edu Lab D" (its last e-mail its
+%   contact), "Eve Eng" and "Fay Fox Univ E e.eng@e.org fx1@e.org"; perl has no eptcs binding (OmniBus)
+% expect:  0 errors, 0 warnings; Carl Cole: Univ C, cole@c.edu, Lab D; Dan Dorn: Univ C, dorn@c.edu, Lab D, dorn@d.org;
+%   Eve Eng: Univ E, e.eng@e.org; Fay Fox: Univ E, fx1@e.org
+% status:  RED (int111d) -> GREEN (84b)
+% preload: ar5iv.sty
+\documentclass{eptcs}
+\title{T}
+\author{Carl Cole and Dan Dorn
+\institute{Univ C}
+\email{\{cole, dorn\}@c.edu}
+\institute{Lab D}
+\email{dorn@d.org}
+\and
+Eve Eng \qquad Fay Fox
+\institute{Univ E}
+\email{e.eng@e.org \qquad fx1@e.org}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

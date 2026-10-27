@@ -1,0 +1,28 @@
+% mechanism: eptcs.cls sets `\@author` in a centred tabular (:160-180), so `\institute{…}` and `\email{…}` written in
+%   `\author` after the names are each a line under them (:186-191) and `\and` starts a column: an institute is the
+%   names' affiliation, an e-mail their author's. The binding reads the cells (eptcs_cls.rs); read as the kernel's
+%   author line, every institute and e-mail stayed in the name.
+% witness: 1408.5969 ("Ilaria De Crescenzo Università degli Studi di Salerno Dipartimento di Informatica"), 1909.07676,
+%   2406.16409 (an institute of two lines)
+% oracle:  pdflatex with eptcs.cls beside it: 0 errors; two columns: "Ann Able" over "Univ A" / "Country A" over
+%   "ann@a.edu"; "Bob Baker" over "Univ B", "Dept B" and "bob@b.edu"
+% engines: rust int111d = personnames "Ann Able Univ A Country A" (the e-mail its contact) and "Bob Baker Univ B Dept
+%   B"; perl has no eptcs binding (OmniBus)
+% expect:  0 errors, 0 warnings; Ann Able with affiliation "Univ A<break/>Country A" and e-mail ann@a.edu; Bob Baker
+%   with affiliations "Univ B", "Dept B" and e-mail bob@b.edu
+% status:  RED (int111d) -> GREEN (84b)
+% preload: ar5iv.sty
+\documentclass{eptcs}
+\title{T}
+\author{Ann Able
+\institute{Univ A\\ Country A}
+\email{ann@a.edu}
+\and
+Bob Baker
+\institute{Univ B}
+\institute{Dept B}
+\email{bob@b.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -25526,3 +25526,23 @@ had given each author the next one's mark and note) — repro `author_lapped_com
 `perfect_kernel_batch84a::author_lapped_comma_before_marks`. A group holding only marks is the name's marks
 (`Jia-Bin Huang{$^{2}$} ~ David W. Jacobs{$^{2}$}`, 2406.09417; repro and guard
 `author_grouped_marks_then_space_separate_names`).
+
+### 898. eptcs.cls: `\institute` and `\email` inside `\author` are each a line under the names (Perl: no binding)
+
+eptcs.cls (Electronic Proceedings in Theoretical Computer Science; v1.5-v1.7, shipped with each paper, not in TeX Live)
+sets `\@author` in a centred `tabular` (eptcs.cls:160-180, `\and` the article class's), and defines `\institute{#1}`
+as `\\` and a one-column `tabular` of #1 and `\email{#1}` as `\\{\footnotesize\tt #1}` (:186-191), written inside
+`\author` after the names. Read raw as the kernel's author line, the institute and the e-mail stayed in the name
+("Ilaria De Crescenzo Università degli Studi di Salerno Dipartimento di Informatica", 1408.5969): the frontmatter
+scorer found every one of its 6 sample papers wrong, and 18 of the census's 73 eptcs papers change. Ours: a contrib
+binding (`latexml_contrib/src/eptcs_cls.rs`) reads the shipped class raw and reads `\author` as the class prints it —
+each `\and` cell a row of names (`Tobias Grubenmann and Jens Lehmann`, 2109.08295), every institute under the row
+each name's affiliation (FIDELITY_CHARTER R12), an e-mail line the author it spells, else, a list of one address per
+name, the name at its place, else the row's only author, else the block's (§4; `row_email_owners`,
+author_block/row_emails.rs). A cell that opens with a `tabular` of names (1407.7928) or with an environment of the
+paper's own that opens one (2409.15014's `{authors}{5}`) is read by its columns: a column's names its cell, a full
+row's cell a line under its column, any other line every name's. A block with no `\institute`, `\email` or leading
+table is the kernel's. Open: an institute or e-mail block labelled by marks (`$^{1}$ Quantinuum … \\ $^{2}$
+Informatics Institute …`, `\email{$^{a, b}$ \{…\}@quantinuum.com, $^{c}$ …}`, 2304.02524) goes whole to every
+name, not by its labels. Repros `class-bindings/eptcs/eptcs_{institute_email_cells, row_of_names, author_tabular,
+author_environment_columns}` (beside a stand-in `eptcs.cls` written from scratch); guards `perfect_kernel_batch84b::*`.

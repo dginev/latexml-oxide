@@ -183,6 +183,7 @@ pub const AUTHOR_FILE_STAND_INS: &[&str] = &[
   "entics.cls",
   "epl.cls",
   "epl2.cls",
+  "eptcs.cls",
   "equations.sty",
   "espcrc.sty",
   "fairmeta.cls",

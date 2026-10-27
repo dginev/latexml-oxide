@@ -182,6 +182,7 @@ pub mod clear2025_cls;
 pub mod compositio_cls;
 pub mod czipreprint_cls;
 pub mod epl_cls;
+pub mod eptcs_cls;
 pub mod gauss_sty;
 pub mod hha_cls;
 pub mod hvfloat_sty;
@@ -817,6 +818,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     resphilosophica_cls::load_definitions,
   ),
   ("lmcs", "cls", lmcs_cls::load_definitions),
+  ("eptcs", "cls", eptcs_cls::load_definitions),
   ("mdpi", "cls", mdpi_cls::load_definitions),
   ("Definitions/mdpi", "cls", mdpi_cls::load_definitions),
   ("modernposter", "cls", modernposter_cls::load_definitions),

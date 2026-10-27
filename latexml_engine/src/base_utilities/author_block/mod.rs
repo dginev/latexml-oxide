@@ -18,6 +18,8 @@ mod marks;
 pub use marks::*;
 mod rows;
 pub use rows::*;
+mod row_emails;
+pub use row_emails::*;
 mod symbols;
 pub(super) use symbols::*;
 mod notes;

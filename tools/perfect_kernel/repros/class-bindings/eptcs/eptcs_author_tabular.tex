@@ -1,0 +1,26 @@
+% mechanism: an eptcs `\author` that opens with a tabular of its own sets the names as its columns; a full row under
+%   them is a line under each column, a line after the table every name's (the class's author tabular holds it, :175).
+% witness: 1407.7928 (`\begin{tabular}{c@{\qquad\qquad}c} Gijs Kant\thanks{…} & Jaco van de Pol\\ \texttt{…} &
+%   \texttt{…}\end{tabular}\medskip\\{\footnotesize Formal Methods \& Tools}\\…`)
+% oracle:  pdflatex with eptcs.cls beside it: 0 errors; "Ann Able*" and "Bob Baker" side by side, their addresses
+%   under each, "Dept of Tools" and "Univ of Here" centred under both; the footnote "Funded."
+% engines: rust int111d = one personname holding the whole table; perl has no eptcs binding (OmniBus)
+% expect:  0 errors, 0 warnings; Ann Able (her thanks note) with ann@a.edu, Dept of Tools, Univ of Here; Bob Baker with
+%   bob@b.edu, Dept of Tools, Univ of Here
+% status:  RED (int111d) -> GREEN (84b)
+% preload: ar5iv.sty
+\documentclass{eptcs}
+\title{T}
+\author{
+\begin{tabular}{c@{\qquad}c}
+Ann Able\thanks{Funded.} & Bob Baker\\
+\texttt{\footnotesize ann@a.edu} & \texttt{\footnotesize bob@b.edu}
+\end{tabular}
+\medskip
+\\{\footnotesize Dept of Tools}
+\\{\footnotesize Univ of Here}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}
