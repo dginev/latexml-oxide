@@ -2,8 +2,9 @@
 % oracle:  pdflatex 0 errors: "Ann Able and Bob Baker", centred "Department of Physics and Astronomy"
 % engines: rust (62zs) = 5 errors: the author splitter cut at the `and` inside {center}, its \begin and \end in different
 %          \lx@personname pieces (`Attempt to end mode restricted_horizontal`, `\lx@frontmatterhere`); Perl 0.8.8 5 errors alike
-% expect:  0 errors; creators Ann Able and Bob Baker, the {center} affiliation kept whole with Bob Baker
-% status:  GREEN (62zt)
+% expect:  0 errors; creators Ann Able and Bob Baker, the {center} kept whole as one line under the names: every
+%          name's affiliation (R12), not text inside Bob Baker's personname
+% status:  GREEN (62zt; 83a: the affiliation out of the personname)
 \documentclass[journal]{IEEEtran}
 \begin{document}
 \title{T}

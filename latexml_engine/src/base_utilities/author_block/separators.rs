@@ -729,6 +729,53 @@ pub(in crate::base_utilities) fn unwrap_alignment_environment(tokens: Tokens) ->
   Tokens::new(toks)
 }
 
+/// An alignment environment (`center`, `flushleft`, `flushright`) that opens after the names and ends the block is
+/// layout too: it starts a line of its own, its content the lines under the names — `\author{Ann Able and Bob Baker
+/// \begin{center}Department of Physics and Astronomy\end{center}}` prints the department centred under both names, read
+/// as `… Bob Baker \\ Department …`, every name's of the row (R12; 2609.01563, 2609.17357, 2609.33831 — it had been kept
+/// whole inside the last personname). One opening the block is [`unwrap_alignment_environment`]'s.
+pub(in crate::base_utilities) fn trailing_alignment_environment_as_lines(tokens: Tokens) -> Tokens {
+  let toks = tokens.unlist();
+  let end = toks.len() - toks.iter().rev().take_while(|t| **t == T_SPACE!()).count();
+  let mut depth = 0i32;
+  for start in 0..end {
+    match toks[start].get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      _ => {},
+    }
+    if depth != 0
+      || toks[start] != T_CS!("\\begin")
+      || toks[..start].iter().all(|t| *t == T_SPACE!())
+    {
+      continue;
+    }
+    let stream: VecDeque<Token> = toks[start + 1..end].iter().copied().collect();
+    let Some(span) = environment_closes_ahead(&stream) else {
+      continue;
+    };
+    let name_end = (start + 2..end)
+      .find(|&k| toks[k].get_catcode() == Catcode::END)
+      .unwrap_or(start + 1);
+    let name: String = toks[start + 2..name_end]
+      .iter()
+      .map(|t| t.to_string())
+      .collect();
+    if start + 1 + span != end || !matches!(name.as_str(), "center" | "flushleft" | "flushright") {
+      continue;
+    }
+    let end_cs = (name_end + 1..end)
+      .rev()
+      .find(|&k| toks[k] == T_CS!("\\end"))
+      .unwrap_or(end);
+    let mut out = toks[..start].to_vec();
+    out.push(T_CS!("\\\\"));
+    out.extend_from_slice(&toks[name_end + 1..end_cs]);
+    return Tokens::new(out);
+  }
+  Tokens::new(toks)
+}
+
 /// An author block's parameterless macro whose expansion closes the title page's tabular and opens another — the ACM
 /// SIG template's `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`, set inside the class's own author tabular
 /// (sig-alternate.cls:283's `\alignauthor` juggles the same way) — is the line break it prints between the names

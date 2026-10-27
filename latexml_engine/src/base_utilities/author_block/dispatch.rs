@@ -109,6 +109,7 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
   let stuff = tabular_juggles_as_line_breaks(stuff);
   let stuff = unbrace_acm_author_columns(stuff);
   let stuff = unwrap_alignment_environment(stuff);
+  let stuff = trailing_alignment_environment_as_lines(stuff);
   // Beyond-Perl (OXIDIZED_DESIGN #52), two composable normalizations applied
   // BEFORE branch selection so both branches benefit, and so a symbol mark can
   // no longer spuriously trigger the affiliation-marker branch:
@@ -885,7 +886,7 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
       spaced &= delimiter
         .first()
         .is_some_and(|d| *d == T_CS!("\\quad") || *d == T_CS!("\\qquad"));
-      let block = unwrap_alignment_environment(block);
+      let block = trailing_alignment_environment_as_lines(unwrap_alignment_environment(block));
       // (a block that is only the word "and", in any case or wrapper, separates the names beside it — never a name
       // or their affiliation: `\href{…}{…Eric Rossetto} \quad \textnormal{and} \quad \href{…}{…}`, 2608.24427)
       if block.is_empty() || is_and_piece(block.unlist_ref()) {

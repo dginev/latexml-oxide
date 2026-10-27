@@ -8057,13 +8057,15 @@ fn frontmatter_digest_cluster_2609() {
   let xml = clean(include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_block_environment_is_one_unit.tex"
   ));
-  let found = names(&xml);
-  assert_eq!(found.len(), 2, "{found:?}");
-  assert_eq!(found[0], "Ann Able");
-  assert!(
-    found[1].starts_with("Bob Baker") && found[1].contains("Department of Physics and Astronomy"),
-    "{found:?}"
-  );
+  // (the `{center}` under the names is a line of its own, every name's affiliation — R12 — not text in the last
+  // personname)
+  let department = "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics and Astronomy</contact>";
+  assert_eq!(creators_of(&xml), [
+    format!("<creator role=\"author\"><personname>Ann Able</personname>{department}</creator>"),
+    format!(
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{department}</creator>"
+    ),
+  ]);
   // An alignment environment around the whole block, or a whole `\and` group, is layout: its lines split as written.
   let affiliation = |name: &str| {
     format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
