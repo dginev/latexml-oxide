@@ -90,13 +90,17 @@ LoadDefinitions!({
     "\\lmcsdoi{}{}{}",
     "\\@add@frontmatter{ltx:note}[role=lmcs-doi]{Volume #1, Issue #2, Paper #3}"
   );
-  // \lmcsheading{vol}{issue}{year}{pages}{subm}{publ}{rev}{spec_iss}{title}
-  // The raw cls signature is 7-args but with optional/positional variations.
-  // We don't reproduce the running-header layout — just discard, since the
-  // metadata is already captured by \lmcsdoi.
-  def_macro_noop("\\lmcsheading{}{}{}{}")?;
+  // `\lmcsheading{doi}{pages}{line}{line}{submitted}{published}{extra}` (lmcs.cls:499 in 2306.08266's copy, :376 in
+  // 1103.0510's LMCS.cls: seven arguments in every version) sets the first page's running head, page furniture but for
+  // the two dates, which are the paper's: "Submitted Jun. 16, 2023", "Published Mar. 20, 2024" (2306.08266). Four
+  // arguments were read, so the dates were left in the document's first paragraph.
+  DefMacro!(
+    "\\lmcsheading{}{}{}{}{}{}{}",
+    "\\if\\relax\\detokenize{#5}\\relax\\else\\lx@add@date[role=submitted,name={Submitted }]{#5}\\fi\
+     \\if\\relax\\detokenize{#6}\\relax\\else\\lx@add@date[role=published,name={Published }]{#6}\\fi"
+  );
   // \lmcsorcid{orcid-id} — render as a plain link rather than the
-  // tikz/XeTeXLinkBox logo construction.
+  // tikz/XeTeXLinkBox logo construction. Within an `\author` it is the author's ORCID contact (below).
   DefMacro!("\\lmcsorcid{}", "\\href{https://orcid.org/#1}{ORCID:#1}");
 
   // Section-numbering and shortauthors/shorttitle helpers used by raw
@@ -143,4 +147,262 @@ LoadDefinitions!({
 \newenvironment{iteMize}[1]{\begin{list}{#1}{}}{\end{list}}
 \newenvironment{desCription}{\begin{list}{}{}}{\end{list}}"
   );
+
+  // The title page (2306.08266's lmcs.cls:391-450, the 2023 v0.92 class; 1103.0510's LMCS.cls v0.8 keeps amsart's
+  // `\author`): `\author[short]{Name}[a,b]` prints the name with the letters raised after it (`\rsuper`, :398-404), and
+  // the addresses print as one list after all the names, each led by the next letter, a, b, c, … (`\@setaddresses`,
+  // :416-445: `\lsuper{\alph{addressctr}}` when the paper has several authors and several addresses), its e-mail under
+  // it. The letters are the link: a name's letters request the addresses printed with them (the `\inst` request of
+  // llncs's binding, a frontmatter annotation, so the name is the name alone, FIDELITY_CHARTER §4), and an address is
+  // labelled by its place in the list. The papers of the earlier classes write the letters themselves, `Name\rsuper a`
+  // and `\address{{\lsuper a}Univ}` (1103.0510, cs0701140, 1202.6352's `{\lsuper{b,c}}`), which mean the same. A paper
+  // whose names carry no letters keeps amsart's reading, an address the run of authors' it follows: its own author's
+  // when written after each (2108.06944, 1703.06021), every author's when written after them all (2402.11987's one
+  // address of two authors). Was: every address on the last author, the letters left as text in a paragraph of their
+  // own (2306.08266's eight authors, 2402.09138). An ORCID written in the name (`\lmcsorcid`, :776-791) is the
+  // author's ORCID contact, not "ORCID:…" in the name (2306.08266, 2402.09138). Each `\author` starts an author group,
+  // so an e-mail that spells no author and follows no lettered address is its author's, as amsart prints it.
+  DefMacro!("\\author[]{}[]", sub[(short, name, labels)] {
+    let mut labelled = false;
+    let mut content = lmcs_author_name(name.unlist_ref(), &mut labelled);
+    if let Some(labels) = labels {
+      content.extend(inst_requests(labels.unlist_ref(), &mut labelled));
+    }
+    if labelled {
+      assign_value("lx_lmcs_labelled", Stored::Bool(true), Some(Scope::Global));
+    }
+    let stored = short.clone().unwrap_or_else(|| name.clone());
+    Ok(Invocation!(T_CS!("\\lx@lmcs@author"), vec![
+      Some(short.unwrap_or_default()),
+      Some(name),
+      Some(stored),
+      Some(Tokens::new(content))
+    ]))
+  });
+  DefMacro!(
+    "\\lx@lmcs@author{}{}{}{}",
+    "\\def\\@shortauthor{#1}\\def\\@author{#2}\\lx@ams@addto@authors{#3}{#2}\
+     \\lx@frontmatter@group@start\\lx@add@author{#4}"
+  );
+  // An address is labelled by the letters written before it (`{\lsuper a}`, `\lsuper{b,c}`), else, in a paper whose
+  // names carry letters, by its place in the list (2306.08266's `[f,g]` naming its sixth and seventh addresses,
+  // 2001.03894's `\rsuper{a,c}` and unlettered addresses). Its letter is the mark an e-mail printed under it is read
+  // by when the e-mail spells no author (`\lx@address@mark@set`, iopart's `\ead` reading). An address of spacing alone
+  // (1202.6352's `\address{\vskip-6 pt}`, the earlier classes' way to letter one address for two authors) is none.
+  DefMacro!("\\address[]{}", sub[(name, body)] {
+    let place = lookup_int("lx_lmcs_addresses") + 1;
+    assign_value("lx_lmcs_addresses", Stored::Int(place), Some(Scope::Global));
+    let (letters, rest) = leading_lsuper(body.unlist());
+    let items: Vec<Vec<Token>> = match letters {
+      Some(letters) => label_items(&letters),
+      None if lookup_bool("lx_lmcs_labelled") => vec![vec![T_LETTER!(radix::radix_alpha(place).as_str())]],
+      None => Vec::new(),
+    };
+    let name = name.unwrap_or_default();
+    if items.is_empty() {
+      return Ok(Invocation!(T_CS!("\\lx@lmcs@address@run"), vec![Some(name), Some(Tokens::new(rest))]));
+    }
+    let mut mark = vec![T_MATH!(), T_SUPER!(), T_BEGIN!()];
+    for (at, item) in items.iter().enumerate() {
+      if at > 0 {
+        mark.push(T_OTHER!(","));
+      }
+      mark.extend(item.iter().copied());
+    }
+    mark.extend([T_END!(), T_MATH!()]);
+    // (an address with several letters, `{\\lsuper{b,c}}Univ BC` (1202.6352), is the address of each: one labelled
+    // address a letter, so each author its letter names holds it)
+    let mut calls = Vec::new();
+    for item in &items {
+      let label = s!("affiliation:{}", Tokens::new(item.clone()).to_string().trim());
+      calls.extend(
+        Invocation!(T_CS!("\\lx@lmcs@address@labelled"), vec![
+          Some(name.clone()),
+          Some(mouth::tokenize_internal(TeXString::assembled(label))),
+          Some(Tokens::new(rest.clone()))
+        ])
+        .unlist(),
+      );
+    }
+    calls.extend(Invocation!(T_CS!("\\lx@address@mark@set"), vec![Some(Tokens::new(mark))]).unlist());
+    Ok(Tokens::new(calls))
+  });
+  DefMacro!(
+    "\\lx@lmcs@address@labelled{}{}{}",
+    "\\lx@add@address[name={#1},label={#2}]{#3}"
+  );
+  DefMacro!(
+    "\\lx@lmcs@address@run{}{}",
+    "\\lx@add@address[name={#1},annotate=run]{#2}\\lx@address@mark@set{}"
+  );
+  // `\email{a@x, b@y}` prints under the address before it ("e-mail address: …", :438-441): each address of the list is
+  // the author it spells, else, under a lettered address, the author its letter names alone, else the group's author
+  // (`\lx@add@contact@placed`, as jheppub's `\emailAdd` and iopart's `\ead`; 2402.09138's three addresses of one
+  // `\email` for its three authors).
+  DefMacro!("\\email[]{}", "\\lx@add@contact@list{\\lx@lmcs@email}{#2}");
+  DefMacro!(
+    "\\lx@lmcs@email{}",
+    "\\lx@add@contact@placed[role=email,owner=sequence,mark=address,name={\\emailaddrname:\\ }]{}{\\lx@address@urlfont{#1}}"
+  );
+  // `\subjclass[edition]{…}` is the ACM classification (:252-261: `\subjclassname` is the 2012 ACM CCS's, whichever
+  // edition is given; the earlier classes' the 1998 ACM Subject Classification, 1103.0510's LMCS.cls:205-215), its name
+  // the one the paper's class prints.
+  let edition = match crate::shipped_class::shipped_class_text("lmcs")? {
+    Some(text)
+      if !crate::shipped_class::class_code_contains(&text, "subjclassname@2012")
+        && crate::shipped_class::class_code_contains(&text, "subjclassname@1998") =>
+    {
+      "1998 ACM Subject Classification"
+    },
+    _ => "2012 ACM CCS",
+  };
+  RawTeX!(&s!(r"\def\subjclassname{{{edition}}}"));
+  DefMacro!(
+    "\\lx@ams@subjclass[]{}",
+    "\\lx@add@classification[scheme={\\subjclassname},name={\\subjclassname:~}]{#2}"
+  );
 });
+
+/// An author's name as the frontmatter reads it: each `\rsuper{a,b}` the letters' address requests ([`inst_requests`]),
+/// each `\lmcsorcid` the author's ORCID contact. `labelled` is set when a letter is requested.
+fn lmcs_author_name(name: &[Token], labelled: &mut bool) -> Vec<Token> {
+  let mut out = Vec::with_capacity(name.len());
+  let mut at = 0;
+  while at < name.len() {
+    let t = name[at];
+    if t == T_CS!("\\rsuper") {
+      let (argument, next) = read_argument(name, at + 1);
+      out.extend(inst_requests(&argument, labelled));
+      at = next;
+      continue;
+    }
+    out.push(if t == T_CS!("\\lmcsorcid") {
+      T_CS!("\\lx@add@orcid")
+    } else {
+      t
+    });
+    at += 1;
+  }
+  out
+}
+
+/// `\inst{…}` for each label of a comma list, its letters lowercased as the class's `\MakeLowercase` prints them: a
+/// letter or number requests the address it labels; a footnote symbol (`\rsuper{a,*}`, 2012.13129) stays shown.
+fn inst_requests(labels: &[Token], labelled: &mut bool) -> Vec<Token> {
+  let mut out = Vec::new();
+  for item in label_items(labels) {
+    *labelled |= item.iter().any(|t| {
+      matches!(t.get_catcode(), Catcode::LETTER)
+        || t.with_str(|s| s.chars().all(|c| c.is_ascii_digit()))
+    });
+    out.push(T_CS!("\\inst"));
+    out.push(T_BEGIN!());
+    out.extend(item);
+    out.push(T_END!());
+  }
+  out
+}
+
+/// The labels of a comma list, each without its spaces and its letters lowercased.
+fn label_items(labels: &[Token]) -> Vec<Vec<Token>> {
+  split_tokens(Tokens::new(labels.to_vec()), vec![SplitDelim::Token(
+    T_OTHER!(","),
+  )])
+  .into_iter()
+  .map(|item| {
+    item
+      .unlist()
+      .into_iter()
+      .filter(|t| t.get_catcode() != Catcode::SPACE)
+      .map(|t| {
+        let lower = t.with_str(|s| s.to_ascii_lowercase());
+        if t.get_catcode() == Catcode::LETTER && t.with_str(|s| s != lower) {
+          T_LETTER!(&lower)
+        } else {
+          t
+        }
+      })
+      .collect::<Vec<_>>()
+  })
+  .filter(|item| !item.is_empty())
+  .collect()
+}
+
+/// The argument of a macro at `at`: a brace group's content, else the one token there; and where it ends.
+fn read_argument(tokens: &[Token], at: usize) -> (Vec<Token>, usize) {
+  let mut start = at;
+  while start < tokens.len() && tokens[start].get_catcode() == Catcode::SPACE {
+    start += 1;
+  }
+  if start >= tokens.len() {
+    return (Vec::new(), start);
+  }
+  if tokens[start].get_catcode() != Catcode::BEGIN {
+    return (vec![tokens[start]], start + 1);
+  }
+  let mut depth = 0usize;
+  for (end, t) in tokens.iter().enumerate().skip(start) {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => {
+        depth -= 1;
+        if depth == 0 {
+          return (tokens[start + 1..end].to_vec(), end + 1);
+        }
+      },
+      _ => {},
+    }
+  }
+  (tokens[start + 1..].to_vec(), tokens.len())
+}
+
+/// The letters an address opens with (`{\lsuper a}Univ`, `\lsuper{b,c} Univ`, `{\lsuper{a}}Univ`) and the address
+/// without them; `None` when it opens with none. An address of spacing alone (`\vskip-6 pt`) is left empty.
+fn leading_lsuper(body: Vec<Token>) -> (Option<Vec<Token>>, Vec<Token>) {
+  let start = body
+    .iter()
+    .take_while(|t| t.get_catcode() == Catcode::SPACE)
+    .count();
+  let mut letters = None;
+  let mut rest_at = start;
+  if body.get(start) == Some(&T_CS!("\\lsuper")) {
+    let (argument, next) = read_argument(&body, start + 1);
+    letters = Some(argument);
+    rest_at = next;
+  } else if body
+    .get(start)
+    .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+  {
+    let (group, next) = read_argument(&body, start);
+    let inner = group
+      .iter()
+      .take_while(|t| t.get_catcode() == Catcode::SPACE)
+      .count();
+    if group.get(inner) == Some(&T_CS!("\\lsuper")) {
+      let (argument, after) = read_argument(&group, inner + 1);
+      if group[after..]
+        .iter()
+        .all(|t| t.get_catcode() == Catcode::SPACE)
+      {
+        letters = Some(argument);
+        rest_at = next;
+      }
+    }
+  }
+  let rest: Vec<Token> = body[rest_at..].to_vec();
+  // (spacing alone is no address)
+  static SPACING: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(
+      r"\\(?:[vh]skip\s*[-+]?\s*[0-9.]*\s*(?:pt|em|ex|cm|mm|in|bp|sp|pc|dd|cc|mu)|[vh]space\*?\s*\{[^}]*\}|(?:small|med|big)skip|par)",
+    )
+    .unwrap()
+  });
+  let spacing = SPACING
+    .replace_all(&Tokens::new(rest.clone()).to_string(), "")
+    .trim()
+    .is_empty();
+  if spacing {
+    return (letters, Vec::new());
+  }
+  (letters, rest)
+}

@@ -1,0 +1,22 @@
+% mechanism: an lmcs paper whose names carry no letters keeps amsart's reading: an address is the run of authors' it
+%   follows — every author's when written after them all (the class prints the list under all the names, unlettered when
+%   it holds one address) —, an e-mail list each address the author it spells.
+% witness: 2402.11987 (two authors, one address and `\email{remi.di-guardia@…, olivier.laurent@…}` after both),
+%   2106.06745; 2108.06944 and 1703.06021 (an address after each author, its author's)
+% oracle:  pdflatex with 2306.08266's lmcs.cls: 0 errors; "ANN ABLE AND BOB BAKER"; "Univ A"; "e-mail address:
+%   ann.able@a.edu, bob.baker@a.edu"
+% engines: rust int111d = Univ A and both addresses on Bob Baker; perl has no lmcs binding (OmniBus)
+% expect:  0 errors, 0 warnings; Ann Able: Univ A, ann.able@a.edu; Bob Baker: Univ A, bob.baker@a.edu
+% status:  RED (int111d) -> GREEN (84c)
+% preload: ar5iv.sty
+\documentclass{lmcs}
+\begin{document}
+\title{T}
+\author[A.~Able]{Ann Able}
+\author[B.~Baker]{Bob Baker}
+\address{Univ A}
+\email{ann.able@a.edu, bob.baker@a.edu}
+\maketitle
+\section{S}
+Text.
+\end{document}

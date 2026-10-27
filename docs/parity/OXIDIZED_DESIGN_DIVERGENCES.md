@@ -25546,3 +25546,25 @@ table is the kernel's. Open: an institute or e-mail block labelled by marks (`$^
 Informatics Institute …`, `\email{$^{a, b}$ \{…\}@quantinuum.com, $^{c}$ …}`, 2304.02524) goes whole to every
 name, not by its labels. Repros `class-bindings/eptcs/eptcs_{institute_email_cells, row_of_names, author_tabular,
 author_environment_columns}` (beside a stand-in `eptcs.cls` written from scratch); guards `perfect_kernel_batch84b::*`.
+
+### 899. lmcs.cls: an author's letters request the addresses they label; `\lmcsorcid` is the author's ORCID (Perl: no binding)
+
+lmcs.cls (Logical Methods in Computer Science; shipped with each paper, not in TeX Live; the contrib binding
+`latexml_contrib/src/lmcs_cls.rs` loads amsart under it) prints `\author[short]{Name}[a,b]` with the letters raised
+after the name and the addresses as one list after all names, each led by the next letter, a, b, c, … (2306.08266's
+v0.92 copy, lmcs.cls:391-450); the earlier classes' papers write the letters themselves, `Name\rsuper a` and
+`\address{{\lsuper a}Univ}` (1103.0510's LMCS.cls v0.8, cs0701140, 1202.6352). The binding read neither: every address
+went to the last author, the letters were left as a paragraph of their own, an ORCID was "ORCID:0000-…" inside the name
+(the frontmatter scorer's 2 of 2 lmcs sample papers), and `\lmcsheading` read four of its seven arguments, leaving the
+submission and publication dates in the first paragraph. Ours: a name's letters (`[a,b]`, `\rsuper{a,b}`) are `\inst`
+requests, llncs's; an address is labelled by the letters written before it, else, in a paper whose names carry
+letters, by its place in the list, and an address with several letters (`{\lsuper{b,c}}`, 1202.6352) is each one's;
+an address of spacing alone (`\address{\vskip-6 pt}`) is none; a paper whose names carry no letters keeps amsart's
+reading, an address the run of authors' it follows (2108.06944, 2402.11987); each address of an `\email` list goes to
+the author it spells, else the one its address's letter names, else the group's author (2402.09138's one `\email`
+of three addresses); `\lmcsorcid` in a name is the author's ORCID contact; `\lmcsheading`'s fifth and sixth
+arguments are the paper's submitted and published dates; `\subjclass` is named as the paper's class names it (2012
+ACM CCS, the earlier classes' 1998 ACM Subject Classification). Shared change: `sequenced_contact_labels`
+(frontmatter/place.rs) counts an `address` contact as it counts an `affiliation`, so an e-mail under a lettered
+`\address` is placed by its letter. Repros `class-bindings/lmcs_{lettered_addresses, unlettered_addresses,
+written_letters}`; guards `perfect_kernel_batch84c::*`.

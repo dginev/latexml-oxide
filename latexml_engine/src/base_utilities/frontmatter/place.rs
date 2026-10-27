@@ -55,9 +55,14 @@ pub(in crate::base_utilities) fn sequenced_contact_labels(
   let first_listed = commands
     .iter()
     .position(|entry| entry.0 == "ltx:contact" && entry.1.contains_key("_sequence"));
+  // (an amsart-style class's `\address` is an address too: lmcs's `\email` under each lettered `\address`, 2306.08266)
   let interleaved = first_listed.is_some_and(|first| {
     commands[first..].iter().any(|entry| {
-      entry.0 == "ltx:contact" && entry.1.get("role").map(String::as_str) == Some("affiliation")
+      entry.0 == "ltx:contact"
+        && matches!(
+          entry.1.get("role").map(String::as_str),
+          Some("affiliation" | "address")
+        )
     })
   });
   // Each address with the class command's call it came from (`\lx@sequence@call`: `\emailAdd{a, b}` is one call of two

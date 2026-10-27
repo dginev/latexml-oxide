@@ -24,7 +24,7 @@ macro_rules! repro {
 const CLASS: &str = repro!("eptcs.cls");
 
 /// The text of `fragment`, markup aside, its whitespace collapsed.
-fn text(fragment: &str) -> String {
+pub(super) fn text(fragment: &str) -> String {
   let mut out = String::new();
   let mut in_tag = false;
   for c in fragment.chars() {
@@ -42,7 +42,7 @@ fn text(fragment: &str) -> String {
 }
 
 /// Each creator of `xml`, in order: its personname's text, then each contact as `role=text`.
-fn creators(xml: &str) -> Vec<Vec<String>> {
+pub(super) fn creators(xml: &str) -> Vec<Vec<String>> {
   xml
     .match_indices("<creator ")
     .map(|(start, _)| {
