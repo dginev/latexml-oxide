@@ -4,7 +4,7 @@
 %          (<text/><text/>, the `\hfill\mbox{}\par\mbox{}\hfill` between the blocks); Perl 0.8.8 merges both names into one
 %          creator
 % expect:  0 errors; creators Ann Able (Univ A) and Bob Baker (Univ B), no empty contact
-% status:  RED
+% status:  RED -> GREEN (83b: an empty contact is no contact)
 \documentclass[conference]{IEEEtran}
 \makeatletter
 \newcommand{\authorrowbreak}{\end{@IEEEauthorhalign}

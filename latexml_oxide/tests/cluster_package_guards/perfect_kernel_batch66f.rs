@@ -253,13 +253,12 @@ fn ieeetran_author_conditional_from_block_argument() {
     "../../../tools/perfect_kernel/repros/class-bindings/ieeetran_author_conditional_from_block_argument.tex"
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  // The second, empty affiliation is a residual: the block's `\vspace{-5mm}` and the conditional's tail stay in
-  // the `\author` argument after the block and are read as a further (empty) block line; pdflatex prints nothing.
+  // (the block's `\vspace{-5mm}` and the conditional's tail after the block read as a further block line make an
+  // empty contact, dropped as no contact — 83b; pdflatex prints nothing)
   assert_eq!(
     element(&xml, "<creator", "</creator>"),
     "<creator role=\"author\">\n<personname>A. Author</personname>\n\
-     <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ <break/>\nE-mail: a@b.c</contact>\n\
-     <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"/>\n</creator>",
+     <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ <break/>\nE-mail: a@b.c</contact>\n</creator>",
     "{xml}"
   );
   assert!(!xml.contains("x@y.z"), "{xml}");

@@ -1,0 +1,21 @@
+% mechanism: a template's empty contact commands (`\curraddr{}`, `\urladdr{}`, `\dedicatory{}`) made contacts of no
+%   content, each printed under its name label ("Current address:", "URL:") with nothing after it; pdflatex prints
+%   nothing for them (amsart.cls `\@setaddresses` skips an empty field).
+% witness: 2206.14950, 2203.07822, 2001.01741, 2003.03018 — 58 of the 2,973 ams census papers, 7 of the 688 aas
+%   (`\nocollaboration`'s empty collaboration contact)
+% oracle:  pdflatex 0 errors; the address and the e-mail only
+% expect:  0 errors; Ann Able holds the address and the e-mail, no empty contact
+% status:  RED (int111c) -> GREEN (83b)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\address{Univ A}
+\curraddr{}
+\email{ann@a.org}
+\urladdr{}
+\dedicatory{}
+\maketitle
+Text.
+\end{document}

@@ -235,3 +235,54 @@ fn an_email_call_goes_to_the_author_it_spells() {
     "{xml}"
   );
 }
+
+/// A template's empty contact commands (`\curraddr{}`, `\urladdr{}`, `\dedicatory{}`; aastex's `\nocollaboration`) make
+/// no contact: each had printed its name label ("Current address:") over nothing, where pdflatex prints nothing — 58 of
+/// the 2,973 ams census papers (2206.14950, 2203.07822, 2001.01741, 2003.03018), 7 of the 688 aas. They still count while
+/// the entries are placed (an empty entry is in today's pile, `perfect_kernel_batchfms2a2r4`). Repro
+/// sectioning-frontmatter/empty_contacts_print_nothing.
+#[test]
+fn empty_contacts_print_nothing() {
+  let (log, xml) = convert_files_with(
+    repro!("sectioning-frontmatter/empty_contacts_print_nothing.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch61::creators_of(&xml),
+    [
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Address:\u{a0}\" role=\"address\">Univ A</contact><contact name=\"Email address: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@a.org</text></contact></creator>"
+    ],
+    "{xml}"
+  );
+}
+
+/// IEEEtran's `\authorrowbreak` left an empty affiliation contact (OPEN_ROWS FM-4): no contact since 83b. Repro
+/// sectioning-frontmatter/ieeetran_authorrowbreak_leaves_no_empty_affiliation.
+#[test]
+fn ieeetran_authorrowbreak_leaves_no_empty_affiliation() {
+  let (log, xml) = convert_files_with(
+    repro!("sectioning-frontmatter/ieeetran_authorrowbreak_leaves_no_empty_affiliation.tex"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let affiliation = |text: &str| {
+    format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{text}</contact>")
+  };
+  assert_eq!(
+    super::perfect_kernel_batch61::creators_of(&xml),
+    [
+      format!(
+        "<creator role=\"author\"><personname>Ann Able</personname>{}</creator>",
+        affiliation("Univ A")
+      ),
+      format!(
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{}</creator>",
+        affiliation("Univ B")
+      ),
+    ],
+    "{xml}"
+  );
+}

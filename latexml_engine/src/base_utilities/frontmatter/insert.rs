@@ -92,9 +92,42 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   respell_emails(document)?;
   show_unanswered_marks(document, &answered)?;
   flag_merged_creators(document)?;
+  drop_empty_contacts(document)?;
   // (FM S2b: a written family's paper, where it differs from the observer's reading by the writer's operations alone,
   // written as the reading has it — under the shadow switch only; OXIDIZED_DESIGN_DIVERGENCES #837 "S2b")
   write_observed_frontmatter(document)?;
+  Ok(())
+}
+
+/// A contact of no content — a template's `\curraddr{}`, `\urladdr{}`, `\dedicatory{}`, aastex's `\nocollaboration` —
+/// is no contact: its name label printed over nothing ("Current address:"), where pdflatex prints nothing (58 of the
+/// 2,973 ams census papers: 2206.14950, 2203.07822, 2001.01741, 2003.03018; 7 of the 688 aas). Removed once every entry
+/// is placed — an empty entry still counts in today's pile (`perfect_kernel_batchfms2a2r4::an_empty_entry_is_in_todays_pile`)
+/// — with a nameless creator it leaves empty. Guard `perfect_kernel_batch81::empty_contacts_print_nothing`.
+fn drop_empty_contacts(document: &mut Document) -> Result<()> {
+  // (empty: no text, and no element but an empty `text` or a `break` — an icon, a link, a formula is content)
+  let empty = |contact: &Node| {
+    contact.get_content().trim().is_empty()
+      && element_nodes(contact).iter().all(|child| {
+        matches!(child.get_name().as_str(), "text" | "break") && element_nodes(child).is_empty()
+      })
+  };
+  for creator in document.findnodes("//ltx:creator", None) {
+    let dropped: Vec<Node> = element_nodes(&creator)
+      .into_iter()
+      .filter(|child| child.get_name() == "contact" && empty(child))
+      .collect();
+    if dropped.is_empty() {
+      continue;
+    }
+    for contact in dropped {
+      document.remove_node(contact);
+    }
+    // (a nameless creator holding only them is no creator either; the scope is the creators this pass emptied)
+    if element_nodes(&creator).is_empty() {
+      document.remove_node(creator);
+    }
+  }
   Ok(())
 }
 
