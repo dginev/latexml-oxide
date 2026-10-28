@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+  - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
+    meaning inverted.** The double negative (`nodefaultresources: false`) is gone.
+    The positive name is Perl's option name (`Config.pm:120` `defaultresources!`),
+    and the XSLT step still receives its negation as `noresources`, as
+    `LaTeXML.pm:584` passes it. The CLI flags `--defaultresources` and
+    `--nodefaultresources` are unchanged.
+  - **New `api::convert_to_html_with(tex, &HtmlOptions)`.** `HtmlOptions` holds the
+    settings of the library's HTML entry point, and its `Default` is what
+    `api::convert_to_html(tex)` does, so that function is unchanged. The first
+    setting is `default_resources`; set it to `false` (the `--nodefaultresources`
+    equivalent) to get the page without links to the bundled CSS/JS and with
+    nothing written to the working directory. Construct `HtmlOptions` with
+    `..Default::default()`, so a setting added later leaves callers compiling. The
+    tests use it through `util::test::convert_to_html_page`, so a test run no
+    longer leaves `LaTeXML.css`/`ltx-*.css` in `latexml_oxide/`.
+
   - **The XSLT recursion cap now applies in the statically linked release
     binaries.** `xsltMaxDepth = 1000` (Perl `XML::LibXSLT->max_depth(1000)`) was
     written through `dlsym`, which cannot see a global of a statically linked

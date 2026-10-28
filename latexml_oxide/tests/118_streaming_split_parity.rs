@@ -80,7 +80,7 @@ fn post_opts<'a>(dest: &'a str, src_dir: &'a str) -> PostOptions<'a> {
     source_directory:          Some(src_dir),
     site_directory:            None,
     search_paths:              &[],
-    nodefaultresources:        true,
+    default_resources:         false,
     css_files:                 &[],
     js_files:                  &[],
     noinvisibletimes:          false,

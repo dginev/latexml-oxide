@@ -936,6 +936,12 @@ pub const GUARD_JOBNAME: &str = "t";
 /// (the CLI's own default is 60 s).
 pub const GUARD_TIMEOUT_SECS: u64 = 180;
 
+/// The HTML page of `tex` through [`crate::api::convert_to_html_with`], without the bundled CSS/JS. With no
+/// destination those files would otherwise be copied into the test's working directory, the crate root.
+pub fn convert_to_html_page(tex: &str) -> Result<String, String> {
+  crate::api::convert_to_html_with(tex, &crate::api::HtmlOptions { default_resources: false })
+}
+
 /// Convert `tex` in-process (`convert_in_process`) — the package and contrib bindings, `preload` when given, comments
 /// off, XML. Returns (log, XML).
 pub fn convert_with(tex: &str, preload: Option<&str>) -> (String, String) {

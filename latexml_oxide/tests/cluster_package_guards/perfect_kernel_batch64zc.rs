@@ -120,7 +120,7 @@ fn typewriter_address_split_keeps_its_link() {
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Address:\u{a0}\" role=\"address\">University of A</contact>\n    <contact name=\"Email address: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">$^</text>†<text font=\"typewriter\" xml:id=\"id2\">$ ann@a.edu</text></contact>\n    <contact name=\"URL: \" role=\"url\"><text font=\"typewriter\" xml:id=\"id3\">http://a.edu/~ann</text></contact>\n  </creator>",
     "<creator before=\" and \" role=\"author\">\n    <personname>Bob Bee</personname>\n    <contact name=\"Address:\u{a0}\" role=\"address\">University of B</contact>\n    <contact name=\"URL: \" role=\"url\"><text font=\"typewriter\" xml:id=\"id4\">http://b.edu/$</text>∼<text font=\"typewriter\" xml:id=\"id5\">$bob</text></contact>\n  </creator>",
   ]);
-  let html = latexml::api::convert_to_html(tex).expect("HTML");
+  let html = latexml::util::test::convert_to_html_page(tex).expect("HTML");
   let hrefs: Vec<&str> = html
     .match_indices("<a href=\"")
     .map(|(at, open)| {
@@ -140,7 +140,7 @@ fn typewriter_address_split_keeps_its_link() {
     ],
     "{html}"
   );
-  let html = latexml::api::convert_to_html(
+  let html = latexml::util::test::convert_to_html_page(
     r"\documentclass[aps]{revtex4}
 \begin{document}
 \title{T}
@@ -159,7 +159,7 @@ x
   ] {
     assert!(html.contains(href), "{href}\n{html}");
   }
-  let html = latexml::api::convert_to_html(
+  let html = latexml::util::test::convert_to_html_page(
     r"\documentclass{amsart}
 \begin{document}
 \title{T}

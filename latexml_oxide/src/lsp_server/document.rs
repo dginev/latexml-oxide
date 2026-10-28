@@ -134,7 +134,7 @@ pub(crate) fn post_process_html(core_xml: &str, uri: &str) -> String {
     // The server returns HTML as a string with no destination — it must never
     // write CSS/JS resource files to disk (would pollute the cwd). The client
     // supplies its own preview styling.
-    nodefaultresources:        true,
+    default_resources:         false,
     css_files:                 &[],
     js_files:                  &[],
     noinvisibletimes:          false,

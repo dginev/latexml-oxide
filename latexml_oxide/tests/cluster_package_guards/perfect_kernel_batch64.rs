@@ -601,7 +601,7 @@ fn post_in(xml: &str, stylesheet: &str, source_directory: Option<&str>) -> Strin
     source_directory,
     site_directory: None,
     search_paths: &[],
-    nodefaultresources: true,
+    default_resources: false,
     css_files: &[],
     js_files: &[],
     noinvisibletimes: false,

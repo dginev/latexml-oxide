@@ -55,7 +55,7 @@ fn html_from(xml: &str) -> String {
     source_directory:          Some("tests/structure"),
     site_directory:            None,
     search_paths:              &[],
-    nodefaultresources:        true,
+    default_resources:         false,
     css_files:                 &[],
     js_files:                  &[],
     noinvisibletimes:          false,

@@ -30,7 +30,7 @@ pub(super) fn post_logged(xml: &str, source_directory: &str) -> (String, String)
     source_directory:          Some(source_directory),
     site_directory:            None,
     search_paths:              &[],
-    nodefaultresources:        true,
+    default_resources:         false,
     css_files:                 &[],
     js_files:                  &[],
     noinvisibletimes:          false,

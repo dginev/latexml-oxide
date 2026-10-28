@@ -2286,7 +2286,7 @@ fn post_xml(tex: &str) -> String {
     source_directory:          None,
     site_directory:            None,
     search_paths:              &[],
-    nodefaultresources:        true,
+    default_resources:         false,
     css_files:                 &[],
     js_files:                  &[],
     noinvisibletimes:          false,
@@ -3484,7 +3484,7 @@ fn cas_ead_verbatim() {
     hf3_element(tex, "creator", "A."),
     "<creator role=\"author\">\n    <personname>A. B</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">arash_khajooei@alumni.iust.ac.ir</text></contact>\n  </creator>"
   );
-  let html = latexml::api::convert_to_html(tex).expect("HTML");
+  let html = latexml::util::test::convert_to_html_page(tex).expect("HTML");
   assert!(
     html.contains(
       "<a href=\"mailto:arash_khajooei@alumni.iust.ac.ir\"><span class=\"ltx_text ltx_font_typewriter\">arash_khajooei@alumni.iust.ac.ir</span></a>"
@@ -3558,7 +3558,7 @@ fn contact_link_from_whole_text() {
     0,
     "{log}"
   );
-  let html = latexml::api::convert_to_html(tex).expect("HTML");
+  let html = latexml::util::test::convert_to_html_page(tex).expect("HTML");
   let at = html.find("<a href=\"mailto:").expect("the email link");
   assert_eq!(
     &html[at..at + html[at..].find("</a>").unwrap() + 4],
@@ -3567,7 +3567,7 @@ fn contact_link_from_whole_text() {
   );
   // an address that is the contact's own text links to that text alone, not the marks after it; a contact that is
   // already a link (`\href`) is not wrapped in another
-  let html = latexml::api::convert_to_html(
+  let html = latexml::util::test::convert_to_html_page(
     r"\documentclass{revtex4-2}
 \usepackage{hyperref}
 \begin{document}

@@ -242,14 +242,14 @@ struct Cli {
 #[allow(dead_code)] // Fields used when post-processing is enabled
 #[derive(Clone, Debug)]
 struct ConversionProfile {
-  preloads:           Vec<String>,
-  pmml:               bool,
-  mathtex:            bool,
-  noinvisibletimes:   bool,
-  nodefaultresources: bool,
-  timeout:            u64,
+  preloads:          Vec<String>,
+  pmml:              bool,
+  mathtex:           bool,
+  noinvisibletimes:  bool,
+  default_resources: bool,
+  timeout:           u64,
   /// Resident-memory ceiling in KiB for the shared `Watchdog` (0 = disabled).
-  max_rss_kb:         u64,
+  max_rss_kb:        u64,
 }
 
 impl ConversionProfile {
@@ -272,7 +272,7 @@ impl ConversionProfile {
       pmml: !no_pmml,
       mathtex: !no_mathtex,
       noinvisibletimes: true,
-      nodefaultresources: true,
+      default_resources: false,
       timeout,
       max_rss_kb: max_rss_mb * 1024,
     }
@@ -290,7 +290,7 @@ impl ConversionProfile {
       pmml: !no_pmml,
       mathtex: !no_mathtex,
       noinvisibletimes: false,
-      nodefaultresources: false,
+      default_resources: true,
       timeout,
       max_rss_kb: max_rss_mb * 1024,
     }
@@ -498,7 +498,7 @@ impl LatexmlWorker {
       source_directory:          Some(&source_dir),
       site_directory:            None,
       search_paths:              &[],
-      nodefaultresources:        self.profile.nodefaultresources,
+      default_resources:         self.profile.default_resources,
       css_files:                 &[],
       js_files:                  &[],
       noinvisibletimes:          self.profile.noinvisibletimes,

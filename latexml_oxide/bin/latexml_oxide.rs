@@ -520,25 +520,25 @@ fn chosen_by_clap(pos: bool, neg: bool) -> Option<bool> {
 /// `_prepare_options`. Every other pair has a static default and is fully resolved.
 struct ResolvedOptions {
   /// Core tri-states (`None` ⇒ leave the engine/state default untouched).
-  include_comments:   Option<bool>,
-  nomathparse:        Option<bool>,
-  number_sections:    Option<bool>,
+  include_comments:  Option<bool>,
+  nomathparse:       Option<bool>,
+  number_sections:   Option<bool>,
   /// Whether output splitting is enabled (Perl `split!` + `split*`-implies rule).
-  split_enabled:      bool,
+  split_enabled:     bool,
   /// User's explicit `--post`/`--nopost` choice; format-dependent default applied
   /// at the post-processing site.
-  post:               Option<bool>,
+  post:              Option<bool>,
   /// User's explicit `--pmml`/`--nopmml` choice; format-dependent default applied
   /// at the post-processing site.
-  pmml:               Option<bool>,
+  pmml:              Option<bool>,
   /// Post reps/flags with static defaults, fully resolved.
-  cmml:               bool,
-  keep_xmath:         bool,
-  mathtex:            bool,
-  noinvisibletimes:   bool,
-  plane1:             bool,
-  nodefaultresources: bool,
-  graphicimages:      bool,
+  cmml:              bool,
+  keep_xmath:        bool,
+  mathtex:           bool,
+  noinvisibletimes:  bool,
+  plane1:            bool,
+  default_resources: bool,
+  graphicimages:     bool,
 }
 
 impl ResolvedOptions {
@@ -549,29 +549,28 @@ impl ResolvedOptions {
       // Perl Core.pm L45 `comments!`; `noparse`/`parse` (mathparse); `numbersections!`
       // (default on). `None` leaves the setting unset (Rust comments default OFF —
       // OXIDIZED_DESIGN #2).
-      include_comments:   chosen_by_clap(cli.comments, cli.nocomments),
-      nomathparse:        chosen_by_clap(cli.nomathparse, cli.mathparse),
-      number_sections:    chosen_by_clap(cli.numbersections, cli.nonumbersections),
+      include_comments:  chosen_by_clap(cli.comments, cli.nocomments),
+      nomathparse:       chosen_by_clap(cli.nomathparse, cli.mathparse),
+      number_sections:   chosen_by_clap(cli.numbersections, cli.nonumbersections),
       // Perl `Common/Config.pm` L124-130: `split!` is last-wins; the value options
       // `--splitat`/`--splitpath`/`--splitnaming` do `split = 1 unless defined split`,
       // i.e. they enable splitting ONLY when neither `--split` nor `--nosplit`
       // decided it (a split! always overwrites; a split* never overwrites a decided
       // value, so only the split! pair's order — which clap resolves — matters).
-      split_enabled:      chosen_by_clap(cli.split, cli.nosplit)
+      split_enabled:     chosen_by_clap(cli.split, cli.nosplit)
         .unwrap_or(cli.splitat.is_some() || cli.splitnaming.is_some() || cli.splitpath.is_some()),
-      post:               chosen_by_clap(cli.post, cli.nopost),
-      pmml:               chosen_by_clap(cli.pmml, cli.nopmml),
-      cmml:               chosen_by_clap(cli.cmml, cli.nocmml).unwrap_or(false),
-      keep_xmath:         chosen_by_clap(cli.keep_xmath, cli.noxmath).unwrap_or(false),
-      mathtex:            chosen_by_clap(cli.mathtex, cli.nomathtex).unwrap_or(false),
-      noinvisibletimes:   chosen_by_clap(cli.noinvisibletimes, cli.invisibletimes).unwrap_or(false),
+      post:              chosen_by_clap(cli.post, cli.nopost),
+      pmml:              chosen_by_clap(cli.pmml, cli.nopmml),
+      cmml:              chosen_by_clap(cli.cmml, cli.nocmml).unwrap_or(false),
+      keep_xmath:        chosen_by_clap(cli.keep_xmath, cli.noxmath).unwrap_or(false),
+      mathtex:           chosen_by_clap(cli.mathtex, cli.nomathtex).unwrap_or(false),
+      noinvisibletimes:  chosen_by_clap(cli.noinvisibletimes, cli.invisibletimes).unwrap_or(false),
       // Perl `MathML.pm` L70: `--hackplane1` forces plane1 on; otherwise the
       // pair is last-wins over a default-on.
-      plane1:             cli.hackplane1
-        || chosen_by_clap(cli.plane1, cli.noplane1).unwrap_or(true),
-      nodefaultresources: chosen_by_clap(cli.nodefaultresources, cli.defaultresources)
-        .unwrap_or(false),
-      graphicimages:      chosen_by_clap(cli.graphicimages, cli.nographicimages).unwrap_or(true),
+      plane1:            cli.hackplane1 || chosen_by_clap(cli.plane1, cli.noplane1).unwrap_or(true),
+      default_resources: chosen_by_clap(cli.defaultresources, cli.nodefaultresources)
+        .unwrap_or(true),
+      graphicimages:     chosen_by_clap(cli.graphicimages, cli.nographicimages).unwrap_or(true),
     }
   }
 }
@@ -1521,7 +1520,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           // destination's directory (document.rs / Perl Config.pm L466-469).
           site_directory: cli.sitedirectory.as_deref(),
           search_paths: &cli.search_paths,
-          nodefaultresources: resolved.nodefaultresources,
+          default_resources: resolved.default_resources,
           css_files: &cli.css_files,
           js_files: &cli.js_files,
           noinvisibletimes: resolved.noinvisibletimes,
@@ -2377,8 +2376,8 @@ mod boolean_flag_last_wins_tests {
 
     let c = cli(&["--defaultresources", "--nodefaultresources"]);
     assert_eq!(
-      chosen_by_clap(c.nodefaultresources, c.defaultresources),
-      Some(true)
+      chosen_by_clap(c.defaultresources, c.nodefaultresources),
+      Some(false)
     );
 
     let c = cli(&["--comments", "--nocomments"]);
@@ -2419,7 +2418,7 @@ mod boolean_flag_last_wins_tests {
     assert!(!r.keep_xmath);
     assert!(!r.mathtex);
     assert!(!r.noinvisibletimes);
-    assert!(!r.nodefaultresources);
+    assert!(r.default_resources, "default_resources defaults ON");
     assert!(!r.split_enabled);
     assert_eq!(r.post, None);
     assert_eq!(r.pmml, None);

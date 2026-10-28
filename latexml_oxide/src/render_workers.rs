@@ -132,7 +132,7 @@ pub struct RenderManifest {
   /// The fully-resolved XSLT parameter map (CSS/JS/LATEXML_VERSION/user
   /// overrides), captured after the parent computed it.
   pub xslt_params:               Vec<(String, String)>,
-  pub nodefaultresources:        bool,
+  pub default_resources:         bool,
   /// The resolved stylesheet/resource search paths the parent's `XSLT::new`
   /// received.
   pub searchpaths:               Vec<String>,
@@ -638,7 +638,7 @@ fn render_manifest_pages(m: RenderManifest) -> usize {
     match latexml_post::xslt::XSLT::new(
       xsl_path,
       params,
-      m.nodefaultresources,
+      !m.default_resources,
       None,
       m.searchpaths.clone(),
     ) {
