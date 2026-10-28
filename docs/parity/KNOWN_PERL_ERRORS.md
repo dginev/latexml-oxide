@@ -18735,3 +18735,29 @@ replaces the English abstract. Minimal triggers:
 
 Fixed in Rust (86b, OXIDIZED_DESIGN_DIVERGENCES #904): bindings `pos_sty.rs` and `rmaa_cls.rs`. Witnesses 2409.20413,
 2512.14592, 2602.22379, 0903.4819, astro-ph0208329, 1301.7157. Guards `perfect_kernel_batch86b::*`.
+
+## 1199. revtex4_support's `\affil` blocks a document's own `\newcommand{\affil}`
+
+revtex4_support.sty.ltxml:49 defines `\affil OptionalSemiverbatim {}` (an authblk-style affiliation), which none of
+revtex4.cls, revtex4-1.cls, revtex4-2.cls (nor their `.rtx` society files) defines. A REVTeX paper that names its
+affiliation with a macro of its own is pdflatex's, but Perl ignores the `\newcommand` ("Ignoring redefinition") and
+reads `\affiliation{\affil}` with its own `\affil`, whose argument is the closing brace. Minimal trigger:
+
+```latex
+\documentclass[aps,prl]{revtex4-1}
+\newcommand{\affil}{Center for Nanophotonics, FOM Institute, Amsterdam}
+\begin{document}
+\title{T}\author{Martin Frimmer}\affiliation{\affil}
+\maketitle Body.
+\end{document}
+% pdflatex: "Martin Frimmer / Center for Nanophotonics, FOM Institute, Amsterdam".
+% Perl: two empty <contact role="affiliation"/>, 1 error (Missing argument {} for \affil)
+```
+
+Fixed in Rust (86c): the binding's `\affil` is a guess (`DefinitionOrigin::Fallback`, revtex4_support_sty.rs), which a
+document's `\newcommand` or `\providecommand` replaces (`is_definable_latex`); under AASTeX, whose classes define
+`\affil` (aastex701.cls:13186, emulateapj.cls:460 `\let\affil\affiliation`; aastex.cls 5.x), aastex_cls.rs assigns it
+again as the class's, so a document's definition is refused there, as in LaTeX. Witnesses 1104.4073, 1907.12838,
+1908.05079. Repros sectioning-frontmatter/{revtex_document_newcommand_affil, revtex_document_providecommand_affil,
+aastex_class_affil_stays_the_class}; guards `perfect_kernel_batch86c::{a_revtex_document_defines_its_own_affil,
+aastex_keeps_its_own_affil}`.

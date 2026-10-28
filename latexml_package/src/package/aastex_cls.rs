@@ -49,6 +49,11 @@ LoadDefinitions!({
   // 5.x:1076-1093, aastex63.cls:1117), so the REVTeX class's (`revtex4_support_sty::define_section_numbers`) are not set.
   assign_value("lx@revtex@sections@by@class", true, Some(Scope::Global));
   LoadClass!("revtex4");
+  // AASTeX's own `\affil` (aastex.cls 5.x; aastex701.cls:13186 and emulateapj.cls:460 `\let\affil\affiliation`): the
+  // REVTeX binding's, which REVTeX itself lacks and so gives a document's `\newcommand{\affil}` way
+  // (revtex4_support_sty.rs), is the class's here, and a document's `\newcommand` of it is refused, as in LaTeX. Assigned
+  // again at the class's own origin, it is no guess.
+  Let!("\\affil", "\\affil");
   // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`), over REVTeX's:
   // AASTeX 6.x's, as pdflatex gives it for aastex631.cls — 513.117pt in two 242.267pt columns under `twocolumn`, one
   // column otherwise; `\onecolumngrid` regions follow (revtex4_support_sty.rs). Witness 2605.22754. The other

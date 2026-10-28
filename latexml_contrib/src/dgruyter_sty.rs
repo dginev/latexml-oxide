@@ -15,6 +15,28 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
+  // dgruyter.sty:2392-2475 builds its author block on authblk (`\RequirePackage[noblocks]{authblk}`, :2394): under
+  // `article`, `\author*[1]{Name}` is authblk's `\author[1]{Name}` (:2397) whose star (`\@ifstar`, :2472-2475) marks the
+  // corresponding author — a `*` after the name, "*Corresponding author:" before the affiliation note (:2418-2421). The
+  // copy's redefinitions are refused (the kernel's `\author` is locked), so authblk's binding read the star as the name:
+  // a creator "*", "[1]Karoline Busse" a paragraph after the abstract (1910.07269). authblk is loaded here, before the
+  // copy (whose own request then finds it loaded), and its `\author` takes the star: the corresponding-author contact
+  // after the creator. Under another class the copy keeps the kernel's `\author` (:2476-2481). Guard
+  // `perfect_kernel_batch86c::dgruyter_author_star_and_affiliation_labels`.
+  RequirePackage!("authblk", options => vec![s!("noblocks")]);
+  if has_meaning(&T_CS!("\\ver@article.cls")) {
+    Let!("\\lx@dg@blk@author", "\\author");
+    DefMacro!("\\author OptionalMatch:* []{}", sub[(star, label, name)] {
+      let mut call = Invocation!(T_CS!("\\lx@dg@blk@author"), vec![label, Some(name)]).unlist();
+      if star.is_some() {
+        call.extend(
+          TokenizeInternal!("\\lx@add@contact[role=corresponding]{\\@ifundefined{CorrAuth}{Corresponding author}{\\CorrAuth}}")
+            .unlist(),
+        );
+      }
+      Ok(Tokens::new(call))
+    });
+  }
   DefMacro!("\\subtitle{}", "\\lx@add@subtitle{#1}");
   DefMacro!("\\keywords{}", "\\lx@add@keywords{#1}");
   // `\transabstract[<language>]{…}`, `\transkeywords[<language>]{…}` (:2733-2742): the abstract and keywords again, in

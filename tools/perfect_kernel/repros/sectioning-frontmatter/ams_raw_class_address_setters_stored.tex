@@ -1,0 +1,42 @@
+% mechanism: a raw class read over the AMS binding re-dresses \address, \curraddr, \email and \urladdr as stores for its
+%   own title page (stacs.cls:294-298 into amsart's \addresses; rmmcart.cls the four alike), which only its \@maketitle
+%   (:364 \@setaddresses, :384-407) prints: our deposit of that \@maketitle errs (\@settitle, \@setauthors undefined)
+%   and is dropped, and the class's \enddoc@text (:468) replaces amsart's, so the addresses are printed nowhere. A lock
+%   on the four setters against the files keeps them, but only with a stacs binding (its \address[ref] key is no
+%   label, its \author[ref]{short}{long} prints the long name), a pcms-l \auth binding and OD #803's empty-shell drop
+%   extended to the deposit's footnotes and pubnotes (SYNC_STATUS frontmatter row, the AMS setter lock).
+% witness: 0902.1737 (franceschiniFINAL_new.tex:135-146, stacs.cls), 0802.2833; here a minimal stand-in of the class
+% oracle:  pdflatex 0 errors: "R. GROSSI / Dipartimento di Informatica, Universita di Pisa / Current address: Google
+%          Inc., NY / E-mail address: grossi@di.unipi.it / URL: http://www.di.unipi.it/grossi"
+% engines: rust int116a = 0 errors, the creator's name only (the four contacts in the dropped deposit); perl = the
+%          addresses kept, 2 errors (\@settitle, \@setauthors)
+% expect:  0 errors, 0 warnings; one creator with the address, current address, e-mail and URL, in order
+% status:  RED (int116a; no guard)
+% preload: ar5iv.sty
+\begin{filecontents*}{stacs.cls}
+% A minimal stand-in for stacs.cls (2008, on amsart), written for a latexml-oxide test: its \address (:294-298), the
+% same store for \curraddr, \email and \urladdr (rmmcart.cls), \@maketitle (:351-364), \@setaddresses (:384-407) and
+% \enddoc@text (:468).
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{stacs}[2008/01/01 stand-in]
+\LoadClass[11pt,reqno]{amsart}
+\renewcommand{\address}[2][]{\g@addto@macro\addresses{\address{#1}{#2}}}
+\renewcommand{\curraddr}[2][]{\g@addto@macro\addresses{\curraddr{#1}{#2}}}
+\renewcommand{\email}[2][]{\g@addto@macro\addresses{\email{#1}{#2}}}
+\renewcommand{\urladdr}[2][]{\g@addto@macro\addresses{\urladdr{#1}{#2}}}
+\def\@setaddresses{\par\begingroup\def\address##1##2{##2\par}%
+  \def\curraddr##1##2{Current address: ##2\par}\def\email##1##2{E-mail address: ##2\par}%
+  \def\urladdr##1##2{URL: ##2\par}\addresses\endgroup}
+\def\@maketitle{\@settitle\ifx\@empty\authors\else\@setauthors\fi\@setaddresses}
+\def\enddoc@text{}
+\end{filecontents*}
+\documentclass{stacs}
+\begin{document}
+\title{Optimal Cache-Aware Suffix Selection}
+\author{R. Grossi}
+\address{Dipartimento di Informatica, Universita di Pisa}
+\curraddr{Google Inc., NY}
+\email{grossi@di.unipi.it}
+\urladdr{http://www.di.unipi.it/grossi}
+\maketitle
+Body.
+\end{document}

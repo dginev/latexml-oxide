@@ -26008,3 +26008,28 @@ changed, all better, every creator compared: E 52 → 52, F 1 → 1 — 2504.215
 `sectioning-frontmatter/{pos_sty_speaker_author_contacts, pos_sty_marked_authors, pos_sty_marked_speaker_second,
 pos_sty_report_unstarred_author, rmaa_altaffiltext_marks, rmaa_altaffiltext_unmarked}`; guards
 `perfect_kernel_batch86b::*`.
+
+### 905. fcs's and dgruyter's `\author*[labels]` mark the corresponding author and request its labelled affiliations (Perl: no fcs or dgruyter author binding, the authors mangled)
+
+fcs.cls:268-290 `\DeclareDocumentCommand \author { s o m }` and dgruyter.sty:2392-2475 (authblk's
+`\author[labels]{name}` under `\@ifstar`, `article` only) mark the corresponding author with the star — fcs an envelope
+(:720-723), dgruyter a `*` and "*Corresponding author:" on the affiliation note — and the option lists the labels of
+the `\address[n]` (fcs, :293-307) or `\affil[n]` (dgruyter) lines the name requests. The fcs binding left the kernel's
+`\author[]{}` and OmniBus's label-blind `\address`; dgruyter's raw copy's redefinitions are refused (the `\author`
+lock), leaving authblk's binding: either way `\author*[1]{Name}` was a creator "*" and "[1]Name" a paragraph after the
+abstract (2410.08723, 1910.07269). Ours: fcs_cls.rs `\author OptionalMatch:* []{}` is
+`\lx@add@authors@append[annotations={#2}]{#3}` (sn-jnl's) and, starred, a `corresponding` contact "✉" (acmart's
+`\correspondingauthor`); `\address[n]{…}` an address labelled `n`. dgruyter_sty.rs loads authblk (`noblocks`) before the
+copy and, under `article`, wraps its `\author` with the star: the `corresponding` contact "Corresponding author" (the
+copy's `\CorrAuth`). Perl has neither binding (0 errors on the fcs repro, 5 on 2410.08723, every name mangled).
+
+The same batch makes revtex4_support's `\affil` a guess a document's definition replaces (KNOWN_PERL_ERRORS #1199,
+1104.4073, 1907.12838, 1908.05079; aastex_cls.rs keeps it the class's under AASTeX).
+
+Census A/B against int116a (`ab_66bundle/pop86c.tsv`, 1,249 papers: 880 AMS-derived-class or setter-redefining papers,
+a 292-paper amsart sample, 53 REVTeX/AASTeX papers defining `\affil`, all 24 fcs and dgruyter papers): 23 changed, none
+worse, every creator compared: the 20 fcs/dgruyter papers with the starred name, its corresponding contact and its
+labelled affiliations, and the 3 REVTeX papers with the document's `\affil`; the AMS papers and the amsart sample
+byte-identical; E 2,273 → 2,273, F 3 → 3.
+Repros `sectioning-frontmatter/{fcs_author_star_and_address_labels, dgruyter_author_star_and_affil_labels}`; guards
+`perfect_kernel_batch86c::{fcs_author_star_and_address_labels, dgruyter_author_star_and_affiliation_labels}`.

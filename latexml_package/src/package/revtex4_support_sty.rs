@@ -1,3 +1,5 @@
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -112,8 +114,16 @@ LoadDefinitions!({
   def_macro_noop("\\move@AF")?;
   DefMacro!("\\@affiliation{}", "\\endgroup\\lx@add@affiliation[annotate=run]{#1}");
   DefMacro!("\\noaffiliation", "\\lx@add@affiliation[annotate=run]{}");
-  DefMacro!("\\affil OptionalSemiverbatim {}",
-    "\\lx@add@affiliation[annotate={\\ifx.#1.new\\else 1\\fi},label={#1}]{#2}");
+  // `\affil` is the binding's own (Perl revtex4_support.sty.ltxml:49): none of revtex4.cls, revtex4-1.cls or
+  // revtex4-2.cls defines it, so a document's `\newcommand{\affil}{Center for Nanophotonics, …}` (1104.4073; 1907.12838,
+  // 1908.05079) is the one pdflatex takes, and `\affiliation{\affil}` prints it. A guess the document's definition
+  // replaces (`is_definable_latex`, as aa_cls.rs's `\psj`); Perl ignores the `\newcommand` and reads `\affil}` with a
+  // missing argument (KNOWN_PERL_ERRORS #1199). Guard `perfect_kernel_batch86c::a_revtex_document_defines_its_own_affil`.
+  {
+    let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
+    DefMacro!("\\affil OptionalSemiverbatim {}",
+      "\\lx@add@affiliation[annotate={\\ifx.#1.new\\else 1\\fi},label={#1}]{#2}");
+  }
   // revtex4-2.cls:7519 (revtex4.cls:5964, revtex4-1.cls:7498): the obsolete `\address` becomes `\affiliation`, its
   // mark-led lines going to the names showing their marks (Perl's `\lx@add@address` had no mark path, 0806.3762),
   // as `\altaddress` becomes `\altaffiliation` below.

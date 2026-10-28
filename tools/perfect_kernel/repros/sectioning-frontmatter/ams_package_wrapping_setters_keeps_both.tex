@@ -1,0 +1,34 @@
+% mechanism: a boundary a lock on the AMS contact setters against the files must keep: a package that wraps a setter,
+%   calling the binding through a copy it saved with \let, is the binding still. epigamath.sty:227-232 prints each
+%   address again where the paper's \displayaddresses sets it; MyCommA.sty:530-533 links the e-mail. A lock that
+%   refuses the wrapper loses both.
+% witness: 2206.02674, 2304.03539, 2305.12241 (epigamath.sty), 2602.16384 (MyCommA.sty); here a minimal stand-in of both
+% oracle:  pdflatex 0 errors: "A. KOLLAR" on the title; after the body "Princeton University" (the package's
+%          \displayaddresses), then amsart's own "Princeton University / Email address: kollar@math.princeton.edu"
+% engines: rust int116a = the creator's address and linked e-mail, the end paragraphs
+% expect:  0 errors, 0 warnings; the creator has the address and the e-mail, its link kept; the document's last
+%          paragraph is the address the package printed again
+% status:  CONTROL (int116a; no guard)
+% preload: ar5iv.sty
+\begin{filecontents*}{wrapaddr.sty}
+% A minimal stand-in for epigamath.sty:227-232 and MyCommA.sty:530-533, written for a latexml-oxide test.
+\ProvidesPackage{wrapaddr}[2022/01/01 stand-in]
+\def\displayaddresses{}
+\let\@pigaaddress\address
+\renewcommand{\address}[1]{\g@addto@macro{\displayaddresses}{\par\noindent#1}\@pigaaddress{#1}}
+\let\orgemail=\email
+\renewcommand{\email}[1]{\orgemail{\href{mailto:#1}{#1}}}
+\end{filecontents*}
+\documentclass{amsart}
+\usepackage{hyperref}
+\usepackage{wrapaddr}
+\begin{document}
+\title{Families of Varieties}
+\author{A. Kollar}
+\address{Princeton University}
+\email{kollar@math.princeton.edu}
+\maketitle
+Body.
+
+\displayaddresses
+\end{document}

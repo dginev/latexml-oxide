@@ -1,0 +1,21 @@
+% mechanism: a boundary a lock on the AMS contact setters against the files must keep: a document's own redefinition is
+%   the document's, as in pdflatex. 1212.1375 (and 2206.01924) define a two-argument \address that sets a box where it
+%   is called, after the body.
+% witness: 1212.1375 (1212.1375.tex:412-417, :2101), 2206.01924 (decomposition.tex:150)
+% oracle:  pdflatex 0 errors: "A. Stout" on the title, and after the body "Graduate Center, CUNY: astout@gc.cuny.edu"
+% engines: rust int116a = the same (the document's \address runs in place)
+% expect:  0 errors, 0 warnings; the creator has no address; the body ends with the document's address line
+% status:  CONTROL (int116a; no guard)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\makeatletter
+\def\address#1#2{\par\noindent{\scshape #1}: #2\par}
+\makeatother
+\begin{document}
+\title{Toric Varieties}
+\author{A. Stout}
+\maketitle
+Body.
+
+\address{Graduate Center, CUNY}{astout@gc.cuny.edu}
+\end{document}

@@ -1,0 +1,38 @@
+% mechanism: fcs.cls:268-290 `\DeclareDocumentCommand \author { s o m }`: the star marks the corresponding author (an
+%   envelope, :720-723) and the option lists the labels of the `\address[label]` lines the name requests (:293-307).
+%   The fcs binding (fcs_cls.rs) left the kernel's \author[]{}, which read the star as the name and set "[1,2]Bob
+%   Corresponding" after the abstract; and OmniBus's \address ignored the label, every address the last author's.
+% witness: 2410.08723 (template.tex:16-21: \author[1], \author*[1,2], \address[1], \address[2]); here a minimal
+%          stand-in of the class
+% oracle:  pdflatex 0 errors: "Ann Author1, Bob Corresponding(envelope)1,2, Carl Plain / 1 University of Witness /
+%          2 Institute of Repro"
+% engines: rust int116a = 0 errors, a creator "*", "[1,2]Bob Corresponding" a paragraph, both addresses the last
+%          author's; perl (no binding) = every author mangled
+% expect:  0 errors, 0 warnings; three creators, none named "*": Ann with address 1; Bob with the corresponding mark
+%          and addresses 1 and 2; Carl with none
+% status:  RED (int116a) -> GREEN (86c)
+% preload: ar5iv.sty
+\begin{filecontents*}{fcs.cls}
+% A minimal stand-in for fcs.cls (Front. Comput. Sci., 2020, Zhao Chongbin), written for a latexml-oxide test: its
+% \author (:268-290), \address (:293-307) and the title block they print.
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{fcs}[2020/01/01 stand-in]
+\LoadClass{article}\RequirePackage{xparse}
+\def\fcs@authors{}\def\fcs@addresses{}\newcounter{fcs@address}
+\DeclareDocumentCommand\author{s o m}{\g@addto@macro\fcs@authors{#3\IfBooleanT{#1}{(\textsc{b})}%
+  \IfNoValueF{#2}{\textsuperscript{\@for\fcs@r:=#2\do{\ref{\fcs@r} }}} }}
+\DeclareDocumentCommand\address{o m}{\g@addto@macro\fcs@addresses{\par
+  \IfNoValueTF{#1}{#2}{\refstepcounter{fcs@address}\label{#1}\arabic{fcs@address}\quad #2}}}
+\renewcommand\maketitle{{\centering\LARGE\@title\par\normalsize\fcs@authors\par\fcs@addresses\par}}
+\end{filecontents*}
+\documentclass{fcs}
+\title{Repro Title}
+\author[1]{Ann Author}
+\author*[1,2]{Bob Corresponding}
+\author{Carl Plain}
+\address[1]{University of Witness}
+\address[2]{Institute of Repro}
+\begin{document}
+\maketitle
+\begin{abstract}Abstract words here.\end{abstract}
+Body text.
+\end{document}
