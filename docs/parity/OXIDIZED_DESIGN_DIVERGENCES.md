@@ -25874,7 +25874,9 @@ aguplus, `aas_support_sty::altaffil_markup`): each label the affiliation of ever
 unmarked one the block's (1301.7157); `\affil` an affiliation of the authors before it (`annotate=new`); `\resumen` and
 `\abstract` two abstracts handed on in the title page's order, "Resumen" before "Abstract", whichever is given first, at
 `\maketitle` (else at the first section, else at the end, as aguplus's addresses); the keywords one accumulating list
-(`\@kwdsep` " --- "); `\shorttitle` (:550, the running head) the toc title, as OmniBus's (Perl keeps it, 0903.4819).
+(`\@kwdsep` " --- "); `\shorttitle` (:550, the running head) the toc title, as OmniBus's (Perl keeps it, 0903.4819), only until the title
+page is made — the class's own `abstracts` environment re-sets the running head with `\shorttitle{Abstracts}` (:1366),
+no toc title of the paper's (the 86b r2 re-review's r2 probe).
 The class's `\newcommand`s of these names are ignored, so no lock is needed; its document-time
 `\renewcommand{\altaffilmark}[1]{\relax}` in the index and contents environments stays the class's.
 

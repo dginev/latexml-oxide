@@ -67,7 +67,9 @@ LoadDefinitions!({
     "\\lx@add@keywords[name={Key Words:}]{#1}"
   );
   // :550 `\shorttitle{…}` (`\@shorttitle`, the running head, :421): the toc title, as OmniBus's (Perl reads rmaa so and
-  // keeps it, 0903.4819; 5 of the 11 rmaa papers give one).
+  // keeps it, 0903.4819; 9 of the 11 rmaa papers give one). Only until the title page is made: the class's own
+  // `abstracts` environment (:1366) re-sets the running head with `\shorttitle{Abstracts}`, no toc title of the paper's.
   DefMacro!("\\shorttitle{}", "\\lx@add@toctitle{#1}");
+  AddToMacro!("\\lx@maketitle@begin", "\\global\\let\\shorttitle\\@gobble");
   crate::shipped_class::read_raw(&RMAA)?;
 });
