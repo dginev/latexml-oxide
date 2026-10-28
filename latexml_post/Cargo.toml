@@ -53,7 +53,7 @@ which = "8"
 # lives in `latexml_oxide` because it needs the model loader. This crate is back
 # to depending on `latexml_core` alone.
 latexml_core = {path = "../latexml_core", version = "0.6.0"}
-rusqlite = { version = "0.40.1", features = ["bundled"] }
+rusqlite = { version = "0.41.0", features = ["bundled"] }
 serde_json = "1.0.151"
 
 # setsid + killpg in graphics.rs `run_with_timeout` — kills convert's gs
