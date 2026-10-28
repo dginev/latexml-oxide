@@ -15,6 +15,12 @@ recovery cases are recorded here with their witnesses. Each OPEN_ROWS row named 
   own output (OPEN_ROWS design row "title-page line membership from the speculative title-page run", task #367).
   Witnesses 1705.02941, 1010.5721, 1707.06242 (a paper's own `\authors{…}`), 1103.2069, 1710.03652, 1105.3169,
   1803.08128, 1109.1681.
+- **Names stacked under names with no line between** (85a residual, OD #900): `Ann Able \\ Bob Baker \\ Univ X`
+  stays lines of the first author, as Perl reads it. Nothing in the text tells a stacked run of names from a name over
+  a name-shaped institution, so it needs the labelling study (`AUTHOR_BLOCK_LABELING_DESIGN.md`, not built). Witness
+  1702.07694 (Peter I. Frazier, Shane G. Henderson); RED `author_block_stacked_names_each_a_creator`.
+- **adassconf's typesetting `\author`** called once per author keeps only the last call (astro-ph0101447); the class
+  prints each name at its call, so recovery needs the calls collected in order rather than the kernel store.
 - **FM-14** a class setter that builds the kernel's `\@author` from its stores (jfpc.cls:188-191; 1503.05530).
 - **FM-15** vmsta 2018+ `\author@optarg` names made by `\csname`; a replayed `\maketitle` prints the author line
   and the e-mail line twice (1806.03850, 1810.09667, 2012.03249).
