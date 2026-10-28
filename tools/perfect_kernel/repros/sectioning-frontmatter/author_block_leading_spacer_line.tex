@@ -1,0 +1,19 @@
+% witness: solv-int9710025 (`\author{\ \\ Ann … \\ … \\ \\ Bob … \\ …}`, the 85a r3 review's probe k5; pre-existing):
+%          a block opening with a line that prints only a control space reads it as an empty names line, so the
+%          first author is a line of a nameless creator; `coalesce_empty_creators` (insert.rs) then appends that
+%          creator's lines after the next creator's own (Bob Baker holding University of Y, then "Ann Able" and
+%          University of X). The leading spacer line is the block's spacing, Ann Able its names line
+% oracle:  pdflatex 0 errors: one centred column, a blank line, Ann Able, University of X, a blank line, Bob Baker,
+%          University of Y
+% engines: rust int114a = no creator (both authors dropped); rust 85a r3, r4 = Bob Baker holding University of Y, Ann
+%          Able, University of X
+% expect:  0 errors, 0 warnings; two creators, each with its own line
+% status:  RED (int114a, 85a r3, 85a r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{\ \\ Ann Able \\ University of X \\ \\ Bob Baker \\ University of Y}
+\begin{document}
+\maketitle
+Text.
+\end{document}

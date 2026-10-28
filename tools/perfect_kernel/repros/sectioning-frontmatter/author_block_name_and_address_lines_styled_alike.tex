@@ -1,0 +1,27 @@
+% witness: 2408.11742 (`\author{\name Yuliang Cai \email caiyulia@usc.edu\\ \addr University of Southern California \\
+%          \name Mohammad Rostami \email rostamim@usc.edu \\ \addr University of Southern California}`, the JMLR
+%          `\name`/`\email`/`\addr` declarations of its tmlr.sty, over the article class)
+% oracle:  pdflatex 0 errors: "Ann Able ann@usc.edu / University of Southern California / Bob Baker bob@usc.edu /
+%          University of Southern California"
+% engines: rust int114a = one creator, Ann Able with her address, "Bob Baker bob@usc.edu" among her affiliation
+%          contacts (silent); Perl 0.8.8 one creator "Ann Able ann@usc.edu", every later line her affiliation
+% expect:  0 errors, 0 warnings; two creators, each with its address and its line
+% status:  RED (int114a) -> GREEN (85a)
+% preload: ar5iv.sty
+\documentclass{article}
+% (tmlr.sty:98-100, the paper's: declarations, no arguments)
+\def\addr{\small\it}
+\def\email{\hfill\small\it}
+\def\name{\normalsize\bf}
+\title{T}
+\author{\name Ann Able \email ann@usc.edu\\
+      \addr
+      University of Southern California
+      \\
+      \name Bob Baker \email  bob@usc.edu \\
+     \addr
+      University of Southern California}
+\begin{document}
+\maketitle
+Text.
+\end{document}

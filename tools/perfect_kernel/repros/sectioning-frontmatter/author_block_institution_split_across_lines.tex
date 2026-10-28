@@ -1,0 +1,45 @@
+% witness: 1110.3939 (`School of Physical and \\ Mathematical Sciences`), 2510.15190 (`Department of Electrical \\and
+%          Computer Engineering`), 1404.5443 (`Department of Biomedical Engineering and \\ Computational Science`),
+%          math-ph9903017 (`James Clerk Maxwell Building`): an institution's name set across lines stays the lines of
+%          the author above it, though a line of it reads as a name — the line above ends in a connective or the line
+%          opens with one (`Institute of Theoretical and \\ Applied Mechanics`, the 85a r1 review's r10), a head noun
+%          and its adjectives before the first comma go on with the line above (`Johns Hopkins \\ University,
+%          Baltimore`, `Los Alamos \\ National Laboratory`, `San Diego \\ State University`, q1, q2, q16;
+%          `continues_the_line`), a name-shaped head over an institution of its own has no person's cue (`Max Planck \\
+%          Institute for …`, q13; `Carnegie Mellon \\ University`, `Tata Institute \\ of Fundamental Research`,
+%          `Imperial College \\ London`, the r2 review's t14a-c), a field or building word (`Computer Engineering`, q14;
+%          NON_PERSON_WORDS), styled words inside a line (`{\bf Enrico Fermi} Institute, Chicago`, q15). OD #900
+% oracle:  pdflatex 0 errors: one centred column per author, the name over its lines
+% engines: rust int114a, 85a r2, r3 = as expected (the guarded negatives' engines line records the r1 creators)
+% expect:  0 errors, 0 warnings; the six creators, every other line their contact
+% status:  GREEN (int114a, 85a r2, r3) — a catalog repro, no guard: its 1110.3939 / 2510.15190 / 1404.5443 /
+%          math-ph9903017 / q1 / q2 / q13 / q16 shapes ride on perfect_kernel_batch85a::lines_that_read_as_names_stay_lines
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \\
+Department of Electrical \\
+Computer Engineering, University of X
+\and {\bf Bob Baker} \\
+Department of Physics \\
+{\bf Enrico Fermi} Institute, Chicago
+\and Cat Cole \\
+Department of Physics \\
+Imperial College \\
+London
+\and Dan Dorn \\
+Robotics Institute \\
+Carnegie Mellon \\
+University
+\and Eve Eads \\
+Department of Theoretical Physics \\
+Tata Institute \\
+of Fundamental Research
+\and Fay Fox \\
+Remote Sensing Division \\
+Naval Research \\
+Laboratory, Washington DC}
+\begin{document}
+\maketitle
+Text.
+\end{document}

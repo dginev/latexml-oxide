@@ -1,0 +1,55 @@
+% witness: 1702.07694 (`\name Stephen N. Pallone \email snp32@cornell.edu \\ \name Peter I. Frazier \email pf98@… \\
+%          \name Shane G. Henderson \email sgh9@… \\\\ \addr School of Operations Research … \\ 290 Rhodes Hall, Cornell
+%          University \\ Ithaca, …`, the JMLR declarations over the article class): a stacked run of name lines — each
+%          reading as a name, styled as the line above it — keeps the lines under it as the run's; its last name does
+%          not take them alone, though an institution stands under it and its name has an initial (the 85a r1 review's
+%          finding 1, probes q6, r13, r14). Telling the run's names apart (each a creator sharing the lines) changes the
+%          "names under names" reading Perl and int114a keep — deferred (SYNC_STATUS); a run after a name's own line
+%          (`Dan Dorn \\ Physics Department, … \\ Eve Eads \\ Fay F. Fox \\ Institute of Y, Z`) is in the RED
+%          author_block_stacked_names_each_a_creator
+%          The veto's other side: after a gap a name line under a line that reads as a name (`Hong Kong`) opens the
+%          next author when the lines above do not all read as names (`Hanson Robotics` holds a field word: no run
+%          reaching the names line, the 85a r2 review's finding 5a; the 85a r1 review's q11; 0801.1297) — and after
+%          a gap no line opens one when every line between the names line and it reads as names, a name or a row of
+%          them, however styled: `\textbf{6 names} \\ \textbf{5 names\thanks{…}} \\ \\ CUHK MMLab \\ \texttt{…}`
+%          (2604.18394; the 85a r3 review's finding 1, k1), the lab the rows' line, no creator. The guard asserts the
+%          run only where today's reading and the right one (each name a creator sharing the lines: the RED
+%          author_block_stacked_names_each_a_creator) agree; the second row of names read as a line is the same RED
+% oracle:  pdflatex 0 errors: "Ann Able / Bob B. Baker / Cat C. Cole", their three addresses, then the shared address
+%          lines; Dan Dorn, his two lines, a blank line, Eve Eads, Univ B; two bold rows of names, a blank line,
+%          CUHK MMLab and the e-mail under both rows
+% engines: rust int114a = Ann Able holding every line (the other names among them); rust 85a r1 = Ann Able holding
+%          only "Bob B. Baker bob@x.edu", Cat C. Cole the shared address lines alone (by position); rust 85a r3 =
+%          a creator "CUHK MMLab", Fay Fox and Gil Gray without it
+% expect:  0 errors, 0 warnings; Ann Able holding her e-mail and the shared lines, no other name holding them
+%          alone; Dan Dorn, Eve Eads with their lines; Fay Fox and Gil Gray holding CUHK MMLab, no creator named so
+% status:  GREEN (int114a; Eve Eads RED there) -> RED (85a r1) -> GREEN (85a r2) -> RED (85a r3 review: k1) ->
+%          GREEN (85a r4)
+% preload: ar5iv.sty
+\documentclass{article}
+% (tmlr.sty:98-100, as 2408.11742's: declarations, no arguments)
+\def\addr{\small\it}
+\def\email{\hfill\small\it}
+\def\name{\normalsize\bf}
+\title{T}
+\author{\name Ann Able \email ann@x.edu \\
+\name Bob B. Baker \email bob@x.edu \\
+\name Cat C. Cole \email cat@x.edu \\\\
+\addr School of Operations Research \\
+290 Rhodes Hall, Cornell University \\
+Ithaca, NY 14853, USA
+\and Dan Dorn \\
+Hanson Robotics \\
+Hong Kong \\
+\\
+Eve Eads \\
+Univ B
+\and \textbf{Fay Fox \quad Gil Gray} \\
+\textbf{Hal Hunt \quad Ida Ives\thanks{Corresponding author.}} \\
+\\
+CUHK MMLab \\
+\texttt{fay@x.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,33 @@
+% witness: gr-qc9906006 (`… Puerto Rico 00931-3343 \\[12pt] Palash B. Pal`), 2503.11250 (`\\[5pt]` before each later
+%          author), the 85a r1 review's r3, r3b (finding 6), the r2 review's u2, t19: a positive `\\[len]` (and `\\
+%          \vspace{12pt} \\`) between a name's lines and the next name is the gap pdflatex prints, opening the next
+%          author (`strip_linebreak_options_keeping_gaps` writes it `\\ \\`); with lines styled `\small{…}` under each
+%          name (a marked block's gaps: author_block_marked_block_gaps). OD #900
+% oracle:  pdflatex 0 errors: one centred column per group, the gaps printed
+% engines: rust int114a = each later name among the lines of the author above (`\\[12pt]` stripped); rust 85a r1 =
+%          the `\vspace` shape right, the `\\[12pt]` one not; rust 85a r2, r3 = as expected
+% expect:  0 errors, 0 warnings; the seven creators, each with its own lines
+% status:  RED (int114a, 85a r1) -> GREEN (85a r2) — a catalog repro, no guard: rides on
+%          perfect_kernel_batch85a::{next_name_after_a_spacer_line, lines_after_spaced_names}
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \\
+Univ A \\[12pt]
+Bob Baker \\
+Boston, MA
+\and Cat Cole \\
+Univ C \\
+\vspace{12pt} \\
+Dan Dorn \\
+Boston, MA
+\and Eve Eads\thanks{x} \\
+\small{Institute of Statistics, University of Bern, Switzerland} \\[5pt]
+Fay Fox \\
+\small{DTIS, ONERA, Paris-Saclay University, Palaiseau, France} \\[5pt]
+Gil Gray \\
+\small{Institute of Statistics, University of Bern, Switzerland}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

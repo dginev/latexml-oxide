@@ -693,3 +693,118 @@ fn notes_out_of_marks_takes_the_note_after_the_mark() {
     tk(r"Ann$^{1}$\thanks{X}, Bob\textsuperscript{2}")
   );
 }
+
+#[test]
+fn institution_head_continues_the_line_above() {
+  setup();
+  // (an institution's head noun, adjectives before it, goes on with the name over it: the 85a r1 review's finding 2,
+  // probes q1, q2, q16; two nouns, or an institution's own name, are an institution of their own)
+  for (line, under, continues) in [
+    ("Johns Hopkins", "University, Baltimore, MD 21218", true),
+    ("Los Alamos", "National Laboratory, NM 87545", true),
+    ("San Diego", "State University, CA", true),
+    ("Shanghai Jiao Tong", "University", true),
+    ("Bob B. Baker", "Physics Department, University of X", false),
+    ("Bob B. Baker", "Research Center, University of X", false),
+    ("Zach Shahn", "IBM Research,", false),
+    ("Max Planck", "Institute for Gravitational Physics", false),
+  ] {
+    assert_eq!(
+      continues_the_line(&tk(line), &tk(under)),
+      continues,
+      "{line} / {under}"
+    );
+  }
+}
+
+#[test]
+fn person_over_institution_needs_a_persons_cue() {
+  setup();
+  // (an initial or a particle tells a person's name from two capitalized words — a place, an institution's name, a
+  // role: the 85a r1 review's findings 2-4)
+  for (line, under, person) in [
+    ("Palash B. Pal", "Saha Institute of Nuclear Physics", true),
+    ("V.I. Tkach", "Department of Physics", true),
+    ("J.-P. Serre", "Department of Mathematics", true),
+    (
+      "Ludwig van Beethoven",
+      "Department of Music, University of X",
+      true,
+    ),
+    (
+      r"\name Shane G. Henderson \email sgh9@x.edu",
+      "School of Operations Research",
+      true,
+    ),
+    ("Max Planck", "Institute for Gravitational Physics", false),
+    (
+      "Santa Barbara",
+      "Kavli Institute for Theoretical Physics",
+      false,
+    ),
+    (
+      "Associate Dean",
+      "School of Medicine, University of X",
+      false,
+    ),
+    ("Zach Shahn", "IBM Research,", false),
+    ("St. Louis", "Department of Physics, University of X", false),
+    ("Bob B. Baker", "Boston, MA", false),
+    ("Johns B. Hopkins", "University, Baltimore", false),
+  ] {
+    assert_eq!(
+      person_over_institution(&tk(line), &tk(under)),
+      person,
+      "{line} / {under}"
+    );
+  }
+}
+
+#[test]
+fn linebreak_option_gap_kept_between_lines() {
+  setup();
+  // (compared without their spaces: a space after a control word is no token of the expected text)
+  let unspaced = |t: Tokens| -> Vec<Token> {
+    t.unlist()
+      .into_iter()
+      .filter(|t| *t != T_SPACE!())
+      .collect()
+  };
+  let kept = |s: &'static str| unspaced(strip_linebreak_options_keeping_gaps(tk(s)));
+  let plain = |s: &'static str| unspaced(tk(s));
+  // (a positive length is the gap it prints, `\\ \\`: gr-qc9906006, the 85a r1 review's finding 6; on the line
+  // break ending the names line too, the 85a r2 review's finding 3, for `name_groups`' block-spacing test; not a
+  // negative or zero length, not inside a group or an environment)
+  assert_eq!(kept(r"A \\ U \\[12pt] B"), plain(r"A \\ U \\ \\ B"));
+  assert_eq!(kept(r"A \\ U \\*[8pt] B"), plain(r"A \\ U \\ \\ B"));
+  assert_eq!(
+    kept(r"A \\ U \\ [\baselineskip] B"),
+    plain(r"A \\ U \\ \\ B")
+  );
+  assert_eq!(kept(r"A \\[12pt] U \\ B"), plain(r"A \\ \\ U \\ B"));
+  assert_eq!(
+    kept(r"A \\ U \and C \\[12pt] V"),
+    plain(r"A \\ U \and C \\ \\ V")
+  );
+  assert_eq!(kept(r"A \\ U \\[-2pt] B"), plain(r"A \\ U \\ B"));
+  assert_eq!(kept(r"A \\ U \\[0pt] B"), plain(r"A \\ U \\ B"));
+  assert_eq!(kept(r"{A \\ U \\[12pt] B}"), plain(r"{A \\ U \\ B}"));
+  // (nor after a row of names: 2605.24414's `\\[0.2em]` rows)
+  assert_eq!(
+    kept(r"A\;\;\; B \\[2pt] C\;\;\; D \\[2pt] E~~F \\ U"),
+    plain(r"A\;\;\; B \\ C\;\;\; D \\ E~~F \\ U")
+  );
+  assert_eq!(
+    kept(r"A \\ U \quad V \\[12pt] B"),
+    plain(r"A \\ U \quad V \\ B")
+  );
+  assert_eq!(
+    kept(r"\begin{tabular}{c}A \\ U \\[12pt] B\end{tabular}"),
+    plain(r"\begin{tabular}{c}A \\ U \\ B\end{tabular}")
+  );
+  // (the stripping alone, as before)
+  assert_eq!(
+    unspaced(strip_linebreak_options(tk(r"A \\ U \\[12pt] B"))),
+    plain(r"A \\ U \\ B")
+  );
+}

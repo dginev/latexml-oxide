@@ -1,0 +1,103 @@
+% witness: the stacked-run veto's edges in 85a's rule (a name line under a name's lines starts the next author): a run
+%          of name lines under a name's own line, or after a gap, whose last name has an institution under it — `Dan
+%          Dorn \\ Physics Department, University of X \\ Eve Eads \\ Fay F. Fox \\ Institute of Y, Z` (the 85a r1
+%          review's q6 with an initial), `Ann A. Able \\ Bob B. Baker \\[6pt] Cat C. Cole \\ Institute of Y, Z` (the
+%          85a r2 review's t16), `Gil Gray \\ Physics Department, Univ X \\[8pt] Hal H. Hunt \\ Ida I. Ives \\ Institute
+%          of Y, Z` (its w5); cue-less names stacked under a name's line (q6), under the names line (q8), stacked runs
+%          after a gap (r13, r14: the run's first name opens and holds the next name as its line); 1702.07694's JMLR
+%          run under the names line (`\name Ann Able \email … \\ \name Bob B. Baker \email … \\ \name Cat C. Cole
+%          \email … \\\\ \addr …`: Bob and Cat lines of Ann, the 85a r3 review's guard finding — the GREEN
+%          stacked_names_keep_their_lines asserts only that no name takes the shared lines alone); a row of names
+%          under the names row (`\textbf{Fay Fox \quad Gil Gray} \\ \textbf{Hal Hunt \quad Ida Ives} \\ \\ CUHK
+%          MMLab`, 2604.18394's second row: one line "Hal Hunt Ida Ives" of the first row's names, int114a too); a
+%          name under the names line (`Vic Vale \\ Wes Wolf \\ Department of Physics \\ Costa Rica`, the Gil Gray of
+%          lines_that_read_as_names_stay_lines); after a gap under rows of names, a name with a person's cue over an
+%          institution (`\textbf{Ari Ash \quad Ben Bly} \\ \textbf{Cal Cox \quad Dee Day} \\ \\ Eli E. Eck \\ Ohio State
+%          University`, the 85a r4 review's m1b) and after a gap under a lone line that reads as a name, a place
+%          (`Fin Fay \\ \textit{Hong Kong} \\ \\ Gus G. Gale \\ Ohio State University`, its m6b): the widened veto
+%          returns before the cue is weighed, so the author stays a line, as int114a. pdflatex prints each name a line of the column over the shared institute; telling the
+%          run's names apart, each a creator sharing the lines under the run, is the deferred "names under names"
+%          reading (SYNC_STATUS); none is given the shared lines alone by position (the veto: OD #900)
+% oracle:  pdflatex 0 errors: one centred column per author group, the names over their lines
+% engines: rust int114a = Dan Dorn holding every line, Eve Eads and Fay F. Fox among them; Ann A. Able the same;
+%          Gil Gray the same; rust 85a r2 = Dan Dorn as int114a, Ann A. Able holding "Bob B. Baker" and Cat C. Cole the
+%          institute alone (t16, by position), Gil Gray his line and Hal H. Hunt (after the gap) holding "Ida I. Ives"
+%          and the institute; rust 85a r3 = Dan Dorn and Ann A. Able as int114a, Gil Gray and Hal H. Hunt as 85a r2; rust
+%          85a r4 = as r3 for those, the JMLR Ann Able holding "Bob B. Baker bob@x.edu" and "Cat C. Cole cat@x.edu"
+%          as affiliations (the address inside), Fay Fox and Gil Gray each holding "Hal Hunt Ida Ives" and CUHK MMLab,
+%          Vic Vale holding Wes Wolf's line, Ari Ash and Ben Bly each holding "Cal Cox Dee Day", Eli E. Eck and her
+%          lines, Fin Fay holding Hong Kong, Gus G. Gale and his lines (int114a's readings)
+% expect:  0 errors, 0 warnings; every name a creator, a run's names sharing the lines under it
+% status:  RED (int114a, 85a r2, 85a r3, 85a r4)
+% preload: ar5iv.sty
+\documentclass{article}
+% (tmlr.sty:98-100, as 2408.11742's: declarations, no arguments)
+\def\addr{\small\it}
+\def\email{\hfill\small\it}
+\def\name{\normalsize\bf}
+\title{T}
+\author{Jan Jones \\
+Physics Department, University of X \\
+Kim Kerr \\
+Lee Lowe \\
+Institute of Y, Z
+\and Mia Moss \\
+Ned Nash \\
+Department of Physics \\
+University of X
+\and Oli Ott \\
+Pam Poe \\
+Univ A \\
+\\
+Quin Quay \\
+Rex Roe \\
+Univ B
+\and Sam Shaw \\
+Physics Department, Univ X \\
+\\
+Tom Tate \\
+Uma Udall \\
+Univ Y
+\and Dan Dorn \\
+Physics Department, University of X \\
+Eve Eads \\
+Fay F. Fox \\
+Institute of Y, Z
+\and Ann A. Able \\
+Bob B. Baker \\[6pt]
+Cat C. Cole \\
+Institute of Y, Z
+\and Gil Gray \\
+Physics Department, Univ X \\[8pt]
+Hal H. Hunt \\
+Ida I. Ives \\
+Institute of Y, Z
+\and \name Ann Able \email ann@x.edu \\
+\name Bob B. Baker \email bob@x.edu \\
+\name Cat C. Cole \email cat@x.edu \\\\
+\addr School of Operations Research \\
+Ithaca, NY 14853, USA
+\and \textbf{Fay Fox \quad Gil Gray} \\
+\textbf{Hal Hunt \quad Ida Ives} \\
+\\
+CUHK MMLab
+\and Vic Vale \\
+Wes Wolf \\
+Department of Physics \\
+Costa Rica
+\and \textbf{Ari Ash \quad Ben Bly} \\
+\textbf{Cal Cox \quad Dee Day} \\
+\\
+Eli E. Eck \\
+Ohio State University \\
+Columbus, OH
+\and Fin Fay \\
+\textit{Hong Kong} \\
+\\
+Gus G. Gale \\
+Ohio State University \\
+Columbus, OH}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -4,8 +4,13 @@
 %          B. Pal and his two address lines: two authors
 % engines: rust 64w = one creator, José F. Nieves, with "Palash B. Pal" among his six affiliation contacts; rust
 %          64qb (OmniBus) = 5 creators, names and addresses mixed; Perl not run
+% mechanism: the positive `\\[12pt]` is the gap pdflatex prints, as `\\ \vspace{12pt} \\` is (85a r2,
+%          `strip_linebreak_options_keeping_gaps`); "Palash B. Pal", a name with an initial over an institute, opens
+%          the next author too (`person_over_institution`) — either signal alone suffices
 % expect:  0 errors; two creators, each with his own affiliation lines
-% status:  RED (64w)
+% status:  RED (64w) -> GREEN (85a); a catalog repro, no guard of its own since 85a r4 (the 85a r3 review's finding
+%          6): each signal is guarded alone, the gap by perfect_kernel_batch85a::next_name_after_a_spacer_line (`\\[12pt]
+%          Eve Eads \\ Boston, MA`), the initial over an institute by next_name_under_its_institution
 % preload: ar5iv.sty
 \documentclass{article}
 \title{Non-universal gravitational couplings of neutrinos in matter}

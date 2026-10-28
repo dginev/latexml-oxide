@@ -1,0 +1,132 @@
+% witness: the negatives of 85a's rule (a name line under a name's lines starts the next author): an institution whose
+%          words read as a name (`Hanson Robotics`, 1709.07791's) under the name stays its line when nothing under it is
+%          an institution; a place (`Hong Kong`) over the institution it goes on with (`The Hong Kong University …`)
+%          stays a line; a role (`Chief Scientist`) over an institution stays a line; a two-word line closing the block
+%          stays a line; a name line with no lines of its own under a name stays the names' line, as Perl reads it; a
+%          line going on with the one above it (`School of Physical and \\ Mathematical Sciences`, 1110.3939; `Department
+%          of Electrical \\and Computer Engineering`, 2510.15190; `Department of Biomedical Engineering and \\
+%          Computational Science`, 1404.5443; `Institute of Theoretical and \\ Applied Mechanics`, the connective alone,
+%          the 85a r1 review's r10) and a building (`James Clerk Maxwell Building`, math-ph9903017) stay lines. The 85a
+%          r1 review's findings 2-4 and 7: with no gap and no styling, two capitalized words over an institution are no
+%          author without a person's cue (an initial, a particle) — an institution's name over its head noun (`Johns
+%          Hopkins \\ University, Baltimore`, `Los Alamos \\ National Laboratory`, `San Diego \\ State University`, q1,
+%          q2, q16, which go on with the line too), over an institution of its own (`Max Planck \\ Institute for …`,
+%          q13), a place (`Santa Barbara`, `Ann Arbor`, q3, r11), a role or field (`Associate Dean`, `Vice Provost`,
+%          `Cognitive Neuroscience`, q5, q10, q9); after a gap, a title-case common-noun phrase (`Technical Report`,
+%          q7; `Lecture Notes`) stays a line. The 85a r2 review's findings 2 and 3: a place closing the block stays a
+%          line under a line in a style group of its own (`\textit{University of X} \\ Costa Rica`, `{\it University of
+%          X} \\ Hong Kong`, t5, t6: that styling reading needs a line under the candidate), after a gap (`\\ \\ Hong
+%          Kong`, `\\[12pt] Hong Kong`, t23: a gap-opened last line needs a person's cue) and under a group whose every
+%          line a gap opens, the first line break's included (`\\[2pt] University of X \\[2pt] Hong Kong`, t1, t22:
+%          the block's spacing). The 85a r3 review's finding 2: a gap before every line from the second under the
+%          names line on (`University of X \\[2pt] Santa Barbara \\[2pt] California`, g11), or before every line down
+%          to the candidate (`\\[3pt] University of X \\[3pt] Santa Barbara \\ California`, g12), is the block's spacing
+%          too: a cue-less line after it stays a line (lengths are not compared, so `Ann Able \\[3pt] Inst \\[3pt] Bob
+%          Baker \\ Inst B` reads the same: the RED author_block_uniform_gaps_hide_a_wider_gap). `Gil Gray` under the
+%          names line `Fay Fox` is a name under names (the RED author_block_stacked_names_each_a_creator): the guard
+%          asserts only Fay Fox's two lines and no creator holding them alone. More shapes of these classes, unguarded: author_block_institution_split_across_lines,
+%          author_block_places_and_roles_under_an_institution. The cue rule's residual (a cue-less person's name:
+%          1908.10448's `Zach Shahn \\ IBM Research,`) is in the RED article_plain_name_line_between_affiliations
+% oracle:  pdflatex 0 errors: one centred column of lines per author
+% engines: rust int114a = Ann Able, Fay Fox, Hal Hunt, Ida Ives, Jan Jones, Kim Kerr and Lee Lowe with their lines,
+%          and a creator "Computer Engineering" holding the lines after it (#52's "and"-led opening); Perl 0.8.8
+%          creators split at the "and"s and commas of the lines
+% engines: rust 85a r1 = creators "Computer Engineering" gone; "Johns Hopkins", "Los Alamos", "San Diego", "Max
+%          Planck", "Santa Barbara", "Ann Arbor", "Associate Dean", "Vice Provost", "Cognitive Neuroscience",
+%          "Technical Report", "Lecture Notes" and "Zach Shahn" creators (its first cut also "Mathematical Sciences" and
+%          "James Clerk Maxwell Building"); rust 85a r2 = creators "Costa Rica" and "Hong Kong" (findings 2, 3); rust
+%          85a r3 = creators "Santa Barbara" under Quin Quay and Rex Roe (the r3 review's g11, g12)
+% expect:  0 errors, 0 warnings; the thirteen creators, every other line their contact (Gil Gray: see above)
+% status:  RED (int114a) -> GREEN (85a r2) -> RED (85a r2 review: t1, t5, t6, t22, t23) -> GREEN (85a r3) -> RED
+%          (85a r3 review: g11, g12) -> GREEN (85a r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \\
+Hanson Robotics \\
+Hong Kong \\
+The Hong Kong University of Science and Technology \\
+Chief Scientist \\
+Google Research
+\and Fay Fox \\
+Gil Gray \\
+Department of Physics \\
+Costa Rica
+\and Hal Hunt \\
+School of Physical and \\
+Mathematical Sciences \\
+Nanyang Technological University \\
+Department of Electrical \\and Computer Engineering \\
+Western University \\
+Department of Biomedical Engineering and \\
+Computational Science \\
+Aalto University \\
+Institute of Theoretical and \\
+Applied Mechanics \\
+Polish Academy of Sciences \\
+James Clerk Maxwell Building \\
+University of Edinburgh
+\and Ida Ives \\
+Department of Physics and Astronomy \\
+Johns Hopkins \\
+University, Baltimore, MD 21218 \\
+Theoretical Division \\
+Los Alamos \\
+National Laboratory, NM 87545 \\
+Department of Mathematics \\
+San Diego \\
+State University, CA \\
+Albert Einstein Institute \\
+Max Planck \\
+Institute for Gravitational Physics
+\and Jan Jones \\
+University of California \\
+Santa Barbara \\
+Kavli Institute for Theoretical Physics \\
+University of Michigan \\
+Ann Arbor \\
+Center for the Study of Complex Systems
+\and Kim Kerr \\
+Department of Medicine, University of X \\
+Associate Dean \\
+School of Medicine, University of X \\
+Vice Provost \\
+Office of Research, University of X \\
+Department of Psychology \\
+Cognitive Neuroscience \\
+Research Unit, Aarhus \\
+\\
+Technical Report \\
+Department of Physics \\
+\\
+Lecture Notes \\
+Summer School on Physics
+\and Lee Lowe \\
+\textit{University of X} \\
+Costa Rica
+\and Mia Moss \\
+{\it Department of Physics} \\
+{\it University of X} \\
+Hong Kong
+\and Ned Nash \\[2pt]
+University of X \\[2pt]
+Hong Kong
+\and Oli Ott \\
+University of X \\
+\\
+Hong Kong
+\and Pam Poe \\
+University of X \\[12pt]
+Hong Kong
+\and Quin Quay \\
+University of X \\[2pt]
+Santa Barbara \\[2pt]
+California
+\and Rex Roe \\[3pt]
+University of X \\[3pt]
+Santa Barbara \\
+California}
+\begin{document}
+\maketitle
+Text.
+\end{document}

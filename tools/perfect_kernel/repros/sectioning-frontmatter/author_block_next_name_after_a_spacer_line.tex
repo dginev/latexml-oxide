@@ -1,0 +1,40 @@
+% witness: 1702.01413 (`… B3 7ET, Birmingham, UK\\ \vspace{0.1cm}\\ A. Plastino\\ IFLP-CCT-Conicet\\ …`), 0801.1297 and
+%          1608.08479 (an empty line, `\\ \\`, before `V.I. Tkach`, `M. Lassaut`), 2201.06821 (`\\ \\ Liuhua Peng`, then
+%          `and\\ Zhonglei Wang`), 1509.03383 (`$ $\\ {\bf Anne Schilling}\\ {\em …}`): an author block of a name line,
+%          its address lines, a line that prints nothing, then the next name line and its own lines; a positive
+%          `\\[12pt]` or `\\*[8pt]` before the name prints the same gap (gr-qc9906006's `\\[12pt]`; the 85a r1 review's
+%          finding 6, probes r3/r3b: `\\[12pt]` had been no gap where `\\ \vspace{12pt} \\` was one)
+% oracle:  pdflatex 0 errors: one centred column — Ann Able, her three lines, a gap, B. Baker, his two lines, a gap,
+%          Cat Cole, her two lines, a gap, Dan Dorn and his line, a gap, Eve Eads and her line, a gap, Fay Fox and her
+%          line
+% engines: rust int114a = one creator, Ann Able, with every later name among her affiliation contacts (silent); Perl
+%          0.8.8 splits at every comma (Base_Utility.pool.ltxml:676-725): creators "Birmingham", "UK", "Argentina", …,
+%          each later name an affiliation line
+% engines: rust 85a r1 = Eve Eads and Fay Fox among Dan Dorn's lines (a `\\[len]` stripped before the lines were read)
+% expect:  0 errors, 0 warnings; six creators, each with its own lines
+% status:  RED (int114a) -> GREEN (85a)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\\
+Mathematics Department\\
+Aston University\\
+B3 7ET, Birmingham, UK\\
+\vspace{0.1cm}\\
+B. Baker\\
+IFLP-CCT-Conicet\\
+CC 727, 1900 La Plata, Argentina\\
+\\
+Cat Cole\\
+School of Mathematics and Statistics, \\The University of Melbourne\\
+$ $\\
+{\bf Dan Dorn}\\
+{\em LPTMS, Orsay}\\[12pt]
+Eve Eads\\
+Boston, MA\\*[8pt]
+Fay Fox\\
+Cambridge, MA}
+\begin{document}
+\maketitle
+Text.
+\end{document}

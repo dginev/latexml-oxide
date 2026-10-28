@@ -649,8 +649,27 @@ fn leading_markup(line: &Tokens) -> Vec<Token> {
 ///    name) stays an affiliation;
 ///  - after affiliations, a line of names carrying an author's note (`\thanks`, `\footnote`) opens the next pair
 ///    when the block's first names carry the same note command ([`author_note_of`]; hep-lat9404004's `C.
-///    Michael\thanks{…},`).
-pub(in crate::base_utilities) fn name_groups(lines: Vec<Tokens>) -> Vec<(Tokens, Vec<Tokens>)> {
+///    Michael\thanks{…},`);
+///  - after affiliations, a line that reads as a name and nothing else opens the next pair when the block's shape
+///    says it is the next author's ([`opens_next_author`]: a spacer line before it, its names' styling, the
+///    institution under it; 1702.01413, 1908.10448, 1709.07791).
+///
+/// `gaps` tells, by line, whether a line that prints nothing stood before it (dropped before the lines were handed
+/// here: `\\ \\`, `\vspace{0.1cm}\\`, a positive `\\[len]`). A gap before every line under the names line, the
+/// first one's included, or before every line from the second under it on, is the block's spacing, parting no authors
+/// (`Ann Able \\[2pt] University of X \\[2pt] Hong Kong`, the 85a r2 review's finding 3; `Ann Able \\ University of X
+/// \\[2pt] Santa Barbara \\[2pt] California`, the r3 review's finding 2, probe g11).
+pub(in crate::base_utilities) fn name_groups(
+  lines: Vec<Tokens>,
+  gaps: &[bool],
+) -> Vec<(Tokens, Vec<Tokens>)> {
+  let gaps = if (gaps.len() > 1 && gaps[1..].iter().all(|gap| *gap))
+    || (gaps.len() > 3 && gaps[2..].iter().all(|gap| *gap))
+  {
+    &[]
+  } else {
+    gaps
+  };
   let mut groups: Vec<(Tokens, Vec<Tokens>)> = Vec::new();
   let mut names_markup: Vec<Token> = Vec::new();
   let mut opens_pair = true;
@@ -686,6 +705,8 @@ pub(in crate::base_utilities) fn name_groups(lines: Vec<Tokens>) -> Vec<(Tokens,
     }
     // (the author's note the block's first names carry, below)
     let first_names_note = groups.first().and_then(|(first, _)| author_note_of(first));
+    // (whether the line starts the next author after the open pair's lines, below)
+    let opens_next = opens_next_author(&groups, &lines, index, gaps, &names_markup);
     let (names, affiliations) = groups.last_mut().expect("a pair is open");
     let alternates = affiliations.last().is_some_and(|last| {
       let affiliation_markup = leading_markup(last);
@@ -697,6 +718,10 @@ pub(in crate::base_utilities) fn name_groups(lines: Vec<Tokens>) -> Vec<(Tokens,
     let and_led = text
       .strip_prefix("and ")
       .or_else(|| text.strip_prefix("& "));
+    // (a line that opens the next pair after affiliations is a names line: a row of names on it, parted by a run of
+    // spacing, is parted as the block's first names line's is, [`normalize_hspace_separators`], then by the split,
+    // [`space_parted_names`] — `Ann Able \\ Univ A \\ \\ Bob Baker~~~~Cat Cole \\ Univ B`, two creators, not one named
+    // "Bob Baker Cat Cole", the 85a r1 review's finding 5; `{\bf Gil Gray}~~~{\bf Hal Hunt}` between `{\it …}` lines)
     if affiliations.is_empty() && names_continue(names, line) {
       let mut joined = names.clone().unlist();
       // a line of names after a finished list goes on after a comma, where the line break parted them
@@ -724,14 +749,17 @@ pub(in crate::base_utilities) fn name_groups(lines: Vec<Tokens>) -> Vec<(Tokens,
       // the next names, the lines after them their affiliations as after any names
       groups.push((line.clone(), Vec::new()));
     } else if let Some(names_line) = and_led
-      .filter(|rest| leading_markup(line) == names_markup && name_count(rest) > 0)
+      .filter(|rest| {
+        leading_markup(line) == names_markup && name_count(rest) > 0 && !names_no_person(rest)
+      })
       .and_then(|_| without_leading_and(line))
     {
       // after affiliations, "and" before names opens the next author (`James Brink \\Dept of Math., UC Berkeley,
-      // …\\and Zhenghan Wang \\Dept of Math., Indiana University`, math-ph0303018), its "and" dropped
-      groups.push((names_line, Vec::new()));
+      // …\\and Zhenghan Wang \\Dept of Math., Indiana University`, math-ph0303018), its "and" dropped — not "and" before
+      // a field of study, the line above going on (`Department of Electrical \\and Computer Engineering`, 2510.15190)
+      groups.push((normalize_hspace_separators(names_line), Vec::new()));
     } else if alternates && leading_markup(line) == names_markup && name_count(text) > 0 {
-      groups.push((line.clone(), Vec::new()));
+      groups.push((normalize_hspace_separators(line.clone()), Vec::new()));
     } else if name_count(text) > 0
       && first_names_note.is_some()
       && author_note_of(line) == first_names_note
@@ -742,7 +770,9 @@ pub(in crate::base_utilities) fn name_groups(lines: Vec<Tokens>) -> Vec<(Tokens,
       // 1403.1404); an affiliation with a note under plain names stays one (`Ann Able and Bob Baker\\ Department of
       // Physics\\ Ohio State\footnote{Visiting.}`), and so does one with another note command than the names'
       // (`Ann Able\thanks{x}\\ Dept\\ Ohio State\footnote{Visiting}\\ Bob Baker\thanks{y}`)
-      groups.push((line.clone(), Vec::new()));
+      groups.push((normalize_hspace_separators(line.clone()), Vec::new()));
+    } else if opens_next {
+      groups.push((normalize_hspace_separators(line.clone()), Vec::new()));
     } else {
       affiliations.push(line.clone());
     }
@@ -756,6 +786,290 @@ pub(in crate::base_utilities) fn name_groups(lines: Vec<Tokens>) -> Vec<(Tokens,
     affiliations.push(and_line);
   }
   groups
+}
+
+/// Words a line of capitalized words naming no person holds, though [`name_count`] reads it as a name: the title-case
+/// common-noun phrases an author block sets on a line of its own — a role or a title (`Chief Scientist`, `Visiting
+/// Scholar`, `Associate Dean`, `Vice Provost`), a field of study (`Mathematical Sciences`, `Computational Science`,
+/// `Computer Engineering`: 1110.3939, 1404.5443, 2510.15190; `Cognitive Neuroscience`), a facility (`James Clerk
+/// Maxwell Building`, math-ph9903017), a document (`Technical Report`, `Lecture Notes`). Such a line is the line of
+/// the author above it, not the next author. Local to [`opens_next_author`] and the "and"-led opening of
+/// [`name_groups`]: it only keeps a line a line, where [`NON_NAME_WORDS`] decides what [`name_count`] reads as a name
+/// everywhere — surnames such as "Dean", "Head" or "Chair" stay names there. Two capitalized words with no person's
+/// cue over an institution need no word here ([`person_over_institution`]); a gap or the names' styling before such
+/// a phrase does.
+const NON_PERSON_WORDS: &[&str] = &[
+  "chief",
+  "scientist",
+  "lecturer",
+  "director",
+  "engineer",
+  "manager",
+  "scholar",
+  "researcher",
+  "investigator",
+  "emeritus",
+  "editor",
+  "president",
+  "officer",
+  "adjunct",
+  "visiting",
+  "postdoctoral",
+  "postdoc",
+  "candidate",
+  "chair",
+  "chairman",
+  "dean",
+  "provost",
+  "head",
+  "lead",
+  "architect",
+  "consultant",
+  "science",
+  "sciences",
+  "engineering",
+  "mathematics",
+  "mathematical",
+  "computational",
+  "computing",
+  "computer",
+  "statistics",
+  "statistical",
+  "technology",
+  "technologies",
+  "technological",
+  "technical",
+  "robotics",
+  "informatics",
+  "economics",
+  "chemistry",
+  "biology",
+  "medicine",
+  "medical",
+  "neuroscience",
+  "psychology",
+  "astronomy",
+  "astrophysics",
+  "studies",
+  "systems",
+  "building",
+  "report",
+  "lecture",
+  "notes",
+  "paper",
+  "preprint",
+  "manuscript",
+  "thesis",
+  "dissertation",
+];
+
+/// Whether `line` prints nothing ([`prints_nothing`]) once its math shifts are left out: spacing, or a formula holding
+/// nothing but spacing (`$ $\\`, 1509.03383's spacer between author blocks).
+fn spacer_line(line: &Tokens) -> bool {
+  prints_nothing(&Tokens::new(
+    line
+      .unlist_ref()
+      .iter()
+      .filter(|t| t.get_catcode() != Catcode::MATH)
+      .copied()
+      .collect(),
+  ))
+}
+
+/// Whether a text that reads as a name holds a word that names no person ([`NON_PERSON_WORDS`]).
+fn names_no_person(text: &str) -> bool {
+  text
+    .split_whitespace()
+    .any(|word| word_forms(word).any(|form| NON_PERSON_WORDS.contains(&form.as_str())))
+}
+
+/// The visible text of `line` as a name, without the address it ends with (the JMLR family's `\name Ann Able \email
+/// ann@x.edu`, [`name_and_trailing_email`]; an error reading the address is raised where the name is made).
+fn name_text_without_address(line: &Tokens) -> String {
+  let name = name_and_trailing_email(line).map_or_else(|_| line.clone(), |(name, _)| name);
+  visible_name_text(name.unlist_ref()).trim().to_string()
+}
+
+/// Whether `line` reads as a name and nothing else: every part a name ([`name_count`]) once the address it ends with
+/// is aside ([`name_text_without_address`]: `\name Peter I. Frazier \email pf98@cornell.edu`, 1702.07694), no word
+/// naming no person ([`NON_PERSON_WORDS`]), no note ([`classify_thanks`]), no mark leading it, and no e-mail or link
+/// line.
+fn reads_as_name_alone(line: &Tokens) -> bool {
+  let text = name_text_without_address(line);
+  name_count(&text) > 0
+    && !names_no_person(&text)
+    && classify_thanks(&text) == "note"
+    && !line_is_email(line)
+    && !is_link_line(line)
+    && after_symbol_mark(line.unlist_ref()).len() == line.unlist_ref().len()
+}
+
+/// Whether a word is an initial: capitals, each with at most one small letter and its period, hyphens between (`B.`,
+/// `V.I.`, `J.-P.`, `Yu.`), not a place's abbreviation (`St.`, `Mt.`, `Ft.`).
+fn is_initial(word: &str) -> bool {
+  let word = word.trim_end_matches([',', ';']);
+  !word.is_empty()
+    && !["St.", "Mt.", "Ft."].contains(&word)
+    && word.split('-').all(|part| {
+      let mut chars = part.chars().peekable();
+      let mut any = false;
+      while let Some(capital) = chars.next() {
+        if !capital.is_uppercase() {
+          return false;
+        }
+        chars.next_if(|c| c.is_lowercase());
+        if chars.next() != Some('.') {
+          return false;
+        }
+        any = true;
+      }
+      any
+    })
+}
+
+/// Whether a name's text carries what only a person's name does: an initial ([`is_initial`]: `Palash B. Pal`, `James
+/// M. Robins`) or a particle inside it ([`NAME_PARTICLES`]: `Ludwig van Beethoven`). Two capitalized words alone are as
+/// often a place, an institution's head or a role (`Johns Hopkins`, `Max Planck`, `Santa Barbara`, `Associate Dean`)
+/// as a name.
+fn has_person_cue(text: &str) -> bool {
+  let words: Vec<&str> = text.split_whitespace().collect();
+  words.iter().any(|word| is_initial(word))
+    || (words.len() > 2
+      && words[1..words.len() - 1]
+        .iter()
+        .any(|word| NAME_PARTICLES.contains(word)))
+}
+
+/// Whether `under`, the line under the name line `line`, is an institution of its own under it, telling that `line` is
+/// a person's: an institution ([`reads_as_institution`]) that does not go on with `line`'s words
+/// ([`continues_the_line`]: `Johns Hopkins \\ University, Baltimore`), under a name carrying a person's cue
+/// ([`has_person_cue`]: `Palash B. Pal \\ Saha Institute of Nuclear Physics`, gr-qc9906006) — not two capitalized words
+/// alone, a place or a role over an institution (`University of California \\ Santa Barbara \\ Kavli Institute …`,
+/// `Associate Dean \\ School of Medicine`, the 85a r1 review's findings 2-4).
+pub(in crate::base_utilities) fn person_over_institution(line: &Tokens, under: &Tokens) -> bool {
+  reads_as_institution(under)
+    && !continues_the_line(line, under)
+    && has_person_cue(&name_text_without_address(line))
+}
+
+/// Whether `lines[index]`, after the lines under the open pair's names (the last of `groups`), is the next author's
+/// name line: it reads as a name and nothing else ([`reads_as_name_alone`]), does not go on with the line above it
+/// (that line ending in a connective, `School of Physical and \\ Mathematical Sciences`, 1110.3939, or the line opening
+/// with one, `\\ and Computer Engineering`, 2510.15190), and the block's shape says so — with no gap before it, only
+/// when the line above is not itself a name styled as it is, a stacked run of names whose lines below are the run's
+/// (`\name Stephen N. Pallone \email … \\ \name Peter I. Frazier \email … \\ \name Shane G. Henderson \email … \\\\
+/// \addr …`, 1702.07694: Henderson took the run's shared address alone, the 85a r1 review's finding 1), and after a gap
+/// only when not every line under the names line down to it reads as names, a name or a row of them, however styled
+/// (`Ann A. Able \\ Bob B. Baker \\[6pt] Cat C. Cole`, the r2 review's finding 5a; `\textbf{6 names} \\ \textbf{5
+/// names} \\ \\ CUHK MMLab`, 2604.18394, the r3 review's finding 1); else a gap parts the authors whatever the line
+/// above reads as (`Comunidad de Palo Blanco, Salamanca Gto. México.\\ \\ V.I. Tkach`, 0801.1297):
+///  - a line that prints nothing stands before it (`gaps`, or a line such as `$ $` kept among the lines: `…UK\\
+///    \vspace{0.1cm}\\ A. Plastino\\ IFLP-CCT-Conicet`, 1702.01413; `\\ \\ V.I. Tkach`, 0801.1297, 1608.08479,
+///    2201.06821; `$ $\\ {\bf Anne Schilling}`, 1509.03383; a positive `\\[12pt]`, gr-qc9906006,
+///    [`strip_linebreak_options_keeping_gaps`]; not one that stood before every line under the names line down to it,
+///    the block's spacing) — on the block's last line only with a person's cue ([`has_person_cue`]:
+///    `\\ \\ Hong Kong` stays a line, the r2 review's finding 3);
+///  - it is styled as the names over the open pair are, in markup of their own the line above it is not in
+///    (`{\bf Anne Schilling}` under `{\em …}`; `\name Mohammad Rostami` under `\addr …`, 2408.11742), or plain as
+///    they are under a line set in a style group of its own, with a line under it (`Eddie Monroe` under `{\it Institute
+///    of Noetic Sciences …}`, 1709.07791, the line under him mistyped `I{\it ONS …}`; not a closing `\textit{University
+///    of X} \\ Costa Rica`, the r2 review's finding 2);
+///  - the line under it is an e-mail address its names spell ([`addresses_spelling`]), or a line styled as the block's
+///    styled affiliations are and unlike the name (`David Hanson \\ {\it Hanson Robotics}` under `{\it …}` lines,
+///    1709.07791), or an institution of its own under a person's name ([`person_over_institution`]: `James M. Robins \\
+///    Department of …`, 1908.10448). With no gap and no styling, the institution under a cue-less name tells nothing:
+///    1908.10448's `Zach Shahn \\ IBM Research,` stays a line of Lin Liu (a SYNC_STATUS residual).
+///
+/// A line that reads as a name with none of these stays the line it is (`Hanson Robotics` over a name, `Hong Kong` over
+/// `The Hong Kong University …`, a closing `Costa Rica`), as the names under names with no lines between them do.
+fn opens_next_author(
+  groups: &[(Tokens, Vec<Tokens>)],
+  lines: &[Tokens],
+  index: usize,
+  gaps: &[bool],
+  names_markup: &[Token],
+) -> bool {
+  let Some((_, affiliations)) = groups.last() else {
+    return false;
+  };
+  let Some(above) = affiliations.iter().rev().find(|a| !spacer_line(a)) else {
+    return false;
+  };
+  let line = &lines[index];
+  let text = name_text_without_address(line);
+  let above_text = visible_name_text(above.unlist_ref());
+  let connective = |word: Option<&str>| {
+    word.is_some_and(|word| {
+      [
+        "and", "&", "of", "for", "the", "at", "in", "de", "di", "du", "des", "und", "et", "e", "y",
+      ]
+      .contains(&word.to_lowercase().as_str())
+    })
+  };
+  if !reads_as_name_alone(line)
+    || connective(text.split_whitespace().next())
+    || connective(above_text.split_whitespace().next_back())
+  {
+    return false;
+  }
+  // (a gap at every line break of the block down to it, the first one included, is the block's
+  // spacing, as one before every line of the block is: `Ann Able \\[3pt] University of X \\[3pt] Santa Barbara \\
+  // California`, the 85a r3 review's probe g12)
+  let block_spacing = (1..=index).all(|before| gaps.get(before) == Some(&true));
+  let gap = (gaps.get(index).copied().unwrap_or(false) && !block_spacing)
+    || index
+      .checked_sub(1)
+      .is_some_and(|before| spacer_line(&lines[before]));
+  let markup = leading_markup(line);
+  let above_markup = leading_markup(above);
+  // (with no gap before it, a name styled as the line above it, which reads as a name too: a stacked run of names,
+  // their lines below; after a gap, any line when every line under the names line down to it reads as names, a name
+  // or a row of them, however styled — the gap parts rows of names from the lines they share: `Ann A. Able \\ Bob B.
+  // Baker \\[6pt] Cat C. Cole \\ Institute of Y, Z`, the 85a r2 review's finding 5a, probe t16; `\textbf{6 names} \\
+  // \textbf{5 names\thanks{…}} \\ \\ CUHK MMLab \\ \texttt{…}`, 2604.18394, the r3 review's finding 1, probe k1)
+  let reads_as_names = |a: &Tokens| {
+    reads_as_name_alone(a) || {
+      let pieces = split_author_line(a.clone());
+      pieces.len() > 1 && pieces.iter().all(reads_as_name_alone)
+    }
+  };
+  let stacked = if gap {
+    affiliations
+      .iter()
+      .filter(|a| !spacer_line(a))
+      .all(reads_as_names)
+  } else {
+    above_markup == markup && reads_as_name_alone(above)
+  };
+  if stacked {
+    return false;
+  }
+  // (a line under it: the block's last line, opened by a gap alone, needs a person's cue — `Ann Able \\ University of
+  // X \\[2pt] Hong Kong`, `\\ \\ Hong Kong`, the 85a r2 review's finding 3, probes t1, t22, t23)
+  let line_under = index + 1 < lines.len();
+  let gap = gap && (line_under || has_person_cue(&text));
+  // (styled as the names, under a line styled otherwise — in markup of the names' own, or, with a line under it, in a
+  // group of the line's own under plain names: `Eddie Monroe` under `{\it Institute of Noetic Sciences …}`,
+  // 1709.07791; not the block's closing place, `\textit{University of X} \\ Costa Rica`, the 85a r2 review's finding 2,
+  // probes t5, t6; a declaration's style, `\small Dept of Physics`, goes on over the lines after it)
+  let styled_as_names = markup == names_markup
+    && above_markup != names_markup
+    && (!names_markup.is_empty() || (line_under && above_markup.contains(&T_BEGIN!())));
+  // (the markup of the block's affiliation lines that open with some)
+  let affiliation_markups: Vec<Vec<Token>> = groups
+    .iter()
+    .flat_map(|(_, affiliations)| affiliations.iter().map(leading_markup))
+    .filter(|m| !m.is_empty())
+    .collect();
+  let under_it = lines.get(index + 1).is_some_and(|under| {
+    let under_markup = leading_markup(under);
+    addresses_spelling(line, under)
+      || (!under_markup.is_empty()
+        && under_markup != markup
+        && affiliation_markups.contains(&under_markup))
+      || person_over_institution(line, under)
+  });
+  gap || styled_as_names || under_it
 }
 
 /// The author's note command `line` carries at its top level, `\thanks` or `\footnote` (the first one), if any.

@@ -1,0 +1,44 @@
+% witness: the 85a r1 review's findings 3 and 4, the r2 review's t7, t8, t13, t25, t26: with no gap and no styling, two
+%          capitalized words with no person's cue (an initial, an inner particle) over an institution are as often a
+%          place (`Santa Barbara`, `Ann Arbor`, `Buenos Aires`, `San Carlos de Bariloche`, `Mt. Sinai`, `St. Louis`: q3,
+%          r11, q4; `St.`/`Mt.` are no initials) or a role or field (`Associate Dean`, `Vice Provost`, `Cognitive
+%          Neuroscience`, `Chief Scientist`: q5, q10, q9; NON_PERSON_WORDS) as a name, and stay the lines of the author
+%          above them (`person_over_institution`); a place under an institution (`Washington, D.C.`, `New York, N.Y.`)
+%          is no name. OD #900
+% oracle:  pdflatex 0 errors: one centred column per author, the name over its lines
+% engines: rust int114a, 85a r2, r3 = as expected (85a r1 made the guarded q3/r11/q5/q9/q10 shapes creators)
+% expect:  0 errors, 0 warnings; the six creators, every other line their contact
+% status:  GREEN (int114a, 85a r2, r3) — a catalog repro, no guard: its q3 / r11 / q5 / q9 / q10 shapes ride on
+%          perfect_kernel_batch85a::lines_that_read_as_names_stay_lines
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \\
+Departamento de F\'{\i}sica, FCEyN \\
+Buenos Aires \\
+Instituto de F\'{\i}sica de Buenos Aires
+\and Bob Baker \\
+Instituto Balseiro \\
+San Carlos de Bariloche \\
+Comisi\'on Nacional de Energ\'ia At\'omica
+\and Cat Cole \\
+University of X \\
+Mt. Sinai \\
+Icahn School of Medicine
+\and Dan Dorn \\
+Department of Physics \\
+St. Louis \\
+Washington University
+\and Eve Eads \\
+Georgetown University \\
+Washington, D.C. \\
+Institute for Advanced Study \\
+Princeton, N.J.
+\and Fay Fox \\
+Columbia University \\
+New York, N.Y. \\
+Brookhaven National Laboratory}
+\begin{document}
+\maketitle
+Text.
+\end{document}

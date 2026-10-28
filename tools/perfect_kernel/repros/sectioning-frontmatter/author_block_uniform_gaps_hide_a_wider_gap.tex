@@ -1,0 +1,33 @@
+% witness: the 85a r2 review's finding 3, probe t3: a gap before every line of a group is the block's spacing, so a
+%          wider gap before the next name among narrower ones (`\\[2pt] University of X \\[12pt] Bob Baker \\[2pt]`)
+%          parts no authors: lengths are not compared (the review's proposal, not taken: OD #900). Nor do equal gaps
+%          tell a name from a place: a gap before every line down to the line after them is the block's spacing (the
+%          85a r3 review's g12, `Ann Able \\[3pt] University of X \\[3pt] Santa Barbara \\ California`, a line), so
+%          `\\[3pt] University of X \\[3pt] Cat Cole \\ University of Z`, a name set the same way, stays a line too.
+%          Plainest form (the 85a r4 review's m8b): `Hal H. Hale \\[2pt] Boston University \\[12pt] Ian Irwin \\ Ohio
+%          State University` — a gap before every line down to Ian Irwin, so even a wider one parts nothing
+% oracle:  pdflatex 0 errors: one centred column, a wider gap before "Bob Baker"
+% engines: rust int114a, 85a r2, r3, r4 = Ann Able holding "Bob Baker" and University of Y; Cat Cole: rust int114a,
+%          85a r4 = a line of Dan Dorn's (85a r2, r3: a creator, and so was g12's "Santa Barbara"); Ian Irwin: rust
+%          int114a, 85a r4 = a line of Hal H. Hale's (85a r3: a creator)
+% expect:  0 errors, 0 warnings; six creators, each with its own line
+% status:  RED (int114a, 85a r3, 85a r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \\[2pt]
+University of X \\[12pt]
+Bob Baker \\[2pt]
+University of Y
+\and Dan Dorn \\[3pt]
+University of X \\[3pt]
+Cat Cole \\
+University of Z
+\and Hal H. Hale \\[2pt]
+Boston University \\[12pt]
+Ian Irwin \\
+Ohio State University}
+\begin{document}
+\maketitle
+Text.
+\end{document}

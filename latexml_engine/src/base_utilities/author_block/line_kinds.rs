@@ -439,10 +439,33 @@ fn institution_beside_labelled(segment: &Tokens) -> bool {
     && !is_link_line(segment)
 }
 
+/// The adjectives that qualify a generic institution noun at the head of an institution's name (`State University`,
+/// `National Laboratory`, `Technical University`), whatever name stands before them ([`continues_the_line`]).
+const INSTITUTION_ADJECTIVES: &[&str] = &[
+  "national",
+  "state",
+  "federal",
+  "technical",
+  "technological",
+  "polytechnic",
+  "central",
+  "international",
+  "royal",
+  "imperial",
+  "normal",
+  "medical",
+  "agricultural",
+  "catholic",
+  "autonomous",
+];
+
 /// Whether the institution `under` goes on with the words of `line` above it as one name of one institution, no
-/// institution of its own under a line of names: it is one generic institution noun ([`NON_NAME_WORDS`]: `Shanghai Jiao
-/// Tong \\ University`), opens with a connective (`… \\ of Science and Technology`), or holds every word of the line
-/// (`Hong Kong \\ The Hong Kong University of Science and Technology`) — the rev77y2 re-review's finding 4, probes k12,
+/// institution of its own under a line of names: its words before its first comma are one generic institution noun
+/// ([`NON_NAME_WORDS`]) and the adjectives before it that qualify it ([`INSTITUTION_ADJECTIVES`]) — the head of
+/// an institution whose name is the line above (`Shanghai Jiao Tong \\ University`; `Johns Hopkins \\ University,
+/// Baltimore`, `San Diego \\ State University, CA`, `Los Alamos \\ National Laboratory, NM`, the 85a r1 review's
+/// finding 2) —, opens with a connective (`… \\ of Science and Technology`), or holds every word of the line (`Hong
+/// Kong \\ The Hong Kong University of Science and Technology`) — the rev77y2 re-review's finding 4, probes k12,
 /// k17. An institution's own name is none (`Cat Cole \\ CERN`, `\\ RIKEN`, `\\ the University of Tokyo`, `\\ eBay
 /// Inc.`, `\\ Max-Planck-Institut`: the rev77y3 re-review's finding 1, probes k20, k26, k31, k40-k42; rev77y4's, c2,
 /// c5). A name over a one-word generic noun or a connective-led institution of its own (`Cat Cole \\ Physics`, `\\ at
@@ -458,10 +481,24 @@ pub(in crate::base_utilities) fn continues_the_line(line: &Tokens, under: &Token
       .next()
       .is_some_and(|bare| NON_NAME_WORDS.contains(&bare.as_str()))
   };
-  matches!(words.as_slice(), [word] if generic_noun(word))
-    || words
-      .first()
-      .is_some_and(|word| ["of", "and", "for", "at", "in"].contains(word))
+  // (the words before the first comma: `University, Baltimore, MD` → `University`)
+  let head: Vec<&str> = words
+    .iter()
+    .take_while(|word| !word.ends_with(','))
+    .chain(words.iter().find(|word| word.ends_with(',')))
+    .copied()
+    .collect();
+  let qualifier = |word: &str| {
+    word_forms(word)
+      .next()
+      .is_some_and(|bare| INSTITUTION_ADJECTIVES.contains(&bare.as_str()))
+  };
+  // (one noun, last: two are an institution's whole name, `Physics Department, Univ X`, `Research Center`)
+  head.split_last().is_some_and(|(noun, qualifiers)| {
+    generic_noun(noun) && qualifiers.iter().all(|word| qualifier(word))
+  }) || words
+    .first()
+    .is_some_and(|word| ["of", "and", "for", "at", "in"].contains(word))
     || text.split_whitespace().all(|word| words.contains(&word))
 }
 

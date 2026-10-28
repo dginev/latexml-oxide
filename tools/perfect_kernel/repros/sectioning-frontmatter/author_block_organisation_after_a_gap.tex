@@ -1,0 +1,21 @@
+% witness: the 85a r3 review's finding 3, probe k4: after a gap, a line whose words read as a name opens the next
+%          author when a line stands under it — an organisation's name too (`Google DeepMind`, `Meta AI`), as a name
+%          does (`\\[12pt] Eve Eads \\ Boston, MA`, guarded by perfect_kernel_batch85a::next_name_after_a_spacer_line).
+%          Only words tell the two apart (no lexicon of organisations: not taken, OD #900); no corpus witness found
+%          among the 53 + 210 papers with later gaps (the r3 review's scans 6 and 7)
+% oracle:  pdflatex 0 errors: one centred column, Ann Able, University of X, a blank line, Google DeepMind, London, UK
+% engines: rust int114a = Ann Able holding every line; rust 85a r1-r4 = a creator "Google DeepMind" holding "London, UK"
+% expect:  0 errors, 0 warnings; one creator, Ann Able, holding the three lines
+% status:  RED (85a r1, r2, r3, r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \\
+University of X \\
+\\
+Google DeepMind \\
+London, UK}
+\begin{document}
+\maketitle
+Text.
+\end{document}

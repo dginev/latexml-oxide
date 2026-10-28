@@ -17,14 +17,68 @@ use super::*;
 /// the spaces after it, which `\@ifnextchar` skips (`\\ [0.5em]`, 2604.20841), so
 /// ordinary bracketed content elsewhere in a name/affiliation is untouched.
 pub fn strip_linebreak_options(tokens: Tokens) -> Tokens {
+  linebreak_options_stripped(tokens, false)
+}
+
+/// [`strip_linebreak_options`], an author block's positive `\\[len]` kept as the gap it prints: written `\\ \\`, the
+/// spacer line pdflatex sets the same gap with (`\\ \vspace{len} \\`), which the unmarked branch reads as a gap before
+/// the next line ([`name_groups`]: gr-qc9906006's `… Puerto Rico 00931-3343 \\[12pt] Palash B. Pal`; the 85a r1
+/// review's finding 6). Only at the block's top level, outside braces and environments (a tabular's row is no line),
+/// and not after a row of names, a line holding a wide space or a run of spacing at its top level (`Ivy Ives\;\;\; Jon Jay \\[0.2em] Lou Lee\;\;\; Max Moss \\[0.2em] Oli Ott`,
+/// 2605.24414: rows going on with the names line, [`normalize_hspace_separators`]). The first line break of a group of
+/// names, the one ending their names line, keeps its gap too, though no lines stand above it for the gap to part: a
+/// gap there and before every later line is the block's spacing, parting no authors (`Ann Able \\[2pt] University of X
+/// \\[2pt] Hong Kong`, the 85a r2 review's finding 3; [`name_groups`]). A negative or zero length (`\\[-0.1cm]`,
+/// `\\[0pt]`) is no gap.
+pub(in crate::base_utilities) fn strip_linebreak_options_keeping_gaps(tokens: Tokens) -> Tokens {
+  linebreak_options_stripped(tokens, true)
+}
+
+/// Whether the tokens of a `\\[…]` option, between its brackets, are a positive length: not led by a minus sign, and
+/// a register (`\bigskipamount`, `\baselineskip`) or a number with a non-zero digit (`12pt`, `.5cm`; not `0pt`).
+fn positive_length(option: &[Token]) -> bool {
+  let mut tokens = option.iter().filter(|t| **t != T_SPACE!());
+  let Some(first) = tokens.next() else {
+    return false;
+  };
+  *first != T_OTHER!("-")
+    && std::iter::once(first).chain(tokens).any(|t| {
+      t.get_catcode() == Catcode::CS || t.with_str(|s| s.chars().any(|c| ('1'..='9').contains(&c)))
+    })
+}
+
+fn linebreak_options_stripped(tokens: Tokens, keep_gaps: bool) -> Tokens {
   let src = tokens.unlist();
   let n = src.len();
   let mut out: Vec<Token> = Vec::with_capacity(n);
   let brk = T_CS!("\\\\");
+  // (the brace depth and the environment depth outside braces; whether the line since the last line break holds a wide
+  // space or a run of spacing at its top level, a row)
+  let (mut depth, mut environments) = (0usize, 0usize);
+  let mut row = false;
   let mut i = 0;
   while i < n {
     out.push(src[i]);
+    if depth == 0
+      && (is_separating_space(&src[i])
+        || (is_spacing_command(&src[i])
+          && src[i + 1..]
+            .iter()
+            .find(|t| **t != T_SPACE!())
+            .is_some_and(is_spacing_command)))
+    {
+      row = true;
+    }
+    match src[i].get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ if depth == 0 && src[i] == T_CS!("\\begin") => environments += 1,
+      _ if depth == 0 && src[i] == T_CS!("\\end") => environments = environments.saturating_sub(1),
+      _ => {},
+    }
     if src[i] == brk {
+      let top = depth == 0 && environments == 0;
+      let after_row = std::mem::take(&mut row);
       let mut j = i + 1;
       let mut consumed = false;
       // (the spaces before the optional argument skipped, as `\@ifnextchar` skips them: latex.ltx's `\@xnewline`,
@@ -55,6 +109,9 @@ pub fn strip_linebreak_options(tokens: Tokens) -> Tokens {
           k += 1;
         }
         if depth == 0 {
+          if keep_gaps && top && !after_row && positive_length(&src[j + 1..k - 1]) {
+            out.extend([T_SPACE!(), brk]);
+          }
           j = k;
           consumed = true;
         }

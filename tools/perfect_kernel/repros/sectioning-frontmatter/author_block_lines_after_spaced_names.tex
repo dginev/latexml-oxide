@@ -1,0 +1,57 @@
+% witness: 1701.05964 (`Assaf P. Oron\hspace{.2cm}\\ Children's Core for Biomedical Statistics, Seattle Children's
+%          Research Institute\\ and \\ Nancy Flournoy \\ Department of Statistics, University of Missouri`), 2004.03971
+%          (`Efstathios Paparoditis \hspace{.2cm}\\ … \\ University of Cyprus\\ and \\ Han Lin Shang \\ …`), 1504.05438
+%          (its "and" line), 2503.11250 (`Lea Friedli\thanks{…}\hspace{.2cm} \\ \small{Institute …} \\[5pt] Athénaïs
+%          Gautier \\ \small{DTIS, …} \\[5pt] Anna Broccard \\ …`): the JASA template's `\hspace{.2cm}` before the
+%          first line break parts no names from the lines under them; with the names line, those lines are one group's,
+%          parted as any (`name_groups`): an "and" line between two names opens the next author and is dropped, a
+%          `\\[5pt]` or `\\ \\` gap opens one (the 85a r2 review's finding 1, probes v1, v3, u1, u3); without the
+%          `\hspace`, the same lines (v2)
+% oracle:  pdflatex 0 errors: one centred column per group, "and" between the names
+% engines: rust int114a = creators named by the institution's comma parts ("Department of Statistics", …), each
+%          holding every later line; rust 85a r2 = Ann Able and Cat Cole holding "and", Bob Baker, Dan Lin Dorn and the
+%          lines under them, Eve Eads holding every later line (Nancy Flournoy, Han Lin Shang, Athénaïs Gautier lost)
+% expect:  0 errors, 0 warnings; fourteen creators, each with its own lines, no "and" contact
+% status:  RED (int114a, 85a r2) -> GREEN (85a r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\hspace{.2cm}\\
+Children's Core for Biomedical Statistics, Seattle Children's Research Institute\\
+and \\
+Bob Baker \\
+Department of Statistics, University of Missouri
+\and Cat Cole \hspace{.2cm}\\
+Department of Mathematics and Statistics\\
+University of Cyprus\\
+and \\
+Dan Lin Dorn \\
+Department of Actuarial Studies and Business Analytics\\
+Macquarie University
+\and Eve Eads\thanks{Corresponding author.}\hspace{.2cm} \\
+\small{Institute of Mathematical Statistics and Actuarial Science, University of Bern, Switzerland} \\[5pt]
+Fay Fox \\
+\small{DTIS, ONERA, Paris-Saclay University, 91120, Palaiseau, France} \\[5pt]
+Gil Gray \\
+\small{Institute of Mathematical Statistics and Actuarial Science, University of Bern, Switzerland}\footnote{Master
+student.} \\[5pt]
+Hal Hunt \\ \small{Institute of Mathematical Statistics and Actuarial Science, University of Bern, Switzerland}
+\and Ida Ives\hspace{.2cm} \\
+Institute of Statistics, University of Bern \\
+\\
+Jan Jones \\
+DTIS, ONERA, Paris-Saclay University
+\and Kim Kerr\thanks{Supported by X.}\hspace{.2cm} \\
+Department of Statistics, University of X \\
+and \\
+Lee B. Lowe \\
+Department of Statistics, University of Y
+\and Mia Moss\thanks{Supported by Y.} \\
+Department of Statistics, University of X \\
+and \\
+Ned Nash \\
+Department of Statistics, University of Y}
+\begin{document}
+\maketitle
+Text.
+\end{document}

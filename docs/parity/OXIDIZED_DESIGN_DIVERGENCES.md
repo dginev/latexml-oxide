@@ -1732,8 +1732,10 @@ of alternating plain lines lost a name:
   `author_note_of`; `A.M. Green\thanks{…},\\ … \\ C. Michael\thanks{…},\\ DAMTP …`, hep-lat9404004; 1410.7277,
   1706.02584, 1403.1404); under plain names a noted affiliation stays one (`Ann Able and Bob Baker\\ Department of
   Physics\\ Ohio State\footnote{Visiting.}`). Guards `author_note_name_line_opens_next_author`,
-  `author_noted_affiliation_stays_affiliation`. Residual (RED `article_plain_name_line_between_affiliations`): the
-  same alternation with no notes, a place reading as a name too. The note command must be the first names' own
+  `author_noted_affiliation_stays_affiliation`. With no notes the same alternation opens the next author when a gap,
+  the names' styling or a person's name over an institution says so (#900); residual (RED
+  `article_plain_name_line_between_affiliations`): a cue-less `Bob Baker` over `Univ Y, …` with none of these, a place
+  reading as a name too (1908.10448's `Zach Shahn \\ IBM Research,`). The note command must be the first names' own
   (`\thanks` names over a `\footnote`d affiliation: the affiliation stays one; guard
   `author_other_note_command_stays_affiliation`); with `\footnote` on names and affiliations alike the block is
   ambiguous and a noted affiliation name-shaped line opens an author (RED `author_footnote_everywhere_ambiguous`).
@@ -14997,7 +14999,9 @@ per-class rule:
   opening with "and" opens the next group, its "and" dropped (`…\\and Zhenghan Wang \\Dept of Math., …`,
   math-ph0303018); and after an affiliation styled unlike the names, a line of names styled as the names opens the
   next group only when an affiliation styled as that one follows it (the alternation of hep-ph9306253, 0811.1526), so
-  a closing city line stays an affiliation. "Names" is `name_shaped`:
+  a closing city line stays an affiliation; and after a name's lines, a line that reads as a name alone opens the
+  next group when a gap, the names' styling or the institution under a person's name says so (#900). "Names" is
+  `name_shaped`:
   2-5 capitalised words or initials (a letter command — `{\L}ukasz`, `\O stergaard` — read as its letter, an accent's
   spaces skipped; initials glued to their surname, `A.G.Bogdanchikov`, `Yu.M.Shatunov`, read as words, 63f,
   hep-ex0105093 5 → 38 creators — not a place's `St.`, `Mt.`, `Ft.`; a `\vspace` with its length is no text, an
@@ -25568,3 +25572,92 @@ ACM CCS, the earlier classes' 1998 ACM Subject Classification). Shared change: `
 (frontmatter/place.rs) counts an `address` contact as it counts an `affiliation`, so an e-mail under a lettered
 `\address` is placed by its letter. Repros `class-bindings/lmcs_{lettered_addresses, unlettered_addresses,
 written_letters}`; guards `perfect_kernel_batch84c::*`.
+
+### 900. An unmarked author block's next name line under the lines of the name above starts the next author (Perl: the first author holds every line)
+
+A hand-formatted `\author{…}` in the article class often lists its authors as blocks of lines: a name line, its
+address lines, then the next name line (`\author{Laura Rebollo-Neira\\ Mathematics Department\\ Aston University\\ B3
+7ET, Birmingham, UK\\ \vspace{0.1cm}\\ A. Plastino\\ IFLP-CCT-Conicet\\ …}`, 1702.01413), which pdflatex prints as one
+centred column of author blocks. Perl's no-marker branch reads the first `\\` piece of each `@authorsplits` part as
+the names and the rest as their affiliations (Base_Utility.pool.ltxml:720-725; its parts are cut at every comma and
+"and" too, so the column falls into creators named by address fragments, "Birmingham", "UK"), and ours kept the
+first-line rule, so every later name was an affiliation contact of the first author — silently: the frontmatter
+scorer's largest missing-author shape (9 of the 18 missing authors on int114a). Ours (`opens_next_author`,
+author_block/name_text.rs, a rule of `name_groups`): after the lines under a name, a line that reads as a name and
+nothing else (`reads_as_name_alone`: every part a name, `name_count`, a trailing address aside, `\name … \email …`; no
+word of a title-case common-noun phrase, `NON_PERSON_WORDS` — roles, titles, fields of study, facilities, documents:
+`Chief Scientist`, `Associate Dean`, `Mathematical Sciences`, `James Clerk Maxwell Building`, `Technical Report`; no
+note, no leading mark, no e-mail or link line), not going on with the line above (that line ending in a connective,
+`School of Physical and \\ Mathematical Sciences`, or the line opening with one), starts the next author when
+- a line that prints nothing stands before it (`\\ \vspace{0.1cm}\\`, `\\ \\`, `$ $\\`; the dispatch hands
+  `name_groups` a gap flag per line), or a positive `\\[len]` does — pdflatex prints the same gap, so
+  `strip_linebreak_options_keeping_gaps` writes it `\\ \\` at the block's top level, outside environments, but not
+  after a row of names (`\\[0.2em]` rows, 2605.24414), nor in the whole-block tabular/minipage fallback, whose
+  content keeps its line breaks as written (1901.06146); a gap before every line under the names line, the first line
+  break's included, or before every line from the second under it on, or at every line break of the block down to the
+  candidate, is the block's spacing, no gap (`Ann Able \\[2pt] University of X \\[2pt] Hong Kong`; `\\ University of X \\[2pt]
+  Santa Barbara \\[2pt] California`; `\\[3pt] University of X \\[3pt] Santa Barbara \\ California`; lengths are not
+  compared, so a wider gap among narrower ones parts no authors, nor does a name set as that place is: RED
+  `author_block_uniform_gaps_hide_a_wider_gap`); and a gap-opened last line of the block needs a person's cue (`\\
+  \\ Hong Kong`, `\\[12pt] Hong Kong` stay lines);
+- it is styled as the names over it in markup of its own the line above is not (`{\bf Anne Schilling}` under `{\em
+  …}`, 1509.03383; `\name Mohammad Rostami` under `\addr …`, 2408.11742), or, with a line under it, plain as they
+  are under a line set in a style group of its own (`Eddie Monroe` under `{\it Institute of Noetic Sciences …}`,
+  1709.07791; not a closing `\textit{University of X} \\ Costa Rica`);
+- the line under it is an e-mail address its names spell, a line styled as the block's styled affiliation lines
+  (`David Hanson \\ {\it Hanson Robotics}`, 1709.07791), or an institution of its own under a person's name
+  (`person_over_institution`): an institution that does not go on with the line (`continues_the_line`: a connective
+  opening it, every word of the line again, or its words before the first comma one generic institution noun and the
+  adjectives before it, `INSTITUTION_ADJECTIVES` — `Johns Hopkins \\ University, Baltimore`, `Los Alamos \\ National
+  Laboratory`, `San Diego \\ State University`), under a name carrying a person's cue, an initial or a particle
+  (`Palash B. Pal \\ Saha Institute of Nuclear Physics`, gr-qc9906006; `James M. Robins \\ Department of …`,
+  1908.10448). Two capitalized words alone over an institution are as often a place, an institution's name or a role
+  (`Santa Barbara \\ Kavli Institute …`, `Max Planck \\ Institute for …`, `Associate Dean \\ School of Medicine`), so
+  with no gap and no styling a cue-less name stays a line.
+With no gap, a name styled as the line above it that itself reads as a name is a stacked run of names, whose lines
+below are the run's: its last name does not take them alone by position (1702.07694's `\name Stephen N. Pallone
+\email … \\ \name Peter I. Frazier \email … \\ \name Shane G. Henderson \email … \\\\ \addr …`). After a gap, no
+line opens the next author when every line between the names line and it reads as names — a name, or a row of them
+(each piece of `split_author_line` a name) — however styled: the gap parts rows of names from the lines they share
+(`Ann A. Able \\ Bob B. Baker \\[6pt] Cat C. Cole \\ Institute of Y, Z`; `\textbf{6 names} \\ \textbf{5
+names\thanks{…}} \\ \\ CUHK MMLab \\ \texttt{…}`, 2604.18394, the lab no creator); otherwise a gap parts the
+authors whatever the line above reads as (`Comunidad de Palo Blanco, Salamanca Gto. México.\\ \\ V.I. Tkach`,
+0801.1297). A line that opens the next author — by this rule or by #52's alternation, note or "and" rules — is a names
+line: a row of names on it parted by a run of spacing is parted as the block's first names line is (#52(o), then
+`space_parted_names`: `\\ \\ Bob Baker~~~~Cat Cole \\ Univ B`, two creators). A name-shaped line with none of these
+stays a line (`Hanson Robotics` over a name, `Hong Kong` over `The Hong Kong University …`, a closing `Costa Rica`),
+as does a name directly under names (Perl's reading). The "and"-led opening of #52's math-ph0303018 rule skips a field
+of study the same way (`\\and Computer Engineering`, 2510.15190). And a block a line break opens after names only
+horizontal space parts it from (the JASA template's `Name\thanks{…}\hspace{.2cm}\\`), names with no lines of their
+own, is those names' lines when its first line is an institution: the names line and the block's lines are one
+group's, which `name_groups` parts as any — its first group's lines are the names', its later groups the next
+authors' (an "and" line opening one and dropped, a gap, the names' styling, a note, an institution under a person's
+name: `Assaf P. Oron\hspace{.2cm}\\ Children's Core …\\ and \\ Nancy Flournoy \\ …`, 1701.05964; 2004.03971's Han
+Lin Shang; 2503.11250's `\\[5pt]` gaps; 1504.05438's "and" line; `Lin Liu \hspace{.2cm} \\ Institute of Natural
+Sciences, School of Mathematical Sciences, MOE-LSC \\ …`, 1908.10448: before, three creators named by the
+institution's parts). Residuals, each a RED repro: a cue-less person's name over an institution with no gap or
+styling stays a line (1908.10448's `Zach Shahn \\ IBM Research,`; `article_plain_name_line_between_affiliations`), and
+so does a row of names (`author_block_row_of_names_with_no_signal`, SYNC row 121); the names of a stacked run stay
+lines of its first name (1702.07694; deferred; `author_block_stacked_names_each_a_creator`); an eponym or a place with
+a particle over an institution reads as a person (`L.D. Landau \\ Institute for Theoretical Physics`, `Rio de Janeiro
+\\ Centro …`; `author_block_eponym_or_place_over_institution`); a cued name under a place that reads as a name, or
+over an institution whose head noun leads it (`Bob B. Baker \\ Imperial College, London`), stays a line
+(`author_block_next_name_under_a_place_or_whole_institution`); a wider gap among uniform ones parts no authors
+(`author_block_uniform_gaps_hide_a_wider_gap`); a name line carrying a note or an address after a wide space stays a
+line (`author_block_name_line_with_trailing_text`, int114a's reading); an organisation's name after a gap, with a
+line under it, opens an author as a name does (`University of X \\ \\ Google DeepMind \\ London, UK`; only words
+tell them apart; `author_block_organisation_after_a_gap`); a block opening with a line that prints only `\ ` reads
+it as an empty names line, and `coalesce_empty_creators` appends its lines after the next creator's own
+(solv-int9710025, pre-existing; `author_block_leading_spacer_line`). Witnesses 1702.01413, 0801.1297, 1608.08479,
+2201.06821, 1509.03383, 1709.07791, 1908.10448, 2408.11742, gr-qc9906006 (its repro red since 64w), 1702.07694,
+1701.05964, 2004.03971, 2503.11250, 1504.05438, 2604.18394, 1901.06146. Repros
+`sectioning-frontmatter/author_block_{next_name_after_a_spacer_line, next_name_under_its_institution,
+next_name_styled_as_the_names, name_and_address_lines_styled_alike, lines_that_read_as_names_stay_lines,
+stacked_names_keep_their_lines, row_of_names_opens_the_next_author, lines_after_spaced_names}` (GREEN, guarded; the
+two stacked-run guards assert a name under names only where today's reading and the right one agree); catalog repros
+without a guard, near-duplicates of a guarded path: `article_author_block_second_author_after_spaced_break`
+(gr-qc9906006: its gap and its cue are guarded apart), `author_block_{institution_split_across_lines,
+places_and_roles_under_an_institution, next_name_after_a_gap_under_a_place, linebreak_length_gaps, marked_block_gaps,
+rows_of_names_share_their_lines}`; and the RED ones above; guards `perfect_kernel_batch85a::*`,
+`author_split_tests::{institution_head_continues_the_line_above, person_over_institution_needs_a_persons_cue,
+linebreak_option_gap_kept_between_lines}`.

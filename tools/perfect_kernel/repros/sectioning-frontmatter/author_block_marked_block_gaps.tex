@@ -1,0 +1,26 @@
+% witness: the controls of 85a's gaps (`strip_linebreak_options_keeping_gaps` writes a positive `\\[len]` `\\ \\`, the
+%          first line break's too): a block whose authors carry marks keeps its marks' reading through the gaps, an
+%          empty line or a `\\[len]` (`Ann Able$^1$ \\ $^1$Univ A \\ \\ Bob Baker$^2$`, the 85a r1 review's r4; `Cat
+%          Cole$^1$ \\[2pt] $^1$Univ A \\[8pt] Dan Dorn$^2$ \\[2pt] $^2$Univ B`, the r2 review's t19). A marked block in
+%          the same `\author` as unmarked groups reads them all as marked (the unmarked repros keep their own)
+% oracle:  pdflatex 0 errors: one centred column per group, each name over its marked line
+% engines: rust int114a, 85a r2, r3 = as expected
+% expect:  0 errors, 0 warnings; four creators, each with its own line
+% status:  GREEN (int114a, 85a r3) — a catalog repro, no guard (the strip itself:
+%          author_split_tests::linebreak_option_gap_kept_between_lines; marked blocks: the suite's marked-author guards)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^1$ \\
+$^1$Univ A \\
+\\
+Bob Baker$^2$ \\
+$^2$Univ B
+\and Cat Cole$^3$ \\[2pt]
+$^3$Univ C \\[8pt]
+Dan Dorn$^4$ \\[2pt]
+$^4$Univ D}
+\begin{document}
+\maketitle
+Text.
+\end{document}

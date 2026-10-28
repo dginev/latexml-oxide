@@ -1,0 +1,34 @@
+% witness: 1508.00093 (84a: names parted by horizontal space alone share the lines under them), the 85a r1 review's
+%          r5, r15, the r2 review's t18, w1: a row of names parted by space shares the lines under it — the block's first
+%          names line (`Ann Able~~~~Bob Baker \\ Univ A`, `Ann Able \quad Bob Baker \\ Univ A`), a row opening the next
+%          author after a gap (`\\ \\ Cat Cole`), after "and" (`\\ and Bob Baker~~~~Cat Cole`, math-ph0303018's
+%          "and"-led opening), or carrying the notes the block's first names carry (`Bob Baker\thanks{b}~~~~Cat
+%          Cole\thanks{c}`, hep-lat9404004's note rule). OD #900, #52(o)
+% oracle:  pdflatex 0 errors: one centred column per group, each row over its lines
+% engines: rust int114a = Ann Able and Bob Baker holding "Cat Cole" and Univ C (r5), "Bob Baker Cat Cole" one creator
+%          (t18), Bob Baker and Cat Cole among Ann Able's lines (w1); rust 85a r2, r3 = as expected
+% expect:  0 errors, 0 warnings; the eleven creators, each with its own lines
+% status:  RED (int114a) -> GREEN (85a r2) — a catalog repro, no guard: rides on
+%          perfect_kernel_batch85a::row_of_names_opens_the_next_author and 84a's space-parted guards
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able~~~~Bob Baker \\
+Univ A
+\and Cat Cole \quad Dan Dorn \\
+Univ C \\
+\\
+Eve Eads \\
+Univ E
+\and Fay Fox \\
+Dept of Math, UC Berkeley \\
+and Gil Gray~~~~Hal Hunt \\
+Dept of Math, Indiana University
+\and Ida Ives\thanks{a} \\
+Dept X \\
+Jan Jones\thanks{b}~~~~Kim Kerr\thanks{c} \\
+Dept Y}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,45 @@
+% witness: the person's cue of 85a's rule (an initial or an inner particle in a name line over an institution starts
+%          the next author, `person_over_institution`) fires on lines naming no person: an eponym an institution's name
+%          opens with, split from the rest of the name across lines (`U.S. Naval \\ Research Laboratory, …`, `L.D.
+%          Landau \\ Institute for Theoretical Physics`, `M.V. Lomonosov \\ Moscow State University`, `J. Craig Venter
+%          \\ Institute for Genomic Research`, `E. O. Lawrence \\ Berkeley National Laboratory`), and a place with a
+%          particle (`Rio de Janeiro \\ Centro Brasileiro de Pesquisas Físicas`) — the 85a r2 review's finding 4, probes
+%          t9-t12, t14d, t14e. No text tells `L.D. Landau \\ Institute …` from `Palash B. Pal \\ Institute of Physics`
+%          (gr-qc9906006); its corpus scan (65 papers with a cue line over an institution line, 8 changed by 85a, all
+%          better) met none of this shape. A SYNC_STATUS residual, not this rule's fix
+% oracle:  pdflatex 0 errors: one centred column per author, the name over its lines
+% engines: rust int114a = one creator per group, every line its contact; rust 85a r2, r3, r4 = creators "U.S. Naval", "L.D.
+%          Landau", "M.V. Lomonosov", "J. Craig Venter", "E. O. Lawrence", "Rio de Janeiro" holding the line under them
+% expect:  0 errors, 0 warnings; six creators, every other line their contact
+% status:  GREEN (int114a) -> RED (85a r2, r3, r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \\
+Remote Sensing Division \\
+U.S. Naval \\
+Research Laboratory, Washington DC
+\and Bob Baker \\
+Department of Physics \\
+L.D. Landau \\
+Institute for Theoretical Physics
+\and Cat Cole \\
+Department of Physics \\
+M.V. Lomonosov \\
+Moscow State University
+\and Dan Dorn \\
+Department of Biology \\
+J. Craig Venter \\
+Institute for Genomic Research
+\and Eve Eads \\
+Physics Division \\
+E. O. Lawrence \\
+Berkeley National Laboratory
+\and Fay Fox \\
+Pontif\'icia Universidade Cat\'olica \\
+Rio de Janeiro \\
+Centro Brasileiro de Pesquisas F\'isicas}
+\begin{document}
+\maketitle
+Text.
+\end{document}

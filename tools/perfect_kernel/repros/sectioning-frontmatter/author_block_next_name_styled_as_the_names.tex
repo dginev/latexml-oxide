@@ -1,0 +1,28 @@
+% witness: 1709.07791 (`Ben Goertzel \\ {\it Hanson Robotics \& OpenCog Foundation} \\ Julia Mossbridge \\ {\it …} \\
+%          Eddie Monroe \\ I{\it ONS \& OpenCog Foundation} \\ David Hanson \\ {\it Hanson Robotics} \\ Gino Yu \\ {\it …}`):
+%          a name line styled as the names are, over a line styled as the block's affiliations are, starts the next
+%          author even when that line reads as a name (`Hanson Robotics`) or its markup is mistyped (`I{\it ONS …}`)
+% oracle:  pdflatex 0 errors: one centred column of names, each over its line, italic but for the "I" of "IONS"
+% engines: rust int114a = Cat Cole and Dan Dorn among Bob Baker's affiliation contacts (silent); Perl 0.8.8 one
+%          creator, Ann Able, every later line her affiliation
+% expect:  0 errors, 0 warnings; five creators, each with its own line
+% status:  RED (int114a) -> GREEN (85a)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{
+Ann Able \\
+{\it Hanson Robotics \& OpenCog Foundation} \\
+Bob Baker \\
+{\it Institute of Noetic Sciences} \\
+Cat Cole \\
+I{\it ONS \& OpenCog Foundation} \\
+Dan Dorn \\
+{\it Hanson Robotics} \\
+Eve Eads \\
+{\it Hong Kong Polytechnic University}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

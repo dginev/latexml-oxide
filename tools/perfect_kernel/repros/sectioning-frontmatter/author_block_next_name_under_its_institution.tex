@@ -1,0 +1,33 @@
+% witness: 1908.10448 (`Lin Liu \hspace{.2cm} \\ Institute of Natural Sciences, … \\ Shanghai Jiao Tong University, \\
+%          Zach Shahn \\ IBM Research, \\ James M. Robins \\ Department of …, \\ and \\ Andrea Rotnitzky \\ …`),
+%          gr-qc9906006 (`… Puerto Rico 00931-3343 \\[12pt] Palash B. Pal\\ Saha Institute of Nuclear Physics\\ …`):
+%          with no spacer line, a line that reads as a name and nothing else and carries a person's cue (an initial,
+%          a particle: `Bob B. Baker`, `Cat C. Cole`) starts the next author when an institution it does not go on
+%          with stands under it; a space before the first line break parts no names from the lines under them. A
+%          cue-less name over an institution (1908.10448's `Zach Shahn \\ IBM Research,`) is read as `Max Planck \\
+%          Institute for …` is, a line: the 85a r2 residual, in the RED article_plain_name_line_between_affiliations
+% oracle:  pdflatex 0 errors: one centred column — Ann Able, her three lines, Bob B. Baker, his line, Cat C. Cole,
+%          her line, "and", Dan Dorn and his line
+% engines: rust int114a = Ann Able, "Institute of Natural Sciences", "School of Mathematical Sciences" and "MOE-LSC" as
+%          creators each holding every later line, Dan Dorn on his own (silent); Perl 0.8.8 one creator per comma, "and"
+%          and `\hspace` part, empty creators, each later name an affiliation line
+% expect:  0 errors, 0 warnings; four creators, each with its own lines
+% status:  RED (int114a) -> GREEN (85a)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \hspace{.2cm} \\
+Institute of Natural Sciences, School of Mathematical Sciences, MOE-LSC \\
+and SJTU-Yale Center for Biostatistics and Data Science, \\
+Shanghai Jiao Tong University, \\
+Bob B. Baker \\
+IBM Research, \\
+Cat C. Cole \\
+Department of Biostatistics and Epidemiology, Harvard University, \\
+and \\
+Dan Dorn \\
+Department of Economics, Universidad Torcuato Di Tella and CONICET}
+\begin{document}
+\maketitle
+Text.
+\end{document}

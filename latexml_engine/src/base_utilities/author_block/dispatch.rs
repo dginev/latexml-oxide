@@ -102,31 +102,37 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
   // also runs ahead of the tabular/minipage fallback: that fallback is a
   // last-resort escape hatch for author markup we cannot structure, and its
   // `<tabular>`-in-`<personname>` output is a presentational artifact we do not
-  // want in frontmatter anyway, so there is nothing to preserve by skipping it.
-  let stuff = strip_linebreak_options(stuff);
-  let stuff = note_environments_as_commands(stuff);
-  let stuff = math_active_scripts(stuff);
-  let stuff = tabular_juggles_as_line_breaks(stuff);
-  let stuff = unbrace_acm_author_columns(stuff);
-  let stuff = unwrap_alignment_environment(stuff);
-  let stuff = trailing_alignment_environment_as_lines(stuff);
-  // Beyond-Perl (OXIDIZED_DESIGN #52), two composable normalizations applied
-  // BEFORE branch selection so both branches benefit, and so a symbol mark can
-  // no longer spuriously trigger the affiliation-marker branch:
-  //   1. horizontal-space separators (`\hspace{len}` / `\hfill`) → `\quad`, the
-  //      "regular" poor-man's author separator LaTeXML's `\and`/`\quad` splitter
-  //      otherwise misses (witness arXiv:2506.06941, six authors bunched);
-  //   2. footnote-SYMBOL superscripts (`$^{*}$`, `\textsuperscript{\dagger}` —
-  //      equal-contribution / corresponding notes, NEVER affiliation numbers) →
-  //      a visible `\lx@frontmatter@keepsup` sup, so they render instead of
-  //      being consumed into an unmatched `affiliation:*` label and dropped.
-  // For the witness, (2) removes its ONLY `^`, dropping the whole block into the
-  // clean no-marker branch where (1)'s `\quad`s split all six authors.
-  let stuff = normalize_hspace_separators(stuff);
-  let stuff = join_icons_to_links(stuff);
-  let stuff = rewrite_symbol_superscripts(stuff);
-  let stuff = rewrite_ordinal_superscripts(stuff);
-  let stuff = rewrite_in_word_superscripts(stuff);
+  // want in frontmatter anyway, so there is nothing to preserve by skipping it. A positive length between lines is
+  // kept as the gap it prints, `\\ \\` ([`strip_linebreak_options_keeping_gaps`]: gr-qc9906006) — not in that
+  // fallback, whose content keeps its line breaks as written (1901.06146's `\\*[10pt]`, one break; the 85a r3 review's
+  // finding 4).
+  let lines_prepared = |stuff: Tokens| {
+    let stuff = note_environments_as_commands(stuff);
+    let stuff = math_active_scripts(stuff);
+    let stuff = tabular_juggles_as_line_breaks(stuff);
+    let stuff = unbrace_acm_author_columns(stuff);
+    let stuff = unwrap_alignment_environment(stuff);
+    let stuff = trailing_alignment_environment_as_lines(stuff);
+    // Beyond-Perl (OXIDIZED_DESIGN #52), two composable normalizations applied
+    // BEFORE branch selection so both branches benefit, and so a symbol mark can
+    // no longer spuriously trigger the affiliation-marker branch:
+    //   1. horizontal-space separators (`\hspace{len}` / `\hfill`) → `\quad`, the
+    //      "regular" poor-man's author separator LaTeXML's `\and`/`\quad` splitter
+    //      otherwise misses (witness arXiv:2506.06941, six authors bunched);
+    //   2. footnote-SYMBOL superscripts (`$^{*}$`, `\textsuperscript{\dagger}` —
+    //      equal-contribution / corresponding notes, NEVER affiliation numbers) →
+    //      a visible `\lx@frontmatter@keepsup` sup, so they render instead of
+    //      being consumed into an unmatched `affiliation:*` label and dropped.
+    // For the witness, (2) removes its ONLY `^`, dropping the whole block into the
+    // clean no-marker branch where (1)'s `\quad`s split all six authors.
+    let stuff = normalize_hspace_separators(stuff);
+    let stuff = join_icons_to_links(stuff);
+    let stuff = rewrite_symbol_superscripts(stuff);
+    let stuff = rewrite_ordinal_superscripts(stuff);
+    rewrite_in_word_superscripts(stuff)
+  };
+  let written = stuff;
+  let stuff = lines_prepared(strip_linebreak_options_keeping_gaps(written.clone()));
   // If too much formatting, fall back to unstructured author content
   let stuff_string = stuff.to_string();
   // Perl Base_Utility.pool.ltxml:693 tests `{tabular}`, `{minipage}` and `\halign`; a `\\` inside any alignment ends
@@ -146,6 +152,7 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
   .iter()
   .any(|form| stuff_string.contains(form))
   {
+    let stuff = lines_prepared(strip_linebreak_options(written));
     calls
       .extend(Invocation!(T_CS!("\\lx@add@author"), vec![keyvals.clone(), Some(stuff)]).unlist());
   } else if has_author_marks(&stuff) && (!cautious || answers_its_marks(&stuff)) {
@@ -899,6 +906,9 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
     // (the lines under such links, the block's affiliations)
     let mut block_lines: Vec<Tokens> = Vec::new();
     let mut spaced = true;
+    // (the names line of the last group pushed, as written: the `\hspace`-before-`\\` branch below reads the lines
+    // after it with it)
+    let mut last_names_line: Option<Tokens> = None;
     for (delimiter, block) in split_tokens_delimited(stuff, author_group_splits()) {
       spaced &= delimiter
         .first()
@@ -926,11 +936,25 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
         && pieces
           .first()
           .is_some_and(|l| spacing_end(l.unlist_ref()) == 0);
-      let mut lines: Vec<Tokens> = pieces
-        .into_iter()
-        .filter(|l| spacing_end(l.unlist_ref()) > 0)
-        .flat_map(link_run_lines)
-        .collect();
+      // (and by line, whether a line that prints nothing stood before it, a gap between the lines above and the next
+      // author's: `\\ \vspace{0.1cm}\\`, `\\ \\`, [`name_groups`])
+      // (a block a line break opens: whether a gap stands before its first line too, two empty pieces, `Ann Able
+      // \hspace{.2cm} \\[5pt] Univ A`)
+      let mut gaps: Vec<bool> = Vec::new();
+      let mut lines: Vec<Tokens> = Vec::new();
+      let mut gap = false;
+      let mut leading_empty = 0usize;
+      for piece in pieces {
+        if spacing_end(piece.unlist_ref()) == 0 {
+          gap = !lines.is_empty();
+          leading_empty += usize::from(lines.is_empty());
+          continue;
+        }
+        for line in link_run_lines(piece) {
+          gaps.push(std::mem::take(&mut gap));
+          lines.push(line);
+        }
+      }
       // …but a block the line break opens whose first line is an institution a footnote symbol of the names before it
       // labels is lines under those names, no names (`Bob Baker$^\sharp$\footnote{…}\hspace{.2cm}\\ {\it \normalsize
       // $^\star$School of Mathematics …}\\ {\it \normalsize $^\sharp$Department of Biostatistics …}`, 2602.16540: a
@@ -956,8 +980,52 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
             .is_some_and(|(_, rest)| reads_as_affiliation(&rest))
         })
       };
-      if (opens_with_break || after_lines)
-        && lines.first().is_some_and(labelled)
+      // …and so is a block a line break opens after names only horizontal space parts it from, which have no lines of
+      // their own, when its first line is an institution: the space before the line break parts no names, the
+      // institution is the names' line (`Lin Liu \hspace{.2cm} \\ Institute of Natural Sciences, School of
+      // Mathematical Sciences, MOE-LSC \\ …`, 1908.10448: three creators named by its parts, 85a; the JASA template's
+      // `Name\thanks{…}\hspace{.2cm}\\`)
+      let names_without_lines = spaced
+        && blocks
+          .last()
+          .and_then(|(_, groups)| groups.last())
+          .is_some_and(|(_, affils)| affils.is_empty());
+      let labelled_lines = (opens_with_break || after_lines) && lines.first().is_some_and(labelled);
+      // (under lines no mark labels, the names line and these lines are one group's lines, which [`name_groups`]
+      // parts as it parts any: its first group's lines are the names', its later groups the next authors' — an "and"
+      // line between them dropped, a gap, the names' styling, a note or an institution under a person's name opening
+      // one: `Assaf P. Oron\hspace{.2cm}\\ Children's Core …\\ and \\ Nancy Flournoy \\ Department of Statistics, …`,
+      // 1701.05964; 2004.03971's Han Lin Shang; 2503.11250's `\\[5pt]` gaps; the 85a r2 review's finding 1)
+      let mut later_groups: Vec<(Tokens, Vec<Tokens>)> = Vec::new();
+      if !labelled_lines
+        && opens_with_break
+        && names_without_lines
+        && lines.first().is_some_and(reads_as_institution)
+        && let Some(names_line) = last_names_line.clone()
+        && let Some((_, groups)) = blocks.last_mut()
+        && let Some((_, affils)) = groups.last_mut()
+      {
+        let mut grouped_lines = vec![names_line.clone()];
+        grouped_lines.append(&mut lines);
+        let mut grouped_gaps = vec![false];
+        grouped_gaps.append(&mut gaps);
+        grouped_gaps[1] = leading_empty > 1;
+        let mut grouped = name_groups(grouped_lines.clone(), &grouped_gaps).into_iter();
+        match grouped.next() {
+          // (the names line read as the names it is)
+          Some((first, mut first_lines)) if first == names_line => {
+            affils.append(&mut first_lines);
+            later_groups.extend(grouped);
+          },
+          // (else every line is theirs, as a block of names with no lines of their own reads)
+          _ => affils.extend(grouped_lines.into_iter().skip(1)),
+        }
+        if later_groups.is_empty() {
+          spaced = true;
+          continue;
+        }
+        spaced = false;
+      } else if labelled_lines
         && let Some((_, groups)) = blocks.last_mut()
         && let Some((_, affils)) = groups.last_mut()
       {
@@ -991,6 +1059,8 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
           })
           .unwrap_or(lines.len());
         let names: Vec<Tokens> = lines.split_off(names_at);
+        let names_gaps = gaps.split_off(names_at);
+        gaps.clear();
         affils.append(&mut lines);
         if names.is_empty() {
           spaced = true;
@@ -998,6 +1068,7 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
         }
         // (a line break, no space, parts the names from the lines above)
         lines = names;
+        gaps = names_gaps;
         spaced = false;
       }
       // A link line printing a URL is no name ([`prints_a_url`]; a linked name is one, 2608.24427): one opening the
@@ -1019,7 +1090,14 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
         continue;
       }
       let mut links: Vec<Tokens> = lines.drain(..leading_links).collect();
-      for (names_line, mut affils) in name_groups(lines) {
+      gaps.drain(..leading_links.min(gaps.len()));
+      let groups = if later_groups.is_empty() {
+        name_groups(lines, &gaps)
+      } else {
+        later_groups
+      };
+      for (names_line, mut affils) in groups {
+        last_names_line = Some(names_line.clone());
         affils.splice(0..0, std::mem::take(&mut links));
         let mut names = split_names(names_line);
         if names.is_empty() {
