@@ -392,7 +392,19 @@ LoadDefinitions!({
   // Perl (PR #2767): keyword macros
   DefMacro!("\\keywords{}", "\\lx@add@keywords{#1}");
   DefMacro!("\\kword{}",    "\\lx@add@keywords{#1}");
-  DefMacro!("\\kwd[]{}",    "\\lx@add@keywords{#2, }");
+  // Each `\kwd{<entry>}` adds to the entries before it (`\begin{keyword}\kwd{a}\kwd{b}\end{keyword}`: "a, b, "), as
+  // the classes defining `\kwd` list them (imsart.sty:1566 of 1410.4462's copy, bmcart.cls:1560 of 1507.06515's).
+  // Perl's re-added the keywords with only its own entry, `\lx@add@keywords` clearing them first
+  // (Base_Utility.pool.ltxml:613-615), so the last entry was all that was kept (KNOWN_PERL_ERRORS #1196). Found on
+  // 1401.3408's `myimsart`, which now has imsart's own markup (ims_support_sty.rs `vtex_keyword_markup`): no live corpus
+  // paper reaches this `\kwd`. The list is the document's, never reset: the entries of every block are one `<keywords>`,
+  // in order, each once (`\lx@add@keywords` replaces the element it re-adds; a reset per block would drop the blocks
+  // before it).
+  RawTeX!(r"\gdef\lx@omnibus@kwd@list{}");
+  DefMacro!(
+    "\\kwd[]{}",
+    "\\g@addto@macro\\lx@omnibus@kwd@list{#2, }\\expandafter\\lx@add@keywords\\expandafter{\\lx@omnibus@kwd@list}"
+  );
 
   // Perl L133-156: {keyword}, {keywords} as environments, plus auto-variants
   // via `\keywords` that can be used as a section-like bare macro.

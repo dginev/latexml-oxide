@@ -215,7 +215,12 @@ LoadDefinitions!({
   DefMacro!("\\@setabstract", "");
   DefMacro!("\\dateposted{}",   "\\lx@add@date[role=posted]{#1}");
   DefMacro!("\\translator[]{}", "\\lx@add@translator[name={\\translname~}]{#2}", short => true);
-  DefMacro!("\\lx@ams@keywords{}", "\\lx@add@keywords[name={\\keywordsname:~}]{#1}", short => true);
+  // (each records that the binding's own setter ran: `amsart_class_internals`'s hand-over of a document's own store)
+  DefMacro!(
+    "\\lx@ams@keywords{}",
+    "\\global\\let\\lx@ams@keywords@given\\@empty\\lx@add@keywords[name={\\keywordsname:~}]{#1}",
+    short => true
+  );
   DefMacro!("\\keywords", sub[_args] { post_title_topmatter("\\lx@ams@keywords") });
 
   // \thanks{} ( == ack, not latex's \thanks, not in author)
@@ -257,7 +262,7 @@ LoadDefinitions!({
   // (`\subjclass{{\sc AMS Subject Classification:} 06B05}`).
   DefMacro!("\\subjclass", sub[_args] { post_title_topmatter("\\lx@ams@subjclass") });
   DefMacro!("\\lx@ams@subjclass[Default:\\@subjclassyear]{}",
-    "\\ifx.#1.\\else\\xdef\\@subjclassyear{#1}\\fi\
+    "\\ifx.#1.\\else\\xdef\\@subjclassyear{#1}\\fi\\global\\let\\lx@ams@subjclass@given\\@empty\
      \\lx@add@classification[scheme={#1 Mathematics Subject Classification},name={\\subjclassname:~}]{#2}",
     short => true);
 
@@ -555,6 +560,13 @@ pub fn ams_class_caption_format() -> Result<()> {
 /// - :554, :564 `\@keywords` and `\@subjclass`, empty: `\keywords` and `\subjclass` give the frontmatter, so a
 ///   document's own print of them (2510.22858 `\ifx\@keywords\@empty\else…`) prints nothing twice, as `\@dedicatory`;
 ///   :114 `\@dateposted` and :710-711 `\@PII` alike (memo-l.cls:116-171's abstract-page notes read them: 2412.15928).
+///   A document's own `\subjclass` or `\keywords` that stores them as amsart's does (amsart.cls:553-564; 2004.06211:12
+///   `\renewcommand*\subjclass[2][2000]{\def\@subjclass{#2}…}`) has them printed by amsart's `\maketitle` (:657-658, a
+///   first-page footnote): the `\maketitle` hands a non-empty one to the frontmatter, as the binding's own setter would
+///   (`\lx@ams@stored@topmatter`, at `\lx@maketitle@begin`), unless that setter ran (`\lx@ams@subjclass@given`,
+///   `\lx@ams@keywords@given`), so a paper using the class's commands is unchanged, nor when the K11 reroute owns a raw
+///   class's `\keywords` store (`\iflx@ams@keywords@rerouted`; a class wrapping acmart, which loads amsart). Perl
+///   loses them (OXIDIZED_DESIGN_DIVERGENCES #902; 1009.1929 too).
 /// - :687-689 `\copyrightinfo{0000}{(copyright holder)}`, the defaults `\copyrightyear`/`\copyrightholder` (2403.17965).
 /// - :837, :856-864 `\abstractbox` and `\@setabstract`/`\@setabstracta`, which set a box an abstract-like environment
 ///   of the document's fills (1512.02361 and 2602.22909 `{abstracts}`, 2303.07306 and 2201.00740 `{acknowledgements}`,
@@ -580,6 +592,11 @@ pub fn amsart_class_internals() -> Result<()> {
   // (resphilosophica.cls:259) sets nothing there, where the empty box made an empty paragraph.
   DefConditional!("\\iflx@ams@depositing", {
     lookup_bool("lx_depositing_frontmatter_fields")
+  });
+  // A raw class's own `\keywords` store is the K11 reroute's (frontmatter_stores.rs `reroute_raw_class_stores`, which
+  // records its store name), handed on as the class sets it: not handed over again at the `\maketitle`.
+  DefConditional!("\\iflx@ams@keywords@rerouted", {
+    lookup_value("lx_store_cs_keywords").is_some_and(|v| !matches!(v, Stored::None))
   });
   RawTeX!(
     r"\newswitch{}
@@ -610,6 +627,19 @@ pub fn amsart_class_internals() -> Result<()> {
 \newswitch{lot}
 \let\@keywords=\@empty
 \let\@subjclass=\@empty
+\let\lx@ams@keywords@given\relax
+\let\lx@ams@subjclass@given\relax
+\def\lx@ams@stored@topmatter{%
+  \ifx\@subjclass\@empty\else\ifx\@subjclass\relax\else\ifx\lx@ams@subjclass@given\@empty\else
+    \expandafter\lx@ams@stored@subjclass\expandafter{\@subjclass}%
+    \global\let\@subjclass\@empty\fi\fi\fi
+  \ifx\@keywords\@empty\else\ifx\@keywords\relax\else\ifx\lx@ams@keywords@given\@empty\else
+    \iflx@ams@keywords@rerouted\else
+    \expandafter\lx@ams@stored@keywords\expandafter{\@keywords}%
+    \global\let\@keywords\@empty\fi\fi\fi\fi}
+\def\lx@ams@stored@subjclass#1{\expandafter\lx@ams@stored@subjclass@\expandafter{\subjclassname}{#1}}
+\def\lx@ams@stored@subjclass@#1#2{\lx@add@classification[scheme={#1},name={#1:~}]{#2}}
+\def\lx@ams@stored@keywords#1{\lx@add@keywords[name={\keywordsname:~}]{#1}}
 \let\@dateposted\@empty
 \let\@PII\@empty
 \def\copyrightyear{0000}\def\copyrightholder{(copyright holder)}
@@ -671,6 +701,8 @@ pub fn amsart_class_internals() -> Result<()> {
     "\\copyrightinfo{}{}",
     "\\def\\copyrightyear{#1}\\@ifnotempty{#2}{\\def\\copyrightholder{#2}}\\lx@ams@add@copyright{#1}{#2}"
   );
+  // amsart.cls:657-658: `\maketitle` prints the subject classification and keywords the document stored itself.
+  AddToMacro!("\\lx@maketitle@begin", "\\lx@ams@stored@topmatter");
   // amsart.cls:645: `\@maketitle` runs `\@setabstract` after the title (here `\lx@maketitle@body`, sect05.rs).
   AddToMacro!("\\lx@maketitle@body", "\\@setabstract");
   Ok(())

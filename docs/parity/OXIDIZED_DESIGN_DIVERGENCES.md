@@ -25786,3 +25786,52 @@ several names spell by its place, SYNC_STATUS) and `llncs_unknown_email_label_st
 `llncs_corresponding_note_does_not_override_inst_marks`, `llncs_shared_note_line_word_is_no_email` (the r5
 re-review's s17, s23 above); guards `perfect_kernel_batch85b::*`,
 `frontmatter_llncs_institute_shared_email`; the 77t llncs guards carry the `\institute{Inst A}` on every author.
+
+### 902. imsart's `{keyword}` blocks are the VTeX classes' markup; an amsart document's own stored `\subjclass`/`\keywords` reach the frontmatter (Perl: one keyword kept; lost)
+
+imsart.sty (shipped with each paper, not in TeX Live) writes its keywords and subject classification as
+`{keyword}[class=<class>]` blocks of `\kwd[<sep>]{<entry>}` entries — `\begin{keyword}[class=MSC] \kwd[Primary ]{60J10}
+\kwd[; Secondary ]{60G35}\end{keyword}` — which it sets in `\keyword@box` for the title page (imsart.sty: 1518-1567 of
+1410.4462's copy, :2334-2393 of 2605.27137's) or, under the journal options' `keywordsasfootnote` (aap, aop, aos, …),
+collects through its `\pseudo@keyword` (:474-490, read first by its own `\begin`) for a title footnote (:1604-1630). The
+imsart binding (`latexml_contrib/src/imsart_cls.rs`) loaded OmniBus, whose `\kwd` re-added the keywords with its one
+entry (KNOWN_PERL_ERRORS #1196), and the raw blocks set the box nothing typesets: 1410.4462, 2407.13970 and 2605.27137
+kept their last keyword only and lost their MSC codes (Perl the same). Ours: the binding defines the markup arxbj and
+arximspdf already share (`vtex_keyword_markup`, ims_support_sty.rs) and locks it against the raw files' (`\keyword`,
+`\endkeyword`, `\begin{keyword}`, `\end{keyword}`, `\kwd`, `\@kwd`, `\pseudo@keyword`) while the class loads — imsart.sty
+read raw, and a shipped copy of the class under another name that declares itself imsart, read after the binding with
+the imsart.sty copy it loads (1401.3408's myimsart.cls and myimsart.sty) — and unlocks it at the class's
+`\AtEndOfClass`, so a document's own `\renewcommand{\kwd}` is the document's, as `\arxiv` is. Each block's entries are
+one list joined by the class's `\sep`, under the class's `\keyword@<class>` heading (imsart.sty's own
+`\setattribute`/`\setpkgattr` lines; the binding's defaults are those of :1521-1525); a block whose class is a subject
+classification — `AMS`, `MSC`, `MSC2010`, `MSC2020` — is an `ltx:classification`, any other an `ltx:keywords`. The
+classification's scheme is the printed heading, edition included, without the closing ":" or "." its name keeps
+(`\lx@ims@scheme`: "MSC 2010 subject classifications", 1410.4462; "MSC2020 subject classifications", 2605.27137 and
+2407.13970, through the copy's `\ims@href`), as the AMS classes' `\subjclass` gives "2000 Mathematics Subject
+Classification": the HTML heads a classification with its scheme and shows the name only without one
+(LaTeXML-structure-xhtml.xsl:239-240, Perl's the same), so the class key alone read "MSC". A key the class gives no
+heading keeps the key (arxbj's `class=MSC`, where pdflatex prints no heading). Shared change: arxbj's and arximspdf's
+`class=AMS` schemes are their headings ("AMS 2000 subject classifications", was "AMS"), and their `class=MSC…` blocks are
+classifications (were keywords).
+
+amsart.cls's `\subjclass` and `\keywords` store `\@subjclass` and `\@keywords`, which its `\maketitle` prints in a
+first-page footnote (amsart.cls:553-564, :657-658); the binding's setters give the frontmatter directly and never set
+them. A document carrying its own copy (`\renewcommand*\subjclass[2][2000]{\def\@subjclass{#2}…}`, 2004.06211:12,
+1009.1929) lost its classification, as Perl does; so did kms-j's and kms-b's (1109.3766, 2207.08173), whose
+`\@adminfootnotes` print `\@subjclass`. Ours: the AMS classes' `\maketitle` hands a non-empty stored value to
+the frontmatter (`\lx@ams@stored@topmatter` at `\lx@maketitle@begin`, `amsart_class_internals`): the subject
+classification under the edition's `\subjclassname` (the scheme and the name), the keywords under `\keywordsname`, then
+empties the store; it does nothing once the binding's own setter ran (`\lx@ams@subjclass@given`,
+`\lx@ams@keywords@given`), so a paper using the class's commands is unchanged, nor when the K11 reroute owns a raw
+class's `\keywords` store (`\iflx@ams@keywords@rerouted`: a class wrapping acmart, guard
+`perfect_kernel_batch58::acmart_under_a_wrapper_class_keeps_its_setters`). The hand-over reaches every class loading
+the AMS binding, also one whose title page never prints `\@subjclass`: CSML.cls's `\@maketitle` (:292-299) prints only
+`\@ACMCCS`, `\@amsclass` and `\@keywords`, so its papers' unprinted `\subjclass` codes (1504.03919, 1510.01752,
+1602.00476, 1608.04592) are a classification, kept by FIDELITY_CHARTER §2 (authored text is kept, even where the class
+discards it). Residual (RED, no guard): a document's `\subjclass` copy that stores `\@subjclass` but sets no
+`\subjclassname` takes the binding's default edition, 1991 (Perl's `\@subjclassyear`), where amsart.cls prints 2020
+(:789); no corpus paper (`sectioning-frontmatter/amsart_document_subjclass_copy_default_edition`). Repros
+`sectioning-frontmatter/{imsart_keyword_blocks_footnote_option, imsart_keyword_blocks_in_the_box,
+imsart_document_kwd_is_the_documents, imsart_renamed_copy_keyword_blocks, arxbj_keyword_classification_headings,
+omnibus_kwd_entries_add_up, omnibus_kwd_blocks_each_entry_once, amsart_document_subjclass_store}`; guards
+`perfect_kernel_batch86a::*`.

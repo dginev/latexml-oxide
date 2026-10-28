@@ -18677,3 +18677,30 @@ sequence label `author:1`: the institute and the first `\email` in it are the fi
 Fixed in Rust (85b, OXIDIZED_DESIGN_DIVERGENCES #901): the institute is every author's, each address the author it
 spells. Witnesses 1002.2793, 2106.04289, 2402.19043. Repro class-bindings/llncs_sole_institute_is_every_authors; guard
 `perfect_kernel_batch85b::llncs_sole_institute_is_every_authors`.
+
+## 1196. OmniBus's `\kwd` keeps only the last keyword
+
+OmniBus.cls.ltxml:124 binds `\kwd[]{}` to `\lx@add@keywords{#2, }`, and `\lx@add@keywords` clears the keywords before it
+adds (Base_Utility.pool.ltxml:613-615), so each entry replaces the ones before it. The classes that define `\kwd` list
+every entry (imsart.sty:1566 of 1410.4462's copy, bmcart.cls:1560 of 1507.06515's). Every paper whose class falls to
+OmniBus with a `{keyword}` block of `\kwd` entries keeps one; imsart, which Perl reads through OmniBus, lost all but
+the last of 1410.4462's four and 2605.27137's six. Minimal trigger:
+
+```latex
+\documentclass{OmniBus}
+\begin{document}
+\title{T}
+\begin{keyword}\kwd{alpha}\kwd{beta}\kwd{gamma}\end{keyword}
+Body.
+\end{document}
+% Perl: <keywords name="Keywords: ">gamma, </keywords>; the classes that define \kwd print "alpha, beta, gamma"
+```
+
+Fixed in Rust (86a): OmniBus's `\kwd` adds its entry to a list of those before it and re-adds the whole list
+(omnibus_cls.rs, `\lx@omnibus@kwd@list`): "alpha, beta, gamma, ". The list is the document's, never reset: the entries
+of several blocks, also across a second title and `\maketitle`, are one `<keywords>` in source order, each once (the
+re-add replaces the element; a reset per block would drop the blocks before it). imsart has the VTeX classes' keyword
+markup instead (OXIDIZED_DESIGN_DIVERGENCES #902), so the papers this was found on (1410.4462, 2407.13970, 2605.27137,
+1401.3408's myimsart) no longer reach OmniBus's `\kwd`, and no live corpus paper does. Repros
+sectioning-frontmatter/{omnibus_kwd_entries_add_up, omnibus_kwd_blocks_each_entry_once}; guard
+`perfect_kernel_batch86a::omnibus_kwd_entries_add_up`.

@@ -301,9 +301,10 @@ fn ejpecp_class_commands() {
 #[test]
 fn arxbj_class_commands() {
   let xml = clean!("arxbj_class_commands.tex");
-  // Both blocks kept: the AMS one the subject classification (arxbj.cls:2495), the other the keywords.
+  // Both blocks kept: the AMS one the subject classification (arxbj.cls:2495), its scheme the printed heading the HTML
+  // shows (86a: was the key, "AMS"), the other the keywords.
   assert!(
-    xml.contains(r#"<classification name="AMS 2000 subject classifications: " scheme="AMS">Primary 60F05; secondary 62G20 </classification>"#),
+    xml.contains(r#"<classification name="AMS 2000 subject classifications: " scheme="AMS 2000 subject classifications">Primary 60F05; secondary 62G20 </classification>"#),
     "{xml}"
   );
   assert!(
@@ -336,7 +337,7 @@ fn arxbj_class_commands() {
 fn arximspdf_keyword_blocks_and_starred_theorems() {
   let xml = clean!("arximspdf_keyword_blocks_and_starred_theorems.tex");
   assert!(
-    xml.contains(r#"<classification name="AMS 2000 subject classifications. " scheme="AMS">Primary 65C05, 91G60 </classification>"#),
+    xml.contains(r#"<classification name="AMS 2000 subject classifications. " scheme="AMS 2000 subject classifications">Primary 65C05, 91G60 </classification>"#),
     "{xml}"
   );
   assert!(

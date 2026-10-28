@@ -3,7 +3,7 @@
 //! imsart.cls loads `article` + requires `imsart.sty` (support file with
 //! \startlocaldefs, \endlocaldefs, etc.). We fall back to OmniBus and raw-
 //! load imsart.sty so most user macros become available.
-use latexml_package::prelude::*;
+use latexml_package::{package::ims_support_sty::vtex_keyword_markup, prelude::*};
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
@@ -89,8 +89,45 @@ LoadDefinitions!({
 \def\@setattribute[#1]#2#3#4{\expandafter\gdef\csname #2@#3\endcsname{#4}}
 \def\getattribute#1#2{\csname #1@#2\endcsname}"
   );
+  // imsart.sty's `{keyword}[class=…]` and `\kwd` (:1518-1567 of 1410.4462's copy) are the VTeX classes' shared markup
+  // (`vtex_keyword_markup`, ims_support_sty.rs): every `\kwd` of a block in one list, and a `class=MSC` (`AMS`,
+  // `MSC2010`, `MSC2020`) block the paper's subject classification. Locked, so the raw definitions are refused: imsart.sty
+  // sets its blocks in `\keyword@box` (or, under the journal options' `keywordsasfootnote`, collects them in
+  // `\keyword@toks` through its `\pseudo@keyword`, :1609, which `\begin` reads first), and OmniBus's `\kwd` kept only
+  // the last keyword (KNOWN_PERL_ERRORS #1196): 1410.4462, 2407.13970, 2605.27137 lost every keyword but one and their
+  // MSC codes. The headings are imsart.sty's (:1521-1525), which its own `\setattribute`/`\setpkgattr` lines set again.
+  // Locked only while the class loads — imsart.sty read raw, and a renamed copy of the class read after this binding
+  // with the imsart.sty copy it loads (1401.3408's myimsart.cls, myimsart.sty) — and unlocked at the class's end, as
+  // `\arxiv` below is defined over the raw one: a document's own `\renewcommand{\kwd}` is the document's.
+  RequirePackage!("keyval");
+  vtex_keyword_markup()?;
+  RawTeX!(
+    r"\@namedef{keyword@KWD}{Keywords and phrases:}
+\@namedef{keyword@AMS}{AMS 2000 subject classifications:}
+\@namedef{keyword@MSC}{MSC 2010 subject classifications:}
+\@namedef{keyword@MSC2010}{MSC 2010 subject classifications:}
+\@namedef{keyword@MSC2020}{MSC2020 subject classifications:}"
+  );
+  let keyword_markup = [
+    "\\keyword",
+    "\\endkeyword",
+    "\\begin{keyword}",
+    "\\end{keyword}",
+    "\\kwd",
+    "\\@kwd",
+    "\\pseudo@keyword",
+  ];
+  for cs in keyword_markup {
+    AssignValue!(&s!("{cs}:locked") => true, Some(Scope::Global));
+  }
   // imsart.cls L149: \RequirePackage{imsart}.
   InputDefinitions!("imsart", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  DefPrimitive!("\\lx@ims@keyword@unlock", {
+    for cs in keyword_markup {
+      AssignValue!(&s!("{cs}:locked") => false, Some(Scope::Global));
+    }
+  });
+  RawTeX!(r"\AtEndOfClass{\lx@ims@keyword@unlock}");
   // `\arxiv{id}` (imsart.sty:1186-1189) prints the paper's arXiv identifier as an unmarked title note: the paper's
   // arXiv pubnote, as jheppub's `\arxivnumber` (jheppub_sty.rs), not an author's note (2201.08502). Defined over the
   // raw one and not locked: a paper citing with its own `\renewcommand\arxiv` keeps it.

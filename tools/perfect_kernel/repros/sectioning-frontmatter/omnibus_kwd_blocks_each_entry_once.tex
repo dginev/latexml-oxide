@@ -1,0 +1,20 @@
+% mechanism: OmniBus's `\kwd` list (omnibus_cls.rs `\lx@omnibus@kwd@list`) is the document's: every block's entries are
+%   one <keywords>, in source order, each once, also over a second title and `\maketitle` (`\lx@add@keywords`
+%   replaces the element it re-adds, so the list never shows an entry twice; a reset per block would drop the blocks
+%   before it).
+% witness: 86a review round 1 (probe om2, the suspected repeat); no live corpus paper reaches OmniBus's `\kwd`
+% oracle:  none in pdflatex (OmniBus is LaTeXML's catch-all class, no .cls)
+% engines: rust 85a = <keywords name="Keywords: ">delta, </keywords> (KNOWN_PERL_ERRORS #1196); perl the same
+% expect:  0 errors, 0 warnings; one <keywords name="Keywords: ">alpha, beta, gamma, delta, </keywords>
+% status:  RED (85a) -> GREEN (86a)
+% preload: ar5iv.sty
+\documentclass{OmniBus}
+\begin{document}
+\title{T}
+\begin{keyword}\kwd{alpha}\kwd{beta}\end{keyword}
+\maketitle
+\title{S}
+\begin{keyword}\kwd{gamma}\kwd{delta}\end{keyword}
+\maketitle
+More.
+\end{document}

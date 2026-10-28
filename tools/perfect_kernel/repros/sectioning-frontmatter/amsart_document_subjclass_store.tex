@@ -1,0 +1,24 @@
+% mechanism: a document's own `\subjclass` or `\keywords` that stores the value as amsart.cls does (:553-564, printed
+%   by its `\maketitle`, :657-658) is handed to the frontmatter at the `\maketitle` (`\lx@ams@stored@topmatter`,
+%   ams_support_sty.rs), unless the binding's own setter ran; the binding's `\subjclass` never sets `\@subjclass`.
+% witness: 2004.06211:12, 1009.1929 (`\renewcommand*\subjclass[2][2000]{\def\@subjclass{#2}…}`, amsart.cls's own)
+% oracle:  pdflatex 0 errors: first-page footnotes "2000 Mathematics Subject Classification. Primary 31B05; Secondary
+%          42B30." and "Key words and phrases. Harmonic mappings, Schwarz lemma."
+% engines: rust 85a = 0 errors, no <classification>, no <keywords>; perl the same (OXIDIZED_DESIGN_DIVERGENCES #902)
+% expect:  0 errors, 0 warnings; <classification scheme="2000 Mathematics Subject Classification"> with the codes and
+%          <keywords name="Key words and phrases: "> with both entries
+% status:  RED (85a) -> GREEN (86a)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\makeatletter
+\renewcommand*\subjclass[2][2000]{\def\@subjclass{#2}%
+  \@xp\let\@xp\subjclassname\csname subjclassname@#1\endcsname}
+\renewcommand\keywords[1]{\def\@keywords{#1}}
+\makeatother
+\begin{document}
+\title{Harmonic maps}\author{David Kalaj}
+\subjclass{Primary 31B05; Secondary 42B30}
+\keywords{Harmonic mappings, Schwarz lemma}
+\maketitle
+Body.
+\end{document}

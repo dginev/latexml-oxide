@@ -1,0 +1,48 @@
+% mechanism: imsart's keyword markup is locked only while the class loads (imsart_cls.rs, unlocked at its
+%   `\AtEndOfClass`), so a document's own `\renewcommand{\kwd}` is the document's, as `\arxiv` is.
+% witness: 86a review round 1 (probe k1d/k1.tex); no corpus paper (a census of pop86a found `\newcommand{\kwd}` only in
+%          two acmart papers)
+% oracle:  pdflatex 0 errors: "The if statement and the while loop." (typewriter if, while)
+% engines: rust 86a r1 = 0 errors, "Theif statement and the, while loop." (the binding's `\kwd`, locked for good); rust
+%          85a "while," in the keywords and both words lost from the body
+% expect:  0 errors, 0 warnings; the paragraph "The if statement and the while loop." with both words typewriter
+% status:  RED (85a, 86a r1) -> GREEN (86a)
+% preload: ar5iv.sty
+\begin{filecontents*}{imsart.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{imsart}
+\LoadClass{article}
+\RequirePackage{imsart}
+\end{filecontents*}
+\begin{filecontents*}{imsart.sty}
+\NeedsTeXFormat{LaTeX2e}\ProvidesPackage{imsart}
+\def\sep@key@value#1=#2/?/#3{\setpkgattr{#3}{#1}{#2}}
+\def\do@option@list#1#2{\@for\curr@option:={#2}\do{\expandafter\sep@key@value\curr@option/?/{#1}\relax}}
+\protected\def\setpkgattr#1#2#3{\expandafter\long\expandafter\gdef\csname #1@#2\endcsname{#3}}
+\def\ims@href#1#2{#2}
+\def\msc@url{https://mathscinet.ams.org/mathscinet/msc/msc2020.html}
+\newtoks\keywords@list
+\def\addto@keywords@list#1{\keywords@list=\expandafter{\the\keywords@list#1, }}
+\newbox\keyword@box
+\setpkgattr{keyword}{MSC2020}{\ims@href{\msc@url}{MSC2020 subject classifications}:}
+\setpkgattr{keyword}{KWD}{Keywords and phrases:}
+\gdef\keyword{\@ifnextchar[{\@keyword}{\@keyword[class=KWD]}}
+\gdef\@keyword[#1]{\do@option@list{keyword}{#1}\def\keyword@name{\csname keyword@\keyword@class\endcsname}%
+  \let\kwd@sep\relax
+  \global\setbox\keyword@box=\vbox\bgroup\ifvoid\keyword@box\else\unvbox\keyword@box\fi
+  \noindent{\keyword@name}\space\hskip.1pt}
+\def\endkeyword{\unskip.\par\egroup}
+\def\keyword@fmt{\ifvoid\keyword@box\else\unvbox\keyword@box\fi}
+\def\sep{\unskip\string, }
+\DeclareRobustCommand*\kwd{\@ifnextchar[\@kwd{\@kwd[\kwd@sep]}}
+\def\@kwd[#1]#2{\unskip#1{#2}\addto@keywords@list{#2}\let\kwd@sep\sep}
+\newenvironment{frontmatter}{}{\maketitle}
+\def\maketitle{\keyword@fmt}
+\end{filecontents*}
+\documentclass{imsart}
+\renewcommand{\kwd}[1]{\texttt{#1}}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\end{frontmatter}
+The \kwd{if} statement and the \kwd{while} loop.
+\end{document}
