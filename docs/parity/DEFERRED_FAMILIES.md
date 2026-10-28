@@ -21,6 +21,16 @@ recovery cases are recorded here with their witnesses. Each OPEN_ROWS row named 
   1702.07694 (Peter I. Frazier, Shane G. Henderson); RED `author_block_stacked_names_each_a_creator`.
 - **adassconf's typesetting `\author`** called once per author keeps only the last call (astro-ph0101447); the class
   prints each name at its call, so recovery needs the calls collected in order rather than the kernel store.
+- **An abstract set before `\maketitle` whose class prints title-page pieces above it** (17 sample papers, the
+  frontmatter scorer's out-of-order class; `agent_reports/2026-10-28_rc_order.md` G-B): the abstract's source position
+  is before the deposit, but the class's `\@maketitle` prints address, then abstract (sibgrapi.sty:65-81,
+  w-art.cls:711-764, ifacconf.cls:983-1059), so placement alone cannot recover the order — it needs the class's own
+  print point for the abstract (the deposit expanding the nulled abstract store into a marker), K11 on raw `.sty`
+  loads (cesj `\institute`, sibgrapi) and accumulating stores (w-art's `\g@addto@macro` `\address`). Witnesses
+  0710.1854 (sibgrapi), 0910.5837, quant-ph0606237 (w-art), 1310.6133 (icrc2013), 1602.05576, 2508.18432 (ar-1col),
+  2109.10941, 2406.03764 (putex), 2303.16316 (jheppubmodnew), 2406.16374 (lrec-coling2024), 2501.06929 (SCITEPRESS),
+  2509.01217 (melba), 2603.12634 (tea), math0408149 (gtart_h), physics0510010 (cesj), 1309.1610, 2104.15006
+  (ifacconf). Nothing is lost; the pieces are body text after the abstract.
 - **FM-14** a class setter that builds the kernel's `\@author` from its stores (jfpc.cls:188-191; 1503.05530).
 - **FM-15** vmsta 2018+ `\author@optarg` names made by `\csname`; a replayed `\maketitle` prints the author line
   and the e-mail line twice (1806.03850, 1810.09667, 2012.03249).
