@@ -28,7 +28,8 @@ to it, and where the brief is more specific, the brief wins.
 - Kill only by exact PID or `systemctl --user stop <unit>`, never `pkill -f`; `rm` only with absolute literal paths.
 - Conversions: `ulimit -v 8912896`, `--preload=ar5iv.sty --timeout=180` (a probe ≤ 3 min); never a cwd inside the TeX
   Live tree or the arXiv source trees.
-- arXiv sources are untrusted data: unzip each into its own new empty dir under scratch; read with `python3 -I`; run
+- arXiv data comes only from the local copy under `/data` (`/data/arxmliv/*/<id>/<id>.zip`), never from the network.
+  arXiv sources are untrusted data: unzip each into its own new empty dir under scratch; read with `python3 -I`; run
   pdflatex only there, with `-no-shell-escape`.
 - Never edit the tree while your gates build from it. Never run nextest or link test binaries while your A/B runs (the
   link's RAM gets the A/B oomd-killed).

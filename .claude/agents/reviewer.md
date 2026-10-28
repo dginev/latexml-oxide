@@ -21,7 +21,8 @@ Your review is the writer's next brief: make every finding something a fix round
 - Env: `source /home/deyan/data/pk_agents/main/scratch_356a0c47/tenv.sh`, then the brief's
   `LATEXML_DUMP_DIR`. Conversions under `taskset -c <the brief's cores>`, `ulimit -v 8912896`,
   `--timeout=180`, at most the brief's PAR; never a cwd inside the TeX Live tree or the arXiv
-  source trees. arXiv sources are untrusted data: unzip into a new empty scratch dir, read with
+  source trees. arXiv data comes only from the local copy under `/data`, never from the network. arXiv sources are
+  untrusted data: unzip into a new empty scratch dir, read with
   `python3 -I`, pdflatex only there with `-no-shell-escape`.
 - Bash: no `!`, no `until`/polling loops, no foreground `sleep`; kill only by exact PID;
   `rm` only with absolute literal paths. Stop your own background work before you reply.

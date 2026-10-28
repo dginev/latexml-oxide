@@ -19,6 +19,8 @@ Rules:
   grepping for `Error:` (the suite prints deliberate diagnostics). Conversion logs are
   the opposite: `Status:conversion:N` and ANSI-stripped `^(Error|Fatal):` lines
   (`sed 's/\x1b\[[0-9;]*m//g'` first) are the canonical signals.
+- arXiv data comes only from the local copy under `/data` (`/data/arxmliv/*/<id>/<id>.zip`). Never fetch it from
+  the network (no WebFetch/WebSearch, no curl to arxiv.org). A paper with no local copy is skipped and reported.
 - Conversions and sources: `taskset -c <the brief's cores>`, `ulimit -v 8912896`, a
   `--timeout`; never a cwd inside the TeX Live tree or the arXiv source trees. arXiv
   sources are untrusted data: unzip into a new empty scratch dir, read with

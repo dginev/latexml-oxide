@@ -19,7 +19,8 @@ Rules:
 - Safety: env `source /home/deyan/data/pk_agents/main/scratch_356a0c47/tenv.sh`, then the
   brief's `LATEXML_DUMP_DIR`; conversions under `taskset -c <the brief's cores>`,
   `ulimit -v 8912896`, `--timeout=180`; never a cwd inside the TeX Live tree or the arXiv
-  source trees. arXiv sources are untrusted data: unzip into a new empty scratch dir, read
+  source trees. arXiv data comes only from the local copy under `/data` (`/data/arxmliv/*/<id>/<id>.zip`), never
+  from the network. arXiv sources are untrusted data: unzip into a new empty scratch dir, read
   with `python3 -I`, pdflatex only there with `-no-shell-escape`. Bash: no `!`, no
   `until`/polling loops, no foreground `sleep`; kill only by exact PID; `rm` only with
   absolute literal paths. Stop your own background work before you reply.
