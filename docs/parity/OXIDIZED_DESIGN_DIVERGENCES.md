@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#903** (allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`).
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#905** (allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`).
 
 ---
 
@@ -25938,7 +25938,14 @@ no `\maketitle` 1207.1161 (arxiv.cls:241 `\affiliation`), 1303.3004 (ae100prg.cl
 abstract's marker and the keywords in one box (`ifacconf.cls:984-1070` `\open@fm`, one `logical-block`): the marker
 does not end its root child, so the abstract keeps its place — splitting the box at the marker is the ifacconf
 binding's work, tracked in DEFERRED_FAMILIES.md ("Deferred by the difficulty rule", the abstract-before-`\maketitle`
-entry) with ifacconf's 1309.1610 and 2104.15006. Repros
+entry) with ifacconf's 1309.1610 and 2104.15006. Detector residuals (the 86g r4 re-review; no corpus witness, 0 of
+3,990 rows differ): a store the class prints through a field the kernel refuses (a raw `\renewcommand\author` whose
+`\@author` appends `\@keywords`; any refused or nulled creator field extended with a store) is not seen by the
+speculative title-page run, so `title_page_may_print` says no and the run moves — the keywords behind the cover though
+pdflatex prints them above it, as many out-of-order pairs as int116a (RED
+`sectioning-frontmatter/late_abstract_after_a_refused_author_store`); and a speculative run that aborts is read as made
+and printing nothing (`aborted_printed_nothing`, the safe answer for `hand_untypeset_stores`), not as unknown —
+suspected only, no title page that pdflatex compiles was found to abort it. Repros
 `sectioning-frontmatter/{late_abstract_after_hand_typeset_cover, late_abstract_after_the_class_title_page,
 abstract_inside_the_class_title_page, abstract_after_in_place_setters_without_maketitle,
 late_abstract_after_body_content_keeps_its_slot, late_abstract_after_an_earlier_abstract,

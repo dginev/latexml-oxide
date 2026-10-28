@@ -262,6 +262,12 @@ fn late_abstract_follows_the_hand_typeset_cover() {
     for text in [kept, "Department of Repro", "Abstract words here."] {
       assert_eq!(xml.matches(text).count(), 1, "{text} once:\n{xml}");
     }
+    // (the stores' own content, kept whole and once — an emptied entry must not pass; the 86g r4 re-review's nit 3)
+    if expected.contains(&"keywords") {
+      for text in ["order, print", "12.34.Ab"] {
+        assert_eq!(xml.matches(text).count(), 1, "{text} once:\n{xml}");
+      }
+    }
   }
 }
 
