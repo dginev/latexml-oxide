@@ -18756,8 +18756,9 @@ reads `\affiliation{\affil}` with its own `\affil`, whose argument is the closin
 
 Fixed in Rust (86c): the binding's `\affil` is a guess (`DefinitionOrigin::Fallback`, revtex4_support_sty.rs), which a
 document's `\newcommand` or `\providecommand` replaces (`is_definable_latex`); under AASTeX, whose classes define
-`\affil` (aastex701.cls:13186, emulateapj.cls:460 `\let\affil\affiliation`; aastex.cls 5.x), aastex_cls.rs assigns it
-again as the class's, so a document's definition is refused there, as in LaTeX. Witnesses 1104.4073, 1907.12838,
+`\affil` (aastex701.cls:13186, emulateapj.cls:460 `\let\affil\affiliation`; aastex.cls 5.x), aas_support_sty.rs:173
+defines it again as `\affiliation` at the binding's origin, so a document's definition is refused there, as in LaTeX
+(aastex_cls.rs's own re-assignment after the REVTeX load is a backstop only). Witnesses 1104.4073, 1907.12838,
 1908.05079. Repros sectioning-frontmatter/{revtex_document_newcommand_affil, revtex_document_providecommand_affil,
 aastex_class_affil_stays_the_class}; guards `perfect_kernel_batch86c::{a_revtex_document_defines_its_own_affil,
 aastex_keeps_its_own_affil}`.

@@ -51,8 +51,10 @@ LoadDefinitions!({
   LoadClass!("revtex4");
   // AASTeX's own `\affil` (aastex.cls 5.x; aastex701.cls:13186 and emulateapj.cls:460 `\let\affil\affiliation`): the
   // REVTeX binding's, which REVTeX itself lacks and so gives a document's `\newcommand{\affil}` way
-  // (revtex4_support_sty.rs), is the class's here, and a document's `\newcommand` of it is refused, as in LaTeX. Assigned
-  // again at the class's own origin, it is no guess.
+  // (revtex4_support_sty.rs), is the class's here, and a document's `\newcommand` of it is refused, as in LaTeX. The
+  // definition that decides is aas_support_sty.rs:173 (`\affil` as `\affiliation`, at the binding's origin, loaded
+  // below); this re-assignment at the class's origin is a backstop for the load order (witness 1104.4073's REVTeX shape,
+  // KNOWN_PERL_ERRORS #1199).
   Let!("\\affil", "\\affil");
   // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`), over REVTeX's:
   // AASTeX 6.x's, as pdflatex gives it for aastex631.cls — 513.117pt in two 242.267pt columns under `twocolumn`, one

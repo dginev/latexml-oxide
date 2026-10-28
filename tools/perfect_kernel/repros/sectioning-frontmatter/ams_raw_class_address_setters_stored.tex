@@ -8,8 +8,9 @@
 % witness: 0902.1737 (franceschiniFINAL_new.tex:135-146, stacs.cls), 0802.2833; here a minimal stand-in of the class
 % oracle:  pdflatex 0 errors: "R. GROSSI / Dipartimento di Informatica, Universita di Pisa / Current address: Google
 %          Inc., NY / E-mail address: grossi@di.unipi.it / URL: http://www.di.unipi.it/grossi"
-% engines: rust int116a = 0 errors, the creator's name only (the four contacts in the dropped deposit); perl = the
-%          addresses kept, 2 errors (\@settitle, \@setauthors)
+% engines: rust int116a = 0 errors, the creator's name only (the four contacts in the dropped deposit); perl = 0
+%          errors, the name only (on 0902.1737 Perl never reads stacs.cls — 1 missing file — and keeps the addresses
+%          as contacts named by stacs's `\address[ref]` key, "uniroma", the visible-label shape of the 86c r1 review)
 % expect:  0 errors, 0 warnings; one creator with the address, current address, e-mail and URL, in order
 % status:  RED (int116a; no guard)
 % preload: ar5iv.sty
