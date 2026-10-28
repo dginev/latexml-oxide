@@ -1,0 +1,22 @@
+% mechanism: (not handled) the general author-block reader places the e-mail line under a marked institute block by
+%   the authors' order (`run_in_author_order` -> `addresses_in_order`, author_block/affiliations.rs): an address
+%   several names spell (`lee@` for Ann Lee and Bob Lee) counts as no spelling, so `lee@` goes to Cid Cole by place.
+%   The row reader (`row_address_owners`) has the fix since 85b r2: such an address agrees with the order only at a
+%   place it spells.
+% witness: the 85b review's r01 and re-review's open question (i) (the same rule in the shared reader: its own batch
+%   and A/B, for every class reaching `\lx@add@affiliations`)
+% oracle:  pdflatex 0 errors; "Ann Lee1, Bob Lee2, and Cid Cole1" over "1 Univ A", "2 Univ B" and
+%   "x1@x.edu, x2@x.edu, lee@x.edu"
+% engines: rust 85b r3 = x1@ Ann Lee's, x2@ Bob Lee's, lee@ Cid Cole's (by place)
+% expect:  0 errors, 0 warnings; Univ A on Ann Lee and Cid Cole, Univ B on Bob Lee; the three addresses the block's
+% status:  RED (85b r3): deferred to a later batch (SYNC_STATUS)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Lee\inst{1} \and Bob Lee\inst{2} \and Cid Cole\inst{1}}
+\institute{$^1$ Univ A \\ $^2$ Univ B \\ \email{x1@x.edu}, \email{x2@x.edu}, \email{lee@x.edu}}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

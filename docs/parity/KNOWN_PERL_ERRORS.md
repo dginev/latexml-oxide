@@ -18653,3 +18653,27 @@ Fixed in Rust (82u): one binding reads both forms by the call's shape — a seco
 after `\nocollaboration`, is the 6.3 form (aas_support_sty.rs). Witness 1802.09023. Repro
 package-bindings/aastex61_collaboration_takes_one_argument; guard
 `perfect_kernel_batch81::an_aastex61_collaboration_takes_one_argument`.
+
+## 1195. llncs's one `\institute` without `\inst` goes to the first author only
+
+llncs.cls:868-886 prints a sole `\institute` (no `\and`) unnumbered under every author. Perl's llncs.cls.ltxml:46-49
+labels it `affiliation:1` by `labelseq`; with no `\inst{1}` no author requests the label, and `relocateAnnotations`'
+prefix-stripped fallback (Base_Utility.pool.ltxml:891-900) reduces it to `1` and matches the first author's own
+sequence label `author:1`: the institute and the first `\email` in it are the first author's alone; any further
+`\email` goes to the last author (only the first inherits the institute's pending entry, :497-500). Minimal trigger:
+
+```latex
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker \and Cat Cole}
+\institute{University of Somewhere, Town\\ \email{\{able,baker\}@x.edu}, \email{cole@y.edu}}
+\maketitle
+\end{document}
+% pdflatex: the institute and both addresses under all three names. Perl: the institute and the brace list on Ann
+% Able, cole@y.edu on Cat Cole, Bob Baker nothing
+```
+
+Fixed in Rust (85b, OXIDIZED_DESIGN_DIVERGENCES #901): the institute is every author's, each address the author it
+spells. Witnesses 1002.2793, 2106.04289, 2402.19043. Repro class-bindings/llncs_sole_institute_is_every_authors; guard
+`perfect_kernel_batch85b::llncs_sole_institute_is_every_authors`.

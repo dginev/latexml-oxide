@@ -81,8 +81,26 @@ LoadDefinitions!({
   // IMPROVEMENT over upstream: also split on \\ -- authors commonly use a manual
   // row break in place of \and ("A\inst{1} \\ B\inst{2}"), which upstream merges
   // into a single creator (witness 2606.19939: "Hiuyi Cheng \\ Dezhi Peng").
-  DefMacro!("\\author{}",
-    "\\lx@clear@creators[role=author]\\lx@llncs@author{#1}\\lx@author@trailing");
+  // An `\institute{…}` written inside `\author` (`\author{Ann Able and Bob Baker \institute{Univ X}}`, 1609.01220) is
+  // the class's store all the same, `\gdef\@institute` (llncs.cls:868), printed under the names by `\institutename`
+  // (:1036): one after the names, not a part of the last name. It runs when `\@maketitle` sets `\@author`, before
+  // `\institutename` prints the store, so it wins over any `\institute` given outside, before or after (the 85b
+  // review's r02: `\author{Ann Able \and Bob Baker \institute{Univ X}}\institute{Univ Y}` prints "Univ X"): taken
+  // here, it is the store, and an outer `\institute` given while it stands sets nothing (`\lx@llncs@inner@institute`;
+  // a later `\author` without one gives the store back to the outer calls).
+  DefMacro!("\\author{}", sub[(body)] {
+    let (names, institutes) = take_institutes(&body);
+    let mut out = mouth::tokenize_internal("\\lx@clear@creators[role=author]").unlist();
+    out.extend(Invocation!(T_CS!("\\lx@llncs@author"), vec![Some(names)]).unlist());
+    let inner = !institutes.is_empty();
+    out.extend(mouth::tokenize_internal("\\gdef\\lx@llncs@inner@institute{}").unlist());
+    out.extend(institutes);
+    if inner {
+      out.extend(mouth::tokenize_internal("\\gdef\\lx@llncs@inner@institute{1}").unlist());
+    }
+    out.push(T_CS!("\\lx@author@trailing"));
+    Ok(Tokens::new(out))
+  });
   // llncs.cls:1019-1036 sets `\@author` as one centred paragraph, so a `\\` there is a line break of the author list,
   // and its `\and` is inline text (llncs.cls:1013-1018, `\unskip,` or `\lastand` in `\@maketitle`): a line reading as
   // an affiliation (`\author{Ann Able\\University of Somewhere\\\email{…}}`) is printed under the names since the last
@@ -151,22 +169,26 @@ LoadDefinitions!({
   //      affiliation's label, so it attaches to the matching \inst{N} authors.
   //  (b) Single institution, no \and, "\\"-separating the name from a SHARED
   //      \email covering every author (witness 2608.11332, arXiv/html_feedback
-  //      #6881). This is Perl's plain case: it must stay ONE affiliation so the
-  //      trailing \email inherits its "affiliation:1" label and lands on all the
-  //      \inst{1} authors. Splitting the "\\" here (the pre-fix bug) put the
+  //      #6881). This is Perl's plain case: it must stay ONE affiliation, on all
+  //      the \inst{1} authors. Splitting the "\\" here (the pre-fix bug) put the
   //      \email in its own "affiliation:2" contact that no author carries, so it
-  //      mislanded on a single creator and left an empty affiliation stub.
+  //      mislanded on a single creator and left an empty affiliation stub. Its
+  //      \email lines are each address its owner's (85b, below), not the brace
+  //      list whole on every author, which inheriting "affiliation:1" made it.
   //  (c) Lazy: ONE block, no \and, hand-typed superscripts ("$^1$..\quad $^2$..")
   //      (witness 2606.19939). Upstream makes a single affiliation = the whole
   //      block attached to every \inst{1} author (duplicating it) while \inst{2}+
   //      get nothing (reproduces identically in Perl LaTeXML 0.8.8). The shared
   //      \lx@add@affiliations parser handles this: it splits on \quad/\qquad/\\
   //      and extracts each superscript as the affiliation label \inst{N} links to.
-  // So: clear, then \and-split (a)+(b) UNLESS there is no \and AND superscript
+  // So: clear, then \and-split (a), one affiliation (b) — shared by every author when no
+  // `\inst` number picks it (85b, below) — UNLESS there is no \and AND superscript
   // markers are present (c) -- the only shape that needs the multi-parser.
+  // (an `\institute` inside the last `\author` is the store, which an outer one does not replace: above)
+  DefMacro!("\\lx@llncs@inner@institute", "");
   DefMacro!("\\institute{}",
-    "\\lx@clear@frontmatter{ltx:contact}[role=affiliation]\
-     \\lx@llncs@institute@dispatch{#1}");
+    "\\ifx\\lx@llncs@inner@institute\\@empty\\expandafter\\@firstofone\\else\\expandafter\\@gobble\\fi\
+     {\\lx@clear@frontmatter{ltx:contact}[role=affiliation]\\lx@llncs@institute@dispatch{#1}}");
   DefMacro!("\\lx@llncs@institute@split{}", "\\lx@splitting{\\lx@llncs@affiliation}{\\and}{#1}");
   DefMacro!("\\lx@llncs@institute@sup{}",   "\\lx@add@affiliations[labelseq={affiliation}]{#1}");
   DefMacro!("\\lx@llncs@institute@dispatch{}", sub[(body)] {
@@ -175,12 +197,33 @@ LoadDefinitions!({
     let has_sup = author_mark_position(&body).is_some();
     let target = if !has_and && has_sup {
       T_CS!("\\lx@llncs@institute@sup")     // shape (c): lazy superscript-labeled block
+    } else if !has_and && body.unlist_ref().iter().any(|t| t.get_catcode() != Catcode::SPACE) {
+      // (an empty `\institute{}` stays none, as the split of nothing makes it: the `\inst` marks it answers no one
+      // stay shown, 2407.13764)
+      T_CS!("\\lx@llncs@institute@sole")    // shape (b): one institute
     } else {
-      T_CS!("\\lx@llncs@institute@split")   // shapes (a)+(b): \and-split, single stays one
+      T_CS!("\\lx@llncs@institute@split")   // shape (a): \and-split
     };
     Ok(Invocation!(target, vec![Some(body)]))
   });
   DefMacro!("\\lx@llncs@affiliation{}", "\\lx@add@affiliation[labelseq={affiliation}]{#1}");
+  // llncs.cls:868-886: one institute (`\c@@inst=1`, no `\and` in it) is printed under the names unnumbered, every
+  // author's, unless the authors' `\inst` marks pick it (`\inst{1}`): `_share=authors`, which the frontmatter's flush
+  // reads (`share_row_contacts`, OXIDIZED_DESIGN_DIVERGENCES #901; Perl strands it on the first author for want of an
+  // `\inst{1}`, KNOWN_PERL_ERRORS #1195, and the kernel had kept it on a nameless creator under the names,
+  // OXIDIZED_DESIGN #159, 2402.19043). Only `\inst{n}` picks it: hand-typed `$^{1}$` (2607.02596) and a paper's mark
+  // macro (`\printfnsymbol{1}`, 1804.05870, 2007.07423, 2102.12877, 2403.11865) are answered by no one. Its `\email`s
+  // are lines under the names, picked or shared, each decided on its own: the address the author it spells, or in a
+  // list one per author the author at its place (2410.04091's `\{…\}` addresses), a call the reader cannot part the
+  // block's (2206.10050; FIDELITY_CHARTER §4). Witnesses 1002.2793, 1307.8067,
+  // 1405.1167, 1509.00818, 1609.01220, 1809.11127, 1910.11599, 2011.00616, 2101.06781, 2106.04289, 2205.06740,
+  // 2207.04574 (an `\inst{*}`), 2207.11464, 2306.03360, 2405.11276, 2502.08785, 2511.12796, 2603.26486, 2604.20229
+  // (`\inst{}`), 1701.08125; the shape (b) witness 2608.11332 (`\inst{1}` on every author) is picked by its marks, as
+  // before, its brace list each address its owner's.
+  // Guards `perfect_kernel_batch85b`.
+  DefMacro!("\\lx@llncs@institute@sole{}", "\\lx@add@affiliation[labelseq={affiliation},_share={authors}]{#1}");
+  // (an address of such a line is set as llncs's `\email` sets its own, under its name, llncs.cls:897)
+  DefMacro!("\\lx@row@email{}{}", "\\lx@add@email[name={\\emailname~},label={#1}]{#2}");
   DefMacro!("\\inst{}",                 "\\lx@request@frontmatter@annotation[affiliation]{#1}");
   // \orcidID should be used within each author in \author
   DefMacro!("\\orcidID{}", "\\lx@add@orcid{#1}");
@@ -525,3 +568,52 @@ LoadDefinitions!({
 \def\proofname{Beweis}\def\propertyname{Eigenschaft}\def\questionname{Frage}\def\remarkname{Anmerkung}\def\seename{siehe}%
 \def\solutionname{L\"osung}\def\tablename{Tabelle}}"#);
 });
+
+/// `body` without its top-level `\institute{…}` calls, and the calls.
+fn take_institutes(body: &Tokens) -> (Tokens, Vec<Token>) {
+  let v = body.unlist_ref();
+  let (mut names, mut institutes) = (Vec::with_capacity(v.len()), Vec::new());
+  let (mut at, mut depth) = (0usize, 0usize);
+  while at < v.len() {
+    let t = v[at];
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ => {},
+    }
+    if depth == 0 && t == T_CS!("\\institute") {
+      let mut arg = at + 1;
+      while v.get(arg) == Some(&T_SPACE!()) {
+        arg += 1;
+      }
+      if v
+        .get(arg)
+        .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+      {
+        let mut end = arg;
+        let mut inner = 0usize;
+        while end < v.len() {
+          match v[end].get_catcode() {
+            Catcode::BEGIN => inner += 1,
+            Catcode::END => {
+              inner -= 1;
+              if inner == 0 {
+                break;
+              }
+            },
+            _ => {},
+          }
+          end += 1;
+        }
+        if end < v.len() {
+          institutes.extend_from_slice(&v[at..=end]);
+          at = end + 1;
+          continue;
+        }
+      }
+    }
+    names.push(t);
+    at += 1;
+  }
+  (Tokens::new(names), institutes)
+}

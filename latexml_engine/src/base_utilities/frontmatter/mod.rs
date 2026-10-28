@@ -16,5 +16,7 @@ mod insert;
 pub use insert::*;
 mod relocate;
 pub use relocate::*;
+mod shared_row;
+pub(in crate::base_utilities) use shared_row::*;
 pub(in crate::base_utilities) mod observer;
 pub use observer::*;

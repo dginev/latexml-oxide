@@ -203,7 +203,7 @@ fn author_order_step(listed: &[(i64, Option<usize>)], authors: usize) -> Option<
 /// corresponding author's (`\emailAdd{zyxu@gzu.edu.cn(Corresponding author)}`) and exactly one author among `within`
 /// carries a `*` with no legend (2308.06532's `\author[1,*]{Zhaoyi Xu}`, "E-mail: zyxu@gzu.edu.cn(Corresponding
 /// author)" in its PDF).
-fn marked_corresponding_author(
+pub(super) fn marked_corresponding_author(
   commands: &[RawFrontmatter],
   address: &str,
   within: Option<&[usize]>,
@@ -420,10 +420,12 @@ pub fn digest_front_matter() -> Result<()> {
   // else — deferred timing, digestion order, late re-let/\def fidelity —
   // is exactly the PR's. Newly-queued entries during this digest are
   // processed by the next invocation (or the end-of-document fallback).
-  let commands: Vec<RawFrontmatter> = match remove_value("frontmatter_raw") {
+  let mut commands: Vec<RawFrontmatter> = match remove_value("frontmatter_raw") {
     Some(Stored::FrontmatterRaw(commands)) => commands,
     _ => Vec::new(),
   };
+  // (a contact the class prints under the whole row of names, every author's: OXIDIZED_DESIGN_DIVERGENCES #901)
+  share_row_contacts(&mut commands)?;
   // The entries a seal drops in this flush, whose annotations go with them ([`seal_digested_frontmatter`]) — this
   // flush's own, the outer flush's restored after it (a queued entry may flush again, `\maketitle` in an abstract).
   let outer_sealed_off = lookup_string("lx_frontmatter_sealed_off");

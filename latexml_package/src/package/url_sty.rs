@@ -204,7 +204,42 @@ LoadDefinitions!({
     let cmd = cmd.to_string();
     unread(start);
     let expansion : Vec<Digested> = digest_next_body(Some(T_CS!("\\endgroup")))?;
+    // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #901): what the command prints, as text, kept beside it — a primitive's
+    // boxes are no expansion a reader of the frontmatter can look into. A `\urldef`'d address in llncs's shared
+    // `\institute` (`\urldef{\mailsa}\path|{mkelly, …}@cs.odu.edu|`, 1307.8067; `\mailk, \mailt`, 1408.0384) is an
+    // e-mail line of the row (`share_row_contacts`), not every author's affiliation.
+    let text: String = expansion.iter().map(ToString::to_string).collect();
+    assign_value(&s!("lx@urldef@text@{cmd}"), url_printed_text(&text), None);
     DefPrimitive!(&cmd, { Ok(expansion.clone()) });
     Ok(vec![])
   });
 });
+
+/// The string a `\url`/`\path` call as written prints (`\path|{a,b}@x.edu|`, `\url{a@x.edu}`): what stands between its
+/// delimiters, or the whole of `written` when it is no such call.
+fn url_printed_text(written: &str) -> String {
+  let Some(rest) = written.strip_prefix('\\') else {
+    return written.to_string();
+  };
+  let rest = rest
+    .trim_start_matches(|c: char| c.is_ascii_alphabetic())
+    .trim_start();
+  let mut chars = rest.chars();
+  let Some(open) = chars.next() else {
+    return written.to_string();
+  };
+  let close = if open == '{' { '}' } else { open };
+  let inner: &str = chars.as_str();
+  let mut depth = 0usize;
+  for (at, c) in inner.char_indices() {
+    if open == '{' && c == '{' {
+      depth += 1;
+    } else if c == close {
+      if depth == 0 {
+        return inner[..at].to_string();
+      }
+      depth -= 1;
+    }
+  }
+  written.to_string()
+}

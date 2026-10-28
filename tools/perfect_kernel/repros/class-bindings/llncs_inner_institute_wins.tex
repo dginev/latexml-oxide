@@ -1,0 +1,20 @@
+% mechanism: an `\institute` inside `\author` runs when `\@maketitle` sets the names, before `\institutename` prints
+%   the store (llncs.cls:868, :1036): it wins over an outer `\institute`, before or after (llncs binding,
+%   `\lx@llncs@inner@institute`).
+% witness: the 85b review's r02; 1609.01220 (an `\institute` inside `\author`); near-duplicates without a guard:
+%   p11 (the inner one holding an `\email`), p14 (two outer: the last wins), p10 (outer before `\author`)
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker" over "Univ X" (and so with the outer `\institute{Univ Y}`
+%   first)
+% engines: rust 85b r1 = Univ Y on both; int114a = Univ X on Ann Able, Univ Y on Bob Baker
+% expect:  0 errors, 0 warnings; Univ X on both
+% status:  RED (85b r1) -> GREEN (85b r2)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able \and Bob Baker \institute{Univ X}}
+\institute{Univ Y}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

@@ -15,17 +15,49 @@ pub fn row_email_owners(names: &[Tokens], line: &Tokens) -> Result<Option<Addres
   let Some(addresses) = email_addresses(line) else {
     return Ok(None);
   };
-  let keys: Vec<NameKeys> = names.iter().map(NameKeys::of).collect();
-  let in_order = addresses.len() == names.len() && addresses_in_order(&keys, &addresses, 0);
-  let owners: Vec<Option<usize>> = addresses
-    .iter()
-    .enumerate()
-    .map(|(at, address)| spelled_owner(&keys, address).or(in_order.then_some(at)))
-    .collect();
+  let owners = row_address_owners(names, &addresses);
   let tokens = if addresses.len() == 1 {
     vec![line.clone()]
   } else {
     address_tokens(line, addresses)?
   };
   Ok(Some(tokens.into_iter().zip(owners).collect()))
+}
+
+/// The place among a row's `names` of the owner of each of `addresses`, the e-mail addresses printed under the row
+/// ([`row_email_owners`]): the name it spells; else, in a list of one address per name that every spelled address
+/// agrees with, the name at its place; else `None`, the row's names' (FIDELITY_CHARTER §4). An address several names
+/// spell agrees with the list only when the name at its place is one of them: `lee@x.edu` at Cid Cole's place under
+/// "Ann Lee, Bob Lee and Cid Cole" spells another author than the one there, so the list is in no author order (the
+/// 85b review's r01; [`addresses_in_order`] reads such an address as none's). A list of local parts the reader could
+/// not part (`{zz|yy}@x.edu`, [`lists_local_parts`]) is several authors' address, so no list holding one is one address
+/// per name (user ruling R10: the block's).
+pub(in crate::base_utilities) fn row_address_owners(
+  names: &[Tokens],
+  addresses: &[String],
+) -> Vec<Option<usize>> {
+  let keys: Vec<NameKeys> = names.iter().map(NameKeys::of).collect();
+  let in_order = addresses.len() == names.len()
+    && addresses.iter().enumerate().all(|(at, address)| {
+      let spelled = spelled_owners(&keys, address);
+      !lists_local_parts(address) && (spelled.is_empty() || spelled.contains(&at))
+    });
+  addresses
+    .iter()
+    .enumerate()
+    .map(|(at, address)| spelled_owner(&keys, address).or(in_order.then_some(at)))
+    .collect()
+}
+
+/// The owner of each of `addresses` among a row's `names` by its spelling alone ([`spelled_owner`]), when the
+/// addresses printed under the row are not all read, so no list of them is known to be one per name.
+pub(in crate::base_utilities) fn row_address_spelled_owners(
+  names: &[Tokens],
+  addresses: &[String],
+) -> Vec<Option<usize>> {
+  let keys: Vec<NameKeys> = names.iter().map(NameKeys::of).collect();
+  addresses
+    .iter()
+    .map(|address| spelled_owner(&keys, address))
+    .collect()
 }

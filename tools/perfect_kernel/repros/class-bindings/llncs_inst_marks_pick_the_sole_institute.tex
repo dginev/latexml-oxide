@@ -1,0 +1,17 @@
+% mechanism: an `\inst{1}` mark picks the one institute for the authors carrying it, as before: no sharing
+%   (`share_row_contacts` reads a numbered mark as a pick); its `\email` inherits its label.
+% witness: (negative of 2207.04574, 2604.20229: their marks are no number)
+% oracle:  pdflatex 0 errors; "Ann Able1, Bob Baker, and Cat Cole" over "University of Somewhere able@x.edu"
+% engines: rust int114a = the same as expected; perl = the same
+% expect:  0 errors, 0 warnings; the institute and its address on Ann Able only
+% status:  GREEN (int114a, pinned by 85b)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1} \and Bob Baker \and Cat Cole}
+\institute{University of Somewhere \email{able@x.edu}}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

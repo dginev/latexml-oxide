@@ -345,6 +345,49 @@ pub(in crate::base_utilities) fn author_notes<'a>(
   found
 }
 
+/// The words of a contact's label, lowercase, without hyphens (`E-mail` is `email`): first the e-mail words, then the
+/// address words, then the words naming a contact. An e-mail label is an e-mail word, alone or before an address word
+/// ([`is_email_label`]); the label an e-mail call has of its own starts with any of them (`Corresponding author:`,
+/// `Contact:`, `E-mail address:`, `Correspondence to:`, the 85b r4 re-review's q03, q04, q23; [`names_a_contact`]).
+const CONTACT_WORDS: &[&str] = &[
+  "email",
+  "emails",
+  "address",
+  "addresses",
+  "mail",
+  "contact",
+  "corresponding",
+  "correspondence",
+  "author",
+  "authors",
+];
+
+/// `word`, lowercase, without hyphens or whitespace ([`CONTACT_WORDS`]' form).
+fn contact_word_form(word: &str) -> String {
+  word
+    .chars()
+    .filter(|c| !c.is_whitespace() && *c != '-')
+    .collect::<String>()
+    .to_lowercase()
+}
+
+/// Is `text` an e-mail label's words ("E-mail", "Emails", "E-mail address"; [`CONTACT_WORDS`])?
+pub(in crate::base_utilities) fn is_email_label(text: &str) -> bool {
+  let text = contact_word_form(text);
+  let (emails, rest) = CONTACT_WORDS.split_at(2);
+  let addresses = &rest[..2];
+  emails.iter().any(|email| {
+    text
+      .strip_prefix(email)
+      .is_some_and(|after| after.is_empty() || addresses.contains(&after))
+  })
+}
+
+/// Is `word` a word of a contact's label ([`CONTACT_WORDS`]: `Corresponding`, `Contact`, `E-mail`, …)?
+pub(in crate::base_utilities) fn names_a_contact(word: &str) -> bool {
+  CONTACT_WORDS.contains(&contact_word_form(word).as_str())
+}
+
 /// A line's leading email label — "E-mail:", "Email:", "e-mails:", "E-mail address:", up to its colon, or the same
 /// words without one right before a command — and the rest of the line.
 pub(in crate::base_utilities) fn split_email_label(line: &Tokens) -> (Option<Tokens>, Tokens) {
@@ -369,17 +412,7 @@ pub(in crate::base_utilities) fn split_email_label(line: &Tokens) -> (Option<Tok
       _ => break,
     }
   }
-  let is_label = {
-    let words: String = text
-      .chars()
-      .filter(|c| !c.is_whitespace() && *c != '-')
-      .collect::<String>()
-      .to_lowercase();
-    matches!(
-      words.as_str(),
-      "email" | "emails" | "emailaddress" | "emailaddresses"
-    )
-  };
+  let is_label = is_email_label(&text);
   match end {
     Some(end) if is_label => {
       let label: Vec<Token> = tokens[..end]

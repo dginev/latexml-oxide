@@ -1,0 +1,20 @@
+% mechanism: a label before an `\email` call on llncs's shared `\institute` goes with the call only when the rule
+%   recognises it (`call_label`: one to four words ending in a colon, the first a contact word, `CONTACT_WORDS`). A
+%   label word the rule does not know (`Reach me at:`) stays the institute's, every author's, while the address goes
+%   to its owner — the label is cut off from its address. Not fixed: sending unrecognised colon text before a call to
+%   the block would undo the 85b r3 re-review's n09/n10 (`Department of CS: \email{…}`, the department rightly the
+%   institute's); a residual, OXIDIZED_DESIGN_DIVERGENCES #901.
+% witness: the 85b r4 re-review's finding 2 (q03, q23: `Correspondence:`, fixed by the word); no census paper
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker" over "Univ X" and "Reach me at: able@x.edu"
+% engines: rust int114a = all on a nameless creator; 85b r5 = "Univ X Reach me at:" on both, able@x.edu Ann's
+% expect:  0 errors, 0 warnings; "Univ X" on both; "Reach me at: able@x.edu" Ann's
+% status:  RED (85b r5)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\institute{Univ X\\ Reach me at: \email{able@x.edu}}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,26 @@
+% mechanism: a line of llncs's shared `\institute` holding an `@` outside an `\email` call (`{\tt \{a,b\}@…}`,
+%   `\texttt`, `\url`, `\href{mailto:…}`) is an e-mail line of the row: read with the address reader, each address its
+%   owner's (`row_email_calls`, `holds_raw_address`, FIDELITY_CHARTER §4); a line the reader cannot read is the block's,
+%   as written; a shared institute's own first line holding one keeps the whole institute at the block (1706.02124),
+%   while under `\inst{1}` marks the picked institute keeps any line the reader cannot read, first or later, as
+%   written, on its picked authors (int114a's placement; the 85b r3 re-review's n31-n33, the r4 re-review's q25).
+% witness: 1103.2027 (this replica); 0712.2737, 2207.07506, 2407.18381, 2504.06600, 1809.11127 (`\url`), 2408.03209
+%   (`\href{mailto:…}`); the 85b re-review's s20, s30 (near-duplicates without a guard of their own)
+% oracle:  pdflatex 0 errors; "Joxan Jaffar, Jorge A. Navas, and Andrew E. Santosa" over "National University of
+%   Singapore" and "{joxan,navas,andrews}@comp.nus.edu.sg"
+% engines: rust int114a = the institute and the list on a nameless creator; 85b r2 = the institute and the whole list
+%   in every author's affiliation
+% expect:  0 errors, 0 warnings; the institute on the three; joxan@, navas@, andrews@ each its author's
+% status:  RED (85b r2; the picked first line, 85b r3; the picked later line, 85b r4) -> GREEN (85b r5)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Joxan Jaffar \and Jorge A. Navas \and Andrew E. Santosa}
+\institute{ National University of Singapore\\
+ {\tt \{joxan,navas,andrews\}@comp.nus.edu.sg} \\
+}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

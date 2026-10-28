@@ -7075,7 +7075,14 @@ affiliation once, full-width, centered, below the author row.
 
 **Why it's safe.** Only the auto self-sequence labels leave the numeric fallback; exact-label
 (`\inst`) attachment and genuine cross-prefix misuse recovery are untouched. Guarded by
-`frontmatter_llncs_shared_affiliation_below_authors`.
+`perfect_kernel_batch85b::llncs_several_or_empty_institutes_are_not_shared` (the trailing shared creator).
+
+**llncs since 85b (#901).** llncs's sole `\institute` no longer reaches this rule unless an `\inst{n}` picks it (or
+a shown mark numbers a second, hand-numbered institute): the binding's flush makes it every author's
+(`share_row_contacts`), as the class prints it under the whole row (guard
+`perfect_kernel_batch85b::llncs_sole_institute_is_every_authors`, which replaced the former
+`frontmatter_llncs_shared_affiliation_below_authors`). The trailing shared creator stays for every other class, and for
+llncs's several unmarked institutes.
 
 **Orphaned thanks notes (63g).** A `role="thanks"` note that no creator cites joins the same
 trailing creator, for every class. Perl warns ("Orphaned frontmatter annotation") and drops it,
@@ -25661,3 +25668,112 @@ places_and_roles_under_an_institution, next_name_after_a_gap_under_a_place, line
 rows_of_names_share_their_lines}`; and the RED ones above; guards `perfect_kernel_batch85a::*`,
 `author_split_tests::{institution_head_continues_the_line_above, person_over_institution_needs_a_persons_cue,
 linebreak_option_gap_kept_between_lines}`.
+
+### 901. llncs's one `\institute` is every author's, its e-mail lines by their owners (Perl: on the first author)
+
+llncs.cls:868-886 prints a sole institute (no `\and` in `\institute`, `\c@@inst=1`) unnumbered under the whole author
+row; `\inst{n}` (:894) numbers each author's when there are several. Perl numbers the sole institute `affiliation:1`
+(llncs.cls.ltxml:46-49), which no author requests without `\inst{1}`, and its prefix-stripped fallback strands it on
+the first author (KNOWN_PERL_ERRORS #1195); #159 had kept it once on a nameless creator under the names, so no author
+had an affiliation (20 of the frontmatter scorer's 56 llncs sample papers). Ours: the binding queues the sole
+institute with `_share=authors` (`\lx@llncs@institute@sole`), and the frontmatter's flush (`share_row_contacts`,
+base_utilities/frontmatter/shared_row.rs, before anything is digested) makes it every author's unless it is picked:
+only the class's own request picks it, a command requesting a labelled annotation (`\inst{1}`) with a number; a
+hand-typed `$^{1}$` (2607.02596), a paper's mark macro (`\affmark{1}`, `\printfnsymbol{1}`: 1804.05870, 2007.07423,
+2102.12877, 2403.11865) and llncs's `\fnmsep` are answered by no one and pick nothing (`\inst{*}`, 2207.04574, and an
+empty `\inst{}`, 2604.20229, neither). Not shared, as before: an institute holding marks of its own (a superscript, or
+a paper macro raising its argument bare, `\textsuperscript{#1}`: 2608.21425's `\affmark{1} City University … \quad
+\affmark{2} …`), a shown mark numbering another institute than the first (`Ann Able$^{1,2}$` over `{1} Univ A \\ {2}
+Univ B`: several institutes numbered by hand, astro-ph0305539's shape), an empty `\institute{}` (none, 2407.13764).
+Shared, each author's content requests `row:shared`, which the contact sets as its own label, so it is digested once
+and placed on every author as an `\inst`-picked one is.
+
+Its e-mail lines are lines under the row, taken out of the contact and each decided on its own (`row_email_calls`); the contact's lines are its `\\`/`\newline`/`\par` parts. With several authors, a line
+holding an `@` outside the class's `\email` calls — at any depth, a note's too, or in what a command of the paper's
+own on it prints (a parameterless macro's body; a `\urldef`'d command's text, which `\urldef` keeps beside it,
+url_sty.rs) — is an e-mail line (`holds_raw_address`): `{\tt \{joxan,navas,andrews\}@…}` (1103.2027), `\texttt{…}`,
+`\url{{farazi, pallgeuer}@…}` (1809.11127), `\href{mailto:…}{…}` (2408.03209), `\mailsa` (1307.8067; 1408.0384's
+`\mailk, \mailt`). The address reader (`email_addresses`) reads it after an `Email:` label (the contact's own name)
+or a label of its own (`Corresponding author:`, its first word a contact's, which keeps the line whole), each address
+its owner's as a call's are;
+a line of a shared institute the reader cannot read is the block's, as written, an affiliation (1708.06860's brace
+list cut across two `\urldef`s; `Department of CS: {\tt able@x.edu}`, no label of its own); when that line is the
+institute's own first line (`… Hamburg, Germany \mailsa`, 1706.02124; an address in the institute's `\thanks`), the
+whole institute is the block's, as written (int114a's placement). Each `\email` call: each address the reader takes goes to the author it spells; else, a list of one address per author that every
+spelled address agrees with — an address several names spell agreeing only when the name at its place is one of them
+(`lee@` at Cid Cole's place under Ann Lee and Bob Lee is no order), a list of local parts the reader cannot part never
+— to the author at its place; else, with one author, to that author; else, the one address left of several authors,
+to the one marked as the corresponding author (`marked_corresponding_author`) who owns no other address of the line
+(2510.12629's `kgwo0528@` stays the block's beside Jinwoo Kim's `jinwookim@`), unless it is a template's
+(`{firstname.lastname}@`, `first.last@`: no one's); else, in a shared institute, to the author
+block (FIDELITY_CHARTER §4, `row_address_owners`, the reading of eptcs's rows, #898). A brace list of local parts is each address apart
+(`\{saad,saia\}@cs.unm.edu`, 1405.1167); split so, a list no one owns keeps its printed braces
+(`{stomforde|bsick}@uni-kassel.de`, 1701.08125). One address in printed braces is that address, set as written
+(`\email{\{fatima.iribu@gmail.com\}}` ×3, 2410.04091: one per author, each the author's at its place). A call the
+reader cannot part (`{a,b}@x` without printed braces, 2206.10050; 1809.06205, 2607.18577), or parts into pieces no
+whole address (`[a@insa-, b@insa-]rouen.fr`, 2609.24668), is the call as written, the block's (user ruling R10), one
+author's when there is one; when another call or line is not read, no list is one per author and the others go by
+spelling alone. A label of the call's own the rule recognises goes with it, in its piece, the call then unparted
+(`call_label`): before the call, one to four words of letters and hyphens ending in a colon, read as printed
+(through a font's group, a `~`, a spacing command: `\textit{Corresponding author:}`, `Corresponding~author:`,
+`\hspace{1cm}Contact:`), the first a contact's (`names_a_contact`, one vocabulary with the `Email:` label reader
+`split_email_label`: corresponding, correspondence, contact, author, e-mail, mail, address), from a later line's start
+or after a `,` or `;`, the spacing before it aside (`Corresponding author:`, 2410.06985, 2609.00838; `Contact:`,
+2509.05139; `Correspondence to:`, the r4 re-review's q03, q23); after it, a parenthetical of words
+(`(Corresponding author)`, 2608.24697). Other text on the call's line stays the institute's, every author's: `… Rouen,
+France. \email{…}` (2609.24668), `\hspace{0.5cm}` (2310.06847), text that only ends in a colon (`Department of
+Computer Science:`, `Dept. of CS:`, `Lab of A. B. Smith:`: the r3 re-review's n09, n10, n35) — and a label of a form
+the rule does not recognise, a residual (prose without a colon, `Corresponding author email \email{…}`; a label word
+the rule does not know, `Reach me at: \email{…}`, kept off the block so that n09/n10's department stays the
+institute's; a label after a `.` or after other text on its line, `Univ X. Corresponding author: \email{…}`). A
+connective between two calls (`\email{a} and \email{b}`, `\&`, `or`: the r4 re-review's q08, q28) is no call
+separator and stays the institute's, every author's — a residual. A shared contact's `\email` inside its `\thanks` (no other `@` in it) stays in the
+note, given its owner's label in place; as int114a, the address leaves the note's sentence. Every address goes through
+`\lx@row@email{label}{address}` (llncs's sets its `\emailname`). An e-mail digested inside a shared contact all the
+same (a paper's own `\email` macro) never inherits `row:shared`: it keeps its own label, else is the block's
+(`SHARED_ROW_LABEL`, `\lx@annotate@frontmatter@now`). So in a shared institute an address the rule reads, and a
+label it recognises, is one author's or the block's, never every author's; a shared contact every line of which is
+taken is none. An `\inst{1}`-picked institute is its picked authors' as the marks decide, and the block is the
+shared path's fail-safe only: a piece leaves it only when it is an address the reader reads and an owner is found for
+(the rules above), with the label the rule recognises; everything else stays in it, as written, its picked authors'
+(int114a's placement): a line the reader cannot read, first or later (`\institute{Univ X, able@x.edu}`, `Univ X\\
+Twitter: @univx`; the r3 re-review's n31-n33, the r4 re-review's q01, q25), the calls on it each read apart
+(`\email{able@x.edu}, Twitter: @univx`, q31), a line holding a note (q02), `Department of CS: {\tt able@x.edu}` (q19),
+a call or line no address of which an owner is found for (2109.05583's template, 2307.04136, 2609.24668), and the
+text between — save decision 3 of 2026-10-22: of a call or line parted by owner (a group written out), an address no
+one is found for is the block's, as in a shared institute (2510.12629's `\email{kgwo0528@gmail.com,
+jinwookim@kw.ac.kr}`: `jinwookim@` Jinwoo Kim's, `kgwo0528@` the block's); a picked contact every line of which is
+taken stays, empty, answering its authors' `\inst{1}` marks. Left in the contact, an e-mail would
+have inherited the institute's label (Perl Base_Utility.pool.ltxml:497-500): every author's, or with `\inst{1}` every
+`\inst{1}` author's (2608.11332's brace list whole on both, arXiv/html_feedback#6881's witness, now each address its
+owner's).
+
+The binding also takes an `\institute` written inside `\author` out of the last name (1609.01220): it is the class's
+store, run when `\@maketitle` sets the names, before `\institutename` prints it, so it wins over an outer
+`\institute` before or after it (`\lx@llncs@inner@institute`; a later `\author` without one gives the store back).
+Unchanged: `\inst`-numbered institutes, several institutes without marks (the block's, or Perl's numeric pairing when
+as many as the authors; 2207.06953's hand-typed `$^1$` marks still read by no one), the lazy superscript block.
+Witnesses 1002.2793, 1307.8067, 1405.1167, 1509.00818, 1609.01220, 1809.11127, 1910.11599, 2011.00616, 2101.06781,
+2106.04289, 2205.06740, 2207.04574, 2207.11464, 2306.03360, 2405.11276, 2502.08785, 2511.12796, 2603.26486,
+2604.20229, 2402.19043 (#159's); 1804.05870, 2607.02596, 2007.07423, 2102.12877, 2403.11865 (marks no one answers);
+2410.04091, 2206.10050, 1701.08125 (e-mail calls); 0712.2737, 1103.2027, 1307.8067, 1405.0417, 1408.0384,
+1503.02007, 1504.01099, 1511.00725, 1705.06516, 1706.02124, 1708.06860, 1805.11291, 1809.11127, 2103.08389,
+2207.07506, 2407.18381, 2408.03209, 2411.00887, 2504.06600 (address lines outside the calls); 2410.06985,
+2609.00838, 2608.24697, 2509.05139 (a call's own label); 2609.24668, 1812.09276, 2310.06847 (the institute's text on
+a call's line). Repros `class-bindings/llncs_{sole_institute_is_every_authors,
+sole_institute_before_the_authors, institute_inside_author, inst_marks_pick_the_sole_institute,
+several_institutes_without_marks_stay_the_blocks, institute_marked_by_a_paper_macro_is_not_shared,
+empty_institute_keeps_the_inst_marks, each_email_call_is_decided_alone, single_address_braces_are_each_owners,
+address_in_institute_note_is_never_shared, hand_marks_pick_nothing, paper_mark_macro_picks_nothing,
+fnmsep_note_in_institute_is_shared, inner_institute_wins, ambiguous_spelling_is_no_place,
+listed_local_parts_keep_their_braces, corresponding_author_takes_the_left_address,
+inst_picked_brace_list_is_each_owners, email_line_by_place, address_line_is_each_owners,
+urldef_address_line_is_each_owners, email_label_goes_with_the_call}` (the r1 review's probe shapes p01-p25, q01-q03,
+r01-r05, the r2 re-review's s01-s30;
+one guard per distinct path, near-duplicates repros without a guard); RED, not handled: `class-bindings/llncs_hand_marks_with_several_institutes`
+(hand-typed marks over `\and`-parted institutes, 2207.06953, deferred) and `llncs_author_line_brace_list_email` (an
+author-line `\email{\{a,b\}@x}` split inside its braces, 1609.01220, the author-block e-mail reader) and
+`llncs_marked_block_ambiguous_spelling_is_no_place` (the general reader's `addresses_in_order` places an address
+several names spell by its place, SYNC_STATUS) and `llncs_unknown_email_label_stays_the_institutes`,
+`llncs_connective_between_email_calls` (the two label/connective residuals above); guards `perfect_kernel_batch85b::*`,
+`frontmatter_llncs_institute_shared_email`; the 77t llncs guards carry the `\institute{Inst A}` on every author.

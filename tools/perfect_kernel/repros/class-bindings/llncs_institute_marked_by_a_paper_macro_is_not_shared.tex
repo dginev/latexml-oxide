@@ -1,0 +1,20 @@
+% mechanism: an institute holding marks of a command of the paper's own (`\newcommand{\affmark}[1]{\textsuperscript{#1}}`)
+%   is lines the names' marks pick, not one institute every author shares (`share_row_contacts`'s `marks_pick` reads a
+%   command whose body raises a mark, one level down): it stays the author block's, as before.
+% witness: 2608.21425 (`Nai-Xin Zhai\affmark{1,11}`, `\institute{\parbox{…}{\affmark{1} City University of Hong Kong
+%   \quad \affmark{2} ShanghaiTech University …}}`)
+% oracle:  pdflatex 0 errors; "Ann Able1 and Bob Baker2" over "1 University A 2 University B"
+% engines: rust int114a = the same as expected; perl = the institute line on Ann Able
+% expect:  0 errors, 0 warnings; both names with their marks and no contact, the line on a nameless creator
+% status:  GREEN (int114a, pinned by 85b; an 85b draft gave the line to every author)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\newcommand{\affmark}[1]{\textsuperscript{#1}}
+\begin{document}
+\title{A Title}
+\author{Ann Able\affmark{1} \and Bob Baker\affmark{2}}
+\institute{\affmark{1} University A \quad \affmark{2} University B}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

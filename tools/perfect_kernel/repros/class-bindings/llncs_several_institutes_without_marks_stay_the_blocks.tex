@@ -1,0 +1,18 @@
+% mechanism: several institutes (`\and` in `\institute`) with no `\inst` are numbered by the class (llncs.cls:875-883)
+%   but paired with no one: they stay the author block's (no pairing is invented).
+% witness: 2207.06953 (two institutes, the names marked by hand `$^1$`, `$^{1,2}$` — left as it was)
+% oracle:  pdflatex 0 errors; "Ann Able, Bob Baker, and Cat Cole" over "1 University A" and "2 University B"
+% engines: rust int114a = the same as expected; perl = University A on Ann Able, University B on Bob Baker (its numeric
+%   `affiliation:N`/`author:N` fallback)
+% expect:  0 errors, 0 warnings; three authors with no contact, both institutes on a nameless creator
+% status:  GREEN (int114a, pinned by 85b)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able \and Bob Baker \and Cat Cole}
+\institute{University A \and University B}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

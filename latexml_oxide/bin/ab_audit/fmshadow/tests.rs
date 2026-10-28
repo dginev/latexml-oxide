@@ -726,14 +726,28 @@ fn welded_legends_are_an_xml_wrong_class() {
 }
 
 /// FM S2a.2 r6, decision 3: a braced address group an `\institute` entry's `\email` prints, written out to the authors
-/// it spells and the block, disagrees with today's whole group on every author of the entry — each row classified by
-/// the decision's tag (`ruling3:written-out`).
+/// it spells and the block, disagrees with a whole group on every author of the entry — each row classified by the
+/// decision's tag (`ruling3:written-out`). Since 85b r2 the kernel writes llncs's group out so too (OXIDIZED_DESIGN_
+/// DIVERGENCES #901, `share_row_contacts`): today's XML agrees with the shadow, and the whole-group XML it had before
+/// (int114a's) is the one the rows classify.
 #[test]
 fn a_written_out_address_group_is_classified() {
   let tex = "\\documentclass{llncs}\n\\begin{document}\n\\title{T}\n\\author{Ann Able\\inst{1} \\and Bob Baker\\inst{1}}\n\\institute{Univ A, City\\\\ \\email{\\{ann.able,bob.baker,info\\}@example.org}}\n\\maketitle\nBody.\n\\end{document}\n";
   let (xml, dump) = convert(tex);
   let shadow = shadow_tuples(&json_resolved(&dump["resolved"]));
-  let rows = compare(&shadow, &xml_tuples(xml.as_bytes()).expect("xml"));
+  let today = compare(&shadow, &xml_tuples(xml.as_bytes()).expect("xml"));
+  assert!(today.is_empty(), "{today:?}");
+  let whole = |name: &str| {
+    format!(
+      r#"<creator role="author"><personname>{name}</personname><contact role="affiliation">Univ A, City</contact><contact role="email"><text font="typewriter">{{ann.able,bob.baker,info}}@example.org</text></contact></creator>"#
+    )
+  };
+  let before = format!(
+    "{HEAD}{}{}</document>",
+    whole("Ann Able"),
+    whole("Bob Baker")
+  );
+  let rows = compare(&shadow, &xml_tuples(before.as_bytes()).expect("xml"));
   assert_eq!(rows.len(), 5, "{rows:?}");
   assert!(
     rows

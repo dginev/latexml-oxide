@@ -1,0 +1,25 @@
+% mechanism: a `\urldef`'d address on a line of llncs's shared `\institute` is an e-mail line of the row: what the
+%   command prints is read as its text (`\urldef` keeps it, url_sty.rs; `urldef_text`), each address its owner's.
+% witness: 1307.8067 (this replica); 1405.0417, 1408.0384 (`\mailk, \mailt`), 1503.02007, 1504.01099 (a brace list cut
+%   across three commands, each line kept at the block when unread), 1511.00725, 1705.06516, 1708.06860, 1805.11291,
+%   2103.08389, 2411.00887
+% oracle:  pdflatex 0 errors; four names over "Old Dominion University, …", "Norfolk VA, 23529, USA" and
+%   "{mkelly, jbrunelle, mweigle, mln}@cs.odu.edu"
+% engines: rust int114a = all on a nameless creator; 85b r2 = the institute and the list in every author's affiliation
+% expect:  0 errors, 0 warnings; the institute on the four; mkelly@, jbrunelle@, mweigle@, mln@ each its author's
+% status:  RED (85b r2) -> GREEN (85b r3)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\usepackage{url}
+\urldef{\mailsa}\path|{mkelly, jbrunelle, mweigle, mln}@cs.odu.edu|
+\begin{document}
+\title{A Title}
+\author{Mat Kelly \and Justin F. Brunelle \and Michele C. Weigle \and Michael L. Nelson}
+\institute{Old Dominion University, Department of Computer Science\\
+Norfolk VA, 23529, USA\\
+\mailsa\\
+}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

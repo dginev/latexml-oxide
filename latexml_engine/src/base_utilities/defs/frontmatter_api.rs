@@ -490,7 +490,17 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
             && matches!(last.content.first(), Some(TagContent::PlaceKeeper))
           {
             let inherited = last.attr.get("_annotations").cloned().unwrap_or_default();
-            options.insert("_label".to_string(), inherited);
+            // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #901): an e-mail inside a contact every author shares (llncs's
+            // one `\institute`, `share_row_contacts`) is no author's by that: it keeps the label its owner gave it,
+            // else it is the author block's — never every author's (the 85b review's p19; 2410.04091's addresses had all gone to every author).
+            let shares = inherited.split(',').any(|label| label == SHARED_ROW_LABEL);
+            let label = match options.get("_label") {
+              _ if !shares => inherited,
+              Some(own) if role == "email" && !own.is_empty() => own.clone(),
+              _ if role == "email" => "addresses:block".to_string(),
+              _ => inherited,
+            };
+            options.insert("_label".to_string(), label);
           }
         let mut stub_attr = TagAttrs::default();
         stub_attr.insert("role".to_string(), "pending".to_string());

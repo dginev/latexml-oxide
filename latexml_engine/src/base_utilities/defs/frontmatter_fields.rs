@@ -436,6 +436,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     "\\lx@add@email [] Semiverbatim",
     "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=email,#1]{#2}"
   );
+  // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #901): an address of the e-mail line under a whole row of names, placed by
+  // its owner's label (`row:atN`, or `addresses:block`; `share_row_contacts`), `#2` set in the class command's font. A
+  // class whose own e-mail contact has a name of its own sets it here (llncs's `\emailname`).
+  DefMacro!("\\lx@row@email{}{}", "\\lx@add@email[label={#1}]{#2}");
   // Rust-only: a contact a class's command gives apart from the names (OSA's `\email{x@y}` and `\homepage{…}` after
   // the author groups, opex3.sty:52/:57), placed among the queued authors by [`placed_contact_owner`] (`label=author:N`,
   // or the mark's own label, or `label=addresses:block`, the shared creator of #159). `#1` is the contact's keyvals

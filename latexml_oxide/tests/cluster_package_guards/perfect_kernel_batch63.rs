@@ -1650,6 +1650,7 @@ fn svjour3_sole_author_keeps_the_institute() {
 }
 
 /// 63h: the same for llncs, whose `\institute` without `\inst` went to a name-less creator even under one author (#159).
+/// Since 85b its e-mail is a line under the names (`share_row_contacts`, #901), which takes the space before it.
 /// Repro sectioning-frontmatter/llncs_sole_author_keeps_the_institute.
 #[test]
 fn llncs_sole_author_keeps_the_institute() {
@@ -1658,7 +1659,7 @@ fn llncs_sole_author_keeps_the_institute() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/llncs_sole_author_keeps_the_institute.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A </contact><contact name=\"E-mail\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@a.org</text></contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><contact name=\"E-mail\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@a.org</text></contact></creator>",
     ],
   );
 }

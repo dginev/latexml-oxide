@@ -246,24 +246,20 @@ Text.
 
 /// Rank 110: in llncs a `\\` of `\author` is a line break of the centred author list (llncs.cls:1019-1036), so a line
 /// under a name reading as an affiliation is that name's (review probe rv63k/llncs1). Was a creator "University of
-/// Somewhere" holding the e-mail. The unmarked `\institute` stays the block's shared creator, as before.
+/// Somewhere" holding the e-mail. The unmarked `\institute`, llncs's one institute, is every author's, after the lines
+/// under the names (85b, OXIDIZED_DESIGN_DIVERGENCES #901; had been the block's shared creator).
 #[test]
 fn llncs_author_line_break_affiliation() {
   let xml = repro!("sectioning-frontmatter/llncs_author_line_break_affiliation.tex");
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &format!(
-        r#"{} <contact name="E-mail " role="email"><text font="typewriter" xml:id="id1">ann@x.org</text></contact>"#,
-        affiliation("University of Somewhere")
-      )
-    ),
-    format!(
-      r#"<creator role="author"> {} </creator>"#,
+  assert_eq!(creators(&xml), [creator(
+    true,
+    "Ann Able",
+    &format!(
+      r#"{} <contact name="E-mail " role="email"><text font="typewriter" xml:id="id1">ann@x.org</text></contact> {}"#,
+      affiliation("University of Somewhere"),
       affiliation("Inst A")
-    ),
-  ]);
+    )
+  ),]);
 }
 
 /// A minimal article author block, converted with the ar5iv preload: its squashed XML, the conversion free of errors
@@ -377,23 +373,32 @@ fn role_and_note_lines_are_no_unmarked_institution() {
 
 /// Rank 110 (rev77t finding 3): an llncs `\\` affiliation line is the names' since the last affiliation line, a names
 /// row after an affiliation starting a new row (review probe L4: 77t r1 gave Other Institute to Ann Able and Bob
-/// Baker too). The unmarked `\institute` stays the block's shared creator.
+/// Baker too). The unmarked `\institute` is every author's (85b, #901; had been the block's shared creator).
 #[test]
 fn llncs_author_line_break_affiliation_rows() {
   let xml = repro!("sectioning-frontmatter/llncs_author_line_break_affiliation_rows.tex");
-  let somewhere = affiliation("University of Somewhere");
+  let somewhere = format!(
+    "{} {}",
+    affiliation("University of Somewhere"),
+    affiliation("Inst A")
+  );
   assert_eq!(creators(&xml), [
     creator(true, "Ann Able", &somewhere),
     creator(false, "Bob Baker", &somewhere),
-    creator(false, "Cat Cole", &affiliation("Other Institute")),
-    format!(
-      r#"<creator role="author"> {} </creator>"#,
-      affiliation("Inst A")
+    creator(
+      false,
+      "Cat Cole",
+      &format!(
+        "{} {}",
+        affiliation("Other Institute"),
+        affiliation("Inst A")
+      )
     ),
   ]);
 }
 
-/// Rank 110 (rev77t finding 3), a row per name (review probe L2): University of Y is Bob Baker's only.
+/// Rank 110 (rev77t finding 3), a row per name (review probe L2): University of Y is Bob Baker's only; the one
+/// `\institute` every author's (85b, #901).
 #[test]
 fn llncs_author_line_break_affiliation_per_name() {
   let (log, xml) = convert_with(
@@ -410,29 +415,41 @@ Text.
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let xml = squash(&xml);
   assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &affiliation("University of X")),
-    creator(false, "Bob Baker", &affiliation("University of Y")),
-    format!(
-      r#"<creator role="author"> {} </creator>"#,
-      affiliation("Inst A")
+    creator(
+      true,
+      "Ann Able",
+      &format!(
+        "{} {}",
+        affiliation("University of X"),
+        affiliation("Inst A")
+      )
+    ),
+    creator(
+      false,
+      "Bob Baker",
+      &format!(
+        "{} {}",
+        affiliation("University of Y"),
+        affiliation("Inst A")
+      )
     ),
   ]);
 }
 
 /// Rank 110 (rev77t finding 4): llncs's `\and` is inline (llncs.cls:1013-1018, `\unskip,` or `\lastand` in
 /// `\@maketitle`), so the names it joins share the row and the line under it (2604.11038's Simon Fraser University;
-/// review probe L1: 77t r1 gave it to Bob Baker only).
+/// review probe L1: 77t r1 gave it to Bob Baker only). The one `\institute` is every author's (85b, #901).
 #[test]
 fn llncs_author_and_is_inline() {
   let xml = repro!("sectioning-frontmatter/llncs_author_and_is_inline.tex");
-  let somewhere = affiliation("University of Somewhere");
+  let somewhere = format!(
+    "{} {}",
+    affiliation("University of Somewhere"),
+    affiliation("Inst A")
+  );
   assert_eq!(creators(&xml), [
     creator(true, "Ann Able", &somewhere),
     creator(false, "Bob Baker", &somewhere),
-    format!(
-      r#"<creator role="author"> {} </creator>"#,
-      affiliation("Inst A")
-    ),
   ]);
 }
 
@@ -452,7 +469,7 @@ fn vmsta_first_name_without_surname() {
 
 /// Rank 110 (rev77t findings 3, 4), an e-mail line under a name (review probe L3): it ends that name's row as an
 /// affiliation line does, so the next names start a new one — University of Y is Bob Baker's only (printed under
-/// "ann@x.org and Bob Baker"); each e-mail its name's.
+/// "ann@x.org and Bob Baker"); each e-mail its name's; the one `\institute` every author's (85b, #901).
 #[test]
 fn llncs_author_e_mail_line_ends_a_row() {
   let (log, xml) = convert_with(
@@ -474,19 +491,20 @@ Text.
     )
   };
   assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &email("id1", "ann@x.org")),
+    creator(
+      true,
+      "Ann Able",
+      &format!("{} {}", email("id1", "ann@x.org"), affiliation("Inst A"))
+    ),
     creator(
       false,
       "Bob Baker",
       &format!(
-        "{} {}",
+        "{} {} {}",
         affiliation("University of Y"),
-        email("id2", "bob@y.org")
+        email("id2", "bob@y.org"),
+        affiliation("Inst A")
       )
-    ),
-    format!(
-      r#"<creator role="author"> {} </creator>"#,
-      affiliation("Inst A")
     ),
   ]);
 }
@@ -517,18 +535,15 @@ fn place_or_note_line_under_a_shared_institution_is_no_names_row() {
 
 /// llncs prints `\and` inline in the names row (llncs.cls:1013-1018), so a piece after `\and` is names, never an
 /// affiliation line: `Ann Able \and Bob Baker \and the ATLAS Collaboration` is three creators (the rev77t2 re-review's
-/// finding 2, probe L6: 77t r2 gave the collaboration to Ann Able and Bob Baker as an affiliation).
+/// finding 2, probe L6: 77t r2 gave the collaboration to Ann Able and Bob Baker as an affiliation). The one
+/// `\institute` is every author's (85b, #901).
 #[test]
 fn llncs_author_and_piece_is_names() {
   let xml = repro!("sectioning-frontmatter/llncs_author_and_piece_is_names.tex");
   assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", ""),
-    creator(false, "Bob Baker", ""),
-    creator(false, "the ATLAS Collaboration", ""),
-    format!(
-      r#"<creator role="author"> {} </creator>"#,
-      affiliation("Inst A")
-    ),
+    creator(true, "Ann Able", &affiliation("Inst A")),
+    creator(false, "Bob Baker", &affiliation("Inst A")),
+    creator(false, "the ATLAS Collaboration", &affiliation("Inst A")),
   ]);
 }
 

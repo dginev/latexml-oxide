@@ -1,0 +1,19 @@
+% mechanism: (not handled) hand-typed marks on the names with several `\and`-parted institutes: llncs numbers the
+%   institutes 1, 2, …, so `$^{1,2}$` shows Bob Baker under both; the kernel reads no hand-typed mark and pairs the
+%   institutes with the authors by position (Perl's numeric pairing, OXIDIZED_DESIGN #159), so Bob Baker loses Univ A.
+% witness: 2207.06953 (`Cho$^1$ … Lee$^{1,2}$`, `\institute{Yonsei University \and KIST}`; there with seven authors, so
+%   both stay on the block); the 85b round-1 report's open question A (deferred by the main session)
+% oracle:  pdflatex 0 errors; "Ann Able1 and Bob Baker1,2" over "1 Univ A", "2 Univ B"
+% engines: rust 85b r2 = Univ A on Ann Able, Univ B on Bob Baker (by position)
+% expect:  0 errors, 0 warnings; Univ A on Ann Able; Univ A and Univ B on Bob Baker
+% status:  RED (85b r2): hand-typed marks pick no llncs institute; pairing them with the class's numbers is deferred
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$ \and Bob Baker$^{1,2}$}
+\institute{Univ A \and Univ B}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

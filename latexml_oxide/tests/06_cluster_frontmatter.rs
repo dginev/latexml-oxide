@@ -31,6 +31,24 @@ fn creator_block_contains(xml: &str, name: &str, needle: &str) -> bool {
   })
 }
 
+/// Every `<creator>` element of `xml`, whole, in order, the whitespace between its tags dropped.
+fn whole_creators(xml: &str) -> Vec<String> {
+  let flat = regex::Regex::new(r">\s+<")
+    .unwrap()
+    .replace_all(xml, "><")
+    .into_owned();
+  flat
+    .match_indices("<creator")
+    .map(|(at, _)| {
+      let rest = &flat[at..];
+      let end = rest
+        .find("</creator>")
+        .map_or(rest.len(), |end| end + "</creator>".len());
+      rest[..end].to_string()
+    })
+    .collect()
+}
+
 /// acmart `\author[F. Poli]{Federico Poli}`: the real class is `\author[2][]`
 /// (optional running-head short name + full name). The name must render, and
 /// the `[F. Poli]` optarg must NOT leak as a `[` creator. Witness 2405.08372.
@@ -1326,42 +1344,29 @@ fn frontmatter_sn_jnl_abstract_env_after_title() {
 
 /// LNCS `llncs.cls`: several authors all bound to ONE `\institute` via
 /// `\inst{1}`, whose body is the shared affiliation line followed by a single
-/// shared `\email{\{a,b\}@host}` covering every author. Both the affiliation
-/// AND the email are `\lx@annotate@frontmatter` contacts that must attach to
-/// EACH creator carrying the `affiliation:1` label (the email inherits that
-/// label from the enclosing pending affiliation entry, Perl
-/// `Base_Utility.pool.ltxml` L498-500), not land on a single author. And the
-/// pending affiliation stub must not surface as an empty
-/// `<contact role="affiliation"/>`. arXiv/html_feedback#6881, witness 2608.11332.
+/// `\email{\{a,b\}@host}` listing every author's address. The affiliation
+/// attaches to EACH creator carrying the `affiliation:1` label, and the pending
+/// affiliation stub does not surface as an empty `<contact role="affiliation"/>`
+/// (arXiv/html_feedback#6881, witness 2608.11332). The e-mail line under the
+/// row is each address its owner's, as the shared institute's is
+/// (OXIDIZED_DESIGN_DIVERGENCES #901, `share_row_contacts`; FIDELITY_CHARTER §4):
+/// `alice@` Alice Smith's, `bob@` Bob Jones's — before 85b r2 the brace list
+/// went whole to both, inheriting the institute's label (Perl
+/// `Base_Utility.pool.ltxml` L498-500).
 #[test]
 fn frontmatter_llncs_institute_shared_email() {
   let x = convert_to_xml("tests/cluster_regressions/frontmatter_llncs_shared_email.tex");
-  assert!(
-    x.matches("<personname>").count() >= 2,
-    "llncs: expected 2 author personnames:\n{x}"
-  );
-  assert!(
-    x.contains("Alice Smith") && x.contains("Bob Jones"),
-    "llncs author names missing:\n{x}"
-  );
-  // The shared affiliation attaches to BOTH authors...
-  assert!(
-    x.matches(">Some University</contact>").count() >= 2,
-    "llncs shared affiliation did not attach to both authors:\n{x}"
-  );
-  // ...and so does the shared email...
-  assert!(
-    x.matches("role=\"email\"").count() >= 2,
-    "llncs shared email did not attach to both authors:\n{x}"
-  );
-  assert!(
-    x.matches(">{alice,bob}@univ.edu</text></contact>").count() >= 2,
-    "llncs shared email content missing on both authors:\n{x}"
-  );
-  // ...with no empty pending-stub affiliation leaking through.
-  assert!(
-    !x.contains("role=\"affiliation\"/>") && !x.contains("role=\"affiliation\"></contact>"),
-    "llncs pending affiliation stub leaked as an empty contact:\n{x}"
+  assert_eq!(
+    whole_creators(&x),
+    [
+      "<creator role=\"author\"><personname>Alice Smith</personname><contact name=\"Affiliation:\u{a0}\" \
+       role=\"affiliation\">Some University</contact><contact name=\"E-mail\u{a0}\" role=\"email\"><text \
+       font=\"typewriter\">alice@univ.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Jones</personname><contact \
+       name=\"Affiliation:\u{a0}\" role=\"affiliation\">Some University</contact><contact name=\"E-mail\u{a0}\" \
+       role=\"email\"><text font=\"typewriter\">bob@univ.edu</text></contact></creator>",
+    ],
+    "{x}"
   );
 }
 
@@ -1592,45 +1597,6 @@ fn frontmatter_fairmeta_author_affiliation_1396() {
     !creator_block_contains(&x, "Yuqing Du", ">Meta<"),
     "Yuqing Du (mark 4) wrongly carries Meta — marks not honored:\n{x}"
   );
-}
-
-/// LLNCS `\author{A \and B \and C}` + one shared `\institute{…}` with NO per-author
-/// `\inst` marker. Perl 0.8.8 (and pre-fix Rust) strand the single affiliation on
-/// the FIRST author only — its `affiliation:1` label binds to author 1's `author:1`
-/// sequence label by number in `relocate_annotations`. Beyond-Perl (OXIDIZED_DESIGN
-/// #159, witness arXiv:2402.19043 / WDM): the shared affiliation is emitted ONCE, on a
-/// trailing name-LESS `<creator>` after all authors, so it renders once below the row
-/// (never under author 1, never replicated per author). Guards both regressions.
-#[test]
-fn frontmatter_llncs_shared_affiliation_below_authors() {
-  let x = convert_to_xml("tests/cluster_regressions/frontmatter_llncs_shared_affiliation.tex");
-  // Exactly ONE affiliation contact — not dropped, not replicated per author.
-  assert_eq!(
-    x.matches("Shared Institute").count(),
-    1,
-    "shared affiliation should appear exactly once:\n{x}"
-  );
-  // NOT stranded on the first author.
-  assert!(
-    !creator_block_contains(&x, "Alice Alpha", "Shared Institute"),
-    "shared affiliation wrongly nested under first author Alice:\n{x}"
-  );
-  // Lives on a trailing name-LESS creator (a <creator> with no <personname>).
-  let on_nameless = x.split("<creator").skip(1).any(|rest| {
-    let block = rest.split("</creator>").next().unwrap_or("");
-    block.contains("Shared Institute") && !block.contains("<personname")
-  });
-  assert!(
-    on_nameless,
-    "shared affiliation should sit on a name-less trailing creator:\n{x}"
-  );
-  // All three named authors still present.
-  for name in ["Alice Alpha", "Bob Beta", "Carol Gamma"] {
-    assert!(
-      x.contains(&format!("<personname>{name}</personname>")),
-      "author {name} missing:\n{x}"
-    );
-  }
 }
 
 /// 60n: a marker-less `\\`-separated line continues the previous author-block entry with the `\\` kept where it stood
