@@ -1,0 +1,23 @@
+% An abstract set before \maketitle keeps its place when another, given after it, follows the title-page line printed
+% between them: only what is queued after \maketitle placed the frontmatter (`_late`) goes behind that cover
+% (OXIDIZED_DESIGN_DIVERGENCES #903). smfart's {abstract} before \maketitle and {altabstract} after it.
+% witness: none (synthetic; 86g r1 review probe q01).
+% Guard: perfect_kernel_batch86g::late_abstract_follows_the_hand_typeset_cover.
+% streamed: equal to eager by the CLI; at the streaming guard's fragment budget 3 the pagebreaks between the
+%          abstracts and the cover are spilled, and a spilled root child keeps the slot (fail-safe), so it is not
+%          in 114_streaming_structure.
+% oracle:  pdflatex 0 errors: "REPRO TITLE / par / Ann Author / Résumé. — Main abstract words. / Department of Repro,
+%          University of Witness / Abstract. — Alternative abstract words. / 1. Intro".
+% engines: rust 86a: title, creator, abstract, abstract, …, para (cover). 86g r1: title, creator, titlepage, abstract,
+%          abstract (the early abstract behind the cover). 86g r2: title, creator, abstract (main), titlepage[block,
+%          block], abstract (alternative).
+% expect:  0 errors, 0 warnings.
+\documentclass{smfart}
+\title{Repro Title}\author{Ann Author}
+\begin{document}
+\begin{abstract}Main abstract words.\end{abstract}
+\maketitle
+\begin{center}Department of Repro, University of Witness\end{center}
+\begin{altabstract}Alternative abstract words.\end{altabstract}
+\section{Intro}Body text.
+\end{document}

@@ -1,0 +1,25 @@
+% A class's \@maketitle that prints the abstract itself, between the affiliations and a "Received" line:
+% the abstract the deposit queues is late, its cover what the deposit printed before it, and the deposit's
+% line after it stays after it (OXIDIZED_DESIGN_DIVERGENCES #903).
+% Guard: perfect_kernel_batch86g::abstract_inside_the_class_title_page.
+% oracle:  pdflatex 0 errors: "University of Witness / Abstract / Abstract words here. / Received 1 January
+%          2026 / 1 Intro".
+%          perl: title, creator, section — no deposit, so no abstract either.
+% engines: rust 86a: title, creator, abstract, para, para, section. 86g: title, creator, titlepage[block],
+%          abstract, para (Received), section.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\makeatletter
+\long\gdef\affiliations#1{\def\affiliations_{#1}}
+\long\gdef\abs#1{\def\abs@text{#1}}
+\def\maketitle{\par\begingroup\@maketitle\endgroup}
+\def\@maketitle{{\LARGE\@title\par}{\large\@author\par}{\affiliations_\par}%
+  \begin{abstract}\abs@text\end{abstract}%
+  {\small Received 1 January 2026\par}}
+\makeatother
+\title{Repro Title}\author{Ann Author}\affiliations{University of Witness}
+\abs{Abstract words here.}
+\begin{document}
+\maketitle
+\section{Intro}Body text.
+\end{document}

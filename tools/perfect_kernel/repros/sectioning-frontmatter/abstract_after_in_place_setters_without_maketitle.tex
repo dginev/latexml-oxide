@@ -1,0 +1,22 @@
+% No \maketitle: a setter that prints where it is called (newpasp_crete.sty:74 \affil, astro-ph0210637;
+% arxiv.cls:241 \affiliation, 1207.1161; ae100prg.cls:188 \address, 1303.3004) sets the cover before the
+% abstract. The fallback flush places the title and author at the top, the setter's print is wrapped as
+% <titlepage>, and the abstract follows it; the line after the abstract stays after it
+% (OXIDIZED_DESIGN_DIVERGENCES #903). Guard:
+% perfect_kernel_batch86g::abstract_without_maketitle_follows_the_in_place_setters.
+% oracle:  pdflatex 0 errors: "University of Witness / Abstract / Abstract words here. / Keywords: order,
+%          print / 1 Intro" (no \maketitle: no title or author printed).
+%          perl: title, creator, abstract, para, para, section (SHARED order).
+% engines: rust 86a: title, creator, abstract, para, para, section. 86g: title, creator, titlepage[block],
+%          abstract, para, section.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\def\affil#1{\begin{center}#1\end{center}}
+\begin{document}
+\title{Repro Title}
+\author{Ann Author}
+\affil{University of Witness}
+\begin{abstract}Abstract words here.\end{abstract}
+\noindent Keywords: order, print
+\section{Intro}Body text.
+\end{document}

@@ -146,7 +146,8 @@ fn ieeetran_pscc_thanksto() {
 /// The SIU template's IEEEtran.cls (1504.02975, 1807.04577): `{ozet}` and `{IEEEanahtar}`, the Turkish abstract and
 /// keywords, are set where they stand under their headings; the English `{abstract}` and `{IEEEkeywords}` stay the
 /// frontmatter's. As the template sets them (:3746, :3765): the abstract bold, the keywords bold italic, each heading a
-/// text of its own.
+/// text of its own. Printed before the English abstract, they are its cover, in print order (a continued `<titlepage>`
+/// of `block`s, OXIDIZED_DESIGN_DIVERGENCES #903; were `para`s after the abstract).
 #[test]
 fn ieeetran_siu_ozet() {
   let (log, xml) = convert_counted(include_str!(
@@ -156,18 +157,26 @@ fn ieeetran_siu_ozet() {
   let assert_element = latexml::util::test::assert_element;
   assert_element(
     &xml,
-    "para",
+    "block",
     &[r#"xml:id="p1""#],
-    "<para class=\"ltx_noindent\" xml:id=\"p1\"><p xml:id=\"p1.1\"><text font=\"bold italic\" xml:id=\"p1.1.1\">\
-     Özetçe </text><text font=\"bold\" xml:id=\"p1.1.2\">—Türkçe özet.</text></p></para>",
+    "<block class=\"ltx_noindent\" xml:id=\"p1\"><p xml:id=\"p1.1\"><text font=\"bold italic\" xml:id=\"p1.1.1\">\
+     Özetçe </text><text font=\"bold\" xml:id=\"p1.1.2\">—Türkçe özet.</text></p></block>",
   );
   assert_element(
     &xml,
-    "para",
+    "block",
     &[r#"xml:id="p2""#],
-    "<para class=\"ltx_noindent\" xml:id=\"p2\"><p xml:id=\"p2.1\"><text font=\"bold italic\" xml:id=\"p2.1.1\">\
+    "<block class=\"ltx_noindent\" xml:id=\"p2\"><p xml:id=\"p2.1\"><text font=\"bold italic\" xml:id=\"p2.1.1\">\
      Anahtar Kelimeler</text><text font=\"bold\" xml:id=\"p2.1.2\">—</text><text font=\"bold italic\" \
-     xml:id=\"p2.1.3\">anahtar, kelime</text></p></para>",
+     xml:id=\"p2.1.3\">anahtar, kelime</text></p></block>",
+  );
+  // (in print order: the Turkish abstract and keywords, then the English ones)
+  let titlepage = xml
+    .find("<titlepage class=\"ltx_titlepage_continued\"")
+    .expect("the cover");
+  assert!(
+    titlepage < xml.find("<abstract").expect("the abstract"),
+    "{xml}"
   );
   assert_element(
     &xml,

@@ -290,12 +290,14 @@ struct Cli {
   /// bounded fragments, closed subtrees spill to disk beside the source, and
   /// a second, streaming pass finishes them — so peak memory is bounded by
   /// fragment size instead of document size. Output is byte-identical to the
-  /// normal path (guarded by the 114_streaming_* sweep), save two documented
+  /// normal path (guarded by the 114_streaming_* sweep), save three documented
   /// cases: a heading unit with prose before the bibliography after it keeps
-  /// its own heading (OXIDIZED_DESIGN_DIVERGENCES #456), and an `\index` /
+  /// its own heading (OXIDIZED_DESIGN_DIVERGENCES #456); an `\index` /
   /// `\nomenclature` / `\glossary` entry of a list the document never prints
   /// is typeset at a fragment yield where the normal path typesets nothing
-  /// (OXIDIZED_DESIGN_DIVERGENCES #738). Off by default;
+  /// (OXIDIZED_DESIGN_DIVERGENCES #738); and a late abstract whose cover has a
+  /// root child spilled at a small fragment budget keeps its slot, ahead of
+  /// that cover (OXIDIZED_DESIGN_DIVERGENCES #903). Off by default;
   /// also AUTO-activates when the projected memory need of a large source
   /// exceeds the --max-memory ceiling, i.e. only where the normal path is
   /// certain to exhaust memory anyway.

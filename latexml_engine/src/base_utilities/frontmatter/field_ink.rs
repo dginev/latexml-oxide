@@ -246,8 +246,12 @@ pub fn settle_cover_title_ink(document: &mut Document) {
   let Some(root) = document.get_document().get_root_element() else {
     return;
   };
+  // (a titlepage continuing the title block stands for no title: OXIDIZED_DESIGN_DIVERGENCES #903)
   if document
-    .findnode("/ltx:document/ltx:titlepage", None)
+    .findnode(
+      &s!("/ltx:document/ltx:titlepage[not(contains(concat(' ', @class, ' '), ' {CONTINUED_TITLEPAGE} '))]"),
+      None,
+    )
     .is_some()
   {
     for mark in cover_title_marks(document, &root) {

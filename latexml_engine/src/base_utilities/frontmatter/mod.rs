@@ -14,6 +14,8 @@ mod titlepage_layout;
 pub use titlepage_layout::*;
 mod insert;
 pub use insert::*;
+mod cover_order;
+pub use cover_order::*;
 mod relocate;
 pub use relocate::*;
 mod shared_row;

@@ -2651,6 +2651,39 @@ fn settle_placed_stores() {
   }
 }
 
+/// The state naming the store whose frontmatter entries are being queued (`\lx@store@from`): their title-page
+/// provenance (`frontmatter_push`, base_utilities `TITLE_PAGE_ENTRY`: a late abstract's run holding one the title page
+/// may print, [`title_page_may_print`], is not moved, OXIDIZED_DESIGN_DIVERGENCES #903).
+pub const STORE_ENTRY_FROM: &str = "lx_store_entry_from";
+
+/// `\lx@store@from{<name>}`: the entries queued next are handed on from the store `\<name>`; empty, from none.
+fn store_from_tokens(name: &str) -> Vec<Token> {
+  mouth::tokenize_internal(TeXString::assembled(s!("\\lx@store@from{{{name}}}"))).unlist()
+}
+
+/// Digest the frontmatter calls of handed-on stores, `\lx@store@from`-bracketed, and clear the provenance after them
+/// however the digestion ended: a call that stopped before its closing `\lx@store@from{}` stamps no later entry.
+fn digest_store_calls(calls: Vec<Token>) -> Result<Digested> {
+  let digested = digest(Tokens::new(calls));
+  assign_value(
+    STORE_ENTRY_FROM,
+    Stored::String(pin("")),
+    Some(Scope::Global),
+  );
+  digested
+}
+
+/// May the class's title page print the store of `\<name>`, whose entry carries its title-page provenance
+/// (OXIDIZED_DESIGN_DIVERGENCES #903)? Unless the speculative run of the whole title page was made and its sentinel did
+/// not reach it ([`before_title_page_runs`], `lx_sentinel_printed`): a store the class prints elsewhere — dmtcs's
+/// `\keywords` after its abstract, 0905.1102 — is not the title page's; with no run made, it may be.
+pub fn title_page_may_print(name: &str) -> bool {
+  !lookup_bool("lx_sentinel_ran") || {
+    let store = T_CS!(&s!("\\{}", store_of(name))).get_cs_name();
+    sentinel_list("printed").contains(&store)
+  }
+}
+
 /// Does the class's title page print the store of `\<name>`: its sentinel reached the speculative run of the whole title
 /// page (`lx_sentinel_printed`, [`before_title_page_runs`]) — without a run, its code reads it
 /// (`lx_store_title_page_reads_<name>`)?
@@ -2891,6 +2924,11 @@ fn hand_untypeset_stores() -> Result<Vec<Digested>> {
       }
       (head, "a note on the document")
     };
+    // (a note the class's title page printed: its title-page provenance, base_utilities `TITLE_PAGE_ENTRY`)
+    let note = what == "a note on the document";
+    if note {
+      calls.extend(store_from_tokens(name));
+    }
     calls.extend(head);
     calls.push(T_BEGIN!());
     // (in a note, the class's `\and` between authors' blocks — nowfnt.cls:813-818 starts a new block — is a line break
@@ -2904,6 +2942,9 @@ fn hand_untypeset_stores() -> Result<Vec<Digested>> {
       }
     }));
     calls.push(T_END!());
+    if note {
+      calls.extend(store_from_tokens(""));
+    }
     Info!(
       "frontmatter",
       s!("\\{name}"),
@@ -2916,7 +2957,7 @@ fn hand_untypeset_stores() -> Result<Vec<Digested>> {
   if calls.is_empty() {
     return Ok(Vec::new());
   }
-  Ok(vec![digest(Tokens::new(calls))?])
+  Ok(vec![digest_store_calls(calls)?])
 }
 
 /// The words of each creator's name in the frontmatter (each creator's own digested content, its personname; not the
@@ -3826,16 +3867,27 @@ fn line_label_before(body: &[Token], at: usize) -> Option<(usize, usize, Tokens,
   let mut in_argument = false;
   // (past the group last skipped, which starts at `k` while it is the item before)
   let mut group_past: Option<usize> = None;
+  // (an implicit `\bgroup` or `\egroup`, `\let` to a brace, opens or closes a group as one does: the store's own group
+  // in `\insert\footins\bgroup\footnotesize Keywords: \@keywords\par\egroup`, 86g r3 review probe i3)
+  let group_catcode = |t: &Token| {
+    if *t == T_CS!("\\bgroup") {
+      Catcode::BEGIN
+    } else if *t == T_CS!("\\egroup") {
+      Catcode::END
+    } else {
+      t.get_catcode()
+    }
+  };
   while k > 0 {
     let t = body[k - 1];
-    match t.get_catcode() {
+    match group_catcode(&t) {
       Catcode::END => {
         // a group before the store: one item of the line
         group_past = Some(k);
         let mut depth = 0i32;
         let mut open = None;
         for j in (0..k).rev() {
-          match body[j].get_catcode() {
+          match group_catcode(&body[j]) {
             Catcode::END => depth += 1,
             Catcode::BEGIN => {
               depth -= 1;
@@ -4362,15 +4414,24 @@ pub fn harvest_stores(at_maketitle: bool) -> Result<Vec<Digested>> {
     }
     handed.push(store);
     note_store_handed(name);
+    // (what the title page prints of it is the class's title page's, its title-page provenance, base_utilities
+    // `TITLE_PAGE_ENTRY`; a creator and what annotates one are no frontmatter a late abstract's cover can follow)
+    let from = at_maketitle && !annotates_a_creator(name) && !creates_a_creator(name);
+    if from {
+      calls.extend(store_from_tokens(name));
+    }
     let (before, after) = api.split_once("#1").unwrap_or((api, ""));
     calls.extend(mouth::tokenize_internal(TeXString::assembled(before.to_string())).unlist());
     calls.extend(value.unlist());
     calls.extend(mouth::tokenize_internal(TeXString::assembled(after.to_string())).unlist());
+    if from {
+      calls.extend(store_from_tokens(""));
+    }
   }
   let digested = if calls.is_empty() {
     Vec::new()
   } else {
-    vec![digest(Tokens::new(calls))?]
+    vec![digest_store_calls(calls)?]
   };
   // (what this `\maketitle` placed, whose setter called again only re-sets the store, is settled once its title page
   // ran: `settle_placed_stores`)
@@ -4475,6 +4536,11 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@store@handed{}", sub[(name)] {
     note_store_handed(&name.to_string());
   });
+  // The frontmatter entries queued from here on are handed on from the store `\<name>` (empty: no more), the
+  // title-page provenance (base_utilities `TITLE_PAGE_ENTRY`).
+  DefPrimitive!("\\lx@store@from{}", sub[(name)] {
+    assign_value(STORE_ENTRY_FROM, Stored::String(pin(name.to_string())), Some(Scope::Global));
+  });
   // A store handed on as it is set (`#2`, its frontmatter call): once the `\maketitle` whose title page printed it has
   // placed its value (`lx_store_placed_<name>`, `settle_placed_stores`: handed on, and its sentinel reached the
   // speculative run of the title page), the setter called again only re-sets the store, for what reads it later, and
@@ -4505,8 +4571,10 @@ LoadDefinitions!({
       );
       return Ok(Tokens::new(Vec::new()));
     }
-    let mut out =
-      mouth::tokenize_internal(TeXString::assembled(s!("\\lx@store@handed{{{name}}}"))).unlist();
+    let mut out = store_from_tokens(&name);
+    out.extend(
+      mouth::tokenize_internal(TeXString::assembled(s!("\\lx@store@handed{{{name}}}"))).unlist(),
+    );
     if deferred {
       note_store_late(&name);
       // (the call `\maketitle` settled — named by the class's label only when its title page printed it,
@@ -4518,10 +4586,12 @@ LoadDefinitions!({
         out.extend(mouth::tokenize_internal(TeXString::assembled(before.to_string())).unlist());
         out.extend(value.unlist());
         out.extend(mouth::tokenize_internal(TeXString::assembled(after.to_string())).unlist());
+        out.extend(store_from_tokens(""));
         return Ok(Tokens::new(out));
       }
     }
     out.extend(call.unlist());
+    out.extend(store_from_tokens(""));
     Ok(Tokens::new(out))
   });
   // A creator-annotating or creator-making store set after `\maketitle` read the stores: its value

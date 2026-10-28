@@ -373,8 +373,10 @@
     <xsl:param name="context"/>
     <!-- Skip title, if the parent has a titlepage, or if writing a cv! -->
     <!-- Only a titlepage with ink stands for the title: an empty one (`\begin{titlepage}\vspace*{2cm}\end{titlepage}`
-         before `\maketitle`) prints nothing, and the title stays (OXIDIZED_DESIGN #761). -->
-    <xsl:if test="not(parent::*/child::ltx:titlepage[normalize-space(.) or descendant::*[local-name()='graphics' or local-name()='picture' or local-name()='Math' or local-name()='svg']])">
+         before `\maketitle`) prints nothing, and the title stays (OXIDIZED_DESIGN #761); nor does one continuing the title
+         block, the cover lines printed after the title and before a late abstract (`ltx_titlepage_continued`,
+         OXIDIZED_DESIGN_DIVERGENCES #903). -->
+    <xsl:if test="not(parent::*/child::ltx:titlepage[not(contains(concat(' ',@class,' '),' ltx_titlepage_continued '))][normalize-space(.) or descendant::*[local-name()='graphics' or local-name()='picture' or local-name()='Math' or local-name()='svg']])">
       <xsl:text>&#x0A;</xsl:text>
       <!-- In html5, could have wrapped in hgroup, but that was deprecated -->
       <xsl:call-template name="maketitle">

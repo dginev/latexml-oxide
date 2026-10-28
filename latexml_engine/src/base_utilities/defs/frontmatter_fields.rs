@@ -162,21 +162,39 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // body as cover. `_Capture_`-suffixed names are admitted anywhere by the model
   // (model.rs) so no paragraph is auto-opened; every marker is removed by
   // `insert_frontmatter`/`remove_frontmatter_marks` before output. OXIDIZED_DESIGN #246.
-  DefConstructor!("\\lx@frontmatter@mark{}", sub[document, _args] {
-    // Only meaningful BEFORE the frontmatter is placed: a later abstract (lips'
-    // `\DocInput`-ed `\begin{abstract}` after `\maketitle`) is handled by
-    // `insert_late_frontmatter`, and a marker built then would outlive every
-    // removal point (s107: 8 docs leaked `<_Frontmatter_Capture_>`).
-    // …and only once there is an open element to sit in: a preamble `\abstract{…}`
+  //
+  // A LATE abstract — queued after `\maketitle`'s flush (`\lx@frontmatterhere`'s `after_digest`), which placed it
+  // with the head of the frontmatter (the eager build digests the whole queue there) or leaves it to
+  // `insert_late_frontmatter` (a streamed one) — gets a marker of its own (`LATE_ABSTRACT_MARK`): the title-page text
+  // printed between `\maketitle` and it is its cover, and the abstract goes behind that (`place_abstract_after_cover`,
+  // OXIDIZED_DESIGN_DIVERGENCES #903; AAAI's `\affiliations` in its `\@maketitle` deposit, 2011.04405, 2102.01904;
+  // hand-typeset lines, 1302.5352, 1702.07128). Settled at once where the abstract is placed, so no marker outlives
+  // its reader (s107: 8 docs leaked `<_Frontmatter_Capture_>`; lips' `\DocInput`-ed `\begin{abstract}` after
+  // `\maketitle`).
+  DefConstructor!("\\lx@frontmatter@mark{}", sub[document, _args, props] {
+    // Only once there is an open element to sit in: a preamble `\abstract{…}`
     // (svjour's setter, fixture structure/svabstract) is constructed BEFORE the
     // whatsit that opens <ltx:document>, and inserting anything there auto-creates
     // the root early (a duplicated RelaxNGSchema PI). Construction runs after
     // digestion, so the digest-time `inPreamble` flag is useless here — ask the
     // tree via the current element (which, unlike the root element, also holds
     // inside a streaming fragment; 114_streaming_structure faketitlepage).
-    if !lookup_bool("frontmatter_done") && document.get_element().is_some() {
-      document.insert_element("ltx:_Frontmatter_Capture_", Vec::new(), None)?;
+    if document.get_element().is_none() {
+      return Ok(());
     }
+    if !lookup_bool("frontmatter_done") {
+      document.insert_element("ltx:_Frontmatter_Capture_", Vec::new(), None)?;
+    } else if prop_bool!(props, "late") {
+      let marker = document.insert_element(LATE_ABSTRACT_MARK, Vec::new(), None)?;
+      settle_late_abstract_mark(document, marker)?;
+    }
+  },
+  properties => {
+    Ok(if lookup_bool("lx_frontmatter_here_digested") {
+      stored_map!("late" => true)
+    } else {
+      SymHashMap::default()
+    })
   });
   // Field provenance (frontmatter model M3, stage S1): `\lx@field@mark<prefix><store>{<field>}` — the store, a macro
   // without parameters, redefined (`<prefix>` `\def` or `\gdef`, the store's own scope at the setter) with the same

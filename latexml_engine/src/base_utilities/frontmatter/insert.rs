@@ -388,7 +388,8 @@ fn creator_personname_empty(document: &mut Document, creator: &Node) -> bool {
 /// consumption. Those late arrivals re-populate the `frontmatter` state hash;
 /// this inserts them at their canonical slot — after the last frontmatter
 /// element already placed — by re-running `insert_frontmatter` there
-/// (element order within it is canonical, not arrival order).
+/// (element order within it is canonical, not arrival order). A late abstract then
+/// goes behind the cover printed before its marker, as in the eager build.
 pub fn insert_late_frontmatter(document: &mut Document) -> Result<()> {
   debug_assert!(!document.root_after_open_deferred());
   let has_late = with_value(
@@ -401,6 +402,9 @@ pub fn insert_late_frontmatter(document: &mut Document) -> Result<()> {
   if !has_late || !lookup_bool("frontmatter_done") {
     // Nothing late, or nothing was ever inserted early — in the latter case
     // the root's deferred late hook performs the one-and-only insertion.
+    for marker in document.findnodes(&s!("//{LATE_ABSTRACT_MARK}"), None) {
+      document.remove_node(marker);
+    }
     return Ok(());
   }
   // Anchor: the late elements' CANONICAL slot among the frontmatter already
@@ -458,6 +462,15 @@ pub fn insert_late_frontmatter(document: &mut Document) -> Result<()> {
   insert_frontmatter(document)?;
   document.unwrap_nodes(wrapper)?;
   document.set_node(&savenode);
+  // A late abstract's marker (`\lx@frontmatter@mark`): the abstract, now placed, goes behind the cover printed before
+  // it, as in the eager build (OXIDIZED_DESIGN_DIVERGENCES #903); every such marker goes.
+  let late_marks = document.findnodes(&s!("//{LATE_ABSTRACT_MARK}"), None);
+  if let Some(first) = late_marks.first() {
+    place_abstract_after_late_mark(document, first)?;
+  }
+  for marker in late_marks {
+    document.remove_node(marker);
+  }
   Ok(())
 }
 

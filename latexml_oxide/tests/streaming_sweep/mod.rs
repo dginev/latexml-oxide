@@ -31,6 +31,17 @@ pub fn convert_with(
   streaming: Option<usize>,
   dispatch: DispatchFn,
 ) -> (String, usize) {
+  convert_preloaded(source, streaming, dispatch, None)
+}
+
+/// [`convert_with`], with `preload` (the CLI's `--preload`): ar5iv.sty, under which a document's own raw class is
+/// loaded (without it the class falls back to OmniBus, its title page and stores unread).
+pub fn convert_preloaded(
+  source: &str,
+  streaming: Option<usize>,
+  dispatch: DispatchFn,
+  preload: Option<Vec<String>>,
+) -> (String, usize) {
   let source = source.to_string();
   std::thread::Builder::new()
     .stack_size(64 * 1024 * 1024)
@@ -47,6 +58,7 @@ pub fn convert_with(
         // divergence (witness omnibus_natbib_bbl_sideload: 101 errors, an
         // empty eager doc, a partial streamed one).
         extra_bindings_dispatch: Some(std::rc::Rc::new(dispatch)),
+        preload,
         ..Config::default()
       };
       let mut c = Converter::from_config(cfg);

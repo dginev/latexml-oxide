@@ -450,6 +450,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     assign_value("lx_frontmatter_explicit", outer, Some(Scope::Global));
     flushed?;
     assign_value("frontmatter_deferred", true, Some(Scope::Global));
+    // An abstract queued from here on is LATE (`\lx@frontmatter@mark`'s `late`, OXIDIZED_DESIGN_DIVERGENCES #903).
+    assign_value("lx_frontmatter_here_digested", true, Some(Scope::Global));
   });
 
   // Same, but put it at the beginning of document, but after any ltx:resources
@@ -489,25 +491,37 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       // (tikz-mirror-lens, tipfr-doc, pgf-interference, axodraw2-man, derivative,
       // russ_doc, schulmathematik, jourcl, isosigns-docs, bootstrapicons-docs — 16
       // s106 docs; OXIDIZED_DESIGN #246).
-      // Only on the FIRST flush: once frontmatter has been placed (`\maketitle`), a
-      // later abstract-only queue is a LATE abstract — what precedes its marker is
-      // body, not cover, and `insert_late_frontmatter` places it beside the
-      // existing frontmatter. (`frontmatter_done` is reset by that path itself.)
       // First flush only: promote an unambiguous hand-made title, then let the pass
-      // wrap the rest of the cover (before the abstract's marker) as <titlepage>. A
-      // LATE abstract (after `\maketitle`) is filed by `insert_late_frontmatter`.
+      // wrap the rest of the cover (before the abstract's marker) as <titlepage>. Once
+      // `\maketitle` placed the frontmatter, a later abstract is a LATE abstract: the
+      // title-page text printed between `\maketitle` and it — the class's own title page
+      // (the deposit), cover lines set apart, never body prose, a sectional unit, a TOC
+      // or a float — is its cover, wrapped as <titlepage> with the abstract behind it at
+      // its own marker (`\lx@frontmatter@mark`, `place_abstract_after_cover`, OXIDIZED_DESIGN_DIVERGENCES #903;
+      // 2011.04405, 1302.5352); what is not cover stays body after the abstract, which
+      // the placed frontmatter holds (or `insert_late_frontmatter` files, streamed).
+      // (`frontmatter_done` is reset by that path itself.)
       let first_flush = !lookup_bool("frontmatter_done");
       if first_flush {
         maybe_promote_leading_title(document)?;
       }
       place_frontmatter(document, first_flush, FrontmatterAnchor::LeadingFrontmatter)?;
     } else {
+      // Where the abstract sits among the document's in-place setters (`\lx@frontmatter@mark`), read before the flush
+      // sweeps its marker: the root child after it, or the end.
+      let abstract_bound = abstract_mark_bound(document);
       place_frontmatter(document, false, FrontmatterAnchor::Top)?;
       // The marked print of a field first (`\lx@field@mark`); the text match only for a copy no mark explains.
       if lift_marked_field_ink(document)? {
         assign_value("lx_title_ink_dedup_done", true, Some(Scope::Global));
       }
       maybe_dedup_leading_title_ink(document)?;
+      // A document without `\maketitle` whose setters print in place before its abstract (arxiv.cls's `\affiliation`,
+      // 1207.1161; ae100prg's `\address`, 1303.3004; newpasp's `\affil`, astro-ph0210637): their cover is wrapped and
+      // the abstract follows it, as a late abstract does (OXIDIZED_DESIGN_DIVERGENCES #903).
+      if let Some(bound) = abstract_bound {
+        place_abstract_after_cover(document, bound.as_ref(), false)?;
+      }
     }
   },
   after_digest => {

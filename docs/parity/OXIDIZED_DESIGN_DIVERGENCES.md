@@ -9188,8 +9188,9 @@ marker in 8 docs whose abstract came AFTER `\maketitle`, e.g. lips' `\DocInput`-
 `% \begin{abstract}`, or whose `\end{document}` was swallowed by an unbalanced conditional —
 an end-of-document hook is not a reliable cleanup point, the core finalize is). The flush
 point cannot be the bound, since a sectionless manual flushes at `\end{document}` and would
-see its whole body as cover; and promotion/wrap run only on the FIRST flush — a LATE abstract's
-preceding content is body, `insert_late_frontmatter` files it beside the existing frontmatter) into a new `<ltx:titlepage>` in its exact order — `titlepage_model = (FrontMatter.class
+see its whole body as cover; and promotion/wrap run only on the FIRST flush — a LATE abstract (after `\maketitle`)
+is placed beside the existing frontmatter, and the title-page text printed before it is its cover by #903's rule,
+any other content before it body) into a new `<ltx:titlepage>` in its exact order — `titlepage_model = (FrontMatter.class
 | SectionalFrontMatter.class | Block.class)*` is the schema's container for exactly this
 layout — renaming `para`→`block` and demoting `logical-block` with #244's bottom-up
 `demote_para_class_content`; the run stops at the first non-layout node (`<TOC>`, section,
@@ -25844,6 +25845,107 @@ lost too) and siamart_cls.rs:93-171 (1707.06953) — a later batch, each binding
 imsart_document_kwd_is_the_documents, imsart_renamed_copy_keyword_blocks, arxbj_keyword_classification_headings,
 omnibus_kwd_entries_add_up, omnibus_kwd_blocks_each_entry_once, amsart_document_subjclass_store}`; guards
 `perfect_kernel_batch86a::*`.
+
+### 903. An abstract placed ahead of title-page text pdflatex prints before it follows that text, wrapped as a continued `<titlepage>` (Perl: the text after the abstract, or lost)
+
+Perl's `\lx@frontmatterhere` constructor inserts every queued frontmatter element at once
+(`Base_Utility.pool.ltxml:824-844`, `:918`); construction runs after digestion, so an abstract given after
+`\maketitle` is already queued and lands in the block at the head, and whatever the document typesets between
+`\maketitle` and `\begin{abstract}` follows it as body (`latex_constructs.pool.ltxml:1099`). Rust did the same and
+adds the class's own title page (the `\@maketitle` deposit and class `\maketitle` replay, #265), which runs after
+`\lx@frontmatterhere` (`sect05.rs` `\lx@maketitle@body`) — so AAAI's `\affiliations` (aaai21.sty:58, a store delimited
+by `_` that `\@maketitle` reads at :75; aaai24/2026 and aaai2027 alike), dmtcs's addresses, pnastwo's affiliations and
+`\@contributor` line all came after the abstract, though pdflatex prints them above it. The same held for lines
+hand-typeset between `\maketitle` and the abstract, and, without `\maketitle`, for setters that print in place before
+it (the fallback places the frontmatter at the top, #246's wrap running only for an abstract-only queue). The
+frontmatter scorer's readability tier counts each as a piece out of print order; it was the largest class on the
+3,000-paper sample (`agent_reports/2026-10-28_rc_order.md` groups G-A and G-C).
+
+Ours (`base_utilities/frontmatter/cover_order.rs` `place_abstract_after_cover`; user ruling 2026-09-20, titlepage layout
+is not semantic, the frontmatter schema is; main-session decision 2026-10-28 under the readability bar): a frontmatter
+entry set after `\lx@frontmatterhere`'s `after_digest` (`lx_frontmatter_here_digested`) — queued after it (the stamp
+taken by `queue_front_matter` and handed to the later flush that digests it) or digested in place after it
+(`{abstract}`) — is LATE: its element carries `_late` (`frontmatter_push`, stripped at finalize). A late abstract's
+`\lx@frontmatter@mark` builds a marker of its own (`ltx:_LateAbstract_Capture_`, which the flush's marker sweep leaves
+alone). Where the abstract is already placed (the eager build) the marker is settled at once; in a streamed build
+`insert_late_frontmatter` settles it after placing the abstract, so both builds give one tree. The root children between
+the placed run of frontmatter that begins with the first late abstract and the marker are read as #246 reads a cover:
+title-page layout (`is_titlepage_layout`) that the class's title page printed — every root child built between
+`\lx@deposit@begin` and `\lx@deposit@end`, which `\lx@deposit@maketitle` puts around a kept deposit (`_deposit`) — or
+that is no running body prose (`is_body_prose`: an indented paragraph with text outside its boxes, or a list whose items
+hold one; a `\noindent`ed, centred or flushed line, a box alone, a list of such lines are cover) is wrapped as
+`<ltx:titlepage class="ltx_titlepage_continued">` in its order; pagebreaks, preamble residue, root footnote texts and
+what an `\insert` inside the deposit sets (`_inserted`: page-foot material — AAAI's copyright slug, aaai21.sty:53
+`\insert\footins{…}`, printed at the foot of the first column; a title page whose only ink it is, the AAAI-19 papers
+1909.05089 and 1904.09412, keeps the abstract where it was) are passed over and follow the abstract; anything else — a
+sectional unit, a TOC, a float, body prose, a body list — keeps the abstract where it was. While a deposit runs,
+`\insert` (`tex_inserts.rs`) digests its material as the internal vertical list TeX makes it (tex.web §1099-1100:
+vertical mode, its `}` ends its paragraph), ended by a `\par` and set after the title page (`lx_deposit_inserts`, handed
+on by `\lx@deposit@maketitle`), so an `\insert` inside a centred line leaves the line whole and one before a `\noindent`
+line does not run into it (nor does what the body sets right after `\maketitle`: 2501.04820's `\footnotetext`,
+2110.04708's and 2312.05616's teaser figure were set inside AAAI's slug paragraph); material opened by an implicit
+`\bgroup` (§403 `scan_left_brace` takes it: revtex4*, aastex701, memoir, bxjs*) is read live to its group's end as
+`\vadjust`'s is (`predigest_insert_group_contents`) and set after the title page the same way, after the braced ones
+before it; outside a deposit `\insert` stays Perl's no-op, its material set in place. The speculative runs of the
+title page (`speculative_title_page_run`, #767) read the material an `\insert` stashes as printed, after the run's own
+text, and a deposit or replay whose only ink is that material counts as kept (`lx_title_page_deposit_kept`), so a
+store printed in an `\insert` is the title page's and its label is the entry's name, taken out of the deposit with it
+(as when the material was set inline; the label reader `line_label_before` reads `\bgroup`/`\egroup` as braces, so
+`\insert\footins\bgroup … Keywords: \@keywords\par\egroup` no longer leaves an orphan "Keywords:" paragraph, which
+int116a left too). With a cover, the run of the first late abstract is placed by one rule:
+- **The fail-safe.** A late run holding an entry with title-page provenance is not moved at all: the abstract and
+  everything after it keep today's slot (int116a's order). Title-page provenance is `_titlepage` on the element
+  (stripped at finalize), naming the raw class's store the entry was handed on from (`\lx@store@from` around the call:
+  `harvest_stores` at `\maketitle`, creators and their annotations aside; `\lx@store@hand` as it is set;
+  `hand_untypeset_stores`' notes; `queue_front_matter` and `frontmatter_push` stamp it as they stamp `_late`; the
+  provenance is cleared after each call list however its digestion ends), from a store the class's title page may print
+  (`title_page_may_print`: unless the speculative run of the whole title page was made and the store's sentinel did not
+  reach it). The class's title page prints such a store where the frontmatter cannot tell — above the cover, below it,
+  at the page foot (`\footnotetext{Keywords: \@keywords}`, an `\insert`) — so no move is made.
+- **Otherwise**, an abstract queued before `\maketitle`'s flush (not `_late`: smfart's `{abstract}`, the late
+  `{altabstract}` after the cover; an rcresumen-style `\resumen` store `\maketitle` hands on) keeps its place ahead of
+  the titlepage, and everything else in the run moves behind it: keywords printed after the abstract — a binding's,
+  which carry no provenance (amsart's, set at the page foot; aaspp4's, astro-ph9911463), a raw class's store its title
+  page does not print (dmtcs's preamble `\keywords`, printed after its abstract: 0905.1102) — and a title `\thanks`
+  pubnote (2102.01904).
+
+A date never follows the abstract in the frontmatter's order, so none is in the run. Once per document (`lx_late_abstract_placed`: a second late abstract or a replaced first
+one has nothing more to place). A marker inside an open paragraph (a `\noindent` line running into `\begin{abstract}`)
+ends the region with that paragraph, closed first, when nothing follows the marker in it. Without `\maketitle` nothing
+is late: the fallback's non-abstract-only branch reads the first abstract's marker (`abstract_mark_bound`), the earliest
+in source and so before every abstract in print, before the flush removes it, and applies the same rule to the first
+root abstract's run after the title-ink dedup — no abstract moves behind text printed after it (nothing there is
+late, so the fail-safe, a late run's, does not apply: no `\maketitle` placed a store). Residual on both paths
+(as before 86g): a second abstract kept beside the first (smfart `{abstract}`, a centred line, `{altabstract}`) stays
+ahead of the lines printed between the two. Residual of the fail-safe (int116a's order, out of print order): a raw
+class whose title page prints frontmatter above or below the cover — `\def\@maketitle{…\noindent Keywords:
+\@keywords\par}` (or `\@pacs`, a `\footnotetext{Keywords: \@keywords}`, an `\insert\footins{…}` of it, an off-table
+store `\maketitle` hands on as a note) before `\maketitle` `\begin{center}Department\end{center}`
+`\begin{abstract}…` — gives `abstract, keywords, para(Department)` where pdflatex prints the department before the
+abstract (86g r2/r3 review probes b01, b03, b03b, b04, f1, f2, f3; no case in the 3,990-paper A/B population).
+In a streamed build a root child spilled out of the tree (`_spilled_`) in the region keeps the slot, fail-safe (the smfart repro at fragment budget 3: its pagebreaks). The titlepage continues
+the title block rather than standing for it, so LaTeXML-structure-xhtml.xsl's `ltx:title` template displays the title
+beside an `ltx_titlepage_continued` one (it hides it beside any other titlepage with ink, #761), and
+`settle_cover_title_ink` counts no such titlepage as a cover. An abstract the class's title page prints itself (a
+`\begin{abstract}` inside `\@maketitle`) is late as well: the deposit's lines before it are its cover, those after it
+stay after it.
+
+Witnesses (order before → after, no word lost, nothing else moved): aaai 2011.04405, 2102.01904, 2109.06762,
+2203.09121, 2208.05119, 2309.13734, 2412.11664; 2304.00893 (nature `{affiliations}`), 0905.1102 (dmtcs), 1404.2263
+(pnastwo), 1609.06335 (bmc_article), 1908.08044 (INTERSPEECH2019); hand-typeset 1302.5352, 1702.07128, 2309.14687;
+no `\maketitle` 1207.1161 (arxiv.cls:241 `\affiliation`), 1303.3004 (ae100prg.cls:188 `\address`), astro-ph0210637
+(newpasp_crete.sty:74 `\affil`). Not covered: 2403.15998 (ifacconf), whose `{frontmatter}` sets the deposit, the
+abstract's marker and the keywords in one box (`ifacconf.cls:984-1070` `\open@fm`, one `logical-block`): the marker
+does not end its root child, so the abstract keeps its place — splitting the box at the marker is the ifacconf
+binding's work, tracked in DEFERRED_FAMILIES.md ("Deferred by the difficulty rule", the abstract-before-`\maketitle`
+entry) with ifacconf's 1309.1610 and 2104.15006. Repros
+`sectioning-frontmatter/{late_abstract_after_hand_typeset_cover, late_abstract_after_the_class_title_page,
+abstract_inside_the_class_title_page, abstract_after_in_place_setters_without_maketitle,
+late_abstract_after_body_content_keeps_its_slot, late_abstract_after_an_earlier_abstract,
+late_abstract_after_a_class_store_abstract, late_abstract_after_class_printed_frontmatter,
+late_abstract_after_a_class_note_store}`; guards `perfect_kernel_batch86g::*`,
+`114_streaming_structure::streaming_late_abstract_follows_its_cover`, and
+`perfect_kernel_batch56::late_abstract_after_maketitle_leaves_no_marker_and_wraps_nothing` (body prose stays body).
 
 ### 904. pos.sty and rmaa.cls have bindings: their title-page stores are the frontmatter (Perl: no binding; pos.sty unread, an empty name; rmaa through OmniBus)
 

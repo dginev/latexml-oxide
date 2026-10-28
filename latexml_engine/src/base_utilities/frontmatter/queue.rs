@@ -41,6 +41,15 @@ pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
       }
     }
   }
+  // (queued after `\maketitle`'s flush: digested by a later one, still late, [`LATE_ENTRY`])
+  if lookup_bool("lx_frontmatter_here_digested") {
+    attr_hash.insert(LATE_ENTRY.to_string(), "true".to_string());
+  }
+  // (handed on from a raw class's store: its title-page provenance, [`TITLE_PAGE_ENTRY`])
+  let from = lookup_string(crate::frontmatter_stores::STORE_ENTRY_FROM);
+  if !from.is_empty() {
+    attr_hash.insert(TITLE_PAGE_ENTRY.to_string(), from);
+  }
   DebugFeature!(
     "frontmatter",
     "FRONT Queuing {tag} [{:?}] {command}",

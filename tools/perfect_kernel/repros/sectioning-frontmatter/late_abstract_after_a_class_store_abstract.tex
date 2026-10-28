@@ -1,0 +1,28 @@
+% A class's abstract store its \@maketitle prints ("Resumen: \@resumen") keeps its place when the document's own
+% {abstract}, given after \maketitle, follows the title-page line printed between them: only what is queued after
+% \maketitle placed the frontmatter (`_late`) goes behind that cover (OXIDIZED_DESIGN_DIVERGENCES #903).
+% witness: none (synthetic; 86g r1 review probe q02, the rcresumen store of abstract_store_keeps_the_document_abstract).
+% Guard: perfect_kernel_batch86g::late_abstract_follows_the_hand_typeset_cover;
+%          114_streaming_structure::streaming_late_abstract_follows_its_cover (budget 3, under ar5iv.sty: without
+%          it the class falls back to OmniBus and its store is unread).
+% oracle:  pdflatex 0 errors: "Repro Title / Ann Author / Resumen: Spanish abstract words. / Department of Repro,
+%          University of Witness / Abstract / English abstract words. / 1 Intro".
+% engines: rust 86a: title, creator, abstract, abstract, para (cover), section. 86g r1: title, creator, titlepage,
+%          abstract (Spanish), abstract (English). 86g r2: title, creator, abstract (Spanish), titlepage[block],
+%          abstract (English), section.
+% expect:  0 errors, 0 warnings.
+\begin{filecontents*}[overwrite]{rclatestore.cls}
+\ProvidesClass{rclatestore}
+\LoadClass{article}
+\newcommand*\resumen[1]{\gdef\@resumen{#1}}
+\def\@resumen{}
+\def\@maketitle{\@title\par\@author\par Resumen: \@resumen\par}
+\end{filecontents*}
+\documentclass{rclatestore}
+\title{Repro Title}\author{Ann Author}\resumen{Spanish abstract words.}
+\begin{document}
+\maketitle
+\begin{center}Department of Repro, University of Witness\end{center}
+\begin{abstract}English abstract words.\end{abstract}
+\section{Intro}Body text.
+\end{document}

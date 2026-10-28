@@ -8620,10 +8620,11 @@ fn sectionless_body_after_the_abstract_is_not_cover_layout() {
 /// Batch 56et regression control (s107: 8 docs leaked `<_Frontmatter_Capture_>`): an
 /// abstract queued AFTER `\maketitle` placed the frontmatter (lips: a `\DocInput`-ed
 /// `\begin{abstract}`) is a LATE abstract. No position marker is built once the
-/// frontmatter is placed, the abstract-only fallback neither promotes nor wraps (what
-/// precedes it is body, not cover), `insert_late_frontmatter` files the abstract beside
-/// the existing frontmatter, and the core finalize drops any stranded `*_Capture_`
-/// scaffolding even when `\end{document}` is never reached.
+/// frontmatter is placed, the abstract-only fallback neither promotes nor wraps, the body
+/// prose before it is no cover (OXIDIZED_DESIGN_DIVERGENCES #903's `is_body_prose`, batch
+/// 86g, whose late marker is settled at once), the abstract stays beside the existing
+/// frontmatter, and the core finalize drops any stranded `*_Capture_` scaffolding even
+/// when `\end{document}` is never reached.
 #[test]
 fn late_abstract_after_maketitle_leaves_no_marker_and_wraps_nothing() {
   let tex = "\\documentclass{article}\n\\title{T}\\author{A}\n\\begin{document}\n\\maketitle\n\

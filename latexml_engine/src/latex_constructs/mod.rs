@@ -26,7 +26,8 @@ use latexml_core::{
 /// NOTE: This will be loaded after `TeX.pool`, so it inherits.
 ///**********************************************************************
 use crate::base_utilities::{
-  FrontmatterAnchor, already_reported, mark_preamble_residue, place_frontmatter,
+  FrontmatterAnchor, already_reported, begin_deposit_insert, begin_deposit_provenance,
+  end_deposit_insert, end_deposit_provenance, mark_preamble_residue, place_frontmatter,
   remove_frontmatter_marks, tag_forms,
 };
 use crate::{

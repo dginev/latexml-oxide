@@ -531,6 +531,20 @@ pub fn digest_front_matter() -> Result<()> {
       // `report.fatal=true` with no log line); propagation fixes the
       // silence without diverging from Perl. Non-fatal Error!s inside
       // the digest log-and-continue in both engines as before.
+      // (its element is late when the entry was queued late: `frontmatter_push`)
+      assign_value(
+        "lx_frontmatter_entry_late",
+        Stored::Bool(attr.contains_key(LATE_ENTRY)),
+        Some(Scope::Local),
+      );
+      // (and handed on from the store its title-page provenance names: `frontmatter_push`)
+      assign_value(
+        "lx_frontmatter_entry_from",
+        Stored::String(pin(
+          attr.get(TITLE_PAGE_ENTRY).map(String::as_str).unwrap_or(""),
+        )),
+        Some(Scope::Local),
+      );
       digest(command)?;
     }
   }
@@ -694,7 +708,7 @@ pub fn mark_preamble_residue(root: &Node) {
 /// alone. An open `{titlepage}` is not a paragraph — `\begin{titlepage}\maketitle
 /// \end{titlepage}` relies on the `\unwind@titlepage` hook finding it open (closing
 /// it here left an empty `<titlepage/>` behind).
-fn close_auto_closable_to_root(document: &mut Document, root: &Node) -> Result<()> {
+pub(super) fn close_auto_closable_to_root(document: &mut Document, root: &Node) -> Result<()> {
   let mut n = document.get_node().clone();
   if n.get_type() != Some(NodeType::ElementNode) {
     match n.get_parent() {
@@ -719,7 +733,7 @@ fn close_auto_closable_to_root(document: &mut Document, root: &Node) -> Result<(
 }
 
 /// Was `node` built before `\begin{document}`? ([`mark_preamble_residue`])
-fn is_preamble_residue(node: &Node) -> bool { node.has_attribute(PREAMBLE_RESIDUE) }
+pub(super) fn is_preamble_residue(node: &Node) -> bool { node.has_attribute(PREAMBLE_RESIDUE) }
 
 /// The ONE frontmatter placement pass (OXIDIZED_DESIGN #247). The schema wants every
 /// frontmatter-group element before all `document.body.class` content

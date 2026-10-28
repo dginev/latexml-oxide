@@ -1330,6 +1330,35 @@ pub(crate) fn load() -> Result<()> {
     }
     Ok(Tokens::default())
   });
+  // What the deposit below builds is the class's title page by provenance (`\lx@deposit@end` marks it), which a late
+  // abstract's placement reads: it is that abstract's cover, whatever its typography (pnastwo's `\@contributor` line,
+  // 1404.2263; OXIDIZED_DESIGN_DIVERGENCES #903). Rust-only, reverting as nothing.
+  DefConstructor!("\\lx@deposit@begin",
+    sub[document, _args, _props] {
+      begin_deposit_provenance(document)?;
+    },
+    reversion => ""
+  );
+  DefConstructor!("\\lx@deposit@end",
+    sub[document, _args, _props] {
+      end_deposit_provenance(document)?;
+    },
+    reversion => ""
+  );
+  // What an `\insert` sets inside the deposit goes to the page foot (tex_inserts.rs): the late abstract's cover passes
+  // it over (OXIDIZED_DESIGN_DIVERGENCES #903). Rust-only, reverting as nothing.
+  DefConstructor!("\\lx@deposit@insert@begin",
+    sub[document, _args, _props] {
+      begin_deposit_insert(document)?;
+    },
+    reversion => ""
+  );
+  DefConstructor!("\\lx@deposit@insert@end",
+    sub[document, _args, _props] {
+      end_deposit_insert(document)?;
+    },
+    reversion => ""
+  );
   // A primitive, not a macro: the deposit is digested first and kept only
   // when it produced content. A class whose `\@maketitle` typesets nothing
   // but captured stores (ptptex, every field in the frontmatter) yields
@@ -1352,8 +1381,11 @@ pub(crate) fn load() -> Result<()> {
     // `\copyrightholders`, which its `\maketitle` (:73-89) provides just before calling it, so alone it raised
     // "undefined" for page furniture (1309.1271, 1405.5596, 1109.2657).
     let hold = util::logger::DiagnosticsHold::begin();
+    // (what an `\insert` in it sets, after it: tex_inserts.rs)
+    AssignValue!("lx_deposit_inserts" => Stored::VecDigested(Vec::new()), Some(Scope::Global));
     let deposit = digest(title_page_deposit_tokens(&[]));
     AssignValue!("lx_depositing_frontmatter_fields" => false, Some(Scope::Global));
+    let mut inserts = take_deposit_inserts();
     let deposit = match deposit {
       Ok(deposit) => deposit,
       Err(err) => {
@@ -1365,6 +1397,7 @@ pub(crate) fn load() -> Result<()> {
     let errors = hold.errors_raised();
     if errors > 0 {
       hold.discard();
+      inserts.clear();
       Info!(
         "ignore",
         "\\@maketitle",
@@ -1372,8 +1405,12 @@ pub(crate) fn load() -> Result<()> {
       );
     } else {
       hold.commit();
-      if typesets_content(&deposit) {
+      // (what its `\insert`s set is kept after it, an empty title page or not: a store it prints there is typeset,
+      // `hand_untypeset_stores`)
+      if typesets_content(&deposit) || inserts.iter().any(typesets_content) {
         AssignValue!("lx_title_page_deposit_kept" => true, Some(Scope::Global));
+      }
+      if typesets_content(&deposit) {
         out.push(deposit);
       }
     }
@@ -1420,7 +1457,9 @@ pub(crate) fn load() -> Result<()> {
       let hold = util::logger::DiagnosticsHold::begin();
       // The class's code, read as the class's: a `\def` of a locked name it makes stays refused (state.rs
       // `install_definition`), not a document override.
+      AssignValue!("lx_deposit_inserts" => Stored::VecDigested(Vec::new()), Some(Scope::Global));
       let body = with_origin(DefinitionOrigin::File, || digest(replay));
+      let body_inserts = take_deposit_inserts();
       // Reset before propagating an error, so a failed deposit does not disable
       // every later one. A hard error still propagates on purpose (Fatal stays
       // Fatal): only a recursion/resource Fatal gets here — an undefined internal
@@ -1447,12 +1486,27 @@ pub(crate) fn load() -> Result<()> {
       } else {
         hold.commit();
         // Kept only when it shows something: KOMA's emptied title page (scrreprt, scrbook,
-        // `scrartcl[titlepage]`) and boek/rapport typeset only `\noindent`, skips and `\par`.
-        if typesets_content(&body) {
+        // `scrartcl[titlepage]`) and boek/rapport typeset only `\noindent`, skips and `\par`. (What its `\insert`s
+        // set is kept after it either way.)
+        if typesets_content(&body) || body_inserts.iter().any(typesets_content) {
           AssignValue!("lx_title_page_replay_kept" => true, Some(Scope::Global));
+        }
+        inserts.extend(body_inserts);
+        if typesets_content(&body) {
           out.push(body);
         }
       }
+    }
+    // (the kept title page, between the marks of its provenance)
+    if !out.is_empty() {
+      out.insert(0, digest(Tokens!(T_CS!("\\lx@deposit@begin")))?);
+      out.push(digest(Tokens!(T_CS!("\\lx@deposit@end")))?);
+    }
+    // What its `\insert`s set goes after it, a vertical list of its own (tex.web §1100): out of the paragraph the
+    // `\insert` stood in, ahead of the title page's next line (OXIDIZED_DESIGN_DIVERGENCES #903).
+    if !inserts.is_empty() {
+      out.push(digest(Tokens!(T_CS!("\\par")))?);
+      out.extend(inserts);
     }
     Ok(out)
   });
@@ -4851,7 +4905,17 @@ pub(crate) fn speculative_title_page_run(tokens: Tokens) -> Result<SpeculativeRu
   let depth = get_frame_depth();
   let boxes = box_lists_mark();
   let conditionals = if_stack_depth();
+  // (what an `\insert` in it sets is stashed for after the title page, tex_inserts.rs — printed by it all the same, at
+  // the page foot: its text follows the run's, so a store and the label the class prints before it there are printed,
+  // as they are inline in Perl, and taken out of the deposit with it, `note_store_handed`)
+  let outer_inserts = remove_value("lx_deposit_inserts");
+  assign_value(
+    "lx_deposit_inserts",
+    Stored::VecDigested(Vec::new()),
+    Some(Scope::Global),
+  );
   let result = with_origin(DefinitionOrigin::File, || digest(tokens));
+  let inserts = take_deposit_inserts();
   let unwound = reading_from_mouth(Mouth::default(), || {
     new_local_box_list();
     while get_frame_depth() > depth {
@@ -4868,12 +4932,19 @@ pub(crate) fn speculative_title_page_run(tokens: Tokens) -> Result<SpeculativeRu
     Ok(digested) => {
       let mut text = String::new();
       ink_text(digested, &mut text);
+      for insert in &inserts {
+        ink_text(insert, &mut text);
+      }
       Some(text)
     },
     Err(_) => None,
   };
   drop(muted);
   let undone = journal.rollback();
+  remove_value("lx_deposit_inserts");
+  if let Some(outer) = outer_inserts {
+    assign_value("lx_deposit_inserts", outer, Some(Scope::Global));
+  }
   for (flag, value) in FLAGS.iter().zip(saved) {
     assign_value(flag, value, Some(Scope::Global));
   }
@@ -4918,4 +4989,12 @@ pub(crate) fn speculative_title_page_run(tokens: Tokens) -> Result<SpeculativeRu
     Some(text) if undone => SpeculativeRun::Printed(text),
     _ => SpeculativeRun::Unavailable,
   })
+}
+
+/// The material the `\insert`s of a title-page run set (`lx_deposit_inserts`, tex_inserts.rs), taken from the state.
+fn take_deposit_inserts() -> Vec<Digested> {
+  match remove_value("lx_deposit_inserts") {
+    Some(Stored::VecDigested(inserts)) => inserts,
+    _ => Vec::new(),
+  }
 }

@@ -346,8 +346,29 @@ pub(in crate::base_utilities) fn get_frontmatter_name(
 }
 
 /// Push an entry to frontmatter{tag}, returning its index
-/// (Perl holds a direct entry ref instead).
-pub(in crate::base_utilities) fn frontmatter_push(tag: &str, entry: TagData) -> usize {
+/// (Perl holds a direct entry ref instead). An entry set after `\maketitle` placed the frontmatter — queued after
+/// `\lx@frontmatterhere`'s flush, or digested in place after it (`{abstract}`) — is LATE ([`LATE_ENTRY`]): its element
+/// is the one a late abstract's placement may move (`place_abstract_after_cover`, OXIDIZED_DESIGN_DIVERGENCES #903).
+pub(in crate::base_utilities) fn frontmatter_push(tag: &str, mut entry: TagData) -> usize {
+  let late = if lookup_bool("lx_frontmatter_flushing") {
+    lookup_bool("lx_frontmatter_entry_late")
+  } else {
+    lookup_bool("lx_frontmatter_here_digested")
+  };
+  if late {
+    entry
+      .attr
+      .insert(LATE_ENTRY.to_string(), "true".to_string());
+  }
+  // (handed on from a raw class's store, [`TITLE_PAGE_ENTRY`]: queued from it, or set from it in place)
+  let from = if lookup_bool("lx_frontmatter_flushing") {
+    lookup_string("lx_frontmatter_entry_from")
+  } else {
+    lookup_string(crate::frontmatter_stores::STORE_ENTRY_FROM)
+  };
+  if !from.is_empty() {
+    entry.attr.insert(TITLE_PAGE_ENTRY.to_string(), from);
+  }
   with_value_mut("frontmatter", |val_opt| {
     if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
       let list = frnt.entry(tag.to_string()).or_insert_with(Vec::new);

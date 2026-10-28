@@ -14,7 +14,56 @@ LoadDefinitions!({
   //----------------------------------------------------------------------
   // \insert           c  places material into an insertions class.
   // \insert<8bit><filler>{<vertical mode material>}
-  DefPrimitive!("\\insert Number", None);
+  // Inside the class's own title page (the deposit, `\lx@deposit@maketitle`) the material goes to the page foot, out of
+  // the title page's flow (AAAI's copyright slug, aaai21.sty:53 `\insert\footins{\noindent\footnotesize…}`; 2011.04405,
+  // 1909.05089): as TeX makes it an internal vertical list of its own (tex.web §1099, its `}` ends its paragraph,
+  // §1100), it is digested in vertical mode, ended by a `\par`, and set after the title page
+  // (`lx_deposit_inserts`, handed on by `\lx@deposit@maketitle`) — not inside the paragraph the `\insert` stands in,
+  // nor running into the title page's next line or what the body sets after it (2501.04820's `\footnotetext`,
+  // 2110.04708's teaser figure) — marked (`\lx@deposit@insert@begin` … `\lx@deposit@insert@end`), so a
+  // late abstract's cover passes it over (OXIDIZED_DESIGN_DIVERGENCES #903). Material opened by an implicit `\bgroup`
+  // (§403 `scan_left_brace` takes it too: revtex4*, aastex701, memoir) is read live to its group's end, as `\vadjust`'s
+  // (`predigest_insert_group_contents`), and set after the title page the same way. A speculative run of the title page
+  // reads it as printed (sect05.rs `speculative_title_page_run`), so a store it prints and the label before it are
+  // the title page's, the label taken out with the store (no orphan "Keywords:" line). Elsewhere, as Perl, the
+  // material is set where it stands.
+  DefPrimitive!("\\insert Number", sub[_args] {
+    if !lookup_bool("lx_depositing_frontmatter_fields") {
+      return Ok(Vec::new());
+    }
+    let Some(next) = read_non_space()? else {
+      return Ok(Vec::new());
+    };
+    let set = if next.get_catcode() == Catcode::BEGIN {
+      unread(Tokens::new(vec![next]));
+      let material = read_arg(ExpansionLevel::Off)?;
+      let mut tokens = vec![T_CS!("\\lx@deposit@insert@begin")];
+      tokens.extend(material.unlist());
+      tokens.extend([T_CS!("\\par"), T_CS!("\\lx@deposit@insert@end")]);
+      begin_mode("inline_internal_vertical")?;
+      let set = digest(Tokens::new(tokens));
+      end_mode("inline_internal_vertical")?;
+      vec![set?]
+    } else if is_left_brace(&next) {
+      let begin = digest(Tokens!(T_CS!("\\lx@deposit@insert@begin")))?;
+      let material = predigest_insert_group_contents()?;
+      let end = digest(Tokens!(T_CS!("\\lx@deposit@insert@end")))?;
+      [Some(begin), material, Some(end)].into_iter().flatten().collect()
+    } else {
+      unread(Tokens::new(vec![next]));
+      return Ok(Vec::new());
+    };
+    let mut set = Some(set);
+    with_value_mut("lx_deposit_inserts", |value| {
+      if let Some(Stored::VecDigested(inserts)) = value {
+        inserts.extend(set.take().into_iter().flatten());
+      }
+    });
+    if let Some(set) = set {
+      assign_value("lx_deposit_inserts", Stored::VecDigested(set), Some(Scope::Global));
+    }
+    Ok(Vec::new())
+  });
 
   //======================================================================
   // Splitting a box
