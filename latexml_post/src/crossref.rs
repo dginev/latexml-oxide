@@ -1424,8 +1424,14 @@ impl CrossRef {
       }
 
       if ref_mut.get_first_child().is_none() {
-        doc.add_nodes(&mut ref_mut, &[NodeData::Text(key.clone())]);
-        PostDocument::add_class(&mut ref_mut, "ltx_missing");
+        let show = ref_node.get_attribute("show").unwrap_or_else(|| "label".to_string());
+        let content = self.generate_glossary_ref_title(&gkey, &show);
+        if content.is_empty() {
+          doc.add_nodes(&mut ref_mut, &[NodeData::Text(key.clone())]);
+          PostDocument::add_class(&mut ref_mut, "ltx_missing");
+        } else {
+          doc.add_nodes(&mut ref_mut, &content);
+        }
       }
     }
   }
