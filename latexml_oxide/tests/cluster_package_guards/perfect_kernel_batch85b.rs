@@ -506,6 +506,33 @@ fn llncs_address_lines_are_each_owners() {
     &["Jorge A. Navas", both],
     &["Andrew E. Santosa"],
   ]);
+  // (a read unit no author owns stays its picked authors' too: a template address, 2109.05583's shape, which 85b r4
+  // sent to the block; and an address its owner takes off a line whose other text the reader does not read, the r4
+  // re-review's q31 — the rest of the line stays every picked author's; the r5 re-review's finding 2)
+  let picked_template = r"\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1}}
+\institute{Univ X\\ \email{\{firstname.lastname\}@x.edu}}
+\maketitle
+Text.
+\end{document}
+";
+  let template = "email={firstname.lastname}@x.edu";
+  assert_creators(picked_template, &[
+    &["Ann Able", "affiliation=Univ X", template],
+    &["Bob Baker", "affiliation=Univ X", template],
+  ]);
+  let picked_owned = picked_template.replace(
+    r"\email{\{firstname.lastname\}@x.edu}",
+    r"\email{able@x.edu}, Twitter: @univx",
+  );
+  assert_ne!(picked_owned, picked_template);
+  let rest = "affiliation=Univ X, Twitter: @univx";
+  assert_creators(&picked_owned, &[
+    &["Ann Able", rest, "email=able@x.edu"],
+    &["Bob Baker", rest],
+  ]);
   let institute =
     "affiliation=Old Dominion University, Department of Computer Science Norfolk VA, 23529, USA";
   assert_creators(repro!("llncs_urldef_address_line_is_each_owners.tex"), &[

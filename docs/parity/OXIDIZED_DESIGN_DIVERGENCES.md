@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#565** (allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`).
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#902** (allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`).
 
 ---
 
@@ -25743,7 +25743,14 @@ a call or line no address of which an owner is found for (2109.05583's template,
 text between — save decision 3 of 2026-10-22: of a call or line parted by owner (a group written out), an address no
 one is found for is the block's, as in a shared institute (2510.12629's `\email{kgwo0528@gmail.com,
 jinwookim@kw.ac.kr}`: `jinwookim@` Jinwoo Kim's, `kgwo0528@` the block's); a picked contact every line of which is
-taken stays, empty, answering its authors' `\inst{1}` marks. Left in the contact, an e-mail would
+taken stays, empty, answering its authors' `\inst{1}` marks. Two residuals of the picked path (the r5 re-review):
+the corresponding-author step is not limited to the picked authors, so a "Corresponding author" note on an author with
+no mark takes an unspelled address out of the picked institute (s17, RED below); and one address no one spells, alone
+in its call under two or more picked authors, stays every picked author's (s01, s16, s19; int114a's placement, while
+the same address in a call parted by owner is the block's) — FIDELITY_CHARTER §4 sends an unspelled address to the
+block, so it waits on a ruling. A shared institute's line holding a note with an `@` reads the line's own word as the
+spelled author's address (`Univ X\\ Visit\footnote{able@x.edu}`: "Visit" Ann's e-mail, s23, RED below; the picked
+path keeps the line, q02, v03). Left in the contact, an e-mail would
 have inherited the institute's label (Perl Base_Utility.pool.ltxml:497-500): every author's, or with `\inst{1}` every
 `\inst{1}` author's (2608.11332's brace list whole on both, arXiv/html_feedback#6881's witness, now each address its
 owner's).
@@ -25775,5 +25782,7 @@ one guard per distinct path, near-duplicates repros without a guard); RED, not h
 author-line `\email{\{a,b\}@x}` split inside its braces, 1609.01220, the author-block e-mail reader) and
 `llncs_marked_block_ambiguous_spelling_is_no_place` (the general reader's `addresses_in_order` places an address
 several names spell by its place, SYNC_STATUS) and `llncs_unknown_email_label_stays_the_institutes`,
-`llncs_connective_between_email_calls` (the two label/connective residuals above); guards `perfect_kernel_batch85b::*`,
+`llncs_connective_between_email_calls` (the two label/connective residuals above) and
+`llncs_corresponding_note_does_not_override_inst_marks`, `llncs_shared_note_line_word_is_no_email` (the r5
+re-review's s17, s23 above); guards `perfect_kernel_batch85b::*`,
 `frontmatter_llncs_institute_shared_email`; the 77t llncs guards carry the `\institute{Inst A}` on every author.

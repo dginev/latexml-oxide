@@ -132,7 +132,8 @@ fn email_calls_in(
 /// What a row contact's e-mail lines are taken out as ([`row_email_calls`]): an e-mail call, or a whole line of the
 /// contact. Its span in the contact (the separators before it with it); the addresses read from it, if it is read; its
 /// tokens as one piece; each address apart, when it may be parted; whether it is an e-mail (else a line no reader
-/// parts, which is the block's as written, an affiliation as the institute is).
+/// parts, which is the block's as written on the shared path and stays its picked authors' on the `\inst` path, an
+/// affiliation as the institute is).
 struct EmailUnit {
   start: usize,
   end:   usize,
@@ -290,8 +291,8 @@ pub(super) fn row_email_calls(
       .iter()
       .any(|t| t.get_catcode() != Catcode::SPACE)
   });
-  // (a line of a picked contact holding an address the reader does not read: no list of the contact is then known to be
-  // one per author)
+  // (a line of a picked contact holding an address the reader does not read, or one it reads beside a note: no list of
+  // the contact is then known to be one per author)
   let mut unread_line = false;
   for (place, &(sep, start, end)) in lines.iter().enumerate() {
     let on_line: Vec<&EmailCall> = calls
@@ -758,7 +759,8 @@ fn holds_raw_address(
 /// before it at `sep`: read with the address reader ([`email_addresses`]) after an `Email:` label, which the contact's
 /// own name says ([`split_email_label`]), or a label of its own (`Corresponding author:`, [`own_label_end`]), what a
 /// `\urldef`'d command prints read as its text. A line the reader reads is an e-mail line, parted by owner only with no
-/// label of its own; a line it cannot read is the block's, as written.
+/// label of its own; a line it cannot read is the block's, as written, on the shared path, and stays its picked
+/// authors' on the `\inst` path.
 fn raw_line_unit(tokens: &[Token], sep: usize, from: usize, to: usize) -> Result<EmailUnit> {
   let line = Tokens::new(tokens[from..to].to_vec());
   let (email_label, after_label) = split_email_label(&line);
@@ -820,7 +822,8 @@ fn raw_line_unit(tokens: &[Token], sep: usize, from: usize, to: usize) -> Result
 
 /// The end of a label of a line's own before its addresses, its colon (`Corresponding author:`): words, no `@`, no
 /// command, before the line's first colon outside any group, the first a contact's ([`names_a_contact`]; not
-/// `Department of CS: {\tt able@x.edu}`, a line the address reader then cannot read, the block's).
+/// `Department of CS: {\tt able@x.edu}`, a line the address reader then cannot read: the block's on the shared path,
+/// its picked authors' on the `\inst` path).
 fn own_label_end(line: &[Token]) -> Option<usize> {
   let mut text = String::new();
   for (at, t) in line.iter().enumerate() {

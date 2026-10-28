@@ -1,0 +1,20 @@
+% mechanism: on llncs's shared `\institute` (no `\inst`), a later line holding a note with an `@` in it is read as
+%   an e-mail line: the line's own word becomes the address of the author the note's address spells. 85b keeps such a
+%   line in place on the `\inst`-picked path only (`holds_a_note`, gated on `!shared` in shared_row/emails.rs). The
+%   fail-safe on the shared path is the unread line's: the line goes to the block as written. `{\tt able@x.edu}\footnote{…}`
+%   already lands there.
+% witness: the 85b r5 re-review's finding 3 (s23; v03 on the picked path, fixed in r5); no census paper
+% oracle:  pdflatex 0 errors; "Univ X" and "Visit" under the names, footnote 1 "able@x.edu"
+% engines: rust int114a = "Univ X Visit" on a nameless creator; 85b r5 = Univ X on both, `<contact role="email">Visit`
+%   on Ann; the footnote is kept in both
+% expect:  0 errors, 0 warnings; "Visit" never an e-mail contact; Univ X on both, or the line at the block as written
+% status:  RED (85b r5)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\institute{Univ X\\ Visit\footnote{able@x.edu}}
+\maketitle
+Text.
+\end{document}
