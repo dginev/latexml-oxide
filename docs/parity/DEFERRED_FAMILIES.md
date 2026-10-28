@@ -4,6 +4,33 @@
 > items, each needing a dedicated session. Parked deliberately: read the entry
 > before starting, several carry explicit "do NOT start" directives.
 
+## Deferred by the difficulty rule (user 2026-10-28)
+
+The user's rule for questions that waited on a ruling: easy, pragmatic improvements are in scope; high-difficulty
+recovery cases are recorded here with their witnesses. Each OPEN_ROWS row named below says so in its status.
+
+- **Hand-typeset title pages with no `\author`** — the frontmatter scorer's largest bucket: 178 of 2,578 sample
+  papers (6.9 %; `article` 119 of 842) print their authors in a `center`/`titlepage` block or a macro of their own,
+  so no creator is made (Perl the same). Needs a new capability — recognising a typeset title block, best from TeX's
+  own output (OPEN_ROWS design row "title-page line membership from the speculative title-page run", task #367).
+  Witnesses 1705.02941, 1010.5721, 1707.06242 (a paper's own `\authors{…}`), 1103.2069, 1710.03652, 1105.3169,
+  1803.08128, 1109.1681.
+- **FM-14** a class setter that builds the kernel's `\@author` from its stores (jfpc.cls:188-191; 1503.05530).
+- **FM-15** vmsta 2018+ `\author@optarg` names made by `\csname`; a replayed `\maketitle` prints the author line
+  and the e-mail line twice (1806.03850, 1810.09667, 2012.03249).
+- **BIB-5** citation commands a paper redefines through `\@citex`/`\@lbibitem` against the locked `\cite` (6 papers);
+  front-matter fields a class never typesets (revtex `\thanks` in `\author`, aastex running heads).
+- **BIB-9** MathSciNet `MRREVIEWER` macros and Perl's MathReview synthesis (6 papers).
+- **KRN-7** eqnarray REDs (`alignment/eqnarray_cr_row_column_count`, `lefteqn_overprint_keeps_template_material`,
+  `eqnarray_side_content_only_cell`); the proposed rule — size never decides dropping content, only
+  `Digested::is_skippable` — stands as the direction.
+- **KRN-15** `\item[]` excluded from the OD #189 item bridge (2606.00118).
+- **KRN-17** `\unvbox`/`\lastbox` residuals of OD #637 (awaiting R6; `boxes-groups/unvbox_lastbox_peel_loop`;
+  math0301370's `diagrams` loops).
+- **KRN-40** K9 Stage 1 frame ownership and Stage 2 (L 126, B 38 papers), and the study's six questions.
+- **REF-6** cleveref formats that compute or make an object at the reference (typesetting them needs post to run
+  TeX), range compression and late format settings.
+
 ## Deep deferred families (parked — large or shared; dedicated sessions)
 
 - **Native `.bst` interpretation — DEFERRED (pending plan, ~a few months out; do NOT
