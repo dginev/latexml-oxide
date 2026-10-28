@@ -13,6 +13,8 @@ ground truth and is absent from git worktrees).
 Rules:
 - Do only the task you were briefed; return conclusions, numbers and `file:line`
   pointers, not file dumps — the caller's context is the scarce resource.
+- Never spawn agents of your own: the user's limit is 2 subagents at once, counting the
+  main session's, and a helper you start breaks it (2026-10-28).
 - Never `git commit`/`push`, never rebuild while the main session may be running the
   binary, unless the brief explicitly says so. The main session owns the tree.
 - Judge a test run by its `test result:`/`Summary` lines and exit code, never by
