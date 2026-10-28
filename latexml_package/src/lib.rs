@@ -672,6 +672,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("tu", "fontmap", package::tu_fontmap::load_definitions),
   ("pzd", "fontmap", package::pzd_fontmap::load_definitions),
   ("pifont", "sty", package::pifont_sty::load_definitions),
+  ("pos", "sty", package::pos_sty::load_definitions),
   ("pict2e", "sty", package::pict2e_sty::load_definitions),
   ("utf8", "def", package::utf8_def::load_definitions),
   // Perl utf8x.def.ltxml L18: "Note: this is a copy of utf8.def.ltxml

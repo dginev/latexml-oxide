@@ -45,14 +45,7 @@ LoadDefinitions!({
   Let!("\\authoraddr", "\\authoraddress");
   // `\altaffilmark` marks an author, `\altaffiltext{n}{…}` gives the marked authors the affiliation (agupp.sty:150,
   // aguplus.cls:239-242 a title footnote), as the AAS binding's.
-  DefMacro!(
-    "\\altaffilmark Semiverbatim",
-    "\\lx@request@frontmatter@annotation[altaffil]{#1}"
-  );
-  DefMacro!(
-    "\\altaffiltext Semiverbatim {}",
-    "\\lx@add@contact[role=altaffiliation,label={altaffil:#1}]{#2}"
-  );
+  aas_support_sty::altaffil_markup()?;
   // The dates printed under the references (agupp.sty:68-70, :119-126 `\@dates`), and the slug comment over the
   // title (agupp.sty:110-117 `\@makeslugcmmnt`; aguplus.cls:245 `\let\date=\slugcomment`), as the AAS binding's.
   DefMacro!(

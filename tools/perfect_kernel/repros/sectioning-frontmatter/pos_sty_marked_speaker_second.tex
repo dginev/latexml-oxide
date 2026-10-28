@@ -1,0 +1,124 @@
+% mechanism: the pos.sty binding (pos_sty.rs) on a speaker after a labelled author, with one more note: the star's
+%   "Speaker" note is labelled (`lx@pos@speaker`) and requested by the starred author only, so it is not one of the
+%   unlabelled notes the kernel deals out one per labelled author when they are as many (here the `\onbehalf` line and
+%   the speaker's note against Ann Lee and Bob Kim)
+% witness: the review of 86b r1 (its probe s11, with 2409.20413's pos.sty v2.2); the speaker of 2602.22379,
+%          2512.14592 is the first author; here a shortened copy of pos.sty v2.2
+% oracle:  pdflatex 0 errors: "Ann Lee a Bob Kim b,* for the XYZ Collaboration / a Inst A / b Inst B / Abs. /
+%          Conf X / * Speaker"
+% engines: rust 86b r1 = 0 errors, Ann Lee the "Speaker" note, Bob Kim the on-behalf line; int116a = one creator "*",
+%          the rest paragraphs; perl = errors for each \affiliation
+% expect:  0 errors, 0 warnings; Ann Lee with affiliation a; Bob Kim with the on-behalf note, the "Speaker" note and
+%          affiliation b
+% status:  RED (86b r1) -> GREEN (86b r2)
+% preload: ar5iv.sty
+\begin{filecontents*}{pos.sty}
+%% pos.sty
+%% Copyright 2021 SISSA Medialab
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+%
+% This work has the LPPL maintenance status `author-maintained'.
+%
+% The Current Maintainer of this work is
+% SISSA Medialab <info@medialab.sissa.it>
+%
+% MODIFIED: a shortened copy of pos.sty v2.2 (2021/09/21) for a latexml-oxide test, keeping its title-page code only.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{pos} [2021/09/21 v2.2]
+\RequirePackage{xcolor}
+\RequirePackage[colorlinks=true]{hyperref}
+\newif\ifemailadd\emailaddfalse
+\let\oldthefootnote\thefootnote
+\RequirePackage{expl3}
+\RequirePackage{xparse}
+\ExplSyntaxOn
+\seq_new:N \l_authors_for_head_s
+\seq_new:N \l_super_s
+\seq_new:N \l_authors_s
+\bool_new:N\l_do_speaker_note_bool\bool_set_false:N\l_do_speaker_note_bool
+\newcommand{\speakerFlag}{\ast}
+\newcommand{\speakerText}{Speaker}
+\RenewDocumentCommand\author{som}{%
+  \seq_put_right:Nn \l_authors_s {#3}
+  \IfNoValueTF{#2}
+  { \IfBooleanTF#1
+    { \seq_put_right:Nn \l_authors_for_head_s {#3}
+      \seq_put_right:Nn \l_super_s {\speakerFlag}
+      \bool_set_true:N\l_do_speaker_note_bool }
+    { \seq_put_right:Nn \l_super_s {{}} } }
+  { \IfBooleanTF#1
+    { \seq_put_right:Nn \l_authors_for_head_s {#3}
+      \seq_put_right:Nn \l_super_s {#2,\speakerFlag}
+      \bool_set_true:N\l_do_speaker_note_bool }
+    { \seq_put_right:Nn \l_super_s {#2} } }
+}
+\tl_new:N\l_author_tl
+\tl_new:N\l_superscript_tl
+\newcommand{\printAuthors}{%
+  \bool_do_until:nn {\seq_if_empty_p:N\l_authors_s}
+    { \seq_pop_left:NN\l_authors_s\l_author_tl
+      \seq_pop_left:NN\l_super_s\l_superscript_tl
+      \tl_use:N\l_author_tl$^{\tl_use:N\l_superscript_tl}$~ }
+  \tl_use:N \l_onbehalf_tl
+  \bool_if:NT\l_do_speaker_note_bool
+    { \begin{NoHyper}
+        \renewcommand\thefootnote{$\speakerFlag$}%
+        \footnotetext{\speakerText}%
+        \stepcounter{footnote}%
+        \let\thefootnote\oldthefootnote%
+      \end{NoHyper} }
+}
+\tl_new:N \l_onbehalf_tl
+\NewDocumentCommand{\onbehalf}{sm}{ \tl_set:Nn \l_onbehalf_tl { \IfBooleanTF{#1}{\par}{\nobreakspace} #2\nobreakspace } }
+\ExplSyntaxOff
+\def\@abstract{\@empty}
+\def\@dedicated{\@empty}
+\def\@afterAbstractEmitNotes{\@empty}
+\newcommand{\notes}[1]{\gdef\@afterAbstractEmitNotes{#1}}
+\newcommand\dedicated[1]{\gdef\@dedicated{\vbox{\small\it\raggedleft #1}}}
+\renewcommand{\abstract}[1]{\gdef\@abstract{#1}}
+\gdef\FullConference@box{\relax}
+\newcommand\FullConference[1]{\gdef\FullConference@box{\vbox{\small\raggedright\it #1}}}
+\newtoks\affil@toks\newif\ifaffil\affilfalse
+\newcommand{\affiliation}[2][]{\affiltrue
+  \if!#1!\affil@toks=\expandafter{\the\affil@toks{\item[]#2}}%
+  \else\affil@toks=\expandafter{\the\affil@toks{\item[$^{#1}$]#2}}\fi}
+\newtoks\email@toks\newcounter{email@counter}%
+\newcommand{\emailAdd}[1]{\emailaddtrue%
+  \ifnum\theemail@counter>0\email@toks=\expandafter{\the\email@toks, \@email{#1}}%
+  \else\email@toks=\expandafter{\the\email@toks\@email{#1}}\fi\stepcounter{email@counter}}
+\newcommand{\@email}[1]{\href{mailto:#1}{#1}}
+\renewcommand\maketitle{\begingroup
+  \begin{flushleft}
+    {\LARGE\bfseries \@title\par}\medskip
+    {\bfseries \printAuthors\par}
+    \ifaffil\begin{list}{}{}\itshape\small\the\affil@toks\end{list}\fi
+    \ifemailadd\textit{E-mail:} {\ttfamily\small\the\email@toks}\par\fi
+    \if!\@abstract!\else\parbox{.9\textwidth}{\small\@abstract}\par\fi
+    \@afterAbstractEmitNotes\par
+    \@dedicated
+    \FullConference@box
+  \end{flushleft}
+  \endgroup\setcounter{footnote}{0}}
+\end{filecontents*}
+\documentclass[a4paper,11pt]{article}
+\usepackage{pos}
+\title{T}
+\FullConference{Conf X}
+\author[a]{Ann Lee}
+\author*[b]{Bob Kim}
+\onbehalf{for the XYZ Collaboration}
+\affiliation[a]{Inst A}
+\affiliation[b]{Inst B}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+Body.
+\end{document}

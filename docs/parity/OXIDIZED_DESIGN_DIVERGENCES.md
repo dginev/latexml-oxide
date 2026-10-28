@@ -25844,3 +25844,56 @@ lost too) and siamart_cls.rs:93-171 (1707.06953) — a later batch, each binding
 imsart_document_kwd_is_the_documents, imsart_renamed_copy_keyword_blocks, arxbj_keyword_classification_headings,
 omnibus_kwd_entries_add_up, omnibus_kwd_blocks_each_entry_once, amsart_document_subjclass_store}`; guards
 `perfect_kernel_batch86a::*`.
+
+### 904. pos.sty and rmaa.cls have bindings: their title-page stores are the frontmatter (Perl: no binding; pos.sty unread, an empty name; rmaa through OmniBus)
+
+pos.sty (SISSA's PoS template v2.1 2018/11/13 and v2.2 2021/09/21, under `article`; not in TeX Live, every paper ships
+it) and rmaa.cls (RevMexAA, v1.9 to v3.26; shipped too) were read raw, and their title pages live in stores only their
+own `\maketitle` prints, which the kernel's locked `\maketitle` refuses. pos.sty:88 `\RenewDocumentCommand\author{som}`
+is refused by the kernel's locked `\author`, so `\author*{Javier M. Duarte}` read `*` as the name and the name as an
+affiliation; `\affiliation` and `\emailAdd` (:411-430) fill token registers, `\FullConference` (:364-369) a box,
+`\onbehalf` (:249-260) an expl3 token list — all lost. rmaa.cls:500-503 `\altaffiltext` appends
+`\protect\footnotetext[#1]{#2}` to `\@thanks`, which the kernel's `\maketitle` empties (sect05.rs, TITLE_PAGE_FIELDS and
+the `\maketitle` tail); `\resumen` (:450-453) and `\addkeyword`/`\keywords` (:509-546) store the Spanish abstract and
+the "Key Words:" line; `\affil{…}` inside an `\author` (:491-494, `\\[1.5ex]…\\[1.5ex]`) stayed in the name.
+
+Ours: `pos_sty.rs` and `rmaa_cls.rs` define the title-page commands before the copy is read raw (the copy's `\newcommand`
+of a name LaTeXML defines is ignored with an `Info:ignore`, as any; its `\NewDocumentCommand\onbehalf` too). pos.sty:
+`\author*[marks]{name}` is `\lx@add@authors@append[annotations={marks}]` (jheppub's), the star the speaker's note — the
+text of the copy's own speaker footnote (`\footnotetext{\speakerText}`, "Speaker"; a v2.1 copy's written-out "Presenter",
+2107.12913; read from the copy, `speaker_text`), given once, labelled `lx@pos@speaker` and requested by every starred
+author beside its marks (the footnote under every star). The label keeps it off the kernel's dealing of unlabelled notes
+one per labelled author, in order, when they are as many: `\author[a]{Ann Lee}\author*[b]{Bob Kim}\onbehalf{…}` (or
+`\note{…}`) had given Ann Lee the "Speaker" note and Bob Kim the other; `\affiliation[label]`, `\emailAdd`, `\note`, `\dedicated` are
+jheppub.sty's (shared, `jheppub_sty::jhep_contact_markup`; the e-mails placed by FIDELITY_CHARTER §4, an address no name
+spells the block's, as the template's unattributed "E-mail:" line); `\ShortTitle`/`\FullConference` PoS.cls's
+(`pos_cls::pos_title_page_fields`); `\onbehalf[*]{…}` a note of the author given last before it, after whose name it is
+printed; `\notes{…}` a note; the abstract one argument (`\abstract:redefined@nargs`). Without a copy the binding loads
+pos.sty's packages. rmaa.cls: `\altaffilmark`/`\altaffiltext` are the AAS markup (shared with OmniBus, aas_support and
+aguplus, `aas_support_sty::altaffil_markup`): each label the affiliation of every author whose mark lists it, an
+unmarked one the block's (1301.7157); `\affil` an affiliation of the authors before it (`annotate=new`); `\resumen` and
+`\abstract` two abstracts handed on in the title page's order, "Resumen" before "Abstract", whichever is given first, at
+`\maketitle` (else at the first section, else at the end, as aguplus's addresses); the keywords one accumulating list
+(`\@kwdsep` " --- "); `\shorttitle` (:550, the running head) the toc title, as OmniBus's (Perl keeps it, 0903.4819).
+The class's `\newcommand`s of these names are ignored, so no lock is needed; its document-time
+`\renewcommand{\altaffilmark}[1]{\relax}` in the index and contents environments stays the class's.
+
+Residuals: an `\emailAdd` inside an `\author` is kept as that author's e-mail, which pdflatex prints nowhere (the address
+list is extended locally inside the title page's author group, pos.sty:468-476); the `\onbehalf` line of a
+multi-author list rides on its last author (2308.05475, 2507.06616), placing it on the block needs the block to exist
+for a non-address contact (`\lx@add@contact@placed` warned "Orphaned frontmatter annotation … addresses:block"); a
+paper's `\author{, on behalf of the FASER Collaboration}` (2211.04319) is a creator, as before; rmaa's Spanish abstract
+is kept where the class prints it only beside an `\abstract` (`\if@abstractpresent`, :970; astro-ph0208329 gives
+`\boldabstract`), and its keywords likewise; an unlabelled `\affiliation` after several authors is the last author's
+only (jheppub's shared markup), where pos.sty prints it under every name (`\author{Ann Lee}\author*{Bob Kim}
+\affiliation{Inst A}`; no corpus pos.sty paper has two unlabelled authors; RED
+`sectioning-frontmatter/pos_sty_unlabelled_affiliation_several_authors`, a fix of the shared markup needs a jheppub
+A/B); and, pre-existing, the kernel's dealing of unlabelled notes reaches jheppub's and pos.sty's `\note` given inside an
+`\author` (`\author[a]{Ann Lee}\author[b]{Bob Kim\note{Deceased.}}\note{Also at CERN.}` gives Ann Lee "Deceased.",
+int116a alike; pos.sty's `\author[b]{Bob Kim\note{Speaker}}\onbehalf{…}` the same). Witnesses 2409.20413, 2512.14592, 2602.22379 (pos.sty), 0903.4819,
+astro-ph0208329, 1301.7157, astro-ph0105072 (rmaa). Census A/B against int116a: all 31 pos.sty and 8 rmaa papers (38
+changed, all better, every creator compared: E 52 → 52, F 1 → 1 — 2504.21590's expansion-loop Fatal on both — W 93 →
+93) and 345 OmniBus/aguplus/AASTeX `\altaffiltext` papers (byte-identical). Repros
+`sectioning-frontmatter/{pos_sty_speaker_author_contacts, pos_sty_marked_authors, pos_sty_marked_speaker_second,
+pos_sty_report_unstarred_author, rmaa_altaffiltext_marks, rmaa_altaffiltext_unmarked}`; guards
+`perfect_kernel_batch86b::*`.

@@ -267,10 +267,7 @@ LoadDefinitions!({
   DefMacro!("\\speaker{}", "\\lx@add@creator[role=speaker]{#1}");
 
   // Perl (PR #2767): affiliations, like from aas
-  DefMacro!("\\altaffilmark Semiverbatim",
-    "\\lx@request@frontmatter@annotation[altaffil]{#1}");
-  DefMacro!("\\altaffiltext Semiverbatim {}",
-    "\\lx@add@contact[role=altaffiliation,label={altaffil:#1}]{#2}");
+  aas_support_sty::altaffil_markup()?;
 
   DefMacro!("\\address[]{}", "\\lx@add@address{#2}");
   Let!("\\affaddr", "\\address");

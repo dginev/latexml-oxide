@@ -1,0 +1,132 @@
+% mechanism: pos.sty (the PoS template, v2.2) keeps its title page in stores only its own \maketitle prints, which the
+%   kernel's locked \maketitle refuses; its \RenewDocumentCommand\author{som} is refused by the kernel's locked \author.
+%   The pos.sty binding (pos_sty.rs) makes each the frontmatter: the starred author is the speaker, noted "Speaker"; the
+%   \onbehalf* line (set below the names), the unlabelled affiliations and the e-mail are the one author's; the
+%   \notes text (under the abstract, :357/:506) and the \dedicated line (:359/:508) are notes of the paper; the
+%   conference is a note.
+% witness: 2409.20413 (skeleton.tex:8-30; its pos.sty v2.2 :84-127 \author, :226-233 the speaker footnote, :249-260
+%          \onbehalf, :411-430 \affiliation and \emailAdd, :364-369 \FullConference); here a shortened copy of pos.sty,
+%          with its \onbehalf*, \notes and \dedicated
+% oracle:  pdflatex 0 errors: "Javier M. Duarte* on behalf of the ALICE Collaboration / Department of Physics /
+%          University of California San Diego / E-mail: jduarte@ucsd.edu / Machine learning is growing. / Talk given
+%          on behalf of the authors. / To the memory of a colleague. / ICHEP2024 / * Speaker"
+% engines: rust int116a = 0 errors, <personname>*</personname> and the name as an affiliation, the affiliations, the
+%          e-mail, the on-behalf line and the conference lost; perl = 4 errors (\affiliation, \emailAdd undefined),
+%          an empty <personname/>
+% expect:  0 errors, 0 warnings; one creator "Javier M. Duarte" with the on-behalf note, the two affiliations, the
+%          "Speaker" note and the e-mail, in order; the \notes and \dedicated notes; a conference note
+% status:  RED (int116a) -> GREEN (86b)
+% preload: ar5iv.sty
+\begin{filecontents*}{pos.sty}
+%% pos.sty
+%% Copyright 2021 SISSA Medialab
+%
+% This work may be distributed and/or modified under the
+% conditions of the LaTeX Project Public License, either version 1.3
+% of this license or (at your option) any later version.
+% The latest version of this license is in
+%   http://www.latex-project.org/lppl.txt
+% and version 1.3 or later is part of all distributions of LaTeX
+% version 2005/12/01 or later.
+%
+% This work has the LPPL maintenance status `author-maintained'.
+%
+% The Current Maintainer of this work is
+% SISSA Medialab <info@medialab.sissa.it>
+%
+% MODIFIED: a shortened copy of pos.sty v2.2 (2021/09/21) for a latexml-oxide test, keeping its title-page code only.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{pos} [2021/09/21 v2.2]
+\RequirePackage{xcolor}
+\RequirePackage[colorlinks=true]{hyperref}
+\newif\ifemailadd\emailaddfalse
+\let\oldthefootnote\thefootnote
+\RequirePackage{expl3}
+\RequirePackage{xparse}
+\ExplSyntaxOn
+\seq_new:N \l_authors_for_head_s
+\seq_new:N \l_super_s
+\seq_new:N \l_authors_s
+\bool_new:N\l_do_speaker_note_bool\bool_set_false:N\l_do_speaker_note_bool
+\newcommand{\speakerFlag}{\ast}
+\newcommand{\speakerText}{Speaker}
+\RenewDocumentCommand\author{som}{%
+  \seq_put_right:Nn \l_authors_s {#3}
+  \IfNoValueTF{#2}
+  { \IfBooleanTF#1
+    { \seq_put_right:Nn \l_authors_for_head_s {#3}
+      \seq_put_right:Nn \l_super_s {\speakerFlag}
+      \bool_set_true:N\l_do_speaker_note_bool }
+    { \seq_put_right:Nn \l_super_s {{}} } }
+  { \IfBooleanTF#1
+    { \seq_put_right:Nn \l_authors_for_head_s {#3}
+      \seq_put_right:Nn \l_super_s {#2,\speakerFlag}
+      \bool_set_true:N\l_do_speaker_note_bool }
+    { \seq_put_right:Nn \l_super_s {#2} } }
+}
+\tl_new:N\l_author_tl
+\tl_new:N\l_superscript_tl
+\newcommand{\printAuthors}{%
+  \bool_do_until:nn {\seq_if_empty_p:N\l_authors_s}
+    { \seq_pop_left:NN\l_authors_s\l_author_tl
+      \seq_pop_left:NN\l_super_s\l_superscript_tl
+      \tl_use:N\l_author_tl$^{\tl_use:N\l_superscript_tl}$~ }
+  \tl_use:N \l_onbehalf_tl
+  \bool_if:NT\l_do_speaker_note_bool
+    { \begin{NoHyper}
+        \renewcommand\thefootnote{$\speakerFlag$}%
+        \footnotetext{\speakerText}%
+        \stepcounter{footnote}%
+        \let\thefootnote\oldthefootnote%
+      \end{NoHyper} }
+}
+\tl_new:N \l_onbehalf_tl
+\NewDocumentCommand{\onbehalf}{sm}{ \tl_set:Nn \l_onbehalf_tl { \IfBooleanTF{#1}{\par}{\nobreakspace} #2\nobreakspace } }
+\ExplSyntaxOff
+\def\@abstract{\@empty}
+\def\@dedicated{\@empty}
+\def\@afterAbstractEmitNotes{\@empty}
+\newcommand{\notes}[1]{\gdef\@afterAbstractEmitNotes{#1}}
+\newcommand\dedicated[1]{\gdef\@dedicated{\vbox{\small\it\raggedleft #1}}}
+\renewcommand{\abstract}[1]{\gdef\@abstract{#1}}
+\gdef\FullConference@box{\relax}
+\newcommand\FullConference[1]{\gdef\FullConference@box{\vbox{\small\raggedright\it #1}}}
+\newtoks\affil@toks\newif\ifaffil\affilfalse
+\newcommand{\affiliation}[2][]{\affiltrue
+  \if!#1!\affil@toks=\expandafter{\the\affil@toks{\item[]#2}}%
+  \else\affil@toks=\expandafter{\the\affil@toks{\item[$^{#1}$]#2}}\fi}
+\newtoks\email@toks\newcounter{email@counter}%
+\newcommand{\emailAdd}[1]{\emailaddtrue%
+  \ifnum\theemail@counter>0\email@toks=\expandafter{\the\email@toks, \@email{#1}}%
+  \else\email@toks=\expandafter{\the\email@toks\@email{#1}}\fi\stepcounter{email@counter}}
+\newcommand{\@email}[1]{\href{mailto:#1}{#1}}
+\renewcommand\maketitle{\begingroup
+  \begin{flushleft}
+    {\LARGE\bfseries \@title\par}\medskip
+    {\bfseries \printAuthors\par}
+    \ifaffil\begin{list}{}{}\itshape\small\the\affil@toks\end{list}\fi
+    \ifemailadd\textit{E-mail:} {\ttfamily\small\the\email@toks}\par\fi
+    \if!\@abstract!\else\parbox{.9\textwidth}{\small\@abstract}\par\fi
+    \@afterAbstractEmitNotes\par
+    \@dedicated
+    \FullConference@box
+  \end{flushleft}
+  \endgroup\setcounter{footnote}{0}}
+\end{filecontents*}
+\documentclass[a4paper,11pt]{article}
+\usepackage{pos}
+\title{Novel machine learning applications at the LHC}
+\author*{Javier M. Duarte}
+\onbehalf*{on behalf of the ALICE Collaboration}
+\affiliation{Department of Physics}
+\affiliation{University of California San Diego}
+\emailAdd{jduarte@ucsd.edu}
+\abstract{Machine learning is growing.}
+\notes{Talk given on behalf of the authors.}
+\dedicated{To the memory of a colleague.}
+\FullConference{ICHEP2024}
+\begin{document}
+\maketitle
+\section{Introduction}
+Body.
+\end{document}

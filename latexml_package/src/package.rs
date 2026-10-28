@@ -383,6 +383,7 @@ pub mod pifont_sty;
 pub mod placeins_sty;
 pub mod polyglossia_sty;
 pub mod pos_cls;
+pub mod pos_sty;
 pub mod prettyref_sty;
 pub mod preview_sty;
 pub mod proof_sty;

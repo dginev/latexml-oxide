@@ -26,6 +26,21 @@ fn holds_table_float(digested: &Digested) -> bool {
   }
 }
 
+/// The older AASTeX's affiliation marks (Perl aas_support.sty.ltxml): `\altaffilmark{1,2}` in an `\author` marks the
+/// author with the labels it lists, and `\altaffiltext{n}{text}` is the affiliation those marks request, of every
+/// author carrying `n` — the AAS idiom the classes that copied it share (OmniBus, aguplus, rmaa: `rmaa_cls`).
+pub fn altaffil_markup() -> Result<()> {
+  DefMacro!(
+    "\\altaffilmark Semiverbatim",
+    "\\lx@request@frontmatter@annotation[altaffil]{#1}"
+  );
+  DefMacro!(
+    "\\altaffiltext Semiverbatim {}",
+    "\\lx@add@contact[role=altaffiliation,label={altaffil:#1}]{#2}"
+  );
+  Ok(())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: aas_support.sty.ltxml — support macros for AAS styles
@@ -181,10 +196,7 @@ LoadDefinitions!({
   DefMacro!("\\lx@aas@nocollaboration{}", "\\lx@add@contact[role=collaboration,annotate=new]{}");
 
   // Older aas versions: put mark within \author, text will be attached
-  DefMacro!("\\altaffilmark Semiverbatim",
-    "\\lx@request@frontmatter@annotation[altaffil]{#1}");
-  DefMacro!("\\altaffiltext Semiverbatim {}",
-    "\\lx@add@contact[role=altaffiliation,label={altaffil:#1}]{#2}");
+  altaffil_markup()?;
   // The obsolete `\authoremail{…}` (Perl aas_support.sty.ltxml:134 `\email`; aaspp4.sty:129 and aas2pp4.sty:136
   // gobble it, the address unprinted): after authors, `\email`'s, the last author's (astro-ph9612041 gives one after
   // each `\author`); given before any `\author` (astro-ph9803018's `\authoremail{ecford@astro.uva.nl}\author{Eric C.

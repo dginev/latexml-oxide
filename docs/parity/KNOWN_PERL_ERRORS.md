@@ -18704,3 +18704,34 @@ markup instead (OXIDIZED_DESIGN_DIVERGENCES #902), so the papers this was found 
 1401.3408's myimsart) no longer reach OmniBus's `\kwd`, and no live corpus paper does. Repros
 sectioning-frontmatter/{omnibus_kwd_entries_add_up, omnibus_kwd_blocks_each_entry_once}; guard
 `perfect_kernel_batch86a::omnibus_kwd_entries_add_up`.
+
+## 1198. pos.sty and rmaa.cls have no binding: the PoS author is an empty name, rmaa's Spanish abstract replaces the English
+
+Perl has no pos.sty binding and does not read the copy the papers ship, so the PoS template's `\author*{Name}` is
+the kernel's `\author` with `*` as its argument — an empty `<personname/>`, the name a paragraph — and every
+`\affiliation`, `\emailAdd` and `\FullConference` is an undefined macro. Perl has no rmaa.cls binding either and reads rmaa papers
+through OmniBus: the `\altaffiltext` affiliations are kept, but `\addkeyword` is undefined and OmniBus's `\resumen`
+replaces the English abstract. Minimal triggers:
+
+```latex
+\documentclass{article}
+\usepackage{pos}   % the paper's own pos.sty v2.2
+\title{T}
+\author*{Javier M. Duarte}
+\affiliation{University of California San Diego}
+\emailAdd{jduarte@ucsd.edu}
+\begin{document}\maketitle Body.\end{document}
+% pdflatex: "Javier M. Duarte* / University of California San Diego / E-mail: jduarte@ucsd.edu / * Speaker".
+% Perl: <personname/>, 2 errors (\affiliation, \emailAdd undefined)
+
+\documentclass{rmaa}  % the paper's own rmaa.cls
+\title{T}\author{R.E. Mennickent\altaffilmark{1}}
+\altaffiltext{1}{Universidad de Concepcion, Chile.}
+\abstract{In this paper.}\resumen{En este articulo.}\addkeyword{Binaries: Eclipsing}
+\begin{document}\maketitle Body.\end{document}
+% pdflatex: "Resumen En este articulo. / Abstract In this paper. / Key Words: Binaries: Eclipsing / 1 Universidad …".
+% Perl (as on 0903.4819): one abstract, the Spanish one; \addkeyword undefined
+```
+
+Fixed in Rust (86b, OXIDIZED_DESIGN_DIVERGENCES #904): bindings `pos_sty.rs` and `rmaa_cls.rs`. Witnesses 2409.20413,
+2512.14592, 2602.22379, 0903.4819, astro-ph0208329, 1301.7157. Guards `perfect_kernel_batch86b::*`.

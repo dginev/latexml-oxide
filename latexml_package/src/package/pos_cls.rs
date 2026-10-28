@@ -17,14 +17,10 @@ LoadDefinitions!({
   // 1811.03840). Perl's PoS.cls.ltxml:24-27 loads ifpdf, times, mathptmx and graphicx only (KNOWN_PERL_ERRORS #629).
   RequirePackage!("color");
 
-  DefMacro!("\\ShortTitle{}",     "\\lx@add@toctitle{#1}");
+  pos_title_page_fields()?;
   DefMacro!("\\PoScopydate{}",    "\\lx@add@date[role=accepted]{#1}");
   DefMacro!("\\PACSname",      "\\textbf{PACS}");
   DefMacro!("\\PACS{}",           "\\lx@add@classification[scheme=pacs,name={\\PACSname:~}]{#1}");
-  // \FullConference{name} — conference identification text. Round-34
-  // surpass-Perl: preserve as ltx:note frontmatter.
-  DefMacro!("\\FullConference{}",
-    "\\lx@add@frontmatter{ltx:note}[role=conference]{#1}");
 
   DefMacro!("\\Jmath", "J");
   // PoS.cls v1.2.1 (2006/05/19, as 1507.03892 ships it):1384: a link to a PoS contribution by its
@@ -55,3 +51,15 @@ LoadDefinitions!({
   // The astronomical journal abbreviations 16 of 92 copies paste in (0810.0108, 1212.1356, 1708.06808, 1802.02766).
   crate::shipped_class::provide_shipped_aas_macros("PoS")?;
 });
+
+/// The title-page fields PoS.cls and the PoS template's pos.sty v2 (`pos_sty`) share: `\ShortTitle{}`, the running
+/// head's title, and `\FullConference{name}`, the conference the title page names at its foot (pos.sty:362-369).
+#[rustfmt::skip]
+pub fn pos_title_page_fields() -> Result<()> {
+  DefMacro!("\\ShortTitle{}",     "\\lx@add@toctitle{#1}");
+  // \FullConference{name} — conference identification text. Round-34
+  // surpass-Perl: preserve as ltx:note frontmatter.
+  DefMacro!("\\FullConference{}",
+    "\\lx@add@frontmatter{ltx:note}[role=conference]{#1}");
+  Ok(())
+}
