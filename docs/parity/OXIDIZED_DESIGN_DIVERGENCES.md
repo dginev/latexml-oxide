@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#902** (allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`).
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#903** (allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`).
 
 ---
 
@@ -25830,7 +25830,16 @@ the AMS binding, also one whose title page never prints `\@subjclass`: CSML.cls'
 1602.00476, 1608.04592) are a classification, kept by FIDELITY_CHARTER §2 (authored text is kept, even where the class
 discards it). Residual (RED, no guard): a document's `\subjclass` copy that stores `\@subjclass` but sets no
 `\subjclassname` takes the binding's default edition, 1991 (Perl's `\@subjclassyear`), where amsart.cls prints 2020
-(:789); no corpus paper (`sectioning-frontmatter/amsart_document_subjclass_copy_default_edition`). Repros
+(:789); no corpus paper (`sectioning-frontmatter/amsart_document_subjclass_copy_default_edition`). Residuals of
+the 86a r2 re-review: an imsart block on a supplement's own title page, the frontmatter sealed, is kept in place as
+bare text run into the next paragraph, its heading lost (RED `sectioning-frontmatter/imsart_supplement_keyword_block_keeps_its_heading`;
+85a lost the words; OmniBus's sealed `{keyword}` after a `\section*` is still dropped; no corpus paper); arxbj's
+`class=MSC` block, which prints no heading, shows the class key "MSC" as its `<h6>`; and, pre-existing, other bindings'
+classifications show a scheme the paper does not print — the AMS binding's default edition beside a class's own
+heading (`scheme="1991 Mathematics Subject Classification"`, `name="Mathematical subject classification (2010)"`:
+1310.5294, cedram-alco; m2an's 0811.1789, 1512.06935, 2407.04312, 2411.09498), and a bare "AMS"/"keywords" in
+tac_cls.rs:30 (2312.12356), sigma_cls.rs:98 (0705.3628), ejpecp_cls.rs:45-55 (2312.17406, its "Primary"/"Secondary"
+lost too) and siamart_cls.rs:93-171 (1707.06953) — a later batch, each binding's printed heading. Repros
 `sectioning-frontmatter/{imsart_keyword_blocks_footnote_option, imsart_keyword_blocks_in_the_box,
 imsart_document_kwd_is_the_documents, imsart_renamed_copy_keyword_blocks, arxbj_keyword_classification_headings,
 omnibus_kwd_entries_add_up, omnibus_kwd_blocks_each_entry_once, amsart_document_subjclass_store}`; guards
