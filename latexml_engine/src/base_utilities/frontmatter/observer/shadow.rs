@@ -91,6 +91,22 @@ pub(in crate::base_utilities) fn shadow_flush() -> Result<()> {
   if !reads_now() || rehearsal::rehearsing() {
     return Ok(());
   }
+  // (the labels the calls' keyvals defer, read as this flush's digestion expands them: `\lx@label@ref`, cas's
+  // `\author[a]` under entries given after it — 2303.00352, 2603.22658, 2504.19452, 2509.10496)
+  with_ledger(|ledger| {
+    for entry in &mut ledger.entries {
+      let text = match entry {
+        Entry::Author(block) => block.keyvals.as_mut(),
+        Entry::Api(call) => Some(&mut call.attrs),
+        _ => None,
+      };
+      if let Some(text) = text
+        && let Cow::Owned(resolved) = resolve_label_refs(text)
+      {
+        *text = resolved;
+      }
+    }
+  });
   let pending: Vec<usize> = with_ledger(|ledger| {
     ledger
       .entries

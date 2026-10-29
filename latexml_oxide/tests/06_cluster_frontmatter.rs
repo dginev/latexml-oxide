@@ -206,7 +206,9 @@ fn frontmatter_superscript_affil_comma() {
 /// same on Perl 0.8.8 (parity). The fix delegates any `\author{}` carrying an
 /// `\affiliations`/`\emails` marker to the shared sectioned-author machinery
 /// (also used by `ijcai_sty`), which splits names / affiliations / emails and
-/// attaches the n-th email to the n-th author. Rust surpasses Perl.
+/// places each email as a class's address list (OXIDIZED_DESIGN_DIVERGENCES #908):
+/// the grouped `\{creddy,wmgifford,jayant\}@us.ibm.com` written out, each on the
+/// author it spells, not cut at its commas. Rust surpasses Perl.
 #[test]
 fn frontmatter_ijcai_affiliations_emails() {
   let x = convert_to_xml("tests/cluster_regressions/frontmatter_ijcai_affiliations_emails.tex");
@@ -246,6 +248,56 @@ fn frontmatter_ijcai_affiliations_emails() {
     x.contains("role=\"email\"") && x.contains("vijaye12@in.ibm.com"),
     "IJCAI author block: the \\emails list is not structured as email contacts:\n{x}"
   );
+  // (88b: every author whole — each address of the group on the author it spells, none of its pieces cut at a comma,
+  // the one `\affiliations` line the first author's, Perl's `labelseq=author`)
+  let contacts = |name: &str| -> Vec<(String, String)> {
+    let at = x
+      .find(&format!("<personname>{name}</personname>"))
+      .expect("the author");
+    let creator = &x[at..at + x[at..].find("</creator>").expect("closed creator")];
+    creator
+      .match_indices("<contact ")
+      .map(|(open, _)| {
+        let tag_end = open + creator[open..].find('>').expect("contact tag");
+        let role = creator[open..tag_end]
+          .split("role=\"")
+          .nth(1)
+          .and_then(|r| r.split('"').next())
+          .unwrap_or("")
+          .to_string();
+        let close = tag_end
+          + creator[tag_end..]
+            .find("</contact>")
+            .expect("closed contact");
+        (role, creator[tag_end + 1..close].to_string())
+      })
+      .collect()
+  };
+  for (name, expected) in [
+    (
+      "Vijay Ekambaram",
+      &[
+        ("affiliation", "IBM Research"),
+        ("email", "vijaye12@in.ibm.com"),
+      ][..],
+    ),
+    ("Arindam Jati", &[("email", "arindam.jati@ibm.com")][..]),
+    ("Nam H. Nguyen", &[("email", "nnguyen@us.ibm.com")][..]),
+    ("Pankaj Dayama", &[("email", "pankajdayama@in.ibm.com")][..]),
+    ("Chandra Reddy", &[("email", "creddy@us.ibm.com")][..]),
+    (
+      "Wesley M.\u{a0}Gifford",
+      &[("email", "wmgifford@us.ibm.com")][..],
+    ),
+    ("Jayant Kalagnanam", &[("email", "jayant@us.ibm.com")][..]),
+  ] {
+    let expected: Vec<(String, String)> = expected
+      .iter()
+      .map(|(role, text)| (role.to_string(), text.to_string()))
+      .collect();
+    assert_eq!(contacts(name), expected, "{name}: {x}");
+  }
+  assert!(!x.contains("{creddy") && !x.contains("jayant}"), "{x}");
 }
 /// html_feedback#6880 (arXiv:2605.23553, IEEEtran journal): the "all authors, then
 /// all affiliations keyed by `\textsuperscript{N}`" block — the harder variation of

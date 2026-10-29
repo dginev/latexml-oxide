@@ -26239,3 +26239,118 @@ real last page to the `.aux`, so 343–375 needs a second pass). A/B of the fina
 `sectioning-frontmatter/author_ieee_membership_after_closing_stop`; guards `perfect_kernel_batch86d::*`
 (`ieee_membership_kept_after_closing_stop` pins every note's place, `note_places`;
 `maketitle_replay_gate_runs_what_noexpand_stores_and_expandafter_expands` the two refusals).
+
+### 908. ijcai's `\emails` section is a class's address list, placed by spelling, else author order, else the block; cas's `\address[label]` keeps its label (Perl: the n-th piece of a comma split on the n-th author; the label dropped)
+
+ijcai19.sty:127-130 (every year's style, and ijcai97.sty's derivatives: ttm.sty) prints the `\emails` section of the one
+`\author{…}` under the affiliations, attributing none: `{faraztrb, pstone}@cs.utexas.edu, garrett.a.warnell.civ@mail.mil`.
+Perl's ijcai.sty.ltxml:50-53 splits it at every comma and gives the n-th piece to the n-th author (`\lx@ijcai@email` =
+`\lx@add@email[labelseq=author]`, KNOWN_PERL_ERRORS #1200): a grouped address was cut into `{faraztrb` and
+`pstone}@cs.utexas.edu`, and every piece after it went one author on (1905.13566: Warnell's address on Peter Stone;
+2308.08563: `zhangmengdi02@` on Enhong Chen; 2105.02711: `$^3$fenglong@` on Jimeng Sun; 2401.03955's ttm.sty
+`\{creddy,wmgifford,jayant\}@us.ibm.com`) — ownership by bare position, which FIDELITY_CHARTER §4 forbids. The section is
+now a class's address list, as jheppub's `\emailAdd` is (#805), fixed once in the engine's `\lx@ijcai@*` machinery
+(author_macros.rs), so the ijcai binding's `\author` and a raw derivative's `\lx@add@authors` marker branch (dispatch.rs)
+share it: one call of the list (`\lx@sequence@call`), each address `\lx@add@contact@placed[role=email,owner=sequence]`
+through `\lx@split@addresses`. Each address goes to the author it spells, else to the n-th author while the list is one
+address per author in their order (Perl's answer where it is evidence), else stays on the author block, or — the one
+address left there — goes to the one author a note marks as the corresponding author (`sequenced_contact_labels`; the
+observer's `owner=sequence` path reads the same). A grouped address of plain text is written out, one address each, as an
+author block's line gives it (`email_addresses`): `faraztrb@cs.utexas.edu` on Faraz Torabi, `pstone@cs.utexas.edu` on
+Peter Stone; its underscore is `\_`, as `address_tokens` writes it (a bare `_` printed the OT1 dot accent: `scs˙lzg@` for
+2304.11989's `\{scs$\_$lzg, …\}@tju.edu.cn`, in every binding's list). The section is read line by line
+(`ijcai_email_lines`): a `\\` (with its `*` and `[skip]`), a `\newline` and a further `\emails` start a line of the
+class's title block, so an address after one is an address of its own (2002.11711's
+`1871161@stu.neu.edu.cn\\zelei.liu@ntu.edu.sg`, now Shuangfeng Zhang's and Zelei Liu's by their places); a break inside a
+group, TeX's or a printed one (`\{aable, bbaker,\\ ccole\}@x.edu`, `\lbrace … \rbrace`, `\textbraceleft …
+\textbraceright`), parts no line, and the group's three addresses are written out (`\lx@split@addresses` writes out a
+group in any of the three). A line with no address (2609.15094's second `\emails`, `{$^{*}$Corresponding author}`,
+under the two starred names of Qiang Xie and Tao Li) is no place of the list and no e-mail: a note (`role=note`, as
+jheppub's `\note` files its "Corresponding author."), placed by its own evidence, else the block's — where it lost no
+person, so it is no orphan warned about (relocate.rs `shared_orphan`: a note labelled `addresses:block`); filed as an
+e-mail it rendered "Email: mailto:Corresponding%20author". The ijcai binding
+declares its conventions (`ijcai_sty::FRONTMATTER_CONVENTIONS`, `email_owner: SpelledElseOrder`, #837). Perl's
+`\lx@clear@frontmatter` of the queued e-mails before the list is kept.
+
+Residuals, each the existing helpers' reading: a list whose groups carry the affiliation marks
+(`$^1$\{chaoqiy2, jimeng\}@illinois.edu, $^2$…`, 2105.02711) is no plain list of addresses and stays whole on the author
+block, the printed line — deferred: `email_addresses` reading a leading `$^n$`/`\textsuperscript{n}` as a mark would
+place all five addresses by their spelling, but drops the printed mark from the contact, which needs a charter ruling; 2308.08563's
+`wulk@` (Likang Wu: "Wu" and his initials) spells no one, and its list, the group written out, lists Enhong Chen before
+Mengdi Zhang, so it is in no author order and the address stays on the block (Likang Wu's before by its place only); a
+group in markup the split does not write out (`\texttt{\{aable, ccole\}@x.edu}`; 2501.02356's TeX-braced
+`{pablo.barcelo, roberto.cominetti, mat.mw} @uc.cl`) is one contact, which the spelling gives to the one author it
+scores highest — routed to the e-mail spelling code (email_owners.rs, 88a's area): a contact holding two or more local
+parts spells no single author; 2304.11989's `scs_lzg@` (Zhigang Li's initials) and 2505.12894's `ericcan@` are each the
+one address left on the block and go to the author the corresponding-author step finds (`marked_corresponding_author`:
+Jianye Hao's `\thanks{Corresponding author}`, Peican Zhu's `\thanks{Corresponding authors.}`), not to their owners — the
+step is a user ruling (jheppub and iopart use it too), kept; two narrower refinements are the user's to choose: skip a
+marked author who already owns an address of the same list (Jianye Hao has `sjianye.hao@`, so `scs_lzg@` stays on the
+block), and let no plural legend ("Corresponding authors.") mark one author (2505.12894, where Tang and Wang carry the
+`*`). The single unmarked `\affiliations` line still goes to the first author only (Perl's
+`\lx@add@affiliations[labelseq=author]`), where ijcai prints it under every name — a follow-up batch reusing
+`\lx@add@affiliation@shared` (author_macros.rs, aistats's line under a row of names).
+
+cas-common.sty:1216 `\NewDocumentCommand \address { O{} m O{} }` files the address in the list `\affiliation` files into
+(`g_stm_aff<n>_seq`), labelled as it labels (`\textsuperscript{\itshape\@currentlabel}` from `#1`, a letter label
+`\stmLabel`led, :1222-1242); its text is printed as written. The cas binding (cas_dc_cls.rs, Rust-only; Perl has none)
+left `\address` to OmniBus's `\address[]{}` (Perl OmniBus.cls.ltxml:91, `\lx@add@address{#2}`), which dropped the label:
+`\author[1]{O. U. Salman}[orcid=…]\author[2]{L. Truskinovsky}[]\address[1]{LSPM…}\address[2]{PMMH…}` gave both
+addresses to Truskinovsky (2011.00505; without the ORCID the positional reading hid it). `\address[]{}[]` is now
+`\lx@add@contact[label=…,role=affiliation]{#2}`, the path of `\affiliation`: the role moves from OmniBus's
+`role=address` to `role=affiliation`, as cas files both commands in one list (the HTML is unchanged, no CSS rule reads
+either role and the schema takes both; the TEI output changes, LaTeXML-tei.xsl:189 `address` vs :193 `affiliation`).
+The trailing optional of both commands — the `stm/address` keys `foot`, `type`, `name` (:1178-1190) — is typeset
+nowhere, where it was text ("[foot=true]"). Every entry is labelled by the letter cas prints for it, by the class's own
+entry counter (`\g_stm_aff_int`, :1175, global, never reset, shared by both commands; `cas_labelled_entry`): a label
+opening with a letter steps the counter and prints its letter, which the label then stands for (`\int_gincr:N`,
+`\stmLabel`, :1230-1236); a number N sets the counter and prints the N-th letter (`\int_gset:Nn`, :1238-1242); an entry
+the `foot` key sets as a footnote (`__foot_address`/`__foot_affiliation`, :1294-1373) leaves the counter and labels
+nothing, printed under the N-th letter or, lettered, under the letter the last main entry printed (`\@currentlabel`,
+read at the flush, `\lx@label@ref{cas@current}`). An author's marks are read as cas reads them (`cas_mark_labels`,
+:907-914): a list opening with a letter as labels, each the letter its entry prints (`\processAffRef`/`\stmRef`,
+:197-201, :278-286, which cas reads from the run before's `.aux`: the letter, when the entry came first, else a
+deferred reference; nothing for a label no entry has, where cas prints "0"), any other as numbers, N the N-th
+letter (`\processAffNum`, :288-296). So `\author[1,2]{…}` under `\address[a]{…}\address[b]{…}` requests both, as it
+prints "a,b" (2207.12381, where the addresses went to the last author on the base); `\address[b]{Univ X}
+\address[a]{Univ Y}` prints "a Univ X", "b Univ Y", Univ X `\author[1]`'s; word labels `\address[aff2]{X}
+\address[aff1]{Y}` print "a", "b", so `\author[1]` and `\author[aff2]` both have X; and `\address[1]{X}
+\affiliation[a]{…}` prints "a X", "b …", which `\author[a]` and `\author[2]` request. An item cas cannot read so (a `*`
+among letters, a template's `<num>` among numbers) is kept as written, and a label that is no number and opens with no
+letter (`*`, `1a`, an `\int_gset:Nn` error in cas) keeps its text and leaves the counter.
+
+A deferred label is a generalized mechanism, not a cas one: `\lx@label@ref{<key>}` (frontmatter_api.rs) stands for the
+label a binding records for `key` once later input is read (`set_label_ref`, one state table any binding fills; cas
+fills `cas:<label>` and `cas@current` from its entry counter), and expands to it where the queued entry is digested, at
+the flush. The flush's readers of the queued keyvals before the digestion read the same text (`resolve_label_refs`,
+label_refs.rs): `digest_front_matter` resolves the queue's attribute maps (`place.rs`'s `author_labels`, legends and
+`sequenced_contact_labels`), and the observer's flush (`shadow_flush`) the ledger's block keyvals and API attributes
+(`blocks.rs`'s requests, the resolver's labelled-author test, `api.rs`), so the dump holds the letters and an offline
+re-resolve reads them too. On r2 the readers saw the raw reference as single-character requests and the shadow
+misread every letter-labelled author whose entry came after it (2303.00352, 2603.22658: every affiliation gone;
+2504.19452, 2509.10496: every author every one); the written XML, which expands the macro, was right. A binding
+filling the table from an `.aux` round trip copies its own redefinition rule: cas's `\NewLabel` (cas-common.sty:191-195)
+defines `X@<label>:` globally only when it is free and locally otherwise, and LaTeX reads the `.aux` inside a group
+(latex.ltx:9486-9490), so the first entry under a label keeps it (`set_label_ref_once` for `cas:<label>`;
+`cas@current`, `\@currentlabel`, stays last-wins, `set_label_ref`). `\affiliation[a]{X}\author[a]{Ann}
+\affiliation[a]{Y}\author[a]{Bob}` and the same with both entries after the authors print "Ann^a, Bob^a" with X under
+"a" and Y under "b": both authors have X, Y is the block's, whether the letter was written when Bob's `\author` was
+read or deferred; r3 took the last entry (Bob Y in the first shape, both Y in the second). In cas,
+`place.rs`'s corresponding-author step is reached by no shape: the binding queues no `owner=sequence` contact, and its
+`\cormark` marks no one, so `\cortext` stays a note of the title block. `\corref{label}` (cas-common.sty:224, a
+mandatory argument) prints nothing; the binding's `\corref[]` took none and left the label typeset after the name or
+as a paragraph (2303.00352 "Enrique García-Macíascor1", 2104.06505, 2308.04522, 2412.03617, 2206.03104 `<p>c</p>`:
+every cas paper of the census writing `\corref{`). The `\corref`/`\cormark`/`\cortext` and `\fnmark`/`\fntext` links
+(cas-common.sty:204-238, :556-623) are not built.
+
+Repros `class-bindings/{ijcai_emails_grouped_address_by_spelling, ijcai_binding_emails_in_author_order,
+ijcai_emails_out_of_order_stay_on_the_block, ijcai_emails_lines_and_sections, ijcai_emails_group_broken_over_lines,
+cas_address_label_keeps_its_author, cas_dc_address_letter_labels_and_keys, cas_numeric_marks_name_letter_entries,
+cas_letter_entries_print_by_the_counter, cas_word_labels_out_of_order, cas_mixed_number_and_letter_entries,
+cas_dc_letter_marks_before_their_entries, cas_corresponding_mark_on_a_deferred_label,
+cas_first_entry_under_a_label_keeps_it, cas_first_entry_under_a_deferred_label_keeps_it, cas_corref_label_is_no_text}`;
+guards
+`perfect_kernel_batch88b::*` (eager, the binary's eager and `--streaming` builds the same;
+`cas_deferred_labels_are_read_before_digestion` the shadow's reading as well;
+`ijcai_binding_email_list_in_author_order_keeps_perl_order` a no-regression check, the base gives the same),
+`06_cluster_frontmatter::frontmatter_ijcai_affiliations_emails` (the ttm.sty group on its three authors).

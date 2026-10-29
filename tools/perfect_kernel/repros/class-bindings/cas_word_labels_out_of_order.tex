@@ -1,0 +1,23 @@
+% witness: none (sibling of probe p7, review of 88b r1); word labels as 2206.03104, 2303.00352, 2504.19452,
+%          2509.10496 (whose `\author[third]` comes before `\affiliation[third]`) write them; cas-common.sty:197-201
+%          `\stmRef{aff1}` prints the letter the entry labelled aff1 printed (`\stmLabel`, read from the run before)
+% oracle:  pdflatex 0 errors (two runs): "Ann Able^a , Bob Baker^b and Cid Cole^b / a Univ X / b Univ Y"; .aux
+%          `\NewLabel{aff2}{a}`, `\NewLabel{aff1}{b}`
+% engines: rust int117a = 0 errors, both on Cid Cole (`role=address`, the labels dropped); rust 88b r1 = 0 errors,
+%          Univ Y on Cid Cole and Univ X on the author block (a number mark and a word label never met); Perl:
+%          OmniBus's, the labels dropped
+% expect:  0 errors, 0 warnings; Univ X on Ann Able (`[1]`, "a"), Univ Y on Bob Baker (`[2]`, "b") and on Cid Cole
+%          (`[aff1]`, the letter aff1 prints, `\lx@label@ref` once the entries are read; OD #908), in the XML and in
+%          the shadow (`LATEXML_FM_SHADOW=1`; r2's read the raw reference: Cid Cole none)
+% status:  RED (88b r1) -> GREEN (88b r2); the shadow RED (88b r2) -> GREEN (88b r3)
+% preload: ar5iv.sty
+\documentclass{cas-sc}
+\begin{document}
+\title [mode = title]{T}
+\author[1]{Ann Able}
+\author[2]{Bob Baker}
+\author[aff1]{Cid Cole}
+\address[aff2]{Univ X}
+\address[aff1]{Univ Y}
+\maketitle
+\end{document}

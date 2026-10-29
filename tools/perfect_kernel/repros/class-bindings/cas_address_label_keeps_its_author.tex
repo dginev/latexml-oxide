@@ -1,0 +1,17 @@
+% witness: 2011.00505 (cas-sc: `\author[1]{…}[orcid=…]`, `\address[1]{…}`); cas-common.sty:1216-1246 `\address`
+%          labels as `\affiliation` does (:1252-1290)
+% oracle:  pdflatex 0 errors: "Ann Able^a , Bob Baker^b / a Univ X / b Univ Y"
+% engines: rust int117a = 0 errors; both addresses on Bob Baker (OmniBus's `\address[]{}`, Perl OmniBus.cls.ltxml:91,
+%          drops the label; the ORCID keyvals break the positional reading that hid it); Perl: the same
+% expect:  0 errors, 0 warnings; Univ X on Ann Able, Univ Y on Bob Baker, each an affiliation
+% status:  RED (int117a) -> GREEN (88b)
+% preload: ar5iv.sty
+\documentclass{cas-sc}
+\begin{document}
+\title [mode = title]{T}
+\author[1]{Ann Able}[orcid=0000-0003-0696-521X]
+\author[2]{Bob Baker}
+\address[1]{Univ X}
+\address[2]{Univ Y}
+\maketitle
+\end{document}

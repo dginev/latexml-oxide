@@ -1,0 +1,29 @@
+% witness: 2105.02711, 1905.13566, 2308.08563 (an `\emails` list not in author order)
+% oracle:  pdflatex 0 errors: "Ann Able , Bob Baker and Cid Cole / Univ X / bob.baker@y.org, x1@a.org, z3@c.org"
+% engines: rust int117a = 0 errors; Able `bob.baker@y.org`, Baker `x1@a.org`, Cole `z3@c.org` (the n-th address on the
+%          n-th author, Perl ijcai.sty.ltxml:50-53, KNOWN_PERL_ERRORS #1200); Perl: the same
+% expect:  0 errors, 0 warnings; bob.baker@y.org on Bob Baker (its spelling); x1@ and z3@, which spell no one in a list
+%          not in author order, on the author block, no name's (FIDELITY_CHARTER §4, OD #908)
+% status:  RED (int117a) -> GREEN (88b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ijcai.sty}
+\ProvidesPackage{ijcai}
+\def\maketitle{\par\begingroup\@maketitle\endgroup
+  \let\maketitle\relax \let\@maketitle\relax
+  \gdef\@author{}\gdef\@title{}}
+\def\@maketitle{\vbox{\centering{\LARGE\bf \@title \par}\vskip 0.2in
+  {\def\and{\unskip\thinspace{\rm ,}\enspace}%
+   \def\And{\unskip\enspace{\rm and}\enspace}%
+   \def\affiliations{\egroup\par\bgroup\rm}%
+   \def\emails{\egroup\par\bgroup\rm}%
+   \bgroup\bf\@author\egroup}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{ijcai}
+\title{T}
+\author{Ann Able\and Bob Baker\And Cid Cole
+\affiliations Univ X
+\emails bob.baker@y.org, x1@a.org, z3@c.org}
+\begin{document}
+\maketitle
+\end{document}

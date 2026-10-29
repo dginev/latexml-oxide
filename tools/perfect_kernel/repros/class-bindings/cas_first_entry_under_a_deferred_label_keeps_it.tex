@@ -1,0 +1,18 @@
+% witness: none (review of 88b r3, finding 1, probe d2); the label written twice, both entries after the authors
+% oracle:  pdflatex 0 errors (two runs): "Ann Able^a , Bob Baker^a / a Univ X, / b Univ Y,"; .aux `\NewLabel{a}{a}`,
+%          `\NewLabel{a}{b}`, the first kept (`\NewLabel`, cas-common.sty:191-195; the .aux read in a group,
+%          latex.ltx:9486-9490)
+% engines: rust 88b r3 = 0 errors, both Univ Y (the deferred `\lx@label@ref`, the last entry's letter), Univ X on
+%          the block; rust int117a = the same; Perl: not run
+% expect:  0 errors, 0 warnings; both authors Univ X, in the XML and in the shadow; Univ Y on the title block
+% status:  RED (88b r3) -> GREEN (88b r4)
+% preload: ar5iv.sty
+\documentclass{cas-sc}
+\begin{document}
+\title [mode = title]{T}
+\author[a]{Ann Able}
+\author[a]{Bob Baker}
+\affiliation[a]{organization={Univ X}}
+\affiliation[a]{organization={Univ Y}}
+\maketitle
+\end{document}

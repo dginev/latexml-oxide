@@ -1,0 +1,20 @@
+% witness: none (review of 88b r1, probe p7; 0 of the 72 cas census papers write their letters out of order);
+%          cas-common.sty:1228-1236 a letter-labelled entry steps `\g_stm_aff_int` and prints `\int_to_alph` of it,
+%          :288-296 `\processAffNum` prints an author's number N as the N-th letter
+% oracle:  pdflatex 0 errors (two runs): "Ann Able^a , Bob Baker^b / a Univ X / b Univ Y"
+% engines: rust int117a = 0 errors, Univ X on Ann Able and Univ Y on Bob Baker by position (OmniBus's `\address[]{}`
+%          dropped the labels; `role=address`); rust 88b r1 = 0 errors, Univ Y on Ann Able and Univ X on Bob Baker
+%          (each entry read by the letter written in its label); Perl: OmniBus's, the labels dropped
+% expect:  0 errors, 0 warnings; Univ X on Ann Able, Univ Y on Bob Baker (each entry labelled by the letter its
+%          counter prints, OD #908)
+% status:  RED (88b r1) -> GREEN (88b r2)
+% preload: ar5iv.sty
+\documentclass{cas-sc}
+\begin{document}
+\title [mode = title]{T}
+\author[1]{Ann Able}
+\author[2]{Bob Baker}
+\address[b]{Univ X}
+\address[a]{Univ Y}
+\maketitle
+\end{document}

@@ -427,6 +427,8 @@ pub fn digest_front_matter() -> Result<()> {
     Some(Stored::FrontmatterRaw(commands)) => commands,
     _ => Vec::new(),
   };
+  // (the labels the queue defers, read for the readers of its keyvals here: `\lx@label@ref`, cas's `\author[a]`)
+  resolve_queued_label_refs(&mut commands);
   // (a contact the class prints under the whole row of names, every author's: OXIDIZED_DESIGN_DIVERGENCES #901)
   share_row_contacts(&mut commands)?;
   // The entries a seal drops in this flush, whose annotations go with them ([`seal_digested_frontmatter`]) — this

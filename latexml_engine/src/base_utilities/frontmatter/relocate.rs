@@ -141,10 +141,14 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
   // An orphan no one cites is kept all the same, as LaTeX prints it. An institute-level contact, or a thanks note
   // (svjour3's `\thankstext` without its `\thanksref`; an EPJ institute's own note, 63g review, repro
   // svjour3_epj_title_and_institute_notes), is shared as a matter of course. A person's own note (elsarticle's
-  // `\fntext` without its `\fnref`) lost the link to its person, which is warned about.
+  // `\fntext` without its `\fnref`) lost the link to its person, which is warned about; one placed on the block (the
+  // `addresses:block` label, the shared creator below) lost none: the evidence gave it to the block (ijcai's `\emails
+  // {$^{*}$Corresponding author}` under two starred names, 2609.15094; OXIDIZED_DESIGN_DIVERGENCES #908).
   let shared_orphan = |note: &Node| {
     let role = note.get_attribute("role").unwrap_or_default();
-    is_shared_contact_role(&role) || role == "thanks"
+    is_shared_contact_role(&role)
+      || role == "thanks"
+      || note.get_attribute("_label").as_deref() == Some("addresses:block")
   };
   // Beyond-Perl (OXIDIZED_DESIGN #159): an orphan's label is one institute with what inherited its label (its
   // `\email`/`\url`), and it goes to the author the evidence names, else is shared:

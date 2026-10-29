@@ -1,0 +1,24 @@
+% witness: none (the corresponding-author legend the 88b r2 review asked for); `\cormark`/`\cortext` as every cas
+%          sample writes them (cas-sc-sample.tex)
+% oracle:  pdflatex 0 errors (two runs): "Ann Able^{b,*} , Bob Baker^a / a Univ Y / b Univ X / * Corresponding author
+%          / aable@x.edu (A. Able) / ORCID (s): 0000-0002-1825-0097 (A. Able)"; .aux `\NewLabel{b}{a}`, `\NewLabel{a}{b}`
+% engines: rust int117a = 0 errors, right in the XML and the shadow (the labels compared as written); rust 88b r2 = 0 errors, the XML right, the shadow
+%          (`LATEXML_FM_SHADOW=1`) Univ Y on Ann Able and both on Bob Baker; Perl: OmniBus's
+% expect:  0 errors, 0 warnings; Bob Baker's `[b]` read when his `\author` is (the entry came first: "a", Univ Y),
+%          Ann Able's `[a]` at the flush ("b", Univ X), in the XML and in the shadow; the "Corresponding author" note
+%          on the title block (cas's `\cormark` marks no one: no `owner=sequence` contact reaches `place.rs`'s
+%          corresponding-author step in cas; OD #908)
+% status:  RED (88b r2, shadow) -> GREEN (88b r3)
+% preload: ar5iv.sty
+\documentclass{cas-sc}
+\begin{document}
+\title [mode = title]{T}
+\affiliation[b]{organization={Univ Y}}
+\author[a]{Ann Able}[orcid=0000-0002-1825-0097]
+\cormark[1]
+\ead{aable@x.edu}
+\author[b]{Bob Baker}
+\affiliation[a]{organization={Univ X}}
+\cortext[1]{Corresponding author}
+\maketitle
+\end{document}

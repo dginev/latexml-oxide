@@ -1,0 +1,22 @@
+% witness: 2011.00505 (cas `\address[label]`); cas-common.sty:1216 `\address { O{} m O{} }` and :1252 `\affiliation
+%          { O{} m O{} }`: a letter label is `\stmLabel`led (:1230-1236), the trailing optional the `stm/address` keys
+%          (`foot`, `type`, `name`, :1178-1190), no text
+% oracle:  pdflatex 0 errors (two runs): "Ann Able^a , Bob Baker^a,b and Cid Cole^b / a Univ X, Paris / … b Univ Y"
+%          (`foot=true`: Univ Y a footnote); no "[foot=true]" or "[type=alt]" printed
+% engines: rust int117a = 0 errors; both addresses on Cid Cole, Univ X Bob Baker's only by the `\affiliation`, and
+%          "[foot=true]", "[type=alt]" typeset as text; Perl: OmniBus's `\address[]{}`, the label dropped
+% expect:  0 errors, 0 warnings; Univ X, Paris (the keys printed as cas prints them) on Ann Able and Bob Baker, Univ Y
+%          and Univ Z on Bob Baker and Cid Cole; no keys typeset
+% status:  RED (int117a) -> GREEN (88b)
+% preload: ar5iv.sty
+\documentclass{cas-dc}
+\begin{document}
+\title [mode = title]{T}
+\author[a]{Ann Able}
+\author[a,b]{Bob Baker}
+\author[b]{Cid Cole}
+\affiliation[a]{organization={Univ X}, city={Paris}}[type=alt]
+\address[b]{Univ Y}[foot=true]
+\address[b]{Univ Z}
+\maketitle
+\end{document}

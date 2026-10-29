@@ -1,0 +1,21 @@
+% witness: none (probe of 88b; 0 of the 72 cas census papers mix number- and letter-labelled entries)
+% oracle:  pdflatex 0 errors (two runs): "Ann Able^b , Bob Baker^b and Cid Cole^a / a Univ X / b Univ Y" — the letter
+%          entry `[a]` after the number entry `[1]` steps the counter to 2 and prints "b" (cas-common.sty:1230-1242),
+%          which `\author[a]` reads (`\stmRef`)
+% engines: rust int117a = 0 errors, Univ Y on Ann Able, Univ X on Cid Cole (`role=address`, by position), none on Bob
+%          Baker; rust 88b r1 = 0 errors, Univ X and Univ Y both on Ann Able and Cid Cole, none on Bob Baker (the
+%          number entry `[1]` printed "a" and the letter entry was read by its own label "a"); Perl: OmniBus's
+% expect:  0 errors, 0 warnings; Univ Y on Ann Able and Bob Baker, Univ X on Cid Cole (the entries labelled by the
+%          letters cas's counter prints, `\author[a]` by the letter entry a prints; OD #908)
+% status:  RED (88b r1) -> GREEN (88b r2)
+% preload: ar5iv.sty
+\documentclass{cas-sc}
+\begin{document}
+\title [mode = title]{T}
+\author[a]{Ann Able}
+\author[2]{Bob Baker}
+\author[1]{Cid Cole}
+\address[1]{Univ X}
+\affiliation[a]{organization={Univ Y}}
+\maketitle
+\end{document}

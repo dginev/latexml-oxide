@@ -114,6 +114,15 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefKeyVal!("Frontmatter", "property", "Semiverbatim");
   DefKeyVal!("Frontmatter", "content", "Semiverbatim");
 
+  // Rust-only: `\lx@label@ref{<key>}`, the label a binding recorded for `key` once later input was read
+  // ([`set_label_ref`]: cas's `\stmRef`, which LaTeX reads from the `.aux` of the run before), nothing for one never
+  // recorded; read where a queued entry is digested, and by the flush's readers of the queue ([`resolve_label_refs`]).
+  DefMacro!("\\lx@label@ref{}", sub[(key)] {
+    let key: Tokens = key;
+    let label = label_ref_text(&key.to_string()).unwrap_or_default();
+    Ok(mouth::tokenize_internal(TeXString::assembled(label)))
+  });
+
   // \lx@clear@frontmatter{tag}[kv]
   // Remove all pending frontmatter element matching $tag, and role (if given) in keyvals
   DefPrimitive!("\\lx@clear@frontmatter {} OptionalKeyVals:Frontmatter", sub[(tag, kv)] {

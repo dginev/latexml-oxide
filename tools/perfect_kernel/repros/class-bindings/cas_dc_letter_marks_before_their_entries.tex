@@ -1,0 +1,17 @@
+% witness: none (review of 88b r2, probe q10); the shape of 2303.00352, 2603.22658, 2504.19452, 2509.10496, whose
+%          letter-marked `\author`s come before their entries
+% oracle:  pdflatex 0 errors (two runs): "Ann Able^b , Bob Baker^a / a Univ Y / b Univ X"; .aux `\NewLabel{b}{a}`,
+%          `\NewLabel{a}{b}` (cas-common.sty:197-201 `\stmRef`, read from the run before)
+% engines: rust int117a = 0 errors, right in the XML and the shadow (the labels compared as written); rust 88b r2 = 0
+%          errors, the XML right, but the shadow (`LATEXML_FM_SHADOW=1`) gave Ann Univ Y and Bob both, its readers
+%          seeing the raw deferred reference; Perl: OmniBus's
+% expect:  0 errors, 0 warnings; Univ X on Ann Able (`[a]`, "b"), Univ Y on Bob Baker (`[b]`, "a"), in the XML and in
+%          the shadow's reading (`\lx@label@ref`, read at the flush by the queue's readers too; OD #908)
+% status:  RED (88b r2, shadow) -> GREEN (88b r3)
+% preload: ar5iv.sty
+\documentclass{cas-dc}
+\begin{document}
+\title [mode = title]{T}
+\author[a]{Ann Able}\author[b]{Bob Baker}\affiliation[b]{organization={Univ Y}}\affiliation[a]{organization={Univ X}}
+\maketitle
+\end{document}

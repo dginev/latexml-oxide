@@ -224,7 +224,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     .filter(|piece| !piece.is_empty())
     .collect();
     let addresses = pieces.iter().all(|piece| address_text(piece).contains('@'));
-    // (only a list of plain addresses is written out — their letters, the printed braces `\{ \}` and `\_`, the spacing
+    // (only a list of plain addresses is written out — their letters, the printed braces `\{ \}` (`\lbrace`, `\textbraceleft`) and `\_`, the spacing
     // and line breaks between them and an e-mail command's address font, `\mailto` (1105.4742's `\ead{\mailto{idan.oren@…}
     // \\ \mailto{\ \ uzy.smilansky@…}}`): a braced group of local parts, a semicolon list, 0711.4000's `leticia@…;
     // jorge@…` —, so a list in other markup keeps it: `\href{mailto:a@x,b@y}{a@x, b@y}` one contact, rev78f probe j06)
@@ -233,16 +233,31 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
         || is_spacing_command(t)
         || is_line_separator(t)
         || is_email_wrapper(t)
-        || t.with_str(|name| matches!(name, "\\{" | "\\}" | "\\_" | "\\lbrace" | "\\rbrace" | "\\,"))
+        || t.with_str(|name| {
+          matches!(
+            name,
+            "\\{" | "\\}" | "\\_" | "\\lbrace" | "\\rbrace" | "\\textbraceleft" | "\\textbraceright" | "\\,"
+          )
+        })
     });
     let pieces = if pieces.len() > 1 && addresses {
       pieces
     } else {
       // (a shared domain's addresses each written out, as an author block's line gives them, `email_line_calls`)
       match email_addresses(&list) {
+        // (each written as the characters it prints, an underscore as the author block's line writes it, `\_`: a bare
+        // `_` prints the OT1 dot accent, `scs˙lzg@tju.edu.cn` for 2304.11989's `\{scs$\_$lzg, …\}@tju.edu.cn`;
+        // `address_tokens`; the others, a Semiverbatim `\emailAdd`'s `~` or `&` among them, as they are)
         Some(each) if each.len() > 1 && plain => each
           .iter()
-          .map(|address| Tokens::new(text_tokens(address)))
+          .map(|address| {
+            Tokens::new(
+              text_tokens(address)
+                .into_iter()
+                .map(|t| if t == T_OTHER!("_") { T_CS!("\\_") } else { t })
+                .collect(),
+            )
+          })
           .collect(),
         _ => vec![list],
       }

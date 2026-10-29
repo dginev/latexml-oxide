@@ -41,7 +41,7 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
   // body carries either marker, delegate to the shared sectioned-author machinery
   // (`\lx@ijcai@authorsplit`, also used by `ijcai_sty`): it consumes the markers
   // as `Until:` delimiters (so they no longer error) and splits names /
-  // affiliations / emails, attaching the n-th email to the n-th author. This runs
+  // affiliations / emails, each email placed as a class's address list is (OD #908). This runs
   // before any dequeue/normalization because the delegate re-enters
   // `\lx@add@authors` on the (marker-free) name list.
   // Witness html_feedback#1361 + #1362. A marker counts at the block's top level only, and only as a separator:

@@ -166,7 +166,10 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=corresponding]{#2}"
   );
   def_macro_noop("\\cormark[]")?; // mark only, no body
-  def_macro_noop("\\corref[]")?;
+  // cas-common.sty:224 `\NewDocumentCommand \corref { m }`: the label of the `\cortext` it marks, no text (an optional
+  // `\corref[]` left `cor1` typeset after the name or as a paragraph, 2303.00352's "Enrique García-Macíascor1"; the
+  // mark's link to its `\cortext` is not built)
+  def_macro_noop("\\corref{}")?;
   // cas-common.sty:895 `\RenewDocumentCommand\author{O{} m O{}}` —
   // `\author[affil-marks]{name}[type=editor, auid=…, orcid=…]`, once per
   // author (cas-sc-sample.tex:58-97: four calls). The inst_support shape
@@ -180,18 +183,49 @@ LoadDefinitions!({
   // :1252-1266 `\affiliation[1]{…}`); unmarked, an affiliation goes to the author before it.
   // (the names are split as the kernel splits an author list, at commas, `\and` and the word "and": cas prints the
   // argument as written, `\author[a]{Cy Cee and Dee Dee}` two people; review of 63u)
-  DefMacro!(
-    "\\author[]{}[]",
-    "\\lx@add@authors@append[annotations={#1}]{#2}\\lx@add@author@keyvals{#3}"
-  );
+  // (the marks are read as the letters cas prints, `cas_mark_labels`: `\author[1,2]` under `\address[a]…\address[b]`
+  // is "a,b", 2207.12381; under `\address[b]{Univ X}\address[a]{Univ Y}`, which print "a Univ X", "b Univ Y", it is
+  // Univ X and Univ Y, review of 88b r1)
+  DefMacro!("\\author[]{}[]", sub[(marks, name, keys)] {
+    let name: Tokens = name;
+    let mut out = mouth::tokenize_internal("\\lx@add@authors@append[annotations=").unlist();
+    out.push(T_BEGIN!());
+    out.extend(cas_mark_labels(marks));
+    out.extend([T_END!(), T_OTHER!("]"), T_BEGIN!()]);
+    out.extend(name.unlist());
+    out.extend([T_END!(), T_CS!("\\lx@add@author@keyvals"), T_BEGIN!()]);
+    out.extend(keys.map(Tokens::unlist).unwrap_or_default());
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  });
   // \affiliation[id]{keys}: cas-common.sty:1118-1160 reads the argument as nearly the `stm/affiliation` keys
   // elsarticle reads (elsarticle.cls:387-440), printed as the class prints them (`stm_affiliation`): `organization={X},
   // city={Y}, country={Z}` is "X, Y, Z". The keys were typeset as text (160 of 200 cas papers of 2609: 2609.00047,
   // 2609.04891) and every affiliation went to the last author.
-  DefMacro!(
-    "\\affiliation[]{}",
-    "\\lx@add@contact[label={#1},role=affiliation]{\\lx@cas@affiliation{#2}}"
-  );
+  // cas-common.sty:1252 `\NewDocumentCommand \affiliation { O{} m O{} }`: the trailing optional is the `stm/address`
+  // keys (`foot`, `type`, `name`: where and under what heading the class prints the entry, :1178-1190), no text of it.
+  DefMacro!("\\affiliation[]{}[]", sub[(label, keys, options)] {
+    let keys: Tokens = keys;
+    let mut out = cas_labelled_entry(label, options);
+    out.extend([T_BEGIN!(), T_CS!("\\lx@cas@affiliation"), T_BEGIN!()]);
+    out.extend(keys.unlist());
+    out.extend([T_END!(), T_END!()]);
+    Ok(Tokens::new(out))
+  });
+  // cas-common.sty:1216 `\NewDocumentCommand \address { O{} m O{} }` files the address in the affiliation list
+  // `\affiliation` files into (`g_stm_aff<n>_seq`), labelled as it labels (`\textsuperscript{\itshape\@currentlabel}`
+  // from `#1`, :1222-1242), its text printed as written (no keys read), the trailing optional the same `stm/address`
+  // keys. OmniBus's `\address[]{}` (Perl OmniBus.cls.ltxml:91) dropped the label, so `\author[1]{…}[orcid=…]
+  // \author[2]{…}\address[1]{X}\address[2]{Y}` gave both addresses to the last author (2011.00505). Both commands'
+  // labels are read as cas prints them (`cas_labelled_entry`).
+  DefMacro!("\\address[]{}[]", sub[(label, text, options)] {
+    let text: Tokens = text;
+    let mut out = cas_labelled_entry(label, options);
+    out.push(T_BEGIN!());
+    out.extend(text.unlist());
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  });
   DefMacro!("\\lx@cas@affiliation {}", sub[(raw)] {
     elsart_support_core_sty::stm_affiliation(raw, false)
   });
@@ -254,3 +288,148 @@ LoadDefinitions!({
     "\\newenvironment{#1}{\\par\\noindent\\textbf{#2.}\\hspace{0.5em}}{\\par}"
   );
 });
+
+/// The entry counter cas prints its affiliation-list labels by (`\g_stm_aff_int`, cas-common.sty:1175), global and
+/// never reset, which `\address` and `\affiliation` share.
+const CAS_ENTRY_COUNTER: &str = "lx_cas_aff_int";
+
+/// The key of the letter a cas entry's label prints (`\stmLabel`'s `X@<label>:`, cas-common.sty:184-196), in the
+/// deferred labels' table (`set_label_ref_once`, read as `\lx@label@ref`: cas's `\stmRef` reads it from the `.aux` of
+/// the run before, where the first entry under a label keeps it).
+fn cas_label_key(label: &str) -> String { s!("cas:{label}") }
+
+/// The key of the letter the last entry of cas's affiliation list printed (`\@currentlabel`, cas-common.sty:1233,
+/// :1240), in the same table (no label's key: those are `cas:<label>`): the letter a lettered `[foot]` entry is printed
+/// under (:1310 `\tex_def:D \thefootnote{\itshape\@currentlabel}`), the last the entries printed, as the title page
+/// prints its footnoted entries after them.
+const CAS_CURRENT_LABEL: &str = "cas@current";
+
+/// The marks a cas `\author[marks]` requests, as the letters cas-common.sty:907-914 prints them: a list opening with a
+/// letter reads each item as an entry's label, the letter that entry prints (`\processAffRef`, `\stmRef`, :197-201,
+/// :278-286; the letter when the entry came first, else `\lx@label@ref`, read at the flush once the entries are known,
+/// as cas reads it from the `.aux` of the run before; nothing for a label no entry has, where cas prints "0"), any
+/// other each number N as the N-th letter (`\processAffNum`, `\int_to_alph:n`, :288-296), the letter
+/// the entry `\address[N]` and the N-th lettered entry print (`cas_labelled_entry`). (an item cas cannot read so, a
+/// `*` among letters or a template's `<num>` among numbers, as written)
+fn cas_mark_labels(marks: Option<Tokens>) -> Vec<Token> {
+  let marks = marks.map(Tokens::unlist).unwrap_or_default();
+  let by_label = cas_letter_headed(&marks);
+  let mut out: Vec<Token> = Vec::new();
+  for item in marks.split(|t| *t == T_OTHER!(",")) {
+    let text = Tokens::new(item.to_vec()).to_string();
+    let text = text.trim();
+    if text.is_empty() {
+      continue;
+    }
+    if !out.is_empty() {
+      out.push(T_OTHER!(","));
+    }
+    if by_label && cas_letter_headed(item) {
+      // (the letter, when the entry came first; else read once the entries are known)
+      let key = cas_label_key(text);
+      match label_ref_text(&key) {
+        Some(letter) => out.extend(mouth::tokenize_internal(TeXString::assembled(letter)).unlist()),
+        None => out.extend(label_ref_tokens(&key)),
+      }
+    } else {
+      let letter = (!by_label)
+        .then(|| cas_number(text))
+        .flatten()
+        .filter(|n| *n > 0);
+      let text = letter.map_or_else(|| text.to_string(), radix::radix_alpha);
+      out.extend(mouth::tokenize_internal(TeXString::assembled(text)).unlist());
+    }
+  }
+  out
+}
+
+/// `\lx@add@contact[label={…},role=affiliation]` for a cas affiliation-list entry (`\affiliation[label]{…}[keys]`,
+/// `\address[label]{…}[keys]`), labelled by the letter it prints, as cas-common.sty:1228-1242 (and :1274-1290) prints
+/// it: a label opening with a letter steps the entry counter and prints its letter, the letter the label stands for
+/// (`\int_gincr:N \g_stm_aff_int`, `\stmLabel`); a number N sets the counter and prints the N-th letter
+/// (`\int_gset:Nn`). So `\address[b]{Univ X}\address[a]{Univ Y}` prints "a Univ X", "b Univ Y", the entries an
+/// `\author[1]` and an `\author[2]` ask for, and `\address[1]{X}\affiliation[a]{…}` prints X and the affiliation as
+/// "a" and "b". An entry the `foot` key sets as a footnote (:1294-1326, :1328-1373) leaves the counter and labels
+/// nothing: a number N prints the N-th letter, a lettered one the letter the entries before it printed last
+/// (`\@currentlabel`, `\lx@label@ref{cas@current}`). (a label cas cannot read so, a `*` or `1a`, is kept as written and leaves
+/// the counter; no label, none)
+fn cas_labelled_entry(label: Option<Tokens>, keys: Option<Tokens>) -> Vec<Token> {
+  let label = label.map(Tokens::unlist).unwrap_or_default();
+  let text = Tokens::new(label.clone()).to_string();
+  let text = text.trim();
+  let lettered = !text.is_empty() && cas_letter_headed(&label);
+  let foot = keys.is_some_and(|keys| cas_foot_key(&keys));
+  let printed = if text.is_empty() {
+    None
+  } else if foot {
+    if lettered {
+      Some(label_ref_tokens(CAS_CURRENT_LABEL))
+    } else {
+      cas_number(text).map(|n| cas_letter_tokens(n, &label))
+    }
+  } else {
+    let counter = if lettered {
+      Some(lookup_int(CAS_ENTRY_COUNTER) + 1)
+    } else {
+      cas_number(text)
+    };
+    counter.map(|counter| {
+      assign_value(CAS_ENTRY_COUNTER, Stored::Int(counter), Some(Scope::Global));
+      let letter = radix::radix_alpha(counter);
+      set_label_ref(CAS_CURRENT_LABEL, &letter);
+      if lettered {
+        // (the first entry under a label keeps it: `\NewLabel` defines `X@<label>:` globally only when it is free,
+        // and LaTeX reads the `.aux` in a group, latex.ltx:9486-9490, so the second's local definition goes)
+        set_label_ref_once(&cas_label_key(text), &letter);
+      }
+      cas_letter_tokens(counter, &label)
+    })
+  };
+  let mut out = mouth::tokenize_internal("\\lx@add@contact[label=").unlist();
+  out.push(T_BEGIN!());
+  out.extend(printed.unwrap_or(label));
+  out.push(T_END!());
+  out.extend(mouth::tokenize_internal(",role=affiliation]").unlist());
+  out
+}
+
+/// The tokens of the letter `\int_to_alph:n` prints for `number`, else (0, which prints none) `label` as written.
+fn cas_letter_tokens(number: i64, label: &[Token]) -> Vec<Token> {
+  let letter = radix::radix_alpha(number);
+  if letter.is_empty() {
+    label.to_vec()
+  } else {
+    mouth::tokenize_internal(TeXString::assembled(letter)).unlist()
+  }
+}
+
+/// Whether an entry's `stm/address` keys set it as a footnote: `foot` (a `.bool_gset:N`, cas-common.sty:1180, true
+/// when given no value) set true, the last setting read. Each entry reads its own keys from `foot = false`
+/// (`\__reset_addr:`, :1200).
+fn cas_foot_key(keys: &Tokens) -> bool {
+  let text = keys.to_string();
+  let mut foot = false;
+  for item in text.split(',') {
+    let (key, value) = item.split_once('=').unwrap_or((item, "true"));
+    if key.trim() == "foot" {
+      foot = value.trim().trim_matches(|c| c == '{' || c == '}').trim() == "true";
+    }
+  }
+  foot
+}
+
+/// Whether a cas label opens with a letter (`\tl_if_head_eq_catcode:nNTF {#1} a`, spaces skipped as the head is read).
+fn cas_letter_headed(label: &[Token]) -> bool {
+  label
+    .iter()
+    .find(|t| **t != T_SPACE!())
+    .is_some_and(|t| t.get_catcode() == Catcode::LETTER)
+}
+
+/// A cas label written as a number in digits, the value `\int_gset:Nn` and `\int_to_alph:n` read.
+fn cas_number(text: &str) -> Option<i64> {
+  if text.is_empty() || !text.bytes().all(|b| b.is_ascii_digit()) {
+    return None;
+  }
+  text.parse().ok()
+}

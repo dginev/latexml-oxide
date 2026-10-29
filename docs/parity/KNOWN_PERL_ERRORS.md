@@ -18774,3 +18774,29 @@ defines it again as `\affiliation` at the binding's origin, so a document's defi
 1908.05079. Repros sectioning-frontmatter/{revtex_document_newcommand_affil, revtex_document_providecommand_affil,
 aastex_class_affil_stays_the_class}; guards `perfect_kernel_batch86c::{a_revtex_document_defines_its_own_affil,
 aastex_keeps_its_own_affil}`.
+
+## 1200. ijcai.sty.ltxml gives the n-th piece of the `\emails` line, cut at every comma, to the n-th author
+
+ijcai.sty.ltxml:50-53 defines `\lx@ijcai@emails{}` as `\lx@splitting{\lx@ijcai@email}{,}{#1}` with
+`\lx@ijcai@email{}` = `\lx@add@email[labelseq=author]{#1}`: the `\emails` section of the IJCAI `\author` is cut at every
+comma, including those inside a grouped address `\{a, b\}@x`, and the n-th piece goes to the n-th author. The IJCAI
+styles print the section as one line under the affiliations, attributing none (ijcai19.sty:127-130). Minimal trigger
+(with a local copy of any year's ijcai style, here ijcai19.sty):
+
+```latex
+\documentclass{article}
+\usepackage{ijcai19}
+\title{T}
+\author{Ann Able$^1$\and Bob Baker$^2$\And Cid Cole$^1$
+\affiliations $^1$Univ X\\ $^2$Univ Y\\
+\emails \{aable, ccole\}@x.edu, bob.baker@y.org}
+\begin{document}\maketitle\end{document}
+% pdflatex: "{aable, ccole}@x.edu, bob.baker@y.org" on one line under the affiliations.
+% Perl: Ann Able `{aable`, Bob Baker `ccole}@x.edu`, Cid Cole `bob.baker@y.org`.
+```
+
+Fixed in Rust (88b, OXIDIZED_DESIGN_DIVERGENCES #908): the list is a class's address list (`owner=sequence`), each
+address with the author it spells, else the n-th author's while the list is in author order, else the author block's,
+a grouped address written out. Witnesses 1905.13566, 2105.02711, 2308.08563, 2401.03955; guards
+`perfect_kernel_batch88b::{ijcai_grouped_email_list_placed_by_spelling,
+ijcai_binding_email_list_out_of_order_leaves_the_unspelled_on_the_block}`.

@@ -155,8 +155,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // marker-branch above (so raw-loaded derivatives like ttm.sty work too).
   // `\lx@ijcai@authorsplit` reads the names up to `\affiliations` and runs them
   // through `\lx@ijcai@names` (`\lx@add@authors` without the marker branch), then splits the remainder into
-  // affiliations (up to `\emails`) and the comma-separated emails, attaching the
-  // n-th email to the n-th author. Ported from Perl ijcai.sty.ltxml (PR #2767).
+  // affiliations (up to `\emails`) and the comma-separated emails. Ported from Perl ijcai.sty.ltxml (PR #2767).
   DefMacro!(
     "\\lx@ijcai@authorsplit Until:\\affiliations Until:\\done",
     "\\lx@ijcai@names{#1}\\ifx.#2.\\else\\lx@ijcai@affilsplit#2\\emails\\affiliations\\done\\fi"
@@ -169,11 +168,41 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     "\\lx@ijcai@affiliations{}",
     "\\lx@add@affiliations[labelseq=author]{#1}"
   );
+  // The `\emails` list, which ijcai19.sty:127-130 prints as one line under the affiliations, attributing none
+  // (`{aable, ccole}@x.edu, bob.baker@y.org`). Perl's ijcai.sty.ltxml:50-53 splits it at every comma and gives the
+  // n-th piece to the n-th author (`labelseq=author`): a grouped address `\{a, b\}@x` was cut into `{a` and
+  // `b}@x` and every piece after it went one author on (2105.02711, 1905.13566, 2308.08563; the ttm.sty derivative's
+  // `\{creddy,wmgifford,jayant\}@us.ibm.com`, 2401.03955). Rust-only (OXIDIZED_DESIGN_DIVERGENCES #908,
+  // KNOWN_PERL_ERRORS #1200): the list is a class's address list, as jheppub's `\emailAdd` is (`owner=sequence`,
+  // `\lx@add@contact@list`): each address goes to the author it spells, else to the n-th author while the list is one
+  // address per author in their order, else to the author block (`sequenced_contact_labels`); a grouped address is
+  // written out, one address each (`\lx@split@addresses`), or kept whole where it is no plain list of addresses. The
+  // section is one call of the list (`\lx@sequence@call`, `\lx@add@contact@list`'s), read line by line: a `\\` and a
+  // further `\emails` start a line in the class (ijcai19.sty:127 `\def\emails{\egroup\par\bgroup\rm}`), so an
+  // address after one is an address of its own (2002.11711's `1871161@stu.neu.edu.cn\\zelei.liu@ntu.edu.sg`;
+  // 2609.15094's `\emails {$^{*}$Corresponding author}` after its list) — [`ijcai_email_lines`].
+  DefMacro!("\\lx@ijcai@emails{}", sub[(list)] {
+    let mut out =
+      mouth::tokenize_internal("\\lx@clear@frontmatter{ltx:contact}[role=email]\\lx@sequence@call").unlist();
+    for line in ijcai_email_lines(&list) {
+      // (a line with no address, `$^{*}$Corresponding author`, is no place of the list and no e-mail: a note, as
+      // jheppub's `\note` files its "Corresponding author." (`role=note`, notes.rs `is_note_macro`), placed by its own
+      // evidence, else the author block's, as `\lx@add@contact@placed` places a contact; 2609.15094)
+      if address_text(&Tokens::new(line.clone())).contains('@') {
+        out.extend([T_CS!("\\lx@split@addresses"), T_BEGIN!(), T_CS!("\\lx@ijcai@email"), T_END!()]);
+      } else {
+        out.extend(mouth::tokenize_internal("\\lx@add@contact@placed[role=note]{}").unlist());
+      }
+      out.push(T_BEGIN!());
+      out.extend(line);
+      out.push(T_END!());
+    }
+    Ok(Tokens::new(out))
+  });
   DefMacro!(
-    "\\lx@ijcai@emails{}",
-    "\\lx@clear@frontmatter{ltx:contact}[role=email]\\lx@splitting{\\lx@ijcai@email}{,}{#1}"
+    "\\lx@ijcai@email{}",
+    "\\lx@add@contact@placed[role=email,owner=sequence]{}{#1}"
   );
-  DefMacro!("\\lx@ijcai@email{}", "\\lx@add@email[labelseq=author]{#1}");
 
   // Superscript markers in author/affiliation blocks carry the affiliation
   // number. Both sides use the "affiliation" prefix so the author's requested
@@ -551,4 +580,72 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     }
   });
   Ok(())
+}
+
+/// The lines of an IJCAI `\emails` section (`\lx@ijcai@emails`): parted at the top level by a line break (`\\`, its
+/// `*` and `[skip]`, `\newline`) and by a further section marker (`\emails`, `\affiliations`), each a new line of the
+/// class's title block (ijcai19.sty:124-130); a line that prints nothing is none. The top level is outside a TeX group
+/// and outside a printed one (`\{ … \}`, `\lbrace … \rbrace`, `\textbraceleft … \textbraceright`): `\{aable, bbaker,\\
+/// ccole\}@x.edu` is one group of three addresses broken over two lines, which `\lx@split@addresses` writes out (review
+/// of 88b r1, probe p1; r2, probe i7).
+fn ijcai_email_lines(list: &Tokens) -> Vec<Vec<Token>> {
+  let breaks = [
+    T_CS!("\\\\"),
+    T_CS!("\\newline"),
+    T_CS!("\\emails"),
+    T_CS!("\\affiliations"),
+  ];
+  let v = list.unlist_ref();
+  let mut lines: Vec<Vec<Token>> = vec![Vec::new()];
+  let mut depth = 0usize;
+  let mut printed = 0usize;
+  let mut at = 0;
+  while at < v.len() {
+    let t = v[at];
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ if t == T_CS!("\\{") || t == T_CS!("\\lbrace") || t == T_CS!("\\textbraceleft") => {
+        printed += 1
+      },
+      _ if t == T_CS!("\\}") || t == T_CS!("\\rbrace") || t == T_CS!("\\textbraceright") => {
+        printed = printed.saturating_sub(1)
+      },
+      _ => {},
+    }
+    if depth == 0 && printed == 0 && breaks.contains(&t) {
+      at += 1;
+      if t == T_CS!("\\\\") {
+        // (`\\*`, `\\[1ex]`: the break's own arguments)
+        let mut next = at + v[at..].iter().take_while(|t| **t == T_SPACE!()).count();
+        if v.get(next) == Some(&T_OTHER!("*")) {
+          next += 1;
+          at = next;
+        }
+        if v.get(next) == Some(&T_OTHER!("["))
+          && let Some(close) = v[next..].iter().position(|t| *t == T_OTHER!("]"))
+        {
+          at = next + close + 1;
+        }
+      }
+      lines.push(Vec::new());
+      continue;
+    }
+    lines.last_mut().expect("a line").push(t);
+    at += 1;
+  }
+  // (without the spaces around it, the end of the line before: `…,\\` then `wenqian@u.nus.edu`, 2304.11989)
+  lines
+    .into_iter()
+    .map(|line| {
+      let lead = line.iter().take_while(|t| **t == T_SPACE!()).count();
+      let trail = line[lead..]
+        .iter()
+        .rev()
+        .take_while(|t| **t == T_SPACE!())
+        .count();
+      line[lead..line.len() - trail].to_vec()
+    })
+    .filter(|line| !prints_nothing(&Tokens::new(line.clone())))
+    .collect()
 }

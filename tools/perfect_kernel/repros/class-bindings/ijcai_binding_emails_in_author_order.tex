@@ -1,0 +1,29 @@
+% witness: 2105.02711, 1905.13566, 2308.08563 (the ijcai binding's `\author`, ijcai.sty.ltxml; the stand-in below,
+%          named ijcai.sty for pdflatex, is ijcai19.sty's `\maketitle`, :101-130)
+% oracle:  pdflatex 0 errors: "Ann Able , Bob Baker and Cid Cole / Univ X / x1@a.org, y2@b.org, z3@c.org"
+% engines: rust int117a = 0 errors, the n-th address on the n-th author (Perl ijcai.sty.ltxml:50-53); Perl: the same
+% expect:  0 errors, 0 warnings; the same: a list of one address per author that no spelling contradicts is in author
+%          order (FIDELITY_CHARTER §4, OD #805, #908); x1@ Ann Able's, y2@ Bob Baker's, z3@ Cid Cole's
+% status:  GREEN (int117a, kept by 88b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ijcai.sty}
+\ProvidesPackage{ijcai}
+\def\maketitle{\par\begingroup\@maketitle\endgroup
+  \let\maketitle\relax \let\@maketitle\relax
+  \gdef\@author{}\gdef\@title{}}
+\def\@maketitle{\vbox{\centering{\LARGE\bf \@title \par}\vskip 0.2in
+  {\def\and{\unskip\thinspace{\rm ,}\enspace}%
+   \def\And{\unskip\enspace{\rm and}\enspace}%
+   \def\affiliations{\egroup\par\bgroup\rm}%
+   \def\emails{\egroup\par\bgroup\rm}%
+   \bgroup\bf\@author\egroup}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{ijcai}
+\title{T}
+\author{Ann Able\and Bob Baker\And Cid Cole
+\affiliations Univ X
+\emails x1@a.org, y2@b.org, z3@c.org}
+\begin{document}
+\maketitle
+\end{document}

@@ -8,6 +8,8 @@ mod queue_digest;
 pub use queue_digest::*;
 mod place;
 pub use place::*;
+mod label_refs;
+pub use label_refs::*;
 mod field_ink;
 pub use field_ink::*;
 mod titlepage_layout;
