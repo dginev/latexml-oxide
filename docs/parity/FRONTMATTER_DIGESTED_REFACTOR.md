@@ -34,7 +34,7 @@ this doc is its living plan. The inventory it rests on is `~/data/pk_agents/main
 
 | Group | Where (representative) | Replaced by |
 |---|---|---|
-| Observer writer/comparator re-parse `tex` | `writer/dom.rs:79`, `fmshadow/mod.rs:100` (two diverging copies); `relocate.rs:489` `shown_marks` (MARK_SWITCHES[32]); `author_block/name_text.rs:1224` `is_name_mark` | XMath shape: `XMApp[@role='FLOATSUPERSCRIPT']` last non-hint child = a mark; `POSTSUPERSCRIPT` base = text (`tex_math.rs:1980,2004`); XMHint = spacing |
+| Observer writer/comparator re-parse `tex` — **done (90a, OD #911)** | `writer/dom.rs`, `fmshadow/mod.rs`, `relocate.rs` `shown_marks`, `author_block/name_text.rs` `is_name_mark` now call `observer::marks::read_formula` | XMath shape (as digested and as parsed); `relocate::printed_marks` splits a mark's printed text |
 | Writer cut walk-back | 88c `plan.rs` `piece_tokens`/`mark_formula_ends` (not merged) | event `Mark.formula_span` + `Mark.ends_formula` (to add) |
 | Binding pre-splitters | `defs/author_macros.rs:591` `ijcai_email_lines`; `defs/general.rs:211` `\lx@split@addresses` (brace list :233-244); `frontmatter_fields.rs:117,520,547,593,742`; `relocate.rs:693-717` revtex group rule | rehearse the section; Break (non-`group` role); printed-brace depth from ink; `resolver/labels.rs:446` `addresses_in` on printed text |
 | Label keys | `frontmatter_api.rs:786,799` → `queue_digest.rs:212-300` `clean_frontmatter_labels` (FONT_SWITCH[19], spacing, `\ref{`); `insert.rs:689` `unanswered_mark_text` | `Mark.label` = printed text of the digested operand (**needs a user ruling**: departs from Perl's ToString labels) |
@@ -42,7 +42,10 @@ this doc is its living plan. The inventory it rests on is `~/data/pk_agents/main
 | Per-class Rust parsers (38 files) | ptephy_cls, osa_journal_sty, amsppt, aistats, interspeech, epl, eptcs, … | the binding declares its commands' events (rehearsal bindings + `policy`); migrate with each family |
 
 Six diverging switch lists disappear with their callers: SWITCHES[33] (88c), MARK_SWITCHES[32], FONT_SWITCH[19],
-NAME_TEXT_COMMANDS[38], PLAIN_FONT_COMMANDS[8], FONT_WRAPPERS[16].
+NAME_TEXT_COMMANDS[38], PLAIN_FONT_COMMANDS[8], FONT_WRAPPERS[16]. MARK_SWITCHES and MARK_SPACING[4] have only token
+callers left since stage 1 (`relocate::script_marks` through `past_mark_switches`: the `\lx@frontmatter@sup` label keys,
+`author_macros.rs:254`, and revtex's group rule, `content_marks`/`group_shares_the_mark`; `notes::leads_with_mark`):
+they stay for stages 3–5.
 
 ## Gaps in the event model (to add, shadow-only first)
 
@@ -57,7 +60,17 @@ NAME_TEXT_COMMANDS[38], PLAIN_FONT_COMMANDS[8], FONT_WRAPPERS[16].
 ## Stages (smallest risk first; each its own batch, red/green, census A/B)
 
 1. **XML readers** (writer view, comparator, `shown_marks`, `is_name_mark`): read the XMath shape; merge the two
-   copies into one reader. Settled 2026-10-29 (`agent_reports/2026-10-29_rf1_xmath_shapes.md`): the writer
+   copies into one reader. **Landed in 90a** (OD #911, `observer::marks::read_formula`, guards
+   `perfect_kernel_batch90a`). The rule: a floating script is a mark unless the item printed right after it is a
+   letter or digit; a blank box before `^` is no ink; subscripts stay in a base; a script on printed text is on a
+   base; an application, digested or parsed, is read through only when LaTeXML lays it out as a row (an infix role,
+   `POSTFIX`, `Apply:?:?`, a script on its base: Perl `Post/MathML.pm`) and holds a script, in print order, its silent
+   operator none (`$Ann^{1}$` as `⁢(A, n, n¹)` reads as the digested `A n n ^1`); a two-dimensional layout (a
+   fraction, a root, an accent, an enclosure, limits) is one printed item, and so is a big operator with its body
+   (which Perl rows — read as one item on the safe side), so `$\frac{a}{b^{1}}$` ends
+   on no script. The token-only callers of `MARK_SWITCHES`/`MARK_SPACING` (through `relocate::script_marks`: the
+   `\lx@frontmatter@sup` label keys, `defs/author_macros.rs:254`; revtex's `content_marks`/`group_shares_the_mark`;
+   `notes::leads_with_mark`) stay for stages 3–5. Settled 2026-10-29 (`agent_reports/2026-10-29_rf1_xmath_shapes.md`): the writer
    (`insert.rs:98` → `writer/mod.rs:63,73` → `dom.rs:79`) reads every formula *before* `finish_document`'s rewrite
    (`core_interface.rs:632`, the `tex_math.rs:2046` floating-script → `ltx:sup` rule) and math parse (`:654`), so it
    sees the digested shape: `XMApp[@role='FLOATSUPERSCRIPT']` (or `POSTSUPERSCRIPT` after base tokens) holding
@@ -70,10 +83,14 @@ NAME_TEXT_COMMANDS[38], PLAIN_FONT_COMMANDS[8], FONT_WRAPPERS[16].
    rewrite will make. Font switches and spacing commands never appear — the six switch lists go.
 2. **Event-model additions** (gaps 1–5): additive, shadow-only; checked offline with `ab_audit fmshadow --re-resolve`.
 3. **Writer cut** on `formula_span`/`ends_formula`; absorbs 88c (font-switched marks, 2105.07958; the isotope class;
-   q17's mid-line unowned mark as text). Gate: the revtex/ams census A/B.
-4. **Labels as printed** (after the user's ruling): every family; the marked-path guards.
+   q17's mid-line unowned mark as text; the q18b/x2 cut path, 90a's RED repros, among them amsart's `$\,^{1}$` address
+   lines, 0804.4669's shape, `amsart_address_spaced_marks_cut_with_their_lines`) and `notes::leads_with_mark`. Gate: the
+   revtex/ams census A/B.
+4. **Labels as printed** (after the user's ruling): every family; the marked-path guards; the `\lx@frontmatter@sup`
+   label keys (`author_macros.rs:254` → `script_marks`).
 5. **Pre-splitters onto the rehearsal**: ijcai e-mails, `\lx@split@addresses` → `addresses_in`, `\inst` marks,
-   `\thanks`-as-affiliations, revtex's group rule.
+   `\thanks`-as-affiliations, revtex's group rule (`content_marks`/`group_shares_the_mark`). With the last token
+   caller gone, `MARK_SWITCHES` and `MARK_SPACING` go.
 6. **Provenance as a schema attribute** (user 2026-10-29: the archival tier records how each creator and contact was
    decided as a schema attribute): one `LaTeXML.model`/RelaxNG attribute on `ltx:creator`/`ltx:contact` carrying the
    resolver's decision (spelled, marks, order, the group's only author, the corresponding author, the block, the

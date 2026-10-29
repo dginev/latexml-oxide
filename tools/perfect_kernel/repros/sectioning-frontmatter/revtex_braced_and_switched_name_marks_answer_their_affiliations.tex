@@ -1,0 +1,22 @@
+% mechanism: the marks a name shows (`relocate::shown_marks`, which answers each marked affiliation with the authors
+%   showing its mark) are read from the formula's digested XMath (`observer::marks::read_formula`): `${^2}$` (a group
+%   that is the whole formula) and `$\rm ^{1}$` (a switch before the script) are floating superscripts, marks — a `tex`
+%   reading saw `{^2}` and `\rm{}^{1}` open with no `^` and showed none, so Bob and Cid answered no affiliation
+% witness: 2002.12524 (`Po-Hao Chou${^2}$`), 2006.00536 (`Radoslaw Ryblewski${^1}$`); 2105.07958 (`$\rm ^a$`)
+% oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "Ann Able1 , Bob Baker2 , and Cid Cole1" over "1 Univ X", "2 Univ Y"
+% engines: rust int118a: Ann "Univ X", Bob and Cid none, "Univ Y" a nameless creator's (writer `declined: the
+%   creators' names`); 90a: Ann and Cid "Univ X", Bob "Univ Y" (writer `same`)
+% expect:  0 errors, 0 warnings; Able: Univ X; Baker: Univ Y; Cole: Univ X
+% status:  RED (int118a) -> GREEN (90a; perfect_kernel_batch90a::a_formula_mark_on_a_name_answers_its_affiliation)
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker${^2}$}
+\author{Cid Cole$\rm ^{1}$}
+\affiliation{$^{1}$Univ X}
+\affiliation{$^{2}$Univ Y}
+\maketitle
+Text.
+\end{document}

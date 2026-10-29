@@ -1,0 +1,18 @@
+% mechanism: the writer's cut of one call at its marks takes each piece's tokens from the call (`writer::plan`
+%   `piece_tokens`); a switch inside the mark's formula before its script (`$\rm ^{1}$`) must go with its piece — a
+%   token reading, refactor stage 3 (the cut on the event's formula span); the key reads the mark (90a)
+% witness: 2105.07958 (`$\rm ^a$`; this cut of one `\affiliation` is its sibling on the cut path)
+% oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "Ann Able1 and Bob Baker2" over "1 Univ X", "2 Univ Y"
+% engines: rust int118a, 90a: both authors' affiliation "1Univ X2Univ Y" (writer `declined: Affiliation univx: reading
+%   [Creator(0)], written []`, the piece no balanced run); 88c (not merged): GREEN
+% expect:  0 errors, 0 warnings; writer `written`; Able: 1 Univ X; Baker: 2 Univ Y
+% status:  RED (int118a, 90a; catalog, no guard) -> GREEN with refactor stage 3
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\affiliation{$\rm ^{1}$Univ X\\ $\rm ^{2}$Univ Y}
+\maketitle
+Text.
+\end{document}

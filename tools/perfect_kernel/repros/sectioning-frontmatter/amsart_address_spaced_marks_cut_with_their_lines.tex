@@ -1,0 +1,19 @@
+% mechanism: amsart's merged `\address` is cut at its marks by the writer (`writer::plan`), which reads the call's
+%   tokens: a thin space before each line's script (`$\,^{1}$`) is no balanced mark piece, so the cut declines and the
+%   merged address goes to the last author. The reader calls the formula a mark (`observer::marks::read_formula`, 90a);
+%   the cut on the event's formula span is refactor stage 3
+% witness: 0804.4669 (`\,^{3}`); review 90a r2 P1 (probe AFs17; its siblings `${\rm ^1}$`, `$\rm ^1$`,
+%   `$\mbox{ }^1$`, `$\text{$^1$}$` decline alike)
+% oracle:  pdflatex (TL 2025 amsart) 0 errors: "ANN ABLE1, BOB BAKER2" / "Text." / "1 Univ X, 2 Univ Y"
+% engines: rust int118a, 90a: Able no contact, Baker `address=1 Univ X 2 Univ Y` (writer `declined: Affiliation univx:
+%   reading [Creator(0)], written []`)
+% expect:  0 errors, 0 warnings; writer `written`; Able: 1 Univ X; Baker: 2 Univ Y
+% status:  RED (int118a, 90a; catalog, no guard) -> GREEN with refactor stage 3
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$}\address{$\,^{1}$Univ X\\ $\,^{2}$Univ Y}
+\maketitle
+Text.
+\end{document}

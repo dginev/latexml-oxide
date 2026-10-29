@@ -1,0 +1,17 @@
+% mechanism: a script on a printed base is no mark, the base the item's text (`observer::marks::read_formula`: digested,
+%   the digits then a `POSTSUPERSCRIPT`; parsed, a `scriptpos="post1"` script on "97403"), so the writer's view and the
+%   comparator key "Univ Y, OR 97403", as the observer's lexer reads the line: the writer's outcome `same`
+% witness: 2203.01892 (`OR $97403^{1}$`), 0707.4047 (`Ul. Ainy $299^A$`)
+% oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "Ann Able1 and Bob Baker2" over "1 Univ X", "2 Univ Y, OR 97403³"
+% engines: rust int118a, 90a: writer `same`; Able: Univ X; Baker: "Univ Y, OR 97403 3" (the parsed formula's text)
+% expect:  0 errors, 0 warnings; writer `same`; Able: Univ X; Baker: Univ Y, OR 97403 3
+% status:  GREEN (int118a, 90a; perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text)
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\affiliation{$^{1}$Univ X\\ $^{2}$Univ Y, OR $97403^{3}$}
+\maketitle
+Text.
+\end{document}

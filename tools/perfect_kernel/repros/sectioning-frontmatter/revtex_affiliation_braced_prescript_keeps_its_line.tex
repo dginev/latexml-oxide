@@ -1,0 +1,18 @@
+% mechanism: as revtex_affiliation_isotope_prescript_keeps_its_line.tex, unswitched: `${^{3}He}$` is no mark (the
+%   structural reader reads it so); the writer's cut of the line at its marks (`writer::plan`) still sends "He Lab" off
+%   — the cut reads tokens, refactor stage 3
+% witness: 2105.07958 (the prescript class of its `$\rm ^a$` mark; reviewer probe q18b)
+% oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "2 Univ Y, 3He Lab" on Baker's line
+% engines: rust int118a, 90a: `written-different: Affiliation helab: reading [Block], written []`, 1 Warning, Baker
+%   "2Univ Y" and "H 3 e Lab" a nameless creator's
+% expect:  0 errors, 0 warnings; writer `declined`; Able: Univ X; Baker: Univ Y, ³He Lab (the whole line)
+% status:  RED (int118a, 90a; catalog, no guard) -> GREEN with the cut on the formula's span (refactor stage 3)
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\affiliation{$^{1}$Univ X\\ $^{2}$Univ Y, ${^{3}He}$ Lab}
+\maketitle
+Text.
+\end{document}

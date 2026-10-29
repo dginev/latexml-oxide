@@ -178,12 +178,14 @@ fn block_items_and_joined_pieces() {
 }
 
 /// FM S2a.2 r3 normalisation: a name's marks the XML holds as text (`R. Vasile 1`, 0807.4407) or as a floating
-/// superscript formula (`Dadhich${}^{a,\;b}$`, 1307.6166; `\,^{3}`, 0804.4669) are no text of the name.
+/// superscript formula (`Dadhich${}^{a,\;b}$`, 1307.6166, its list a dual; `\,^{3}`, 0804.4669; a name's
+/// `{}^{1}\quad`, its float wrapped with the space) are no text of the name — read from the parsed XMath as the
+/// final XML holds it (`fm_read_formula`), not from its `tex`.
 #[test]
 fn marks_as_text_or_formulas_are_no_name_text() {
   let xml = xml_tuples(
     format!(
-      r#"{HEAD}<creator><personname>R. Vasile 1</personname></creator><creator><personname>Naresh Dadhich<Math tex="{{}}^{{a,\;b}}" text="x"><XMath><XMTok>a</XMTok></XMath></Math></personname></creator><creator><personname>Roberta Zambrini<Math tex="\,^{{3}}" text="x"><XMath><XMTok>3</XMTok></XMath></Math></personname></creator></document>"#
+      r#"{HEAD}<creator><personname>R. Vasile 1</personname></creator><creator><personname>Naresh Dadhich<Math tex="{{}}^{{a,\;b}}" text="x"><XMath><XMApp role="FLOATSUPERSCRIPT" scriptpos="1"><XMDual><XMApp><XMTok meaning="list"/><XMRef idref="m1.1"/><XMRef idref="m1.2"/></XMApp><XMWrap><XMTok xml:id="m1.1">a</XMTok><XMTok role="PUNCT">,</XMTok><XMTok xml:id="m1.2">b</XMTok></XMWrap></XMDual></XMApp></XMath></Math></personname></creator><creator><personname>Roberta Zambrini<Math tex="\,^{{3}}" text="x"><XMath><XMApp role="FLOATSUPERSCRIPT"><XMTok>3</XMTok></XMApp></XMath></Math></personname></creator><creator><personname>Cid Cole<Math tex="{{}}^{{1}}\quad"><XMath><XMDual><XMRef idref="m14.1"/><XMWrap><XMApp role="FLOATSUPERSCRIPT" scriptpos="1" xml:id="m14.1"><XMTok>1</XMTok></XMApp><XMHint name="quad" role="PUNCT" width="10pt"/></XMWrap></XMDual></XMath></Math></personname></creator></document>"#
     )
     .as_bytes(),
   )
@@ -195,6 +197,7 @@ fn marks_as_text_or_formulas_are_no_name_text() {
       a,
       creator("Naresh Dadhich", &[], ""),
       creator("Roberta Zambrini", &[], ""),
+      creator("Cid Cole", &[], ""),
     ],
     ..Tuples::default()
   };
@@ -214,6 +217,184 @@ fn a_superscript_inside_a_word_is_its_letters() {
   .expect("xml");
   let names: Vec<&str> = xml.creators.iter().map(|c| c.name.as_str()).collect();
   assert_eq!(names, ["I. M. McHardy", "James McKernan"]);
+}
+
+/// The parsed XMath's other shapes, as `fm_read_formula` reads them: a prescript on a printed base is the formula's
+/// text, no mark (an isotope, `${\rm ^{3}He}$`: `scriptpos="pre2"` on "He"); a script on a base is the base's text, in
+/// a name (`\text{Leon Bello}^{1,3}`, 2011.08099) and an affiliation (`OR $97403^{1}$`, 2203.01892) alike; a prescript
+/// on a closing parenthesis prints no word after it, a mark (`$^{a})$`, cond-mat9808038).
+#[test]
+fn a_parsed_prescript_on_a_word_is_text_a_script_on_a_base_the_base() {
+  let xml = xml_tuples(
+    format!(
+      r#"{HEAD}<creator><personname><Math><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMText>Leon Bello</XMText><XMTok>1,3</XMTok></XMApp></XMath></Math></personname><contact role="affiliation">Lab <Math><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok>He</XMTok><XMTok>3</XMTok></XMApp></XMath></Math>, OR <Math><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok>97403</XMTok><XMTok>1</XMTok></XMApp></XMath></Math></contact><contact role="affiliation"><Math><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre1"/><XMTok role="CLOSE">)</XMTok><XMTok>a</XMTok></XMApp></XMath></Math>Univ Y</contact></creator></document>"#
+    )
+    .as_bytes(),
+  )
+  .expect("xml");
+  let [creator] = xml.creators.as_slice() else {
+    panic!("{xml:?}")
+  };
+  assert_eq!(creator.name, "Leon Bello");
+  // (the prescript before its base, as printed and as the writer reads the digested shape: "3He", not "He3")
+  assert_eq!(creator.affiliations, ["Lab 3He, OR 97403", "Univ Y"]);
+}
+
+/// The writer reads a formula as digested, the comparator as parsed: the same reading of both (`fm_read_formula`)
+/// and the same text (`text_without_marks`). The parser nests a script on the last item of a word under that word's
+/// invisible times (`$Ann^{1}$`, `$\mathrm{Ann~Able}^{1}$`), and a hyphenated word's under its minus
+/// (`$Smith-Jones^1$`): the application's arguments in print order, its silent operator none (review 90a r2 F1).
+/// An isotope's prescript prints before its base in both (`{\rm ^{3}He}`: "3He"); an application holding no script is
+/// one printed item, an accented letter a letter (`$^{1}\mathrm{\acute{e}}$`, no mark). A two-dimensional layout is one
+/// printed item in both vocabularies, its text in document order: a script under a fraction's bar, a root's sign, a box
+/// or an accent (`\frac{a}{b^1}`, `\sqrt{x^1}`, `\sqrt[3]{x^1}`, `\boxed{x^1}`, `\hat{x^1}`) is no script the formula
+/// ends on (review 90a r3 F1; Perl `Post/MathML.pm` `mfrac`, `msqrt`, `mroot`, `menclose`, `mover`).
+#[test]
+fn the_writer_and_the_comparator_read_a_formula_alike() {
+  let tok = |t: &str| format!("<XMTok role=\"UNKNOWN\">{t}</XMTok>");
+  let toks = |w: &str| w.chars().map(|c| tok(&c.to_string())).collect::<String>();
+  let post = r#"<XMApp role="POSTSUPERSCRIPT" scriptpos="1"><XMArg rule="Superscript"><XMTok role="NUMBER">1</XMTok></XMArg></XMApp>"#;
+  let times = |kids: &str| {
+    format!(
+      r#"<XMApp><XMTok meaning="times" role="MULOP">{}</XMTok>{kids}</XMApp>"#,
+      '\u{2062}'
+    )
+  };
+  let on = |base: &str| {
+    format!(
+      r#"<XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>{base}<XMTok role="NUMBER">1</XMTok></XMApp>"#
+    )
+  };
+  let hint = r#"<XMHint width="3.3pt"/>"#;
+  let acute = '\u{b4}';
+  let shapes = [
+    // (digested, parsed, the reading)
+    (
+      format!("{}{post}", toks("Ann")),
+      times(&format!("{}{}", toks("An"), on(&tok("n")))),
+      FmFormulaMarks::OnBase {
+        base:    "Ann".into(),
+        scripts: vec!["1".into()],
+      },
+    ),
+    (
+      format!("{}{hint}{}{post}", toks("Ann"), toks("Able")),
+      times(&format!("{}{}", tok("Ann"), on(&tok("Able")))),
+      FmFormulaMarks::OnBase {
+        base:    "AnnAble".into(),
+        scripts: vec!["1".into()],
+      },
+    ),
+    (
+      format!(
+        r#"{}<XMTok meaning="minus" role="ADDOP">-</XMTok>{}{post}"#,
+        toks("Smith"),
+        toks("Jones")
+      ),
+      format!(
+        r#"<XMApp><XMTok meaning="minus" role="ADDOP">-</XMTok>{}{}</XMApp>"#,
+        times(&toks("Smith")),
+        times(&format!("{}{}", toks("Jone"), on(&tok("s"))))
+      ),
+      FmFormulaMarks::OnBase {
+        base:    "Smith-Jones".into(),
+        scripts: vec!["1".into()],
+      },
+    ),
+    (
+      format!(
+        r#"<XMApp role="FLOATSUPERSCRIPT" scriptpos="2"><XMArg rule="Superscript"><XMTok role="NUMBER">3</XMTok></XMArg></XMApp>{}"#,
+        toks("He")
+      ),
+      format!(
+        r#"<XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/>{}<XMTok role="NUMBER">3</XMTok></XMApp>"#,
+        tok("He")
+      ),
+      FmFormulaMarks::Other,
+    ),
+    (
+      // (`$^{1}\mathrm{\acute{e}}$`: an accented letter is one printed item, a letter after the prescript)
+      format!(
+        r#"<XMApp role="FLOATSUPERSCRIPT" scriptpos="1"><XMArg rule="Superscript"><XMTok role="NUMBER">1</XMTok></XMArg></XMApp><XMApp><XMTok name="acute" role="OVERACCENT">{acute}</XMTok><XMArg>{}</XMArg></XMApp>"#,
+        tok("e")
+      ),
+      format!(
+        r#"<XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre1"/><XMApp><XMTok name="acute" role="OVERACCENT">{acute}</XMTok>{}</XMApp><XMTok role="NUMBER">1</XMTok></XMApp>"#,
+        tok("e")
+      ),
+      FmFormulaMarks::Other,
+    ),
+  ];
+  // (the two-dimensional layouts: as digested, each argument an `XMArg`, the script beside its base; as parsed, the
+  // script applied to its base)
+  let x1 = format!("{}{post}", tok("x"));
+  let on_x = on(&tok("x"));
+  let frac = r#"<XMTok meaning="divide" role="FRACOP"/>"#;
+  let sqrt = r#"<XMTok meaning="square-root"/>"#;
+  let root = r#"<XMTok meaning="nth-root"/>"#;
+  let hat = r#"<XMTok name="hat" role="OVERACCENT">^</XMTok>"#;
+  let three = r#"<XMTok meaning="3" role="NUMBER">3</XMTok>"#;
+  let layouts = [
+    (
+      format!(
+        "<XMApp>{frac}<XMArg>{}</XMArg><XMArg>{}{post}</XMArg></XMApp>",
+        tok("a"),
+        tok("b")
+      ),
+      format!("<XMApp>{frac}{}{}</XMApp>", tok("a"), on(&tok("b"))),
+    ),
+    (
+      format!("<XMApp>{sqrt}<XMArg>{x1}</XMArg></XMApp>"),
+      format!("<XMApp>{sqrt}{on_x}</XMApp>"),
+    ),
+    (
+      format!("<XMApp>{root}<XMArg>{three}</XMArg><XMArg>{x1}</XMArg></XMApp>"),
+      format!("<XMApp>{root}{three}{on_x}</XMApp>"),
+    ),
+    (
+      format!(r#"<XMArg enclose="box">{x1}</XMArg>"#),
+      format!(
+        r#"<XMApp enclose="box"><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>{}<XMTok role="NUMBER">1</XMTok></XMApp>"#,
+        tok("x")
+      ),
+    ),
+    (
+      format!("<XMApp>{hat}<XMArg>{x1}</XMArg></XMApp>"),
+      format!("<XMApp>{hat}{on_x}</XMApp>"),
+    ),
+  ];
+  let shapes = shapes.into_iter().chain(
+    layouts
+      .into_iter()
+      .map(|(digested, parsed)| (digested, parsed, FmFormulaMarks::Other)),
+  );
+  for (digested, parsed, reading) in shapes {
+    // (the digested document unindented, as the writer holds it; the final XML indented, as the comparator reads it)
+    let read = |xmath: &str, indent: bool| {
+      let xmath = if indent {
+        xmath.replace("><", ">\n<")
+      } else {
+        xmath.to_string()
+      };
+      let xml = format!(
+        "<personname xmlns=\"http://dlmf.nist.gov/LaTeXML\">Lab <Math>\n<XMath>\n{}\n</XMath>\n</Math></personname>",
+        xmath
+      );
+      let doc = parse(xml.as_bytes()).expect("xml");
+      let math = doc
+        .root_element()
+        .children()
+        .find(|n| is_ltx(*n, "Math"))
+        .expect("Math");
+      (
+        fm_read_formula(&XmlNode(math)),
+        norm(&text_without_marks(doc.root_element())),
+      )
+    };
+    let (d, p) = (read(&digested, false), read(&parsed, true));
+    assert_eq!(d.0, reading, "{digested}");
+    assert_eq!(p, d, "{parsed}");
+  }
 }
 
 /// FM S2a.2 r3 classes: names parted only by a mark or a note merged into one personname (1609.02129); a url whose text is an

@@ -1,0 +1,21 @@
+% mechanism: as revtex_font_switched_address_mark_keys_its_entry.tex, the switch on the names' marks (`$\rm ^{2,a}$`)
+%   and inside a group that is the whole formula (`${\rm ^a}$`): digested, both one floating superscript, the group
+%   no element of the XMath (`observer::marks::read_formula`)
+% witness: 2105.07958 (its `$\rm ^a$`; these two spellings are the siblings)
+% oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "Ann Able1 and Bob Baker2,a", the e-mail under mark a
+% engines: rust int118a: both authors' affiliation "aEmail: bob.baker@y.org", the names' marks unread (writer
+%   `declined: the creators' names`); 90a: writer `written`
+% expect:  0 errors, 0 warnings; writer `written`; Able: Univ X; Baker: a Email: bob.baker@y.org, Univ Y — that order
+%   today's residual, not TeX's (RED repro revtex_marked_address_contacts_in_print_order.tex)
+% status:  RED (int118a) -> GREEN (90a; perfect_kernel_batch90a::a_formula_printing_only_floating_scripts_is_a_mark)
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$\rm ^{1}$ and Bob Baker$\rm ^{2,a}$}
+\address{$^1$Univ X}
+\address{$^2$Univ Y}
+\address{${\rm ^a}$Email: bob.baker@y.org}
+\maketitle
+Text.
+\end{document}

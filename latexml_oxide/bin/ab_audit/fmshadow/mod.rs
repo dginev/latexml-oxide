@@ -25,13 +25,14 @@ use std::{
 };
 
 use latexml_engine::base_utilities::{
-  FmAssoc, FmEvent, FmEventKind, FmInput, FmResolved, FmSepKind, fm_addresses_in, fm_creator_call,
+  FmAssoc, FmEvent, FmEventKind, FmFormulaMarks, FmInput, FmMathNode, FmResolved, FmSepKind,
+  fm_addresses_in, fm_creator_call, fm_glued_in_a_word, fm_printed_children, fm_read_formula,
 };
 use roxmltree::Node;
 use serde_json::Value;
 
 use crate::{
-  facts::{collapse, is_ltx, parse},
+  facts::{LTX_NS, collapse, is_ltx, parse},
   tree::{discover, par_map},
 };
 
@@ -94,64 +95,27 @@ pub fn norm(text: &str) -> String {
     .collect()
 }
 
-/// The text a formula in a name prints when it is a mark: none for a floating superscript (`{}^{a,\;b}`, `^{1}`:
-/// revtex names written `Dadhich${}^{a,\;b}$`, 1307.6166); the name for `\text{Leon Bello}^{1,3}` (2011.08099); `None`
-/// for any other formula (its text kept).
-fn math_mark_text(math: Node<'_, '_>) -> Option<String> {
-  let mut tex = math.attribute("tex")?.trim();
-  // (spacing before the script, braced too: `\,^{3}`, 0804.4669; `{\,\!}^{1,2}`, 2112.13115)
-  loop {
-    if let Some(rest) = [r"\,", r"\;", r"\!", r"\ ", "~", "{}"]
-      .iter()
-      .find_map(|p| tex.strip_prefix(p))
-    {
-      tex = rest.trim_start();
-    } else if let Some(rest) = tex.strip_prefix('{').and_then(|inner| {
-      let close = inner.find('}')?;
-      let group = inner[..close]
-        .replace([',', ';', '!', '~'], "")
-        .replace('\\', "");
-      group.trim().is_empty().then(|| &inner[close + 1..])
-    }) {
-      tex = rest.trim_start();
-    } else {
-      break;
-    }
-  }
-  if tex.starts_with('^') {
-    return Some(String::new());
-  }
-  for command in [r"\text{", r"\textrm{", r"\mbox{", r"\mathrm{"] {
-    if let Some(rest) = tex.strip_prefix(command)
-      && let Some(close) = rest.find('}')
-      && rest[close + 1..].trim_start().starts_with('^')
-    {
-      return Some(rest[..close].to_string());
-    }
-  }
-  None
-}
+/// A node of the final XML for the frontmatter's one reading of a formula ([`fm_read_formula`], which the observer's
+/// writer applies to the document as digested).
+#[derive(Clone, Copy)]
+struct XmlNode<'a, 'input>(Node<'a, 'input>);
 
-/// The text of `node` without its `ltx:sup` descendants (a name's or an affiliation's marks), its notes, nor a note's
-/// `ltx:tags` (its number and reference names, "* footnote * footnote Footnote …"); a formula that is a mark as
-/// [`math_mark_text`] reads it.
-fn text_without_marks(node: Node<'_, '_>) -> String { text_without(node, false) }
+impl FmMathNode for XmlNode<'_, '_> {
+  fn ltx_name(&self) -> Option<String> {
+    (self.0.is_element() && matches!(self.0.tag_name().namespace(), None | Some(LTX_NS)))
+      .then(|| self.0.tag_name().name().to_string())
+  }
 
-/// An affiliation's text as [`text_without_marks`], a formula's superscript a mark too (`OR $97403^{1}$`,
-/// `Ul. Ainy $299^A$`: the base its text — the lexer's reading of a formula, `events.rs` `walk_math`; 2203.01892,
-/// 0707.4047).
-fn affiliation_text(node: Node<'_, '_>) -> String { text_without(node, true) }
+  fn attribute(&self, name: &str) -> Option<String> { self.0.attribute(name).map(str::to_string) }
 
-/// A formula `<base>^{…}` (or `<base>^x`) whose base is a word or a number: that base.
-fn math_base(math: Node<'_, '_>) -> Option<String> {
-  let tex = math.attribute("tex")?.trim();
-  let (base, _) = tex.split_once('^')?;
-  let base = base.trim();
-  (!base.is_empty()
-    && base
-      .chars()
-      .all(|c| c.is_alphanumeric() || c == '.' || c == '-'))
-  .then(|| base.to_string())
+  fn children(&self) -> Vec<Self> { self.0.children().map(XmlNode).collect() }
+
+  fn text(&self) -> Option<String> {
+    self
+      .0
+      .is_text()
+      .then(|| self.0.text().unwrap_or("").to_string())
+  }
 }
 
 /// The letters a superscript prints: its text without the spacing of its markup (a formula's `<XMath>` layout).
@@ -165,40 +129,56 @@ fn sup_letters(sup: Node<'_, '_>) -> String {
     .collect()
 }
 
-/// A superscript of lowercase letters glued on both sides to letters (`James M<sup>c</sup>Kernan`, math0610203; a
-/// formula's, `I. M. M$^{\rm c}$Hardy`, 2003.01448): part of the word, as the frontmatter observer's lexer reads it.
-fn inside_a_word(sup: Node<'_, '_>) -> bool {
-  let text = sup_letters(sup);
-  let glued = |side: Option<Node<'_, '_>>, last: bool| {
-    side
-      .filter(|n| n.is_text())
-      .and_then(|n| n.text())
-      .is_some_and(|t| {
-        let c = if last {
-          t.chars().next_back()
-        } else {
-          t.chars().next()
-        };
-        c.is_some_and(char::is_alphabetic)
-      })
-  };
-  (1..=2).contains(&text.chars().count())
-    && text.chars().all(char::is_lowercase)
-    && glued(sup.prev_sibling(), true)
-    && glued(sup.next_sibling(), false)
+/// A superscript (an `ltx:sup`, or a formula that is a mark of one script) of lowercase `letters` glued on both sides to
+/// letters (`James M<sup>c</sup>Kernan`, math0610203; a formula's, `I. M. M$^{\rm c}$Hardy`, 2003.01448): part of the
+/// word, as the frontmatter observer's lexer reads it ([`fm_glued_in_a_word`]).
+fn inside_a_word<'a>(mark: Node<'a, '_>, letters: &str) -> bool {
+  fn side<'a>(n: Option<Node<'a, '_>>) -> Option<&'a str> {
+    n.filter(|n| n.is_text()).and_then(|n| n.text())
+  }
+  fm_glued_in_a_word(
+    letters,
+    side(mark.prev_sibling()),
+    side(mark.next_sibling()),
+  )
 }
 
-fn text_without(node: Node<'_, '_>, scripts: bool) -> String {
-  fn walk(node: Node<'_, '_>, scripts: bool, out: &mut String) {
-    for child in node.children() {
+/// The text of `node` without its `ltx:sup` descendants (a name's or an affiliation's marks), its notes, nor a note's
+/// `ltx:tags` (its number and reference names, "* footnote * footnote Footnote …"); a formula as [`fm_read_formula`]
+/// reads it: a mark prints none (revtex names written `Dadhich${}^{a,\;b}$`, 1307.6166; `\,^{3}`, 0804.4669;
+/// `{\,\!}^{1,2}`, 2112.13115), scripts on a base the base (`\text{Leon Bello}^{1,3}`, 2011.08099; an affiliation's
+/// `OR $97403^{1}$`, `Ul. Ainy $299^A$`: 2203.01892, 0707.4047 — the lexer's reading, `events.rs` `walk_math`), any
+/// other formula its text.
+fn text_without_marks(node: Node<'_, '_>) -> String {
+  fn walk(node: Node<'_, '_>, out: &mut String) {
+    // (in print order, as the writer reads the digested XMath: a prescript before its base, `³He`; the XML's
+    // indentation between an application's children, which the order leaves out, kept as one space before each
+    // child — before each of a digested script application's children too, its text nodes among them, which
+    // `printed_children` returns as they are)
+    let indented = is_ltx(node, "XMApp")
+      && node
+        .children()
+        .any(|c| c.is_text() && c.text().is_some_and(|t| t.trim().is_empty()));
+    for child in fm_printed_children(&XmlNode(node)).into_iter().map(|c| c.0) {
+      if indented {
+        out.push(' ');
+      }
       if child.is_text() {
         out.push_str(child.text().unwrap_or(""));
-      } else if is_ltx(child, "Math")
-        && let Some(text) =
-          math_mark_text(child).or_else(|| scripts.then(|| math_base(child)).flatten())
-      {
-        out.push_str(&text);
-      } else if is_ltx(child, "sup") && inside_a_word(child) {
+      } else if is_ltx(child, "Math") {
+        match fm_read_formula(&XmlNode(child)) {
+          // (one lowercase script glued inside a word is its letters, as an `ltx:sup` of it is)
+          FmFormulaMarks::Marks(scripts) => {
+            if let [letters] = scripts.as_slice()
+              && inside_a_word(child, letters)
+            {
+              out.push_str(letters);
+            }
+          },
+          FmFormulaMarks::OnBase { base, .. } => out.push_str(&base),
+          FmFormulaMarks::Other => walk(child, out),
+        }
+      } else if is_ltx(child, "sup") && inside_a_word(child, &sup_letters(child)) {
         // (a lowercase superscript inside a word is the word's letters, no mark: `M\textsuperscript{c}Kernan`)
         out.push_str(&sup_letters(child));
       } else if child.is_element()
@@ -206,7 +186,7 @@ fn text_without(node: Node<'_, '_>, scripts: bool) -> String {
         && !is_ltx(child, "note")
         && !is_ltx(child, "tags")
       {
-        walk(child, scripts, out);
+        walk(child, out);
       }
       if is_ltx(child, "break") {
         out.push(' ');
@@ -214,7 +194,7 @@ fn text_without(node: Node<'_, '_>, scripts: bool) -> String {
     }
   }
   let mut raw = String::new();
-  walk(node, scripts, &mut raw);
+  walk(node, &mut raw);
   collapse(&raw)
 }
 
@@ -271,11 +251,7 @@ pub fn xml_tuples(xml: &[u8]) -> Result<Tuples, String> {
             }
           }
         }
-        let mut text = if role == "affiliation" || role == "address" {
-          affiliation_text(child)
-        } else {
-          text_without_marks(child)
-        };
+        let mut text = text_without_marks(child);
         // (an ORCID contact prints a logo, its identifier the link's: `<ref href="https://orcid.org/0000-…">`)
         if text.is_empty()
           && let Some(href) = child

@@ -1,0 +1,23 @@
+% mechanism: the observer's writer keys today's items by their text without their marks (`writer::dom`, as `ab_audit
+%   fmshadow` reads the XML), a formula read from its digested XMath (`observer::marks::read_formula`, refactor stage 1):
+%   `$\rm ^a$` is one floating superscript, the switch a token's font, so it is a mark and the address keys as "Email: …"
+% witness: 2105.07958
+% oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "Ann Able1 and Bob Baker2,a" over "1 Univ X", "2 Univ Y", "a Email:
+%   bob.baker@y.org"
+% engines: rust int118a: both authors' affiliation "aEmail: bob.baker@y.org" (writer `declined: Affiliation
+%   emailbobbakeryorg: reading [Creator(1)], written []`, the `tex` `\rm{}^{a}` no mark); 90a: writer `written`
+% expect:  0 errors, 0 warnings; writer `written`; Able: Univ X; Baker: a Email: bob.baker@y.org, Univ Y — that order
+%   today's residual, not TeX's (pdflatex prints "2 Univ Y" first; RED repro
+%   revtex_marked_address_contacts_in_print_order.tex)
+% status:  RED (int118a) -> GREEN (90a; perfect_kernel_batch90a::a_formula_printing_only_floating_scripts_is_a_mark)
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2,a}$}
+\address{$^1$Univ X}
+\address{$^2$Univ Y}
+\address{$\rm ^a$Email: bob.baker@y.org}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,18 @@
+% mechanism: a script with a letter or digit printed after it in its formula is no mark (`observer::marks::read_formula`:
+%   `${\rm ^{3}He}$` digested is a floating superscript, then "H", "e"; parsed, a `scriptpos="pre2"` script on "He"):
+%   the formula's text is the line's, "3He", and the line "Univ Y, ³He Lab" stays whole, Baker's
+% witness: 2105.07958 (`$\rm ^a$`; this prescript is its switched mark's sibling); review 88c r1 probe q24
+% oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "Ann Able1 and Bob Baker2" over "1 Univ X", "2 Univ Y, 3He Lab"
+% engines: rust int118a, 90a: Baker "Univ Y, ³He Lab" (writer `declined: Affiliation helab: reading [Block]`); 88c r1
+%   (a `tex` reading past the switch): "He 3 Lab" a nameless creator's, 1 Warning
+% expect:  0 errors, 0 warnings; writer `declined`; Able: Univ X; Baker: Univ Y, ³He Lab (the whole line)
+% status:  GREEN (int118a, 90a; perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text)
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\affiliation{$^{1}$Univ X\\ $^{2}$Univ Y, ${\rm ^{3}He}$ Lab}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,18 @@
+% mechanism: a marked `\address` whose marks no name carries is cut into its addresses, every piece the block's
+%   (`writer::plan`); stage 3's fail-safe must keep writing it (88c r3's any-piece-to-the-block rule declined it)
+% witness: 1305.3804 (`\author{…}` with no marks, `\address{$^{1}$ …\\ $^{2,3}$ …}`); review 88c r3
+% oracle:  pdflatex (TL 2025 amsart) 0 errors: "ANN ABLE, BOB BAKER" / "Text." / "1 Univ X, 2 Univ Y"
+% engines: rust int118a, 90a: writer `written`, two block addresses; 88c r3 (not merged): writer `declined`, Bob
+%   alone "1Univ X2Univ Y" and Ann none
+% expect:  0 errors, 0 warnings; writer `written`; Able, Baker without contacts; a nameless creator's addresses
+%   "1 Univ X", "2 Univ Y"
+% status:  GREEN (int118a, 90a; catalog, no guard)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able, Bob Baker}
+\address{$^{1}$Univ X\\ $^{2}$Univ Y}
+\maketitle
+Text.
+\end{document}

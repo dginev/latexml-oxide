@@ -1,0 +1,19 @@
+% mechanism: a mark spelled inside a math font command, `$\mathrm{^{1}}$`: digested it is one floating superscript
+%   (the font command makes no element), which the writer's view reads as a mark (`observer::marks::read_formula`,
+%   90a); the observer's lexer does not strip it from the reading's line ("1univx2univy"), so the writer leaves today's
+%   (both lines every author's). The address shape `\address{$\mathrm{^a}$Email: bob.baker@y.org}` declines the same
+% witness: none in frontmatter (19 census papers use `$\mathrm{^…}` anywhere, none in a frontmatter call)
+% oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "Ann Able1 and Bob Baker2" over "1 Univ X", "2 Univ Y"
+% engines: rust int118a, 90a: both authors' affiliation "1Univ X2Univ Y" (writer `declined: Affiliation
+%   1univx2univy`: the reading's key, the lexer's — refactor stage 2)
+% expect:  0 errors, 0 warnings; Able: Univ X; Baker: Univ Y
+% status:  RED (catalog, no guard: the decline is safe)
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\affiliation{$\mathrm{^{1}}$Univ X\\ $\mathrm{^{2}}$Univ Y}
+\maketitle
+Text.
+\end{document}

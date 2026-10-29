@@ -1,0 +1,17 @@
+% mechanism: an enclosure is one printed item (`observer::marks::flatten`, Perl `Post/MathML.pm` L338-342: any node
+%   carrying `enclose` is an menclose): `$\boxed{x^{1}}$` digested is an `XMArg[@enclose='box']` (amsmath.sty.ltxml
+%   :893-895), so its script is no script the line's formula ends on and the address is cut at its marks
+% witness: review 90a r3 probe AFg02 (90a r2 and r3 opened the `XMArg`, read `OnBase{"x"}` and declined, Baker got the
+%   merged address)
+% oracle:  pdflatex (TL 2025 amsart) 0 errors: "ANN ABLE1 , BOB BAKER2" / "Text." / "1 Lab [x1], 2 Lbb [x1]" (boxed)
+% engines: rust int118a: writer `written`; 90a r2, r3: declined, Able no contact; 90a r4: as int118a
+% expect:  0 errors, 0 warnings; writer `written`; Able: 1 Lab x 1; Baker: 2 Lbb x 1
+% status:  GREEN (int118a, 90a; perfect_kernel_batch90a::a_script_inside_a_two_dimensional_layout_ends_no_line)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$}\address{$^{1}$Lab $\boxed{x^{1}}$\\ $^{2}$Lbb $\boxed{x^{1}}$}
+\maketitle
+Text.
+\end{document}

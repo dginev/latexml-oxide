@@ -12,6 +12,9 @@
 //!   discarded.
 //! - [`events`]: the digested list read into events (names, marks, separators, breaks, contacts, notes, layout), each
 //!   with its span of the field's positions (`fieldProv`/`fieldSerial`, core `gullet::field_cover_of`) and its ink.
+//! - [`marks`]: whether a formula in a name or an affiliation is a mark, read from its digested XMath (as digested and
+//!   as parsed), the one reading of the writer's view, `ab_audit fmshadow`, `relocate::shown_marks` and
+//!   `name_text::is_name_mark` (frontmatter refactor stage 1).
 //! - [`resolver`] (S2a.2): the ledger's blocks and API calls read into the frontmatter tuples (creators with their
 //!   names, affiliations, contacts and notes; the block's own), each association with the rule that decided it, under
 //!   the family's conventions from [`policy`] (each binding declares its own at load; read keyed on the binding owning
@@ -30,6 +33,7 @@ use super::*;
 
 pub(in crate::base_utilities) mod events;
 pub(in crate::base_utilities) mod ledger;
+pub(in crate::base_utilities) mod marks;
 pub(in crate::base_utilities) mod policy;
 pub(in crate::base_utilities) mod rehearsal;
 pub(in crate::base_utilities) mod resolver;
@@ -42,6 +46,11 @@ pub(in crate::base_utilities) use ledger::{
   field_stamped, note_field_stamp, record_api_call, record_author_call,
 };
 pub use ledger::{note_binding_load, record_note_text as fm_record_note_text};
+// (the one reading of a formula's mark-ness, for `ab_audit fmshadow`'s view of the final XML)
+pub use marks::{
+  FmMathNode, FormulaMarks as FmFormulaMarks, glued_in_a_word as fm_glued_in_a_word,
+  printed_children as fm_printed_children, read_formula as fm_read_formula,
+};
 // (for the bindings, which declare their conventions at load, and `ab_audit fmshadow --re-resolve`)
 pub use policy::{
   EmailOwner as FmEmailOwner, KERNEL as FM_KERNEL_CONVENTIONS, Policy as FmConventions,

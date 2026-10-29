@@ -1,0 +1,17 @@
+% mechanism: a cut by marks whose every piece some name requests (Ann's `$^{1,3}$` requests the `$\rm ^{3}$` piece)
+%   is written; the cut's walk-back over the switch is refactor stage 3's (`writer::plan`, tokens)
+% witness: 2105.07958 (`$\rm ^a$`); review 88c r2 probe q17 (its requested sibling)
+% oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "Ann Able1,3 and Bob Baker2" over "1 Univ X, 3 He Lab", "2 Univ Y"
+% engines: rust int118a, 90a: Ann "Univ X, 3He Lab" (writer `declined: Affiliation helab`); 88c r2/r4 (not merged):
+%   writer `written`, Ann "1Univ X" and "3He Lab"
+% expect:  0 errors, 0 warnings; writer `written`; Able: Univ X, 3He Lab as two entries; Baker: Univ Y
+% status:  RED (int118a, 90a; catalog, no guard) -> GREEN with refactor stage 3
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,3}$ and Bob Baker$^{2}$}
+\affiliation{$^{1}$Univ X, $\rm ^{3}$He Lab\\ $^{2}$Univ Y}
+\maketitle
+Text.
+\end{document}

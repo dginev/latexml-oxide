@@ -23530,7 +23530,7 @@ only (XML byte-identical against int54a with the switch unset and set, SYNC "FM 
   legend reading as an institution is an affiliation (`is_legend_text`; `classify_thanks`'s "erc" matched "Perception"
   until 78u, #880, 2509.05368).
 - **Comparator**: a name's marks the XML holds as text (`R. Vasile 1`, 0807.4407; 1309.7542) or as a floating-superscript
-  formula (`{}^{a,\;b}`, `\,^{3}`: 1307.6166, 0804.4669) are no name text (`xml_names`, `math_mark_text`); notes compare
+  formula (`{}^{a,\;b}`, `\,^{3}`: 1307.6166, 0804.4669) are no name text (`xml_names`; read from the XMath, #911); notes compare
   without the creator's ORCID identifier (2106.12436); an e-mail's glued label aside (2108.12329); an XML item is the
   shadow's pieces joined with their printed labels before them (`1INFN …2Dipartimento …`, 1211.5032). Change tags added:
   `ruling1:parted`, `role:url-as-email` (the r2 brief's item 8: 1701.01829, 2501.18366, 2506.18574), `owner:order`.
@@ -26479,3 +26479,113 @@ ams_font_slots_decode_as_msam_msbm_draw, kernel_name_at_another_slot_stays_undec
 font_packages_get_the_bindings_symbols, ams_font_slots_decode_as_the_fonts_draw,
 kernel_name_at_another_slot_stays_undecoded}` (the first two also on the binary, eager and `--streaming`),
 `perfect_kernel_batch68v::batch68v_u_symbol_font_without_a_map_stays_undecoded`.
+### 911. Whether a formula in a name or an affiliation is a mark is read from its digested XMath, one reader for the observer's writer, the comparator, the marks a name shows and the merged-name check (Perl: no such reading; its frontmatter labels are the operand's ToString)
+
+Frontmatter refactor stage 1 (`FRONTMATTER_DIGESTED_REFACTOR.md`; user directive 2026-10-29: decisions on the digested
+representation, never TeX spelling). Four readers decided a formula's mark-ness by re-parsing its `tex` attribute: the
+observer writer's view of today's frontmatter (`writer/dom.rs` `math_mark_text`, `spacing_group`, `math_base`), its
+diverged copy in `ab_audit fmshadow` (`fmshadow/mod.rs`), the marks a name shows (`relocate.rs` `shown_marks`:
+`past_mark_spacing` over MARK_SPACING, `{}`, then `^`), and the merged-name check (`name_text.rs` `is_name_mark`: `tex`
+opening `{}^`/`^`). A spelling the prefix tests did not list was no mark: `$\rm ^a$` (tex `\rm{}^{a}`, 2105.07958's
+`\address{$\rm ^a$Email: …}`), `${^2}$` on a name (2002.12524's `Po-Hao Chou${^2}$`, 2006.00536's `Radoslaw
+Ryblewski${^1}$`), `${\rm ^a}$`; and a spelling that printed more was one (`{}^{3}He` started with a mark).
+
+One reader, `observer::marks::read_formula` (re-exported `fm_read_formula`, `FmFormulaMarks`, generic over
+`FmMathNode`: the engine's libxml node, and a roxmltree newtype in `ab_audit`), reads the XMath in both vocabularies:
+as digested (the writer, `shown_marks` and `is_name_mark` all run before `finish_document`'s rewrite and math parse,
+`core_interface.rs:632,654`) — `XMApp[@role]` `FLOATSUPERSCRIPT`/`POSTSUPERSCRIPT` (and the subscripts) holding
+`XMArg[@rule]`, flat `XMTok`/`XMText`/`XMHint` siblings, chosen at digestion (`tex_math.rs` `script_handler`) — and as
+parsed (the comparator reads the final XML) — `XMApp(XMTok[@role='SUPERSCRIPTOP'][@scriptpos], base, script)`, `preN`
+printing the script before its base, `postN` after it; a surviving `FLOATSUPERSCRIPT` with its script unwrapped;
+`XMDual` by its presentation (the last child) and `XMWrap` flattened. An application is read through only when
+LaTeXML lays it out as a row (`marks::row_layout`, by the operator's role and meaning as Perl `Post/MathML.pm`'s
+`lookupPresenter`, L205, picks the presenter; in both vocabularies): an infix role (`pmml_infix`, L1540, L1600-1622,
+L1699-1700, L1739: the operator between its arguments), `POSTFIX` (L1632, after), any operator without a layout of
+its own (`Apply:?:?`, L1523, before; `formulae`, `multirelation` alike), a script before or after its base (`pmml_script`); and then only when it holds a
+script, in print order (`marks::printed_children`), an operator that prints nothing (U+2061–U+2064) none: the parser
+nests a script on a word's last letter under the word's invisible times (`$Ann^{1}$` as `⁢(A, n, n¹)`,
+`$\mathrm{Ann~Able}^{1}$`, `$Smith-Jones^1$` under its minus), and read so it is the digested shape's `OnBase "Ann"`
+(review 90a r2 F1). Any other application is one printed item, its text in document order: one holding no script
+(an accented letter, `$^{1}\mathrm{\acute{e}}$`, a letter), and every two-dimensional layout (review 90a r3 F1) — a
+fraction (`Apply:FRACOP:?` → `mfrac`, L1609; `\frac`, `\tfrac`, `\binom`), a root by its meaning
+(`square-root`/`nth-root` → `msqrt`/`mroot`, L1636-1645), a continued fraction (L1954's display `mfrac`), an accent
+(`Apply:OVERACCENT:?`/`UNDERACCENT:?` → `mover`/`munder`, L1489-1505; `\hat`, `\overline`, `\overset`), an
+enclosure (`Apply:ENCLOSE:?`, L1507, and any node carrying `enclose`, L338-342: `\boxed`, digested an
+`XMArg[@enclose]`, amsmath.sty.ltxml:893-895), a big operator with its body (which Perl rows, `pmml_summation`'s `mrow`, L1796-1798, as it rows an inline `cfrac-inline` — read as one item here on the safe side, with no output change on any probe), and a script
+set over or under its base (`scriptpos` `mid`, `munder`/`mover`: limits, `\stackrel`; a digested `mid` script is
+ink). So a script under a fraction's bar or a root's sign is no script a formula ends on: `$\frac{a}{b^{1}}$` ending
+an address line is the line's text, not `OnBase "ab"` (a reading through every application holding a script made it
+one, the writer dropped the "1" from the line's key and declined it). A formula is a **mark** (`Marks`, each
+superscript's printed text before the first letter or digit) when it opens with scripts nothing visible precedes
+(floating, or after a box that prints nothing: `$\mbox{ }^1$`, cond-mat0206265, digested `POSTSUPERSCRIPT`), at least
+one a superscript, and the first item printed after them is no letter or digit (our criterion, not the parser's:
+the parser attaches a prescript, `scriptpos="pre"`, to whatever follows, a `)` as readily as a word): font switches are a token's font, spacing an `XMHint`
+(`$^{1}\hspace{1mm}$`, review 88c r4 h2; a name's `{}^{1}\quad`, `author_block/rows.rs:685`), punctuation and symbols
+no base (`$^{a})$`, cond-mat9808038; `$^{1}{}^{,}$`; `$^{1,2}\dagger$`, 2501.04244; `$^1,2$`, 1912.02075's
+`A.P.~Orlov$^1,2$`, its marks the 1). Only the item right after the scripts counts: a reading that took any letter or
+digit anywhere after the script as ink (88c's) made `^1,2` no mark, Orlov showed no mark and lost both affiliations. Scripts after printed ink are **on a base** (`OnBase`: `$97403^{1}$`, 2203.01892; `Ul. Ainy $299^A$`,
+0707.4047; `$\text{Leon Bello}^{1,3}$`, 2011.08099), the base with its subscripts the item's text when it is a text box or a word or a
+number (`$G_2'$`, 2208.14409's keyword "G₂′", keeps its 2), in a name and an affiliation alike (the writer's affiliation-only `math_base` and the comparator's
+`affiliation_text` are one reading now). Scripts right before a letter or digit (an isotope, `{\rm ^{3}He}`, 88c r1 q24;
+`${}^{\dagger}X$`) are a prescript on a printed word, **neither**: the formula's text kept as printed — the structural fail-safe for what
+digestion cannot settle; the writer's and the comparator's text of it both in print order ("3He", not the parsed
+document order "He3": both walks take `printed_children`). A mark formula of one or two lowercase letters glued to letters on both sides is the word's,
+as an `ltx:sup` of it is (`glued_in_a_word`; `I. M. M$^{\rm c}$Hardy`, 2003.01448; `M\textsuperscript{c}Kernan`,
+math0610203): the writer had dropped it as a mark while the comparator, seeing the rewritten `ltx:sup`, kept it.
+`shown_marks` splits a mark's printed text into its letter or number marks (`relocate::printed_marks`, the item rule
+of `script_marks` without the spelling's switches). Deleted: both `math_mark_text` copies, `spacing_group`, both
+`math_base` copies, `past_mark_spacing`, `is_name_mark`'s prefix test. Kept for the callers that have only tokens
+(stages 3–5): MARK_SWITCHES[32] and MARK_SPACING[4] through `script_marks`/`past_mark_switches` (the
+`\lx@frontmatter@sup` label keys, `author_macros.rs`; revtex's group rule, `content_marks`/`group_shares_the_mark`),
+and `notes::leads_with_mark`.
+
+Measured on the committed code (pop90a: pop88c5's 10,389 written-family rows plus 3,000 random popint118a rows, seed
+90; 13,352 papers). A/B `results_r90a4.tsv` (int118a → 90a): 14 changed, none worse, E 14,975 → 14,972, F 29 → 28
+(2006.14721's B side killed at 210 s with no Fatal line; alone both give F 1), words 193,938,335 → 193,938,172; 12
+better — 2105.07958 (the e-mail address Sorée's alone), 1410.8534, 1804.10344, 1810.00507, astro-ph9807043 (declined →
+written, each author the affiliations of their own marks), 2002.12524, 2006.00536 (a name's `${^2}$`/`${^1}$` now
+shows its mark, the author gains the affiliation), 1703.09552, 1808.04425, 2111.06000 (`$^{\hspace{0.3mm}1,2}$`),
+1904.05642 (`$^{\left(1,2\right)}$`), 1002.3515 (an author's affiliations in mark order) — and 2 noise (1111.1264's
+known memory abort, 2006.14721). Shadow census (`LATEXML_FM_SHADOW=1`, pop90a, int118a → 90a): same 9,049 → 9,059,
+written 341 → 343, declined 141 → 131 ("the creators' names" 71 → 64, Affiliation 31 → 29), no writer 3,817 → 3,816;
+19 outcomes changed, all better or neutral (the witnesses above; 0807.4407, 1309.7542, cond-mat0206329,
+cond-mat0407580 names now agree; 1904.02582 `same` → `written`, its XML unchanged; cond-mat0206265 keeps int118a's
+reason) bar 4 load-noise rows (1901.00143, 2101.04154, 2203.01615, 2211.11776: a timeout or no dump on one side).
+`ab_audit fmshadow` on the census trees: the new comparator on int118a's tree classifies every paper as the old one
+but hep-ph9805510 (`$^(c)$`, only the "(" raised: 3 of its 6 unclassified disagreements now classified); on the new
+tree 7 papers go disagree → agree (the written witnesses); TOTAL unclassified 281 → 281. The print order through
+rows and the two-dimensional layouts as one item (reviews 90a r2 F1, r3 F1), measured on the final code: A/B
+`results_r90a6.tsv` (int118a → 90a, same population) changes the same 12 papers, better, none worse, E 14,971 →
+14,971, F 29 → 29, words 192,802,058 → 192,801,895 (the run's own A side); the one other changed row, 2002.04636 (W 82
+→ 81, one `ambiguous_math` Warning and its parse on one side), converts alone to W 82 and the same XML on both
+binaries (load noise). On the r2 census tree the comparator's per-paper results and disagreement texts are the same
+(agree 12,044, classified 339, unclassified 281). On the reviews' 268 probes, against the reading through every
+application holding a script: 6 unclassified disagreements become classified (x14, `$\mathrm{Ann~Able}^{1}$` names,
+as on int118a; AFs11, AFs14, AFs20, x05, x25, prescripts on `\alpha`, `\ell`, an accented letter and `He` read in
+print order) and AFf19/RFf19 agree; 7 `\frac`/`\tfrac`/`\sqrt`/`\sqrt[3]`/`\boxed` address lines (AFg10, AFf07,
+AFf08, AFg01, AFg02, AFg06, AFg09) are cut at their marks as on int118a; and the two names that end on a root over
+a script (ANh01 `Ann Able$\sqrt{x^1}$`, RSh01 `Ann $\sqrt{Able^1}$`) are read, as on int118a, as names with no mark
+(the reading through the root had made the root's script a name mark). The 44 reach and witness papers convert as
+before.
+
+Residuals, each another stage's: the writer's cut reads tokens (`writer::plan`; stage 3): `${^{3}He}$` and
+`${}^{87}{\rm Rb}$` inside a marked line are still cut there (`written-different`, 1 Warning; RED repros
+`revtex_affiliation_braced_prescript_keeps_its_line`, `…_empty_base_prescript_…`), and a switched mark is no balanced
+piece (`revtex_affiliation_font_switched_marks_cut_with_their_lines`, `…_requested_switched_mark_cuts`); the mid-line
+`$\rm ^{3}$He Lab` no name requests (88c r2 q17) reads as a mark now, kept whole only because that cut declines
+(`revtex_affiliation_unrequested_mark_keeps_its_line`, which stage 3 must keep); the observer's lexer does not strip
+`$\mathrm{^{1}}$` from the reading's line (stage 2; `revtex_mathrm_wrapped_marks_are_not_read`); the label keys and
+revtex's group rule read the spelling (stages 4, 5); a marked address's contacts in insertion order, not print order
+(2105.07958; `revtex_marked_address_contacts_in_print_order`).
+
+Guards: `perfect_kernel_batch90a::{a_formula_printing_only_floating_scripts_is_a_mark,
+a_script_before_printed_ink_or_on_a_base_is_text, a_formula_mark_on_a_name_answers_its_affiliation,
+a_script_inside_a_two_dimensional_layout_ends_no_line}` (the last: repros
+`amsart_address_fraction_script_ends_no_line`, `amsart_address_boxed_script_ends_no_line`);
+`observer::marks::tests::{floating_scripts_before_no_letter_or_digit_are_a_mark,
+a_script_before_or_on_printed_ink_is_no_mark}` (both vocabularies, the parsed nested bases, the accented letter and
+the two-dimensional layouts `\frac{a}{b^1}`, `\sqrt{x^1}`, `\sqrt[3]{x^1}`, `\boxed{x^1}`, `\hat{x^1}`,
+`\stackrel{a}{b^1}` among them); `ab_audit` `fmshadow::tests::{marks_as_text_or_formulas_are_no_name_text,
+a_parsed_prescript_on_a_word_is_text_a_script_on_a_base_the_base, the_writer_and_the_comparator_read_a_formula_alike}`
+(the last: each shape's digested and parsed XMath give one reading and one text). RED repro (stage 3):
+`amsart_address_spaced_marks_cut_with_their_lines` (`$\,^{1}$` address lines, 0804.4669's shape).

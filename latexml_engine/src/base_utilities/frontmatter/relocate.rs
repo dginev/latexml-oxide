@@ -483,9 +483,10 @@ fn contact_in_title_as_note(document: &mut Document, target: &Node) -> Result<()
   document.add_class(&mut note, &s!("ltx_note_frontmatter ltx_thanks_{kind}"))
 }
 
-/// The marks a creator's name shows: each `<ltx:sup>`'s (`\textsuperscript{a}`), and each formula's that is only a
-/// superscript (`$^{a}$`, `$^{1,2}$`: a `<ltx:Math>` whose `tex` is `{}^{a}` until the math is rewritten into a
-/// `<ltx:sup>` later).
+/// The marks a creator's name shows: each `<ltx:sup>`'s (`\textsuperscript{a}`), and each formula's that is a mark
+/// (`$^{a}$`, `$^{1,2}$`, `$\,{}^{a,b}$` — 2311.14432 — `$\rm ^{1}$`: [`fm_read_formula`], which reads the formula as
+/// digested, before the math is rewritten into an `<ltx:sup>`), from their printed text ([`printed_marks`]). A script on
+/// a base (`$\text{Leon Bello}^{1,3}$`) or before printed ink (`${\rm ^{3}He}$`) shows none.
 pub(in crate::base_utilities) fn shown_marks(
   document: &mut Document,
   creator: &Node,
@@ -493,17 +494,11 @@ pub(in crate::base_utilities) fn shown_marks(
   let mut marks: Vec<String> = document
     .findnodes("ltx:personname//ltx:sup", Some(creator))
     .iter()
-    .flat_map(|sup| script_marks(sup.get_content().trim()))
+    .flat_map(|sup| printed_marks(&sup.get_content()))
     .collect();
   for math in document.findnodes("ltx:personname//ltx:Math", Some(creator)) {
-    let tex = math.get_attribute("tex").unwrap_or_default();
-    // (past the spacing before it: `$\,{}^{a,b}$`, 2311.14432)
-    if past_mark_spacing(tex.trim())
-      .trim_start_matches("{}")
-      .trim_start()
-      .starts_with('^')
-    {
-      marks.extend(superscript_scripts(&tex).concat());
+    if let FmFormulaMarks::Marks(scripts) = fm_read_formula(&math) {
+      marks.extend(scripts.iter().flat_map(|script| printed_marks(script)));
     }
   }
   marks
@@ -527,10 +522,25 @@ fn braced_group(text: &str) -> (&str, &str) {
 /// the 2), past braces and font and size switches (`\rm a`, `\mathrm{a}`, `{\rm 2}`, `\footnotesize 1`: the a, the 2,
 /// the 1), and before a symbol or closing parenthesis after it (`2*`, `1\dagger`, `1†`, `1)`: the 2, the 1; the `1)` of
 /// 2306.17039, as `clean_frontmatter_labels` reads its label). A symbol alone or other markup (`\footnote{…}`) is no
-/// mark. Both the marks an affiliation is labelled by and the marks an author shows are read so (63i review).
+/// mark. Both the marks an affiliation is labelled by (from its spelling, here) and the marks an author shows (from the
+/// printed text, [`printed_marks`]) are split so (63i review). The spelling's readers are the token-only callers (the
+/// `\lx@frontmatter@sup` label keys, revtex's group rule): the frontmatter refactor's later stages
+/// (`docs/parity/FRONTMATTER_DIGESTED_REFACTOR.md`).
 pub(in crate::base_utilities) fn script_marks(script: &str) -> Vec<String> {
+  split_marks(script, past_mark_switches)
+}
+
+/// The letter or number marks of a superscript's printed text (an `<ltx:sup>`'s, a mark formula's scripts': `1,2`,
+/// `1∗`, `[1],[2]`, `a)`), read as [`script_marks`] reads a script's spelling, items and all.
+pub(in crate::base_utilities) fn printed_marks(text: &str) -> Vec<String> {
+  split_marks(text, str::trim_start)
+}
+
+/// A script's marks ([`script_marks`]): `past` skips what opens the script and each item before its mark (the
+/// spelling's switches and spacing, [`past_mark_switches`]; the printed text's spaces).
+fn split_marks(script: &str, past: fn(&str) -> &str) -> Vec<String> {
   // (the whole script under its switches, `\footnotesize\ensuremath{1,2}`: the 1 and the 2; 2411.14110)
-  let script = past_mark_switches(script);
+  let script = past(script);
   let mut items = Vec::new();
   let (mut depth, mut start) = (0usize, 0usize);
   for (i, c) in script.char_indices() {
@@ -550,7 +560,7 @@ pub(in crate::base_utilities) fn script_marks(script: &str) -> Vec<String> {
     .filter_map(|item| {
       // (a number in brackets or parentheses is the number: `$^{[1],[2]}$` against the line's `$^1$`, 1803.06822; so is
       // one after a footnote symbol glued to it, `\textsuperscript{*3}`, 2412.01183)
-      let item: String = past_mark_switches(item)
+      let item: String = past(item)
         .trim_start_matches(|c: char| {
           matches!(c, '[' | '(' | '*') || (!c.is_ascii() && !c.is_alphanumeric())
         })
@@ -569,7 +579,8 @@ pub(in crate::base_utilities) fn script_marks(script: &str) -> Vec<String> {
 
 /// The font and size switches, and the math wrapper, a mark is printed under (`{\rm 2}`, `\mathrm{a}`,
 /// `\textsuperscript{\footnotesize\ensuremath{1}}`, 2502.16662 and 2411.14110's `\IEEEauthorrefmark`), which neither
-/// an affiliation's mark nor its leading text is.
+/// an affiliation's mark nor its leading text is: for the readers that have only the tokens ([`script_marks`],
+/// `notes::leads_with_mark`); a formula read from the document is read from its structure (`observer::marks`).
 pub(in crate::base_utilities) const MARK_SWITCHES: [&str; 32] = [
   "\\rm",
   "\\it",
@@ -607,29 +618,8 @@ pub(in crate::base_utilities) const MARK_SWITCHES: [&str; 32] = [
 
 /// The spacing a mark is set apart with (`{}^{a,\;b}`, `{}^{\rm b,\ c}`, `\,{}^{b,c}`: 1307.6166, hep-th0410034,
 /// 2311.14432), which no mark is: the control words; the control symbols `\,` `\;` `\:` `\!` `\ ` and the tie besides.
+/// For the token readers, as [`MARK_SWITCHES`].
 const MARK_SPACING: [&str; 4] = ["\\quad", "\\qquad", "\\thinspace", "\\enspace"];
-
-/// `text` past the spacing it opens with ([`MARK_SPACING`], the spacing control symbols, ties and spaces).
-fn past_mark_spacing(text: &str) -> &str {
-  let mut rest = text;
-  loop {
-    rest = rest.trim_start_matches(|c: char| c == '~' || c.is_whitespace());
-    let Some(after) = rest.strip_prefix('\\') else {
-      return rest;
-    };
-    if after.starts_with([',', ';', ':', '!', ' ']) {
-      rest = &after[1..];
-      continue;
-    }
-    let len = after
-      .find(|c: char| !c.is_ascii_alphabetic())
-      .unwrap_or(after.len());
-    if len == 0 || !MARK_SPACING.contains(&&rest[..=len]) {
-      return rest;
-    }
-    rest = &after[len..];
-  }
-}
 
 /// `text` past the switches it opens with ([`MARK_SWITCHES`]) and the spacing ([`MARK_SPACING`]), with the braces and
 /// spaces around them.

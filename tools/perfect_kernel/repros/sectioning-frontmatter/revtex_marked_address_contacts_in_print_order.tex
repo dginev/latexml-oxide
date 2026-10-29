@@ -1,0 +1,20 @@
+% mechanism: a creator's contacts in the order pdflatex prints the addresses (source order): Baker's "Univ Y" (mark 2)
+%   before "Email: …" (mark a); today's places the marked e-mail address first, on the binding's insertion and on the
+%   writer's (perfect_kernel_batch90a pins today's order as a residual)
+% witness: 2105.07958 (Sorée's e-mail address listed before his institutes; pdflatex prints it last)
+% oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "1 Univ X", "2 Univ Y and", "a Email: bob.baker@y.org", in
+%   that order
+% engines: rust int118a: both authors' "aEmail: …" first; 90a: Baker "a Email: bob.baker@y.org", then "Univ Y"
+% expect:  0 errors, 0 warnings; Able: Univ X; Baker: Univ Y, then Email: bob.baker@y.org
+% status:  RED (int118a, 90a; catalog, no guard) -- the order is a residual, SYNC "FM S2b third family: aas_support"
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2,a}$}
+\address{$^1$Univ X}
+\address{$^2$Univ Y}
+\address{$\rm ^a$Email: bob.baker@y.org}
+\maketitle
+Text.
+\end{document}

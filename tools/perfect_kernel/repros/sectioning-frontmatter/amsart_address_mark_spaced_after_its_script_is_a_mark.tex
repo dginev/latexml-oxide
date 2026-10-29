@@ -1,0 +1,16 @@
+% mechanism: a formula is a mark when nothing but spacing follows its floating script (`observer::marks::read_formula`):
+%   `$^{1}\hspace{1mm}$` digested is the script then an `XMHint` (no ink), so the writer's view keys "Univ X" and the
+%   address is cut at its marks — a `tex` reading counts the digits of `\hspace{1mm}` as printed (88c r4 review F2)
+% witness: review 88c r4 probe h2 (88c r2-r4 declined it: "the entry does not cut", Bob "1 Univ X 2 Univ Y")
+% oracle:  pdflatex (TL 2025 amsart) 0 errors: "ANN ABLE1 , BOB BAKER2" / "Text." / "1 Univ X, 2 Univ Y"
+% engines: rust int118a, 90a: writer `written`, Ann "1 Univ X", Bob "2 Univ Y"
+% expect:  0 errors, 0 warnings; writer `written`; Able: 1 Univ X; Baker: 2 Univ Y
+% status:  GREEN (int118a, 90a; perfect_kernel_batch90a::a_formula_printing_only_floating_scripts_is_a_mark)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$}\address{$^{1}\hspace{1mm}$Univ X\\ $^{2}\hspace{1mm}$Univ Y}
+\maketitle
+Text.
+\end{document}

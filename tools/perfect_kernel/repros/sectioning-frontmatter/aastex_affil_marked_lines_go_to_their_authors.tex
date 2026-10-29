@@ -1,0 +1,21 @@
+% mechanism: aas_support declares its frontmatter conventions `written` (FM S2b's third family, OD #837): one
+%   `\affil` holding marked lines is cut at its marks, each line its marked author's (the writer's cut, `writer::plan`)
+% witness: 1701.05122
+% oracle:  pdflatex (1701.05122's aastex.cls, AASTeX 5.2) 0 errors: "Ann Able1 , Bob Baker2" over "1 Univ X", "2 Univ Y"
+% engines: rust int118a, 90a, 88c: both authors' affiliation "1Univ X 2Univ Y" (aas_support.sty resolves to the kernel's
+%   conventions, not written); 88c with aas_support written (the held patch): GREEN
+% expect:  0 errors, 0 warnings; writer `written`; Able: Univ X; Baker: Univ Y — once aas_support is written
+% status:  RED (int118a, 90a; catalog, no guard; 88c: aas_support not switched to `written` — held, the inner e-mail of a shared marked
+%   entry is every holder's, 1503.02933, SYNC "FM S2b third family: aas_support") -> GREEN when aas_support is written
+% preload: ar5iv.sty
+\documentclass{aastex}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$}
+\affil{$^{1}$Univ X\\ $^{2}$Univ Y}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

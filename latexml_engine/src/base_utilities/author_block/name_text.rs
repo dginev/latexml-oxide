@@ -1219,18 +1219,12 @@ pub(in crate::base_utilities) fn only_marks_and_notes(tokens: &[Token]) -> bool 
   any
 }
 
-/// Whether a personname's child is a mark: an `<ltx:sup>`, or a formula that is only a superscript (`$^{1}$`, its `tex`
-/// `{}^{1}` until the math is rewritten into an `<ltx:sup>`; [`shown_marks`]).
+/// Whether a personname's child is a mark: an `<ltx:sup>`, or a formula that is one (`$^{1}$`, `$\rm ^{a}$`, read from
+/// its structure as digested, before the math is rewritten into an `<ltx:sup>`: [`fm_read_formula`]; [`shown_marks`]).
 fn is_name_mark(node: &Node, qname: SymStr) -> bool {
   with(qname, |q| q == "ltx:sup")
     || (with(qname, |q| q == "ltx:Math")
-      && node.get_attribute("tex").is_some_and(|tex| {
-        tex
-          .trim()
-          .trim_start_matches("{}")
-          .trim_start()
-          .starts_with('^')
-      }))
+      && matches!(fm_read_formula(node), FmFormulaMarks::Marks(_)))
 }
 
 /// The text a `<ltx:personname>` shows, without its marks and notes (`ltx:sup`, `ltx:note`, math); an element

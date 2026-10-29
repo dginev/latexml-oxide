@@ -73,107 +73,60 @@ fn is(node: &Node, qname: &str) -> bool {
   node.get_type() == Some(NodeType::ElementNode) && document::get_node_qname(node) == pin(qname)
 }
 
-/// The text a formula in a name or an affiliation prints when it is a mark (`ab_audit fmshadow`'s `math_mark_text`):
-/// none for a floating superscript (`{}^{a,\;b}`, `^{1}`), the name for `\text{Leon Bello}^{1,3}`; `None` for any other
-/// formula.
-fn math_mark_text(math: &Node) -> Option<String> {
-  let tex = math.get_attribute("tex")?;
-  let mut tex = tex.trim();
-  // (spacing before the script, braced too: `\,^{3}`, `{\,\!}^{1,2}` — 2112.13115's empty base)
-  loop {
-    if let Some(rest) = [r"\,", r"\;", r"\!", r"\ ", "~", "{}"]
-      .iter()
-      .find_map(|p| tex.strip_prefix(p))
-    {
-      tex = rest.trim_start();
-    } else if let Some(rest) = spacing_group(tex) {
-      tex = rest.trim_start();
-    } else {
-      break;
-    }
-  }
-  if tex.starts_with('^') {
-    return Some(String::new());
-  }
-  for command in [r"\text{", r"\textrm{", r"\mbox{", r"\mathrm{"] {
-    if let Some(rest) = tex.strip_prefix(command)
-      && let Some(close) = rest.find('}')
-      && rest[close + 1..].trim_start().starts_with('^')
-    {
-      return Some(rest[..close].to_string());
-    }
-  }
-  None
-}
-
-/// `tex` after a leading brace group holding spacing alone (`{\,\!}`), if it opens with one.
-fn spacing_group(tex: &str) -> Option<&str> {
-  let inner = tex.strip_prefix('{')?;
-  let close = inner.find('}')?;
-  let mut group = inner[..close].trim();
-  while let Some(rest) = [r"\,", r"\;", r"\!", r"\ ", "~"]
-    .iter()
-    .find_map(|p| group.strip_prefix(p))
-  {
-    group = rest.trim_start();
-  }
-  group.is_empty().then(|| &inner[close + 1..])
-}
-
-/// A formula `<base>^{…}` whose base is a word or a number: that base (an affiliation's `OR $97403^{1}$`).
-fn math_base(math: &Node) -> Option<String> {
-  let tex = math.get_attribute("tex")?;
-  let (base, _) = tex.trim().split_once('^')?;
-  let base = base.trim();
-  (!base.is_empty()
-    && base
-      .chars()
-      .all(|c| c.is_alphanumeric() || c == '.' || c == '-'))
-  .then(|| base.to_string())
-}
-
-/// A superscript of lowercase letters glued on both sides to letters (`James M<sup>c</sup>Kernan`, math0610203): part
-/// of the word, as the lexer reads it (`events::lexer`).
-fn inside_a_word(sup: &Node) -> bool {
-  let text = sup.get_content();
-  let glued = |side: Option<Node>, last: bool| {
-    side
-      .filter(|n| n.get_type() == Some(NodeType::TextNode))
-      .is_some_and(|n| {
-        let t = n.get_content();
-        let c = if last {
-          t.chars().next_back()
-        } else {
-          t.chars().next()
-        };
-        c.is_some_and(char::is_alphabetic)
-      })
+/// The text of the sibling just before `node` (`after`: just after it), when a text node.
+fn sibling_text(node: &Node, after: bool) -> Option<String> {
+  let side = if after {
+    node.get_next_sibling()
+  } else {
+    node.get_prev_sibling()
   };
-  (1..=2).contains(&text.chars().count())
-    && text.chars().all(char::is_lowercase)
-    && glued(sup.get_prev_sibling(), true)
-    && glued(sup.get_next_sibling(), false)
+  side
+    .filter(|n| n.get_type() == Some(NodeType::TextNode))
+    .map(|n| n.get_content())
 }
 
-/// The text of `node` without its `ltx:sup` marks, its notes and their tags; a formula that is a mark as
-/// [`math_mark_text`] reads it, an affiliation's (`scripts`) formula superscript a mark too.
-pub(super) fn text_without_marks(node: &Node, scripts: bool) -> String {
-  fn walk(node: &Node, scripts: bool, out: &mut String) {
-    for child in node.get_child_nodes() {
+/// A superscript (an `ltx:sup`, or a formula that is a mark of one script) of lowercase letters glued on both sides to
+/// letters (`James M<sup>c</sup>Kernan`, math0610203; `I. M. M$^{\rm c}$Hardy`, 2003.01448): part of the word, as the
+/// lexer reads it (`events::lexer`; [`marks::glued_in_a_word`]).
+fn inside_a_word(mark: &Node, letters: &str) -> bool {
+  marks::glued_in_a_word(
+    letters,
+    sibling_text(mark, false).as_deref(),
+    sibling_text(mark, true).as_deref(),
+  )
+}
+
+/// The text of `node` without its `ltx:sup` marks, its notes and their tags; a formula as [`marks::read_formula`]
+/// reads it: a mark prints none (`{}^{a,\;b}`, `^{1}`, `\rm ^a`: revtex names `Dadhich${}^{a,\;b}$`, 1307.6166;
+/// 2105.07958's `$\rm ^a$Email: …`), scripts on a base the base (`\text{Leon Bello}^{1,3}`, 2011.08099; an
+/// affiliation's `OR $97403^{1}$`, `Ul. Ainy $299^A$`: 2203.01892, 0707.4047), any other formula its text (an isotope,
+/// `${\rm ^{3}He}$`) — as `ab_audit fmshadow` reads the final XML.
+pub(super) fn text_without_marks(node: &Node) -> String {
+  fn walk(node: &Node, out: &mut String) {
+    // (in print order: a prescript before its base, as `ab_audit fmshadow` reads the parsed XML)
+    for child in marks::printed_children(node) {
       match child.get_type() {
         Some(NodeType::TextNode) => out.push_str(&child.get_content()),
         Some(NodeType::ElementNode) => {
-          if is(&child, "ltx:Math")
-            && let Some(text) =
-              math_mark_text(&child).or_else(|| scripts.then(|| math_base(&child)).flatten())
-          {
-            out.push_str(&text);
-          } else if (!is(&child, "ltx:sup") || inside_a_word(&child))
+          if is(&child, "ltx:Math") {
+            match marks::read_formula(&child) {
+              // (one lowercase script glued inside a word is its letters, as the `ltx:sup` the rewrite makes of it)
+              marks::FormulaMarks::Marks(scripts) => {
+                if let [letters] = scripts.as_slice()
+                  && inside_a_word(&child, letters)
+                {
+                  out.push_str(letters);
+                }
+              },
+              marks::FormulaMarks::OnBase { base, .. } => out.push_str(&base),
+              marks::FormulaMarks::Other => walk(&child, out),
+            }
+          } else if (!is(&child, "ltx:sup") || inside_a_word(&child, &child.get_content()))
             && !is(&child, "ltx:note")
             && !is(&child, "ltx:tags")
           {
             // (a lowercase superscript inside a word is the word's letters, no mark: `M\textsuperscript{c}Kernan`)
-            walk(&child, scripts, out);
+            walk(&child, out);
           }
           if is(&child, "ltx:break") {
             out.push(' ');
@@ -184,7 +137,7 @@ pub(super) fn text_without_marks(node: &Node, scripts: bool) -> String {
     }
   }
   let mut raw = String::new();
-  walk(node, scripts, &mut raw);
+  walk(node, &mut raw);
   raw.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
@@ -229,7 +182,7 @@ fn read_creator(node: &Node) -> Creator {
   let mut items = Vec::new();
   for child in node.get_child_nodes() {
     if is(&child, "ltx:personname") {
-      names.push(text_without_marks(&child, false));
+      names.push(text_without_marks(&child));
       // (a footnote set in the name: the creator's note; an ORCID link printed in it: its ORCID)
       let mut notes = Vec::new();
       descendants(&child, "ltx:note", &mut notes);
@@ -249,7 +202,7 @@ fn read_creator(node: &Node) -> Creator {
         if !nested {
           items.push(Item {
             kind:    Kind::Note,
-            key:     norm(&text_without_marks(&note, false)),
+            key:     norm(&text_without_marks(&note)),
             node:    note,
             movable: false,
           });
@@ -277,7 +230,7 @@ fn read_creator(node: &Node) -> Creator {
         }
       }
       let kind = Kind::of_contact(&role);
-      let mut text = text_without_marks(&child, kind == Kind::Affiliation);
+      let mut text = text_without_marks(&child);
       // (an ORCID contact prints a logo, its identifier the link's)
       if text.is_empty()
         && let Some(href) = {
@@ -297,7 +250,7 @@ fn read_creator(node: &Node) -> Creator {
     } else if is(&child, "ltx:note") {
       items.push(Item {
         kind:    Kind::Note,
-        key:     norm(&text_without_marks(&child, false)),
+        key:     norm(&text_without_marks(&child)),
         node:    child.clone(),
         movable: true,
       });

@@ -1,0 +1,22 @@
+% mechanism: the writer's cut of one call at its marks takes each piece's tokens from the call (`writer::plan`
+%   `piece_tokens`); a switch or a space inside the mark's formula before its script (`$\rm ^{1}$`) is the piece's, with
+%   the `$` before it — else the piece is no balanced run and the paper is not written
+% witness: 2105.07958 (`$\rm ^a$`), 1701.05122 (the aastex `\affil` cut); this pairing is the sibling of the two
+% oracle:  pdflatex (1701.05122's aastex.cls, AASTeX 5.2) 0 errors: "Ann Able1 , Bob Baker2" over "1 Univ X", "2 Univ Y"
+% engines: rust int118a, 90a: both authors' affiliation "1Univ X 2Univ Y"; 88c with aas_support written, before
+%   `piece_tokens` took the switch: the same, writer `declined` ("piece (2, 13) is no balanced run"), after: GREEN
+% expect:  0 errors, 0 warnings; writer `written`; Able: Univ X; Baker: Univ Y — once aas_support is written
+% status:  RED (int118a, 90a; catalog, no guard; 88c: aas_support not switched to `written` — held, the inner e-mail of a shared marked
+%   entry is every holder's, 1503.02933, SYNC "FM S2b third family: aas_support") -> GREEN when aas_support is written
+% preload: ar5iv.sty
+\documentclass{aastex}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$}
+\affil{$\rm ^{1}$Univ X\\ $\rm ^{2}$Univ Y}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}
