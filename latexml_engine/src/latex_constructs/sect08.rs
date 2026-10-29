@@ -786,7 +786,9 @@ pub(crate) fn load() -> Result<()> {
   // is None — that left the CS undefined for unknown encodings (e.g.
   // `\DeclareMathAccent{\widecheck}{\mathalpha}{mathx}{"71}` with no
   // mathx font map → \widecheck undefined → 1806.02506-style 1-error
-  // cluster). Mirror Perl: always install; an undecodable accent is U+FFFD where Perl's is empty (#27).
+  // cluster). Mirror Perl: always install; an undecodable accent is U+FFFD where Perl's is empty (#27), but a kernel
+  // accent's name, in a declared font, gives LaTeXML's own token for it at any slot (`reference_accent`; newtxsf's
+  // `\hat` in `U/ntxsfmia` at 223, 2106.08363). Guard `perfect_kernel_batch89c::kernel_accent_decodes_by_its_name`.
   // The symbol font is read `Expanded`, as latex.ltx:13430 resolves it through `\csname sym#3\endcsname`
   // (`symbol_font_name_expands`, below).
   DefPrimitive!("\\DeclareMathAccent DefToken {} Expanded {Number}",
@@ -802,17 +804,37 @@ pub(crate) fn load() -> Result<()> {
       .unwrap_or_else(|| class_str.clone());
     // Decoded with the declared font, as `\DeclareMathSymbol` is: its family selects a per-family map (`U_msa`).
     let (glyph, _font) = font_decode(code.value_of() as i32, Some(&encoding), decl_font.clone());
+    // Undecoded in a declared font with no font map, a kernel accent is the token LaTeXML's own binding makes of its
+    // name, at whatever slot (`reference_accent`). A mapped font says what its slots hold, an accent or not, so its
+    // empty slot stays U+FFFD with the font's Warning (`U/eur`'s "7E, a slot eurm10 lacks: pdflatex "Missing
+    // character").
+    let reference = if glyph.is_none()
+      && decl_font.is_some()
+      && !symbol_font_has_map(&encoding, decl_font.as_ref())
+    {
+      reference_accent(&cs)
+    } else {
+      None
+    };
     // Undecodable, the accent is U+FFFD (Perl: empty), and printed, its symbol font says so once
     // (`undecodable_math_slot`, OXIDIZED_DESIGN_DIVERGENCES #27).
-    let (presentation, report) = match glyph {
-      Some(glyph) => (glyph.to_string(), None),
-      None => undecodable_math_slot(&class_str, &encoding, decl_font.as_ref(), &cs, code.value_of(), "accent"),
+    let (presentation, report) = match (glyph, &reference) {
+      (Some(glyph), _) => (glyph.to_string(), None),
+      (None, Some(reference)) => (reference.glyph.to_string(), None),
+      (None, None) =>
+        undecodable_math_slot(&class_str, &encoding, decl_font.as_ref(), &cs, code.value_of(), "accent"),
     };
     let paramlist = parse_parameters("Digested", &cs, true)?;
-    let opts = MathPrimitiveOptions{
+    let mut opts = MathPrimitiveOptions{
       operator_role: Some("OVERACCENT".to_string()),
       absorb_warning: report,
       ..Default::default()};
+    if let Some(reference) = reference {
+      opts.operator_role = reference.role.map(String::from).or(opts.operator_role);
+      opts.meaning = reference.meaning.map(String::from);
+      opts.name = Some(reference.name.to_string());
+      opts.operator_stretchy = reference.stretchy;
+    }
     def_math(cs, paramlist, presentation, opts)?;
     // Perl: return AddToPreamble('\DeclareMathAccent', $cs, $kind, $class, $code);
     // AddToPreamble returns Digest(Invocation(\lx@add@Preamble@PI, Invocation(\DeclareMathAccent, ...)))
@@ -861,8 +883,14 @@ pub(crate) fn load() -> Result<()> {
         .is_some_and(|shape| matches!(shape.as_ref(), "it" | "sl" | "italic" | "slanted"));
     let (glyph, _font) = font_decode(code.value_of() as i32, Some(&encoding), decl_font.clone());
     // Undecoded, a symbol at its reference slot is the token LaTeXML's own binding makes of the name: its glyph, and
-    // its role, meaning, name and stretchiness where the binding gives them (`reference_symbol`).
-    let reference = if glyph.is_none() { reference_symbol(&cs, code.value_of()) } else { None };
+    // its role, meaning, name and stretchiness where the binding gives them (`reference_symbol`) — but at a slot the
+    // font lacks (pdflatex: "Missing character"; `U/eur`'s "3F, where `\star` would be), U+FFFD and the font's
+    // Warning (`symbol_font_lacks_slot`).
+    let reference = if glyph.is_none() && !symbol_font_lacks_slot(&encoding, decl_font.as_ref(), code.value_of()) {
+      reference_symbol(&cs, code.value_of())
+    } else {
+      None
+    };
     let binding = reference.as_ref().and_then(|reference| reference.binding.as_ref());
     let glyph = glyph.map(String::from).or_else(|| reference.as_ref().and_then(reference_glyph));
     // latex.ltx `\mathchar@type`: the class is a `\math…` cs OR its number
@@ -2270,8 +2298,13 @@ fn nfss_name(name: &Tokens) -> String {
   Tokens::new(spaced).to_string()
 }
 
-/// The reference of a math symbol whose declared symbol font decodes nothing, when it is declared at its reference
-/// slot: the slot fontmath.ltx or amsfonts/amssymb give the same name ([`reference_math_slot`]). A font package that
+/// The reference of a math symbol its symbol font cannot decode, unless the slot is a recorded gap of the font
+/// ([`symbol_font_lacks_slot`]: `U/eur`'s "3F, `U/msb`'s "65), when it is declared at its reference slot: the slot
+/// fontmath.ltx or amsfonts/amssymb give the same name ([`reference_math_slot`]). Slot-matched means the name and the
+/// slot, not the font: `\Cap` at `AMSb` "65 matches amssymb's `AMSa` "65, so only the gap record keeps it U+FFFD
+/// where msbm draws nothing. The equal slot is the layout evidence the match rests on, so, unlike an accent's
+/// ([`reference_accent`]), it holds in a mapped font too, at an empty slot that is no gap (msbm's negated pairs,
+/// msam's `\dabar@`, glyphs the maps have no single character for). A font package that
 /// redeclares a kernel or AMS name at that slot of its own font keeps the reference layout there: kpfonts' `\Delta` in
 /// `U/jkpmia` at 1 (fontmath.ltx:205 `operators` "01; kpfonts.sty:679-681 `\let`s the name away first), `\Cap` in an
 /// `AMSa` redeclared as `U/jkpsya` at "65 (amssymb.sty:146), raw newtxsf's `\lfloor` in `LMS/ntxsy` at 98
@@ -2284,6 +2317,25 @@ fn reference_symbol(cs: &Token, code: i64) -> Option<ReferenceSymbol> {
   cs.with_str(reference_math_slot)
     .filter(|reference| code == i64::from(reference.slot))
 }
+
+/// The reference of a math accent whose declared symbol font has no font map ([`symbol_font_has_map`]; a mapped font's
+/// empty slot stays U+FFFD, `U/eur`'s "7E a gap of the font), when its name is one fontmath.ltx declares (`\acute`
+/// `\grave` `\ddot` `\tilde` `\bar` `\breve` `\check` `\hat` `\vec` `\dot` `\widetilde` `\widehat` `\mathring`;
+/// [`reference_math_accent`]): the token LaTeXML's own kernel binding makes of the name — its glyph, spacing or
+/// combining, its `name` and stretchiness — whatever the slot. An accent's name is its meaning: unlike a symbol
+/// (`\epsilon` at `\varepsilon`'s slot, [`reference_symbol`]), no package draws another accent under a kernel accent's
+/// name, so the slot is no part of the match — and, matching no slot, the name is no layout evidence, so it is confined
+/// to fonts with no map: in a mapped font an empty slot names nothing the map vouches for. Checked by rendering every
+/// redeclaration in a font we cannot decode: newtxsf's `\grave` `\acute` `\check` `\breve` `\bar` `\mathring` `\hat`
+/// `\dot` `\tilde` in `lettersA` (`U/ntxsfmia` 254/255/186/187/221/222/223/224/219; newtxsf.sty:301-309,
+/// asmeconf.cls:2399-2407's `lettersAB` alike) and `\dot` `\ddot` `\vec` in `symbols` (`LMS/ntxsy` 164/165/174;
+/// :310-311, :1332), mdsymbol's `\vec` in `U/MdSymbolE` "84 (mdsymbol.sty:1959; rendered; not reached while
+/// `\SetSymbolFont{…}{normal}` is unmodelled, the font in force staying OMX/cmex), mathabx's `\widehat` in `U/mathx`
+/// "70 (mathabx.dcl:944, as papers copy it, 2607.15091) and `\dot` `\ddot` in `U/mathb` "39/"3A (mathabx.dcl:193,195).
+/// Witnesses 2106.08363 (296 hats), 1808.01384, 2406.11942, 1902.03183 (eq. 9's `\bar{u}`), 2607.15091.
+/// A name of its own (mathabx's `\widecheck`) and a symbol font never declared (pdflatex: "Symbol font … is not
+/// defined") stay U+FFFD with the font's Warning ([`undecodable_math_slot`]). OXIDIZED_DESIGN_DIVERGENCES #27.
+fn reference_accent(cs: &Token) -> Option<BindingToken> { cs.with_str(reference_math_accent) }
 
 /// The glyph of a symbol at its reference slot: the one LaTeXML's own kernel/amssymb binding gives the name, so a
 /// paper using kpfonts gets the symbols a paper without it gets (`\Cap` ⋒, `\mid` ∣, `\lgroup` ⟮, `\jmath` ȷ); a name
@@ -2344,14 +2396,12 @@ fn undecodable_math_slot(
     None if decl.is_none() => s!("\\sym{font_name}"),
     None => encoding.to_string(),
   };
-  let has_map = load_font_map(encoding).is_some()
-    || decl
-      .and_then(|font| font.get_family())
-      .is_some_and(|family| lookup_value(&s!("{encoding}_{family}_fontmap")).is_some());
   let font = if decl.is_none() {
     s!("Symbol font {font_name} is not declared")
-  } else if !has_map {
+  } else if !symbol_font_has_map(encoding, decl) {
     s!("Symbol font {font_name} ({layout}) has no font map")
+  } else if symbol_font_lacks_slot(encoding, decl, code) {
+    s!("Symbol font {font_name} ({layout}) has no character at slot \"{code:02X}")
   } else {
     s!("Symbol font {font_name} ({layout}) has no Unicode glyph at slot \"{code:02X}")
   };
@@ -2367,6 +2417,35 @@ fn undecodable_math_slot(
     &message,
   );
   ("\u{FFFD}".to_string(), Some(warning))
+}
+
+/// Whether a symbol font has a font map: its encoding's ([`load_font_map`]) or its family's (`U_msa`, `U_eur`), as
+/// [`font_decode`] chooses them. Without one, nothing the font draws is known, and a kernel accent's name decodes it
+/// ([`reference_accent`]); with one, the map says what each slot holds, and an empty slot stays U+FFFD with the
+/// font's Warning ([`undecodable_math_slot`]). OXIDIZED_DESIGN_DIVERGENCES #27.
+fn symbol_font_has_map(encoding: &str, decl: Option<&Rc<Font>>) -> bool {
+  load_font_map(encoding).is_some()
+    || decl
+      .and_then(|font| font.get_family())
+      .is_some_and(|family| lookup_value(&s!("{encoding}_{family}_fontmap")).is_some())
+}
+
+/// Whether a symbol font is known to lack a character at `code` — its family's map records the slot as a gap of the
+/// font (`U_<family>_fontmap_lacks`, generated by tftopl over every size: eurm/eurb's 17, msbm's "5F and "62-"65,
+/// msam none; u_fontmap.rs `U_FONT_GAPS`), where pdflatex says "Missing character" and prints nothing — so no
+/// reference name decodes it ([`reference_symbol`]): U+FFFD and the font's Warning ([`undecodable_math_slot`]). A
+/// map's other empty slots hold glyphs it has no single character for: msam's dash
+/// `\dabar@` at "39 (amsfonts.sty:89, amstex.sty:1939) and msbm's six negated relations at "0A/"0B/"14/"15/"22/"23
+/// (oz.sty:289-310, zed-csp.sty:231-232, amsfonts' `\newsymbol`), which a reference name still decodes.
+/// OXIDIZED_DESIGN_DIVERGENCES #27, #910.
+fn symbol_font_lacks_slot(encoding: &str, decl: Option<&Rc<Font>>, code: i64) -> bool {
+  let slot = code.to_string();
+  let family = decl.and_then(|font| font.get_family());
+  family
+    .map(|family| s!("{encoding}_{family}_fontmap_lacks"))
+    .into_iter()
+    .chain([s!("{encoding}_fontmap_lacks")])
+    .any(|key| matches!(lookup_value(&key), Some(Stored::HashString(lacks)) if lacks.contains_key(&slot)))
 }
 
 /// The math-italic class of a `\DeclareMathSymbol` math class (`\mathchar@type`: a `\math…` name or its number):

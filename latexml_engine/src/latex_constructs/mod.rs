@@ -8686,7 +8686,9 @@ mod sect10;
 mod sect11;
 mod sect12;
 mod sect13;
-use reference_math_slots::{ReferenceSymbol, reference_math_slot};
+use reference_math_slots::{
+  BindingToken, ReferenceSymbol, reference_math_accent, reference_math_slot,
+};
 pub use sect04::toc_select;
 pub use sect07::prepare_latex_equation_counter;
 pub use sect08::{declare_bound_text_symbols, declare_capital_greek, declare_capital_greek_named};

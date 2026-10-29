@@ -1,0 +1,31 @@
+% witness: 2106.08363 (296 `\hat`), 1808.01384, 2406.11942, 1902.03183 (eq. 9 `\bar{u} &= a_0.`), 2506.22450 —
+%          newtxsf.sty:301-311, :1332 (`\re@DeclareMathAccent` in `lettersA` `U/ntxsfmia` at 254/255/186/187/221/222/
+%          223/224/219, `\dot` `\ddot` `\vec` in `symbols` `LMS/ntxsy` at 164/165/174); 2607.15091 (its own
+%          `\DeclareMathAccent{\widehat}{0}{mathx}{"70}`, `{\widecheck}…{"71}`, mathabx.dcl:944-945)
+% oracle:  pdflatex: "x́ x̀ ẍ x̃ x̄ x̆ x̌ x̂ ⃗x ẋ x̊, xy + x̌, x̄ˆ, a_x̂, ˆ. / ū = a0. (1)" (checked visually: each the
+%          accent its name says; pdftotext reads ¥ ® ¤ Þ for the ddot, vec, dot and ring, which have no ToUnicode), 0
+%          errors
+% engines: rust 89b = 0 errors, 3 warnings (U/ntxsfmia, LMS/ntxsy, U/mathx), every accent U+FFFD; rust 89a = 0
+%          warnings, every accent an empty token (MathML `<mo>hat</mo>`, the name), the align cell dropped; perl
+%          0.8.8 = 0 warnings, every accent an empty token
+% expect:  0 errors, 1 warning (U/mathx, naming the math accent \widecheck, a name of mathabx's own); each kernel
+%          accent the token LaTeXML's own binding makes of its name, whatever its slot — glyph, `name`, stretchiness
+%          (`\hat` ^ stretchy="false", `\mathring` U+030A, `\widehat` ^) — over its base, nested, in a script, with an
+%          empty base, and over `u` in the align cell (OXIDIZED_DESIGN_DIVERGENCES #27)
+% status:  RED (89b) -> GREEN (89c)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{newtxsf}
+\DeclareFontFamily{U}{mathx}{\hyphenchar\font45}
+\DeclareFontShape{U}{mathx}{m}{n}{<5> <6> <7> <8> <9> <10> <10.95> <12> <14.4> <17.28> <20.74> <24.88> mathx10}{}
+\DeclareSymbolFont{mathx}{U}{mathx}{m}{n}
+\DeclareMathAccent{\widehat}{0}{mathx}{"70}
+\DeclareMathAccent{\widecheck}{0}{mathx}{"71}
+\begin{document}
+$\acute{x}\grave{x}\ddot{x}\tilde{x}\bar{x}\breve{x}\check{x}\hat{x}\vec{x}\dot{x}\mathring{x}$,
+$\widehat{xy}+\widecheck{x}$, $\hat{\bar{x}}$, $a_{\hat{x}}$, $\hat{}$.
+\begin{align}
+\bar{u} &= a_0.
+\end{align}
+\end{document}

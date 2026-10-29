@@ -605,7 +605,8 @@ in its group, onto the whatsit as `absorbWarningLocator` (`ABSORB_WARNING_LOCATO
 `at Anonymous String` in 89b round 2). So a box digested and never printed loses nothing
 and says nothing: a symbol declared and never used (kpfonts, mathdesign and MnSymbol declare hundreds a paper never
 uses), one only measured (`\settowidth`), one in a savebox never used (program.sty:834-838 sets `\powersetsymbol`,
-`U/eur` "7D, in a box as it loads, which older sn-jnl.cls copies load; `\powerset`'s `\usebox` prints it and warns),
+`U/eur` "7D, in a box as it loads, which older sn-jnl.cls copies load; `\powerset`'s `\usebox` prints it — U+FFFD with
+the Warning in 89b, ℘ since 89c, below),
 and one digested by a rehearsal or under a diagnostics hold that is discarded (a counter's `\the…` under
 `\refstepcounter`, `counter/dialect.rs`). The key set at digestion in 89b round 1 lost the Warning in that last case
 (`DiagnosticsHold::discard` drops the record and keeps the global assignment) while the document still printed U+FFFD.
@@ -613,10 +614,29 @@ A property keeps a simple symbol on the primitive path; a `before_digest` would 
 which sizes its box otherwise (2201.00184's bussproofs rule went from 471.8pt to 656.4pt; 2605.21024's and
 2304.04743's pictures changed size).
 
-**Undecodable** means `font_decode` gives no glyph and the name has no reference slot (#910). That covers two cases:
-the declared font's encoding has no map (`U` with a family other than `msa`/`msb`, or a symbol font that is not
-declared at all), or the map has no entry at the slot (TS1 "41; the reason reads "has no Unicode glyph at slot …"). A
-raw slot is no font's glyph in either case. A decoded glyph is never touched. A character symbol
+**Undecodable** means `font_decode` gives no glyph and the name has no reference slot (#910), or for an accent no
+kernel accent's name (below). That covers three cases:
+the declared font's encoding has no map (`U` with a family other than `msa`/`msb`/`eur`, or a symbol font that is not
+declared at all), the map has no entry at the slot (TS1 "41; the reason reads "has no Unicode glyph at slot …"), or
+the map records the slot as a gap of the font (`U/eur`'s 17, `U/msb`'s 5, "has no character at slot …"). A
+raw slot is no font's glyph in any case. **A mapped font's empty slot** is never decoded by a name for an accent —
+the map says what the font's slots hold — and for a symbol only where it is no gap of the font: a slot the font lacks
+(pdflatex: "Missing character", prints nothing; `U_<family>_fontmap_lacks`) is U+FFFD with the font's Warning,
+kernel or AMS name or not (`\star` at eur "3F, `\vec` at eur "7E; review 89c r1 B1/P1, ⋆ and → by name in 89c round
+1, ⋆ on int120a; `\Cap`, `\Subset`, `\varpropto` declared in `AMSb` at their `AMSa` slots "65/"62/"5F, review 89c r2
+S1, ⋒ ⋐ ∝ by name through 89c round 2 and on int120a, no corpus or TeX Live witness), while the maps' other empty
+slots hold glyphs they have no single character for — msbm's six negated relations at "0A/"0B/"14/"15/"22/"23 and
+msam's dash bar `\dabar@` at "39, which oz.sty:289-310, zed-csp.sty:231-232, amsfonts.sty:89 and amstex.sty:1939
+declare at those slots — and a reference name decodes them as before (sect08.rs `symbol_font_lacks_slot`). The gaps
+are generated, not typed: tftopl over every size each mapped `U` family's .fd loads (msam5/7/10 none; msbm5/7/10 "5F
+and "62-"65; eurm and eurb 5/7/10 the 17 below; every size of a family agrees), `U_FONT_GAPS` in u_fontmap.rs from
+tools/perfect_kernel/gen_reference_math_slots.py `--u-font-gaps`. **The two rules differ on purpose.** The symbol rule
+is slot-matched: the name and the slot equal the reference's, and that equal slot is layout evidence, so it holds in a
+mapped font too and is defeated only at a slot the font is recorded as lacking. Slot-matched means the name and the
+slot, not the font — `\Cap` at `AMSb` "65 matches amssymb's `AMSa` "65 — which is why the gap record, not the match,
+keeps msbm's gaps U+FFFD. The accent rule takes the name at any slot, which is no layout evidence, so it is confined
+to fonts with no map: in a mapped font an empty slot names nothing the map vouches for. Guards `perfect_kernel_batch89c::{euler_roman_decodes_as_math_italic,
+mapped_font_glyph_without_a_character_decodes_by_name}`. A decoded glyph is never touched. A character symbol
 (`\DeclareMathSymbol{-}…`, euler.sty's `(` in `U/euf`) prints its own character, through `def_math`'s rewrite rule,
 whatever its slot, as before, and reports nothing; it keeps its `name` attribute unless it sits at its own code, as
 before (newtxsf's digits keep `name="2"`). `\DeclareMathAccent` now decodes with the declared font, as
@@ -642,8 +662,54 @@ An undecodable accent was an empty token (Perl's), and MathML filled the empty `
 `\bar{u} &= a_0.` lost its `\displaystyle\bar{u}` (151 formulas with 89b against 150). It is now U+FFFD over its base,
 visible and counted, and the cell is kept. The accents involved are newtxsf's `\hat`, `\bar`, `\tilde` and `\dot` in
 `lettersA` at 223/221/219/224 and its `\vec` in `symbols` at 174 (newtxsf.sty:301-313, :1332, after
-`\let…\undefined`), and mathabx's `\widehat`/`\widecheck` in `U/mathx` (mathabx.dcl:944-945). Decoding a kernel accent
-by its name alone, at any slot, is a rule of its own and stays open (SYNC_STATUS Font-Selection residual 9).
+`\let…\undefined`), and mathabx's `\widehat`/`\widecheck` in `U/mathx` (mathabx.dcl:944-945).
+
+**A kernel accent is decoded by its name** (89c): undecoded in a declared symbol font with no font map, an
+accent fontmath.ltx declares (`\acute` `\grave` `\ddot` `\tilde` `\bar` `\breve` `\check` `\hat` `\vec` `\dot`
+`\widetilde` `\widehat` `\mathring`, fontmath.ltx:410-422; amsfonts declares none) is the token LaTeXML's own kernel
+binding makes of the name, at whatever slot: its glyph (`^`, `¯`, U+030A …), `name` and stretchiness (`\hat`, `\bar`,
+`\tilde`, `\check`, `\vec` `stretchy="false"`), as `$\hat{x}$` gives without the package. Unlike a symbol, whose
+reference must match name and slot (#910: `\epsilon` at `\varepsilon`'s slot is a variant swap), an accent's name is
+its meaning: no package draws another accent under a kernel accent's name. Checked by rendering (pdflatex, pdftotext
+and by eye where ToUnicode is missing) every redeclaration in a font we cannot decode — newtxsf's nine in `lettersA`
+(`U/ntxsfmia` 254/255/186/187/221/222/223/224/219; asmeconf.cls:2399-2407's `lettersAB`, the same font) and `\dot`
+`\ddot` `\vec` in `symbols` (`LMS/ntxsy` 164/165/174), mdsymbol's `\vec` in `U/MdSymbolE` "84 (mdsymbol.sty:1959;
+rendered; not reached while `\SetSymbolFont{…}{normal}` is unmodelled), and a paper's copy of mathabx.dcl:944 `\widehat` in `U/mathx` "70 (2607.15091): each draws the accent its name says.
+So does mathabx.dcl's `\dot`/`\ddot` in `U/mathb` "39/"3A (mathabx.dcl:193,195), rendered as a dot and a double
+dot. Every other TeX Live redeclaration of a kernel accent is bound or decodes through a map, and is untouched; in a
+mapped font an empty slot stays U+FFFD (above). mdsymbol's accents are redeclared in `largesymbols` after
+`\SetSymbolFont{largesymbols}{normal}{U}{MdSymbolE}` (mdsymbol.sty:383-408), which is not modelled, so the font in
+force is still `OMX/cmex` and its `\vec` at "84 — outside cmex's 128 slots — stays U+FFFD with the Warning (89c round
+1 decoded it by name; SYNC_STATUS Font-Selection residual 9). The table
+is `reference_math_accent` (`reference_math_slots.rs`, the same generator as #910's, each token captured from the
+binding); the rule is sect08.rs `reference_accent`. A name of a package's own (mathabx's `\widecheck`) and an accent
+in a symbol font never declared (pdflatex: "Symbol font … is not defined") stay U+FFFD with the font's Warning. Repro
+fonts-nfss/kernel_accent_decodes_by_its_name; guard `perfect_kernel_batch89c::kernel_accent_decodes_by_its_name`
+(eleven newtxsf accents, nested, in a script, over an empty base, in 1902.03183's align cell). In the 89c A/B
+(pop89c: pop89a and 80 papers loading newtxsf, asmeconf, mdsymbol, program or another raw `U/eur` user; 756 against
+int120a; run `r89c2`, round 2) 19 papers changed, none worse: E 2291 = 2291, F 2 = 2, W 12136 → 12127 (eight newtxsf
+papers lose their `U/ntxsfmia` or `LMS/ntxsy` Warning; the ninth W is 2406.00910's one `ambiguous_math` Warning, its
+XML identical and 161 on both binaries rerun alone — noise; no other category moved; run `r89c3`, round 3, equals it
+row for row); U+FFFD in them 2092 → 1031, every changed token an
+accent U+FFFD becoming the kernel's (1,025 newtxsf accents in 17 papers, 2106.08363's 296 hats among them, and
+2607.15091's 36 `\widehat`; its 88 `\widecheck` stay); text outside maths identical, but for 2607.15091's tikz-cd
+pictures, sized by the accent's glyph as without mathabx. The gap rule (round 2) changes no row of that A/B: every
+paper's candidate row equals round 1's but 2406.00910's (one `ambiguous_math` Warning fewer, its XML identical; 161 on
+both binaries rerun alone), and no TeX Live package declares a symbol or a kernel accent at an eur gap; nor at an
+msbm gap (round 3).
+
+**The Euler Roman family `U/eur` decodes through OML** (89c): eurm10/eurb10 (amsfonts' ueur.fd) say "TEX MATH ITALIC
+SUBSET"; tftopl gives 111 of cmmi10's 128 slots and none outside them, and rendered beside cmmi10 each draws cmmi's
+glyph, upright. So `U_eur_fontmap` (u_fontmap.rs, beside `U_msa`/`U_msb`) is the OML map with the 17 slots eurm lacks
+emptied — 37 and 38 (ϱ and ς, "Euler's missing variants", sansmath.sty:76), 40-47 (harpoons, hooks, triangles), 63
+(star), 91-95 (flat, natural, sharp, smile, frown), 126 (the vector accent) — and recorded as gaps of the font
+(`U_eur_fontmap_lacks`, generated with msbm's, above): they stay undecodable, a kernel name there too ("has no character at slot"; pdflatex logs
+"Missing character"). program.sty's
+`\powersetsymbol` is ℘ (older sn-jnl.cls copies; statex, mismath, mathgreeks, sansmath, beilstein.cls declare `U/eur`
+fonts raw too). A letter so declared is italic, as any letter `\DeclareMathSymbol` puts in an upright font
+(SYNC_STATUS Font-Selection residual 9; RED repro fonts-nfss/declare_math_symbol_letter_in_an_upright_font_is_upright).
+Repro fonts-nfss/euler_roman_decodes_as_math_italic; guard
+`perfect_kernel_batch89c::euler_roman_decodes_as_math_italic`.
 
 In the 89b A/B (pop89a, 676 papers against 89a), 68 papers changed:
 - Errors stayed 1665 and Fatals 2.
@@ -26466,8 +26532,17 @@ undecoded: a variant swap (`\epsilon` at "22, where fontmath.ltx has `\varepsilo
 rendering) — so the symbol-font name alone (`AMSa`) is no slot contract, and a name no reference declares in an
 `AMSa`/`AMSb` font stays undecoded too. A name no reference declares (shuffle's `\shuffle`, stmaryrd's `\boxslash`,
 #645; kpfonts' `\neq` in `U/jkpsyc` at 44) stays undecoded too: U+FFFD, with its font's one Warning (#27). A font with a map decodes through it, not the binding (oz.sty's
-`U/msa` `\Cap` ⋒ BINOP through `U_msa`). `\DeclareMathAccent` has no such step (no package redeclares a kernel accent
-at its kernel slot in an undecodable font; newtx and newpx use other slots). Perl drops all these symbols. The
+`U/msa` `\Cap` ⋒ BINOP through `U_msa`), and at a slot its map records as a gap of the font (`U/eur`'s 17, `U/msb`'s
+5, generated by tftopl; pdflatex "Missing character") a kernel or AMS name is U+FFFD with the font's Warning too
+(`\star` at eur "3F, `\Cap` at `AMSb` "65; 89c, #27); the maps' other empty slots are glyphs with no single
+character, which the reference still decodes (msbm's negated pairs, msam's `\dabar@`). The match is slot-matched in
+the name and the slot, not the font (`\Cap` at `AMSb` "65 matches amssymb's `AMSa` "65), so a font's gap is defeated
+by its record, not by the match. `\DeclareMathAccent`, undecoded in a declared font with no font map, takes the
+binding's token by the name alone, at any slot (89c, #27: an accent's name is its meaning; newtxsf uses other slots,
+and mdsymbol's `largesymbols` would — rendered; not reached while `\SetSymbolFont{…}{normal}` is unmodelled). The two
+triggers differ because the evidence differs: an equal slot is layout evidence, which holds in a mapped font and is
+defeated only at a recorded gap; a name at any slot is not, so the accent rule is confined to fonts with no map, where
+an empty slot of a mapped font names nothing the map vouches for. Perl drops all these symbols. The
 binding's limits placement (its `scriptpos`/`mathstyle` closures) is not carried: a kernel `\mathop` redeclared this
 way (`\sum`, `\bigcup` at their largesymbols slots) sets its display limits as scripts, where the kernel's token sets
 them under and over (repro fonts-nfss/redeclared_mathop_takes_display_limits, RED; no corpus witness, the packages use

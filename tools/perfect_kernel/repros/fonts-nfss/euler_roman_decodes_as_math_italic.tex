@@ -1,0 +1,32 @@
+% witness: program.sty:834-838 (`\DeclareSymbolFont{eulerletters}{U}{eur}{m}{n}`, `\powersetsymbol` at "7D, printed by
+%          `\powerset`; older sn-jnl.cls copies load it); amsfonts ueur.fd (eurm10, "TEX MATH ITALIC SUBSET": 111 of
+%          cmmi10's slots, none outside them, by tftopl); review 89c r1 (B1: `\vec` at "7E; P1: `\star` at "3F);
+%          review 89c r2 (S1: msbm5/7/10 have no character at "5F, "62-"65, by tftopl, where amssymb's `AMSa` puts
+%          `\varpropto`, `\Subset`, `\Cap`; no corpus paper declares them in `AMSb`)
+% oracle:  pdflatex: "A ⊆ ℘B, ℓ, a . v a b c d" — the star at "3F, the flat at "5B and the vector accent at "7E print
+%          nothing ("Missing character: There is no ? in font eurm10!", "… no [ …", "… no ~ …"), nor `\Cap`,
+%          `\Subset` and `\varpropto` in `AMSb` (three "Missing character … in font msbm10!"), 0 errors
+% engines: rust 89c r2 = 0 errors, 2 warnings, `\Cap` ⋒, `\Subset` ⋐, `\varpropto` ∝ by their names (int120a, 89c r1
+%          alike); rust 89c r1 = 0 errors, 1 warning (eulerletters), `\star` ⋆ and `\vec` → by their names;
+%          rust 89b = 0 errors, 1 warning (U/eur has no font map, naming \powersetsymbol), every eur symbol U+FFFD;
+%          rust 89a = 0 warnings, the raw slots (`}` for ℘); perl 0.8.8 = 0 warnings, every eur symbol dropped
+% expect:  0 errors, 3 warnings (eulerletters naming \star, eu naming \vec: U/eur "has no character at slot"; AMSb
+%          naming \Cap: U/msb "has no character at slot"): ℘ and ℓ decode through the OML layout; the star, the flat
+%          and the vector accent, slots eurm10 lacks, and the three AMS names at slots msbm lacks, are U+FFFD, kernel
+%          or AMS names or not (OXIDIZED_DESIGN_DIVERGENCES #27, #910)
+% status:  RED (89b, 89c r1; msbm rows 89c r2) -> GREEN (89c r2; msbm rows 89c r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{program}
+\usepackage{amsfonts}
+\DeclareSymbolFont{eu}{U}{eur}{m}{n}
+\DeclareMathSymbol{\euell}{\mathord}{eulerletters}{"60}
+\DeclareMathSymbol{\star}{\mathbin}{eulerletters}{"3F}
+\DeclareMathSymbol{\euflat}{\mathord}{eulerletters}{"5B}
+\DeclareMathAccent{\vec}{\mathord}{eu}{"7E}
+\DeclareMathSymbol{\Cap}{\mathbin}{AMSb}{"65}
+\DeclareMathSymbol{\Subset}{\mathrel}{AMSb}{"62}
+\DeclareMathSymbol{\varpropto}{\mathrel}{AMSb}{"5F}
+\begin{document}
+$A\subseteq\powerset B$, $\euell$, $a\star\euflat$. $\vec{v}$ $a\Cap b \Subset c \varpropto d$
+\end{document}
