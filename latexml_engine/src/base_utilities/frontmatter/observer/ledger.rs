@@ -306,7 +306,8 @@ pub(in crate::base_utilities) fn reset_author_owner() {
 
 /// The binding a block's policy is keyed on (S2a.2 r2, review revfms2a2's answer to question 3): the binding owning
 /// the `\author` meaning that makes the `\lx@add@authors*` call ([`author_binding`]); when that is the kernel's, the
-/// document class's binding that declared conventions (iopart.cls's `iopart_support.sty`, `jpconf.cls`, `report.cls`)
+/// document class's binding that declared conventions (`jpconf.cls`, `report.cls`, `book.cls`; iopart_support owns its
+/// `\author` itself)
 /// — never over a package owning `\author` (authblk's stays authblk's).
 pub(in crate::base_utilities) fn policy_binding(owner: &str) -> String {
   if owner != "kernel" {

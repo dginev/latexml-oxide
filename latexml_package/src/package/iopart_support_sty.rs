@@ -62,8 +62,8 @@ pub fn iop_address_and_email() -> Result<()> {
 /// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
 /// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
 /// iopart: `\ead` by spelling, else author order, else the address mark, else the group's only author (each
-/// `\author` a group). Reaches iopart.cls's binding, which loads this one (`ledger::policy_binding`: the class's
-/// binding with a declaration, under the kernel `\author`).
+/// `\author` a group). Reaches iopart.cls, which loads this binding: this binding's own locked `\author[]{}` owns the
+/// call, so `ledger::author_binding` is this binding (every iopart census block, e.g. 0710.1143).
 pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   name: "iopart",
   binding: "iopart_support.sty",

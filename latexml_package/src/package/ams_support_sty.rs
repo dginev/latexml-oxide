@@ -31,7 +31,8 @@ pub fn declare_ams_size_options() -> Result<()> {
 /// Reaches a binding only while its `\author` at the call is still this binding's (the key is
 /// `ledger::author_binding`): ams_core's amsart, amsproc and amsbook, amsaddr. Not lmcs: its own `\author` calls
 /// `\lx@add@author`, so the observer records no author block (2306.08266, 2108.06944, 2402.09138). OmniBus loads this
-/// binding lazily (the `\curraddr` autoload), so it is reached only when that load comes before `\author`.
+/// binding lazily — its `\subjclass` autoload (omnibus_cls.rs:820), or the ambient `\curraddr` one (tex.rs:314) — so it
+/// is reached only when that load comes before `\author`; otherwise OmniBus is inst_support's.
 pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   name: "ams",
   binding: "ams_support.sty",

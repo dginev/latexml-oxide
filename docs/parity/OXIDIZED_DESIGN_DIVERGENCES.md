@@ -23308,7 +23308,8 @@ own (the XML's trailing nameless creator, #159) — each association with the ru
   field is gone — revtex4-2.cls:3040-3043 is `\@fnsymbol` by default, :5976-5978 `\@booleanfalse\altaffilletter@sw`
   after :3043's default, checked with pdflatex; `\@alph` only under `altaffilletter`.) The policy key is the binding
   owning `\author`, or — when that is the kernel's — the document class's binding with an entry (`ledger::policy_binding`:
-  the first binding the class's load loaded that has one; iopart.cls's `iopart_support.sty`, `jpconf.cls`, `report.cls`),
+  the first binding the class's load loaded that has one; `jpconf.cls`, `report.cls`, `book.cls` — iopart_support owns
+  its `\author` itself),
   never over a package owning `\author` (authblk); an API call runs under the policy of the block before it.
 - **Policy table** (`policy.rs`, Layer B; first match on (binding, hook), else `kernel`; since 87a each binding's own
   declaration, "The conventions' home" below): `revtex`
@@ -24004,13 +24005,18 @@ the default build's S2b writer) is the binding's own flag. The key is the one th
 (`ledger::author_binding`, `ledger::policy_binding`), as the table's lookup was: a declaration reaches a binding only
 while that binding's `\author` at the call is still the declaring binding's — loading the declaring binding is not
 enough. revtex4_support's reaches revtex4, revtex4-1, revtex4-2; ams_support's ams_core's amsart, amsproc, amsbook and
-amsaddr; iopart_support's iopart.cls (through `policy_binding`, its `\author` the kernel's). Not reached today: the
+amsaddr; iopart_support's iopart.cls, because iopart_support's own locked `\author[]{}` owns the call (all 122 author
+blocks of the 97 iopart census papers keyed `iopart_support.sty`); `policy_binding` — the class's declaring binding under
+the kernel's `\author` — reaches jpconf.cls, report.cls and book.cls (the census's only blocks where owner and key
+differ: 57, 36, 33). Not reached today: the
 aastex classes load revtex4 and then `aas_support`, whose `\author` (aas_support_sty.rs) takes the ownership — kernel
 conventions, keyed `aas_support.sty` (every aastex-family census paper: aastex 45, aastex631 24, aastex63 13,
 aastex62 7, aastex6 3, aastex7 3; 1005.0770, 1910.05363, 2604.19097); lmcs's own `\author` (lmcs_cls.rs) calls
 `\lx@add@author`, no `\lx@add@authors*`, so the observer records no author block and no conventions are read
-(2306.08266, 2108.06944, 2402.09138: 0 blocks under `LATEXML_FM_SHADOW=1`); OmniBus loads ams_support only lazily
-(the `\curraddr` autoload, tex.rs), so it is reached only when that load comes before `\author`; aa.cls's declaration
+(2306.08266, 2108.06944, 2402.09138: 0 blocks under `LATEXML_FM_SHADOW=1`); OmniBus (inst_support's conventions by
+default, loaded eagerly) is reached by ams_support's only when its `\subjclass` autoload (omnibus_cls.rs:820) or the
+ambient `\curraddr` autoload (tex.rs:314) loads ams_support before `\author` (the 87a r2 re-review's probes p2, p4; the
+ambient one would also reach a kernel-`\author` class, a shape pdflatex does not compile); aa.cls's declaration
 is unread, inst_support owning aa's `\author` (all 100 aa census papers keyed `inst_support.sty`, the same values).
 Whether aastex should take revtex's conventions is an observer decision left open. The fifteen former
 rows, each in its binding (latexml_package: revtex4_support, authblk, llncs, aa, inst_support, sv_support,
