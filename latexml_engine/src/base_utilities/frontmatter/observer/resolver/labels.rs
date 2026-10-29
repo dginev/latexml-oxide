@@ -46,10 +46,35 @@ pub(super) fn is_symbol_char(c: char) -> bool { events::is_fnsymbol(c) }
 /// symbol glued to a label another (`*1` → `*`, `1`); parentheses and brackets around a label dropped (`(a)`); the
 /// math asterisk `∗` read as `*`, the formula `\|`'s `∥` as `‖` (0806.2911).
 pub fn mark_labels(label: &str) -> Vec<String> {
-  // (a `\ref` mark's key, and a `fuzzy:<name>` label — svjour's `\institute` entry after `\at`, a name with its
-  // spaces — are one label each, never split: review revfms2a2 finding 2, 0807.3898, 2403.09642)
-  if label.starts_with("ref:") || label.starts_with("fuzzy:") {
+  // (a `fuzzy:<name>` label — svjour's `\institute` entry after `\at`, a name with its spaces — is one label, never
+  // split: review revfms2a2 finding 2, 0807.3898, 2403.09642)
+  if label.starts_with("fuzzy:") {
     return vec![label.trim().to_string()];
+  }
+  // (a mark holding `\ref`s is a list at its commas — `events::script_ink` writes each reference as an item of its
+  // own —, each `\ref`'s key one label, never split further — its spaces and brackets are the key's —, the rest read
+  // as any mark, what prints between two references no label: `\inst{\ref{ia},\ref{ib}}` and `\inst{\ref{ia}\ref{ib}}`
+  // request `ref:ia` and `ref:ib`, 1707.06238, 1302.1442; `\inst{1,\ref{ib}}` `1` and `ref:ib`; `\ref{a}--\ref{c}`
+  // `ref:a` and `ref:c`, its dash none)
+  if label
+    .split(',')
+    .any(|piece| piece.trim().starts_with("ref:"))
+  {
+    return label
+      .split(',')
+      .map(str::trim)
+      .filter(|piece| !piece.is_empty())
+      .flat_map(|piece| {
+        if piece.starts_with("ref:") {
+          vec![piece.to_string()]
+        } else {
+          mark_labels(piece)
+            .into_iter()
+            .filter(|l| l.chars().any(|c| c.is_alphanumeric() || is_symbol_char(c)))
+            .collect()
+        }
+      })
+      .collect();
   }
   let mut labels = Vec::new();
   for part in label.split(|c: char| c == ',' || c == ';' || c.is_whitespace()) {
@@ -643,6 +668,67 @@ pub(super) fn only_addresses(text: &str) -> bool {
       )
     })
     .all(|w| !w.chars().any(char::is_alphanumeric))
+}
+
+/// The pieces of the text a document's note prints before an address, each a name it may give
+/// (`Resolver::note_named`): parted at `,`, `;`, `:`, `/`, `&` and the words "and" and "or". A label is a piece of its
+/// own that names no one ("Corresponding author: A. Able" gives "Corresponding author" and "A. Able"; "A. Able:
+/// corresponding author" the same two, review rev92a_r3 S1). The words part the text, so a creator surnamed Or or And
+/// (Yuval Or) is never named: the note fails to the block.
+pub(super) fn note_pieces(letters: &str) -> Vec<String> {
+  let mut pieces = Vec::new();
+  for part in letters.split([',', ';', ':', '/', '&']) {
+    let mut piece: Vec<&str> = Vec::new();
+    for word in part.split_whitespace() {
+      if matches!(word.to_lowercase().as_str(), "and" | "or") {
+        pieces.push(piece.join(" "));
+        piece.clear();
+      } else {
+        piece.push(word);
+      }
+    }
+    pieces.push(piece.join(" "));
+  }
+  pieces
+    .into_iter()
+    .map(|p| p.trim().to_string())
+    .filter(|p| !p.is_empty())
+    .collect()
+}
+
+/// The words of a name, each folded ([`fold_name`]) with whether it is an initial: parted at spaces and hyphens, and
+/// after an initial's period (`A.B.` two initials; `J.-P.` and `Jean-Pierre` both two words); a word is an initial when
+/// it folds to one letter.
+pub(super) fn name_words(name: &str) -> Vec<(String, bool)> {
+  name
+    .split(|c: char| c.is_whitespace() || c == '-' || c == '.')
+    .map(fold_name)
+    .filter(|w| !w.is_empty())
+    .map(|w| {
+      let initial = w.chars().count() == 1;
+      (w, initial)
+    })
+    .collect()
+}
+
+/// Whether the words of a note's piece are a creator's name, every word agreeing (review rev92a_r2 B2): the last is
+/// the creator's surname, whole; each before it one of the creator's given names, in order, equal or its initial (`J.
+/// Smith` is not Adam Smith; `B. Bitsch` is Bertram Bitsch, 1411.3255; `O. Kochukhov` Oleg Kochukhov, 0903.3512). A
+/// piece with any other word ("the editor of Bob Baker") is no creator's name.
+pub(super) fn names_agree(piece: &[(String, bool)], creator: &[(String, bool)]) -> bool {
+  let (Some(((surname, false), given)), Some(((own_surname, _), own_given))) =
+    (piece.split_last(), creator.split_last())
+  else {
+    return false;
+  };
+  if surname != own_surname {
+    return false;
+  }
+  let agree = |(a, a_initial): &(String, bool), (b, b_initial): &(String, bool)| {
+    a == b || ((*a_initial || *b_initial) && a.chars().next() == b.chars().next())
+  };
+  let mut own = own_given.iter();
+  given.iter().all(|word| own.any(|o| agree(word, o)))
 }
 
 /// The creators a fuzzy label's names name by their surnames when the label spells no name whole (today's

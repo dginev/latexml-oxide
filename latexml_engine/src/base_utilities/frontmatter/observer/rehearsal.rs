@@ -17,7 +17,12 @@ use latexml_core::{
   token::FieldLedgerScope,
 };
 
-use super::{ledger::SkipReason, policy::TitleMarks, *};
+use super::{
+  events::EmailMeaning,
+  ledger::{SkipReason, email_meaning},
+  policy::TitleMarks,
+  *,
+};
 
 thread_local! {
   static REHEARSING: Cell<bool> = const { Cell::new(false) };
@@ -148,6 +153,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefConstructor!("\\lx@fm@obs@request []{}", "");
   DefConstructor!("\\lx@fm@obs@label Semiverbatim", "");
   DefConstructor!("\\lx@fm@obs@email [] Semiverbatim", "");
+  // (an e-mail call by the class's binding printing in place, and by no binding's meaning: `ledger::email_meaning`)
+  DefConstructor!("\\lx@fm@obs@email@inplace [] Semiverbatim", "");
+  DefConstructor!("\\lx@fm@obs@email@own [] Semiverbatim", "");
   DefConstructor!("\\lx@fm@obs@url Semiverbatim", "");
   DefConstructor!("\\lx@fm@obs@href Semiverbatim {}", "");
   DefConstructor!("\\lx@fm@obs@orcid [] Semiverbatim", "");
@@ -301,7 +309,19 @@ fn install_event_bindings(title_marks: TitleMarks) -> Result<()> {
     if lookup_definition(&T_CS!(*cs))?
       .is_some_and(|defn| !needs_argument || defn.get_num_args() > 0)
     {
-      let_i(&T_CS!(*cs), &T_CS!(*target), None);
+      // (an e-mail call is read with whose meaning it has here, when the note is rehearsed — at the flush,
+      // `\maketitle`, not at the call (review rev92a_r4 B1, OD #913): `\lx@fm@obs@email` a binding's, the `@inplace`
+      // and `@own` variants the class's printing in place and no binding's — review rev92a_r3 B1)
+      let target = if *target == "\\lx@fm@obs@email" {
+        match email_meaning(cs) {
+          EmailMeaning::Binding => *target,
+          EmailMeaning::InPlace => "\\lx@fm@obs@email@inplace",
+          EmailMeaning::Own => "\\lx@fm@obs@email@own",
+        }
+      } else {
+        *target
+      };
+      let_i(&T_CS!(*cs), &T_CS!(target), None);
     }
   }
   Ok(())

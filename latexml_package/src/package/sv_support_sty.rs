@@ -17,12 +17,17 @@ pub fn define_bold_vectors() -> Result<()> {
 
 /// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
 /// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
-/// svjour: an `\inst` after a comma is the name's before it
+/// svjour: an `\inst` after a comma is the name's before it; `\email` prints in place in each class loading it —
+/// svjour3.cls:303 `\def\email#1{\emailname: #1}` (v3.2 2007/05/08, 1902.07328's copy), svmult.cls:2304
+/// `\def\email#1{\emailname: \url{#1}}` (v5.4 2007/06/25, 0812.2480's), the old svjour.cls:256 `\def\email#1{{e-mail:
+/// \tt#1}}` (2003/04/15 and 1999/09/14, 0901.1015's and 1711.03503's); none is in TeX Live 2025, so read from the
+/// copies the papers ship —, so `\offprints{O. Kochukhov, \email{…}}` names its address's owner
 pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   name: "svjour",
   binding: "sv_support.sty",
   inst_after_comma: true,
-  cite: "svjour3.cls `\\inst` (`\\unskip`); OD #807",
+  email_in_place: true,
+  cite: "svjour3.cls `\\inst` (`\\unskip`), :303 `\\email`; svmult.cls:2304, svjour.cls:256; OD #807, #913",
   ..FM_KERNEL_CONVENTIONS
 };
 

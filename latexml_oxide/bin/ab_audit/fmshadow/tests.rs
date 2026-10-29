@@ -36,6 +36,37 @@ fn convert(tex: &str) -> (String, Value) {
   (xml, serde_json::from_str(&json).expect("json"))
 }
 
+/// 92a (OD #913): a dump re-resolves to its own resolution with the shapes the groundwork for stage 7 (llncs and aa onto the observer) reads — a frontmatter
+/// clear's calls marked `"cleared"` and skipped (llncs's `\author` given twice, 2104.04331), a publication note's e-mail
+/// (`ltx:pubnote`, A&A's `\offprints`, 0711.1152; its call's meaning, `"meaning"`, the class's binding's and the paper's
+/// own, review rev92a_r3 B1) and the title (`resolver_call`, the intake `ledger_inputs` shares), a mark of two `\ref`s
+/// (1707.06238) — and the comparator finds each agreeing with the XML.
+#[test]
+fn a_dump_with_clears_publication_notes_and_ref_lists_re_resolves_to_itself() {
+  for tex in [
+    include_str!(
+      "../../../../tools/perfect_kernel/repros/class-bindings/llncs_author_twice_keeps_the_last.tex"
+    ),
+    include_str!(
+      "../../../../tools/perfect_kernel/repros/class-bindings/aa_offprints_email_is_the_authors.tex"
+    ),
+    include_str!(
+      "../../../../tools/perfect_kernel/repros/class-bindings/aa_offprints_document_email_stays_the_notes.tex"
+    ),
+    include_str!(
+      "../../../../tools/perfect_kernel/repros/class-bindings/aa_inst_ref_list_is_one_mark.tex"
+    ),
+  ] {
+    let (xml, dump) = convert(tex);
+    let shadow = shadow_tuples(&json_resolved(&dump["resolved"]));
+    assert_eq!(shadow, shadow_tuples(&fm_resolve(&json_inputs(&dump))));
+    assert_eq!(
+      compare(&shadow, &xml_tuples(xml.as_bytes()).expect("xml")),
+      vec![]
+    );
+  }
+}
+
 /// The comparator on two conversions: a marked block the shadow resolves as the XML has it agrees; the design's
 /// `dag` probe disagrees, one classified row per moved symbol line (ruling 2: today's XML has both lines on Cat Cole,
 /// the shadow each on its carriers) — and resolving the dump's events again gives the dump's own resolution.

@@ -1,0 +1,17 @@
+% witness: review rev92a_r3 S1 (probe c2): a name before a colon in llncs's `\thanks`
+% oracle:  pdflatex: the footnote prints "Ann Able: corresponding author, carl@z.org"
+% engines: perl 0.8.8 = 0 errors (1 warning, ar5iv.sty absent), carl@z.org on Bob Baker; rust int120a = the same XML;
+%          rust 92a r3 = the same XML, the shadow the block's
+% expect:  0 errors, 0 warnings; "Ann Able" and "corresponding author" are pieces, the first Ann Able's whole name:
+%          carl@z.org Ann Able's (owner:corresponding api:note-name); the XML today's (llncs is not written)
+% status:  RED (92a r3) -> GREEN (92a r4)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A title}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{Univ X \and Univ Y}
+\thanks{Ann Able: corresponding author, \email{carl@z.org}}
+\maketitle
+Text.
+\end{document}

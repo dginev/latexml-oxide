@@ -36,7 +36,7 @@
 //! `\author` call (OXIDIZED_DESIGN_DIVERGENCES #837's r2 paragraph).
 
 use super::{
-  events::{self, Event, EventKind, SepKind},
+  events::{self, EmailMeaning, Event, EventKind, SepKind},
   policy::{EmailOwner, Policy, policy_for},
   *,
 };
@@ -108,7 +108,8 @@ pub struct Resolved {
 ///   an API entry a symbol leads that reads as a legend, not an affiliation, a legend note of the names showing it
 ///   (`api:legend`: the role change, its own tag — review revfms2a2_8 finding 2, FM S2a.2 r9);
 /// - ruling 2, a footnote-symbol line labels the line for its carriers: `ruling2:symbol-line`, `ruling2:uncarried`;
-/// - the corresponding author (charter §4's e-mail owner order): `owner:corresponding`;
+/// - the corresponding author (charter §4's e-mail owner order): `owner:corresponding` (a creator's own note, or the name a
+///   document's note prints before the address, `api:note-name`);
 /// - one contact per print event (`ruling3:one-per-print`): counted only where the XML holds the pieces joined into one
 ///   item (an `overlaps` rule), the change the ruling makes — the owner of each address is its other tag's;
 /// - an emptied note dropped, a note's inner contacts its contacts, `\thanks{}` kept: `ruling4:`;
@@ -151,6 +152,20 @@ pub fn is_change_rule(rule: &str) -> bool {
   })
 }
 
+/// One e-mail call a document's own note makes (`ltx:pubnote`, `Resolver::api`), placed by `answer_document_notes`.
+#[derive(Debug, Clone)]
+struct DocumentEmail {
+  assoc:    Assoc,
+  /// the text the note prints before it (the name it may give: "O. Kochukhov, ")
+  printed:  String,
+  /// whether the class's binding's `\email` made it, which prints it in the note (`Policy::email_in_place`, the
+  /// call's `EmailMeaning::InPlace`), so the name before it designates its owner; else another binding's, which routes
+  /// it to the current author
+  in_place: bool,
+  /// the current author at the note's call (the last creator read before it), whose own call a routed one is
+  current:  Option<usize>,
+}
+
 /// A resolver input: an author block (its events as the lexer gave them) or an API call made apart from the blocks.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Input {
@@ -165,6 +180,9 @@ pub enum Input {
     /// whether the call replaces the authors queued before it (`\lx@clear@frontmatter{ltx:creator}`: the kernel
     /// `\author` given twice), and the flushes before it (the queue it is in)
     replace: bool,
+    /// whether a later creator clear in its queue removed its authors (`ledger::AuthorBlock::cleared`: llncs's
+    /// `\author` given twice)
+    cleared: bool,
     epoch:   usize,
     events:  Vec<Event>,
   },
@@ -193,6 +211,7 @@ mod lines;
 mod post;
 
 pub(in crate::base_utilities::frontmatter::observer) use api::split_pieces;
+use blocks::Chain;
 // (named, as the prelude has its own of these names: the resolver's shadow them)
 pub use labels::{addresses_in, mark_labels};
 use labels::{text_tokens, *};
@@ -248,6 +267,9 @@ struct Resolver {
   replaced:         Vec<usize>,
   /// a note's links, and the notes they may empty, placed once every name is read (`answer_note_links`)
   note_links:       Vec<NoteLink>,
+  /// the e-mail calls a document's own note makes (`ltx:pubnote`: A&A's `\offprints{B. Baker, \email{…}}`), placed
+  /// once every name is read (`answer_document_notes`)
+  document_emails:  Vec<DocumentEmail>,
   /// the marks a name's notes show on it (creator, label: `Ann\footnote[1]{…}` shows `∗`), what an entry led by the
   /// same `\footnotemark` answers (`answer_pending`; 1607.07280)
   note_marks:       Vec<(usize, String)>,
@@ -336,6 +358,7 @@ impl Resolver {
       epoch_of:         Vec::new(),
       replaced:         Vec::new(),
       note_links:       Vec::new(),
+      document_emails:  Vec::new(),
       note_marks:       Vec::new(),
       notes_marked:     true,
       parted:           Vec::new(),
@@ -457,6 +480,7 @@ pub fn resolve_with(
         keyvals,
         counter,
         replace,
+        cleared,
         epoch,
         events,
       } => {
@@ -475,6 +499,10 @@ pub fn resolve_with(
         // `\lx@add@authors@append` hook, `split_author_line_cautious`)
         let cautious = hook == "\\lx@add@authors@append";
         resolver.block(*index, policy, cautious, keyvals.as_deref(), events);
+        // (a block whose authors a later clear removed, as a replacing call's: `ledger::record_clear`)
+        if *cleared {
+          resolver.replaced.extend(start..resolver.out.creators.len());
+        }
         resolver.epoch_of.resize(start, None);
         resolver
           .epoch_of
@@ -513,6 +541,7 @@ pub fn resolve_with(
   resolver.answer_pending();
   resolver.answer_note_texts();
   resolver.answer_sequence();
+  resolver.answer_document_notes();
   resolver.respell_emails();
   resolver.held_before_creators();
   resolver.sole_author_takes_the_block();
@@ -586,6 +615,7 @@ pub(in crate::base_utilities) fn ledger_inputs(ledger: &ledger::Ledger) -> Vec<I
             keyvals: block.keyvals.clone(),
             counter: block.counter,
             replace: block.replace,
+            cleared: block.cleared,
             epoch:   block.epoch,
             events:  events.clone(),
           });
@@ -593,7 +623,7 @@ pub(in crate::base_utilities) fn ledger_inputs(ledger: &ledger::Ledger) -> Vec<I
       },
       // (and the title, for the labels its marks request: `Resolver::api`'s `ltx:title`)
       ledger::Entry::Api(call)
-        if !call.inside && (creator_call(&call.tag, &call.parent) || call.tag == "ltx:title") =>
+        if !call.inside && !call.cleared && resolver_call(&call.tag, &call.parent) =>
       {
         inputs.push(Input::Api {
           index:  call.index,
@@ -623,6 +653,14 @@ pub fn creator_call(tag: &str, parent: &str) -> bool {
   (tag == "ltx:creator" && parent.is_empty()) || parent == "ltx:creator"
 }
 
+/// Whether an API call made apart from the blocks is the resolver's input (`ledger_inputs`, and `ab_audit fmshadow
+/// --re-resolve` reading a dump): a creator call (`creator_call`), the title (for the labels its marks request), or a
+/// publication note (`ltx:pubnote`, for the e-mails it prints: A&A's `\offprints{B. Baker, \email{…}}`, 0711.1152,
+/// 0802.0707).
+pub fn resolver_call(tag: &str, parent: &str) -> bool {
+  creator_call(tag, parent) || tag == "ltx:title" || tag == "ltx:pubnote"
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -645,6 +683,8 @@ mod tests {
     assert!(!creator_call("ltx:note", ""));
     assert!(!creator_call("ltx:note", "ltx:title"));
     assert!(!creator_call("ltx:contact", ""));
+    assert!(resolver_call("ltx:pubnote", "") && resolver_call("ltx:title", ""));
+    assert!(!resolver_call("ltx:note", ""));
   }
 
   /// Items 3 and 4: `author:N` names the N-th creator exactly; any other label falls back past the prefixes in Perl's
@@ -697,6 +737,15 @@ mod tests {
       "fuzzy:Luca Passalacqua (\\Envelope)"
     ]);
     assert_eq!(mark_labels("*1, a"), ["*", "1", "a"]);
+    // (a mark holding several `\ref`s is a list, each key whole: `\inst{\ref{ia},\ref{ib}}`, 1707.06238, 1302.1442)
+    assert_eq!(mark_labels("ref:sec one (a)"), ["ref:sec one (a)"]);
+    assert_eq!(mark_labels("ref:ia, ref:ib"), ["ref:ia", "ref:ib"]);
+    assert_eq!(mark_labels("1,ref:ib"), ["1", "ref:ib"]);
+    // (what prints between two references is no label: `\ref{a}--\ref{c}`, `\ref{a};\ref{b}`, as
+    // `events::script_ink` writes them; review rev92a_r1 B3)
+    assert_eq!(mark_labels("ref:a,\u{2013},ref:c"), ["ref:a", "ref:c"]);
+    assert_eq!(mark_labels("ref:a,;,ref:b"), ["ref:a", "ref:b"]);
+    assert_eq!(mark_labels("ref:a,*,ref:b"), ["ref:a", "*", "ref:b"]);
     assert_eq!(
       fold_name(&tex_letters("Luca Passalacqua (\\Envelope)")),
       "lucapassalacqua"
@@ -718,6 +767,46 @@ mod tests {
 
   /// FM S2a.2 r3 item 1c: a glued label as the known labels written together, the fewest pieces; a symbol run on its
   /// own only where symbols may stand alone; none when no piece is known.
+  /// A document note's name (review rev92a_r2 B2): its pieces part at `,`, `;`, `:`, `/`, `&`, "and" and "or" (a
+  /// label a piece of its own, which names no one: review rev92a_r3 S1); a piece is a creator's name only when every
+  /// word agrees with it.
+  #[test]
+  fn a_note_piece_names_a_creator_only_when_it_is_their_name() {
+    assert_eq!(note_pieces("O. Kochukhov, "), ["O. Kochukhov"]);
+    assert_eq!(note_pieces("Corresponding: A. Able, "), [
+      "Corresponding",
+      "A. Able"
+    ]);
+    assert_eq!(note_pieces("Ann Able: corresponding author, "), [
+      "Ann Able",
+      "corresponding author"
+    ]);
+    assert_eq!(note_pieces("A. Able: "), ["A. Able"]);
+    assert_eq!(
+      note_pieces("A. Able or B. Baker; C. Cole/D. Dunn & E. Eve and F. Fox"),
+      [
+        "A. Able", "B. Baker", "C. Cole", "D. Dunn", "E. Eve", "F. Fox"
+      ]
+    );
+    let agree = |piece: &str, name: &str| names_agree(&name_words(piece), &name_words(name));
+    assert!(agree("O. Kochukhov", "Oleg Kochukhov"));
+    assert!(agree("B. Bitsch", "Bertram Bitsch"));
+    assert!(agree("Bertram Bitsch", "B. Bitsch"));
+    assert!(agree("Kochukhov", "Oleg Kochukhov"));
+    assert!(agree("J.-P. Dupont", "Jean-Pierre Dupont"));
+    assert!(agree("A.B. Smith", "Adam Bruce Smith"));
+    assert!(agree("A. Smith", "Adam Bruce Smith"));
+    assert!(agree("M. Iłkiewicz", "Mateusz Iłkiewicz"));
+    assert!(!agree("J. Smith", "Adam Smith"));
+    assert!(!agree("B. A. Smith", "Adam Bruce Smith"));
+    assert!(!agree("the editor of Bob Baker", "Bob Baker"));
+    assert!(!agree("Dr. Baker", "Bob Baker"));
+    assert!(!agree("Baker B.", "Bob Baker"));
+    assert!(!agree("Bob", "Bob Baker"));
+    assert!(!agree("Corresponding author", "Ann Able"));
+    assert!(!agree("Correspondence to", "Ann Able"));
+  }
+
   #[test]
   fn glued_labels_part_into_known_ones() {
     let known = |ls: &[&str]| ls.iter().map(|l| l.to_string()).collect::<Vec<_>>();

@@ -1,0 +1,20 @@
+% witness: 0711.1152, 0802.0707 (sibling: an address spelling no author, the note before the authors; review
+%          rev92a_r1 B2, probe p12: Ann Able's own e-mail leaves Bob Baker the one author without one)
+% oracle:  pdflatex with 1707.06238's aa.cls: "Send offprint requests to: the editors, e-mail: office@y.org"
+% engines: perl 0.8.8 = 0 errors, office@y.org lost (an annotation before any creator); rust 90a = 0 errors, XML
+%          office@y.org on a nameless creator after the authors; the shadow without it; rust 92a r1 = the shadow
+%          gave it to Bob Baker by elimination, which FIDELITY_CHARTER §4 does not have
+% expect:  0 errors, 0 warnings; office@y.org on the nameless creator, the block's in the shadow reading (the name
+%          the note prints, "the editors", names no author)
+% status:  RED (90a, 92a r1: the shadow) -> GREEN (92a r2)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\offprints{the editors, \email{office@y.org}}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{Univ X\\ \email{ann@x.org} \and Univ Y}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

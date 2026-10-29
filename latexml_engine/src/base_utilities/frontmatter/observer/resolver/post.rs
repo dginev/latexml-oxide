@@ -133,6 +133,117 @@ impl Resolver {
     }
   }
 
+  /// The e-mail calls a document's own note makes with a binding's meaning (`ltx:pubnote`, `Resolver::api`; one the
+  /// document's own `\email` makes stays the note's text, review rev92a_r3 B1), once every name is read, by where the
+  /// binding prints each (review rev92a_r2 B1):
+  /// - routed (another binding's than the class's printing in place, `Policy::email_in_place`): the binding routes the
+  ///   call to the current author, whose own call it is (FIDELITY_CHARTER §4, #420): the whole call, every address in
+  ///   it, is the current author's (`api:annotate:last owner:own-call`, as the binding's `\email` outside a note; never
+  ///   parted by order, review rev92a_r3 S2) — amsart's `\thanks{Correspondence to Ann Able, \email{carl@z.org}}`
+  ///   prints "Email address: carl@z.org" under Bob's address, as today's, and `\thanks{Contact: \email{p@x.org,
+  ///   q@y.org}}` both; with no live author current (REVTeX's `\preprint{Contact Ann Able, \email{…}}` before the
+  ///   names, which prints the address nowhere; amsart's `\thanks{Contact: \email{p@x.org, q@y.org}}` before every
+  ///   `\author`), the block's, the whole call (`owner:block`, as today's; review rev92a_r4 S1: the order step parted
+  ///   it, p@x.org onto Ann Able);
+  /// - in place (aa's `\offprints`, llncs's `\thanks`): FIDELITY_CHARTER §4's chain exactly (`place_line_contacts`
+  ///   under [`Chain::DocumentNote`]: the author it spells, the authors' order, the only author, the corresponding
+  ///   author, the block — no elimination, review rev92a_r1 B2) over the live authors, the name the note prints
+  ///   before the address the corresponding step's evidence ([`Resolver::note_named`]). A&A's `\offprints{B. Baker,
+  ///   \email{…}}` is Baker's (0711.1152, 0802.0707), as today's; `\offprints{O. Kochukhov, \email{oleg@…}}` O.
+  ///   Kochukhov's by the name (0903.3512; 1205.5105, 1411.3255); `\offprints{the editors, \email{office@…}}` and
+  ///   `\offprints{J. Smith, \email{…}}` under Adam Smith the block's.
+  pub(super) fn answer_document_notes(&mut self) {
+    let candidates = self.live();
+    for note in std::mem::take(&mut self.document_emails) {
+      let Some(source) = note.assoc.source else {
+        continue;
+      };
+      let anchor = note.assoc.target.is_some().then_some(&note.assoc);
+      let text = note
+        .assoc
+        .target
+        .as_deref()
+        .unwrap_or(&note.assoc.text)
+        .to_string();
+      if !note.in_place {
+        // (one author's call: the current author's, or the block's whole when no live author is current — never
+        // parted by order, review rev92a_r4 S1)
+        let current = note.current.filter(|c| candidates.contains(c));
+        self.attach(
+          current,
+          Assoc {
+            role:   "email".into(),
+            text:   note.assoc.text.clone(),
+            label:  None,
+            rule:   if current.is_some() {
+              "api:document-note api:annotate:last owner:own-call".into()
+            } else {
+              "api:document-note owner:block".into()
+            },
+            source: Some(source),
+            target: anchor.and_then(|a| a.target.clone()),
+          },
+          false,
+        );
+        continue;
+      }
+      let named =
+        (!fold_name(&note.printed).is_empty()).then(|| self.note_named(&note.printed, &candidates));
+      self.place_line_contacts(
+        &text,
+        "email",
+        &candidates,
+        source,
+        anchor,
+        Chain::DocumentNote { named: named.as_deref() },
+      );
+    }
+  }
+
+  /// The creators among `candidates` (the live ones, review rev92a_r2 S1) a document note's text before an address
+  /// names ([`note_pieces`]): a piece names a creator only when it is that creator's name, every word agreeing
+  /// ([`names_agree`]), and no one when it holds any other word; every creator some piece names, in order — one is the
+  /// note's designation, none or several the block's (`place_line_contacts`).
+  pub(super) fn note_named(&self, printed: &str, candidates: &[usize]) -> Vec<usize> {
+    let names: Vec<(usize, Vec<(String, bool)>)> = candidates
+      .iter()
+      .map(|&c| (c, name_words(&tex_letters(&self.out.creators[c].name))))
+      .collect();
+    let mut named = Vec::new();
+    for piece in note_pieces(&tex_letters(printed)) {
+      let words = name_words(&piece);
+      for (c, name) in &names {
+        if names_agree(&words, name) && !named.contains(c) {
+          named.push(*c);
+        }
+      }
+    }
+    named
+  }
+
+  /// The creators a name written in TeX names, as a `fuzzy:` label names them (ruling 1): the one whose name, its
+  /// marks aside, it spells whole (letters folded, [`fold_name`]); else each of its names (commas, `&`, "and") the one
+  /// creator whose surname is its last word ([`surname_owners`]: svjour3's `B. Wickramanayake \at …`, 2011.14024);
+  /// none when a name names no one or several. (A document note's name is read by the stricter [`Resolver::note_named`],
+  /// every word agreeing: a label's surname reading is today's, OD #159.)
+  pub(super) fn named_creators(&self, name: &str) -> Vec<usize> {
+    let letters = tex_letters(name);
+    let key = fold_name(&letters);
+    let whole: Vec<usize> = self
+      .out
+      .creators
+      .iter()
+      .enumerate()
+      .filter(|(_, c)| !key.is_empty() && fold_name(&c.name) == key)
+      .map(|(i, _)| i)
+      .collect();
+    if whole.is_empty() {
+      surname_owners(&self.out.creators, &letters)
+    } else {
+      whole
+    }
+  }
+
   /// An `\author` call under authblk's notes, its creators from `start` on: the counter stepped at the first after an
   /// `\affil`; each unlabelled creator showing it, a labelled one showing the marks.
   pub(super) fn thenote_author(&mut self, start: usize, labelled: bool) {
@@ -845,23 +956,16 @@ impl Resolver {
       // ltx:creator — names the creator whose name, without its marks, it spells: ruling 1)
       let (owners, assoc) = match labels.iter().find_map(|l| l.strip_prefix("fuzzy:")) {
         Some(name) if owners.is_empty() => {
-          let letters = tex_letters(name);
-          let key = fold_name(&letters);
-          let fuzzy: Vec<usize> = self
-            .out
-            .creators
+          let key = fold_name(&tex_letters(name));
+          let fuzzy = self.named_creators(name);
+          // (named by surname when the label spells no name whole)
+          let whole = fuzzy
             .iter()
-            .enumerate()
-            .filter(|(_, c)| !key.is_empty() && fold_name(&c.name) == key)
-            .map(|(i, _)| i)
-            .collect();
-          let (fuzzy, rule) = if fuzzy.is_empty() {
-            (
-              surname_owners(&self.out.creators, &letters),
-              s!("{} ruling1:fuzzy-label fuzzy:surname", assoc.rule),
-            )
+            .any(|&c| !key.is_empty() && fold_name(&self.out.creators[c].name) == key);
+          let rule = if whole {
+            s!("{} ruling1:fuzzy-label", assoc.rule)
           } else {
-            (fuzzy, s!("{} ruling1:fuzzy-label", assoc.rule))
+            s!("{} ruling1:fuzzy-label fuzzy:surname", assoc.rule)
           };
           (fuzzy, Assoc { rule, ..assoc })
         },
@@ -1050,6 +1154,20 @@ impl Resolver {
           .any(|(c, r)| *c == owner && labels.iter().any(|l| label_matches(r, l)));
         if by_parted && !assoc.rule.contains("ruling1:parted") {
           assoc.rule.push_str(" ruling1:parted");
+        }
+        // (an owner found by the `\ref` key its mark prints, among a numbered entry's labels: ruling 1 on that mark, as
+        // an entry its keys alone label is (`api:ref-label`) — `\inst{\ref{inst1},\ref{inst2}}` under `\institute{… \\
+        // \email{…} \label{inst1} \and …}`, whose entry 1 today's left on a nameless creator, 1302.1442, 1707.06238;
+        // not the entry's inner e-mail, which its every carrier holding is no reading of the page: the gate study's G3)
+        let by_ref = self.out.creators[owner]
+          .requests
+          .iter()
+          .any(|r| r.starts_with("ref:") && labels.contains(r));
+        if by_ref
+          && !assoc.rule.contains("api:ref-label")
+          && !assoc.rule.contains("api:inner-contact")
+        {
+          assoc.rule.push_str(" api:ref-label");
         }
         // (an API entry its call labels — aastex's `\altaffiltext{5}{…}` — to the names whose marks request it: ruling 1,
         // user 2026-10-21 #1, as a labelled line inside an author block is; 0707.2093's `Woods\altaffilmark{5,6}`, whose

@@ -1,0 +1,22 @@
+% witness: review rev92a_r1 B1 (probe p10; the publication-note reading of 0711.1152, 0802.0707)
+% oracle:  pdflatex: "Correspondence to carl@z.org." in the unnumbered title note; the addresses University X (with
+%          ann@x.org), University Y
+% engines: perl 0.8.8 = 0 errors, 3 warnings, the addresses lost; rust 90a = 0 errors, written: Ann Able University X, Bob Baker University Y, the
+%          link in the note; rust 92a r1 = the shadow put carl@z.org on Bob Baker (a mailto link read as an e-mail),
+%          the writer declined and both addresses went to a nameless creator
+% expect:  0 errors, 0 warnings; written as 90a: a link in a publication note is the note's text, not an e-mail call
+% status:  RED (92a r1) -> GREEN (92a r2)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage{hyperref}
+\begin{document}
+\title{A title}
+\author{Ann Able\textsuperscript{\ref{a1}}}
+\address{\label{a1}University X, Town}
+\email{ann@x.org}
+\author{Bob Baker\textsuperscript{\ref{a2}}}
+\address{\label{a2}University Y, City}
+\thanks{Correspondence to \href{mailto:carl@z.org}{carl@z.org}}
+\maketitle
+Text.
+\end{document}

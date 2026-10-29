@@ -118,6 +118,47 @@ impl Resolver {
       }
       return;
     }
+    // (a publication note gives no creator nor contact of its own, but the e-mail calls it makes are the authors' —
+    // A&A's `\offprints{B. Baker, \email{bob.baker@y.org}}`, "Send offprint requests to: B. Baker, e-mail: …",
+    // 0711.1152, 0802.0707; placed once every name is read, `answer_document_notes`, with the text the note prints
+    // before each, the name it may give. Only an e-mail call, the rehearsal's `\lx@fm@obs@email`: a link the note
+    // prints is the note's text, as today's output and TeX keep it — amsart's `\thanks{Correspondence to
+    // \href{mailto:carl@z.org}{…}}`, revtex's `\preprint` holding a link (review rev92a_r1 B1) —, and only a
+    // binding's: one the document's own `\email` makes (`\renewcommand{\email}[1]{\texttt{#1}}`, a class read raw)
+    // prints wherever its definition prints, so it is the note's text too (`EmailMeaning::Own`, the meaning when
+    // the note is rehearsed, at the flush, `\maketitle`; review rev92a_r3 B1: 1412.0748, 1809.01965; rev92a_r4 B1))
+    if tag == "ltx:pubnote" {
+      let current = self.out.creators.len().checked_sub(1);
+      let mut before: Vec<&Event> = Vec::new();
+      for e in events {
+        if e.kind != EventKind::Contact {
+          before.push(e);
+          continue;
+        }
+        let printed = events_text(&std::mem::take(&mut before));
+        if e.role.as_deref() != Some("email") || e.meaning == EmailMeaning::Own {
+          continue;
+        }
+        let in_place = e.meaning == EmailMeaning::InPlace;
+        let (role, text) = contact_parts(e);
+        if role == "email" && !text.is_empty() {
+          self.document_emails.push(DocumentEmail {
+            assoc: Assoc {
+              role,
+              text,
+              label: None,
+              rule: String::new(),
+              source: Some((index, e.span)),
+              target: link_target(e),
+            },
+            printed,
+            in_place,
+            current,
+          });
+        }
+      }
+      return;
+    }
     let split = self.splitting;
     let withsup = attr_value(attrs, "_withsup") == Some("true");
     // its leading marks (`\affil{$^1$Univ X}`), its `\label`s, its text

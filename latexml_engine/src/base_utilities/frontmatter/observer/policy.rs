@@ -73,6 +73,14 @@ pub struct Policy {
   /// is empty"): a note stands beside a name only by its place, so its inner contacts are a name's only by spelling
   /// (main-session decision 2 of 2026-10-22, user ruling 2026-10-20 #4)
   pub unmarked_notes:   bool,
+  /// the class's `\email` prints its address where it is called (llncs.cls:897 `\def\email#1{{\tt#1}}`, aa.cls:824
+  /// `e-mail: {\aa@emailfont #1}`, svjour3.cls:303, svmult.cls:2304, svjour.cls:256): one inside a document's note
+  /// (`\offprints{O. Kochukhov, \email{…}}`, a `\thanks`) prints in the note, after the name the note gives, which
+  /// designates its owner — while the `\email` meaning is one of the class's bindings' (`ledger::email_meaning`, read at
+  /// the call; `Resolver::answer_document_notes`). Not amsart's (amsart.cls:538 `\def\email` stores the address for
+  /// the author's address block) nor REVTeX's (the author's footnote): there the address is the call's current
+  /// author's, as the binding routes it
+  pub email_in_place:   bool,
   /// the observer writes this family's frontmatter (FM S2b, `writer/`): the family passed its per-family gate — its own
   /// seeded classified-precision sample ≥ 95 % right and its unclassified rate < 0.5 % (main-session decision at int63,
   /// OXIDIZED_DESIGN_DIVERGENCES #837 "S2a.2 r5 at landing"); a paper is written only when every place its output and
@@ -98,6 +106,7 @@ pub const KERNEL: Policy = Policy {
   state_counter:    None,
   and_word:         false,
   unmarked_notes:   false,
+  email_in_place:   false,
   written:          false,
   cite:             "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); FIDELITY_CHARTER §4",
 };
@@ -143,6 +152,11 @@ pub fn declare_frontmatter_conventions(conventions: &'static Policy) {
 
 /// Whether a binding declared conventions of its own (the class fallback's test, `ledger::policy_binding`).
 pub fn has_entry(binding: &str) -> bool { declared(binding).is_some() }
+
+/// Whether a binding declared that its class's `\email` prints in place ([`Policy::email_in_place`], any of its hooks).
+pub fn declares_email_in_place(binding: &str) -> bool {
+  declared(binding).is_some_and(|d| d.iter().any(|p| p.email_in_place))
+}
 
 /// The conventions among `declared` for a block recorded under `binding` (the `\author` owner) and `hook`: the first
 /// declaration whose binding and hook match (`*` any), else [`KERNEL`] — `policy_for`'s rule, for a caller holding

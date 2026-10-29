@@ -1,0 +1,22 @@
+% witness: review rev92a_r2 P2 (probe p20): amsart's frontmatter setters called again after `\maketitle`
+% oracle:  pdflatex: amsart.cls:621-629 `\@cleartopmattertags` lets `\maketitle`, `\title`, `\author`, `\address`,
+%          `\email` (and the other setters) `\relax` after the first `\maketitle`, so the second set prints as body
+%          text: "Text. New Ann Able University X, Town ann@x.org More.", the title "OLD"
+% engines: perl 0.8.8 = 0 errors, the title "Old", "New Ann Able" in the body, the address and the e-mail lost; rust
+%          int120a and 92a = 0 errors, the same body text, the address and the e-mail on a nameless creator
+% expect:  the title "Old", no creator, "New Ann Able University X, Town ann@x.org" in the body
+% status:  RED (catalog, no guard): pre-existing on every binary, not 92a's mechanism (the setters after
+%          `\maketitle` are still the binding's; SYNC row)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{Old}
+\maketitle
+Text.
+\title{New}
+\author{Ann Able}
+\address{University X, Town}
+\email{ann@x.org}
+\maketitle
+More.
+\end{document}

@@ -7,14 +7,18 @@ use crate::{
 
 /// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
 /// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
-/// aa: an `\inst` after a comma is the name's before it
-/// (Unread today: inst_support owns aa's `\author`, so its blocks are keyed `inst_support.sty`, whose values are the
-/// same — every aa census paper.)
+/// aa: an `\inst` after a comma is the name's before it; `\email` prints in place (aa.cls:824 `e-mail: {\aa@emailfont
+/// #1}`), so `\offprints{O. Kochukhov, \email{…}}` names its address's owner while `\email` is the class's own
+/// (aa_support.sty's; read when the note is rehearsed, at the flush, `\maketitle`, `ledger::email_meaning`: 0903.3512;
+/// aa.cls:910-911's `\protected@edef` expands it at the call, so a redefinition between the two keeps the note's text)
+/// (The block conventions are unread today: inst_support owns aa's `\author`, so its blocks are keyed
+/// `inst_support.sty`, whose values are the same — every aa census paper.)
 pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   name: "aa",
   binding: "aa.cls",
   inst_after_comma: true,
-  cite: "aa.cls:759-760 `\\def\\inst#1{\\unskip\\hbox{$^{#1}$}}`; OD #807 (1604.07826, 2309.00573)",
+  email_in_place: true,
+  cite: "aa.cls:759-760 `\\def\\inst#1{\\unskip\\hbox{$^{#1}$}}`, :824; OD #807 (1604.07826, 2309.00573), #913",
   ..FM_KERNEL_CONVENTIONS
 };
 

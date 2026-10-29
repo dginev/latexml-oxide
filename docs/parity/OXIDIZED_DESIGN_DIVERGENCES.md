@@ -26775,6 +26775,164 @@ just_unmarked_address_is_its_author_s_affiliation, just_unmarked_address_under_s
 just_emails_after_maketitle_is_the_author_s_e_mail, cpc_hepnp_is_not_routed_until_91c}` (the first and third also
 check the binary, eager and `--streaming`).
 
+### 913. The observer reads a mark of `\ref`s as one mark with every key, a publication note's e-mail calls by the charter's chain, and the frontmatter clears (Perl: no observer; its labels split `\ref{…}` by ToString, `cleanFrontmatterLabels`)
+
+Frontmatter refactor stage 7 (retire the old reader family by family), groundwork for moving llncs and aa onto the
+observer (task #429's gate study, `agent_reports/2026-10-29_s6_aa_llncs_gate.md`, pieces 1, 2 and 7). Three
+shadow-side readings, each from what TeX digested; today's output does not change for a family not written. A written
+family's (revtex4_support, ams_support) output changes where its writer takes a change-tagged difference: every key
+of a `\ref`-list mark (`api:ref-label`); an ORCID link inside a mark, no longer its labels (REVTeX's
+`\textsuperscript{\ref{a1}\href{https://orcid.org/…}{…}}` places both affiliations, which today's left on a nameless
+creator; amsart's `\textsuperscript{1,\href{https://orcid.org/…}{…}}` lets Bob Baker's mark 1 request the address
+marked 1: review rev92a_r2 N1, probes q50, q51); and a
+paper whose reading now agrees with today's XML where it did not (an amsart `\thanks` calling the binding's `\email`,
+below: 1606.03799), so the writer no longer declines it and writes its other change-tagged differences (each address on
+the name requesting it); a `\thanks` calling the paper's own `\email` stays the note's text, as the base reads it.
+Wherever the reading differs from today's XML with no change tag, the writer declines the paper (whole-paper rule) and
+the output is the old reader's.
+
+- **A mark holding `\ref`s** (aa class A, 52 papers; 1707.06238, 1302.1442). A cross-reference prints nothing at
+  digestion (it resolves in post), so `\inst{\ref{ia},\ref{ib}}` printed only its comma, which `mark_event` read as
+  the separator between two marks: no Mark, no request, Univ X on the block. `events::script_mark` (the three script
+  sites: `\inst`, `\textsuperscript`, a formula's superscript) now reads a script holding a reference that prints
+  nothing (`printless_ref_key`: one of `REF_COMMANDS` whose shown arguments and body print no ink — a `\namecref`'s
+  show list is ink, so it stays its text) as one Mark whose label is the script in print order, each such reference
+  written `ref:<key>`, an item of its own: `script_ink` parts it by a comma from the ink or the reference beside it,
+  whatever printed between them, so `\ref{ia},\ref{ib}` and `\ref{ia}\ref{ib}` are both `ref:ia,ref:ib`, `1\ref{ib}` is
+  `1,ref:ib`, `\ref{ia}--\ref{ic}` `ref:ia,–,ref:ic` (the keys written back to back were one label, `ref:iaref:ib`, that
+  matched no entry: review rev92a_r1 B3). `resolver::mark_labels` splits a label holding a `ref:` piece at its
+  commas, each `ref:` piece one label kept whole (its spaces and brackets the key's), the others read as any mark, a
+  piece printing no letter, digit or footnote symbol (a dash, a semicolon) none: a range requests its ends only.
+  A link to an ORCID record inside the mark (`events::is_note_whatsit`: a paper's `\orcidicon`,
+  `\href{https://orcid.org/#1}{…tikzpicture…}`, `\inst{\ref{inst1} \orcidicon{…}}`, 2407.07678, 2605.02769;
+  `\inst{1,2,\orcidicon{…}}`, 2608.18287) is an
+  event of its own after the mark, the name's ORCID, as `\orcidlink` is: its logo's path data was the mark's labels
+  (the keys parted, its digits were read as institutes 1-7). Perl's `cleanFrontmatterLabels` (Base_Utility.pool.ltxml:360-375) splits the `ToString` at commas and keys a
+  piece `\ref{k}` as `LABEL:k`: the same keys for the plain list. A key holding a comma is parted (Perl the same).
+  An owner `answer_pending` finds by such a key among a numbered entry's labels (`labelseq=`, `[n, ref:k]`) is tagged
+  `api:ref-label`, ruling 1's change tag an entry its keys alone label already carried: 1302.1442's entry 1, keyed
+  after its `\email` line, which today's left on a nameless creator (also 1312.5084). Not the entry's inner e-mail,
+  whose copy on every carrier is the gate study's G3, not a reading of the page.
+- **A publication note's e-mails** (aa class B, 42 papers; 0711.1152, 0802.0707): `\offprints{B. Baker, \email{…}}`
+  is `\lx@add@pubnote` (`ltx:pubnote`), which `record_api_call` did not record, so the e-mail today's places on Baker
+  (`respell_emails`; Perl: the last creator) was missing from the reading. The ledger now records `ltx:pubnote`;
+  `resolver_call` (the one intake predicate of `ledger_inputs` and `ab_audit fmshadow --re-resolve`, which had omitted
+  the title) admits it, and `Resolver::api` keeps only the e-mail calls the note makes with a binding's meaning: a link
+  the note prints — a `mailto:` `\href` in amsart's `\thanks`, in revtex's `\preprint` — stays the note's text, as
+  today's output and TeX keep it (review rev92a_r1 B1: read as an e-mail, it was placed where today's has none, and the
+  writer declined the paper), and so does a call of the paper's own `\email` (below). Each call is placed once every
+  name is read (`answer_document_notes`), by where its meaning prints it (review rev92a_r2 B1). LaTeXML's digested
+  evidence cannot tell: every binding's `\email` in a note (`\lx@add@email`, aa's `\lx@add@contact[role=email]`)
+  annotates the current creator, and the note's XML holds only its text. The page does, and whose the meaning is
+  says which page: the rehearsal binds `\email` and `\emailAdd` by `ledger::email_meaning` (the meaning when the note
+  is rehearsed, at the flush, `\maketitle`; the owning binding is tracked for both as for `\author`,
+  `note_binding_load`), each call an `EmailMeaning` on its event (the dump's `"meaning"`, a binding's the default).
+  That is when amsart's TeX reads it: amsart.cls:516 `\g@addto@macro\thankses` holds the note until `\maketitle`, so
+  `\renewcommand{\email}` between the call and `\maketitle` prints the note's address in the footnote, read so. aa
+  and llncs expand `\email` at the call: aa.cls:910-911 `\offprints` uses `\protected@edef`, and llncs's `\thanks` is
+  the kernel's (latex.ltx `\protected@xdef\@thanks`) when called outside `\author` and `\title` (inside them it runs
+  at `\maketitle`, as amsart's). There a redefinition between the call and `\maketitle` reads as no binding's, the
+  note's text, where the page prints the class's own (aa's "e-mail: carl@z.org") — failing safe, no creator given a
+  wrong address (review rev92a_r4 B1; repro `class-bindings/aa_offprints_renewed_email_after_the_call`, RED; read at
+  the call instead, the amsart case would route the call to the current author against the page):
+  - **No binding's** (`own`: the document's own `\renewcommand{\email}[1]{\texttt{#1}}`, a file read raw, OmniBus's
+    guess for a class with no binding, whose real print is unknown): the definition prints the address wherever it
+    prints, in the note under the paper's own `\email` — so the call stays the note's text, no creator's, as today's
+    XML keeps it (review rev92a_r3 B1: 1412.0748 `\renewcommand{\email}[1]{\href{mailto:#1}{…}}`, 1809.01965
+    `{e-mail: \tt#1}`; 92a r3 read them as routed calls, so the writer declined both). Each call by its own command:
+    a note calling amsart's `\email` and a paper's `\emailAdd` gives the first to the current author and keeps the
+    second.
+  - **The class's, printing in place** (`in-place`): a class whose `\email` prints the address where it is called —
+    llncs (llncs.cls:897 `\def\email#1{{\tt#1}}`), aa (aa.cls:824 `e-mail: {\aa@emailfont #1}`), the Springer classes
+    on sv_support.sty (svjour3.cls:303 `\def\email#1{\emailname: #1}`, v3.2; svmult.cls:2304 `\emailname: \url{#1}`,
+    v5.4; the old svjour.cls:256 `{e-mail: \tt#1}`; none in TeX Live 2025, read from the copies 1902.07328, 0812.2480,
+    0901.1015 and 1711.03503 ship) — prints it in the note, after the name the note gives. Each binding declares it
+    (`Policy::email_in_place`, set in llncs.cls, aa.cls and sv_support.sty); the call is `in-place` when the binding
+    owning the `\email` meaning declares it (llncs.cls, also under a class with no binding whose `\LoadClass{llncs}`
+    the dependency scan loads — OmniBus; the class file itself is not read: review probe e1, a local `mylncs.cls`, whose `\thanks{Corresponding author: A. Able, \email{…}}` is Ann Able's as the page
+    prints it — no guard, its "Can't find binding for class" Warning is the shape's own; sv_support.sty) or is one of
+    the document class's bindings and one of those declares it (aa.cls, whose aa_support.sty defines it; kluwer's
+    aa_support is not aa's print). A package binding's `\email` under such a class is not the class's print: no TeX
+    Live package binding defines one — minimal shape `\documentclass{llncs}\usepackage{jheppub}…\thanks{Ann Able,
+    \emailAdd{c@z.org}}`, jheppub.sty not in TeX Live, so no guard: read as routed).
+  - **Another binding's, routed** (`binding`: amsart's `\email` stores the address for the author's address block,
+    amsart.cls:538, run at `\maketitle`; REVTeX's for the author's footnote; jheppub's `\emailAdd`): the binding routes
+    the call to the current author, whose own call it is (FIDELITY_CHARTER §4, #420): the whole call, every address in
+    it, is the creator's read last before the note's call (`api:annotate:last owner:own-call`, as the binding's
+    `\email` outside a note; no change tag), whatever the note names — amsart's `\thanks{Correspondence to Ann Able,
+    \email{carl@z.org}}` after Bob Baker prints "Email address: carl@z.org" under Bob Baker's address and is his, as
+    today's (92a r2 wrote it onto Ann Able), and `\thanks{Contact: \email{p@x.org, q@y.org}}` both, as one call (92a r3
+    parted them by order: review rev92a_r3 S2). No live author current at the call (REVTeX's `\preprint{Contact Ann
+    Able, \email{…}}` before the names, which prints the address nowhere; amsart's `\thanks{Contact: \email{p@x.org,
+    q@y.org}}` before every `\author`, which prints "Email address: p@x.org, q@y.org" after the last address): the
+    whole call is the block's (`api:document-note owner:block`), one author's call never parted by order, as today's
+    (review rev92a_r4 S1: 92a r4 ran it through the chain below, p@x.org onto Ann Able and q@y.org onto Bob Baker by
+    order, and the writer declined). (REVTeX's `\preprint{…\email{…}}` after the authors also prints nowhere; it is
+    Bob Baker's routed call, as today's and Perl's: left, review rev92a_r3 s2.)
+  - **In place**: FIDELITY_CHARTER §4's chain exactly (`place_line_contacts` under `Chain::DocumentNote`) over the
+    live authors: the author it spells, the authors' order, the only author, the corresponding author, the block; no
+    elimination (a block's line keeps it, `Chain::Line`), so an address spelling no one is not guessed onto the one
+    author left without an address (review rev92a_r1 B2: `\offprints{the editors, \email{office@y.org}}` stays the
+    block's). The corresponding step's evidence is the name the note prints before the address
+    (`Resolver::note_named`; main-session decision on 92a r1 question a: "Send offprint requests to: O. Kochukhov,
+    e-mail: oleg@…", 0903.3512), rule `owner:corresponding api:note-name`. The text is parted at `,`, `;`, `:`, `/`,
+    `&` and the words "and" and "or" (`note_pieces`): a label is a piece of its own, which names no one ("Corresponding
+    author: A. Able" and "A. Able: corresponding author" both name Ann Able; review rev92a_r3 S1 deleted 92a r3's
+    colon-label rule, which dropped the name before a colon); the words part the text, so a creator surnamed Or or And
+    (Yuval Or) is never named and the note fails to the block. A piece names a creator only when it is that creator's
+    whole name (`names_agree`): its last word the creator's surname, each word before it one of the creator's given
+    names in order, equal or its initial (`J. Smith` is not Adam Smith, `B. Able` is Bob Able beside Ann Able, `B.
+    Bitsch` Bertram Bitsch). A piece with any other word ("the editor of Bob Baker", "Correspondence to") names no one;
+    read over the live creators only (a cleared llncs `\author` is no second match: review rev92a_r2 S1). Exactly one
+    creator named is the owner; none, or two or more ("A. Able or B. Baker"), the block's (review rev92a_r2 B2: 92a r2
+    matched a piece's last word alone) — prose naming no one too (llncs's `\thanks{Supported by NSF.
+    \email{carl@z.org}}` beside Bob Baker's `\thanks{Corresponding author}`: the block's; whether such prose should
+    reach the corresponding step is an open design point). A note printing nothing before the address leaves the step
+    to the creators' own "Corresponding author" notes.
+  An address no step owns is the block's: today's nameless creator (Perl loses it, the annotation made before any
+  creator). A document `ltx:note`'s e-mails are not read (open). Residual: the routed call's current author is the one
+  read before the call, as the binding routes it; amsart runs a `\thanks` at `\maketitle` (amsart.cls:516 keeps it in
+  `\thankses`, `\email` :508 appends to `\addresses`), so one between two authors, or before every `\author`, prints
+  under the last author's address (catalog repros `class-bindings/amsart_thanks_between_authors_email`, today's and
+  Perl's the first author's, and `amsart_thanks_before_every_author_email`, today's the block's, Perl's lost): a
+  routed amsart note belongs to the last live author at `\maketitle`, which changes written output against Perl and
+  needs a change tag and a ruling (SYNC row; deferred to the ams written-family work).
+- **The frontmatter clears** (llncs class N1, 7 papers; 2104.04331, 1712.00617). `\lx@clear@frontmatter`
+  (`dequeue_front_matter`) removed the queued entries, but the ledger kept the calls: llncs's `\author` given twice
+  (`\lx@clear@creators[role=author]`) left the first set's creators in the reading, and its `\institute`'s
+  affiliation clear left the first institute numbered 1. `ledger::record_clear` marks every API call it dequeues —
+  its tag and every attribute it names, queued since the last flush, as the dequeue matches the queue — `cleared`,
+  and for a creator clear of the authors every author block queued before it, save the one whose own expansion makes
+  the clear (the kernel `\author`'s replacing call, which its `replace` already covers); a cleared call is no
+  resolver input, a cleared block's creators are replaced as a replacing call's are. The dump writes `"cleared":true`.
+  A flag, not an epoch counter: a clear is scoped by tag and role. The queue's epoch counts every real flush, read or
+  not (`shadow_flush`; in default mode an early `\maketitle` reads nothing but empties the queue: review rev92a_r1 S2).
+
+Guards: `perfect_kernel_batch92a::{a_mark_of_refs_requests_every_key, a_written_family_reads_every_key_of_a_mark_of_refs,
+a_publication_note_email_is_placed_by_the_chain, a_publication_note_reads_only_its_email_calls,
+a_routed_note_email_is_the_current_authors_own_call, a_note_names_a_creator_only_by_their_whole_name,
+a_note_email_of_no_bindings_meaning_stays_the_notes_text, a_frontmatter_clear_removes_the_calls_before_it}` (in process and the binary eager and `--streaming`; repros
+`class-bindings/aa_inst_ref_list_is_one_mark`, `aa_ref_marks_mixed_and_in_scripts`, `aa_inst_refs_touching_are_each_a_key`,
+`aa_inst_orcid_link_is_no_mark_text`,
+`revtex_ref_list_mark_is_every_key`, `amsart_ref_marks_listed_and_touching`, `aa_offprints_email_is_the_authors`,
+`aa_offprints_name_is_the_corresponding_author`, `aa_offprints_unspelled_email_is_the_blocks`,
+`amsart_thanks_link_stays_the_notes`, `amsart_thanks_spelled_link_stays_the_notes`, `amsart_thanks_email_call_is_read`,
+`amsart_thanks_named_email_is_the_current_authors`, `amsart_thanks_or_names_email_is_the_current_authors`,
+`amsart_thanks_routed_call_of_two_addresses`, `revtex_preprint_email_before_the_names_is_the_blocks`,
+`amsart_thanks_before_every_author_two_addresses`, `aa_offprints_initial_mismatch_is_the_blocks`, `aa_offprints_two_names_is_the_blocks`,
+`aa_offprints_prose_name_is_the_blocks`, `llncs_thanks_name_after_cleared_author`, `aa_offprints_colon_after_the_name`,
+`llncs_thanks_name_before_a_colon`, `amsart_thanks_document_email_stays_the_notes`,
+`aa_offprints_document_email_stays_the_notes`, `amsart_thanks_document_emailadd_beside_the_bindings_email`,
+`llncs_author_twice_keeps_the_last`, `llncs_marked_author_then_unmarked_keeps_the_last`; RED catalog, no guard:
+`aa_offprints_renewed_email_after_the_call`, `amsart_thanks_between_authors_email`,
+`amsart_thanks_before_every_author_email`);
+`resolver::tests::fuzzy_labels_and_their_letters` (the ref-list split), `resolver::tests::a_note_piece_names_a_creator_only_when_it_is_their_name`
+(the name test), `resolver::tests::intake_takes_creator_calls_only`
+(`resolver_call`); `shadow::tests::a_flush_that_reads_nothing_still_counts`; `ab_audit`
+`fmshadow::tests::a_dump_with_clears_publication_notes_and_ref_lists_re_resolves_to_itself` (the dump reader).
+Residual (today's XML, the old reader, stage 7): `\inst{2,\ref{ic}}` keeps the `2` in the name and loses its
+institute; `$^{\ref{ia},\ref{ic}}$` stays a formula in the name (Perl the same); the reading is pdflatex's.
+
 ### 914. bbold's blackboard map is its own family's (`blackboard`, a name bbm and bbmss share), not the `U` encoding's, and a family's map is read without an encoding map (Perl: bbold's map decodes every `U` font)
 
 bbold.sty.ltxml:30 registers its map as `U_fontmap`, the encoding's (KNOWN_PERL_ERRORS #1203), so beside

@@ -299,6 +299,10 @@ pub fn dequeue_front_matter(tag: &str, attr: &[(&str, &str)]) {
   if frontmatter_frozen_for_replay() {
     return;
   }
+  // (the observer's ledger, under its shadow switch only: the calls it removes, OXIDIZED_DESIGN_DIVERGENCES #837)
+  if fm_shadow_enabled() {
+    record_clear(tag, attr);
+  }
   note_document_sets_front_matter(
     tag,
     attr

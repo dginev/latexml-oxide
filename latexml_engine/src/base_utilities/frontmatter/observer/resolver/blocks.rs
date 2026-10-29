@@ -4,10 +4,28 @@
 
 use super::*;
 
+/// The chain [`Resolver::place_line_contacts`] places a print's addresses by.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum Chain<'a> {
+  /// A line of a block (or an entry's e-mail call): the spelled addresses first, then — the one address left, and
+  /// the one candidate left without an address — by elimination (R10), then the rest of the chain.
+  Line,
+  /// A document's own note (`ltx:pubnote`, `answer_document_notes`): FIDELITY_CHARTER §4 exactly — the author it
+  /// spells, the authors' order, the only author, the corresponding author, the block; no elimination, so an address
+  /// that spells no one is not guessed onto an author (review rev92a_r1 B2: aa's `\offprints{the editors,
+  /// \email{office@y.org}}`). `named` is the creators the name the note prints before the address names, when the
+  /// class prints the address in the note after it ([`Resolver::note_named`], `Policy::email_in_place`): A&A's "Send
+  /// offprint requests to: O. Kochukhov, e-mail: …" designates the corresponding author (main-session decision on 92a
+  /// r1 question a, 0903.3512), so one creator named is the corresponding step's owner, and none or several the
+  /// block's — prose naming no one ("Supported by NSF.") too (an open design point, OD #913); a note printing nothing
+  /// before the address (`named` `None`) leaves the step to the creators' own "Corresponding author" notes. (A call
+  /// the class prints elsewhere, routed, is one author's whole call and never reaches the chain: review rev92a_r4 S1.)
+  DocumentNote { named: Option<&'a [usize]> },
+}
+
 impl Resolver {
-  /// Contacts of `text` (one per printed address, ruling 3; the text whole when it holds none), owned by the chain:
-  /// the spelled ones first, then — the one address left, and the one candidate left without an address — by
-  /// elimination (R10), then the rest of the chain.
+  /// Contacts of `text` (one per printed address, ruling 3; the text whole when it holds none), owned by `chain`; each
+  /// rule led by `api:document-note` for a document's note.
   pub(super) fn place_line_contacts(
     &mut self,
     text: &str,
@@ -15,7 +33,12 @@ impl Resolver {
     candidates: &[usize],
     source: (usize, Option<(u16, u16)>),
     anchor: Option<&Assoc>,
+    chain: Chain<'_>,
   ) {
+    let led = |rule: String| match chain {
+      Chain::Line => rule,
+      Chain::DocumentNote { .. } => s!("api:document-note {rule}"),
+    };
     let addresses = addresses_in(text);
     if addresses.is_empty() {
       let (owner, rule) = match candidates {
@@ -28,7 +51,7 @@ impl Resolver {
           role:   role.to_string(),
           text:   text.to_string(),
           label:  None,
-          rule:   rule.into(),
+          rule:   led(rule.into()),
           source: Some(source),
           target: None,
         },
@@ -69,7 +92,9 @@ impl Resolver {
       let (owner, rule) = match spelled {
         Some(owner) => (Some(owner), "owner:spelled"),
         None if in_order => (Some(candidates[at]), "owner:order"),
-        None if unspelled == 1 && candidates.len() > 1 && left.len() == 1 => {
+        None
+          if chain == Chain::Line && unspelled == 1 && candidates.len() > 1 && left.len() == 1 =>
+        {
           (Some(left[0]), "owner:elimination")
         },
         None => match candidates {
@@ -82,7 +107,13 @@ impl Resolver {
           // another author's — `{hong3924.cs10, evan20010126.cs12, …}@nycu.edu.tw` under a corresponding Ching-Chun
           // Huang, 2512.08223; `{congjing, ryanflin}@uw.edu chris20030909@gmail.com`, 2602.04785; 2604.14972)
           _ if address_count > 1 => (None, "owner:block"),
-          _ => self.corresponding(candidates),
+          _ => match chain {
+            Chain::DocumentNote { named: Some(named) } => match named {
+              [one] if candidates.len() > 1 => (Some(*one), "owner:corresponding api:note-name"),
+              _ => (None, "owner:block"),
+            },
+            _ => self.corresponding(candidates),
+          },
         },
       };
       self.attach(
@@ -91,7 +122,7 @@ impl Resolver {
           role:   "email".into(),
           text:   anchor.map_or_else(|| address.clone(), |a| a.text.clone()),
           label:  None,
-          rule:   s!("{rule} ruling3:one-per-print"),
+          rule:   led(s!("{rule} ruling3:one-per-print")),
           source: Some(source),
           target: anchor.and_then(|a| a.target.clone()),
         },
@@ -477,7 +508,7 @@ impl Resolver {
             }
             skip_to = last;
             let candidates: Vec<usize> = (block_creators_start..self.out.creators.len()).collect();
-            self.place_line_contacts(&text, "email", &candidates, source, None);
+            self.place_line_contacts(&text, "email", &candidates, source, None, Chain::Line);
             // (the notes of the list's lines are the block's: a line of addresses is no one name's, so no place makes
             // its note a name's — the lines read on to were skipped after, and their notes went unread, review
             // revfms2a2_5 finding 6; 2406.07529's `\vphantom{\thanks{Equal contribution.}}` after the last address,
@@ -748,7 +779,14 @@ impl Resolver {
     let addresses = mailto.unwrap_or(&assoc.text);
     if role == "email" && (owners.len() > 1 || addresses_in(addresses).len() > 1) {
       let anchor = mailto.is_some().then_some(&assoc);
-      self.place_line_contacts(addresses, "email", owners, (index, contact.span), anchor);
+      self.place_line_contacts(
+        addresses,
+        "email",
+        owners,
+        (index, contact.span),
+        anchor,
+        Chain::Line,
+      );
       return;
     }
     for &owner in owners {

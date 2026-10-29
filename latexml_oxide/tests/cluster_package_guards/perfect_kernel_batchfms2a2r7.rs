@@ -126,6 +126,7 @@ fn block(index: usize, binding: &str, replace: bool, events: Vec<FmEvent>) -> Fm
     keyvals: None,
     counter: None,
     replace,
+    cleared: false,
     epoch: 0,
     events,
   }

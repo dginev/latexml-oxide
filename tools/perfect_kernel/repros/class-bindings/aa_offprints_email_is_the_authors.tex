@@ -1,0 +1,18 @@
+% witness: 0711.1152, 0802.0707 (`\offprints{B. Carry, \email{bcarry@eso.org}}`: aa class B of the stage-6 gate
+%          study, 42 papers)
+% oracle:  pdflatex with 1707.06238's aa.cls: "Send offprint requests to: B. Baker, e-mail: bob.baker@y.org"
+% engines: perl 0.8.8 = 0 errors, the e-mail on Bob Baker; rust 90a = the same XML, the shadow without the e-mail
+%          (the publication note never reached the ledger)
+% expect:  0 errors, 0 warnings; bob.baker@y.org on Bob Baker, in the XML and in the shadow reading (it spells him)
+% status:  RED (90a, the shadow) -> GREEN (92a)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\offprints{B. Baker, \email{bob.baker@y.org}}
+\institute{Univ X \and Univ Y}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

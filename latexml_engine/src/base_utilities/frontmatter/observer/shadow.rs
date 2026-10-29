@@ -9,7 +9,7 @@
 use std::{cell::Cell, fmt::Write as _, sync::OnceLock};
 
 use super::{
-  events::{Event, EventKind, SepKind, lex_events},
+  events::{EmailMeaning, Event, EventKind, SepKind, lex_events},
   ledger::{Entry, Outcome, SkipReason, Stamp, reset_ledger, stamped_block_tokens, with_ledger},
   policy::{TitleMarks, policy_for},
   rehearsal::{Rehearsal, rehearse},
@@ -88,9 +88,22 @@ pub fn reset_fm_shadow() {
 /// (a journal already open: the flush is itself inside a speculative run) waits for the next flush, deferred: left so
 /// at the end, the dump reports that reason (`JournalUnavailable`), not "no flush after the call".
 pub(in crate::base_utilities) fn shadow_flush() -> Result<()> {
-  if !reads_now() || rehearsal::rehearsing() {
+  // (a rehearsal's flush is undone with it; every real flush empties the queue, read or not — the epoch a clear
+  // compares, `ledger::record_clear`: an early `\maketitle` before any author block, in default mode, reads nothing
+  // but flushes the title it digests, which a later `\title` must not clear; review rev92a_r1 S2)
+  if rehearsal::rehearsing() {
     return Ok(());
   }
+  if reads_now() {
+    read_at_flush()?;
+  }
+  // (the flush empties the frontmatter queue: the calls after it are queued from position 0 again)
+  with_ledger(|ledger| ledger.flushes += 1);
+  Ok(())
+}
+
+/// [`shadow_flush`]'s reading, when the observer reads.
+fn read_at_flush() -> Result<()> {
   // (the labels the calls' keyvals defer, read as this flush's digestion expands them: `\lx@label@ref`, cas's
   // `\author[a]` under entries given after it — 2303.00352, 2603.22658, 2504.19452, 2509.10496)
   with_ledger(|ledger| {
@@ -187,8 +200,6 @@ pub(in crate::base_utilities) fn shadow_flush() -> Result<()> {
       });
     }
   }
-  // (the flush empties the frontmatter queue: the calls after it are queued from position 0 again)
-  with_ledger(|ledger| ledger.flushes += 1);
   Ok(())
 }
 
@@ -285,6 +296,10 @@ fn json_event(out: &mut String, event: &Event) {
   if event.nest > 0 {
     let _ = write!(out, ",\"nest\":{}", event.nest);
   }
+  if event.meaning != EmailMeaning::Binding {
+    out.push_str(",\"meaning\":");
+    json_str(out, event.meaning.name());
+  }
   if !event.inner.is_empty() {
     out.push_str(",\"inner\":[");
     for (i, inner) in event.inner.iter().enumerate() {
@@ -371,6 +386,9 @@ pub fn fm_shadow_json() -> String {
             out.push_str(",\"parent\":");
             json_str(&mut out, &call.parent);
           }
+          if call.cleared {
+            out.push_str(",\"cleared\":true");
+          }
           if call.rehearsed {
             out.push_str(",\"events\":[");
             for (i, event) in call.events.iter().enumerate() {
@@ -399,6 +417,9 @@ pub fn fm_shadow_json() -> String {
           json_str(&mut out, &block.owner);
           if let Some(counter) = block.counter {
             let _ = write!(out, ",\"counter\":{counter}");
+          }
+          if block.cleared {
+            out.push_str(",\"cleared\":true");
           }
           let _ = write!(
             out,
@@ -465,6 +486,7 @@ pub fn fm_shadow_json() -> String {
                   glued:        false,
                   space_before: false,
                   space_after:  false,
+                  meaning:      EmailMeaning::Binding,
                 });
               },
               _ => {},
@@ -625,6 +647,21 @@ pub fn write_fm_shadow(destination: &str) -> std::io::Result<()> {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// Every real flush counts, whether the observer reads at it or not: the epoch a clear compares
+  /// (`ledger::record_clear`). Switched off, no block recorded yet — what default mode reads at an early
+  /// `\maketitle` before any author block — the flush still empties the queue (review rev92a_r1 S2).
+  #[test]
+  fn a_flush_that_reads_nothing_still_counts() {
+    set_fm_shadow_override(Some(false));
+    reset_fm_shadow();
+    assert!(!reads_now());
+    shadow_flush().unwrap();
+    shadow_flush().unwrap();
+    assert_eq!(with_ledger(|ledger| ledger.flushes), 2);
+    set_fm_shadow_override(None);
+    reset_fm_shadow();
+  }
 
   /// A block a flush deferred because no journal could open there (the flush was inside a speculative run) and no
   /// later flush rehearsed says so, not "no flush after the call" (review revfms2a1_2 finding 6).

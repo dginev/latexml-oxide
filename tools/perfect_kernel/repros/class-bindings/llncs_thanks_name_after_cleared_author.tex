@@ -1,0 +1,19 @@
+% witness: review rev92a_r2 S1 (probe q42: llncs's `\author` given twice, then `\thanks{Corresponding: A. Able, …}`)
+% oracle:  pdflatex: "Ann Able1 and Bob Baker2", the title's footnote "Corresponding: A. Able, carl@z.org"
+% engines: perl 0.8.8 = 0 errors, carl@z.org on Bob Baker (the last creator); rust 90a = 0 errors, today's XML the
+%          same, the shadow without it; rust 92a r2 = the shadow's block (the cleared Ann Able a second match)
+% expect:  0 errors, 0 warnings; llncs's `\email` prints in place (llncs.cls:897), the note's name designates the owner,
+%          read over the live authors: carl@z.org on Ann Able (owner:corresponding api:note-name); today's XML unchanged
+% status:  RED (92a r2) -> GREEN (92a r3)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A title}
+\author{Ann Able\inst{1}}
+\institute{Univ X}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{Univ X \and Univ Y}
+\thanks{Corresponding: A. Able, \email{carl@z.org}}
+\maketitle
+Text.
+\end{document}

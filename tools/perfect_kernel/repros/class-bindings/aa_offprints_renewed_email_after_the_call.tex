@@ -1,0 +1,26 @@
+% witness: review rev92a_r4 B1 (probes f5, f10): aa's `\offprints` call, then the paper's `\renewcommand{\email}`
+%          before `\maketitle`
+% oracle:  pdflatex (1707.06238's aa.cls): "Send offprint requests to: A. Able, e-mail: carl@z.org" — aa.cls:910-911
+%          `\offprints` uses `\protected@edef`, so `\email` is the class's at the call (aa.cls:824)
+% engines: perl 0.8.8 = 0 errors, 0 warnings (no preload), carl@z.org in the `ltx:pubnote`, in the paper's
+%          `\texttt`; rust int120a = carl@z.org in the `ltx:pubnote`, no creator's; rust 92a r3 = the same XML, the
+%          shadow carl@z.org on Ann Able (the meaning recorded at the call); rust 92a r4/r5 = the same XML, the
+%          shadow no creator's: the meaning is read when the note is rehearsed (at the flush, `\maketitle`), the
+%          paper's own by then, so the call stays the note's text (fails safe)
+% expect:  carl@z.org on Ann Able, the note's name, as the page prints the class's "e-mail:" after it
+% status:  RED (catalog, no guard): reading the meaning at the call would route amsart's held `\thanks`
+%          (amsart.cls:516, run at `\maketitle`) against its page; the flush is right there and fails safe here
+%          (OD #913)
+% preload: ar5iv.sty
+\documentclass{aa}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{Univ X \and Univ Y}
+\offprints{A. Able, \email{carl@z.org}}
+\renewcommand{\email}[1]{\texttt{#1}}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

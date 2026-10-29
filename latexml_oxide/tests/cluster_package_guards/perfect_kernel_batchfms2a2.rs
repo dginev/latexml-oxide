@@ -33,7 +33,7 @@ fn resolved(tex: &str, preload: Option<&str>) -> Value {
 /// The resolved tuples compactly, one line per item: `C <name> [<requests>] <rule>`, then its `a <text> <rule>`
 /// (affiliations), `c <role> <text> <rule>` (contacts), `n <text> <rule>` (notes); `B <role> <text> <rule>` the block's,
 /// `D <role> <text> <rule>` what a ruling dropped.
-fn tuples(resolved: &Value) -> Vec<String> {
+pub(super) fn tuples(resolved: &Value) -> Vec<String> {
   let mut out = Vec::new();
   let item = |prefix: &str, a: &Value, role: bool| {
     let rule = a["rule"].as_str().unwrap_or("");
@@ -413,9 +413,9 @@ fn ref_mark_takes_the_label_of_its_institute() {
     )),
     [
       "C Ann Able [ref:ia] | line:names",
-      "  a Inst A | api:labelseq",
+      "  a Inst A | api:labelseq api:ref-label",
       "C Bob Baker [ref:ib] | line:names",
-      "  a Inst B | api:labelseq",
+      "  a Inst B | api:labelseq api:ref-label",
     ]
   );
 }

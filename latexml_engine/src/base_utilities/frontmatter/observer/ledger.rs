@@ -8,11 +8,12 @@ use std::{cell::RefCell, rc::Rc};
 use latexml_core::{
   definition::{Definition, origin::DefinitionOrigin},
   gullet::{InputMark, input_mark, input_unread_since},
+  state::fallback_meaning_origin,
   token::{FIELD_PROV_POS_MASK, field_prov},
 };
 
 use super::{
-  events::{Event, lex_events},
+  events::{EmailMeaning, Event, lex_events},
   *,
 };
 
@@ -107,6 +108,9 @@ pub(in crate::base_utilities) struct AuthorBlock {
   pub counter:        Option<i64>,
   /// whether the call replaces the authors before it (`\lx@clear@frontmatter{ltx:creator}`)
   pub replace:        bool,
+  /// whether a later creator clear in its queue removed its authors ([`record_clear`]: llncs's `\author` given twice,
+  /// its `\lx@clear@creators[role=author]` — a call of its own, not the block's `replace`)
+  pub cleared:        bool,
   /// whether the IJCAI sectioned split applies
   pub sectioned:      bool,
   /// a per-author binding's cautious name split
@@ -166,6 +170,8 @@ pub(in crate::base_utilities) struct ApiCall {
   pub events:         Vec<Event>,
   /// whether a flush rehearsed its content
   pub rehearsed:      bool,
+  /// whether a later clear removed it from the queue before any flush digested it ([`record_clear`])
+  pub cleared:        bool,
 }
 
 /// One `\footnotetext` the document made (the kernel's `\lx@notetext`, a footnote's text): its printed mark, the footnote
@@ -228,23 +234,38 @@ pub(in crate::base_utilities) fn reset_ledger() {
 /// The document class's bindings in load order, the binding loads' depth now, and whether the outermost is the class's.
 type ClassBindings = (Vec<String>, usize, bool);
 
+/// The commands whose owning binding the observer tracks ([`note_binding_load`]): `\author` (the policy key's binding
+/// half, [`author_binding`]) and the e-mail commands the rehearsal binds (`\email`, `\emailAdd`: whose a note's call
+/// is, [`email_meaning`]).
+const OWNED_COMMANDS: [&str; 3] = ["\\author", "\\email", "\\emailAdd"];
+const AUTHOR: usize = 0;
+
+/// A tracked command's owning binding and the meaning it made.
+type Owner = Option<(String, Rc<dyn Definition>)>;
+
 thread_local! {
-  /// The compiled binding that defined the current `\author` meaning, with that meaning itself ([`note_binding_load`];
-  /// held, so its identity is `Rc::ptr_eq`'s and no later definition can take its address), under the shadow switch
-  /// only.
-  static AUTHOR_OWNER: RefCell<Option<(String, Rc<dyn Definition>)>> = const { RefCell::new(None) };
+  /// For each of [`OWNED_COMMANDS`], the compiled binding that defined its current meaning, with that meaning itself
+  /// ([`note_binding_load`]; held, so its identity is `Rc::ptr_eq`'s and no later definition can take its address),
+  /// under the shadow switch only.
+  static OWNERS: RefCell<[Owner; 3]> = const { RefCell::new([None, None, None]) };
   /// The document class's compiled bindings: the first class binding loaded outside any other binding's load, and every
   /// binding its load loaded (`report.cls`; iopart.cls's `iopart_support.sty`), in load order; and how deep the loads
   /// nest now, with whether the outermost is that class's.
   static CLASS_BINDINGS: RefCell<ClassBindings> = const { RefCell::new((Vec::new(), 0, false)) };
 }
 
-/// The current `\author` meaning, if any (what [`note_binding_load`] compares, by `Rc::ptr_eq`).
-fn author_meaning() -> Option<Rc<dyn Definition>> {
-  lookup_definition(&T_CS!("\\author")).ok().flatten()
+/// The current meaning of the tracked command `n` ([`OWNED_COMMANDS`]), if any (what [`note_binding_load`] compares,
+/// by `Rc::ptr_eq`).
+fn tracked_meaning(n: usize) -> Option<Rc<dyn Definition>> {
+  lookup_definition(&T_CS!(OWNED_COMMANDS[n])).ok().flatten()
 }
 
-/// Whether two `\author` meanings are the same definition (or both absent).
+/// The meaning the tracked command `n`'s noted owner made.
+fn owned_meaning(n: usize) -> Option<Rc<dyn Definition>> {
+  OWNERS.with(|o| o.borrow()[n].as_ref().map(|(_, defn)| Rc::clone(defn)))
+}
+
+/// Whether two meanings are the same definition (or both absent).
 fn same_meaning(a: Option<&Rc<dyn Definition>>, b: Option<&Rc<dyn Definition>>) -> bool {
   match (a, b) {
     (Some(a), Some(b)) => Rc::ptr_eq(a, b),
@@ -253,16 +274,17 @@ fn same_meaning(a: Option<&Rc<dyn Definition>>, b: Option<&Rc<dyn Definition>>) 
   }
 }
 
-/// Run a compiled binding's loader (`name`.`extension`, the binding's file: `revtex4_support.sty`), noting it as the owner of the
-/// `\author` meaning when its load changed it and no binding it loaded did (revtex4-2.cls's binding loads
-/// revtex4_support.sty, whose `\author` it is): the binding half of the policy key (`author_binding`). Under the
-/// shadow switch only; otherwise just the load.
+/// Run a compiled binding's loader (`name`.`extension`, the binding's file: `revtex4_support.sty`), noting it as the
+/// owner of each tracked command's meaning (`OWNED_COMMANDS`) when its load changed it and no binding it loaded did
+/// (revtex4-2.cls's binding loads revtex4_support.sty, whose `\author` it is; aa.cls's loads aa_support.sty, whose
+/// `\email` it is): the binding half of the policy key (`author_binding`), and an e-mail call's binding
+/// (`email_meaning`). Under the shadow switch only; otherwise just the load.
 pub fn note_binding_load<R>(name: &str, extension: &str, load: impl FnOnce() -> R) -> R {
   if !fm_shadow_enabled() {
     return load();
   }
-  let before = author_meaning();
-  let owner_before = AUTHOR_OWNER.with(|o| o.borrow().as_ref().map(|(_, defn)| Rc::clone(defn)));
+  let before: [Option<Rc<dyn Definition>>; 3] = std::array::from_fn(tracked_meaning);
+  let owners_before: [Option<Rc<dyn Definition>>; 3] = std::array::from_fn(owned_meaning);
   CLASS_BINDINGS.with(|c| {
     let (names, depth, in_class) = &mut *c.borrow_mut();
     if *depth == 0 && extension == "cls" && names.is_empty() {
@@ -281,26 +303,27 @@ pub fn note_binding_load<R>(name: &str, extension: &str, load: impl FnOnce() -> 
       *in_class = false;
     }
   });
-  let after = author_meaning();
-  let owner_after = AUTHOR_OWNER.with(|o| o.borrow().as_ref().map(|(_, defn)| Rc::clone(defn)));
-  if let Some(after) = after
-    && !same_meaning(before.as_ref(), Some(&after))
-    && same_meaning(owner_after.as_ref(), owner_before.as_ref())
-  {
-    // (a pool is LaTeXML's own kernel: `kernel`, so a binding that loads it — latexml.sty — does not own its `\author`)
-    let owner = if extension == "pool" {
-      "kernel".to_string()
-    } else {
-      s!("{name}.{extension}")
-    };
-    AUTHOR_OWNER.with(|o| *o.borrow_mut() = Some((owner, after)));
+  for n in 0..OWNED_COMMANDS.len() {
+    if let Some(after) = tracked_meaning(n)
+      && !same_meaning(before[n].as_ref(), Some(&after))
+      && same_meaning(owned_meaning(n).as_ref(), owners_before[n].as_ref())
+    {
+      // (a pool is LaTeXML's own kernel: `kernel`, so a binding that loads it — latexml.sty — does not own its
+      // `\author`)
+      let owner = if extension == "pool" {
+        "kernel".to_string()
+      } else {
+        s!("{name}.{extension}")
+      };
+      OWNERS.with(|o| o.borrow_mut()[n] = Some((owner, after)));
+    }
   }
   value
 }
 
-/// Forget the `\author` owner and the class's bindings (a conversion's start).
+/// Forget the tracked commands' owners and the class's bindings (a conversion's start).
 pub(in crate::base_utilities) fn reset_author_owner() {
-  AUTHOR_OWNER.with(|o| *o.borrow_mut() = None);
+  OWNERS.with(|o| *o.borrow_mut() = [None, None, None]);
   CLASS_BINDINGS.with(|c| *c.borrow_mut() = (Vec::new(), 0, false));
 }
 
@@ -327,12 +350,16 @@ pub(in crate::base_utilities) fn policy_binding(owner: &str) -> String {
 /// still that meaning; else by the meaning's origin — `kernel` (LaTeXML's pools, the format), `document` (the
 /// document's own `\renewcommand`), `raw` (a class or package read raw), `fallback` (OmniBus), `binding` (a binding no
 /// load noted).
-pub(in crate::base_utilities) fn author_binding() -> String {
-  let Some(meaning) = author_meaning() else {
+pub(in crate::base_utilities) fn author_binding() -> String { meaning_owner(AUTHOR) }
+
+/// The binding owning the tracked command `n`'s meaning now ([`author_binding`]'s reading, for any of
+/// [`OWNED_COMMANDS`]); `kernel` when it has none.
+fn meaning_owner(n: usize) -> String {
+  let Some(meaning) = tracked_meaning(n) else {
     return "kernel".to_string();
   };
-  if let Some(name) = AUTHOR_OWNER.with(|o| {
-    o.borrow()
+  if let Some(name) = OWNERS.with(|o| {
+    o.borrow()[n]
       .as_ref()
       .filter(|(_, owned)| Rc::ptr_eq(owned, &meaning))
       .map(|(name, _)| name.clone())
@@ -347,6 +374,56 @@ pub(in crate::base_utilities) fn author_binding() -> String {
     _ => "kernel",
   }
   .to_string()
+}
+
+/// Whose the meaning of the e-mail command `cs` (`\email`, `\emailAdd`) is now: the rehearsal's reading of a call to
+/// it, the meaning when the note is rehearsed (at the flush, `\maketitle`; `rehearsal::install_event_bindings`) —
+/// amsart's, which holds `\thanks` until `\maketitle` (amsart.cls:516), as TeX reads it; aa's `\offprints`
+/// (aa.cls:910-911 `\protected@edef`) and llncs's kernel `\thanks` outside `\author` expand `\email` at the call, so
+/// a paper's redefinition between the call and `\maketitle` reads as no binding's, the note's text, failing safe
+/// (review rev92a_r4 B1, OD #913). The class's own, printing the address in place, when the
+/// binding owning it ([`meaning_owner`]) declares it ([`policy::declares_email_in_place`]: llncs.cls, also under a
+/// raw class that loads it; sv_support.sty, under svjour3, svjour and svmult), or is one of the document class's
+/// bindings and one of those declares it (aa.cls, whose aa_support.sty defines it — not kluwer's, which loads
+/// aa_support too); another binding's (amsart's ams_support.sty, REVTeX's, jheppub's `\emailAdd`, a package's), whose
+/// code routes the address to the current author; else no binding's — the document's own
+/// (`\renewcommand{\email}[1]{\texttt{#1}}`), a file read raw, the fallback class's guess for a class with no binding
+/// (OmniBus: the real class's print is unknown) —, which prints wherever its definition prints (review rev92a_r3 B1:
+/// 1412.0748, 1809.01965).
+pub(in crate::base_utilities) fn email_meaning(cs: &str) -> EmailMeaning {
+  let Some(n) = OWNED_COMMANDS.iter().position(|c| *c == cs) else {
+    return EmailMeaning::Own;
+  };
+  // (the guess a fallback class makes is marked in the state's own record, whatever the definition carries:
+  // `fallback_meaning_origin`)
+  let guessed = matches!(
+    fallback_meaning_origin(&T_CS!(cs)),
+    Some(DefinitionOrigin::Fallback | DefinitionOrigin::Stub)
+  );
+  let by_binding = !guessed
+    && tracked_meaning(n).is_some_and(|meaning| {
+      matches!(
+        meaning.get_origin(),
+        DefinitionOrigin::Binding | DefinitionOrigin::Borrowed
+      )
+    });
+  if !by_binding {
+    return EmailMeaning::Own;
+  }
+  let owner = meaning_owner(n);
+  let in_place = policy::declares_email_in_place(&owner)
+    || CLASS_BINDINGS.with(|c| {
+      let names = &c.borrow().0;
+      names.contains(&owner)
+        && names
+          .iter()
+          .any(|name| policy::declares_email_in_place(name))
+    });
+  if in_place {
+    EmailMeaning::InPlace
+  } else {
+    EmailMeaning::Binding
+  }
 }
 
 /// Whether a call now is the document's own: not one the frontmatter is frozen for (a replayed class setter, a
@@ -395,6 +472,7 @@ pub(in crate::base_utilities) fn record_author_call(
     owner,
     counter,
     replace,
+    cleared: false,
     sectioned,
     cautious,
     keyvals: keyvals.map(|kv| kv.to_string()),
@@ -516,10 +594,11 @@ pub(in crate::base_utilities) fn record_api_call(
   command: &Tokens,
 ) {
   // (and the title, whose marks request labelled entries too — aastex's `\title{…\altaffilmark{1}}` and
-  // `\altaffiltext{1}{Based on observations …}`, the title's note: 0801.1670)
+  // `\altaffiltext{1}{Based on observations …}`, the title's note: 0801.1670; and a publication note, whose e-mails are
+  // the authors' — A&A's `\offprints{B. Baker, \email{…}}`, 0711.1152, 0802.0707)
   if !matches!(
     tag,
-    "ltx:creator" | "ltx:contact" | "ltx:note" | "ltx:title"
+    "ltx:creator" | "ltx:contact" | "ltx:note" | "ltx:title" | "ltx:pubnote"
   ) || !records_now()
   {
     return;
@@ -605,8 +684,78 @@ pub(in crate::base_utilities) fn record_api_call(
       content,
       events: Vec::new(),
       rehearsed: false,
+      cleared: false,
     }));
   });
+}
+
+/// Record a clear of the frontmatter queue (`dequeue_front_matter`: `\lx@clear@frontmatter{tag}[role=…]`), under the
+/// shadow switch only: the API calls it removes — of its tag and every attribute it names, queued since the last flush,
+/// as the dequeue matches the queue's entries — are cleared, and so are, for a creator clear of the authors, the
+/// author blocks queued before it, save the one whose own expansion makes the clear (the kernel `\author`'s replacing
+/// call, which its `replace` covers). llncs's `\author` given twice — an anonymous or template one, then the real
+/// one — clears the first one's creators, which today's drops (2104.04331, 1712.00617).
+pub(in crate::base_utilities) fn record_clear(tag: &str, attr: &[(&str, &str)]) {
+  if !records_now() {
+    return;
+  }
+  let role = attr
+    .iter()
+    .find(|(key, _)| *key == "role")
+    .map(|(_, role)| *role);
+  with_ledger(|ledger| {
+    let flushes = ledger.flushes;
+    let latest_block = ledger.entries.iter().rev().find_map(|entry| match entry {
+      Entry::Author(block) => Some(block.index),
+      _ => None,
+    });
+    for entry in &mut ledger.entries {
+      match entry {
+        Entry::Api(call) if call.epoch == flushes && call.tag == tag => {
+          let matches = attr.iter().all(|(key, value)| {
+            if *key == "role" {
+              call.role == *value
+            } else {
+              last_attr(&call.attrs, key) == *value
+            }
+          });
+          if matches {
+            call.cleared = true;
+          }
+        },
+        Entry::Author(block)
+          if block.epoch == flushes
+            && tag == "ltx:creator"
+            && role.is_none_or(|role| role == "author")
+            && attr.iter().all(|(key, _)| *key == "role") =>
+        {
+          let own = Some(block.index) == latest_block
+            && block.window_open
+            && input_unread_since(&block.mark);
+          if !own {
+            block.cleared = true;
+          }
+        },
+        _ => {},
+      }
+    }
+  });
+}
+
+/// The last value of `key` in a call's recorded attributes (`role=affiliation,label=a`), as the queue's attribute hash
+/// keeps it (`queue_front_matter`: the last value of a repeated key); empty when it has none. It mirrors the dequeue's
+/// match on any attribute, which no caller uses today — every clear passes only `role` (Perl
+/// Base_Utility.pool.ltxml:289-311) —, and it splits at every comma, so a braced value holding one (`label={a, b}`,
+/// `record_api_call`) would not match: a clear naming another key needs that first (review rev92a_r1 N2).
+fn last_attr<'a>(attrs: &'a str, key: &str) -> &'a str {
+  attrs
+    .split(',')
+    .rev()
+    .find_map(|kv| {
+      let (k, v) = kv.split_once('=')?;
+      (k.trim() == key).then(|| v.trim())
+    })
+    .unwrap_or("")
 }
 
 /// Record a footnote's text (`\lx@notetext`'s whatsit, once digested: `\footnotetext[<n>]{…}`), under the shadow switch

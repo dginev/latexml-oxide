@@ -25,8 +25,9 @@ use std::{
 };
 
 use latexml_engine::base_utilities::{
-  FmAssoc, FmEvent, FmEventKind, FmFormulaMarks, FmInput, FmMathNode, FmResolved, FmSepKind,
-  fm_addresses_in, fm_creator_call, fm_glued_in_a_word, fm_printed_children, fm_read_formula,
+  FmAssoc, FmEmailMeaning, FmEvent, FmEventKind, FmFormulaMarks, FmInput, FmMathNode, FmResolved,
+  FmSepKind, fm_addresses_in, fm_glued_in_a_word, fm_printed_children, fm_read_formula,
+  fm_resolver_call,
 };
 use roxmltree::Node;
 use serde_json::Value;

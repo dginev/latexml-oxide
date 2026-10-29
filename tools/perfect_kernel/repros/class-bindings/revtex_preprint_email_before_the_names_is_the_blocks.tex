@@ -1,0 +1,22 @@
+% witness: review rev92a_r2 B1 (probe q32: an `\email` call in REVTeX's `\preprint`, before any `\author`)
+% oracle:  pdflatex prints "Contact Ann Able," at the top and the address nowhere
+% engines: perl 0.8.8 = 0 errors, 3 warnings (the orphaned `\ref` labels), the address lost; rust 90a = 0 errors,
+%          carl@z.org and both affiliations on a nameless creator; rust 92a r2 = written, carl@z.org on Ann Able by the
+%          note's name
+% expect:  0 errors, 0 warnings; REVTeX's `\email` is not printed in place, and no author is read before the call: the
+%          block's (api:document-note owner:block), as today's; each affiliation on the name requesting it
+% status:  RED (92a r2) -> GREEN (92a r3)
+% preload: ar5iv.sty
+\documentclass[preprint]{revtex4-2}
+\usepackage{hyperref}
+\begin{document}
+\preprint{Contact Ann Able, \email{carl@z.org}}
+\title{A title}
+\author{Ann Able$^{\ref{a1}}$}
+\author{Bob Baker$^{\ref{a2}}$}
+\affiliation{\label{a1}University X, Town}
+\affiliation{\label{a2}University Y, City}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Text.
+\end{document}

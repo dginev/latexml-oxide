@@ -44,6 +44,7 @@ pub fn json_event(v: &Value) -> FmEvent {
   event.role = v["role"].as_str().map(str::to_string);
   event.target = v["target"].as_str().map(str::to_string);
   event.nest = v["nest"].as_u64().unwrap_or(0) as u8;
+  event.meaning = FmEmailMeaning::from_name(v["meaning"].as_str().unwrap_or(""));
   event.inner = v["inner"]
     .as_array()
     .map(|a| a.iter().map(json_event).collect())
@@ -63,6 +64,7 @@ pub fn json_inputs(dump: &Value) -> Vec<FmInput> {
         keyvals: e["keyvals"].as_str().map(str::to_string),
         counter: e["counter"].as_i64(),
         replace: e["replace"].as_bool().unwrap_or(false),
+        cleared: e["cleared"].as_bool().unwrap_or(false),
         epoch:   e["epoch"].as_u64().unwrap_or(0) as usize,
         events:  e["events"]
           .as_array()
@@ -74,7 +76,8 @@ pub fn json_inputs(dump: &Value) -> Vec<FmInput> {
       }),
       Some("api")
         if e["inside"] == false
-          && fm_creator_call(
+          && e["cleared"] != true
+          && fm_resolver_call(
             e["tag"].as_str().unwrap_or(""),
             e["parent"].as_str().unwrap_or(""),
           ) =>

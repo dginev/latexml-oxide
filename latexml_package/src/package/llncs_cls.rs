@@ -3,13 +3,15 @@ use crate::prelude::*;
 /// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
 /// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
 /// llncs: `\institute{A \and B}` numbered by its `\and`s (`labelseq=affiliation`), `\inst` the request; an `\inst`
-/// after a comma is the name's before it; an unmarked `\\` line under names is their affiliation
+/// after a comma is the name's before it; an unmarked `\\` line under names is their affiliation; `\email` prints in
+/// place (llncs.cls:897), so a `\thanks{Corresponding: A. Able, \email{…}}` names its address's owner
 pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   name: "llncs",
   binding: "llncs.cls",
   inst_after_comma: true,
   and_inline: true,
-  cite: "llncs.cls:870-885, 894-896; OD #791 (2405.16615, 2512.08621), #792 (2604.11038), #807 (2401.16957)",
+  email_in_place: true,
+  cite: "llncs.cls:870-885, 894-897; OD #791 (2405.16615, 2512.08621), #792 (2604.11038), #807 (2401.16957), #913",
   ..FM_KERNEL_CONVENTIONS
 };
 

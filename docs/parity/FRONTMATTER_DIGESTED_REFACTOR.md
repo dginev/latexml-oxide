@@ -99,11 +99,32 @@ they stay for stages 3–5.
    change refreshes the binding nets' RelaxNG copies (`binding_nets/scripts/rng/`).
 7. **Retire the old reader family by family** through the per-family writer gate (S2b/S2c; ams_support written,
    aas_support's G5 held): notes, e-mails, marks, line kinds, name parting last.
+   llncs and aa (task #429; `agent_reports/2026-10-29_s6_aa_llncs_gate.md`): in shadow, unclassified llncs 19.0 %,
+   aa 23.3 % (90a). **Groundwork landed (92a, OD #913)**, the study's pieces 1, 2 and 7, each read from the digested
+   list: a mark whose script holds `\ref`s printing nothing at digestion is one Mark carrying every key, each reference
+   an item of its own whatever prints between them (`events::script_mark`/`script_ink`, `\ref{ia}\ref{ib}` and
+   `\ref{ia},\ref{ib}` both `ref:ia,ref:ib`; the ref list split in `mark_labels`; an owner found by a key among a
+   numbered entry's labels tagged `api:ref-label`; an ORCID link inside a mark the name's ORCID, not mark text,
+   2407.07678, 2608.18287) — revtex's and amsart's written output reads every key too; a
+   publication note's e-mail calls made with a binding's meaning (never a link it prints, nor a call of the paper's
+   own `\email`, which stays the note's text: `ledger::email_meaning`, the meaning when the note is rehearsed — at
+   the flush, `\maketitle` —, `EmailMeaning` on the event) reach the ledger, placed by where that binding prints them (`Policy::email_in_place`, the class's declaration: the
+   digested list cannot tell) — printed in the note (the class's `\email`: llncs, aa, svjour), by FIDELITY_CHARTER
+   §4's chain exactly, no elimination, the note's name (a piece, parted at `, ; : / &` "and" "or", that is one live
+   creator's whole name) the corresponding author's designation (`answer_document_notes`, `Chain::DocumentNote`,
+   `note_named`); routed elsewhere (amsart, REVTeX), the current author's whole own call (#420), the block's whole
+   with no live author current; a
+   frontmatter clear removes the API calls and
+   the author blocks queued before it (`ledger::record_clear`, every real flush counted). Shadow census (92a r2,
+   re-resolved; 92a r4 re-converted): unclassified llncs 81 of 463 papers (17.5 %, unchanged), aa 57 of 554 (10.3 %). Left before `written: true`: G3 (an inner one-address
+   e-mail on every carrier, piece 3), the 85b `_share=authors` port (4), the labelseq-by-printed-mark tag (5, needs
+   stage 4), the labelseq mark-led split (6), aa's policy key (8: `inst_support.sty` today, which OmniBus shares).
 8. **Per-class parsers** as each family is promoted.
 
 ## Test suite and measurement
 
-- Guards: `cluster_package_guards/perfect_kernel_batch{fms2a*,fms2b,78e,78f,64zc,81,86i,88b}`, `fmshadow/tests.rs` (30),
+- Guards: `cluster_package_guards/perfect_kernel_batch{fms2a*,fms2b,78e,78f,64zc,81,86i,88b,90a,92a}`,
+  `fmshadow/tests.rs` (30),
   `author_split_tests.rs` (32), `114_streaming_structure`. Repros: `tools/perfect_kernel/repros/class-bindings/` and
   `sectioning-frontmatter/` (name groups: `*and*` 103, `*symbol*` 66, `*thanks*`/`*footnote*` 30, `*email*` 27, …).
 - The held batches' witnesses and probes join the suite: 88a (`pk/88a`, #422: e-mail spelling, t06–t11, q01–q12,

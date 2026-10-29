@@ -1,0 +1,21 @@
+% witness: 1707.06238, 1302.1442 (siblings of `\inst{\ref{a},\ref{b}}`: references with no comma between them;
+%          review rev92a_r1 B3)
+% oracle:  pdflatex with 1707.06238's aa.cls: "Ann Able1 2", "Bob Baker1 , 3", "Cid Cole1 −−3", "Dee Dunn2; 3",
+%          "Eve Eng12" (`1\ref{ib}`), institutes 1 Univ X, 2 Univ Y, 3 Univ Z
+% engines: perl 0.8.8 = 0 errors, 4 warnings, every institute lost; rust 90a = 0 errors, every institute on a
+%          nameless creator (today's XML, unchanged); rust 92a r1 = 0 errors, the shadow read each mark's keys as one label
+%          (`ref:iaref:ib`, `ref:ia--ref:ic`, `1ref:ib`) that matched no institute
+% expect:  0 errors, 0 warnings; in the shadow reading every key a request of its own, what prints between them none
+%          (the range's ends only: `\ref{ia}--\ref{ic}` requests ia and ic)
+% status:  RED (92a r1, the shadow) -> GREEN (92a r2)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{\ref{ia}\ref{ib}} \and Bob Baker\inst{\ref{ia}\fnmsep\ref{ic}}
+  \and Cid Cole\inst{\ref{ia}--\ref{ic}} \and Dee Dunn\inst{\ref{ib};\ref{ic}} \and Eve Eng\inst{1\ref{ib}}}
+\institute{Univ X\label{ia} \and Univ Y\label{ib} \and Univ Z\label{ic}}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

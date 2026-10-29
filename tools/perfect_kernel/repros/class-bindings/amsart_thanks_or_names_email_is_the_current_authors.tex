@@ -1,0 +1,22 @@
+% witness: review rev92a_r2 B1, B2 (probe q23: "Correspondence: B. Baker or A. Able" in amsart's `\thanks`)
+% oracle:  pdflatex: "Email address: carl@z.org" under University Y, City, Bob Baker's address
+% engines: perl 0.8.8 = 0 errors, 3 warnings (the orphaned `\ref` labels), carl@z.org on Bob Baker; rust 90a = 0 errors,
+%          carl@z.org on Bob Baker, the addresses on a nameless creator; rust 92a r2 = written, carl@z.org on Ann Able
+%          ("A. Able", the last piece, read alone: "or" did not part the names)
+% expect:  0 errors, 0 warnings; the call is the current author's own, whatever the note names: carl@z.org on Bob
+%          Baker (api:annotate:last owner:own-call), as today's; each address on the name requesting it
+% status:  RED (92a r2) -> GREEN (92a r3)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage{hyperref}
+\begin{document}
+\title{A title}
+\author{Ann Able\textsuperscript{\ref{a1}}}
+\address{\label{a1}University X, Town}
+\email{ann@x.org}
+\author{Bob Baker\textsuperscript{\ref{a2}}}
+\address{\label{a2}University Y, City}
+\thanks{Correspondence: B. Baker or A. Able, \email{carl@z.org}}
+\maketitle
+Text.
+\end{document}

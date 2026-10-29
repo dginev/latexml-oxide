@@ -80,6 +80,42 @@ impl EventKind {
   }
 }
 
+/// Whose meaning an e-mail call has when its note is rehearsed (at the flush, `\maketitle`; `ledger::email_meaning`,
+/// the rehearsal's binding of `\email` and `\emailAdd`): what a document note's e-mail call is read by
+/// (`Resolver::api`, review rev92a_r3 B1; review rev92a_r4 B1 on the timing, OD #913).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum EmailMeaning {
+  /// a binding's, whose code routes the address to the current author (amsart's, REVTeX's, jheppub's `\emailAdd`)
+  #[default]
+  Binding,
+  /// the document class's binding's, which prints the address where it is called (`Policy::email_in_place`: llncs,
+  /// aa, svjour)
+  InPlace,
+  /// no binding's (the document's own `\renewcommand{\email}`, a file read raw): it prints wherever its definition
+  /// prints, so a note's call stays the note's text
+  Own,
+}
+
+impl EmailMeaning {
+  /// Its name in the shadow dump (`"meaning"`; a binding's, the default, is not written).
+  pub fn name(self) -> &'static str {
+    match self {
+      EmailMeaning::Binding => "binding",
+      EmailMeaning::InPlace => "in-place",
+      EmailMeaning::Own => "own",
+    }
+  }
+
+  /// The meaning a dump's name gives (`ab_audit fmshadow`); a binding's for any other.
+  pub fn from_name(name: &str) -> Self {
+    match name {
+      "in-place" => EmailMeaning::InPlace,
+      "own" => EmailMeaning::Own,
+      _ => EmailMeaning::Binding,
+    }
+  }
+}
+
 /// One event of an author block.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Event {
@@ -109,6 +145,8 @@ pub struct Event {
   /// two TeX's output sets it next to (the resolver's `nearer_next`; `Han,${}^1$ Thibault` prints "Han,¹ Thibault")
   pub space_before: bool,
   pub space_after:  bool,
+  /// an e-mail contact's: whose meaning made the call ([`EmailMeaning`])
+  pub meaning:      EmailMeaning,
 }
 
 impl Event {
@@ -127,6 +165,7 @@ impl Event {
       glued: false,
       space_before: false,
       space_after: false,
+      meaning: EmailMeaning::Binding,
     }
   }
 }
@@ -167,48 +206,76 @@ fn mark_event(text: String, role: &str) -> Option<Event> {
   Some(event)
 }
 
-/// The cross-reference commands whose key a mark can print ([`ref_key`]): sect11.rs `\ref OptionalMatch:*
+/// The cross-reference commands whose key a mark can print ([`printless_ref_key`]): sect11.rs `\ref OptionalMatch:*
 /// Semiverbatim` (`\pageref` is `\let` to it, sect11.rs:164, so it reads as one), hyperref's `\autoref`, amsmath's
 /// `\eqref`, cleveref's `\lx@cref` (its `\cref`/`\Cref`, cleveref_sty.rs) — each with the key its last argument. Not
 /// `\href` (a link, its last argument the text printed), nor `\nameref` (a title, never a label's mark). cleveref's
 /// `\namecref{x}` is `\lx@cref{creftype}{x}` too (cleveref_sty.rs:312), a type's name, not a number: the key is read
-/// only off a mark printing nothing at digestion ([`ref_mark`]), and in the rehearsal `\lx@cref` prints its show list
-/// ("creftype", "creftype~creflabel"), so a `\namecref` mark is that text, never `ref:x`.
+/// only off a reference printing nothing at digestion ([`script_mark`]), and in the rehearsal `\lx@cref` prints its
+/// show list ("creftype", "creftype~creflabel"), so a `\namecref` mark is that text, never `ref:x`.
 const REF_COMMANDS: &[&str] = &["\\ref", "\\autoref", "\\eqref", "\\lx@cref"];
 
-/// The key of the `\ref` a digested mark holds (its last argument, Semiverbatim), when it holds one of
-/// [`REF_COMMANDS`].
-fn ref_key(d: &Digested) -> Option<String> {
+/// The key of a cross-reference whatsit printing nothing at digestion — one of [`REF_COMMANDS`], whose reference
+/// resolves in post —, its last argument (Semiverbatim), if `w` is one.
+fn printless_ref_key(w: &Whatsit) -> Option<String> {
+  if !REF_COMMANDS.contains(&whatsit_cs(w).trim_end()) {
+    return None;
+  }
+  let mut printed = String::new();
+  for (arg, shown) in w.get_args().iter().zip(shown_arguments(w)) {
+    if shown && let Some(arg) = arg {
+      ink_text(arg, &mut printed);
+    }
+  }
+  if let Ok(Some(body)) = w.get_body() {
+    ink_text(&body, &mut printed);
+  }
+  if !printed.trim().is_empty() {
+    return None;
+  }
+  let key = ink_of(w.get_args().iter().rev().flatten().next()?)
+    .trim()
+    .to_string();
+  (!key.is_empty()).then_some(key)
+}
+
+/// Whether `d` holds a cross-reference printing nothing at digestion ([`printless_ref_key`]), at any depth.
+fn holds_printless_ref(d: &Digested) -> bool {
   match d.data() {
-    DigestedData::List(l) => l.borrow().boxes.iter().find_map(ref_key),
+    DigestedData::List(l) => l.borrow().boxes.iter().any(holds_printless_ref),
     DigestedData::Whatsit(w) => {
       let w = w.borrow();
-      let cs = whatsit_cs(&w);
-      if REF_COMMANDS.contains(&cs.trim_end())
-        && let Some(key) = w.get_args().iter().rev().flatten().next()
-      {
-        let key = ink_of(key).trim().to_string();
-        if !key.is_empty() {
-          return Some(key);
-        }
-      }
-      w.get_args()
-        .iter()
-        .flatten()
-        .find_map(ref_key)
-        .or_else(|| w.get_body().ok().flatten().as_ref().and_then(ref_key))
+      printless_ref_key(&w).is_some()
+        || w.get_args().iter().flatten().any(holds_printless_ref)
+        || w
+          .get_body()
+          .ok()
+          .flatten()
+          .as_ref()
+          .is_some_and(holds_printless_ref)
     },
-    _ => None,
+    _ => false,
   }
 }
 
-/// A mark printing only a `\ref` (A&A's `\inst{\ref{ipag}}`, 1809.08354): the reference resolves in post, so it
-/// prints nothing at digestion; its label is the `\ref`'s key, prefixed `ref:` (the resolver matches it against the
-/// `\label`s inside the labelled lines and affiliations; S2a.2, review revfms2a1_2's open question (a)).
-fn ref_mark(script: Option<&Digested>, role: &str) -> Option<Event> {
-  let key = ref_key(script?)?;
+/// The event of a mark's script (`\inst{…}`, `\textsuperscript{…}`, a formula's `^{…}`, made by `role`): the notes it
+/// holds aside ([`notes_in`]), a script holding a cross-reference that prints nothing at digestion is a Mark whose
+/// label is the script in print order, each such reference written as its key prefixed `ref:` — the resolver matches
+/// it against the `\label`s inside the labelled lines and affiliations (S2a.2, review revfms2a1_2's open question (a)):
+/// A&A's `\inst{\ref{ipag}}` is `ref:ipag` (1809.08354), `\inst{\ref{ia},\ref{ib}}` one Mark `ref:ia,ref:ib` carrying
+/// both keys (1707.06238, 1302.1442: the comma between them was read as the separator between two marks, and the mark
+/// lost), `\inst{1,\ref{ib}}` `1,ref:ib`; any other script is [`mark_event`]'s, by what it prints.
+fn script_mark(script: Option<&Digested>, role: &'static str, notes: &[Digested]) -> Option<Event> {
+  let role = parted_role(role, notes);
+  let Some(script) = script else {
+    return mark_event(String::new(), role);
+  };
+  if !holds_printless_ref(script) {
+    return mark_event(ink_of_without_notes(script), role);
+  }
   let mut mark = Event::new(EventKind::Mark);
-  mark.label = Some(s!("ref:{key}"));
+  mark.label = Some(script_ink(script, true));
+  mark.text = ink_of_without_notes(script);
   mark.role = Some(s!("{role} ref"));
   Some(mark)
 }
@@ -312,19 +379,33 @@ fn ink_of(d: &Digested) -> String {
 }
 
 /// Whether a whatsit is one of the rehearsal's notes (`\thanks`, `\footnotetext`), footnote marks (`\footnotemark`) or
-/// ORCID links (the rehearsal's `\orcidlink`/`\orcid`, the kernel's `\lx@orcidlink`): inside a mark's script, each is
-/// an event of its own after the mark, not the mark's text (`Martin Bachratý$^{\orcidlink{0000-0002-4300-7507},1,\ast}$`,
-/// 2506.11626: the ORCID was lost).
+/// ORCID links (the rehearsal's `\orcidlink`/`\orcid`, the kernel's `\lx@orcidlink`, a link to an ORCID record): inside
+/// a mark's script, each is an event of its own after the mark, not the mark's text
+/// (`Martin Bachratý$^{\orcidlink{0000-0002-4300-7507},1,\ast}$`, 2506.11626: the ORCID was lost;
+/// `\inst{\ref{inst1} \orcidicon{…}}`, `\inst{1,2,\orcidicon{…}}`, `\orcidicon` a paper's
+/// `\href{https://orcid.org/#1}{…tikzpicture…}`, 2407.07678, 2605.02769, 2608.18287: the logo's path data was read as
+/// the mark's labels, its digits parted onto institutes 1-7).
 fn is_note_whatsit(w: &Whatsit) -> bool {
-  matches!(
-    whatsit_cs(w).as_str(),
+  match whatsit_cs(w).as_str() {
     "\\lx@fm@obs@note"
-      | "\\lx@fm@obs@notetext"
-      | "\\lx@fm@obs@fnmark"
-      | "\\lx@fm@obs@orcid"
-      | "\\lx@orcidlink"
-  )
+    | "\\lx@fm@obs@notetext"
+    | "\\lx@fm@obs@fnmark"
+    | "\\lx@fm@obs@orcid"
+    | "\\lx@orcidlink" => true,
+    "\\lx@fm@obs@href" => href_target(w).contains("orcid.org/"),
+    _ => false,
+  }
 }
+
+/// A whatsit's argument `n` as its tokens read (a link's target, a contact's role), empty when it has none: the one
+/// reader of the walker's `raw` and [`is_note_whatsit`] (review rev92a_r2 N2).
+fn raw_arg(w: &Whatsit, n: usize) -> String {
+  w.get_arg(n).map(|a| a.to_string()).unwrap_or_default()
+}
+
+/// The target of the rehearsal's link (`\lx@fm@obs@href{target}{text}`), trimmed: the contact's target the walker
+/// writes, and what [`is_note_whatsit`] tests for an ORCID record.
+fn href_target(w: &Whatsit) -> String { raw_arg(w, 1).trim().to_string() }
 
 /// The notes and footnote marks a mark's script holds (`$^{1,\thanks{…}}$`, `\inst{3\footnotemark[1]}`), outermost
 /// first.
@@ -373,33 +454,57 @@ fn parted_role(role: &'static str, notes: &[Digested]) -> &'static str {
 }
 
 /// [`ink_of`] a mark's script without the notes it holds ([`notes_in`]).
-fn ink_of_without_notes(d: &Digested) -> String {
-  fn ink(d: &Digested, out: &mut String) {
+fn ink_of_without_notes(d: &Digested) -> String { script_ink(d, false) }
+
+/// A mark's script as [`ink_of_without_notes`] reads it, and with `refs` each cross-reference printing nothing at
+/// digestion written as its key, prefixed `ref:` ([`printless_ref_key`], [`script_mark`]), a list item of its own: a
+/// comma parts it from the ink or the reference beside it, whatever printed between them (`\ref{ia}\ref{ib}`
+/// `ref:ia,ref:ib`; `1\ref{b}` `1,ref:b`; `\ref{a}--\ref{c}` `ref:a,–,ref:c`; review rev92a_r1 B3, where the keys
+/// written back to back were one label, `ref:iaref:ib`, that matched no entry).
+fn script_ink(d: &Digested, refs: bool) -> String {
+  fn ink(d: &Digested, refs: bool, out: &mut String) {
     match d.data() {
       DigestedData::List(l) => {
         for child in l.borrow().boxes.iter() {
-          ink(child, out);
+          ink(child, refs, out);
         }
       },
       DigestedData::Whatsit(w) if is_note_whatsit(&w.borrow()) => {},
-      DigestedData::Whatsit(_) if notes_in(d).is_empty() => ink_text(d, out),
+      DigestedData::Whatsit(w) if refs && let Some(key) = printless_ref_key(&w.borrow()) => {
+        out.push_str(",ref:");
+        out.push_str(&key);
+        out.push(',');
+      },
+      DigestedData::Whatsit(_) if notes_in(d).is_empty() && !(refs && holds_printless_ref(d)) => {
+        ink_text(d, out)
+      },
       DigestedData::Whatsit(w) => {
         let w = w.borrow();
         for (arg, shown) in w.get_args().iter().zip(shown_arguments(&w)) {
           if shown && let Some(arg) = arg {
-            ink(arg, out);
+            ink(arg, refs, out);
           }
         }
         if let Ok(Some(body)) = w.get_body() {
-          ink(&body, out);
+          ink(&body, refs, out);
         }
       },
       _ => ink_text(d, out),
     }
   }
   let mut text = String::new();
-  ink(d, &mut text);
-  text.split_whitespace().collect::<Vec<_>>().join(" ")
+  ink(d, refs, &mut text);
+  let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
+  if !refs {
+    return text;
+  }
+  // (the list's items, each trimmed, the empty ones a reference's own commas made beside a printed one dropped)
+  text
+    .split(',')
+    .map(str::trim)
+    .filter(|item| !item.is_empty())
+    .collect::<Vec<_>>()
+    .join(",")
 }
 
 /// A piece of the walk: ink, a spacing item, or a finished event.
@@ -524,7 +629,7 @@ impl Walker {
   fn walk_whatsit(&mut self, d: &Digested, w: &Whatsit, nest: u8) {
     let cs = whatsit_cs(w);
     let arg = |n: usize| w.get_arg(n).map(ink_of).unwrap_or_default();
-    let raw = |n: usize| w.get_arg(n).map(|a| a.to_string()).unwrap_or_default();
+    let raw = |n: usize| raw_arg(w, n);
     match cs.as_str() {
       "\\lx@fm@obs@and" => self.event(Event::new(EventKind::Sep(SepKind::And("\\and"))), d, nest),
       "\\lx@fm@obs@And" => self.event(Event::new(EventKind::Sep(SepKind::And("\\And"))), d, nest),
@@ -637,10 +742,7 @@ impl Walker {
         // (a `\footnotemark` inside the mark is a mark of its own after it, its footnote's: `Kui Wu\inst{3\footnotemark[1]}`
         // printed "31", parted into "3" and "1" — llncs, 2404.09857)
         let notes = w.get_arg(1).map(notes_in).unwrap_or_default();
-        let script = w.get_arg(1).map(ink_of_without_notes).unwrap_or_default();
-        if let Some(mark) =
-          mark_event(script, parted_role("inst", &notes)).or_else(|| ref_mark(w.get_arg(1), "inst"))
-        {
+        if let Some(mark) = script_mark(w.get_arg(1), "inst", &notes) {
           self.event(mark, d, nest);
         }
         self.walk_notes(&notes, nest);
@@ -677,24 +779,30 @@ impl Walker {
       },
       "\\textsuperscript" | "\\@textsuperscript" => {
         let notes = w.get_arg(1).map(notes_in).unwrap_or_default();
-        let script = w.get_arg(1).map(ink_of_without_notes).unwrap_or_default();
-        if let Some(mark) =
-          mark_event(script, parted_role("sup", &notes)).or_else(|| ref_mark(w.get_arg(1), "sup"))
-        {
+        if let Some(mark) = script_mark(w.get_arg(1), "sup", &notes) {
           self.event(mark, d, nest);
         }
         self.walk_notes(&notes, nest);
       },
-      "\\lx@fm@obs@email" | "\\lx@fm@obs@orcid" | "\\lx@fm@obs@affil" => {
+      "\\lx@fm@obs@email"
+      | "\\lx@fm@obs@email@inplace"
+      | "\\lx@fm@obs@email@own"
+      | "\\lx@fm@obs@orcid"
+      | "\\lx@fm@obs@affil" => {
         let mut contact = Event::new(EventKind::Contact);
         contact.role = Some(
           match cs.as_str() {
-            "\\lx@fm@obs@email" => "email",
             "\\lx@fm@obs@orcid" => "orcid",
-            _ => "affiliation",
+            "\\lx@fm@obs@affil" => "affiliation",
+            _ => "email",
           }
           .to_string(),
         );
+        contact.meaning = match cs.as_str() {
+          "\\lx@fm@obs@email@inplace" => EmailMeaning::InPlace,
+          "\\lx@fm@obs@email@own" => EmailMeaning::Own,
+          _ => EmailMeaning::Binding,
+        };
         let label = arg(1);
         contact.label = (!label.is_empty()).then_some(label);
         contact.text = if cs == "\\lx@fm@obs@affil" {
@@ -714,7 +822,7 @@ impl Walker {
       "\\lx@fm@obs@href" => {
         let mut contact = Event::new(EventKind::Contact);
         contact.role = Some("url".to_string());
-        contact.target = Some(raw(1).trim().to_string());
+        contact.target = Some(href_target(w));
         contact.text = arg(2);
         self.event(contact, d, nest);
       },
@@ -801,10 +909,7 @@ impl Walker {
           // (the script is the last argument: `\lx@post@superscript`'s, `\lx@floating@superscript`'s)
           let script_box = w.get_args().iter().rev().flatten().next();
           let notes = script_box.map(notes_in).unwrap_or_default();
-          let script = script_box.map(ink_of_without_notes).unwrap_or_default();
-          if let Some(mark) =
-            mark_event(script, parted_role("math", &notes)).or_else(|| ref_mark(script_box, "math"))
-          {
+          if let Some(mark) = script_mark(script_box, "math", &notes) {
             self.event(mark, d, nest);
           }
           // (a `\thanks` inside the script is a note of its own, after the mark, not the mark's text:

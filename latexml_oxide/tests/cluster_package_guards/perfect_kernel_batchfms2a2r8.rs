@@ -437,6 +437,7 @@ fn an_unlabelled_entry_is_no_legend() {
     keyvals: None,
     counter: None,
     replace: false,
+    cleared: false,
     epoch:   0,
     events:  vec![
       name("Ann Able"),

@@ -1,0 +1,25 @@
+% witness: review rev92a_r1 B1 (probe p13: the e-mail call a publication note makes, which the reading keeps)
+% oracle:  pdflatex: amsart's `\email` inside `\thanks` runs at `\maketitle`, so "Email address: carl@z.org" prints
+%          last in the address list, after University Y, City
+% engines: perl 0.8.8 = 0 errors, 3 warnings, the addresses lost, carl@z.org on Bob Baker; rust 90a = 0 errors, today's XML carl@z.org on Bob Baker (the binding's
+%          `\lx@add@email` on the last creator), the shadow without it, the writer declined: both addresses on a
+%          nameless creator; rust 92a r1 = written, carl@z.org on Bob Baker by elimination (not in the charter's chain);
+%          rust 92a r2 = the shadow's block, the writer declined (today's XML)
+% expect:  0 errors, 0 warnings; the shadow reads the e-mail call; amsart's `\email` is not printed in place, so the
+%          call is the current author's own (FIDELITY_CHARTER §4, #420): carl@z.org on Bob Baker (api:annotate:last
+%          owner:own-call); the writer writes each address to the name requesting it
+% status:  GREEN (92a r2: the reading) -> GREEN (92a r3: the own call, written)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage{hyperref}
+\begin{document}
+\title{A title}
+\author{Ann Able\textsuperscript{\ref{a1}}}
+\address{\label{a1}University X, Town}
+\email{ann@x.org}
+\author{Bob Baker\textsuperscript{\ref{a2}}}
+\address{\label{a2}University Y, City}
+\thanks{Correspondence: \email{carl@z.org}}
+\maketitle
+Text.
+\end{document}

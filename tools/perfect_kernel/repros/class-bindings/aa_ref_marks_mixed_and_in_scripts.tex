@@ -1,0 +1,20 @@
+% witness: 1707.06238 (`\inst{\ref{inst5}, \ref{inst20}}`, a space after the comma), 1302.1442; siblings: a number
+%          and a `\ref` in one mark, a formula's script holding two `\ref`s
+% oracle:  pdflatex with 1707.06238's aa.cls: "Ann Able1, 2 , Bob Baker2, 3 , and Cid Cole1,3", institutes 1 Univ X,
+%          2 Univ Y, 3 Univ Z
+% engines: perl 0.8.8 = 0 errors, Bob Baker Univ Z only (the number lost), Cid Cole none; rust 90a = 0 errors, XML
+%          Ann Able Univ X + Univ Y, Bob Baker "Bob Baker2" Univ Z only, Cid Cole none (the formula kept in the name);
+%          the shadow read Ann's and Cid's marks as commas (no requests)
+% expect:  0 errors, 0 warnings; Ann Able X + Y, Bob Baker Y + Z, Cid Cole X + Z (as printed)
+% status:  RED (90a, the shadow) -> GREEN (92a, the shadow reading); today's XML RED: Bob Baker's 2 kept in his name
+%          and Univ Y lost, Cid Cole's formula kept in his name with no institute (the old reader, stage 7)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{\ref{ia}, \ref{ib}} \and Bob Baker\inst{2,\ref{ic}} \and Cid Cole$^{\ref{ia},\ref{ic}}$}
+\institute{Univ X\label{ia} \and Univ Y\label{ib} \and Univ Z\label{ic}}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

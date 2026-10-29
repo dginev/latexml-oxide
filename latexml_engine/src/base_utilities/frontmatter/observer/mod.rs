@@ -41,9 +41,11 @@ pub(in crate::base_utilities) mod shadow;
 pub(in crate::base_utilities) mod writer;
 
 // (for `ab_audit fmshadow`, which re-resolves a dump's events offline; prefixed, as the prelude re-exports these)
-pub use events::{Event as FmEvent, EventKind as FmEventKind, SepKind as FmSepKind};
+pub use events::{
+  EmailMeaning as FmEmailMeaning, Event as FmEvent, EventKind as FmEventKind, SepKind as FmSepKind,
+};
 pub(in crate::base_utilities) use ledger::{
-  field_stamped, note_field_stamp, record_api_call, record_author_call,
+  field_stamped, note_field_stamp, record_api_call, record_author_call, record_clear,
 };
 pub use ledger::{note_binding_load, record_note_text as fm_record_note_text};
 // (the one reading of a formula's mark-ness, for `ab_audit fmshadow`'s view of the final XML)
@@ -59,8 +61,8 @@ pub use policy::{
 };
 pub use resolver::{
   Assoc as FmAssoc, CHANGE_TAGS as FM_CHANGE_TAGS, Input as FmInput, RCreator as FmCreator,
-  Resolved as FmResolved, addresses_in as fm_addresses_in, creator_call as fm_creator_call,
-  is_change_rule as fm_is_change_rule, resolve as fm_resolve, resolve_with as fm_resolve_with,
+  Resolved as FmResolved, addresses_in as fm_addresses_in, is_change_rule as fm_is_change_rule,
+  resolve as fm_resolve, resolve_with as fm_resolve_with, resolver_call as fm_resolver_call,
 };
 pub(in crate::base_utilities) use shadow::shadow_flush;
 pub use shadow::{

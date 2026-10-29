@@ -1,0 +1,23 @@
+% witness: review rev92a_r3 B1 (probe c5; 1412.0748 `\renewcommand{\email}[1]{\href{mailto:#1}{…}}`, 1809.01965
+%          `\renewcommand{\email}[1]{{e-mail: \tt#1}}`): a `\thanks` e-mail call whose `\email` is the paper's own
+% oracle:  pdflatex: the footnote prints "Correspondence to Ann Able, carl@z.org."; no "Email address" line
+% engines: perl 0.8.8 = 0 errors (1 warning, ar5iv.sty absent), carl@z.org in the `ltx:pubnote`; rust int120a = the
+%          same, the writer "same"; rust 92a r3 = the same XML, the shadow carl@z.org on Bob Baker (owner:own-call),
+%          so the writer declined
+% expect:  0 errors, 0 warnings; the call is no binding's (`EmailMeaning::Own`), so it stays the note's text: no
+%          creator holds carl@z.org, the shadow agreeing with the XML (writer "same")
+% status:  RED (92a r3) -> GREEN (92a r4)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage{hyperref}
+\renewcommand{\email}[1]{\texttt{#1}}
+\begin{document}
+\title{A title}
+\author{Ann Able}
+\address{University X, Town}
+\author{Bob Baker}
+\address{University Y, City}
+\thanks{Correspondence to Ann Able, \email{carl@z.org}}
+\maketitle
+Text.
+\end{document}

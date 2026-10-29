@@ -1,0 +1,19 @@
+% witness: review rev92a_r3 S1 (probe c1): a name before a colon in aa's `\offprints`
+% oracle:  pdflatex (1707.06238's aa.cls): "Send offprint requests to: A. Able: e-mail: carl@z.org"
+% engines: perl 0.8.8 = 0 errors (1 warning, ar5iv.sty absent), carl@z.org on Bob Baker; rust int120a = the same XML;
+%          rust 92a r3 = the same XML, the shadow the block's (the lead before the colon dropped as a label)
+% expect:  0 errors, 0 warnings; `:` parts the note's pieces, so "A. Able" designates Ann Able (owner:corresponding
+%          api:note-name), as the page prints it; the XML today's (aa is not written)
+% status:  RED (92a r3) -> GREEN (92a r4)
+% preload: ar5iv.sty
+\documentclass{aa}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{Univ X \and Univ Y}
+\offprints{A. Able: \email{carl@z.org}}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}
