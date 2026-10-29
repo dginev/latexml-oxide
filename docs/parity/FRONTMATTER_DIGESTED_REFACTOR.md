@@ -57,7 +57,17 @@ NAME_TEXT_COMMANDS[38], PLAIN_FONT_COMMANDS[8], FONT_WRAPPERS[16].
 ## Stages (smallest risk first; each its own batch, red/green, census A/B)
 
 1. **XML readers** (writer view, comparator, `shown_marks`, `is_name_mark`): read the XMath shape; merge the two
-   copies into one reader. First confirm which XMath the writer (`insert.rs:98`) and `fmshadow` (final XML) each see.
+   copies into one reader. Settled 2026-10-29 (`agent_reports/2026-10-29_rf1_xmath_shapes.md`): the writer
+   (`insert.rs:98` → `writer/mod.rs:63,73` → `dom.rs:79`) reads every formula *before* `finish_document`'s rewrite
+   (`core_interface.rs:632`, the `tex_math.rs:2046` floating-script → `ltx:sup` rule) and math parse (`:654`), so it
+   sees the digested shape: `XMApp[@role='FLOATSUPERSCRIPT']` (or `POSTSUPERSCRIPT` after base tokens) holding
+   `XMArg[rule=Superscript]`, flat `XMTok`/`XMHint`/`XMText` siblings — chosen at digestion (`script_handler`,
+   `tex_math.rs:121`). The comparator reads the final, parsed XML: a lone floating script is `ltx:sup`, and a script
+   with a neighbour is `XMApp(XMTok[role=SUPERSCRIPTOP scriptpos=preN|postN], base, script)`, `XMDual`/`XMWrap` around
+   lists. One reader takes both vocabularies: a mark is a floating script with no ink after it in its formula (any
+   `XMHint` aside), or an `ltx:sup`; `preN` (a following base, ³He, `^a)`) and `postN`/`POSTSUPERSCRIPT` (base text plus
+   a script) are not marks; a single `FLOATSUPERSCRIPT` whose `XMArg` holds only `XMTok` reads as the `ltx:sup` the
+   rewrite will make. Font switches and spacing commands never appear — the six switch lists go.
 2. **Event-model additions** (gaps 1–5): additive, shadow-only; checked offline with `ab_audit fmshadow --re-resolve`.
 3. **Writer cut** on `formula_span`/`ends_formula`; absorbs 88c (font-switched marks, 2105.07958; the isotope class;
    q17's mid-line unowned mark as text). Gate: the revtex/ams census A/B.
