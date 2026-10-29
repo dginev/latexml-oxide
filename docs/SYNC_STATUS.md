@@ -476,10 +476,24 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
    for an already declared font (mdsymbol.sty:383-390) is not modelled: its symbols decode through cmsy's OMS layout
    or print a stand-in (`\Cap` ⊥, `\blacktriangledown` ⊎; 339 of the 402 reference names in a probe), and a binding's
    limits placement is not carried (a redeclared `\sum`/`\bigcup` sets display limits as scripts; no corpus witness;
-   RED repro fonts-nfss/redeclared_mathop_takes_display_limits). Open, each a
-   slot `\DeclareMathSymbol` declares in a font with no map: (B0) an undecodable slot prints the slot itself, a wrong ASCII stand-in from 0x20 (`\neq` as `,`, Ω as
-   a newline; OD #27) — awaits the user's ruling on U+FFFD plus a Warning (repro fonts-nfss/u_font_kernel_slot_and_ams_names
-   `\neq`; 1502.03923 104 tokens, 2402.09138, 2008.13643, 1604.04618); (B3, HARD, deferred) the layout from the TFM's
+   RED repro fonts-nfss/redeclared_mathop_takes_display_limits). FIXED 89b (B0, user ruling 2026-10-29): an
+   undecodable slot is U+FFFD, never the slot as a wrong ASCII stand-in (`\neq` as `,`, Ω as a newline), and each symbol
+   font that loses glyphs says so in one `Warning:missing_font_encoding:<enc>/<family>`, where such a symbol is first
+   printed — raised when the document absorbs its box, so a symbol only digested (program.sty's savebox, a
+   `\settowidth`, a discarded hold) says nothing (OD #27; guards
+   `perfect_kernel_batch89b::*`; 1502.03923, 2402.09138, 2008.13643, 1604.04618, 2307.11186). Open, the text side's
+   `\lx@unmapped@text@symbol` (a macro expanding to nothing) still warns at expansion and sets its key there, so a
+   text symbol expanded only under a discarded hold or in a box never printed warns or is silenced alike as 89b r1's
+   math symbols were (minimal: fonts-nfss/text_symbol_of_an_unmapped_encoding_warns's `XX` preamble, then
+   `\sbox0{\textxxa}Hello.` → 1 Warning, pdflatex prints "Hello."); a box of its own would change its expansion. A kernel accent a
+   package redeclares at another slot of an undecodable font is U+FFFD over its base since 89b. Before, its token was
+   empty and MathML filled it with the accent's `name` (`<mo>hat</mo>`, presentation.rs:1186; Perl MathML.pm:711), and
+   an align cell holding only the accent and its base was dropped whole (1902.03183 eq. 9 `\bar{u}`, restored by 89b;
+   guard `perfect_kernel_batch89b::undecodable_math_accent_is_fffd_and_warns`): newtxsf's `\hat`/`\bar`/`\tilde`/`\dot` in `lettersA` and `\vec` in `symbols`
+   (newtxsf.sty:301-313, :1332), and mathabx's `\widehat`/`\widecheck`. These are 1,093 tokens in 16 papers of pop89a:
+   2106.08363, 1808.01384, 2406.11942 and 2607.15091 among them. Decoding a kernel accent by its name, at any slot, is
+   open; it needs a ruling, since 89a's rule matches name and slot together. Open, each a slot
+   `\DeclareMathSymbol` declares in a font with no map, now U+FFFD and counted: (B3, HARD, deferred) the layout from the TFM's
    coding scheme: `U/fsy`'s `zplmr7t` says "TEX TEXT" (OT1) and `zplmr7m` "TEX MATH ITALIC" (OML), trustworthy only for
    those two strings — msam10/msbm10/esint10 claim false ones (heppennames2.sty:117-151 via cms-tdr.cls:167;
    2307.11186 147 tokens, 2507.13469; minimal: `\DeclareFontFamily{U}{fsy}{}\DeclareFontShape{U}{fsy}{m}{n}{<->s*[1.0]zplmr7t}{}`

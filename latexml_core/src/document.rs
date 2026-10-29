@@ -347,6 +347,82 @@ pub const FIELD_BOX_PROPERTY: &str = "fieldBox";
 /// opened for its material ([`Document::mark_field_box`]).
 pub const FIELD_BOX_ATTRIBUTE: &str = "_fieldbox";
 
+/// The box property of a Warning that belongs to the box's print, not to its digestion ([`absorb_warning`]): raised
+/// when [`Document::absorb`] takes the box (a [`Tbox`] or a whatsit) into the document, once per key. A box digested and
+/// never absorbed — measured (`\settowidth`), saved and never used (`\sbox`), made by a rehearsal or a speculative
+/// digestion, or under a [`DiagnosticsHold`](crate::util::logger::DiagnosticsHold) it discards — raises nothing and
+/// leaves no key set, so the box the document prints still raises it. An undecodable math glyph's once-per-font
+/// Warning (latexml_engine sect08.rs `undecodable_math_slot`, OXIDIZED_DESIGN_DIVERGENCES #27).
+pub const ABSORB_WARNING_PROPERTY: &str = "absorbWarning";
+// `pin!` takes a literal: [`raise_absorb_warning`]'s lookup spells the name, tied to the constant here.
+const _: () = assert!(matches!(
+  ABSORB_WARNING_PROPERTY.as_bytes(),
+  b"absorbWarning"
+));
+/// The source position, recorded at digestion, at which a constructor's [`ABSORB_WARNING_PROPERTY`] Warning is raised:
+/// the gullet's as the constructor's arguments are read (core `dialect::transfer_common_constructor_options`), the
+/// position a [`Tbox`] carries as its locator. A whatsit's own locator is set only under `--source-map`.
+pub const ABSORB_WARNING_LOCATOR_PROPERTY: &str = "absorbWarningLocator";
+const _: () = assert!(matches!(
+  ABSORB_WARNING_LOCATOR_PROPERTY.as_bytes(),
+  b"absorbWarningLocator"
+));
+
+/// The [`ABSORB_WARNING_PROPERTY`] value of `Warning:<category>:<object> <message>`, raised once per `once_key`: the
+/// first absorbed box carrying the key raises it, the key is then set (a global state value, as the text side's once
+/// keys are), and every later one is silent.
+pub fn absorb_warning(once_key: &str, category: &str, object: &str, message: &str) -> Stored {
+  Stored::Strings(Rc::from([
+    arena::pin(once_key),
+    arena::pin(category),
+    arena::pin(object),
+    arena::pin(message),
+  ]))
+}
+
+/// Raise the [`ABSORB_WARNING_PROPERTY`] Warning `object` carries, if its key is not yet set; the one place the key is
+/// set. Looked up by its cached symbol and without a copy of the map: this runs for every box absorbed.
+fn raise_absorb_warning(object: &Digested) {
+  let Some((warning, recorded)) =
+    object.with_properties(|props| match props.get_sym(pin!("absorbWarning")) {
+      Some(Stored::Strings(warning)) => Some((
+        Rc::clone(warning),
+        match props.get_sym(pin!("absorbWarningLocator")) {
+          Some(Stored::Locator(locator)) => Some(**locator),
+          _ => None,
+        },
+      )),
+      _ => None,
+    })
+  else {
+    return;
+  };
+  let [key, category, name, message] = *warning else {
+    return;
+  };
+  if state::lookup_bool_sym(key) {
+    return;
+  }
+  state::assign_value(&arena::to_string(key), true, Some(state::Scope::Global));
+  // At the box's source position, where it was digested: a constructor's recorded one
+  // ([`ABSORB_WARNING_LOCATOR_PROPERTY`]), else the box's locator (a Tbox's). The gullet's, at build time, is the
+  // document's end.
+  let location = recorded
+    .or_else(|| object.get_locator())
+    .map_or_else(crate::gullet::get_location, |locator| s!("at {locator}"));
+  emit_warn(
+    &arena::to_string(category),
+    &arena::to_string(name),
+    &s!(
+      "{}\n\t{location}\n\tIn {}:{}:{}\n",
+      arena::to_string(message),
+      file!(),
+      line!(),
+      column!()
+    ),
+  );
+}
+
 /// Can a box digested now still matter to a frontmatter field's print (the field ledger not settled)? The gate of
 /// every digest-time field-box mark, checked before anything else is looked up. It does not wait for a field to be
 /// stamped: a header box may be digested before the document declares its `\title` (fms1 round-6 review finding 1);
@@ -1432,6 +1508,7 @@ impl Document {
         },
         // A Proper Box or Whatsit? Absorb it.
         TBox(digested) => {
+          raise_absorb_warning(&front_box);
           self.field_ink_before(&front_box)?;
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
@@ -1441,6 +1518,7 @@ impl Document {
           self.expire_box_to_absorb();
         },
         Whatsit(digested) => {
+          raise_absorb_warning(&front_box);
           let field_ink = self.field_ink_before(&front_box)?;
           self.field_inherit += u32::from(field_ink);
           self.set_box_to_absorb(Some((*front_box).clone()));
@@ -2841,6 +2919,7 @@ impl Document {
     attributes.remove("cached_width");
     attributes.remove("cached_height");
     attributes.remove("cached_depth");
+    attributes.remove(ABSORB_WARNING_PROPERTY);
     // attributes.remove("stretchy");
 
     let is_space = attributes.contains_key("isSpace");

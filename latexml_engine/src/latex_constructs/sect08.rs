@@ -786,26 +786,32 @@ pub(crate) fn load() -> Result<()> {
   // is None — that left the CS undefined for unknown encodings (e.g.
   // `\DeclareMathAccent{\widecheck}{\mathalpha}{mathx}{"71}` with no
   // mathx font map → \widecheck undefined → 1806.02506-style 1-error
-  // cluster). Mirror Perl: always install, fall back to empty presentation.
+  // cluster). Mirror Perl: always install; an undecodable accent is U+FFFD where Perl's is empty (#27).
   // The symbol font is read `Expanded`, as latex.ltx:13430 resolves it through `\csname sym#3\endcsname`
   // (`symbol_font_name_expands`, below).
   DefPrimitive!("\\DeclareMathAccent DefToken {} Expanded {Number}",
   sub[(cs, kind, class, code)] {
     let class_str = nfss_name(&class);
-    let encoding = lookup_value(&s!("fontdeclaration@{}", class_str))
-      .and_then(|v| {
-        if let Stored::Font(ref f) = v {
-          f.get_encoding().map(|e| e.to_string())
-        } else {
-          None
-        }
-      })
-      .unwrap_or(class_str);
-    let (glyph, _font) = font_decode(code.value_of() as i32, Some(&encoding), None);
-    let presentation = glyph.map(|c| c.to_string()).unwrap_or_default();
+    let decl_font = match lookup_value(&s!("fontdeclaration@{}", class_str)) {
+      Some(Stored::Font(font)) => Some(font),
+      _ => None,
+    };
+    let encoding = decl_font
+      .as_ref()
+      .and_then(|font| font.get_encoding().map(|e| e.to_string()))
+      .unwrap_or_else(|| class_str.clone());
+    // Decoded with the declared font, as `\DeclareMathSymbol` is: its family selects a per-family map (`U_msa`).
+    let (glyph, _font) = font_decode(code.value_of() as i32, Some(&encoding), decl_font.clone());
+    // Undecodable, the accent is U+FFFD (Perl: empty), and printed, its symbol font says so once
+    // (`undecodable_math_slot`, OXIDIZED_DESIGN_DIVERGENCES #27).
+    let (presentation, report) = match glyph {
+      Some(glyph) => (glyph.to_string(), None),
+      None => undecodable_math_slot(&class_str, &encoding, decl_font.as_ref(), &cs, code.value_of(), "accent"),
+    };
     let paramlist = parse_parameters("Digested", &cs, true)?;
     let opts = MathPrimitiveOptions{
       operator_role: Some("OVERACCENT".to_string()),
+      absorb_warning: report,
       ..Default::default()};
     def_math(cs, paramlist, presentation, opts)?;
     // Perl: return AddToPreamble('\DeclareMathAccent', $cs, $kind, $class, $code);
@@ -837,7 +843,8 @@ pub(crate) fn load() -> Result<()> {
   // `kernel_name_at_another_slot_stays_undecoded`.
   DefPrimitive!("\\DeclareMathSymbol DefToken SkipSpaces DefToken Expanded {Number}",
   sub[(cs, sym_type, fontkind, code)] {
-    let mut encoding = nfss_name(&fontkind);
+    let font_name = nfss_name(&fontkind);
+    let mut encoding = font_name.clone();
     // Decode with the DECLARED symbol font (Perl FontDecode takes the font):
     // its family selects the per-family map (`U_msa_fontmap`, u_fontmap.rs).
     let mut decl_font: Option<Rc<Font>> = None;
@@ -852,7 +859,7 @@ pub(crate) fn load() -> Result<()> {
         .as_ref()
         .and_then(|font| font.get_shape())
         .is_some_and(|shape| matches!(shape.as_ref(), "it" | "sl" | "italic" | "slanted"));
-    let (glyph, _font) = font_decode(code.value_of() as i32, Some(&encoding), decl_font);
+    let (glyph, _font) = font_decode(code.value_of() as i32, Some(&encoding), decl_font.clone());
     // Undecoded, a symbol at its reference slot is the token LaTeXML's own binding makes of the name: its glyph, and
     // its role, meaning, name and stretchiness where the binding gives them (`reference_symbol`).
     let reference = if glyph.is_none() { reference_symbol(&cs, code.value_of()) } else { None };
@@ -871,52 +878,17 @@ pub(crate) fn load() -> Result<()> {
       _ => None,
     };
     let role = binding.and_then(|binding| binding.role).or(role);
-    // Perl Package.pm L2761: `DefMathI($cs, undef, $glyph, role => $role)` —
-    // called unconditionally, even when FontDecode returns `undef` (e.g. the
-    // encoding's `.fontmap.ltxml` isn't shipped with LaTeXML, like "U").
-    // Fall back to the raw codepoint so the CS is defined; better to render
-    // an ASCII stand-in than to cascade into Error:undefined for the
-    // command itself. arxiv 1011.1955 hits this with
-    //   \DeclareSymbolFont{AMSb}{U}{msb}{m}{n}
-    //   \DeclareMathSymbol{\Z}{\mathalpha}{AMSb}{"5A}
-    // where no u.fontmap exists.
-    //
-    // XML-validity guard: slots in the C0 control range (0x00-0x1F, minus
-    // tab/LF/CR) are NOT valid XML 1.0 characters and break downstream
-    // libxml2 parsing of the serialized document (XPath aborts mid-tree
-    // when it encounters one, so post-processor `find_node_by_id` returns
-    // None for any id past the bad byte — manifested as the
-    // `Error:expected:id Cannot find a node` cluster on 1501.05180,
-    // where `\DeclareMathSymbol\onto\mathrel{latex-font msa}{"10}`
-    // emits `<XMTok>\x10</XMTok>` with no msa fontmap installed).
-    // Render U+FFFD (REPLACEMENT CHARACTER) for forbidden control chars
-    // when no fontmap mapping is available — visually surfaces the
-    // missing-fontmap case without poisoning the XML.
-    fn xml_safe_char(codepoint: u32) -> String {
-      if let Some(c) = char::from_u32(codepoint) {
-        // XML 1.0 §2.2 valid Char: #x9 | #xA | #xD | [#x20-#xD7FF] |
-        // [#xE000-#xFFFD] | [#x10000-#x10FFFF]
-        let cp = c as u32;
-        let valid = cp == 0x09
-          || cp == 0x0A
-          || cp == 0x0D
-          || (0x20..=0xD7FF).contains(&cp)
-          || (0xE000..=0xFFFD).contains(&cp)
-          || (0x10000..=0x10FFFF).contains(&cp);
-        if valid {
-          c.to_string()
-        } else {
-          "\u{FFFD}".to_string()
-        }
-      } else {
-        String::new()
-      }
-    }
-    let presentation = match glyph {
-      Some(glyph) => glyph,
-      None => xml_safe_char(code.value_of() as u32),
+    // Perl Package.pm L2761: `DefMathI($cs, undef, $glyph, role => $role)` — called unconditionally, even when
+    // FontDecode returns `undef` (no map for the encoding, as for "U"), so the CS is defined. Perl's token is then
+    // empty; ours is U+FFFD, and printed, its symbol font says once that it cannot decode (`undecodable_math_slot`,
+    // OXIDIZED_DESIGN_DIVERGENCES #27: the raw slot it printed before was no font's glyph — kpfonts' `\neq` as `,`,
+    // Ω at "0A as a line break — and a control slot no XML character, 1501.05180; the stand-in it was kept for,
+    // 1011.1955's `\Z` at `U/msb` "5A, now decodes through the msb map).
+    let (presentation, report) = match glyph {
+      Some(glyph) => (glyph, None),
+      None => undecodable_math_slot(&font_name, &encoding, decl_font.as_ref(), &cs, code.value_of(), "symbol"),
     };
-    let mut opts = MathPrimitiveOptions::default();
+    let mut opts = MathPrimitiveOptions { absorb_warning: report, ..Default::default() };
     if let Some(r) = role {
       opts.role = Some(r.to_string());
     }
@@ -2324,6 +2296,77 @@ fn reference_glyph(reference: &ReferenceSymbol) -> Option<String> {
       .and_then(|map| map.get(usize::from(reference.slot)).copied().flatten())
       .map(String::from),
   }
+}
+
+/// The presentation of a math symbol or accent its symbol font cannot decode — no glyph at its slot in the
+/// declared font's map, or no map at all, and no reference slot ([`reference_symbol`]) — and what it does when printed.
+/// The presentation is U+FFFD, the unrepresentable character, never the raw slot as a character: that was the glyph of
+/// no font, kpfonts' `\neq` (`U/jkpsyc` 44) as `,`, a slot "0A Ω as a line break, newtx's `\lbrace` at 215 as `×`, and
+/// a control slot is no XML character (1501.05180). Printed, the symbol says so once per symbol font, under
+/// `missing_font_encoding` as a text symbol does (`\lx@unmapped@text@symbol`), naming the font, its encoding and family
+/// (`<encoding>/<family>`; an undeclared symbol font, which has neither, by LaTeX's own name for it, `\sym<font>`), and
+/// the symbol or accent and its slot; the font's further undecodable symbols say nothing more. The Warning is the box's
+/// ([`latexml_core::document::absorb_warning`]), raised when the document absorbs it: a symbol declared and never used,
+/// or digested only into a box never printed — program.sty's `\powersetsymbol` in a savebox (program.sty:836-837,
+/// sn-jnl.cls copies), a `\settowidth`, a counter's `\the…` digested under a discarded hold — says nothing, and leaves
+/// the once-per-font key unset for the symbol the document prints. A character symbol (`\DeclareMathSymbol{-}…`)
+/// prints its own character (`def_math`'s rewrite), so it loses nothing and says nothing; its `name` is kept, as before, unless it sits at its own code (2307.16667's `-`; newtxsf's digits keep
+/// `name="2"`). Witnesses 1604.04618, 2008.13643 (kpfonts), 1502.03923 (esvect `\fldr`), 2402.09138 (cmll
+/// `\invamp`), 2307.11186 (heppennames2). OXIDIZED_DESIGN_DIVERGENCES #27; guards `perfect_kernel_batch89b::*`.
+fn undecodable_math_slot(
+  font_name: &str,
+  encoding: &str,
+  decl: Option<&Rc<Font>>,
+  cs: &Token,
+  code: i64,
+  kind: &str,
+) -> (String, Option<Stored>) {
+  // A character symbol prints itself; its presentation only decides whether `def_math` keeps a `name`, which it keeps
+  // unless the character sits at its own code — as when the raw slot was the presentation.
+  if let Some(character) = cs.with_str(|name| (name.len() == 1).then(|| name.to_string())) {
+    let at_own_code = character
+      .chars()
+      .next()
+      .is_some_and(|c| i64::from(u32::from(c)) == code);
+    return (
+      if at_own_code {
+        character
+      } else {
+        "\u{FFFD}".to_string()
+      },
+      None,
+    );
+  }
+  // The Warning's object: the font's layout, or for an undeclared symbol font (no encoding, no family), its name as
+  // LaTeX keys it, `\sym<font>` (latex.ltx's `\DeclareMathSymbol` raises "Symbol font `<font>' is not defined").
+  let layout = match decl.and_then(|font| font.get_family()) {
+    Some(family) => s!("{encoding}/{family}"),
+    None if decl.is_none() => s!("\\sym{font_name}"),
+    None => encoding.to_string(),
+  };
+  let has_map = load_font_map(encoding).is_some()
+    || decl
+      .and_then(|font| font.get_family())
+      .is_some_and(|family| lookup_value(&s!("{encoding}_{family}_fontmap")).is_some());
+  let font = if decl.is_none() {
+    s!("Symbol font {font_name} is not declared")
+  } else if !has_map {
+    s!("Symbol font {font_name} ({layout}) has no font map")
+  } else {
+    s!("Symbol font {font_name} ({layout}) has no Unicode glyph at slot \"{code:02X}")
+  };
+  let cs_name = cs.with_str(ToString::to_string);
+  let message = s!(
+    "{font}: the math {kind} {cs_name} (slot \"{code:02X}) prints U+FFFD, as will any other symbol of this font it \
+     cannot decode"
+  );
+  let warning = document::absorb_warning(
+    &s!("unmapped_math_symbol_font_{font_name}"),
+    "missing_font_encoding",
+    &layout,
+    &message,
+  );
+  ("\u{FFFD}".to_string(), Some(warning))
 }
 
 /// The math-italic class of a `\DeclareMathSymbol` math class (`\mathchar@type`: a `\math…` name or its number):

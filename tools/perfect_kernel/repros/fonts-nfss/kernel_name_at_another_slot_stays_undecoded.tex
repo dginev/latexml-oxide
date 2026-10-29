@@ -2,10 +2,10 @@
 %          `\varphi` redeclared); fontmath.ltx:179 `\epsilon` letters "0F, :203 `\varphi` letters "27
 % oracle:  pdflatex: "ε φ"; 0 errors (the U/jkpmia glyphs at "22 and "1E)
 % engines: rust int117a = 0 errors, `\epsilon` as `"`, `\varphi` U+FFFD; perl 0.8.8 = 0 errors, both dropped
-% expect:  0 errors, 0 warnings; both as int117a: a kernel name at ANOTHER slot than fontmath.ltx's (a variant swap)
-%          is not decoded through the kernel font, whose glyph there is a different letter; the raw slot stays
-%          (OXIDIZED_DESIGN_DIVERGENCES #27)
-% status:  GREEN (negative guard, 89a)
+% expect:  0 errors, 1 warning (U/jkpmia, naming \epsilon); a kernel name at ANOTHER slot than fontmath.ltx's (a
+%          variant swap) is not decoded through the kernel font, whose glyph there is a different letter: both U+FFFD
+%          (OXIDIZED_DESIGN_DIVERGENCES #27; int117a and 89a kept the raw slot, `"` for \epsilon)
+% status:  GREEN (negative guard, 89a; U+FFFD and the warning 89b)
 % preload: ar5iv.sty
 \documentclass{article}
 \DeclareSymbolFont{lettersA}{U}{jkpmia}{m}{it}

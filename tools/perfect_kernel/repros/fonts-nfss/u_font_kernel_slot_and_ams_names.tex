@@ -5,10 +5,10 @@
 % oracle:  pdflatex: "∆+Ω⩽x≠y ⌊z⌋ □ k"; 0 errors (checked visually: the ≠ reads as "," in pdftotext, no ToUnicode)
 % engines: rust int117a = 0 errors, Δ U+FFFD, Ω a newline, ⩽ "6", ≠ ",", ⌊ "b", 𝕜 "|"; perl 0.8.8 = 0 errors, the
 %          redeclared symbols dropped
-% expect:  0 errors, 0 warnings; Delta Δ, Omega Ω, lfloor ⌊ (a kernel name at its fontmath.ltx slot); leqslant ⩽,
-%          Bbbk 𝕜 (AMSa/AMSb keep msam/msbm's slots); square □ (the amssymb binding, unaffected); neq "," (no
-%          layout known for U/jkpsyc and no kernel slot: as before, OXIDIZED_DESIGN_DIVERGENCES #27)
-% status:  RED (int117a) -> GREEN (89a)
+% expect:  0 errors, 1 warning (U/jkpsyc); Delta Δ, Omega Ω, lfloor ⌊ (a kernel name at its fontmath.ltx slot);
+%          leqslant ⩽, Bbbk 𝕜 (AMSa/AMSb keep msam/msbm's slots); square □ (the amssymb binding, unaffected); neq
+%          U+FFFD (no layout known for U/jkpsyc and no kernel slot: OXIDIZED_DESIGN_DIVERGENCES #27; 89a ",")
+% status:  RED (int117a) -> GREEN (89a; neq and the warning 89b)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{amssymb}

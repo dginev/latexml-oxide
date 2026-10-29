@@ -2243,6 +2243,21 @@ fn transfer_common_constructor_options(
       bgroup();
     }));
   }
+  // A Warning raised where the box is printed (`absorb_warning`, an undecodable glyph's): its position is the
+  // gullet's here, as the arguments are about to be read (the one a simple symbol's Tbox carries as its locator),
+  // recorded in the constructor's group and moved onto the whatsit after digestion, for the document to raise it at
+  // (core `document::ABSORB_WARNING_LOCATOR_PROPERTY`). Not the whatsit's own locator: that is `--source-map`'s.
+  // Witness 1902.03183 (newtxsf's `\bar`, `\dot`).
+  let records_absorb_locator = options.absorb_warning.is_some();
+  if records_absorb_locator {
+    before_digest_closures.push(before_digest_simple!({
+      assign_value(
+        crate::document::ABSORB_WARNING_LOCATOR_PROPERTY,
+        Stored::from(gullet::get_locator()),
+        Some(Scope::Local),
+      );
+    }));
+  }
   // Perl Package.pm:1708: `MergeFont(%{ $options{font} })` inside the group just opened.
   if let Some(font) = options.font {
     before_digest_closures.push(before_digest_simple!({
@@ -2264,6 +2279,13 @@ fn transfer_common_constructor_options(
         .is_some_and(|s| s.as_ref() == "display");
       let mathstyle = if is_display { "display" } else { "text" };
       _args.set_property("mathstyle", Stored::from(mathstyle.to_string()));
+    }));
+  }
+  if records_absorb_locator {
+    after_digest_closures.push(after_digest_simple!(_args, {
+      if let Some(locator) = lookup_value(crate::document::ABSORB_WARNING_LOCATOR_PROPERTY) {
+        _args.set_property(crate::document::ABSORB_WARNING_LOCATOR_PROPERTY, locator);
+      }
     }));
   }
   if declared_mode.bounded {

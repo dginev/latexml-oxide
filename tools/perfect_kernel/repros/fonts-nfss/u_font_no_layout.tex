@@ -1,7 +1,7 @@
 % witness: 2402.09138 (cmll.sty:32,87), 1502.03923 (esvect.sty:28-29)
 % oracle:  pdflatex: "a⅋b" and an arrow fragment before c; 0 errors
-% engines: rust 89a = 0 errors, both U+FFFD (no map for U/cmllr or U/esvect, no reference slot); perl 0.8.8 = 0 errors,
-%          both dropped
+% engines: rust 89a = 0 errors, both U+FFFD (no map for U/cmllr or U/esvect, no reference slot); rust 89b the same and
+%          2 warnings, one per symbol font (OXIDIZED_DESIGN_DIVERGENCES #27); perl 0.8.8 = 0 errors, both dropped
 % expect:  0 errors; invamp ⅋ (a cmll table); `\fldr` has no Unicode of its own — esvect's `\vv` wants a binding;
 %          SYNC_STATUS Font-Selection residual 9
 % status:  RED (deferred: package data, a binding row each)

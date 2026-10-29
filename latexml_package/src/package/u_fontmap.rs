@@ -3,7 +3,8 @@
 //! decodes through the per-family map `U_msa_fontmap` (`font_decode`; AMSb's `msb` through
 //! `U_msb_fontmap`, which amsfonts' `\newsymbol` reaches), which
 //! Perl (no `u.fontmap.ltxml`) leaves undecoded. The encoding has no map of its own: a U symbol font of another family
-//! (shuffle.sty, stmaryrd's `stmry`) stays undecoded — but for a kernel or AMS name declared at its fontmath.ltx or
+//! (shuffle.sty, stmaryrd's `stmry`) stays undecoded — U+FFFD, and one Warning per symbol font
+//! (OXIDIZED_DESIGN_DIVERGENCES #27) — but for a kernel or AMS name declared at its fontmath.ltx or
 //! amssymb slot (sect08.rs `reference_symbol`, OXIDIZED_DESIGN_DIVERGENCES #910) — and the text switch
 //! `\fontencoding{U}` falls back to OT1 while `\f@encoding` still names `U` (`\lx@fontencoding`, tex_fonts.rs;
 //! OXIDIZED_DESIGN_DIVERGENCES #645). Guards:

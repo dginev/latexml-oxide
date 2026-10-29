@@ -95,11 +95,26 @@ fn batch68v_empheq_lbrace_empty_fence_known_gap() {
 /// fonts-nfss/u_symbol_font_without_map: a math symbol of a U-encoded symbol font without a map of its own stays
 /// undecoded (U+FFFD), as before 68v — shuffle.sty's `\shuffle` (2306.04672) and stmaryrd's `\boxslash` are no OT1
 /// glyph (Δ, an italic ø) — while `\fontencoding{U}` still leaves `\f@encoding` as `U` (`\lx@fontencoding`,
-/// tex_fonts.rs; OXIDIZED_DESIGN_DIVERGENCES #645).
+/// tex_fonts.rs; OXIDIZED_DESIGN_DIVERGENCES #645). Since 89b each symbol font that cannot decode says so in one
+/// Warning naming its encoding, family and symbol (OXIDIZED_DESIGN_DIVERGENCES #27; 68v pinned 0 warnings).
 #[test]
 fn batch68v_u_symbol_font_without_a_map_stays_undecoded() {
   let (counts, log, xml) = repro!("fonts-nfss/u_symbol_font_without_map.tex");
-  assert_eq!(counts, (0, 0), "{log}");
+  assert_eq!(counts, (0, 2), "{log}");
+  let warnings: Vec<&str> = log
+    .lines()
+    .filter(|line| line.starts_with("Warning:"))
+    .collect();
+  assert_eq!(
+    warnings,
+    [
+      "Warning:missing_font_encoding:U/shuffle Symbol font Shuffle (U/shuffle) has no font map: the math symbol \\shuffle \
+       (slot \"01) prints U+FFFD, as will any other symbol of this font it cannot decode",
+      "Warning:missing_font_encoding:U/stmry Symbol font stmry (U/stmry) has no font map: the math symbol \\boxslash \
+       (slot \"1C) prints U+FFFD, as will any other symbol of this font it cannot decode",
+    ],
+    "{log}"
+  );
   assert_all(&xml, &[
     "<XMTok name=\"shuffle\" role=\"BINOP\">\u{FFFD}</XMTok>",
     "<XMTok name=\"boxslash\" role=\"BINOP\">\u{FFFD}</XMTok>",

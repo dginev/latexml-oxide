@@ -1,0 +1,32 @@
+% witness: 1604.04618, 2008.13643 (kpfonts.sty:568 `\DeclareSymbolFont{symbolsC}{U}{jkpsyc}`, :1028 `{\neq}…{44}`);
+%          2307.11186 (heppennames2.sty `U/fsy` on zplmr7t: Ω at "0A); program.sty:834-838 (a symbol in a savebox,
+%          printed through `\usebox`); review 89b r1 probe p1 (title, `\mathchoice`, a tabular cell, `\settowidth`)
+% oracle:  pdflatex: "On a ≠ b / A. Author / Text ≠ and width 6.68999pt, ≠ a ≢ b and Ω." (pdftotext reads
+%          ≠ ≢ as "," and "."), 0 errors
+% engines: rust 89b r1 = 0 errors, 2 warnings, the first naming the symbol first digested; rust 89a = 0 warnings, `,`
+%          `.` and a line break for the raw slots; perl 0.8.8 = 0 warnings, every undecodable symbol dropped silently
+% expect:  0 errors, 2 warnings, one per symbol font, raised where a box holding its symbol is printed (absorbed): U/jkpsyc
+%          naming \neq (the title's, printed first), U/fsy naming \Upomega (printed by \usebox); the same eager and
+%          `--streaming`; the `\settowidth`'s \doteq is measured, never printed (OXIDIZED_DESIGN_DIVERGENCES #27)
+% status:  GREEN (89b round 2)
+% preload: ar5iv.sty
+\documentclass{article}
+\DeclareSymbolFont{symbolsC}{U}{jkpsyc}{m}{n}
+\let\neq\undefined\DeclareMathSymbol{\neq}{\mathrel}{symbolsC}{44}
+\let\doteq\undefined\DeclareMathSymbol{\doteq}{\mathrel}{symbolsC}{17}
+\DeclareMathSymbol{\nequiv}{\mathrel}{symbolsC}{46}
+\DeclareFontFamily{U}{fsy}{}
+\DeclareFontShape{U}{fsy}{m}{n}{<->s*[1.0]zplmr7t}{}
+\DeclareSymbolFont{ugrfr}{U}{fsy}{m}{n}
+\DeclareMathSymbol{\Upomega}{\mathord}{ugrfr}{"0A}
+\newsavebox{\omegabox}
+\sbox{\omegabox}{\mbox{$\Upomega$}}
+\title{On $a\neq b$}
+\author{A. Author}
+\date{}
+\begin{document}
+\maketitle
+Text $\mathchoice{\neq}{\neq}{\neq}{\neq}$ and \settowidth{\dimen0}{$\doteq$}width \the\dimen0,
+\begin{tabular}{cc} $\neq$ & $a\nequiv b$ \\ \end{tabular}
+and \usebox{\omegabox}.
+\end{document}

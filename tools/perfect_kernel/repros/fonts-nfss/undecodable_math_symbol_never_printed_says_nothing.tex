@@ -1,0 +1,21 @@
+% witness: program.sty:834-838 (`\powersetsymbol` at `U/eur` "7D set in a savebox as the package loads; sn-jnl.cls
+%          copies load it), review 89b r1 finding 2, probes p7 and p8 (`\settowidth`)
+% oracle:  pdflatex: "Hello x, width 21.24297pt.", 0 errors
+% engines: rust 89b r1 = 0 errors, 2 warnings (U/eur naming \powersetsymbol, U/jkpsyc naming \neq) for symbols digested
+%          and never printed; rust 89a = 0 warnings; perl 0.8.8 = 0 warnings
+% expect:  0 errors, 0 warnings, no U+FFFD: a box saved and never used and a box only measured are never printed
+%          (absorbed), so they lose nothing and say nothing; the same eager and `--streaming`
+%          (OXIDIZED_DESIGN_DIVERGENCES #27)
+% status:  RED (89b r1) -> GREEN (89b round 2)
+% preload: ar5iv.sty
+\documentclass{article}
+\DeclareSymbolFont{eulerletters}{U}{eur}{m}{n}
+\DeclareMathSymbol{\powersetsymbol}{\mathord}{eulerletters}{"7D}
+\newsavebox{\powersetbox}
+\sbox{\powersetbox}{\raisebox{0.5ex}{\mbox{\Large$\powersetsymbol$}}}
+\def\powerset{\usebox{\powersetbox}}
+\DeclareSymbolFont{symbolsC}{U}{jkpsyc}{m}{n}
+\let\neq\undefined\DeclareMathSymbol{\neq}{\mathrel}{symbolsC}{44}
+\begin{document}
+\settowidth{\dimen0}{$a\neq b$}Hello $x$, width \the\dimen0.
+\end{document}

@@ -1,7 +1,8 @@
 % witness: 2307.11186, 2507.13469 (cms-tdr.cls:167 `[pazoGreek]{heppennames2}`; heppennames2.sty:117-151)
 % oracle:  pdflatex: "Λ+π+ω"; 0 errors
 % engines: rust 89a = 0 errors, Λ and π U+FFFD, ω as `!` (U/fsy has no map; no reference slot: OXIDIZED_DESIGN_DIVERGENCES
-%          #910); perl 0.8.8 = 0 errors, all three dropped
+%          #910); rust 89b = U+FFFD for all three and 2 warnings (ugrfm, ugrfr: OXIDIZED_DESIGN_DIVERGENCES #27);
+%          perl 0.8.8 = 0 errors, all three dropped
 % expect:  0 errors; Uplambda Λ, uppi π, upomega ω — the layout from the TFM coding scheme of the shape's font
 %          (zplmr7t "TEX TEXT" = OT1, zplmr7m "TEX MATH ITALIC" = OML); SYNC_STATUS Font-Selection residual 9 (B3)
 % status:  RED (deferred, HARD)

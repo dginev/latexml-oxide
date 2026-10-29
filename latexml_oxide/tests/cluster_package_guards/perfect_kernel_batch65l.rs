@@ -160,7 +160,8 @@ fn mnsymbol_own_declarators_keep_the_binding() {
 /// `\upfootline` ⟙), `\upmodels` ⫫ and `\downmodels` ⫪ (2604.25507) — and a name a document declares with the
 /// package's own declarators takes the glyph the binding's table gives its slot: `\Decl@Mn@Char` at MnSyD slot 65 is
 /// `\gtr`'s > (TeX4ht's `&gt;` decoded), `\Decl@Mn@Open` at `largesymbols` '102 `\lsem`'s ⟦; a slot the table does not
-/// map is declared by the kernel, with an Info (OXIDIZED_DESIGN_DIVERGENCES #545). `\Decl@Mn@Op` keeps amsmath's
+/// map is declared by the kernel, with an Info (OXIDIZED_DESIGN_DIVERGENCES #545), and printed, is U+FFFD with its
+/// symbol font's one Warning (#27, batch 89b). `\Decl@Mn@Op` keeps amsmath's
 /// `\slimits@` (`\displaylimits`): limits under the operator in display. Repro
 /// class-bindings/mnsymbol_declarators_take_slot_glyphs.
 #[test]
@@ -169,7 +170,15 @@ fn mnsymbol_declarators_take_slot_glyphs() {
     "../../../tools/perfect_kernel/repros/class-bindings/mnsymbol_declarators_take_slot_glyphs.tex"
   );
   let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  // The kernel-declared `\myord` prints U+FFFD, and its symbol font says so where it is printed (batch 89b,
+  // OXIDIZED_DESIGN_DIVERGENCES #27).
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.lines().any(|line| line
+      == "Warning:missing_font_encoding:U/MnSymbolA Symbol font MnSyQ (U/MnSymbolA) has no font map: the math symbol \
+          \\myord (slot \"0C) prints U+FFFD, as will any other symbol of this font it cannot decode"),
+    "{log}"
+  );
   assert_eq!(
     log.matches("Info:unmapped:MnSymbol.sty").count(),
     1,

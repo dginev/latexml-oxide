@@ -1,0 +1,41 @@
+% witness: 1604.04618, 2008.13643 (kpfonts.sty:568 `\DeclareSymbolFont{symbolsC}{U}{jkpsyc}`, :1001/:1028/:1031
+%          `\re@DeclareMathSymbol{\doteq}…{17}`, `{\neq}…{44}`, `{\nequiv}…{46}`), 2307.11186 (heppennames2.sty:117-151,
+%          `U/fsy` on zplmr7t: Ω at "0A); a TS1 slot with no glyph (tcrm1000 "41); oz.sty's `U/msa` (decodes);
+%          euler.sty:62-74 `U/euf` character symbols
+% oracle:  pdflatex: "x ≠ y ≐ z ≢ w, Ω + Λ, ℧ and □(v), v"." (checked visually; pdftotext reads ≠ ≢ as "," and "."), 0 errors;
+%          the log's "Missing character: There is no A in font tcrm1000!"
+% engines: rust 89a = 0 errors, 0 warnings: neq ",", doteq U+FFFD, nequiv ".", Upomega a line break, Uplambda U+FFFD,
+%          tcnone "A" (raw slots: OXIDIZED_DESIGN_DIVERGENCES #27 as it was); perl 0.8.8 = 0 errors, every symbol but
+%          tcmho dropped silently (Perl has no `U/msa` map either)
+% expect:  0 errors, 3 warnings, one per symbol font that cannot decode (`missing_font_encoding`: U/jkpsyc naming \neq,
+%          U/fsy naming \Upomega, TS1/cmr naming \tcnone); neq, doteq, nequiv, Upomega, Uplambda and tcnone U+FFFD;
+%          tcmho ℧ and mysquare □ as decoded; euler.sty's character symbols in U/euf print themselves and warn nothing,
+%          `(` `)` at their own codes with no name, `"` at "7D keeping `name="&quot;"` as 89a; `\nsim` and cmll's
+%          `\invamp` (2402.09138) are declared and never used: no warning (the Warning comes where a symbol is printed) (OXIDIZED_DESIGN_DIVERGENCES #27, user ruling 2026-10-29)
+% status:  RED (89a) -> GREEN (89b)
+% preload: ar5iv.sty
+\documentclass{article}
+\DeclareSymbolFont{symbolsC}{U}{jkpsyc}{m}{n}
+\let\neq\undefined\DeclareMathSymbol{\neq}{\mathrel}{symbolsC}{44}
+\let\doteq\undefined\DeclareMathSymbol{\doteq}{\mathrel}{symbolsC}{17}
+\DeclareMathSymbol{\nequiv}{\mathrel}{symbolsC}{46}
+\DeclareFontFamily{U}{fsy}{}
+\DeclareFontShape{U}{fsy}{m}{n}{<->s*[1.0]zplmr7t}{}
+\DeclareSymbolFont{ugrfr}{U}{fsy}{m}{n}
+\DeclareMathSymbol{\Upomega}{\mathord}{ugrfr}{"0A}
+\DeclareMathSymbol{\Uplambda}{\mathord}{ugrfr}{"03}
+\DeclareSymbolFont{textcomp}{TS1}{cmr}{m}{n}
+\DeclareMathSymbol{\tcnone}{\mathord}{textcomp}{"41}
+\DeclareMathSymbol{\tcmho}{\mathord}{textcomp}{"4D}
+\DeclareSymbolFont{amsx}{U}{msa}{m}{n}
+\DeclareMathSymbol{\mysquare}{\mathord}{amsx}{"03}
+\DeclareSymbolFont{EulerFraktur}{U}{euf}{m}{n}
+\DeclareMathSymbol{(}\mathopen{EulerFraktur}{"28}
+\DeclareMathSymbol{)}\mathclose{EulerFraktur}{"29}
+\DeclareMathSymbol{"}\mathord{EulerFraktur}{"7D}
+\DeclareMathSymbol{\nsim}{\mathrel}{symbolsC}{47}
+\DeclareSymbolFont{llsymbols}{U}{cmllr}{m}{n}
+\DeclareMathSymbol{\invamp}{\mathbin}{llsymbols}{0}
+\begin{document}
+$x\neq y\doteq z\nequiv w$, $\Upomega+\Uplambda$, $\tcnone\tcmho$ and $\mysquare(v)$, $v"$.
+\end{document}

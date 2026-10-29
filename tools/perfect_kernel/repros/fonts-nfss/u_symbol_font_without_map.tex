@@ -2,8 +2,9 @@
 % oracle:  pdflatex: "a ⧢ b, a ⧄ b and encoding U."; 0 errors
 % engines: rust 67int15 = 0 errors, both symbols undecoded (U+FFFD: no map for the family); rust 68v round 1 = Δ and an
 %          italic ø (the `U` encoding had OT1's map)
-% expect:  0 errors, 0 warnings; both symbols as 67int15 (no OT1 glyph); `\f@encoding` is `U` after `\fontencoding{U}`
-% status:  RED (68v round 1) -> GREEN (68v round 2)
+% expect:  0 errors, 2 warnings (one per symbol font that cannot decode, U/shuffle and U/stmry: OXIDIZED_DESIGN_DIVERGENCES
+%          #27, 89b); both symbols U+FFFD as 67int15 (no OT1 glyph); `\f@encoding` is `U` after `\fontencoding{U}`
+% status:  RED (68v round 1) -> GREEN (68v round 2; the warnings 89b)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{shuffle}

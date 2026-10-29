@@ -581,43 +581,100 @@ deliberate:
 `\begin{mdframed}\begin{theorem}…\end{theorem}\end{mdframed}`
 blocks). 3 errors → 0. Tests 1328/0/0.
 
-### 27. `\DeclareMathSymbol` U-encoding Fallback: U+FFFD, not Empty
+### 27. An undecodable math slot is U+FFFD, and its symbol font says so once (Perl: an empty token, silently)
 
-**Decision:** When `\DeclareMathSymbol{cs}{type}{fontkind}{slot}` resolves
-the symbol-font's encoding to a value whose `LoadFontMap()` returns
-`None` (the most common case is `U` — "Unknown" encoding declared via
-`\DeclareSymbolFont{AMSa}{U}{msa}{m}{n}`), we substitute U+FFFD
-(REPLACEMENT CHARACTER) for any slot in the C0 control range (0x00-0x1F
-minus tab/LF/CR) and the raw codepoint otherwise. Perl's
-`Package.pm::FontDecode` returns `undef` glyph for the same case;
-Perl's `DefMathI($cs, undef, undef, role => …)` defines the CS as an
-**empty** XMTok with just the role attribute set.
+**Decision** (user ruling 2026-10-29): a `\DeclareMathSymbol` or `\DeclareMathAccent` whose symbol font cannot decode
+its slot gives U+FFFD (REPLACEMENT CHARACTER) as the token's text, and the symbol font reports it in one Warning,
+`Warning:missing_font_encoding:<encoding>/<family>`, naming the font, its encoding and family, the first such symbol
+or accent printed and its slot (`Symbol font symbolsC (U/jkpsyc) has no font map: the math symbol \neq (slot "2C)
+prints U+FFFD, as will any other symbol of this font it cannot decode`; "the math accent \widecheck" for an accent).
+Its further undecodable symbols say nothing more, so the Warning count is the number of symbol fonts that lost
+printed glyphs. The category is the text side's (`\lx@unmapped@text@symbol`, "Font encoding … has no font map: the
+text symbol … is dropped"), so one count covers both. A symbol font that is not declared at all has no encoding or
+family; its object is LaTeX's own name for it, `\sym<font>` (`Warning:missing_font_encoding:\symmathx Symbol font
+mathx is not declared: …`; pdflatex raises "Symbol font `mathx' is not defined", Perl and 89a nothing).
 
-**Why diverge:** Perl emits the literal byte (e.g. `\x10` for hex slot
-`"10`) into the XML, which is **not valid XML 1.0** (§2.2: C0 chars
-except 0x09/0x0A/0x0D are forbidden). When libxml2 later parses the
-serialized document for post-processing (`find_node_by_id` / XPath),
-it aborts mid-tree on the first invalid byte. Every `xml:id` past that
-point becomes unresolvable, surfacing as the
-`Error:expected:id Cannot find a node with xml:id=…` cluster (which
-dominated CONVERR on second-500K canvas stage_51, ~63% of papers
-with errors). U+FFFD is the canonical "unrepresentable character"
-placeholder and is XML-1.0-valid, so the downstream parse stays
-clean.
+The Warning belongs to the print, not the digestion: the symbol's box (a `Tbox` on the simple primitive path, a
+whatsit on the constructor paths) carries it as the property `absorbWarning`
+(`latexml_core::document::{ABSORB_WARNING_PROPERTY, absorb_warning}`, from `MathPrimitiveOptions::absorb_warning`),
+and `Document::absorb` raises it, once per symbol font, when it takes the box into the document, at the box's source
+position. That is also the only place the once-per-font key is set. A `Tbox`'s position is its locator; a whatsit has
+one only under `--source-map`, so a constructor records the gullet's position as its arguments are about to be read,
+in its group, onto the whatsit as `absorbWarningLocator` (`ABSORB_WARNING_LOCATOR_PROPERTY`, `dialect.rs`
+`transfer_common_constructor_options`; 1902.03183's `\bar` and `\dot` at `line 81 col 268` and `line 103 col 12`,
+`at Anonymous String` in 89b round 2). So a box digested and never printed loses nothing
+and says nothing: a symbol declared and never used (kpfonts, mathdesign and MnSymbol declare hundreds a paper never
+uses), one only measured (`\settowidth`), one in a savebox never used (program.sty:834-838 sets `\powersetsymbol`,
+`U/eur` "7D, in a box as it loads, which older sn-jnl.cls copies load; `\powerset`'s `\usebox` prints it and warns),
+and one digested by a rehearsal or under a diagnostics hold that is discarded (a counter's `\the…` under
+`\refstepcounter`, `counter/dialect.rs`). The key set at digestion in 89b round 1 lost the Warning in that last case
+(`DiagnosticsHold::discard` drops the record and keeps the global assignment) while the document still printed U+FFFD.
+A property keeps a simple symbol on the primitive path; a `before_digest` would have moved it to the constructor path,
+which sizes its box otherwise (2201.00184's bussproofs rule went from 471.8pt to 656.4pt; 2605.21024's and
+2304.04743's pictures changed size).
 
-**Shared upstream gap:** Neither Perl nor we ship a `u.fontmap.ltxml`
-nor a `("U", family="msa")`-keyed registration of the AMSa table.
-Resolving the slot to its correct Unicode codepoint (e.g. U+21A0 for
-`\onto` at AMSa slot 0x10) would require registering the existing
-`AMSa_fontmap` data under the `"U_msa_fontmap"` key, which neither
-engine currently does. The fix is parity-neutral if landed on both
-sides; we defer it as a beyond-Perl improvement.
+**Undecodable** means `font_decode` gives no glyph and the name has no reference slot (#910). That covers two cases:
+the declared font's encoding has no map (`U` with a family other than `msa`/`msb`, or a symbol font that is not
+declared at all), or the map has no entry at the slot (TS1 "41; the reason reads "has no Unicode glyph at slot …"). A
+raw slot is no font's glyph in either case. A decoded glyph is never touched. A character symbol
+(`\DeclareMathSymbol{-}…`, euler.sty's `(` in `U/euf`) prints its own character, through `def_math`'s rewrite rule,
+whatever its slot, as before, and reports nothing; it keeps its `name` attribute unless it sits at its own code, as
+before (newtxsf's digits keep `name="2"`). `\DeclareMathAccent` now decodes with the declared font, as
+`\DeclareMathSymbol` does, so a per-family map (`U_msa`) reaches an accent too.
 
-**Witness:** arXiv:1501.05180 (`\DeclareMathSymbol\onto\mathrel
-{latex-font msa}{"10}`). With the U+FFFD substitution, the paper
-converts cleanly through post-processing; without it, the dominant
-CONVERR_N cluster fires. See `latexml_engine/src/latex_constructs.rs`
-the `xml_safe_char` helper around line 6243.
+**Perl:** `FontDecode` returns `undef`, and `DefMathI($cs, undef, undef, …)` makes an empty token with no diagnostic
+(latex_constructs.pool.ltxml:2697-2705, :2645-2652; Package.pm `LoadFontMap` logs only `Info:fontmap` once per
+encoding). Before 89b we printed the raw slot as a character: a C0 slot became U+FFFD, since a C0 byte is not XML 1.0
+(§2.2), and libxml2's reparse stopped at it — 1501.05180's `\onto` at msa "10 gave the `expected:id` cluster. Any
+other slot printed as a wrong visible glyph. Witnesses for that:
+- kpfonts' `\neq` (`U/jkpsyc` 44) came out as `,` and its `\notin` as `<` (1604.04618), and its `\rhd` as `B`
+  (2008.13643; decoded since #910);
+- an Ω at "0A came out as a line break, ω as `!`, ⩽ as `6`;
+- newtx's `\lbrace` at 215 came out as `×`;
+- esvect's arrow pieces `\montraita` and `\montraitd` came out as a space and as `#` (1502.03923, 52 each; its `\fldr`,
+  at the control slot "14, was U+FFFD already);
+- cmll's `\invamp` at slot 0 (2402.09138);
+- heppennames2's `U/fsy` Greek (2307.11186).
+
+An undecodable accent was an empty token (Perl's), and MathML filled the empty `<mo>` with the accent's `name`
+(`presentation.rs:1186`, as Perl MathML.pm:711 does), so 89a printed the word as an ASCII stand-in, `<mo>hat</mo>`,
+`<mo>vec</mo>`. Worse, an align cell holding only that accent and its base was dropped whole: 1902.03183's eq. (9)
+`\bar{u} &= a_0.` lost its `\displaystyle\bar{u}` (151 formulas with 89b against 150). It is now U+FFFD over its base,
+visible and counted, and the cell is kept. The accents involved are newtxsf's `\hat`, `\bar`, `\tilde` and `\dot` in
+`lettersA` at 223/221/219/224 and its `\vec` in `symbols` at 174 (newtxsf.sty:301-313, :1332, after
+`\let…\undefined`), and mathabx's `\widehat`/`\widecheck` in `U/mathx` (mathabx.dcl:944-945). Decoding a kernel accent
+by its name alone, at any slot, is a rule of its own and stays open (SYNC_STATUS Font-Selection residual 9).
+
+In the 89b A/B (pop89a, 676 papers against 89a), 68 papers changed:
+- Errors stayed 1665 and Fatals 2.
+- Warnings went 9902 → 10001, and every added Warning is this one. By package: newtxsf 51 (25 papers), kpfonts 19
+  (17), mathdesign 17 (17), esvect 3, heppennames2 2, and 7 more, one each. program.sty's never-printed `U/eur` box
+  gives none (2205.13841, 2212.02709; it gave one each while the Warning came at digestion).
+- U+FFFD in the changed papers went 762 → 5908. Of the tokens that changed, 4,431 raw-slot stand-ins or empty
+  accents became U+FFFD, among them 1,093 accents in 16 papers. The rest were math-parse consequences, such as `,0`
+  no longer read as one number.
+- 6 papers changed only by the Warning; their lost symbols were U+FFFD already.
+
+The case the raw slot was first kept for, 1011.1955's `\Z` (`\DeclareMathSymbol{\Z}{\mathalpha}{AMSb}{"5A}` with
+AMSb declared `U/msb`), now decodes through the `U_msb` map (#645) to ℤ.
+
+Remaining layouts would each need data of their own: B3, the TFM coding scheme; the cmll and esvect bindings; a
+kpfonts `symbolsC` table. These are tracked in SYNC_STATUS "Font-Selection residual 9".
+
+Code: `undecodable_math_slot` (latexml_engine/src/latex_constructs/sect08.rs), `raise_absorb_warning`
+(latexml_core/src/document.rs). Repros `fonts-nfss/undecodable_math_{slot,accent}_is_fffd_and_warns` and
+`fonts-nfss/undecodable_math_symbol_{warns_where_printed,first_digested_in_a_discarded_hold,never_printed_says_nothing}`.
+Guards `perfect_kernel_batch89b::*`, which run the binary eager and `--streaming` too, and
+`perfect_kernel_batch68v::batch68v_u_symbol_font_without_a_map_stays_undecoded` (2 Warnings). These give 1 Warning
+each: `perfect_kernel_batch89a::{kernel_and_ams_names_at_their_reference_slots,
+kernel_name_at_another_slot_stays_undecoded}` and `perfect_kernel_batch65l::mnsymbol_declarators_take_slot_glyphs`.
+program.sty's never-printed box gives none (`perfect_kernel_batch67u::{snjnl_class_copy_loads_program,
+snjnl_class_open_square_is_the_proof_mark}`, `perfect_kernel_batch56::the_sn_jnl_class_loads_its_packages`). The
+`40_math` golden `declare_mathaccent_unknown_encoding` (`\DeclareMathAccent` in an undeclared symbol font, which
+pdflatex rejects) is retired; `undecodable_math_accent_is_fffd_and_warns` covers its path with a declared font.
+
+The text side's `\lx@unmapped@text@symbol` still sets its once-per-symbol key at expansion (SYNC_STATUS
+Font-Selection residual 9): it is a macro that expands to nothing, so it makes no box to carry the Warning.
 
 ---
 
@@ -19218,7 +19275,7 @@ encoding `\fontencoding` was given (latex.ltx:10490): `\lx@fontencoding` of an e
 into the font, which decodes through it as before, and keeps the name beside it (`lx@fontencoding@unmapped`,
 tex_fonts.rs), which `\f@encoding` (sect08.rs) reports while the font's encoding is still OT1 — a later switch to a
 mapped encoding clears it. The `U` encoding itself has no map, only the per-family `U_msa`/`U_msb` (u_fontmap.rs), so a
-math symbol of a U symbol font of any other family stays undecoded (U+FFFD), as before — unless it is a kernel or AMS
+math symbol of a U symbol font of any other family stays undecoded (U+FFFD, and one Warning per symbol font: #27) — unless it is a kernel or AMS
 name declared at its fontmath.ltx/amssymb slot (#910): giving `U` OT1's map decoded shuffle.sty's `\shuffle` ("001)
 as Δ (2306.04672) and stmaryrd's `\boxslash` ("1C) as an italic ø. Left out: the
 unknown-family error of `\DeclareFontShape`, its `\series@maybe@drop@one@m` (latex.ltx:10288, the shape is recorded
@@ -26408,7 +26465,7 @@ undecoded: a variant swap (`\epsilon` at "22, where fontmath.ltx has `\varepsilo
 `\precapprox`/`\succapprox` at 118/119 (kpfonts.sty, txfonts.sty), where msbm has them the other way round (checked by
 rendering) — so the symbol-font name alone (`AMSa`) is no slot contract, and a name no reference declares in an
 `AMSa`/`AMSb` font stays undecoded too. A name no reference declares (shuffle's `\shuffle`, stmaryrd's `\boxslash`,
-#645; kpfonts' `\neq` in `U/jkpsyc` at 44) is as before. A font with a map decodes through it, not the binding (oz.sty's
+#645; kpfonts' `\neq` in `U/jkpsyc` at 44) stays undecoded too: U+FFFD, with its font's one Warning (#27). A font with a map decodes through it, not the binding (oz.sty's
 `U/msa` `\Cap` ⋒ BINOP through `U_msa`). `\DeclareMathAccent` has no such step (no package redeclares a kernel accent
 at its kernel slot in an undecodable font; newtx and newpx use other slots). Perl drops all these symbols. The
 binding's limits placement (its `scriptpos`/`mathstyle` closures) is not carried: a kernel `\mathop` redeclared this
