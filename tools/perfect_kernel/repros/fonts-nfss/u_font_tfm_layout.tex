@@ -1,0 +1,20 @@
+% witness: 2307.11186, 2507.13469 (cms-tdr.cls:167 `[pazoGreek]{heppennames2}`; heppennames2.sty:117-151)
+% oracle:  pdflatex: "Λ+π+ω"; 0 errors
+% engines: rust 89a = 0 errors, Λ and π U+FFFD, ω as `!` (U/fsy has no map; no reference slot: OXIDIZED_DESIGN_DIVERGENCES
+%          #910); perl 0.8.8 = 0 errors, all three dropped
+% expect:  0 errors; Uplambda Λ, uppi π, upomega ω — the layout from the TFM coding scheme of the shape's font
+%          (zplmr7t "TEX TEXT" = OT1, zplmr7m "TEX MATH ITALIC" = OML); SYNC_STATUS Font-Selection residual 9 (B3)
+% status:  RED (deferred, HARD)
+% preload: ar5iv.sty
+\documentclass{article}
+\DeclareFontFamily{U}{fsy}{}
+\DeclareFontShape{U}{fsy}{m}{i}{<->s*[1.0]zplmr7m}{}
+\DeclareFontShape{U}{fsy}{m}{n}{<->s*[1.0]zplmr7t}{}
+\DeclareSymbolFont{ugrfm}{U}{fsy}{m}{i}
+\DeclareSymbolFont{ugrfr}{U}{fsy}{m}{n}
+\DeclareMathSymbol{\uppi}{\mathord}{ugrfm}{"19}
+\DeclareMathSymbol{\upomega}{\mathord}{ugrfm}{"21}
+\DeclareMathSymbol{\Uplambda}{\mathord}{ugrfr}{"03}
+\begin{document}
+$\Uplambda+\uppi+\upomega$
+\end{document}

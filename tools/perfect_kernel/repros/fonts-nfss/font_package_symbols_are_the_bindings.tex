@@ -1,0 +1,42 @@
+% witness: kpfonts.sty:498/:513 `\DeclareSymbolFont{AMSa}{U}{jkpsya}`, `{AMSb}{U}{jkpsyb}`, :831/:833 `\Cup`/`\Cap`
+%          {AMSa}{100}/{101}, :853 `\backsimeq` {119}, :926-927 `\ntriangleleft`/`\ntriangleright` {AMSb}{54}/{55}
+%          (1604.04618, 2008.13643); eulerpx.sty:123/:276 `\jmath` {EulerRoman}{124} in U/zeur (2501.18458);
+%          newtxsf.sty:95/:150 LMS/ntxsy, LMX/ntxexx, :242-243 `\lgroup`/`\rgroup` {largesymbols}{58}/{59}, :261
+%          `\mid` {symbols}{106} (2506.22450 via wiley-article.cls); amssymb.sty:144/146/164/225-226, fontmath.ltx
+%          :217 `\jmath` letters "7C, :290 `\mid` symbols "6A, :444-445 `\lgroup` largesymbols "3A, :467 `\|`
+%          symbols "6B (a control-symbol delimiter, here in LMS/ntxsy; newtxsf itself `\let\|=\Vert`)
+% oracle:  pdflatex: "A⋒B⋓C, N⋪G⋫H, x⋍y, ȷ, {x∣y}, ⟮z⟯, ∥w∥"; 0 errors (checked visually)
+% engines: rust 89a r1 = 0 errors, A⋓B⋒C, N⋫G⋪H, x≌y, j, | (RELOP), ⎩z⎭ — the reference fonts' fontmap entries,
+%          Perl-origin slot errors among them (KNOWN_PERL_ERRORS #1202); int117a = stand-ins e d 6 7 w |;
+%          89a r2 = `\|` as `k` (the reference table missed control symbols); perl 0.8.8 = 0 errors, the
+%          redeclared symbols dropped
+% expect:  0 errors, 0 warnings; each symbol, declared at its fontmath.ltx/amssymb slot in a font with no map, is the
+%          token LaTeXML's own kernel/amssymb binding makes of the name — glyph, role, meaning, stretchiness
+%          (OXIDIZED_DESIGN_DIVERGENCES #910)
+% status:  RED (89a r1) -> GREEN (89a r2); `\|` RED (89a r2) -> GREEN (89a r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amssymb}
+\DeclareFontEncoding{LMS}{}{}
+\DeclareFontSubstitution{LMS}{ntxsy}{m}{n}
+\DeclareFontEncoding{LMX}{}{}
+\DeclareFontSubstitution{LMX}{ntxexx}{m}{n}
+\DeclareSymbolFont{AMSa}{U}{jkpsya}{m}{n}
+\DeclareSymbolFont{AMSb}{U}{jkpsyb}{m}{n}
+\DeclareSymbolFont{EulerRoman}{U}{zeur}{m}{n}
+\DeclareSymbolFont{symbolsN}{LMS}{ntxsy}{m}{n}
+\DeclareSymbolFont{largesymbolsN}{LMX}{ntxexx}{m}{n}
+\let\Cup\undefined\DeclareMathSymbol{\Cup}{\mathbin}{AMSa}{100}
+\let\Cap\undefined\DeclareMathSymbol{\Cap}{\mathbin}{AMSa}{101}
+\let\backsimeq\undefined\DeclareMathSymbol{\backsimeq}{\mathrel}{AMSa}{119}
+\let\ntriangleleft\undefined\DeclareMathSymbol{\ntriangleleft}{\mathrel}{AMSb}{54}
+\let\ntriangleright\undefined\DeclareMathSymbol{\ntriangleright}{\mathrel}{AMSb}{55}
+\let\jmath\undefined\DeclareMathSymbol{\jmath}{\mathord}{EulerRoman}{124}
+\let\mid\undefined\DeclareMathSymbol{\mid}{\mathrel}{symbolsN}{106}
+\let\lgroup\undefined\let\rgroup\undefined
+\DeclareMathDelimiter{\lgroup}{\mathopen}{largesymbolsN}{58}{largesymbolsN}{58}
+\DeclareMathDelimiter{\rgroup}{\mathclose}{largesymbolsN}{59}{largesymbolsN}{59}
+\DeclareMathDelimiter{\|}{\mathord}{symbolsN}{"6B}{largesymbols}{"0D}
+\begin{document}
+$A\Cap B\Cup C$, $N\ntriangleleft G\ntriangleright H$, $x\backsimeq y$, $\jmath$, $\{x\mid y\}$, $\lgroup z\rgroup$, $\|w\|$
+\end{document}

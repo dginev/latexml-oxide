@@ -391,7 +391,8 @@ LoadDefinitions!({
       'p', 'q', 'r', 's', 't', 'u', 'v',
       'w', // x          y           z           dotless i    dotless j    weier-p    arrow
       // acc.inv.breve
-      'x', 'y', 'z', '\u{0131}', 'j', '\u{2118}', '\u{2192}', '\u{0361}'
+      // dotless j is ȷ U+0237 (cmmi10 0x7C, fontmath.ltx:217 `\jmath`); Perl has `j` (KNOWN_PERL_ERRORS #1202)
+      'x', 'y', 'z', '\u{0131}', '\u{0237}', '\u{2118}', '\u{2192}', '\u{0361}'
     ]
   ); // Perl: '\u{00A0}' . '\u{0361}' — two-char string, we use U+0361 only
 
@@ -422,7 +423,8 @@ LoadDefinitions!({
     // cal P      cal Q       cal R cal S        cal T       cal U       cal V   cal W
     '\u{1D4AB}','\u{1D4AC}','\u{211B}','\u{1D4AE}','\u{1D4AF}','\u{1D4B0}','\u{1D4B1}','\u{1D4B2}',
     // cal X      cal Y       cal Z       cup          cap       uplus       wedge       vee
-    '\u{1D4B3}','\u{1D4B4}','\u{1D4B5}','\u{222A}','\u{2229}','\u{228C}','\u{2227}','\u{2228}',
+    // uplus is ⊎ U+228E (cmsy10 0x5D, fontmath.ltx:280); Perl has ⊌ U+228C (KNOWN_PERL_ERRORS #1202)
+    '\u{1D4B3}','\u{1D4B4}','\u{1D4B5}','\u{222A}','\u{2229}','\u{228E}','\u{2227}','\u{2228}',
     // vdash      dashv       lfloor    rfloor       lceil       rceil       lbrace       rbrace
     '\u{22A2}', '\u{22A3}', '\u{230A}', '\u{230B}', '\u{2308}', '\u{2309}',  '{',         '}',
     // langle     rangle       |          \|  updownarrow Updownarrow backslash   wr

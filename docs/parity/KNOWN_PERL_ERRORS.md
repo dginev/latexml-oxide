@@ -18800,3 +18800,61 @@ address with the author it spells, else the n-th author's while the list is in a
 a grouped address written out. Witnesses 1905.13566, 2105.02711, 2308.08563, 2401.03955; guards
 `perfect_kernel_batch88b::{ijcai_grouped_email_list_placed_by_spelling,
 ijcai_binding_email_list_out_of_order_leaves_the_unspelled_on_the_block}`.
+
+## 1201. A symbol-font name given by a macro is read as written: the symbols declared in it are dropped
+
+latex_constructs.pool.ltxml:2697-2701 reads `\DeclareMathSymbol`'s font argument as `{}` and looks up
+`fontdeclaration@` of `ToString($fontkind)`; `\DeclareMathAccent` (:2645) and `\DeclareSymbolFont`'s name, family,
+series and shape (:2664) likewise. latex.ltx expands them (`\csname sym#3\endcsname`, :13480). A font named by a macro
+finds no declaration, the macro's text is taken for the encoding, and `FontDecode` gives no glyph. Minimal trigger:
+
+```latex
+\documentclass{article}
+\def\grfam{letters}
+\DeclareSymbolFont{lettersupright}{OML}{cmm}{m}{n}
+\DeclareMathSymbol{\myalpha}{\mathord}{\grfam}{"0B}
+\DeclareMathSymbol{\myDelta}{\mathalpha}{\grfam upright}{"01}
+\begin{document}$\myalpha+\myDelta$\end{document}
+% pdflatex: "α+∆"
+% Perl: both symbols dropped, the formula is "+" (0 errors)
+```
+
+mathdesign declares its Greek this way (mdbch.sty:157/261, `\MD@greek@family`; 1808.08390, 1910.04228, 1108.1913).
+Fixed in Rust (89a, OXIDIZED_DESIGN_DIVERGENCES #910): the arguments are read `Expanded`. Repro
+fonts-nfss/symbol_font_name_expands; guard `perfect_kernel_batch89a::symbol_font_name_expands`.
+
+## 1202. Seven slots of the msam, msbm, cmsy and cmmi font maps hold the wrong glyph
+
+amsa.fontmap.ltxml:31 has ⋒ at 0x64 and ⋓ at 0x65, where msam10 draws `\Cup` ⋓ at "64 and `\Cap` ⋒ at "65
+(amssymb.sty:144/146); :33 has ≌ U+224C at 0x77, where msam10 draws `\backsimeq` ⋍ U+22CD (:164).
+amsb.fontmap.ltxml:25 has ⋫ at 0x36 and ⋪ at 0x37, where msbm10 draws `\ntriangleleft` ⋪ and `\ntriangleright` ⋫
+(:225-226). TeX_Fonts.pool.ltxml:297 (OMS) has ⊌ U+228C (multiset) at 0x5D, where cmsy10 draws `\uplus` ⊎ U+228E
+(fontmath.ltx:280); :272 (OML) has `j` at 0x7C, where cmmi10 draws `\jmath`, the dotless ȷ U+0237 (fontmath.ltx:217).
+amssymb's and the kernel's bindings give the right glyphs (amssymb.sty.ltxml:63 ⋒, :122 ⋍, :251 ⋪), so only a symbol
+decoded through the map shows it. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{amssymb}
+\DeclareMathSymbol{\oCap}{\mathbin}{AMSa}{"65}
+\DeclareMathSymbol{\obacksimeq}{\mathrel}{AMSa}{"77}
+\DeclareMathSymbol{\ontl}{\mathrel}{AMSb}{"36}
+\DeclareMathSymbol{\ouplus}{\mathbin}{symbols}{"5D}
+\DeclareMathSymbol{\ojmath}{\mathord}{letters}{"7C}
+\begin{document}
+$\oCap\ \obacksimeq\ \ontl\ \ouplus\ \ojmath$
+\end{document}
+% pdflatex: "⋒ ⋍ ⋪ ⊎ ȷ" (each slot rendered from msam10, msbm10, cmsy10, cmmi10 and checked)
+% Perl 0.8.8: "⋓ ≌ ⋫ ⊌ j" (0 errors)
+```
+
+oz.sty's and zed-csp's `\DeclareSymbolFont{AMSa}{U}{msa}` `\Cap` and `\Cup` (oz.sty:44/:249-250,
+zed-csp.sty:60/:191-192) decode through the same table here (`U_msa`, u_fontmap.rs). Fixed in Rust (89a):
+amsa_fontmap.rs, amsb_fontmap.rs and tex_fonts.rs hold the glyphs the fonts draw; the `omencodings` golden (Perl's own
+test) follows at OML 0x7C and OMS 0x5D. StandardMetrics.pm keys the metrics by the same glyphs (cmsy/cmbsy ⊌, msam ≌,
+and no ȷ in cmmi, whose "7C metric is lost under `j`), so even the bindings' own ⊎ and ⋍ take the 0.75em default
+width and ȷ cmr10's (Perl: `\settowidth` of `$\uplus$`, `$\backsimeq$`, `$\jmath$` gives 7.5pt, 7.5pt, 3.05557pt;
+pdflatex 6.66669pt, 7.7778pt, 3.8403pt); standard_metrics.rs keys them by the glyph the font draws (⊎, ⋍, and ȷ added
+from cmmi*.tfm "7C). Repros fonts-nfss/{ams_font_slots_decode_as_msam_msbm_draw,
+corrected_slot_glyphs_have_their_tfm_widths}; guards `perfect_kernel_batch89a::{ams_font_slots_decode_as_the_fonts_draw,
+corrected_slot_glyphs_have_their_tfm_widths}`.

@@ -1,0 +1,16 @@
+% witness: 1604.04618 (kpfonts.sty:679-681 `\re@DeclareMathSymbol`), mathdesign mdbch.sty:261 (`\epsilon` and
+%          `\varphi` redeclared); fontmath.ltx:179 `\epsilon` letters "0F, :203 `\varphi` letters "27
+% oracle:  pdflatex: "ε φ"; 0 errors (the U/jkpmia glyphs at "22 and "1E)
+% engines: rust int117a = 0 errors, `\epsilon` as `"`, `\varphi` U+FFFD; perl 0.8.8 = 0 errors, both dropped
+% expect:  0 errors, 0 warnings; both as int117a: a kernel name at ANOTHER slot than fontmath.ltx's (a variant swap)
+%          is not decoded through the kernel font, whose glyph there is a different letter; the raw slot stays
+%          (OXIDIZED_DESIGN_DIVERGENCES #27)
+% status:  GREEN (negative guard, 89a)
+% preload: ar5iv.sty
+\documentclass{article}
+\DeclareSymbolFont{lettersA}{U}{jkpmia}{m}{it}
+\let\epsilon\undefined\DeclareMathSymbol{\epsilon}{\mathord}{lettersA}{"22}
+\let\varphi\undefined\DeclareMathSymbol{\varphi}{\mathord}{lettersA}{"1E}
+\begin{document}
+$\epsilon\ \varphi$
+\end{document}

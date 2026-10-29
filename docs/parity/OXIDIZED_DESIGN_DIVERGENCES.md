@@ -19218,8 +19218,9 @@ encoding `\fontencoding` was given (latex.ltx:10490): `\lx@fontencoding` of an e
 into the font, which decodes through it as before, and keeps the name beside it (`lx@fontencoding@unmapped`,
 tex_fonts.rs), which `\f@encoding` (sect08.rs) reports while the font's encoding is still OT1 — a later switch to a
 mapped encoding clears it. The `U` encoding itself has no map, only the per-family `U_msa`/`U_msb` (u_fontmap.rs), so a
-math symbol of a U symbol font of any other family stays undecoded (U+FFFD), as before: giving `U` OT1's map decoded
-shuffle.sty's `\shuffle` ("001) as Δ (2306.04672) and stmaryrd's `\boxslash` ("1C) as an italic ø. Left out: the
+math symbol of a U symbol font of any other family stays undecoded (U+FFFD), as before — unless it is a kernel or AMS
+name declared at its fontmath.ltx/amssymb slot (#910): giving `U` OT1's map decoded shuffle.sty's `\shuffle` ("001)
+as Δ (2306.04672) and stmaryrd's `\boxslash` ("1C) as an italic ø. Left out: the
 unknown-family error of `\DeclareFontShape`, its `\series@maybe@drop@one@m` (latex.ltx:10288, the shape is recorded
 under the series as written, not with a redundant `m` dropped — sect08.rs `\DeclareFontShape@`) and the note that goes
 with it, `\@font@info` and the "No file" typeout (none is in the dumpless base). KNOWN_PERL_ERRORS #845. Repros
@@ -26354,3 +26355,70 @@ guards
 `cas_deferred_labels_are_read_before_digestion` the shadow's reading as well;
 `ijcai_binding_email_list_in_author_order_keeps_perl_order` a no-regression check, the base gives the same),
 `06_cluster_frontmatter::frontmatter_ijcai_affiliations_emails` (the ttm.sty group on its three authors).
+
+### 910. A symbol-font argument is read expanded, and a symbol its font cannot decode, declared at its fontmath.ltx or amssymb slot, is the token LaTeXML's own binding makes of the name (Perl: the name read as written, the symbols dropped)
+
+latex.ltx reads the symbol-font name through `\csname sym#3\endcsname` (`\DeclareMathSymbol` :13480,
+`\DeclareMathAccent` :13430, `\DeclareSymbolFontAlphabet@` :13725) and `\DeclareSymbolFont` builds
+`\csname sym#1\endcsname` and `\csname#2/#3/#4/#5\endcsname` (:13138): each argument is expanded. Perl reads them as
+written (latex_constructs.pool.ltxml:2645, :2664, :2671, :2697-2699 `ToString($fontkind)`; KNOWN_PERL_ERRORS #1201).
+mathdesign declares `\DeclareSymbolFont{\MD@greek@family upright}{OML}{\MD@greek@family}{m}{n}` (mdbch.sty:157) and
+its Greek in `{\MD@greek@family}`/`{\MD@greek@family upright}` (:261, :291, :330; `\MD@greek@family` is `letters`,
+mathdesign.sty:135): the name found no declaration and was taken for the encoding, which has no map, so every Greek
+letter came out U+FFFD or an ASCII stand-in (Ω a newline, ω `!`; OXIDIZED_DESIGN_DIVERGENCES #27) — 703 tokens on
+1808.08390, 1910.04228 and 1108.1913. Ours (sect08.rs): `\DeclareMathSymbol`'s font, `\DeclareMathAccent`'s font,
+`\DeclareSymbolFont`'s name, family, series and shape (the encoding stays `ExpandedPartially`, as Perl) and
+`\DeclareSymbolFontAlphabet`'s name are read `Expanded`, each space token a space (`nfss_name`): a space token keeps
+the line end it came from as its text, so 1501.05180's `\DeclareSymbolFont{latex-font⏎msa}` was another font than its
+`\DeclareMathSymbol\onto\mathrel{latex-font msa}{"10}` (U+FFFD, now ↠). A series or shape given by a macro is the one
+latex.ltx selects (`\mddefault`, `\updefault`: mathtext.sty:103, euler.sty:225): an OML font declared with shape
+`{\itdefault}` records `it` and is a math italic font (`math_italic`, its letters italic as their class says;
+`Font::specialize_letters`, KNOWN_PERL_ERRORS #1147).
+(`\DeclareSymbolFontAlphabet` looks up `fontdeclarations@`, plural, as Perl's pool:2673 does, so it finds no font
+either way; left as it is.)
+
+A math-font package that redeclares a symbol font as `U` (or `LMS`, `MDA`…) has no map for it (#645): its symbols stayed
+undecoded. When the declared font decodes nothing, `\DeclareMathSymbol` now looks the symbol up in the reference slots —
+every `\DeclareMathSymbol` of fontmath.ltx (254) and the small variant of its control-sequence `\DeclareMathDelimiter`s
+(26, `\|` among them), and those of amsfonts.sty and amssymb.sty (219), with the encoding of the font they name
+(`operators` OT1, `letters` OML, `symbols` OMS, `largesymbols` OMX, `AMSa`/`AMSb` msam/msbm). Declared at its reference
+slot, the symbol is the token LaTeXML's own kernel/amssymb binding makes of the name: its glyph, and the role, meaning,
+`name` and stretchiness the binding gives (a binding's `UNKNOWN`, no role at all, leaves the class's role) — so a paper
+using kpfonts gets the symbols a paper without it gets (`reference_symbol`/`reference_glyph`, sect08.rs). `\Cap` is ⋒
+ADDOP `double-intersection`, `\mid` ∣ VERTBAR, `\lgroup` ⟮ OPEN `stretchy="false"`, `\jmath` ȷ, `\uplus` ⊎, `\perp` ⟂,
+`\setminus` ∖ — where the reference fonts' fontmap entries give a slot glyph (`|`, the OMX extensible piece ⎩, the plain
+⊥ ◁ ⊔ `\`) or a Perl-origin slot error (KNOWN_PERL_ERRORS #1202). The table `reference_math_slots.rs` is static and
+generated by `tools/perfect_kernel/gen_reference_math_slots.py`: the slots from TL 2025's fontmath.ltx 2025/06/05 v3.0l
+and amsfonts/amssymb 2013/01/14 v3.01 (the Computer Modern and AMS layouts, unchanged since LaTeX2e; a conversion should
+not parse kernel files to look up fixed layouts), each binding's token captured by converting the generator's own
+document (every name typeset, amssymb loaded) with `--nomathparse`; the header names the binary. A name no binding
+defines — fontmath.ltx's `\varbigtriangleup`/`\varbigtriangledown`, whose `\mathchardef` LaTeXML keeps raw — falls back
+to the reference font's map, as do `,` `.` `;` (set as text by the capture).
+
+A package that puts a kernel or AMS name at the reference slot of its own font draws the reference glyph there:
+kpfonts' `\Delta`/`\Omega` in `U/jkpmia` at 1 and 10 (fontmath.ltx:205/214 `operators`; kpfonts.sty:679-681 `\let`s
+the name away before redeclaring it, so its old meaning is gone), `\leqslant`, `\Cap`/`\Cup` in an `AMSa` redeclared as
+`U/jkpsya` (kpfonts.sty:498, :831/:833; amssymb.sty:101, :144/:146; txfonts and pxfonts likewise), eulerpx's `\jmath`
+in `U/zeur` at 124 (eulerpx.sty:276), raw newtxsf's `\lfloor`, `\mid` and `\lgroup` in `LMS/ntxsy`/`LMX/ntxexx`
+(newtxsf.sty:95/:150, :242/:261; fontmath.ltx:499 — newtxmath and newpxmath are bound and run none of this). Witnesses
+1604.04618, 2008.13643 (kpfonts), 2506.22450 (newtxsf through wiley-article.cls:130), 2501.18458 (eulerpx). The
+exception is arev: its bold `mathdesignA` (`mdbchbma`) draws ∟ at `\nless`'s slot 04 and lacks 0x24, 0x26 and 0x36
+(pdflatex logs "Missing character"); we print what the author named (≮). Another slot is another glyph and stays
+undecoded: a variant swap (`\epsilon` at "22, where fontmath.ltx has `\varepsilon`), and jkpsyb's and txsyb's
+`\precapprox`/`\succapprox` at 118/119 (kpfonts.sty, txfonts.sty), where msbm has them the other way round (checked by
+rendering) — so the symbol-font name alone (`AMSa`) is no slot contract, and a name no reference declares in an
+`AMSa`/`AMSb` font stays undecoded too. A name no reference declares (shuffle's `\shuffle`, stmaryrd's `\boxslash`,
+#645; kpfonts' `\neq` in `U/jkpsyc` at 44) is as before. A font with a map decodes through it, not the binding (oz.sty's
+`U/msa` `\Cap` ⋒ BINOP through `U_msa`). `\DeclareMathAccent` has no such step (no package redeclares a kernel accent
+at its kernel slot in an undecodable font; newtx and newpx use other slots). Perl drops all these symbols. The
+binding's limits placement (its `scriptpos`/`mathstyle` closures) is not carried: a kernel `\mathop` redeclared this
+way (`\sum`, `\bigcup` at their largesymbols slots) sets its display limits as scripts, where the kernel's token sets
+them under and over (repro fonts-nfss/redeclared_mathop_takes_display_limits, RED; no corpus witness, the packages use
+their own `\sumop`), and carrying it needs a display capture or a role-based rule.
+
+Repros fonts-nfss/{symbol_font_name_expands, u_font_kernel_slot_and_ams_names, font_package_symbols_are_the_bindings,
+ams_font_slots_decode_as_msam_msbm_draw, kernel_name_at_another_slot_stays_undecoded}; guards
+`perfect_kernel_batch89a::{symbol_font_name_expands, kernel_and_ams_names_at_their_reference_slots,
+font_packages_get_the_bindings_symbols, ams_font_slots_decode_as_the_fonts_draw,
+kernel_name_at_another_slot_stays_undecoded}` (the first two also on the binary, eager and `--streaming`),
+`perfect_kernel_batch68v::batch68v_u_symbol_font_without_a_map_stays_undecoded`.

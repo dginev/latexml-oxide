@@ -8677,6 +8677,7 @@ pub(crate) use sect05::{
   SpeculativeRun, replay_class_begin_code, speculative_title_page_run, title_page_deposit_tokens,
   title_page_print_tokens, title_page_replay_tokens,
 };
+mod reference_math_slots;
 mod sect06;
 mod sect07;
 mod sect08;
@@ -8685,6 +8686,7 @@ mod sect10;
 mod sect11;
 mod sect12;
 mod sect13;
+use reference_math_slots::{ReferenceSymbol, reference_math_slot};
 pub use sect04::toc_select;
 pub use sect07::prepare_latex_equation_counter;
 pub use sect08::{declare_bound_text_symbols, declare_capital_greek, declare_capital_greek_named};

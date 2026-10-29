@@ -787,9 +787,11 @@ pub(crate) fn load() -> Result<()> {
   // `\DeclareMathAccent{\widecheck}{\mathalpha}{mathx}{"71}` with no
   // mathx font map → \widecheck undefined → 1806.02506-style 1-error
   // cluster). Mirror Perl: always install, fall back to empty presentation.
-  DefPrimitive!("\\DeclareMathAccent DefToken {}{} {Number}",
+  // The symbol font is read `Expanded`, as latex.ltx:13430 resolves it through `\csname sym#3\endcsname`
+  // (`symbol_font_name_expands`, below).
+  DefPrimitive!("\\DeclareMathAccent DefToken {} Expanded {Number}",
   sub[(cs, kind, class, code)] {
-    let class_str = class.to_string();
+    let class_str = nfss_name(&class);
     let encoding = lookup_value(&s!("fontdeclaration@{}", class_str))
       .and_then(|v| {
         if let Stored::Font(ref f) = v {
@@ -822,9 +824,20 @@ pub(crate) fn load() -> Result<()> {
   // my $symboltype_roles = { '\mathord' => 'ID', '\mathop' => 'BIGOP', '\mathbin' => 'BINOP',
   //   '\mathrel' => 'RELOP', '\mathopen' => 'OPEN', '\mathclose' => 'CLOSE', '\mathpunct' => 'PUNCT' };
   // locked: prevents raw TeX dump from overriding with version that errors on redefinition
-  DefPrimitive!("\\DeclareMathSymbol DefToken SkipSpaces DefToken {}{Number}",
+  //
+  // The symbol font is read `Expanded`: latex.ltx:13480 resolves it through `\csname sym#3\endcsname`, and so do
+  // `\DeclareMathAccent` (:13430), `\DeclareSymbolFont` (:13138, with `\csname#2/#3/#4/#5\endcsname`) and
+  // `\DeclareSymbolFontAlphabet@` (:13725). mathdesign declares `{\MD@greek@family upright}` (mdbch.sty:157/261,
+  // `\MD@greek@family` = `letters`, mathdesign.sty:135): read as written, the name found no declaration and its
+  // glyphs were lost (witnesses 1808.08390, 1910.04228, 1108.1913). Perl reads it unexpanded (pool:2699,
+  // KNOWN_PERL_ERRORS #1201). When the declared font decodes nothing, a symbol declared at its reference slot is the
+  // token LaTeXML's own binding makes of the name (`reference_symbol`, `reference_glyph`).
+  // OXIDIZED_DESIGN_DIVERGENCES #910. Guards `perfect_kernel_batch89a::symbol_font_name_expands`,
+  // `kernel_and_ams_names_at_their_reference_slots`, `font_packages_get_the_bindings_symbols`,
+  // `kernel_name_at_another_slot_stays_undecoded`.
+  DefPrimitive!("\\DeclareMathSymbol DefToken SkipSpaces DefToken Expanded {Number}",
   sub[(cs, sym_type, fontkind, code)] {
-    let mut encoding = fontkind.to_string();
+    let mut encoding = nfss_name(&fontkind);
     // Decode with the DECLARED symbol font (Perl FontDecode takes the font):
     // its family selects the per-family map (`U_msa_fontmap`, u_fontmap.rs).
     let mut decl_font: Option<Rc<Font>> = None;
@@ -840,6 +853,11 @@ pub(crate) fn load() -> Result<()> {
         .and_then(|font| font.get_shape())
         .is_some_and(|shape| matches!(shape.as_ref(), "it" | "sl" | "italic" | "slanted"));
     let (glyph, _font) = font_decode(code.value_of() as i32, Some(&encoding), decl_font);
+    // Undecoded, a symbol at its reference slot is the token LaTeXML's own binding makes of the name: its glyph, and
+    // its role, meaning, name and stretchiness where the binding gives them (`reference_symbol`).
+    let reference = if glyph.is_none() { reference_symbol(&cs, code.value_of()) } else { None };
+    let binding = reference.as_ref().and_then(|reference| reference.binding.as_ref());
+    let glyph = glyph.map(String::from).or_else(|| reference.as_ref().and_then(reference_glyph));
     // latex.ltx `\mathchar@type`: the class is a `\math…` cs OR its number
     // 0-7 (oz.sty:261 `\DeclareMathDelimiter\ulcorner{4}{AMSa}{"70}…`).
     let role = match sym_type.to_string().trim() {
@@ -852,6 +870,7 @@ pub(crate) fn load() -> Result<()> {
       "\\mathpunct" | "6" => Some("PUNCT"),
       _ => None,
     };
+    let role = binding.and_then(|binding| binding.role).or(role);
     // Perl Package.pm L2761: `DefMathI($cs, undef, $glyph, role => $role)` —
     // called unconditionally, even when FontDecode returns `undef` (e.g. the
     // encoding's `.fontmap.ltxml` isn't shipped with LaTeXML, like "U").
@@ -894,12 +913,18 @@ pub(crate) fn load() -> Result<()> {
       }
     }
     let presentation = match glyph {
-      Some(ch) => ch.to_string(),
+      Some(glyph) => glyph,
       None => xml_safe_char(code.value_of() as u32),
     };
     let mut opts = MathPrimitiveOptions::default();
     if let Some(r) = role {
       opts.role = Some(r.to_string());
+    }
+    if let Some(binding) = binding {
+      opts.meaning = binding.meaning.map(String::from);
+      // An empty name is none (`def_math`), as the binding's token has none.
+      opts.name = Some(binding.name.to_string());
+      opts.stretchy = binding.stretchy;
     }
     // A glyph of a math italic symbol font — OML-encoded, italic or slanted, as fontmath.ltx:60 declares `letters`
     // (`{OML}{cmm}{m}{it}`), not newtxmath's upright-Greek `lettersA` (`{U}{ntxmia}`) — takes its class's shape
@@ -959,13 +984,17 @@ pub(crate) fn load() -> Result<()> {
   // `\DeclareSymbolFont{operators}{\encodingdefault}{\rmdefault}{m}{n}`. Read
   // unexpanded, the literal string `\encodingdefault` lands in
   // `fontdeclaration@operators`, and every dependent `\DeclareMathSymbol` /
-  // `\DeclareMathAccent` then looks up a fontmap by that name and finds none.
-  DefPrimitive!("\\DeclareSymbolFont{} ExpandedPartially {}{}{}",
+  // `\DeclareMathAccent` then looks up a fontmap by that name and finds none. The name, family, series and shape are
+  // read `Expanded`, as latex.ltx:13138 makes `\csname sym#1\endcsname` and `\csname#2/#3/#4/#5\endcsname` of them
+  // (mathdesign's `\DeclareSymbolFont{\MD@greek@family upright}{OML}{\MD@greek@family}{m}{n}`, mdbch.sty:157;
+  // OXIDIZED_DESIGN_DIVERGENCES #910).
+  DefPrimitive!("\\DeclareSymbolFont Expanded ExpandedPartially Expanded Expanded Expanded",
   sub[(name, enc, family, series, shape)] {
+    let name = nfss_name(&name);
     AssignValue!(&s!("fontdeclaration@{}", name),
-      fontmap!(family => family.to_string(),
-        series   => series.to_string(),
-        shape    => shape.to_string(),
+      fontmap!(family => nfss_name(&family),
+        series   => nfss_name(&series),
+        shape    => nfss_name(&shape),
         encoding => enc.to_string()
       )
     );
@@ -982,8 +1011,9 @@ pub(crate) fn load() -> Result<()> {
       Let!(&sym_cs, "\\z@");
     }
   });
-  DefPrimitive!("\\DeclareSymbolFontAlphabet {Token} {}", sub[(cs, name)] {
-    let fontkey = s!("fontdeclarations@{}", name.to_string());
+  // The name is read `Expanded` (latex.ltx:13725 `\csname sym#2\endcsname`; OXIDIZED_DESIGN_DIVERGENCES #910).
+  DefPrimitive!("\\DeclareSymbolFontAlphabet {Token} Expanded", sub[(cs, name)] {
+    let fontkey = s!("fontdeclarations@{}", nfss_name(&name));
     let font : Option<Font> = match lookup_value(&fontkey) { Some(Stored::Font(value)) => {
       Some((*value).clone())
     } _ => {
@@ -2246,6 +2276,53 @@ fn decode_slot(code: i64, encoding: &str) -> Option<SymStr> {
       .and_then(char::from_u32)
       .map(pin_char),
     Err(_) => None,
+  }
+}
+
+/// A symbol-font name, or a font's family, series or shape, as latex.ltx's `\csname sym#1\endcsname` and
+/// `\csname#2/#3/#4/#5\endcsname` read it: every space token is a space, the end of a line inside the argument too —
+/// 1501.05180 declares `\DeclareSymbolFont{latex-font⏎msa}` and uses `{latex-font msa}` (OXIDIZED_DESIGN_DIVERGENCES
+/// #910).
+fn nfss_name(name: &Tokens) -> String {
+  let spaced = name
+    .unlist_ref()
+    .iter()
+    .map(|token| {
+      if token.get_catcode() == Catcode::SPACE {
+        T_SPACE!()
+      } else {
+        *token
+      }
+    })
+    .collect();
+  Tokens::new(spaced).to_string()
+}
+
+/// The reference of a math symbol whose declared symbol font decodes nothing, when it is declared at its reference
+/// slot: the slot fontmath.ltx or amsfonts/amssymb give the same name ([`reference_math_slot`]). A font package that
+/// redeclares a kernel or AMS name at that slot of its own font keeps the reference layout there: kpfonts' `\Delta` in
+/// `U/jkpmia` at 1 (fontmath.ltx:205 `operators` "01; kpfonts.sty:679-681 `\let`s the name away first), `\Cap` in an
+/// `AMSa` redeclared as `U/jkpsya` at "65 (amssymb.sty:146), raw newtxsf's `\lfloor` in `LMS/ntxsy` at 98
+/// (fontmath.ltx:499). Another slot is another glyph — a variant swap (`\epsilon` at "22, `\varepsilon`'s), or
+/// jkpsyb's `\precapprox` at 118, where msbm has `\succapprox` — and stays undecoded, as does a name no reference
+/// declares (shuffle's `\shuffle`, OXIDIZED_DESIGN_DIVERGENCES #645). Witnesses 1604.04618, 2008.13643 (kpfonts),
+/// 2506.22450 (newtxsf via wiley-article.cls), 2501.18458 (eulerpx's `\jmath`, `\partial`). OXIDIZED_DESIGN_DIVERGENCES
+/// #910.
+fn reference_symbol(cs: &Token, code: i64) -> Option<ReferenceSymbol> {
+  cs.with_str(reference_math_slot)
+    .filter(|reference| code == i64::from(reference.slot))
+}
+
+/// The glyph of a symbol at its reference slot: the one LaTeXML's own kernel/amssymb binding gives the name, so a
+/// paper using kpfonts gets the symbols a paper without it gets (`\Cap` ⋒, `\mid` ∣, `\lgroup` ⟮, `\jmath` ȷ); a name
+/// no binding defines (the kernel's raw `\varbigtriangleup`), the slot decoded through the reference font's own map
+/// (OT1, OML, OMS, OMX, msam's `AMSa`, msbm's `AMSb`).
+fn reference_glyph(reference: &ReferenceSymbol) -> Option<String> {
+  match reference.binding {
+    Some(ref binding) => Some(binding.glyph.to_string()),
+    None => load_font_map(reference.encoding)
+      .and_then(|map| map.get(usize::from(reference.slot)).copied().flatten())
+      .map(String::from),
   }
 }
 

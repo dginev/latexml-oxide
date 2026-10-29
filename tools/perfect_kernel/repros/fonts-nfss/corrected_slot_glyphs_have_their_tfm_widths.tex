@@ -1,0 +1,17 @@
+% witness: KNOWN_PERL_ERRORS #1202's slots, sized: cmsy10 "5D `\uplus` (fontmath.ltx:280), msam10 "77 `\backsimeq`
+%          (amssymb.sty:164), cmmi10 "7C `\jmath` (fontmath.ltx:217); widths from cmsy10.tfm, msam10.tfm, cmmi10.tfm
+% oracle:  pdflatex: "U6.66669pt; B7.7778pt; J3.8403pt;"; 0 errors
+% engines: rust 89a r2 = U7.5pt; B7.5pt; J3.05557pt; (⊎ and ⋍ had no metric under their corrected glyphs and took the
+%          0.75em default, ȷ took cmr10's dotless j: the metrics were keyed by Perl's ⊌, ≌ and `j`); perl 0.8.8 = the
+%          same, 0 errors (its bindings print ⊎ ⋍ ȷ, its StandardMetrics.pm keys the slots by its maps' glyphs)
+% expect:  0 errors, 0 warnings; each width as pdflatex's (standard_metrics.rs keyed by the glyph the font draws)
+% status:  RED (89a r2) -> GREEN (89a r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amssymb}
+\newlength\w
+\begin{document}
+\settowidth\w{$\uplus$}U\the\w;
+\settowidth\w{$\backsimeq$}B\the\w;
+\settowidth\w{$\jmath$}J\the\w;
+\end{document}

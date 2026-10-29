@@ -465,6 +465,28 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
    text default's (OD #780), and none of these bindings declares a sans math version (`\DeclareSymbolFont`/
    `\SetSymbolFont` for `operators`/`letters`). Fix: a binding-level math default (the family of the `operators` and
    `letters` symbol fonts) read where `finalize_rec` resets an `ltx:Math`. Open.
+9. **Math glyphs of a raw math-font package's own fonts** (89a residuals; FIXED there: a symbol-font name given by a
+   macro, mathdesign — and a kernel or AMS name at its fontmath.ltx/amssymb slot in a font with no map, now the token
+   LaTeXML's own binding makes of it, kpfonts, raw newtxsf, eulerpx; newpxmath and newtxmath are bound and untouched;
+   OXIDIZED_DESIGN_DIVERGENCES #910, the msam/msbm/cmsy/cmmi map slots KNOWN_PERL_ERRORS #1202). Also open: a raw
+   kernel `\mathchardef` LaTeXML keeps prints the low byte of its code (fontmath.ltx:268-269 `\varbigtriangleup`
+   `\mathchar"2234` as `4`, `\meaning` `\char"8756`; pdflatex △), and a symbol whose font HAS a map takes the map's
+   glyph and the class's role, not the binding's (oz.sty's `U/msa` `\Cap` ⋒ BINOP where kpfonts' is ⋒ ADDOP
+   `double-intersection`; a raw OMS `\mid` `|` RELOP), and mdsymbol's `\SetSymbolFont{symbols}{normal}{U}{MdSymbolA}`
+   for an already declared font (mdsymbol.sty:383-390) is not modelled: its symbols decode through cmsy's OMS layout
+   or print a stand-in (`\Cap` ⊥, `\blacktriangledown` ⊎; 339 of the 402 reference names in a probe), and a binding's
+   limits placement is not carried (a redeclared `\sum`/`\bigcup` sets display limits as scripts; no corpus witness;
+   RED repro fonts-nfss/redeclared_mathop_takes_display_limits). Open, each a
+   slot `\DeclareMathSymbol` declares in a font with no map: (B0) an undecodable slot prints the slot itself, a wrong ASCII stand-in from 0x20 (`\neq` as `,`, Ω as
+   a newline; OD #27) — awaits the user's ruling on U+FFFD plus a Warning (repro fonts-nfss/u_font_kernel_slot_and_ams_names
+   `\neq`; 1502.03923 104 tokens, 2402.09138, 2008.13643, 1604.04618); (B3, HARD, deferred) the layout from the TFM's
+   coding scheme: `U/fsy`'s `zplmr7t` says "TEX TEXT" (OT1) and `zplmr7m` "TEX MATH ITALIC" (OML), trustworthy only for
+   those two strings — msam10/msbm10/esint10 claim false ones (heppennames2.sty:117-151 via cms-tdr.cls:167;
+   2307.11186 147 tokens, 2507.13469; minimal: `\DeclareFontFamily{U}{fsy}{}\DeclareFontShape{U}{fsy}{m}{n}{<->s*[1.0]zplmr7t}{}`
+   `\DeclareSymbolFont{ugrfr}{U}{fsy}{m}{n}\DeclareMathSymbol{\Uplambda}{\mathord}{ugrfr}{"03}` → pdflatex Λ, ours U+FFFD);
+   package data, a binding row each: esvect's `\vv` (`\fldr`/`\montraita` are arrow fragments, no Unicode; esvect.sty:28-29,
+   1502.03923), cmll's `U/cmllr` table (⅋ `\invamp` at 0, cmll.sty:32/87; 2402.09138), kpfonts' `symbolsC` (150
+   symbols at txfonts' `symbolsC` slots, no `txsyc` table to share; `\neq` at 44).
 
 ### Fragid Parity Open Items
 1. **`associateNode` (Post.pm L508-585) unported**: Generated MathML/OpenMath nodes carry no `xml:id`, so `convertedIDs` and pmml↔cmml parallel cross-linking do not exist.
