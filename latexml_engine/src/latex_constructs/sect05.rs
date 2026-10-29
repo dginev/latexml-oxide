@@ -2149,7 +2149,11 @@ pub(crate) fn options_pi_spelling(arg: Option<&Digested>) -> SymHashMap<Stored> 
 ///   parser, whose ParamSpec Fatal is sticky; a `\csname`-made name's tokens are run in place and an `\expandafter`
 ///   chain's `{`-adjacent token is expanded in place, the rest of either's replacement text stored
 ///   ([`expandafter_definee`]; 75a review r3); a body whose definitions nest past [`GATE_DEFINITION_DEPTH`] is refused
-///   with an Info.
+///   with an Info;
+/// - since 86d, a token TeX compares or shows but never runs is not checked ([`unrun_operands`],
+///   OXIDIZED_DESIGN_DIVERGENCES #906): `\ifx`'s comparands, `\ifdefined`'s, `\string`'s, `\meaning`'s
+///   (zaa.cls:166 `\ifx\@dedication\undefined`, 1902.07328), and a `\newif` switch there is no conditional
+///   ([`switch_is_operand`]).
 fn body_vocabulary_is_defined(body: &[Token], what: &str) -> bool {
   let mut definees: Vec<BodyDefinee> = Vec::new();
   vocabulary_is_defined(body, what, &mut definees, 0)
@@ -2211,13 +2215,19 @@ fn vocabulary_is_defined(
   let body = &body[..];
   // the positions of the delimiters a called macro's parameter text matches (`\nowfnt@splitauthor#2,!,!,\@nil`)
   let mut delimiters: rustc_hash::FxHashSet<usize> = rustc_hash::FxHashSet::default();
+  // the positions of the tokens a primitive compares or shows but never runs ([`unrun_operands`])
+  let mut unrun: rustc_hash::FxHashSet<usize> = rustc_hash::FxHashSet::default();
   let mut i = 0;
   while i < body.len() {
     let t = &body[i];
     i += 1;
-    if !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) || delimiters.contains(&(i - 1)) {
+    if !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+      || delimiters.contains(&(i - 1))
+      || unrun.contains(&(i - 1))
+    {
       continue;
     }
+    unrun.extend(unrun_operands(body, i - 1));
     if *t == T_CS!("\\begin")
       && let Some(past) = defined_environment_span(body, i)
     {
@@ -2444,6 +2454,62 @@ fn vocabulary_is_defined(
     }
   }
   true
+}
+
+/// The positions of the tokens after `body[at]` that TeX compares or shows but never runs, when `body[at]` is a
+/// primitive that reads them unexpanded: `\ifx`'s two comparands (tex.web §507, `get_next`), e-TeX's `\ifdefined`'s
+/// one (etex.ch `if_def_code`), and `\string`'s and `\meaning`'s (§470-471, `get_token`). An undefined control
+/// sequence there is none TeX meets: zaa.cls:166's `\ifx\@dedication\undefined` (1902.07328) and cms-tdr.cls:786's
+/// `\ifx\cmsMessage\undefined` (2307.11186, 2507.13469) refused their `\maketitle` bodies, and the addresses they
+/// print were lost. A parameter (`#1`) is one comparand. After `\expandafter\ifx`, a `\csname…\endcsname` first
+/// comparand is made as the condition runs (its name tokens run, checked as any others) and the token after its
+/// `\endcsname` is the second; any other token there is expanded once (§367) and nothing is skipped. `\noexpand`'s
+/// operand is checked: in an `\edef`/`\xdef` replacement text (its main use) it is stored and runs later.
+fn unrun_operands(body: &[Token], at: usize) -> Vec<usize> {
+  let t = &body[at];
+  let count = if *t == T_CS!("\\ifx") {
+    2
+  } else if [T_CS!("\\ifdefined"), T_CS!("\\string"), T_CS!("\\meaning")].contains(t) {
+    1
+  } else {
+    return Vec::new();
+  };
+  // the positions one operand from `k` takes: a parameter's `#`s and the token after them, or one token
+  let operand = |k: usize| -> std::ops::Range<usize> {
+    let mut end = k;
+    while body
+      .get(end)
+      .is_some_and(|u| u.get_catcode() == Catcode::PARAM)
+    {
+      end += 1;
+    }
+    k..(end + 1).min(body.len())
+  };
+  let mut k = at + 1;
+  if count == 2 && at > 0 && body[at - 1] == T_CS!("\\expandafter") {
+    if body.get(k) != Some(&T_CS!("\\csname")) {
+      return Vec::new();
+    }
+    let mut level = 0usize;
+    let Some(end) = (k..body.len()).find(|&e| {
+      if body[e] == T_CS!("\\csname") {
+        level += 1;
+      } else if body[e] == T_CS!("\\endcsname") {
+        level -= 1;
+      }
+      level == 0
+    }) else {
+      return Vec::new();
+    };
+    return operand(end + 1).collect();
+  }
+  let mut out = Vec::new();
+  for _ in 0..count {
+    let range = operand(k);
+    k = range.end;
+    out.extend(range);
+  }
+  out
 }
 
 /// A definition a checked body makes ([`stored_definition`]).
@@ -2839,17 +2905,33 @@ fn live_branches(body: &[Token]) -> Vec<Token> {
 }
 
 /// Whether a switch token after `before` is an assignment's operand: the name `\let`, `\newif` or a
-/// `\def` defines, or the meaning `\let` copies (`\let\ifX\ifY`, `\let\ifX=\ifY`).
+/// `\def` defines, or the meaning `\let` copies (`\let\ifX\ifY`, `\let\ifX=\ifY`); or a primitive's operand that is
+/// compared or shown, not run ([`unrun_operands`]: `\ifx\ifX\undefined`, `\ifx\x\ifX`, `\string\ifX`; not after
+/// `\expandafter\ifx`, which expands the token after it).
 fn switch_is_operand(before: &[Token]) -> bool {
-  let assigns = |t: &Token| {
-    [r"\let", r"\newif", r"\def", r"\edef", r"\gdef", r"\xdef"]
-      .iter()
-      .any(|cs| *t == T_CS!(*cs))
+  let unrun_before = |t: &Token| {
+    [
+      r"\let",
+      r"\newif",
+      r"\def",
+      r"\edef",
+      r"\gdef",
+      r"\xdef",
+      r"\ifx",
+      r"\ifdefined",
+      r"\string",
+      r"\meaning",
+    ]
+    .iter()
+    .any(|cs| *t == T_CS!(*cs))
   };
   let is_let = |t: &Token| *t == T_CS!(r"\let");
+  let is_expandafter = |t: &Token| *t == T_CS!(r"\expandafter");
   match before {
-    [.., last] if assigns(last) => true,
-    [.., l, _] if is_let(l) => true,
+    [.., e, x] if is_expandafter(e) && *x == T_CS!(r"\ifx") => false,
+    [.., e, x, _] if is_expandafter(e) && *x == T_CS!(r"\ifx") => false,
+    [.., last] if unrun_before(last) => true,
+    [.., l, _] if is_let(l) || *l == T_CS!(r"\ifx") => true,
     [.., l, _, eq] if is_let(l) && eq.get_catcode() == Catcode::OTHER && eq.to_string() == "=" => {
       true
     },
@@ -4773,7 +4855,13 @@ pub(crate) fn title_page_deposit_tokens(inject: &[Token]) -> Tokens {
 
 /// The replay of the class's own refused `\maketitle` (`\lx@dropped@maketitle`, `\lx@deposit@maketitle`), in a group
 /// with the fields read as the deposit reads them, `\thanks` gobbled and `\@maketitle` relaxed (no second deposit),
-/// with the options the kernel `\maketitle` read for a `\maketitle[<options>]` body (`\lx@maketitle@withopt`).
+/// with the options the kernel `\maketitle` read for a `\maketitle[<options>]` body (`\lx@maketitle@withopt`). A call
+/// of the kernel's `\maketitle` from the body (`\let\@origmaketitle\maketitle` … `\def\maketitle{…\@origmaketitle}`)
+/// runs LaTeX's `\maketitle` there, whose `\@maketitle` the deposit already printed: its `\lx@maketitle@body` is
+/// empty too (a macro, which a `{titlepage}` in the body extends with its `\unwind@titlepage`), so the frontmatter is
+/// not made a second time (a second `\maketitle` superseding the first handed the
+/// class's keywords store on as a note beside the deposit's "Key words: lensing",
+/// `perfect_kernel_batch77i::unset_store_reads_as_the_title_page_tests_it`, replayed since #906).
 /// `None` when it is not replayed: a body that takes arguments other than those options, one whose vocabulary is not
 /// defined here (`body_vocabulary_is_defined`), or while a replay runs (not re-entrant). `inject`: as
 /// [`title_page_deposit_tokens`].
@@ -4799,7 +4887,7 @@ pub(crate) fn title_page_replay_tokens(inject: &[Token]) -> Option<Tokens> {
     return None;
   }
   let mut replay = mouth::tokenize_internal(TeXString::assembled(s!(
-    r"{{{TITLE_PAGE_FIELDS}\let\thanks\@gobble\let\and\relax\let\@maketitle\relax\lx@captured@stores\lx@dropped@env@stores\lx@replay@records"
+    r"{{{TITLE_PAGE_FIELDS}\let\thanks\@gobble\let\and\relax\let\@maketitle\relax\let\lx@maketitle@body\@empty\lx@captured@stores\lx@dropped@env@stores\lx@replay@records"
   )))
   .unlist();
   replay.extend_from_slice(inject);

@@ -6,7 +6,9 @@
 % witness: none (synthetic; 77i review probe `relax`; the 77h follow-up).
 % oracle:  pdflatex 0 errors: "T Anton Key words: lensing Text.", no "Institute:".
 % engines: rust 67int35: "Key words" lost (the undefined store dropped the deposit); rust 77h r1 (`\@empty`): right;
-%          rust 77h r2 (`\relax`): an orphan "Institute:" paragraph.
+%          rust 77h r2 (`\relax`): an orphan "Institute:" paragraph; rust 86d: the class's `\maketitle` is replayed
+%          (refused before at `\@institute`, an `\ifx` comparand, OXIDIZED_DESIGN_DIVERGENCES #906) and the kernel's
+%          `\maketitle` it calls makes no second frontmatter: the same output.
 % expect:  0 errors, 0 warnings; "Key words: lensing" once; no "Institute:".
 % status:  RED (77h r2) -> GREEN (77i r2)
 \begin{filecontents*}[overwrite]{rcrelax.cls}

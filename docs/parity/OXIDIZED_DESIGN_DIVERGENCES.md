@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#906** (allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`).
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#907** (allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`).
 
 ---
 
@@ -21105,7 +21105,8 @@ whether every control sequence a refused class body would run is defined. It now
 - the delimiters a called macro's parameter text matches (`Match`/`Until` parameters, tex.web §392-399) are
   matched, not run (`delimiter_positions`); the arguments themselves stay checked;
 - what a called macro's body defines counts as defined after the call;
-- `\futurelet` defines what it lets, as `\let` does (§1221).
+- `\futurelet` defines what it lets, as `\let` does (§1221);
+- a token `\ifx`, `\ifdefined`, `\string` or `\meaning` only compares or shows is not checked (#906).
 The gate itself never reports: a parameter text is read by its own `gate_parameters` — `None` (no delimiters matched,
 the call's arguments checked as tokens) for one holding an argument of the enclosing macro (an `ARG` token), a doubled
 `#` or parameters out of order — and never by `parse_def_parameters`, whose ParamSpec Fatal is sticky (a class
@@ -26083,3 +26084,102 @@ labelled affiliations, and the 3 REVTeX papers with the document's `\affil`; the
 byte-identical; E 2,273 → 2,273, F 3 → 3.
 Repros `sectioning-frontmatter/{fcs_author_star_and_address_labels, dgruyter_author_star_and_affil_labels}`; guards
 `perfect_kernel_batch86c::{fcs_author_star_and_address_labels, dgruyter_author_star_and_affiliation_labels}`.
+
+### 906. The `\maketitle` replay gate does not run what `\ifx` and its kin only compare or show; the full stop closing an IEEE author block after a grade is no part of its names, and the notes after it stay the block's (Perl: the class body is never run; IEEE grades dropped)
+
+`body_vocabulary_is_defined` (#756) refused a class title page that tests a control sequence TeX never defines:
+zaa.cls:166 `\ifx\@dedication\undefined` gave "The \maketitle body was not replayed: it uses \undefined", and the
+addresses only its `\maketitle` prints (`\@addresses`, :115-127, in its `\afootnote`, :190; numbered stores K11 does not
+take) were lost (1902.07328: "University of Calgary" and the MSC line "Primary 34K20, secondary 34N05", which pdflatex
+prints). A token TeX reads unexpanded and never runs is now not checked (`unrun_operands`, sect05.rs): `\ifx`'s two
+comparands (tex.web §507, `get_next`), e-TeX's `\ifdefined`'s one (etex.ch `if_def_code`), `\string`'s and
+`\meaning`'s (§470-471, `get_token`). A parameter (`#1`) is one comparand; after `\expandafter\ifx` a
+`\csname…\endcsname` first comparand's name tokens are checked as any others and the token after `\endcsname` is the
+second. Any other first comparand after `\expandafter\ifx` is expanded once (§367), so nothing there is skipped
+(`\expandafter\ifx\Hy@pdfversion\relax`). `\noexpand`'s operand is checked as well: in an `\edef`/`\xdef` replacement
+text, its main use, the operand is stored and runs when the macro is called (`\edef\x{\noexpand\Hy@SectionAnchorHref{a}}\x`).
+Both bodies are refused by the gate, which names the control sequence; 86d's first round admitted them, and the
+replay's error net then discarded each body after 1 error. A `\newif` switch in a skipped place is no conditional for
+the dead-branch reading (`switch_is_operand`: `\ifx\if@x\undefined` keeps its branches; not after `\expandafter\ifx`),
+so the skipped positions stay the body's.
+`\@ifundefined{name}` and `\ifcsname` take characters and needed nothing. Both branches of an `\ifx` are still
+checked: `\ifx\@foo\undefined\else…\@foo…\fi` with `\@foo` undefined stays refused (the dead-branch reading of
+`\@ifundefined` admitted apa7's man-mode title page, the #265/68u dead end). A replayed body that calls the kernel's
+`\maketitle` (`\let\@origmaketitle\maketitle` … `\def\maketitle{\ifx\@institute\undefined…\fi\@origmaketitle}`, the
+77i probe `relax`, replayed now) runs it with `\lx@maketitle@body` empty (`title_page_replay_tokens`), as it already ran
+`\@maketitle` relaxed: that nested `\maketitle` superseded the first and handed the class's keywords store on as a
+`<pubnote>` beside the deposit's "Key words: lensing" — pre-existing for any such wrapper the gate admitted
+(`\def\maketitle{\@origmaketitle}` gave it on the base, 501e8ba4f1).
+
+The full stop or semicolon closing an IEEE author block right after a grade is no part of its names: IEEEtran's binding
+takes it out before the block is read (`without_stop_after_grade`, ieeetran_cls.rs; only what prints no text after it,
+and only such material between it and an `\IEEEmembership{…}`: spaces, `\par`, `\\`, `\vspace{…}`, `\thanks{…}`,
+`\footnote{…}` and `\IEEEcompsocitemizethanks{…}` notes). `…,\\ and Farshid Alambeigi$^{1}$
+\IEEEmembership{Member, IEEE}\thanks{…}.}` (2405.17600): the lone "." left once the grade and the note are set apart
+made the last line no names, so its grade was dropped (KNOWN_PERL_ERRORS #534); in an `\IEEEauthorblockN` the line's
+authors became every author's affiliation ("Charlie Zhang, , Xianbin Wang, , Jiangchuan Liu, .", 2405.10825;
+2112.14209, 2409.11755, 2510.15773). Every reading of the names after it — the line test (`names_continue`), the block's
+cautious split, a grade rejoining its name (`is_name_qualifier`) — took the "." for a word, so the stop is removed once
+at the binding, not taught to each test: a rule in the shared `name_count` alone kept 2405.10825's names one author (an
+Error), and 1810.08035's `{\em Senior Member, IEEE}.` became a creator of its own. A stop after any other text (an
+affiliation's, a grade written `{\em …}`: 1810.08035, whose last line stays every author's affiliation, as before) stays.
+The notes between the grade and the end of the block keep the reading the stop gave them. Where the names carry no
+marks, the stop had made the last line no names and the notes the document's `<pubnote>`s. The binding now sets them on
+a line of their own after a `\\`: a line of notes alone reads as no names and yields the document's notes, as
+2510.15773's own `\\`-lines did. So they stay the document's: all six of 2112.14209's (with "L. Qiao, J. Zhang, Z. Gao,
+and D. Zheng are with…" and the ICCC presented-in-part note), 2409.11755's one, which covers all five authors ("H. Fukada
+and N. Ishikawa are with … H. Iimori, C. Pradhan, and S. Malomsoky are with Ericsson…"; pdflatex prints it as an
+unmarked page-1 footnote), and 2510.15773's four (the first had followed the grade; the other three were on `\\`-lines).
+Left after the grade, they went to the last author by position alone in 86d's first round: Marco Di Renzo held
+2112.14209's six, Naoki Ishikawa 2409.11755's one (the HTML put a † on his name), Chau Yuen 2510.15773's first. Charter
+§4 rules that out: IEEEtran journal `\thanks` print unmarked, and nothing ties them to an owner. The stop is removed only where no note changes hands by it, decided by the shared reader's own tests of a mark, three
+of them: any mark on the names (`names_any`: `author_mark_position` on the block with its notes taken out, as
+`llncs_cls.rs` reads its list; it sees a `\let` alias of `\textsuperscript`, a mark in a group or an `\mbox`); a mark on
+the names that reads as a label (`names_labelled`: `leads_with_mark` on the names from one of those marks, the test the
+notes are read by — `$^{1}$`, `\IEEEauthorrefmark{2}`, `$^{1,*}$`, not `$^{*}$`, `$^{\dag}$`, `\textsuperscript{*}`);
+and a note after the grade leading with a label (`notes_marked`: `leads_with_mark` on each, `$^{1}$…`, `\up{1}…`; a
+symbol such as `$^{*}$` is a note's own mark, no affiliation's). Three branches: with neither the names nor a note
+marked (`!names_any && !notes_marked`), the stop goes and the notes move to their own line (above); with a label on the
+names and a note marked (`names_labelled && notes_marked`), the stop goes and the notes stay in place, read by their
+marks as the base reads them with the stop; only the grade is added (2405.17600, whose first marks, `$^{*1}$`, lead with a
+symbol; Sarah Go's `$^{1}$` is the label; the guard's `$^{1}$` and `\let\up\textsuperscript` variants; the 86d r2 re-review's m0-m3, m5, m9, m13, the r3 re-review's
+a7, a17: the same notes and affiliations as on the base). Every other block is left exactly as the base reads it, stop
+and all: marks on the names alone (`Ann Able$^{*}$,… Cat Cole,~\IEEEmembership{Fellow,~IEEE}.\thanks{$^{*}$Corresponding
+author.}\thanks{Manuscript received May 1.}`, the r2 re-review's m4 and n4b; the base's notes the document's, where
+without the stop both went to Cat Cole), on the notes alone, and names marked only by symbols over a note led by a
+number or letter (`Ann Able$^{*}$,… Cat Cole,~\IEEEmembership{Fellow,~IEEE}.\thanks{$^{*}$Corresponding
+author.}\thanks{$^{1}$All authors are with X.}`, the r3 re-review's a9, a12: read as both-marked, the correspondence
+note went to Cat Cole and the numbered note became a creator with no name; a test that took a symbol for a mark on the
+names and not on a note had let them through). r2's literal test of a top-level `^`/`\textsuperscript`/`\IEEEauthorrefmark` read an alias
+as no mark and moved marked notes to a line of their own, so they lost their authors (the re-review's B1). Two
+pre-existing residuals of the shared reader are not this binding's: a line of notes alone is not read by marks (`Cat
+Cole$^{2}$` keeps a printed "2" and both marked notes become pubnotes, base alike), and a correspondence note is not tied
+to a non-last author's mark (n4b without the stop: Ann Able's `$^{*}$` note goes to Cat Cole, base alike; RED
+`author_ieee_correspondence_note_of_a_non_last_author`, the observer's S2c item, a reader change for its single home).
+A note after a `\\` that already
+follows the grade is on such a line already. `[journal,compsoc]`'s
+`…Fellow,~IEEE}.\IEEEcompsocitemizethanks{\IEEEcompsocthanksitem A. Able is with X.}` keeps Cat Cole (the 86d review's
+probe; it had lost her, base alike), the note the document's. Notes after a grade with no stop keep the pre-existing
+reading: they go to the last author by position (`…Cat Cole,~\IEEEmembership{Fellow,~IEEE}\thanks{A. Able is with
+X.}\thanks{Manuscript received May 1.}}`, both Cat Cole's). Perl does the same: on
+`author_ieee_membership_after_closing_stop` it puts the `\thanks` inside Alambeigi's creator. That reading waits for a
+ruling; an upper bound of 322 of the 1,801 `ieee86d` papers have a `\thanks` right after an `\IEEEmembership`.
+Residual (RED `sectioning-frontmatter/author_ieee_membership_mark_before_closing_stop`, 0 of 1,801 by regex): a mark
+between the grade and the stop (`…Fellow,~IEEE}$^{*}$.\thanks{…}`) is not looked past, so the last line stays every
+author's affiliation.
+
+Witnesses 1902.07328 (replayed), 2307.11186 and 2507.13469 (cms-tdr.cls:786 `\ifx\cmsMessage\undefined` passes; still
+refused at :689's `\ifthenelse{\boolean{cms@pas}}{\cmsContact}{}`, a dead branch the gate does not read), 2406.18171
+(copernicus.cls:554: its replayed `\maketitle` sets manuscript mode's `\baselinestretch` 1.4 for the rest, :575, as
+pdflatex does), 2405.17600, 2405.10825, 2112.14209, 2409.11755, 2510.15773, 1810.08035 (unchanged). Residual
+(pre-existing for any class of the shape, RED
+`sectioning-frontmatter/class_title_page/maketitle_replay_label_of_refused_abstract_store`): a class `\abstract` that
+only stores, refused by the kernel's locked one, leaves the label its replayed title page prints before the empty store
+as a line of its own — zaa's "Abstract." after the frontmatter's `<abstract>`. 1902.07328's other residuals: the
+nulled title and author slots of its replayed title page leave two empty `<para><text/></para>`, blank space in the
+HTML; its masthead's "343–0" is what pdflatex prints in a single pass (zaa.cls:503-504 `\last@page{0}`; :518 writes the
+real last page to the `.aux`, so 343–375 needs a second pass). A/B of the final code (`86d-rel`, the gates' build of this code) against 501e8ba4f1 (`86d-base`), cached harness, 9,329 papers (pop86d2: 3,634 shipping a `.cls` that tests `\ifx…\undefined` in a title-page file, 1,800 IEEE `\IEEEmembership` papers, 544 whose `\author` closes with a stop; pop86d7: 3,351 raw-class papers): 8 changed, none worse, E 8,592 → 8,592, F 25 → 25. Better creators with their grades on 2405.17600, 2405.10825, 2112.14209, 2409.11755 and 2510.15773, their notes the document's as on the base; 2605.22853's two unmarked notes after a closing stop ("The authors are with the Neuro-X Institute…", "Manuscript received…") are the document's now, where the base gave them to the last author; 1902.07328 replayed; 2406.18171 its manuscript `\baselinestretch`. No other paper changed (r86d10, r86d11; the same 8 outputs as the second round's `86d-rel`). Earlier rounds' A/B noise, each rerun alone on both binaries: the second round's 2210.01917 (a 180 s timeout Fatal on both sides, the exit code flipping), 1309.5800 (W 60 → 59 in the A/B, identical alone) and 1203.4558 (one math fingerprint, identical XML alone); the first round's 1101.3742 (one display equation, identical alone; its A/B ran `86d6-rel`). Repros
+`sectioning-frontmatter/class_title_page/maketitle_replay_gate_ifx_comparands_are_not_run` (with `tpifx.cls`),
+`sectioning-frontmatter/author_ieee_membership_after_closing_stop`; guards `perfect_kernel_batch86d::*`
+(`ieee_membership_kept_after_closing_stop` pins every note's place, `note_places`;
+`maketitle_replay_gate_runs_what_noexpand_stores_and_expandafter_expands` the two refusals).

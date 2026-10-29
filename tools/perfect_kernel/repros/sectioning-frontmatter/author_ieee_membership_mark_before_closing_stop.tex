@@ -1,0 +1,20 @@
+% An `\IEEEmembership` grade followed by a mark and then the block's closing full stop: the stop is not taken out
+%   (ieeetran_cls.rs `without_stop_after_grade` looks past spacing and notes only, not a mark), so the last line still
+%   reads as no names.
+% witness: none (synthetic; 86d r1 review S3 variant; 0 of 1,801 papers of pop ieee86d by regex).
+% oracle:  pdflatex 0 errors: "Ann Able, Member, IEEE, Bob Baker, / and Cat Cole, Fellow, IEEE∗ ." and the unmarked
+%          note "∗Corresponding author."
+% engines: rust 86d-base = 86d = two creators, each with the affiliation "and Cat Cole, *.", the note a document
+%          note; perl = three creators ("Ann Able, Bob Baker", "Cat Cole", "$ˆ*$Corresponding author."; no grade,
+%          KNOWN_PERL_ERRORS #534)
+% expect:  0 errors, 0 warnings; three creators Ann Able (role=membership "Member, IEEE"), Bob Baker and Cat Cole
+%          (role=membership "Fellow, IEEE"), the note a document note
+% status:  RED (86d); catalog only, no guard
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann Able,~\IEEEmembership{Member,~IEEE,} Bob Baker,\\ and Cat Cole,~\IEEEmembership{Fellow,~IEEE}$^{*}$.\thanks{$^{*}$Corresponding author.}}
+\maketitle
+Body.
+\end{document}

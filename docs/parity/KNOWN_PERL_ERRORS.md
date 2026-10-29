@@ -11460,6 +11460,18 @@ every grade in conference mode (IEEEtran.cls:6270 swallows them) unless `\IEEEov
 ieee_membership_outside_the_names_stays_dropped, ieee_membership_own_definition_kept,
 ieee_membership_conference_override, author_ieee_membership_in_a_block_stays_with_its_name,
 ieee_compsoc_names_continue_past_a_break, ieee_grade_comma_before_a_break_continues_names}`.
+A block that closes its sentence after the last grade or note (`…,\\ and Farshid Alambeigi$^{1}$
+\IEEEmembership{Member, IEEE}\thanks{…}.}`, 2405.17600; `…, Jiangchuan Liu, \IEEEmembership{Fellow, IEEE}.}` in an
+`\IEEEauthorblockN`, 2405.10825) keeps the last line's grades and authors too (86d): the binding takes out a stop that closes the block right
+after a grade (`without_stop_after_grade`, OXIDIZED_DESIGN_DIVERGENCES #906), only where no note changes hands by
+it: with neither the names nor a note after the grade marked (the notes stay the document's: 2112.14209, 2409.11755,
+2510.15773), or with a label on the names (`$^{1}$`, not a symbol such as `$^{*}$`) and a note after the grade led by
+one (read by their marks, as on the base: 2405.17600); every other block, symbol-only name marks over a numbered note
+too, is left as the base reads it. Perl on both: no grade, and
+2405.10825's block one author, as for any IEEE block; Perl also gives the notes after the last name to the last author
+by position (the `\thanks` inside Alambeigi's creator on `author_ieee_membership_after_closing_stop`), as Rust still does
+when no stop closes the block (awaiting a ruling). Guards `perfect_kernel_batch86d::{ieee_membership_kept_after_closing_stop,
+ieee_block_names_kept_after_closing_stop}`.
 
 ## 535. A `\label` after acmart's `\Description` labels the hidden description note
 

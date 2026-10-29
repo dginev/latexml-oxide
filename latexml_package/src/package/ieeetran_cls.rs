@@ -1259,6 +1259,7 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
 /// ([`names_continue`]: `Wenming~Li, \\ Xiaochun~Ye, …`, 2408.01902); grades past the names keep `\IEEEmembership`,
 /// which drops them.
 fn name_memberships(tokens: Vec<Token>) -> Vec<Token> {
+  let tokens = without_stop_after_grade(tokens);
   let spacing = |t: &Token| *t == T_SPACE!() || *t == T_ACTIVE!('~');
   // the end of the line opening at `from`: the next `\\` or `\and` outside groups
   let line_end = |from: usize| {
@@ -1393,6 +1394,229 @@ fn name_memberships(tokens: Vec<Token>) -> Vec<Token> {
     i += 1;
   }
   out
+}
+
+/// `tokens` without the full stop or semicolon that closes them right after a grade: one at the top level that only
+/// what prints no text follows — spaces, `\par`, `\\`, `\vspace{…}` and authors' notes (`\thanks{…}`, `\footnote{…}`)
+/// — and only such material parts from an `\IEEEmembership{…}` before it: `…,\\ and Farshid Alambeigi$^{1}$
+/// \IEEEmembership{Member, IEEE}\thanks{…}.}` (2405.17600), `…, Jiangchuan Liu, \IEEEmembership{Fellow, IEEE}. }` in an
+/// `\IEEEauthorblockN` (2405.10825), `…~\IEEEmembership{Fellow,~IEEE}.` + a blank line, notes and a `\\` (2510.15773),
+/// `…~\IEEEmembership{Fellow,~IEEE}` + a blank line, `\vspace{-10mm}` and notes, then `.` (2112.14209). The stop
+/// closes the block's sentence and is no part of the last author's names or grade: every reading of the names after it
+/// — whether the line after a `\\` continues them ([`names_continue`]), the block's split, a grade rejoining its name —
+/// took the lone "." for a word, so the last line's grades were dropped and its authors became every author's
+/// affiliation (2112.14209, 2409.11755, 2510.15773). A stop after any other text (an affiliation's) stays.
+///
+/// The stop parts the notes after it from the names, and the shared reader reads them by that: the stop goes only where
+/// it is sure no note changes hands, by the reader's own tests of a mark — any mark on the names, `author_mark_position`
+/// on the block with its notes taken out (which sees a `\let` alias of `\textsuperscript`, a mark in a group or an
+/// `\mbox`); a mark on the names that reads as a label, `leads_with_mark` on the names from that mark (`$^{1}$`,
+/// `\IEEEauthorrefmark{2}`, `$^{1,*}$`; not `$^{*}$`, `$^{\dag}$`); a note after the grade led by a label,
+/// `leads_with_mark` (`$^{1}$…`, `\up{1}…`; a symbol, `$^{*}$Corresponding author`, is a note's own mark, no
+/// affiliation's). Three branches. With neither the names nor a note marked, the stop goes and the notes after the
+/// grade move onto a line of their own, after a `\\`, which reads as no names and yields the document's notes
+/// (2510.15773's own `\\`-lines): left after the grade, they would follow the last name and go to its author by
+/// position alone (all six of 2112.14209's, 2409.11755's one covering all five authors, 2605.22853's "The authors are
+/// with"). With a label on the names and a note after the grade led by one, the stop goes and the notes stay, read by
+/// their marks as the base reads them with the stop (2405.17600, whose first marks, `$^{*1}$`, lead with a
+/// symbol; Sarah Go's `$^{1}$` is the label; the 86d r2 re-review's m0-m3, m5). Every other block is left exactly
+/// as the base reads it: marks on the names alone (`Ann Able$^{*}$` over `\thanks{$^{*}$Corresponding author.}`,
+/// the r2 re-review's m4, n4b), on the notes alone, or names
+/// marked only by symbols over a note led by a number (the same block with `\thanks{$^{1}$All authors are with X.}`,
+/// the r3 re-review's a9, a12: read as both-marked, the correspondence note went to the last author and the numbered
+/// note became a creator with no name). There, without the stop, the notes went to the last author (n4b's
+/// correspondence note, whose `*` marks the first: the shared reader ties no such note to a non-last author's mark,
+/// the observer's S2c item). A note after a `\\` that already follows the grade is on such a line. Notes after a grade with no stop
+/// keep their reading, Perl's too (the last author's; KNOWN_PERL_ERRORS #534).
+fn without_stop_after_grade(mut tokens: Vec<Token>) -> Vec<Token> {
+  let notes = [
+    T_CS!("\\thanks"),
+    T_CS!("\\footnote"),
+    T_CS!("\\IEEEcompsocitemizethanks"),
+  ];
+  let spacing = |t: &Token| {
+    *t == T_SPACE!() || *t == T_ACTIVE!('~') || *t == T_CS!("\\par") || *t == T_CS!("\\\\")
+  };
+  // the start of the group ending just before `end` that prints no text there (a `\thanks{…}`, `\footnote{…}`,
+  // `\IEEEcompsocitemizethanks{…}`, `\vspace{…}`, `\vspace*{…}`), at its command
+  let note_before = |tokens: &[Token], end: usize| -> Option<usize> {
+    if end == 0 || tokens[end - 1].code != Catcode::END {
+      return None;
+    }
+    let mut level = 0usize;
+    let open = (0..end).rev().find(|&j| {
+      match tokens[j].code {
+        Catcode::END => level += 1,
+        Catcode::BEGIN => level = level.saturating_sub(1),
+        _ => {},
+      }
+      level == 0
+    })?;
+    let mut before = open;
+    while before > 0 && tokens[before - 1] == T_SPACE!() {
+      before -= 1;
+    }
+    if before > 1 && tokens[before - 1] == T_OTHER!("*") && tokens[before - 2] == T_CS!("\\vspace")
+    {
+      return Some(before - 2);
+    }
+    (before > 0 && (notes.contains(&tokens[before - 1]) || tokens[before - 1] == T_CS!("\\vspace")))
+      .then(|| before - 1)
+  };
+  // back over spaces and notes from `end`
+  let back = |tokens: &[Token], mut end: usize| -> usize {
+    loop {
+      if end > 0 && spacing(&tokens[end - 1]) {
+        end -= 1;
+      } else if let Some(start) = note_before(tokens, end) {
+        end = start;
+      } else {
+        return end;
+      }
+    }
+  };
+  let end = back(&tokens, tokens.len());
+  if end == 0 || ![T_OTHER!("."), T_OTHER!(";")].contains(&tokens[end - 1]) {
+    return tokens;
+  }
+  let stop = end - 1;
+  let grade_end = back(&tokens, stop);
+  // the grade's group, and `\IEEEmembership` before it
+  if grade_end == 0 || tokens[grade_end - 1].code != Catcode::END {
+    return tokens;
+  }
+  let mut level = 0usize;
+  let Some(open) = (0..grade_end).rev().find(|&j| {
+    match tokens[j].code {
+      Catcode::END => level += 1,
+      Catcode::BEGIN => level = level.saturating_sub(1),
+      _ => {},
+    }
+    level == 0
+  }) else {
+    return tokens;
+  };
+  let mut before = open;
+  while before > 0 && tokens[before - 1] == T_SPACE!() {
+    before -= 1;
+  }
+  if before == 0 || tokens[before - 1] != T_CS!("\\IEEEmembership") {
+    return tokens;
+  }
+  // (each note's argument at the top level from `from`, and `tokens` with every note taken out, at any depth)
+  let note_args = |tokens: &[Token], from: usize| -> Vec<Tokens> {
+    let mut out = Vec::new();
+    let mut level = 0usize;
+    let mut i = from;
+    while i < tokens.len() {
+      if level == 0 && notes.contains(&tokens[i]) {
+        let (arg, next) = note_argument(tokens, i + 1);
+        out.push(Tokens::new(arg));
+        i = next;
+        continue;
+      }
+      match tokens[i].code {
+        Catcode::BEGIN => level += 1,
+        Catcode::END => level = level.saturating_sub(1),
+        _ => {},
+      }
+      i += 1;
+    }
+    out
+  };
+  let without_notes = |tokens: &[Token]| -> Tokens {
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < tokens.len() {
+      if notes.contains(&tokens[i]) {
+        i = note_argument(tokens, i + 1).1;
+      } else {
+        out.push(tokens[i]);
+        i += 1;
+      }
+    }
+    Tokens::new(out)
+  };
+  // marks by the shared reader's own tests: any mark on the names (`author_mark_position`, which sees a `\let` alias,
+  // a grouped mark, `\mbox{$^{1}$}`); a mark on the names that reads as a label, by the test a note's is read by
+  // (`leads_with_mark` on the names from that mark: `$^{1}$`, `\IEEEauthorrefmark{2}`, `$^{1,*}$`, not `$^{*}$`,
+  // `$^{\dag}$`); and a note leading with a label (`leads_with_mark`)
+  let names = without_notes(&tokens).unlist();
+  let names_any = author_mark_position(&Tokens::new(names.clone())).is_some();
+  let mut names_labelled = false;
+  let mut from = 0;
+  while let Some(at) = author_mark_position(&Tokens::new(names[from..].to_vec())) {
+    let at = from + at - 1;
+    if leads_with_mark(&Tokens::new(names[at..].to_vec())) {
+      names_labelled = true;
+      break;
+    }
+    from = at + 1;
+  }
+  let notes_marked = note_args(&tokens, grade_end).iter().any(leads_with_mark);
+  // (neither the names nor a note marked; or both marked with labels; else the block as the base reads it)
+  let unmarked = !names_any && !notes_marked;
+  if !unmarked && !(names_labelled && notes_marked) {
+    return tokens;
+  }
+  tokens.remove(stop);
+  if unmarked {
+    // a note after the grade before any `\\` (the tail holds only spacing, `\vspace` and notes, at the top level)
+    let mut level = 0usize;
+    for t in &tokens[grade_end..] {
+      if level == 0 && *t == T_CS!("\\\\") {
+        break;
+      }
+      if level == 0 && notes.contains(t) {
+        tokens.insert(grade_end, T_CS!("\\\\"));
+        break;
+      }
+      match t.code {
+        Catcode::BEGIN => level += 1,
+        Catcode::END => level = level.saturating_sub(1),
+        _ => {},
+      }
+    }
+  }
+  tokens
+}
+
+/// The argument of the note whose command ends just before `at` (`\thanks[…]{…}`): its tokens, braces dropped, and
+/// the position after it; past spaces and an optional `[…]`, a group or else one token.
+fn note_argument(tokens: &[Token], mut at: usize) -> (Vec<Token>, usize) {
+  let skip_spaces = |at: &mut usize| {
+    while *at < tokens.len() && tokens[*at] == T_SPACE!() {
+      *at += 1;
+    }
+  };
+  skip_spaces(&mut at);
+  if at < tokens.len() && tokens[at] == T_OTHER!("[") {
+    while at < tokens.len() && tokens[at] != T_OTHER!("]") {
+      at += 1;
+    }
+    at += 1;
+    skip_spaces(&mut at);
+  }
+  if at >= tokens.len() {
+    return (Vec::new(), tokens.len());
+  }
+  if tokens[at].code != Catcode::BEGIN {
+    return (vec![tokens[at]], at + 1);
+  }
+  let mut level = 0usize;
+  for j in at..tokens.len() {
+    match tokens[j].code {
+      Catcode::BEGIN => level += 1,
+      Catcode::END => {
+        level -= 1;
+        if level == 0 {
+          return (tokens[at + 1..j].to_vec(), j + 1);
+        }
+      },
+      _ => {},
+    }
+  }
+  (tokens[at + 1..].to_vec(), tokens.len())
 }
 
 /// An explicit author-block body with the grades of each `\IEEEauthorblockN{…}` name line made its author's
