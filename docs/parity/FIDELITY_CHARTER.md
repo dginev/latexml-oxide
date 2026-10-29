@@ -97,6 +97,10 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   `DEFERRED_FAMILIES.md` (hand-typeset title pages, ifacconf's `{frontmatter}` box, names stacked under names, …) is
   excluded from the readability bar — its witnesses stay recorded for later work, not dropped; and the archival tier's
   provenance (how each creator and contact was decided) is recorded as a **schema attribute**, not a class token.
+- **Frontmatter label keys are compared by their printed text** (2026-10-29, refactor stage 4): the marks that link
+  authors to affiliations (`\inst{…}`, `$^{…}$`, `\textsuperscript{…}`) are keyed by the printed text of the digested
+  operand, not Perl's source-string ToString — aa's `\inst{\ESO}` with `\newcommand{\ESO}{2}` prints 2 and is entry 2's;
+  `\dag` and `$\dagger$` are one label. A documented divergence from Perl's frontmatter API (OD entry with the stage).
 - **A second `\maketitle` keeps the latest title** (2026-10-01); multi-contribution volumes are deferred (KPE #1026).
 
 ## 5. Bindings and shipped copies

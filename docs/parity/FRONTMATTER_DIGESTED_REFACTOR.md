@@ -86,7 +86,7 @@ they stay for stages 3–5.
    q17's mid-line unowned mark as text; the q18b/x2 cut path, 90a's RED repros, among them amsart's `$\,^{1}$` address
    lines, 0804.4669's shape, `amsart_address_spaced_marks_cut_with_their_lines`) and `notes::leads_with_mark`. Gate: the
    revtex/ams census A/B.
-4. **Labels as printed** (after the user's ruling): every family; the marked-path guards; the `\lx@frontmatter@sup`
+4. **Labels as printed** (RULED 2026-10-29: printed labels, FIDELITY_CHARTER §4): every family; the marked-path guards; the `\lx@frontmatter@sup`
    label keys (`author_macros.rs:254` → `script_marks`).
 5. **Pre-splitters onto the rehearsal**: ijcai e-mails, `\lx@split@addresses` → `addresses_in`, `\inst` marks,
    `\thanks`-as-affiliations, revtex's group rule (`content_marks`/`group_shares_the_mark`). With the last token
