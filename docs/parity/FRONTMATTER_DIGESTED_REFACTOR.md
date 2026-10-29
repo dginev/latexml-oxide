@@ -74,9 +74,15 @@ NAME_TEXT_COMMANDS[38], PLAIN_FONT_COMMANDS[8], FONT_WRAPPERS[16].
 4. **Labels as printed** (after the user's ruling): every family; the marked-path guards.
 5. **Pre-splitters onto the rehearsal**: ijcai e-mails, `\lx@split@addresses` → `addresses_in`, `\inst` marks,
    `\thanks`-as-affiliations, revtex's group rule.
-6. **Retire the old reader family by family** through the per-family writer gate (S2b/S2c; ams_support written,
+6. **Provenance as a schema attribute** (user 2026-10-29: the archival tier records how each creator and contact was
+   decided as a schema attribute): one `LaTeXML.model`/RelaxNG attribute on `ltx:creator`/`ltx:contact` carrying the
+   resolver's decision (spelled, marks, order, the group's only author, the corresponding author, the block, the
+   class's own call); the observer's resolver already tags each decision (`owner:spelled`, `owner:order`,
+   `owner:block`), so the written families emit it first and each family gains it as it is promoted below. A schema
+   change refreshes the binding nets' RelaxNG copies (`binding_nets/scripts/rng/`).
+7. **Retire the old reader family by family** through the per-family writer gate (S2b/S2c; ams_support written,
    aas_support's G5 held): notes, e-mails, marks, line kinds, name parting last.
-7. **Per-class parsers** as each family is promoted.
+8. **Per-class parsers** as each family is promoted.
 
 ## Test suite and measurement
 

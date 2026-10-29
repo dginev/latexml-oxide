@@ -93,6 +93,10 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   (2026-10-21, rank 93).
 - **A footnote-list symbol (`\dag` included) that starts a line labels that line**; the line goes to the authors who
   carry the symbol, affiliation or legend alike (2026-10-21).
+- **The frontmatter exit bar's two rulings** (2026-10-29): a family deferred with its witnesses in
+  `DEFERRED_FAMILIES.md` (hand-typeset title pages, ifacconf's `{frontmatter}` box, names stacked under names, …) is
+  excluded from the readability bar — its witnesses stay recorded for later work, not dropped; and the archival tier's
+  provenance (how each creator and contact was decided) is recorded as a **schema attribute**, not a class token.
 - **A second `\maketitle` keeps the latest title** (2026-10-01); multi-contribution volumes are deferred (KPE #1026).
 
 ## 5. Bindings and shipped copies
