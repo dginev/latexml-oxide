@@ -84,6 +84,11 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   one address left on the block of a multi-author paper, to the one author marked as the corresponding author (a
   "Corresponding author" note, or a mark whose legend says so; 2026-10-21); else to the block. Otherwise an address that
   spells no one is not guessed onto an author.
+- **An author's own call holding one address keeps it** (2026-10-29, #420): when an `\email` (or the class's
+  equivalent) belongs to one author's own call — amsart's `\author{A}\address{…}\email{x}`, one address — the class's
+  structure says one address per author, and spelling does not move it (`\author{Anna Smith}…\email{mueller-group@x.de}`
+  stays Anna Smith's beside `\author{J\"org M\"uller}`, its ASCII twin too). A call holding several addresses is not
+  that evidence: spelling decides among them, as above (1204.1484: `montaldo@`, `piu@` under Caddeo's call).
 - **The marks shown on a name are its requests for labelled affiliations**; a name's label is the name alone
   (2026-10-21, rank 93).
 - **A footnote-list symbol (`\dag` included) that starts a line labels that line**; the line goes to the authors who
