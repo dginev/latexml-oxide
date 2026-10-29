@@ -1,0 +1,21 @@
+% `\abstract{…}` after `\maketitle`, then `{abstract}`: both printed where they stand, both kept. The command form is
+% dequeued by the next abstract only before `\maketitle` places the frontmatter (queue_digest.rs `COMMAND_FORM`); Perl's
+% `\lx@clear@frontmatter` empties the queue filled after the flush too, and loses the first (OXIDIZED_DESIGN #154).
+% witness: review probe q01 (86i r1); the after-`\maketitle` sibling of 2305.00493's sn-jnl shape.
+% Guard: perfect_kernel_batch86i::abstract_command_form_twice_before_maketitle_keeps_the_last.
+% oracle:  pdflatex 0 errors: "Abstract Command abstract words. Abstract Environment abstract words. 1 Intro".
+% engines: perl: one abstract, the environment's. rust int117a and 86i r1: the same.
+% expect:  0 errors, 0 warnings; title, creator, abstract ("Command abstract words."), abstract ("Environment
+%          abstract words."), section.
+% status:  RED (int117a, 86i r1) -> GREEN (86i r2)
+\documentclass{article}
+\begin{document}
+\title{Probe}\author{Ann}
+\maketitle
+\abstract{Command abstract words.}
+\begin{abstract}
+Environment abstract words.
+\end{abstract}
+\section{Intro}
+Body.
+\end{document}

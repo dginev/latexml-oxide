@@ -1,0 +1,27 @@
+% An abstract added again with the same text after `\maketitle` — the `{abstract}` environment twice
+% (`\lx@add@frontmatter@until`), then once in place (`\lx@add@frontmatter@now`) — is one block: the earlier entries
+% whose name, language and text (whitespace aside) the new one repeats are dropped, the last kept
+% (`frontmatter_drop_repeats`, OXIDIZED_DESIGN #154), while a second abstract with other text is kept
+% (second_abstract_after_maketitle_*.tex). Keywords re-added
+% as their list grows (OmniBus's `\kwd`) replace the earlier ones, as before: the keywords stay replaceable.
+% witness: none (synthetic; the safety net for a block a class or binding adds twice).
+% Guard: perfect_kernel_batch86i::repeated_abstract_with_the_same_text_is_one.
+% oracle:  pdflatex 0 errors: "Abstract Same words." twice, "Same words.", "alpha", "alpha, beta" (pdflatex prints
+%          what it is given, `\lx@add@frontmatter@now` provided as printing its text; the frontmatter keeps one each).
+% engines: perl (vendored HEAD) 0 errors: three identical abstracts, two keywords. rust int117a: 0 errors, one each
+%          (the clearing).
+% expect:  0 errors, 0 warnings; one `ltx:abstract` "Same words.", one `ltx:keywords` "alpha, beta".
+% status:  GREEN (int117a) -> GREEN (86i) (the dedup now does for the abstract what the clearing did)
+\documentclass{article}
+\makeatletter
+\providecommand\lx@add@frontmatter@now[2]{\par#2\par}% (pdflatex: print it)
+\begin{document}
+\title{Probe}\author{Ann}\maketitle
+\begin{abstract}Same   words.\end{abstract}
+\begin{abstract}Same words.\end{abstract}
+\lx@add@frontmatter@now{ltx:abstract}{Same
+  words.}
+\lx@add@frontmatter@now{ltx:keywords}{alpha}
+\lx@add@frontmatter@now{ltx:keywords}{alpha, beta}
+\section{Intro}Body.
+\end{document}

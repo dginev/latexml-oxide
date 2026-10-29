@@ -1,0 +1,23 @@
+% Two `{abstract}`s after amsart's `\maketitle`, printed where they stand (amsart.cls:854): both are frontmatter
+% abstracts, in source order, the first keeping its in-abstract keywords and MSC lines. The second replaced the first
+% (OXIDIZED_DESIGN #154's `REPLACEABLE_FRONTMATTER_TAGS`, which upstream removed in #2767): a silent content loss.
+% witness: 1006.5288 (amsart, an English and a French abstract after `\maketitle`).
+% Guard: perfect_kernel_batch86i::second_abstract_after_maketitle_is_kept.
+% oracle:  pdflatex 0 errors: "Abstract. English words. Keywords: alpha. MSC: 60G51." then
+%          "Abstract. [Résumé] Mots français."
+% engines: perl (vendored HEAD) 0 errors, both abstracts. rust int117a: 0 errors, only "Mots français.".
+% expect:  0 errors, 0 warnings; two `ltx:abstract`s, "English words. Keywords: alpha. MSC: 60G51." first.
+% status:  RED (int117a) -> GREEN (86i)
+\documentclass{amsart}
+\begin{document}
+\title{Probe}\author{Ann}
+\maketitle
+\begin{abstract}
+English words. \textbf{Keywords:} alpha. \textbf{MSC:} 60G51.
+\end{abstract}
+\begin{abstract}[R\'esum\'e]
+Mots fran\c{c}ais.
+\end{abstract}
+\section{Intro}
+Body.
+\end{document}

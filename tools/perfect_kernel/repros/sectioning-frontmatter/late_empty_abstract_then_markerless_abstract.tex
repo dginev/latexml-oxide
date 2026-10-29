@@ -1,0 +1,35 @@
+% An empty `{abstract}` after `\maketitle`, then an abstract a command adds with no marker of its own
+% (`\lx@add@frontmatter{ltx:abstract}`, as rmaa's hand-off and oup's `\otherabstract` add theirs; pdflatex, where the
+% command is undefined, prints it as a quote): the empty abstract's marker places nothing. The marked abstracts'
+% ordinal (`LATE_MARK_ORDINAL`) is taken by the first abstract added after the marker, its own command's, whether kept
+% or not (`take_late_mark`, cover_order.rs); the markerless one carried the empty abstract's ordinal, and its marker
+% moved it behind "Cover two". With no marker it has no source position: it stays right after the late abstract before
+% it, here the first in the head run, as every late abstract did before 86g (late abstracts keep their source order;
+% DEFERRED_FAMILIES "abstracts a class stores or queues": such classes print it in `\maketitle` only).
+% witness: review 86i r2 (SUSPECTED sibling: rmaa, gretsi, oup `\otherabstract`); 1006.5288 (the late-abstract path).
+% Guard: perfect_kernel_batch86i::second_late_abstract_follows_its_own_cover_line.
+% oracle:  pdflatex 0 errors: "Cover one / Abstract First late words. / Cover two / Abstract / Cover three / Other:
+%          Markerless words. / 1 Intro".
+% engines: perl (vendored HEAD) 0 errors: First, an empty abstract, Markerless, then the three cover lines.
+%          rust int117a: titlepage (Cover one), Markerless, para, para; First lost.
+%          rust 86i r2: titlepage, First, Cover two, Markerless (placed by the empty abstract's marker), Cover three.
+% expect:  0 errors, 0 warnings; titlepage[Cover one], abstract (First), abstract (Markerless), para (Cover two),
+%          para (Cover three), section.
+% status:  RED (86i r2) -> GREEN (86i r3)
+\documentclass{article}
+\makeatletter
+\newcommand\otherabs[1]{\@ifundefined{lx@add@frontmatter}{\begin{quote}Other: #1\end{quote}}%
+  {\lx@add@frontmatter{ltx:abstract}[name={Other}]{#1}}}
+\makeatother
+\begin{document}
+\title{Probe}\author{Ann}
+\maketitle
+\begin{center}Cover one\end{center}
+\begin{abstract}First late words.\end{abstract}
+\begin{center}Cover two\end{center}
+\begin{abstract}\end{abstract}
+\begin{center}Cover three\end{center}
+\otherabs{Markerless words.}
+\section{Intro}
+Body.
+\end{document}

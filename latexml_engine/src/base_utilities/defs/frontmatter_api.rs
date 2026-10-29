@@ -105,6 +105,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // `\received` history, acmart.cls:1859-1872: several revised dates; 2307.05988), honoured by
   // `\lx@add@frontmatter@now` and `@until` ([`takes_accumulate`])
   DefKeyVal!("Frontmatter", "accumulate", "");
+  // Rust-only: the abstract read from `\abstract{…}` (sect05.rs), which Perl's `\lx@add@abstract` queues
+  // ([`COMMAND_FORM`]), honoured by `\lx@add@frontmatter@until` ([`takes_command_form`])
+  DefKeyVal!("Frontmatter", "command_form", "");
   DefKeyVal!("Frontmatter", "name", "");
   // Rust-only: the RDFa pair of an `ltx:rdf` annotation ([`\lx@add@creator@rdf`]; OXIDIZED_DESIGN #479). Semiverbatim, so an
   // address's `_` and `~` are characters, not a script and a tie.
@@ -167,6 +170,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // marker (witness arXiv:2606.00309). The affiliation list itself survives —
     // it is fed separately via `\icmlaffiliation`.
     if tag_tks.to_string().trim().is_empty() || tokens.to_string().trim().is_empty() {
+      drop_late_mark(tag_tks.to_string().trim());
       return Ok(Vec::new());
     }
     queue_add_frontmatter_now(keys_opt.as_ref(), &tag_tks, attrs_opt.as_ref(), Some(&tokens))?;
@@ -209,11 +213,14 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       None => { options.remove("name"); },
     }
     // Replaceable tags (title/toctitle/subtitle/date) keep only one entry — a later
-    // one replaces earlier ones. Ported from upstream `%ReplaceableFrontmatterTags`
-    // (the vendored copy pushes unconditionally → duplicate <title> when a document
-    // re-adds it, e.g. arXiv 2002.09766's appendix `\icmltitle`). OXIDIZED_DESIGN #154.
+    // one replaces earlier ones. Ported from upstream `%ReplaceableFrontmatterTags`, which
+    // upstream later removed (#2767; the vendored HEAD pushes unconditionally → duplicate
+    // <title> when a document re-adds it, e.g. arXiv 2002.09766's appendix `\icmltitle`);
+    // an abstract is printed where it stands, and kept (`PRINTED_WHERE_THEY_STAND`,
+    // 1006.5288). OXIDIZED_DESIGN #154.
     // An `accumulate` entry adds to the ones before (acmart's `\received` history, 2307.05988).
     let replaceable = REPLACEABLE_FRONTMATTER_TAGS.contains(&tag.as_str()) && !accumulate;
+    let printed_in_place = PRINTED_WHERE_THEY_STAND.contains(&tag.as_str());
     // …unless the document body began after the one it would replace: that one is the paper's, this a supplement's
     // ([`seal_digested_frontmatter`]), dropped — with the authors a supplement's frontmatter lists — before it is counted
     // (a later flush's last-author conjunction reads the count).
@@ -222,6 +229,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       && frontmatter_sealed(key)
     {
       Info!("frontmatter", "sealed", s!("{tag} after the document body began is a supplement's; the paper's is kept"));
+      drop_late_mark(&tag);
       // …and the annotations this flush attaches to it, which would otherwise land on the paper's.
       let sealed_off = lookup_string("lx_frontmatter_sealed_off");
       assign_value(
@@ -256,12 +264,16 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
         entry.attr.get("name").map(String::as_str),
         entry.attr.get("xml:lang").map(String::as_str),
         entry.attr.get("_store").map(String::as_str),
+        printed_in_place,
       );
     }
     let index = frontmatter_push(&tag, entry);
     // REPLACE only 'place_keeper'!!
     let digested = digest_frontmatter_item(&tag, content)?;
     frontmatter_set_first_content(&tag, index, TagContent::Box(digested));
+    if replaceable && printed_in_place {
+      frontmatter_drop_repeats(&tag, index);
+    }
     if let Some(key) = seal {
       note_digested_frontmatter(&key);
     }
@@ -289,11 +301,16 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       }
     }
     let accumulate = takes_accumulate(&mut options);
+    // (the abstract's command form, which Perl queues — removable by the next abstract of its name and language until
+    // a flush digests it — while `\maketitle` has not placed the frontmatter: [`COMMAND_FORM`])
+    let command_form =
+      takes_command_form(&mut options) && !lookup_bool("lx_frontmatter_here_digested");
     match get_frontmatter_name(options.get("name"), &tag, &role)? {
       Some(name) => { options.insert("name".to_string(), name); },
       None => { options.remove("name"); },
     }
     let replaceable = REPLACEABLE_FRONTMATTER_TAGS.contains(&tag.as_str()) && !accumulate;
+    let printed_in_place = PRINTED_WHERE_THEY_STAND.contains(&tag.as_str());
     // (sealed whether or not the blocks accumulate: the IEEEtran and VTeX keyword blocks add to the ones before them,
     // and a supplement's after the body began is still its own — 2604.23289's `{IEEEkeywords}` under its "Supplemental
     // File" section, 77t)
@@ -311,6 +328,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       && frontmatter_sealed(key)
     {
       Info!("frontmatter", "sealed", s!("{tag} after the document body began is a supplement's; kept in place"));
+      drop_late_mark(&tag);
       // (read by what the body defines for itself: a class's in-abstract `\keywords` stays in place with it,
       // frontmatter_stores.rs `\lx@abstract@class@setters` — mtt.cls papers' English and Ukrainian abstracts at
       // their end: 1310.0585, 1310.0589, 1212.3890)
@@ -329,22 +347,27 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       labels.push(clean_label(&n.to_string(), Some(&role)).into_owned());
     }
     options.insert("_annotations".to_string(), labels.join(","));
+    if command_form {
+      options.insert(COMMAND_FORM.to_string(), lookup_int(FRONTMATTER_FLUSHES).to_string());
+    }
     let entry = TagData {
       tag: tag.clone(),
       attr: options,
       content: vec![TagContent::PlaceKeeper], // (in case embedded)
     };
-    // Replaceable tags (abstract/keywords) keep only one entry — but ONLY dedup when no
-    // same-tag `@until` is already in progress (open PlaceKeeper), so a nested/malformed
-    // `\begin{abstract}\begin{abstract}…` isn't corrupted by clearing a parent's still-
-    // open entry. OXIDIZED_DESIGN #154. Witness 2511.21969 (nested abstract env).
+    // A replaceable tag keeps only one entry — an abstract, printed where it stands, replaces only a
+    // store's entry no title page printed (`PRINTED_WHERE_THEY_STAND`; the vendored Perl keeps every one, 1006.5288)
+    // — but ONLY clear when no same-tag `@until` is already in progress (open PlaceKeeper), so a nested/malformed
+    // `\begin{abstract}\begin{abstract}…` isn't corrupted by clearing a parent's still-open entry.
+    // OXIDIZED_DESIGN #154. Witness 2511.21969 (nested abstract env).
+    // The abstract's command form before it of its name, language and store, not yet flushed, is what Perl's
+    // `\lx@clear@frontmatter` dequeues ([`COMMAND_FORM`]).
     if replaceable && !frontmatter_has_open_placekeeper(&tag) {
-      frontmatter_clear_same_name(
-        &tag,
-        entry.attr.get("name").map(String::as_str),
-        entry.attr.get("xml:lang").map(String::as_str),
-        entry.attr.get("_store").map(String::as_str),
-      );
+      let key = ["name", "xml:lang", "_store"].map(|k| entry.attr.get(k).map(String::as_str));
+      frontmatter_clear_same_name(&tag, key[0], key[1], key[2], printed_in_place);
+      if printed_in_place {
+        frontmatter_clear_command_form(&tag, key);
+      }
     }
     let index = frontmatter_push(&tag, entry);
     // the body's own paragraph breaks are the field's (`frontmatter_paragraph_break`); the enclosing notes come back
@@ -369,6 +392,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     }
     DebugFeature!("frontmatter", "FRONT Add (until) {} for: {}", tag, digested);
     frontmatter_set_first_content(&tag, index, TagContent::Box(digested));
+    // (a repeat of an earlier block with the same text is no second one)
+    if replaceable && printed_in_place {
+      frontmatter_drop_repeats(&tag, index);
+    }
     if let Some(key) = seal {
       note_digested_frontmatter(&key);
     }

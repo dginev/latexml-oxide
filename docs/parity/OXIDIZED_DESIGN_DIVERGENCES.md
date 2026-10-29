@@ -6752,25 +6752,59 @@ linenumbers}.xml`).
 **Upstream**: to be filed at brucemiller/LaTeXML (ruled-family algorithm captions should
 render at the top of the frame, per algorithm2e's `\@algocf@capt@ruled`).
 
-### 154. Replaceable frontmatter tags keep only one entry (forward-port of upstream dedup)
+### 154. A re-added title, date or keywords keeps only one entry; a second abstract is kept
 
-**Background.** Some frontmatter tags are "replaceable" — only one per document: a later
-`title`/`toctitle`/`subtitle`/`date`/`abstract`/`keywords` should REPLACE the earlier,
-not stack. Later upstream LaTeXML added `%ReplaceableFrontmatterTags` +
-`\@add@frontmatter@now` (`Base_Utility.pool.ltxml`), which empties `$$frontmatter{$tag}`
-before pushing a replaceable entry.
+**Background.** Upstream LaTeXML added `%ReplaceableFrontmatterTags` (bb048fc1, #2573, 2025-07-22): a later
+`title`/`toctitle`/`subtitle`/`date`/`abstract`/`keywords` entry emptied `$$frontmatter{$tag}` before it was pushed.
+Bruce Miller's frontmatter refactor removed it again (23f3acfa, #2767, 2026-05-20: "Use only \lx@clear@frontmatter
+explicitly to remove duplicated frontmatter entries, since there can be multiple dates with different roles"); in its
+place, entries are queued until `\maketitle` and `\lx@clear@frontmatter` dequeues the ones not yet digested.
 
-**Perl behavior**: the VENDORED Perl (our ground truth) PREDATES that fix — its
-`\lx@add@frontmatter@{now,until}` push unconditionally, so a document that re-adds a
-replaceable tag keeps BOTH entries and emits DUPLICATE frontmatter (two `<title>`, two
-`<abstract>`). Newer upstream Perl does NOT.
+**Perl behavior**: the vendored Perl is that HEAD (0d02309d; both commits are its ancestors). Its
+`\lx@add@frontmatter@{now,until}` (Base_Utility.pool.ltxml:391-445) push unconditionally; the only replacement is
+`dequeueFrontMatter` (:291-308), which `\lx@add@abstract`, `\lx@begin@abstract` and their keywords siblings call
+(:610-628). A preamble `\title` given twice keeps the last (dequeued); a body `{abstract}` digests at once, so two of
+them after `\maketitle` are two abstracts, as pdflatex prints them; a title re-added after the flush is a second title.
 
-**Rust behavior**: `base_utilities/mod.rs` adds `REPLACEABLE_FRONTMATTER_TAGS` and clears
-`frontmatter{tag}` before the push in `\lx@add@frontmatter@now` (and `@until`, guarded
-against same-tag re-entrancy so a nested/malformed `{abstract}` is not corrupted).
-Non-replaceable tags — crucially `ltx:creator` — still accumulate (multi-author
-frontmatter is preserved). A forward-port of the upstream fix; a surpass over the
-vendored Perl.
+**Rust behavior**: `base_utilities/mod.rs` `REPLACEABLE_FRONTMATTER_TAGS` keeps the clearing for the titles, the dates
+and the keywords: before the push in `\lx@add@frontmatter@now` (and `@until`, guarded against same-tag re-entrancy so a
+nested/malformed `{abstract}` is not corrupted), `frontmatter_clear_same_name` (base_utilities/frontmatter/queue_digest.rs)
+drops the entries of the same name, language and store. A title re-emitted after the flush is one title (2002.09766's
+appendix `\twocolumn[\icmltitle{…}]`); bindings re-add the whole keyword list as it grows and rely on the replacement
+(OmniBus's `\kwd`, tex-label's `\labels`, a class's keywords store set again after `\maketitle`); a repeated keywords
+block lost no words in the corpus (IEEEtran's `{IEEEkeywords}` accumulate). The abstract is not cleared
+(`PRINTED_WHERE_THEY_STAND`, 86i): a second abstract digested in place is printed where it stands, and both are kept,
+in source order, as in Perl — the clearing dropped amsart's English abstract with its keywords and MSC lines when the
+French one followed (1006.5288) and ceurart's printed abstract for its unprinted later one (2406.04383; ceurart's
+`{abstract}` is `\verbatimwrite{\jobname.abs}`, read by `\maketitle`, so pdflatex prints only the first: both are kept
+here, as in Perl). The clearing also dropped elsarticle's only abstract for an empty later `{abstract}` holding a
+comment, which adds no entry (2404.04417). An abstract replaces only a raw class's store entry no title page printed
+(`_released_store`, `frontmatter_release_store`; the 77i section below); the earlier entries whose name, language and
+text (whitespace aside) a new one repeats are dropped, the later kept as the clearing kept it
+(`frontmatter_drop_repeats`: a block a class or binding adds twice — JAC2001's `\abstract{…}` before `\maketitle` and
+the same `{abstract}` after it, physics0206049; Perl keeps both); and `\abstract{…}` before `\maketitle`, which Perl's
+`\lx@add@abstract` queues (latex_constructs.pool.ltxml:1136-1141) and ours reads as a group digested in place, is
+marked as the command form's (`_command_form`, the flush count; its call's own keyval, `\lx@begin@abstract[command_form=true]`,
+so a sealed one marks nothing after it), removed by the next abstract of its name, language and store until a flush
+would have digested Perl's queue (`frontmatter_clear_command_form`): sn-jnl's template `\abstract{…}` above the
+paper's, which the class stores and overwrites (2305.00493, 2609.14034), is one abstract, the paper's. Two departures
+from Perl's dequeue, which ignores the name and also empties the queue filled after `\maketitle`'s flush: an abstract
+of another name or language is another element (an English `\abstract{…}` and `{otherlanguage}{french}`'s
+`{abstract}`), and a `\abstract{…}` after `\maketitle` is printed where it stands (`\abstract{X}` then
+`{abstract}Y`; then a supplement's sealed `{abstract}`, whose clear removed the only head abstract) — pdflatex prints
+both, the base kept them, and Perl loses the first (review probes q01, q07, q15, q16). Each later
+late abstract follows the cover lines printed between the one before and it (cover_order.rs `place_later_abstract`, OD #903:
+1006.5288's centred French title between its two abstracts). Non-replaceable tags — crucially `ltx:creator` — still
+accumulate. Residual, Perl's too: an abstract a class stores for `\maketitle` and overwrites — amsart or revtex with
+`\begin{abstract}A\end{abstract}\begin{abstract}B\end{abstract}` before `\maketitle`, which pdflatex prints as "B" only
+— gives both `ltx:abstract`s, A first; so does elsarticle's `{frontmatter}`, whose `{abstract}` sets `\absbox` and
+prints the last (elsarticle.cls:674; 2108.09753, 2412.03249: 2 of 3,269 A/B papers, 0 of its 3,000 random ones);
+2108.09753's unprinted first abstract shows its acronyms empty ("controlled by a ()"), as its `\ac` entries are
+defined only after it. The other way, Perl's and the base's too: article's `\abstract{A}` then `{abstract}B` before
+`\maketitle`, which pdflatex prints both, gives B only — the dequeue, which cannot tell it from sn-jnl's shape, whose
+class prints the last (review probe q02). These, P1 (a repeated queued `\lx@add@abstract` after `\maketitle` keeps only
+the last) and P2 (an empty `{abstract}`'s printed heading) are deferred together: DEFERRED_FAMILIES "Abstracts a class
+stores or queues".
 
 **Refined (batch 56io).** Only entries with the SAME `name` as the new one are replaced. An
 entry under another name is another element and stays: a bilingual document's `Abstract` and
@@ -6781,17 +6815,19 @@ has no name) are still replaced. Guard `class_census::two_named_abstracts`. An e
 key `accumulate` adds to the same-name entries before it instead of replacing them (63f: acmart's `\received` history,
 two revisions being two `revised` dates; KNOWN_PERL_ERRORS #522, 2307.05988).
 
-**Why it's safe.** Restores the single-entry semantics upstream Perl already adopted;
-creators/notes are excluded so multi-valued frontmatter is unaffected, and the `@until`
-re-entrancy guard leaves the malformed-nesting case exactly as before.
+**Why it's safe.** The titles' clearing is a surpass over the vendored Perl for a re-emission after the flush (Perl
+emits two `<title>`s); the abstract's is Perl's, the clearing having been a Rust-only content loss. Creators/notes are
+excluded so multi-valued frontmatter is unaffected, and the `@until` re-entrancy guard leaves the malformed-nesting
+case exactly as before.
 
-**Witnesses**: arXiv 2002.09766 (appendix `\twocolumn[\icmltitle{…}]` re-added
-`ltx:title` → duplicate title + duplicated author block), 2511.21969 (nested
-`{abstract}` env). Guard `cluster_frontmatter_replaceable_dedup`.
-
-**Upstream**: already fixed upstream (`%ReplaceableFrontmatterTags`); this forward-ports
-it into the vendored engine. (Correction, 64d: LaTeXML-master, Base_Utility.pool.ltxml:391-417, also pushes
-unconditionally — no `%ReplaceableFrontmatterTags` there either; the replacement is a Rust-only surpass.)
+**Witnesses**: arXiv 2002.09766 (appendix `\twocolumn[\icmltitle{…}]` re-added `ltx:title` → duplicate title +
+duplicated author block), 2511.21969 (nested `{abstract}` env), 1006.5288 (amsart, two abstracts after `\maketitle`),
+2406.04383 (ceurart), 2404.04417 (elsarticle), 2305.00493 and 2609.14034 (sn-jnl), physics0206049 (JAC2001). Guards
+`cluster_frontmatter_replaceable_dedup` (two abstracts kept, 86i; it pinned one before),
+`perfect_kernel_batch86i::{second_abstract_after_maketitle_is_kept, second_abstract_kept_in_other_classes,
+repeated_abstract_with_the_same_text_is_one, abstract_command_form_twice_before_maketitle_keeps_the_last} (its
+variants: after `\maketitle`, a sealed supplement, another language before and after),
+second_late_abstract_follows_its_own_cover_line}` (a repeat dropped, an empty abstract).
 
 **Sealed by the document body (64d, user ruling 2026-10-09).** "Latest wins" let a supplement's or an appendix's
 frontmatter replace the paper's: a second `{abstract}` after the sections (2503.16707, 2405.10566), imsart's second
@@ -6835,7 +6871,8 @@ That holds only while the title page prints the store: once the speculative run 
 (`title_page_prints_store`, `lx_sentinel_printed`; without a run, its code reads it), the entry is an ordinary one at
 `\lx@store@untypeset` (`release_unprinted_store_entries`, base_utilities/frontmatter/queue_digest.rs `frontmatter_release_store`: one the
 document's own entry of the same name and language already replaces is dropped), as an entry with no `\maketitle`
-(`harvest_stores` at the fallback) and one set after the `\maketitle` that read the store are (`untagged_api`) —
+(`harvest_stores` at the fallback) and one set after the `\maketitle` that read the store are (`untagged_api`); a later
+document abstract of the same name and language replaces it (`_released_store`, though abstracts are otherwise kept) —
 `\hypersetup{pdfsubject={\@abst}}` in `\@maketitle` beside the document's `{abstract}` gives one abstract, as pdflatex
 prints (77i r5; review probe `md`). Two setters of one store (a class's `\let\keyword\keywords`, `\let\resumen\abst`)
 make one entry: `\maketitle` hands each store on once (77i r4 handed it once per setter; review probes `al1`, `al2`). Set
@@ -25960,15 +25997,34 @@ int116a left too). With a cover, the run of the first late abstract is placed by
   page does not print (dmtcs's preamble `\keywords`, printed after its abstract: 0905.1102) — and a title `\thanks`
   pubnote (2102.01904).
 
-A date never follows the abstract in the frontmatter's order, so none is in the run. Once per document (`lx_late_abstract_placed`: a second late abstract or a replaced first
-one has nothing more to place). A marker inside an open paragraph (a `\noindent` line running into `\begin{abstract}`)
+A date never follows the abstract in the frontmatter's order, so none is in the run. Once per document
+(`lx_late_abstract_placed`): each later late abstract's marker (linked to the abstract its command added by an
+ordinal both carry, `LATE_MARK_ORDINAL`, the eager build's and the streamed build's alike; the marker of a command that
+added none — a repeat `frontmatter_drop_repeats` dropped, an empty `{abstract}` — places nothing; the ordinal is taken
+by the first abstract added after its marker, kept or not, `take_late_mark`, so an abstract a binding adds later with
+`\lx@add@frontmatter{ltx:abstract}` and no marker of its own carries none, and no marker places it, DEFERRED_FAMILIES
+"Abstracts a class stores or queues") places its own abstract and its run behind the cover lines printed between the
+abstract before it and it (86i `place_later_abstract`: they stay paragraphs, not a second titlepage) — the second of two
+`{abstract}`s after `\maketitle`, both kept since 86i (OD #154; 1006.5288's centred French title between them). Late
+abstracts keep their source order: the run carries every later late abstract still waiting right after it, marked or
+markerless, with theirs, and each carried one then scans from its new place, right after the one before it — so three
+or more late abstracts each follow their own cover lines (review probe o2d), and no late abstract stands in the region
+a scan crosses (one that did would refuse the move). With anything in the region that is no cover — body prose, a
+float, a list, a TOC, a sectional unit — or no cover at all, the move is refused and the run stays right after the
+abstract before it (86i r3 review probes q1–q4, q10); a markerless abstract stays right after the one before it, carried
+along (q9). After each move the late abstracts' marker ordinals are checked to ascend
+(`keep_late_abstracts_in_source_order`): a violation is a placement bug, a `debug_assert!` failure in a debug build;
+a release build reports it (`Warning:unexpected:late_abstract_order`, counted) and sets every late abstract with its
+run (its keywords, its classification) in source order where the first of them stands — at the root's head if nothing
+precedes it — each markerless one after the marked one it followed. A marker inside an open paragraph (a `\noindent` line running into `\begin{abstract}`)
 ends the region with that paragraph, closed first, when nothing follows the marker in it. Without `\maketitle` nothing
 is late: the fallback's non-abstract-only branch reads the first abstract's marker (`abstract_mark_bound`), the earliest
 in source and so before every abstract in print, before the flush removes it, and applies the same rule to the first
 root abstract's run after the title-ink dedup — no abstract moves behind text printed after it (nothing there is
-late, so the fail-safe, a late run's, does not apply: no `\maketitle` placed a store). Residual on both paths
-(as before 86g): a second abstract kept beside the first (smfart `{abstract}`, a centred line, `{altabstract}`) stays
-ahead of the lines printed between the two. Residual of the fail-safe (int116a's order, out of print order): a raw
+late, so the fail-safe, a late run's, does not apply: no `\maketitle` placed a store). Residual (as before 86g): on
+the fallback path, and where the first abstract is not late, a second abstract kept beside the first (smfart
+`{abstract}` before `\maketitle`, a centred line, `{altabstract}`) stays ahead of the lines printed between the two;
+late ones are each placed (86i, above). Residual of the fail-safe (int116a's order, out of print order): a raw
 class whose title page prints frontmatter above or below the cover — `\def\@maketitle{…\noindent Keywords:
 \@keywords\par}` (or `\@pacs`, a `\footnotetext{Keywords: \@keywords}`, an `\insert\footins{…}` of it, an off-table
 store `\maketitle` hands on as a note) before `\maketitle` `\begin{center}Department\end{center}`

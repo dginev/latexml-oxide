@@ -62,7 +62,9 @@ Text \cite{a}.
 /// and removes the marker (OXIDIZED_DESIGN_DIVERGENCES #903). The hand-typeset cover, the class title page's deposit,
 /// an abstract inside the deposit, the fallback without `\maketitle` (whose marker the flush reads first), and a raw
 /// class's stores its title page prints before the cover (86g r2 review finding 3; their late run keeps its slot, the
-/// fail-safe, as eager).
+/// fail-safe, as eager); two late abstracts with a cover line before each (86i: each marker in turn), one repeating the
+/// other (86i r2: each marker its own abstract), three of them and a refused third that stays after the second (86i
+/// r3, r4: late abstracts keep their source order).
 #[test]
 fn streaming_late_abstract_follows_its_cover() {
   for repro in [
@@ -77,6 +79,25 @@ fn streaming_late_abstract_follows_its_cover() {
     ),
     include_str!(
       "../../tools/perfect_kernel/repros/sectioning-frontmatter/abstract_after_in_place_setters_without_maketitle.tex"
+    ),
+    // (86i: two late abstracts, each after a cover line of its own — every marker settles in turn, the second
+    // abstract behind the second line, `place_later_abstract`)
+    include_str!(
+      "../../tools/perfect_kernel/repros/sectioning-frontmatter/two_late_abstracts_with_a_cover_line_between.tex"
+    ),
+    // (86i r2: each marker places the abstract its command added — a dropped repeat's places nothing,
+    // `LATE_MARK_ORDINAL`)
+    include_str!(
+      "../../tools/perfect_kernel/repros/sectioning-frontmatter/late_abstract_repeat_between_cover_lines.tex"
+    ),
+    // (86i r3: three late abstracts — each move carries the later ones the streamed build inserted with the head,
+    // each of which then scans from right after the one before it)
+    include_str!(
+      "../../tools/perfect_kernel/repros/sectioning-frontmatter/three_late_abstracts_each_after_its_cover_line.tex"
+    ),
+    // (86i r4: the third's own move refused by body prose — it stays right after the second, source order)
+    include_str!(
+      "../../tools/perfect_kernel/repros/sectioning-frontmatter/late_abstracts_prose_after_the_second_keep_source_order.tex"
     ),
   ] {
     let source = format!("literal:{repro}");

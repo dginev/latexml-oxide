@@ -359,6 +359,17 @@ pub(in crate::base_utilities) fn frontmatter_push(tag: &str, mut entry: TagData)
     entry
       .attr
       .insert(LATE_ENTRY.to_string(), "true".to_string());
+    // (a late abstract carries its command's marker ordinal: [`LATE_MARK_ORDINAL`])
+    if tag == "ltx:abstract" {
+      let ordinal = if lookup_bool("lx_frontmatter_flushing") {
+        lookup_string("lx_frontmatter_entry_mark")
+      } else {
+        take_late_mark()
+      };
+      if !ordinal.is_empty() {
+        entry.attr.insert(LATE_MARK_ORDINAL.to_string(), ordinal);
+      }
+    }
   }
   // (handed on from a raw class's store, [`TITLE_PAGE_ENTRY`]: queued from it, or set from it in place)
   let from = if lookup_bool("lx_frontmatter_flushing") {
@@ -558,11 +569,14 @@ fn frontmatter_entry_in_progress() -> bool {
 /// prints it beside the document's own abstract (`\begin{quote}\itshape\@resumen\end{quote}` and the document's
 /// `{abstract}`, review probe `d_nolab`; silent-loss #6a) — one it does not print is released
 /// ([`frontmatter_release_store`]).
+/// An abstract (`PRINTED_WHERE_THEY_STAND`) replaces only a store's entry released as no title
+/// page's (`only_released`, [`RELEASED_STORE`]): the others of its name were printed where they stand, and are kept.
 pub(in crate::base_utilities) fn frontmatter_clear_same_name(
   tag: &str,
   name: Option<&str>,
   lang: Option<&str>,
   store: Option<&str>,
+  only_released: bool,
 ) {
   with_value_mut("frontmatter", |val_opt| {
     if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
@@ -572,14 +586,119 @@ pub(in crate::base_utilities) fn frontmatter_clear_same_name(
         e.attr.get("name").map(String::as_str) != name
           || e.attr.get("xml:lang").map(String::as_str) != lang
           || e.attr.get("_store").map(String::as_str) != store
+          || (only_released && !e.attr.contains_key(RELEASED_STORE))
       });
     }
   });
 }
 
+/// The flushes of the frontmatter queue so far (`digest_front_matter`).
+pub(in crate::base_utilities) const FRONTMATTER_FLUSHES: &str = "lx_frontmatter_flushes";
+
+/// The mark of an abstract given as `\abstract{…}` before `\maketitle` placed the frontmatter, which sect05.rs reads as
+/// a group digested in place (`\lx@begin@abstract[command_form=true]`, [`takes_command_form`]) where Perl's
+/// `\lx@add@abstract` queues it (latex_constructs.pool.ltxml:1136-1141): the flush count when it was added
+/// ([`FRONTMATTER_FLUSHES`]). Until the next flush digests Perl's queue, a later abstract's `\lx@clear@frontmatter`
+/// dequeues it there, so the next abstract of its name, language and store removes the entry here
+/// ([`frontmatter_clear_command_form`]): a class's template `\abstract{…}` and the paper's own before `\maketitle` are
+/// one abstract, the paper's, as pdflatex prints the last (sn-jnl, 2305.00493, 2609.14034). Two departures from Perl's
+/// dequeue, which ignores the name and empties the queue filled after a flush too: an abstract of another name or
+/// language is another element (a bilingual `\abstract{…}` and `{otherlanguage}`'s `{abstract}`, review probes q15,
+/// q16), and one after `\maketitle` is printed where it stands (q01, q07), as pdflatex prints both and the base kept
+/// them. OXIDIZED_DESIGN #154.
+pub(in crate::base_utilities) const COMMAND_FORM: &str = "_command_form";
+
+/// Take the `command_form` keyval of `\lx@add@frontmatter@until` (`\abstract{…}`, sect05.rs): whether the entry is the
+/// abstract's command form ([`COMMAND_FORM`]).
+pub(in crate::base_utilities) fn takes_command_form(options: &mut TagAttrs) -> bool {
+  options
+    .remove("command_form")
+    .is_some_and(|value| value.trim() != "false")
+}
+
+/// Remove the entries of the abstract's command form not yet flushed ([`COMMAND_FORM`]) of the `name`, language and
+/// store `key` of the abstract being added: Perl's `\lx@clear@frontmatter{ltx:abstract}` dequeue of them.
+pub(in crate::base_utilities) fn frontmatter_clear_command_form(tag: &str, key: [Option<&str>; 3]) {
+  let flushes = lookup_int(FRONTMATTER_FLUSHES).to_string();
+  with_value_mut("frontmatter", |val_opt| {
+    if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
+      && let Some(list) = frnt.get_mut(tag)
+    {
+      list.retain(|e| {
+        e.attr.get(COMMAND_FORM) != Some(&flushes)
+          || ["name", "xml:lang", "_store"].map(|k| e.attr.get(k).map(String::as_str)) != key
+          || matches!(e.content.as_slice(), [TagContent::PlaceKeeper])
+      });
+    }
+  });
+}
+
+/// The mark of a store's entry no title page printed ([`frontmatter_release_store`]): an ordinary entry the document's
+/// own of the same name and language replaces.
+const RELEASED_STORE: &str = "_released_store";
+
+/// Drop the abstract entries before (tag, index) of the same `name`, language and store as it, and its text (whitespace
+/// aside): a repeat, not a second block — what a class or binding adds twice, which the clearing of a later same-named
+/// entry used to absorb. The later copy stays, as the clearing kept it: a `\maketitle` placed the first, the second
+/// is where the paper prints it (JAC2001's `\abstract{…}` before `\maketitle` and the same `{abstract}` after it,
+/// physics0206049). A block with other text is a second one, kept. Not while an entry of the tag is still being
+/// digested, whose index its digestion holds. OXIDIZED_DESIGN #154.
+pub(in crate::base_utilities) fn frontmatter_drop_repeats(tag: &str, index: usize) {
+  type Key = [Option<String>; 3];
+  // (the boxes' text is read outside the borrow of the frontmatter: reading it consults the state)
+  let entries: Vec<(Key, Option<Digested>)> = with_value("frontmatter", |v| match v {
+    Some(Stored::HashTagData(frnt)) => frnt
+      .get(tag)
+      .map(|list| {
+        list
+          .iter()
+          .map(|e| {
+            let key = ["name", "xml:lang", "_store"].map(|k| e.attr.get(k).cloned());
+            let content = match e.content.as_slice() {
+              [TagContent::PlaceKeeper] => None,
+              [TagContent::Box(d), ..] => Some(d.clone()),
+              _ => None,
+            };
+            (key, content)
+          })
+          .collect()
+      })
+      .unwrap_or_default(),
+    _ => Vec::new(),
+  });
+  if index >= entries.len() || frontmatter_has_open_placekeeper(tag) {
+    return;
+  }
+  let text = |d: &Option<Digested>| {
+    d.as_ref()
+      .map(|d| {
+        d.to_string()
+          .split_whitespace()
+          .collect::<Vec<_>>()
+          .join(" ")
+      })
+      .filter(|t| !t.is_empty())
+  };
+  let (new_key, new_content) = &entries[index];
+  let Some(new_text) = text(new_content) else {
+    return;
+  };
+  let repeats: Vec<usize> = entries[..index]
+    .iter()
+    .enumerate()
+    .filter(|(_, (key, content))| {
+      key == new_key && text(content).as_deref() == Some(new_text.as_str())
+    })
+    .map(|(at, _)| at)
+    .collect();
+  for at in repeats.into_iter().rev() {
+    frontmatter_remove(tag, at);
+  }
+}
+
 /// The abstract and keywords entries of a raw class's `store` (`_store`, frontmatter_stores.rs `labelled_api`) whose
 /// title page does not print it (`\hypersetup{pdfsubject={\@abst}}`, review probe `md`) become ordinary entries, which
-/// the document's own of the same name and language replaces as it replaces any (`frontmatter_clear_same_name`): one
+/// the document's own of the same name and language replaces (`frontmatter_clear_same_name`, [`RELEASED_STORE`]): one
 /// already there drops the store's.
 pub(crate) fn frontmatter_release_store(store: &str) {
   with_value_mut("frontmatter", |val_opt| {
@@ -594,6 +713,9 @@ pub(crate) fn frontmatter_release_store(store: &str) {
         let mut dropped: Vec<usize> = Vec::new();
         for &i in &released {
           list[i].attr.remove("_store");
+          list[i]
+            .attr
+            .insert(RELEASED_STORE.to_string(), "true".to_string());
           let (name, lang) = (list[i].attr.get("name"), list[i].attr.get("xml:lang"));
           let replaced = list.iter().enumerate().any(|(j, e)| {
             j != i

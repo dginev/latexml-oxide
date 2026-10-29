@@ -1,0 +1,28 @@
+% Three `{abstract}`s after `\maketitle`, a cover line before each; a figure between the second and the third cover
+% line. The second follows its cover line and carries the third (`place_later_abstract`, cover_order.rs,
+% OXIDIZED_DESIGN_DIVERGENCES #903); the third's own move is refused (a float is no cover), so it stays right after
+% the second: late abstracts keep their source order. The third had been printed ahead of "Cover two" and the second.
+% witness: 1006.5288 (amsart: two abstracts with a centred French title between them; this is a sibling where the
+%          later move is refused, r3 review probe q2).
+% Guard: perfect_kernel_batch86i::second_late_abstract_follows_its_own_cover_line.
+% oracle:  pdflatex 0 errors: "Probe / Ann / Cover one / Abstract First late words. / Cover two / Abstract Second late
+%          words. / Fig box Figure 1: A caption / Cover three / Abstract Third late words. / 1 Intro".
+% engines: rust 86i r2: titlepage, First, Second, Third, para (Cover two), figure, para (Cover three).
+%          rust 86i r3: titlepage, First, Third, para (Cover two), Second, figure, para (Cover three).
+% expect:  0 errors, 0 warnings; title, creator, titlepage[Cover one], abstract (First), para (Cover two),
+%          abstract (Second), abstract (Third), figure, para (Cover three), section; eager and streamed identical.
+% status:  RED (86i r3) -> GREEN (86i r4)
+\documentclass{article}
+\begin{document}
+\title{Probe}\author{Ann}
+\maketitle
+\begin{center}Cover one\end{center}
+\begin{abstract}First late words.\end{abstract}
+\begin{center}Cover two\end{center}
+\begin{abstract}Second late words.\end{abstract}
+\begin{figure}[h]\centering Fig box\caption{A caption}\end{figure}
+\begin{center}Cover three\end{center}
+\begin{abstract}Third late words.\end{abstract}
+\section{Intro}
+Body.
+\end{document}

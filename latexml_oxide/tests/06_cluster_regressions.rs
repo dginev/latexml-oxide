@@ -1988,14 +1988,15 @@ fn cluster_bib_preamble_no_phantom_entry() {
   );
 }
 
-/// GREEN guard: replaceable frontmatter tags (title/subtitle/date/abstract/keywords)
-/// keep only ONE entry — a later one REPLACES the earlier — while non-replaceable
-/// creators accumulate. Ports upstream `%ReplaceableFrontmatterTags`
-/// (`base_utilities.rs` `REPLACEABLE_FRONTMATTER_TAGS`); the vendored Perl pushed
-/// unconditionally, so a re-added title/abstract kept BOTH → duplicated frontmatter.
-/// Surpass over the vendored Perl (forward-port of the upstream fix); OXIDIZED_DESIGN
-/// #154. Witnesses arXiv 2002.09766 (appendix `\icmltitle` duplicated `<title>`) and
-/// 2511.21969 (nested `{abstract}` duplicated the abstract heading).
+/// GREEN guard: replaceable frontmatter tags (title/subtitle/toctitle/date) keep only
+/// ONE entry — a later one REPLACES the earlier — while creators accumulate, and so do
+/// abstracts: a second `{abstract}` digested in place is printed where it stands, so
+/// both are kept (pdflatex prints both; the vendored Perl, upstream HEAD after #2767
+/// removed `%ReplaceableFrontmatterTags`, keeps both). `base_utilities.rs`
+/// `REPLACEABLE_FRONTMATTER_TAGS` / `PRINTED_WHERE_THEY_STAND`; OXIDIZED_DESIGN #154.
+/// Witnesses arXiv 2002.09766 (appendix `\icmltitle` duplicated `<title>`), 2511.21969
+/// (nested `{abstract}` duplicated the abstract heading), 1006.5288 (the abstract count
+/// was pinned at 1 here, the defect: the second replaced the first).
 #[test]
 fn cluster_frontmatter_replaceable_dedup() {
   let xml = convert_to_xml("tests/cluster_regressions/frontmatter_replaceable_dedup.tex");
@@ -2022,9 +2023,14 @@ fn cluster_frontmatter_replaceable_dedup() {
   );
   assert_eq!(
     count("<abstract"),
-    1,
-    "replaceable <abstract> not deduplicated:\n{head}"
+    2,
+    "both printed abstracts are kept, in source order:\n{head}"
   );
+  let (first, second) = (
+    head.find("First abstract.").expect("first abstract"),
+    head.find("Second abstract.").expect("second abstract"),
+  );
+  assert!(first < second, "abstracts out of source order:\n{head}");
 }
 
 /// Guard: the `algpseudocodex` package (raw-loaded under `--includestyles`/ar5iv

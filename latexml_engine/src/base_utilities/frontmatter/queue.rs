@@ -17,6 +17,9 @@ fn frontmatter_frozen_for_replay() -> bool { lookup_bool("lx_replaying_class_set
 /// Perl: queueFrontMatter($stomach, $tag, $attr, $command).
 pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
   if frontmatter_frozen_for_replay() {
+    // (an abstract it queues no more: its late marker's ordinal goes with it, not to the next abstract added,
+    // [`take_late_mark`])
+    drop_late_mark(tag);
     return;
   }
   let queue = frontmatter_queue_name();
@@ -44,6 +47,13 @@ pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
   // (queued after `\maketitle`'s flush: digested by a later one, still late, [`LATE_ENTRY`])
   if lookup_bool("lx_frontmatter_here_digested") {
     attr_hash.insert(LATE_ENTRY.to_string(), "true".to_string());
+    // (and the late marker before it, of its command: [`LATE_MARK_ORDINAL`])
+    if tag == "ltx:abstract" {
+      let ordinal = take_late_mark();
+      if !ordinal.is_empty() {
+        attr_hash.insert(LATE_MARK_ORDINAL.to_string(), ordinal);
+      }
+    }
   }
   // (handed on from a raw class's store: its title-page provenance, [`TITLE_PAGE_ENTRY`])
   let from = lookup_string(crate::frontmatter_stores::STORE_ENTRY_FROM);

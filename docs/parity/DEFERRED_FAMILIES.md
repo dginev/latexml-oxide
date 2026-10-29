@@ -34,6 +34,61 @@ recovery cases are recorded here with their witnesses. Each OPEN_ROWS row named 
   kept tracked): 2403.15998 (ifacconf, a late abstract) — `\open@fm` (ifacconf.cls:984-1070) sets the title-page
   deposit, the abstract's marker and the keywords in one block, so 86g's cover rule fails safe and leaves it as is; an
   ifacconf binding (24 of 30k papers) would fix it and 1309.1610, 2104.15006 together.
+- **Abstracts a class stores or queues** (86i residuals; OD #154, #903). Since 86i every abstract printed where it
+  stands is kept, as the vendored Perl keeps it; three shapes remain where the class does not print where it stands,
+  and four of the late placement (d)-(g):
+  - (a) **Stored abstracts: one extra, unprinted.** A class whose `{abstract}` stores its text for `\maketitle` or
+    `\end{frontmatter}` prints only the last; we keep each (Perl too). Witnesses 2108.09753, 2412.03249 (elsarticle
+    `\absbox`; 2108.09753's extra one shows its acronyms empty, "controlled by a ()", as they are defined after it),
+    2406.04383 (ceurart writes `{abstract}` to a file with `\verbatimwrite`); two `{abstract}`s before `\maketitle` in
+    amsart or revtex (`rc_abstract2` probes `p01_amsart2`, `p06_revtex`: pdflatex prints "B" only, we give A and B).
+    The converse, q02: article's `\abstract{A}` then `{abstract}B` gives B only, where pdflatex prints both (the
+    command-form dequeue cannot tell it from sn-jnl's store, 2305.00493). The same family: an abstract a binding adds
+    after `\maketitle` with `\lx@add@frontmatter{ltx:abstract}` and no marker (rmaa's hand-off, oup's
+    `\otherabstract`, which those classes print only inside `\maketitle`) has no source position, so no late marker
+    places it: it stays right after the late abstract before it, carried along when that one moves (86i r3 review
+    probe q9, r3 probe m4: behind the second's cover line, where pdflatex prints it after the next line or the body),
+    or with the first in the head run, ahead of the cover lines (repro `late_empty_abstract_then_markerless_abstract`);
+    late abstracts keep their source order either way (OD #903). Proposed fix: a per-binding
+    `FmConventions` field, "stores its abstract until `\maketitle`/`\end{frontmatter}`", under which a later one
+    replaces the stored one; it needs a class-by-class audit.
+  - (b) **P1: a repeated queued `\lx@add@abstract` after `\maketitle` loses the printed ones before it.** A class whose
+    `\abstract{…}` (`\renewcommand{\abstract}[1]{\begin{quote}…#1\end{quote}}`) prints in place keeps only the last of
+    several after `\maketitle` (Perl, the base and 86i alike): `\lx@clear@frontmatter{ltx:abstract}` is Perl's
+    dequeue, which empties the queue filled after `\maketitle`'s flush and ignores the name (`queue.rs`
+    `dequeue_front_matter`). Review probes o7, o8 (86i r2). Differently named entries collide too, CONFIRMED: a
+    queued `\lx@add@frontmatter{ltx:abstract}[name=Other]` after `\maketitle` is lost at the next `{abstract}` (86i r3
+    probes m1, m2; Perl the same). The reverse shape: a queued `\lx@add@abstract` between two `{abstract}`s is
+    removed by the later one's `\lx@clear@frontmatter` (86i r4 writer probe x2: `{abstract}` Env first, Cover two,
+    `\lx@add@abstract{Queued second}`, Cover three, `{abstract}` Env third — pdflatex prints all three, we lose the
+    queued one; int117a also loses Env first). No corpus witness.
+  - (c) **P2: an empty `{abstract}` loses its printed heading.** pdflatex prints "Abstract" over nothing; we add no
+    element (the base too; Perl keeps an empty one). Review probes o1, o4, q09 (86i). No content lost.
+  - (d) **Keywords given after any late abstract but the last follow the last, and a carry can take them past later
+    cover lines.** The frontmatter orders all keywords after every abstract in the head, so they ride with the run of
+    whichever late abstract moves last. IEEEtran, after `\maketitle`: `Cover one`, `{abstract}First`,
+    `{IEEEkeywords}kwone`, `Cover two`, `{abstract}Second`, `Cover three`, `{abstract}Third` — pdflatex prints "Index
+    Terms—kwone" after the first; we give it after the third (repro
+    `late_abstracts_keywords_after_the_first_follow_the_last`, 86i r4 review probe n2; o2g, keywords after the
+    second, the same). With a refused move, `{abstract}`+`{IEEEkeywords}kwone`, `Cover two`, `{abstract}Second`, body
+    prose, `{abstract}Third`+`{IEEEkeywords}kwthree`: Second's move carries Third and both keywords, so kwone lands
+    past "Cover two" (repro `late_abstracts_keywords_carried_past_a_cover_line`, probe n10; 86i r3 put kwthree on
+    the wrong side of the same line instead). 86i r2-r4 alike; int117a lost the earlier abstracts. Not a regression,
+    no corpus witness. Fix direction: place keywords in the head by their source position relative to the late
+    abstracts, so each late abstract's run holds only its own; the carry is not the problem.
+  - (e) **A late abstract after a `{titlepage}` environment lands ahead of it** (readability: visible content
+    reordered). article, after `\maketitle`: `{titlepage}` holding Cover one, `{abstract}First`, Cover two,
+    `{abstract}Second`; then Cover three, `{abstract}Third` — we give Third, the titlepage, Cover three; pdflatex
+    prints Third after Cover three. Repro `late_abstract_after_a_titlepage_environment_lands_ahead_of_it` (86i r4
+    review probe n3); int117a, 86i r3 and r4 alike. No corpus witness.
+  - (f) **An `{abstract}` inside a section or an appendix becomes a plain paragraph** with no "Abstract" heading;
+    pdflatex prints the heading. The text is kept. Repro `abstract_inside_an_appendix_section_loses_its_heading` (86i
+    r4 review probes n1, n6 — the latter after three carried late abstracts); int117a, 86i r3 and r4 alike. No corpus
+    witness.
+  - (g) **amsart keywords and subjclass given before `\maketitle` come out after the last late abstract**, where
+    pdflatex prints them in the first page's footnote (`\@adminfootnotes`, amsart.cls:655-658). Repro
+    `amsart_keywords_before_maketitle_set_after_late_abstracts` (86i r4 review probe n9); int117a, 86i r3 and r4
+    alike. No content lost; no corpus witness.
 - **FM-14** a class setter that builds the kernel's `\@author` from its stores (jfpc.cls:188-191; 1503.05530).
 - **FM-15** vmsta 2018+ `\author@optarg` names made by `\csname`; a replayed `\maketitle` prints the author line
   and the e-mail line twice (1806.03850, 1810.09667, 2012.03249).

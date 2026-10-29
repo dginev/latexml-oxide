@@ -463,10 +463,10 @@ pub fn insert_late_frontmatter(document: &mut Document) -> Result<()> {
   document.unwrap_nodes(wrapper)?;
   document.set_node(&savenode);
   // A late abstract's marker (`\lx@frontmatter@mark`): the abstract, now placed, goes behind the cover printed before
-  // it, as in the eager build (OXIDIZED_DESIGN_DIVERGENCES #903); every such marker goes.
+  // it, as in the eager build (OXIDIZED_DESIGN_DIVERGENCES #903), each in turn; every such marker goes.
   let late_marks = document.findnodes(&s!("//{LATE_ABSTRACT_MARK}"), None);
-  if let Some(first) = late_marks.first() {
-    place_abstract_after_late_mark(document, first)?;
+  for marker in &late_marks {
+    place_abstract_after_late_mark(document, marker)?;
   }
   for marker in late_marks {
     document.remove_node(marker);

@@ -345,6 +345,7 @@ mod perfect_kernel_batch86b;
 mod perfect_kernel_batch86c;
 mod perfect_kernel_batch86d;
 mod perfect_kernel_batch86g;
+mod perfect_kernel_batch86i;
 mod perfect_kernel_batch87a;
 mod perfect_kernel_batchfms1;
 mod perfect_kernel_batchfms2a1;

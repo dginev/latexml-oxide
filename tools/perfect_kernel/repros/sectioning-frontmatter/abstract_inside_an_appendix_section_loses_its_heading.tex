@@ -1,0 +1,25 @@
+% article: an `{abstract}` inside an appendix section (after `\maketitle`, two late abstracts before the body). The
+% appendix's abstract becomes a plain paragraph with no "Abstract" heading; pdflatex prints the heading. The text is
+% kept. Pre-existing: int117a, 86i r3 and r4 alike; the same inside a `\section` and after carried late abstracts (86i
+% r4 review probe n6). DEFERRED_FAMILIES "Abstracts a class stores or queues" (f).
+% witness: none in the corpus; 86i r4 review probes n1, n6.
+% oracle:  pdflatex 0 errors: "... 1 Intro / Body. / A App / Abstract / Appendix late words. / More appendix.".
+% engines: rust int117a, 86i r3 and r4: appendix[App | para (Appendix late words. ...)], no "Abstract" heading.
+% expect:  0 errors, 0 warnings; the appendix holds the abstract's text under an "Abstract" heading (as in place,
+%          before "More appendix.").
+% status:  RED (86i r4; no guard)
+\documentclass{article}
+\begin{document}
+\title{Probe}\author{Ann}
+\maketitle
+\begin{center}Cover one\end{center}
+\begin{abstract}First late words.\end{abstract}
+\begin{center}Cover two\end{center}
+\begin{abstract}Second late words.\end{abstract}
+\section{Intro}
+Body.
+\appendix
+\section{App}
+\begin{abstract}Appendix late words.\end{abstract}
+More appendix.
+\end{document}

@@ -1730,10 +1730,15 @@ pub(crate) fn load() -> Result<()> {
       // inside the `{` group (a NESTED digest body, `tex_box.rs`), where
       // `until_terminal_inside_group` (stomach.rs) closes the runaway group
       // and ends the body (screenplay-pkg.tex:67).
-      Tokens!(
+      // (Perl's `\lx@add@abstract`, which queues it: a later abstract's `\lx@clear@frontmatter` before the next flush
+      // dequeues it, `command_form` — sn-jnl's template `\abstract{…}` and the paper's, 2305.00493)
+      let mut toks = Tokens!(
         T_CS!("\\par"),
         T_CS!("\\g@addto@macro"), T_CS!("\\@startsection@hook"), T_CS!("\\maybe@end@abstract"),
-        T_CS!("\\lx@begin@abstract"), T_BEGIN!(), T_CS!("\\aftergroup"), T_CS!("\\lx@end@abstract"))
+        T_CS!("\\lx@begin@abstract"), T_OTHER!("[")).unlist();
+      toks.extend(ExplodeText!("command_form=true"));
+      toks.extend([T_OTHER!("]"), T_BEGIN!(), T_CS!("\\aftergroup"), T_CS!("\\lx@end@abstract")]);
+      Tokens::new(toks)
     } else {
       // When \abstract is used without braces (e.g. \abstract ... \section{...}),
       // add \maybe@end@abstract to \@startsection@hook so the abstract closes

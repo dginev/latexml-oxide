@@ -1,0 +1,29 @@
+% Four `{abstract}`s after `\maketitle` with a hand-typeset cover line before each: every abstract follows its own
+% line (`place_later_abstract`, cover_order.rs, OXIDIZED_DESIGN_DIVERGENCES #903), as pdflatex prints them — the
+% sibling of the three-abstract repro with two middle abstracts: each move carries the later ones waiting right after
+% it, which then scan from right after the one before them (late abstracts keep their source order).
+% witness: 1006.5288 (amsart, two abstracts with a cover line between); review 86i r2 (B1, "four late abstracts").
+% Guard: perfect_kernel_batch86i::second_late_abstract_follows_its_own_cover_line.
+% oracle:  pdflatex 0 errors: "Cover one / Abstract First late words. / Cover two / Abstract Second late words. /
+%          Cover three / Abstract Third late words. / Cover four / Abstract Fourth late words. / 1 Intro".
+% engines: perl (vendored HEAD) 0 errors: four abstracts, then the four cover lines (frontmatter at the head).
+%          rust int117a: titlepage (Cover one), "Fourth late words.", three paras; the first three lost.
+%          rust 86i r2: titlepage, First, Second, Third, para, para, para, Fourth.
+% expect:  0 errors, 0 warnings; title, creator, date, titlepage[Cover one], abstract, para, abstract, para, abstract,
+%          para, abstract, section, in that print order.
+% status:  RED (86i r2) -> GREEN (86i r3)
+\documentclass{article}
+\begin{document}
+\title{Probe}\author{Ann}
+\maketitle
+\begin{center}Cover one\end{center}
+\begin{abstract}First late words.\end{abstract}
+\begin{center}Cover two\end{center}
+\begin{abstract}Second late words.\end{abstract}
+\begin{center}Cover three\end{center}
+\begin{abstract}Third late words.\end{abstract}
+\begin{center}Cover four\end{center}
+\begin{abstract}Fourth late words.\end{abstract}
+\section{Intro}
+Body.
+\end{document}

@@ -1,0 +1,32 @@
+% Two `{abstract}`s after `\maketitle`, a cover line before each; after the body begins, a supplement's `{abstract}`
+% (sealed: the paper's are kept) and a binding's `\lx@add@frontmatter{ltx:abstract}`, which adds an abstract with no
+% late marker of its own (rmaa's hand-off, oup's `\otherabstract`). No marker places the markerless abstract, so the
+% second carries it along (`place_later_abstract`, cover_order.rs, OXIDIZED_DESIGN_DIVERGENCES #903): it stays right
+% after the second, late abstracts in source order. It had been printed ahead of "Cover two" and the second; it stays
+% in the frontmatter, not at its print place after the body (DEFERRED_FAMILIES "Abstracts a class stores or queues").
+% witness: 1006.5288 (amsart: two abstracts with a centred French title between them; this is a sibling where the
+%          later move is refused, r3 review probe q9).
+% Guard: perfect_kernel_batch86i::second_late_abstract_follows_its_own_cover_line.
+% oracle:  pdflatex 0 errors: "Probe / Ann / Cover one / Abstract First late words. / Cover two / Abstract Second late
+%          words. / 1 Intro / Body. / Abstract Supplement words. / Other: Markerless words.".
+% engines: rust 86i r2: titlepage, First, Second, Markerless, para (Cover two), section.
+%          rust 86i r3: titlepage, First, Markerless, para (Cover two), Second, section.
+% expect:  0 errors, 0 warnings; title, creator, titlepage[Cover one], abstract (First), para (Cover two),
+%          abstract (Second), abstract (Markerless), section; eager and streamed identical.
+% status:  RED (86i r3) -> GREEN (86i r4)
+\documentclass{article}
+\makeatletter
+\newcommand\otherabs[1]{\@ifundefined{lx@add@frontmatter}{\begin{quote}Other: #1\end{quote}}{\lx@add@frontmatter{ltx:abstract}[name={Other}]{#1}}}
+\makeatother
+\begin{document}
+\title{Probe}\author{Ann}
+\maketitle
+\begin{center}Cover one\end{center}
+\begin{abstract}First late words.\end{abstract}
+\begin{center}Cover two\end{center}
+\begin{abstract}Second late words.\end{abstract}
+\section{Intro}
+Body.
+\begin{abstract}Supplement words.\end{abstract}
+\otherabs{Markerless words.}
+\end{document}

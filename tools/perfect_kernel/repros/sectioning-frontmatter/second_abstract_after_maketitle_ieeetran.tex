@@ -1,0 +1,19 @@
+% IEEEtran: two `{abstract}`s, each followed by its `{IEEEkeywords}`, after `\maketitle`: both abstracts are kept, as
+% the keyword blocks already were (they accumulate, ieeetran_cls.rs); the frontmatter order is the kernel's, the
+% abstracts before the keywords, as the vendored Perl orders them (OXIDIZED_DESIGN #154).
+% witness: none (synthetic; the IEEEtran shape of 1006.5288).
+% Guard: perfect_kernel_batch86i::second_abstract_kept_in_other_classes.
+% oracle:  pdflatex 0 errors: "Abstract—English words. Index Terms—kw one Abstract—Second words. Index Terms—kw two".
+% engines: perl (vendored HEAD) 0 errors: abstract, abstract, keywords, keywords. rust int117a: 0 errors, only
+%          "Second words." and both keywords.
+% expect:  0 errors, 0 warnings; two `ltx:abstract`s ("English words.", "Second words."), two `ltx:keywords`.
+% status:  RED (int117a) -> GREEN (86i)
+\documentclass{IEEEtran}
+\begin{document}
+\title{Probe}\author{Ann}\maketitle
+\begin{abstract}English words.\end{abstract}
+\begin{IEEEkeywords}kw one\end{IEEEkeywords}
+\begin{abstract}Second words.\end{abstract}
+\begin{IEEEkeywords}kw two\end{IEEEkeywords}
+\section{Intro}Body.
+\end{document}

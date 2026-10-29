@@ -30,7 +30,7 @@ macro_rules! repro {
 
 /// The document's root children after its resources, each as its name — a titlepage as `titlepage[<child>: <text>|…]`,
 /// its children's text whitespace-collapsed.
-fn root_order(xml: &str) -> Vec<String> {
+pub(crate) fn root_order(xml: &str) -> Vec<String> {
   let doc = Parser::default()
     .parse_string(xml)
     .expect("the output parses");
@@ -89,10 +89,11 @@ fn with_cover(lines: &str) -> String {
 /// para, para, section` (the cover after the abstract, out of print order). Variants on the same path: a `\noindent`
 /// line running into `\begin{abstract}` (the marker inside the open paragraph); a `\clearpage` after the cover (the
 /// pagebreak follows the abstract); a quoted epigraph or dedication (a title-page line too); two abstracts after
-/// `\maketitle` (the second is kept, at the first's place: `{abstract}` given twice keeps the last, the known loss of
-/// OXIDIZED_DESIGN #154 — pdflatex prints both); the `\abstract … \endabstract` command form; amsart's preamble
-/// `\keywords`, which it prints at the page foot, follows the abstract behind the cover (as dmtcs's 0905.1102 and
-/// aaspp4's astro-ph9911463 do). What the title page printed before the cover keeps its place ahead of it, only the
+/// `\maketitle` (both kept, together behind the cover, as pdflatex prints them — the second used to replace the first,
+/// OXIDIZED_DESIGN #154; one with a cover line of its own follows it,
+/// `perfect_kernel_batch86i::second_late_abstract_follows_its_own_cover_line`); the `\abstract … \endabstract` command
+/// form; amsart's preamble `\keywords`, which it prints at the page foot, follows the abstract behind the cover (as
+/// dmtcs's 0905.1102 and aaspp4's astro-ph9911463 do). What the title page printed before the cover keeps its place ahead of it, only the
 /// rest of the late abstract's run follows the cover: an abstract the frontmatter had before the late one (not
 /// `_late`) — smfart's `{abstract}` before `\maketitle` and `{altabstract}` after it, a class's abstract store its
 /// `\@maketitle` prints (86g r1 review probes q01, q02; the first moved behind the cover too). The fail-safe: a late
@@ -143,7 +144,14 @@ fn late_abstract_follows_the_hand_typeset_cover() {
     ),
     (
       format!("{center}\\begin{{abstract}}First abstract.\\end{{abstract}}\n{abstract_}"),
-      &["title", "creator", affiliation, "abstract", "section"],
+      &[
+        "title",
+        "creator",
+        affiliation,
+        "abstract",
+        "abstract",
+        "section",
+      ],
     ),
     (
       format!("{center}\\abstract Abstract words here.\\endabstract"),

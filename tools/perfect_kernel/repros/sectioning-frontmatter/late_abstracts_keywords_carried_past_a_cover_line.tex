@@ -1,0 +1,30 @@
+% IEEEtran, after `\maketitle`: `{abstract}` + `{IEEEkeywords}kwone`, `Cover two`, `{abstract}Second`, body prose,
+% `{abstract}Third` + `{IEEEkeywords}kwthree`. Both keywords sit after every abstract in the head; Second's move
+% behind "Cover two" carries Third and both keywords (`place_later_abstract`, cover_order.rs,
+% OXIDIZED_DESIGN_DIVERGENCES #903), and Third's own move is refused by the prose: kwone lands past "Cover two".
+% DEFERRED_FAMILIES "Abstracts a class stores or queues" (d). Fix direction: place keywords in the head by their
+% source position relative to the late abstracts (the carry then takes only its own).
+% witness: none in the corpus; 86i r4 review probe n10.
+% oracle:  pdflatex 0 errors: "Probe / Ann / Abstract—Early-ish late words. / Index Terms—kwone / Cover two /
+%          Abstract—Second late words. / Body prose right here. / Abstract—Third late words. / Index Terms—kwthree /
+%          I. Intro".
+% engines: rust 86i r3: Early-ish, Third, kwone, kwthree, para (Cover two), Second, para (prose).
+%          rust 86i r4: Early-ish, para (Cover two), Second, Third, keywords (kwone), keywords (kwthree), para (prose).
+% expect:  0 errors, 0 warnings; abstract (Early-ish), keywords (kwone), para (Cover two), abstract (Second),
+%          para (prose), abstract (Third), keywords (kwthree), section.
+% status:  RED (86i r4; no guard)
+\documentclass{IEEEtran}
+\begin{document}
+\title{Probe}\author{Ann}
+\maketitle
+\begin{abstract}Early-ish late words.\end{abstract}
+\begin{IEEEkeywords}kwone\end{IEEEkeywords}
+\begin{center}Cover two\end{center}
+\begin{abstract}Second late words.\end{abstract}
+Body prose right here.
+
+\begin{abstract}Third late words.\end{abstract}
+\begin{IEEEkeywords}kwthree\end{IEEEkeywords}
+\section{Intro}
+Body.
+\end{document}

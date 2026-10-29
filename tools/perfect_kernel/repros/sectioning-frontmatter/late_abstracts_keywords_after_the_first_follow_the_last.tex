@@ -1,0 +1,27 @@
+% IEEEtran, after `\maketitle`: three `{abstract}`s, each after its own cover line, and `{IEEEkeywords}` right after
+% the FIRST. The frontmatter orders all keywords after every abstract in the head, so the keywords ride with the run
+% of the abstract that moves last (`place_later_abstract`, cover_order.rs, OXIDIZED_DESIGN_DIVERGENCES #903).
+% DEFERRED_FAMILIES "Abstracts a class stores or queues" (d). Fix direction: place keywords in the head by their source
+% position relative to the late abstracts.
+% witness: none in the corpus; 86i r4 review probe n2.
+% oracle:  pdflatex 0 errors: "Probe / Ann / Cover one / Abstract—First late words. / Index Terms—kwone / Cover two /
+%          Abstract—Second late words. / Cover three / Abstract—Third late words. / I. Intro".
+% engines: rust 86i r3 and r4: titlepage[Cover one], First, para (Cover two), Second, para (Cover three), Third,
+%          keywords (kwone).
+% expect:  0 errors, 0 warnings; titlepage[Cover one], abstract (First), keywords (kwone), para (Cover two),
+%          abstract (Second), para (Cover three), abstract (Third), section.
+% status:  RED (86i r4; no guard)
+\documentclass{IEEEtran}
+\begin{document}
+\title{Probe}\author{Ann}
+\maketitle
+\begin{center}Cover one\end{center}
+\begin{abstract}First late words.\end{abstract}
+\begin{IEEEkeywords}kwone\end{IEEEkeywords}
+\begin{center}Cover two\end{center}
+\begin{abstract}Second late words.\end{abstract}
+\begin{center}Cover three\end{center}
+\begin{abstract}Third late words.\end{abstract}
+\section{Intro}
+Body.
+\end{document}

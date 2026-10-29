@@ -1,0 +1,26 @@
+% Two `{abstract}`s after `\maketitle` with a hand-typeset cover line before each: the first abstract follows the first
+% line (its cover, the `<titlepage>`, OXIDIZED_DESIGN_DIVERGENCES #903), the second follows the second line
+% (`place_later_abstract`, cover_order.rs), as pdflatex prints them. Both used to move behind the first line, ahead of
+% the second (once both abstracts were kept, OXIDIZED_DESIGN #154).
+% witness: 1006.5288 (amsart: "Sur la propriété de couplage des processus de Lévy" centred between its English and
+%          French abstracts).
+% Guard: perfect_kernel_batch86i::second_late_abstract_follows_its_own_cover_line.
+% oracle:  pdflatex 0 errors: "Probe Title / Ann Author / Cover line one / Abstract First late abstract. / Cover line
+%          two / Abstract Second late abstract. / 1 Intro".
+% engines: perl (vendored HEAD) 0 errors: abstract, abstract, para, para (frontmatter at the head).
+%          rust int117a: titlepage (line one), "Second late abstract.", para (line two); the first lost.
+%          rust 86i (before cover_order's per-abstract placement): titlepage, abstract, abstract, para.
+% expect:  0 errors, 0 warnings; title, creator, titlepage[Cover line one], abstract, para (Cover line two), abstract,
+%          section.
+% status:  RED (int117a) -> GREEN (86i)
+\documentclass{article}
+\title{Probe Title}\author{Ann Author}
+\begin{document}
+\maketitle
+\begin{center}Cover line one\end{center}
+\begin{abstract}First late abstract.\end{abstract}
+\begin{center}Cover line two\end{center}
+\begin{abstract}Second late abstract.\end{abstract}
+\section{Intro}
+Intro text.
+\end{document}

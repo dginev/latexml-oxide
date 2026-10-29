@@ -401,6 +401,9 @@ pub(in crate::base_utilities) fn last_group(tokens: &Tokens) -> Tokens {
 /// Digest FrontMatter (if not already?)
 /// Perl: digestFrontMatter().
 pub fn digest_front_matter() -> Result<()> {
+  // (what the abstract's command form added before this flush is no longer in Perl's queue: [`COMMAND_FORM`])
+  let flushes = lookup_int(FRONTMATTER_FLUSHES);
+  assign_value(FRONTMATTER_FLUSHES, flushes + 1, Some(Scope::Global));
   // The frontmatter observer's rehearsal of the author blocks, under its shadow switch only (nothing it finds is used
   // yet; OXIDIZED_DESIGN_DIVERGENCES #837).
   shadow_flush()?;
@@ -535,6 +538,17 @@ pub fn digest_front_matter() -> Result<()> {
       assign_value(
         "lx_frontmatter_entry_late",
         Stored::Bool(attr.contains_key(LATE_ENTRY)),
+        Some(Scope::Local),
+      );
+      // (and its late marker's ordinal, [`LATE_MARK_ORDINAL`])
+      assign_value(
+        "lx_frontmatter_entry_mark",
+        Stored::String(pin(
+          attr
+            .get(LATE_MARK_ORDINAL)
+            .map(String::as_str)
+            .unwrap_or(""),
+        )),
         Some(Scope::Local),
       );
       // (and handed on from the store its title-page provenance names: `frontmatter_push`)

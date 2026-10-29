@@ -1,0 +1,32 @@
+% Four `{abstract}`s after `\maketitle`, a cover line before each; body prose after the second. The second follows its
+% cover line and carries the third and the fourth (`place_later_abstract`, cover_order.rs, OXIDIZED_DESIGN_DIVERGENCES
+% #903); each of their own moves then scans from right after the one before it, meets the prose and is refused, so all
+% three stay together in source order. The third and fourth had been printed ahead of "Cover two" and the second.
+% witness: 1006.5288 (amsart: two abstracts with a centred French title between them; this is a sibling where the
+%          later move is refused, r3 review probe q10).
+% Guard: perfect_kernel_batch86i::second_late_abstract_follows_its_own_cover_line.
+% oracle:  pdflatex 0 errors: "Probe / Ann / Cover one / Abstract First late words. / Cover two / Abstract Second late
+%          words. / Plain running prose ... / Cover three / Abstract Third late words. / Cover four / Abstract Fourth
+%          late words. / 1 Intro".
+% engines: rust 86i r3: titlepage, First, Third, Fourth, para (Cover two), Second, para (prose), para, para.
+% expect:  0 errors, 0 warnings; title, creator, titlepage[Cover one], abstract (First), para (Cover two),
+%          abstract (Second), abstract (Third), abstract (Fourth), para (prose), para (Cover three), para (Cover four),
+%          section; eager and streamed identical.
+% status:  RED (86i r3) -> GREEN (86i r4)
+\documentclass{article}
+\begin{document}
+\title{Probe}\author{Ann}
+\maketitle
+\begin{center}Cover one\end{center}
+\begin{abstract}First late words.\end{abstract}
+\begin{center}Cover two\end{center}
+\begin{abstract}Second late words.\end{abstract}
+Plain running prose after the second abstract, as a body paragraph.
+
+\begin{center}Cover three\end{center}
+\begin{abstract}Third late words.\end{abstract}
+\begin{center}Cover four\end{center}
+\begin{abstract}Fourth late words.\end{abstract}
+\section{Intro}
+Body.
+\end{document}

@@ -185,13 +185,22 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     if !lookup_bool("frontmatter_done") {
       document.insert_element("ltx:_Frontmatter_Capture_", Vec::new(), None)?;
     } else if prop_bool!(props, "late") {
-      let marker = document.insert_element(LATE_ABSTRACT_MARK, Vec::new(), None)?;
+      let ordinal = match props.get("late_mark") {
+        Some(&Stored::Int(n)) => n.to_string(),
+        _ => String::new(),
+      };
+      let attrib: HashMap<String, String> =
+        [(LATE_MARK_ORDINAL.to_string(), ordinal)].into_iter().collect();
+      let marker = document.insert_element(LATE_ABSTRACT_MARK, Vec::new(), Some(attrib))?;
       settle_late_abstract_mark(document, marker)?;
     }
   },
+  // (each late marker's ordinal, which the abstract its command adds carries: [`LATE_MARK_ORDINAL`])
   properties => {
     Ok(if lookup_bool("lx_frontmatter_here_digested") {
-      stored_map!("late" => true)
+      let ordinal = lookup_int(LATE_MARKS) + 1;
+      set_late_mark(ordinal);
+      stored_map!("late" => true, "late_mark" => Stored::Int(ordinal))
     } else {
       SymHashMap::default()
     })

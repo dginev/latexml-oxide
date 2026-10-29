@@ -1,0 +1,31 @@
+% Three `{abstract}`s after `\maketitle` with a hand-typeset cover line before each: every abstract follows its own
+% line (the first's is the `<titlepage>`, OXIDIZED_DESIGN_DIVERGENCES #903; each later one `place_later_abstract`,
+% cover_order.rs), as pdflatex prints them. The middle one stayed ahead of its line: the scan between its run and its
+% marker met the third abstract, still in the head run, and refused the move; the move now carries the later late
+% abstracts waiting right after it, each of which then scans from right after the one before it (late abstracts keep
+% their source order).
+% witness: 1006.5288 (amsart: two abstracts with a centred French title between them; this is its three-abstract
+%          sibling, review 86i r2 probe o2d).
+% Guard: perfect_kernel_batch86i::second_late_abstract_follows_its_own_cover_line;
+%        114_streaming_structure::streaming_late_abstract_follows_its_cover.
+% oracle:  pdflatex 0 errors: "Probe / Ann / Cover one / Abstract First late words. / Cover two / Abstract Second late
+%          words. / Cover three / Abstract Third late words. / 1 Intro".
+% engines: perl (vendored HEAD) 0 errors: abstract, abstract, abstract, para, para, para (frontmatter at the head).
+%          rust int117a: titlepage (Cover one), "Third late words.", para, para; the first two lost.
+%          rust 86i r2: titlepage, First, Second, para (Cover two), para (Cover three), Third.
+% expect:  0 errors, 0 warnings; title, creator, date, titlepage[Cover one], abstract (First), para (Cover two),
+%          abstract (Second), para (Cover three), abstract (Third), section; eager and streamed identical.
+% status:  RED (86i r2) -> GREEN (86i r3)
+\documentclass{article}
+\begin{document}
+\title{Probe}\author{Ann}
+\maketitle
+\begin{center}Cover one\end{center}
+\begin{abstract}First late words.\end{abstract}
+\begin{center}Cover two\end{center}
+\begin{abstract}Second late words.\end{abstract}
+\begin{center}Cover three\end{center}
+\begin{abstract}Third late words.\end{abstract}
+\section{Intro}
+Body.
+\end{document}

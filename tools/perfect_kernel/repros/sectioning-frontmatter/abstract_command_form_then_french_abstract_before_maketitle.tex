@@ -1,0 +1,21 @@
+% An English `\abstract{…}` and a French `{abstract}` before `\maketitle`: two abstracts, another name and language
+% each. The command form's dequeue matches the next abstract's name, language and store
+% (`frontmatter_clear_command_form`); Perl's ignores the name and loses the English one (OXIDIZED_DESIGN #154).
+% witness: review probe q15 (86i r1).
+% Guard: perfect_kernel_batch86i::abstract_command_form_twice_before_maketitle_keeps_the_last.
+% oracle:  pdflatex 0 errors: "Abstract English abstract words. Résumé Mots du résumé. 1 Probe Ann".
+% engines: perl: the French abstract only. rust int117a: both. rust 86i r1: the French only.
+% expect:  0 errors, 0 warnings; title, creator, abstract ("Abstract", English), abstract ("Résumé", fr), section.
+% status:  GREEN (int117a) -> RED (86i r1) -> GREEN (86i r2)
+\documentclass{article}
+\usepackage[french,english]{babel}
+\begin{document}
+\title{Probe}\author{Ann}
+\abstract{English abstract words.}
+\begin{otherlanguage}{french}
+\begin{abstract}Mots du résumé.\end{abstract}
+\end{otherlanguage}
+\maketitle
+\section{Intro}
+Body.
+\end{document}
