@@ -1,0 +1,32 @@
+% witness: 1511.03783 (`\author{Hye-Sung Lee\email{…}}`, then `\address{Center for Theoretical Physics …}` after
+%          `\maketitle`, no mark); 1510.03577 (an unmarked address under a marked name); just.cls:100-105, 173-181
+% oracle:  pdflatex 0 errors: "Ann Able", "Center for Theory, Univ A, Town, Country" under it, the footnote
+%          "1)0 E-mail: ann@x.org" (0 the stand-in's footnote mark; the class's is empty)
+% engines: rust int119a = 0 errors, 0 warnings: the address a body paragraph, the e-mail lost
+% expect:  0 errors, 0 warnings; the one creator with the e-mail and the address as its affiliation
+% status:  RED (int119a) -> GREEN (91a)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{just.cls}
+\ProvidesClass{cpc-hepnp}
+\LoadClass{article}
+\newcounter{email}
+\setcounter{email}{1}
+\newcommand{\email}[1]{\protected@xdef\@thanks{\@thanks
+  \protect\footnotetext[0]{\hspace*{-8pt}\arabic{email})\,{E-mail:\,}#1}}\stepcounter{email}}
+\newcommand{\emails}[1]{\footnotetext[0]{\hspace*{-8pt}\arabic{email})\,{E-mail:\,}#1}\stepcounter{email}}
+\renewcommand\maketitle{\par\begingroup\newpage\@maketitle\@thanks\endgroup
+  \setcounter{footnote}{0}\global\let\thanks\relax\global\let\maketitle\relax
+  \global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@title\@empty}
+\renewcommand\@maketitle{\begin{center}\let\footnote\thanks{\Large\bf\@title\par}%
+  {\normalsize\lineskip .5em\vskip 4mm\begin{tabular}[t]{c}\normalsize\@author\end{tabular}}\end{center}}
+\newcommand{\address}[1]{\vspace*{0mm}
+  \begin{center}\vskip -5mm\begin{center}{\footnotesize #1}\end{center}\end{center}}
+\end{filecontents*}
+\documentclass{just}
+\begin{document}
+\title{A Title}
+\author{Ann Able\email{ann@x.org}}
+\maketitle
+\address{Center for Theory, Univ A, Town, Country}
+Body.
+\end{document}

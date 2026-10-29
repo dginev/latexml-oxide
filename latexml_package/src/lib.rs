@@ -621,6 +621,10 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
     package::quantumview_cls::load_definitions,
   ),
   ("deepseek", "cls", package::deepseek_cls::load_definitions),
+  // just.cls is cpc-hepnp.cls under another name (its `\ProvidesClass{cpc-hepnp}`, just.cls:11; the PhiPsi15
+  // proceedings, 1603.03230). cpc-hepnp routing waits for 91c (its mark conventions; OD #912), so `cpc-hepnp` is not
+  // registered: a `\documentclass{cpc-hepnp}` paper reads its copy as before.
+  ("just", "cls", package::cpc_hepnp_cls::load_definitions),
   ("asmejour", "cls", package::asmejour_cls::load_definitions),
   ("shapepar", "sty", package::shapepar_sty::load_definitions),
   ("multido", "sty", package::multido_sty::load_definitions),

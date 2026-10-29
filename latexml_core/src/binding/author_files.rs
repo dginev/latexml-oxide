@@ -233,6 +233,7 @@ pub const AUTHOR_FILE_STAND_INS: &[&str] = &[
   "jmlr2e_preprint.sty",
   "jpc.sty",
   "jpconf.cls",
+  "just.cls",
   "l-aa-ps.cls",
   "l-aa.cls",
   "l4dc2026.cls",

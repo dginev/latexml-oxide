@@ -126,6 +126,7 @@ pub mod comment_sty;
 pub mod concmath_sty;
 pub mod constants_sty;
 pub mod courier_sty;
+pub mod cpc_hepnp_cls;
 pub mod crop_sty;
 pub mod cropmark_sty;
 pub mod csquotes_sty;

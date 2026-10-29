@@ -26589,3 +26589,86 @@ the two-dimensional layouts `\frac{a}{b^1}`, `\sqrt{x^1}`, `\sqrt[3]{x^1}`, `\bo
 a_parsed_prescript_on_a_word_is_text_a_script_on_a_base_the_base, the_writer_and_the_comparator_read_a_formula_alike}`
 (the last: each shape's digested and parsed XMath give one reading and one text). RED repro (stage 3):
 `amsart_address_spaced_marks_cut_with_their_lines` (`$\,^{1}$` address lines, 0804.4669's shape).
+
+### 912. just.cls (Chinese Physics C's cpc-hepnp.cls under the PhiPsi15 name) has a binding: its `\email` is the author's e-mail and its `\address` after `\maketitle` the names' affiliations; cpc-hepnp itself waits for 91c (Perl: no binding; through OmniBus the list is one address of the last author)
+
+cpc-hepnp.cls, the Chinese Physics C template (`\ProvidesClass{cpc-hepnp}`, :11; not in TeX Live), is shipped by
+every paper that uses it, under its own name (`\documentclass{cpc-hepnp}`, 611 papers 2008-2026: 1101.0224,
+0904.1329, 1002.4139, 0908.0848, 1401.5029) or as just.cls (the 12 PhiPsi15 proceedings papers, each a byte-identical
+copy). Both are read raw. Its `\author` is the article kernel's, and its frontmatter commands print outside the
+kernel's frontmatter. `\email{x}` (:100-105) appends "n) E-mail: x" to `\@thanks`, an unnumbered footnote set after
+the names by the class's `\maketitle` (:124-155), which the kernel's locked `\maketitle` never sets: the e-mail is
+lost with 0 errors. `\address{…}` (:173-181) prints its argument centred where it is called, after `\maketitle` in the
+template, below the whole name block: a list of lines led by the marks the names carry (`$^1$ Budker Institute …\\ $^2$
+Novosibirsk State University …`), or one address with no mark. It becomes a body paragraph after the names, so no
+creator holds an affiliation (1603.03230: 0 of 55 right in the frontmatter scorer's archival tier).
+
+Ours: `cpc_hepnp_cls.rs`, registered as `just` only (lib.rs), reads the paper's copy raw (`RawRead`, `shipped: true`;
+the copy's name chosen as it loads, `just` or the class's own; without a copy, OmniBus and the missing-file Warning, as
+before; `just.cls` listed among the author-file stand-ins, `binding/author_files.rs`, so `\IfFileExists{just.cls}`
+finds it only when shipped) and redefines the class's own setters after the read, each into the frontmatter API with
+no new reading of tokens, and each only where the copy defines it (the 23 variants of the census copies share
+one-argument `\email` and `\address`; the 2009-13 copies have no `\emails`). `\email` and `\emails` (:107-109, the
+same footnote set where it is called) become `\lx@add@email[name={E-mail:~}]`, the e-mail of the author whose line
+holds it, under the class's label. `\address` becomes `\lx@add@affiliation@marked[annotate=all]`, the marked list
+iopart's `\address` and informs4's `\AFF` read: each mark-led line is an affiliation of the names that request its
+mark, and an address with no mark is one affiliation of every name above it (`annotate=all`, as llncs's sole
+`\institute` is every author's: 1511.03783's one name; 1101.0224's six and 0904.1329's two under the cpc-hepnp name).
+The address arriving after the frontmatter was placed takes the late path under `--streaming`, and the result is
+identical to the eager build. 1603.03230: 54 of 55 creators exactly right in the scorer's archival tier (0 before),
+and its e-mail is no longer a lost piece. Witnesses 1603.03230, 1510.03577, 1510.07251, 1511.03783, 1511.03934,
+1511.05708, 1511.08514, 1511.09253, 1511.09434, 1512.00162. The `{keyword}` and `{pacs}` lists stay the class's (body
+lists with their "Key words:"/"PACS:" labels, as before).
+
+`\emails` inside `\author` is kept as that author's e-mail, though pdflatex loses it there (a `\footnotetext` in the
+title tabular is an insert in an inner box, never set); after `\maketitle`, where it prints at the page foot, it is the
+e-mail of the name above it. No census paper calls `\emails`.
+
+**Why `cpc-hepnp` is not registered.** Routed through the same setters, the 611 cpc-hepnp papers gained e-mails (562
+of the 623) and affiliations (585), but about 90 of them gained affiliations on names that do not request them, where
+the base had none, which the user's condition for routing (nothing worse) excludes:
+- **An e-mail mark after a comma is read as a label** (`$^{1,4,3)}$`, the `n)` mark of the name's e-mail footnote,
+  :104 `\arabic{email})`): 41 papers. The `n)` names line n — 2105.14997's Shudong Wang (`1,4,3)`) holds College of
+  Physics, Jilin University, where pdflatex shows `3)` is his e-mail mark; 1410.4949's `3,4)` (a typo for 3,4) comes
+  out right by chance.
+- **A typed-number list** (`1~(Institute …)\\ 2~(…)`, the 2009-13 template: 50 papers; 21 more unmarked multi-line
+  lists) has no mark the marked list reads, so it is one address with no mark, every name's: each name holds the whole
+  list (0906.3801: 11 names, 8 lines; 1001.2445: 80 names).
+- **A marked list inside a font group** (`\address{(BESIII Collaboration)\\ \it{$^{1}$ …\\ $^{2}$ …}}`, 6 papers) is
+  read as one entry, labelled by its first mark: 1709.03653's 156 names marked 1 each hold the whole list, the others
+  none (XML 0.43 → 1.78 MB). The marked-list reader does not enter a group.
+A `\documentclass{cpc-hepnp}` paper converts as before (byte-identical to int119a); the no-change guard pins it.
+
+A/B of the 623 papers whose main file asks for `cpc-hepnp` (611) or `just` (12), against int119a, with
+`--preload=ar5iv.sty` as the guards: the 611 cpc-hepnp papers unchanged; the 12 just papers as with cpc-hepnp routed
+(all frontmatter: e-mails and affiliations gained, the only words lost marks, now links). Without the preload the base
+loads OmniBus for the missing binding with a `missing_file` Warning: on 1603.03230 2 Errors (`\figcaption`,
+`\tabcaption` undefined), the e-mail kept as "Email: ", the keywords an `ltx:classification` split wrongly ("1",
+"3.40.Gp"). The binding reads the class raw either way: 0 errors there, the keywords as body lists, and the class's own
+`\@obsoletefile{article.cls}{article.sty}` Warning, as pdflatex prints.
+
+Residuals:
+- **CPC's e-mail mark `affiliations;n)`** (`E.A.Kozyrev$^{1,2;1)}$`; under cpc-hepnp 341 papers). A mark is parted at
+  commas only (`clean_frontmatter_labels`; Perl's cleanFrontmatterLabels, Base_Utility.pool.ltxml:366, the same), so
+  `2;1)` requests no line. Kozyrev lacks Novosibirsk State University (1603.03230); 1510.07251's Achasov (`$^{1;1)}$`),
+  1510.07985's three authors (`$^{1;1)}$`, `$^{2,3;2)}$`, `$^{2;3);\dagger}$`), 1511.03934's Berger and 1511.09245's
+  Kardapoltsev (`$^{1,2;1)}$`) lack lines. A line that no name requests goes to a creator with no name (1510.07251,
+  1510.07985, 1511.09245), as the marked list places any unrequested entry. RED repro
+  `class-bindings/just_semicolon_email_marks`.
+- **A name's own mark stays in its name** (`Longke Li$^{1)}$`, 1510.03577: `<sup>1</sup>` in the `personname`, the ")"
+  gone), as before the binding.
+- **91c, the plan that registers `cpc-hepnp`** (proposed, main session 2026-10-29): (1) the cpc-hepnp binding declares
+  its house mark convention — an item ending in `)` is a footnote mark, not a label, and `;` separates items like `,`.
+  This is binding-declared data the marked-list reader consults, not a global scanner; it resolves both the `,n)`
+  residual (41 papers) and the `;n)` one (341), without r1's objection that parting at `;` turns `3)` into label 3.
+  (2) A structural fail-safe: an unmarked multi-line address under names that carry marks goes to the author block,
+  once, not to every name (the typed-number and other unmarked lists, 71 papers; 0906.3801, 1001.2445). The grouped
+  list (1709.03653, 6 papers) is to be re-measured under both. Then the 611-paper A/B again, nothing worse.
+
+Repros class-bindings/{just_marked_address_after_maketitle, just_unmarked_address,
+just_unmarked_address_under_several_names, just_emails_after_maketitle} (GREEN),
+cpc_hepnp_unmarked_address_under_several_names (NO-CHANGE, GREEN for 91c) and just_semicolon_email_marks (RED); guards
+`perfect_kernel_batch91a::{just_marked_address_after_maketitle_affiliates_every_name,
+just_unmarked_address_is_its_author_s_affiliation, just_unmarked_address_under_several_names_is_every_name_s,
+just_emails_after_maketitle_is_the_author_s_e_mail, cpc_hepnp_is_not_routed_until_91c}` (the first and third also
+check the binary, eager and `--streaming`).

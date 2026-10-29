@@ -1,0 +1,36 @@
+% witness: 1603.03230 (`E.A.Kozyrev$^{1,2;1)}$`), 1510.07251 (`$^{1;1)}$`), 1510.07985 (`$^{2,3;2)}$`,
+%          `$^{2;3);\dagger}$`), 1511.03934, 1511.05708, 1511.09245: CPC's mark `affiliations;n)`, `n)` the mark of
+%          the name's e-mail footnote (just.cls:104 `\arabic{email})`)
+% oracle:  pdflatex 0 errors: "Ann Able1,2;1) , Bob Baker2;2) , Cy Cole1;3);†", the four marked lines, the footnotes
+% engines: rust 91a = 0 errors, 0 warnings: a mark is parted at commas only (`clean_frontmatter_labels`), so `2;1)`,
+%          `2;2)`, `1;3);\dagger` request no line: Ann Able has Univ A only, Bob Baker and Cy Cole none, and the
+%          lines no name answers go to a creator with no name; Perl splits at commas too (Base_Utility.pool.ltxml:366)
+% expect:  0 errors, 0 warnings; Ann Able Univ A and Univ B, Bob Baker Univ B, Cy Cole Univ A and Speaker (not Lab
+%          C, whose 3 is Cy Cole's e-mail mark)
+% status:  RED (91a; deferred: parting at `;` reads the e-mail mark `3)` as the label 3, OD #912)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{just.cls}
+\ProvidesClass{cpc-hepnp}
+\LoadClass{article}
+\newcounter{email}
+\setcounter{email}{1}
+\newcommand{\email}[1]{\protected@xdef\@thanks{\@thanks
+  \protect\footnotetext[0]{\hspace*{-8pt}\arabic{email})\,{E-mail:\,}#1}}\stepcounter{email}}
+\newcommand{\emails}[1]{\footnotetext[0]{\hspace*{-8pt}\arabic{email})\,{E-mail:\,}#1}\stepcounter{email}}
+\renewcommand\maketitle{\par\begingroup\newpage\@maketitle\@thanks\endgroup
+  \setcounter{footnote}{0}\global\let\thanks\relax\global\let\maketitle\relax
+  \global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@title\@empty}
+\renewcommand\@maketitle{\begin{center}\let\footnote\thanks{\Large\bf\@title\par}%
+  {\normalsize\lineskip .5em\vskip 4mm\begin{tabular}[t]{c}\normalsize\@author\end{tabular}}\end{center}}
+\newcommand{\address}[1]{\vspace*{0mm}
+  \begin{center}\vskip -5mm\begin{center}{\footnotesize #1}\end{center}\end{center}}
+\end{filecontents*}
+\documentclass{just}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,2;1)}$\email{ann@x.org}, \quad Bob Baker$^{2;2)}$\email{bob@y.org},
+\quad Cy Cole$^{1;3);\dagger}$\email{cy@z.org}}
+\maketitle
+\address{$^1$ Univ A, Town\\ $^2$ Univ B, City\\ $^3$ Lab C, Place\\ $^\dagger$ Speaker.}
+Body.
+\end{document}
