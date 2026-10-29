@@ -1,6 +1,20 @@
 use crate::prelude::*;
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
+/// book: its title page (`titlepage`, its default) prints the notes in the body's arabic numbers; without one
+/// (`notitlepage`) the kernel declares the title hook (`declare_fnsymbol_title_block`), which wins
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "book",
+  binding: "book.cls",
+  title_marks: FmTitleMarks::Body,
+  cite: "book.cls:217 (OD #851, `declare_fnsymbol_title_block`)",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   LoadPool!("LaTeX");
   //**********************************************************************
   // Option handling

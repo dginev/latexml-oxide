@@ -94,11 +94,11 @@ pub(in crate::base_utilities) struct AuthorBlock {
   pub index:          usize,
   /// the macro called (`\lx@add@authors@adaptive` for the kernel `\author`, `\lx@add@authors@append`, …)
   pub hook:           &'static str,
-  /// the policy entry the call runs under (`policy::policy_for` of `binding` and `hook`: `kernel` for every family
-  /// without one)
+  /// the conventions the call runs under (`policy::policy_for` of `binding` and `hook`: what that binding declared,
+  /// `kernel` for every family that declared none)
   pub policy:         String,
   /// the binding the policy is keyed on ([`policy_binding`]): the `\author` owner, or the document class's binding
-  /// when that is the kernel's — with `hook`, the key of the policy table (`policy::policy_for`; S2a.2, notes decision 2)
+  /// when that is the kernel's — with `hook`, the key of its declared conventions (`policy::policy_for`; S2a.2)
   pub binding:        String,
   /// the binding owning the `\author` meaning at the call ([`author_binding`]): a compiled binding's file name
   /// (`revtex4_support.sty`), else `kernel`, `document`, `raw` or `fallback` by its definition origin
@@ -306,8 +306,8 @@ pub(in crate::base_utilities) fn reset_author_owner() {
 
 /// The binding a block's policy is keyed on (S2a.2 r2, review revfms2a2's answer to question 3): the binding owning
 /// the `\author` meaning that makes the `\lx@add@authors*` call ([`author_binding`]); when that is the kernel's, the
-/// document class's binding with a policy entry (iopart.cls's `iopart_support.sty`, `jpconf.cls`, `report.cls`) — never
-/// over a package owning `\author` (authblk's stays authblk's).
+/// document class's binding that declared conventions (iopart.cls's `iopart_support.sty`, `jpconf.cls`, `report.cls`)
+/// — never over a package owning `\author` (authblk's stays authblk's).
 pub(in crate::base_utilities) fn policy_binding(owner: &str) -> String {
   if owner != "kernel" {
     return owner.to_string();

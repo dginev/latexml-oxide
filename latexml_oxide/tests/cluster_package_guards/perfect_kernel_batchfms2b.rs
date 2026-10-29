@@ -1,7 +1,7 @@
 //! Red/green guards for FM S2b r1 (OXIDIZED_DESIGN_DIVERGENCES #837 "S2b"; user frontmatter rulings 2026-10-17, M3
-//! observer): for a family whose policy entry is `written` — the pilot, revtex4_support's `revtex` — the observer's
-//! reading is written into the document once today's frontmatter is placed, where every difference from today's is
-//! one of the writer's operations (`observer::writer`). Under the shadow switch only (`LATEXML_FM_SHADOW=1`): unset,
+//! observer): for a family whose declared conventions are `written` — the pilot, revtex4_support's `revtex` — the
+//! observer's reading is written into the document once today's frontmatter is placed, where every difference from
+//! today's is one of the writer's operations (`observer::writer`). Under the shadow switch only (`LATEXML_FM_SHADOW=1`): unset,
 //! the XML is today's (the shadow-neutral guards of the families not switched stay byte-identical, batchfms2a2r7/r8).
 //! Each guard converts with the switch on and off and asserts every creator whole.
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};

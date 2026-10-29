@@ -1,3 +1,5 @@
+use latexml_engine::base_utilities::fm_resolve;
+
 use super::*;
 
 const HEAD: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML"><title>T</title>"#;
@@ -723,6 +725,213 @@ fn welded_legends_are_an_xml_wrong_class() {
       }),
     "{d:?}"
   );
+}
+
+/// 87a: an amsart dump (`\author{Ann Able}`, `\address{Einstein Institute \and Rutgers}`, which pdflatex prints
+/// "Einstein Institute and Rutgers"), as the binary wrote it, the creator's own call and the block's API-call events left
+/// out.
+const AMS_DUMP: &str = r#"{"entries":[{"index":1,"kind":"author","hook":"\\lx@add@authors@append","policy":"ams","binding":"ams_support.sty","owner":"ams_support.sty","replace":false,"sectioned":false,"cautious":true,"keyvals":null,"epoch":0,"queue_position":1,"authors_queued":0,"stamp":"projected","range":[0,8],"source":"Ann Able","status":"events","errors":0,"warnings":0,"events":[{"kind":"Name","span":[0,8],"text":"Ann Able"}]},{"index":3,"kind":"api","tag":"ltx:contact","role":"address","epoch":0,"queue_position":2,"after_block":1,"inside":false,"attrs":"role=address,name=","parent":"ltx:creator","events":[{"kind":"Name","span":null,"text":"Einstein Institute"},{"kind":"Sep","sep":"and","command":"\\and","span":null},{"kind":"Name","span":null,"text":"Rutgers"}]}],"resolved":{"creators":[{"name":"Ann Able","requests":[],"rule":"line:names","source":1,"affiliations":[{"role":"address","text":"Einstein Institute and Rutgers","rule":"api:annotate:last","source":[3,null]}],"contacts":[],"notes":[]}],"block":[],"dropped":[],"continued":[],"policies":[[1,"ams"]]}}"#;
+
+/// 87a: offline no binding loads to declare its conventions, so `--re-resolve` holds the bindings' declarations
+/// (`conventions::DECLARED`): an amsart dump re-resolves to its own resolution — the address's `\and` the word "and",
+/// the ams conventions' (`and_word`, amsart.cls:599), which the kernel's do not print; a dump recording conventions the
+/// list does not give its binding is not re-resolved; and every declaration cites what it reproduces, under a name of
+/// its own.
+#[test]
+fn a_declared_familys_dump_re_resolves_under_its_bindings_conventions() {
+  use latexml_engine::base_utilities::{FM_KERNEL_CONVENTIONS, fm_resolve_with};
+  let mut dump: Value = serde_json::from_str(AMS_DUMP).expect("json");
+  let shadow = shadow_tuples(&json_resolved(&dump["resolved"]));
+  assert_eq!(
+    shadow,
+    shadow_tuples(&re_resolve_dump(&dump).expect("ams_support is declared"))
+  );
+  assert_ne!(
+    shadow,
+    shadow_tuples(&fm_resolve_with(&json_inputs(&dump), &|_, _| {
+      &FM_KERNEL_CONVENTIONS
+    }))
+  );
+  dump["entries"][0]["policy"] = "kernel".into();
+  assert!(re_resolve_dump(&dump).is_err());
+  // (87a r2, review S2: a block recording no conventions is stale too, not re-resolved under whatever the list gives)
+  dump["entries"][0]
+    .as_object_mut()
+    .expect("entry")
+    .remove("policy");
+  assert!(re_resolve_dump(&dump).is_err());
+  let mut names: Vec<&str> = DECLARED.iter().map(|c| c.name).collect();
+  for c in DECLARED {
+    assert!(
+      c.cite.contains("OD #") || c.cite.contains(".ltxml"),
+      "{}",
+      c.name
+    );
+  }
+  names.sort_unstable();
+  names.dedup();
+  assert_eq!(names.len(), DECLARED.len());
+}
+
+/// 87a r2 (review S2): under `--re-resolve` a paper whose conventions are stale — a block recording other conventions
+/// than the declared, or none — has its own summary column, `stale_conventions`, which the gate counts as unclassified
+/// (a family gone all stale is no clean 0 %), and the run exits non-zero; with no stale paper it exits 0.
+#[test]
+fn stale_conventions_have_their_own_column_count_in_the_gate_and_fail_the_run() {
+  let root = std::env::temp_dir().join(format!("fmshadow_stale_{}", std::process::id()));
+  let prefix = root.join("report");
+  let write = |key: &str, dump: &Value| {
+    let dir = root.join("papers").join(key);
+    fs::create_dir_all(&dir).expect("dir");
+    fs::write(
+      dir.join("out.xml"),
+      format!(
+        r#"{HEAD}<creator role="author"><personname>Ann Able</personname><contact role="address">Einstein Institute and Rutgers</contact></creator></document>"#
+      ),
+    )
+    .expect("xml");
+    fs::write(dir.join("out.xml.fmshadow.json"), dump.to_string()).expect("json");
+  };
+  let summary_row = |family: &str| {
+    let text = fs::read_to_string(root.join("report.summary.txt")).expect("summary");
+    let header = text.lines().nth(1).expect("header").to_string();
+    let row = text
+      .lines()
+      .find(|l| l.split('\t').next() == Some(family))
+      .expect("row")
+      .to_string();
+    (header, row)
+  };
+  let mut dump: Value = serde_json::from_str(AMS_DUMP).expect("json");
+  write("1712.00001", &dump);
+  let code = run(&root.join("papers"), None, &prefix, 1, true).expect("run");
+  let (header, row) = summary_row("ams_support.sty");
+  assert_eq!(
+    (code, header.as_str(), row.as_str()),
+    (
+      0,
+      "family\tpapers\tblocks\tagree\tdisagree_classified\tdisagree_unclassified\tno_block\theld\tunobserved\tstale_conventions\tother\tgate_unclassified_pct",
+      "ams_support.sty\t1\t1\t1\t0\t0\t0\t0\t0\t0\t0\t0.0"
+    )
+  );
+  dump["entries"][0]["policy"] = "kernel".into();
+  write("1712.00002", &dump);
+  dump["entries"][0]
+    .as_object_mut()
+    .expect("entry")
+    .remove("policy");
+  write("1712.00003", &dump);
+  let code = run(&root.join("papers"), None, &prefix, 1, true).expect("run");
+  let (_, row) = summary_row("ams_support.sty");
+  let (_, total) = summary_row("TOTAL");
+  fs::remove_dir_all(&root).expect("cleanup");
+  assert_eq!(
+    (code, row.as_str(), total.as_str()),
+    (
+      1,
+      "ams_support.sty\t3\t3\t1\t0\t0\t0\t0\t0\t2\t0\t66.7",
+      "TOTAL\t3\t3\t1\t0\t0\t0\t0\t0\t2\t0\t66.7"
+    )
+  );
+}
+
+/// 87a r2 (review S1): `DECLARED` is exactly the bindings' declarations — every `declare_frontmatter_conventions(&
+/// FRONTMATTER_CONVENTIONS)` call in `latexml_package/src/package/*.rs` and `latexml_contrib/src/*.rs`, by its
+/// constant's `name` and `binding`, no call of another form — so a binding that declares and is left out of the list
+/// fails here, not on the first `--re-resolve` of its family; and each `binding:` is a registered binding's name and
+/// extension, the entry whose loader is the declaring file's own (a copied `binding: "jheppub.sty"` would key a family
+/// on another's file and make it the kernel's in live conversions).
+#[test]
+fn the_declared_list_is_every_bindings_own_declaration() {
+  use std::collections::{BTreeMap, BTreeSet};
+  let workspace = Path::new(env!("CARGO_MANIFEST_DIR"))
+    .parent()
+    .expect("workspace");
+  let call = "declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS)";
+  let field = |text: &str, key: &str| -> String {
+    let start = text
+      .find("pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {")
+      .expect("the declared constant");
+    let body = &text[start..start + text[start..].find("\n};").expect("constant end")];
+    let at = body
+      .find(&format!("\n  {key}: \""))
+      .unwrap_or_else(|| panic!("{key}"));
+    let value = &body[at + key.len() + 6..];
+    value[..value.find('"').expect("quote")].to_string()
+  };
+  let entry =
+    regex::Regex::new(r#"\(\s*"([^"]+)",\s*"([^"]+)",\s*(?:\w+::)*(\w+)::load_definitions,?\s*\)"#)
+      .expect("regex");
+  // (each binding module's registry names, `name.ext`, from the crates' `BINDINGS` tables)
+  let mut registered: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+  for lib in ["latexml_package/src/lib.rs", "latexml_contrib/src/lib.rs"] {
+    let text = fs::read_to_string(workspace.join(lib)).expect("lib.rs");
+    for c in entry.captures_iter(&text) {
+      registered
+        .entry(c[3].to_string())
+        .or_default()
+        .insert(format!("{}.{}", &c[1], &c[2]));
+    }
+  }
+  let mut scanned: BTreeSet<(String, String)> = BTreeSet::new();
+  for dir in ["latexml_package/src/package", "latexml_contrib/src"] {
+    for file in fs::read_dir(workspace.join(dir)).expect("dir").flatten() {
+      let path = file.path();
+      if path.extension().is_none_or(|e| e != "rs") {
+        continue;
+      }
+      let text = fs::read_to_string(&path).expect("source");
+      let stem = path
+        .file_stem()
+        .expect("stem")
+        .to_string_lossy()
+        .into_owned();
+      let code: Vec<&str> = text
+        .lines()
+        .filter(|l| !l.trim_start().starts_with("//"))
+        .collect();
+      let calls = code
+        .iter()
+        .filter(|l| l.contains("declare_frontmatter_conventions("))
+        .count();
+      if calls == 0 {
+        continue;
+      }
+      assert_eq!(
+        code.iter().filter(|l| l.contains(call)).count(),
+        calls,
+        "{stem}: a declaration of another form"
+      );
+      let binding = field(&text, "binding");
+      assert!(
+        registered
+          .get(&stem)
+          .is_some_and(|names| names.contains(&binding)),
+        "{stem}: `binding: \"{binding}\"` is not its registry entry ({:?})",
+        registered.get(&stem)
+      );
+      scanned.insert((field(&text, "name"), binding));
+    }
+  }
+  let declared: BTreeSet<(String, String)> = DECLARED
+    .iter()
+    .map(|c| (c.name.to_string(), c.binding.to_string()))
+    .collect();
+  assert_eq!(declared, scanned);
+  assert_eq!(declared.len(), DECLARED.len());
+  // (and each is a binding the crates register under that name and extension)
+  let names: BTreeSet<String> = latexml_package::BINDINGS
+    .iter()
+    .map(|(name, ext, _)| format!("{name}.{ext}"))
+    .chain(
+      latexml_contrib::BINDINGS
+        .iter()
+        .map(|(name, ext, _)| format!("{name}.{ext}")),
+    )
+    .collect();
+  for c in DECLARED {
+    assert!(names.contains(c.binding), "{}", c.binding);
+  }
 }
 
 /// FM S2a.2 r6, decision 3: a braced address group an `\institute` entry's `\email` prints, written out to the authors

@@ -15,7 +15,20 @@ pub fn define_bold_vectors() -> Result<()> {
   Ok(())
 }
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
+/// svjour: an `\inst` after a comma is the name's before it
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "svjour",
+  binding: "sv_support.sty",
+  inst_after_comma: true,
+  cite: "svjour3.cls `\\inst` (`\\unskip`); OD #807",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   // Perl: sv_support.sty.ltxml
   // Support package for svjour class variants
 

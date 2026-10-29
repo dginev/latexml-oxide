@@ -25,8 +25,28 @@ pub fn declare_ams_size_options() -> Result<()> {
   Ok(())
 }
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
+/// amsart: `\and` prints "and", in an `\address` too (`\address{Einstein Institute … \and Rutgers}`, 1712.02568).
+/// Reaches a binding only while its `\author` at the call is still this binding's (the key is
+/// `ledger::author_binding`): ams_core's amsart, amsproc and amsbook, amsaddr. Not lmcs: its own `\author` calls
+/// `\lx@add@author`, so the observer records no author block (2306.08266, 2108.06944, 2402.09138). OmniBus loads this
+/// binding lazily (the `\curraddr` autoload), so it is reached only when that load comes before `\author`.
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "ams",
+  binding: "ams_support.sty",
+  and_word: true,
+  // (the second family: 0.38 % unclassified over 2,903 census papers, a seeded classified sample 33 of 34 right, none
+  // wrong — SYNC "FM S2b next family: ams_support", int110l)
+  written: true,
+  cite: "amsart.cls:599 `\\def\\and`; Perl ams_support.sty.ltxml:94 `\\lx@author@conj`; 1712.02568",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 #[rustfmt::skip]
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   // Perl: ams_support.sty.ltxml — common support for AMS document classes
 
   //======================================================================

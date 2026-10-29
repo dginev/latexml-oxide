@@ -5,8 +5,23 @@ use crate::{
   shipped_class::{class_text_loads, shipped_class_loads_or, shipped_class_text},
 };
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
+/// aa: an `\inst` after a comma is the name's before it
+/// (Unread today: inst_support owns aa's `\author`, so its blocks are keyed `inst_support.sty`, whose values are the
+/// same — every aa census paper.)
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "aa",
+  binding: "aa.cls",
+  inst_after_comma: true,
+  cite: "aa.cls:759-760 `\\def\\inst#1{\\unskip\\hbox{$^{#1}$}}`; OD #807 (1604.07826, 2309.00573)",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 #[rustfmt::skip]
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   // Perl: aa.cls.ltxml — Astronomy & Astrophysics
   // aa.cls v5-v7 (1201.4282's v7.0 :85-88): `\if@referee` and `\if@onecolumn`, which the `referee` and
   // `onecolumn` options set and papers test in their preambles (1201.4282, 1208.0304, 1501.05323, 1605.00944;

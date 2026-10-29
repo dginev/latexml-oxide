@@ -1,10 +1,16 @@
-//! The observer's policy table (Layer B of the design note's §2; OXIDIZED_DESIGN_DIVERGENCES #837): the association
-//! conventions a binding family applies on top of the class-independent resolver (`resolver/`, Layer C), keyed on
-//! (binding, hook) as the ledger records them at the call — the binding owning the `\author` meaning
-//! (`ledger::author_binding`) and the `\lx@add@authors*` hook it called (notes decision 2: no policy keyval in the
-//! binding files). Each entry reproduces a convention today's code already applies for that family, and cites the
-//! OXIDIZED_DESIGN_DIVERGENCES entry or the witness it reproduces; a family with no entry takes [`KERNEL`], the
-//! kernel's (Perl's `@authorsplits` reading, Base_Utility.pool.ltxml:676-700).
+//! The observer's conventions (Layer B of the design note's §2; OXIDIZED_DESIGN_DIVERGENCES #837): the association
+//! conventions a binding family applies on top of the class-independent resolver (`resolver/`, Layer C). Each binding
+//! declares its own at load ([`declare_frontmatter_conventions`], user ruling 2026-10-28 "in each binding", superseding
+//! the design note's decision 2, "no policy keyval in the binding files"): the declaration is kept in the state under
+//! the binding's file name, keyed on (binding, hook) as the ledger records them at the call — the binding owning the
+//! `\author` meaning (`ledger::author_binding`, or the class's binding with a declaration, `ledger::policy_binding`)
+//! and the `\lx@add@authors*` hook it called. Each declaration reproduces a convention the binding's family already
+//! had and cites the OXIDIZED_DESIGN_DIVERGENCES entry or the witness it reproduces; a family that declares none takes
+//! [`KERNEL`], the kernel's (Perl's `@authorsplits` reading, Base_Utility.pool.ltxml:676-700).
+
+use std::rc::Rc;
+
+use super::*;
 
 /// How an e-mail no mark of its own places is owned.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -29,12 +35,13 @@ pub enum TitleMarks {
   Body,
 }
 
-/// One family's association conventions.
+/// One family's association conventions, as its binding declares them ([`declare_frontmatter_conventions`]).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Policy {
-  /// the entry's name (reported with every decision it made)
+  /// the declaration's name (reported with every decision it made)
   pub name:             &'static str,
-  /// the binding (`revtex4_support.sty`) and the hook (`\lx@add@authors@append`) it applies to: `*` any
+  /// the declaring binding's file name, as the BINDINGS registry gives it (`<name>.<extension>`), and the hook
+  /// (`\lx@add@authors@append`) it applies to: `*` any
   pub binding:          &'static str,
   pub hook:             &'static str,
   /// an `\inst` mark (the convention's own, the rehearsal's `\lx@fm@obs@mark`) after a comma is the name's before the
@@ -71,11 +78,12 @@ pub struct Policy {
   /// OXIDIZED_DESIGN_DIVERGENCES #837 "S2a.2 r5 at landing"); a paper is written only when every place its output and
   /// the observer's reading differ is one of the writer's operations (`writer::plan`)
   pub written:          bool,
-  /// what the entry reproduces
+  /// what the declaration reproduces
   pub cite:             &'static str,
 }
 
-/// The kernel's conventions: every family without an entry.
+/// The kernel's conventions: every family whose binding declares none (and the template a declaration completes,
+/// `..KERNEL`).
 pub const KERNEL: Policy = Policy {
   name:             "kernel",
   binding:          "*",
@@ -94,197 +102,120 @@ pub const KERNEL: Policy = Policy {
   cite:             "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); FIDELITY_CHARTER §4",
 };
 
-/// The table, first match wins (a binding's file name as the BINDINGS registry gives it, `<name>.<extension>`).
-pub const POLICIES: &[Policy] = &[
-  // revtex: `\affiliation` after a run of `\author`s is every author of the run without one (revtex4-2.cls's group
-  // rule; Perl revtex4_support.sty.ltxml `annotate=new`) — declared by the binding at the call, `annotate=new`, which
-  // the resolver's `api:annotate:new` honours. (Its title marks, revtex4-2.cls:3040-3043 `\frontmatter@thefootnote`,
-  // are `\@fnsymbol` by default — :5976-5978 `\@booleanfalse\altaffilletter@sw` after :3043's default — and `\@alph`
-  // under `altaffilletter`; the binding declares no title hook, so the kernel's fallback is the default's.)
-  Policy {
-    name: "revtex",
-    binding: "revtex4_support.sty",
-    // (the S2b pilot: 0.4 % unclassified, a seeded classified sample 39 of 39 right — SYNC "FM S2a.2" r9)
-    written: true,
-    cite: "revtex4_support_sty.rs:79-105 `\\lx@add@affiliation[annotate=new]` (Perl revtex4_support.sty.ltxml); \
-           0911.0568",
-    ..KERNEL
-  },
-  // authblk: an unlabelled `\author` shows `\AB@thenote` and an unlabelled `\affil` is labelled by it (ruling 1,
-  // review revfms2a2's answer to question 6b): when the marks show, the affiliation is the authors' showing its
-  // number, a labelled author's too (2605.25017); in block mode (no marks shown) the run of authors since the last
-  // `\affil`, as the binding declares it at the call (`annotate=run:<n>`)
-  Policy {
-    name: "authblk",
-    binding: "authblk.sty",
-    thenote: true,
-    state_counter: Some("Maxaffil"),
-    cite: "authblk.sty:114-118, 148-167 (`\\AB@thenote`, `\\newaffil`, `Maxaffil`); Perl authblk.sty.ltxml:57 \
-           `annotate=new`; authblk_sty.rs:221 (2605.01689, 2605.25017)",
-    ..KERNEL
-  },
-  // llncs: `\institute{A \and B}` numbered by its `\and`s (`labelseq=affiliation`), `\inst` the request; an `\inst`
-  // after a comma is the name's before it; an unmarked `\\` line under names is their affiliation
-  Policy {
-    name: "llncs",
-    binding: "llncs.cls",
-    inst_after_comma: true,
-    and_inline: true,
-    cite: "llncs.cls:870-885, 894-896; OD #791 (2405.16615, 2512.08621), #792 (2604.11038), #807 (2401.16957)",
-    ..KERNEL
-  },
-  Policy {
-    name: "aa",
-    binding: "aa.cls",
-    inst_after_comma: true,
-    cite: "aa.cls:759-760 `\\def\\inst#1{\\unskip\\hbox{$^{#1}$}}`; OD #807 (1604.07826, 2309.00573)",
-    ..KERNEL
-  },
-  Policy {
-    name: "inst_support",
-    binding: "inst_support.sty",
-    inst_after_comma: true,
-    cite: "Perl inst_support.sty.ltxml:33-35; OD #807 (2401.16957)",
-    ..KERNEL
-  },
-  Policy {
-    name: "svjour",
-    binding: "sv_support.sty",
-    inst_after_comma: true,
-    cite: "svjour3.cls `\\inst` (`\\unskip`); OD #807",
-    ..KERNEL
-  },
-  // amsart: `\and` prints "and", in an `\address` too (`\address{Einstein Institute … \and Rutgers}`, 1712.02568)
-  Policy {
-    name: "ams",
-    binding: "ams_support.sty",
-    and_word: true,
-    // (the second family: 0.38 % unclassified over 2,903 census papers, a seeded classified sample 33 of 34 right, none
-    // wrong — SYNC "FM S2b next family: ams_support", int110l)
-    written: true,
-    cite: "amsart.cls:599 `\\def\\and`; Perl ams_support.sty.ltxml:94 `\\lx@author@conj`; 1712.02568",
-    ..KERNEL
-  },
-  // IEEEtran (and the classes the binding serves, ieeeconf.cls:3592, ieeecolor2.cls:3903 the same `\def\thefootnote{}`):
-  // the title's `\thanks` print no mark, so a note's link is no name's by its place (2001.02600, 1803.04996, 2504.08644,
-  // 2602.13176: a co-author's homepage, a video, data records, four co-authors' ORCIDs given to the last author)
-  Policy {
-    name: "IEEEtran",
-    binding: "IEEEtran.cls",
-    unmarked_notes: true,
-    cite: "IEEEtran.cls:4756 `\\def\\thefootnote{}`; OD #837 S2a.2 r6 (2001.02600, 1803.04996, 2504.08644, 2602.13176)",
-    ..KERNEL
-  },
-  // the JHEP family: `\emailAdd` addresses printed as one shared line, placed by spelling, else by author order
-  Policy {
-    name: "jheppub",
-    binding: "jheppub.sty",
-    email_owner: EmailOwner::SpelledElseOrder,
-    cite: "jheppub.sty:126-131; OD #805 (2407.18115, 2406.03543), #809 (1901.08773)",
-    ..KERNEL
-  },
-  Policy {
-    name: "jcappub",
-    binding: "jcappub.sty",
-    email_owner: EmailOwner::SpelledElseOrder,
-    cite: "jcappub.sty (jheppub's `\\emailAdd`); OD #805 (1804.07528, 2407.07862)",
-    ..KERNEL
-  },
-  Policy {
-    name: "jinstpub",
-    binding: "jinstpub.sty",
-    email_owner: EmailOwner::SpelledElseOrder,
-    cite: "OD #801, #805 (jinstpub's placement: steps 1 and 4)",
-    ..KERNEL
-  },
-  // iopart: `\ead` by spelling, else author order, else the address mark, else the group's only author (each
-  // `\author` a group)
-  Policy {
-    name: "iopart",
-    binding: "iopart_support.sty",
-    email_owner: EmailOwner::SpelledElseOrder,
-    call_is_group: true,
-    cite: "iopart.cls:225-231, 363-364; OD #806 (2311.12551), #808 (2407.14305, 2311.07087, 2311.17496), #809 \
-           (2504.15015)",
-    ..KERNEL
-  },
-  // report and book: their title page (`titlepage`, their default) prints the notes in the body's arabic numbers;
-  // without one (`notitlepage`) the kernel declares the title hook (`declare_fnsymbol_title_block`), which wins
-  Policy {
-    name: "report",
-    binding: "report.cls",
-    title_marks: TitleMarks::Body,
-    cite: "report.cls:211 (OD #851, `declare_fnsymbol_title_block`)",
-    ..KERNEL
-  },
-  Policy {
-    name: "book",
-    binding: "book.cls",
-    title_marks: TitleMarks::Body,
-    cite: "book.cls:217 (OD #851, `declare_fnsymbol_title_block`)",
-    ..KERNEL
-  },
-  // jpconf: its notes print the body's arabic `\thefootnote` as a superscript (jpconf.cls:139, 153 `\@thefnmark`,
-  // `\def\@fnsymbol#1{…^{\thefootnote}…}`; no `\maketitle` of its own changes `\thefootnote`): 1105.2659's
-  // `\footnote[3]{Speaker}` shows "3" — the kernel's `\@fnsymbol\c@footnote` there recurses through `\thefootnote`
-  // (review revfms2a2_7 finding 4)
-  Policy {
-    name: "jpconf",
-    binding: "jpconf.cls",
-    email_owner: EmailOwner::SpelledElseOrder,
-    call_is_group: true,
-    title_marks: TitleMarks::Body,
-    cite: "jpconf.cls:104-110 (iopart's `\\address`/`\\ead`), :139, 153 (its notes' marks); OD #841 (0705.0202, \
-           1011.0523)",
-    ..KERNEL
-  },
-];
+/// The state key a binding's declarations are kept under.
+fn declarations_key(binding: &str) -> String { s!("frontmatter_conventions:{binding}") }
 
-/// Whether a binding has an entry of its own (the class fallback's test, `ledger::policy_binding`).
-pub fn has_entry(binding: &str) -> bool { POLICIES.iter().any(|p| p.binding == binding) }
+/// The declarations `binding` made, in declaration order, if any.
+fn declared(binding: &str) -> Option<Rc<Vec<&'static Policy>>> {
+  with_value(&declarations_key(binding), |v| match v {
+    Some(Stored::Opaque(payload)) => Rc::clone(payload).downcast::<Vec<&'static Policy>>().ok(),
+    _ => None,
+  })
+}
 
-/// The policy for a block recorded under `binding` (the `\author` owner) and `hook`: the table's first entry whose
-/// binding and hook match (`*` any), else [`KERNEL`].
-pub fn policy_for(binding: &str, hook: &str) -> &'static Policy {
-  POLICIES
-    .iter()
-    .find(|p| (p.binding == "*" || p.binding == binding) && (p.hook == "*" || p.hook == hook))
+/// Declare a binding's frontmatter conventions (the binding's load, before anything else it defines): kept in the
+/// state, globally, under `conventions.binding` for the hook `conventions.hook` (`*` any); a binding may declare one
+/// per hook (the first matching, in declaration order, applies), and a later declaration for the same hook replaces the
+/// earlier in its place (a binding loaded again declares the same). What `policy_for` reads.
+pub fn declare_frontmatter_conventions(conventions: &'static Policy) {
+  debug_assert!(
+    !conventions.binding.is_empty() && conventions.binding != "*",
+    "{}: conventions are declared for the declaring binding's file",
+    conventions.name
+  );
+  debug_assert!(
+    conventions.cite.contains("OD #") || conventions.cite.contains(".ltxml"),
+    "{}: a declaration cites the entry or the Perl binding it reproduces",
+    conventions.name
+  );
+  let mut all: Vec<&'static Policy> =
+    declared(conventions.binding).map_or_else(Vec::new, |d| d.to_vec());
+  match all.iter_mut().find(|p| p.hook == conventions.hook) {
+    Some(earlier) => *earlier = conventions,
+    None => all.push(conventions),
+  }
+  assign_value(
+    &declarations_key(conventions.binding),
+    Stored::Opaque(Rc::new(all)),
+    Some(Scope::Global),
+  );
+}
+
+/// Whether a binding declared conventions of its own (the class fallback's test, `ledger::policy_binding`).
+pub fn has_entry(binding: &str) -> bool { declared(binding).is_some() }
+
+/// The conventions among `declared` for a block recorded under `binding` (the `\author` owner) and `hook`: the first
+/// declaration whose binding and hook match (`*` any), else [`KERNEL`] — `policy_for`'s rule, for a caller holding
+/// the declarations itself (`ab_audit fmshadow --re-resolve`).
+pub fn conventions_among<'a>(
+  declared: impl IntoIterator<Item = &'a &'static Policy>,
+  binding: &str,
+  hook: &str,
+) -> &'static Policy {
+  declared
+    .into_iter()
+    .copied()
+    .find(|p| p.binding == binding && (p.hook == "*" || p.hook == hook))
     .unwrap_or(&KERNEL)
+}
+
+/// The conventions for a block recorded under `binding` (the `\author` owner) and `hook`: the first that binding
+/// declared whose hook matches (`*` any), else [`KERNEL`].
+pub fn policy_for(binding: &str, hook: &str) -> &'static Policy {
+  declared(binding).map_or(&KERNEL, |d| conventions_among(d.iter(), binding, hook))
 }
 
 #[cfg(test)]
 mod tests {
   use super::*;
 
-  #[test]
-  fn every_entry_cites_what_it_reproduces() {
-    for policy in POLICIES {
-      assert!(!policy.cite.is_empty(), "{}", policy.name);
-      assert!(
-        policy.cite.contains("OD #") || policy.cite.contains(".ltxml"),
-        "{}",
-        policy.name
-      );
-    }
-  }
+  /// A synthetic binding's declarations: one for every hook, one for a hook of its own (declared first, so it wins
+  /// for that hook, as the first matching declaration does).
+  const ANY_HOOK: Policy = Policy {
+    name: "synthetic",
+    binding: "synthetic_binding",
+    and_inline: true,
+    cite: "OD #837 (a synthetic binding: the declaration's lookup)",
+    ..KERNEL
+  };
+  const APPEND_HOOK: Policy = Policy {
+    name: "synthetic_append",
+    hook: "\\lx@add@authors@append",
+    and_word: true,
+    ..ANY_HOOK
+  };
 
   #[test]
-  fn an_unknown_family_takes_the_kernel() {
+  fn a_declaration_is_read_and_an_undeclared_family_takes_the_kernel() {
     assert_eq!(
-      policy_for("revtex4_support.sty", "\\lx@add@authors@append").name,
-      "revtex"
+      policy_for("synthetic_binding", "\\lx@add@author@split").name,
+      "kernel"
+    );
+    assert!(!has_entry("synthetic_binding"));
+    declare_frontmatter_conventions(&APPEND_HOOK);
+    declare_frontmatter_conventions(&ANY_HOOK);
+    assert!(has_entry("synthetic_binding"));
+    assert_eq!(
+      policy_for("synthetic_binding", "\\lx@add@authors@append").name,
+      "synthetic_append"
     );
     assert_eq!(
-      policy_for("llncs.cls", "\\lx@add@author@split").name,
-      "llncs"
+      policy_for("synthetic_binding", "\\lx@add@author@split").name,
+      "synthetic"
     );
     assert_eq!(
       policy_for("kernel", "\\lx@add@authors@adaptive").name,
       "kernel"
     );
     assert_eq!(
-      policy_for("acmart.cls", "\\lx@add@authors@append").name,
+      policy_for("undeclared_binding", "\\lx@add@authors@append").name,
       "kernel"
+    );
+    // (a declaration again for a hook replaces the earlier in its place: a binding loaded again)
+    declare_frontmatter_conventions(&APPEND_HOOK);
+    assert_eq!(
+      policy_for("synthetic_binding", "\\lx@add@authors@append").name,
+      "synthetic_append"
     );
   }
 }

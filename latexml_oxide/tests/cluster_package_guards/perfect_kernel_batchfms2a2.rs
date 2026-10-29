@@ -1,4 +1,4 @@
-//! Guards for batch FM S2a.2: the frontmatter observer's resolver and policy table, in shadow mode
+//! Guards for batch FM S2a.2: the frontmatter observer's resolver and the families' conventions, in shadow mode
 //! (OXIDIZED_DESIGN_DIVERGENCES #837; KERNEL_CAPABILITIES K23). Under the shadow switch (here the thread's override)
 //! the ledger's blocks and API calls are resolved into the tuples `ab_audit fmshadow` compares with the XML — each
 //! creator's name without its marks, its affiliations, contacts and notes, the author block's own — each with the rule
@@ -421,7 +421,7 @@ fn ref_mark_takes_the_label_of_its_institute() {
 }
 
 /// revtex's `\firstname{…} \surname{…}` is one name (a layout container between two runs never separates, decision
-/// 6d; 1303.6104); the revtex policy entry runs (its `\affiliation`'s `annotate=new` the call's own).
+/// 6d; 1303.6104); revtex4_support's declared conventions run (its `\affiliation`'s `annotate=new` the call's own).
 #[test]
 fn revtex_name_parts_are_one_name() {
   let json_out = resolved(

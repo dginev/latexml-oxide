@@ -1,7 +1,22 @@
 use crate::prelude::*;
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
+/// llncs: `\institute{A \and B}` numbered by its `\and`s (`labelseq=affiliation`), `\inst` the request; an `\inst`
+/// after a comma is the name's before it; an unmarked `\\` line under names is their affiliation
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "llncs",
+  binding: "llncs.cls",
+  inst_after_comma: true,
+  and_inline: true,
+  cite: "llncs.cls:870-885, 894-896; OD #791 (2405.16615, 2512.08621), #792 (2604.11038), #807 (2401.16957)",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 #[rustfmt::skip]
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   // Perl: llncs.cls.ltxml — Lecture Notes in Computer Science (Springer)
   // llncs.cls:25-36 (TL 2025 v2.26): the switches the numbering and running-head options set, which papers and their
   // packages test (`\if@runhead`: pscproc2.sty:19, 0905.3107, 0908.0239, 1006.0809; `\if@envcntsame`: 2303.08726,

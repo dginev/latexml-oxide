@@ -3,8 +3,21 @@
 //! abbreviations. Neither Perl nor Rust had a jcappub binding.
 use latexml_package::prelude::*;
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
+/// jheppub's `\emailAdd` line: placed by spelling, else by author order
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "jcappub",
+  binding: "jcappub.sty",
+  email_owner: FmEmailOwner::SpelledElseOrder,
+  cite: "jcappub.sty (jheppub's `\\emailAdd`); OD #805 (1804.07528, 2407.07862)",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 #[rustfmt::skip]
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   jheppub_sty::load_definitions()?;
   // jcappub.sty:68
   DefMacro!("\\jname", "JCAP");

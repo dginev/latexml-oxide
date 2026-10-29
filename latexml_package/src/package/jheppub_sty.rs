@@ -1,7 +1,20 @@
 use crate::prelude::*;
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
+/// the JHEP family: `\emailAdd` addresses printed as one shared line, placed by spelling, else by author order
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "jheppub",
+  binding: "jheppub.sty",
+  email_owner: FmEmailOwner::SpelledElseOrder,
+  cite: "jheppub.sty:126-131; OD #805 (2407.18115, 2406.03543), #809 (1901.08773)",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 #[rustfmt::skip]
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   // Perl: jheppub.sty.ltxml — 112 lines
   RequirePackage!("hyperref");
   RequirePackage!("color");

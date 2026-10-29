@@ -1266,7 +1266,7 @@ pub fn dispatch(filename: &str) -> Option<Result<()>> {
       } else {
         DefinitionOrigin::Binding
       };
-      // (the frontmatter observer notes the binding whose load defines `\author`, the policy table's key; under its
+      // (the frontmatter observer notes the binding whose load defines `\author`, its conventions' key; under its
       // shadow switch only: OXIDIZED_DESIGN_DIVERGENCES #837)
       ::latexml_engine::base_utilities::note_binding_load(name, extension, || {
         with_origin(origin, loader)

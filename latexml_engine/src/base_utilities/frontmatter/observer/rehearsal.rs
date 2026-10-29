@@ -279,7 +279,7 @@ const BOUND_WHEN_DEFINED: &[(&str, &str, bool)] = &[
 const TITLE_FOOTNOTE_HOOK: &str = crate::latex_constructs::TITLE_THEFOOTNOTE;
 
 /// Bind the Layer-B event commands, in the rehearsal's group, and the title's footnote marks: `\thefootnote` the
-/// declared [`TITLE_FOOTNOTE_HOOK`] when there is one; else, as the block's policy entry says (`title_marks`), the
+/// declared [`TITLE_FOOTNOTE_HOOK`] when there is one; else, as the block's conventions say (`title_marks`), the
 /// class's own `\thefootnote` (report's and book's title page: arabic) or the kernel `\maketitle`'s `\@fnsymbol` of the
 /// counter (when the format has it).
 fn install_event_bindings(title_marks: TitleMarks) -> Result<()> {

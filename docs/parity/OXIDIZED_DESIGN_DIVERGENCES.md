@@ -23300,8 +23300,8 @@ own (the XML's trailing nameless creator, #159) — each association with the ru
   command's last argument, inside the affiliation wrappers) is rehearsed and lexed at the flush, and its attributes and
   parent recorded; the binding owning `\author` is recorded at the call — the compiled binding whose load changed the
   meaning (`note_binding_load`, the loader seams of latexml_package and latexml_contrib `dispatch`; a pool's load is the kernel's), else
-  `kernel`/`document`/`raw`/`fallback` by its origin — and with the hook is the policy key (notes decision 2: no keyval
-  in the binding files). A bare `\footnotemark` prints the kernel title hook `\lx@title@thefootnote`
+  `kernel`/`document`/`raw`/`fallback` by its origin — and with the hook is the policy key (notes decision 2, "no keyval
+  in the binding files", superseded at 87a: each binding declares its conventions, below). A bare `\footnotemark` prints the kernel title hook `\lx@title@thefootnote`
   (`TITLE_FOOTNOTE_HOOK` = `latex_constructs::TITLE_THEFOOTNOTE`, 78o) when defined; else the policy entry's
   `title_marks`: `Fnsymbol` (the kernel `\maketitle`'s `\@fnsymbol\c@footnote`) or `Body` (the class's own
   `\thefootnote`: report's and book's title page, arabic). (r2: the revtex entry's inert `\frontmatter@thefootnote`
@@ -23310,12 +23310,14 @@ own (the XML's trailing nameless creator, #159) — each association with the ru
   owning `\author`, or — when that is the kernel's — the document class's binding with an entry (`ledger::policy_binding`:
   the first binding the class's load loaded that has one; iopart.cls's `iopart_support.sty`, `jpconf.cls`, `report.cls`),
   never over a package owning `\author` (authblk); an API call runs under the policy of the block before it.
-- **Policy table** (`policy.rs`, Layer B; first match on (binding, hook), else `kernel`): `revtex`
+- **Policy table** (`policy.rs`, Layer B; first match on (binding, hook), else `kernel`; since 87a each binding's own
+  declaration, "The conventions' home" below): `revtex`
   (revtex4_support.sty; `annotate=new` declared by the binding's call), `authblk` (`thenote`: authblk's `\AB@thenote`
   under ruling 1, below; `state_counter` `Maxaffil`), `report`, `book` (`title_marks: Body`), `llncs` (`\inst` after a comma, `\and`
   inline: #791, #792, #807), `aa`, `inst_support`, `svjour` (`\inst` after a comma, #807), `jheppub`, `jcappub`,
   `jinstpub` (e-mail by spelling else call order, #801, #805, #809), `iopart`, `jpconf` (the same, each call a group:
-  #806, #808, #841); each entry cites what it reproduces (unit test `every_entry_cites_what_it_reproduces`).
+  #806, #808, #841); each entry cites what it reproduces (since 87a checked at the declaration and over the
+  re-resolver's list, ab_audit `fmshadow::tests::a_declared_familys_dump_re_resolves_under_its_bindings_conventions`).
 - **Comparator** (`ab_audit fmshadow ROOT [-o PREFIX] [--keys F] [--re-resolve]`, latexml_oxide/bin/ab_audit/fmshadow/):
   per paper the shadow's tuples against the XML's (names without their `ltx:sup` marks, texts by their letters and
   digits; contacts of role `note`/`thanks` read as notes on both sides), each disagreement a row — kind (`name-split`,
@@ -23988,6 +23990,48 @@ a collaboration's list in one personname may hold an affiliation the reading gav
 an_entry_the_title_requests_is_the_titles_note, a_request_of_a_separator_still_parts_the_names,
 emulateapj_title_marks_print_the_given_number, an_unmarked_line_under_a_run_of_names_rows_is_every_names,
 an_address_beside_an_institution_keeps_the_institution}`.
+
+**The conventions' home (87a, 2026-10-28; user ruling "in each binding", the audit's §3a item 1).** A family's
+conventions are declared by its binding at load, not looked up in a table keyed on binding file names in generic
+code: `declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS)` is the first statement of the binding's load, its
+`FmConventions` (`observer::policy::Policy`: every field the table carried — `inst_after_comma`, `and_inline`,
+`label_sequence`, `email_owner`, `call_is_group`, `title_marks`, `thenote`, `state_counter`, `and_word`,
+`unmarked_notes`, `written`, `cite` — completed from `FM_KERNEL_CONVENTIONS`) kept in the state globally under the
+declaring binding's file name (`frontmatter_conventions:<binding>`, one declaration per hook, `*` any; the first
+matching in declaration order applies, a re-declaration replaces in place). `policy_for` and `has_entry` read the
+state; a family that declares none is `KERNEL`, as the table's fallback was; `written` (revtex4_support, ams_support:
+the default build's S2b writer) is the binding's own flag. The key is the one the ledger already recorded at the call
+(`ledger::author_binding`, `ledger::policy_binding`), as the table's lookup was: a declaration reaches a binding only
+while that binding's `\author` at the call is still the declaring binding's — loading the declaring binding is not
+enough. revtex4_support's reaches revtex4, revtex4-1, revtex4-2; ams_support's ams_core's amsart, amsproc, amsbook and
+amsaddr; iopart_support's iopart.cls (through `policy_binding`, its `\author` the kernel's). Not reached today: the
+aastex classes load revtex4 and then `aas_support`, whose `\author` (aas_support_sty.rs) takes the ownership — kernel
+conventions, keyed `aas_support.sty` (every aastex-family census paper: aastex 45, aastex631 24, aastex63 13,
+aastex62 7, aastex6 3, aastex7 3; 1005.0770, 1910.05363, 2604.19097); lmcs's own `\author` (lmcs_cls.rs) calls
+`\lx@add@author`, no `\lx@add@authors*`, so the observer records no author block and no conventions are read
+(2306.08266, 2108.06944, 2402.09138: 0 blocks under `LATEXML_FM_SHADOW=1`); OmniBus loads ams_support only lazily
+(the `\curraddr` autoload, tex.rs), so it is reached only when that load comes before `\author`; aa.cls's declaration
+is unread, inst_support owning aa's `\author` (all 100 aa census papers keyed `inst_support.sty`, the same values).
+Whether aastex should take revtex's conventions is an observer decision left open. The fifteen former
+rows, each in its binding (latexml_package: revtex4_support, authblk, llncs, aa, inst_support, sv_support,
+ams_support, IEEEtran, jheppub, iopart_support, report, book; latexml_contrib: jcappub, jinstpub, jpconf); no binding
+file name is a key in `observer/`. Offline (`ab_audit fmshadow --re-resolve`) no binding loads, so the re-resolver holds
+the bindings' declarations by reference (`fmshadow/conventions.rs` `DECLARED`, `resolver::resolve_with`) and fails a
+paper loudly (`stale-conventions`) when a block's recorded conventions are not the ones the list gives its binding, or
+it records none: a summary column of its own (`stale_conventions`), counted by the gate as unclassified, and a non-zero
+exit. A drift guard scans the bindings' sources for the declaration and checks the list is exactly theirs, each
+`binding:` its own registry entry's name and extension.
+A pure refactor: the observer census (1,612 papers over every family that declares, `LATEXML_FM_SHADOW=1`) gives
+byte-identical shadow records on both binaries, and the same XML (one display formula's parse varied under the census
+load, 2002.02531, identical on solo reruns of both), and the A/B (5,309 papers: those families plus 2,000 of
+popint110u; E 7,230 → 7,230, F 12 → 12) changes no paper (its four changed rows — math-ambiguity enumeration counts
+under load, 2507.14058, 2411.02167, gr-qc9505014, and a 180 s timeout, 2203.01615 — identical on solo reruns of both).
+Guards
+`perfect_kernel_batch87a::a_bindings_declared_conventions_are_read_and_an_undeclared_family_is_the_kernels`, engine
+unit test `policy::tests::a_declaration_is_read_and_an_undeclared_family_takes_the_kernel`, ab_audit
+`fmshadow::tests::{a_declared_familys_dump_re_resolves_under_its_bindings_conventions,
+the_declared_list_is_every_bindings_own_declaration,
+stale_conventions_have_their_own_column_count_in_the_gate_and_fail_the_run}`.
 
 ### 840. A space a name sets before its own mark is the name's; spacing-only math, `\enskip` after a mark part names
 

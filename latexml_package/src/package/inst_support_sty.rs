@@ -1,7 +1,20 @@
 use crate::prelude::*;
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
+/// inst_support: an `\inst` after a comma is the name's before it
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "inst_support",
+  binding: "inst_support.sty",
+  inst_after_comma: true,
+  cite: "Perl inst_support.sty.ltxml:33-35; OD #807 (2401.16957)",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 #[rustfmt::skip]
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   // Perl: inst_support.sty.ltxml (PR #2767)
   // This bit of code supports the \inst style institution markup
   // used by several document classes and styles [aa, llncs, sv]

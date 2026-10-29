@@ -2,8 +2,30 @@ use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 
 use crate::prelude::*;
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
+/// revtex: `\affiliation` after a run of `\author`s is every author of the run without one (revtex4-2.cls's group
+/// rule; Perl revtex4_support.sty.ltxml `annotate=new`) — declared by this binding at the call, `annotate=new`, which
+/// the resolver's `api:annotate:new` honours. (Its title marks, revtex4-2.cls:3040-3043 `\frontmatter@thefootnote`,
+/// are `\@fnsymbol` by default — :5976-5978 `\@booleanfalse\altaffilletter@sw` after :3043's default — and `\@alph`
+/// under `altaffilletter`; this binding declares no title hook, so the kernel's fallback is the default's.) Reaches a
+/// binding only while its `\author` at the call is still this binding's (the key is `ledger::author_binding`): revtex4,
+/// revtex4-1, revtex4-2. Not the aastex classes: they load `aas_support` after revtex4, whose `\author` takes the
+/// ownership, so they resolve to the kernel's conventions (1005.0770, 1910.05363, 2604.19097).
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "revtex",
+  binding: "revtex4_support.sty",
+  // (the S2b pilot: 0.4 % unclassified, a seeded classified sample 39 of 39 right — SYNC "FM S2a.2" r9)
+  written: true,
+  cite: "revtex4_support_sty.rs `\\affiliation`: `\\lx@add@affiliation[annotate=new]` (Perl \
+         revtex4_support.sty.ltxml); 0911.0568",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 #[rustfmt::skip]
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   // Perl: revtex4_support.sty.ltxml — 433 lines
   // Support macros for RevTeX4 class (APS journals)
 

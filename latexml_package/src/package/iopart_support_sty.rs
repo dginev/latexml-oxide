@@ -59,8 +59,25 @@ pub fn iop_address_and_email() -> Result<()> {
   Ok(())
 }
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
+/// iopart: `\ead` by spelling, else author order, else the address mark, else the group's only author (each
+/// `\author` a group). Reaches iopart.cls's binding, which loads this one (`ledger::policy_binding`: the class's
+/// binding with a declaration, under the kernel `\author`).
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "iopart",
+  binding: "iopart_support.sty",
+  email_owner: FmEmailOwner::SpelledElseOrder,
+  call_is_group: true,
+  cite: "iopart.cls:225-231, 363-364; OD #806 (2311.12551), #808 (2407.14305, 2311.07087, 2311.17496), #809 \
+         (2504.15015)",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 #[rustfmt::skip]
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   // Conditionals — Perl L22-26
   RawTeX!("\\newif\\ifletter\\letterfalse");
   RawTeX!("\\newif\\ifnumbysec\\numbysecfalse");

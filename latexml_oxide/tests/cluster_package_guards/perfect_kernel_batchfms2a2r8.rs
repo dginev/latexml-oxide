@@ -269,7 +269,7 @@ const JPFNX: &str = r#"\documentclass{jpfnx}
 "#;
 
 /// Review revfms2a2_7 finding 4: jpconf prints its notes' marks as the body's arabic `\thefootnote` (jpconf.cls:139,
-/// 153), its policy entry `TitleMarks::Body` — 1105.2659's `\footnote[3]{Speaker}` shows "3", as its PDF, and a bare
+/// 153), its declared conventions' `TitleMarks::Body` — 1105.2659's `\footnote[3]{Speaker}` shows "3", as its PDF, and a bare
 /// `\footnotemark` "1"; under the kernel's `\@fnsymbol\c@footnote` the bare `\footnotemark` ran away and the block's
 /// rehearsal ended in a Fatal error, the block unobserved.
 #[test]
@@ -312,7 +312,7 @@ fn jpconfs_note_marks_are_its_arabic_numbers() {
 }
 
 /// Review revfms2a2_7 finding 4's residual: a bare `\footnotemark`'s print is read quietly as a note's is — under a
-/// class with no policy entry whose `\@fnsymbol` reads `\thefootnote` (the jpconf stand-in renamed: read raw, its
+/// class declaring no conventions whose `\@fnsymbol` reads `\thefootnote` (the jpconf stand-in renamed: read raw, its
 /// `\address` no frontmatter call), it ran away and the block's rehearsal ended in a Fatal error; now the mark shows
 /// nothing and the block is read.
 #[test]

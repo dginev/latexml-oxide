@@ -18,7 +18,8 @@ pub(super) const UNOBSERVED: &[&str] = &[
 pub struct PaperRow {
   pub key:           String,
   /// `agree`, `disagree`, `no-block`, `held`, `unobserved` (an author block the rehearsal could not see:
-  /// [`UNOBSERVED`]), `missing` (no dump or no XML), `unreadable`
+  /// [`UNOBSERVED`]), `stale-conventions` (`--re-resolve`: a block's recorded conventions are not the declared ones,
+  /// or it records none — [`re_resolve_dump`]), `missing` (no dump or no XML), `unreadable`
   pub status:        String,
   pub family:        String,
   pub blocks:        usize,
@@ -98,7 +99,15 @@ pub fn compare_paper(root: &Path, key: &str, re_resolve: bool) -> PaperRow {
     return row;
   }
   let resolved = if re_resolve {
-    fm_resolve(&json_inputs(&dump))
+    // (each block under its binding's declared conventions, held here: offline no binding loads to declare them)
+    match re_resolve_dump(&dump) {
+      Ok(resolved) => resolved,
+      Err(why) => {
+        eprintln!("ab_audit fmshadow {key}: not re-resolved: {why}");
+        row.status = "stale-conventions".into();
+        return row;
+      },
+    }
   } else {
     json_resolved(&dump["resolved"])
   };
@@ -185,8 +194,20 @@ pub fn run(
     no_block:     usize,
     held:         usize,
     unobserved:   usize,
+    /// `stale-conventions` (`--re-resolve` only): counted by the gate as unclassified, and the run exits non-zero
+    stale:        usize,
     other:        usize,
   }
+  // (the gate: the share of the counted papers — agreeing, disagreeing, or not re-resolved for stale conventions — with
+  // an unclassified disagreement or stale conventions; a family gone all stale is 100 %, never a clean 0)
+  let gate_pct = |f: &Fam| {
+    let counted = f.agree + f.classified + f.unclassified + f.stale;
+    if counted > 0 {
+      100.0 * (f.unclassified + f.stale) as f64 / counted as f64
+    } else {
+      0.0
+    }
+  };
   let mut fams: BTreeMap<String, Fam> = BTreeMap::new();
   let mut kinds: BTreeMap<(String, String, bool), (usize, usize)> = BTreeMap::new();
   for row in &rows {
@@ -267,6 +288,7 @@ pub fn run(
       "no-block" => fam.no_block += 1,
       "held" => fam.held += 1,
       "unobserved" => fam.unobserved += 1,
+      "stale-conventions" => fam.stale += 1,
       _ => fam.other += 1,
     }
   }
@@ -279,21 +301,15 @@ pub fn run(
   )?;
   writeln!(
     summary,
-    "family\tpapers\tblocks\tagree\tdisagree_classified\tdisagree_unclassified\tno_block\theld\tunobserved\tother\tgate_unclassified_pct"
+    "family\tpapers\tblocks\tagree\tdisagree_classified\tdisagree_unclassified\tno_block\theld\tunobserved\tstale_conventions\tother\tgate_unclassified_pct"
   )?;
   let mut ranked: Vec<(&String, &Fam)> = fams.iter().collect();
   ranked.sort_by(|a, b| b.1.papers.cmp(&a.1.papers).then(a.0.cmp(b.0)));
   let mut total = Fam::default();
   for (name, f) in &ranked {
-    let counted = f.agree + f.classified + f.unclassified;
-    let pct = if counted > 0 {
-      100.0 * f.unclassified as f64 / counted as f64
-    } else {
-      0.0
-    };
     writeln!(
       summary,
-      "{name}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{pct:.1}",
+      "{name}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{:.1}",
       f.papers,
       f.blocks,
       f.agree,
@@ -302,7 +318,9 @@ pub fn run(
       f.no_block,
       f.held,
       f.unobserved,
-      f.other
+      f.stale,
+      f.other,
+      gate_pct(f)
     )?;
     total.papers += f.papers;
     total.blocks += f.blocks;
@@ -312,12 +330,12 @@ pub fn run(
     total.no_block += f.no_block;
     total.held += f.held;
     total.unobserved += f.unobserved;
+    total.stale += f.stale;
     total.other += f.other;
   }
-  let counted = total.agree + total.classified + total.unclassified;
   writeln!(
     summary,
-    "TOTAL\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{:.1}",
+    "TOTAL\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{:.1}",
     total.papers,
     total.blocks,
     total.agree,
@@ -326,12 +344,9 @@ pub fn run(
     total.no_block,
     total.held,
     total.unobserved,
+    total.stale,
     total.other,
-    if counted > 0 {
-      100.0 * total.unclassified as f64 / counted as f64
-    } else {
-      0.0
-    }
+    gate_pct(&total)
   )?;
   // (the unobserved papers by reason, and how many of them disagree unclassified in their observed blocks: outside the
   // gate, never silently)
@@ -370,5 +385,5 @@ pub fn run(
   for ((kind, rule, classified), (papers, n)) in kinds {
     writeln!(summary, "{kind}\t{rule}\t{classified}\t{papers}\t{n}")?;
   }
-  Ok(i32::from(total.unclassified > 0))
+  Ok(i32::from(total.unclassified > 0 || total.stale > 0))
 }

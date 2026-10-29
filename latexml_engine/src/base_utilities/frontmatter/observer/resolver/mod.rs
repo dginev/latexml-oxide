@@ -1,7 +1,7 @@
 //! The observer's resolver (Layer C of the design note's §2; OXIDIZED_DESIGN_DIVERGENCES #837): a document's ledger —
 //! each author block's events and the frontmatter API calls after them — read into the tuples `ab_audit`'s `front.rs`
 //! extracts from the XML (each creator's name, affiliations, contacts and notes, and the author block's own), each
-//! association with the rule that decided it. Class-independent; a family's conventions come from its policy entry
+//! association with the rule that decided it. Class-independent; a family's conventions are those its binding declared
 //! (`policy.rs`, Layer B). In SHADOW mode only (stage S2a.2): nothing it decides reaches the output.
 //!
 //! The rules, in order (design §2 points 1-9, the FIDELITY_CHARTER §4 rulings of 2026-10-21):
@@ -88,7 +88,7 @@ pub struct Resolved {
   /// what the rulings dropped: a note whose content all became contacts (ruling 4), with its text — kept for the
   /// comparison, which reads today's note there as the ruling's change
   pub dropped:   Vec<Assoc>,
-  /// per block (ledger index): the policy entry it ran under
+  /// per block (ledger index): the declared conventions it ran under (by name)
   pub policies:  Vec<(usize, &'static str)>,
   /// the lines of each entry that unmarked lines under it continued (`line:continued`), each as printed — what today's
   /// prints as one contact a line (the comparison's `part`, review revfms2a2_7 finding 5); `None` read from a dump made
@@ -436,8 +436,16 @@ impl Resolver {
   }
 }
 
-/// Resolve a document's ledger (its inputs in call order).
-pub fn resolve(inputs: &[Input]) -> Resolved {
+/// Resolve a document's ledger (its inputs in call order), each block under the conventions its binding declared
+/// (`policy::policy_for`).
+pub fn resolve(inputs: &[Input]) -> Resolved { resolve_with(inputs, &policy_for) }
+
+/// Resolve inputs, each block under the conventions `conventions` gives for its binding and hook (`ab_audit fmshadow
+/// --re-resolve`, offline: the declarations it holds, as `policy::conventions_among` reads them).
+pub fn resolve_with(
+  inputs: &[Input],
+  conventions: &dyn Fn(&str, &str) -> &'static Policy,
+) -> Resolved {
   let mut resolver = Resolver::new();
   let mut policy: &'static Policy = &policy::KERNEL;
   for input in inputs {
@@ -452,7 +460,7 @@ pub fn resolve(inputs: &[Input]) -> Resolved {
         epoch,
         events,
       } => {
-        policy = policy_for(binding, hook);
+        policy = conventions(binding, hook);
         // (a call replacing the authors before it in its queue: `\author{A, B}` then `\author{A\thanks{…}, B}`,
         // 2502.11323, 2509.11381 — the later one's are the document's)
         if *replace {

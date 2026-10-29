@@ -11,8 +11,8 @@
 //! byte-identical with the switch on and off.
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
 use latexml_engine::base_utilities::{
-  FmEvent, FmEventKind, FmInput, FmResolved, FmSepKind, fm_resolve, fm_shadow_json,
-  set_fm_shadow_override,
+  FmEvent, FmEventKind, FmInput, FmResolved, FmSepKind, declare_frontmatter_conventions,
+  fm_resolve, fm_shadow_json, set_fm_shadow_override,
 };
 use serde_json::Value;
 
@@ -148,6 +148,8 @@ fn email(index: usize, attrs: &str, address: &str) -> FmInput {
 /// compared with its live place (0), the list read as out of order and `x2@` left to the block.
 #[test]
 fn a_replacing_calls_address_list_is_read_in_live_order() {
+  // (jheppub's conventions, as its binding declares them at load: 87a, OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&latexml_package::package::jheppub_sty::FRONTMATTER_CONVENTIONS);
   let inputs = [
     block(1, "jheppub.sty", false, vec![name("Ann Able")]),
     block(2, "jheppub.sty", true, vec![

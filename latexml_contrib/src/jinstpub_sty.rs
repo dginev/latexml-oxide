@@ -7,8 +7,21 @@
 //! latexml_contrib jinst_cls.rs. Neither Perl nor Rust had a jinstpub binding (so it is a contrib binding).
 use latexml_package::prelude::*;
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
+/// jheppub's `\emailAdd` line: placed by spelling, else by author order
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "jinstpub",
+  binding: "jinstpub.sty",
+  email_owner: FmEmailOwner::SpelledElseOrder,
+  cite: "OD #801, #805 (jinstpub's placement: steps 1 and 4)",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 #[rustfmt::skip]
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   // jinstpub.sty:32-56: its packages in its order — the newtx text and math fonts (amsthm before newtxmath) before
   // jheppub's amsmath, hyperref and natbib —, then the `wrapfigure` environment and T1
   RequirePackage!("newtxtext");

@@ -1,7 +1,25 @@
 use crate::prelude::*;
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
+/// authblk: an unlabelled `\author` shows `\AB@thenote` and an unlabelled `\affil` is labelled by it (ruling 1,
+/// review revfms2a2's answer to question 6b): when the marks show, the affiliation is the authors' showing its
+/// number, a labelled author's too (2605.25017); in block mode (no marks shown) the run of authors since the last
+/// `\affil`, as this binding declares it at the call (`annotate=run:<n>`)
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "authblk",
+  binding: "authblk.sty",
+  thenote: true,
+  state_counter: Some("Maxaffil"),
+  cite: "authblk.sty:114-118, 148-167 (`\\AB@thenote`, `\\newaffil`, `Maxaffil`); Perl authblk.sty.ltxml:57 \
+         `annotate=new`; authblk_sty.rs `\\affil` (2605.01689, 2605.25017)",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 #[rustfmt::skip]
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   // Perl: authblk.sty.ltxml — 100 lines
   // Author/affiliation blocks with mark-based association
 

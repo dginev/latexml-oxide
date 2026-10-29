@@ -14,7 +14,8 @@
 //!
 //! Output: `<prefix>.tsv` (a row per paper), `<prefix>.disagree.tsv` (a row per disagreement), and
 //! `<prefix>.summary.txt` (the per-family table ranked by reach, with the gate number: the share of the family's
-//! counted papers with an unclassified disagreement).
+//! counted papers with an unclassified disagreement — or, under `--re-resolve`, with stale conventions, its own
+//! `stale_conventions` column, which also makes the run exit non-zero).
 
 use std::{
   collections::BTreeMap,
@@ -25,7 +26,6 @@ use std::{
 
 use latexml_engine::base_utilities::{
   FmAssoc, FmEvent, FmEventKind, FmInput, FmResolved, FmSepKind, fm_addresses_in, fm_creator_call,
-  fm_resolve,
 };
 use roxmltree::Node;
 use serde_json::Value;
@@ -428,6 +428,7 @@ pub fn shadow_tuples(resolved: &FmResolved) -> Tuples {
 
 mod classes;
 mod compare;
+mod conventions;
 mod driver;
 mod dump;
 #[cfg(test)]
@@ -435,5 +436,6 @@ mod tests;
 
 pub(crate) use classes::*;
 pub(crate) use compare::*;
+pub(crate) use conventions::*;
 pub(crate) use driver::*;
 pub(crate) use dump::*;

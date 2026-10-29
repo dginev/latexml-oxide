@@ -9,8 +9,24 @@ use crate::{
   prelude::*,
 };
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
+/// IEEEtran (and the classes this binding serves, ieeeconf.cls:3592, ieeecolor2.cls:3903 the same
+/// `\def\thefootnote{}`): the title's `\thanks` print no mark, so a note's link is no name's by its place (2001.02600,
+/// 1803.04996, 2504.08644, 2602.13176: a co-author's homepage, a video, data records, four co-authors' ORCIDs given to
+/// the last author)
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "IEEEtran",
+  binding: "IEEEtran.cls",
+  unmarked_notes: true,
+  cite: "IEEEtran.cls:4756 `\\def\\thefootnote{}`; OD #837 S2a.2 r6 (2001.02600, 1803.04996, 2504.08644, 2602.13176)",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 #[rustfmt::skip]
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   // IEEEtran.cls L232-260 declares each class-option flag with
   // `\newif\ifCLASSOPTION<name>`, which creates BOTH the `\ifCLASSOPTION<name>`
   // conditional AND the `\CLASSOPTION<name>true`/`false` setters. IEEEtran

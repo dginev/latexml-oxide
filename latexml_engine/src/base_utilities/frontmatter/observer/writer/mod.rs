@@ -1,11 +1,11 @@
-//! The observer's writer (FM S2b; OXIDIZED_DESIGN_DIVERGENCES #837 "S2b"): for a family whose policy entry is
-//! `written` (the pilot: revtex4_support's `revtex`), once `insert_frontmatter` has placed today's frontmatter, the
-//! paper's creators are compared with the resolver's reading as `ab_audit fmshadow` compares them ([`dom`], the
-//! comparator's tuples), and the paper is written only when every difference is one of the writer's operations
-//! ([`plan`]) — an entry given to the authors the reading gives it, one call's marked entries cut apart at their marks,
-//! a legend made a note of the names showing its mark, a url printing an address made an e-mail — each decided by a
-//! rule holding an adopted ruling's change tag (`resolver::CHANGE_TAGS`). Any other difference leaves the paper as
-//! today's: a difference no operation explains is one the comparison would report unclassified.
+//! The observer's writer (FM S2b; OXIDIZED_DESIGN_DIVERGENCES #837 "S2b"): for a family whose binding declared its
+//! conventions `written` (the pilot: revtex4_support's `revtex`), once `insert_frontmatter` has placed today's
+//! frontmatter, the paper's creators are compared with the resolver's reading as `ab_audit fmshadow` compares them
+//! ([`dom`], the comparator's tuples), and the paper is written only when every difference is one of the writer's
+//! operations ([`plan`]) — an entry given to the authors the reading gives it, one call's marked entries cut apart at
+//! their marks, a legend made a note of the names showing its mark, a url printing an address made an e-mail — each
+//! decided by a rule holding an adopted ruling's change tag (`resolver::CHANGE_TAGS`). Any other difference leaves the
+//! paper as today's: a difference no operation explains is one the comparison would report unclassified.
 //!
 //! What is written comes from the tokens the document queued: a cut entry's pieces from its call's content, mapped by
 //! the spans of a stamped rehearsal of it ([`plan`]), digested as today's digests an entry ([`apply`]). Under the

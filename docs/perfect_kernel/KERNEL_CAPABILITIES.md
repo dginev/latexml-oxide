@@ -647,7 +647,8 @@ resolver and the comparator (S2a.2), any output change (S2b on). Guards `perfect
 "FM S2a.1".
 
 **As landed (FM S2a.2, fms2a2; OD #837 "S2a.2").** Layers B and C in shadow mode: `observer/policy.rs` (the policy
-table keyed on (the binding owning `\author`, the hook), each entry citing what it reproduces) and `observer/resolver/`
+table keyed on (the binding owning `\author`, the hook), each entry citing what it reproduces; since 87a each binding
+declares its own conventions at load, read from the state, OD #837 "The conventions' home") and `observer/resolver/`
 (rules 1-9 of the design note, each association with its rule), whose tuples the dump carries as `resolved`; the
 comparator `ab_audit fmshadow ROOT` (per-family table with the gate number, a row per classified/unclassified
 disagreement, `--re-resolve` to resolve a dump's events again offline). The class guard is not met: the census numbers

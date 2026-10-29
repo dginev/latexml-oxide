@@ -16,7 +16,26 @@ const JPCONF: RawRead = RawRead {
   ..RawRead::new("jpconf", "cls")
 };
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
+/// jpconf: its notes print the body's arabic `\thefootnote` as a superscript (jpconf.cls:139, 153 `\@thefnmark`,
+/// `\def\@fnsymbol#1{…^{\thefootnote}…}`; no `\maketitle` of its own changes `\thefootnote`): 1105.2659's
+/// `\footnote[3]{Speaker}` shows "3" — the kernel's `\@fnsymbol\c@footnote` there recurses through `\thefootnote`
+/// (review revfms2a2_7 finding 4); its `\address`/`\ead` are iopart's
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "jpconf",
+  binding: "jpconf.cls",
+  email_owner: FmEmailOwner::SpelledElseOrder,
+  call_is_group: true,
+  title_marks: FmTitleMarks::Body,
+  cite: "jpconf.cls:104-110 (iopart's `\\address`/`\\ead`), :139, 153 (its notes' marks); OD #841 (0705.0202, \
+         1011.0523)",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   if read_raw(&JPCONF)? {
     iopart_support_sty::iop_address_and_email()?;
   }

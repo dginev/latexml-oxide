@@ -14,12 +14,12 @@
 //!   with its span of the field's positions (`fieldProv`/`fieldSerial`, core `gullet::field_cover_of`) and its ink.
 //! - [`resolver`] (S2a.2): the ledger's blocks and API calls read into the frontmatter tuples (creators with their
 //!   names, affiliations, contacts and notes; the block's own), each association with the rule that decided it, under
-//!   the family's conventions from [`policy`] (keyed on the binding owning `\author` and the hook); written into the
-//!   dump, compared with the XML by `ab_audit fmshadow`.
+//!   the family's conventions from [`policy`] (each binding declares its own at load; read keyed on the binding owning
+//!   `\author` and the hook); written into the dump, compared with the XML by `ab_audit fmshadow`.
 //! - [`shadow`]: the switch, the runtime environment variable `LATEXML_FM_SHADOW=1`, under which the flush
 //!   (`digest_front_matter`) rehearses and lexes each block and the CLI writes `<dest>.fmshadow.json`. Without it no
 //!   part of the observer runs, and with it the conversion's output is the same: the observer decides nothing yet
-//!   (the resolver is stage S2a.2) — but for a family whose policy entry is `written` (FM S2b):
+//!   (the resolver is stage S2a.2) — but for a family whose declared conventions are `written` (FM S2b):
 //! - [`writer`] (S2b): once today's frontmatter is in the document (`insert_frontmatter`), the paper of a written
 //!   family is compared with the resolver's reading, and where every difference is one of the writer's operations —
 //!   an entry given to the authors the reading gives it, one call's marked entries cut apart, a legend made a note,
@@ -42,10 +42,16 @@ pub(in crate::base_utilities) use ledger::{
   field_stamped, note_field_stamp, record_api_call, record_author_call,
 };
 pub use ledger::{note_binding_load, record_note_text as fm_record_note_text};
+// (for the bindings, which declare their conventions at load, and `ab_audit fmshadow --re-resolve`)
+pub use policy::{
+  EmailOwner as FmEmailOwner, KERNEL as FM_KERNEL_CONVENTIONS, Policy as FmConventions,
+  TitleMarks as FmTitleMarks, conventions_among as fm_conventions_among,
+  declare_frontmatter_conventions,
+};
 pub use resolver::{
   Assoc as FmAssoc, CHANGE_TAGS as FM_CHANGE_TAGS, Input as FmInput, RCreator as FmCreator,
   Resolved as FmResolved, addresses_in as fm_addresses_in, creator_call as fm_creator_call,
-  is_change_rule as fm_is_change_rule, resolve as fm_resolve,
+  is_change_rule as fm_is_change_rule, resolve as fm_resolve, resolve_with as fm_resolve_with,
 };
 pub(in crate::base_utilities) use shadow::shadow_flush;
 pub use shadow::{
