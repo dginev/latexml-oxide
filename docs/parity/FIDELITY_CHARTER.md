@@ -32,7 +32,8 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
 - **Label text is markup, never stray content and never dropped**: "E-mail:", "Keywords:", "Require:" become an
   element or attribute CSS can style or hide (2026-10).
 - **An empty presentational shell left by our own restructuring is not emitted**: a thanks note whose entire content
-  became contacts (OD #803, 2026-10-21). An author's own empty `\thanks{}` is the author's and stays.
+  became contacts (OD #803, 2026-10-21). An author's own empty `\thanks{}` is not emitted either (2026-10-30, superseding
+  2026-10-21's "stays": pdflatex prints a bare mark, and an empty note only adds a "Thanks:" label over nothing).
 - **Duplicates the author printed stay duplicated**: an address in the author list and again after "Correspondence:"
   is kept twice (2026-10-21).
 - **Display toggles are honored as the PDF shows them**: blind review, anonymous, final/draft options (2026-10).
@@ -101,6 +102,14 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   authors to affiliations (`\inst{…}`, `$^{…}$`, `\textsuperscript{…}`) are keyed by the printed text of the digested
   operand, not Perl's source-string ToString — aa's `\inst{\ESO}` with `\newcommand{\ESO}{2}` prints 2 and is entry 2's;
   `\dag` and `$\dagger$` are one label. A documented divergence from Perl's frontmatter API (OD entry with the stage).
+- **A frontmatter note reads as the class prints it** (2026-10-30): its label is the class's own printed label — aa's
+  and svjour's `\offprints{O. Kochukhov, \email{…}}` is "Send offprint requests to: O. Kochukhov, …" (aa.cls,
+  svjour3.cls:371-374), never a role name the class does not print ("Preprint: "); a note we cannot give its printed
+  reading is better hidden than shown mislabelled ("it adds confusion").
+- **A note our own extraction empties is not emitted** (2026-10-30, generalising OD #803 from thanks notes to every
+  frontmatter note): `\offprints{\email{x}}` whose only content became a contact leaves no "Send offprint requests to:"
+  shell; a note whose remainder still informs stays with its printed label (`\offprints{O. Kochukhov, \email{…}}` reads
+  "Send offprint requests to: O. Kochukhov," — the address is in the author list).
 - **A second `\maketitle` keeps the latest title** (2026-10-01); multi-contribution volumes are deferred (KPE #1026).
 
 ## 5. Bindings and shipped copies

@@ -30,7 +30,10 @@ recovery cases are recorded here with their witnesses. Each OPEN_ROWS row named 
   0710.1854 (sibgrapi), 0910.5837, quant-ph0606237 (w-art), 1310.6133 (icrc2013), 1602.05576, 2508.18432 (ar-1col),
   2109.10941, 2406.03764 (putex), 2303.16316 (jheppubmodnew), 2406.16374 (lrec-coling2024), 2501.06929 (SCITEPRESS),
   2509.01217 (melba), 2603.12634 (tea), math0408149 (gtart_h), physics0510010 (cesj), 1309.1610, 2104.15006
-  (ifacconf). Nothing is lost; the pieces are body text after the abstract. Witness TODO (user 2026-10-28: deferred,
+  (ifacconf), 0806.3855 (an: `\@maketitle` prints `\@keywords` before `{\@abstract}`, an.cls:717-721; Perl drops
+  both), astro-ph0607079 (SolarPhysics: the `{opening}` abstract is a store, printed after `\@title`
+  `\@authorsandinstitutes` `\@date`, SolarPhysics.cls:901-908, :949-952; Perl drops the title page; root-cause
+  `agent_reports/2026-10-30_rc_abs5.md`). Nothing is lost; the pieces are body text after the abstract. Witness TODO (user 2026-10-28: deferred,
   kept tracked): 2403.15998 (ifacconf, a late abstract) — `\open@fm` (ifacconf.cls:984-1070) sets the title-page
   deposit, the abstract's marker and the keywords in one block, so 86g's cover rule fails safe and leaves it as is; an
   ifacconf binding (24 of 30k papers) would fix it and 1309.1610, 2104.15006 together.
