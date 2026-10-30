@@ -1,0 +1,38 @@
+% witness: 2402.00473, 2412.11966 (nature_mod: `\item[Author Contributions]`, `\item[Competing Interests]`,
+%          `\item[Correspondence]`), 1408.2522, 1702.00936 (a bare `\item`, the list's "Acknowledgements");
+%          nature_mod.cls:117-130 = TL nature.cls:110-123 (the class's `{addendum}` and `\addendumlabel`, cut here)
+% oracle:  pdflatex 0 errors: "Acknowledgements We thank the referees.", "Competing Interests The authors declare
+%          none.", each label bold, the bodies small
+% engines: rust 92a = 0 errors, 0 warnings: the binding emptied `{addendum}`, so the bodies were body paragraphs with
+%          "Competing Interests" lost and no "Acknowledgements"; perl (no binding, the copy read with
+%          --includestyles) = an itemize, the given label's tag bold
+% expect:  0 errors, 0 warnings; an itemize after the section, the items tagged "Acknowledgements" and bold
+%          "Competing Interests"
+% status:  RED (92a) -> GREEN (92f)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{nature_mod.cls}
+\ProvidesClass{nature_mod}[24/2/2004 v1.0]
+\LoadClass[12pt]{article}
+\newenvironment{addendum}{%
+    \setlength{\parindent}{0in}%
+    \small%
+    \begin{list}{Acknowledgements}{%
+        \setlength{\leftmargin}{0in}%
+        \setlength{\listparindent}{0in}%
+        \setlength{\labelsep}{0em}%
+        \setlength{\labelwidth}{0in}%
+        \setlength{\itemsep}{12pt}%
+        \let\makelabel\addendumlabel}
+    }
+    {\end{list}\normalsize}
+\newcommand*{\addendumlabel}[1]{\textbf{#1}\hspace{1em}}
+\end{filecontents*}
+\documentclass{nature_mod}
+\begin{document}
+\section{Intro}
+Body.
+\begin{addendum}
+\item We thank the referees.
+\item[Competing Interests] The authors declare none.
+\end{addendum}
+\end{document}
