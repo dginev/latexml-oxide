@@ -307,6 +307,9 @@ struct Resolver {
   /// the pending entries (their place in `pending`) a `_share=authors` call made (llncs's one `\institute`, no `\and`
   /// in it: every author's unless the class's `\inst{n}` picks it), and whether the entry holds a mark of its own
   shared:           Vec<(usize, bool)>,
+  /// the pending entries of a numbered call (`labelseq=`) whose content holds marks of its own, which no split read
+  /// (`answer_pending`: its number is no reading of those marks, so an owner found by a hand mark is not ruling 1's)
+  marked_entries:   Vec<usize>,
   /// the footnote texts the document made (ledger index, flushes before it, printed mark, text), each read where a
   /// name shows its mark (`answer_note_texts`)
   note_texts:       Vec<(usize, usize, String, String)>,
@@ -385,6 +388,7 @@ impl Resolver {
       fn_requests:      Vec::new(),
       class_requests:   Vec::new(),
       shared:           Vec::new(),
+      marked_entries:   Vec::new(),
       note_texts:       Vec::new(),
       continued:        Vec::new(),
     }

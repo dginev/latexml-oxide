@@ -375,6 +375,59 @@ pub(super) fn reads_as_names(text: &str) -> bool {
   !text.contains('@') && name_count(text) > 0 && !reads_as_affiliation(&text_tokens(text))
 }
 
+/// The lines of a numbered entry (`labelseq=`: one `\institute` with no `\and`) when every line's first ink is a Mark
+/// — at the start, or after a Break event: aa's `\institute{\inst{1} Max-Planck-Institut … \\ \inst{2} University of
+/// Illinois … \\ …}`, each line printed after its mark, 1003.3020 (aa class D of the stage-6 gate study, 5 papers;
+/// 0904.2180) —, each line an entry of its own its mark labels, a line of contacts alone the entry's above it; empty
+/// when fewer than two such entries, or a line opens with other ink (`Univ X \\ \email{…}`: one entry, its lines
+/// continued). A mark mid-line opens nothing here
+/// ([`mark_led_pieces`] reads those for an entry no class numbers).
+pub(super) fn line_led_pieces(events: &[Event]) -> Vec<Vec<Event>> {
+  let lines: Vec<Vec<Event>> = events
+    .split(|e| e.kind == EventKind::Break)
+    .map(<[Event]>::to_vec)
+    .filter(|line| line.iter().any(inked))
+    .collect();
+  let led = |line: &[Event]| {
+    line
+      .iter()
+      .find(|e| {
+        inked(e) && !(e.kind == EventKind::Name && !e.text.chars().any(char::is_alphanumeric))
+      })
+      .is_some_and(|e| {
+        e.kind == EventKind::Mark && e.label.as_deref().is_some_and(|l| !l.is_empty())
+      })
+  };
+  // (a line of contacts alone continues the entry above it, as an unmarked line under a labelled one does (R12): the
+  // institute's `\\ \email{cessen@phys.au.dk}` closing its last entry, 1507.05963)
+  let contacts_only = |line: &[Event]| {
+    line
+      .iter()
+      .filter(|e| {
+        inked(e) && !(e.kind == EventKind::Name && !e.text.chars().any(char::is_alphanumeric))
+      })
+      .all(|e| e.kind == EventKind::Contact)
+  };
+  let mut pieces: Vec<Vec<Event>> = Vec::new();
+  for line in lines {
+    if led(&line) {
+      pieces.push(line);
+    } else if contacts_only(&line)
+      && let Some(last) = pieces.last_mut()
+    {
+      last.push(Event::new(EventKind::Break));
+      last.extend(line);
+    } else {
+      return Vec::new();
+    }
+  }
+  if pieces.len() >= 2 {
+    pieces
+  } else {
+    Vec::new()
+  }
+}
+
 /// The entries of an API call's content whose first ink is a mark, when two or more marks open one — a mark at its
 /// start, after a line break or after a separator (a comma, a gap, a word) with ink since the entry before (`$^{*}$Univ
 /// A,\\$^{+}$Univ B`, cond-mat0510562; `$^1$SJTU, $^2$Beihang`, 1809.03738): each entry its events up to the next,

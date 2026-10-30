@@ -1209,7 +1209,10 @@ impl Resolver {
         // under `\institute{Univ X \and Univ Y}`, whose numbers the class prints before each entry (aa.cls v6.1
         // :319-341), which today's left on a nameless creator, the marks in the names: 1009.6047, 0904.2180 (aa class C
         // of the stage-6 gate study, 13 papers), 2207.06953 (llncs class H))
+        // (not an entry holding marks of its own no split read: its number is no reading of them — 1507.05963's
+        // institute before its line-led split read a contacts line)
         let by_hand = assoc.rule.split_whitespace().next() == Some("api:labelseq")
+          && !self.marked_entries.contains(&at)
           && self.out.creators[owner].requests.iter().any(|r| {
             labels.iter().any(|l| label_matches(r, l))
               && !self

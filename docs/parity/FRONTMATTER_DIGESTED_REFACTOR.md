@@ -122,7 +122,8 @@ they stay for stages 3–5.
    line breaks read as such (`events::raw_lines`); the 85b `_share=authors` port, llncs's one `\institute` every live
    author's unless the class's `\inst{n}` picks it, its e-mail lines by the chain (`api:share:authors`); (OD #918) a
    numbered entry's owner found by a mark printed by hand, each request keeping its origin
-   (`Resolver::class_requests`), tagged `ruling1:request`. Left before `written: true`: the labelseq mark-led split (6), aa's policy key (8:
+   (`Resolver::class_requests`), tagged `ruling1:request`; a numbered entry whose every line a mark leads split at
+   them (`line_led_pieces`). Left before `written: true`: aa's policy key (8:
    `inst_support.sty` today, which OmniBus shares).
 8. **Per-class parsers** as each family is promoted.
 

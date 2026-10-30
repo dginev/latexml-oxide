@@ -18,6 +18,15 @@ pub(super) fn attr_value<'a>(attrs: &'a str, key: &str) -> Option<&'a str> {
   })
 }
 
+/// An attribute string without any `key=` pair (`role=affiliation,labelseq=affiliation` without `labelseq`).
+pub(super) fn without_key(attrs: &str, key: &str) -> String {
+  split_top_commas(attrs)
+    .into_iter()
+    .filter(|kv| kv.split_once('=').is_none_or(|(k, _)| k.trim() != key))
+    .collect::<Vec<_>>()
+    .join(",")
+}
+
 /// `text` split at its commas outside braces.
 pub(super) fn split_top_commas(text: &str) -> Vec<&str> {
   let mut parts = Vec::new();

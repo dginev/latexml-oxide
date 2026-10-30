@@ -1,0 +1,20 @@
+% witness: 1003.3020, 0904.2180 (aa class D of the stage-6 gate study, 5 papers: one `\institute`, no `\and`, each line
+%          led by `\inst{n}`)
+% oracle:  pdflatex with 1707.06238's aa.cls: "Ann Able1, Bob Baker2, and Cid Cole1,2" / 1 Univ X / 2 Univ Y, Town —
+%          each line printed after its mark
+% engines: perl 0.8.8 = 0 errors, 1 warning (an orphaned annotation, `label=affiliation:1,affiliation:1,affiliation:2`),
+%          no affiliation kept; rust 92a: today's XML one affiliation "Univ X Univ Y, Town" on a nameless creator; the
+%          shadow the whole on the `\inst{1}` names (the class's number 1)
+% expect:  0 errors, 0 warnings; the shadow reading: Univ X Ann Able's and Cid Cole's, Univ Y, Town Bob Baker's and Cid
+%          Cole's, each line its mark's entry (`api:leading-mark api:split-by-marks`)
+% status:  RED (92a, the shadow) -> GREEN (92b)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2} \and Cid Cole\inst{1,2}}
+\institute{\inst{1} Univ X\\ \inst{2} Univ Y, Town}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

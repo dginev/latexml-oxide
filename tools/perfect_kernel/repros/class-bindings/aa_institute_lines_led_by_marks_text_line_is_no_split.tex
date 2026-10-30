@@ -1,0 +1,18 @@
+% witness: astro-ph0405186 (aa: `\institute{$^1$ … \\ $^2$ … \\ email: agupta@…, orion@…}`, the closing line text)
+% oracle:  pdflatex with 1707.06238's aa.cls: "Ann Able1 and Bob Baker2" / 1 Univ X / 2 Univ Y / Contact: X Office
+% engines: perl 0.8.8 = 0 errors, the whole institute on Ann Able; rust 92a: one affiliation on a nameless creator, the
+%          shadow the whole institute on Ann Able (`api:labelseq ruling1:request` since 92b's piece 3)
+% expect:  0 errors, 0 warnings; the shadow reading: the whole institute on the name marked 1, untagged (`api:labelseq`):
+%          an entry holding marks of its own that no split read is no reading of the hand marks (an honest
+%          disagreement, not a classified one)
+% status:  GREEN (92b)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\institute{$^{1}$Univ X\\ $^{2}$Univ Y\\ Contact: X Office}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

@@ -195,3 +195,54 @@ fn a_numbered_entry_owned_by_a_hand_mark_is_ruling_ones() {
     ],
   );
 }
+
+/// Piece 4, the mark-led split of a numbered entry with no `\and` (aa class D, 5 papers: 1003.3020, 0904.2180): one
+/// `\institute{\inst{1} Univ X \\ \inst{2} Univ Y, Town}` whose every line a mark leads (`resolver::line_led_pieces`,
+/// at the start or after a Break event) is each line its own entry, labelled by its mark — not the whole by the class's
+/// number 1, which gave it to the `\inst{1}` names (today's XML: one affiliation on a nameless creator; Perl none, an
+/// orphaned annotation Warning). The reading alone is pinned.
+#[test]
+fn a_numbered_entry_whose_lines_marks_lead_is_split_at_them() {
+  assert_reading(
+    repro!("aa_institute_lines_led_by_inst_are_each_an_entry.tex"),
+    None,
+    &[
+      "C Ann Able [1] | line:names",
+      "  a Univ X | api:leading-mark api:split-by-marks",
+      "C Bob Baker [2] | line:names",
+      "  a Univ Y, Town | api:leading-mark api:split-by-marks",
+      "C Cid Cole [1,2] | line:names",
+      "  a Univ X | api:leading-mark api:split-by-marks",
+      "  a Univ Y, Town | api:leading-mark api:split-by-marks",
+    ],
+  );
+  // (a closing line of contacts alone continues the entry above it — 1507.05963's `\\ \email{cessen@phys.au.dk}`,
+  // which held the split back, so the whole institute went to the names marked 1, tagged; the address its speller's)
+  assert_reading(
+    repro!("aa_institute_lines_led_by_marks_email_line_continues.tex"),
+    None,
+    &[
+      "C Ann Able [1] | line:names",
+      "  a Univ X | api:leading-mark api:split-by-marks",
+      "  c email ann.able@y.org | api:leading-mark api:split-by-marks api:inner-contact owner:inner-email \
+       owner:spelled",
+      "C Bob Baker [2] | line:names",
+      "  a Univ Y | api:leading-mark api:split-by-marks",
+      "C Cid Cole [1,2] | line:names",
+      "  a Univ X | api:leading-mark api:split-by-marks",
+      "  a Univ Y | api:leading-mark api:split-by-marks",
+    ],
+  );
+  // (a closing line of text holds the split back: the entry holds marks of its own no split read, so its number is no
+  // reading of the names' hand marks — untagged, an honest disagreement; astro-ph0405186, 2208.05114)
+  assert_reading(
+    repro!("aa_institute_lines_led_by_marks_text_line_is_no_split.tex"),
+    None,
+    &[
+      "C Ann Able [1] | line:names",
+      "  a Univ X Univ Y Contact: X Office | api:labelseq",
+      "C Bob Baker [2] | line:names",
+    ],
+  );
+}
+

@@ -335,6 +335,32 @@ impl Resolver {
       }
       return;
     }
+    // (one numbered entry whose every line a mark leads — `\institute{\inst{1} Univ X \\ \inst{2} Univ Y}`, the one entry
+    // the class numbers with no `\and` (aa class D of the stage-6 gate study, 1003.3020, 0904.2180): each line its own
+    // entry, labelled by its mark as a leading mark labels one, not the whole by the class's number — `line_led_pieces`)
+    if !split
+      && tag != "ltx:creator"
+      && policy.label_sequence
+      && attr_value(attrs, "labelseq").is_some_and(|s| !s.is_empty())
+      && attr_value(attrs, "label").is_none_or(str::is_empty)
+    {
+      let lines = line_led_pieces(events);
+      if !lines.is_empty() {
+        // (the class's number is taken all the same: an entry after it keeps its own)
+        let seq = attr_value(attrs, "labelseq").unwrap_or("");
+        match self.sequence.iter_mut().find(|(r, _)| r == seq) {
+          Some((_, n)) => *n += 1,
+          None => self.sequence.push((seq.to_string(), 1)),
+        }
+        let unnumbered = without_key(attrs, "labelseq");
+        self.splitting = true;
+        for line in lines {
+          self.api(index, tag, role, &unnumbered, &line, policy);
+        }
+        self.splitting = false;
+        return;
+      }
+    }
     // an entry of several marked entries (`\affiliation{$^{*}$Univ A,\\$^{+}$Univ B}`): each entry by its own leading
     // mark, as ruling 1 reads the marks (cond-mat0510562, 1612.09425, 1809.03738, hep-ph0408045, 2509.08362,
     // 1506.00848: the whole went to the first mark's carriers)
@@ -516,6 +542,11 @@ impl Resolver {
           },
           ..assoc
         }));
+      }
+      if marked && label_rule == "api:labelseq" {
+        self
+          .marked_entries
+          .extend(first_pending..self.pending.len());
       }
       if shares {
         self

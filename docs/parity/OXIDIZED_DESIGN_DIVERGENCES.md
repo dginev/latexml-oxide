@@ -27105,7 +27105,7 @@ Shadow-side, in the resolver; a written family's output changes where its writer
   `perfect_kernel_batch92b::an_entry_email_printing_one_address_is_placed_by_the_chain`,
   `perfect_kernel_batch92b::a_sole_institute_no_inst_picks_is_every_authors`.
 
-### 918. A numbered entry's owner found by a mark printed by hand is ruling 1's reading (Perl: hand-typed marks stay in the names, the numbered institutes unowned or placed by position)
+### 918. A numbered entry's owner found by a mark printed by hand is ruling 1's reading, and a numbered entry whose lines marks lead is split at them (Perl: hand-typed marks stay in the names, the numbered institutes unowned or placed by position; the line-led institute dropped)
 
 Frontmatter refactor stage 7, the llncs and aa move (task #429; `agent_reports/2026-10-29_s6_aa_llncs_gate.md` §4 rows
 5 and 6). Shadow-side, in the resolver.
@@ -27120,5 +27120,21 @@ Frontmatter refactor stage 7, the llncs and aa move (task #429; `agent_reports/2
   `request`, or an `annotations=` list), and an owner a labelseq entry finds by a request no class command made (nor
   a `\footnotemark`) is tagged `ruling1:request` — not where `api:ref-label` already says so. Census (re-resolved):
   unclassified aa 38 → 25 of 554, llncs 41 → 36 of 463.
-- Repro class-bindings/`aa_hand_marks_request_numbered_institutes`; guard
-  `perfect_kernel_batch92b::a_numbered_entry_owned_by_a_hand_mark_is_ruling_ones`.
+- **The mark-led split of a numbered entry with no `\and`** (aa class D, 5 papers: 1003.3020, 0904.2180). One
+  `\institute{\inst{1} Univ X \\ \inst{2} Univ Y}` whose every line a mark leads (the first ink at the start or after
+  a Break event, `resolver::line_led_pieces`) was one entry numbered 1 by the class, given whole to the `\inst{1}`
+  names (today's XML: one affiliation on a nameless creator; Perl: none, an orphaned annotation Warning). Each line is
+  now its own entry labelled by its mark (`api:leading-mark api:split-by-marks`, the call's `labelseq=` dropped for
+  its lines, the class's number taken all the same so a later entry keeps its own); a line of contacts alone
+  continues the entry above it (1507.05963's closing `\\ \email{cessen@…}` had held the split back). A mark mid-line
+  opens nothing here. An entry holding marks of its own that no split read (a closing line of text: astro-ph0405186,
+  2208.05114) is no reading of the names' hand marks: its owners are not tagged `ruling1:request`
+  (`Resolver::marked_entries`). Census (re-resolved): aa unclassified 25 → 23 (llncs 36 → 37), the two papers whose
+  whole-institute reading had been tagged now honest disagreements; 16 aa papers whose shadow had agreed with today's
+  whole block on the first names (0902.0930, 1907.07692, 2203.14638, 2503.07779, …) are now classified differences, each line on
+  the names its mark requests.
+- Repros class-bindings/`aa_hand_marks_request_numbered_institutes`,
+  `aa_institute_lines_led_by_inst_are_each_an_entry`, `aa_institute_lines_led_by_marks_email_line_continues`,
+  `aa_institute_lines_led_by_marks_text_line_is_no_split`; guards
+  `perfect_kernel_batch92b::a_numbered_entry_owned_by_a_hand_mark_is_ruling_ones`,
+  `perfect_kernel_batch92b::a_numbered_entry_whose_lines_marks_lead_is_split_at_them`.
