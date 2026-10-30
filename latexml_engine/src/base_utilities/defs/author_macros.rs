@@ -228,8 +228,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       return Ok(Vec::new());
     }
     // (keyed by the operand's printed text: refactor stage 4, OXIDIZED_DESIGN_DIVERGENCES #919)
-    let label = frontmatter_label_keys(&operand, "affiliation")?.join(",");
-    add_annotation_labels(label, true);
+    let (label, pictured) = frontmatter_label_request(&operand, "affiliation")?;
+    add_annotation_labels(label.join(","), true, pictured);
     if let Some(notes) = notes {
       unread(notes);
     }
@@ -254,7 +254,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // #919 — `$^{\dag}$Univ A` answers `Ann$^{\dagger}$`)
     let printed = printed_label(&operand)?;
     let label = match &printed {
-      Some(printed) => clean_frontmatter_labels(printed, "affiliation"),
+      Some(printed) => clean_frontmatter_labels(&printed.text, "affiliation"),
       None => clean_frontmatter_labels(&operand.to_string(), "affiliation"),
     }
     .into_iter()
@@ -262,7 +262,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // the marks it is (`\mathrm{a}`: a), as the authors' are read (relocate_annotations): from its printed text, else
     // its TeX spelling, which keeps the boundary after a control word (`{\rm a}`'s tokens join to `\rma`: 2008.00493)
     let keys = match &printed {
-      Some(printed) => printed_marks(printed).join(","),
+      Some(printed) => printed_marks(&printed.text).join(","),
       None => script_marks(operand.clone().untex_string().as_ref()).join(","),
     };
     with_pending_entry_attr(move |attr| match label {

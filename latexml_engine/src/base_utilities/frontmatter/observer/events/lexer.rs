@@ -175,6 +175,13 @@ impl Lexer {
       if is_zero_width(c) {
         continue;
       }
+      // (a combining mark is part of the symbol it is on, `\={\dag}`'s `†̄`: no `†` mark and a mark-led name run —
+      // its line read as "̄Univ One" — review rev92b_r3 B1's sibling; `labels::mark_labels` reads a script so)
+      if !self.symbol.is_empty() && is_combining_mark(c) {
+        self.symbol.push(c);
+        self.symbol_span = join_span(self.symbol_span, span);
+        continue;
+      }
       if is_fnsymbol(c) || is_mark_glyph(c) {
         self.flush_run();
         if self.symbol.is_empty() {

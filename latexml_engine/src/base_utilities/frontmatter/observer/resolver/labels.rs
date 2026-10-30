@@ -102,26 +102,38 @@ pub fn mark_labels(label: &str) -> Vec<String> {
       );
       continue;
     }
-    let mut run = String::new();
-    let mut rest = String::new();
+    // (each character with the combining marks on it, as `parted_label` reads one: `\={\dag}`'s `†̄` and
+    // `\textcircled{\dag}`'s `†⃝` are a symbol of their own, never a bare `†` and a lone mark — review rev92b_r3 B1,
+    // where both requested `†` and a `\dag` author took the `\={\dag}` line —; a run is one such character repeated)
+    let mut characters: Vec<String> = Vec::new();
     for c in part.chars().map(|c| match c {
       '\u{2217}' => '*',
       '\u{2225}' => '‖',
       c => c,
     }) {
-      if is_symbol_char(c) {
+      match characters.last_mut() {
+        Some(character) if is_combining_mark(c) => character.push(c),
+        _ => characters.push(c.to_string()),
+      }
+    }
+    let mut run = String::new();
+    let mut unit = String::new();
+    let mut rest = String::new();
+    for character in characters {
+      if character.starts_with(is_symbol_char) {
         if !rest.is_empty() {
           labels.push(std::mem::take(&mut rest));
         }
-        if run.chars().next().is_some_and(|r| r != c) {
+        if !run.is_empty() && unit != character {
           labels.push(std::mem::take(&mut run));
         }
-        run.push(c);
+        run.push_str(&character);
+        unit = character;
       } else {
         if !run.is_empty() {
           labels.push(std::mem::take(&mut run));
         }
-        rest.push(c);
+        rest.push_str(&character);
       }
     }
     labels.extend([run, rest].into_iter().filter(|s| !s.is_empty()));

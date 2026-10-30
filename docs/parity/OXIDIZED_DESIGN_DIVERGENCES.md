@@ -27174,14 +27174,22 @@ ruling 2026-10-29; `FRONTMATTER_DIGESTED_REFACTOR.md`; inventory row 2.8). Today
   text parts two labels as a comma does: white space in a box's text and every item `util_text::is_spacing_item` reads
   as spacing, the reader 92e's `first_ink` uses (a box of white space, a box or whatsit Perl marks `isSpace`, but a
   leader: `$^{1\,2}$`'s math glue, a box of a space; `\!`'s zero-width-space box; `\:`, `\>`, `\ `, `\hspace`,
-  `\kern`, `\mskip`, `\textsuperscript{1\,2}`). A format character (Unicode Cf: the zero-width space, the joiners)
+  `\kern`, `\mskip`, `\textsuperscript{1\,2}`) — but what prints no gap (`util_text::is_blank_item`: a box of no
+  text, `\-`'s; a zero-width kern, the italic correction `\/`): `\textsuperscript{1\-2}` and `1\/2` print the one label
+  12 (review rev92b_r3 P1: read as spacing, 1 and 2, the `12` line on a nameless creator). A format character (Unicode Cf: the zero-width space, the joiners)
   is no label and no shown symbol; a combining mark (M) is part of the character before it — `\={x}`'s `x̄` (the
   accents with no precomposed form, `\=` `\~` `\v` `\u` `\H` `\b` `\d`) is one label, never `x` nor a mark of its own —
   and is dropped only with no base (`util_text::keeps_label_char`; `parted_printed_label`, `is_printed_symbol`,
-  `insert::unanswered_mark_text`, the observer's `labels::parted_label`). A pgf/TikZ picture (`\lxSVG@insertpicture`)
+  `insert::unanswered_mark_text`, the observer's `labels::parted_label`, `labels::mark_labels` and its lexer's text
+  symbols, `events::lexer`: `\={\dag}`'s `†̄` and `\textcircled{\dag}`'s `†⃝` are no `†`, review rev92b_r3 B1, where
+  the shadow gave both `†` lines to both names). A pgf/TikZ picture (`\lxSVG@insertpicture`)
   prints only its text nodes, the boxes its `\pgfsys@hbox` calls insert (`util_text::picture_text`): an SVG path's
   data, colours and transforms are no label, a circled `a` (`\tikz…\node[circle,draw](c){a};`) is `a`; LaTeX's
-  `picture` environment is read as any material (`\put(0,0){c}`'s `c`). The observer's mark reader
+  `picture` environment is read as any material (`\put(0,0){c}`'s `c`). A label only a pgf picture's text prints may
+  answer a line (a circled `a`, `\inst{\circled{1}}`'s 1) but is never shown unanswered (`queue_digest::
+  frontmatter_label_request`, the creator's `_picturemarks`): the picture is dropped from the name, and its text with
+  it (review rev92b_r3 S1: a TikZ ORCID icon's node text "iD" in `$^{1,\href{…}{\orcidicon}}$` and llncs
+  `\inst{1\myorcid{…}}` was shown as a mark; Perl shows nothing). The observer's mark reader
   (`events::script_ink`) reads a script so too. Review rev92b_r2: dropping every combining mark read `x̄` as `x` (a
   wrong owner), and reading a picture as no text lost a circled letter's label. Review rev92b_r1 B1: `$^{1\,2}$`
   printed one label `1_2`, which nothing answered and `unanswered_mark_text` showed none of — each such mark lost
@@ -27210,13 +27218,17 @@ ruling 2026-10-29; `FRONTMATTER_DIGESTED_REFACTOR.md`; inventory row 2.8). Today
   operand's end) told apart. A LaTeX `picture` in a mark is read whole, its drawing commands' arguments too
   (`$^{\begin{picture}(6,6)\put(0,0){a}\put(0,0){\circle{6}}\end{picture}}$` keys `a6.0`, on both sides alike):
   telling its coordinates and sizes from its text needs every drawing command's parameters typed (`\lx@pic@polyline`
-  and `\lx@pic@cbezier` take `{}`).
+  and `\lx@pic@cbezier` take `{}`). A math accent in a mark is read as its bare letter (`$^{\hat a}$`, `$^{\bar x}$`
+  key `a` and `x`, pdflatex prints â and x̄; an unanswered one is shown as the letter): the accent whatsit's base is
+  its shown argument and the accent no text of it — reading it as the base with its combining mark (as `\={x}`'s text
+  `x̄` is) needs the math accent's character mapped to its combining form.
 - Witness 1307.8124 (`\inst{\MPIA}`: each author's institutes, where all seven were on a nameless creator). Repros
   class-bindings/`aa_inst_macro_is_its_printed_number`, `aa_inst_unanswered_symbol_stays_shown`,
   sectioning-frontmatter/`author_dag_and_dagger_are_one_label`, `author_macro_mark_glued_to_a_symbol`,
   `author_mark_labels_parted_by_spacing`, `author_mark_spaced_labels_answer_their_lines`,
   `author_mark_zero_width_space_is_no_label`, `author_mark_picture_is_no_label`,
-  `author_mark_combining_accent_is_its_letter`, `author_mark_picture_text_is_its_label`; guards
+  `author_mark_combining_accent_is_its_letter`, `author_text_symbol_with_combining_mark_is_one_mark`,
+  `author_mark_picture_text_is_its_label`; guards
   `perfect_kernel_batch92b::a_mark_is_keyed_by_its_printed_text`, `perfect_kernel_batch92b::spacing_parts_a_marks_labels`.
 
 ### 920. A binding's `\author` replaces or stacks as its class's does where the binding owns it; inst_support's keeps stacking (Perl: inst_support's clears on every call; no ptephy or webofc binding)

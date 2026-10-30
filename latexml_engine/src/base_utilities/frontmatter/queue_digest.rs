@@ -252,13 +252,60 @@ pub(in crate::base_utilities) fn frontmatter_label_keys(
   operand: &Tokens,
   prefix: &str,
 ) -> Result<Vec<String>> {
-  Ok(match printed_label(operand)? {
-    Some(printed) => clean_frontmatter_labels(&printed, prefix)
+  Ok(frontmatter_label_request(operand, prefix)?.0)
+}
+
+/// The label keys of a mark's operand ([`frontmatter_label_keys`]), and those of them only a picture's text prints
+/// ([`PrintedLabel::outside_pictures`]): a request nothing answers is shown in the name (`insert::
+/// show_unanswered_marks`), but not one a picture prints — the picture is no part of the name, and its text alone is
+/// no mark (the TikZ ORCID icon's "iD" in `$^{1,\href{…}{\orcidicon}}$`, review rev92b_r3 S1), while it may answer a
+/// label still (a circled `a`'s `a`, `\inst{\circled{1}}`'s 1).
+pub(in crate::base_utilities) fn frontmatter_label_request(
+  operand: &Tokens,
+  prefix: &str,
+) -> Result<(Vec<String>, Vec<String>)> {
+  let keys = |printed: &str| -> Vec<String> {
+    clean_frontmatter_labels(printed, prefix)
       .into_iter()
       .flat_map(parted_printed_label)
-      .collect(),
-    None => clean_frontmatter_labels(&operand.to_string(), prefix),
+      .collect()
+  };
+  Ok(match printed_label(operand)? {
+    Some(printed) => {
+      let all = keys(&printed.text);
+      let outside = keys(&printed.outside_pictures);
+      let pictured = all
+        .iter()
+        .filter(|key| !outside.contains(key))
+        .cloned()
+        .collect();
+      (all, pictured)
+    },
+    None => (
+      clean_frontmatter_labels(&operand.to_string(), prefix),
+      Vec::new(),
+    ),
   })
+}
+
+/// A mark operand's printed text ([`printed_label`]), and the same with each pgf picture's text left out ([`label_ink`]:
+/// a picture prints its text nodes, a label apart).
+#[derive(Debug, Default)]
+pub(in crate::base_utilities) struct PrintedLabel {
+  /// What the operand prints.
+  pub text:             String,
+  /// What it prints outside its pictures, each picture a label separator.
+  pub outside_pictures: String,
+}
+
+impl PrintedLabel {
+  /// Write `c`, inside a picture or not.
+  fn push(&mut self, c: char, in_picture: bool) {
+    self.text.push(c);
+    if !in_picture {
+      self.outside_pictures.push(c);
+    }
+  }
 }
 
 /// A printed label read as the marks the page shows: a number or letters a symbol is glued to (`$^{\ICQD,\Phys\ast}$`
@@ -336,7 +383,7 @@ pub(in crate::base_utilities) fn is_printed_symbol(c: char) -> bool {
 /// residuals). Inside an open assignment journal (a refused setter's replay, a title page's speculative run, the
 /// observer's rehearsal: journals do not nest, `begin_assignment_journal`) no run opens and the spelling is read (#919's
 /// residuals).
-pub(in crate::base_utilities) fn printed_label(operand: &Tokens) -> Result<Option<String>> {
+pub(in crate::base_utilities) fn printed_label(operand: &Tokens) -> Result<Option<PrintedLabel>> {
   let tokens = operand.unlist_ref();
   let plain = |t: &Token| {
     matches!(
@@ -362,8 +409,11 @@ pub(in crate::base_utilities) fn printed_label(operand: &Tokens) -> Result<Optio
   );
   Ok(
     printed
-      .map(|p| p.trim().to_string())
-      .filter(|p| !p.is_empty()),
+      .map(|p| PrintedLabel {
+        text:             p.text.trim().to_string(),
+        outside_pictures: p.outside_pictures.trim().to_string(),
+      })
+      .filter(|p| !p.text.is_empty()),
   )
 }
 
@@ -384,7 +434,7 @@ pub(in crate::base_utilities) fn reading_label() -> bool {
 /// diagnostics discarded, an argument read past its end (`\altaffilmark` handed `\let`) reading nothing of the
 /// document's. `None` when no journal opens, the run is not undone, or it raised an error (a resource Fatal, or one
 /// that could not be undone, propagates: Fatal stays Fatal).
-fn speculative_label_ink(tokens: Tokens) -> Result<Option<String>> {
+fn speculative_label_ink(tokens: Tokens) -> Result<Option<PrintedLabel>> {
   let Some(journal) = begin_assignment_journal() else {
     return Ok(None);
   };
@@ -416,8 +466,8 @@ fn speculative_label_ink(tokens: Tokens) -> Result<Option<String>> {
     Ok(())
   });
   let printed = result.as_ref().ok().map(|digested| {
-    let mut printed = String::new();
-    label_ink(digested, &mut printed);
+    let mut printed = PrintedLabel::default();
+    label_ink(digested, &mut printed, false);
     printed
   });
   drop(ledger_scope);
@@ -455,9 +505,9 @@ fn speculative_label_ink(tokens: Tokens) -> Result<Option<String>> {
 /// rev92b_r1 B1: one label `1_2`, nothing answered it, and the mark was lost). A format character prints no label, a
 /// combining mark is part of the character before it ([`keeps_label_char`]: `\={x}`'s `x̄`), and a pgf/TikZ picture
 /// prints only its text nodes ([`picture_text`]: a circled `a`'s `a`, never an SVG path's data), a label apart.
-fn label_ink(d: &Digested, out: &mut String) {
+fn label_ink(d: &Digested, out: &mut PrintedLabel, in_picture: bool) {
   if is_spacing_item(d) {
-    out.push(',');
+    out.push(',', in_picture);
     return;
   }
   match d.data() {
@@ -465,16 +515,16 @@ fn label_ink(d: &Digested, out: &mut String) {
       if let Ok(text) = b.borrow().get_string() {
         for c in text.chars() {
           if c.is_whitespace() {
-            out.push(',');
-          } else if keeps_label_char(c, out.chars().next_back()) {
-            out.push(c);
+            out.push(',', in_picture);
+          } else if keeps_label_char(c, out.text.chars().next_back()) {
+            out.push(c, in_picture);
           }
         }
       }
     },
     DigestedData::List(l) => {
       for child in l.borrow().boxes.iter() {
-        label_ink(child, out);
+        label_ink(child, out, in_picture);
       }
     },
     DigestedData::Whatsit(w) => {
@@ -485,30 +535,32 @@ fn label_ink(d: &Digested, out: &mut String) {
         "\\ref" | "\\autoref" | "\\eqref" | "\\lx@cref"
       ) {
         if let Some(key) = w.get_args().iter().rev().flatten().next() {
-          out.push_str(&s!(",\\ref{{{}}},", key.to_string().trim()));
+          for c in s!(",\\ref{{{}}},", key.to_string().trim()).chars() {
+            out.push(c, in_picture);
+          }
         }
         return;
       }
       // (a pgf picture prints only its text nodes, a label apart: 2605.02769's TikZ ORCID logo none, a circled `a` its
-      // `a`)
+      // `a`; what it prints is kept apart, `PrintedLabel::outside_pictures`)
       if let Some(text) = picture_text(&w) {
-        out.push(',');
+        out.push(',', in_picture);
         for node in &text {
-          label_ink(node, out);
+          label_ink(node, out, true);
         }
-        out.push(',');
+        out.push(',', in_picture);
         return;
       }
       if let Some(Stored::Digested(a)) = w.get_property("alignment").as_deref() {
-        label_ink(a, out);
+        label_ink(a, out, in_picture);
       }
       for (arg, shown) in w.get_args().iter().zip(shown_arguments(&w)) {
         if shown && let Some(arg) = arg {
-          label_ink(arg, out);
+          label_ink(arg, out, in_picture);
         }
       }
       if let Ok(Some(body)) = w.get_body() {
-        label_ink(&body, out);
+        label_ink(&body, out, in_picture);
       }
     },
     _ => {},

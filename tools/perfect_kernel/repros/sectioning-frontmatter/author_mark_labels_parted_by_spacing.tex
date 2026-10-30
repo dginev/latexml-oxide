@@ -1,19 +1,22 @@
 % witness: 2403.08629 (`Nan Jiang$^{1,2\,*}$`), 2601.02539 (`$^{1\,2\,\bigstar}$`), 1704.04058 (`$^{* \, \dagger}$`);
-%          review rev92b_r1 B1 (its class: `\,` `\!` `\:` `\ ` `\hspace` `\kern` `\mskip`, `\textsuperscript{1\,2}`)
+%          review rev92b_r1 B1 (its class: `\,` `\!` `\:` `\ ` `\hspace` `\kern` `\mskip`, `\textsuperscript{1\,2}`);
+%          review rev92b_r3 P1 (what prints no gap is no spacing: `\-`, the italic correction `\/`)
 % oracle:  pdflatex: "Ann Able1 2 Bob Baker∗ † Cid Cole1† Dee Dunna b Eve Esse1 2 Fay Fox12 Gus Gray1 2 Hal Hill1 2
-%          Ida Ide1 2" (each mark two labels, spacing between them)
+%          Ida Ide1 2 Jo Jay12 Kit Kay12" (each mark but the last two two labels, spacing between them; `1\-2` and
+%          `1\/2` the one label 12)
 % engines: perl 0.8.8 = 0 errors, every mark lost (an annotation nothing answers); rust 92a the marks shown but Gus
 %          Gray's and Hal Hill's (`\kern`, `\mskip`: their spelling one label); 92b r1: Ann Able's, Bob Baker's, Eve
 %          Esse's and Hal Hill's lost (one printed label `1_2`, which no line answers and `unanswered_mark_text` shows
-%          none of), Cid Cole's † lost (`\!`'s zero-width space glued to it)
-% expect:  0 errors, 0 warnings; every name shows its two labels
-% status:  RED (92b r1) -> GREEN (92b r2)
+%          none of), Cid Cole's † lost (`\!`'s zero-width space glued to it); 92b r2-r3: Jo Jay's and Kit Kay's
+%          `\-`'s empty box and `\/`'s zero kern read as spacing, the labels 1 and 2 (92b r1: 12)
+% expect:  0 errors, 0 warnings; every name shows its two labels, Jo Jay and Kit Kay their one label 12
+% status:  RED (92b r1) -> GREEN (92b r2); Jo Jay and Kit Kay RED (92b r2) -> GREEN (92b r4)
 % preload: ar5iv.sty
 \documentclass{article}
 \title{T}
 \author{Ann Able$^{1\,2}$ \and Bob Baker$^{*\,\dagger}$ \and Cid Cole$^{1\!\dagger}$ \and Dee Dunn$^{a\:b}$
   \and Eve Esse$^{1\ 2}$ \and Fay Fox$^{1\hspace{2pt}2}$ \and Gus Gray$^{1\kern2pt2}$ \and Hal Hill$^{1\mskip3mu2}$
-  \and Ida Ide\textsuperscript{1\,2}}
+  \and Ida Ide\textsuperscript{1\,2} \and Jo Jay\textsuperscript{1\-2} \and Kit Kay\textsuperscript{1\/2}}
 \begin{document}
 \maketitle
 Text.

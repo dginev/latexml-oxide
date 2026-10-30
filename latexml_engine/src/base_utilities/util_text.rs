@@ -311,7 +311,7 @@ pub fn first_ink(d: &Digested) -> Option<String> {
   {
     return Some(format!("a background colour: {d}"));
   }
-  if is_spacing_item(d) {
+  if is_spacing_item(d) || is_blank_item(d) {
     return None;
   }
   match d.data() {
@@ -379,15 +379,16 @@ pub fn first_ink(d: &Digested) -> Option<String> {
   }
 }
 
-/// Whether digested material is spacing, printing no ink between what it stands between ([`first_ink`]; the frontmatter
-/// label reader's separator, `queue_digest::label_ink`): a box of white space (an interword space, a tie's no-break
-/// space, math glue `\,` in a formula) and a box or whatsit Perl marks `isSpace` (Box.pm:33-38 and the pool's
+/// Whether digested material is spacing, printing no ink but a gap between what it stands between ([`first_ink`]; the
+/// frontmatter label reader's separator, `queue_digest::label_ink`): a box of white space (an interword space, a tie's
+/// no-break space, math glue `\,` in a formula) and a box or whatsit Perl marks `isSpace` (Box.pm:33-38 and the pool's
 /// `isSpace` properties: `\!`'s zero-width-space box, glue, a kern, `\quad`, `\hspace`, a phantom), but a leader
-/// (`\hrulefill`, ink though Perl marks some `isSpace`).
+/// (`\hrulefill`, ink though Perl marks some `isSpace`) and what prints no gap ([`is_blank_item`]).
 pub fn is_spacing_item(d: &Digested) -> bool {
-  let truthy = d
-    .get_property("isSpace")
-    .is_some_and(|v| !matches!(*v, Stored::Bool(false) | Stored::Int(0)));
+  if is_blank_item(d) {
+    return false;
+  }
+  let truthy = is_space_marked(d);
   match d.data() {
     DigestedData::TBox(b) => {
       truthy
@@ -401,6 +402,35 @@ pub fn is_spacing_item(d: &Digested) -> bool {
     },
     _ => false,
   }
+}
+
+/// Whether digested material prints nothing and no gap — no ink ([`first_ink`]) and no spacing ([`is_spacing_item`]):
+/// a box of no text (`\-`'s), and a kern Perl marks `isSpace` of zero width (the italic correction
+/// `\/`, `width => 0em`, TeX_Fonts.pool.ltxml:162, a kern tex.web §1113; `\kern0pt`). `\textsuperscript{1\-2}` and
+/// `1\/2` print "12", the label 12 (review rev92b_r3 P1: read as spacing, the labels 1 and 2, its `12` line on no
+/// name).
+pub fn is_blank_item(d: &Digested) -> bool {
+  match d.data() {
+    DigestedData::TBox(b)
+      if b.borrow().get_string().is_ok_and(|s| s.is_empty()) && !is_space_marked(d) =>
+    {
+      true
+    },
+    DigestedData::TBox(_) | DigestedData::Whatsit(_) => {
+      is_space_marked(d)
+        && d
+          .get_property("isKern")
+          .is_some_and(|v| !matches!(*v, Stored::Bool(false) | Stored::Int(0)))
+        && matches!(d.get_property("width").as_deref(), Some(Stored::Dimension(w)) if w.value_of() == 0)
+    },
+    _ => false,
+  }
+}
+
+/// Whether Perl marks digested material `isSpace` (Box.pm:33-38).
+fn is_space_marked(d: &Digested) -> bool {
+  d.get_property("isSpace")
+    .is_some_and(|v| !matches!(*v, Stored::Bool(false) | Stored::Int(0)))
 }
 
 /// The text a pgf/TikZ picture shows (pgfsys-latexml.def's `\lxSVG@insertpicture`, an `<ltx:picture>` and its

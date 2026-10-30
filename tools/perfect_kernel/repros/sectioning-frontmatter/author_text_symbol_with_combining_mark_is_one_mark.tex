@@ -1,0 +1,16 @@
+% witness: review rev92b_r3 B1's sibling (a footnote symbol set in text with an accent on it, `\={\dag}`, the observer's
+%          lexer: `author_mark_combining_accent_is_its_letter` has it in a superscript)
+% oracle:  pdflatex: "Ann Able†̄ Bob Baker†" / †̄Univ One / †Univ Two (pdftotext: †̄ "¯†")
+% engines: perl 0.8.8 = 0 errors; rust 92b r3: the XML keeps each symbol in its name and line, the shadow read †̄ as
+%          the mark † and a line "̄Univ One" — Univ One and Univ Two on both names
+% expect:  0 errors, 0 warnings; the shadow: Univ One Ann Able's, Univ Two Bob Baker's (the XML pinned only the same
+%          in every mode: the kernel reads no mark set in text)
+% status:  RED (92b r3, the shadow) -> GREEN (92b r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\={\dag} \and Bob Baker\dag\\ \={\dag}Univ One\\ \dag Univ Two}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -609,6 +609,7 @@ fn show_unanswered_marks(document: &mut Document, answered: &HashSet<String>) ->
       .split(',')
       .map(str::to_string)
       .collect();
+    let picture_marks = creator.get_attribute("_picturemarks").unwrap_or_default();
     let mut marks: Vec<String> = Vec::new();
     for label in creator
       .get_attribute("_annotations")
@@ -619,6 +620,11 @@ fn show_unanswered_marks(document: &mut Document, answered: &HashSet<String>) ->
         continue;
       };
       if answered.contains(label) || answered.contains(mark) {
+        continue;
+      }
+      // (a label only a picture prints is no mark of the name: the picture is dropped from it, and its text with it —
+      // the TikZ ORCID icon's "iD", `\inst{1\myorcid{…}}`; review rev92b_r3 S1, as rounds 1-2 and Perl showed nothing)
+      if picture_marks.split(',').any(|m| m == label) {
         continue;
       }
       let Some(mut text) = unanswered_mark_text(mark) else {
@@ -660,9 +666,25 @@ fn show_unanswered_marks(document: &mut Document, answered: &HashSet<String>) ->
 /// superscript requested in text (`\textsuperscript{1,*}`, not `$^{1,*}$`: `superscript`), to its text-mode marks
 /// (`_textmarks`): such a `*` prints as `*`, a math one as `∗` (`show_unanswered_marks`). A mark command (`\inst`,
 /// `\IEEEauthorrefmark`) sets its mark in math (llncs.cls `\def\inst#1{\unskip$^{#1}$}`), whatever mode it is read in.
-pub(in crate::base_utilities) fn add_annotation_labels(label: String, superscript: bool) {
+/// The labels only a picture prints (`pictured`, [`frontmatter_label_request`]) are its picture marks
+/// (`_picturemarks`), never shown unanswered.
+pub(in crate::base_utilities) fn add_annotation_labels(
+  label: String,
+  superscript: bool,
+  pictured: Vec<String>,
+) {
   let in_text = superscript && !lookup_bool("IN_MATH");
   with_pending_entry_attr(move |attr| {
+    if !pictured.is_empty() {
+      let mut marks = attr.get("_picturemarks").cloned().unwrap_or_default();
+      for mark in &pictured {
+        if !marks.is_empty() {
+          marks.push(',');
+        }
+        marks.push_str(mark);
+      }
+      attr.insert("_picturemarks".to_string(), marks);
+    }
     let labels = attr.get("_annotations").cloned().unwrap_or_default();
     let newval = if labels.is_empty() {
       label.clone()

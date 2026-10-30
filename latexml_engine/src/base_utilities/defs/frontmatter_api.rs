@@ -804,10 +804,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     if reading_label() {
       return Ok(Vec::new());
     }
-    let label = frontmatter_label_keys(
+    let (label, pictured) = frontmatter_label_request(
       &label,
-      if prefix.is_empty() { "LABEL" } else { &prefix })?.join(",");
-    add_annotation_labels(label, false);
+      if prefix.is_empty() { "LABEL" } else { &prefix })?;
+    add_annotation_labels(label.join(","), false, pictured);
   });
 
   // \lx@set@frontmatter@label Internal to digesting annotation contents.
