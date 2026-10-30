@@ -235,6 +235,15 @@ fn mark_text_symbols(label: &str) -> String {
     .collect()
 }
 
+/// Whether a Mark is the class's own request (`Resolver::class_requests`): its `\inst` (role `inst`, `inst parted`) or
+/// a binding's request command (`request`) — not a mark printed by hand (`math`, `sup`, a footnote symbol).
+pub(super) fn is_class_request(event: &Event) -> bool {
+  event
+    .role
+    .as_deref()
+    .is_some_and(|r| r.starts_with("inst") || r == "request")
+}
+
 /// A Mark event's labels: [`mark_labels`] of its label, a glued run ([`glue_shown_runs`]) one label.
 pub(super) fn event_labels(event: &Event) -> Vec<String> {
   if event.glued {
@@ -712,6 +721,8 @@ impl Resolver {
     let mut waiting: Vec<String> = Vec::new();
     // (of them, the labels a `\footnotemark` printed: `fn_requests`)
     let mut waiting_fn: Vec<String> = Vec::new();
+    // (and those the class's own request command made: `class_requests`)
+    let mut waiting_class: Vec<String> = Vec::new();
     let mut waiting_parted: Vec<String> = Vec::new();
     let mut waiting_notes: Vec<&Event> = Vec::new();
     // the mark before, where it ends in the source and whether it went to the next name
@@ -903,6 +914,12 @@ impl Resolver {
           self
             .fn_requests
             .extend(std::mem::take(&mut waiting_fn).into_iter().map(|l| (c, l)));
+          self.class_requests.extend(
+            std::mem::take(&mut waiting_class)
+              .into_iter()
+              .chain(block_requests.iter().cloned())
+              .map(|l| (c, l)),
+          );
           self.parted.extend(
             std::mem::take(&mut waiting_parted)
               .into_iter()
@@ -978,15 +995,24 @@ impl Resolver {
               waiting_parted.extend(labels.iter().cloned());
             }
           }
+          let class = is_class_request(event);
           if to_next {
             if footnote {
               waiting_fn.extend(labels.iter().cloned());
+            }
+            if class {
+              waiting_class.extend(labels.iter().cloned());
             }
             waiting.extend(labels);
           } else if let Some(&c) = made.last() {
             if footnote {
               self
                 .fn_requests
+                .extend(labels.iter().map(|l| (c, l.clone())));
+            }
+            if class {
+              self
+                .class_requests
                 .extend(labels.iter().map(|l| (c, l.clone())));
             }
             self.out.creators[c].requests.extend(labels);
@@ -1025,6 +1051,9 @@ impl Resolver {
       self
         .fn_requests
         .extend(waiting_fn.into_iter().map(|l| (c, l)));
+      self
+        .class_requests
+        .extend(waiting_class.into_iter().map(|l| (c, l)));
       self
         .parted
         .extend(waiting_parted.into_iter().map(|l| (c, l)));

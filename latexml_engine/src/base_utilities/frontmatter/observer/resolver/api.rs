@@ -271,6 +271,23 @@ impl Resolver {
         .collect();
       if !text.is_empty() {
         let start = self.out.creators.len();
+        // (the class's own: its `annotations=` and the marks its request commands made)
+        let class: Vec<String> = attr_value(attrs, "annotations")
+          .into_iter()
+          .flat_map(|l| l.split(','))
+          .map(str::trim)
+          .filter(|s| !s.is_empty())
+          .map(str::to_string)
+          .chain(
+            events
+              .iter()
+              .filter(|e| e.kind == EventKind::Mark && is_class_request(e))
+              .flat_map(|e| mark_labels(e.label.as_deref().unwrap_or(""))),
+          )
+          .collect();
+        self
+          .class_requests
+          .extend(class.into_iter().map(|l| (start, l)));
         self.new_creator(text, "api:creator", index, requests, index);
         if policy.thenote {
           self.thenote_author(
@@ -486,6 +503,10 @@ impl Resolver {
           }));
         }
       }
+      // (a class's one institute every author shares unless its `\inst{n}` picks it: `_share=authors`, llncs's
+      // `\lx@llncs@institute@sole`, OD #901 — decided once every name is read, `answer_pending`)
+      let shares = label_rule == "api:labelseq" && attr_value(attrs, "_share") == Some("authors");
+      let marked = events.iter().any(|e| e.kind == EventKind::Mark);
       if !text.is_empty() {
         self.pending.push((labels, false, Assoc {
           rule: if legend {
@@ -495,6 +516,11 @@ impl Resolver {
           },
           ..assoc
         }));
+      }
+      if shares {
+        self
+          .shared
+          .extend((first_pending..self.pending.len()).map(|at| (at, marked)));
       }
       // (a run today's records for a call it attaches at once — revtex's symbol-led `\affiliation{$^\flat$…}` —, which an
       // unmarked line after it continues: 1303.7097's `\affiliation{CONICET La Plata, …}`, every name's)

@@ -218,14 +218,18 @@ fn an_entrys_address_group_is_written_out_to_its_spellers() {
     "  c email cole@example.org | api:labelseq api:inner-contact owner:inner-email owner:spelled",
     "B email info@example.org | api:labelseq api:inner-contact ruling3:written-out owner:block",
   ]);
-  // (an entry no name requests too: each address the author's it spells, the institution the block's —
-  // `\{guyam, osherm, tomz, guykatz, schapiram\}@cs.huji.ac.il` under unmarked names, 2302.05745)
+  // (an entry no name requests too: each address the author's it spells — `\{guyam, osherm, tomz, guykatz,
+  // schapiram\}@cs.huji.ac.il` under unmarked names, 2302.05745; the institution, llncs's one `\institute` no `\inst{n}`
+  // picks, every author's since 92b, `api:share:authors`: it was the block's, against today's and the PDF)
   assert_eq!(tuples(GROUP_UNREQUESTED), [
     "C Ann Able [] | api:creator",
-    "  c email ann.able@example.org | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
+    "  a Univ A, City | api:labelseq api:share:authors",
+    "  c email ann.able@example.org | api:labelseq api:inner-contact ruling3:written-out api:share:authors \
+     owner:spelled",
     "C Bob Baker [] | api:creator",
-    "  c email bob.baker@example.org | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
-    "B affiliation Univ A, City | api:labelseq label:unrequested owner:block",
+    "  a Univ A, City | api:labelseq api:share:authors",
+    "  c email bob.baker@example.org | api:labelseq api:inner-contact ruling3:written-out api:share:authors \
+     owner:spelled",
   ]);
 }
 

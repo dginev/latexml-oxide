@@ -27057,6 +27057,7 @@ kernel_thanks_empty_superscript_reads_alike}`, `perfect_kernel_batch78e::aa_than
 Baker's empty `\thanks{}` now no note) and `perfect_kernel_batchfms2a2::notes_labels_and_contacts` (Cat Cole's
 `\thanks{}` a `ruling4:inkless` drop).
 ### 917. The observer places an entry's one-address e-mail call by the charter's chain, not on every name carrying the entry's label (Perl: the call inherits its `\institute` entry's label, copied onto every carrier)
+### 917. The observer places an entry's one-address e-mail call by the charter's chain, not on every name carrying the entry's label, and llncs's one institute no `\inst{n}` picks on every author (Perl: the call inherits its `\institute` entry's label, copied onto every carrier; the one institute on the first author)
 
 Frontmatter refactor stage 7, the llncs and aa move (task #429; `agent_reports/2026-10-29_s6_aa_llncs_gate.md` §2, G3).
 Shadow-side, in the resolver; a written family's output changes where its writer takes the tagged difference.
@@ -27083,7 +27084,23 @@ Shadow-side, in the resolver; a written family's output changes where its writer
 - **Census** (re-resolved from the 92a r5 census dumps; the line-break reading needs a reconversion): unclassified aa
   57 → 38 of 554 papers, llncs 81 → 58 of 463; the G3 decisions on a disagreement: aa 426 spelled, 94 block, 2 only
   carrier; llncs 173 spelled, 105 block, 8 corresponding, 4 only carrier.
+- **85b's `_share` port** (gate study row 4, llncs class S, 19 papers: 1912.11606, 2302.05745; OD #901). llncs's one
+  `\institute`, no `\and` in it (`\lx@llncs@institute@sole`, `_share=authors`), prints unnumbered under the whole row of
+  names; the resolver read its number 1, which no name requests, and left it on the block. Now (`Resolver::shared`,
+  `share_unpicked`, `answer_shared_emails`) it is every live author's (`api:share:authors`) unless a mark picks it, as
+  today's `marks_pick` reads one: a live name shows the class's own request of a number (`\inst{n}`; the requests the
+  class's request commands made, `Resolver::class_requests`, Mark role `inst`/`request` or `annotations=` — a hand-typed
+  `$^{1}$`, `\inst{*}`, `\inst{}` pick nothing: 2607.02596, 2207.04574, 2604.20229), a name shows a number other than
+  1 by hand, or the entry holds a mark of its own. Its e-mail calls go by the charter's chain over the live authors,
+  as today's `row_email_calls`: spelled; the entry's addresses one per author in order (`owner:order`); one author;
+  the one address left of several authors to the corresponding author holding no other of them; else the block (a
+  template's too). No elimination. A list of local parts the address reader cannot part (`(npalmer|pwg)@…`,
+  cs0607047) spells no one (`Resolver::spelled`, as today's `spelled_owner`, user ruling R10). Census: llncs
+  unclassified 58 → 41 of 463 (17 of the 19 class-S papers agree; 2104.12226 and cs0607047 keep a note and a residual).
 - Repros class-bindings/`llncs_inner_email_is_its_spellers`, `llncs_inner_shared_email_is_the_blocks`,
   `llncs_inner_email_is_the_corresponding_carriers`, `aa_inner_email_is_its_spellers`,
-  `llncs_inner_email_lines_are_each_written_out`; guard
-  `perfect_kernel_batch92b::an_entry_email_printing_one_address_is_placed_by_the_chain`.
+  `llncs_inner_email_lines_are_each_written_out`, `llncs_sole_institute_is_every_authors_in_order`,
+  `llncs_sole_institute_emails_by_the_chain`, `llncs_sole_institute_shared_address_is_the_blocks`,
+  `llncs_sole_institute_picked_by_inst`; guards
+  `perfect_kernel_batch92b::an_entry_email_printing_one_address_is_placed_by_the_chain`,
+  `perfect_kernel_batch92b::a_sole_institute_no_inst_picks_is_every_authors`.

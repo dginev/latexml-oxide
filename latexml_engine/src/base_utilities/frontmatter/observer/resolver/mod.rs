@@ -299,6 +299,14 @@ struct Resolver {
   /// the requests a `\footnotemark` made (creator, label): a footnote's mark, answered by a note, never by a labelled
   /// affiliation (`Kui Wu\inst{3\footnotemark[1]}` under `\institute{A \and B …}`, 2404.09857)
   fn_requests:      Vec<(usize, String)>,
+  /// the requests the class's own request command made (creator, label): a Mark of llncs's and aa's `\inst` (role
+  /// `inst`), a binding's `\lx@request@frontmatter@annotation` (`request`), an `annotations=` list — not a mark printed
+  /// by hand (`$^{1}$`, `\textsuperscript{1}`, a paper's mark macro), which [`Resolver::by_hand`] reads off the rest
+  /// (`answer_pending`: a `_share=authors` entry only the class's `\inst{n}` picks)
+  class_requests:   Vec<(usize, String)>,
+  /// the pending entries (their place in `pending`) a `_share=authors` call made (llncs's one `\institute`, no `\and`
+  /// in it: every author's unless the class's `\inst{n}` picks it), and whether the entry holds a mark of its own
+  shared:           Vec<(usize, bool)>,
   /// the footnote texts the document made (ledger index, flushes before it, printed mark, text), each read where a
   /// name shows its mark (`answer_note_texts`)
   note_texts:       Vec<(usize, usize, String, String)>,
@@ -375,6 +383,8 @@ impl Resolver {
       annotated:        Vec::new(),
       grouped:          Vec::new(),
       fn_requests:      Vec::new(),
+      class_requests:   Vec::new(),
+      shared:           Vec::new(),
       note_texts:       Vec::new(),
       continued:        Vec::new(),
     }
@@ -435,8 +445,13 @@ impl Resolver {
       .collect()
   }
 
-  /// The one candidate an address spells (`spelled_owners`), if one.
+  /// The one candidate an address spells (`spelled_owners`), if one — none for a list of local parts the address
+  /// reader could not part (`(npalmer|pwg)@dcs.warwick.ac.uk`, cs0607047: several authors' address, the block's by user
+  /// ruling R10, as today's `spelled_owner` reads it — `lists_local_parts`).
   fn spelled(&self, address: &str, candidates: &[usize]) -> Option<usize> {
+    if lists_local_parts(address) {
+      return None;
+    }
     let keys: Vec<NameKeys> = candidates
       .iter()
       .map(|&c| NameKeys::of(&text_tokens(&self.out.creators[c].name)))

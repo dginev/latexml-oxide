@@ -877,7 +877,31 @@ impl Resolver {
       .collect();
     let live = self.live();
     let mut inner_emails: Vec<(Vec<usize>, Assoc)> = Vec::new();
+    let mut shared_emails: Vec<Assoc> = Vec::new();
+    let unpicked = self.share_unpicked(&live);
     for (at, (labels, symbol, assoc)) in pending.into_iter().enumerate() {
+      // (a class's one institute no `\inst{n}` picks is every author's, its e-mail lines placed each by the chain:
+      // `share_unpicked`, `answer_shared_emails`)
+      if let Some(&(_, marked)) = self.shared.iter().find(|(p, _)| *p == at)
+        && unpicked
+        && !marked
+      {
+        if assoc.role == "email" {
+          shared_emails.push(assoc);
+        } else {
+          for &owner in &live {
+            self.attach(
+              Some(owner),
+              Assoc {
+                rule: s!("{} api:share:authors", assoc.rule),
+                ..assoc.clone()
+              },
+              false,
+            );
+          }
+        }
+        continue;
+      }
       // (a letter or number line the binding attached by its group rule (`_grouped=true`) is the group's, as today's
       // placed it: revtex's interleaved `\author{Ann$^{\mathrm a}$}\author{Bob}\affiliation{$^{\mathrm a}$Univ A}` both
       // names', `\author{Cat Cole$^2$}\affiliation{$^3$Univ B}` Cat's though no name shows 3 — 63i review r2; a symbol
@@ -1193,6 +1217,97 @@ impl Resolver {
       }
     }
     self.answer_inner_emails(inner_emails);
+    self.answer_shared_emails(shared_emails);
+  }
+
+  /// Whether no mark picks a `_share=authors` entry (llncs.cls:868-886: one institute, no `\and` in it, printed
+  /// unnumbered under the names, every author's — OD #901, today's `share_row_contacts`/`marks_pick`): no live name
+  /// shows the class's own request of a number (`\inst{1}`, `\inst{2}`: [`Resolver::class_requests`]; `\inst{*}`, an
+  /// empty `\inst{}`, a hand-typed `$^{1}$` and a paper's mark macro pick nothing: 2207.04574, 2604.20229, 2607.02596,
+  /// 1804.05870), and no name shows a number other than 1 by hand (`Ann Able$^{1,2}$`: the one institute is several,
+  /// numbered by hand). An entry holding a mark of its own is picked too (`answer_pending`, 2608.21425).
+  fn share_unpicked(&self, live: &[usize]) -> bool {
+    let number = |label: &str| {
+      let bare = unprefixed(label).unwrap_or(label);
+      !bare.is_empty() && bare.bytes().all(|b| b.is_ascii_digit())
+    };
+    !live.iter().any(|&c| {
+      self
+        .class_requests
+        .iter()
+        .any(|(o, l)| *o == c && number(l))
+        || self.out.creators[c].requests.iter().any(|r| {
+          number(r)
+            && unprefixed(r).unwrap_or(r) != "1"
+            && !self.class_requests.iter().any(|(o, l)| *o == c && l == r)
+        })
+    })
+  }
+
+  /// The e-mail calls of a `_share=authors` entry no mark picks (`share_unpicked`: llncs's one `\institute{Univ X \\
+  /// \email{…}}`), every address placed by FIDELITY_CHARTER §4's chain over the live authors, as today's places a
+  /// shared row's lines (`shared_row::row_email_calls`, OD #901): the author it spells; else, the entry's addresses one
+  /// per author that every spelled one agrees with, the author at its place (`owner:order`); else, one author, that
+  /// author; else, the one address left of several authors, the author marked the corresponding author who holds no
+  /// other of them; else the block (a template's `{firstname.lastname}@x.edu`, `owner:pattern`, and a list of local
+  /// parts the reader could not part, `(npalmer|pwg)@…`, too). No elimination.
+  /// Witnesses 1912.11606, 2302.05745 (llncs class S of the stage-6 gate study).
+  fn answer_shared_emails(&mut self, emails: Vec<Assoc>) {
+    let live = self.live();
+    let flat: Vec<(Assoc, String)> = emails
+      .into_iter()
+      .flat_map(|assoc| {
+        let addresses = addresses_in(&assoc.text);
+        if addresses.is_empty() {
+          vec![(assoc.clone(), assoc.text.clone())]
+        } else {
+          addresses
+            .into_iter()
+            .map(|address| (assoc.clone(), address))
+            .collect()
+        }
+      })
+      .collect();
+    let spelled: Vec<Option<usize>> = flat
+      .iter()
+      .map(|(_, address)| self.spelled(address, &live))
+      .collect();
+    let in_order = flat.len() == live.len()
+      && live.len() >= 2
+      && flat.iter().all(|(_, address)| !lists_local_parts(address))
+      && spelled
+        .iter()
+        .zip(&live)
+        .all(|(s, c)| s.is_none_or(|s| s == *c));
+    let mut owners: Vec<(Option<usize>, &str)> = flat
+      .iter()
+      .zip(&spelled)
+      .enumerate()
+      .map(|(at, ((_, address), spelled))| match spelled {
+        Some(owner) => (Some(*owner), "owner:spelled"),
+        None if in_order => (Some(live[at]), "owner:order"),
+        None => match live.as_slice() {
+          [only] => (Some(*only), "owner:only-author"),
+          _ if is_pattern_address(address) => (None, "owner:pattern"),
+          _ => (None, "owner:block"),
+        },
+      })
+      .collect();
+    let left: Vec<usize> = (0..owners.len())
+      .filter(|&at| owners[at] == (None, "owner:block"))
+      .collect();
+    if let [at] = left.as_slice()
+      && live.len() > 1
+      && !lists_local_parts(&flat[*at].1)
+      && let (Some(author), "owner:corresponding") = self.corresponding(&live)
+      && owners.iter().all(|(owner, _)| *owner != Some(author))
+    {
+      owners[*at] = (Some(author), "owner:corresponding");
+    }
+    for ((assoc, address), (owner, tag)) in flat.into_iter().zip(owners) {
+      let rule = s!("{} api:share:authors {tag}", assoc.rule);
+      self.attach(owner, Assoc { rule, text: address, ..assoc }, false);
+    }
   }
 
   /// The e-mail calls inside labelled entries that print one address (an `\email` inside an `\institute` entry, the
