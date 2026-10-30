@@ -246,3 +246,79 @@ fn a_numbered_entry_whose_lines_marks_lead_is_split_at_them() {
   );
 }
 
+/// Piece 5, refactor stage 4 (FIDELITY_CHARTER §4, 2026-10-29: frontmatter label keys are compared by their printed
+/// text; OXIDIZED_DESIGN_DIVERGENCES #919): a mark's operand that prints through a command is keyed by the text it
+/// prints, read off its digestion in a speculative run (`queue_digest::printed_label`), on the request side (`\inst`,
+/// a name's `$^{…}$`, a symbol mark) and the set side (an affiliation's leading mark) alike — aa's `\inst{\ESO}` with
+/// `\newcommand{\ESO}{2}` is entry 2's (1307.8124's `\inst{\MPIA}`: the label `affiliation:\ESO` matched no entry);
+/// `\dag` and `\dagger` are one label (†). Today's output changes, and is pinned.
+#[test]
+fn a_mark_is_keyed_by_its_printed_text() {
+  assert_reading(
+    repro!("aa_inst_macro_is_its_printed_number.tex"),
+    Some(&[
+      &["Ann Able", "affiliation=Univ X"],
+      &["Bob Baker", "affiliation=ESO"],
+      &["Cid Cole", "affiliation=Univ X", "affiliation=ESO"],
+    ]),
+    &[
+      "C Ann Able [1] | line:names",
+      "  a Univ X | api:labelseq",
+      "C Bob Baker [2] | line:names",
+      "  a ESO | api:labelseq",
+      "C Cid Cole [1,2] | line:names",
+      "  a Univ X | api:labelseq",
+      "  a ESO | api:labelseq",
+    ],
+  );
+  // (a number a macro prints with a symbol glued to it is each mark apart, `1∗` the 1 and the ∗: `$^{\ICQD,\Phys\ast}$`,
+  // 2412.09857 — read whole, Ann Able lost Univ A)
+  assert_reading(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_macro_mark_glued_to_a_symbol.tex"
+    ),
+    Some(&[&["Ann Able ∗", "affiliation=Univ A"], &[
+      "Bob Baker",
+      "affiliation=Univ A",
+    ]]),
+    &[
+      "C Ann Able [1,*] | line:names",
+      "  a Univ A | ruling1:request",
+      "C Bob Baker [1] | line:names sep:comma",
+      "  a Univ A | ruling1:request",
+    ],
+  );
+  assert_reading(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_dag_and_dagger_are_one_label.tex"
+    ),
+    Some(&[
+      &["Ann Able", "affiliation=Univ A"],
+      &["Cid Cole ⋄", "affiliation=Univ C"],
+      &["Bob Baker †", "affiliation=Univ A"],
+    ]),
+    &[
+      "C Ann Able [†] | line:names",
+      "  a Univ A | ruling2:symbol-line",
+      "C Cid Cole [⋄] | line:names sep:comma",
+      "  a Univ C | ruling1:request",
+      "C Bob Baker [†] | line:names sep:comma",
+      "  a Univ A | ruling2:symbol-line",
+    ],
+  );
+  // (a symbol no entry answers stays shown on its name, by its printed glyph: `\inst{1,\star}`, 2105.03212 — the ⋆ was
+  // lost once its label was the printed `⋆`, which `insert::unanswered_mark_text` read only by spelling)
+  assert_reading(
+    repro!("aa_inst_unanswered_symbol_stays_shown.tex"),
+    Some(&[&["Ann Able ⋆", "affiliation=Univ X"], &[
+      "Bob Baker",
+      "affiliation=Univ Y",
+    ]]),
+    &[
+      "C Ann Able [1,⋆] | line:names",
+      "  a Univ X | api:labelseq",
+      "C Bob Baker [2] | line:names",
+      "  a Univ Y | api:labelseq",
+    ],
+  );
+}

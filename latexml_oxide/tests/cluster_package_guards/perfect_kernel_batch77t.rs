@@ -227,19 +227,21 @@ Text.
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let xml = squash(&xml);
-  // (the `†`-led line on the block's shared creator, as on the base: which symbols label a line awaits the `\dag`-vs-
-  // `\dagger` ruling)
+  // (the `†`-led line is every name's that shows †, all three: since the label keys are compared by their printed
+  // text (92b, OXIDIZED_DESIGN_DIVERGENCES #919), the names' `*†` runs request † as the line's `†` sets it — it was on
+  // the block's shared creator, awaiting that ruling; pdflatex prints † on all three names. Each name shows the marks
+  // no line answered, the `*` line staying on the last name as before)
+  let program = affiliation("Program in Cognition, Univ A");
   assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", ""),
-    creator(false, "Bob Baker", ""),
+    creator(true, r#"Ann Able<sup xml:id="id1">*</sup>"#, &program),
+    creator(false, r#"Bob Baker<sup xml:id="id2">‡</sup>"#, &program),
     creator(
       false,
-      "Cat Cole",
-      &affiliation(r#"<sup xml:id="id1">*</sup>Department of Computer Science, Univ A"#)
-    ),
-    format!(
-      r#"<creator role="author"> {} </creator>"#,
-      affiliation("Program in Cognition, Univ A")
+      r#"Cat Cole<sup xml:id="id3">*,‡</sup>"#,
+      &format!(
+        "{} {program}",
+        affiliation(r#"<sup xml:id="id4">*</sup>Department of Computer Science, Univ A"#)
+      )
     ),
   ]);
 }

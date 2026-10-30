@@ -583,8 +583,14 @@ fn frontmatter_nested_math_author_marker() {
 #[test]
 fn frontmatter_and_hard_author_boundary() {
   let x = convert_to_xml("tests/cluster_regressions/frontmatter_and_hard_author_boundary.tex");
-  // (Alice's `$^{1}$`, which no affiliation answers, stays printed in her name, 64a)
-  for name in ["Alice<sup>1</sup>", "Bob", "Carol"] {
+  // (Alice's `$^{1}$`, which no affiliation answers, stays printed in her name, 64a; and so does each name's `\mk`
+  // star, `$^\text{$\star$}$`, keyed by its printed ⋆ since 92b — OXIDIZED_DESIGN_DIVERGENCES #919 — as pdflatex prints
+  // "Alice⋆1", "Bob⋆", "Carol⋆"; its label had been its spelling, which no display table read, so the stars were lost)
+  for name in [
+    "Alice<sup>⋆,1</sup>",
+    "Bob<sup>⋆</sup>",
+    "Carol<sup>⋆</sup>",
+  ] {
     assert!(
       x.contains(&format!("<personname>{name}</personname>")),
       "author {name} must be its own clean creator, not merged:\n{x}"

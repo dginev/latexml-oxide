@@ -799,9 +799,14 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // Can provide the prefix to distinguish different sets of labels
   DefPrimitive!("\\lx@request@frontmatter@annotation[]{}", sub[(prefix, label)] {
     let prefix = prefix.as_ref().map(ToString::to_string).unwrap_or_default();
-    let label = clean_frontmatter_labels(
-      &label.to_string(),
-      if prefix.is_empty() { "LABEL" } else { &prefix }).join(",");
+    // (keyed by the operand's printed text: FIDELITY_CHARTER §4, refactor stage 4, OXIDIZED_DESIGN_DIVERGENCES #919;
+    // none while a label's own operand is read)
+    if reading_label() {
+      return Ok(Vec::new());
+    }
+    let label = frontmatter_label_keys(
+      &label,
+      if prefix.is_empty() { "LABEL" } else { &prefix })?.join(",");
     add_annotation_labels(label, false);
   });
 

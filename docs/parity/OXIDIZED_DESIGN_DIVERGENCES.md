@@ -27138,3 +27138,36 @@ Frontmatter refactor stage 7, the llncs and aa move (task #429; `agent_reports/2
   `aa_institute_lines_led_by_marks_text_line_is_no_split`; guards
   `perfect_kernel_batch92b::a_numbered_entry_owned_by_a_hand_mark_is_ruling_ones`,
   `perfect_kernel_batch92b::a_numbered_entry_whose_lines_marks_lead_is_split_at_them`.
+
+### 919. Frontmatter label keys are compared by their printed text (Perl: the operand's source string, `cleanFrontmatterLabels`)
+
+Frontmatter refactor stage 4 (FIDELITY_CHARTER §4 "Frontmatter label keys are compared by their printed text", user
+ruling 2026-10-29; `FRONTMATTER_DIGESTED_REFACTOR.md`; inventory row 2.8). Today's output, every family.
+
+- **Perl.** The marks that link authors to affiliations are keyed by the operand's ToString, cleaned by
+  `cleanFrontmatterLabels` (Base_Utility.pool.ltxml:365: `\rm` stripped, split at commas, prefixed): aa's
+  `\inst{\ESO}` with `\newcommand{\ESO}{2}` requests `affiliation:\ESO`, which no entry answers (entry 2 is
+  `affiliation:2`); `$^{\dag}$` and `$^{\dagger}$` are two labels. The port had grown token-level patches on the same
+  reading (`FONT_SWITCH`, the 19 switches; `SPACING_IN_LABEL`; `SYMBOL_COMMAND_RUN`).
+- **Now** (`queue_digest::frontmatter_label_keys`, `printed_label`): an operand that prints through a command — a
+  macro, a symbol, a font switch, math — is digested in a speculative run of its own (`speculative_label_ink`: in a
+  group, in a reading context of its own, assignments undone, diagnostics discarded, as sect05.rs
+  `speculative_title_page_run`) and keyed by what it prints (`label_ink`: its characters, a cross-reference as its key
+  `\ref{key}`, glue and kerns a thin space between labels), then parted and prefixed as before; a printed run of
+  distinct symbols (`♣♡`) is each symbol too, as the spelled run of symbol commands was, and so is a number or letters
+  a symbol is glued to (`parted_printed_label`: `$^{\ICQD,\Phys\ast}$` prints "1,4∗", the 4 and the ∗; 2412.09857). An operand of characters
+  alone prints itself and is read as before. Perl's ToString stays the fallback where the speculative run errs or
+  prints nothing, where it cannot open, and for an operand holding a note (`split_mark_notes`). Both sides: the
+  request (`\lx@request@frontmatter@annotation`, the `\lx@frontmatter@sup` request, `\lx@frontmatter@symbolmark`) and
+  the set side (`\lx@sup@setlabel@affiliation`, its `_bymark` keys by `relocate::printed_marks` of the printed text).
+  A mark inside a label's own operand requests and sets nothing (`reading_label`). An unanswered mark keyed by its
+  printed glyph is shown as it (`insert::unanswered_mark_text`: `\inst{1,\star}`'s ⋆, 2105.03212, which the
+  spelled-name table alone had shown).
+- **Residuals** (token-level readers before digestion, stages 5 and 7): `place.rs`'s author labels and legends,
+  `shared_row::marks_pick`, `queue.rs`'s one-label check; the `label=` keyval (a binding's Semiverbatim argument);
+  whether an answered symbol mark stays shown in the name (`$^{\dag}$` under a `$^{\dagger}$` line is answered and no
+  longer shown; its `\dagger` sibling stays shown).
+- Witness 1307.8124 (`\inst{\MPIA}`: each author's institutes, where all seven were on a nameless creator). Repros
+  class-bindings/`aa_inst_macro_is_its_printed_number`, `aa_inst_unanswered_symbol_stays_shown`,
+  sectioning-frontmatter/`author_dag_and_dagger_are_one_label`, `author_macro_mark_glued_to_a_symbol`;
+  guard `perfect_kernel_batch92b::a_mark_is_keyed_by_its_printed_text`.

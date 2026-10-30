@@ -239,6 +239,219 @@ static SPACING_IN_LABEL: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|
   .unwrap()
 });
 
+/// The label keys of a frontmatter mark's operand — the request an `\inst{…}` or a name's `$^{…}$` makes, the label
+/// an affiliation's leading mark sets — compared by their printed text (FIDELITY_CHARTER §4, 2026-10-29: refactor
+/// stage 4, OXIDIZED_DESIGN_DIVERGENCES #919): [`printed_label`] when the operand prints through a command, else its
+/// characters (which print themselves), each then parted and prefixed as [`clean_frontmatter_labels`] reads them. A
+/// documented divergence from Perl's frontmatter API, which keys the source string (`cleanFrontmatterLabels`,
+/// Base_Utility.pool.ltxml:365): aa's `\inst{\ESO}` with `\newcommand{\ESO}{2}` prints 2 and is entry 2's; `\dag` and
+/// `$\dagger$` are one label, †.
+pub(in crate::base_utilities) fn frontmatter_label_keys(
+  operand: &Tokens,
+  prefix: &str,
+) -> Result<Vec<String>> {
+  Ok(match printed_label(operand)? {
+    Some(printed) => clean_frontmatter_labels(&printed, prefix)
+      .into_iter()
+      .flat_map(parted_printed_label)
+      .collect(),
+    None => clean_frontmatter_labels(&operand.to_string(), prefix),
+  })
+}
+
+/// A printed label whose number or letters a symbol is glued to (`$^{\ICQD,\Phys\ast}$` prints "1,4∗", 2412.09857):
+/// the whole, then each run apart (`4∗`, `4`, `∗`), as a printed run of distinct symbols is (`clean_frontmatter_labels`)
+/// — the page shows two marks, the number an affiliation's and the symbol a note's; any other label as it is.
+fn parted_printed_label(label: String) -> Vec<String> {
+  let (prefix, bare) = match label.split_once(':') {
+    Some((prefix, bare)) => (s!("{prefix}:"), bare.to_string()),
+    None => (String::new(), label.clone()),
+  };
+  let symbol = |c: char| c == '*' || (!c.is_ascii() && !c.is_alphanumeric() && !c.is_whitespace());
+  let mut runs: Vec<String> = Vec::new();
+  let mut last: Option<bool> = None;
+  for c in bare.chars() {
+    let kind = if c.is_alphanumeric() {
+      false
+    } else if symbol(c) {
+      true
+    } else {
+      return vec![label];
+    };
+    if last == Some(kind) {
+      runs.last_mut().expect("a run").push(c);
+    } else {
+      runs.push(c.to_string());
+    }
+    last = Some(kind);
+  }
+  if runs.len() < 2 {
+    return vec![label];
+  }
+  std::iter::once(label)
+    .chain(runs.into_iter().map(|run| s!("{prefix}{run}")))
+    .collect()
+}
+
+/// The printed text of a frontmatter mark's operand that holds a command (a macro, a symbol, a font switch, math):
+/// digested in a group, read as the page shows it ([`label_ink`]: its characters, a cross-reference as its key
+/// `\ref{key}`, glue and kerns a space between labels); `None` — the operand's spelling, Perl's ToString, read instead —
+/// for an operand of characters alone, one holding a note (`\inst{3\footnotemark[1]}`: the note is no label, and
+/// digesting it here would queue it twice), one whose digestion errs (the error stays reported) or prints nothing.
+pub(in crate::base_utilities) fn printed_label(operand: &Tokens) -> Result<Option<String>> {
+  let tokens = operand.unlist_ref();
+  let plain = |t: &Token| {
+    matches!(
+      t.get_catcode(),
+      Catcode::LETTER | Catcode::OTHER | Catcode::SPACE | Catcode::BEGIN | Catcode::END
+    )
+  };
+  if tokens.iter().all(plain) || split_mark_notes(tokens).is_some() {
+    return Ok(None);
+  }
+  if reading_label() {
+    return Ok(None);
+  }
+  READING_LABEL.with(|r| r.set(true));
+  let printed = speculative_label_ink(Tokens::new(tokens.to_vec()));
+  READING_LABEL.with(|r| r.set(false));
+  let printed = printed?;
+  DebugFeature!(
+    "frontmatter",
+    "FRONT printed label {:?} of {}",
+    printed,
+    operand
+  );
+  Ok(
+    printed
+      .map(|p| p.trim().to_string())
+      .filter(|p| !p.is_empty()),
+  )
+}
+
+thread_local! {
+  /// While a label's operand is digested ([`printed_label`]): a frontmatter mark inside it (`\inst{\inst{1}}`) requests
+  /// and sets nothing ([`reading_label`]).
+  static READING_LABEL: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Whether a label's operand is being digested ([`printed_label`]): the frontmatter label primitives run inside it
+/// leave the entry being digested as it is.
+pub(in crate::base_utilities) fn reading_label() -> bool {
+  READING_LABEL.with(std::cell::Cell::get)
+}
+
+/// The printed text of `tokens` digested in a speculative run of their own (in a group, in a reading context of their
+/// own, as sect05.rs `speculative_title_page_run` runs a title page): nothing of it stays — its assignments undone, its
+/// diagnostics discarded, an argument read past its end (`\altaffilmark` handed `\let`) reading nothing of the
+/// document's. `None` when no journal opens, the run is not undone, or it raised an error (a resource Fatal, or one
+/// that could not be undone, propagates: Fatal stays Fatal).
+fn speculative_label_ink(tokens: Tokens) -> Result<Option<String>> {
+  let Some(journal) = begin_assignment_journal() else {
+    return Ok(None);
+  };
+  let hold = util::logger::DiagnosticsHold::begin();
+  let resource_fatal_before = resource_fatal_latched();
+  let muted = SuppressLogOutputGuard::new(true);
+  let depth = get_frame_depth();
+  let boxes = box_lists_mark();
+  let conditionals = if_stack_depth();
+  let result = reading_from_mouth(Mouth::default(), || -> Result<Digested> {
+    bgroup();
+    let digested = digest(tokens)?;
+    egroup()?;
+    Ok(digested)
+  });
+  let unwound = reading_from_mouth(Mouth::default(), || {
+    new_local_box_list();
+    while get_frame_depth() > depth {
+      let before = get_frame_depth();
+      let nobox = lookup_bool("groupNonBoxing");
+      if pop_stack_frame(nobox).is_err() || get_frame_depth() >= before {
+        break;
+      }
+    }
+    expire_local_box_list();
+    Ok(())
+  });
+  let printed = result.as_ref().ok().map(|digested| {
+    let mut printed = String::new();
+    label_ink(digested, &mut printed);
+    printed
+  });
+  drop(muted);
+  let errors = hold.errors_raised();
+  let undone = journal.rollback();
+  if let Err(err) = result {
+    if !undone || (resource_fatal_latched() && !resource_fatal_before && !unlatch_runaway_fatal()) {
+      hold.commit();
+      return Err(err);
+    }
+    hold.discard();
+    unwound?;
+    unwind_box_lists_to(boxes);
+    while if_stack_depth() > conditionals {
+      pop_if_frame();
+    }
+    return Ok(None);
+  }
+  if undone {
+    hold.discard();
+  } else {
+    hold.commit();
+  }
+  unwound?;
+  Ok(printed.filter(|_| undone && errors == 0))
+}
+
+/// The text a digested label operand prints ([`printed_label`]): its boxes' characters, through lists and the arguments
+/// a whatsit shows ([`shown_arguments`]); a cross-reference (`\ref`, its key resolved in post: it prints nothing yet)
+/// written `\ref{key}`, as [`clean_frontmatter_labels`] reads a key; glue and a kern (`\,`, `\quad`, `\hspace`: no
+/// ink, a whatsit showing none) a thin space, which parts two labels as the spacing does in a mark's spelling.
+fn label_ink(d: &Digested, out: &mut String) {
+  match d.data() {
+    DigestedData::TBox(b) => {
+      if let Ok(text) = b.borrow().get_string() {
+        out.push_str(&text);
+      }
+    },
+    DigestedData::List(l) => {
+      for child in l.borrow().boxes.iter() {
+        label_ink(child, out);
+      }
+    },
+    DigestedData::Whatsit(w) => {
+      let w = w.borrow();
+      let cs = w.get_definition().get_cs_name().into_owned();
+      if matches!(
+        cs.trim_end(),
+        "\\ref" | "\\autoref" | "\\eqref" | "\\lx@cref"
+      ) {
+        if let Some(key) = w.get_args().iter().rev().flatten().next() {
+          out.push_str(&s!(",\\ref{{{}}},", key.to_string().trim()));
+        }
+        return;
+      }
+      let before = out.len();
+      if let Some(Stored::Digested(a)) = w.get_property("alignment").as_deref() {
+        label_ink(a, out);
+      }
+      for (arg, shown) in w.get_args().iter().zip(shown_arguments(&w)) {
+        if shown && let Some(arg) = arg {
+          label_ink(arg, out);
+        }
+      }
+      if let Ok(Some(body)) = w.get_body() {
+        label_ink(&body, out);
+      }
+      if out.len() == before {
+        out.push('\u{2009}');
+      }
+    },
+    _ => {},
+  }
+}
+
 /// Perl: cleanFrontmatterLabels($labels, $prefix). Rust also parts the labels at the spacing ([`SPACING_IN_LABEL`]), on
 /// both sides of the match: the mark an author requests and the one an affiliation sets (OXIDIZED_DESIGN #52(o)).
 pub(in crate::base_utilities) fn clean_frontmatter_labels(
@@ -277,7 +490,29 @@ pub(in crate::base_utilities) fn clean_frontmatter_labels(
           vec![piece]
         }
       },
-      false => vec![piece],
+      // (and a printed run of distinct symbol characters, the same labels read off the page: `$^{\clubsuit
+      // \heartsuit}$` prints "♣♡", [`printed_label`])
+      false => {
+        let symbols: Vec<char> = piece.trim().chars().collect();
+        // (a star, or a printed symbol: no letter, digit, space or ASCII punctuation)
+        let symbol =
+          |c: &char| *c == '*' || (!c.is_ascii() && !c.is_alphanumeric() && !c.is_whitespace());
+        if symbols.len() >= 2
+          && symbols.iter().all(symbol)
+          && symbols.iter().skip(1).any(|c| *c != symbols[0])
+        {
+          let trimmed = piece.trim();
+          std::iter::once(piece)
+            .chain(
+              trimmed
+                .char_indices()
+                .map(|(at, c)| &trimmed[at..at + c.len_utf8()]),
+            )
+            .collect()
+        } else {
+          vec![piece]
+        }
+      },
     })
     .collect();
   for label in pieces {

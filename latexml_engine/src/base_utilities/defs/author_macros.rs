@@ -224,7 +224,11 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // note its author's or its line's (2512.05464; an author block takes it out before, `notes_out_of_marks`).
   DefPrimitive!(T_CS!("\\lx@sup@request@affiliation"), None, {
     let (operand, notes) = frontmatter_sup_operand_and_notes()?;
-    let label = clean_frontmatter_labels(&operand.to_string(), "affiliation").join(",");
+    if reading_label() {
+      return Ok(Vec::new());
+    }
+    // (keyed by the operand's printed text: refactor stage 4, OXIDIZED_DESIGN_DIVERGENCES #919)
+    let label = frontmatter_label_keys(&operand, "affiliation")?.join(",");
     add_annotation_labels(label, true);
     if let Some(notes) = notes {
       unread(notes);
@@ -246,12 +250,21 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
         vec![Some(operand)]
       ))?]);
     }
-    let label = clean_frontmatter_labels(&operand.to_string(), "affiliation")
-      .into_iter()
-      .next();
-    // the marks it is (`\mathrm{a}`: a), as the authors' are read (relocate_annotations) — from its TeX spelling, which
-    // keeps the boundary after a control word (`{\rm a}`'s tokens join to `\rma`: 2008.00493)
-    let keys = script_marks(operand.clone().untex_string().as_ref()).join(",");
+    // (keyed by the operand's printed text, as the authors' requests are: refactor stage 4, OXIDIZED_DESIGN_DIVERGENCES
+    // #919 — `$^{\dag}$Univ A` answers `Ann$^{\dagger}$`)
+    let printed = printed_label(&operand)?;
+    let label = match &printed {
+      Some(printed) => clean_frontmatter_labels(printed, "affiliation"),
+      None => clean_frontmatter_labels(&operand.to_string(), "affiliation"),
+    }
+    .into_iter()
+    .next();
+    // the marks it is (`\mathrm{a}`: a), as the authors' are read (relocate_annotations): from its printed text, else
+    // its TeX spelling, which keeps the boundary after a control word (`{\rm a}`'s tokens join to `\rma`: 2008.00493)
+    let keys = match &printed {
+      Some(printed) => printed_marks(printed).join(","),
+      None => script_marks(operand.clone().untex_string().as_ref()).join(","),
+    };
     with_pending_entry_attr(move |attr| match label {
       Some(label) => {
         DebugFeature!("frontmatter", "FRONT set label {label}");
@@ -336,7 +349,11 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // `\AFF{$^*$Corresponding author}`, 2609.38842) gives that entry to its authors; a request nothing answers is not
   // used. Only on a creator: in an affiliation the label is its own (`\lx@affiliation@withsup`).
   DefPrimitive!("\\lx@frontmatter@symbolmark{}", sub[(sym)] {
-    let label = clean_frontmatter_labels(&sym.to_string(), "affiliation").join(",");
+    if reading_label() {
+      return Ok(Vec::new());
+    }
+    // (keyed by the symbol's printed text, as the entry's mark is: refactor stage 4, OXIDIZED_DESIGN_DIVERGENCES #919)
+    let label = frontmatter_label_keys(&sym, "affiliation")?.join(",");
     with_pending_entry_attr(move |attr| {
       if attr.get("role").map(String::as_str) != Some("pending") && !label.is_empty() {
         let labels = attr.get("_annotations").cloned().unwrap_or_default();

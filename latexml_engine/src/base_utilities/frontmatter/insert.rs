@@ -684,8 +684,9 @@ pub(in crate::base_utilities) fn add_annotation_labels(label: String, superscrip
 }
 
 /// How an unanswered affiliation mark prints: a number or letter as it is, a superscript footnote symbol (`$^{\dag}$`,
-/// which labels affiliations as a mark, `is_symbol_mark`; its label keeps the control sequence) as its glyph; `None`
-/// for anything else (a fuzzy or composite label).
+/// which labels affiliations as a mark, `is_symbol_mark`) as its glyph — a label keyed by its printed text is that glyph
+/// already (`\inst{1,\star}`'s `⋆`, 2105.03212; refactor stage 4, OXIDIZED_DESIGN_DIVERGENCES #919), one keyed by its
+/// spelling (the fallback) keeps the control sequence; `None` for anything else (a fuzzy or composite label).
 pub(in crate::base_utilities) fn unanswered_mark_text(mark: &str) -> Option<String> {
   if !mark.is_empty() && mark.chars().all(char::is_alphanumeric) {
     return Some(mark.to_string());
@@ -703,6 +704,15 @@ pub(in crate::base_utilities) fn unanswered_mark_text(mark: &str) -> Option<Stri
     "\\|" => "\u{2016}",
     "\\#" | "#" => "#",
     "\u{2020}" | "\u{2021}" | "\u{2217}" | "\u{A7}" | "\u{B6}" => mark,
+    // (one printed symbol, no letter, digit, space or ASCII character: a run of several is a whole-run label, its
+    // symbols requested apart, `clean_frontmatter_labels`)
+    _ if mark.chars().count() == 1
+      && mark
+        .chars()
+        .all(|c| !c.is_ascii() && !c.is_alphanumeric() && !c.is_whitespace()) =>
+    {
+      mark
+    },
     _ => return None,
   };
   Some(glyph.to_string())

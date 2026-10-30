@@ -87,7 +87,10 @@ they stay for stages 3–5.
    lines, 0804.4669's shape, `amsart_address_spaced_marks_cut_with_their_lines`) and `notes::leads_with_mark`. Gate: the
    revtex/ams census A/B.
 4. **Labels as printed** (RULED 2026-10-29: printed labels, FIDELITY_CHARTER §4): every family; the marked-path guards; the `\lx@frontmatter@sup`
-   label keys (`author_macros.rs:254` → `script_marks`).
+   label keys (`author_macros.rs:254` → `script_marks`). **Landed (92b, OD #919)** on the digested primitives, request
+   and set side: `queue_digest::frontmatter_label_keys` reads an operand printing through a command by its speculative
+   digestion's ink (`\inst{\ESO}` entry 2's, `\dag` ≡ `$\dagger$`), Perl's ToString the fallback; the token readers
+   before digestion (`place.rs`, `shared_row::marks_pick`, `queue.rs`) stay for stages 5 and 7.
 5. **Pre-splitters onto the rehearsal**: ijcai e-mails, `\lx@split@addresses` → `addresses_in`, `\inst` marks,
    `\thanks`-as-affiliations, revtex's group rule (`content_marks`/`group_shares_the_mark`). With the last token
    caller gone, `MARK_SWITCHES` and `MARK_SPACING` go.

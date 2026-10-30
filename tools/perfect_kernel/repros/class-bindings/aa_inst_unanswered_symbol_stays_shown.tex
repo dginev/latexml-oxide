@@ -1,0 +1,16 @@
+% witness: 2105.03212 (aa `R.\,Dokara \inst{1,\star}`: a symbol no entry answers, shown on the name)
+% oracle:  pdflatex with 1707.06238's aa.cls: "Ann Able1,⋆ and Bob Baker2" / 1 Univ X / 2 Univ Y
+% engines: perl 0.8.8 = 0 errors, the ⋆ dropped; rust 92a: "Ann Able⋆" (the unanswered `\star` shown by its spelling), Univ X hers;
+%          92b before this row: the ⋆ lost (its label keyed by the printed text, `⋆`, which the display did not read)
+% expect:  0 errors, 0 warnings; "Ann Able ⋆" with Univ X, Bob Baker with Univ Y
+% status:  RED (92b piece 5) -> GREEN (92b)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1,\star} \and Bob Baker\inst{2}}
+\institute{Univ X \and Univ Y}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

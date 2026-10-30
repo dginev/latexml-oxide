@@ -1,0 +1,18 @@
+% witness: the gate study's class E (`\dag` against `$\dagger$`); FIDELITY_CHARTER §4 "label keys compared by their
+%          printed text" (2026-10-29)
+% oracle:  pdflatex: "Ann Able†, Cid Cole⋄, Bob Baker†" / † Univ A / ⋄ Univ C — `\dag` and `\dagger` print one dagger
+% engines: perl 0.8.8 = 0 errors, Univ A Bob Baker's only (the labels `\dag` and `\dagger` differ); rust 92a the same
+%          (Ann Able's † kept in her name)
+% expect:  0 errors, 0 warnings; Univ A Ann Able's and Bob Baker's, Univ C Cid Cole's, in the XML and in the shadow
+%          reading (Ann Able's answered mark no longer shown in her name, as an answered mark is not: the mark's
+%          display is the old reader's token-level choice, a residual of OD #919)
+% status:  RED (92a) -> GREEN (92b)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\dag}$, Cid Cole$^{\diamond}$, Bob Baker$^{\dagger}$ \\ $^{\dagger}$ Univ A \\
+$^{\diamond}$ Univ C}
+\begin{document}
+\maketitle
+Text.
+\end{document}
