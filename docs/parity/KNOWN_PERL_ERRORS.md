@@ -18688,7 +18688,10 @@ sequence label `author:1`: the institute and the first `\email` in it are the fi
 
 Fixed in Rust (85b, OXIDIZED_DESIGN_DIVERGENCES #901): the institute is every author's, each address the author it
 spells. Witnesses 1002.2793, 2106.04289, 2402.19043. Repro class-bindings/llncs_sole_institute_is_every_authors; guard
-`perfect_kernel_batch85b::llncs_sole_institute_is_every_authors`.
+`perfect_kernel_batch85b::llncs_sole_institute_is_every_authors`. aa has the same defect: aa.cls:886-899 prints a sole
+institute unnumbered under the names, and Perl's aa reads it through inst_support.sty.ltxml:36-37, the same
+`labelseq=affiliation` contact no author requests (trigger: the one above with `\documentclass{aa}`); fixed in Rust
+92c r2 (OD #932; 2210.16066, astro-ph0305539; guard `perfect_kernel_batch92c::aa_sole_institute_is_the_rows`).
 
 ## 1196. OmniBus's `\kwd` keeps only the last keyword
 

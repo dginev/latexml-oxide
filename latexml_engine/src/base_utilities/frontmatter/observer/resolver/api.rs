@@ -159,6 +159,18 @@ impl Resolver {
       }
       return;
     }
+    // (a class's sole institute under the names, `_share=authors` (llncs's, aa's): with several authors a later line of
+    // it printing addresses alone, outside the class's e-mail calls, is an e-mail line of the row, each address read
+    // apart and placed as a call's — today's reads the row so (`shared_row::row_email_calls`, OD #901): aa
+    // 2506.20360's `\email{guolianglv@sina.com};{chunhuazhu@sina.cn}` gave the second address to the institute's
+    // text, which then differed from today's and held the writing back)
+    let row_lines;
+    let events = if attr_value(attrs, "_share") == Some("authors") && self.out.creators.len() > 1 {
+      row_lines = row_address_lines(events);
+      &row_lines[..]
+    } else {
+      events
+    };
     let split = self.splitting;
     let withsup = attr_value(attrs, "_withsup") == Some("true");
     // its leading marks (`\affil{$^1$Univ X}`), its `\label`s, its text
@@ -769,4 +781,47 @@ fn written_out(contact: &Assoc) -> Vec<String> {
   } else {
     Vec::new()
   }
+}
+
+/// A shared row entry's events with each Name printing addresses alone on a line after its first one, a line holding
+/// nothing else but e-mail calls and separators, an e-mail Contact of its own, the separators between them no text of
+/// the entry (`Api::api`'s row lines).
+fn row_address_lines(events: &[Event]) -> Vec<Event> {
+  let mut out: Vec<Option<Event>> = events.iter().cloned().map(Some).collect();
+  let mut line_start = 0usize;
+  let mut first_line = true;
+  let ends: Vec<usize> = (0..=events.len())
+    .filter(|&at| at == events.len() || events[at].kind == EventKind::Break)
+    .collect();
+  for end in ends {
+    let line = &events[line_start..end];
+    let prints = line
+      .iter()
+      .any(|e| matches!(e.kind, EventKind::Name | EventKind::Contact));
+    if !first_line && prints {
+      let address_only = |e: &Event| {
+        e.kind == EventKind::Name && !addresses_in(&e.text).is_empty() && only_addresses(&e.text)
+      };
+      let rest_is_calls = line.iter().all(|e| {
+        address_only(e)
+          || matches!(e.kind, EventKind::Sep(_) | EventKind::Layout)
+          || (e.kind == EventKind::Contact && e.role.as_deref() == Some("email"))
+      });
+      if rest_is_calls && line.iter().any(address_only) {
+        for slot in &mut out[line_start..end] {
+          match slot {
+            Some(e) if address_only(e) => {
+              e.kind = EventKind::Contact;
+              e.role = Some("email".to_string());
+            },
+            Some(e) if matches!(e.kind, EventKind::Sep(_)) => *slot = None,
+            _ => {},
+          }
+        }
+      }
+    }
+    first_line &= !prints;
+    line_start = end + 1;
+  }
+  out.into_iter().flatten().collect()
 }

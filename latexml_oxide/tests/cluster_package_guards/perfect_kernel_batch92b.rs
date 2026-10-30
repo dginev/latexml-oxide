@@ -288,14 +288,16 @@ fn a_numbered_entry_whose_lines_marks_lead_is_split_at_them() {
     ],
   );
   // (a closing line of text holds the split back: the entry holds marks of its own no split read, so its number is no
-  // reading of the names' hand marks — untagged, an honest disagreement; astro-ph0405186, 2208.05114)
+  // reading of the names' hand marks; astro-ph0405186, 2208.05114 — and aa's sole institute is `_share=authors` since
+  // 92c r2 (OD #932: aa.cls prints it unnumbered, only `\inst{n}` picks it), so the hand-marked names leave it the
+  // block's, as today's XML; it was the first name's, untagged, an honest disagreement)
   assert_reading(
     repro!("aa_institute_lines_led_by_marks_text_line_is_no_split.tex"),
     None,
     &[
       "C Ann Able [1] | line:names",
-      "  a Univ X Univ Y Contact: X Office | api:labelseq",
       "C Bob Baker [2] | line:names",
+      "B affiliation Univ X Univ Y Contact: X Office | api:labelseq label:unrequested owner:block",
     ],
   );
 }

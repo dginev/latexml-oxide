@@ -253,6 +253,58 @@ fn an_address_lists_lines_place_their_notes() {
   });
 }
 
+/// The llncs shapes, written since 92c (OD #923), whole: every creator's XML items in order (review rev92c S3 — they
+/// left the byte-identity check, and [`tuples`] reads only the shadow): the entry's group written out, each address to
+/// the author it spells, the unspelled `info@` the block's; under unmarked names the sole institute every author's.
+#[test]
+fn r6_llncs_shapes_are_written_whole() {
+  for (tex, want) in [
+    (GROUP, vec![
+      vec![
+        "Ann Able",
+        "affiliation=Univ A, City",
+        "email=ann.able@example.org",
+      ],
+      vec![
+        "Bob Baker",
+        "affiliation=Univ A, City",
+        "email=bob.baker@example.org",
+      ],
+      vec![
+        "Cat Cole",
+        "affiliation=Univ B, Town",
+        "email=cole@example.org",
+      ],
+      vec!["email=info@example.org"],
+    ]),
+    (GROUP_UNREQUESTED, vec![
+      vec![
+        "Ann Able",
+        "affiliation=Univ A, City",
+        "email=ann.able@example.org",
+      ],
+      vec![
+        "Bob Baker",
+        "affiliation=Univ A, City",
+        "email=bob.baker@example.org",
+      ],
+    ]),
+  ] {
+    let (log, xml, ()) = convert_with_setup_then(
+      tex,
+      Some("ar5iv.sty"),
+      || set_fm_shadow_override(Some(true)),
+      |_| (),
+    );
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert_eq!(
+      super::perfect_kernel_batch84b::creators(&xml),
+      want,
+      "{tex}"
+    );
+  }
+}
+
 /// The r6 shapes of a family the observer does not write leave the XML byte-identical with the switch on and off
 /// (shadow only). (The llncs shapes, GROUP and GROUP_UNREQUESTED, are written since 92c, OD #923: their guard's outcome
 /// is the writer's `written`, `perfect_kernel_batchfms2a1::parsed`.)

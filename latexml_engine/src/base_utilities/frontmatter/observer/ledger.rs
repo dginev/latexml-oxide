@@ -277,7 +277,7 @@ fn same_meaning(a: Option<&Rc<dyn Definition>>, b: Option<&Rc<dyn Definition>>) 
 /// Run a compiled binding's loader (`name`.`extension`, the binding's file: `revtex4_support.sty`), noting it as the
 /// owner of each tracked command's meaning (`OWNED_COMMANDS`) when its load changed it and no binding it loaded did, or
 /// its own code redefined it after one did (revtex4-2.cls's binding loads revtex4_support.sty, whose `\author` it is;
-/// aa.cls's loads aa_support.sty, whose `\email` it is, and defines its own `\author` after inst_support.sty's):the binding half of the policy key (`author_binding`), and an e-mail call's binding
+/// aa.cls's loads aa_support.sty, whose `\email` it is, and defines its own `\author` after inst_support.sty's): the binding half of the policy key (`author_binding`), and an e-mail call's binding
 /// (`email_meaning`). Under the shadow switch only; otherwise just the load.
 pub fn note_binding_load<R>(name: &str, extension: &str, load: impl FnOnce() -> R) -> R {
   if !fm_shadow_enabled() {

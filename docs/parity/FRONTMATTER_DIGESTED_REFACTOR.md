@@ -135,7 +135,9 @@ they stay for stages 3–5.
    out (`Op::WriteOut`) and an empty call holds no paper back; a label glued to a symbol parted (`\inst{1*}`), a
    share entry no hand mark requests, a note's spelled address a change. Scorer aa 81.23 % → 100 %, llncs 78.98 % →
    94.89 % (left: 1901.07288, stage 5's pre-splitter; two scorer source limits); census unclassified llncs 25 (5.4 %),
-   aa 18 (3.2 %). **93a: the kernel family written** (OD #925-#927): the kernel's own `\author` (`article`,
+   aa 18 (3.2 %). **92c r2** (review rev92c): an e-mail call's link is its printed text, one item per owner and text,
+   a group written out only when its contact prints the addresses alone, added items in the reading's print order
+   (OD #923, #924); aa's sole `\institute` is `_share=authors` as llncs's (OD #932). **93a: the kernel family written** (OD #925-#927): the kernel's own `\author` (`article`,
    `report`, `book` and every class whose bindings declare no conventions) `written`, a binding owning `\author` that
    declares none `UNDECLARED` (unwritten); the writer cuts a block's own marked lines today's joined, writes a legend
    line as the starred names' note, leaves an unrequested entry where today's put it; readings: a label several `\and`

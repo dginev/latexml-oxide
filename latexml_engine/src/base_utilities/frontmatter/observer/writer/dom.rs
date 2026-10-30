@@ -177,7 +177,7 @@ fn orcid_links(node: &Node) -> Vec<(Node, String)> {
 }
 
 /// One creator's items, as `xml_tuples` reads them.
-fn read_creator(node: &Node) -> Creator {
+pub(super) fn read_creator(node: &Node) -> Creator {
   let mut names = Vec::new();
   let mut items = Vec::new();
   for child in node.get_child_nodes() {

@@ -1,0 +1,17 @@
+% witness: review rev92c B2 (`p/l2.tex`, `p/l3.tex`); the write-out's own witnesses 1811.05243, 1812.02463, 2403.14668
+% oracle:  pdflatex: "Ann Able1 and Bob Baker1", "1 Univ A {ann,bob}@a.org (corresponding)"; the second shape
+%          "1 Univ A Emails: {ann,bob}@a.org"
+% engines: perl 0.8.8 = 0 errors, the contact whole on both authors; rust int122w = the same; int122y (92c) = written out,
+%          "ann@a.org" and "bob@a.org" — the remark "(corresponding)" and the label "Emails:" lost
+% expect:  0 errors, 0 warnings; the writer writes a group out only when its contact prints the addresses alone (with
+%          their separators): beside other words it declines, today's contact stays whole on both authors (OD #923)
+% status:  RED (92c) -> GREEN (92c r2) — perfect_kernel_batch92c::an_email_group_beside_words_stays_whole
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1}}
+\institute{Univ A\\ \email{\{ann,bob\}@a.org (corresponding)}}
+\maketitle
+Text.
+\end{document}

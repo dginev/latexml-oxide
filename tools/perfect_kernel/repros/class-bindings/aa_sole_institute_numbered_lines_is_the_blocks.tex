@@ -1,0 +1,20 @@
+% witness: astro-ph0305539 (`\institute{{1} Astronomical Institute … \\ {2} Copernicus …}` under authors marked
+%          $^{1,2}$, $^{2,3}$, $^{2,4}$); the llncs twin institute_with_numbered_lines_is_no_marked_list (63i); review
+%          rev92c B3
+% oracle:  pdflatex with 2210.16066's aa.cls: "Ann Able1,2 and Bob Baker2", then "1 Univ A, City A" / "2 Univ B, City B"
+%          unnumbered (aa.cls:888 `\ifnum\aa@nbinstitutes=1`: a sole institute is printed under the names, unnumbered)
+% engines: perl 0.8.8 = 0 errors; rust int122w = the institute on a nameless creator; int122y (92c) = Ann Able's alone
+%          (the shadow read her hand-typed 1 as a request of the sole institute's unprinted number; written)
+% expect:  0 errors, 0 warnings; the block's: aa's binding declares its sole institute `_share=authors`, as llncs's
+%          (aa_cls.rs `\lx@aa@institute@sole`), which only the class's `\inst{n}` picks, never a mark typed by hand
+% status:  RED (92c) -> GREEN (92c r2) — perfect_kernel_batch92c::aa_sole_institute_is_the_rows
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2}$ \and Bob Baker$^{2}$}
+\institute{{1} Univ A, City A\\ {2} Univ B, City B}
+\abstract{X}
+\maketitle
+Text.
+\end{document}

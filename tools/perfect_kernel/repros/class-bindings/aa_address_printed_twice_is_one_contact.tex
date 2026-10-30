@@ -1,0 +1,20 @@
+% witness: 0906.2451 (S. K. Mathew\inst{1,2}: `\email{shibu@prl.res.in}` in institute 1 and in `\offprints{Shibu K.
+%          Mathew\\ \email{shibu@prl.res.in}}`); review rev92c S2
+% oracle:  pdflatex with 2210.16066's aa.cls: "Ann Able1,2 and Bob Baker2", "1 Univ A e-mail: ann@a.org", "2 Univ B",
+%          the footnote "Send offprint requests to: Ann Able e-mail: ann@a.org"
+% engines: perl 0.8.8 = 0 errors; rust int122w = ann@a.org once on Ann Able; int122y (92c) = twice on Ann Able, once
+%          after each of her institutes (the reading gave her the address from both prints, each written)
+% expect:  0 errors, 0 warnings; one contact per creator and address: the writer collapses the reading's identical
+%          items of one owner (OD #923)
+% status:  RED (92c) -> GREEN (92c r2) — perfect_kernel_batch92c::an_address_printed_twice_is_one_contact
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1,2} \and Bob Baker\inst{2}}
+\institute{Univ A\\ \email{ann@a.org} \and Univ B}
+\offprints{Ann Able\\ \email{ann@a.org}}
+\abstract{X}
+\maketitle
+Text.
+\end{document}

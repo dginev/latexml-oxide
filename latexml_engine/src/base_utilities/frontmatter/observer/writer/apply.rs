@@ -4,9 +4,11 @@
 //! today's items taken away — in that order, so a copy is made before its source goes, and a copy that stays takes back
 //! the ids of the one taken.
 
+use std::collections::BTreeMap;
+
 use super::{
-  dom::Front,
-  plan::{Made, Op, Owner, Plan},
+  dom::{Front, read_creator},
+  plan::{Key, Made, Op, Owner, Place, Plan},
   *,
 };
 
@@ -203,9 +205,65 @@ fn reclaim_ids(document: &mut Document, taken: &[(SymStr, String)]) -> Result<()
   Ok(())
 }
 
+/// `new`, an item just added to `owner` (the node of `who`), moved to where the reading prints it: before the first of
+/// the owner's items the reading prints after it — not at the creator's end, where a copy made in the order of the
+/// items' texts reordered what the PDF prints (rev92c S1: Sangyoun Lee's institutes 1 and 2 copied KIST before Yonsei,
+/// 2207.06953; S. Mangla's ORIGINS before LMU and O. M. Smirnov's in the order of their names, 2608.05923; Ilyass
+/// Haloui's written-out Airbus address after ISAE, 1812.02463). An item the reading places nowhere stays last.
+/// Whether the reading places it.
+fn place(owner: &Node, who: Owner, new: &Node, order: &BTreeMap<(Owner, Key), Place>) -> bool {
+  let items = read_creator(owner).items;
+  // (within one print, an entry's own text before the contacts and notes it holds: `Univ X \\ \email{…}`)
+  let place_of = |item: &dom::Item| {
+    order
+      .get(&(who, (item.kind.clone(), item.key.clone())))
+      .map(|place| (*place, item.kind.clone()))
+  };
+  let Some(at) = items
+    .iter()
+    .find(|item| item.movable && item.node == *new)
+    .and_then(place_of)
+  else {
+    return false;
+  };
+  if let Some(next) = items
+    .iter()
+    .filter(|item| item.movable && item.node != *new)
+    .find(|item| place_of(item).is_some_and(|p| prints_after(&p, &at)))
+  {
+    let mut next = next.node.clone();
+    let mut new = new.clone();
+    let _ = next.add_prev_sibling(&mut new);
+  }
+  true
+}
+
+/// Whether the reading prints an item placed at `a` after one at `b`: by their blocks or calls, then within one by
+/// their spans — or, neither spanned, an entry's own text before what it holds (`Univ X \\ \email{…}`). One spanned
+/// and one not in the same block are not ordered: a span is a position in the block, its absence none (an
+/// `\institute`'s legend line cut at its span and the address line before it, which the row parted out with no span:
+/// the legend had gone before the address it prints after, `perfect_kernel_batch61::marked_affiliation_review_shapes`).
+fn prints_after(a: &(Place, dom::Kind), b: &(Place, dom::Kind)) -> bool {
+  let ((ai, (af, astart)), akind) = a;
+  let ((bi, (bf, bstart)), bkind) = b;
+  match (ai.cmp(bi), af, bf) {
+    (std::cmp::Ordering::Equal, 0, 0) => (astart, akind) > (bstart, bkind),
+    (std::cmp::Ordering::Equal, 1, 1) => akind > bkind,
+    (std::cmp::Ordering::Equal, ..) => false,
+    (order, ..) => order == std::cmp::Ordering::Greater,
+  }
+}
+
 /// Carry out `plan` on the document.
 pub(super) fn apply(document: &mut Document, front: &Front, plan: &Plan) -> Result<()> {
   let mut block: Option<Node> = None;
+  // (the owners the operations touch, whose items are then in the reading's order)
+  let mut touched: Vec<(Owner, Node)> = Vec::new();
+  let mut touch = |who: Owner, node: &Node| {
+    if !touched.iter().any(|(o, _)| *o == who) {
+      touched.push((who, node.clone()));
+    }
+  };
   let mut owner_node = |document: &mut Document, owner: Owner| -> Result<Option<Node>> {
     match owner {
       Owner::Creator(i) => Ok(plan.creators.get(&i).cloned()),
@@ -222,28 +280,50 @@ pub(super) fn apply(document: &mut Document, front: &Front, plan: &Plan) -> Resu
       && let Some(mut owner) = owner_node(document, *to)?
     {
       document.append_clone(&mut owner, vec![from.clone()])?;
+      touch(*to, &owner);
     }
   }
   for op in &plan.ops {
     if let Op::Make {
-      owner,
+      owner: who,
       made,
       tokens,
       template,
       before,
     } = op
-      && let Some(owner) = owner_node(document, *owner)?
+      && let Some(owner) = owner_node(document, *who)?
     {
       make(document, &owner, *made, tokens, template, before.as_ref())?;
+      touch(*who, &owner);
+      // (an affiliation replacing none of today's items where the reading prints it, as a copy: 2311.16503's Jing Liu
+      // had his institutes after the address the block prints below them; a legend stays last — the row's e-mail lines
+      // are queued after the entry they print inside, so the calls' order does not place a legend line among them,
+      // `perfect_kernel_batch61::marked_affiliation_review_shapes`)
+      if before.is_none()
+        && *made == Made::Affiliation
+        && let Some(new) = elements(&owner).pop()
+      {
+        place(&owner, *who, &new, &plan.order);
+      }
     }
   }
   for op in &plan.ops {
-    if let Op::WriteOut { owner, template, address } = op
-      && let Some(mut owner) = owner_node(document, *owner)?
+    if let Op::WriteOut { owner: who, template, address } = op
+      && let Some(mut owner) = owner_node(document, *who)?
     {
       document.append_clone(&mut owner, vec![template.clone()])?;
-      if let Some(copy) = elements(&owner).pop() {
+      touch(*who, &owner);
+      if let Some(mut copy) = elements(&owner).pop() {
         set_text(document, &copy, address)?;
+        // (where the reading prints it; one it places nowhere at the template's place on the owner holding it, taken
+        // after — today's place of a group may be no print order: Yuan Gao's `{malan,gaoy97}@` before his China
+        // Telecom, 2603.23924)
+        if !place(&owner, *who, &copy, &plan.order)
+          && template.get_parent().as_ref() == Some(&owner)
+        {
+          let mut template = template.clone();
+          let _ = template.add_prev_sibling(&mut copy);
+        }
       }
     }
   }
@@ -260,6 +340,14 @@ pub(super) fn apply(document: &mut Document, front: &Front, plan: &Plan) -> Resu
   let mut taken = Vec::new();
   for op in &plan.ops {
     if let Op::Remove { node } = op {
+      if let Some(parent) = node.get_parent() {
+        if let Some((&i, _)) = plan.creators.iter().find(|(_, n)| **n == parent) {
+          touch(Owner::Creator(i), &parent);
+        } else if block.as_ref() == Some(&parent) || front.nameless.iter().any(|c| c.node == parent)
+        {
+          touch(Owner::Block, &parent);
+        }
+      }
       // (named while attached: a detached element's name no longer resolves its prefix)
       let ids: Vec<(SymStr, String)> = subtree_ids(document, node)
         .into_iter()
@@ -271,6 +359,23 @@ pub(super) fn apply(document: &mut Document, front: &Front, plan: &Plan) -> Resu
   }
   for ids in &taken {
     reclaim_ids(document, ids)?;
+  }
+  // (each touched owner's items in the reading's order, today's ones too: what an operation left — 2603.13900's Claudio
+  // Di Ciccio kept today's address before his institute once the copy after it was taken; rev92c S1. Its notes stay
+  // where they are, as a made legend does: the row's e-mail lines are queued after the entry they print inside, so the
+  // calls' order does not place a note line among them)
+  for (who, owner) in &touched {
+    if owner.get_parent().is_some() {
+      let items: Vec<Node> = read_creator(owner)
+        .items
+        .into_iter()
+        .filter(|item| item.movable && item.kind != dom::Kind::Note)
+        .map(|item| item.node)
+        .collect();
+      for item in items {
+        place(owner, *who, &item, &plan.order);
+      }
+    }
   }
   // (a nameless creator the operations emptied is gone, as `coalesce_empty_creators` drops one)
   for creator in front.nameless.iter().map(|c| c.node.clone()).chain(block) {

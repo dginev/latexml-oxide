@@ -62,6 +62,38 @@ LoadDefinitions!({
   // two calls (pop92b6: their second calls in comments or conditionals) change nothing.
   DefMacro!("\\author[]{}",
     "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author@split}{\\and\\And}{#2}\\lx@author@trailing");
+  // aa.cls:736-757 counts the `\institute`'s pieces at its `\and`s (`\aa@nbinstitutes`), and `\aainstitutename`
+  // (:886-899) prints a sole institute unnumbered under the whole author row (`\ifnum\aa@nbinstitutes=1
+  // \noindent\ignorespaces`), several each numbered: the sole one is every author's unless the class's own `\inst{n}`
+  // picks it, never by a mark typed by hand — `_share=authors`, as llncs's (llncs_cls.rs `\lx@llncs@institute@sole`,
+  // OXIDIZED_DESIGN_DIVERGENCES #901, #924; `Ann Able$^{1,2}$` under `\institute{{1} Univ A \\ {2} Univ B}` is the
+  // block's, astro-ph0305539 — the reading had given its four institutes to J. Daszyńska-Daszkiewicz, review rev92c
+  // B3). Several institutes split as inst_support's (OD #53); an empty `\institute{}` adds none.
+  DefMacro!("\\institute{}",
+    "\\lx@clear@frontmatter{ltx:contact}[role=affiliation]\\lx@aa@institute@dispatch{#1}");
+  DefMacro!("\\lx@aa@institute@dispatch{}", sub[(body)] {
+    let mut depth = 0i32;
+    let mut pieces = 1usize;
+    for t in body.unlist_ref() {
+      match t.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth -= 1,
+        _ if depth == 0 && *t == T_CS!("\\and") => pieces += 1,
+        _ => {},
+      }
+    }
+    let ink = body.unlist_ref().iter().any(|t| t.get_catcode() != Catcode::SPACE);
+    let target = if pieces == 1 && ink {
+      T_CS!("\\lx@aa@institute@sole")
+    } else {
+      T_CS!("\\lx@aa@institute@split")
+    };
+    Ok(Invocation!(target, vec![Some(body)]))
+  });
+  DefMacro!("\\lx@aa@institute@split{}",
+    "\\lx@splitting{\\lx@add@contact[role=affiliation,labelseq=affiliation]}{\\and\\And}{#1}");
+  DefMacro!("\\lx@aa@institute@sole{}",
+    "\\lx@add@contact[role=affiliation,labelseq=affiliation,_share=authors]{#1}");
   // Raw aa.cls unconditionally loads natbib (not just for bibnumber/bibauthoryear options).
   // Many aa papers use \citep/\citet without explicit \usepackage{natbib}.
   RequirePackage!("natbib");

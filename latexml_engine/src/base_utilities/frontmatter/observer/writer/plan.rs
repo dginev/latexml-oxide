@@ -72,14 +72,28 @@ pub(super) enum Op {
   },
 }
 
-/// The plan: its operations, and the document's creator of each resolved creator.
+/// The plan: its operations, the document's creator of each resolved creator, and where each of the reading's items
+/// prints ([`Place`]), which places the items the operations add among an owner's (rev92c S1).
 #[derive(Debug, Clone)]
 pub(super) struct Plan {
   pub ops:      Vec<Op>,
   pub creators: BTreeMap<usize, Node>,
+  pub order:    BTreeMap<(Owner, Key), Place>,
 }
 
-type Key = (Kind, String);
+pub(super) type Key = (Kind, String);
+
+/// Where one of the reading's items prints: its block or API call's ledger index, then its span's start, one with no
+/// span after its block's spanned ones — the order the resolver keeps a creator's contacts and notes in
+/// (`resolver::in_source_order`), the print order of the entries an owner's marks request (llncs's and aa's institute
+/// list: `\inst{2,1}` prints under institutes 1 and 2, as today's places them).
+pub(super) type Place = (usize, (u8, u16));
+
+fn place_of(assoc: &Assoc) -> Option<Place> {
+  assoc
+    .source
+    .map(|(index, span)| (index, span.map_or((1, 0), |(start, _)| (0, start))))
+}
 
 /// The resolved creators paired with today's, by name in order: `None` when they differ.
 fn pair_names(resolved: &Resolved, front: &Front) -> Option<BTreeMap<usize, usize>> {
@@ -125,21 +139,41 @@ fn wanted(resolved: &Resolved) -> BTreeMap<Key, Vec<(Owner, &Assoc)>> {
     for a in &c.notes {
       items.push(((Kind::Note, norm(&a.text)), a));
     }
+    // (one item per creator and text: an address the reading gives one creator twice — from its institute line and from
+    // `\offprints`, 0906.2451; a link's target and its text before the events read only the text, review rev92c B1, S2
+    // — is one contact, the one a ruling decided kept)
     for (key, a) in items {
-      if !key.1.is_empty() {
-        out.entry(key).or_default().push((owner, a));
+      if key.1.is_empty() {
+        continue;
+      }
+      let wants = out.entry(key).or_default();
+      match wants.iter_mut().find(|(o, _)| *o == owner) {
+        Some(held) if !writes(held.1) && writes(a) => held.1 = a,
+        Some(_) => {},
+        None => wants.push((owner, a)),
       }
     }
   }
   for a in &resolved.block {
     let key = norm(&a.text);
     if !key.is_empty() {
-      out
-        .entry((Kind::of_block(&a.role), key))
-        .or_default()
-        .push((Owner::Block, a));
+      let wants = out.entry((Kind::of_block(&a.role), key)).or_default();
+      match wants.iter_mut().find(|(o, _)| *o == Owner::Block) {
+        Some(held) if !writes(held.1) && writes(a) => held.1 = a,
+        Some(_) => {},
+        None => wants.push((Owner::Block, a)),
+      }
     }
   }
+  out
+}
+
+/// The owners of `items`, each once: an item is one creator's or the block's, however many times today's or the
+/// reading holds it (rev92c S2: one contact per creator and address).
+fn owners(items: impl Iterator<Item = Owner>) -> Vec<Owner> {
+  let mut out: Vec<Owner> = items.collect();
+  out.sort();
+  out.dedup();
   out
 }
 
@@ -194,14 +228,8 @@ pub(super) fn difference(resolved: &Resolved, front: &Front) -> Option<String> {
   let want = wanted(resolved);
   let have = held(front, &pairs);
   for key in want.keys().chain(have.keys()) {
-    let mut w: Vec<Owner> = want
-      .get(key)
-      .map_or_else(Vec::new, |v| v.iter().map(|(o, _)| *o).collect());
-    let mut h: Vec<Owner> = have
-      .get(key)
-      .map_or_else(Vec::new, |v| v.iter().map(|(o, ..)| *o).collect());
-    w.sort();
-    h.sort();
+    let w = owners(want.get(key).into_iter().flatten().map(|(o, _)| *o));
+    let h = owners(have.get(key).into_iter().flatten().map(|(o, ..)| *o));
     if w != h {
       return Some(s!("{:?} {}: reading {w:?}, written {h:?}", key.0, key.1));
     }
@@ -518,6 +546,41 @@ fn cut_block_lines(
   }
 }
 
+/// Whether an e-mail contact's `text` prints its addresses alone: with its braced groups (`{ann,bob}@a.org`,
+/// `{ann,bob@a.org}`) taken out, every word between the separators (`,`, `;`, spaces) an address — no label, no remark
+/// beside them (rev92c B2).
+fn addresses_alone(text: &str) -> bool {
+  let mut flat = String::new();
+  let mut rest = text;
+  while let Some(open) = rest.find('{') {
+    let Some(close) = rest[open..].find('}').map(|c| open + c) else {
+      return false;
+    };
+    flat.push_str(&rest[..open]);
+    flat.push(' ');
+    let after = &rest[close + 1..];
+    if let Some(domain) = after.strip_prefix('@') {
+      let end = domain
+        .find(|c: char| c.is_whitespace() || ",;".contains(c))
+        .unwrap_or(domain.len());
+      rest = &domain[end..];
+    } else if rest[open + 1..close].contains('@') {
+      rest = after;
+    } else {
+      return false;
+    }
+  }
+  flat.push_str(rest);
+  flat
+    .split(|c: char| c.is_whitespace() || ",;".contains(c))
+    .filter(|w| !w.is_empty())
+    .all(|w| {
+      w.split_once('@').is_some_and(|(local, domain)| {
+        !local.is_empty() && domain.contains('.') && !domain.contains('@')
+      })
+    })
+}
+
 /// No plan, and why (the `frontmatter` debug feature).
 fn declined(reason: &str) -> Option<Plan> {
   DebugFeature!("frontmatter", "FRONT writer: declined, {reason}");
@@ -547,8 +610,8 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
   for key in keys {
     let wants: &[(Owner, &Assoc)] = want.get(&key).map_or(&[], Vec::as_slice);
     let holds: &[(Owner, Node, bool)] = have.get(&key).map_or(&[], Vec::as_slice);
-    let w: Vec<Owner> = wants.iter().map(|(o, _)| *o).collect();
-    let h: Vec<Owner> = holds.iter().map(|(o, ..)| *o).collect();
+    let w = owners(wants.iter().map(|(o, _)| *o));
+    let h = owners(holds.iter().map(|(o, ..)| *o));
     let (added, removed) = (minus(&w, &h), minus(&h, &w));
     if added.is_empty() && removed.is_empty() {
       continue;
@@ -584,17 +647,15 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
         to:   owner,
       });
     }
-    let mut taken: Vec<usize> = Vec::new();
+    // (every copy today's gives an owner the reading does not: one item per owner, S2)
     for owner in removed {
-      let Some(at) = holds
-        .iter()
-        .enumerate()
-        .position(|(at, (o, _, movable))| *o == owner && *movable && !taken.contains(&at))
-      else {
+      let mine: Vec<&(Owner, Node, bool)> = holds.iter().filter(|(o, ..)| *o == owner).collect();
+      if mine.iter().any(|(_, _, movable)| !movable) {
         return Ok(declined("an item to remove that cannot move"));
-      };
-      taken.push(at);
-      ops.push(Op::Remove { node: holds[at].1.clone() });
+      }
+      for (_, node, _) in mine {
+        ops.push(Op::Remove { node: node.clone() });
+      }
     }
   }
   // the reading's entries cut from one call by its marks, today's one item
@@ -735,31 +796,55 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
   }
   // a group of addresses one e-mail call printed, written out: today's one contact (on each carrier of its entry, or
   // the block's), the reading's addresses each its own — every address of the group one of the reading's written-out
-  // items, none of them today's
+  // items, none of them today's but one its owners hold already from another print (S2: written once), and the contact
+  // printing the addresses alone (rev92c B2: `\{ann,bob\}@a.org (corresponding)`, `Emails: \{ann,bob\}@a.org` —
+  // written out, the words beside the group were lost; such a contact stays today's, the paper declined)
   let email = Kind::Contact("email".into());
   for key in held_only.clone() {
     if key.0 != email {
       continue;
     }
     let holds = &have[&key];
-    if holds.iter().any(|(_, _, movable)| !movable)
-      || !holds.iter().all(|(_, n, _)| text_leaf(n).is_some())
-    {
+    if holds.iter().any(|(_, _, movable)| !movable) {
       continue;
     }
-    let addresses = addresses_in(&holds[0].1.get_content());
+    let Some(leaf) = holds
+      .iter()
+      .map(|(_, n, _)| text_leaf(n))
+      .collect::<Option<Vec<Node>>>()
+    else {
+      continue;
+    };
+    let text = leaf[0].get_content();
+    let addresses = addresses_in(&text);
     let keys: Vec<Key> = addresses.iter().map(|a| (email.clone(), norm(a))).collect();
+    let held_elsewhere = |k: &Key| {
+      want.get(k).is_some_and(|wants| {
+        have.get(k).is_some_and(|holds| {
+          owners(wants.iter().map(|(o, _)| *o)) == owners(holds.iter().map(|(o, ..)| *o))
+        })
+      })
+    };
     if addresses.len() < 2
+      || !addresses_alone(&text)
+      || !keys.iter().any(|k| wanted_only.contains(k))
       || !keys.iter().all(|k| {
-        wanted_only.contains(k)
-          && want[k]
-            .iter()
-            .all(|(_, a)| rule_has(a, "ruling3:written-out") && writes(a))
+        held_elsewhere(k)
+          || (wanted_only.contains(k)
+            && want[k]
+              .iter()
+              .all(|(_, a)| rule_has(a, "ruling3:written-out") && writes(a)))
       })
     {
       continue;
     }
+    let mut written: Vec<&Key> = Vec::new();
     for (address, k) in addresses.iter().zip(&keys) {
+      // (each address once, however often the group prints it)
+      if !wanted_only.contains(k) || written.contains(&k) {
+        continue;
+      }
+      written.push(k);
       for (owner, _) in &want[k] {
         ops.push(Op::WriteOut {
           owner:    *owner,
@@ -781,5 +866,13 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
     .iter()
     .map(|(&i, &j)| (i, front.creators[j].node.clone()))
     .collect();
-  Ok(Some(Plan { ops, creators }))
+  let order = want
+    .iter()
+    .flat_map(|(key, wants)| {
+      wants
+        .iter()
+        .filter_map(|(owner, a)| place_of(a).map(|place| ((*owner, key.clone()), place)))
+    })
+    .collect();
+  Ok(Some(Plan { ops, creators, order }))
 }

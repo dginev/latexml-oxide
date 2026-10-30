@@ -1,0 +1,18 @@
+% witness: 2210.16066 (aa, one `\institute` under two unmarked names, its `\email` the first author's); review rev92c B3
+% oracle:  pdflatex with 2210.16066's aa.cls: "Ann Able and Bob Baker", then "Univ A, City" unnumbered and
+%          "e-mail: ann@a.org"
+% engines: perl 0.8.8 = 0 errors, the institute on Ann Able; rust int122w = the institute and the address on a nameless
+%          creator; int122y (92c) = the address twice on Ann Able, the institute on the nameless creator
+% expect:  0 errors, 0 warnings; aa.cls prints a sole institute unnumbered under the whole row (aa.cls:886-899): every
+%          author's (`_share=authors`, as llncs's, OD #901); the address once, the author's it spells
+% status:  RED (92c) -> GREEN (92c r2) — perfect_kernel_batch92c::aa_sole_institute_is_the_rows
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\institute{Univ A, City\\ \email{ann@a.org}}
+\abstract{X}
+\maketitle
+Text.
+\end{document}

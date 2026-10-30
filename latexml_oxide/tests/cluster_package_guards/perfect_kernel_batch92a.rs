@@ -230,22 +230,23 @@ fn a_written_family_reads_every_key_of_a_mark_of_refs() {
   assert_reading(
     repro!("amsart_ref_marks_listed_and_touching.tex"),
     Some(&[
+      // (each author's items in print order since rev92c S1: the copies were appended after today's e-mail)
       &[
         "Ann Able ,",
-        "email=ann@x.org",
         "address=University X, Town",
+        "email=ann@x.org",
         "address=University Y, City",
       ],
       &[
         "Bob Baker",
-        "email=bob@y.org",
         "address=University Y, City",
+        "email=bob@y.org",
         "address=University Z, Village",
       ],
       &[
         "Cid Cole",
-        "email=cid@z.org",
         "address=University Z, Village",
+        "email=cid@z.org",
       ],
     ]),
     &[
@@ -332,7 +333,7 @@ fn a_publication_note_email_is_placed_by_the_chain() {
 #[test]
 fn a_publication_note_reads_only_its_email_calls() {
   let written: &[&[&str]] = &[
-    &["Ann Able", "email=ann@x.org", "address=University X, Town"],
+    &["Ann Able", "address=University X, Town", "email=ann@x.org"],
     &["Bob Baker", "address=University Y, City"],
   ];
   let reading = [
@@ -362,13 +363,15 @@ fn a_publication_note_reads_only_its_email_calls() {
   );
 }
 
-/// amsart's written output when carl@z.org is Bob Baker's own call: each address on the name requesting it.
+/// amsart's written output when carl@z.org is Bob Baker's own call: each address on the name requesting it, each
+/// author's items in print order — the address before the e-mail, as amsart prints them (the copies were appended after
+/// today's e-mail, review rev92c S1).
 const AMSART_CARL_ON_BOB: &[&[&str]] = &[
-  &["Ann Able", "email=ann@x.org", "address=University X, Town"],
+  &["Ann Able", "address=University X, Town", "email=ann@x.org"],
   &[
     "Bob Baker",
-    "email=carl@z.org",
     "address=University Y, City",
+    "email=carl@z.org",
   ],
 ];
 const AMSART_CARL_ON_BOB_READING: &[&str] = &[

@@ -1,0 +1,18 @@
+% witness: 1812.02463 (Ilyass Haloui\inst{1,2}: `Airbus … \\ \email{\{ilyass.haloui,…\}@airbus.com} \and ISAE … \\
+%          \email{ilyass.haloui@supaero.isae.fr}`; written Airbus, ISAE, the ISAE address, then the Airbus one);
+%          2603.23924 (Yuan Gao's address before his China Telecom); review rev92c S1
+% oracle:  pdflatex: "Ann Able1,2 and Bob Baker1", "1 Univ A {ann,bob}@a.org", "2 Univ B ann@b.org"
+% engines: perl 0.8.8 = 0 errors, the group whole on both; rust int122w = the same; int122y (92c) = written out, Ann
+%          Able's ann@a.org after Univ B's address
+% expect:  0 errors, 0 warnings; each written-out address where the reading prints it: Ann Able Univ A, ann@a.org,
+%          Univ B, ann@b.org
+% status:  RED (92c) -> GREEN (92c r2) — perfect_kernel_batch92c::written_items_keep_the_print_order
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1,2} \and Bob Baker\inst{1}}
+\institute{Univ A\\ \email{\{ann,bob\}@a.org} \and Univ B\\ \email{ann@b.org}}
+\maketitle
+Text.
+\end{document}

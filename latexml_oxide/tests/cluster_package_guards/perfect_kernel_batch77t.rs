@@ -231,14 +231,15 @@ Text.
   // text (92b, OXIDIZED_DESIGN_DIVERGENCES #919), the names' `*†` runs request † as the line's `†` sets it — it was on
   // the block's shared creator, awaiting that ruling; pdflatex prints † on all three names. Each name shows the marks
   // no line answered. Since 93a (OD #925) the `*` line is every name's showing `*`, Ann Able and Cat Cole, as ruling 2
-  // reads it — never Bob Baker, who carries none; the old reader left it on the last name)
+  // reads it — never Bob Baker, who carries none; the old reader left it on the last name; each name's lines in print
+  // order since 92c r2, OD #923: the `*` line's copy had been appended after Ann Able's `†` line)
   let program = affiliation("Program in Cognition, Univ A");
   assert_eq!(creators(&xml), [
     creator(
       true,
       r#"Ann Able<sup xml:id="id1">*</sup>"#,
       &format!(
-        "{program} {}",
+        "{} {program}",
         affiliation(r#"<sup xml:id="id2">*</sup>Department of Computer Science, Univ A"#)
       )
     ),

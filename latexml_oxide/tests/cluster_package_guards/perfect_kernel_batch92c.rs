@@ -123,3 +123,204 @@ fn an_empty_author_piece_holds_nothing_back() {
     ],
   );
 }
+
+/// An `\href` in an e-mail call is the text it prints, never its target (review rev92c B1): the call's text read
+/// `\lx@fm@obs@href{mailto:ann@a.org}{ann@a.org}` whole, two addresses for one print, each a contact the writer wrote
+/// (aa 2210.16066, 1907.11241, 2007.06573, 2103.15844; llncs 2405.04152, 2603.13900, every author). Its siblings on
+/// the same path (`events::raw_lines`): the printed text in a font (`\texttt{bob@b.org}`), and a link printing a name
+/// (`\href{mailto:cid@c.org}{Cid Cole}`), which prints no address.
+#[test]
+fn an_email_link_is_the_text_it_prints() {
+  assert_reading(
+    repro!("llncs_email_link_prints_its_text.tex"),
+    Some(&[
+      &["Ann Able", "affiliation=Univ A", "email=ann@a.org"],
+      &["Bob Baker", "affiliation=Univ B", "email=bob@b.org"],
+      &["Cid Cole", "affiliation=Univ C", "email=Cid Cole"],
+    ]),
+    &[
+      "C Ann Able [1] | line:names",
+      "  a Univ A | api:labelseq",
+      "  c email ann@a.org | api:labelseq api:inner-contact owner:inner-email owner:spelled",
+      "C Bob Baker [2] | line:names",
+      "  a Univ B | api:labelseq",
+      "  c email bob@b.org | api:labelseq api:inner-contact owner:inner-email owner:spelled",
+      "C Cid Cole [3] | line:names",
+      "  a Univ C | api:labelseq",
+      "  c email Cid Cole | api:labelseq api:inner-contact owner:inner-email owner:spelled",
+    ],
+  );
+}
+
+/// One contact per creator and address (review rev92c S2): the reading gives Ann Able `ann@a.org` from her institute's
+/// line and from `\offprints` (0906.2451's S. K. Mathew), and the writer, which wrote each, collapses a reading's
+/// identical items of one owner (`plan::wanted`) — today's one contact stays. Distinct from the link: two prints, one
+/// address, the writer's collapse rather than the reading's.
+#[test]
+fn an_address_printed_twice_is_one_contact() {
+  assert_reading(
+    repro!("aa_address_printed_twice_is_one_contact.tex"),
+    Some(&[
+      &[
+        "Ann Able",
+        "affiliation=Univ A",
+        "email=ann@a.org",
+        "affiliation=Univ B",
+      ],
+      &["Bob Baker", "affiliation=Univ B"],
+    ]),
+    &[
+      "C Ann Able [1,2] | line:names",
+      "  a Univ A | api:labelseq",
+      "  a Univ B | api:labelseq",
+      "  c email ann@a.org | api:labelseq api:inner-contact owner:inner-email owner:spelled",
+      "  c email ann@a.org | api:document-note owner:spelled api:note-spelled ruling3:one-per-print",
+      "C Bob Baker [2] | line:names",
+      "  a Univ B | api:labelseq",
+    ],
+  );
+}
+
+/// The write-out writes a group only when its contact prints the addresses alone (review rev92c B2): beside a remark
+/// (`\{ann,bob\}@a.org (corresponding)`) or a label (`Emails: \{ann,bob\}@a.org`) the words were lost; now the writer
+/// declines (`plan::addresses_alone`), today's contact stays whole on both carriers, the reading still writing it out.
+#[test]
+fn an_email_group_beside_words_stays_whole() {
+  for (tex, contact) in [
+    (
+      repro!("llncs_email_group_beside_text_stays_whole.tex"),
+      "email={ann,bob}@a.org (corresponding)",
+    ),
+    (
+      repro!("llncs_email_group_after_a_label_stays_whole.tex"),
+      "email=Emails: {ann,bob}@a.org",
+    ),
+  ] {
+    let reading = assert_reading(
+      tex,
+      Some(&[&["Ann Able", "affiliation=Univ A", contact], &[
+        "Bob Baker",
+        "affiliation=Univ A",
+        contact,
+      ]]),
+      &[
+        "C Ann Able [1] | line:names",
+        "  a Univ A | api:labelseq",
+        "  c email ann@a.org | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
+        "C Bob Baker [1] | line:names",
+        "  a Univ A | api:labelseq",
+        "  c email bob@a.org | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
+      ],
+    );
+    assert!(
+      reading
+        .3
+        .as_str()
+        .is_some_and(|w| w.starts_with("declined")),
+      "{:?}",
+      reading.3
+    );
+  }
+}
+
+/// aa's sole institute (review rev92c B3): aa.cls prints one `\institute` unnumbered under the whole author row
+/// (aa.cls:886-899), as llncs.cls does, and aa's binding now says so (`\lx@aa@institute@sole`, `_share=authors`): only
+/// the class's `\inst{n}` picks it. Hand-typed marks over numbered lines (`{1} Univ A \\ {2} Univ B`, astro-ph0305539:
+/// the reading had given the four institutes to J. Daszyńska-Daszkiewicz) leave it the block's — the twin of llncs's
+/// 63i (`perfect_kernel_batch63::institute_with_numbered_lines_is_no_marked_list`); unmarked names share it, the
+/// address the author it spells (2210.16066); a later line printing addresses alone is an e-mail line of the row in the
+/// reading as in today's (`resolver::api::row_address_lines`; 2506.20360, whose `\inst{1*}` authors lost the institute when the
+/// two readings of `{cid@x.org}` differed and the writer declined).
+#[test]
+fn aa_sole_institute_is_the_rows() {
+  assert_reading(
+    repro!("aa_sole_institute_numbered_lines_is_the_blocks.tex"),
+    Some(&[&["Ann Able 1,2"], &["Bob Baker 2"], &[
+      "affiliation=1 Univ A, City A 2 Univ B, City B",
+    ]]),
+    &[
+      "C Ann Able [1,2] | line:names",
+      "C Bob Baker [2] | line:names",
+      "B affiliation 1 Univ A, City A 2 Univ B, City B | api:labelseq label:unrequested owner:block",
+    ],
+  );
+  assert_reading(
+    repro!("aa_sole_institute_is_every_authors.tex"),
+    Some(&[
+      &["Ann Able", "affiliation=Univ A, City", "email=ann@a.org"],
+      &["Bob Baker", "affiliation=Univ A, City"],
+    ]),
+    &[
+      "C Ann Able [] | line:names",
+      "  a Univ A, City | api:labelseq api:share:authors",
+      "  c email ann@a.org | api:labelseq api:inner-contact api:share:authors owner:spelled",
+      "C Bob Baker [] | line:names",
+      "  a Univ A, City | api:labelseq api:share:authors",
+    ],
+  );
+  assert_reading(
+    repro!("aa_sole_institute_address_line_is_the_rows.tex"),
+    Some(&[
+      &["Ann Able", "affiliation=Univ X, City"],
+      &["Bob Baker", "affiliation=Univ X, City", "email=bob@x.org"],
+      &["Cid Cole", "affiliation=Univ X, City", "email=cid@x.org"],
+    ]),
+    &[
+      "C Ann Able [1] | line:names",
+      "  a Univ X, City | api:labelseq",
+      "C Bob Baker [1,*] | line:names",
+      "  a Univ X, City | api:labelseq ruling1:parted",
+      "  c email bob@x.org | api:labelseq api:inner-contact owner:inner-email owner:spelled",
+      "C Cid Cole [1,*] | line:names",
+      "  a Univ X, City | api:labelseq ruling1:parted",
+      "  c email cid@x.org | api:labelseq api:inner-contact owner:inner-email owner:spelled",
+    ],
+  );
+}
+
+/// The items the writer adds go where the reading prints them among their owner's (review rev92c S1), not at the
+/// creator's end in the order of their texts: a copy (`Op::Copy`: Bob Baker's institutes 1 and 2, Zeta before Alpha —
+/// 2207.06953's Sangyoun Lee, KIST before Yonsei; 2608.05923's S. Mangla and O. M. Smirnov) and a written-out address
+/// (`Op::WriteOut`: Ann Able's `ann@a.org` under Univ A, before Univ B — 1812.02463's Ilyass Haloui; 2603.23924's Yuan
+/// Gao). `apply::place`, by the reading's print order (`plan::Place`).
+#[test]
+fn written_items_keep_the_print_order() {
+  assert_reading(
+    repro!("llncs_copied_items_keep_the_print_order.tex"),
+    Some(&[&["Ann Able 1", "affiliation=Zeta University"], &[
+      "Bob Baker 1,2",
+      "affiliation=Zeta University",
+      "affiliation=Alpha Institute",
+    ]]),
+    &[
+      "C Ann Able [1] | line:names",
+      "  a Zeta University | api:labelseq ruling1:request",
+      "C Bob Baker [1,2] | line:names",
+      "  a Zeta University | api:labelseq ruling1:request",
+      "  a Alpha Institute | api:labelseq ruling1:request",
+    ],
+  );
+  assert_reading(
+    repro!("llncs_written_out_address_keeps_its_place.tex"),
+    Some(&[
+      &[
+        "Ann Able",
+        "affiliation=Univ A",
+        "email=ann@a.org",
+        "affiliation=Univ B",
+        "email=ann@b.org",
+      ],
+      &["Bob Baker", "affiliation=Univ A", "email=bob@a.org"],
+    ]),
+    &[
+      "C Ann Able [1,2] | line:names",
+      "  a Univ A | api:labelseq",
+      "  a Univ B | api:labelseq",
+      "  c email ann@a.org | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
+      "  c email ann@b.org | api:labelseq api:inner-contact owner:inner-email owner:spelled",
+      "C Bob Baker [1] | line:names",
+      "  a Univ A | api:labelseq",
+      "  c email bob@a.org | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
+    ],
+  );
+}

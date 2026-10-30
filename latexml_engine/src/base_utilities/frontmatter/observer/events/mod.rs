@@ -410,7 +410,11 @@ fn raw_arg(w: &Whatsit, n: usize) -> String {
 /// An e-mail call's argument as it prints (`raw_arg`), each line break it holds — the rehearsal's `\lx@fm@obs@break`,
 /// `\\` inside the verbatim argument of llncs's `\email{a@x.org \\ b@y.org}`, `{\tt#1}` printing one address a line —
 /// a space between its lines: their addresses are several, each written out (2608.29307's three addresses under one
-/// `\email` were one address, `…@gmail.com\lx@fm@obs@breakn.van.stein@…`, which spelled its first author).
+/// `\email` were one address, `…@gmail.com\lx@fm@obs@breakn.van.stein@…`, which spelled its first author). A link in
+/// it is what it prints: an `\href`'s text, never its target (`\email{\href{mailto:ann@a.org}{ann@a.org}}` printed one
+/// address, read twice from the target and the text — two contacts written for one print: aa 2210.16066, 1907.11241,
+/// 2007.06573, 2103.15844, llncs 2405.04152, 2603.13900; `\href{mailto:ann@a.org}{Ann}` prints no address), a `\url`'s
+/// argument (review rev92c B1).
 fn raw_lines(w: &Whatsit, n: usize) -> String {
   fn walk(d: &Digested, out: &mut String) {
     match d.data() {
@@ -419,7 +423,23 @@ fn raw_lines(w: &Whatsit, n: usize) -> String {
           walk(child, out);
         }
       },
-      DigestedData::Whatsit(w) if whatsit_cs(&w.borrow()) == "\\lx@fm@obs@break" => out.push(' '),
+      DigestedData::Whatsit(w) => {
+        let w = w.borrow();
+        match whatsit_cs(&w).as_str() {
+          "\\lx@fm@obs@break" => out.push(' '),
+          "\\lx@fm@obs@href" => {
+            if let Some(text) = w.get_arg(2) {
+              walk(text, out);
+            }
+          },
+          "\\lx@fm@obs@url" => {
+            if let Some(text) = w.get_arg(1) {
+              walk(text, out);
+            }
+          },
+          _ => out.push_str(&d.to_string()),
+        }
+      },
       _ => out.push_str(&d.to_string()),
     }
   }
