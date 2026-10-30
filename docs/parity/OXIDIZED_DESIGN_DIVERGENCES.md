@@ -27171,3 +27171,34 @@ ruling 2026-10-29; `FRONTMATTER_DIGESTED_REFACTOR.md`; inventory row 2.8). Today
   class-bindings/`aa_inst_macro_is_its_printed_number`, `aa_inst_unanswered_symbol_stays_shown`,
   sectioning-frontmatter/`author_dag_and_dagger_are_one_label`, `author_macro_mark_glued_to_a_symbol`;
   guard `perfect_kernel_batch92b::a_mark_is_keyed_by_its_printed_text`.
+
+### 920. A binding's `\author` replaces or stacks as its class's does where the binding owns it; inst_support's keeps stacking (Perl: inst_support's clears on every call; no ptephy or webofc binding)
+
+User 2026-10-30 (review rev92a_r5): every .cls defines `\author` its own way — some stack one call per author, others
+take the whole list in one call that a later call replaces — and the frontmatter API serves that diversity through the
+binding, each binding's `\author` saying it with the API's primitives (`\lx@clear@creators[role=author]` for a
+replacing class, none for a stacking one); never a flag, a convention key, the spelling of the call or `[marks]`.
+
+- **ptephy** (`ptephy_cls.rs`, one binding for both versions, read off `\@currname`): ptephy.cls:427 replaces
+  (`\def\author#1{\gdef\@author{#1}}`, 1412.6580): its kernel author clears; ptephy_v1.cls:485 loads authblk-TI, whose
+  `\author` (authblk-TI.sty:70) appends each call: it stacks (2311.07297, 1606.03167). Both had stacked through
+  inst_support's `\author`.
+- **webofc** (`webofc_cls.rs`): its own `\author` (the `\\` line split) clears: webofc.cls defines none, its
+  `\@parseauthor` reads the kernel's `\@author` (:431-466; 1609.01040).
+- **inst_support's own `\author` keeps stacking (OD #53), an open question.** Perl's per-call clear
+  (inst_support.sty.ltxml:33-35) is right for aa (aa.cls defines no `\author`; pdflatex prints only the last call's
+  names — the rev92a_r5 probe `s1_aa_cleared_current` keeps Ann Able) and l-aa, but inst_support's `\author` is also
+  OmniBus's, which about 40 class bindings load and every unknown class falls back to. Restoring the clear changed
+  162 of 1,305 OmniBus papers with two or more `\author` calls in the 92b A/B: achemso 69 (achemso.cls:336 stacks,
+  `\acs@author@cnt`), autart 20, pasj00 12, oup-authoring-template 9, gtpart 7, lipics 5+, ifacconf 4, the AMS `-l`
+  classes (conm-p-l, memo-l, tran-l, pspum-l, crmp-l: amsart's stacking `\author`), aomart (stacks, aomart.cls:267),
+  ieeetj (ieeetj.cls:4857 stacks); and a `\documentclass{subfiles}` subfile (1210.5518, 2307.07324) or a subfile
+  loaded mid-document (1502.05436), whose main class (revtex) stacks, guessed OmniBus. Each binding saying its class's
+  `\author`, and aa's binding its replacing one (which moves aa's policy key from `inst_support.sty` to `aa.cls`, the
+  gate study's piece 8, 92c's), is the decision this leaves.
+- The 16 aa census papers with two `\author` calls in source change nothing either way (their second calls sit in
+  comments or conditionals).
+- Repros sectioning-frontmatter/`ptephy_author_given_twice_keeps_the_last`; class-bindings/
+  `webofc_author_given_twice_keeps_the_last` (catalog only: its raw-read class leaves a conditional open, a pre-existing
+  Warning), `aa_author_given_twice_keeps_the_last` and `ieeetj_author_calls_stack` (catalog: the open question's
+  shapes); guard `perfect_kernel_batch92b::each_class_author_replaces_or_stacks_as_its_class`.

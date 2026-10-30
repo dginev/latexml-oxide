@@ -126,7 +126,9 @@ they stay for stages 3–5.
    author's unless the class's `\inst{n}` picks it, its e-mail lines by the chain (`api:share:authors`); (OD #918) a
    numbered entry's owner found by a mark printed by hand, each request keeping its origin
    (`Resolver::class_requests`), tagged `ruling1:request`; a numbered entry whose every line a mark leads split at
-   them (`line_led_pieces`). Left before `written: true`: aa's policy key (8:
+   them (`line_led_pieces`); (OD #920) aa's `\author` still stacks through inst_support's, a ruling open (restoring
+   Perl's clear there changed 162 OmniBus papers, mostly stacking classes). Shadow census (92b, re-converted):
+   unclassified llncs 32 of 463 (6.9 %), aa 21 of 554 (3.8 %). Left before `written: true`: aa's policy key (8:
    `inst_support.sty` today, which OmniBus shares).
 8. **Per-class parsers** as each family is promoted.
 

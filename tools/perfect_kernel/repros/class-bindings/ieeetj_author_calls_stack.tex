@@ -1,0 +1,15 @@
+% witness: 2510.05542 (ieeetj.cls:4857, one `\author` per author, stacked: `\global\advance\authorcount\@ne`)
+% oracle:  pdflatex with 2510.05542's ieeetj.cls: "Ann Able AND Bob Baker", both calls' names
+% engines: perl 0.8.8 = (no ieeetj binding: OmniBus, inst_support's clearing `\author`) Bob Baker only; rust 92a both
+%          (inst_support without its clear)
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker: ieeetj's own stacking `\author`
+% status:  GREEN (92a, 92b) — catalog: inst_support's `\author` stacks; it needs ieeetj's own once that one clears (OD #920)
+% preload: ar5iv.sty
+\documentclass{ieeetj}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\maketitle
+Text.
+\end{document}

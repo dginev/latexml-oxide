@@ -586,6 +586,8 @@ fn address_lines(tokens: &[Token]) -> Result<Tokens> {
 }
 
 LoadDefinitions!({
+  // (the class this binding answers for: ptephy_v1, whose authblk-TI stacks one `\author` call per author, or ptephy)
+  let v1 = Expand!(Tokens!(T_CS!("\\@currname"))).to_string() == "ptephy_v1";
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
@@ -638,8 +640,19 @@ LoadDefinitions!({
     Ok(Tokens::new(out))
   });
   // The kernel's `\author`, given the line `author_line` reads: its splitter reads a name's own marks as names when
-  // they are macros (a "12" person, a `\thanks` folded into the name, 2209.07273, 1801.03251).
-  Let!("\\lx@ptephy@kernel@author", "\\author");
+  // they are macros (a "12" person, a `\thanks` folded into the name, 2209.07273, 1801.03251). Each class's own: a
+  // later call replaces the earlier under ptephy.cls:427 (`\def\author#1{\gdef\@author{#1}}`, 1412.6580), and stacks
+  // under ptephy_v1.cls:485's authblk-TI (authblk-TI.sty:70, `\renewcommand\author[2][]` appending to
+  // `\AB@authlist`: `\author{…}\affil{…}` pairs, 2311.07297, 1606.03167, as inst_support's `\author` does) —
+  // OXIDIZED_DESIGN #920.
+  if v1 {
+    Let!("\\lx@ptephy@kernel@author", "\\author");
+  } else {
+    DefMacro!(
+      "\\lx@ptephy@kernel@author[]{}",
+      "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author@split}{\\and\\And}{#2}\\lx@author@trailing"
+    );
+  }
   // Names marked with superscripts of their own instead (`\author{R.~Abbott$^{1}$, H.~Abe$^{2}$, …}` over authblk-TI's
   // `\affil{$^{1}$LIGO Laboratory, … \\ $^{2}$…}`, 2203.01270) are a name list whose marks request the affiliations
   // so labelled (`\lx@add@authors@list`, as l-aa's).

@@ -1,0 +1,20 @@
+% witness: review rev92a_r5 probe s1_aa_cleared_current; the 16 aa papers with two `\author` calls (pop92b6)
+% oracle:  pdflatex with 1707.06238's aa.cls: "Bob Baker1 and Cid Cole2" — aa.cls defines no `\author`, the kernel's
+%          `\gdef\@author{#1}` keeps the last call's names; "Send offprint requests to: A. Able, e-mail: carl@z.org"
+% engines: perl 0.8.8 = 0 errors, Bob Baker and Cid Cole (inst_support.sty.ltxml:33-35 clears on every call); rust
+%          92a: Ann Able, Bob Baker and Cid Cole (OD #53 had dropped the clear), the shadow likewise
+% expect:  0 errors, 0 warnings; Bob Baker Univ X, Cid Cole Univ Y, in the XML and in the shadow reading; carl@z.org,
+%          whose note names no live author, the block's
+% status:  RED (92a, 92b: inst_support's `\author` keeps stacking, OXIDIZED_DESIGN #920 open) — catalog, no guard
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1}}
+\offprints{A. Able, \email{carl@z.org}}
+\author{Bob Baker\inst{1} \and Cid Cole\inst{2}}
+\institute{Univ X \and Univ Y}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

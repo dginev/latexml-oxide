@@ -29,9 +29,11 @@ LoadDefinitions!({
   // NA61/SHINE Collaboration` —, is a line of the author paragraph, webofc.cls:497-552: a creator of its own, as
   // llncs's split has it, where inst_support's split at `\and` only kept it in the last name; the break's `*` and
   // `[…]` are no text, `\lx@splitting`)
+  // (and a second `\author` replaces the first, as the kernel's `\author` the class keeps does: webofc.cls defines none,
+  // its `\@parseauthor` reads `\@author`, :431-466 — OXIDIZED_DESIGN #920; inst_support's own `\author` stacks, OD #53)
   DefMacro!(
     "\\author[]{}",
-    "\\lx@splitting{\\lx@add@author@split}{\\and\\And\\\\}{#2}\\lx@author@trailing"
+    "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author@split}{\\and\\And\\\\}{#2}\\lx@author@trailing"
   );
   DefMacro!("\\email Semiverbatim", "\\lx@add@email{#1}");
   def_macro_noop("\\sidecaption")?;

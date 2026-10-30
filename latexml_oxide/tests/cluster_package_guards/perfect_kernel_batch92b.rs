@@ -322,3 +322,25 @@ fn a_mark_is_keyed_by_its_printed_text() {
     ],
   );
 }
+
+/// Piece 6, each binding's `\author` is its class's (review rev92a_r5; user 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES
+/// #53, #920), where the binding owns the call: ptephy's binding serves ptephy.cls, whose `\author` replaces
+/// (ptephy.cls:427, 1412.6580: only "Bob Baker" is printed), and ptephy_v1, whose authblk-TI stacks (64qa's
+/// `ptephy_v1_authblk_interleaved`); it had both stack through inst_support's `\author`. Univ A, which no printed name
+/// requests, is the block's. (inst_support's own `\author` keeps stacking: restoring Perl's per-call clear changed 162
+/// of 1,305 OmniBus papers, most of them stacking classes — an open question for the main session, OD #920.)
+#[test]
+fn each_class_author_replaces_or_stacks_as_its_class() {
+  assert_reading(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ptephy_author_given_twice_keeps_the_last.tex"
+    ),
+    Some(&[&["Bob Baker", "affiliation=Univ B"], &[
+      "affiliation=Univ A",
+    ]]),
+    &[
+      "C Bob Baker [affiliation:2] | line:names",
+      "  a Univ B | api:leading-mark",
+    ],
+  );
+}

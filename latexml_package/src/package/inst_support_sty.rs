@@ -40,7 +40,14 @@ LoadDefinitions!({
   //     (`\lx@add@author@split`: `R. Braun\inst{1} and W. B. Burton\inst{2}`, astro-ph9810433; 63e),
   //   * ACCUMULATE across calls — drop the per-call `\lx@clear@creators`, which
   //     is a no-op on the first call anyway, so single-`\author` classes are
-  //     unaffected (and aa/llncs/sv define their own `\author` regardless).
+  //     unaffected. (llncs and sv define their own `\author`; aa does not — aa.cls
+  //     keeps the kernel's replacing `\author`, so an aa paper's second call keeps
+  //     the first's names, which pdflatex does not print. Restoring Perl's clear
+  //     here (92b) changed 162 of 1,305 OmniBus papers with two or more `\author`
+  //     calls, most of them stacking classes reached through OmniBus — achemso,
+  //     autart, pasj00, lipics, the AMS `-l` classes, oup, a subfile of a revtex
+  //     main —, so the clear stays dropped until each binding says its class's:
+  //     OXIDIZED_DESIGN #920.)
   // The `[marks]` (author↔affiliation label) are dropped, matching Perl's own
   // handling; wiring them to the affiliation annotation is a separate follow-up.
   DefMacro!("\\author[]{}",
