@@ -1,0 +1,27 @@
+% witness: 1609.03883 (`\corres{Correspondence: }`, an author-typed label with no address after it; the main
+%          session's 92e scope, 2026-10-30: a note with any ink is kept)
+% oracle:  pdflatex with 2609.00671's Definitions/mdpi.cls (sensors, accept, moreauthors): 0 errors; the note line "* Correspondence:"
+%          under the affiliations
+% engines: rust b4c8392 = `<note role="corresponding">Correspondence: </note>`; no Perl binding for mdpi
+% expect:  0 errors, 0 warnings; that note kept, whole
+% status:  GREEN (b4c8392) -> GREEN (92e), the no-change row of the no-ink rule
+% preload: ar5iv.sty
+\documentclass[sensors,article,accept,moreauthors,pdftex]{mdpi}
+\pubvolume{1}
+\issuenum{1}
+\articlenumber{0}
+\pubyear{2026}
+\copyrightyear{2026}
+\datereceived{1 June 2026}
+\dateaccepted{1 July 2026}
+\datepublished{ }
+\Title{Title}
+\Author{Author One}
+\address{Univ A}
+\corres{Correspondence: }
+\abstract{An abstract.}
+\keyword{one; two}
+\begin{document}
+\section{S}
+Text.
+\end{document}

@@ -1,0 +1,20 @@
+% witness: the user's ruling 2026-10-30 (FIDELITY_CHARTER §4, "A frontmatter note reads as the class prints it"):
+%          aa's `\offprints{O. Kochukhov, \email{…}}` (0903.3512; 498 census papers of class aa call `\offprints`)
+% oracle:  pdflatex with 0903.3512's aa.cls (:337-340) and 2609.21658's (v9.x, :898-914, `\aa@offprintsname`):
+%          0 errors; the title-page footnote "Send offprint requests to: O. Kochukhov, e-mail: oleg@x.se"
+% engines: rust b4c8392 = the pubnote named "Preprint: " (the role default, `\lx@pubnote@preprint@name`); Perl the
+%          same (aa_support.sty.ltxml:107, role=preprint, no name)
+% expect:  0 errors, 0 warnings; the pubnote named "Send offprint requests to: ", role preprint, holding
+%          "O. Kochukhov, " (the e-mail is the author's contact, SYNC 92e row)
+% status:  RED (b4c8392) -> GREEN (92e)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{O. Kochukhov}
+\offprints{O. Kochukhov, \email{oleg@x.se}}
+\institute{Uppsala University}
+\maketitle
+\section{S}
+Text.
+\end{document}

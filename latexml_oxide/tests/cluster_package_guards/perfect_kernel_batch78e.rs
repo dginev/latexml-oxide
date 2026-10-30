@@ -128,9 +128,10 @@ fn llncs_author_line_break_options_with_inst_marks() {
 }
 
 /// aa's template shape `\fnmsep\thanks{\email{…}}` (aa.cls v9.1 :761): the e-mail is the author's contact and the thanks
-/// note it emptied is none (ruling 2026-10-21, `\lx@annotate@frontmatter@now`); an author's own empty `\thanks{}` moved
-/// nothing out and stays a note, as Perl keeps it. Red (int45b): an empty thanks note on Ann Able. The rev78e review's
-/// finding 2 (webofc's 2409.01693 the same shape). Repro class-bindings/aa_thanks_email_leaves_no_empty_note.
+/// note it emptied is none (ruling 2026-10-21, `\lx@annotate@frontmatter@now`); an author's own empty `\thanks{}` is no
+/// note either (ruling 2026-10-30, batch 92e, OD #916; Perl keeps it). Red (int45b): an empty thanks note on Ann Able.
+/// The rev78e review's finding 2 (webofc's 2409.01693 the same shape). Repro
+/// class-bindings/aa_thanks_email_leaves_no_empty_note.
 #[test]
 fn aa_thanks_email_leaves_no_empty_note() {
   let xml = repro_with!("class-bindings/aa_thanks_email_leaves_no_empty_note.tex",);
@@ -142,10 +143,7 @@ fn aa_thanks_email_leaves_no_empty_note() {
     ),
     contact("affiliation", "Univ A")
   );
-  let bob = format!(
-    r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id2"/> {}"#,
-    contact("affiliation", "Univ B")
-  );
+  let bob = contact("affiliation", "Univ B");
   assert_eq!(creators(&xml), [
     creator(true, "Ann Able", &ann),
     creator(false, "Bob Baker", &bob),

@@ -22862,8 +22862,9 @@ review). Ours (main session ruling 2026-10-21; `\lx@annotate@frontmatter@now`, b
 `ltx:note` whose digested content typesets nothing after one or more annotations were made while digesting it is
 dropped, its pending stub removed — for every class whose `\email`, `\affiliation` or other contact setter runs inside a
 `\thanks` (aa, webofc, …); the rule covers `ltx:note`s only, not contact-typed notes (elsarticle's `\fntext[f1]{\ead{…}}`
-keeps an empty `<contact role="note"/>`, as before; synthetic, 0 corpus cases in the rev78e2 sample). An author's own
-empty `\thanks{}` made no annotation and stays a note, as Perl keeps it (the kernel's empty-note behaviour is Perl's).
+keeps an empty `<contact role="note"/>`, as before; synthetic, 0 corpus cases in the rev78e2 sample). Generalised by #916
+(2026-10-30): every frontmatter note with no ink is dropped, an author's own empty `\thanks{}` too, by a structural
+test (`may_typeset_content`) in place of the count of annotations made while the note digested.
 Residual: a note left holding only a separator or a lead word once its addresses became contacts — `\thanks{\email{a},
 \email{b}}` a "," note, `\thanks{e-mail: \email{x}}` an "e-mail: " note (0902.3523's three "E-mail:" notes, 1610.04567's
 ","; as int45b) — is kept: no further rule (rev78e2). Perl (Base_Utility.pool.ltxml, `\lx@add@thanks` a `role=thanks` contact) emits
@@ -26975,3 +26976,49 @@ pdflatex ≔) are now U+FFFD, each font saying so (W +2, +1, +1; the `U/cmllr` a
 SYNC_STATUS Font-Selection residual 9); hep-ph0607037's `\lesssim` at `AMSa` "2E is ≲ again (`U_msa` loads; it was
 `.`, and `$\beta\lesssim 0.3$` read `.0.3`); 2003.08144's fourier-orns `\leafNE` (`\fontencoding{U}`, `U/futs` "G")
 is `G` as without bbold, where it was 𝔾 (pdflatex: a leaf; a text `U` font without a map decodes as OT1, #645).
+
+### 915. A binding's frontmatter note carries the label its class prints, not its role's default (Perl: the role's `\lx@pubnote@<role>@name`)
+
+Perl's `getFrontmatterName` (Base_Utility.pool.ltxml:378-389) names a note without a `name=` key by its role's default
+(`\lx@pubnote@preprint@name` "Preprint:~", `…@journal@name` "Journal:~", `…@arxiv@name`, `…@isbn@name`, `…@doi@name`),
+so A&A's `\offprints{O. Kochukhov, \email{…}}` read "Preprint: O. Kochukhov," where aa.cls prints "Send offprint
+requests to: O. Kochukhov, e-mail: …" (FIDELITY_CHARTER §4, user ruling 2026-10-30: "'Send offprint requests to:' is
+the desired reading"). Ours: where the class prints its own label and the binding can say it with `name=`, the binding
+does, the role kept (Perl PR #2767's `role=preprint` and the rest; no consumer reads a pubnote's name but the XSLT's
+`ltx_note_name` span): aa_support's and sv_support's `\offprints` "Send offprint requests to:" (aa.cls :337-340
+in 0903.3512's copy, :898-914 with `\aa@offprintsname` in 2609.21658's; svjour3.cls:371-374, 1902.07328's; svjour.cls
+:327-330, 0901.1015's), jheppub's `\arxivnumber` "ArXiv ePrint:" (jheppub.sty:223, jinstpub.sty:235), acmart's
+`\acmISBN` "ACM ISBN" (acmart.cls:2320; printed in the conference formats only), iopart's `\submitto`/`\submitted`
+"Submitted to:" (iopart.cls:268-272), AASTeX's `\submitjournal` "Submitted to" (aastex631.cls:5875-5876; aastex62,
+63, 7 and 701 the same), IEEEoj's and ieeetj's `\doiinfo` "Digital Object Identifier" (IEEEoj.cls:3458, ieeetj.cls:3440)
+and the 2016-2019 LIPIcs classes' `\DOI` the same (lipics.cls:637 `\doiHeading`). The 92e audit of every note a binding
+labels by its role default (93 call sites in latexml_package, latexml_contrib and latexml_engine) left the notes whose
+class prints no label, or a reading `name=` cannot give, as they were, listed for a ruling in SYNC_STATUS (the 92e row):
+an empty `name=` falls back to the role default (`get_frontmatter_name`), so "no label" has no binding-side spelling.
+Repros class-bindings/{aa,svjour3}_offprints_note_reads_send_offprint_requests, jheppub_arxivnumber_note_reads_arxiv_eprint,
+acmart_isbn_note_reads_acm_isbn, iopart_submitto_note_reads_submitted_to, aastex631_submitjournal_note_reads_submitted_to,
+ieeeoj_doiinfo_note_reads_digital_object_identifier, lipics_doi_note_reads_digital_object_identifier; guards
+`perfect_kernel_batch92e::*` (the whole `ltx:pubnote`, eager and `--streaming`).
+
+### 916. A frontmatter note with no ink is not emitted, whoever emptied it (Perl: an empty note, its label over nothing)
+
+Generalises #803 (a creator's thanks note whose whole content became contacts) to every frontmatter note and to notes
+the author left empty (FIDELITY_CHARTER §2 and §4, user rulings 2026-10-30: "notes from which we remove content (such
+as an email) should be removed after that content is stripped out", "\thanks{} can go too"). Perl emits
+`<pubnote name="Preprint: " role="preprint"/>` for A&A's `\offprints{\email{…}}` (the address became a contact;
+astro-ph0405280, astro-ph0608669), `<pubnote name="Thanks: " role="thanks"/>` for a title's `\thanks{}` (2004.01582,
+astro-ph0608669) and an empty `<note role="thanks"/>` for an author's (2401.15379), where pdflatex prints a bare mark.
+Ours: `\lx@add@frontmatter@now` (an `ltx:pubnote` or a document's `ltx:note`) and `\lx@annotate@frontmatter@now` (a
+creator's `ltx:note`; contact-typed notes, elsarticle's `\fntext{\ead{…}}`, stay as #803 left them) drop the entry when
+nothing in its digested content may print — `may_typeset_content` (util_text.rs): `typesets_content`, failing safe on a
+whatsit argument `shown_arguments` does not count (a verbatim argument of a constructor whose replacement is compiled:
+jhep's two-verbatim `\href`, so JHEP3's `\preprint{\arXivid{…}}` stays, 0704.3719), and a key (`\ref`, `\label`).
+The structural test replaces #803's count of annotations made while the note digested. The address stays the contact
+the binding made of it; no mark is left in the title or the name (a frontmatter note's mark is the note's own). A note
+with any ink stays with its label: `\offprints{O. Kochukhov, \email{…}}` reads "Send offprint requests to: O.
+Kochukhov," (#915), mdpi's author-typed `\corres{Correspondence: }` stays (1609.03883), and so do the 51 sample
+creator notes reading "Corresponding author." (1306.1712, 2211.07501). Repros
+class-bindings/{aa_offprints_only_email_leaves_no_note, kernel_empty_thanks_leave_no_note,
+mdpi_corres_label_only_note_is_kept}; guards `perfect_kernel_batch92e::{aa_offprints_only_email_leaves_no_note,
+kernel_empty_thanks_leave_no_note, mdpi_corres_label_only_note_is_kept}`, and
+`perfect_kernel_batch78e::aa_thanks_email_leaves_no_empty_note` (Bob Baker's empty `\thanks{}` now no note).

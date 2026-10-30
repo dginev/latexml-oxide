@@ -1,0 +1,20 @@
+% witness: astro-ph0405280, astro-ph0608669 (`\offprints{\email{…}}`; the user's ruling 2026-10-30, FIDELITY_CHARTER
+%          §2 and §4: a note with no ink is not emitted, whatever its label); astro-ph0608669's `\title{…\thanks{}}`
+% oracle:  pdflatex with 0903.3512's aa.cls: 0 errors; the title-page footnotes "Send offprint requests to: e-mail:
+%          oleg@x.se" and a bare "⋆" (the empty `\thanks{}`), the title "T⋆"
+% engines: rust b4c8392 = an empty `<pubnote name="Preprint: " role="preprint"/>` and an empty `<pubnote
+%          name="Thanks: " role="thanks"/>` (the e-mail the last author's contact); Perl the same notes
+% expect:  0 errors, 0 warnings; no pubnote at all; the e-mail still B. Baker's contact (where the binding puts an
+%          `\email`, SYNC 92e row), no mark left in the title
+% status:  RED (b4c8392) -> GREEN (92e)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T\thanks{}}
+\author{O. Kochukhov\inst{1} \and B. Baker\inst{2}}
+\offprints{\email{oleg@x.se}}
+\institute{Univ A \and Univ B}
+\maketitle
+\section{S}
+Text.
+\end{document}

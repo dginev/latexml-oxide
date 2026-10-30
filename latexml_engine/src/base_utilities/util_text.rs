@@ -276,6 +276,34 @@ pub fn typesets_content(d: &Digested) -> bool {
   }
 }
 
+/// [`typesets_content`], failing safe: also material holding a whatsit argument it may print though
+/// `shown_arguments` does not count it — a verbatim argument of a constructor other than the
+/// `VERBATIM_PRINTERS`: its replacement is compiled, so whether it puts the argument in its element cannot be read off
+/// the whatsit (jhep's two-verbatim `\href{<url>}{<text>}`, `\preprint{\arXivid{…}}`: 0704.3719, 0709.3309), and a key
+/// (`\ref`, `\label`) counts too. A frontmatter note is dropped as one with no ink only when nothing in it could print
+/// (frontmatter_api.rs, OXIDIZED_DESIGN_DIVERGENCES #916): a false "no ink" would lose its content.
+pub fn may_typeset_content(d: &Digested) -> bool {
+  fn holds_argument_text(d: &Digested) -> bool {
+    match d.data() {
+      DigestedData::List(l) => l.borrow().boxes.iter().any(holds_argument_text),
+      DigestedData::Whatsit(w) => {
+        let w = w.borrow();
+        w.get_args().iter().flatten().any(|arg| {
+          let mut text = String::new();
+          ink_text(arg, &mut text);
+          !text.trim().is_empty() || holds_argument_text(arg)
+        }) || w
+          .get_body()
+          .ok()
+          .flatten()
+          .is_some_and(|body| holds_argument_text(&body))
+      },
+      _ => false,
+    }
+  }
+  typesets_content(d) || holds_argument_text(d)
+}
+
 /// Whether the whatsit `w` is a cross-reference or a citation, which prints text the post-processor generates (the
 /// label's number, the cited work's name and year) though its arguments are keys, never shown ([`shown_arguments`]):
 /// a reference carries the `label` its `labelref` names (`\ref`, `\pageref`, `\eqref`, `\autoref`, `\nameref`,

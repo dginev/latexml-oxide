@@ -43,7 +43,9 @@ LoadDefinitions!({
   DefMacro!("\\keywords{}", "\\lx@add@keywords[name={\\keywordname}]{#1}");
 
   // Frontmatter metadata
-  DefMacro!("\\arxivnumber{}", "\\lx@add@pubnote[role=arxiv]{#1}");
+  // labelled as the class prints it (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #915): jheppub.sty:223 (2609.25212's copy)
+  // `{\textsc{ArXiv ePrint:}} \href{…}{#1}`, jinstpub.sty:235 (2609.15846's) the same — not the role's "arXiv: ".
+  DefMacro!("\\arxivnumber{}", "\\lx@add@pubnote[role=arxiv,name={ArXiv ePrint:~}]{#1}");
   DefMacro!("\\preprint{}", "\\lx@add@pubnote[role=preprint]{#1}");
   DefMacro!("\\proceeding{}", "\\lx@add@pubnote[role=conference]{#1}");
   DefMacro!("\\collaboration{}", "\\lx@add@pubnote[role=collaboration]{#1}");

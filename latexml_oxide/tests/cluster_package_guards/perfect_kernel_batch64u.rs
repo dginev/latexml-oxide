@@ -58,7 +58,8 @@ fn l_aa_documentstyle_is_the_aa_class() {
     &xml,
     "pubnote",
     &[],
-    "<pubnote name=\"Preprint: \" role=\"preprint\">J. Greiner</pubnote>",
+    // (the class's label, aa.cls :337-340 "Send offprint requests to:": batch 92e, OD #915)
+    "<pubnote name=\"Send offprint requests to: \" role=\"preprint\">J. Greiner</pubnote>",
   );
   assert_eq!(xml.matches("<keywords ").count(), 1, "{xml}");
   assert_eq!(xml.matches("<acknowledgements ").count(), 1, "{xml}");

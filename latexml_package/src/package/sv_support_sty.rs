@@ -187,7 +187,13 @@ LoadDefinitions!({
   );
   DefMacro!("\\headnote{}", "\\lx@add@pubnote[role=node]{#1}");
   DefMacro!("\\dedication{}", "\\lx@add@pubnote[role=dedication]{#1}");
-  DefMacro!("\\offprints{}", "\\lx@add@pubnote[role=preprint]{#1}");
+  // labelled as the class prints it (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #915):
+  // svjour3.cls :371-374 (1902.07328's copy) and svjour.cls :327-330 (0901.1015's) `{\itshape Send offprint requests
+  // to\/}: #1` — not the role's "Preprint: " (svmult has no `\offprints`).
+  DefMacro!(
+    "\\offprints{}",
+    "\\lx@add@pubnote[role=preprint,name={Send offprint requests to:~}]{#1}"
+  );
   DefMacro!("\\journalname{}", "\\lx@add@pubnote[role=journal]{#1}");
   DefMacro!("\\papertype{}", "\\lx@add@pubnote[role=type]{#1}");
 

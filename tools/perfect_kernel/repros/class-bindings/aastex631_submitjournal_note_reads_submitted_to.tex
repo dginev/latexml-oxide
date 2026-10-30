@@ -1,0 +1,20 @@
+% witness: the user's ruling 2026-10-30 (FIDELITY_CHARTER §4, "A frontmatter note reads as the class prints it"), the
+%          92e audit of the notes a binding labels by its role: AASTeX's `\submitjournal` (450 census papers)
+% oracle:  pdflatex with 2608.19186's aastex631.cls (:5875-5876, :5903-5905): 0 errors; "Submitted to ApJ" under the authors
+% engines: rust b4c8392 = the pubnote named "Journal: " (the role default, `\lx@pubnote@journal@name`); Perl the same
+%          (aas_support.sty.ltxml:142, role=journal, no name)
+% expect:  0 errors, 0 warnings; the pubnote named "Submitted to ", role journal, holding "ApJ"
+% status:  RED (b4c8392) -> GREEN (92e)
+% preload: ar5iv.sty
+\documentclass{aastex631}
+\submitjournal{ApJ}
+\begin{document}
+\title{T}
+\author{A. Able}
+\affiliation{Univ A}
+\begin{abstract}
+An abstract.
+\end{abstract}
+\section{S}
+Text.
+\end{document}

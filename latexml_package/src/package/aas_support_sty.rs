@@ -228,7 +228,9 @@ LoadDefinitions!({
   DefPrimitive!("\\and", None);
 
   DefMacro!("\\software{}", "\\lx@add@pubnote[role=software]{#1}");
-  DefMacro!("\\submitjournal{}", "\\lx@add@pubnote[role=journal]{#1}");
+  // labelled as the class prints it (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #915): aastex631.cls:5875-5876
+  // (2608.19186's copy) `\def\@submitted{Submitted to #1}`, aastex62/63/7/701 the same — not the role's "Journal: ".
+  DefMacro!("\\submitjournal{}", "\\lx@add@pubnote[role=journal,name={Submitted to~}]{#1}");
 
   // Alas \doi is not frontmatter.
   DefConstructor!("\\doi{}", "<ltx:ref href='https://doi.org/#1'>#1</ltx:ref>",

@@ -289,7 +289,8 @@ fn iopart_submitted_names_the_journal() {
     &xml,
     "pubnote",
     &[],
-    "<pubnote name=\"Journal:\u{a0}\" role=\"journal\">Institute of Physics Publishing</pubnote>",
+    // (the class's label, iopart.cls:268-269 "Submitted to:": batch 92e, OD #915)
+    "<pubnote name=\"Submitted to:\u{a0}\" role=\"journal\">Institute of Physics Publishing</pubnote>",
   );
 }
 

@@ -1,0 +1,17 @@
+% witness: 2004.01582 (IEEEtran, `\title{…\thanks{}}`), 2401.15379 (IEEEtran, an author's `\thanks{}`),
+%          astro-ph0608669 (aa, `\title{…\thanks{}}`); the user's ruling 2026-10-30 ("\thanks{} can go too",
+%          FIDELITY_CHARTER §2, superseding 2026-10-21's "stays")
+% oracle:  pdflatex (article): 0 errors; "T∗" and "A. Able†‡", the footnotes a bare "∗" and "†" and "‡ Univ A"
+% engines: rust b4c8392 = an empty `<pubnote name="Thanks: " role="thanks"/>` and an empty `<note role="thanks"/>` in
+%          the creator; Perl the same
+% expect:  0 errors, 0 warnings; no pubnote, no note in the creator, no mark left in the title or the name; the
+%          author's other `\thanks{Univ A}` kept, and a title `\thanks` with text kept with its label
+% status:  RED (b4c8392) -> GREEN (92e)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T\thanks{}}
+\author{A. Able\thanks{}\thanks{Univ A}}
+\maketitle
+Text.
+\end{document}

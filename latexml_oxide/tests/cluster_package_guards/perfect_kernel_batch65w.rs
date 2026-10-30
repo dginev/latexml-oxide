@@ -94,7 +94,8 @@ fn lipics_class_commands_are_defined() {
     "\u{231F}",
     r#"role="event""#,
     "A Conference",
-    r#"<pubnote name="DOI: " role="doi">10.4230/LIPIcs.SAMPLE.2016.1</pubnote>"#,
+    // (the class's label, lipics.cls:637 `\doiHeading`: batch 92e, OD #915)
+    r#"<pubnote name="Digital Object Identifier " role="doi">10.4230/LIPIcs.SAMPLE.2016.1</pubnote>"#,
   ]);
   // The claim's own end is the ◁, not a ∎ besides it; the nested proof keeps its ∎.
   assert_eq!(xml.matches('\u{220E}').count(), 1, "{xml}");

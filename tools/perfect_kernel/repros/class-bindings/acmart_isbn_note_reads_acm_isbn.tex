@@ -1,0 +1,19 @@
+% witness: the user's ruling 2026-10-30 (FIDELITY_CHARTER §4, "A frontmatter note reads as the class prints it"), the
+%          92e audit of the notes a binding labels by its role: acmart's `\acmISBN` (832 census papers)
+% oracle:  pdflatex with TL 2025's acmart.cls (:1761, :2320): 0 errors; "ACM ISBN 978-1-4503-0000-0" in the first
+%          page's rights block (a conference format's; the journal formats and `manuscript` print no ISBN)
+% engines: rust b4c8392 = the pubnote named "ISBN: " (the role default, `\lx@pubnote@isbn@name`); Perl the same
+%          (acmart.cls.ltxml, role=isbn, no name)
+% expect:  0 errors, 0 warnings; the pubnote named "ACM ISBN ", role isbn, holding "978-1-4503-0000-0"
+% status:  RED (b4c8392) -> GREEN (92e)
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\acmISBN{978-1-4503-0000-0}
+\begin{document}
+\title{T}
+\author{A. Able}
+\affiliation{\institution{Univ A}\city{Town}\country{Land}}
+\maketitle
+\section{S}
+Text.
+\end{document}

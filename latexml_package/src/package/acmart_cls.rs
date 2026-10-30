@@ -185,7 +185,9 @@ yysep={,},notesep={, }}}
   DefMacro!("\\acmArticleSeq{}", "\\lx@add@pubnote[role=articleseq]{#1}");
   // read verbatim: acmart.cls:2052 prints the DOI through `\url` (2401.02563: `10.475/123_4`, its `_` an error)
   DefMacro!("\\acmDOI Semiverbatim", "\\lx@add@pubnote[role=doi]{#1}");
-  DefMacro!("\\acmISBN{}", "\\if@ACM@nonacm\\else\\lx@add@pubnote[role=isbn]{#1}\\fi");
+  // labelled as the class prints it (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #915): acmart.cls:2320 (TL 2025)
+  // `ACM~ISBN~\@acmISBN` — not the role's "ISBN: ".
+  DefMacro!("\\acmISBN{}", "\\if@ACM@nonacm\\else\\lx@add@pubnote[role=isbn,name={ACM~ISBN~}]{#1}\\fi");
   DefMacro!("\\acmMonth{}", "\\lx@add@pubnote[role=publicationmonth]{#1}");
   DefMacro!("\\acmNumber{}", "\\lx@add@pubnote[role=number]{#1}");
   DefMacro!("\\acmPrice{}", "\\if@ACM@nonacm\\else\\lx@add@pubnote[role=price,name={Price:~}]{#1}\\fi");

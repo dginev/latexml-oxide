@@ -189,8 +189,10 @@ LoadDefinitions!({
   // pubnote is `\journal`'s text. Perl's `\submitto{\journal}` (iopart_support.sty.ltxml:98) runs `\def\journal{\journal}`,
   // and the pubnote's `\journal` expands into itself (hep-th9910179: "Error:recursion:\journal"; KNOWN_PERL_ERRORS #1121).
   // Guard `perfect_kernel_batch78s::iopart_submitted_names_the_journal`.
-  DefMacro!("\\submitted", "\\lx@add@pubnote[role=journal]{\\journal}");
-  DefMacro!("\\submitto{}", "\\def\\journal{#1}\\lx@add@pubnote[role=journal]{#1}");
+  // Both labelled as the class prints them (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #915): iopart.cls:268-272
+  // (quant-ph0512134's copy) "Submitted to: {\it …}" — not the role's "Journal: ".
+  DefMacro!("\\submitted", "\\lx@add@pubnote[role=journal,name={Submitted to:~}]{\\journal}");
+  DefMacro!("\\submitto{}", "\\def\\journal{#1}\\lx@add@pubnote[role=journal,name={Submitted to:~}]{#1}");
 
   // Perl L102-104: \jl{n} — sets \journal to journals[n]
   DefPrimitive!("\\jl{}", sub[(n)] {

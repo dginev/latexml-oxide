@@ -46,10 +46,12 @@ LoadDefinitions!({
   DefMacro!("\\accepteddate{}", "\\lx@add@date[role=accepted]{#1}");
   DefMacro!("\\publisheddate{}", "\\lx@add@date[role=published]{#1}");
   DefMacro!("\\currentdate{}", "\\lx@add@date[role=current]{#1}");
+  // Labelled as the class prints it (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #915): ieeetj.cls:3440 (2510.05542's copy) "Digital Object
+  // Identifier 10.1109/…" — not the role's "DOI: ".
   // An empty `\doiinfo{}` (the class's own default) prints no DOI line (ieeetj.cls:3440 `\ifx\@doiinfo\@empty`; 2609.27083).
   DefMacro!(
     "\\doiinfo{}",
-    "\\lx@clear@frontmatter{ltx:pubnote}[role=doi]\\def\\lx@ieee@doi{#1}\\ifx\\lx@ieee@doi\\@empty\\else\\lx@add@pubnote[role=doi]{10.1109/#1}\\fi"
+    "\\lx@clear@frontmatter{ltx:pubnote}[role=doi]\\def\\lx@ieee@doi{#1}\\ifx\\lx@ieee@doi\\@empty\\else\\lx@add@pubnote[role=doi,name={Digital Object Identifier~}]{10.1109/#1}\\fi"
   );
   // The names the first page prints them with (ieeetj.cls:3439; Perl looks a date's name up as `\lx@date@<role>@name`).
   DefMacro!("\\lx@date@published@name", "Date of publication~");

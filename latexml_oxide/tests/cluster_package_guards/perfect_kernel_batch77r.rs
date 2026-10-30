@@ -300,7 +300,7 @@ fn documentstyle_after_a_missing_class_loads_the_class() {
     &xml,
     "pubnote",
     &[],
-    r#"<pubnote name="Preprint: " role="preprint">A. Name</pubnote>"#,
+    r#"<pubnote name="Send offprint requests to: " role="preprint">A. Name</pubnote>"#,
   );
 }
 
@@ -319,7 +319,7 @@ fn documentstyle_after_a_missing_documentclass_loads_the_class() {
     &xml,
     "pubnote",
     &[],
-    r#"<pubnote name="Preprint: " role="preprint">A. Name</pubnote>"#,
+    r#"<pubnote name="Send offprint requests to: " role="preprint">A. Name</pubnote>"#,
   );
 }
 

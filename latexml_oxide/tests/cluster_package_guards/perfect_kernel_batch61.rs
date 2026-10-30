@@ -6091,7 +6091,8 @@ Text.
     &xml,
     "pubnote",
     &["role=\"doi\""],
-    "<pubnote name=\"DOI:\u{a0}\" role=\"doi\">10.1109/OJ.2024.0000000</pubnote>",
+    // (the class's label, IEEEoj.cls:3458 "Digital Object Identifier": batch 92e, OD #915)
+    "<pubnote name=\"Digital Object Identifier\u{a0}\" role=\"doi\">10.1109/OJ.2024.0000000</pubnote>",
   );
   // The overridden first values are gone, not kept beside the last ones.
   assert!(

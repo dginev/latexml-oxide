@@ -4,8 +4,8 @@
 %          "⋆ e-mail: ann@x.org" and an empty "⋆⋆"
 % engines: rust int45b = an empty thanks note on Ann Able (its e-mail moved into the contact) and one on Bob Baker
 % expect:  0 errors, 0 warnings; Ann Able's e-mail her contact and no note (all of it became contacts); Bob Baker's
-%          empty `\thanks{}` still a thanks note (the kernel keeps an author's own empty note, as Perl)
-% status:  RED (int45b) -> GREEN (78e r2)
+%          empty `\thanks{}` no note either (the user's ruling 2026-10-30, batch 92e; Perl keeps it)
+% status:  RED (int45b) -> GREEN (78e r2); Bob Baker's empty note dropped (92e)
 % preload: ar5iv.sty
 \documentclass{aa}
 \begin{document}

@@ -279,6 +279,17 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     let index = frontmatter_push(&tag, entry);
     // REPLACE only 'place_keeper'!!
     let digested = digest_frontmatter_item(&tag, content)?;
+    // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #803, #916; user rulings 2026-10-21, 2026-10-30): a document's note that
+    // typesets nothing is none, whatever its label — one whose whole content our own extraction moved out (A&A's
+    // `\offprints{\email{…}}` makes the address a contact and left an empty "Preprint: " note: astro-ph0405280,
+    // astro-ph0608669) and one the author left empty (`\title{…\thanks{}}`, an empty "Thanks: " note: 2004.01582,
+    // 2401.15379). A note keeping any ink (`\offprints{O. Kochukhov, \email{…}}`, mdpi's `\corres{Correspondence: }`)
+    // stays, and one holding an argument that may print ([`may_typeset_content`]: JHEP3's `\preprint{\arXivid{…}}`).
+    if matches!(tag.as_str(), "ltx:pubnote" | "ltx:note") && !may_typeset_content(&digested) {
+      DebugFeature!("frontmatter", "FRONT drop {tag}: it typesets nothing");
+      frontmatter_remove(&tag, index);
+      return Ok(Vec::new());
+    }
     frontmatter_set_first_content(&tag, index, TagContent::Box(digested));
     if replaceable && printed_in_place {
       frontmatter_drop_repeats(&tag, index);
@@ -463,10 +474,6 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       return Ok(Vec::new());
     }
     let preformatted = tag == "preformatted"; // Obsolete API? $content is constructor!
-    // (the annotations made so far, this one counted: one made while its content is digested is content it moved out,
-    // for the note below)
-    let annotations = lookup_int("lx_frontmatter_annotations") + 1;
-    assign_value("lx_frontmatter_annotations", Stored::Int(annotations), Some(Scope::Global));
     let mut options = TagAttrs::default();
     if let Some(kv) = kv
       && let DigestedData::KeyVals(dkv) = kv.be_digested()?.data() {
@@ -560,12 +567,14 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // no author carries — is no answer to an author's label request, nor passes over the authors one answers)
     let legend = marker_leads(&content);
     let xcontent = digest_frontmatter_item(&tag, content)?;
-    // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #803; ruling 2026-10-21): a note whose whole content became contacts is
-    // none. `\fnsep\thanks{\email{…}}` (webofc; aa's `\fnmsep\thanks{\email{…}}`) moves the e-mail into the author's
-    // contact and left an empty `<note role="thanks"/>`, a visible mark opening a note with nothing in it (2409.01693;
-    // 20 of 21 webofc papers). An author's own empty `\thanks{}` moved nothing out and stays a note, as Perl keeps it.
-    if tag == "ltx:note" && lookup_int("lx_frontmatter_annotations") > annotations && !typesets_content(&xcontent) {
-      DebugFeature!("frontmatter", "FRONT drop {tag}: its content became contacts");
+    // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #803, #916; user rulings 2026-10-21, 2026-10-30): a note that typesets
+    // nothing is none, whatever its label. `\fnsep\thanks{\email{…}}` (webofc; aa's `\fnmsep\thanks{\email{…}}`) moves
+    // the e-mail into the author's contact and left an empty `<note role="thanks"/>`, a visible mark opening a note with
+    // nothing in it (2409.01693; 20 of 21 webofc papers); an author's own empty `\thanks{}` is no note either (pdflatex
+    // prints a bare mark: 2004.01582, 2401.15379, astro-ph0608669); nothing in it may print ([`may_typeset_content`]).
+    // The rule covers `ltx:note`s only, not contact-typed notes (elsarticle's `\fntext[f1]{\ead{…}}`).
+    if tag == "ltx:note" && !may_typeset_content(&xcontent) {
+      DebugFeature!("frontmatter", "FRONT drop {tag}: it typesets nothing");
       with_value_mut("frontmatter", |val_opt| {
         if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
           && let Some(list) = frnt.get_mut(&parenttag)

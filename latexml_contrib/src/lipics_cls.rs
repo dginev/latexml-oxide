@@ -375,7 +375,8 @@ LoadDefinitions!({
   // copies), guesses a paper's own definition replaces: `\EventShortName`, `\serieslogo`, `\DOIPrefix` store what the
   // page furniture prints (run 340: `\serieslogo` 123, 2103.15651); `\DOI` the DOI the title block prints after the
   // abstract when set (1507.03682's copy :391-393, `\doiHeading\doi{\@DOI}`; the class itself sets it empty, :643),
-  // once, as a pubnote at `\maketitle`; `\volumeinfo{editors}{n}{event}
+  // once, as a pubnote at `\maketitle` labelled as the class prints it, `\doiHeading` "Digital Object Identifier" (:637;
+  // FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #915); `\volumeinfo{editors}{n}{event}
   // {volume}{issue}{first page}` the event, the note `\event` makes.
   {
     let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
@@ -391,7 +392,7 @@ LoadDefinitions!({
     );
   }
   RawTeX!(
-    r"\def\lx@lipics@doi{\@ifundefined{@DOI}{}{\ifx\@DOI\@empty\else\lx@add@pubnote[role=doi]{\@DOI}\fi}}"
+    r"\def\lx@lipics@doi{\@ifundefined{@DOI}{}{\ifx\@DOI\@empty\else\lx@add@pubnote[role=doi,name={Digital Object Identifier~}]{\@DOI}\fi}}"
   );
   AddToMacro!("\\lx@maketitle@body", "\\lx@lipics@doi");
 });

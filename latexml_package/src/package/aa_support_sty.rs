@@ -101,8 +101,10 @@ LoadDefinitions!({
   def_macro_noop("\\authrun")?;
   def_macro_noop("\\titrun")?;
 
-  // Correspondence (Perl PR #2767)
-  DefMacro!("\\offprints{}", "\\lx@add@pubnote[role=preprint]{#1}");
+  // Correspondence (Perl PR #2767), labelled as the class prints it (FIDELITY_CHARTER §4, user ruling 2026-10-30;
+  // OXIDIZED_DESIGN_DIVERGENCES #915): aa.cls :337-340 (0903.3512's copy) `{\it Send offprint requests to\/}: #1`,
+  // the modern one :459 `\aa@offprintsname`, :898-914 the same — not the role's "Preprint: ".
+  DefMacro!("\\offprints{}", "\\lx@add@pubnote[role=preprint,name={Send offprint requests to:~}]{#1}");
   // aa.cls:824 `e-mail: {\aa@emailfont #1}`, `\aa@emailfont` = `\ttfamily` (:600); 2101.02014, 2101.04399
   DefMacro!("\\email Semiverbatim", "\\lx@add@contact[role=email]{\\lx@address@urlfont{#1}}");
   // aa.cls 2026 (:812): `\corrauth{<email>}` is `\thanks{Corresponding author: <email>}` on the current author.

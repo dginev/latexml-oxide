@@ -1,0 +1,20 @@
+% witness: the user's ruling 2026-10-30 (FIDELITY_CHARTER §4, "A frontmatter note reads as the class prints it"), the
+%          92e audit of the notes a binding labels by its role: jheppub's `\arxivnumber` (360 census papers)
+% oracle:  pdflatex with 2609.25212's jheppub.sty (:64, :223): 0 errors; "ArXiv ePrint: 1234.56789" under the abstract
+% engines: rust b4c8392 = the pubnote named "arXiv: " (the role default, `\lx@pubnote@arxiv@name`); Perl the same
+%          (jheppub.sty.ltxml, role=arxiv, no name)
+% expect:  0 errors, 0 warnings; the pubnote named "ArXiv ePrint: ", role arxiv, holding "1234.56789"
+% status:  RED (b4c8392) -> GREEN (92e)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{jheppub}
+\title{T}
+\author{A. Able}
+\affiliation{Univ A}
+\arxivnumber{1234.56789}
+\abstract{An abstract.}
+\begin{document}
+\maketitle
+\section{S}
+Text.
+\end{document}
