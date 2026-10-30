@@ -120,6 +120,45 @@ fn make(
   Ok(())
 }
 
+/// The element whose text a contact prints: the innermost of the chain of only children `node` opens (a contact's
+/// `ltx:text` of the typewriter font), when it holds text alone — `None` when the chain holds anything else (a link,
+/// a formula, two pieces), whose text the writer does not set.
+pub(super) fn text_leaf(node: &Node) -> Option<Node> {
+  let mut at = node.clone();
+  loop {
+    let children = at.get_child_nodes();
+    let mut elements = children
+      .iter()
+      .filter(|c| c.get_type() != Some(NodeType::TextNode) || !c.get_content().trim().is_empty());
+    match (elements.next(), elements.next()) {
+      (Some(only), None)
+        if only.get_type() == Some(NodeType::ElementNode)
+          && document::get_node_qname(only) == pin("ltx:text") =>
+      {
+        at = only.clone();
+      },
+      _ => break,
+    }
+  }
+  at.get_child_nodes()
+    .iter()
+    .all(|c| c.get_type() == Some(NodeType::TextNode))
+    .then_some(at)
+}
+
+/// `node`'s text set to `text`, in its [`text_leaf`].
+fn set_text(document: &Document, node: &Node, text: &str) -> Result<()> {
+  let Some(mut at) = text_leaf(node) else {
+    return Ok(());
+  };
+  for mut child in at.get_child_nodes() {
+    child.unlink();
+  }
+  let mut node = Node::new_text(text, &document.document)?;
+  at.add_child(&mut node)?;
+  Ok(())
+}
+
 /// The elements of `node`'s subtree that carry an `xml:id`, with it, in document order.
 fn subtree_ids(document: &mut Document, node: &Node) -> Vec<(Node, String)> {
   document
@@ -196,6 +235,16 @@ pub(super) fn apply(document: &mut Document, front: &Front, plan: &Plan) -> Resu
       && let Some(owner) = owner_node(document, *owner)?
     {
       make(document, &owner, *made, tokens, template, before.as_ref())?;
+    }
+  }
+  for op in &plan.ops {
+    if let Op::WriteOut { owner, template, address } = op
+      && let Some(mut owner) = owner_node(document, *owner)?
+    {
+      document.append_clone(&mut owner, vec![template.clone()])?;
+      if let Some(copy) = elements(&owner).pop() {
+        set_text(document, &copy, address)?;
+      }
     }
   }
   for op in &plan.ops {

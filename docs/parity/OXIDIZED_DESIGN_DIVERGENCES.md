@@ -27254,3 +27254,57 @@ inst_support's split (its `[marks]`, `\and`/`\And`, OD #53) — the class's `\au
   with 1707.06238's aa.cls prints "Bob Baker1 and Cid Cole2"; Perl too); guard
   `perfect_kernel_batch92c::aa_author_replaces_and_keys_aa_blocks`. The 16 aa census papers with two `\author` calls
   (pop92b6) change nothing: their second calls sit in comments or conditionals.
+
+### 923. aa and llncs are written by the frontmatter observer (FM stage 7); the writer writes an address group out, an empty call holds nothing back (Perl: the old reader's output, no observer)
+
+`aa_cls.rs` and `llncs_cls.rs` declare `written: true` (their `FRONTMATTER_CONVENTIONS`, as revtex4_support and
+ams_support): by default the flush rehearses a paper whose every author block is a written family's, and the writer
+(`observer::writer`) rewrites today's creators where they differ from the reading by its operations alone; any other
+difference leaves today's output (the fail-safe, unchanged). Three writer changes the two families needed:
+
+- **write out** (`plan::Op::WriteOut`): an e-mail call printing several addresses (`\institute{Univ X\\
+  \email{\{a,b,c\}@x.org}}`) that the reading writes out (`ruling3:written-out`, decision 3 of 2026-10-22), today's one
+  contact on every carrier of the entry — each address a copy of today's contact printing only it (its text leaf, a
+  contact holding only `ltx:text`; one holding a link or a formula is declined), given to its owner, today's removed.
+  Witnesses 1811.05243, 1812.02463, 2403.14668, 2501.11467 (95 llncs and 25 aa census papers were held back by it).
+- an author block skipped as empty (`Outcome::Skipped(Empty)`: llncs's `\and\\`, the empty piece of its split) holds
+  no paper back (2409.09478).
+- a later placement pass that finds the document reading as the reading keeps the earlier pass's outcome
+  (`--streaming` places the frontmatter again at the document's end: it reported `same` after `written`).
+
+Scorer (the 3,000-paper sample, structurally decided creators exactly right; int122w → 92c): aa 81.23 % → 100.00 %
+(357 creators), llncs 78.98 % → 94.89 % (176), overall 95.77 % → 97.40 %. llncs's 9 left: 1901.07288 (6, a
+trailing-mark `\institute` whose entries span two lines, cut at the lines by llncs's binding pre-splitter
+`\lx@add@affiliations` before the observer reads it: refactor stage 5), and two scorer source-reading limits where our
+output is the PDF's (1505.06588: hand marks inside one `\institute` read by the scorer as one entry; 2203.08964: the
+scorer parsed the supplement's `\institute`). Shadow census (the 92b populations, 1,253 papers, re-converted; rc/E/F
+unchanged): agreeing blocks aa 296 → 522, llncs 220 → 427; the writer writes aa 227 papers (32 declined), llncs 206
+(34 declined); unclassified aa 21 → 18 papers (3.2 %), llncs 32 → 25 (5.4 %); measured on 92b's round-2 fix. Guards `perfect_kernel_batch92c::an_email_group_is_written_out_to_its_spellers`,
+`an_empty_author_piece_holds_nothing_back`; the guards pinning the old reader's llncs/aa XML updated to the written
+output (`perfect_kernel_batch92a::a_note_names_a_creator_only_by_their_whole_name`, `batch64zc::
+llncs_institute_email_in_typewriter`, `batch85b::llncs_address_lines_are_each_owners`' template row,
+`batchfms2a2r6::r6_shapes_leave_the_xml_unchanged` without its llncs shapes); `batchfms2a2r5::
+a_footnotemark_inside_a_mark_is_its_own` pinned held (OPEN_ROWS "written-family writer gaps": a `\footnotetext` after
+`\maketitle` sits outside every creator, which no operation moves).
+
+### 924. Observer readings the aa/llncs promotion needed: a label glued to a symbol parted, a group's domain inside its braces, names spelled by their base letters, an unprinted share entry no hand mark requests, a note's spelled address a change (Perl: none of these readings)
+
+- **A label glued to a footnote symbol** in one written piece (`\inst{1*}` printing "1∗", `*2`) is the marks it
+  prints, ruling 1, tagged `ruling1:parted` (`labels::glued_symbol_parts`, `lines.rs`'s Mark arm), so the writer may
+  give the entry to the names it requests: 2506.20360 (its two corresponding authors had no institute). Existing readings
+  of `†⋆`, `*1` gain the tag (guards fms2a2, fms2a2r7, fms2a2r8, 92b updated).
+- **A braced address group whose last local part holds the shared domain** (`\{blaz.skrlj,senja.pollak@ijs.si\}`,
+  1907.06944) is each local part at that domain (`labels::addresses_in`).
+- **A digested name is spelled by its base letters** (`Resolver::spelled`, `base_letters`: canonical decomposition,
+  combining marks dropped, `ł ø đ ı` their base): "Ștefan Ciobâcă" spells `stefan.ciobaca@` (2001.09649), as the old
+  reader's source reading drops the accent commands.
+- **A `_share=authors` entry** (llncs's one `\institute`, its number never printed, llncs.cls:878-883) is requested only
+  by the class's `\inst{n}`, never by a hand-typed mark (`answer_pending`): `Ann Able$^{1,2}$` under
+  `\institute{{1} Univ A \\ {2} Univ B}` (astro-ph0305539's shape) had the whole on Ann Able by OD #918's hand-mark
+  request; the block's again, as the binding declares and 63i's guard pins.
+- **A document's note's address that spells an author** is that author's, the chain's first step (OD #913), and now a
+  change tag, `api:note-spelled` (`blocks.rs` `Chain::DocumentNote`): today's routes it to the current author
+  (1708.05224, astro-ph0509342, 0802.4021).
+- Repros class-bindings/`aa_inst_glued_symbol_is_parted`, `llncs_email_group_written_out` (the domain-inside and
+  accented siblings), `llncs_empty_author_piece_holds_nothing_back`; guards `perfect_kernel_batch92c::
+  a_label_glued_to_a_symbol_is_parted_and_written`, `an_email_group_is_written_out_to_its_spellers`.

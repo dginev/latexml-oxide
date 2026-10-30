@@ -130,8 +130,12 @@ they stay for stages 3–5.
    (`Resolver::class_requests`), tagged `ruling1:request`; a numbered entry whose every line a mark leads split at
    them (`line_led_pieces`); (OD #920) aa's `\author` still stacks through inst_support's, a ruling open (restoring
    Perl's clear there changed 162 OmniBus papers, mostly stacking classes). Shadow census (92b, re-converted):
-   unclassified llncs 32 of 463 (6.9 %), aa 21 of 554 (3.8 %). Left before `written: true`: aa's policy key (8:
-   `inst_support.sty` today, which OmniBus shares).
+   unclassified llncs 32 of 463 (6.9 %), aa 21 of 554 (3.8 %). **92c: aa and llncs written** (OD #922-#924): aa's own
+   replacing `\author` keys its blocks `aa.cls` (piece 8); `written: true` for both; the writer writes an address group
+   out (`Op::WriteOut`) and an empty call holds no paper back; a label glued to a symbol parted (`\inst{1*}`), a
+   share entry no hand mark requests, a note's spelled address a change. Scorer aa 81.23 % → 100 %, llncs 78.98 % →
+   94.89 % (left: 1901.07288, stage 5's pre-splitter; two scorer source limits); census unclassified llncs 25 (5.4 %),
+   aa 18 (3.2 %).
 8. **Per-class parsers** as each family is promoted.
 
 ## Test suite and measurement

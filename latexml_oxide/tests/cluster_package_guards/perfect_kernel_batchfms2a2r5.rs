@@ -262,7 +262,9 @@ fn a_glued_mark_opens_the_next_entry() {
 /// `\maketitle` is the name's note by its mark.
 #[test]
 fn a_footnotemark_inside_a_mark_is_its_own() {
-  assert_eq!(tuples(LLNCS), [
+  // (written family since 92c, held back: the footnote's text after `\maketitle` sits outside every creator, which no
+  // writer operation moves — OPEN_ROWS "written-family writer gaps")
+  assert_eq!(tuples_held(LLNCS, "Affiliation univbtown"), [
     "C Ann Able [1] | line:names",
     "  a Univ A, City | api:labelseq",
     "C Bob Baker [2,*] | line:names",

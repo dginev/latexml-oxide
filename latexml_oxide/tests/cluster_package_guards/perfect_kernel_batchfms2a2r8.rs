@@ -356,8 +356,8 @@ fn a_glued_symbol_run_a_line_leads_with_is_one_mark() {
     "C Cat Cole [†] | line:names sep:comma",
     "  a Univ A, City | ruling2:symbol-line",
     "C Dan Dole [†,⋆] | line:names sep:comma",
-    "  a Univ A, City | ruling2:symbol-line",
-    "  a Univ B, Town | ruling1:request",
+    "  a Univ A, City | ruling2:symbol-line ruling1:parted",
+    "  a Univ B, Town | ruling1:request ruling1:parted",
   ]);
 }
 

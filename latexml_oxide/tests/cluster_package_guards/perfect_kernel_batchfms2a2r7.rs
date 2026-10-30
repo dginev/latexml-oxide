@@ -306,8 +306,8 @@ fn a_names_mark_glyphs_are_marks() {
     "C Bob Baker [⋄] | line:names sep:comma",
     "  a Univ B, Town | ruling1:request",
     "C Cat Cole [†,⋆] | line:names sep:comma",
-    "  a Univ C, Village | ruling2:symbol-line",
-    "  a Univ D, Hamlet | ruling1:request",
+    "  a Univ C, Village | ruling2:symbol-line ruling1:parted",
+    "  a Univ D, Hamlet | ruling1:request ruling1:parted",
   ]);
 }
 

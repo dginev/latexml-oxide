@@ -13,7 +13,7 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   inst_after_comma: true,
   and_inline: true,
   email_in_place: true,
-  // written: true, (step 3)
+  written: true,
   cite: "llncs.cls:870-885, 894-897; OD #791 (2405.16615, 2512.08621), #792 (2604.11038), #807 (2401.16957), #913",
   ..FM_KERNEL_CONVENTIONS
 };

@@ -90,6 +90,10 @@ impl Resolver {
     let anchor = anchor.filter(|_| address_count == 1);
     for (at, (address, spelled)) in addresses.into_iter().zip(spelled).enumerate() {
       let (owner, rule) = match spelled {
+        // (a document's note: the chain's first step, a ruling's change of today's — `api:note-spelled`)
+        Some(owner) if matches!(chain, Chain::DocumentNote { .. }) => {
+          (Some(owner), "owner:spelled api:note-spelled")
+        },
         Some(owner) => (Some(owner), "owner:spelled"),
         None if in_order => (Some(candidates[at]), "owner:order"),
         None

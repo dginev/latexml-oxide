@@ -19,7 +19,7 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   binding: "aa.cls",
   inst_after_comma: true,
   email_in_place: true,
-  // written: true, (step 3)
+  written: true,
   cite: "aa.cls:759-760 `\\def\\inst#1{\\unskip\\hbox{$^{#1}$}}`, :824; OD #807 (1604.07826, 2309.00573), #913",
   ..FM_KERNEL_CONVENTIONS
 };

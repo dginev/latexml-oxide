@@ -39,3 +39,87 @@ fn aa_author_replaces_and_keys_aa_blocks() {
     ],
   );
 }
+
+/// A label glued to a footnote symbol in one written piece is the two marks it prints (ruling 1, `ruling1:parted`, a
+/// change tag): aa's `\inst{1*}` prints "1∗" — institute 1 and the corresponding author's `*` (2506.20360, its two
+/// corresponding authors; `*2` the same, symbol first). Today's old reader matched `1*` against no entry, so the two
+/// names had no institute; the reading's owner was untagged, so the writer declined. Distinct from the lexer's parted
+/// `\footnotemark` (`fms2a2r5`): here the label's own text holds both.
+#[test]
+fn a_label_glued_to_a_symbol_is_parted_and_written() {
+  assert_reading(
+    repro!("aa_inst_glued_symbol_is_parted.tex"),
+    Some(&[
+      &["Ann Able", "affiliation=Univ X"],
+      &["Bob Baker", "affiliation=Univ X"],
+      &["Cid Cole", "affiliation=Univ Y"],
+    ]),
+    &[
+      "C Ann Able [1] | line:names",
+      "  a Univ X | api:labelseq",
+      "C Bob Baker [1,*] | line:names",
+      "  a Univ X | api:labelseq ruling1:parted",
+      "C Cid Cole [*,2] | line:names",
+      "  a Univ Y | api:labelseq ruling1:parted",
+    ],
+  );
+}
+
+/// The writer's write-out operation (`plan::Op::WriteOut`): an `\institute` entry's `\email{\{a,b,c\}@x}` printing
+/// several addresses, which the reading writes out (ruling 3, `ruling3:written-out`), each to the author it spells and
+/// the rest to the block — today's one contact on every carrier of the entry — is written so: each address a copy of
+/// today's contact printing only it (1811.05243, 1812.02463, 2403.14668, 2501.11467: 95 llncs and 25 aa census papers
+/// held back for want of it). Siblings on the same path: the shared domain printed inside the braces after the last
+/// local part (`\{cid.cole,lab@y.org\}`, 1907.06944; `labels::addresses_in`), and an accented digested name spelled by
+/// its base letters (`Ştefan Ciobâcă`'s `stefan.ciobaca@`, 2001.09649; `Resolver::spelled`).
+#[test]
+fn an_email_group_is_written_out_to_its_spellers() {
+  assert_reading(
+    repro!("llncs_email_group_written_out.tex"),
+    Some(&[
+      &["Ann Able", "affiliation=Univ X", "email=ann.able@x.org"],
+      &[
+        "Ştefan Ciobâcă",
+        "affiliation=Univ X",
+        "email=stefan.ciobaca@x.org",
+      ],
+      &["Cid Cole", "affiliation=Univ Y", "email=cid.cole@y.org"],
+      &["email=info@x.org", "email=lab@y.org"],
+    ]),
+    &[
+      "C Ann Able [1] | line:names",
+      "  a Univ X | api:labelseq",
+      "  c email ann.able@x.org | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
+      "C Ştefan Ciobâcă [1] | line:names",
+      "  a Univ X | api:labelseq",
+      "  c email stefan.ciobaca@x.org | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
+      "C Cid Cole [2] | line:names",
+      "  a Univ Y | api:labelseq",
+      "  c email cid.cole@y.org | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
+      "B email info@x.org | api:labelseq api:inner-contact ruling3:written-out owner:block",
+      "B email lab@y.org | api:labelseq api:inner-contact ruling3:written-out owner:block",
+    ],
+  );
+}
+
+/// An empty call holds nothing back (`writer::written_resolution`): llncs's split of `Ann Able\inst{1} \and\\ Bob
+/// Baker\inst{2}` leaves an empty piece between `\and` and `\\`, a block skipped as empty, which held a written
+/// paper back as an unread one (2409.09478: the scorer's R2 `email_spells_other`, its corresponding author's address
+/// on another name). Distinct from the write-out: the writer's gate, not its operations.
+#[test]
+fn an_empty_author_piece_holds_nothing_back() {
+  assert_reading(
+    repro!("llncs_empty_author_piece_holds_nothing_back.tex"),
+    Some(&[
+      &["Ann Able", "affiliation=Univ X", "email=ann.able@y.org"],
+      &["Bob Baker", "affiliation=Univ Y"],
+    ]),
+    &[
+      "C Ann Able [1] | line:names",
+      "  a Univ X | api:labelseq",
+      "  c email ann.able@y.org | api:labelseq api:inner-contact owner:inner-email owner:spelled",
+      "C Bob Baker [2] | line:names",
+      "  a Univ Y | api:labelseq",
+    ],
+  );
+}

@@ -11,7 +11,10 @@
 //!   today's one contact — each entry made from its tokens (the stamped rehearsal's spans), given to its authors;
 //! - **legend**: an entry the reading takes for a legend note (`api:legend`), today's an affiliation — made a note of
 //!   the names showing its mark;
-//! - **role**: a url printing one address, an e-mail (`role:url-as-email`).
+//! - **role**: a url printing one address, an e-mail (`role:url-as-email`);
+//! - **write out**: one e-mail call printing several addresses (a braced group `{ann,bob}@x.org`) that the reading
+//!   writes out (`ruling3:written-out`), today's one contact (on every carrier of its entry) — each address a contact
+//!   of its own, made from today's, given to its owner.
 
 use std::collections::BTreeMap;
 
@@ -21,8 +24,9 @@ use super::{
     ledger::{ApiCall, field_stamped},
     policy::TitleMarks,
     rehearsal::{Rehearsal, rehearse},
-    resolver::split_pieces,
+    resolver::{addresses_in, split_pieces},
   },
+  apply::text_leaf,
   dom::{Front, Kind, norm, orcid_id},
   *,
 };
@@ -60,6 +64,12 @@ pub(super) enum Op {
   },
   /// today's contact given the reading's role
   Role { node: Node, role: String },
+  /// a copy of today's contact `template` printing only `address`, for `owner` (a written-out address)
+  WriteOut {
+    owner:    Owner,
+    template: Node,
+    address:  String,
+  },
 }
 
 /// The plan: its operations, and the document's creator of each resolved creator.
@@ -569,6 +579,47 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
     }
     wanted_only.retain(|k| *k != key);
     held_only.retain(|k| *k != url);
+  }
+  // a group of addresses one e-mail call printed, written out: today's one contact (on each carrier of its entry, or
+  // the block's), the reading's addresses each its own — every address of the group one of the reading's written-out
+  // items, none of them today's
+  let email = Kind::Contact("email".into());
+  for key in held_only.clone() {
+    if key.0 != email {
+      continue;
+    }
+    let holds = &have[&key];
+    if holds.iter().any(|(_, _, movable)| !movable)
+      || !holds.iter().all(|(_, n, _)| text_leaf(n).is_some())
+    {
+      continue;
+    }
+    let addresses = addresses_in(&holds[0].1.get_content());
+    let keys: Vec<Key> = addresses.iter().map(|a| (email.clone(), norm(a))).collect();
+    if addresses.len() < 2
+      || !keys.iter().all(|k| {
+        wanted_only.contains(k)
+          && want[k]
+            .iter()
+            .all(|(_, a)| rule_has(a, "ruling3:written-out") && writes(a))
+      })
+    {
+      continue;
+    }
+    for (address, k) in addresses.iter().zip(&keys) {
+      for (owner, _) in &want[k] {
+        ops.push(Op::WriteOut {
+          owner:    *owner,
+          template: holds[0].1.clone(),
+          address:  address.clone(),
+        });
+      }
+    }
+    for (_, node, _) in holds {
+      ops.push(Op::Remove { node: node.clone() });
+    }
+    wanted_only.retain(|k| !keys.contains(k));
+    held_only.retain(|k| *k != key);
   }
   if !wanted_only.is_empty() || !held_only.is_empty() || ops.is_empty() {
     return Ok(declined("a difference no operation explains"));

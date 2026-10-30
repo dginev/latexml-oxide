@@ -506,9 +506,11 @@ fn llncs_address_lines_are_each_owners() {
     &["Jorge A. Navas", both],
     &["Andrew E. Santosa"],
   ]);
-  // (a read unit no author owns stays its picked authors' too: a template address, 2109.05583's shape, which 85b r4
-  // sent to the block; and an address its owner takes off a line whose other text the reader does not read, the r4
-  // re-review's q31 — the rest of the line stays every picked author's; the r5 re-review's finding 2)
+  // (a read unit no author owns: a template address, 2109.05583's shape — an entry's one-address `\email`, placed by
+  // FIDELITY_CHARTER §4's chain since 92b's G3 (OD #917), the block's: two carriers, none spelled nor marked the
+  // corresponding author; written so since llncs is written, 92c, OD #923 — 85b r5 had kept it on the picked authors;
+  // and an address its owner takes off a line whose other text the reader does not read, the r4 re-review's q31 — the
+  // rest of the line stays every picked author's; the r5 re-review's finding 2)
   let picked_template = r"\documentclass{llncs}
 \begin{document}
 \title{T}
@@ -520,8 +522,9 @@ Text.
 ";
   let template = "email={firstname.lastname}@x.edu";
   assert_creators(picked_template, &[
-    &["Ann Able", "affiliation=Univ X", template],
-    &["Bob Baker", "affiliation=Univ X", template],
+    &["Ann Able", "affiliation=Univ X"],
+    &["Bob Baker", "affiliation=Univ X"],
+    &[template],
   ]);
   let picked_owned = picked_template.replace(
     r"\email{\{firstname.lastname\}@x.edu}",

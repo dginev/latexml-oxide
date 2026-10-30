@@ -319,7 +319,7 @@ fn a_mark_is_keyed_by_its_printed_text() {
     ]]),
     &[
       "C Ann Able [1,*] | line:names",
-      "  a Univ A | ruling1:request",
+      "  a Univ A | ruling1:request ruling1:parted",
       "C Bob Baker [1] | line:names sep:comma",
       "  a Univ A | ruling1:request",
     ],

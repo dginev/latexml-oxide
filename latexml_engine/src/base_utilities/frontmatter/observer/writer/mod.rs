@@ -13,7 +13,7 @@
 
 use super::{
   events::Event,
-  ledger::{Entry, Outcome, with_ledger},
+  ledger::{Entry, Outcome, SkipReason, with_ledger},
   policy::policy_for,
   resolver::{Assoc, Resolved, is_change_rule, ledger_inputs, resolve},
   *,
@@ -33,7 +33,9 @@ fn written_resolution() -> Option<Resolved> {
         Entry::Author(block) => {
           blocks += 1;
           match &block.outcome {
-            Outcome::Events { errors: 0, .. } => {},
+            // (an empty call holds nothing to read: llncs's `\and\\` between two names, an empty piece of its split —
+            // 2409.09478)
+            Outcome::Events { errors: 0, .. } | Outcome::Skipped(SkipReason::Empty) => {},
             _ => return None,
           }
           if !policy_for(&block.binding, block.hook).written {
@@ -63,8 +65,13 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
   let front = dom::read(document);
   let before = plan::difference(&resolved, &front);
   let Some(plan) = plan::plan(&resolved, &front)? else {
-    let outcome = before.map_or_else(|| "same".to_string(), |d| s!("declined: {d}"));
-    with_ledger(|ledger| ledger.writer = Some(outcome));
+    // (a later pass that finds the document reading as the reading keeps the earlier pass's outcome: `--streaming`
+    // places the frontmatter again at the document's end, after this writer wrote it)
+    with_ledger(|ledger| match before {
+      None if ledger.writer.is_some() => {},
+      None => ledger.writer = Some("same".to_string()),
+      Some(d) => ledger.writer = Some(s!("declined: {d}")),
+    });
     return Ok(());
   };
   DebugFeature!("frontmatter", "FRONT writer: {} operations", plan.ops.len());

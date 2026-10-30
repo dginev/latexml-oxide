@@ -129,6 +129,21 @@ pub fn mark_labels(label: &str) -> Vec<String> {
   labels
 }
 
+/// The labels [`mark_labels`] parts out of one written piece at a footnote symbol glued to a label (`1*` → `1`, `*`;
+/// `*1`; not `1,*` or `1 *`, written apart, nor a run of one symbol `**`): ruling 1's reading of a mark printed so
+/// (2506.20360's `\inst{1*}`). None for a `\ref` list or a `fuzzy:` label, which are never parted.
+pub(super) fn glued_symbol_parts(label: &str) -> Vec<String> {
+  if label.starts_with("fuzzy:") || label.contains("ref:") {
+    return Vec::new();
+  }
+  label
+    .split(|c: char| c == ',' || c == ';' || c.is_whitespace())
+    .map(mark_labels)
+    .filter(|labels| labels.len() >= 2)
+    .flatten()
+    .collect()
+}
+
 /// A name mark's labels with a number range spelled out: `1-4` requests 1, 2, 3 and 4 (`Bauer$^{1-4}$`, 2012.15817 —
 /// read as its ends, the 2 and 3 entries were not hers), and so does the en-dash `--` spells before its ligature
 /// (`$^{1\text{--}5}$`, 2507.06232). A falling range, or one of more than 50 numbers, stays as written.
@@ -500,6 +515,12 @@ pub fn addresses_in(text: &str) -> Vec<String> {
         }
       }
       rest = &after[1 + domain.len()..];
+    } else if let Some(group) = domain_inside_group(&rest[open + 1..close]) {
+      // (the shared domain printed inside the group, after its last local part: `\{blaz.skrlj,senja.pollak@ijs.si\}`,
+      // 1907.06944 — each local part at it, as the reader reads the line)
+      out.extend(plain_addresses(&rest[..open]));
+      out.extend(group);
+      rest = after;
     } else {
       out.extend(plain_addresses(&rest[..=close]));
       rest = after;
@@ -507,6 +528,30 @@ pub fn addresses_in(text: &str) -> Vec<String> {
   }
   out.extend(plain_addresses(rest));
   out
+}
+
+/// A braced group of local parts whose last holds the one `@` and the shared domain (`blaz.skrlj,senja.pollak@ijs.si`),
+/// written out: each local part at that domain; `None` for any other group.
+fn domain_inside_group(inner: &str) -> Option<Vec<String>> {
+  let pieces: Vec<&str> = inner.split(',').map(str::trim).collect();
+  let (last, locals) = pieces.split_last()?;
+  let (local, domain) = last.split_once('@')?;
+  let plain = |p: &str| !p.is_empty() && !p.contains(|c: char| c == '@' || c.is_whitespace());
+  if locals.is_empty()
+    || !locals.iter().all(|p| plain(p))
+    || !plain(local)
+    || !domain.contains('.')
+    || !plain(domain)
+  {
+    return None;
+  }
+  Some(
+    locals
+      .iter()
+      .chain([&local])
+      .map(|l| format!("{l}@{}", domain.trim_end_matches('.')))
+      .collect(),
+  )
 }
 
 /// The plain addresses of `text` (no braced group).

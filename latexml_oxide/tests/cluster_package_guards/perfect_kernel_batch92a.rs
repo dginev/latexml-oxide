@@ -287,7 +287,7 @@ fn a_publication_note_email_is_placed_by_the_chain() {
       "  a Univ X | api:labelseq",
       "C Bob Baker [2] | line:names",
       "  a Univ Y | api:labelseq",
-      "  c email bob.baker@y.org | api:document-note owner:spelled ruling3:one-per-print",
+      "  c email bob.baker@y.org | api:document-note owner:spelled api:note-spelled ruling3:one-per-print",
     ],
   );
   assert_reading(
@@ -465,7 +465,8 @@ fn a_routed_note_email_is_the_current_authors_own_call() {
 /// as pdflatex prints it (92a r2: the cleared Ann Able a second match, the block's; today's XML Bob Baker's, the last
 /// creator). A colon parts the pieces as a comma does (review rev92a_r3 S1): aa's `\offprints{A. Able: \email{…}}` and
 /// llncs's `\thanks{Ann Able: corresponding author, \email{…}}` name Ann Able, as the page prints the address after her
-/// name (92a r3 dropped the lead before the colon as a label: the block's); today's XML Bob Baker's.
+/// name (92a r3 dropped the lead before the colon as a label: the block's); the old reader's XML Bob Baker's, written
+/// Ann Able's since aa and llncs are written (92c, OD #923).
 #[test]
 fn a_note_names_a_creator_only_by_their_whole_name() {
   for (repro, address) in [
@@ -506,13 +507,15 @@ fn a_note_names_a_creator_only_by_their_whole_name() {
       ],
     );
   }
+  // (llncs and aa written since 92c, OD #923: the address on the note's named author, as the reading has it)
   assert_reading(
     repro!("llncs_thanks_name_after_cleared_author.tex"),
-    Some(&[&["Ann Able", "affiliation=Univ X"], &[
-      "Bob Baker",
-      "email=carl@z.org",
-      "affiliation=Univ Y",
-    ]]),
+    Some(
+      &[&["Ann Able", "affiliation=Univ X", "email=carl@z.org"], &[
+        "Bob Baker",
+        "affiliation=Univ Y",
+      ]],
+    ),
     &[
       "C Ann Able [1] | line:names",
       "  a Univ X | api:labelseq",
@@ -527,11 +530,12 @@ fn a_note_names_a_creator_only_by_their_whole_name() {
   ] {
     assert_reading(
       repro,
-      Some(&[&["Ann Able", "affiliation=Univ X"], &[
-        "Bob Baker",
-        "email=carl@z.org",
-        "affiliation=Univ Y",
-      ]]),
+      Some(
+        &[&["Ann Able", "affiliation=Univ X", "email=carl@z.org"], &[
+          "Bob Baker",
+          "affiliation=Univ Y",
+        ]],
+      ),
       &[
         "C Ann Able [1] | line:names",
         "  a Univ X | api:labelseq",

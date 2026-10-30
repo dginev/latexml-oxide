@@ -249,18 +249,12 @@ fn an_address_lists_lines_place_their_notes() {
   ]);
 }
 
-/// The r6 shapes leave the XML byte-identical with the switch on and off (shadow only).
+/// The r6 shapes of a family the observer does not write leave the XML byte-identical with the switch on and off
+/// (shadow only). (The llncs shapes, GROUP and GROUP_UNREQUESTED, are written since 92c, OD #923: their guard's outcome
+/// is the writer's `written`, `perfect_kernel_batchfms2a1::parsed`.)
 #[test]
 fn r6_shapes_leave_the_xml_unchanged() {
-  for tex in [
-    REPLACED,
-    DOT,
-    INNER,
-    IEEE,
-    GROUP,
-    GROUP_UNREQUESTED,
-    ADDRESS_LIST,
-  ] {
+  for tex in [REPLACED, DOT, INNER, IEEE, ADDRESS_LIST] {
     let run = |on: bool| {
       convert_with_setup_then(
         tex,

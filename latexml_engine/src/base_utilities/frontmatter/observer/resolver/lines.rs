@@ -1036,16 +1036,25 @@ impl Resolver {
             .is_some_and(|r| r.starts_with("footnotemark"));
           // (a mark the lexer parted from the footnote mark glued to it, `\inst{1, 2\footnotemark[1]}` printing
           // "1, 2∗": ruling 1's reading, the marks shown apart — 2404.09857)
-          if event
+          // — and so is a label glued to a symbol in one written piece, `\inst{1*}` printing "1*" (mark 1 and the
+          // corresponding author's `*`, 2506.20360): only the labels so parted
+          let parted: Vec<String> = if event
             .role
             .as_deref()
             .is_some_and(|r| r.ends_with(" parted"))
           {
+            labels.clone()
+          } else if event.glued {
+            Vec::new()
+          } else {
+            glued_symbol_parts(event.label.as_deref().unwrap_or(""))
+          };
+          if !parted.is_empty() {
             let owner = if to_next { None } else { made.last().copied() };
             if let Some(c) = owner {
-              self.parted.extend(labels.iter().map(|l| (c, l.clone())));
+              self.parted.extend(parted.into_iter().map(|l| (c, l)));
             } else {
-              waiting_parted.extend(labels.iter().cloned());
+              waiting_parted.extend(parted);
             }
           }
           let class = is_class_request(event);

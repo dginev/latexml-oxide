@@ -124,7 +124,10 @@ pub struct Resolved {
 /// - an entry's e-mail call printing one address (an `\email` inside an `\institute` entry) placed by FIDELITY_CHARTER
 ///   §4's chain, not copied onto every carrier of the entry's label (`owner:inner-email`: the author it spells, the
 ///   entry's only carrier, the block — the ONE address left the corresponding author's, `place_emails_left` — the llncs
-///   and aa gate study's G3, 1606.03774, 2204.03161, 0901.4618; 2408.14427).
+///   and aa gate study's G3, 1606.03774, 2204.03161, 0901.4618; 2408.14427);
+/// - a document's own note's address that spells an author (`\offprints{…, \email{…}}`, a title `\thanks`), that
+///   author's — the chain's first step, which today's (routing it to the current author) does not take
+///   (`api:note-spelled`: `Chain::DocumentNote`, OD #913's chain exactly; 1708.05224, astro-ph0509342, 0802.4021).
 ///
 /// Elimination (`owner:elimination`, the one address left to the one name left) is NOT a change: today's output
 /// applies it too (OXIDIZED_DESIGN_DIVERGENCES #52's e-mail lines, `owners_by_elimination`, under user ruling R10
@@ -147,6 +150,7 @@ pub const CHANGE_TAGS: &[&str] = &[
   "ruling3:one-per-print",
   "ruling3:written-out",
   "owner:inner-email",
+  "api:note-spelled",
   "ruling4:",
 ];
 
@@ -451,14 +455,16 @@ impl Resolver {
 
   /// The one candidate an address spells (`spelled_owners`), if one — none for a list of local parts the address
   /// reader could not part (`(npalmer|pwg)@dcs.warwick.ac.uk`, cs0607047: several authors' address, the block's by user
-  /// ruling R10, as today's `spelled_owner` reads it — `lists_local_parts`).
+  /// ruling R10, as today's `spelled_owner` reads it — `lists_local_parts`). A name is read by its base letters, as
+  /// an address spells it: the digested name's accents dropped (`Ștefan Ciobâcă` "stefan", "ciobaca", 2001.09649's
+  /// `stefan.ciobaca@`), as the old reader's source reading drops the accent commands.
   fn spelled(&self, address: &str, candidates: &[usize]) -> Option<usize> {
     if lists_local_parts(address) {
       return None;
     }
     let keys: Vec<NameKeys> = candidates
       .iter()
-      .map(|&c| NameKeys::of(&text_tokens(&self.out.creators[c].name)))
+      .map(|&c| NameKeys::of(&text_tokens(&base_letters(&self.out.creators[c].name))))
       .collect();
     match spelled_owners(&keys, address).as_slice() {
       [one] => Some(candidates[*one]),
@@ -483,6 +489,26 @@ impl Resolver {
       _ => (None, "owner:block"),
     }
   }
+}
+
+/// `text` with its letters' accents dropped (canonical decomposition, the combining marks aside), and the letters
+/// that decompose to none their base letter (`ł` l, `ø` o, `đ` d, `ı` i).
+fn base_letters(text: &str) -> String {
+  use unicode_normalization::{UnicodeNormalization, char::is_combining_mark};
+  text
+    .nfd()
+    .filter(|c| !is_combining_mark(*c))
+    .map(|c| match c {
+      'ł' => 'l',
+      'Ł' => 'L',
+      'ø' => 'o',
+      'Ø' => 'O',
+      'đ' => 'd',
+      'Đ' => 'D',
+      'ı' => 'i',
+      c => c,
+    })
+    .collect()
 }
 
 /// Resolve a document's ledger (its inputs in call order), each block under the conventions its binding declared

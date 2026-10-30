@@ -932,6 +932,18 @@ impl Resolver {
           }
         }
       }
+      // (a `_share=authors` entry's number is not printed — llncs.cls:878-883 numbers its one institute only beside
+      // another —, so only the class's own `\inst{n}` requests it, never a mark typed by hand: `Ann Able$^{1,2}$`
+      // under `\institute{{1} Univ A \\ {2} Univ B}` is no request of the whole, the block's, as the binding declares
+      // (llncs_cls.rs `\lx@llncs@institute@sole`; astro-ph0305539's shape, perfect_kernel_batch63's 63i guard))
+      if self.shared.iter().any(|(p, _)| *p == at) {
+        owners.retain(|&c| {
+          self
+            .class_requests
+            .iter()
+            .any(|(o, q)| *o == c && labels.iter().any(|l| label_matches(q, l)))
+        });
+      }
       // (an entry a `\footnotemark` leads answers the same print on a name: a footnote's mark, `\footnotemark[1]` or the
       // mark a `\footnote[1]` shows — `Shun'ya Mizoguchi\footnote[1]{…}` under `\affiliation{\footnotemark[1]Theory
       // Center, …}`, 1607.07280 (FM S2a.2 r7): ruling 1, the marks shown on a name are its requests)

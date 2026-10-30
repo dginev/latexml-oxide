@@ -1,0 +1,16 @@
+% witness: 2409.09478 (`\and\\` between names in llncs's `\author`; the fm scorer's R2 `email_spells_other`)
+% oracle:  pdflatex: "Ann Able1 and" / "Bob Baker2", then "1 Univ X", "2 Univ Y ann.able@y.org"
+% engines: perl 0.8.8 = 0 errors, ann.able@y.org on Bob Baker (the entry's label's); rust int122w (92b) = the same XML,
+%          the shadow Ann Able's (spelled) — llncs written, the writer still held back: the empty piece between `\and`
+%          and `\\` was a block skipped as empty, which held the paper back as an unread one
+% expect:  0 errors, 0 warnings; an empty call holds nothing back; ann.able@y.org Ann Able's, written (OD #923)
+% status:  RED (92c r0) -> GREEN (92c) — perfect_kernel_batch92c::an_empty_author_piece_holds_nothing_back
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and\\ Bob Baker\inst{2}}
+\institute{Univ X \and Univ Y\\ \email{ann.able@y.org}}
+\maketitle
+Text.
+\end{document}

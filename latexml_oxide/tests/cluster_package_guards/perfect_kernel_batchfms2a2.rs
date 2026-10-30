@@ -285,7 +285,7 @@ fn sync_row_shapes_46_53_66() {
     ),
     [
       "C Ann Able [*,1] | line:names",
-      "  a Univ A | ruling1:request",
+      "  a Univ A | ruling1:request ruling1:parted",
       "C Bob Baker [1] | line:names sep:comma",
       "  a Univ A | ruling1:request",
     ]
