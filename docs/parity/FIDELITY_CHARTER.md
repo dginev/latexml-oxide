@@ -105,7 +105,14 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
 - **A frontmatter note reads as the class prints it** (2026-10-30): its label is the class's own printed label — aa's
   and svjour's `\offprints{O. Kochukhov, \email{…}}` is "Send offprint requests to: O. Kochukhov, …" (aa.cls,
   svjour3.cls:371-374), never a role name the class does not print ("Preprint: "); a note we cannot give its printed
-  reading is better hidden than shown mislabelled ("it adds confusion").
+  reading is better hidden than shown mislabelled ("it adds confusion"). Where the class prints no label, the note
+  is kept, with its role, and has none (2026-10-30, "keep every note with the label the class prints, which here is
+  none"): the kernel's title `\thanks{X}` (pdflatex: a "∗ X" footnote) is X, not "Thanks: X"; aa's `\dedication`,
+  aastex631's `\reportnum`, emulateapj's `\slugcomment`/`\journalinfo` likewise. Perl's role defaults
+  (Base_Utility.pool.ltxml:768-787 `\lx@pubnote@<role>@name`) stand only where the class prints that label; a label
+  the binding writes into the content (IEEEtran `\IEEEpubid`'s "pubid: ") goes too. The role stays semantic: `role=` in
+  the XML, the `ltx_role_<role>` class in the HTML (LaTeXML-common.xsl:538), which a CSS theme may style or label
+  (2026-10-30); only the `ltx_note_name` label span goes.
 - **A note our own extraction empties is not emitted** (2026-10-30, generalising OD #803 from thanks notes to every
   frontmatter note): `\offprints{\email{x}}` whose only content became a contact leaves no "Send offprint requests to:"
   shell; a note whose remainder still informs stays with its printed label (`\offprints{O. Kochukhov, \email{…}}` reads
