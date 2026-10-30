@@ -277,7 +277,7 @@ fn frontmatter(xml: &str) -> String {
   xml[start..start + end].trim_end().to_string()
 }
 
-/// The ink test reads what a note prints, not only its text boxes (review rev92e r1 B1): a command that writes its own
+/// The ink test reads what a note prints, not only its text boxes: a command that writes its own
 /// text — an ellipsis, a TeX logo — is ink though it shows no argument, in a creator's note (`\lx@annotate@frontmatter`)
 /// and in the title's publication note (`\lx@add@frontmatter`), so each note stays whole.
 #[test]
@@ -311,7 +311,7 @@ fn kernel_thanks_command_text_is_ink() {
   );
 }
 
-/// A formula's symbol is ink (`$\vdots$`, `$\dotsc$`, `\ensuremath{\ldots}`: review rev92e r1 B1); an empty formula
+/// A formula's symbol is ink (`$\vdots$`, `$\dotsc$`, `\ensuremath{\ldots}`); an empty formula
 /// `$ $` prints nothing, and its note is none, as pdflatex prints a bare mark.
 #[test]
 fn kernel_thanks_math_token_is_ink() {
@@ -341,7 +341,7 @@ fn kernel_thanks_math_token_is_ink() {
   );
 }
 
-/// A class's publication note by the same test (review rev92e r1 B1): aa's `\offprints{\LaTeX}` is the note its
+/// A class's publication note by the same test: aa's `\offprints{\LaTeX}` is the note its
 /// class labels, holding the logo.
 #[test]
 fn aa_offprints_command_text_is_ink() {
@@ -355,7 +355,7 @@ fn aa_offprints_command_text_is_ink() {
   );
 }
 
-/// A rule with a width and a height, a framed box (empty or not) and a leader print (review rev92e r1 S2), and their
+/// A rule with a width and a height, a framed box (empty or not) and a leader print, and their
 /// notes stay; a strut (`\rule{0pt}{2ex}`), `\quad`, an empty `\mbox{}`, a phantom and the title's tie print nothing,
 /// and theirs are none — material the test knows to be blank, each a sibling of the A/B's 18 drops.
 #[test]
@@ -399,7 +399,7 @@ fn kernel_thanks_rule_and_frame_are_ink() {
   );
 }
 
-/// An undefined command is no known blank item (review rev92e r1 N1): the note stays, holding its error marker, and the
+/// An undefined command is no known blank item: the note stays, holding its error marker, and the
 /// conversion reports the one Error (the repro fails pdflatex too: it guards the error path only).
 #[test]
 fn kernel_thanks_undefined_command_is_ink() {
@@ -420,7 +420,7 @@ fn kernel_thanks_undefined_command_is_ink() {
   );
 }
 
-/// The frontmatter observer reads a note by the XML's test (review rev92e r1 S1; `Event::inkless`, OD #837, #916): an
+/// The frontmatter observer reads a note by the XML's test (`Event::inkless`, OD #837, #916): an
 /// empty `\thanks{}` is no note of its author's but one the ruling dropped (`ruling4:inkless`), and of the
 /// rule-and-frame repro's eight notes the four that print stay, the four blank ones dropped.
 #[test]
@@ -455,7 +455,7 @@ fn observer_reads_a_note_by_the_ink_test() {
 /// and it has an argument (`util_text.rs` `prints_only_arguments`, OD #916): revsymb's `\openone` (`"1"` in the
 /// blackboard font, no argument) is a formula's symbol, its note kept; `\emph{}`'s hook closing its element cannot be
 /// read, so its blank note is kept too (in doubt, ink); `$\mathbb{}$` is a font switch over nothing, its note none. The
-/// observer reads each note so (review rev92e r2 B1′).
+/// observer reads each note so.
 #[test]
 fn kernel_thanks_constructor_text_is_ink() {
   let tex = repro!("kernel_thanks_constructor_text_is_ink");
@@ -492,7 +492,7 @@ fn kernel_thanks_constructor_text_is_ink() {
   ]);
 }
 
-/// A background colour is ink, whatever it is behind (review rev92e r2 B2′): `\colorbox{c}{…}` is
+/// A background colour is ink, whatever it is behind: `\colorbox{c}{…}` is
 /// `\hbox{\pagecolor{c}…}`, and pdflatex prints the coloured block over nothing, a space, a phantom or a strut, inside
 /// `\mbox` too, so each note stays; `\textcolor{red}{}` prints nothing, its note none. XML and observer alike.
 #[test]
@@ -545,7 +545,7 @@ fn kernel_thanks_colorbox_is_ink() {
   ]);
 }
 
-/// The XML and the observer read a note on the same input (review rev92e r2 S1′): the author block's empty-mark filter
+/// The XML and the observer read a note on the same input: the author block's empty-mark filter
 /// (`drop_empty_marks`) leaves a note's text as written, so `\thanks{\textsuperscript{}}` keeps its superscript — an
 /// element of its own, in doubt ink — and both keep the note; the empty mark beside Bob's name is still no mark.
 #[test]

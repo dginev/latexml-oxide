@@ -469,7 +469,7 @@ const LEADERS: &[&str] = &[
 
 /// Wrappers that print only their arguments and body ([`first_ink`]) though their construction is no font-only
 /// template ([`prints_only_arguments`] reads `\mbox`, `\text`, `\smash` and the font switches): an unframed box,
-/// built by a closure (`\hbox`, `\vbox`, `\vtop`, `\parbox`) or placed by its template's size or offset
+/// built by a closure (`\hbox`, `\vbox`, `\vtop`) or placed by its template's size or offset
 /// (`\@makebox`, `\raisebox`) — a box's colour is its content's font's, which [`first_ink`] reads —, and a formula.
 const INKLESS_WRAPPERS: &[&str] = &[
   "\\@makebox",
@@ -477,7 +477,6 @@ const INKLESS_WRAPPERS: &[&str] = &[
   "\\vbox",
   "\\vtop",
   "\\raisebox",
-  "\\parbox",
   "\\lx@begin@inline@math",
   "\\lx@begin@display@math",
 ];

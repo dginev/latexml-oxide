@@ -27017,8 +27017,9 @@ every item of its digested content is one known to leave no ink — `leaves_no_i
 none). Known blank: a box of white space (a space, a tie) or one Perl marks `isSpace` (glue, kerns, `\quad`,
 phantoms, `\indent`/`\noindent`; Box.pm:33-38), a leader aside; a rule with no width or no height and depth (a
 strut); breaks, `\par`, penalties, `\leavevmode`; and a transparent wrapper whose arguments (options and position
-keywords aside) and body are blank — an unframed box or a formula (`\hbox`, `\vbox`, `\vtop`, `\parbox`,
-`\@makebox`, `\raisebox`, `$…$`), or a constructor whose whole construction is a literal template printing only its
+keywords aside) and body are blank — an unframed box or a formula (`\hbox`, `\vbox`, `\vtop`,
+`\@makebox`, `\raisebox`, `$…$`; `\parbox` is a macro over the closure `\lx@parbox`, so a blank `\parbox` is ink
+— kept, the safe direction), or a constructor whose whole construction is a literal template printing only its
 arguments (`prints_only_arguments`: arguments and the body absorbed, white space, `ltx:text`/`ltx:emph` with font-only
 attributes, conditionals of such, at least one argument absorbed, no `before_construct`/`after_construct` hook;
 `Definition::replacement_template`, which `DefConstructor!` records from its string replacement): `\mbox{}`,
