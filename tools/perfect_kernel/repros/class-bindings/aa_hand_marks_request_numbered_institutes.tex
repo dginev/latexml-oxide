@@ -1,0 +1,20 @@
+% witness: 1009.6047, 0904.2180 (aa class C of the stage-6 gate study, 13 papers: hand-typed `$^{n}$` against
+%          numbered institutes); 2207.06953 (llncs class H)
+% oracle:  pdflatex with 1707.06238's aa.cls: "Ann Able1, Bob Baker1,2, and Cid Cole2" / 1 Univ X / 2 Univ Y — the class
+%          numbers its `\institute` entries, the names' hand-typed marks request them
+% engines: perl 0.8.8 = 0 errors, the marks kept in the names ("Ann Able1"), Univ X on Ann Able, Univ Y on Bob Baker
+%          (by place); rust 92a: the marks in the names, both institutes on a nameless creator; the shadow reads each mark a request, its owners by `api:labelseq` alone (no change
+%          tag: unclassified)
+% expect:  0 errors, 0 warnings; the shadow reading: Univ X Ann Able's and Bob Baker's, Univ Y Bob Baker's and Cid
+%          Cole's, each `api:labelseq ruling1:request` (ruling 1, a mark printed by hand, not the class's `\inst`)
+% status:  RED (92a, the shadow untagged) -> GREEN (92b)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \and Bob Baker$^{1,2}$ \and Cid Cole\textsuperscript{2}}
+\institute{Univ X \and Univ Y}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

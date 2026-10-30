@@ -1203,6 +1203,25 @@ impl Resolver {
         {
           assoc.rule.push_str(" api:ref-label");
         }
+        // (an owner a numbered entry (`labelseq=`) finds by a mark printed by hand — `$^{1}$`, `\textsuperscript{1}`, a
+        // paper's mark macro, read off the digested list (`observer::marks`) —, not by the class's own request
+        // (`\inst{1}`, `class_requests`): ruling 1, the marks shown on a name are its requests — aa's `Ann Able$^{1}$`
+        // under `\institute{Univ X \and Univ Y}`, whose numbers the class prints before each entry (aa.cls v6.1
+        // :319-341), which today's left on a nameless creator, the marks in the names: 1009.6047, 0904.2180 (aa class C
+        // of the stage-6 gate study, 13 papers), 2207.06953 (llncs class H))
+        let by_hand = assoc.rule.split_whitespace().next() == Some("api:labelseq")
+          && self.out.creators[owner].requests.iter().any(|r| {
+            labels.iter().any(|l| label_matches(r, l))
+              && !self
+                .class_requests
+                .iter()
+                .any(|(c, q)| *c == owner && q == r)
+              && !self.fn_requests.iter().any(|(c, q)| *c == owner && q == r)
+          });
+        // (a `\ref` key's owner says so already, `api:ref-label`)
+        if by_hand && !assoc.rule.contains("ruling1:") && !assoc.rule.contains("api:ref-label") {
+          assoc.rule.push_str(" ruling1:request");
+        }
         // (an API entry its call labels — aastex's `\altaffiltext{5}{…}` — to the names whose marks request it: ruling 1,
         // user 2026-10-21 #1, as a labelled line inside an author block is; 0707.2093's `Woods\altaffilmark{5,6}`, whose
         // two entries today's gave the last author)

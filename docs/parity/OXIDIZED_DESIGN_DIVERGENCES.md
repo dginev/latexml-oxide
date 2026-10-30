@@ -27104,3 +27104,21 @@ Shadow-side, in the resolver; a written family's output changes where its writer
   `llncs_sole_institute_picked_by_inst`; guards
   `perfect_kernel_batch92b::an_entry_email_printing_one_address_is_placed_by_the_chain`,
   `perfect_kernel_batch92b::a_sole_institute_no_inst_picks_is_every_authors`.
+
+### 918. A numbered entry's owner found by a mark printed by hand is ruling 1's reading (Perl: hand-typed marks stay in the names, the numbered institutes unowned or placed by position)
+
+Frontmatter refactor stage 7, the llncs and aa move (task #429; `agent_reports/2026-10-29_s6_aa_llncs_gate.md` §4 rows
+5 and 6). Shadow-side, in the resolver.
+
+- **Labelseq owners by printed marks** (aa class C, 13 papers: 1009.6047, 0904.2180; llncs class H: 2207.06953). aa
+  and llncs number their `\institute` entries (aa.cls v6.1 :319-341 prints `$^{\the@inst}$` before each); a paper
+  that marks its names by hand (`Ann Able$^{1}$`, `\textsuperscript{1,2}`, a paper's mark macro) requests them as the
+  PDF shows. Today's old reader and Perl keep the marks in the names (Perl places the entries by position; today's on
+  a nameless creator); the resolver read each mark off the digested list (`observer::marks`) and gave each entry its
+  requesters, untagged (`api:labelseq`), so every such difference was unclassified. Each request now keeps its origin
+  (`Resolver::class_requests`: a Mark of the class's `\inst`, role `inst`, or of a binding's request command,
+  `request`, or an `annotations=` list), and an owner a labelseq entry finds by a request no class command made (nor
+  a `\footnotemark`) is tagged `ruling1:request` — not where `api:ref-label` already says so. Census (re-resolved):
+  unclassified aa 38 → 25 of 554, llncs 41 → 36 of 463.
+- Repro class-bindings/`aa_hand_marks_request_numbered_institutes`; guard
+  `perfect_kernel_batch92b::a_numbered_entry_owned_by_a_hand_mark_is_ruling_ones`.

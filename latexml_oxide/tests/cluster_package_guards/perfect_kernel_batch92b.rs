@@ -172,3 +172,26 @@ fn a_sole_institute_no_inst_picks_is_every_authors() {
     ],
   );
 }
+
+/// Piece 3, labelseq owners by printed marks (aa class C, 13 papers: 1009.6047, 0904.2180; llncs class H: 2207.06953):
+/// a numbered entry's owner found by a mark printed by hand (`$^{1}$`, `\textsuperscript{2}`), read off the digested
+/// list, not by the class's own `\inst` (`Resolver::class_requests`), is ruling 1's reading — the marks shown on a name
+/// are its requests —, tagged `ruling1:request`: today's (and Perl's) XML keeps the marks in the names and the
+/// institutes on a nameless creator (Perl on two names by place), so the reading alone is pinned. The class's own
+/// `\inst{1}` stays untagged (`a_sole_institute_no_inst_picks_is_every_authors`'s last row, the 92a guards).
+#[test]
+fn a_numbered_entry_owned_by_a_hand_mark_is_ruling_ones() {
+  assert_reading(
+    repro!("aa_hand_marks_request_numbered_institutes.tex"),
+    None,
+    &[
+      "C Ann Able [1] | line:names",
+      "  a Univ X | api:labelseq ruling1:request",
+      "C Bob Baker [1,2] | line:names",
+      "  a Univ X | api:labelseq ruling1:request",
+      "  a Univ Y | api:labelseq ruling1:request",
+      "C Cid Cole [2] | line:names",
+      "  a Univ Y | api:labelseq ruling1:request",
+    ],
+  );
+}

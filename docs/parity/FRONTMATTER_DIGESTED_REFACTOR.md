@@ -120,8 +120,9 @@ they stay for stages 3–5.
    **92b** (OD #917): G3, an entry's `\email` printing one address placed by FIDELITY_CHARTER §4's chain (the author it
    spells, the entry's only carrier, its corresponding author, the block; `owner:inner-email`), and an e-mail call's
    line breaks read as such (`events::raw_lines`); the 85b `_share=authors` port, llncs's one `\institute` every live
-   author's unless the class's `\inst{n}` picks it, its e-mail lines by the chain (`api:share:authors`). Left before
-   `written: true`: the labelseq-by-printed-mark tag (5, needs stage 4), the labelseq mark-led split (6), aa's policy key (8:
+   author's unless the class's `\inst{n}` picks it, its e-mail lines by the chain (`api:share:authors`); (OD #918) a
+   numbered entry's owner found by a mark printed by hand, each request keeping its origin
+   (`Resolver::class_requests`), tagged `ruling1:request`. Left before `written: true`: the labelseq mark-led split (6), aa's policy key (8:
    `inst_support.sty` today, which OmniBus shares).
 8. **Per-class parsers** as each family is promoted.
 
