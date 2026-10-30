@@ -27056,7 +27056,7 @@ observer_reads_a_note_by_the_ink_test, kernel_thanks_constructor_text_is_ink, ke
 kernel_thanks_empty_superscript_reads_alike}`, `perfect_kernel_batch78e::aa_thanks_email_leaves_no_empty_note` (Bob
 Baker's empty `\thanks{}` now no note) and `perfect_kernel_batchfms2a2::notes_labels_and_contacts` (Cat Cole's
 `\thanks{}` a `ruling4:inkless` drop).
-### 917. The observer places an entry's one-address e-mail call by the charter's chain, not on every name carrying the entry's label (Perl: the call inherits its `\institute` entry's label, copied onto every carrier)
+
 ### 917. The observer places an entry's one-address e-mail call by the charter's chain, not on every name carrying the entry's label, and llncs's one institute no `\inst{n}` picks on every author (Perl: the call inherits its `\institute` entry's label, copied onto every carrier; the one institute on the first author)
 
 Frontmatter refactor stage 7, the llncs and aa move (task #429; `agent_reports/2026-10-29_s6_aa_llncs_gate.md` §2, G3).
