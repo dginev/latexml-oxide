@@ -27216,6 +27216,11 @@ ruling 2026-10-29; `FRONTMATTER_DIGESTED_REFACTOR.md`; inventory row 2.8). Today
   A mark inside a label's own operand requests and sets nothing (`reading_label`). An unanswered mark keyed by its
   printed glyph is shown as it (`insert::unanswered_mark_text`: `\inst{1,\star}`'s ⋆, 2105.03212, which the
   spelled-name table alone had shown).
+- **Residuals of the printed reading** (RED repros pending; no regression against the reading before stage 4 on any
+  witness): an accent with no combining form (`\overbrace`, `\underbrace`, `\wideparen`, `\overgroup`,
+  `\overRightarrow`: ⏞ ⏟ ⏜ ⏠ ⇒) keys its bare base, so `$^{\overbrace{2}}$` and `$^{2}$` collide and both names take both
+  lines (the spelling keys before stage 4 told them apart); glue with stretch inside a mark (`\hspace{0pt plus 1fil}`,
+  `\hskip 0pt plus 1pt`) still parts its labels though the box is set at natural width (`1,2` where pdflatex prints 12).
 - **Residuals** (token-level readers before digestion, stages 5 and 7): `place.rs`'s author labels and legends,
   `shared_row::marks_pick`, `queue.rs`'s one-label check; the `label=` keyval (a binding's Semiverbatim argument);
   whether an answered symbol mark stays shown in the name (`$^{\dag}$` under a `$^{\dagger}$` line is answered and no
