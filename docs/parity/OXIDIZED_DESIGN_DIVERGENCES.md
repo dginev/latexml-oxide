@@ -26867,8 +26867,10 @@ the output is the old reader's.
     q@y.org}}` before every `\author`, which prints "Email address: p@x.org, q@y.org" after the last address): the
     whole call is the block's (`api:document-note owner:block`), one author's call never parted by order, as today's
     (review rev92a_r4 S1: 92a r4 ran it through the chain below, p@x.org onto Ann Able and q@y.org onto Bob Baker by
-    order, and the writer declined). (REVTeX's `\preprint{…\email{…}}` after the authors also prints nowhere; it is
-    Bob Baker's routed call, as today's and Perl's: left, review rev92a_r3 s2.)
+    order, and the writer declined); with one author only, the general sole-author pass then gives it to that author
+    (`owner:block owner:sole-author`, as the page prints it; review rev92a_r5 N2). (REVTeX's `\preprint{…\email{…}}`
+    after the authors also prints nowhere; it is Bob Baker's routed call, as today's and Perl's: left, review rev92a_r3
+    s2.)
   - **In place**: FIDELITY_CHARTER §4's chain exactly (`place_line_contacts` under `Chain::DocumentNote`) over the
     live authors: the author it spells, the authors' order, the only author, the corresponding author, the block; no
     elimination (a block's line keeps it, `Chain::Line`), so an address spelling no one is not guessed onto the one

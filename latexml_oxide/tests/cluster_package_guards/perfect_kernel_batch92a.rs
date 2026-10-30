@@ -342,16 +342,19 @@ fn a_publication_note_reads_only_its_email_calls() {
     "C Bob Baker [ref:a2] | line:names",
     "  a University Y, City | api:ref-label",
   ];
-  assert_reading(
+  // (each note's text whole, the link's address in it as pdflatex prints it — review rev92a_r5 S1)
+  let (.., notes, _) = assert_reading(
     repro!("amsart_thanks_link_stays_the_notes.tex"),
     Some(written),
     &reading,
   );
-  assert_reading(
+  assert_eq!(notes, ["Correspondence to carl@z.org"]);
+  let (.., notes, _) = assert_reading(
     repro!("amsart_thanks_spelled_link_stays_the_notes.tex"),
     Some(written),
     &reading,
   );
+  assert_eq!(notes, ["Correspondence to Bob Baker, bob.baker@y.org"]);
   assert_reading(
     repro!("amsart_thanks_email_call_is_read.tex"),
     Some(AMSART_CARL_ON_BOB),
@@ -582,7 +585,7 @@ fn a_note_email_of_no_bindings_meaning_stays_the_notes_text() {
     ],
   );
   assert_eq!(notes, ["A. Able, carl@z.org"]);
-  assert_reading(
+  let (.., notes, _) = assert_reading(
     repro!("amsart_thanks_document_emailadd_beside_the_bindings_email.tex"),
     Some(&[&["Ann Able", "address=University X, Town"], &[
       "Bob Baker",
@@ -597,6 +600,8 @@ fn a_note_email_of_no_bindings_meaning_stays_the_notes_text() {
       "  c email carl@z.org | api:document-note api:annotate:last owner:own-call",
     ],
   );
+  // (the binding's address gone to Bob Baker, the paper's own `\emailAdd` kept in the note — rev92a_r5 S1)
+  assert_eq!(notes, ["Correspondence to ; at home bob@home.org"]);
 }
 
 /// llncs class N1 of the llncs and aa gate study (2104.04331, 1712.00617; 7 papers): an anonymous `\author` and

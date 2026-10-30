@@ -379,9 +379,9 @@ fn meaning_owner(n: usize) -> String {
 /// Whose the meaning of the e-mail command `cs` (`\email`, `\emailAdd`) is now: the rehearsal's reading of a call to
 /// it, the meaning when the note is rehearsed (at the flush, `\maketitle`; `rehearsal::install_event_bindings`) —
 /// amsart's, which holds `\thanks` until `\maketitle` (amsart.cls:516), as TeX reads it; aa's `\offprints`
-/// (aa.cls:910-911 `\protected@edef`) and llncs's kernel `\thanks` outside `\author` expand `\email` at the call, so
-/// a paper's redefinition between the call and `\maketitle` reads as no binding's, the note's text, failing safe
-/// (review rev92a_r4 B1, OD #913). The class's own, printing the address in place, when the
+/// (aa.cls:910-911 `\protected@edef`) and llncs's kernel `\thanks` outside `\author` and `\title` expand `\email`
+/// at the call, so a paper's redefinition between the call and `\maketitle` reads as no binding's, the note's text,
+/// failing safe (review rev92a_r4 B1, OD #913). The class's own, printing the address in place, when the
 /// binding owning it ([`meaning_owner`]) declares it ([`policy::declares_email_in_place`]: llncs.cls, also under a
 /// raw class that loads it; sv_support.sty, under svjour3, svjour and svmult), or is one of the document class's
 /// bindings and one of those declares it (aa.cls, whose aa_support.sty defines it — not kluwer's, which loads
