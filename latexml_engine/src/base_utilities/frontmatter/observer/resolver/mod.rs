@@ -37,7 +37,7 @@
 //! `\author` call (OXIDIZED_DESIGN_DIVERGENCES #837's r2 paragraph).
 
 use super::{
-  events::{self, EmailMeaning, Event, EventKind, SepKind},
+  events::{self, EmailMeaning, Event, EventKind, SepKind, events_text},
   policy::{EmailOwner, Policy, policy_for},
   *,
 };

@@ -477,28 +477,6 @@ pub(super) fn is_symbol_label(label: &str) -> bool {
   !label.is_empty() && label.chars().all(is_symbol_char)
 }
 
-/// The text of events, as printed: names and contacts, a comma's `,`, a word's word, a gap's space; marks aside.
-pub(super) fn events_text(events: &[&Event]) -> String {
-  let mut out = String::new();
-  for event in events {
-    let piece = match &event.kind {
-      EventKind::Name | EventKind::Contact => event.text.as_str(),
-      EventKind::Sep(SepKind::Comma) => ",",
-      EventKind::Sep(SepKind::Word(word)) => word.as_str(),
-      _ => continue,
-    };
-    if piece == "," {
-      out.push(',');
-    } else {
-      if !out.is_empty() {
-        out.push(' ');
-      }
-      out.push_str(piece);
-    }
-  }
-  out.trim().to_string()
-}
-
 /// `text` as tokens for the classify helpers (letters and others: `ExplodeText!`).
 pub(super) fn text_tokens(text: &str) -> Tokens { Tokens::new(ExplodeText!(text)) }
 

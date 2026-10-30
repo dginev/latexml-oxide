@@ -1,13 +1,13 @@
-% mechanism: the writer's re-part (OD #928) declined: an `\affil{$^1$…}` inside `\author` is one Contact event whose
-%   text keeps its mark's ink ("1Department of Physics, Univ X"), where the affiliation the writer makes reads without
-%   it, so what was built does not read as the reading: taken back, today's output stays (the fail-safe).
+% mechanism: the writer's re-part (OD #928) with an `\affil{$^1$…}` inside `\author`: one Contact event, its leading
+%   Mark its label and its span its content from the mark on (OD #937); before 94b its text kept the mark's ink
+%   ("1Department of Physics, Univ X"), the re-part did not read as the reading and was taken back (the fail-safe)
 % witness: 2405.08158, 1602.05576 (ar-1col `\affil{$^1$…; email: …}` in `\author`: the affiliations in the last name)
 % oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker2" / "1 Department of Physics, Univ X" / "2 Department of Physics,
 %   Univ Y"
-% engines: rust 94a: unchanged from 93a (Bob Baker's name holds both lines); perl: the same (Bob Baker's name holds both lines)
-% expect:  0 errors, 0 warnings; writer "declined: the creators' names"; RED for the reading (the Contact's leading
-%   mark is neither its label nor out of its text)
-% status:  RED (94a: declined by the fail-safe)
+% engines: rust 94a: Bob Baker's name holds both lines (the re-part declined); perl: the same
+% expect:  0 errors, 0 warnings; writer "written": Ann Able "1 Department of Physics, Univ X", Bob Baker "2 Department of
+%   Physics, Univ Y", each requested by its name's mark
+% status:  RED (94a: declined by the fail-safe) -> GREEN (94b)
 % preload: ar5iv.sty
 \documentclass{article}
 \newcommand{\affil}[1]{\\{\footnotesize #1}}

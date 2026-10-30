@@ -885,7 +885,46 @@ impl Walker {
         } else {
           raw_lines(w, 2).trim().to_string()
         };
+        // (an in-block affiliation without a label of its own that opens with marks is the entry they label, as an API
+        // entry is (`leading_marks`): ar-1col.cls's `\affil{$^1$Max Planck …}` inside `\author{}`, 1602.05576,
+        // 2405.08158, the names showing `1` requesting it — its text the rest of its events, not the ink "1Max Planck"
+        // given to the name beside it)
+        let mut content_span: Option<(u16, u16)> = None;
+        if cs == "\\lx@fm@obs@affil"
+          && contact.label.is_none()
+          && let Some(body) = w.get_arg(2)
+        {
+          let events = lex_events(body);
+          let (start, end) = leading_marks(&events);
+          let labels: Vec<&str> = events[start..end]
+            .iter()
+            .filter(|e| e.kind == EventKind::Mark)
+            .filter_map(|e| e.label.as_deref().filter(|l| !l.is_empty()))
+            .collect();
+          if !labels.is_empty() {
+            contact.label = Some(labels.join(","));
+            let rest: Vec<&Event> = events
+              .iter()
+              .enumerate()
+              .filter(|&(at, e)| !((start..end).contains(&at) && between_leading_marks(e)))
+              .map(|(_, e)| e)
+              .collect();
+            contact.text = events_text(&rest);
+            // (and its span its content's, from its marks on, which the writer makes the entry from, as a line of the
+            // block from its mark (`plan::block_span_tokens`): not the call, whose own typesetting — a document's
+            // `\newcommand{\affil}[1]{\\{\footnotesize #1}}` — is no part of it)
+            content_span = events[start..]
+              .iter()
+              .filter_map(|e| e.span)
+              .reduce(|(a, b), (s, e)| (a.min(s), b.max(e)));
+          }
+        }
         self.event(contact, d, nest);
+        if let Some(span) = content_span
+          && let Some(Atom::Event(event)) = self.atoms.last_mut()
+        {
+          event.span = Some(span);
+        }
       },
       "\\lx@fm@obs@url" => {
         let mut contact = Event::new(EventKind::Contact);
@@ -1177,6 +1216,65 @@ pub(in crate::base_utilities) fn printed_text(events: &[Event]) -> String {
     out.push_str(piece);
   }
   out.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// The text of events, as printed: names and contacts, a comma's `,`, a word's word, a gap's space; marks aside.
+pub(in crate::base_utilities) fn events_text(events: &[&Event]) -> String {
+  let mut out = String::new();
+  for event in events {
+    let piece = match &event.kind {
+      EventKind::Name | EventKind::Contact => event.text.as_str(),
+      EventKind::Sep(SepKind::Comma) => ",",
+      EventKind::Sep(SepKind::Word(word)) => word.as_str(),
+      _ => continue,
+    };
+    if piece == "," {
+      out.push(',');
+    } else {
+      if !out.is_empty() {
+        out.push(' ');
+      }
+      out.push_str(piece);
+    }
+  }
+  out.trim().to_string()
+}
+
+/// The run of marks an entry's events lead with — `\affil{$^1$Univ X}`, `\address{$\dagger,\;\ast$\;Univ A}` (one run,
+/// its separators no text: math-ph0404036) —, as `start..end` of `events`: what comes before its first ink (a space or a
+/// break, a layout, an unprinted piece of punctuation: `\affiliation{ $^a$Fermilab, …}`, 0902.0006; an acmart address
+/// part's brace, `{$^1$Gaoling School …`, 2211.15148), then its marks and what parts them. `start == end` when it leads
+/// with no mark. The labelled-entry reading of a frontmatter API entry (`resolver/api.rs`) and of an in-block contact
+/// (`\lx@fm@obs@affil`) alike.
+pub(in crate::base_utilities) fn leading_marks(events: &[Event]) -> (usize, usize) {
+  let start = events
+    .iter()
+    .position(|e| {
+      !(matches!(
+        e.kind,
+        EventKind::Sep(SepKind::Gap { .. }) | EventKind::Break | EventKind::Layout
+      ) || unprinted_piece(e))
+    })
+    .unwrap_or(events.len());
+  let mut end = start;
+  for (at, e) in events.iter().enumerate().skip(start) {
+    if matches!(e.kind, EventKind::Mark | EventKind::Layout) {
+      end = at + 1;
+    } else if !between_leading_marks(e) {
+      break;
+    }
+  }
+  (start, end)
+}
+
+/// A Name event printing no letter or digit (punctuation alone): no text of an entry before or between its marks.
+pub(in crate::base_utilities) fn unprinted_piece(e: &Event) -> bool {
+  e.kind == EventKind::Name && !e.text.chars().any(char::is_alphanumeric)
+}
+
+/// What parts two marks of an entry's leading run and is no text of it ([`leading_marks`]).
+pub(in crate::base_utilities) fn between_leading_marks(e: &Event) -> bool {
+  unprinted_piece(e) || matches!(e.kind, EventKind::Sep(SepKind::Comma | SepKind::Gap { .. }))
 }
 
 /// The events of a digested author block (a rehearsal's list), in print order.

@@ -15,8 +15,9 @@
 //! `\setoddhead`, `date` matches `\cref@updatelabeldata`) and (b) its macro
 //! BODY is a pure store of its argument (`#1`, or `#2` of an `[optional]{mandatory}` setter) — a
 //! check on the tokens, never a guess.
-//! Everything else the class defined is left alone; the kernel's own locked
-//! `\title`/`\author`/`\date`/`\thanks` are not in the table. A store is handed
+//! Everything else the class defined is left alone, but its contact setters that print their argument as a title-page
+//! line (`reroute_in_place_contact_setters`, after a raw class or package: OXIDIZED_DESIGN_DIVERGENCES #936); the
+//! kernel's own locked `\title`/`\author`/`\date`/`\thanks` are not in the table. A store is handed
 //! to the API as it is set, except one that annotates a creator (an affiliation,
 //! address, e-mail, ORCID) or makes one (an editor, a speaker), which is read at
 //! `\maketitle` where the author list exists. The class's `\@maketitle` is deposited with the handed stores read as
@@ -35,7 +36,7 @@
 use std::collections::VecDeque;
 
 use latexml_core::{
-  binding::store_setters::{STORE_SETTERS, defined_by_a_binding},
+  binding::store_setters::{STORE_SETTERS, defined_by_a_binding, defined_by_a_raw_file},
   definition::origin::{DefinitionOrigin, with_origin},
   document::tag::TagContent,
 };
@@ -1387,6 +1388,380 @@ fn reroute_kernel_field_setters(cls: &str) -> Result<()> {
       "frontmatter",
       cls,
       s!("The raw class's \\{name} keeps its definitions and sets the frontmatter's {name}")
+    );
+  }
+  Ok(())
+}
+
+/// The Frontmatter API's contact setters (OmniBus.cls.ltxml:77-94, the generic class Perl gives a paper whose class has
+/// no binding) and the API call each is when a raw file's own definition of it sets its argument as a title-page line
+/// ([`in_place_contact_setter`]). An address or affiliation printed where it is called stands under the names printed
+/// above it: the authors new since the last such entry (`annotate=run`, `frontmatter_api.rs`), or those its marks
+/// request; an e-mail line goes where the API's evidence puts each of its addresses (the author it spells, …), a
+/// list written out one address each, as a class's address list is (`\lx@split@addresses`, OD #805): 1303.3004's
+/// `\email{rnarayan@…, jmcclintock@…, atchekho@…}` is one address of each of its three authors.
+const IN_PLACE_CONTACT_SETTERS: &[(&str, &str)] = &[
+  ("address", "\\lx@add@address[annotate=run]{#1}"),
+  ("affil", "\\lx@add@affiliation[annotate=run]{#1}"),
+  ("affiliation", "\\lx@add@affiliation[annotate=run]{#1}"),
+  ("institute", "\\lx@add@affiliation[annotate=run]{#1}"),
+  ("email", "\\lx@split@addresses{\\lx@add@email}{#1}"),
+];
+
+/// What ends a line or a paragraph, or starts a list item (`\begin{indented}\item[]`): a setter whose executed code has
+/// one around its argument sets the argument as a line of its own. (Not an environment's `\begin`/`\end` as such: a
+/// font environment, aptmod.cls:137 `\begin{footnotesize}Email address: #1\end{footnotesize}`, sets no line.)
+const LINE_BREAKS: &[&str] = &[
+  "\\par",
+  "\\endgraf",
+  "\\\\",
+  "\\newline",
+  "\\linebreak",
+  "\\break",
+  "\\vskip",
+  "\\vspace",
+  "\\smallskip",
+  "\\medskip",
+  "\\bigskip",
+  "\\noindent",
+  "\\item",
+  "\\centerline",
+  "\\leftline",
+  "\\rightline",
+  "\\cr",
+  "\\crcr",
+];
+
+/// The control sequences `body` writes — the next control sequence after a definer ([`WRITERS`]), past the
+/// `\expandafter`s of an append (`\expandafter\def\expandafter\@aabuffer\expandafter{\@aabuffer …}`) — each with
+/// whether the text it writes holds argument `#<arg>` (the definer's next group, or `\g@addto@macro`'s second
+/// argument).
+fn written_stores(body: &[Token], arg: Option<usize>) -> Vec<(Token, bool)> {
+  let holds_arg = |text: &[Token]| {
+    arg.is_some_and(|arg| {
+      text
+        .iter()
+        .any(|t| t.get_catcode() == Catcode::ARG && t.with_str(|s| s == arg.to_string()))
+    })
+  };
+  let mut out = Vec::new();
+  for (i, t) in body.iter().enumerate() {
+    if !cs_in(t, WRITERS) || *t == T_CS!("\\let") {
+      continue;
+    }
+    let mut k = skip_spaces(body, i + 1);
+    while body.get(k) == Some(&T_CS!("\\expandafter")) {
+      k = skip_spaces(body, k + 1);
+    }
+    // (`\newcommand{\x}`: the braced name)
+    if body
+      .get(k)
+      .is_some_and(|b| b.get_catcode() == Catcode::BEGIN)
+    {
+      k = skip_spaces(body, k + 1);
+    }
+    let Some(target) = body.get(k).filter(|b| b.get_catcode() == Catcode::CS) else {
+      continue;
+    };
+    let mut open = k + 1;
+    while open < body.len() && body[open].get_catcode() != Catcode::BEGIN {
+      open += 1;
+    }
+    let written = group_end(body, open).map_or(&[][..], |past| &body[open..past]);
+    out.push((*target, holds_arg(written)));
+  }
+  out
+}
+
+/// The stores the class's own `\author` — the definition the kernel's locked `\author` refused, kept as
+/// `\lx@dropped@author` (state.rs `install_definition`, sect08.rs's `\newcommand` bail) — writes, itself or through the
+/// macros a raw file defined that it calls (ae100prg.cls:170 `\@ifnextchar[{\@sauthor}{\@fauthor}`).
+fn class_author_stores() -> Vec<Token> {
+  let dropped = T_CS!("\\lx@dropped@author");
+  let mut stores = Vec::new();
+  for name in live_read_order(&[dropped], &[], false) {
+    let cs = with(name, |n| T_CS!(n));
+    let body = match lookup_meaning(&cs) {
+      Some(Stored::Expandable(defn))
+        if cs == dropped || defn.get_origin() == DefinitionOrigin::File =>
+      {
+        match defn.get_expansion() {
+          Some(ExpansionBody::Tokens(body)) => body.clone(),
+          _ => continue,
+        }
+      },
+      _ => continue,
+    };
+    stores.extend(
+      written_stores(body.unlist_ref(), None)
+        .into_iter()
+        .map(|(store, _)| store),
+    );
+  }
+  stores
+}
+
+/// The commands whose braced argument is printed where they stand — LaTeX's text faces and boxes, an e-mail link
+/// (ae100prg.cls:185 `\address{E-mail: \mailto{#1}}`) — with the number of arguments before it they do not print (a
+/// link's target, a parbox's width).
+const PRINTED_ARGUMENTS: &[(&str, usize)] = &[
+  ("\\textbf", 0),
+  ("\\textit", 0),
+  ("\\textsl", 0),
+  ("\\textsc", 0),
+  ("\\textup", 0),
+  ("\\textmd", 0),
+  ("\\textrm", 0),
+  ("\\textsf", 0),
+  ("\\texttt", 0),
+  ("\\textnormal", 0),
+  ("\\emph", 0),
+  ("\\underline", 0),
+  ("\\mbox", 0),
+  ("\\fbox", 0),
+  ("\\centerline", 0),
+  ("\\leftline", 0),
+  ("\\rightline", 0),
+  ("\\mailto", 0),
+  ("\\url", 0),
+  ("\\href", 1),
+  ("\\parbox", 1),
+];
+
+/// The primitives that read a braced text without printing it: the log, a write, a mark, a special.
+const UNPRINTED_ARGUMENTS: &[&str] = &[
+  "\\message",
+  "\\errmessage",
+  "\\write",
+  "\\mark",
+  "\\marks",
+  "\\special",
+  "\\showtokens",
+  "\\detokenize",
+  "\\scantokens",
+];
+
+/// The arguments the command `t` reads where it stands, each whether it is optional (`[…]`, read only when one
+/// follows) and whether the command prints it: a face, a box or a link the argument it prints ([`PRINTED_ARGUMENTS`]); a
+/// macro a raw file defined each argument its own code prints ([`prints_argument`], a few levels down: ae100prg.cls:185
+/// `\email` passing `#1` to its `\address`); any other command's arguments, by its parameters (an undefined command one
+/// braced argument), unprinted — it may store them (spr-sola-addons.sty:317 `\add@xtok\adresses@list{…#2…}`,
+/// 2005.09586), make them a footnote (`\thanks{#1}`) or write them to the log ([`UNPRINTED_ARGUMENTS`]). `None` when it
+/// takes none (a switch, a register, a conditional's `\fi`), and `Some` of nothing when its arguments are delimited,
+/// which the token walk cannot follow.
+fn command_arguments(t: &Token, depth: usize) -> Option<Vec<(bool, bool)>> {
+  if let Some((_, unprinted)) = PRINTED_ARGUMENTS
+    .iter()
+    .find(|(cs, _)| t.with_str(|s| s == *cs))
+  {
+    let mut args = vec![(false, false); *unprinted];
+    args.push((false, true));
+    return Some(args);
+  }
+  if cs_in(t, UNPRINTED_ARGUMENTS) {
+    return Some(vec![(false, false)]);
+  }
+  let meaning = lookup_meaning(t);
+  let params = match &meaning {
+    Some(Stored::Expandable(defn)) => defn.get_parameters(),
+    Some(Stored::Primitive(defn)) => defn.get_parameters(),
+    Some(Stored::Constructor(defn)) => defn.get_parameters(),
+    None => return Some(vec![(false, false)]),
+    _ => return None,
+  }
+  .map(|p| p.get_parameters().to_vec())
+  .unwrap_or_default();
+  if params.is_empty() {
+    return None;
+  }
+  let raw_body = match &meaning {
+    Some(Stored::Expandable(defn)) if defn.get_origin() == DefinitionOrigin::File && depth < 4 => {
+      if params.iter().any(|p| !undelimited(p)) {
+        return Some(Vec::new());
+      }
+      match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => Some(executed_code(body.unlist_ref())),
+        _ => None,
+      }
+    },
+    _ => None,
+  };
+  Some(
+    params
+      .iter()
+      .enumerate()
+      .map(|(k, p)| {
+        let printed = raw_body
+          .as_deref()
+          .is_some_and(|code| prints_argument(code, k + 1, depth + 1));
+        (p.optional, printed)
+      })
+      .collect(),
+  )
+}
+
+/// Whether `code` (a body's executed code, [`executed_code`]) prints its argument `#<arg>` where it is called: the
+/// argument stands at its top level or in a plain group (`{\reset@font\affilfont#1\par}`, ar-1col.cls:341; one after a
+/// switch, `{\eaddfnt{\par #1}}`), or in an argument a command prints ([`command_arguments`]).
+fn prints_argument(code: &[Token], arg: usize, depth: usize) -> bool {
+  let is_arg = |t: &Token| t.get_catcode() == Catcode::ARG && t.with_str(|s| s == arg.to_string());
+  // the index past one argument at `k` (a group or one token), spaces before it skipped
+  let past_argument = |k: usize| -> usize {
+    let k = skip_spaces(code, k);
+    group_end(code, k).unwrap_or((k + 1).min(code.len()))
+  };
+  let mut i = 0;
+  while i < code.len() {
+    let t = code[i];
+    if is_arg(&t) {
+      return true;
+    }
+    if t.get_catcode() == Catcode::BEGIN {
+      let end = group_end(code, i).unwrap_or(code.len());
+      if prints_argument(&code[i + 1..end.saturating_sub(1).max(i + 1)], arg, depth) {
+        return true;
+      }
+      i = end;
+      continue;
+    }
+    if t.get_catcode() == Catcode::CS
+      && let Some(arguments) = command_arguments(&t, depth)
+    {
+      if arguments.is_empty() {
+        // (delimited arguments: what follows is the command's to read)
+        return false;
+      }
+      let mut k = i + 1;
+      for (optional, printed) in arguments {
+        let at = skip_spaces(code, k);
+        let end = if optional {
+          if code.get(at) != Some(&T_OTHER!("[")) {
+            continue;
+          }
+          code[at..]
+            .iter()
+            .position(|b| *b == T_OTHER!("]"))
+            .map_or(code.len(), |p| at + p + 1)
+        } else {
+          past_argument(k)
+        };
+        if printed && prints_argument(&code[at.min(end)..end], arg, depth) {
+          return true;
+        }
+        k = end;
+      }
+      i = k.max(i + 1);
+      continue;
+    }
+    i += 1;
+  }
+  false
+}
+
+/// Whether the raw file's own `\<name>` is a contact setter of the title page, by its code: a macro of one argument
+/// (or of an optional one and one, setting the second) that sets the argument as a line of its own where it is called
+/// — its executed code ([`executed_code`]) prints the argument there ([`prints_argument`]) beside a line break
+/// ([`LINE_BREAKS`]): ae100prg.cls:188
+/// `\begin{indented}\item[]\normalsize #1\end{indented}`, :185 `\vspace*{5pt}\address{E-mail: …#1…}` (1303.3004),
+/// ar-1col.cls:341 `\par…{\reset@font\affilfont#1\par}` (1602.05576, 2405.08158) — or that appends it to a store the
+/// class's own `\author` writes too ([`class_author_stores`]), the author block its title page prints and the kernel's
+/// `\author` carries: 11lomcon.sty:15-18 `\@aabuffer` (hep-ph0312288), jetpl.cls:286-303 `\@authoraddress`
+/// (cond-mat0611585). Its argument number when it is one. Anything else stays the class's: a mark
+/// (agujournal2019.cls `\def\affil#1{$^{#1}$\ignorespaces}`), an inline face of an address used inside a note or a line
+/// (`\newcommand{\email}[1]{\texttt{#1}}`, `\href{mailto:#1}{#1}`), a footnote (ecai.cls `\institute` =
+/// `\thanks{#1}`), a store only its own title page reads (K11's; interspeech.cls's `\gdef\@address{#1\\}`;
+/// spr-sola-addons.sty:317's `\add@xtok\adresses@list{…}`, 2005.09586), a `\message` that prints nothing
+/// (dmtcs-episciences.cls), a switch or a dispatcher without the argument (jmlr2e.sty `\def\email{\hfill\small\sc}`,
+/// imsart.sty `\def\address{\@ifnextchar[…}`).
+fn in_place_contact_setter(name: &str) -> Result<Option<usize>> {
+  let cs = T_CS!(&s!("\\{name}"));
+  let Some(Stored::Expandable(defn)) = lookup_meaning(&cs) else {
+    return Ok(None);
+  };
+  let arg = defn
+    .get_parameters()
+    .and_then(|p| match p.get_parameters().as_slice() {
+      [only] if !only.optional && undelimited(only) => Some(1),
+      [first, second] if first.optional && !second.optional && undelimited(second) => Some(2),
+      _ => None,
+    });
+  let (Some(ExpansionBody::Tokens(body)), Some(arg)) = (defn.get_expansion(), arg) else {
+    return Ok(None);
+  };
+  let body = body.unlist_ref();
+  let executed = executed_code(body);
+  let sets_a_line =
+    prints_argument(&executed, arg, 0) && executed.iter().any(|t| cs_in(t, LINE_BREAKS));
+  if sets_a_line {
+    return Ok(Some(arg));
+  }
+  // (not the kernel's own `\@author`: the rows a class appends to it are its authors' already, each the rows after
+  // its own `\author` — `\lx@author@flush`, 59d: cjs-rcs-article.cls:361 `\newcommand\affil[1]{\g@addto@macro
+  // \@author{\\#1}}`)
+  let appended: Vec<Token> = written_stores(body, Some(arg))
+    .into_iter()
+    .filter_map(|(store, holds)| holds.then_some(store))
+    .filter(|store| *store != T_CS!("\\@author"))
+    .collect();
+  if appended.is_empty() {
+    return Ok(None);
+  }
+  let author_stores = class_author_stores();
+  Ok(
+    appended
+      .iter()
+      .any(|s| author_stores.contains(s))
+      .then_some(arg),
+  )
+}
+
+/// After a raw file is read (a class, `\lx@class@loaded@raw`; a package, `\lx@package@loaded@raw`): each Frontmatter
+/// API contact setter it defined (`IN_PLACE_CONTACT_SETTERS`; still its own definition, not a binding's, nor one K11
+/// rerouted as a store) that sets its argument as a title-page line (`in_place_contact_setter`) is the API's, as the
+/// kernel's locked `\author` stays the kernel's against the file's own: the line becomes a contact of the creators,
+/// keyed by its printed marks, and the file's in-place typesetting of it is not kept — in pdflatex it prints under the
+/// names its `\author` printed, which the kernel's `\author` made creators. Beyond Perl, which reads no shipped file and
+/// gives the paper OmniBus's setters. OXIDIZED_DESIGN_DIVERGENCES #936.
+pub fn reroute_in_place_contact_setters(file: &str) -> Result<()> {
+  // (each decided on the file's own definitions before any is rerouted: ae100prg.cls's `\email` prints through its
+  // `\address`)
+  let mut setters = Vec::new();
+  for (name, api) in IN_PLACE_CONTACT_SETTERS {
+    if defined_by_a_raw_file(name)?
+      && let Some(arg) = in_place_contact_setter(name)?
+    {
+      setters.push((*name, *api, arg));
+    }
+  }
+  let mut rerouted = Vec::new();
+  for (name, api, arg) in setters {
+    let (params, arg_ref, class_args) = if arg == 2 {
+      (
+        convert_latex_args(2, Some(Tokens::new(Vec::new())))?,
+        "#2",
+        "[#1]{#2}",
+      )
+    } else {
+      (convert_latex_args(1, None)?, "#1", "{#1}")
+    };
+    // (the file's own definition kept, for the calls `\lx@class@contact` gives it)
+    let cs = T_CS!(&s!("\\{name}"));
+    Let!(T_CS!(&s!("\\lx@class@contact@{name}")), cs, Scope::Global);
+    let body = mouth::tokenize_internal(TeXString::assembled(s!(
+      "\\lx@class@contact{{{}}}{{\\lx@class@contact@{name}{class_args}}}",
+      api.replace("#1", arg_ref)
+    )));
+    DefMacro!(cs, params, body);
+    rerouted.push(name);
+  }
+  if !rerouted.is_empty() {
+    Info!(
+      "frontmatter",
+      file,
+      s!(
+        "The raw file's contact setters that print a title-page line set the frontmatter's contacts: \\{}",
+        rerouted.join(", \\")
+      )
     );
   }
   Ok(())
@@ -4738,5 +5113,28 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@class@loaded@raw{}", sub[(cls)] {
     let cls = cls.to_string();
     reroute_raw_class_stores(&cls)?;
+    reroute_in_place_contact_setters(&cls)?;
+  });
+  // A rerouted contact setter's call ([`reroute_in_place_contact_setters`]): the frontmatter API's while the author
+  // creators it annotates are being set — one stands (`has_author_creators`), and neither has a `\maketitle` placed
+  // them (`author_creators_placed`) nor has the document body sealed them (`frontmatter_entry_sealed`: the paper's
+  // authors came before its first section); else the file's own definition, which prints its argument where it stands,
+  // as the kernel's locked `\author` runs a class's own one in a later unit (`\lx@sealed@class@call`, sect05.rs). So a
+  // contact line of a later unit is its text, not the paper's authors' contact; a file whose names never become
+  // creators — osameet2.sty:49 `\let\author\MEETauthor`, saj.cls's `\authors` (1710.05603, 2110.09949, 2212.09079) —
+  // keeps its lines beside the names it prints, not on a nameless creator; and a line set after `\maketitle` placed
+  // the names stays where it prints, as the late frontmatter path reads such a list right only under a binding that
+  // declares the class's mark conventions (cpc-hepnp.cls's `\address` after `\maketitle`: its `,n)` e-mail marks and
+  // typed-number lists, OD #912, task 91c; just.cls's binding routes the same list).
+  DefMacro!("\\lx@class@contact{}{}", sub[(api, class)] {
+    let set_now = has_author_creators()
+      && !author_creators_placed()
+      && !frontmatter_entry_sealed("ltx:creator", "author");
+    Ok(if set_now { api } else { class })
+  });
+  // …and after a `.sty` is loaded raw: its contact setters only (`reroute_in_place_contact_setters`; 11lomcon.sty,
+  // hep-ph0312288). Its stores stay a class's concern (K11).
+  DefPrimitive!("\\lx@package@loaded@raw{}", sub[(sty)] {
+    reroute_in_place_contact_setters(&sty.to_string())?;
   });
 });

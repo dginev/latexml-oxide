@@ -183,6 +183,15 @@ pub fn mark_raw(before: &[Option<Stored>]) -> Result<()> {
   Ok(())
 }
 
+/// Whether the setter's current definition is the one a raw file made ([`mark_raw`]): not a binding's, nor the K11
+/// reroute's of a raw file's store.
+pub fn defined_by_a_raw_file(name: &str) -> Result<bool> {
+  let Some(current) = setter_definition(name)? else {
+    return Ok(false);
+  };
+  Ok(lookup_value(&s!("lx_raw_setter_{name}")).is_some_and(|raw| same_definition(&raw, &current)))
+}
+
 /// Whether the setter's current definition is one a binding made.
 pub fn defined_by_a_binding(name: &str) -> Result<bool> {
   let Some(current) = setter_definition(name)? else {

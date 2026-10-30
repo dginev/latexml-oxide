@@ -1513,6 +1513,17 @@ fn input_definitions_impl(
           "\\lx@class@loaded@raw{{{name}}}"
         ))))?;
       }
+      // A package loaded raw: its in-place contact setters reach the frontmatter API as a raw class's do
+      // (`frontmatter_stores.rs` `reroute_in_place_contact_setters`; 11lomcon.sty, hep-ph0312288).
+      if is_found_raw
+        && !is_binding
+        && as_type == "sty"
+        && lookup_definition(&T_CS!("\\lx@package@loaded@raw"))?.is_some()
+      {
+        digest(crate::mouth::tokenize_internal(TeXString::assembled(s!(
+          "\\lx@package@loaded@raw{{{name}}}"
+        ))))?;
+      }
     }
     if file_stack_pushed {
       digest(T_CS!("\\@expl@@@filehook@file@pop@@"))?;

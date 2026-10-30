@@ -318,9 +318,10 @@ fn jpconfs_note_marks_are_its_arabic_numbers() {
 }
 
 /// Review revfms2a2_7 finding 4's residual: a bare `\footnotemark`'s print is read quietly as a note's is — under a
-/// class declaring no conventions whose `\@fnsymbol` reads `\thefootnote` (the jpconf stand-in renamed: read raw, its
-/// `\address` no frontmatter call), it ran away and the block's rehearsal ended in a Fatal error; now the mark shows
-/// nothing and the block is read.
+/// class declaring no conventions whose `\@fnsymbol` reads `\thefootnote` (the jpconf stand-in renamed: read raw), it
+/// ran away and the block's rehearsal ended in a Fatal error; now the mark shows nothing and the block is read. The
+/// raw class's in-place `\address` (jpconf.cls's `\begin{indented}\item[]…`) is the API's since 94b (OD #936): its
+/// unmarked line is both names' (`annotate=run`), as pdflatex prints it under them.
 #[test]
 fn a_runaway_footnotemark_is_unwound() {
   let class = JPCONF_CLASS.replace("\\ProvidesClass{jpconf}", "\\ProvidesClass{jpfnx}");
@@ -332,7 +333,9 @@ fn a_runaway_footnotemark_is_unwound() {
   );
   assert_eq!(dump_tuples(&dump), [
     "C Ann Able [] | line:names",
+    "  a Univ A, City | api:annotate:run",
     "C Bob Baker [] | line:names sep:comma",
+    "  a Univ A, City | api:annotate:run",
   ]);
 }
 

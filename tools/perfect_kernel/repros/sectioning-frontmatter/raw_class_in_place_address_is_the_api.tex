@@ -1,0 +1,35 @@
+% witness: 1303.3004 (ae100prg.cls:170-190: its `\author` and `\address` typeset in place in an `{indented}` list,
+%          `\email` an `\address` line; no `\maketitle`); jpconf.cls's `\address` (58 census papers) is the same
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able1, Bob Baker1 and Cy Cole2", then the lines "1 Univ A, Town, Country",
+%          "2 Univ B, City, Country", "E-mail: ann@a.edu", the abstract, "1 Intro", "Write to the desk:", the line
+%          "E-mail: desk@journal.org"
+% engines: rust 94a = 0 errors, 0 warnings: no contact on any creator, the three lines a titlepage block in the body;
+%          perl (OmniBus: `\address` = `\lx@add@address`) = the lines on the last creator
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker Univ A, Cy Cole Univ B (by their marks), Ann Able her
+%          e-mail; no copy of the lines in the body; the e-mail after the first section the class's line in the body
+%          (the author list sealed); eager and --streaming the same
+% status:  RED (94a) -> GREEN (94b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{inplaceaddr.cls}
+\ProvidesClass{inplaceaddr}
+\LoadClass{article}
+\newenvironment{indented}{\begin{list}{}{\leftmargin=2em\itemsep=0pt}}{\end{list}}
+\renewcommand{\title}[1]{\begin{indented}\item[]\Large #1\end{indented}}
+\renewcommand{\author}[1]{\begin{indented}\item[]\normalsize\bfseries #1\end{indented}}
+\newcommand{\address}[1]{\begin{indented}\item[]\normalsize #1\end{indented}}
+\def\email#1{\vspace*{5pt}\address{E-mail: #1}}
+\end{filecontents*}
+\documentclass{inplaceaddr}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^1$, Bob Baker$^1$ and Cy Cole$^2$}
+\address{$^1$ Univ A, Town, Country}
+\address{$^2$ Univ B, City, Country}
+\email{ann@a.edu}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\section{Intro}
+Write to the desk:
+\email{desk@journal.org}
+\end{document}

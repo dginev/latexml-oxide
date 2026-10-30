@@ -27569,11 +27569,10 @@ authors as written (1909.05311's merged_creators Error went with the merge).
 Witnesses written: 1909.05311 (aaai20: five names after `\textsuperscript{\rm 5}` merged, `\ `-parted lines),
 2609.32870 (names, marks and lines in a minipage, `\quad`), 2609.33104 (a tabular in a makebox, a dagger legend),
 2307.03384 (`and~`, a minipage of `{\it …}` lines), 1502.03246 (a line under the name), 2308.10621 (`\and` columns, a
-line of marked entries over an e-mail line). Declined, today's kept: 2405.08158, 1602.05576 (an `\affil{$^1$…}` inside
-`\author` is one Contact event whose text keeps its mark's ink, the affiliation made from it reads without it — the
-reading's to fix: its leading mark neither its label nor out of its text); 1304.1574 (`Computer Science3` today a
-creator, which `reads_as_names` reads as names). The guards pinning the old reader's parting are updated to the
-written output: `batch77d::separator_macro_case_and_spacing_read_as_printed` ("Ann Able And Bob Baker" two names, the
+line of marked entries over an e-mail line). Declined, today's kept: 1304.1574 (`Computer Science3` today a
+creator, which `reads_as_names` reads as names); 2405.08158 and 1602.05576 (an `\affil{$^1$…}` inside `\author`, its
+mark's ink kept in its text) are read and written since 94b (OD #937). The guards pinning the old reader's parting
+are updated to the written output: `batch77d::separator_macro_case_and_spacing_read_as_printed` ("Ann Able And Bob Baker" two names, the
 any-case "and" of 77p r4), `batch77p::single_spacing_stays_in_the_name` (`\textbf{Eve Ell\;\;Fay Fox}` two: the
 spacing-run residual of OD #837, for a written family), `batch61::author_in_tabular_star_stays_whole` (A and its
 affiliation X), `06_cluster_frontmatter::frontmatter_inst_affiliation_dedup` (llncs: Alice and Bob each their Mila
@@ -27582,8 +27581,8 @@ removed from `r5_shapes_leave_the_xml_unchanged`, the switch now writes it), `fm
 an_affiliation_read_as_legend_notes_is_explained` (rows against the observer-off XML); and by the block-line cut's
 mark (OD #926) `batch93a::marked_lines_joined_today_are_cut_by_the_writer` ("3 Univ Z") and
 `batch77o::aistats_note_marked_address_still_pairs_by_column` (the `$^*$` legend the starred names' note). Repros
-sectioning-frontmatter/`author_names_reparted_*` (7: six written, `..._declined_mark_in_contact` the fail-safe); guards
-`perfect_kernel_batch94a` (5). Scorer (3,000 sample, against
+sectioning-frontmatter/`author_names_reparted_*` (7, written; `..._declined_mark_in_contact` the fail-safe until 94b,
+OD #937); guards `perfect_kernel_batch94a` (5). Scorer (3,000 sample, against
 `run_93a_w4`'s tiers): structurally decided creators 5,693 → 5,717 of 5,838 (97.52 % → 97.93 %), marks path 1,128 →
 1,152 of 1,219 (92.53 % → 94.50 %), `article` 716 → 740 of 775 (92.39 % → 95.48 %), every other class unchanged;
 papers with lost words 7, unchanged; readability 26 → 27 papers, the new one 2603.12826 the scorer's source reading of
@@ -27626,3 +27625,80 @@ The shared row reads aa's sole institute as llncs's (`shared_row::row_email_call
 
 Repros class-bindings/`aa_sole_institute_inline_email_is_its_authors`, `aa_sole_institute_thanks_stays_shared`,
 `aa_sole_institute_email_line_is_an_email`; guard `perfect_kernel_batch92c::aa_sole_institute_reads_as_llncss`.
+### 936. A raw file's in-place contact setter is the Frontmatter API's: `\address`, `\affil`, `\affiliation`, `\institute`, `\email` that print a title-page line become contacts (Perl: the shipped file is not read; OmniBus's setters feed the API)
+
+A paper's own class or style read raw (beyond Perl, which ignores the shipped file and gives the paper
+OmniBus.cls.ltxml:77-94's setters) that defines a contact setter as typesetting kept the line out of the frontmatter:
+the author's `$^1$` mark had no entry to answer it, and the line landed in a titlepage block (1303.3004,
+ae100prg.cls:188 `\begin{indented}\item[]\normalsize #1\end{indented}`), as body text after the names (hep-ph0312288,
+11lomcon.sty:17; cond-mat0611585, jetpl.cls:302) or glued into the last personname (1602.05576, 2405.08158,
+ar-1col.cls:341 `\affil` written inside `\author{}`). `frontmatter_stores.rs` `reroute_in_place_contact_setters` runs
+after a raw class is read (`\lx@class@loaded@raw`, after K11's store reroute) and after a raw package is read
+(`\lx@package@loaded@raw`, a hook `input_definitions` now fires for a `.sty` read raw); each of the five that is still
+the file's own definition (`store_setters::defined_by_a_raw_file`: not a binding's, nor one K11 rerouted as a store) is
+the API's when the file's code says it sets a title-page line (`in_place_contact_setter`), as the kernel's locked
+`\author` stays the kernel's against the file's own: (a) a macro of one argument, or of `[opt]{arg}`, whose executed
+code (`executed_code`: what its definitions store left out) prints the argument where it is called — at its top level,
+in a plain group, or in an argument a face, a box or a link prints, or that a macro the raw file defined prints, a few
+levels down (`prints_argument`, `command_arguments`; ae100prg's `\email` = `\vspace*{5pt}\address{E-mail: \mailto{#1}}`)
+— beside a line break (`LINE_BREAKS`: `\par`, `\\`, `\vskip`, `\item`, …); or (b) one that appends the argument to a
+store the class's own `\author` — the definition the lock refused, `\lx@dropped@author`, and the raw macros it calls —
+writes too (`class_author_stores`: 11lomcon's `\@aabuffer`, jetpl's `\@authoraddress`; amsart copies' `\addresses`,
+nyjm.cls, smfart.cls, birkart.cls, whose `\enddoc@text` prints the list) — not the kernel's own `\@author`, whose
+appended rows are its authors' already (`\lx@author@flush`, 59d: cjs-rcs-article.cls's `\g@addto@macro\@author{\\#1}`).
+The API call (`IN_PLACE_CONTACT_SETTERS`): `\lx@add@address[annotate=run]`, `\lx@add@affiliation[annotate=run]` for
+`\affil`, `\affiliation`, `\institute` — a line printed under the names printed above it, the authors new since the last
+such entry, or those its marks request — and `\lx@split@addresses{\lx@add@email}`, each address of a listed line placed
+by the API's evidence (1303.3004's `\email{rnarayan@…, jmcclintock@…, atchekho@…}` one address of each author). The
+file's own definition is kept (`\lx@class@contact@<name>`) and runs unless the call comes while the author creators are
+being set (`\lx@class@contact`): where no author creator stands to carry the line (`has_author_creators`: a file that
+prints its names itself, osameet2.sty:49 `\let\author\MEETauthor`, saj.cls's `\authors` — 1710.05603, 2110.09949,
+2212.09079 — keeps its lines beside them), once a `\maketitle` placed them (`author_creators_placed`: cpc-hepnp.cls's
+`\address` after `\maketitle`, whose `,n)` e-mail marks and typed-number lists the late path reads wrong without the
+binding 91c plans, OD #912 — which converts as before), and once the document body sealed them
+(`frontmatter_entry_sealed`, as `\lx@sealed@class@call` runs a class's own `\author` in a later unit): a contact line
+after the first section is the text it prints. Stays the class's (the fail-safe, by its code, not its name): a mark
+(agujournal2019.cls `\def\affil#1{$^{#1}$\ignorespaces}`), an inline face of an address (`\texttt{#1}`,
+`\href{mailto:#1}{#1}`: epl2.cls, siamart*.cls, fairmeta.cls), a footnote (ecai.cls `\institute` = `\thanks{#1}`), a
+store only its title page reads (interspeech.cls's `\gdef\@address{#1\\}`; spr-sola-addons.sty:317's
+`\add@xtok\adresses@list{…#2…}`, 2005.09586), a `\message` (dmtcs-episciences.cls), a switch or a dispatcher without the
+argument (jmlr2e.sty `\def\email{\hfill\small\sc}`, imsart.sty `\def\address{\@ifnextchar[…}`), a font environment
+(aptmod.cls `\begin{footnotesize}Email address: #1\end{footnotesize}`). Residual: an in-place setter called in body text
+before the first section is still the API's (`\author{Ann}\maketitle Mail \email{a@x} here.` with `\def\email#1{\it
+#1\par}`: the address leaves the paragraph for Ann's contacts; no census paper has the shape). Census (300 papers whose
+shipped class or style defines one of the five, seeded; base f6e03429df): 299 converted (one has no main file); the
+setters rerouted in 35 papers (27 files), the creators of 22 changed, each read against its source: every affiliation
+now on the names its marks request or, unmarked, on the names printed above it (hep-ph9809388's shared `\affiliation`
+both authors', where today's gave it the last); words lost only the labels amsart copies' `\enddoc@text` prints ("E-mail
+address": smfart, birkmult, birkart; ectj) and ci2018.cls's `\vphantom{gy}`; Errors 2 → 0 in 0910.0487 (nlaauth.cls's
+`\address` closing a `{center}` its refused `\author` opened), every other paper's E/W/F unchanged. cpc-hepnp (60 of
+pop91a2's 611, seeded): byte-identical. Scorer (3,000 sample): structurally decided creators 5,713 → 5,732 of 5,838
+(97.86 % → 98.18 %), marks path 1,152 → 1,164 of 1,219 (94.50 % → 95.49 %), `article` 740 → 748 of 775 (95.48 % → 96.52
+%); readability 27 → 24 papers (with lost words 6 → 4: 0902.1737 and 1912.02015 lose none; out of print order 13 → 12);
+17 papers better (1303.3004, hep-ph0312288, cond-mat0611585, 2405.08158 — one of two: the scorer's source reading gives
+Keim the `\affil`'s `$^1$`, our XML the PDF's —, birkjour 1203.4682 1602.05798 1807.11056 2601.10217, w-art 0910.5837
+1105.1753 quant-ph0606237, …), none worse (base re-measured on f6e03429df, `fm_scorer/run_94b_base`; `run_94a_r9`
+predates 94a's last round: its 2506.20360). Repros sectioning-frontmatter/`raw_class_in_place_address_is_the_api`,
+`raw_style_buffered_address_is_the_api`, `raw_class_affil_inside_author_is_the_api`,
+`raw_class_inline_contact_setters_stay_the_class`; guards `perfect_kernel_batch94b` (4);
+`perfect_kernel_batchfms2a2r8::a_runaway_footnotemark_is_unwound` updated to the new output (its renamed jpconf
+stand-in's unmarked `\address` is both names' affiliation, as pdflatex prints it under them);
+`perfect_kernel_batch91a::cpc_hepnp_is_not_routed_until_91c` unchanged and green (the `\maketitle` rule).
+
+### 937. An in-block affiliation that opens with marks is the entry they label in the observer's reading (Perl: no observer)
+
+An `\affil`, `\address`, `\affiliation` or `\institute` written inside `\author{}` with no label argument is one Contact
+event (`\lx@fm@obs@affil`); its text was its whole ink, the leading mark's included ("1Max Planck …"), and it went to
+the name beside it (`owner:adjacent`): ar-1col's `\affil{$^1$…}` lines both on the last author, the writer declining
+(1602.05576, 2405.08158). The event now reads its digested content's leading marks as its label — the run
+`events::leading_marks` finds, the one an API entry's leading-mark reading takes (`resolver/api.rs`, which now calls the
+same function) — its text as the rest of its events (`events_text`, moved beside the lexer), and its span as its
+content's from the marks on: a labelled entry, which the names showing the mark request (`ruling1:request`), never a
+character stripped from the text, and which the writer's re-part (OD #928) makes from its own tokens
+(`plan::block_span_tokens`, `<sup>1</sup>Department …`), not from the call, whose typesetting is no part of it. The
+witnesses' reading is today's XML (`writer: same`); 94a's fail-safe repro
+`author_names_reparted_declined_mark_in_contact` (the paper's own `\newcommand{\affil}[1]{\\{\footnotesize #1}}`, which
+no reroute touches) is now written, each line on the name showing its mark
+(`perfect_kernel_batch94a::an_affil_in_the_author_led_by_its_mark_is_reparted`, renamed from
+`a_repart_that_does_not_read_as_the_reading_is_taken_back`). Guard
+`perfect_kernel_batch94b::an_affil_inside_the_author_is_labelled_by_its_leading_mark`.

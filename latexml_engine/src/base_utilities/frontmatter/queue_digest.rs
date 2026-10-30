@@ -742,6 +742,19 @@ pub(in crate::base_utilities) fn frontmatter_remove(tag: &str, index: usize) {
 }
 
 /// The author creators queued and not yet digested.
+/// Whether the frontmatter has an author creator, queued or digested: one a contact can annotate (a raw file's in-place
+/// contact setter is the API's only then, `frontmatter_stores.rs` `\lx@class@contact`).
+pub fn has_author_creators() -> bool { queued_author_count() > 0 || digested_author_count() > 0 }
+
+/// Whether the author creators were placed — digested by a `\maketitle` or a frontmatter environment, not the fallback's
+/// provisional flush (`note_digested_frontmatter`) — and no frontmatter entry is being digested now (a contact command
+/// inside the author's own content runs while its creator digests).
+pub fn author_creators_placed() -> bool {
+  frontmatter_seal_key("ltx:creator", None, "author", false)
+    .is_some_and(|key| lookup_mapping_int("frontmatter_digested", &key) >= FINAL_SEAL)
+    && !frontmatter_entry_in_progress()
+}
+
 pub(in crate::base_utilities) fn queued_author_count() -> usize {
   with_value("frontmatter_raw", |v| match v {
     Some(Stored::FrontmatterRaw(queue)) => queue

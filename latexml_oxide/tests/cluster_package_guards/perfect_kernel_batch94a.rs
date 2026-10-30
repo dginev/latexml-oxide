@@ -205,22 +205,24 @@ fn what_a_name_held_is_written_where_the_reading_puts_it() {
   );
 }
 
-/// The fail-safe: what the re-part built is taken back, and today's output stays, when it does not read as the
-/// reading. An `\affil{$^1$…}` inside `\author` is one Contact event whose text keeps its mark's ink ("1Department of
-/// Physics, Univ X"), the affiliation made from it reads without it (2405.08158, 1602.05576: ar-1col's affiliations in
-/// the last name, left by the fail-safe — the reading's, not the writer's, to fix).
+/// An `\affil{$^1$…}` inside `\author` (the paper's own `\newcommand{\affil}[1]{\\{\footnotesize #1}}`; 2405.08158,
+/// 1602.05576: ar-1col's): one Contact event, which kept its mark's ink ("1Department of Physics, Univ X") and went to
+/// the name beside it, so the re-part was taken back by its fail-safe and both lines stayed in the last name. Since 94b
+/// (OD #937) the contact's leading Mark is its label and its span its content from the mark on: the names request
+/// their lines (`ruling1:request`) and the re-part writes each from its mark, `<sup>1</sup>Department …`.
 #[test]
-fn a_repart_that_does_not_read_as_the_reading_is_taken_back() {
+fn an_affil_in_the_author_led_by_its_mark_is_reparted() {
   let tex = repro!("author_names_reparted_declined_mark_in_contact.tex");
-  let xml: &[&[&str]] = &[&["Ann Able 1"], &[
-    "Bob Baker Department of Physics, Univ X Department of Physics, Univ Y 2,1",
-  ]];
+  let xml: &[&[&str]] = &[
+    &["Ann Able", "affiliation=1 Department of Physics, Univ X"],
+    &["Bob Baker", "affiliation=2 Department of Physics, Univ Y"],
+  ];
   let reading = assert_reading(tex, Some(xml), &[
     "C Ann Able [1] | line:names",
-    "  a 1Department of Physics, Univ X | owner:adjacent owner:upfront-grid",
+    "  a Department of Physics, Univ X | ruling1:request",
     "C Bob Baker [2] | line:names sep:word",
-    "  a 2Department of Physics, Univ Y | owner:adjacent",
+    "  a Department of Physics, Univ Y | ruling1:request",
   ]);
-  assert_eq!(reading.3, Value::from("declined: the creators' names"));
+  assert_eq!(reading.3, Value::from("written"));
   assert_eq!(default_mode_creators(tex), owned(xml));
 }

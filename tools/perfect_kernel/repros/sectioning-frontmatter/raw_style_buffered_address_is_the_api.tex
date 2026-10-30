@@ -1,0 +1,37 @@
+% witness: hep-ph0312288 (11lomcon.sty:14-26, loaded by `\documentstyle[11lomcon]{article}`: `\author` and `\address`
+%          append their lines to one buffer, `\@aabuffer`, that its `\maketitle` prints); ws-ijmpd.cls (15 census
+%          papers) has the same pair; cond-mat0611585's jetpl.cls:286-303 the same in `\@authoraddress`
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able1,2, Bob Baker3", the lines "1Univ A, Town", "2Univ B, City",
+%          "3Lab C, Place" (italic), "Body."
+% engines: rust 94a = 0 errors, 0 warnings: no contact on any creator, the three lines a block in the body;
+%          perl (no binding: the style not read) = no address at all
+% expect:  0 errors, 0 warnings; Ann Able Univ A and Univ B, Bob Baker Lab C (by their marks); no copy of the lines in
+%          the body; eager and --streaming the same
+% status:  RED (94a) -> GREEN (94b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{bufferaddr.sty}
+\def\@aabuffer{}
+\def\author #1{\expandafter\def\expandafter\@aabuffer\expandafter
+{\@aabuffer \small\rm      #1\relax \par}}
+\def\address#1{\expandafter\def\expandafter\@aabuffer\expandafter
+{\@aabuffer \small\it #1\relax \par\vspace{0em}}}
+\def\maketitle{
+\begin{center}
+   {\bf \@title \par}
+   \vskip 1em
+   \@aabuffer\relax
+\end{center} \par
+\gdef\@aabuffer{}
+}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{bufferaddr}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,2}$, Bob Baker$^{3}$}
+\address{$^1$Univ A, Town}
+\address{$^2$Univ B, City}
+\address{$^3$Lab C, Place}
+\maketitle
+Body.
+\end{document}

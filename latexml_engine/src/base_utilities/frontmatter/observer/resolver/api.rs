@@ -173,34 +173,9 @@ impl Resolver {
     };
     let split = self.splitting;
     let withsup = attr_value(attrs, "_withsup") == Some("true");
-    // its leading marks (`\affil{$^1$Univ X}`), its `\label`s, its text
-    // (a space or a break before the mark does not part it from the content: `\affiliation{ $^a$Fermilab, $^b$UC
-    // Davis}`, 0902.0006)
-    // nor punctuation, an acmart address part's brace (`{$^1$Gaoling School …`, 2211.15148)
-    let unprinted =
-      |e: &Event| e.kind == EventKind::Name && !e.text.chars().any(char::is_alphanumeric);
-    let start = events
-      .iter()
-      .position(|e| {
-        !(matches!(
-          e.kind,
-          EventKind::Sep(SepKind::Gap { .. }) | EventKind::Break | EventKind::Layout
-        ) || unprinted(e))
-      })
-      .unwrap_or(events.len());
-    // (and a list of marks is one run, its separators between two marks no text: `\address{$\dagger,\;\ast$\;Univ
-    // A}` requests both, math-ph0404036)
-    let between_marks = |e: &Event| {
-      unprinted(e) || matches!(e.kind, EventKind::Sep(SepKind::Comma | SepKind::Gap { .. }))
-    };
-    let mut lead_end = start;
-    for (at, e) in events.iter().enumerate().skip(start) {
-      if matches!(e.kind, EventKind::Mark | EventKind::Layout) {
-        lead_end = at + 1;
-      } else if !between_marks(e) {
-        break;
-      }
-    }
+    // its leading marks (`\affil{$^1$Univ X}`), its `\label`s, its text (`events::leading_marks`)
+    let (start, lead_end) = events::leading_marks(events);
+    let between_marks = events::between_leading_marks;
     let lead_marks: Vec<&Event> = events[start..lead_end]
       .iter()
       .filter(|e| e.kind == EventKind::Mark)
