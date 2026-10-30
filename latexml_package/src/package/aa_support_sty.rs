@@ -105,8 +105,11 @@ LoadDefinitions!({
   // OXIDIZED_DESIGN_DIVERGENCES #915): aa.cls :337-340 (0903.3512's copy) `{\it Send offprint requests to\/}: #1`,
   // the modern one :459 `\aa@offprintsname`, :898-914 the same — not the role's "Preprint: ".
   DefMacro!("\\offprints{}", "\\lx@add@pubnote[role=preprint,name={Send offprint requests to:~}]{#1}");
-  // aa.cls:824 `e-mail: {\aa@emailfont #1}`, `\aa@emailfont` = `\ttfamily` (:600); 2101.02014, 2101.04399
-  DefMacro!("\\email Semiverbatim", "\\lx@add@contact[role=email]{\\lx@address@urlfont{#1}}");
+  // aa.cls:824 `e-mail: {\aa@emailfont #1}`, `\aa@emailfont` = `\ttfamily` (:600); 2101.02014, 2101.04399. Perl's
+  // `\lx@add@contact[role=email]{#1}` (aa_support.sty.ltxml:109) is the kernel's `\lx@add@email` (Base_Utility.pool.ltxml
+  // :655, the same contact): said so, it is a class e-mail command the shared row and the author block's lines read
+  // (`is_email_command`), as llncs's (review rev92c r2 B-2: 1312.1871, 2310.16880).
+  DefMacro!("\\email Semiverbatim", "\\lx@add@email{\\lx@address@urlfont{#1}}");
   // aa.cls 2026 (:812): `\corrauth{<email>}` is `\thanks{Corresponding author: <email>}` on the current author.
   // 58 2609 papers (2609.06653).
   DefMacro!("\\corrauth{}", "\\lx@add@contact[role=corresponding,name={Corresponding author: }]{#1}");

@@ -1,0 +1,20 @@
+% witness: 2407.18899 (`\email{…, \{xxh22@mails, huichen@mail\}.tsinghua.edu.cn, linzijia07@…}` under institute 2);
+%          review rev92c r2 B-3
+% oracle:  pdflatex: "Ann Able1, Bob Baker1,2, and Cid Cole2" / 1 Univ A / 2 Univ B /
+%          "ann.able@a.org, {bob@mails, cid@mail}.b.edu"
+% engines: perl 0.8.8 = 0 errors, the contact whole on the carriers of institute 2; rust 93a = written out, the two
+%          group addresses lost (read as no addresses); 92c r2 (int 94a) = the whole contact on Ann Able (the write-out
+%          declined, `plan::addresses_alone` read `.b.edu` as a word beside the group)
+% expect:  0 errors, 0 warnings; the group's domain after its brace its addresses' (`labels::addresses_in`), each
+%          address written out to the author it spells, under the institute it prints in
+% status:  RED (92c r2) -> GREEN (92c r3) — perfect_kernel_batch92c::an_email_group_with_its_domain_after_the_brace
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1,2} \and Cid Cole\inst{2}}
+\institute{Univ A \and Univ B \\
+\email{ann.able@a.org, \{bob@mails, cid@mail\}.b.edu}}
+\maketitle
+Text.
+\end{document}

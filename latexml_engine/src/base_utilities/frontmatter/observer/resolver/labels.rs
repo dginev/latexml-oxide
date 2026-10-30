@@ -527,6 +527,12 @@ pub fn addresses_in(text: &str) -> Vec<String> {
         }
       }
       rest = &after[1 + domain.len()..];
+    } else if let Some((group, taken)) = domain_after_group(&rest[open + 1..close], after) {
+      // (the addresses of the group ending in the domain printed after its brace: `\{xxh22@mails,
+      // huichen@mail\}.tsinghua.edu.cn`, 2407.18899 — each read whole; they were lost, review rev92c r2 B-3)
+      out.extend(plain_addresses(&rest[..open]));
+      out.extend(group);
+      rest = &after[taken..];
     } else if let Some(group) = domain_inside_group(&rest[open + 1..close]) {
       // (the shared domain printed inside the group, after its last local part: `\{blaz.skrlj,senja.pollak@ijs.si\}`,
       // 1907.06944 — each local part at it, as the reader reads the line)
@@ -540,6 +546,37 @@ pub fn addresses_in(text: &str) -> Vec<String> {
   }
   out.extend(plain_addresses(rest));
   out
+}
+
+/// A braced group of addresses each missing the domain the text prints after the group's brace (`inner` =
+/// `xxh22@mails, huichen@mail`, `after` = `.tsinghua.edu.cn, …`): each address with that domain, and the length of
+/// `after` the domain takes; `None` for any other group (a piece with no `@` or two, or no domain after the brace).
+fn domain_after_group(inner: &str, after: &str) -> Option<(Vec<String>, usize)> {
+  let rest = after.strip_prefix('.')?;
+  let domain: String = rest
+    .chars()
+    .take_while(|c| !c.is_whitespace() && !",;()<>{}".contains(*c))
+    .collect();
+  let domain = domain.trim_end_matches('.');
+  if domain.is_empty() {
+    return None;
+  }
+  let pieces: Vec<&str> = inner.split(',').map(str::trim).collect();
+  let whole = |p: &str| {
+    p.split_once('@').is_some_and(|(local, sub)| {
+      !local.is_empty()
+        && !sub.is_empty()
+        && !p.contains(|c: char| c.is_whitespace())
+        && !sub.contains('@')
+    })
+  };
+  if !pieces.iter().all(|p| whole(p)) {
+    return None;
+  }
+  Some((
+    pieces.iter().map(|p| format!("{p}.{domain}")).collect(),
+    1 + domain.len(),
+  ))
 }
 
 /// A braced group of local parts whose last holds the one `@` and the shared domain (`blaz.skrlj,senja.pollak@ijs.si`),

@@ -28,7 +28,7 @@ use super::{
   dom::{Creator, Front, Kind, norm, read_creator, words_without_marks},
   plan::{
     Key, Made, Owner, Place, api_call, block_items, block_span_tokens, creator_items, difference,
-    pair_names, reading_order,
+    pair_names, place_of, reading_order,
   },
   *,
 };
@@ -187,11 +187,12 @@ fn items_once(c: &RCreator) -> Vec<(Key, &Assoc)> {
   out
 }
 
-/// An assoc's place in print order: its block or call, and its span's start.
-fn print_place(assoc: &Assoc) -> (usize, u16) {
-  match assoc.source {
-    Some((index, span)) => (index, span.map_or(0, |s| s.0)),
-    None => (usize::MAX, u16::MAX),
+/// An assoc's place in print order: a note's after the block's (`plan::place_of`), then its block or call, and its
+/// span's start.
+fn print_place(kind: &Kind, assoc: &Assoc) -> (bool, usize, u16) {
+  match place_of(assoc, kind) {
+    Some((note, index, (_, start))) => (note, index, start),
+    None => (true, usize::MAX, u16::MAX),
   }
 }
 
@@ -311,7 +312,7 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
       blocks.push(c.source);
     }
     let mut assocs = items_once(c);
-    assocs.sort_by_key(|(_, a)| print_place(a));
+    assocs.sort_by_key(|(key, a)| print_place(&key.0, a));
     let mut items = Vec::new();
     for (key, assoc) in assocs {
       let Some(item) = item_source(&key, assoc, &todays) else {
@@ -352,7 +353,7 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
     return declined("no named creator");
   }
   let mut assocs = block_items(resolved);
-  assocs.sort_by_key(|(_, a)| print_place(a));
+  assocs.sort_by_key(|(key, a)| print_place(&key.0, a));
   let mut block = Vec::new();
   for (key, assoc) in assocs {
     let Some(item) = item_source(&key, assoc, &todays) else {

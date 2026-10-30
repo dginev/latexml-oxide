@@ -255,54 +255,70 @@ fn an_address_lists_lines_place_their_notes() {
 
 /// The llncs shapes, written since 92c (OD #923), whole: every creator's XML items in order (review rev92c S3 — they
 /// left the byte-identity check, and [`tuples`] reads only the shadow): the entry's group written out, each address to
-/// the author it spells, the unspelled `info@` the block's; under unmarked names the sole institute every author's.
+/// the author it spells, the unspelled `info@` the block's; under unmarked names the sole institute every author's. In
+/// process and with the binary, eager and `--streaming` (`perfect_kernel_batch92a::assert_reading`; review rev92c r2
+/// S-4: it ran in process only).
 #[test]
 fn r6_llncs_shapes_are_written_whole() {
-  for (tex, want) in [
-    (GROUP, vec![
-      vec![
+  use super::perfect_kernel_batch92a::assert_reading;
+  assert_reading(
+    GROUP,
+    Some(&[
+      &[
         "Ann Able",
         "affiliation=Univ A, City",
         "email=ann.able@example.org",
       ],
-      vec![
+      &[
         "Bob Baker",
         "affiliation=Univ A, City",
         "email=bob.baker@example.org",
       ],
-      vec![
+      &[
         "Cat Cole",
         "affiliation=Univ B, Town",
         "email=cole@example.org",
       ],
-      vec!["email=info@example.org"],
+      &["email=info@example.org"],
     ]),
-    (GROUP_UNREQUESTED, vec![
-      vec![
+    &[
+      "C Ann Able [1] | line:names",
+      "  a Univ A, City | api:labelseq",
+      "  c email ann.able@example.org | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
+      "C Bob Baker [1] | line:names",
+      "  a Univ A, City | api:labelseq",
+      "  c email bob.baker@example.org | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
+      "C Cat Cole [2] | line:names",
+      "  a Univ B, Town | api:labelseq",
+      "  c email cole@example.org | api:labelseq api:inner-contact owner:inner-email owner:spelled",
+      "B email info@example.org | api:labelseq api:inner-contact ruling3:written-out owner:block",
+    ],
+  );
+  assert_reading(
+    GROUP_UNREQUESTED,
+    Some(&[
+      &[
         "Ann Able",
         "affiliation=Univ A, City",
         "email=ann.able@example.org",
       ],
-      vec![
+      &[
         "Bob Baker",
         "affiliation=Univ A, City",
         "email=bob.baker@example.org",
       ],
     ]),
-  ] {
-    let (log, xml, ()) = convert_with_setup_then(
-      tex,
-      Some("ar5iv.sty"),
-      || set_fm_shadow_override(Some(true)),
-      |_| (),
-    );
-    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-    assert_eq!(
-      super::perfect_kernel_batch84b::creators(&xml),
-      want,
-      "{tex}"
-    );
-  }
+    &[
+      "C Ann Able [] | api:creator",
+      "  a Univ A, City | api:labelseq api:share:authors",
+      "  c email ann.able@example.org | api:labelseq api:inner-contact ruling3:written-out api:share:authors \
+       owner:spelled",
+      "C Bob Baker [] | api:creator",
+      "  a Univ A, City | api:labelseq api:share:authors",
+      "  c email bob.baker@example.org | api:labelseq api:inner-contact ruling3:written-out api:share:authors \
+       owner:spelled",
+    ],
+  );
 }
 
 /// The r6 shapes of a family the observer does not write leave the XML byte-identical with the switch on and off

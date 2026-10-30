@@ -83,16 +83,53 @@ pub(super) struct Plan {
 
 pub(super) type Key = (Kind, String);
 
-/// Where one of the reading's items prints: its block or API call's ledger index, then its span's start, one with no
-/// span after its block's spanned ones — the order the resolver keeps a creator's contacts and notes in
+/// Where one of the reading's items prints: whether a note prints it, then its block or API call's ledger index, then
+/// its span's start (`(0, start)`; `(1, 0)` for none) — the order the resolver keeps a creator's contacts and notes in
 /// (`resolver::in_source_order`), the print order of the entries an owner's marks request (llncs's and aa's institute
-/// list: `\inst{2,1}` prints under institutes 1 and 2, as today's places them).
-pub(super) type Place = (usize, (u8, u16));
+/// list: `\inst{2,1}` prints under institutes 1 and 2, as today's places them). A note's item prints after every item
+/// of the author block, whatever its call's place ([`prints_in_note`]); a note itself is where today's writes it, at
+/// its mark, which its call's place keeps. Within one block or call, a spanned item and an unspanned one are not
+/// ordered (`apply::prints_after`): a span is a position in it, its absence none.
+pub(super) type Place = (bool, usize, (u8, u16));
 
-fn place_of(assoc: &Assoc) -> Option<Place> {
-  assoc
-    .source
-    .map(|(index, span)| (index, span.map_or((1, 0), |(start, _)| (0, start))))
+/// The [`Place`] of the reading's item `assoc` of kind `kind`.
+pub(super) fn place_of(assoc: &Assoc, kind: &Kind) -> Option<Place> {
+  assoc.source.map(|(index, span)| {
+    (
+      *kind != Kind::Note && prints_in_note(index, span),
+      index,
+      span.map_or((1, 0), |(start, _)| (0, start)),
+    )
+  })
+}
+
+/// Whether the print at ledger index `index` (and `span` in it) is a note's, which the page prints below the author
+/// block, not where its call stands: a publication note's call (aa's `\offprints{A. Able, \email{…}}`, "Send offprint
+/// requests to:" in the first page's footer, after the institutes it is called before — 0902.0930, 0903.3512,
+/// 1205.5105, 1411.3255, astro-ph0203288, astro-ph0509342, astro-ph0512559, astro-ph0608284, astro-ph0702605: ordered
+/// by the call, the e-mail had gone above the affiliation, review rev92c r2 B-1), a footnote's text, an `ltx:note`
+/// call, and a contact a `\thanks` or `\footnote` of a block or call holds (`\thanks{Corresponding: \email{…}}`).
+fn prints_in_note(index: usize, span: Option<(u16, u16)>) -> bool {
+  let in_a_note = |events: &[Event]| {
+    span.is_some_and(|(start, end)| {
+      events.iter().any(|e| {
+        e.kind == EventKind::Note
+          && (e.span.is_some_and(|(s, t)| s <= start && end <= t)
+            || e.inner.iter().any(|inner| inner.span == Some((start, end))))
+      })
+    })
+  };
+  with_ledger(|ledger| match ledger.entries.get(index) {
+    Some(Entry::Api(call)) => {
+      matches!(call.tag.as_str(), "ltx:pubnote" | "ltx:note") || in_a_note(&call.events)
+    },
+    Some(Entry::Author(block)) => match &block.outcome {
+      Outcome::Events { events, .. } => in_a_note(events),
+      _ => false,
+    },
+    Some(Entry::NoteText(_)) => true,
+    _ => false,
+  })
 }
 
 /// The resolved creators paired with today's, by name in order: `None` when they differ.
@@ -590,11 +627,17 @@ fn cut_block_lines(
 }
 
 /// Whether an e-mail contact's `text` prints its addresses alone: with its braced groups (`{ann,bob}@a.org`,
-/// `{ann,bob@a.org}`) taken out, every word between the separators (`,`, `;`, spaces) an address — no label, no remark
-/// beside them (rev92c B2).
+/// `{ann,bob@a.org}`, `{ann@mails, bob@mail}.a.edu` — the domain after the brace the group's, 2407.18899: review rev92c
+/// r2 B-3) taken out, every word between the separators (`,`, `;`, spaces) an address — no label, no remark beside
+/// them (rev92c B2).
 fn addresses_alone(text: &str) -> bool {
   let mut flat = String::new();
   let mut rest = text;
+  let domain_end = |domain: &str| {
+    domain
+      .find(|c: char| c.is_whitespace() || ",;".contains(c))
+      .unwrap_or(domain.len())
+  };
   while let Some(open) = rest.find('{') {
     let Some(close) = rest[open..].find('}').map(|c| open + c) else {
       return false;
@@ -603,12 +646,13 @@ fn addresses_alone(text: &str) -> bool {
     flat.push(' ');
     let after = &rest[close + 1..];
     if let Some(domain) = after.strip_prefix('@') {
-      let end = domain
-        .find(|c: char| c.is_whitespace() || ",;".contains(c))
-        .unwrap_or(domain.len());
-      rest = &domain[end..];
+      rest = &domain[domain_end(domain)..];
     } else if rest[open + 1..close].contains('@') {
-      rest = after;
+      // (a domain the group's addresses end in, printed after the brace: `}.tsinghua.edu.cn`)
+      rest = match after.strip_prefix('.') {
+        Some(domain) if !domain.is_empty() => &domain[domain_end(domain)..],
+        _ => after,
+      };
     } else {
       return false;
     }
@@ -921,7 +965,7 @@ pub(super) fn reading_order(resolved: &Resolved) -> BTreeMap<(Owner, Key), Place
     .flat_map(|(key, wants)| {
       wants
         .iter()
-        .filter_map(|(owner, a)| place_of(a).map(|place| ((*owner, key.clone()), place)))
+        .filter_map(|(owner, a)| place_of(a, &key.0).map(|place| ((*owner, key.clone()), place)))
     })
     .collect()
 }

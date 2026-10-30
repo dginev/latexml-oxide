@@ -257,15 +257,16 @@ pub(super) fn place(
   true
 }
 
-/// Whether the reading prints an item placed at `a` after one at `b`: by their blocks or calls, then within one by
+/// Whether the reading prints an item placed at `a` after one at `b`: a note's item after the author block's (aa's
+/// `\offprints` e-mail below the institutes, review rev92c r2 B-1), then by their blocks or calls, then within one by
 /// their spans — or, neither spanned, an entry's own text before what it holds (`Univ X \\ \email{…}`). One spanned
 /// and one not in the same block are not ordered: a span is a position in the block, its absence none (an
 /// `\institute`'s legend line cut at its span and the address line before it, which the row parted out with no span:
 /// the legend had gone before the address it prints after, `perfect_kernel_batch61::marked_affiliation_review_shapes`).
 fn prints_after(a: &(Place, dom::Kind), b: &(Place, dom::Kind)) -> bool {
-  let ((ai, (af, astart)), akind) = a;
-  let ((bi, (bf, bstart)), bkind) = b;
-  match (ai.cmp(bi), af, bf) {
+  let ((anote, ai, (af, astart)), akind) = a;
+  let ((bnote, bi, (bf, bstart)), bkind) = b;
+  match ((anote, ai).cmp(&(bnote, bi)), af, bf) {
     (std::cmp::Ordering::Equal, 0, 0) => (astart, akind) > (bstart, bkind),
     (std::cmp::Ordering::Equal, 1, 1) => akind > bkind,
     (std::cmp::Ordering::Equal, ..) => false,

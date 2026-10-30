@@ -50,6 +50,26 @@ fn past_spacing(tokens: &[Token], mut from: usize, to: usize) -> usize {
   }
 }
 
+/// The argument of the note command at `tokens[at]` ([`NOTE_COMMANDS`]), within `..to`: where its group opens (past
+/// the spaces and an optional `[…]`), and where it ends; `None` when `tokens[at]` is no note command.
+fn note_argument(tokens: &[Token], at: usize, to: usize) -> Option<(usize, usize)> {
+  let t = tokens.get(at)?;
+  if t.get_catcode() != Catcode::CS || !t.with_str(|name| NOTE_COMMANDS.contains(&name)) {
+    return None;
+  }
+  let mut next = at + 1;
+  while tokens.get(next) == Some(&T_SPACE!()) {
+    next += 1;
+  }
+  if tokens.get(next) == Some(&T_OTHER!("[")) {
+    next = tokens[next..to]
+      .iter()
+      .position(|t| *t == T_OTHER!("]"))
+      .map_or(to, |end| next + end + 1);
+  }
+  Some((next, skip_group(tokens, next).min(to)))
+}
+
 /// One e-mail call of a row contact ([`row_email_calls`]): its span, the separators before it with it; where its
 /// command stands; the command; its argument; whether it is written inside a note of the contact (`\thanks{Mail me at
 /// \email{…}}`).
@@ -76,18 +96,7 @@ fn email_calls_in(
   let mut at = from;
   while at < to {
     let t = tokens[at];
-    if t.get_catcode() == Catcode::CS && t.with_str(|name| NOTE_COMMANDS.contains(&name)) {
-      let mut next = at + 1;
-      while tokens.get(next) == Some(&T_SPACE!()) {
-        next += 1;
-      }
-      if tokens.get(next) == Some(&T_OTHER!("[")) {
-        next = tokens[next..to]
-          .iter()
-          .position(|t| *t == T_OTHER!("]"))
-          .map_or(to, |end| next + end + 1);
-      }
-      let end = skip_group(tokens, next).min(to);
+    if let Some((next, end)) = note_argument(tokens, at, to) {
       if notes && next < end && tokens[next].get_catcode() == Catcode::BEGIN {
         email_calls_in(tokens, next + 1, end - 1, notes, true, calls)?;
       }
@@ -333,6 +342,16 @@ pub(super) fn row_email_calls(
         }];
         break;
       } else {
+        // (a shared contact's later line the reader does not read, opened by an e-mail label of its own, is an
+        // e-mail of the block, its label the contact's name: `\\ e-mail: gil@astrax.fis.ucm.es (AGdP)`, astro-ph0007270
+        // — it had been a nameless affiliation, review rev92c r2 S-3)
+        let mut unit = unit;
+        if !unit.email
+          && let (Some(_), rest) = split_email_label(&unit.whole)
+        {
+          unit.email = true;
+          unit.whole = rest;
+        }
         units.push(unit);
         continue;
       }
@@ -711,7 +730,10 @@ fn parameterless_body(t: &Token) -> Result<Option<Tokens>> {
 
 /// Does `tokens[from..to]`, the spans `calls` (the class's e-mail calls) aside, hold an `@` — a character, at any
 /// depth, or one a command of the paper's own on it prints, one level into a command without arguments
-/// ([`parameterless_body`], an e-mail call in it aside) or a `\urldef`'d one ([`urldef_text`])?
+/// ([`parameterless_body`], an e-mail call in it aside) or a `\urldef`'d one ([`urldef_text`])? A note's text aside
+/// too ([`note_argument`]): the page prints it in its footnote, not on the line (`\institute{Univ A, City
+/// A\thanks{email: ann@a.org}}`, aa 0705.1240 — the whole institute had been the block's, its sole institute every
+/// author's; review rev92c r2 B-2).
 fn holds_raw_address(
   tokens: &[Token],
   from: usize,
@@ -722,6 +744,10 @@ fn holds_raw_address(
   while at < to {
     if let Some((_, end)) = calls.iter().find(|(start, _)| *start == at) {
       at = *end;
+      continue;
+    }
+    if let Some((_, end)) = note_argument(tokens, at, to) {
+      at = end.max(at + 1);
       continue;
     }
     let t = &tokens[at];

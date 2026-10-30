@@ -324,3 +324,162 @@ fn written_items_keep_the_print_order() {
     ],
   );
 }
+
+/// A note's item prints below the author block, whatever its call's place (review rev92c r2 B-1; `plan::Place`,
+/// `prints_in_note`): aa's `\offprints{A. Able, \email{…}}` is called before `\institute` but prints in the first page's
+/// footer, so the writer, which gives the address to A. Able (the note's name) and orders her items, keeps it after her
+/// institute — ordered by the calls, it had gone above it (0903.3512's O. Kochukhov; 0902.0930, 1205.5105, 1411.3255,
+/// astro-ph0203288, astro-ph0509342, astro-ph0512559, astro-ph0608284, astro-ph0702605). Distinct from
+/// `written_items_keep_the_print_order`: the order across the author block and a note, not within the block's calls.
+/// The note's text keeps its name. The same for a contact inside a block's `\thanks` (2212.07438).
+#[test]
+fn a_notes_item_prints_after_the_author_block() {
+  let reading = assert_reading(
+    repro!("aa_offprints_email_prints_after_the_institutes.tex"),
+    Some(&[
+      &["Ann Able", "affiliation=Univ A, City A", "email=xyz@a.org"],
+      &["Bob Baker", "affiliation=Univ B, City B"],
+      &[
+        "Cid Cole",
+        "affiliation=Univ B, City B",
+        "affiliation=Univ C, City C",
+      ],
+    ]),
+    &[
+      "C Ann Able [1] | line:names",
+      "  a Univ A, City A | api:labelseq",
+      "  c email xyz@a.org | api:document-note owner:corresponding api:note-name ruling3:one-per-print",
+      "C Bob Baker [2] | line:names",
+      "  a Univ B, City B | api:labelseq",
+      "C Cid Cole [2,3] | line:names",
+      "  a Univ B, City B | api:labelseq",
+      "  a Univ C, City C | api:labelseq",
+    ],
+  );
+  assert_eq!(reading.2, ["A. Able,"]);
+  assert_eq!(reading.3, "written");
+  // (a contact inside a `\thanks` of the author block, which prints in the footer too: 2212.07438's S. Contarini — the
+  // writer cuts the hand-marked institute lines and orders her items; by span the note's e-mail went first)
+  let reading = assert_reading(
+    repro!("aa_thanks_email_prints_after_the_institutes.tex"),
+    Some(&[
+      &[
+        "Ann Able 1",
+        "affiliation=1 Univ A, City A",
+        "email=ann@a.org",
+      ],
+      &["Bob Baker 2", "affiliation=2 Univ B, City B"],
+    ]),
+    &[
+      "C Ann Able [1] | line:names",
+      "  a Univ A, City A | api:leading-mark api:split-by-marks",
+      "  c email ann@a.org | note:adjacent ruling4:inner-contact",
+      "C Bob Baker [2] | line:names",
+      "  a Univ B, City B | api:leading-mark api:split-by-marks",
+      "D note ann@a.org | note:adjacent ruling4:emptied",
+    ],
+  );
+  assert_eq!(reading.3, "written");
+}
+
+/// aa's sole institute read as llncs's (review rev92c r2 B-2; OD #932), on the three paths of the shared row
+/// (`shared_row::row_email_calls`): an `\email` inside it is a class e-mail call — aa_support's `\email`, Perl's
+/// `\lx@add@contact[role=email]`, said as the kernel's `\lx@add@email` (`is_email_command`) — so the address goes to
+/// the author it spells and the institute to every author, the comma before the call a separator (1312.1871,
+/// 2310.16880: both had been the block's; the llncs twin was right); a `\thanks` inside it prints in the footer, no line
+/// of the institute, so its address holds nothing back (`holds_raw_address`; 0705.1240: the institute had been the
+/// block's), the note a publication note; a later line the address reader does not part (a remark beside the address)
+/// opened by an `e-mail:` label is an e-mail of the block, not a nameless affiliation (astro-ph0007270's `e-mail: gil@…
+/// (AGdP)`, review rev92c r2 S-3) — the reading keeps the line in the institute's text, so the writer declines and
+/// today's stands.
+#[test]
+fn aa_sole_institute_reads_as_llncss() {
+  let reading = assert_reading(
+    repro!("aa_sole_institute_inline_email_is_its_authors.tex"),
+    Some(&[
+      &["Ann Able", "affiliation=Univ A, City A", "email=ann@a.org"],
+      &["Bob Baker", "affiliation=Univ A, City A"],
+    ]),
+    &[
+      "C Ann Able [] | line:names",
+      "  a Univ A, City A, | api:labelseq api:share:authors",
+      "  c email ann@a.org | api:labelseq api:inner-contact api:share:authors owner:spelled",
+      "C Bob Baker [] | line:names",
+      "  a Univ A, City A, | api:labelseq api:share:authors",
+    ],
+  );
+  assert_eq!(reading.3, "same");
+  let reading = assert_reading(
+    repro!("aa_sole_institute_thanks_stays_shared.tex"),
+    Some(&[&["Ann Able", "affiliation=Univ A, City A"], &[
+      "Bob Baker",
+      "affiliation=Univ A, City A",
+    ]]),
+    &[
+      "C Ann Able [] | line:names",
+      "  a Univ A, City A | api:labelseq api:share:authors",
+      "C Bob Baker [] | line:names",
+      "  a Univ A, City A | api:labelseq api:share:authors",
+    ],
+  );
+  assert_eq!(reading.2, ["email: ann@a.org"]);
+  assert_eq!(reading.3, "same");
+  let reading = assert_reading(
+    repro!("aa_sole_institute_email_line_is_an_email.tex"),
+    Some(&[
+      &["Ann Able", "affiliation=Univ A, City A"],
+      &["Bob Baker", "affiliation=Univ A, City A"],
+      &["email=ann@a.org (AA)"],
+    ]),
+    &[
+      "C Ann Able [] | line:names",
+      "  a Univ A, City A e-mail: ann@a.org (AA) | api:labelseq api:share:authors",
+      "C Bob Baker [] | line:names",
+      "  a Univ A, City A e-mail: ann@a.org (AA) | api:labelseq api:share:authors",
+    ],
+  );
+  assert!(
+    reading
+      .3
+      .as_str()
+      .is_some_and(|w| w.starts_with("declined")),
+    "{:?}",
+    reading.3
+  );
+}
+
+/// A braced group of addresses whose shared domain prints after the brace (`\{bob@mails, cid@mail\}.b.edu`, review
+/// rev92c r2 B-3): each address read whole (`labels::addresses_in`; 93a's write-out lost them, read as no address) and
+/// the contact read as printing addresses alone (`plan::addresses_alone` took `.b.edu` for a word beside the group, so
+/// the writer declined and the whole contact stayed on one carrier — 2407.18899's Zijia Lin lost `linzijia07@`), so
+/// it is written out, each address to the author it spells under the institute it prints in. Distinct from
+/// `an_email_group_is_written_out_to_its_spellers`: the group's domain outside its braces, after no `@`.
+#[test]
+fn an_email_group_with_its_domain_after_the_brace() {
+  let reading = assert_reading(
+    repro!("llncs_email_group_domain_after_the_brace_written_out.tex"),
+    Some(&[
+      &["Ann Able", "affiliation=Univ A", "email=ann.able@a.org"],
+      &[
+        "Bob Baker",
+        "affiliation=Univ A",
+        "affiliation=Univ B",
+        "email=bob@mails.b.edu",
+      ],
+      &["Cid Cole", "affiliation=Univ B", "email=cid@mail.b.edu"],
+    ]),
+    &[
+      "C Ann Able [1] | line:names",
+      "  a Univ A | api:labelseq",
+      "  c email ann.able@a.org | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
+      "C Bob Baker [1,2] | line:names",
+      "  a Univ A | api:labelseq",
+      "  a Univ B | api:labelseq",
+      "  c email bob@mails.b.edu | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
+      "C Cid Cole [2] | line:names",
+      "  a Univ B | api:labelseq",
+      "  c email cid@mail.b.edu | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
+    ],
+  );
+  assert_eq!(reading.3, "written");
+}

@@ -1,0 +1,18 @@
+% witness: 2212.07438 (S. Contarini's `\thanks{\email{sofia.contarini3@unibo.it}}` under hand-marked institute lines);
+%          review rev92c r2 B-1's class (a contact inside a `\thanks` of the author block)
+% oracle:  pdflatex with 1707.06238's aa.cls: "Ann Able1⋆ and Bob Baker2" / "1Univ A, City A" / "2Univ B, City B";
+%          the footnote "⋆ e-mail: ann@a.org"
+% engines: perl 0.8.8 = 0 errors; rust 92c r2 (int 94a) = Ann Able's e-mail before her institute (the writer, cutting
+%          the institute lines at their marks, ordered her items by their spans, the `\thanks` before the lines)
+% expect:  0 errors, 0 warnings; the e-mail after her institute: the note prints in the footer (`plan::prints_in_note`)
+% status:  RED (92c r2) -> GREEN (92c r3) — perfect_kernel_batch92c::a_notes_item_prints_after_the_author_block
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$\thanks{\email{ann@a.org}} \and Bob Baker$^{2}$}
+\institute{$^{1}$Univ A, City A \\ $^{2}$Univ B, City B}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

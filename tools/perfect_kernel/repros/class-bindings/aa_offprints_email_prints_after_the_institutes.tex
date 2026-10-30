@@ -1,0 +1,21 @@
+% witness: 0903.3512 (O. Kochukhov's `\offprints{O. Kochukhov, \email{oleg@…}}`: pdftotext prints the Uppsala institute
+%          on line 11, "Send offprint requests to: … oleg@" on line 50); 0902.0930, 1205.5105, 1411.3255,
+%          astro-ph0203288, astro-ph0509342, astro-ph0512559, astro-ph0608284, astro-ph0702605; review rev92c r2 B-1
+% oracle:  pdflatex with 1707.06238's aa.cls: "Ann Able1, Bob Baker2, and Cid Cole2,3" / 1 Univ A, City A / 2 Univ B,
+%          City B / 3 Univ C, City C; the footer "Send offprint requests to: A. Able, e-mail: xyz@a.org"
+% engines: perl 0.8.8 = 0 errors; rust 93a = Ann Able's institute, then her e-mail; 92c r2 (int 94a) = the e-mail moved
+%          above the institute (the writer ordered her items by their calls, `\offprints` called before `\institute`)
+% expect:  0 errors, 0 warnings; the address A. Able's (the note's name, `api:note-name`), after her institute: a
+%          note's item prints below the author block, whatever its call's place (`plan::prints_in_note`)
+% status:  RED (92c r2) -> GREEN (92c r3) — perfect_kernel_batch92c::a_notes_item_prints_after_the_author_block
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2} \and Cid Cole\inst{2,3}}
+\offprints{A. Able, \email{xyz@a.org}}
+\institute{Univ A, City A \and Univ B, City B \and Univ C, City C}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

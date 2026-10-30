@@ -27311,16 +27311,28 @@ difference leaves today's output (the fail-safe, unchanged). Three writer change
   Only a contact printing its addresses alone is written out (`plan::addresses_alone`: with the braced groups taken
   out, every word between `,` `;` and spaces an address): beside a remark or a label (`\{ann,bob\}@a.org
   (corresponding)`, `Emails: \{ann,bob\}@a.org`) the words were lost; such a contact stays today's and the paper is
-  declined (review rev92c B2). An address of the group its owners hold already from another print is not written
-  again.
+  declined (review rev92c B2). A domain printed after the group's brace is the group's (`\{bob@mails,
+  cid@mail\}.b.edu`, 2407.18899: `.b.edu` had read as a word beside the group, the paper declined and Zijia Lin's
+  `linzijia07@` stayed on another carrier; review rev92c r2 B-3). An address of the group its owners hold already from
+  another print is not written again.
+- an author block skipped as empty (`Outcome::Skipped(Empty)`: llncs's `\and\\`, the empty piece of its split) holds
+  no paper back (2409.09478).
+- a later placement pass that finds the document reading as the reading keeps the earlier pass's outcome
+  (`--streaming` places the frontmatter again at the document's end: it reported `same` after `written`).
 - **one item per owner and text** (`plan::wanted`, `owners`): the reading's identical items of one creator (or of the
   block) are one, and so are today's in the comparison — the writer never adds a second copy of an item its owner holds
   (0906.2451's S. K. Mathew had `shibu@prl.res.in` from institute 1 and from `\offprints`, written twice; review rev92c
   S2); a removal takes every copy today's gives an owner the reading does not.
 - **print order** (`apply::place`, `prints_after`, `plan::Place`): the items of every owner an operation touches are in
-  the reading's order — an item before the first of its owner's items the reading prints after it: its block or API
-  call's ledger index, then within one its span's start, or, neither spanned, an entry's own text before the contacts
-  it holds; a spanned and an unspanned item of one call are not ordered — not today's order with the added items at the
+  the reading's order — an item before the first of its owner's items the reading prints after it: a note's item after
+  the author block's (`plan::prints_in_note`: a publication note's call, a footnote's text, an `ltx:note` call, a
+  contact inside a `\thanks` or `\footnote` — the page prints them below the author block, whatever the call's place:
+  aa's `\offprints{O. Kochukhov, \email{oleg@…}}` is called before `\institute`, and ordered by the calls the address
+  had gone above the institute on 9 aa papers, 0903.3512, 0902.0930, 1205.5105, 1411.3255, astro-ph0203288,
+  astro-ph0509342, astro-ph0512559, astro-ph0608284, astro-ph0702605, and 2212.07438's `\thanks{\email{…}}`; review
+  rev92c r2 B-1; a note itself stays at its call's place), then its block or API call's ledger index, then within one its span's start, or, neither spanned, an
+  entry's own text before the contacts it holds; a spanned and an unspanned item of one call are not ordered — not
+  today's order with the added items at the
   creator's end in the order of their texts (2207.06953's Sangyoun Lee$^{1,2}$ had KIST before Yonsei; 2608.05923's
   S. Mangla and O. M. Smirnov; 1812.02463's Ilyass Haloui his Airbus address after ISAE; 2603.23924's Yuan Gao;
   2603.13900's Claudio Di Ciccio his address before his institute; amsart's address now before the e-mail, as printed;
@@ -27348,7 +27360,10 @@ a_footnotemark_inside_a_mark_is_its_own` pinned held (OPEN_ROWS "written-family 
 llncs shapes' whole creators, review S3); updated to the print order: `perfect_kernel_batch92a::
 a_publication_note_reads_only_its_email_calls`, `a_routed_note_email_is_the_current_authors_own_call`,
 `a_written_family_reads_every_key_of_a_mark_of_refs` (amsart's address before the e-mail), `perfect_kernel_batch77t::
-symbol_led_line_under_marked_names_is_not_every_names` (the `*` line before the `†` line).
+symbol_led_line_under_marked_names_is_not_every_names` (the `*` line before the `†` line). Round 3 (review rev92c r2):
+guards `perfect_kernel_batch92c::a_notes_item_prints_after_the_author_block` (B-1),
+`an_email_group_with_its_domain_after_the_brace` (B-3); `perfect_kernel_batchfms2a2r6::
+r6_llncs_shapes_are_written_whole` now in process and with the binary, eager and `--streaming` (S-4).
 
 ### 924. Observer readings the aa/llncs promotion needed: a label glued to a symbol parted, a group's domain inside its braces, names spelled by their base letters, an unprinted share entry no hand mark requests, a note's spelled address a change (Perl: none of these readings)
 
@@ -27375,6 +27390,10 @@ symbol_led_line_under_marked_names_is_not_every_names` (the `*` line before the 
   text as two addresses, each written (aa 2210.16066, 1907.11241, 2007.06573, 2103.15844; llncs 2405.04152,
   2603.13900, every author; review rev92c B1); `\href{mailto:X}{Name}` prints no address. Guard
   `perfect_kernel_batch92c::an_email_link_is_the_text_it_prints`.
+- **A group's domain printed after its brace** (`labels::addresses_in`, `domain_after_group`): `\{xxh22@mails,
+  huichen@mail\}.tsinghua.edu.cn` is `xxh22@mails.tsinghua.edu.cn` and `huichen@mail.tsinghua.edu.cn` (2407.18899);
+  each piece one `@`, the domain after the brace up to a separator. Read as no address before, the written-out group
+  lost them (93a). Guard `perfect_kernel_batch92c::an_email_group_with_its_domain_after_the_brace`.
 - **A document's note's address that spells an author** is that author's, the chain's first step (OD #913), and now a
   change tag, `api:note-spelled` (`blocks.rs` `Chain::DocumentNote`): today's routes it to the current author
   (1708.05224, astro-ph0509342, 0802.4021).
@@ -27545,3 +27564,21 @@ names share it (2210.16066: base on a nameless creator, its address on the first
 KNOWN_PERL_ERRORS #1195's (inst_support.sty.ltxml:36-37 for aa). Repros class-bindings/
 `aa_sole_institute_numbered_lines_is_the_blocks`, `aa_sole_institute_is_every_authors`,
 `aa_sole_institute_address_line_is_the_rows`; guard `perfect_kernel_batch92c::aa_sole_institute_is_the_rows`.
+
+The shared row reads aa's sole institute as llncs's (`shared_row::row_email_calls`; review rev92c r2 B-2):
+- aa_support's `\email` is the kernel's `\lx@add@email{\lx@address@urlfont{#1}}` — Perl's `\lx@add@contact[role=email]
+  {#1}` (aa_support.sty.ltxml:109), the same contact as `\lx@add@email` (Base_Utility.pool.ltxml:655) —, so it is a
+  class e-mail call (`is_email_command`): `\institute{Univ A, City A, \email{ann@a.org}}` gives the address to the
+  author it spells and the institute, its comma before the call a separator, to every author (1312.1871, 2310.16880:
+  both had been the block's, the row finding no e-mail call and an address on the institute's first line). The
+  institute's content stays aa's (no `\lx@affiliation@withinst`, whose `\inst{n}` sets the entry's label: aa's `\inst`
+  there is a request, `\institute{\inst{1} Univ X\\ \inst{2} Univ Y}` cut at its marks, 1003.3020).
+- A note's text is no line of the institute (`holds_raw_address`, aa and llncs): `\institute{Univ A, City A\thanks{email:
+  ann@a.org}}` prints its address in the footer, so the institute is every author's, the note a publication note
+  (0705.1240; it had been the block's).
+- A later line the address reader does not part, opened by an e-mail label (`e-mail: gil@astrax.fis.ucm.es (AGdP)`,
+  astro-ph0007270), is an e-mail of the block under that label, not a nameless `role="affiliation"` (review rev92c r2
+  S-3); the reading keeps it in the institute's text, so the writer declines and today's stands.
+
+Repros class-bindings/`aa_sole_institute_inline_email_is_its_authors`, `aa_sole_institute_thanks_stays_shared`,
+`aa_sole_institute_email_line_is_an_email`; guard `perfect_kernel_batch92c::aa_sole_institute_reads_as_llncss`.

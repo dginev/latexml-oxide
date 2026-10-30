@@ -92,6 +92,11 @@ LoadDefinitions!({
   });
   DefMacro!("\\lx@aa@institute@split{}",
     "\\lx@splitting{\\lx@add@contact[role=affiliation,labelseq=affiliation]}{\\and\\And}{#1}");
+  // (its `\email`s are read as llncs's are — aa_support's `\email` the kernel's `\lx@add@email`, a class e-mail command
+  // the shared row parts its lines by: `\institute{Univ A, City A, \email{ann@a.org}}` gives the address to the author
+  // it spells and the institute to every author; both had been the block's, 1312.1871, 2310.16880 — review rev92c r2
+  // B-2. Its content is not llncs's `\lx@affiliation@withinst`, whose `\inst{n}` sets the entry's label: aa's `\inst`
+  // there is the request it is everywhere, `\institute{\inst{1} Univ X\\ \inst{2} Univ Y}` cut at its marks, 1003.3020)
   DefMacro!("\\lx@aa@institute@sole{}",
     "\\lx@add@contact[role=affiliation,labelseq=affiliation,_share=authors]{#1}");
   // Raw aa.cls unconditionally loads natbib (not just for bibnumber/bibauthoryear options).
