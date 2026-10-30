@@ -211,7 +211,7 @@ Text.
 
 /// Rank 15, the negative: a line a footnote symbol leads (`\textsuperscript{*}Department …`, 2604.02578's `*`-led line
 /// under names marked `*†`, `†‡`, `*†‡`) is no unmarked institution line: not given to every name of the block (77t
-/// r1's A/B had given it to Robert L. Goldstone, who carries no `*`); it goes on as before (on the last name).
+/// r1's A/B had given it to Robert L. Goldstone, who carries no `*`); it goes to the names carrying `*` (93a).
 #[test]
 fn symbol_led_line_under_marked_names_is_not_every_names() {
   let (log, xml) = convert_with(
@@ -230,17 +230,25 @@ Text.
   // (the `†`-led line is every name's that shows †, all three: since the label keys are compared by their printed
   // text (92b, OXIDIZED_DESIGN_DIVERGENCES #919), the names' `*†` runs request † as the line's `†` sets it — it was on
   // the block's shared creator, awaiting that ruling; pdflatex prints † on all three names. Each name shows the marks
-  // no line answered, the `*` line staying on the last name as before)
+  // no line answered. Since 93a (OD #925) the `*` line is every name's showing `*`, Ann Able and Cat Cole, as ruling 2
+  // reads it — never Bob Baker, who carries none; the old reader left it on the last name)
   let program = affiliation("Program in Cognition, Univ A");
   assert_eq!(creators(&xml), [
-    creator(true, r#"Ann Able<sup xml:id="id1">*</sup>"#, &program),
-    creator(false, r#"Bob Baker<sup xml:id="id2">‡</sup>"#, &program),
+    creator(
+      true,
+      r#"Ann Able<sup xml:id="id1">*</sup>"#,
+      &format!(
+        "{program} {}",
+        affiliation(r#"<sup xml:id="id2">*</sup>Department of Computer Science, Univ A"#)
+      )
+    ),
+    creator(false, r#"Bob Baker<sup xml:id="id3">‡</sup>"#, &program),
     creator(
       false,
-      r#"Cat Cole<sup xml:id="id3">*,‡</sup>"#,
+      r#"Cat Cole<sup xml:id="id4">*,‡</sup>"#,
       &format!(
         "{} {program}",
-        affiliation(r#"<sup xml:id="id4">*</sup>Department of Computer Science, Univ A"#)
+        affiliation(r#"<sup xml:id="id5">*</sup>Department of Computer Science, Univ A"#)
       )
     ),
   ]);

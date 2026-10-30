@@ -840,33 +840,33 @@ fn email_owner_by_confirmed_order_marked() {
 
 /// A legend line after the names — a footnote symbol and its text, `\\ \textsuperscript{*}\textit{Equal
 /// contribution.}` (2509.20748, aero.cls and the article `\author` alike) — is no part of the name before it (was "Bob
-/// Baker*Equal contribution.1"). Its entry still lands on the last name, the symbol-mark SYNC_STATUS residual pinned
-/// here; the `\dagger` line answers Bob Baker's mark.
+/// Baker*Equal contribution.1"). Since 93a (OD #925) its legend is the note of the names showing `*`, Ann Able and Cat
+/// Cole, as ruling 2 reads it (the symbol-mark SYNC_STATUS residual pinned here before: the entry on the last name); the
+/// `\dagger` line answers Bob Baker's mark.
 #[test]
 fn legend_line_is_no_name() {
   let xml = convert_repro!("author_legend_line_is_no_name.tex");
   assert_no_merged_names(&xml);
+  let legend = |id: &str| {
+    format!(
+      r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks" xml:id="{id}"><sup xml:id="{id}.1">*</sup><text font="italic" xml:id="{id}.2">Equal contribution.</text></note>"#
+    )
+  };
   assert_eq!(creators(&xml), [
     creator(
       true,
       r#"Ann Able<sup xml:id="id1">*</sup><sup xml:id="id2">1</sup>"#,
-      ""
+      &legend("id3")
     ),
     creator(
       false,
-      r#"Cat Cole<sup xml:id="id3">*</sup><sup xml:id="id4">1</sup>"#,
-      ""
+      r#"Cat Cole<sup xml:id="id4">*</sup><sup xml:id="id5">1</sup>"#,
+      &legend("id6")
     ),
     creator(
       false,
-      r#"Bob Baker<sup xml:id="id5">1</sup>"#,
-      &format!(
-        "{} {}",
-        affiliation(
-          r#"<sup xml:id="id6">*</sup><text font="italic" xml:id="id7">Equal contribution.</text>"#
-        ),
-        affiliation(r#"<text font="italic" xml:id="id8">Chair of Things.</text>"#)
-      )
+      r#"Bob Baker<sup xml:id="id7">1</sup>"#,
+      &affiliation(r#"<text font="italic" xml:id="id8">Chair of Things.</text>"#)
     ),
   ]);
 }
@@ -2018,8 +2018,8 @@ fn url_brace_list_is_addresses_by_spelling() {
 
 /// Under a row whose only symbol line is a legend, the unmarked institution lines are every name's of the row (2609.24299,
 /// 2603.06578; user ruling R12 2026-10-20; the r6 re-review's finding 7); the legend goes to the name carrying its
-/// symbol, Bob Baker (its "Corresponding author:" label no e-mail label: the address stays in its text). Was every line on
-/// Bob Baker alone.
+/// symbol, Bob Baker, as his note since 93a (OD #925; its "Corresponding author:" label no e-mail label: the address
+/// stays in its text). Was every line on Bob Baker alone.
 #[test]
 fn legend_row_shares_the_institution() {
   let xml = convert_repro!("author_legend_row_shares_the_institution.tex");
@@ -2034,12 +2034,11 @@ fn legend_row_shares_the_institution() {
     creator(
       false,
       r#"Bob Baker<sup xml:id="id3">*</sup>"#,
+      // (the legend a note of Bob Baker's, its `*` kept: written since 93a, OD #925 — the old reader's affiliation)
       &format!(
         r#"{} {}"#,
         lines("id4", "id5"),
-        affiliation(
-          r#"<sup xml:id="id6"><text fontsize="90%" xml:id="id6.1">*</text></sup><text fontsize="90%" xml:id="id7">Corresponding author: bbaker@x.edu</text>"#
-        )
+        r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id6"><sup xml:id="id6.1">*</sup>Corresponding author: bbaker@x.edu</note>"#
       )
     ),
   ]);

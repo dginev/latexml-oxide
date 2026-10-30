@@ -95,16 +95,18 @@ Text.
 /// text (review revfms2a2 finding 1).
 #[test]
 fn a_link_contact_carries_its_target() {
-  assert_eq!(tuples(LINKS), [
-    "C Robin Hankin [] | line:names",
-    "  c url work → https://academics.aut.ac.nz/robin.hankin | note:adjacent ruling4:inner-contact",
-    "  n work, play | note:adjacent",
-    "C Tanmay Samak [] | line:names sep:column",
-    "  c email tsamak → tsamak@clemson.edu | note:adjacent ruling4:inner-contact",
-    "  n { tsamak, csamak }@clemson.edu | note:adjacent",
-    "C Chinmay Samak [] | line:names sep:column",
-    "  c email csamak → csamak@clemson.edu | note:adjacent ruling4:inner-contact owner:spelled",
-  ]);
+  super::perfect_kernel_batchfms2a1::reading_only(|| {
+    assert_eq!(tuples(LINKS), [
+      "C Robin Hankin [] | line:names",
+      "  c url work → https://academics.aut.ac.nz/robin.hankin | note:adjacent ruling4:inner-contact",
+      "  n work, play | note:adjacent",
+      "C Tanmay Samak [] | line:names sep:column",
+      "  c email tsamak → tsamak@clemson.edu | note:adjacent ruling4:inner-contact",
+      "  n { tsamak, csamak }@clemson.edu | note:adjacent",
+      "C Chinmay Samak [] | line:names sep:column",
+      "  c email csamak → csamak@clemson.edu | note:adjacent ruling4:inner-contact owner:spelled",
+    ]);
+  });
 }
 
 const IEEE_LEGEND: &str = r#"\documentclass[conference]{IEEEtran}

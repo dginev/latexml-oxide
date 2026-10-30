@@ -1,0 +1,19 @@
+% mechanism: a footnote-symbol line under the kernel `\author`'s names (`\textsuperscript{*}Equal contribution`): the
+%   observer reads it as the legend of the names showing `*` (ruling 2, `ruling2:symbol-line`); today's old reader
+%   made it an affiliation of each. The writer's block-line cut (`plan::cut_block_lines`, OD #925) makes the legend a
+%   note of each starred name from the line's tokens, its mark kept, and takes the affiliations.
+% witness: 2407.07614 (`\small\textsuperscript{\textbf{*}}Equal contribution~~~~ … Corresponding author`)
+% oracle:  pdflatex 0 errors: "Ann Able1,* , Bob Baker2,* , Cid Cole2", "1 Univ X 2 Univ Y", "* Equal contribution"
+% engines: rust 92c: an affiliation "Equal contribution" on Ann Able and Bob Baker; perl: not measured
+% expect:  0 errors, 0 warnings; a note "*Equal contribution" on Ann Able and Bob Baker, no such affiliation
+% status:  GREEN (93a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able\textsuperscript{1,*}, Bob Baker\textsuperscript{2,*}, Cid Cole\textsuperscript{2} \\
+\textsuperscript{1}Univ X~~~~\textsuperscript{2}Univ Y \\
+\textsuperscript{*}Equal contribution}
+\maketitle
+Body.
+\end{document}

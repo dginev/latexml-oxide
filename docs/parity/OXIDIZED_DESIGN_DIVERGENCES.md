@@ -24193,8 +24193,9 @@ code: `declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS)` is the first s
 `unmarked_notes`, `written`, `cite` — completed from `FM_KERNEL_CONVENTIONS`) kept in the state globally under the
 declaring binding's file name (`frontmatter_conventions:<binding>`, one declaration per hook, `*` any; the first
 matching in declaration order applies, a re-declaration replaces in place). `policy_for` and `has_entry` read the
-state; a family that declares none is `KERNEL`, as the table's fallback was; `written` (revtex4_support, ams_support:
-the default build's S2b writer) is the binding's own flag. The key is the one the ledger already recorded at the call
+state; a family that declares none is `KERNEL`, as the table's fallback was (since 93a, OD #925: the kernel's own
+blocks `KERNEL`, written; a binding owning `\author` that declares none `UNDECLARED`, the same reading unwritten);
+`written` (revtex4_support, ams_support: the default build's S2b writer) is the binding's own flag. The key is the one the ledger already recorded at the call
 (`ledger::author_binding`, `ledger::policy_binding`), as the table's lookup was: a declaration reaches a binding only
 while that binding's `\author` at the call is still the declaring binding's — loading the declaring binding is not
 enough. revtex4_support's reaches revtex4, revtex4-1, revtex4-2; ams_support's ams_core's amsart, amsproc, amsbook and
@@ -27347,3 +27348,90 @@ a_footnotemark_inside_a_mark_is_its_own` pinned held (OPEN_ROWS "written-family 
 - Repros class-bindings/`aa_inst_glued_symbol_is_parted`, `llncs_email_group_written_out` (the domain-inside and
   accented siblings), `llncs_empty_author_piece_holds_nothing_back`; guards `perfect_kernel_batch92c::
   a_label_glued_to_a_symbol_is_parted_and_written`, `an_email_group_is_written_out_to_its_spellers`.
+
+### 925. The kernel's own `\author` is written by the frontmatter observer (FM stage 7: `article` and every class whose bindings declare no conventions); a binding owning `\author` that declares none stays unwritten (Perl: the old reader's output, no observer)
+
+`observer::policy::KERNEL` is `written: true`: a block of the kernel's `\author` (`ledger::meaning_owner` "kernel",
+under a class whose bindings declare no conventions — `article`, `report`, `book`, and every class with no binding of
+its own) is read and written as revtex's, ams's, aa's and llncs's are: by default the flush rehearses a paper whose
+every author block is a written family's, and the writer applies the reading where every difference is one of its
+operations, else keeps today's output. A binding that owns the `\author` meaning and declares no conventions (JHEP.cls,
+acmart.cls, mn2e_support.sty, aas_support.sty, …; or a meaning no binding owns: the document's own, a raw file's, the
+fallback class's) takes `policy::UNDECLARED`, the kernel's reading unwritten, until its family passes its own gate
+(`policy::undeclared`, `conventions_among`); every declaration completing `..KERNEL` states its own `written`.
+
+- The writer's comparison skips a reading item of no letter or digit, a creator's as the block's, as it already
+  skipped today's (`plan::wanted`): a note printing only a superscript or a box (`\thanks{\textsuperscript{}}`, the
+  observer's note of ink in doubt, OD #916) held the paper back.
+- An entry the reading leaves to the block because no name requests its label (`label:unrequested owner:block`,
+  `ruling2:uncarried owner:block`) is no ruling's owner decision: the writer keeps today's placement (`writer::writes`)
+  — espcrc's `\address[ETHZ]{…}` after each name inside `\author` (hep-lat0409072), a numbered line under names
+  printing no mark (1205.5573's shape).
+- Census mode and the default write alike (the guards' `*_leave_the_xml_unchanged` now compare the census switch with
+  the default mode, the fleet's: a written family's paper written in both).
+
+Scorer (the 3,000-paper sample, structurally decided creators exactly right; 92c → 93a, with OD #926-#927): the marks
+path 91.88 % → 92.53 % (1,120 → 1,128 of 1,219), `article` 92.00 % → 92.39 % (775), the classes under 20 creators
+80.08 % → 81.78 % (236), overall 97.40 % → 97.53 % (5,838); the readability violations 24 → 26 papers, both new ones
+(2508.00387, 2510.00280) the scorer's: it drops a label glued to a symbol (`\textsuperscript{1,2*}`), our creators
+the PDF's. Shadow census (article with author marks, 1,445 papers converted of a seeded 1,500, and the sample's 260
+marks-path papers; rc/E/F and every paper's Warning count unchanged): the kernel family's agreeing papers 847 → 899
+(sample 54 → 63), written 55 (17), declined 363 (31), unclassified 245 → 244 papers (19.4 %; the writer declines
+them, today's output kept). Left on the marks path (the scorer's 91 wrong; 44 of them other families' — PoS's JHEP.cls,
+inst_support's jfm/ws_ijmpa/appolb, IEEEtran, acmart, svjour3, aastex, revtex4, ijcai —, not written): the creators'
+names the old reader parted otherwise than the reading, which no writer operation re-parts (32 creators: 1909.05311,
+2609.32870, 2609.33104, 2308.10621, 2405.08158, 1304.1574, 1502.03246, 1602.05576, 2307.03384); a raw shipped file's
+`\address` typesetting in place, no API entry (14: hep-ph0312288's 11lomcon.sty, 1303.3004's ae100prg.cls,
+cond-mat0611585's jetpl); the scorer's source reading (11: `2*`, `\samethanks[1]`, `\footnotemark[1]`, `~~~~`
+between marked entries — 2508.00387, 2510.00280, 2502.19103, 2512.23422, 2407.07614, 2404.02078, 2211.09342); a
+`\footnotetext` note the writer cannot place (2504.14717).
+
+Guards `perfect_kernel_batch93a`; the guards pinning the old reader's kernel output updated to the written output
+(`batch77p::legend_line_is_no_name`, `legend_row_shares_the_institution`, `batch77t::
+symbol_led_line_under_marked_names_is_not_every_names`, `batch61::marked_affiliation_review_shapes` and
+`marked_affiliation_wrappers_and_legends`); the lexer's and resolver's guards of kernel shapes written before
+(`batchfms2a1`/`fms2a2`/`r5`-`r9`, `batch92e::kernel_thanks_constructor_text_is_ink`) run under
+`batchfms2a1::reading_only`: the writer's outcome checked for its own defect only, a decline there one of the stage-7
+writer gaps (OPEN_ROWS).
+
+### 926. The writer cuts an author block's own lines: today's one affiliation joining several marked entries, or a legend line today's made an affiliation (Perl: the old reader's joined contact)
+
+`plan::cut_block_lines`: where today's holds one affiliation whose text is several of the reading's entries joined,
+each one line (its span) of the same author block, decided by a ruling's change and held nowhere today — `$^4$
+ModelBest.Inc \xspace$^5$ Renmin University of China \xspace$^6$ BUPT \xspace$^7$ Tencent` one contact today, four
+entries each requested by its mark (2404.02078, 2509.24142) — or one legend line the reading takes for a note
+(`\textsuperscript{*}Equal contribution` under starred names, ruling 2: 2407.07614), each entry is made from its line's
+tokens (`block_line_tokens`: from the mark it opens with, the Mark event printed just before it with only spaces
+between, to its end, balanced as `piece_tokens` balances a cut piece) for the authors the reading gives it, an
+affiliation through `\lx@affiliation@withinst`, a legend as the kernel's author note, and today's item taken. Repros
+sectioning-frontmatter/`author_block_marked_lines_joined_are_cut`, `author_block_legend_line_is_written_as_a_note`;
+guards `perfect_kernel_batch93a::marked_lines_joined_today_are_cut_by_the_writer`,
+`a_legend_line_is_written_as_the_starred_names_note`.
+
+### 927. Observer readings the kernel family's promotion needed: a label several `\and` columns answer is each column's, a compound symbol mark is all its symbols', an author-order list agrees with the block's every spelled address, a trailing mark is a label only on a name (Perl: the old reader's)
+
+Each was the old reader's reading already (its guards pin the XML); the reading differed, and the kernel family written
+would have printed it.
+
+- **A label with entries in several `\and` columns labels each column's own names** (`Resolver::answer_pending`, the
+  creators' and the block lines' columns recorded as read, `Resolver::column`, `entry_column`): `Ann Able$^\dagger$ …
+  \\ $^\dagger$ Univ A \and Cat Cole$^\dagger$ \\ $^\dagger$ Univ C` gives Univ C to Cat Cole alone (the 77p r6
+  re-review's finding 3); a column's `1` likewise. A label whose entries all stand in one column stays every carrier's
+  (a shared list under the last column).
+- **One mark printing distinct footnote symbols together names the names carrying them all** (`lines::Entry::compound`,
+  `Resolver::compound`): `$^{\dagger\ddagger}$ Project lead` is Bob Baker's (`†‡`) alone, not Ann Able's (`†`):
+  2602.19190, the old reader's 77p r10 rule. `$^{\dagger,\ddagger}$`, two marks, stays either's.
+- **An author-order list is one address per author that every spelled address of the block agrees with**
+  (FIDELITY_CHARTER §4, OD #805; `Resolver::block_addresses`): `\{xx,yy\}@x.edu` under two names, one of whom
+  `ann.able@gmail.com` on the next line spells, is three addresses for two authors — the two unspelled the block's
+  (77p r9's probe y1).
+- **A line's trailing mark is a label only when a name of the block shows it** (`blocks.rs` `shown_elsewhere`; 2307.02318's
+  `Harvard University$^{*}$` under a starred name): aistats's `\aistatsaddress{Univ A$^*$ \And Univ B \And Univ A$^*$}`
+  under names showing no `*` pairs each address with its column's name (the `*` another address line printed read as
+  shown, so both went to the block; 77o).
+- Repros sectioning-frontmatter/`author_and_columns_number_their_own_lines`, `author_and_columns_share_one_list` (and
+  77p's `author_symbol_carriers_stay_in_their_row`, `author_compound_legend_mark_names_its_carrier`,
+  `author_email_sequence_more_addresses`); guards `perfect_kernel_batch93a::
+  a_label_answered_in_several_columns_is_each_columns_own`, `a_compound_symbol_mark_names_the_names_carrying_all`,
+  `an_order_list_agrees_with_every_spelled_address_of_the_block`, `a_trailing_mark_no_name_shows_leaves_the_line_unmarked`,
+  `an_unrequested_entry_keeps_todays_placement`.

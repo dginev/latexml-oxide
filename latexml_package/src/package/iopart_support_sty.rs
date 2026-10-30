@@ -71,6 +71,7 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   call_is_group: true,
   cite: "iopart.cls:225-231, 363-364; OD #806 (2311.12551), #808 (2407.14305, 2311.07087, 2311.17496), #809 \
          (2504.15015)",
+  written: false,
   ..FM_KERNEL_CONVENTIONS
 };
 

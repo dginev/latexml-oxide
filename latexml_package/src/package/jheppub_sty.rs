@@ -8,6 +8,7 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   binding: "jheppub.sty",
   email_owner: FmEmailOwner::SpelledElseOrder,
   cite: "jheppub.sty:126-131; OD #805 (2407.18115, 2406.03543), #809 (1901.08773)",
+  written: false,
   ..FM_KERNEL_CONVENTIONS
 };
 

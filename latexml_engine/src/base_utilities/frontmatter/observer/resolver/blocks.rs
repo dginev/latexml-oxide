@@ -78,12 +78,20 @@ impl Resolver {
     // (a list with one address per author that every spelled address agrees with is in author order: FIDELITY_CHARTER
     // §4, 2026-10-21, OD #805 — `{qkv, riven, jiyicheng.cs, lihuan.cs, cwang85}@zju.edu.cn` under five names, 2603.19610;
     // 2512.22629, 2305.12998, 2105.11174, 2412.09666)
+    // (and no address the block prints elsewhere spells one of them: `\{xx,yy\}@x.edu` under two names, one of whom
+    // `ann.able@gmail.com` on the next line spells, is no one-per-author list — three addresses for two authors, the
+    // two unspelled the block's, as the old reader's 77p r9 held them)
     let in_order = addresses.len() == candidates.len()
       && candidates.len() >= 2
       && spelled
         .iter()
         .zip(candidates)
-        .all(|(s, c)| s.is_none_or(|s| s == *c));
+        .all(|(s, c)| s.is_none_or(|s| s == *c))
+      && self
+        .block_addresses
+        .iter()
+        .filter(|a| !addresses.contains(a))
+        .all(|a| self.spelled(a, candidates).is_none());
     let address_count = addresses.len();
     // (a link printing one address: its anchor the contact's text, its address the target — position 2, review
     // revfms2a2_9 finding 5; 1607.00911's `\href{mailto: edremets@…}{* edremets@…}`)
@@ -161,6 +169,10 @@ impl Resolver {
       .unwrap_or_default();
     let group = index;
     let block_creators_start = self.out.creators.len();
+    self.block_addresses = lines
+      .iter()
+      .flat_map(|line| addresses_in(&events_text(&line.events)))
+      .collect();
     // the labels the block's later mark-led lines answer (for the prefix convention)
     let answered_below: Vec<String> = lines
       .iter()
@@ -203,6 +215,10 @@ impl Resolver {
     for (n, line) in lines.iter().enumerate() {
       if n > 0 && n <= skip_to {
         continue;
+      }
+      self.line_column = Some((index, line.column));
+      for span in line.events.iter().filter_map(|e| e.span) {
+        self.entry_column.insert((index, span.0), line.column);
       }
       let unmarked_above = unmarked_before.take();
       let continued = open_rows.contains(&line.column);
@@ -403,15 +419,14 @@ impl Resolver {
           // Amazon$^2$`, 2507.05750)
           // (each of its marks one a name shows on another line: a symbol after an affiliation, `Harvard
           // University$^{*}$`, points to a note, 2307.02318)
+          // (shown on a name: a mark another address line prints is no name's — aistats's `\aistatsaddress{Univ A$^*$
+          // \And Univ B \And Univ A$^*$}` under names showing no `*` pairs each address with its column's name, as
+          // the class prints column i under author i, 77o's `aistats_note_marked_address_still_pairs_by_column`)
           let trailing = trailing_entries(&line.events);
           let shown_elsewhere = |label: &String| {
-            lines.iter().enumerate().any(|(m, other)| {
-              m != n
-                && other
-                  .events
-                  .iter()
-                  .any(|e| e.kind == EventKind::Mark && event_labels(e).contains(label))
-            })
+            self.out.creators[block_creators_start..]
+              .iter()
+              .any(|c| c.requests.iter().any(|r| label_matches(r, label)))
           };
           if !trailing.is_empty()
             && trailing
@@ -603,6 +618,8 @@ impl Resolver {
         None => {},
       }
     }
+    self.line_column = None;
+    self.block_addresses.clear();
   }
 
   /// A labelled line's entries, each pending its requests (ruling 1; ruling 2 for a symbol): an e-mail entry one
@@ -682,6 +699,15 @@ impl Resolver {
         }
         continues = None;
       } else {
+        // (a line led by one mark printing distinct footnote symbols together names the names carrying them all:
+        // `$^{\dagger\ddagger}$ Project lead` under `Ann Able$^{\dagger}$` and `Bob Baker$^{\dagger\ddagger}$` is Bob
+        // Baker's alone, 2602.19190 — the old reader's 77p r10 rule; `$^{\dagger,\ddagger}$`, two marks, is either's)
+        let compound = entry.symbol && entry.compound && {
+          let mut symbols: Vec<&String> = entry.labels.iter().collect();
+          symbols.sort_unstable();
+          symbols.dedup();
+          symbols.len() > 1 && symbols.iter().all(|l| is_symbol_label(l))
+        };
         self
           .pending
           .push((entry.labels.clone(), entry.symbol, Assoc {
@@ -692,6 +718,9 @@ impl Resolver {
             source: Some((index, span)),
             target: None,
           }));
+        if compound {
+          self.compound.push(self.pending.len() - 1);
+        }
         continues = Some(Continued::Pending(self.pending.len() - 1));
       }
     }

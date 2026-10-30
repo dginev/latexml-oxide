@@ -20,8 +20,8 @@ use std::collections::BTreeMap;
 
 use super::{
   super::{
-    events::lex_events,
-    ledger::{ApiCall, field_stamped},
+    events::{EventKind, lex_events},
+    ledger::{ApiCall, Outcome, field_stamped},
     policy::TitleMarks,
     rehearsal::{Rehearsal, rehearse},
     resolver::{addresses_in, split_pieces},
@@ -100,7 +100,9 @@ fn pair_names(resolved: &Resolved, front: &Front) -> Option<BTreeMap<usize, usiz
 }
 
 /// The reading's items: (owner, kind, text) with the association, as `ab_audit fmshadow`'s `shadow_tuples` reads them
-/// (a creator with no name holds none; the block's items of no letter or digit compare as none).
+/// (a creator with no name holds none; an item of no letter or digit compares as none, a creator's as the block's — as
+/// [`held`] reads today's: a note printing only a superscript or a box, `\thanks{\textsuperscript{}}`, the observer's
+/// note of ink in doubt, held the kernel's paper back, OD #925).
 fn wanted(resolved: &Resolved) -> BTreeMap<Key, Vec<(Owner, &Assoc)>> {
   let mut out: BTreeMap<Key, Vec<(Owner, &Assoc)>> = BTreeMap::new();
   for (i, c) in resolved.creators.iter().enumerate() {
@@ -108,11 +110,9 @@ fn wanted(resolved: &Resolved) -> BTreeMap<Key, Vec<(Owner, &Assoc)>> {
       continue;
     }
     let owner = Owner::Creator(i);
+    let mut items: Vec<(Key, &Assoc)> = Vec::new();
     for a in &c.affiliations {
-      out
-        .entry((Kind::Affiliation, norm(&a.text)))
-        .or_default()
-        .push((owner, a));
+      items.push(((Kind::Affiliation, norm(&a.text)), a));
     }
     for a in &c.contacts {
       let key = match a.role.as_str() {
@@ -120,13 +120,15 @@ fn wanted(resolved: &Resolved) -> BTreeMap<Key, Vec<(Owner, &Assoc)>> {
         "orcid" => (Kind::Contact("orcid".into()), norm(orcid_id(&a.text))),
         role => (Kind::Contact(role.to_string()), norm(&a.text)),
       };
-      out.entry(key).or_default().push((owner, a));
+      items.push((key, a));
     }
     for a in &c.notes {
-      out
-        .entry((Kind::Note, norm(&a.text)))
-        .or_default()
-        .push((owner, a));
+      items.push(((Kind::Note, norm(&a.text)), a));
+    }
+    for (key, a) in items {
+      if !key.1.is_empty() {
+        out.entry(key).or_default().push((owner, a));
+      }
     }
   }
   for a in &resolved.block {
@@ -368,6 +370,154 @@ fn cut(call: &ApiCall) -> Result<Option<Vec<(String, Tokens)>>> {
   Ok(Some(out))
 }
 
+/// The tokens of an author block's own line, the reading's entry at `span` of the block at ledger index `index`: from
+/// the mark it opens with (the event printed just before it, a Mark with only spaces between: `$^4$ ModelBest.Inc`,
+/// `\textsuperscript{*}Equal contribution`) to its end, as [`piece_tokens`] balances a piece — `None` when the index is
+/// no rehearsed block, no balanced run holds it, or the span's own letters and digits are not the entry's text `key`
+/// (an entry printing through a command, an accent, a line read on to: what the writer would make is not the entry).
+fn block_line_tokens(index: usize, (start, end): (u16, u16), key: &str) -> Option<Tokens> {
+  with_ledger(|ledger| {
+    let Some(Entry::Author(block)) = ledger.entries.get(index) else {
+      return None;
+    };
+    let Outcome::Events { events, .. } = &block.outcome else {
+      return None;
+    };
+    let base = block.range.0;
+    let content = block.tokens.unlist_ref();
+    let at = |p: u16| usize::from(p).checked_sub(base);
+    let (mut from, to) = (at(start)?, at(end)?);
+    let letters: String = content
+      .get(from..to)?
+      .iter()
+      .filter(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
+      .map(|t| t.with_str(ToString::to_string))
+      .collect();
+    if norm(&letters) != key {
+      return None;
+    }
+    // (the event printed last before the line, a layout change aside)
+    if let Some(mark) = events
+      .iter()
+      .rev()
+      .find(|e| e.kind != EventKind::Layout && e.span.is_some_and(|(_, e)| e <= start))
+      && mark.kind == EventKind::Mark
+      && let Some((mark_start, mark_end)) = mark.span
+      && let (Some(mark_start), Some(mark_end)) = (at(mark_start), at(mark_end))
+      && content
+        .get(mark_end..from)
+        .is_some_and(|between| between.iter().all(|t| t.get_catcode() == Catcode::SPACE))
+    {
+      from = mark_start;
+    }
+    piece_tokens(content, (from, to), 0, from).map(|(tokens, _)| tokens)
+  })
+}
+
+/// The writer's cut of an author block's own lines (FM stage 7, OD #925): today's one affiliation joining several of
+/// the reading's entries, each one line of the same block (`$^4$ ModelBest.Inc $^5$ Renmin University of China`, one
+/// contact today, four entries each requested by its mark: 2404.02078, 2509.24142), or one legend line the reading
+/// takes for a note (`\textsuperscript{*}Equal contribution`, ruling 2: 2407.07614) — each entry made from its line's
+/// tokens for the authors the reading gives it, today's item taken. Only entries the reading decided by a ruling's
+/// change, none of which today's holds anywhere, in one run of consecutive lines whose texts joined are today's item's;
+/// anything else is left to the final check, which declines.
+fn cut_block_lines(
+  want: &BTreeMap<Key, Vec<(Owner, &Assoc)>>,
+  have: &BTreeMap<Key, Vec<(Owner, Node, bool)>>,
+  wanted_only: &mut Vec<Key>,
+  held_only: &mut Vec<Key>,
+  ops: &mut Vec<Op>,
+) {
+  // (the reading's entries no item of today's holds, each one span of one block, by a ruling's change, in print order)
+  let mut lines: Vec<(usize, (u16, u16), Key)> = wanted_only
+    .iter()
+    .filter(|key| !matches!(key.0, Kind::Contact(_)))
+    .filter_map(|key| {
+      let wants = &want[key];
+      let (index, Some(span)) = wants.first()?.1.source? else {
+        return None;
+      };
+      // (one line's entry, opened by its mark: not one a line under it continued, nor one whose mark trails it)
+      let one_line = |a: &Assoc| {
+        !["line:continued", "-joined", "mark:trailing"]
+          .iter()
+          .any(|tag| a.rule.contains(tag))
+      };
+      wants
+        .iter()
+        .all(|(_, a)| writes(a) && one_line(a) && a.source == Some((index, Some(span))))
+        .then(|| (index, span, key.clone()))
+    })
+    .collect();
+  lines.sort();
+  for whole in held_only.clone() {
+    if whole.0 != Kind::Affiliation {
+      continue;
+    }
+    let holds = &have[&whole];
+    if holds.iter().any(|(_, _, movable)| !movable) {
+      continue;
+    }
+    let Some(run) = (0..lines.len()).find_map(|from| {
+      let mut joined = String::new();
+      for to in from..lines.len() {
+        if lines[to].0 != lines[from].0 {
+          return None;
+        }
+        joined.push_str(&lines[to].2.1);
+        if joined == whole.1 {
+          return Some(from..=to);
+        }
+        if !whole.1.starts_with(&joined) {
+          return None;
+        }
+      }
+      None
+    }) else {
+      continue;
+    };
+    let run: Vec<(usize, (u16, u16), Key)> = lines[run].to_vec();
+    // (one line alone is today's item under another kind only: a legend)
+    if run.len() == 1 && run[0].2.0 != Kind::Note {
+      continue;
+    }
+    let Some(pieces) = run
+      .iter()
+      .map(|(index, span, key)| block_line_tokens(*index, *span, &key.1))
+      .collect::<Option<Vec<Tokens>>>()
+    else {
+      DebugFeature!("frontmatter", "FRONT writer: a block line does not cut");
+      continue;
+    };
+    for ((_, _, key), tokens) in run.iter().zip(pieces) {
+      let made = if key.0 == Kind::Note {
+        Made::Legend
+      } else {
+        Made::Affiliation
+      };
+      for (owner, _) in &want[key] {
+        ops.push(Op::Make {
+          owner: *owner,
+          made,
+          tokens: tokens.clone(),
+          template: holds[0].1.clone(),
+          before: holds
+            .iter()
+            .find(|(o, ..)| o == owner)
+            .map(|(_, n, _)| n.clone()),
+        });
+      }
+    }
+    for (_, node, _) in holds {
+      ops.push(Op::Remove { node: node.clone() });
+    }
+    let keys: Vec<&Key> = run.iter().map(|(_, _, key)| key).collect();
+    wanted_only.retain(|k| !keys.contains(&k));
+    lines.retain(|(_, _, k)| !keys.contains(&k));
+    held_only.retain(|k| *k != whole);
+  }
+}
+
 /// No plan, and why (the `frontmatter` debug feature).
 fn declined(reason: &str) -> Option<Plan> {
   DebugFeature!("frontmatter", "FRONT writer: declined, {reason}");
@@ -510,6 +660,9 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
     }
     held_only.retain(|k| *k != whole);
   }
+  // the reading's entries of an author block's own lines, today's one item joining them (or a legend line, today's an
+  // affiliation)
+  cut_block_lines(&want, &have, &mut wanted_only, &mut held_only, &mut ops);
   // a legend the reading takes for a note, today's an affiliation of the same text
   for key in wanted_only.clone() {
     let wants = &want[&key];

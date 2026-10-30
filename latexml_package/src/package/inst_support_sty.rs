@@ -8,6 +8,7 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   binding: "inst_support.sty",
   inst_after_comma: true,
   cite: "Perl inst_support.sty.ltxml:33-35; OD #807 (2401.16957)",
+  written: false,
   ..FM_KERNEL_CONVENTIONS
 };
 

@@ -6846,7 +6846,8 @@ Text.
     bob,
     vec![
       &affiliation(" Univ B"),
-      &"<contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">b@x.y</text></contact>".to_string()
+      // (id4: Ann's legend note, written since 93a, holds id3 — OD #925)
+      &"<contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id4\">b@x.y</text></contact>".to_string()
     ],
     "{xml}"
   );
@@ -7175,8 +7176,11 @@ Text.
         &format!(
           "{}{}{}",
           affiliation(" Univ B"),
-          affiliation(" Corresponding author"),
-          email_tt("bob@x.y", 2)
+          email_tt("bob@x.y", 2),
+          // (the legend Bob Baker's note, its `†` kept: the kernel family's writer since 93a, OD #925 — ruling 2's
+          // legend line, which the old reader made an affiliation)
+          "<note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id3\"><sup \
+           xml:id=\"id3.1\">†</sup> Corresponding author</note>"
         )
       )
     ]
@@ -7288,9 +7292,11 @@ Text.
       )
     ]
   );
-  // A mark's first label is the one it sets (`$^{1,3}$`): Bob's request for 3 finds no affiliation, a residual shared
-  // with Perl (Base_Utility.pool.ltxml:565-570 keeps the first label), though pdflatex prints Univ A as his too; the
-  // affiliation's printed `1,3` answers his mark, so it is not shown again (64a `answered_labels`).
+  // A mark's first label is the one it sets (`$^{1,3}$`): Perl's reading keeps the first label only
+  // (Base_Utility.pool.ltxml:565-570), so Bob's request for 3 found no affiliation; the observer reads the printed
+  // `1,3` as both (ruling 1), and the observer writes it: Univ A is Bob's too, as pdflatex prints it (the binary wrote
+  // it so since 92c; this in-process conversion since 93a, OD #925). The affiliation's printed `1,3` answers his mark,
+  // so it is not shown again (64a `answered_labels`).
   assert_eq!(
     contacts(
       r"\documentclass{llncs}
@@ -7308,7 +7314,7 @@ Text.
         "Ann Able",
         &format!("{}{}", affiliation(" Univ A"), email("ann@x.y"))
       ),
-      creator(true, "Bob Baker", "")
+      creator(true, "Bob Baker", &affiliation(" Univ A"))
     ]
   );
   // More addresses than authors: the block's, on the shared creator, without the `\email{…}` wrapper, one contact an

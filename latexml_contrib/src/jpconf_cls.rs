@@ -30,6 +30,7 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   title_marks: FmTitleMarks::Body,
   cite: "jpconf.cls:104-110 (iopart's `\\address`/`\\ead`), :139, 153 (its notes' marks); OD #841 (0705.0202, \
          1011.0523)",
+  written: false,
   ..FM_KERNEL_CONVENTIONS
 };
 

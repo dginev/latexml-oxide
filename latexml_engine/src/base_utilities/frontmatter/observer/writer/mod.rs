@@ -110,5 +110,14 @@ pub(super) fn piece_span(events: &[Event]) -> Option<(usize, usize)> {
   span
 }
 
-/// Whether a rule is one the writer writes: a change tag's.
-pub(super) fn writes(assoc: &Assoc) -> bool { is_change_rule(&assoc.rule) }
+/// Whether a rule is one the writer writes: a change tag's — but not an entry the reading leaves to the block because
+/// no name requests its label (`label:unrequested owner:block`, `ruling2:uncarried owner:block`): its tag says how its
+/// label was read, and no ruling decided an owner, so today's placement stays (OD #925: the kernel `\author`'s
+/// `\address` inside it, espcrc's after each name — 78s's `espcrc_addressmark_key_not_printed`, hep-lat0409072 —, a
+/// numbered line under names printing no mark, 77n's `parbox_names_split_and_drop_the_box`, 1205.5573).
+pub(super) fn writes(assoc: &Assoc) -> bool {
+  let unowned = |tag: &str| assoc.rule.contains(tag);
+  is_change_rule(&assoc.rule)
+    && !unowned("label:unrequested owner:block")
+    && !unowned("ruling2:uncarried owner:block")
+}

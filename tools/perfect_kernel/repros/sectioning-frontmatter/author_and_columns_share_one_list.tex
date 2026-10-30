@@ -1,0 +1,16 @@
+% mechanism: `\and` columns whose numbered lines all stand in the last column (`Ann Able$^{1}$ \and Bob
+%   Baker$^{1,2}$ \\ $^{1}$Univ X \\ $^{2}$Univ Y`): a label no other column holds an entry of is every carrier's,
+%   wherever its column (the negative of `author_and_columns_number_their_own_lines.tex`, OD #925)
+% witness: (construct)
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker1,2", "1 Univ X", "2 Univ Y" under Bob Baker
+% engines: rust 92c: the same
+% expect:  0 errors, 0 warnings; Ann Able Univ X, Bob Baker Univ X + Univ Y
+% status:  GREEN (93a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \and Bob Baker$^{1,2}$ \\ $^{1}$Univ X \\ $^{2}$Univ Y}
+\maketitle
+Body.
+\end{document}

@@ -458,13 +458,14 @@ fn observer_reads_a_note_by_the_ink_test() {
 /// observer reads each note so.
 #[test]
 fn kernel_thanks_constructor_text_is_ink() {
-  let tex = repro!("kernel_thanks_constructor_text_is_ink");
-  let xml = clean_both_ways(tex);
-  let note = r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">"#;
-  assert_eq!(
-    frontmatter(&xml),
-    format!(
-      r#"<title>T</title>
+  super::perfect_kernel_batchfms2a1::reading_only(|| {
+    let tex = repro!("kernel_thanks_constructor_text_is_ink");
+    let xml = clean_both_ways(tex);
+    let note = r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">"#;
+    assert_eq!(
+      frontmatter(&xml),
+      format!(
+        r#"<title>T</title>
   <creator role="author">
     <personname>Ann Able</personname>
     {note}<Math mode="inline" tex="\openone" text="1">
@@ -480,16 +481,17 @@ fn kernel_thanks_constructor_text_is_ink() {
   <creator before="{EM2}" role="author">
     <personname>Cat Cole</personname>
   </creator>"#
-    )
-  );
-  assert_eq!(tuples(&resolved(tex, Some("ar5iv.sty"))), [
-    "C Ann Able [] | line:names",
-    "  n  | note:adjacent",
-    "C Bob Baker [] | line:names sep:column",
-    "  n  | note:adjacent",
-    "C Cat Cole [] | line:names sep:column",
-    "D note  | note:adjacent ruling4:inkless",
-  ]);
+      )
+    );
+    assert_eq!(tuples(&resolved(tex, Some("ar5iv.sty"))), [
+      "C Ann Able [] | line:names",
+      "  n  | note:adjacent",
+      "C Bob Baker [] | line:names sep:column",
+      "  n  | note:adjacent",
+      "C Cat Cole [] | line:names sep:column",
+      "D note  | note:adjacent ruling4:inkless",
+    ]);
+  });
 }
 
 /// A background colour is ink, whatever it is behind: `\colorbox{c}{…}` is

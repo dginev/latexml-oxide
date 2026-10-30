@@ -5,8 +5,10 @@
 //! the binding's file name, keyed on (binding, hook) as the ledger records them at the call — the binding owning the
 //! `\author` meaning (`ledger::author_binding`, or the class's binding with a declaration, `ledger::policy_binding`)
 //! and the `\lx@add@authors*` hook it called. Each declaration reproduces a convention the binding's family already
-//! had and cites the OXIDIZED_DESIGN_DIVERGENCES entry or the witness it reproduces; a family that declares none takes
-//! [`KERNEL`], the kernel's (Perl's `@authorsplits` reading, Base_Utility.pool.ltxml:676-700).
+//! had and cites the OXIDIZED_DESIGN_DIVERGENCES entry or the witness it reproduces. The kernel's own blocks (`\author`
+//! still LaTeXML's, under `article` or any class whose bindings declare none) take [`KERNEL`] (Perl's `@authorsplits`
+//! reading, Base_Utility.pool.ltxml:676-700), written (OD #925); a binding owning `\author` that declares none takes the
+//! same reading unwritten, `UNDECLARED`, until its family passes its own gate.
 
 use std::rc::Rc;
 
@@ -90,8 +92,10 @@ pub struct Policy {
   pub cite:             &'static str,
 }
 
-/// The kernel's conventions: every family whose binding declares none (and the template a declaration completes,
-/// `..KERNEL`).
+/// The kernel's conventions: the blocks of the kernel's `\author` under a class whose bindings declare none (`article`
+/// and every class without a frontmatter binding of its own), written (FM stage 7, OD #925: the writer applies the
+/// reading where its operations explain every difference, else today's output stays); and the template a declaration
+/// completes (`..KERNEL`, each declaration stating its own `written`).
 pub const KERNEL: Policy = Policy {
   name:             "kernel",
   binding:          "*",
@@ -107,9 +111,32 @@ pub const KERNEL: Policy = Policy {
   and_word:         false,
   unmarked_notes:   false,
   email_in_place:   false,
-  written:          false,
-  cite:             "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); FIDELITY_CHARTER §4",
+  written:          true,
+  cite:             "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); FIDELITY_CHARTER §4; OD #925",
 };
+
+/// The conventions of a binding owning the `\author` meaning that declares none of its own (JHEP.cls, acmart.cls,
+/// mn2e_support.sty, …), or of a meaning no binding owns (the document's own, a file read raw, the fallback class's):
+/// the kernel's reading, not written — the observer writes a family only once its own gate passed (OD #837 S2b).
+pub const UNDECLARED: Policy = Policy {
+  name: "undeclared",
+  written: false,
+  cite: "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); OD #925",
+  ..KERNEL
+};
+
+/// The owner name the ledger gives the kernel's `\author` (`ledger::meaning_owner`, `ledger::policy_binding`).
+pub const KERNEL_BINDING: &str = "kernel";
+
+/// The conventions for a block of `binding` when it declared none: the kernel's for the kernel's own blocks, else
+/// `UNDECLARED`.
+fn undeclared(binding: &str) -> &'static Policy {
+  if binding == KERNEL_BINDING {
+    &KERNEL
+  } else {
+    &UNDECLARED
+  }
+}
 
 /// The state key a binding's declarations are kept under.
 fn declarations_key(binding: &str) -> String { s!("frontmatter_conventions:{binding}") }
@@ -159,7 +186,8 @@ pub fn declares_email_in_place(binding: &str) -> bool {
 }
 
 /// The conventions among `declared` for a block recorded under `binding` (the `\author` owner) and `hook`: the first
-/// declaration whose binding and hook match (`*` any), else [`KERNEL`] — `policy_for`'s rule, for a caller holding
+/// declaration whose binding and hook match (`*` any), else the kernel's for the kernel's own blocks, `UNDECLARED`
+/// for any other — `policy_for`'s rule, for a caller holding
 /// the declarations itself (`ab_audit fmshadow --re-resolve`).
 pub fn conventions_among<'a>(
   declared: impl IntoIterator<Item = &'a &'static Policy>,
@@ -170,13 +198,16 @@ pub fn conventions_among<'a>(
     .into_iter()
     .copied()
     .find(|p| p.binding == binding && (p.hook == "*" || p.hook == hook))
-    .unwrap_or(&KERNEL)
+    .unwrap_or_else(|| undeclared(binding))
 }
 
 /// The conventions for a block recorded under `binding` (the `\author` owner) and `hook`: the first that binding
-/// declared whose hook matches (`*` any), else [`KERNEL`].
+/// declared whose hook matches (`*` any), else the kernel's for the kernel's own blocks, `UNDECLARED` for any other.
 pub fn policy_for(binding: &str, hook: &str) -> &'static Policy {
-  declared(binding).map_or(&KERNEL, |d| conventions_among(d.iter(), binding, hook))
+  declared(binding).map_or_else(
+    || undeclared(binding),
+    |d| conventions_among(d.iter(), binding, hook),
+  )
 }
 
 #[cfg(test)]
@@ -200,10 +231,10 @@ mod tests {
   };
 
   #[test]
-  fn a_declaration_is_read_and_an_undeclared_family_takes_the_kernel() {
+  fn a_declaration_is_read_and_an_undeclared_family_takes_the_kernel_unwritten() {
     assert_eq!(
       policy_for("synthetic_binding", "\\lx@add@author@split").name,
-      "kernel"
+      "undeclared"
     );
     assert!(!has_entry("synthetic_binding"));
     declare_frontmatter_conventions(&APPEND_HOOK);
@@ -223,8 +254,10 @@ mod tests {
     );
     assert_eq!(
       policy_for("undeclared_binding", "\\lx@add@authors@append").name,
-      "kernel"
+      "undeclared"
     );
+    assert!(policy_for("kernel", "\\lx@add@authors@adaptive").written);
+    assert!(!policy_for("undeclared_binding", "\\lx@add@authors@append").written);
     // (a declaration again for a hook replaces the earlier in its place: a binding loaded again)
     declare_frontmatter_conventions(&APPEND_HOOK);
     assert_eq!(

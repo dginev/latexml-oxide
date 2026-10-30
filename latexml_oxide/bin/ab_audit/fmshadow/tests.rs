@@ -68,8 +68,8 @@ fn a_dump_with_clears_publication_notes_and_ref_lists_re_resolves_to_itself() {
 }
 
 /// The comparator on two conversions: a marked block the shadow resolves as the XML has it agrees; the design's
-/// `dag` probe disagrees, one classified row per moved symbol line (ruling 2: today's XML has both lines on Cat Cole,
-/// the shadow each on its carriers) — and resolving the dump's events again gives the dump's own resolution.
+/// `dag` probe, written (93a), agrees, and against the old reader's XML disagrees, one classified row per moved symbol
+/// line (ruling 2: the old reader has both lines on Cat Cole, the shadow each on its carriers) — and resolving the dump's events again gives the dump's own resolution.
 #[test]
 fn comparator_rows_on_an_agreeing_and_a_disagreeing_conversion() {
   let agreeing = "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^{1}$ \\and Bob Baker$^{2}$\\\\ $^1$Univ A\\\\ $^2$Univ B}\n\\maketitle\nBody.\n\\end{document}\n";
@@ -84,7 +84,28 @@ fn comparator_rows_on_an_agreeing_and_a_disagreeing_conversion() {
   let (xml, dump) = convert(disagreeing);
   let shadow = shadow_tuples(&json_resolved(&dump["resolved"]));
   assert_eq!(shadow, shadow_tuples(&fm_resolve(&json_inputs(&dump))));
-  let rows = compare(&shadow, &xml_tuples(xml.as_bytes()).expect("xml"));
+  // (the kernel family is written since 93a, OD #925: the writer re-assigns the symbol lines, so the written XML agrees;
+  // the comparator's rows are against the old reader's, the observer off)
+  assert_eq!(dump["writer"], "written");
+  assert_eq!(
+    compare(&shadow, &xml_tuples(xml.as_bytes()).expect("xml")),
+    vec![]
+  );
+  let (log, old_reader, ()) = latexml::util::test::convert_with_setup_then(
+    disagreeing,
+    Some("ar5iv.sty"),
+    || latexml_engine::base_utilities::set_fm_shadow_override(Some(false)),
+    |_| (),
+  );
+  assert_eq!(
+    (
+      latexml::util::test::error_count(&log),
+      latexml::util::test::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  let rows = compare(&shadow, &xml_tuples(old_reader.as_bytes()).expect("xml"));
   assert!(
     !rows.is_empty() && rows.iter().all(|d| d.kind == "affiliation" && d.classified),
     "{rows:?}"

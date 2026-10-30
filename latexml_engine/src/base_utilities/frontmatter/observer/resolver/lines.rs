@@ -15,9 +15,12 @@ pub(super) struct Line<'a> {
 
 /// A labelled entry of a labelled line: its labels, its events, whether a symbol leads it.
 pub(super) struct Entry<'a> {
-  pub(super) labels: Vec<String>,
-  pub(super) symbol: bool,
-  pub(super) events: Vec<&'a Event>,
+  pub(super) labels:   Vec<String>,
+  pub(super) symbol:   bool,
+  /// its labels are the symbols of one mark printing them together (`$^{\dagger\ddagger}$`, no separator): a compound
+  /// mark, which names the names carrying them all
+  pub(super) compound: bool,
+  pub(super) events:   Vec<&'a Event>,
 }
 
 /// The block's lines (rule 1): a `Break` ends a row, a column separator (unless `\and` is inline) a column.
@@ -274,6 +277,7 @@ pub(super) fn trailing_entries<'a>(line: &[&'a Event]) -> Vec<Entry<'a>> {
           entries.push(Entry {
             labels,
             symbol,
+            compound: false,
             events: std::mem::take(&mut run),
           });
           closed = true;
@@ -316,16 +320,24 @@ pub(super) fn entries_of<'a>(line: &[&'a Event]) -> Vec<Entry<'a>> {
         let labels = event_labels(event);
         let symbol =
           event.symbol || (!labels.is_empty() && labels.iter().all(|l| is_symbol_label(l)));
+        // (one mark printing distinct symbols together, no separator between them: `$^{\dagger\ddagger}$`)
+        let compound = labels.len() > 1
+          && event
+            .label
+            .as_deref()
+            .is_some_and(|l| l.trim() == labels.concat());
         let open = entries.last().is_some_and(|e| e.events.is_empty());
         if open {
           if let Some(entry) = entries.last_mut() {
             entry.labels.extend(labels);
             entry.symbol &= symbol;
+            entry.compound = false;
           }
         } else if after_sep || entries.is_empty() {
           entries.push(Entry {
             labels,
             symbol,
+            compound,
             events: Vec::new(),
           });
         }

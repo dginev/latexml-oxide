@@ -9,6 +9,7 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   binding: "ijcai.sty",
   email_owner: FmEmailOwner::SpelledElseOrder,
   cite: "ijcai.sty.ltxml:50-53 (`\\emails`, `labelseq=author`); OD #908 (2105.02711, 1905.13566, 2308.08563)",
+  written: false,
   ..FM_KERNEL_CONVENTIONS
 };
 

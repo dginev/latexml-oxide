@@ -11,6 +11,7 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   binding: "jcappub.sty",
   email_owner: FmEmailOwner::SpelledElseOrder,
   cite: "jcappub.sty (jheppub's `\\emailAdd`); OD #805 (1804.07528, 2407.07862)",
+  written: false,
   ..FM_KERNEL_CONVENTIONS
 };
 

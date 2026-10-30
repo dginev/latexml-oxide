@@ -259,13 +259,15 @@ Text.
 /// Peng Xu's). The unspelled link stays in the text (decision 2).
 #[test]
 fn a_notes_url_spelling_a_coauthor_is_theirs() {
-  assert_eq!(tuples(URL), [
-    "C Ann Able [] | line:names",
-    "  n Univ A, City. The code is at https://example.org/code, Bob’s page https://www.bobbaker.org/ . | \
+  super::perfect_kernel_batchfms2a1::reading_only(|| {
+    assert_eq!(tuples(URL), [
+      "C Ann Able [] | line:names",
+      "  n Univ A, City. The code is at https://example.org/code, Bob’s page https://www.bobbaker.org/ . | \
      note:adjacent",
-    "C Bob Baker [] | line:names sep:column",
-    "  c url https://www.bobbaker.org/ | note:adjacent ruling4:inner-contact owner:spelled",
-  ]);
+      "C Bob Baker [] | line:names sep:column",
+      "  c url https://www.bobbaker.org/ | note:adjacent ruling4:inner-contact owner:spelled",
+    ]);
+  });
 }
 
 /// A url printing an address group (local parts before one domain set as a link) is no co-author's by the first spelling
@@ -285,13 +287,15 @@ fn a_notes_address_group_url_is_no_coauthors() {
 /// would print them twice); now dropped, each address its speller's.
 #[test]
 fn a_notes_links_empty_it_once_every_name_is_read() {
-  assert_eq!(tuples(EMPTIED), [
-    "C Ann Able [] | line:names",
-    "  c email ann.able@example.org | note:adjacent ruling4:inner-contact",
-    "C Bob Baker [] | line:names sep:column",
-    "  c email bob.baker@example.org | note:adjacent ruling4:inner-contact owner:spelled",
-    "D note ann.able@example.org, bob.baker@example.org | note:adjacent ruling4:emptied",
-  ]);
+  super::perfect_kernel_batchfms2a1::reading_only(|| {
+    assert_eq!(tuples(EMPTIED), [
+      "C Ann Able [] | line:names",
+      "  c email ann.able@example.org | note:adjacent ruling4:inner-contact",
+      "C Bob Baker [] | line:names sep:column",
+      "  c email bob.baker@example.org | note:adjacent ruling4:inner-contact owner:spelled",
+      "D note ann.able@example.org, bob.baker@example.org | note:adjacent ruling4:emptied",
+    ]);
+  });
 }
 
 /// Decision 2 of int66 (the lexer reads a name's edge glyphs as the marks they are): the formula `\|` (`∥`) is
@@ -318,19 +322,21 @@ fn a_names_mark_glyphs_are_marks() {
 /// typed (2003.01448's `F.~M\"uller--S\'anchez`: the classify helpers read `--` as a hyphen, hep-ex9811040).
 #[test]
 fn a_separator_glyph_parts_names() {
-  assert_eq!(tuples(SEPARATORS), [
-    "C Ann Able [] | line:names",
-    "C Bob Baker [] | line:names sep:word",
-    "C Cat Cole [] | line:names sep:word",
-    "C Dan Dole [] | line:names sep:column",
-    "  c email dan.dole@example.org | owner:adjacent",
-    "C Eve Ern PhD [1] | line:names name:qualifier sep:column",
-    "C The ABC Collaboration [] | line:names sep:column",
-    "  n Corresponding authors. | note:adjacent",
-    "C Fay Fox [] | line:names sep:word",
-    "C Gus Gill [] | line:names sep:comma",
-    "C Hal Müller--Sánchez [] | line:names sep:column",
-  ]);
+  super::perfect_kernel_batchfms2a1::reading_only(|| {
+    assert_eq!(tuples(SEPARATORS), [
+      "C Ann Able [] | line:names",
+      "C Bob Baker [] | line:names sep:word",
+      "C Cat Cole [] | line:names sep:word",
+      "C Dan Dole [] | line:names sep:column",
+      "  c email dan.dole@example.org | owner:adjacent",
+      "C Eve Ern PhD [1] | line:names name:qualifier sep:column",
+      "C The ABC Collaboration [] | line:names sep:column",
+      "  n Corresponding authors. | note:adjacent",
+      "C Fay Fox [] | line:names sep:word",
+      "C Gus Gill [] | line:names sep:comma",
+      "C Hal Müller--Sánchez [] | line:names sep:column",
+    ]);
+  });
 }
 
 /// 1607.07280 (r6's revtex4_support sample, wrong): the mark a `\footnote[1]` shows on a name is the request an entry led
@@ -404,17 +410,19 @@ Text.
 /// revfms2a2_7 finding 6 — it was read as ruling 2's symbol line).
 #[test]
 fn a_mark_glyphs_legend_is_a_note() {
-  assert_eq!(tuples(GLYPH_LEGEND), [
-    "C Ann Able [1,#] | line:names mark:after-comma",
-    "  a Univ A, City. | ruling1:request",
-    "  n authors contributed equally | ruling1:request",
-    "C Bob Baker [2,#] | line:names sep:comma mark:after-comma",
-    "  a Univ B, Town. | ruling1:request",
-    "  n authors contributed equally | ruling1:request",
-    "C Cat Cole [2,⋆] | line:names sep:comma",
-    "  a Univ B, Town. | ruling1:request",
-    "  n to whom correspondence should be addressed. | ruling1:request",
-  ]);
+  super::perfect_kernel_batchfms2a1::reading_only(|| {
+    assert_eq!(tuples(GLYPH_LEGEND), [
+      "C Ann Able [1,#] | line:names mark:after-comma",
+      "  a Univ A, City. | ruling1:request",
+      "  n authors contributed equally | ruling1:request",
+      "C Bob Baker [2,#] | line:names sep:comma mark:after-comma",
+      "  a Univ B, Town. | ruling1:request",
+      "  n authors contributed equally | ruling1:request",
+      "C Cat Cole [2,⋆] | line:names sep:comma",
+      "  a Univ B, Town. | ruling1:request",
+      "  n to whom correspondence should be addressed. | ruling1:request",
+    ]);
+  });
 }
 
 const RUNAWAY_MARK: &str = r#"\documentclass{article}
@@ -453,7 +461,8 @@ fn a_runaway_note_mark_is_unwound() {
   ]);
 }
 
-/// The r7 shapes leave the XML byte-identical with the switch on and off (shadow only) — but `FOOTNOTE_MARK`, a
+/// The r7 shapes leave the XML byte-identical under the census switch and in the default mode (the fleet's; shadow
+/// only, or written in both — the kernel family since 93a, OD #925) — but `FOOTNOTE_MARK`, a
 /// REVTeX paper the writer writes (FM S2b, `perfect_kernel_batchfms2b::footnote_marked_affiliations_go_to_their_names`).
 #[test]
 fn r7_shapes_leave_the_xml_unchanged() {
@@ -468,16 +477,17 @@ fn r7_shapes_leave_the_xml_unchanged() {
     RUNAWAY_MARK,
     GLYPH_LEGEND,
   ] {
-    let run = |on: bool| {
+    let run = |on: Option<bool>| {
       convert_with_setup_then(
         tex,
         Some("ar5iv.sty"),
-        move || set_fm_shadow_override(Some(on)),
+        move || set_fm_shadow_override(on),
         |_| (),
       )
     };
-    let (on_log, on_xml, ()) = run(true);
-    let (off_log, off_xml, ()) = run(false);
+    let (on_log, on_xml, ()) = run(Some(true));
+    // (the default, as the fleet runs: a written family's paper written there too)
+    let (off_log, off_xml, ()) = run(None);
     assert_eq!(on_xml, off_xml, "{tex}");
     assert_eq!(
       (error_count(&on_log), warning_count(&on_log)),

@@ -567,7 +567,8 @@ impl Resolver {
       .iter()
       .flat_map(|c| c.requests.iter().filter(|r| !special(r)).map(|r| bare(r)))
       .collect();
-    for (labels, _, assoc) in &mut self.pending {
+    let mut compound = Vec::new();
+    for (at, (labels, _, assoc)) in self.pending.iter_mut().enumerate() {
       // (only a label a printed mark gave: never a class's numbering, `labelseq` — `\institute{… \and …}`'s 12th
       // entry is no glued `1` and `2`, 1005.2409 — nor a call's own `label=`)
       let printed = assoc.rule.split_whitespace().next().is_some_and(|first| {
@@ -587,6 +588,15 @@ impl Resolver {
           && !shown.contains(&b)
           && let Some(parts) = parted_label(&b, &shown, false)
         {
+          // (a compound of distinct footnote symbols names the names carrying them all, as the line prints it beside
+          // them — `$^{\dagger\ddagger}$ Project lead` under `Ann Able$^{\dagger}$` and `Bob Baker$^{\dagger\ddagger}$`
+          // is Bob Baker's alone, 2602.19190; `∗∗` beside revtex's own `∗` is the one symbol, 1505.06831)
+          let mut distinct = parts.clone();
+          distinct.sort();
+          distinct.dedup();
+          if distinct.len() > 1 && distinct.iter().all(|p| is_symbol_label(p)) {
+            compound.push(at);
+          }
           for p in parts {
             if !out.contains(&p) {
               out.push(p);
@@ -602,6 +612,7 @@ impl Resolver {
         assoc.rule.push_str(" ruling1:parted");
       }
     }
+    self.compound.extend(compound);
   }
 
   /// A note's links, once every name is read: each e-mail or url to the author of the note's block it spells (a url by
@@ -879,6 +890,43 @@ impl Resolver {
     let mut inner_emails: Vec<(Vec<usize>, Assoc)> = Vec::new();
     let mut shared_emails: Vec<Assoc> = Vec::new();
     let unpicked = self.share_unpicked(&live);
+    // (each block line entry's `\and` column, and per label the columns of a block whose lines hold an entry of it:
+    // a label with entries in two columns labels each column's own names — `Ann Able$^\dagger$ … \\ $^\dagger$ Univ A
+    // \and Cat Cole$^\dagger$ \\ $^\dagger$ Univ C` gives Univ C to Cat Cole alone, as pdflatex sets each column apart;
+    // an entry of a label no other column holds is every carrier's, wherever its column)
+    let entry_column = |assoc: &Assoc| -> Option<(usize, usize)> {
+      let (block, Some((start, _))) = assoc.source? else {
+        return None;
+      };
+      self.entry_column.get(&(block, start)).map(|&c| (block, c))
+    };
+    let columns: Vec<Option<(usize, usize)>> =
+      pending.iter().map(|(_, _, a)| entry_column(a)).collect();
+    let label_columns = |block: usize, label: &str| -> usize {
+      let mut seen: Vec<usize> = pending
+        .iter()
+        .zip(&columns)
+        .filter(|((labels, ..), column)| {
+          column.is_some_and(|(b, _)| b == block) && labels.iter().any(|l| l == label)
+        })
+        .filter_map(|(_, column)| column.map(|(_, c)| c))
+        .collect();
+      seen.sort_unstable();
+      seen.dedup();
+      seen.len()
+    };
+    let scoped: Vec<Vec<String>> = pending
+      .iter()
+      .zip(&columns)
+      .map(|((labels, ..), column)| match column {
+        Some((block, _)) => labels
+          .iter()
+          .filter(|l| label_columns(*block, l) > 1)
+          .cloned()
+          .collect(),
+        None => Vec::new(),
+      })
+      .collect();
     for (at, (labels, symbol, assoc)) in pending.into_iter().enumerate() {
       // (a class's one institute no `\inst{n}` picks is every author's, its e-mail lines placed each by the chain:
       // `share_unpicked`, `answer_shared_emails`)
@@ -927,6 +975,10 @@ impl Resolver {
       let mut owners: Vec<usize> = Vec::new();
       for label in &labels {
         for owner in label_owners(&self.out.creators, &live, label) {
+          // (a label several columns answer: this entry's column's names only)
+          if scoped[at].contains(label) && self.column[owner] != columns[at] {
+            continue;
+          }
           if !owners.contains(&owner) {
             owners.push(owner);
           }
@@ -964,6 +1016,17 @@ impl Resolver {
             owners.push(*c);
           }
         }
+      }
+      // (a compound of footnote symbols parted: the names carrying every one of them)
+      if self.compound.contains(&at) {
+        owners.retain(|&c| {
+          labels.iter().all(|l| {
+            self.out.creators[c]
+              .requests
+              .iter()
+              .any(|r| label_matches(r, l))
+          })
+        });
       }
       owners.sort_unstable();
       // (a numbered affiliation answers no request a `\footnotemark` made: that number is its footnote's — `Kui

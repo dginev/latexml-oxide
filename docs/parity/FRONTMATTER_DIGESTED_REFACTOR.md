@@ -135,7 +135,14 @@ they stay for stages 3–5.
    out (`Op::WriteOut`) and an empty call holds no paper back; a label glued to a symbol parted (`\inst{1*}`), a
    share entry no hand mark requests, a note's spelled address a change. Scorer aa 81.23 % → 100 %, llncs 78.98 % →
    94.89 % (left: 1901.07288, stage 5's pre-splitter; two scorer source limits); census unclassified llncs 25 (5.4 %),
-   aa 18 (3.2 %).
+   aa 18 (3.2 %). **93a: the kernel family written** (OD #925-#927): the kernel's own `\author` (`article`,
+   `report`, `book` and every class whose bindings declare no conventions) `written`, a binding owning `\author` that
+   declares none `UNDECLARED` (unwritten); the writer cuts a block's own marked lines today's joined, writes a legend
+   line as the starred names' note, leaves an unrequested entry where today's put it; readings: a label several `\and`
+   columns answer each column's, a compound symbol mark all its symbols', an order list agreeing with the block's
+   every spelled address, a trailing mark a label only on a name. Scorer marks path 91.88 % → 92.53 %, `article`
+   92.00 % → 92.39 %; left: the names the old reader parted otherwise (a writer re-part operation, 32 creators), raw
+   files' in-place `\address` (14), the scorer's source reading (11), other families' (44).
 8. **Per-class parsers** as each family is promoted.
 
 ## Test suite and measurement

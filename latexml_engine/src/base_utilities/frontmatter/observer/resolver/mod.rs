@@ -252,6 +252,16 @@ struct Resolver {
   pending:          Vec<(Vec<String>, bool, Assoc)>,
   /// per creator: its group (the block's input index, or the policy's call group)
   group:            Vec<usize>,
+  /// per creator: the block (input index) and `\and` column of the names line it was read from, if a block's
+  column:           Vec<Option<(usize, usize)>>,
+  /// the block line being read (input index, column): the column a creator made now is read from
+  line_column:      Option<(usize, usize)>,
+  /// the column (input index, column) of each block line's events, keyed by (input index, an event's span start):
+  /// where a labelled entry stands (`answer_pending`'s per-column labels)
+  entry_column:     HashMap<(usize, u16), usize>,
+  /// the addresses every line of the block being read prints (`place_line_contacts`' author-order list: one address
+  /// per author, every spelled address of the block agreeing)
+  block_addresses:  Vec<String>,
   /// the addresses of a class's list printed apart from the names (`EmailOwner::SpelledElseOrder`), each with its
   /// group's creators
   /// (each with its call's place in the list: `_sequence=<n>`, else the calls' count)
@@ -288,6 +298,9 @@ struct Resolver {
   notes_marked:     bool,
   /// the requests a glued mark was parted into (creator, request), `part_glued_labels`
   parted:           Vec<(usize, String)>,
+  /// the pending entries (their place in `pending`) whose label was a compound of distinct footnote symbols parted
+  /// (`$^{\dagger\ddagger}$ Project lead`): the names carrying all of them (`part_glued_labels`, `answer_pending`)
+  compound:         Vec<usize>,
   /// while an API call's marked entries are resolved one by one (`mark_led_pieces`)
   splitting:        bool,
   /// the pending entries ruling 1 labels by a leading mark that today's attaches where its `annotate=` puts it, with
@@ -366,6 +379,10 @@ impl Resolver {
       sequence:         Vec::new(),
       pending:          Vec::new(),
       group:            Vec::new(),
+      column:           Vec::new(),
+      line_column:      None,
+      entry_column:     HashMap::default(),
+      block_addresses:  Vec::new(),
       sequenced:        Vec::new(),
       sequence_calls:   0,
       last_run:         None,
@@ -384,6 +401,7 @@ impl Resolver {
       note_marks:       Vec::new(),
       notes_marked:     true,
       parted:           Vec::new(),
+      compound:         Vec::new(),
       splitting:        false,
       piled:            Vec::new(),
       empty_piled:      Vec::new(),
@@ -421,6 +439,7 @@ impl Resolver {
     self.roles.push(Vec::new());
     self.order.push(Vec::new());
     self.group.push(group);
+    self.column.push(self.line_column);
     self.out.creators.len() - 1
   }
 
@@ -537,6 +556,8 @@ pub fn resolve_with(
         events,
       } => {
         policy = conventions(binding, hook);
+        resolver.line_column = None;
+        resolver.block_addresses.clear();
         // (a call replacing the authors before it in its queue: `\author{A, B}` then `\author{A\thanks{…}, B}`,
         // 2502.11323, 2509.11381 — the later one's are the document's)
         if *replace {

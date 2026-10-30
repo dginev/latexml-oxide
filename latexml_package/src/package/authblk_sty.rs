@@ -13,6 +13,7 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   state_counter: Some("Maxaffil"),
   cite: "authblk.sty:114-118, 148-167 (`\\AB@thenote`, `\\newaffil`, `Maxaffil`); Perl authblk.sty.ltxml:57 \
          `annotate=new`; authblk_sty.rs `\\affil` (2605.01689, 2605.25017)",
+  written: false,
   ..FM_KERNEL_CONVENTIONS
 };
 

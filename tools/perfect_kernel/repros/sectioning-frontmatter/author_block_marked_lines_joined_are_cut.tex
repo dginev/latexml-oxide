@@ -1,0 +1,22 @@
+% mechanism: the kernel `\author`'s own affiliation lines, several on one line each opened by its mark
+%   (`$^3$ Univ Z \xspace$^4$ Univ W`): the observer reads one entry per mark, each requested by the name showing it
+%   (ruling 1); today's old reader joined the line into one affiliation of the first name. The writer's block-line cut
+%   (`plan::cut_block_lines`, OD #925) makes each entry from its line's tokens, from its mark on, for its authors.
+% witness: 2404.02078 (`$^4$ ModelBest.Inc \xspace$^5$ Renmin University of China \xspace$^6$ BUPT \xspace$^7$
+%   Tencent`), 2509.24142
+% oracle:  pdflatex 0 errors: "Ann Able1,2 , Bob Baker3 , Cid Cole4" over "1 Univ X 2 Univ Y" and "3 Univ Z 4 Univ W"
+% engines: rust 92c: Bob Baker "Univ Z 4 Univ W", Cid Cole none; perl: one creator per comma piece, the lines in the
+%   last name
+% expect:  0 errors, 0 warnings; Ann Able Univ X + Univ Y, Bob Baker Univ Z, Cid Cole Univ W
+% status:  GREEN (93a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{xspace}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,2}$, Bob Baker$^{3}$, Cid Cole$^{4}$ \\
+$^1$Univ X \hfill$^2$Univ Y \\
+$^3$ Univ Z \xspace$^4$ Univ W}
+\maketitle
+Body.
+\end{document}
