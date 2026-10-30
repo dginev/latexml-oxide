@@ -487,9 +487,16 @@ fn ink_of_without_notes(d: &Digested) -> String { script_ink(d, false) }
 /// digestion written as its key, prefixed `ref:` ([`printless_ref_key`], [`script_mark`]), a list item of its own: a
 /// comma parts it from the ink or the reference beside it, whatever printed between them (`\ref{ia}\ref{ib}`
 /// `ref:ia,ref:ib`; `1\ref{b}` `1,ref:b`; `\ref{a}--\ref{c}` `ref:a,–,ref:c`; review rev92a_r1 B3, where the keys
-/// written back to back were one label, `ref:iaref:ib`, that matched no entry).
+/// written back to back were one label, `ref:iaref:ib`, that matched no entry). Spacing (`is_spacing_item`, the reader
+/// `first_ink` and the kernel's label keys use: `$^{1\,2}$`'s glue, `\!`'s zero-width-space box, a `\kern`) is a space
+/// between labels, and an invisible character (`is_invisible_char`) none (`$^{1\kern2pt2}$` read "12", one label;
+/// `\up{\!1,2}` a zero-width-space label of its own, 2209.14855 — review rev92b_r1 B1, `queue_digest::label_ink`).
 fn script_ink(d: &Digested, refs: bool) -> String {
   fn ink(d: &Digested, refs: bool, out: &mut String) {
+    if is_spacing_item(d) {
+      out.push(' ');
+      return;
+    }
     match d.data() {
       DigestedData::List(l) => {
         for child in l.borrow().boxes.iter() {
@@ -497,16 +504,19 @@ fn script_ink(d: &Digested, refs: bool) -> String {
         }
       },
       DigestedData::Whatsit(w) if is_note_whatsit(&w.borrow()) => {},
+      // (a picture prints no label: `is_picture`)
+      DigestedData::Whatsit(w) if is_picture(&w.borrow()) => out.push(' '),
       DigestedData::Whatsit(w) if refs && let Some(key) = printless_ref_key(&w.borrow()) => {
         out.push_str(",ref:");
         out.push_str(&key);
         out.push(',');
       },
-      DigestedData::Whatsit(_) if notes_in(d).is_empty() && !(refs && holds_printless_ref(d)) => {
-        ink_text(d, out)
-      },
+      // (what any other whatsit shows, walked as `ink_text` walks it, its notes and printless references read here)
       DigestedData::Whatsit(w) => {
         let w = w.borrow();
+        if let Some(Stored::Digested(a)) = w.get_property("alignment").as_deref() {
+          ink(a, refs, out);
+        }
         for (arg, shown) in w.get_args().iter().zip(shown_arguments(&w)) {
           if shown && let Some(arg) = arg {
             ink(arg, refs, out);
@@ -521,6 +531,7 @@ fn script_ink(d: &Digested, refs: bool) -> String {
   }
   let mut text = String::new();
   ink(d, refs, &mut text);
+  text.retain(|c| !is_invisible_char(c));
   let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
   if !refs {
     return text;

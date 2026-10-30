@@ -704,15 +704,10 @@ pub(in crate::base_utilities) fn unanswered_mark_text(mark: &str) -> Option<Stri
     "\\|" => "\u{2016}",
     "\\#" | "#" => "#",
     "\u{2020}" | "\u{2021}" | "\u{2217}" | "\u{A7}" | "\u{B6}" => mark,
-    // (one printed symbol, no letter, digit, space or ASCII character: a run of several is a whole-run label, its
-    // symbols requested apart, `clean_frontmatter_labels`)
-    _ if mark.chars().count() == 1
-      && mark
-        .chars()
-        .all(|c| !c.is_ascii() && !c.is_alphanumeric() && !c.is_whitespace()) =>
-    {
-      mark
-    },
+    // (one printed symbol, `queue_digest::is_printed_symbol` — no letter, digit, space, ASCII or invisible character:
+    // `\up{\!1,2}`'s zero-width space is none, 2209.14855; a run of several is a whole-run label, its symbols requested
+    // apart, `parted_printed_label`)
+    _ if mark.chars().count() == 1 && mark.chars().all(is_printed_symbol) => mark,
     _ => return None,
   };
   Some(glyph.to_string())

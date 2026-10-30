@@ -1,5 +1,7 @@
 //! Digesting a queued front matter item: labels, the `Frontmatter` store, and the digested-entry seals.
 
+use latexml_core::token::FieldLedgerScope;
+
 use super::*;
 
 /// Digest the content for a frontmatter item, disabling or masking certain commands.
@@ -259,45 +261,67 @@ pub(in crate::base_utilities) fn frontmatter_label_keys(
   })
 }
 
-/// A printed label whose number or letters a symbol is glued to (`$^{\ICQD,\Phys\ast}$` prints "1,4∗", 2412.09857):
-/// the whole, then each run apart (`4∗`, `4`, `∗`), as a printed run of distinct symbols is (`clean_frontmatter_labels`)
-/// — the page shows two marks, the number an affiliation's and the symbol a note's; any other label as it is.
+/// A printed label read as the marks the page shows: a number or letters a symbol is glued to (`$^{\ICQD,\Phys\ast}$`
+/// prints "1,4∗", 2412.09857) the whole, then each run apart (`4∗`, `4`, `∗`) — the number an affiliation's and the
+/// symbol a note's —; a run of distinct symbols (`$^{\clubsuit\heartsuit}$` prints "♣♡", 1811.10830's spelled shape)
+/// each symbol too (a doubled `∗∗` stays one), as the spelled run of symbol commands is (`SYMBOL_COMMAND_RUN`,
+/// [`clean_frontmatter_labels`]); any other label as it is. Printed text alone (review rev92b_r1 S2): a mark's spelling
+/// is parted by [`clean_frontmatter_labels`] only.
 fn parted_printed_label(label: String) -> Vec<String> {
   let (prefix, bare) = match label.split_once(':') {
     Some((prefix, bare)) => (s!("{prefix}:"), bare.to_string()),
     None => (String::new(), label.clone()),
   };
-  let symbol = |c: char| c == '*' || (!c.is_ascii() && !c.is_alphanumeric() && !c.is_whitespace());
-  let mut runs: Vec<String> = Vec::new();
-  let mut last: Option<bool> = None;
+  let mut runs: Vec<(bool, String)> = Vec::new();
   for c in bare.chars() {
-    let kind = if c.is_alphanumeric() {
+    let symbol = if c.is_alphanumeric() {
       false
-    } else if symbol(c) {
+    } else if is_printed_symbol(c) {
       true
     } else {
       return vec![label];
     };
-    if last == Some(kind) {
-      runs.last_mut().expect("a run").push(c);
-    } else {
-      runs.push(c.to_string());
+    match runs.last_mut() {
+      Some((kind, run)) if *kind == symbol => run.push(c),
+      _ => runs.push((symbol, c.to_string())),
     }
-    last = Some(kind);
   }
-  if runs.len() < 2 {
+  let mut parts: Vec<String> = Vec::new();
+  for (symbol, run) in &runs {
+    if runs.len() > 1 {
+      parts.push(run.clone());
+    }
+    let mut chars = run.chars();
+    let first = chars.next();
+    if *symbol && chars.any(|c| Some(c) != first) {
+      parts.extend(run.chars().map(String::from));
+    }
+  }
+  if parts.is_empty() {
     return vec![label];
   }
   std::iter::once(label)
-    .chain(runs.into_iter().map(|run| s!("{prefix}{run}")))
+    .chain(parts.into_iter().map(|part| s!("{prefix}{part}")))
     .collect()
+}
+
+/// Whether a printed character is a symbol a mark may be: a star, or a character no letter, digit, space, ASCII
+/// punctuation or invisible character ([`is_invisible_char`]) — `†`, `⋆`, `♣` (`parted_printed_label`,
+/// `insert::unanswered_mark_text`).
+pub(in crate::base_utilities) fn is_printed_symbol(c: char) -> bool {
+  c == '*' || (!c.is_ascii() && !c.is_alphanumeric() && !c.is_whitespace() && !is_invisible_char(c))
 }
 
 /// The printed text of a frontmatter mark's operand that holds a command (a macro, a symbol, a font switch, math):
 /// digested in a group, read as the page shows it ([`label_ink`]: its characters, a cross-reference as its key
-/// `\ref{key}`, glue and kerns a space between labels); `None` — the operand's spelling, Perl's ToString, read instead —
-/// for an operand of characters alone, one holding a note (`\inst{3\footnotemark[1]}`: the note is no label, and
-/// digesting it here would queue it twice), one whose digestion errs (the error stays reported) or prints nothing.
+/// `\ref{key}`, spacing a comma between labels); `None` — the operand's spelling, Perl's ToString, read instead — for
+/// an operand of characters alone, one holding a note (`\inst{3\footnotemark[1]}`: the note is no label, and digesting
+/// it here would queue it twice), one whose digestion errs or prints nothing. The speculative run's diagnostics are
+/// discarded, an erring operand's error too (aa's `\inst{\undefinedmark}`: 0 errors, pdflatex's `! Undefined control
+/// sequence`; Perl, which only stringifies the operand, reports none either — OXIDIZED_DESIGN_DIVERGENCES #919's
+/// residuals). Inside an open assignment journal (a refused setter's replay, a title page's speculative run, the
+/// observer's rehearsal: journals do not nest, `begin_assignment_journal`) no run opens and the spelling is read (#919's
+/// residuals).
 pub(in crate::base_utilities) fn printed_label(operand: &Tokens) -> Result<Option<String>> {
   let tokens = operand.unlist_ref();
   let plain = |t: &Token| {
@@ -356,6 +380,9 @@ fn speculative_label_ink(tokens: Tokens) -> Result<Option<String>> {
   let depth = get_frame_depth();
   let boxes = box_lists_mark();
   let conditionals = if_stack_depth();
+  // (the field ledger put back and the boxes it stamped unstamped, as the observer's rehearsal does: a `\usebox` in
+  // the operand hands back a register's box, which the run's serial would otherwise stay on)
+  let ledger_scope = FieldLedgerScope::begin();
   let result = reading_from_mouth(Mouth::default(), || -> Result<Digested> {
     bgroup();
     let digested = digest(tokens)?;
@@ -379,6 +406,7 @@ fn speculative_label_ink(tokens: Tokens) -> Result<Option<String>> {
     label_ink(digested, &mut printed);
     printed
   });
+  drop(ledger_scope);
   drop(muted);
   let errors = hold.errors_raised();
   let undone = journal.rollback();
@@ -406,13 +434,27 @@ fn speculative_label_ink(tokens: Tokens) -> Result<Option<String>> {
 
 /// The text a digested label operand prints ([`printed_label`]): its boxes' characters, through lists and the arguments
 /// a whatsit shows ([`shown_arguments`]); a cross-reference (`\ref`, its key resolved in post: it prints nothing yet)
-/// written `\ref{key}`, as [`clean_frontmatter_labels`] reads a key; glue and a kern (`\,`, `\quad`, `\hspace`: no
-/// ink, a whatsit showing none) a thin space, which parts two labels as the spacing does in a mark's spelling.
+/// written `\ref{key}`, as [`clean_frontmatter_labels`] reads a key. Spacing parts two labels as a comma does — any
+/// white space in a box's text, and every item [`is_spacing_item`] reads as spacing, the reader 92e's [`first_ink`] uses
+/// (`$^{1\,2}$`'s math glue, a box of a space; `\!`'s zero-width-space box; `\:`, `\>`, `\ `, `\hspace`, `\kern`,
+/// `\mskip`): `$^{1\,2}$` is the labels 1 and 2 (2403.08629, 2601.02539, 1704.04058's `$^{* \, \dagger}$`; review
+/// rev92b_r1 B1: one label `1_2`, nothing answered it, and the mark was lost). An invisible character
+/// ([`is_invisible_char`]) prints no label, nor does a picture ([`is_picture`]).
 fn label_ink(d: &Digested, out: &mut String) {
+  if is_spacing_item(d) {
+    out.push(',');
+    return;
+  }
   match d.data() {
     DigestedData::TBox(b) => {
       if let Ok(text) = b.borrow().get_string() {
-        out.push_str(&text);
+        for c in text.chars() {
+          if c.is_whitespace() {
+            out.push(',');
+          } else if !is_invisible_char(c) {
+            out.push(c);
+          }
+        }
       }
     },
     DigestedData::List(l) => {
@@ -432,7 +474,11 @@ fn label_ink(d: &Digested, out: &mut String) {
         }
         return;
       }
-      let before = out.len();
+      // (a picture prints no label: `is_picture`, 2605.02769's TikZ ORCID logo)
+      if is_picture(&w) {
+        out.push(',');
+        return;
+      }
       if let Some(Stored::Digested(a)) = w.get_property("alignment").as_deref() {
         label_ink(a, out);
       }
@@ -443,9 +489,6 @@ fn label_ink(d: &Digested, out: &mut String) {
       }
       if let Ok(Some(body)) = w.get_body() {
         label_ink(&body, out);
-      }
-      if out.len() == before {
-        out.push('\u{2009}');
       }
     },
     _ => {},
@@ -490,29 +533,7 @@ pub(in crate::base_utilities) fn clean_frontmatter_labels(
           vec![piece]
         }
       },
-      // (and a printed run of distinct symbol characters, the same labels read off the page: `$^{\clubsuit
-      // \heartsuit}$` prints "♣♡", [`printed_label`])
-      false => {
-        let symbols: Vec<char> = piece.trim().chars().collect();
-        // (a star, or a printed symbol: no letter, digit, space or ASCII punctuation)
-        let symbol =
-          |c: &char| *c == '*' || (!c.is_ascii() && !c.is_alphanumeric() && !c.is_whitespace());
-        if symbols.len() >= 2
-          && symbols.iter().all(symbol)
-          && symbols.iter().skip(1).any(|c| *c != symbols[0])
-        {
-          let trimmed = piece.trim();
-          std::iter::once(piece)
-            .chain(
-              trimmed
-                .char_indices()
-                .map(|(at, c)| &trimmed[at..at + c.len_utf8()]),
-            )
-            .collect()
-        } else {
-          vec![piece]
-        }
-      },
+      false => vec![piece],
     })
     .collect();
   for label in pieces {

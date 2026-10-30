@@ -89,7 +89,8 @@ they stay for stages 3–5.
 4. **Labels as printed** (RULED 2026-10-29: printed labels, FIDELITY_CHARTER §4): every family; the marked-path guards; the `\lx@frontmatter@sup`
    label keys (`author_macros.rs:254` → `script_marks`). **Landed (92b, OD #919)** on the digested primitives, request
    and set side: `queue_digest::frontmatter_label_keys` reads an operand printing through a command by its speculative
-   digestion's ink (`\inst{\ESO}` entry 2's, `\dag` ≡ `$\dagger$`), Perl's ToString the fallback; the token readers
+   digestion's ink (`\inst{\ESO}` entry 2's, `\dag` ≡ `$\dagger$`; any spacing a label boundary, invisible
+   characters and pictures no label, the observer's mark reader alike), Perl's ToString the fallback; the token readers
    before digestion (`place.rs`, `shared_row::marks_pick`, `queue.rs`) stay for stages 5 and 7.
 5. **Pre-splitters onto the rehearsal**: ijcai e-mails, `\lx@split@addresses` → `addresses_in`, `\inst` marks,
    `\thanks`-as-affiliations, revtex's group rule (`content_marks`/`group_shares_the_mark`). With the last token
@@ -121,7 +122,8 @@ they stay for stages 3–5.
    the author blocks queued before it (`ledger::record_clear`, every real flush counted). Shadow census (92a r2,
    re-resolved; 92a r4 re-converted): unclassified llncs 81 of 463 papers (17.5 %, unchanged), aa 57 of 554 (10.3 %).
    **92b** (OD #917): G3, an entry's `\email` printing one address placed by FIDELITY_CHARTER §4's chain (the author it
-   spells, the entry's only carrier, its corresponding author, the block; `owner:inner-email`), and an e-mail call's
+   spells, the entry's only carrier, the block, the ONE address left the corresponding author's — one step,
+   `Resolver::place_emails_left`, shared with the `_share` lines; `owner:inner-email`), and an e-mail call's
    line breaks read as such (`events::raw_lines`); the 85b `_share=authors` port, llncs's one `\institute` every live
    author's unless the class's `\inst{n}` picks it, its e-mail lines by the chain (`api:share:authors`); (OD #918) a
    numbered entry's owner found by a mark printed by hand, each request keeping its origin

@@ -1,0 +1,16 @@
+% witness: 2403.08629 (`Nan Jiang$^{1,2\,*}$, Zhiyuan Zhang$^{1,2\,*}$` under `$^1$Institute for AI …`, `$^2$… BIGAI`;
+%          the `SPACING_IN_LABEL` comment's own), 2601.02539 (`$^{1\,2\,\bigstar}$`)
+% oracle:  pdflatex: "Ann Able1,2 ∗ and Bob Baker2" / 1 Univ One / 2 Univ Two
+% engines: perl 0.8.8 = 0 errors, Univ One Ann Able's, Univ Two Bob Baker's only (Ann Able's `2\,*` one label), the ∗
+%          lost; rust 92a: Univ One and Univ Two Ann Able's, the ∗ shown, Univ Two Bob Baker's; 92b r1: Ann Able's
+%          printed `2 ∗` one label `2_∗`, so Univ Two hers no more and the ∗ lost
+% expect:  0 errors, 0 warnings; Univ One and Univ Two Ann Able's, the ∗ shown on her; Univ Two Bob Baker's
+% status:  RED (92b r1) -> GREEN (92b r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1,2\,*}$ \and Bob Baker$^{2}$\\ $^1$Univ One \\ $^2$Univ Two}
+\begin{document}
+\maketitle
+Text.
+\end{document}

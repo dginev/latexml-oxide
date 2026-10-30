@@ -1238,8 +1238,9 @@ impl Resolver {
         self.attach(Some(owner), assoc, note);
       }
     }
-    self.answer_inner_emails(inner_emails);
-    self.answer_shared_emails(shared_emails);
+    let mut placed = self.answer_inner_emails(inner_emails);
+    placed.extend(self.answer_shared_emails(shared_emails));
+    self.place_emails_left(placed);
   }
 
   /// Whether no mark picks a `_share=authors` entry (llncs.cls:868-886: one institute, no `\and` in it, printed
@@ -1270,11 +1271,10 @@ impl Resolver {
   /// \email{…}}`), every address placed by FIDELITY_CHARTER §4's chain over the live authors, as today's places a
   /// shared row's lines (`shared_row::row_email_calls`, OD #901): the author it spells; else, the entry's addresses one
   /// per author that every spelled one agrees with, the author at its place (`owner:order`); else, one author, that
-  /// author; else, the one address left of several authors, the author marked the corresponding author who holds no
-  /// other of them; else the block (a template's `{firstname.lastname}@x.edu`, `owner:pattern`, and a list of local
-  /// parts the reader could not part, `(npalmer|pwg)@…`, too). No elimination.
+  /// author; else the block (a template's `{firstname.lastname}@x.edu`, `owner:pattern`) — the one address left of
+  /// several authors the corresponding author's ([`Resolver::place_emails_left`]). No elimination.
   /// Witnesses 1912.11606, 2302.05745 (llncs class S of the stage-6 gate study).
-  fn answer_shared_emails(&mut self, emails: Vec<Assoc>) {
+  fn answer_shared_emails(&mut self, emails: Vec<Assoc>) -> Vec<EmailPlacement> {
     let live = self.live();
     let flat: Vec<(Assoc, String)> = emails
       .into_iter()
@@ -1301,35 +1301,29 @@ impl Resolver {
         .iter()
         .zip(&live)
         .all(|(s, c)| s.is_none_or(|s| s == *c));
-    let mut owners: Vec<(Option<usize>, &str)> = flat
-      .iter()
-      .zip(&spelled)
+    flat
+      .into_iter()
+      .zip(spelled)
       .enumerate()
-      .map(|(at, ((_, address), spelled))| match spelled {
-        Some(owner) => (Some(*owner), "owner:spelled"),
-        None if in_order => (Some(live[at]), "owner:order"),
-        None => match live.as_slice() {
-          [only] => (Some(*only), "owner:only-author"),
-          _ if is_pattern_address(address) => (None, "owner:pattern"),
-          _ => (None, "owner:block"),
-        },
+      .map(|(at, ((assoc, address), spelled))| {
+        let (owner, tag) = match spelled {
+          Some(owner) => (Some(owner), "owner:spelled"),
+          None if in_order => (Some(live[at]), "owner:order"),
+          None => match live.as_slice() {
+            [only] => (Some(*only), "owner:only-author"),
+            _ if is_pattern_address(&address) => (None, "owner:pattern"),
+            _ => (None, "owner:block"),
+          },
+        };
+        let rule = s!("{} api:share:authors", assoc.rule);
+        EmailPlacement {
+          assoc: Assoc { rule, text: address, ..assoc },
+          owner,
+          tag,
+          candidates: live.clone(),
+        }
       })
-      .collect();
-    let left: Vec<usize> = (0..owners.len())
-      .filter(|&at| owners[at] == (None, "owner:block"))
-      .collect();
-    if let [at] = left.as_slice()
-      && live.len() > 1
-      && !lists_local_parts(&flat[*at].1)
-      && let (Some(author), "owner:corresponding") = self.corresponding(&live)
-      && owners.iter().all(|(owner, _)| *owner != Some(author))
-    {
-      owners[*at] = (Some(author), "owner:corresponding");
-    }
-    for ((assoc, address), (owner, tag)) in flat.into_iter().zip(owners) {
-      let rule = s!("{} api:share:authors {tag}", assoc.rule);
-      self.attach(owner, Assoc { rule, text: address, ..assoc }, false);
-    }
+      .collect()
   }
 
   /// The e-mail calls inside labelled entries that print one address (an `\email` inside an `\institute` entry, the
@@ -1339,24 +1333,78 @@ impl Resolver {
   /// aa's 0901.4618, 1401.5494: `nuccio.lanza@`, `lfossati@`), and today's copies it onto every carrier (Perl too). So
   /// FIDELITY_CHARTER §4's chain, exactly, never bare position and no elimination: the author it spells, any live
   /// author of the document (an entry's address may spell an author of another entry, as `ruling3:written-out` reads
-  /// one); else the entry's only carrier; else, of its carriers, the one marked the corresponding author (a
-  /// "Corresponding author" note: `Resolver::corresponding`); else the block, once — a group's shared address
-  /// (`info@y.org` under an institute two names carry, spelling neither). (An entry no live name carries, its address
-  /// spelling no one, stays the unrequested entry's: `answer_pending`.) Each rule says so (`owner:inner-email`, a
-  /// change tag: the writer moves it). Run after the pending entries, whose legend notes the corresponding step reads.
-  fn answer_inner_emails(&mut self, inner_emails: Vec<(Vec<usize>, Assoc)>) {
+  /// one); else the entry's only carrier; else the block, once — a group's shared address (`info@y.org` under an
+  /// institute two names carry, spelling neither), a template (`\{first.last\}@x.org`, `owner:pattern`: 2408.14427) —,
+  /// the one address left of several, of the entry's carriers the one marked the corresponding author
+  /// ([`Resolver::place_emails_left`]: two addresses left are the block's, though one author carries both entries and
+  /// is marked so). (An entry no live name carries, its address spelling no one, stays the unrequested entry's:
+  /// `answer_pending`.) Each rule says so (`owner:inner-email`, a change tag: the writer moves it).
+  fn answer_inner_emails(&mut self, inner_emails: Vec<(Vec<usize>, Assoc)>) -> Vec<EmailPlacement> {
     let live = self.live();
-    for (owners, assoc) in inner_emails {
-      let carriers: Vec<usize> = owners.into_iter().filter(|c| live.contains(c)).collect();
-      let (owner, tag) = match (self.spelled(&assoc.text, &live), carriers.as_slice()) {
-        (Some(owner), _) => (Some(owner), "owner:spelled"),
-        (None, [only]) => (Some(*only), "owner:only-carrier"),
-        (None, _) => self.corresponding(&carriers),
-      };
-      let rule = s!("{} owner:inner-email {tag}", assoc.rule);
+    inner_emails
+      .into_iter()
+      .map(|(owners, assoc)| {
+        let carriers: Vec<usize> = owners.into_iter().filter(|c| live.contains(c)).collect();
+        let (owner, tag) = match (self.spelled(&assoc.text, &live), carriers.as_slice()) {
+          (Some(owner), _) => (Some(owner), "owner:spelled"),
+          (None, [only]) => (Some(*only), "owner:only-carrier"),
+          (None, _) if is_pattern_address(&assoc.text) => (None, "owner:pattern"),
+          (None, _) => (None, "owner:block"),
+        };
+        let rule = s!("{} owner:inner-email", assoc.rule);
+        EmailPlacement {
+          assoc: Assoc { rule, ..assoc },
+          owner,
+          tag,
+          candidates: carriers,
+        }
+      })
+      .collect()
+  }
+
+  /// FIDELITY_CHARTER §4's corresponding step, once over the e-mail addresses the post-pass placed (the entries'
+  /// one-address calls, [`Resolver::answer_inner_emails`]; a shared entry's lines, [`Resolver::answer_shared_emails`]),
+  /// then each attached by its owner: the ONE address left on the block of a multi-author paper — no other of them left,
+  /// none on the block already — goes to the one author of its candidates marked the corresponding author (a
+  /// "Corresponding author" note: [`Resolver::corresponding`]) who holds no other address; a template
+  /// (`owner:pattern`) and a list of local parts the reader could not part (`(npalmer|pwg)@…`, `lists_local_parts`)
+  /// stay the block's, every author's address and no one's own. Two or more left are each the block's, once
+  /// (`info@x.org` and `office@y.org` under the two institutes a corresponding Ann Able and Bob Baker both carry: not
+  /// both Ann Able's).
+  fn place_emails_left(&mut self, mut placed: Vec<EmailPlacement>) {
+    let left: Vec<usize> = (0..placed.len())
+      .filter(|&at| placed[at].owner.is_none() && placed[at].tag == "owner:block")
+      .collect();
+    let on_block = self.out.block.iter().any(|assoc| assoc.role == "email");
+    if let [at] = left.as_slice()
+      && !on_block
+      && self.live().len() > 1
+      && !lists_local_parts(&placed[*at].assoc.text)
+      && let (Some(author), "owner:corresponding") = self.corresponding(&placed[*at].candidates)
+      && placed.iter().all(|p| p.owner != Some(author))
+      && !self.out.creators[author]
+        .contacts
+        .iter()
+        .any(|assoc| assoc.role == "email")
+    {
+      placed[*at].owner = Some(author);
+      placed[*at].tag = "owner:corresponding";
+    }
+    for EmailPlacement { assoc, owner, tag, .. } in placed {
+      let rule = s!("{} {tag}", assoc.rule);
       self.attach(owner, Assoc { rule, ..assoc }, false);
     }
   }
+}
+
+/// An e-mail address the post-pass placed ([`Resolver::place_emails_left`]): its contact (the rule its chain wrote
+/// before the owner's tag), its owner by the chain so far (`None` the block), the owner's tag, and the authors the
+/// corresponding step may pick among (an entry's carriers, a shared entry's live authors).
+struct EmailPlacement {
+  assoc:      Assoc,
+  owner:      Option<usize>,
+  tag:        &'static str,
+  candidates: Vec<usize>,
 }
 
 /// Whether a pending entry is an e-mail call an entry made that prints one address (`api:inner-contact`; one printing

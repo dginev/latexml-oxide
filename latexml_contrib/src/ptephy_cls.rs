@@ -586,8 +586,13 @@ fn address_lines(tokens: &[Token]) -> Result<Tokens> {
 }
 
 LoadDefinitions!({
-  // (the class this binding answers for: ptephy_v1, whose authblk-TI stacks one `\author` call per author, or ptephy)
-  let v1 = Expand!(Tokens!(T_CS!("\\@currname"))).to_string() == "ptephy_v1";
+  // (the class this binding answers for: ptephy_v1 or ptephy_v2, each loading authblk-TI (ptephy_v1.cls:485,
+  // ptephy_v2.cls:485 `\usepackage{authblk-TI}`), whose `\author` stacks one call per author — 2511.03250's six
+  // `\author[1]{R.~Miyata}` calls —, or ptephy)
+  let stacks = matches!(
+    Expand!(Tokens!(T_CS!("\\@currname"))).to_string().as_str(),
+    "ptephy_v1" | "ptephy_v2"
+  );
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
@@ -642,10 +647,10 @@ LoadDefinitions!({
   // The kernel's `\author`, given the line `author_line` reads: its splitter reads a name's own marks as names when
   // they are macros (a "12" person, a `\thanks` folded into the name, 2209.07273, 1801.03251). Each class's own: a
   // later call replaces the earlier under ptephy.cls:427 (`\def\author#1{\gdef\@author{#1}}`, 1412.6580), and stacks
-  // under ptephy_v1.cls:485's authblk-TI (authblk-TI.sty:70, `\renewcommand\author[2][]` appending to
-  // `\AB@authlist`: `\author{…}\affil{…}` pairs, 2311.07297, 1606.03167, as inst_support's `\author` does) —
-  // OXIDIZED_DESIGN #920.
-  if v1 {
+  // under ptephy_v1.cls:485's and ptephy_v2.cls:485's authblk-TI (authblk-TI.sty:70, `\renewcommand\author[2][]`
+  // appending to `\AB@authlist`: `\author{…}\affil{…}` pairs, 2311.07297, 1606.03167; ptephy_v2's 2511.03250, as
+  // inst_support's `\author` does) — OXIDIZED_DESIGN #920.
+  if stacks {
     Let!("\\lx@ptephy@kernel@author", "\\author");
   } else {
     DefMacro!(

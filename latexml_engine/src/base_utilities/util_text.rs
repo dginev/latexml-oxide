@@ -311,11 +311,13 @@ pub fn first_ink(d: &Digested) -> Option<String> {
   {
     return Some(format!("a background colour: {d}"));
   }
+  if is_spacing_item(d) {
+    return None;
+  }
   match d.data() {
     DigestedData::TBox(b) => {
       let b = b.borrow();
       match b.get_string() {
-        Ok(s) if s.chars().all(char::is_whitespace) => None,
         Ok(s) => Some(s.to_string()),
         Err(_) => Some(b.to_string()),
       }
@@ -333,9 +335,7 @@ pub fn first_ink(d: &Digested) -> Option<String> {
         Some(Stored::Dimension(d)) => d.value_of(),
         _ => 0,
       };
-      if INKLESS_COMMANDS.contains(&cs.as_ref())
-        || (truthy("isSpace") && !LEADERS.contains(&cs.as_ref()))
-      {
+      if INKLESS_COMMANDS.contains(&cs.as_ref()) {
         return None;
       }
       // (a rule shows with a width and a height or depth: LaTeX's `\rule` its `width`, `height` and `depth`
@@ -377,6 +377,53 @@ pub fn first_ink(d: &Digested) -> Option<String> {
     DigestedData::Postponed(t) => Some(t.to_string()),
     DigestedData::KeyVals(_) | DigestedData::RegisterValue(_) | DigestedData::Comment(_) => None,
   }
+}
+
+/// Whether digested material is spacing, printing no ink between what it stands between ([`first_ink`]; the frontmatter
+/// label reader's separator, `queue_digest::label_ink`): a box of white space (an interword space, a tie's no-break
+/// space, math glue `\,` in a formula) and a box or whatsit Perl marks `isSpace` (Box.pm:33-38 and the pool's
+/// `isSpace` properties: `\!`'s zero-width-space box, glue, a kern, `\quad`, `\hspace`, a phantom), but a leader
+/// (`\hrulefill`, ink though Perl marks some `isSpace`).
+pub fn is_spacing_item(d: &Digested) -> bool {
+  let truthy = d
+    .get_property("isSpace")
+    .is_some_and(|v| !matches!(*v, Stored::Bool(false) | Stored::Int(0)));
+  match d.data() {
+    DigestedData::TBox(b) => {
+      truthy
+        || b
+          .borrow()
+          .get_string()
+          .is_ok_and(|s| s.chars().all(char::is_whitespace))
+    },
+    DigestedData::Whatsit(w) => {
+      truthy && !LEADERS.contains(&w.borrow().get_definition().get_cs_name().as_ref())
+    },
+    _ => false,
+  }
+}
+
+/// Whether the whatsit `w` typesets a picture — graphics drawn, not characters: pgf/TikZ's `\lxSVG@insertpicture` (an
+/// `<ltx:picture>` and its `<svg:svg>`, pgfsys-latexml.def), LaTeX's `picture` environment (sect13.rs). A frontmatter
+/// mark's printed label reads no text of one (`queue_digest::label_ink`, the observer's `events::script_ink`): the
+/// path data an SVG path's argument holds is no label (`\inst{\ref{leiden}\orcidicon{…}}`, a paper's `\orcidicon` a
+/// TikZ ORCID logo, 2605.02769: its "M 354.23 -177.11 C …", parted at its spaces, was the marks M, C, 0, L, Z on
+/// every name — review rev92b_r1 B1's fix).
+pub fn is_picture(w: &Whatsit) -> bool {
+  matches!(
+    w.get_definition().get_cs_name().trim_end(),
+    "\\lxSVG@insertpicture" | "\\begin{picture}"
+  )
+}
+
+/// Whether a character prints nothing: a format character (the zero-width space, the joiners, the byte-order mark:
+/// Unicode Cf) or a combining mark (M) on its own. A frontmatter mark's label is never one: `\up{\!1,2}`'s zero-width
+/// space was an empty mark on each name, 2209.14855 (`queue_digest::label_ink`, the observer's `events::script_ink`;
+/// review rev92b_r1 B1).
+pub fn is_invisible_char(c: char) -> bool {
+  static INVISIBLE: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"^[\p{Cf}\p{M}]$").unwrap());
+  INVISIBLE.is_match(c.encode_utf8(&mut [0; 4]))
 }
 
 /// Whether a constructor's replacement `template` ([`Definition::replacement_template`]) prints nothing of its own,

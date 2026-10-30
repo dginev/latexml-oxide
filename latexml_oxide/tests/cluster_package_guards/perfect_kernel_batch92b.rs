@@ -92,6 +92,41 @@ fn an_entry_email_printing_one_address_is_placed_by_the_chain() {
       "B email office@x.org | api:labelseq api:inner-contact ruling3:written-out owner:block",
     ],
   );
+  // (FIDELITY_CHARTER §4's corresponding step takes only the ONE address left on the block, once over every address
+  // the post-pass placed (`Resolver::place_emails_left`, shared with the sole institute's lines): two left are each
+  // the block's, though the corresponding Ann Able carries both entries — review rev92b_r1 B2, where both were hers)
+  assert_reading(
+    repro!("llncs_inner_emails_left_are_each_the_blocks.tex"),
+    None,
+    &[
+      "C Ann Able [1,2] | line:names",
+      "  a Univ X | api:labelseq",
+      "  a Univ Y | api:labelseq",
+      "  n Corresponding author. | note:adjacent",
+      "C Bob Baker [1,2] | line:names",
+      "  a Univ X | api:labelseq",
+      "  a Univ Y | api:labelseq",
+      "B email info@x.org | api:labelseq api:inner-contact owner:inner-email owner:block",
+      "B email office@y.org | api:labelseq api:inner-contact owner:inner-email owner:block",
+    ],
+  );
+  // (a template is every author's address and no one's own: the block's, never the corresponding author's —
+  // 2408.14427's `\{first.last\}@uii-ai.com`, which went to Meng Zheng)
+  assert_reading(
+    repro!("llncs_inner_pattern_email_is_the_blocks.tex"),
+    None,
+    &[
+      "C Ann Able [1] | line:names",
+      "  a Univ X | api:labelseq",
+      "  n Corresponding author. | note:adjacent",
+      "C Bob Baker [1] | line:names",
+      "  a Univ X | api:labelseq",
+      "C Cid Cole [2] | line:names",
+      "  a Univ Y | api:labelseq",
+      "  c email cid.cole@y.org | api:labelseq api:inner-contact owner:inner-email owner:spelled",
+      "B email {first.last}@x.org | api:labelseq api:inner-contact owner:inner-email owner:pattern",
+    ],
+  );
 }
 
 /// Piece 2, 85b's `_share` port (llncs class S, 19 papers: 1912.11606, 2302.05745; OD #901): llncs's one `\institute`,
@@ -196,7 +231,8 @@ fn a_numbered_entry_owned_by_a_hand_mark_is_ruling_ones() {
   );
 }
 
-/// Piece 4, the mark-led split of a numbered entry with no `\and` (aa class D, 5 papers: 1003.3020, 0904.2180): one
+/// Piece 4, the mark-led split of a numbered entry with no `\and` (aa class D, 5 papers: 1003.3020; aa's 1206.6282 and
+/// astro-ph0308041 split so too; OD #918 — 0904.2180 is class C's, the gate table's 1312.5084 no such shape): one
 /// `\institute{\inst{1} Univ X \\ \inst{2} Univ Y, Town}` whose every line a mark leads (`resolver::line_led_pieces`,
 /// at the start or after a Break event) is each line its own entry, labelled by its mark — not the whole by the class's
 /// number 1, which gave it to the `\inst{1}` names (today's XML: one affiliation on a nameless creator; Perl none, an
@@ -341,6 +377,114 @@ fn each_class_author_replaces_or_stacks_as_its_class() {
     &[
       "C Bob Baker [affiliation:2] | line:names",
       "  a Univ B | api:leading-mark",
+    ],
+  );
+  // (ptephy_v2 loads authblk-TI as ptephy_v1 does (ptephy_v2.cls:485): its calls stack — 2511.03250's six
+  // `\author[1]{R.~Miyata}` calls, of which the binding's `\@currname` test kept the last (review rev92b_r1 S1). The
+  // shadow does not read authblk-TI's `\author[n]` labels (ptephy is not a written family): its institutes the block's.)
+  assert_reading(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ptephy_v2_author_calls_stack.tex"
+    ),
+    Some(&[&["Ann Able", "affiliation=Univ A"], &[
+      "Bob Baker",
+      "affiliation=Univ B",
+    ]]),
+    &[
+      "C Ann Able [] | line:names",
+      "C Bob Baker [] | line:names",
+      "B affiliation Univ A | api:leading-mark label:unrequested owner:block",
+      "B affiliation Univ B | api:leading-mark label:unrequested owner:block",
+    ],
+  );
+}
+
+/// Piece 5's spacing, review rev92b_r1 B1 (2403.08629, 2601.02539, 1704.04058; FIDELITY_CHARTER §4): in a mark's
+/// printed text any spacing parts its labels, as a comma does — white space, and every item Perl marks `isSpace`
+/// (`util_text::is_spacing_item`, the reader `first_ink` uses: `\,` `\!` `\:` `\ ` `\hspace` `\kern` `\mskip`, in a
+/// formula and in `\textsuperscript`) —, and an invisible character (a zero-width space, a format or combining
+/// character: `util_text::is_invisible_char`) is no label and no shown symbol: the kernel's label keys
+/// (`queue_digest::label_ink`) and the observer's mark reader (`events::script_ink`) alike. `$^{1\,2}$` printed one
+/// label `1_2`, which nothing answered and no name showed (each mark lost; Nan Jiang's `$^{1,2\,*}$` lost BIGAI and the
+/// ∗); `\up{\!1,2}` (2209.14855) showed an empty superscript holding U+200B on each name. Today's output changes, and
+/// is pinned.
+#[test]
+fn spacing_parts_a_marks_labels() {
+  assert_reading(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_mark_labels_parted_by_spacing.tex"
+    ),
+    Some(&[
+      &["Ann Able 1,2"],
+      &["Bob Baker ∗,†"],
+      &["Cid Cole 1,†"],
+      &["Dee Dunn a,b"],
+      &["Eve Esse 1,2"],
+      &["Fay Fox 1,2"],
+      &["Gus Gray 1,2"],
+      &["Hal Hill 1,2"],
+      &["Ida Ide 1,2"],
+    ]),
+    &[
+      "C Ann Able [1,2] | line:names",
+      "C Bob Baker [*,†] | line:names sep:column",
+      "C Cid Cole [1,†] | line:names sep:column",
+      "C Dee Dunn [a,b] | line:names sep:column",
+      "C Eve Esse [1,2] | line:names sep:column",
+      "C Fay Fox [1,2] | line:names sep:column",
+      "C Gus Gray [1,2] | line:names sep:column",
+      "C Hal Hill [1,2] | line:names sep:column",
+      "C Ida Ide [1,2] | line:names sep:column",
+    ],
+  );
+  assert_reading(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_mark_spaced_labels_answer_their_lines.tex"
+    ),
+    Some(&[
+      &["Ann Able ∗", "affiliation=Univ One", "affiliation=Univ Two"],
+      &["Bob Baker", "affiliation=Univ Two"],
+    ]),
+    &[
+      "C Ann Able [1,2,*] | line:names",
+      "  a Univ One | ruling1:request",
+      "  a Univ Two | ruling1:request",
+      "C Bob Baker [2] | line:names sep:column",
+      "  a Univ Two | ruling1:request",
+    ],
+  );
+  assert_reading(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_mark_zero_width_space_is_no_label.tex"
+    ),
+    Some(&[
+      &["Ann Able", "affiliation=Univ One", "affiliation=Univ Two"],
+      &["Bob Baker *", "affiliation=Univ Two"],
+    ]),
+    &[
+      "C Ann Able [1,2] | line:names",
+      "  a Univ One | ruling1:request",
+      "  a Univ Two | ruling1:request",
+      "C Bob Baker [*,2] | line:names sep:column",
+      "  a Univ Two | ruling1:request",
+    ],
+  );
+  // (a picture prints no label (`util_text::is_picture`): an SVG path's data is no text of the mark — 2605.02769's TikZ
+  // ORCID logo in `\inst{\ref{leiden}\orcidicon{…}}`, parted at its spaces, was the marks M, C, 0, L, Z on every
+  // name; the shadow read it as the requests `M`, `0`, `L`, … already)
+  assert_reading(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_mark_picture_is_no_label.tex"
+    ),
+    Some(&[&["Ann Able", "affiliation=Univ One"], &[
+      "Bob Baker",
+      "affiliation=Univ Two",
+    ]]),
+    &[
+      "C Ann Able [1] | line:names",
+      "  a Univ One | ruling1:request",
+      "C Bob Baker [2] | line:names sep:column",
+      "  a Univ Two | ruling1:request",
     ],
   );
 }

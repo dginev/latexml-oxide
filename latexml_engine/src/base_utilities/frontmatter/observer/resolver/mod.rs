@@ -123,8 +123,8 @@ pub struct Resolved {
 ///   session's decision 3 of 2026-10-22, user rulings 2026-10-20 #4, #8, #10);
 /// - an entry's e-mail call printing one address (an `\email` inside an `\institute` entry) placed by FIDELITY_CHARTER
 ///   §4's chain, not copied onto every carrier of the entry's label (`owner:inner-email`: the author it spells, the
-///   entry's only carrier, its corresponding author, the block — the llncs and aa gate study's G3, 1606.03774,
-///   2204.03161, 0901.4618).
+///   entry's only carrier, the block — the ONE address left the corresponding author's, `place_emails_left` — the llncs
+///   and aa gate study's G3, 1606.03774, 2204.03161, 0901.4618; 2408.14427).
 ///
 /// Elimination (`owner:elimination`, the one address left to the one name left) is NOT a change: today's output
 /// applies it too (OXIDIZED_DESIGN_DIVERGENCES #52's e-mail lines, `owners_by_elimination`, under user ruling R10

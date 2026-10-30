@@ -27073,10 +27073,19 @@ Shadow-side, in the resolver; a written family's output changes where its writer
   corresponding step reads): an `email` contact recorded `api:inner-contact` that prints one address (one printing
   several is written out, `ruling3:written-out`) goes by FIDELITY_CHARTER §4's chain exactly, never bare position and
   no elimination — the author it spells, any live author (an address under institute 2 may spell an author of
-  institute 1); else the entry's only live carrier; else, of its carriers, the one marked the corresponding author
-  (`Resolver::corresponding`, a "Corresponding author" note); else the block, once (a group's shared address under an
-  institute two names carry, spelling neither). An entry no live name carries, its address spelling no one, keeps the
-  unrequested entry's placement. Each rule carries `owner:inner-email`, a change tag (`resolver::CHANGE_TAGS`).
+  institute 1); else the entry's only live carrier; else the block, once (a group's shared address under an institute
+  two names carry, spelling neither; a template, `\{first.last\}@x.org`, `owner:pattern`). Then the charter's
+  corresponding step, once over every address the post-pass placed (these and the `_share` entry's lines below:
+  `Resolver::place_emails_left`, the one helper): the ONE address left on the block of a multi-author paper — no
+  other of them left, no e-mail on the block already — goes to the one of its candidates (an entry's carriers, a
+  shared entry's live authors) marked the corresponding author (`Resolver::corresponding`, a "Corresponding author"
+  note) who holds no other address; a template and a list of local parts the reader cannot part stay the block's.
+  Two left are each the block's, though one corresponding author carries both entries (review rev92b_r1 B2: llncs
+  `\author{Ann Able\inst{1,2}\thanks{Corresponding author.} \and Bob Baker\inst{1,2}}` gave `info@x.org` and
+  `office@y.org` both to Ann Able; 2408.14427's `\{first.last\}@uii-ai.com` under five authors went to Meng Zheng; kept:
+  2307.04136 `xfy_73…` Fengying Xie's, 2206.03049 `liuj@` Jiang Liu's). An entry no live name carries, its address
+  spelling no one, keeps the unrequested entry's placement. Each rule carries `owner:inner-email`, a change tag
+  (`resolver::CHANGE_TAGS`).
 - **A line break inside the call.** `\email{a@x.org \\ b@y.org}` prints one address a line (llncs's `{\tt#1}`); the
   rehearsal's break whatsit was stringified into the verbatim argument (`a@x.org\lx@fm@obs@breakb@y.org`, one address
   that spelled its first author, 2608.29307). `events::raw_lines` reads an e-mail call's argument with each break a
@@ -27093,15 +27102,15 @@ Shadow-side, in the resolver; a written family's output changes where its writer
   `$^{1}$`, `\inst{*}`, `\inst{}` pick nothing: 2607.02596, 2207.04574, 2604.20229), a name shows a number other than
   1 by hand, or the entry holds a mark of its own. Its e-mail calls go by the charter's chain over the live authors,
   as today's `row_email_calls`: spelled; the entry's addresses one per author in order (`owner:order`); one author;
-  the one address left of several authors to the corresponding author holding no other of them; else the block (a
-  template's too). No elimination. A list of local parts the address reader cannot part (`(npalmer|pwg)@…`,
+  else the block (a template's too), the corresponding step above taking the one address left. No elimination. A list of local parts the address reader cannot part (`(npalmer|pwg)@…`,
   cs0607047) spells no one (`Resolver::spelled`, as today's `spelled_owner`, user ruling R10). Census: llncs
   unclassified 58 → 41 of 463 (17 of the 19 class-S papers agree; 2104.12226 and cs0607047 keep a note and a residual).
 - Repros class-bindings/`llncs_inner_email_is_its_spellers`, `llncs_inner_shared_email_is_the_blocks`,
   `llncs_inner_email_is_the_corresponding_carriers`, `aa_inner_email_is_its_spellers`,
   `llncs_inner_email_lines_are_each_written_out`, `llncs_sole_institute_is_every_authors_in_order`,
   `llncs_sole_institute_emails_by_the_chain`, `llncs_sole_institute_shared_address_is_the_blocks`,
-  `llncs_sole_institute_picked_by_inst`; guards
+  `llncs_sole_institute_picked_by_inst`, `llncs_inner_emails_left_are_each_the_blocks`,
+  `llncs_inner_pattern_email_is_the_blocks`; guards
   `perfect_kernel_batch92b::an_entry_email_printing_one_address_is_placed_by_the_chain`,
   `perfect_kernel_batch92b::a_sole_institute_no_inst_picks_is_every_authors`.
 
@@ -27120,7 +27129,9 @@ Frontmatter refactor stage 7, the llncs and aa move (task #429; `agent_reports/2
   `request`, or an `annotations=` list), and an owner a labelseq entry finds by a request no class command made (nor
   a `\footnotemark`) is tagged `ruling1:request` — not where `api:ref-label` already says so. Census (re-resolved):
   unclassified aa 38 → 25 of 554, llncs 41 → 36 of 463.
-- **The mark-led split of a numbered entry with no `\and`** (aa class D, 5 papers: 1003.3020, 0904.2180). One
+- **The mark-led split of a numbered entry with no `\and`** (aa class D, 5 papers: 1003.3020; aa's 1206.6282 and
+  astro-ph0308041 split so too; 0904.2180 is class C's, and the gate table's 1312.5084 no such shape — its one
+  institute a `\label`led entry). One
   `\institute{\inst{1} Univ X \\ \inst{2} Univ Y}` whose every line a mark leads (the first ink at the start or after
   a Break event, `resolver::line_led_pieces`) was one entry numbered 1 by the class, given whole to the `\inst{1}`
   names (today's XML: one affiliation on a nameless creator; Perl: none, an orphaned annotation Warning). Each line is
@@ -27152,11 +27163,25 @@ ruling 2026-10-29; `FRONTMATTER_DIGESTED_REFACTOR.md`; inventory row 2.8). Today
 - **Now** (`queue_digest::frontmatter_label_keys`, `printed_label`): an operand that prints through a command — a
   macro, a symbol, a font switch, math — is digested in a speculative run of its own (`speculative_label_ink`: in a
   group, in a reading context of its own, assignments undone, diagnostics discarded, as sect05.rs
-  `speculative_title_page_run`) and keyed by what it prints (`label_ink`: its characters, a cross-reference as its key
-  `\ref{key}`, glue and kerns a thin space between labels), then parted and prefixed as before; a printed run of
-  distinct symbols (`♣♡`) is each symbol too, as the spelled run of symbol commands was, and so is a number or letters
-  a symbol is glued to (`parted_printed_label`: `$^{\ICQD,\Phys\ast}$` prints "1,4∗", the 4 and the ∗; 2412.09857). An operand of characters
-  alone prints itself and is read as before. Perl's ToString stays the fallback where the speculative run errs or
+  `speculative_title_page_run`; the field ledger put back, `FieldLedgerScope`, as the observer's rehearsal does) and
+  keyed by what it prints (`label_ink`: its characters, a cross-reference as its key
+  `\ref{key}`), then parted and prefixed as before; a printed run of distinct symbols (`♣♡`) is each symbol too, as
+  the spelled run of symbol commands was, and so is a number or letters a symbol is glued to (`parted_printed_label`:
+  `$^{\ICQD,\Phys\ast}$` prints "1,4∗", the 4 and the ∗; 2412.09857) — the printed text alone, never a spelling
+  (`clean_frontmatter_labels`' ~30 spelling callers read it as before; review rev92b_r1 S2). Any spacing in the printed
+  text parts two labels as a comma does: white space in a box's text and every item `util_text::is_spacing_item` reads
+  as spacing, the reader 92e's `first_ink` uses (a box of white space, a box or whatsit Perl marks `isSpace`, but a
+  leader: `$^{1\,2}$`'s math glue, a box of a space; `\!`'s zero-width-space box; `\:`, `\>`, `\ `, `\hspace`,
+  `\kern`, `\mskip`, `\textsuperscript{1\,2}`). An invisible character (`util_text::is_invisible_char`: Unicode Cf
+  and M — the zero-width space, the joiners, a combining mark) is no label and no shown symbol, and a picture
+  (`util_text::is_picture`: pgf/TikZ's `\lxSVG@insertpicture`, the `picture` environment) prints no label. The
+  observer's mark reader (`events::script_ink`) reads a script so too. Review rev92b_r1 B1: `$^{1\,2}$` printed one
+  label `1_2`, which nothing answered and `unanswered_mark_text` showed none of — each such mark lost (2403.08629's
+  Nan Jiang and Zhiyuan Zhang `$^{1,2\,*}$` lost BIGAI and the ∗, Yixin Zhu and Siyuan Huang `$^{1\,\textrm{\Letter}}$`
+  their affiliation; 2601.02539 `$^{1\,2\,\bigstar}$`; 1704.04058 `$^{* \, \dagger}$`); `\up{\!1,2}` (2209.14855) an
+  empty superscript holding U+200B on each name; the picture rule keeps 2605.02769's TikZ ORCID logo, its path data
+  parted at its spaces, from being the marks M, C, 0, L, Z on every name. An operand of characters alone prints itself
+  and is read as before. Perl's ToString stays the fallback where the speculative run errs or
   prints nothing, where it cannot open, and for an operand holding a note (`split_mark_notes`). Both sides: the
   request (`\lx@request@frontmatter@annotation`, the `\lx@frontmatter@sup` request, `\lx@frontmatter@symbolmark`) and
   the set side (`\lx@sup@setlabel@affiliation`, its `_bymark` keys by `relocate::printed_marks` of the printed text).
@@ -27166,11 +27191,20 @@ ruling 2026-10-29; `FRONTMATTER_DIGESTED_REFACTOR.md`; inventory row 2.8). Today
 - **Residuals** (token-level readers before digestion, stages 5 and 7): `place.rs`'s author labels and legends,
   `shared_row::marks_pick`, `queue.rs`'s one-label check; the `label=` keyval (a binding's Semiverbatim argument);
   whether an answered symbol mark stays shown in the name (`$^{\dag}$` under a `$^{\dagger}$` line is answered and no
-  longer shown; its `\dagger` sibling stays shown).
+  longer shown; its `\dagger` sibling stays shown). Inside an open assignment journal (a refused setter's replay, a
+  sealed storing run, a title page's speculative run, the observer's rehearsal: sect05.rs `replay_class_setter`,
+  `speculative_title_page_run`; journals do not nest, `begin_assignment_journal`) no speculative run opens and the key
+  is the operand's spelling (`\inst{\ESO}` in a replayed setter keys `\ESO`, as before stage 4). An operand whose
+  digestion errs is keyed by its spelling and its error discarded with the run's diagnostics (aa's
+  `\inst{\undefinedmark}`: 0 errors, pdflatex's `! Undefined control sequence`) — Perl, which only stringifies the
+  operand, reports none either; reporting it would need the run's spurious errors (an argument read past the
+  operand's end) told apart.
 - Witness 1307.8124 (`\inst{\MPIA}`: each author's institutes, where all seven were on a nameless creator). Repros
   class-bindings/`aa_inst_macro_is_its_printed_number`, `aa_inst_unanswered_symbol_stays_shown`,
-  sectioning-frontmatter/`author_dag_and_dagger_are_one_label`, `author_macro_mark_glued_to_a_symbol`;
-  guard `perfect_kernel_batch92b::a_mark_is_keyed_by_its_printed_text`.
+  sectioning-frontmatter/`author_dag_and_dagger_are_one_label`, `author_macro_mark_glued_to_a_symbol`,
+  `author_mark_labels_parted_by_spacing`, `author_mark_spaced_labels_answer_their_lines`,
+  `author_mark_zero_width_space_is_no_label`, `author_mark_picture_is_no_label`; guards
+  `perfect_kernel_batch92b::a_mark_is_keyed_by_its_printed_text`, `perfect_kernel_batch92b::spacing_parts_a_marks_labels`.
 
 ### 920. A binding's `\author` replaces or stacks as its class's does where the binding owns it; inst_support's keeps stacking (Perl: inst_support's clears on every call; no ptephy or webofc binding)
 
@@ -27179,10 +27213,11 @@ take the whole list in one call that a later call replaces — and the frontmatt
 binding, each binding's `\author` saying it with the API's primitives (`\lx@clear@creators[role=author]` for a
 replacing class, none for a stacking one); never a flag, a convention key, the spelling of the call or `[marks]`.
 
-- **ptephy** (`ptephy_cls.rs`, one binding for both versions, read off `\@currname`): ptephy.cls:427 replaces
-  (`\def\author#1{\gdef\@author{#1}}`, 1412.6580): its kernel author clears; ptephy_v1.cls:485 loads authblk-TI, whose
-  `\author` (authblk-TI.sty:70) appends each call: it stacks (2311.07297, 1606.03167). Both had stacked through
-  inst_support's `\author`.
+- **ptephy** (`ptephy_cls.rs`, one binding for the three versions, read off `\@currname`): ptephy.cls:427 replaces
+  (`\def\author#1{\gdef\@author{#1}}`, 1412.6580): its kernel author clears; ptephy_v1.cls:485 and ptephy_v2.cls:485
+  load authblk-TI, whose `\author` (authblk-TI.sty:70) appends each call: they stack (2311.07297, 1606.03167; ptephy_v2's
+  2511.03250, the census's one paper, whose six `\author[1]{R.~Miyata}` calls a test for `ptephy_v1` alone had cut to
+  the last — review rev92b_r1 S1). All had stacked through inst_support's `\author`.
 - **webofc** (`webofc_cls.rs`): its own `\author` (the `\\` line split) clears: webofc.cls defines none, its
   `\@parseauthor` reads the kernel's `\@author` (:431-466; 1609.01040).
 - **inst_support's own `\author` keeps stacking (OD #53), an open question.** Perl's per-call clear
@@ -27198,7 +27233,7 @@ replacing class, none for a stacking one); never a flag, a convention key, the s
   gate study's piece 8, 92c's), is the decision this leaves.
 - The 16 aa census papers with two `\author` calls in source change nothing either way (their second calls sit in
   comments or conditionals).
-- Repros sectioning-frontmatter/`ptephy_author_given_twice_keeps_the_last`; class-bindings/
+- Repros sectioning-frontmatter/`ptephy_author_given_twice_keeps_the_last`, `ptephy_v2_author_calls_stack`; class-bindings/
   `webofc_author_given_twice_keeps_the_last` (catalog only: its raw-read class leaves a conditional open, a pre-existing
   Warning), `aa_author_given_twice_keeps_the_last` and `ieeetj_author_calls_stack` (catalog: the open question's
   shapes); guard `perfect_kernel_batch92b::each_class_author_replaces_or_stacks_as_its_class`.
