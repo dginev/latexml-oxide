@@ -278,20 +278,39 @@ pub fn typesets_content(d: &Digested) -> bool {
 
 /// Whether digested material prints nothing: every item in it is one known to leave no ink ([`first_ink`] finds
 /// none). The inverse of [`typesets_content`], failing safe: what is not known to print nothing is ink. A frontmatter
-/// note is dropped as one with no ink only on this test (frontmatter_api.rs, the rehearsal's note event;
-/// OXIDIZED_DESIGN_DIVERGENCES #916): a false "no ink" loses the note's content.
+/// note is dropped as one with no ink only on this test, the XML's (frontmatter_api.rs) and the frontmatter observer's
+/// (the rehearsal's note event, `Event::inkless`) alike (OXIDIZED_DESIGN_DIVERGENCES #916): a false "no ink" loses the
+/// note's content, a false "ink" keeps a blank note.
 pub fn leaves_no_ink(d: &Digested) -> bool { first_ink(d).is_none() }
 
 /// The first item of digested material not known to print nothing ([`leaves_no_ink`]), described: its command, or its
-/// text. Known to print nothing are a box of white space (an interword space, a tie's no-break space), a box Perl marks
-/// `isSpace` (glue, a kern, `\quad`, a phantom, `\indent`/`\noindent`: Box.pm:33-38 and the pool's `isSpace`
-/// properties), a rule with no width or no height and depth, a line or page break, `\par`, a penalty, `\leavevmode`,
-/// and an empty font or box wrapper — a command whose definition declares a font (`\textbf{}`, `\emph{}`) or one of
-/// `INKLESS_WRAPPERS` (`\mbox{}`, `\makebox[1em]{}`, `\raisebox{1ex}{}`, a formula) whose arguments (but options and a
-/// position keyword) and body print nothing. A command's own text is ink though it shows no argument (`\dots`,
-/// `\LaTeX`, `$\vdots$`), and so are a framed box (`\fbox{}`), a leader (`\hrulefill`), an image, a cross-reference,
-/// an alignment and an undefined command's error marker (review rev92e r1 B1, S2, N1).
+/// text. Known to print nothing are
+/// - a box of white space (an interword space, a tie's no-break space) and a box Perl marks `isSpace` (glue, a kern,
+///   `\quad`, a phantom, `\indent`/`\noindent`: Box.pm:33-38 and the pool's `isSpace` properties), but a leader;
+/// - a rule with no width or no height and depth (a strut);
+/// - a line or page break, `\par`, a penalty, `\leavevmode` (`INKLESS_COMMANDS`);
+/// - a transparent wrapper whose arguments (but options and a position keyword) and body print nothing: a plain box or
+///   a formula (`INKLESS_WRAPPERS`: `\makebox[1em]{}`, `\raisebox{1ex}{}`, `$ $`), or a constructor whose whole
+///   construction is a template printing only its arguments or body (`prints_only_arguments`: `\mbox{}`, a font
+///   switch, `$\mathbb{}$`).
+///
+/// Anything else is ink: a constructor's own text, with or without a font (revsymb's `\openone`, `"1"` in the
+/// blackboard font; `\dots`, `\LaTeX`, `$\vdots$`), an element of its own (`\textsuperscript{}`'s `ltx:sup`, a framed
+/// box `\fbox{}`), a closure-built construction (`\hypertarget{a}{}`) or one with a construction hook (`\emph{}`), an
+/// empty template standing for what it does not show (the observer rehearsal's `\lx@fm@obs@url`, its footnote mark), a
+/// leader (`\hrulefill`), an image, a cross-reference, an alignment, an undefined command's error marker — and any
+/// item, blank or not, whose font carries a background colour: `\colorbox{c}{…}` is `\hbox{\pagecolor{c}…}`
+/// (color.sty, color_sty.rs), whose `\pagecolor` leaves an empty box in the coloured font, and pdflatex prints the
+/// coloured block (`\colorbox{red}{}`, `\colorbox{yellow}{\hspace{2em}}`, inside `\mbox{}` too).
 pub fn first_ink(d: &Digested) -> Option<String> {
+  if d
+    .get_font()
+    .ok()
+    .flatten()
+    .is_some_and(|font| font.get_background().is_some())
+  {
+    return Some(format!("a background colour: {d}"));
+  }
   match d.data() {
     DigestedData::TBox(b) => {
       let b = b.borrow();
@@ -336,7 +355,11 @@ pub fn first_ink(d: &Digested) -> Option<String> {
       if let Some(shows) = shows {
         return shows.then(|| cs.to_string());
       }
-      let wrapper = INKLESS_WRAPPERS.contains(&cs.as_ref()) || definition.declared_font().is_some();
+      let body = w.get_body().ok().flatten();
+      let wrapper = INKLESS_WRAPPERS.contains(&cs.as_ref())
+        || definition
+          .replacement_template()
+          .is_some_and(prints_only_arguments);
       if !wrapper {
         return Some(cs.to_string());
       }
@@ -348,18 +371,72 @@ pub fn first_ink(d: &Digested) -> Option<String> {
         .enumerate()
         .filter(|(i, _)| kinds.as_ref().is_none_or(|k| k.get(*i) != Some(&0)))
         .find_map(|(_, arg)| arg.as_ref().and_then(first_ink))
-        .or_else(|| {
-          w.get_body()
-            .ok()
-            .flatten()
-            .and_then(|body| first_ink(&body))
-        })
+        .or_else(|| body.as_ref().and_then(first_ink))
     },
     DigestedData::Alignment(_) => Some("an alignment".to_string()),
     DigestedData::Postponed(t) => Some(t.to_string()),
     DigestedData::KeyVals(_) | DigestedData::RegisterValue(_) | DigestedData::Comment(_) => None,
   }
 }
+
+/// Whether a constructor's replacement `template` ([`Definition::replacement_template`]) prints nothing of its own,
+/// only its arguments and body ([`first_ink`]): every piece of it is one of these
+/// - an argument (`#1`) or the body (`#body`), absorbed;
+/// - white space;
+/// - an `ltx:text` or `ltx:emph` element (opened or closed) whose attributes only set the font or how the element
+///   closes ([`FONT_ONLY_ATTRIBUTES`]: `<ltx:text _noautoclose='1'>#1</ltx:text>`, `\emph`'s `_force_font`);
+/// - a conditional both of whose branches are such (`\emph`'s `?#isMath(…)(…)`);
+///
+/// and one of them absorbs an argument or the body. Anything else is something of its own: literal text (revsymb's `\openone`,
+/// `"1"`), another element (`<ltx:sup>#1</ltx:sup>`, a rule, a framed or coloured `ltx:text`), an empty element, a
+/// processing instruction, an attribute set on the node around it, a property or function value, a template that
+/// does not parse — and an empty template, which stands for what it does not show.
+fn prints_only_arguments(template: &str) -> bool {
+  use latexml_core::binding::def::replacement::{
+    AttrPair, ReplacementOp, Value, parse_replacement,
+  };
+  fn font_only(attrs: &[AttrPair]) -> bool {
+    attrs.iter().all(|pair| match pair {
+      AttrPair::KeyValue { key, .. } => FONT_ONLY_ATTRIBUTES.contains(&key.as_str()),
+      AttrPair::Conditional { then_attrs, else_attrs, .. } => {
+        font_only(then_attrs) && font_only(else_attrs)
+      },
+    })
+  }
+  fn transparent(ops: &[ReplacementOp]) -> bool {
+    ops.iter().all(|op| match op {
+      ReplacementOp::Text { text } => text.chars().all(char::is_whitespace),
+      ReplacementOp::AbsorbValue { value: Value::Arg(_) } => true,
+      ReplacementOp::AbsorbValue { value: Value::Prop(name) } => name == "body",
+      ReplacementOp::OpenElement {
+        qname,
+        attrs,
+        self_closing: false,
+        ..
+      } => matches!(qname.as_str(), "ltx:text" | "ltx:emph") && font_only(attrs),
+      ReplacementOp::CloseElement { qname } => matches!(qname.as_str(), "ltx:text" | "ltx:emph"),
+      ReplacementOp::Conditional { then_ops, else_ops, .. } => {
+        transparent(then_ops) && transparent(else_ops)
+      },
+      _ => false,
+    })
+  }
+  // (and absorbs one: a template printing nothing at all stands for what it does not show — the frontmatter
+  // observer's rehearsal's `\lx@fm@obs@url`, `\lx@fm@obs@fnmark`, `""` in place of a URL or a footnote mark —, a doubt)
+  fn absorbs(ops: &[ReplacementOp]) -> bool {
+    ops.iter().any(|op| match op {
+      ReplacementOp::AbsorbValue { .. } => true,
+      ReplacementOp::Conditional { then_ops, else_ops, .. } => {
+        absorbs(then_ops) || absorbs(else_ops)
+      },
+      _ => false,
+    })
+  }
+  parse_replacement(template).is_ok_and(|ops| transparent(&ops) && absorbs(&ops))
+}
+
+/// The attributes a transparent wrapper's element may carry ([`prints_only_arguments`]): its font, and how it closes.
+const FONT_ONLY_ATTRIBUTES: &[&str] = &["font", "_font", "_force_font", "_noautoclose"];
 
 /// Commands that print nothing, whatever their arguments ([`first_ink`]): `\par`, breaks and penalties.
 const INKLESS_COMMANDS: &[&str] = &[
@@ -390,20 +467,17 @@ const LEADERS: &[&str] = &[
   "\\xleaders",
 ];
 
-/// Wrappers that print only their arguments and body ([`first_ink`]), besides a command declaring a font: a box that
-/// is not framed, a formula.
+/// Wrappers that print only their arguments and body ([`first_ink`]) though their construction is no font-only
+/// template ([`prints_only_arguments`] reads `\mbox`, `\text`, `\smash` and the font switches): an unframed box,
+/// built by a closure (`\hbox`, `\vbox`, `\vtop`, `\parbox`) or placed by its template's size or offset
+/// (`\@makebox`, `\raisebox`) — a box's colour is its content's font's, which [`first_ink`] reads —, and a formula.
 const INKLESS_WRAPPERS: &[&str] = &[
-  "\\mbox",
-  "\\makebox",
   "\\@makebox",
   "\\hbox",
   "\\vbox",
   "\\vtop",
   "\\raisebox",
   "\\parbox",
-  "\\smash",
-  "\\text",
-  "\\textcolor",
   "\\lx@begin@inline@math",
   "\\lx@begin@display@math",
 ];
@@ -544,4 +618,37 @@ fn argument_kinds(w: &Whatsit) -> Option<Vec<u8>> {
       })
       .collect()
   })
+}
+
+#[cfg(test)]
+mod tests {
+  use super::prints_only_arguments;
+
+  /// A constructor's template prints only its arguments when it absorbs one and adds nothing but white space and
+  /// font-only `ltx:text`/`ltx:emph` (OD #916): `\mbox`, `\emph`, a math alphabet; revsymb's `\openone` (`"1"`), an
+  /// element of its own, a frame, a background, an empty template and a property value are something of their own.
+  #[test]
+  fn template_prints_only_its_arguments() {
+    for template in [
+      "#1",
+      "<ltx:text _noautoclose='1'>#1</ltx:text>",
+      "?#isMath(<ltx:text _force_font='1'>#1)(<ltx:emph _force_font='1'>#1)",
+      "#body",
+    ] {
+      assert!(prints_only_arguments(template), "{template}");
+    }
+    for template in [
+      "1",
+      "",
+      "<ltx:sup>#1</ltx:sup>",
+      "<ltx:text framed='rectangle'>#1</ltx:text>",
+      "<ltx:text backgroundcolor='#color'>#1</ltx:text>",
+      "<ltx:text width='#width' _noautoclose='1'>#3</ltx:text>",
+      "<ltx:rule width='#1'/>",
+      "#1x",
+      "#name",
+    ] {
+      assert!(!prints_only_arguments(template), "{template}");
+    }
+  }
 }

@@ -1,0 +1,19 @@
+% witness: review rev92e r2 B1' (a constructor declaring a font counted as a transparent wrapper whatever it
+%          constructs, so one with no argument never found ink: revsymb's `\openone`, `DefConstructor("\openone", "1",
+%          font => …)`, dropped its note, in the XML and in the observer)
+% oracle:  pdflatex (article + amssymb, revsymb): 0 errors; Ann's footnote "∗ 𝟙", Bob's and Cat's a bare mark
+% engines: rust 92e r2 (b1ed75e) = no note for Ann, Bob or Cat; rust 92a5 keeps all three (Bob's and Cat's empty)
+% expect:  0 errors, 0 warnings; Ann's note holds its formula's 𝟙; Bob's note kept, an empty `ltx:emph` (`\emph`'s
+%          template prints only its argument, but its construction hook closing the element cannot be read: in doubt,
+%          ink — a blank note kept); no note for Cat (`$\mathbb{}$`, a font switch over nothing: a template printing only
+%          its argument, no hook)
+% status:  RED (92e r2) -> GREEN (92e r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amssymb,revsymb}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{$\openone$} \and Bob Baker\thanks{\emph{}} \and Cat Cole\thanks{$\mathbb{}$}}
+\maketitle
+Text.
+\end{document}

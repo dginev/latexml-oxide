@@ -15,11 +15,13 @@
 //! not emitted, whether our extraction emptied it (`\offprints{\email{…}}`: astro-ph0405280, astro-ph0608669) or the
 //! author wrote it empty (`\thanks{}`: 2004.01582, 2401.15379, astro-ph0608669); its address stays the contact the
 //! binding made of it, and no mark of it is left in the title or the name. A note with any ink stays, an author-typed
-//! label alone too (mdpi's `\corres{Correspondence: }`, 1609.03883): the no-change row. Round 2 (review rev92e r1)
-//! inverts the test: a note is inkless only when every item in it is known to print nothing (white space, glue and
-//! kerns, breaks, penalties, phantoms and struts, an empty font or box wrapper: `util_text.rs` `leaves_no_ink`), so a
-//! command's own text (`\thanks{\dots}`, `\thanks{\LaTeX}`, aa's `\offprints{\LaTeX}`), a formula's symbol, a rule, a
-//! frame, a leader and an undefined command's marker stay; the frontmatter observer reads a note by the same test.
+//! label alone too (mdpi's `\corres{Correspondence: }`, 1609.03883): the no-change row. A note is inkless only when
+//! it provably prints nothing — every item in it known blank (white space, glue and kerns, breaks, penalties,
+//! phantoms and struts, an unframed box, a constructor whose literal template prints only its arguments, over blank
+//! arguments: `util_text.rs` `leaves_no_ink`) —; any doubt is ink: a command's own text (`\thanks{\dots}`,
+//! `\thanks{\LaTeX}`, aa's `\offprints{\LaTeX}`, revsymb's `\openone`), a formula's symbol, an element of its own, a
+//! construction hook, a rule, a frame, a leader, a background colour, an undefined command's marker. The frontmatter
+//! observer reads each note by the same test on the same input.
 use latexml::util::test::assert_element;
 
 use super::{
@@ -213,25 +215,38 @@ fn kernel_empty_thanks_leave_no_note() {
 }
 
 /// mdpi's `\corres{Correspondence: }` (1609.03883): an author-typed label alone is ink, and the note stays whole. A
-/// document's note holding only a tie, `\externaleditor{~}` (2609.00671; 1508.00510's lipics `\Copyright{\@empty}` the
-/// same shape), is none.
+/// document's note holding only a space or a tie, `\datepublished{ }` and `\externaleditor{~}` (2609.00671;
+/// 1508.00510's lipics `\Copyright{\@empty}` the same shape), is none: the document's notes are exactly the others, in
+/// order.
 #[test]
 fn mdpi_corres_label_only_note_is_kept() {
   let xml = without_ids(&clean_both_ways(repro!(
     "mdpi_corres_label_only_note_is_kept"
   )));
-  assert_element(
-    &xml,
-    "note",
-    &["role=\"corresponding\""],
+  let notes: Vec<&str> = xml
+    .match_indices("<note ")
+    .map(|(at, _)| {
+      &xml[at..at + xml[at..].find("</note>").expect("a closed note") + "</note>".len()]
+    })
+    .collect();
+  assert_eq!(notes, [
+    r#"<note role="volume">1</note>"#,
+    r#"<note role="issue">1</note>"#,
+    r#"<note role="articlenumber">0</note>"#,
+    r#"<note role="year">2026</note>"#,
+    r#"<note role="copyright-year">2026</note>"#,
+    r#"<note role="received">1 June 2026</note>"#,
+    r#"<note role="accepted">1 July 2026</note>"#,
+    r#"<note role="address">Univ A</note>"#,
     r#"<note role="corresponding">Correspondence: </note>"#,
-  );
-  assert!(!xml.contains("external-editor"), "{xml}");
+  ]);
 }
 
 /// The separator a creator after the first carries (`before`): two em spaces, the kernel's `\and` (OD #915's
 /// guards assert it whole).
 const EM2: &str = "\u{2003}\u{2003}";
+/// The em space a coloured box's blank content reads as (`\hspace{2em}`, `\strut\hspace{1em}`).
+const EM: &str = "\u{2003}";
 /// The en space of `\LaTeXe`'s logo and the no-break space after a role's label.
 const EN: &str = "\u{2002}";
 const NBSP: &str = "\u{a0}";
@@ -342,7 +357,7 @@ fn aa_offprints_command_text_is_ink() {
 
 /// A rule with a width and a height, a framed box (empty or not) and a leader print (review rev92e r1 S2), and their
 /// notes stay; a strut (`\rule{0pt}{2ex}`), `\quad`, an empty `\mbox{}`, a phantom and the title's tie print nothing,
-/// and theirs are none — the material the inverted test knows to be blank, each a sibling of round 1's 18 drops.
+/// and theirs are none — material the test knows to be blank, each a sibling of the A/B's 18 drops.
 #[test]
 fn kernel_thanks_rule_and_frame_are_ink() {
   let xml = clean_both_ways(repro!("kernel_thanks_rule_and_frame_are_ink"));
@@ -433,5 +448,129 @@ fn observer_reads_a_note_by_the_ink_test() {
     "D note  | note:adjacent ruling4:inkless",
     "D note  | note:adjacent ruling4:inkless",
     "D note X | note:adjacent ruling4:inkless",
+  ]);
+}
+
+/// A constructor is a transparent wrapper only when its whole construction is a template printing only its arguments
+/// and it has an argument (`util_text.rs` `prints_only_arguments`, OD #916): revsymb's `\openone` (`"1"` in the
+/// blackboard font, no argument) is a formula's symbol, its note kept; `\emph{}`'s hook closing its element cannot be
+/// read, so its blank note is kept too (in doubt, ink); `$\mathbb{}$` is a font switch over nothing, its note none. The
+/// observer reads each note so (review rev92e r2 B1′).
+#[test]
+fn kernel_thanks_constructor_text_is_ink() {
+  let tex = repro!("kernel_thanks_constructor_text_is_ink");
+  let xml = clean_both_ways(tex);
+  let note = r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">"#;
+  assert_eq!(
+    frontmatter(&xml),
+    format!(
+      r#"<title>T</title>
+  <creator role="author">
+    <personname>Ann Able</personname>
+    {note}<Math mode="inline" tex="\openone" text="1">
+        <XMath>
+          <XMTok font="blackboard" role="UNKNOWN">1</XMTok>
+        </XMath>
+      </Math></note>
+  </creator>
+  <creator before="{EM2}" role="author">
+    <personname>Bob Baker</personname>
+    {note}<emph font="italic"/></note>
+  </creator>
+  <creator before="{EM2}" role="author">
+    <personname>Cat Cole</personname>
+  </creator>"#
+    )
+  );
+  assert_eq!(tuples(&resolved(tex, Some("ar5iv.sty"))), [
+    "C Ann Able [] | line:names",
+    "  n  | note:adjacent",
+    "C Bob Baker [] | line:names sep:column",
+    "  n  | note:adjacent",
+    "C Cat Cole [] | line:names sep:column",
+    "D note  | note:adjacent ruling4:inkless",
+  ]);
+}
+
+/// A background colour is ink, whatever it is behind (review rev92e r2 B2′): `\colorbox{c}{…}` is
+/// `\hbox{\pagecolor{c}…}`, and pdflatex prints the coloured block over nothing, a space, a phantom or a strut, inside
+/// `\mbox` too, so each note stays; `\textcolor{red}{}` prints nothing, its note none. XML and observer alike.
+#[test]
+fn kernel_thanks_colorbox_is_ink() {
+  let tex = repro!("kernel_thanks_colorbox_is_ink");
+  let xml = clean_both_ways(tex);
+  let note = r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">"#;
+  assert_eq!(
+    frontmatter(&xml),
+    format!(
+      r##"<title>T</title>
+  <creator role="author">
+    <personname>Ann Able</personname>
+    {note}<text/></note>
+  </creator>
+  <creator before="{EM2}" role="author">
+    <personname>Bob Baker</personname>
+    {note}<text backgroundcolor="#FFFF00">{EM}</text></note>
+  </creator>
+  <creator before="{EM2}" role="author">
+    <personname>Cat Cole</personname>
+    {note}<text backgroundcolor="#FFFF00" class="ltx_phantom">XX</text></note>
+  </creator>
+  <creator before="{EM2}" role="author">
+    <personname>Dan Doe</personname>
+    {note}<text backgroundcolor="#D9D9D9">{EM}</text></note>
+  </creator>
+  <creator before="{EM2}" role="author">
+    <personname>Eve Ell</personname>
+    {note}<text/></note>
+  </creator>
+  <creator before="{EM2}" role="author">
+    <personname>Fay Fox</personname>
+  </creator>"##
+    )
+  );
+  assert_eq!(tuples(&resolved(tex, Some("ar5iv.sty"))), [
+    "C Ann Able [] | line:names",
+    "  n  | note:adjacent",
+    "C Bob Baker [] | line:names sep:column",
+    "  n  | note:adjacent",
+    "C Cat Cole [] | line:names sep:column",
+    "  n XX | note:adjacent",
+    "C Dan Doe [] | line:names sep:column",
+    "  n  | note:adjacent",
+    "C Eve Ell [] | line:names sep:column",
+    "  n  | note:adjacent",
+    "C Fay Fox [] | line:names sep:column",
+    "D note  | note:adjacent ruling4:inkless",
+  ]);
+}
+
+/// The XML and the observer read a note on the same input (review rev92e r2 S1′): the author block's empty-mark filter
+/// (`drop_empty_marks`) leaves a note's text as written, so `\thanks{\textsuperscript{}}` keeps its superscript — an
+/// element of its own, in doubt ink — and both keep the note; the empty mark beside Bob's name is still no mark.
+#[test]
+fn kernel_thanks_empty_superscript_reads_alike() {
+  let tex = repro!("kernel_thanks_empty_superscript_reads_alike");
+  let xml = clean_both_ways(tex);
+  let note = r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">"#;
+  assert_eq!(
+    frontmatter(&xml),
+    format!(
+      r#"<title>T</title>
+  <creator role="author">
+    <personname>Ann Able</personname>
+    {note}<sup/></note>
+  </creator>
+  <creator before="{EM2}" role="author">
+    <personname>Bob Baker</personname>
+    {note}B</note>
+  </creator>"#
+    )
+  );
+  assert_eq!(tuples(&resolved(tex, Some("ar5iv.sty"))), [
+    "C Ann Able [] | line:names",
+    "  n  | note:adjacent",
+    "C Bob Baker [] | line:names sep:column",
+    "  n B | note:adjacent",
   ]);
 }

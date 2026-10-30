@@ -1,0 +1,20 @@
+% witness: catalog (no guard) — blank notes the no-ink test keeps, failing safe (review rev92e r2; the user's rule
+%          2026-10-30: a note is dropped only when it provably prints nothing, any doubt is ink)
+% oracle:  pdflatex (article + hyperref, amsmath): 0 errors; every footnote a bare mark
+% engines: rust 92a5 and 92e r3 = all eight notes kept, blank (`\url{}` an empty `ltx:ref`, `\href{…}{}` one with
+%          its target, `\hypertarget{a}{}` an `ltx:anchor`, `\underline{}` an `ltx_underline` text, the others empty);
+%          `\emph{}` and `\textsuperscript{}`, kept alike, are guarded with their repros
+%          (kernel_thanks_constructor_text_is_ink, kernel_thanks_empty_superscript_reads_alike)
+% expect:  0 errors, 0 warnings; each note kept: a closure-built construction (`\url`, `\href`, `\hypertarget`,
+%          `\index`, `\parbox`, `\left…\right`), an element of its own (`\underline`), a math kern not marked
+%          `isSpace` (`$\!$`) — each a cosmetic miss, no content lost
+% status:  CATALOG (kept by design)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath,hyperref}
+\begin{document}
+\title{T}
+\author{A\thanks{\url{}} \and B\thanks{\href{http://x.org}{}} \and C\thanks{\protect\index{x}} \and D\thanks{\protect\hypertarget{a}{}} \and E\thanks{\parbox{1em}{}} \and F\thanks{$\!$} \and G\thanks{$\left.\right.$} \and H\thanks{\underline{}}}
+\maketitle
+Text.
+\end{document}

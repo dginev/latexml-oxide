@@ -425,6 +425,15 @@ fn empty_marks_and_compound_symbol_labels() {
     drop_empty_marks(tk("Ann$^{1}$")).to_string(),
     tk("Ann$^{1}$").to_string()
   );
+  // (a note's text is the note's, kept as written — `\thanks`, its optional argument too, `\footnote`: the XML's note
+  // holds what the observer's rehearsal does, OD #916)
+  assert_eq!(
+    drop_empty_marks(tk(
+      "Ann\\thanks{\\textsuperscript{}} \\textsuperscript{}Univ A\\thanks[2]{$^{}$x}\\footnote{\\textsuperscript{}}"
+    ))
+    .to_string(),
+    tk("Ann\\thanks{\\textsuperscript{}} Univ A\\thanks[2]{$^{}$x}\\footnote{\\textsuperscript{}}").to_string()
+  );
   // (in a block other marks make a marked one it stays: 2604.22129)
   let marked = "Ann$^{1}$~~~Bob\\textsuperscript{}";
   assert_eq!(

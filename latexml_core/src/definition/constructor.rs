@@ -169,6 +169,8 @@ pub struct ConstructorOptions {
   pub alias:              Option<String>,
   /// The constructor is TeX's `\halign` primitive or a binding's stand-in for it ([`Constructor::halign_primitive`]).
   pub halign_primitive:   bool,
+  /// The XML template its replacement was compiled from, when it is a literal one ([`Constructor::template`]).
+  pub template:           Option<&'static str>,
 }
 impl Default for ConstructorOptions {
   fn default() -> Self {
@@ -199,6 +201,7 @@ impl Default for ConstructorOptions {
       reversion:          None,
       sizer:              None,
       halign_primitive:   false,
+      template:           None,
     }
   }
 }
@@ -256,6 +259,10 @@ pub struct Constructor {
   /// matrix `\lxSVG@halign`): what a document's `\halign` macro ends with when it is run before an alignment the
   /// bindings build (latexml_engine tex_tables.rs `run_halign_redefinition_prelude`), under whatever name it was saved.
   pub halign_primitive:  bool,
+  /// The XML template its replacement was compiled from, when it is a literal one (`DefConstructor!` with a string
+  /// replacement); none for a closure replacement or a constructor made at run time. Read by
+  /// [`Definition::replacement_template`].
+  pub template:          Option<&'static str>,
 }
 impl Default for Constructor {
   fn default() -> Self {
@@ -278,6 +285,7 @@ impl Default for Constructor {
       declared_mode:     None,
       font:              None,
       halign_primitive:  false,
+      template:          None,
     }
   }
 }
@@ -578,6 +586,11 @@ impl Constructor {
 impl Definition for Constructor {
   fn declared_mode(&self) -> Option<crate::definition::DeclaredMode> { self.declared_mode }
   fn declared_font(&self) -> Option<&FontDirective> { self.font.as_ref() }
+  fn replacement_template(&self) -> Option<&'static str> {
+    self
+      .template
+      .filter(|_| self.before_construct.is_empty() && self.after_construct.is_empty())
+  }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest) }
   fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest_body) }

@@ -628,7 +628,9 @@ macro_rules! DefConstructor {
     let (cs, params) = parse_prototype!($proto);
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);
-    def_constructor(cs, params, compiled_replacement, ConstructorOptions::default());
+    let options =
+      ConstructorOptions { template: Some($replacement), ..ConstructorOptions::default() };
+    def_constructor(cs, params, compiled_replacement, options);
   }};
   // Pre-parsed prototype flavors
   // Pre-parsed prototype; Closure replacement flavors
@@ -649,7 +651,9 @@ macro_rules! DefConstructor {
   ($cs:expr_2021, $parameters:expr_2021, $replacement:literal) => {{
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);
-    def_constructor($cs, $parameters, compiled_replacement, ConstructorOptions::default());
+    let options =
+      ConstructorOptions { template: Some($replacement), ..ConstructorOptions::default() };
+    def_constructor($cs, $parameters, compiled_replacement, options);
   }};
   ($cs:expr_2021, $parameters:expr_2021, None) => {{
     def_constructor($cs, $parameters, $replacement, ConstructorOptions::default());
@@ -657,7 +661,8 @@ macro_rules! DefConstructor {
 
   // Optioned flavors come last due to :tt munching
   ($cs:expr_2021, $parameters:expr_2021, $replacement:literal, $($input:tt)+) => {{
-    let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
+    let mut options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
+    options.template = Some($replacement);
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);
     def_constructor($cs, $parameters, compiled_replacement, options);
@@ -667,7 +672,8 @@ macro_rules! DefConstructor {
     def_constructor($cs, $parameters, None, options);
   }};
   ($proto:expr_2021, $replacement:literal, $($input:tt)+) => {{
-    let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
+    let mut options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
+    options.template = Some($replacement);
     let (cs, params) = parse_prototype!($proto);
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);

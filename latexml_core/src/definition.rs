@@ -312,6 +312,11 @@ pub trait Definition: Object {
   /// `\math@bgroup` let to `\relax`, latex.ltx:14312-14321): the binding's switch merges this font
   /// (`\lx@math@alphabet@switch`, latex_constructs/sect13.rs).
   fn declared_font(&self) -> Option<&FontDirective> { None }
+  /// The literal XML template that is a constructor's whole construction: its replacement's source (`DefConstructor!`
+  /// with a string replacement), when no construction hook (`before_construct`, `after_construct`) adds to it. `None`
+  /// for a closure replacement, a constructor made at run time and every other definition: what it builds cannot be
+  /// read off it (the frontmatter's no-ink test, latexml_engine util_text.rs `first_ink`, counts such a whatsit as ink).
+  fn replacement_template(&self) -> Option<&'static str> { None }
   fn get_alias(&self) -> Option<&String>;
   fn is_protected(&self) -> bool { false }
   /// Whether this macro peeks at the next token the way latex.ltx's

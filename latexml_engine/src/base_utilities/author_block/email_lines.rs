@@ -726,7 +726,11 @@ pub(in crate::base_utilities) fn addresses_in_order(
 /// …` under four unmarked names, which pdflatex prints with no mark, an affiliation of all four). In a block other marks
 /// make a marked one it stays, as before: it labels nothing there, and each name it ends is an author's piece of its
 /// own (2604.22129's `Robert Maier\textsuperscript{}~~~Aljaz Bozic\textsuperscript{}` beside `David
-/// Recasens\textsuperscript{\rm 1}`, which a marked block's marker-less pieces would weld into one creator).
+/// Recasens\textsuperscript{\rm 1}`, which a marked block's marker-less pieces would weld into one creator). A note's
+/// text is the note's, not the block's marks: what a `\thanks`, `\footnote` or `\footnotetext` (or a document's note
+/// command, [`is_note_macro`]) holds is kept as written, so the note is read on what the author wrote — by the XML's
+/// no-ink test as by the frontmatter observer's rehearsal of the same block (`\thanks{\textsuperscript{}}`: taken out,
+/// the XML's note was empty and dropped where the observer's kept it; OXIDIZED_DESIGN_DIVERGENCES #916).
 pub(in crate::base_utilities) fn drop_empty_marks(tokens: Tokens) -> Tokens {
   let original = tokens.clone();
   let v = tokens.unlist();
@@ -742,6 +746,21 @@ pub(in crate::base_utilities) fn drop_empty_marks(tokens: Tokens) -> Tokens {
   let mut out = Vec::with_capacity(v.len());
   let mut i = 0;
   while i < v.len() {
+    if NOTE_TEXT_COMMANDS.iter().any(|cs| v[i] == T_CS!(*cs)) || is_note_macro(&v[i]) {
+      // (the command, an optional `[…]`, and its braced text, as written)
+      let mut end = i + 1 + v[i + 1..].iter().take_while(|t| **t == T_SPACE!()).count();
+      if v.get(end) == Some(&T_OTHER!("[")) {
+        end = v[end..]
+          .iter()
+          .position(|t| *t == T_OTHER!("]"))
+          .map_or(v.len(), |at| end + at + 1);
+        end += v[end..].iter().take_while(|t| **t == T_SPACE!()).count();
+      }
+      let close = skip_group(&v, end).max(i + 1).min(v.len());
+      out.extend_from_slice(&v[i..close]);
+      i = close;
+      continue;
+    }
     let (operand, after) = if mark_commands().contains(&v[i]) {
       let open = i + 1 + v[i + 1..].iter().take_while(|t| **t == T_SPACE!()).count();
       (open, 0)
@@ -775,6 +794,9 @@ pub(in crate::base_utilities) fn drop_empty_marks(tokens: Tokens) -> Tokens {
     out
   }
 }
+
+/// The note commands whose braced argument is a note's text ([`drop_empty_marks`]).
+const NOTE_TEXT_COMMANDS: &[&str] = &["\\thanks", "\\footnote", "\\footnotetext"];
 
 /// The operand of a mark at `tokens[i..]`, as `read_frontmatter_sup_operand` reads it from the input — a group's
 /// content, a control sequence with the group after it, else one token — and the index after it.

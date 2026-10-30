@@ -1,0 +1,17 @@
+% witness: review rev92e r2 S1' (`\thanks{\textsuperscript{}}`: the XML dropped the note, the frontmatter observer kept
+%          it — the author block's empty-mark filter (`drop_empty_marks`, user ruling R11 2026-10-20) took the
+%          superscript out of the note's text too, so the XML's note was empty where the rehearsal's held the whatsit)
+% oracle:  pdflatex (article): 0 errors; Ann's footnote a bare mark; Bob's footnote "† B" after the name's mark
+% engines: rust 92e r2 (b1ed75e) = XML no note for Ann, the shadow one (`n  | note:adjacent`); rust 92a5 an empty
+%          `<note role="thanks"/>` (the superscript already taken out)
+% expect:  0 errors, 0 warnings; the XML and the observer alike: Ann's note kept, its empty superscript an element of
+%          its own (in doubt, ink), Bob's note its text; a mark of the name's own (`\textsuperscript{}` beside it) no mark
+% status:  RED (92e r2) -> GREEN (92e r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{\textsuperscript{}} \and Bob Baker\textsuperscript{}\thanks{B}}
+\maketitle
+Text.
+\end{document}

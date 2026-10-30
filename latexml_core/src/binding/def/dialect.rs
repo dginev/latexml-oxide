@@ -1406,6 +1406,7 @@ pub fn def_constructor(
     declared_mode: Some(declared_mode),
     font: declared_font,
     halign_primitive: options.halign_primitive,
+    template: options.template,
     // outer
     // long
     ..Constructor::default()
@@ -1714,6 +1715,7 @@ pub fn def_environment(
     declared_mode:     Some(declared_mode),
     font:              None,
     halign_primitive:  false,
+    template:          None,
   });
   install_definition(begin_name_constructor, options.scope);
 
@@ -1873,6 +1875,7 @@ pub fn def_environment(
     declared_mode: Some(declared_mode),
     font: None,
     halign_primitive: false,
+    template: None,
   });
   install_definition(name_constructor, options.scope);
   let end_name = s!("\\end{}", &name);

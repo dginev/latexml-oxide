@@ -27012,28 +27012,46 @@ astro-ph0405280, astro-ph0608669), `<pubnote name="Thanks: " role="thanks"/>` fo
 astro-ph0608669) and an empty `<note role="thanks"/>` for an author's (2401.15379), where pdflatex prints a bare mark.
 Ours: `\lx@add@frontmatter@now` (an `ltx:pubnote` or a document's `ltx:note`: mdpi's `\externaleditor{~}`, 2609.00671;
 lipics's `\Copyright{\@empty}`, 1508.00510) and `\lx@annotate@frontmatter@now` (a creator's `ltx:note`; contact-typed
-notes, elsarticle's `\fntext{\ead{…}}`, stay as #803 left them) drop the entry when every item of its digested content
-is one known to print nothing — `leaves_no_ink` (util_text.rs, `first_ink` finds no ink): a box of white space (a
-space, a tie), a box Perl marks `isSpace` (glue, kerns, `\quad`, phantoms, `\indent`/`\noindent`; Box.pm:33-38), a
-rule with no width or no height and depth (a strut), breaks, `\par`, penalties, `\leavevmode`, and a font or
-unframed box wrapper (`\textbf{}`, `\mbox{}`, `\makebox[1em]{}`, `\raisebox`, a formula) whose arguments (options and
-position keywords aside) and body print nothing. Anything else is ink, failing safe: a command's own text though it
-shows no argument (`\thanks{\dots}`, `\thanks{\LaTeX}`, aa's `\offprints{\LaTeX}`, svjour3's `\offprints{\dots}`,
-`$\vdots$`, `\ensuremath{\ldots}`), a rule with a size, a framed box (`\fbox{}`), a leader (`\hrulefill`), an image, a
-reference, an undefined command's error marker, a verbatim argument the test cannot read (JHEP3's
-`\preprint{\arXivid{…}}`, 0704.3719). The frontmatter observer reads a note by the same test (`Event::inkless`, set by
-the lexer on the rehearsed note; the resolver drops it as `ruling4:inkless`, #837), so its tuples agree with the XML. The test replaces #803's count of annotations made while the note
-digested; round 1's `may_typeset_content` (text boxes and shown arguments only) read a command's own text as inkless
-and dropped those notes (review rev92e r1 B1, S2). The address stays the contact the binding made of it; no mark is
-left in the title or the name (a frontmatter note's mark is the note's own). A note with any ink stays with its label:
-`\offprints{O. Kochukhov, \email{…}}` reads "Send offprint requests to: O. Kochukhov," (#915), mdpi's author-typed
-`\corres{Correspondence: }` stays (1609.03883), and so do the 51 sample creator notes reading "Corresponding author."
-(1306.1712, 2211.07501). Repros class-bindings/{aa_offprints_only_email_leaves_no_note, kernel_empty_thanks_leave_no_note,
+notes, elsarticle's `\fntext{\ead{…}}`, stay as #803 left them) drop the entry only when it provably prints nothing:
+every item of its digested content is one known to leave no ink — `leaves_no_ink` (util_text.rs, `first_ink` finds
+none). Known blank: a box of white space (a space, a tie) or one Perl marks `isSpace` (glue, kerns, `\quad`,
+phantoms, `\indent`/`\noindent`; Box.pm:33-38), a leader aside; a rule with no width or no height and depth (a
+strut); breaks, `\par`, penalties, `\leavevmode`; and a transparent wrapper whose arguments (options and position
+keywords aside) and body are blank — an unframed box or a formula (`\hbox`, `\vbox`, `\vtop`, `\parbox`,
+`\@makebox`, `\raisebox`, `$…$`), or a constructor whose whole construction is a literal template printing only its
+arguments (`prints_only_arguments`: arguments and the body absorbed, white space, `ltx:text`/`ltx:emph` with font-only
+attributes, conditionals of such, at least one argument absorbed, no `before_construct`/`after_construct` hook;
+`Definition::replacement_template`, which `DefConstructor!` records from its string replacement): `\mbox{}`,
+`$\mathbb{}$`. Any doubt is ink, so content is never lost and a blank note kept is the cost: a constructor's own text
+with or without a font (revsymb's `\openone`, `"1"` in the blackboard font; `\thanks{\dots}`, `\LaTeX`, `$\vdots$`,
+aa's `\offprints{\LaTeX}`), an element of its own (`\textsuperscript{}`'s `ltx:sup`, `\fbox{}`), a closure-built
+construction or one with a hook (`\emph{}`, `\url{}`, `\hypertarget{a}{}`), an empty template (the observer
+rehearsal's stand-ins), a sized rule, a leader, an image, a reference, an undefined command's error marker, a verbatim
+argument (JHEP3's `\preprint{\arXivid{…}}`, 0704.3719), and any item whose font carries a background colour —
+`\colorbox{c}{…}` is `\hbox{\pagecolor{c}…}`, whose `\pagecolor` leaves an empty box in the coloured font, so
+`\colorbox{red}{}` and `\colorbox{yellow}{\hspace{2em}}` (inside `\mbox` too) are ink, as pdflatex prints the block
+(the XML still loses the colour of a box with no text: `<text/>`, as before). The frontmatter observer reads a note by
+the same predicate on the same input: the lexer sets `Event::inkless` on the rehearsed note's digested body and the
+resolver drops it as `ruling4:inkless` (#837); the author block's empty-mark filter (`drop_empty_marks`, user ruling
+R11 2026-10-20) leaves a note's text (`\thanks`, `\footnote`, `\footnotetext`, a document's note command) as written,
+so the XML's note holds what the rehearsal's does (`\thanks{\textsuperscript{}}`, kept by both). Remaining
+XML/observer difference, not this test's: a note holding only an ORCID link (`\thanks{\orcidlink{…}}`) stays in the XML
+and is `ruling4:emptied` in the observer (as before 92e). The address stays the contact the binding made of it; no
+mark is left in the title or the name (a frontmatter note's mark is the note's own). A note with any ink stays with
+its label: `\offprints{O. Kochukhov, \email{…}}` reads "Send offprint requests to: O. Kochukhov," (#915), mdpi's
+author-typed `\corres{Correspondence: }` stays (1609.03883), and so do the 51 sample creator notes reading
+"Corresponding author." (1306.1712, 2211.07501). Settled dead-ends: a note's XML (no text, no element but font-only
+`ltx:text`) cannot decide it — the observer builds no XML, and `\colorbox{red}{}` constructs a bare `<text/>`; a
+declared font alone does not make a constructor transparent (`\openone`). Repros
+class-bindings/{aa_offprints_only_email_leaves_no_note, kernel_empty_thanks_leave_no_note,
 mdpi_corres_label_only_note_is_kept, kernel_thanks_command_text_is_ink, kernel_thanks_math_token_is_ink,
 aa_offprints_command_text_is_ink, kernel_thanks_rule_and_frame_are_ink, kernel_thanks_undefined_command_is_ink (fails
-pdflatex: the error path only)}; guards `perfect_kernel_batch92e::{aa_offprints_only_email_leaves_no_note,
-kernel_empty_thanks_leave_no_note, mdpi_corres_label_only_note_is_kept, kernel_thanks_command_text_is_ink,
-kernel_thanks_math_token_is_ink, aa_offprints_command_text_is_ink, kernel_thanks_rule_and_frame_are_ink,
-kernel_thanks_undefined_command_is_ink, observer_reads_a_note_by_the_ink_test}`,
-`perfect_kernel_batch78e::aa_thanks_email_leaves_no_empty_note` (Bob Baker's empty `\thanks{}` now no note) and
-`perfect_kernel_batchfms2a2::notes_labels_and_contacts` (Cat Cole's `\thanks{}` a `ruling4:inkless` drop).
+pdflatex: the error path only), kernel_thanks_constructor_text_is_ink, kernel_thanks_colorbox_is_ink,
+kernel_thanks_empty_superscript_reads_alike, kernel_thanks_blank_notes_kept (catalog: blank notes the test keeps, no
+guard)}; guards `perfect_kernel_batch92e::{aa_offprints_only_email_leaves_no_note, kernel_empty_thanks_leave_no_note,
+mdpi_corres_label_only_note_is_kept, kernel_thanks_command_text_is_ink, kernel_thanks_math_token_is_ink,
+aa_offprints_command_text_is_ink, kernel_thanks_rule_and_frame_are_ink, kernel_thanks_undefined_command_is_ink,
+observer_reads_a_note_by_the_ink_test, kernel_thanks_constructor_text_is_ink, kernel_thanks_colorbox_is_ink,
+kernel_thanks_empty_superscript_reads_alike}`, `perfect_kernel_batch78e::aa_thanks_email_leaves_no_empty_note` (Bob
+Baker's empty `\thanks{}` now no note) and `perfect_kernel_batchfms2a2::notes_labels_and_contacts` (Cat Cole's
+`\thanks{}` a `ruling4:inkless` drop).
