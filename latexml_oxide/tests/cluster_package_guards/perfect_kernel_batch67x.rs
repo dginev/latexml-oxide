@@ -139,7 +139,7 @@ fn ieeetran_pscc_thanksto() {
     &xml,
     "pubnote",
     &[],
-    "<pubnote name=\"Thanks:\u{a0}\" role=\"thanks\">This work is funded by Z.</pubnote>",
+    "<pubnote role=\"thanks\">This work is funded by Z.</pubnote>",
   );
 }
 

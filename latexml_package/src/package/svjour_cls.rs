@@ -143,6 +143,6 @@ LoadDefinitions!({
   }
   // svjour.cls:61-62 and svjour3.cls:392-393 (v3.3): `\preprint{<number>}`, the report number `\makeheadbox` sets
   // at the title page's top right (svjour.cls:489-492) — a publication note, as REVTeX's (1801.06113, 1605.08256,
-  // 2305.07696).
-  DefMacro!("\\preprint{}", "\\lx@add@pubnote[role=preprint]{#1}");
+  // 2305.07696), with no label, as the class prints none (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921).
+  DefMacro!("\\preprint{}", "\\lx@add@pubnote[role=preprint,name={}]{#1}");
 });

@@ -247,9 +247,8 @@ fn mdpi_corres_label_only_note_is_kept() {
 const EM2: &str = "\u{2003}\u{2003}";
 /// The em space a coloured box's blank content reads as (`\hspace{2em}`, `\strut\hspace{1em}`).
 const EM: &str = "\u{2003}";
-/// The en space of `\LaTeXe`'s logo and the no-break space after a role's label.
+/// The en space of `\LaTeXe`'s logo.
 const EN: &str = "\u{2002}";
-const NBSP: &str = "\u{a0}";
 
 /// `xml` without its `xml:id` attributes, which number every element and so move when a note before them goes.
 fn without_ids(xml: &str) -> String {
@@ -306,7 +305,7 @@ fn kernel_thanks_command_text_is_ink() {
     <personname>Dan Doe</personname>
     {note}{latex}{EN}2<text cssstyle="font-style:italic" yoffset="-0.3ex">ε</text></text></note>
   </creator>
-  <pubnote name="Thanks:{NBSP}" role="thanks">…</pubnote>"#
+  <pubnote role="thanks">…</pubnote>"#
     )
   );
 }

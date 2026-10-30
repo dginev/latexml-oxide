@@ -89,10 +89,14 @@ LoadDefinitions!({
   DefMacro!("\\revised{}", "\\lx@add@date[role=revised]{#1}");
   DefMacro!("\\accepted{}", "\\lx@add@date[role=accepted]{#1}");
   DefMacro!("\\communicated{}", "\\lx@add@date[role=communicated]{#1}");
-  DefMacro!("\\dedicated{}", "\\lx@add@pubnote[role=dedication]{#1}");
+  // No label, as elsart.cls prints none (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921) (quant-ph0004056's copy): :1165-1168 the
+  // dedication centred in italics, :1131 the article's type, :1080-1081 and :1203 the volume in "Article published in
+  // J V (year) pages", the issue stored, not printed (elsarticle.cls defines none of the four). `\journal` below keeps
+  // the role's label: what the class prints around it depends on the version (SYNC_STATUS, the 92e row).
+  DefMacro!("\\dedicated{}", "\\lx@add@pubnote[role=dedication,name={}]{#1}");
   DefMacro!("\\presented{}", "\\lx@add@date[role=presented]{#1}");
-  DefMacro!("\\articletype{}", "\\lx@add@pubnote[role=type]{#1}");
-  DefMacro!("\\issue{}", "\\lx@add@pubnote[role=issue]{#1}");
+  DefMacro!("\\articletype{}", "\\lx@add@pubnote[role=type,name={}]{#1}");
+  DefMacro!("\\issue{}", "\\lx@add@pubnote[role=issue,name={}]{#1}");
   // elsarticle.cls:1301-1302 (TL v3.4c; elsart.cls v2.18:1215 alike): `\journal` stores the journal's name in
   // `\@journal`, empty until set (elsarticle.cls:1302 `\let\@journal\@empty`, after :32's "Elsevier Ltd" served its
   // `\ProvidesClass` line; elsart.cls keeps its publisher, v2.18:28 "Elsevier Science", which elsart_cls.rs sets), which
@@ -100,7 +104,7 @@ LoadDefinitions!({
   // 1212.6083, 1007.3192, 0812.4577): the frontmatter keeps it as a note, the store as the class keeps it.
   RawTeX!(r"\let\@journal\@empty");
   DefMacro!("\\journal{}", "\\gdef\\@journal{#1}\\lx@add@pubnote[role=journal]{#1}");
-  DefMacro!("\\volume{}", "\\lx@add@pubnote[role=volume]{#1}");
+  DefMacro!("\\volume{}", "\\lx@add@pubnote[role=volume,name={}]{#1}");
   DefMacro!("\\pubyear{}", "\\lx@add@date[role=publication]{#1}");
   def_macro_noop("\\FullCopyrightText")?;
   DefMacro!("\\copyear{}", "\\lx@add@copyrightyear{#1}");

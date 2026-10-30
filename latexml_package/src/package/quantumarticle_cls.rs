@@ -129,13 +129,13 @@ LoadDefinitions!({
   // The optional arguments here are a sort of prefix to the footnote (NOT label!)
   // quantumarticle.cls:1220-1225 `\href{mailto:#2}{#2}`, `\href{#2}{#2}`: in the current font (no corpus `_`
   // witness)
-  DefMacro!("\\email[] Semiverbatim",    "\\lx@add@contact[role=email,name={#1}]{\\lx@address@textfont{#2}}");
-  DefMacro!("\\homepage[] Semiverbatim", "\\lx@add@contact[role=url,name={#1}]{\\lx@address@textfont{#2}}");
-  DefMacro!("\\thanks[]{}",              "\\lx@add@contact[role=thanks,name={#1}]{#2}");
+  DefMacro!("\\email[Default:\\lx@contact@email@name] Semiverbatim",    "\\lx@add@contact[role=email,name={#1}]{\\lx@address@textfont{#2}}");
+  DefMacro!("\\homepage[Default:\\lx@contact@url@name] Semiverbatim", "\\lx@add@contact[role=url,name={#1}]{\\lx@address@textfont{#2}}");
+  DefMacro!("\\thanks[Default:\\lx@contact@thanks@name]{}",              "\\lx@add@contact[role=thanks,name={#1}]{#2}");
   DefMacro!("\\orcid[]{}",               "\\lx@add@orcid[name={#1}]{#2}");
 
   DefMacro!("\\collaboration{}",    "\\author{#1}");
-  DefMacro!("\\altaffiliation[]{}", "\\lx@add@contact[annotate=new,role=affiliation,name={#1}]{#2}");
+  DefMacro!("\\altaffiliation[Default:\\lx@contact@affiliation@name]{}", "\\lx@add@contact[annotate=new,role=affiliation,name={#1}]{#2}");
 
   RawTeX!("\\DeclareRobustCommand\\openone{\\mathbbm{1}}");
   RawTeX!("\\definecolor{quantumviolet}{HTML}{53257F}");

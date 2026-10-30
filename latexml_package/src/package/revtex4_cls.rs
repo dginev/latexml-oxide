@@ -208,8 +208,8 @@ LoadDefinitions!({
   // this binding also serves, sets it in the current font (revtex4-2.cls:1980, its `\href` = `\@href`), as
   // revtex4_support_sty.rs's commands do; `%` other in the address, as `\sanitize@url` makes it (`UrlSemiverbatim`).
   if revtex4_0 {
-    DefMacro!("\\email[] UrlSemiverbatim", "\\lx@add@email[name={#1}]{\\lx@address@urlfont{#2}}");
-    DefMacro!("\\homepage[] UrlSemiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@urlfont{#2}}");
+    DefMacro!("\\email[Default:\\lx@contact@email@name] UrlSemiverbatim", "\\lx@add@email[name={#1}]{\\lx@address@urlfont{#2}}");
+    DefMacro!("\\homepage[Default:\\lx@contact@url@name] UrlSemiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@urlfont{#2}}");
     DefMacro!("\\@email{} Semiverbatim", "\\endgroup\\lx@add@email[name={#1}]{\\lx@address@urlfont{#2}}");
     DefMacro!("\\@homepage{} Semiverbatim", "\\endgroup\\lx@add@url[name={#1}]{\\lx@address@urlfont{#2}}");
   }

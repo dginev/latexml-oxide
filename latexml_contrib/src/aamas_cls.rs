@@ -40,7 +40,9 @@ LoadDefinitions!({
       out.extend(suffix.unlist_ref().iter().copied());
       out.push(T_END!());
       if lookup_bool("inPreamble") && !suffix.unlist_ref().iter().all(|t| *t == T_SPACE!()) {
-        out.extend(TokenizeInternal!("\\lx@add@pubnote[role=doi]{10.65109/").unlist());
+        // (printed as its https://doi.org/ link, aamas.cls:1674, with no label: FIDELITY_CHARTER §4,
+        // OXIDIZED_DESIGN_DIVERGENCES #921)
+        out.extend(TokenizeInternal!("\\lx@add@pubnote[role=doi,name={}]{10.65109/").unlist());
         out.extend(suffix.unlist());
         out.push(T_END!());
       }

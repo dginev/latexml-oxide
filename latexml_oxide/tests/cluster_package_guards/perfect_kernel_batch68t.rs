@@ -228,7 +228,7 @@ fn titlepage_class_title_print_gobbles_label_and_thanks() {
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/titlepage_class_title_print_gobbles_label_and_thanks.tex"
   ));
   assert!(
-    xml.contains(r#"<document xmlns="http://dlmf.nist.gov/LaTeXML"> <titlepage xml:id="id1"> <p align="center" xml:id="id1.1"><text fontsize="120%" xml:id="id1.1.1">Static spacetimes</text></p> <p xml:id="id1.2">Cover text.</p> </titlepage> <title>Static spacetimes</title> <pubnote name="Thanks: " role="thanks">Supported by X.</pubnote> <section"#),
+    xml.contains(r#"<document xmlns="http://dlmf.nist.gov/LaTeXML"> <titlepage xml:id="id1"> <p align="center" xml:id="id1.1"><text fontsize="120%" xml:id="id1.1.1">Static spacetimes</text></p> <p xml:id="id1.2">Cover text.</p> </titlepage> <title>Static spacetimes</title> <pubnote role="thanks">Supported by X.</pubnote> <section"#),
     "{xml}"
   );
   assert_eq!(xml.matches("<pubnote").count(), 1, "{xml}");

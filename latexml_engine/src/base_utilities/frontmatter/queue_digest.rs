@@ -647,16 +647,20 @@ pub(in crate::base_utilities) fn clean_frontmatter_labels(
 
 /// Look for \lx@<tag>@<role>@name or \lx@<tag>@name
 /// Perl: getFrontmatterName($name, $tag, $role).
+///
+/// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #921; FIDELITY_CHARTER §4, user ruling 2026-10-30): a `name=` the call gives
+/// is the label, and an EMPTY one (`name=`, `name={}`, or one that digests to nothing) is no label — the binding says
+/// its class prints none (the kernel's title `\thanks`, a dedication, a report number set top right), and the role's
+/// default does not stand in. Perl's `$name && scalar($name->unlist)` falls back to the default there. A call that
+/// forwards an optional label (`\email[]{…}`, `name={#1}`) passes the role's default itself when none was given.
 pub(in crate::base_utilities) fn get_frontmatter_name(
   name: Option<&String>,
   tag: &str,
   role: &str,
 ) -> Result<Option<String>> {
   let stag = tag.strip_prefix("ltx:").unwrap_or(tag);
-  if let Some(name) = name
-    && !name.is_empty()
-  {
-    return Ok(Some(name.clone()));
+  if let Some(name) = name {
+    return Ok((!name.is_empty()).then(|| name.clone()));
   }
   if !role.is_empty() {
     let cs = T_CS!(s!("\\lx@{stag}@{role}@name"));

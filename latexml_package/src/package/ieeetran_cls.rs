@@ -403,7 +403,10 @@ LoadDefinitions!({
   // (beyond-Perl): "Lei Chen²", matching pdfTeX and preserving the marker.
   DefMacro!("\\IEEEauthorrefmark{}", "\\textsuperscript{#1}");
   def_macro_noop("\\IEEEtriggeratref{}")?;
-  DefMacro!("\\IEEEpubid{}", "\\lx@add@pubnote[role=pubid]{pubid: #1}");
+  // IEEEtran.cls:6153 `\def\IEEEpubid#1{\def\@IEEEpubid{#1}…}`: the publisher's ID line at the first page's foot, the
+  // argument alone — no label, and no "pubid: " before it (Perl's IEEEtran.cls.ltxml:157 content)
+  // (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921).
+  DefMacro!("\\IEEEpubid{}", "\\lx@add@pubnote[role=pubid,name={}]{#1}");
   def_macro_noop("\\IEEEpubidadjcol")?;
   // \corresp{name} — IEEE Open Journal class IEEEoj.cls L4875 marks
   // a corresponding-author note (later rendered in titlepage). Preserve

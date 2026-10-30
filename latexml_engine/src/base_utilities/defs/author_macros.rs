@@ -401,7 +401,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefMacro!("\\lx@pubnote@issue@name", "Issue:~");
   DefMacro!("\\lx@pubnote@volume@name", "Volume:~");
   DefMacro!("\\lx@pubnote@dedication@name", "Dedication:~");
-  DefMacro!("\\lx@pubnote@thanks@name", "Thanks:~");
+  // Empty: LaTeX sets a `\thanks` as a marked footnote with no label (latex.ltx `\thanks`/`\@thanks`; pdflatex "∗ X"),
+  // so the note has none (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921; Perl
+  // "Thanks:~"). A class that prints one sets it here (resphilosophica_cls.rs "Acknowledgments").
+  DefMacro!("\\lx@pubnote@thanks@name", "");
 
   DefMacro!("\\lx@abstract@name", "Abstract");
   DefMacro!("\\lx@keywords@name", "Keywords:~");

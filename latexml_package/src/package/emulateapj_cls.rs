@@ -190,7 +190,7 @@ LoadDefinitions!({
   // 2383-2391): roman, as pdflatex prints them (CMR8, also under `[revtex4]`), not AASTeX 5.x's `\tt` or REVTeX 4.0's
   // `\url` that the aastex binding it loads installs. The `_` is kept (user ruling 2026-10-11).
   DefMacro!("\\email[]{}", "\\lx@add@email{\\lx@address@textfont{#2}}");
-  DefMacro!("\\homepage[] Semiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
+  DefMacro!("\\homepage[Default:\\lx@contact@url@name] Semiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
   // emulateapj.cls's `{appendix}` (TL 2025, :744-797; its begin code is the `\appendix` a paper calls): the
   // sections "A", the equations "A1" (aastex's `\@appendix`, aas_support_sty.rs), and with `[appendixfloats]` (:128-131)
   // the figures and tables numbered within each appendix, "A1" (zeroed by each appendix section, :785), the running

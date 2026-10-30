@@ -52,7 +52,7 @@ LoadDefinitions!({
 \newif\ifPreprint \Preprintfalse
 \def\prepNo{}
 \long\def\preprint#1{\Preprinttrue\long\gdef\prepNo{#1}}
-\def\lx@appolb@preprint{\ifPreprint\lx@add@pubnote[role=preprint]{\prepNo}\fi}
+\def\lx@appolb@preprint{\ifPreprint\lx@add@pubnote[role=preprint,name={}]{\prepNo}\fi}
 \newcount\volume \volume=0
 \let\pageno=\c@page
 \newcount\No \No=0

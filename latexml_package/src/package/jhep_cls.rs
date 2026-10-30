@@ -192,9 +192,11 @@ LoadDefinitions!({
   DefMacro!("\\revised{}", "\\lx@add@date[role=revised,name={\\revisedname}]{#1}");
   DefMacro!("\\accepted{}", "\\lx@add@date[role=accepted,name={\\acceptedname}]{#1}");
   DefMacro!("\\JHEPcopydate{}", "\\lx@add@date[role=copydate]{#1}");
-  DefMacro!("\\dedicated{}", "\\lx@add@pubnote[role=dedication]{#1}");
-  DefMacro!("\\conference{}", "\\lx@add@pubnote[role=conference]{#1}");
-  DefMacro!("\\preprint{}", "\\lx@add@pubnote[role=preprint]{#1}");
+  // No label, as the class prints none (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921): JHEP.cls:608 sets the dedication in italics, :390
+  // the preprint header's number, and the conference line its name alone (hep-th0103183's copy) — the role stays.
+  DefMacro!("\\dedicated{}", "\\lx@add@pubnote[role=dedication,name={}]{#1}");
+  DefMacro!("\\conference{}", "\\lx@add@pubnote[role=conference,name={}]{#1}");
+  DefMacro!("\\preprint{}", "\\lx@add@pubnote[role=preprint,name={}]{#1}");
   DefMacro!("\\keywords{}", "\\lx@add@keywords[name={\\keywordsname~}]{#1}");
 
   // Perl L61-64: Acknowledgements environment. Perl uses

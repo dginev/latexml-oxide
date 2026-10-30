@@ -113,11 +113,11 @@ fn pos_sty_speaker_author_contacts() {
         "Machine learning is growing.",
       ),
       (
-        "<pubnote name=\"Note:\u{a0}\" role=\"note\">",
+        "<pubnote role=\"note\">",
         "Talk given on behalf of the authors.",
       ),
       (
-        "<pubnote name=\"Dedication:\u{a0}\" role=\"dedication\">",
+        "<pubnote role=\"dedication\">",
         "To the memory of a colleague.",
       ),
       ("<note role=\"conference\">", "ICHEP2024"),

@@ -1873,7 +1873,7 @@ fn compositio_family_frontmatter() {
     &xml,
     "pubnote",
     &["role=\"dedication\""],
-    "<pubnote name=\"Dedication:\u{a0}\" role=\"dedication\">To C.</pubnote>",
+    "<pubnote role=\"dedication\">To C.</pubnote>",
   );
   assert_element(
     &xml,

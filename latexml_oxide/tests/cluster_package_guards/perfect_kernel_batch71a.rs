@@ -150,7 +150,7 @@ fn appolb_class_commands() {
     &xml,
     "pubnote",
     &[r#"role="preprint""#],
-    r#"<pubnote name="Preprint: " role="preprint">TPJU-1/2004</pubnote>"#,
+    r#"<pubnote role="preprint">TPJU-1/2004</pubnote>"#,
   );
   assert_element(
     &xml,

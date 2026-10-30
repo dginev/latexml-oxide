@@ -47,8 +47,11 @@ LoadDefinitions!({
   // labelled as the class prints it (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #915): jheppub.sty:223 (2609.25212's copy)
   // `{\textsc{ArXiv ePrint:}} \href{…}{#1}`, jinstpub.sty:235 (2609.15846's) the same — not the role's "arXiv: ".
   DefMacro!("\\arxivnumber{}", "\\lx@add@pubnote[role=arxiv,name={ArXiv ePrint:~}]{#1}");
-  DefMacro!("\\preprint{}", "\\lx@add@pubnote[role=preprint]{#1}");
-  DefMacro!("\\proceeding{}", "\\lx@add@pubnote[role=conference]{#1}");
+  // No label, as the class prints none (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921): jheppub.sty:71/166 sets the report number at the
+  // first page's top right, :172 the proceeding's line, :225 the dedication in italics (2609.25212's copy;
+  // jinstpub.sty:237, 2609.15846's, alike) — the role stays.
+  DefMacro!("\\preprint{}", "\\lx@add@pubnote[role=preprint,name={}]{#1}");
+  DefMacro!("\\proceeding{}", "\\lx@add@pubnote[role=conference,name={}]{#1}");
   DefMacro!("\\collaboration{}", "\\lx@add@pubnote[role=collaboration]{#1}");
   def_macro_noop("\\collaborationImg[]{}")?;
 
@@ -169,6 +172,6 @@ pub fn jhep_contact_markup() -> Result<()> {
   // 2112.00370). The family's rule: jcappub and jinstpub take it with this binding.
   DefMacro!("\\emailAdd Semiverbatim", "\\lx@add@contact@list{\\lx@jhep@email}{#1}");
   DefMacro!("\\lx@jhep@email{}", "\\lx@add@contact@placed[role=email,owner=sequence]{}{\\lx@address@urlfont{#1}}");
-  DefMacro!("\\dedicated{}", "\\lx@add@pubnote[role=dedication]{#1}");
+  DefMacro!("\\dedicated{}", "\\lx@add@pubnote[role=dedication,name={}]{#1}");
   Ok(())
 }

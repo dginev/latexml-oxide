@@ -3503,7 +3503,7 @@ fn acmart_doi_verbatim() {
   );
   assert_eq!(
     hf3_element(tex, "pubnote", "doi"),
-    "<pubnote name=\"DOI:\u{a0}\" role=\"doi\">10.475/123_4</pubnote>"
+    "<pubnote role=\"doi\">10.475/123_4</pubnote>"
   );
 }
 

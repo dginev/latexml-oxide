@@ -147,8 +147,12 @@ LoadDefinitions!({
   } else {
     DefMacro!("\\abstract{}", "\\lx@add@abstract{#1}");
   }
-  // :568 `\dedication`, set under the abstract (:800)
-  DefMacro!("\\dedication{}", "\\lx@add@pubnote[role=dedication]{#1}");
+  // :568 `\dedication`, set under the abstract (:800), with no label (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921) (epl2.cls:537-541,
+  // 2212.14228's copy)
+  DefMacro!(
+    "\\dedication{}",
+    "\\lx@add@pubnote[role=dedication,name={}]{#1}"
+  );
   // :543-562, :606 the issue data (volume, issue, year, first page, DOI, page id and the dates) the publisher fills
   // in, printed in the banner only by the production layout (:615-634 prints neither): stored, as there. The class's
   // `\renewcommand{\year}` (:545) is not followed: `\year` stays the TeX date parameter the kernel's `\today` reads.

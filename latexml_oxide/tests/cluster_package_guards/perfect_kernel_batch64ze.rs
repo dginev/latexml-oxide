@@ -170,7 +170,7 @@ fn svjour_preprint_is_a_pubnote() {
     &xml,
     "pubnote",
     &[],
-    "<pubnote name=\"Preprint:\u{a0}\" role=\"preprint\">CERN-TH-2024-001</pubnote>",
+    "<pubnote role=\"preprint\">CERN-TH-2024-001</pubnote>",
   );
 }
 

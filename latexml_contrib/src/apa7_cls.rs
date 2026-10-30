@@ -167,13 +167,15 @@ LoadDefinitions!({
     "\\duedate{}",
     "\\@ifundefined{def@stu}{}{\\lx@add@frontmatter{ltx:note}[role=duedate]{#1}}"
   );
+  // apa7.cls:1450-1459, :1593-1598: the journal, the volume and the copyright number set in the first page's head,
+  // each alone — no label (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921).
   DefMacro!(
     "\\journal{}",
-    "\\ifapamodeman{}{\\lx@add@pubnote[role=journal]{#1}}"
+    "\\ifapamodeman{}{\\lx@add@pubnote[role=journal,name={}]{#1}}"
   );
   DefMacro!(
     "\\volume{}",
-    "\\ifapamodeman{}{\\lx@add@pubnote[role=volume]{#1}}"
+    "\\ifapamodeman{}{\\lx@add@pubnote[role=volume,name={}]{#1}}"
   );
   DefMacro!(
     "\\ccoppy{}",
@@ -181,7 +183,7 @@ LoadDefinitions!({
   );
   DefMacro!(
     "\\copnum{}",
-    "\\ifapamodeman{}{\\lx@add@pubnote[role=pubid]{#1}}"
+    "\\ifapamodeman{}{\\lx@add@pubnote[role=pubid,name={}]{#1}}"
   );
   // A DOI stays a link to its record (user 2026-10-06: semantic markup before PDF fidelity), as OmniBus's `\doi` gave
   // these papers before the binding: apacite's own (`\providecommand{\doi}`, apacite.sty:1812-1815, which this then

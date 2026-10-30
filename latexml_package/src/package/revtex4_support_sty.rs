@@ -160,14 +160,14 @@ LoadDefinitions!({
   // `\homepage{http://www.nhn.ou.edu/%7Emilton}` (0712.3811) is the address, where a `%` comment swallowed the rest
   // of the document, every `\label` with it (KNOWN_PERL_ERRORS #1149). One call `\email[]{}`, as an author-block line
   // reads it (`perfect_kernel_batch64::email_command_option_on_author_line`).
-  DefMacro!("\\email[] UrlSemiverbatim",    "\\lx@add@email[name={#1}]{\\lx@address@textfont{#2}}");
-  DefMacro!("\\homepage[] UrlSemiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
+  DefMacro!("\\email[Default:\\lx@contact@email@name] UrlSemiverbatim",    "\\lx@add@email[name={#1}]{\\lx@address@textfont{#2}}");
+  DefMacro!("\\homepage[Default:\\lx@contact@url@name] UrlSemiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
   // `\@email{label}{address}` closes the class's group. A class that re-dresses `\email` over them (cej.cls:88
   // `\renewcommand*\email[1][E-mail: ]{\begingroup\sanitize@url\@email{#1}}`; 0710.1022, 1201.4230 and 5 more) left
   // the group open without them, `%` other to the end of the document.
   DefMacro!("\\@email{} Semiverbatim",    "\\endgroup\\lx@add@email[name={#1}]{\\lx@address@textfont{#2}}");
   DefMacro!("\\@homepage{} Semiverbatim", "\\endgroup\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
-  DefMacro!("\\thanks[]{}",              "\\lx@add@contact[role=thanks,name={#1}]{#2}");
+  DefMacro!("\\thanks[Default:\\lx@contact@thanks@name]{}",              "\\lx@add@contact[role=thanks,name={#1}]{#2}");
   // revtex4-2.cls:2472-2493 (revtex4.cls, revtex4-1.cls alike): the front-matter footnote under `\thanks` and the
   // `\author`'s optional notes, a mark shared by identical texts; documents call it for a note on several authors
   // (`\newcommand{\equalcontrib}{\frontmatter@footnote{…contributed equally…}}`, 2605.04155). Each author keeps it.
@@ -198,7 +198,7 @@ LoadDefinitions!({
   // group's run: role `altaffiliation`, as aastex's binding has it. Perl's `annotate=new,role=affiliation`
   // (revtex4_support.sty.ltxml:61) cost the author before it the group's affiliation (cond-mat0209262; 78 of 5,934
   // revtex papers write an `\altaffiliation` inside a group).
-  DefMacro!("\\altaffiliation[]{}", "\\lx@add@contact[role=altaffiliation,name={#1}]{#2}");
+  DefMacro!("\\altaffiliation[Default:\\lx@contact@altaffiliation@name]{}", "\\lx@add@contact[role=altaffiliation,name={#1}]{#2}");
 
   def_macro_noop("\\firstname")?;
   DefConstructor!("\\surname{}", "#1", enter_horizontal => true);
@@ -224,7 +224,9 @@ LoadDefinitions!({
       T_CS!("\\lx@revtex@preprint@identifier")
     }))
   });
-  DefMacro!("\\lx@revtex@preprint@printed{}", "\\lx@add@pubnote[role=preprint]{#1}");
+  // (printed at the first page's top right, its numbers alone, aps4-2.rtx:250-264 `\produce@preprints`: no label,
+  // FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921)
+  DefMacro!("\\lx@revtex@preprint@printed{}", "\\lx@add@pubnote[role=preprint,name={}]{#1}");
   // The numbers are the argument's `\\`-separated items at its top level: a `\\` in a group or an environment
   // (`\parbox{2in}{A-1\\B-2}`, a `{flushright}` block in a `{minipage}`, FERMILAB's layout) belongs to it.
   DefMacro!("\\lx@revtex@preprint@identifier Semiverbatim", sub[(number)] {

@@ -191,9 +191,7 @@ fn revtex_preprint_number_is_an_identifier() {
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(
-    xml.contains(
-      "<pubnote name=\"Preprint:\u{a0}\" role=\"preprint\">CERN-PH-TH <break/>LA-UR-12</pubnote>"
-    ),
+    xml.contains("<pubnote role=\"preprint\">CERN-PH-TH <break/>LA-UR-12</pubnote>"),
     "{xml}"
   );
   assert!(
@@ -214,7 +212,7 @@ fn revtex_printed_preprint_is_read_as_tex() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   // The text and the subscript structure; the subscript digit's font is not pinned (TeX sets it upright, the italic
   // `2` here is a pre-existing rendering artifact, base the same — 77k r2 review NIT 4).
-  let head = "<pubnote name=\"Preprint:\u{a0}\" role=\"preprint\">Gasi <text font=\"italic\">et al.</text>, Fe<sub>";
+  let head = "<pubnote role=\"preprint\">Gasi <text font=\"italic\">et al.</text>, Fe<sub>";
   let start = xml.find(head).unwrap_or_else(|| panic!("{xml}")) + head.len();
   let len = xml[start..]
     .find("</sub>YZ</pubnote>")
@@ -224,12 +222,12 @@ fn revtex_printed_preprint_is_read_as_tex() {
     .replace("</text>", "");
   assert_eq!(digit, "2", "{xml}");
   assert!(
-    xml.contains("<pubnote name=\"Preprint:\u{a0}\" role=\"preprint\">DESY\u{a0}11–210</pubnote>"),
+    xml.contains("<pubnote role=\"preprint\">DESY\u{a0}11–210</pubnote>"),
     "{xml}"
   );
   assert!(
     squash(&xml).contains(
-      r#"<pubnote name="Preprint: " role="preprint"><Math mode="inline" tex="\mathrm{UCB}" text="UCB" xml:id="m2"> <XMath> <XMTok role="UNKNOWN">UCB</XMTok> </XMath> </Math>-PTH</pubnote>"#
+      r#"<pubnote role="preprint"><Math mode="inline" tex="\mathrm{UCB}" text="UCB" xml:id="m2"> <XMath> <XMTok role="UNKNOWN">UCB</XMTok> </XMath> </Math>-PTH</pubnote>"#
     ),
     "{xml}"
   );
@@ -291,7 +289,7 @@ fn revtex3_preprint_style_prints_the_number() {
       "{head}: {log}"
     );
     assert!(
-      xml.contains("<pubnote name=\"Preprint:\u{a0}\" role=\"preprint\">UCB-PTH-95/01</pubnote>"),
+      xml.contains("<pubnote role=\"preprint\">UCB-PTH-95/01</pubnote>"),
       "{head}: {xml}"
     );
     assert!(!xml.contains("<rdf"), "{head}: {xml}");
@@ -335,7 +333,7 @@ fn revtex40_preprint_numbers_follow_the_class() {
       "{options}: {log}"
     );
     assert!(
-      xml.contains("<pubnote name=\"Preprint:\u{a0}\" role=\"preprint\">PRE-2004/01</pubnote>"),
+      xml.contains("<pubnote role=\"preprint\">PRE-2004/01</pubnote>"),
       "{options}: {xml}"
     );
     assert!(!xml.contains("<rdf"), "{options}: {xml}");

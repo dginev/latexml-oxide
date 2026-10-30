@@ -1,0 +1,16 @@
+% witness: the user's ruling 2026-10-30 (FIDELITY_CHARTER §4), the 92e audit: IEEEtran's `\IEEEpubid` read
+%          "PubID: pubid: X" (the role's label over Perl's content prefix, IEEEtran.cls.ltxml:157)
+% oracle:  pdflatex (TL 2025, IEEEtran.cls:6153): 0 errors; the first page's foot "0000–0000/24$31.00 © 2024 IEEE"
+%          alone
+% engines: rust 3a90791 = <pubnote name="PubID: " role="pubid">pubid: 0000–0000/…</pubnote>; Perl the content alike
+% expect:  0 errors, 0 warnings; <pubnote role="pubid">0000–0000/24$31.00 © 2024 IEEE</pubnote>
+% status:  RED (3a90791) -> GREEN (92g)
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{A Study}
+\author{Ann Able}
+\maketitle
+\IEEEpubid{0000--0000/24\$31.00~\copyright~2024 IEEE}
+Text.
+\end{document}

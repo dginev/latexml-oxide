@@ -209,7 +209,7 @@ LoadDefinitions!({
   // Various frontmatter creator contact information; attaches to previous \author
   DefMacro!("\\contrib[]{}", "\\lx@add@creator[role=contributor, name={#1}]{#2}");
   DefMacro!("\\commby{}",    "\\lx@add@creator[role=communicator,name={\\@commby~}]{#1}");
-  DefMacro!("\\address[]{}", "\\lx@add@address[name={#1}]{#2}");
+  DefMacro!("\\address[Default:\\lx@contact@address@name]{}", "\\lx@add@address[name={#1}]{#2}");
   DefMacro!("\\curraddr[]{}",
     "\\lx@add@contact[role=current_address,name={\\curraddrname\\ifx.#1.\\else{, #1}\\fi:\\ }]{#2}");
   // amsart.cls:538-546 (amsproc.cls:516-524, amsbook.cls:486-494) set the address in `\ttfamily`: an
@@ -246,8 +246,11 @@ LoadDefinitions!({
 
   // \thanks{} ( == ack, not latex's \thanks, not in author)
   // make a throwaway optional argument available for OmniBus use
+  // amsart.cls:836 `\@setthanks` prints each `\thanks` in the first-page footnote with no label: a class with no
+  // `\thanksname` names it by the role's default, none unless its binding sets one (resphilosophica's
+  // "Acknowledgments"; FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921).
   DefMacro!("\\thanks[]{}",
-    "\\lx@add@pubnote[role=thanks,name={\\@ifundefined{thanksname}{}{\\thanksname}}]{#2}");
+    "\\lx@add@pubnote[role=thanks,name={\\@ifundefined{thanksname}{\\lx@pubnote@thanks@name}{\\thanksname}}]{#2}");
 
   // Non-standard but makes it easier to create bindings for variations on AMS classes;
   // just redefine this macro
@@ -303,8 +306,10 @@ LoadDefinitions!({
   DefMacro!("\\currentmonth", None, "");
   DefMacro!("\\currentyear", None, "");
   DefMacro!("\\volinfo", None, "");
+  // amsart.cls:121-143, :680: the first page prints `\volinfo` ("Volume 12, Number 3, March 2024") alone — no label
+  // (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921).
   DefMacro!("\\issueinfo{}{}{}{}",
-    "\\def\\currentvolume{#1}\\def\\currentissue{#2}\\def\\currentmonth{#3}\\def\\currentyear{#4}\\def\\volinfo{Volume \\currentvolume, Number \\number0\\currentissue, \\currentmonth\\ \\currentyear}\\lx@add@pubnote[role=volume]{\\volinfo}");
+    "\\def\\currentvolume{#1}\\def\\currentissue{#2}\\def\\currentmonth{#3}\\def\\currentyear{#4}\\def\\volinfo{Volume \\currentvolume, Number \\number0\\currentissue, \\currentmonth\\ \\currentyear}\\lx@add@pubnote[role=volume,name={}]{\\volinfo}");
 
   // abstract otherwise defined in LaTeX.pool
   DefMacro!("\\abstractname", None, "\\textsc{Abstract}");

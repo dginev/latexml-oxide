@@ -198,7 +198,8 @@ LoadDefinitions!({
       None if lookup_bool("lx_lmcs_labelled") => vec![vec![T_LETTER!(radix::radix_alpha(place).as_str())]],
       None => Vec::new(),
     };
-    let name = name.unwrap_or_default();
+    // (no `[name]`: the role's label, as before; an empty one is none, OXIDIZED_DESIGN_DIVERGENCES #921)
+    let name = name.unwrap_or_else(|| Tokens!(T_CS!("\\lx@contact@address@name")));
     if items.is_empty() {
       return Ok(Invocation!(T_CS!("\\lx@lmcs@address@run"), vec![Some(name), Some(Tokens::new(rest))]));
     }

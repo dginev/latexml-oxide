@@ -153,7 +153,7 @@ LoadDefinitions!({
     "\\lx@add@contact[role=url,name={\\ifx.#1.URL:~\\else#1\\fi}]{\\lx@address@textfont{#2}}"
   );
   DefMacro!(
-    "\\thanks[]{}",
+    "\\thanks[Default:\\lx@contact@thanks@name]{}",
     "\\lx@add@contact[role=thanks,name={#1}]{#2}"
   );
   DefMacro!("\\orcid[]{}", "\\lx@add@orcid[name={#1}]{#2}");
@@ -187,7 +187,13 @@ LoadDefinitions!({
     "\\lx@add@classification[scheme=pacs,name={\\PACSname: }]{#1}"
   );
   DefMacro!("\\headnote{}", "\\lx@add@pubnote[role=node]{#1}");
-  DefMacro!("\\dedication{}", "\\lx@add@pubnote[role=dedication]{#1}");
+  // No label, as the class prints none (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921): svjour3.cls:612-616 sets the dedication in italics
+  // (2609.05466's copy), svjour3.cls:536 / svjour.cls:489 the journal's name before its "manuscript No." (a suffix),
+  // and the paper type is stored, not printed — the role stays.
+  DefMacro!(
+    "\\dedication{}",
+    "\\lx@add@pubnote[role=dedication,name={}]{#1}"
+  );
   // labelled as the class prints it (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #915):
   // svjour3.cls :371-374 (1902.07328's copy) and svjour.cls :327-330 (0901.1015's) `{\itshape Send offprint requests
   // to\/}: #1` — not the role's "Preprint: " (svmult has no `\offprints`).
@@ -195,8 +201,11 @@ LoadDefinitions!({
     "\\offprints{}",
     "\\lx@add@pubnote[role=preprint,name={Send offprint requests to:~}]{#1}"
   );
-  DefMacro!("\\journalname{}", "\\lx@add@pubnote[role=journal]{#1}");
-  DefMacro!("\\papertype{}", "\\lx@add@pubnote[role=type]{#1}");
+  DefMacro!(
+    "\\journalname{}",
+    "\\lx@add@pubnote[role=journal,name={}]{#1}"
+  );
+  DefMacro!("\\papertype{}", "\\lx@add@pubnote[role=type,name={}]{#1}");
 
   Let!("\\journalopt", "\\@empty");
 

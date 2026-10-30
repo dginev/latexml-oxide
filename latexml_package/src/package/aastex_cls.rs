@@ -213,7 +213,7 @@ LoadDefinitions!({
   // (aastex701.cls:2213-2216) — not in REVTeX 4.0's typewriter type, which revtex4_cls.rs installs (this binding loads
   // under that name)
   if aastex6_plus {
-    DefMacro!("\\homepage[] Semiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
+    DefMacro!("\\homepage[Default:\\lx@contact@url@name] Semiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
   }
   if requested.starts_with("aastex7") {
     // (one `\lx@add@` call, so an author line holding `\email{…}` reads it as the class's frontmatter command:

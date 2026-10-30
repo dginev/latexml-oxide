@@ -44,9 +44,10 @@ LoadDefinitions!({
   // :22 the first page's header line, "Prepared for submission to JINST", printed first by `\maketitle` (:180), is
   // page furniture; a paper's own (its copy's `\gdef\@fpheader{…}`, read after this binding, or its preamble's) is
   // author content, its report number or publication status: a pubnote (2103.06391 "Prepared for submission to JINST
-  // (FERMILAB-PUB-21-079-ND-SCD)", 2205.10526 "JINST-060P-0522, accepted for publication, 11/6/2022", 2311.06155)
+  // (FERMILAB-PUB-21-079-ND-SCD)", 2205.10526 "JINST-060P-0522, accepted for publication, 11/6/2022", 2311.06155),
+  // the header line alone: no label (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921)
   RawTeX!(r"\def\lx@jinst@stockheader{Prepared for submission to JINST}
-\def\lx@jinst@header#1{\lx@add@pubnote[role=preprint]{#1}}
+\def\lx@jinst@header#1{\lx@add@pubnote[role=preprint,name={}]{#1}}
 \AtBeginDocument{\@ifundefined{@fpheader}{}{\ifx\@fpheader\lx@jinst@stockheader\else\ifx\@fpheader\@empty\else%
 \expandafter\lx@jinst@header\expandafter{\@fpheader}\fi\fi}}");
   // (:91-98 `\newcommand\note[2][]`, an optional mark for the footnote: jheppub's `\note`, as above)

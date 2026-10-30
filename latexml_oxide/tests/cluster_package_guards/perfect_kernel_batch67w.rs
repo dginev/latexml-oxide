@@ -161,7 +161,7 @@ fn wileymsp_dedication_threesubsection() {
   let xml = clean!("class-bindings/wileymsp_dedication_threesubsection.tex");
   assert_eq!(xml.matches("<pubnote ").count(), 1, "{xml}");
   assert!(
-    xml.contains(r##"<pubnote name="Dedication: " role="dedication">To all of us.</pubnote>"##),
+    xml.contains(r##"<pubnote role="dedication">To all of us.</pubnote>"##),
     "{xml}"
   );
   assert!(

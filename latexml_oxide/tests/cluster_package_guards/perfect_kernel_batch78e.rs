@@ -264,7 +264,7 @@ fn jinstpub_edited_header_is_a_preprint_note() {
     &xml,
     "pubnote",
     &[],
-    "<pubnote name=\"Preprint: \" role=\"preprint\">Prepared for submission to JINST \
+    "<pubnote role=\"preprint\">Prepared for submission to JINST \
      (FERMILAB-PUB-21-079-ND-SCD)</pubnote>",
   );
 }

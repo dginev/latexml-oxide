@@ -44,7 +44,9 @@ LoadDefinitions!({
     let mut tokens = if in_bibliography {
       vec![T_CS!("\\def"), T_CS!("\\@doi"), T_BEGIN!()]
     } else {
-      mouth::tokenize_internal(TeXString::assembled("\\lx@add@pubnote[role=doi]{".to_string())).unlist()
+      // (the footer prints the DOI alone, pnas-new.cls:268/:369-370 (2602.17158's copy): no label, FIDELITY_CHARTER §4,
+      // OXIDIZED_DESIGN_DIVERGENCES #921)
+      mouth::tokenize_internal(TeXString::assembled("\\lx@add@pubnote[role=doi,name={}]{".to_string())).unlist()
     };
     tokens.extend(doi.unlist());
     tokens.push(T_END!());

@@ -30,7 +30,8 @@ LoadDefinitions!({
   Let!("\\AND",      "\\and");
   Let!("\\And",      "\\and");
   Let!("\\leftcite", "\\cite");
-  DefMacro!("\\pubnote{}", "\\lx@add@pubnote[role=note]{#1}");
+  // ijcai24.sty:62 `\pubnote` sets its text in the running head, no label (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921) (2406.14201).
+  DefMacro!("\\pubnote{}", "\\lx@add@pubnote[role=note,name={}]{#1}");
 
   // These are used as separators WITHIN \author, so...
   def_macro_noop("\\affiliations")?;

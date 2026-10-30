@@ -181,5 +181,9 @@ LoadDefinitions!({
 \def\thirdleveltheorems{\def\state##1{\subsubsection{\sc##1}\begingroup\em\@ifnextchar[{\@credit}{}}%
 \def\staterm##1{\subsubsection{\sc##1}\begingroup\@ifnextchar[{\@credit}{}}}"
   );
-  DefMacro!("\\dedication{}", "\\lx@add@pubnote[role=dedication]{#1}");
+  // tac.cls:311-312, :493-495: the dedication in large italics, no label (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921) (2509.18410).
+  DefMacro!(
+    "\\dedication{}",
+    "\\lx@add@pubnote[role=dedication,name={}]{#1}"
+  );
 });

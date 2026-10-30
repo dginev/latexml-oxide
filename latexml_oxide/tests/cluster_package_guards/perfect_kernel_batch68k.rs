@@ -97,7 +97,7 @@ fn pos_class_commands() {
 fn jhep3_arxivid_links_the_identifier() {
   let xml = clean!("jhep3_arxivid.tex");
   assert_all(&xml, &[
-    r#"<pubnote name="Preprint: " role="preprint"><ref font="typewriter" href="http://arxiv.org/abs/0704.3719 [hep-th]">arXiv:0704.3719 [hep-th]</ref></pubnote>"#,
+    r#"<pubnote role="preprint"><ref font="typewriter" href="http://arxiv.org/abs/0704.3719 [hep-th]">arXiv:0704.3719 [hep-th]</ref></pubnote>"#,
     r#"<bibblock> B. Author, <emph font="italic" xml:id="bib.bib1.2">A paper</emph>, <ref font="typewriter" href="http://arxiv.org/abs/0706.2722">arXiv:0706.2722</ref>. </bibblock>"#,
   ]);
 }

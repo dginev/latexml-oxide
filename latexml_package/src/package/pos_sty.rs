@@ -58,8 +58,9 @@ LoadDefinitions!({
   // them): a note of the author given last before it, after whose name it is printed (2308.05475, 2507.06616 give it
   // after their author lists).
   DefMacro!("\\onbehalf OptionalMatch:* {}", "\\lx@add@contact[role=note]{#2}");
-  // `\notes{…}` (:357): the text the title page prints under the abstract (:506).
-  DefMacro!("\\notes{}", "\\lx@add@pubnote[role=note]{#1}");
+  // `\notes{…}` (:357): the text the title page prints under the abstract (:506), with no label
+  // (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921).
+  DefMacro!("\\notes{}", "\\lx@add@pubnote[role=note,name={}]{#1}");
   // :356 `\renewcommand{\abstract}[1]{\gdef\@abstract{#1}}`: the abstract is one argument, as jheppub.sty's.
   AssignValue!("\\abstract:redefined@nargs" => Stored::Number(Number::new(1)), Some(Scope::Global));
   RawTeX!(&s!("\\def\\lx@pos@speaker{{{}}}", speaker_text()));

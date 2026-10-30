@@ -35,7 +35,9 @@ LoadDefinitions!({
   Let!("\\tablefontsize", "\\tabletypesize");
   def_macro_noop("\\subtitle")?;
   DefMacro!("\\submitted{}",   "\\lx@add@date[role=submitted]{#1}");
-  DefMacro!("\\journalinfo{}", "\\lx@add@pubnote[role=journal]{#1}");
+  // emulateapj.cls:880/884 `\journalinfo`: the journal line of the first page's head, in small capitals, no label
+  // (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921).
+  DefMacro!("\\journalinfo{}", "\\lx@add@pubnote[role=journal,name={}]{#1}");
   DefMacro!("\\keywordsname", "Subject headings");
   DefMacro!("\\ulap{}", "\\hbox{#1}");
   DefMacro!("\\dlap{}", "\\hbox{#1}");

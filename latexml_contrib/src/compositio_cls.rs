@@ -94,7 +94,11 @@ pub(crate) fn compositio_family_class(name: &str) -> Result<()> {
     "\\submitted{}",
     "\\lx@add@pubnote[role=communicated,name={communicated by }]{#1}"
   );
-  DefMacro!("\\dedication{}", "\\lx@add@pubnote[role=dedication]{#1}");
+  // compositio.cls:179, :244-245: the dedication in italics, no label (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921) (2501.00323).
+  DefMacro!(
+    "\\dedication{}",
+    "\\lx@add@pubnote[role=dedication,name={}]{#1}"
+  );
   Let!("\\lx@dropped@maketitle", "\\relax");
   Let!("\\@maketitle", "\\@empty");
   Ok(())

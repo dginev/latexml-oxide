@@ -168,7 +168,10 @@ yysep={,},notesep={, }}}
     history.extend(out);
     Ok(Tokens::new(history))
   });
-  DefMacro!("\\acmJournal{}", "\\lx@add@pubnote[role=journal]{#1}");
+  // As the class prints them (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921): the journal's name, the conference's line (the
+  // first-page footnote, "In …" of the ACM reference) and the DOI's https://doi.org/ link (acmart.cls:2309-2321, :2961)
+  // with no label; the volume "Vol. V" in the journal formats' running foot (:3088, :3206).
+  DefMacro!("\\acmJournal{}", "\\lx@add@pubnote[role=journal,name={}]{#1}");
   DefMacro!("\\acmSubmissionID{}", "\\lx@add@pubnote[role=submissionid]{#1}");
   // Under `nonacm` the class prints no conference, booktitle, ISBN or price (acmart.cls:2943, :3079-3250: the rights
   // block and the ACM reference are skipped), so these notes are added only without it, as the PDF shows them
@@ -179,19 +182,19 @@ yysep={,},notesep={, }}}
   // `@name`, `@date`, `@venue`, which papers print in their own lines (`\newcommand{\confdate}{\acmConference@date}`,
   // 23 papers that ship acmart.cls and 7 on TeX Live's: 2604.15990, 2604.21043, 2604.27997); outside the journal formats
   // the class starts from a placeholder conference (:1597-1600), set without its note.
-  DefMacro!("\\acmConference[]{}{}{}", "\\gdef\\acmConference@shortname{#1}\\gdef\\acmConference@name{#2}\\gdef\\acmConference@date{#3}\\gdef\\acmConference@venue{#4}\\ifx\\acmConference@shortname\\@empty\\gdef\\acmConference@shortname{#2}\\fi\\if@ACM@nonacm\\else\\lx@add@pubnote[role=conference]{#2; #3; #4}\\fi");
+  DefMacro!("\\acmConference[]{}{}{}", "\\gdef\\acmConference@shortname{#1}\\gdef\\acmConference@name{#2}\\gdef\\acmConference@date{#3}\\gdef\\acmConference@venue{#4}\\ifx\\acmConference@shortname\\@empty\\gdef\\acmConference@shortname{#2}\\fi\\if@ACM@nonacm\\else\\lx@add@pubnote[role=conference,name={}]{#2; #3; #4}\\fi");
   DefMacro!("\\acmBooktitle{}", "\\if@ACM@nonacm\\else\\lx@add@pubnote[role=booktitle]{#1}\\fi");
   DefMacro!("\\acmArticle{}", "\\lx@add@pubnote[role=article]{#1}");
   DefMacro!("\\acmArticleSeq{}", "\\lx@add@pubnote[role=articleseq]{#1}");
   // read verbatim: acmart.cls:2052 prints the DOI through `\url` (2401.02563: `10.475/123_4`, its `_` an error)
-  DefMacro!("\\acmDOI Semiverbatim", "\\lx@add@pubnote[role=doi]{#1}");
+  DefMacro!("\\acmDOI Semiverbatim", "\\lx@add@pubnote[role=doi,name={}]{#1}");
   // labelled as the class prints it (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #915): acmart.cls:2320 (TL 2025)
   // `ACM~ISBN~\@acmISBN` — not the role's "ISBN: ".
   DefMacro!("\\acmISBN{}", "\\if@ACM@nonacm\\else\\lx@add@pubnote[role=isbn,name={ACM~ISBN~}]{#1}\\fi");
   DefMacro!("\\acmMonth{}", "\\lx@add@pubnote[role=publicationmonth]{#1}");
   DefMacro!("\\acmNumber{}", "\\lx@add@pubnote[role=number]{#1}");
   DefMacro!("\\acmPrice{}", "\\if@ACM@nonacm\\else\\lx@add@pubnote[role=price,name={Price:~}]{#1}\\fi");
-  DefMacro!("\\acmVolume{}", "\\lx@add@pubnote[role=volume]{#1}");
+  DefMacro!("\\acmVolume{}", "\\lx@add@pubnote[role=volume,name={Vol.~}]{#1}");
   // acmart.cls:1749-1750: `\@acmYear` (default `\the\year`) is the copyright year's default.
   RawTeX!(r"\def\@acmYear{\the\year}");
   DefMacro!("\\acmYear{}", "\\def\\@acmYear{#1}\\lx@add@date[role=published]{#1}");
@@ -266,8 +269,9 @@ yysep={,},notesep={, }}}
   DefMacro!("\\postcode{}",      "\\lx@acm@addresspart{postcode}{#1}");
   DefMacro!("\\country{}",       "\\lx@acm@addresspart{country}{#1}");
 
-  DefMacro!("\\titlenote{}",    "\\lx@add@pubnote[role=note]{#1}");
-  DefMacro!("\\subtitlenote{}", "\\lx@add@pubnote[role=note]{#1}");
+  // acmart.cls:1708-1720: footnotes of the title and the subtitle, no label (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921).
+  DefMacro!("\\titlenote{}",    "\\lx@add@pubnote[role=note,name={}]{#1}");
+  DefMacro!("\\subtitlenote{}", "\\lx@add@pubnote[role=note,name={}]{#1}");
   DefMacro!("\\authornote{}",   "\\lx@add@contact[role=note]{#1}");
   // acmart 2026 (acmart.cls:1683-1686): `\correspondingauthor` marks the current author the corresponding one, an
   // envelope (`\ding{41}`) after the name, outside anonymous mode. 76 2609 papers (2609.06664, 2609.07038).

@@ -12492,7 +12492,7 @@ fn pnas_doi_is_the_classs_setter() {
     &xml,
     "pubnote",
     &[r#"role="doi""#],
-    r##"<pubnote name="DOI: " role="doi"><ref class="ltx_url" font="typewriter" href="www.pnas.org/cgi/doi/10.1073/pnas.XXXXXXXXXX">www.pnas.org/cgi/doi/10.1073/pnas.XXXXXXXXXX</ref></pubnote>"##,
+    r##"<pubnote role="doi"><ref class="ltx_url" font="typewriter" href="www.pnas.org/cgi/doi/10.1073/pnas.XXXXXXXXXX">www.pnas.org/cgi/doi/10.1073/pnas.XXXXXXXXXX</ref></pubnote>"##,
   );
   // A bibliography's `\doi` meets the class setter: nothing printed (as in pdflatex).
   latexml::util::test::assert_element(

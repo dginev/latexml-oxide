@@ -31,8 +31,8 @@ LoadDefinitions!({
   // contribution's identifier (`\PoSsplit@ident`), which the class prints as the grey watermark down the page edge,
   // then `\let\PoS\gobble` (`\gobble`, which no copy defines, so a second call is undefined): the identifier as a
   // pubnote. Run 340: 79 of 120 sampled PoS papers call it, ~360
-  // first errors (0711.1871, 0806.0754, 1012.3355).
-  RawTeX!(r"\newcommand\PoS[1]{\lx@add@pubnote[role=pubid]{#1}\let\PoS\gobble}");
+  // first errors (0711.1871, 0806.0754, 1012.3355). The watermark has no label (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921).
+  RawTeX!(r"\newcommand\PoS[1]{\lx@add@pubnote[role=pubid,name={}]{#1}\let\PoS\gobble}");
   // PoS.cls (every sampled release, v0.1.0 to v1.2.7; v1.2.6 as 1812.08139 ships it): :656 `\newbox\@firstaubox`, the
   // speaker's name for the running head, which papers set themselves (`\setbox\@firstaubox\hbox{\small Andreas
   // Nyffeler}`, 0912.1441; 26 papers: 1011.0095, astro-ph0502215, 1412.6006); :704-709 `\PoSspecialurl{url}`, the

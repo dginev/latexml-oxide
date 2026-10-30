@@ -49,7 +49,9 @@ fn aa_class_commands_v7_v91() {
 fn acmart_conference_parts_and_title_fonts() {
   let xml = clean!("acmart_conference_parts_and_title_fonts.tex");
   assert!(
-    xml.contains(r#"<pubnote name="Conference: " role="conference">The Conference; August 2026; Toronto, Canada</pubnote>"#),
+    xml.contains(
+      r#"<pubnote role="conference">The Conference; August 2026; Toronto, Canada</pubnote>"#
+    ),
     "{xml}"
   );
   assert!(
@@ -141,7 +143,7 @@ fn jfm_legend_symbols_and_subequations() {
 fn tac_class_commands() {
   let xml = clean!("tac_class_commands.tex");
   assert!(
-    xml.contains(r#"<pubnote name="Dedication: " role="dedication">To C</pubnote>"#),
+    xml.contains(r#"<pubnote role="dedication">To C</pubnote>"#),
     "{xml}"
   );
   for tex in [
@@ -169,7 +171,7 @@ fn tac_class_commands() {
 fn aamas_doi() {
   let xml = clean!("aamas_doi.tex");
   assert!(
-    xml.contains(r#"<pubnote name="DOI: " role="doi">10.65109/SEHD8631</pubnote>"#),
+    xml.contains(r#"<pubnote role="doi">10.65109/SEHD8631</pubnote>"#),
     "{xml}"
   );
   assert_eq!(xml.matches(r#"role="doi""#).count(), 1, "{xml}");
@@ -194,7 +196,7 @@ fn aamas_doi_older_copy() {
 fn aamas_doi_2026_copy() {
   let xml = clean!("aamas_doi_2026_copy.tex");
   assert!(
-    xml.contains(r#"<pubnote name="DOI: " role="doi">10.65109/SEHD8631</pubnote>"#),
+    xml.contains(r#"<pubnote role="doi">10.65109/SEHD8631</pubnote>"#),
     "{xml}"
   );
   assert_eq!(xml.matches(r#"role="doi""#).count(), 1, "{xml}");

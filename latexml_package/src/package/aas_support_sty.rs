@@ -90,20 +90,23 @@ LoadDefinitions!({
   DefMacro!("\\edit{}{}",   "#2");
   def_macro_noop("\\ccc{}")?;
   DefMacro!("\\cpright{}{}", "\\lx@add@copyright{#2: #1}");
+  // aastex.cls:1893-1895 (astro-ph0702360's copy) gobbles `\journal`, `\volume`, `\issue`: printed nowhere, kept as
+  // notes with no label (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921).
   DefMacro!("\\journal{}",
-    "\\lx@add@pubnote[role=journal]{#1}");
+    "\\lx@add@pubnote[role=journal,name={}]{#1}");
   DefMacro!("\\volume{}",
-    "\\lx@add@pubnote[role=volume]{#1}");
+    "\\lx@add@pubnote[role=volume,name={}]{#1}");
   DefMacro!("\\issue{}",
-    "\\lx@add@pubnote[role=issue]{#1}");
+    "\\lx@add@pubnote[role=issue,name={}]{#1}");
   DefMacro!("\\SGMLbi{}", "#1");
   DefMacro!("\\SGMLbsc{}", "#1");
   DefMacro!("\\SGMLclc{}", "#1");
   DefMacro!("\\SGMLentity{}", "#1");
   def_macro_noop("\\SGML{}")?;
 
-  // 2.1.4 Short Comment
-  DefMacro!("\\slugcomment{}", "\\lx@add@pubnote[role=note]{#1}");
+  // 2.1.4 Short Comment: the slug line at the first page's top right, its text alone (aastex.cls:706; emulateapj.cls:887
+  // `\let\slugcomment\submitted`, :509), no label (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921).
+  DefMacro!("\\slugcomment{}", "\\lx@add@pubnote[role=note,name={}]{#1}");
 
   // 2.1.5 Running Heads
   DefMacro!("\\shorttitle{}", "\\lx@add@toctitle{#1}");
@@ -242,7 +245,7 @@ LoadDefinitions!({
 
   // 2.5 Keywords
   DefMacro!("\\keywords{}",
-    "\\lx@add@keywords[name={\\@ifundefined{keywordsname}{}{\\keywordsname}}]{#1}");
+    "\\lx@add@keywords[name={\\@ifundefined{keywordsname}{\\lx@keywords@name}{\\keywordsname}}]{#1}");
   Let!("\\subjectheadings", "\\keywords");
 
   // 2.6 Comments to Editors. Faithful to Perl aas_support.sty.ltxml L162-163:
@@ -444,13 +447,14 @@ LoadDefinitions!({
 \let\turnoffediting\turnoffedits\newif\ifturnoffone\newif\ifturnofftwo\newif\ifturnoffthree
 \def\turnoffeditone{\turnoffonetrue}\def\turnoffedittwo{\turnofftwotrue}\def\turnoffeditthree{\turnoffthreetrue}");
   def_macro_noop("\\listofchanges")?;
-  // aastex631.cls:651 `\reportnum{…}`: a report number set at the top right of the first page.
-  DefMacro!("\\reportnum{}", "\\lx@add@pubnote[role=preprint]{#1}");
+  // aastex631.cls:651 `\reportnum{…}`: a report number set at the top right of the first page. It and the two below
+  // print their text alone: no label (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921) (2608.19186's copy).
+  DefMacro!("\\reportnum{}", "\\lx@add@pubnote[role=preprint,name={}]{#1}");
   // aastex631.cls:1494 `\journalinfo{…}`: the journal line of the first page's head ("Accepted to ApJ"); the same
   // note emulateapj's makes (emulateapj_sty.rs).
-  DefMacro!("\\journalinfo{}", "\\lx@add@pubnote[role=journal]{#1}");
+  DefMacro!("\\journalinfo{}", "\\lx@add@pubnote[role=journal,name={}]{#1}");
   // aastex6.cls:972/984 `\submitted{…}` feeds the same journal line (`\journalinfo{\@submitted}`).
-  DefMacro!("\\submitted{}", "\\lx@add@pubnote[role=journal]{#1}");
+  DefMacro!("\\submitted{}", "\\lx@add@pubnote[role=journal,name={}]{#1}");
   // aastex6.cls:5212 `\fullcollaborationName{…}` stores the collaboration's full name for the author block's note.
   DefMacro!("\\fullcollaborationName{}", "\\def\\thefullcollaborationname{#1}");
   // Layout switches (aastex631.cls:7323, :6816, :5856): affiliations hidden from the author block, a page break

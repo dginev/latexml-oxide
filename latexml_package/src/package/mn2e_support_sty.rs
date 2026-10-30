@@ -48,8 +48,10 @@ LoadDefinitions!({
     Ok(Invocation!(T_CS!("\\lx@add@authors"), vec![Some(Tokens::new(list))]))
   });
   def_macro_noop("\\newauthor")?;
-  DefMacro!("\\journal{}", "\\lx@add@pubnote[role=journal]{#1}");
-  DefMacro!("\\volume{}", "\\lx@add@pubnote[role=volume]{#1}");
+  // mn2e.cls:1072-1080 (astro-ph0702128's copy): `\journal` replaces the head line "Mon. Not. R. Astron. Soc.
+  // {\bf V}, pages (year)", `\volume` its bold number — no label (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921).
+  DefMacro!("\\journal{}", "\\lx@add@pubnote[role=journal,name={}]{#1}");
+  DefMacro!("\\volume{}", "\\lx@add@pubnote[role=volume,name={}]{#1}");
   DefMacro!("\\pubyear{}", "\\lx@add@pubnote[role=pubyear]{#1}");
   DefMacro!("\\microfiche{}", "\\lx@add@pubnote[role=microfiche]{#1}");
   DefMacro!("\\pagerange{}", "\\lx@add@pubnote[role=pages]{#1}");

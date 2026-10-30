@@ -1,0 +1,24 @@
+% witness: the user's ruling 2026-10-30 (FIDELITY_CHARTER §4), the 92e audit: aa's notes read "Journal: ", "Note: ",
+%          "Dedication: " where the class prints no label (0903.3512, astro-ph0608669, 2609.21658)
+% oracle:  pdflatex with 2609.21658's aa.cls (v9.4, with its linenoaa.sty): 0 errors; the head line "Astronomy &
+%          Astrophysics manuscript no. …", the head note "Research Note" above the title, "To the memory of B. Baker" in
+%          italics, no label on any; the DOI "DOI: 10.1051/x" in the final layout's head box (aa.cls:430, :1044), which this
+%          draft layout does not print
+% engines: rust 3a90791 = the role's label on each (name="Journal: ", "Note: ", "Dedication: ", "DOI: "); Perl the same
+% expect:  0 errors, 0 warnings; <pubnote role="journal">, <pubnote role="note">, <pubnote role="dedication"> with no
+%          name; <pubnote name="DOI: " role="doi"> unchanged (the class's own label)
+% status:  RED (3a90791) -> GREEN (92g)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\journalname{Astronomy \& Astrophysics}
+\title{A Study}
+\headnote{Research Note}
+\author{Ann Able}
+\institute{Univ X}
+\dedication{To the memory of B. Baker}
+\doi{10.1051/x}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

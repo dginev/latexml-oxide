@@ -71,9 +71,21 @@ pub(crate) fn jhep_family_class(name: &str) -> Result<()> {
   // digested any later, still need.
   Let!("\\lx@jhep@auto@maketitle", "\\auto@maketitle");
   RawTeX!(r"\def\auto@maketitle{\maketitle\lx@jhep@auto@maketitle}");
-  DefMacro!("\\dedicated{}", "\\lx@add@pubnote[role=dedication]{#1}");
-  DefMacro!("\\preprint{}", "\\lx@add@pubnote[role=preprint]{#1}");
-  DefMacro!("\\conference{}", "\\lx@add@pubnote[role=conference]{#1}");
+  // No label, as the class prints none (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921): JINST.cls, JHEP.cls's sibling (1508.06575's copy),
+  // sets the dedication in italics, the report number in the preprint header and the conference line alone — the
+  // role stays.
+  DefMacro!(
+    "\\dedicated{}",
+    "\\lx@add@pubnote[role=dedication,name={}]{#1}"
+  );
+  DefMacro!(
+    "\\preprint{}",
+    "\\lx@add@pubnote[role=preprint,name={}]{#1}"
+  );
+  DefMacro!(
+    "\\conference{}",
+    "\\lx@add@pubnote[role=conference,name={}]{#1}"
+  );
   Let!("\\@maketitle", "\\@empty");
   Let!("\\lx@dropped@maketitle", "\\relax");
   Ok(())

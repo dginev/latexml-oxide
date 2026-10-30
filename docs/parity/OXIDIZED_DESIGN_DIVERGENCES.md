@@ -26998,8 +26998,8 @@ in 0903.3512's copy, :898-914 with `\aa@offprintsname` in 2609.21658's; svjour3.
 63, 7 and 701 the same), IEEEoj's and ieeetj's `\doiinfo` "Digital Object Identifier" (IEEEoj.cls:3458, ieeetj.cls:3440)
 and the 2016-2019 LIPIcs classes' `\DOI` the same (lipics.cls:637 `\doiHeading`). The 92e audit of every note a binding
 labels by its role default (93 call sites in latexml_package, latexml_contrib and latexml_engine) left the notes whose
-class prints no label, or a reading `name=` cannot give, as they were, listed for a ruling in SYNC_STATUS (the 92e row):
-an empty `name=` falls back to the role default (`get_frontmatter_name`), so "no label" has no binding-side spelling.
+class prints no label, or a reading `name=` cannot give, as they were, listed in SYNC_STATUS (the 92e row); those
+whose class prints no label have none since #921 (an explicit empty `name=`).
 Repros class-bindings/{aa,svjour3}_offprints_note_reads_send_offprint_requests, jheppub_arxivnumber_note_reads_arxiv_eprint,
 acmart_isbn_note_reads_acm_isbn, iopart_submitto_note_reads_submitted_to, aastex631_submitjournal_note_reads_submitted_to,
 ieeeoj_doiinfo_note_reads_digital_object_identifier, lipics_doi_note_reads_digital_object_identifier; guards
@@ -27278,6 +27278,50 @@ replacing class, none for a stacking one); never a flag, a convention key, the s
   `webofc_author_given_twice_keeps_the_last` (catalog only: its raw-read class leaves a conditional open, a pre-existing
   Warning), `aa_author_given_twice_keeps_the_last` and `ieeetj_author_calls_stack` (catalog: the open question's
   shapes); guard `perfect_kernel_batch92b::each_class_author_replaces_or_stacks_as_its_class`.
+
+### 921. A frontmatter note whose class prints no label has none: an explicit empty `name=` is no label (Perl: the role's default label)
+
+Perl's `getFrontmatterName` (Base_Utility.pool.ltxml:378-389) treats an empty `name=` as unset (`$name &&
+scalar($name->unlist)`) and names the note by its role's default (`\lx@pubnote@<role>@name`), so every note whose class
+prints it with no label read as a labelled field: a title's `\thanks{X}` "Thanks: X" (pdflatex: a "∗ X" footnote),
+aa's `\dedication` "Dedication: …", a report number set at the top right "Preprint: …", IEEEtran's `\IEEEpubid`
+"PubID: pubid: X" (Perl's content prefix too). FIDELITY_CHARTER §4, user rulings 2026-10-30: "keep every note with the
+label the class prints, which here is none", and "we still want the 'role' of the note to be kept semantic. That can
+be carried to a class in HTML which can be styled via CSS". Ours: `get_frontmatter_name` (queue_digest.rs) reads a
+`name=` the call gives as the label, an empty one (`name={}`, or one digesting to nothing) as none — the per-role empty
+default (`\lx@contact@orcid@name`) already meant that —, and each binding passes the label its class prints, `name={}`
+for none; the role stays (`role=`, the HTML's `ltx_role_<role>`, LaTeXML-common.xsl:538), only `ltx_note_name` goes.
+No label: a `\thanks` — the role's default `\lx@pubnote@thanks@name` is empty (LaTeX prints a title's `\thanks` as a
+marked footnote; Perl "Thanks:~"), so the kernel's title `\thanks` (`\lx@add@pubnote@thanks`, IEEEtran's `\thanksto`
+with it) and amsart's `\thanks` with no `\thanksname` (amsart.cls:836) have none, and a class that labels its thanks
+sets the default (resphilosophica's "Acknowledgments", resphilosophica.cls:448); amsppt's `\thanks…\endthanks` and
+`\dedicatory` (amsppt.sty:373, :504); the dedications of aa, svjour/svjour3, jheppub (jinstpub with it), JHEP, JINST, elsart, tac,
+compositio, epl2, wileymsp; the report numbers of svjour, jheppub, JHEP, JINST, aastex631 `\reportnum`, atlasdoc,
+appolb, jinstpub's header and REVTeX's printed `\preprint` (aps4-2.rtx:250-264, a sibling the 92e audit did not
+list); the head and slug notes (aa `\headnote`, acmart `\titlenote`/`\subtitlenote`, AASTeX/aguplus `\slugcomment`,
+ijcai `\pubnote`, pos.sty `\notes`); the journal lines (aa/svjour `\journalname`, before the class's "manuscript no."
+suffix; acmart `\acmJournal`; emulateapj/AASTeX `\journalinfo` and aastex6 `\submitted`; apa7; arximspdf; mn2e;
+aastex.cls's gobbled `\journal`/`\volume`/`\issue`); the conference lines (jheppub `\proceeding`, JHEP/JINST
+`\conference`, acmart `\acmConference`); the bare DOIs (acmart `\acmDOI`, aamas `\doi`, pnas `\doi`); the volumes
+(apa7, mn2e, elsart, ams `\issueinfo`, whose content "Volume 12, Number 3, …" is the class's `\volinfo`); the IDs
+(IEEEtran `\IEEEpubid`, its content the ID alone, IEEEtran.cls:6153; PoS's watermark; apa7 `\copnum`); the article
+types (iopart `\article`, svjour `\papertype`, elsart `\articletype`), and elsart's `\issue`. The class's own label:
+acmart `\acmVolume` "Vol." (the journal formats' running foot, acmart.cls:3088), arximspdf `\volume` "Vol." and
+`\issue` "No." (arximspdf.cls:366, :383). Kept as they were: aa's, atlasdoc's and arximspdf's DOI "DOI:", imsart's and
+atlasdoc's "arXiv:" (the classes print them), elsarticle/elsart `\journal` and dgruyter's "Dedicated to" (the printed
+reading depends on the version or the language: SYNC_STATUS, the 92e row), OmniBus's notes (no class to read). A command
+that forwards its optional label as `name={#1}` (the class prints the option before the address) defaults the option
+to the role's label (`\email[Default:\lx@contact@email@name]`), so a call without one reads as before and one with an
+empty option has none, as the class prints it: REVTeX's `\email`, `\homepage`, `\thanks`, `\altaffiliation`
+(revtex4-2.cls:2404-2421 `#1\href…`), quantumarticle's `\email`, `\homepage`, `\thanks`, `\altaffiliation`, aastex's
+and emulateapj's `\homepage`, sv_support's `\thanks`, ams_support's `\address`, lmcs's `\address` (in Rust); the body
+keeps its frontmatter call first, which the author block reads a class's email command by (`is_email_command`). A
+class's own `\@email{}`/`\@homepage{}` call with an empty label (the class prints none) has none. AASTeX's `\keywords`
+falls back to `\lx@keywords@name` when the class defines no `\keywordsname`. A label a class defines empty (`\renewcommand\abstractname{}`) now reads as printed:
+none. Repros class-bindings/{kernel_title_thanks_note_has_no_label, aa_notes_read_as_aa_prints_them,
+ieeetran_pubid_note_is_the_id_alone, revtex_contact_without_its_label_keeps_the_roles}; guards
+`perfect_kernel_batch92g::*`; the structure goldens authors.xml and amsarticle.xml (the title's and amsart's `\thanks`,
+now no `name`).
 
 ### 922. aa's binding owns a replacing `\author`; a binding's own redefinition after a nested binding's owns the meaning (Perl: inst_support's `\author` clears for aa; no ownership notion)
 

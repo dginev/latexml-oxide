@@ -18,7 +18,7 @@
     <contact name="Affiliation: " role="affiliation">(Scuola Normale Superiore, Pisa)</contact>
   </creator>
   <date role="creation">Today!</date>
-  <pubnote name="Thanks: " role="thanks">Whoppee!</pubnote>
+  <pubnote role="thanks">Whoppee!</pubnote>
   <section inlist="toc" labels="LABEL:sec:one" xml:id="S1">
     <tags>
       <tag>1</tag>

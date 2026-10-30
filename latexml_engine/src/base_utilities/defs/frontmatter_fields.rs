@@ -413,6 +413,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     "\\lx@add@pubnote[]{}",
     "\\lx@title@footnote@step\\lx@add@frontmatter{ltx:pubnote}[#1]{#2}"
   );
+  // (named by the role's default, `\lx@pubnote@thanks@name`: none, as LaTeX prints a title's `\thanks`, or the label a
+  // class's binding sets for it — resphilosophica's "Acknowledgments")
   DefMacro!(
     "\\lx@add@pubnote@thanks[]{}",
     "\\lx@title@footnote@step\\lx@add@frontmatter{ltx:pubnote}[role=thanks,#1]{#2}"

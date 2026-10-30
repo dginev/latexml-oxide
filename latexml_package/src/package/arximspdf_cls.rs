@@ -116,9 +116,11 @@ LoadDefinitions!({
   DefMacro!("\\address[]{}", "\\lx@add@contact[role=address]{#2}");
   DefMacro!("\\email{}", "\\lx@add@contact[role=email,name={e-mail: }]{#1}");
   DefMacro!("\\ead[]{}", "\\lx@add@contact[role=email,name={e-mail: }]{#2}");
-  DefMacro!("\\journal{}", "\\lx@add@pubnote[role=journal]{#1}");
-  DefMacro!("\\volume{}", "\\lx@add@pubnote[role=volume]{#1}");
-  DefMacro!("\\issue{}", "\\lx@add@pubnote[role=number]{#1}");
+  // As the class prints them (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921): arximspdf.cls:1911-1912 (math0702702's copy) sets the
+  // journal's name alone, then "Vol. V, No. N" (:366 and :383 the labels); :1913 "DOI: ", the role's.
+  DefMacro!("\\journal{}", "\\lx@add@pubnote[role=journal,name={}]{#1}");
+  DefMacro!("\\volume{}", "\\lx@add@pubnote[role=volume,name={Vol.~}]{#1}");
+  DefMacro!("\\issue{}", "\\lx@add@pubnote[role=number,name={No.~}]{#1}");
   DefMacro!("\\pubyear{}", "\\lx@add@date[role=publication]{#1}");
   DefMacro!("\\doi{}", "\\lx@add@pubnote[role=doi]{#1}");
   DefMacro!("\\received{}", "\\lx@add@date[role=received]{#1}");

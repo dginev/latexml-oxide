@@ -153,9 +153,9 @@ LoadDefinitions!({
     \lx@add@pubnote[role=journal,name={Submitted to:~}]{\ADOC@journal}\fi
   \else\lx@add@pubnote[role=journalref]{\ADOC@journalref}\fi
   \ifx\ADOC@doi\@empty\else\lx@add@pubnote[role=doi]{\ADOC@doi}\fi
-  \ifx\ADOC@preprintnumber\@empty\else\lx@add@pubnote[role=preprint]{\ADOC@preprintnumber}\fi
+  \ifx\ADOC@preprintnumber\@empty\else\lx@add@pubnote[role=preprint,name={}]{\ADOC@preprintnumber}\fi
 \else\iflx@atlas@hepdata
-  \ifx\ADOC@preprintnumber\@empty\else\lx@add@pubnote[role=preprint]{\ADOC@preprintnumber}\fi
+  \ifx\ADOC@preprintnumber\@empty\else\lx@add@pubnote[role=preprint,name={}]{\ADOC@preprintnumber}\fi
   \ifx\AtlasArXivId\@empty\else\lx@add@pubnote[role=arxiv]{\AtlasArXivId\ \AtlasArXivCat}\fi
 \else\iflx@atlas@book\else
   \ifx\ADOC@journal\@empty\else\lx@add@pubnote[role=journal,name={\ADOC@subprepend~}]{\ADOC@journal}\fi

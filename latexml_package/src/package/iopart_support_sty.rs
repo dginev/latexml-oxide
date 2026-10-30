@@ -96,8 +96,10 @@ LoadDefinitions!({
     "\\lx@titlepage@class@call{title}{#1}{#2}{\\lx@replay@class@setter{title}{#1}{#2}\\gdef\\@shorttitle{#1}\\gdef\\@title{#2}\\ifx.#1.\\else\\lx@add@toctitle{#1}\\fi\\lx@add@title{#2}}");
   Let!("\\paper", "\\title");
   def_macro_noop("\\@articletype")?;
+  // iopart.cls:148 sets the article's type as a heading above the title, no label (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921)
+  // (quant-ph0512134).
   DefMacro!("\\article[]{}{}",
-    "\\ifx.#1.\\else\\lx@add@toctitle{#1}\\fi\\ifx.#2.\\else\\lx@add@pubnote[role=type]{#2}\\fi\\lx@add@title{#3}");
+    "\\ifx.#1.\\else\\lx@add@toctitle{#1}\\fi\\ifx.#2.\\else\\lx@add@pubnote[role=type,name={}]{#2}\\fi\\lx@add@title{#3}");
   DefMacro!("\\letter{}", "\\article[Letter to the Editor]{Letter to the Editor}{#1}\\lettertrue");
   DefMacro!("\\ftc{}", "\\article[Fast Track Communication]{Fast Track Communication}{#1}");
   DefMacro!("\\review[]{}", "\\article[#1]{Review Article}{#2}");

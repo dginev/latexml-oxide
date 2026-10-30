@@ -120,11 +120,15 @@ LoadDefinitions!({
   // aa_support: Perl L? gobbles \journalname; surpass with content
   // preservation — A&A papers set \journalname{Astronomy & Astrophysics}
   // and the value is genuine author metadata for the JATS pipeline.
-  DefMacro!("\\journalname{}", "\\lx@add@pubnote[role=journal]{#1}");
+  // No label, as the class prints none (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921): aa.cls v9.4 (2609.21658's copy) sets
+  // the journal's name before its "manuscript no." (:415-418, a suffix, not a label), the head note above the title
+  // (:980, :1070-1072), the dedication in italics (:983, :1138-1142); older copies alike (0903.3512,
+  // astro-ph0608669) — the role stays.
+  DefMacro!("\\journalname{}", "\\lx@add@pubnote[role=journal,name={}]{#1}");
   DefMacro!("\\rnotename", "(Research Note)");
   DefMacro!("\\rnotname", "(RN)");
-  DefMacro!("\\headnote{}", "\\lx@add@pubnote[role={note}]{#1}");
-  DefMacro!("\\dedication{}", "\\lx@add@pubnote[role=dedication]{#1}");
+  DefMacro!("\\headnote{}", "\\lx@add@pubnote[role={note},name={}]{#1}");
+  DefMacro!("\\dedication{}", "\\lx@add@pubnote[role=dedication,name={}]{#1}");
   DefMacro!("\\mailname", "\\it Correspondence to \\/");
   DefMacro!("\\mail {}", "\\lx@add@address[name={\\mailname}]{#1}");
   DefMacro!("\\doi{}", "\\lx@add@pubnote[role=doi]{#1}");

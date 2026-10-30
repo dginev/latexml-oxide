@@ -60,6 +60,7 @@ LoadDefinitions!({
     "\\accepted{}",
     "\\lx@add@date[role=accepted,name=Accepted]{#1}"
   );
-  DefMacro!("\\slugcomment{}", "\\lx@add@pubnote[role=note]{#1}");
+  // agupp.sty:109 `\slugcomment` (and `\date`, aguplus.cls:245): the slug line, its text alone (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921)
+  DefMacro!("\\slugcomment{}", "\\lx@add@pubnote[role=note,name={}]{#1}");
   Let!("\\date", "\\slugcomment");
 });

@@ -220,11 +220,13 @@ LoadDefinitions!({
   DefMacro!("\\urladdr Until:\\endurladdr", "\\lx@amsppt@contact{\\lx@add@url}{#1}");
   Let!("\\endurladdr", "\\relax");
 
-  DefMacro!("\\thanks Until:\\endthanks", "\\lx@add@pubnote[role=thanks]{#1}");
+  // No label, as the style prints none (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921): amsppt.sty:373 sets `\thanks…\endthanks` as a
+  // first-page footnote, :504 `\dedicatory…\enddedicatory` centred in italics — the role stays.
+  DefMacro!("\\thanks Until:\\endthanks", "\\lx@add@pubnote[role=thanks,name={}]{#1}");
   Let!("\\endthanks", "\\relax");
   DefMacro!("\\date Until:\\enddate", "\\lx@add@date{#1}");
   Let!("\\enddate", "\\relax");
-  DefMacro!("\\dedicatory Until:\\enddedicatory", "\\lx@add@pubnote[role=dedication]{#1}");
+  DefMacro!("\\dedicatory Until:\\enddedicatory", "\\lx@add@pubnote[role=dedication,name={}]{#1}");
   Let!("\\enddedicatory", "\\relax");
   DefMacro!("\\translator Until:\\endtranslator", "\\lx@add@translator{#1}");
   Let!("\\endtranslator", "\\relax");
