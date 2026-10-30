@@ -688,7 +688,10 @@ pub(in crate::base_utilities) fn add_annotation_labels(label: String, superscrip
 /// already (`\inst{1,\star}`'s `⋆`, 2105.03212; refactor stage 4, OXIDIZED_DESIGN_DIVERGENCES #919), one keyed by its
 /// spelling (the fallback) keeps the control sequence; `None` for anything else (a fuzzy or composite label).
 pub(in crate::base_utilities) fn unanswered_mark_text(mark: &str) -> Option<String> {
-  if !mark.is_empty() && mark.chars().all(char::is_alphanumeric) {
+  // (its characters, each combining mark part of the one before it: `\={x}`'s `x̄` is a letter — review rev92b_r2 B1)
+  let bases: Vec<char> = mark.chars().filter(|c| !is_combining_mark(*c)).collect();
+  let marked = !mark.starts_with(is_combining_mark);
+  if marked && !bases.is_empty() && bases.iter().all(|c| c.is_alphanumeric()) {
     return Some(mark.to_string());
   }
   let glyph = match mark {
@@ -704,10 +707,10 @@ pub(in crate::base_utilities) fn unanswered_mark_text(mark: &str) -> Option<Stri
     "\\|" => "\u{2016}",
     "\\#" | "#" => "#",
     "\u{2020}" | "\u{2021}" | "\u{2217}" | "\u{A7}" | "\u{B6}" => mark,
-    // (one printed symbol, `queue_digest::is_printed_symbol` — no letter, digit, space, ASCII or invisible character:
-    // `\up{\!1,2}`'s zero-width space is none, 2209.14855; a run of several is a whole-run label, its symbols requested
-    // apart, `parted_printed_label`)
-    _ if mark.chars().count() == 1 && mark.chars().all(is_printed_symbol) => mark,
+    // (one printed symbol, `queue_digest::is_printed_symbol` — no letter, digit, space, ASCII, format character or
+    // combining mark: `\up{\!1,2}`'s zero-width space is none, 2209.14855 —, with the marks on it; a run of several is
+    // a whole-run label, its symbols requested apart, `parted_printed_label`)
+    _ if marked && matches!(bases.as_slice(), [c] if is_printed_symbol(*c)) => mark,
     _ => return None,
   };
   Some(glyph.to_string())

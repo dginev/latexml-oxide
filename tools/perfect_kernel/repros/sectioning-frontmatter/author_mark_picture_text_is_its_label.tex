@@ -1,0 +1,25 @@
+% witness: review rev92b_r2 B2 (a TikZ circled letter, `\tikz…\node[circle,draw](c){#1};`); 2605.02769 (the TikZ
+%          ORCID logo, a picture holding no text, `author_mark_picture_is_no_label`)
+% oracle:  pdflatex: "Ann Able1,ⓐ and Bob Baker2,ⓑ and Cid Cole3,c" / 1 Univ One / 2 Univ Two / 3 Univ Three
+%          / ⓐ Corresponding A / ⓑ Corresponding B / c Corresponding C (ⓐ a circled a TikZ draws, c a picture's
+%          `\put`)
+% engines: perl 0.8.8 = 0 errors, as expected; rust 92b r1: each circled mark read as its picture's path data (its
+%          circle's coordinates, the letter no part of it), the shadow Corresponding A and B on Ann Able and on Bob
+%          Baker; 92b r2: a picture read as no label — the marks lost, Corresponding A, B and C unmarked lines, all
+%          Cid Cole's (the shadow: a name of their own)
+% expect:  0 errors, 0 warnings; Ann Able Univ One and Corresponding A, Bob Baker Univ Two and Corresponding B, Cid
+%          Cole Univ Three and Corresponding C
+% status:  RED (92b r2) -> GREEN (92b r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tikz}
+\newcommand\circled[1]{\tikz[baseline=(c.base)]\node[circle,draw,inner sep=0.5pt](c){#1};}
+\newcommand\boxed[1]{\begin{picture}(6,6)\put(0,0){#1}\end{picture}}
+\title{T}
+\author{Ann Able$^{1,\circled{a}}$ \and Bob Baker$^{2,\circled{b}}$ \and Cid Cole$^{3,\boxed{c}}$\\ $^{1}$Univ One\\
+  $^{2}$Univ Two\\ $^{3}$Univ Three\\ $^{\circled{a}}$Corresponding A\\ $^{\circled{b}}$Corresponding B\\
+  $^{\boxed{c}}$Corresponding C}
+\begin{document}
+\maketitle
+Text.
+\end{document}

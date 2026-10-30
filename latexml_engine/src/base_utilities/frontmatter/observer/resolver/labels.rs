@@ -825,9 +825,14 @@ pub(super) fn surname_owners(creators: &[RCreator], letters: &str) -> Vec<usize>
 /// are no letter or digit may stand alone too (`1⋆` → `1`, `⋆`), and so may one letter (`1a` → `1`, `a`: the letter a
 /// note's mark, `$^{1{\rm a}}$`, 1904.02582), as long as one piece is known. The most known pieces win, then the fewest
 /// pieces: a symbol run spelling known labels is parted into them before it stands alone as one piece (`†♮♯` under
-/// entries `†`, `♮`, `♯`: `$^{\dagger\natural\sharp}$`, 1004.1402).
+/// entries `†`, `♮`, `♯`: `$^{\dagger\natural\sharp}$`, 1004.1402). A combining mark is part of the character before
+/// it, never parted from it (`\~{x}`'s `x̃` is no `x` and a `̃`, review rev92b_r2 B1).
 pub(super) fn parted_label(label: &str, known: &[String], symbols: bool) -> Option<Vec<String>> {
-  let chars: Vec<(usize, char)> = label.char_indices().collect();
+  // (each character with the combining marks on it)
+  let chars: Vec<(usize, char)> = label
+    .char_indices()
+    .filter(|(at, c)| *at == 0 || !is_combining_mark(*c))
+    .collect();
   let n = chars.len();
   if n < 2 {
     return None;
@@ -844,8 +849,9 @@ pub(super) fn parted_label(label: &str, known: &[String], symbols: bool) -> Opti
       let piece = &label[at(i)..at(j)];
       let is_known = known.iter().any(|k| k == piece);
       let is_symbol = symbols && piece.chars().all(|c| !c.is_alphanumeric());
+      let mut bases = piece.chars().filter(|c| !is_combining_mark(*c));
       let is_letter =
-        symbols && piece.chars().count() == 1 && piece.chars().all(char::is_alphabetic);
+        symbols && bases.next().is_some_and(char::is_alphabetic) && bases.next().is_none();
       if !is_known && !is_symbol && !is_letter {
         continue;
       }

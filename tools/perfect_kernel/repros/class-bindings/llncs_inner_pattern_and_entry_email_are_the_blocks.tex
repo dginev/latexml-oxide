@@ -1,0 +1,18 @@
+% witness: review rev92b_r2 S1 (FIDELITY_CHARTER §4: a template on the block is one address left there, so the
+%          corresponding step finds two); 2408.14427 (`\{first.last\}@uii-ai.com`, the template's own witness)
+% oracle:  pdflatex: "Ann Able1,2⋆ and Bob Baker1,2" (the note "⋆ Corresponding author."), 1 Univ X
+%          {first.last}@x.org, 2 Univ Y office@y.org
+% engines: perl 0.8.8 = 0 errors, both addresses on Ann Able and on Bob Baker; rust 92b r2: the shadow office@y.org on
+%          Ann Able (`owner:corresponding`, the template not counted as left)
+% expect:  0 errors, 0 warnings; the shadow reading: the template the block's (`owner:pattern`), office@y.org the
+%          block's (`owner:block`)
+% status:  RED (92b r2, the shadow) -> GREEN (92b r3)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1,2}\thanks{Corresponding author.} \and Bob Baker\inst{1,2}}
+\institute{Univ X\\ \email{\{first.last\}@x.org} \and Univ Y\\ \email{office@y.org}}
+\maketitle
+Text.
+\end{document}

@@ -127,6 +127,24 @@ fn an_entry_email_printing_one_address_is_placed_by_the_chain() {
       "B email {first.last}@x.org | api:labelseq api:inner-contact owner:inner-email owner:pattern",
     ],
   );
+  // (a template is an address left on the block, too: with `office@y.org` the block's, two are left, and the
+  // corresponding step takes neither — review rev92b_r2 S1, where only `owner:block` counted and `office@y.org` went
+  // to the corresponding Ann Able)
+  assert_reading(
+    repro!("llncs_inner_pattern_and_entry_email_are_the_blocks.tex"),
+    None,
+    &[
+      "C Ann Able [1,2] | line:names",
+      "  a Univ X | api:labelseq",
+      "  a Univ Y | api:labelseq",
+      "  n Corresponding author. | note:adjacent",
+      "C Bob Baker [1,2] | line:names",
+      "  a Univ X | api:labelseq",
+      "  a Univ Y | api:labelseq",
+      "B email {first.last}@x.org | api:labelseq api:inner-contact owner:inner-email owner:pattern",
+      "B email office@y.org | api:labelseq api:inner-contact owner:inner-email owner:block",
+    ],
+  );
 }
 
 /// Piece 2, 85b's `_share` port (llncs class S, 19 papers: 1912.11606, 2302.05745; OD #901): llncs's one `\institute`,
@@ -402,9 +420,11 @@ fn each_class_author_replaces_or_stacks_as_its_class() {
 /// Piece 5's spacing, review rev92b_r1 B1 (2403.08629, 2601.02539, 1704.04058; FIDELITY_CHARTER §4): in a mark's
 /// printed text any spacing parts its labels, as a comma does — white space, and every item Perl marks `isSpace`
 /// (`util_text::is_spacing_item`, the reader `first_ink` uses: `\,` `\!` `\:` `\ ` `\hspace` `\kern` `\mskip`, in a
-/// formula and in `\textsuperscript`) —, and an invisible character (a zero-width space, a format or combining
-/// character: `util_text::is_invisible_char`) is no label and no shown symbol: the kernel's label keys
-/// (`queue_digest::label_ink`) and the observer's mark reader (`events::script_ink`) alike. `$^{1\,2}$` printed one
+/// formula and in `\textsuperscript`) —, and a format character (a zero-width space: `util_text::keeps_label_char`) is
+/// no label and no shown symbol: the kernel's label keys (`queue_digest::label_ink`) and the observer's mark reader
+/// (`events::script_ink`) alike. A combining mark is part of the letter it is on (`\={x}` is `x̄`, review rev92b_r2
+/// B1), and a pgf/TikZ picture prints its text nodes only (`util_text::picture_text`: a circled `a` is `a`, review
+/// rev92b_r2 B2). `$^{1\,2}$` printed one
 /// label `1_2`, which nothing answered and no name showed (each mark lost; Nan Jiang's `$^{1,2\,*}$` lost BIGAI and the
 /// ∗); `\up{\!1,2}` (2209.14855) showed an empty superscript holding U+200B on each name. Today's output changes, and
 /// is pinned.
@@ -469,9 +489,9 @@ fn spacing_parts_a_marks_labels() {
       "  a Univ Two | ruling1:request",
     ],
   );
-  // (a picture prints no label (`util_text::is_picture`): an SVG path's data is no text of the mark — 2605.02769's TikZ
-  // ORCID logo in `\inst{\ref{leiden}\orcidicon{…}}`, parted at its spaces, was the marks M, C, 0, L, Z on every
-  // name; the shadow read it as the requests `M`, `0`, `L`, … already)
+  // (a pgf picture prints only its text nodes (`util_text::picture_text`): an SVG path's data is no text of the mark —
+  // 2605.02769's TikZ ORCID logo in `\inst{\ref{leiden}\orcidicon{…}}`, parted at its spaces, was the marks M, C, 0,
+  // L, Z on every name; the shadow read it as the requests `M`, `0`, `L`, … already)
   assert_reading(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_mark_picture_is_no_label.tex"
@@ -485,6 +505,73 @@ fn spacing_parts_a_marks_labels() {
       "  a Univ One | ruling1:request",
       "C Bob Baker [2] | line:names sep:column",
       "  a Univ Two | ruling1:request",
+    ],
+  );
+  // (a combining mark is part of the character before it (`util_text::keeps_label_char`, `queue_digest::
+  // parted_printed_label`, the observer's `labels::parted_label`): `\={x}` prints `x̄`, a label of its own, matching no
+  // `x` line, and an unanswered `\~{x}` … `\d{x}` shows whole — review rev92b_r2 B1, where every combining mark was
+  // dropped (x̄ the label x, both lines Ann Able's) and round 1 parted x̄ into x and a lone mark)
+  assert_reading(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_mark_combining_accent_is_its_letter.tex"
+    ),
+    Some(&[
+      &["Ann Able", "affiliation=Univ Two"],
+      &["Bob Baker", "affiliation=Univ One"],
+      &["Cid Cole x\u{303}"],
+      &["Dee Dunn x\u{30c}"],
+      &["Eve Esse x\u{306}"],
+      &["Fay Fox x\u{30b}"],
+      &["Gus Gray x\u{331}"],
+      &["Hal Hill x\u{323}"],
+    ]),
+    &[
+      "C Ann Able [x] | line:names",
+      "  a Univ Two | ruling1:request",
+      "C Bob Baker [x\u{304}] | line:names sep:column",
+      "  a Univ One | ruling1:request",
+      "C Cid Cole [x\u{303}] | line:names sep:column",
+      "C Dee Dunn [x\u{30c}] | line:names sep:column",
+      "C Eve Esse [x\u{306}] | line:names sep:column",
+      "C Fay Fox [x\u{30b}] | line:names sep:column",
+      "C Gus Gray [x\u{331}] | line:names sep:column",
+      "C Hal Hill [x\u{323}] | line:names sep:column",
+    ],
+  );
+  // (a pgf picture's text nodes are its printed text (`\pgfsys@hbox`'s box): a circled `a` and `b` are the labels a and
+  // b, each answered by its line, and LaTeX's `picture` prints its `\put`'s `c` — review rev92b_r2 B2, where a picture
+  // was no label: the marks lost, the lines continuations of the ones before)
+  assert_reading(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_mark_picture_text_is_its_label.tex"
+    ),
+    Some(&[
+      &[
+        "Ann Able",
+        "affiliation=Univ One",
+        "affiliation=Corresponding A",
+      ],
+      &[
+        "Bob Baker",
+        "affiliation=Univ Two",
+        "affiliation=Corresponding B",
+      ],
+      &[
+        "Cid Cole",
+        "affiliation=Univ Three",
+        "affiliation=Corresponding C",
+      ],
+    ]),
+    &[
+      "C Ann Able [1,a] | line:names",
+      "  a Univ One | ruling1:request",
+      "  a Corresponding A | ruling1:request",
+      "C Bob Baker [2,b] | line:names sep:column",
+      "  a Univ Two | ruling1:request",
+      "  a Corresponding B | ruling1:request",
+      "C Cid Cole [3,c] | line:names sep:column",
+      "  a Univ Three | ruling1:request",
+      "  a Corresponding C | ruling1:request",
     ],
   );
 }

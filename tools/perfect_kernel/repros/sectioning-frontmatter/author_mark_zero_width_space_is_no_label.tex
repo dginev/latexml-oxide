@@ -1,8 +1,8 @@
 % witness: 2209.14855 (`\let\up\textsuperscript`, `Matthieu Kirchmeyer${}^*$\up{\!1,2}`; review rev92b_r1 B1's sibling)
 % oracle:  pdflatex: "Ann Able1,2 and Bob Baker*2" / 1 Univ One / 2 Univ Two
 % engines: perl 0.8.8 = 0 errors, the marks in the names (each U+200B-led), both lines Bob Baker's; rust 92a: Univ One
-%          and Univ Two Ann Able's, Univ Two Bob Baker's; 92b r1: the same, and each name an empty superscript holding U+200B — `\!`'s zero-width-space box
-%          read as a printed symbol, a label of its own no line answers
+%          and Univ Two Ann Able's, Univ Two Bob Baker's; 92b r1: the same, and each name an empty superscript holding
+%          U+200B — `\!`'s zero-width-space box read as a printed symbol, a label of its own no line answers
 % expect:  0 errors, 0 warnings; Univ One and Univ Two Ann Able's, Univ Two Bob Baker's, no empty mark
 % status:  RED (92b r1) -> GREEN (92b r2)
 % preload: ar5iv.sty

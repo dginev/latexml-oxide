@@ -1,0 +1,21 @@
+% witness: review rev92b_r2 B1 (an accent with no precomposed form prints a letter and a combining mark)
+% oracle:  pdflatex: "Ann Ablex and Bob Bakerx̄ and Cid Colex̃ and Dee Dunnx̌ and Eve Essex̆ and Fay Foxx̋ and Gus
+%          Grayx̱ and Hal Hillx̣" (pdftotext: the last two "x¯", ".x") / x̄ Univ One / x Univ Two
+% engines: perl 0.8.8 = 0 errors, Univ Two Ann Able's, Univ One Bob Baker's, no unanswered mark shown; rust 92b r1:
+%          each accented mark also the labels x and a lone mark (Univ Two on every name, Univ One on Bob Baker's, the
+%          lone mark shown on each), the shadow alike; 92b r2: every combining mark dropped — each mark the label x,
+%          Univ One and Univ Two on every name, no mark shown
+% expect:  0 errors, 0 warnings; Univ Two Ann Able's, Univ One Bob Baker's, each other name its mark shown whole
+%          (x̃, x̌, x̆, x̋, x̱, x̣)
+% status:  RED (92b r2) -> GREEN (92b r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\textsuperscript{x} \and Bob Baker\textsuperscript{\={x}} \and Cid Cole\textsuperscript{\~{x}}
+  \and Dee Dunn\textsuperscript{\v{x}} \and Eve Esse\textsuperscript{\u{x}} \and Fay Fox\textsuperscript{\H{x}}
+  \and Gus Gray\textsuperscript{\b{x}} \and Hal Hill\textsuperscript{\d{x}}\\
+  \textsuperscript{\={x}}Univ One \\ \textsuperscript{x}Univ Two}
+\begin{document}
+\maketitle
+Text.
+\end{document}

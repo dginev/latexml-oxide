@@ -403,27 +403,89 @@ pub fn is_spacing_item(d: &Digested) -> bool {
   }
 }
 
-/// Whether the whatsit `w` typesets a picture — graphics drawn, not characters: pgf/TikZ's `\lxSVG@insertpicture` (an
-/// `<ltx:picture>` and its `<svg:svg>`, pgfsys-latexml.def), LaTeX's `picture` environment (sect13.rs). A frontmatter
-/// mark's printed label reads no text of one (`queue_digest::label_ink`, the observer's `events::script_ink`): the
-/// path data an SVG path's argument holds is no label (`\inst{\ref{leiden}\orcidicon{…}}`, a paper's `\orcidicon` a
-/// TikZ ORCID logo, 2605.02769: its "M 354.23 -177.11 C …", parted at its spaces, was the marks M, C, 0, L, Z on
-/// every name — review rev92b_r1 B1's fix).
-pub fn is_picture(w: &Whatsit) -> bool {
-  matches!(
-    w.get_definition().get_cs_name().trim_end(),
-    "\\lxSVG@insertpicture" | "\\begin{picture}"
-  )
+/// The text a pgf/TikZ picture shows (pgfsys-latexml.def's `\lxSVG@insertpicture`, an `<ltx:picture>` and its
+/// `<svg:svg>`), `None` for any other whatsit: the boxes its text nodes insert — `\pgfsys@hbox`'s box (`thebox`), the
+/// one way pgf typesets text in a picture (a `\node{…}`, `\pgftext`, `\pgfsys@hboxsynced`; pgfsys.code.tex) —, in their
+/// order. Everything else a pgf picture holds draws: an SVG path's data and style (`\lxSVG@drawpath@unclipped{M 5.53 0
+/// C …}{fill:none}`), colours, transforms, scopes. A frontmatter mark's printed label reads only the text
+/// (`queue_digest::label_ink`, the observer's `events::script_ink`): 2605.02769's TikZ ORCID logo in
+/// `\inst{\ref{leiden}\orcidicon{…}}` holds none (its path data, parted at its spaces, was the marks M, C, 0, L, Z on
+/// every name — review rev92b_r1 B1), a circled letter `\tikz…\node[circle,draw](c){a};` prints its "a" (review
+/// rev92b_r2 B2: a picture read as no text lost it, its line a continuation of the one before). LaTeX's `picture`
+/// environment is read as any material is (`\put(0,0){a}`'s text is an argument).
+pub fn picture_text(w: &Whatsit) -> Option<Vec<Digested>> {
+  fn text_nodes(d: &Digested, nodes: &mut Vec<Digested>) {
+    match d.data() {
+      DigestedData::List(l) => {
+        for child in l.borrow().boxes.iter() {
+          text_nodes(child, nodes);
+        }
+      },
+      DigestedData::Whatsit(w) => whatsit_text_nodes(&w.borrow(), nodes),
+      DigestedData::Alignment(a) => {
+        for row in a.borrow().rows() {
+          for cell in row.get_columns() {
+            if let Some(boxes) = cell.boxes.as_ref() {
+              text_nodes(boxes, nodes);
+            }
+          }
+        }
+      },
+      _ => {},
+    }
+  }
+  fn whatsit_text_nodes(w: &Whatsit, nodes: &mut Vec<Digested>) {
+    if w.get_definition().get_cs_name().trim_end() == "\\pgfsys@hbox" {
+      if let Some(Stored::Digested(text)) = w.get_property("thebox").as_deref() {
+        nodes.push(text.clone());
+      }
+      return;
+    }
+    if let Some(Stored::Digested(a)) = w.get_property("alignment").as_deref() {
+      text_nodes(a, nodes);
+    }
+    for arg in w.get_args().iter().flatten() {
+      text_nodes(arg, nodes);
+    }
+    if let Ok(Some(body)) = w.get_body() {
+      text_nodes(&body, nodes);
+    }
+  }
+  (w.get_definition().get_cs_name().trim_end() == "\\lxSVG@insertpicture").then(|| {
+    let mut nodes = Vec::new();
+    for arg in w.get_args().iter().flatten() {
+      text_nodes(arg, &mut nodes);
+    }
+    nodes
+  })
 }
 
-/// Whether a character prints nothing: a format character (the zero-width space, the joiners, the byte-order mark:
-/// Unicode Cf) or a combining mark (M) on its own. A frontmatter mark's label is never one: `\up{\!1,2}`'s zero-width
-/// space was an empty mark on each name, 2209.14855 (`queue_digest::label_ink`, the observer's `events::script_ink`;
-/// review rev92b_r1 B1).
-pub fn is_invisible_char(c: char) -> bool {
-  static INVISIBLE: std::sync::LazyLock<Regex> =
-    std::sync::LazyLock::new(|| Regex::new(r"^[\p{Cf}\p{M}]$").unwrap());
-  INVISIBLE.is_match(c.encode_utf8(&mut [0; 4]))
+/// Whether a frontmatter mark's label reader keeps the character `c` of printed text, `before` the last it kept
+/// (`queue_digest::label_ink`, the observer's `events::script_ink`): a format character (Unicode Cf: the zero-width
+/// space, the joiners, the byte-order mark) prints nothing and is dropped — `\up{\!1,2}`'s zero-width space was an
+/// empty mark on each name, 2209.14855 (review rev92b_r1 B1) —; a combining mark (M) is part of the character before
+/// it, kept — `\={x}` prints "x̄", an accent with no precomposed form (`\=`, `\~`, `\v`, `\u`, `\H`, `\b`, `\d` over an
+/// `x`), a label of its own, not `x` (review rev92b_r2 B1: the mark dropped, `x̄` matched an `x` line) — and dropped
+/// only with no base: first, or after white space or a label separator (`,`). Any other character is kept.
+pub fn keeps_label_char(c: char, before: Option<char>) -> bool {
+  if is_format_char(c) {
+    return false;
+  }
+  !is_combining_mark(c) || before.is_some_and(|b| b != ',' && !b.is_whitespace())
+}
+
+/// Whether a character is a format character (Unicode Cf), printing nothing ([`keeps_label_char`]).
+pub fn is_format_char(c: char) -> bool {
+  static FORMAT: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"^\p{Cf}$").unwrap());
+  FORMAT.is_match(c.encode_utf8(&mut [0; 4]))
+}
+
+/// Whether a character is a combining mark (Unicode M), printed on the character before it ([`keeps_label_char`]).
+pub fn is_combining_mark(c: char) -> bool {
+  static MARK: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"^\p{M}$").unwrap());
+  MARK.is_match(c.encode_utf8(&mut [0; 4]))
 }
 
 /// Whether a constructor's replacement `template` ([`Definition::replacement_template`]) prints nothing of its own,

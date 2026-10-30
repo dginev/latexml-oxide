@@ -489,8 +489,11 @@ fn ink_of_without_notes(d: &Digested) -> String { script_ink(d, false) }
 /// `ref:ia,ref:ib`; `1\ref{b}` `1,ref:b`; `\ref{a}--\ref{c}` `ref:a,–,ref:c`; review rev92a_r1 B3, where the keys
 /// written back to back were one label, `ref:iaref:ib`, that matched no entry). Spacing (`is_spacing_item`, the reader
 /// `first_ink` and the kernel's label keys use: `$^{1\,2}$`'s glue, `\!`'s zero-width-space box, a `\kern`) is a space
-/// between labels, and an invisible character (`is_invisible_char`) none (`$^{1\kern2pt2}$` read "12", one label;
-/// `\up{\!1,2}` a zero-width-space label of its own, 2209.14855 — review rev92b_r1 B1, `queue_digest::label_ink`).
+/// between labels (`$^{1\kern2pt2}$` was read "12", one label), a format character none and a combining mark part of
+/// the character before it (`keeps_label_char`: `\up{\!1,2}` was a zero-width-space label of its own, 2209.14855 —
+/// review rev92b_r1 B1; `\={x}` is `x̄`, not `x`, review rev92b_r2 B1), and a pgf/TikZ picture prints only its text
+/// nodes (`picture_text`: a circled `a` its `a`, an SVG path's data nothing — review rev92b_r2 B2), apart
+/// (`queue_digest::label_ink` reads a label so).
 fn script_ink(d: &Digested, refs: bool) -> String {
   fn ink(d: &Digested, refs: bool, out: &mut String) {
     if is_spacing_item(d) {
@@ -504,8 +507,14 @@ fn script_ink(d: &Digested, refs: bool) -> String {
         }
       },
       DigestedData::Whatsit(w) if is_note_whatsit(&w.borrow()) => {},
-      // (a picture prints no label: `is_picture`)
-      DigestedData::Whatsit(w) if is_picture(&w.borrow()) => out.push(' '),
+      // (a pgf picture prints only its text nodes, apart: `picture_text`)
+      DigestedData::Whatsit(w) if let Some(text) = picture_text(&w.borrow()) => {
+        out.push(' ');
+        for node in &text {
+          ink(node, refs, out);
+        }
+        out.push(' ');
+      },
       DigestedData::Whatsit(w) if refs && let Some(key) = printless_ref_key(&w.borrow()) => {
         out.push_str(",ref:");
         out.push_str(&key);
@@ -531,7 +540,12 @@ fn script_ink(d: &Digested, refs: bool) -> String {
   }
   let mut text = String::new();
   ink(d, refs, &mut text);
-  text.retain(|c| !is_invisible_char(c));
+  let text = text.chars().fold(String::new(), |mut kept, c| {
+    if keeps_label_char(c, kept.chars().next_back()) {
+      kept.push(c);
+    }
+    kept
+  });
   let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
   if !refs {
     return text;

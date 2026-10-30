@@ -265,15 +265,26 @@ pub(in crate::base_utilities) fn frontmatter_label_keys(
 /// prints "1,4∗", 2412.09857) the whole, then each run apart (`4∗`, `4`, `∗`) — the number an affiliation's and the
 /// symbol a note's —; a run of distinct symbols (`$^{\clubsuit\heartsuit}$` prints "♣♡", 1811.10830's spelled shape)
 /// each symbol too (a doubled `∗∗` stays one), as the spelled run of symbol commands is (`SYMBOL_COMMAND_RUN`,
-/// [`clean_frontmatter_labels`]); any other label as it is. Printed text alone (review rev92b_r1 S2): a mark's spelling
-/// is parted by [`clean_frontmatter_labels`] only.
+/// [`clean_frontmatter_labels`]); any other label as it is. A combining mark is part of the character before it
+/// (`x̄`, `\={x}`'s, is one letter: no `x` and no mark of its own, review rev92b_r2 B1). Printed text alone (review
+/// rev92b_r1 S2): a mark's spelling is parted by [`clean_frontmatter_labels`] only.
 fn parted_printed_label(label: String) -> Vec<String> {
   let (prefix, bare) = match label.split_once(':') {
     Some((prefix, bare)) => (s!("{prefix}:"), bare.to_string()),
     None => (String::new(), label.clone()),
   };
-  let mut runs: Vec<(bool, String)> = Vec::new();
+  // (each run a kind — symbol or not — and its characters, a combining mark kept with the one before it)
+  let mut runs: Vec<(bool, Vec<String>)> = Vec::new();
   for c in bare.chars() {
+    if is_combining_mark(c) {
+      match runs.last_mut().and_then(|(_, run)| run.last_mut()) {
+        Some(character) => {
+          character.push(c);
+          continue;
+        },
+        None => return vec![label],
+      }
+    }
     let symbol = if c.is_alphanumeric() {
       false
     } else if is_printed_symbol(c) {
@@ -282,19 +293,17 @@ fn parted_printed_label(label: String) -> Vec<String> {
       return vec![label];
     };
     match runs.last_mut() {
-      Some((kind, run)) if *kind == symbol => run.push(c),
-      _ => runs.push((symbol, c.to_string())),
+      Some((kind, run)) if *kind == symbol => run.push(c.to_string()),
+      _ => runs.push((symbol, vec![c.to_string()])),
     }
   }
   let mut parts: Vec<String> = Vec::new();
   for (symbol, run) in &runs {
     if runs.len() > 1 {
-      parts.push(run.clone());
+      parts.push(run.concat());
     }
-    let mut chars = run.chars();
-    let first = chars.next();
-    if *symbol && chars.any(|c| Some(c) != first) {
-      parts.extend(run.chars().map(String::from));
+    if *symbol && run.iter().any(|c| *c != run[0]) {
+      parts.extend(run.iter().cloned());
     }
   }
   if parts.is_empty() {
@@ -306,10 +315,15 @@ fn parted_printed_label(label: String) -> Vec<String> {
 }
 
 /// Whether a printed character is a symbol a mark may be: a star, or a character no letter, digit, space, ASCII
-/// punctuation or invisible character ([`is_invisible_char`]) — `†`, `⋆`, `♣` (`parted_printed_label`,
-/// `insert::unanswered_mark_text`).
+/// punctuation, format character ([`is_format_char`]) or combining mark ([`is_combining_mark`], never a symbol on its
+/// own: it is part of the character before it) — `†`, `⋆`, `♣` (`parted_printed_label`, `insert::unanswered_mark_text`).
 pub(in crate::base_utilities) fn is_printed_symbol(c: char) -> bool {
-  c == '*' || (!c.is_ascii() && !c.is_alphanumeric() && !c.is_whitespace() && !is_invisible_char(c))
+  c == '*'
+    || (!c.is_ascii()
+      && !c.is_alphanumeric()
+      && !c.is_whitespace()
+      && !is_format_char(c)
+      && !is_combining_mark(c))
 }
 
 /// The printed text of a frontmatter mark's operand that holds a command (a macro, a symbol, a font switch, math):
@@ -438,8 +452,9 @@ fn speculative_label_ink(tokens: Tokens) -> Result<Option<String>> {
 /// white space in a box's text, and every item [`is_spacing_item`] reads as spacing, the reader 92e's [`first_ink`] uses
 /// (`$^{1\,2}$`'s math glue, a box of a space; `\!`'s zero-width-space box; `\:`, `\>`, `\ `, `\hspace`, `\kern`,
 /// `\mskip`): `$^{1\,2}$` is the labels 1 and 2 (2403.08629, 2601.02539, 1704.04058's `$^{* \, \dagger}$`; review
-/// rev92b_r1 B1: one label `1_2`, nothing answered it, and the mark was lost). An invisible character
-/// ([`is_invisible_char`]) prints no label, nor does a picture ([`is_picture`]).
+/// rev92b_r1 B1: one label `1_2`, nothing answered it, and the mark was lost). A format character prints no label, a
+/// combining mark is part of the character before it ([`keeps_label_char`]: `\={x}`'s `x̄`), and a pgf/TikZ picture
+/// prints only its text nodes ([`picture_text`]: a circled `a`'s `a`, never an SVG path's data), a label apart.
 fn label_ink(d: &Digested, out: &mut String) {
   if is_spacing_item(d) {
     out.push(',');
@@ -451,7 +466,7 @@ fn label_ink(d: &Digested, out: &mut String) {
         for c in text.chars() {
           if c.is_whitespace() {
             out.push(',');
-          } else if !is_invisible_char(c) {
+          } else if keeps_label_char(c, out.chars().next_back()) {
             out.push(c);
           }
         }
@@ -474,8 +489,13 @@ fn label_ink(d: &Digested, out: &mut String) {
         }
         return;
       }
-      // (a picture prints no label: `is_picture`, 2605.02769's TikZ ORCID logo)
-      if is_picture(&w) {
+      // (a pgf picture prints only its text nodes, a label apart: 2605.02769's TikZ ORCID logo none, a circled `a` its
+      // `a`)
+      if let Some(text) = picture_text(&w) {
+        out.push(',');
+        for node in &text {
+          label_ink(node, out);
+        }
         out.push(',');
         return;
       }

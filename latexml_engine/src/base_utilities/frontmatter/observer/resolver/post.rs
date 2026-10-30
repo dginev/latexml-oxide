@@ -1380,15 +1380,17 @@ impl Resolver {
   /// none on the block already — goes to the one author of its candidates marked the corresponding author (a
   /// "Corresponding author" note: [`Resolver::corresponding`]) who holds no other address; a template
   /// (`owner:pattern`) and a list of local parts the reader could not part (`(npalmer|pwg)@…`, `lists_local_parts`)
-  /// stay the block's, every author's address and no one's own. Two or more left are each the block's, once
-  /// (`info@x.org` and `office@y.org` under the two institutes a corresponding Ann Able and Bob Baker both carry: not
-  /// both Ann Able's).
+  /// stay the block's, every author's address and no one's own — and count as left on it: a template under Univ X and
+  /// `office@y.org` under Univ Y are two left, each the block's (review rev92b_r2 S1: `office@y.org` went to the
+  /// corresponding author). Two or more left are each the block's, once (`info@x.org` and `office@y.org` under the two
+  /// institutes a corresponding Ann Able and Bob Baker both carry: not both Ann Able's).
   fn place_emails_left(&mut self, mut placed: Vec<EmailPlacement>) {
     let left: Vec<usize> = (0..placed.len())
-      .filter(|&at| placed[at].owner.is_none() && placed[at].tag == "owner:block")
+      .filter(|&at| placed[at].owner.is_none())
       .collect();
     let on_block = self.out.block.iter().any(|assoc| assoc.role == "email");
     if let [at] = left.as_slice()
+      && placed[*at].tag == "owner:block"
       && !on_block
       && self.live().len() > 1
       && !lists_local_parts(&placed[*at].assoc.text)
