@@ -11,13 +11,15 @@ use crate::{
 /// #1}`), so `\offprints{O. Kochukhov, \email{…}}` names its address's owner while `\email` is the class's own
 /// (aa_support.sty's; read when the note is rehearsed, at the flush, `\maketitle`, `ledger::email_meaning`: 0903.3512;
 /// aa.cls:910-911's `\protected@edef` expands it at the call, so a redefinition between the two keeps the note's text)
-/// (The block conventions are unread today: inst_support owns aa's `\author`, so its blocks are keyed
-/// `inst_support.sty`, whose values are the same — every aa census paper.)
+/// (This binding's own `\author`, the kernel's replacing one, keys aa's blocks `aa.cls`, OD #922.) `written`: the
+/// observer's writer writes aa's creators (FM stage 7, OD #922; the writer declines a paper whose reading it cannot
+/// apply, which keeps today's output).
 pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   name: "aa",
   binding: "aa.cls",
   inst_after_comma: true,
   email_in_place: true,
+  // written: true, (step 3)
   cite: "aa.cls:759-760 `\\def\\inst#1{\\unskip\\hbox{$^{#1}$}}`, :824; OD #807 (1604.07826, 2309.00573), #913",
   ..FM_KERNEL_CONVENTIONS
 };
@@ -51,6 +53,15 @@ LoadDefinitions!({
   // pdflatex gives it — 523.531pt in two 256.075pt columns, one column under `onecolumn`. Witness 1510.07016.
   declare_panel_page(256.0748, 523.5307, last_class_option(&["onecolumn", "twocolumn"]) != Some("onecolumn"));
   RequirePackage!("aa_support");
+  // aa.cls defines no `\author`: the kernel's `\def\author#1{\gdef\@author{#1}}` keeps the last call's names, so this
+  // binding's `\author` clears the authors queued before it, then splits as inst_support's (its `[marks]` and its
+  // `\and`/`\And` pieces, OD #53) — the class's own, said with the API's primitives (OXIDIZED_DESIGN #920, #922; Perl
+  // inst_support.sty.ltxml:33-35 clears on every call). inst_support's own `\author` keeps stacking, for the classes
+  // that reach it through OmniBus. Defining it here makes this binding the owner of aa's `\author`, so its blocks are
+  // keyed `aa.cls` and read by this binding's conventions (`ledger::note_binding_load`). The 16 aa census papers with
+  // two calls (pop92b6: their second calls in comments or conditionals) change nothing.
+  DefMacro!("\\author[]{}",
+    "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author@split}{\\and\\And}{#2}\\lx@author@trailing");
   // Raw aa.cls unconditionally loads natbib (not just for bibnumber/bibauthoryear options).
   // Many aa papers use \citep/\citet without explicit \usepackage{natbib}.
   RequirePackage!("natbib");

@@ -40,9 +40,8 @@ LoadDefinitions!({
   //     (`\lx@add@author@split`: `R. Braun\inst{1} and W. B. Burton\inst{2}`, astro-ph9810433; 63e),
   //   * ACCUMULATE across calls — drop the per-call `\lx@clear@creators`, which
   //     is a no-op on the first call anyway, so single-`\author` classes are
-  //     unaffected. (llncs and sv define their own `\author`; aa does not — aa.cls
-  //     keeps the kernel's replacing `\author`, so an aa paper's second call keeps
-  //     the first's names, which pdflatex does not print. Restoring Perl's clear
+  //     unaffected. (llncs, sv and aa define their own `\author` — aa's the kernel's
+  //     replacing one aa.cls keeps, OXIDIZED_DESIGN #922. Restoring Perl's clear
   //     here (92b) changed 162 of 1,305 OmniBus papers with two or more `\author`
   //     calls, most of them stacking classes reached through OmniBus — achemso,
   //     autart, pasj00, lipics, the AMS `-l` classes, oup, a subfile of a revtex

@@ -275,9 +275,9 @@ fn same_meaning(a: Option<&Rc<dyn Definition>>, b: Option<&Rc<dyn Definition>>) 
 }
 
 /// Run a compiled binding's loader (`name`.`extension`, the binding's file: `revtex4_support.sty`), noting it as the
-/// owner of each tracked command's meaning (`OWNED_COMMANDS`) when its load changed it and no binding it loaded did
-/// (revtex4-2.cls's binding loads revtex4_support.sty, whose `\author` it is; aa.cls's loads aa_support.sty, whose
-/// `\email` it is): the binding half of the policy key (`author_binding`), and an e-mail call's binding
+/// owner of each tracked command's meaning (`OWNED_COMMANDS`) when its load changed it and no binding it loaded did, or
+/// its own code redefined it after one did (revtex4-2.cls's binding loads revtex4_support.sty, whose `\author` it is;
+/// aa.cls's loads aa_support.sty, whose `\email` it is, and defines its own `\author` after inst_support.sty's):the binding half of the policy key (`author_binding`), and an e-mail call's binding
 /// (`email_meaning`). Under the shadow switch only; otherwise just the load.
 pub fn note_binding_load<R>(name: &str, extension: &str, load: impl FnOnce() -> R) -> R {
   if !fm_shadow_enabled() {
@@ -304,9 +304,15 @@ pub fn note_binding_load<R>(name: &str, extension: &str, load: impl FnOnce() -> 
     }
   });
   for n in 0..OWNED_COMMANDS.len() {
+    // (a binding it loaded that defined the meaning first owns it unless this binding's own code redefined it after:
+    // aa.cls's `\author`, defined after its aa_support.sty's inst_support.sty defined one, is aa.cls's, OD #922; a raw
+    // file's redefinition stays no binding's)
+    let nested = !same_meaning(owned_meaning(n).as_ref(), owners_before[n].as_ref());
     if let Some(after) = tracked_meaning(n)
       && !same_meaning(before[n].as_ref(), Some(&after))
-      && same_meaning(owned_meaning(n).as_ref(), owners_before[n].as_ref())
+      && (!nested
+        || (!same_meaning(owned_meaning(n).as_ref(), Some(&after))
+          && matches!(after.get_origin(), DefinitionOrigin::Binding)))
     {
       // (a pool is LaTeXML's own kernel: `kernel`, so a binding that loads it — latexml.sty — does not own its
       // `\author`)

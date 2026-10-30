@@ -4,13 +4,16 @@ use crate::prelude::*;
 /// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
 /// llncs: `\institute{A \and B}` numbered by its `\and`s (`labelseq=affiliation`), `\inst` the request; an `\inst`
 /// after a comma is the name's before it; an unmarked `\\` line under names is their affiliation; `\email` prints in
-/// place (llncs.cls:897), so a `\thanks{Corresponding: A. Able, \email{…}}` names its address's owner
+/// place (llncs.cls:897), so a `\thanks{Corresponding: A. Able, \email{…}}` names its address's owner. `written`:
+/// the observer's writer writes llncs's creators (FM stage 7, OD #922; a paper whose reading it cannot apply keeps
+/// today's output).
 pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   name: "llncs",
   binding: "llncs.cls",
   inst_after_comma: true,
   and_inline: true,
   email_in_place: true,
+  // written: true, (step 3)
   cite: "llncs.cls:870-885, 894-897; OD #791 (2405.16615, 2512.08621), #792 (2604.11038), #807 (2401.16957), #913",
   ..FM_KERNEL_CONVENTIONS
 };

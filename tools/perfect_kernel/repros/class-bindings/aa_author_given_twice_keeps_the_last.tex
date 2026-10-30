@@ -2,10 +2,11 @@
 % oracle:  pdflatex with 1707.06238's aa.cls: "Bob Baker1 and Cid Cole2" — aa.cls defines no `\author`, the kernel's
 %          `\gdef\@author{#1}` keeps the last call's names; "Send offprint requests to: A. Able, e-mail: carl@z.org"
 % engines: perl 0.8.8 = 0 errors, Bob Baker and Cid Cole (inst_support.sty.ltxml:33-35 clears on every call); rust
-%          92a: Ann Able, Bob Baker and Cid Cole (OD #53 had dropped the clear), the shadow likewise
+%          92a, 92b: Ann Able, Bob Baker and Cid Cole (inst_support's `\author` stacks, OD #53), the shadow likewise;
+%          92c: aa's own `\author` clears (OXIDIZED_DESIGN #922), its blocks keyed `aa.cls`
 % expect:  0 errors, 0 warnings; Bob Baker Univ X, Cid Cole Univ Y, in the XML and in the shadow reading; carl@z.org,
 %          whose note names no live author, the block's
-% status:  RED (92a, 92b: inst_support's `\author` keeps stacking, OXIDIZED_DESIGN #920 open) — catalog, no guard
+% status:  GREEN (92c) — perfect_kernel_batch92c::aa_author_replaces_and_keys_aa_blocks
 % preload: ar5iv.sty
 \documentclass{aa}
 \begin{document}

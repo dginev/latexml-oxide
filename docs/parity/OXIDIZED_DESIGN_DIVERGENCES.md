@@ -27230,10 +27230,27 @@ replacing class, none for a stacking one); never a flag, a convention key, the s
   ieeetj (ieeetj.cls:4857 stacks); and a `\documentclass{subfiles}` subfile (1210.5518, 2307.07324) or a subfile
   loaded mid-document (1502.05436), whose main class (revtex) stacks, guessed OmniBus. Each binding saying its class's
   `\author`, and aa's binding its replacing one (which moves aa's policy key from `inst_support.sty` to `aa.cls`, the
-  gate study's piece 8, 92c's), is the decision this leaves.
+  gate study's piece 8: landed, OD #922), is the decision this leaves.
 - The 16 aa census papers with two `\author` calls in source change nothing either way (their second calls sit in
   comments or conditionals).
 - Repros sectioning-frontmatter/`ptephy_author_given_twice_keeps_the_last`, `ptephy_v2_author_calls_stack`; class-bindings/
   `webofc_author_given_twice_keeps_the_last` (catalog only: its raw-read class leaves a conditional open, a pre-existing
   Warning), `aa_author_given_twice_keeps_the_last` and `ieeetj_author_calls_stack` (catalog: the open question's
   shapes); guard `perfect_kernel_batch92b::each_class_author_replaces_or_stacks_as_its_class`.
+
+### 922. aa's binding owns a replacing `\author`; a binding's own redefinition after a nested binding's owns the meaning (Perl: inst_support's `\author` clears for aa; no ownership notion)
+
+aa.cls defines no `\author`, so the kernel's `\gdef\@author{#1}` prints only the last call's names. `aa_cls.rs` now
+defines its own `\author[]{}` after `aa_support` loads inst_support: `\lx@clear@creators[role=author]`, then
+inst_support's split (its `[marks]`, `\and`/`\And`, OD #53) — the class's `\author` said with the API's primitives
+(OD #920's rule). inst_support's own `\author` keeps stacking for the classes reaching it through OmniBus.
+
+- **Ownership** (`ledger::note_binding_load`): a load that changed a tracked command (`\author`, `\email`,
+  `\emailAdd`) owns it when no binding it loaded did, or when its own code redefined it after one did (the meaning now
+  is not the nested owner's and its origin is `Binding`; a raw file's redefinition stays no binding's). aa's blocks
+  are keyed `aa.cls` and read by aa's conventions (`email_in_place`, `inst_after_comma`), no longer
+  `inst_support.sty`'s, which OmniBus shares (the stage-6 gate study's piece 8).
+- Repro class-bindings/`aa_author_given_twice_keeps_the_last` (rev92a_r5 probe `s1_aa_cleared_current`; pdflatex
+  with 1707.06238's aa.cls prints "Bob Baker1 and Cid Cole2"; Perl too); guard
+  `perfect_kernel_batch92c::aa_author_replaces_and_keys_aa_blocks`. The 16 aa census papers with two `\author` calls
+  (pop92b6) change nothing: their second calls sit in comments or conditionals.
