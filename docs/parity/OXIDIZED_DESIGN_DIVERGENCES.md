@@ -27540,31 +27540,50 @@ would have printed it.
 `writer::repart` (FM stage 7, "name parting last"): where the resolver's reading parts the names and today's old reader
 parted them otherwise — no creator pairs by name, so no item-wise operation applies (`declined: the creators' names`)
 — today's creators are written again from the reading, every written family alike (kernel, aa, llncs, revtex, ams).
-Each named reading creator is one `ltx:creator` (the attributes of today's creator whose name printed it) whose
-`ltx:personname` is its name as printed — the reading's digested text, its marks out, a request no entry answers shown
-as `show_unanswered_marks` shows it —, then its affiliations, contacts and notes, one per kind and text (the one a
-ruling decided kept, as `plan::wanted` reads them), placed by the writer's own print-order pass (`apply::place` over
-`plan::reading_order`, rev92c S1), the author block's own on a nameless creator after them. An item is today's own, copied (its ids given back once today's is taken), where
-today's holds one of its kind and text anywhere among the creators; else an affiliation, or a block line the reading
-takes for a legend (never a name's `\thanks`/`\footnote`), made from its entry's tokens — read on from the entry's
-first Name through the events after it until their ink is the entry's text (`entry_span`: an entry of several pieces,
-the word "and" inside one, the lines an unmarked line continued), from the mark it opens with (`block_span_tokens`).
-A name is the reading's text, not its tokens digested again: a Name's span may carry the cover of the command or
-environment its ink came through (`\bf \Large \textbf{Ming Gong\textsuperscript{\rm 5}, …}` spanned the whole
-argument; `\begin{tabular}{c}A …` opened an alignment the run did not close — two Errors).
+Each named reading creator is one `ltx:creator` (the attributes and font of today's creator whose name printed it)
+whose `ltx:personname` is the run of today's digested personname its words are (`repart::slice_name`: today's name
+cloned and cut to the run — its fonts, a link, a note set in it such as a `\footnotemark` kept, its ids given back; its
+marks out; a layout's cells, rows and boxes unwrapped and their geometry dropped; a request no entry answers shown as
+`show_unanswered_marks` shows it, unless a kept note prints it) —, then its affiliations, contacts and notes, one per
+kind and text (the one a ruling decided kept, as `plan::wanted` reads them), placed by the writer's own print-order
+pass (`apply::place` over `plan::reading_order`, rev92c S1), the author block's own on a nameless creator after them.
+A name is never the reading's text set as a string, nor its tokens digested again: the string took the font current
+at the document's end, where the writer runs (`\small` after `\maketitle`: `fontsize="90%"` on every name, 1607.00911;
+smallcaps dropped, 2304.09381) and lost the name's markup (1909.05311's `\footnotemark[1]`); a Name's span may carry
+the cover of the command or environment its ink came through (`\begin{tabular}{c}A …` opened an alignment). An item is
+today's own, copied (its ids given back once today's is taken), where today's holds one of its kind and text anywhere
+among the creators; else an affiliation, or a block line the reading takes for a legend (never a name's
+`\thanks`/`\footnote`), made from its entry's tokens — read on from the entry's first Name through the events after it
+until their ink is the entry's text (`entry_span`: an entry of several pieces, the word "and" inside one, the lines an
+unmarked line continued), digested in the font of today's name, its leading line breaks taken (asme2e's in-name
+`\affiliation{…}` printing `\\` first, 2107.11510). A made affiliation carries no entry mark, as today's copies hold
+none (`block_span_tokens` without the mark, `drop_leading_marks`); a legend keeps its mark's ink (the label-text
+ruling). The writer's block-line cut reads its lines so too: a mark's formula cut from a group the entry closes
+(`{\small $~^2$ Univ Y}`) was no balanced run, so the cut declined and 2308.11662's two institutes stayed one contact.
 
-Only where the reading refines today's names (`repart::plan`, else declined): every reading name is printed as a run
-of words inside one of today's names, in order (none is made of an item of today's — a url column, an institution
-row, `Google DeepMind` under symbol lines: 77p, 77y); every name of today's that reads as names (`reads_as_names`)
-keeps one (a prefix-marked `$^2$Bob Baker` the reading made an affiliation: 61); a one-word name parted from a shared
-name at a comma is the given name of a name written surname first (`Smith, Jr., John`: 61's ACM shape); an item the
-reading gives more authors than today's held it is a ruling's change (`writer::writes`: a role or note line under a
-row given to every name, 77t's rank 15). Fail-safe on the digested text: the new creators are built beside today's and
-kept only when they read as the reading (`plan::difference` finds nothing) and hold every word today's creators held,
-none duplicated — names and distinct items word for word, a layout's cells and rows parting words
-(`dom::words_without_marks`), the only words left out or added the separators the blocks printed (`SepKind::Word`,
-"and") —; anything else removes them and today's stays. `flag_merged_creators` runs after the writer: it reads the
-authors as written (1909.05311's merged_creators Error went with the merge).
+Only where the reading refines today's names, across a boundary the digested structure shows (`repart::plan`, else
+declined): every reading name is printed as a run of words inside one of today's names, in order (none is made of an
+item of today's — a url column, an institution row, `Google DeepMind` under symbol lines: 77p, 77y); every name of
+today's that reads as names (`reads_as_names`) keeps one (a prefix-marked `$^2$Bob Baker` the reading made an
+affiliation: 61); a one-word name parted from a shared name at a comma is the given name of a name written surname
+first (`Smith, Jr., John`: 61's ACM shape); an item the reading gives more authors than today's held it is a ruling's
+change (`writer::writes`: a role or note line under a row given to every name, 77t's rank 15); an institution the
+classify helpers read (`classify:institution`) is made only of whole creators of today's (`whole_creators`: article's
+`John Smith` + `University of Toronto`), never carved from the words of one personname (amsart's `\author{John Smith,
+University of Toronto}` is one creator as written, as Perl's: batch63; `Ann Able, Department of Physics and
+Astronomy`); a name or made item whose brackets do not close is declined. The reading itself parts no name inside an
+open `(`/`[` (the lexer's `open`: a comma or "and" there is the bracket's — 0811.3142's `(on behalf of the H1 and ZEUS
+collaborations)`), reads a bracket or a collaboration a name speaks for after it as that name's remark
+(`is_name_remark`, `speaks_for`: `for the Hall A DVCS collaboration`, 1502.03246, the name's as today's), and continues
+an institution over the word "and" unless what follows reads as names (`Department of Physics and Astronomy`).
+Fail-safe on the digested text: the new creators are built beside today's and kept only when they read as the reading
+(`plan::difference` finds nothing), hold every word today's creators held, none duplicated — names and distinct items
+word for word, a layout's cells and rows parting words (`dom::words_without_marks`), the only words left out or added
+the separators the blocks printed (`SepKind::Word`, "and") —, no made affiliation prints a mark (another entry's,
+joined), and no author keeping today's name loses the lead of an item of theirs the reading cut (`dispossessed`: an
+item kept whole goes where the reading gives it — hep-lat0209026's merged first name put every `\address` one author
+down); anything else removes them and today's stays. `flag_merged_creators` runs after the writer: it reads the authors
+as written (1909.05311's merged_creators Error went with the merge).
 
 Witnesses written: 1909.05311 (aaai20: five names after `\textsuperscript{\rm 5}` merged, `\ `-parted lines),
 2609.32870 (names, marks and lines in a minipage, `\quad`), 2609.33104 (a tabular in a makebox, a dagger legend),
@@ -27574,14 +27593,14 @@ creator, which `reads_as_names` reads as names); 2405.08158 and 1602.05576 (an `
 mark's ink kept in its text) are read and written since 94b (OD #937). The guards pinning the old reader's parting
 are updated to the written output: `batch77d::separator_macro_case_and_spacing_read_as_printed` ("Ann Able And Bob Baker" two names, the
 any-case "and" of 77p r4), `batch77p::single_spacing_stays_in_the_name` (`\textbf{Eve Ell\;\;Fay Fox}` two: the
-spacing-run residual of OD #837, for a written family), `batch61::author_in_tabular_star_stays_whole` (A and its
+spacing-run residual of OD #837, for a written family), `batch61::author_in_tabular_star_opens_no_alignment` (A and its
 affiliation X), `06_cluster_frontmatter::frontmatter_inst_affiliation_dedup` (llncs: Alice and Bob each their Mila
 Institute once), `batchfms2a2r5::group_lines_and_an_institutions_address` (amsart's `Cat Cole, Pforzheim …` parted;
 removed from `r5_shapes_leave_the_xml_unchanged`, the switch now writes it), `fmshadow::tests::
 an_affiliation_read_as_legend_notes_is_explained` (rows against the observer-off XML); and by the block-line cut's
 mark (OD #926) `batch93a::marked_lines_joined_today_are_cut_by_the_writer` ("3 Univ Z") and
 `batch77o::aistats_note_marked_address_still_pairs_by_column` (the `$^*$` legend the starred names' note). Repros
-sectioning-frontmatter/`author_names_reparted_*` (7, written; `..._declined_mark_in_contact` the fail-safe until 94b,
+sectioning-frontmatter/`author_names_reparted_*` (13 with round 2's, and `author_names_two_marked_groups_cut`; `..._declined_mark_in_contact` the fail-safe until 94b,
 OD #937); guards `perfect_kernel_batch94a` (5). Scorer (3,000 sample, against
 `run_93a_w4`'s tiers): structurally decided creators 5,693 → 5,717 of 5,838 (97.52 % → 97.93 %), marks path 1,128 →
 1,152 of 1,219 (92.53 % → 94.50 %), `article` 716 → 740 of 775 (92.39 % → 95.48 %), every other class unchanged;
@@ -27592,7 +27611,21 @@ merged_creators Error, gone): kernel agreeing 63 → 70, unclassified 26 → 23;
 article+marks census (1,445 papers; four more merged_creators Errors gone, 1607.00911, 1906.04287, 2510.12014,
 2609.16841): kernel agreeing 899 → 954, unclassified 244 → 218, written 55 → 112, declined 363 → 308; none
 written-different (measured on the pre-rebase base cc9dd91ed7; on 4529bfc899 the witnesses and the 41 census papers it
-re-parted read the same creators).
+re-parted read the same creators). Both populations were marked author lines only (`author_marks`): the unmarked
+comma-tail shape was not in them, and 94a carved it (`\author{John Smith, New York}` and its amsart, `University of
+…`, `	extbf{…}` twins — batch63's four guards red; the invented author "Astronomy"), which round 2 declines.
+Round 2 (review rev94a; census against the 94b binary on the marked sample 270 + article 1,500 and a seeded 500 of
+article/amsart papers whose `\author` holds commas and no marks, `who_uses.py` + an in-zip filter): none
+written-different in any; rc/E/F/W unchanged on every changed paper; no word lost but the marks made affiliations no
+longer carry; written 34 → 33 / 123 → 129 / 9 → 7 (1502.03246, 1012.5400, astro-ph0608515 now pair by name: the
+collaboration their name's; 2509.26598, 2510.24717, 2605.27067 written, their joined institute lines cut). Guards
+`perfect_kernel_batch94a` (12); updated to the round's output: 93a's `marked_lines_joined_today_are_cut_by_the_writer`
+and `a_legend_line_is_written_as_the_starred_names_note` (no mark in a made affiliation; pdflatex prints "3 Univ Z",
+the mark the line's label), `batchfms2a2r5::group_lines_and_an_institutions_address` back to its 93a expectation (held:
+the re-part declines amsart's `Cat Cole, Pforzheim …`), `06::frontmatter_inst_affiliation_dedup` whole elements,
+`batch61::author_in_tabular_star_opens_no_alignment` (renamed). Residual: the old reader parts `[for the C and D
+groups]` at its "and" (square brackets; parentheses it keeps whole) — the reading does not, so the re-part declines and
+today's split stays.
 
 ### 932. aa's sole `\institute` is every author's unless the class's `\inst{n}` picks it, as llncs's (Perl: inst_support's `affiliation:1`, which no author requests; the first author's by the prefix-stripped fallback)
 

@@ -71,12 +71,12 @@ pub(super) fn owned(rows: &[&[&str]]) -> Vec<Vec<String>> {
 #[test]
 fn marked_lines_joined_today_are_cut_by_the_writer() {
   let tex = repro!("author_block_marked_lines_joined_are_cut.tex");
-  // (each entry from its mark on, as its line prints it — the mark's formula closing just before the line, `$^4$`, read
-  // through since 94a)
+  // (each entry made from its own ink, its mark out, as today's copies hold none — review rev94a S3; 94a made them
+  // from the mark on, `3 Univ Z`; pdflatex prints "3 Univ Z" under the names, the mark the entry's label)
   let xml: &[&[&str]] = &[
     &["Ann Able", "affiliation=Univ X", "affiliation=Univ Y"],
-    &["Bob Baker", "affiliation=3 Univ Z"],
-    &["Cid Cole 4", "affiliation=4 Univ W"],
+    &["Bob Baker", "affiliation=Univ Z"],
+    &["Cid Cole 4", "affiliation=Univ W"],
   ];
   let reading = assert_reading(tex, Some(xml), &[
     "C Ann Able [1,2] | line:names",
@@ -94,8 +94,9 @@ fn marked_lines_joined_today_are_cut_by_the_writer() {
 /// The writer's block-line cut for a legend line (ruling 2, `ruling2:symbol-line`): `\textsuperscript{*}Equal
 /// contribution` under names showing `*` is their legend note (2407.07614); today's old reader made it an affiliation
 /// of each. The writer makes a note of each starred name from the line's tokens, its mark kept in the note's text (the
-/// kernel's author note, `\lx@add@thanks`), and takes the affiliations. (The names' kept `*` and Univ Y's kept `2` are
-/// the old reader's split of the names and of the marked line, untouched by the writer.)
+/// kernel's author note, `\lx@add@thanks`), and takes the affiliations. (The names' kept `*` is the old reader's split of
+/// the names, untouched by the writer; Univ Y, cut from today's joined line, is made from its own ink, its `2` out — a
+/// made affiliation carries no entry mark, review rev94a S3.)
 #[test]
 fn a_legend_line_is_written_as_the_starred_names_note() {
   let tex = repro!("author_block_legend_line_is_written_as_a_note.tex");
@@ -120,10 +121,10 @@ fn a_legend_line_is_written_as_the_starred_names_note() {
       ],
       &[
         "Bob Baker *",
-        "affiliation=2 Univ Y",
+        "affiliation=Univ Y",
         "note=* Equal contribution"
       ],
-      &["Cid Cole", "affiliation=2 Univ Y"],
+      &["Cid Cole", "affiliation=Univ Y"],
     ])
   );
 }

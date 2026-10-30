@@ -1,0 +1,27 @@
+% mechanism: the re-part's names (OD #928, review rev94a S1, S2): each re-parted name is the run of today's digested
+%   personname its words are — its fonts (`\textsc`), a footnote mark set in it (`\footnotemark[1]`, its id given
+%   back) kept, its marks out, a layout's parts unwrapped —, the creator in today's creator's font and the items made
+%   in today's name's font: never the font current at the document's end (`\small` after `\maketitle`), where the
+%   writer runs. 94a set the names as strings under that font: `fontsize="90%"` on every name and affiliation, the
+%   smallcaps and the footnote marks lost.
+% witness: 1607.00911 (eleven names `fontsize="90%"`), 1909.05311 (Daya Guo's and Jingjing Xu's `\footnotemark[1]`),
+%   2304.09381 (smallcaps 120 % dropped), 2609.16841
+% oracle:  pdflatex 0 errors: "Ann Able1" (small caps), "Bob Baker2∗ Cid Cole1∗" / "1 Univ X 2 Univ Y", footnote
+%   "∗ Equal contribution."
+% engines: rust 94b: every name and affiliation fontsize 90 %, no smallcaps, the marks `<sup>∗</sup>`; perl: not run
+% expect:  0 errors, 0 warnings; Ann Able (smallcaps) Univ X, Bob Baker (footnote mark) Univ Y, Cid Cole (footnote
+%   mark) Univ X; no fontsize
+% status:  RED (94a) -> GREEN (94a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{\begin{minipage}[t]{\textwidth}
+\centering \textsc{Ann Able}$^{1}$ \quad Bob Baker$^{2}$\footnotemark[1] \quad Cid Cole$^{1}$\footnotemark[1]\\[0.6em]
+$^{1}$Univ X \quad$^{2}$Univ Y
+\end{minipage}}
+\maketitle
+\footnotetext[1]{Equal contribution.}
+\small
+Body.
+\end{document}

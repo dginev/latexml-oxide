@@ -69,7 +69,7 @@ pub(super) fn norm(text: &str) -> String {
     .collect()
 }
 
-fn is(node: &Node, qname: &str) -> bool {
+pub(super) fn is(node: &Node, qname: &str) -> bool {
   node.get_type() == Some(NodeType::ElementNode) && document::get_node_qname(node) == pin(qname)
 }
 
@@ -109,7 +109,7 @@ pub(super) fn text_without_marks(node: &Node) -> String { printed_text(node, fal
 pub(super) fn words_without_marks(node: &Node) -> String { printed_text(node, true) }
 
 /// The elements of a layout that part the words on their sides.
-const LAYOUT_PARTS: &[&str] = &[
+pub(super) const LAYOUT_PARTS: &[&str] = &[
   "ltx:td",
   "ltx:tr",
   "ltx:tabular",
@@ -120,51 +120,101 @@ const LAYOUT_PARTS: &[&str] = &[
   "ltx:block",
 ];
 
-fn printed_text(node: &Node, parted: bool) -> String {
-  fn walk(node: &Node, out: &mut String, parted: bool) {
-    // (in print order: a prescript before its base, as `ab_audit fmshadow` reads the parsed XML)
+/// One piece of a node's printed text, in print order ([`segments`]).
+pub(super) enum Seg {
+  /// a text node, printed as it reads
+  Text(Node),
+  /// an element printed as one piece of text that no cut divides: a formula, a superscript inside a word
+  Atom(Node, String),
+  /// an element that prints no text of the name: a mark, the tags of a note
+  Hidden(Node),
+  /// a note set in the text: no text, but its own
+  Note(Node),
+  /// the edge of a layout's part, or a line break (`Some`): a space between the words on its sides
+  Space(Option<Node>),
+}
+
+impl Seg {
+  /// The text the piece prints.
+  pub(super) fn text(&self) -> String {
+    match self {
+      Seg::Text(node) => node.get_content(),
+      Seg::Atom(_, text) => text.clone(),
+      Seg::Space(_) => " ".to_string(),
+      Seg::Hidden(_) | Seg::Note(_) => String::new(),
+    }
+  }
+}
+
+/// The pieces `node` prints, in print order (a prescript before its base, as `ab_audit fmshadow` reads the parsed
+/// XML): what [`text_without_marks`] reads — `parted`, every cell, row, paragraph and box of a layout a [`Seg::Space`]
+/// on each side.
+pub(super) fn segments(node: &Node, parted: bool) -> Vec<Seg> {
+  fn walk(node: &Node, out: &mut Vec<Seg>, parted: bool) {
     for child in marks::printed_children(node) {
       match child.get_type() {
-        Some(NodeType::TextNode) => out.push_str(&child.get_content()),
+        Some(NodeType::TextNode) => out.push(Seg::Text(child)),
         Some(NodeType::ElementNode) => {
           if is(&child, "ltx:Math") {
             match marks::read_formula(&child) {
               // (one lowercase script glued inside a word is its letters, as the `ltx:sup` the rewrite makes of it)
-              marks::FormulaMarks::Marks(scripts) => {
-                if let [letters] = scripts.as_slice()
-                  && inside_a_word(&child, letters)
-                {
-                  out.push_str(letters);
-                }
+              marks::FormulaMarks::Marks(scripts) => match scripts.as_slice() {
+                [letters] if inside_a_word(&child, letters) => {
+                  let letters = letters.clone();
+                  out.push(Seg::Atom(child, letters));
+                },
+                _ => out.push(Seg::Hidden(child)),
               },
-              marks::FormulaMarks::OnBase { base, .. } => out.push_str(&base),
-              marks::FormulaMarks::Other => walk(&child, out, parted),
+              marks::FormulaMarks::OnBase { base, .. } => out.push(Seg::Atom(child, base)),
+              marks::FormulaMarks::Other => {
+                let text = raw_text(&child, parted);
+                out.push(Seg::Atom(child, text));
+              },
             }
-          } else if (!is(&child, "ltx:sup") || inside_a_word(&child, &child.get_content()))
-            && !is(&child, "ltx:note")
-            && !is(&child, "ltx:tags")
-          {
+          } else if is(&child, "ltx:sup") {
             // (a lowercase superscript inside a word is the word's letters, no mark: `M\textsuperscript{c}Kernan`)
+            let content = child.get_content();
+            if inside_a_word(&child, &content) {
+              out.push(Seg::Atom(child, content));
+            } else {
+              out.push(Seg::Hidden(child));
+            }
+          } else if is(&child, "ltx:note") {
+            out.push(Seg::Note(child));
+          } else if is(&child, "ltx:tags") {
+            out.push(Seg::Hidden(child));
+          } else if is(&child, "ltx:break") {
+            out.push(Seg::Space(Some(child)));
+          } else {
             let part = parted && LAYOUT_PARTS.iter().any(|q| is(&child, q));
             if part {
-              out.push(' ');
+              out.push(Seg::Space(None));
             }
             walk(&child, out, parted);
             if part {
-              out.push(' ');
+              out.push(Seg::Space(None));
             }
-          }
-          if is(&child, "ltx:break") {
-            out.push(' ');
           }
         },
         _ => {},
       }
     }
   }
-  let mut raw = String::new();
-  walk(node, &mut raw, parted);
-  raw.split_whitespace().collect::<Vec<_>>().join(" ")
+  let mut out = Vec::new();
+  walk(node, &mut out, parted);
+  out
+}
+
+/// The text of [`segments`], as printed.
+fn raw_text(node: &Node, parted: bool) -> String {
+  segments(node, parted).iter().map(Seg::text).collect()
+}
+
+fn printed_text(node: &Node, parted: bool) -> String {
+  raw_text(node, parted)
+    .split_whitespace()
+    .collect::<Vec<_>>()
+    .join(" ")
 }
 
 /// An ORCID link's identifier (`https://orcid.org/0000-0002-…` "0000-0002-…").

@@ -1,0 +1,18 @@
+% mechanism: the re-part's decline (OD #928, review rev94a B1): an institution the classify helpers read from the
+%   words of one personname of today's (amsart's `\author{Ann Able, Department of Physics and Astronomy}`, one name as
+%   written) is no boundary the page shows; the re-part makes an item only from whole creators of today's, so it
+%   declines and today's one creator stays, as Perl's (perfect_kernel_batch63's `John Smith, University of Toronto`).
+% witness: review rev94a syn s8_amsart_inst_and (94a: "Department of Physics" and an author "Astronomy")
+% oracle:  pdflatex 0 errors: "ANN ABLE, DEPARTMENT OF PHYSICS AND ASTRONOMY"
+% engines: rust 93a: one creator as written; rust 94a: Ann Able "Department of Physics" + an author "Astronomy";
+%   perl: one creator as written
+% expect:  0 errors, 0 warnings; one creator "Ann Able, Department of Physics and Astronomy"
+% status:  RED (94a) -> GREEN (94a r2)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{A Title}
+\author{Ann Able, Department of Physics and Astronomy}
+\maketitle
+Body.
+\end{document}

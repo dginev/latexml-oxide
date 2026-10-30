@@ -7,6 +7,8 @@
 //! reading's tuples and the XML's creators whole, and no Error or Warning; and the default mode (the fleet's) writes the
 //! same XML, notes included. Every repro compiles clean with pdflatex (TL 2025).
 
+use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
+use latexml_engine::base_utilities::set_fm_shadow_override;
 use serde_json::Value;
 
 use super::{
@@ -32,10 +34,10 @@ macro_rules! repro {
 fn names_after_a_bold_line_are_reparted() {
   let tex = repro!("author_names_reparted_after_a_bold_line.tex");
   let xml: &[&[&str]] = &[
-    &["Ann Able", "affiliation=1 Univ X"],
-    &["Bob Baker", "affiliation=2 Univ Y"],
-    &["Cid Cole", "affiliation=1 Univ X"],
-    &["Dee Dunn", "affiliation=2 Univ Y"],
+    &["Ann Able", "affiliation=Univ X"],
+    &["Bob Baker", "affiliation=Univ Y"],
+    &["Cid Cole", "affiliation=Univ X"],
+    &["Dee Dunn", "affiliation=Univ Y"],
   ];
   let reading = assert_reading(tex, Some(xml), &[
     "C Ann Able [1] | line:names",
@@ -56,18 +58,16 @@ fn names_after_a_bold_line_are_reparted() {
 /// `$^{\dagger}$` legend row (2609.33104). The word check reads a layout's cells and rows as parting the words beside
 /// them (`dom::words_without_marks`: the name in one row and the institution in the next read glued otherwise); an
 /// affiliation in a `{\small\normalfont …}` group keeps its switches; the legend is the dagger name's note (ruling 2,
-/// `Made::Legend`), the asterisk line in the minipage the reading's affiliation of the starred name.
+/// `Made::Legend`), and so is the asterisk line in the minipage, "Equal advising." an equal share of the work as "Equal
+/// contribution" is (`classify_thanks`; it was the starred name's affiliation: review rev94a S4). The names are the
+/// runs of today's digested personname (`slice_name`): no `width`/`align` of the `\makebox` on them.
 #[test]
 fn names_in_a_layout_are_reparted() {
   let tex = repro!("author_names_reparted_in_a_minipage.tex");
   let xml: &[&[&str]] = &[
-    &["Ann Able", "affiliation=1 Univ X"],
-    &["Bob Baker", "affiliation=2 Univ Y"],
-    &[
-      "Cid Cole",
-      "affiliation=1 Univ X",
-      "affiliation=∗ Equal advising.",
-    ],
+    &["Ann Able", "affiliation=Univ X"],
+    &["Bob Baker", "affiliation=Univ Y"],
+    &["Cid Cole", "affiliation=Univ X"],
   ];
   let reading = assert_reading(tex, Some(xml), &[
     "C Ann Able [1] | line:names",
@@ -76,17 +76,24 @@ fn names_in_a_layout_are_reparted() {
     "  a Univ Y | ruling1:request",
     "C Cid Cole [1,*] | line:names sep:gap",
     "  a Univ X | ruling1:request",
-    "  a Equal advising. | ruling2:symbol-line",
+    "  n Equal advising. | ruling2:symbol-line",
   ]);
   assert_eq!(reading.3, Value::from("written"));
-  assert_eq!(default_mode_creators(tex), owned(xml));
+  assert_eq!(
+    default_mode_creators(tex),
+    owned(&[
+      &["Ann Able", "affiliation=Univ X"],
+      &["Bob Baker", "affiliation=Univ Y"],
+      &["Cid Cole", "affiliation=Univ X", "note=∗ Equal advising."],
+    ])
+  );
   let tex = repro!("author_names_reparted_in_a_tabular_with_a_legend.tex");
   let reading = assert_reading(
     tex,
     Some(&[
-      &["Ann Able", "affiliation=1 Univ X"],
-      &["Bob Baker", "affiliation=2 Univ Y"],
-      &["Cid Cole", "affiliation=2 Univ Y"],
+      &["Ann Able", "affiliation=Univ X"],
+      &["Bob Baker", "affiliation=Univ Y"],
+      &["Cid Cole", "affiliation=Univ Y"],
     ]),
     &[
       "C Ann Able [1] | line:names",
@@ -102,11 +109,11 @@ fn names_in_a_layout_are_reparted() {
   assert_eq!(
     default_mode_creators(tex),
     owned(&[
-      &["Ann Able", "affiliation=1 Univ X"],
-      &["Bob Baker", "affiliation=2 Univ Y"],
+      &["Ann Able", "affiliation=Univ X"],
+      &["Bob Baker", "affiliation=Univ Y"],
       &[
         "Cid Cole",
-        "affiliation=2 Univ Y",
+        "affiliation=Univ Y",
         "note=† Corresponding author"
       ],
     ])
@@ -141,37 +148,36 @@ fn an_entry_of_several_pieces_is_written_whole() {
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 
-/// What today's name held besides the name moves to where the reading puts it: an unmarked line under the name
-/// (`{\footnotesize for the Example collaboration}`, R12's row above) was in today's personname (1502.03246) and is the
-/// name's affiliation, made from its tokens; and `\and` columns whose last is a line of marked entries over an e-mail
-/// line, each piece a creator of today's (2308.10621): the legend is the starred names' note, the entry the line under
-/// it continues read on over the break (`line:continued`), each item in print order.
+/// What today's name held besides the name moves to where the reading puts it — but a remark on the name stays the
+/// name's: the line under it, `{\footnotesize for the Example collaboration}`, is the collaboration the name speaks
+/// for (`is_name_remark`; review rev94a S6), one personname as today's and Perl's (1502.03246: 94a made it an
+/// affiliation); and `\and` columns whose last is a line of marked entries over an e-mail line, each piece a creator
+/// of today's (2308.10621): the legend is the starred names' note, the entry the line under it continues read on over
+/// the break (`line:continued`), each item in print order.
 #[test]
 fn what_a_name_held_is_written_where_the_reading_puts_it() {
   let tex = repro!("author_names_reparted_a_line_under_the_name.tex");
   let xml: &[&[&str]] = &[&[
-    "Ann Able",
-    "affiliation=for the Example collaboration",
+    "Ann Able for the Example collaboration",
     "affiliation=Univ X, Sometown, Country",
   ]];
   let reading = assert_reading(tex, Some(xml), &[
-    "C Ann Able [1] | line:names",
-    "  a for the Example collaboration | line:unmarked-joined R12:row-above",
+    "C Ann Able for the Example collaboration [1] | line:names name:remark",
     "  a Univ X, Sometown, Country | ruling1:request",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from("same"));
   assert_eq!(default_mode_creators(tex), owned(xml));
   let tex = repro!("author_names_reparted_columns_with_a_continued_line.tex");
   let reading = assert_reading(
     tex,
     Some(&[
-      &["Ann Able", "affiliation=1 Univ X"],
+      &["Ann Able", "affiliation=Univ X"],
       &[
         "Bob Baker",
-        "affiliation=1 Univ X",
-        "affiliation=2 Lab Y ann.able, bob.baker@lab.org",
+        "affiliation=Univ X",
+        "affiliation=Lab Y ann.able, bob.baker@lab.org",
       ],
-      &["Cid Cole", "affiliation=1 Univ X"],
+      &["Cid Cole", "affiliation=Univ X"],
     ]),
     &[
       "C Ann Able [*,1] | line:names",
@@ -191,16 +197,16 @@ fn what_a_name_held_is_written_where_the_reading_puts_it() {
     owned(&[
       &[
         "Ann Able",
-        "affiliation=1 Univ X",
+        "affiliation=Univ X",
         "note=∗ equal contribution"
       ],
       &[
         "Bob Baker",
-        "affiliation=1 Univ X",
-        "affiliation=2 Lab Y ann.able, bob.baker@lab.org",
+        "affiliation=Univ X",
+        "affiliation=Lab Y ann.able, bob.baker@lab.org",
         "note=∗ equal contribution"
       ],
-      &["Cid Cole", "affiliation=1 Univ X"],
+      &["Cid Cole", "affiliation=Univ X"],
     ])
   );
 }
@@ -209,13 +215,14 @@ fn what_a_name_held_is_written_where_the_reading_puts_it() {
 /// 1602.05576: ar-1col's): one Contact event, which kept its mark's ink ("1Department of Physics, Univ X") and went to
 /// the name beside it, so the re-part was taken back by its fail-safe and both lines stayed in the last name. Since 94b
 /// (OD #937) the contact's leading Mark is its label and its span its content from the mark on: the names request
-/// their lines (`ruling1:request`) and the re-part writes each from its mark, `<sup>1</sup>Department …`.
+/// their lines (`ruling1:request`) and the re-part writes each, its leading mark out — a made affiliation carries no
+/// entry mark, as today's copies (review rev94a S3: 94b wrote `<sup>1</sup>Department …`).
 #[test]
 fn an_affil_in_the_author_led_by_its_mark_is_reparted() {
   let tex = repro!("author_names_reparted_declined_mark_in_contact.tex");
   let xml: &[&[&str]] = &[
-    &["Ann Able", "affiliation=1 Department of Physics, Univ X"],
-    &["Bob Baker", "affiliation=2 Department of Physics, Univ Y"],
+    &["Ann Able", "affiliation=Department of Physics, Univ X"],
+    &["Bob Baker", "affiliation=Department of Physics, Univ Y"],
   ];
   let reading = assert_reading(tex, Some(xml), &[
     "C Ann Able [1] | line:names",
@@ -225,4 +232,199 @@ fn an_affil_in_the_author_led_by_its_mark_is_reparted() {
   ]);
   assert_eq!(reading.3, Value::from("written"));
   assert_eq!(default_mode_creators(tex), owned(xml));
+}
+
+/// Each `<ltx:personname>` of `xml`, whole: its ids out, its whitespace runs one space.
+fn personnames(xml: &str) -> Vec<String> {
+  xml
+    .split("<personname")
+    .skip(1)
+    .map(|rest| {
+      let end = rest.find("</personname>").expect("closed personname");
+      let element = format!("<personname{}</personname>", &rest[..end]);
+      let mut out = String::new();
+      let mut rest = element.as_str();
+      while let Some(at) = rest.find(" xml:id=\"") {
+        out.push_str(&rest[..at]);
+        let after = &rest[at + " xml:id=\"".len()..];
+        rest = &after[after.find('"').expect("closed id") + 1..];
+      }
+      out.push_str(rest);
+      out.split_whitespace().collect::<Vec<_>>().join(" ")
+    })
+    .collect()
+}
+
+/// The default mode's XML of `tex`, no Error or Warning.
+fn default_mode_xml(tex: &str) -> String {
+  let (log, xml, ()) = convert_with_setup_then(
+    tex,
+    Some("ar5iv.sty"),
+    || set_fm_shadow_override(None),
+    |_| (),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  xml
+}
+
+/// The word "and" after an institution read in a row of names continues it (review rev94a B1): `Ann Able, Department of
+/// Physics and Astronomy, Univ X` gives Ann Able "Department of Physics and Astronomy" and "Univ X" — 94a made an author
+/// "Astronomy" of the word after the "and". The re-part writes it: what it makes, today's whole creators (each piece of
+/// the line was a creator of today's old reader), no name's words carved.
+#[test]
+fn an_institution_continues_over_and() {
+  let tex = repro!("author_names_reparted_institution_and_continues.tex");
+  let xml: &[&[&str]] = &[&[
+    "Ann Able",
+    "affiliation=Department of Physics and Astronomy",
+    "affiliation=Univ X",
+  ]];
+  let reading = assert_reading(tex, Some(xml), &[
+    "C Ann Able [] | line:names",
+    "  a Department of Physics and Astronomy | line:names classify:institution",
+    "  a Univ X | line:names classify:institution",
+  ]);
+  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(default_mode_creators(tex), owned(xml));
+}
+
+/// The re-part makes no item of words today's held inside one name (review rev94a B1): amsart's `\author{Ann Able,
+/// Department of Physics and Astronomy}` is one creator as written, as Perl's — the classify helpers' institution is no
+/// boundary the page shows, so the re-part declines (`whole_creators`) and today's name stays (the standing record of
+/// perfect_kernel_batch63's `John Smith, University of Toronto`).
+#[test]
+fn an_institution_inside_a_name_is_not_carved() {
+  let tex = repro!("author_names_reparted_institution_in_a_name_declined.tex");
+  let reading = assert_reading(
+    tex,
+    Some(&[&["Ann Able, Department of Physics and Astronomy"]]),
+    &[
+      "C Ann Able [] | line:names",
+      "  a Department of Physics and Astronomy | line:names classify:institution",
+    ],
+  );
+  assert_eq!(reading.3, Value::from("declined: the creators' names"));
+  assert_eq!(
+    default_mode_creators(tex),
+    owned(&[&["Ann Able, Department of Physics and Astronomy"]])
+  );
+}
+
+/// Inside an open bracket a comma or the word "and" is the bracket's (review rev94a B2, the lexer's `open`): `Cid Cole
+/// (for the ATLAS and CMS Collaborations)` is one name, as today's old reader reads it — 94a made "CMS
+/// Collaborations)" an author (0811.3142's `(on behalf of the H1 and ZEUS collaborations)`).
+#[test]
+fn a_bracket_holds_its_and() {
+  let tex = repro!("author_names_reparted_brackets_hold_and.tex");
+  let xml: &[&[&str]] = &[&["Ann Able"], &["Bob Baker"], &[
+    "Cid Cole (for the ATLAS and CMS Collaborations)",
+  ]];
+  let reading = assert_reading(tex, Some(xml), &[
+    "C Ann Able [] | line:names",
+    "C Bob Baker [] | line:names sep:comma",
+    "C Cid Cole (for the ATLAS and CMS Collaborations) [] | line:names sep:word",
+  ]);
+  assert_eq!(reading.3, Value::from("same"));
+  assert_eq!(default_mode_creators(tex), owned(xml));
+}
+
+/// A bracket after a name, its mark between, is a remark on the name (review rev94a B2, `is_name_remark`; the
+/// collaboration a name speaks for is one too, 1502.03246): `Ann Able$^1$ (on behalf of the A and B teams)` one name,
+/// whose mark requests Univ X — 94a wrote the authors "(on behalf of the A" and "B teams)".
+#[test]
+fn a_bracket_after_a_mark_is_the_names() {
+  let tex = repro!("author_names_reparted_bracket_after_a_mark.tex");
+  let xml: &[&[&str]] = &[&[
+    "Ann Able (on behalf of the A and B teams)",
+    "affiliation=Univ X",
+  ]];
+  let reading = assert_reading(tex, Some(xml), &[
+    "C Ann Able (on behalf of the A and B teams) [1] | line:names name:qualifier",
+    "  a Univ X | ruling1:request",
+  ]);
+  assert_eq!(reading.3, Value::from("same"));
+  assert_eq!(default_mode_creators(tex), owned(xml));
+}
+
+/// Two marked institute groups on one line, one contact today, cut at their marks for the names requesting them, each
+/// made from its own ink — no mark in a made affiliation, as today's copies (review rev94a B3, S3): 94a read each line
+/// from its mark, whose formula's `$` the group closing after it left unbalanced, so the cut declined and the joined
+/// contact stayed — Ann Able and Cid Cole held "Univ X 2 Univ Y", Bob Baker nothing (2308.11662).
+#[test]
+fn two_marked_groups_on_a_line_are_cut() {
+  let tex = repro!("author_names_two_marked_groups_cut.tex");
+  let xml: &[&[&str]] = &[
+    &["Ann Able", "affiliation=Univ X"],
+    &["Bob Baker 2", "affiliation=Univ Y"],
+    &["Cid Cole 2", "affiliation=Univ X", "affiliation=Univ Y"],
+  ];
+  let reading = assert_reading(tex, Some(xml), &[
+    "C Ann Able [1] | line:names",
+    "  a Univ X | ruling1:request",
+    "C Bob Baker [2] | line:names sep:comma",
+    "  a Univ Y | ruling1:request",
+    "C Cid Cole [1,2] | line:names sep:comma mark:after-comma",
+    "  a Univ X | ruling1:request",
+    "  a Univ Y | ruling1:request",
+  ]);
+  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(default_mode_creators(tex), owned(xml));
+}
+
+/// A re-parted name is the run of today's digested personname its words are (review rev94a S1, S2, `slice_name`): its
+/// smallcaps and its `\footnotemark[1]` kept (the note's id given back), its marks out — and no font of the document's
+/// end, `\small` after `\maketitle`, on the names or the items made (94a: `fontsize="90%"` on each; 1607.00911,
+/// 1909.05311, 2304.09381).
+#[test]
+fn reparted_names_keep_their_fonts_and_notes() {
+  let tex = repro!("author_names_reparted_keep_fonts_and_notes.tex");
+  let reading = assert_reading(
+    tex,
+    Some(&[
+      &["Ann Able", "affiliation=Univ X"],
+      &["Bob Baker * * footnote *", "affiliation=Univ Y"],
+      &["Cid Cole * * footnote *", "affiliation=Univ X"],
+    ]),
+    &[
+      "C Ann Able [1] | line:names",
+      "  a Univ X | ruling1:request",
+      "C Bob Baker [2,*] | line:names sep:gap",
+      "  a Univ Y | ruling1:request",
+      "C Cid Cole [1,*] | line:names sep:gap",
+      "  a Univ X | ruling1:request",
+    ],
+  );
+  assert_eq!(reading.3, Value::from("written"));
+  let xml = default_mode_xml(tex);
+  let mark = "<note mark=\"*\" role=\"footnotemark\"><tags> <tag>*</tag> <tag role=\"refnum\">*</tag> <tag \
+              role=\"typerefnum\">footnote *</tag> </tags></note>";
+  assert_eq!(personnames(&xml), [
+    "<personname><text font=\"smallcaps\">Ann Able</text></personname>".to_string(),
+    format!("<personname>Bob Baker{mark}</personname>"),
+    format!("<personname>Cid Cole{mark}</personname>"),
+  ]);
+  assert!(
+    !xml.contains("fontsize=\"90%\"><text") && xml.matches("fontsize").count() == 1,
+    "{xml}"
+  );
+  assert_eq!(xml.matches("xml:id=\"footnotex1\"").count(), 1, "{xml}");
+  assert_eq!(xml.matches("xml:id=\"footnotex2\"").count(), 1, "{xml}");
+}
+
+/// The fail-safe: what the re-part makes is digested at the document's end, where the writer runs; an entry printing
+/// through a macro redefined after `\maketitle` digests otherwise there ("Univ Q"), so what was built does not read as
+/// the reading ("Univ X") and is taken back — today's one creator holding the minipage stays.
+#[test]
+fn a_repart_that_reads_otherwise_is_taken_back() {
+  let tex = repro!("author_names_reparted_taken_back_state_changed.tex");
+  let reading = assert_reading(tex, None, &[
+    "C Ann Able [1] | line:names",
+    "  a Univ X | ruling1:request",
+    "C Bob Baker [2] | line:names sep:gap",
+    "  a Univ Y | ruling1:request",
+  ]);
+  assert_eq!(reading.3, Value::from("declined: the creators' names"));
+  let xml = default_mode_xml(tex);
+  assert_eq!(xml.matches("<creator ").count(), 1, "{xml}");
+  assert!(xml.contains("Univ X") && !xml.contains("Univ Q"), "{xml}");
 }

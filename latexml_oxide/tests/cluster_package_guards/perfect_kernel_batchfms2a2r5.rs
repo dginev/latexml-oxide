@@ -356,29 +356,10 @@ fn footnote_texts_are_the_notes_of_their_marks() {
 /// is its address (`Frank Schadt, Pforzheim University of Applied Sciences, Germany`, 1106.0130).
 #[test]
 fn group_lines_and_an_institutions_address() {
-  // (written family: the reading's names are not today's — `Cat Cole, Pforzheim …` one name to the old reader —, and the
-  // writer re-parts them, 94a, OD #928; the XML is the reading's)
-  let (_, xml, ()) = convert_with_setup_then(
-    GROUP,
-    Some("ar5iv.sty"),
-    || set_fm_shadow_override(None),
-    |_| (),
-  );
-  assert_eq!(super::perfect_kernel_batch84b::creators(&xml), [
-    vec![
-      "Ann Able".to_string(),
-      "affiliation=College of X, Univ A, City, Country".to_string(),
-    ],
-    vec![
-      "Bob Baker".to_string(),
-      "affiliation=Pure Mathematics Univ B Town".to_string(),
-    ],
-    vec![
-      "Cat Cole".to_string(),
-      "affiliation=Pforzheim University of Applied Sciences, Germany".to_string(),
-    ],
-  ]);
-  assert_eq!(tuples(GROUP), [
+  // (written family, held back: the reading's names are not today's — `Cat Cole, Pforzheim …` one name to the old
+  // reader —, and the re-part declines, an institution read inside one personname being no boundary the page shows:
+  // review rev94a B1, OD #928)
+  assert_eq!(tuples_held(GROUP, "the creators' names"), [
     "C Ann Able [] | line:names",
     "  a College of X, Univ A, City, Country | line:unmarked R12:row-above line:continued",
     "C Bob Baker [] | line:names",
@@ -472,7 +453,7 @@ fn r5_shapes_leave_the_xml_unchanged() {
     ACCENT,
     NOTETEXTS,
     NOTETEXTS_BEFORE,
-    // (GROUP is written since 94a — its names re-parted —, so the switch changes it: `group_lines_and_an_institutions_address`)
+    GROUP,
     COLUMNS,
     ORCIDS,
     UNSHOWN,

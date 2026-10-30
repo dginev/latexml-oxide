@@ -27,6 +27,11 @@ pub(super) struct Lexer {
   symbol_span:       Option<(u16, u16)>,
   /// a printed space before the symbol mark being read
   symbol_space:      bool,
+  /// the brackets `(`, `[` printed and not yet closed since the line's start, and how many were open where the name run
+  /// being read began: inside one a comma or the word "and" is the bracket's text, no separator (`Laurent Schoeffel (on
+  /// behalf of the H1 and ZEUS collaborations)`, 0811.3142; review rev94a B2)
+  open:              u8,
+  run_open:          u8,
 }
 
 impl Lexer {
@@ -106,15 +111,23 @@ impl Lexer {
     if font.is_some() {
       self.last_font = font;
     }
+    // (the brackets open at each word's start: a word inside one is the bracket's, no separator)
+    let mut open = self.run_open;
+    let mut opens = Vec::with_capacity(words.len());
+    for (word, _) in &words {
+      opens.push(open);
+      open = word.chars().fold(open, bracket_depth);
+    }
     let mut name: Option<Event> = None;
     // (a byline's "by", in any case, opening a line before names is no name — today's `without_leading_by`:
     // `\author{by David Harari and Tam\'as Szamuely}`, 0808.2556)
     let byline = !self.line_inked && words.len() > 1 && words[0].0.eq_ignore_ascii_case("by");
     for (at, (word, span)) in words.into_iter().enumerate() {
-      if word.eq_ignore_ascii_case("and")
-        || word == "&"
-        || is_separator_word(&word)
-        || (at == 0 && byline)
+      if opens[at] == 0
+        && (word.eq_ignore_ascii_case("and")
+          || word == "&"
+          || is_separator_word(&word)
+          || (at == 0 && byline))
       {
         self.events.extend(name.take());
         let mut sep = Event::new(EventKind::Sep(SepKind::Word(word)));
@@ -145,6 +158,7 @@ impl Lexer {
       EventKind::Break => {
         self.clear_gap();
         self.line_inked = false;
+        self.open = 0;
       },
       EventKind::Mark => {
         event.space_before = self.gap_items > 0;
@@ -156,7 +170,10 @@ impl Lexer {
         self.flush_gap();
         self.line_inked = true;
       },
-      EventKind::Sep(SepKind::And(_) | SepKind::Column(_)) => self.clear_gap(),
+      EventKind::Sep(SepKind::And(_) | SepKind::Column(_)) => {
+        self.clear_gap();
+        self.open = 0;
+      },
       _ => self.flush_gap(),
     }
     self.events.push(event);
@@ -193,7 +210,7 @@ impl Lexer {
         continue;
       }
       self.flush_symbol();
-      if c == ',' || c == ';' {
+      if (c == ',' || c == ';') && self.open == 0 {
         self.flush_run();
         self.clear_gap();
         let mut comma = Event::new(EventKind::Sep(SepKind::Comma));
@@ -230,7 +247,9 @@ impl Lexer {
       if self.run.is_empty() {
         self.run_font = font.clone();
         self.run_nest = nest;
+        self.run_open = self.open;
       }
+      self.open = bracket_depth(self.open, c);
       self.run.push((c, span));
     }
   }
@@ -263,6 +282,15 @@ impl Lexer {
       events.push(event);
     }
     events
+  }
+}
+
+/// The brackets open after `c`, `open` open before it: a `(` or `[` opens one, a `)` or `]` closes one.
+fn bracket_depth(open: u8, c: char) -> u8 {
+  match c {
+    '(' | '[' => open.saturating_add(1),
+    ')' | ']' => open.saturating_sub(1),
+    _ => open,
   }
 }
 

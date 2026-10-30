@@ -11,12 +11,18 @@ use super::*;
 /// in "transfer", "fund" in "Fundamental" read an institution as a funder, so its line was no affiliation (2509.05368
 /// "Machine Perception", OXIDIZED_DESIGN_DIVERGENCES #880).
 /// Witnesses: arXiv 2512.24601 (correspondence), 1510.02728 (funding),
-/// 2506.06941 "Equal contribution" (contribution). Explicitly best-effort.
+/// 2506.06941 "Equal contribution", 2609.32870 "Equal advising." (contribution). Explicitly best-effort.
 pub(in crate::base_utilities) fn classify_thanks(text: &str) -> &'static str {
   let t = text.to_lowercase();
   if t.contains("correspond") {
     "correspondence"
-  } else if t.contains("equal") && t.contains("contribut") {
+  // (an equal share of the work, contributed or advised: "Equal advising.", "equal supervision" — 2609.32870's legend
+  // line, a note as "Equal contribution" is, review rev94a S4)
+  } else if t.contains("equal")
+    && ["contribut", "advis", "supervis", "mentor"]
+      .iter()
+      .any(|w| t.contains(w))
+  {
     "contribution"
   } else if t.contains("now at") || t.contains("present address") || t.contains("current address") {
     "address"

@@ -10848,7 +10848,7 @@ Text.
 
 pdflatex: "A" over "X". Perl: 7 errors. Rust (62zg, base_utilities/author_block/dispatch.rs): `{tabular*}`, `{tabularx}`, `{tabulary}`,
 `{longtable}` and `{array}` join the list, and the author is one creator holding the tabular. Witnesses 2609.34061,
-34965, 39374, 39909. Guard `perfect_kernel_batch61::author_in_tabular_star_stays_whole`.
+34965, 39374, 39909. Guard `perfect_kernel_batch61::author_in_tabular_star_opens_no_alignment`.
 
 ## 503. physics' operators read a size before their argument
 

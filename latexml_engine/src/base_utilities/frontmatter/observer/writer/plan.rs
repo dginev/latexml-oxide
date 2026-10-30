@@ -455,17 +455,22 @@ fn cut(call: &ApiCall) -> Result<Option<Vec<(String, Tokens)>>> {
 /// `\textsuperscript{*}Equal contribution`) to its end, as [`piece_tokens`] balances a piece — `None` when the index is
 /// no rehearsed block, no balanced run holds it, or the span's own letters and digits are not the entry's text `key`
 /// (an entry printing through a command, an accent, a line read on to: what the writer would make is not the entry).
-fn block_line_tokens(index: usize, span: (u16, u16), key: &str) -> Option<Tokens> {
-  block_span_tokens(index, span, Some(key))
+fn block_line_tokens(index: usize, span: (u16, u16), key: &str, mark: bool) -> Option<Tokens> {
+  block_span_tokens(index, span, Some(key), mark)
 }
 
-/// The tokens of the block at ledger index `index` an entry's `span` covers, from the mark it opens with, as
-/// [`block_line_tokens`] reads them — the span's own letters and digits checked against `key` when one is given (the
-/// re-part checks what it made on the digested text instead, `repart`).
+/// The tokens of the block at ledger index `index` an entry's `span` covers, as [`block_line_tokens`] reads them — the
+/// span's own letters and digits checked against `key` when one is given (the re-part checks what it made on the
+/// digested text instead, `repart`). With `mark` (a legend, whose text keeps its mark's ink: the label-text ruling)
+/// from the mark it opens with; else from its own ink, the mark left out — a made affiliation carries no entry mark, as
+/// today's copies hold none, and a mark's formula cut from a group the entry closes (`{\small $~^2$ Univ of
+/// Colorado}`) is no balanced run: 2308.11662's second institute was no cut, its two lines one contact (review rev94a
+/// B3, S3; 2404.02078, 2609.03563, 1909.05311).
 pub(super) fn block_span_tokens(
   index: usize,
   (start, end): (u16, u16),
   key: Option<&str>,
+  with_mark: bool,
 ) -> Option<Tokens> {
   with_ledger(|ledger| {
     let Some(Entry::Author(block)) = ledger.entries.get(index) else {
@@ -488,6 +493,7 @@ pub(super) fn block_span_tokens(
       return None;
     }
     // (the event printed last before the line, a layout change aside)
+    let mut floor = 0;
     if let Some(mark) = events
       .iter()
       .rev()
@@ -502,7 +508,12 @@ pub(super) fn block_span_tokens(
           .all(|t| matches!(t.get_catcode(), Catcode::SPACE | Catcode::MATH))
       })
     {
-      from = mark_start;
+      // (without the mark, nothing before the entry's ink is the entry's: the mark's closing shift stays the mark's)
+      if with_mark {
+        from = mark_start;
+      } else {
+        floor = from;
+      }
     }
     // (a group closing past the spaces after the entry: `{\it Department …, Japan }`, 2307.03384)
     let mut past = to;
@@ -512,10 +523,10 @@ pub(super) fn block_span_tokens(
     {
       past += 1;
     }
-    piece_tokens(content, (from, to), 0, from)
+    piece_tokens(content, (from, to), floor, from)
       .or_else(|| {
         (past > to)
-          .then(|| piece_tokens(content, (from, past), 0, from))
+          .then(|| piece_tokens(content, (from, past), floor, from))
           .flatten()
       })
       .map(|(tokens, _)| tokens)
@@ -591,7 +602,7 @@ fn cut_block_lines(
     }
     let Some(pieces) = run
       .iter()
-      .map(|(index, span, key)| block_line_tokens(*index, *span, &key.1))
+      .map(|(index, span, key)| block_line_tokens(*index, *span, &key.1, key.0 == Kind::Note))
       .collect::<Option<Vec<Tokens>>>()
     else {
       DebugFeature!("frontmatter", "FRONT writer: a block line does not cut");

@@ -1,0 +1,23 @@
+% mechanism: the re-part's fail-safe (OD #928): what it makes is digested at the document's end, where the writer
+%   runs; an entry printing through a macro the document redefined after `\maketitle` digests otherwise there ("Univ
+%   Q"), so what was built does not read as the reading ("Univ X") and is taken back — today's output stays.
+% witness: the fail-safe's own (94a's red repro, `author_names_reparted_declined_mark_in_contact`, is written since
+%   94b); 2405.08158, 1602.05576 were its witnesses
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker2" / "1 Univ X 2 Univ Y"
+% engines: rust 94b: the same as here (taken back); perl: not run
+% expect:  0 errors, 0 warnings; the reading's Ann Able Univ X, Bob Baker Univ Y; the writer declined ("the creators'
+%   names"), today's one creator holding the minipage
+% status:  GREEN (94a r2: the fail-safe's guard)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand{\uni}{Univ X}
+\begin{document}
+\title{A Title}
+\author{\begin{minipage}[t]{\textwidth}
+\centering Ann Able$^{1}$ \quad Bob Baker$^{2}$\\[0.6em]
+$^{1}$\uni \quad$^{2}$Univ Y
+\end{minipage}}
+\maketitle
+\renewcommand{\uni}{Univ Q}
+Body.
+\end{document}

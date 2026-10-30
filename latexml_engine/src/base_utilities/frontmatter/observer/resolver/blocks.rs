@@ -473,6 +473,26 @@ impl Resolver {
             unmarked_before = Some(places);
             continue;
           }
+          // (a line under one name, the only name of its run of rows, that is the collaboration it speaks for is the
+          // name's, as today's and Perl's one personname: `{\slshape Maxime Defurne$^1$}\\ {\footnotesize for the
+          // Hall A DVCS collaboration}`, 1502.03246 — no affiliation, review rev94a S6; a bracketed line under rows of
+          // names is theirs, R12: `(The Nearby Supernova Factory)`, 1511.01102)
+          if speaks_for(&text)
+            && let [c] = above[..]
+            && run.iter().all(|&r| r == c)
+            && self.out.creators[c].affiliations.is_empty()
+            && self.out.creators[c].contacts.is_empty()
+          {
+            let creator = &mut self.out.creators[c];
+            creator.name = s!("{} {text}", creator.name);
+            if !creator.rule.contains("name:remark") {
+              creator.rule.push_str(" name:remark");
+            }
+            for note in notes {
+              self.note(index, note, Some(c), "note:line-owner");
+            }
+            continue;
+          }
           let starts = source.1.map(|(start, _)| start);
           match open_group.take() {
             Some((until, places)) if starts.is_some_and(|start| start < until) => {

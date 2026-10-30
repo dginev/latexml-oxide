@@ -1,0 +1,18 @@
+% mechanism: the observer's lexer (OD #928, review rev94a B2): inside an open `(` or `[` a comma or the word "and" is
+%   the bracket's text, no separator, so the reading's name is `Cid Cole (for the ATLAS and CMS Collaborations)` as
+%   today's; the re-part also declines a name or a made item whose brackets do not close.
+% witness: 0811.3142 (`Laurent Schoeffel (on behalf of the H1 and ZEUS collaborations)`: 94a two creators, the second
+%   "ZEUS collaborations)" holding the address); review rev94a syn n_collab, a_paren_and, s4_paren_inst
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker and Cid Cole (for the ATLAS and CMS Collaborations)"
+% engines: rust 93a: three creators, the third "Cid Cole (for the ATLAS and CMS Collaborations)"; rust 94b: four, "Cid
+%   Cole (for the ATLAS" and "CMS Collaborations)"; perl (review syn a_paren_and): parted at "and"
+% expect:  0 errors, 0 warnings; Ann Able, Bob Baker, Cid Cole (for the ATLAS and CMS Collaborations)
+% status:  RED (94a) -> GREEN (94a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able, Bob Baker and Cid Cole (for the ATLAS and CMS Collaborations)}
+\maketitle
+Body.
+\end{document}

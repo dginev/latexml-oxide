@@ -1,0 +1,20 @@
+% mechanism: the observer's names line (OD #928, review rev94a B1): the word "and" after an institution the classify
+%   helpers read in a row of names continues the institution, unless what follows reads as names (`Univ X and Bob
+%   Baker`): `Department of Physics and Astronomy` is one affiliation, not "Department of Physics" and an author
+%   "Astronomy". Today's old reader prints four creators, each piece apart; the re-part writes the one name and its
+%   institutions, made of whole creators of today's (no name's words carved).
+% witness: review rev94a syn s6_dept_and (the invented author "Astronomy"); 1304.1574 (`Computer Science and
+%   Engineering` inside an entry)
+% oracle:  pdflatex 0 errors: "Ann Able, Department of Physics and Astronomy, Univ X"
+% engines: rust 93a: four creators Ann Able / Department of Physics / Astronomy / Univ X; rust 94a: Ann Able
+%   "Department of Physics" and an author "Astronomy" holding "Univ X" (94b the same); perl: not run
+% expect:  0 errors, 0 warnings; Ann Able, affiliations "Department of Physics and Astronomy" and "Univ X"
+% status:  RED (94a) -> GREEN (94a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able, Department of Physics and Astronomy, Univ X}
+\maketitle
+Body.
+\end{document}

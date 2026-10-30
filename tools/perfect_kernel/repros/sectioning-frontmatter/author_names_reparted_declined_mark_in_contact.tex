@@ -5,8 +5,8 @@
 % oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker2" / "1 Department of Physics, Univ X" / "2 Department of Physics,
 %   Univ Y"
 % engines: rust 94a: Bob Baker's name holds both lines (the re-part declined); perl: the same
-% expect:  0 errors, 0 warnings; writer "written": Ann Able "1 Department of Physics, Univ X", Bob Baker "2 Department of
-%   Physics, Univ Y", each requested by its name's mark
+% expect:  0 errors, 0 warnings; writer "written": Ann Able "Department of Physics, Univ X", Bob Baker "Department of
+%   Physics, Univ Y", each requested by its name's mark, the mark out of the made affiliation (94a r2, review rev94a S3)
 % status:  RED (94a: declined by the fail-safe) -> GREEN (94b)
 % preload: ar5iv.sty
 \documentclass{article}

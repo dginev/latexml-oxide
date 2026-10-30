@@ -148,7 +148,8 @@ they stay for stages 3–5.
    every spelled address, a trailing mark a label only on a name. Scorer marks path 91.88 % → 92.53 %, `article`
    92.00 % → 92.39 %; left: the names the old reader parted otherwise (a writer re-part operation, 32 creators —
    **94a, OD #928**: `writer::repart` writes the creators again from the reading where it refines today's names, each
-   name its printed text, each item today's copied or made from its entry's tokens, kept only when it reads as the
+   name the run of today's digested personname it is (round 2: its fonts and notes kept), each item today's copied or
+   made from its entry's tokens (no entry mark), only across a boundary the digested structure shows, kept only when it reads as the
    reading and holds every word today's held; marks path 92.53 % → 94.50 %, `article` 92.39 % → 95.48 %; left
    1304.1574 — **94b, OD #937**: an in-block `\affil{$^1$…}` reads its leading Mark as its label, 2405.08158 and
    1602.05576 —), raw files' in-place contact setters (**94b, OD #936**: the API's when the file's code prints the

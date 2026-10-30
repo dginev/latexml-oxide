@@ -5519,13 +5519,14 @@ fn neurips_notice_names_the_year_of_its_style() {
   }
 }
 
-/// 62zg: an author block in any alignment stays whole — Perl's splitter (Base_Utility.pool.ltxml:693) keeps only
+/// 62zg: an author block in any alignment opens no alignment across its pieces — Perl's splitter (Base_Utility.pool.ltxml:693) keeps only
 /// `{tabular}`, `{minipage}` and `\halign` content whole, so a `tabular*` author was split at its row ends, leaving
 /// the alignment open across the pieces (2609.34061, 34965, 39374, 39909; KNOWN_PERL_ERRORS #502). pdflatex: "A" over
 /// "X". The kernel family written (94a, OD #928): the observer reads the name A and the line X under it its
-/// affiliation (R12), and the writer re-parts the one creator today's kept whole — no alignment opened in either.
+/// affiliation (R12), and the writer re-parts the one creator today's kept whole, the name the run of its digested cell
+/// (`slice_name`) — no alignment opened in either.
 #[test]
-fn author_in_tabular_star_stays_whole() {
+fn author_in_tabular_star_opens_no_alignment() {
   let xml = assert_elements(
     r"\documentclass{article}
 \title{T}

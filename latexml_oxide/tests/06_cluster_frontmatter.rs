@@ -1515,20 +1515,40 @@ fn frontmatter_sn_jnl_numbered_affil() {
 fn frontmatter_inst_affiliation_dedup() {
   let x = convert_to_xml("tests/cluster_regressions/frontmatter_inst_affiliation_dedup.tex");
   // (llncs written, 94a: the observer parts the `\quad`-separated names, as pdflatex prints "Alice1 Bob2,1", and the
-  // writer re-parts the one creator today's held — each author's affiliation once, never once per citation)
-  let creators: Vec<&str> = x.split("<creator ").skip(1).collect();
-  assert_eq!(creators.len(), 2, "{x}");
-  for creator in &creators {
-    let mila = creator.matches(">Mila Institute").count();
-    assert_eq!(
-      mila, 1,
-      "affiliation cited by two authors was not deduped (got {mila}× Mila Institute):\n{x}"
-    );
-  }
-  // Both distinct institutions still present, as structured affiliation contacts.
-  assert!(
-    x.contains(">Uni Montreal") && x.contains("role=\"affiliation\""),
-    "the second (distinct) affiliation was dropped:\n{x}"
+  // writer re-parts the one creator today's held — each author's affiliation once, never once per citation; the
+  // creators asserted whole, review rev94a)
+  let creators: Vec<String> = x
+    .split("<creator ")
+    .skip(1)
+    .map(|c| {
+      let c = &c[..c.find("</creator>").expect("closed creator")];
+      let mut out = String::new();
+      let mut rest = c;
+      while let Some(at) = rest.find(" xml:id=\"") {
+        out.push_str(&rest[..at]);
+        let after = &rest[at + " xml:id=\"".len()..];
+        rest = &after[after.find('"').expect("closed id") + 1..];
+      }
+      out.push_str(rest);
+      out.split_whitespace().collect::<Vec<_>>().join(" ")
+    })
+    .collect();
+  let affiliation =
+    |text: &str| format!("<contact name=\"Affiliation: \" role=\"affiliation\">{text}</contact>");
+  assert_eq!(
+    creators,
+    [
+      format!(
+        "role=\"author\"> <personname>Alice</personname> {}",
+        affiliation("Mila Institute")
+      ),
+      format!(
+        "role=\"author\"> <personname>Bob</personname> {} {}",
+        affiliation("Mila Institute"),
+        affiliation("Uni Montreal")
+      ),
+    ],
+    "{x}"
   );
 }
 

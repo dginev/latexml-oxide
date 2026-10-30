@@ -1,12 +1,14 @@
-% mechanism: the writer's re-part (OD #928): `{\slshape Ann Able$^1$}\\ {\footnotesize for the Example
-%   collaboration}`: the reading's name is Ann Able, the line under it an unmarked line it gives her (R12); today's
-%   name holds the line. The writer writes the name alone and the line as her affiliation, made from its tokens.
-% witness: 1502.03246 ("Maxime Defurne for the Hall A DVCS collaboration" one name)
+% mechanism: the observer's block lines (OD #928, review rev94a S6): `{\slshape Ann Able$^1$}\\ {\footnotesize for
+%   the Example collaboration}`: the line under the one name is a remark on it, the collaboration it speaks for
+%   (`is_name_remark`), so the reading's name holds it as today's personname does and nothing is re-parted. 94a read
+%   it as an unmarked line the name's affiliation (R12) and wrote it so.
+% witness: 1502.03246 ("Maxime Defurne" \\ "for the Hall A DVCS collaboration": 94a an affiliation)
 % oracle:  pdflatex 0 errors: "Ann Able1" / "for the Example collaboration" / "1 Univ X, Sometown, Country"
-% engines: rust 93a: the name "Ann Ablefor the Example collaboration"; perl: "Ann Ablefor the Example
-%   collaboration", "[1ex] Univ X", "Sometown", "Country" creators
-% expect:  0 errors, 0 warnings; Ann Able, affiliations "for the Example collaboration" and Univ X
-% status:  GREEN (94a)
+% engines: rust 93a: the name "Ann Ablefor the Example collaboration"; rust 94a: Ann Able, affiliations "for the
+%   Example collaboration" and Univ X; perl: "Ann Ablefor the Example collaboration", "[1ex] Univ X", "Sometown",
+%   "Country" creators
+% expect:  0 errors, 0 warnings; Ann Able for the Example collaboration (one personname, its fonts), Univ X
+% status:  GREEN (94a r2)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

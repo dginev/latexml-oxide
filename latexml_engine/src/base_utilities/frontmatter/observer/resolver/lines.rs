@@ -642,6 +642,24 @@ pub(super) fn is_collaboration(text: &str) -> bool {
     .any(|w| t.ends_with(w))
 }
 
+/// Whether a names line's piece is a remark on the name before it, no name of its own: a bracket (`(on behalf of the H1
+/// and ZEUS collaborations)`, 0811.3142), or the collaboration the name speaks for (`for the Hall A DVCS
+/// collaboration`, 1502.03246; `on behalf of the ATLAS Collaboration`) — review rev94a B2, S6.
+pub(super) fn is_name_remark(text: &str) -> bool {
+  let t = text.trim();
+  t.starts_with('(') || t.starts_with('[') || speaks_for(t)
+}
+
+/// Whether a text is the collaboration a name speaks for: "for" or "on behalf of" before a collaboration
+/// ([`is_collaboration`]: `for the Hall A DVCS collaboration`, 1502.03246).
+pub(super) fn speaks_for(text: &str) -> bool {
+  let lower = text.trim().to_lowercase();
+  ["for ", "on behalf of "]
+    .iter()
+    .find_map(|p| lower.strip_prefix(p))
+    .is_some_and(is_collaboration)
+}
+
 /// Whether a name is initials alone (`V.G.`, `A. B.`): each word a capital with at most one small letter and a dot.
 pub(super) fn initials_only(name: &str) -> bool {
   let words: Vec<&str> = name.split_whitespace().collect();
@@ -912,7 +930,13 @@ impl Resolver {
         },
         // (a qualifier after a comma is the name's: `Robert W. Heath, Jr.`, `Matthew Nokleby, Student Member, IEEE`,
         // printed after the name, comma-separated — name_text.rs `is_name_qualifier`; 1106.5253, 1203.0695)
-        EventKind::Name if !made.is_empty() && is_name_qualifier(&event.text) => {
+        // (and so is a remark on the name after it, a bracket or a collaboration it speaks for: `Ann Able$^1$ (on
+        // behalf of the A and B teams)`, `Maxime Defurne \\ for the Hall A DVCS collaboration`, 0811.3142, 1502.03246 —
+        // review rev94a B2, S6)
+        EventKind::Name
+          if !made.is_empty()
+            && (is_name_qualifier(&event.text) || is_name_remark(&event.text)) =>
+        {
           let c = *made.last().expect("a name");
           let creator = &mut self.out.creators[c];
           let glue = if last_sep.is_some_and(|s| s.kind == EventKind::Sep(SepKind::Comma)) {
@@ -947,6 +971,22 @@ impl Resolver {
             },
             false,
           );
+          last_sep = None;
+        },
+        // (a piece after the word "and" that ends an institution and does not read as names is the institution's:
+        // `Department of Physics and Astronomy` — review rev94a B1; an author after it reads as names, `Univ X and Bob
+        // Baker`)
+        EventKind::Name
+          if institution.is_some()
+            && last_sep.is_some_and(|s| matches!(s.kind, EventKind::Sep(SepKind::Word(_))))
+            && !reads_as_names(&event.text) =>
+        {
+          if let Some((c, at)) = institution
+            && let Some(affiliation) = self.out.creators[c].affiliations.get_mut(at)
+            && let Some(EventKind::Sep(SepKind::Word(word))) = last_sep.map(|s| &s.kind)
+          {
+            affiliation.text = s!("{} {word} {}", affiliation.text, event.text);
+          }
           last_sep = None;
         },
         // (a piece after an institution's comma that does not read as names is the institution's address, as today's

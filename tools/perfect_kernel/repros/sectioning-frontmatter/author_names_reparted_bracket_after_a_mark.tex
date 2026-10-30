@@ -1,0 +1,19 @@
+% mechanism: the observer's names line (OD #928, review rev94a B2, S6): a bracket after a name, its mark between, is a
+%   remark on that name (as a collaboration it speaks for is, `for the Hall A DVCS collaboration`: `is_name_remark`),
+%   no name of its own; and the "and" inside it no separator. The re-part made `(on behalf of the A` and `B teams)`
+%   authors.
+% witness: 0811.3142, 1502.03246; review rev94a syn s7_marked_paren
+% oracle:  pdflatex 0 errors: "Ann Able1 (on behalf of the A and B teams)" / "1 Univ X"
+% engines: rust 93a: Ann Able (on behalf of the A and B teams) Univ X; rust 94b: Ann Able Univ X and authors "(on
+%   behalf of the A", "B teams)"; perl (review syn s7_marked_paren): one creator "Ann Able (on behalf of the AB teams)"
+%   Univ X
+% expect:  0 errors, 0 warnings; Ann Able (on behalf of the A and B teams), affiliation Univ X
+% status:  RED (94a) -> GREEN (94a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^1$ (on behalf of the A and B teams) \\ $^1$Univ X}
+\maketitle
+Body.
+\end{document}

@@ -1,20 +1,25 @@
 //! The writer's re-part (FM stage 7, "name parting last"; OXIDIZED_DESIGN_DIVERGENCES #928): where the resolver's
 //! reading parts the names and today's (the old reader's) parted them otherwise, so that no creator pairs by name and
 //! no item-wise operation ([`super::plan`]) applies, today's creators are written again from the reading — each named
-//! reading creator one `ltx:creator` whose `ltx:personname` is its name as printed (the reading's digested text, its
-//! marks out), then its affiliations, contacts and notes in print order, and the author block's own on a nameless
-//! creator after them. An item is today's own, copied, where today's holds one of its kind and text anywhere among the
-//! creators; else, an affiliation or a line the reading takes for a legend (never a `\thanks` or `\footnote` of a
-//! name) made from the tokens of its entry.
+//! reading creator one `ltx:creator` whose `ltx:personname` is the run of today's digested personname its words are
+//! ([`slice_name`]: its fonts, links and notes kept, its marks out), then its affiliations, contacts and notes in print
+//! order, and the author block's own on a nameless creator after them. An item is today's own, copied, where today's
+//! holds one of its kind and text anywhere among the creators; else, an affiliation or a line the reading takes for a
+//! legend (never a `\thanks` or `\footnote` of a name) made from the tokens of its entry, in today's name's font, an
+//! affiliation without its entry's mark.
 //!
-//! Only where the reading refines today's names (the plan declines otherwise): every reading name is printed inside one
-//! of today's names — none is made of an item of today's, a url column, an institution row —; every name of today's
-//! that reads as names keeps one; an item the reading gives more authors than today's held it is a ruling's change.
+//! Only where the reading refines today's names, across a boundary the digested structure shows (the plan declines
+//! otherwise): every reading name is printed inside one of today's names — none is made of an item of today's, a url
+//! column, an institution row —; every name of today's that reads as names keeps one; an item the reading gives more
+//! authors than today's held it is a ruling's change; an institution the classify helpers read is made only of whole
+//! creators of today's, never carved from one name ([`whole_creators`]); no name or made item leaves a bracket open.
 //! Fail-safe, on the digested text: the new creators are built beside today's, and kept only when they read as the
-//! reading ([`super::plan::difference`] finds nothing) and hold every word today's creators held, none duplicated —
-//! names and distinct items word for word, the only words left out or added the separators the blocks printed between
-//! names ("and", `SepKind::Word`) —; anything else removes them and leaves today's (1909.05311, 2609.32870,
-//! 2609.33104, 2307.03384, 1502.03246, 2308.10621; declined: 2405.08158, 1602.05576, 1304.1574).
+//! reading ([`super::plan::difference`] finds nothing), hold every word today's creators held, none duplicated — names
+//! and distinct items word for word, the only words left out or added the separators the blocks printed between names
+//! ("and", `SepKind::Word`) —, no made affiliation prints a mark ([`holds_mark`]) and no author keeping today's name
+//! loses the lead of an item the reading cut ([`dispossessed`]); anything else removes them and leaves today's
+//! (1909.05311, 2609.32870, 2609.33104, 2307.03384, 2308.10621, hep-lat0209026; declined: 1304.1574, 0811.3142's
+//! bracket in 94a; review rev94a).
 
 use std::collections::BTreeMap;
 
@@ -25,7 +30,9 @@ use super::{
     resolver::{mark_labels, reads_as_names},
   },
   apply::{elements, make, place, reclaim_ids, subtree_ids},
-  dom::{Creator, Front, Kind, norm, read_creator, words_without_marks},
+  dom::{
+    Creator, Front, Kind, LAYOUT_PARTS, Seg, is, norm, read_creator, segments, words_without_marks,
+  },
   plan::{
     Key, Made, Owner, Place, api_call, block_items, block_span_tokens, creator_items, difference,
     pair_names, place_of, reading_order,
@@ -52,6 +59,8 @@ struct NewCreator {
   /// its index among the resolved creators (its owner in the reading's print order)
   index: usize,
   name:  String,
+  /// today's creator its name was printed in, and the run of that name's words it is (`personname_words`)
+  from:  (usize, (usize, usize)),
   /// the marks it requests that no entry answers, shown in its name as today's shows them (`show_unanswered_marks`)
   marks: Vec<String>,
   attrs: TagAttrs,
@@ -162,7 +171,9 @@ fn item_source(key: &Key, assoc: &Assoc, todays: &BTreeMap<Key, Node>) -> Option
   let tokens = match assoc.source? {
     (index, Some(span)) => {
       let span = entry_span(index, span, &key.1).unwrap_or(span);
-      block_span_tokens(index, span, None)?
+      // (a made affiliation carries no entry mark, as today's copies hold none; a legend keeps its mark's ink, the
+      // label-text ruling — review rev94a S3)
+      block_span_tokens(index, span, None, made == Made::Legend)?
     },
     (index, None) => api_call(index)?.content,
   };
@@ -251,7 +262,8 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
     .collect();
   let mut kept = vec![false; front.creators.len()];
   let mut parted: Vec<(usize, &RCreator)> = Vec::new();
-  for c in &resolved.creators {
+  let mut runs: BTreeMap<usize, (usize, (usize, usize))> = BTreeMap::new();
+  for (index, c) in resolved.creators.iter().enumerate() {
     if c.name.trim().is_empty() {
       continue;
     }
@@ -270,7 +282,19 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
       return declined(&s!("a name today's names do not print: {}", c.name));
     };
     kept[at] = true;
+    let end = todays_names[at].1;
+    runs.insert(index, (at, (end - name.len(), end)));
     parted.push((at, c));
+    // (a name of the reading's own whose brackets do not close is cut inside one: `(on behalf of the H1`, 0811.3142 —
+    // review rev94a B2)
+    if !balanced(&c.name)
+      && !front
+        .creators
+        .iter()
+        .any(|t| norm(&t.name) == norm(&c.name))
+    {
+      return declined(&s!("a name whose brackets do not close: {}", c.name));
+    }
   }
   // (a one-word name parted from today's name at a comma is the given name of a name written surname first, `Smith,
   // Jr., John`: uncertain, so today's stays)
@@ -318,6 +342,22 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
       let Some(item) = item_source(&key, assoc, &todays) else {
         return declined(&s!("an item with nothing to write it from: {key:?}"));
       };
+      if let Item::Make { .. } = item {
+        if !balanced(&assoc.text) {
+          return declined(&s!("an item whose brackets do not close: {}", assoc.text));
+        }
+        // (an institution the classify helpers read from the words of a name is no boundary the page shows: amsart's
+        // `\author{John Smith, University of Toronto}` is one creator as written, as Perl's; only an item today's held
+        // as whole creators of its own is made — review rev94a B1)
+        if assoc
+          .rule
+          .split_whitespace()
+          .any(|t| t == "classify:institution")
+          && !whole_creators(&words(&assoc.text), &todays_names)
+        {
+          return declined(&s!("an institution read inside a name: {}", assoc.text));
+        }
+      }
       items.push(item);
     }
     // (the attributes of today's creator whose name printed it: its role, its separator)
@@ -341,9 +381,13 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
         }
         marks
       });
+    let Some(&from) = runs.get(&index) else {
+      return declined(&s!("a name with no run: {name}"));
+    };
     creators.push(NewCreator {
       index,
       name,
+      from,
       marks,
       attrs,
       items,
@@ -363,6 +407,44 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
   }
   let separators = blocks.into_iter().flat_map(separator_words).collect();
   Some(Repart { creators, block, separators })
+}
+
+/// Whether a text's brackets close: as many `(` as `)` and `[` as `]`, none closed before it opened.
+fn balanced(text: &str) -> bool {
+  let (mut round, mut square) = (0i32, 0i32);
+  for c in text.chars() {
+    match c {
+      '(' => round += 1,
+      ')' => round -= 1,
+      '[' => square += 1,
+      ']' => square -= 1,
+      _ => {},
+    }
+    if round < 0 || square < 0 {
+      return false;
+    }
+  }
+  round == 0 && square == 0
+}
+
+/// Whether `item`'s words are the words of whole consecutive creators of today's (`names`, their personnames' words),
+/// the word "and" aside: a non-name creator today's printed apart (`John Smith` and `University of Toronto`), not words
+/// a name of today's held.
+fn whole_creators(item: &[String], names: &[(Vec<String>, usize)]) -> bool {
+  let item: Vec<&String> = item.iter().filter(|w| *w != "and").collect();
+  (0..names.len()).any(|from| {
+    let mut joined: Vec<&String> = Vec::new();
+    for (name, _) in &names[from..] {
+      joined.extend(name.iter().filter(|w| *w != "and"));
+      if joined == item {
+        return true;
+      }
+      if !item.starts_with(&joined) {
+        return false;
+      }
+    }
+    false
+  })
 }
 
 /// The words of a creator's personname, its marks out, a layout's cells parting words.
@@ -421,14 +503,13 @@ fn creator_words(creators: &[Creator]) -> Vec<String> {
   out
 }
 
-/// Insert a new `ltx:creator` of `attrs` before `anchor`, holding an `ltx:personname` of `name` when given: the
-/// reading's name, its printed text (Unicode, its marks out) — not its tokens digested again, whose span may open a
-/// layout it does not close (`\begin{tabular}{c}Ann Able`, the first ink carrying the environment's cover).
+/// Insert a new, empty `ltx:creator` of `attrs` before `anchor`, in the font of `like` (today's creator it stands for)
+/// — never the font current at the document's end, where the writer runs (review rev94a S1).
 fn new_creator(
   document: &mut Document,
   anchor: &Node,
   attrs: &TagAttrs,
-  name: Option<&str>,
+  like: &Node,
 ) -> Result<Option<Node>> {
   let Some(parent) = anchor.get_parent() else {
     return Ok(None);
@@ -436,16 +517,7 @@ fn new_creator(
   let entry = TagData {
     tag:     "ltx:creator".to_string(),
     attr:    attrs.clone(),
-    content: name
-      .map(|name| {
-        TagContent::Entry(TagData {
-          tag:     "ltx:personname".to_string(),
-          attr:    TagAttrs::default(),
-          content: vec![TagContent::Box(Digested::from(name.to_string()))],
-        })
-      })
-      .into_iter()
-      .collect(),
+    content: Vec::new(),
   };
   let saved = document.get_node().clone();
   document.set_node(&parent);
@@ -473,7 +545,221 @@ fn new_creator(
   if anchor.add_prev_sibling(&mut creator).is_err() {
     return Ok(None);
   }
+  document.copy_node_font(like, &mut creator)?;
   Ok(Some(creator))
+}
+
+/// A new `ltx:element` in `like`'s namespace.
+fn new_element(document: &Document, like: &Node, name: &str) -> Result<Node> {
+  let mut node = Node::new(name, None, document.get_document())?;
+  if let Some(namespace) = like.get_namespace() {
+    let _ = node.set_namespace(&namespace);
+  }
+  Ok(node)
+}
+
+/// The words of a text with where each starts and ends, in characters: [`words`]' runs.
+fn word_spans(text: &[char]) -> Vec<(usize, usize)> {
+  let mut out = Vec::new();
+  let mut start = None;
+  for (i, c) in text.iter().enumerate() {
+    match (c.is_alphanumeric(), start) {
+      (true, None) => start = Some(i),
+      (false, Some(s)) => {
+        out.push((s, i));
+        start = None;
+      },
+      _ => {},
+    }
+  }
+  if let Some(s) = start {
+    out.push((s, text.len()));
+  }
+  out
+}
+
+/// `into` (a new, empty `ltx:personname`) made the run `run` of the words of today's personname `from`, as its digested
+/// content printed it — its fonts, a link, a note set in the name kept (review rev94a S1, S2: a re-parted name set as
+/// a string took the end of the document's font, `fontsize="90%"` after a `\small` there, 1607.00911; and lost
+/// 1909.05311's `\footnotemark[1]`) — its marks out (as the reading has them), a layout's parts unwrapped (a name in a
+/// cell of a tabular, 2609.32870), the name's own leading and trailing punctuation (`Jr.`, a closing bracket) kept.
+/// Today's notes it kept, or `None` when the run cuts through a formula or no run is there (`into` emptied).
+fn slice_name(
+  document: &mut Document,
+  from: &Node,
+  into: &mut Node,
+  run: (usize, usize),
+  name: &str,
+) -> Result<Option<Vec<Node>>> {
+  document.append_clone(into, from.get_child_nodes())?;
+  let copied = segments(into, true);
+  let source = segments(from, true);
+  let texts: Vec<Vec<char>> = copied
+    .iter()
+    .map(|seg| seg.text().chars().collect())
+    .collect();
+  let stream: Vec<char> = texts.concat();
+  let spans = word_spans(&stream);
+  let fail = |document: &mut Document, into: &Node| {
+    for child in into.get_child_nodes() {
+      document.remove_node(child);
+    }
+    Ok(None)
+  };
+  if copied.len() != source.len() || run.0 >= run.1 || run.1 > spans.len() {
+    return fail(document, into);
+  }
+  let (mut start, mut end) = (spans[run.0].0, spans[run.1 - 1].1);
+  // (the name's own punctuation before its first word and after its last, where the text prints it there)
+  let name: Vec<char> = name.trim().chars().collect();
+  let lead = name.iter().take_while(|c| !c.is_alphanumeric()).count();
+  let trail = name
+    .iter()
+    .rev()
+    .take_while(|c| !c.is_alphanumeric())
+    .count();
+  if lead > 0 && start >= lead && stream[start - lead..start] == name[..lead] {
+    start -= lead;
+  }
+  if trail > 0
+    && name.len() > trail
+    && stream.get(end..end + trail) == Some(&name[name.len() - trail..])
+  {
+    end += trail;
+  }
+  // (a note set after the name, before the next one's first word, is the name's: `Daya Guo\footnotemark[1]`)
+  let next = spans.get(run.1).map_or(stream.len(), |w| w.0);
+  let mut kept = Vec::new();
+  let mut at = 0;
+  for ((seg, text), original) in copied.iter().zip(&texts).zip(&source) {
+    let (s, e) = (at, at + text.len());
+    at = e;
+    match seg {
+      Seg::Text(node) => {
+        let (from, to) = (s.max(start), e.min(end));
+        let mut node = node.clone();
+        if from >= to {
+          node.unlink();
+        } else if (from, to) != (s, e) {
+          let part: String = text[from - s..to - s].iter().collect();
+          let _ = node.set_content(&part);
+        }
+      },
+      Seg::Atom(node, _) => {
+        if s >= start && e <= end {
+          continue;
+        }
+        if e > start && s < end {
+          return fail(document, into);
+        }
+        document.remove_node(node.clone());
+      },
+      Seg::Hidden(node) => document.remove_node(node.clone()),
+      Seg::Note(node) => {
+        if s > start && s <= next {
+          if let Seg::Note(original) = original {
+            kept.push(original.clone());
+          }
+        } else {
+          document.remove_node(node.clone());
+        }
+      },
+      Seg::Space(Some(node)) => {
+        if !(s > start && s < end) {
+          document.remove_node(node.clone());
+        }
+      },
+      Seg::Space(None) => {},
+    }
+  }
+  // (what the cut left empty taken, a layout's parts unwrapped)
+  loop {
+    let empty: Vec<Node> = document
+      .findnodes("descendant::*", Some(into))
+      .into_iter()
+      .filter(|n| {
+        !is(n, "ltx:break")
+          && n
+            .get_child_nodes()
+            .iter()
+            .all(|c| c.get_type() == Some(NodeType::TextNode) && c.get_content().trim().is_empty())
+      })
+      .collect();
+    if empty.is_empty() {
+      break;
+    }
+    for node in empty {
+      document.remove_node(node);
+    }
+  }
+  for part in document
+    .findnodes("descendant::*", Some(into))
+    .into_iter()
+    .rev()
+  {
+    if LAYOUT_PARTS
+      .iter()
+      .chain(&["ltx:tbody", "ltx:thead", "ltx:tfoot"])
+      .any(|q| is(&part, q))
+    {
+      let mut part = part;
+      for mut child in part.get_child_nodes() {
+        child.unlink();
+        let _ = part.add_prev_sibling(&mut child);
+      }
+      document.remove_node(part);
+    }
+  }
+  // (a box's geometry is the layout's, no name's: `\makebox{\begin{tabular}…}`'s `width`, `align` — a text wrapper
+  // that was only a box, in its parent's font, unwrapped; one of a font of its own, `\textsc{…}`, kept: 2609.33104)
+  for mut node in document
+    .findnodes("descendant::*", Some(into))
+    .into_iter()
+    .rev()
+  {
+    let mut boxed = false;
+    for attribute in [
+      "width",
+      "height",
+      "depth",
+      "align",
+      "vattach",
+      "xoffset",
+      "yoffset",
+      "pad-width",
+      "pad-height",
+      "framed",
+    ] {
+      if node.has_attribute(attribute) {
+        let _ = node.remove_attribute(attribute);
+        boxed = true;
+      }
+    }
+    let parent_font = node.get_parent().and_then(|p| p.get_attribute("_font"));
+    if boxed
+      && is(&node, "ltx:text")
+      && node.get_attributes().keys().all(|key| key.starts_with('_'))
+      && (node.get_attribute("_font").is_none() || node.get_attribute("_font") == parent_font)
+    {
+      for mut child in node.get_child_nodes() {
+        child.unlink();
+        let _ = node.add_prev_sibling(&mut child);
+      }
+      document.remove_node(node);
+    }
+  }
+  // (the spaces a layout set around its cells, at the name's edges, are none of it)
+  let texts = document.findnodes("descendant::text()", Some(into));
+  if let Some(first) = texts.first() {
+    let _ = first.clone().set_content(first.get_content().trim_start());
+  }
+  if let Some(last) = texts.last() {
+    let _ = last.clone().set_content(last.get_content().trim_end());
+  }
+  if words(&words_without_marks(into)).is_empty() {
+    return fail(document, into);
+  }
+  Ok(Some(kept))
 }
 
 /// A written creator's items in the reading's print order, by the writer's own pass (`apply::place`; rev92c S1): its
@@ -490,9 +776,23 @@ fn in_print_order(owner: &Node, who: Owner, order: &BTreeMap<(Owner, Key), Place
   }
 }
 
-/// Write `items` into `owner`.
-fn write_items(document: &mut Document, owner: &Node, items: &[Item]) -> Result<()> {
+/// Write `items` into `owner`, but a copy of a note its name holds already, an item made digested in `font` (the
+/// font today's name was digested in: not the document's end's, where the writer runs — review rev94a S1); whether
+/// every affiliation made carries no mark (a mark in a made affiliation is another entry's, joined: review rev94a B3).
+fn write_items(
+  document: &mut Document,
+  owner: &Node,
+  items: &[Item],
+  in_name: &[Node],
+  font: &Font,
+) -> Result<bool> {
+  let mut clean = true;
   for item in items {
+    if let Item::Copy(node) = item
+      && in_name.contains(node)
+    {
+      continue;
+    }
     match item {
       Item::Copy(node) => {
         let mut owner = owner.clone();
@@ -504,11 +804,82 @@ fn write_items(document: &mut Document, owner: &Node, items: &[Item]) -> Result<
           "FRONT writer: re-part makes {made:?} {role} from {}",
           tokens.clone().untex_string()
         );
-        make(document, owner, *made, tokens, None, role, None)?;
+        bgroup();
+        assign_value("font", font.clone(), Some(Scope::Local));
+        let made_now = make(document, owner, *made, tokens, None, role, None);
+        egroup()?;
+        made_now?;
+        if let Some(new) = elements(owner).pop() {
+          trim_breaks(document, &new);
+          if *made == Made::Affiliation {
+            drop_leading_marks(document, &new);
+          }
+        }
+        if *made == Made::Affiliation
+          && let Some(new) = elements(owner).pop()
+          && holds_mark(&new)
+        {
+          DebugFeature!(
+            "frontmatter",
+            "FRONT writer: re-part made a marked affiliation: {}",
+            new.get_content()
+          );
+          clean = false;
+        }
       },
     }
   }
-  Ok(())
+  Ok(clean)
+}
+
+/// The line breaks and spaces a made item opens or ends with taken, as today's cleans an entry's trailing break
+/// (`clean_trailing_break`): the `\\` a class's in-name `\affiliation{…}` prints before its lines (asme2e,
+/// 2107.11510 — review rev94a S6).
+fn trim_breaks(document: &mut Document, node: &Node) {
+  for last in [false, true] {
+    let mut at = node.clone();
+    loop {
+      let children = at.get_child_nodes();
+      let edge = if last {
+        children
+          .into_iter()
+          .rev()
+          .find(|c| c.get_type() != Some(NodeType::TextNode) || !c.get_content().trim().is_empty())
+      } else {
+        children
+          .into_iter()
+          .find(|c| c.get_type() != Some(NodeType::TextNode) || !c.get_content().trim().is_empty())
+      };
+      match edge {
+        Some(child) if is(&child, "ltx:break") => document.remove_node(child),
+        Some(child) if is(&child, "ltx:text") => at = child,
+        _ => break,
+      }
+    }
+  }
+}
+
+/// The marks a made affiliation opens with taken: its entry's label, which today's copies do not print either (an
+/// `\affil{$^1$…}` in `\author`, whose span 94b's reading opens at its mark — OD #937 — review rev94a S3).
+fn drop_leading_marks(document: &mut Document, node: &Node) {
+  for seg in segments(node, false) {
+    match seg {
+      Seg::Hidden(mark) if !is(&mark, "ltx:tags") => document.remove_node(mark),
+      Seg::Text(text) if text.get_content().trim().is_empty() => {},
+      Seg::Text(mut text) => {
+        let _ = text.set_content(text.get_content().trim_start());
+        break;
+      },
+      _ => break,
+    }
+  }
+}
+
+/// Whether `node` prints a mark: a superscript or a formula its text reads without ([`segments`]).
+fn holds_mark(node: &Node) -> bool {
+  segments(node, false)
+    .iter()
+    .any(|seg| matches!(seg, Seg::Hidden(n) if !is(n, "ltx:tags")))
 }
 
 /// Carry out the re-part: the new creators built before today's first, kept — today's taken, their copied items' ids
@@ -529,33 +900,89 @@ pub(super) fn apply(
   let mut named: Vec<Creator> = Vec::new();
   let mut nameless: Vec<Creator> = Vec::new();
   let mut complete = true;
+  let mut notes_kept: Vec<Node> = Vec::new();
   for creator in &repart.creators {
-    let Some(node) = new_creator(document, &anchor, &creator.attrs, Some(&creator.name))? else {
+    let like = front
+      .creators
+      .get(creator.from.0)
+      .map_or(&anchor, |t| &t.node);
+    let Some(mut node) = new_creator(document, &anchor, &creator.attrs, like)? else {
       complete = false;
       break;
     };
     built.push(node.clone());
-    if !creator.marks.is_empty()
-      && let Some(mut personname) = elements(&node).into_iter().next()
-    {
-      let mut sup = Node::new("sup", None, document.get_document())?;
-      if let Some(namespace) = personname.get_namespace() {
-        let _ = sup.set_namespace(&namespace);
-      }
-      sup.append_text(&creator.marks.join(","))?;
+    let (at, run) = creator.from;
+    let Some(today) = front.creators.get(at) else {
+      complete = false;
+      break;
+    };
+    let mut personname = new_element(document, &node, "personname")?;
+    node.add_child(&mut personname)?;
+    let sources: Vec<Node> = elements(&today.node)
+      .into_iter()
+      .filter(|n| is(n, "ltx:personname"))
+      .collect();
+    // (the name's own attributes, its font among them, as today's digested it)
+    let font = match sources.first() {
+      Some(source) => {
+        for (key, value) in source.get_attributes() {
+          if key != "id" && key != "xml:id" {
+            personname.set_attribute(&key, &value)?;
+          }
+        }
+        document.get_node_font(source).clone()
+      },
+      None => document.get_node_font(&today.node).clone(),
+    };
+    let in_name = match sources.as_slice() {
+      [source] => slice_name(document, source, &mut personname, run, &creator.name)?,
+      _ => None,
+    };
+    let in_name = match in_name {
+      Some(notes) => notes,
+      None => {
+        // (no run of today's digested name to keep: its printed text, in no font of its own)
+        DebugFeature!(
+          "frontmatter",
+          "FRONT writer: re-part sets {} as text",
+          creator.name
+        );
+        personname.append_text(&creator.name)?;
+        Vec::new()
+      },
+    };
+    // (a mark the name's own note prints is shown by it: `Daya Guo\footnotemark[1]`'s `*`, 1909.05311)
+    let asterisk = |m: &str| m.replace('\u{2217}', "*");
+    let shown: Vec<String> = in_name
+      .iter()
+      .filter_map(|note| note.get_attribute("mark"))
+      .map(|m| asterisk(&m))
+      .collect();
+    let marks: Vec<&str> = creator
+      .marks
+      .iter()
+      .filter(|m| !shown.contains(&asterisk(m)))
+      .map(String::as_str)
+      .collect();
+    if !marks.is_empty() {
+      let mut sup = new_element(document, &personname, "sup")?;
+      sup.append_text(&marks.join(","))?;
       personname.add_child(&mut sup)?;
     }
-    write_items(document, &node, &creator.items)?;
+    complete &= write_items(document, &node, &creator.items, &in_name, &font)?;
+    notes_kept.extend(in_name);
     in_print_order(&node, Owner::Creator(creator.index), &order);
     named.push(read_creator(&node));
   }
   if complete && !repart.block.is_empty() {
     let mut attrs = TagAttrs::default();
     attrs.insert("role".to_string(), "author".to_string());
-    match new_creator(document, &anchor, &attrs, None)? {
+    let like = front.nameless.first().map_or(&anchor, |c| &c.node);
+    let font = document.get_node_font(like).clone();
+    match new_creator(document, &anchor, &attrs, like)? {
       Some(node) => {
         built.push(node.clone());
-        write_items(document, &node, &repart.block)?;
+        complete &= write_items(document, &node, &repart.block, &[], &font)?;
         in_print_order(&node, Owner::Block, &order);
         nameless.push(read_creator(&node));
       },
@@ -600,10 +1027,12 @@ pub(super) fn apply(
     nameless,
   };
   let reads = difference(resolved, &built_front);
-  if !complete || !lost.is_empty() || !added.is_empty() || reads.is_some() {
+  let dispossessed = dispossessed(&today, &built_front.creators);
+  if !complete || !lost.is_empty() || !added.is_empty() || reads.is_some() || dispossessed.is_some()
+  {
     DebugFeature!(
       "frontmatter",
-      "FRONT writer: re-part taken back: lost {lost:?}, added {added:?}, {reads:?}"
+      "FRONT writer: re-part taken back: lost {lost:?}, added {added:?}, {reads:?}, {dispossessed:?}"
     );
     for node in built {
       document.remove_node(node);
@@ -628,6 +1057,15 @@ pub(super) fn apply(
       }
     }
   }
+  for note in &notes_kept {
+    let ids: Vec<(SymStr, String)> = subtree_ids(document, note)
+      .into_iter()
+      .map(|(holder, id)| (document::get_node_qname(&holder), id))
+      .collect();
+    if !taken.contains(&ids) {
+      taken.push(ids);
+    }
+  }
   for node in old {
     document.remove_node(node);
   }
@@ -637,12 +1075,86 @@ pub(super) fn apply(
   Ok(true)
 }
 
+/// A name of today's that the re-part keeps as it was but whose creator holds less than today's gave it: an item of
+/// today's creator, cut into the reading's entries (no written creator holds it whole), some word of which before its
+/// first mark none of the new one's items holds (an institute line joined to the next and given to one author, the
+/// other's taken away: 2308.11662 — review rev94a B3). An item kept whole goes where the reading gives it, by the call
+/// or line it prints after: today's merged name put every item after it one author down (`CP-PACS Collaboration :
+/// T.~Umeda\rlap,\address{…}`, T. Umeda's address today's S. Aoki's, hep-lat0209026). `None` when every author kept
+/// what was theirs.
+fn dispossessed(today: &[Creator], built: &[Creator]) -> Option<String> {
+  let whole: Vec<(&Kind, &String)> = built
+    .iter()
+    .flat_map(|c| &c.items)
+    .map(|item| (&item.kind, &item.key))
+    .collect();
+  for old in today.iter().filter(|c| !c.name.trim().is_empty()) {
+    let Some(new) = built.iter().find(|c| norm(&c.name) == norm(&old.name)) else {
+      continue;
+    };
+    let held: Vec<String> = new
+      .items
+      .iter()
+      .flat_map(|item| words(&words_without_marks(&item.node)))
+      .collect();
+    for item in old.items.iter().filter(|item| {
+      item.movable && !item.key.is_empty() && !whole.contains(&(&item.kind, &item.key))
+    }) {
+      // (what an item prints before its first mark is the creator's own; a piece after a mark is that mark's entry,
+      // which the reading gives whoever requests it: today's one contact joining `Sun Yat-sen University $^4$Peking
+      // University`, the second Jingjing Xu's — 1909.05311)
+      let lead: String = segments(&item.node, true)
+        .iter()
+        .take_while(|seg| !matches!(seg, Seg::Hidden(n) if !is(n, "ltx:tags")))
+        .map(Seg::text)
+        .collect();
+      if let Some(word) = words(&lead).into_iter().find(|w| !held.contains(w)) {
+        return Some(s!("{} loses {word:?} of {}", old.name, item.key));
+      }
+    }
+  }
+  None
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
 
   /// A name's words found as a run of today's name's words, from where the last name found ended; a name longer than
   /// what is left is none (it panicked, slicing past the end).
+  /// An item made of whole creators of today's, the word "and" aside — not of the words of one name (review rev94a B1).
+  #[test]
+  fn an_institution_is_made_of_whole_creators() {
+    let names: Vec<(Vec<String>, usize)> =
+      ["Ann Able", "Department of Physics", "Astronomy", "Univ X"]
+        .iter()
+        .map(|n| (words(n), 0))
+        .collect();
+    assert!(whole_creators(
+      &words("Department of Physics and Astronomy, Univ X"),
+      &names
+    ));
+    assert!(whole_creators(&words("Univ X"), &names));
+    assert!(!whole_creators(&words("Physics and Astronomy"), &names));
+    let one = vec![(words("Ann Able, Department of Physics and Astronomy"), 0)];
+    assert!(!whole_creators(
+      &words("Department of Physics and Astronomy"),
+      &one
+    ));
+  }
+
+  /// A text's brackets close, in order (review rev94a B2).
+  #[test]
+  fn brackets_close() {
+    assert!(balanced(
+      "Ann Able (on behalf of the H1 and ZEUS collaborations)"
+    ));
+    assert!(!balanced("Laurent Schoeffel (on behalf of the H1"));
+    assert!(!balanced("ZEUS collaborations)"));
+    assert!(!balanced("a) b ("));
+    assert!(balanced("[for the C and D groups]"));
+  }
+
   #[test]
   fn a_name_is_found_as_a_run_of_words() {
     let today = words("Ann Able, Bob Baker");
