@@ -1,0 +1,25 @@
+% mechanism: the writer's re-part (OD #928): `\and` columns of names, the last column a line of marked entries
+%   (`$^{\ast}$ equal contribution,$^{1}$ Univ X, $^{2}$ Lab Y`) and an e-mail line under it; today's old reader made
+%   each piece a creator. The reading continues Lab Y with the line under it (`line:continued`): the writer reads the
+%   entry on over the break, the legend the starred names' note (ruling 2).
+% witness: 2308.10621 (four names, "∗ equal contribution1", "TU Munich" and the e-mail line creators)
+% oracle:  pdflatex 0 errors: "Ann Able∗,1" "Bob Baker∗,1,2" "Cid Cole1" / "∗ 1 2 equal contribution, Univ X, Lab Y" /
+%   "ann.able, bob.baker@lab.org"
+% engines: rust 93a: six creators ("∗ equal contribution", "Univ X", "Lab Y…"); perl: three creators, the legend line
+%   and the e-mail line one affiliation of Bob Baker
+% expect:  0 errors, 0 warnings; three creators, the legend on Ann Able and Bob Baker, Univ X on all, Lab Y (with the
+%   e-mail line) on Bob Baker
+% status:  GREEN (94a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{\ast, 1}$
+\and Bob Baker$^{\ast, 1,2}$
+\and Cid Cole$^{1}$
+\and $^{\ast}$ equal contribution,$^{1}$ Univ X, $^{2}$ Lab Y\\
+{\tt\small ann.able, bob.baker@lab.org}
+}
+\maketitle
+Body.
+\end{document}

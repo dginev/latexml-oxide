@@ -106,7 +106,10 @@ fn single_spacing_stays_in_the_name() {
     creator(false, "Jan van der Berg", ""),
     creator(false, "Cat Cole", ""),
     creator(false, "Dan Dorn", ""),
-    creator(false, "Eve Ell Fay Fox", ""),
+    // (a spacing run inside a wrapper, `\textbf{Eve Ell\;\;Fay Fox}`: one name to the old reader (the residual of
+    // OD #837's spacing-run rule), two to the observer, which the writer re-parts — the kernel family written, 94a)
+    creator(false, "Eve Ell", ""),
+    creator(false, "Fay Fox", ""),
     creator(
       false,
       "Gus Gray",

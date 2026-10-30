@@ -101,8 +101,27 @@ fn inside_a_word(mark: &Node, letters: &str) -> bool {
 /// 2105.07958's `$\rm ^a$Email: …`), scripts on a base the base (`\text{Leon Bello}^{1,3}`, 2011.08099; an
 /// affiliation's `OR $97403^{1}$`, `Ul. Ainy $299^A$`: 2203.01892, 0707.4047), any other formula its text (an isotope,
 /// `${\rm ^{3}He}$`) — as `ab_audit fmshadow` reads the final XML.
-pub(super) fn text_without_marks(node: &Node) -> String {
-  fn walk(node: &Node, out: &mut String) {
+pub(super) fn text_without_marks(node: &Node) -> String { printed_text(node, false) }
+
+/// [`text_without_marks`], every cell, row, paragraph and box of a layout parting the words on its sides (a name in
+/// one cell of a tabular and the institution in the next, which the comparison reads glued: what words a re-part keeps,
+/// `repart`).
+pub(super) fn words_without_marks(node: &Node) -> String { printed_text(node, true) }
+
+/// The elements of a layout that part the words on their sides.
+const LAYOUT_PARTS: &[&str] = &[
+  "ltx:td",
+  "ltx:tr",
+  "ltx:tabular",
+  "ltx:p",
+  "ltx:para",
+  "ltx:inline-block",
+  "ltx:inline-para",
+  "ltx:block",
+];
+
+fn printed_text(node: &Node, parted: bool) -> String {
+  fn walk(node: &Node, out: &mut String, parted: bool) {
     // (in print order: a prescript before its base, as `ab_audit fmshadow` reads the parsed XML)
     for child in marks::printed_children(node) {
       match child.get_type() {
@@ -119,14 +138,21 @@ pub(super) fn text_without_marks(node: &Node) -> String {
                 }
               },
               marks::FormulaMarks::OnBase { base, .. } => out.push_str(&base),
-              marks::FormulaMarks::Other => walk(&child, out),
+              marks::FormulaMarks::Other => walk(&child, out, parted),
             }
           } else if (!is(&child, "ltx:sup") || inside_a_word(&child, &child.get_content()))
             && !is(&child, "ltx:note")
             && !is(&child, "ltx:tags")
           {
             // (a lowercase superscript inside a word is the word's letters, no mark: `M\textsuperscript{c}Kernan`)
-            walk(&child, out);
+            let part = parted && LAYOUT_PARTS.iter().any(|q| is(&child, q));
+            if part {
+              out.push(' ');
+            }
+            walk(&child, out, parted);
+            if part {
+              out.push(' ');
+            }
           }
           if is(&child, "ltx:break") {
             out.push(' ');
@@ -137,7 +163,7 @@ pub(super) fn text_without_marks(node: &Node) -> String {
     }
   }
   let mut raw = String::new();
-  walk(node, &mut raw);
+  walk(node, &mut raw, parted);
   raw.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 

@@ -383,7 +383,7 @@ pub(super) fn entries_of<'a>(line: &[&'a Event]) -> Vec<Entry<'a>> {
 }
 
 /// Whether a text reads as names (the classify helpers: name-shaped parts, no institution word, no address).
-pub(super) fn reads_as_names(text: &str) -> bool {
+pub(in crate::base_utilities::frontmatter::observer) fn reads_as_names(text: &str) -> bool {
   !text.contains('@') && name_count(text) > 0 && !reads_as_affiliation(&text_tokens(text))
 }
 

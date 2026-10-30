@@ -255,8 +255,11 @@ x
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let xml = squash(&xml);
+  // (the kernel family written, 94a: the observer reads the printed "And" as the word separating two names — any case,
+  // 77p r4's rule — and the writer re-parts the one name today's old reader kept)
   assert_eq!(creators(&xml), [
-    creator(true, "Ann Able And Bob Baker", ""),
+    creator(true, "Ann Able", ""),
+    creator(true, "Bob Baker", ""),
     creator(false, "Cat Cole", ""),
     creator(false, "Dan Dorn", ""),
   ]);

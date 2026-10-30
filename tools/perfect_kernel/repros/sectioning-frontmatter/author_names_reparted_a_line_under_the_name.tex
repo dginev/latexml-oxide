@@ -1,0 +1,18 @@
+% mechanism: the writer's re-part (OD #928): `{\slshape Ann Able$^1$}\\ {\footnotesize for the Example
+%   collaboration}`: the reading's name is Ann Able, the line under it an unmarked line it gives her (R12); today's
+%   name holds the line. The writer writes the name alone and the line as her affiliation, made from its tokens.
+% witness: 1502.03246 ("Maxime Defurne for the Hall A DVCS collaboration" one name)
+% oracle:  pdflatex 0 errors: "Ann Able1" / "for the Example collaboration" / "1 Univ X, Sometown, Country"
+% engines: rust 93a: the name "Ann Ablefor the Example collaboration"; perl: "Ann Ablefor the Example
+%   collaboration", "[1ex] Univ X", "Sometown", "Country" creators
+% expect:  0 errors, 0 warnings; Ann Able, affiliations "for the Example collaboration" and Univ X
+% status:  GREEN (94a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{{\slshape Ann Able$^1$}\\ {\footnotesize for the Example collaboration}\\[1ex]
+$^1$Univ X, Sometown, Country\\}
+\maketitle
+Body.
+\end{document}

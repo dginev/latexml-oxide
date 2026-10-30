@@ -143,7 +143,11 @@ they stay for stages 3–5.
    line as the starred names' note, leaves an unrequested entry where today's put it; readings: a label several `\and`
    columns answer each column's, a compound symbol mark all its symbols', an order list agreeing with the block's
    every spelled address, a trailing mark a label only on a name. Scorer marks path 91.88 % → 92.53 %, `article`
-   92.00 % → 92.39 %; left: the names the old reader parted otherwise (a writer re-part operation, 32 creators), raw
+   92.00 % → 92.39 %; left: the names the old reader parted otherwise (a writer re-part operation, 32 creators —
+   **94a, OD #928**: `writer::repart` writes the creators again from the reading where it refines today's names, each
+   name its printed text, each item today's copied or made from its entry's tokens, kept only when it reads as the
+   reading and holds every word today's held; marks path 92.53 % → 94.50 %, `article` 92.39 % → 95.48 %; left
+   2405.08158, 1602.05576 — an `\affil{$^1$…}` Contact's text keeps its mark's ink — and 1304.1574), raw
    files' in-place `\address` (14), the scorer's source reading (11), other families' (44).
 8. **Per-class parsers** as each family is promoted.
 

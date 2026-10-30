@@ -96,7 +96,7 @@ fn place_of(assoc: &Assoc) -> Option<Place> {
 }
 
 /// The resolved creators paired with today's, by name in order: `None` when they differ.
-fn pair_names(resolved: &Resolved, front: &Front) -> Option<BTreeMap<usize, usize>> {
+pub(super) fn pair_names(resolved: &Resolved, front: &Front) -> Option<BTreeMap<usize, usize>> {
   let named: Vec<usize> = (0..resolved.creators.len())
     .filter(|&i| !resolved.creators[i].name.trim().is_empty())
     .collect();
@@ -123,47 +123,15 @@ fn wanted(resolved: &Resolved) -> BTreeMap<Key, Vec<(Owner, &Assoc)>> {
     if c.name.trim().is_empty() {
       continue;
     }
-    let owner = Owner::Creator(i);
-    let mut items: Vec<(Key, &Assoc)> = Vec::new();
-    for a in &c.affiliations {
-      items.push(((Kind::Affiliation, norm(&a.text)), a));
-    }
-    for a in &c.contacts {
-      let key = match a.role.as_str() {
-        "note" | "thanks" => (Kind::Note, norm(&a.text)),
-        "orcid" => (Kind::Contact("orcid".into()), norm(orcid_id(&a.text))),
-        role => (Kind::Contact(role.to_string()), norm(&a.text)),
-      };
-      items.push((key, a));
-    }
-    for a in &c.notes {
-      items.push(((Kind::Note, norm(&a.text)), a));
-    }
     // (one item per creator and text: an address the reading gives one creator twice — from its institute line and from
     // `\offprints`, 0906.2451; a link's target and its text before the events read only the text, review rev92c B1, S2
     // — is one contact, the one a ruling decided kept)
-    for (key, a) in items {
-      if key.1.is_empty() {
-        continue;
-      }
-      let wants = out.entry(key).or_default();
-      match wants.iter_mut().find(|(o, _)| *o == owner) {
-        Some(held) if !writes(held.1) && writes(a) => held.1 = a,
-        Some(_) => {},
-        None => wants.push((owner, a)),
-      }
+    for (key, a) in creator_items(c) {
+      want_once(&mut out, key, Owner::Creator(i), a);
     }
   }
-  for a in &resolved.block {
-    let key = norm(&a.text);
-    if !key.is_empty() {
-      let wants = out.entry((Kind::of_block(&a.role), key)).or_default();
-      match wants.iter_mut().find(|(o, _)| *o == Owner::Block) {
-        Some(held) if !writes(held.1) && writes(a) => held.1 = a,
-        Some(_) => {},
-        None => wants.push((Owner::Block, a)),
-      }
-    }
+  for (key, a) in block_items(resolved) {
+    want_once(&mut out, key, Owner::Block, a);
   }
   out
 }
@@ -175,6 +143,53 @@ fn owners(items: impl Iterator<Item = Owner>) -> Vec<Owner> {
   out.sort();
   out.dedup();
   out
+}
+
+/// The reading's item `a` of `owner` under `key`, once per owner: the one a ruling decided kept.
+fn want_once<'a>(
+  out: &mut BTreeMap<Key, Vec<(Owner, &'a Assoc)>>,
+  key: Key,
+  owner: Owner,
+  a: &'a Assoc,
+) {
+  let wants = out.entry(key).or_default();
+  match wants.iter_mut().find(|(o, _)| *o == owner) {
+    Some(held) if !writes(held.1) && writes(a) => held.1 = a,
+    Some(_) => {},
+    None => wants.push((owner, a)),
+  }
+}
+
+/// A resolved creator's items as the comparison keys them — its affiliations, contacts and notes, an item of no letter
+/// or digit none ([`wanted`]).
+pub(super) fn creator_items(c: &RCreator) -> Vec<(Key, &Assoc)> {
+  let mut items: Vec<(Key, &Assoc)> = Vec::new();
+  for a in &c.affiliations {
+    items.push(((Kind::Affiliation, norm(&a.text)), a));
+  }
+  for a in &c.contacts {
+    let key = match a.role.as_str() {
+      "note" | "thanks" => (Kind::Note, norm(&a.text)),
+      "orcid" => (Kind::Contact("orcid".into()), norm(orcid_id(&a.text))),
+      role => (Kind::Contact(role.to_string()), norm(&a.text)),
+    };
+    items.push((key, a));
+  }
+  for a in &c.notes {
+    items.push(((Kind::Note, norm(&a.text)), a));
+  }
+  items.retain(|(key, _)| !key.1.is_empty());
+  items
+}
+
+/// The author block's own items, as the comparison keys them ([`wanted`]).
+pub(super) fn block_items(resolved: &Resolved) -> Vec<(Key, &Assoc)> {
+  resolved
+    .block
+    .iter()
+    .map(|a| ((Kind::of_block(&a.role), norm(&a.text)), a))
+    .filter(|(key, _)| !key.1.is_empty())
+    .collect()
 }
 
 /// Today's items: (owner, kind, text) with the node and whether it may move (`dom::Item::movable`).
@@ -238,7 +253,7 @@ pub(super) fn difference(resolved: &Resolved, front: &Front) -> Option<String> {
 }
 
 /// The API call at ledger index `index`.
-fn api_call(index: usize) -> Option<ApiCall> {
+pub(super) fn api_call(index: usize) -> Option<ApiCall> {
   with_ledger(|ledger| match ledger.entries.get(index) {
     Some(Entry::Api(call)) => Some(call.clone()),
     _ => None,
@@ -403,7 +418,18 @@ fn cut(call: &ApiCall) -> Result<Option<Vec<(String, Tokens)>>> {
 /// `\textsuperscript{*}Equal contribution`) to its end, as [`piece_tokens`] balances a piece — `None` when the index is
 /// no rehearsed block, no balanced run holds it, or the span's own letters and digits are not the entry's text `key`
 /// (an entry printing through a command, an accent, a line read on to: what the writer would make is not the entry).
-fn block_line_tokens(index: usize, (start, end): (u16, u16), key: &str) -> Option<Tokens> {
+fn block_line_tokens(index: usize, span: (u16, u16), key: &str) -> Option<Tokens> {
+  block_span_tokens(index, span, Some(key))
+}
+
+/// The tokens of the block at ledger index `index` an entry's `span` covers, from the mark it opens with, as
+/// [`block_line_tokens`] reads them — the span's own letters and digits checked against `key` when one is given (the
+/// re-part checks what it made on the digested text instead, `repart`).
+pub(super) fn block_span_tokens(
+  index: usize,
+  (start, end): (u16, u16),
+  key: Option<&str>,
+) -> Option<Tokens> {
   with_ledger(|ledger| {
     let Some(Entry::Author(block)) = ledger.entries.get(index) else {
       return None;
@@ -421,7 +447,7 @@ fn block_line_tokens(index: usize, (start, end): (u16, u16), key: &str) -> Optio
       .filter(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
       .map(|t| t.with_str(ToString::to_string))
       .collect();
-    if norm(&letters) != key {
+    if key.is_some_and(|key| norm(&letters) != key) {
       return None;
     }
     // (the event printed last before the line, a layout change aside)
@@ -432,13 +458,30 @@ fn block_line_tokens(index: usize, (start, end): (u16, u16), key: &str) -> Optio
       && mark.kind == EventKind::Mark
       && let Some((mark_start, mark_end)) = mark.span
       && let (Some(mark_start), Some(mark_end)) = (at(mark_start), at(mark_end))
-      && content
-        .get(mark_end..from)
-        .is_some_and(|between| between.iter().all(|t| t.get_catcode() == Catcode::SPACE))
+      && content.get(mark_end..from).is_some_and(|between| {
+        // (spaces, and the math shift closing the mark's formula: `$^{1}$Univ X`, whose Mark spans its script)
+        between
+          .iter()
+          .all(|t| matches!(t.get_catcode(), Catcode::SPACE | Catcode::MATH))
+      })
     {
       from = mark_start;
     }
-    piece_tokens(content, (from, to), 0, from).map(|(tokens, _)| tokens)
+    // (a group closing past the spaces after the entry: `{\it Department …, Japan }`, 2307.03384)
+    let mut past = to;
+    while content
+      .get(past)
+      .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+    {
+      past += 1;
+    }
+    piece_tokens(content, (from, to), 0, from)
+      .or_else(|| {
+        (past > to)
+          .then(|| piece_tokens(content, (from, past), 0, from))
+          .flatten()
+      })
+      .map(|(tokens, _)| tokens)
   })
 }
 
@@ -866,13 +909,19 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
     .iter()
     .map(|(&i, &j)| (i, front.creators[j].node.clone()))
     .collect();
-  let order = want
+  let order = reading_order(resolved);
+  Ok(Some(Plan { ops, creators, order }))
+}
+
+/// Where each of the reading's items prints, by its owner and key ([`Place`]): what the print-order pass places an
+/// owner's items by (`apply::place`).
+pub(super) fn reading_order(resolved: &Resolved) -> BTreeMap<(Owner, Key), Place> {
+  wanted(resolved)
     .iter()
     .flat_map(|(key, wants)| {
       wants
         .iter()
         .filter_map(|(owner, a)| place_of(a).map(|place| ((*owner, key.clone()), place)))
     })
-    .collect();
-  Ok(Some(Plan { ops, creators, order }))
+    .collect()
 }

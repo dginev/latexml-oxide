@@ -15,13 +15,14 @@ use super::{
   events::Event,
   ledger::{Entry, Outcome, SkipReason, with_ledger},
   policy::policy_for,
-  resolver::{Assoc, Resolved, is_change_rule, ledger_inputs, resolve},
+  resolver::{Assoc, RCreator, Resolved, is_change_rule, ledger_inputs, resolve},
   *,
 };
 
 mod apply;
 mod dom;
 mod plan;
+mod repart;
 
 /// The resolution of the document's author blocks when the writer may write them: every block flushed so far
 /// rehearsed without an error held, the API calls after them rehearsed, and every block's family `written`.
@@ -62,7 +63,16 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
   let Some(resolved) = written_resolution() else {
     return Ok(());
   };
-  let front = dom::read(document);
+  let mut front = dom::read(document);
+  // (today's names parted otherwise than the reading's: the creators written again from the reading, when what is
+  // written holds every word today's held — the re-part, OD #928)
+  if let Some(repart) = repart::plan(&resolved, &front)
+    && repart::apply(document, &resolved, &front, &repart)?
+  {
+    DebugFeature!("frontmatter", "FRONT writer: the names re-parted");
+    with_ledger(|ledger| ledger.writer = Some("written".to_string()));
+    front = dom::read(document);
+  }
   let before = plan::difference(&resolved, &front);
   let Some(plan) = plan::plan(&resolved, &front)? else {
     // (a later pass that finds the document reading as the reading keeps the earlier pass's outcome: `--streaming`

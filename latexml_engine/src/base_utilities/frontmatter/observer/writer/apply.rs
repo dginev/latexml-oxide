@@ -13,7 +13,7 @@ use super::{
 };
 
 /// The element children of `node`.
-fn elements(node: &Node) -> Vec<Node> {
+pub(super) fn elements(node: &Node) -> Vec<Node> {
   node
     .get_child_nodes()
     .into_iter()
@@ -57,13 +57,16 @@ fn template_attributes(template: &Node) -> TagAttrs {
   attrs
 }
 
-/// Digest `tokens` as `made` and insert it into `owner`, before `before` when given.
-fn make(
+/// Digest `tokens` as `made` and insert it into `owner`, before `before` when given. An affiliation takes the
+/// attributes of `template` (today's contact it replaces), or with none (the re-part's entry today's printed inside a
+/// name) those of a contact of `role`: its role and its name label, as `\lx@add@affiliation` gives them.
+pub(super) fn make(
   document: &mut Document,
   owner: &Node,
   made: Made,
   tokens: &Tokens,
-  template: &Node,
+  template: Option<&Node>,
+  role: &str,
   before: Option<&Node>,
 ) -> Result<()> {
   let entry = match made {
@@ -73,9 +76,20 @@ fn make(
         tokens.clone()
       )]);
       let digested = digest_frontmatter_item("ltx:contact", wrapped)?;
+      let attr = match template {
+        Some(template) => template_attributes(template),
+        None => {
+          let mut attr = TagAttrs::default();
+          attr.insert("role".to_string(), role.to_string());
+          if let Some(name) = get_frontmatter_name(None, "ltx:contact", role)? {
+            attr.insert("name".to_string(), name);
+          }
+          attr
+        },
+      };
       TagData {
-        tag:     "ltx:contact".to_string(),
-        attr:    template_attributes(template),
+        tag: "ltx:contact".to_string(),
+        attr,
         content: vec![TagContent::Box(digested)],
       }
     },
@@ -162,7 +176,7 @@ fn set_text(document: &Document, node: &Node, text: &str) -> Result<()> {
 }
 
 /// The elements of `node`'s subtree that carry an `xml:id`, with it, in document order.
-fn subtree_ids(document: &mut Document, node: &Node) -> Vec<(Node, String)> {
+pub(super) fn subtree_ids(document: &mut Document, node: &Node) -> Vec<(Node, String)> {
   document
     .findnodes("descendant-or-self::*[@xml:id]", Some(node))
     .into_iter()
@@ -176,7 +190,7 @@ fn subtree_ids(document: &mut Document, node: &Node) -> Vec<(Node, String)> {
 /// copy is the element named as the taken subtree's first id-holder whose id is that one's with a `radix_alpha` suffix
 /// (a contact holds no id, the footnote mark in it does), its subtree's ids paired in order with the taken subtree's,
 /// and references to them follow.
-fn reclaim_ids(document: &mut Document, taken: &[(SymStr, String)]) -> Result<()> {
+pub(super) fn reclaim_ids(document: &mut Document, taken: &[(SymStr, String)]) -> Result<()> {
   let Some(&(qname, ref id)) = taken.first() else {
     return Ok(());
   };
@@ -211,7 +225,12 @@ fn reclaim_ids(document: &mut Document, taken: &[(SymStr, String)]) -> Result<()
 /// 2207.06953; S. Mangla's ORIGINS before LMU and O. M. Smirnov's in the order of their names, 2608.05923; Ilyass
 /// Haloui's written-out Airbus address after ISAE, 1812.02463). An item the reading places nowhere stays last.
 /// Whether the reading places it.
-fn place(owner: &Node, who: Owner, new: &Node, order: &BTreeMap<(Owner, Key), Place>) -> bool {
+pub(super) fn place(
+  owner: &Node,
+  who: Owner,
+  new: &Node,
+  order: &BTreeMap<(Owner, Key), Place>,
+) -> bool {
   let items = read_creator(owner).items;
   // (within one print, an entry's own text before the contacts and notes it holds: `Univ X \\ \email{…}`)
   let place_of = |item: &dom::Item| {
@@ -293,7 +312,15 @@ pub(super) fn apply(document: &mut Document, front: &Front, plan: &Plan) -> Resu
     } = op
       && let Some(owner) = owner_node(document, *who)?
     {
-      make(document, &owner, *made, tokens, template, before.as_ref())?;
+      make(
+        document,
+        &owner,
+        *made,
+        tokens,
+        Some(template),
+        "affiliation",
+        before.as_ref(),
+      )?;
       touch(*who, &owner);
       // (an affiliation replacing none of today's items where the reading prints it, as a copy: 2311.16503's Jing Liu
       // had his institutes after the address the block prints below them; a legend stays last — the row's e-mail lines

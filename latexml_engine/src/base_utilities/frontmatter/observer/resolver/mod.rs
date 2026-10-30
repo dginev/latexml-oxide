@@ -226,7 +226,8 @@ use blocks::Chain;
 // (named, as the prelude has its own of these names: the resolver's shadow them)
 pub use labels::{addresses_in, mark_labels};
 use labels::{text_tokens, *};
-use lines::{reads_as_names, *};
+pub(in crate::base_utilities::frontmatter::observer) use lines::reads_as_names;
+use lines::*;
 
 /// The entry a line ended with, which an unmarked line under it continues: a labelled entry (its place in
 /// `Resolver::pending`).

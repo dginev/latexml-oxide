@@ -25,7 +25,7 @@ macro_rules! repro {
 
 /// Each creator's personname and contacts (`creators`), then its own notes (`note=<text>`, the `ltx:note` children
 /// outside its personname).
-fn creators_with_notes(xml: &str) -> Vec<Vec<String>> {
+pub(super) fn creators_with_notes(xml: &str) -> Vec<Vec<String>> {
   let mut all = creators(xml);
   for (creator, (start, _)) in all.iter_mut().zip(xml.match_indices("<creator ")) {
     let end = start + xml[start..].find("</creator>").expect("closed creator");
@@ -44,7 +44,7 @@ fn creators_with_notes(xml: &str) -> Vec<Vec<String>> {
 
 /// The default mode's XML creators with their notes (no shadow switch: what the fleet writes), converted clean.
 #[track_caller]
-fn default_mode_creators(tex: &str) -> Vec<Vec<String>> {
+pub(super) fn default_mode_creators(tex: &str) -> Vec<Vec<String>> {
   let (log, xml, ()) = convert_with_setup_then(
     tex,
     Some("ar5iv.sty"),
@@ -55,7 +55,7 @@ fn default_mode_creators(tex: &str) -> Vec<Vec<String>> {
   creators_with_notes(&xml)
 }
 
-fn owned(rows: &[&[&str]]) -> Vec<Vec<String>> {
+pub(super) fn owned(rows: &[&[&str]]) -> Vec<Vec<String>> {
   rows
     .iter()
     .map(|r| r.iter().map(ToString::to_string).collect())
@@ -71,10 +71,12 @@ fn owned(rows: &[&[&str]]) -> Vec<Vec<String>> {
 #[test]
 fn marked_lines_joined_today_are_cut_by_the_writer() {
   let tex = repro!("author_block_marked_lines_joined_are_cut.tex");
+  // (each entry from its mark on, as its line prints it — the mark's formula closing just before the line, `$^4$`, read
+  // through since 94a)
   let xml: &[&[&str]] = &[
     &["Ann Able", "affiliation=Univ X", "affiliation=Univ Y"],
-    &["Bob Baker", "affiliation=Univ Z"],
-    &["Cid Cole 4", "affiliation=Univ W"],
+    &["Bob Baker", "affiliation=3 Univ Z"],
+    &["Cid Cole 4", "affiliation=4 Univ W"],
   ];
   let reading = assert_reading(tex, Some(xml), &[
     "C Ann Able [1,2] | line:names",

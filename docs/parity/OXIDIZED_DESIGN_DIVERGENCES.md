@@ -2377,7 +2377,8 @@ symbol_led_affiliation_is_labelled_by_its_symbol}`,
 `perfect_kernel_batch63::author_email_list_out_of_author_order`,
 `perfect_kernel_batch77n::email_pile_beside_marked_affiliations_is_dealt`. Residuals (SYNC_STATUS rows): a run or
 `\quad` inside a group or wrapper (`\textbf{Ann Able\;\;Bob Baker}`; a declaring group's `\quad`, 2603.20775,
-2610.21682) parts no names; a single tie between spaces (`David McAllister$^{1}$ ~ Songwei Ge`, 2406.09417, inside a group
+2610.21682) parts no names (for a written family the observer parts them and the writer re-parts today's one name, 94a
+OD #928); a single tie between spaces (`David McAllister$^{1}$ ~ Songwei Ge`, 2406.09417, inside a group
 too) is no run and no separator (user ruling 2026-10-19: the ruling covers runs of two or more); a mark wrapped in a
 user macro (`\newcommand*{\affmark}[1][*]{\textsuperscript{#1}}`, 2304.13998) is not read as a mark; an IEEE affiliation
 block whose refmarked entries a tie run parts (`\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A~~~\IEEEauthorrefmark{2}Univ
@@ -27411,7 +27412,8 @@ marks-path papers; rc/E/F and every paper's Warning count unchanged): the kernel
 (sample 54 → 63), written 55 (17), declined 363 (31), unclassified 245 → 244 papers (19.4 %; the writer declines
 them, today's output kept). Left on the marks path (the scorer's 91 wrong; 44 of them other families' — PoS's JHEP.cls,
 inst_support's jfm/ws_ijmpa/appolb, IEEEtran, acmart, svjour3, aastex, revtex4, ijcai —, not written): the creators'
-names the old reader parted otherwise than the reading, which no writer operation re-parts (32 creators: 1909.05311,
+names the old reader parted otherwise than the reading, which no writer operation re-parts (since 94a the re-part,
+OD #928, where the reading refines today's names; 32 creators: 1909.05311,
 2609.32870, 2609.33104, 2308.10621, 2405.08158, 1304.1574, 1502.03246, 1602.05576, 2307.03384); a raw shipped file's
 `\address` typesetting in place, no API entry (14: hep-ph0312288's 11lomcon.sty, 1303.3004's ae100prg.cls,
 cond-mat0611585's jetpl); the scorer's source reading (11: `2*`, `\samethanks[1]`, `\footnotemark[1]`, `~~~~`
@@ -27434,7 +27436,9 @@ ModelBest.Inc \xspace$^5$ Renmin University of China \xspace$^6$ BUPT \xspace$^7
 entries each requested by its mark (2404.02078, 2509.24142) — or one legend line the reading takes for a note
 (`\textsuperscript{*}Equal contribution` under starred names, ruling 2: 2407.07614), each entry is made from its line's
 tokens (`block_line_tokens`: from the mark it opens with, the Mark event printed just before it with only spaces
-between, to its end, balanced as `piece_tokens` balances a cut piece) for the authors the reading gives it, an
+between — or the shift closing the mark's formula, `$^{1}$Univ X`, whose Mark spans its script: 94a, so `$^3$ Univ Z`
+now keeps its mark as its line prints it —, to its end, balanced as `piece_tokens` balances a cut piece, past the spaces
+before a group it closes) for the authors the reading gives it, an
 affiliation through `\lx@affiliation@withinst`, a legend as the kernel's author note, and today's item taken. Repros
 sectioning-frontmatter/`author_block_marked_lines_joined_are_cut`, `author_block_legend_line_is_written_as_a_note`;
 guards `perfect_kernel_batch93a::marked_lines_joined_today_are_cut_by_the_writer`,
@@ -27467,6 +27471,66 @@ would have printed it.
   a_label_answered_in_several_columns_is_each_columns_own`, `a_compound_symbol_mark_names_the_names_carrying_all`,
   `an_order_list_agrees_with_every_spelled_address_of_the_block`, `a_trailing_mark_no_name_shows_leaves_the_line_unmarked`,
   `an_unrequested_entry_keeps_todays_placement`.
+
+### 928. The writer re-parts today's names from the reading where the reading refines them (Perl: the old reader's parting, no observer)
+
+`writer::repart` (FM stage 7, "name parting last"): where the resolver's reading parts the names and today's old reader
+parted them otherwise — no creator pairs by name, so no item-wise operation applies (`declined: the creators' names`)
+— today's creators are written again from the reading, every written family alike (kernel, aa, llncs, revtex, ams).
+Each named reading creator is one `ltx:creator` (the attributes of today's creator whose name printed it) whose
+`ltx:personname` is its name as printed — the reading's digested text, its marks out, a request no entry answers shown
+as `show_unanswered_marks` shows it —, then its affiliations, contacts and notes, one per kind and text (the one a
+ruling decided kept, as `plan::wanted` reads them), placed by the writer's own print-order pass (`apply::place` over
+`plan::reading_order`, rev92c S1), the author block's own on a nameless creator after them. An item is today's own, copied (its ids given back once today's is taken), where
+today's holds one of its kind and text anywhere among the creators; else an affiliation, or a block line the reading
+takes for a legend (never a name's `\thanks`/`\footnote`), made from its entry's tokens — read on from the entry's
+first Name through the events after it until their ink is the entry's text (`entry_span`: an entry of several pieces,
+the word "and" inside one, the lines an unmarked line continued), from the mark it opens with (`block_span_tokens`).
+A name is the reading's text, not its tokens digested again: a Name's span may carry the cover of the command or
+environment its ink came through (`\bf \Large \textbf{Ming Gong\textsuperscript{\rm 5}, …}` spanned the whole
+argument; `\begin{tabular}{c}A …` opened an alignment the run did not close — two Errors).
+
+Only where the reading refines today's names (`repart::plan`, else declined): every reading name is printed as a run
+of words inside one of today's names, in order (none is made of an item of today's — a url column, an institution
+row, `Google DeepMind` under symbol lines: 77p, 77y); every name of today's that reads as names (`reads_as_names`)
+keeps one (a prefix-marked `$^2$Bob Baker` the reading made an affiliation: 61); a one-word name parted from a shared
+name at a comma is the given name of a name written surname first (`Smith, Jr., John`: 61's ACM shape); an item the
+reading gives more authors than today's held it is a ruling's change (`writer::writes`: a role or note line under a
+row given to every name, 77t's rank 15). Fail-safe on the digested text: the new creators are built beside today's and
+kept only when they read as the reading (`plan::difference` finds nothing) and hold every word today's creators held,
+none duplicated — names and distinct items word for word, a layout's cells and rows parting words
+(`dom::words_without_marks`), the only words left out or added the separators the blocks printed (`SepKind::Word`,
+"and") —; anything else removes them and today's stays. `flag_merged_creators` runs after the writer: it reads the
+authors as written (1909.05311's merged_creators Error went with the merge).
+
+Witnesses written: 1909.05311 (aaai20: five names after `\textsuperscript{\rm 5}` merged, `\ `-parted lines),
+2609.32870 (names, marks and lines in a minipage, `\quad`), 2609.33104 (a tabular in a makebox, a dagger legend),
+2307.03384 (`and~`, a minipage of `{\it …}` lines), 1502.03246 (a line under the name), 2308.10621 (`\and` columns, a
+line of marked entries over an e-mail line). Declined, today's kept: 2405.08158, 1602.05576 (an `\affil{$^1$…}` inside
+`\author` is one Contact event whose text keeps its mark's ink, the affiliation made from it reads without it — the
+reading's to fix: its leading mark neither its label nor out of its text); 1304.1574 (`Computer Science3` today a
+creator, which `reads_as_names` reads as names). The guards pinning the old reader's parting are updated to the
+written output: `batch77d::separator_macro_case_and_spacing_read_as_printed` ("Ann Able And Bob Baker" two names, the
+any-case "and" of 77p r4), `batch77p::single_spacing_stays_in_the_name` (`\textbf{Eve Ell\;\;Fay Fox}` two: the
+spacing-run residual of OD #837, for a written family), `batch61::author_in_tabular_star_stays_whole` (A and its
+affiliation X), `06_cluster_frontmatter::frontmatter_inst_affiliation_dedup` (llncs: Alice and Bob each their Mila
+Institute once), `batchfms2a2r5::group_lines_and_an_institutions_address` (amsart's `Cat Cole, Pforzheim …` parted;
+removed from `r5_shapes_leave_the_xml_unchanged`, the switch now writes it), `fmshadow::tests::
+an_affiliation_read_as_legend_notes_is_explained` (rows against the observer-off XML); and by the block-line cut's
+mark (OD #926) `batch93a::marked_lines_joined_today_are_cut_by_the_writer` ("3 Univ Z") and
+`batch77o::aistats_note_marked_address_still_pairs_by_column` (the `$^*$` legend the starred names' note). Repros
+sectioning-frontmatter/`author_names_reparted_*` (7: six written, `..._declined_mark_in_contact` the fail-safe); guards
+`perfect_kernel_batch94a` (5). Scorer (3,000 sample, against
+`run_93a_w4`'s tiers): structurally decided creators 5,693 → 5,717 of 5,838 (97.52 % → 97.93 %), marks path 1,128 →
+1,152 of 1,219 (92.53 % → 94.50 %), `article` 716 → 740 of 775 (92.39 % → 95.48 %), every other class unchanged;
+papers with lost words 7, unchanged; readability 26 → 27 papers, the new one 2603.12826 the scorer's source reading of
+the glued `$^{*1,2,3}$` (our creators the PDF's: its Shanghai AI Laboratory reached through the block-line cut's mark).
+Shadow census (the sample's 260 marks-path papers; rc/E/F and every paper's Warning count unchanged but 1909.05311's
+merged_creators Error, gone): kernel agreeing 63 → 70, unclassified 26 → 23; written 17 → 24, declined 31 → 24; the
+article+marks census (1,445 papers; four more merged_creators Errors gone, 1607.00911, 1906.04287, 2510.12014,
+2609.16841): kernel agreeing 899 → 954, unclassified 244 → 218, written 55 → 112, declined 363 → 308; none
+written-different (measured on the pre-rebase base cc9dd91ed7; on 4529bfc899 the witnesses and the 41 census papers it
+re-parted read the same creators).
 
 ### 932. aa's sole `\institute` is every author's unless the class's `\inst{n}` picks it, as llncs's (Perl: inst_support's `affiliation:1`, which no author requests; the first author's by the prefix-stripped fallback)
 

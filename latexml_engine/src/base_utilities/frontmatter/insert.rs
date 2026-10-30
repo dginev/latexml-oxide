@@ -91,11 +91,12 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   relocate_annotations(document)?;
   respell_emails(document)?;
   show_unanswered_marks(document, &answered)?;
-  flag_merged_creators(document)?;
   drop_empty_contacts(document)?;
   // (FM S2b: a written family's paper, where it differs from the observer's reading by the writer's operations alone,
   // written as the reading has it — under the shadow switch only; OXIDIZED_DESIGN_DIVERGENCES #837 "S2b")
   write_observed_frontmatter(document)?;
+  // (the authors as written: a name the writer re-parted holds one person, OD #928)
+  flag_merged_creators(document)?;
   Ok(())
 }
 

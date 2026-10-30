@@ -1,0 +1,21 @@
+% mechanism: the writer's re-part (OD #928): names after a line break inside `\bf \Large \textbf{…}`, each with a
+%   `\textsuperscript{\rm n}` mark; the observer reads four names (ruling 1 requests), today's old reader one creator
+%   "Cid Cole, Dee Dunn" (an Error, merged_creators). The writer writes each reading creator its name's ink (the
+%   Name span clipped where the next event starts — the ink of a command's argument carries its cover — less the
+%   group it opens), its affiliations made from their marked lines (`\ `-separated); the Error goes with the merge.
+% witness: 1909.05311 (aaai20: five names after `\textsuperscript{\rm 5}` merged; lines parted by `\ `)
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Baker2 ," / "Cid Cole1 , Dee Dunn2" over "1 Univ X 2 Univ Y"
+% engines: rust 93a: Bob Baker none, "Cid Cole, Dee Dunn" one creator (Error merged_creators); perl: "Cid Cole, Dee Dunn" one
+%   creator, "Univ X Univ Y" one affiliation of Bob Baker and of it
+% expect:  0 errors, 0 warnings; four creators, Ann Able and Cid Cole Univ X, Bob Baker and Dee Dunn Univ Y
+% status:  GREEN (94a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able\textsuperscript{\rm 1}, Bob Baker\textsuperscript{\rm 2}, \\ \bf \Large \textbf{Cid Cole\textsuperscript{\rm 1}, Dee Dunn\textsuperscript{\rm 2}}\\
+\textsuperscript{\rm 1}Univ X \
+\textsuperscript{\rm 2}Univ Y}
+\maketitle
+Body.
+\end{document}

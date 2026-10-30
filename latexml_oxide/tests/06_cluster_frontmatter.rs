@@ -1514,11 +1514,17 @@ fn frontmatter_sn_jnl_numbered_affil() {
 #[test]
 fn frontmatter_inst_affiliation_dedup() {
   let x = convert_to_xml("tests/cluster_regressions/frontmatter_inst_affiliation_dedup.tex");
-  let mila = x.matches(">Mila Institute").count();
-  assert_eq!(
-    mila, 1,
-    "affiliation cited by two authors was not deduped (got {mila}× Mila Institute):\n{x}"
-  );
+  // (llncs written, 94a: the observer parts the `\quad`-separated names, as pdflatex prints "Alice1 Bob2,1", and the
+  // writer re-parts the one creator today's held — each author's affiliation once, never once per citation)
+  let creators: Vec<&str> = x.split("<creator ").skip(1).collect();
+  assert_eq!(creators.len(), 2, "{x}");
+  for creator in &creators {
+    let mila = creator.matches(">Mila Institute").count();
+    assert_eq!(
+      mila, 1,
+      "affiliation cited by two authors was not deduped (got {mila}× Mila Institute):\n{x}"
+    );
+  }
   // Both distinct institutions still present, as structured affiliation contacts.
   assert!(
     x.contains(">Uni Montreal") && x.contains("role=\"affiliation\""),

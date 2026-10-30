@@ -1,0 +1,29 @@
+% mechanism: the writer's re-part (OD #928): `Ann Able$^{\,1}$ and~ Bob Baker$^{\,2}$`, then a minipage of
+%   `$^1${\it Department of Physics and Astronomy, Univ X, Japan }` lines; today's one creator holds it all. An entry
+%   of several pieces is sourced at its first Name: the writer reads on through the events after it until their ink
+%   (the word "and" inside it too) is the entry's text; the "and" between the names is a separator the block printed.
+% witness: 2307.03384 (two names and two affiliations in one creator), 1304.1574 (`Computer Science and Engineering`)
+% oracle:  pdflatex 0 errors: "Ann Able 1 and Bob Baker 2" over "1 Department of Physics and Astronomy, Univ X, Japan"
+%   and "2 Department of Physics, Univ Y, Japan"
+% engines: rust 93a: one creator; perl: the same (one creator)
+% expect:  0 errors, 0 warnings; Ann Able the first affiliation, Bob Baker the second
+% status:  GREEN (94a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{\,1}$
+and~ Bob Baker$^{\,2}$
+\\*[20pt]
+{
+\begin{minipage}{\linewidth}
+$^1${\it\normalsize Department of Physics and Astronomy, Univ X, Japan }
+\\*[5pt]
+$^2${\it\normalsize Department of Physics, Univ Y, Japan}
+\\*[5pt]
+\end{minipage}
+}
+\\*[50pt]}
+\maketitle
+Body.
+\end{document}

@@ -1284,7 +1284,28 @@ fn an_affiliation_read_as_legend_notes_is_explained() {
   let tex = "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^{1,\\$}$, Bob Baker$^{1,\\$}$, Cat Cole$^{1,*}$\\\\ $^1$Univ A, City.\\\\ $^\\$$These authors contributed equally to this work.\\\\ $^*$Corresponding author}\n\\maketitle\nBody.\n\\end{document}\n";
   let (xml, dump) = convert(tex);
   let shadow = shadow_tuples(&json_resolved(&dump["resolved"]));
-  let rows = compare(&shadow, &xml_tuples(xml.as_bytes()).expect("xml"));
+  // (the kernel family written and its names re-parted since 94a, OD #928: the written XML agrees; the comparator's rows
+  // are against the old reader's, the observer off)
+  assert_eq!(dump["writer"], "written");
+  assert_eq!(
+    compare(&shadow, &xml_tuples(xml.as_bytes()).expect("xml")),
+    vec![]
+  );
+  let (log, old_reader, ()) = latexml::util::test::convert_with_setup_then(
+    tex,
+    Some("ar5iv.sty"),
+    || latexml_engine::base_utilities::set_fm_shadow_override(Some(false)),
+    |_| (),
+  );
+  assert_eq!(
+    (
+      latexml::util::test::error_count(&log),
+      latexml::util::test::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  let rows = compare(&shadow, &xml_tuples(old_reader.as_bytes()).expect("xml"));
   assert!(rows.iter().all(|d| d.classified), "{rows:?}");
   assert_eq!(
     rows
