@@ -98,6 +98,11 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   `DEFERRED_FAMILIES.md` (hand-typeset title pages, ifacconf's `{frontmatter}` box, names stacked under names, …) is
   excluded from the readability bar — its witnesses stay recorded for later work, not dropped; and the archival tier's
   provenance (how each creator and contact was decided) is recorded as a **schema attribute**, not a class token.
+- **A late abstract keeps print order** (2026-10-30): an abstract set after `\maketitle` stays after everything
+  printed before it, cover or not — nature-pre's `\maketitle`, `{affiliations}`, `\date{\today}` (`\date` already
+  `\relax`, so the date prints as text), `{abstract}` reads title, authors, the list, the date, the abstract, as
+  pdflatex prints it (2608.12563, 2102.01782, 2111.09589, 2412.11966), not abstract first (Perl) nor stopped at the date
+  line read as body prose (86g's cover rule, `cover_order.rs:601 is_body_prose`). Content kept, page order kept.
 - **Frontmatter label keys are compared by their printed text** (2026-10-29, refactor stage 4): the marks that link
   authors to affiliations (`\inst{…}`, `$^{…}$`, `\textsuperscript{…}`) are keyed by the printed text of the digested
   operand, not Perl's source-string ToString — aa's `\inst{\ESO}` with `\newcommand{\ESO}{2}` prints 2 and is entry 2's;
