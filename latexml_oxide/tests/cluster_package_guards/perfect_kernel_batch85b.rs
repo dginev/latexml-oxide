@@ -243,7 +243,11 @@ fn llncs_each_email_call_is_decided_alone() {
 #[test]
 fn llncs_address_in_institute_note_is_never_shared() {
   let tex = repro!("llncs_address_in_institute_note_is_never_shared.tex");
-  let xml = assert_creators(tex, &[&["Ann Able"], &["Bob Baker"], &[
+  // (since 92c r3 a `\thanks` inside the institute is no line of it — `shared_row/emails.rs` `note_argument` — so the
+  // sole institute is every author's, as llncs prints it under the names, and `baker@x.edu` is Bob Baker's by
+  // spelling; the note's sentence stays the note's)
+  let xml = assert_creators(tex, &[&["Ann Able", "affiliation=Univ X"], &[
+    "Bob Baker",
     "affiliation=Univ X",
     "email=baker@x.edu",
   ]]);
