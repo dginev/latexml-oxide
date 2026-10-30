@@ -116,9 +116,12 @@ they stay for stages 3–5.
    with no live author current; a
    frontmatter clear removes the API calls and
    the author blocks queued before it (`ledger::record_clear`, every real flush counted). Shadow census (92a r2,
-   re-resolved; 92a r4 re-converted): unclassified llncs 81 of 463 papers (17.5 %, unchanged), aa 57 of 554 (10.3 %). Left before `written: true`: G3 (an inner one-address
-   e-mail on every carrier, piece 3), the 85b `_share=authors` port (4), the labelseq-by-printed-mark tag (5, needs
-   stage 4), the labelseq mark-led split (6), aa's policy key (8: `inst_support.sty` today, which OmniBus shares).
+   re-resolved; 92a r4 re-converted): unclassified llncs 81 of 463 papers (17.5 %, unchanged), aa 57 of 554 (10.3 %).
+   **92b** (OD #917): G3, an entry's `\email` printing one address placed by FIDELITY_CHARTER §4's chain (the author it
+   spells, the entry's only carrier, its corresponding author, the block; `owner:inner-email`), and an e-mail call's
+   line breaks read as such (`events::raw_lines`). Left before `written: true`: the 85b `_share=authors` port (4), the
+   labelseq-by-printed-mark tag (5, needs stage 4), the labelseq mark-led split (6), aa's policy key (8:
+   `inst_support.sty` today, which OmniBus shares).
 8. **Per-class parsers** as each family is promoted.
 
 ## Test suite and measurement

@@ -1,0 +1,17 @@
+% witness: 2608.29307 (llncs: three addresses a `\\` apart in one `\email` of a numbered institute)
+% oracle:  pdflatex: "Ann Able1, Bob Baker1, and Cid Cole2" / 1 Univ X / ann.able@x.org / bob.baker@x.org / office@x.org
+%          (one address a line) / 2 Univ Y
+% engines: perl 0.8.8 = 0 errors, the call whole (its lines broken) on Ann Able and on Bob Baker; rust 92a the same
+%          XML; the shadow read the call as one address, `ann.able@x.org\lx@fm@obs@breakbob.baker@…`
+% expect:  0 errors, 0 warnings; the shadow reading: each address written out (`ruling3:written-out`), Ann Able's and
+%          Bob Baker's by spelling, office@x.org the block's
+% status:  RED (92a, the shadow) -> GREEN (92b)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1} \and Cid Cole\inst{2}}
+\institute{Univ X\\ \email{ann.able@x.org\\ bob.baker@x.org\\ office@x.org} \and Univ Y}
+\maketitle
+Text.
+\end{document}

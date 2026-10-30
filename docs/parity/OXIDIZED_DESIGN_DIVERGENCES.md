@@ -27056,3 +27056,34 @@ observer_reads_a_note_by_the_ink_test, kernel_thanks_constructor_text_is_ink, ke
 kernel_thanks_empty_superscript_reads_alike}`, `perfect_kernel_batch78e::aa_thanks_email_leaves_no_empty_note` (Bob
 Baker's empty `\thanks{}` now no note) and `perfect_kernel_batchfms2a2::notes_labels_and_contacts` (Cat Cole's
 `\thanks{}` a `ruling4:inkless` drop).
+### 917. The observer places an entry's one-address e-mail call by the charter's chain, not on every name carrying the entry's label (Perl: the call inherits its `\institute` entry's label, copied onto every carrier)
+
+Frontmatter refactor stage 7, the llncs and aa move (task #429; `agent_reports/2026-10-29_s6_aa_llncs_gate.md` §2, G3).
+Shadow-side, in the resolver; a written family's output changes where its writer takes the tagged difference.
+
+- **The defect.** llncs and aa (inst_support's `\institute`) print the `\institute` list once under the names, an
+  `\email` inside an entry once, under its institute. Today's old reader and Perl (both through the entry's label,
+  `\lx@add@affiliation[labelseq=affiliation]` / `\lx@add@contact[role=affiliation,labelseq=affiliation]`) and the
+  resolver alike gave the address to every name carrying the entry's `\inst{n}`: `ann.able@x.org` on Ann Able and on
+  Cid Cole (1606.03774, 2204.03161; aa 0901.4618's `nuccio.lanza@`, 1401.5494's `lfossati@`). A Perl-origin defect
+  shared with today's output; reach in the census, a one-address inner e-mail on two or more carriers: aa 142 of 559
+  papers, llncs 77 of 686.
+- **The rule** (`Resolver::answer_inner_emails`, run after `answer_pending`'s loop, whose legend notes the
+  corresponding step reads): an `email` contact recorded `api:inner-contact` that prints one address (one printing
+  several is written out, `ruling3:written-out`) goes by FIDELITY_CHARTER §4's chain exactly, never bare position and
+  no elimination — the author it spells, any live author (an address under institute 2 may spell an author of
+  institute 1); else the entry's only live carrier; else, of its carriers, the one marked the corresponding author
+  (`Resolver::corresponding`, a "Corresponding author" note); else the block, once (a group's shared address under an
+  institute two names carry, spelling neither). An entry no live name carries, its address spelling no one, keeps the
+  unrequested entry's placement. Each rule carries `owner:inner-email`, a change tag (`resolver::CHANGE_TAGS`).
+- **A line break inside the call.** `\email{a@x.org \\ b@y.org}` prints one address a line (llncs's `{\tt#1}`); the
+  rehearsal's break whatsit was stringified into the verbatim argument (`a@x.org\lx@fm@obs@breakb@y.org`, one address
+  that spelled its first author, 2608.29307). `events::raw_lines` reads an e-mail call's argument with each break a
+  space, so its addresses are several, each written out.
+- **Census** (re-resolved from the 92a r5 census dumps; the line-break reading needs a reconversion): unclassified aa
+  57 → 38 of 554 papers, llncs 81 → 58 of 463; the G3 decisions on a disagreement: aa 426 spelled, 94 block, 2 only
+  carrier; llncs 173 spelled, 105 block, 8 corresponding, 4 only carrier.
+- Repros class-bindings/`llncs_inner_email_is_its_spellers`, `llncs_inner_shared_email_is_the_blocks`,
+  `llncs_inner_email_is_the_corresponding_carriers`, `aa_inner_email_is_its_spellers`,
+  `llncs_inner_email_lines_are_each_written_out`; guard
+  `perfect_kernel_batch92b::an_entry_email_printing_one_address_is_placed_by_the_chain`.

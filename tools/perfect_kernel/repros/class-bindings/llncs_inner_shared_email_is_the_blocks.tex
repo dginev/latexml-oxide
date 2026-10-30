@@ -1,0 +1,17 @@
+% witness: 1606.03774, 2204.03161 (llncs class G of the stage-6 gate study; the gate's G3, its negative)
+% oracle:  pdflatex: "Ann Able1, Bob Baker1, and Cid Cole2" / 1 Univ X info@x.org / 2 Univ Y cid@y.org bob.baker@y.org:
+%          a group address under the institute two names carry, spelling neither; an address under institute 2 that
+%          spells an author of institute 1
+% engines: perl 0.8.8 = 0 errors, info@x.org on Ann Able and Bob Baker, both of entry 2's on Cid Cole; rust 92a the same
+% expect:  0 errors, 0 warnings; the shadow reading: info@x.org the block's, once (`owner:inner-email owner:block`);
+%          cid@y.org Cid Cole's, bob.baker@y.org Bob Baker's (any live author it spells)
+% status:  RED (92a, the shadow) -> GREEN (92b)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1} \and Cid Cole\inst{2}}
+\institute{Univ X\\ \email{info@x.org} \and Univ Y\\ \email{cid@y.org}\\ \email{bob.baker@y.org}}
+\maketitle
+Text.
+\end{document}

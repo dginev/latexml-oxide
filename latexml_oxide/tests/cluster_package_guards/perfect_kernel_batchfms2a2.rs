@@ -795,7 +795,7 @@ fn fuzzy_labels_by_surname_and_with_their_macros() {
     [
       "C Ann Able [] | line:names",
       "  a Univ A | api:label ruling1:fuzzy-label fuzzy:surname",
-      "  c email ann@x.org | api:label api:inner-contact ruling1:fuzzy-label fuzzy:surname",
+      "  c email ann@x.org | api:label api:inner-contact ruling1:fuzzy-label fuzzy:surname owner:inner-email owner:spelled",
       "C Bob M. Baker [] | line:names",
       "  a Univ B | api:label ruling1:fuzzy-label fuzzy:surname",
     ]

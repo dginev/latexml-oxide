@@ -1,0 +1,17 @@
+% witness: 1606.03774, 2204.03161 (llncs class G of the stage-6 gate study, 27 papers; the gate's G3)
+% oracle:  pdflatex: "Ann Able1, Bob Baker2, and Cid Cole1" / 1 Univ X ann.able@x.org / 2 Univ Y info@y.org: each
+%          address printed once, under its institute
+% engines: perl 0.8.8 = 0 errors, ann.able@x.org on Ann Able and on Cid Cole; rust 92a the same, in the XML and in the
+%          shadow (the entry's label copies its e-mail onto every carrier)
+% expect:  0 errors, 0 warnings; the shadow reading: ann.able@x.org Ann Able's only (the author it spells,
+%          `owner:inner-email owner:spelled`), info@y.org Bob Baker's (the entry's only carrier)
+% status:  RED (92a, the shadow) -> GREEN (92b)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2} \and Cid Cole\inst{1}}
+\institute{Univ X\\ \email{ann.able@x.org} \and Univ Y\\ \email{info@y.org}}
+\maketitle
+Text.
+\end{document}

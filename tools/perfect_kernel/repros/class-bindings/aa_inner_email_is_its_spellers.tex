@@ -1,0 +1,16 @@
+% witness: 0901.4618, 1401.5494 (aa: `nuccio.lanza@`, `lfossati@`; the stage-6 gate study's G3, 142 aa census papers)
+% oracle:  pdflatex with 1707.06238's aa.cls: "Ann Able1, Bob Baker1, and Cid Cole2" / 1 Univ X e-mail:
+%          bob.baker@x.org / 2 Univ Y
+% engines: perl 0.8.8 = 0 errors, bob.baker@x.org on Ann Able and on Bob Baker; rust 92a the same, XML and shadow
+% expect:  0 errors, 0 warnings; the shadow reading: bob.baker@x.org Bob Baker's only (`owner:inner-email owner:spelled`)
+% status:  RED (92a, the shadow) -> GREEN (92b)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1} \and Cid Cole\inst{2}}
+\institute{Univ X\\ \email{bob.baker@x.org} \and Univ Y}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

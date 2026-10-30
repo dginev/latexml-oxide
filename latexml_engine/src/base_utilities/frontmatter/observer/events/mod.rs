@@ -407,6 +407,29 @@ fn raw_arg(w: &Whatsit, n: usize) -> String {
   w.get_arg(n).map(|a| a.to_string()).unwrap_or_default()
 }
 
+/// An e-mail call's argument as it prints (`raw_arg`), each line break it holds — the rehearsal's `\lx@fm@obs@break`,
+/// `\\` inside the verbatim argument of llncs's `\email{a@x.org \\ b@y.org}`, `{\tt#1}` printing one address a line —
+/// a space between its lines: their addresses are several, each written out (2608.29307's three addresses under one
+/// `\email` were one address, `…@gmail.com\lx@fm@obs@breakn.van.stein@…`, which spelled its first author).
+fn raw_lines(w: &Whatsit, n: usize) -> String {
+  fn walk(d: &Digested, out: &mut String) {
+    match d.data() {
+      DigestedData::List(l) => {
+        for child in l.borrow().boxes.iter() {
+          walk(child, out);
+        }
+      },
+      DigestedData::Whatsit(w) if whatsit_cs(&w.borrow()) == "\\lx@fm@obs@break" => out.push(' '),
+      _ => out.push_str(&d.to_string()),
+    }
+  }
+  let mut out = String::new();
+  if let Some(arg) = w.get_arg(n) {
+    walk(arg, &mut out);
+  }
+  out
+}
+
 /// The target of the rehearsal's link (`\lx@fm@obs@href{target}{text}`), trimmed: the contact's target the walker
 /// writes, and what [`is_note_whatsit`] tests for an ORCID record.
 fn href_target(w: &Whatsit) -> String { raw_arg(w, 1).trim().to_string() }
@@ -813,7 +836,7 @@ impl Walker {
         contact.text = if cs == "\\lx@fm@obs@affil" {
           arg(2)
         } else {
-          raw(2).trim().to_string()
+          raw_lines(w, 2).trim().to_string()
         };
         self.event(contact, d, nest);
       },

@@ -215,7 +215,7 @@ fn an_entrys_address_group_is_written_out_to_its_spellers() {
     "  c email bob.baker@example.org | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
     "C Cat Cole [2] | line:names",
     "  a Univ B, Town | api:labelseq",
-    "  c email cole@example.org | api:labelseq api:inner-contact",
+    "  c email cole@example.org | api:labelseq api:inner-contact owner:inner-email owner:spelled",
     "B email info@example.org | api:labelseq api:inner-contact ruling3:written-out owner:block",
   ]);
   // (an entry no name requests too: each address the author's it spells, the institution the block's —

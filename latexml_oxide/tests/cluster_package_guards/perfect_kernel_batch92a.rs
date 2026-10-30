@@ -39,7 +39,7 @@ macro_rules! repro {
 
 /// The XML's creators and the shadow reading's tuples of one conversion, which must be clean, then its publication
 /// notes' text (`ltx:pubnote`, in order) and the writer's outcome (`"writer"`, null for a family not written).
-type Reading = (Vec<Vec<String>>, Vec<String>, Vec<String>, Value);
+pub(super) type Reading = (Vec<Vec<String>>, Vec<String>, Vec<String>, Value);
 
 #[track_caller]
 fn reading_of(log: &str, xml: &str, json: &str) -> Reading {
@@ -111,7 +111,7 @@ fn with_binary(tex: &str, streaming: bool) -> Reading {
 /// `shadow`, in process and from the binary, eager and `--streaming` (its notes and the writer's outcome the same in
 /// every mode).
 #[track_caller]
-fn assert_reading(tex: &str, xml: Option<&[&[&str]]>, shadow: &[&str]) -> Reading {
+pub(super) fn assert_reading(tex: &str, xml: Option<&[&[&str]]>, shadow: &[&str]) -> Reading {
   let shadow: Vec<String> = shadow.iter().map(ToString::to_string).collect();
   let (xml_in_process, shadow_in_process, notes, writer) = in_process(tex);
   if let Some(xml) = xml {
@@ -311,7 +311,7 @@ fn a_publication_note_email_is_placed_by_the_chain() {
     &[
       "C Ann Able [1] | line:names",
       "  a Univ X | api:labelseq",
-      "  c email ann@x.org | api:labelseq api:inner-contact",
+      "  c email ann@x.org | api:labelseq api:inner-contact owner:inner-email owner:spelled",
       "C Bob Baker [2] | line:names",
       "  a Univ Y | api:labelseq",
       "B email office@y.org | api:document-note owner:block ruling3:one-per-print",

@@ -876,6 +876,7 @@ impl Resolver {
       .flat_map(|c| c.requests.iter().filter_map(|r| kind(r)))
       .collect();
     let live = self.live();
+    let mut inner_emails: Vec<(Vec<usize>, Assoc)> = Vec::new();
     for (at, (labels, symbol, assoc)) in pending.into_iter().enumerate() {
       // (a letter or number line the binding attached by its group rule (`_grouped=true`) is the group's, as today's
       // placed it: revtex's interleaved `\author{Ann$^{\mathrm a}$}\author{Bob}\affiliation{$^{\mathrm a}$Univ A}` both
@@ -998,6 +999,15 @@ impl Resolver {
       // entry's: llncs prints its `\institute` list as one block, `\{jzhao,qfu,chu,syue\}@lincoln.ac.uk` closing entry 3
       // under entry 1's authors, 1904.07206; an entry no name requests too, `\{guyam, osherm, tomz, guykatz,
       // schapiram\}@cs.huji.ac.il` under unmarked names, 2302.05745)
+      // (an entry's e-mail call printing one address is not its label's (the gate study's G3): placed once every
+      // entry is read, by FIDELITY_CHARTER §4's chain — `answer_inner_emails`; an entry no live name carries keeps the
+      // unrequested entry's placement below unless the address spells an author)
+      if is_inner_email(&assoc)
+        && (owners.iter().any(|c| live.contains(c)) || self.spelled(&assoc.text, &live).is_some())
+      {
+        inner_emails.push((owners, assoc));
+        continue;
+      }
       if assoc.rule.contains("ruling3:written-out") {
         let (owner, tag) = match self.spelled(&assoc.text, &self.live()) {
           Some(owner) => (Some(owner), "owner:spelled"),
@@ -1182,5 +1192,43 @@ impl Resolver {
         self.attach(Some(owner), assoc, note);
       }
     }
+    self.answer_inner_emails(inner_emails);
   }
+
+  /// The e-mail calls inside labelled entries that print one address (an `\email` inside an `\institute` entry, the
+  /// gate study's G3: llncs's `\institute{Univ X\\ \email{ann.able@x.org} \and Univ Y\\ \email{info@y.org}}`), each with
+  /// the entry's carriers — the names requesting its label. The address is not the label's: llncs prints its
+  /// `\institute` list as one block under the names, the address once, under its institute (1606.03774, 2204.03161;
+  /// aa's 0901.4618, 1401.5494: `nuccio.lanza@`, `lfossati@`), and today's copies it onto every carrier (Perl too). So
+  /// FIDELITY_CHARTER §4's chain, exactly, never bare position and no elimination: the author it spells, any live
+  /// author of the document (an entry's address may spell an author of another entry, as `ruling3:written-out` reads
+  /// one); else the entry's only carrier; else, of its carriers, the one marked the corresponding author (a
+  /// "Corresponding author" note: `Resolver::corresponding`); else the block, once — a group's shared address
+  /// (`info@y.org` under an institute two names carry, spelling neither). (An entry no live name carries, its address
+  /// spelling no one, stays the unrequested entry's: `answer_pending`.) Each rule says so (`owner:inner-email`, a
+  /// change tag: the writer moves it). Run after the pending entries, whose legend notes the corresponding step reads.
+  fn answer_inner_emails(&mut self, inner_emails: Vec<(Vec<usize>, Assoc)>) {
+    let live = self.live();
+    for (owners, assoc) in inner_emails {
+      let carriers: Vec<usize> = owners.into_iter().filter(|c| live.contains(c)).collect();
+      let (owner, tag) = match (self.spelled(&assoc.text, &live), carriers.as_slice()) {
+        (Some(owner), _) => (Some(owner), "owner:spelled"),
+        (None, [only]) => (Some(*only), "owner:only-carrier"),
+        (None, _) => self.corresponding(&carriers),
+      };
+      let rule = s!("{} owner:inner-email {tag}", assoc.rule);
+      self.attach(owner, Assoc { rule, ..assoc }, false);
+    }
+  }
+}
+
+/// Whether a pending entry is an e-mail call an entry made that prints one address (`api:inner-contact`; one printing
+/// several is written out, `ruling3:written-out`).
+fn is_inner_email(assoc: &Assoc) -> bool {
+  assoc.role == "email"
+    && assoc
+      .rule
+      .split_whitespace()
+      .any(|tag| tag == "api:inner-contact")
+    && !assoc.rule.contains("ruling3:written-out")
 }
