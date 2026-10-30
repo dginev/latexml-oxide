@@ -1,0 +1,19 @@
+% witness: review rev92e r1 S2 (`\thanks{\rule{1em}{1ex}}`, `\thanks{\fbox{}}`, `\thanks{\framebox[1em]{}}`,
+%          `\thanks{\hrulefill}` dropped); the 18 notes of round 1's A/B dropped as empty, a space or a tie (2004.01582,
+%          2401.15379, 1704.05401, 2609.00671), whose siblings are the blank material below
+% oracle:  pdflatex (article): 0 errors; Ann's footnote a black box, Bob's and Cat's an empty frame, Dan's a rule to
+%          the line's end; the title's (a tie), Eve's (a strut `\rule{0pt}{2ex}`), Fay's (`\quad`), Gil's (`\mbox{}`)
+%          and Ida's (`\phantom{X}`) a bare mark
+% engines: rust 92e r1 (8f49d20) = only Ida's note (`<text class="ltx_phantom">X</text>`); rust 92a5 keeps all nine
+%          (the blank ones empty or a space); Perl keeps all (`<contact role="thanks">`)
+% expect:  0 errors, 0 warnings; the notes of Ann (a rule), Bob and Cat (a framed box) and Dan (a leader); no
+%          pubnote, and no note for Eve, Fay, Gil or Ida
+% status:  RED (92e r1) -> GREEN (92e r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T\thanks{~}}
+\author{Ann Able\thanks{\rule{1em}{1ex}} \and Bob Baker\thanks{\fbox{}} \and Cat Cole\thanks{\framebox[1em]{}} \and Dan Doe\thanks{\hrulefill} \and Eve Ell\thanks{\rule{0pt}{2ex}} \and Fay Fox\thanks{\quad} \and Gil Gray\thanks{\mbox{}} \and Ida Ivy\thanks{\phantom{X}}}
+\maketitle
+Text.
+\end{document}

@@ -276,33 +276,137 @@ pub fn typesets_content(d: &Digested) -> bool {
   }
 }
 
-/// [`typesets_content`], failing safe: also material holding a whatsit argument it may print though
-/// `shown_arguments` does not count it — a verbatim argument of a constructor other than the
-/// `VERBATIM_PRINTERS`: its replacement is compiled, so whether it puts the argument in its element cannot be read off
-/// the whatsit (jhep's two-verbatim `\href{<url>}{<text>}`, `\preprint{\arXivid{…}}`: 0704.3719, 0709.3309), and a key
-/// (`\ref`, `\label`) counts too. A frontmatter note is dropped as one with no ink only when nothing in it could print
-/// (frontmatter_api.rs, OXIDIZED_DESIGN_DIVERGENCES #916): a false "no ink" would lose its content.
-pub fn may_typeset_content(d: &Digested) -> bool {
-  fn holds_argument_text(d: &Digested) -> bool {
-    match d.data() {
-      DigestedData::List(l) => l.borrow().boxes.iter().any(holds_argument_text),
-      DigestedData::Whatsit(w) => {
-        let w = w.borrow();
-        w.get_args().iter().flatten().any(|arg| {
-          let mut text = String::new();
-          ink_text(arg, &mut text);
-          !text.trim().is_empty() || holds_argument_text(arg)
-        }) || w
-          .get_body()
-          .ok()
-          .flatten()
-          .is_some_and(|body| holds_argument_text(&body))
-      },
-      _ => false,
-    }
+/// Whether digested material prints nothing: every item in it is one known to leave no ink ([`first_ink`] finds
+/// none). The inverse of [`typesets_content`], failing safe: what is not known to print nothing is ink. A frontmatter
+/// note is dropped as one with no ink only on this test (frontmatter_api.rs, the rehearsal's note event;
+/// OXIDIZED_DESIGN_DIVERGENCES #916): a false "no ink" loses the note's content.
+pub fn leaves_no_ink(d: &Digested) -> bool { first_ink(d).is_none() }
+
+/// The first item of digested material not known to print nothing ([`leaves_no_ink`]), described: its command, or its
+/// text. Known to print nothing are a box of white space (an interword space, a tie's no-break space), a box Perl marks
+/// `isSpace` (glue, a kern, `\quad`, a phantom, `\indent`/`\noindent`: Box.pm:33-38 and the pool's `isSpace`
+/// properties), a rule with no width or no height and depth, a line or page break, `\par`, a penalty, `\leavevmode`,
+/// and an empty font or box wrapper — a command whose definition declares a font (`\textbf{}`, `\emph{}`) or one of
+/// `INKLESS_WRAPPERS` (`\mbox{}`, `\makebox[1em]{}`, `\raisebox{1ex}{}`, a formula) whose arguments (but options and a
+/// position keyword) and body print nothing. A command's own text is ink though it shows no argument (`\dots`,
+/// `\LaTeX`, `$\vdots$`), and so are a framed box (`\fbox{}`), a leader (`\hrulefill`), an image, a cross-reference,
+/// an alignment and an undefined command's error marker (review rev92e r1 B1, S2, N1).
+pub fn first_ink(d: &Digested) -> Option<String> {
+  match d.data() {
+    DigestedData::TBox(b) => {
+      let b = b.borrow();
+      match b.get_string() {
+        Ok(s) if s.chars().all(char::is_whitespace) => None,
+        Ok(s) => Some(s.to_string()),
+        Err(_) => Some(b.to_string()),
+      }
+    },
+    DigestedData::List(l) => l.borrow().boxes.iter().find_map(first_ink),
+    DigestedData::Whatsit(w) => {
+      let w = w.borrow();
+      let definition = w.get_definition();
+      let cs = definition.get_cs_name();
+      let truthy = |key: &str| {
+        w.get_property(key)
+          .is_some_and(|v| !matches!(*v, Stored::Bool(false) | Stored::Int(0)))
+      };
+      let dimension = |key: &str| match w.get_property(key).as_deref() {
+        Some(Stored::Dimension(d)) => d.value_of(),
+        _ => 0,
+      };
+      if INKLESS_COMMANDS.contains(&cs.as_ref())
+        || (truthy("isSpace") && !LEADERS.contains(&cs.as_ref()))
+      {
+        return None;
+      }
+      // (a rule shows with a width and a height or depth: LaTeX's `\rule` its `width`, `height` and `depth`
+      // (sect12.rs); a primitive rule its `cached_*` sizes, a `\vrule` of no stated height or depth the running
+      // one, of width 0 `invisible` (tex_box.rs, OXIDIZED_DESIGN #176))
+      let shows = match cs.as_ref() {
+        "\\rule" => Some(dimension("width") != 0 && dimension("height") + dimension("depth") != 0),
+        "\\vrule" => Some(
+          !truthy("invisible")
+            && (w.get_property("rheight").is_none()
+              || w.get_property("rdepth").is_none()
+              || dimension("cached_height") + dimension("cached_depth") != 0),
+        ),
+        "\\hrule" => Some(dimension("cached_height") + dimension("cached_depth") != 0),
+        _ => None,
+      };
+      if let Some(shows) = shows {
+        return shows.then(|| cs.to_string());
+      }
+      let wrapper = INKLESS_WRAPPERS.contains(&cs.as_ref()) || definition.declared_font().is_some();
+      if !wrapper {
+        return Some(cs.to_string());
+      }
+      // (every argument but its options and a position keyword: a verbatim one too, which a wrapper may print though
+      // `shown_arguments` does not count it — failing safe, as for jhep's `\href`, 0704.3719)
+      let kinds = argument_kinds(&w);
+      w.get_args()
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| kinds.as_ref().is_none_or(|k| k.get(*i) != Some(&0)))
+        .find_map(|(_, arg)| arg.as_ref().and_then(first_ink))
+        .or_else(|| {
+          w.get_body()
+            .ok()
+            .flatten()
+            .and_then(|body| first_ink(&body))
+        })
+    },
+    DigestedData::Alignment(_) => Some("an alignment".to_string()),
+    DigestedData::Postponed(t) => Some(t.to_string()),
+    DigestedData::KeyVals(_) | DigestedData::RegisterValue(_) | DigestedData::Comment(_) => None,
   }
-  typesets_content(d) || holds_argument_text(d)
 }
+
+/// Commands that print nothing, whatever their arguments ([`first_ink`]): `\par`, breaks and penalties.
+const INKLESS_COMMANDS: &[&str] = &[
+  "\\par",
+  "\\penalty",
+  "\\\\",
+  "\\lx@newline",
+  "\\lx@parboxnewline",
+  "\\@normalcr",
+  "\\newline",
+  "\\linebreak",
+  "\\nolinebreak",
+  "\\pagebreak",
+  "\\nopagebreak",
+  "\\leavevmode",
+  "\\lx@normal@par",
+  // (the frontmatter observer's rehearsal's `\\`, `\newline`, `\linebreak`, `\par` and `\label`, observer/rehearsal.rs)
+  "\\lx@fm@obs@break",
+  "\\lx@fm@obs@label",
+];
+
+/// Leaders, ink though Perl marks some `isSpace` ([`first_ink`]).
+const LEADERS: &[&str] = &[
+  "\\hrulefill",
+  "\\dotfill",
+  "\\leaders",
+  "\\cleaders",
+  "\\xleaders",
+];
+
+/// Wrappers that print only their arguments and body ([`first_ink`]), besides a command declaring a font: a box that
+/// is not framed, a formula.
+const INKLESS_WRAPPERS: &[&str] = &[
+  "\\mbox",
+  "\\makebox",
+  "\\@makebox",
+  "\\hbox",
+  "\\vbox",
+  "\\vtop",
+  "\\raisebox",
+  "\\parbox",
+  "\\smash",
+  "\\text",
+  "\\textcolor",
+  "\\lx@begin@inline@math",
+  "\\lx@begin@display@math",
+];
 
 /// Whether the whatsit `w` is a cross-reference or a citation, which prints text the post-processor generates (the
 /// label's number, the cited work's name and year) though its arguments are keys, never shown ([`shown_arguments`]):
@@ -392,36 +496,10 @@ pub(crate) fn shown_arguments(w: &Whatsit) -> Vec<bool> {
   if w.get_property("graphic").is_some() || w.get_property("candidates").is_some() {
     return vec![false; args.len()];
   }
-  let definition = w.get_definition();
-  let types: Vec<SymStr> = definition
-    .get_parameters()
-    .map(|params| {
-      params
-        .get_parameters()
-        .into_iter()
-        .filter(|p| !p.novalue)
-        .map(|p| p.name)
-        .collect()
-    })
-    .unwrap_or_default();
-  if types.len() != args.len() {
+  let Some(kinds) = argument_kinds(w) else {
     return vec![true; args.len()];
-  }
-  // (0: keyvals or a position keyword, 1: verbatim, 2: shown text)
-  let kinds: Vec<u8> = types
-    .iter()
-    .map(|t| {
-      with(*t, |name| {
-        if name.contains("KeyVals") || name.ends_with("Position") {
-          0
-        } else if name.contains("erbatim") {
-          1
-        } else {
-          2
-        }
-      })
-    })
-    .collect();
+  };
+  let definition = w.get_definition();
   let cs = definition.get_cs();
   let shown: &[bool] = VERBATIM_PRINTERS
     .iter()
@@ -432,4 +510,38 @@ pub(crate) fn shown_arguments(w: &Whatsit) -> Vec<bool> {
     .enumerate()
     .map(|(i, kind)| *kind == 2 || (*kind == 1 && shown.get(i).copied().unwrap_or(false)))
     .collect()
+}
+
+/// The kind of each argument of the whatsit `w` by its parameter's type — 0: keyvals (options) or a position keyword
+/// (`Position`, `OptionalPosition`), 1: verbatim (`Semiverbatim`, `Verbatim`, `HyperVerbatim`), 2: any other —; none
+/// when its parameters cannot be matched to its arguments ([`shown_arguments`], [`first_ink`]).
+fn argument_kinds(w: &Whatsit) -> Option<Vec<u8>> {
+  let types: Vec<SymStr> = w
+    .get_definition()
+    .get_parameters()
+    .map(|params| {
+      params
+        .get_parameters()
+        .into_iter()
+        .filter(|p| !p.novalue)
+        .map(|p| p.name)
+        .collect()
+    })
+    .unwrap_or_default();
+  (types.len() == w.get_args().len()).then(|| {
+    types
+      .iter()
+      .map(|t| {
+        with(*t, |name| {
+          if name.contains("KeyVals") || name.ends_with("Position") {
+            0
+          } else if name.contains("erbatim") {
+            1
+          } else {
+            2
+          }
+        })
+      })
+      .collect()
+  })
 }

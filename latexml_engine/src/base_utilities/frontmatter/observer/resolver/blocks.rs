@@ -895,8 +895,21 @@ impl Resolver {
     });
   }
 
-  /// A note kept: a legend of the label its leading mark names, else a note of `owner`, its whole text.
+  /// A note kept: a legend of the label its leading mark names, else a note of `owner`, its whole text. A note nothing
+  /// in which prints is none (ruling 4 as the user's rulings of 2026-10-30 extend it, OXIDIZED_DESIGN_DIVERGENCES #916:
+  /// `\thanks{}`, `\thanks{~}`, as the XML drops it): dropped, as an emptied one is.
   pub(super) fn keep_note(&mut self, index: usize, note: &Event, owner: Option<usize>, rule: &str) {
+    if note.inkless {
+      self.out.dropped.push(Assoc {
+        role:   "note".into(),
+        text:   note.text.trim().to_string(),
+        label:  note.label.clone(),
+        rule:   s!("{rule} ruling4:inkless"),
+        source: Some((index, note.span)),
+        target: None,
+      });
+      return;
+    }
     let live = self.live();
     // (a note opening with a Mark some name requests is that label's legend: `\thanks{$^{1}$ Canizaro … Center}`
     // under `Newaz$^{1,2,*}$`, 2311.16145 — the mark it prints, its leading Mark event; its owners by ruling 1)
@@ -946,11 +959,7 @@ impl Resolver {
       .next()
       .unwrap_or("thanks")
       .to_string();
-    let rule = if note.text.is_empty() && note.inner.is_empty() {
-      s!("{rule} ruling4:empty-kept")
-    } else {
-      rule.to_string()
-    };
+    let rule = rule.to_string();
     self.attach(
       owner,
       Assoc {

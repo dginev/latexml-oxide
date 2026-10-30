@@ -147,6 +147,9 @@ pub struct Event {
   pub space_after:  bool,
   /// an e-mail contact's: whose meaning made the call ([`EmailMeaning`])
   pub meaning:      EmailMeaning,
+  /// a note's: nothing in it prints ([`leaves_no_ink`] on its digested body, the test the XML's note is dropped by:
+  /// `\thanks{}`, `\thanks{~}`, OXIDIZED_DESIGN_DIVERGENCES #916)
+  pub inkless:      bool,
 }
 
 impl Event {
@@ -166,6 +169,7 @@ impl Event {
       space_before: false,
       space_after: false,
       meaning: EmailMeaning::Binding,
+      inkless: false,
     }
   }
 }
@@ -659,6 +663,7 @@ impl Walker {
       "\\lx@fm@obs@note" | "\\lx@fm@obs@notetext" => {
         let mut note = Event::new(EventKind::Note);
         if let Some(body) = w.get_arg(2) {
+          note.inkless = leaves_no_ink(body);
           let events = lex_events(body);
           // (its text as printed, its contacts' too: the rehearsal's contact constructors print nothing, so the ink
           // of "available at \url{…}" lacks the address — 2105.10596)

@@ -1,0 +1,17 @@
+% witness: review rev92e r1 B1 (`\thanks{$\vdots$}`, `\thanks{\ensuremath{\ldots}}` dropped: a formula's symbol is
+%          a command's own text, no shown argument)
+% oracle:  pdflatex (article, amsmath): 0 errors; the footnotes "∗ ⋮", "† . . .", "‡ . . ." and a bare "§" (the empty
+%          formula `$ $` prints nothing)
+% engines: rust 92e r1 (8f49d20) = Bob's `$\dotsc$` note kept, the other three dropped; rust 92a5 keeps all four (Dan's
+%          an empty note); Perl keeps all four (`<contact role="thanks">`, Dan's "$ $")
+% expect:  0 errors, 0 warnings; the notes of Ann, Bob and Cat, each its formula; none for Dan, and no mark of it
+% status:  RED (92e r1) -> GREEN (92e r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{$\vdots$} \and Bob Baker\thanks{$\dotsc$} \and Cat Cole\thanks{\ensuremath{\ldots}} \and Dan Doe\thanks{$ $}}
+\maketitle
+Text.
+\end{document}

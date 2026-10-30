@@ -24,7 +24,8 @@
 //!    only author → elimination (the one address no name spells, the one name no address spells: today's, OD #52 under
 //!    user ruling R10) → the one author marked as the corresponding author → the block.
 //! 8. **Ruling 3**: one contact per print event, nothing deduplicated (a line's addresses one each).
-//! 9. **Ruling 4**: a note whose content all became contacts is dropped; an empty `\thanks{}` is kept.
+//! 9. **Ruling 4**: a note whose content all became contacts is dropped, and so is a note nothing in which prints (an
+//!    empty `\thanks{}`: `Event::inkless`, the user's ruling 2026-10-30; OD #916).
 //! 10. **API calls** after a block (not made by its expansion), creators and creator annotations only
 //!     ([`creator_call`]): a creator; a labelled contact (its `label=`, its `labelseq=` place, its leading mark, or a
 //!     `\label` a `\ref` mark names) to the names requesting it — a creator's own `author:N` exactly, any other label by
@@ -85,8 +86,8 @@ pub struct Resolved {
   pub creators:  Vec<RCreator>,
   /// what no creator owns: the author block's own (a trailing nameless creator in the XML, OD #159)
   pub block:     Vec<Assoc>,
-  /// what the rulings dropped: a note whose content all became contacts (ruling 4), with its text — kept for the
-  /// comparison, which reads today's note there as the ruling's change
+  /// what the rulings dropped: a note whose content all became contacts or nothing in which prints (ruling 4), with
+  /// its text — kept for the comparison, which reads today's note there as the ruling's change
   pub dropped:   Vec<Assoc>,
   /// per block (ledger index): the declared conventions it ran under (by name)
   pub policies:  Vec<(usize, &'static str)>,
@@ -112,7 +113,8 @@ pub struct Resolved {
 ///   document's note prints before the address, `api:note-name`);
 /// - one contact per print event (`ruling3:one-per-print`): counted only where the XML holds the pieces joined into one
 ///   item (an `overlaps` rule), the change the ruling makes — the owner of each address is its other tag's;
-/// - an emptied note dropped, a note's inner contacts its contacts, `\thanks{}` kept: `ruling4:`;
+/// - an emptied note dropped, a note's inner contacts its contacts, a note nothing in which prints dropped
+///   (`\thanks{}`): `ruling4:`;
 /// - a url whose text is one e-mail address is an e-mail (`role:url-as-email`: the S2a.2 r2 brief's item 8, adopted);
 /// - a list with one address per author that every spelled address agrees with is in author order (`owner:order`:
 ///   charter §4's owner order, 2026-10-21, OD #805 — for every class, not only the sequenced lists);

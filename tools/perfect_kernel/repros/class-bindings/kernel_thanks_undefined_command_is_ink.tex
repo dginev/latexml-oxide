@@ -1,0 +1,16 @@
+% witness: review rev92e r1 N1 (`\thanks{\undefinedcs}`: an undefined command is no known inkless item, so its note
+%          and its error marker stay)
+% oracle:  pdflatex (article): 1 error, "! Undefined control sequence." — INVALID input for the oracle (it prints a
+%          bare mark "∗"); kept as a guard of the error path only
+% engines: rust 92e r1 (8f49d20) = 1 Error, no note (the marker dropped with it); rust 92a5 = 1 Error and the note with
+%          `<ERROR class="undefined">\undefinedcs</ERROR>`; Perl the same (`<contact role="thanks">`)
+% expect:  exactly 1 Error (undefined `\undefinedcs`), 0 warnings; the note kept, holding the error marker
+% status:  RED (92e r1) -> GREEN (92e r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{\undefinedcs}}
+\maketitle
+Text.
+\end{document}

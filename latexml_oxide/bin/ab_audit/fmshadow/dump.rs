@@ -45,6 +45,7 @@ pub fn json_event(v: &Value) -> FmEvent {
   event.target = v["target"].as_str().map(str::to_string);
   event.nest = v["nest"].as_u64().unwrap_or(0) as u8;
   event.meaning = FmEmailMeaning::from_name(v["meaning"].as_str().unwrap_or(""));
+  event.inkless = v["inkless"].as_bool().unwrap_or(false);
   event.inner = v["inner"]
     .as_array()
     .map(|a| a.iter().map(json_event).collect())

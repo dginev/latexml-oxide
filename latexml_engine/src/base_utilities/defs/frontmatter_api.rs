@@ -280,13 +280,16 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // REPLACE only 'place_keeper'!!
     let digested = digest_frontmatter_item(&tag, content)?;
     // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #803, #916; user rulings 2026-10-21, 2026-10-30): a document's note that
-    // typesets nothing is none, whatever its label — one whose whole content our own extraction moved out (A&A's
+    // prints nothing is none, whatever its label — one whose whole content our own extraction moved out (A&A's
     // `\offprints{\email{…}}` makes the address a contact and left an empty "Preprint: " note: astro-ph0405280,
-    // astro-ph0608669) and one the author left empty (`\title{…\thanks{}}`, an empty "Thanks: " note: 2004.01582,
-    // 2401.15379). A note keeping any ink (`\offprints{O. Kochukhov, \email{…}}`, mdpi's `\corres{Correspondence: }`)
-    // stays, and one holding an argument that may print ([`may_typeset_content`]: JHEP3's `\preprint{\arXivid{…}}`).
-    if matches!(tag.as_str(), "ltx:pubnote" | "ltx:note") && !may_typeset_content(&digested) {
-      DebugFeature!("frontmatter", "FRONT drop {tag}: it typesets nothing");
+    // astro-ph0608669) and one the author left empty or blank (`\title{…\thanks{}}`, an empty "Thanks: " note:
+    // 2004.01582, 2401.15379; mdpi's `\externaleditor{~}`, 2609.00671; lipics's `\Copyright{\@empty}`, 1508.00510).
+    // Only material known to print nothing counts as none ([`leaves_no_ink`]): a note keeping any other item stays —
+    // text (`\offprints{O. Kochukhov, \email{…}}`, mdpi's `\corres{Correspondence: }`, 1609.03883), a command's own
+    // text (`\offprints{\LaTeX}`, `\thanks{\dots}`), a rule or a frame, an argument the test cannot read (JHEP3's
+    // `\preprint{\arXivid{…}}`, 0704.3719).
+    if matches!(tag.as_str(), "ltx:pubnote" | "ltx:note") && leaves_no_ink(&digested) {
+      DebugFeature!("frontmatter", "FRONT drop {tag}: it prints nothing");
       frontmatter_remove(&tag, index);
       return Ok(Vec::new());
     }
@@ -567,14 +570,16 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // no author carries — is no answer to an author's label request, nor passes over the authors one answers)
     let legend = marker_leads(&content);
     let xcontent = digest_frontmatter_item(&tag, content)?;
-    // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #803, #916; user rulings 2026-10-21, 2026-10-30): a note that typesets
+    // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #803, #916; user rulings 2026-10-21, 2026-10-30): a note that prints
     // nothing is none, whatever its label. `\fnsep\thanks{\email{…}}` (webofc; aa's `\fnmsep\thanks{\email{…}}`) moves
     // the e-mail into the author's contact and left an empty `<note role="thanks"/>`, a visible mark opening a note with
-    // nothing in it (2409.01693; 20 of 21 webofc papers); an author's own empty `\thanks{}` is no note either (pdflatex
-    // prints a bare mark: 2004.01582, 2401.15379, astro-ph0608669); nothing in it may print ([`may_typeset_content`]).
-    // The rule covers `ltx:note`s only, not contact-typed notes (elsarticle's `\fntext[f1]{\ead{…}}`).
-    if tag == "ltx:note" && !may_typeset_content(&xcontent) {
-      DebugFeature!("frontmatter", "FRONT drop {tag}: it typesets nothing");
+    // nothing in it (2409.01693; 20 of 21 webofc papers); an author's own empty or blank `\thanks{}` is no note either
+    // (pdflatex prints a bare mark: 2004.01582, 2401.15379, astro-ph0608669). Only material known to print nothing
+    // counts ([`leaves_no_ink`]: `\thanks{\dots}`, `\thanks{\LaTeX}`, `\thanks{$\vdots$}` and `\thanks{\fbox{}}` stay;
+    // the frontmatter observer reads a note by the same test, `Event::inkless`). The rule covers `ltx:note`s only, not
+    // contact-typed notes (elsarticle's `\fntext[f1]{\ead{…}}`).
+    if tag == "ltx:note" && leaves_no_ink(&xcontent) {
+      DebugFeature!("frontmatter", "FRONT drop {tag}: it prints nothing");
       with_value_mut("frontmatter", |val_opt| {
         if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
           && let Some(list) = frnt.get_mut(&parenttag)

@@ -300,6 +300,9 @@ fn json_event(out: &mut String, event: &Event) {
     out.push_str(",\"meaning\":");
     json_str(out, event.meaning.name());
   }
+  if event.inkless {
+    out.push_str(",\"inkless\":true");
+  }
   if !event.inner.is_empty() {
     out.push_str(",\"inner\":[");
     for (i, inner) in event.inner.iter().enumerate() {
@@ -487,6 +490,7 @@ pub fn fm_shadow_json() -> String {
                   space_before: false,
                   space_after:  false,
                   meaning:      EmailMeaning::Binding,
+                  inkless:      false,
                 });
               },
               _ => {},

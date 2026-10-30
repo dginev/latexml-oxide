@@ -22864,7 +22864,7 @@ dropped, its pending stub removed — for every class whose `\email`, `\affiliat
 `\thanks` (aa, webofc, …); the rule covers `ltx:note`s only, not contact-typed notes (elsarticle's `\fntext[f1]{\ead{…}}`
 keeps an empty `<contact role="note"/>`, as before; synthetic, 0 corpus cases in the rev78e2 sample). Generalised by #916
 (2026-10-30): every frontmatter note with no ink is dropped, an author's own empty `\thanks{}` too, by a structural
-test (`may_typeset_content`) in place of the count of annotations made while the note digested.
+test (`leaves_no_ink`) in place of the count of annotations made while the note digested.
 Residual: a note left holding only a separator or a lead word once its addresses became contacts — `\thanks{\email{a},
 \email{b}}` a "," note, `\thanks{e-mail: \email{x}}` an "e-mail: " note (0902.3523's three "E-mail:" notes, 1610.04567's
 ","; as int45b) — is kept: no further rule (rev78e2). Perl (Base_Utility.pool.ltxml, `\lx@add@thanks` a `role=thanks` contact) emits
@@ -23476,8 +23476,10 @@ own (the XML's trailing nameless creator, #159) — each association with the ru
   `spelled_owners`), a class list's author at its call's place (one place per author, every spelled address at its
   author's: `_sequence`, #805), the group's only author, elimination (the line's one unspelled address and the one
   author without an address), the one author a note names the corresponding author (`names_correspondence`), the block;
-  one contact per printed address (a braced `{a,b}@x` written out); a note emptied into contacts dropped, `\thanks{}`
-  kept. API calls: a creator; a labelled contact (`label=`, a `labelseq=` place — a `\and`-list entry numbered piece by
+  one contact per printed address (a braced `{a,b}@x` written out); a note emptied into contacts dropped
+  (`ruling4:emptied`), and so is a note nothing in which prints (`ruling4:inkless`, `\thanks{}`, `\thanks{~}`: the
+  lexer's `Event::inkless`, the XML's `leaves_no_ink` read on the rehearsed note; user ruling 2026-10-30, #916,
+  superseding the 2026-10-21 reading that kept `\thanks{}`). API calls: a creator; a labelled contact (`label=`, a `labelseq=` place — a `\and`-list entry numbered piece by
   piece, #791 —, its leading mark, a `\label` a `\ref` mark names) to its requesters, the block's when none; an
   unlabelled one by its `annotate=` (the last author; `all`; `new`; `run[:<cap>]`, a second contact before a new author
   the same run's), its `\email`s its owners' too; a title's note (its parent `ltx:title`) is no creator's.
@@ -27008,17 +27010,30 @@ as an email) should be removed after that content is stripped out", "\thanks{} c
 `<pubnote name="Preprint: " role="preprint"/>` for A&A's `\offprints{\email{…}}` (the address became a contact;
 astro-ph0405280, astro-ph0608669), `<pubnote name="Thanks: " role="thanks"/>` for a title's `\thanks{}` (2004.01582,
 astro-ph0608669) and an empty `<note role="thanks"/>` for an author's (2401.15379), where pdflatex prints a bare mark.
-Ours: `\lx@add@frontmatter@now` (an `ltx:pubnote` or a document's `ltx:note`) and `\lx@annotate@frontmatter@now` (a
-creator's `ltx:note`; contact-typed notes, elsarticle's `\fntext{\ead{…}}`, stay as #803 left them) drop the entry when
-nothing in its digested content may print — `may_typeset_content` (util_text.rs): `typesets_content`, failing safe on a
-whatsit argument `shown_arguments` does not count (a verbatim argument of a constructor whose replacement is compiled:
-jhep's two-verbatim `\href`, so JHEP3's `\preprint{\arXivid{…}}` stays, 0704.3719), and a key (`\ref`, `\label`).
-The structural test replaces #803's count of annotations made while the note digested. The address stays the contact
-the binding made of it; no mark is left in the title or the name (a frontmatter note's mark is the note's own). A note
-with any ink stays with its label: `\offprints{O. Kochukhov, \email{…}}` reads "Send offprint requests to: O.
-Kochukhov," (#915), mdpi's author-typed `\corres{Correspondence: }` stays (1609.03883), and so do the 51 sample
-creator notes reading "Corresponding author." (1306.1712, 2211.07501). Repros
-class-bindings/{aa_offprints_only_email_leaves_no_note, kernel_empty_thanks_leave_no_note,
-mdpi_corres_label_only_note_is_kept}; guards `perfect_kernel_batch92e::{aa_offprints_only_email_leaves_no_note,
-kernel_empty_thanks_leave_no_note, mdpi_corres_label_only_note_is_kept}`, and
-`perfect_kernel_batch78e::aa_thanks_email_leaves_no_empty_note` (Bob Baker's empty `\thanks{}` now no note).
+Ours: `\lx@add@frontmatter@now` (an `ltx:pubnote` or a document's `ltx:note`: mdpi's `\externaleditor{~}`, 2609.00671;
+lipics's `\Copyright{\@empty}`, 1508.00510) and `\lx@annotate@frontmatter@now` (a creator's `ltx:note`; contact-typed
+notes, elsarticle's `\fntext{\ead{…}}`, stay as #803 left them) drop the entry when every item of its digested content
+is one known to print nothing — `leaves_no_ink` (util_text.rs, `first_ink` finds no ink): a box of white space (a
+space, a tie), a box Perl marks `isSpace` (glue, kerns, `\quad`, phantoms, `\indent`/`\noindent`; Box.pm:33-38), a
+rule with no width or no height and depth (a strut), breaks, `\par`, penalties, `\leavevmode`, and a font or
+unframed box wrapper (`\textbf{}`, `\mbox{}`, `\makebox[1em]{}`, `\raisebox`, a formula) whose arguments (options and
+position keywords aside) and body print nothing. Anything else is ink, failing safe: a command's own text though it
+shows no argument (`\thanks{\dots}`, `\thanks{\LaTeX}`, aa's `\offprints{\LaTeX}`, svjour3's `\offprints{\dots}`,
+`$\vdots$`, `\ensuremath{\ldots}`), a rule with a size, a framed box (`\fbox{}`), a leader (`\hrulefill`), an image, a
+reference, an undefined command's error marker, a verbatim argument the test cannot read (JHEP3's
+`\preprint{\arXivid{…}}`, 0704.3719). The frontmatter observer reads a note by the same test (`Event::inkless`, set by
+the lexer on the rehearsed note; the resolver drops it as `ruling4:inkless`, #837), so its tuples agree with the XML. The test replaces #803's count of annotations made while the note
+digested; round 1's `may_typeset_content` (text boxes and shown arguments only) read a command's own text as inkless
+and dropped those notes (review rev92e r1 B1, S2). The address stays the contact the binding made of it; no mark is
+left in the title or the name (a frontmatter note's mark is the note's own). A note with any ink stays with its label:
+`\offprints{O. Kochukhov, \email{…}}` reads "Send offprint requests to: O. Kochukhov," (#915), mdpi's author-typed
+`\corres{Correspondence: }` stays (1609.03883), and so do the 51 sample creator notes reading "Corresponding author."
+(1306.1712, 2211.07501). Repros class-bindings/{aa_offprints_only_email_leaves_no_note, kernel_empty_thanks_leave_no_note,
+mdpi_corres_label_only_note_is_kept, kernel_thanks_command_text_is_ink, kernel_thanks_math_token_is_ink,
+aa_offprints_command_text_is_ink, kernel_thanks_rule_and_frame_are_ink, kernel_thanks_undefined_command_is_ink (fails
+pdflatex: the error path only)}; guards `perfect_kernel_batch92e::{aa_offprints_only_email_leaves_no_note,
+kernel_empty_thanks_leave_no_note, mdpi_corres_label_only_note_is_kept, kernel_thanks_command_text_is_ink,
+kernel_thanks_math_token_is_ink, aa_offprints_command_text_is_ink, kernel_thanks_rule_and_frame_are_ink,
+kernel_thanks_undefined_command_is_ink, observer_reads_a_note_by_the_ink_test}`,
+`perfect_kernel_batch78e::aa_thanks_email_leaves_no_empty_note` (Bob Baker's empty `\thanks{}` now no note) and
+`perfect_kernel_batchfms2a2::notes_labels_and_contacts` (Cat Cole's `\thanks{}` a `ruling4:inkless` drop).

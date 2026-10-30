@@ -18,7 +18,7 @@ use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
 use serde_json::Value;
 
 /// Convert `tex` (with `preload`) under the shadow switch, asserting a clean conversion: the dump's `resolved`.
-fn resolved(tex: &str, preload: Option<&str>) -> Value {
+pub(super) fn resolved(tex: &str, preload: Option<&str>) -> Value {
   let (log, _, json) = convert_with_setup_then(
     tex,
     preload,
@@ -370,10 +370,11 @@ fn sync_row_shapes_62_64_authblk() {
 }
 
 /// A `\label` in a `\thanks` labels the note (78f item 4, design §5 default 9); a `\thanks` whose content became
-/// contacts is dropped (ruling 4), an empty `\thanks{}` kept; an e-mail line no name spells goes to the one author a
-/// note marks as the corresponding author (FIDELITY_CHARTER §4, 2026-10-21). (FM S2a.2 r8, main-session decision 1 on
-/// r7: a url is an author's only as the page it spells — `https://b.org` spells no one, so it stays in Bob's note, which
-/// is kept.)
+/// contacts is dropped (ruling 4), and so is an empty `\thanks{}`, as the XML drops it (`ruling4:inkless`: the user's
+/// ruling 2026-10-30, "\thanks{} can go too", superseding the 2026-10-21 reading that kept it; batch 92e, OD #916); an
+/// e-mail line no name spells goes to the one author a note marks as the corresponding author (FIDELITY_CHARTER §4,
+/// 2026-10-21). (FM S2a.2 r8, main-session decision 1 on r7: a url is an author's only as the page it spells —
+/// `https://b.org` spells no one, so it stays in Bob's note, which is kept.)
 #[test]
 fn notes_labels_and_contacts() {
   let (log, _, json) = convert_with_setup_then(
@@ -395,7 +396,7 @@ fn notes_labels_and_contacts() {
     "C Bob Baker [] | line:names sep:column",
     "  n https://b.org | note:adjacent",
     "C Cat Cole [] | line:names sep:column",
-    "  n  | note:adjacent ruling4:empty-kept",
+    "D note  | note:adjacent ruling4:inkless",
   ]);
 }
 

@@ -1,10 +1,14 @@
 % witness: 1609.03883 (`\corres{Correspondence: }`, an author-typed label with no address after it; the main
-%          session's 92e scope, 2026-10-30: a note with any ink is kept)
+%          session's 92e scope, 2026-10-30: a note with any ink is kept); 2609.00671 (`\externaleditor{~}`, a
+%          document's note holding only a tie; 1508.00510's lipics `\Copyright{\@empty}` the same shape, an empty
+%          `<note role="copyright"/>`)
 % oracle:  pdflatex with 2609.00671's Definitions/mdpi.cls (sensors, accept, moreauthors): 0 errors; the note line "* Correspondence:"
-%          under the affiliations
-% engines: rust b4c8392 = `<note role="corresponding">Correspondence: </note>`; no Perl binding for mdpi
-% expect:  0 errors, 0 warnings; that note kept, whole
-% status:  GREEN (b4c8392) -> GREEN (92e), the no-change row of the no-ink rule
+%          under the affiliations, and "Academic Editor:" with no name after it
+% engines: rust b4c8392 = `<note role="corresponding">Correspondence: </note>` and `<note role="external-editor"> </note>`;
+%          no Perl binding for mdpi
+% expect:  0 errors, 0 warnings; the corresponding note kept, whole; no external-editor note
+% status:  GREEN (b4c8392) -> GREEN (92e) for the corresponding note, the no-change row of the no-ink rule; RED
+%          (b4c8392) -> GREEN (92e) for the tie
 % preload: ar5iv.sty
 \documentclass[sensors,article,accept,moreauthors,pdftex]{mdpi}
 \pubvolume{1}
@@ -19,6 +23,7 @@
 \Author{Author One}
 \address{Univ A}
 \corres{Correspondence: }
+\externaleditor{~}
 \abstract{An abstract.}
 \keyword{one; two}
 \begin{document}

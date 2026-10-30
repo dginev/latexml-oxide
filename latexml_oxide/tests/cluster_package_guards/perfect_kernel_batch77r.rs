@@ -300,6 +300,7 @@ fn documentstyle_after_a_missing_class_loads_the_class() {
     &xml,
     "pubnote",
     &[],
+    // (the class's label, aa.cls:337-340 "Send offprint requests to:", not the role's "Preprint: ": batch 92e, OD #915)
     r#"<pubnote name="Send offprint requests to: " role="preprint">A. Name</pubnote>"#,
   );
 }
@@ -319,6 +320,7 @@ fn documentstyle_after_a_missing_documentclass_loads_the_class() {
     &xml,
     "pubnote",
     &[],
+    // (the class's label, aa.cls:337-340 "Send offprint requests to:", not the role's "Preprint: ": batch 92e, OD #915)
     r#"<pubnote name="Send offprint requests to: " role="preprint">A. Name</pubnote>"#,
   );
 }
