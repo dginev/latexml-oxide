@@ -323,10 +323,12 @@ pub(in crate::base_utilities) fn normalize_hspace_separators(tokens: Tokens) -> 
           j += 1;
         }
       }
-      // (a zero length prints no gap, and parts nothing: `\textsuperscript{1\hspace{0pt}2}` prints the label 12 —
-      // review rev92b_r4 S1, where its `\quad` parted the labels 1 and 2 —, as `\hskip0pt` is no spacing,
-      // `util_text::is_blank_item`)
-      let zero = length_start < j
+      // (a zero length inside a group, a mark's argument or math prints no gap and parts nothing:
+      // `\textsuperscript{1\hspace{0pt}2}` prints the label 12, as `\hskip0pt` is no spacing,
+      // `util_text::is_blank_item`; at the top level of the author line it stays the `\quad` that parts two names,
+      // `Ann Able\hspace{0pt}Bob Baker` two creators)
+      let zero = (depth > 0 || in_math || mark_argument.is_some())
+        && length_start < j
         && ZERO_LENGTH.is_match(&Tokens::new(src[length_start..j - 1].to_vec()).to_string());
       if !zero {
         out.push(T_CS!("\\quad"));

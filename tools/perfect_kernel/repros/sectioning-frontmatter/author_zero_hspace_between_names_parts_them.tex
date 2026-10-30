@@ -1,0 +1,17 @@
+% witness: none (review rev92b r5 B1: a zero-length `\hspace` at the top level of the author line)
+% oracle:  pdflatex: "Ann Able1Bob Baker2" — two names (no gap printed, but two `\author` names to every reader of
+%          the source), "1Univ One", "2Univ Two"
+% engines: 92b0 and 92b round 4 = two creators, each with its line; 92b round 5 = one creator "Ann Able 1 Bob Baker"
+%          holding both lines and an `Error:frontmatter:merged_creators`
+% expect:  0 errors, 0 warnings; Ann Able with Univ One, Bob Baker with Univ Two (the zero `\hspace` the separator at
+%          the top level; inside a mark it is no gap, `author_mark_labels_parted_by_spacing`)
+% status:  RED (92b round 5) -> GREEN
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\title{T}
+\author{Ann Able$^{1}$\hspace{0pt}Bob Baker$^{2}$\\ $^1$Univ One\\ $^2$Univ Two}
+\begin{document}
+\maketitle
+Text.
+\end{document}

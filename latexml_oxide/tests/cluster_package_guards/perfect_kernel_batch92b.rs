@@ -670,4 +670,22 @@ fn spacing_parts_a_marks_labels() {
       "  a Univ Two | api:labelseq",
     ],
   );
+  // (a zero-length `\hspace` at the top level of the author line still parts two names, as the `\quad` it was —
+  // review rev92b_r5 B1, where dropping it everywhere merged them into one creator holding both lines; inside a mark it
+  // is no gap, the rows above)
+  assert_reading(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_zero_hspace_between_names_parts_them.tex"
+    ),
+    Some(&[&["Ann Able", "affiliation=Univ One"], &[
+      "Bob Baker",
+      "affiliation=Univ Two",
+    ]]),
+    &[
+      "C Ann Able [1] | line:names",
+      "  a Univ One | ruling1:request",
+      "C Bob Baker [2] | line:names",
+      "  a Univ Two | ruling1:request",
+    ],
+  );
 }

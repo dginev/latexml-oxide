@@ -1714,7 +1714,7 @@ produced byte-identical output, so this is a surpass, not a Rust-only fix.
   creator, because the splitter only knew `\and`/`\quad`. `\quad` is already a hard
   separator in every author/affiliation split set, so the rewrite needs no new plumbing;
   `\hspace`'s optional `*` and mandatory length are consumed so the length cannot leak; a length written as zero
-  (`\hspace{0pt}`, `\z@`) prints no gap and is dropped (`\textsuperscript{1\hspace{0pt}2}` is the one label 12, #919). A space right before a
+  (`\hspace{0pt}`, `\z@`) inside a group, a mark's argument or math prints no gap and is dropped (`\textsuperscript{1\hspace{0pt}2}` is the one label 12, #919); at the top level of the author line it stays the separator (`Ann Able\hspace{0pt}Bob Baker` two creators). A space right before a
   name's own mark or note is the name's, no separator, and an `\enskip` right after a mark or note and a
   spacing-only math group (`$\qquad$`) separate too (78m, #840).
 - **Footnote-SYMBOL superscripts (`$^{*}$`, `${}^{\dagger}$`, `\textsuperscript{\ddagger}`)
