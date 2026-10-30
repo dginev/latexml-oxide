@@ -1,0 +1,13 @@
+% witness: 2003.08144 (fourier-orns `\leafNE`, `\fontencoding{U}` `U/futs` "G"); review 89d r1 open question 1
+% oracle:  pdflatex: A, fourier-orns' leaf (its "47; pdffonts: CMR10, fourier-orns), B; 0 errors
+% engines: rust 89d = 0 errors, 0 warnings, "AGB" (a text `U` font with no map decodes through OT1, #645, silently);
+%          perl (read, not run): no fourier-orns binding, the `U` font decodes as its ASCII slot
+% expect:  0 errors; the leaf U+FFFD with one Warning for `U/futs` (the 89b rule for math, user ruling 2026-10-29),
+%          or the leaf itself from a fourier-orns table (SYNC_STATUS Font-Selection residual 13; its own batch with an A/B)
+% status:  RED (89d)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{fourier-orns}
+\begin{document}
+A\leafNE B
+\end{document}

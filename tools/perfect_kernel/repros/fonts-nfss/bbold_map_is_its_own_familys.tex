@@ -1,0 +1,35 @@
+% witness: none in the corpus run (review 89c r3 P1); bbold.sty.ltxml:30 / bbold_sty.rs registered the blackboard
+%          map for the whole `U` encoding — mathabx.dcl:944's `\widehat` (2607.15091's copy) and stmaryrd's
+%          `U/stmry` (stmaryrd.sty:117 `\boxslash` at "1B) beside `\usepackage{bbold}` decoded through it
+% oracle:  pdflatex: "x̂ x̌ a⧄b a⋒b ℘ 𝟙 ℝ𝟙 ℝ𝟙 ℝ𝟙 ℝ𝟙" (checked visually: the hat, check, box-slash, ⋒ and ℘ drawn by
+%          mathx10, stmary10, msam10 and eurm10, bbold's ℝ and 𝟙), 0 errors
+% engines: rust 89c = 0 errors, 0 warnings, the hat 𝕡, the check 𝕢, `\boxslash` σ, `\Cap` 𝕖,
+%          `\powersetsymbol` – (bbold's glyphs at those slots); perl (read, not run): bbold.sty.ltxml's `U` map decodes
+%          every `U` font alike
+% expect:  0 errors, 1 warning (U/stmry has no font map, naming `\boxslash`): `\widehat` ^ and `\widecheck` ˇ by
+%          their names (mathx has no map), `\boxslash` U+FFFD, `\Cap` ⋒ (`U_msa`), `\powersetsymbol` ℘ (`U_eur`),
+%          and bbold's own font decoding through its map wherever it is named — `\mathbb`, `\textbb`, `\bbfamily`,
+%          `\usefont{U}{bbold}{m}{n}`, a `\DeclareSymbolFont{…}{U}{bbold}{m}{n}` (OXIDIZED_DESIGN_DIVERGENCES #914)
+% status:  RED (89c) -> GREEN (89d)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{bbold}
+\DeclareFontFamily{U}{mathx}{\hyphenchar\font45}
+\DeclareFontShape{U}{mathx}{m}{n}{<-> mathx10}{}
+\DeclareSymbolFont{mathx}{U}{mathx}{m}{n}
+\DeclareMathAccent{\widehat}{0}{mathx}{"70}
+\DeclareMathAccent{\widecheck}{0}{mathx}{"71}
+\DeclareFontFamily{U}{stmry}{}
+\DeclareFontShape{U}{stmry}{m}{n}{<-> stmary10}{}
+\DeclareSymbolFont{stmry}{U}{stmry}{m}{n}
+\DeclareMathSymbol{\boxslash}{\mathbin}{stmry}{"1B}
+\DeclareSymbolFont{AMSa}{U}{msa}{m}{n}
+\DeclareMathSymbol{\Cap}{\mathbin}{AMSa}{"65}
+\DeclareSymbolFont{eu}{U}{eur}{m}{n}
+\DeclareMathSymbol{\powersetsymbol}{\mathord}{eu}{"7D}
+\DeclareSymbolFont{bbsymbols}{U}{bbold}{m}{n}
+\DeclareMathSymbol{\bbone}{\mathord}{bbsymbols}{"31}
+\begin{document}
+$\widehat{x}$ $\widecheck{x}$ $a\boxslash b$ $a\Cap b$ $\powersetsymbol$ $\bbone$ $\mathbb{R1}$
+\textbb{R1} {\bbfamily R1} {\usefont{U}{bbold}{m}{n}R1}
+\end{document}

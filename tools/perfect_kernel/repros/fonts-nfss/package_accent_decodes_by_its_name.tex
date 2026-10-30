@@ -1,0 +1,38 @@
+% witness: 2607.15091 (its own copy of mathabx.dcl:944-945, `\DeclareMathAccent{\widecheck}{0}{mathx}{"71}`: 88
+%          `\widecheck`) — mathabx.dcl:191 (`\ring` in `U/mathb` "38), :945-949
+%          (`\widecheck` `\widebar` `\widearrow` `\wideparen` in `U/mathx` "71/"73/"74/"75); randexam.cls:1317
+%          (`\widebar`, "73); newtxsf.sty:312-313, :592 (`\dddot` `\ddddot` `\widearc` in `LMS/ntxsy` 168/200/175)
+% oracle:  pdflatex: "x̂, x̊ x͝y̌ x͞y x͞y⃗ x͡y; x⃛ x⃜ x͡y; x̃ x̂." (checked visually at 200 dpi: each the accent its
+%          name says — a ring, a wide check, bar, arrow and arc, newtxsf's three and four dots and arc; mathabx.dcl's `\dddot`
+%          `\ddddot` at mathb "3B/"3C draw three and four dots too; `\myhat`'s and `\utilde`'s slots draw a
+%          hat and a tilde over x; `\overleftrightarrow` a wide hat), 0 errors
+% engines: rust 89c = 0 errors, 3 warnings (U/mathx, U/mathb, LMS/ntxsy), every accent U+FFFD; perl (read, not
+%          run): every accent an empty token, 0 warnings (latex_constructs.pool.ltxml:2702-2709)
+% expect:  0 errors, 1 warning (U/mathx, naming `\myhat`, a name no binding defines); each accent name LaTeXML's
+%          own package bindings agree on the token LaTeXML's binding makes of it, whatever its slot (`\widecheck` ˇ
+%          as mathabx's and libertinust1math's bindings, `\wideparen` ⏜ as fourier's and mathabx's); `\utilde` (an
+%          under accent, which `\DeclareMathAccent` cannot set) and `\overleftrightarrow` (stretchy in amsmath's
+%          binding, not in mathabx's) stay U+FFFD (OXIDIZED_DESIGN_DIVERGENCES #27)
+% status:  RED (89c) -> GREEN (89d)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{newtxsf}
+\DeclareFontFamily{U}{mathx}{\hyphenchar\font45}
+\DeclareFontShape{U}{mathx}{m}{n}{<-> mathx10}{}
+\DeclareSymbolFont{mathx}{U}{mathx}{m}{n}
+\DeclareFontFamily{U}{mathb}{\hyphenchar\font45}
+\DeclareFontShape{U}{mathb}{m}{n}{<-> mathb10}{}
+\DeclareSymbolFont{mathb}{U}{mathb}{m}{n}
+\DeclareMathAccent{\myhat}{0}{mathx}{"70}
+\DeclareMathAccent{\ring}{0}{mathb}{"38}
+\DeclareMathAccent{\widecheck}{0}{mathx}{"71}
+\DeclareMathAccent{\widebar}{0}{mathx}{"73}
+\DeclareMathAccent{\widearrow}{0}{mathx}{"74}
+\DeclareMathAccent{\wideparen}{0}{mathx}{"75}
+\DeclareMathAccent{\utilde}{0}{mathx}{"72}
+\let\overleftrightarrow\undefined % amsmath's, which newtxsf loads
+\DeclareMathAccent{\overleftrightarrow}{0}{mathx}{"70}
+\begin{document}
+$\myhat{x}$, $\ring{x}$ $\widecheck{xy}$ $\widebar{xy}$ $\widearrow{xy}$ $\wideparen{xy}$;
+$\dddot{x}$ $\ddddot{x}$ $\widearc{xy}$; $\utilde{x}$ $\overleftrightarrow{x}$.
+\end{document}

@@ -13,8 +13,17 @@ LoadDefinitions!({
   DefConstructor!("\\bbfamily", "",
     font => {encoding => "U", family => "blackboard", series => "medium", shape => "upright"});
 
+  // The blackboard layout is bbold's own font's, so its map is keyed to that font's family — the one this binding's
+  // `\mathbb`/`\textbb`/`\bbfamily` name (`blackboard`, which `\fontfamily{bbold}` also selects, font.rs) and the one
+  // Ubbold.fd and bbold.sty name in NFSS (`bbold`, a `\DeclareSymbolFont{…}{U}{bbold}{m}{n}`) — not to the shared `U`
+  // encoding. Perl registers it for `U` itself (bbold.sty.ltxml:30), so every other `U` font without a map of its own
+  // decoded through it: mathx's `\widehat` (mathabx.dcl:944) printed 𝕡, stmaryrd's symbols blackboard letters, all
+  // silently (KNOWN_PERL_ERRORS #1203, OXIDIZED_DESIGN_DIVERGENCES #914; guard
+  // `perfect_kernel_batch89d::bbold_map_is_its_own_familys`). Still reached: bbm's and bbmss's fonts, which font.rs
+  // also names `blackboard` (SYNC_STATUS Font-Selection residual 12; RED repro
+  // fonts-nfss/bbold_map_reaches_bbm_through_the_blackboard_alias).
   #[rustfmt::skip]
-  DeclareFontMap!("U", mixrc![
+  let blackboard: Rc<[Option<char>]> = mixrc![
     // \Gamma     \Delta      \Theta      \Lambda      \Xi         \Pi         \Sigma      \Upsilon
     '\u{213E}', '\u{0394}', '\u{0398}', '\u{039B}', '\u{039E}', '\u{213F}', '\u{2140}', '\u{03A5}',
     // \Phi       \Psi        \Omega      alpha        beta        gamma       delta       epsilon
@@ -46,9 +55,12 @@ LoadDefinitions!({
     '\u{1D561}', '\u{1D562}', '\u{1D563}', '\u{1D564}', '\u{1D565}', '\u{1D566}', '\u{1D567}', '\u{1D568}',
     // x          y           z          -             |          --          ``          omega
     '\u{1D569}', '\u{1D56A}', '\u{1D56B}', '-',        '|',       '\u{2013}', '`',        '\u{03C9}'
-  ]);
-  // Position 0x7E is two backtick characters in Perl, not U+201C (ligature result)
-  DeclareFontMapMultichar!("U", {
-    0x7Eu8 => "``",
-  });
+  ];
+  for family in ["blackboard", "bbold"] {
+    DeclareFontMap!("U", blackboard.clone(), family);
+    // Position 0x7E is two backtick characters in Perl, not U+201C (ligature result)
+    DeclareFontMapMultichar!("U", family, {
+      0x7Eu8 => "``",
+    });
+  }
 });

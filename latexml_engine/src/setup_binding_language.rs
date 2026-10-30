@@ -129,11 +129,19 @@ macro_rules! DeclareFontMap {
 }
 
 /// Declare multi-char overrides for font map positions that need more than one character.
-/// Usage: `DeclareFontMapMultichar!("T2B", { 0x80 => "\u{04F6}\u{0336}", 0x91 => "C\u{0337}" });`
+/// Usage: `DeclareFontMapMultichar!("T2B", { 0x80 => "\u{04F6}\u{0336}", 0x91 => "C\u{0337}" });`, or for a family's
+/// own map (`DeclareFontMap!("U", map, "blackboard")`), `DeclareFontMapMultichar!("U", "blackboard", { … })`.
 #[macro_export]
 macro_rules! DeclareFontMapMultichar {
   ($name:expr_2021, { $($pos:expr_2021 => $str:expr_2021),* $(,)? }) => {{
     let mapname = s!("{}_fontmap_multichar", $name);
+    let map: HashMap<String, String> = [
+      $( ($pos.to_string(), $str.to_string()), )*
+    ].into_iter().collect();
+    state::assign_value(&mapname, map, Some(Scope::Global));
+  }};
+  ($name:expr_2021, $family:expr_2021, { $($pos:expr_2021 => $str:expr_2021),* $(,)? }) => {{
+    let mapname = s!("{}_{}_fontmap_multichar", $name, $family);
     let map: HashMap<String, String> = [
       $( ($pos.to_string(), $str.to_string()), )*
     ].into_iter().collect();

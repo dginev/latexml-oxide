@@ -616,8 +616,8 @@ which sizes its box otherwise (2201.00184's bussproofs rule went from 471.8pt to
 
 **Undecodable** means `font_decode` gives no glyph and the name has no reference slot (#910), or for an accent no
 kernel accent's name (below). That covers three cases:
-the declared font's encoding has no map (`U` with a family other than `msa`/`msb`/`eur`, or a symbol font that is not
-declared at all), the map has no entry at the slot (TS1 "41; the reason reads "has no Unicode glyph at slot …"), or
+the declared font's encoding has no map (`U` with a family other than `msa`/`msb`/`eur` or bbold's, bbold loaded or
+not, #914; or a symbol font that is not declared at all), the map has no entry at the slot (TS1 "41; the reason reads "has no Unicode glyph at slot …"), or
 the map records the slot as a gap of the font (`U/eur`'s 17, `U/msb`'s 5, "has no character at slot …"). A
 raw slot is no font's glyph in any case. **A mapped font's empty slot** is never decoded by a name for an accent —
 the map says what the font's slots hold — and for a symbol only where it is no gap of the font: a slot the font lacks
@@ -682,8 +682,8 @@ mapped font an empty slot stays U+FFFD (above). mdsymbol's accents are redeclare
 force is still `OMX/cmex` and its `\vec` at "84 — outside cmex's 128 slots — stays U+FFFD with the Warning (89c round
 1 decoded it by name; SYNC_STATUS Font-Selection residual 9). The table
 is `reference_math_accent` (`reference_math_slots.rs`, the same generator as #910's, each token captured from the
-binding); the rule is sect08.rs `reference_accent`. A name of a package's own (mathabx's `\widecheck`) and an accent
-in a symbol font never declared (pdflatex: "Symbol font … is not defined") stay U+FFFD with the font's Warning. Repro
+binding); the rule is sect08.rs `reference_accent`. An accent in a symbol font never declared (pdflatex: "Symbol font …
+is not defined") stays U+FFFD with the font's Warning. Repro
 fonts-nfss/kernel_accent_decodes_by_its_name; guard `perfect_kernel_batch89c::kernel_accent_decodes_by_its_name`
 (eleven newtxsf accents, nested, in a script, over an empty base, in 1902.03183's align cell). In the 89c A/B
 (pop89c: pop89a and 80 papers loading newtxsf, asmeconf, mdsymbol, program or another raw `U/eur` user; 756 against
@@ -697,6 +697,33 @@ pictures, sized by the accent's glyph as without mathabx. The gap rule (round 2)
 paper's candidate row equals round 1's but 2406.00910's (one `ambiguous_math` Warning fewer, its XML identical; 161 on
 both binaries rerun alone), and no TeX Live package declares a symbol or a kernel accent at an eur gap; nor at an
 msbm gap (round 3).
+
+**A package accent is decoded by its name too** (89d), under the same conditions: an over accent LaTeXML's own
+package bindings define (`DefMath!` with `operator_role => "OVERACCENT"`), where every binding defining it makes the
+same token, is that token — `\widecheck` ˇ (mathabx, libertinust1math), `\widebar` ¯ (with newtxmath), `\wideparen`
+⏜ (fourier, mathabx), `\widearc` ⏜ (fourier), `\widearrow` →, `\ring` U+030A (accents, mathabx), `\dddot`/`\ddddot`
+(accents, amsmath, mathabx, mathdots; revsymb's `\dddot`), and the rest of mathabx's, revsymb's, actuarialangle's,
+elsart's and iopart's: twenty names in `reference_math_accent`, each captured from a document loading only its binding
+(gen_reference_math_slots.py `--capture-packages`). Left out: a name the bindings give different tokens
+(`\overleftrightarrow`, stretchy in amsmath's binding, not in mathabx's; TeX gives no tie-break, as
+`make_math_accent` (tex.web §738) walks the accent's charlist to the widest successor that fits, so a `\mathaccent`
+can grow and "not stretchy in TeX" is no premise), a name some definition in latexml_package, latexml_engine or
+latexml_core makes otherwise (a `DefMacro!`, a `DefConstructor!`, a `DefMath!` without the role or with
+`UNDERACCENT`, or one outside a `*_sty.rs` binding; none today), and an under accent (`\utilde`,
+`\underleftarrow`): TeX sets a `\mathaccent` above its nucleus (tex.web §738), so an under accent is no meaning a
+`\DeclareMathAccent` can have. Rendered (pdflatex, 200 dpi) at every TeX Live redeclaration the rule reaches, each
+draws the accent its name says: mathabx.dcl's `\ring` `\dddot` `\ddddot` in `U/mathb` "38/"3B/"3C (:191-199) and
+`\widecheck` `\widebar` `\widearrow` `\wideparen` in `U/mathx` "71/"73-"75 (:945-949), randexam.cls:1317's
+`\widebar`, and newtxsf's `\dddot` `\ddddot` `\widearc` in `LMS/ntxsy` 168/200/175 (newtxsf.sty:312-313, :592).
+The other TeX Live redeclarations of these names (newtxmath, newpxmath, fourier, MnSymbol, fdsymbol, stix, stix2,
+libertinust1math, kpfonts, yhmath, arev, mathdesign, mathsemantics) are bound or decode through an `OMX` map, and are
+untouched (a sweep of each, base against 89d). A name no binding defines as an accent (`\myhat`) stays U+FFFD with the font's Warning.
+Witness 2607.15091 (88 `\widecheck` in its copy of mathabx.dcl). Repro fonts-nfss/package_accent_decodes_by_its_name;
+guard `perfect_kernel_batch89d::package_accent_decodes_by_its_name`. In the 89d A/B (pop89d: pop89c and the 830 more
+census papers loading bbold or mathabx or naming `\widecheck`, `\widebar`, `\widearrow` or `\widearc`; 1584 against
+int120a, run `r89d1`, its 48 changed papers rerun against 89c's tip, run `r89d1x`) the rule turns 1,572 U+FFFD into
+the accent in 22 papers (1,560 `\widecheck` ˇ, 12 `\widebar` ¯; 2405.02071 601, 2306.15285 384, 2607.15091 88), each
+paper losing its `U/mathx` Warning (−23 with 2505.20009, a Fatal on both sides); E, F and words equal.
 
 **The Euler Roman family `U/eur` decodes through OML** (89c): eurm10/eurb10 (amsfonts' ueur.fd) say "TEX MATH ITALIC
 SUBSET"; tftopl gives 111 of cmmi10's 128 slots and none outside them, and rendered beside cmmi10 each draws cmmi's
@@ -26747,3 +26774,44 @@ cpc_hepnp_unmarked_address_under_several_names (NO-CHANGE, GREEN for 91c) and ju
 just_unmarked_address_is_its_author_s_affiliation, just_unmarked_address_under_several_names_is_every_name_s,
 just_emails_after_maketitle_is_the_author_s_e_mail, cpc_hepnp_is_not_routed_until_91c}` (the first and third also
 check the binary, eager and `--streaming`).
+
+### 914. bbold's blackboard map is its own family's (`blackboard`, a name bbm and bbmss share), not the `U` encoding's, and a family's map is read without an encoding map (Perl: bbold's map decodes every `U` font)
+
+bbold.sty.ltxml:30 registers its map as `U_fontmap`, the encoding's (KNOWN_PERL_ERRORS #1203), so beside
+`\usepackage{bbold}` every `U` symbol font without a map of its own decoded as blackboard letters, silently: a paper's
+copy of mathabx.dcl:944 `\widehat` in `U/mathx` printed 𝕡 (and 89c's name rule never fired, the font now having a
+map), stmaryrd's `\boxslash` in `U/stmry` σ, a raw `U/msa` `\Cap` 𝕖 — loaded first, the encoding map also stopped
+u_fontmap.rs, which holds `U_msa`/`U_msb`/`U_eur`, from ever loading — and program.sty's `U/eur` `\powersetsymbol` –.
+OXIDIZED_DESIGN_DIVERGENCES #27's "`U` with a family other than `msa`/`msb`/`eur` has no map" was false under bbold.
+
+Ours: bbold_sty.rs registers the map for bbold's own font, by both names it goes by — `U_blackboard`, the family its
+`\mathbb`/`\textbb`/`\bbfamily` constructors name (and `\fontfamily{bbold}` selects, font.rs's family table), and
+`U_bbold`, Ubbold.fd's and bbold.sty's NFSS family (`\DeclareSymbolFont{…}{U}{bbold}{m}{n}`) — with its multichar
+entry (`DeclareFontMapMultichar!("U", family, …)`, `U_<family>_fontmap_multichar`). `U` keeps no map of its own. Three
+readers had reached a family map only through its encoding's, as Perl's `FontDecode`/`FontDecodeString` do
+(Package.pm:2878-2882, :2907-2910), and are now its own: font.rs `decoding_map`, shared by `decode`, `decode_string`
+and the `\char` multichar lookup, reads the family's map (and its multichar table, which a slot of Perl's map holds)
+whether or not the encoding has one, as content.rs `font_decode` already did; math characters decode in the font's
+family (`decode_in_font`, mathchar.rs), as Perl's `decodeMathChar` passes `$font` to `FontDecode` (Package.pm:2990),
+where Rust had passed the encoding alone, so `\mathbb{R1}` under bbold is ℝ𝟙; and `\selectfont` gives back the encoding
+`\fontencoding` named, which decodes through OT1 for want of a map (`\lx@fontencoding`, #645), when the selected family
+has a map under it (sect13.rs `nfss_selected_font`), so `\usefont{U}{bbold}{m}{n}R1` is ℝ𝟙 as `\textbb{R1}` is. Every
+`*_fontmap.rs` is its own encoding's map, and no other binding registers an encoding map under a shared encoding.
+Still open: the map's reach is the family as font.rs names it, and font.rs's family table (font.rs:184-186) names
+`bbm`, `bbold` and `bbmss` alike `blackboard`, so beside bbold the `U/bbm` and `U/bbmss` fonts decode through bbold's
+map too — `{\usefont{U}{bbm}{m}{n}\char"0B\char"00}` is αℾ, where bbm10 (58 characters) has none at either slot and
+pdflatex prints nothing. The fix keys the map to the NFSS family before font.rs normalises it (SYNC_STATUS
+Font-Selection residual 12; RED repro fonts-nfss/bbold_map_reaches_bbm_through_the_blackboard_alias).
+Repro fonts-nfss/bbold_map_is_its_own_familys; guard `perfect_kernel_batch89d::bbold_map_is_its_own_familys` (mathx's
+`\widehat` ^ and `\widecheck` ˇ by their names, `\boxslash` U+FFFD with `U/stmry`'s Warning, `\Cap` ⋒, ℘, and bbold's
+𝟙/ℝ through `\mathbb`, `\textbb`, `\bbfamily`, `\usefont` and a declared `U/bbold` symbol font, eager and
+`--streaming`). The glyph sweep (the 89b reviewer's 23 setups, 89c's 26 accent and 22 raw setups, 21 accent-name
+setups, and bbold alone, with amssymb, stmaryrd and mathabx) changes no bbold glyph. In the 89d A/B (run `r89d1x`,
+against 89c's tip) five bbold papers change, each checked against pdflatex: 2208.07361's mathabx copies (`\otimes`
+`\boxtimes` `\oplus` `\boxplus` in `U/matha`/`U/mathb`, 114 tokens, 𝕓 and a backquote; pdflatex ⊗ ⊠ ⊕ ⊞),
+2401.14126's cmll `\invamp` `\Bot` `\biginvamp` (`U/cmllr` 0/13/10, 64 tokens, ℾ ℽ Ω; cmllr10 draws ⅋, its
+bottom and a large ⅋) and 2601.14312's `U/txsyc` `\df` (5, 𝔹;
+pdflatex ≔) are now U+FFFD, each font saying so (W +2, +1, +1; the `U/cmllr` and `txsyc` tables are open,
+SYNC_STATUS Font-Selection residual 9); hep-ph0607037's `\lesssim` at `AMSa` "2E is ≲ again (`U_msa` loads; it was
+`.`, and `$\beta\lesssim 0.3$` read `.0.3`); 2003.08144's fourier-orns `\leafNE` (`\fontencoding{U}`, `U/futs` "G")
+is `G` as without bbold, where it was 𝔾 (pdflatex: a leaf; a text `U` font without a map decodes as OT1, #645).

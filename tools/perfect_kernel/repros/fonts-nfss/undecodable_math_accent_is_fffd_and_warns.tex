@@ -1,13 +1,13 @@
 % witness: 1806.02506 (mathabx.dcl:945 `\DeclareMathAccent{\widecheck}{0}{mathx}{"71}`, :748 `\sum` in mathx at "B0;
-%          mathabx.sty:61-65 `U/mathx`); 1902.03183 (eq. 9, `\bar{u} &= a_0.` in an align under newtxsf's `lettersA`
-%          `\bar` at 221: the cell lost whole in 89a)
+%          mathabx.sty:61-65 `U/mathx`; here `\mycheck`, no binding's accent, since 89d decodes `\widecheck` by name);
+%          1902.03183 (eq. 9, `\bar{u} &= a_0.` in an align under newtxsf's `lettersA` `\bar` at 221: lost in 89a)
 % oracle:  pdflatex: "x̌ + ∑ y. / u(t) = a0 (1) / ǔ = a0. (2)" (checked visually), 0 errors
 % engines: rust 89a = 0 errors, 0 warnings: widecheck an empty accent (its MathML `<mo>widecheck</mo>`, the name as an
 %          ASCII stand-in, presentation.rs:1186, Perl MathML.pm:711), sumx the raw slot (U+00B0 °), and equation (2)'s
 %          first align cell `\displaystyle\widecheck{u}` dropped whole; perl 0.8.8 = 0 errors, widecheck an empty
 %          accent, sumx dropped
-% expect:  0 errors, 1 warning (`missing_font_encoding` U/mathx, naming the math accent \widecheck: the accent and the
-%          symbol share their symbol font); widecheck and sumx U+FFFD, the accent over its base `x`, and over `u` in
+% expect:  0 errors, 1 warning (`missing_font_encoding` U/mathx, naming the math accent \mycheck: the accent and the
+%          symbol share their symbol font); mycheck and sumx U+FFFD, the accent over its base `x`, and over `u` in
 %          the align cell, which is kept (OXIDIZED_DESIGN_DIVERGENCES #27)
 % status:  RED (89a) -> GREEN (89b)
 % preload: ar5iv.sty
@@ -16,12 +16,12 @@
 \DeclareFontFamily{U}{mathx}{\hyphenchar\font45}
 \DeclareFontShape{U}{mathx}{m}{n}{<5> <6> <7> <8> <9> <10> <10.95> <12> <14.4> <17.28> <20.74> <24.88> mathx10}{}
 \DeclareSymbolFont{mathx}{U}{mathx}{m}{n}
-\DeclareMathAccent{\widecheck}{0}{mathx}{"71}
+\DeclareMathAccent{\mycheck}{0}{mathx}{"71}
 \DeclareMathSymbol{\sumx}{1}{mathx}{"B0}
 \begin{document}
-$\widecheck{x}+\sumx y$.
+$\mycheck{x}+\sumx y$.
 \begin{align}
 u(t) &= a_0\\
-\widecheck{u} &= a_0.
+\mycheck{u} &= a_0.
 \end{align}
 \end{document}

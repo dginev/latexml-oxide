@@ -8,7 +8,8 @@
 % engines: rust 89b = 0 errors, 3 warnings (U/ntxsfmia, LMS/ntxsy, U/mathx), every accent U+FFFD; rust 89a = 0
 %          warnings, every accent an empty token (MathML `<mo>hat</mo>`, the name), the align cell dropped; perl
 %          0.8.8 = 0 warnings, every accent an empty token
-% expect:  0 errors, 1 warning (U/mathx, naming the math accent \widecheck, a name of mathabx's own); each kernel
+% expect:  0 errors, 0 warnings (89c: 1, U/mathx, for mathabx's own `\widecheck`, since 89d ˇ, the token LaTeXML's
+%          mathabx and libertinust1math bindings agree on: package_accent_decodes_by_its_name); each kernel
 %          accent the token LaTeXML's own binding makes of its name, whatever its slot — glyph, `name`, stretchiness
 %          (`\hat` ^ stretchy="false", `\mathring` U+030A, `\widehat` ^) — over its base, nested, in a script, with an
 %          empty base, and over `u` in the align cell (OXIDIZED_DESIGN_DIVERGENCES #27)

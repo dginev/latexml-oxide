@@ -6310,7 +6310,7 @@ pub fn font_decode_string(string: &str, encoding_opt: Option<&str>, implicit: bo
 thread_local! {
   static FONTMAP_KEY_MEMO: std::cell::RefCell<HashMap<String, FontmapKeySyms>> =
     std::cell::RefCell::new(HashMap::default());
-  static FONTMAP_FAMILY_KEY_MEMO: std::cell::RefCell<HashMap<(String, String), SymStr>> =
+  static FONTMAP_FAMILY_KEY_MEMO: std::cell::RefCell<HashMap<(String, String), (SymStr, SymStr)>> =
     std::cell::RefCell::new(HashMap::default());
 }
 
@@ -6340,16 +6340,19 @@ pub fn fontmap_key_syms(encoding: &str) -> FontmapKeySyms {
   })
 }
 
-/// The memoized `"{encoding}_{family}_fontmap"` key symbol.
-pub fn fontmap_family_key_sym(encoding: &str, family: &str) -> SymStr {
+/// The memoized `"{encoding}_{family}_fontmap"` and `"{encoding}_{family}_fontmap_multichar"` key symbols.
+pub fn fontmap_family_key_syms(encoding: &str, family: &str) -> (SymStr, SymStr) {
   FONTMAP_FAMILY_KEY_MEMO.with(|m| {
-    if let Some(sym) = m.borrow().get(&(encoding.to_string(), family.to_string())) {
-      return *sym;
+    if let Some(syms) = m.borrow().get(&(encoding.to_string(), family.to_string())) {
+      return *syms;
     }
-    let sym = arena::pin(s!("{encoding}_{family}_fontmap"));
+    let syms = (
+      arena::pin(s!("{encoding}_{family}_fontmap")),
+      arena::pin(s!("{encoding}_{family}_fontmap_multichar")),
+    );
     m.borrow_mut()
-      .insert((encoding.to_string(), family.to_string()), sym);
-    sym
+      .insert((encoding.to_string(), family.to_string()), syms);
+    syms
   })
 }
 

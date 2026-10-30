@@ -2601,6 +2601,20 @@ pub fn nfss_selected_font(base: &Font, report: bool) -> Result<Font> {
     let message = s!("Unrecognized font shape {:?}.", shape);
     Info!("unexpected", shape, message);
   }
+  // An encoding with no map of its own decodes through OT1 (`\lx@fontencoding`, tex_fonts.rs, which keeps its name
+  // for `\f@encoding`). A family with a map of its own under it is that font's layout, so the font takes the named
+  // encoding back and decodes through the family's map: `\usefont{U}{bbold}{m}{n}` is bbold's blackboard
+  // (`U_blackboard`, bbold_sty.rs), as `\bbfamily` is. OXIDIZED_DESIGN_DIVERGENCES #914.
+  let unmapped = lookup_string_from_sym(pin!("lx@fontencoding@unmapped"));
+  if !unmapped.is_empty()
+    && font
+      .get_encoding()
+      .is_some_and(|encoding| encoding == "OT1")
+    && let Some(family) = font.get_family()
+    && lookup_value(&s!("{unmapped}_{family}_fontmap")).is_some()
+  {
+    font = font.merge_ref(&fontmap!(encoding => unmapped));
+  }
   Ok(font)
 }
 

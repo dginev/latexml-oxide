@@ -18,7 +18,7 @@ use rustc_hash::FxHashMap as HashMap;
 
 use crate::{
   BoxOps, Digested, DigestedData, Result,
-  binding::content::{fontmap_family_key_sym, fontmap_key_syms, load_font_map, preload_font_map},
+  binding::content::{fontmap_family_key_syms, fontmap_key_syms, load_font_map, preload_font_map},
   common::{
     arena::{self, SymHashMap, SymStr},
     color::{self, Color},
@@ -2420,11 +2420,14 @@ pub fn decode_str(code: u8, encoding_opt: Option<String>, implicit: bool) -> Opt
 /// Look up multi-char override for a given encoding position.
 /// Returns Some(String) if a multi-char override exists.
 fn lookup_multichar_override(code: u8, encoding_opt: Option<&str>) -> Option<String> {
+  let mut font = None;
   let encoding = match encoding_opt {
     Some(enc) if !enc.is_empty() => enc.to_string(),
     _ => {
-      let font = lookup_font();
-      font.and_then(|f| f.get_encoding().map(|e| e.to_string()))?
+      font = lookup_font();
+      font
+        .as_ref()
+        .and_then(|f| f.get_encoding().map(|e| e.to_string()))?
     },
   };
   if encoding.is_empty() {
@@ -2444,13 +2447,34 @@ fn lookup_multichar_override(code: u8, encoding_opt: Option<&str>) -> Option<Str
   // such hazard: `FontDecode` calls `LoadFontMap` first and then indexes one
   // map whose slot already holds the whole string.
   let _ = preload_font_map(&encoding);
-  with_value_sym(fontmap_key_syms(&encoding).multichar, |val_opt| {
+  with_value_sym(decoding_map(&encoding, font.as_deref()).1, |val_opt| {
     if let Some(Stored::HashString(map)) = val_opt {
       map.get(&code.to_string()).cloned()
     } else {
       None
     }
   })
+}
+
+/// The map a font decodes through, and the key of the multichar table that goes with it (Perl `FontDecode`,
+/// Package.pm:2878-2882): its family's own map (`<encoding>_<family>_fontmap`, `OT1_typewriter`, `U_msa`), when one is
+/// declared, with that map's multichar entries (`<encoding>_<family>_fontmap_multichar`), else its encoding's. In Perl a
+/// map slot holds the whole string, so the family's map replaces the encoding's multichar entries too. Perl reads a
+/// family map only after its encoding's map has loaded; here a family map stands on its own, as `font_decode`
+/// (content.rs) already reads it: `U` has no map of its own (u_fontmap.rs), and its families' — `U_msa`, `U_msb`,
+/// `U_eur`, and bbold's `U_blackboard` — are each one font's layout, not the encoding's (bbold_sty.rs;
+/// OXIDIZED_DESIGN_DIVERGENCES #27).
+fn decoding_map(encoding: &str, font: Option<&Font>) -> (Option<Fontmap>, SymStr) {
+  // `load_font_map` preloads; keys are memoized (2026-08-23 audit R6).
+  let map = load_font_map(encoding);
+  if let Some(family) = font.and_then(|font| font.get_family()) {
+    let (family_map_key, family_multichar_key) = fontmap_family_key_syms(encoding, family);
+    let family_map: Option<Fontmap> = with_value_sym(family_map_key, |v| v.and_then(|s| s.into()));
+    if family_map.is_some() {
+      return (family_map, family_multichar_key);
+    }
+  }
+  (map, fontmap_key_syms(encoding).multichar)
 }
 
 pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool) -> Option<char> {
@@ -2483,23 +2507,23 @@ pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool) -> Option<
     },
   };
 
-  let mut map: Option<Fontmap> = None;
-  if !encoding.is_empty() {
-    // `load_font_map` preloads; keys are memoized (2026-08-23 audit R6).
-    if let Some(encmap) = load_font_map(&encoding) {
-      // OK got some map.
-      map = Some(encmap);
-      if let Some(ref font) = font
-        && let Some(family) = (*font).get_family()
-      {
-        with_value_sym(fontmap_family_key_sym(&encoding, family), |fmap_opt| {
-          if let Some(fmap) = fmap_opt {
-            map = fmap.into(); // Use the family specific map, if any.
-          }
-        });
-      }
-    }
-  }
+  decode_with_map(code, &encoding, font.as_deref(), implicit)
+}
+
+/// Decode a codepoint in `encoding` as `font` draws it: through the font family's own map, when one is declared
+/// (`decoding_map`). Perl `FontDecode($n, $encoding, $font)`, as `decodeMathChar` calls it (Package.pm:2990): the
+/// math character's encoding is the font info's, its family the font's — `\mathbb{R}` under bbold is `U` in the
+/// `blackboard` family, decoded through `U_blackboard` (bbold_sty.rs).
+pub fn decode_in_font(code: u8, encoding: &str, font: &Font, implicit: bool) -> Option<char> {
+  decode_with_map(code, encoding, Some(font), implicit)
+}
+
+fn decode_with_map(code: u8, encoding: &str, font: Option<&Font>, implicit: bool) -> Option<char> {
+  let map = if encoding.is_empty() {
+    None
+  } else {
+    decoding_map(encoding, font).0
+  };
 
   if implicit {
     if let Some(map) = map {
@@ -2546,26 +2570,16 @@ pub fn decode_string(string: SymStr, encoding_opt: Option<&str>, implicit: bool)
   // the "{encoding}_fontmap"-family key strings each call was ~1M allocations
   // on a 1.3 s paper (2026-08-23 audit R6). `load_font_map` preloads, so no
   // separate `preload_font_map` call is needed.
-  let mut map: Option<Fontmap> = None;
-  if !encoding.is_empty()
-    && let Some(encmap) = load_font_map(encoding)
-  {
-    // OK got some map.
-    map = Some(encmap);
-    if let Some(ref font) = font
-      && let Some(family) = (*font).get_family()
-    {
-      with_value_sym(fontmap_family_key_sym(encoding, family), |fmap_opt| {
-        if let Some(fmap) = fmap_opt {
-          map = fmap.into(); // Use the family specific map, if any.
-        }
-      });
-    }
-  }
+  let (map, multichar_key) = if encoding.is_empty() {
+    (None, None)
+  } else {
+    let (map, multichar_key) = decoding_map(encoding, font.as_deref());
+    (map, Some(multichar_key))
+  };
 
   // Load multi-char overrides if available
-  let multichar_map: Option<HashMap<String, String>> = if !encoding.is_empty() {
-    with_value_sym(fontmap_key_syms(encoding).multichar, |val_opt| {
+  let multichar_map: Option<HashMap<String, String>> = if let Some(multichar_key) = multichar_key {
+    with_value_sym(multichar_key, |val_opt| {
       if let Some(Stored::HashString(m)) = val_opt {
         Some(m.clone())
       } else {

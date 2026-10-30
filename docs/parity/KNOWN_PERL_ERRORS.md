@@ -18858,3 +18858,34 @@ pdflatex 6.66669pt, 7.7778pt, 3.8403pt); standard_metrics.rs keys them by the gl
 from cmmi*.tfm "7C). Repros fonts-nfss/{ams_font_slots_decode_as_msam_msbm_draw,
 corrected_slot_glyphs_have_their_tfm_widths}; guards `perfect_kernel_batch89a::{ams_font_slots_decode_as_the_fonts_draw,
 corrected_slot_glyphs_have_their_tfm_widths}`.
+
+## 1203. bbold's blackboard map is registered for the whole `U` encoding, so every other `U` font decodes through it
+
+bbold.sty.ltxml:30 calls `DeclareFontMap('U', [...])` with no `family` option, so the map is `U_fontmap`, the
+encoding's, not one font's. `FontDecode` (Package.pm:2871-2891) uses the encoding's map for any font whose family has
+no map of its own, so once `\usepackage{bbold}` is loaded every `U` symbol font — mathabx's `mathx`/`mathb` as papers
+copy mathabx.dcl, stmaryrd's `stmry`, the AMS `msa`/`msb`, Euler `eur` — decodes its slots as bbold's blackboard
+letters, silently. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{bbold}
+\DeclareFontFamily{U}{mathx}{\hyphenchar\font45}
+\DeclareFontShape{U}{mathx}{m}{n}{<-> mathx10}{}
+\DeclareSymbolFont{mathx}{U}{mathx}{m}{n}
+\DeclareMathAccent{\widehat}{0}{mathx}{"70}
+\DeclareFontFamily{U}{stmry}{}
+\DeclareFontShape{U}{stmry}{m}{n}{<-> stmary10}{}
+\DeclareSymbolFont{stmry}{U}{stmry}{m}{n}
+\DeclareMathSymbol{\boxslash}{\mathbin}{stmry}{"1B}
+\begin{document}
+$\widehat{x}$ $a\boxslash b$
+\end{document}
+% pdflatex: "x̂ a⧄b" (mathx10's wide hat, stmary10's box-slash), 0 errors
+% Perl (read, not run): the hat 𝕡 and the box-slash σ, bbold's glyphs at "70 and "1B, no diagnostic
+```
+
+Fixed in Rust (89d, OXIDIZED_DESIGN_DIVERGENCES #914): bbold_sty.rs keys the map to bbold's own families
+(`U_blackboard`, `U_bbold`). Repro fonts-nfss/bbold_map_is_its_own_familys; guard
+`perfect_kernel_batch89d::bbold_map_is_its_own_familys`. Still reached: bbm's and bbmss's fonts, which font.rs names
+`blackboard` too (SYNC_STATUS Font-Selection residual 12).

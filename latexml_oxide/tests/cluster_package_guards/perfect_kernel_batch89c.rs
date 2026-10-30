@@ -35,7 +35,7 @@ fn warnings(log: &str) -> Vec<String> {
 }
 
 /// `xml` with each line's indentation dropped, the lines joined and the `xml:id`s dropped.
-fn squash(xml: &str) -> String {
+pub(super) fn squash(xml: &str) -> String {
   let mut out = String::new();
   for line in xml.lines() {
     let mut rest = line.trim();
@@ -52,7 +52,11 @@ fn squash(xml: &str) -> String {
 /// Checks a conversion's Errors, Warnings and named tokens, in process and from the binary, eager and `--streaming`;
 /// returns the in-process XML.
 #[track_caller]
-fn check_everywhere(tex: &str, expected_warnings: &[&str], expected_tokens: &[&str]) -> String {
+pub(super) fn check_everywhere(
+  tex: &str,
+  expected_warnings: &[&str],
+  expected_tokens: &[&str],
+) -> String {
   let (log, xml) = convert_with(tex, Some(PRELOAD));
   assert_eq!(
     (error_count(&log), warning_count(&log)),
@@ -86,17 +90,16 @@ fn check_everywhere(tex: &str, expected_warnings: &[&str], expected_tokens: &[&s
 /// (`U/ntxsfmia`) and `symbols` (`LMS/ntxsy`) at slots of their own (newtxsf.sty:301-311, :1332; 2106.08363,
 /// 1808.01384, 2406.11942, 1902.03183), and a paper's `\widehat` in `U/mathx` at "70 (2607.15091): each the token the
 /// kernel binding makes of its name — glyph, `name`, stretchiness, as `$\hat{x}$` without the package — over its base,
-/// nested, in a script, over an empty base, and in 1902.03183's align cell, kept whole. mathabx's own `\widecheck` is
-/// no kernel name: U+FFFD, and its font's one Warning. 89b printed U+FFFD for each with 3 Warnings; 89a an empty
+/// nested, in a script, over an empty base, and in 1902.03183's align cell, kept whole. mathabx's own `\widecheck`,
+/// no kernel name, is the token LaTeXML's mathabx and libertinust1math bindings agree on, ˇ, with no Warning since 89d
+/// (`perfect_kernel_batch89d::package_accent_decodes_by_its_name`; U+FFFD and its font's one Warning in 89c). 89b
+/// printed U+FFFD for each with 3 Warnings; 89a an empty
 /// token (MathML `<mo>hat</mo>`) and dropped the cell. A kernel accent in a symbol font never declared (pdflatex:
 /// "Symbol font `mathx' is not defined", an in-process input) stays U+FFFD and is said so.
 #[test]
 fn kernel_accent_decodes_by_its_name() {
   let tex = repro!("kernel_accent_decodes_by_its_name.tex");
-  let expected_warnings = [
-    "Warning:missing_font_encoding:U/mathx Symbol font mathx (U/mathx) has no font map: the math accent \\widecheck \
-     (slot \"71) prints U+FFFD, as will any other symbol of this font it cannot decode",
-  ];
+  let expected_warnings: [&str; 0] = [];
   let hat = r#"<XMTok name="hat" role="OVERACCENT" stretchy="false">^</XMTok>"#;
   let bar = r#"<XMTok name="bar" role="OVERACCENT" stretchy="false">¯</XMTok>"#;
   let script_hat =
@@ -116,7 +119,7 @@ fn kernel_accent_decodes_by_its_name() {
     "<XMTok name=\"mathring\" role=\"OVERACCENT\">\u{030A}</XMTok>",
     r#"<XMTok meaning="plus" name="+" role="ADDOP">+</XMTok>"#,
     r#"<XMTok name="widehat" role="OVERACCENT">^</XMTok>"#,
-    "<XMTok name=\"widecheck\" role=\"OVERACCENT\">\u{FFFD}</XMTok>",
+    r#"<XMTok name="widecheck" role="OVERACCENT">ˇ</XMTok>"#,
     hat,
     bar,
     script_hat,

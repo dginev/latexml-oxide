@@ -139,9 +139,10 @@ fn undecodable_math_slot_is_fffd_and_warns() {
   }
 }
 
-/// fonts-nfss/undecodable_math_accent_is_fffd_and_warns: mathabx's `\widecheck` accent and its `\sum` in `U/mathx`
-/// (mathabx.dcl:945, :748; 1806.02506): both U+FFFD, and one Warning for the symbol font they share, naming the math
-/// accent. The accent stays over its base, in an align cell too: 1902.03183's eq. 9 `\bar{u} &= a_0.` (newtxsf's
+/// fonts-nfss/undecodable_math_accent_is_fffd_and_warns: an accent of a paper's own name, `\mycheck`, at mathabx's
+/// `\widecheck` slot, and mathabx's `\sum`, in `U/mathx` (mathabx.dcl:945, :748; 1806.02506, whose `\widecheck`
+/// decodes by its name since 89d, `perfect_kernel_batch89d::package_accent_decodes_by_its_name`): both U+FFFD, and one
+/// Warning for the symbol font they share, naming the math accent. The accent stays over its base, in an align cell too: 1902.03183's eq. 9 `\bar{u} &= a_0.` (newtxsf's
 /// `lettersA` `\bar`) lost that cell whole in 89a, where the accent was empty, and only the accent's `name` reached
 /// MathML (`<mo>hat</mo>`). 89a gave an empty accent and `°` (the raw slot "B0), with 0 warnings.
 /// The Warning is at the accent (a constructor: its position recorded at digestion,
@@ -153,10 +154,10 @@ fn undecodable_math_slot_is_fffd_and_warns() {
 fn undecodable_math_accent_is_fffd_and_warns() {
   let tex = repro!("undecodable_math_accent_is_fffd_and_warns.tex");
   let expected_warnings = [
-    "Warning:missing_font_encoding:U/mathx Symbol font mathx (U/mathx) has no font map: the math accent \\widecheck \
+    "Warning:missing_font_encoding:U/mathx Symbol font mathx (U/mathx) has no font map: the math accent \\mycheck \
      (slot \"71) prints U+FFFD, as will any other symbol of this font it cannot decode",
   ];
-  let accent_location = ["at t; line 22 col 12 - line 22 col 12"];
+  let accent_location = ["at t; line 22 col 10 - line 22 col 10"];
   let (log, xml) = convert_with(tex, Some(PRELOAD));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert_eq!(warnings(&log), expected_warnings, "{log}");
@@ -205,7 +206,7 @@ fn undecodable_math_accent_is_fffd_and_warns() {
   let xml = squash(&xml);
   let accent = |base: char| {
     format!(
-      "<XMApp><XMTok name=\"widecheck\" role=\"OVERACCENT\">\u{FFFD}</XMTok><XMTok font=\"italic\" \
+      "<XMApp><XMTok name=\"mycheck\" role=\"OVERACCENT\">\u{FFFD}</XMTok><XMTok font=\"italic\" \
        role=\"UNKNOWN\">{base}</XMTok></XMApp>"
     )
   };
@@ -217,8 +218,8 @@ fn undecodable_math_accent_is_fffd_and_warns() {
   // The align cell, whole: its accent over `u`.
   assert!(
     xml.contains(&format!(
-      "<td align=\"right\"><Math mode=\"inline\" tex=\"\\displaystyle\\widecheck{{u}}\" \
-       text=\"widecheck@(u)\"><XMath>{}</XMath></Math></td>",
+      "<td align=\"right\"><Math mode=\"inline\" tex=\"\\displaystyle\\mycheck{{u}}\" \
+       text=\"mycheck@(u)\"><XMath>{}</XMath></Math></td>",
       accent('u')
     )),
     "{xml}"
