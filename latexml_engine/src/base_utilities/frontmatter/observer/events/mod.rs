@@ -534,6 +534,8 @@ fn script_ink(d: &Digested, refs: bool) -> String {
         if let Ok(Some(body)) = w.get_body() {
           ink(&body, refs, out);
         }
+        // (a math accent its glyph on its base, `accent_combining_form`: `\bar{\dag}` is `†̄`)
+        out.push_str(&accent_combining_form(&w).unwrap_or_default());
       },
       _ => ink_text(d, out),
     }

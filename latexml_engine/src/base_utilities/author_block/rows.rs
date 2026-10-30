@@ -144,6 +144,11 @@ fn linebreak_options_stripped(tokens: Tokens, keep_gaps: bool) -> Tokens {
 /// names on either side. A run or `\quad` inside a group parts nothing here: neurips_2024's 2406.09417 (one tie between
 /// spaces) and 2603.20775 (`{\large \bf A \quad B}`), named with the ruling, are that shape.
 pub(in crate::base_utilities) fn normalize_hspace_separators(tokens: Tokens) -> Tokens {
+  /// A length written as zero, `0pt`, `0.0mm`, `0`, `\z@`: an `\hspace` of it is no separator.
+  static ZERO_LENGTH: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"^\s*(?:[+-]?(?:0+(?:\.0*)?|\.0+)\s*(?:pt|mm|cm|in|em|ex|bp|sp|pc|dd|cc|mu)?|\\z@(?:skip)?)\s*$")
+      .unwrap()
+  });
   // (marked as the branch choice reads it, a footnote-symbol mark no mark: `\textbf{Vaibhav Singh}$^{*}$`, 2603.09835)
   let marked_block = has_author_marks(&rewrite_symbol_superscripts(tokens.clone()));
   let src = spacing_math_unwrapped(tokens.unlist());
@@ -305,6 +310,7 @@ pub(in crate::base_utilities) fn normalize_hspace_separators(tokens: Tokens) -> 
         j += 1;
       }
       // mandatory `{len}` group
+      let length_start = j + 1;
       if j < n && src[j] == T_BEGIN!() {
         let mut depth = 1usize;
         j += 1;
@@ -317,7 +323,14 @@ pub(in crate::base_utilities) fn normalize_hspace_separators(tokens: Tokens) -> 
           j += 1;
         }
       }
-      out.push(T_CS!("\\quad"));
+      // (a zero length prints no gap, and parts nothing: `\textsuperscript{1\hspace{0pt}2}` prints the label 12 —
+      // review rev92b_r4 S1, where its `\quad` parted the labels 1 and 2 —, as `\hskip0pt` is no spacing,
+      // `util_text::is_blank_item`)
+      let zero = length_start < j
+        && ZERO_LENGTH.is_match(&Tokens::new(src[length_start..j - 1].to_vec()).to_string());
+      if !zero {
+        out.push(T_CS!("\\quad"));
+      }
       i = j;
       continue;
     }

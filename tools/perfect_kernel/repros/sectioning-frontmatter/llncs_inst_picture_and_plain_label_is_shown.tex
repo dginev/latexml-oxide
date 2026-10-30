@@ -1,0 +1,19 @@
+% witness: review rev92b_r4 B1 (the `\inst` path: a label one name requests in a picture and plainly too, either
+%          order); review rev92b_r3 S1 (llncs `\inst{1\myorcid{…}}`, a picture's label unanswered)
+% oracle:  pdflatex: "Ann Able1,ⓑ b and Bob Baker2,c ⓒ" / 1 Univ One / 2 Univ Two (ⓑ a circled b TikZ draws;
+%          pdftotext "Ann Able1, b b and Bob Baker2,c c")
+% engines: perl 0.8.8 = 0 errors, b and c lost (annotations nothing answers); rust 92b r4: b and c hidden with the
+%          picture's label (92b r3: shown)
+% expect:  0 errors, 0 warnings; Ann Able Univ One and the mark b shown, Bob Baker Univ Two and the mark c shown
+% status:  RED (92b r4) -> GREEN (92b r5)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\usepackage{tikz}
+\newcommand\circled[1]{\tikz[baseline=(c.base)]\node[circle,draw,inner sep=0.5pt](c){#1};}
+\title{T}
+\author{Ann Able\inst{1,\circled{b}}\inst{b} \and Bob Baker\inst{2,c}\inst{\circled{c}}}
+\institute{Univ One \and Univ Two}
+\begin{document}
+\maketitle
+Text.
+\end{document}

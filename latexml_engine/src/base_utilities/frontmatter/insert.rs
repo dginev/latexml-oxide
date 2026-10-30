@@ -610,6 +610,7 @@ fn show_unanswered_marks(document: &mut Document, answered: &HashSet<String>) ->
       .map(str::to_string)
       .collect();
     let picture_marks = creator.get_attribute("_picturemarks").unwrap_or_default();
+    let plain_marks = creator.get_attribute("_plainmarks").unwrap_or_default();
     let mut marks: Vec<String> = Vec::new();
     for label in creator
       .get_attribute("_annotations")
@@ -623,8 +624,11 @@ fn show_unanswered_marks(document: &mut Document, answered: &HashSet<String>) ->
         continue;
       }
       // (a label only a picture prints is no mark of the name: the picture is dropped from it, and its text with it —
-      // the TikZ ORCID icon's "iD", `\inst{1\myorcid{…}}`; review rev92b_r3 S1, as rounds 1-2 and Perl showed nothing)
-      if picture_marks.split(',').any(|m| m == label) {
+      // the TikZ ORCID icon's "iD", `\inst{1\myorcid{…}}`; review rev92b_r3 S1, as rounds 1-2 and Perl showed nothing.
+      // Per request: a label the name also requests outside a picture is shown, `Ann Able$^{\circled{b}}$$^{b}$`'s b,
+      // in either order — review rev92b_r4 B1, where the picture's hid it)
+      if picture_marks.split(',').any(|m| m == label) && !plain_marks.split(',').any(|m| m == label)
+      {
         continue;
       }
       let Some(mut text) = unanswered_mark_text(mark) else {
@@ -667,7 +671,8 @@ fn show_unanswered_marks(document: &mut Document, answered: &HashSet<String>) ->
 /// (`_textmarks`): such a `*` prints as `*`, a math one as `∗` (`show_unanswered_marks`). A mark command (`\inst`,
 /// `\IEEEauthorrefmark`) sets its mark in math (llncs.cls `\def\inst#1{\unskip$^{#1}$}`), whatever mode it is read in.
 /// The labels only a picture prints (`pictured`, [`frontmatter_label_request`]) are its picture marks
-/// (`_picturemarks`), never shown unanswered.
+/// (`_picturemarks`), the others its plain marks (`_plainmarks`): a picture mark the entry never requests plainly is
+/// never shown unanswered.
 pub(in crate::base_utilities) fn add_annotation_labels(
   label: String,
   superscript: bool,
@@ -675,16 +680,26 @@ pub(in crate::base_utilities) fn add_annotation_labels(
 ) {
   let in_text = superscript && !lookup_bool("IN_MATH");
   with_pending_entry_attr(move |attr| {
-    if !pictured.is_empty() {
-      let mut marks = attr.get("_picturemarks").cloned().unwrap_or_default();
-      for mark in &pictured {
+    let mut append = |key: &str, new: &mut dyn Iterator<Item = &str>| {
+      let mut marks = attr.get(key).cloned().unwrap_or_default();
+      let before = marks.len();
+      for mark in new {
         if !marks.is_empty() {
           marks.push(',');
         }
         marks.push_str(mark);
       }
-      attr.insert("_picturemarks".to_string(), marks);
-    }
+      if marks.len() != before {
+        attr.insert(key.to_string(), marks);
+      }
+    };
+    append("_picturemarks", &mut pictured.iter().map(String::as_str));
+    append(
+      "_plainmarks",
+      &mut label
+        .split(',')
+        .filter(|key| !key.is_empty() && !pictured.iter().any(|p| p == key)),
+    );
     let labels = attr.get("_annotations").cloned().unwrap_or_default();
     let newval = if labels.is_empty() {
       label.clone()

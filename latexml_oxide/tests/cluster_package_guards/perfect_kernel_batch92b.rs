@@ -447,6 +447,9 @@ fn spacing_parts_a_marks_labels() {
       &["Ida Ide 1,2"],
       &["Jo Jay 12"],
       &["Kit Kay 12"],
+      &["Lee Lin 12"],
+      &["Max Moe 12"],
+      &["Ned Nye 12"],
     ]),
     &[
       "C Ann Able [1,2] | line:names",
@@ -460,6 +463,9 @@ fn spacing_parts_a_marks_labels() {
       "C Ida Ide [1,2] | line:names sep:column",
       "C Jo Jay [12] | line:names sep:column",
       "C Kit Kay [12] | line:names sep:column",
+      "C Lee Lin [12] | line:names sep:column",
+      "C Max Moe [12] | line:names sep:column",
+      "C Ned Nye [12] | line:names sep:column",
     ],
   );
   assert_reading(
@@ -553,12 +559,18 @@ fn spacing_parts_a_marks_labels() {
   );
   // (the same in text, the observer's lexer (`events::lexer::Lexer::ink`): a combining mark joins the symbol it is on —
   // review rev92b_r3 B1's sibling, where `†̄` was the mark `†` and a line "̄Univ One", both lines on both names; the
-  // kernel reads no mark set in text, so its XML is pinned only alike in every mode)
+  // kernel reads no mark set in text: each symbol stays in its name and in its line, as printed)
   assert_reading(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_text_symbol_with_combining_mark_is_one_mark.tex"
     ),
-    None,
+    Some(&[
+      &[
+        "Ann Able\u{2020}\u{304}",
+        "affiliation=\u{2020}\u{304}Univ One",
+      ],
+      &["Bob Baker\u{2020}", "affiliation=\u{2020}Univ Two"],
+    ]),
     &[
       "C Ann Able [\u{2020}\u{304}] | line:names",
       "  a Univ One | ruling1:request",
@@ -566,11 +578,39 @@ fn spacing_parts_a_marks_labels() {
       "  a Univ Two | ruling2:symbol-line",
     ],
   );
+  // (a math accent prints its glyph on its base (`util_text::accent_combining_form`, the kernel's `queue_digest::
+  // label_ink` and the observer's `events::script_ink`): `$^{\bar{\dag}}$` is the label `†̄`, no `$^{\dag}$`'s `†`, and
+  // `$^{\hat a}$` `â`, no `a` — review rev92b_r4 S2, where the accent was no part of the label, Univ One and Univ Two
+  // on Ann Able and Bob Baker, Univ Three and Univ Four on Cid Cole and Dee Dunn; an unanswered `\vec x` shows whole)
+  assert_reading(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_mark_math_accent_is_its_letter.tex"
+    ),
+    Some(&[
+      &["Ann Able", "affiliation=Univ One"],
+      &["Bob Baker", "affiliation=Univ Two"],
+      &["Cid Cole", "affiliation=Univ Three"],
+      &["Dee Dunn", "affiliation=Univ Four"],
+      &["Eve Esse x\u{20d7}"],
+    ]),
+    &[
+      "C Ann Able [\u{2020}] | line:names",
+      "  a Univ One | ruling2:symbol-line",
+      "C Bob Baker [\u{2020}\u{304}] | line:names sep:column",
+      "  a Univ Two | ruling1:request",
+      "C Cid Cole [a] | line:names sep:column",
+      "  a Univ Three | ruling1:request",
+      "C Dee Dunn [a\u{302}] | line:names sep:column",
+      "  a Univ Four | ruling1:request",
+      "C Eve Esse [x\u{20d7}] | line:names sep:column",
+    ],
+  );
   // (a pgf picture's text nodes are its printed text (`\pgfsys@hbox`'s box): a circled `a` and `b` are the labels a and
   // b, each answered by its line, and LaTeX's `picture` prints its `\put`'s `c` — review rev92b_r2 B2, where a picture
   // was no label: the marks lost, the lines continuations of the ones before); a picture's label nothing answers is
   // not shown (`queue_digest::frontmatter_label_request`, `_picturemarks`): Dee Dunn's TikZ ORCID icon prints "iD",
-  // which round 3 showed as a mark in the name — review rev92b_r3 S1)
+  // which round 3 showed as a mark in the name — review rev92b_r3 S1; per request, `_plainmarks`: one the name requests
+  // plainly too is shown, Eve Esse's, Fay Fox's and Gus Gray's — review rev92b_r4 B1, where the picture's hid it)
   assert_reading(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_mark_picture_text_is_its_label.tex"
@@ -592,6 +632,9 @@ fn spacing_parts_a_marks_labels() {
         "affiliation=Corresponding C",
       ],
       &["Dee Dunn", "affiliation=Univ Four"],
+      &["Eve Esse e"],
+      &["Fay Fox f"],
+      &["Gus Gray g"],
     ]),
     &[
       "C Ann Able [1,a] | line:names",
@@ -605,6 +648,26 @@ fn spacing_parts_a_marks_labels() {
       "  a Corresponding C | ruling1:request",
       "C Dee Dunn [4,iD] | line:names sep:column",
       "  a Univ Four | ruling1:request",
+      "C Eve Esse [e,e] | line:names sep:column",
+      "C Fay Fox [f,f] | line:names sep:column",
+      "C Gus Gray [g,g] | line:names sep:column",
+    ],
+  );
+  // (the same through a mark command, `\inst` (llncs.cls's, `\lx@request@frontmatter@annotation`): a label the name
+  // requests in a picture and plainly is shown, in either order — review rev92b_r4 B1)
+  assert_reading(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/llncs_inst_picture_and_plain_label_is_shown.tex"
+    ),
+    Some(&[&["Ann Able b", "affiliation=Univ One"], &[
+      "Bob Baker c",
+      "affiliation=Univ Two",
+    ]]),
+    &[
+      "C Ann Able [1,b,b] | line:names",
+      "  a Univ One | api:labelseq",
+      "C Bob Baker [2,c,c] | line:names",
+      "  a Univ Two | api:labelseq",
     ],
   );
 }

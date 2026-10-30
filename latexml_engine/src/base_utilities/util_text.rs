@@ -405,11 +405,15 @@ pub fn is_spacing_item(d: &Digested) -> bool {
 }
 
 /// Whether digested material prints nothing and no gap — no ink ([`first_ink`]) and no spacing ([`is_spacing_item`]):
-/// a box of no text (`\-`'s), and a kern Perl marks `isSpace` of zero width (the italic correction
-/// `\/`, `width => 0em`, TeX_Fonts.pool.ltxml:162, a kern tex.web §1113; `\kern0pt`). `\textsuperscript{1\-2}` and
-/// `1\/2` print "12", the label 12 (review rev92b_r3 P1: read as spacing, the labels 1 and 2, its `12` line on no
-/// name).
+/// a box of no text (`\-`'s), a kern Perl marks `isSpace` of zero width (the italic correction
+/// `\/`, `width => 0em`, TeX_Fonts.pool.ltxml:162, a kern tex.web §1113; `\kern0pt`), and glue of no natural width,
+/// stretch or shrink (`\hskip0pt`, `\hspace{0pt}`: `is_zero_glue`). `\textsuperscript{1\-2}`, `1\/2` and
+/// `1\hskip0pt 2` print "12", the label 12 (review rev92b_r3 P1 and rev92b_r4 S1: read as spacing, the labels 1 and
+/// 2, its `12` line on no name).
 pub fn is_blank_item(d: &Digested) -> bool {
+  if is_zero_glue(d) {
+    return true;
+  }
   match d.data() {
     DigestedData::TBox(b)
       if b.borrow().get_string().is_ok_and(|s| s.is_empty()) && !is_space_marked(d) =>
@@ -422,6 +426,26 @@ pub fn is_blank_item(d: &Digested) -> bool {
           .get_property("isKern")
           .is_some_and(|v| !matches!(*v, Stored::Bool(false) | Stored::Int(0)))
         && matches!(d.get_property("width").as_deref(), Some(Stored::Dimension(w)) if w.value_of() == 0)
+    },
+    _ => false,
+  }
+}
+
+/// Whether digested material is glue whose natural width, stretch and shrink are all zero ([`is_blank_item`]): an
+/// `\hskip` whatsit by its glue argument (tex_glue.rs), an `\hspace` box by the glue it states (`glue`, sect12.rs).
+fn is_zero_glue(d: &Digested) -> bool {
+  let zero = |g: &Glue| g.skip == 0 && g.plus.unwrap_or(0) == 0 && g.minus.unwrap_or(0) == 0;
+  match d.data() {
+    DigestedData::Whatsit(w) => {
+      let w = w.borrow();
+      w.get_definition().get_cs_name().trim_end() == "\\hskip"
+        && matches!(
+          w.get_args().first().and_then(Option::as_ref).map(Digested::data),
+          Some(DigestedData::RegisterValue(RegisterValue::Glue(g))) if zero(g)
+        )
+    },
+    DigestedData::TBox(_) => {
+      matches!(d.get_property("glue").as_deref(), Some(Stored::Glue(g)) if zero(g))
     },
     _ => false,
   }
@@ -502,6 +526,48 @@ pub fn keeps_label_char(c: char, before: Option<char>) -> bool {
     return false;
   }
   !is_combining_mark(c) || before.is_some_and(|b| b != ',' && !b.is_whitespace())
+}
+
+/// The combining characters a math accent whatsit prints on its base, from the glyph its constructor carries
+/// (`accent`, set for an `OVERACCENT` or `UNDERACCENT` operator, latexml_core `transfer_common_constructor_options`):
+/// `\bar`'s U+00AF over is U+0304, `\hat`'s `^` U+0302, `\vec`'s → U+20D7, a combining glyph itself (`\mathring`'s
+/// U+030A), `\underline`'s U+00AF under U+0332; `None` for anything else, an accent whose glyph has no combining form
+/// (`\overbrace`'s ⏞) among them. The frontmatter label readers (`queue_digest::label_ink`, the observer's
+/// `events::script_ink`) write it after the base: `$^{\bar{\dag}}$` is the label `†̄`, no `\dag`'s `†`, and
+/// `$^{\hat a}$` `â`, no `a` (review rev92b_r4 S2; `\={x}` digests to `x̄` already).
+pub fn accent_combining_form(w: &Whatsit) -> Option<String> {
+  let accent = match w.get_property("accent").as_deref() {
+    Some(accent @ Stored::String(_)) => accent.to_string(),
+    _ => return None,
+  };
+  let under = w
+    .get_property("operator_role")
+    .is_some_and(|role| role.to_string() == "UNDERACCENT");
+  let form = |c: char| -> Option<char> {
+    if is_combining_mark(c) {
+      return Some(c);
+    }
+    Some(match (c, under) {
+      ('^' | '\u{02C6}', false) => '\u{0302}',
+      ('~' | '\u{02DC}', false) => '\u{0303}',
+      ('\u{00AF}', false) => '\u{0304}',
+      ('\u{02D8}', false) => '\u{0306}',
+      ('\u{02D9}', false) => '\u{0307}',
+      ('\u{00A8}', false) => '\u{0308}',
+      ('\u{02C7}', false) => '\u{030C}',
+      ('\u{00B4}', false) => '\u{0301}',
+      ('`', false) => '\u{0300}',
+      ('\u{2192}', false) => '\u{20D7}',
+      ('\u{2190}', false) => '\u{20D6}',
+      ('\u{2194}', false) => '\u{20E1}',
+      ('\u{00AF}', true) => '\u{0332}',
+      ('~' | '\u{02DC}', true) => '\u{0330}',
+      ('\u{2192}', true) => '\u{20EF}',
+      ('\u{2190}', true) => '\u{20EE}',
+      _ => return None,
+    })
+  };
+  accent.chars().map(form).collect()
 }
 
 /// Whether a character is a format character (Unicode Cf), printing nothing ([`keeps_label_char`]).

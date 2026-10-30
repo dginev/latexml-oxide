@@ -1713,7 +1713,8 @@ produced byte-identical output, so this is a surpass, not a Rust-only fix.
   `A \hspace{1cm} B \hspace{1cm} C` (a regular poor-man's separator) collapsed into one
   creator, because the splitter only knew `\and`/`\quad`. `\quad` is already a hard
   separator in every author/affiliation split set, so the rewrite needs no new plumbing;
-  `\hspace`'s optional `*` and mandatory length are consumed so the length cannot leak. A space right before a
+  `\hspace`'s optional `*` and mandatory length are consumed so the length cannot leak; a length written as zero
+  (`\hspace{0pt}`, `\z@`) prints no gap and is dropped (`\textsuperscript{1\hspace{0pt}2}` is the one label 12, #919). A space right before a
   name's own mark or note is the name's, no separator, and an `\enskip` right after a mark or note and a
   spacing-only math group (`$\qquad$`) separate too (78m, #840).
 - **Footnote-SYMBOL superscripts (`$^{*}$`, `${}^{\dagger}$`, `\textsuperscript{\ddagger}`)
@@ -27175,21 +27176,31 @@ ruling 2026-10-29; `FRONTMATTER_DIGESTED_REFACTOR.md`; inventory row 2.8). Today
   as spacing, the reader 92e's `first_ink` uses (a box of white space, a box or whatsit Perl marks `isSpace`, but a
   leader: `$^{1\,2}$`'s math glue, a box of a space; `\!`'s zero-width-space box; `\:`, `\>`, `\ `, `\hspace`,
   `\kern`, `\mskip`, `\textsuperscript{1\,2}`) — but what prints no gap (`util_text::is_blank_item`: a box of no
-  text, `\-`'s; a zero-width kern, the italic correction `\/`): `\textsuperscript{1\-2}` and `1\/2` print the one label
-  12 (review rev92b_r3 P1: read as spacing, 1 and 2, the `12` line on a nameless creator). A format character (Unicode Cf: the zero-width space, the joiners)
+  text, `\-`'s; a zero-width kern, the italic correction `\/`; glue of no width, stretch or shrink, `\hskip0pt`,
+  `\hspace{0pt}`, which the author block's `\hspace` rewrite, `author_block::rows::normalize_hspace_separators`, no
+  longer turns into a `\quad`): `\textsuperscript{1\-2}`, `1\/2` and `$^{1\hskip0pt 2}$` print the one label 12
+  (review rev92b_r3 P1 and rev92b_r4 S1: read as spacing, 1 and 2, the `12` line on a nameless creator). A format character (Unicode Cf: the zero-width space, the joiners)
   is no label and no shown symbol; a combining mark (M) is part of the character before it — `\={x}`'s `x̄` (the
   accents with no precomposed form, `\=` `\~` `\v` `\u` `\H` `\b` `\d`) is one label, never `x` nor a mark of its own —
   and is dropped only with no base (`util_text::keeps_label_char`; `parted_printed_label`, `is_printed_symbol`,
   `insert::unanswered_mark_text`, the observer's `labels::parted_label`, `labels::mark_labels` and its lexer's text
   symbols, `events::lexer`: `\={\dag}`'s `†̄` and `\textcircled{\dag}`'s `†⃝` are no `†`, review rev92b_r3 B1, where
-  the shadow gave both `†` lines to both names). A pgf/TikZ picture (`\lxSVG@insertpicture`)
+  the shadow gave both `†` lines to both names). A math accent prints its glyph on its base as that combining mark
+  (`util_text::accent_combining_form`, from the glyph the accent's constructor carries, `accent`, set for an
+  `OVERACCENT` or `UNDERACCENT` operator in latexml_core `transfer_common_constructor_options`: `\bar` U+0304, `\hat`
+  U+0302, `\tilde` U+0303, `\dot` U+0307, `\ddot` U+0308, `\vec` U+20D7, `\check` U+030C, `\breve` U+0306, `\acute`
+  U+0301, `\grave` U+0300, `\mathring` U+030A; `\underline` U+0332; a glyph with no combining form, `\overbrace`'s,
+  none): `$^{\bar{\dag}}$` is `†̄`, no `$^{\dag}$`, and `$^{\hat a}$` `â`, no `a` (review rev92b_r4 S2, a regression
+  against the spelling keys: both `†` lines on both names). A pgf/TikZ picture (`\lxSVG@insertpicture`)
   prints only its text nodes, the boxes its `\pgfsys@hbox` calls insert (`util_text::picture_text`): an SVG path's
   data, colours and transforms are no label, a circled `a` (`\tikz…\node[circle,draw](c){a};`) is `a`; LaTeX's
   `picture` environment is read as any material (`\put(0,0){c}`'s `c`). A label only a pgf picture's text prints may
   answer a line (a circled `a`, `\inst{\circled{1}}`'s 1) but is never shown unanswered (`queue_digest::
   frontmatter_label_request`, the creator's `_picturemarks`): the picture is dropped from the name, and its text with
   it (review rev92b_r3 S1: a TikZ ORCID icon's node text "iD" in `$^{1,\href{…}{\orcidicon}}$` and llncs
-  `\inst{1\myorcid{…}}` was shown as a mark; Perl shows nothing). The observer's mark reader
+  `\inst{1\myorcid{…}}` was shown as a mark; Perl shows nothing). The rule is per request: a label the name also
+  requests outside a picture (`_plainmarks`) is shown, `Ann Able$^{\circled{b}}$$^{b}$` or `\inst{\circled{b}}\inst{b}`
+  in either order (review rev92b_r4 B1, where the picture's hid it). The observer's mark reader
   (`events::script_ink`) reads a script so too. Review rev92b_r2: dropping every combining mark read `x̄` as `x` (a
   wrong owner), and reading a picture as no text lost a circled letter's label. Review rev92b_r1 B1: `$^{1\,2}$`
   printed one label `1_2`, which nothing answered and `unanswered_mark_text` showed none of — each such mark lost
@@ -27218,17 +27229,15 @@ ruling 2026-10-29; `FRONTMATTER_DIGESTED_REFACTOR.md`; inventory row 2.8). Today
   operand's end) told apart. A LaTeX `picture` in a mark is read whole, its drawing commands' arguments too
   (`$^{\begin{picture}(6,6)\put(0,0){a}\put(0,0){\circle{6}}\end{picture}}$` keys `a6.0`, on both sides alike):
   telling its coordinates and sizes from its text needs every drawing command's parameters typed (`\lx@pic@polyline`
-  and `\lx@pic@cbezier` take `{}`). A math accent in a mark is read as its bare letter (`$^{\hat a}$`, `$^{\bar x}$`
-  key `a` and `x`, pdflatex prints â and x̄; an unanswered one is shown as the letter): the accent whatsit's base is
-  its shown argument and the accent no text of it — reading it as the base with its combining mark (as `\={x}`'s text
-  `x̄` is) needs the math accent's character mapped to its combining form.
+  and `\lx@pic@cbezier` take `{}`).
 - Witness 1307.8124 (`\inst{\MPIA}`: each author's institutes, where all seven were on a nameless creator). Repros
   class-bindings/`aa_inst_macro_is_its_printed_number`, `aa_inst_unanswered_symbol_stays_shown`,
   sectioning-frontmatter/`author_dag_and_dagger_are_one_label`, `author_macro_mark_glued_to_a_symbol`,
   `author_mark_labels_parted_by_spacing`, `author_mark_spaced_labels_answer_their_lines`,
   `author_mark_zero_width_space_is_no_label`, `author_mark_picture_is_no_label`,
   `author_mark_combining_accent_is_its_letter`, `author_text_symbol_with_combining_mark_is_one_mark`,
-  `author_mark_picture_text_is_its_label`; guards
+  `author_mark_math_accent_is_its_letter`, `author_mark_picture_text_is_its_label`,
+  `llncs_inst_picture_and_plain_label_is_shown`; guards
   `perfect_kernel_batch92b::a_mark_is_keyed_by_its_printed_text`, `perfect_kernel_batch92b::spacing_parts_a_marks_labels`.
 
 ### 920. A binding's `\author` replaces or stacks as its class's does where the binding owns it; inst_support's keeps stacking (Perl: inst_support's clears on every call; no ptephy or webofc binding)

@@ -265,8 +265,9 @@ pub(crate) fn load() -> Result<()> {
     let tokens = Invocation!(T_CS!("\\hskip"), vec![length_tokens]);
     // Glue (latex.ltx:9425 `\hskip`): `\unskip` removes it. `\hspace*` puts a zero-width rule and a penalty
     // before its glue and `\z@skip` after it (latex.ltx:9427-9428), so `\unskip` takes the `\z@skip`.
+    // (`glue`: the skip stated, stretch and shrink too — a zero one prints no gap, `util_text::is_blank_item`)
     Tbox::new(pin(&s), None, None, tokens,
-      stored_map!("width" => length, "isSpace" => true, "isSkip" => star.is_none()))
+      stored_map!("width" => length, "glue" => skip, "isSpace" => true, "isSkip" => star.is_none()))
   });
 
   Let!("\\lx@kernel@hspace", "\\hspace");

@@ -2215,7 +2215,16 @@ fn transfer_common_constructor_options(
   cons: &mut Constructor,
 ) {
   let cs_str = cs.with_str(ToString::to_string);
-  let properties = options.to_hash_stored();
+  let mut properties = options.to_hash_stored();
+  // (an accent's glyph, `accent`, which its token prints over or under its base: Rust only, for the readers of what a
+  // digested mark prints — `\bar{\dag}` is no `\dag`, the frontmatter label keys, latexml_engine
+  // `util_text::accent_combining_form`)
+  if matches!(
+    options.operator_role.as_deref(),
+    Some("OVERACCENT" | "UNDERACCENT")
+  ) {
+    properties.insert("accent", Stored::from(presentation.to_string()));
+  }
   cons.alias = Some(options.alias.unwrap_or_else(|| cs_str.clone()));
   if let Some(sizer) = infer_sizer(options.sizer.as_ref(), options.reversion.as_ref()) {
     cons.sizer = Some(sizer);

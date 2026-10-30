@@ -1,18 +1,23 @@
 % witness: review rev92b_r2 B2 (a TikZ circled letter, `\tikz…\node[circle,draw](c){#1};`); 2605.02769 (the TikZ
 %          ORCID logo, a picture holding no text, `author_mark_picture_is_no_label`); review rev92b_r3 S1 (an ORCID
 %          icon whose TikZ node prints "iD", unanswered: the tex.SE icon in `$^{1,\href{…}{\orcidicon}}$`, llncs
-%          `\inst{1\myorcid{…}}`)
-% oracle:  pdflatex: "Ann Able1,ⓐ and Bob Baker2,ⓑ and Cid Cole3,c and Dee Dunn4,[iD]" / 1 Univ One / 2 Univ Two
-%          / 3 Univ Three / 4 Univ Four / ⓐ Corresponding A / ⓑ Corresponding B / c Corresponding C (ⓐ a circled a
-%          TikZ draws, c a picture's `\put`, [iD] a drawn disc with the node text "iD")
+%          `\inst{1\myorcid{…}}`); review rev92b_r4 B1 (a label one name requests in a picture and plainly too:
+%          `Ann Able$^{\circled{b}}$$^{b}$`, `\textsuperscript{b}`, either order)
+% oracle:  pdflatex: "Ann Able1,ⓐ and Bob Baker2,ⓑ and Cid Cole3,c and Dee Dunn4,[iD] and Eve Esseⓔe and Fay
+%          Foxⓕf and Gus Grayg ⓖ" / 1 Univ One / 2 Univ Two / 3 Univ Three / 4 Univ Four / ⓐ Corresponding A / ⓑ
+%          Corresponding B / c Corresponding C (ⓐ a circled a TikZ draws, c a picture's `\put`, [iD] a drawn disc with
+%          the node text "iD"; pdftotext "Eve Esse e e", "Fay Fox f f", "Gus Grayg g")
 % engines: perl 0.8.8 = 0 errors, as expected; rust 92b r1: each circled mark read as its picture's path data (its
 %          circle's coordinates, the letter no part of it), the shadow Corresponding A and B on Ann Able and on Bob
 %          Baker; 92b r2: a picture read as no label — the marks lost, Corresponding A, B and C unmarked lines, all
 %          Cid Cole's (the shadow: a name of their own); 92b r3: Dee Dunn's unanswered "iD" shown as a mark in the
-%          name (92b r2 and perl: nothing)
+%          name (92b r2 and perl: nothing); 92b r4: Eve Esse's, Fay Fox's and Gus Gray's plain e, f, g hidden with
+%          the picture's (92b r3: shown)
 % expect:  0 errors, 0 warnings; Ann Able Univ One and Corresponding A, Bob Baker Univ Two and Corresponding B, Cid
-%          Cole Univ Three and Corresponding C, Dee Dunn Univ Four and no mark shown (the shadow requests [4,iD])
-% status:  RED (92b r2) -> GREEN (92b r3); Dee Dunn RED (92b r3) -> GREEN (92b r4)
+%          Cole Univ Three and Corresponding C, Dee Dunn Univ Four and no mark shown (the shadow requests [4,iD]); Eve
+%          Esse, Fay Fox and Gus Gray each the plain label shown once
+% status:  RED (92b r2) -> GREEN (92b r3); Dee Dunn RED (92b r3) -> GREEN (92b r4); Eve Esse, Fay Fox, Gus Gray RED
+%          (92b r4) -> GREEN (92b r5)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{tikz}
@@ -21,7 +26,8 @@
 \newcommand\orcidicon{\tikz{\fill[green!60!black] (0,0) circle (.8ex); \node[white,font=\tiny\bfseries] at (0,0) {iD};}}
 \title{T}
 \author{Ann Able$^{1,\circled{a}}$ \and Bob Baker$^{2,\circled{b}}$ \and Cid Cole$^{3,\boxed{c}}$
-  \and Dee Dunn$^{4,\orcidicon}$\\ $^{1}$Univ One\\ $^{2}$Univ Two\\ $^{3}$Univ Three\\ $^{4}$Univ Four\\
+  \and Dee Dunn$^{4,\orcidicon}$ \and Eve Esse$^{\circled{e}}$$^{e}$ \and Fay Fox$^{\circled{f}}$\textsuperscript{f}
+  \and Gus Gray$^{g}$$^{\circled{g}}$\\ $^{1}$Univ One\\ $^{2}$Univ Two\\ $^{3}$Univ Three\\ $^{4}$Univ Four\\
   $^{\circled{a}}$Corresponding A\\ $^{\circled{b}}$Corresponding B\\ $^{\boxed{c}}$Corresponding C}
 \begin{document}
 \maketitle
