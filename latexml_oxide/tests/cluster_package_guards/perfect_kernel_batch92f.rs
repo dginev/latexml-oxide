@@ -14,6 +14,7 @@ use latexml::util::test::assert_element;
 use super::{
   perfect_kernel_batch46::{convert_with, error_count, warning_count},
   perfect_kernel_batch84b::{creators, text},
+  perfect_kernel_batch89a::cli_conversion,
 };
 
 const PRELOAD: &str = "ar5iv.sty";
@@ -69,19 +70,39 @@ fn nature_affiliations_list_is_the_cover_before_the_abstract() {
   let (log, bare) = convert_with(&without_copy(tex), Some(PRELOAD));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(bare, xml);
+  // (the binary, eager and `--streaming`: the same root order and titlepage — review rev92f S2)
+  for streaming in [false, true] {
+    let (log, xml) = cli_conversion(tex, streaming);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert_eq!(
+      root_children(&xml),
+      ["title", "creator", "titlepage", "abstract", "section"],
+      "streaming={streaming}: {xml}"
+    );
+    assert_element(&xml, "titlepage", &[], TITLEPAGE);
+  }
 }
 
 /// The addendum's items (2402.00473's `\item[Competing Interests]`, 1408.2522's bare `\item`): an itemize, each body
 /// `\small`, the given label set by `\addendumlabel` (bold, its `\hspace{1em}` a space) and a bare `\item` the list's
 /// "Acknowledgements" (not bold: the kernel's `\list` sets its default label without `\makelabel`, as Perl's,
-/// latex_constructs.pool.ltxml:1642-1643, where LaTeX's `\@item` sets it through `\makelabel`).
+/// latex_constructs.pool.ltxml:1642-1643, where LaTeX's `\@item` sets it through `\makelabel`; a label's styling is the
+/// CSS theme's, user ruling 2026-10-30).
 #[test]
 fn nature_addendum_items_carry_the_class_labels() {
   let (log, xml) = convert_with(repro!("nature_addendum_labels.tex"), Some(PRELOAD));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_element(&xml, "itemize", &[], ADDENDUM);
+  // (the binary, eager and `--streaming` — review rev92f S2)
+  for streaming in [false, true] {
+    let (log, xml) = cli_conversion(repro!("nature_addendum_labels.tex"), streaming);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert_element(&xml, "itemize", &[], ADDENDUM);
+  }
 }
 
+// (the label digit's `font="italic"` is Perl's reading too, but TeX sets it upright — `\upshape$^{…}$`, CMR8 in the
+// repro's PDF: a later fix of the math font under `\slshape` changes this row and is no regression — review rev92f N4)
 const TITLEPAGE: &str = r#"<titlepage class="ltx_titlepage_continued" xml:id="id2">
   <block class="ltx_noindent" xml:id="p1">
     <itemize xml:id="p1.1">

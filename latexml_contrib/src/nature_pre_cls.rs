@@ -20,7 +20,8 @@ LoadDefinitions!({
   // its own mark) in a `\slshape` body (2608.12563, 1702.00936, 1408.2522, 2412.11966); `{addendum}` labels each item
   // through `\addendumlabel`, the bold `\item[Competing Interests]` (2402.00473, 2412.11966), the list's
   // "Acknowledgements" for a bare `\item` (1408.2522, 1702.00936; not bold: the kernel's `\list` sets its default
-  // label without `\makelabel`, as Perl's latex_constructs.pool.ltxml:1642-1643 does). Emptied to nothing (the
+  // label without `\makelabel`, as Perl's latex_constructs.pool.ltxml:1642-1643 does — a label's styling is the CSS
+  // theme's, the item and its tag text are the markup, user ruling 2026-10-30). Emptied to nothing (the
   // former stubs), the items were plain paragraphs without their labels, and the affiliations read as body prose to
   // the cover rule (`cover_order.rs` `is_body_prose`), so a later abstract stayed above them.
   RawTeX!(
@@ -53,13 +54,8 @@ LoadDefinitions!({
     {\end{list}\normalsize}
 \newcommand*{\addendumlabel}[1]{\textbf{#1}\hspace{1em}}"
   );
-  // Preserve author content.
-  DefMacro!(
-    "\\correspondingauthor[]{}",
-    "\\@add@frontmatter{ltx:note}[role=corresponding]{#2}"
-  );
-  DefMacro!(
-    "\\thanks{}",
-    "\\@add@frontmatter{ltx:note}[role=thanks]{#1}"
-  );
+  // The class defines no `\thanks` and no `\correspondingauthor`: the kernel's `\thanks` is the one the page prints
+  // (inside `\author` a footnote on the name, 2402.00473), and `\correspondingauthor` is no command of the class or
+  // of any copy shipped (the binding's former definitions, dropped: user ruling 2026-10-30, a binding defines only
+  // what its class defines).
 });
