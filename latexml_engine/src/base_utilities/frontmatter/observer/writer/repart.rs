@@ -1697,6 +1697,30 @@ mod tests {
     with_ledger(|ledger| ledger.entries.clear());
   }
 
+  /// Only an item made from the queued tokens is one of the block's own a creator of no name would hold
+  /// (`writer::writes_a_nameless_creator`); a copy of today's is not (review rev94b r4 N1).
+  #[test]
+  fn a_block_item_is_made_or_copied() {
+    let doc = libxml::tree::Document::new().expect("a document");
+    let node = Node::new("contact", None, &doc).expect("a node");
+    let repart = |block: Vec<Item>| Repart {
+      creators: Vec::new(),
+      block,
+      separators: Vec::new(),
+    };
+    assert!(!repart(Vec::new()).makes_block_items());
+    assert!(!repart(vec![Item::Copy(node.clone())]).makes_block_items());
+    assert!(
+      repart(vec![Item::Copy(node), Item::Make {
+        made:   Made::Affiliation,
+        role:   "affiliation".to_string(),
+        tokens: Tokens::new(Vec::new()),
+        label:  None,
+      }])
+      .makes_block_items()
+    );
+  }
+
   /// A text's brackets close, in order (review rev94a B2).
   #[test]
   fn brackets_close() {

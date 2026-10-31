@@ -33,6 +33,10 @@
 //! and the writer never writes a creator without a name (B2, B2b; `writer::writes_a_nameless_creator`, unit-tested
 //! there); a kept class body's call of a rerouted setter runs the setter's meaning when the document redefined it (S3);
 //! the authors' box is recorded by its frame's serial, whatever group the kernel's call stood in.
+//!
+//! Round 5 (review rev94b r4): a font the reading cannot tell never undoes a cut, a line break's box tells the font
+//! after it, and a container spanning entries wraps each again (B1); a mark no author requests yet is decided where
+//! `\maketitle` places the authors (S1); a class body calls a rerouted setter through one token (S2).
 
 use std::{path::Path, process::Command};
 
@@ -746,30 +750,91 @@ fn an_api_piece_keeps_the_font_open_before_it() {
   );
 }
 
-/// Review rev94b r3 B1: a container other than a group holding two entries' ink — an `\underline{…}`, an `\emph{…}` —
-/// is markup no cut entry could keep (`events::InkFonts::crossed`): the content is no cut, today's one contact whole on
-/// the names its first mark labels, as the other uncut shapes (`entries_the_writer_cannot_cut_stay_one_contact`).
+/// Review rev94b r3 B1, r4 B1: a container other than a group holding two entries' ink — an `\underline{…}`, an
+/// `\emph{…}` (pdflatex prints both lines in it) — wraps each cut entry again (`writer::container_wrap`): each name its
+/// own line with the markup. A container the writer cannot wrap exactly (a switch inside it before its first entry,
+/// `\emph{\bfseries $^5$…}`) is cut as before fonts were read: attribution first. Re-baselined in r5: r4 left each
+/// affiliation one contact on the first name (the second name had nothing), worse than 94a r7's cut.
 #[test]
-fn entries_inside_one_container_stay_one_contact() {
+fn entries_inside_one_container_are_each_wrapped_again() {
   assert_written(
-    repro!("raw_class_affil_crossed_container_stays_one_contact.tex"),
+    repro!("raw_class_affil_container_wraps_each_entry.tex"),
     &[
-      &["Ann Able", "affiliation=Univ A, Town Univ B, City"],
-      &["Bob Baker"],
-      &["Cy Cole", "affiliation=Lab C, Place Lab D, Place"],
-      &["Dan Doe"],
+      &["Ann Able", "affiliation=Univ A, Town"],
+      &["Bob Baker", "affiliation=Univ B, City"],
+      &["Cy Cole", "affiliation=Lab C, Place"],
+      &["Dan Doe", "affiliation=Lab D, Place"],
+      &["Eve Ern", "affiliation=Lab E, Place"],
+      &["Fay Fox", "affiliation=Lab F, Place"],
     ],
     Some(&[
-      "<text class=\"ltx_underline\">Univ A, Town<break/>Univ B, City</text>",
-      "<emph font=\"italic\">Lab C, Place<break/>Lab D, Place</emph>",
+      "<text class=\"ltx_underline\">Univ A, Town</text>",
+      "<text class=\"ltx_underline\">Univ B, City</text>",
+      "<emph font=\"italic\">Lab C, Place</emph>",
+      "<emph font=\"italic\">Lab D, Place</emph>",
+      "<text font=\"bold\">Lab E, Place</text>",
+      "Lab F, Place",
     ]),
     None,
   );
 }
 
+/// Review rev94b r4 B1: a font the reading cannot tell where an entry's cut starts never undoes the cut — the entry is
+/// cut as before fonts were read (the switches of the group it sits in), and a line break's own box tells the font in
+/// effect where the next entry starts (`events::entry_font`): `$^1$\textbf{Univ A}\\ $^2$\textbf{Univ B}`, `\textit{Town}
+/// \\`, `Town~\\` and `\itshape $^7$\textbf{Dept G}` each left the whole affiliation on the first name. ar-1col.cls's
+/// `\affil` inside `\author{}` (1602.05576, 2405.08158). Distinct from `a_cut_entry_keeps_the_font_open_before_it`: the
+/// fonts the reading cannot tell, not the ones it reads.
+#[test]
+fn an_uncertain_font_never_undoes_a_cut() {
+  assert_written(
+    repro!("raw_class_affil_uncertain_font_still_cuts.tex"),
+    &[
+      &["Ann Able", "affiliation=Univ A"],
+      &["Bob Baker", "affiliation=Univ B"],
+      &["Cy Cole", "affiliation=Lab C, Town"],
+      &["Dan Doe", "affiliation=Lab D , City"],
+      &["Eve Ern", "affiliation=Inst E, Town"],
+      &["Fay Fox", "affiliation=Inst F , City"],
+      &["Gil Gray", "affiliation=Dept G , Town"],
+      &["Hal Hart", "affiliation=Dept H, City"],
+    ],
+    Some(&[
+      "<text font=\"bold\">Univ A</text>",
+      "<text font=\"bold\">Univ B</text>",
+      "Lab C, <text font=\"italic\">Town</text>",
+      "<text font=\"bold\">Lab D</text>, City",
+      "Inst E, Town",
+      "<text font=\"italic\">Inst F</text>, City",
+      "<text font=\"bold italic\">Dept G<text font=\"medium\">, Town</text></text>",
+      "<text font=\"italic\">Dept H, City</text>",
+    ]),
+    None,
+  );
+}
+
+/// Review rev94b r4 S1: a title-block line leading with a mark no author requests yet is the API's labelled call,
+/// decided at the `\maketitle` that places the authors (`frontmatter_stores.rs` `doubtful`, `place.rs`
+/// `take_lines_in_doubt`): a later `\author` requesting it takes it (Bob Baker's `\address[\inst{2}]`, Cy Cole's
+/// `\affil{\inst{3}…}`, both left in the body by r4), and one requested by none is the class's line after the title, no
+/// creator of no name's (94a r7's). w-art.cls's `\address[\inst{1}]` (0910.5837, 1105.1753, quant-ph0606237).
+/// Distinct from `an_optional_mark_no_name_requests_stays_the_class`: an author after the line.
+#[test]
+fn a_mark_a_later_author_requests_is_the_api() {
+  assert_written(
+    repro!("raw_class_optional_mark_a_later_author_requests.tex"),
+    &[&["Ann Able 1"], &["Bob Baker", "address=Univ B, City"], &[
+      "Cy Cole",
+      "affiliation=Lab C, Place",
+    ]],
+    Some(&["Univ B, City", "Lab C, Place"]),
+    Some("( 4 ) Lab D, Place Body."),
+  );
+}
+
 /// Review rev94b r3 B2: a contact line of its own leading with a mark no name requests — `\inst{3}`,
 /// `\textsuperscript{4}`, `$^{5}$` under `Ann Able\inst{1} and Bob Baker\inst{2}` — is in doubt
-/// (`frontmatter_stores.rs` `leads_with_unrequested_mark`): the class's line where it is called, its words kept (the
+/// (`frontmatter_stores.rs` `unrequested_mark`): the class's line where it is called, its words kept (the
 /// main session's ruling: content over markup). "Lab C, Place" was a creator of no name's, the other two both authors'.
 #[test]
 fn a_line_no_name_requests_stays_the_class() {
@@ -802,7 +867,7 @@ fn an_optional_mark_no_name_requests_stays_the_class() {
 }
 
 /// Review rev94b r3 S3: a kept class body's call of a rerouted setter (ae100prg.cls's `\email` through its `\address`,
-/// 1303.3004) runs the class's definition only while the setter means the reroute (`\lx@class@contact@dispatch`):
+/// 1303.3004) runs the class's definition only while the setter means the reroute (`\lx@class@contact@dispatch@<name>`):
 /// redefined in a group, then globally, it runs the document's — "Addr:", "Addr2:" were dropped.
 #[test]
 fn a_redefined_setter_runs_its_meaning() {
@@ -813,6 +878,24 @@ fn a_redefined_setter_runs_its_meaning() {
     Some(
       "Write to us, Addr: E-mail: d@x.org until 2030. Or write, E-mail: e@x.org now. Write again, Addr2: E-mail: \
        f@x.org later. Body.",
+    ),
+  );
+}
+
+/// Review rev94b r4 S2: a kept class body calls a rerouted setter through one token
+/// (`\lx@class@contact@dispatch@<name>`), whatever reads it — cexp-like `\expandafter\address\expandafter{\emailprefix
+/// #1}` (the braced dispatcher left the copy's `#1` to the `\expandafter`: "Addr:" alone, the e-mail in the sentence),
+/// `\let\x\address`, `\@ifnextchar[\address` — and an `\ifx` operand is the class's own definition. ae100prg.cls's
+/// `\email` (1303.3004). Distinct from `a_redefined_setter_runs_its_meaning`: the call site's shape, not the meaning.
+#[test]
+fn a_class_body_calls_a_setter_through_one_token() {
+  assert_written(
+    repro!("raw_class_setter_body_calls_through_one_token.tex"),
+    &[&["Ann Able"], &["Bob Baker"]],
+    None,
+    Some(
+      "Write to us, Addr: E-mail: d@x.org until 2030, Addr: Aff: Univ A then Addr: Inst: Lab C and Addr: [ Lab D] \
+       end. Body.",
     ),
   );
 }

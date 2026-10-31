@@ -26,7 +26,7 @@ mod repart;
 
 use plan::{Op, Owner};
 // (the writer's cut of a block's entry, which the reading checks an in-block contact's entries by: `events::labelled_entries`)
-pub(super) use plan::{labelled_start, span_tokens};
+pub(super) use plan::{entry_forms, labelled_start, span_tokens};
 
 /// The resolution of the document's author blocks when the writer may write them: every block flushed so far
 /// rehearsed without an error held, the API calls after them rehearsed, and every block's family `written`.
@@ -252,5 +252,63 @@ mod tests {
       &none
     ));
     assert!(!writes_a_nameless_creator(None, &none));
+    // (today's holds a nameless creator already: the block's own items are its, no new one — review rev94b r4 N1)
+    let doc = libxml::tree::Document::new().expect("a document");
+    let node = Node::new("creator", None, &doc).expect("a node");
+    let nameless = dom::Front {
+      creators: Vec::new(),
+      nameless: vec![dom::Creator {
+        node:  node.clone(),
+        name:  String::new(),
+        items: Vec::new(),
+      }],
+    };
+    assert!(!writes_a_nameless_creator([Owner::Block], &nameless));
+    // (only an item made from the queued tokens counts: a copy of today's, a written-out address, a removal and a role
+    // set make none — `Op::made_for`)
+    let make = |owner| Op::Make {
+      owner,
+      made: plan::Made::Affiliation,
+      tokens: Tokens::new(Vec::new()),
+      template: node.clone(),
+      before: None,
+      label: None,
+    };
+    assert_eq!(make(Owner::Block).made_for(), Some(Owner::Block));
+    assert_eq!(make(Owner::Creator(1)).made_for(), Some(Owner::Creator(1)));
+    for op in [
+      Op::Copy {
+        from: node.clone(),
+        to:   Owner::Block,
+      },
+      Op::WriteOut {
+        owner:    Owner::Block,
+        template: node.clone(),
+        address:  "a@x.org".to_string(),
+      },
+      Op::Remove { node: node.clone() },
+      Op::Role {
+        node: node.clone(),
+        role: "email".to_string(),
+      },
+    ] {
+      assert_eq!(op.made_for(), None, "{op:?}");
+    }
+  }
+
+  /// A declined paper says so: one Warning, the ledger's writer state naming the reason ([`decline_nameless`]). No real
+  /// shape reaches it today (an unrequested entry the reading cuts is the one entry its leading marks label,
+  /// `events::lex_events`, and the API's own cut makes the nameless creator itself): driven directly.
+  #[test]
+  fn a_declined_paper_warns_once() {
+    use latexml_core::common::error::{LogStatus, get_status};
+    let before = get_status(LogStatus::Warning);
+    decline_nameless(&Resolved::default()).expect("declined");
+    assert_eq!(get_status(LogStatus::Warning), before + 1);
+    assert_eq!(
+      with_ledger(|ledger| ledger.writer.clone()),
+      Some("declined: a creator with no name".to_string())
+    );
+    with_ledger(|ledger| ledger.writer = None);
   }
 }

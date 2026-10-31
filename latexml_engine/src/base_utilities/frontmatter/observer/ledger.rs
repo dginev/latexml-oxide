@@ -748,6 +748,26 @@ pub(in crate::base_utilities) fn record_clear(tag: &str, attr: &[(&str, &str)]) 
   });
 }
 
+/// Record that the flush about to run took the queued entries at `positions` out of its queue (a raw class's lines in
+/// doubt no author requests, `place::take_lines_in_doubt`), under the shadow switch only: their API calls are cleared,
+/// as a dequeue's are ([`record_clear`]).
+pub(in crate::base_utilities) fn record_dropped(positions: &[usize]) {
+  if !records_now() {
+    return;
+  }
+  with_ledger(|ledger| {
+    let flushes = ledger.flushes;
+    for entry in &mut ledger.entries {
+      if let Entry::Api(call) = entry
+        && call.epoch == flushes
+        && positions.contains(&call.queue_position)
+      {
+        call.cleared = true;
+      }
+    }
+  });
+}
+
 /// The last value of `key` in a call's recorded attributes (`role=affiliation,label=a`), as the queue's attribute hash
 /// keeps it (`queue_front_matter`: the last value of a repeated key); empty when it has none. It mirrors the dequeue's
 /// match on any attribute, which no caller uses today — every clear passes only `role` (Perl

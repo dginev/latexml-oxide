@@ -4,10 +4,16 @@
 //! `\color{red}`, `\bfseries`), a group or a font command's argument still open (`{\itshape …\\ …}`,
 //! `\textit{…\\ …}`, `\begin{itshape}…\end{itshape}`) — is lost unless the entry carries it: each entry carries the
 //! font in effect at its first token, against the call's own, and the writer digests the entry under it
-//! (`writer::plan::entry_font_tokens`). When the boxes cannot tell that font, or a container other than a group (an
-//! `\underline`, an `\emph`, an `\href`) holds the ink of two entries, the content is no cut: today's one contact.
+//! (`writer::plan::entry_font_tokens`). A container other than a group (an `\underline`, an `\emph`, an `\href`) holding
+//! the ink of two entries wraps each of them again (`writer::container_wrap`: each entry keeps its markup). A font the
+//! boxes cannot tell, or a container the writer cannot wrap again exactly, never undoes the cut (review rev94b r4 B1:
+//! attribution beats typography): the entry is cut as before fonts were read, with the switches opening the group it
+//! sits in (`writer::span_tokens`' `own_font`).
 
-use std::{collections::BTreeMap, rc::Rc};
+use std::{
+  collections::{BTreeMap, BTreeSet},
+  rc::Rc,
+};
 
 use latexml_core::{document::FIELD_PROV_PROPERTY, token::field_prov_pos};
 
@@ -18,7 +24,18 @@ use super::*;
 /// (`box_span`'s field-ledger cover: `\textbf{Lab C}`'s letters covered from `\textbf`, read as the font there).
 #[derive(Default)]
 pub(in crate::base_utilities) struct InkFonts {
-  at: BTreeMap<u16, InkBox>,
+  at:       BTreeMap<u16, InkBox>,
+  /// each whatsit's font (math aside) at its own token's position: a line break's is the font in effect where it
+  /// breaks, which the next entry starts in when nothing between them switches ([`entry_font`])
+  whatsits: BTreeMap<u16, Rc<Font>>,
+}
+
+/// The containers a cut entry is wrapped in again (`writer::container_wrap`): the tokens opening each, outermost first
+/// (`\emph{`, `\textcolor{red}{`), each closed by one end-group after the entry's tokens.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Wrap {
+  pub open:   Vec<Token>,
+  pub closes: usize,
 }
 
 /// A character box's font, its text, and the spans of the whatsits holding it ([`InkFonts`]).
@@ -57,6 +74,13 @@ impl InkFonts {
         }
       },
       DigestedData::Whatsit(w) => {
+        if let Ok(Some(font)) = d.get_font()
+          && font.get_mathstyle().is_none()
+          && let Some(Stored::Int(prov)) = d.get_property(FIELD_PROV_PROPERTY).as_deref()
+          && let Ok(prov) = u16::try_from(*prov)
+        {
+          self.whatsits.entry(field_prov_pos(prov)).or_insert(font);
+        }
         let span = deep_span(d);
         if let Some(span) = span {
           within.push(span);
@@ -76,26 +100,33 @@ impl InkFonts {
     }
   }
 
-  /// Whether a whatsit holds the ink of two of the entries `spans` (an `\underline{$^1$Univ A\\ $^2$Univ B}`): its
-  /// markup no cut entry could keep.
-  pub(in crate::base_utilities) fn crossed(&self, spans: &[(u16, u16)]) -> bool {
-    let mut holders: BTreeMap<(u16, u16), usize> = BTreeMap::new();
+  /// The whatsits each holding the ink of two or more of the entries `spans` (an `\underline{$^1$Univ A\\ $^2$Univ B}`),
+  /// with the entries (indices into `spans`) whose ink each holds: the containers a cut entry is re-wrapped in
+  /// (`writer::container_wrap`), outermost first.
+  pub(in crate::base_utilities) fn holders(
+    &self,
+    spans: &[(u16, u16)],
+  ) -> Vec<((u16, u16), BTreeSet<usize>)> {
+    let mut held: BTreeMap<(u16, u16), BTreeSet<usize>> = BTreeMap::new();
     for (pos, (_, _, within)) in &self.at {
       let Some(entry) = spans.iter().position(|(s, e)| s <= pos && pos < e) else {
         continue;
       };
       for w in within {
-        if *holders.entry(*w).or_insert(entry) != entry {
-          return true;
-        }
+        held.entry(*w).or_default().insert(entry);
       }
     }
-    false
+    let mut holders: Vec<_> = held
+      .into_iter()
+      .filter(|(_, entries)| entries.len() > 1)
+      .collect();
+    holders.sort_by_key(|((s, e), _)| (*s, std::cmp::Reverse(*e)));
+    holders
   }
 }
 
 /// Where the font is read from ([`entry_font`]): the content's digested ink, the font its call set it in, and the
-/// index of the content's first token.
+/// position of the content's first token (what the backward scan stops at).
 pub(in crate::base_utilities) struct FontScope {
   pub ink:   InkFonts,
   pub root:  Rc<Font>,
@@ -117,14 +148,7 @@ pub(in crate::base_utilities) fn entry_font(
   events: &[Event],
 ) -> Option<Rc<Font>> {
   let pos = |i: usize| u16::try_from(base + i).ok();
-  let printed = |p: u16| {
-    events.iter().any(|e| {
-      matches!(
-        e.kind,
-        EventKind::Mark | EventKind::Break | EventKind::Sep(_)
-      ) && e.span.is_some_and(|(s, t)| s <= p && p < t)
-    })
-  };
+  let printed = |p: u16| printed_by_event(events, p);
   // (a character box made from the token itself)
   let ink = |i: usize| {
     let t = &content[i];
@@ -137,16 +161,15 @@ pub(in crate::base_utilities) fn entry_font(
       .filter(|(_, text, _)| t.with_str(|s| text.starts_with(s)))
       .map(|(font, ..)| font.clone())
   };
-  // (no switch: nothing of its own — a space, a math shift, LaTeX's `\(` and `\)` spelling one (`\protect`ed), a script
-  // — or what a mark, a break or a separator prints)
-  let neutral = |i: usize| {
-    let t = &content[i];
-    matches!(
-      t.get_catcode(),
-      Catcode::SPACE | Catcode::MATH | Catcode::SUPER | Catcode::SUB
-    ) || (t.get_catcode() == Catcode::CS
-      && t.with_cs_name(|n| matches!(n, "\\(" | "\\)" | "\\protect")))
-      || pos(i).is_some_and(printed)
+  let neutral = |i: usize| neutral_token(content, base, i, events);
+  // (a line break's own box at the token: its font)
+  let break_font = |i: usize| {
+    let p = pos(i)?;
+    events
+      .iter()
+      .any(|e| e.kind == EventKind::Break && e.span.is_some_and(|(s, t)| s <= p && p < t))
+      .then(|| scope.ink.whatsits.get(&p).cloned())
+      .flatten()
   };
   let found = (|| {
     let mut depth = 0i32;
@@ -161,15 +184,18 @@ pub(in crate::base_utilities) fn entry_font(
         _ => break,
       }
     }
-    // (a group closed before it sets nothing after it: passed whole)
+    // (a group closed before it sets nothing after it: passed whole; a line break prints in the font in effect there,
+    // which nothing between it and the entry switches — `\textbf{Univ A}\\ $^2$…`, `Town~\\ $^2$…`: read from its box,
+    // review rev94b r4 B1)
     let mut depth = 0i32;
-    for i in (scope.start..from.min(content.len())).rev() {
+    let start = scope.start.saturating_sub(base);
+    for i in (start..from.min(content.len())).rev() {
       match content[i].get_catcode() {
         Catcode::END => depth += 1,
         Catcode::BEGIN if depth > 0 => depth -= 1,
         _ if depth > 0 => {},
         _ => {
-          if let Some(font) = ink(i) {
+          if let Some(font) = ink(i).or_else(|| break_font(i)) {
             return Some(font);
           }
           if !(content[i].get_catcode() == Catcode::BEGIN || neutral(i)) {
@@ -181,6 +207,44 @@ pub(in crate::base_utilities) fn entry_font(
     Some(scope.root.clone())
   })()?;
   Some(Rc::new(font_changes(&scope.root, &found)))
+}
+
+/// Whether the content position `p` is printed by a mark, a line break or a separator of `events` — no switch.
+fn printed_by_event(events: &[Event], p: u16) -> bool {
+  events.iter().any(|e| {
+    matches!(
+      e.kind,
+      EventKind::Mark | EventKind::Break | EventKind::Sep(_)
+    ) && e.span.is_some_and(|(s, t)| s <= p && p < t)
+  })
+}
+
+/// Whether `content[i]` (`content[0]` at position `base`) is no switch: nothing of its own — a space, a math shift,
+/// LaTeX's `\(` and `\)` spelling one (`\protect`ed), a script — or what a mark, a break or a separator of `events`
+/// prints.
+fn neutral_token(content: &[Token], base: usize, i: usize, events: &[Event]) -> bool {
+  let t = &content[i];
+  matches!(
+    t.get_catcode(),
+    Catcode::SPACE | Catcode::MATH | Catcode::SUPER | Catcode::SUB
+  ) || (t.get_catcode() == Catcode::CS
+    && t.with_cs_name(|n| matches!(n, "\\(" | "\\)" | "\\protect")))
+    || u16::try_from(base + i).is_ok_and(|p| printed_by_event(events, p))
+}
+
+/// Whether nothing in `content[from..to]` switches a font ([`neutral_token`], braces aside): a container's argument up
+/// to its first entry (`writer::container_wrap`).
+pub(in crate::base_utilities) fn switch_free(
+  content: &[Token],
+  base: usize,
+  from: usize,
+  to: usize,
+  events: &[Event],
+) -> bool {
+  (from..to.min(content.len())).all(|i| {
+    matches!(content[i].get_catcode(), Catcode::BEGIN | Catcode::END)
+      || neutral_token(content, base, i, events)
+  })
 }
 
 /// The changes making `from` into `to`: each of the family, series, shape, size and colours that differ.

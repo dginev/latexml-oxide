@@ -498,6 +498,13 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     let flushed = digest_front_matter();
     assign_value("lx_frontmatter_explicit", outer, Some(Scope::Global));
     flushed?;
+    // (a raw class's title-block lines in doubt that no author of the flush requested: set here, after the title, as
+    // the class printed them — `frontmatter_stores::doubtful`)
+    let deferred = crate::frontmatter_stores::CONTACT_DEFERRED;
+    if let Some(Stored::Tokens(lines)) = lookup_value(deferred) {
+      assign_value(deferred, Stored::Tokens(Tokens::new(Vec::new())), Some(Scope::Global));
+      unread(lines);
+    }
     assign_value("frontmatter_deferred", true, Some(Scope::Global));
     // An abstract queued from here on is LATE (`\lx@frontmatter@mark`'s `late`, OXIDIZED_DESIGN_DIVERGENCES #903).
     assign_value("lx_frontmatter_here_digested", true, Some(Scope::Global));

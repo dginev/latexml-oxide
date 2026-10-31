@@ -498,6 +498,7 @@ pub fn fm_shadow_json() -> String {
                   inkless:      false,
                   annotate:     None,
                   font:         None,
+                  wrap:         None,
                 });
               },
               _ => {},

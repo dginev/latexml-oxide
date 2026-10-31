@@ -1,0 +1,33 @@
+% witness: ar-1col.cls's `\affil` inside `\author{}` (1602.05576, 2405.08158); review rev94b r3 B1, r4 B1 (its probes
+%          `p/f` emph, und: an argument spanning entries)
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able,1 Bob Baker,2 Cy Cole,3 Dan Doe,4 Eve Ern,5 Fay Fox6", the
+%          underlined "1Univ A, Town2 Univ B, City" (one line: the `\\` inside the underline's box), the emphasized
+%          "3Lab C, Place" / "4Lab D, Place", the emphasized bold "5Lab E, Place" / "6Lab F, Place", "Body."
+% engines: rust 94b r3 = each entry cut out of the `\underline`/`\emph`, its markup lost; 94b r4 = no cut: each
+%          affiliation one contact on the first name (Bob Baker, Dan Doe, Fay Fox nothing); 94a r7 (base) cut each,
+%          the markup lost
+% expect:  0 errors, 0 warnings; a container other than a group holding two entries' ink wraps each entry again
+%          (`writer::container_wrap`): each name its own line, underlined or emphasized as printed; a container
+%          whose entries the writer cannot wrap exactly (a switch inside it before its first entry, `\emph{\bfseries
+%          $^5$…}`) is cut as before fonts were read — attribution first (Fay Fox's line plain); eager and
+%          --streaming the same
+% status:  RED (94b r4) -> GREEN (94b r5)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilinauthor.cls}
+\ProvidesClass{affilinauthor}
+\LoadClass{article}
+\def\affilfont{\small}
+\def\affil#1{\par{\reset@font\affilfont#1\par}}
+\def\address#1{\par{\reset@font\affilfont#1\par}}
+\def\@maketitle{\newpage{\Large\bfseries\@title\par}\vskip1em\noindent{\bfseries\@author\par}\vskip1em}
+\end{filecontents*}
+\documentclass{affilinauthor}
+\begin{document}
+\title{A Title}
+\author{Ann Able,$^1$ Bob Baker,$^2$ Cy Cole,$^3$ Dan Doe,$^4$ Eve Ern,$^5$ Fay Fox$^6$
+\affil{\underline{$^1$Univ A, Town\\ $^2$Univ B, City}}
+\affil{\emph{$^3$Lab C, Place\\ $^4$Lab D, Place}}
+\affil{\emph{\bfseries $^5$Lab E, Place\\ $^6$Lab F, Place}}}
+\maketitle
+Body.
+\end{document}

@@ -16,11 +16,14 @@
 //!   writes out (`ruling3:written-out`), today's one contact (on every carrier of its entry) — each address a contact
 //!   of its own, made from today's, given to its owner.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use super::{
   super::{
-    events::{EventKind, FontScope, InkFonts, changes_font, entry_font, lex_events},
+    events::{
+      Event, EventKind, FontScope, InkFonts, Wrap, changes_font, entry_font, lex_events,
+      switch_free,
+    },
     ledger::{ApiCall, Outcome, field_stamped},
     policy::TitleMarks,
     rehearsal::{Rehearsal, rehearse},
@@ -434,41 +437,44 @@ fn cut(call: &ApiCall) -> Result<Option<Vec<(String, Tokens)>>> {
     return Ok(None);
   }
   // (the call's font, which its content's fonts are read against: `events::entry_font`)
-  let Some(root) = lookup_font() else {
-    return Ok(None);
-  };
+  let root = lookup_font();
   let (events, ink) = match rehearse(field_stamped(2, 0, content), TitleMarks::Fnsymbol, |d| {
     (lex_events(d), InkFonts::of(d))
   })? {
     Rehearsal::Done { value, .. } => value,
     Rehearsal::Skipped(_) => return Ok(None),
   };
-  let scope = FontScope { ink, root, start: 0 };
+  let scope = root.map(|root| FontScope { ink, root, start: 0 });
   let pieces = split_pieces(&events, &call.role);
   let spans: Vec<Option<(usize, usize)>> = pieces.iter().map(|(_, p)| piece_span(p)).collect();
   let Some(first) = spans.iter().flatten().map(|(s, _)| *s).min() else {
     return Ok(None);
   };
-  // (a container other than a group holding two pieces' ink, whose markup no piece could keep: no cut — review rev94b
-  // r3 B1, `\underline{$^1$Univ A\\ $^2$Univ B}`)
-  let held: Vec<(u16, u16)> = spans
+  // (each piece's form, `entry_forms`: the font in effect where it starts — `{\itshape $^1$Univ A\\ $^2$Univ B}`'s
+  // second too —, read from the rehearsal's ink, and a container holding two pieces' ink wrapped round each again —
+  // `\underline{$^1$Univ A\\ $^2$Univ B}`, review rev94b r3 B1; when the boxes cannot tell the font (a command between:
+  // `$^2$\mbox{…}` after `\mbox{Univ A}`) or the container cannot be wrapped again exactly, the piece as before, with
+  // the switches opening the group it sits in: never no cut, review rev94b r4 B1)
+  let Some(starts) = spans
     .iter()
-    .flatten()
-    .filter_map(|&(s, e)| Some((u16::try_from(s).ok()?, u16::try_from(e).ok()?)))
-    .collect();
-  if scope.ink.crossed(&held) {
+    .map(|span| {
+      let (s, e) = (*span)?;
+      Some((s, (u16::try_from(s).ok()?, u16::try_from(e).ok()?)))
+    })
+    .collect::<Option<Vec<_>>>()
+  else {
     return Ok(None);
-  }
+  };
+  let forms = match &scope {
+    Some(scope) => entry_forms(content, 0, &starts, scope, &events),
+    None => vec![(None, None); starts.len()],
+  };
   let mut out = Vec::new();
   let mut floor = 0;
-  for ((text, _), span) in pieces.iter().zip(&spans) {
+  for (((text, _), span), (font, wrap)) in pieces.iter().zip(&spans).zip(forms) {
     let Some(span) = *span else {
       return Ok(None);
     };
-    // (each piece digested in the font in effect where it starts — `{\itshape $^1$Univ A\\ $^2$Univ B}`'s second
-    // too —, read from the rehearsal's ink; when the boxes cannot tell it (a command between: `$^2$\mbox{…}` after
-    // `\mbox{Univ A}`), the piece as before, with the switches opening the group it sits in)
-    let font = entry_font(content, 0, span.0, &scope, &events);
     let Some((tokens, end)) =
       piece_tokens(content, span, floor, if font.is_some() { 0 } else { first })
     else {
@@ -479,10 +485,10 @@ fn cut(call: &ApiCall) -> Result<Option<Vec<(String, Tokens)>>> {
       return Ok(None);
     };
     floor = end;
-    out.push((norm(text), match &font {
-      Some(font) => entry_font_tokens(font, tokens),
-      None => tokens,
-    }));
+    out.push((
+      norm(text),
+      entry_tokens(font.as_ref(), wrap.as_deref(), tokens),
+    ));
   }
   Ok(Some(out))
 }
@@ -526,8 +532,10 @@ pub(super) fn block_span_tokens(
     let labelled = events
       .iter()
       .find(|e| e.kind == EventKind::Contact && e.label.is_some() && e.span == Some(span));
-    // (a cut entry's font, `events::entry_font`: the entry digested under it, the switches its cut starts past left out)
+    // (a cut entry's font, `events::entry_font`: the entry digested under it, the switches its cut starts past left out;
+    // and the containers holding it and another entry, wrapped round it again: `entry_forms`)
     let font = labelled.and_then(|e| e.font.as_ref());
+    let wrap = labelled.and_then(|e| e.wrap.as_deref());
     let tokens = span_tokens(
       block.tokens.unlist_ref(),
       block.range.0,
@@ -538,11 +546,165 @@ pub(super) fn block_span_tokens(
       with_mark,
       font.is_some(),
     )?;
-    Some(match font {
-      Some(font) => entry_font_tokens(font, tokens),
-      None => tokens,
-    })
+    Some(entry_tokens(font, wrap, tokens))
   })
+}
+
+/// A cut entry's `tokens` in its form ([`entry_forms`]): wrapped in its containers again, digested under its font.
+fn entry_tokens(font: Option<&Rc<Font>>, wrap: Option<&Wrap>, tokens: Tokens) -> Tokens {
+  let tokens = match wrap {
+    Some(wrap) => {
+      let mut out = wrap.open.clone();
+      out.extend(tokens.unlist());
+      out.extend(std::iter::repeat_n(T_END!(), wrap.closes));
+      Tokens::new(out)
+    },
+    None => tokens,
+  };
+  match font {
+    Some(font) => entry_font_tokens(font, tokens),
+    None => tokens,
+  }
+}
+
+/// Each cut entry's form: the font changes its cut starts in (`events::entry_font`), and the containers holding its ink
+/// and another entry's — an `\emph{$^1$Univ A, Town\\ $^2$Univ B, City}`, an `\underline{…}` (pdflatex prints both
+/// lines in it) —, which it is wrapped in again ([`container_wrap`]), its font then the one in effect where the
+/// outermost starts. `entries` each entry's cut start (an index into `content`, `content[0]` at position `base`) and
+/// span. Exact only: a container whose entries do not read one font (a switch inside it between them), or one the
+/// writer cannot wrap again ([`container_wrap`]), gives the entries it holds neither — they are cut as before fonts
+/// were read (review rev94b r4 B1: attribution beats typography, a cut is never undone for its markup).
+#[allow(clippy::type_complexity)]
+pub(in crate::base_utilities::frontmatter::observer) fn entry_forms(
+  content: &[Token],
+  base: usize,
+  entries: &[(usize, (u16, u16))],
+  scope: &FontScope,
+  events: &[Event],
+) -> Vec<(Option<Rc<Font>>, Option<Rc<Wrap>>)> {
+  let spans: Vec<(u16, u16)> = entries.iter().map(|(_, span)| *span).collect();
+  let holders = scope.ink.holders(&spans);
+  let leads: Vec<Option<Rc<Font>>> = entries
+    .iter()
+    .map(|(from, _)| entry_font(content, base, *from, scope, events))
+    .collect();
+  entries
+    .iter()
+    .enumerate()
+    .map(|(at, &(from, (_, end)))| {
+      let mine: Vec<&((u16, u16), BTreeSet<usize>)> = holders
+        .iter()
+        .filter(|(_, held)| held.contains(&at))
+        .collect();
+      if mine.is_empty() {
+        return (leads[at].clone(), None);
+      }
+      let one_font = mine.iter().all(|(_, held)| {
+        let first = held.first().and_then(|&k| leads[k].as_ref());
+        first.is_some() && held.iter().all(|&k| leads[k].as_ref() == first)
+      });
+      let wrap = one_font
+        .then(|| {
+          let containers: Vec<((u16, u16), usize)> = mine
+            .iter()
+            .map(|(span, held)| {
+              (
+                *span,
+                held.iter().map(|&k| entries[k].0).min().unwrap_or(from),
+              )
+            })
+            .collect();
+          let end = usize::from(end).checked_sub(base)?;
+          container_wrap(content, base, &containers, from, end, events)
+        })
+        .flatten();
+      match wrap {
+        Some((wrap, outer)) => (
+          entry_font(content, base, outer, scope, events),
+          Some(Rc::new(wrap)),
+        ),
+        None => (None, None),
+      }
+    })
+    .collect()
+}
+
+/// The tokens opening each container (`containers`: its span, outermost first, and its first entry's cut start) an
+/// entry cut at `from..end` sits in, wrapped round it again ([`entry_forms`]), and where the outermost starts: each
+/// container a command (`content[0]` at position `base`) taking its arguments as braced groups or `[…]` options, the
+/// entry in one of them, with nothing switching a font between that argument's start and the container's first entry
+/// (`events::switch_free`), and only switches between two containers' — `None` otherwise (a container made by a
+/// macro of the document's, an environment, a box whose argument is no group).
+fn container_wrap(
+  content: &[Token],
+  base: usize,
+  containers: &[((u16, u16), usize)],
+  from: usize,
+  end: usize,
+  events: &[Event],
+) -> Option<(Wrap, usize)> {
+  let close_of = |open: usize, (opening, closing): (Catcode, Option<Token>)| -> Option<usize> {
+    let mut depth = 0i32;
+    for (k, t) in content.iter().enumerate().skip(open) {
+      match t.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => {
+          depth -= 1;
+          if depth < 0 {
+            return None;
+          }
+          if depth == 0 && opening == Catcode::BEGIN {
+            return Some(k);
+          }
+        },
+        _ if depth == 0 && closing.is_some_and(|c| *t == c) => return Some(k),
+        _ => {},
+      }
+    }
+    None
+  };
+  let mut open = Vec::new();
+  let mut outer = None;
+  let mut after: Option<usize> = None;
+  for &((start, _), first) in containers {
+    let at = usize::from(start).checked_sub(base)?;
+    if let Some(after) = after {
+      let between = content.get(after..at)?;
+      if !between
+        .iter()
+        .all(|t| matches!(t.get_catcode(), Catcode::CS | Catcode::SPACE))
+      {
+        return None;
+      }
+      open.extend_from_slice(between);
+    }
+    if content.get(at)?.get_catcode() != Catcode::CS {
+      return None;
+    }
+    let mut k = at + 1;
+    let arg = loop {
+      let t = content.get(k)?;
+      match t.get_catcode() {
+        Catcode::SPACE => k += 1,
+        Catcode::BEGIN => {
+          let close = close_of(k, (Catcode::BEGIN, None))?;
+          if k < from && end <= close {
+            break k;
+          }
+          k = close + 1;
+        },
+        _ if *t == T_OTHER!("[") => k = close_of(k + 1, (Catcode::OTHER, Some(T_OTHER!("]"))))? + 1,
+        _ => return None,
+      }
+    };
+    if !switch_free(content, base, arg + 1, first, events) {
+      return None;
+    }
+    open.extend_from_slice(&content[at..=arg]);
+    outer.get_or_insert(at);
+    after = Some(arg + 1);
+  }
+  Some((Wrap { open, closes: containers.len() }, outer?))
 }
 
 /// `tokens` digested under the font changes `font` ([`events::entry_font`]): `\lx@fm@entry@font{n}` before them, the
@@ -1122,7 +1284,7 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
     .keys()
     .chain(have.keys())
     .cloned()
-    .collect::<std::collections::BTreeSet<_>>()
+    .collect::<BTreeSet<_>>()
     .into_iter()
     .collect();
   for key in keys {

@@ -1742,21 +1742,85 @@ fn in_place_contact_setter(name: &str) -> Result<Option<(usize, bool)>> {
 /// `\address` after `\maketitle`: its `,n)` e-mail marks and typed-number lists, OD #912, task 91c; just.cls's binding
 /// routes the same list).
 fn class_contact(api: Tokens, class: Tokens, in_place: bool) -> Tokens {
-  let title_block_line = || {
-    (!in_place || (at_the_body_level() && !frontmatter_entry_in_progress()))
-      && has_author_creators()
-      && !author_creators_placed()
-      && !frontmatter_entry_sealed("ltx:creator", "author")
-  };
-  // (a line of its own that leads with a mark no queued name requests is no creator's contact: the class's line, in
-  // place — review rev94b r3 B2, `\affil{\inst{3}Lab C}` under `Ann\inst{1}` and `Bob\inst{2}` was a nameless
-  // creator's; a stored setter's keeps the API's)
-  if creator_entry_in_progress()
-    || (title_block_line() && !(in_place && leads_with_unrequested_mark(last_group(&class))))
-  {
+  let doubt = in_place
+    .then(|| unrequested_mark(last_group(&class)))
+    .flatten();
+  contact_call(api, class, in_place, doubt)
+}
+
+/// [`class_contact`]'s choice, `doubt` the operand of a mark the line leads with that no author requests yet
+/// ([`unrequested_mark`]): a title-block line in doubt is the API's labelled call, decided at the `\maketitle` that
+/// places the authors ([`doubtful`]) — review rev94b r4 S1: a later `\author{and Bob Baker\inst{2}}` requests the
+/// `\address[\inst{2}]{…}` before it, which the class's line had left in the body.
+fn contact_call(api: Tokens, class: Tokens, in_place: bool, doubt: Option<Vec<Token>>) -> Tokens {
+  if creator_entry_in_progress() {
     api
+  } else if title_block_line(in_place) {
+    match doubt {
+      Some(operand) => doubtful(api, class, &operand),
+      None => api,
+    }
   } else {
     class
+  }
+}
+
+/// Whether a rerouted setter's call is a line of the authors being set ([`class_contact`]): an author creator stands to
+/// carry it, none placed nor sealed yet, and — for a setter printing its line where it is called — the call stands
+/// between paragraphs at the body's own level, outside any other frontmatter entry digesting.
+fn title_block_line(in_place: bool) -> bool {
+  (!in_place || (at_the_body_level() && !frontmatter_entry_in_progress()))
+    && has_author_creators()
+    && !author_creators_placed()
+    && !frontmatter_entry_sealed("ltx:creator", "author")
+}
+
+/// The value naming the rerouted setter's call in doubt being queued ([`doubtful`]): the queue marks its entry
+/// (`queue.rs`, [`CONTACT_DOUBT_ATTR`]).
+pub(crate) const CONTACT_DOUBT: &str = "lx_class_contact_doubt";
+/// The queued entry's attribute naming the call in doubt it came from ([`CONTACT_DOUBT`]).
+pub(crate) const CONTACT_DOUBT_ATTR: &str = "_class_contact_doubt";
+/// The class's lines a `\maketitle`'s flush found no author requesting ([`doubt_line`]), set after it.
+pub(crate) const CONTACT_DEFERRED: &str = "lx_class_contact_deferred";
+
+/// A title-block line in doubt (review rev94b r3 B2, r4 S1): it leads with a mark no author requests yet, and a later
+/// `\author` may. The API's labelled call, queued with its doubt (`\lx@class@contact@doubt{k}`), the class's line
+/// kept beside it: the `\maketitle` flush that places the authors ([`doubt_line`], `place.rs`) digests the call when an
+/// author requests the mark, else drops it and the class's line is set after the title, where the class printed it
+/// (orph3's `\address[\inst{3}]{Lab C, Place}` under `Ann Able\inst{1} and Bob Baker\inst{2}`: no nameless creator, the
+/// words in the body). A flush with no `\maketitle` (the fallback) digests the call: the API's own residual, the block's.
+fn doubtful(api: Tokens, class: Tokens, operand: &[Token]) -> Tokens {
+  let k = lookup_int("lx_class_contact_doubts") + 1;
+  assign_value(
+    "lx_class_contact_doubts",
+    Stored::Int(k),
+    Some(Scope::Global),
+  );
+  assign_value(
+    &s!("lx_class_contact_doubt_line_{k}"),
+    Stored::Tokens(class),
+    Some(Scope::Global),
+  );
+  assign_value(
+    &s!("lx_class_contact_doubt_key_{k}"),
+    Stored::from(Tokens::new(operand.to_vec()).to_string()),
+    Some(Scope::Global),
+  );
+  let mut out = vec![T_CS!("\\lx@class@contact@doubt"), T_BEGIN!()];
+  out.extend(ExplodeText!(&k.to_string()));
+  out.push(T_END!());
+  out.extend(api.unlist());
+  out.extend([T_CS!("\\lx@class@contact@doubt"), T_BEGIN!(), T_END!()]);
+  Tokens::new(out)
+}
+
+/// The call in doubt `k` ([`doubtful`]): the operand of the mark it leads with, and the class's line — which the flush
+/// sets when no author of it requests the mark (`place.rs` `take_lines_in_doubt`).
+pub(crate) fn doubt_line(k: &str) -> (String, Option<Tokens>) {
+  let key = lookup_string(&s!("lx_class_contact_doubt_key_{k}"));
+  match lookup_value(&s!("lx_class_contact_doubt_line_{k}")) {
+    Some(Stored::Tokens(line)) => (key, Some(line)),
+    _ => (key, None),
   }
 }
 
@@ -1835,18 +1899,18 @@ fn leading_mark_operand(line: &[Token]) -> Option<Vec<Token>> {
   operand(at + 1)
 }
 
-/// Whether `line` leads with a printed mark ([`leading_mark_operand`]) whose label no author's name requests,
+/// The operand of the printed mark `line` leads with ([`leading_mark_operand`]) when its label no author's name requests,
 /// queued or digested in the flush (`queued_authors_requesting`, `digested_authors_requesting`), the names showing
 /// marks of their own (`authors_show_marks`): a contact line no creator asks for, which the
 /// API would give to a creator of no name (review rev94b r3 B2: orph3's `\address[\inst{3}]{Lab C, Place}`, orph6's
 /// `\affil{\inst{3}Lab C, Place}` under `Ann Able\inst{1} and Bob Baker\inst{2}`).
-fn leads_with_unrequested_mark(line: &[Token]) -> bool {
-  leading_mark_operand(line).is_some_and(|operand| {
+fn unrequested_mark(line: &[Token]) -> Option<Vec<Token>> {
+  leading_mark_operand(line).filter(|operand| {
     operand
       .iter()
       .any(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
       && authors_show_marks()
-      && queued_authors_requesting(&operand).is_empty()
+      && queued_authors_requesting(operand).is_empty()
       && !digested_authors_requesting(&Tokens::new(operand.clone()).to_string())
   })
 }
@@ -1926,13 +1990,11 @@ fn optional_contact(name: &str, in_place: bool, opt: Tokens, arg: Tokens) -> Res
         && t.with_cs_name(|n| matches!(n, "\\inst" | "\\textsuperscript" | "\\@textsuperscript")))
   });
   if mark {
-    // (a mark no queued name requests is in doubt — review rev94b r3 B2: the address it labels a nameless creator's)
-    if leads_with_unrequested_mark(&opt_tokens) {
-      return Ok(if in_place {
-        class
-      } else {
-        decide(call("", arg))
-      });
+    // (a mark no queued name requests is in doubt — review rev94b r3 B2: the address it labels a nameless creator's; an
+    // in-place setter's call decided where the authors are placed, [`doubtful`], review rev94b r4 S1)
+    let doubt = unrequested_mark(&opt_tokens);
+    if doubt.is_some() && !in_place {
+      return Ok(decide(call("", arg)));
     }
     // (an address's line read for its marks as an affiliation's is, `\lx@affiliation@withinst`: the mark labels it and
     // prints nothing of its own in it)
@@ -1944,7 +2006,12 @@ fn optional_contact(name: &str, in_place: bool, opt: Tokens, arg: Tokens) -> Res
       wrapped.push(T_END!());
       line = wrapped;
     }
-    return Ok(decide(call("", Tokens::new(line))));
+    return Ok(contact_call(
+      call("", Tokens::new(line)),
+      class,
+      in_place,
+      doubt,
+    ));
   }
   let plain = trimmed
     .iter()
@@ -2026,8 +2093,15 @@ fn optional_contact(name: &str, in_place: bool, opt: Tokens, arg: Tokens) -> Res
       return Ok(decide(call(options, arg)));
     }
   }
+  // (in doubt: an in-place setter's line is the class's — a title-block line's set where the other lines in doubt are,
+  // after the title, in the order the class printed them (a key no author can request: `doubtful` with no operand) —,
+  // a stored setter's call the API's without the optional)
   Ok(if in_place {
-    class
+    if !creator_entry_in_progress() && title_block_line(true) {
+      doubtful(call("", arg), class, &[])
+    } else {
+      class
+    }
   } else {
     decide(call("", arg))
   })
@@ -2081,7 +2155,8 @@ const AUTHOR_BOX: &str = "lx_author_box";
 
 /// Each kept class definition (`\lx@class@contact@<name>`) of the rerouted setters `names`, rewritten so that its calls
 /// to another rerouted setter — or to itself — call that setter's class definition while the setter still means the
-/// reroute, else its meaning then (`\lx@class@contact@dispatch{<name>}`, which expands to the one token: a document's
+/// reroute, else its meaning then (`\lx@class@contact@dispatch@<name>`, one token at the call site, which expands to
+/// that one token: a document's
 /// `\renewcommand{\address}[1]{…Addr: #1…}` is what ae100prg's `\email` prints through — review rev94b r3 S3): a setter run as the class's
 /// prints all of its line where the class prints it, never part of it through the API (ae100prg.cls:185 `\def\email#1
 /// {\vspace*{5pt}\address{E-mail: #1}}`, 1303.3004: its `\address` the class's `\lx@class@contact@address`). Static, at
@@ -2112,15 +2187,22 @@ fn class_bodies_call_class_copies(names: &[&str]) {
     {
       continue;
     }
+    let tokens = body.unlist_ref();
     let mut calls: Vec<Token> = Vec::new();
-    for t in body.unlist_ref() {
+    for (k, t) in tokens.iter().enumerate() {
       match rerouted.iter().position(|(cs, _)| cs == t) {
-        Some(at) => {
-          calls.push(T_CS!("\\lx@class@contact@dispatch"));
-          calls.push(T_BEGIN!());
-          calls.extend(ExplodeText!(names[at]));
-          calls.push(T_END!());
+        // (an `\ifx` operand compares the class's own definition, as the file's test did: `\ifx\address\relax`)
+        Some(at)
+          if [1, 2]
+            .iter()
+            .any(|back| k >= *back && tokens[k - back] == T_CS!("\\ifx")) =>
+        {
+          calls.push(rerouted[at].1);
         },
+        // (one token, whatever reads it: `\expandafter\address\expandafter{…}`, `\let\x\address`, `\@ifnextchar[\address`
+        // — review rev94b r4 S2, cexp.cls's `\email`: a braced name after one dispatcher left the class copy's `#1` to
+        // the `\expandafter`)
+        Some(at) => calls.push(T_CS!(&s!("\\lx@class@contact@dispatch@{}", names[at]))),
         None => calls.push(*t),
       }
     }
@@ -2186,11 +2268,21 @@ pub fn reroute_in_place_contact_setters(file: &str) -> Result<()> {
       "{decider}{{{api}}}{{\\lx@class@contact@{name}{class_args}}}"
     )));
     DefMacro!(cs, params, body, scope => Some(Scope::Global));
-    // (the reroute's own meaning, which a class body's call is dispatched by: `\lx@class@contact@dispatch`)
+    // (the reroute's own meaning, which a class body's call is dispatched by: `\lx@class@contact@dispatch@<name>`, one
+    // token where the body called the setter)
     Let!(
       T_CS!(&s!("\\lx@class@contact@rerouted@{name}")),
       cs,
       Scope::Global
+    );
+    let dispatch = mouth::tokenize_internal(TeXString::assembled(s!(
+      "\\lx@class@contact@dispatch{{{name}}}"
+    )));
+    DefMacro!(
+      T_CS!(&s!("\\lx@class@contact@dispatch@{name}")),
+      None,
+      dispatch,
+      scope => Some(Scope::Global)
     );
     rerouted.push(name);
   }
@@ -5556,6 +5648,12 @@ LoadDefinitions!({
     reroute_raw_class_stores(&cls)?;
     reroute_in_place_contact_setters(&cls)?;
   });
+  // A title-block line in doubt being queued ([`doubtful`]): the call `k` the queue marks its entry with, none when
+  // empty.
+  DefPrimitive!("\\lx@class@contact@doubt{}", sub[(k)] {
+    let k = k.to_string().trim().to_string();
+    assign_value(CONTACT_DOUBT, Stored::from(k), Some(Scope::Global));
+  });
   // A rerouted contact setter's call that prints its line where it is called ([`class_contact`]).
   DefMacro!("\\lx@class@contact{}{}", sub[(api, class)] {
     Ok(class_contact(api, class, true))
@@ -5616,9 +5714,9 @@ LoadDefinitions!({
       assign_value(AUTHOR_KEYS, Stored::from(records), Some(Scope::Global));
     }
   });
-  // A kept class body's call of a rerouted setter (`class_bodies_call_class_copies`): the setter's class definition
-  // while the setter means the reroute, else what it means now (a document's redefinition) — one token, nothing left
-  // after it for the class's look-ahead.
+  // A kept class body's call of a rerouted setter (`class_bodies_call_class_copies`, through the one token
+  // `\lx@class@contact@dispatch@<name>`): the setter's class definition while the setter means the reroute, else what it
+  // means now (a document's redefinition) — one token, nothing left after it for the class's look-ahead.
   DefMacro!("\\lx@class@contact@dispatch{}", sub[(name)] {
     let name = name.to_string();
     let name = name.trim();

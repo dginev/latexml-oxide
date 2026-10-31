@@ -1,0 +1,31 @@
+% witness: ae100prg.cls:185 `\def\email#1{\vspace*{5pt}\address{E-mail: #1}}` (1303.3004); review rev94b r4 S2 (its
+%          probe `p/d/d_exp`, cexp.cls: `\expandafter\address\expandafter{\emailprefix #1}`)
+% oracle:  pdflatex 0 errors: "Write to us,", "Addr: E-mail: d@x.org", "until 2030,", "Addr: Aff: Univ A", "then",
+%          "Addr: Inst: Lab C", "and", "Addr: [", "Lab D] end.", then the title page, "Body."
+% engines: rust 94b r4 = 0 errors, 0 warnings: the class copy's call of `\address` was the dispatcher and a braced name
+%          (`\lx@class@contact@dispatch{address}`), so `\expandafter` expanded the brace and the copy's `#1` was the
+%          `\expandafter`: "Addr:" alone, "E-mail: d@x.org" left in the sentence
+% expect:  0 errors, 0 warnings; a kept class body calls a rerouted setter through one token
+%          (`\lx@class@contact@dispatch@<name>`), whatever reads it — `\expandafter`, `\let\x\address`,
+%          `\@ifnextchar[\address` — and an `\ifx` operand is the class's own definition: the body as pdflatex prints
+%          it; eager and --streaming the same
+% status:  RED (94b r4) -> GREEN (94b r5)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{onetoken.cls}
+\ProvidesClass{onetoken}
+\LoadClass{article}
+\newcommand{\address}[1]{\par{\itshape Addr: #1}\par}
+\def\emailprefix{E-mail: }
+\def\email#1{\vspace*{5pt}\expandafter\address\expandafter{\emailprefix #1}}
+\def\affil#1{\let\x\address\x{Aff: #1}}
+\def\thanksaddr{\@ifnextchar[\address\@gobble}
+\def\institute#1{\ifx\address\relax(none)\else\address{Inst: #1}\fi}
+\end{filecontents*}
+\documentclass{onetoken}
+\begin{document}
+\title{A Title}
+\author{Ann Able and Bob Baker}
+Write to us, \email{d@x.org} until 2030, \affil{Univ A} then \institute{Lab C} and \thanksaddr[Lab D] end.
+\maketitle
+Body.
+\end{document}

@@ -398,12 +398,101 @@ pub(in crate::base_utilities) fn last_group(tokens: &Tokens) -> Tokens {
   last
 }
 
+/// The labels the queued authors' marks request ([`digest_front_matter`]).
+fn requested_labels(commands: &[RawFrontmatter]) -> Vec<String> {
+  commands
+    .iter()
+    .filter(|entry| {
+      entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
+    })
+    .flat_map(|entry| author_mark_operands(entry.2.unlist_ref()))
+    .flat_map(|operand| clean_frontmatter_labels(&Tokens::new(operand).to_string(), "affiliation"))
+    .collect()
+}
+
+/// Take out of a `\maketitle`'s queue the entries of a raw class's title-block lines in doubt
+/// (`frontmatter_stores::doubtful`) whose mark no author of the flush requests (this flush's authors only, as
+/// `digested_authors_requesting` reads them), and keep their
+/// class lines for after the title (`frontmatter_stores::CONTACT_DEFERRED`, set by `\maketitle`'s flush): no nameless
+/// creator holds them, and their words print where the class printed them (review rev94b r4 S1).
+fn take_lines_in_doubt() {
+  use crate::frontmatter_stores::{CONTACT_DEFERRED, CONTACT_DOUBT_ATTR, doubt_line};
+  let commands: Vec<RawFrontmatter> = match lookup_value("frontmatter_raw") {
+    Some(Stored::FrontmatterRaw(commands)) => commands,
+    _ => return,
+  };
+  if !commands
+    .iter()
+    .any(|(_, attr, _)| attr.contains_key(CONTACT_DOUBT_ATTR))
+  {
+    return;
+  }
+  let requested = requested_labels(&commands);
+  let mut doubts: Vec<String> = Vec::new();
+  let mut dropped: Vec<usize> = Vec::new();
+  let mut deferred: Vec<Token> = Vec::new();
+  for (at, (_, attr, _)) in commands.iter().enumerate() {
+    let Some(k) = attr.get(CONTACT_DOUBT_ATTR) else {
+      continue;
+    };
+    if doubts.contains(k) {
+      dropped.push(at);
+      continue;
+    }
+    let (key, line) = doubt_line(k);
+    if let Some(line) = line
+      && !clean_frontmatter_labels(&key, "affiliation")
+        .iter()
+        .any(|label| requested.contains(label))
+    {
+      DebugFeature!("frontmatter", "FRONT in doubt, the class's line: {line}");
+      doubts.push(k.clone());
+      dropped.push(at);
+      deferred.extend(line.unlist());
+    }
+  }
+  if dropped.is_empty() {
+    return;
+  }
+  let kept: Vec<RawFrontmatter> = commands
+    .into_iter()
+    .enumerate()
+    .filter(|(at, _)| !dropped.contains(at))
+    .map(|(_, entry)| entry)
+    .collect();
+  assign_value(
+    "frontmatter_raw",
+    Stored::FrontmatterRaw(kept),
+    Some(Scope::Global),
+  );
+  // (and the observer's record of the calls: cleared, as a dequeue's are)
+  record_dropped(&dropped);
+  if !deferred.is_empty() {
+    let mut lines = match lookup_value(CONTACT_DEFERRED) {
+      Some(Stored::Tokens(lines)) => lines.unlist(),
+      _ => Vec::new(),
+    };
+    lines.extend(deferred);
+    assign_value(
+      CONTACT_DEFERRED,
+      Stored::Tokens(Tokens::new(lines)),
+      Some(Scope::Global),
+    );
+  }
+}
+
 /// Digest FrontMatter (if not already?)
 /// Perl: digestFrontMatter().
 pub fn digest_front_matter() -> Result<()> {
   // (what the abstract's command form added before this flush is no longer in Perl's queue: [`COMMAND_FORM`])
   let flushes = lookup_int(FRONTMATTER_FLUSHES);
   assign_value(FRONTMATTER_FLUSHES, flushes + 1, Some(Scope::Global));
+  // (a raw class's title-block lines in doubt no author of a `\maketitle`'s flush requests: out of the queue before
+  // anything reads it — the observer's reading too —, their class lines set after the title:
+  // `frontmatter_stores::doubtful`)
+  if lookup_bool("lx_frontmatter_explicit") {
+    take_lines_in_doubt();
+  }
   // The frontmatter observer's rehearsal of the author blocks, under its shadow switch only (nothing it finds is used
   // yet; OXIDIZED_DESIGN_DIVERGENCES #837).
   shadow_flush()?;
@@ -471,14 +560,7 @@ pub fn digest_front_matter() -> Result<()> {
   );
   // The labels the authors' marks request, for the notes digested here (`note_body`) — this call's authors only: a
   // note queued for a later call (an appending `\author` after `\maketitle`) sees that call's.
-  let requested: Vec<String> = commands
-    .iter()
-    .filter(|entry| {
-      entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
-    })
-    .flat_map(|entry| author_mark_operands(entry.2.unlist_ref()))
-    .flat_map(|operand| clean_frontmatter_labels(&Tokens::new(operand).to_string(), "affiliation"))
-    .collect();
+  let requested = requested_labels(&commands);
   assign_value(
     "lx_frontmatter_requested_marks",
     Stored::String(pin(requested.join("\u{1}"))),

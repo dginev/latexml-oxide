@@ -28115,9 +28115,10 @@ sectioning-frontmatter/`raw_class_contact_in_a_box_stays_the_class`, `raw_class_
 Round 4 (review rev94b r3): B2 a line of its own, or an optional argument, leading with a printed mark (`\inst{3}`,
 `\textsuperscript{3}`, `$^{3}$`) that no author's name requests — queued (`queued_authors_requesting`) or digested in
 the flush (`digested_authors_requesting`), the names showing marks of their own (`authors_show_marks`) — is in doubt
-(`frontmatter_stores.rs` `leads_with_unrequested_mark`, in `class_contact` and `optional_contact`): the API gave it to a
+(`frontmatter_stores.rs` `unrequested_mark`, in `class_contact` and `optional_contact`): the API gave it to a
 creator of no name (`\address[\inst{3}]{Lab C, Place}`, `\affil{\inst{3}Lab C, Place}` under `Ann\inst{1}`,
-`Bob\inst{2}`); in place it is the class's line, a stored setter's call the API's as before. B2b a comma-separated list
+`Bob\inst{2}`); in place it is the class's line — decided where `\maketitle` places the authors since round 5, below —,
+a stored setter's call the API's as before. B2b a comma-separated list
 of single words no one requests (`\address[c, d]{…}`) is a key list, in doubt, no caption. The writer's invariant
 (`writer::writes_a_nameless_creator`, every written family): a plan making an item from the queued tokens for the
 author block's own where today's holds no nameless creator — the re-part's block included — is declined whole,
@@ -28125,7 +28126,8 @@ today's output kept, with a Warning naming the block's ledger entry; a copy of t
 (an address no author spells: `owner:inner-email`, `ruling3:written-out`; 1811.05243, 1812.02463, 2403.14668,
 2501.11467) stays the block's — over every item the invariant had left 2105.11343, 2107.09414 and 2508.05637 with
 today's shared e-mail (`Op::made_for`, `Repart::makes_block_items`). S3 a kept class body's call of a rerouted setter is
-`\lx@class@contact@dispatch{<name>}`, which expands to the class's definition while the setter means the reroute
+`\lx@class@contact@dispatch@<name>` (round 5; a braced `\lx@class@contact@dispatch{<name>}` until then), one token at
+the call site, which expands to the class's definition while the setter means the reroute
 (`\lx@class@contact@rerouted@<name>`, `x_equals`), else to the setter as it now means — a document's
 `\renewcommand{\address}[1]{…Addr: #1…}`, global or in a group, is what ae100prg's `\email` prints through (1303.3004)
 — one token, nothing after it for the class's look-ahead. The box the authors were set in (`\lx@author@box`) is
@@ -28142,6 +28144,29 @@ class; a second box at the same depth (another minipage) is another. The `\autho
 unit test `writer::tests::the_writer_never_writes_a_nameless_creator`. Known residual: an in-block `\affil{\inst{3}…}`
 inside `\author{}` whose label no name requests is still the API's creator of no name (no class line can stand inside
 the names; the in-block shape `a_in`, reported for a ruling).
+Round 5 (review rev94b r4 S1, S2): S1 a title-block line in doubt is decided where the authors are placed, not at the
+call: a later `\author{and Bob Baker\inst{2}}` requests the `\address[\inst{2}]{…}` before it (capa-like appending
+`\author`), which round 4 had left the class's line in the body (94a r7 had it Bob Baker's). The call is the API's
+labelled one, queued with its doubt (`frontmatter_stores.rs` `doubtful`: `\lx@class@contact@doubt{k}` marks the queued
+entry, `queue.rs`), the class's line kept beside it; the flush of a `\maketitle` (`place.rs` `take_lines_in_doubt`,
+before the observer's flush reads the queue, whose calls it clears, `ledger::record_dropped`) keeps the entry when an
+author of the flush requests its mark (`lx_frontmatter_requested_marks`' labels, the narrowed
+`digested_authors_requesting`'s), else takes it out and sets the class's line after the title (`\maketitle`'s
+`after_digest` unreads `lx_class_contact_deferred`): no creator of no name, the words in the body. Every other in-place
+doubt of a title-block line (a key list, `\address[c, d]`; anything else no convention reads) is deferred alike, with
+no mark to request, so the lines print in the class's order. A flush with no `\maketitle` (the fallback, at the first
+section or the document's end) digests the call: the API's residual, the block's (94a r7's output; r4's class line
+there is not kept: its in-place set would be read as the section's arguments). S2 the kept class body's call of a
+rerouted setter is one token, `\lx@class@contact@dispatch@<name>` (defined at the reroute, expanding to the braced
+dispatcher): cexp-like `\expandafter\address\expandafter{\emailprefix #1}` had expanded the dispatcher's brace and
+left the copy's `#1` to the `\expandafter` ("Addr:" alone, the e-mail in the sentence); `\let\x\address` and
+`\@ifnextchar[\address` read the one token too, and an `\ifx` operand is the class's own copy, as the file's test
+compared. Repros sectioning-frontmatter/`raw_class_optional_mark_a_later_author_requests`,
+`raw_class_setter_body_calls_through_one_token`; guards `perfect_kernel_batch94b::a_mark_a_later_author_requests_is_the_api`,
+`a_class_body_calls_a_setter_through_one_token`; unit tests `writer::tests::the_writer_never_writes_a_nameless_creator`
+(now `Op::made_for` of every operation and a block today's nameless creator holds), `a_declined_paper_warns_once` (no
+real shape reaches `decline_nameless`: driven directly), `repart::tests::a_block_item_is_made_or_copied`. Residual: a
+line in doubt before a fallback flush (`\affil{$^{3}$Lab C}` with no `\maketitle`) is the API's, as 94a r7's.
 
 ### 937. An in-block affiliation that opens with marks is the entry they label in the observer's reading (Perl: no observer)
 
@@ -28198,12 +28223,37 @@ expansion that made it (`\textbf{Lab C}`'s letters are covered from `\textbf`). 
 (`plan::entry_font_tokens`, `frontmatter_stores.rs`), which merges them: the made entry is digested in the call's font,
 the switches of a group it sits in no longer copied (an `\em` toggled twice). An in-block cut whose font the boxes
 cannot tell (a command between: `\itshape $^1$\textbf{Univ A}`), or one whose entries' ink a container other than a
-group holds (`\underline{…}`, `\emph{…}`, `\href`: `InkFonts::crossed`), is no cut — today's one contact, its markup
-whole; an API call's piece whose font cannot be told is cut as before (`$^2$\mbox{…}` after `\mbox{Univ A}`,
+group holds (`\underline{…}`, `\emph{…}`, `\href`), was no cut — today's one contact on the first name (corrected in
+round 5, below: the base cut these, attribution beats typography); an API call's piece whose font cannot be told is cut as before (`$^2$\mbox{…}` after `\mbox{Univ A}`,
 `perfect_kernel_batchfms2b`). The API call's cut (`plan::cut`) reads its pieces' fonts from its own rehearsal. The
 rehearsal's `\lx@fm@obs@affil` and `@run` are bounded, a group of their own as the API digests each entry (a switch in
 one affiliation was the next one's font, its `\textit` read as no change). Repros
 sectioning-frontmatter/`raw_class_affil_cut_keeps_the_font_open_before_it`,
 `raw_class_address_cut_keeps_the_font_open_before_it`, `raw_class_affil_crossed_container_stays_one_contact`; guards
 `perfect_kernel_batch94b::a_cut_entry_keeps_the_font_open_before_it`, `an_api_piece_keeps_the_font_open_before_it`,
-`entries_inside_one_container_stay_one_contact`.
+`entries_inside_one_container_stay_one_contact` (renamed in round 5).
+Round 5 (review rev94b r4 B1; main-session rule: a font the reading cannot tell never undoes a cut the base made): no
+early exit of the cut turns it into one contact any more — the audited exits, each with its fallback: no font or span
+of the call (`scope` none: every entry cut without a font), a container holding two entries (wrapped again, else cut
+without one), a cut start out of the content (`labelled_start`: the writer's `span_tokens` fails there too — no cut, as
+94a r7), a font the boxes cannot tell (`entry_font` none: cut without one, the switches opening the group it sits in its
+own, `span_tokens`' `own_font` false), and in `plan::cut` no call font (`lookup_font` none: pieces without one) and a
+container (as in-block); what stays one contact is only what 94a r7 kept one (entries of no text, a mark past the
+leading run, texts that do not join to the content's, no balanced run, a mark no name shows). `entry_font` reads a line
+break's own box (`InkFonts`' whatsit fonts, at the break token's position): the font in effect where the next entry
+starts when nothing between switches (`$^1$\textbf{Univ A}\\ $^2$…`, `\textit{Town}\\`, `Town~\\`), and its backward
+scan stops at the content's first token by position (`FontScope::start` is a position, the block's `base` subtracted:
+a second block's scan had stopped short). A container spanning entries (`InkFonts::holders`: `\emph{…\\…}`,
+`\underline{…\\…}`; pdflatex prints both lines in it) wraps each entry again (`plan::entry_forms`,
+`plan::container_wrap`, the event's `wrap`): its opening tokens — the command, its `[…]` and braced arguments up to the
+one holding the entry, switches between nested containers — before the entry, one end-group after, the entry's font
+then the one where the outermost starts; exact only when the container's entries read one font and nothing switches
+between its argument's start and its first entry (`events::switch_free`), else cut without either
+(`\emph{\bfseries $^5$…\\ $^6$…}`: the bold the first entry's switches carry, the second plain). Probes `p/f` (46):
+none attributes worse than 94a r7; od4, mac7, mac4 back to 94a r7; od1 the second entry italic (94a r7: plain); emph,
+und each entry its name's with the markup (94a r7: cut, markup lost). Residual: the API path's `\affiliation{\emph{$^1$…\\
+$^2$…}}` (revtex) stays one contact, as 94a r7 — the reading's first piece spans the container (`piece_span` of the
+`\emph`'s events), no balanced run. Repros sectioning-frontmatter/`raw_class_affil_uncertain_font_still_cuts`,
+`raw_class_affil_container_wraps_each_entry` (was `raw_class_affil_crossed_container_stays_one_contact`); guards
+`perfect_kernel_batch94b::an_uncertain_font_never_undoes_a_cut`, `entries_inside_one_container_are_each_wrapped_again`
+(re-baselined from `entries_inside_one_container_stay_one_contact`: each entry its name's).

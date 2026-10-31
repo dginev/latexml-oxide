@@ -30,7 +30,9 @@ use super::*;
 
 mod fonts;
 mod lexer;
-pub(in crate::base_utilities) use fonts::{FontScope, InkFonts, changes_font, entry_font};
+pub(in crate::base_utilities) use fonts::{
+  FontScope, InkFonts, Wrap, changes_font, entry_font, switch_free,
+};
 use lexer::Lexer;
 pub(in crate::base_utilities) use lexer::{is_fnsymbol, is_separator_word};
 
@@ -158,6 +160,9 @@ pub struct Event {
   /// a cut in-block contact entry's: the font changes in effect where the writer's cut of it starts, against its call's
   /// (`fonts::entry_font`; `Font::default()` for none), which the writer digests it under — `None` when not read
   pub font:         Option<Rc<Font>>,
+  /// a cut in-block contact entry's: the containers holding it and another entry, which the writer wraps it in again
+  /// (`fonts::Wrap`, `writer::container_wrap`)
+  pub wrap:         Option<Rc<Wrap>>,
 }
 
 impl Event {
@@ -180,6 +185,7 @@ impl Event {
       inkless: false,
       annotate: None,
       font: None,
+      wrap: None,
     }
   }
 }
@@ -932,11 +938,13 @@ impl Walker {
               start: usize::from(at) + 1,
             });
           if let Some((entries, whole)) = labelled_entries(&events, scope.as_ref()) {
-            let entry_event = |(label, text, span, font): LabelledEntry| {
+            let entry_event = |e: LabelledEntry| {
+              let LabelledEntry { label, text, span, font, wrap } = e;
               let mut entry = contact.clone();
               entry.label = Some(label);
               entry.text = text;
               entry.font = font;
+              entry.wrap = wrap;
               // (its span its own ink, which the writer makes the entry from (`plan::block_span_tokens`): not the
               // call, whose own typesetting — a document's `\newcommand{\affil}[1]{\\{\footnotesize #1}}` — is no
               // part of it)
@@ -945,7 +953,7 @@ impl Walker {
               entry
             };
             if entries.len() > 1 {
-              let spans = entries.iter().filter_map(|(_, _, span, _)| *span).collect();
+              let spans = entries.iter().filter_map(|e| e.span).collect();
               self.cuts.push((spans, entry_event(whole)));
             }
             for entry in entries {
@@ -1458,8 +1466,15 @@ fn mark_led_pieces_keeping(events: &[Event], punctuation: bool) -> Vec<Vec<Event
 }
 
 /// An in-block contact's entry read from its leading marks: its labels, its text, its span, and for an entry of a cut
-/// the font its cut starts in ([`labelled_entries`]).
-type LabelledEntry = (String, String, Option<(u16, u16)>, Option<Rc<Font>>);
+/// the font its cut starts in and the containers it is wrapped in again ([`labelled_entries`]).
+#[derive(Clone)]
+struct LabelledEntry {
+  label: String,
+  text:  String,
+  span:  Option<(u16, u16)>,
+  font:  Option<Rc<Font>>,
+  wrap:  Option<Rc<Wrap>>,
+}
 
 /// An author block's first position in the author field and its tokens ([`with_block_content`]).
 type BlockContent = Option<(usize, Tokens)>;
@@ -1506,7 +1521,13 @@ fn labelled_entry(events: &[Event]) -> Option<LabelledEntry> {
     .iter()
     .filter_map(|e| e.span)
     .reduce(|(a, b), (s, e)| (a.min(s), b.max(e)));
-  Some((labels.join(","), events_text(&rest), span, None))
+  Some(LabelledEntry {
+    label: labels.join(","),
+    text: events_text(&rest),
+    span,
+    font: None,
+    wrap: None,
+  })
 }
 
 /// The entries of an in-block contact's content each led by marks ([`mark_led_pieces_keeping`], its printed
@@ -1538,51 +1559,53 @@ fn labelled_entries(
       if piece[end..].iter().any(|e| e.kind == EventKind::Mark) {
         return None;
       }
-      labelled_entry(piece).filter(|(_, text, span, _)| span.is_some() && !norm(text).is_empty())
+      labelled_entry(piece).filter(|e| e.span.is_some() && !norm(&e.text).is_empty())
     })
     .collect();
-  // (each entry with the font its cut starts in, `fonts::entry_font`: none when the boxes cannot tell it, or a
-  // container other than a group holds two entries' ink — review rev94b r3 B1: a font open from earlier in the block
-  // was lost from every entry after the first)
+  // (each entry with the font its cut starts in, `fonts::entry_font`, and the containers holding it and another entry
+  // it is wrapped in again, `writer::container_wrap` — review rev94b r3 B1: a font open from earlier in the block was
+  // lost from every entry after the first. A font the boxes cannot tell, a container the writer cannot wrap again
+  // exactly, no font of the call or no block content to read it from never undo the cut: the entry is cut as before
+  // fonts were read, the switches of the group it sits in its own — review rev94b r4 B1: `$^1$\textbf{Univ A}\\
+  // $^2$\textbf{Univ B}` was one contact on the first name. Only what the writer could not cut at all stays one entry.)
   let cut = |entries: Vec<LabelledEntry>| -> Option<Vec<LabelledEntry>> {
     if entries.len() < 2
-      || entries
-        .iter()
-        .map(|(_, text, ..)| norm(text))
-        .collect::<String>()
-        != norm(&whole.1)
+      || entries.iter().map(|e| norm(&e.text)).collect::<String>() != norm(&whole.text)
     {
       return None;
     }
-    let scope = scope?;
-    let spans: Vec<(u16, u16)> = entries
-      .iter()
-      .map(|(_, _, span, _)| *span)
-      .collect::<Option<_>>()?;
-    if scope.ink.crossed(&spans) {
+    let spans: Vec<(u16, u16)> = entries.iter().filter_map(|e| e.span).collect();
+    if spans.len() != entries.len() {
       return None;
     }
     BLOCK_CONTENT.with(|block| {
       let block = block.borrow();
       let (base, tokens) = block.as_ref()?;
       let content = tokens.unlist_ref();
+      // (where each entry's cut starts: no such start is no cut the writer could make, `writer::span_tokens`)
+      let starts: Vec<(usize, (u16, u16))> = spans
+        .iter()
+        .map(|&span| Some((writer::labelled_start(content, *base, span)?, span)))
+        .collect::<Option<_>>()?;
+      let forms = match scope {
+        Some(scope) => writer::entry_forms(content, *base, &starts, scope, events),
+        None => vec![(None, None); entries.len()],
+      };
       entries
         .into_iter()
-        .map(|(label, text, span, _)| {
-          let span = span?;
-          let from = writer::labelled_start(content, *base, span)?;
-          let font = entry_font(content, *base, from, scope, events)?;
+        .zip(forms)
+        .map(|(entry, (font, wrap))| {
           writer::span_tokens(
             content,
             *base,
-            span,
-            Some(&norm(&text)),
+            entry.span?,
+            Some(&norm(&entry.text)),
             None,
             true,
             false,
-            true,
+            font.is_some(),
           )?;
-          Some((label, text, Some(span), Some(font)))
+          Some(LabelledEntry { font, wrap, ..entry })
         })
         .collect()
     })
