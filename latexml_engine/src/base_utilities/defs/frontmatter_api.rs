@@ -686,10 +686,13 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
             }
             let has_role_key = s!("_has{role}");
             // (a parent has the role already when it has such a contact; in a run, also when a mark of its own is
-            // answered by a mark-picked contact of the role (`_bymark`, `\lx@affiliation@withsup`) — one deferred until
-            // the labels are compared, or one this flush digests later (`lx_frontmatter_offered_labels`) — which has
-            // not reached it yet: `\author{Ann$^{1}$}\affil{$^1$Univ X}\author{Bob \affil{Univ Y}}` gave Ann Y as well,
-            // 77n r4 review probes e1, e4; a label nothing answers, `\author{Ann$^{1}$}\affil{$^{1-3}$Univ X}`, is none
+            // answered by a mark-picked contact of the role (`_bymark`, `\lx@affiliation@withsup`; or one its printed
+            // mark labels, `_plainmarks`/`_picturemarks`, as `marked_at` below reads it — a class's in-place
+            // `\affil{$^1$Univ A}`, so `\author{ANN ABLE$^1$ and BOB BAKER \affil{$^1$Univ A} \affil{Univ B}}` gives
+            // Univ B to Bob Baker alone, as the observer's `Resolver::record_run`, review rev94a r7 SF2) — one deferred
+            // until the labels are compared, or one this flush digests later (`lx_frontmatter_offered_labels`) — which
+            // has not reached it yet: `\author{Ann$^{1}$}\affil{$^1$Univ X}\author{Bob \affil{Univ Y}}` gave Ann Y as
+            // well, 77n r4 review probes e1, e4; a label nothing answers, `\author{Ann$^{1}$}\affil{$^{1-3}$Univ X}`, is none
             // (b3); a legend reads the contact only (`\affil{$^\dagger$Corresponding author}` after mark-picked ones
             // is every new author's, r3 review probe q04; 2605.11982's after `\maketitle`). A `label=` answers
             // nothing here: authblk's `\author[1]{Ann}\author{Bob}\affil[1]{Univ X}\affil{Univ Y}` prints Univ Y under
@@ -700,7 +703,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
                 .iter()
                 .filter(|e| {
                   e.attr.get("role").map(String::as_str) == Some("pending")
-                    && e.attr.contains_key("_bymark")
+                    && ["_bymark", "_plainmarks", "_picturemarks"]
+                      .iter()
+                      .any(|key| e.attr.contains_key(*key))
                     && matches!(e.content.first(),
                       Some(TagContent::Entry(contact)) if contact.attr.get("role") == Some(&role))
                 })

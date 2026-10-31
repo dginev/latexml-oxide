@@ -288,8 +288,9 @@ struct Resolver {
   sequenced:        Vec<(String, Assoc, Vec<usize>, usize)>,
   /// the calls of the list so far
   sequence_calls:   usize,
-  /// the last `annotate=run` contact's role, the creators then, and the run it reached
-  last_run:         Option<(String, usize, Vec<usize>)>,
+  /// the last `annotate=run` contact's role, the creators then, the run it reached, and the run's extent (the run and
+  /// the authors its walk passed over as answered, which a legend continuing it reaches: `record_run`)
+  last_run:         Option<(String, usize, Vec<usize>, Vec<usize>)>,
   /// per role, the creators made when the last contact of it that bounds a run was read — a block's, labelled or not;
   /// a call's a printed mark labels: the names before it are no run's of a later unlabelled one (`record_run`,
   /// `new_run`)

@@ -1,0 +1,26 @@
+% mechanism: an unlabelled in-place affiliation after a labelled one, no name since, is the whole run's when every name
+%   of it is answered (OD #928 round 7-8; `Resolver::record_run`, today's API's walk): ANN ABLE and BOB BAKER both
+%   show the 1 the labelled `\affil{$^1$Univ A}` answers, so the stop at an answered name never comes and Univ B is
+%   both names'; CID COLE's `\affil{Univ C}` is his alone (the bound at the contact before it).
+% witness: review rev94a r7 n/n06_pair_plus_unmarked (sibling n/n01, `raw_class_affil_run_stops_at_an_answered_name`)
+% oracle:  pdflatex 0 errors: "ANN ABLE1 and BOB BAKER1, 1Univ A / , Univ B / CID COLE, Univ C"
+% engines: rust 94a r7: as expected; perl: not run
+% expect:  0 errors, 0 warnings; ANN ABLE and BOB BAKER Univ A and Univ B, CID COLE Univ C; eager and --streaming the
+%   same
+% status:  GREEN (94a r7, kept by 94a r8)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilsinauthor.cls}
+\ProvidesClass{affilsinauthor}
+\LoadClass{article}
+\def\affilfont{\small}
+\def\author#1{\gdef\@author{#1}}
+\def\affil#1{\gdef\@affil{#1}\ifx\@affil\@empty\else{\reset@font\affilfont\unskip,\ #1\vphantom{gy}\endgraf}\fi}\affil{}
+\def\maketitle{\par{\Large\@title\par}{\noindent\@author\par}}
+\end{filecontents*}
+\documentclass{affilsinauthor}
+\begin{document}
+\title{A Title}
+\author{ANN ABLE$^1$ and BOB BAKER$^1$ \affil{$^1$Univ A} \affil{Univ B} CID COLE \affil{Univ C}}
+\maketitle
+Body.
+\end{document}

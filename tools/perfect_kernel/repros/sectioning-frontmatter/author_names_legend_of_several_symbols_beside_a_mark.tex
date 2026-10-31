@@ -1,0 +1,20 @@
+% mechanism: a legend of several symbols beside another mark in the name's mark formula shows its mark once (OD #928
+%   round 8, review rev94a r7 SF1; `apply::show_legend_mark`): the formula `$^{1,\dagger\dagger}$` holds one token per
+%   symbol, so no single token was the label `††` and the name kept it beside the note's mark ("Ann Able1,†† [††]");
+%   a run of adjacent mark tokens between commas whose joined text is the label is taken, with its comma, and the
+%   formula's `tex=` drops the joined spelling. Sibling on the path: `$^{2,**}$` (review v/rv2).
+% witness: review rev94a r7 v/rv15, v/rv2
+% oracle:  pdflatex 0 errors: "Ann Able1,†† and Bob Baker1 / 1Univ X / ††Corresponding author"
+% engines: rust 94a r7: Ann Able's name `<sup>1,††</sup>` beside the note's mark ††; perl: not run
+% expect:  0 errors, 0 warnings; Ann Able `<sup>1</sup>`, Univ X and the note mark=†† "Corresponding author"; Bob Baker
+%   `<sup>1</sup>`, Univ X; eager and --streaming the same
+% status:  RED (94a r7) -> GREEN (94a r8)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,\dagger\dagger}$ and Bob Baker$^{1}$}
+\affiliation{$^1$Univ X\\ $^{\dagger\dagger}$Corresponding author}
+\maketitle
+Body.
+\end{document}

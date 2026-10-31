@@ -992,6 +992,10 @@ fn an_affil_after_a_run_of_names_is_the_runs() {
         "  a Univ B | owner:adjacent",
       ][..],
     ),
+    // (BOB BAKER, unmarked beside the marked name, gets no affiliation: by FIDELITY_CHARTER §4 a marked line is its
+    // mark carriers', and nothing printed gives `$^1$Univ A` or the later run's line to him — the charter's reading,
+    // main session's ruling on review rev94a r7 N2; a14, as i07's IEEE block and the kernel's `Ann Able$^1$ and Bob
+    // Baker\\ $^1$Univ A \and Cid Cole\\ Univ B`, f/k01)
     (
       repro!("raw_class_affil_run_after_a_marked_name.tex"),
       &[
@@ -1026,6 +1030,40 @@ fn an_affil_after_a_run_of_names_is_the_runs() {
         "  a Univ C | owner:annotate:run",
       ][..],
     ),
+    // (with no name since the labelled entry, the walk stops at the first name a mark answers once it has reached one
+    // no mark answers — review rev94a r7 SF2, n01, as today's API's `reached_unanswered` and the authblk rule; r7's
+    // reading gave Univ B to both — and is the whole run's when every name is answered, n06)
+    (
+      repro!("raw_class_affil_run_stops_at_an_answered_name.tex"),
+      &[
+        &["ANN ABLE", "affiliation=Univ A"][..],
+        &["BOB BAKER", "affiliation=Univ B"][..],
+      ][..],
+      &[
+        "C ANN ABLE [1] | line:names",
+        "  a Univ A | ruling1:request",
+        "C BOB BAKER [] | line:names sep:word",
+        "  a Univ B | owner:adjacent",
+      ][..],
+    ),
+    (
+      repro!("raw_class_affil_run_of_answered_names_is_whole.tex"),
+      &[
+        &["ANN ABLE", "affiliation=Univ A", "affiliation=Univ B"][..],
+        &["BOB BAKER", "affiliation=Univ A", "affiliation=Univ B"][..],
+        &["CID COLE", "affiliation=Univ C"][..],
+      ][..],
+      &[
+        "C ANN ABLE [1] | line:names",
+        "  a Univ B | owner:annotate:run",
+        "  a Univ A | ruling1:request",
+        "C BOB BAKER [1] | line:names sep:word",
+        "  a Univ B | owner:annotate:run",
+        "  a Univ A | ruling1:request",
+        "C CID COLE [] | line:names",
+        "  a Univ C | owner:adjacent",
+      ][..],
+    ),
   ] {
     assert_reading(tex, Some(xml), shadow);
     assert_eq!(default_mode_creators(tex), owned(xml));
@@ -1036,7 +1074,9 @@ fn an_affil_after_a_run_of_names_is_the_runs() {
 /// rev94a r6 B1, the same rule as a raw class's in-place `\affil`): `\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ X}`
 /// waits for its label, so the author above it held no affiliation yet and `\IEEEauthorblockA{Univ Y}` reached her too
 /// (94b r2 and r6: Ann Able Univ Y and Univ X; i06); the run's names are those made after the marked block, so its
-/// unmarked name is no name of the next block's either (i07: Bob Baker none). Both the observer's walk
+/// unmarked name is no name of the next block's either (i07: Bob Baker none — the charter's reading, FIDELITY_CHARTER
+/// §4: a marked block is its mark carriers', and nothing printed gives it to the unmarked name; main session's ruling
+/// on review rev94a r7 N2). Both the observer's walk
 /// (`Resolver::ends_a_run`) and today's API's (`frontmatter_api.rs` `marked_at`). Perl reads no mark here.
 #[test]
 fn an_ieee_affiliation_block_after_a_marked_block_is_the_next_names() {
@@ -1074,7 +1114,11 @@ fn an_ieee_affiliation_block_after_a_marked_block_is_the_next_names() {
 /// `apply::show_legend_mark`): `**` is no one glyph, so r6 left the note without a `mark` and the page set the default
 /// dagger beside the name's own `**` ("Bob Baker** †"); its mark is now the note's leading superscript, which prints
 /// the label's symbols, and the name shows it no more. Siblings on the path (`$^{\dagger\dagger}$`,
-/// `$^{\ddagger\ddagger}$`, `\textsuperscript{**}`, `$^{1,**}$`) were probed alike.
+/// `$^{\ddagger\ddagger}$`, `\textsuperscript{**}`) were probed alike. Beside another mark in the name's formula
+/// (`$^{1,\dagger\dagger}$`, `$^{2,**}$`) one token per symbol is no one of them the label: r7 kept "Ann Able1,††"
+/// beside the note's †† (review rev94a r7 SF1, v/rv15, v/rv2); the run of tokens between commas is the mark. A mark
+/// taken from a formula leaves its `tex=` as the source spells the rest, an emptied script group gone (N1, rv11
+/// `${}^{2}{}^{\star}$`: r7 `tex="{}^{2}{}^{}"`, an unparsed-math Warning; `apply::drop_spelled`'s unit test).
 #[test]
 fn a_legend_of_several_symbols_shows_its_mark() {
   let tex = repro!("author_names_legend_of_several_symbols_shows_its_mark.tex");
@@ -1093,6 +1137,38 @@ fn a_legend_of_several_symbols_shows_its_mark() {
     "mark=∗ ∗ Equal contribution",
     "mark=∗∗ ∗∗ Corresponding author",
   ]);
+  let tex = repro!("author_names_legend_of_several_symbols_beside_a_mark.tex");
+  let xml: &[&[&str]] = &[&["Ann Able 1", "affiliation=1 Univ X"], &[
+    "Bob Baker 1",
+    "affiliation=1 Univ X",
+  ]];
+  assert_reading(tex, Some(xml), &[
+    "C Ann Able [1,††] | line:names",
+    "  a Univ X | api:leading-mark api:split-by-marks owner:group",
+    "  n Corresponding author | api:leading-mark api:split-by-marks api:legend",
+    "C Bob Baker [1] | line:names sep:word",
+    "  a Univ X | api:leading-mark api:split-by-marks owner:group",
+  ]);
+  let xml = default_mode_xml(tex);
+  assert_eq!(personnames(&xml), [
+    "<personname>Ann Able<sup><text font=\"italic\">1</text></sup></personname>",
+    "<personname>Bob Baker<sup><text font=\"italic\">1</text></sup></personname>",
+  ]);
+  assert_eq!(notes_with_marks(&xml), ["mark=†† †† Corresponding author"]);
+  let tex = repro!("author_names_legend_mark_formula_keeps_its_tex.tex");
+  let xml: &[&[&str]] = &[&["Ann Able 2"], &["Bob Baker 1", "affiliation=Univ X"]];
+  assert_reading(tex, Some(xml), &[
+    "C Ann Able [2,⋆] | line:names",
+    "  n Corresponding author | api:leading-mark api:legend",
+    "C Bob Baker [1] | line:names sep:word",
+    "  a Univ X | api:leading-mark",
+  ]);
+  let xml = default_mode_xml(tex);
+  assert_eq!(personnames(&xml), [
+    "<personname>Ann Able<sup><text font=\"italic\">2</text></sup></personname>",
+    "<personname>Bob Baker<sup><text font=\"italic\">1</text></sup></personname>",
+  ]);
+  assert_eq!(notes_with_marks(&xml), ["mark=⋆ ⋆ Corresponding author"]);
 }
 
 /// The mark a legend note shows, taken from the name's superscript, leaves the superscript's font (review rev94a r6 N1,
@@ -1114,4 +1190,26 @@ fn a_names_mark_taken_keeps_its_font() {
     "<personname>Bob Baker<sup><text font=\"italic\">1</text></sup></personname>",
   ]);
   assert_eq!(notes_with_marks(&xml), ["mark=* * Corresponding author"]);
+}
+
+/// A class's in-place `\affil[1]{Univ A}` between boxed names inside `\author` (review rev94a r7 SF3, o10; 94b r3's
+/// `\lx@class@contact@optional`): the labelled call is the API's, deferred to its label, and its stub stood after the
+/// author being digested — the `\textsuperscript{2}` after it requested its label of no entry (`queue_digest::
+/// with_pending_entry_attr` read the last entry alone, Perl's `fetchPendingEntry`), so r7 lost the 2 and printed
+/// `\affil[2]{Univ B}` inside the name. The marks after it are the author's again, the key read against the flush's
+/// authors' marks (`digested_authors_requesting`), and the re-part writes the boxed names as pdflatex prints them.
+#[test]
+fn a_mark_after_an_in_place_labelled_affil_is_the_authors() {
+  let tex = repro!("raw_class_affil_optional_between_boxed_names.tex");
+  let xml: &[&[&str]] = &[&["ANN ABLE", "affiliation=Univ A"], &[
+    "BOB BAKER",
+    "affiliation=Univ B",
+  ]];
+  assert_reading(tex, Some(xml), &[
+    "C ANN ABLE [1] | line:names",
+    "  a Univ A | ruling1:request",
+    "C BOB BAKER [2] | line:names",
+    "  a Univ B | ruling1:request",
+  ]);
+  assert_eq!(default_mode_creators(tex), owned(xml));
 }

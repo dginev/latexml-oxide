@@ -61,20 +61,42 @@ impl Resolver {
   }
 
   /// The authors an `annotate=run[:<cap>]` contact reaches, as `frontmatter_api.rs` records its run: the run of the
-  /// contact of the role before it while no author came since (the same count of authors), else the authors back from
-  /// the last to one holding the role or made before the last contact of the role that bounds a run (`run_from`), at
-  /// most <cap> — and the run recorded for the next. Only a call today's attaches at once records it: a mark-picked
-  /// line (`_withsup`) waits for its label, and its run is not taken.
-  pub(super) fn record_run(&mut self, annotate: &str, role: &str) -> Vec<usize> {
+  /// contact of the role before it while no author came since (the same count of authors; a `legend`'s the run's whole
+  /// extent), else the authors back from the last to one holding the role or made before the last contact of the role
+  /// that bounds a run (`run_from`), at most <cap> — and the run recorded for the next. Only a call today's attaches at
+  /// once records it: a mark-picked line (`_withsup`) waits for its label, and its run is not taken.
+  ///
+  /// A new run's walk stops at an author a mark answers once it has reached one no mark answers (`answered`): ANN
+  /// ABLE's 1 is answered by `\affil{$^1$Univ A}`, so `\author{ANN ABLE$^1$ and BOB BAKER \affil{$^1$Univ A} \affil{Univ
+  /// B}}` gives Univ B to Bob Baker alone, as today's API's walk (`reached_unanswered`) and the authblk rule for the same
+  /// print (review rev94a r7 SF2, n/n01). When every author of the run is answered the run is whole (n06, 77n's
+  /// authblk/ptephy/opex3 rows). Not a legend's walk, whose mark answers no one (`marker_leads`): the authors it passed
+  /// over are its extent, which a legend continuing the run reaches.
+  pub(super) fn record_run(&mut self, annotate: &str, role: &str, legend: bool) -> Vec<usize> {
     let n = self.out.creators.len();
     let cap = annotate
       .split_once(':')
       .and_then(|(_, c)| c.trim().parse::<usize>().ok())
       .filter(|c| *c >= 1);
-    let run = match &self.last_run {
-      Some((r, count, run)) if r == role && *count == n => run.clone(),
+    let (run, extent) = match &self.last_run {
+      Some((r, count, run, extent)) if r == role && *count == n => {
+        // (a legend within the run leaves its record as it was, as today's: `!(legend && continued)`)
+        if legend {
+          return extent.clone();
+        }
+        (run.clone(), extent.clone())
+      },
       _ => {
-        let mut run = Vec::new();
+        let answering = self.answering(role);
+        let answered = |c: usize| {
+          !legend
+            && self.out.creators[c]
+              .requests
+              .iter()
+              .any(|r| answering.contains(r))
+        };
+        let (mut run, mut passed) = (Vec::new(), Vec::new());
+        let mut reached_unanswered = false;
         for c in (0..n).rev() {
           if !run.is_empty() && self.ends_a_run(c, role) {
             break;
@@ -82,14 +104,48 @@ impl Resolver {
           if cap.is_some_and(|cap| run.len() >= cap) {
             break;
           }
+          if reached_unanswered && answered(c) {
+            // (the authors Perl's `new` reaches past here, the run's extent: up to one holding the role)
+            passed = (0..=c)
+              .rev()
+              .take(cap.map_or(usize::MAX, |cap| cap - run.len()))
+              .take_while(|&c| !self.roles[c].iter().any(|r| r == role))
+              .collect();
+            break;
+          }
+          reached_unanswered |= !answered(c);
           run.push(c);
         }
+        let mut extent: Vec<usize> = run.iter().chain(&passed).copied().collect();
         run.reverse();
-        run
+        extent.sort_unstable();
+        (run, extent)
       },
     };
-    self.last_run = Some((role.to_string(), n, run.clone()));
+    self.last_run = Some((role.to_string(), n, run.clone(), extent));
     run
+  }
+
+  /// The labels the pending entries of `role` answer that a printed mark labels — a block's labelled line, an API
+  /// call's leading or `_withsup` mark (a legend so read of an affiliation call too: today's keeps it an affiliation) —,
+  /// not a call's `label=`: what today's API's run walk reads as `answering` (`frontmatter_api.rs`; authblk's
+  /// `\author[1]{Ann}\author{Bob}\affil[1]{Univ X}\affil{Univ Y}` prints Univ Y under both, 2605.25017).
+  fn answering(&self, role: &str) -> Vec<String> {
+    self
+      .pending
+      .iter()
+      .filter(|(_, _, assoc)| {
+        let marked = assoc.rule.split_whitespace().any(|t| {
+          matches!(
+            t,
+            "ruling1:request" | "api:leading-mark" | "api:withsup-mark"
+          )
+        });
+        marked
+          && (assoc.role == role || (assoc.role == "legend" && assoc.rule.contains("api:legend")))
+      })
+      .flat_map(|(labels, ..)| labels.iter().cloned())
+      .collect()
   }
 
   /// An API call made apart from the blocks.
@@ -574,7 +630,7 @@ impl Resolver {
         && attr_value(attrs, "annotate")
           .unwrap_or("")
           .starts_with("run"))
-      .then(|| self.record_run(attr_value(attrs, "annotate").unwrap_or(""), role));
+      .then(|| self.record_run(attr_value(attrs, "annotate").unwrap_or(""), role, true));
       if label_rule.starts_with("api:leading-mark") {
         let owners = run.clone().unwrap_or_else(|| {
           self.annotate_owners(attr_value(attrs, "annotate").unwrap_or(""), role)
@@ -680,7 +736,7 @@ impl Resolver {
       // frontmatter_api.rs `annotate=run`, authblk's `\AB@thenote` group)
       let run_rule = annotate.starts_with("run");
       let run = if run_rule {
-        self.record_run(annotate, role)
+        self.record_run(annotate, role, false)
       } else {
         self.new_run(role)
       };

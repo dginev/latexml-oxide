@@ -27866,8 +27866,7 @@ legend's own walk), so the re-part no longer admits the API's over-reach (`repar
 admission). A call's `label=` sets no bound (authblk's `\author[1]{Ann}\author{Bob}\affil[1]{Univ X}\affil{Univ Y}`
 prints Univ Y under both, 2605.25017), and with no name made since the bounding contact the bound is none — every
 author of the run answered, the contact the whole run's (authblk's `\affil{Univ Z}` after every author's marked line,
-ptephy's `\affil{}{Univ Z}`, 77n r5 review probes r01, t02; `ANN ABLE$^1$ and BOB BAKER \affil{$^1$Univ A}
-\affil{Univ B}` gives Univ B to both, the tip's). `\author{ANN ABLE$^1$ \affil{$^1$Univ A} BOB BAKER \affil{Univ B}}`
+ptephy's `\affil{}{Univ Z}`, 77n r5 review probes r01, t02; round 8 stops that walk at an answered name, below). `\author{ANN ABLE$^1$ \affil{$^1$Univ A} BOB BAKER \affil{Univ B}}`
 in a class printing `\affil` in place gave Ann Univ B too (r6); IEEEtran's `annotate=new` `\IEEEauthorblockA{Univ Y}`
 after `\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}}\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ X}` gave Ann Univ Y
 since 63e, and a marked block's unmarked name (`Ann Able$^1$ and Bob Baker`) the next block's affiliation. Perl reads no
@@ -27899,6 +27898,55 @@ and E/W/F the tip's. Census against the tip (94b r3; the three populations, 270 
 the tip's (2404.03434's 0 against 22 pgf errors in one census run is noise: 22 on both binaries alone). Scorer (3,000
 sample, `run_94a_r7`): tiers identical to 94b r3's — 5,732 of 5,838 (98.18 %), readability 24 papers; against round 6, 4
 papers' creators differ, each 94b r3's (0910.5837, 1105.1753, 2303.16316, quant-ph0606237).
+
+Round 8 (review rev94a r7's should-fixes; on 94b r4). A new run's walk (`Resolver::record_run`) stops at the first
+author a mark answers once it has reached one no mark answers — the labels of the pending entries of the role a
+printed mark labels (`Resolver::answering`: a block's labelled line, an API call's leading or `_withsup` mark; not a
+`label=`) — as today's API's walk (`frontmatter_api.rs` `reached_unanswered`), whose `answering` now reads a stub its
+printed mark labels (`_plainmarks`, `_picturemarks`) as `marked_at` does, not `_bymark` alone: `\author{ANN ABLE$^1$ and
+BOB BAKER \affil{$^1$Univ A} \affil{Univ B}}` in a class printing `\affil` in place gives Univ B to Bob Baker alone, as
+the authblk rule for the same print (`author_authblk_unmarked_affils_after_marked_author`); the reading and today's
+both gave it to both (review n/n01). When every author of the run is answered the run is whole (`ANN ABLE$^1$ and BOB
+BAKER$^1$`, n06; 77n's authblk/ptephy/opex3 rows). A legend's walk does not stop (its mark answers no one), and the
+authors a stopped walk passed over are the run's extent, which a legend continuing it reaches, as today's records it.
+An unmarked name in a block whose lines are all marked gets no affiliation — the charter's reading (FIDELITY_CHARTER §4:
+a marked line is its mark carriers', and nothing printed gives it to the unmarked name; main session's ruling): a
+raw class's `ANN ABLE$^1$ and BOB BAKER \affil{$^1$Univ A} CID COLE \affil{Univ B}` (a14), IEEEtran's marked block
+over `Bob Baker and Cid Cole` (i07), the kernel's `\author{Ann Able$^1$ and Bob Baker\\ $^1$Univ A \and Cid Cole\\ Univ
+B}` (f/k01) leave Bob Baker none. A legend of several symbols beside another mark in the name's formula
+(`$^{1,\dagger\dagger}$`, `$^{2,**}$`, `$^{\dagger\dagger,1}$`, `$^{1,\mathbf{**}}$`) shows its mark once
+(`apply::show_legend_mark`): the formula holds a token per symbol, so no single token was the label and the name kept
+"1,††" beside the note's ††; the run of adjacent tokens between commas (`apply::token_runs`, a letter or digit glued to
+a symbol parted from it) whose joined text is the label is taken with its comma, else the run's tokens that are the
+label one by one (`$^{\star 1}$`'s `⋆`, a compound `††` under a `†` legend, OD #927), as round 7 took them. A formula's
+`tex=` drops the run's spelling (`apply::drop_spelled`): the item of the last script group that spells it, a font
+wrapper or a space with it (`^{2,\mathbf{*}}` → `^{2}`), else its tokens from inside a glued item; a group left empty
+goes whole with the empty base before it, as the script element left with no token goes from the XMath (`${}^{2}
+{}^{\star}$` → `{}^{2}`: round 7 left `{}^{2}{}^{}` and an empty `FLOATSUPERSCRIPT`, an unparsed-math Warning). A
+class's in-place `\affil[1]{Univ A}` between boxed names inside `\author` (`\author{\mbox{ANN ABLE\textsuperscript{1}}
+\affil[1]{Univ A} \mbox{BOB BAKER\textsuperscript{2}} \affil[2]{Univ B}}`, o10) is a labelled API call deferred to its
+label, whose stub stood after the author being digested; Perl's `fetchPendingEntry` reads a tag's last entry alone, so
+the `\textsuperscript{2}` after it requested its label of no entry — the 2 was lost and `\affil[2]{Univ B}` found no
+author printing its key and printed inside the name (r7). `queue_digest::with_pending_entry_attr` passes over the
+deferred stubs after the entry being digested (Rust-only: Perl's bindings make no labelled annotation inside an
+entry's content — its `\\`-lines' are unlabelled, Base_Utility.pool.ltxml:723-726 — so no KNOWN_PERL_ERRORS entry),
+and `digested_authors_requesting` reads the flush's authors' marks (`lx_frontmatter_requested_marks`, `place.rs`
+`digest_front_matter`), not every creator the frontmatter holds; the re-part then writes the boxed names as pdflatex
+prints them, each its affiliation. Guards `perfect_kernel_batch94a` (+1: `a_mark_after_an_in_place_labelled_affil_is_the_authors`;
+rows n01, n06 in `an_affil_after_a_run_of_names_is_the_runs`, rv15 and rv11 in `a_legend_of_several_symbols_shows_its_mark`)
+and the unit test `writer::apply::tests::a_mark_runs_spelling_leaves_the_rest_of_the_tex`. Repros
+`raw_class_affil_run_stops_at_an_answered_name`, `raw_class_affil_run_of_answered_names_is_whole`,
+`author_names_legend_of_several_symbols_beside_a_mark`, `author_names_legend_mark_formula_keeps_its_tex`,
+`raw_class_affil_optional_between_boxed_names`. Not fixed, the old output kept: a heterogeneous compound mark in a
+superscript beside its legend, `Ann Able$^{*\dagger}$ … $^{*}$Corresponding author`, shows "∗†" beside the note's ∗
+(the superscript path parts marks at commas only).
+Probes (the review's n/, v/, o/, h/, f/ sets, 15 mark siblings `s01`-`s15` with pdflatex 0 errors each; 0 errors and 0
+warnings each): against 94b r4, only n01, o10, rv2, rv11, rv15 and the siblings `$^{\dagger\dagger,1}$`,
+`$^{1,\ddagger\ddagger}$`, `$^{1,\mathbf{**}}$`, `$^{1, \dagger\dagger}$` differ, each as pdflatex prints it; every other
+probe 94b r4's. Witnesses (the 37 of the review's `pp/`, 1805.12376's `main.tex` among them): XML byte-identical to 94b
+r4's and to round 7's. Census against 94b r4 and against round 7 (the three populations, 270 / 1,500 / 500): changed
+0 / 0 / 0, none written-different, rc/E/F/W identical. Scorer (3,000 sample, `run_94a_r8`, `run_94a_r8b`): tiers and
+creators identical to round 7's and 94b r4's — 5,732 of 5,838 (98.18 %), readability 24 papers.
 
 ### 932. aa's sole `\institute` is every author's unless the class's `\inst{n}` picks it, as llncs's (Perl: inst_support's `affiliation:1`, which no author requests; the first author's by the prefix-stripped fallback)
 

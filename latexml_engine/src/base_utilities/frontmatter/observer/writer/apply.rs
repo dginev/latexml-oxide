@@ -202,36 +202,67 @@ fn show_legend_mark(document: &mut Document, owner: &Node, note: &Node, label: &
     }
   }
   // (a mark formula the name shows, not yet rewritten into its superscript — revtex's `Bob Baker$^{1,\star}$`: the
-  // glyph's token taken, with the comma beside it, and a formula left with no mark taken whole)
+  // glyph's tokens taken, with the comma beside them, and a formula left with no mark taken whole. A mark of several
+  // symbols is a run of adjacent tokens between commas, one per symbol — `$^{1,\dagger\dagger}$`'s `†`, `†` —, taken
+  // when its joined text is the mark: no single token was `††`, and the name showed "Ann Able1,††" beside the note's
+  // mark, review rev94a r7 SF1, v/rv15, v/rv2 `$^{2,**}$`)
   for mut math in document.findnodes("ltx:personname//ltx:Math", Some(owner)) {
     if !matches!(marks::read_formula(&math), marks::FormulaMarks::Marks(_)) {
       continue;
     }
-    let tokens: Vec<Node> = document
-      .findnodes("descendant::ltx:XMTok", Some(&math))
-      .into_iter()
-      .filter(|token| shown.contains(&unify(token.get_content().trim())))
-      .collect();
-    // (its `tex=` spelled without them too, `{}^{1,\star}` → `{}^{1}`: a token whose spelling the source does not show
+    // (a run that is not the mark gives its tokens that are, one by one: `$^{\star 1}$`'s `⋆`, and a compound symbol
+    // mark read as its symbol's, `$^{1,\dagger\dagger}$` under a `$^\dagger$` legend, OD #927)
+    let runs: Vec<Vec<Node>> =
+      token_runs(&document.findnodes("descendant::ltx:XMTok", Some(&math)))
+        .into_iter()
+        .flat_map(|run| {
+          let text: String = run
+            .iter()
+            .map(|token| token.get_content().trim().to_string())
+            .collect();
+          if shown.contains(&unify(&text)) {
+            vec![run]
+          } else {
+            run
+              .into_iter()
+              .filter(|token| shown.contains(&unify(token.get_content().trim())))
+              .map(|token| vec![token])
+              .collect()
+          }
+        })
+        .collect();
+    // (its `tex=` spelled without them too, `{}^{1,\star}` → `{}^{1}`: a run whose spelling the source does not show
     // leaves the formula whole, both marks printed, rather than a `tex=` the formula no longer holds — review rev94a r6
     // N2)
     let mut tex = math.get_attribute("tex");
     if let Some(spelled) = tex.as_mut()
-      && !tokens.iter().all(|token| drop_spelling(spelled, token))
+      && !runs.iter().all(|run| drop_spelling(spelled, run))
     {
       continue;
     }
+    let comma = |node: Option<Node>| {
+      node.filter(|n| dom::is(n, "ltx:XMTok") && n.get_content().trim() == ",")
+    };
     let mut taken = false;
-    for token in &tokens {
-      let comma = |node: Option<Node>| {
-        node.filter(|n| dom::is(n, "ltx:XMTok") && n.get_content().trim() == ",")
+    for run in &runs {
+      let (Some(first), Some(last)) = (run.first(), run.last()) else {
+        continue;
       };
       if let Some(comma) =
-        comma(token.get_prev_sibling()).or_else(|| comma(token.get_next_sibling()))
+        comma(first.get_prev_sibling()).or_else(|| comma(last.get_next_sibling()))
       {
         document.remove_node(comma);
       }
-      document.remove_node(token.clone());
+      for token in run {
+        let parent = token.get_parent();
+        document.remove_node(token.clone());
+        // (a script the run was all of goes with it: `${}^{2}{}^{\star}$`'s second `FLOATSUPERSCRIPT`)
+        let mut at = parent;
+        while let Some(node) = at.filter(|n| !dom::is(n, "ltx:XMath") && elements(n).is_empty()) {
+          at = node.get_parent();
+          document.remove_node(node);
+        }
+      }
       taken = true;
     }
     let empty = |scripts: &[String]| {
@@ -252,9 +283,39 @@ fn show_legend_mark(document: &mut Document, owner: &Node, note: &Node, label: &
   Ok(())
 }
 
-/// `tex` without the spelling of a mark `token` of its formula, and the comma beside it: the control word its `name`
-/// spells (`\star`), else its text or the spellings of its glyph (`*`, `\ast` for `∗`). Whether it was found.
-fn drop_spelling(tex: &mut String, token: &Node) -> bool {
+/// The runs of a formula's `tokens` (in document order) a comma parts: adjacent element siblings, none a comma, a
+/// letter or digit glued to a symbol parted from it — one mark each, `$^{1,\dagger\dagger}$`'s and `$^{1\dagger
+/// \dagger}$`'s `1` and `††`.
+fn token_runs(tokens: &[Node]) -> Vec<Vec<Node>> {
+  let mut runs: Vec<Vec<Node>> = Vec::new();
+  for token in tokens {
+    if token.get_content().trim() == "," {
+      runs.push(Vec::new());
+      continue;
+    }
+    let follows = runs.last().and_then(|run| run.last()).is_some_and(|last| {
+      let mut next = last.get_next_sibling();
+      while let Some(n) = next
+        .as_ref()
+        .filter(|n| n.get_type() != Some(NodeType::ElementNode))
+      {
+        next = n.get_next_sibling();
+      }
+      next.as_ref() == Some(token)
+        && marks::has_word(&last.get_content()) == marks::has_word(&token.get_content())
+    });
+    match runs.last_mut() {
+      Some(run) if follows => run.push(token.clone()),
+      _ => runs.push(vec![token.clone()]),
+    }
+  }
+  runs.retain(|run| !run.is_empty());
+  runs
+}
+
+/// The spellings a formula's mark `token` may have in its `tex`: the control word its `name` spells (`\star`), its
+/// text, the spellings of its glyph (`*`, `\ast` for `∗`).
+fn token_spellings(token: &Node) -> Vec<String> {
   let text = token.get_content().trim().to_string();
   let mut spellings: Vec<String> = token
     .get_attribute("name")
@@ -270,37 +331,242 @@ fn drop_spelling(tex: &mut String, token: &Node) -> bool {
     _ => &[],
   };
   spellings.extend(glyphs.iter().map(|g| g.to_string()));
-  for spelling in spellings.iter().filter(|s| !s.is_empty()) {
-    // (a control word ends where no letter follows: `\star` is not `\stare`)
-    let word =
-      spelling.starts_with('\\') && spelling.chars().nth(1).is_some_and(char::is_alphabetic);
-    let found = tex
-      .match_indices(spelling.as_str())
-      .map(|(at, _)| at)
-      .find(|&at| {
-        !word
-          || !tex[at + spelling.len()..]
-            .chars()
-            .next()
-            .is_some_and(char::is_alphabetic)
-      });
-    let Some(start) = found else {
-      continue;
-    };
-    let end = start + spelling.len();
-    let before = tex[..start].trim_end();
-    let after = tex[end..].trim_start();
-    let (from, to) = if before.ends_with(',') {
-      (before.len() - 1, end)
-    } else if after.starts_with(',') {
-      (start, tex.len() - after.len() + 1)
-    } else {
-      (start, end)
-    };
-    tex.replace_range(from..to, "");
-    return true;
+  spellings.retain(|s| !s.is_empty());
+  spellings
+}
+
+/// The commands that print no mark of their own around one: a font or a style (`\mathbf{*}`, `{\rm a}`), a space.
+const MARK_WRAPPERS: &[&str] = &[
+  "\\mathbf",
+  "\\mathrm",
+  "\\mathit",
+  "\\mathsf",
+  "\\mathtt",
+  "\\mathnormal",
+  "\\boldsymbol",
+  "\\bm",
+  "\\pmb",
+  "\\textbf",
+  "\\textit",
+  "\\textrm",
+  "\\textnormal",
+  "\\text",
+  "\\mbox",
+  "\\bf",
+  "\\rm",
+  "\\it",
+  "\\sf",
+  "\\tt",
+  "\\scriptstyle",
+  "\\scriptscriptstyle",
+  "\\textstyle",
+  "\\displaystyle",
+  "\\,",
+  "\\;",
+  "\\:",
+  "\\!",
+  "\\ ",
+  "~",
+];
+
+/// The TeX tokens of `spelled` (a control sequence, or one character) with their spans, its braces, spaces and
+/// [`MARK_WRAPPERS`] out.
+fn mark_tokens(spelled: &str) -> Vec<(String, usize, usize)> {
+  let mut out = Vec::new();
+  let mut chars = spelled.char_indices().peekable();
+  while let Some((at, c)) = chars.next() {
+    let mut end = at + c.len_utf8();
+    if c == '\\' {
+      match chars.next() {
+        Some((i, l)) if l.is_ascii_alphabetic() => {
+          end = i + l.len_utf8();
+          while let Some(&(i, l)) = chars.peek().filter(|(_, l)| l.is_ascii_alphabetic()) {
+            end = i + l.len_utf8();
+            chars.next();
+          }
+        },
+        Some((i, symbol)) => end = i + symbol.len_utf8(),
+        None => {},
+      }
+    }
+    let token = &spelled[at..end];
+    if !(token == "{" || token == "}" || token.trim().is_empty() || MARK_WRAPPERS.contains(&token))
+    {
+      out.push((token.to_string(), at, end));
+    }
+  }
+  out
+}
+
+/// `tex` without the spelling of a run of mark tokens of its formula, and the comma beside it: the item of a script
+/// group (`^{…}`, `^x`) its tokens spell one by one ([`token_spellings`]; a font wrapper or a space around them taken
+/// too, `^{2,\mathbf{*}}` → `^{2}`), the last group holding one first, as the marks end the formula; a group left
+/// empty goes whole, with an empty base before it (`{}^{2}{}^{\star}` → `{}^{2}`, review rev94a r7 N1). A run that is
+/// part of an item — a token taken from a glued mark, `^{\star 1}`, `^{1,\dagger\dagger}` under a `\dagger` legend —
+/// is taken from it, its last such place first. Whether it was found.
+fn drop_spelling(tex: &mut String, run: &[Node]) -> bool {
+  drop_spelled(tex, &run.iter().map(token_spellings).collect::<Vec<_>>())
+}
+
+/// [`drop_spelling`] of a run whose tokens may each be spelled one of `spellings`.
+fn drop_spelled(tex: &mut String, spellings: &[Vec<String>]) -> bool {
+  // (where in `item`'s tokens the run is spelled, the last place first)
+  let spelled_at = |item: &str| -> Option<(usize, usize, bool)> {
+    let tokens = mark_tokens(item);
+    let n = spellings.len();
+    (n > 0 && n <= tokens.len())
+      .then(|| {
+        (0..=tokens.len() - n).rev().find(|&at| {
+          tokens[at..at + n]
+            .iter()
+            .zip(spellings)
+            .all(|((token, ..), spellings)| spellings.contains(token))
+        })
+      })
+      .flatten()
+      .map(|at| (tokens[at].1, tokens[at + n - 1].2, tokens.len() == n))
+  };
+  let groups = script_groups(tex);
+  // (an item spelling the run whole first, in any group; else a part of one)
+  for whole in [true, false] {
+    for &(caret, (start, end), close) in groups.iter().rev() {
+      let items = top_level_items(&tex[start..end]);
+      let Some((from, to, part)) = items.iter().rev().find_map(|&(from, to)| {
+        spelled_at(&tex[start + from..start + to])
+          .filter(|&(.., is_whole)| is_whole == whole)
+          .map(|(f, t, _)| {
+            (
+              start + from,
+              start + to,
+              (start + from + f, start + from + t),
+            )
+          })
+      }) else {
+        continue;
+      };
+      if !whole {
+        tex.replace_range(part.0..part.1, "");
+        return true;
+      }
+      let rest_empty = items
+        .iter()
+        .all(|&(f, t)| start + f == from || tex[start + f..start + t].trim().is_empty());
+      if rest_empty {
+        // (the whole group: its caret to its end, and an empty base right before it)
+        let mut open = caret;
+        let before = tex[..caret].trim_end();
+        if before.ends_with("{}") {
+          open = before.len() - 2;
+        }
+        tex.replace_range(open..close, "");
+      } else {
+        // (the comma before the item, else the one after it)
+        let before = tex[start..from].trim_end();
+        let after = tex[to..end].trim_start();
+        let (from, to) = if before.ends_with(',') {
+          (start + before.len() - 1, to)
+        } else if after.starts_with(',') {
+          (from, end - after.len() + 1)
+        } else {
+          (from, to)
+        };
+        tex.replace_range(from..to, "");
+      }
+      return true;
+    }
   }
   false
+}
+
+/// The superscript groups of `tex`: each its caret's place, its body's span — a braced group's inside, or the one
+/// control word or character after the caret — and the group's end.
+fn script_groups(tex: &str) -> Vec<(usize, (usize, usize), usize)> {
+  let bytes = tex.as_bytes();
+  let mut groups = Vec::new();
+  let mut at = 0;
+  while let Some(offset) = tex[at..].find('^') {
+    let caret = at + offset;
+    let mut start = caret + 1;
+    while start < bytes.len() && bytes[start] == b' ' {
+      start += 1;
+    }
+    if start >= bytes.len() {
+      break;
+    }
+    if bytes[start] == b'{' {
+      let mut depth = 0usize;
+      let mut close = None;
+      for (i, b) in bytes.iter().enumerate().skip(start) {
+        // (an escaped brace, `\{`, is none)
+        match b {
+          b'{' if i == 0 || bytes[i - 1] != b'\\' => depth += 1,
+          b'}' if i == 0 || bytes[i - 1] != b'\\' => {
+            depth -= 1;
+            if depth == 0 {
+              close = Some(i);
+              break;
+            }
+          },
+          _ => {},
+        }
+      }
+      let Some(close) = close else {
+        break;
+      };
+      groups.push((caret, (start + 1, close), close + 1));
+      at = close + 1;
+    } else {
+      let token = mark_token_end(tex, start);
+      groups.push((caret, (start, token), token));
+      at = token;
+    }
+  }
+  groups
+}
+
+/// The end of the TeX token starting at byte `start` of `tex`: a control word, a control symbol, or one character.
+fn mark_token_end(tex: &str, start: usize) -> usize {
+  let rest = &tex[start..];
+  let mut chars = rest.char_indices();
+  match chars.next() {
+    Some((_, '\\')) => match chars.next() {
+      Some((i, l)) if l.is_ascii_alphabetic() => {
+        let mut end = i + l.len_utf8();
+        for (j, c) in chars {
+          if !c.is_ascii_alphabetic() {
+            break;
+          }
+          end = j + c.len_utf8();
+        }
+        start + end
+      },
+      Some((i, c)) => start + i + c.len_utf8(),
+      None => tex.len(),
+    },
+    Some((_, c)) => start + c.len_utf8(),
+    None => start,
+  }
+}
+
+/// The spans of the items a comma parts in a group's `body`, at its own brace level.
+fn top_level_items(body: &str) -> Vec<(usize, usize)> {
+  let mut items = Vec::new();
+  let (mut depth, mut from) = (0i32, 0usize);
+  let mut prev = '\0';
+  for (i, c) in body.char_indices() {
+    match c {
+      '{' if prev != '\\' => depth += 1,
+      '}' if prev != '\\' => depth -= 1,
+      ',' if depth == 0 => {
+        items.push((from, i));
+        from = i + 1;
+      },
+      _ => {},
+    }
+    prev = c;
+  }
+  items.push((from, body.len()));
+  items
 }
 
 /// The element whose text a contact prints: the innermost of the chain of only children `node` opens (a contact's
@@ -585,4 +851,51 @@ pub(super) fn apply(document: &mut Document, front: &Front, plan: &Plan) -> Resu
     }
   }
   Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+  use super::drop_spelled;
+
+  /// A mark run's spelling taken from a formula's `tex` (review rev94a r7 N1): from the last script group holding it,
+  /// with its comma, a font wrapper or a space around it, and a group it was all of with the empty base before it.
+  #[test]
+  fn a_mark_runs_spelling_leaves_the_rest_of_the_tex() {
+    let star = || vec!["\\star".to_string(), "\u{22C6}".to_string()];
+    let ast = || vec!["\u{2217}".to_string(), "*".to_string(), "\\ast".to_string()];
+    let dagger = || {
+      vec![
+        "\\dagger".to_string(),
+        "\u{2020}".to_string(),
+        "\\dag".to_string(),
+      ]
+    };
+    for (tex, run, left) in [
+      ("{}^{1,\\star}", vec![star()], Some("{}^{1}")),
+      ("{}^{2}{}^{\\star}", vec![star()], Some("{}^{2}")),
+      ("^{2,\\mathbf{*}}", vec![ast()], Some("^{2}")),
+      ("^{2, \\star}", vec![star()], Some("^{2}")),
+      ("^{\\star,1}", vec![star()], Some("^{1}")),
+      (
+        "^{1,\\dagger\\dagger}",
+        vec![dagger(), dagger()],
+        Some("^{1}"),
+      ),
+      ("^{2,**}", vec![ast(), ast()], Some("^{2}")),
+      ("^{**,*}", vec![ast()], Some("^{**}")),
+      ("^{*}{}^{1}", vec![ast()], Some("{}^{1}")),
+      ("^{\\star 1}", vec![star()], Some("^{ 1}")),
+      (
+        "^{1,\\dagger\\dagger}",
+        vec![dagger()],
+        Some("^{1,\\dagger}"),
+      ),
+      ("^{1,\\stare}", vec![star()], None),
+      ("^{1,\\dagger}", vec![dagger(), dagger()], None),
+    ] {
+      let mut spelled = tex.to_string();
+      let found = drop_spelled(&mut spelled, &run);
+      assert_eq!(found.then_some(spelled.as_str()), left, "{tex}");
+    }
+  }
 }

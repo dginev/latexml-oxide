@@ -379,7 +379,10 @@ fn item_text(item: &Item) -> &str {
   }
 }
 
-fn has_word(text: &str) -> bool { text.chars().any(char::is_alphanumeric) }
+/// Whether `text` holds a letter or a digit.
+pub(in crate::base_utilities::frontmatter::observer) fn has_word(text: &str) -> bool {
+  text.chars().any(char::is_alphanumeric)
+}
 
 /// A formula `math` (an `ltx:Math`, or its `ltx:XMath`) as the frontmatter reads it ([`FormulaMarks`]; the module
 /// docs).

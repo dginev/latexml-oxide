@@ -1111,7 +1111,7 @@ impl Resolver {
               let run = if annotate == "new" {
                 self.new_run(&role)
               } else {
-                self.record_run(annotate, &role)
+                self.record_run(annotate, &role, false)
               };
               run.into_iter().filter(|c| made.contains(c)).collect()
             },
