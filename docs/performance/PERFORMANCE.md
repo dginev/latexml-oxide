@@ -285,7 +285,8 @@ XML byte-identical on all 18** (an `LD_PRELOAD` shim of the same cache: −0.79 
 evaluations, 0 string evaluations, 61 context creations.
 Measured and NOT taken: post's per-call `XPathContext` (61 per document — no lever); `get_nodes_as_vec` upgrading the
 document once per result set (+0.005 %, noise).
-Landing: publish rust-libxml with `Expression`, drop the `[patch]`, require that version, full gates + byte-cmp A/B.
+Landing: KWARC/rust-libxml#223 (with P11 option 1); once released, drop the `[patch]`, require that version, full
+gates + byte-cmp A/B.
 
 ### P11 — `_font` attribute traffic (engine-wide; sized, perf453c)
 
@@ -295,7 +296,9 @@ CString/String/xmlFree wrapper 0.87, the font-id parse 0.50 and format 0.17, `Fo
 the rest ≤0.12 each. Hot callers: `get_node_font` from `open_text` (`document.rs:3152`, `:3169`) 1.94 %,
 `set_node_font` from `open_element_at_with_box` (`:6609`) 0.62 %. Options, cleanest first:
 1. keep the attribute, make the READ cheap behind `get_node_font`/`has_node_font`/`get_node_language`
-   (borrowed value, parse from bytes, no CString/String/xmlFree) — needs a small rust-libxml read API; ≈1.2 %;
+   (borrowed value, parse from bytes, no CString/String/xmlFree) — **PILOT MEASURED −1.18 % mean (−0.52 … −2.49 %),
+   XML byte-identical on 18 docs** with rust-libxml `Node::with_attribute(c"_font", …)` (KWARC/rust-libxml#223;
+   `pk/96x`); with P10, −2.03 % mean vs `95c-rel`;
 2. the font id in libxml2's `xmlNode._private` (unused by rust-libxml) behind the Perl-shaped methods, with an explicit
    font copy at the 12 raw attribute-copy sites and at the streaming spill — ≈2.5 %, output at risk at any missed site;
 3. a pointer-keyed side map — rejected (stale entries on node free/reuse, the `node_boxes` history).
