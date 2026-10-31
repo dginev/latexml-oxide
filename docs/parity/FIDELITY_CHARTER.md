@@ -93,7 +93,11 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
 - **The marks shown on a name are its requests for labelled affiliations**; a name's label is the name alone
   (2026-10-21, rank 93).
 - **A footnote-list symbol (`\dag` included) that starts a line labels that line**; the line goes to the authors who
-  carry the symbol, affiliation or legend alike (2026-10-21).
+  carry the symbol, affiliation or legend alike (2026-10-21). An e-mail address on such a line that spells none of the
+  carriers is every carrier's — the symbol-line rule wins over "not guessed onto an author" there (2026-10-30, "every
+  symbol carrier"); one that spells a carrier is that carrier's; and a spelled address beside it does not send the
+  unspelled one to the block (`Ann Able$^\dagger$, Cat Cole$^\dagger$ … $^\dagger$\texttt{alpha@x.org,
+  beta@y.org}`: both addresses Ann's and Cat's).
 - **The frontmatter exit bar's two rulings** (2026-10-29): a family deferred with its witnesses in
   `DEFERRED_FAMILIES.md` (hand-typeset title pages, ifacconf's `{frontmatter}` box, names stacked under names, …) is
   excluded from the readability bar — its witnesses stay recorded for later work, not dropped; and the archival tier's
