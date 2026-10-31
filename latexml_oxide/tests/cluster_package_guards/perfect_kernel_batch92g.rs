@@ -74,7 +74,7 @@ fn start_tags(xml: &str, tag: &str) -> Vec<String> {
 /// Converts `tex` to HTML with the binary (`--dest t.html`, the post stage and XSLT, ar5iv preloaded), checks it has
 /// no Error and no Warning, and returns the HTML.
 #[track_caller]
-fn clean_html(tex: &str) -> String {
+pub(super) fn clean_html(tex: &str) -> String {
   let bin = env!("CARGO_BIN_EXE_latexml_oxide");
   assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
   let workdir = tempfile::tempdir().expect("create tempdir");

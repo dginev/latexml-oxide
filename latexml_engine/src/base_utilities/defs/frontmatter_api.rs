@@ -756,9 +756,13 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
                 })
             };
             // (the walk stops at an answered author only once it has attached the contact to an author no mark
-            // answers: when the last author is answered too, every author of the run is, and the contact is the
-            // whole run's as Perl's `_has{role}` test gives it — ptephy's `\affil{}{Univ Z}` after `\affil{1}{…}
-            // \affil{2}{…}`, which the class prints under all of them; 77n r5 review probes t02, t04, o04)
+            // answers, so while every author it reached is answered it goes on: when every author of the run is
+            // answered the contact is the whole run's as Perl's `_has{role}` test gives it — ptephy's
+            // `\affil{}{Univ Z}` after `\affil{1}{…} \affil{2}{…}`, which the class prints under all of them; 77n r5
+            // review probes t02, t04, o04. A last author answered does not make every author of the run answered:
+            // `ANN ABLE$^1$ and BOB BAKER and CID COLE$^1$ \affil{$^1$Univ A} \affil{Univ B}` gives Univ B to CID
+            // COLE too, before his Univ A — a known residual, review rev94a r8 u04, z14, RED catalog repro
+            // `raw_class_affil_run_trailing_answered_name_takes_the_unmarked_line`)
             let mut reached_unanswered = false;
             let mut indices = parent_indices.clone();
             while let Some(pi) = indices.pop() {

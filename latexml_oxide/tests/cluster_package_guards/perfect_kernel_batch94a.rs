@@ -14,6 +14,7 @@ use serde_json::Value;
 use super::{
   perfect_kernel_batch84b::text,
   perfect_kernel_batch92a::assert_reading,
+  perfect_kernel_batch92g::clean_html,
   perfect_kernel_batch93a::{default_mode_creators, owned},
 };
 
@@ -1046,6 +1047,24 @@ fn an_affil_after_a_run_of_names_is_the_runs() {
         "  a Univ B | owner:adjacent",
       ][..],
     ),
+    // (an unmarked name before the answered one is reached by no walk and gets neither line — the main session's
+    // ruling on review rev94a r8 u03: nothing printed decides it; authblk's guarded rule for the same print, z13 and
+    // z18, and FIDELITY_CHARTER §4's ownership by evidence, no owner chosen by excluding the answered names)
+    (
+      repro!("raw_class_affil_run_unmarked_name_before_a_marked_one.tex"),
+      &[
+        &["ANN ABLE"][..],
+        &["BOB BAKER", "affiliation=Univ A"][..],
+        &["CID COLE", "affiliation=Univ B"][..],
+      ][..],
+      &[
+        "C ANN ABLE [] | line:names",
+        "C BOB BAKER [1] | line:names sep:word",
+        "  a Univ A | ruling1:request",
+        "C CID COLE [] | line:names sep:word",
+        "  a Univ B | owner:adjacent",
+      ][..],
+    ),
     (
       repro!("raw_class_affil_run_of_answered_names_is_whole.tex"),
       &[
@@ -1137,6 +1156,9 @@ fn a_legend_of_several_symbols_shows_its_mark() {
     "mark=∗ ∗ Equal contribution",
     "mark=∗∗ ∗∗ Corresponding author",
   ]);
+  // (the rows below, rv15 and rv11, pin a known residual too: a mark formula rewritten into a superscript keeps the
+  // formula's italic digits, `<sup><text font="italic">1</text></sup>`, where pdflatex's are upright — since 93a,
+  // SYNC_STATUS "A mark formula rewritten into a superscript keeps its italic digits"; update them with its fix)
   let tex = repro!("author_names_legend_of_several_symbols_beside_a_mark.tex");
   let xml: &[&[&str]] = &[&["Ann Able 1", "affiliation=1 Univ X"], &[
     "Bob Baker 1",
@@ -1169,6 +1191,154 @@ fn a_legend_of_several_symbols_shows_its_mark() {
     "<personname>Bob Baker<sup><text font=\"italic\">1</text></sup></personname>",
   ]);
   assert_eq!(notes_with_marks(&xml), ["mark=⋆ ⋆ Corresponding author"]);
+}
+
+/// A symbol repeated in a name's mark formula is a mark of its own, not its legend's symbol (review rev94a r8 P1;
+/// `apply::show_legend_mark`, `repeated_symbols`): `$^{1,**}$` under a `$^{*}$` legend and `$^{1,\dagger\dagger}$`
+/// under a `$^\dagger$` one keep their `∗∗` and `††` shown, as pdflatex prints them — r7's per-token fallback took
+/// the run's tokens one by one and the names showed "Ann Able1" beside the note's mark (w11, w16; 93a kept "1,∗∗").
+/// The superscript path reads `$^{\dagger\dagger}$` the same (w17), and a run of distinct symbols still gives the
+/// legend its symbol (`$^{1,*\spadesuit}$`'s ∗, 2606.15609; its comma going with it is the compound-mark residual).
+/// Distinct from `a_legend_of_several_symbols_shows_its_mark`, where the run IS the label and is taken whole. The
+/// HTML shows each note's mark once, beside the name's own marks.
+#[test]
+fn a_repeated_symbol_beside_a_legend_is_its_own_mark() {
+  // (the reading parts a repeated symbol into its symbols, `[1,*,*]`, and so gives the legend to its carrier — the
+  // compound-mark residual, SYNC_STATUS: one rule for the superscript path, the formula's runs and the legend's label;
+  // the italic digits of the rewritten superscripts are the italic-digits residual, as rv11's and rv15's)
+  let rows: [LegendRow; 4] = [
+    (
+      repro!("author_names_repeated_symbol_beside_a_legend_is_its_own_mark.tex"),
+      &[&["Ann Able 1,∗∗", "affiliation=1 Univ X"], &[
+        "Bob Baker 1",
+        "affiliation=1 Univ X",
+      ]],
+      &[
+        "C Ann Able [1,*,*] | line:names mark:parted",
+        "  a Univ X | api:leading-mark api:split-by-marks owner:group",
+        "  n Corresponding author | api:leading-mark api:split-by-marks api:legend ruling1:parted",
+        "C Bob Baker [1] | line:names sep:word",
+        "  a Univ X | api:leading-mark api:split-by-marks owner:group",
+      ],
+      &[
+        "<personname>Ann Able<sup><text font=\"italic\">1,∗∗</text></sup></personname>",
+        "<personname>Bob Baker<sup><text font=\"italic\">1</text></sup></personname>",
+      ],
+      &["mark=∗ ∗ Corresponding author"],
+      &["Ann Able 1,∗∗ [∗]", "Bob Baker 1"],
+    ),
+    (
+      repro!("author_names_repeated_dagger_beside_a_legend_is_its_own_mark.tex"),
+      &[&["Ann Able 1,††", "affiliation=1 Univ X"], &[
+        "Bob Baker 1",
+        "affiliation=1 Univ X",
+      ]],
+      &[
+        "C Ann Able [1,†,†] | line:names mark:parted",
+        "  a Univ X | api:leading-mark api:split-by-marks owner:group",
+        "  n Corresponding author | api:leading-mark api:split-by-marks api:legend ruling1:parted",
+        "C Bob Baker [1,†] | line:names sep:word",
+        "  a Univ X | api:leading-mark api:split-by-marks owner:group",
+        "  n Corresponding author | api:leading-mark api:split-by-marks api:legend",
+      ],
+      &[
+        "<personname>Ann Able<sup><text font=\"italic\">1,††</text></sup></personname>",
+        "<personname>Bob Baker<sup><text font=\"italic\">1</text></sup></personname>",
+      ],
+      &[
+        "mark=† † Corresponding author",
+        "mark=† † Corresponding author",
+      ],
+      &["Ann Able 1,†† [†]", "Bob Baker 1 [†]"],
+    ),
+    (
+      repro!("author_names_repeated_symbol_superscript_beside_a_legend.tex"),
+      &[&["Ann Able ††", "affiliation=1 Univ X"], &[
+        "Bob Baker 1",
+        "affiliation=1 Univ X",
+      ]],
+      &[
+        "C Ann Able [†,†] | line:names mark:parted",
+        "  a Univ X | api:leading-mark api:split-by-marks owner:group",
+        "  n Corresponding author | api:leading-mark api:split-by-marks api:legend ruling1:parted",
+        "C Bob Baker [1] | line:names sep:word",
+        "  a Univ X | api:leading-mark api:split-by-marks owner:group",
+      ],
+      &[
+        "<personname>Ann Able<sup>††</sup></personname>",
+        "<personname>Bob Baker<sup><text font=\"italic\">1</text></sup></personname>",
+      ],
+      &["mark=† † Corresponding author"],
+      &["Ann Able †† [†]", "Bob Baker 1"],
+    ),
+    (
+      repro!("author_names_distinct_symbols_beside_a_legend_give_its_symbol.tex"),
+      &[&["Ann Able 1♠", "affiliation=1 Univ X"], &[
+        "Bob Baker 1",
+        "affiliation=1 Univ X",
+      ]],
+      &[
+        "C Ann Able [1,*,♠] | line:names",
+        "  a Univ X | api:leading-mark api:split-by-marks owner:group",
+        "  n Corresponding author | api:leading-mark api:split-by-marks api:legend ruling1:parted",
+        "C Bob Baker [1] | line:names sep:word",
+        "  a Univ X | api:leading-mark api:split-by-marks owner:group",
+      ],
+      &[
+        "<personname>Ann Able<sup><text font=\"italic\">1♠</text></sup></personname>",
+        "<personname>Bob Baker<sup><text font=\"italic\">1</text></sup></personname>",
+      ],
+      &["mark=∗ ∗ Corresponding author"],
+      &["Ann Able 1♠ [∗]", "Bob Baker 1"],
+    ),
+  ];
+  for (tex, xml, shadow, names, notes, html) in rows {
+    assert_reading(tex, Some(xml), shadow);
+    let written = default_mode_xml(tex);
+    assert_eq!(personnames(&written), names);
+    assert_eq!(notes_with_marks(&written), notes);
+    assert_eq!(html_names_with_marks(&clean_html(tex)), html);
+  }
+}
+
+/// A legend row: the repro, its creators, its shadow tuples, its personnames, its notes with their marks, and the
+/// HTML's names with their notes' marks.
+type LegendRow = (
+  &'static str,
+  &'static [&'static [&'static str]],
+  &'static [&'static str],
+  &'static [&'static str],
+  &'static [&'static str],
+  &'static [&'static str],
+);
+
+/// Each creator of `html` as its personname's text, then `[m]` for each of its notes' marks (the `ltx_note_mark`
+/// printed beside the name, before the note's `ltx_note_outer`; the copy inside the note's content not counted).
+fn html_names_with_marks(html: &str) -> Vec<String> {
+  html
+    .split("<span class=\"ltx_creator ")
+    .skip(1)
+    .map(|creator| {
+      let creator = creator.split("ltx_author_before").next().unwrap_or(creator);
+      let mut out = creator
+        .split("class=\"ltx_personname\">")
+        .nth(1)
+        .and_then(|rest| rest.split("\n</span>").next())
+        .map(text)
+        .unwrap_or_default();
+      let pieces: Vec<&str> = creator.split("<span class=\"ltx_note_outer\">").collect();
+      for before in &pieces[..pieces.len() - 1] {
+        if let Some(mark) = before
+          .rsplit("<sup class=\"ltx_note_mark\">")
+          .next()
+          .and_then(|tail| tail.split("</sup>").next())
+        {
+          out.push_str(&format!(" [{mark}]"));
+        }
+      }
+      out
+    })
+    .collect()
 }
 
 /// The mark a legend note shows, taken from the name's superscript, leaves the superscript's font (review rev94a r6 N1,

@@ -210,23 +210,29 @@ fn show_legend_mark(document: &mut Document, owner: &Node, note: &Node, label: &
     if !matches!(marks::read_formula(&math), marks::FormulaMarks::Marks(_)) {
       continue;
     }
-    // (a run that is not the mark gives its tokens that are, one by one: `$^{\star 1}$`'s `⋆`, and a compound symbol
-    // mark read as its symbol's, `$^{1,\dagger\dagger}$` under a `$^\dagger$` legend, OD #927)
+    // (a run that is the mark is taken whole — `$^{1,\dagger\dagger}$` under a `$^{\dagger\dagger}$` legend, OD #927's
+    // compound reading; `$^{\star 1}$`'s glued `⋆` is a run of its own, `token_runs`. A run that is not the mark gives
+    // its marks of one distinct symbol each that are: `$^{1,*\spadesuit}$`'s `∗` under a `$^*$` legend, each symbol
+    // requested (2606.15609). A symbol repeated is one mark of its own, not the label's symbol: `$^{1,**}$` under a
+    // `$^{*}$` legend and `$^{1,\dagger\dagger}$` under a `$^\dagger$` one keep their `∗∗` and `††` shown, as pdflatex
+    // prints them and as a superscript's are (`$^{\dagger\dagger}$`, w/w17) — round 7 took the run's tokens one by one
+    // and the name showed "Ann Able1" beside the note's ∗, review rev94a r8 P1, w/w11, w/w16)
     let runs: Vec<Vec<Node>> =
       token_runs(&document.findnodes("descendant::ltx:XMTok", Some(&math)))
         .into_iter()
         .flat_map(|run| {
-          let text: String = run
-            .iter()
-            .map(|token| token.get_content().trim().to_string())
-            .collect();
-          if shown.contains(&unify(&text)) {
+          let joined = |run: &[Node]| -> String {
+            run
+              .iter()
+              .map(|token| token.get_content().trim().to_string())
+              .collect()
+          };
+          if shown.contains(&unify(&joined(&run))) {
             vec![run]
           } else {
-            run
+            repeated_symbols(run)
               .into_iter()
-              .filter(|token| shown.contains(&unify(token.get_content().trim())))
-              .map(|token| vec![token])
+              .filter(|symbol| shown.contains(&unify(&joined(symbol))))
               .collect()
           }
         })
@@ -311,6 +317,26 @@ fn token_runs(tokens: &[Node]) -> Vec<Vec<Node>> {
   }
   runs.retain(|run| !run.is_empty());
   runs
+}
+
+/// A run of a formula's mark tokens parted into its marks of one symbol each: adjacent tokens printing the same glyph
+/// are one mark (`**`, `††`), a different glyph starts the next (`*†` is `*` and `†`).
+fn repeated_symbols(run: Vec<Node>) -> Vec<Vec<Node>> {
+  let glyph = |token: &Node| token.get_content().trim().replace('\u{2217}', "*");
+  let mut symbols: Vec<Vec<Node>> = Vec::new();
+  for token in run {
+    match symbols.last_mut() {
+      Some(symbol)
+        if symbol
+          .last()
+          .is_some_and(|last| glyph(last) == glyph(&token)) =>
+      {
+        symbol.push(token)
+      },
+      _ => symbols.push(vec![token]),
+    }
+  }
+  symbols
 }
 
 /// The spellings a formula's mark `token` may have in its `tex`: the control word its `name` spells (`\star`), its

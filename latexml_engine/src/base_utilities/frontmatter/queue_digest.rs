@@ -1205,8 +1205,10 @@ pub(in crate::base_utilities) fn frontmatter_set_first_content(
 /// after it and are passed over — a class's in-place `\affil[1]{Univ A}` inside `\author{\mbox{ANN
 /// ABLE\textsuperscript{1}} \affil[1]{Univ A} \mbox{BOB BAKER\textsuperscript{2}} …}` is such an annotation (94b's
 /// `\lx@class@contact@optional`), and the `\textsuperscript{2}` after it requested its label of no entry: the mark was
-/// lost (review rev94a r7 SF3, o/o10). Perl's bindings make no labelled annotation inside an entry's content (its
-/// `\\`-lines' are unlabelled, Base_Utility.pool.ltxml:723-726).
+/// lost (review rev94a r7 SF3, o/o10). Perl reads the last entry alone: a `\label` inside an entry's content is
+/// `\lx@set@frontmatter@label` (Base_Utility.pool.ltxml:330, :565), and the annotation it labels is lost there —
+/// llncs's `\thanks{\protect\label{fn1}Funded.}` warns "Orphaned frontmatter annotation" and drops the text
+/// (KNOWN_PERL_ERRORS #1204, review rev94a r8 pl/p02).
 pub(in crate::base_utilities) fn with_pending_entry_attr(f: impl FnOnce(&mut TagAttrs)) {
   with_value_mut("frontmatter", |val_opt| {
     if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {

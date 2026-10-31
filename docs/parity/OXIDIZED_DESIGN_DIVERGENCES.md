@@ -27912,13 +27912,14 @@ authors a stopped walk passed over are the run's extent, which a legend continui
 An unmarked name in a block whose lines are all marked gets no affiliation — the charter's reading (FIDELITY_CHARTER §4:
 a marked line is its mark carriers', and nothing printed gives it to the unmarked name; main session's ruling): a
 raw class's `ANN ABLE$^1$ and BOB BAKER \affil{$^1$Univ A} CID COLE \affil{Univ B}` (a14), IEEEtran's marked block
-over `Bob Baker and Cid Cole` (i07), the kernel's `\author{Ann Able$^1$ and Bob Baker\\ $^1$Univ A \and Cid Cole\\ Univ
+`Ann Able$^1$ and Bob Baker` (i07), the kernel's `\author{Ann Able$^1$ and Bob Baker\\ $^1$Univ A \and Cid Cole\\ Univ
 B}` (f/k01) leave Bob Baker none. A legend of several symbols beside another mark in the name's formula
 (`$^{1,\dagger\dagger}$`, `$^{2,**}$`, `$^{\dagger\dagger,1}$`, `$^{1,\mathbf{**}}$`) shows its mark once
 (`apply::show_legend_mark`): the formula holds a token per symbol, so no single token was the label and the name kept
 "1,††" beside the note's ††; the run of adjacent tokens between commas (`apply::token_runs`, a letter or digit glued to
 a symbol parted from it) whose joined text is the label is taken with its comma, else the run's tokens that are the
-label one by one (`$^{\star 1}$`'s `⋆`, a compound `††` under a `†` legend, OD #927), as round 7 took them. A formula's
+label one by one (`$^{\star 1}$`'s `⋆`), as round 7 took them — round 9 narrows this: a repeated symbol is a mark of
+its own, not the label's symbol. A formula's
 `tex=` drops the run's spelling (`apply::drop_spelled`): the item of the last script group that spells it, a font
 wrapper or a space with it (`^{2,\mathbf{*}}` → `^{2}`), else its tokens from inside a glued item; a group left empty
 goes whole with the empty base before it, as the script element left with no token goes from the XMath (`${}^{2}
@@ -27928,8 +27929,9 @@ class's in-place `\affil[1]{Univ A}` between boxed names inside `\author` (`\aut
 label, whose stub stood after the author being digested; Perl's `fetchPendingEntry` reads a tag's last entry alone, so
 the `\textsuperscript{2}` after it requested its label of no entry — the 2 was lost and `\affil[2]{Univ B}` found no
 author printing its key and printed inside the name (r7). `queue_digest::with_pending_entry_attr` passes over the
-deferred stubs after the entry being digested (Rust-only: Perl's bindings make no labelled annotation inside an
-entry's content — its `\\`-lines' are unlabelled, Base_Utility.pool.ltxml:723-726 — so no KNOWN_PERL_ERRORS entry),
+deferred stubs after the entry being digested (Rust-only: Perl's `fetchPendingEntry` reads the last entry, and an
+annotation labelled inside an entry's content — a `\label` there is `\lx@set@frontmatter@label`,
+Base_Utility.pool.ltxml:330, :565 — is lost in Perl, KNOWN_PERL_ERRORS #1204),
 and `digested_authors_requesting` reads the flush's authors' marks (`lx_frontmatter_requested_marks`, `place.rs`
 `digest_front_matter`), not every creator the frontmatter holds; the re-part then writes the boxed names as pdflatex
 prints them, each its affiliation. Guards `perfect_kernel_batch94a` (+1: `a_mark_after_an_in_place_labelled_affil_is_the_authors`;
@@ -27947,6 +27949,48 @@ probe 94b r4's. Witnesses (the 37 of the review's `pp/`, 1805.12376's `main.tex`
 r4's and to round 7's. Census against 94b r4 and against round 7 (the three populations, 270 / 1,500 / 500): changed
 0 / 0 / 0, none written-different, rc/E/F/W identical. Scorer (3,000 sample, `run_94a_r8`, `run_94a_r8b`): tiers and
 creators identical to round 7's and 94b r4's — 5,732 of 5,838 (98.18 %), readability 24 papers.
+
+Round 9 (review rev94a r8's P1 and its docs findings; on round 8). A symbol repeated in a name's mark formula is a
+mark of its own, not its legend's symbol (`apply::show_legend_mark`, `repeated_symbols`): a run of tokens between
+commas that is not the label gives the legend only its marks of one distinct symbol each — `$^{1,*\spadesuit}$`'s ∗
+under a `$^*$` legend, each symbol requested (2606.15609) —, and a repeated symbol is one such mark: `Ann
+Able$^{1,**}$` under `$^{*}$Corresponding author` keeps "1,∗∗" (w11) and `$^{1,\dagger\dagger}$` under a `$^\dagger$`
+legend "1,††" (w16), as pdflatex prints them and as the superscript path reads `$^{\dagger\dagger}$` (w17); round 7
+took the run's tokens one by one and the names showed "Ann Able1" beside the note's mark (93a kept "1,∗∗"). A run
+that IS the label (`$^{1,\dagger\dagger}$` under `$^{\dagger\dagger}$`, OD #927's compound reading) is taken whole, as
+round 8. An unmarked name before an answered one, both before a labelled in-place affiliation and an unlabelled one,
+gets neither — the main session's ruling on review u03 (`ANN ABLE and BOB BAKER$^1$ and CID COLE \affil{$^1$Univ A}
+\affil{Univ B}`: ANN ABLE none, BOB BAKER Univ A, CID COLE Univ B): nothing printed decides ANN ABLE's line, and the
+reading is authblk's guarded rule for the same print (review z13, z18) and FIDELITY_CHARTER §4's ownership by
+evidence — an owner is not chosen by excluding the answered names. Guards `perfect_kernel_batch94a` (+1:
+`a_repeated_symbol_beside_a_legend_is_its_own_mark`, rows w11, w16, w17 and `$^{1,*\spadesuit}$`, each name's text, the
+note's `mark` and the HTML's one mark per note; the u03 row in `an_affil_after_a_run_of_names_is_the_runs`); the rows
+rv11 and rv15 of `a_legend_of_several_symbols_shows_its_mark` pin the italic digits of a mark formula rewritten into a
+superscript, a known residual (below). Repros `author_names_repeated_symbol_beside_a_legend_is_its_own_mark`,
+`author_names_repeated_dagger_beside_a_legend_is_its_own_mark`, `author_names_repeated_symbol_superscript_beside_a_legend`,
+`author_names_distinct_symbols_beside_a_legend_give_its_symbol`, `raw_class_affil_run_unmarked_name_before_a_marked_one`.
+Known residuals, the old output kept (catalog repros, RED, SYNC_STATUS "Frontmatter refactor stage 7 residuals"): the
+compound-mark class — one rule for the superscript path, the formula path's `token_runs` and the legend's label,
+constrained by 2602.19190 (a run of symbols labels a line as a whole) and 2606.15609 (`$^{*\spadesuit}$` requests each
+symbol): `$^{*\dagger}$` beside a `$^*$` legend shows "*†" and the note's ∗ (w01,
+`author_names_compound_mark_superscript_beside_its_legend`), a `$^{*\dagger}$` legend reaches a name carrying only `*`
+(w10, since 93a, `author_names_compound_legend_goes_to_a_partial_carrier`), the reading parts `**` into `*,*` (so the
+`$^*$` legend is the `**` carrier's, w11), the kernel hides a `**` the legend answers so read (`\author{Ann
+Able$^{1,**}$, Bob Baker$^{1}$\\ $^1$Univ X\\ $^*$Corresponding author}`, as 93a), and `$^{1,*\spadesuit}$` loses its
+comma with the ∗; a trailing answered name takes the unmarked line, before its own (u04, z14,
+`raw_class_affil_run_trailing_answered_name_takes_the_unmarked_line`); IEEEtran's `annotate=new` block gives Ann Able
+Univ Y before Univ X (z07, z11, since 93a, `ieee_affil_new_block_after_a_marked_name_contact_order`); a `\thanks`
+opening with `\label` is kept on a nameless creator (p02, `llncs_thanks_label_on_a_nameless_creator`; Perl drops it,
+KNOWN_PERL_ERRORS #1204); a `\footnotemark` after a name's mark invents a `^∗`/`^‡` superscript and loses the mark (x02,
+x13, x14, `raw_class_affil_footnotemark_after_a_mark_invents_a_sup`); marks printed by a document macro or a picture
+key are not split, the content kept (y01, y05, x10, `raw_class_affil_marks_by_macro_not_split`); a mark formula
+rewritten into a superscript keeps the formula's italic digits (`<sup><text font="italic">1</text></sup>`, pdflatex
+upright, since 93a; rv11, rv15); `\IEEEauthorrefmark{1}` shows "1" where pdflatex prints "∗" (z07,
+`ieee_authorrefmark_prints_its_footnote_symbol`). Probes (the review's w/, v/, h/, l/ sets and 10 mark siblings, pdflatex
+0 errors each; 0 errors and 0 warnings each): against round 8 only w11, w16 and the siblings `$^{1,**\dagger}$`,
+`$^{1,\mathbf{**}}$`, `$^{**,1}$`, Bob Baker's `$^{1,**}$` beside Ann Able's `$^{1,*}$` (each under a `$^*$` legend)
+differ, each now keeping its repeated symbol as pdflatex prints it; every other probe round 8's. Witnesses (the 37 of
+the review's `pp/`, 1805.12376's `main.tex` among them): XML byte-identical to 94b r5's, E/W/F identical.
 
 ### 932. aa's sole `\institute` is every author's unless the class's `\inst{n}` picks it, as llncs's (Perl: inst_support's `affiliation:1`, which no author requests; the first author's by the prefix-stripped fallback)
 

@@ -1,0 +1,29 @@
+% mechanism: an unmarked name before a marked one, both before a labelled in-place affiliation and an unlabelled one,
+%   gets neither (OD #928 round 9, the main session's ruling on review rev94a r8 u03; `Resolver::record_run`, today's
+%   API `reached_unanswered`): `$^1$Univ A` is BOB BAKER's, its mark's carrier; `\affil{Univ B}`'s run walks back
+%   from CID COLE and stops at BOB BAKER, whom a mark answers — ANN ABLE is reached by no walk. Nothing printed
+%   decides ANN ABLE's line; the reading is authblk's guarded rule for the same print (`\author{Ann Able}\author{Bob
+%   Baker$^{1}$}\author{Cid Cole}\affil{$^1$Univ A}\affil{Univ B}`, review z13, z18) and FIDELITY_CHARTER §4's
+%   ownership by evidence, no elimination: an owner is not chosen by excluding the answered names.
+% witness: review rev94a r8 u/u03
+% oracle:  pdflatex 0 errors: "ANN ABLE and BOB BAKER1 and CID COLE, 1 Univ A / , Univ B"
+% engines: rust 94a r8: as expected; perl: not run
+% expect:  0 errors, 0 warnings; ANN ABLE no affiliation, BOB BAKER Univ A, CID COLE Univ B; eager and --streaming
+%   the same
+% status:  GREEN (94a r8; the ruling pinned 94a r9)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilsinauthor.cls}
+\ProvidesClass{affilsinauthor}
+\LoadClass{article}
+\def\affilfont{\small}
+\def\author#1{\gdef\@author{#1}}
+\def\affil#1{\gdef\@affil{#1}\ifx\@affil\@empty\else{\reset@font\affilfont\unskip,\ #1\vphantom{gy}\endgraf}\fi}\affil{}
+\def\maketitle{\par{\Large\@title\par}{\noindent\@author\par}}
+\end{filecontents*}
+\documentclass{affilsinauthor}
+\begin{document}
+\title{A Title}
+\author{ANN ABLE and BOB BAKER$^1$ and CID COLE \affil{$^1$Univ A} \affil{Univ B}}
+\maketitle
+Body.
+\end{document}

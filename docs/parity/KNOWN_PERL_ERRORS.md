@@ -18892,3 +18892,29 @@ Fixed in Rust (89d, OXIDIZED_DESIGN_DIVERGENCES #914): bbold_sty.rs keys the map
 (`U_blackboard`, `U_bbold`). Repro fonts-nfss/bbold_map_is_its_own_familys; guard
 `perfect_kernel_batch89d::bbold_map_is_its_own_familys`. Still reached: bbm's and bbmss's fonts, which font.rs names
 `blackboard` too (SYNC_STATUS Font-Selection residual 12).
+
+## 1204. A `\label` inside a frontmatter item labels an annotation no entry requests: a `\thanks` holding one is lost
+
+`digestFrontmatterItem` (Base_Utility.pool.ltxml:327-335) lets `\label` be `\lx@set@frontmatter@label` while it digests
+an entry's content; that primitive (:565-570) sets the `_annotations` label of `fetchPendingEntry()` (:535-542), the
+last pending entry — inside an author's `\thanks`, the note being digested, not the author. The note reads it back as
+its own label (:508, "Reset if changed!") and is deferred to an entry requesting `LABEL:fn1`; none does, and
+`relocateAnnotations` (:880-909) warns and drops it. Minimal trigger:
+
+```latex
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able\thanks{\protect\label{fn1}Funded.}\inst{1} \and Bob Baker\inst{2}}
+\institute{Univ X \and Univ Y}
+\maketitle
+Body.
+\end{document}
+% pdflatex: "Ann Able⋆1 and Bob Baker2" and the footnote "⋆ Funded.", 0 errors
+% Perl (/usr/local/bin/latexml, run): Warning:unexpected:annotation "Orphaned frontmatter annotation couldn't find
+%   target for label=LABEL:fn1"; Ann Able Univ X, Bob Baker Univ Y, "Funded." dropped
+```
+
+Not fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #928 round 9): the text is kept, with 0 warnings, but on a creator of no
+name after the two authors rather than on Ann Able (SYNC_STATUS "A `\thanks` opening with `\label` sits on a nameless
+creator"; RED catalog repro sectioning-frontmatter/llncs_thanks_label_on_a_nameless_creator).

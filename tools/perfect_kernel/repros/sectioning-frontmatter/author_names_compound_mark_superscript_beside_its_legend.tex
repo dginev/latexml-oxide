@@ -1,0 +1,20 @@
+% mechanism: a heterogeneous compound mark in a name's superscript beside its legend (OD #928 round 9, Known residual,
+%   the compound-mark class; `apply::show_legend_mark`'s `ltx:sup` loop parts marks at commas only): `$^{*\dagger}$`
+%   under a `$^{*}$Corresponding author` legend keeps "*†" in the name beside the note's ∗ — the star printed twice,
+%   once as ASCII `*`. One rule for the superscript path, the formula path's `token_runs` and the legend's label is
+%   open, constrained by 2602.19190 (a run of symbols labels a line as a whole) and 2606.15609 (`$^{*\spadesuit}$`
+%   requests each symbol).
+% witness: 2602.19190, 2606.15609; review rev94a r8 w/w01
+% oracle:  pdflatex 0 errors: "Ann Able∗† and Bob Baker1 / 1Univ X / ∗Corresponding author"
+% engines: rust 94a r8, r9: Ann Able `<sup>*†</sup>` and the note mark=∗ (the star twice); perl: not run
+% expect:  0 errors, 0 warnings; Ann Able shows † beside the note's ∗ (the star once), Univ X; Bob Baker 1, Univ X
+% status:  RED (catalog, no guard)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{*\dagger}$ and Bob Baker$^{1}$}
+\affiliation{$^1$Univ X\\ $^{*}$Corresponding author}
+\maketitle
+Body.
+\end{document}

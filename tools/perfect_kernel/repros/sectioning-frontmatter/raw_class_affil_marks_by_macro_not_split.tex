@@ -1,0 +1,25 @@
+% mechanism: a name's marks printed by a document macro, beside a class's in-place labelled `\affil[1]{…}` (OD #928
+%   round 9, Known residual P7): `\newcommand\sa[1]{\textsuperscript{#1}}` and `ANN ABLE\sa{1} \affil[1]{Univ A}
+%   BOB BAKER\sa{2} \affil[2]{Univ B}` stay one creator holding both lines (content kept, no split). Siblings: the
+%   names boxed (review y05), a picture key `\affil[\ctwo]{…}` with `\ctwo` a tikz circled 2 (x10).
+% witness: review rev94a r8 x/y01, x/y05, x/x10
+% oracle:  pdflatex 0 errors: "ANN ABLE1, 1 Univ A / BOB BAKER2, 2 Univ B"
+% engines: rust 94a r8, r9: one creator "ANN ABLE1 , 1Univ A BOB BAKER2 , 2Univ B", no affiliation; perl: not run
+% expect:  0 errors, 0 warnings; ANN ABLE Univ A, BOB BAKER Univ B
+% status:  RED (catalog, no guard)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilopt.cls}
+\ProvidesClass{affilopt}
+\LoadClass{article}
+\def\author#1{\gdef\@author{#1}}
+\newcommand\affil[2][]{{\reset@font\small\unskip,\ \textsuperscript{#1}#2\endgraf}}
+\def\maketitle{\par{\Large\@title\par}{\noindent\@author\par}}
+\end{filecontents*}
+\documentclass{affilopt}
+\newcommand\sa[1]{\textsuperscript{#1}}
+\begin{document}
+\title{A Title}
+\author{ANN ABLE\sa{1} \affil[1]{Univ A} BOB BAKER\sa{2} \affil[2]{Univ B}}
+\maketitle
+Body.
+\end{document}

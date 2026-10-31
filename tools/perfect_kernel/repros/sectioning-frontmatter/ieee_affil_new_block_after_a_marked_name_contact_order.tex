@@ -1,0 +1,17 @@
+% mechanism: IEEEtran's unmarked `\IEEEauthorblockA` after a marked one in a block of one names line (OD #928 round 9,
+%   Known residual P4; ieeetran_cls.rs `annotate=new`): `\IEEEauthorblockN{Ann Able$^1$ and Bob Baker}
+%   \IEEEauthorblockA{$^1$Univ X}\IEEEauthorblockA{Univ Y}` gives Ann Able Univ Y before Univ X, against the print
+%   order — since 93a. Sibling: the same with `\IEEEauthorrefmark{1}` (review z07).
+% witness: review rev94a r8 z/z11, z/z07
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker / 1Univ X / Univ Y"
+% engines: rust 93a, 94a r8, r9: Ann Able Univ Y, Univ X; Bob Baker Univ Y; perl: not run
+% expect:  0 errors, 0 warnings; Ann Able's contacts in print order, Univ X first
+% status:  RED (catalog, no guard)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\begin{document}
+\title{A Title}
+\author{\IEEEauthorblockN{Ann Able$^1$ and Bob Baker}\IEEEauthorblockA{$^1$Univ X}\IEEEauthorblockA{Univ Y}}
+\maketitle
+Body.
+\end{document}
