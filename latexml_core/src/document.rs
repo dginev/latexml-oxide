@@ -6346,17 +6346,16 @@ impl Document {
 
   pub fn get_node_font(&self, node: &Node) -> &Font {
     if let Some(element) = xml::closest_element(node) {
-      // Use the closest element (for text nodes, this is the parent element)
-      if let Some(fontid) = element.get_attribute("_font") {
-        // Tolerate non-numeric `_font` attributes — they can occur when
-        // a corrupted property propagates across reversion (driver:
-        // 2304.07380 panicked at parse::<u64>().unwrap()). Fall through
-        // to the default font instead of aborting the run.
-        if let Ok(id) = fontid.parse::<u64>()
-          && let Some(fnt) = self.node_fonts.get(&id)
-        {
-          return fnt;
-        }
+      // Use the closest element (for text nodes, this is the parent element); the id is read in place, not copied
+      // (`_font` is read on every text chunk: docs/performance/PERFORMANCE.md P11).
+      // Tolerate non-numeric `_font` attributes — they can occur when
+      // a corrupted property propagates across reversion (driver:
+      // 2304.07380 panicked at parse::<u64>().unwrap()). Fall through
+      // to the default font instead of aborting the run.
+      if let Some(Ok(id)) = element.with_attribute(c"_font", str::parse::<u64>)
+        && let Some(fnt) = self.node_fonts.get(&id)
+      {
+        return fnt;
       }
     }
     &FONT_TEXT_DEFAULT
@@ -6372,7 +6371,7 @@ impl Document {
 
   pub fn has_node_font(&self, node: &Node) -> bool {
     match xml::closest_element(node) {
-      Some(element) => element.has_attribute("_font"),
+      Some(element) => element.with_attribute(c"_font", |_| ()).is_some(),
       _ => false,
     }
   }
@@ -6395,11 +6394,8 @@ impl Document {
       // not the original node — use `node_ref`, not `node`. Be robust against a
       // missing/foreign _font property (Perl PR #2767): never panic on a
       // non-numeric font id.
-      if let Some(fontid) = node_ref.get_attribute("_font")
-        && let Some(font) = fontid
-          .parse::<u64>()
-          .ok()
-          .and_then(|id| self.node_fonts.get(&id))
+      if let Some(Ok(id)) = node_ref.with_attribute(c"_font", str::parse::<u64>)
+        && let Some(font) = self.node_fonts.get(&id)
         && let Some(lang) = font.get_language()
       {
         return lang.to_string();

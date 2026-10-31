@@ -271,40 +271,56 @@ The frontmatter costs 0.68–1.05 % of a median conversion and 0.5–0.9 % of fl
 **The observer writes nothing on 17 of the 18 measured papers.** Its cost is the ceiling for coordinating its phases:
 16.0 % at 975 creators, ≈0.05 % fleet-wide.
 
-### P10 — XPath compiled-expression cache (engine-wide) — PILOT MEASURED, waits on a rust-libxml release
+### P10 — XPath compiled-expression cache (engine-wide) — LANDED (libxml 0.3.23)
 
-`XPath::findnodes` (`latexml_core/src/common/xml.rs:215`) reaches rust-libxml's `node_evaluate` → `xmlXPathNodeEval`,
+`XPath::findnodes` (`latexml_core/src/common/xml.rs`) reached rust-libxml's `node_evaluate` → `xmlXPathNodeEval`,
 which compiles the expression on every call: a document makes 15k–32k calls of only 57–63 distinct expressions. The
-cache cannot live in latexml-oxide alone (rust-libxml keeps `Node::wrap` and `Object`'s document private), so the
-pilot adds `xpath::Expression` + `Context::*_compiled` evaluators to rust-libxml (local branch `perf-xpath-compiled`,
-`cf127c30`, on upstream main `c8a993a5`; tests + a counting leak test green) and, on branch `pk/96x` (`cea2797006`,
-`[patch.crates-io]` path, not mergeable until released), a table of compiled expressions in core `XPath` and in
-`PostDocument` (cap 1,024; a non-compiling expression keeps its string evaluation and its diagnostic).
-**Measured** (perf stat instructions:u vs `latexml_oxide.95c-rel`, 18 audit docs): **−0.86 % mean (−0.51 … −1.32 %),
-XML byte-identical on all 18** (an `LD_PRELOAD` shim of the same cache: −0.79 %). On 1601.01776: 18,211 compiled
-evaluations, 0 string evaluations, 61 context creations.
-Measured and NOT taken: post's per-call `XPathContext` (61 per document — no lever); `get_nodes_as_vec` upgrading the
-document once per result set (+0.005 %, noise).
-Landing: KWARC/rust-libxml#223 (with P11 option 1); once released, drop the `[patch]`, require that version, full
-gates + byte-cmp A/B.
+cache cannot live in latexml-oxide alone (rust-libxml keeps `Node::wrap` and `Object`'s document private), so
+rust-libxml 0.3.23 adds `xpath::Expression` + `Context::*_compiled` (KWARC/rust-libxml#223), and core `XPath` and
+`PostDocument` keep a table of compiled expressions (`compiled_xpath`, cap `COMPILED_XPATH_LIMIT` = 1,024; a
+non-compiling expression keeps its string evaluation and its diagnostic). Measured alone (perf stat instructions:u vs
+`95c-rel`, 18 audit docs): −0.86 % mean (−0.51 … −1.32 %), XML byte-identical. Measured and NOT taken: post's per-call
+`XPathContext` (61 per document — no lever); `get_nodes_as_vec` upgrading the document once per result set (+0.005 %,
+noise).
 
-### P11 — `_font` attribute traffic (engine-wide; sized, perf453c)
+### P11 — `_font` attribute traffic (engine-wide; sized, perf453c) — option 1 LANDED (libxml 0.3.23)
 
-All traffic of the private `_font` attribute costs **3.17 % of instructions pooled** over 16 docs (1.09 % on
+All traffic of the private `_font` attribute cost **3.17 % of instructions pooled** over 16 docs (1.09 % on
 1910.01256 … 7.17 % on 2005.08745; 3.78 M calls): libxml2 `xmlGet/Has/SetProp` 1.23 % exact, rust-libxml's
 CString/String/xmlFree wrapper 0.87, the font-id parse 0.50 and format 0.17, `Font::to_hashable` on every set 0.39,
-the rest ≤0.12 each. Hot callers: `get_node_font` from `open_text` (`document.rs:3152`, `:3169`) 1.94 %,
-`set_node_font` from `open_element_at_with_box` (`:6609`) 0.62 %. Options, cleanest first:
-1. keep the attribute, make the READ cheap behind `get_node_font`/`has_node_font`/`get_node_language`
-   (borrowed value, parse from bytes, no CString/String/xmlFree) — **PILOT MEASURED −1.18 % mean (−0.52 … −2.49 %),
-   XML byte-identical on 18 docs** with rust-libxml `Node::with_attribute(c"_font", …)` (KWARC/rust-libxml#223;
-   `pk/96x`); with P10, −2.03 % mean vs `95c-rel`;
+the rest ≤0.12 each. Hot callers: `get_node_font` from `open_text` 1.94 %, `set_node_font` from
+`open_element_at_with_box` 0.62 %. Options, cleanest first:
+1. **LANDED**: keep the attribute, read it in place behind `get_node_font`/`has_node_font`/`get_node_language`
+   (`Node::with_attribute(c"_font", str::parse::<u64>)`, rust-libxml#223) — alone −1.18 % mean (−0.52 … −2.49 %);
 2. the font id in libxml2's `xmlNode._private` (unused by rust-libxml) behind the Perl-shaped methods, with an explicit
    font copy at the 12 raw attribute-copy sites and at the streaming spill — ≈2.5 %, output at risk at any missed site;
+   it would also take the `_private` slot P12's NodeMap lever wants;
 3. a pointer-keyed side map — rejected (stale entries on node free/reuse, the `node_boxes` history).
-Sibling: `_autoopened` (2.93 M calls, 0.79 % with the wrapper); `document.rs:3511`, `:3555` allocate a String
-(`get_attribute(..).is_some()`) only to test presence. Dead code: `font_match_xpaths` (`common/font.rs:2335-2356`);
-stale comment `document.rs:1812-1813`.
+Dead code: `font_match_xpaths` (`common/font.rs:2335-2356`); stale comment `document.rs:1812-1813`.
+
+**P10 + P11 + rust-libxml 0.3.23's wrapper work (#224, #226), as shipped** (perf stat instructions:u, release build
+with libxml 0.3.23 from crates.io vs `tip2` on 0.3.22, the 18 audit docs of `perf453b`): **−4.75 % summed, −4.64 %
+mean (−3.12 … −6.24 %), XML byte-identical on all 18**; the wrapper work alone −2.83 % summed against the #223 code.
+
+### P12 — rust-libxml wrapper layer after 0.3.23 (sized 2026-10-31 on `int123a-bench`, 6 docs)
+
+The wrapper layer (Rust-side conversions, allocations and node bookkeeping around libxml2) cost ≈6.5 % pooled before
+0.3.23; 0.3.23 took the parts inside the crate without an API change (names and short values through a 128-byte stack
+copy, single-text values read in place, a `str::from_utf8` fast path, child lists sized once, `get_child_elements`
+wrapping elements only). Left, each with its basis (exact call counts × gdb-stepped instructions per call):
+* `get_properties` callers that read only names or a count — `namespace_prefixes_in_use` (`document.rs` ~:8744,
+  0.51 %), `finalize_rec` (~:1218, 0.51 %; `_`-prefixed names and the count), `append_tree` (~:8171, 0.45 %),
+  `serialize_into` (~:2696, 0.24 %): ≈1.9 % with a borrowed attribute walk — a latexml-side change, needing an additive
+  rust-libxml visitor (no public-API break).
+* `get_name` behind `get_node_qname` (`common/model.rs:723`) and `collect_named` (`latexml_math_parser/src/util.rs:946`):
+  0.72 % of String copies, 2.56 M calls — a borrowed name read (additive API) on the latexml side.
+* `Node::_wrap`'s `NodeMap` probe + `Rc` clone on every traversal step (5.27 M hits, 0.48 %): a `_private` back-pointer
+  would remove the probe, but collides with P11 option 2 — design decision, not taken.
+* `set_property` 2.14 % is libxml2's own `xmlSetNsProp` (frees and re-creates the text child): no wrapper lever.
+Method: call counts by hardware breakpoints on each wrapper function's out-of-line entry (`perf stat -e
+mem:ADDR:x`, ASLR off) cross-checked against an `LD_PRELOAD` count of libxml2's property calls, instructions per call
+by gdb single-stepping 150–200 calls, attribution by in-process stack sampling — sampled shares under-count high-IPC
+code on AMD (skid), so the figures are counts × stepped instructions.
 
 ### P8 — Lower-frequency global scans and lookup allocation
 

@@ -10,10 +10,11 @@
 
 use std::path::Path;
 
+use latexml_core::common::xml::compiled_xpath;
 use libxml::{
   parser::Parser as XmlParser,
   tree::{Document, Namespace, Node, NodeType},
-  xpath::{Context as XPathContext, XPathError},
+  xpath::{Context as XPathContext, Expression, XPathError},
 };
 use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet};
@@ -458,6 +459,10 @@ pub struct PostDocument {
   /// children, which is what `//ltx:navigation/ltx:ref` selects given the single
   /// navigation element Perl's own `findnode` assumes.
   nav_memo:                    Option<NavigationMemo>,
+  /// Each XPath expression compiled once, for every evaluation of this document's queries — compiled expressions
+  /// hold no context, so the per-call contexts share them (`latexml_core::common::xml::compiled_xpath`;
+  /// docs/performance/PERFORMANCE.md P10).
+  compiled_xpath:              std::cell::RefCell<HashMap<Box<str>, Expression>>,
 }
 
 /// Memoized navigation state for one document — see [`PostDocument::nav_memo`].
@@ -569,6 +574,7 @@ impl PostDocument {
       nocache: options.nocache,
       pending_xmath_unlinks: Vec::new(),
       nav_memo: None,
+      compiled_xpath: std::cell::RefCell::default(),
     }
   }
 
@@ -946,26 +952,38 @@ impl PostDocument {
       return out;
     }
 
-    let result = if let Some(node) = context_node {
-      ctx.node_evaluate_checked(xpath, node)
-    } else {
-      // Perl `$doc->findnodes($xpath)` (no ref node) evaluates from the DOCUMENT
-      // NODE, so RELATIVE location paths (`descendant::…`, `.//…`, `child::…`)
-      // resolve against the whole tree. rust-libxml's bare `evaluate_checked`
-      // leaves the XPath context node UNSET, so relative axes silently matched
-      // NOTHING (only absolute `//…`/`/…` worked) — which broke, among others,
-      // `new_document`'s split-page resource/PI copy (#341), `Split`'s
-      // `descendant::ltx:navigation`, and CrossRef's `descendant::ltx:glossaryref`.
-      // We cannot bind the document node itself: rust-libxml's `node_evaluate`
-      // SIGSEGVs on a document-node context (an unguarded FFI path in the fork).
-      // The root ELEMENT is a safe context and makes relative axes resolve for
-      // everything inside the tree. NOTE: nodes OUTSIDE the root element — i.e.
-      // `<?latexml …?>` PIs that precede it — are not descendants of the root, so
-      // a relative PI query still needs the absolute `//processing-instruction()`
-      // form; absolute paths are unaffected by the context node either way.
-      match self.document.get_root_element() {
-        Some(root) => ctx.node_evaluate_checked(xpath, &root),
-        None => ctx.evaluate_checked(xpath),
+    // (the borrow of the compiled table ends with the evaluation, before any diagnostic below)
+    let result = {
+      let mut compiled = self.compiled_xpath.borrow_mut();
+      let expression = compiled_xpath(&mut compiled, xpath);
+      let at_node = |node: &Node| match expression {
+        Some(expression) => ctx.node_evaluate_compiled(expression, node),
+        None => ctx.node_evaluate_checked(xpath, node),
+      };
+      if let Some(node) = context_node {
+        at_node(node)
+      } else {
+        // Perl `$doc->findnodes($xpath)` (no ref node) evaluates from the DOCUMENT
+        // NODE, so RELATIVE location paths (`descendant::…`, `.//…`, `child::…`)
+        // resolve against the whole tree. rust-libxml's bare `evaluate_checked`
+        // leaves the XPath context node UNSET, so relative axes silently matched
+        // NOTHING (only absolute `//…`/`/…` worked) — which broke, among others,
+        // `new_document`'s split-page resource/PI copy (#341), `Split`'s
+        // `descendant::ltx:navigation`, and CrossRef's `descendant::ltx:glossaryref`.
+        // We cannot bind the document node itself: rust-libxml's `node_evaluate`
+        // SIGSEGVs on a document-node context (an unguarded FFI path in the fork).
+        // The root ELEMENT is a safe context and makes relative axes resolve for
+        // everything inside the tree. NOTE: nodes OUTSIDE the root element — i.e.
+        // `<?latexml …?>` PIs that precede it — are not descendants of the root, so
+        // a relative PI query still needs the absolute `//processing-instruction()`
+        // form; absolute paths are unaffected by the context node either way.
+        match self.document.get_root_element() {
+          Some(root) => at_node(&root),
+          None => match expression {
+            Some(expression) => ctx.evaluate_compiled(expression),
+            None => ctx.evaluate_checked(xpath),
+          },
+        }
       }
     };
 
@@ -1030,7 +1048,12 @@ impl PostDocument {
     for (prefix, uri) in &self.namespaces {
       let _ = ctx.register_namespace(prefix, uri);
     }
-    ctx.evaluate(xpath).ok().map(|obj| obj.to_string())
+    let mut compiled = self.compiled_xpath.borrow_mut();
+    match compiled_xpath(&mut compiled, xpath) {
+      Some(expression) => ctx.evaluate_compiled(expression).ok(),
+      None => ctx.evaluate(xpath).ok(),
+    }
+    .map(|obj| obj.to_string())
   }
 
   /// XPath query relative to a node of any document — Perl's
