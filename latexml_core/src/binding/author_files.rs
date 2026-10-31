@@ -164,7 +164,6 @@ pub const AUTHOR_FILE_STAND_INS: &[&str] = &[
   "czipreprint.cls",
   "czjphys.cls",
   "daj.cls",
-  "deepseek.cls",
   "deluxe.sty",
   "deluxetable.sty",
   "dgruyter.sty",

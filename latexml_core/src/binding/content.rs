@@ -1375,6 +1375,7 @@ fn input_definitions_impl(
       // The title-page setters the file defines are its own, even when a binding reads it
       // (`store_setters::mark_raw`).
       let setters_before = crate::binding::store_setters::snapshot()?;
+      let class_read = (as_type == "cls").then(crate::binding::store_setters::RawClassRead::begin);
       load_tex_definitions(
         &filename,
         &file,
@@ -1383,6 +1384,7 @@ fn input_definitions_impl(
         grandparent_in_expl3,
         options.handleoptions,
       )?;
+      drop(class_read);
       crate::binding::store_setters::mark_raw(&setters_before)?;
       if as_type == "cls" && !options.handleoptions {
         UNCLAIMED_RAW_CLASS_READS.set(UNCLAIMED_RAW_CLASS_READS.get() + 1);
@@ -2516,7 +2518,9 @@ fn read_standard_class_derivative(file: &str, path: &str, in_expl3: bool) -> Res
   // (the binding loaded last is the standard class's, whose load just ended: its own names are the class's)
   let class_names = stand_in_last_load_names();
   STANDARD_CLASS_DERIVATIVE.with(|reads| reads.borrow_mut().push(class_names));
+  let class_read = crate::binding::store_setters::RawClassRead::begin();
   let read = load_tex_definitions(file, path, false, true, in_expl3, true);
+  drop(class_read);
   STANDARD_CLASS_DERIVATIVE.with(|reads| reads.borrow_mut().pop());
   read?;
   crate::binding::store_setters::mark_raw(&setters_before)?;

@@ -270,9 +270,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     if replaceable {
       frontmatter_clear_same_name(
         &tag,
-        entry.attr.get("name").map(String::as_str),
-        entry.attr.get("xml:lang").map(String::as_str),
-        entry.attr.get("_store").map(String::as_str),
+        ["name", "xml:lang", "_store", "role"].map(|k| entry.attr.get(k).map(String::as_str)),
         printed_in_place,
       );
     }
@@ -387,7 +385,11 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // `\lx@clear@frontmatter` dequeues ([`COMMAND_FORM`]).
     if replaceable && !frontmatter_has_open_placekeeper(&tag) {
       let key = ["name", "xml:lang", "_store"].map(|k| entry.attr.get(k).map(String::as_str));
-      frontmatter_clear_same_name(&tag, key[0], key[1], key[2], printed_in_place);
+      frontmatter_clear_same_name(
+        &tag,
+        [key[0], key[1], key[2], entry.attr.get("role").map(String::as_str)],
+        printed_in_place,
+      );
       if printed_in_place {
         frontmatter_clear_command_form(&tag, key);
       }

@@ -28467,3 +28467,70 @@ sectioning-frontmatter/`entry_address_inside_an_entry_is_its_speller_email`,
 `entry_address_label_names_contacts_in_print_order`, `revtex_affiliation_addresses_ordered_within_one_run`,
 `revtex_affiliation_address_ending_a_line`; guards `perfect_kernel_batch95c` (fourteen), the lexer's
 `resolver::tests::address_runs_read_groups_lists_and_labels`.
+
+### 939. A raw class's token register that only its title page's page style prints is the frontmatter's note; `\fancypagestyle` stores the style (Perl: `\fancypagestyle` a no-op, the register undefined — an Error, its value a body paragraph)
+
+googlecloud.cls:80 `\newtoks\correspondingauthor` (cmu.cls:113, nv.cls:180, deepseek.cls:112 and 20 more shipped
+classes: googledeepmind, nvidiatechreport, berkeley, instadeep, hku, ds, dm, dmml, …) is filled by the document's
+`\correspondingauthor{…}` and printed only in the foot of `\fancypagestyle{firststyle}` (:103-114), which its
+`\maketitle` selects with `\thispagestyle{firststyle}`: page furniture LaTeXML does not set, so the note was lost with 0
+errors (2607.06973, 2608.26053, 2604.13010). Two parts. fancyhdr_sty.rs ports fancyhdr.sty:691-711:
+`\fancypagestyle[*]{name}[base]{defs}` defines `\ps@name` as the base style then the definitions (Perl
+fancyhdr.sty.ltxml:56 makes it a no-op); `\fancyfoot` and the other fields stay no-ops, so selecting the style sets no
+head or foot, and the starred reset and the base style's checks are not modelled. `\pagestyle{name}` runs the style,
+as LaTeX does (sect05.rs): schooldocs.sty:312-315's `exam` style makes `\subtitle` a store, so schooldocs_sty.rs
+hoists it to `\lx@add@subtitle` again after the style runs (schooldocs-examples.tex:227-230). And K11 (frontmatter_stores.rs
+`toks_store`) takes a table name (`STORE_SETTERS`, now with `correspondingauthor` → `\lx@add@frontmatter{ltx:note}
+[role=corresponding]{#1}`) that a raw file made a token register, when every macro reading it is printed code
+(`ClassReaders::printed`) or a fancyhdr page style, and one of them prints its value — a `\the\X` that is no conditional's operand
+(`\if\relax\the\X\relax` only tests it: nvidiatechreport's copy in 2507.09850 prints "* Equal contribution."
+instead) — in a macro the title page reaches or a page style the title page selects (`selected_page_styles`:
+`\thispagestyle{…}`/`\pagestyle{…}` in the refused `\maketitle`, `\@maketitle` or a printed macro). At `\maketitle`
+(`harvest_stores`) a non-blank value is the table's call, led by the text the class prints right before it in its line
+(`printed_text_before`: "Corresponding author(s): " of googlecloud.cls:114, the "*" of deepseek.cls:170; none when a
+test's operand ends it). A fancyhdr style is not printed code otherwise (`page_style_name`): its fields are page
+furniture, and a store's class default read only there is not the frontmatter's (nbdt-article.cls:292-325's foot prints
+its `\@jname` default only under a `\@paperreceived` the paper leaves empty, 2211.12591). The deepseek.cls binding (deepseek_cls.rs, which added this note for one class name) is
+retired into this path; 2401.14196's note is unchanged. Not covered: a page style the class selects only at its top
+level or in `\AtBeginDocument`, fields set outside `\fancypagestyle` (`\fancyfoot[L]{\the\X}` under `\pagestyle{fancy}`),
+the class's other footer registers (`\paperurl`, `\reportnumber`), and a macro store a `\ps@` style prints under another
+name (`\def\correspondingauthor#1{\gdef\@corr{#1}}`). Repro sectioning-frontmatter/
+`toks_store_printed_in_a_fancy_page_style_is_a_note`; guards
+`perfect_kernel_batch95d::toks_store_printed_in_a_selected_page_style_is_a_corresponding_note`,
+`perfect_kernel_batch74b::deepseek_corresponding_author_note_is_kept`.
+
+### 940. A raw package's table stores are rerouted as a raw class's; a date's printed label names it; two dates of different roles are two (Perl: the shipped style is not read; elsarticle's binding keeps received and accepted, `\finalform` and `\availableonline` are undefined)
+
+medima.sty:300-312 (2307.16262, under elsarticle) redefines `\received`, `\accepted` and adds `\finalform`,
+`\availableonline`, `\communicated` as pure stores (`\def\received#1{\gdef\@received{#1}}`) that only its own
+`\maketitle` reads, which the kernel refuses; K11 ran after a raw class only, so the five "Article history" lines were
+lost (jcomp, prletters, ycviu, yjvci, cag, jasr and imsart.sty copies ship the shape under elsarticle: 17 census papers).
+`\lx@package@loaded@raw` now runs `reroute_raw_package_stores` (frontmatter_stores.rs) — the table setters the package
+defined itself (`store_setters::defined_by_a_raw_file`), rerouted as a class's, not its keywords environments, kernel
+field setters or off-table stores — unless a raw class is being read (`store_setters::in_a_raw_class_read`, counted
+around a `.cls` read raw in content.rs), whose end reroutes them with its title page known. The table gains
+`finalform` → `\lx@add@date[role=revised]` and `availableonline` → `[role=published]` (the roles revtex4_support and
+aipproc give them; received, accepted, communicated as before). Two siblings: a date store's label is read as a
+classification's (`labelled_api`): `Received~\@received\par` names the date "Received" and the deposit takes the label
+out with the store, where a lone "Received" paragraph stayed (a raw package under article, and a raw class) — not a
+label that opens a parenthesis the store's line closes (jpsj2.cls's and ptptex.cls's `(Received \@recdate)`: the date
+keeps the role's name, the deposit its "(Received )"); and a
+replaceable entry is replaced only by one of the same role too (`frontmatter_clear_same_name`, as its seal key has it):
+the unnamed `published` date was replaced by the unnamed `communicated` one. medima's own lines are inside `\ifx…\else`,
+where no label is read, so its dates keep the roles' default names ("Revised " for its "Received in final form").
+Repro sectioning-frontmatter/`raw_package_history_dates_are_the_frontmatter_dates`; guard
+`perfect_kernel_batch95d::raw_package_date_stores_are_the_frontmatter_dates` (elsarticle and article).
+
+### 941. A table setter that prints a mark before its pure store is a store; the mark still prints (Perl: OmniBus's `\email`, the class unread)
+
+astlb.cls:78 `\def\email#1{\textsuperscript{*}\gdef\@email{#1}}` (1202.2889; 10 of the 11 pazh/astl census papers:
+astlb, pazhb, pazhb_eng, pazha2, pazhastl) is read only by `\endabstract`'s `\maketitle` (:176), which the kernel's
+locked `{abstract}` never runs; K11's `pure_stores` refused the setter because the mark typesets, so the e-mail was lost
+with 0 errors. `table_setter_stores` (frontmatter_stores.rs) also takes a table setter whose body is a printed mark of
+the forms a marked line leads with (`leading_mark`, the extent-reporting form of `leading_mark_operand`:
+`\textsuperscript{…}`, `\@textsuperscript{…}`, `\inst{…}`, `$^{…}$`) that does not use the argument, then a pure
+store; the rerouted setter keeps the whole body, so the mark prints where it is called (inside `\author{…}`, at the
+name) and the store goes to the table's call (`\lx@add@email`, read at `\maketitle` or the frontmatter's flush). Only
+table setters; an off-table setter (`survey_off_table_stores`) still needs a pure store. Repro sectioning-frontmatter/
+`mark_then_store_email_read_by_a_refused_abstract`; guard
+`perfect_kernel_batch95d::mark_then_store_email_is_its_creators_contact`.

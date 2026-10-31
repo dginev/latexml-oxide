@@ -10,12 +10,17 @@ LoadDefinitions!({
   // top. Guard: `perfect_kernel_batch54::schooldocs_binding_loads_the_real_style`.
   InputDefinitions!("schooldocs", noltxml => true, extension => Some(Cow::Borrowed("sty")));
   // schooldocs.sty defines \subtitle only INSIDE \fancypagestyle{exam}{...}
-  // (schooldocs.sty L312-315), whose body LaTeXML discards (fancyhdr_sty.rs
-  // \fancypagestyle noop, matching Perl fancyhdr.sty.ltxml L56 — shared
-  // failure). Hoist the semantic part: route to the standard frontmatter
-  // subtitle. Witness: doc/latex/schooldocs/schooldocs-examples.tex L230
+  // (schooldocs.sty L312-315: `\newcommand\subtitle[1]{\long\def\@subtitle{##1}}`,
+  // a store for its own title code), which Perl discards (fancyhdr.sty.ltxml L56
+  // makes \fancypagestyle a no-op). Hoist the semantic part: route to the
+  // standard frontmatter subtitle. fancyhdr_sty.rs now stores the style as
+  // `\ps@exam` (fancyhdr.sty:691-711), which `\pagestyle{exam}` runs: the hoist
+  // is made again after it, or the store would replace it (the subtitle a body
+  // block, 95d). Witness: doc/latex/schooldocs/schooldocs-examples.tex L227-230
   // (perfect-kernel corpus).
   DefMacro!("\\subtitle{}", "\\lx@add@subtitle{#1}");
+  RawTeX!(r"\let\lx@schooldocs@ps@exam\ps@exam
+\def\ps@exam{\lx@schooldocs@ps@exam\def\subtitle##1{\lx@add@subtitle{##1}}}");
   // Presentational style hooks (schooldocs.sty \*style family).
   def_macro_noop("\\titlestyle")?;
   def_macro_noop("\\subtitlestyle")?;

@@ -992,11 +992,13 @@ pub fn frontmatter_entry_in_progress() -> bool {
 /// ([`frontmatter_release_store`]).
 /// An abstract (`PRINTED_WHERE_THEY_STAND`) replaces only a store's entry released as no title
 /// page's (`only_released`, [`RELEASED_STORE`]): the others of its name were printed where they stand, and are kept.
+/// An entry of another role is another element, as its seal key has it ([`frontmatter_seal_key`]): two dates with no
+/// name, a `published` and a `communicated` one (medima.sty's "Available online" and "Communicated by", 2307.16262),
+/// are two dates — the later replaced the earlier; a date of the same role is one, as `\lx@add@date`'s own dequeue
+/// of its role has it.
 pub(in crate::base_utilities) fn frontmatter_clear_same_name(
   tag: &str,
-  name: Option<&str>,
-  lang: Option<&str>,
-  store: Option<&str>,
+  [name, lang, store, role]: [Option<&str>; 4],
   only_released: bool,
 ) {
   with_value_mut("frontmatter", |val_opt| {
@@ -1005,6 +1007,7 @@ pub(in crate::base_utilities) fn frontmatter_clear_same_name(
     {
       list.retain(|e| {
         e.attr.get("name").map(String::as_str) != name
+          || e.attr.get("role").map(String::as_str) != role
           || e.attr.get("xml:lang").map(String::as_str) != lang
           || e.attr.get("_store").map(String::as_str) != store
           || (only_released && !e.attr.contains_key(RELEASED_STORE))

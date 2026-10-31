@@ -31,7 +31,8 @@ single-level expansion tolerates — our/Perl recursion guard is load-bearing),
 also invokes at CONSTRUCTION time inside elements — the wrapper leaks tokens
 into the DOM), `titleps_sty.rs`/`schooldocs_sty.rs` (purely presentational
 page-style surfaces with no XML counterpart; schooldocs hides its one semantic
-command inside a `\fancypagestyle` body both engines discard),
+command inside a `\fancypagestyle` body, which Perl discards and ours stores as the
+style, the binding hoisting it again after `\pagestyle{exam}` runs it),
 `frontespizio_sty.rs` (the package typesets its title page in a SECOND pdflatex
 run on a generated file and re-includes it as a graphic — external compilation,
 out of scope like shell-escape; the binding forces the package's own inline

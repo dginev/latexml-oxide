@@ -135,7 +135,6 @@ pub mod currfile_sty;
 pub mod datatool_base_sty;
 pub mod datatool_sty;
 pub mod dcolumn_sty;
-pub mod deepseek_cls;
 pub mod delarray_sty;
 pub mod deluxetable_sty;
 pub mod diagbox_sty;

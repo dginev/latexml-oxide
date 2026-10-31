@@ -1,0 +1,32 @@
+% A raw package redefines elsarticle's bound date setters as pure stores (`\def\received#1{\gdef\@received{#1}}`) that
+% only its own `\maketitle` reads, which the kernel refuses: K11 reroutes a raw package's table stores at its end too
+% (frontmatter_stores.rs `reroute_raw_package_stores`), as a raw class's, so the five "Article history" lines are the
+% frontmatter's dates — received, final form (`revised`), accepted, available online (`published`), communicated —,
+% each named by its printed label (`labelled_api`), which leaves the title page with it.
+% witness: 2307.16262 (elsarticle + medima.sty:300-312); census: 17 elsarticle papers ship such a style (medima ×8,
+%          jcomp ×2, prletters ×2, ycviu ×2, yjvci, cag, jasr)
+% oracle:  pdflatex 0 errors: "T", "Ann Able", "Received 1 May 2020", "Received in final form 9 May 2020",
+%          "Accepted 2 June 2020", "Available online 5 June 2020", "Communicated by B. Editor", "Text."
+% engines: rust int124a = 0 errors, every date lost; perl = 0 errors, received and accepted kept (elsarticle's binding)
+% expect:  0 errors, 0 warnings; five <ltx:date> in that order, roles received, revised, accepted, published,
+%          communicated, each named by the label printed before it ("Received", "Received in final form", …)
+% status:  RED (int124a) -> GREEN (95d)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{rawhist.sty}
+\def\received#1{\gdef\@received{#1}}
+\def\finalform#1{\gdef\@finalform{#1}}
+\def\accepted#1{\gdef\@accepted{#1}}
+\def\availableonline#1{\gdef\@availableonline{#1}}
+\def\communicated#1{\gdef\@communicated{#1}}
+\def\articleinfobox{Received~\@received\par Received in final form~\@finalform\par Accepted~\@accepted\par
+  Available online~\@availableonline\par Communicated by~\@communicated\par}
+\def\maketitle{\@title\par\elsauthors\par\articleinfobox}
+\end{filecontents*}
+\documentclass{elsarticle}
+\usepackage{rawhist}
+\begin{document}
+\begin{frontmatter}\title{T}\author{Ann Able}
+\received{1 May 2020}\finalform{9 May 2020}\accepted{2 June 2020}\availableonline{5 June 2020}
+\communicated{B. Editor}\end{frontmatter}
+Text.
+\end{document}

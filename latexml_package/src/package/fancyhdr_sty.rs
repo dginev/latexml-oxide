@@ -39,11 +39,24 @@ LoadDefinitions!({
   DefMacro!("\\ifbotfloat{}{}", "#2");
   DefMacro!("\\iffootnote{}{}", "#2"); // since 3.8
 
-  def_macro_noop("\\fancypagestyle{}[]{}")?;
-  // fancyhdr.sty:617-619 `\ps@fancy`/`\ps@fancyplain`: the page styles a class
+  // fancyhdr.sty:609-619 `\ps@f@nch@fancyproto`, `\ps@fancy`/`\ps@fancyplain`: the page styles a class
   // probes (`seminar.cls:760 \@ifgoodps{fancy}`) or `\let`s — headers are not
   // modelled, so the styles are empty.
-  RawTeX!(r"\def\ps@fancy{}\def\ps@fancyplain{}\@namedef{f@nch@ps@fancy-is-fancyhdr}{}");
+  // fancyhdr.sty:691-711 `\fancypagestyle[*]{name}[base]{defs}` stores the style as `\ps@name`, the base style then
+  // the definitions, as TeX does (Perl fancyhdr.sty.ltxml:56 makes it a no-op). Selecting the style still sets no
+  // head or foot (`\fancyfoot` and friends are no-ops), but the class's code is there to read: the frontmatter
+  // stores read what a title page's page style prints (frontmatter_stores.rs, K11's toks stores: googlecloud.cls
+  // :103-114 prints `\the\correspondingauthor` in `firststyle`'s foot, 2607.06973; cmu.cls:144-164, 2608.26053;
+  // deepseek.cls:147-171, 2401.14196). The starred form's reset of the fields (`\f@nch@pagestyle@setup`) and the
+  // base style's checks (an unknown or non-fancyhdr base is a `\PackageError`) are not modelled: the fields are not.
+  RawTeX!(
+    r"\def\ps@f@nch@fancyproto{}\@namedef{f@nch@ps@f@nch@fancyproto-is-fancyhdr}{}%
+\def\ps@fancy{\ps@f@nch@fancyproto}\def\ps@fancyplain{\ps@f@nch@fancyproto}\@namedef{f@nch@ps@fancy-is-fancyhdr}{}%
+\newif\iff@nch@pagestyle@star
+\def\fancypagestyle{\@ifstar{\f@nch@pagestyle@startrue\f@nch@pagestyle}{\f@nch@pagestyle@starfalse\f@nch@pagestyle}}%
+\def\f@nch@pagestyle#1{\@ifnextchar[{\f@nch@@pagestyle{#1}}{\f@nch@@pagestyle{#1}[f@nch@fancyproto]}}%
+\long\def\f@nch@@pagestyle#1[#2]#3{\@namedef{ps@#1}{\@nameuse{ps@#2}#3\relax}\@namedef{f@nch@ps@#1-is-fancyhdr}{}}"
+  );
   // fancyhdr.sty:849-851: under the newlfm class, `\ps@@empty` is fancyhdr's
   // version marker, which newlfm.cls:41 tests with `\@ifundefined` (class census
   // 2026-09-24). fancyhdr lets it to `\f@nch@ps@empty`, which is not modelled here:

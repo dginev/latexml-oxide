@@ -1,5 +1,5 @@
 //! K11's table of title-page setters (`latexml_engine/src/frontmatter_stores.rs` reroutes a raw
-//! class's stores through it), and which of them a binding defined: a setter whose definition
+//! class's — or package's — stores through it), and which of them a binding defined: a setter whose definition
 //! changed while a binding loaded is the binding's own (acmart.cls's `\copyrightyear`, ported as the
 //! class's store), never a raw class's store, though a raw class that loads the binding
 //! (`\LoadClass[nonacm]{acmart}` in a wrapper class) ends with it defined. `input_definitions`
@@ -9,7 +9,7 @@
 //! reroutes at its own end, and a raw class's later redefinition of a binding's setter is the raw
 //! class's. Only loads through `input_definitions` are tracked (a plain-TeX `.tex` binding loaded
 //! by `load_binding` directly is not).
-use std::rc::Rc;
+use std::{cell::Cell, rc::Rc};
 
 use crate::{
   common::{error::Result, store::Stored},
@@ -52,7 +52,12 @@ pub const STORE_SETTERS: &[(&str, &str)] = &[
   ("received", "\\lx@add@date[role=received]{#1}"),
   ("recdate", "\\lx@add@date[role=received]{#1}"),
   ("revised", "\\lx@add@date[role=revised]{#1}"),
+  // medima.sty:300-312 (and the other Elsevier journal styles papers ship under elsarticle: jcomp, prletters, ycviu,
+  // yjvci, cag, jasr) keeps a five-line "Article history" — received, received in final form, accepted, available
+  // online, communicated —, in the roles revtex4_support and aipproc give those dates (2307.16262).
+  ("finalform", "\\lx@add@date[role=revised]{#1}"),
   ("accepted", "\\lx@add@date[role=accepted]{#1}"),
+  ("availableonline", "\\lx@add@date[role=published]{#1}"),
   ("pubyear", "\\lx@add@date[role=publication]{#1}"),
   ("copyrightyear", "\\lx@add@copyrightyear{#1}"),
   ("communicated", "\\lx@add@date[role=communicated]{#1}"),
@@ -108,6 +113,13 @@ pub const STORE_SETTERS: &[(&str, &str)] = &[
   (
     "authornote",
     "\\lx@add@frontmatter{ltx:note}[role=authornote]{#1}",
+  ),
+  // The corresponding-author note a class keeps in a token register (`\newtoks\correspondingauthor`) and prints only in
+  // its title page's footer (googlecloud.cls:80/:110-114, 2607.06973; cmu.cls, 2608.26053; deepseek.cls, 2401.14196;
+  // K11's toks stores, `frontmatter_stores.rs` `toks_store`), or in a macro store its title page prints.
+  (
+    "correspondingauthor",
+    "\\lx@add@frontmatter{ltx:note}[role=corresponding]{#1}",
   ),
 ];
 
@@ -202,3 +214,28 @@ pub fn defined_by_a_binding(name: &str) -> Result<bool> {
       .is_some_and(|bound| same_definition(&bound, &current)),
   )
 }
+
+thread_local! {
+  /// The raw class reads in progress (`content.rs`, around a `.cls` read raw).
+  static RAW_CLASS_READS: Cell<usize> = const { Cell::new(0) };
+}
+
+/// Counts a raw class read while it lasts ([`in_a_raw_class_read`]).
+pub struct RawClassRead;
+
+impl RawClassRead {
+  /// Enter a raw class read.
+  #[must_use]
+  pub fn begin() -> Self {
+    RAW_CLASS_READS.with(|n| n.set(n.get() + 1));
+    RawClassRead
+  }
+}
+
+impl Drop for RawClassRead {
+  fn drop(&mut self) { RAW_CLASS_READS.with(|n| n.set(n.get().saturating_sub(1))); }
+}
+
+/// Is a raw class being read? A raw package it loads is then the class's: its table setters are rerouted at the
+/// class's end, where its title page is known (`latexml_engine/src/frontmatter_stores.rs` `reroute_raw_package_stores`).
+pub fn in_a_raw_class_read() -> bool { RAW_CLASS_READS.with(Cell::get) > 0 }
