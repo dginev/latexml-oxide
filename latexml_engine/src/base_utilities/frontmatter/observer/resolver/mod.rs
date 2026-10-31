@@ -712,6 +712,23 @@ pub fn resolve_with(
       a.source
         .is_none_or(|(index, _)| !replaced_blocks.contains(&index))
     });
+    // (the entries the reading took addresses out of name their holders by creator index: renumbered past the
+    // replaced creators, a replaced creator's holding dropped with it — an index into the creators before the deletion
+    // ran past the end, or onto another author, 2011.06172's apa.cls `\author{Author}` before `\threeauthors`)
+    let renumbered: Vec<Option<usize>> = (0..out.creators.len())
+      .scan(0usize, |kept, c| {
+        Some((!resolver.replaced.contains(&c)).then(|| {
+          *kept += 1;
+          *kept - 1
+        }))
+      })
+      .collect();
+    for taken in &mut out.taken {
+      taken.holders.retain_mut(|(holder, ..)| match holder {
+        Some(c) => renumbered[*c].map(|n| *c = n).is_some(),
+        None => true,
+      });
+    }
     let mut at = 0usize;
     out.creators.retain(|_| {
       at += 1;

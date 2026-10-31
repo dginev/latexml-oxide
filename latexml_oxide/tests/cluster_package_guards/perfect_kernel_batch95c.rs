@@ -794,3 +794,18 @@ fn an_email_call_over_a_line_break_is_written_out() {
      role=\"address\">Univ Y</contact></creator>",
   ]);
 }
+
+/// A replaced `\author` call before an author block whose entry prints an address: the reading's take-outs name their
+/// holders by creator index, renumbered past the replaced call's creators when those are deleted (bundle int124a's
+/// A/B: the index ran past the end and the writer panicked, 2011.06172's apa.cls `\author{Author}` before
+/// `\threeauthors`; an index still in range would have given the address back to another author). Whole elements.
+#[test]
+fn a_replaced_author_call_before_an_entry_address_keeps_its_holders() {
+  let tex = repro!("entry_address_after_a_replaced_author_call.tex");
+  assert_elements(tex, &[
+    "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" \
+     role=\"affiliation\"> Univ X</contact><contact name=\"Email:\u{a0}\" role=\"email\">ann@x.org</contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact \
+     name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ Y</contact></creator>",
+  ]);
+}
