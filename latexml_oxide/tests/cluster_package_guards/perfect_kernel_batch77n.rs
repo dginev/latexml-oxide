@@ -710,28 +710,13 @@ fn marked_affiliation(id: &str, mark: &str, text: &str) -> String {
 /// `Bob$^{1*}$` (r2 review probe c1): a footnote symbol is no affiliation mark, so the line keeps authblk's run — both
 /// authors', as printed under the block — and no creator without a name holds it (77n r2). The `1*` is affiliation 1's
 /// mark and a star shown (`split_glued_symbol`).
+/// 95b (authblk written, OD #942): the starred legend a note of the starred names (`api:legend`), their mark answered.
 #[test]
 fn authblk_symbol_mark_affil_runs() {
   let xml = convert_repro!("author_authblk_symbol_mark_affil_runs.tex");
   assert_eq!(creators(&xml), [
-    creator(
-      true,
-      r#"Ann<sup xml:id="id1">*</sup>"#,
-      &[
-        marked_affiliation("id2", "∗", "Equal contribution"),
-        affiliation("Univ X")
-      ]
-      .join(" ")
-    ),
-    creator(
-      false,
-      r#"Bob<sup xml:id="id3">*</sup>"#,
-      &[
-        marked_affiliation("id4", "∗", "Equal contribution"),
-        affiliation("Univ X")
-      ]
-      .join(" ")
-    ),
+    "<creator role=\"author\"> <personname>Ann</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact> <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"∗\" role=\"thanks\" xml:id=\"id1\"><sup xml:id=\"id1.1\">∗</sup>Equal contribution</note> </creator>",
+    "<creator before=\" \" role=\"author\"> <personname>Bob</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact> <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"∗\" role=\"thanks\" xml:id=\"id2\"><sup xml:id=\"id2.1\">∗</sup>Equal contribution</note> </creator>",
   ]);
 }
 
@@ -1078,41 +1063,26 @@ fn authblk_affil_in_author_between_marked_ones() {
 /// r3/r4/r5 review probes q10, r07; 2605.25017, whose e-mail line is both authors'): a `label=` answers no one in the
 /// run, so Univ Y is both authors', as authblk prints it under its note and Perl's `annotate=new` gives it (int32a; 77n
 /// r5 gave it to Bob only). Univ X on Bob, which authblk's `\AB@thenote` prints too, is a SYNC row.
+/// 95b (authblk written, OD #942): Univ X on Bob too, as `\AB@thenote` prints it (`ruling1:thenote`) — the SYNC row's.
 #[test]
 fn authblk_labelled_author_shares_the_run() {
   let xml = convert_repro!("author_authblk_labelled_author_shares_run.tex");
   assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann",
-      &[affiliation("Univ Y"), affiliation("Univ X")].join(" ")
-    ),
-    creator(false, "Bob", &affiliation("Univ Y")),
+    "<creator role=\"author\"> <personname>Ann</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact> </creator>",
+    "<creator before=\" \" role=\"author\"> <personname>Bob</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> </creator>",
   ]);
 }
 
 /// A footnote-symbol legend after mark-picked `\affil`s (r3 review probe q04): a contact led by a mark of its own is no
 /// answer and reads `new` by the contact only, so it is every author's of the run, the ones their marks answer included
 /// — control for the run's `new`, which passes those over for an unmarked `\affil` (77n r4's output).
+/// 95b (authblk written, OD #942): the legend a note of the name showing its `†` alone (ruling 2), its mark answered.
 #[test]
 fn authblk_symbol_legend_reaches_marked_authors() {
   let xml = convert_repro!("author_authblk_symbol_legend_reaches_marked.tex");
-  let legend = |id: &str| {
-    affiliation(&format!(
-      r#"<sup xml:id="{id}">†</sup>Corresponding author"#
-    ))
-  };
   assert_eq!(creators(&xml), [
-    creator(
-      true,
-      r#"Ann<sup xml:id="id1">†</sup>"#,
-      &[legend("id2"), affiliation("Univ X")].join(" ")
-    ),
-    creator(
-      false,
-      "Bob",
-      &[legend("id3"), affiliation("Univ Y")].join(" ")
-    ),
+    "<creator role=\"author\"> <personname>Ann</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact> <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"†\" role=\"thanks\" xml:id=\"id1\"><sup xml:id=\"id1.1\">†</sup>Corresponding author</note> </creator>",
+    "<creator before=\" \" role=\"author\"> <personname>Bob</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> </creator>",
   ]);
 }
 
@@ -1183,21 +1153,13 @@ fn authblk_marked_pair_then_unmarked_author() {
 /// A symbol legend after an unmarked `\affil` the run gave the unmarked author only (r5 review probe m11; g05): Univ Y is
 /// Bob Baker's, and the legend the whole run's (the extent Perl's `new` gives the contact before it), so Ann Able, who
 /// shows its dagger, keeps it (77n r5: the grid gave Univ Y to Ann and left Bob the legend alone).
+/// 95b (authblk written, OD #942): the legend a note of the name showing its `†` alone (ruling 2), its mark answered.
 #[test]
 fn authblk_legend_after_passed_over_run() {
   let xml = convert_repro!("author_authblk_legend_after_passed_over_run.tex");
-  let legend = |id: &str| marked_affiliation(id, "†", "Corresponding author");
   assert_eq!(creators(&xml), [
-    creator(
-      true,
-      r#"Ann Able<sup xml:id="id1">†</sup>"#,
-      &[legend("id2"), affiliation("Univ X")].join(" ")
-    ),
-    creator(
-      false,
-      "Bob Baker",
-      &[affiliation("Univ Y"), legend("id3")].join(" ")
-    ),
+    "<creator role=\"author\"> <personname>Ann Able</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact> <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"†\" role=\"thanks\" xml:id=\"id1\"><sup xml:id=\"id1.1\">†</sup>Corresponding author</note> </creator>",
+    "<creator before=\" \" role=\"author\"> <personname>Bob Baker</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> </creator>",
   ]);
 }
 
@@ -1427,21 +1389,13 @@ fn email_pile_beside_marked_affiliations_is_dealt() {
 /// (bob@x.org)∗", "Bob Baker∗equal∗"). Ann Able's "Corresponding author" is the run's extent (Perl's `annotate=new`),
 /// not the page — pdflatex shows the ∗ on Bob only (77n r7 review finding 2; SYNC "A symbol legend reaches authors who
 /// do not show its symbol").
+/// 95b (authblk written, OD #942): the legend a note of the name showing its `∗` alone (ruling 2), its mark answered.
 #[test]
 fn authblk_symbol_mark_then_text_shown_once() {
   let xml = convert_repro!("author_authblk_symbol_mark_then_address_shown_once.tex");
-  let legend = |id: &str| marked_affiliation(id, "∗", "Corresponding author");
   assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &[legend("id1"), affiliation("Univ X")].join(" ")
-    ),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id2"><text font="italic" xml:id="id2.1">∗</text></sup> (bob@x.org)"#,
-      &[affiliation("Univ Y"), legend("id3")].join(" ")
-    ),
+    "<creator role=\"author\"> <personname>Ann Able</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact> </creator>",
+    "<creator before=\" \" role=\"author\"> <personname>Bob Baker (bob@x.org)</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" role=\"thanks\" xml:id=\"id1\"><sup xml:id=\"id1.1\">∗</sup>Corresponding author</note> </creator>",
   ]);
   let xml = convert_repro!("author_authblk_symbol_mark_then_raised_text_shown_once.tex");
   assert_eq!(creators(&xml), [creator(
@@ -1455,21 +1409,13 @@ fn authblk_symbol_mark_then_text_shown_once() {
 /// label answers reads the mark as the request does (`label_pieces`), so `\affil{$^2$Univ Y}` is Bob's and not authblk's
 /// run's (77n r7 review probe g8: Ann Able had Univ Y too). The `*` legend on Ann is the run's extent, not the page (SYNC
 /// "A symbol legend reaches authors who do not show its symbol").
+/// 95b (authblk written, OD #942): the legend a note of the name showing its `∗` alone (ruling 2), its mark answered.
 #[test]
 fn authblk_glued_symbol_mark_answered_by_its_affil() {
   let xml = convert_repro!("author_authblk_glued_symbol_mark_answered_by_its_affil.tex");
-  let legend = |id: &str| marked_affiliation(id, "∗", "Corresponding");
   assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &[legend("id1"), affiliation("Univ X")].join(" ")
-    ),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id2"><text font="italic" xml:id="id2.1">2∗</text></sup> (bob@y.org)"#,
-      &[legend("id3"), affiliation("Univ Y")].join(" ")
-    ),
+    "<creator role=\"author\"> <personname>Ann Able</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact> </creator>",
+    "<creator before=\" \" role=\"author\"> <personname>Bob Baker<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">2</text></sup> (bob@y.org)</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" role=\"thanks\" xml:id=\"id2\"><sup xml:id=\"id2.1\">∗</sup>Corresponding</note> </creator>",
   ]);
 }
 
@@ -1499,16 +1445,13 @@ fn authblk_glued_symbols_in_one_author_block() {
 /// An `\author[1]` and another author's mark `$^{1}$` picking the same mark-led `\affil{$^1$Univ X}` (r6 review probe
 /// f2): authblk prints the label as the superscript the mark is, so Bob Baker keeps Univ X beside the run's Univ Y
 /// (int32a: both; 77n r3-r6: Univ Y only). Ann Able's Univ Y is the SYNC row of authblk's `\AB@thenote`.
+/// 95b (authblk written, OD #942): Univ Y on Ann Able too, as `\AB@thenote` prints it — the SYNC row's.
 #[test]
 fn authblk_labelled_author_and_marked_affil() {
   let xml = convert_repro!("author_authblk_labelled_author_and_marked_affil.tex");
   assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &affiliation("Univ X")),
-    creator(
-      false,
-      "Bob Baker",
-      &[affiliation("Univ Y"), affiliation("Univ X")].join(" ")
-    ),
+    "<creator role=\"author\"> <personname>Ann Able</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> </creator>",
+    "<creator before=\" \" role=\"author\"> <personname>Bob Baker</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact> </creator>",
   ]);
 }
 
@@ -1528,20 +1471,12 @@ fn authblk_marked_author_and_labelled_affil() {
 /// A symbol legend after two unmarked `\affil`s the run gave the unmarked author only (r6 review probe x1; x5): the run
 /// keeps the extent Perl's `new` gave its first contact, so Ann Able, who shows the dagger, keeps the legend (int32a,
 /// 77n r5, r6: Univ W recorded Bob Baker alone, and Ann lost it).
+/// 95b (authblk written, OD #942): the legend a note of the name showing its `†` alone (ruling 2), its mark answered.
 #[test]
 fn authblk_legend_after_two_unmarked_affils() {
   let xml = convert_repro!("author_authblk_legend_after_two_unmarked_affils.tex");
-  let legend = |id: &str| marked_affiliation(id, "†", "Corresponding author");
   assert_eq!(creators(&xml), [
-    creator(
-      true,
-      r#"Ann Able<sup xml:id="id1">†</sup>"#,
-      &[legend("id2"), affiliation("Univ X")].join(" ")
-    ),
-    creator(
-      false,
-      "Bob Baker",
-      &[affiliation("Univ Y"), affiliation("Univ W"), legend("id3")].join(" ")
-    ),
+    "<creator role=\"author\"> <personname>Ann Able</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact> <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"†\" role=\"thanks\" xml:id=\"id1\"><sup xml:id=\"id1.1\">†</sup>Corresponding author</note> </creator>",
+    "<creator before=\" \" role=\"author\"> <personname>Bob Baker</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> <contact name=\"Affiliation: \" role=\"affiliation\">Univ W</contact> </creator>",
   ]);
 }

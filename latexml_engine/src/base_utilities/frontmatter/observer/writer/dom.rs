@@ -150,6 +150,30 @@ impl Seg {
   }
 }
 
+/// The marks `node` prints after its first ink, in print order: each hidden piece of [`segments`] (an `ltx:sup` not
+/// inside a word, a formula that is a mark) some letter or digit precedes, its printed text (a formula's scripts each).
+pub(super) fn later_marks(node: &Node) -> Vec<String> {
+  let mut ink = false;
+  let mut out = Vec::new();
+  for seg in segments(node, false) {
+    match seg {
+      Seg::Text(text) => ink |= text.get_content().chars().any(char::is_alphanumeric),
+      Seg::Atom(_, text) => ink |= text.chars().any(char::is_alphanumeric),
+      Seg::Hidden(mark) if ink => {
+        if is(&mark, "ltx:Math") {
+          if let marks::FormulaMarks::Marks(scripts) = marks::read_formula(&mark) {
+            out.extend(scripts);
+          }
+        } else if is(&mark, "ltx:sup") {
+          out.push(mark.get_content());
+        }
+      },
+      _ => {},
+    }
+  }
+  out
+}
+
 /// The pieces `node` prints, in print order (a prescript before its base, as `ab_audit fmshadow` reads the parsed
 /// XML): what [`text_without_marks`] reads — `parted`, every cell, row, paragraph and box of a layout a [`Seg::Space`]
 /// on each side.

@@ -4291,15 +4291,16 @@ fn acmart_author_name_tu_institution() {
 
 /// 63x (HF2): a mark manyfoot declares beside `\footnotemark` (`\footnotemarkAAffil[1]`, manyfoot.sty:253-257) after
 /// each name of an acmart author list is a mark, so the comma between the names separates two authors. Witness
-/// 2309.13063. Repro sectioning-frontmatter/acmart_manyfoot_marks.
+/// 2309.13063. Repro sectioning-frontmatter/acmart_manyfoot_marks. 95b (acmart written, OD #942): each marked line
+/// of the affiliation its marked author's (`api:split-by-marks`).
 #[test]
 fn acmart_manyfoot_marks() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/acmart_manyfoot_marks.tex"
   );
   assert_eq!(creators_63x(tex), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">1</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ A, <sup xml:id=\"id3\">2</sup>Univ B <text class=\"ltx_affiliation_country\" xml:id=\"id4\">USA</text></contact>\n  </creator>",
-    "<creator before=\" and \" role=\"author\">\n    <personname>Bob Bee<sup xml:id=\"id5\">2</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id6\">1</sup>Univ A, <sup xml:id=\"id7\">2</sup>Univ B <text class=\"ltx_affiliation_country\" xml:id=\"id8\">USA</text></contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">1</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ A</contact>\n  </creator>",
+    "<creator before=\" and \" role=\"author\">\n    <personname>Bob Bee<sup xml:id=\"id3\">2</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">2</sup>Univ B <text class=\"ltx_affiliation_country\" xml:id=\"id5\">USA</text></contact>\n  </creator>",
   ]);
 }
 
@@ -4344,12 +4345,13 @@ fn ieeetran_author_block_conditional() {
 }
 
 /// 63x: a conditional the bare run after a block holds whole is wrapped with it, as any bare text (the email of its
-/// true branch stays the author's, not the body's; review of 63x, the 1901.07768 shape).
+/// true branch stays the author's, not the body's; review of 63x, the 1901.07768 shape). 95b (IEEEtran written, OD
+/// #942): the group's two addresses its only carrier's e-mails (`owner:only-carrier`).
 #[test]
 fn ieeetran_conditional_in_bare_run() {
   let tex = "\\documentclass[10pt,conference]{IEEEtran}\\def\\x{}\\title{T}\n\\author{\\IEEEauthorblockN{Ann Able}\\IEEEauthorblockA{Univ A}\\ifdefined\\x \\{a,b\\}@host.org\\else Hidden Text\\fi}\n\\begin{document}\n\\maketitle\nx\n\\end{document}\n";
   assert_eq!(creators_63x(tex), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">{a,b}@host.org</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">a@host.org</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">b@host.org</contact>\n  </creator>",
   ]);
 }
 

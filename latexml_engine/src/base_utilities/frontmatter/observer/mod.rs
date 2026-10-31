@@ -61,8 +61,9 @@ pub use policy::{
 };
 pub use resolver::{
   Assoc as FmAssoc, CHANGE_TAGS as FM_CHANGE_TAGS, Input as FmInput, RCreator as FmCreator,
-  Resolved as FmResolved, addresses_in as fm_addresses_in, is_change_rule as fm_is_change_rule,
-  resolve as fm_resolve, resolve_with as fm_resolve_with, resolver_call as fm_resolver_call,
+  Resolved as FmResolved, address_take_out as fm_address_take_out, addresses_in as fm_addresses_in,
+  is_change_rule as fm_is_change_rule, resolve as fm_resolve, resolve_with as fm_resolve_with,
+  resolver_call as fm_resolver_call,
 };
 pub(in crate::base_utilities) use shadow::shadow_flush;
 pub use shadow::{

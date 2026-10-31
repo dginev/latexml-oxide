@@ -140,6 +140,10 @@ pub struct Taken {
 ///   §4's chain, not copied onto every carrier of the entry's label (`owner:inner-email`: the author it spells, the
 ///   entry's only carrier, the block — the ONE address left the corresponding author's, `place_emails_left` — the llncs
 ///   and aa gate study's G3, 1606.03774, 2204.03161, 0901.4618; 2408.14427);
+/// - an address printed inside an affiliation entry taken out as an e-mail contact by FIDELITY_CHARTER §4's chain — the
+///   author it spells, the entry's only carrier, a symbol line's carriers, the author at its place in one run
+///   (`owner:entry-address`: brief 95c, OD #938, which names it a change tag; the writer cuts today's entry by the
+///   same reader, `writer::plan`'s `CutAddresses`);
 /// - a document's own note's address that spells an author (`\offprints{…, \email{…}}`, a title `\thanks`), that
 ///   author's — the chain's first step, which today's (routing it to the current author) does not take
 ///   (`api:note-spelled`: `Chain::DocumentNote`, OD #913's chain exactly; 1708.05224, astro-ph0509342, 0802.4021).
@@ -165,6 +169,7 @@ pub const CHANGE_TAGS: &[&str] = &[
   "ruling3:one-per-print",
   "ruling3:written-out",
   "owner:inner-email",
+  "owner:entry-address",
   "api:note-spelled",
   "ruling4:",
 ];
@@ -244,7 +249,7 @@ pub(in crate::base_utilities::frontmatter::observer) use labels::{
   AddressRun, address_cuts, address_runs, listed_addresses, strip_address_runs,
 };
 // (named, as the prelude has its own of these names: the resolver's shadow them)
-pub use labels::{addresses_in, mark_labels};
+pub use labels::{address_take_out, addresses_in, mark_labels};
 use labels::{text_tokens, *};
 use lines::*;
 pub(in crate::base_utilities::frontmatter::observer) use lines::{
@@ -708,32 +713,42 @@ pub fn resolve_with(
       .iter()
       .map(|&c| out.creators[c].source)
       .collect();
-    out.block.retain(|a| {
-      a.source
-        .is_none_or(|(index, _)| !replaced_blocks.contains(&index))
-    });
-    // (the entries the reading took addresses out of name their holders by creator index: renumbered past the
-    // replaced creators, a replaced creator's holding dropped with it — an index into the creators before the deletion
-    // ran past the end, or onto another author, 2011.06172's apa.cls `\author{Author}` before `\threeauthors`)
-    let renumbered: Vec<Option<usize>> = (0..out.creators.len())
-      .scan(0usize, |kept, c| {
-        Some((!resolver.replaced.contains(&c)).then(|| {
-          *kept += 1;
-          *kept - 1
-        }))
+    let kept_block: Vec<bool> = out
+      .block
+      .iter()
+      .map(|a| {
+        a.source
+          .is_none_or(|(index, _)| !replaced_blocks.contains(&index))
       })
       .collect();
-    for taken in &mut out.taken {
-      taken.holders.retain_mut(|(holder, ..)| match holder {
-        Some(c) => renumbered[*c].map(|n| *c = n).is_some(),
-        None => true,
-      });
-    }
+    let mut at = 0usize;
+    out.block.retain(|_| {
+      at += 1;
+      kept_block[at - 1]
+    });
     let mut at = 0usize;
     out.creators.retain(|_| {
       at += 1;
       !resolver.replaced.contains(&(at - 1))
     });
+    // (the take-outs' holders held where the deletions moved them: a creator's index past the replaced ones before it,
+    // a block slot past the deleted block items before it — 2602.12633's first `\author{Author Names Omitted…}`, whose
+    // deletion left the second call's last holder past the end, a panic in the writer's give-back; 2011.06172's apa.cls
+    // `\author{Author}` before `\threeauthors`, the bundle int124a A/B's, guard `a_replaced_author_call_before_an_entry_…`)
+    let shift =
+      |kept: &dyn Fn(usize) -> bool, i: usize| kept(i).then(|| (0..i).filter(|&j| kept(j)).count());
+    let live_creator = |c: usize| !resolver.replaced.contains(&c);
+    let live_block = |i: usize| kept_block.get(i).copied().unwrap_or(false);
+    for taken in &mut out.taken {
+      taken.holders = std::mem::take(&mut taken.holders)
+        .into_iter()
+        .filter_map(|(holder, slot, assoc)| match holder {
+          Some(c) => shift(&live_creator, c).map(|c| (Some(c), slot, assoc)),
+          None => shift(&live_block, slot).map(|slot| (None, slot, assoc)),
+        })
+        .collect();
+    }
+    out.taken.retain(|taken| !taken.holders.is_empty());
   }
   // (each creator's notes and contacts, and the block's own, in source order — the order the PDF prints them: a note
   // and a link placed once every name is read (`answer_note_links`) came after the ones the source gives later,
@@ -1003,6 +1018,21 @@ mod tests {
     );
     assert_eq!(parted_label("1a", &known(&["1", "2"]), false), None);
     assert_eq!(parted_label("ab", &known(&["1", "2"]), true), None);
+    // (a label as its source spells it is what it spells before its first command: authblk's `\author[3\authfn{2}]`,
+    // 2405.16051; `\author[1\thanks{…}]`, 2202.05736)
+    assert_eq!(
+      parted_label("3\\authfn{2}", &known(&["1", "2", "3"]), true),
+      Some(vec!["3".into()])
+    );
+    assert_eq!(
+      parted_label("1\\thanks{\\tt{a@b.de}}", &known(&["1", "2"]), true),
+      Some(vec!["1".into()])
+    );
+    assert_eq!(
+      parted_label("12\\fn{3}", &known(&["1", "2", "3"]), true),
+      Some(vec!["1".into(), "2".into()])
+    );
+    assert_eq!(parted_label("\\dag", &known(&["1"]), true), None);
   }
 
   /// FM S2a.2 r5 (review revfms2a2_4 finding 5): an annotation made before the authors that is a note (`api:note`) is

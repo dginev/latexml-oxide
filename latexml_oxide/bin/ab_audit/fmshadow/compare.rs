@@ -263,7 +263,12 @@ pub(super) fn surplus_rules(
 /// (`ruling3:written-out`, decision 3 of 2026-10-22): every address of it is a shadow e-mail so tagged, somewhere — the
 /// first one's rule (`overlaps …`).
 pub(super) fn written_out_rule(shadow: &Tuples, raw: &str) -> Option<String> {
-  let addresses = fm_addresses_in(raw);
+  // (or a list sharing its domain unbraced, as the reading's address reader reads it: acmart's
+  // `\email{vsiyer, rajaln, anranw, minster, gshyam@uw.edu}`, 1812.09419; 1802.08365)
+  let mut addresses = fm_addresses_in(raw);
+  if addresses.len() < 2 {
+    addresses = fm_address_take_out(raw, &shadow_names(shadow)).0;
+  }
   if addresses.len() < 2 {
     return None;
   }
@@ -277,6 +282,33 @@ pub(super) fn written_out_rule(shadow: &Tuples, raw: &str) -> Option<String> {
     })
     .collect::<Option<_>>()?;
   rules.first().map(|rule| format!("overlaps {rule}"))
+}
+
+/// The shadow's creators' names (what a list part an address reader reads may spell).
+fn shadow_names(shadow: &Tuples) -> Vec<&str> {
+  shadow.creators.iter().map(|c| c.name.as_str()).collect()
+}
+
+/// The shadow rule that explains today's affiliation item `raw` by the reading's take-out of the e-mail addresses it
+/// prints (brief 95c, OD #938: `Resolver::take_out_entry_addresses`): read by the reading's own address reader
+/// (`fm_address_take_out`), every address it prints is a shadow e-mail the take-out made (`owner:entry-address`) — the
+/// first one's rule (`cut …`) — with the normalised text the cut leaves (empty for an entry of addresses alone), which
+/// must be the shadow's own affiliation for the item to be explained.
+pub(super) fn taken_out_rule(shadow: &Tuples, raw: &str) -> Option<(String, String)> {
+  let (addresses, rest) = fm_address_take_out(raw, &shadow_names(shadow));
+  if addresses.is_empty() {
+    return None;
+  }
+  let rules: Vec<&String> = addresses
+    .iter()
+    .map(|a| {
+      let key = format!("email\t{}", norm(a));
+      rule_maps(shadow)
+        .flat_map(|rules| rules.get(&key))
+        .find(|rule| rule.contains("owner:entry-address"))
+    })
+    .collect::<Option<_>>()?;
+  Some((format!("cut {}", rules[0]), norm(&rest)))
 }
 
 /// A normalised text without the ORCID iDs it holds (`0000000283879887`: 16 characters opening with `000`, the last a
@@ -371,19 +403,40 @@ pub fn compare(shadow: &Tuples, xml: &Tuples) -> Vec<Disagreement> {
     let sa = multiset(sc.affiliations.iter().map(|a| norm(a)));
     let xa = multiset(xc.affiliations.iter().map(|a| norm(a)));
     let affiliation_key = |text: &str| format!("affiliation\t{text}");
-    for (text, rule) in surplus_rules(minus(&sa, &xa), affiliation_key, &sc.rules, &sc.all_rules) {
+    // (today's entry the reading cut its printed addresses out of, brief 95c: explained, with the shadow's own cut
+    // entry it leaves — both one classified disagreement, the take-out's)
+    let mut shadow_only = minus(&sa, &xa);
+    let mut xml_only: Vec<(String, Option<String>)> = Vec::new();
+    let mut cuts: Vec<(String, String)> = Vec::new();
+    for text in minus(&xa, &sa) {
+      let cut = xc
+        .affiliations
+        .iter()
+        .find(|a| norm(a) == text)
+        .and_then(|raw| taken_out_rule(shadow, raw))
+        .filter(|(_, rest)| rest.is_empty() || shadow_only.contains(rest));
+      match cut {
+        Some((rule, rest)) => {
+          if let Some(at) = shadow_only.iter().position(|s| *s == rest) {
+            shadow_only.remove(at);
+          }
+          cuts.push((rule, format!("{}: xml-only {text} (cut: {rest})", sc.name)));
+        },
+        None => xml_only.push((text.clone(), affiliation_rule_of(shadow, &text))),
+      }
+    }
+    for (text, rule) in surplus_rules(shadow_only, affiliation_key, &sc.rules, &sc.all_rules) {
       push(
         "affiliation",
         rule,
         format!("{}: shadow-only {text}", sc.name),
       );
     }
-    for text in minus(&xa, &sa) {
-      push(
-        "affiliation",
-        affiliation_rule_of(shadow, &text),
-        format!("{}: xml-only {text}", sc.name),
-      );
+    for (rule, detail) in cuts {
+      push("affiliation", Some(rule), detail);
+    }
+    for (text, rule) in xml_only {
+      push("affiliation", rule, format!("{}: xml-only {text}", sc.name));
     }
     for (kind, emails) in [("contact-owner", true), ("contact", false)] {
       // (an address with its label glued, `Email:jingyuan@xmu.edu.cn`, is the address: 2108.12329)

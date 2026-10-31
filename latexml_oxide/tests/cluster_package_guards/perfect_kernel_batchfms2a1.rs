@@ -465,11 +465,13 @@ fn sync_row_shapes_62_64_authblk() {
     ("affiliation".to_string(), false, 0, 3),
     ("affiliation".to_string(), false, 0, 4),
   ]);
+  // (authblk written since 95b, OD #942: the unrequested `$^3$Z` is the block's in the reading, today's on both
+  // authors — a placement no ruling decides, so the writer declines and today's XML stays)
   assert_eq!(
-    article_blocks(
+    held("Affiliation z", || article_blocks(
       r"\usepackage{authblk}",
       "\\author{Ann$^1$ and Bob$^2$}\n\\affil{$^1$X}\n\\affil{$^3$Z}"
-    ),
+    )),
     [[
       "N:Ann",
       "M:1",

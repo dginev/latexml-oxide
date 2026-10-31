@@ -1,0 +1,20 @@
+% witness: 0810.2791 (`$^1$ Dipartimento di Astronomia …, Italy (saro,borgani,tornator@oats.inaf.it)\\`),
+%          1001.5025, astro-ph0309037; the fm scorer's mn2e rows (4 creators)
+% oracle:  pdflatex with 0810.2791's mn2e.cls (TL lacks it): "Ann Able1, Bob Baker1,2 & Cid Cole2", "1Univ X, Italy
+%          (able,baker@x.it)", "2Univ Y, Germany"
+% engines: rust int124a = the shadow right (each address its speller's, the entry cut), not written (mn2e_support
+%          declared no conventions): Ann Able and Bob Baker each held both addresses inside Univ X
+% expect:  0 errors, 0 warnings; the MNRAS family is written (mn2e_support's own conventions, brief 95b, OD #942):
+%          Ann Able "Univ X, Italy" able@x.it, Bob Baker "Univ X, Italy" "Univ Y, Germany" baker@x.it, Cid Cole
+%          "Univ Y, Germany"
+% status:  RED (int124a) -> GREEN (95b) — perfect_kernel_batch95b::mn2e_is_written
+% preload: ar5iv.sty
+\documentclass{mn2e}
+\begin{document}
+\title{T}
+\author[A. Able et al.]{Ann Able$^{1}$, Bob Baker$^{1,2}$ \& Cid Cole$^{2}$\\
+$^{1}$Univ X, Italy (able,baker@x.it)\\
+$^{2}$Univ Y, Germany}
+\maketitle
+Text.
+\end{document}

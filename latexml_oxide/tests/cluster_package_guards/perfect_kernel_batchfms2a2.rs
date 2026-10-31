@@ -361,11 +361,12 @@ fn sync_row_shapes_62_64_authblk() {
       "  a Univ Y | api:thenote ruling1:request",
     ]
   );
+  // (authblk written since 95b, OD #942: the unrequested `$^3$Z` the block's, today's on both — the writer declines)
   assert_eq!(
-    article(
+    super::perfect_kernel_batchfms2a1::held("Affiliation z", || article(
       r"\usepackage{authblk}",
       "\\author{Ann$^1$ and Bob$^2$}\n\\affil{$^1$X}\n\\affil{$^3$Z}"
-    ),
+    )),
     [
       "C Ann [1] | line:names",
       "  a X | api:leading-mark",

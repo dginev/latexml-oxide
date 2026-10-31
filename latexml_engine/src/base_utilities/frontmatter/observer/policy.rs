@@ -115,9 +115,10 @@ pub const KERNEL: Policy = Policy {
   cite:             "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); FIDELITY_CHARTER §4; OD #925",
 };
 
-/// The conventions of a binding owning the `\author` meaning that declares none of its own (JHEP.cls, acmart.cls,
-/// mn2e_support.sty, …), or of a meaning no binding owns (the document's own, a file read raw, the fallback class's):
-/// the kernel's reading, not written — the observer writes a family only once its own gate passed (OD #837 S2b).
+/// The conventions of a binding owning the `\author` meaning that declares none of its own (JHEP.cls, aas_support.sty,
+/// elsart_support_core.sty, …), or of a meaning no binding owns (the document's own, a file read raw, the fallback
+/// class's): the kernel's reading, not written — the observer writes a family only once its own gate passed (OD #837
+/// S2b).
 pub const UNDECLARED: Policy = Policy {
   name: "undeclared",
   written: false,

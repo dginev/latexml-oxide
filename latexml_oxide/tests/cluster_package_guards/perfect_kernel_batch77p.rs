@@ -2172,10 +2172,11 @@ fn ieee_halign_markers_print_nothing() {
     "{xml}"
   );
   let univ_a = affiliation("Univ A");
+  // (IEEEtran written since 95b, OD #942: each typewriter address line its speller's e-mail, brief 95c's take-out)
   let tt = |address: &str, id: &str| {
-    affiliation(&format!(
-      r#"<text font="typewriter" xml:id="{id}">{address}</text>"#
-    ))
+    format!(
+      r#"<contact name="Email: " role="email"><text font="typewriter" xml:id="{id}">{address}</text></contact>"#
+    )
   };
   assert_eq!(creators(&xml), [
     creator(

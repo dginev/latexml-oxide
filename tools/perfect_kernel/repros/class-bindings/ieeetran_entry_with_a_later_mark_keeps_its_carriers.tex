@@ -1,0 +1,18 @@
+% witness: 2311.10290 (acmart `\affiliation{\institution{$^\dagger$Beijing Institute of Technology}\country{China}
+%          $^\ddagger$Zhejiang Lab, China}` under `Hongyang Chen$^\ddagger$`), 2405.00230 (authblk's unlabelled
+%          `\affil{… \textsuperscript{2}TUM School …}` under `\author[2]{Maximilian Schiffer}`)
+% oracle:  pdflatex (TL 2025): "Ann Able†, Bob Baker†, and Cid Cole‡", "†Univ X, City‡Lab Y, Town" — one line
+% engines: rust 95b r1 = the reading labels the line by its leading `†` alone (a symbol glued to the word before it
+%          opens no entry: `ECT$^*$`), so the writer took the line from Cid Cole, who then held no affiliation
+% expect:  0 errors, 0 warnings; the writer never takes an item that prints, past its first ink, a mark its creator
+%          requests: declined, today's (each creator the whole line)
+% status:  RED (95b r1) -> GREEN (95b) — perfect_kernel_batch95b::an_item_printing_a_later_mark_is_not_taken
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able$^\dagger$, Bob Baker$^\dagger$, and Cid Cole$^\ddagger$}
+\IEEEauthorblockA{$^\dagger$Univ X, City$^\ddagger$Lab Y, Town}}
+\maketitle
+Text.
+\end{document}

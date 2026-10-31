@@ -14,13 +14,14 @@ use crate::{
 /// IEEEtran (and the classes this binding serves, ieeeconf.cls:3592, ieeecolor2.cls:3903 the same
 /// `\def\thefootnote{}`): the title's `\thanks` print no mark, so a note's link is no name's by its place (2001.02600,
 /// 1803.04996, 2504.08644, 2602.13176: a co-author's homepage, a video, data records, four co-authors' ORCIDs given to
-/// the last author)
+/// the last author). `written`: the observer's writer writes IEEEtran's creators (brief 95b, OD #942: 2202.02533,
+/// 2401.16729, 1303.4266, 2311.14729, 2405.16358; a paper whose reading it cannot apply keeps today's output)
 pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   name: "IEEEtran",
   binding: "IEEEtran.cls",
   unmarked_notes: true,
   cite: "IEEEtran.cls:4756 `\\def\\thefootnote{}`; OD #837 S2a.2 r6 (2001.02600, 1803.04996, 2504.08644, 2602.13176)",
-  written: false,
+  written: true,
   ..FM_KERNEL_CONVENTIONS
 };
 

@@ -1471,6 +1471,21 @@ pub(super) fn apply(
       personname.add_child(&mut sup)?;
     }
     complete &= write_items(document, &node, &creator.items, &in_name, &font)?;
+    // (no element beside the name that today's creator did not hold there: a link the name's slice left outside it —
+    // `\href{https://orcid.org/…}{\usebox{\orcid}\hspace{1mm}Patricia~Paskov}`, 2603.11001 — printed the name twice,
+    // an `ltx:ref` the creator's content model refuses; the re-part is taken back)
+    let held_kinds: Vec<String> = elements(&today.node).iter().map(|n| n.get_name()).collect();
+    if elements(&node).iter().any(|n| {
+      !["personname", "contact", "note", "rdf"].contains(&n.get_name().as_str())
+        && !held_kinds.contains(&n.get_name())
+    }) {
+      DebugFeature!(
+        "frontmatter",
+        "FRONT writer: re-part left an element beside the name of {}",
+        creator.name
+      );
+      complete = false;
+    }
     notes_kept.extend(in_name);
     in_print_order(&node, Owner::Creator(creator.index), &order);
     named.push(read_creator(&node));

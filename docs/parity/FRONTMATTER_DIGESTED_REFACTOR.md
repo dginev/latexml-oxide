@@ -156,7 +156,11 @@ they stay for stages 3–5.
    1304.1574 — **94b, OD #937**: an in-block `\affil{$^1$…}` reads its leading Mark as its label, 2405.08158 and
    1602.05576 —), raw files' in-place contact setters (**94b, OD #936**: the API's when the file's code prints the
    argument as a title-page line or appends it to its `\author`'s store), the scorer's source reading (11), other
-   families' (44).
+   families' (44). **95b, OD #942: IEEEtran, acmart, authblk and the MNRAS family written** — acmart's and
+   mn2e_support's own declarations, `owner:entry-address` a change tag, the comparator reading the take-out, a source-
+   spelled label read to its first command, the writer keeping an item that prints a later mark its creator requests;
+   archival 97.56 % → 98.15 % (`fm_scorer/run_95b_mn2e`); elsarticle unwritten (its `\author` is
+   elsart_support_core's, shared with OmniBus through elsart_support).
 8. **Per-class parsers** as each family is promoted.
 
 ## Test suite and measurement

@@ -27453,8 +27453,9 @@ under a class whose bindings declare no conventions — `article`, `report`, `bo
 its own) is read and written as revtex's, ams's, aa's and llncs's are: by default the flush rehearses a paper whose
 every author block is a written family's, and the writer applies the reading where every difference is one of its
 operations, else keeps today's output. A binding that owns the `\author` meaning and declares no conventions (JHEP.cls,
-acmart.cls, mn2e_support.sty, aas_support.sty, …; or a meaning no binding owns: the document's own, a raw file's, the
-fallback class's) takes `policy::UNDECLARED`, the kernel's reading unwritten, until its family passes its own gate
+aas_support.sty, elsart_support_core.sty, …; acmart.cls and mn2e_support.sty declare their own since 95b, OD #942; or a
+meaning no binding owns: the document's own, a raw file's, the fallback class's) takes `policy::UNDECLARED`, the
+kernel's reading unwritten, until its family passes its own gate
 (`policy::undeclared`, `conventions_among`); every declaration completing `..KERNEL` states its own `written`.
 
 - The writer's comparison skips a reading item of no letter or digit, a creator's as the block's, as it already
@@ -28534,3 +28535,94 @@ name) and the store goes to the table's call (`\lx@add@email`, read at `\maketit
 table setters; an off-table setter (`survey_off_table_stores`) still needs a pure store. Repro sectioning-frontmatter/
 `mark_then_store_email_read_by_a_refused_abstract`; guard
 `perfect_kernel_batch95d::mark_then_store_email_is_its_creators_contact`.
+
+### 942. The observer writes IEEEtran, acmart, authblk and the MNRAS family, each behind its own gate; an entry's take-out e-mail is a change tag; the comparator reads the take-out (Perl: the old reader's output, no observer)
+
+**What.** `written: true` for IEEEtran (`ieeetran_cls.rs`), authblk (`authblk_sty.rs`), and two new declarations in
+the files whose `\author` they own: acmart (`acmart_cls.rs`, its comma-list `\author`, acmart.cls:1620-1621) and the
+MNRAS family (`mn2e_support_sty.rs`, mn2e/mnras/mn; mnras.cls:1072-1079) — both the kernel's reading, no longer
+`UNDECLARED`. elsarticle stays unwritten (its `\author` is elsart_support_core.sty's, which elsart_support shares with
+OmniBus; its one wrong sample creator, 2308.13695, the reading gets wrong too). A paper the writer cannot apply keeps
+today's output (`writer::plan`, the ledger's `declined: …`).
+
+**Mechanisms.**
+- `owner:entry-address` is a change tag (`resolver::CHANGE_TAGS`), as #938 names it: the writer writes every owner the
+  take-out's chain decides — the entry's only carrier (`owner:only-carrier`) too, not only a spelled owner
+  (0707.1008's `\IEEEauthorblockA{ETH Zurich\\ … Email: lapidoth@isi.ee.ethz.ch}`; 36 IEEEtran census papers).
+- The comparator (`ab_audit fmshadow`) reads the take-out: today's affiliation whose printed addresses, read by the
+  reading's own reader (`resolver::address_take_out`, `address_runs` + `strip_address_runs`), are all shadow e-mails
+  tagged `owner:entry-address`, the rest the shadow's cut entry (or nothing), is one classified row (`compare::
+  taken_out_rule`); an unbraced list sharing a domain (`\email{vsiyer, rajaln, …@uw.edu}`, 1812.09419, 1802.08365) is
+  written out by the same reader (`written_out_rule`). IEEEtran unclassified 362 → 90 papers, acmart 21 → 2.
+- A call's label as its source spells it (authblk's `\author[…]` keyval holding a backslash) is what it spells before
+  its first command (`labels::parted_label`): `\author[3\authfn{2}]{Raul Ramos-Pollán}` is `3` (2405.16051: parted
+  whole, its command's letters were labels and its argument's `2` a request of `\affil[1,2,4]`), `\author[1\thanks{…}]`
+  `1` (2202.05736, 2410.10922). Never parting such a label lost those `1`s (95b r1, measured on the census).
+- The writer never takes an item that prints, after its first ink, a mark its creator requests (`plan::later_marks`,
+  `dom::later_marks`: an `ltx:sup` or a formula that is a mark): the reading labels an entry by its leading mark alone
+  where a later symbol is glued to the word before it (`City$^\ddagger$Lab Y`), and taking the entry lost that name's
+  own affiliation (2311.10290's Hongyang Chen, 2405.00230's Maximilian Schiffer under an unlabelled authblk `\affil`
+  printing `\textsuperscript{2}`): declined, today's.
+- The take-out's holders are remapped when `resolve` deletes a replaced `\author` call's creators (`resolver::resolve`):
+  an anonymous-review `\author{Author Names Omitted…}` before the real one (2602.12633) left the last holder past the
+  end — the writer's give-back panicked (Fatal `panic:caught`) — and every other holder named the creator after its own.
+- The re-part (OD #928) is taken back when a written creator holds an element beside its name that today's creator did
+  not (`repart::apply`): a name inside an ORCID link holding its logo (`\href{https://orcid.org/…}{\usebox{\orcid}
+  \hspace{1mm}Patricia~Paskov}`, 2603.11001) was sliced into the personname and its link left beside it as well — the
+  name printed twice, an `ltx:ref` child of `ltx:creator` the schema refuses (the off/on census's one schema-invalid
+  paper). No guard of its own: the witness's trigger, a nested `\author\href{…}`, errs in our conversion (a
+  `readBalanced` Error pdflatex does not raise), so no clean fixture reaches the re-part there.
+- Considered and dropped: an entry the call labels with a footnote symbol (`\affil[*]{Equal contribution}`) as a legend
+  note like a symbol-led one (`api:legend`): seven sample papers' `\affil[*]{Corresponding author, …}` lost their
+  affiliation and e-mail (2206.08826, 2403.17178, 2409.13995, 2503.00537, 2603.05201, 2608.03927, 2106.04144); such an
+  entry stays the starred names' affiliation (FIDELITY_CHARTER §4 ruling 2, "affiliation or legend alike").
+
+**Gate (OD #837 S2b; shadow census over seeded populations, `census/who_uses.py --sample all --cap 1000 --seed 95`).**
+Unclassified, with the comparator reading the take-out: IEEEtran 90 of 973 papers (9.3 %), acmart 2 of 72 with a block
+(2.8 %; 774 of 873 make each author one API call, no block), authblk 58 of 814 (7.1 %), MNRAS mn2e 9 of 363 (2.5 %),
+mnras 30 of 458 (6.6 %); elsarticle 23 of 881 (2.6 %, not written). Above the 0.5 % rule, as aa (3.2 %), llncs
+(5.4 %) and the kernel (19.4 %) were when written (#922, #925): an unclassified paper is one the writer declines.
+Classified precision, seeded (95), PDF-judged (pdflatex TL 2025; the source where it fails): IEEEtran 30/30, acmart
+28/29 (one undecidable; 2407.20157's `wzheng@` given Jianwu Zheng, counted wrong), authblk 29/29 after the label fix
+(2405.16051), MNRAS 29/30 (1608.00588's `SUPA$^\dagger$, Institute …` read as two entries — the writer declines it).
+
+**Off/on census** (default mode, the populations above, writer off = int124a): IEEEtran 1,000 papers, 399 byte-changed
+(328 with creators changed), E 2,886 → 2,883, F and W equal; acmart 873, 87 (34), E/F/W equal; authblk 999, 345 (254),
+E 2,417 → 2,416, F and W equal but 1710.01722, which times out at 180 s on both binaries (alone too), and 1806.10859's
+one ambiguous-math warning in the body; mn2e 364, 18 (14), E 168 → 165; mnras 459, 38 (16), E 320 → 318. No
+duplicate ids; every changed paper as schema-valid as today's (jing over 887 papers both sides) but 2603.11001, fixed
+(the re-part above). Words lost: only the e-mail label words (`Email`, `E-mail address`) the take-out cuts with the addresses
+(#938). Every changed creator was read against today's (a creator losing every affiliation, an address gone, a name
+changed: automated, then read): the name changes part merged names (1507.08137, 1808.03506, 2305.18242, 1401.2060,
+1801.03062) or drop a nameless creator whose items the reading gave their authors; the losses found were the two
+fixed above (the source label, the later mark) and 2607.06101 (left).
+
+**Scorer (the 3,000 sample, `fm_scorer/run_95b_mn2e` against `run_95c_r3`).** Structurally decided creators exactly
+right 6,006 → 6,042 of 6,156 = 97.56 % → 98.15 % (the 98 % bar's 6,033 by 9): IEEEtran 129 → 144 of 150, mn2e 46 → 50,
+`article` 914 → 923 (authblk), the classes under 20 creators 198 → 206 (acmart, `ieeetran`); decided by marks 1,430 →
+1,457, authblk 241 → 250; 41 creators right that were wrong (0810.2791, 1001.5025, astro-ph0309037, 1303.4266,
+2202.02533, 2211.14547, 2401.16729, 2405.16358, 2311.10779, 1704.08795, 2002.00727, 2008.07734, 2008.13643, 2106.04144,
+2110.01283, 2511.07020), 2 wrong that were right — 2605.12855's two starred authors, whose `*` entry is now theirs as
+pdflatex prints it ("Julio Garcia-Aguilar*c", "*Equal senior author contribution."): the scorer reads authblk's labels
+from the `\author[…]` source only, not the `*` the name prints (`aff_foreign`). 2311.14729's Sapana Bhirud is right by
+the source and the PDF and still counted wrong (the scorer's IEEE reading takes `\IEEEauthorblockA` whole for the
+names before it). Lost-words papers 4 → 4 (the four outside this batch); R2 owner violations 9 → 7.
+Rehearsal cost (`perf stat -e instructions:u`, writer off int124a vs on, default mode): median papers +0.04 % (acmart)
+to +0.19 % (MNRAS), many-author +0.14 % (acmart, 15 names) to +0.80 % (mn2e; 1502.07946, 54 names: +1.08 %).
+Left: 2010.12245 (acmart `\institution{$^1$Intesa Sanpaolo, $^2$Politecnico di Milano}`: the second piece is no
+balanced run of the address part's wrapper, declined); 2607.06101 (`†Accenture Labs, India *Accenture, USA`: the `*`
+prints as text, no mark the fail-safe reads — Adam P. Burden's part goes with the `†` entry); 2602.04239 (an ORCID
+line kept as an affiliation, as today's); 2603.10979 (affiliations in `\thanks` legends, no writer operation).
+Guards `perfect_kernel_batch95b` (eight), the comparator's
+`fmshadow::tests::an_entry_the_reading_cut_its_addresses_out_of_is_classified`, `resolver::tests` (`parted_label`);
+the guards pinning today's IEEEtran/acmart/authblk output updated to the written output
+(`batch63::{acmart_manyfoot_marks, ieeetran_conditional_in_bare_run}`,
+`batch66f::ieeetran_author_conditional_from_block_argument`, eight `batch77n::authblk_*`,
+`batch77p::ieee_halign_markers_print_nothing`, `batch78v::affiliation_address_run_after_a_trailing_comma`,
+`batch86d::ieee_membership_kept_after_closing_stop`), the reading guards of shapes the writer declines held
+(`batchfms2a1`/`fms2a2::sync_row_shapes_62_64_authblk`, `fms2a2r6::an_unmarked_notes_link_is_a_names_only_by_spelling`,
+`fms2a2r9::an_api_legend_holding_an_institution_is_an_affiliation`). Repros
+class-bindings/`ieeetran_entry_addresses_written`, `ieeetran_entry_address_of_its_only_carrier`,
+`ieeetran_entry_with_a_later_mark_keeps_its_carriers`, `ieeetran_entry_addresses_after_a_replaced_author`,
+`acmart_author_list_written`, `authblk_entry_addresses_written`, `authblk_label_spelled_with_a_command`,
+`mn2e_entry_addresses_written`.

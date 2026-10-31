@@ -2,8 +2,23 @@
 //! Perl: mn2e_support.sty.ltxml — 252 lines
 use crate::prelude::*;
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own): the MNRAS family's
+/// `\author` (mn2e.cls, mnras.cls, mn.cls: this file's, below) holds the names with their marks and, after `\\`, the
+/// marked address lines (`$^{1}$Dept…`) — the kernel's reading. `written`: the observer's writer writes the family's
+/// creators (brief 95b, OD #942: 0810.2791; a paper whose reading it cannot apply keeps today's output).
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "mn2e",
+  binding: "mn2e_support.sty",
+  written: true,
+  cite: "mnras.cls:1072-1079 (`\\newauthor`: the one author tabular); OD #942 (0810.2791)",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 #[rustfmt::skip]
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   // Dependencies — Perl mn2e_support.sty.ltxml L18-23 conditionally loads
   // only dcolumn/natbib/graphicx based on the matching option flags.
   // NOTE: Perl does NOT load amsmath even when @useAMS is set — the

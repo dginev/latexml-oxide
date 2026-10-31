@@ -27,7 +27,7 @@ use super::{
     ledger::{ApiCall, Outcome, field_stamped},
     policy::TitleMarks,
     rehearsal::{Rehearsal, rehearse},
-    resolver::{addresses_in, listed_addresses, spelled_name, split_pieces},
+    resolver::{addresses_in, listed_addresses, mark_labels, spelled_name, split_pieces},
   },
   apply::text_leaf,
   dom::{Front, Kind, norm, orcid_id},
@@ -1487,6 +1487,23 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
       if mine.iter().any(|(_, _, movable)| !movable) {
         return Ok(declined("an item to remove that cannot move"));
       }
+      // (an item that prints, past its first mark, a mark the creator requests is never taken from it: the reading
+      // labelled the entry by its leading mark alone and kept the later one inside it — `†Beijing Institute of
+      // Technology, China ‡Zhejiang Lab, China` under `Hongyang Chen‡`, 2311.10290; `†Accenture Labs, India *Accenture,
+      // USA`, 2607.06101; authblk's unlabelled `\affil{… \textsuperscript{2}TUM School …}` under `\author[2]`,
+      // 2405.00230 — taking it lost the creator's own affiliation)
+      if let Owner::Creator(c) = owner
+        && let Some(creator) = resolved.creators.get(c)
+        && mine.iter().any(|(_, node, _)| {
+          later_marks(node)
+            .iter()
+            .any(|m| creator.requests.contains(m))
+        })
+      {
+        return Ok(declined(&s!(
+          "an item printing a later mark its creator requests: {key:?}, reading {w:?}, today's {h:?}"
+        )));
+      }
       for (_, node, _) in mine {
         ops.push(Op::Remove { node: node.clone() });
       }
@@ -1748,6 +1765,17 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
   let order = reading_order(resolved);
   let names = names.iter().map(ToString::to_string).collect();
   Ok(Some(Plan { ops, names, creators, order }))
+}
+
+/// The labels of the marks an item prints after its first ink (each `ltx:sup`, or formula that is a mark, some letter
+/// or digit precedes — `dom::later_marks`, as the comparator's segments read them —, read as a mark's labels,
+/// `resolver::mark_labels`; a leading mark is the item's own label): the entries a single item of today's still holds
+/// after its leading one.
+fn later_marks(node: &Node) -> Vec<String> {
+  dom::later_marks(node)
+    .iter()
+    .flat_map(|mark| mark_labels(mark.trim()))
+    .collect()
 }
 
 /// Where each of the reading's items prints, by its owner and key ([`Place`]): what the print-order pass places an

@@ -9,8 +9,23 @@ use crate::{
   prelude::*,
 };
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own): acmart's own `\author`
+/// (below) reads an argument holding a comma as the kernel's author list (acmart.cls:1620-1621), its `\affiliation` and
+/// `\email` each the current author's call — the kernel's reading. `written`: the observer's writer writes acmart's
+/// creators (brief 95b, OD #942: 2311.10779, 2010.12245; a paper whose reading it cannot apply keeps today's output).
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "acmart",
+  binding: "acmart.cls",
+  written: true,
+  cite: "acmart.cls:1620-1621 (several authors in one `\\author`); OD #942 (2311.10779, 2010.12245)",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 #[rustfmt::skip]
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   // acmart.cls:44-47: before anything else the class reads `acmart-preload-hook.tex`, where a paper puts what must
   // precede its packages (2609.29962: `\PassOptionsToPackage{svgnames}{xcolor}`; without it 293 `DarkViolet` errors;
   // KNOWN_PERL_ERRORS #507), with the class's warning.

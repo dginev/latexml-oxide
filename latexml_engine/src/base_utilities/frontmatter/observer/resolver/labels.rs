@@ -838,6 +838,17 @@ fn mail_word_before(text: &str, at: usize) -> Option<usize> {
   (prev_start < prev.len() && is_email_label(&text[prev_start..before.len()])).then_some(prev_start)
 }
 
+/// The addresses printed in `text` as the reading takes them out of an affiliation entry
+/// (`Resolver::take_out_entry_addresses`, brief 95c): every address of its runs (`address_runs`, a list part spelling
+/// one of `names` read as a part), written out, and the text the cut leaves (`strip_address_runs`) — what `ab_audit
+/// fmshadow` reads today's uncut entry, or today's e-mail printing several addresses, by.
+pub fn address_take_out(text: &str, names: &[&str]) -> (Vec<String>, String) {
+  let spells = |local: &str| spelled_name(names, &s!("{local}@x.org")).is_some();
+  let runs = address_runs(text, &spells);
+  let addresses = runs.iter().flat_map(|r| r.addresses.clone()).collect();
+  (addresses, strip_address_runs(text, &runs))
+}
+
 /// The addresses of a text that prints addresses alone, two or more — a list (`ann@x.org, bob@y.org`,
 /// `tuhin@…;rajib@…`), a group or a list sharing the domain (`{ann,bob}@x.org`, `julioleite,tmariz@fis.ufal.br`) —,
 /// written out ([`address_runs`]); `None` for one address, a text with other words beside them, or a label word before
@@ -1253,8 +1264,22 @@ pub(super) fn surname_owners(creators: &[RCreator], letters: &str) -> Vec<usize>
 /// note's mark, `$^{1{\rm a}}$`, 1904.02582), as long as one piece is known. The most known pieces win, then the fewest
 /// pieces: a symbol run spelling known labels is parted into them before it stands alone as one piece (`†♮♯` under
 /// entries `†`, `♮`, `♯`: `$^{\dagger\natural\sharp}$`, 1004.1402). A combining mark is part of the character before
-/// it, never parted from it (`\~{x}`'s `x̃` is no `x` and a `̃`, review rev92b_r2 B1).
+/// it, never parted from it (`\~{x}`'s `x̃` is no `x` and a `̃`, review rev92b_r2 B1). A label holding a backslash is
+/// a call's label as its source spells it, not as it prints: only what it spells before its first command is read, as
+/// the labels that part (authblk's `\author[3\authfn{2}]{…}`, which prints `3†`, is `3` — 2405.16051: parted whole,
+/// its command's letters were labels and its argument the `2` of `\affil[1,2,4]`; `\author[1\thanks{…}]{…}` is `1`,
+/// 2202.05736, 2410.10922).
 pub(super) fn parted_label(label: &str, known: &[String], symbols: bool) -> Option<Vec<String>> {
+  if let Some(at) = label.find('\\') {
+    let spelled = label[..at].trim();
+    return match parted_label(spelled, known, symbols) {
+      Some(parts) => Some(parts),
+      None => known
+        .iter()
+        .any(|k| k == spelled)
+        .then(|| vec![spelled.to_string()]),
+    };
+  }
   // (each character with the combining marks on it)
   let chars: Vec<(usize, char)> = label
     .char_indices()

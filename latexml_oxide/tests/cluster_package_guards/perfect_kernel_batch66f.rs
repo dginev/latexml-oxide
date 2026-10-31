@@ -254,11 +254,13 @@ fn ieeetran_author_conditional_from_block_argument() {
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   // (the block's `\vspace{-5mm}` and the conditional's tail after the block read as a further block line make an
-  // empty contact, dropped as no contact — 83b; pdflatex prints nothing)
+  // empty contact, dropped as no contact — 83b; pdflatex prints nothing. IEEEtran written since 95b, OD #942: the
+  // entry's printed address its only carrier's e-mail, brief 95c's take-out)
   assert_eq!(
     element(&xml, "<creator", "</creator>"),
     "<creator role=\"author\">\n<personname>A. Author</personname>\n\
-     <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ <break/>\nE-mail: a@b.c</contact>\n</creator>",
+     <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ</contact>\n\
+     <contact name=\"E-mail: \" role=\"email\">a@b.c</contact>\n</creator>",
     "{xml}"
   );
   assert!(!xml.contains("x@y.z"), "{xml}");

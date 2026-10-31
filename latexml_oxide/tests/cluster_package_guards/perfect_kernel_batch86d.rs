@@ -209,13 +209,14 @@ fn ieee_membership_kept_after_closing_stop() {
   );
   // (2405.17600's own shape, the 86d r4 re-review's S1: the first name's mark, `$^{*1}$`, leads with a symbol, so only
   // a later name's `$^{1}$` makes the names labelled; a test of the first mark alone reads the block as the base does
-  // and drops the grade. The base plus the grade: the `$^{*1}$` name holds no affiliation, as on the base and in the
-  // witness, a shared-reader residual pinned on purpose)
+  // and drops the grade. The base plus the grade; the `$^{*1}$` name held no affiliation, as on the base, until
+  // IEEEtran was written, 95b)
   let star_first = tex.replace(
     "Susheela Sharma$^{1}$, Sarah Go$^{1}$",
     "Susheela Sharma$^{*1}$, Sarah Go$^{1}$",
   );
-  let star_first_creators: &[&[&str]] = &[&["Susheela Sharma"], &["Sarah Go", thanks], &[
+  // (95b, OD #942: the written reading gives the numbered note to every name its mark labels, the `$^{*1}$` one's too)
+  let star_first_creators: &[&[&str]] = &[&["Susheela Sharma", thanks], &["Sarah Go", thanks], &[
     "Farshid Alambeigi",
     "membership=Member, IEEE",
     thanks,

@@ -1199,6 +1199,54 @@ fn a_written_out_address_group_is_classified() {
   );
 }
 
+/// Brief 95b: today's affiliation the reading cut its printed addresses out of (brief 95c, OD #938's
+/// `Resolver::take_out_entry_addresses`) is explained by the take-out — read by the reading's own address reader, every
+/// address it prints a shadow e-mail tagged `owner:entry-address` (a change tag), the rest the shadow's cut entry — one
+/// classified row; the cut entry and the e-mails are no unexplained rows (IEEEtran's census, 206 of 362 unclassified
+/// papers: 2202.02533's `Email: \{salman0335, ykyawtun7, cshong\}@khu.ac.kr, …`). An entry of addresses alone is
+/// explained with nothing left; an address the reading did not take out leaves today's entry unexplained.
+#[test]
+fn an_entry_the_reading_cut_its_addresses_out_of_is_classified() {
+  let tex = "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^1$ and Bob Baker$^1$ \\\\ $^1$Univ X, Email: \\{ann.able, bbaker\\}@x.org}\n\\maketitle\nBody.\n\\end{document}\n";
+  let (_, dump) = convert(tex);
+  let shadow = shadow_tuples(&json_resolved(&dump["resolved"]));
+  let uncut = |name: &str| {
+    format!(
+      r#"<creator role="author"><personname>{name}</personname><contact role="affiliation">Univ X, Email: {{ann.able, bbaker}}@x.org</contact></creator>"#
+    )
+  };
+  let before = format!(
+    "{HEAD}{}{}</document>",
+    uncut("Ann Able"),
+    uncut("Bob Baker")
+  );
+  let rows = compare(&shadow, &xml_tuples(before.as_bytes()).expect("xml"));
+  assert!(!rows.is_empty(), "{shadow:?}");
+  assert!(
+    rows
+      .iter()
+      .all(|d| d.classified && d.rule.contains("owner:entry-address")),
+    "{rows:?}"
+  );
+  assert_eq!(
+    rows.iter().filter(|d| d.kind == "affiliation").count(),
+    2,
+    "{rows:?}"
+  );
+  // (an address the take-out did not make: today's entry stays unexplained)
+  let other = format!(
+    "{HEAD}{}</document>",
+    r#"<creator role="author"><personname>Ann Able</personname><contact role="affiliation">Univ X, Email: carl@x.org</contact></creator>"#
+  );
+  let rows = compare(&shadow, &xml_tuples(other.as_bytes()).expect("xml"));
+  assert!(
+    rows
+      .iter()
+      .any(|d| d.kind == "affiliation" && !d.classified),
+    "{rows:?}"
+  );
+}
+
 /// FM S2a.2 r6, decision 2: an ORCID link a note keeps in its text (no one's contact) is no difference in the note — the
 /// XML's prints the logo, the shadow's the iD (2602.13176).
 #[test]

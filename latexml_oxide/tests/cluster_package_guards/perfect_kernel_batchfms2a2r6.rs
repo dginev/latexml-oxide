@@ -187,20 +187,26 @@ fn a_notes_links_are_its_owners_by_spelling_or_as_its_only_link() {
 /// segment — `example.org/ann` is Ann Able's, its whole letters "exampleorgann" spelled no one.)
 #[test]
 fn an_unmarked_notes_link_is_a_names_only_by_spelling() {
-  let dump = dump(IEEE);
+  // (IEEEtran written since 95b, OD #942: the writer has no operation making a note's link a contact — declined,
+  // today's XML kept; the reading pinned)
+  let why = "Contact(\"url\") httpsexampleorgann";
+  let dump = super::perfect_kernel_batchfms2a1::held(why, || dump(IEEE));
   assert_eq!(
     dump["resolved"]["policies"],
     // (the block is the ledger's second entry, after the title: the title is recorded for its marks)
     serde_json::json!([[2, "IEEEtran"]])
   );
-  assert_eq!(tuples(IEEE), [
-    "C Ann Able [] | line:names",
-    "  c url https://example.org/ann | note:adjacent ruling4:inner-contact owner:spelled",
-    "C Bob Baker [] | line:names sep:word",
-    "  c url https://www.bobbaker.org/ | note:adjacent ruling4:inner-contact owner:spelled",
-    "  n A. Able is with Univ A (homepage https://example.org/ann ). | note:adjacent",
-    "  n B. Baker is with Univ B ( https://www.bobbaker.org/ ). | note:adjacent",
-  ]);
+  assert_eq!(
+    super::perfect_kernel_batchfms2a1::held(why, || tuples(IEEE)),
+    [
+      "C Ann Able [] | line:names",
+      "  c url https://example.org/ann | note:adjacent ruling4:inner-contact owner:spelled",
+      "C Bob Baker [] | line:names sep:word",
+      "  c url https://www.bobbaker.org/ | note:adjacent ruling4:inner-contact owner:spelled",
+      "  n A. Able is with Univ A (homepage https://example.org/ann ). | note:adjacent",
+      "  n B. Baker is with Univ B ( https://www.bobbaker.org/ ). | note:adjacent",
+    ]
+  );
 }
 
 /// Decision 3 (user rulings 2026-10-20 #4, #8, #10): a braced `{a,b,c}@x` group an `\institute` entry's `\email` prints is

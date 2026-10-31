@@ -5,7 +5,9 @@ use crate::prelude::*;
 /// authblk: an unlabelled `\author` shows `\AB@thenote` and an unlabelled `\affil` is labelled by it (ruling 1,
 /// review revfms2a2's answer to question 6b): when the marks show, the affiliation is the authors' showing its
 /// number, a labelled author's too (2605.25017); in block mode (no marks shown) the run of authors since the last
-/// `\affil`, as this binding declares it at the call (`annotate=run:<n>`)
+/// `\affil`, as this binding declares it at the call (`annotate=run:<n>`). `written`: the observer's writer writes
+/// authblk's creators (brief 95b, OD #942: 2511.07020, 2008.07734, 2110.01283, 2008.13643; a paper whose reading it
+/// cannot apply keeps today's output)
 pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   name: "authblk",
   binding: "authblk.sty",
@@ -13,7 +15,7 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   state_counter: Some("Maxaffil"),
   cite: "authblk.sty:114-118, 148-167 (`\\AB@thenote`, `\\newaffil`, `Maxaffil`); Perl authblk.sty.ltxml:57 \
          `annotate=new`; authblk_sty.rs `\\affil` (2605.01689, 2605.25017)",
-  written: false,
+  written: true,
   ..FM_KERNEL_CONVENTIONS
 };
 
