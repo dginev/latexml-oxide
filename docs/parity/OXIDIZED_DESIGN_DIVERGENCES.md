@@ -27451,8 +27451,8 @@ r6_llncs_shapes_are_written_whole` now in process and with the binary, eager and
 `observer::policy::KERNEL` is `written: true`: a block of the kernel's `\author` (`ledger::meaning_owner` "kernel",
 under a class whose bindings declare no conventions — `article`, `report`, `book`, and every class with no binding of
 its own) is read and written as revtex's, ams's, aa's and llncs's are: by default the flush rehearses a paper whose
-every author block is a written family's, and the writer applies the reading where every difference is one of its
-operations, else keeps today's output. A binding that owns the `\author` meaning and declares no conventions (JHEP.cls,
+every author block is a written family's, and the writer applies the reading where its operations explain a
+difference, each item it declines left as today's output holds it (#942). A binding that owns the `\author` meaning and declares no conventions (JHEP.cls,
 aas_support.sty, elsart_support_core.sty, …; acmart.cls and mn2e_support.sty declare their own since 95b, OD #942; or a
 meaning no binding owns: the document's own, a raw file's, the fallback class's) takes `policy::UNDECLARED`, the
 kernel's reading unwritten, until its family passes its own gate
@@ -28565,8 +28565,10 @@ table setters; an off-table setter (`survey_off_table_stores`) still needs a pur
 the files whose `\author` they own: acmart (`acmart_cls.rs`, its comma-list `\author`, acmart.cls:1620-1621) and the
 MNRAS family (`mn2e_support_sty.rs`, mn2e/mnras/mn; mnras.cls:1072-1079) — both the kernel's reading, no longer
 `UNDECLARED`. elsarticle stays unwritten (its `\author` is elsart_support_core.sty's, which elsart_support shares with
-OmniBus; its one wrong sample creator, 2308.13695, the reading gets wrong too). A paper the writer cannot apply keeps
-today's output (`writer::plan`, the ledger's `declined: …`).
+OmniBus; its one wrong sample creator, 2308.13695, the reading gets wrong too). The writer declines per item, each
+declined item left as today's output holds it (`writer` module docs): an entry whose address take-out today's does not
+print so is given back whole (2102.08148's Hongyun Yu keeps today's entry while the other authors' are cut), and a plan
+difference no operation explains (the ledger's `declined: …`) leaves every item of the plan as today's.
 
 **Mechanisms.**
 - `owner:entry-address` is a change tag (`resolver::CHANGE_TAGS`), as #938 names it: the writer writes every owner the
@@ -28595,6 +28597,16 @@ today's output (`writer::plan`, the ledger's `declined: …`).
   name printed twice, an `ltx:ref` child of `ltx:creator` the schema refuses (the off/on census's one schema-invalid
   paper). No guard of its own: the witness's trigger, a nested `\author\href{…}`, errs in our conversion (a
   `readBalanced` Error pdflatex does not raise), so no clean fixture reaches the re-part there.
+- An entry's number is parted into digits only under single-digit numbering (`Resolver::part_glued_labels`, the entry
+  side, the mirror of the names' side guard of 1501.05343): every other numbered entry label one digit, and every
+  numbered mark the names show. 2207.06713 (mnras) prints `$^{15}$The Inter-University Institute … (IDIA)` under names
+  marked up to 18, none 15: read as `1` + `5`, IDIA went to the 9 authors marked 1 or 5 (95b r1, review rev95b B1); it
+  stays in the block, as int124b and the print have it. Symbol compounds part as before (2602.19190's
+  `$^{\dagger\ddagger}$`, 1505.06831's `∗∗`). The kernel's and revtex's `$^{15}$` entry under names marked 1 and 5 (wrong
+  in int124b too) now stays in the block as well.
+- The comparator's take-out reading (`compare::taken_out_rule`) explains the block's rows as a creator's: today's
+  block entry cut by the reading, with the shadow's cut entry it leaves, is one classified row (2106.15893's
+  `\affil[$\star$]{… corresponding author: michaela.benz@…}`, written, was unclassified).
 - Considered and dropped: an entry the call labels with a footnote symbol (`\affil[*]{Equal contribution}`) as a legend
   note like a symbol-led one (`api:legend`): seven sample papers' `\affil[*]{Corresponding author, …}` lost their
   affiliation and e-mail (2206.08826, 2403.17178, 2409.13995, 2503.00537, 2603.05201, 2608.03927, 2106.04144); such an
@@ -28604,7 +28616,13 @@ today's output (`writer::plan`, the ledger's `declined: …`).
 Unclassified, with the comparator reading the take-out: IEEEtran 90 of 973 papers (9.3 %), acmart 2 of 72 with a block
 (2.8 %; 774 of 873 make each author one API call, no block), authblk 58 of 814 (7.1 %), MNRAS mn2e 9 of 363 (2.5 %),
 mnras 30 of 458 (6.6 %); elsarticle 23 of 881 (2.6 %, not written). Above the 0.5 % rule, as aa (3.2 %), llncs
-(5.4 %) and the kernel (19.4 %) were when written (#922, #925): an unclassified paper is one the writer declines.
+(5.4 %) and the kernel (19.4 %) were when written (#922, #925). An unclassified row marks an item the writer may
+decline, not the paper: on the review's sample (rev95b) 24 of authblk's 59 unclassified papers were written in their
+other items, IEEEtran 18 of 94, mn2e 3 of 9, acmart 2 of 7, each read and improved. After 95b r2 (the comparator
+reading the block's take-out rows, over the same census dumps): unclassified IEEEtran 89 of 973 (9.2 %), acmart 2 of 72
+(2.8 %), authblk 47 of 814 (5.8 %; 58 before, the block cuts now classified), mn2e 9 of 363 (2.5 %), mnras 30 of 458
+(6.6 %); re-resolved with the entry digit guard, IEEEtran and authblk the same (acmart and the MNRAS family cannot be
+re-resolved: their dumps predate their declarations, `stale_conventions`).
 Classified precision, seeded (95), PDF-judged (pdflatex TL 2025; the source where it fails): IEEEtran 30/30, acmart
 28/29 (one undecidable; 2407.20157's `wzheng@` given Jianwu Zheng, counted wrong), authblk 29/29 after the label fix
 (2405.16051), MNRAS 29/30 (1608.00588's `SUPA$^\dagger$, Institute …` read as two entries — the writer declines it).
@@ -28648,4 +28666,7 @@ the guards pinning today's IEEEtran/acmart/authblk output updated to the written
 class-bindings/`ieeetran_entry_addresses_written`, `ieeetran_entry_address_of_its_only_carrier`,
 `ieeetran_entry_with_a_later_mark_keeps_its_carriers`, `ieeetran_entry_addresses_after_a_replaced_author`,
 `acmart_author_list_written`, `authblk_entry_addresses_written`, `authblk_label_spelled_with_a_command`,
-`mn2e_entry_addresses_written`.
+`mn2e_entry_addresses_written`. 95b r2: guard `perfect_kernel_batch95b::an_entry_number_no_name_shows_stays_in_the_block`
+(repros `mnras_entry_number_of_no_name_stays_in_the_block`, `ieeetran_entry_number_of_no_name_stays_in_the_block`), the
+comparator's block row in `fmshadow::tests::an_entry_the_reading_cut_its_addresses_out_of_is_classified`; RED catalog
+repro `authblk_label_opening_with_a_command` (`\author[$\dagger$1]`, as int124b: SYNC).

@@ -1245,6 +1245,28 @@ fn an_entry_the_reading_cut_its_addresses_out_of_is_classified() {
       .any(|d| d.kind == "affiliation" && !d.classified),
     "{rows:?}"
   );
+  // (the block's entry too: an unrequested `\affil[9]{Corresponding author: ann.able@x.org}` the reading leaves in the
+  // block cut to `Corresponding author`, the address Ann Able's — today's whole entry on the nameless creator is one
+  // classified row, the take-out's, 2106.15893)
+  let tex = "\\documentclass{article}\n\\usepackage{authblk}\n\\title{T}\n\\author[1]{Ann Able}\n\\author[2]{Bob Baker}\n\\affil[1]{Univ X}\n\\affil[2]{Univ Y}\n\\affil[9]{Corresponding author: ann.able@x.org}\n\\begin{document}\n\\maketitle\nBody.\n\\end{document}\n";
+  let (_, dump) = convert(tex);
+  let shadow = shadow_tuples(&json_resolved(&dump["resolved"]));
+  let today = format!(
+    "{HEAD}{}{}{}</document>",
+    r#"<creator role="author"><personname>Ann Able</personname><contact role="affiliation">Univ X</contact></creator>"#,
+    r#"<creator role="author"><personname>Bob Baker</personname><contact role="affiliation">Univ Y</contact></creator>"#,
+    r#"<creator role="author"><contact role="affiliation">Corresponding author: ann.able@x.org</contact></creator>"#,
+  );
+  let rows = compare(&shadow, &xml_tuples(today.as_bytes()).expect("xml"));
+  let block: Vec<_> = rows.iter().filter(|d| d.kind == "block").collect();
+  assert_eq!(block.len(), 1, "{shadow:?} {rows:?}");
+  assert!(
+    block[0].classified
+      && block[0].rule.starts_with("cut ")
+      && block[0].rule.contains("owner:entry-address"),
+    "{rows:?}"
+  );
+  assert!(rows.iter().all(|d| d.classified), "{rows:?}");
 }
 
 /// FM S2a.2 r6, decision 2: an ORCID link a note keeps in its text (no one's contact) is no difference in the note — the

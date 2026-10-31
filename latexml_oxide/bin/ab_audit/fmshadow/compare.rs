@@ -289,11 +289,11 @@ fn shadow_names(shadow: &Tuples) -> Vec<&str> {
   shadow.creators.iter().map(|c| c.name.as_str()).collect()
 }
 
-/// The shadow rule that explains today's affiliation item `raw` by the reading's take-out of the e-mail addresses it
-/// prints (brief 95c, OD #938: `Resolver::take_out_entry_addresses`): read by the reading's own address reader
-/// (`fm_address_take_out`), every address it prints is a shadow e-mail the take-out made (`owner:entry-address`) — the
-/// first one's rule (`cut …`) — with the normalised text the cut leaves (empty for an entry of addresses alone), which
-/// must be the shadow's own affiliation for the item to be explained.
+/// The shadow rule that explains today's affiliation item `raw` — a creator's or the block's (2106.15893) — by the
+/// reading's take-out of the e-mail addresses it prints (brief 95c, OD #938: `Resolver::take_out_entry_addresses`): read
+/// by the reading's own address reader (`fm_address_take_out`), every address it prints is a shadow e-mail the take-out
+/// made (`owner:entry-address`) — the first one's rule (`cut …`) — with the normalised text the cut leaves (empty for an
+/// entry of addresses alone), which must be the shadow's own affiliation (the same side's) for the item to be explained.
 pub(super) fn taken_out_rule(shadow: &Tuples, raw: &str) -> Option<(String, String)> {
   let (addresses, rest) = fm_address_take_out(raw, &shadow_names(shadow));
   if addresses.is_empty() {
@@ -601,15 +601,50 @@ pub fn compare(shadow: &Tuples, xml: &Tuples) -> Vec<Disagreement> {
     )
   };
   let (sb, xb) = (block(shadow), block(xml));
+  // (today's block entry the reading cut its printed addresses out of: explained with the shadow's own cut entry it
+  // leaves, as a creator's is above — authblk's unlabelled `\affil{Corresponding author: michaela.benz@…}`, cut to
+  // `Corresponding author` in the block and the address Michaela Benz's, 2106.15893)
+  let mut shadow_only = minus(&sb, &xb);
+  let mut cuts: Vec<(String, String)> = Vec::new();
+  let mut xml_only: Vec<String> = Vec::new();
+  for item in minus(&xb, &sb) {
+    let cut = item
+      .strip_prefix("affiliation\t")
+      .and_then(|text| {
+        xml
+          .block
+          .iter()
+          .find(|(r, x)| r == "affiliation" && norm(x) == text)
+      })
+      .and_then(|(_, raw)| taken_out_rule(shadow, raw))
+      .map(|(rule, rest)| (rule, format!("affiliation\t{rest}"), rest))
+      .filter(|(_, key, rest)| rest.is_empty() || shadow_only.contains(key));
+    match cut {
+      Some((rule, key, rest)) => {
+        if let Some(at) = shadow_only.iter().position(|s| *s == key) {
+          shadow_only.remove(at);
+        }
+        let text = item.split_once('\t').map_or(item.as_str(), |(_, t)| t);
+        cuts.push((
+          rule,
+          format!("block: xml-only affiliation {text} (cut: {rest})"),
+        ));
+      },
+      None => xml_only.push(item),
+    }
+  }
   for (item, rule) in surplus_rules(
-    minus(&sb, &xb),
+    shadow_only,
     str::to_string,
     &shadow.block_rules,
     &shadow.block_all_rules,
   ) {
     push("block", rule, format!("block: shadow-only {item}"));
   }
-  for item in minus(&xb, &sb) {
+  for (rule, detail) in cuts {
+    push("block", Some(rule), detail);
+  }
+  for item in xml_only {
     let (role, text) = item.split_once('\t').unwrap_or(("", &item));
     let rule = match role {
       "note" => note_rule_of(shadow, text),

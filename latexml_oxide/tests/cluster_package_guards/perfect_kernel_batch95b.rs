@@ -295,3 +295,55 @@ fn mn2e_is_written() {
     ],
   );
 }
+
+/// An entry's number is parted into digits only under single-digit numbering (`Resolver::part_glued_labels`, the entry
+/// side, the mirror of the names' side guard of 1501.05343): MNRAS's `$^{15}$The Inter-University Institute …` under
+/// names marked up to 18, none marked 15 (2207.06713), stays in the block as it prints — 95b parted it into `1` and `5`
+/// and gave it to every name marked 1 or 5 (9 creators). IEEEtran's sibling (`\textsuperscript{15}`, review rev95b p3)
+/// on the same path. Entries 1, 5 and 10 their names'. Distinct from `mn2e_is_written`: the label reading, not the
+/// take-out.
+#[test]
+fn an_entry_number_no_name_shows_stays_in_the_block() {
+  let tex = repro!("mnras_entry_number_of_no_name_stays_in_the_block.tex");
+  let (written, _, _, writer) = assert_reading(
+    tex,
+    Some(&[
+      &["Ann Able", "affiliation=University One, Town"],
+      &["Bob Baker", "affiliation=University Five, Town"],
+      &["Cid Cole", "affiliation=University Ten, Town"],
+      &["affiliation=University Fifteen, Town"],
+    ]),
+    &[
+      "C Ann Able [1] | line:names mark:after-comma",
+      "  a University One, Town | ruling1:request",
+      "C Bob Baker [5] | line:names sep:comma mark:after-comma",
+      "  a University Five, Town | ruling1:request",
+      "C Cid Cole [10] | line:names sep:comma",
+      "  a University Ten, Town | ruling1:request",
+      "B affiliation University Fifteen, Town | ruling1:request label:unrequested owner:block",
+    ],
+  );
+  assert_eq!(writer, "same", "the writer's outcome");
+  assert_eq!(default_mode_creators(tex), written, "the default mode");
+  let tex = repro!("ieeetran_entry_number_of_no_name_stays_in_the_block.tex");
+  let (written, _, _, writer) = assert_reading(
+    tex,
+    Some(&[
+      &["Ann Able 1", "affiliation=University One, Town"],
+      &["Bob Baker 5", "affiliation=University Five, Town"],
+      &["Cid Cole 10", "affiliation=University Ten, Town"],
+      &["affiliation=University Fifteen, Town"],
+    ]),
+    &[
+      "C Ann Able [1] | line:names",
+      "  a University One, Town | api:leading-mark",
+      "C Bob Baker [5] | line:names sep:comma",
+      "  a University Five, Town | api:leading-mark",
+      "C Cid Cole [10] | line:names sep:comma",
+      "  a University Ten, Town | api:leading-mark",
+      "B affiliation University Fifteen, Town | api:leading-mark label:unrequested owner:block",
+    ],
+  );
+  assert_eq!(writer, "same", "the writer's outcome");
+  assert_eq!(default_mode_creators(tex), written, "the default mode");
+}

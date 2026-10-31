@@ -1,0 +1,24 @@
+% witness: 2609.05466 (svjour3 with authblk loaded: `\institute{N. Cuellar \and A. Pereira \and I. F. M. Menezes \at
+%          Pontifical Catholic University … \email{…} \and A. Cunha~Jr \at National Laboratory … \email{…}}`)
+% oracle:  pdflatex with 2609.05466's svjour3.cls (TL lacks it): "Ann Able · Bob Baker · Cid Cole", then
+%          "A. Able · B. Baker" / "Univ X, Town" / "E-mail: ann@x.org", "C. Cole" / "Univ Y, City" / "E-mail: cid@y.org"
+% engines: rust int124b = every institute item in the block (the names before `\at` lost but "A. Able"); rust 95b,
+%          95b r2 = wrong: the author block is authblk's (written), so svjour3's `\institute` reading is written though
+%          svjour3 passed no gate — "A. Able" (the names before `\at`, numbered as entry 1, `api:labelseq
+%          ruling1:thenote`) an affiliation of all three, Univ X on Bob Baker only, Univ Y on Cid Cole
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker Univ X, ann@x.org Ann Able's; Cid Cole Univ Y, cid@y.org; no
+%          name piece an affiliation
+% status:  RED (catalog, no guard; SYNC row "a non-written family's API call written under a written author block")
+% preload: ar5iv.sty
+\documentclass[smallextended]{svjour3}
+\usepackage{authblk}
+\begin{document}
+\title{A title}
+\author{Ann Able \and Bob Baker \and Cid Cole}
+\institute{A. Able \and B. Baker \at
+  Univ X, Town \\ \email{ann@x.org}
+  \and
+  C. Cole \at Univ Y, City \\ \email{cid@y.org}}
+\maketitle
+Text.
+\end{document}

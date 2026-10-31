@@ -85,8 +85,8 @@ pub struct Policy {
   pub email_in_place:   bool,
   /// the observer writes this family's frontmatter (FM S2b, `writer/`): the family passed its per-family gate — its own
   /// seeded classified-precision sample ≥ 95 % right and its unclassified rate < 0.5 % (main-session decision at int63,
-  /// OXIDIZED_DESIGN_DIVERGENCES #837 "S2a.2 r5 at landing"); a paper is written only when every place its output and
-  /// the observer's reading differ is one of the writer's operations (`writer::plan`)
+  /// OXIDIZED_DESIGN_DIVERGENCES #837 "S2a.2 r5 at landing"); what differs between its output and the observer's
+  /// reading is written where the writer's operations explain it (`writer::plan`), each other item left as today's
   pub written:          bool,
   /// what the declaration reproduces
   pub cite:             &'static str,

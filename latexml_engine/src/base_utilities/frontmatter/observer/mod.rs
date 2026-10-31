@@ -24,10 +24,10 @@
 //!   part of the observer runs, and with it the conversion's output is the same: the observer decides nothing yet
 //!   (the resolver is stage S2a.2) — but for a family whose declared conventions are `written` (FM S2b):
 //! - [`writer`] (S2b): once today's frontmatter is in the document (`insert_frontmatter`), the paper of a written
-//!   family is compared with the resolver's reading, and where every difference is one of the writer's operations —
-//!   an entry given to the authors the reading gives it, one call's marked entries cut apart, a legend made a note,
-//!   a url printing an address made an e-mail — those are written, from the tokens the document queued; any other
-//!   difference leaves the paper as today's.
+//!   family is compared with the resolver's reading, and the differences the writer's operations explain — an entry
+//!   given to the authors the reading gives it, one call's marked entries cut apart, a legend made a note, a url
+//!   printing an address made an e-mail — are written, from the tokens the document queued; the fail-safe declines
+//!   per item, each declined item left as today's output holds it (the writer's module docs).
 
 use super::*;
 

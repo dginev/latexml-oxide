@@ -1,15 +1,20 @@
 //! The observer's writer (FM S2b; OXIDIZED_DESIGN_DIVERGENCES #837 "S2b"): for a family whose binding declared its
 //! conventions `written` (the pilot: revtex4_support's `revtex`), once `insert_frontmatter` has placed today's
 //! frontmatter, the paper's creators are compared with the resolver's reading as `ab_audit fmshadow` compares them
-//! ([`dom`], the comparator's tuples), and the paper is written only when every difference is one of the writer's
-//! operations ([`plan`]) — an entry given to the authors the reading gives it, one call's marked entries cut apart at
-//! their marks, a legend made a note of the names showing its mark, a url printing an address made an e-mail — each
-//! decided by a rule holding an adopted ruling's change tag (`resolver::CHANGE_TAGS`). Any other difference leaves the
-//! paper as today's: a difference no operation explains is one the comparison would report unclassified.
+//! ([`dom`], the comparator's tuples), and what differs is written by the writer's operations ([`plan`]) — an entry
+//! given to the authors the reading gives it, one call's marked entries cut apart at their marks, a legend made a note
+//! of the names showing its mark, a url printing an address made an e-mail — each decided by a rule holding an adopted
+//! ruling's change tag (`resolver::CHANGE_TAGS`). The fail-safe declines per item, each declined item left as today's
+//! output holds it: an entry whose address take-out today's does not print so is given back whole
+//! (`give_back_addresses`: 2102.08148's Hongyun Yu keeps today's entry while the other authors' are cut), the names
+//! re-parted only where every word today's held is kept (`repart`), and a difference of the plan no operation explains
+//! (the ledger's `declined: …`) leaves every item the plan would write as today's. So a paper the comparison reports
+//! unclassified may still be written in its other items.
 //!
 //! What is written comes from the tokens the document queued: a cut entry's pieces from its call's content, mapped by
-//! the spans of a stamped rehearsal of it ([`plan`]), digested as today's digests an entry ([`apply`]). Under the
-//! shadow switch only (`LATEXML_FM_SHADOW=1`); unset, nothing of it runs.
+//! the spans of a stamped rehearsal of it ([`plan`]), digested as today's digests an entry ([`apply`]). By default (the
+//! fleet's) and under the census switch (`LATEXML_FM_SHADOW=1`), for a paper whose author blocks are all a written
+//! family's; switched off (`=0`), nothing of it runs (`shadow::FmShadow`).
 
 use super::{
   events::Event,
