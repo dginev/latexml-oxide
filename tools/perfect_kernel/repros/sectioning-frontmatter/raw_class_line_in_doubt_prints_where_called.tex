@@ -1,0 +1,34 @@
+% witness: w-art.cls's `\address[\inst{1}]{…}` (0910.5837, 1105.1753, quant-ph0606237); review rev94b r5 BL1 (its probes
+%          `p/s` s1, k1: capa.cls, capc.cls)
+% oracle:  pdflatex 0 errors: "(1 ) Univ A, Town", "(9 ) Univ Z, Zed", "Pre text.", "(c, d) Lab C, Place", "We thank
+%          X.", "(8 ) Univ Y1" with its footnote 1 "Y note.", then "A Title", "Ann Able1", "Body." with footnote 1 "Body
+%          note." (`\maketitle` resets the counter; LaTeXML numbers it 2, as 94b r4 and 94a r8 do)
+% engines: rust 94b r5 = 0 errors, 0 warnings: every line in doubt set after the title, after the text printed between
+%          them ("Pre text. We thank X. (9) Univ Z, Zed (c, d) Lab C, Place (8) Univ Y"), the body's footnote 1 and
+%          the line's 2; 94b r4 and 94a r8 = the lines where the class printed them
+% expect:  0 errors, 0 warnings; a title-block line in doubt (a mark no author requests, a key list) prints where it is
+%          called, as the class prints it (`frontmatter_stores.rs` `doubtful`): the body's paragraphs in pdflatex's
+%          order, the footnotes numbered in it; a line holding a footnote is not queued in doubt at all; Ann Able
+%          "Univ A, Town"; eager and --streaming the same
+% status:  RED (94b r5) -> GREEN (94b r6)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{inplaceaddr.cls}
+\ProvidesClass{inplaceaddr}
+\LoadClass{article}
+\let\@author\@empty\renewcommand\author[2][]{\g@addto@macro\@author{#2 }}
+\newcommand\address[2][]{\par{\small\ifx\relax#1\relax\else(#1) \fi #2}\par}
+\def\inst#1{\textsuperscript{#1}}
+\end{filecontents*}
+\documentclass{inplaceaddr}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1}}
+\address[\inst{1}]{Univ A, Town}
+\address[\inst{9}]{Univ Z, Zed}
+Pre text.
+\address[c, d]{Lab C, Place}
+We thank X.
+\address[\inst{8}]{Univ Y\footnote{Y note.}}
+\maketitle
+Body.\footnote{Body note.}
+\end{document}

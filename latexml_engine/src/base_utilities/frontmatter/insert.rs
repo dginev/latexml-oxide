@@ -9,6 +9,8 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   // A raw class's title-page stores in a document without `\maketitle` (frontmatter_stores.rs).
   crate::frontmatter_stores::harvest_stores(false)?;
   digest_front_matter()?; // If needed
+  // (a contact kept from a raw class's line in doubt in place of the line's ink: [`settle_contacts_in_doubt`])
+  settle_contacts_in_doubt(document);
   let frontmatter_elements_set: HashSet<String> = FRONTMATTER_ELEMENTS
     .iter()
     .map(ToString::to_string)

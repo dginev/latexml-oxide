@@ -1,0 +1,29 @@
+% witness: w-art.cls's `\address[\inst{1}]{…}` (0910.5837, 1105.1753, quant-ph0606237); review rev94b r5 BL2 (its probes
+%          `p/s` s6, s9: capa.cls, a `\section` before `\maketitle` or none)
+% oracle:  pdflatex 0 errors: "(1 ) Univ A, Town", "(9 ) Univ Z, Zed", "1 Intro", "Pre text.", then "A Title", "Ann
+%          Able1", "Body."
+% engines: rust 94b r5 = 0 errors, 0 warnings: the fallback flush at `\section` digested the call in doubt — a creator
+%          of no name holding "Univ Z, Zed", the printed "(9)" gone; 94b r4 and 94a r8 = the line in the body
+% expect:  0 errors, 0 warnings; a flush other than a `\maketitle`'s drops a call in doubt (`place.rs`
+%          `settle_calls_in_doubt`): the line stays where the class printed it, no nameless creator; Ann Able "Univ A,
+%          Town"; eager and --streaming the same
+% status:  RED (94b r5) -> GREEN (94b r6)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{inplaceaddr.cls}
+\ProvidesClass{inplaceaddr}
+\LoadClass{article}
+\let\@author\@empty\renewcommand\author[2][]{\g@addto@macro\@author{#2 }}
+\newcommand\address[2][]{\par{\small\ifx\relax#1\relax\else(#1) \fi #2}\par}
+\def\inst#1{\textsuperscript{#1}}
+\end{filecontents*}
+\documentclass{inplaceaddr}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1}}
+\address[\inst{1}]{Univ A, Town}
+\address[\inst{9}]{Univ Z, Zed}
+\section{Intro}
+Pre text.
+\maketitle
+Body.
+\end{document}

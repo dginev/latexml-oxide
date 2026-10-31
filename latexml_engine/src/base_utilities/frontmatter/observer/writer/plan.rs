@@ -618,11 +618,13 @@ pub(in crate::base_utilities::frontmatter::observer) fn entry_forms(
           container_wrap(content, base, &containers, from, end, events)
         })
         .flatten();
-      match wrap {
-        Some((wrap, outer)) => (
-          entry_font(content, base, outer, scope, events),
-          Some(Rc::new(wrap)),
-        ),
+      // (the font where the outermost container starts: one the boxes cannot tell gives neither — the base's cut;
+      // re-wrapped without it, `\itshape\emph{…\\…}`'s entries read italic where pdflatex prints them upright, review
+      // rev94b r5 BL3)
+      match wrap
+        .and_then(|(wrap, outer)| Some((entry_font(content, base, outer, scope, events)?, wrap)))
+      {
+        Some((font, wrap)) => (Some(font), Some(Rc::new(wrap))),
         None => (None, None),
       }
     })
@@ -666,8 +668,12 @@ fn container_wrap(
   let mut open = Vec::new();
   let mut outer = None;
   let mut after: Option<usize> = None;
-  for &((start, _), first) in containers {
+  for (n, &((start, _), first)) in containers.iter().enumerate() {
     let at = usize::from(start).checked_sub(base)?;
+    // (the innermost container's argument is switch-free up to its first entry; an outer one's holds the next
+    // container, whose opening tokens and the switches before it — kept in the wrap, read as `between` — are that
+    // one's: `\emph{\underline{…\\…}}`, review rev94b r5 BL3)
+    let innermost = n + 1 == containers.len();
     if let Some(after) = after {
       let between = content.get(after..at)?;
       if !between
@@ -697,7 +703,7 @@ fn container_wrap(
         _ => return None,
       }
     };
-    if !switch_free(content, base, arg + 1, first, events) {
+    if innermost && !switch_free(content, base, arg + 1, first, events) {
       return None;
     }
     open.extend_from_slice(&content[at..=arg]);

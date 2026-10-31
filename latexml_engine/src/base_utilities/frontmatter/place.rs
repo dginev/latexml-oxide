@@ -410,13 +410,15 @@ fn requested_labels(commands: &[RawFrontmatter]) -> Vec<String> {
     .collect()
 }
 
-/// Take out of a `\maketitle`'s queue the entries of a raw class's title-block lines in doubt
-/// (`frontmatter_stores::doubtful`) whose mark no author of the flush requests (this flush's authors only, as
-/// `digested_authors_requesting` reads them), and keep their
-/// class lines for after the title (`frontmatter_stores::CONTACT_DEFERRED`, set by `\maketitle`'s flush): no nameless
-/// creator holds them, and their words print where the class printed them (review rev94b r4 S1).
-fn take_lines_in_doubt() {
-  use crate::frontmatter_stores::{CONTACT_DEFERRED, CONTACT_DOUBT_ATTR, doubt_line};
+/// Settle the queue's calls of a raw class's title-block lines in doubt (`frontmatter_stores::doubtful`), before
+/// anything reads it — the observer's reading too: a `\maketitle`'s flush (`explicit`) keeps a call whose mark one of
+/// its authors requests (this flush's authors only, as `digested_authors_requesting` reads them), its contact then
+/// marked with its doubt (`lx_frontmatter_entry_doubt`, `_doubt`) for the placement to lift the line's printed ink
+/// ([`settle_contacts_in_doubt`]); every other call, and every call of any other flush (the fallback at a `\section` or
+/// `\end{document}`), is taken out of the queue, its observer's record cleared (`record_doubt_dropped`): its line stays
+/// where the class printed it, and no nameless creator holds it (review rev94b r5 BL2).
+fn settle_calls_in_doubt(explicit: bool) {
+  use crate::frontmatter_stores::{CONTACT_DOUBT_ATTR, doubt_key};
   let commands: Vec<RawFrontmatter> = match lookup_value("frontmatter_raw") {
     Some(Stored::FrontmatterRaw(commands)) => commands,
     _ => return,
@@ -428,27 +430,24 @@ fn take_lines_in_doubt() {
     return;
   }
   let requested = requested_labels(&commands);
-  let mut doubts: Vec<String> = Vec::new();
-  let mut dropped: Vec<usize> = Vec::new();
-  let mut deferred: Vec<Token> = Vec::new();
-  for (at, (_, attr, _)) in commands.iter().enumerate() {
+  let mut dropped: Vec<String> = Vec::new();
+  for (_, attr, _) in &commands {
     let Some(k) = attr.get(CONTACT_DOUBT_ATTR) else {
       continue;
     };
-    if doubts.contains(k) {
-      dropped.push(at);
+    if dropped.contains(k) {
       continue;
     }
-    let (key, line) = doubt_line(k);
-    if let Some(line) = line
-      && !clean_frontmatter_labels(&key, "affiliation")
+    let kept = explicit
+      && clean_frontmatter_labels(&doubt_key(k), "affiliation")
         .iter()
-        .any(|label| requested.contains(label))
-    {
-      DebugFeature!("frontmatter", "FRONT in doubt, the class's line: {line}");
-      doubts.push(k.clone());
-      dropped.push(at);
-      deferred.extend(line.unlist());
+        .any(|label| requested.contains(label));
+    if !kept {
+      DebugFeature!(
+        "frontmatter",
+        "FRONT in doubt, the class's line stays: call {k}"
+      );
+      dropped.push(k.clone());
     }
   }
   if dropped.is_empty() {
@@ -456,9 +455,11 @@ fn take_lines_in_doubt() {
   }
   let kept: Vec<RawFrontmatter> = commands
     .into_iter()
-    .enumerate()
-    .filter(|(at, _)| !dropped.contains(at))
-    .map(|(_, entry)| entry)
+    .filter(|(_, attr, _)| {
+      attr
+        .get(CONTACT_DOUBT_ATTR)
+        .is_none_or(|k| !dropped.contains(k))
+    })
     .collect();
   assign_value(
     "frontmatter_raw",
@@ -466,19 +467,178 @@ fn take_lines_in_doubt() {
     Some(Scope::Global),
   );
   // (and the observer's record of the calls: cleared, as a dequeue's are)
-  record_dropped(&dropped);
-  if !deferred.is_empty() {
-    let mut lines = match lookup_value(CONTACT_DEFERRED) {
-      Some(Stored::Tokens(lines)) => lines.unlist(),
-      _ => Vec::new(),
-    };
-    lines.extend(deferred);
-    assign_value(
-      CONTACT_DEFERRED,
-      Stored::Tokens(Tokens::new(lines)),
-      Some(Scope::Global),
-    );
+  for k in &dropped {
+    record_doubt_dropped(k);
   }
+}
+
+/// The marks around the ink a raw class's title-block line in doubt printed where it was called
+/// (`\lx@class@contact@ink{k}{begin|end}`, `frontmatter_stores::doubtful`): empty construction-time markers, `_doubt` the
+/// call, `_at` which end, removed by [`settle_contacts_in_doubt`] (and as any empty `*_Capture_` is, by the core finalize).
+pub(in crate::base_utilities) const CONTACT_INK_MARK: &str = "ltx:_ContactDoubt_Capture_";
+
+/// Where the frontmatter is placed: each contact a `\maketitle`'s flush kept from a raw class's title-block line in doubt
+/// (`_doubt`, [`settle_calls_in_doubt`]) takes the place of the line the class printed — that line's ink, between its two
+/// marks ([`CONTACT_INK_MARK`]), is removed when it is exactly a whole paragraph (or several) of its own: both marks
+/// found, the end one closing the last of them, nothing between them but paragraphs, no note and no label in them.
+/// Otherwise (not yet built, a streamed fragment already written, a line run into the text after it) the contact goes
+/// and its observer's record is cleared: the line stays where it printed, its words kept, never twice nor reordered
+/// (review rev94b r5 BL1, BL2; the fail-safe is r4's output). Every ink mark of the document so far goes.
+pub(in crate::base_utilities) fn settle_contacts_in_doubt(document: &mut Document) {
+  let mut kept: Vec<String> = Vec::new();
+  with_value("frontmatter", |v| {
+    if let Some(Stored::HashTagData(frnt)) = v {
+      for list in frnt.values() {
+        for entry in list {
+          doubts_in(entry, &mut kept);
+        }
+      }
+    }
+  });
+  let marks = document.findnodes(&s!("//{CONTACT_INK_MARK}"), None);
+  if kept.is_empty() && marks.is_empty() {
+    return;
+  }
+  let mut lifted: Vec<String> = Vec::new();
+  for k in &kept {
+    let mark = |at: &str| {
+      marks
+        .iter()
+        .find(|m| {
+          m.get_attribute("_doubt").as_deref() == Some(k.as_str())
+            && m.get_attribute("_at").as_deref() == Some(at)
+        })
+        .cloned()
+    };
+    let ink = match (mark("begin"), mark("end")) {
+      (Some(begin), Some(end)) => whole_paragraphs_between(document, &begin, &end),
+      _ => None,
+    };
+    match ink {
+      Some(ink) => {
+        DebugFeature!(
+          "frontmatter",
+          "FRONT in doubt, kept: call {k}'s printed line lifted"
+        );
+        for node in ink {
+          document.remove_node(node);
+        }
+        lifted.push(k.clone());
+      },
+      None => {
+        DebugFeature!(
+          "frontmatter",
+          "FRONT in doubt, kept but its line cannot be lifted: call {k} dropped"
+        );
+        record_doubt_dropped(k);
+      },
+    }
+  }
+  with_value_mut("frontmatter", |val_opt| {
+    if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
+      for list in frnt.values_mut() {
+        settle_doubts(list, &lifted);
+      }
+    }
+  });
+  for mark in marks {
+    document.remove_node(mark);
+  }
+}
+
+/// The doubts (`_doubt`) of the contacts in `entry`, appended to `out` ([`settle_contacts_in_doubt`]).
+fn doubts_in(entry: &TagData, out: &mut Vec<String>) {
+  if let Some(k) = entry.attr.get("_doubt")
+    && !out.contains(k)
+  {
+    out.push(k.clone());
+  }
+  for item in &entry.content {
+    if let TagContent::Entry(inner) = item {
+      doubts_in(inner, out);
+    }
+  }
+}
+
+/// `list` with every entry of a doubt not `lifted` removed — and a pending stub it leaves empty — and the doubt of the
+/// others forgotten ([`settle_contacts_in_doubt`]).
+fn settle_doubts(list: &mut Vec<TagData>, lifted: &[String]) {
+  list.retain_mut(|entry| match entry.attr.remove("_doubt") {
+    Some(k) => lifted.contains(&k),
+    None => !settle_doubts_in(entry, lifted),
+  });
+}
+
+/// [`settle_doubts`] in `entry`'s content, in its order: whether that left a pending stub (an annotation deferred to its
+/// label, `\lx@annotate@frontmatter@now`) empty, which then goes too.
+fn settle_doubts_in(entry: &mut TagData, lifted: &[String]) -> bool {
+  let mut gone = false;
+  entry.content.retain_mut(|item| match item {
+    TagContent::Entry(inner) => match inner.attr.remove("_doubt") {
+      Some(k) => {
+        let keep = lifted.contains(&k);
+        gone |= !keep;
+        keep
+      },
+      None => !settle_doubts_in(inner, lifted),
+    },
+    _ => true,
+  });
+  gone && entry.content.is_empty() && entry.attr.get("role").map(String::as_str) == Some("pending")
+}
+
+/// The nodes a line's ink is between its marks `begin` and `end` ([`settle_contacts_in_doubt`]), when they are exactly
+/// whole paragraphs: the nodes after `begin` among its siblings, up to the one `end` closes (`end` itself, or an
+/// ancestor of it whose last content it is), every one a paragraph (`ltx:para`, `ltx:p`) holding no note and no label,
+/// at least one; `None` otherwise.
+fn whole_paragraphs_between(
+  document: &mut Document,
+  begin: &Node,
+  end: &Node,
+) -> Option<Vec<Node>> {
+  let parent = begin.get_parent()?;
+  let blank =
+    |n: &Node| n.get_type() == Some(NodeType::TextNode) && n.get_content().trim().is_empty();
+  // (the end mark's ancestor among `begin`'s siblings, the end mark the last content of each element up to it)
+  let mut top = end.clone();
+  loop {
+    let up = top.get_parent()?;
+    let mut next = top.get_next_sibling();
+    if up == parent {
+      break;
+    }
+    while let Some(n) = next {
+      if !blank(&n) {
+        return None;
+      }
+      next = n.get_next_sibling();
+    }
+    top = up;
+  }
+  let mut ink = Vec::new();
+  let mut next = begin.get_next_sibling();
+  loop {
+    let node = next?;
+    if node != *end {
+      if !blank(&node) {
+        let q = document::get_node_qname(&node);
+        if !(q == pin_static("ltx:para") || q == pin_static("ltx:p"))
+          || node.has_attribute("labels")
+          || !document
+            .findnodes("descendant::ltx:note | descendant::*[@labels]", Some(&node))
+            .is_empty()
+        {
+          return None;
+        }
+      }
+      ink.push(node.clone());
+    }
+    if node == top {
+      break;
+    }
+    next = node.get_next_sibling();
+  }
+  ink.iter().any(|n| !blank(n)).then_some(ink)
 }
 
 /// Digest FrontMatter (if not already?)
@@ -487,12 +647,10 @@ pub fn digest_front_matter() -> Result<()> {
   // (what the abstract's command form added before this flush is no longer in Perl's queue: [`COMMAND_FORM`])
   let flushes = lookup_int(FRONTMATTER_FLUSHES);
   assign_value(FRONTMATTER_FLUSHES, flushes + 1, Some(Scope::Global));
-  // (a raw class's title-block lines in doubt no author of a `\maketitle`'s flush requests: out of the queue before
-  // anything reads it — the observer's reading too —, their class lines set after the title:
-  // `frontmatter_stores::doubtful`)
-  if lookup_bool("lx_frontmatter_explicit") {
-    take_lines_in_doubt();
-  }
+  // (a raw class's title-block lines in doubt: the calls no author of a `\maketitle`'s flush requests, and every call of
+  // any other flush, out of the queue before anything reads it — the observer's reading too —, their lines staying where
+  // the class printed them: `frontmatter_stores::doubtful`)
+  settle_calls_in_doubt(lookup_bool("lx_frontmatter_explicit"));
   // The frontmatter observer's rehearsal of the author blocks, under its shadow switch only (nothing it finds is used
   // yet; OXIDIZED_DESIGN_DIVERGENCES #837).
   shadow_flush()?;
@@ -630,6 +788,17 @@ pub fn digest_front_matter() -> Result<()> {
         Stored::String(pin(
           attr
             .get(LATE_MARK_ORDINAL)
+            .map(String::as_str)
+            .unwrap_or(""),
+        )),
+        Some(Scope::Local),
+      );
+      // (and the call in doubt it is, whose contact the placement settles: [`settle_contacts_in_doubt`])
+      assign_value(
+        "lx_frontmatter_entry_doubt",
+        Stored::String(pin(
+          attr
+            .get(crate::frontmatter_stores::CONTACT_DOUBT_ATTR)
             .map(String::as_str)
             .unwrap_or(""),
         )),
@@ -888,6 +1057,9 @@ pub fn place_frontmatter(
   // under `--streaming` (digestion interleaved with construction) a `\title` given
   // after `\end{titlepage}` may still sit undigested there.
   digest_front_matter()?;
+  // (the contacts kept from a raw class's lines in doubt take the place of the lines' ink, before anything reads the
+  // document's content)
+  settle_contacts_in_doubt(document);
   let Some(root) = document.get_document().get_root_element() else {
     return insert_frontmatter(document);
   };

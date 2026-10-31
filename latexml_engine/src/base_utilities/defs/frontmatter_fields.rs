@@ -171,6 +171,19 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // hand-typeset lines, 1302.5352, 1702.07128). Settled at once where the abstract is placed, so no marker outlives
   // its reader (s107: 8 docs leaked `<_Frontmatter_Capture_>`; lips' `\DocInput`-ed `\begin{abstract}` after
   // `\maketitle`).
+  // The marks around the ink a raw class's title-block line in doubt prints where it is called
+  // (`frontmatter_stores::doubtful`): `\lx@class@contact@ink{k}{begin}` before it, `{end}` after it — empty markers the
+  // placement reads to lift the line where the flush kept its call, and removes (`settle_contacts_in_doubt`).
+  DefConstructor!("\\lx@class@contact@ink{}{}", sub[document, args] {
+    if document.get_element().is_none() {
+      return Ok(());
+    }
+    let arg = |n: usize| args[n].as_ref().map(ToString::to_string).unwrap_or_default().trim().to_string();
+    let attrib: HashMap<String, String> =
+      [("_doubt".to_string(), arg(0)), ("_at".to_string(), arg(1))].into_iter().collect();
+    document.insert_element(CONTACT_INK_MARK, Vec::new(), Some(attrib))?;
+  },
+  reversion => "");
   DefConstructor!("\\lx@frontmatter@mark{}", sub[document, _args, props] {
     // Only once there is an open element to sit in: a preamble `\abstract{…}`
     // (svjour's setter, fixture structure/svabstract) is constructed BEFORE the

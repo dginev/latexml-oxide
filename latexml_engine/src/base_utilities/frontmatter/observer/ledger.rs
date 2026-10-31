@@ -172,6 +172,8 @@ pub(in crate::base_utilities) struct ApiCall {
   pub rehearsed:      bool,
   /// whether a later clear removed it from the queue before any flush digested it ([`record_clear`])
   pub cleared:        bool,
+  /// the call in doubt it is (a raw class's title-block line, `frontmatter_stores::doubtful`), empty for any other
+  pub doubt:          String,
 }
 
 /// One `\footnotetext` the document made (the kernel's `\lx@notetext`, a footnote's text): its printed mark, the footnote
@@ -655,6 +657,7 @@ pub(in crate::base_utilities) fn record_api_call(
     _ => String::new(),
   };
   let queue_position = queue_length();
+  let doubt = lookup_string(crate::frontmatter_stores::CONTACT_DOUBT);
   with_ledger(|ledger| {
     let index = ledger.entries.len();
     let mut after_block = None;
@@ -691,6 +694,7 @@ pub(in crate::base_utilities) fn record_api_call(
       events: Vec::new(),
       rehearsed: false,
       cleared: false,
+      doubt,
     }));
   });
 }
@@ -748,19 +752,18 @@ pub(in crate::base_utilities) fn record_clear(tag: &str, attr: &[(&str, &str)]) 
   });
 }
 
-/// Record that the flush about to run took the queued entries at `positions` out of its queue (a raw class's lines in
-/// doubt no author requests, `place::take_lines_in_doubt`), under the shadow switch only: their API calls are cleared,
-/// as a dequeue's are ([`record_clear`]).
-pub(in crate::base_utilities) fn record_dropped(positions: &[usize]) {
+/// Record that a raw class's call in doubt `k` (`frontmatter_stores::doubtful`) was dropped — taken out of the queue
+/// by its flush, or its contact out of the frontmatter where its line could not be lifted (`place::settle_calls_in_doubt`,
+/// `place::settle_contacts_in_doubt`) —, under the shadow switch only: its API calls are cleared, as a dequeue's are
+/// ([`record_clear`]).
+pub(in crate::base_utilities) fn record_doubt_dropped(k: &str) {
   if !records_now() {
     return;
   }
   with_ledger(|ledger| {
-    let flushes = ledger.flushes;
     for entry in &mut ledger.entries {
       if let Entry::Api(call) = entry
-        && call.epoch == flushes
-        && positions.contains(&call.queue_position)
+        && call.doubt == k
       {
         call.cleared = true;
       }

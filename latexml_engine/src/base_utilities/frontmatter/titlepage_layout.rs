@@ -618,10 +618,15 @@ fn leading_centered_paragraphs(root: &Node) -> Vec<Node> {
 
 /// Insert FrontMatter into document, if not already added
 /// Perl: insertFrontMatter($document).
-/// Drop every `ltx:_Frontmatter_Capture_` position marker (`\lx@frontmatter@mark`);
+/// Drop every `ltx:_Frontmatter_Capture_` position marker (`\lx@frontmatter@mark`), and every ink mark of a raw class's
+/// line in doubt (`place::CONTACT_INK_MARK`);
 /// called once the frontmatter is placed and again at `\end{document}` as a safety net.
 pub fn remove_frontmatter_marks(document: &mut Document) {
-  for mark in document.findnodes("//ltx:_Frontmatter_Capture_", None) {
+  // (and a raw class's line-in-doubt ink marks no placement read: [`CONTACT_INK_MARK`])
+  for mark in document.findnodes(
+    &s!("//ltx:_Frontmatter_Capture_ | //{CONTACT_INK_MARK}"),
+    None,
+  ) {
     document.remove_node(mark);
   }
 }

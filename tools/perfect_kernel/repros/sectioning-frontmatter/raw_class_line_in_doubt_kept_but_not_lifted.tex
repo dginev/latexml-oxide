@@ -1,0 +1,33 @@
+% witness: w-art.cls's `\address[\inst{1}]{…}` (0910.5837, 1105.1753, quant-ph0606237); review rev94b r5 BL1 (the design
+%          of round 6: the in-place ink lifted only when it is exactly a paragraph of its own)
+% oracle:  pdflatex 0 errors: "(2 ) Univ B, City More text.", "(3 ) Lab C1" with its footnote 1 "C note.", then "A
+%          Title", "Ann Able1 and Bob Baker2 and Cy Cole3", "Body."
+% engines: rust 94b r5 = 0 errors, 0 warnings: Bob Baker's "Univ B, City" and Cy Cole's "Lab C" (the lines' calls
+%          deferred to the flush, the footnote digested after the title); 94b r4 = both lines in the body
+% expect:  0 errors, 0 warnings; a line in doubt a later author requests whose printed ink runs into the text after it
+%          (no `\par` after it) cannot be lifted: its contact is dropped where the frontmatter is placed (`place.rs`
+%          `settle_contacts_in_doubt`), the line stays where it printed, never twice; a line holding a footnote is not
+%          queued in doubt at all (a kept call would digest it twice); Bob Baker and Cy Cole without a contact, the
+%          words in the body in pdflatex's order; eager and --streaming the same
+% status:  RED (94b r5) -> GREEN (94b r6)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{runonaddr.cls}
+\ProvidesClass{runonaddr}
+\LoadClass{article}
+\let\@author\@empty\renewcommand\author[2][]{\g@addto@macro\@author{#2 }}
+\newcommand\address[2][]{\par{\small\ifx\relax#1\relax\else(#1) \fi #2} }
+\def\affil#1{\par{\small #1}\par}
+\def\inst#1{\textsuperscript{#1}}
+\end{filecontents*}
+\documentclass{runonaddr}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1}}
+\address[\inst{2}]{Univ B, City}
+More text.
+
+\affil{\inst{3}Lab C\footnote{C note.}}
+\author{and Bob Baker\inst{2} and Cy Cole\inst{3}}
+\maketitle
+Body.
+\end{document}
