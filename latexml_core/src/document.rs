@@ -1709,8 +1709,10 @@ impl Document {
 
   /// Insert a construction-time position mark: an empty internal element (`*_Capture_`-suffixed, admitted anywhere by
   /// the model, never in the output) at the current point, as [`Document::insert_element`] does, its name recorded
-  /// first. A mark is made only here or copied from one made here, so a pass looking for the marks of a name none was
-  /// made of ([`Document::made_mark`]) has none to find and skips its scan of the document.
+  /// first. A mark of a name a pass gates on with [`Document::made_mark`] (`_Frontmatter_Capture_`,
+  /// `_CoverTitleBegin_Capture_`, `_CoverTitleEnd_Capture_`) must be made only here (or copied from one made here), so a
+  /// pass looking for marks of a name none was made of has none to find and skips its scan of the document; other marks
+  /// (`insert_element`) are not recorded.
   pub fn insert_mark(
     &mut self,
     qname: &str,
