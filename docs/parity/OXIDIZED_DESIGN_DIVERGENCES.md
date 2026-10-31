@@ -28463,9 +28463,11 @@ the authors it gives it), and the re-part reads it so (`writer::give_back_listed
 `give_back_addresses`); the plan writes the addresses out after it, as the take-outs (`take_out_again`: only when the
 re-part's reading is the whole reading). Fail-safe: where the plan declines with the calls written out, it plans again
 with each call one contact on its authors (`write_observed_frontmatter`) — today's, which the re-part wrote — so an
-e-mail split never declines a paper's names or the rest of its writing (an `\href` around one address: no one text leaf
-to write from; 1411.1443, 1412.1769, 2307.05703 had their write-out declined, today's kept, the ledger's `declined: …`
-now `same`). A reading a conceded creator changed keeps every call one contact, as today's. Repros
+e-mail split never declines a paper's names or the rest of its writing (no one text leaf to write an address from: an
+`\href` around one address, 1412.1769; a separator printed in its own run of text, `\xand` 1411.1443, `{\rm and }`
+2307.05703, `{\rm ,}` 2603.10734). Where keeping the calls whole leaves today's as it was, the ledger still reads
+`declined: …` (the write-out the reading wanted, declined — not `same`, rev95e S2), as before 95e; those four papers'
+XML is today's. A reading a conceded creator changed keeps every call one contact, as today's. Repros
 `amsart_names_call_with_a_several_address_email` (RED → GREEN), `amsart_names_call_of_three_with_a_several_address_email`,
 `amsart_names_call_with_a_several_address_email_kept_whole`; guards `perfect_kernel_batch95e` (2). Census against
 int125a (the 95c populations, 2,686 papers, and 192 papers of amsart, elsarticle, revtex4*, aastex*, article with an

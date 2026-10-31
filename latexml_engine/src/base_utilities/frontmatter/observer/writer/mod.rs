@@ -115,7 +115,9 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
   let mut planned = plan::plan(&resolved, &front)?;
   // (the fail-safe of the write-out: where the plan cannot write a call's e-mails out address by address, each call
   // stays one contact on its authors, as today's holds it — the reading the re-part wrote — and the plan writes the
-  // rest; an e-mail split never declines a paper, brief 95e)
+  // rest; an e-mail split never declines a paper, brief 95e — and where that leaves today's as it was, the ledger still
+  // says the write-out was declined, not `same`: the improvement the reading wanted is not hidden, rev95e S2, 1412.1769)
+  let mut kept_whole = None;
   let resolved = if planned.is_none() && before.is_some() && !resolved.listed.is_empty() {
     let whole = give_back_listed(&resolved);
     let whole_before = plan::difference(&whole, &front);
@@ -125,6 +127,7 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
         "frontmatter",
         "FRONT writer: the e-mail calls kept whole, their write-out declined: {before:?}"
       );
+      kept_whole = before.as_ref().map(|d| d.to_string());
       (before, planned) = (whole_before, whole_plan);
       whole
     } else {
@@ -138,7 +141,12 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
     // places the frontmatter again at the document's end, after this writer wrote it)
     with_ledger(|ledger| match before {
       None if ledger.writer.is_some() => {},
-      None => ledger.writer = Some("same".to_string()),
+      None => {
+        ledger.writer = Some(match &kept_whole {
+          Some(d) => s!("declined: {d}"),
+          None => "same".to_string(),
+        })
+      },
       Some(d) => ledger.writer = Some(s!("declined: {d}")),
     });
     return Ok(());
