@@ -28415,7 +28415,8 @@ prints on the call's author (revtex 2011.01984, 1303.5460, 1304.4972, 1503.07733
 and 0809.3090 (`\author{Santos Bravo Yuste}\email{santos@unex.es}`: the holder's given name, today's moves it to Andrés
 Santos), and, outside that population, right on 2112.10604 (`\author{Dario Mathi\"a and Ulrich Thiel}`, `mathiae@` on
 Thiel; a several-name call, base letters alone) and on the ASCII twin `\author{Anna Smith}…\email{mueller-group@x.de}`
-beside `\author{Jorg Mueller}` (moved here, as by every binary before). This rule stays; the rival's witnesses are RED
+beside `\author{Jorg Mueller}` (moved here, as by every binary before — which FIDELITY_CHARTER §4 #420's "its ASCII twin
+too" says should stay; the charter keeps the user's wording until the user rules on this measurement). This rule stays; the rival's witnesses are RED
 repros `amsart_email_of_a_two_name_call_spelling_an_accented_name`, `revtex_email_spelling_its_holders_given_name` (SYNC).
 
 **Label words** travel as an e-mail line's do (`author_block::labelled_emails`): an e-mail label word goes with the
@@ -28441,8 +28442,13 @@ separator or a period is the label when its run ends a list's item (`Univ X, E-m
 "E-mail " contact; `\texttt{mail ann@x.org now}` stays; F4). G3's write-out reads today's contact across a line
 break (`apply::text_leaf`, `leaf_text`): `\email{mhamed.ghiati@…;\\ mohammed.mouniane@…}` (2212.08940) is written out
 address by address, where the writer had declined the paper and so dropped the rest of its work (Mohammed Mouniane's
-`$^{*1}$` address, which the base's writer gave him). Census against round 2 (2,270 papers): two changed, 0808.1112 (the
-font) and 2606.13944 (a space kept before an icon). Repros `entry_address_in_emph_keeps_its_font`,
+`$^{*1}$` address, which the base's writer gave him); the same write-out reaches every `\email{a\\ b}` call (read against
+their sources, final review rev95c_r3: 1010.2311, 1705.06212, 2307.07287, 1110.1356, 1610.09150, 2108.11087, 2109.13668,
+2301.05042 — each address to the author it spells, else its call's author, only the `;`/`,` and the break dropped).
+Census against round 2 (2,270 papers): two changed, 0808.1112 (the font) and 2606.13944 (a space kept before an icon).
+Open, RED `entry_address_after_a_non_email_colon_word_keeps_the_colon` (review rev95c_r3 S1): a run after a colon word
+that is no e-mail label (`Mail:`, `Contact:`) comes out one-sided and the separator trim takes the colon ("Univ X, Mail";
+2601.07312's `Correspondence:` likewise). Repros `entry_address_in_emph_keeps_its_font`,
 `entry_address_link_with_an_icon_keeps_it_once`, `entry_address_group_in_one_link_keeps_its_target`,
 `entry_address_after_a_bare_label_word`, `entry_address_in_one_sided_prose_stays`,
 `amsart_email_call_of_addresses_over_a_line_break`; guards `perfect_kernel_batch95c` (round 3, six).
