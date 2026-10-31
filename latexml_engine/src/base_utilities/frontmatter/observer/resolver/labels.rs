@@ -413,11 +413,15 @@ pub(super) fn later_line_is_names(
     .filter(|e| e.kind == EventKind::Name && e.text.chars().any(char::is_alphanumeric))
     .collect();
   let pieces = names.iter().filter(|e| !is_name_qualifier(&e.text)).count();
-  // (the line's first run in a font of its own, against the affiliation line above it: the print sets the name apart)
-  let own_font = events
-    .iter()
-    .take_while(|e| !inked(e))
-    .any(|e| e.kind == EventKind::Layout && e.role.as_deref() == Some("font"));
+  // (the line's first run in a font of its own, against the affiliation line above it: the print sets the name apart —
+  // but not a cell's: each cell of an alignment opens in the alignment's font, so the lexer's change of font between
+  // the runs of two cells is a cell's reset as often as a switch (`$^1$\it Univ X,\\ \bf Dept Y\\ City Z` in a
+  // `tabular`: "City Z" read as an author, review rev94a r5 t06))
+  let mut in_cell = false;
+  let own_font = events.iter().take_while(|e| !inked(e)).any(|e| {
+    in_cell |= e.kind == EventKind::Layout && e.role.as_deref() == Some("cell");
+    !in_cell && e.kind == EventKind::Layout && e.role.as_deref() == Some("font")
+  });
   // (a row whose pieces each hold an acronym — a word of two or more capitals, no roman numeral — reads as
   // institutions, and its pieces alone are no evidence: `Bhanwar Gupta \\ IBM India, IBM CIO \\ …`, 2609.10596)
   let acronym = |word: &str| {

@@ -100,8 +100,10 @@ Text.
 
 /// Operations 1 and 3 (split by marks, a legend made a note): one `\affiliation{$^1$Univ A, City \\ $^\star${…}}` under
 /// `Ann Able$^{1}$, Bob Baker$^{1,\star}$` is cut at its marks — Univ A both names', the starred legend a
-/// correspondence note of Bob, who shows the star, its ink kept as styled label markup (the label-text ruling). Was:
-/// the whole call, legend and all, both names' affiliation. Shape `perfect_kernel_batchfms2a2r8::API_LEGEND`.
+/// correspondence note of Bob, who shows the star, its ink kept as styled label markup (the label-text ruling) — the
+/// note's `mark` the star, which the name then shows no more (one mark on the page, `apply::show_legend_mark`: review
+/// rev94a r5). Was: the whole call, legend and all, both names' affiliation. Shape
+/// `perfect_kernel_batchfms2a2r8::API_LEGEND`.
 #[test]
 fn a_marked_affiliation_is_cut_at_its_marks() {
   let tex = r"\documentclass[aps,prl]{revtex4-2}
@@ -120,9 +122,9 @@ Text.
      </sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ A, City\
      </contact></creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" \
-     xml:id=\"id3.1\">1,⋆</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup \
+     xml:id=\"id3.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup \
      xml:id=\"id4\">1</sup>Univ A, City</contact><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" \
-     role=\"thanks\" xml:id=\"id5\"><sup xml:id=\"id5.1\">⋆</sup>corresponding author, e-mail: bob@x.org</note>\
+     mark=\"⋆\" role=\"thanks\" xml:id=\"id5\"><sup xml:id=\"id5.1\">⋆</sup>corresponding author, e-mail: bob@x.org</note>\
      </creator>",
   ]);
   let today = creators(tex, false);

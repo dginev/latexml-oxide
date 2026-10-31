@@ -852,24 +852,21 @@ fn legend_line_is_no_name() {
   assert_no_merged_names(&xml);
   let legend = |id: &str| {
     format!(
-      r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks" xml:id="{id}"><sup xml:id="{id}.1">*</sup><text font="italic" xml:id="{id}.2">Equal contribution.</text></note>"#
+      r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks" xml:id="{id}"><sup xml:id="{id}.1">*</sup><text font="italic" xml:id="{id}.2">Equal contribution.</text></note>"#
     )
   };
+  // (the note's `mark` the star it prints, which the names then show no more — one mark on the page: 94a r6)
   assert_eq!(creators(&xml), [
+    creator(true, r#"Ann Able<sup xml:id="id1">1</sup>"#, &legend("id2")),
     creator(
-      true,
-      r#"Ann Able<sup xml:id="id1">*</sup><sup xml:id="id2">1</sup>"#,
-      &legend("id3")
+      false,
+      r#"Cat Cole<sup xml:id="id3">1</sup>"#,
+      &legend("id4")
     ),
     creator(
       false,
-      r#"Cat Cole<sup xml:id="id4">*</sup><sup xml:id="id5">1</sup>"#,
-      &legend("id6")
-    ),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id7">1</sup>"#,
-      &affiliation(r#"<text font="italic" xml:id="id8">Chair of Things.</text>"#)
+      r#"Bob Baker<sup xml:id="id5">1</sup>"#,
+      &affiliation(r#"<text font="italic" xml:id="id6">Chair of Things.</text>"#)
     ),
   ]);
 }
@@ -2036,12 +2033,13 @@ fn legend_row_shares_the_institution() {
     creator(true, "Ann Able", &lines("id1", "id2")),
     creator(
       false,
-      r#"Bob Baker<sup xml:id="id3">*</sup>"#,
-      // (the legend a note of Bob Baker's, its `*` kept: written since 93a, OD #925 — the old reader's affiliation)
+      "Bob Baker",
+      // (the legend a note of Bob Baker's, its `*` kept: written since 93a, OD #925 — the old reader's affiliation; the
+      // note's `mark` the star, which the name then shows no more, 94a r6)
       &format!(
         r#"{} {}"#,
-        lines("id4", "id5"),
-        r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id6"><sup xml:id="id6.1">*</sup>Corresponding author: bbaker@x.edu</note>"#
+        lines("id3", "id4"),
+        r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="id5"><sup xml:id="id5.1">*</sup>Corresponding author: bbaker@x.edu</note>"#
       )
     ),
   ]);

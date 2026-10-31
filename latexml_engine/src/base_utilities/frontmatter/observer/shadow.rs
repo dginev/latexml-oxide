@@ -491,6 +491,7 @@ pub fn fm_shadow_json() -> String {
                   space_after:  false,
                   meaning:      EmailMeaning::Binding,
                   inkless:      false,
+                  annotate:     None,
                 });
               },
               _ => {},

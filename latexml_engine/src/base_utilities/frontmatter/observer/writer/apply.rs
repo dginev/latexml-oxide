@@ -59,7 +59,9 @@ fn template_attributes(template: &Node) -> TagAttrs {
 
 /// Digest `tokens` as `made` and insert it into `owner`, before `before` when given. An affiliation takes the
 /// attributes of `template` (today's contact it replaces), or with none (the re-part's entry today's printed inside a
-/// name) those of a contact of `role`: its role and its name label, as `\lx@add@affiliation` gives them.
+/// name) those of a contact of `role`: its role and its name label, as `\lx@add@affiliation` gives them. A legend
+/// shows its `label` as its note's mark ([`show_legend_mark`]).
+#[allow(clippy::too_many_arguments)]
 pub(super) fn make(
   document: &mut Document,
   owner: &Node,
@@ -68,6 +70,7 @@ pub(super) fn make(
   template: Option<&Node>,
   role: &str,
   before: Option<&Node>,
+  label: Option<&str>,
 ) -> Result<()> {
   let entry = match made {
     Made::Affiliation => {
@@ -127,11 +130,96 @@ pub(super) fn make(
   document.expire_box_to_absorb();
   document.set_node(&saved);
   inserted?;
+  if made == Made::Legend
+    && let (Some(note), Some(label)) = (elements(owner).pop(), label)
+  {
+    show_legend_mark(document, owner, &note, label)?;
+  }
   if let Some(before) = before
     && let Some(mut new) = elements(owner).pop()
   {
     let mut before = before.clone();
     let _ = before.add_prev_sibling(&mut new);
+  }
+  Ok(())
+}
+
+/// A legend made a note shows the mark its line prints (charter: a note keeps the label the class prints): its `mark`
+/// is the legend's label as printed — the glyph of each label ([`unanswered_mark_text`]), or the superscript the note's
+/// text opens with where it prints that glyph (`\textsuperscript{*}`'s `*`, `$^*$`'s `∗`) —, and the name of `owner`
+/// showing that mark shows it no more: the note's mark is printed beside the name, as a `\thanks` note's is, and a
+/// superscript of the name's own (`$^*$`, `\lx@frontmatter@keepsup`) or one shown for no entry beside it printed the
+/// mark twice — with no `mark` the page set the note's default `†` beside the name's `*` (review rev94a r5: f08's
+/// "Observatory*†", k01's `Ann Able$^*$, Bob Baker\\ $^*$Equal contribution`).
+fn show_legend_mark(document: &mut Document, owner: &Node, note: &Node, label: &str) -> Result<()> {
+  let unify = |m: &str| m.replace('\u{2217}', "*");
+  let glyphs: Vec<String> = mark_labels(label)
+    .iter()
+    .filter_map(|l| unanswered_mark_text(l))
+    .collect();
+  if glyphs.is_empty() {
+    return Ok(());
+  }
+  let printed = dom::segments(note, false)
+    .into_iter()
+    .find_map(|seg| match seg {
+      dom::Seg::Hidden(mark) if !dom::is(&mark, "ltx:tags") => Some(mark.get_content()),
+      dom::Seg::Text(text) if text.get_content().trim().is_empty() => None,
+      _ => Some(String::new()),
+    })
+    .map(|m| m.trim().to_string())
+    .filter(|m| unify(m) == unify(&glyphs.join(",")));
+  let mark = printed.unwrap_or_else(|| glyphs.join(","));
+  let mut note = note.clone();
+  document.set_attribute(&mut note, "mark", &mark)?;
+  let shown: Vec<String> = glyphs.iter().map(|g| unify(g)).collect();
+  for mut sup in document.findnodes("ltx:personname//ltx:sup", Some(owner)) {
+    let text = sup.get_content();
+    let kept: Vec<&str> = text
+      .split(',')
+      .filter(|m| !shown.contains(&unify(m.trim())))
+      .collect();
+    if kept.is_empty() {
+      document.remove_node(sup);
+    } else if kept.len() < text.split(',').count() {
+      let _ = sup.set_content(&kept.join(","));
+    }
+  }
+  // (a mark formula the name shows, not yet rewritten into its superscript — revtex's `Bob Baker$^{1,\star}$`: the
+  // glyph's token taken, with the comma beside it, and a formula left with no mark taken whole)
+  for math in document.findnodes("ltx:personname//ltx:Math", Some(owner)) {
+    if !matches!(marks::read_formula(&math), marks::FormulaMarks::Marks(_)) {
+      continue;
+    }
+    let tokens = document.findnodes("descendant::ltx:XMTok", Some(&math));
+    let mut taken = false;
+    for token in &tokens {
+      if !shown.contains(&unify(token.get_content().trim())) {
+        continue;
+      }
+      let comma = |node: Option<Node>| {
+        node.filter(|n| dom::is(n, "ltx:XMTok") && n.get_content().trim() == ",")
+      };
+      if let Some(comma) =
+        comma(token.get_prev_sibling()).or_else(|| comma(token.get_next_sibling()))
+      {
+        document.remove_node(comma);
+      }
+      document.remove_node(token.clone());
+      taken = true;
+    }
+    let empty = |scripts: &[String]| {
+      scripts
+        .iter()
+        .all(|s| s.chars().all(|c| c == ',' || c.is_whitespace()))
+    };
+    let left = document.findnodes("descendant::ltx:XMTok", Some(&math));
+    if taken
+      && (left.is_empty()
+        || matches!(marks::read_formula(&math), marks::FormulaMarks::Marks(scripts) if empty(&scripts)))
+    {
+      document.remove_node(math);
+    }
   }
   Ok(())
 }
@@ -310,6 +398,7 @@ pub(super) fn apply(document: &mut Document, front: &Front, plan: &Plan) -> Resu
       tokens,
       template,
       before,
+      label,
     } = op
       && let Some(owner) = owner_node(document, *who)?
     {
@@ -321,6 +410,7 @@ pub(super) fn apply(document: &mut Document, front: &Front, plan: &Plan) -> Resu
         Some(template),
         "affiliation",
         before.as_ref(),
+        label.as_deref(),
       )?;
       touch(*who, &owner);
       // (an affiliation replacing none of today's items where the reading prints it, as a copy: 2311.16503's Jing Liu

@@ -54,13 +54,15 @@ pub(super) enum Op {
   Copy { from: Node, to: Owner },
   /// today's item taken away
   Remove { node: Node },
-  /// an item made from the queued `tokens` for `owner` — before `before`, the item of today's it replaces there
+  /// an item made from the queued `tokens` for `owner` — before `before`, the item of today's it replaces there; a
+  /// legend's `label` the mark its note shows
   Make {
     owner:    Owner,
     made:     Made,
     tokens:   Tokens,
     template: Node,
     before:   Option<Node>,
+    label:    Option<String>,
   },
   /// today's contact given the reading's role
   Role { node: Node, role: String },
@@ -494,6 +496,41 @@ pub(super) fn block_span_tokens(
     }
     // (the event printed last before the line, a layout change aside)
     let mut floor = 0;
+    // (where the entry starts after its mark: past the math shift closing the mark's formula and the spaces after it —
+    // `$^{1}$Univ X`, whose Mark spans its script —, its own switches the entry's (`$^1$\it Univ X`, `$^1$\small`,
+    // `$^1$\color{red}`, `$^1$\textit{…}`: the font Layout event between them has no span; the made item began at its
+    // first Name and lost the switch, review rev94a r5 u03); `None` when anything else stands between)
+    let lead = |mark_end: usize| -> Option<usize> {
+      let between = content.get(mark_end..from)?;
+      let skip = between
+        .iter()
+        .take_while(|t| matches!(t.get_catcode(), Catcode::SPACE | Catcode::MATH))
+        .count();
+      let mut depth = 0i32;
+      between[skip..]
+        .iter()
+        .all(|t| match t.get_catcode() {
+          Catcode::SPACE => true,
+          Catcode::BEGIN => {
+            depth += 1;
+            true
+          },
+          Catcode::END => {
+            depth -= 1;
+            depth >= 0
+          },
+          Catcode::LETTER | Catcode::OTHER => depth > 0,
+          Catcode::CS => {
+            !["\\\\", "\\par", "\\newline", "\\cr", "\\crcr"]
+              .iter()
+              .any(|cs| is_cs(t, cs))
+              && !ALIGNMENT_ONLY.iter().any(|cs| is_cs(t, cs))
+          },
+          _ => false,
+        })
+        .then_some(mark_end + skip)
+    };
+    let mut switched = None;
     if let Some(mark) = events
       .iter()
       .rev()
@@ -501,17 +538,16 @@ pub(super) fn block_span_tokens(
       && mark.kind == EventKind::Mark
       && let Some((mark_start, mark_end)) = mark.span
       && let (Some(mark_start), Some(mark_end)) = (at(mark_start), at(mark_end))
-      && content.get(mark_end..from).is_some_and(|between| {
-        // (spaces, and the math shift closing the mark's formula: `$^{1}$Univ X`, whose Mark spans its script)
-        between
-          .iter()
-          .all(|t| matches!(t.get_catcode(), Catcode::SPACE | Catcode::MATH))
-      })
+      && let Some(lead) = lead(mark_end)
     {
-      // (without the mark, nothing before the entry's ink is the entry's: the mark's closing shift stays the mark's)
+      // (without the mark, nothing before the entry's ink is the entry's but its switches: the mark's closing shift
+      // stays the mark's)
       if with_mark {
         from = mark_start;
       } else {
+        if lead < from {
+          switched = Some(lead);
+        }
         floor = from;
       }
     } else if events
@@ -531,13 +567,19 @@ pub(super) fn block_span_tokens(
     {
       past += 1;
     }
-    piece_tokens(content, (from, to), floor, from)
-      .or_else(|| {
-        (past > to)
-          .then(|| piece_tokens(content, (from, past), floor, from))
-          .flatten()
-      })
-      .and_then(|(tokens, _)| cell_tokens(content, from, &tokens))
+    let piece = |from: usize, floor: usize| {
+      piece_tokens(content, (from, to), floor, from)
+        .or_else(|| {
+          (past > to)
+            .then(|| piece_tokens(content, (from, past), floor, from))
+            .flatten()
+        })
+        .and_then(|(tokens, _)| cell_tokens(content, from, &tokens))
+    };
+    // (from the entry's own switches when they make a balanced run, else from its ink)
+    switched
+      .and_then(|lead| piece(lead, lead))
+      .or_else(|| piece(from, floor))
   })
 }
 
@@ -672,9 +714,21 @@ fn cell_tokens(content: &[Token], from: usize, tokens: &Tokens) -> Option<Tokens
       {
         i += 1;
       }
+      // (the star and the skip read as `\@ifstar` and `\@ifnextchar[` read them, past the spaces before each — `\\*
+      // [2pt]` —, and the spaces a cell opens with none of its text, as the column template's `\ignorespaces` takes
+      // them: review rev94a r5 y01, t02, t12)
+      let skip_spaces = |i: &mut usize| {
+        while run
+          .get(*i)
+          .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+        {
+          *i += 1;
+        }
+      };
       if run.get(i).is_some_and(|t| t.with_str(|s| s == "*")) {
         out.push(run[i]);
         i += 1;
+        skip_spaces(&mut i);
       }
       if run.get(i).is_some_and(|t| t.with_str(|s| s == "[")) {
         while let Some(t) = run.get(i) {
@@ -684,6 +738,7 @@ fn cell_tokens(content: &[Token], from: usize, tokens: &Tokens) -> Option<Tokens
             break;
           }
         }
+        skip_spaces(&mut i);
       }
       out.push(T_BEGIN!());
       continue;
@@ -776,7 +831,7 @@ fn cut_block_lines(
       } else {
         Made::Affiliation
       };
-      for (owner, _) in &want[key] {
+      for (owner, assoc) in &want[key] {
         ops.push(Op::Make {
           owner: *owner,
           made,
@@ -786,6 +841,7 @@ fn cut_block_lines(
             .iter()
             .find(|(o, ..)| o == owner)
             .map(|(_, n, _)| n.clone()),
+          label: assoc.label.clone(),
         });
       }
     }
@@ -976,7 +1032,7 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
         Kind::Note => Made::Legend,
         Kind::Contact(_) => return Ok(declined("a contact piece")),
       };
-      for (owner, _) in &want[key] {
+      for (owner, assoc) in &want[key] {
         ops.push(Op::Make {
           owner: *owner,
           made,
@@ -986,6 +1042,7 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
             .iter()
             .find(|(o, ..)| o == owner)
             .map(|(_, n, _)| n.clone()),
+          label: assoc.label.clone(),
         });
       }
       wanted_only.retain(|k| k != key);
@@ -1023,13 +1080,14 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
     if holds.iter().any(|(_, _, movable)| !movable) {
       return Ok(declined("an item to remove that cannot move"));
     }
-    for (owner, _) in wants {
+    for (owner, assoc) in wants {
       ops.push(Op::Make {
         owner:    *owner,
         made:     Made::Legend,
         tokens:   call.content.clone(),
         template: holds[0].1.clone(),
         before:   None,
+        label:    assoc.label.clone(),
       });
     }
     for (_, node, _) in holds {

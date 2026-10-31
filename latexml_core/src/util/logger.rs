@@ -623,6 +623,21 @@ impl DiagnosticsHold {
     now.error.saturating_sub(then.error) + usize::from(now.fatal && !then.fatal)
   }
 
+  /// Whether a Fatal was raised since [`begin`](Self::begin): counted (the report's flag set) or held as a record — what
+  /// [`defer`](Self::defer) never sets aside, and a caller taking back its work must not [`discard`](Self::discard).
+  pub fn fatal_raised(&self) -> bool {
+    let fatal_now = {
+      let now = crate::common::error::REPORT.borrow();
+      now.fatal && !self.snapshot.report.fatal
+    };
+    fatal_now
+      || HELD.borrow().as_ref().is_some_and(|records| {
+        records
+          .iter()
+          .any(|(_, m)| strip_ansi(m).starts_with("Fatal:"))
+      })
+  }
+
   /// Warnings raised since [`begin`](Self::begin) (a suppressed one counted too).
   pub fn warnings_raised(&self) -> usize {
     let now = crate::common::error::REPORT.borrow();
@@ -1004,6 +1019,32 @@ mod tests {
     note_label_use("LABEL:a", "autoref");
     replay_shown_deferred();
     assert_eq!(get_status(LogStatus::Error), 0, "stale deferred set");
+  }
+
+  /// A hold tells a Fatal raised in its scope (`fatal_raised`), which a caller taking its work back commits rather
+  /// than discards — Fatal stays Fatal (review rev94a r5, the writer's re-part take-back); an Error alone is no Fatal.
+  #[test]
+  fn a_hold_tells_a_fatal_raised_in_it() {
+    use crate::common::error::{LogStatus, get_status, initialize_report, note_status_from_logger};
+    initialize_report();
+    let hold = DiagnosticsHold::begin();
+    note_status_from_logger(LogStatus::Error);
+    assert!(!hold.fatal_raised(), "an Error is no Fatal");
+    note_status_from_logger(LogStatus::Fatal);
+    assert!(hold.fatal_raised());
+    hold.commit();
+    assert_eq!(
+      get_status(LogStatus::Fatal),
+      1,
+      "committed, the Fatal stays"
+    );
+    let hold = DiagnosticsHold::begin();
+    assert!(
+      !hold.fatal_raised(),
+      "one raised before the hold is not its own"
+    );
+    hold.discard();
+    initialize_report();
   }
 
   #[test]

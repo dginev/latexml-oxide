@@ -1,0 +1,17 @@
+% mechanism: the writer's per-row cut reads a row end as LaTeX does (OD #928, review rev94a r5 y01;
+%   `plan::cell_tokens`): `\\* [2pt]` — the star and the skip past the spaces before each, as `\@ifstar` and
+%   `\@ifnextchar[` read them — and the spaces the next cell opens with none of its text.
+% witness: review rev94a r5 t/y01_star_space_skip (t02_skip, t12_star: "<break/> Dept Y")
+% oracle:  pdflatex 0 errors: "Ann Able1 / 1 Univ X, / Dept Y"
+% engines: rust 93a: one creator, the tabular its name; rust 94a r5: the same (the `[2pt]` fell into the next row, the
+%   made item read "[2pt] Dept Y" and was taken back); perl: not run
+% expect:  0 errors, 0 warnings; Ann Able with the affiliation "Univ X," then a 2pt break and "Dept Y", no space
+% status:  RED (94a r5) -> GREEN (94a r6)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{\begin{tabular}{c}Ann Able$^1$\\ $^1$Univ X,\\* [2pt] Dept Y\end{tabular}}
+\maketitle
+Body.
+\end{document}

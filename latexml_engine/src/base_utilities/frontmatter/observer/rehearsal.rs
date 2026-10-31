@@ -160,6 +160,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefConstructor!("\\lx@fm@obs@href Semiverbatim {}", "");
   DefConstructor!("\\lx@fm@obs@orcid [] Semiverbatim", "");
   DefConstructor!("\\lx@fm@obs@affil []{}", "");
+  // (the affiliation of a raw file's in-place setter the API took, `annotate=run`: `frontmatter_stores`'
+  // `reroute_in_place_contact_setters`, whose rerouted setter keeps the file's own as `\lx@class@contact@<name>`)
+  DefConstructor!("\\lx@fm@obs@affil@run []{}", "");
   DefConstructor!("\\lx@fm@obs@annotate {}{}[]{}", "");
   Ok(())
 }
@@ -318,6 +321,10 @@ fn install_event_bindings(title_marks: TitleMarks) -> Result<()> {
           EmailMeaning::InPlace => "\\lx@fm@obs@email@inplace",
           EmailMeaning::Own => "\\lx@fm@obs@email@own",
         }
+      } else if *target == "\\lx@fm@obs@affil"
+        && lookup_definition(&T_CS!(&s!("\\lx@class@contact@{}", &cs[1..])))?.is_some()
+      {
+        "\\lx@fm@obs@affil@run"
       } else {
         *target
       };

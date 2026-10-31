@@ -7177,9 +7177,9 @@ Text.
           affiliation(" Univ B"),
           email_tt("bob@x.y", 2),
           // (the legend Bob Baker's note, its `†` kept: the kernel family's writer since 93a, OD #925 — ruling 2's
-          // legend line, which the old reader made an affiliation)
-          "<note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id3\"><sup \
-           xml:id=\"id3.1\">†</sup> Corresponding author</note>"
+          // legend line, which the old reader made an affiliation; its `mark` the dagger it prints, 94a r6)
+          "<note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"†\" role=\"thanks\" \
+           xml:id=\"id3\"><sup xml:id=\"id3.1\">†</sup> Corresponding author</note>"
         )
       )
     ]

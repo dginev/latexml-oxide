@@ -1096,8 +1096,30 @@ impl Resolver {
           None => waiting_notes.push(event),
         },
         EventKind::Contact => {
-          let owner: Vec<usize> = made.last().copied().into_iter().collect();
-          self.contact_event(index, event, &owner, "owner:adjacent");
+          // (an unlabelled annotation of the run of new authors, `annotate=run` or `new` — a class's `\affil` printed
+          // in place inside `\author`, rerouted to `\lx@add@affiliation[annotate=run]`: `JORGE RAMIREZ and EVGENY
+          // KRIVOSHEEV \affil{University of Trento} MARCOS BAEZ and …`, ci2018, 1805.12376 —, the run's names of the
+          // line as today's API attaches it (`Resolver::record_run`), not the name beside it alone)
+          let run: Vec<usize> = match event.annotate.as_deref() {
+            Some(annotate)
+              if event.label.is_none() && (annotate == "new" || annotate.starts_with("run")) =>
+            {
+              let role = contact_parts(event).0;
+              let run = if annotate == "new" {
+                self.new_run(&role)
+              } else {
+                self.record_run(annotate, &role)
+              };
+              run.into_iter().filter(|c| made.contains(c)).collect()
+            },
+            _ => Vec::new(),
+          };
+          if run.len() > 1 {
+            self.contact_event(index, event, &run, "owner:annotate:run");
+          } else {
+            let owner: Vec<usize> = made.last().copied().into_iter().collect();
+            self.contact_event(index, event, &owner, "owner:adjacent");
+          }
         },
         _ => {},
       }

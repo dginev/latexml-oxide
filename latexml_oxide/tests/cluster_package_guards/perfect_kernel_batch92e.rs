@@ -446,7 +446,8 @@ fn observer_reads_a_note_by_the_ink_test() {
     "D note  | note:adjacent ruling4:inkless",
     "D note  | note:adjacent ruling4:inkless",
     "D note  | note:adjacent ruling4:inkless",
-    "D note X | note:adjacent ruling4:inkless",
+    // (a `\phantom`'s letters are no ink of the note's text: invisible ink, OD #928 — 94a r2's B-2)
+    "D note  | note:adjacent ruling4:inkless",
   ]);
 }
 
@@ -536,7 +537,8 @@ fn kernel_thanks_colorbox_is_ink() {
     "C Bob Baker [] | line:names sep:column",
     "  n  | note:adjacent",
     "C Cat Cole [] | line:names sep:column",
-    "  n XX | note:adjacent",
+    // (the `\colorbox{…}{\phantom{XX}}` block prints, its letters no ink of the note's text: OD #928, 94a r2's B-2)
+    "  n  | note:adjacent",
     "C Dan Doe [] | line:names sep:column",
     "  n  | note:adjacent",
     "C Eve Ell [] | line:names sep:column",

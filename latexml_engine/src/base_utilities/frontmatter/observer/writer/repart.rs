@@ -18,9 +18,10 @@
 //! from an API call ([`structural`]) —, and no item read from its words alone is made ([`by_words`]: the classify
 //! helpers' institution, neither carved from one name, `John Smith, University of Toronto`, nor made of creators
 //! printed apart, `Bob Baker for the Pierre Auger Observatory` — review rev94a r3), nor one that may name a person or a
-//! team from its place alone (a `tabular` row under a name, `Ann Able\\ Bob Baker`), nor one across an alignment's
-//! cells ([`super::plan::block_span_tokens`]' cell check — review rev94a r4); no name or made item leaves a bracket
-//! open. Fail-safe, on the digested text: the new creators are built beside today's, and
+//! team from its place alone (a `tabular` row under a name, `Ann Able\\ Bob Baker`) or continued over a line that may
+//! (`Resolved::continued`), nor one across an alignment's cells ([`super::plan::block_span_tokens`]' cell check — review
+//! rev94a r4); no author is cut from a row of today's name under no names row ([`opens_a_row_under_no_names`] — r5);
+//! no name or made item leaves a bracket open. Fail-safe, on the digested text: the new creators are built beside today's, and
 //! kept only when they read as the reading ([`super::plan::difference`] finds nothing), every written name is one name
 //! — it prints a word, and no separator outside its brackets ([`not_one_name`]: no author of invisible ink, no two
 //! joined) —, they hold every word today's creators held, none duplicated — names and distinct items word for word, the
@@ -63,6 +64,8 @@ enum Item {
     made:   Made,
     role:   String,
     tokens: Tokens,
+    /// a legend's label, the mark its note shows
+    label:  Option<String>,
   },
 }
 
@@ -197,6 +200,7 @@ fn item_source(key: &Key, assoc: &Assoc, todays: &BTreeMap<Key, Node>) -> Option
     made,
     role: assoc.role.clone(),
     tokens,
+    label: assoc.label.clone(),
   })
 }
 
@@ -263,9 +267,14 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
       wants.push((Owner::Block, assoc));
     }
   }
+  // (nor by today's API: an unlabelled annotation of the run of new authors is every name of the run's, as today's API
+  // attaches it — today's old reader merged names across two runs, so fewer of today's creators held it: 1805.12376)
   if let Some((key, _)) = owners.iter().find(|(key, assocs)| {
     assocs.len() > holders.get(*key).copied().unwrap_or(0).max(1)
       && !assocs.iter().all(|(_, a)| writes(a))
+      && !assocs
+        .iter()
+        .all(|(_, a)| rule_has(a, "owner:annotate:run"))
   }) {
     return declined(&s!("an item given more authors by no ruling: {key:?}"));
   }
@@ -321,6 +330,21 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
   }) {
     return declined(&s!("a one-word name parted at a comma: {}", c.name));
   }
+  // (a name the reading cuts from one of today's names at a line or row of it — no separator before it on its line —
+  // is an author only on structure: a names row above it ending with the name before (`Ann Able, Bob Baker,\\ Cid
+  // Cole`), a mark or a note on it (`Ann Able$^1$\\ Bob Baker$^2$`); a line's font, its words read as a name, are no
+  // boundary the page shows, so today's one creator stays — `$^1$Univ X,\\ \bf City Z` in a `tabular` made "City Z" an
+  // author, review rev94a r5 t06: the mirror of the person no item is made of, below)
+  if let Some((_, c)) = parted.iter().enumerate().find_map(|(k, (at, c))| {
+    let before = parted[..k].iter().rev().find(|(other, _)| other == at)?;
+    (!c.rule.contains("sep:")
+      && c.requests.is_empty()
+      && c.notes.is_empty()
+      && opens_a_row_under_no_names(c, before.1))
+    .then_some(parted[k])
+  }) {
+    return declined(&s!("a name cut from a row on no structure: {}", c.name));
+  }
   // (a name with a remark after it is a name too: `Bob Baker for the ATLAS Collaboration`, `Bob Baker (MIT)` — review
   // rev94a r2 B-1)
   if let Some(lost) =
@@ -355,8 +379,19 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
   // row of a `tabular` in `\author` printed under a name — `Ann Able\\ Bob Baker`, `Bob Baker for the Pierre Auger
   // Observatory`, `the PE11 team of Kepler` — is no affiliation by its place alone; today's one creator stays, as a
   // line of today's creators does. A word reading, read only to decline — review rev94a r4)
+  // (each line of an entry continued over lines — `resolved.continued` —, a line under the first one as a row of its
+  // own: `Ann Able\\ {\it Univ X}\\ Bob Baker\\ {\it Univ Y}` in a `tabular`, whose third row the reading continues
+  // into the second's entry now no cell's font sets it apart)
+  let lines_of = |assoc: &Assoc| -> Vec<String> {
+    resolved
+      .continued
+      .iter()
+      .flatten()
+      .find(|lines| norm(&lines.join(" ")) == norm(&assoc.text))
+      .map_or_else(Vec::new, |lines| lines[1..].to_vec())
+  };
   let reads_as_a_person = |assoc: &Assoc| {
-    !structural(assoc)
+    let person = !structural(assoc)
       && (may_name_a_person(&assoc.text)
         || [" for ", " on behalf of "].iter().any(|said| {
           assoc
@@ -373,7 +408,9 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
             "group",
           ]
           .contains(&w.as_str())
-        }))
+        }));
+    // (a line an entry is continued over, labelled or not: the label is its first line's)
+    person || lines_of(assoc).iter().any(|line| may_name_a_person(line))
   };
   // (the labels the reading's entries answer)
   let answered: Vec<String> = resolved
@@ -486,6 +523,51 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
   }
   let separators = blocks.into_iter().flat_map(separator_words).collect();
   Some(Repart { creators, block, separators })
+}
+
+/// Whether a reading creator's name opens a line or row of its block that no names row above it leads to: the Name
+/// event of its block printing its first words follows a line break, and the line above does not end with the name
+/// before it, `before` — past the marks, notes, separators and spacing after that name (`Ann Able, Bob Baker,\\ Cid
+/// Cole`; `\textbf{Xiaochen Li} \quad \\ \textbf{Michael L.~Littman}`, 2407.03321, whose `\quad` the break clears).
+/// A line above that ends with other ink (`$^1$Univ X,\\ City Z`: an institution, its comma its own) is no names row.
+/// A name on its line after other ink (a mark, a note) is no row's.
+fn opens_a_row_under_no_names(c: &RCreator, before: &RCreator) -> bool {
+  let (name, before) = (words(&c.name), words(&before.name));
+  with_ledger(|ledger| {
+    let Some(Entry::Author(block)) = ledger.entries.get(c.source) else {
+      return false;
+    };
+    let Outcome::Events { events, .. } = &block.outcome else {
+      return false;
+    };
+    let events = read_events(events);
+    let Some(at) = events.iter().position(|e| {
+      let text = words(&e.text);
+      e.kind == EventKind::Name && !text.is_empty() && name.starts_with(&text)
+    }) else {
+      return false;
+    };
+    // (back from it, layout and spacing aside: the line break, then the ink the line above ends with)
+    let mut back = events[..at].iter().rev().filter(|e| {
+      !matches!(
+        e.kind,
+        EventKind::Layout | EventKind::Sep(SepKind::Gap { .. })
+      )
+    });
+    if !back.next().is_some_and(|e| e.kind == EventKind::Break) {
+      return false;
+    }
+    let ink = back.find(|e| {
+      !matches!(
+        e.kind,
+        EventKind::Mark | EventKind::Note | EventKind::Sep(_)
+      )
+    });
+    !ink.is_some_and(|e| {
+      let text = words(&e.text);
+      e.kind == EventKind::Name && !text.is_empty() && before.ends_with(&text)
+    })
+  })
 }
 
 /// Whether a written name is no one name: it prints nothing, or, outside its brackets, a separator the blocks part
@@ -716,20 +798,21 @@ fn give_back_ink(holder: &mut RCreator, piece: &mut RCreator, assoc: &Assoc) -> 
   if piece.requests.is_empty() {
     return Some(());
   }
-  let answers = |requests: &[String], label: Option<&str>| {
-    label.is_some_and(|label| {
-      mark_labels(label)
-        .iter()
-        .any(|l| requests.iter().any(|r| label_matches(r, l)))
-    })
+  // (an item's labels are its legend's, as printed: the reading keys a legend answering several marks by the one its
+  // owner requested — `$^{1,2}$Univ X` under `Ann Able$^{1}$` is labelled `1` —, so the piece's `2` read it as none
+  // of its own; review rev94a r5 g13)
+  let answers = |requests: &[String], item: &Assoc| {
+    item_labels(item)
+      .iter()
+      .any(|l| requests.iter().any(|r| label_matches(r, l)))
   };
   let (own, shown) = (holder.requests.clone(), piece.requests.clone());
   for (from, into) in lists(holder).into_iter().zip(lists(piece)) {
     let mut kept = Vec::new();
     for item in std::mem::take(from) {
-      if answers(&shown, item.label.as_deref()) {
+      if answers(&shown, &item) {
         into.push(item.clone());
-        if !answers(&own, item.label.as_deref()) {
+        if !answers(&own, &item) {
           continue;
         }
       }
@@ -741,17 +824,58 @@ fn give_back_ink(holder: &mut RCreator, piece: &mut RCreator, assoc: &Assoc) -> 
     [&c.affiliations, &c.contacts, &c.notes]
       .into_iter()
       .flatten()
-      .any(|a| answers(std::slice::from_ref(mark), a.label.as_deref()))
+      .any(|a| answers(std::slice::from_ref(mark), a))
   };
   let foreign = [&holder.affiliations, &holder.contacts, &holder.notes]
     .into_iter()
     .flatten()
-    .any(|a| a.label.is_some() && !answers(&own, a.label.as_deref()));
+    .any(|a| a.label.is_some() && !answers(&own, a));
   if foreign && shown.iter().any(|m| !answered(piece, m)) {
     return None;
   }
   Some(())
 }
+
+/// The labels an item of the reading answers: those its legend's Mark prints — the Mark event its line opens with, just
+/// before its span in its block (Layout events aside), every label of it, a number range spelled out (`$^{1,2}$`,
+/// `$^{1-3}$`, `$^{1,*}$`: [`mark_requests`]) — else its own label's ([`mark_labels`]); none for an item of no label.
+fn item_labels(item: &Assoc) -> Vec<String> {
+  let Some(label) = item.label.as_deref() else {
+    return Vec::new();
+  };
+  let printed = item.source.and_then(|(index, span)| {
+    let (start, _) = span?;
+    with_ledger(|ledger| {
+      let Some(Entry::Author(block)) = ledger.entries.get(index) else {
+        return None;
+      };
+      let Outcome::Events { events, .. } = &block.outcome else {
+        return None;
+      };
+      read_events(events)
+        .iter()
+        .rev()
+        .find(|e| e.kind != EventKind::Layout && e.span.is_some_and(|(_, end)| end <= start))
+        .filter(|e| e.kind == EventKind::Mark)
+        .map(mark_requests)
+    })
+  });
+  let own = mark_labels(label);
+  match printed {
+    // (the legend's Mark, when it prints the item's own label: the event is the item's)
+    Some(printed)
+      if own
+        .iter()
+        .all(|l| printed.iter().any(|p| label_matches(p, l))) =>
+    {
+      printed
+    },
+    _ => own,
+  }
+}
+
+/// Whether a reading's rule holds `tag`.
+fn rule_has(assoc: &Assoc, tag: &str) -> bool { assoc.rule.split_whitespace().any(|t| t == tag) }
 
 /// Whether a reading's item was read from its words alone: a rule of the classify helpers (`classify:institution`, a
 /// piece of a row of names `reads_as_affiliation` takes for an institution).
@@ -1135,7 +1259,7 @@ fn write_items(
         let mut owner = owner.clone();
         document.append_clone(&mut owner, vec![node.clone()])?;
       },
-      Item::Make { made, role, tokens } => {
+      Item::Make { made, role, tokens, label } => {
         DebugFeature!(
           "frontmatter",
           "FRONT writer: re-part makes {made:?} {role} from {}",
@@ -1143,7 +1267,16 @@ fn write_items(
         );
         bgroup();
         assign_value("font", font.clone(), Some(Scope::Local));
-        let made_now = make(document, owner, *made, tokens, None, role, None);
+        let made_now = make(
+          document,
+          owner,
+          *made,
+          tokens,
+          None,
+          role,
+          None,
+          label.as_deref(),
+        );
         egroup()?;
         made_now?;
         if let Some(new) = elements(owner).pop() {
@@ -1192,6 +1325,14 @@ fn trim_breaks(document: &mut Document, node: &Node) {
         Some(child) if is(&child, "ltx:text") => at = child,
         _ => break,
       }
+    }
+  }
+  // (and the space it ends with, inside its last group: `{\it Department …, Japan }`, a group the entry now opens with
+  // its switch — 2307.03384)
+  if let Some(mut last) = document.findnodes("descendant::text()", Some(node)).pop() {
+    let content = last.get_content();
+    if content.ends_with(char::is_whitespace) {
+      let _ = last.set_content(content.trim_end());
     }
   }
 }
@@ -1393,7 +1534,12 @@ pub(super) fn apply(
     for node in built {
       document.remove_node(node);
     }
-    hold.discard();
+    // (a Fatal stays Fatal: logged without an `Err`, it is the document's, as `defer` commits one — review rev94a r5)
+    if hold.fatal_raised() {
+      hold.commit();
+    } else {
+      hold.discard();
+    }
     return Ok(false);
   }
   hold.commit();

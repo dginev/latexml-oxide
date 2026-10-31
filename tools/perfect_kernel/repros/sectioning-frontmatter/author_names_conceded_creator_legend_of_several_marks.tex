@@ -1,0 +1,17 @@
+% mechanism: the writer's reading (OD #928, review rev94a r5 g13; `repart::give_back_ink`, `item_labels`): a creator
+%   of today's the shadow reading took for the name before it's institution by its words is given back with its marks
+%   and the entries they answer — an entry's labels its legend's printed Mark, every label of it (`$^{1,2}$`), not the
+%   one label the reading keyed it by: "Univ X" is both names', "Univ Y" the observatory's alone.
+% witness: review rev94a r5 g/g13_both_legend (siblings: `$^{2,1}$`, `$^{1,*}$`)
+% oracle:  pdflatex 0 errors: "Ann Able1 , Kitt Peak Observatory2 / 1,2 Univ X / 2 Univ Y"
+% engines: rust 93a = 94a r5: Ann Able Univ X, the observatory Univ Y only; perl: not run
+% expect:  0 errors, 0 warnings; Ann Able Univ X; Kitt Peak Observatory Univ X and Univ Y
+% status:  RED (94a r5) -> GREEN (94a r6)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$, Kitt Peak Observatory$^{2}$\\ $^{1,2}$Univ X\\ $^2$Univ Y}
+\maketitle
+Body.
+\end{document}

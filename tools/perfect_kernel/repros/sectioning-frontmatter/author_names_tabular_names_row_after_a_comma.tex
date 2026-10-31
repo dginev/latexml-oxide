@@ -1,0 +1,16 @@
+% mechanism: a row of names under a names row is authors (OD #928; `repart::opens_a_row_under_no_names`'s supported
+%   side): the row above ends with Bob Baker's name (and its comma), so the re-part writes three creators — as
+%   2407.03321's `\textbf{Xiaochen Li} \quad \\ \textbf{Michael L.~Littman}`.
+% witness: 2407.03321; review rev94a r5 t/t06_fonts (the sibling of its decline)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker, / Cid Cole"
+% engines: rust 93a: one creator, the tabular its name; rust 94a r5: three creators; perl: not run
+% expect:  0 errors, 0 warnings; Ann Able, Bob Baker, Cid Cole
+% status:  GREEN (94a r5, kept in r6)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{\begin{tabular}{c}Ann Able, Bob Baker,\\ Cid Cole\end{tabular}}
+\maketitle
+Body.
+\end{document}

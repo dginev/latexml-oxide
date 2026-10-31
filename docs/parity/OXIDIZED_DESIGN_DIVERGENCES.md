@@ -27803,6 +27803,56 @@ one-column `tabular` (cut per row, as round 4); every word-shape probe (a01-a25,
 changed 18 / 105 / 7, none written-different. Scorer (3,000 sample, `run_94a_r5`): tiers identical to round 4's —
 5,732 of 5,838 (98.18 %), marks path 95.49 %, `article` 96.52 %, readability 24 papers.
 
+Round 6 (review rev94a r5's should-fixes; on 94b r2). An item's labels are its legend's printed Mark (`repart::
+item_labels`: the Mark event just before its span, every label, ranges spelled out — `$^{1,2}$`, `$^{1-3}$`, `$^{1,*}$`),
+not the one label the reading keyed it by, so a conceded creator's mark finds a legend it shares (`Ann Able$^{1}$, Kitt
+Peak Observatory$^{2}$\\ $^{1,2}$Univ X\\ $^2$Univ Y`: Univ X both names', as pdflatex; rounds 1-5 and 93a gave the
+observatory Univ Y alone). A legend the writer makes a note (`Made::Legend`: the block-line cut, the cut by marks, the
+API legend, the re-part) shows its printed mark (`apply::show_legend_mark`): its `mark` the glyph of each label, or the
+superscript its text opens with where that prints it (`\textsuperscript{*}`'s `*`, `$^*$`'s `∗`), and the owner's name
+shows that mark no more — a superscript of its own (`\lx@frontmatter@keepsup`), one shown for no entry, or the
+glyph's token of a mark formula not yet rewritten (revtex's `$^{1,\star}$` keeps its `1`); with no `mark` the page set
+the note's default dagger beside the name's star ("Observatory*†", since round 1; 93a wrote these as affiliations).
+A made item starts after its mark (`plan::block_span_tokens`): past the mark's closing shift and spaces, the entry's own
+switches its own (`$^1$\it`, `\small`, `\color{red}`, `\textit{…}`: the font Layout event before the first Name has no
+span, and the item lost the switch); anything else between, or no balanced run so, and it starts at its ink as before.
+A cell's font event is no names-line evidence (`labels::later_line_is_names`): each cell opens in the alignment's font,
+so the lexer's change between two cells' runs is a reset as often as a switch (`\begin{tabular}{c}Ann Able$^1$\\
+$^1$\it Univ X,\\ \bf Dept Y\\ City Z\end{tabular}` read an author "City Z"). The re-part cuts no author from a row of
+today's name on no structure (`repart::opens_a_row_under_no_names`): a reading name opening a line, no separator before
+it on the line, no mark or note of its own, is written only under a names row ending with the name before it (past its
+marks, notes, separators — `Ann Able, Bob Baker,\\ Cid Cole`; 2407.03321's `\textbf{Xiaochen Li} \quad \\`, whose
+`\quad` the break clears); a line ending with an institution is none (`$^1$Univ X,\\ \bf City Z`). And no item is
+made continued over a line that may name a person, labelled or not (the person check over `Resolved::continued`: t06's
+"City Z" row continues Univ X; today's one creator stays). Row ends read as LaTeX reads them (`cell_tokens`: `\\*
+[2pt]`'s star and skip past the spaces before each, the next cell's leading spaces none of its text). A made item's
+trailing space inside its last group is taken (`{\it …, Japan }`, 2307.03384). A take-back with a Fatal raised commits
+the held diagnostics (`DiagnosticsHold::fatal_raised`): Fatal stays Fatal. Guards `perfect_kernel_batch94a` (+6:
+`a_legend_of_several_marks_is_each_carriers`, `a_legend_note_shows_its_mark`, `a_made_item_keeps_its_switch`,
+`a_cells_font_reset_is_no_author`, `a_name_cut_from_a_row_needs_a_names_row`, `an_affil_after_a_run_of_names_is_the_runs`;
+the y01 row end in `items_are_cut_at_an_alignments_cells`, the h03 note's mark in `a_conceded_creator_keeps_its_marks`,
+the tabular names asserted whole), `latexml_core` `a_hold_tells_a_fatal_raised_in_it`; updated to the one-mark output:
+`batch61::marked_affiliation_review_shapes`, `batch77o::aistats_note_marked_address_still_pairs_by_column`,
+`batch77p::legend_line_is_no_name`, `batch77p::legend_row_shares_the_institution`,
+`batchfms2b::a_marked_affiliation_is_cut_at_its_marks`; to the reading since round 2 (a `\phantom`'s letters no note
+ink): `batch92e::observer_reads_a_note_by_the_ink_test`, `batch92e::kernel_thanks_colorbox_is_ink`. Repros
+`author_names_conceded_creator_legend_of_several_marks`, `author_names_legend_note_shows_its_mark`,
+`author_names_conceded_creator_legend_note_mark`, `author_names_tabular_item_keeps_its_switch`,
+`author_names_tabular_font_reset_is_no_author`, `author_names_tabular_row_after_an_institution_is_no_author`,
+`author_names_tabular_names_row_after_a_comma`, `author_names_tabular_row_end_star_and_skip`,
+`raw_class_affil_runs_inside_one_author`; catalog `author_names_tabular_person_row_continued_stays` (the font-parted
+persons of 1009.1429 in a `tabular`: each row its own unmarked entry now, declined as `Ann Able\\ Bob Baker`).
+Known residual: a range legend line (`$^{1-2}$Univ X`) is read as no one's (the block's), 93a's too.
+Probes (the review's n/, g/, t/ sets and 57 siblings; pdflatex 0 errors, 0 errors and 0 warnings each): the legend,
+range, symbol+number and switch siblings as pdflatex prints them; one mark per legend note in the HTML; `u01_four_rows`
+(`$^1$Univ X,\\ Dept Y\\ City Z`) back to 93a's one creator, the price of the person check. Witnesses (59 papers):
+1805.12376 all five authors their run's affiliation; 2308.10621, 2407.07614, 2601.00057, 2603.12826, 2609.32870,
+2609.33104 a legend note's mark (the name's duplicate taken); the rest, 1109.6488 among them (its legend García's, the
+team a creator), the tip's. Census against round 5 (the three populations): changed 8 / 26 / 0, all a note's mark but
+1301.3953 (94b r2's in-block entries per mark, the tip's), no word lost or added, none written-different, rc/E/F/W
+unchanged. Scorer (3,000 sample, `run_94a_r6`): tiers identical to round 5's — 5,732 of 5,838 (98.18 %), marks path
+95.49 %, `article` 96.52 %, readability 24 papers; 10 papers' creators differ, 9 a note's mark, 2107.11510 the tip's.
+
 ### 932. aa's sole `\institute` is every author's unless the class's `\inst{n}` picks it, as llncs's (Perl: inst_support's `affiliation:1`, which no author requests; the first author's by the prefix-stripped fallback)
 
 aa.cls:736-757 counts an `\institute`'s pieces at its top-level `\and`s (`\aa@nbinstitutes`) and `\aainstitutename`
@@ -27864,7 +27914,13 @@ by the API's evidence (1303.3004's `\email{rnarayan@…, jmcclintock@…, atchek
 address) …"), a mark (w-art.cls's `\address[\inst{1}]{…}`, 0910.5837, 1105.1753, quant-ph0606237; jheppub's
 `\affiliation[a]{…}`, 2303.16316) or a key (stacs.cls's `\address[uniroma]{…}`, 0902.1737), which nothing in the call
 tells apart — a generic `name={#1}` (review rev94b B2) wrote "\hbox{\@textsuperscript{1}}" and "a" as contact names on
-the 3,000 sample, so the caption stays dropped (catalog repro `raw_class_optional_address_is_named`, deferred).
+the 3,000 sample, so the caption stays dropped (catalog repro `raw_class_optional_address_is_named`, deferred). The
+observer reads such an affiliation as the API attaches it (94a r6): the rehearsal binds a rerouted in-place setter
+(`\lx@class@contact@<name>` defined) to `\lx@fm@obs@affil@run`, a Contact event of `annotate=run`, which a names line
+gives every name of the run before it (`Resolver::record_run` within the line, rule `owner:annotate:run`), not the
+name beside it alone — ci2018's `JORGE RAMIREZ and EVGENY KRIVOSHEEV \affil{University of Trento} MARCOS BAEZ and …`
+(1805.12376) has all five authors their run's affiliation; repro `raw_class_affil_runs_inside_one_author`, guard
+`perfect_kernel_batch94a::an_affil_after_a_run_of_names_is_the_runs`.
 Content is never moved out of its sentence: the file's own definition is kept (`\lx@class@contact@<name>`) and runs
 unless the call is a contact line of the authors being set (`frontmatter_stores::class_contact`) — inside a creator's
 own content while it digests (`creator_entry_in_progress`: its first content still its `PlaceKeeper`, which the

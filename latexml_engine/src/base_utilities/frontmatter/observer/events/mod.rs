@@ -150,6 +150,9 @@ pub struct Event {
   /// a note's: nothing in it prints ([`leaves_no_ink`] on its digested body, the test the XML's note is dropped by:
   /// `\thanks{}`, `\thanks{~}`, OXIDIZED_DESIGN_DIVERGENCES #916)
   pub inkless:      bool,
+  /// an in-block annotation's (`\lx@annotate@frontmatter`) `annotate=` option: the authors today's API gives it (`run`,
+  /// `new`, a number, `all`; Perl Base_Utility.pool.ltxml:520-536)
+  pub annotate:     Option<String>,
 }
 
 impl Event {
@@ -170,6 +173,7 @@ impl Event {
       space_after: false,
       meaning: EmailMeaning::Binding,
       inkless: false,
+      annotate: None,
     }
   }
 }
@@ -863,16 +867,22 @@ impl Walker {
       | "\\lx@fm@obs@email@inplace"
       | "\\lx@fm@obs@email@own"
       | "\\lx@fm@obs@orcid"
-      | "\\lx@fm@obs@affil" => {
+      | "\\lx@fm@obs@affil"
+      | "\\lx@fm@obs@affil@run" => {
         let mut contact = Event::new(EventKind::Contact);
         contact.role = Some(
           match cs.as_str() {
             "\\lx@fm@obs@orcid" => "orcid",
-            "\\lx@fm@obs@affil" => "affiliation",
+            "\\lx@fm@obs@affil" | "\\lx@fm@obs@affil@run" => "affiliation",
             _ => "email",
           }
           .to_string(),
         );
+        // (a raw file's in-place setter the API took, `\lx@add@affiliation[annotate=run]` — the run of new authors'
+        // entry, as today's attaches it: ci2018's `\affil` after `JORGE RAMIREZ and EVGENY KRIVOSHEEV`, 1805.12376)
+        if cs == "\\lx@fm@obs@affil@run" {
+          contact.annotate = Some("run".to_string());
+        }
         contact.meaning = match cs.as_str() {
           "\\lx@fm@obs@email@inplace" => EmailMeaning::InPlace,
           "\\lx@fm@obs@email@own" => EmailMeaning::Own,
@@ -880,7 +890,7 @@ impl Walker {
         };
         let label = arg(1);
         contact.label = (!label.is_empty()).then_some(label);
-        contact.text = if cs == "\\lx@fm@obs@affil" {
+        contact.text = if cs.starts_with("\\lx@fm@obs@affil") {
           arg(2)
         } else {
           raw_lines(w, 2).trim().to_string()
@@ -893,7 +903,7 @@ impl Walker {
         // $^2$…}`, cond-mat0611585) — never one entry under the first mark with the second dropped (review rev94b B1).
         // An entry holding a mark past its leading run, which its text would drop (`$^1$Univ A$^2$`), is read as
         // before: the call's whole ink, unlabelled)
-        let labelled = if cs == "\\lx@fm@obs@affil" && contact.label.is_none() {
+        let labelled = if cs.starts_with("\\lx@fm@obs@affil") && contact.label.is_none() {
           w.get_arg(2)
             .and_then(|body| labelled_entries(&lex_events(body)))
         } else {
@@ -962,6 +972,11 @@ impl Walker {
           EventKind::Contact
         });
         event.role = Some(role);
+        event.annotate = options.split(',').find_map(|kv| {
+          kv.trim()
+            .strip_prefix("annotate=")
+            .map(|a| a.trim().to_string())
+        });
         event.text = arg(4);
         self.event(event, d, nest);
       },
