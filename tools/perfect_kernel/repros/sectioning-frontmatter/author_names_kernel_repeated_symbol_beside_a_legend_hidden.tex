@@ -1,0 +1,19 @@
+% mechanism: a repeated symbol in a kernel (article) author mark beside a single-symbol legend is hidden (OD #928 round
+%   9, Known residual, the compound-mark class): the reading splits `**` into `*,*` (label `[1,*,*]`), so
+%   `writer/mod.rs` `hide_answered_marks` takes every star as the legend's answered mark and the name's `,∗,∗∗` goes.
+%   The revtex formula path keeps it since 94a r9 (`apply::repeated_symbols`); this is the same visible loss on the
+%   kernel path, pre-existing since 93a. One compound-mark rule (the superscript path, the formula path's `token_runs`
+%   and the legend's label) is to cover both.
+% witness: review rev94a r9 p/a03 (siblings a01 `***`, a05 `†,††`, a10, a11)
+% oracle:  pdflatex 0 errors: "Ann Able1,∗,∗∗, Bob Baker1 / 1Univ X / ∗Corresponding author"
+% engines: rust 93a, 94b r5, 94a r9: "Ann Able [∗]" — the name's 1,∗,∗∗ hidden; perl: not run
+% expect:  0 errors, 0 warnings; Ann Able shows 1,∗∗ beside the note's ∗ (the ∗∗ kept), Univ X; Bob Baker 1, Univ X
+% status:  RED (catalog, no guard)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{A Title}
+\author{Ann Able$^{1,*,**}$, Bob Baker$^{1}$\\ $^1$Univ X\\ $^{*}$Corresponding author}
+\begin{document}
+\maketitle
+Body.
+\end{document}
