@@ -602,14 +602,6 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       }
     }).unwrap_or_default();
     options.insert("_label".to_string(), stub_label.clone());
-    // (a contact of a raw class's call in doubt the flush kept: settled where the frontmatter is placed, its line's
-    // printed ink lifted or the contact dropped — `place::settle_contacts_in_doubt`)
-    if lookup_bool("lx_frontmatter_flushing") {
-      let doubt = lookup_string("lx_frontmatter_entry_doubt");
-      if !doubt.is_empty() {
-        options.insert("_doubt".to_string(), doubt);
-      }
-    }
     let datum = if preformatted {
       TagContent::Box(xcontent)
     } else {

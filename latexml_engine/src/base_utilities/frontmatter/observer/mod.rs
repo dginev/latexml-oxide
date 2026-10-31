@@ -46,7 +46,6 @@ pub use events::{
 };
 pub(in crate::base_utilities) use ledger::{
   field_stamped, note_field_stamp, record_api_call, record_author_call, record_clear,
-  record_doubt_dropped,
 };
 pub use ledger::{note_binding_load, record_note_text as fm_record_note_text};
 // (the one reading of a formula's mark-ness, for `ab_audit fmshadow`'s view of the final XML)

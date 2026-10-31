@@ -21,8 +21,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use super::{
   super::{
     events::{
-      Event, EventKind, FontScope, InkFonts, Wrap, changes_font, entry_font, lex_events,
-      switch_free,
+      Event, EventKind, FontScope, InkFonts, Wrap, changes_font, entry_font, font_declaration,
+      lex_events, switch_free, text_font_command,
     },
     ledger::{ApiCall, Outcome, field_stamped},
     policy::TitleMarks,
@@ -671,18 +671,20 @@ fn container_wrap(
   for (n, &((start, _), first)) in containers.iter().enumerate() {
     let at = usize::from(start).checked_sub(base)?;
     // (the innermost container's argument is switch-free up to its first entry; an outer one's holds the next
-    // container, whose opening tokens and the switches before it — kept in the wrap, read as `between` — are that
-    // one's: `\emph{\underline{…\\…}}`, review rev94b r5 BL3)
+    // container, and before it nothing but font declarations — kept in the wrap, every entry printing under them, as
+    // pdflatex prints every line: `\emph{\bfseries\underline{…\\…}}`, review rev94b r5 BL3 — and spaces, which the
+    // wrap leaves out; anything else between prints or acts once, which a copy in every entry would repeat — a
+    // `\newline`'s break, a `\quad`'s space: the base's cut, review rev94b r6 B2)
     let innermost = n + 1 == containers.len();
     if let Some(after) = after {
       let between = content.get(after..at)?;
       if !between
         .iter()
-        .all(|t| matches!(t.get_catcode(), Catcode::CS | Catcode::SPACE))
+        .all(|t| t.get_catcode() == Catcode::SPACE || font_declaration(t))
       {
         return None;
       }
-      open.extend_from_slice(between);
+      open.extend(between.iter().filter(|t| t.get_catcode() != Catcode::SPACE));
     }
     if content.get(at)?.get_catcode() != Catcode::CS {
       return None;
@@ -710,7 +712,28 @@ fn container_wrap(
     outer.get_or_insert(at);
     after = Some(arg + 1);
   }
-  Some((Wrap { open, closes: containers.len() }, outer?))
+  // (a kernel text font command whose argument opens with the outermost container — `\textbf{\emph{…\\…}}`: a
+  // macro, `\bgroup\bfseries #1\egroup`, no whatsit holding the entries' ink — opens each entry again too, the font then
+  // the one where it starts; pdflatex prints every line bold italic — review rev94b r6 S1)
+  let mut outer = outer?;
+  let mut closes = containers.len();
+  loop {
+    let mut b = outer;
+    while b > 0 && content[b - 1].get_catcode() == Catcode::SPACE {
+      b -= 1;
+    }
+    if b < 2
+      || content[b - 1].get_catcode() != Catcode::BEGIN
+      || !text_font_command(&content[b - 2])
+      || close_of(b - 1, (Catcode::BEGIN, None)).is_none()
+    {
+      break;
+    }
+    open.splice(0..0, content[b - 2..b].iter().copied());
+    closes += 1;
+    outer = b - 2;
+  }
+  Some((Wrap { open, closes }, outer))
 }
 
 /// `tokens` digested under the font changes `font` ([`events::entry_font`]): `\lx@fm@entry@font{n}` before them, the

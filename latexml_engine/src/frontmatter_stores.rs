@@ -1741,27 +1741,22 @@ fn in_place_contact_setter(name: &str) -> Result<Option<(usize, bool)>> {
 /// path reads such a list right only under a binding that declares the class's mark conventions (cpc-hepnp.cls's
 /// `\address` after `\maketitle`: its `,n)` e-mail marks and typed-number lists, OD #912, task 91c; just.cls's binding
 /// routes the same list).
+///
+/// A line in doubt — a line of its own that leads with a mark no author requests at the call
+/// ([`leads_with_unrequested_mark`]), an in-place setter's optional key no author gave, an optional the API cannot read
+/// ([`optional_contact`]) — is no creator's contact: the class's line, printed where it is called and digested once, no
+/// API call queued for it (review rev94b r3 B2: `\affil{\inst{3}Lab C}` under `Ann\inst{1}` and `Bob\inst{2}` was a
+/// nameless creator's). A call kept in doubt beside its printed line digested the line twice — a counter stepped twice,
+/// a label made twice (review rev94b r6 B1: "Univ B2", "Body 2." where pdflatex prints 1) —, so none is kept: a mark
+/// only a later `\author` requests leaves its line where the class prints it, its author with no contact (the residual
+/// `raw_class_optional_mark_a_later_author_requests`, OXIDIZED_DESIGN_DIVERGENCES #936). A stored setter's call keeps
+/// the API's.
 fn class_contact(api: Tokens, class: Tokens, in_place: bool) -> Tokens {
-  // (not where the API call is an `[optional]{mandatory}` setter's, which decides again with the class's line itself,
-  // [`optional_contact`]: a line in doubt is printed once)
-  let doubt = (in_place && api.unlist_ref().first() != Some(&T_CS!("\\lx@class@contact@optional")))
-    .then(|| unrequested_mark(last_group(&class)))
-    .flatten();
-  contact_call(api, class, in_place, doubt)
-}
-
-/// [`class_contact`]'s choice, `doubt` the operand of a mark the line leads with that no author requests yet
-/// ([`unrequested_mark`]): a title-block line in doubt prints where it is called, its API call queued in doubt beside
-/// it ([`doubtful`]) — review rev94b r4 S1, r5 BL1: a later `\author{and Bob Baker\inst{2}}` requests the
-/// `\address[\inst{2}]{…}` before it, which the class's line had left in the body.
-fn contact_call(api: Tokens, class: Tokens, in_place: bool, doubt: Option<Vec<Token>>) -> Tokens {
-  if creator_entry_in_progress() {
+  if creator_entry_in_progress()
+    || (title_block_line(in_place)
+      && !(in_place && leads_with_unrequested_mark(last_group(&class))))
+  {
     api
-  } else if title_block_line(in_place) {
-    match doubt {
-      Some(operand) => doubtful(api, class, &operand),
-      None => api,
-    }
   } else {
     class
   }
@@ -1776,87 +1771,6 @@ fn title_block_line(in_place: bool) -> bool {
     && !author_creators_placed()
     && !frontmatter_entry_sealed("ltx:creator", "author")
 }
-
-/// The value naming the rerouted setter's call in doubt being queued ([`doubtful`]): the queue marks its entry
-/// (`queue.rs`, [`CONTACT_DOUBT_ATTR`]), the observer's ledger its call, and the flush digesting it the contact it makes
-/// (`_doubt`, base_utilities `place::settle_contacts_in_doubt`).
-pub(crate) const CONTACT_DOUBT: &str = "lx_class_contact_doubt";
-/// The queued entry's attribute naming the call in doubt it came from ([`CONTACT_DOUBT`]).
-pub(crate) const CONTACT_DOUBT_ATTR: &str = "_class_contact_doubt";
-
-/// A title-block line in doubt (review rev94b r3 B2, r4 S1, r5 BL1-BL2): it leads with a mark no author requests yet,
-/// and a later `\author` may. The class's line prints where it is called, as the class prints it, between the two
-/// marks of its ink (`\lx@class@contact@ink`); the API's labelled call is queued beside it in doubt
-/// (`\lx@class@contact@doubt{k}`). The `\maketitle` flush that places the authors keeps the call when one of its
-/// authors requests the mark, and the frontmatter's placement lifts the line's ink then — when it is exactly a whole
-/// paragraph of its own, else the contact goes and the line stays (base_utilities `place::settle_calls_in_doubt`,
-/// `place::settle_contacts_in_doubt`). Any other flush — no author requesting it, the fallback at a `\section` or
-/// `\end{document}` — drops the call: the line stays where the class printed it (orph3's `\address[\inst{3}]{Lab C,
-/// Place}` under `Ann Able\inst{1} and Bob Baker\inst{2}`; s1's `\address[\inst{9}]{Univ Z, Zed}` before `Pre text.`:
-/// no nameless creator, the words where pdflatex prints them, in its order). A line holding a note, a label or a
-/// counter step is not queued at all ([`counts_or_labels`]): kept, the call would digest them a second time.
-fn doubtful(api: Tokens, class: Tokens, operand: &[Token]) -> Tokens {
-  if counts_or_labels(class.unlist_ref()) {
-    return class;
-  }
-  let k = lookup_int("lx_class_contact_doubts") + 1;
-  assign_value(
-    "lx_class_contact_doubts",
-    Stored::Int(k),
-    Some(Scope::Global),
-  );
-  assign_value(
-    &s!("lx_class_contact_doubt_key_{k}"),
-    Stored::from(Tokens::new(operand.to_vec()).to_string()),
-    Some(Scope::Global),
-  );
-  let k = ExplodeText!(&k.to_string());
-  let mut out = vec![T_CS!("\\lx@class@contact@doubt"), T_BEGIN!()];
-  out.extend(k.iter().copied());
-  out.push(T_END!());
-  out.extend(api.unlist());
-  out.extend([T_CS!("\\lx@class@contact@doubt"), T_BEGIN!(), T_END!()]);
-  let ink = |out: &mut Vec<Token>, at: &str| {
-    out.extend([T_CS!("\\lx@class@contact@ink"), T_BEGIN!()]);
-    out.extend(k.iter().copied());
-    out.extend([T_END!(), T_BEGIN!()]);
-    out.extend(ExplodeText!(at));
-    out.push(T_END!());
-  };
-  ink(&mut out, "begin");
-  out.extend(class.unlist());
-  ink(&mut out, "end");
-  Tokens::new(out)
-}
-
-/// Whether `tokens` hold a command that steps a counter or makes a note or a label (`\footnote`, `\thanks`, `\label`,
-/// `\stepcounter`, …): a line in doubt holding one is not queued in doubt ([`doubtful`]), since a call kept beside its
-/// printed line digests it twice.
-fn counts_or_labels(tokens: &[Token]) -> bool {
-  tokens.iter().any(|t| {
-    t.get_catcode() == Catcode::CS
-      && t.with_cs_name(|n| {
-        matches!(
-          n,
-          "\\footnote"
-            | "\\footnotemark"
-            | "\\footnotetext"
-            | "\\thanks"
-            | "\\label"
-            | "\\stepcounter"
-            | "\\refstepcounter"
-            | "\\addtocounter"
-            | "\\setcounter"
-            | "\\marginpar"
-            | "\\index"
-        )
-      })
-  })
-}
-
-/// The operand of the mark the call in doubt `k` leads with ([`doubtful`]), which an author of the flush requests or not
-/// (base_utilities `place::settle_calls_in_doubt`).
-pub(crate) fn doubt_key(k: &str) -> String { lookup_string(&s!("lx_class_contact_doubt_key_{k}")) }
 
 /// The content of the last braced group of `tokens`: a rerouted setter's class call's mandatory argument.
 fn last_group(tokens: &Tokens) -> &[Token] {
@@ -1933,18 +1847,18 @@ fn leading_mark_operand(line: &[Token]) -> Option<Vec<Token>> {
   operand(at + 1)
 }
 
-/// The operand of the printed mark `line` leads with ([`leading_mark_operand`]) when its label no author's name requests,
-/// queued or digested in the flush (`queued_authors_requesting`, `digested_authors_requesting`), the names showing
-/// marks of their own (`authors_show_marks`): a contact line no creator asks for, which the
-/// API would give to a creator of no name (review rev94b r3 B2: orph3's `\address[\inst{3}]{Lab C, Place}`, orph6's
-/// `\affil{\inst{3}Lab C, Place}` under `Ann Able\inst{1} and Bob Baker\inst{2}`).
-fn unrequested_mark(line: &[Token]) -> Option<Vec<Token>> {
-  leading_mark_operand(line).filter(|operand| {
+/// Whether `line` leads with a printed mark ([`leading_mark_operand`]) whose label no author's name requests at the
+/// call, queued or digested in the flush (`queued_authors_requesting`, `digested_authors_requesting`), the names showing
+/// marks of their own (`authors_show_marks`): a contact line no creator asks for, which the API would give to a creator
+/// of no name (review rev94b r3 B2: orph3's `\address[\inst{3}]{Lab C, Place}`, orph6's `\affil{\inst{3}Lab C, Place}`
+/// under `Ann Able\inst{1} and Bob Baker\inst{2}`).
+fn leads_with_unrequested_mark(line: &[Token]) -> bool {
+  leading_mark_operand(line).is_some_and(|operand| {
     operand
       .iter()
       .any(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
       && authors_show_marks()
-      && queued_authors_requesting(operand).is_empty()
+      && queued_authors_requesting(&operand).is_empty()
       && !digested_authors_requesting(&Tokens::new(operand.clone()).to_string())
   })
 }
@@ -2024,11 +1938,14 @@ fn optional_contact(name: &str, in_place: bool, opt: Tokens, arg: Tokens) -> Res
         && t.with_cs_name(|n| matches!(n, "\\inst" | "\\textsuperscript" | "\\@textsuperscript")))
   });
   if mark {
-    // (a mark no queued name requests is in doubt — review rev94b r3 B2: the address it labels a nameless creator's; an
-    // in-place setter's call decided where the authors are placed, [`doubtful`], review rev94b r4 S1)
-    let doubt = unrequested_mark(&opt_tokens);
-    if doubt.is_some() && !in_place {
-      return Ok(decide(call("", arg)));
+    // (a mark no author requests at the call is in doubt — review rev94b r3 B2: the address it labels a nameless
+    // creator's; an in-place setter's line the class's, printed once, review rev94b r6 B1: [`class_contact`])
+    if leads_with_unrequested_mark(&opt_tokens) {
+      return Ok(if in_place {
+        class
+      } else {
+        decide(call("", arg))
+      });
     }
     // (an address's line read for its marks as an affiliation's is, `\lx@affiliation@withinst`: the mark labels it and
     // prints nothing of its own in it)
@@ -2040,12 +1957,7 @@ fn optional_contact(name: &str, in_place: bool, opt: Tokens, arg: Tokens) -> Res
       wrapped.push(T_END!());
       line = wrapped;
     }
-    return Ok(contact_call(
-      call("", Tokens::new(line)),
-      class,
-      in_place,
-      doubt,
-    ));
+    return Ok(decide(call("", Tokens::new(line))));
   }
   let plain = trimmed
     .iter()
@@ -2127,9 +2039,8 @@ fn optional_contact(name: &str, in_place: bool, opt: Tokens, arg: Tokens) -> Res
       return Ok(decide(call(options, arg)));
     }
   }
-  // (in doubt: an in-place setter's line is the class's, printed where it is called — a key no author can request, so
-  // no call is queued beside it (review rev94b r5 BL1: deferred, two class lines swapped) —, a stored setter's call the
-  // API's without the optional)
+  // (in doubt: an in-place setter's line is the class's, printed where it is called and digested once — a key no author
+  // gave, an optional the API cannot read: [`class_contact`] —, a stored setter's call the API's without the optional)
   Ok(if in_place {
     class
   } else {
@@ -4392,7 +4303,8 @@ fn abstract_setter_definitions() -> Vec<(&'static str, &'static str, Definer, Ve
 }
 
 /// Declarations and spacing that typeset nothing (font, size, paragraph shape), taking no argument (also the
-/// declarations an author line's separator takes the gap before: `base_utilities::spaced_name_separators`).
+/// declarations an author line's separator takes the gap before: `base_utilities::spaced_name_separators`). The font
+/// declarations come first, up to `\selectfont`: `events::font_declaration` reads them so.
 pub(crate) const LAYOUT: &[&str] = &[
   "\\tiny",
   "\\scriptsize",
@@ -5677,12 +5589,6 @@ LoadDefinitions!({
     let cls = cls.to_string();
     reroute_raw_class_stores(&cls)?;
     reroute_in_place_contact_setters(&cls)?;
-  });
-  // A title-block line in doubt being queued ([`doubtful`]): the call `k` the queue marks its entry with (and the
-  // observer's ledger its call), none when empty.
-  DefPrimitive!("\\lx@class@contact@doubt{}", sub[(k)] {
-    let k = k.to_string().trim().to_string();
-    assign_value(CONTACT_DOUBT, Stored::from(k), Some(Scope::Global));
   });
   // A rerouted contact setter's call that prints its line where it is called ([`class_contact`]).
   DefMacro!("\\lx@class@contact{}{}", sub[(api, class)] {

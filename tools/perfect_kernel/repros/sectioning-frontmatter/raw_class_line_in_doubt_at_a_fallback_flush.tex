@@ -4,10 +4,10 @@
 %          Able1", "Body."
 % engines: rust 94b r5 = 0 errors, 0 warnings: the fallback flush at `\section` digested the call in doubt — a creator
 %          of no name holding "Univ Z, Zed", the printed "(9)" gone; 94b r4 and 94a r8 = the line in the body
-% expect:  0 errors, 0 warnings; a flush other than a `\maketitle`'s drops a call in doubt (`place.rs`
-%          `settle_calls_in_doubt`): the line stays where the class printed it, no nameless creator; Ann Able "Univ A,
-%          Town"; eager and --streaming the same
-% status:  RED (94b r5) -> GREEN (94b r6)
+% expect:  0 errors, 0 warnings; a line in doubt queues no API call (`frontmatter_stores.rs` `class_contact`), so no
+%          flush — the fallback at a `\section` neither — digests one: the line stays where the class printed it, no
+%          nameless creator; Ann Able "Univ A, Town"; eager and --streaming the same
+% status:  RED (94b r5) -> GREEN (94b r6; r7: no call queued in doubt — r4's output)
 % preload: ar5iv.sty
 \begin{filecontents*}[overwrite]{inplaceaddr.cls}
 \ProvidesClass{inplaceaddr}

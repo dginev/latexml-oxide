@@ -28159,10 +28159,10 @@ sectioning-frontmatter/`raw_class_contact_in_a_box_stays_the_class`, `raw_class_
 Round 4 (review rev94b r3): B2 a line of its own, or an optional argument, leading with a printed mark (`\inst{3}`,
 `\textsuperscript{3}`, `$^{3}$`) that no author's name requests — queued (`queued_authors_requesting`) or digested in
 the flush (`digested_authors_requesting`), the names showing marks of their own (`authors_show_marks`) — is in doubt
-(`frontmatter_stores.rs` `unrequested_mark`, in `class_contact` and `optional_contact`): the API gave it to a
+(`frontmatter_stores.rs` `leads_with_unrequested_mark`, in `class_contact` and `optional_contact`): the API gave it to a
 creator of no name (`\address[\inst{3}]{Lab C, Place}`, `\affil{\inst{3}Lab C, Place}` under `Ann\inst{1}`,
-`Bob\inst{2}`); in place it is the class's line, printed where it is called (its call kept by `\maketitle` since round 6, below),
-a stored setter's call the API's as before. B2b a comma-separated list
+`Bob\inst{2}`); in place it is the class's line, printed where it is called and digested once (rounds 5-6 decided it
+later; removed in round 7, below), a stored setter's call the API's as before. B2b a comma-separated list
 of single words no one requests (`\address[c, d]{…}`) is a key list, in doubt, no caption. The writer's invariant
 (`writer::writes_a_nameless_creator`, every written family): a plan making an item from the queued tokens for the
 author block's own where today's holds no nameless creator — the re-part's block included — is declined whole,
@@ -28188,45 +28188,47 @@ class; a second box at the same depth (another minipage) is another. The `\autho
 unit test `writer::tests::the_writer_never_writes_a_nameless_creator`. Known residual: an in-block `\affil{\inst{3}…}`
 inside `\author{}` whose label no name requests is still the API's creator of no name (no class line can stand inside
 the names; the in-block shape `a_in`, reported for a ruling).
-Round 5 (review rev94b r4 S1, S2): S1 a title-block line in doubt is decided where the authors are placed, not at the
-call: a later `\author{and Bob Baker\inst{2}}` requests the `\address[\inst{2}]{…}` before it (capa-like appending
-`\author`), which round 4 had left the class's line in the body (94a r7 had it Bob Baker's). (Round 5's deferral — the
-class's line set after the title when no author requested it, and the fallback digesting the call — reordered the
-body and made a creator of no name; replaced in round 6, below.) S2 the kept class body's call of a
+Round 5 (review rev94b r4 S1, S2): S1 a title-block line in doubt was decided where the authors are placed, not at the
+call — a later `\author{and Bob Baker\inst{2}}` requests the `\address[\inst{2}]{…}` before it (capa-like appending
+`\author`), which round 4 had left the class's line in the body (94a r7 had it Bob Baker's) —, the class's line set
+after the title when no author requested it and the fallback digesting the call: it reordered the body and made a
+creator of no name (replaced in round 6, removed in round 7, below). S2 the kept class body's call of a
 rerouted setter is one token, `\lx@class@contact@dispatch@<name>` (defined at the reroute, expanding to the braced
 dispatcher): cexp-like `\expandafter\address\expandafter{\emailprefix #1}` had expanded the dispatcher's brace and
 left the copy's `#1` to the `\expandafter` ("Addr:" alone, the e-mail in the sentence); `\let\x\address` and
 `\@ifnextchar[\address` read the one token too, and an `\ifx` operand is the class's own copy, as the file's test
-compared. Repros sectioning-frontmatter/`raw_class_optional_mark_a_later_author_requests`,
-`raw_class_setter_body_calls_through_one_token`; guards `perfect_kernel_batch94b::a_mark_a_later_author_requests_is_the_api`,
-`a_class_body_calls_a_setter_through_one_token`; unit tests `writer::tests::the_writer_never_writes_a_nameless_creator`
+compared. Repros sectioning-frontmatter/`raw_class_optional_mark_a_later_author_requests` (RED catalog since round 7),
+`raw_class_setter_body_calls_through_one_token`; guard `perfect_kernel_batch94b::a_class_body_calls_a_setter_through_one_token`
+(`a_mark_a_later_author_requests_is_the_api` removed in round 7); unit tests `writer::tests::the_writer_never_writes_a_nameless_creator`
 (now `Op::made_for` of every operation and a block today's nameless creator holds), `a_declined_paper_warns_once` (no
 real shape reaches `decline_nameless`: driven directly), `repart::tests::a_block_item_is_made_or_copied`.
-Round 6 (review rev94b r5 BL1, BL2; main-session design: a line in doubt prints where it was called): a title-block line
-in doubt — a mark no author requests yet — prints where it is called, exactly as the class prints it, between two
-empty ink marks (`frontmatter_stores.rs` `doubtful`, `\lx@class@contact@ink{k}{begin|end}`,
-`place::CONTACT_INK_MARK`); its API call is queued beside it in doubt (`\lx@class@contact@doubt{k}`, the queue's
-`_class_contact_doubt`, the ledger's `ApiCall::doubt`). A `\maketitle` flush keeps the call when one of its authors
-requests the mark (`place.rs` `settle_calls_in_doubt`, before the observer's flush), its contact marked `_doubt`
-(`lx_frontmatter_entry_doubt`, `\lx@annotate@frontmatter@now`); where the frontmatter is placed
-(`settle_contacts_in_doubt`, from `place_frontmatter` and `insert_frontmatter`) the line's ink between its marks is
-removed when it is exactly whole paragraphs of its own (both marks found, the end one closing the last, nothing between
-but `ltx:para`/`ltx:p`, no note and no label in them), else the contact goes. Every other call, and every call of any
-other flush (the fallback at a `\section` or `\end{document}`, so a `\maketitle` after a `\section` too), is dropped
-(`ledger::record_doubt_dropped`; a dropped call does not hold the writer back): the line stays where it printed, no
-creator of no name holds it, the printed "(9)" with it. A key list or an unreadable optional is the class's line with
-no call beside it (nothing an author can request); a line whose tokens hold a note, a label or a counter step
-(`counts_or_labels`: `\footnote`, `\thanks`, `\label`, `\stepcounter`, …) is not queued in doubt at all — kept, its
-call would digest them a second time. An `[optional]{mandatory}` setter's outer reroute call (`\lx@class@contact`
-around `\lx@class@contact@optional`) reads no doubt of its own: the optional's decides, so the line prints once. The
-body's paragraphs keep pdflatex's order (s1: "(9) Univ Z, Zed" before "Pre text."; k1's two class lines in their
-order); `p/m/later` and s4 give Bob Baker his address through the lift. Fail-safe residuals, each round 4's output:
-a kept line whose ink runs into the text after it (`\par{\small …} ` then "More text.") or holds a footnote stays the
-class's line, its author without the contact (round 5 had given it). Repros
-sectioning-frontmatter/`raw_class_line_in_doubt_prints_where_called`, `raw_class_line_in_doubt_at_a_fallback_flush`,
-`raw_class_line_in_doubt_at_the_end_flush`, `raw_class_line_in_doubt_kept_but_not_lifted`; guards
-`perfect_kernel_batch94b::a_line_in_doubt_prints_where_it_is_called`, `a_fallback_flush_drops_a_call_in_doubt`,
-`a_kept_line_whose_ink_cannot_be_lifted_stays_the_class`, `a_mark_a_later_author_requests_is_the_api` (now the lift).
+Round 6 (review rev94b r5 BL1, BL2): round 5's deferral was replaced by the line printed where it is called, between
+two empty ink marks, its API call queued beside it in doubt, kept by a `\maketitle` flush one of whose authors
+requested the mark — the printed ink lifted where the frontmatter is placed when it was whole paragraphs of its own,
+else the contact dropped — and dropped by any other flush. Removed in round 7 with its code (`frontmatter_stores.rs`
+`doubtful`, `counts_or_labels`, `\lx@class@contact@doubt`, `\lx@class@contact@ink`; `place.rs`
+`settle_calls_in_doubt`, `settle_contacts_in_doubt`, `CONTACT_INK_MARK`; `ledger::record_doubt_dropped`,
+`ApiCall::doubt`). Its repros `raw_class_line_in_doubt_prints_where_called`, `raw_class_line_in_doubt_at_a_fallback_flush`,
+`raw_class_line_in_doubt_at_the_end_flush` stay green on round 7's output (the lines where the class printed them, in
+pdflatex's order: s1's "(9) Univ Z, Zed" before "Pre text.", k1's two class lines in their order, no creator of no
+name at a fallback flush); guards `perfect_kernel_batch94b::a_line_in_doubt_prints_where_it_is_called`,
+`a_fallback_flush_digests_no_line_in_doubt` (renamed in round 7 from `a_fallback_flush_drops_a_call_in_doubt`).
+Round 7 (review rev94b r6 B1; main-session decision): a call kept in doubt beside its printed line digested the line a
+second time — a `\stepcounter` stepped twice ("Univ B2", "Body 2." where pdflatex prints 1), a `\refstepcounter` and
+`\label` made twice (a creator of no name holding "Lab C4", "Body 4") —, the third round running (r4 S1, r5's replay,
+r6's keep-and-lift) to find a new blocker in that path, which no census paper takes (the 300-paper setter census,
+cpc-hepnp's 60, the 3,000-paper scorer sample). The path is gone: a line in doubt — one that leads with a mark no author
+requests at the call (`leads_with_unrequested_mark`: the queued authors and the flush's digested ones), an in-place
+setter's key list, an optional the API cannot read — is the class's own line, printed where it is called and digested
+once, no API call queued for it (`class_contact`, `optional_contact`: round 4's output). Dead ends, not to retry:
+setting the line after the title (reorders the body, r5), replaying the class's line at the flush (r5), keeping the
+call and lifting the printed ink (digests the line twice, r6). Residual: a mark only a later `\author` requests in an
+appending class (capa-like `\g@addto@macro\@author`) leaves its line where the class prints it, its author without
+the contact (`raw_class_optional_mark_a_later_author_requests`, a RED catalog repro with no guard; SYNC_STATUS row; 94b
+r4's S1). Repro sectioning-frontmatter/`raw_class_line_in_doubt_is_digested_once` (renamed from
+`raw_class_line_in_doubt_kept_but_not_lifted`, a counter line and a label line added); guard
+`perfect_kernel_batch94b::a_line_in_doubt_is_digested_once` (replaces
+`a_kept_line_whose_ink_cannot_be_lifted_stays_the_class`).
 
 ### 937. An in-block affiliation that opens with marks is the entry they label in the observer's reading (Perl: no observer)
 
@@ -28309,7 +28311,7 @@ a second block's scan had stopped short). A container spanning entries (`InkFont
 one holding the entry, switches between nested containers — before the entry, one end-group after, the entry's font
 then the one where the outermost starts; exact only when the container's entries read one font and nothing switches
 between the innermost container's argument's start and its first entry (`events::switch_free`; an outer container's
-argument holds only switches before the next container, round 6), else cut without either
+argument holds nothing but font declarations and spaces before the next container, round 7), else cut without either
 (`\emph{\bfseries $^5$…\\ $^6$…}`: the bold the first entry's switches carry, the second plain). Probes `p/f` (46):
 none attributes worse than 94a r7; od4, mac7, mac4 back to 94a r7; od1 the second entry italic (94a r7: plain); emph,
 und each entry its name's with the markup (94a r7: cut, markup lost). Residual: the API path's `\affiliation{\emph{$^1$…\\
@@ -28326,3 +28328,20 @@ the switch-free test runs on the innermost container's argument only, the tokens
 switches between the two (`plan::container_wrap`; round 5 read `\underline` as a switch, every entry plain). Repro
 sectioning-frontmatter/`raw_class_affil_container_outer_font_unknown`; guard
 `perfect_kernel_batch94b::a_container_whose_font_is_unknown_is_cut_plain`.
+Round 7 (review rev94b r6 B2, S1): B2 round 6 copied whatever stood between two nested containers into every entry's
+wrap — `\emph{\newline\underline{…\\…}}` a `<break/>` in each contact, `\emph{\quad\underline{…}}` (and a space) a
+leading space in each. Between them now stand only font declarations (`events::font_declaration`: the head of
+`frontmatter_stores::LAYOUT` up to `\selectfont` — `\bfseries`, `\small`, `\em`), copied into the wrap since every
+entry prints under them as every line does in pdflatex, and spaces, left out; anything else prints or acts once, so
+the entries get the base's cut. S1 a kernel text font command whose argument opens with the outermost container
+(`\textbf{\emph{…\\…}}`: latex.ltx:14213-14226 `\DeclareTextFontCommand`, a macro `\bgroup\bfseries #1\egroup`, no
+whatsit holding the ink — `events::text_font_command`) wraps each entry too, nested ones each
+(`\textrm{\textbf{\emph{…}}}`), the entry's font then the one where the outermost command starts: round 6 cut them
+plain (the font where `\emph` starts unknown), 94a r9 wrapped each in the `\emph` alone (pdflatex: bold italic). Any
+other command round a container (`\textcolor{red}{\emph{…}}`) keeps the unknown font and the plain cut. Residual, as
+round 5: the API path's container round the marks (`\address{\textbf{\emph{$^1$…\\ $^2$…}}}` after `\author`) stays one
+contact on every author (all rounds and the tip alike). Repros
+sectioning-frontmatter/`raw_class_affil_nested_containers_only_font_declarations_between`,
+`raw_class_affil_text_font_command_round_a_container`; guards
+`perfect_kernel_batch94b::nested_containers_wrap_each_entry_only_across_font_declarations`,
+`a_text_font_command_round_a_container_wraps_each_entry`.

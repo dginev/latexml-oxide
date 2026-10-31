@@ -1,0 +1,41 @@
+% witness: w-art.cls's `\address[\inst{1}]{…}` (0910.5837, 1105.1753, quant-ph0606237); review rev94b r6 B1 (its probes
+%          `p/n` hcnt, hlab, `p/u` hc2: capa.cls, capt.cls) and r5 BL1 (a line run into the text after it, a line
+%          holding a footnote)
+% oracle:  pdflatex 0 errors: "(2 ) Univ B1, City More text.", "(3 ) Lab C2, Place", "4Lab D1" with its footnote 1 "D
+%          note.", then "A Title", "Ann Able1 and Bob Baker2 and Cy Cole3 and Dan Doe4", "Body 2, 2."
+% engines: rust 94b r6 = 0 errors, 0 warnings: the calls kept in doubt digested the lines a second time — "Body 4", a
+%          creator of no name holding "Lab C4, Place" (the label made twice), Cy Cole without his mark; 94a r9 (the
+%          tip) = Bob Baker's "Univ B1, City", Dan Doe's "Lab D", "Lab C2, Place" on a creator of no name, "(2)" and
+%          "(3)" gone from the body
+% expect:  0 errors, 0 warnings; a line in doubt (here each mark requested only by the later `\author`) is the class's
+%          line, printed where it is called and digested once, no API call queued for it (`frontmatter_stores.rs`
+%          `class_contact`): the counter stepped once ("Univ B1", "Lab C2", "Body 2"), the label made once, the
+%          footnote numbered 1; the four authors without contacts, the lines in the body in pdflatex's order; eager and
+%          --streaming the same
+% status:  RED (94b r6) -> GREEN (94b r7)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{doubtonce.cls}
+\ProvidesClass{doubtonce}
+\LoadClass{article}
+\let\@author\@empty\renewcommand\author[2][]{\g@addto@macro\@author{#2 }}
+\newcommand\address[2][]{\par{\small\ifx\relax#1\relax\else(#1) \fi #2}}
+\def\affil#1{\par{\small #1}\par}
+\def\inst#1{\textsuperscript{#1}}
+\end{filecontents*}
+\documentclass{doubtonce}
+\newcounter{aff}
+\newcommand\bc{\stepcounter{aff}\theaff}
+\newcommand\blab{\refstepcounter{aff}\theaff\label{lc}}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1}}
+\address[\inst{2}]{Univ B\bc, City}
+More text.
+
+\address[\inst{3}]{Lab C\blab, Place}
+
+\affil{\inst{4}Lab D\footnote{D note.}}
+\author{and Bob Baker\inst{2} and Cy Cole\inst{3} and Dan Doe\inst{4}}
+\maketitle
+Body \theaff, \ref{lc}.
+\end{document}

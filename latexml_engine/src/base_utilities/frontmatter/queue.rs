@@ -60,14 +60,6 @@ pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
   if !from.is_empty() {
     attr_hash.insert(TITLE_PAGE_ENTRY.to_string(), from);
   }
-  // (a raw class's title-block line in doubt: its call, decided at the flush — `frontmatter_stores::doubtful`)
-  let doubt = lookup_string(crate::frontmatter_stores::CONTACT_DOUBT);
-  if !doubt.is_empty() {
-    attr_hash.insert(
-      crate::frontmatter_stores::CONTACT_DOUBT_ATTR.to_string(),
-      doubt,
-    );
-  }
   DebugFeature!(
     "frontmatter",
     "FRONT Queuing {tag} [{:?}] {command}",

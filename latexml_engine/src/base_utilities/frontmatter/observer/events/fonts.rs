@@ -247,6 +247,42 @@ pub(in crate::base_utilities) fn switch_free(
   })
 }
 
+/// Whether `t` is one of LaTeX's font declarations taking no argument (`\bfseries`, `\small`, `\em`, `\selectfont`: the
+/// head of `frontmatter_stores::LAYOUT`, up to `\selectfont`), a switch whose effect every entry after it shares
+/// (`writer::container_wrap`).
+pub(in crate::base_utilities) fn font_declaration(t: &Token) -> bool {
+  let layout = crate::frontmatter_stores::LAYOUT;
+  let fonts = layout
+    .iter()
+    .position(|n| *n == "\\selectfont")
+    .map_or(&[][..], |k| &layout[..=k]);
+  t.get_catcode() == Catcode::CS && t.with_cs_name(|n| fonts.contains(&n))
+}
+
+/// LaTeX's text font commands but `\emph` (latex.ltx:14213-14226 `\DeclareTextFontCommand`): each a macro setting its
+/// argument in a group under its declaration, no whatsit holding the ink (`\emph`'s is one).
+const TEXT_FONT_COMMANDS: &[&str] = &[
+  "\\textrm",
+  "\\textsf",
+  "\\texttt",
+  "\\textnormal",
+  "\\textbf",
+  "\\textmd",
+  "\\textit",
+  "\\textsl",
+  "\\textsc",
+  "\\textup",
+  "\\textulc",
+  "\\textsw",
+  "\\textssc",
+];
+
+/// Whether `t` is one of LaTeX's text font commands ([`TEXT_FONT_COMMANDS`]), whose braced argument a cut entry is
+/// wrapped in again round a container it opens with (`writer::container_wrap`).
+pub(in crate::base_utilities) fn text_font_command(t: &Token) -> bool {
+  t.get_catcode() == Catcode::CS && t.with_cs_name(|n| TEXT_FONT_COMMANDS.contains(&n))
+}
+
 /// The changes making `from` into `to`: each of the family, series, shape, size and colours that differ.
 fn font_changes(from: &Font, to: &Font) -> Font {
   Font {

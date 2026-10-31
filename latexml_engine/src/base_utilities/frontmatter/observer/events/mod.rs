@@ -31,7 +31,8 @@ use super::*;
 mod fonts;
 mod lexer;
 pub(in crate::base_utilities) use fonts::{
-  FontScope, InkFonts, Wrap, changes_font, entry_font, switch_free,
+  FontScope, InkFonts, Wrap, changes_font, entry_font, font_declaration, switch_free,
+  text_font_command,
 };
 use lexer::Lexer;
 pub(in crate::base_utilities) use lexer::{is_fnsymbol, is_separator_word};

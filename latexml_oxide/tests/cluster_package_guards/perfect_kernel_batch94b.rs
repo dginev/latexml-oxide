@@ -42,6 +42,13 @@
 //! one of whose authors requests the mark — the printed ink lifted then, when it is a whole paragraph of its own, else
 //! the call dropped (BL1) — and dropped by any other flush (BL2); a container whose start's font is unknown is cut
 //! plain, nested containers wrap each entry in both (BL3).
+//!
+//! Round 7 (review rev94b r6): the path that kept a call in doubt (rounds 5 and 6) is gone — kept beside its printed
+//! line, the call digested the line a second time (B1: a counter stepped twice, a label made twice). A line in doubt is
+//! the class's line at the call, printed where it is called and digested once, no API call queued; a mark only a later
+//! `\author` requests is the recorded residual (`raw_class_optional_mark_a_later_author_requests`, a RED catalog repro).
+//! Between nested containers only font declarations let each entry be wrapped in both (B2), and a kernel text font
+//! command round the outermost container wraps each entry too (S1).
 
 use std::{path::Path, process::Command};
 
@@ -818,29 +825,9 @@ fn an_uncertain_font_never_undoes_a_cut() {
   );
 }
 
-/// Review rev94b r4 S1, r5 BL1: a title-block line leading with a mark no author requests yet prints where it is called,
-/// its API call queued in doubt, decided at the `\maketitle` that places the authors (`frontmatter_stores.rs`
-/// `doubtful`, `place.rs` `settle_calls_in_doubt`): a later `\author` requesting it takes it and the line's printed ink is
-/// lifted (`settle_contacts_in_doubt`; Bob Baker's `\address[\inst{2}]`, Cy Cole's `\affil{\inst{3}…}`, both left in
-/// the body by r4 — the body holds no copy), and one requested by none is the class's line where it printed, no creator
-/// of no name's (94a r7's). w-art.cls's `\address[\inst{1}]` (0910.5837, 1105.1753, quant-ph0606237).
-/// Distinct from `an_optional_mark_no_name_requests_stays_the_class`: an author after the line.
-#[test]
-fn a_mark_a_later_author_requests_is_the_api() {
-  assert_written(
-    repro!("raw_class_optional_mark_a_later_author_requests.tex"),
-    &[&["Ann Able 1"], &["Bob Baker", "address=Univ B, City"], &[
-      "Cy Cole",
-      "affiliation=Lab C, Place",
-    ]],
-    Some(&["Univ B, City", "Lab C, Place"]),
-    Some("( 4 ) Lab D, Place Body."),
-  );
-}
-
 /// Review rev94b r3 B2: a contact line of its own leading with a mark no name requests — `\inst{3}`,
 /// `\textsuperscript{4}`, `$^{5}$` under `Ann Able\inst{1} and Bob Baker\inst{2}` — is in doubt
-/// (`frontmatter_stores.rs` `unrequested_mark`): the class's line where it is called, its words kept (the
+/// (`frontmatter_stores.rs` `leads_with_unrequested_mark`): the class's line where it is called, its words kept (the
 /// main session's ruling: content over markup). "Lab C, Place" was a creator of no name's, the other two both authors'.
 #[test]
 fn a_line_no_name_requests_stays_the_class() {
@@ -957,11 +944,11 @@ fn an_affiliation_after_the_author_group_in_its_box_is_the_api() {
 }
 
 /// Review rev94b r5 BL1: a title-block line in doubt — a mark no author requests (`\address[\inst{9}]`), a key list
-/// (`\address[c, d]`) — prints where it is called, as the class prints it (`frontmatter_stores.rs` `doubtful`), its
-/// call queued in doubt beside it: r5 set every such line after the title, after the text printed between them, and
-/// digested the footnote of one after the body's. The body's paragraphs whole, in pdflatex's order. A line holding a
-/// footnote is not queued in doubt (`counts_or_labels`). w-art.cls's `\address[\inst{1}]` (0910.5837, 1105.1753,
-/// quant-ph0606237). Distinct from `an_optional_mark_no_name_requests_stays_the_class`: text between the lines.
+/// (`\address[c, d]`) — is the class's line, printed where it is called (`frontmatter_stores.rs` `class_contact`): r5
+/// set every such line after the title, after the text printed between them, and digested the footnote of one after
+/// the body's. The body's paragraphs whole, in pdflatex's order. w-art.cls's `\address[\inst{1}]` (0910.5837,
+/// 1105.1753, quant-ph0606237). Distinct from `an_optional_mark_no_name_requests_stays_the_class`: text between the
+/// lines.
 #[test]
 fn a_line_in_doubt_prints_where_it_is_called() {
   assert_written(
@@ -975,12 +962,13 @@ fn a_line_in_doubt_prints_where_it_is_called() {
   );
 }
 
-/// Review rev94b r5 BL2: a flush other than a `\maketitle`'s — the fallback at a `\section` (a `\maketitle` after it
-/// placing nothing more) or at `\end{document}` — drops a call in doubt (`place.rs` `settle_calls_in_doubt`): the line
-/// stays where the class printed it, "(9)" with it; r5's fallback digested the call, a creator of no name holding
-/// "Univ Z, Zed". w-art.cls's `\address[\inst{1}]` (0910.5837, 1105.1753, quant-ph0606237).
+/// Review rev94b r5 BL2: a line in doubt queues no API call (`frontmatter_stores.rs` `class_contact`), so a flush
+/// other than a `\maketitle`'s — the fallback at a `\section` (a `\maketitle` after it placing nothing more) or at
+/// `\end{document}` — digests none: the line stays where the class printed it, "(9)" with it; r5's fallback digested
+/// the call, a creator of no name holding "Univ Z, Zed". w-art.cls's `\address[\inst{1}]` (0910.5837, 1105.1753,
+/// quant-ph0606237). Renamed in r7 from `a_fallback_flush_drops_a_call_in_doubt`: no call is queued to drop.
 #[test]
-fn a_fallback_flush_drops_a_call_in_doubt() {
+fn a_fallback_flush_digests_no_line_in_doubt() {
   assert_written(
     repro!("raw_class_line_in_doubt_at_a_fallback_flush.tex"),
     &[&["Ann Able", "address=Univ A, Town"]],
@@ -995,18 +983,109 @@ fn a_fallback_flush_drops_a_call_in_doubt() {
   );
 }
 
-/// Review rev94b r5 BL1, the fail-safe of the lift: a line in doubt a later author requests whose printed ink is no
-/// paragraph of its own (`\par{\small …} ` runs into "More text.") is not lifted, its kept contact dropped where the
-/// frontmatter is placed (`place.rs` `settle_contacts_in_doubt`) — the line where it printed, never twice nor moved;
-/// and a line holding a footnote is not queued in doubt at all (kept, its call would digest the footnote again).
-/// Distinct from `a_mark_a_later_author_requests_is_the_api`, where the ink is lifted.
+/// Review rev94b r6 B1: a line in doubt is digested once — the class's line where it is called, no API call queued
+/// beside it (`frontmatter_stores.rs` `class_contact`). r6 kept the call of a line whose mark a later `\author`
+/// requests and lifted the printed ink, but the call digested the line again: a `\stepcounter` stepped twice ("Body 4"),
+/// a `\refstepcounter` and `\label` made twice (a creator of no name holding "Lab C4"). Here every counter value is
+/// pdflatex's, the label made once, the footnote numbered 1, the four authors without contacts (the residual of
+/// `raw_class_optional_mark_a_later_author_requests`), the lines in the body in pdflatex's order — the line run into
+/// "More text." and the one holding a footnote too (r6's fail-safe cases). w-art.cls's `\address[\inst{1}]`
+/// (0910.5837, 1105.1753, quant-ph0606237). Replaces `a_kept_line_whose_ink_cannot_be_lifted_stays_the_class` (its
+/// repro renamed `raw_class_line_in_doubt_is_digested_once`, the counter and label lines added).
 #[test]
-fn a_kept_line_whose_ink_cannot_be_lifted_stays_the_class() {
+fn a_line_in_doubt_is_digested_once() {
+  let tex = repro!("raw_class_line_in_doubt_is_digested_once.tex");
   assert_written(
-    repro!("raw_class_line_in_doubt_kept_but_not_lifted.tex"),
-    &[&["Ann Able 1"], &["Bob Baker 2"], &["Cy Cole 3"]],
+    tex,
+    &[&["Ann Able 1"], &["Bob Baker 2"], &["Cy Cole 3"], &[
+      "Dan Doe 4",
+    ]],
     None,
-    Some("( 2 ) Univ B, City More text. 3 Lab C 1 1 footnote 1 C note. Body."),
+    Some(
+      "( 2 ) Univ B1, City More text. ( 3 ) Lab C2, Place 4 Lab D 1 1 footnote 1 D note. Body 2, .",
+    ),
+  );
+  for streaming in [false, true] {
+    let (_, xml) = binary(tex, streaming);
+    assert_eq!(
+      (
+        xml.matches("labels=\"LABEL:lc\"").count(),
+        xml.matches("<note ").count()
+      ),
+      (1, 1),
+      "streaming={streaming}"
+    );
+  }
+}
+
+/// Review rev94b r6 B2: between nested containers only font declarations (`\emph{\bfseries\underline{…\\…}}`) and
+/// spaces let each entry be wrapped in both (`plan::container_wrap`, `events::font_declaration`), the declaration copied
+/// into each wrap, the spaces left out. Anything else between prints or acts once, so a copy in every entry repeats it:
+/// r6 copied `\newline` (a `<break/>` in each contact) and `\quad` (a leading space in each) — now the base's cut.
+/// ar-1col.cls's `\affil` inside `\author{}` (1602.05576, 2405.08158). Distinct from
+/// `a_container_whose_font_is_unknown_is_cut_plain`: what stands between two containers, not before the outer one.
+#[test]
+fn nested_containers_wrap_each_entry_only_across_font_declarations() {
+  assert_written(
+    repro!("raw_class_affil_nested_containers_only_font_declarations_between.tex"),
+    &[
+      &["Ann Able", "affiliation=Univ A, Town"],
+      &["Bob Baker", "affiliation=Univ B, City"],
+      &["Cy Cole", "affiliation=Lab C, Place"],
+      &["Dan Doe", "affiliation=Lab D, Place"],
+      &["Eve Ern", "affiliation=Inst E, Town"],
+      &["Fay Fox", "affiliation=Inst F, City"],
+      &["Gil Gray", "affiliation=Dept G, Town"],
+      &["Hal Hart", "affiliation=Dept H, City"],
+    ],
+    Some(&[
+      "Univ A, Town",
+      "Univ B, City",
+      "Lab C, Place",
+      "Lab D, Place",
+      "<emph class=\"ltx_underline\" font=\"bold italic\">Inst E, Town</emph>",
+      "<emph class=\"ltx_underline\" font=\"bold italic\">Inst F, City</emph>",
+      "<emph class=\"ltx_underline\" font=\"italic\">Dept G, Town</emph>",
+      "<emph class=\"ltx_underline\" font=\"italic\">Dept H, City</emph>",
+    ]),
+    Some("Body."),
+  );
+}
+
+/// Review rev94b r6 S1: a kernel text font command whose argument opens with the outermost container
+/// (`\textbf{\emph{…\\…}}`; `\textbf` is a macro, `\bgroup\bfseries #1\egroup`, no whatsit holding the ink) wraps each
+/// entry again too (`plan::container_wrap`, `events::text_font_command`), nested ones each (`\textrm{\textbf{\emph{…}}}`):
+/// r6 cut them plain (the font where the container starts unknown), the tip wrapped each in the inner container alone.
+/// An entry inside the text font command but outside the container keeps its own font (Org I bold). ar-1col.cls's
+/// `\affil` inside `\author{}` (1602.05576, 2405.08158). Distinct from
+/// `nested_containers_wrap_each_entry_only_across_font_declarations`: the outer command is no container of the ink.
+#[test]
+fn a_text_font_command_round_a_container_wraps_each_entry() {
+  assert_written(
+    repro!("raw_class_affil_text_font_command_round_a_container.tex"),
+    &[
+      &["Ann Able", "affiliation=Univ A, Town"],
+      &["Bob Baker", "affiliation=Univ B, City"],
+      &["Cy Cole", "affiliation=Lab C, Place"],
+      &["Dan Doe", "affiliation=Lab D, Place"],
+      &["Eve Ern", "affiliation=Inst E, Town"],
+      &["Fay Fox", "affiliation=Inst F, City"],
+      &["Gil Gray", "affiliation=Dept G, Town"],
+      &["Hal Hart", "affiliation=Dept H, City"],
+      &["Ida Ince", "affiliation=Org I, Town"],
+    ],
+    Some(&[
+      "<emph font=\"bold italic\">Univ A, Town</emph>",
+      "<emph font=\"bold italic\">Univ B, City</emph>",
+      "<text class=\"ltx_underline\" font=\"italic\">Lab C, Place</text>",
+      "<text class=\"ltx_underline\" font=\"italic\">Lab D, Place</text>",
+      "<emph font=\"bold italic\">Inst E, Town</emph>",
+      "<emph font=\"bold italic\">Inst F, City</emph>",
+      "<emph font=\"bold italic\">Dept G, Town</emph>",
+      "<emph font=\"bold italic\">Dept H, City</emph>",
+      "<text font=\"bold\">Org I, Town</text>",
+    ]),
+    Some("Body."),
   );
 }
 

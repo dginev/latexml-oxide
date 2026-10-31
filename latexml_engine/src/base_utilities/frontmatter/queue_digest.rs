@@ -799,7 +799,7 @@ pub fn digested_authors_requesting(key: &str) -> bool {
 
 /// Whether an author's name shows a mark — a queued author's, or one of the flush being digested
 /// ([`digested_authors_requesting`]'s): what a contact's leading mark is read against (`frontmatter_stores.rs`
-/// `unrequested_mark`) — with none, the marks the names print are not read.
+/// `leads_with_unrequested_mark`) — with none, the marks the names print are not read.
 pub fn authors_show_marks() -> bool {
   queued_author_marks().iter().any(|marks| !marks.is_empty())
     || with_value("frontmatter", |v| match v {

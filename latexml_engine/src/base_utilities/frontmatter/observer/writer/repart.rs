@@ -1673,7 +1673,6 @@ mod tests {
         events:         Vec::new(),
         rehearsed:      true,
         cleared:        false,
-        doubt:          String::new(),
       })
     };
     with_ledger(|ledger| {

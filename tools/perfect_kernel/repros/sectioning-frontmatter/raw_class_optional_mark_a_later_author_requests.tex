@@ -5,13 +5,15 @@
 % engines: rust 94b r4 = 0 errors, 0 warnings: a mark no author had requested yet was in doubt at the call — every line
 %          the class's, in the body: Bob Baker and Cy Cole without their affiliations; 94a r7 (base): Bob Baker's and Cy
 %          Cole's, and "Lab D, Place" on a creator of no name
-% expect:  0 errors, 0 warnings; a title-block line leading with a mark no author requests yet prints where it is called,
-%          its API call queued in doubt and decided at the `\maketitle` that places the authors (`frontmatter_stores.rs`
-%          `doubtful`, `place.rs` `settle_calls_in_doubt`): requested by the later `\author`, Bob Baker's "Univ B, City"
-%          and Cy Cole's "Lab C, Place", their printed lines lifted (`settle_contacts_in_doubt`: no copy in the body);
-%          requested by none, the class's line "(4) Lab D, Place" where it printed, no nameless creator; eager and
-%          --streaming the same
-% status:  RED (94b r4) -> GREEN (94b r5; r6: the lines print in place, the requested ones lifted)
+% expect:  0 errors, 0 warnings; Bob Baker "Univ B, City", Cy Cole "Lab C, Place" (the later `\author` requests their
+%          marks), no copy of the two lines in the body; "(4) Lab D, Place" (requested by none) the class's line where
+%          it printed, no nameless creator; eager and --streaming the same
+% status:  RED (catalog, no guard). 94b r5-r6 kept the call in doubt and decided it at `\maketitle` (a replay, then a
+%          lift of the printed ink); every round of that path digested a line twice or moved it (review rev94b r4-r6),
+%          so 94b r7 removed it: a line in doubt is the class's at the call, digested once (`frontmatter_stores.rs`
+%          `class_contact`) — the three lines in the body, Bob Baker and Cy Cole without a contact (94b r4's output;
+%          OXIDIZED_DESIGN_DIVERGENCES #936, SYNC_STATUS row). No census paper takes this shape (300 setter census,
+%          cpc-hepnp 60, the 3,000 sample).
 % preload: ar5iv.sty
 \begin{filecontents*}[overwrite]{laterauth.cls}
 \ProvidesClass{laterauth}

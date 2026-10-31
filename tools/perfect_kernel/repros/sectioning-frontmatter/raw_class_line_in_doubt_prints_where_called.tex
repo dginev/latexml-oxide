@@ -6,11 +6,11 @@
 % engines: rust 94b r5 = 0 errors, 0 warnings: every line in doubt set after the title, after the text printed between
 %          them ("Pre text. We thank X. (9) Univ Z, Zed (c, d) Lab C, Place (8) Univ Y"), the body's footnote 1 and
 %          the line's 2; 94b r4 and 94a r8 = the lines where the class printed them
-% expect:  0 errors, 0 warnings; a title-block line in doubt (a mark no author requests, a key list) prints where it is
-%          called, as the class prints it (`frontmatter_stores.rs` `doubtful`): the body's paragraphs in pdflatex's
-%          order, the footnotes numbered in it; a line holding a footnote is not queued in doubt at all; Ann Able
-%          "Univ A, Town"; eager and --streaming the same
-% status:  RED (94b r5) -> GREEN (94b r6)
+% expect:  0 errors, 0 warnings; a title-block line in doubt (a mark no author requests at the call, a key list) is the
+%          class's line, printed where it is called and digested once, no API call queued for it
+%          (`frontmatter_stores.rs` `class_contact`): the body's paragraphs in pdflatex's order, the footnotes numbered
+%          in it; Ann Able "Univ A, Town"; eager and --streaming the same
+% status:  RED (94b r5) -> GREEN (94b r6; r7: no call kept in doubt, the line the class's at the call — r4's output)
 % preload: ar5iv.sty
 \begin{filecontents*}[overwrite]{inplaceaddr.cls}
 \ProvidesClass{inplaceaddr}
