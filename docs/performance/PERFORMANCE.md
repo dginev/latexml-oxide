@@ -255,6 +255,40 @@ Every math-heavy witness is now `math_parse`-bound. The over-parse rate is the p
   - Sweeps alongside other tasks: `JOBS=4` maximum.
   - Memory ceiling: Keep `JOBS × --max-memory <= 24 GB` to preserve headroom for rust-analyzer (~4 GB) and OS buffers.
 
+### P9 — Frontmatter pipeline (audit [`FRONTMATTER_PERF_AUDIT_2026-10-31.md`](FRONTMATTER_PERF_AUDIT_2026-10-31.md))
+
+The frontmatter costs 0.68–1.05 % of a median conversion and 0.5–0.9 % of fleet CPU, linear in creators. It is 40.9 % of a
+975-author conversion (2103.04797). Levers, each output-neutral and measured alone:
+- **Two quadratics:** `relocate_annotations` `held()` (`relocate.rs:335-339`, 3.7 % at 975) and `queued_author_count`
+  (`queue_digest.rs:827-834`).
+- **One shared index for the post-insertion passes:** today they make ≈12 relative XPath queries per creator. The
+  self-check Warnings (96a) ride the same index.
+- **Typed keys:** `font_key` (`events/mod.rs:622`) and `policy.rs:142`. Also `get_frontmatter_name` digested once per role.
+- **Keyval digestion per API call:** 5.9 % at 975.
+- **The API content digested once:** the lexer reads the real digestion's boxes, not a rehearsal's (7.6 % at 975). It is
+  gated on identical readings.
+
+**The observer writes nothing on 17 of the 18 measured papers.** Its cost is the ceiling for coordinating its phases:
+16.0 % at 975 creators, ≈0.05 % fleet-wide.
+
+### P10 — XPath compiled-expression cache (engine-wide)
+
+`XPath::findnodes` (`latexml_core/src/common/xml.rs:215`) reaches rust-libxml's `node_evaluate` → `xmlXPathNodeEval`,
+which compiles the expression on every call. A document makes 15k–32k calls but uses only 57–63 distinct expressions.
+Cached compilation, measured by an `LD_PRELOAD` shim on 18 documents, saves 0.48–1.17 % of instructions (mean 0.79 %),
+with identical XML. Re-measured on 1004.1370: 6.551 → 6.486 G (−0.98 %).
+
+The cache cannot live in latexml-oxide alone. rust-libxml keeps `Node::wrap` crate-private and `Object`'s document field
+private, so a compiled expression's result cannot be turned back into `Node`s from outside the crate. The lever is a
+rust-libxml change: a cache inside `Context` (the API unchanged), or a public compiled-expression type.
+
+### P11 — `_font` attribute traffic (engine-wide; sizing in progress)
+
+There are 254k–651k get/set calls of the private `_font` attribute per document, costing 95–290 M instructions inside
+libxml2 alone (1.1–2.3 %). The Rust-side wrapper cost is still unmeasured. A typed per-node store behind the
+Perl-shaped font methods (Perl `Document.pm` `setNodeFont`/`getNodeFont`) must preserve every reader of `_font`:
+XPath, XSLT, clones and the strip at finalization.
+
 ### P8 — Lower-frequency global scans and lookup allocation
 
 * **Logger stderr writes:** each emitted record costs 2-3 unbuffered `write_all` system calls on stderr (`latexml_core/src/util/logger.rs:449-453`; the `flush()`es at `:307`/`:454` are no-ops on unbuffered stderr) — the lever if render logging must get cheaper: one write per record, or a buffered stderr (review `../archive/CODE_REVIEW_2026-08-03.md`, whose flush attribution this corrects).
