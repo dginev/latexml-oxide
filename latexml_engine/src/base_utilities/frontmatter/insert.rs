@@ -589,34 +589,10 @@ fn answered_labels(document: &mut Document) -> HashSet<String> {
 /// is not repeated. (Perl drops it too; repro sectioning-frontmatter/author_unmatched_numeric_mark.)
 fn show_unanswered_marks(document: &mut Document, answered: &HashSet<String>) -> Result<()> {
   for creator in document.findnodes(".//ltx:creator[@_annotations]", None) {
-    let Some(mut personname) = document
-      .findnodes("ltx:personname", Some(&creator))
-      .into_iter()
-      .next()
-    else {
-      continue;
-    };
-    let shown = shown_marks(document, &creator);
-    let shown_sups: Vec<String> = document
-      .findnodes("ltx:personname//ltx:sup", Some(&creator))
-      .iter()
-      .map(|sup| sup.get_content())
-      .collect();
-    // (a symbol mark nothing answers is shown too — 1807.01584, 1805.02699, 2203.01270 — except one that placed one of
-    // this author's contacts and was dropped from it, `$^\dagger$baker@y.edu`: answered on this author only,
-    // `answered_symbol_key`; one the author's email shows as well stays on the name too, as printed: 1910.00401)
-    let answered_here: Vec<String> = document
-      .findnodes(".//*[@_answers]", Some(&creator))
-      .iter()
-      .flat_map(|node| {
-        node
-          .get_attribute("_answers")
-          .unwrap_or_default()
-          .split(',')
-          .map(str::to_string)
-          .collect::<Vec<_>>()
-      })
-      .collect();
+    // (what the author's entries answer and what its name shows, read where a request no entry answers asks: most
+    // authors have none)
+    let mut answered_here: Option<Vec<String>> = None;
+    let mut shown: Option<(Vec<String>, Vec<String>)> = None;
     let text_marks: Vec<String> = creator
       .get_attribute("_textmarks")
       .unwrap_or_default()
@@ -652,9 +628,34 @@ fn show_unanswered_marks(document: &mut Document, answered: &HashSet<String>) ->
       if mark == "*" && text_marks.iter().any(|m| m == label) {
         text = "*".to_string();
       }
+      // (a symbol mark nothing answers is shown too — 1807.01584, 1805.02699, 2203.01270 — except one that placed one of
+      // this author's contacts and was dropped from it, `$^\dagger$baker@y.edu`: answered on this author only,
+      // `answered_symbol_key`; one the author's email shows as well stays on the name too, as printed: 1910.00401)
+      let answered_here = answered_here.get_or_insert_with(|| {
+        document
+          .findnodes(".//*[@_answers]", Some(&creator))
+          .iter()
+          .flat_map(|node| {
+            node
+              .get_attribute("_answers")
+              .unwrap_or_default()
+              .split(',')
+              .map(str::to_string)
+              .collect::<Vec<_>>()
+          })
+          .collect()
+      });
       if symbol_mark_key(mark).is_some_and(|key| answered_here.contains(&key)) {
         continue;
       }
+      let (shown, shown_sups) = shown.get_or_insert_with(|| {
+        let sups = document
+          .findnodes("ltx:personname//ltx:sup", Some(&creator))
+          .iter()
+          .map(|sup| sup.get_content())
+          .collect();
+        (shown_marks(document, &creator), sups)
+      });
       // (a symbol the name shows in a superscript of its own is shown: a `$^*$`, `\lx@frontmatter@keepsup`, also
       // requests; `*` and `∗` are one mark)
       let unify = |text: &str| text.replace('\u{2217}', "*");
@@ -670,6 +671,13 @@ fn show_unanswered_marks(document: &mut Document, answered: &HashSet<String>) ->
     if marks.is_empty() {
       continue;
     }
+    let Some(mut personname) = document
+      .findnodes("ltx:personname", Some(&creator))
+      .into_iter()
+      .next()
+    else {
+      continue;
+    };
     let mut sup = Node::new("sup", None, document.get_document())?;
     if let Some(namespace) = personname.get_namespace() {
       let _ = sup.set_namespace(&namespace);

@@ -58,11 +58,8 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
     }
   }
   let authors = document.findnodes("//ltx:creator[@role='author'][ltx:personname]", None);
-  // the marks each author's name shows (`$^{a,b}$`: two)
-  let author_marks: Vec<Vec<String>> = authors
-    .iter()
-    .map(|author| shown_marks(document, author))
-    .collect();
+  // the marks each author's name shows (`$^{a,b}$`: two), read where an institute labelled by a mark asks (below)
+  let mut author_marks: Option<Vec<Vec<String>>> = None;
   // Only a label a mark set is answered by the authors showing that mark, as the mark's own keys (`_bymark`, read as the
   // authors' are): a number `labelseq` gave is no mark (aa's one `\institute{{1} Univ A \\ {2} Univ B …}` is one
   // institute, `affiliation:1`, under authors marked 1,2 / 2,3: astro-ph0305539).
@@ -192,8 +189,17 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
     let Some(keys) = by_mark.get(label) else {
       continue;
     };
+    if !*institute {
+      continue;
+    }
+    let author_marks = author_marks.get_or_insert_with(|| {
+      authors
+        .iter()
+        .map(|author| shown_marks(document, author))
+        .collect()
+    });
     let marked: Vec<Node> = (0..authors.len())
-      .filter(|&i| *institute && keys.iter().any(|key| author_marks[i].contains(key)))
+      .filter(|&i| keys.iter().any(|key| author_marks[i].contains(key)))
       .map(|i| authors[i].clone())
       .collect();
     if !marked.is_empty() {
@@ -312,6 +318,7 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
       }
     }
   }
+  let mut held = HeldAnnotations::new(&authors);
   for mut pending in pending_nodes {
     let mut promote_this = false;
     // the stub's notes placed elsewhere, which a promoted stub must not keep a second time
@@ -328,19 +335,8 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
       // `perfect_kernel_batch59::store_set_before_a_superseding_author`)
       let empty = annotation_value(&note).trim().is_empty() && element_nodes(&note).is_empty();
       // (metadata, an `ltx:rdf`, is held by an author who has its value in any annotation: 2608.17008's `\email{x}` ahead
-      // of the authors, then `\email[show]{x}` on the first, is that author's displayed address)
-      let held = || {
-        let (role, content) = (note.get_attribute("role"), annotation_value(&note));
-        let metadata = note.get_name() == "rdf";
-        authors.iter().any(|author| {
-          element_nodes(author).iter().any(|c| {
-            let same_kind = c.get_name() == note.get_name() && c.get_attribute("role") == role;
-            (same_kind || (metadata && matches!(c.get_name().as_str(), "contact" | "rdf")))
-              && annotation_value(c).trim() == content.trim()
-          })
-        })
-      };
-      if unlabelled && (pending.get_name() != "creator" || empty || held()) {
+      // of the authors, then `\email[show]{x}` on the first, is that author's displayed address: `HeldAnnotations`)
+      if unlabelled && (pending.get_name() != "creator" || empty || held.holds(&authors, &note)) {
         continue;
       }
       let targets = if unlabelled {
@@ -375,6 +371,7 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
           let mut target = target;
           document.append_clone(&mut target, vec![note.clone()])?;
           contact_in_title_as_note(document, &target)?;
+          held.touched(&target);
         }
       } else {
         let content = annotation_value(&note);
@@ -421,6 +418,7 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
           for owner in named {
             let mut owner = owner.clone();
             document.append_clone(&mut owner, vec![note.clone()])?;
+            held.touched(&owner);
           }
         } else {
           DebugFeature!(
@@ -437,11 +435,14 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
             Some(sc) => {
               let mut sc = sc.clone();
               document.append_clone(&mut sc, vec![note.clone()])?;
+              held.touched(&sc);
             },
           }
         }
       }
     }
+    // (what follows changes the stub, and so any author holding it)
+    held.touched(&pending);
     if promote_this {
       // pending → real trailing creator (role=pending would otherwise be dropped
       // with the node; the `_annotations`/`_label` bookkeeping attrs are stripped
@@ -455,12 +456,81 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
       if let Some(last) = authors.last() {
         move_content_free_after(std::slice::from_ref(&pending), last.clone())?;
       }
+      held.touched(&pending);
       shared_creator = Some(pending);
     } else {
       document.remove_node(pending);
     }
   }
   Ok(())
+}
+
+/// A kind of annotation [`HeldAnnotations`] reads: an element name and role, or (`None`) a contact or metadata of any role.
+type AnnotationKind = Option<(String, Option<String>)>;
+
+/// The annotations the authors hold, for [`relocate_annotations`]'s test of an unlabelled annotation: is one of the same
+/// kind (element name and role) and text on an author, or — for metadata, an `ltx:rdf` — a contact or metadata of its
+/// text? Each author's values of one kind are read the first time that kind is asked about (an author's element
+/// children, their text trimmed), and read again after anything changed the author or what it holds (`touched`): the
+/// answer is the one reading every author's children at the time of the question gives, and an author's children are
+/// read once per kind, not once per question.
+struct HeldAnnotations {
+  /// each author's position, by node (`Node::to_hashable`)
+  position: HashMap<usize, usize>,
+  /// per author: the trimmed texts of its children of each kind read so far (`None`: a contact or metadata, any role)
+  read:     Vec<HashMap<AnnotationKind, HashSet<String>>>,
+}
+
+impl HeldAnnotations {
+  fn new(authors: &[Node]) -> Self {
+    HeldAnnotations {
+      position: authors
+        .iter()
+        .enumerate()
+        .map(|(i, author)| (author.to_hashable(), i))
+        .collect(),
+      read:     vec![HashMap::default(); authors.len()],
+    }
+  }
+
+  /// Does an author hold `note`'s kind with `note`'s text (or, `note` being metadata, a contact or metadata of it)?
+  fn holds(&mut self, authors: &[Node], note: &Node) -> bool {
+    let name = note.get_name();
+    let kind = Some((name.clone(), note.get_attribute("role")));
+    let metadata = name == "rdf";
+    let value = annotation_value(note);
+    let value = value.trim();
+    authors.iter().enumerate().any(|(i, author)| {
+      self.values(i, author, &kind).contains(value)
+        || (metadata && self.values(i, author, &None).contains(value))
+    })
+  }
+
+  /// The trimmed texts of author `i`'s element children of `kind`, read once.
+  fn values(&mut self, i: usize, author: &Node, kind: &AnnotationKind) -> &HashSet<String> {
+    self.read[i].entry(kind.clone()).or_insert_with(|| {
+      element_nodes(author)
+        .iter()
+        .filter(|c| match kind {
+          Some((name, role)) => c.get_name() == *name && c.get_attribute("role") == *role,
+          None => matches!(c.get_name().as_str(), "contact" | "rdf"),
+        })
+        .map(|c| annotation_value(c).trim().to_string())
+        .collect()
+    })
+  }
+
+  /// `node` changed (an annotation placed on it, renamed in it, removed from it, or it moved): the authors it is or
+  /// sits in are read again.
+  fn touched(&mut self, node: &Node) {
+    let mut cur = Some(node.clone());
+    while let Some(n) = cur {
+      if let Some(&i) = self.position.get(&n.to_hashable()) {
+        self.read[i].clear();
+      }
+      cur = n.get_parent();
+    }
+  }
 }
 
 /// A labelled annotation relocated into an element that holds no contact — a title, whose model has none (aastex's
@@ -772,4 +842,67 @@ fn is_shared_contact_role(role: &str) -> bool {
       | "email"
       | "url"
   )
+}
+
+#[cfg(test)]
+mod held_annotations {
+  use super::*;
+
+  /// An element `name` with a `role` and a text, appended to `parent`.
+  fn child(
+    doc: &libxml::tree::Document,
+    parent: &mut Node,
+    name: &str,
+    role: &str,
+    text: &str,
+  ) -> Node {
+    let mut node = Node::new(name, None, doc).expect("a node");
+    if !role.is_empty() {
+      node.set_attribute("role", role).expect("an attribute");
+    }
+    node.append_text(text).expect("a text");
+    parent.add_child(&mut node).expect("a child");
+    node
+  }
+
+  /// The index answers as reading the authors' children at the time of the question does (perf 96p L3): an
+  /// annotation of another kind or text is not held, one placed on an author afterwards is — once `touched` says so,
+  /// whether it was placed on the author or inside one of its children — and one removed is no longer held.
+  #[test]
+  fn held_annotations_are_read_again_after_an_author_changes() {
+    let doc = libxml::tree::Document::new().expect("a document");
+    let mut root = Node::new("document", None, &doc).expect("a node");
+    let mut doc_mut = doc.clone();
+    doc_mut.set_root_element(&root);
+    let mut ann = child(&doc, &mut root, "creator", "author", "");
+    let mut bob = child(&doc, &mut root, "creator", "author", "");
+    child(&doc, &mut ann, "contact", "affiliation", " Univ X ");
+    let authors = vec![ann.clone(), bob.clone()];
+    let mut stub = child(&doc, &mut root, "creator", "pending", "");
+    let univ_x = child(&doc, &mut stub, "contact", "affiliation", "Univ X");
+    let univ_y = child(&doc, &mut stub, "contact", "affiliation", "Univ Y");
+    let email_x = child(&doc, &mut stub, "contact", "email", "Univ X");
+    let rdf_y = child(&doc, &mut stub, "rdf", "", "Univ Y");
+    let mut held = HeldAnnotations::new(&authors);
+    assert!(
+      held.holds(&authors, &univ_x),
+      "same kind, same trimmed text"
+    );
+    assert!(!held.holds(&authors, &univ_y), "another text");
+    assert!(!held.holds(&authors, &email_x), "another role");
+    assert!(!held.holds(&authors, &rdf_y), "no contact of its text");
+    // (placed on Bob: held once Bob is touched — a metadata's text as a contact's too)
+    let mut placed = child(&doc, &mut bob, "contact", "affiliation", "Univ Y");
+    held.touched(&bob);
+    assert!(held.holds(&authors, &univ_y));
+    assert!(held.holds(&authors, &rdf_y));
+    // (changed inside one of Ann's children: Ann is read again)
+    placed.unlink();
+    let mut wrapper = child(&doc, &mut ann, "contact", "email", "");
+    let inner = child(&doc, &mut wrapper, "text", "", "Univ X");
+    held.touched(&inner);
+    assert!(held.holds(&authors, &email_x));
+    held.touched(&bob);
+    assert!(!held.holds(&authors, &univ_y), "removed from Bob");
+  }
 }

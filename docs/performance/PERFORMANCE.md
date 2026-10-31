@@ -338,6 +338,29 @@ Noise floor (base against an identical build): ±0.1 % per document. Every lever
 |---|---|---|---|---|
 | L1 typed font key (`observer/events/mod.rs` `FontKey`) | a `format!("{:?}/{:?}/{:?}/{:?}")` String per text box the event lexer walks, and its clones per name run: the key is the box's `Rc<Font>`, compared by family, series, shape and size | 0.57 % / 1.76 % (1707.07081) | 0.01 % / 0.03 % (noise) | 0.19 % / 0.90 % (`font_key`'s own frames; the key's clones and comparisons in the lexer were outside it) |
 | L2 marks recorded by name where they are made (core `Document::insert_mark` / `made_mark`, `made_field_marks`) | the whole-document scans for the cover-title marks (`settle_cover_title_ink`, `drop_cover_title_ink`), the field marks (`settle_field_marks`, `field_ink_runs`) and the abstract markers (`remove_frontmatter_marks`) in a document none of that name was made in: 15/15 documents make no cover-title and no field mark, 1/15 (1812.02463) no abstract marker | 0.02 % / 0.07 % | 0.04 % / 0.05 % | 0.05–0.65 %, 0.18–0.51 % median (gdb time samples of all three scans; the end-of-document abstract-marker scan is not skipped, below) |
+| L3 post-insertion passes read on demand (`frontmatter/relocate.rs` `HeldAnnotations`, `insert.rs` `show_unanswered_marks`) | `relocate_annotations`' test of an unlabelled annotation against every author's children, once per annotation (annotations × authors × children, each child's text built): each author's values of a kind are read once, again only after the author changed; every author's shown marks (two XPath queries each), read only when an institute labelled by a mark asks; `show_unanswered_marks`' four XPath queries per creator (its personname, its superscripts twice, its `_answers`), read only when a request no entry answers reaches them | 0.18 % / 0.46 % (1707.07081; 2409.19633 0.41 %, 2005.08745 0.29 %) | 0.02 % / 0.03 % | 0.20–1.79 % for all post-insertion passes, the writer's 0–0.74 % included |
+| **cumulative** (82adbc1802 → L3) | | **0.73 % / 2.28 %** (1707.07081; 2409.19633 1.11 %, 2603.24341 1.00 %) | **0.05 % / 0.08 %** | |
+
+**Measured, not taken:**
+- The end-of-document abstract-marker scan (`remove_frontmatter_marks`, sect02.rs `\lx@finalize@document`) when the
+  flush's sweep removed every marker made before it (14/15 documents): a marker made while the insertion point is in a
+  detached subtree (the core has such points, `insert_element`'s hep-th0201062, 1009.0637) and reattached later would
+  be missed. Recording the marker nodes instead is unsafe: `remove_node` frees the subtree and a held handle dangles.
+- L4, keyvals digested per frontmatter call (`frontmatter_api.rs` `\lx@add@frontmatter@now` `be_digested()` 0.42 %
+  [max 0.82 %], `\lx@annotate@frontmatter@now` 0.35 % [1.32 %]): each call's keyvals are digested once, at its `@now`;
+  the queueing primitive reads them undigested (`queue.rs` `queue_front_matter`). Repeats are distinct calls with the
+  same keyvals: revtex queues a run's shared `\affiliation` once per author of the run (1707.07081: 194 of its 702
+  digestions are one affiliation's `role={affiliation},annotate={run}`), each its own annotation, content digested per
+  author. Construction work; left.
+- `queue_digest.rs` `get_frontmatter_name` (0.09 % [0.43 %]) digests `\lx@<tag>@<role>@name` per call: not constant
+  per document (a class or the document redefines the name macros, or what they expand to, between calls), so no
+  per-document cache without a definition-change check.
+- The rehearsal's second digestion of the author block (`observer/shadow.rs` → `rehearsal.rs`, perf453): mean 1.26 %,
+  max 3.11 % on multi-author revtex, ≤ 0.11 % on median papers. The real digestion and DOM absorb are construction.
+- The rest of the insertion chain (`coalesce_empty_creators`, `distribute_upfront_contacts`, `answered_labels`,
+  `drop_empty_contacts`, `flag_merged_creators`): one or two whole-document queries each, and one query per creator
+  in `coalesce_empty_creators` and `flag_merged_creators` whose answer each uses; ≤ 0.10 % of a conversion apiece in the
+  audit's samples.
 
 ### 2026-10-16 — pre-rerun tactical pass + memory-fuse audit (batch 68p)
 
