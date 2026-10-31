@@ -337,6 +337,7 @@ Noise floor (base against an identical build): ±0.1 % per document. Every lever
 | Lever | Removed | many-author: mean / max gain | median: mean / max | audit upper bound |
 |---|---|---|---|---|
 | L1 typed font key (`observer/events/mod.rs` `FontKey`) | a `format!("{:?}/{:?}/{:?}/{:?}")` String per text box the event lexer walks, and its clones per name run: the key is the box's `Rc<Font>`, compared by family, series, shape and size | 0.57 % / 1.76 % (1707.07081) | 0.01 % / 0.03 % (noise) | 0.19 % / 0.90 % (`font_key`'s own frames; the key's clones and comparisons in the lexer were outside it) |
+| L2 marks recorded by name where they are made (core `Document::insert_mark` / `made_mark`, `made_field_marks`) | the whole-document scans for the cover-title marks (`settle_cover_title_ink`, `drop_cover_title_ink`), the field marks (`settle_field_marks`, `field_ink_runs`) and the abstract markers (`remove_frontmatter_marks`) in a document none of that name was made in: 15/15 documents make no cover-title and no field mark, 1/15 (1812.02463) no abstract marker | 0.02 % / 0.07 % | 0.04 % / 0.05 % | 0.05–0.65 %, 0.18–0.51 % median (gdb time samples of all three scans; the end-of-document abstract-marker scan is not skipped, below) |
 
 ### 2026-10-16 — pre-rerun tactical pass + memory-fuse audit (batch 68p)
 

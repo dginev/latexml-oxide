@@ -178,6 +178,10 @@ fn remove_marked_ink(
 
 /// The cover-title marks inside `scope`, in document order.
 fn cover_title_marks(document: &mut Document, scope: &Node) -> Vec<Node> {
+  // (none made, none to find: `Document::made_mark`)
+  if !(document.made_mark(COVER_TITLE_BEGIN) || document.made_mark(COVER_TITLE_END)) {
+    return Vec::new();
+  }
   document.findnodes(
     "descendant::ltx:_CoverTitleBegin_Capture_ | descendant::ltx:_CoverTitleEnd_Capture_",
     Some(scope),
@@ -243,6 +247,10 @@ fn marked_range(scope: &Node, begin: &Node, end: &Node) -> Vec<Node> {
 /// titlepage nested in a section or a box, every cover unwound or demoted) the title is displayed and the print goes
 /// ([`drop_cover_title_ink`]).
 pub fn settle_cover_title_ink(document: &mut Document) {
+  // (no cover-title mark made: none to settle, either way below)
+  if !(document.made_mark(COVER_TITLE_BEGIN) || document.made_mark(COVER_TITLE_END)) {
+    return;
+  }
   let Some(root) = document.get_document().get_root_element() else {
     return;
   };
@@ -672,6 +680,10 @@ fn is_inkless(node: &Node) -> bool {
 
 /// The field marks inside `scope`, in document order.
 fn field_marks(document: &mut Document, scope: &Node) -> Vec<Node> {
+  // (none made, none to find: `Document::made_field_marks`)
+  if !document.made_field_marks() {
+    return Vec::new();
+  }
   document.findnodes(
     &s!("descendant::processing-instruction('{FIELD_MARK_TARGET}')"),
     Some(scope),

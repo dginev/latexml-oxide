@@ -1000,7 +1000,7 @@ pub(crate) fn load() -> Result<()> {
   DefConstructor!("\\lx@cover@title@begin",
     sub[document, _args, _props] {
       if document.get_element().is_some() {
-        document.insert_element(COVER_TITLE_BEGIN, Vec::new(), None)?;
+        document.insert_mark(COVER_TITLE_BEGIN, None)?;
       }
     },
     reversion => ""
@@ -1008,7 +1008,7 @@ pub(crate) fn load() -> Result<()> {
   DefConstructor!("\\lx@cover@title@end",
     sub[document, _args, _props] {
       if document.get_element().is_some() {
-        document.insert_element(COVER_TITLE_END, Vec::new(), None)?;
+        document.insert_mark(COVER_TITLE_END, None)?;
       }
     },
     reversion => ""

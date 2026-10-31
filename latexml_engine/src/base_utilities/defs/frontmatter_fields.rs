@@ -183,7 +183,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       return Ok(());
     }
     if !lookup_bool("frontmatter_done") {
-      document.insert_element("ltx:_Frontmatter_Capture_", Vec::new(), None)?;
+      document.insert_mark(FRONTMATTER_MARK, None)?;
     } else if prop_bool!(props, "late") {
       let ordinal = match props.get("late_mark") {
         Some(&Stored::Int(n)) => n.to_string(),

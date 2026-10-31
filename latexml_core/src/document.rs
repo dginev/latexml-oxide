@@ -260,6 +260,9 @@ pub struct Document {
   /// A TeX box's constructor is being absorbed and has opened no element yet ([`FIELD_BOX_PROPERTY`]): the next
   /// [`Document::open_element`] is its own and is marked; any absorb or text before it disarms the mark.
   field_box_pending:             bool,
+  /// The construction-time position marks made in this document ([`Document::insert_mark`]), by qualified name, each
+  /// once.
+  marks_made:                    Vec<String>,
 }
 impl Default for Document {
   fn default() -> Self { Self::new() }
@@ -672,6 +675,7 @@ impl Document {
       field_inherit:               0,
       field_ink_settled:           false,
       field_box_pending:           false,
+      marks_made:                  Vec::new(),
     }
   }
 
@@ -1702,6 +1706,29 @@ impl Document {
     point_mut.add_prev_sibling(&mut new_node).ok();
     Ok(new_node)
   }
+
+  /// Insert a construction-time position mark: an empty internal element (`*_Capture_`-suffixed, admitted anywhere by
+  /// the model, never in the output) at the current point, as [`Document::insert_element`] does, its name recorded
+  /// first. A mark is made only here or copied from one made here, so a pass looking for the marks of a name none was
+  /// made of ([`Document::made_mark`]) has none to find and skips its scan of the document.
+  pub fn insert_mark(
+    &mut self,
+    qname: &str,
+    attrib: Option<HashMap<String, String>>,
+  ) -> Result<Node> {
+    if !self.made_mark(qname) {
+      self.marks_made.push(qname.to_string());
+    }
+    self.insert_element(qname, Vec::new(), attrib)
+  }
+
+  /// Was a position mark named `qname` ever made in this document ([`Document::insert_mark`])? False: none is in it.
+  pub fn made_mark(&self, qname: &str) -> bool { self.marks_made.iter().any(|made| made == qname) }
+
+  /// Was a field mark ([`FIELD_MARK_TARGET`]) ever made in this document? False: none is in it — a field mark is made
+  /// only where a run of field ink opens or closes, and a run's end mark only after its begin mark (a copy is copied
+  /// from one).
+  pub fn made_field_marks(&self) -> bool { self.field_run_serial > 0 }
 
   /// Shorthand for open,absorb,close, but returns the new node.
   pub fn insert_element(

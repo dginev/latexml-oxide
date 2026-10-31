@@ -39,6 +39,10 @@ fn from_the_title_page(node: &Node) -> bool {
     .is_some_and(|name| crate::frontmatter_stores::title_page_may_print(&name))
 }
 
+/// The source position of an abstract queued before the frontmatter is placed (`\lx@frontmatter@mark`, OXIDIZED_DESIGN
+/// #246): read by `abstract_mark_bound`, removed by `remove_frontmatter_marks`.
+pub const FRONTMATTER_MARK: &str = "ltx:_Frontmatter_Capture_";
+
 /// The source position of an abstract queued after `\maketitle` placed the frontmatter (`\lx@frontmatter@mark`); its own
 /// name, so the flush's marker sweep (`remove_frontmatter_marks`) leaves it to the placement that reads it.
 pub const LATE_ABSTRACT_MARK: &str = "ltx:_LateAbstract_Capture_";

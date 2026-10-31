@@ -621,6 +621,10 @@ fn leading_centered_paragraphs(root: &Node) -> Vec<Node> {
 /// Drop every `ltx:_Frontmatter_Capture_` position marker (`\lx@frontmatter@mark`);
 /// called once the frontmatter is placed and again at `\end{document}` as a safety net.
 pub fn remove_frontmatter_marks(document: &mut Document) {
+  // (none made, none to find: `Document::made_mark`)
+  if !document.made_mark(FRONTMATTER_MARK) {
+    return;
+  }
   for mark in document.findnodes("//ltx:_Frontmatter_Capture_", None) {
     document.remove_node(mark);
   }
