@@ -9,7 +9,7 @@
 use std::{cell::Cell, fmt::Write as _, sync::OnceLock};
 
 use super::{
-  events::{EmailMeaning, Event, EventKind, SepKind, lex_events},
+  events::{EmailMeaning, Event, EventKind, SepKind, lex_events, with_block_content},
   ledger::{Entry, Outcome, SkipReason, Stamp, reset_ledger, stamped_block_tokens, with_ledger},
   policy::{TitleMarks, policy_for},
   rehearsal::{Rehearsal, rehearse},
@@ -148,7 +148,12 @@ fn read_at_flush() -> Result<()> {
       Outcome::Skipped(SkipReason::Empty)
     } else {
       let title_marks = policy_for(&block.binding, block.hook).title_marks;
-      match rehearse(stamped_block_tokens(&block), title_marks, lex_events)? {
+      // (the block's tokens beside it: its in-block contacts' entries are read as the writer can cut them,
+      // `events::labelled_entries`)
+      let rehearsal = with_block_content(block.range.0, block.tokens.clone(), || {
+        rehearse(stamped_block_tokens(&block), title_marks, lex_events)
+      })?;
+      match rehearsal {
         Rehearsal::Done { value, errors, warnings } => Outcome::Events {
           events: value,
           errors,

@@ -1063,9 +1063,12 @@ impl Resolver {
       // (a numbered affiliation answers no request a `\footnotemark` made: that number is its footnote's — `Kui
       // Wu\inst{3\footnotemark[1]}` is not Peking University's, `\institute`'s first entry, 2404.09857; a symbol line
       // is ruling 2's, every carrier of its character; an entry a `\footnotemark` leads is that footnote's print)
+      // (a creator's own role-sequence label, `author:N`, names it exactly and asks no mark of it: a rerouted setter's
+      // `\address[key]{…}` the `\author[key]` gave, `frontmatter_stores.rs` `optional_contact`, 0902.1737, 2303.16316)
       if !symbol_labelled
         && !footnote_led
         && matches!(assoc.role.as_str(), "affiliation" | "address")
+        && !labels.iter().all(|label| label.starts_with("author:"))
       {
         owners.retain(|&owner| {
           labels.iter().any(|label| {

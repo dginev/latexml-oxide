@@ -768,6 +768,19 @@ pub fn author_creators_placed() -> bool {
     && !frontmatter_entry_in_progress()
 }
 
+/// How many author creators stand, digested or queued: the role number (`author:N`, `num_ltx:creator`) the next one
+/// will be given is one more.
+pub fn author_creator_total() -> usize {
+  queued_author_count() + usize::try_from(digested_author_count()).unwrap_or(0)
+}
+
+/// The queued author creators (their queue positions) whose names' marks request the label a mark's `operand` sets
+/// (`requesting_authors`): what a rerouted setter's optional argument is read against (`frontmatter_stores.rs`
+/// `optional_contact`: `\address[a]{…}` under `Ann$^a$` labels the address).
+pub fn queued_authors_requesting(operand: &[Token]) -> Vec<usize> {
+  requesting_authors(&queued_author_marks(), operand)
+}
+
 /// The author creators queued and not yet digested.
 pub(in crate::base_utilities) fn queued_author_count() -> usize {
   with_value("frontmatter_raw", |v| match v {

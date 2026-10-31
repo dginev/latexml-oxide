@@ -470,7 +470,7 @@ fn block_line_tokens(index: usize, span: (u16, u16), key: &str, mark: bool) -> O
 /// B3, S3; 2404.02078, 2609.03563, 1909.05311).
 pub(super) fn block_span_tokens(
   index: usize,
-  (start, end): (u16, u16),
+  span: (u16, u16),
   key: Option<&str>,
   with_mark: bool,
 ) -> Option<Tokens> {
@@ -481,106 +481,211 @@ pub(super) fn block_span_tokens(
     let Outcome::Events { events, .. } = &block.outcome else {
       return None;
     };
-    let base = block.range.0;
-    let content = block.tokens.unlist_ref();
-    let at = |p: u16| usize::from(p).checked_sub(base);
-    let (mut from, to) = (at(start)?, at(end)?);
-    let letters: String = content
-      .get(from..to)?
-      .iter()
-      .filter(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
-      .map(|t| t.with_str(ToString::to_string))
-      .collect();
-    if key.is_some_and(|key| norm(&letters) != key) {
-      return None;
-    }
     // (the event printed last before the line, a layout change aside)
-    let mut floor = 0;
-    // (where the entry starts after its mark: past the math shift closing the mark's formula and the spaces after it —
-    // `$^{1}$Univ X`, whose Mark spans its script —, its own switches the entry's (`$^1$\it Univ X`, `$^1$\small`,
-    // `$^1$\color{red}`, `$^1$\textit{…}`: the font Layout event between them has no span; the made item began at its
-    // first Name and lost the switch, review rev94a r5 u03); `None` when anything else stands between)
-    let lead = |mark_end: usize| -> Option<usize> {
-      let between = content.get(mark_end..from)?;
-      let skip = between
-        .iter()
-        .take_while(|t| matches!(t.get_catcode(), Catcode::SPACE | Catcode::MATH))
-        .count();
-      let mut depth = 0i32;
-      between[skip..]
-        .iter()
-        .all(|t| match t.get_catcode() {
-          Catcode::SPACE => true,
-          Catcode::BEGIN => {
-            depth += 1;
-            true
-          },
-          Catcode::END => {
-            depth -= 1;
-            depth >= 0
-          },
-          Catcode::LETTER | Catcode::OTHER => depth > 0,
-          Catcode::CS => {
-            !["\\\\", "\\par", "\\newline", "\\cr", "\\crcr"]
-              .iter()
-              .any(|cs| is_cs(t, cs))
-              && !ALIGNMENT_ONLY.iter().any(|cs| is_cs(t, cs))
-          },
-          _ => false,
-        })
-        .then_some(mark_end + skip)
-    };
-    let mut switched = None;
-    if let Some(mark) = events
+    let mark = events
       .iter()
       .rev()
-      .find(|e| e.kind != EventKind::Layout && e.span.is_some_and(|(_, e)| e <= start))
-      && mark.kind == EventKind::Mark
-      && let Some((mark_start, mark_end)) = mark.span
-      && let (Some(mark_start), Some(mark_end)) = (at(mark_start), at(mark_end))
-      && let Some(lead) = lead(mark_end)
-    {
-      // (without the mark, nothing before the entry's ink is the entry's but its switches: the mark's closing shift
-      // stays the mark's)
-      if with_mark {
-        from = mark_start;
-      } else {
-        if lead < from {
-          switched = Some(lead);
-        }
-        floor = from;
-      }
-    } else if events
+      .find(|e| e.kind != EventKind::Layout && e.span.is_some_and(|(_, e)| e <= span.0))
+      .filter(|e| e.kind == EventKind::Mark)
+      .and_then(|e| e.span);
+    let labelled = events
       .iter()
-      .any(|e| e.kind == EventKind::Contact && e.label.is_some() && e.span == Some((start, end)))
-    {
-      // (an in-block contact's entry read from its leading marks spans its own ink past them (`events::
-      // labelled_entries`): its marks' closing shift before it is theirs — `\affil{$^1$Univ A\\ $^2$Univ B}`, review
-      // rev94b B1)
+      .any(|e| e.kind == EventKind::Contact && e.label.is_some() && e.span == Some(span));
+    span_tokens(
+      block.tokens.unlist_ref(),
+      block.range.0,
+      span,
+      key,
+      mark,
+      labelled,
+      with_mark,
+    )
+  })
+}
+
+/// [`block_span_tokens`] on a block's `content`, its first token at position `base`: `mark` the span of the Mark
+/// event printed last before the entry, `labelled` whether the entry is an in-block contact's entry read from its
+/// leading marks (`events::labelled_entries`, which checks with it at the reading that the writer can cut each entry).
+pub(in crate::base_utilities::frontmatter::observer) fn span_tokens(
+  content: &[Token],
+  base: usize,
+  (start, end): (u16, u16),
+  key: Option<&str>,
+  mark: Option<(u16, u16)>,
+  labelled: bool,
+  with_mark: bool,
+) -> Option<Tokens> {
+  let at = |p: u16| usize::from(p).checked_sub(base);
+  let (mut from, to) = (at(start)?, at(end)?);
+  let letters: String = content
+    .get(from..to)?
+    .iter()
+    .filter(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
+    .map(|t| t.with_str(ToString::to_string))
+    .collect();
+  if key.is_some_and(|key| norm(&letters) != key) {
+    return None;
+  }
+  let mut floor = 0;
+  // (where the group switches the entry keeps are read up to: its own start, or its mark's formula)
+  let mut first = from;
+  // (where the entry starts after its mark: past the math shift closing the mark's formula and the spaces after it —
+  // `$^{1}$Univ X`, whose Mark spans its script —, its own switches the entry's (`$^1$\it Univ X`, `$^1$\small`,
+  // `$^1$\color{red}`, `$^1$\textit{…}`: the font Layout event between them has no span; the made item began at its
+  // first Name and lost the switch, review rev94a r5 u03); `None` when anything else stands between)
+  let lead = |mark_end: usize| -> Option<usize> {
+    let between = content.get(mark_end..from)?;
+    let skip = between
+      .iter()
+      .take_while(|t| matches!(t.get_catcode(), Catcode::SPACE | Catcode::MATH))
+      .count();
+    let mut depth = 0i32;
+    between[skip..]
+      .iter()
+      .all(|t| match t.get_catcode() {
+        Catcode::SPACE => true,
+        Catcode::BEGIN => {
+          depth += 1;
+          true
+        },
+        Catcode::END => {
+          depth -= 1;
+          depth >= 0
+        },
+        Catcode::LETTER | Catcode::OTHER => depth > 0,
+        Catcode::CS => {
+          !["\\\\", "\\par", "\\newline", "\\cr", "\\crcr"]
+            .iter()
+            .any(|cs| is_cs(t, cs))
+            && !ALIGNMENT_ONLY.iter().any(|cs| is_cs(t, cs))
+        },
+        _ => false,
+      })
+      .then_some(mark_end + skip)
+  };
+  let mut switched = None;
+  if let Some((mark_start, mark_end)) = mark
+    && let (Some(mark_start), Some(mark_end)) = (at(mark_start), at(mark_end))
+    && let Some(lead) = lead(mark_end)
+  {
+    // (without the mark, nothing before the entry's ink is the entry's but its switches: the mark's closing shift
+    // stays the mark's)
+    if with_mark {
+      from = mark_start;
+    } else {
+      if lead < from {
+        switched = Some(lead);
+      }
       floor = from;
     }
-    // (a group closing past the spaces after the entry: `{\it Department …, Japan }`, 2307.03384)
-    let mut past = to;
-    while content
-      .get(past)
-      .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+  } else if labelled {
+    // (an in-block contact's entry read from its leading marks spans its own ink past them (`events::
+    // labelled_entries`): its marks' closing shift before it is theirs — `\affil{$^1$Univ A\\ $^2$Univ B}`, review
+    // rev94b B1 —, and the group and the switches it opens between them and its ink the entry's: `$^2${\itshape Univ
+    // B}, City`, `$^2$\textbf{Univ B}` — review rev94b r2 B1: cut at its ink, the group was no balanced run and the
+    // block's one contact stayed a nameless creator's)
+    let mut lead = from;
+    while lead > 0
+      && matches!(
+        content[lead - 1].get_catcode(),
+        Catcode::CS | Catcode::BEGIN | Catcode::SPACE
+      )
+      && !["\\\\", "\\newline", "\\par", "\\linebreak", "\\cr"]
+        .iter()
+        .any(|name| is_cs(&content[lead - 1], name))
     {
-      past += 1;
+      lead -= 1;
     }
-    let piece = |from: usize, floor: usize| {
-      piece_tokens(content, (from, to), floor, from)
-        .or_else(|| {
-          (past > to)
-            .then(|| piece_tokens(content, (from, past), floor, from))
-            .flatten()
-        })
-        .and_then(|(tokens, _)| cell_tokens(content, from, &tokens))
-    };
-    // (from the entry's own switches when they make a balanced run, else from its ink)
-    switched
-      .and_then(|lead| piece(lead, lead))
-      .or_else(|| piece(from, floor))
-  })
+    if lead < from
+      && lead > 0
+      && matches!(
+        content[lead - 1].get_catcode(),
+        Catcode::MATH | Catcode::END
+      )
+    {
+      while lead < from && content[lead].get_catcode() == Catcode::SPACE {
+        lead += 1;
+      }
+      from = lead;
+    }
+    floor = from;
+    // (and a group opened before its marks, with its switches: `{\itshape $^2$Univ B, City}` keeps the `\itshape`)
+    first = mark_formula_start(content, from);
+  }
+  // (a group closing past the spaces after the entry: `{\it Department …, Japan }`, 2307.03384)
+  let mut past = to;
+  while content
+    .get(past)
+    .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+  {
+    past += 1;
+  }
+  let piece = |from: usize, floor: usize, first: usize| {
+    piece_tokens(content, (from, to), floor, first)
+      .or_else(|| {
+        (past > to)
+          .then(|| piece_tokens(content, (from, past), floor, first))
+          .flatten()
+      })
+      .and_then(|(tokens, _)| cell_tokens(content, from, &tokens))
+  };
+  // (from the entry's own switches when they make a balanced run, else from its ink)
+  switched
+    .and_then(|lead| piece(lead, lead, lead))
+    .or_else(|| piece(from, floor, first))
+}
+
+/// Where the mark formula that ends just before `at` begins — a math formula's opening shift (`$^{1,2}$`, the shift
+/// before `at` one that closes: an even count of them up to it), a `\textsuperscript{…}` (`\@textsuperscript`) —, else
+/// `at`.
+fn mark_formula_start(content: &[Token], at: usize) -> usize {
+  let closes = |k: usize| {
+    content[..=k]
+      .iter()
+      .filter(|t| t.get_catcode() == Catcode::MATH)
+      .count()
+      % 2
+      == 0
+  };
+  match at.checked_sub(1).map(|k| (k, content[k].get_catcode())) {
+    Some((close, Catcode::MATH)) if closes(close) => (0..close)
+      .rev()
+      .find(|&k| content[k].get_catcode() == Catcode::MATH)
+      .filter(|&open| {
+        content[open..close]
+          .iter()
+          .any(|t| t.get_catcode() == Catcode::SUPER)
+      })
+      .unwrap_or(at),
+    Some((close, Catcode::END)) => {
+      let mut depth = 0i32;
+      let mut k = close + 1;
+      while k > 0 {
+        k -= 1;
+        match content[k].get_catcode() {
+          Catcode::END => depth += 1,
+          Catcode::BEGIN => {
+            depth -= 1;
+            if depth == 0 {
+              break;
+            }
+          },
+          _ => {},
+        }
+      }
+      if depth == 0
+        && k > 0
+        && ["\\textsuperscript", "\\@textsuperscript"]
+          .iter()
+          .any(|name| is_cs(&content[k - 1], name))
+      {
+        k - 1
+      } else {
+        at
+      }
+    },
+    _ => at,
+  }
 }
 
 /// The environments whose `\\` ends a row of an alignment.

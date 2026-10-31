@@ -18,9 +18,14 @@
 //! Round 2 (review rev94b): an in-block affiliation of several marked entries is one entry per mark (B1); a setter that
 //! prints its line where it is called is the API's only inside a creator's own content or as a line between paragraphs,
 //! never inside a sentence or an abstract, nor when the class's own definition calls it (B3) — one that stores its line
-//! for the title page is the API's wherever it is called — and every call inside one `\author{…}` decides alike (B4). An
-//! optional argument is dropped, as OmniBus drops it (B2 deferred: `raw_class_optional_address_is_named`, a catalog
-//! repro).
+//! for the title page is the API's wherever it is called — and every call inside one `\author{…}` decides alike (B4).
+//!
+//! Round 3 (review rev94b r2): a line between paragraphs is the API's only at the document body's own level or in the
+//! box the authors were set in, never inside another box, note, list, theorem or cell (B3); entries of an in-block
+//! affiliation the writer could not cut are the one entry its leading marks label, never a nameless creator's, and a cut
+//! entry keeps the fonts and the line-end punctuation of its line (B1, N4); an `[optional]{mandatory}` setter's optional
+//! argument is a caption, a mark or a key by the API's convention (B2); a class's own definition calls the class's other
+//! setters directly, nothing left for its look-ahead (S3).
 
 use std::{path::Path, process::Command};
 
@@ -309,8 +314,9 @@ fn an_affil_inside_the_author_of_several_marked_entries_is_cut_by_its_marks() {
 /// content or as a line between paragraphs, outside any other frontmatter entry, before the authors are placed (`\address{Univ A,
 /// Town}`, both authors'); one inside a paragraph ("Write to the curator, `\email{…}`, until 2030.") or an abstract
 /// before `\maketitle` (revtex's order) is the class's line where it stands, and so is the `\address` the class's own
-/// `\email` calls as it runs, after a `\vspace*` that leaves the paragraph (ae100prg.cls:185, 1303.3004;
-/// `\lx@class@contact@begin`). It was Bob Baker's e-mail, the sentence left "Write to the curator, , until 2030.".
+/// `\email` calls as it runs, after a `\vspace*` that leaves the paragraph (ae100prg.cls:185, 1303.3004; its body
+/// rewritten to call the class's `\address`, `class_bodies_call_class_copies`). It was Bob Baker's e-mail, the sentence
+/// left "Write to the curator, , until 2030."; the body is asserted whole (review rev94b r2 N5).
 #[test]
 fn a_contact_in_running_text_stays_the_class() {
   let tex = repro!("raw_class_contact_in_running_text_stays_the_class.tex");
@@ -332,14 +338,11 @@ fn a_contact_in_running_text_stays_the_class() {
       (0, 0),
       "streaming={streaming}: {log}"
     );
-    let all = text(&xml);
-    assert!(
-      all.contains("Write to the curator, E-mail: data@archive.org , until 2030."),
-      "streaming={streaming}: {all}"
-    );
-    assert!(
-      all.contains("E-mail: list@archive.org is the list."),
-      "streaming={streaming}: {all}"
+    assert_eq!(
+      body_text(&xml),
+      "E-mail: list@archive.org is the list. Write to the curator, E-mail: data@archive.org , until 2030. 1 1 §1 1 \
+       Intro Body.",
+      "streaming={streaming}"
     );
   }
 }
@@ -348,8 +351,8 @@ fn a_contact_in_running_text_stays_the_class() {
 /// 0902.1737) is the API's wherever it is called while the authors are set (`\lx@class@contact@stored`): its class's
 /// run prints nothing where it stands, and the kernel's `\maketitle` never prints the store — a call standing in
 /// horizontal mode (0902.1737's after the class's third `\author` argument our kernel leaves as a paragraph) lost its
-/// address. Its optional argument, a key the class prints as the author's mark (`\@exname{@#1}`), is dropped as OmniBus
-/// drops it (OmniBus.cls.ltxml:92): no contact name.
+/// address. Its optional argument, a key the class prints as the author's mark (`\@exname{@#1}`), is the key the
+/// `\author[key]` gave its author (`optional_contact`, `author:N`): no contact name.
 #[test]
 fn a_stored_setter_is_the_api_wherever_it_is_called() {
   let tex = repro!("raw_class_stored_address_keyed_option.tex");
@@ -359,9 +362,9 @@ fn a_stored_setter_is_the_api_wherever_it_is_called() {
   ]];
   assert_reading(tex, Some(xml), &[
     "C Ann Able [] | line:names",
-    "  a Univ A, Town | api:annotate:run",
+    "  a Univ A, Town | api:label",
     "C Bob Baker [] | line:names",
-    "  a Univ B, City | api:annotate:run",
+    "  a Univ B, City | api:label",
   ]);
   for streaming in [false, true] {
     let (log, xml) = binary(tex, streaming);
@@ -421,4 +424,230 @@ fn a_class_whose_names_are_no_creators_keeps_its_address() {
       "streaming={streaming}: {xml}"
     );
   }
+}
+
+/// Each `ltx:contact`'s content, in order, as its markup (its `xml:id`s aside): the fonts a cut entry keeps.
+fn contact_markup(xml: &str) -> Vec<String> {
+  xml
+    .match_indices("<contact ")
+    .map(|(at, _)| {
+      let open_end = at + xml[at..].find('>').expect("contact tag");
+      let close = open_end + xml[open_end..].find("</contact>").expect("closed contact");
+      let mut inner = xml[open_end + 1..close].to_string();
+      while let Some(id) = inner.find(" xml:id=\"") {
+        let end = id + 9 + inner[id + 9..].find('"').expect("closed id");
+        inner.replace_range(id..=end, "");
+      }
+      inner
+    })
+    .collect()
+}
+
+/// Review rev94b r2 B3: a setter that prints its line where it is called is the API's only between paragraphs at the
+/// document body's own level (`frontmatter_stores.rs` `at_the_body_level`) — never inside a box, a note, a list item, a
+/// theorem, a minipage, a parbox, a quote or an alignment's cell, each binding a mode of its own: there the class's
+/// line stays where it prints (ae100prg.cls's `\address`/`\email`, 1303.3004; a class's `\affil` in an author tabular).
+/// The footnote kept its e-mail (it was Bob Baker's, the note empty), the theorem its address ("holds." alone), the cell
+/// "Univ C" (Ann Able's affiliation). Distinct from `a_contact_in_running_text_stays_the_class`: the mode a box binds,
+/// not the paragraph or the frontmatter entry the call stands in.
+#[test]
+fn a_contact_in_a_box_stays_the_class() {
+  let tex = repro!("raw_class_contact_in_a_box_stays_the_class.tex");
+  let xml: &[&[&str]] = &[&["Ann Able", "address=Univ A, Town"], &[
+    "Bob Baker",
+    "address=Univ A, Town",
+  ]];
+  assert_eq!(default_mode_creators(tex), owned(xml));
+  for streaming in [false, true] {
+    let (log, xml) = binary(tex, streaming);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "streaming={streaming}: {log}"
+    );
+    assert_eq!(
+      named_contacts(&xml),
+      ["address=Univ A, Town", "address=Univ A, Town"],
+      "streaming={streaming}"
+    );
+    assert_eq!(
+      body_text(&xml),
+      "Text before 1 1 footnote 1 E-mail: fn@x.org the title. Theorem 1 1 Theorem 1 Theorem 1 Lab T, Place holds. • \
+       1st item E-mail: it@x.org E-mail: mp@x.org Lab X, Place Cy Cole Univ C Lab P, Place Lab Q, Place 1 1 §1 1 Intro \
+       Body.",
+      "streaming={streaming}"
+    );
+  }
+}
+
+/// Review rev94b r2 B1, N4: an in-block affiliation's entries are cut with the group and the switches their line opens
+/// before its mark (`{\itshape $^1$Univ A, Town;}`) or after it (`$^2${\itshape Univ B}`, `$^3$\textbf{Lab C}`) —
+/// `plan::span_tokens`: the second entry was cut at its ink, inside its group, no balanced run, and today's one contact
+/// stayed on a nameless creator; the first lost its italic — and the punctuation printed at its line's end (the `;`,
+/// `events::mark_led_pieces_keeping`). ar-1col.cls's `\affil` inside `\author{}` (1602.05576, 2405.08158).
+#[test]
+fn a_cut_entry_keeps_its_fonts_and_its_punctuation() {
+  let tex = repro!("raw_class_affil_cut_keeps_its_font.tex");
+  // (the reading's text spells the `;` as the comma it separates by, `events_text`; the written contact prints it)
+  let xml: &[&[&str]] = &[
+    &["Ann Able", "affiliation=Univ A, Town;"],
+    &["Bob Baker", "affiliation=Univ B , City"],
+    &["Cy Cole", "affiliation=Lab C , Place"],
+  ];
+  let reading = assert_reading(tex, Some(xml), &[
+    "C Ann Able [1] | line:names mark:after-comma",
+    "  a Univ A, Town, | ruling1:request",
+    "C Bob Baker [2] | line:names sep:comma",
+    "  a Univ B, City | ruling1:request",
+    "C Cy Cole [3] | line:names sep:word",
+    "  a Lab C, Place | ruling1:request",
+  ]);
+  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(default_mode_creators(tex), owned(xml));
+  let (log, xml) = default_mode(tex);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(contact_markup(&xml), [
+    "<text font=\"italic\">Univ A, Town;</text>",
+    "<text font=\"italic\">Univ B</text>, City",
+    "<text font=\"bold\">Lab C</text>, <text font=\"typewriter\">Place</text>",
+  ]);
+}
+
+/// A repro, its XML's creators and its reading's tuples.
+type Shape = (
+  &'static str,
+  &'static [&'static [&'static str]],
+  &'static [&'static str],
+);
+
+/// Review rev94b r2 B1: entries of an in-block affiliation the writer could not cut — an entry of no text (`$^1$\\
+/// $^2$Univ B`), entries whose texts are not the contact's (the word "and" between them), an entry no name requests
+/// (`$^3$Lab C`) — are the one entry the leading marks label, today's one contact on the names requesting them, never a
+/// nameless creator (`events::labelled_entries`, `lex_events`). ar-1col.cls's `\affil` (1602.05576, 2405.08158).
+#[test]
+fn entries_the_writer_cannot_cut_stay_one_contact() {
+  let shapes: [Shape; 3] = [
+    (
+      repro!("raw_class_affil_uncut_noline_stays_one_contact.tex"),
+      &[&["Ann Able", "affiliation=Univ B, City"], &["Bob Baker"]],
+      &[
+        "C Ann Able [1] | line:names mark:after-comma",
+        "  a Univ B, City | ruling1:request",
+        "C Bob Baker [2] | line:names sep:comma",
+      ],
+    ),
+    (
+      repro!("raw_class_affil_uncut_midword_stays_one_contact.tex"),
+      &[
+        &["Ann Able", "affiliation=Univ A, Town and Univ B, City"],
+        &["Bob Baker"],
+      ],
+      &[
+        "C Ann Able [1] | line:names mark:after-comma",
+        "  a Univ A, Town and Univ B, City | ruling1:request",
+        "C Bob Baker [2] | line:names sep:comma",
+      ],
+    ),
+    (
+      repro!("raw_class_affil_uncut_unrequested_stays_one_contact.tex"),
+      &[
+        &["Ann Able", "affiliation=Univ A, Town Univ B, City Lab C"],
+        &["Bob Baker"],
+      ],
+      &[
+        "C Ann Able [1] | line:names mark:after-comma",
+        "  a Univ A, Town Univ B, City Lab C | ruling1:request",
+        "C Bob Baker [2] | line:names sep:comma",
+      ],
+    ),
+  ];
+  for (tex, xml, shadow) in shapes {
+    let reading = assert_reading(tex, Some(xml), shadow);
+    assert_eq!(reading.3, Value::from("written"));
+    assert_eq!(default_mode_creators(tex), owned(xml));
+  }
+}
+
+/// Review rev94b r1-r2 B2: an `[optional]{mandatory}` setter's optional argument by the API's convention
+/// (`frontmatter_stores.rs` `optional_contact`; Perl ams_support.sty.ltxml:115 `\lx@add@address[name={#1}]{#2}`): words
+/// no creator requests are the line's caption — amsart copies' `\address[Current address]{…}` (smfart, nyjm,
+/// birkmult, birkart, ECACRM), "Current address" was dropped —, an empty one is dropped, and a key the names' marks print
+/// labels the line by that mark (`\address[a]{…}` under `Dan Doe$^{a}$`: both lines were on both later names).
+#[test]
+fn an_optional_caption_names_the_line() {
+  let tex = repro!("raw_class_optional_address_is_named.tex");
+  let contacts = [
+    "address=Univ A, Town",
+    "address[Current address]=Lab C, Place",
+    "email=ann@a.edu",
+    "address=Univ B, City",
+    "address=Lab D, Place",
+    "address=Lab E, Place",
+  ];
+  let xml: &[&[&str]] = &[
+    &[
+      "Ann Able",
+      "address=Univ A, Town",
+      "address=Lab C, Place",
+      "email=ann@a.edu",
+    ],
+    &["Bob Baker", "address=Univ B, City"],
+    &["Cy Cole", "address=Lab D, Place"],
+    &["Dan Doe", "address=Lab E, Place"],
+  ];
+  assert_eq!(default_mode_creators(tex), owned(xml));
+  for streaming in [false, true] {
+    let (log, xml) = binary(tex, streaming);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "streaming={streaming}: {log}"
+    );
+    assert_eq!(named_contacts(&xml), contacts, "streaming={streaming}");
+  }
+}
+
+/// Review rev94b r1-r2 B2: an optional argument that is a printed mark (w-art.cls's `\address[\inst{1}]{…}`: 0910.5837,
+/// 1105.1753, quant-ph0606237) leads the line, read by its mark as any marked line is — each address on the names
+/// requesting it (today's XML as the reading: the mark labels the line, `\lx@affiliation@withinst`), the marks it
+/// answers no longer shown on the names; both were on both names, the marks unanswered.
+#[test]
+fn an_optional_mark_labels_the_line() {
+  let tex = repro!("raw_class_optional_mark_labels_the_address.tex");
+  let xml: &[&[&str]] = &[
+    &["Ann Able", "address=Univ A, Town", "address=Lab B, City"],
+    &["Bob Baker", "address=Lab B, City"],
+  ];
+  let reading = assert_reading(tex, Some(xml), &[
+    "C Ann Able [1,2] | line:names",
+    "  a Univ A, Town | api:leading-mark",
+    "  a Lab B, City | api:leading-mark",
+    "C Bob Baker [2] | line:names",
+    "  a Lab B, City | api:leading-mark",
+  ]);
+  // (today's XML the reading: the line's mark labels it, `\lx@affiliation@withinst`)
+  assert_eq!(reading.3, Value::from("same"));
+  assert_eq!(default_mode_creators(tex), owned(xml));
+}
+
+/// Review rev94b r1-r2 B2: a key an `\author[key]` gave its authors labels the line for each of them (`author:N`,
+/// `\lx@author@keys`; Perl jheppub.sty.ltxml:35-37 `\author[]{}` → `annotations={#1}`, `\affiliation[]{}` →
+/// `label={#1}`): a jheppub copy's `\affiliation[b]{McGill …}` (2303.16316) is Joydeep Chakravarty's (`\author[a,b]`)
+/// alone — it was every author's, the second `annotate=run` affiliation the same run's as the first.
+#[test]
+fn an_optional_key_labels_its_authors() {
+  let tex = repro!("raw_class_optional_key_labels_its_authors.tex");
+  let xml: &[&[&str]] = &[&["Ann Able", "affiliation=Univ A, Town"], &[
+    "Bob Baker",
+    "affiliation=Univ A, Town",
+    "affiliation=Lab B, City",
+  ]];
+  assert_reading(tex, Some(xml), &[
+    "C Ann Able [] | line:names",
+    "  a Univ A, Town | api:label",
+    "C Bob Baker [] | line:names",
+    "  a Univ A, Town | api:label",
+    "  a Lab B, City | api:label",
+  ]);
+  assert_eq!(default_mode_creators(tex), owned(xml));
 }

@@ -1400,10 +1400,7 @@ fn reroute_kernel_field_setters(cls: &str) -> Result<()> {
 /// request; an e-mail line goes where the API's evidence puts each of its addresses (the author it spells, …), a
 /// list written out one address each, as a class's address list is (`\lx@split@addresses`, OD #805): 1303.3004's
 /// `\email{rnarayan@…, jmcclintock@…, atchekho@…}` is one address of each of its three authors. `ARG` the line; an
-/// `[optional]{mandatory}` setter's optional argument is dropped, as OmniBus drops it (OmniBus.cls.ltxml:92
-/// `\address[]{}` → `\lx@add@address{#2}`): classes use it as a caption (amsart's copies, "(Current address) …"), a mark
-/// (w-art.cls's `\address[\inst{1}]{…}`, 0910.5837; jheppub's `\affiliation[a]{…}`, 2303.16316) or a key (stacs.cls's
-/// `\address[uniroma]{…}`, 0902.1737), which nothing in the call tells apart.
+/// `[optional]{mandatory}` setter's optional argument is read by [`optional_contact`].
 const IN_PLACE_CONTACT_SETTERS: &[(&str, &str)] = &[
   ("address", "\\lx@add@address[annotate=run]{ARG}"),
   ("affil", "\\lx@add@affiliation[annotate=run]{ARG}"),
@@ -1721,48 +1718,291 @@ fn in_place_contact_setter(name: &str) -> Result<Option<(usize, bool)>> {
 }
 
 /// A rerouted setter's call ([`reroute_in_place_contact_setters`]): `api` where the line it sets is a contact of the
-/// author creators, else `class`, the file's own definition, bracketed by `\lx@class@contact@begin`/`@end`. The API's
-/// inside a creator's own content while it digests (`creator_entry_in_progress`: ar-1col's `\affil{$^1$…}` inside
-/// `\author{}`, 1602.05576, 2405.08158; every one of ci2018's `\affil`s in one `\author`, 1805.12376), or while the
-/// author creators it annotates are being set — one stands (`has_author_creators`), and neither has a `\maketitle` placed
-/// them (`author_creators_placed`) nor has the document body sealed them (`frontmatter_entry_sealed`: the paper's
-/// authors came before its first section) — for a setter that prints its line where it is called (`in_place`) only a
-/// call that is a line of its own in the title block: between paragraphs (vertical mode, the document body's internal
-/// vertical one, in an author group's environment too: imsart's `{aug}`, 1301.1466), outside any other frontmatter
-/// entry digesting (an abstract). Content is never moved out of its sentence: such a setter's call inside a paragraph
-/// or an abstract (before `\maketitle`, or in a class without one: "…from the curator, `\email{data@archive.org}`,
-/// until 2030.", review rev94b B3; commat.cls's `\address` after the "Affiliation:" label of its title page's footnote,
-/// 2204.02666) is the class's line where it stands, and so is every rerouted setter the class's own run
-/// calls (ae100prg.cls's `\email` prints through its `\address` after a `\vspace*`, which leaves the paragraph). So a
-/// contact line of a later unit is its text, not the paper's authors' contact; a file whose names never become creators
-/// — osameet2.sty:49 `\let\author\MEETauthor`, saj.cls's `\authors` (1710.05603, 2110.09949, 2212.09079) — keeps its
-/// lines beside the names it prints, not on a nameless creator; and a line set after `\maketitle` placed the names stays
-/// where it prints, as the late frontmatter path reads such a list right only under a binding that declares the class's
-/// mark conventions (cpc-hepnp.cls's `\address` after `\maketitle`: its `,n)` e-mail marks and typed-number lists, OD
-/// #912, task 91c; just.cls's binding routes the same list).
+/// author creators, else `class`, the file's own definition (`\lx@class@contact@<name>`). The API's inside a creator's
+/// own content while it digests (`creator_entry_in_progress`: ar-1col's `\affil{$^1$…}` inside `\author{}`,
+/// 1602.05576, 2405.08158; every one of ci2018's `\affil`s in one `\author`, 1805.12376), or while the author creators
+/// it annotates are being set — one stands (`has_author_creators`), and neither has a `\maketitle` placed them
+/// (`author_creators_placed`) nor has the document body sealed them (`frontmatter_entry_sealed`: the paper's authors
+/// came before its first section) — for a setter that prints its line where it is called (`in_place`) only a call that
+/// is a line of its own in the title block: between paragraphs at the document body's own level ([`at_the_body_level`]:
+/// in a group of the body, as an author group's environment is — imsart's `{aug}`, 1301.1466 —, never inside a box, a
+/// note, a list item, a theorem, a minipage, a float, a `\marginpar`, a `\caption` or an alignment's cell, each of
+/// which binds a mode of its own: `\footnote{\email{…}}`, `\begin{thm}\address{…} holds.\end{thm}`, `\item \email{…}`,
+/// `\parbox{5cm}{\address{…}}`, `\begin{tabular}{c}Cy Cole\\ \affil{Univ C}\end{tabular}` — review rev94b r2 B3),
+/// outside any other frontmatter entry digesting (an abstract). Content is never moved out of its sentence, box or
+/// note: such a setter's call inside a paragraph, a box or an abstract (before `\maketitle`, or in a class without one:
+/// "…from the curator, `\email{data@archive.org}`, until 2030.", review rev94b B3; commat.cls's `\address` after the
+/// "Affiliation:" label of its title page's footnote, 2204.02666) is the class's line where it stands, and so is every
+/// rerouted setter the class's own definition calls (`class_bodies_call_class_copies`: ae100prg.cls's `\email` prints
+/// through its `\address` after a `\vspace*`, 1303.3004). So a contact line of a later unit is its text, not the
+/// paper's authors' contact; a file whose names never become creators — osameet2.sty:49 `\let\author\MEETauthor`,
+/// saj.cls's `\authors` (1710.05603, 2110.09949, 2212.09079) — keeps its lines beside the names it prints, not on a
+/// nameless creator; and a line set after `\maketitle` placed the names stays where it prints, as the late frontmatter
+/// path reads such a list right only under a binding that declares the class's mark conventions (cpc-hepnp.cls's
+/// `\address` after `\maketitle`: its `,n)` e-mail marks and typed-number lists, OD #912, task 91c; just.cls's binding
+/// routes the same list).
 fn class_contact(api: Tokens, class: Tokens, in_place: bool) -> Tokens {
   let title_block_line = || {
-    (!in_place
-      || (matches!(
-        lookup_string("MODE").as_str(),
-        "vertical" | "internal_vertical"
-      ) && !frontmatter_entry_in_progress()))
+    (!in_place || (at_the_body_level() && !frontmatter_entry_in_progress()))
       && has_author_creators()
       && !author_creators_placed()
       && !frontmatter_entry_sealed("ltx:creator", "author")
   };
-  if lookup_int(CLASS_CONTACT_DEPTH) == 0 && (creator_entry_in_progress() || title_block_line()) {
-    return api;
+  if creator_entry_in_progress() || title_block_line() {
+    api
+  } else {
+    class
   }
-  let mut tokens = vec![T_CS!("\\lx@class@contact@begin")];
-  tokens.extend(class.unlist());
-  tokens.push(T_CS!("\\lx@class@contact@end"));
-  Tokens::new(tokens)
 }
 
-/// How many runs of a rerouted setter's own (class) definition are open (`\lx@class@contact@begin`): a setter it calls
-/// is the class's too.
-const CLASS_CONTACT_DEPTH: &str = "lx_class_contact_depth";
+/// A rerouted `[optional]{mandatory}` setter's call (`\lx@class@contact@optional`): the API call its optional argument
+/// `opt` makes of the line `arg`, by the API's convention — Perl's own bindings pass it as the entry's label
+/// (jheppub.sty.ltxml:35-37 `\affiliation[a]{…}` → `label={a}`, `\author[a]` → `annotations={a}`) or as its caption
+/// (ams_support.sty.ltxml:115 `\address[]{}` → `\lx@add@address[name={#1}]{#2}`) —, then given to [`class_contact`]
+/// as the call without one is. Empty, it is dropped, as OmniBus drops it (OmniBus.cls.ltxml:92). A printed mark (a
+/// superscript, `\textsuperscript`, `\inst`: w-art.cls's `\address[\inst{1}]{…}`, 0910.5837, 1105.1753,
+/// quant-ph0606237) leads the line, read by its marks as any marked line is. A key an `\author[key]` gave its authors
+/// (jheppub-like `\author[a,b]{…}` with `\affiliation[b]{…}`, 2303.16316; stacs.cls's `\address[uniroma]{…}`,
+/// 0902.1737; `lx_author_keys`, `\lx@author@keys`) labels the line for each of those authors (`author:N`); a key the
+/// names' marks print (`\address[a]{…}` under `Ann$^a$`) labels it by that mark. Words no creator requests are its
+/// caption (amsart copies' `\address[Current address]{…}`: "(Current address) Lab C, Place" — smfart, nyjm, birkmult,
+/// birkart, ECACRM). Anything else is in doubt: an in-place setter's call stays the class's own, a stored one's drops
+/// it (review rev94b r1-r2 B2: a caption written for every optional made w-art's marks and jheppub's keys names).
+fn optional_contact(name: &str, in_place: bool, opt: Tokens, arg: Tokens) -> Result<Tokens> {
+  let Some((_, template)) = IN_PLACE_CONTACT_SETTERS.iter().find(|(n, _)| *n == name) else {
+    return Ok(arg);
+  };
+  let opt_tokens: Vec<Token> = opt.unlist();
+  let trimmed: Vec<&Token> = opt_tokens
+    .iter()
+    .filter(|t| t.get_catcode() != Catcode::SPACE)
+    .collect();
+  // (the class's own call, the optional argument braced when it holds a `]`)
+  let class = {
+    let mut tokens = vec![T_CS!(&s!("\\lx@class@contact@{name}")), T_OTHER!("[")];
+    let bracket = opt_tokens.iter().any(|t| *t == T_OTHER!("]"));
+    if bracket {
+      tokens.push(T_BEGIN!());
+    }
+    tokens.extend(opt_tokens.iter().cloned());
+    if bracket {
+      tokens.push(T_END!());
+    }
+    tokens.extend([T_OTHER!("]"), T_BEGIN!()]);
+    tokens.extend(arg.unlist_ref().iter().cloned());
+    tokens.push(T_END!());
+    Tokens::new(tokens)
+  };
+  // (the API call with `options` added to its own, its line `line`)
+  let call = |options: &str, line: Tokens| -> Tokens {
+    let template = if options.is_empty() {
+      template.to_string()
+    } else if template.contains("[annotate=run]") {
+      template.replace("[annotate=run]", &s!("[{options}]"))
+    } else {
+      template.replace("\\lx@add@email}", &s!("\\lx@add@email[{options}]}}"))
+    };
+    let placeholder = T_CS!("\\lx@class@contact@line");
+    let caption = T_CS!("\\lx@class@contact@caption");
+    let mut out = Vec::new();
+    for t in mouth::tokenize_internal(TeXString::assembled(
+      template.replace("ARG", "\\lx@class@contact@line"),
+    ))
+    .unlist()
+    {
+      if t == placeholder {
+        out.extend(line.unlist_ref().iter().cloned());
+      } else if t == caption {
+        out.extend(opt_tokens.iter().cloned());
+      } else {
+        out.push(t);
+      }
+    }
+    Tokens::new(out)
+  };
+  let decide = |api: Tokens| class_contact(api, class.clone(), in_place);
+  if trimmed.is_empty() {
+    return Ok(decide(call("", arg)));
+  }
+  let mark = trimmed.iter().any(|t| {
+    t.get_catcode() == Catcode::SUPER
+      || (t.get_catcode() == Catcode::CS
+        && t.with_cs_name(|n| matches!(n, "\\inst" | "\\textsuperscript" | "\\@textsuperscript")))
+  });
+  if mark {
+    // (an address's line read for its marks as an affiliation's is, `\lx@affiliation@withinst`: the mark labels it and
+    // prints nothing of its own in it)
+    let mut line = opt_tokens.clone();
+    line.extend(arg.unlist_ref().iter().cloned());
+    if template.starts_with("\\lx@add@address") {
+      let mut wrapped = vec![T_CS!("\\lx@affiliation@withinst"), T_BEGIN!()];
+      wrapped.extend(line);
+      wrapped.push(T_END!());
+      line = wrapped;
+    }
+    return Ok(decide(call("", Tokens::new(line))));
+  }
+  let plain = trimmed
+    .iter()
+    .all(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER) && **t != T_OTHER!("]"));
+  if plain {
+    let text: String = opt_tokens.iter().map(ToString::to_string).collect();
+    let keys: Vec<&str> = text
+      .split(',')
+      .map(str::trim)
+      .filter(|k| !k.is_empty())
+      .collect();
+    // (the authors an `\author[key]` gave each key)
+    let records = lookup_string(AUTHOR_KEYS);
+    let mut authors: Vec<usize> = Vec::new();
+    let mut every_key = !keys.is_empty();
+    for key in &keys {
+      let mut found = false;
+      for record in records.split('\u{1}').filter(|r| !r.is_empty()) {
+        let mut parts = record.split('\u{2}');
+        let (Some(record_keys), Some(from), Some(to)) = (parts.next(), parts.next(), parts.next())
+        else {
+          continue;
+        };
+        if record_keys.split(',').map(str::trim).any(|k| k == *key)
+          && let (Ok(from), Ok(to)) = (from.parse::<usize>(), to.parse::<usize>())
+        {
+          found = true;
+          authors.extend(from + 1..=to);
+        }
+      }
+      every_key &= found;
+    }
+    if every_key && !authors.is_empty() {
+      authors.sort_unstable();
+      authors.dedup();
+      let mut tokens = Vec::new();
+      for n in authors {
+        tokens.extend(call(&s!("label={{author:{n}}}"), arg.clone()).unlist());
+      }
+      return Ok(decide(Tokens::new(tokens)));
+    }
+    if !keys.is_empty()
+      && keys.iter().all(|key| {
+        let operand: Vec<Token> = key
+          .chars()
+          .map(|c| {
+            let c = c.to_string();
+            if c.chars().all(char::is_alphabetic) {
+              T_LETTER!(&c)
+            } else {
+              T_OTHER!(&c)
+            }
+          })
+          .collect();
+        !queued_authors_requesting(&operand).is_empty()
+      })
+    {
+      return Ok(decide(call(&s!("label={{{}}}", keys.join(",")), arg)));
+    }
+    if text
+      .split_whitespace()
+      .filter(|w| w.chars().any(char::is_alphabetic))
+      .count()
+      >= 2
+    {
+      // (an address or an affiliation keeps its run, an e-mail the API's own placement)
+      let options = if template.contains("[annotate=run]") {
+        "annotate=run,name={\\lx@class@contact@caption}"
+      } else {
+        "name={\\lx@class@contact@caption}"
+      };
+      return Ok(decide(call(options, arg)));
+    }
+  }
+  Ok(if in_place {
+    class
+  } else {
+    decide(call("", arg))
+  })
+}
+
+/// The records of the kernel's `\author[key]{…}` calls (`\lx@author@keys`): each its keys (`a,b`), the number of the
+/// author creators standing before it and after it, `\u{2}`-parted, the records `\u{1}`-parted.
+const AUTHOR_KEYS: &str = "lx_author_keys";
+
+/// Whether the digestion stands between paragraphs at the document body's own level: in vertical mode, and no frame
+/// binds a mode of its own (`BOUND_MODE`: the body's is `\begin{document}`'s, bound in no frame of its own,
+/// sect02.rs) — a group of the body binds none (`{\small …}`, an environment that is a group, imsart's `{aug}`); a box,
+/// a note, a list, a theorem, a minipage, a float or an alignment's cell does (`begin_mode`) — or in the box the
+/// authors were set in, still open, no box opened since (`\lx@author@box`): the title block's own box, imsart.sty's
+/// `\open@fm` `\global\setbox\fm@box=\vbox\bgroup` around `{frontmatter}` (1301.1466's `\affiliation` in its
+/// `{aug}`).
+fn at_the_body_level() -> bool {
+  let boxes = mode_frames();
+  matches!(
+    lookup_string("MODE").as_str(),
+    "vertical" | "internal_vertical"
+  ) && (boxes == 0 || lookup_int(AUTHOR_BOX) == boxes as i64)
+}
+
+/// How many frames bind a mode of their own ([`at_the_body_level`]).
+fn mode_frames() -> usize {
+  (0..get_frame_depth())
+    .filter(|&n| is_value_bound("BOUND_MODE", Some(n)))
+    .count()
+}
+
+/// The boxes open around the kernel's last `\author` call ([`mode_frames`]), set locally where it stands
+/// (`\lx@author@box`): visible while that box is open.
+const AUTHOR_BOX: &str = "lx_author_box";
+
+/// Each kept class definition (`\lx@class@contact@<name>`) of the rerouted setters `names`, rewritten so that its calls
+/// to another rerouted setter — or to itself — call that setter's class definition: a setter run as the class's
+/// prints all of its line where the class prints it, never part of it through the API (ae100prg.cls:185 `\def\email#1
+/// {\vspace*{5pt}\address{E-mail: #1}}`, 1303.3004: its `\address` the class's `\lx@class@contact@address`). Static, at
+/// the reroute: nothing is left in the call's input for the class's own look-ahead to see (a class's
+/// `\def\email#1{\\{\ttfamily #1}\ignorespaces}` skips the spaces after the call, `\@ifnextchar`/`\@ifstar` read the
+/// token after it — review rev94b r2 S3).
+fn class_bodies_call_class_copies(names: &[&str]) {
+  let rerouted: Vec<(Token, Token)> = names
+    .iter()
+    .map(|name| {
+      (
+        T_CS!(&s!("\\{name}")),
+        T_CS!(&s!("\\lx@class@contact@{name}")),
+      )
+    })
+    .collect();
+  for (_, copy) in &rerouted {
+    let Some(Stored::Expandable(defn)) = lookup_meaning(copy) else {
+      continue;
+    };
+    let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+      continue;
+    };
+    if !body
+      .unlist_ref()
+      .iter()
+      .any(|t| rerouted.iter().any(|(cs, _)| cs == t))
+    {
+      continue;
+    }
+    let calls: Vec<Token> = body
+      .unlist_ref()
+      .iter()
+      .map(|t| {
+        rerouted
+          .iter()
+          .find(|(cs, _)| cs == t)
+          .map_or(*t, |(_, class)| *class)
+      })
+      .collect();
+    let mut rewritten = (*defn).clone();
+    rewritten.expansion = Some(ExpansionBody::Tokens(Tokens::new(calls)));
+    rewritten.plan = std::cell::OnceCell::new();
+    assign_meaning(
+      copy,
+      Stored::Expandable(Rc::new(rewritten)),
+      Some(Scope::Global),
+    );
+  }
+}
 
 /// After a raw file is read (a class, `\lx@class@loaded@raw`; a package, `\lx@package@loaded@raw`): each Frontmatter
 /// API contact setter it defined (`IN_PLACE_CONTACT_SETTERS`; still its own definition, not a binding's, nor one K11
@@ -1787,7 +2027,10 @@ pub fn reroute_in_place_contact_setters(file: &str) -> Result<()> {
     let (params, api, class_args) = if arg == 2 {
       (
         convert_latex_args(2, Some(Tokens::new(Vec::new())))?,
-        api.replace("ARG", "#2"),
+        s!(
+          "\\lx@class@contact@optional{{{name}}}{{{}}}{{#1}}{{#2}}",
+          u8::from(in_place)
+        ),
         "[#1]{#2}",
       )
     } else {
@@ -1814,6 +2057,7 @@ pub fn reroute_in_place_contact_setters(file: &str) -> Result<()> {
     DefMacro!(cs, params, body, scope => Some(Scope::Global));
     rerouted.push(name);
   }
+  class_bodies_call_class_copies(&rerouted);
   if !rerouted.is_empty() {
     Info!(
       "frontmatter",
@@ -5188,21 +5432,42 @@ LoadDefinitions!({
   DefMacro!("\\lx@class@contact@stored{}{}", sub[(api, class)] {
     Ok(class_contact(api, class, false))
   });
-  DefPrimitive!("\\lx@class@contact@begin", {
-    let depth = lookup_int(CLASS_CONTACT_DEPTH);
+  // …and the call of a rerouted `[optional]{mandatory}` setter: the setter's name, whether it prints its line where it
+  // is called, its two arguments ([`optional_contact`])
+  DefMacro!("\\lx@class@contact@optional{}{}{}{}", sub[(name, in_place, opt, arg)] {
+    optional_contact(&name.to_string(), in_place.to_string() == "1", opt, arg)
+  });
+  // The kernel's `\author[key]{…}` (sect05.rs): the box the call stands in (`\lx@author@box`, [`at_the_body_level`]),
+  // a contact line set in it the title block's;
+  DefPrimitive!("\\lx@author@box", {
+    let boxes = mode_frames();
+    if boxes > 0 {
+      assign_value(AUTHOR_BOX, Stored::Int(boxes as i64), Some(Scope::Local));
+    }
+  });
+  // …the number of author creators before the call (`\lx@author@keys@from`), then its keys and that number after it
+  // (`\lx@author@keys`): the authors a rerouted setter's `[key]` names ([`optional_contact`]). A short author
+  // (`\author[B.F. Roukema]{…}`) records as a key too, which only a setter's equal key reads.
+  DefPrimitive!("\\lx@author@keys@from", {
     assign_value(
-      CLASS_CONTACT_DEPTH,
-      Stored::Int(depth + 1),
+      "lx_author_keys_from",
+      Stored::Int(author_creator_total() as i64),
       Some(Scope::Global),
     );
   });
-  DefPrimitive!("\\lx@class@contact@end", {
-    let depth = lookup_int(CLASS_CONTACT_DEPTH);
-    assign_value(
-      CLASS_CONTACT_DEPTH,
-      Stored::Int((depth - 1).max(0)),
-      Some(Scope::Global),
-    );
+  DefPrimitive!("\\lx@author@keys{}", sub[(keys)] {
+    let keys = keys.to_string();
+    let keys = keys.trim();
+    let to = author_creator_total();
+    let from = usize::try_from(lookup_int("lx_author_keys_from")).unwrap_or(to).min(to);
+    if !keys.is_empty() && to > from {
+      let mut records = lookup_string(AUTHOR_KEYS);
+      if !records.is_empty() {
+        records.push('\u{1}');
+      }
+      records.push_str(&s!("{keys}\u{2}{from}\u{2}{to}"));
+      assign_value(AUTHOR_KEYS, Stored::from(records), Some(Scope::Global));
+    }
   });
   // …and after a `.sty` is loaded raw: its contact setters only (`reroute_in_place_contact_setters`; 11lomcon.sty,
   // hep-ph0312288). Its stores stay a class's concern (K11).

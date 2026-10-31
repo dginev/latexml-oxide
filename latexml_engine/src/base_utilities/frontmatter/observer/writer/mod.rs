@@ -24,6 +24,9 @@ mod dom;
 mod plan;
 mod repart;
 
+// (the writer's cut of a block's entry, which the reading checks an in-block contact's entries by: `events::labelled_entries`)
+pub(super) use plan::span_tokens;
+
 /// The resolution of the document's author blocks when the writer may write them: every block flushed so far
 /// rehearsed without an error held, the API calls after them rehearsed, and every block's family `written`.
 fn written_resolution() -> Option<Resolved> {

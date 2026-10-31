@@ -1202,7 +1202,7 @@ pub(crate) fn load() -> Result<()> {
     assign_meaning(&maketitle, Stored::Expandable(Rc::new(inert)), Some(Scope::Local));
   });
   DefMacro!("\\author[]{}",
-    r"\lx@sealed@class@call{author}{#1}{#2}{\lx@replay@class@setter{author}{#1}{#2}\lx@author@flush\def\@shortauthor{#1}\def\@author{#2}\expandafter\lx@add@authors@adaptive\expandafter{\@author}\lx@field@mark\def\@author{author}\expandafter\lx@author@after\expandafter{\@author}\lx@author@handed\lx@author@trailing}",
+    r"\lx@sealed@class@call{author}{#1}{#2}{\lx@replay@class@setter{author}{#1}{#2}\lx@author@flush\def\@shortauthor{#1}\def\@author{#2}\lx@author@box\lx@author@keys@from\expandafter\lx@add@authors@adaptive\expandafter{\@author}\lx@author@keys{#1}\lx@field@mark\def\@author{author}\expandafter\lx@author@after\expandafter{\@author}\lx@author@handed\lx@author@trailing}",
     locked => true);
   // Kernel fallback for `\inst{n}`, the superscript affiliation mark. Perl
   // has no global `\inst`: Base_Utility.pool.ltxml:549 says a class "typically
