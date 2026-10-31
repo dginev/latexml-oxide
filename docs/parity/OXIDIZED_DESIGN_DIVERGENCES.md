@@ -27538,11 +27538,15 @@ would have printed it.
   `Harvard University$^{*}$` under a starred name): aistats's `\aistatsaddress{Univ A$^*$ \And Univ B \And Univ A$^*$}`
   under names showing no `*` pairs each address with its column's name (the `*` another address line printed read as
   shown, so both went to the block; 77o).
-- **A block line's e-mail entry is one print of its addresses, each placed among its mark's carriers by
-  FIDELITY_CHARTER §4's chain** (`Resolver::print_address_owners`; review rev93a B1): the carrier it spells
-  (`owner:spelled`); else, the print one address per carrier that every spelled one agrees with, the carrier at its
-  place (`owner:order`, OD #805); else, when another address of the print spells its carrier, the block's
-  (`owner:block`); with none spelled, every carrier's, as ruling 2 gives the line. `$^\dagger$\texttt{\{ann,
+- **A block line's e-mail entry is one print of its addresses, each placed by FIDELITY_CHARTER §4's chain**
+  (`Resolver::print_address_owners`; review rev93a B1): the author it spells (`owner:spelled`), spelled against every
+  author, not the mark's carriers alone (`$^\dagger$\texttt{bob@x.org, cat@x.org}` under Ann Able†, Bob Baker, Cat
+  Cole† is bob@ Bob Baker's; one carrier alike; against the carriers when the authors tie); else, the print one
+  address per carrier that every spelled one agrees with, the carrier at its place (`owner:order`, OD #805; an address
+  spelling a non-carrier agrees with no place); else every carrier's, by the symbol-line ruling (FIDELITY_CHARTER §4,
+  2026-10-30, "every symbol carrier": an unspelled address on the line is every carrier's, and a spelled address beside
+  it does not send it to the block — `\texttt{cole@x.org, alpha@y.org}` under three `†` names, alpha@ on all three; a
+  numbered line's print alike, ruling 1 giving it every requester). `$^\dagger$\texttt{\{ann,
   cat\}@x.org}` under Ann Able† and Cat Cole† had been both addresses on both names once the kernel family was written
   (2409.11430's ‡ and § groups, 2506.19548's `\{devesh, minesh\}@…`, 2410.18711's `$^{*}$Email: jtliu@…; wuxin\_1134@…;
   wuzhenhua@…`); `$^{\dagger}$ \texttt{dawnkun1993@…, chenma@…}` is in author order, dawnkun1993 Xiaokun Zhang's
@@ -27556,7 +27560,9 @@ would have printed it.
   Laboratory, …, \\ London SW7 2BZ, UK}` gave Bender "London" and Brody "St. Louis" once written. The mark's entry runs
   on until the next mark (each line still its own contact), as one call's content is cut at its marks
   (`mark_led_pieces`) and a block's unmarked line continues the entry above it; a line before the first mark stays
-  every author's.
+  every author's. Open: a line after the last mark that reads as every author's (`All authors: Some Network`) runs on
+  too — the place of quant-ph0101015's "London" line, told apart only by its text (RED repro
+  `raw_class_store_trailing_line_after_last_mark`).
 - Repros sectioning-frontmatter/`author_and_columns_number_their_own_lines`, `author_and_columns_share_one_list` (and
   77p's `author_symbol_carriers_stay_in_their_row`, `author_compound_legend_mark_names_its_carrier`,
   `author_email_sequence_more_addresses`); guards `perfect_kernel_batch93a::
@@ -27565,7 +27571,10 @@ would have printed it.
   `an_unrequested_entry_keeps_todays_placement`; for the marked print and the store line (93a r2), repros
   `author_marked_email_group_goes_to_its_spellers`, `author_marked_email_list_unspelled_by_carrier_order`,
   `raw_class_store_marked_line_runs_on` (with `raw_store_affiliation.cls`), guards `a_marked_email_print_goes_to_its_spellers`,
-  `a_marked_email_print_takes_the_chain_over_its_carriers`, `a_raw_store_marked_line_runs_on_until_the_next_mark`; and
+  `a_marked_email_print_takes_the_chain_over_its_carriers`, `a_raw_store_marked_line_runs_on_until_the_next_mark`; for
+  the symbol-line ruling and spelling against every author (93a r3), repros `author_marked_email_print_rest_every_carriers`,
+  `author_marked_email_print_spells_a_noncarrier`, guards `a_marked_email_prints_unspelled_address_is_every_carriers`,
+  `a_marked_email_print_is_spelled_against_every_author`; and
   the print order of a block's entries written onto a name (the tip's print-order pass, `apply::place`: 1910.02344,
   2002.09131), repro `author_block_entries_keep_the_print_order`, guard `a_blocks_entries_are_written_in_print_order`.
 

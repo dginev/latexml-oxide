@@ -1,0 +1,22 @@
+% mechanism: a block line's e-mail entry under a mark several names carry, one of its addresses spelling a name that
+%   does not carry the mark (`$^\dagger$\texttt{bob@x.org, cat@x.org}` under Ann Able†, Bob Baker, Cat Cole†): each
+%   address is spelled against every author, not the carriers alone — bob@x.org Bob Baker's (`owner:spelled`), and,
+%   one spelled address disagreeing with its place, no author order (`owner:order`) gives it Ann Able
+%   (`Resolver::print_address_owners`; FIDELITY_CHARTER §4, a spelled address its owner's).
+% witness: synthetic (the review rev93a r2 probes c10, d1-d4); the print path's witnesses 2409.11430, 2410.18711,
+%   2506.19548, 2510.10618
+% oracle:  pdflatex 0 errors: "Ann Able1† , Bob Baker1 , Cat Cole1†" over "1 Univ A, City" and "† bob@x.org,
+%   cat@x.org"
+% engines: rust 93a r2: reading bob@x.org Ann Able's (`owner:order`), the writer declined (today's Bob Baker's kept)
+% expect:  0 errors, 0 warnings; Bob Baker bob@x.org, Cat Cole cat@x.org, Ann Able none
+% status:  GREEN (93a r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1\dagger}$, Bob Baker$^{1}$, Cat Cole$^{1\dagger}$ \\
+$^1$Univ A, City \\
+$^\dagger$\texttt{bob@x.org, cat@x.org}}
+\maketitle
+Text.
+\end{document}

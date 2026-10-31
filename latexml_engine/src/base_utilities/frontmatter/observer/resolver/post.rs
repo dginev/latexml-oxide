@@ -1277,16 +1277,11 @@ impl Resolver {
         );
         continue;
       }
-      // (one of a block line's addresses, its entry's carriers several: the chain's owner among them, or the block)
+      // (one of a block line's addresses: the chain's owner over every author and its entry's carriers)
       let (owners, assoc) = match print_of[at] {
-        Some((print, place)) if owners.len() > 1 => {
-          match self.print_address_owners(&prints[print], place, &owners) {
+        Some((print, place)) => {
+          match self.print_address_owners(&prints[print], place, &owners, &live) {
             (_, None) => (owners, assoc),
-            (narrowed, Some(tag)) if narrowed.is_empty() => {
-              let rule = s!("{} {tag}", assoc.rule);
-              self.attach(None, Assoc { rule, ..assoc }, false);
-              continue;
-            },
             (narrowed, Some(tag)) => {
               let rule = s!("{} {tag}", assoc.rule);
               (narrowed, Assoc { rule, ..assoc })
@@ -1368,27 +1363,36 @@ impl Resolver {
   }
 
   /// The owners of the address at `place` of a block line's e-mail entry (`addresses`, the one print; `carriers`, the
-  /// names requesting its label, two or more), by FIDELITY_CHARTER §4's chain as an unmarked line's
-  /// (`place_line_contacts`), over the carriers: the carrier it spells (`owner:spelled`); else, the print one address per
-  /// carrier that every spelled address agrees with, the carrier at its place (`owner:order`); else, when another
-  /// address of the print spells its carrier, the block's (`owner:block`: one left over, guessed onto no one) — and with
-  /// none spelled, every carrier's, as ruling 2 gives the line (no tag: the label's reading). The label's carriers stay
-  /// the candidates: `$^\dagger$\texttt{\{ann, cat\}@x.org}` under Ann Able† and Cat Cole† is ann@ Ann Able's and cat@
-  /// Cat Cole's, not both each (review rev93a B1: 2409.11430's ‡ and § groups, 2410.18711's `$^{*}$Email: jtliu@…;
-  /// wuxin\_1134@…; wuzhenhua@…`, 2506.19548's `\{devesh, minesh\}@…`, 2510.10618's `\texttt{dawnkun1993@…,
+  /// names requesting its label), by FIDELITY_CHARTER §4's chain as an unmarked line's (`place_line_contacts`): the
+  /// author it spells (`owner:spelled`) — spelled against every live author (`live`), so an address spelling a name
+  /// that does not carry the mark is that name's (`Ann Able$^\dagger$, Bob Baker, Cat Cole$^\dagger$ …
+  /// $^\dagger$\texttt{bob@x.org, cat@x.org}`: bob@ Bob Baker's, review rev93a r2 c10, d1-d4; one carrier alike, c12),
+  /// and against the carriers when the authors tie; else, the print one address per carrier that every spelled address
+  /// agrees with, the carrier at its place (`owner:order`; an address spelling a non-carrier agrees with no place);
+  /// else every carrier's, as the symbol-line ruling gives an unspelled address on the line (FIDELITY_CHARTER §4,
+  /// 2026-10-30, "every symbol carrier": a spelled address beside it does not send it to the block; no tag, the label's
+  /// reading). One carrier: only an address spelling another author leaves it. The label's carriers stay the
+  /// candidates of the order: `$^\dagger$\texttt{\{ann, cat\}@x.org}` under Ann Able† and Cat Cole† is ann@ Ann Able's
+  /// and cat@ Cat Cole's, not both each (review rev93a B1: 2409.11430's ‡ and § groups, 2410.18711's `$^{*}$Email:
+  /// jtliu@…; wuxin\_1134@…; wuzhenhua@…`, 2506.19548's `\{devesh, minesh\}@…`, 2510.10618's `\texttt{dawnkun1993@…,
   /// chenma@…}`, the second in author order).
   fn print_address_owners(
     &self,
     addresses: &[String],
     place: usize,
     carriers: &[usize],
+    live: &[usize],
   ) -> (Vec<usize>, Option<&'static str>) {
     let spelled: Vec<Option<usize>> = addresses
       .iter()
-      .map(|a| self.spelled(a, carriers))
+      .map(|a| self.spelled(a, live).or_else(|| self.spelled(a, carriers)))
       .collect();
-    if let Some(owner) = spelled[place] {
-      return (vec![owner], Some("owner:spelled"));
+    match spelled[place] {
+      Some(owner) if carriers.len() > 1 || !carriers.contains(&owner) => {
+        return (vec![owner], Some("owner:spelled"));
+      },
+      _ if carriers.len() < 2 => return (carriers.to_vec(), None),
+      _ => {},
     }
     let in_order = addresses.len() == carriers.len()
       && !lists_local_parts(&addresses[place])
@@ -1398,9 +1402,6 @@ impl Resolver {
         .all(|(s, c)| s.is_none_or(|s| s == *c));
     if in_order {
       return (vec![carriers[place]], Some("owner:order"));
-    }
-    if spelled.iter().any(Option::is_some) {
-      return (Vec::new(), Some("owner:block"));
     }
     (carriers.to_vec(), None)
   }

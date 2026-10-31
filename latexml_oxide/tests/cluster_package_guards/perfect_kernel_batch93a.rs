@@ -349,7 +349,8 @@ fn a_marked_email_print_goes_to_its_spellers() {
 /// carrier that every spelled one agrees with is in carrier order (`owner:order`, OD #805: `zq77@x.org, cat@x.org` under
 /// Ann Able† and Cat Cole†, zq77 Ann Able's — 2510.10618's `dawnkun1993@…, chenma@…`, which the old reader left to
 /// the block, written); with none spelled, the same (`\{a1, c3\}@x.org`, written); an address left over in a print some
-/// of whose addresses spell their carriers, the block's (`owner:block`: `\{cat, ann, info\}@x.org`, info@ no one's, as
+/// of whose addresses spell their carriers, every carrier's (`\{cat, ann, info\}@x.org`: info@ on Ann Able and Cat
+/// Cole, written — the symbol-line ruling, FIDELITY_CHARTER §4 2026-10-30; it had been the block's, `owner:block`, as
 /// the old reader held it); one address with none spelled, every carrier's, as ruling 2 gives the line (`zq77@x.org`
 /// on both, as the old reader).
 #[test]
@@ -395,14 +396,103 @@ fn a_marked_email_print_takes_the_chain_over_its_carriers() {
   );
   assert_eq!(
     default_mode_creators(&article("\\{cat, ann, info\\}@x.org")),
-    rows(&["email=ann@x.org"], &["email=cat@x.org"], &[
-      "email=info@x.org"
-    ])
+    rows(
+      &["email=ann@x.org", "email=info@x.org"],
+      &["email=cat@x.org", "email=info@x.org"],
+      &[]
+    )
   );
   assert_eq!(
     default_mode_creators(&article("zq77@x.org")),
     rows(&["email=zq77@x.org"], &["email=zq77@x.org"], &[])
   );
+}
+
+/// The symbol-line ruling for a marked print (FIDELITY_CHARTER §4, 2026-10-30, "every symbol carrier";
+/// `Resolver::print_address_owners`): an address of the line spelling none of the carriers is every carrier's, and a
+/// spelled address beside it does not send it to the block — `$^\dagger$\texttt{cole@x.org, alpha@y.org}` under three
+/// carriers: cole@ Cat Cole's, alpha@ on all three (review rev93a r2 probe c4; the reading had left alpha@ to the block,
+/// `owner:block`, as the old reader held it, now written). Distinct from the chain guard's `\{cat, ann, info\}@x.org`
+/// row: the reading itself, three carriers, a print whose every address but one is unspelled.
+#[test]
+fn a_marked_email_prints_unspelled_address_is_every_carriers() {
+  let reading = assert_reading(
+    repro!("author_marked_email_print_rest_every_carriers.tex"),
+    Some(&[
+      &[
+        "Ann Able †",
+        "affiliation=Univ A, City",
+        "email=alpha@y.org",
+      ],
+      &[
+        "Bob Baker †",
+        "affiliation=Univ A, City",
+        "email=alpha@y.org",
+      ],
+      &[
+        "Cat Cole †",
+        "affiliation=Univ A, City",
+        "email=cole@x.org",
+        "email=alpha@y.org",
+      ],
+    ]),
+    &[
+      "C Ann Able [1,†] | line:names",
+      "  a Univ A, City | ruling1:request ruling1:parted",
+      "  c email alpha@y.org | ruling2:symbol-line ruling1:parted",
+      "C Bob Baker [1,†] | line:names sep:comma",
+      "  a Univ A, City | ruling1:request ruling1:parted",
+      "  c email alpha@y.org | ruling2:symbol-line ruling1:parted",
+      "C Cat Cole [1,†] | line:names sep:comma",
+      "  a Univ A, City | ruling1:request ruling1:parted",
+      "  c email cole@x.org | ruling2:symbol-line owner:spelled ruling1:parted",
+      "  c email alpha@y.org | ruling2:symbol-line ruling1:parted",
+    ],
+  );
+  assert_eq!(reading.3, Value::from("written"));
+}
+
+/// A marked print's address is spelled against every author, not the mark's carriers alone
+/// (`Resolver::print_address_owners`; FIDELITY_CHARTER §4, a spelled address its owner's): `$^\dagger$\texttt{bob@x.org,
+/// cat@x.org}` under Ann Able†, Bob Baker and Cat Cole† is bob@ Bob Baker's (`owner:spelled`), and, one spelled address
+/// disagreeing with its place, no author order gives it Ann Able — the reading had (`owner:order`), the writer declining
+/// (review rev93a r2 probes c10, d1-d4); now the reading agrees with the old reader (`same`). The single carrier alike
+/// (probe c12, the gate that left one carrier's line out of the chain): `$^\dagger$\texttt{bob@x.org}` under Ann Able†
+/// alone is Bob Baker's. (c12's XML is not asserted: the old reader's e-mail holds the line's mark, `†bob@x.org`.)
+#[test]
+fn a_marked_email_print_is_spelled_against_every_author() {
+  let reading = assert_reading(
+    repro!("author_marked_email_print_spells_a_noncarrier.tex"),
+    Some(&[
+      &["Ann Able †", "affiliation=Univ A, City"],
+      &["Bob Baker", "affiliation=Univ A, City", "email=bob@x.org"],
+      &["Cat Cole †", "affiliation=Univ A, City", "email=cat@x.org"],
+    ]),
+    &[
+      "C Ann Able [1,†] | line:names",
+      "  a Univ A, City | ruling1:request ruling1:parted",
+      "C Bob Baker [1] | line:names sep:comma",
+      "  a Univ A, City | ruling1:request",
+      "  c email bob@x.org | ruling2:symbol-line owner:spelled",
+      "C Cat Cole [1,†] | line:names sep:comma",
+      "  a Univ A, City | ruling1:request ruling1:parted",
+      "  c email cat@x.org | ruling2:symbol-line owner:spelled ruling1:parted",
+    ],
+  );
+  assert_eq!(reading.3, Value::from("same"));
+  let reading = assert_reading(
+    "\\documentclass{article}\n\\begin{document}\n\\title{A Title}\n\\author{Ann Able$^{1\\dagger}$, Bob Baker$^{1}$ \\\\ \
+     $^1$Univ A, City \\\\ $^\\dagger$\\texttt{bob@x.org}}\n\\maketitle\nText.\n\\end{document}\n",
+    None,
+    &[
+      "C Ann Able [1,†] | line:names",
+      "  a Univ A, City | ruling1:request ruling1:parted",
+      "C Bob Baker [1] | line:names sep:comma",
+      "  a Univ A, City | ruling1:request",
+      "  c email bob@x.org | ruling2:symbol-line owner:spelled",
+    ],
+  );
+  assert_eq!(reading.3, Value::from("same"));
 }
 
 /// The entries of one block line a name requests, which the old reader left to the block, are written onto the name in
@@ -442,7 +532,10 @@ fn a_blocks_entries_are_written_in_print_order() {
 /// hands it on a line a call) is read as it prints: each mark's entry runs on over the unmarked lines after it until the
 /// next mark (`Resolver::api` `line:continued`), and a line before the first mark stays every author's (review rev93a
 /// S2: quant-ph0101015's rspublic.cls, "London SW7 2BZ" Bender's and "St. Louis MO 63130" Brody's once written). In
-/// process, under the census and in the default mode (the class file beside the repro).
+/// process, under the census and in the default mode, and by the binary `--streaming` (the class file beside the repro).
+/// (A line after the last mark reads as its entry run on too: `… \\ $\dagger$Laboratory B, City B \\ All authors: Some
+/// Network` gives the last line to the `†` names — positionally quant-ph0101015's "London SW7 2BZ"; RED repro
+/// `raw_class_store_trailing_line_after_last_mark`.)
 #[test]
 fn a_raw_store_marked_line_runs_on_until_the_next_mark() {
   const CLASS: &str = include_str!(
@@ -466,6 +559,11 @@ fn a_raw_store_marked_line_runs_on_until_the_next_mark() {
     assert_eq!(tuples(&json["resolved"]), shadow);
     assert_eq!(json["writer"], Value::from("written"));
     assert_eq!(run(tex, None).0, owned(xml), "default mode");
+    // (the binary under the census, `--streaming`: the class file beside the source, review rev93a r2)
+    let (streamed_xml, streamed_json) = streamed(tex, CLASS);
+    assert_eq!(streamed_xml, owned(xml), "--streaming");
+    assert_eq!(tuples(&streamed_json["resolved"]), shadow, "--streaming");
+    assert_eq!(streamed_json["writer"], Value::from("written"));
   };
   check(
     repro!("raw_class_store_marked_line_runs_on.tex"),
@@ -533,4 +631,38 @@ fn a_raw_store_marked_line_runs_on_until_the_next_mark() {
       "  a Univ B | api:leading-mark",
     ],
   );
+}
+
+/// `tex` converted by the binary under the census switch (`LATEXML_FM_SHADOW=1`), `--streaming=true`, the class file
+/// `raw_store_affiliation.cls` (`class`) beside it: its XML creators with their notes and the shadow JSON, converted
+/// clean.
+#[track_caller]
+fn streamed(tex: &str, class: &str) -> (Vec<Vec<String>>, Value) {
+  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+  let workdir = tempfile::tempdir().expect("create tempdir");
+  std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
+  std::fs::write(workdir.path().join("raw_store_affiliation.cls"), class).expect("write the class");
+  let output = std::process::Command::new(bin)
+    .args([
+      "t.tex",
+      "--dest",
+      "t.xml",
+      "--nocomments",
+      "--timeout=110",
+      "--preload=ar5iv.sty",
+      "--streaming=true",
+    ])
+    .env("LATEXML_FM_SHADOW", "1")
+    .current_dir(workdir.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  let log = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("t.xml");
+  let json =
+    std::fs::read_to_string(workdir.path().join("t.xml.fmshadow.json")).expect("the shadow JSON");
+  (
+    creators_with_notes(&xml),
+    serde_json::from_str(&json).expect("the shadow JSON"),
+  )
 }
