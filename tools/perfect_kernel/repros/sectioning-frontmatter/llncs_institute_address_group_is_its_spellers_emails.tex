@@ -1,0 +1,23 @@
+% mechanism: llncs's `\institute` entry printing a braced address group in its text (`…, UK, \{ann.able,
+%   bob.baker\}@x.org,`): each address the e-mail of the author it spells; the institute keeps its words
+%   (`Resolver::take_out_entry_addresses`).
+% witness: 2009.00299 (`\institute{CVSSP, University of Surrey, UK, \{n.camgoz, s.hadfield, r.bowden\}@surrey.ac.uk,
+%   \and Microsoft, Munich, Germany, oscar.koller@microsoft.com}`)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker1, and Cid Cole2", "1 Univ X, UK, {ann.able, bob.baker}@x.org,",
+%   "2 Univ Y, Town, cid.cole@y.org"
+% engines: rust 94b-r7: each institute whole, the group on Ann Able and Bob Baker; perl: the same
+% expect:  0 errors, 0 warnings; Ann Able Univ X, UK + ann.able@x.org; Bob Baker Univ X, UK + bob.baker@x.org; Cid
+%   Cole Univ Y, Town + cid.cole@y.org
+% status:  RED (94b-r7) -> GREEN (95c)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1} \and Cid Cole\inst{2}}
+\institute{Univ X, UK, \{ann.able, bob.baker\}@x.org, \and Univ Y, Town, cid.cole@y.org}
+\maketitle
+\begin{abstract}
+A.
+\end{abstract}
+Text.
+\end{document}

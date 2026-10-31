@@ -1,0 +1,23 @@
+% mechanism: an address comes out of an affiliation entry only at a list boundary — on one side at least the text's or
+%   a line's end, a `,` `;`, a bracket, or a label word — and with no parenthesised tag after it (brief 95c r2 B2): one
+%   with a plain word on both sides is prose, one a tag follows is tagged, and stays where it prints (today's output).
+%   A label word counts only with a colon after it or opening its line (S4): `\texttt{mail cc@z.org now}` keeps its
+%   "mail".
+% witness: the reviewer's probes s1, s2, s5 (rev95c); 1909.06145 (a label word that is one: `- e-mail: julien@…`)
+% oracle:  pdflatex 0 errors: "1 Univ X, write to info@x.org or data@x.org for data", "2 Univ Y, City, Emails:
+%   ann@y.org (Ann), bob@y.org (Bob)", "3 Univ Z, mail cc@z.org now"
+% engines: rust 95c: "write to  or  for data", "City,  (Ann),  (Bob)", " now" and each address an e-mail; rust
+%   int123a: every line whole in its affiliation; perl: the same
+% expect:  0 errors, 0 warnings; each line whole in its affiliation, no e-mail contact
+% status:  RED (95c) -> GREEN (95c-r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$, Cid Cole$^3$ \\
+$^1$ Univ X, write to info@x.org or data@x.org for data \\
+$^2$ Univ Y, City, Emails: ann@y.org (Ann), bob@y.org (Bob) \\
+$^3$ Univ Z, \texttt{mail cc@z.org now}}
+\maketitle
+Text.
+\end{document}

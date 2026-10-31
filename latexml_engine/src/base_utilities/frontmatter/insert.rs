@@ -143,15 +143,27 @@ fn respell_emails(document: &mut Document) -> Result<()> {
   if authors.len() < 2 {
     return Ok(());
   }
-  let keys: Vec<NameKeys> = authors
+  // (each name read as printed, whom an address is moved to; and by its base letters, which only keep an address on
+  // the author it spells so: `javier.martinez@ugr.es` spells Javier Martínez-López, its holder, by base letters, so it
+  // stays, though as printed it spells Carlos Javier Navarro alone (brief 95c G6, 2410.00275); `muller-group@x.de` on
+  // Anna Smith's own `\email` stays, though by base letters it spells Jörg Müller — no target is picked by base letters
+  // (brief 95c r2 B1, FIDELITY_CHARTER §4 #420))
+  let names: Vec<String> = authors
     .iter()
     .map(|author| {
-      let name = document
+      document
         .findnode("ltx:personname", Some(author))
         .map(|person| person.get_content())
-        .unwrap_or_default();
-      NameKeys::of(&Tokens::new(ExplodeText!(&name)))
+        .unwrap_or_default()
     })
+    .collect();
+  let keys: Vec<NameKeys> = names
+    .iter()
+    .map(|name| NameKeys::of(&Tokens::new(ExplodeText!(name))))
+    .collect();
+  let base_keys: Vec<NameKeys> = names
+    .iter()
+    .map(|name| NameKeys::of(&Tokens::new(ExplodeText!(&resolver::base_letters(name)))))
     .collect();
   let mut moves: Vec<(Node, usize)> = Vec::new();
   for (at, author) in authors.iter().enumerate() {
@@ -179,6 +191,7 @@ fn respell_emails(document: &mut Document) -> Result<()> {
       };
       if let Some(owner) = spelled_owner(&keys, address)
         && owner != at
+        && !spelled_owners(&base_keys, address).contains(&at)
       {
         moves.push((contact, owner));
       }

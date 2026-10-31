@@ -71,6 +71,10 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
   // (a whole creator of today's the reading made an item from its words alone is a creator again, as today's, with the
   // ink it printed: no word reading licenses a writer operation — review rev94a r3, r4 B1, OD #928; its ink in doubt,
   // nothing is written)
+  // (the re-part reads the names and the words of each item as today's holds them: every entry the reading took
+  // addresses out of whole again there — the take-out is the plan's, `take_out_again`, 2308.10621)
+  let taken_out = resolved.clone();
+  let resolved = give_back_addresses(&resolved, &dom::Front::default(), true);
   let Some(resolved) = repart::concede(&resolved, &front) else {
     with_ledger(|ledger| {
       if ledger.writer.is_none() {
@@ -94,6 +98,11 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
     with_ledger(|ledger| ledger.writer = Some("written".to_string()));
     front = dom::read(document);
   }
+  // (an entry the reading took addresses out of that today's holds no item of — cut by the same reader — is given back
+  // as it was: the reading's take-out written only where today's prints it so, brief 95c's fail-safe; read against
+  // today's as the re-part left it, 2308.10621)
+  let resolved = Resolved { taken: Vec::new(), ..resolved };
+  let resolved = take_out_again(&resolved, &taken_out, &front);
   let before = plan::difference(&resolved, &front);
   let Some(plan) = plan::plan(&resolved, &front)? else {
     // (a later pass that finds the document reading as the reading keeps the earlier pass's outcome: `--streaming`
@@ -126,6 +135,90 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
   let outcome = difference.map_or_else(|| "written".to_string(), |d| s!("written-different: {d}"));
   with_ledger(|ledger| ledger.writer = Some(outcome));
   Ok(())
+}
+
+/// The reading `resolved` with each entry it took printed addresses out of (`Resolved::taken`, brief 95c) given back as
+/// it was — its text whole, the e-mails made of it (`owner:entry-address`, from its source) gone — where today's holds
+/// no affiliation that reads, or cut by the reading's address reader reads (`dom::address_cut`), as what the entry
+/// keeps (an entry of addresses alone: one today's holds whole cuts to nothing, or today's holds it nowhere): the cut
+/// is the writer's to write, never a difference that would decline the paper.
+fn give_back_addresses(resolved: &Resolved, front: &dom::Front, all: bool) -> Resolved {
+  if resolved.taken.is_empty() {
+    return resolved.clone();
+  }
+  let names: Vec<&str> = resolved.creators.iter().map(|c| c.name.as_str()).collect();
+  let spells = plan::spells_one_of(&names);
+  let items: Vec<&dom::Item> = front
+    .creators
+    .iter()
+    .chain(&front.nameless)
+    .flat_map(|c| &c.items)
+    .filter(|item| item.kind == dom::Kind::Affiliation)
+    .collect();
+  // (the addresses the reading holds as e-mails: the runs a cut of today's takes)
+  let mailed: Vec<String> = resolved
+    .creators
+    .iter()
+    .flat_map(|c| &c.contacts)
+    .chain(&resolved.block)
+    .filter(|a| a.role == "email")
+    .map(|a| dom::norm(&a.text))
+    .collect();
+  let mailed = |a: &str| mailed.contains(&dom::norm(a));
+  let mut out = resolved.clone();
+  for taken in &resolved.taken {
+    let (original, stripped) = (dom::norm(&taken.original), dom::norm(&taken.stripped));
+    let cut_to =
+      |item: &dom::Item| dom::address_cut(&item.node, &spells, &mailed).map(|cut| cut.key);
+    let holds = if stripped.is_empty() {
+      !items.iter().any(|item| item.key == original)
+        || items
+          .iter()
+          .any(|item| item.key == original && cut_to(item).is_some_and(|k| k.is_empty()))
+    } else {
+      items.iter().any(|item| {
+        item.key == stripped
+          || (item.key == original && cut_to(item).as_deref() == Some(stripped.as_str()))
+      })
+    };
+    if holds && !all {
+      continue;
+    }
+    for creator in &mut out.creators {
+      creator
+        .contacts
+        .retain(|a| !(a.source == taken.source && a.rule.contains("owner:entry-address")));
+    }
+    for (holder, at, assoc) in &taken.holders {
+      let slots = match holder {
+        Some(c) => &mut out.creators[*c].affiliations,
+        None => &mut out.block,
+      };
+      match slots.iter().position(|a| {
+        a.source == taken.source
+          && a.text == taken.stripped
+          && a.rule.ends_with(" ruling3:address-out")
+      }) {
+        Some(i) => slots[i] = assoc.clone(),
+        None => slots.insert((*at).min(slots.len()), assoc.clone()),
+      }
+    }
+  }
+  out
+}
+
+/// The reading the plan writes: the take-outs of `taken_out` (the reading as resolved) that today's `front` can cut
+/// ([`give_back_addresses`]) — when the re-part's reading `resolved` is `taken_out` with every take-out given back (no
+/// creator conceded); else `resolved`, nothing taken out.
+fn take_out_again(resolved: &Resolved, taken_out: &Resolved, front: &dom::Front) -> Resolved {
+  let whole = Resolved {
+    taken: Vec::new(),
+    ..give_back_addresses(taken_out, &dom::Front::default(), true)
+  };
+  if taken_out.taken.is_empty() || *resolved != whole {
+    return resolved.clone();
+  }
+  give_back_addresses(taken_out, front, false)
 }
 
 /// The writer's invariant: it never makes a creator without a name (review rev94b r3 B2). An item made from the

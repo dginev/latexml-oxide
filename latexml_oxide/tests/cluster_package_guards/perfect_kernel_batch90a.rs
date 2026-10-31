@@ -38,14 +38,15 @@ fn owned(expected: &[&[&str]]) -> Vec<Vec<String>> {
 /// writer's view keys the item without its mark and writes what the reading gives. Red (int118a): the `tex` reading
 /// kept the switched "a" in the key and the writer declined, the address every author's; the h2 row is green on
 /// int118a and pins the hint (88c's `tex` reading counted `\hspace{1mm}`'s digits as printed and declined it). Baker's
-/// contacts in today's order, the e-mail address first: a residual, not TeX's (RED repro
-/// `revtex_marked_address_contacts_in_print_order`).
+/// contacts in print order since 95c (the address an e-mail placed after Univ Y: `revtex_marked_address_contacts_in_print_order`).
 #[test]
 fn a_formula_printing_only_floating_scripts_is_a_mark() {
+  // (the `a` line's address Bob Baker's e-mail, the line cut from today's item, its label word with it — 95c, OD #938;
+  // it was his affiliation "a Email: bob.baker@y.org", before Univ Y)
   let switched = owned(&[&["Ann Able 1", "affiliation=Univ X"], &[
     "Bob Baker 2,a",
-    "affiliation=a Email: bob.baker@y.org",
     "affiliation=Univ Y",
+    "email=bob.baker@y.org",
   ]]);
   for (tex, want) in [
     (

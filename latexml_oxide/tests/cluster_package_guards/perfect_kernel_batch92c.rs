@@ -431,6 +431,8 @@ fn aa_sole_institute_reads_as_llncss() {
       &["Bob Baker", "affiliation=Univ A, City A"],
       &["email=ann@a.org (AA)"],
     ]),
+    // (the address a parenthesised tag follows, `e-mail: ann@a.org (AA)`, is at no list boundary: it stays in the shared
+    // institute, as before 95c — 95c r2 B2, the fail-safe; 95c had taken it out, leaving "Univ A, City A (AA)")
     &[
       "C Ann Able [] | line:names",
       "  a Univ A, City A e-mail: ann@a.org (AA) | api:labelseq api:share:authors",

@@ -1,0 +1,30 @@
+% mechanism: the same `\email` printing a list sharing the domain without spaces after each author
+%   (`julioleite,tmariz@fis.ufal.br`, a list: the main session's ruling) and one listing an address no author spells
+%   (`info@x.org, bbaker@x.org`): each address the author's it spells, one spelling no one its call's own author's, as
+%   today's places the call (`owner:call`). G3 of brief 95c.
+% witness: 1110.2127 (`\email{julioleite,tmariz@fis.ufal.br}` after each author), 2104.11218 (`\email{cpotts@…,
+%   jdavis@…}` after the first author)
+% oracle:  pdflatex 0 errors: "Ann Able∗ and Bob Baker†" over "Univ X", "Cid Cole" over "Univ Y", the footnotes
+%   "∗ aable,bbaker@x.org" and "† aable,bbaker@x.org; info@x.org, ccole@y.org"
+% engines: rust 94b-r7: each list one e-mail of the author before it; perl: the same
+% expect:  0 errors, 0 warnings; Ann Able aable@x.org; Bob Baker bbaker@x.org, info@x.org; Cid Cole ccole@y.org
+% status:  RED (94b-r7) -> GREEN (95c)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\email{aable,bbaker@x.org}
+\affiliation{Univ X}
+\author{Bob Baker}
+\email{aable,bbaker@x.org}
+\email{info@x.org, ccole@y.org}
+\affiliation{Univ X}
+\author{Cid Cole}
+\affiliation{Univ Y}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

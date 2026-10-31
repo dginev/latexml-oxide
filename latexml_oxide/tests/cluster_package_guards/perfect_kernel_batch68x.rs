@@ -59,6 +59,9 @@ fn spelled(expected: &str) -> String {
 /// 1999" after the references). `\cite[][]{key1}` is parenthetical as in the class's own natbib 7.0 copy
 /// (aguplus.cls:979-984: `\cite` sets `\NAT@swatrue` and `\NAT@cites` keeps it when a `[` follows) and natbib.sty:694-701.
 /// Before 68x the affiliations were body text, the address lost and 6 "Missing number" warnings (1107.5305, 1203.5042).
+/// Since 95c (OD #938) the address's printed e-mail is the e-mail of the author it spells, the address its other words;
+/// since 95c r2 the contact is named by the label word as printed ("email: "), as an e-mail line's label names its
+/// contacts.
 #[test]
 fn aguplus_authors_carry_affiliations_and_addresses() {
   let xml = assert_elements(
@@ -81,7 +84,7 @@ fn aguplus_authors_carry_affiliations_and_addresses() {
     "creator",
     &[r#"role="author""#],
     &spelled(
-      r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation:{nbsp}" role="affiliation">First Institute, Town</contact><contact name="Address:{nbsp}" role="address">A. Able, First Institute, Main Street 1, Town (able@example.org)</contact></creator>"#,
+      r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation:{nbsp}" role="affiliation">First Institute, Town</contact><contact name="Address:{nbsp}" role="address">A. Able, First Institute, Main Street 1, Town</contact><contact name="Email:{nbsp}" role="email">able@example.org</contact></creator>"#,
     ),
   );
   assert_element(
@@ -104,7 +107,7 @@ fn aguplus_authors_carry_affiliations_and_addresses() {
 /// class-bindings/aguplus/aguplus_altaffil_and_spelled_addresses: `\altaffilmark`/`\altaffiltext` give the marked
 /// authors their affiliations, and each `\authoraddr` goes to the author it names (pdflatex: "A. Able,1 B. Baker,1,2
 /// and C. Cole2", the footnotes "1 First Institute, Town." "2 Second Laboratory, City.", the addresses after the
-/// references). Before 68x no affiliation or address (1010.3998).
+/// references). Before 68x no affiliation or address (1010.3998). Each address's e-mail its author's since 95c (OD #938).
 #[test]
 fn aguplus_altaffiliations_and_addresses_go_to_their_authors() {
   let xml = assert_elements(
@@ -117,9 +120,9 @@ fn aguplus_altaffiliations_and_addresses_go_to_their_authors() {
   );
   assert_eq!(xml.matches("<creator").count(), 3, "{xml}");
   for creator in [
-    r#"<creator role="author"><personname>A. Able</personname><contact name="Alternate Affiliation:{nbsp}" role="altaffiliation">First Institute, Town.</contact><contact name="Address:{nbsp}" role="address">A. Able, First Institute, Town; email: able@example.org</contact></creator>"#,
+    r#"<creator role="author"><personname>A. Able</personname><contact name="Alternate Affiliation:{nbsp}" role="altaffiliation">First Institute, Town.</contact><contact name="Address:{nbsp}" role="address">A. Able, First Institute, Town</contact><contact name="email: " role="email">able@example.org</contact></creator>"#,
     r#"<creator before="{em}{em}" role="author"><personname>B. Baker</personname><contact name="Alternate Affiliation:{nbsp}" role="altaffiliation">First Institute, Town.</contact><contact name="Alternate Affiliation:{nbsp}" role="altaffiliation">Second Laboratory, City.</contact></creator>"#,
-    r#"<creator before="{em}{em}" role="author"><personname>C. Cole</personname><contact name="Alternate Affiliation:{nbsp}" role="altaffiliation">Second Laboratory, City.</contact><contact name="Address:{nbsp}" role="address">C. Cole, Second Laboratory, City; email: cole@example.org</contact></creator>"#,
+    r#"<creator before="{em}{em}" role="author"><personname>C. Cole</personname><contact name="Alternate Affiliation:{nbsp}" role="altaffiliation">Second Laboratory, City.</contact><contact name="Address:{nbsp}" role="address">C. Cole, Second Laboratory, City</contact><contact name="email: " role="email">cole@example.org</contact></creator>"#,
   ] {
     let creator = spelled(creator);
     assert!(

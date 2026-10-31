@@ -252,8 +252,9 @@ impl Resolver {
       .map(|key| s!("ref:{key}"))
       .collect();
     // (its Contact events, an `\email` inside an `\institute` entry, are contacts of their own, with the entry's owners;
-    // an address it prints as text stays in its text, as today's: `strip_addresses` split them off and disagreed with
-    // 66 + 52 papers of the 5,000)
+    // an address it prints as text stays in its text here — `strip_addresses` split them off at this point and disagreed
+    // with 66 + 52 papers of the 5,000 —, taken out once every name is read, by the chain, where the writer can cut
+    // today's entry the same: `Resolver::take_out_entry_addresses`, brief 95c)
     // (an entry of another role — an `\email`, a `\thanks` contact — is its declared role whatever it holds: a
     // `mailto:` link inside an `\email` is the e-mail, review revfms2a2 finding 10, 2506.17875)
     let splits_contacts =
@@ -277,6 +278,12 @@ impl Resolver {
       .map(|(_, e)| e)
       .collect();
     let text = events_text(&refs);
+    if splits_contacts {
+      let lined = events_lined_text(&refs);
+      if lined.contains('\n') {
+        self.lined.push((index, text.clone(), lined));
+      }
+    }
     let role_owned = contact_role(Some(role), &text);
     let role = if tag == "ltx:contact" {
       role_owned.as_str()
@@ -779,6 +786,25 @@ impl Resolver {
     } else {
       (vec![n - 1], "api:annotate:last")
     };
+    // (an e-mail call printing several addresses alone — a list, a group, a list sharing the domain: revtex's
+    // `\email{seracre, hanaki, jimliu, pszepiet@umich.edu}` after the last `\author`, 0812.3572; `\email{tuhin@…;
+    // rajib@…;…}`, 0901.1641; `\email{julioleite,tmariz@fis.ufal.br}` after each author, 1110.2127; `\email{cpotts@…,
+    // jdavis@…}`, 2104.11218 — is no evidence of one owner (FIDELITY_CHARTER §4, #420: spelling decides among them):
+    // each address the author's it spells, else its call's own author's, as today's places the call (brief 95c G3))
+    if tag == "ltx:contact" && role == "email" && !note && !owners.is_empty() && inner.is_empty() {
+      let live = self.live();
+      let names: Vec<&str> = live
+        .iter()
+        .map(|&c| self.out.creators[c].name.as_str())
+        .collect();
+      let spells = |local: &str| spelled_name(&names, &s!("{local}@x.org")).is_some();
+      if let Some(addresses) = listed_addresses(&text, &spells) {
+        self
+          .listed_emails
+          .push((addresses, assoc.clone(), owners.clone(), rule.to_string()));
+        return;
+      }
+    }
     let owners: Vec<Option<usize>> = if owners.is_empty() {
       vec![None]
     } else {

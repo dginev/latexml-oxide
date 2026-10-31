@@ -2214,24 +2214,30 @@ fn symbol_row_group_wrapped_line_goes_by_its_marks() {
   let xml = convert_repro!("author_symbol_row_group_wrapped_line.tex");
   assert_no_merged_names(&xml);
   let (univ_a, univ_b) = (affiliation(" Univ A"), affiliation(" Univ B"));
+  // (the contact line's addresses each an e-mail of the name it spells, the line keeping its word "Contact" — no e-mail
+  // label word, so it stays the entry's: 95c, OD #938; the group `{aable, ccole}@x.edu` had stayed in the line)
   let contact = |id: usize| {
     affiliation(&format!(
-      r#"<sup xml:id="id{id}"><text fontsize="90%" xml:id="id{id}.1">*</text></sup><text fontsize="90%" xml:id="id{}"> Contact: <text font="typewriter" xml:id="id{}.1">{{aable, ccole}}@x.edu</text></text>"#,
-      id + 1,
+      r#"<sup xml:id="id{id}"><text fontsize="90%" xml:id="id{id}.1">*</text></sup><text fontsize="90%" xml:id="id{}"> Contact</text>"#,
       id + 1
     ))
+  };
+  let email = |id: usize, address: &str| {
+    format!(
+      r#"<contact name="Email: " role="email"><text font="typewriter" fontsize="90%" xml:id="id{id}">{address}</text></contact>"#
+    )
   };
   assert_eq!(creators(&xml), [
     creator(
       true,
       r#"Ann Able <sup xml:id="id1">†*</sup>"#,
-      &format!("{univ_a} {}", contact(2))
+      &format!("{univ_a} {} {}", contact(2), email(4, "aable@x.edu"))
     ),
-    creator(false, r#"Bob Baker <sup xml:id="id4">‡</sup>"#, &univ_b),
+    creator(false, r#"Bob Baker <sup xml:id="id5">‡</sup>"#, &univ_b),
     creator(
       false,
-      r#"Cat Cole <sup xml:id="id5">†*</sup>"#,
-      &format!("{univ_a} {}", contact(6))
+      r#"Cat Cole <sup xml:id="id6">†*</sup>"#,
+      &format!("{univ_a} {} {}", contact(7), email(9, "ccole@x.edu"))
     ),
   ]);
 }

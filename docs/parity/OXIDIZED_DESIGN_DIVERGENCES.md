@@ -26684,7 +26684,8 @@ piece (`revtex_affiliation_font_switched_marks_cut_with_their_lines`, `…_reque
 (`revtex_affiliation_unrequested_mark_keeps_its_line`, which stage 3 must keep); the observer's lexer does not strip
 `$\mathrm{^{1}}$` from the reading's line (stage 2; `revtex_mathrm_wrapped_marks_are_not_read`); the label keys and
 revtex's group rule read the spelling (stages 4, 5); a marked address's contacts in insertion order, not print order
-(2105.07958; `revtex_marked_address_contacts_in_print_order`).
+(2105.07958; `revtex_marked_address_contacts_in_print_order` — FIXED 95c, OD #938: the address an e-mail placed in print
+order, after Univ Y).
 
 Guards: `perfect_kernel_batch90a::{a_formula_printing_only_floating_scripts_is_a_mark,
 a_script_before_printed_ink_or_on_a_base_is_text, a_formula_mark_on_a_name_answers_its_affiliation,
@@ -28345,3 +28346,118 @@ sectioning-frontmatter/`raw_class_affil_nested_containers_only_font_declarations
 `raw_class_affil_text_font_command_round_a_container`; guards
 `perfect_kernel_batch94b::nested_containers_wrap_each_entry_only_across_font_declarations`,
 `a_text_font_command_round_a_container_wraps_each_entry`.
+
+### 938. An e-mail address printed inside an affiliation entry is an e-mail contact of the author it spells; one `\email` of several addresses is decided address by address (Perl: the address stays in the affiliation's text, copied onto every carrier; the call's text one contact)
+
+**Defect.** An address printed in an affiliation entry's text — `$^1$ Dipartimento…, Italy
+(saro,borgani,tornator@oats.inaf.it)` (0810.2791), `…, France - e-mail: julien@obs-besancon.fr` (aa `\institute`,
+1909.06145), revtex's `\affiliation{…, email: rlake@ee.ucr.edu, …}` (cond-mat0607219), llncs's `\institute{…, UK,
+\{n.camgoz, s.hadfield, r.bowden\}@surrey.ac.uk, \and …}` (2009.00299) — or on an e-mail line the block sets under an
+entry, which the reading continues the entry with (`$^2$ 3Dwe.ai\\ {\tt hyunjun.jung, p.ruhkamp, b.busam@tum.de}`,
+2308.10621; a `\{…\}@umontreal.ca` group broken over two lines, 2311.18002, 2603.12826), stayed inside the affiliation
+contact, copied onto every carrier, so each carrier held its co-authors' addresses (the scorer's `email_of_other`, 91
+creators in 41 papers of the 3,000 sample). A mark-led address line (`$^1$\{cherian, …\}@merl.com \quad
+$^2$goncalo.pais@…`, 2108.13865) the reading read as e-mails since 93a r2, but today's old reader had made it an
+affiliation and the writer had no operation to take it back. One `\email` printing several addresses (G3: revtex
+`\email{seracre, hanaki, jimliu, pszepiet@umich.edu}` after the last author, 0812.3572; `\email{tuhin@…;rajib@…;…}`,
+0901.1641; `\email{julioleite,tmariz@fis.ufal.br}` after each author, 1110.2127; `\email{cpotts@…, jdavis@…}`, 2104.11218)
+was one contact of the call's author. And `insert::respell_emails` moved elsarticle's `\author{Javier
+Martínez-López}\ead{javier.martinez@ugr.es}` onto Carlos Javier Navarro, whom it also spells (G6, 2410.00275).
+
+**Fix (FIDELITY_CHARTER §4's chain, the reading's own lexer).** `resolver::address_runs` reads the address runs of a
+printed text — a braced group (the forms `addresses_in` reads; spaces before its `@` the group's, 2311.14729), a list of
+lowercase local parts sharing the domain (without spaces always, the main session's ruling for 1110.2127; with spaces
+when each part spells an author or the list opens the text, a parenthesis or a label — `Univ Tübingen, Germany,
+wilhelm.kley@…` is one address; a part holds a letter, so a digit run glued before an address — `Tel:5551234,info@x.org`,
+`ORCID 0000-…,ann@x.org` — is no local part), a plain address —, each with the label word printed before it
+("E-mail:", "Emails", "e-mail addresses:"; a label only with a colon after it or opening its line:
+`\texttt{mail ann@x.org now}` keeps its "mail") and the parentheses round it. A run comes out only at a list boundary
+(`at_list_boundary`): on one side at least the text's or a line's end, `,` `;`, a bracket (an opening one or a closing
+one before it, a closing one after it), before it its label word, after it a period ending the text or line; and no
+parenthesised tag after it — so prose with a plain word on both sides (`write to info@x.org or data@x.org for data`)
+and a tagged run (`ann@y.org (Ann)`, 0811.1419's `zhanghuamaths@163.com(H. Zhang)`) stay as printed (review rev95c
+B2), while `Correspondence: {…}@westlake.edu.cn` (2601.07312) and `SPAIN. {…}@upc.edu` (2509.12185) come out. `address_cuts` takes the separators a cut strands, each within its line (a run ending its
+line those before it, the break kept: cond-mat0607219's `FAX: 951-827-2425; email: rlake@…` leaves `FAX:
+951-827-2425`), and keeps one space of two. After every name is read, `Resolver::take_out_entry_addresses` gives each address of an affiliation entry
+its owner: the author it spells (`owner:spelled`, any live author); else the entry's only carrier, when no other of its
+addresses spells that carrier (`owner:only-carrier`); else, on a symbol-led line, every carrier (`owner:carriers`, the
+2026-10-30 ruling); else, within one run,
+one address per carrier that every spelled one of the run agrees with, by place (`owner:order`; an address another run
+prints is no place of the order: `Dept X, Univ Y, ann@x.org, Phone 123, office@x.org` under two authors leaves
+`office@` the block's). A run
+holding an address the chain cannot attribute (it would be the block's) stays in the entry as today's prints it — the
+fail-safe. The entry keeps the rest of its words (`ruling3:address-out`; an entry of addresses alone is gone); each
+e-mail is one per print and owner (`owner:entry-address`, a change tag). The writer cuts today's item by the same lexer
+over its printed segments (`dom::address_cut`, marks a space, a line break a line's end — the reading reads an API
+entry's lines too, `events_lined_text`; only the runs the reading holds as e-mails), in place (`plan::Op::CutAddresses`;
+an item cut to nothing is taken; a font wrapper or a link left printing nothing is removed), before the re-assignment
+that copies it, and makes each e-mail contact from that item (`Op::Address`: role `email`, the address in the outermost
+`ltx:text`/`ltx:ref` the cut takes whole — `\href{mailto:…}{…}` keeps its link, 2111.14566, 1804.04123 — else the font
+wrapper it printed in), in print order. The re-part (OD #928) reads the reading with every take-out given back; the plan then takes out
+those today's can cut (`writer::take_out_again`), an entry today's holds no item of given back (the cut never declines a
+paper). G3: an `\email` call printing several addresses alone (`resolver::listed_addresses`; a label word beside them
+keeps it whole, as the group write-out does) is placed once every name is read (`Resolver::answer_listed_emails`), each
+address the author's it spells, else its call's own authors' (`owner:call`); the writer's group write-out reads the
+same lists. G6: today's
+`insert::respell_emails` (and the reading's `Resolver::respell_emails`, alike) picks the author an address moves to
+by the names as printed and keeps an address on the
+holder it spells by base letters (`resolver::base_letters`, as the reading does since 92c): `javier.martinez@` stays on
+Javier Martínez-López, whom it spells by base letters (as printed it spells Carlos Javier Navarro alone), and Anna
+Smith's own `\email{muller-group@x.de}` stays hers though by base letters it spells Jörg Müller (FIDELITY_CHARTER §4
+#420's example; review rev95c B1 — targets picked by base letters had moved it). Measured on real papers (brief 95c
+r3, the user's ruling "answered by our natural examples data"): the rival rule, FIDELITY_CHARTER §4 #420 read literally
+(an author's own one-name call holding one address never respelled; otherwise spelling decides, base letters allowed),
+differs from this one on 24 papers of a 347-paper respell population (amsart, elsarticle, revtex4*, aastex*, article,
+≥2 `\author` calls, an address spelling another author) and none of the 2,270-paper census; on 22 of them it is wrong —
+the corresponding author's address set after the last `\author` or after `\correspondingauthor`, which the class
+prints on the call's author (revtex 2011.01984, 1303.5460, 1304.4972, 1503.07733, 1608.00809, 2303.00383; aastex
+1102.0339, 2004.06253, 2005.06651, 2103.16254, 2105.05931, 2110.15275; amsart 1511.04148, 2408.09634) —, right on 0711.3633
+and 0809.3090 (`\author{Santos Bravo Yuste}\email{santos@unex.es}`: the holder's given name, today's moves it to Andrés
+Santos), and, outside that population, right on 2112.10604 (`\author{Dario Mathi\"a and Ulrich Thiel}`, `mathiae@` on
+Thiel; a several-name call, base letters alone) and on the ASCII twin `\author{Anna Smith}…\email{mueller-group@x.de}`
+beside `\author{Jorg Mueller}` (moved here, as by every binary before). This rule stays; the rival's witnesses are RED
+repros `amsart_email_of_a_two_name_call_spelling_an_accented_name`, `revtex_email_spelling_its_holders_given_name` (SYNC).
+
+**Label words** travel as an e-mail line's do (`author_block::labelled_emails`): an e-mail label word goes with the
+address and names its contact as printed (`E-mail: `, 1911.11406; `email: `, cond-mat0607219), the class's "Email: "
+only without one (review rev95c B5); any other word stays the entry's (`Univ B Correspondence: bbaker@…` leaves `Univ
+B Correspondence`; `* Contact: \{…\}@x.edu` leaves `* Contact`) — the open question on contact labels decides more.
+The e-mail words are the e-mail line's, `author_block::is_email_label`: "E-mail", "Email", "E-mails", "Emails" (any
+case, a hyphen or none), alone or before "address"/"addresses"; "mail" is none (`Univ X, please mail ann@x.org` stays
+prose; review rev95c_r2 N1).
+
+**Round 3** (review rev95c_r2). The wrapper an address prints in (`dom::Wrap`): any inline element wrapping text alone
+(`dom::wraps_text`: its children text and such elements — `ltx:emph` too, not only `ltx:text`/`ltx:ref`) is taken whole
+when every piece under it is text inside the cut (0808.1112's `\small Email: \emph{duan@iit.edu}`: the e-mail keeps its
+italic and its size, the emptied `ltx:emph` leaves the affiliation; F1); a link is kept whole only when it prints that
+one address or its `mailto:` target is it (one `\href{mailto:able@x.org}{\{able,baker\}@x.org}` gives `baker@` no
+link; F3); otherwise only the font of the innermost inline element is carried (a link's an `ltx:text` in its font), and
+an icon in the link (`\includegraphics`, `\rule`, a formula) stays once, with its link, where it printed (F2). The
+writer's address layout reads an element of no content as an icon (`dom::segments_of`, U+FFFC), so the cut's separator
+trim stops at it and at any piece no text (`Univ X, \href{…}{$\boxtimes$\,ann@x.org}` keeps `Univ X, ⊠`; F6). One
+boundary side is enough only when the other side is no lowercase word without a colon (`Univ X, see also data@x.org`,
+`Univ W, see sales@w.org, City W`, `write to a@z.org.` stay; F5), and a bare e-mail word with no colon after a
+separator or a period is the label when its run ends a list's item (`Univ X, E-mail ann@x.org` is "Univ X" and an
+"E-mail " contact; `\texttt{mail ann@x.org now}` stays; F4). G3's write-out reads today's contact across a line
+break (`apply::text_leaf`, `leaf_text`): `\email{mhamed.ghiati@…;\\ mohammed.mouniane@…}` (2212.08940) is written out
+address by address, where the writer had declined the paper and so dropped the rest of its work (Mohammed Mouniane's
+`$^{*1}$` address, which the base's writer gave him). Census against round 2 (2,270 papers): two changed, 0808.1112 (the
+font) and 2606.13944 (a space kept before an icon). Repros `entry_address_in_emph_keeps_its_font`,
+`entry_address_link_with_an_icon_keeps_it_once`, `entry_address_group_in_one_link_keeps_its_target`,
+`entry_address_after_a_bare_label_word`, `entry_address_in_one_sided_prose_stays`,
+`amsart_email_call_of_addresses_over_a_line_break`; guards `perfect_kernel_batch95c` (round 3, six).
+**Residual.** Unwritten families (mn2e 0810.2791, authblk 2511.07020, 2008.07734, 2110.01283, 2008.13643, elsarticle
+2308.13695, IEEEtran 2405.16358, 2311.14729, 2202.02533, 2401.16729, 1303.4266, acmart 2311.10779, 2010.12245) read right
+under `LATEXML_FM_SHADOW=1`, today's output unchanged; a symbol line set after a numbered one today's old reader joins
+into one affiliation the writer cannot cut (`\\ $^1$ Univ X (…) \\ $^\dagger$ Univ Z, desk@z.org`, base and here alike);
+a `\thanks` note printing addresses (1011.4394's `Author for Correspondence: …`) is a note, not an entry. Repros
+sectioning-frontmatter/`entry_address_inside_an_entry_is_its_speller_email`,
+`entry_address_line_continuing_an_entry_is_email`, `entry_address_unspelled_by_the_chain`,
+`entry_address_mark_led_line_today_an_affiliation`, `revtex_affiliation_address_is_its_speller_email`,
+`llncs_institute_address_group_is_its_spellers_emails`, `revtex_email_call_of_several_addresses_by_spelling`,
+`revtex_email_list_after_each_author_by_spelling`, `elsarticle_ead_spelling_its_accented_holder_stays`; round 2:
+`amsart_email_spelling_an_accented_coauthor_stays`, `elsarticle_ead_spelling_an_accented_coauthor_stays`,
+`entry_address_in_prose_stays`, `entry_address_after_a_digit_run`, `entry_address_mailto_link_moves_whole`,
+`entry_address_label_names_contacts_in_print_order`, `revtex_affiliation_addresses_ordered_within_one_run`,
+`revtex_affiliation_address_ending_a_line`; guards `perfect_kernel_batch95c` (fourteen), the lexer's
+`resolver::tests::address_runs_read_groups_lists_and_labels`.

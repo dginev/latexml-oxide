@@ -27,7 +27,7 @@ use super::{
     ledger::{ApiCall, Outcome, field_stamped},
     policy::TitleMarks,
     rehearsal::{Rehearsal, rehearse},
-    resolver::{addresses_in, spelled_name, split_pieces},
+    resolver::{addresses_in, listed_addresses, spelled_name, split_pieces},
   },
   apply::text_leaf,
   dom::{Front, Kind, norm, orcid_id},
@@ -75,6 +75,20 @@ pub(super) enum Op {
     template: Node,
     address:  String,
   },
+  /// the e-mail addresses today's affiliation `node` prints taken out of it, in place — the runs of `mailed`, the
+  /// reading's e-mails (`dom::cut_addresses`: brief 95c)
+  CutAddresses { node: Node, mailed: Vec<String> },
+  /// an e-mail contact printing `address`, for `owner`, made beside today's affiliation `template` it was printed in —
+  /// in `wrapper`, the element it printed in there, whole or its font alone, when one (`dom::Wrap`: brief 95c, r2 B4,
+  /// r3 F1-F3) —, named by the label word printed before it, when one (`name`, as an e-mail line's label names its
+  /// contacts: r2 B5)
+  Address {
+    owner:    Owner,
+    template: Node,
+    wrapper:  Option<dom::Wrap>,
+    address:  String,
+    name:     Option<String>,
+  },
 }
 
 impl Op {
@@ -84,7 +98,12 @@ impl Op {
   pub(super) fn made_for(&self) -> Option<Owner> {
     match self {
       Op::Make { owner, .. } => Some(*owner),
-      Op::Copy { .. } | Op::WriteOut { .. } | Op::Remove { .. } | Op::Role { .. } => None,
+      Op::Copy { .. }
+      | Op::WriteOut { .. }
+      | Op::Remove { .. }
+      | Op::Role { .. }
+      | Op::CutAddresses { .. }
+      | Op::Address { .. } => None,
     }
   }
 }
@@ -94,6 +113,8 @@ impl Op {
 #[derive(Debug, Clone)]
 pub(super) struct Plan {
   pub ops:      Vec<Op>,
+  /// the resolved creators' names, whom an address spells (the address reader's, `Op::CutAddresses`)
+  pub names:    Vec<String>,
   pub creators: BTreeMap<usize, Node>,
   pub order:    BTreeMap<(Owner, Key), Place>,
 }
@@ -1288,6 +1309,96 @@ fn addresses_alone(text: &str) -> bool {
     })
 }
 
+/// Whom an address spells among `names` (`spells` of the address reader, `resolver::address_runs`): a local part alone.
+pub(super) fn spells_one_of<'a>(names: &'a [&'a str]) -> impl Fn(&str) -> bool + 'a {
+  move |local: &str| spelled_name(names, &s!("{local}@x.org")).is_some()
+}
+
+/// The writer's cut of the addresses the reading took out of an affiliation entry (brief 95c,
+/// `Resolver::take_out_entry_addresses`): each of today's affiliation items the reading holds under no owner whose
+/// printed addresses, cut by the reading's own reader (`dom::address_cut`), leave what the reading holds (or nothing,
+/// an item of addresses alone), every address one of the reading's e-mails — cut in place (`Op::CutAddresses`; taken
+/// when it keeps nothing), and held under its new key from here on, so that the re-assignment that follows copies the
+/// cut item. Every holder of the item must cut so, or none is. The addresses cut, by their keys: each with the item it
+/// printed in, its wrapper and its label word, for the e-mail contacts the reading wants that today's holds nowhere
+/// (`Op::Address`) — and its place in print order, the order they are made in (brief 95c r2 S1).
+fn cut_entry_addresses(
+  want: &BTreeMap<Key, Vec<(Owner, &Assoc)>>,
+  have: &mut BTreeMap<Key, Vec<(Owner, Node, bool)>>,
+  names: &[&str],
+  ops: &mut Vec<Op>,
+) -> BTreeMap<Key, PrintedIn> {
+  let spells = spells_one_of(names);
+  let email = Kind::Contact("email".into());
+  let mailed = |a: &str| want.contains_key(&(email.clone(), norm(a)));
+  let mailed_keys: Vec<String> = want
+    .keys()
+    .filter(|key| key.0 == email)
+    .map(|key| key.1.clone())
+    .collect();
+  let mut printed_in: BTreeMap<Key, PrintedIn> = BTreeMap::new();
+  let keys: Vec<Key> = have
+    .keys()
+    .filter(|key| key.0 == Kind::Affiliation && !want.contains_key(*key))
+    .cloned()
+    .collect();
+  for key in keys {
+    let holds = have[&key].clone();
+    let Some(cuts) = holds
+      .iter()
+      .map(|(_, node, movable)| {
+        let cut = dom::address_cut(node, &spells, &mailed).filter(|_| *movable)?;
+        (cut.key.is_empty() || want.contains_key(&(Kind::Affiliation, cut.key.clone())))
+          .then_some(cut)
+      })
+      .collect::<Option<Vec<dom::AddressCut>>>()
+    else {
+      continue;
+    };
+    have.remove(&key);
+    for ((owner, node, movable), cut) in holds.iter().zip(&cuts) {
+      for run in &cut.runs {
+        for (address, wrapper) in &run.addresses {
+          let seq = printed_in.len();
+          printed_in
+            .entry((email.clone(), norm(address)))
+            .or_insert_with(|| PrintedIn {
+              address: address.clone(),
+              template: node.clone(),
+              wrapper: wrapper.clone(),
+              name: run.label.clone(),
+              seq,
+            });
+        }
+      }
+      ops.push(Op::CutAddresses {
+        node:   node.clone(),
+        mailed: mailed_keys.clone(),
+      });
+      if cut.key.is_empty() {
+        ops.push(Op::Remove { node: node.clone() });
+      } else {
+        have
+          .entry((Kind::Affiliation, cut.key.clone()))
+          .or_default()
+          .push((*owner, node.clone(), *movable));
+      }
+    }
+  }
+  printed_in
+}
+
+/// An address [`cut_entry_addresses`] cut out of today's affiliation: as written out, the item it printed in (the
+/// e-mail contact's template), the wrapper it printed in, the label word before it, and its place in print order.
+#[derive(Debug, Clone)]
+struct PrintedIn {
+  address:  String,
+  template: Node,
+  wrapper:  Option<dom::Wrap>,
+  name:     Option<String>,
+  seq:      usize,
+}
+
 /// No plan, and why (the `frontmatter` debug feature).
 fn declined(reason: &str) -> Option<Plan> {
   DebugFeature!("frontmatter", "FRONT writer: declined, {reason}");
@@ -1303,10 +1414,12 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
     return Ok(declined("names differ"));
   };
   let want = wanted(resolved);
-  let have = held(front, &pairs);
+  let mut have = held(front, &pairs);
   // (the creators' names, by the resolved creator's index: whom an address spells)
   let names: Vec<&str> = resolved.creators.iter().map(|c| c.name.as_str()).collect();
   let mut ops = Vec::new();
+  // today's affiliations printing the addresses the reading took out of them: cut in place, held under what they keep
+  let printed_in = cut_entry_addresses(&want, &mut have, &names, &mut ops);
   let mut wanted_only: Vec<Key> = Vec::new();
   let mut held_only: Vec<Key> = Vec::new();
   let keys: Vec<Key> = want
@@ -1538,8 +1651,12 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
     else {
       continue;
     };
-    let text = leaf[0].get_content();
-    let addresses = addresses_in(&text);
+    let text = apply::leaf_text(&leaf[0]);
+    // (a list of local parts sharing the domain too, `julioleite,tmariz@fis.ufal.br`: the reading's address reader,
+    // brief 95c — 1110.2127, 0812.3572)
+    let spells = spells_one_of(&names);
+    let listed = listed_addresses(&text, &spells);
+    let addresses: Vec<String> = listed.clone().unwrap_or_else(|| addresses_in(&text));
     let keys: Vec<Key> = addresses.iter().map(|a| (email.clone(), norm(a))).collect();
     let held_elsewhere = |k: &Key| {
       want.get(k).is_some_and(|wants| {
@@ -1549,7 +1666,7 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
       })
     };
     if addresses.len() < 2
-      || !addresses_alone(&text)
+      || !(listed.is_some() || addresses_alone(&text))
       || !keys.iter().any(|k| wanted_only.contains(k))
       || !keys.iter().all(|k| {
         held_elsewhere(k)
@@ -1582,15 +1699,55 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
     wanted_only.retain(|k| !keys.contains(k));
     held_only.retain(|k| *k != key);
   }
+  // an address the reading took out of today's affiliation, an e-mail contact of each owner the reading gives it by
+  // a ruling's change or its spelling (brief 95c), made in print order (r2 S1: 1911.11406's `shirazu@` had come out
+  // after `yahoo@`, in the order of the keys)
+  let mut made: Vec<&Key> = wanted_only
+    .iter()
+    .filter(|key| printed_in.contains_key(*key))
+    .collect();
+  made.sort_by_key(|key| printed_in[*key].seq);
+  for key in made.into_iter().cloned().collect::<Vec<_>>() {
+    let Some(PrintedIn {
+      address,
+      template,
+      wrapper,
+      name,
+      ..
+    }) = printed_in.get(&key)
+    else {
+      continue;
+    };
+    let wants = &want[&key];
+    if !wants
+      .iter()
+      .all(|(_, a)| writes(a) || rule_has(a, "owner:spelled"))
+    {
+      continue;
+    }
+    for (owner, _) in wants {
+      ops.push(Op::Address {
+        owner:    *owner,
+        template: template.clone(),
+        wrapper:  wrapper.clone(),
+        address:  address.clone(),
+        name:     name.clone(),
+      });
+    }
+    wanted_only.retain(|k| *k != key);
+  }
   if !wanted_only.is_empty() || !held_only.is_empty() || ops.is_empty() {
-    return Ok(declined("a difference no operation explains"));
+    return Ok(declined(&s!(
+      "a difference no operation explains: the reading's {wanted_only:?}, today's {held_only:?}"
+    )));
   }
   let creators = pairs
     .iter()
     .map(|(&i, &j)| (i, front.creators[j].node.clone()))
     .collect();
   let order = reading_order(resolved);
-  Ok(Some(Plan { ops, creators, order }))
+  let names = names.iter().map(ToString::to_string).collect();
+  Ok(Some(Plan { ops, names, creators, order }))
 }
 
 /// Where each of the reading's items prints, by its owner and key ([`Place`]): what the print-order pass places an

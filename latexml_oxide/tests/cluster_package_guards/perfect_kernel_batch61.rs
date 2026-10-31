@@ -6786,9 +6786,14 @@ Text.
       vec![affiliation(
         "<text fontsize=\"90%\" xml:id=\"id1\"> Univ A</text>"
       )],
-      vec![affiliation(
-        "<text fontsize=\"90%\" xml:id=\"id2\"> Univ B. Email: x@y.z</text>"
-      )],
+      // (the address after the entry, spelling no one, the e-mail of its only carrier, Bob Baker — 95c, OD #938; it had
+      // stayed in Univ B's text; named by its label word as printed, as an e-mail line's label names its contacts — 95c
+      // r2 B5)
+      vec![
+        affiliation("<text fontsize=\"90%\" xml:id=\"id2\"> Univ B.</text>"),
+        "<contact name=\"Email: \" role=\"email\"><text fontsize=\"90%\" xml:id=\"id3\">x@y.z</text></contact>"
+          .to_string(),
+      ],
     ],
     "{xml}"
   );

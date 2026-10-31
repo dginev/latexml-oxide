@@ -170,24 +170,29 @@ fn what_a_name_held_is_written_where_the_reading_puts_it() {
   assert_eq!(reading.3, Value::from("same"));
   assert_eq!(default_mode_creators(tex), owned(xml));
   let tex = repro!("author_names_reparted_columns_with_a_continued_line.tex");
+  // (the continued line's list sharing the domain each an e-mail of the name it spells, Lab Y keeping its words — 95c,
+  // OD #938; the line had stayed in Lab Y)
   let reading = assert_reading(
     tex,
     Some(&[
-      &["Ann Able", "affiliation=Univ X"],
+      &["Ann Able", "affiliation=Univ X", "email=ann.able@lab.org"],
       &[
         "Bob Baker",
         "affiliation=Univ X",
-        "affiliation=Lab Y ann.able, bob.baker@lab.org",
+        "affiliation=Lab Y",
+        "email=bob.baker@lab.org",
       ],
       &["Cid Cole", "affiliation=Univ X"],
     ]),
     &[
       "C Ann Able [*,1] | line:names",
       "  a Univ X | ruling1:request",
+      "  c email ann.able@lab.org | ruling1:request line:continued owner:entry-address owner:spelled",
       "  n equal contribution | ruling2:symbol-line",
       "C Bob Baker [*,1,2] | line:names sep:column",
       "  a Univ X | ruling1:request",
-      "  a Lab Y ann.able, bob.baker@lab.org | ruling1:request line:continued",
+      "  a Lab Y | ruling1:request line:continued ruling3:address-out",
+      "  c email bob.baker@lab.org | ruling1:request line:continued owner:entry-address owner:spelled",
       "  n equal contribution | ruling2:symbol-line",
       "C Cid Cole [1] | line:names sep:column",
       "  a Univ X | ruling1:request",
@@ -200,12 +205,14 @@ fn what_a_name_held_is_written_where_the_reading_puts_it() {
       &[
         "Ann Able",
         "affiliation=Univ X",
+        "email=ann.able@lab.org",
         "note=∗ equal contribution"
       ],
       &[
         "Bob Baker",
         "affiliation=Univ X",
-        "affiliation=Lab Y ann.able, bob.baker@lab.org",
+        "affiliation=Lab Y",
+        "email=bob.baker@lab.org",
         "note=∗ equal contribution"
       ],
       &["Cid Cole", "affiliation=Univ X"],

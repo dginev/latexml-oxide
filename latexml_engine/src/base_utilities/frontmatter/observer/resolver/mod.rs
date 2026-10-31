@@ -37,7 +37,7 @@
 //! `\author` call (OXIDIZED_DESIGN_DIVERGENCES #837's r2 paragraph).
 
 use super::{
-  events::{self, EmailMeaning, Event, EventKind, SepKind, events_text},
+  events::{self, EmailMeaning, Event, EventKind, SepKind, events_lined_text, events_text},
   policy::{EmailOwner, Policy, policy_for},
   *,
 };
@@ -96,6 +96,21 @@ pub struct Resolved {
   /// before FM S2a.2 r8, which holds none (review revfms2a2_8 finding 4: an r8 dump's may be empty, `continue_entry`
   /// skipping an item with no source — no old dump's "any part")
   pub continued: Option<Vec<Vec<String>>>,
+  /// the affiliation entries whose printed e-mail addresses the reading took out (`Resolver::take_out_entry_addresses`,
+  /// brief 95c), each as it was — for the writer, which gives an entry back where today's cannot cut it the same
+  /// (`writer::concede_addresses`); not in the dump
+  pub taken:     Vec<Taken>,
+}
+
+/// One affiliation entry the reading took printed addresses out of ([`Resolved::taken`]): its source, its text before
+/// and after, and where each holder held it (a creator's affiliation slot; `None` the block's), with the association as
+/// it was.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Taken {
+  pub source:   Option<(usize, Option<(u16, u16)>)>,
+  pub original: String,
+  pub stripped: String,
+  pub holders:  Vec<(Option<usize>, usize, Assoc)>,
 }
 
 /// The rule tags whose purpose is a change of today's output — an adopted ruling's (FIDELITY_CHARTER §4, 2026-10-21;
@@ -224,6 +239,10 @@ mod post;
 pub(in crate::base_utilities::frontmatter::observer) use api::split_pieces;
 use blocks::Chain;
 pub(in crate::base_utilities::frontmatter::observer) use labels::label_matches;
+// (the address reader of an entry's printed text, the reading's and the writer's cut of today's item alike: brief 95c)
+pub(in crate::base_utilities::frontmatter::observer) use labels::{
+  AddressRun, address_cuts, address_runs, listed_addresses, strip_address_runs,
+};
 // (named, as the prelude has its own of these names: the resolver's shadow them)
 pub use labels::{addresses_in, mark_labels};
 use labels::{text_tokens, *};
@@ -316,6 +335,9 @@ struct Resolver {
   /// the e-mail calls a document's own note makes (`ltx:pubnote`: A&A's `\offprints{B. Baker, \email{…}}`), placed
   /// once every name is read (`answer_document_notes`)
   document_emails:  Vec<DocumentEmail>,
+  /// the e-mail calls printing several addresses alone (brief 95c G3): each call's addresses, its contact, its own
+  /// authors and its rule — placed once every name is read (`answer_listed_emails`)
+  listed_emails:    Vec<(Vec<String>, Assoc, Vec<usize>, String)>,
   /// the marks a name's notes show on it (creator, label: `Ann\footnote[1]{…}` shows `∗`), what an entry led by the
   /// same `\footnotemark` answers (`answer_pending`; 1607.07280)
   note_marks:       Vec<(usize, String)>,
@@ -360,6 +382,9 @@ struct Resolver {
   note_texts:       Vec<(usize, usize, String, String)>,
   /// the entries unmarked lines continued (their source) with their lines (`continue_entry`, `Resolved::continued`)
   continued:        Vec<(Source, Vec<String>)>,
+  /// the affiliation texts of API calls that print line breaks (their ledger index, the text, the text with its lines:
+  /// [`events_lined_text`]), where `take_out_entry_addresses` reads a line's end (brief 95c r2 B2)
+  lined:            Vec<(usize, String, String)>,
 }
 
 /// A note's link placed once every name of the document is read (`Resolver::answer_note_links`; main-session decisions
@@ -427,6 +452,7 @@ impl Resolver {
       replaced:         Vec::new(),
       note_links:       Vec::new(),
       document_emails:  Vec::new(),
+      listed_emails:    Vec::new(),
       note_marks:       Vec::new(),
       notes_marked:     true,
       parted:           Vec::new(),
@@ -443,6 +469,7 @@ impl Resolver {
       marked_entries:   Vec::new(),
       note_texts:       Vec::new(),
       continued:        Vec::new(),
+      lined:            Vec::new(),
     }
   }
 
@@ -555,8 +582,9 @@ pub(in crate::base_utilities::frontmatter::observer) fn spelled_name(
 }
 
 /// `text` with its letters' accents dropped (canonical decomposition, the combining marks aside), and the letters
-/// that decompose to none their base letter (`ł` l, `ø` o, `đ` d, `ı` i).
-fn base_letters(text: &str) -> String {
+/// that decompose to none their base letter (`ł` l, `ø` o, `đ` d, `ı` i) — as an address spells a name (the reading's
+/// and `insert::respell_emails`').
+pub(in crate::base_utilities) fn base_letters(text: &str) -> String {
   use unicode_normalization::{UnicodeNormalization, char::is_combining_mark};
   text
     .nfd()
@@ -659,9 +687,11 @@ pub fn resolve_with(
   resolver.answer_note_texts();
   resolver.answer_sequence();
   resolver.answer_document_notes();
+  resolver.answer_listed_emails();
   resolver.respell_emails();
   resolver.held_before_creators();
   resolver.sole_author_takes_the_block();
+  resolver.take_out_entry_addresses();
   let mut out = resolver.out;
   out.continued = Some(
     resolver
@@ -1073,5 +1103,184 @@ mod tests {
     assert!(!only_addresses("Barcelona, SPAIN. ann@x.org"));
     assert!(is_one_address("mailto:ann@x.org"));
     assert!(!is_one_address("https://x.org"));
+  }
+
+  /// Brief 95c: the address reader of an entry's printed text — each run's addresses written out, its range with the
+  /// label word and parentheses, the separators a cut strands taken with it.
+  #[test]
+  fn address_runs_read_groups_lists_and_labels() {
+    let spells = |local: &str| ["ann.able", "bob.baker", "aable", "bbaker"].contains(&local);
+    let none = |_: &str| false;
+    let read = |text: &str, spells: &dyn Fn(&str) -> bool| -> (String, Vec<String>) {
+      let runs = address_runs(text, spells);
+      (
+        strip_address_runs(text, &runs),
+        runs.into_iter().flat_map(|r| r.addresses).collect(),
+      )
+    };
+    let owned = |v: &[&str]| v.iter().map(ToString::to_string).collect::<Vec<_>>();
+    // (a list written without spaces: the main session's ruling, 0810.2791, 1110.2127)
+    assert_eq!(
+      read(
+        "Dept X, Trieste, Italy (saro,borgani,tornator@oats.inaf.it)",
+        &none
+      ),
+      (
+        "Dept X, Trieste, Italy".into(),
+        owned(&[
+          "saro@oats.inaf.it",
+          "borgani@oats.inaf.it",
+          "tornator@oats.inaf.it"
+        ])
+      )
+    );
+    // (with spaces: each part spelling an author, on a line of its own, 2308.10621; or opening the text, 0812.3572)
+    assert_eq!(
+      read("3Dwe.ai\nann.able, bob.baker@x.org", &spells),
+      (
+        "3Dwe.ai".into(),
+        owned(&["ann.able@x.org", "bob.baker@x.org"])
+      )
+    );
+    assert_eq!(
+      read("cid, dee@x.org", &none).1,
+      owned(&["cid@x.org", "dee@x.org"])
+    );
+    // (prose before one address: no list — a capital, or a word spelling no one mid-text, 0705.3421)
+    assert_eq!(
+      read(
+        "Univ Tübingen, Germany, wilhelm.kley@uni-tuebingen.de",
+        &none
+      ),
+      (
+        "Univ Tübingen, Germany".into(),
+        owned(&["wilhelm.kley@uni-tuebingen.de"])
+      )
+    );
+    assert_eq!(
+      read("Univ X, uk, ann@x.org", &none).1,
+      owned(&["ann@x.org"])
+    );
+    // (a braced group, its spaces before the `@` the group's: 2009.00299, 2311.14729)
+    assert_eq!(
+      read("CVSSP, Univ X, UK, {ann.able, bob.baker}@x.org,", &none),
+      (
+        "CVSSP, Univ X, UK".into(),
+        owned(&["ann.able@x.org", "bob.baker@x.org"])
+      )
+    );
+    assert_eq!(
+      read("Univ X\n{ aable, bbaker } @x.org", &none).1,
+      owned(&["aable@x.org", "bbaker@x.org"])
+    );
+    // (the label word goes with the address; a cut between two separators takes the one after: cond-mat0607219,
+    // 1909.06145)
+    assert_eq!(
+      read("Dept X, FAX: 1, email: aable@y.edu, Jan. 4", &none),
+      ("Dept X, FAX: 1, Jan. 4".into(), owned(&["aable@y.edu"]))
+    );
+    assert_eq!(
+      read("Besançon, France - e-mail: julien@obs.fr", &none).0,
+      "Besançon, France"
+    );
+    assert_eq!(
+      read("Univ X, E-mail addresses: a@x.org, b@y.org", &none).0,
+      "Univ X"
+    );
+    // (two addresses, each a list's end of none: `a@x.org, b@y.org` is no `x.org@…`)
+    assert_eq!(
+      read("a@x.org, b@y.org", &none).1,
+      owned(&["a@x.org", "b@y.org"])
+    );
+    // (only at a list boundary — prose, a parenthesised tag after it, keep it: brief 95c r2 B2)
+    for prose in [
+      "Univ X, write to info@x.org or data@x.org for data",
+      "Univ Y, City, Emails: ann@y.org (Ann), bob@y.org (Bob)",
+      "Univ X, write ann@x.org now",
+      "Univ X, see https://medium.com/@ann.able, mail ann@x.org now",
+      // (one boundary side beside a lowercase word without a colon: prose, brief 95c r3 F5)
+      "Univ X, see also data@x.org",
+      "Univ Y. Write to info@y.org",
+      "Dept Z, Univ Z, write to a@z.org.",
+      "Univ W, see sales@w.org, City W",
+      "Univ X, E-mail: ann@x.org now",
+      // (`mail` is no e-mail label word, `author_block::is_email_label`'s, r3 N1)
+      "Univ X, please mail ann@x.org",
+    ] {
+      assert_eq!(
+        read(prose, &spells),
+        (prose.to_string(), Vec::new()),
+        "{prose}"
+      );
+    }
+    // (a list's parts letters: a digit run is no local part, B3)
+    assert_eq!(
+      read("Univ X, Tel:5551234,info@x.org", &none),
+      ("Univ X, Tel:5551234".into(), owned(&["info@x.org"]))
+    );
+    assert_eq!(
+      read("Univ Y, ORCID 0000-0002-1825-0097,zq@y.org", &none),
+      (
+        "Univ Y, ORCID 0000-0002-1825-0097".into(),
+        owned(&["zq@y.org"])
+      )
+    );
+    // (a label word without a colon only opening its line, S4)
+    // (one side a boundary is enough: 2601.07312, 2509.12185, 2112.12175)
+    assert_eq!(
+      read("Univ X Correspondence: {ann, bob}@x.org", &none),
+      (
+        "Univ X Correspondence".into(),
+        owned(&["ann@x.org", "bob@x.org"])
+      )
+    );
+    assert_eq!(read("KTH, Sweden ann,bob@kth.se", &none).0, "KTH, Sweden");
+    assert_eq!(
+      read("Univ X\nEmail ann@x.org", &none),
+      ("Univ X".into(), owned(&["ann@x.org"]))
+    );
+    assert_eq!(
+      read("Dept X, Univ Y, SPAIN. ann@x.org", &none),
+      ("Dept X, Univ Y, SPAIN.".into(), owned(&["ann@x.org"]))
+    );
+    // (a bare label word after a separator or a period, its run ending the text: the label, r3 F4)
+    assert_eq!(
+      read("Univ X, E-mail ann@x.org", &none),
+      ("Univ X".into(), owned(&["ann@x.org"]))
+    );
+    assert_eq!(
+      read("Univ Y. Email bob@y.org", &none),
+      ("Univ Y.".into(), owned(&["bob@y.org"]))
+    );
+    // (a cut keeps one space of two, N1; a line's end ends a run's separators, its break kept, N2 — cond-mat0607219)
+    let cut = |text: &str| {
+      let runs = address_runs(text, &none);
+      let mut out = String::new();
+      let mut at = 0;
+      for (start, end) in address_cuts(text, &runs) {
+        out.push_str(&text[at..start]);
+        at = end;
+      }
+      out + &text[at..]
+    };
+    assert_eq!(
+      cut("Dept X, Univ Y, ann@x.org, Phone 123, office@x.org"),
+      "Dept X, Univ Y, Phone 123"
+    );
+    assert_eq!(
+      cut("Univ X\nPh: 1; FAX: 2; email: rlake@ee.ucr.edu\nJan. 4, 2005"),
+      "Univ X\nPh: 1; FAX: 2\nJan. 4, 2005"
+    );
+    assert_eq!(cut("Univ X\nann@x.org\nCity"), "Univ X\nCity");
+    assert_eq!(cut("Univ X (ann@x.org), City"), "Univ X, City");
+    // (no address: an `@` with no domain, 2202.02533's `Wireless@VT`)
+    assert!(address_runs("Wireless@VT, Dept X", &none).is_empty());
+    // (a several-address call printing addresses alone; a label word beside them keeps it whole)
+    assert_eq!(
+      listed_addresses("julioleite,tmariz@fis.ufal.br", &none),
+      Some(owned(&["julioleite@fis.ufal.br", "tmariz@fis.ufal.br"]))
+    );
+    assert_eq!(listed_addresses("Emails: {a,b}@x.org", &none), None);
+    assert_eq!(listed_addresses("ann@x.org", &none), None);
   }
 }

@@ -596,8 +596,9 @@ fn top_level_items(body: &str) -> Vec<(usize, usize)> {
 }
 
 /// The element whose text a contact prints: the innermost of the chain of only children `node` opens (a contact's
-/// `ltx:text` of the typewriter font), when it holds text alone — `None` when the chain holds anything else (a link,
-/// a formula, two pieces), whose text the writer does not set.
+/// `ltx:text` of the typewriter font), when it holds text alone, its line breaks aside (`\email{a@x.org;\\
+/// b@y.org}`, 2212.08940: brief 95c r3) — `None` when the chain holds anything else (a link, a formula, two pieces),
+/// whose text the writer does not set.
 pub(super) fn text_leaf(node: &Node) -> Option<Node> {
   let mut at = node.clone();
   loop {
@@ -617,8 +618,119 @@ pub(super) fn text_leaf(node: &Node) -> Option<Node> {
   }
   at.get_child_nodes()
     .iter()
-    .all(|c| c.get_type() == Some(NodeType::TextNode))
+    .all(|c| {
+      c.get_type() == Some(NodeType::TextNode)
+        || (document::get_node_qname(c) == pin("ltx:break") && c.get_first_child().is_none())
+    })
     .then_some(at)
+}
+
+/// The text [`text_leaf`]'s element prints, a line break a line's end (`\n`).
+pub(super) fn leaf_text(leaf: &Node) -> String {
+  leaf
+    .get_child_nodes()
+    .iter()
+    .map(|c| {
+      if c.get_type() == Some(NodeType::TextNode) {
+        c.get_content()
+      } else {
+        "\n".to_string()
+      }
+    })
+    .collect()
+}
+
+/// `copy`, a copy of today's affiliation an address printed in, made the e-mail contact printing `address` alone: the
+/// contact's own attributes `role` and its e-mail label `name` — the label word printed before the address (`E-mail: `,
+/// as an e-mail line's label names its contacts, `author_block::labelled_emails`: 1911.11406, brief 95c r2 B5), else
+/// the class's (as `\lx@add@email` gives it) —, its content the address in a copy of `wrapper`, when one: the link or
+/// font it printed in (`<ltx:ref href="mailto:…">`, `<ltx:text font="typewriter">`, `<ltx:emph>`, r2 B4, r3 F1) — whole
+/// when the cut took it whole (down to its innermost element holding the address), else its font alone: the element
+/// with none of its content, a link an `ltx:text` in its font (its icon and its target stay where they printed, r3
+/// F2, F3).
+fn email_contact(
+  document: &mut Document,
+  copy: &mut Node,
+  wrapper: Option<&dom::Wrap>,
+  address: &str,
+  name: Option<&str>,
+) -> Result<()> {
+  for mut child in copy.get_child_nodes() {
+    child.unlink();
+  }
+  for (key, _) in copy.get_attributes() {
+    if key != "role" && key != "name" {
+      let _ = copy.remove_attribute(&key);
+    }
+  }
+  document.set_attribute(copy, "role", "email")?;
+  let name = match name {
+    Some(label) => Some(s!("{label} ")),
+    None => get_frontmatter_name(None, "ltx:contact", "email")?,
+  };
+  match name {
+    Some(name) => document.set_attribute(copy, "name", &name)?,
+    None => {
+      let _ = copy.remove_attribute("name");
+    },
+  }
+  match wrapper {
+    Some(dom::Wrap { node: wrapper, whole: false }) => {
+      let mut font = if dom::is(wrapper, "ltx:ref") {
+        Node::new("text", None, document.get_document())?
+      } else {
+        Node::new(&wrapper.get_name(), None, document.get_document())?
+      };
+      if let Some(namespace) = wrapper.get_namespace() {
+        let _ = font.set_namespace(&namespace);
+      }
+      if !dom::is(wrapper, "ltx:ref") {
+        // (sorted: a deterministic serialization, as `append_clone` writes)
+        let mut attributes: Vec<(String, String)> = wrapper.get_attributes().into_iter().collect();
+        attributes.sort();
+        for (key, value) in attributes {
+          if key != "xml:id" && key != "id" {
+            font.set_attribute(&key, &value)?;
+          }
+        }
+      }
+      document.copy_node_font(wrapper, &mut font)?;
+      copy.add_child(&mut font)?;
+      let mut text = Node::new_text(address, &document.document)?;
+      font.add_child(&mut text)?;
+    },
+    Some(dom::Wrap { node: wrapper, whole: true }) => {
+      document.append_clone(copy, vec![wrapper.clone()])?;
+      if wrapper.get_content().trim() != address
+        && let Some(mut inner) = elements(copy).pop()
+      {
+        // (down to the innermost element printing an address, what else each one on the way prints dropped — a label
+        // word the contact's name now holds: `\textit{e-mail: \texttt{mdeleon@icmat.es}}` is the italic and the
+        // typewriter round the address alone, 2603.24308; a link holding a font wrapper keeps both)
+        while let Some(next) = elements(&inner)
+          .into_iter()
+          .find(|e| e.get_content().contains('@'))
+        {
+          for mut child in inner.get_child_nodes() {
+            if child != next {
+              child.unlink();
+            }
+          }
+          inner = next;
+        }
+        for mut child in inner.get_child_nodes() {
+          child.unlink();
+        }
+        let mut text = Node::new_text(address, &document.document)?;
+        inner.add_child(&mut text)?;
+      }
+    },
+    None => {
+      let mut text = Node::new_text(address, &document.document)?;
+      copy.add_child(&mut text)?;
+    },
+  }
+  Ok(())
 }
 
 /// `node`'s text set to `text`, in its [`text_leaf`].
@@ -754,6 +866,51 @@ pub(super) fn apply(document: &mut Document, front: &Front, plan: &Plan) -> Resu
       },
     }
   };
+  // (an address the reading took out of today's affiliation, an e-mail contact of its owner, made from the item before
+  // it is cut: brief 95c)
+  // (each after the one made before it for its owner, as they print: brief 95c r2 S1)
+  let mut made: Vec<(Owner, Node)> = Vec::new();
+  for op in &plan.ops {
+    if let Op::Address {
+      owner: who,
+      template,
+      wrapper,
+      address,
+      name,
+    } = op
+      && let Some(mut owner) = owner_node(document, *who)?
+    {
+      document.append_clone(&mut owner, vec![template.clone()])?;
+      touch(*who, &owner);
+      if let Some(mut copy) = elements(&owner).pop() {
+        email_contact(
+          document,
+          &mut copy,
+          wrapper.as_ref(),
+          address,
+          name.as_deref(),
+        )?;
+        match made.iter().rev().find(|(o, _)| o == who) {
+          Some((_, previous)) => {
+            let mut previous = previous.clone();
+            let _ = previous.add_next_sibling(&mut copy);
+          },
+          None => {
+            place(&owner, *who, &copy, &plan.order);
+          },
+        }
+        made.push((*who, copy));
+      }
+    }
+  }
+  for op in &plan.ops {
+    if let Op::CutAddresses { node, mailed } = op {
+      let names: Vec<&str> = plan.names.iter().map(String::as_str).collect();
+      dom::cut_addresses(node, &plan::spells_one_of(&names), &|a: &str| {
+        mailed.contains(&dom::norm(a))
+      });
+    }
+  }
   for op in &plan.ops {
     if let Op::Copy { from, to } = op
       && let Some(mut owner) = owner_node(document, *to)?

@@ -1,0 +1,23 @@
+% mechanism: a mark-led line of addresses in the author block (`$^1$\{a, b\}@x \quad $^2$c@y`) is e-mails, each of the
+%   author it spells (`ruling1:request`, the reading's since 93a r2); today's old reader made the line an affiliation of
+%   the label-1 names, which the writer could not take back (declined: the e-mails no operation's) — it cuts the
+%   addresses out of today's item now, an item of addresses alone taken (`Op::CutAddresses`, `Op::Address`).
+% witness: 2108.13865 (`\small{\texttt{$^1$\{cherian, sjain, tmarks, sullivan\}@merl.com
+%   \quad$^2$goncalo.pais@tecnico.ulisboa.pt}}`)
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker1 Cid Cole2" over "1 Univ X", "2 Univ Y", "1{aable, bbaker}@x.org 2ccole@y.org"
+%   (the `\quad`-parted names set as columns)
+% engines: rust 94b-r7: an affiliation "{aable, bbaker}@x.org ccole@y.org" on Ann Able and Bob Baker, Cid Cole none
+% expect:  0 errors, 0 warnings; Ann Able Univ X + aable@x.org; Bob Baker Univ X + bbaker@x.org; Cid Cole Univ Y +
+%   ccole@y.org
+% status:  RED (94b-r7) -> GREEN (95c)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ \quad Bob Baker$^1$ \quad Cid Cole$^2$ \\
+$^1$Univ X \\
+$^2$Univ Y \\
+\small{\texttt{$^1$\{aable, bbaker\}@x.org \quad$^2$ccole@y.org}}}
+\maketitle
+Text.
+\end{document}

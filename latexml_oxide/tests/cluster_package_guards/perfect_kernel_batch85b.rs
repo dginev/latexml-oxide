@@ -431,7 +431,8 @@ fn llncs_corresponding_author_takes_the_left_address() {
 /// institute at the block (1706.02124; int114a's placement). Under `\inst{1}` marks the marks decide the institute's
 /// authors: a line the reader cannot read, first or later, stays in it, as written, its picked authors' (int114a's
 /// placement; the r3 re-review's n31-n33, the r4 re-review's q25). Red (85b r2): the address text in every author's
-/// affiliation; (85b r3) the picked first line at the block; (85b r4) the picked later line at the block.
+/// affiliation; (85b r3) the picked first line at the block; (85b r4) the picked later line at the block. Since 95c (OD
+/// #938) a picked first line's group is read: each address its speller's e-mail, the institute every picked author's.
 #[test]
 fn llncs_address_lines_are_each_owners() {
   let tex = repro!("llncs_address_line_is_each_owners.tex");
@@ -490,12 +491,9 @@ fn llncs_address_lines_are_each_owners() {
     r"\author{Joxan Jaffar\inst{1} \and Jorge A. Navas\inst{1} \and Andrew E. Santosa\inst{1}}",
   );
   assert_ne!(picked, first);
-  let line = "affiliation=National University of Singapore {joxan,navas,andrews}@comp.nus.edu.sg";
-  assert_creators(&picked, &[
-    &["Joxan Jaffar", line],
-    &["Jorge A. Navas", line],
-    &["Andrew E. Santosa", line],
-  ]);
+  // (picked by every name, the first line's addresses each an e-mail of the name it spells, the institute keeping its
+  // words — 95c, OD #938; the line had stayed whole on each picked author)
+  assert_creators(&picked, &each);
   // (a later line the reader does not read, under the same marks: it stays too, its picked authors' — the marks decide
   // the contact's authors, the block is the shared path's fail-safe only; the r4 re-review's q25, q01, q02, q19, where
   // 85b r4 sent the line to a nameless creator)

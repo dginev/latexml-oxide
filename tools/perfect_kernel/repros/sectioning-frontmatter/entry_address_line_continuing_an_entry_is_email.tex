@@ -1,0 +1,23 @@
+% mechanism: an e-mail line set in the author block under an entry, which the reading continues the entry with —
+%   a list sharing the domain written with spaces, a braced group broken over two lines — is e-mail contacts, each of
+%   the author it spells; the entry keeps its own words (`Resolver::take_out_entry_addresses`).
+% witness: 2308.10621 (`$^{2}$ 3Dwe.ai\\ {\tt\small hyunjun.jung, p.ruhkamp, b.busam@tum.de}`), 2311.18002
+%   (`\texttt{\{alexandre.adam,…,}\\\texttt{laurence.perreault.levasseur\}@umontreal.ca}`), 2603.12826
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker1,2, Cid Cole2" over "1 Univ X", "2 Univ Y", "ann.able, bob.baker@x.org",
+%   "{bob.baker,", "cid.cole}@y.org"
+% engines: rust 94b-r7: the address lines inside Univ Y's affiliation, on Bob Baker and Cid Cole; perl: one creator
+% expect:  0 errors, 0 warnings; Ann Able Univ X + ann.able@x.org; Bob Baker Univ X, Univ Y + bob.baker@x.org +
+%   bob.baker@y.org; Cid Cole Univ Y + cid.cole@y.org
+% status:  RED (94b-r7) -> GREEN (95c)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^{1,2}$, Cid Cole$^2$ \\
+$^1$ Univ X \\
+$^2$ Univ Y \\
+{\tt ann.able, bob.baker@x.org} \\
+\texttt{\{bob.baker,}\\\texttt{cid.cole\}@y.org}}
+\maketitle
+Text.
+\end{document}

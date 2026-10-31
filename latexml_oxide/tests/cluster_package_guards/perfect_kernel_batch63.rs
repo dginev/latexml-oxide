@@ -1317,13 +1317,15 @@ fn author_prefix_marked_unrequested_affiliation_stays_affiliation() {
 /// sectioning-frontmatter/author_prefix_marked_company_affiliation_with_email_line.
 #[test]
 fn author_prefix_marked_company_affiliation_with_email_line() {
+  // (each mark-led address line an e-mail of the name it spells, today's affiliation of it cut by the writer — 95c, OD
+  // #938; it was an affiliation, the writer declining)
   assert_creators(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_prefix_marked_company_affiliation_with_email_line.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Google DeepMind</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"typewriter\" xml:id=\"id1\">ann@google.com</text></contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Huawei Technologies</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"typewriter\" xml:id=\"id2\">bob@huawei.com</text></contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Google DeepMind</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@google.com</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Huawei Technologies</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@huawei.com</text></contact></creator>",
     ],
   );
 }
@@ -1348,13 +1350,15 @@ fn author_prefix_marked_company_affiliation_with_place_line() {
 /// with theirs (review r10). Repro sectioning-frontmatter/author_prefix_marked_names_beside_company_affiliations_below.
 #[test]
 fn author_prefix_marked_names_beside_company_affiliations_below() {
+  // (each mark-led address line an e-mail of the name it spells, today's affiliation of it cut by the writer — 95c, OD
+  // #938; it was an affiliation, the writer declining)
   assert_creators(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_prefix_marked_names_beside_company_affiliations_below.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Google DeepMind</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"typewriter\" xml:id=\"id1\">ann@google.com</text></contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Huawei Technologies</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"typewriter\" xml:id=\"id2\">bob@huawei.com</text></contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Google DeepMind</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@google.com</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Huawei Technologies</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@huawei.com</text></contact></creator>",
     ],
   );
 }

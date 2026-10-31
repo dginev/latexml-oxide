@@ -137,10 +137,13 @@ fn an_api_legend_holding_an_institution_is_an_affiliation() {
   // (the whole tuple list, Bob's and the institutions' text included — review revfms2a2_9 finding 2: a substring test
   // passed with an institution or the addresses out of the affiliation, and never read Bob)
   assert_eq!(tuples(IEEE_LEGEND), [
+    // (the group's addresses each an e-mail of the name it spells, the institutions kept: 95c, OD #938)
     "C Ann Able [*] | line:names",
-    "  a Equal Contribution Univ A National Center in Town {ann, bob}@x.org | api:leading-mark",
+    "  a Equal Contribution Univ A National Center in Town | api:leading-mark ruling3:address-out",
+    "  c email ann@x.org | api:leading-mark owner:entry-address owner:spelled",
     "C Bob Baker [*] | line:names sep:comma",
-    "  a Equal Contribution Univ A National Center in Town {ann, bob}@x.org | api:leading-mark",
+    "  a Equal Contribution Univ A National Center in Town | api:leading-mark ruling3:address-out",
+    "  c email bob@x.org | api:leading-mark owner:entry-address owner:spelled",
     "C Cat Cole [†] | line:names",
     "  n These authors contributed equally E-mail: cat@x.org | api:leading-mark api:legend",
   ]);

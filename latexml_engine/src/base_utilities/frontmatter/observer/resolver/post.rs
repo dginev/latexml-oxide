@@ -483,12 +483,30 @@ impl Resolver {
   /// its call's position (`api:annotate:*`, the upfront grid's included), goes to the one author its address spells — an
   /// AASTeX 5 `\email{able@x.org}` after `\author{Ann Able and Bob Baker}` (0911.3506, 1506.04035: 92 of the 688 aas
   /// census papers); a copy that author holds already is dropped; one a label placed stays. After the grid and the
-  /// labels, as today's `insert::respell_emails`.
+  /// labels, as today's `insert::respell_emails` — its target picked by the names as printed, base letters only keeping
+  /// an address on the holder it spells so (Anna Smith's own `\email{muller-group@x.de}` stays hers though by base
+  /// letters it spells Jörg Müller, FIDELITY_CHARTER §4 #420; 2410.00275's `javier.martinez@` stays on Javier
+  /// Martínez-López; brief 95c r2 B1).
   pub(super) fn respell_emails(&mut self) {
     let live = self.live();
     if live.len() < 2 {
       return;
     }
+    let keys = |base: bool| -> Vec<NameKeys> {
+      live
+        .iter()
+        .map(|&c| {
+          let name = &self.out.creators[c].name;
+          let name = if base {
+            base_letters(name)
+          } else {
+            name.clone()
+          };
+          NameKeys::of(&text_tokens(&name))
+        })
+        .collect()
+    };
+    let (printed, based) = (keys(false), keys(true));
     let mut moves: Vec<(usize, usize, usize)> = Vec::new();
     for &c in &live {
       for (i, a) in self.out.creators[c].contacts.iter().enumerate() {
@@ -501,10 +519,14 @@ impl Resolver {
           continue;
         }
         if let [address] = addresses_in(text).as_slice()
-          && let Some(owner) = self.spelled(address, &live)
-          && owner != c
+          && !lists_local_parts(address)
+          && let [owner] = spelled_owners(&printed, address).as_slice()
+          && live[*owner] != c
+          && !spelled_owners(&based, address)
+            .iter()
+            .any(|&at| live[at] == c)
         {
-          moves.push((c, i, owner));
+          moves.push((c, i, live[*owner]));
         }
       }
     }
@@ -1580,6 +1602,217 @@ impl Resolver {
       let rule = s!("{} {tag}", assoc.rule);
       self.attach(owner, Assoc { rule, ..assoc }, false);
     }
+  }
+}
+
+impl Resolver {
+  /// The e-mail calls printing several addresses alone (`Resolver::api`, brief 95c G3: revtex's `\email{seracre,
+  /// hanaki, jimliu, pszepiet@umich.edu}`, 0812.3572; 0901.1641, 1110.2127, 2104.11218), once every name is read: each
+  /// address the author's it spells — any live author, one read after the call too —, else the call's own authors', as
+  /// today's places the call (`owner:call`; FIDELITY_CHARTER §4 #420: a call holding several addresses is no evidence
+  /// of one owner, spelling decides among them).
+  pub(super) fn answer_listed_emails(&mut self) {
+    let live = self.live();
+    for (addresses, assoc, owners, rule) in std::mem::take(&mut self.listed_emails) {
+      for address in addresses {
+        let (to, tag) = match self.spelled(&address, &live) {
+          Some(owner) => (vec![owner], "owner:spelled"),
+          None => (owners.clone(), "owner:call"),
+        };
+        for owner in to {
+          self.attach(
+            Some(owner),
+            Assoc {
+              rule: s!("{rule} ruling3:written-out {tag}"),
+              text: address.clone(),
+              ..assoc.clone()
+            },
+            false,
+          );
+        }
+      }
+    }
+  }
+
+  /// The e-mail addresses printed inside an affiliation entry — in its text (`$^1$ Dept…, Trieste, Italy
+  /// (saro,borgani,tornator@oats.inaf.it)`, 0810.2791; `…, Besançon, France - e-mail: julien@obs-besancon.fr`,
+  /// 1909.06145; revtex's `\affiliation{…, email: rlake@ee.ucr.edu, …}`, cond-mat0607219), or on an e-mail line the
+  /// block sets under it and the reading continued it with (`$^2$ 3Dwe.ai \\ {\tt hyunjun.jung, p.ruhkamp,
+  /// b.busam@tum.de}`, 2308.10621; a `\{…\}@umontreal.ca` group broken over two lines, 2311.18002, 2603.12826) — taken
+  /// out as e-mail contacts, each owned by FIDELITY_CHARTER §4's chain (brief 95c): the author it spells (any live
+  /// author, `owner:spelled`); else the entry's only carrier, when no other of its addresses spells that carrier
+  /// (`owner:only-carrier`); else, on a symbol-led line, every
+  /// carrier (ruling 2, 2026-10-30); else, the entry's addresses one per carrier that every spelled one agrees with, the
+  /// carrier at its place (`owner:order`). The entry keeps the rest of its words (an entry of addresses alone is gone),
+  /// the label word before them going with them as an e-mail line's does (`only_addresses`). A run of addresses one of
+  /// which the chain cannot attribute — it would be the block's — stays in the entry, as today's prints it (the
+  /// brief's fail-safe). Each e-mail is one per print and carrier (`owner:entry-address`, a change tag: the writer cuts
+  /// today's entry, `writer::plan`).
+  pub(super) fn take_out_entry_addresses(&mut self) {
+    let live = self.live();
+    let names: Vec<String> = self.out.creators.iter().map(|c| c.name.clone()).collect();
+    let spells = |local: &str| {
+      let names: Vec<&str> = live.iter().map(|&c| names[c].as_str()).collect();
+      spelled_name(&names, &s!("{local}@x.org")).is_some()
+    };
+    // (each print: its source and text, with its holders — a creator's slot, or the block's)
+    type Print = ((Option<Source>, String), Vec<(Option<usize>, usize)>);
+    let mut prints: Vec<Print> = Vec::new();
+    let affiliation = |a: &Assoc| matches!(a.role.as_str(), "affiliation" | "address");
+    let mut hold = |key: (Option<Source>, String), at: (Option<usize>, usize)| match prints
+      .iter_mut()
+      .find(|(k, _)| *k == key)
+    {
+      Some((_, holders)) => holders.push(at),
+      None => prints.push((key, vec![at])),
+    };
+    for &c in &live {
+      for (i, a) in self.out.creators[c].affiliations.iter().enumerate() {
+        if affiliation(a) && a.text.contains('@') {
+          hold((a.source, a.text.clone()), (Some(c), i));
+        }
+      }
+    }
+    for (i, a) in self.out.block.iter().enumerate() {
+      if affiliation(a) && a.text.contains('@') {
+        hold((a.source, a.text.clone()), (None, i));
+      }
+    }
+    let mut taken_all: Vec<Taken> = Vec::new();
+    let mut emails: Vec<(usize, Assoc)> = Vec::new();
+    for ((source, text), holders) in prints {
+      // (read with its lines, where it prints them: a run out only at a list boundary, a line's end one — brief 95c
+      // r2 B2, N2)
+      let words = |t: &str| t.split_whitespace().map(str::to_string).collect::<Vec<_>>();
+      let lined = source
+        .and_then(|source| {
+          self
+            .continued
+            .iter()
+            .find(|(s, _)| *s == source)
+            .map(|(_, lines)| lines.join("\n"))
+            .or_else(|| {
+              self
+                .lined
+                .iter()
+                .find(|(index, t, _)| *index == source.0 && *t == text)
+                .map(|(_, _, lined)| lined.clone())
+            })
+        })
+        .filter(|lined| words(lined) == words(&text))
+        .unwrap_or_else(|| text.clone());
+      let runs = address_runs(&lined, &spells);
+      if runs.is_empty() {
+        continue;
+      }
+      let carriers: Vec<usize> = holders.iter().filter_map(|(c, _)| *c).collect();
+      let assoc_of = |(c, i): (Option<usize>, usize)| match c {
+        Some(c) => self.out.creators[c].affiliations[i].clone(),
+        None => self.out.block[i].clone(),
+      };
+      let first = assoc_of(holders[0]);
+      let symbol_line = first.rule.contains("ruling2:symbol-line");
+      let all: Vec<&String> = runs.iter().flat_map(|r| &r.addresses).collect();
+      let spelled: Vec<Option<usize>> = all.iter().map(|a| self.spelled(a, &live)).collect();
+      // (one per carrier at its place only within one run, every spelled one of it agreeing: an address another run
+      // prints is no place of the order — `Dept X, Univ Y, ann@x.org, Phone 123, office@x.org` under Ann and Bob gives
+      // `office@` to the block, as the charter does; brief 95c r2 S2)
+      let in_order = |from: usize, len: usize| {
+        len == carriers.len()
+          && carriers.len() >= 2
+          && spelled[from..from + len]
+            .iter()
+            .zip(&carriers)
+            .all(|(s, c)| s.is_none_or(|s| s == *c))
+      };
+      let owners_of = |at: usize, from: usize, len: usize| -> Option<(Vec<usize>, &'static str)> {
+        if lists_local_parts(all[at]) || is_pattern_address(all[at]) {
+          return None;
+        }
+        match (spelled[at], carriers.as_slice()) {
+          (Some(owner), _) => Some((vec![owner], "owner:spelled")),
+          // (the only carrier's when no other address of the entry spells it: `{steen, sund}@…` under Steen alone is
+          // two people's, the unspelled one no carrier's — 64's `ieee_refmark_address_and_marks_in_a_line`)
+          (None, [only]) if !spelled.contains(&Some(*only)) => {
+            Some((vec![*only], "owner:only-carrier"))
+          },
+          (None, [_]) => None,
+          (None, []) => None,
+          (None, _) if symbol_line => Some((carriers.clone(), "owner:carriers")),
+          (None, _) if in_order(from, len) => Some((vec![carriers[at - from]], "owner:order")),
+          (None, _) => None,
+        }
+      };
+      let mut at = 0usize;
+      let mut kept_runs: Vec<AddressRun> = Vec::new();
+      let mut placed: Vec<(String, Vec<usize>, &'static str)> = Vec::new();
+      for run in &runs {
+        let len = run.addresses.len();
+        let owners: Option<Vec<(Vec<usize>, &'static str)>> =
+          (at..at + len).map(|i| owners_of(i, at, len)).collect();
+        if let Some(owners) = owners {
+          kept_runs.push(run.clone());
+          for (address, (who, tag)) in run.addresses.iter().zip(owners) {
+            placed.push((address.clone(), who, tag));
+          }
+        }
+        at += run.addresses.len();
+      }
+      if kept_runs.is_empty() {
+        continue;
+      }
+      let stripped = strip_address_runs(&lined, &kept_runs);
+      let keeps_words = stripped.chars().any(char::is_alphanumeric);
+      taken_all.push(Taken {
+        source,
+        original: text.clone(),
+        stripped: stripped.clone(),
+        holders: holders.iter().map(|&h| (h.0, h.1, assoc_of(h))).collect(),
+      });
+      for &(c, i) in &holders {
+        let slot = match c {
+          Some(c) => &mut self.out.creators[c].affiliations[i],
+          None => &mut self.out.block[i],
+        };
+        slot.text = stripped.clone();
+        slot.rule.push_str(" ruling3:address-out");
+      }
+      for (address, who, tag) in placed {
+        for owner in who {
+          emails.push((owner, Assoc {
+            role:   "email".into(),
+            text:   address.clone(),
+            label:  first.label.clone(),
+            rule:   s!("{} owner:entry-address {tag}", first.rule),
+            source: first.source,
+            target: None,
+          }));
+        }
+      }
+      if !keeps_words {
+        // (an entry of addresses alone: gone, its addresses the e-mails — marked for removal below)
+        for &(c, i) in &holders {
+          match c {
+            Some(c) => self.out.creators[c].affiliations[i].role = String::new(),
+            None => self.out.block[i].role = String::new(),
+          }
+        }
+      }
+    }
+    for creator in &mut self.out.creators {
+      creator.affiliations.retain(|a| !a.role.is_empty());
+    }
+    self.out.block.retain(|a| !a.role.is_empty());
+    for (owner, assoc) in emails {
+      let contacts = &mut self.out.creators[owner].contacts;
+      if !contacts
+        .iter()
+        .any(|a| a.role == "email" && a.text.eq_ignore_ascii_case(&assoc.text))
+      {
+        contacts.push(assoc);
+      }
+    }
+    self.out.taken = taken_all;
   }
 }
 

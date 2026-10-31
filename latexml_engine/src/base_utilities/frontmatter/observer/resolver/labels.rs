@@ -533,6 +533,399 @@ pub fn addresses_in(text: &str) -> Vec<String> {
   out
 }
 
+/// One run of e-mail addresses printed in a text (FIDELITY_CHARTER §4: an address is a lexical object, the author it
+/// spells its owner — brief 95c): its byte range — with the e-mail label word printed before it ("E-mail:", "Emails",
+/// "e-mail addresses:") and the parentheses round it —, its addresses written out, one each (a braced group, a list
+/// of local parts sharing the domain), and the label word as printed, when it took one (the e-mail contact's name, as
+/// an e-mail line's label names its contacts: `author_block::labelled_emails`, brief 95c r2 B5).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(in crate::base_utilities::frontmatter::observer) struct AddressRun {
+  pub start:     usize,
+  pub end:       usize,
+  pub addresses: Vec<String>,
+  pub label:     Option<String>,
+}
+
+/// A character of an address's local part as the reader takes it (`ann.able`, `j_doe`, `b+x`).
+fn is_local_char(c: char) -> bool { c.is_ascii_alphanumeric() || "._+-".contains(c) }
+
+/// The e-mail address runs printed in `text`, in print order ([`AddressRun`]): a braced group (`{ann,bob}@x.org`,
+/// `{ann@mails, bob@mail}.x.edu`, `{ann,bob@x.org}`, `{ann@x.org, bob@y.org}` — the forms [`addresses_in`] reads), a
+/// list of local parts sharing the domain, each part lowercase (`saro,borgani,tornator@oats.inaf.it`, 0810.2791;
+/// `julioleite,tmariz@fis.ufal.br`, 1110.2127 — a list written without spaces, the main session's ruling; one written
+/// with spaces, `hyunjun.jung, p.ruhkamp, b.busam@tum.de` (2308.10621), only where each of its parts `spells` an author
+/// or the list opens the text, a parenthesis, a brace or a label — else prose before one address: `Univ X, uk, ann@x.org`),
+/// and a plain address. Runs separated only by commas, semicolons, spaces or "and" are one run.
+pub(in crate::base_utilities::frontmatter::observer) fn address_runs(
+  text: &str,
+  spells: &dyn Fn(&str) -> bool,
+) -> Vec<AddressRun> {
+  let domain_at = |from: usize| -> Option<(usize, String)> {
+    let domain: String = text[from..]
+      .chars()
+      .take_while(|c| c.is_ascii_alphanumeric() || ".-".contains(*c))
+      .collect();
+    let domain = domain.trim_end_matches(['.', '-']);
+    (domain.contains('.') && !domain.starts_with('.') && !domain.starts_with('-'))
+      .then(|| (from + domain.len(), domain.to_string()))
+  };
+  let mut runs: Vec<AddressRun> = Vec::new();
+  // (braced groups)
+  let mut from = 0;
+  while let Some(open) = text[from..].find('{').map(|o| from + o) {
+    let Some(close) = text[open + 1..]
+      .find(['{', '}'])
+      .map(|c| open + 1 + c)
+      .filter(|&c| text[c..].starts_with('}'))
+    else {
+      from = open + 1;
+      continue;
+    };
+    let inner = &text[open + 1..close];
+    let after = &text[close + 1..];
+    let local = |p: &str| !p.is_empty() && p.chars().all(is_local_char);
+    // (spaces before the `@` are the group's: `\{ ann, bob \} @x.org`, 2311.14729)
+    let gap = after.len() - after.trim_start().len();
+    let found = if let Some((end, domain)) = after
+      .trim_start()
+      .strip_prefix('@')
+      .and_then(|_| domain_at(close + 2 + gap))
+    {
+      let locals: Vec<&str> = inner
+        .split(|c: char| c.is_whitespace() || ",;|".contains(c))
+        .filter(|p| !p.is_empty())
+        .collect();
+      (!locals.is_empty() && locals.iter().all(|p| local(p)))
+        .then(|| (end, locals.iter().map(|l| s!("{l}@{domain}")).collect()))
+    } else if let Some((group, taken)) = domain_after_group(inner, after) {
+      Some((close + 1 + taken, group))
+    } else if let Some(group) = domain_inside_group(inner) {
+      Some((close + 1, group))
+    } else if inner.contains('@') && only_addresses(inner) {
+      Some((close + 1, plain_addresses(inner)))
+    } else {
+      None
+    };
+    match found {
+      Some((end, addresses)) if !addresses.is_empty() => {
+        runs.push(AddressRun {
+          start: open,
+          end,
+          addresses,
+          label: None,
+        });
+        from = end;
+      },
+      _ => from = close + 1,
+    }
+  }
+  // (plain addresses and lists of local parts, outside the groups)
+  let in_group = |at: usize, runs: &[AddressRun]| runs.iter().any(|r| r.start <= at && at < r.end);
+  let boundary_before = |at: usize| {
+    text[..at]
+      .chars()
+      .next_back()
+      .is_none_or(|c| c.is_whitespace() || "({[<:;,".contains(c))
+  };
+  let mut plain: Vec<AddressRun> = Vec::new();
+  for (at, _) in text.match_indices('@') {
+    if in_group(at, &runs) || plain.iter().any(|r| r.start <= at && at < r.end) {
+      continue;
+    }
+    let Some((end, domain)) = domain_at(at + 1) else {
+      continue;
+    };
+    let mut start = at;
+    while let Some(c) = text[..start].chars().next_back()
+      && is_local_char(c)
+    {
+      start -= c.len_utf8();
+    }
+    while text[start..at].starts_with('.') {
+      start += 1;
+    }
+    if start == at || !boundary_before(start) {
+      continue;
+    }
+    // (the list of local parts before it: `a,b@x`, `a, b@x`)
+    let mut locals: Vec<(usize, &str)> = Vec::new();
+    let mut spaced = false;
+    let mut head = start;
+    loop {
+      let before = text[..head].trim_end();
+      let gap = head - before.len();
+      let Some(comma) = before.strip_suffix(',') else {
+        break;
+      };
+      let word_end = comma.len();
+      let mut word_start = word_end;
+      while let Some(c) = text[..word_start].chars().next_back()
+        && is_local_char(c)
+      {
+        word_start -= c.len_utf8();
+      }
+      let word = &text[word_start..word_end];
+      // (each part a local part of letters: a digit run before the address is no part of a list — `Tel:5551234,info@x.org`
+      // is no `5551234@x.org`, `ORCID 0000-0002-1825-0097,ann@x.org` no `0000-…@x.org`; brief 95c r2 B3)
+      if word.is_empty()
+        || word.starts_with('.')
+        || word.chars().any(|c| c.is_ascii_uppercase())
+        || !word.chars().any(|c| c.is_ascii_alphabetic())
+        || !boundary_before(word_start)
+      {
+        break;
+      }
+      spaced |= gap > 0;
+      locals.push((word_start, word));
+      head = word_start;
+    }
+    let local = &text[start..at];
+    let opens = |at: usize| {
+      let before = text[..at].trim_end();
+      before.is_empty()
+        || before.ends_with(['(', '{', '[', '<', ':'])
+        || label_word_before(text, at, false).is_some()
+    };
+    let list_ok = !locals.is_empty()
+      && (!spaced
+        || locals.iter().all(|(_, w)| spells(w)) && spells(local)
+        || opens(locals.last().map_or(start, |(s, _)| *s)));
+    let (run_start, mut addresses) = if list_ok {
+      let first = locals.last().map_or(start, |(s, _)| *s);
+      (
+        first,
+        locals
+          .iter()
+          .rev()
+          .map(|(_, w)| s!("{w}@{domain}"))
+          .collect::<Vec<_>>(),
+      )
+    } else {
+      (start, Vec::new())
+    };
+    addresses.push(s!("{local}@{domain}"));
+    plain.push(AddressRun {
+      start: run_start,
+      end,
+      addresses,
+      label: None,
+    });
+  }
+  runs.extend(plain);
+  runs.sort_by_key(|r| r.start);
+  // (runs separated only by separators, one run)
+  let mut merged: Vec<AddressRun> = Vec::new();
+  for run in runs {
+    if let Some(last) = merged.last_mut()
+      && text[last.end..run.start]
+        .split(|c: char| c.is_whitespace() || ",;&".contains(c))
+        .all(|w| w.is_empty() || w.eq_ignore_ascii_case("and"))
+    {
+      last.end = run.end;
+      last.addresses.extend(run.addresses);
+      continue;
+    }
+    merged.push(run);
+  }
+  // (its label word)
+  for run in &mut merged {
+    if let Some(label) = label_word_before(text, run.start, ends_a_list_item(text, run.end)) {
+      run.label = Some(text[label..run.start].trim_end().to_string());
+      run.start = label;
+    }
+  }
+  // (a run out of a text only at a list boundary: brief 95c r2 B2)
+  merged.retain(|run| at_list_boundary(text, run));
+  // (the parentheses round it)
+  for run in &mut merged {
+    let before = text[..run.start].trim_end();
+    let after = text[run.end..].trim_start();
+    for (open, close) in [('(', ')'), ('[', ']'), ('<', '>')] {
+      if before.ends_with(open) && after.starts_with(close) {
+        run.start = before.len() - 1;
+        run.end = text.len() - after.len() + 1;
+        break;
+      }
+    }
+  }
+  merged
+}
+
+/// Whether the address run `run` of `text` stands at a list boundary, so a reading may take it out of the text (brief
+/// 95c r2 B2): on one side at least the text's or a line's end (a `\n`, a line break), a list's separator (`,` `;`), a
+/// bracket (an opening one or a closing one before it, a closing one after it: `(…)`, `[…]`, `<…>`) — before it, its
+/// label word too ([`label_word_before`]); after it, a period ending the text or the line ([`ends_a_list_item`]) —, on
+/// the other no lowercase word without a colon (r3 F5: `Univ X, see also data@x.org`, `Univ W, see sales@w.org, City
+/// W`, `write to a@z.org.` are prose), and no parenthesised tag after it. A run with a plain word on both sides is
+/// prose (`write to info@x.org or data@x.org for data`), and one a tag follows is tagged (`ann@y.org (Ann), bob@y.org
+/// (Bob)`, `zhanghuamaths@163.com(H. Zhang)`, 0811.1419): it stays where it prints, as today's prints it (the
+/// fail-safe). One side is enough when the other is no such word: `Correspondence: {…}@westlake.edu.cn` (2601.07312),
+/// `SPAIN. {argimiro.arratia, …}@upc.edu` (2509.12185), `KTH, Sweden sbroome,…@kth.se` (2112.12175), `…, Russia.
+/// …@…` (2112.04350).
+fn at_list_boundary(text: &str, run: &AddressRun) -> bool {
+  let blank = |c: char| c.is_whitespace() && c != '\n';
+  let before = text[..run.start].trim_end_matches(blank);
+  let after = text[run.end..].trim_start_matches(blank);
+  let before_ok = run.label.is_some()
+    || before.is_empty()
+    || before.ends_with(['\n', ',', ';', '(', '[', '<', ')', ']', '>']);
+  let after_ok = ends_a_list_item(text, run.end);
+  // (a lowercase word without a colon beside it: prose's)
+  let prose = |word: Option<&str>| {
+    word.is_some_and(|w| w.chars().next().is_some_and(|c| c.is_lowercase()) && !w.ends_with(':'))
+  };
+  let word_before = before
+    .rsplit(char::is_whitespace)
+    .next()
+    .filter(|w| !w.is_empty());
+  let word_after = after
+    .split(char::is_whitespace)
+    .next()
+    .filter(|w| !w.is_empty());
+  let tagged = after.starts_with(['(', '[']);
+  ((before_ok && (after_ok || !prose(word_after))) || (after_ok && !prose(word_before))) && !tagged
+}
+
+/// Whether an address run ending at `end` of `text` ends a list's item there: the text's or a line's end, a separator
+/// (`,` `;`), a closing bracket, or a period ending the text or the line.
+fn ends_a_list_item(text: &str, end: usize) -> bool {
+  let blank = |c: char| c.is_whitespace() && c != '\n';
+  let after = text[end..].trim_start_matches(blank);
+  after.is_empty()
+    || after.starts_with(['\n', ',', ';', ')', ']', '>'])
+    || after.strip_prefix('.').is_some_and(|rest| {
+      rest.trim_start_matches(blank).is_empty() || rest.trim_start_matches(blank).starts_with('\n')
+    })
+}
+
+/// Where the e-mail label word printed just before `at` starts ("E-mail:", "Emails", "e-mail addresses:", "Email
+/// address"), if one that is a label: a colon after it, or nothing before it on its line — the text's start or a line
+/// break (brief 95c r2 S4: `see …, mail ann@x.org now` is prose, its "mail" no label) —, or, `ends_item` (the run after
+/// it ends a list's item, [`ends_a_list_item`]), a list's separator or a sentence's period before it (r3 F4: `Univ X,
+/// E-mail ann@x.org`, `Univ Y. Email bob@y.org`; `\texttt{mail ann@x.org now}` keeps its "mail").
+fn label_word_before(text: &str, at: usize, ends_item: bool) -> Option<usize> {
+  let start = mail_word_before(text, at)?;
+  let colon = text[..at].trim_end().ends_with(':');
+  let line = text[..start].rfind('\n').map_or(0, |p| p + 1);
+  let lead = text[line..start].trim();
+  let listed = ends_item && lead.ends_with([',', ';', '.', '(', '[', ')', ']']);
+  (colon || lead.is_empty() || listed).then_some(start)
+}
+
+/// Where the e-mail word printed just before `at` starts ("E-mail:", "Emails", "e-mail addresses:", "Email address"; a
+/// colon after it or none; `author_block::is_email_label`'s words, the e-mail line's: brief 95c r3 N1), if one.
+fn mail_word_before(text: &str, at: usize) -> Option<usize> {
+  let before = text[..at].trim_end();
+  let before = before.strip_suffix(':').unwrap_or(before).trim_end();
+  let word_start = |end: usize| {
+    text[..end]
+      .rfind(|c: char| !(c.is_alphabetic() || c == '-'))
+      .map_or(0, |p| {
+        p + text[p..].chars().next().map_or(1, char::len_utf8)
+      })
+  };
+  let start = word_start(before.len());
+  if start == before.len() {
+    return None;
+  }
+  let word = &text[start..before.len()];
+  if is_email_label(word) {
+    return Some(start);
+  }
+  // (an address word after it: "E-mail address", "e-mail addresses")
+  let prev = text[..start].trim_end();
+  let prev_start = word_start(prev.len());
+  (prev_start < prev.len() && is_email_label(&text[prev_start..before.len()])).then_some(prev_start)
+}
+
+/// The addresses of a text that prints addresses alone, two or more — a list (`ann@x.org, bob@y.org`,
+/// `tuhin@…;rajib@…`), a group or a list sharing the domain (`{ann,bob}@x.org`, `julioleite,tmariz@fis.ufal.br`) —,
+/// written out ([`address_runs`]); `None` for one address, a text with other words beside them, or a label word before
+/// them (`Emails: {ann,bob}@x.org`, which the writer keeps whole: `plan`'s group write-out).
+pub(in crate::base_utilities::frontmatter::observer) fn listed_addresses(
+  text: &str,
+  spells: &dyn Fn(&str) -> bool,
+) -> Option<Vec<String>> {
+  let runs = address_runs(text, spells);
+  let labelled = text
+    .split(|c: char| c.is_whitespace() || ",;:".contains(c))
+    .any(|w| !w.is_empty() && is_email_label(w));
+  let addresses: Vec<String> = runs.iter().flat_map(|r| r.addresses.clone()).collect();
+  (addresses.len() >= 2 && !labelled && strip_address_runs(text, &runs).is_empty())
+    .then_some(addresses)
+}
+
+/// The byte ranges of `text` the address runs `runs` take out ([`address_runs`]), with the separators their place
+/// leaves stranded, each read within its line (a `\n`, a line break, ends one: brief 95c r2 N2): a run ending its line
+/// takes the separators before it (`Trieste, Italy, (ann@x.org)` leaves `Trieste, Italy`; cond-mat0607219's `FAX:
+/// 951-827-2425; email: rlake@…` its `FAX: 951-827-2425` before the break), a run opening it those after it, a run
+/// that is its line the line's break too, a run between two separators the one after it (`FAX: 1, email: a@x.org, Jan.
+/// 4` leaves `FAX: 1, Jan. 4`), a run between a word and a separator the spaces before it (`Univ X (a@x.org), City`
+/// leaves `Univ X, City`); and a cut between two spaces one of them (N1: `Univ Y, ann@x.org, Phone` leaves `Univ Y,
+/// Phone`).
+pub(in crate::base_utilities::frontmatter::observer) fn address_cuts(
+  text: &str,
+  runs: &[AddressRun],
+) -> Vec<(usize, usize)> {
+  const SEPARATORS: &[char] = &[',', ';', ':', '-', '\u{2013}', '\u{2014}', '/'];
+  let blank = |c: char| c.is_whitespace() && c != '\n';
+  let stray = |c: char| blank(c) || SEPARATORS.contains(&c);
+  let mut cuts: Vec<(usize, usize)> = Vec::new();
+  for run in runs {
+    let (mut start, mut end) = (run.start, run.end);
+    let line_start = text[..start].rfind('\n').map_or(0, |p| p + 1);
+    let line_end = text[end..].find('\n').map_or(text.len(), |p| end + p);
+    let before = text[line_start..start].trim_end_matches(blank);
+    let after = text[end..line_end].trim_start_matches(blank);
+    if after.chars().all(|c| stray(c) || c == '.') {
+      end = line_end;
+      start = line_start + text[line_start..start].trim_end_matches(stray).len();
+      // (the whole line: its break too)
+      if start == line_start {
+        if line_end < text.len() {
+          end = line_end + 1;
+        } else if line_start > 0 {
+          start = line_start - 1;
+        }
+      }
+    } else if before.chars().all(stray) {
+      start = line_start;
+      end = line_end - text[end..line_end].trim_start_matches(stray).len();
+    } else if before.ends_with([',', ';']) && after.starts_with([',', ';']) {
+      end = line_end - after.len() + 1;
+    } else if after.starts_with([',', ';']) {
+      start = line_start + before.len();
+    } else if before.ends_with([',', ';']) && after.starts_with([')', ']', '>']) {
+      start = line_start + before.trim_end_matches(stray).len();
+    }
+    // (one space of two)
+    if text[..start].ends_with(blank) && text[end..].starts_with(blank) {
+      end = text.len() - text[end..].trim_start_matches(blank).len();
+    }
+    match cuts.last_mut() {
+      Some(last) if last.1 >= start => last.1 = last.1.max(end),
+      _ => cuts.push((start, end)),
+    }
+  }
+  cuts
+}
+
+/// `text` with the address runs `runs` taken out ([`address_cuts`]), its spaces collapsed.
+pub(in crate::base_utilities::frontmatter::observer) fn strip_address_runs(
+  text: &str,
+  runs: &[AddressRun],
+) -> String {
+  let mut out = String::new();
+  let mut at = 0;
+  for (start, end) in address_cuts(text, runs) {
+    out.push_str(&text[at..start]);
+    out.push(' ');
+    at = end;
+  }
+  out.push_str(&text[at..]);
+  out.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
 /// A braced group of addresses each missing the domain the text prints after the group's brace (`inner` =
 /// `xxh22@mails, huichen@mail`, `after` = `.tsinghua.edu.cn, …`): each address with that domain, and the length of
 /// `after` the domain takes; `None` for any other group (a piece with no `@` or two, or no domain after the brace).

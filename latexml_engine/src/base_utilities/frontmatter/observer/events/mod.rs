@@ -1311,6 +1311,18 @@ pub(in crate::base_utilities) fn events_text(events: &[&Event]) -> String {
   out.trim().to_string()
 }
 
+/// [`events_text`] with its lines kept: the text of each run of events between two `Break`s, a `\n` between them —
+/// where an address printed in an affiliation stands at a line's end (`Resolver::take_out_entry_addresses`, brief 95c
+/// r2 B2, N2: cond-mat0607219's revtex `\affiliation{… \\ Ph: …; FAX: …; email: rlake@… \\ Jan. 4, 2005 …}`).
+pub(in crate::base_utilities) fn events_lined_text(events: &[&Event]) -> String {
+  events
+    .split(|e| e.kind == EventKind::Break)
+    .map(events_text)
+    .filter(|line| !line.is_empty())
+    .collect::<Vec<_>>()
+    .join("\n")
+}
+
 /// The run of marks an entry's events lead with — `\affil{$^1$Univ X}`, `\address{$\dagger,\;\ast$\;Univ A}` (one run,
 /// its separators no text: math-ph0404036) —, as `start..end` of `events`: what comes before its first ink (a space or a
 /// break, a layout, an unprinted piece of punctuation: `\affiliation{ $^a$Fermilab, …}`, 0902.0006; an acmart address

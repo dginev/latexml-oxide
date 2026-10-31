@@ -234,31 +234,32 @@ fn a_raw_style_buffered_address_is_the_api() {
 #[test]
 fn an_affil_inside_the_author_is_labelled_by_its_leading_mark() {
   let tex = repro!("raw_class_affil_inside_author_is_the_api.tex");
+  // (the entry's address Ann Able's e-mail, the label word with it, the entry keeping its other words on every carrier
+  // — 95c, OD #938; the address had stayed in the entry, copied onto each)
   let xml: &[&[&str]] = &[
     &[
       "Ann Able",
-      "affiliation=Univ A, Town, Country; email: ann@a.edu",
+      "affiliation=Univ A, Town, Country",
+      "email=ann@a.edu",
     ],
     &[
       "Bob Baker",
-      "affiliation=Univ A, Town, Country; email: ann@a.edu",
+      "affiliation=Univ A, Town, Country",
       "affiliation=Univ B, City, Country",
     ],
-    &[
-      "Cy Cole",
-      "affiliation=Univ A, Town, Country; email: ann@a.edu",
-    ],
+    &["Cy Cole", "affiliation=Univ A, Town, Country"],
   ];
   let reading = assert_reading(tex, Some(xml), &[
     "C Ann Able [1] | line:names mark:after-comma",
-    "  a Univ A, Town, Country, email: ann@a.edu | ruling1:request",
+    "  a Univ A, Town, Country | ruling1:request ruling3:address-out",
+    "  c email ann@a.edu | ruling1:request owner:entry-address owner:spelled",
     "C Bob Baker [1,2] | line:names sep:comma mark:after-comma",
-    "  a Univ A, Town, Country, email: ann@a.edu | ruling1:request",
+    "  a Univ A, Town, Country | ruling1:request ruling3:address-out",
     "  a Univ B, City, Country | ruling1:request",
     "C Cy Cole [1] | line:names sep:word",
-    "  a Univ A, Town, Country, email: ann@a.edu | ruling1:request",
+    "  a Univ A, Town, Country | ruling1:request ruling3:address-out",
   ]);
-  assert_eq!(reading.3, Value::from("same"));
+  assert_eq!(reading.3, Value::from("written"));
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 

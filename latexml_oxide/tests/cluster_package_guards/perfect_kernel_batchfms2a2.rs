@@ -1388,23 +1388,33 @@ fn an_unmarked_line_under_a_run_of_names_rows_is_every_names() {
 /// FM S2b aas census: a line with an address beside other text keeps that text — an institution line with its
 /// address under marked names (`1. Chester F. Carlson Center …; JHK's email: jhk@cis.rit.edu`, astro-ph0202139) is an
 /// unmarked line, every name's of the run (its hand-written `1.` unread, OPEN_ROWS FM-24), and a labelled entry
-/// (`$^1$Univ A, City; ann@a.edu`) keeps its institution beside the address. Red: both kept the addresses alone.
+/// (`$^1$Univ A, City; ann@a.edu`) keeps its institution beside the address. Red: both kept the addresses alone. Since
+/// 95c (OD #938) the addresses are taken out, each the e-mail of the name it spells; the text beside them stays.
 #[test]
 fn an_address_beside_an_institution_keeps_the_institution() {
   // (the reading's text parts its pieces with commas, as the lexer reads `;`; the writer matches today's nodes by their
   // letters, so the output keeps the `;`)
-  let joined = "  a 1. University A, City, Ann’s email: ann@a.edu 2. University B, Town, bob@b.edu | line:unmarked-joined R12:row-above line:continued";
+  // (95c, OD #938: the text beside each address kept, the addresses taken out — each an e-mail of the name it spells,
+  // the label word "email:" with it)
+  let joined = "  a 1. University A, City, Ann’s 2. University B, Town | line:unmarked-joined R12:row-above line:continued ruling3:address-out";
+  let mail = |address: &str| {
+    format!(
+      "  c email {address} | line:unmarked-joined R12:row-above line:continued owner:entry-address owner:spelled"
+    )
+  };
   assert_eq!(
     tuples_of(
       "\\documentclass{aastex}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^1$, Bob Baker$^2$, and Cy Cole$^1$ \\\\\n\\small\n1. University A, City; Ann's email: ann@a.edu \\\\\n2. University B, Town; bob@b.edu}\n\\maketitle\nText.\n\\end{document}\n",
     ),
     [
-      "C Ann Able [1] | line:names",
-      joined,
-      "C Bob Baker [2] | line:names sep:comma",
-      joined,
-      "C Cy Cole [1] | line:names sep:word",
-      joined,
+      "C Ann Able [1] | line:names".to_string(),
+      joined.to_string(),
+      mail("ann@a.edu"),
+      "C Bob Baker [2] | line:names sep:comma".to_string(),
+      joined.to_string(),
+      mail("bob@b.edu"),
+      "C Cy Cole [1] | line:names sep:word".to_string(),
+      joined.to_string(),
     ]
   );
   assert_eq!(
@@ -1413,9 +1423,11 @@ fn an_address_beside_an_institution_keeps_the_institution() {
     ),
     [
       "C Ann Able [1] | line:names",
-      "  a University A, City, ann@a.edu | ruling1:request",
+      "  a University A, City | ruling1:request ruling3:address-out",
+      "  c email ann@a.edu | ruling1:request owner:entry-address owner:spelled",
       "C Bob Baker [2] | line:names sep:comma",
-      "  a University B, Town, bob@b.edu | ruling1:request",
+      "  a University B, Town | ruling1:request ruling3:address-out",
+      "  c email bob@b.edu | ruling1:request owner:entry-address owner:spelled",
     ]
   );
 }
