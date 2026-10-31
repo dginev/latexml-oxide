@@ -28500,10 +28500,17 @@ classes: googledeepmind, nvidiatechreport, berkeley, instadeep, hku, ds, dm, dmm
 `\maketitle` selects with `\thispagestyle{firststyle}`: page furniture LaTeXML does not set, so the note was lost with 0
 errors (2607.06973, 2608.26053, 2604.13010). Two parts. fancyhdr_sty.rs ports fancyhdr.sty:691-711:
 `\fancypagestyle[*]{name}[base]{defs}` defines `\ps@name` as the base style then the definitions (Perl
-fancyhdr.sty.ltxml:56 makes it a no-op); `\fancyfoot` and the other fields stay no-ops, so selecting the style sets no
-head or foot, and the starred reset and the base style's checks are not modelled. `\pagestyle{name}` runs the style,
-as LaTeX does (sect05.rs): schooldocs.sty:312-315's `exam` style makes `\subtitle` a store, so schooldocs_sty.rs
-hoists it to `\lx@add@subtitle` again after the style runs (schooldocs-examples.tex:227-230). And K11 (frontmatter_stores.rs
+fancyhdr.sty.ltxml:56 makes it a no-op); `\fancyfoot` and the other fields stay no-ops, and the starred reset and the
+base style's checks are not modelled. The style is there to be read, not run: `\ps@name` wraps its code in
+`\lx@fancyhdr@style`, which drops it, so `\pagestyle{name}` (sect05.rs runs a class's own `\ps@…`) selects nothing, as
+Perl's no-op `\fancypagestyle` and `\pagestyle` (latex_constructs.pool.ltxml:997) — its fields set no head or foot here,
+and its code may test what a binding does not model: popets.sty:189-279's `standardpagestyle` under the acmart binding
+reads acmart.cls's `\if@ACM@printfolios`/`\if@ACM@timestamp` (acmart.cls:147-153), 9 Errors each on 2408.16304,
+2602.20222, 2606.05273 while the style ran (95d; pdflatex 0). schooldocs.sty:312-315's `exam` style, which makes
+`\subtitle` a store, therefore never replaces schooldocs_sty.rs's `\lx@add@subtitle` hoist (schooldocs-examples.tex
+:227-230). fancyhdr.sty's other user commands a style or field calls are defined: `\fancycenter[][]{}{}{}` (:378) and
+`\fancyfootalign{}` (:429) no-ops, `\fancyhdrsettoheight{len}{field}` (:438) a zero length, `\fancypagestyleassign`
+(:753) as fancyhdr's, `\ps@fancydefault` (:767). And K11 (frontmatter_stores.rs
 `toks_store`) takes a table name (`STORE_SETTERS`, now with `correspondingauthor` → `\lx@add@frontmatter{ltx:note}
 [role=corresponding]{#1}`) that a raw file made a token register, when every macro reading it is printed code
 (`ClassReaders::printed`) or a fancyhdr page style, and one of them prints its value — a `\the\X` that is no conditional's operand
@@ -28521,7 +28528,9 @@ the class's other footer registers (`\paperurl`, `\reportnumber`), and a macro s
 name (`\def\correspondingauthor#1{\gdef\@corr{#1}}`). Repro sectioning-frontmatter/
 `toks_store_printed_in_a_fancy_page_style_is_a_note`; guards
 `perfect_kernel_batch95d::toks_store_printed_in_a_selected_page_style_is_a_corresponding_note`,
-`perfect_kernel_batch74b::deepseek_corresponding_author_note_is_kept`.
+`perfect_kernel_batch74b::deepseek_corresponding_author_note_is_kept`; package-bindings/
+`fancy_page_style_a_package_gives_a_binding_class_selects_nothing`, guard
+`perfect_kernel_batch95d::a_fancy_page_style_a_package_gives_a_binding_class_selects_nothing`.
 
 ### 940. A raw package's table stores are rerouted as a raw class's; a date's printed label names it; two dates of different roles are two (Perl: the shipped style is not read; elsarticle's binding keeps received and accepted, `\finalform` and `\availableonline` are undefined)
 
@@ -28540,10 +28549,33 @@ out with the store, where a lone "Received" paragraph stayed (a raw package unde
 label that opens a parenthesis the store's line closes (jpsj2.cls's and ptptex.cls's `(Received \@recdate)`: the date
 keeps the role's name, the deposit its "(Received )"); and a
 replaceable entry is replaced only by one of the same role too (`frontmatter_clear_same_name`, as its seal key has it):
-the unnamed `published` date was replaced by the unnamed `communicated` one. medima's own lines are inside `\ifx…\else`,
-where no label is read, so its dates keep the roles' default names ("Revised " for its "Received in final form").
-Repro sectioning-frontmatter/`raw_package_history_dates_are_the_frontmatter_dates`; guard
-`perfect_kernel_batch95d::raw_package_date_stores_are_the_frontmatter_dates` (elsarticle and article).
+the unnamed `published` date was replaced by the unnamed `communicated` one. A label starts at a branch's `\else`/`\or`
+too (`line_label_before`): medima.sty:322-347 prints each date in the `\else` branch of its emptiness test,
+`\ifx\@finalform\@empty\relax\else \finalformhead~\@finalform\\ \fi`, and the head macro the file defined is read as
+its text ("Received in final form", "Available online"; `\maketitle`'s run of the title page still checks it prints
+there, `verify_title_page_labels`). A date or classification whose label is not read has no name (`name={}`), never
+its role's default the class does not print (FIDELITY_CHARTER 2026-10-30): 95d named medima's final-form date
+"Revised " (2104.10903, 2307.16262); ujp.sty's `\pacs` (1906.11531, under revtex4), printed as `\udkpacs~\udkpacsnum`
+("PACS" through a macro that reads the store), is unnamed, not "Classification: ". The bindings' own calls keep their
+defaults (revtex4_support, aipproc). A raw package's setter's own `\@<name>` is rerouted only when code that never runs here reads it, or no macro does
+(`store_setter_body`, `ClassReaders::read_where_nothing_runs`): a macro reached from the title page's roots, a refused
+definition (`\lx@dropped@<name>`) or a page style. rlj.sty:73's `\@keywords`, read only by the `\makeCover` 2605.31044
+comments out, was invented as keywords (ycviu.sty's history dates too, read only by an `\articleinfobox` its title page
+never calls, 2009.01540), and a store only a `\printkeywords` the document calls, a body `\printhistory` or an
+`\AtEndDocument` hook prints was printed twice, frontmatter and body (csagh.sty 2305.10014, rlj.sty 2605.26012).
+Reached, not grown (any reader, not every reader): cesj.sty's alternative title page `\cejpmaketitle` reads
+`\@institute` as the refused `\cesjmaketitle` does (physics0510010), and requiring every reader to be title-page code
+lost its affiliations. A raw class's own store — and a package's its read loads — is rerouted as before: the test lost
+real class stores whose readers the survey does not follow (bfhlayout.sty:743-752's `\@titlefooterleft`, printed by a
+scrlayer layer of bfhthesis.cls's title page, reads `\@department`/`\@institute`: DEMO-BFHThesis,
+`perfect_kernel_batch61::bfh_thesis_stores_stay_affiliations`; dmtcs.cls's `\@keywords`, 0905.1102), so a class's
+uncalled cover macro's store stays an item (RED `raw_class_store_only_an_uncalled_macro_reads_is_no_item`, rev95d p9).
+A store no macro reads is still rerouted (astlb.cls:361-372 prints `\@shorttitle` only in a running head its top level
+sets, 1202.2889's `<toctitle>`); rule (a)'s other store keeps its title-page-only test. Repros sectioning-frontmatter/
+`raw_package_history_dates_are_the_frontmatter_dates` (medima's shape),
+`raw_package_store_a_document_macro_prints_stays_in_the_body`, `raw_package_dates_printed_in_the_body_stay_there`; guards
+`perfect_kernel_batch95d::raw_package_date_stores_are_the_frontmatter_dates` (elsarticle, an unlabelled date, article),
+`perfect_kernel_batch95d::raw_package_store_other_code_prints_stays_where_it_prints`.
 
 ### 941. A table setter that prints a mark before its pure store is a store; the mark still prints (Perl: OmniBus's `\email`, the class unread)
 

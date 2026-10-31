@@ -39,7 +39,11 @@
 //! `\newtoks\correspondingauthor`, printed in its `\fancypagestyle{firststyle}` foot, 2607.06973; OD #939); the table
 //! setters a raw PACKAGE defines, rerouted at its end as a raw class's are, unless a raw class's read loads it
 //! (`reroute_raw_package_stores`: medima.sty's dates under elsarticle, 2307.16262; OD #940); and a table setter that
-//! prints a mark before its pure store (`table_setter_stores`: astlb.cls's `\email`, 1202.2889; OD #941).
+//! prints a mark before its pure store (`table_setter_stores`: astlb.cls's `\email`, 1202.2889; OD #941). A raw package's
+//! setter's own `\@<name>` is a store only when code that never runs here reads it
+//! (`ClassReaders::read_where_nothing_runs`: rlj.sty's `\@keywords`, read by an uncalled `\makeCover`, 2605.31044);
+//! a date or classification is named only by a label its title page prints, in a branch's `\else` too (medima.sty's
+//! `\finalformhead~\@finalform`), else unnamed (OD #940).
 use std::collections::VecDeque;
 
 use latexml_core::{
@@ -294,6 +298,12 @@ struct ClassReaders {
   /// The title-page code with the class's own kernel fields among its roots (`\@title`, `\@author`, `\@date`, which
   /// LaTeX's `\@maketitle` prints): [`survey_off_table_stores`].
   title_page_fields: FxHashSet<SymStr>,
+  /// Every macro a raw file defined that code which never runs here reaches: the title page's roots, the refused
+  /// definitions (`\lx@dropped@<name>`, state.rs: a locked kernel definition the raw file redefined — astlb.cls:176's
+  /// `\endabstract`, whose `\maketitle` and e-mail footnote the kernel's locked `{abstract}` never reaches, 1202.2889)
+  /// and the page styles (`\ps@…`, `\@oddhead`, …, a fancyhdr style: page furniture no conversion sets)
+  /// ([`ClassReaders::read_where_nothing_runs`]).
+  never_runs:        FxHashSet<SymStr>,
   /// What the class prints: every macro a raw file defined that the title-page roots — of any origin, a binding's
   /// `\@maketitle` too (titling_sty.rs's, which `\lx@deposit@maketitle` runs) — or the class's page styles (`\ps@…`,
   /// `\@oddhead`, …) reach, and what those roots read themselves.
@@ -756,12 +766,66 @@ impl ClassReaders {
     let mut with_fields: Vec<&str> = ROOTS.to_vec();
     with_fields.extend(KERNEL_FIELDS);
     let title_page_fields = grow(&with_fields);
+    // Code that never runs here: the title page's roots, the refused definitions (of whatever origin the lock kept them
+    // in: cesj.sty's `\def\maketitle{\cesjmaketitle}`, physics0510010) and the page styles — their heads and feet are
+    // page furniture no conversion sets, and a fancyhdr style's selection runs nothing. Reached, not grown: a macro an
+    // unused variant also calls is still reached (cesj.sty:874's `\institutename`, called by its `\cesjmaketitle` and
+    // the alternative `\cejpmaketitle`).
+    let mut roots: Vec<SymStr> = ROOTS
+      .iter()
+      .map(|root| T_CS!(*root).get_cs_name())
+      .collect();
+    roots.extend(
+      current_meanings_where(|stored| matches!(stored, Stored::Expandable(_)))
+        .into_iter()
+        .map(|(key, _)| key)
+        .filter(|key| with(*key, |name| name.starts_with("\\lx@dropped@"))),
+    );
+    roots.extend(callees.keys().copied().filter(|cs| {
+      with(*cs, |name| {
+        page_style_name(name) || fancyhdr_page_style(name)
+      })
+    }));
+    let mut never_runs: FxHashSet<SymStr> = FxHashSet::default();
+    let mut reached: Vec<SymStr> = Vec::new();
+    for root in roots {
+      if callees.contains_key(&root) {
+        reached.push(root);
+      } else if let Some(Stored::Expandable(defn)) =
+        lookup_meaning(&T_CS!(&with(root, ToString::to_string)))
+        && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+      {
+        reached.extend(reads_of(body.unlist_ref()).iter().map(Token::get_cs_name));
+      }
+    }
+    while let Some(cs) = reached.pop() {
+      if never_runs.insert(cs) {
+        reached.extend(callees.get(&cs).into_iter().flatten().copied());
+      }
+    }
     ClassReaders {
       title_page,
       title_page_fields,
+      never_runs,
       printed,
       readers,
     }
+  }
+
+  /// Is `store` read where nothing runs here — by a macro that code which never runs reaches
+  /// ([`ClassReaders::never_runs`]: the title page's roots, a refused definition, a page style) —, or by no macro? A raw
+  /// package's setter's own store is rerouted only then (`store_setter_body`): rlj.sty:73's `\@keywords` is read only by
+  /// its `\makeCover`, which 2605.31044 never calls, so it prints nowhere; one only a `\printkeywords` the document
+  /// calls reads, or a body `\printhistory`, or an `\AtEndDocument` hook, prints there. Whether such a macro runs is not
+  /// read off the code: cesj.sty's alternative title page `\cejpmaketitle` (its `CEJP` option's `\maketitle`;
+  /// physics0510010 selects `CESJ`) reads `\@institute` as the refused `\cesjmaketitle` does, and the store is the
+  /// frontmatter's. A store no macro reads is printed, if at all, by code the file ran as it was read (a running head's
+  /// field set at its top level).
+  fn read_where_nothing_runs(&self, store: &Token) -> bool {
+    self
+      .readers
+      .get(&store.get_cs_name())
+      .is_none_or(|readers| readers.iter().any(|cs| self.never_runs.contains(cs)))
   }
 
   /// [`ClassReaders::read_only_by_the_title_page`], the class's own kernel fields counted as title-page code.
@@ -1465,8 +1529,9 @@ fn prints_text(code: &[Token], depth: usize) -> bool {
 }
 
 /// The class's setter `\name`, if it stores its argument for the title page ([`setter_stores`]): in its own
-/// `\@name` (ptptex.cls:616 `\inst` → `\@inst`), or — rule (a) — in one other `\@X` that only the class's title-page
-/// code reads ([`ClassReaders`]): apa6.cls:760 `\long\def\affiliation#1{\long\def\@affil{#1}}` and :779
+/// `\@name` (ptptex.cls:616 `\inst` → `\@inst`) — a raw package's, read by code which never runs here or by no
+/// macro ([`ClassReaders::read_where_nothing_runs`]) —, or — rule (a) — in one other `\@X` that only the class's
+/// title-page code reads ([`ClassReaders`]): apa6.cls:760 `\long\def\affiliation#1{\long\def\@affil{#1}}` and :779
 /// `\authornote` → `\@acks`, read only by its `\maketitle` (:1126-1234, :1367-1466, :1571-1707) and the
 /// `\check@author` it calls (:786-795). A store some other class macro reads stays raw: letter.cls:155 `\address`
 /// fills `\fromaddress` for `\opening` (:221-237), afthesis.cls:535 `\addr@ss` its vita (:744-749) (sweep 93:
@@ -1474,6 +1539,7 @@ fn prints_text(code: &[Token], depth: usize) -> bool {
 /// Returns the body, the stored argument's number and the store.
 fn store_setter_body(
   name: &str,
+  package: bool,
   readers: &mut Option<ClassReaders>,
 ) -> Result<Option<(Tokens, usize, Token)>> {
   let Some((body, arg, stores)) = table_setter_stores(&T_CS!(&s!("\\{name}")))? else {
@@ -1481,6 +1547,20 @@ fn store_setter_body(
   };
   let own = T_CS!(&s!("\\@{name}"));
   if stores.contains(&own) {
+    // (a raw package's own `\@<name>` only when code that never runs here reads it, or no macro does: rerouted,
+    // rlj.sty:73's `\@keywords`, read only by the `\makeCover` 2605.31044 comments out, was invented, and one a macro
+    // the document calls prints was printed twice, review rev95d B1. A raw class's — and a package's its read loads —
+    // as before: the class's title page reaches its stores along code the survey does not follow, bfhlayout.sty
+    // :743-752's `\@titlefooterleft`, printed by a scrlayer layer of bfhthesis.cls's title page, reads `\@department` and
+    // `\@institute` (DEMO-BFHThesis), and the test lost them; requiring every reader to be title-page code also lost
+    // dmtcs.cls's keywords, printed by its `\@dokeywords` from the refused `\endabstract` and its `\noabstract`, 0905.1102)
+    if package
+      && !readers
+        .get_or_insert_with(ClassReaders::survey)
+        .read_where_nothing_runs(&own)
+    {
+      return Ok(None);
+    }
     return Ok(Some((body, arg, own)));
   }
   let [store] = stores
@@ -2430,7 +2510,7 @@ fn reroute_raw_file_stores(cls: &str, package: bool) -> Result<()> {
       toks.push((*name, label));
       continue;
     }
-    if let Some(setter) = store_setter_body(name, &mut readers)? {
+    if let Some(setter) = store_setter_body(name, package, &mut readers)? {
       setters.push((*name, *api, setter));
     }
   }
@@ -2715,6 +2795,15 @@ fn toks_value(name: &str) -> Option<Tokens> {
   }
 }
 
+/// The table's call `api` of a date or a classification named `label` (`name={…}`, joining its options:
+/// `\lx@add@classification[scheme=…]{#1}`); an empty `label` gives it no name, not its role's default.
+fn named_call(api: &str, label: &str) -> String {
+  match api.split_once('[') {
+    Some((command, rest)) => s!("{command}[name={{{label}}},{rest}"),
+    None => api.replacen("{#1}", &s!("[name={{{label}}}]{{#1}}"), 1),
+  }
+}
+
 /// The frontmatter call of the store `\<name>` (the table's `api`), named by the label the class's title page prints
 /// right before the store ([`ClassReaders::title_page_label`]) when the entry is one shown under a name: an abstract,
 /// keywords, a classification or a date ("Received~\@received"). rcresumen's `\def\@maketitle{… Resumen: \@resumen}`: the class's abstract is named
@@ -2730,8 +2819,9 @@ fn toks_value(name: &str) -> Option<Tokens> {
 /// tokens are recorded for the title-page deposit (`lx_store_label_part_<name>`), which takes them out with the store
 /// when it is handed on (`\lx@store@handed`): the label is the entry's name, not a line of its own before the body —
 /// once `\maketitle`'s run of the title page shows it printed right before the store (`verify_title_page_labels`;
-/// else the entry is unnamed, `lx_store_api_unnamed_<name>`). The api of any other store is the table's. Returns the
-/// api, stored for the later calls (`store_api`).
+/// else the entry is unnamed, `lx_store_api_unnamed_<name>`). A date or a classification with no label read has no name
+/// — never its role's default the class does not print. The api of any other store is the table's. Returns the api,
+/// stored for the later calls (`store_api`).
 fn labelled_api(name: &str, api: &str, store: &Token, readers: &ClassReaders) -> String {
   // (`_store`: the class's store's entry, which only another of the same store replaces — the document's own abstract
   // under the same name does not, `frontmatter_clear_same_name`, while the title page prints the store,
@@ -2757,8 +2847,11 @@ fn labelled_api(name: &str, api: &str, store: &Token, readers: &ClassReaders) ->
   } else if api.starts_with("\\lx@add@classification") || api.starts_with("\\lx@add@date") {
     // (a date's label names it, as a classification's does: `Received~\@received\par`, the deposit takes "Received"
     // out with the store — it stayed a body paragraph of its own, "Received" over nothing: a raw package's dates under
-    // article, 2307.16262's medima.sty shape, and a raw class's)
-    (None, api.to_string())
+    // article, 2307.16262's medima.sty shape, and a raw class's. Unlabelled, it has no name, not the role's default:
+    // medima.sty's final-form date printed as "Received in final form" was named "Revised " (FIDELITY_CHARTER
+    // 2026-10-30, never a role name the class does not print; review rev95d B2) — the defaults stay the bindings'
+    // own calls', revtex4_support's and aipproc's)
+    (None, named_call(api, ""))
   } else {
     return api.to_string();
   };
@@ -2781,7 +2874,16 @@ fn labelled_api(name: &str, api: &str, store: &Token, readers: &ClassReaders) ->
       deferred(&unnamed);
       return unnamed;
     }
-    return api.to_string();
+    if named.is_some() {
+      return api.to_string();
+    }
+    // (the unnamed call, for `\maketitle`'s reads of the store too, `store_api`)
+    assign_value(
+      &s!("lx_store_api_{name}"),
+      Stored::String(pin(unnamed.as_str())),
+      Some(Scope::Global),
+    );
+    return unnamed;
   };
   // (the label as printed, without the space before the store)
   let label = text.to_string().trim_end().to_string();
@@ -2805,11 +2907,7 @@ fn labelled_api(name: &str, api: &str, store: &Token, readers: &ClassReaders) ->
   }
   let call = match named {
     Some(head) => s!("{head}{label}}}]{{#1}}"),
-    // `\lx@add@classification[scheme=…]{#1}`: the name joins its options
-    None => match api.split_once('[') {
-      Some((command, rest)) => s!("{command}[name={{{label}}},{rest}"),
-      None => api.replacen("{#1}", &s!("[name={{{label}}}]{{#1}}"), 1),
-    },
+    None => named_call(api, &label),
   };
   assign_value(
     &s!("lx_store_label_reader_{name}"),
@@ -5017,7 +5115,8 @@ fn balanced(toks: &[Token]) -> bool {
   depth == 0
 }
 
-/// The label in the line before `body[at]` ([`ClassReaders::title_page_label`]): the start of the label's tokens, the
+/// The label in the line before `body[at]` ([`ClassReaders::title_page_label`]; a line starts at a line break, a group's
+/// or an environment's edge, another value, or a branch's `\else`/`\or`): the start of the label's tokens, the
 /// end of what a deposit takes out with it (past `body[at]` when the label is in the store's own group, else the start
 /// of that group), and the label's text.
 fn line_label_before(body: &[Token], at: usize) -> Option<(usize, usize, Tokens, bool)> {
@@ -5110,6 +5209,14 @@ fn line_label_before(body: &[Token], at: usize) -> Option<(usize, usize, Tokens,
           || t == T_CS!("\\cr") =>
       {
         after_break = t != T_CS!("\\par");
+        start = k;
+        break;
+      },
+      // a branch's start starts the line in it: medima.sty:322-347 prints each history date in the `\else` branch of
+      // its emptiness test, `\ifx\@finalform\@empty\relax\else \finalformhead~\@finalform\\ \fi`, the branch printed
+      // exactly when the store has a value (2104.10903, 2307.16262; review rev95d B2) — `\maketitle`'s run of the title
+      // page still checks the label prints right before the store (`verify_title_page_labels`)
+      Catcode::CS if cs_in(&t, &["\\else", "\\or"]) => {
         start = k;
         break;
       },

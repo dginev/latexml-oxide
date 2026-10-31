@@ -2,24 +2,39 @@
 % only its own `\maketitle` reads, which the kernel refuses: K11 reroutes a raw package's table stores at its end too
 % (frontmatter_stores.rs `reroute_raw_package_stores`), as a raw class's, so the five "Article history" lines are the
 % frontmatter's dates — received, final form (`revised`), accepted, available online (`published`), communicated —,
-% each named by its printed label (`labelled_api`), which leaves the title page with it.
-% witness: 2307.16262 (elsarticle + medima.sty:300-312); census: 17 elsarticle papers ship such a style (medima ×8,
-%          jcomp ×2, prletters ×2, ycviu ×2, yjvci, cag, jasr)
-% oracle:  pdflatex 0 errors: "T", "Ann Able", "Received 1 May 2020", "Received in final form 9 May 2020",
-%          "Accepted 2 June 2020", "Available online 5 June 2020", "Communicated by B. Editor", "Text."
-% engines: rust int124a = 0 errors, every date lost; perl = 0 errors, received and accepted kept (elsarticle's binding)
+% each named by the label printed before it (`labelled_api`) — in medima's shape, a head macro of the package's in the
+% `\else` branch of the store's emptiness test (`\ifx\@finalform\@empty\relax\else \finalformhead~\@finalform\\ \fi`) —,
+% which leaves the title page with it; a date with no label read has no name, not its role's default ("Revised ").
+% witness: 2307.16262, 2104.10903 (elsarticle + medima.sty:300-347); census: 17 elsarticle papers ship such a style
+%          (medima ×8, jcomp ×2, prletters ×2, ycviu ×2, yjvci, cag, jasr)
+% oracle:  pdflatex 0 errors: "T", "Ann Able", "Article history:", "Received 1 May 2020", "Received in final form
+%          9 May 2020", "Accepted 2 June 2020", "Available online 5 June 2020", "Communicated by B. Editor", "Text."
+% engines: rust int124a = 0 errors, every date lost; rust 95d = 0 errors, the final-form date named "Revised ", the
+%          available-online one unnamed (review rev95d B2); perl = 0 errors, received and accepted kept (elsarticle's
+%          binding)
 % expect:  0 errors, 0 warnings; five <ltx:date> in that order, roles received, revised, accepted, published,
 %          communicated, each named by the label printed before it ("Received", "Received in final form", …)
-% status:  RED (int124a) -> GREEN (95d)
+% status:  RED (int124a, 95d) -> GREEN (95d-r2)
 % preload: ar5iv.sty
 \begin{filecontents*}[overwrite]{rawhist.sty}
+\let\@received\@empty\let\@finalform\@empty\let\@accepted\@empty
+\let\@availableonline\@empty\let\@communicated\@empty
 \def\received#1{\gdef\@received{#1}}
 \def\finalform#1{\gdef\@finalform{#1}}
 \def\accepted#1{\gdef\@accepted{#1}}
 \def\availableonline#1{\gdef\@availableonline{#1}}
 \def\communicated#1{\gdef\@communicated{#1}}
-\def\articleinfobox{Received~\@received\par Received in final form~\@finalform\par Accepted~\@accepted\par
-  Available online~\@availableonline\par Communicated by~\@communicated\par}
+\def\receivedhead{Received}
+\def\acceptedhead{Accepted}
+\def\finalformhead{Received in final form}
+\def\availableonlinehead{Available online}
+\def\communicatedhead{Communicated by}
+\def\articleinfobox{\textit{Article history}:\\
+  \ifx\@received\@empty\relax\else \receivedhead~\@received\\ \fi
+  \ifx\@finalform\@empty\relax\else \finalformhead~\@finalform\\ \fi
+  \ifx\@accepted\@empty\relax\else \acceptedhead~\@accepted\\ \fi
+  \ifx\@availableonline\@empty\relax\else \availableonlinehead~\@availableonline \fi
+  \ifx\@communicated\@empty\relax\else \par \communicatedhead~\@communicated \fi\par}
 \def\maketitle{\@title\par\elsauthors\par\articleinfobox}
 \end{filecontents*}
 \documentclass{elsarticle}

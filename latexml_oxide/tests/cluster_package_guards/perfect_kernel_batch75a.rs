@@ -147,14 +147,16 @@ fn class_stores_printed_by_class_abstract() {
 }
 
 /// CSML.cls:227-229 `\def\ACMCCS#1{\def\@ACMCCS{#1}}`, printed in a title-page footnote: the frontmatter's
-/// classification (1608.04592, 1602.00476, whose `\@maketitle` deposit errs and was dropped with it).
+/// classification (1608.04592, 1602.00476, whose `\@maketitle` deposit errs and was dropped with it), unnamed — its
+/// printed label ("2012 ACM CCS:", in the footnote) is not read, and the role's default "Classification: " is no label
+/// the class prints (95d-r2, FIDELITY_CHARTER 2026-10-30).
 #[test]
 fn class_acmccs_store_is_a_classification() {
   let (_log, xml) = convert_beside!("class_acmccs_store_is_a_classification.tex", "tpccs.cls");
   title_and_author_once(&xml);
   assert!(
     xml.contains(
-      r#"</creator> <classification name="Classification: " scheme="ACMCCS">[Theory of computation]: Models of computation</classification> <para xml:id="p1"> <p xml:id="p1.1">Body text.</p> </para>"#
+      r#"</creator> <classification scheme="ACMCCS">[Theory of computation]: Models of computation</classification> <para xml:id="p1"> <p xml:id="p1.1">Body text.</p> </para>"#
     ),
     "{xml}"
   );
