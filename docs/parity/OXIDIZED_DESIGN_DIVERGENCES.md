@@ -28415,8 +28415,8 @@ prints on the call's author (revtex 2011.01984, 1303.5460, 1304.4972, 1503.07733
 and 0809.3090 (`\author{Santos Bravo Yuste}\email{santos@unex.es}`: the holder's given name, today's moves it to Andrés
 Santos), and, outside that population, right on 2112.10604 (`\author{Dario Mathi\"a and Ulrich Thiel}`, `mathiae@` on
 Thiel; a several-name call, base letters alone) and on the ASCII twin `\author{Anna Smith}…\email{mueller-group@x.de}`
-beside `\author{Jorg Mueller}` (moved here, as by every binary before — which FIDELITY_CHARTER §4 #420's "its ASCII twin
-too" says should stay; the charter keeps the user's wording until the user rules on this measurement). This rule stays; the rival's witnesses are RED
+beside `\author{Jorg Mueller}` (moved here, as by every binary before; FIDELITY_CHARTER §4 #420 amended to this measurement, user
+2026-10-31). This rule stays; the rival's witnesses are RED
 repros `amsart_email_of_a_two_name_call_spelling_an_accented_name`, `revtex_email_spelling_its_holders_given_name` (SYNC).
 
 **Label words** travel as an e-mail line's do (`author_block::labelled_emails`): an e-mail label word goes with the

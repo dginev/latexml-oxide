@@ -88,7 +88,12 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
 - **An author's own call holding one address keeps it** (2026-10-29, #420): when an `\email` (or the class's
   equivalent) belongs to one author's own call — amsart's `\author{A}\address{…}\email{x}`, one address — the class's
   structure says one address per author, and spelling does not move it (`\author{Anna Smith}…\email{mueller-group@x.de}`
-  stays Anna Smith's beside `\author{J\"org M\"uller}`, its ASCII twin too). A call holding several addresses is not
+  stays Anna Smith's beside `\author{J\"org M\"uller}`, whom it spells by base letters alone). An address that spells
+  another author as printed does move (its ASCII twin, beside `\author{Jorg Mueller}`, does; amended to match the data,
+  user 2026-10-31): measured 2026-10-31 (brief 95c r3, OD #938), the corresponding author's address set after the last
+  `\author` or `\correspondingauthor` is the author it spells on 22 real papers of a 347-paper respell population
+  (1303.5460, 2005.06651, 1511.04148, 2408.09634, …; 2011.01984 the batch63 guard's), the call's author on 2
+  (0711.3633, 0809.3090: the holder's given name). A call holding several addresses is not
   that evidence: spelling decides among them, as above (1204.1484: `montaldo@`, `piu@` under Caddeo's call).
 - **The marks shown on a name are its requests for labelled affiliations**; a name's label is the name alone
   (2026-10-21, rank 93).
