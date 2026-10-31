@@ -28,7 +28,9 @@ use latexml_core::{
 
 use super::*;
 
+mod fonts;
 mod lexer;
+pub(in crate::base_utilities) use fonts::{FontScope, InkFonts, changes_font, entry_font};
 use lexer::Lexer;
 pub(in crate::base_utilities) use lexer::{is_fnsymbol, is_separator_word};
 
@@ -153,6 +155,9 @@ pub struct Event {
   /// an in-block annotation's (`\lx@annotate@frontmatter`) `annotate=` option: the authors today's API gives it (`run`,
   /// `new`, a number, `all`; Perl Base_Utility.pool.ltxml:520-536)
   pub annotate:     Option<String>,
+  /// a cut in-block contact entry's: the font changes in effect where the writer's cut of it starts, against its call's
+  /// (`fonts::entry_font`; `Font::default()` for none), which the writer digests it under — `None` when not read
+  pub font:         Option<Rc<Font>>,
 }
 
 impl Event {
@@ -174,6 +179,7 @@ impl Event {
       meaning: EmailMeaning::Binding,
       inkless: false,
       annotate: None,
+      font: None,
     }
   }
 }
@@ -913,11 +919,24 @@ impl Walker {
           && let Some(body) = w.get_arg(2)
         {
           let events = lex_events(body);
-          if let Some((entries, whole)) = labelled_entries(&events) {
-            let entry_event = |(label, text, span): LabelledEntry| {
+          // (the font each entry's cut starts in, read from the call's digested ink: its first token's after the call's
+          // own — the content's start —, against the call's font; review rev94b r3 B1)
+          let scope = d
+            .get_font()
+            .ok()
+            .flatten()
+            .zip(box_span(d))
+            .map(|(root, (at, _))| FontScope {
+              ink: InkFonts::of(body),
+              root,
+              start: usize::from(at) + 1,
+            });
+          if let Some((entries, whole)) = labelled_entries(&events, scope.as_ref()) {
+            let entry_event = |(label, text, span, font): LabelledEntry| {
               let mut entry = contact.clone();
               entry.label = Some(label);
               entry.text = text;
+              entry.font = font;
               // (its span its own ink, which the writer makes the entry from (`plan::block_span_tokens`): not the
               // call, whose own typesetting — a document's `\newcommand{\affil}[1]{\\{\footnotesize #1}}` — is no
               // part of it)
@@ -926,7 +945,7 @@ impl Walker {
               entry
             };
             if entries.len() > 1 {
-              let spans = entries.iter().filter_map(|(_, _, span)| *span).collect();
+              let spans = entries.iter().filter_map(|(_, _, span, _)| *span).collect();
               self.cuts.push((spans, entry_event(whole)));
             }
             for entry in entries {
@@ -1438,8 +1457,9 @@ fn mark_led_pieces_keeping(events: &[Event], punctuation: bool) -> Vec<Vec<Event
   if pieces.len() < 2 { Vec::new() } else { pieces }
 }
 
-/// An in-block contact's entry read from its leading marks: its labels, its text, its span ([`labelled_entries`]).
-type LabelledEntry = (String, String, Option<(u16, u16)>);
+/// An in-block contact's entry read from its leading marks: its labels, its text, its span, and for an entry of a cut
+/// the font its cut starts in ([`labelled_entries`]).
+type LabelledEntry = (String, String, Option<(u16, u16)>, Option<Rc<Font>>);
 
 /// An author block's first position in the author field and its tokens ([`with_block_content`]).
 type BlockContent = Option<(usize, Tokens)>;
@@ -1486,7 +1506,7 @@ fn labelled_entry(events: &[Event]) -> Option<LabelledEntry> {
     .iter()
     .filter_map(|e| e.span)
     .reduce(|(a, b), (s, e)| (a.min(s), b.max(e)));
-  Some((labels.join(","), events_text(&rest), span))
+  Some((labels.join(","), events_text(&rest), span, None))
 }
 
 /// The entries of an in-block contact's content each led by marks ([`mark_led_pieces_keeping`], its printed
@@ -1498,7 +1518,10 @@ fn labelled_entry(events: &[Event]) -> Option<LabelledEntry> {
 /// (`plan::span_tokens`, on the block being rehearsed: [`with_block_content`]) holds in no balanced run of the block
 /// or reads otherwise — review rev94b r2 B1: such a cut left today's contact on a nameless creator. `None` when the
 /// content leads with no labelled mark.
-fn labelled_entries(events: &[Event]) -> Option<(Vec<LabelledEntry>, LabelledEntry)> {
+fn labelled_entries(
+  events: &[Event],
+  scope: Option<&FontScope>,
+) -> Option<(Vec<LabelledEntry>, LabelledEntry)> {
   let whole = labelled_entry(events)?;
   let norm = |text: &str| -> String {
     text
@@ -1515,38 +1538,58 @@ fn labelled_entries(events: &[Event]) -> Option<(Vec<LabelledEntry>, LabelledEnt
       if piece[end..].iter().any(|e| e.kind == EventKind::Mark) {
         return None;
       }
-      labelled_entry(piece).filter(|(_, text, span)| span.is_some() && !norm(text).is_empty())
+      labelled_entry(piece).filter(|(_, text, span, _)| span.is_some() && !norm(text).is_empty())
     })
     .collect();
-  let cuts = |entries: &[LabelledEntry]| {
-    entries.len() >= 2
-      && entries
+  // (each entry with the font its cut starts in, `fonts::entry_font`: none when the boxes cannot tell it, or a
+  // container other than a group holds two entries' ink — review rev94b r3 B1: a font open from earlier in the block
+  // was lost from every entry after the first)
+  let cut = |entries: Vec<LabelledEntry>| -> Option<Vec<LabelledEntry>> {
+    if entries.len() < 2
+      || entries
         .iter()
-        .map(|(_, text, _)| norm(text))
+        .map(|(_, text, ..)| norm(text))
         .collect::<String>()
-        == norm(&whole.1)
-      && BLOCK_CONTENT.with(|block| {
-        block.borrow().as_ref().is_some_and(|(base, tokens)| {
-          entries.iter().all(|(_, text, span)| {
-            span.is_some_and(|span| {
-              writer::span_tokens(
-                tokens.unlist_ref(),
-                *base,
-                span,
-                Some(&norm(text)),
-                None,
-                true,
-                false,
-              )
-              .is_some()
-            })
-          })
+        != norm(&whole.1)
+    {
+      return None;
+    }
+    let scope = scope?;
+    let spans: Vec<(u16, u16)> = entries
+      .iter()
+      .map(|(_, _, span, _)| *span)
+      .collect::<Option<_>>()?;
+    if scope.ink.crossed(&spans) {
+      return None;
+    }
+    BLOCK_CONTENT.with(|block| {
+      let block = block.borrow();
+      let (base, tokens) = block.as_ref()?;
+      let content = tokens.unlist_ref();
+      entries
+        .into_iter()
+        .map(|(label, text, span, _)| {
+          let span = span?;
+          let from = writer::labelled_start(content, *base, span)?;
+          let font = entry_font(content, *base, from, scope, events)?;
+          writer::span_tokens(
+            content,
+            *base,
+            span,
+            Some(&norm(&text)),
+            None,
+            true,
+            false,
+            true,
+          )?;
+          Some((label, text, Some(span), Some(font)))
         })
-      })
+        .collect()
+    })
   };
-  Some(match entries {
-    Some(entries) if cuts(&entries) => (entries, whole),
-    _ => (vec![whole.clone()], whole),
+  Some(match entries.and_then(cut) {
+    Some(entries) => (entries, whole),
+    None => (vec![whole.clone()], whole),
   })
 }
 

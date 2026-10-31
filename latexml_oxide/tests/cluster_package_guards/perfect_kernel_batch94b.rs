@@ -26,6 +26,13 @@
 //! entry keeps the fonts and the line-end punctuation of its line (B1, N4); an `[optional]{mandatory}` setter's optional
 //! argument is a caption, a mark or a key by the API's convention (B2); a class's own definition calls the class's other
 //! setters directly, nothing left for its look-ahead (S3).
+//!
+//! Round 4 (review rev94b r3): a cut entry is digested in the font in effect where its cut starts, read from the
+//! rehearsal's digested ink (`events::entry_font`), and an argument other than a group spanning two entries is no cut
+//! (B1); a line leading with a mark no name requests, and a list of single-word keys, is in doubt — the class's line —
+//! and the writer never writes a creator without a name (B2, B2b; `writer::writes_a_nameless_creator`, unit-tested
+//! there); a kept class body's call of a rerouted setter runs the setter's meaning when the document redefined it (S3);
+//! the authors' box is recorded by its frame's serial, whatever group the kernel's call stood in.
 
 use std::{path::Path, process::Command};
 
@@ -523,7 +530,10 @@ type Shape = (
 /// Review rev94b r2 B1: entries of an in-block affiliation the writer could not cut — an entry of no text (`$^1$\\
 /// $^2$Univ B`), entries whose texts are not the contact's (the word "and" between them), an entry no name requests
 /// (`$^3$Lab C`) — are the one entry the leading marks label, today's one contact on the names requesting them, never a
-/// nameless creator (`events::labelled_entries`, `lex_events`). ar-1col.cls's `\affil` (1602.05576, 2405.08158).
+/// nameless creator (`events::labelled_entries`, `lex_events`). ar-1col.cls's `\affil` (1602.05576, 2405.08158). This
+/// pins the fallback, not a correct reading: its known misattribution stays — `noline`'s "Univ B, City" is on Ann
+/// Able, whose `1` labels the content's first mark, though pdflatex prints it under Bob Baker's `2` (review rev94b r3
+/// NIT); a nameless creator holding it was worse.
 #[test]
 fn entries_the_writer_cannot_cut_stay_one_contact() {
   let shapes: [Shape; 3] = [
@@ -650,4 +660,209 @@ fn an_optional_key_labels_its_authors() {
     "  a Lab B, City | api:label",
   ]);
   assert_eq!(default_mode_creators(tex), owned(xml));
+}
+
+/// `tex`'s creators in the default mode (the fleet's), and by the binary eager and `--streaming`: no Error or Warning,
+/// each contact's markup `markup` and the body's text `body` when given.
+#[track_caller]
+fn assert_written(tex: &str, creators: &[&[&str]], markup: Option<&[&str]>, body: Option<&str>) {
+  assert_eq!(default_mode_creators(tex), owned(creators));
+  for streaming in [false, true] {
+    let (log, xml) = binary(tex, streaming);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "streaming={streaming}: {log}"
+    );
+    if let Some(markup) = markup {
+      assert_eq!(contact_markup(&xml), markup, "streaming={streaming}");
+    }
+    if let Some(body) = body {
+      assert_eq!(body_text(&xml), body, "streaming={streaming}");
+    }
+  }
+}
+
+/// Review rev94b r3 B1: an in-block affiliation's entry is digested in the font in effect where its cut starts — a
+/// switch at the content's head (`\itshape`, `\footnotesize`), a font command's argument (`\textit{…}`), a font
+/// environment, nested groups with a size and a colour (`{\small{\color{red}…}}`) — read from the rehearsal's digested
+/// ink (`events::entry_font`) and carried by the entry (`plan::entry_font_tokens`, `\lx@fm@entry@font`): every entry
+/// after a line break was plain. Each affiliation its own group in the rehearsal, as the API digests it (a switch of the
+/// first is no font of the next). ar-1col.cls's `\affil` inside `\author{}` (1602.05576, 2405.08158). Distinct from
+/// `a_cut_entry_keeps_its_fonts_and_its_punctuation`: the font is open from before the entry's line, not its own.
+#[test]
+fn a_cut_entry_keeps_the_font_open_before_it() {
+  assert_written(
+    repro!("raw_class_affil_cut_keeps_the_font_open_before_it.tex"),
+    &[
+      &["Ann Able", "affiliation=Univ A, Town"],
+      &["Bob Baker", "affiliation=Univ B, City"],
+      &["Cy Cole", "affiliation=Lab C, Place"],
+      &["Dan Doe", "affiliation=Lab D, Place"],
+      &["Eve Ern", "affiliation=Inst E, Town"],
+      &["Fay Fox", "affiliation=Inst F, City"],
+      &["Gil Gray", "affiliation=Dept G, Town"],
+      &["Hal Hart", "affiliation=Dept H, City"],
+      &["Ida Ince", "affiliation=Org I, Town"],
+      &["Jo Jung", "affiliation=Org J, City"],
+    ],
+    Some(&[
+      "<text font=\"italic\">Univ A, Town</text>",
+      "<text font=\"italic\">Univ B, City</text>",
+      "<text font=\"italic\">Lab C, Place</text>",
+      "<text font=\"italic\">Lab D, Place</text>",
+      "<text fontsize=\"80%\">Inst E, Town</text>",
+      "<text fontsize=\"80%\">Inst F, City</text>",
+      "<text font=\"italic\">Dept G, Town</text>",
+      "<text font=\"italic\">Dept H, City</text>",
+      "<text color=\"#FF0000\" fontsize=\"90%\">Org I, Town</text>",
+      "<text color=\"#FF0000\" fontsize=\"90%\">Org J, City</text>",
+    ]),
+    None,
+  );
+}
+
+/// Review rev94b r3 B1, the API's path (`plan::cut`, an API call's content cut by its marks): each piece in the font in
+/// effect where it starts — the content's head switch (`\itshape $^1$…\\ $^2$…`) and an enclosing group's
+/// (`{\bfseries $^3$…\\ $^4$…}`): the first had been on no piece, the second on the first piece only. Distinct from
+/// `a_cut_entry_keeps_the_font_open_before_it`: an API call's rehearsal, not the author block's.
+#[test]
+fn an_api_piece_keeps_the_font_open_before_it() {
+  assert_written(
+    repro!("raw_class_address_cut_keeps_the_font_open_before_it.tex"),
+    &[
+      &["Ann Able", "address=1 Univ A, Town"],
+      &["Bob Baker", "address=2 Univ B, City"],
+      &["Cy Cole", "address=3 Lab C, Place"],
+      &["Dan Doe", "address=4 Lab D, Place"],
+    ],
+    Some(&[
+      "<sup>1</sup><text font=\"italic\">Univ A, Town</text>",
+      "<sup>2</sup><text font=\"italic\">Univ B, City</text>",
+      "<sup>3</sup><text font=\"bold\">Lab C, Place</text>",
+      "<sup>4</sup><text font=\"bold\">Lab D, Place</text>",
+    ]),
+    None,
+  );
+}
+
+/// Review rev94b r3 B1: a container other than a group holding two entries' ink — an `\underline{…}`, an `\emph{…}` —
+/// is markup no cut entry could keep (`events::InkFonts::crossed`): the content is no cut, today's one contact whole on
+/// the names its first mark labels, as the other uncut shapes (`entries_the_writer_cannot_cut_stay_one_contact`).
+#[test]
+fn entries_inside_one_container_stay_one_contact() {
+  assert_written(
+    repro!("raw_class_affil_crossed_container_stays_one_contact.tex"),
+    &[
+      &["Ann Able", "affiliation=Univ A, Town Univ B, City"],
+      &["Bob Baker"],
+      &["Cy Cole", "affiliation=Lab C, Place Lab D, Place"],
+      &["Dan Doe"],
+    ],
+    Some(&[
+      "<text class=\"ltx_underline\">Univ A, Town<break/>Univ B, City</text>",
+      "<emph font=\"italic\">Lab C, Place<break/>Lab D, Place</emph>",
+    ]),
+    None,
+  );
+}
+
+/// Review rev94b r3 B2: a contact line of its own leading with a mark no name requests — `\inst{3}`,
+/// `\textsuperscript{4}`, `$^{5}$` under `Ann Able\inst{1} and Bob Baker\inst{2}` — is in doubt
+/// (`frontmatter_stores.rs` `leads_with_unrequested_mark`): the class's line where it is called, its words kept (the
+/// main session's ruling: content over markup). "Lab C, Place" was a creator of no name's, the other two both authors'.
+#[test]
+fn a_line_no_name_requests_stays_the_class() {
+  assert_written(
+    repro!("raw_class_affil_unrequested_mark_stays_the_class.tex"),
+    &[&["Ann Able", "affiliation=Univ A, Town"], &[
+      "Bob Baker",
+      "affiliation=Univ B, City",
+    ]],
+    None,
+    Some("3 Lab C, Place 4 Lab D, Place 5 Lab E, Place Body."),
+  );
+}
+
+/// Review rev94b r3 B2, B2b: an `[optional]{mandatory}` setter's optional mark no name requests (`\address[\inst{3}]`,
+/// `\address[$^{4}$]`) and a list of single-word keys no name requests (`\address[c, d]`, captioned "c, d") are in
+/// doubt (`optional_contact`): the class's line where it is called. w-art.cls's `\address[\inst{1}]` (0910.5837,
+/// 1105.1753, quant-ph0606237) stays its authors'.
+#[test]
+fn an_optional_mark_no_name_requests_stays_the_class() {
+  assert_written(
+    repro!("raw_class_optional_unrequested_mark_stays_the_class.tex"),
+    &[&["Ann Able", "address=Univ A, Town"], &[
+      "Bob Baker",
+      "address=Univ B, City",
+    ]],
+    None,
+    Some("( 3 ) Lab C, Place ( 4 ) Lab D, Place (c, d) Lab E, Place Body."),
+  );
+}
+
+/// Review rev94b r3 S3: a kept class body's call of a rerouted setter (ae100prg.cls's `\email` through its `\address`,
+/// 1303.3004) runs the class's definition only while the setter means the reroute (`\lx@class@contact@dispatch`):
+/// redefined in a group, then globally, it runs the document's — "Addr:", "Addr2:" were dropped.
+#[test]
+fn a_redefined_setter_runs_its_meaning() {
+  assert_written(
+    repro!("raw_class_redefined_setter_runs_its_meaning.tex"),
+    &[&["Ann Able"], &["Bob Baker"]],
+    None,
+    Some(
+      "Write to us, Addr: E-mail: d@x.org until 2030. Or write, E-mail: e@x.org now. Write again, Addr2: E-mail: \
+       f@x.org later. Body.",
+    ),
+  );
+}
+
+/// Review rev94b r2-r3 S3: after `\maketitle` each call is the class's run, and the class's look-ahead — `\@ifstar`,
+/// `\futurelet`, `\@ifnextchar[`, `\ignorespaces` — reads the document's own next token, nothing of the reroute's after
+/// the call (`class_bodies_call_class_copies`).
+#[test]
+fn a_class_run_looks_ahead_at_the_documents_tokens() {
+  assert_written(
+    repro!("raw_class_lookahead_after_a_class_run.tex"),
+    &[&["Ann Able"]],
+    None,
+    Some(
+      "Contact a@x.org starred now, Lab A (dot). then Univ B ¡note¿ end Inst C x. 1 1 §1 1 Intro Body.",
+    ),
+  );
+}
+
+/// Review rev94b r3 placements: a call inside a `\marginpar`, a float or a `\caption` is the class's line where it
+/// stands (`at_the_body_level`: each binds a mode of its own). Distinct from `a_contact_in_a_box_stays_the_class`:
+/// the margin note, the float and the caption.
+#[test]
+fn a_contact_in_a_margin_note_float_or_caption_stays_the_class() {
+  assert_written(
+    repro!("raw_class_contact_in_a_margin_note_float_or_caption_stays_the_class.tex"),
+    &[&["Ann Able", "address=Univ A, Town"], &[
+      "Bob Baker",
+      "address=Univ A, Town",
+    ]],
+    None,
+    Some(
+      "Text E-mail: m@x.org here. E-mail: n@x.org Lab F, Place Figure 1 1 Figure 1 X 1 Lab G, Place Figure 1 Lab G, \
+       Place Body.",
+    ),
+  );
+}
+
+/// Review rev94b r3: the box the authors were set in is recorded globally by its frame's serial (`author_box`): an
+/// imsart-like `\affiliation` after `\end{aug}`, still in the frontmatter's `\vbox` (1301.1466), is the API's — the
+/// record had been the kernel call's group's, gone at its end, and the line stayed the class's.
+#[test]
+fn an_affiliation_after_the_author_group_in_its_box_is_the_api() {
+  assert_written(
+    repro!("raw_style_affiliation_after_the_author_group_in_its_box.tex"),
+    &[&["Ann Able", "affiliation=Univ A, Town"], &[
+      "Bob Baker",
+      "affiliation=Univ A, Town",
+    ]],
+    None,
+    Some("Body."),
+  );
 }

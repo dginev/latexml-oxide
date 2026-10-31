@@ -24,8 +24,9 @@ mod dom;
 mod plan;
 mod repart;
 
+use plan::{Op, Owner};
 // (the writer's cut of a block's entry, which the reading checks an in-block contact's entries by: `events::labelled_entries`)
-pub(super) use plan::span_tokens;
+pub(super) use plan::{labelled_start, span_tokens};
 
 /// The resolution of the document's author blocks when the writer may write them: every block flushed so far
 /// rehearsed without an error held, the API calls after them rehearsed, and every block's family `written`.
@@ -80,7 +81,13 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
   };
   // (today's names parted otherwise than the reading's: the creators written again from the reading, when what is
   // written holds every word today's held — the re-part, OD #928)
-  if let Some(repart) = repart::plan(&resolved, &front)
+  let repart = repart::plan(&resolved, &front);
+  if let Some(repart) = &repart
+    && writes_a_nameless_creator(repart.makes_block_items().then_some(Owner::Block), &front)
+  {
+    return decline_nameless(&resolved);
+  }
+  if let Some(repart) = repart
     && repart::apply(document, &resolved, &front, &repart)?
   {
     DebugFeature!("frontmatter", "FRONT writer: the names re-parted");
@@ -98,6 +105,9 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
     });
     return Ok(());
   };
+  if writes_a_nameless_creator(plan.ops.iter().filter_map(Op::made_for), &front) {
+    return decline_nameless(&resolved);
+  }
   DebugFeature!("frontmatter", "FRONT writer: {} operations", plan.ops.len());
   apply::apply(document, &front, &plan)?;
   // (what was written must read as the observer reads it: anything else is the writer's own defect, reported)
@@ -115,6 +125,37 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
   }
   let outcome = difference.map_or_else(|| "written".to_string(), |d| s!("written-different: {d}"));
   with_ledger(|ledger| ledger.writer = Some(outcome));
+  Ok(())
+}
+
+/// The writer's invariant: it never makes a creator without a name (review rev94b r3 B2). An item made from the
+/// queued tokens for the author block's own (`Owner::Block`) where today's holds no nameless creator would make one
+/// (`apply::block_creator`, the re-part's block creator): an entry the reading could not give a name — a cut entry no
+/// mark labels. Every written family's paper is then declined whole — today's output — and a Warning says so
+/// ([`decline_nameless`]). A copy of today's item a ruling gives the block — an address no author spells
+/// (`owner:inner-email`, `ruling3:written-out`: 1811.05243, 1812.02463, 2403.14668, 2501.11467; 2105.11343, 2107.09414,
+/// 2508.05637, which the invariant over every item had left with today's shared e-mail) — is the block's by that
+/// ruling, not by doubt ([`plan::Op::made_for`], `repart::Repart::makes_block_items`).
+fn writes_a_nameless_creator(owners: impl IntoIterator<Item = Owner>, front: &dom::Front) -> bool {
+  front.nameless.is_empty() && owners.into_iter().any(|owner| owner == Owner::Block)
+}
+
+/// Decline the paper's writing for [`writes_a_nameless_creator`]: a Warning naming the block the reading's own items
+/// come from, today's frontmatter kept.
+fn decline_nameless(resolved: &Resolved) -> Result<()> {
+  let block = resolved
+    .block
+    .iter()
+    .find_map(|a| a.source.map(|(index, _)| index))
+    .map_or_else(|| "?".to_string(), |index| index.to_string());
+  Warn!(
+    "unexpected",
+    "frontmatter",
+    s!(
+      "The frontmatter observer's reading would write a creator with no name for the author block's own items (ledger entry {block}); the frontmatter is kept as the API wrote it"
+    )
+  );
+  with_ledger(|ledger| ledger.writer = Some("declined: a creator with no name".to_string()));
   Ok(())
 }
 
@@ -192,4 +233,24 @@ pub(super) fn writes(assoc: &Assoc) -> bool {
   is_change_rule(&assoc.rule)
     && !unowned("label:unrequested owner:block")
     && !unowned("ruling2:uncarried owner:block")
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  /// The invariant: an item for the block's own creator makes a nameless one only where today's holds none.
+  #[test]
+  fn the_writer_never_writes_a_nameless_creator() {
+    let none = dom::Front::default();
+    assert!(writes_a_nameless_creator(
+      [Owner::Creator(0), Owner::Block],
+      &none
+    ));
+    assert!(!writes_a_nameless_creator(
+      [Owner::Creator(0), Owner::Creator(1)],
+      &none
+    ));
+    assert!(!writes_a_nameless_creator(None, &none));
+  }
 }

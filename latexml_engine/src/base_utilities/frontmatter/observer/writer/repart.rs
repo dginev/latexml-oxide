@@ -95,6 +95,16 @@ pub(super) struct Repart {
   separators: Vec<String>,
 }
 
+impl Repart {
+  /// Whether it makes an item of the author block's own from the queued tokens (a creator of no name would hold it).
+  pub(super) fn makes_block_items(&self) -> bool {
+    self
+      .block
+      .iter()
+      .any(|item| matches!(item, Item::Make { .. }))
+  }
+}
+
 /// No re-part, and why (the `frontmatter` debug feature).
 fn declined(reason: &str) -> Option<Repart> {
   DebugFeature!("frontmatter", "FRONT writer: no re-part, {reason}");

@@ -810,6 +810,32 @@ pub fn digested_authors_requesting(key: &str) -> bool {
     })
 }
 
+/// Whether an author's name shows a mark — a queued author's, or one of the flush being digested
+/// ([`digested_authors_requesting`]'s): what a contact's leading mark is read against (`frontmatter_stores.rs`
+/// `leads_with_unrequested_mark`) — with none, the marks the names print are not read.
+pub fn authors_show_marks() -> bool {
+  queued_author_marks().iter().any(|marks| !marks.is_empty())
+    || with_value("frontmatter", |v| match v {
+      Some(Stored::HashTagData(frontmatter)) => {
+        frontmatter.get("ltx:creator").is_some_and(|creators| {
+          creators
+            .iter()
+            .filter(|c| c.attr.get("role").map(String::as_str) == Some("author"))
+            .any(|c| {
+              ["_plainmarks", "_textmarks", "_picturemarks"]
+                .iter()
+                .any(|attr| {
+                  c.attr
+                    .get(*attr)
+                    .is_some_and(|marks| !marks.trim().is_empty())
+                })
+            })
+        })
+      },
+      _ => false,
+    })
+}
+
 /// The author creators queued and not yet digested.
 pub(in crate::base_utilities) fn queued_author_count() -> usize {
   with_value("frontmatter_raw", |v| match v {

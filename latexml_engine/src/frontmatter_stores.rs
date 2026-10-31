@@ -1748,11 +1748,107 @@ fn class_contact(api: Tokens, class: Tokens, in_place: bool) -> Tokens {
       && !author_creators_placed()
       && !frontmatter_entry_sealed("ltx:creator", "author")
   };
-  if creator_entry_in_progress() || title_block_line() {
+  // (a line of its own that leads with a mark no queued name requests is no creator's contact: the class's line, in
+  // place — review rev94b r3 B2, `\affil{\inst{3}Lab C}` under `Ann\inst{1}` and `Bob\inst{2}` was a nameless
+  // creator's; a stored setter's keeps the API's)
+  if creator_entry_in_progress()
+    || (title_block_line() && !(in_place && leads_with_unrequested_mark(last_group(&class))))
+  {
     api
   } else {
     class
   }
+}
+
+/// The content of the last braced group of `tokens`: a rerouted setter's class call's mandatory argument.
+fn last_group(tokens: &Tokens) -> &[Token] {
+  let tokens = tokens.unlist_ref();
+  let Some(close) = tokens.iter().rposition(|t| t.get_catcode() == Catcode::END) else {
+    return &[];
+  };
+  let mut depth = 0usize;
+  for at in (0..=close).rev() {
+    match tokens[at].get_catcode() {
+      Catcode::END => depth += 1,
+      Catcode::BEGIN => {
+        depth -= 1;
+        if depth == 0 {
+          return &tokens[at + 1..close];
+        }
+      },
+      _ => {},
+    }
+  }
+  &[]
+}
+
+/// The operand of the printed mark `line` leads with — `\inst{3}`, `\textsuperscript{3}`, `\@textsuperscript{3}`,
+/// `$^{3}$`, `$^3$` —, if it does.
+fn leading_mark_operand(line: &[Token]) -> Option<Vec<Token>> {
+  let mut at = line
+    .iter()
+    .position(|t| t.get_catcode() != Catcode::SPACE)?;
+  // (a braced argument's content, or the one token)
+  let operand = |at: usize| -> Option<Vec<Token>> {
+    let first = line.get(at)?;
+    if first.get_catcode() != Catcode::BEGIN {
+      return Some(vec![*first]);
+    }
+    let mut depth = 0usize;
+    for (k, t) in line.iter().enumerate().skip(at) {
+      match t.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => {
+          depth -= 1;
+          if depth == 0 {
+            return Some(line[at + 1..k].to_vec());
+          }
+        },
+        _ => {},
+      }
+    }
+    None
+  };
+  let first = line[at];
+  if first.get_catcode() == Catcode::CS
+    && first.with_cs_name(|n| matches!(n, "\\inst" | "\\textsuperscript" | "\\@textsuperscript"))
+  {
+    return operand(at + 1);
+  }
+  if first.get_catcode() != Catcode::MATH {
+    return None;
+  }
+  at += 1;
+  // (an empty group a script hangs on, `${}^3$`)
+  if line
+    .get(at)
+    .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+    && line
+      .get(at + 1)
+      .is_some_and(|t| t.get_catcode() == Catcode::END)
+  {
+    at += 2;
+  }
+  if line.get(at)?.get_catcode() != Catcode::SUPER {
+    return None;
+  }
+  operand(at + 1)
+}
+
+/// Whether `line` leads with a printed mark ([`leading_mark_operand`]) whose label no author's name requests,
+/// queued or digested in the flush (`queued_authors_requesting`, `digested_authors_requesting`), the names showing
+/// marks of their own (`authors_show_marks`): a contact line no creator asks for, which the
+/// API would give to a creator of no name (review rev94b r3 B2: orph3's `\address[\inst{3}]{Lab C, Place}`, orph6's
+/// `\affil{\inst{3}Lab C, Place}` under `Ann Able\inst{1} and Bob Baker\inst{2}`).
+fn leads_with_unrequested_mark(line: &[Token]) -> bool {
+  leading_mark_operand(line).is_some_and(|operand| {
+    operand
+      .iter()
+      .any(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
+      && authors_show_marks()
+      && queued_authors_requesting(&operand).is_empty()
+      && !digested_authors_requesting(&Tokens::new(operand.clone()).to_string())
+  })
 }
 
 /// A rerouted `[optional]{mandatory}` setter's call (`\lx@class@contact@optional`): the API call its optional argument
@@ -1830,6 +1926,14 @@ fn optional_contact(name: &str, in_place: bool, opt: Tokens, arg: Tokens) -> Res
         && t.with_cs_name(|n| matches!(n, "\\inst" | "\\textsuperscript" | "\\@textsuperscript")))
   });
   if mark {
+    // (a mark no queued name requests is in doubt — review rev94b r3 B2: the address it labels a nameless creator's)
+    if leads_with_unrequested_mark(&opt_tokens) {
+      return Ok(if in_place {
+        class
+      } else {
+        decide(call("", arg))
+      });
+    }
     // (an address's line read for its marks as an affiliation's is, `\lx@affiliation@withinst`: the mark labels it and
     // prints nothing of its own in it)
     let mut line = opt_tokens.clone();
@@ -1900,11 +2004,18 @@ fn optional_contact(name: &str, in_place: bool, opt: Tokens, arg: Tokens) -> Res
     {
       return Ok(decide(call(&s!("label={{{}}}", keys.join(",")), arg)));
     }
-    if text
-      .split_whitespace()
-      .filter(|w| w.chars().any(char::is_alphabetic))
-      .count()
-      >= 2
+    // (a list of single words, `c, d`, is a key list no creator requests — in doubt, no caption: review rev94b r3 B2b,
+    // `\address[c, d]{…}` was captioned "c, d")
+    let key_list = text.contains(',')
+      && text
+        .split(',')
+        .all(|piece| piece.split_whitespace().count() <= 1);
+    if !key_list
+      && text
+        .split_whitespace()
+        .filter(|w| w.chars().any(char::is_alphabetic))
+        .count()
+        >= 2
     {
       // (an address or an affiliation keeps its run, an e-mail the API's own placement)
       let options = if template.contains("[annotate=run]") {
@@ -1938,7 +2049,7 @@ fn at_the_body_level() -> bool {
   matches!(
     lookup_string("MODE").as_str(),
     "vertical" | "internal_vertical"
-  ) && (boxes == 0 || lookup_int(AUTHOR_BOX) == boxes as i64)
+  ) && (boxes == 0 || lookup_string(AUTHOR_BOX) == author_box())
 }
 
 /// How many frames bind a mode of their own ([`at_the_body_level`]).
@@ -1948,12 +2059,30 @@ fn mode_frames() -> usize {
     .count()
 }
 
-/// The boxes open around the kernel's last `\author` call ([`mode_frames`]), set locally where it stands
-/// (`\lx@author@box`): visible while that box is open.
+/// The box the digestion stands in: the serial (`lx@frame@id`, `push_stack_frame`) of the innermost frame binding a
+/// mode of its own ([`mode_frames`]) — the same while that box is open and no box opened inside it, whatever groups
+/// opened or closed in it; another box, even at the same depth (a second minipage), another.
+fn author_box() -> String {
+  (0..get_frame_depth())
+    .find(|&n| is_value_bound("BOUND_MODE", Some(n)))
+    .and_then(|n| value_in_frame("lx@frame@id", n))
+    .map(|id| match id {
+      Stored::Number(n) => n.0.to_string(),
+      other => format!("{other:?}"),
+    })
+    .unwrap_or_default()
+}
+
+/// The box the kernel's last `\author` call stood in ([`author_box`]), recorded globally (`\lx@author@box`): a group
+/// it was called in — imsart's `{aug}`, the kernel's own call — closes before the authors' box does (review rev94b r3:
+/// imsart's `\affiliation` after `\end{aug}` in its `\open@fm` box went to the class); recorded anew at each
+/// `\author`, read only while the authors are being set (`class_contact`).
 const AUTHOR_BOX: &str = "lx_author_box";
 
 /// Each kept class definition (`\lx@class@contact@<name>`) of the rerouted setters `names`, rewritten so that its calls
-/// to another rerouted setter — or to itself — call that setter's class definition: a setter run as the class's
+/// to another rerouted setter — or to itself — call that setter's class definition while the setter still means the
+/// reroute, else its meaning then (`\lx@class@contact@dispatch{<name>}`, which expands to the one token: a document's
+/// `\renewcommand{\address}[1]{…Addr: #1…}` is what ae100prg's `\email` prints through — review rev94b r3 S3): a setter run as the class's
 /// prints all of its line where the class prints it, never part of it through the API (ae100prg.cls:185 `\def\email#1
 /// {\vspace*{5pt}\address{E-mail: #1}}`, 1303.3004: its `\address` the class's `\lx@class@contact@address`). Static, at
 /// the reroute: nothing is left in the call's input for the class's own look-ahead to see (a class's
@@ -1983,16 +2112,18 @@ fn class_bodies_call_class_copies(names: &[&str]) {
     {
       continue;
     }
-    let calls: Vec<Token> = body
-      .unlist_ref()
-      .iter()
-      .map(|t| {
-        rerouted
-          .iter()
-          .find(|(cs, _)| cs == t)
-          .map_or(*t, |(_, class)| *class)
-      })
-      .collect();
+    let mut calls: Vec<Token> = Vec::new();
+    for t in body.unlist_ref() {
+      match rerouted.iter().position(|(cs, _)| cs == t) {
+        Some(at) => {
+          calls.push(T_CS!("\\lx@class@contact@dispatch"));
+          calls.push(T_BEGIN!());
+          calls.extend(ExplodeText!(names[at]));
+          calls.push(T_END!());
+        },
+        None => calls.push(*t),
+      }
+    }
     let mut rewritten = (*defn).clone();
     rewritten.expansion = Some(ExpansionBody::Tokens(Tokens::new(calls)));
     rewritten.plan = std::cell::OnceCell::new();
@@ -2055,6 +2186,12 @@ pub fn reroute_in_place_contact_setters(file: &str) -> Result<()> {
       "{decider}{{{api}}}{{\\lx@class@contact@{name}{class_args}}}"
     )));
     DefMacro!(cs, params, body, scope => Some(Scope::Global));
+    // (the reroute's own meaning, which a class body's call is dispatched by: `\lx@class@contact@dispatch`)
+    Let!(
+      T_CS!(&s!("\\lx@class@contact@rerouted@{name}")),
+      cs,
+      Scope::Global
+    );
     rerouted.push(name);
   }
   class_bodies_call_class_copies(&rerouted);
@@ -5440,15 +5577,25 @@ LoadDefinitions!({
   // The kernel's `\author[key]{…}` (sect05.rs): the box the call stands in (`\lx@author@box`, [`at_the_body_level`]),
   // a contact line set in it the title block's;
   DefPrimitive!("\\lx@author@box", {
-    let boxes = mode_frames();
-    if boxes > 0 {
-      assign_value(AUTHOR_BOX, Stored::Int(boxes as i64), Some(Scope::Local));
-    }
+    let boxed = if mode_frames() > 0 {
+      author_box()
+    } else {
+      String::new()
+    };
+    assign_value(AUTHOR_BOX, Stored::from(boxed), Some(Scope::Global));
   });
   // …the number of author creators before the call (`\lx@author@keys@from`), then its keys and that number after it
   // (`\lx@author@keys`): the authors a rerouted setter's `[key]` names ([`optional_contact`]). A short author
   // (`\author[B.F. Roukema]{…}`) records as a key too, which only a setter's equal key reads.
   DefPrimitive!("\\lx@author@keys@from", {
+    // (the records of the authors placed or sealed are no new author's: cleared, review rev94b r3 (a))
+    if author_creators_placed() || frontmatter_entry_sealed("ltx:creator", "author") {
+      assign_value(
+        AUTHOR_KEYS,
+        Stored::from(String::new()),
+        Some(Scope::Global),
+      );
+    }
     assign_value(
       "lx_author_keys_from",
       Stored::Int(author_creator_total() as i64),
@@ -5467,6 +5614,27 @@ LoadDefinitions!({
       }
       records.push_str(&s!("{keys}\u{2}{from}\u{2}{to}"));
       assign_value(AUTHOR_KEYS, Stored::from(records), Some(Scope::Global));
+    }
+  });
+  // A kept class body's call of a rerouted setter (`class_bodies_call_class_copies`): the setter's class definition
+  // while the setter means the reroute, else what it means now (a document's redefinition) — one token, nothing left
+  // after it for the class's look-ahead.
+  DefMacro!("\\lx@class@contact@dispatch{}", sub[(name)] {
+    let name = name.to_string();
+    let name = name.trim();
+    let cs = T_CS!(&s!("\\{name}"));
+    Ok(if x_equals(&cs, &T_CS!(&s!("\\lx@class@contact@rerouted@{name}"))) {
+      Tokens!(T_CS!(&s!("\\lx@class@contact@{name}")))
+    } else {
+      Tokens!(cs)
+    })
+  });
+  // A cut entry's font (`observer::writer::plan::entry_font_tokens`): the font changes in effect where the entry's
+  // cut starts in its call's content, registered as the `n`-th — the entry digested under them, as in the call
+  // (review rev94b r3 B1: `\affil{\itshape $^1$Univ A\\ $^2$Univ B}` lost the italic on Univ B).
+  DefPrimitive!("\\lx@fm@entry@font{}", sub[(n)] {
+    if let Some(Stored::Font(font)) = lookup_value(&s!("lx_fm_entry_font_{}", n.to_string().trim())) {
+      merge_font_ref(&font);
     }
   });
   // …and after a `.sty` is loaded raw: its contact setters only (`reroute_in_place_contact_setters`; 11lomcon.sty,

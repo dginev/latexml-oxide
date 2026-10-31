@@ -1,0 +1,29 @@
+% witness: review rev94b r2 S3 (its probes `p/ig`), r3 (`p/s3/lp`): a class's own look-ahead after its setter's run
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able", the date, then "Contact", "a@x.org", "starred now,", "Lab A",
+%          "(dot). then", "Univ B", "<note> end", "Inst C", "x.", "1 Intro", "Body."
+% engines: rust 94b r3 = 0 errors, 0 warnings (the static rewrite, no guard)
+% expect:  0 errors, 0 warnings; after `\maketitle` each call is the class's run, its `\@ifstar`, `\futurelet`,
+%          `\@ifnextchar[` and `\ignorespaces` reading the document's own next token (nothing of the reroute's left
+%          after the call): the body as pdflatex prints it; eager and --streaming the same
+% status:  GREEN (94b r3, guarded 94b r4)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{lap.cls}
+\ProvidesClass{lap}
+\LoadClass{article}
+\def\email#1{\par{\ttfamily #1}\par\@ifstar{starred}{}}
+\def\address#1{\par{\itshape #1}\par\futurelet\next\@chk}
+\def\@chk{\ifx\next.(dot)\fi}
+\def\affil#1{\par{\bfseries #1}\par\@ifnextchar[{\@affopt}{}}
+\def\@affopt[#1]{<#1>}
+\def\institute#1{\par{\small #1}\par\ignorespaces}
+\end{filecontents*}
+\documentclass{lap}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\maketitle
+Contact \email{a@x.org}* now, \address{Lab A}. then \affil{Univ B}[note] end \institute{Inst C}   x.
+
+\section{Intro}
+Body.
+\end{document}

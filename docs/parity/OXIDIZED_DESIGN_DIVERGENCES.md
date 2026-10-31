@@ -27968,7 +27968,9 @@ Chakravarty's alone, 2303.16316; stacs.cls's `\address[uniroma]`, 0902.1737) —
 two words or more no creator requests are its caption, `name=` (amsart copies' `\address[Current address]{…}`: smfart,
 nyjm, birkmult, birkart, ECACRM); anything else — a lone word no one requests, which reads as a key as often as a
 caption, or other markup — is in doubt: an in-place setter's call stays the class's, a stored one's drops it (a generic
-`name={#1}`, review rev94b B2, wrote "\hbox{\@textsuperscript{1}}" and "a" as contact names). The
+`name={#1}`, review rev94b B2, wrote "\hbox{\@textsuperscript{1}}" and "a" as contact names). An in-place call in doubt
+runs the class's definition and prints its line in the body where it stands: its words kept, its contact markup lost
+(main-session ruling 2026-10-31: content over markup). The
 observer reads such an affiliation as the API attaches it (94a r6): the rehearsal binds a rerouted in-place setter
 (`\lx@class@contact@<name>` defined) to `\lx@fm@obs@affil@run`, a Contact event of `annotate=run`, which a names line
 gives every name of the run before it back to the block's contact of its role before it, labelled or not
@@ -28062,6 +28064,36 @@ sectioning-frontmatter/`raw_class_contact_in_a_box_stays_the_class`, `raw_class_
 `an_optional_caption_names_the_line`, `an_optional_mark_labels_the_line`, `an_optional_key_labels_its_authors`;
 `a_stored_setter_is_the_api_wherever_it_is_called` now reads its keyed address `api:label` (the `\author[key]`'s
 `author:N`), `a_contact_in_running_text_stays_the_class` asserts the body whole.
+Round 4 (review rev94b r3): B2 a line of its own, or an optional argument, leading with a printed mark (`\inst{3}`,
+`\textsuperscript{3}`, `$^{3}$`) that no author's name requests — queued (`queued_authors_requesting`) or digested in
+the flush (`digested_authors_requesting`), the names showing marks of their own (`authors_show_marks`) — is in doubt
+(`frontmatter_stores.rs` `leads_with_unrequested_mark`, in `class_contact` and `optional_contact`): the API gave it to a
+creator of no name (`\address[\inst{3}]{Lab C, Place}`, `\affil{\inst{3}Lab C, Place}` under `Ann\inst{1}`,
+`Bob\inst{2}`); in place it is the class's line, a stored setter's call the API's as before. B2b a comma-separated list
+of single words no one requests (`\address[c, d]{…}`) is a key list, in doubt, no caption. The writer's invariant
+(`writer::writes_a_nameless_creator`, every written family): a plan making an item from the queued tokens for the
+author block's own where today's holds no nameless creator — the re-part's block included — is declined whole,
+today's output kept, with a Warning naming the block's ledger entry; a copy of today's item a ruling gives the block
+(an address no author spells: `owner:inner-email`, `ruling3:written-out`; 1811.05243, 1812.02463, 2403.14668,
+2501.11467) stays the block's — over every item the invariant had left 2105.11343, 2107.09414 and 2508.05637 with
+today's shared e-mail (`Op::made_for`, `Repart::makes_block_items`). S3 a kept class body's call of a rerouted setter is
+`\lx@class@contact@dispatch{<name>}`, which expands to the class's definition while the setter means the reroute
+(`\lx@class@contact@rerouted@<name>`, `x_equals`), else to the setter as it now means — a document's
+`\renewcommand{\address}[1]{…Addr: #1…}`, global or in a group, is what ae100prg's `\email` prints through (1303.3004)
+— one token, nothing after it for the class's look-ahead. The box the authors were set in (`\lx@author@box`) is
+recorded globally by the serial of its frame (`author_box`, `lx@frame@id`): the record had been local to the kernel
+call's own group, so an imsart `\affiliation` after `\end{aug}` still in its `\open@fm` box (1301.1466) went to the
+class; a second box at the same depth (another minipage) is another. The `\author[key]` records are cleared at the next
+`\author` once the authors are placed or sealed. Repros sectioning-frontmatter/`raw_class_affil_unrequested_mark_stays_the_class`,
+`raw_class_optional_unrequested_mark_stays_the_class`, `raw_class_redefined_setter_runs_its_meaning`,
+`raw_style_affiliation_after_the_author_group_in_its_box`, `raw_class_contact_in_a_margin_note_float_or_caption_stays_the_class`,
+`raw_class_lookahead_after_a_class_run`; guards `perfect_kernel_batch94b::a_line_no_name_requests_stays_the_class`,
+`an_optional_mark_no_name_requests_stays_the_class`, `a_redefined_setter_runs_its_meaning`,
+`an_affiliation_after_the_author_group_in_its_box_is_the_api`,
+`a_contact_in_a_margin_note_float_or_caption_stays_the_class`, `a_class_run_looks_ahead_at_the_documents_tokens`;
+unit test `writer::tests::the_writer_never_writes_a_nameless_creator`. Known residual: an in-block `\affil{\inst{3}…}`
+inside `\author{}` whose label no name requests is still the API's creator of no name (no class line can stand inside
+the names; the in-block shape `a_in`, reported for a ruling).
 
 ### 937. An in-block affiliation that opens with marks is the entry they label in the observer's reading (Perl: no observer)
 
@@ -28105,3 +28137,25 @@ one line still parts them). Repros sectioning-frontmatter/`raw_class_affil_cut_k
 `raw_class_affil_uncut_unrequested_stays_one_contact`; guards
 `perfect_kernel_batch94b::a_cut_entry_keeps_its_fonts_and_its_punctuation`,
 `entries_the_writer_cannot_cut_stay_one_contact`.
+Round 4 (review rev94b r3 B1): a cut entry lost the font open from before its line — a switch at the content's head
+(`\itshape $^1$…\\ $^2$…`, `\footnotesize`, `\bfseries`, `\color{red}`), a group or a font command's argument
+still open (`{\itshape …\\ …}`, `\textit{…\\ …}`, `\begin{itshape}…\end{itshape}`, `{\small{\color{red}…}}`):
+every entry after the first was plain. Each entry now carries the font in effect where its cut starts, read from the
+rehearsal's digested ink, not from the tokens' shapes (`events/fonts.rs` `entry_font`): the font of the first text
+character from there on with nothing between but spaces, math shifts (`\(`, `\)`), scripts, braces and what a mark, a
+break or a separator prints; else of the last one before it, a group closed before it passed whole; else, nothing of
+another kind before it, the call's own — each character read at its own token's position, never the cover of the
+expansion that made it (`\textbf{Lab C}`'s letters are covered from `\textbf`). The changes against the call's font
+(family, series, shape, size, colours) are registered and the entry's tokens open with `\lx@fm@entry@font{n}`
+(`plan::entry_font_tokens`, `frontmatter_stores.rs`), which merges them: the made entry is digested in the call's font,
+the switches of a group it sits in no longer copied (an `\em` toggled twice). An in-block cut whose font the boxes
+cannot tell (a command between: `\itshape $^1$\textbf{Univ A}`), or one whose entries' ink a container other than a
+group holds (`\underline{…}`, `\emph{…}`, `\href`: `InkFonts::crossed`), is no cut — today's one contact, its markup
+whole; an API call's piece whose font cannot be told is cut as before (`$^2$\mbox{…}` after `\mbox{Univ A}`,
+`perfect_kernel_batchfms2b`). The API call's cut (`plan::cut`) reads its pieces' fonts from its own rehearsal. The
+rehearsal's `\lx@fm@obs@affil` and `@run` are bounded, a group of their own as the API digests each entry (a switch in
+one affiliation was the next one's font, its `\textit` read as no change). Repros
+sectioning-frontmatter/`raw_class_affil_cut_keeps_the_font_open_before_it`,
+`raw_class_address_cut_keeps_the_font_open_before_it`, `raw_class_affil_crossed_container_stays_one_contact`; guards
+`perfect_kernel_batch94b::a_cut_entry_keeps_the_font_open_before_it`, `an_api_piece_keeps_the_font_open_before_it`,
+`entries_inside_one_container_stay_one_contact`.

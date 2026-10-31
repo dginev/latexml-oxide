@@ -497,6 +497,7 @@ pub fn fm_shadow_json() -> String {
                   meaning:      EmailMeaning::Binding,
                   inkless:      false,
                   annotate:     None,
+                  font:         None,
                 });
               },
               _ => {},

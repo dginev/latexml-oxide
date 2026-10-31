@@ -1,0 +1,38 @@
+% witness: 1602.05576, 2405.08158 (ar-1col.cls:341 `\def\affil#1{\par…{\reset@font\affilfont#1\par}…}`, called inside
+%          `\author{}`); review rev94b r3 B1 (its probes `p/n1` sw, gsp, sz, tit, envit)
+% oracle:  pdflatex 0 errors: "A Title", the ten names with their marks, then each affiliation's lines in the font its
+%          content opens before the first mark: "Univ A, Town", "Univ B, City" (italic), "Lab C, Place", "Lab D, Place"
+%          (italic), "Inst E, Town", "Inst F, City" (footnotesize), "Dept G, Town", "Dept H, City" (italic), "Org I,
+%          Town", "Org J, City" (small, red), "Body."
+% engines: rust 94b r3 = 0 errors, 0 warnings: only the first entry of a line kept a switch it read back to; every entry
+%          after a line break lost the font open since the content's start (Bob Baker, Dan Doe, Fay Fox, Hal Hart, Jo
+%          Jung plain; Cy Cole, Gil Gray, Ida Ince plain too: the `\textit{`, `\begin{itshape}`, `{\small{\color` lead no
+%          switch the cut reads)
+% expect:  0 errors, 0 warnings; each entry digested in the font in effect where its cut starts, read from the
+%          rehearsal's ink (`events::entry_font`): both entries of each line italic, footnotesize, italic, small red as
+%          printed; eager and --streaming the same
+% status:  RED (94b r3) -> GREEN (94b r4)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilinauthor.cls}
+\ProvidesClass{affilinauthor}
+\LoadClass{article}
+\RequirePackage{xcolor}
+\def\YES{yes}
+\def\chk@key{no}
+\def\affilfont{\small\leftskip2em\rightskip0pt plus1fil}
+\def\affil#1{\par\ifx\chk@key\YES\else\vskip6\p@\fi{\reset@font\affilfont#1\par}\def\chk@key{yes}}
+\def\@maketitle{\newpage{\Large\bfseries\@title\par}\vskip1em\noindent{\bfseries\@author\par}\vskip1em}
+\end{filecontents*}
+\documentclass{affilinauthor}
+\begin{document}
+\title{A Title}
+\author{Ann Able,$^1$ Bob Baker,$^2$ Cy Cole,$^3$ Dan Doe,$^4$ Eve Ern,$^5$ Fay Fox,$^6$ Gil Gray,$^7$ Hal Hart,$^8$
+Ida Ince,$^9$ Jo Jung$^{10}$
+\affil{\itshape $^1$Univ A, Town\\ $^2$Univ B, City}
+\affil{\textit{$^3$Lab C, Place\\ $^4$Lab D, Place}}
+\affil{\footnotesize $^5$Inst E, Town\\ $^6$Inst F, City}
+\affil{\begin{itshape}$^7$Dept G, Town\\ $^8$Dept H, City\end{itshape}}
+\affil{{\small{\color{red}$^9$Org I, Town\\ $^{10}$Org J, City}}}}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,29 @@
+% witness: ae100prg.cls:185 `\def\email#1{\vspace*{5pt}\address{E-mail: #1}}` (1303.3004); review rev94b r3 S3 (its probe
+%          `p/n3/redef`)
+% oracle:  pdflatex 0 errors: "Write to us,", "Addr: E-mail: d@x.org" (italic), "until 2030. Or write,", the indented
+%          "E-mail: e@x.org", "now. Write again,", "Addr2: E-mail: f@x.org", "later.", then "A Title", "Ann Able and Bob
+%          Baker", "Body."
+% engines: rust 94b r3 = 0 errors, 0 warnings: the class's `\email` ran the class's `\address` whatever the document
+%          redefined it to: "Addr:" and "Addr2:" dropped, each e-mail in the class's indented list
+% expect:  0 errors, 0 warnings; a kept class body's call of a rerouted setter runs the class's definition only while the
+%          setter means the reroute, else its meaning then (`\lx@class@contact@dispatch`): a local redefinition in a
+%          group, the class's list after it, a global one after that; eager and --streaming the same
+% status:  RED (94b r3) -> GREEN (94b r4)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{inplacetext.cls}
+\ProvidesClass{inplacetext}
+\LoadClass{article}
+\newenvironment{indented}{\begin{list}{}{\leftmargin=2em\itemsep=0pt}}{\end{list}}
+\newcommand{\address}[1]{\begin{indented}\item[]\normalsize #1\end{indented}}
+\def\email#1{\vspace*{5pt}\address{E-mail: #1}}
+\end{filecontents*}
+\documentclass{inplacetext}
+\begin{document}
+\title{A Title}
+\author{Ann Able and Bob Baker}
+{\renewcommand{\address}[1]{\par\textit{Addr: #1}\par}Write to us, \email{d@x.org} until 2030.}
+Or write, \email{e@x.org} now.
+\renewcommand{\address}[1]{\par\textit{Addr2: #1}\par}Write again, \email{f@x.org} later.
+\maketitle
+Body.
+\end{document}

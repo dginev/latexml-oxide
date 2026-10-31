@@ -159,10 +159,13 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefConstructor!("\\lx@fm@obs@url Semiverbatim", "");
   DefConstructor!("\\lx@fm@obs@href Semiverbatim {}", "");
   DefConstructor!("\\lx@fm@obs@orcid [] Semiverbatim", "");
-  DefConstructor!("\\lx@fm@obs@affil []{}", "");
+  // (in a group of its own, as the API digests its entry, `digest_frontmatter_item`: a switch in one affiliation is
+  // no font of the next one's or of the names after it — `\affil{\itshape $^1$…}\affil{\textit{$^3$…}}`, whose
+  // second's italic read as no change of its own, `events::entry_font`; review rev94b r3 B1)
+  DefConstructor!("\\lx@fm@obs@affil []{}", "", bounded => true);
   // (the affiliation of a raw file's in-place setter the API took, `annotate=run`: `frontmatter_stores`'
   // `reroute_in_place_contact_setters`, whose rerouted setter keeps the file's own as `\lx@class@contact@<name>`)
-  DefConstructor!("\\lx@fm@obs@affil@run []{}", "");
+  DefConstructor!("\\lx@fm@obs@affil@run []{}", "", bounded => true);
   DefConstructor!("\\lx@fm@obs@annotate {}{}[]{}", "");
   Ok(())
 }
