@@ -64,9 +64,17 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
     return Ok(());
   };
   let mut front = dom::read(document);
-  // (a whole creator of today's the reading made an item from its words alone is a creator again, as today's: no word
-  // reading licenses a writer operation — review rev94a r3, OD #928)
-  let resolved = repart::concede(&resolved, &front);
+  // (a whole creator of today's the reading made an item from its words alone is a creator again, as today's, with the
+  // ink it printed: no word reading licenses a writer operation — review rev94a r3, r4 B1, OD #928; its ink in doubt,
+  // nothing is written)
+  let Some(resolved) = repart::concede(&resolved, &front) else {
+    with_ledger(|ledger| {
+      if ledger.writer.is_none() {
+        ledger.writer = Some("declined: a conceded creator's ink".to_string());
+      }
+    });
+    return Ok(());
+  };
   // (today's names parted otherwise than the reading's: the creators written again from the reading, when what is
   // written holds every word today's held — the re-part, OD #928)
   if let Some(repart) = repart::plan(&resolved, &front)

@@ -1,0 +1,20 @@
+% mechanism: the writer's reading (OD #928, review rev94a r4 B1): a creator of today's the shadow reading took for the
+%   name before it's affiliation from its words alone (`classify:institution`) is given back (`repart::concede`) with
+%   the ink it printed — its marks, which the reading had given that name (`give_back_ink`), and the items they answer:
+%   `Univ Y`, which its `$^{2}$` requests, is the observatory's, and Ann Able keeps only `Univ X`. 94a r4 gave the
+%   creator back bare, and the writer put `Univ Y` on Ann Able, the observatory with nothing.
+% witness: review rev94a r4 n/f05_mark_inst (h01_same_mark, h02_three its siblings); 1109.6488 (the conceded team,
+%   no mark, its legend García's)
+% oracle:  pdflatex 0 errors: "Ann Able1 , Kitt Peak Observatory2 / 1 Univ X / 2 Univ Y"
+% engines: rust 93a: Ann Able Univ X, Kitt Peak Observatory Univ Y; rust 94a r4: Ann Able Univ X and Univ Y, the
+%   observatory none; perl: not run
+% expect:  0 errors, 0 warnings; Ann Able Univ X; Kitt Peak Observatory Univ Y (93a's)
+% status:  RED (94a r4) -> GREEN (94a r5)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$, Kitt Peak Observatory$^{2}$\\ $^1$Univ X\\ $^2$Univ Y}
+\maketitle
+Body.
+\end{document}

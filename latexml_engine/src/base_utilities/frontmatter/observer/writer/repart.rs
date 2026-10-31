@@ -17,8 +17,10 @@
 //! today's becomes an item only on structural evidence — the item answers a mark, is a labelled line or row, or came
 //! from an API call ([`structural`]) —, and no item read from its words alone is made ([`by_words`]: the classify
 //! helpers' institution, neither carved from one name, `John Smith, University of Toronto`, nor made of creators
-//! printed apart, `Bob Baker for the Pierre Auger Observatory` — review rev94a r3); no name or made item leaves a
-//! bracket open. Fail-safe, on the digested text: the new creators are built beside today's, and
+//! printed apart, `Bob Baker for the Pierre Auger Observatory` — review rev94a r3), nor one that may name a person or a
+//! team from its place alone (a `tabular` row under a name, `Ann Able\\ Bob Baker`), nor one across an alignment's
+//! cells ([`super::plan::block_span_tokens`]' cell check — review rev94a r4); no name or made item leaves a bracket
+//! open. Fail-safe, on the digested text: the new creators are built beside today's, and
 //! kept only when they read as the reading ([`super::plan::difference`] finds nothing), every written name is one name
 //! — it prints a word, and no separator outside its brackets ([`not_one_name`]: no author of invisible ink, no two
 //! joined) —, they hold every word today's creators held, none duplicated — names and distinct items word for word, the
@@ -34,7 +36,10 @@ use super::{
   super::{
     events::{EventKind, SepKind, is_separator_word},
     ledger::{Entry, Outcome},
-    resolver::{mark_labels, name_before_remark, reads_as_names},
+    resolver::{
+      label_matches, mark_labels, mark_requests, may_name_a_person, name_before_remark,
+      read_events, reads_as_names,
+    },
   },
   apply::{elements, make, place, reclaim_ids, subtree_ids},
   dom::{
@@ -346,6 +351,30 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
         .iter()
         .any(|name| find_run(name, 0, &text).is_some() || find_run(&text, 0, name).is_some())
   };
+  // (nor is a row or line of today's name that may name a person or a team made an item on no structural evidence: a
+  // row of a `tabular` in `\author` printed under a name — `Ann Able\\ Bob Baker`, `Bob Baker for the Pierre Auger
+  // Observatory`, `the PE11 team of Kepler` — is no affiliation by its place alone; today's one creator stays, as a
+  // line of today's creators does. A word reading, read only to decline — review rev94a r4)
+  let reads_as_a_person = |assoc: &Assoc| {
+    !structural(assoc)
+      && (may_name_a_person(&assoc.text)
+        || [" for ", " on behalf of "].iter().any(|said| {
+          assoc
+            .text
+            .split_once(said)
+            .is_some_and(|(name, _)| reads_as_names(name))
+        })
+        || words(&assoc.text).iter().any(|w| {
+          [
+            "team",
+            "collaboration",
+            "collaborations",
+            "consortium",
+            "group",
+          ]
+          .contains(&w.as_str())
+        }))
+  };
   // (the labels the reading's entries answer)
   let answered: Vec<String> = resolved
     .creators
@@ -385,6 +414,12 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
         if takes_a_creator(assoc) {
           return declined(&s!(
             "a creator of today's made an item on no structural evidence: {}",
+            assoc.text
+          ));
+        }
+        if reads_as_a_person(assoc) {
+          return declined(&s!(
+            "a person made an item on no structural evidence: {}",
             assoc.text
           ));
         }
@@ -439,7 +474,9 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
     let Some(item) = item_source(&key, assoc, &todays) else {
       return declined(&s!("a block item with nothing to write it from: {key:?}"));
     };
-    if matches!(item, Item::Make { .. }) && (by_words(assoc) || takes_a_creator(assoc)) {
+    if matches!(item, Item::Make { .. })
+      && (by_words(assoc) || takes_a_creator(assoc) || reads_as_a_person(assoc))
+    {
       return declined(&s!(
         "a creator of today's made a block item on no structural evidence: {}",
         assoc.text
@@ -496,12 +533,13 @@ fn balanced(text: &str) -> bool {
 
 /// The reading the writer writes from: the shadow reading, but where it took one whole creator of today's — no name of
 /// the reading printed in it — for another creator's affiliation from its words alone ([`by_words`]), that creator
-/// given back, in print order after the name holding it, as today's printed it apart (`conceded`). A word reading never
-/// demotes a creator of today's, a person or a team (`Bob Baker for the Pierre Auger Observatory`, 1109.6488's `the
-/// PE11 team of {\it Kepler} WG\#1`), while what the structure shows still applies: 1109.6488's `*` legend is García's
-/// note, the name showing its mark (review rev94a r3). An item made of several of today's creators or carved from one
-/// stays the reading's, and the re-part declines it ([`by_words`]).
-pub(super) fn concede(resolved: &Resolved, front: &Front) -> Resolved {
+/// given back, in print order after the name holding it, as today's printed it apart (`conceded`), with the ink it
+/// printed ([`give_back_ink`]). A word reading never demotes a creator of today's, a person or a team (`Bob Baker for
+/// the Pierre Auger Observatory`, 1109.6488's `the PE11 team of {\it Kepler} WG\#1`): the reading's other items stand,
+/// so 1109.6488's `*` legend stays García's note, the name showing its mark (review rev94a r3). An item made of several
+/// of today's creators or carved from one stays the reading's, and the re-part declines it ([`by_words`]). `None` —
+/// the writer writes nothing, today's stays — when a conceded creator's ink is in doubt (review rev94a r4 B1).
+pub(super) fn concede(resolved: &Resolved, front: &Front) -> Option<Resolved> {
   let names: Vec<Vec<String>> = front
     .creators
     .iter()
@@ -528,23 +566,37 @@ pub(super) fn concede(resolved: &Resolved, front: &Front) -> Resolved {
     let mut given = Vec::new();
     if !out.creators[at].name.trim().is_empty() {
       let source = out.creators[at].source;
-      out.creators[at].affiliations.retain(|a| {
-        if !by_words(a) || a.label.is_some() {
-          return true;
-        }
+      let mut k = 0;
+      while k < out.creators[at].affiliations.len() {
+        let a = &out.creators[at].affiliations[k];
         let text = words(&a.text);
-        let Some(j) = (0..names.len()).find(|&j| free[j] && names[j] == text) else {
-          return true;
+        let whole = if by_words(a) && a.label.is_none() {
+          (0..names.len()).find(|&j| free[j] && names[j] == text)
+        } else {
+          None
+        };
+        let Some(j) = whole else {
+          k += 1;
+          continue;
         };
         free[j] = false;
-        given.push(RCreator {
+        let a = out.creators[at].affiliations.remove(k);
+        let mut creator = RCreator {
           name: a.text.clone(),
           rule: "line:names conceded".into(),
           source: a.source.map_or(source, |(index, _)| index),
           ..RCreator::default()
-        });
-        false
-      });
+        };
+        if give_back_ink(&mut out.creators[at], &mut creator, &a).is_none() {
+          DebugFeature!(
+            "frontmatter",
+            "FRONT writer: the ink of a conceded creator in doubt: {}",
+            a.text
+          );
+          return None;
+        }
+        given.push(creator);
+      }
     }
     let count = given.len();
     for (k, creator) in given.into_iter().enumerate() {
@@ -552,7 +604,153 @@ pub(super) fn concede(resolved: &Resolved, front: &Front) -> Resolved {
     }
     at += 1 + count;
   }
-  out
+  Some(out)
+}
+
+/// What a piece of a names line printed after it, before the next separator: the labels its marks request, and the
+/// spans of its notes and contacts — the ink the shadow reading gave the name before it when it took the piece for that
+/// name's institution (`names_line_events`: a mark, a note, a contact to the last name made). `None` when the reading's
+/// attribution is in doubt: no Name event of the piece's span and text, ink between the separator before it and it (a
+/// prefix mark, which the reading holds for the next name), or ink after the separator after it before the next name
+/// (one the source distance gave either side).
+fn piece_ink(index: usize, span: (u16, u16), text: &str) -> Option<PieceInk> {
+  let ink = |e: &Event| {
+    matches!(
+      e.kind,
+      EventKind::Mark | EventKind::Note | EventKind::Contact
+    )
+  };
+  with_ledger(|ledger| {
+    let Some(Entry::Author(block)) = ledger.entries.get(index) else {
+      return None;
+    };
+    let Outcome::Events { events, .. } = &block.outcome else {
+      return None;
+    };
+    let events = read_events(events);
+    let at = events
+      .iter()
+      .position(|e| e.kind == EventKind::Name && e.span == Some(span))?;
+    if norm(&events[at].text) != norm(text) {
+      return None;
+    }
+    if events[..at]
+      .iter()
+      .rev()
+      .take_while(|e| ink(e) || e.kind == EventKind::Layout)
+      .any(ink)
+    {
+      return None;
+    }
+    let (mut marks, mut items) = (Vec::new(), Vec::new());
+    let mut next = at + 1;
+    while let Some(e) = events.get(next) {
+      match e.kind {
+        EventKind::Layout => {},
+        EventKind::Mark => marks.extend(mark_requests(e)),
+        EventKind::Note if e.inkless => {},
+        EventKind::Note | EventKind::Contact => items.push(e.span?),
+        _ => break,
+      }
+      next += 1;
+    }
+    if events
+      .get(next)
+      .is_some_and(|e| matches!(e.kind, EventKind::Sep(_)))
+      && events[next + 1..]
+        .iter()
+        .take_while(|e| ink(e) || matches!(e.kind, EventKind::Layout | EventKind::Sep(_)))
+        .any(ink)
+    {
+      return None;
+    }
+    Some(PieceInk { marks, spans: items })
+  })
+}
+
+/// The ink a piece of a names line printed after it ([`piece_ink`]): the labels its marks request, and the spans of
+/// its notes and contacts.
+struct PieceInk {
+  marks: Vec<String>,
+  spans: Vec<(u16, u16)>,
+}
+
+/// A creator's item lists: its affiliations, contacts and notes.
+fn lists(c: &mut RCreator) -> [&mut Vec<Assoc>; 3] {
+  [&mut c.affiliations, &mut c.contacts, &mut c.notes]
+}
+
+/// Give a conceded creator `piece` the ink it printed, which the reading gave `holder`, the name before it: its marks
+/// (from the holder's requests), its notes and contacts, and the items its marks answer — a copy where the holder's
+/// own marks answer one too, else moved — so that the holder keeps only its own (`Ann Able$^{1}$, Kitt Peak
+/// Observatory$^{2}$` under `$^1$Univ X\\ $^2$Univ Y`: Univ Y the observatory's, as today's — review rev94a r4 B1).
+/// `None` when it cannot be told apart ([`piece_ink`]; a mark no request of the holder's is; a mark of the piece that
+/// none of the items answers while the holder keeps one its own marks do not answer).
+fn give_back_ink(holder: &mut RCreator, piece: &mut RCreator, assoc: &Assoc) -> Option<()> {
+  let (index, Some(span)) = assoc.source? else {
+    return None;
+  };
+  let PieceInk { marks, spans } = piece_ink(index, span, &assoc.text)?;
+  for mark in &marks {
+    let k = holder
+      .requests
+      .iter()
+      .position(|r| label_matches(r, mark))?;
+    piece.requests.push(holder.requests.remove(k));
+  }
+  for span in spans {
+    let source = Some((index, Some(span)));
+    let mut found = false;
+    for (from, into) in lists(holder).into_iter().zip(lists(piece)) {
+      let (theirs, ours): (Vec<Assoc>, Vec<Assoc>) = std::mem::take(from)
+        .into_iter()
+        .partition(|a| a.source == source);
+      found |= !theirs.is_empty();
+      into.extend(theirs);
+      *from = ours;
+    }
+    if !found {
+      return None;
+    }
+  }
+  if piece.requests.is_empty() {
+    return Some(());
+  }
+  let answers = |requests: &[String], label: Option<&str>| {
+    label.is_some_and(|label| {
+      mark_labels(label)
+        .iter()
+        .any(|l| requests.iter().any(|r| label_matches(r, l)))
+    })
+  };
+  let (own, shown) = (holder.requests.clone(), piece.requests.clone());
+  for (from, into) in lists(holder).into_iter().zip(lists(piece)) {
+    let mut kept = Vec::new();
+    for item in std::mem::take(from) {
+      if answers(&shown, item.label.as_deref()) {
+        into.push(item.clone());
+        if !answers(&own, item.label.as_deref()) {
+          continue;
+        }
+      }
+      kept.push(item);
+    }
+    *from = kept;
+  }
+  let answered = |c: &RCreator, mark: &String| {
+    [&c.affiliations, &c.contacts, &c.notes]
+      .into_iter()
+      .flatten()
+      .any(|a| answers(std::slice::from_ref(mark), a.label.as_deref()))
+  };
+  let foreign = [&holder.affiliations, &holder.contacts, &holder.notes]
+    .into_iter()
+    .flatten()
+    .any(|a| a.label.is_some() && !answers(&own, a.label.as_deref()));
+  if foreign && shown.iter().any(|m| !answered(piece, m)) {
+    return None;
+  }
+  Some(())
 }
 
 /// Whether a reading's item was read from its words alone: a rule of the classify helpers (`classify:institution`, a
@@ -565,8 +763,9 @@ fn by_words(assoc: &Assoc) -> bool {
 }
 
 /// Whether a reading's item rests on structural evidence, so that a creator of today's may become it: it answers a mark
-/// or is a labelled line or row (its label), or it came from an API call (`\affil`, `\address`, `\institute`,
-/// `\email`, …) — and no word-based rule read it ([`by_words`]). A creator printed apart and read as an institution by
+/// or is a labelled line or row (its label), or it came from an API call of an item (`\affil`, `\address`,
+/// `\institute`, `\email`, …: [`item_call`]; a creator's call, `\lx@add@creator`, read into a name and its institution
+/// is a word reading) — and no word-based rule read it ([`by_words`]). A creator printed apart and read as an institution by
 /// its words is no item (`John Smith` and `University of Toronto`; `Bob Baker for the Pierre Auger Observatory`):
 /// person or place, the digested structure does not say, so today's stays (review rev94a r3).
 fn structural(assoc: &Assoc) -> bool {
@@ -575,9 +774,14 @@ fn structural(assoc: &Assoc) -> bool {
       .label
       .as_deref()
       .is_some_and(|l| l.chars().any(|c| !c.is_whitespace()))
-      || assoc
-        .source
-        .is_some_and(|(index, _)| api_call(index).is_some()))
+      || assoc.source.is_some_and(|(index, _)| item_call(index)))
+}
+
+/// Whether the ledger entry at `index` is an API call of an item: a contact or a note, an annotation of the creators
+/// (`\lx@annotate@frontmatter{ltx:creator}{ltx:contact}…`) — not a creator's own call (`\lx@add@creator`, tag
+/// `ltx:creator`) nor its name's.
+fn item_call(index: usize) -> bool {
+  api_call(index).is_some_and(|call| call.tag != "ltx:creator" && call.tag != "ltx:personname")
 }
 
 /// The words of a creator's personname, its marks out, a layout's cells parting words.
@@ -1029,6 +1233,9 @@ pub(super) fn apply(
     return Ok(false);
   };
   let order = reading_order(resolved);
+  // (what is built is speculative until kept: the diagnostics its digestion raised are the document's only if it is —
+  // a made item taken back leaves none, review rev94a r4 B2; one that raised an Error is taken back)
+  let hold = util::logger::DiagnosticsHold::begin();
   let mut built: Vec<Node> = Vec::new();
   let mut named: Vec<Creator> = Vec::new();
   let mut nameless: Vec<Creator> = Vec::new();
@@ -1171,17 +1378,25 @@ pub(super) fn apply(
   };
   let reads = difference(resolved, &built_front);
   let dispossessed = dispossessed(&today, &built_front.creators);
-  if !complete || !lost.is_empty() || !added.is_empty() || reads.is_some() || dispossessed.is_some()
+  let errors = hold.errors_raised();
+  if !complete
+    || !lost.is_empty()
+    || !added.is_empty()
+    || reads.is_some()
+    || dispossessed.is_some()
+    || errors > 0
   {
     DebugFeature!(
       "frontmatter",
-      "FRONT writer: re-part taken back: lost {lost:?}, added {added:?}, {reads:?}, {dispossessed:?}"
+      "FRONT writer: re-part taken back: lost {lost:?}, added {added:?}, {reads:?}, {dispossessed:?}, {errors} errors"
     );
     for node in built {
       document.remove_node(node);
     }
+    hold.discard();
     return Ok(false);
   }
+  hold.commit();
   // (today's creators taken, with the ids of the items copied from them: each copy takes its source's back)
   let mut taken = Vec::new();
   for item in repart
@@ -1261,7 +1476,7 @@ fn dispossessed(today: &[Creator], built: &[Creator]) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
+  use super::{super::super::ledger::ApiCall, *};
 
   /// A creator of today's becomes an item only on structural evidence: a label, an API call; never a classify rule
   /// (review rev94a r3).
@@ -1285,6 +1500,45 @@ mod tests {
     assert!(!structural(&assoc(None, "line:unmarked R12:row-above")));
     assert!(by_words(&assoc(None, "line:names classify:institution")));
     assert!(!by_words(&assoc(Some("1"), "mark:parted")));
+    // (an API call's item: an item's call is evidence, a creator's call is not — its content's parting is a reading;
+    // no call at the index, none — review rev94a r4 NIT)
+    let call = |tag: &str, parent: &str| {
+      Entry::Api(ApiCall {
+        index:          0,
+        tag:            tag.into(),
+        role:           "affiliation".into(),
+        epoch:          0,
+        queue_position: 0,
+        after_block:    None,
+        inside:         false,
+        attrs:          String::new(),
+        parent:         parent.into(),
+        content:        Tokens::new(Vec::new()),
+        events:         Vec::new(),
+        rehearsed:      true,
+        cleared:        false,
+      })
+    };
+    with_ledger(|ledger| {
+      ledger.entries = vec![
+        call("ltx:contact", "ltx:creator"),
+        call("ltx:creator", ""),
+        call("ltx:personname", "ltx:creator"),
+      ];
+    });
+    let from = |index: usize, rule: &str| Assoc {
+      source: Some((index, None)),
+      ..assoc(None, rule)
+    };
+    assert!(structural(&from(0, "api:affiliation")));
+    assert!(!structural(&from(1, "api:creator")));
+    assert!(!structural(&from(2, "api:creator")));
+    assert!(!structural(&from(3, "api:affiliation")));
+    assert!(!structural(&from(
+      0,
+      "api:affiliation classify:institution"
+    )));
+    with_ledger(|ledger| ledger.entries.clear());
   }
 
   /// A text's brackets close, in order (review rev94a B2).

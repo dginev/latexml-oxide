@@ -242,17 +242,25 @@ fn personnames(xml: &str) -> Vec<String> {
     .map(|rest| {
       let end = rest.find("</personname>").expect("closed personname");
       let element = format!("<personname{}</personname>", &rest[..end]);
-      let mut out = String::new();
-      let mut rest = element.as_str();
-      while let Some(at) = rest.find(" xml:id=\"") {
-        out.push_str(&rest[..at]);
-        let after = &rest[at + " xml:id=\"".len()..];
-        rest = &after[after.find('"').expect("closed id") + 1..];
-      }
-      out.push_str(rest);
-      out.split_whitespace().collect::<Vec<_>>().join(" ")
+      without_ids(&element)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
     })
     .collect()
+}
+
+/// `xml` without its elements' `xml:id`s.
+fn without_ids(xml: &str) -> String {
+  let mut out = String::new();
+  let mut rest = xml;
+  while let Some(at) = rest.find(" xml:id=\"") {
+    out.push_str(&rest[..at]);
+    let after = &rest[at + " xml:id=\"".len()..];
+    rest = &after[after.find('"').expect("closed id") + 1..];
+  }
+  out.push_str(rest);
+  out
 }
 
 /// The default mode's XML of `tex`, no Error or Warning.
@@ -583,4 +591,142 @@ fn a_creator_read_by_its_words_is_given_back() {
       &["the PE11 team of Kepler WG#1"],
     ])
   );
+}
+
+/// A conceded creator keeps the ink it printed (review rev94a r4 B1, `repart::give_back_ink`): the shadow reading gave
+/// the marks after `Kitt Peak Observatory` — a piece it took for Ann Able's institution by its words — to Ann Able, and
+/// 94a r4 gave the observatory back bare, so the writer wrote every entry those marks answer on Ann Able. Given back
+/// with its marks and the entries they answer, each creator holds its own: a moved entry (`$^{2}$`: Univ Y the
+/// observatory's, as 93a's), a shared one copied (`$^{1}$`) and a symbol legend the observatory's note alone
+/// (`$^{1,\dagger}$`, ruling 2: written) — and the same beside the re-part (today's merged `Cid Cole, Dee Dunn`,
+/// 1909.05311's shape: four names written, the observatory given back with its entry). Distinct paths: the plan's
+/// `same`, the plan's write, the re-part's write.
+#[test]
+fn a_conceded_creator_keeps_its_marks() {
+  let tex = repro!("author_names_conceded_creator_keeps_its_marks.tex");
+  let xml: &[&[&str]] = &[&["Ann Able", "affiliation=Univ X"], &[
+    "Kitt Peak Observatory",
+    "affiliation=Univ Y",
+  ]];
+  let reading = assert_reading(tex, Some(xml), &[
+    "C Ann Able [1,2] | line:names",
+    "  a Kitt Peak Observatory | line:names classify:institution",
+    "  a Univ X | ruling1:request",
+    "  a Univ Y | ruling1:request",
+  ]);
+  assert_eq!(reading.3, Value::from("same"));
+  assert_eq!(default_mode_creators(tex), owned(xml));
+  let tex = repro!("author_names_conceded_creator_shared_mark_and_legend.tex");
+  let xml: &[&[&str]] = &[&["Ann Able", "affiliation=Univ X"], &[
+    "Kitt Peak Observatory",
+    "affiliation=Univ X",
+  ]];
+  let reading = assert_reading(tex, Some(xml), &[
+    "C Ann Able [1,1,†] | line:names",
+    "  a Kitt Peak Observatory | line:names classify:institution",
+    "  a Univ X | ruling1:request",
+    "  n Corresponding | ruling2:symbol-line",
+  ]);
+  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(
+    default_mode_creators(tex),
+    owned(&[&["Ann Able", "affiliation=Univ X"], &[
+      "Kitt Peak Observatory",
+      "affiliation=Univ X",
+      "note=† Corresponding",
+    ]])
+  );
+  let tex = repro!("author_names_reparted_conceded_creator_keeps_its_marks.tex");
+  let xml: &[&[&str]] = &[
+    &["Ann Able", "affiliation=Univ X"],
+    &["Kitt Peak Observatory", "affiliation=Univ Y"],
+    &["Cid Cole", "affiliation=Univ X"],
+    &["Dee Dunn", "affiliation=Univ Y"],
+  ];
+  let reading = assert_reading(tex, Some(xml), &[
+    "C Ann Able [1,2] | line:names",
+    "  a Kitt Peak Observatory | line:names classify:institution",
+    "  a Univ X | ruling1:request",
+    "  a Univ Y | ruling1:request",
+    "C Cid Cole [1] | line:names",
+    "  a Univ X | ruling1:request",
+    "C Dee Dunn [2] | line:names sep:comma",
+    "  a Univ Y | ruling1:request",
+  ]);
+  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(default_mode_creators(tex), owned(xml));
+}
+
+/// A made item is cut at its alignment's cells (review rev94a r4 B2, `plan::cell_tokens`): a two-column `tabular` in
+/// `\author`, names over institutions — the reading's entry "Univ X Univ Y" spans the `&`, and made from its tokens
+/// outside the alignment the `&` was a stray alignment tab, an Error that outlived the re-part's take-back (and with
+/// one name, `Ann Able & `, 94a r4 wrote the joined affiliation). Neither is made, a taken-back re-part logs nothing of
+/// what it digested, and today's one creator stays, 0 errors (93a's). An entry continued over the rows of one column
+/// is made row by row, each row's tokens a group of its own, the row end the break it prints (nucl-th0306055's shape):
+/// a cell's `\bf` stays its cell's — 94a r4 set the next row bold too.
+#[test]
+fn items_are_cut_at_an_alignments_cells() {
+  for (tex, shadow) in [
+    (
+      repro!("author_names_tabular_columns_no_item_across_cells.tex"),
+      &[
+        "C Ann Able Bob Baker [] | line:names name:layout-joined",
+        "  a Univ X Univ Y | line:unmarked R12:row-above",
+      ][..],
+    ),
+    (
+      repro!("author_names_tabular_columns_one_name.tex"),
+      &[
+        "C Ann Able [] | line:names",
+        "  a Univ X Univ Y | line:unmarked R12:row-above",
+      ][..],
+    ),
+  ] {
+    let reading = assert_reading(tex, None, shadow);
+    assert_eq!(reading.0.len(), 1, "today's one creator: {:?}", reading.0);
+    assert!(
+      reading.0[0][0].contains("Ann Able") && reading.0[0][0].contains("Univ Y"),
+      "the tabular today's name: {:?}",
+      reading.0
+    );
+    assert_eq!(reading.0[0].len(), 1, "no item: {:?}", reading.0);
+    assert_eq!(default_mode_creators(tex), reading.0);
+  }
+  let tex = repro!("author_names_tabular_entry_over_rows_cut_per_row.tex");
+  let xml: &[&[&str]] = &[&["Ann Able", "affiliation=Univ X, Lab Z Dept Y"]];
+  let reading = assert_reading(tex, Some(xml), &[
+    "C Ann Able [1] | line:names",
+    "  a Univ X, Lab Z Dept Y | ruling1:request line:continued",
+  ]);
+  assert_eq!(reading.3, Value::from("written"));
+  let xml = default_mode_xml(tex);
+  let contact = without_ids(
+    xml
+      .split("<contact")
+      .nth(1)
+      .and_then(|rest| rest.split("</contact>").next())
+      .expect("the affiliation"),
+  );
+  assert!(
+    contact.ends_with(">Univ X, <text font=\"bold\">Lab Z<break/></text>Dept Y"),
+    "{contact}"
+  );
+}
+
+/// A row of a `tabular` in `\author` that may name a person is made an item only on structural evidence (review rev94a
+/// r4): `Ann Able\\ Bob Baker` in a one-column tabular — 94a r1-r4 made "Bob Baker" Ann Able's affiliation by its place
+/// under her name; today's one creator stays (93a's), as a line of today's creators does. The same decline holds for a
+/// team's row and a name speaking for one (review r4 b03, b07, a23).
+#[test]
+fn a_person_in_a_tabular_row_is_no_item() {
+  let tex = repro!("author_names_tabular_row_person_stays.tex");
+  let reading = assert_reading(tex, None, &[
+    "C Ann Able [] | line:names",
+    "  a Bob Baker | line:unmarked R12:row-above",
+  ]);
+  assert_eq!(reading.0.len(), 1, "today's one creator: {:?}", reading.0);
+  assert_eq!(reading.0[0].len(), 1, "no item: {:?}", reading.0);
+  assert!(reading.0[0][0].contains("Bob Baker"), "{:?}", reading.0);
+  assert_eq!(reading.3, Value::from("declined: the creators' names"));
+  assert_eq!(default_mode_creators(tex), reading.0);
 }

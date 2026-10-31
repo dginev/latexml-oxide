@@ -155,7 +155,7 @@ impl Resolver {
     self.out.policies.push((index, policy.name));
     self.notes_marked = !policy.unmarked_notes;
     let and_inline = policy.and_inline;
-    let events = &glue_shown_runs(&split_text_marks(&join_ordinals(&orcid_link_names(events))));
+    let events = &read_events(events);
     let lines = lines_of(events, and_inline);
     let block_requests: Vec<String> = keyvals
       .and_then(|kv| attr_value(kv, "annotations"))

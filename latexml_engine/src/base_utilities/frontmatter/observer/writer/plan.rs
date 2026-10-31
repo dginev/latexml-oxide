@@ -529,8 +529,162 @@ pub(super) fn block_span_tokens(
           .then(|| piece_tokens(content, (from, past), floor, from))
           .flatten()
       })
-      .map(|(tokens, _)| tokens)
+      .and_then(|(tokens, _)| cell_tokens(content, from, &tokens))
   })
+}
+
+/// The environments whose `\\` ends a row of an alignment.
+const ALIGNMENTS: &[&str] = &[
+  "tabular",
+  "tabular*",
+  "tabularx",
+  "tabulary",
+  "array",
+  "longtable",
+  "supertabular",
+];
+
+/// What only an alignment reads: outside one, TeX's "Misplaced" errors (`\cr`, `\omit`, `\noalign`, …).
+const ALIGNMENT_ONLY: &[&str] = &[
+  "\\cr",
+  "\\crcr",
+  "\\omit",
+  "\\span",
+  "\\noalign",
+  "\\multicolumn",
+  "\\hline",
+  "\\cline",
+  "\\tabularnewline",
+];
+
+/// Tokens cut from a block at `from` as an item digests them outside the block's alignment, cut at its cells: `None`
+/// when they hold, outside any whole environment of their own, an alignment tab or a command only an alignment reads
+/// ([`ALIGNMENT_ONLY`]) — made outside the alignment, the tab is a stray one, an Error, and the item one of two columns
+/// (review rev94a r4 B2: `\author{\begin{tabular}{cc}Ann Able & Bob Baker\\ Univ X & Univ Y\end{tabular}}` made "Univ
+/// X & Univ Y" one affiliation). Where the block's innermost environment or `\shortstack` open at `from` is an
+/// alignment ([`ALIGNMENTS`]), an entry continued over the rows of its column is each row's tokens in a group of its
+/// own, the row ends between them the line breaks they print (`$^2$Chinese Center …\\ \footnotesize\sl P. O. Box
+/// …`, nucl-th0306055): a switch set in a cell stays the cell's, as the alignment's cells group them; a row end inside
+/// a group of the tokens' own is no cut, so `None`.
+fn cell_tokens(content: &[Token], from: usize, tokens: &Tokens) -> Option<Tokens> {
+  // (an environment's name after `\begin`/`\end`: its braced letters)
+  let env_name = |run: &[Token], at: usize| -> Option<String> {
+    let mut i = at + 1;
+    while run
+      .get(i)
+      .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+    {
+      i += 1;
+    }
+    if run.get(i)?.get_catcode() != Catcode::BEGIN {
+      return None;
+    }
+    let mut name = String::new();
+    for t in run.get(i + 1..)? {
+      if t.get_catcode() == Catcode::END {
+        return Some(name);
+      }
+      name.push_str(&t.with_str(ToString::to_string));
+    }
+    None
+  };
+  // (the containers open at `from`: each environment by name, a `\shortstack`'s argument as the group it opens)
+  let mut open: Vec<(String, Option<i32>)> = Vec::new();
+  let mut depth = 0i32;
+  let mut stack_next = false;
+  for (i, t) in content[..from.min(content.len())].iter().enumerate() {
+    match t.get_catcode() {
+      Catcode::BEGIN => {
+        depth += 1;
+        if std::mem::take(&mut stack_next) {
+          open.push(("shortstack".to_string(), Some(depth)));
+        }
+      },
+      Catcode::END => {
+        if open.last().is_some_and(|(_, d)| *d == Some(depth)) {
+          open.pop();
+        }
+        depth -= 1;
+      },
+      Catcode::CS if is_cs(t, "\\shortstack") => stack_next = true,
+      Catcode::CS if is_cs(t, "\\begin") => {
+        if let Some(name) = env_name(content, i) {
+          open.push((name, None));
+        }
+      },
+      Catcode::CS if is_cs(t, "\\end") => {
+        if let Some(name) = env_name(content, i)
+          && let Some(at) = open.iter().rposition(|(n, d)| d.is_none() && *n == name)
+        {
+          open.truncate(at);
+        }
+      },
+      _ => {},
+    }
+  }
+  let in_rows = open
+    .last()
+    .is_some_and(|(name, _)| name == "shortstack" || ALIGNMENTS.contains(&name.as_str()));
+  // (the tokens' own environments and groups: what is inside one whole is theirs)
+  let run = tokens.unlist_ref();
+  let (mut own, mut depth) = (0usize, 0i32);
+  let mut row_ends: Vec<usize> = Vec::new();
+  for (i, t) in run.iter().enumerate() {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      _ if is_cs(t, "\\begin") && env_name(run, i).is_some() => own += 1,
+      _ if is_cs(t, "\\end") && env_name(run, i).is_some() => own = own.saturating_sub(1),
+      _ if own > 0 => {},
+      Catcode::ALIGN => return None,
+      _ if ALIGNMENT_ONLY.iter().any(|cs| is_cs(t, cs)) => return None,
+      _ if in_rows && is_cs(t, "\\\\") => {
+        if depth != 0 {
+          return None;
+        }
+        row_ends.push(i);
+      },
+      _ => {},
+    }
+  }
+  if row_ends.is_empty() {
+    return Some(tokens.clone());
+  }
+  // (each row a group, the row end and its star and optional skip between: `\\[2pt]`)
+  let mut out = vec![T_BEGIN!()];
+  let mut i = 0;
+  while i < run.len() {
+    if row_ends.contains(&i) {
+      out.push(T_END!());
+      out.push(run[i]);
+      i += 1;
+      while run
+        .get(i)
+        .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+      {
+        i += 1;
+      }
+      if run.get(i).is_some_and(|t| t.with_str(|s| s == "*")) {
+        out.push(run[i]);
+        i += 1;
+      }
+      if run.get(i).is_some_and(|t| t.with_str(|s| s == "[")) {
+        while let Some(t) = run.get(i) {
+          out.push(*t);
+          i += 1;
+          if t.with_str(|s| s == "]") {
+            break;
+          }
+        }
+      }
+      out.push(T_BEGIN!());
+      continue;
+    }
+    out.push(run[i]);
+    i += 1;
+  }
+  out.push(T_END!());
+  Some(Tokens::new(out))
 }
 
 /// The writer's cut of an author block's own lines (FM stage 7, OD #925): today's one affiliation joining several of

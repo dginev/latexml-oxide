@@ -27731,8 +27731,10 @@ shape they let through — `for the Pierre Auger Observatory`, `on behalf of the
 Max Planck Institute`, `the PE11 team of {\it Kepler} WG\#1` (1109.6488), `the Fermi-LAT Collaboration members at SLAC`
 — each a person or a team made another author's affiliation. The writer writes from the reading with each whole
 creator of today's that the reading took for an item by its words given back as a creator, in print order after the
-name that held it (`repart::concede`, rule `line:names conceded`): today's creators stay, and what the structure shows
-still applies — 1109.6488's `$^*$` line goes to García, who shows its mark. An item read by its words that is carved
+name that held it (`repart::concede`, rule `line:names conceded`): today's creators stay, and the reading's other items
+stand as the shadow read them — 1109.6488's `$^*$` line goes to García, who shows its mark. (Round 4 gave the creator
+back bare: the marks it printed, which the shadow had given the name before it, stayed that name's, with every entry
+they answer — round 5 below.) An item read by its words that is carved
 from one name, or made of several of today's creators, is declined (`repart::by_words`); a made item without structural
 evidence that holds a word of a creator of today's no reading name is printed in, or is held by one, is declined. The
 resolver keeps its word readings for the shadow (`name_before_remark`: a name with a remark read as a name, also the
@@ -27753,6 +27755,53 @@ unchanged from round 3 — structurally decided creators 5,732 of 5,838 (98.18 %
 tier not checkable either way). Guards `perfect_kernel_batch94a` (18: `a_creator_becomes_an_item_only_on_structure`,
 `a_creator_read_by_its_words_is_given_back`); updated to 93a's XML, the reading kept: `an_institution_continues_over_and`,
 `an_institution_stops_at_a_person`; repart unit test `an_item_rests_on_structure` (for `whole_creators`'s).
+Round 5 (review rev94a r4). A conceded creator keeps the ink it printed (`repart::give_back_ink`): the shadow's names
+line gives a mark, a note and a contact set after a piece to the last name made, so the marks after `Kitt Peak
+Observatory` (`Ann Able$^{1}$, Kitt Peak Observatory$^{2}$\\ $^1$Univ X\\ $^2$Univ Y`) were Ann Able's requests, and
+round 4 wrote `Univ Y` on her, the observatory nothing. Given back, the creator takes the marks its own events show
+(the block's events read as the resolver reads them, `resolver::read_events`; each mark's labels `mark_requests`,
+taken from the holder's requests by `label_matches`), its notes and contacts (by their events' spans), and the items its
+marks answer — copied where the holder's own marks answer them too (`$^{1}$` shared), else moved (`$^{2}$`; a symbol
+legend, `$^{1,\dagger}$`, the observatory's note alone, ruling 2). On any doubt nothing is written and today's stays
+(`concede` returns `None`, outcome `declined: a conceded creator's ink`): no Name event of the piece's span and text,
+ink between the separator before it and it (a prefix mark, which the shadow holds for the next name), ink after the
+separator after it before the next name, a mark no request of the holder's is, a note or contact no item of the
+holder's came from, a mark of the piece answered by none of its items while the holder keeps a labelled item its own
+marks do not answer. 1109.6488's team shows no mark: its legend stays García's. A made item is cut at its
+alignment's cells (`plan::block_span_tokens` → `cell_tokens`): none is made of tokens holding, outside a whole
+environment of their own, an alignment tab or a command only an alignment reads (`\cr`, `\omit`, `\multicolumn`,
+`\hline`, `\tabularnewline`, …) — made outside the alignment, the tab was a stray one (`\author{\begin{tabular}{cc}Ann
+Able & Bob Baker\\ Univ X & Univ Y\end{tabular}}`: an Error, since round 1); where the block's innermost environment or
+`\shortstack` open at the entry is an alignment (`tabular`, `array`, …), an entry continued over the rows of its column
+is each row's tokens in a group of its own, the row end (`\\`, its `*` and `[skip]`) between them the break it prints —
+a cell's switch stays its cell's (round 4 set the next row bold after a cell's `\bf`), nucl-th0306055's
+`$^2${\footnotesize\sl Chinese Center …}\\ … P. O. Box …` written as round 4 wrote it; a row end inside a group of the
+tokens' own is no cut, so none. The re-part's build holds its diagnostics
+(`DiagnosticsHold`), discarded when it is taken back and taking it back when an Error was raised. No item without
+structural evidence is made of a text that may name a person or a team (`may_name_a_person`, a name before " for "/" on
+behalf of ", a word team/collaboration/consortium/group — a word reading, read only to decline; the re-part's
+`reads_as_a_person`), so a row of a `tabular` in `\author` under a name is no item by its place alone: `Ann Able\\ Bob
+Baker`, `the PE11 team of Kepler`, `Bob Baker for the Pierre Auger Observatory`, `Bob Baker
+Observatory` in a one-column tabular stay today's one creator (round 1-4 made the row Ann Able's affiliation); an
+institution row (`University of Toronto`) and marked rows are still written. `structural`'s API evidence is an item's
+call only (`item_call`: not `\lx@add@creator`'s, whose content parted into a name and an institution is a reading).
+Guards `perfect_kernel_batch94a` (21: `a_conceded_creator_keeps_its_marks` — the plan's `same`, the plan's write, the
+re-part's write —, `items_are_cut_at_an_alignments_cells`, `a_person_in_a_tabular_row_is_no_item`); repros
+`author_names_conceded_creator_keeps_its_marks`, `…_conceded_creator_shared_mark_and_legend`,
+`author_names_reparted_conceded_creator_keeps_its_marks`, `author_names_tabular_columns_no_item_across_cells`,
+`…_tabular_columns_one_name`, `…_tabular_entry_over_rows_cut_per_row`, `author_names_tabular_row_person_stays`; `author_names_reparted_institution_and_continues`
+recorded a known residual (today's invented creator "Astronomy", 93a's). Probes (pdflatex 0 errors; 0 errors, 0
+warnings each): the review's 58 and 15 siblings — as 93a, the mark siblings `Kitt Peak Observatory\thanks{…}` (its
+note the observatory's), `\footnotemark[2]`, `$^{1,2}$`, an unanswered `$^{3}$` (shown), `\textsuperscript{2}`, a
+prefix `$^{2}$Kitt Peak Observatory` (declined), `\multicolumn{2}{c}{Univ X}` (declined), `\shortstack{…}`; written,
+the re-part beside a conceded creator (its mark's entry, or its `$^*$` legend its note), `$^1$Univ X\\ Dept Y` in a
+one-column `tabular` (cut per row, as round 4); every word-shape probe (a01-a25, e01-e09) 93a's. Witnesses (58 papers:
+1109.6488, nucl-th0306055, 1909.05311, 2609.32870, 2609.33104, 0811.3142, 1502.03246, the cost list 1511.05175,
+2109.05016, 0910.0732, 1306.0810, 2304.03860, 1912.03042, …): creators and rc/E/F/W round 4's. Census against round 4
+(the same three populations): no paper's creators or rc/E/F/W changed (two Warning counts that moved under load,
+2502.19718 and 2411.02167, are equal run alone); against `93a-rel`: written 33 / 122 / 2 of 270 / 1,500 / 500,
+changed 18 / 105 / 7, none written-different. Scorer (3,000 sample, `run_94a_r5`): tiers identical to round 4's —
+5,732 of 5,838 (98.18 %), marks path 95.49 %, `article` 96.52 %, readability 24 papers.
 
 ### 932. aa's sole `\institute` is every author's unless the class's `\inst{n}` picks it, as llncs's (Perl: inst_support's `affiliation:1`, which no author requests; the first author's by the prefix-stripped fallback)
 

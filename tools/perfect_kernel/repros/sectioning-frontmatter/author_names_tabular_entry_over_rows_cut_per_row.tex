@@ -1,0 +1,19 @@
+% mechanism: the writer's made item cut at its alignment's rows (OD #928, review rev94a r4 B2; `plan::cell_tokens`): an
+%   entry the reading continues over the unmarked row under it inside a `tabular` in `\author` is each row's tokens in a
+%   group of its own, the row end between them the line break it prints — a switch set in a cell stays the cell's
+%   (`\bf Lab Z` bold, `Dept Y` not), as the alignment's cells group them; a column's `&` is never crossed.
+% witness: nucl-th0306055 (`$^2${\footnotesize\sl Chinese Center …}\\ {\footnotesize\sl P. O. Box …}` rows under the
+%   names); review rev94a r4 (the row-end sibling of n/b05_tab_cols)
+% oracle:  pdflatex 0 errors: "Ann Able1 / 1 Univ X, Lab Z (bold) / Dept Y"
+% engines: rust 93a: one creator, the tabular its name; rust 94a r4: Ann Able, "Univ X, Lab Z / Dept Y" one
+%   affiliation, "Dept Y" bold too (the cell's `\bf` leaked); perl: not run
+% expect:  0 errors, 0 warnings; Ann Able with the affiliation "Univ X, Lab Z" (Lab Z bold), "Dept Y" after a break
+% status:  GREEN (94a r5)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{\begin{tabular}{c}Ann Able$^1$\\ $^1$Univ X, \bf Lab Z\\ Dept Y\end{tabular}}
+\maketitle
+Body.
+\end{document}

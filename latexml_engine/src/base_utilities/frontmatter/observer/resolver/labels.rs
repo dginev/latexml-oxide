@@ -224,7 +224,10 @@ pub(super) fn label_owners(creators: &[RCreator], live: &[usize], label: &str) -
 }
 
 /// Whether a request answers a label by any of [`label_owners`]'s tiers.
-pub(super) fn label_matches(request: &str, label: &str) -> bool {
+pub(in crate::base_utilities::frontmatter::observer) fn label_matches(
+  request: &str,
+  label: &str,
+) -> bool {
   request == label
     || unprefixed(request) == Some(label)
     || unprefixed(label) == Some(request)

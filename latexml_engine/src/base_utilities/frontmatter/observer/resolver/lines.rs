@@ -687,8 +687,9 @@ pub(in crate::base_utilities::frontmatter::observer) fn name_before_remark(
 /// B-1): it reads as names, or does once the remark after its name is set aside ([`name_before_remark`]), or its words
 /// before its first institution word are a full name of two words or more (`Bob Baker University` — a person and a
 /// place, or one place as `Johns Hopkins University` is). A word reading: it shapes the reading's `classify:institution`
-/// items only, which license no writer operation (`writer::repart::by_words`, review rev94a r3).
-pub(super) fn may_name_a_person(text: &str) -> bool {
+/// items only, which license no writer operation (`writer::repart::by_words`, review rev94a r3); the writer reads it only
+/// to decline (`writer::repart::plan`'s person made an item, review rev94a r4).
+pub(in crate::base_utilities::frontmatter::observer) fn may_name_a_person(text: &str) -> bool {
   if reads_as_names(text) || name_before_remark(text).is_some() {
     return true;
   }
@@ -1080,7 +1081,7 @@ impl Resolver {
         },
         EventKind::Sep(_) => last_sep = Some(event),
         EventKind::Mark => {
-          let labels = spelled_ranges(event_labels(event));
+          let labels = mark_requests(event);
           let next_is_name = events[i + 1..]
             .iter()
             .find(|e| !matches!(e.kind, EventKind::Layout | EventKind::Mark))

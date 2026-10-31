@@ -223,13 +223,30 @@ mod post;
 
 pub(in crate::base_utilities::frontmatter::observer) use api::split_pieces;
 use blocks::Chain;
+pub(in crate::base_utilities::frontmatter::observer) use labels::label_matches;
 // (named, as the prelude has its own of these names: the resolver's shadow them)
 pub use labels::{addresses_in, mark_labels};
 use labels::{text_tokens, *};
 use lines::*;
 pub(in crate::base_utilities::frontmatter::observer) use lines::{
-  name_before_remark, reads_as_names,
+  may_name_a_person, name_before_remark, reads_as_names,
 };
+
+/// A block's events as the resolver reads them (`Resolver::block`): an ORCID link's name, an IEEE ordinal, a mark
+/// printed as text after a name and a glued run of shown symbols each read as the names line reads it.
+pub(in crate::base_utilities::frontmatter::observer) fn read_events(
+  events: &[Event],
+) -> Vec<Event> {
+  glue_shown_runs(&split_text_marks(&join_ordinals(&orcid_link_names(events))))
+}
+
+/// The labels a Mark event requests of the name it is set on, as a names line reads them (`names_line_events`): its
+/// labels, a number range spelled out.
+pub(in crate::base_utilities::frontmatter::observer) fn mark_requests(
+  event: &Event,
+) -> Vec<String> {
+  spelled_ranges(event_labels(event))
+}
 
 /// The entry a line ended with, which an unmarked line under it continues: a labelled entry (its place in
 /// `Resolver::pending`).
