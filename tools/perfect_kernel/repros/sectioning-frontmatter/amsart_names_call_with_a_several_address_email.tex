@@ -1,0 +1,25 @@
+% mechanism: one amsart \author call naming two people (`$\&$` between them) and one \email holding both addresses: 95c
+%   decides the \email address by address (`ruling3:written-out`, one e-mail per author), but the writer's name re-part
+%   can only write an item today's holds, and today's holds the one whole e-mail contact — "no re-part, an item with
+%   nothing to write it from: (Contact("email"), …)" — so the names are not re-parted and stay one creator. The
+%   affiliation take-outs have this give-back (`writer::give_back_addresses`); the written-out e-mails of one call do not.
+% witness: 2109.07363 (`\author{Jinsong Liu\textsuperscript{1,2} $\&$ Fei Tao\textsuperscript{1,2} $\&$ Huaying
+%   Wei\textsuperscript{3}}`, `\email{liujsong@…,\:ferrytau@…,\:hywei@…}`): three creators at int123a, one at int124b
+%   (`Error:frontmatter:merged_creators`), no word lost
+% oracle:  pdflatex 0 errors: "ANN ABLE1 & BOB BAKER2"
+% engines: rust int123a: two creators (the re-part writes them), the e-mail whole on Bob Baker; int124b: one creator
+%   holding both names, 1 error (merged_creators)
+% expect:  two creators, ann@x.org on Ann Able and bob@y.org on Bob Baker (or, fail-safe, the e-mail whole as int123a);
+%   0 errors
+% status:  RED (bundle int124b A/B; SYNC row)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{1} $\&$ Bob Baker\textsuperscript{2}}
+\address{$1.$ Univ X}
+\address{$2.$ Univ Y}
+\email{ann@x.org,\:bob@y.org}
+\maketitle
+Text.
+\end{document}
