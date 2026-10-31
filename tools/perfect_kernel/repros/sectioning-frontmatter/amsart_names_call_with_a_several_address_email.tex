@@ -11,7 +11,8 @@
 %   holding both names, 1 error (merged_creators)
 % expect:  two creators, ann@x.org on Ann Able and bob@y.org on Bob Baker (or, fail-safe, the e-mail whole as int123a);
 %   0 errors
-% status:  RED (bundle int124b A/B; SYNC row)
+% status:  RED (bundle int124b A/B; SYNC row) -> GREEN (95e: the re-part reads the call's e-mails whole,
+%   `writer::give_back_listed`, and the plan writes them out after it — ann@x.org on Ann Able, bob@y.org on Bob Baker)
 % preload: ar5iv.sty
 \documentclass{amsart}
 \begin{document}

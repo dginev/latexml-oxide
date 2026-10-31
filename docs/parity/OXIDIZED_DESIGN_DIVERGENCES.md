@@ -28453,6 +28453,27 @@ that is no e-mail label (`Mail:`, `Contact:`) comes out one-sided and the separa
 `entry_address_link_with_an_icon_keeps_it_once`, `entry_address_group_in_one_link_keeps_its_target`,
 `entry_address_after_a_bare_label_word`, `entry_address_in_one_sided_prose_stays`,
 `amsart_email_call_of_addresses_over_a_line_break`; guards `perfect_kernel_batch95c` (round 3, six).
+**95e** (bundle int124b's A/B). G3's write-out left the name re-part (OD #928) nothing to write a call's e-mails from:
+today's holds the call as one contact on its author, the reading one contact per address, so a names call the reading
+parts and today's does not stayed one creator (2109.07363's `\author{Jinsong Liu\textsuperscript{1,2} $\&$ Fei
+Tao\textsuperscript{1,2} $\&$ Huaying Wei\textsuperscript{3}}` with `\email{liujsong@…,\:ferrytau@…,\:hywei@…}`: one
+creator and `merged_creators`, where int123a wrote three). The resolver keeps each such call as today's holds it
+(`Resolved::listed`, `resolver::Listed`: the contact whole, the rule of the call's own placement — `api:annotate:last` —,
+the authors it gives it), and the re-part reads it so (`writer::give_back_listed`, beside the entries'
+`give_back_addresses`); the plan writes the addresses out after it, as the take-outs (`take_out_again`: only when the
+re-part's reading is the whole reading). Fail-safe: where the plan declines with the calls written out, it plans again
+with each call one contact on its authors (`write_observed_frontmatter`) — today's, which the re-part wrote — so an
+e-mail split never declines a paper's names or the rest of its writing (an `\href` around one address: no one text leaf
+to write from; 1411.1443, 1412.1769, 2307.05703 had their write-out declined, today's kept, the ledger's `declined: …`
+now `same`). A reading a conceded creator changed keeps every call one contact, as today's. Repros
+`amsart_names_call_with_a_several_address_email` (RED → GREEN), `amsart_names_call_of_three_with_a_several_address_email`,
+`amsart_names_call_with_a_several_address_email_kept_whole`; guards `perfect_kernel_batch95e` (2). Census against
+int125a (the 95c populations, 2,686 papers, and 192 papers of amsart, elsarticle, revtex4*, aastex*, article with an
+`\author` call naming several people and a several-address `\email`/`\ead`): creators changed in 2109.07363 alone; the
+3,000 scorer sample unchanged. Residual, RED `amsart_dollar_numbered_addresses_under_shared_marks`: 2109.07363's
+`\address{$1.$ …}` labels are not read, so its names' marks stay unanswered and the upfront grid — which fires only
+because the call is no longer in the reading's pile (`answer_listed_emails` runs after `distribute_upfront`) — gives
+the three entries one per author by position; its `ferrytau@` (spelling no one) is the call's author's (`owner:call`).
 **Residual.** Unwritten families (mn2e 0810.2791, authblk 2511.07020, 2008.07734, 2110.01283, 2008.13643, elsarticle
 2308.13695, IEEEtran 2405.16358, 2311.14729, 2202.02533, 2401.16729, 1303.4266, acmart 2311.10779, 2010.12245) read right
 under `LATEXML_FM_SHADOW=1`, today's output unchanged; a symbol line set after a numbered one today's old reader joins

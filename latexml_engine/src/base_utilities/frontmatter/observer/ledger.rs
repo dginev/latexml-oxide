@@ -215,7 +215,8 @@ pub(in crate::base_utilities) struct Ledger {
   /// the frontmatter flushes so far (`shadow::shadow_flush`)
   pub flushes:      usize,
   /// the writer's outcome for a written family's paper (`writer::write_observed_frontmatter`): `same` (today's reads
-  /// as the reading), `written`, `written-different: …` (what was written still differs, the writer's own defect) or
+  /// as the reading — the one the plan wrote from: with its e-mail calls each one contact where their write-out
+  /// declined, `writer::give_back_listed`), `written`, `written-different: …` (what was written still differs, the writer's own defect) or
   /// `declined: …` (a difference no operation explains, today's kept); none where the writer did not run
   pub writer:       Option<String>,
 }

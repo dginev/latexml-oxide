@@ -566,7 +566,7 @@ fn an_address_ending_a_line_takes_its_separators_not_the_break() {
 /// The default mode's XML creators whole ([`default_mode_elements`], a formula `<M/>`), in process and from the binary,
 /// eager and `--streaming`, each converted clean.
 #[track_caller]
-fn assert_elements(tex: &str, want: &[&str]) {
+pub(super) fn assert_elements(tex: &str, want: &[&str]) {
   let math = |elements: Vec<String>| -> Vec<String> {
     elements
       .into_iter()

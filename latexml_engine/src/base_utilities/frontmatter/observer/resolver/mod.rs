@@ -98,8 +98,12 @@ pub struct Resolved {
   pub continued: Option<Vec<Vec<String>>>,
   /// the affiliation entries whose printed e-mail addresses the reading took out (`Resolver::take_out_entry_addresses`,
   /// brief 95c), each as it was — for the writer, which gives an entry back where today's cannot cut it the same
-  /// (`writer::concede_addresses`); not in the dump
+  /// (`writer::give_back_addresses`); not in the dump
   pub taken:     Vec<Taken>,
+  /// the e-mail calls printing several addresses alone that the reading wrote out address by address
+  /// (`Resolver::answer_listed_emails`, brief 95c G3), each as today's holds it — for the writer's name re-part, which
+  /// reads them whole (`writer::give_back_addresses`, brief 95e); not in the dump
+  pub listed:    Vec<Listed>,
 }
 
 /// One affiliation entry the reading took printed addresses out of ([`Resolved::taken`]): its source, its text before
@@ -111,6 +115,15 @@ pub struct Taken {
   pub original: String,
   pub stripped: String,
   pub holders:  Vec<(Option<usize>, usize, Assoc)>,
+}
+
+/// One e-mail call printing several addresses alone that the reading wrote out ([`Resolved::listed`]): the contact as
+/// the call printed it — its text whole, the rule of the call's own placement (`api:annotate:last`, …) — and the
+/// creators that placement gives it, today's holders of the one contact (2109.07363).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Listed {
+  pub whole:  Assoc,
+  pub owners: Vec<usize>,
 }
 
 /// The rule tags whose purpose is a change of today's output — an adopted ruling's (FIDELITY_CHARTER §4, 2026-10-21;
@@ -749,6 +762,13 @@ pub fn resolve_with(
         .collect();
     }
     out.taken.retain(|taken| !taken.holders.is_empty());
+    for listed in &mut out.listed {
+      listed.owners = std::mem::take(&mut listed.owners)
+        .into_iter()
+        .filter_map(|c| shift(&live_creator, c))
+        .collect();
+    }
+    out.listed.retain(|listed| !listed.owners.is_empty());
   }
   // (each creator's notes and contacts, and the block's own, in source order — the order the PDF prints them: a note
   // and a link placed once every name is read (`answer_note_links`) came after the ones the source gives later,
@@ -765,7 +785,7 @@ pub fn resolve_with(
 /// `items` in source order: those with a source sorted by it (its block or API call's ledger index, then its span's
 /// start — spans are positions within one block; one with no span after its block's spanned ones, review revfms2a2_8
 /// finding 6), stably, in the places they held; one without a source stays where it is.
-fn in_source_order(items: &mut [Assoc]) {
+pub(in crate::base_utilities::frontmatter::observer) fn in_source_order(items: &mut [Assoc]) {
   let slots: Vec<usize> = (0..items.len())
     .filter(|&i| items[i].source.is_some())
     .collect();

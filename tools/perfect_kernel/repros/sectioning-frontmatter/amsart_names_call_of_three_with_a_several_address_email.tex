@@ -1,0 +1,23 @@
+% mechanism: one amsart \author call naming three people (`$\&$` between them) and one \email holding the three
+%   addresses separated by `,\:` (95e): the re-part reads the call's written-out e-mails whole, as today's holds them on
+%   the call's author (`writer::give_back_listed`), so the names are re-parted; the plan then writes the e-mails out,
+%   each to the author it spells. Three names, three addresses: the brief's second shape (the witness's own count).
+% witness: 2109.07363 (`\author{Jinsong Liu\textsuperscript{1,2} $\&$ Fei Tao\textsuperscript{1,2} $\&$ Huaying
+%   Wei\textsuperscript{3}}`, `\email{liujsong@…,\:ferrytau@…,\:hywei@…}`)
+% oracle:  pdflatex 0 errors: "ANN ABLE1 & BOB BAKER1 & CAT COLE2", "Email address: ann@x.org, bob@x.org, cat@y.org"
+% engines: rust int123a: three creators, every address and the e-mail whole on Cat Cole; int124b: one creator holding
+%   the three names, 1 error (merged_creators)
+% expect:  0 errors, 0 warnings; three creators, ann@x.org on Ann Able, bob@x.org on Bob Baker, cat@y.org on Cat Cole
+%   (both addresses on Cat Cole, the call's author, as int123a: two addresses under three names are no grid)
+% status:  RED (int124b) -> GREEN (95e)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{1} $\&$ Bob Baker\textsuperscript{1} $\&$ Cat Cole\textsuperscript{2}}
+\address{$1.$ Univ X}
+\address{$2.$ Univ Y}
+\email{ann@x.org,\:bob@x.org,\:cat@y.org}
+\maketitle
+Text.
+\end{document}
