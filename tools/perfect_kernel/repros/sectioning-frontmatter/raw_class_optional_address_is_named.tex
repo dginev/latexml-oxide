@@ -1,0 +1,42 @@
+% witness: amsart.cls:506-546 copied by smfart.cls, nyjm.cls, birkmult.cls, birkart.cls, ECACRM (`\newcommand{\address}
+%          [2][]{\g@addto@macro\addresses{\address{#1}{#2}}}`, printed by `\enddoc@text`); Perl ams_support.sty.ltxml:115
+%          `\lx@add@address[name={#1}]{#2}`, :117 `\email`; review rev94b B2 (its probe `ams`, stand-in `amsstand.cls`)
+% oracle:  pdflatex 0 errors: "A Title", "Bob Baker" (the stand-in's `\@author` the last), the date, "1 Intro", "Body.",
+%          then at the end "Ann Able", "Univ A, Town", "(Current address) Lab C, Place", "Email address, Corresponding:
+%          ann@a.edu", "Bob Baker", "Univ B, City"
+% engines: rust 94b r2 = 0 errors, 0 warnings: `address=Lab C, Place`, "Current address" dropped; `email=ann@a.edu`,
+%          "Corresponding" dropped — as Perl, which reads no shipped file and gives OmniBus's `\address[]{}` =
+%          `\lx@add@address{#2}` (OmniBus.cls.ltxml:92); the class's text lands at the end of the document as pdflatex
+%          prints it only when the call is the class's
+% expect:  a non-empty optional argument the class prints as a caption kept (as Perl's ams_support binding keeps it
+%          for amsart, `name=`); a mark or a key it is elsewhere (w-art.cls's `\address[\inst{1}]{…}`, 0910.5837,
+%          1105.1753, quant-ph0606237; jheppub's `\affiliation[a]{…}`, 2303.16316; stacs.cls's `\address[uniroma]{…}`,
+%          0902.1737) — a generic `name={#1}` wrote "\hbox{\@textsuperscript{1}}" and "a" as names, so the optional
+%          stays dropped until a binding declares the caption convention
+% status:  RED, deferred (catalog repro, no guard; review rev94b B2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{amsstand.cls}
+\ProvidesClass{amsstand}
+\LoadClass{article}
+\def\addresses{}
+\renewcommand{\author}[2][]{\g@addto@macro\addresses{\author{#2}}\gdef\@author{#2}}
+\newcommand{\address}[2][]{\g@addto@macro\addresses{\address{#1}{#2}}}
+\newcommand{\email}[2][]{\g@addto@macro\addresses{\email{#1}{#2}}}
+\def\enddoc@text{\def\author##1{\par\noindent ##1\par}%
+ \def\address##1##2{\par\noindent\ifx\relax##1\relax\else(##1) \fi\textsc{##2}\par}%
+ \def\email##1##2{\par\noindent Email address\ifx\relax##1\relax\else, ##1\fi: ##2\par}\addresses}
+\AtEndDocument{\enddoc@text}
+\end{filecontents*}
+\documentclass{amsstand}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\address{Univ A, Town}
+\address[Current address]{Lab C, Place}
+\email[Corresponding]{ann@a.edu}
+\author{Bob Baker}
+\address[]{Univ B, City}
+\maketitle
+\section{Intro}
+Body.
+\end{document}

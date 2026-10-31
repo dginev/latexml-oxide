@@ -64,13 +64,8 @@ pub(super) fn lines_of<'a>(events: &'a [Event], and_inline: bool) -> Vec<Line<'a
   lines
 }
 
-/// Whether an event is ink a line's type is read from (not layout, not a separator).
-pub(super) fn inked(event: &Event) -> bool {
-  matches!(
-    event.kind,
-    EventKind::Name | EventKind::Mark | EventKind::Contact | EventKind::Note
-  )
-}
+// (the observer's, shared with the in-block contact reading: `events::mark_led_pieces`)
+pub(super) use crate::base_utilities::frontmatter::observer::events::{inked, mark_led_pieces};
 
 /// The block's events with an IEEE template's ordinal before a name (`1\textsuperscript{st} Sertac Kilickaya`,
 /// 2412.10792, 2202.06596) one Name with it, as today's personname "1 Sertac Kilickaya": the ordinal's superscript is
@@ -438,98 +433,6 @@ pub(super) fn line_led_pieces(events: &[Event]) -> Vec<Vec<Event>> {
   } else {
     Vec::new()
   }
-}
-
-/// The entries of an API call's content whose first ink is a mark, when two or more marks open one — a mark at its
-/// start, after a line break or after a separator (a comma, a gap, a word) with ink since the entry before (`$^{*}$Univ
-/// A,\\$^{+}$Univ B`, cond-mat0510562; `$^1$SJTU, $^2$Beihang`, 1809.03738): each entry its events up to the next,
-/// the separators between them dropped. A mark glued to the ink before it (`Univ A$^{1}$`) opens none. Empty when the
-/// content is one entry.
-pub(super) fn mark_led_pieces(events: &[Event]) -> Vec<Vec<Event>> {
-  let first_ink = events.iter().find(|e| {
-    inked(e) && !(e.kind == EventKind::Name && !e.text.chars().any(char::is_alphanumeric))
-  });
-  if first_ink.is_none_or(|e| e.kind != EventKind::Mark) {
-    return Vec::new();
-  }
-  // (a mark glued to the ink before it that labels as the leading mark does — a number after numbers, a letter after
-  // letters — with a name right after it opens the next entry: `\institution{$^{1}$University of Illinois …, USA
-  // $^{2}$Amazon.com Inc, CA, USA}` lexed "USA" "2" "Amazon.com Inc" — the call's content has no positions to show the
-  // space —, 2202.06129, given whole to the first mark's authors; `ECT$^*$`'s symbol and BaBar's `$^a$` sub-labels after
-  // numbers stay the entry's)
-  let kind = |e: &Event| -> Option<bool> {
-    let labels = mark_labels(e.label.as_deref().unwrap_or(""));
-    if e.symbol || labels.is_empty() {
-      None
-    } else if labels.iter().all(|l| l.chars().all(|c| c.is_ascii_digit())) {
-      Some(true)
-    } else if labels
-      .iter()
-      .all(|l| l.chars().count() <= 2 && l.chars().all(char::is_alphabetic))
-    {
-      Some(false)
-    } else {
-      None
-    }
-  };
-  let lead_kind = first_ink.and_then(kind);
-  let name_follows = |at: usize| {
-    events[at + 1..]
-      .iter()
-      .find(|e| e.kind != EventKind::Layout)
-      .is_some_and(|e| {
-        e.kind == EventKind::Name && e.text.chars().next().is_some_and(char::is_alphabetic)
-      })
-  };
-  let mut pieces: Vec<Vec<Event>> = vec![Vec::new()];
-  let mut after_sep = true;
-  let mut ink = false;
-  for (at, event) in events.iter().enumerate() {
-    match &event.kind {
-      EventKind::Mark
-        if ink
-          && !after_sep
-          && lead_kind.is_some()
-          && kind(event) == lead_kind
-          && name_follows(at) =>
-      {
-        pieces.push(vec![event.clone()]);
-        ink = false;
-        continue;
-      },
-      EventKind::Mark if after_sep && ink => {
-        pieces.push(vec![event.clone()]);
-        ink = false;
-        after_sep = false;
-        continue;
-      },
-      EventKind::Mark => {},
-      EventKind::Break | EventKind::Sep(_) => {
-        after_sep = true;
-        pieces.last_mut().expect("a piece").push(event.clone());
-        continue;
-      },
-      EventKind::Layout => {},
-      // (a piece of no letter or digit, punctuation or a zero-width space, is no ink between a separator and the mark
-      // after it: `\\ \and ​$^2$Department …`, 2112.13115)
-      EventKind::Name if !event.text.chars().any(char::is_alphanumeric) => {
-        pieces.last_mut().expect("a piece").push(event.clone());
-        continue;
-      },
-      _ => ink = true,
-    }
-    after_sep = matches!(event.kind, EventKind::Layout) && after_sep;
-    pieces.last_mut().expect("a piece").push(event.clone());
-  }
-  for piece in &mut pieces {
-    while piece.last().is_some_and(|e| {
-      matches!(e.kind, EventKind::Break | EventKind::Sep(_))
-        || (e.kind == EventKind::Name && !e.text.chars().any(char::is_alphanumeric))
-    }) {
-      piece.pop();
-    }
-  }
-  if pieces.len() < 2 { Vec::new() } else { pieces }
 }
 
 /// A names line's events with the e-mail addresses its Name runs print taken out (the run's words before its first

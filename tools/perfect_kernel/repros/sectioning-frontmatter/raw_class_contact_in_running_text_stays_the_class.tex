@@ -1,0 +1,35 @@
+% witness: ae100prg.cls:185-188 (1303.3004: `\newcommand{\address}[1]{\begin{indented}\item[]\normalsize #1\end{indented}}`,
+%          `\def\email#1{\vspace*{5pt}\address{E-mail: #1}}`); review rev94b B3 (its probe `p5`/`p3`: an abstract's
+%          "…from the curator, \email{data@archive.org}, until 2030." gave the address to Bob Baker)
+% oracle:  pdflatex 0 errors: "Univ A, Town", the paragraph "Write to the curator," / "E-mail: data@archive.org" / ",
+%          until 2030.", the abstract "Abstract" "E-mail: list@archive.org" "is the list.", then the title block "A
+%          Title" "Ann Able and Bob Baker" and the date, "1 Intro", "Body."
+% engines: rust 94b = 0 errors, 0 warnings: both addresses Bob Baker's e-mails, the sentence "Write to the curator, ,
+%          until 2030." and an abstract "is the list."; with the call alone made the class's, the class's `\email` ran its
+%          `\address` after a `\vspace*` that left the paragraph, and that line was the authors' address
+% expect:  0 errors, 0 warnings; a call between paragraphs, outside any other frontmatter entry, before the authors are
+%          placed is the API's (`Univ A, Town` both authors'); one inside a paragraph or an abstract is the class's line where it
+%          stands, its text kept in its sentence, and so is every setter the class's own definition calls as it runs
+%          (`\lx@class@contact@begin`); eager and --streaming the same
+% status:  RED (94b) -> GREEN (94b r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{inplacetext.cls}
+\ProvidesClass{inplacetext}
+\LoadClass{article}
+\newenvironment{indented}{\begin{list}{}{\leftmargin=2em\itemsep=0pt}}{\end{list}}
+\newcommand{\address}[1]{\begin{indented}\item[]\normalsize #1\end{indented}}
+\def\email#1{\vspace*{5pt}\address{E-mail: #1}}
+\end{filecontents*}
+\documentclass{inplacetext}
+\begin{document}
+\title{A Title}
+\author{Ann Able and Bob Baker}
+\address{Univ A, Town}
+Write to the curator, \email{data@archive.org}, until 2030.
+\begin{abstract}
+\email{list@archive.org} is the list.
+\end{abstract}
+\maketitle
+\section{Intro}
+Body.
+\end{document}

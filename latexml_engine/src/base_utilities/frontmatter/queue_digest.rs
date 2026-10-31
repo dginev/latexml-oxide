@@ -741,10 +741,23 @@ pub(in crate::base_utilities) fn frontmatter_remove(tag: &str, index: usize) {
   });
 }
 
-/// The author creators queued and not yet digested.
 /// Whether the frontmatter has an author creator, queued or digested: one a contact can annotate (a raw file's in-place
 /// contact setter is the API's only then, `frontmatter_stores.rs` `\lx@class@contact`).
 pub fn has_author_creators() -> bool { queued_author_count() > 0 || digested_author_count() > 0 }
+
+/// Whether a creator entry — an author, or the pending stub of an annotation of one — is being digested: its first
+/// content is still its `PlaceKeeper`, the annotations an `annotate=` contact inside it attached pushed after it (a
+/// second `\affil` inside one `\author{…}`, 1805.12376's ci2018 shape, must read as the first did).
+pub fn creator_entry_in_progress() -> bool {
+  with_value("frontmatter", |v| match v {
+    Some(Stored::HashTagData(frnt)) => frnt.get("ltx:creator").is_some_and(|list| {
+      list
+        .iter()
+        .any(|e| matches!(e.content.first(), Some(TagContent::PlaceKeeper)))
+    }),
+    _ => false,
+  })
+}
 
 /// Whether the author creators were placed — digested by a `\maketitle` or a frontmatter environment, not the fallback's
 /// provisional flush (`note_digested_frontmatter`) — and no frontmatter entry is being digested now (a contact command
@@ -755,6 +768,7 @@ pub fn author_creators_placed() -> bool {
     && !frontmatter_entry_in_progress()
 }
 
+/// The author creators queued and not yet digested.
 pub(in crate::base_utilities) fn queued_author_count() -> usize {
   with_value("frontmatter_raw", |v| match v {
     Some(Stored::FrontmatterRaw(queue)) => queue
@@ -895,13 +909,14 @@ pub(in crate::base_utilities) fn frontmatter_sealed(key: &str) -> bool {
   }
 }
 
-/// Whether a frontmatter entry is being digested (its content still a lone `PlaceKeeper`).
-fn frontmatter_entry_in_progress() -> bool {
+/// Whether a frontmatter entry is being digested: its first content still its `PlaceKeeper` (an `annotate=` contact
+/// digested inside it pushes its annotation after it: [`creator_entry_in_progress`]).
+pub fn frontmatter_entry_in_progress() -> bool {
   with_value("frontmatter", |v| match v {
     Some(Stored::HashTagData(frnt)) => frnt.values().any(|list| {
       list
         .iter()
-        .any(|e| matches!(e.content.as_slice(), [TagContent::PlaceKeeper]))
+        .any(|e| matches!(e.content.first(), Some(TagContent::PlaceKeeper)))
     }),
     _ => false,
   })

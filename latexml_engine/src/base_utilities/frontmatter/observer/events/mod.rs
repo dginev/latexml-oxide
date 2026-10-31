@@ -888,42 +888,33 @@ impl Walker {
         // (an in-block affiliation without a label of its own that opens with marks is the entry they label, as an API
         // entry is (`leading_marks`): ar-1col.cls's `\affil{$^1$Max Planck …}` inside `\author{}`, 1602.05576,
         // 2405.08158, the names showing `1` requesting it — its text the rest of its events, not the ink "1Max Planck"
-        // given to the name beside it)
-        let mut content_span: Option<(u16, u16)> = None;
-        if cs == "\\lx@fm@obs@affil"
-          && contact.label.is_none()
-          && let Some(body) = w.get_arg(2)
-        {
-          let events = lex_events(body);
-          let (start, end) = leading_marks(&events);
-          let labels: Vec<&str> = events[start..end]
-            .iter()
-            .filter(|e| e.kind == EventKind::Mark)
-            .filter_map(|e| e.label.as_deref().filter(|l| !l.is_empty()))
-            .collect();
-          if !labels.is_empty() {
-            contact.label = Some(labels.join(","));
-            let rest: Vec<&Event> = events
-              .iter()
-              .enumerate()
-              .filter(|&(at, e)| !((start..end).contains(&at) && between_leading_marks(e)))
-              .map(|(_, e)| e)
-              .collect();
-            contact.text = events_text(&rest);
-            // (and its span its content's, from its marks on, which the writer makes the entry from, as a line of the
-            // block from its mark (`plan::block_span_tokens`): not the call, whose own typesetting — a document's
-            // `\newcommand{\affil}[1]{\\{\footnotesize #1}}` — is no part of it)
-            content_span = events[start..]
-              .iter()
-              .filter_map(|e| e.span)
-              .reduce(|(a, b), (s, e)| (a.min(s), b.max(e)));
+        // given to the name beside it; one of several marked entries, `\affil{$^1$Univ A\\ $^2$Univ B}`, each entry by
+        // its own leading marks, as the API's reading cuts a call (`mark_led_pieces`: jetpl's `\address{$^1$…\\
+        // $^2$…}`, cond-mat0611585) — never one entry under the first mark with the second dropped (review rev94b B1).
+        // An entry holding a mark past its leading run, which its text would drop (`$^1$Univ A$^2$`), is read as
+        // before: the call's whole ink, unlabelled)
+        let labelled = if cs == "\\lx@fm@obs@affil" && contact.label.is_none() {
+          w.get_arg(2)
+            .and_then(|body| labelled_entries(&lex_events(body)))
+        } else {
+          None
+        };
+        let Some(entries) = labelled else {
+          self.event(contact, d, nest);
+          return;
+        };
+        for (label, text, span) in entries {
+          let mut entry = contact.clone();
+          entry.label = Some(label);
+          entry.text = text;
+          self.event(entry, d, nest);
+          // (its span its own ink, which the writer makes the entry from (`plan::block_span_tokens`): not the call,
+          // whose own typesetting — a document's `\newcommand{\affil}[1]{\\{\footnotesize #1}}` — is no part of it)
+          if let Some(span) = span
+            && let Some(Atom::Event(event)) = self.atoms.last_mut()
+          {
+            event.span = Some(span);
           }
-        }
-        self.event(contact, d, nest);
-        if let Some(span) = content_span
-          && let Some(Atom::Event(event)) = self.atoms.last_mut()
-        {
-          event.span = Some(span);
         }
       },
       "\\lx@fm@obs@url" => {
@@ -1302,6 +1293,148 @@ pub(in crate::base_utilities) fn unprinted_piece(e: &Event) -> bool {
 /// What parts two marks of an entry's leading run and is no text of it ([`leading_marks`]).
 pub(in crate::base_utilities) fn between_leading_marks(e: &Event) -> bool {
   unprinted_piece(e) || matches!(e.kind, EventKind::Sep(SepKind::Comma | SepKind::Gap { .. }))
+}
+
+/// Whether an event is ink a line's type is read from (not layout, not a separator).
+pub(in crate::base_utilities) fn inked(event: &Event) -> bool {
+  matches!(
+    event.kind,
+    EventKind::Name | EventKind::Mark | EventKind::Contact | EventKind::Note
+  )
+}
+
+/// The entries of an API call's or an in-block contact's content whose first ink is a mark, when two or more marks open one — a mark at its
+/// start, after a line break or after a separator (a comma, a gap, a word) with ink since the entry before (`$^{*}$Univ
+/// A,\\$^{+}$Univ B`, cond-mat0510562; `$^1$SJTU, $^2$Beihang`, 1809.03738): each entry its events up to the next,
+/// the separators between them dropped. A mark glued to the ink before it (`Univ A$^{1}$`) opens none. Empty when the
+/// content is one entry.
+pub(in crate::base_utilities) fn mark_led_pieces(events: &[Event]) -> Vec<Vec<Event>> {
+  let first_ink = events.iter().find(|e| {
+    inked(e) && !(e.kind == EventKind::Name && !e.text.chars().any(char::is_alphanumeric))
+  });
+  if first_ink.is_none_or(|e| e.kind != EventKind::Mark) {
+    return Vec::new();
+  }
+  // (a mark glued to the ink before it that labels as the leading mark does — a number after numbers, a letter after
+  // letters — with a name right after it opens the next entry: `\institution{$^{1}$University of Illinois …, USA
+  // $^{2}$Amazon.com Inc, CA, USA}` lexed "USA" "2" "Amazon.com Inc" — the call's content has no positions to show the
+  // space —, 2202.06129, given whole to the first mark's authors; `ECT$^*$`'s symbol and BaBar's `$^a$` sub-labels after
+  // numbers stay the entry's)
+  let kind = |e: &Event| -> Option<bool> {
+    let labels = resolver::mark_labels(e.label.as_deref().unwrap_or(""));
+    if e.symbol || labels.is_empty() {
+      None
+    } else if labels.iter().all(|l| l.chars().all(|c| c.is_ascii_digit())) {
+      Some(true)
+    } else if labels
+      .iter()
+      .all(|l| l.chars().count() <= 2 && l.chars().all(char::is_alphabetic))
+    {
+      Some(false)
+    } else {
+      None
+    }
+  };
+  let lead_kind = first_ink.and_then(kind);
+  let name_follows = |at: usize| {
+    events[at + 1..]
+      .iter()
+      .find(|e| e.kind != EventKind::Layout)
+      .is_some_and(|e| {
+        e.kind == EventKind::Name && e.text.chars().next().is_some_and(char::is_alphabetic)
+      })
+  };
+  let mut pieces: Vec<Vec<Event>> = vec![Vec::new()];
+  let mut after_sep = true;
+  let mut ink = false;
+  for (at, event) in events.iter().enumerate() {
+    match &event.kind {
+      EventKind::Mark
+        if ink
+          && !after_sep
+          && lead_kind.is_some()
+          && kind(event) == lead_kind
+          && name_follows(at) =>
+      {
+        pieces.push(vec![event.clone()]);
+        ink = false;
+        continue;
+      },
+      EventKind::Mark if after_sep && ink => {
+        pieces.push(vec![event.clone()]);
+        ink = false;
+        after_sep = false;
+        continue;
+      },
+      EventKind::Mark => {},
+      EventKind::Break | EventKind::Sep(_) => {
+        after_sep = true;
+        pieces.last_mut().expect("a piece").push(event.clone());
+        continue;
+      },
+      EventKind::Layout => {},
+      // (a piece of no letter or digit, punctuation or a zero-width space, is no ink between a separator and the mark
+      // after it: `\\ \and ​$^2$Department …`, 2112.13115)
+      EventKind::Name if !event.text.chars().any(char::is_alphanumeric) => {
+        pieces.last_mut().expect("a piece").push(event.clone());
+        continue;
+      },
+      _ => ink = true,
+    }
+    after_sep = matches!(event.kind, EventKind::Layout) && after_sep;
+    pieces.last_mut().expect("a piece").push(event.clone());
+  }
+  for piece in &mut pieces {
+    while piece.last().is_some_and(|e| {
+      matches!(e.kind, EventKind::Break | EventKind::Sep(_))
+        || (e.kind == EventKind::Name && !e.text.chars().any(char::is_alphanumeric))
+    }) {
+      piece.pop();
+    }
+  }
+  if pieces.len() < 2 { Vec::new() } else { pieces }
+}
+
+/// An in-block contact's entry read from its leading marks: its labels, its text, its span ([`labelled_entries`]).
+type LabelledEntry = (String, String, Option<(u16, u16)>);
+
+/// The entries of an in-block contact's content each led by marks ([`mark_led_pieces`], else the content one entry),
+/// each its labels (its leading marks', [`leading_marks`]), its text (the rest, `events_text`) and its span (its own
+/// ink, past its marks: the writer makes an entry of the block from it, the mark left out, `plan::block_span_tokens`);
+/// `None` when an entry leads with no labelled mark or holds a mark past its leading run (one its text would
+/// drop).
+fn labelled_entries(events: &[Event]) -> Option<Vec<LabelledEntry>> {
+  let pieces = mark_led_pieces(events);
+  let pieces = if pieces.is_empty() {
+    vec![events.to_vec()]
+  } else {
+    pieces
+  };
+  pieces
+    .iter()
+    .map(|piece| {
+      let (start, end) = leading_marks(piece);
+      let labels: Vec<&str> = piece[start..end]
+        .iter()
+        .filter(|e| e.kind == EventKind::Mark)
+        .filter_map(|e| e.label.as_deref().filter(|l| !l.is_empty()))
+        .collect();
+      if labels.is_empty() || piece[end..].iter().any(|e| e.kind == EventKind::Mark) {
+        return None;
+      }
+      let rest: Vec<&Event> = piece
+        .iter()
+        .enumerate()
+        .filter(|&(at, e)| !((start..end).contains(&at) && between_leading_marks(e)))
+        .map(|(_, e)| e)
+        .collect();
+      let span = piece[end..]
+        .iter()
+        .filter_map(|e| e.span)
+        .reduce(|(a, b), (s, e)| (a.min(s), b.max(e)));
+      Some((labels.join(","), events_text(&rest), span))
+    })
+    .collect()
 }
 
 /// The events of a digested author block (a rehearsal's list), in print order.

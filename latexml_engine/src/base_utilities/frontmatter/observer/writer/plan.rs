@@ -514,6 +514,14 @@ pub(super) fn block_span_tokens(
       } else {
         floor = from;
       }
+    } else if events
+      .iter()
+      .any(|e| e.kind == EventKind::Contact && e.label.is_some() && e.span == Some((start, end)))
+    {
+      // (an in-block contact's entry read from its leading marks spans its own ink past them (`events::
+      // labelled_entries`): its marks' closing shift before it is theirs — `\affil{$^1$Univ A\\ $^2$Univ B}`, review
+      // rev94b B1)
+      floor = from;
     }
     // (a group closing past the spaces after the entry: `{\it Department …, Japan }`, 2307.03384)
     let mut past = to;
