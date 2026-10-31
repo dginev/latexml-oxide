@@ -1,0 +1,25 @@
+% mechanism: the allow-list between nested containers (`writer/plan.rs` ~:681-687) is narrower than what prints
+%   nothing: a text font command between two containers (`\emph{\textbf{\underline{…}}}`), `\relax`,
+%   `\fontseries{b}\selectfont`, `\LARGE`/`\huge` give the plain cut (= the base). Synthetic (triage 2026-10-31).
+% witness: review rev94b r7 SHOULD-FIX 3, probes p/z/ebun, etbu, erel, efs, elg
+% oracle:  pdflatex 0 errors: both entries bold italic underlined
+% engines: rust 94b r7, 94a r9: the plain cut (attribution right, markup lost)
+% expect:  0 errors, 0 warnings; each entry bold italic underlined, each name its line
+% status:  RED (catalog, no guard)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilinauthor.cls}
+\ProvidesClass{affilinauthor}
+\LoadClass{article}
+\def\affilfont{\small}
+\def\affil#1{\par{\reset@font\affilfont#1\par}}
+\def\address#1{\par{\reset@font\affilfont#1\par}}
+\def\@maketitle{\newpage{\Large\bfseries\@title\par}\vskip1em\noindent{\bfseries\@author\par}\vskip1em}
+\end{filecontents*}
+\documentclass{affilinauthor}
+\begin{document}
+\title{A Title}
+\author{Ann Able,$^1$ Bob Baker$^2$ Cy Cole$^3$
+\affil{\emph{\textbf{\underline{$^1$Univ A, Town\\ $^2$Univ B, City}}}}}
+\maketitle
+Body.
+\end{document}

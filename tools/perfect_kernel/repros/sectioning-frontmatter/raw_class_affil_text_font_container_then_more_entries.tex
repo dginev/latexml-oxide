@@ -1,0 +1,25 @@
+% mechanism: a container inside a kernel text font command, with more entries after the command's group, loses the
+%   container's font in the per-entry wrap (`writer/plan.rs` `entry_forms`/`container_wrap`; 94b r7 S1 covers only a
+%   command whose argument holds every entry). Synthetic (triage 2026-10-31: RED catalog).
+% witness: review rev94b r7 SHOULD-FIX 1, probes p/z/bt, rbt, scb
+% oracle:  pdflatex 0 errors: Univ A, Town / Univ B, City in bold italic (CMBXTI), Lab C / Lab D upright
+% engines: rust 94b r7, r6, 94a r9: Univ A / Univ B `<text font="bold">` (the italic lost)
+% expect:  0 errors, 0 warnings; each of the first two entries bold italic, each name its line
+% status:  RED (catalog, no guard)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilinauthor.cls}
+\ProvidesClass{affilinauthor}
+\LoadClass{article}
+\def\affilfont{\small}
+\def\affil#1{\par{\reset@font\affilfont#1\par}}
+\def\address#1{\par{\reset@font\affilfont#1\par}}
+\def\@maketitle{\newpage{\Large\bfseries\@title\par}\vskip1em\noindent{\bfseries\@author\par}\vskip1em}
+\end{filecontents*}
+\documentclass{affilinauthor}
+\begin{document}
+\title{A Title}
+\author{Ann Able,$^1$ Bob Baker$^2$ Cy Cole$^3$ Dan Doe$^4$
+\affil{\textbf{\emph{$^1$Univ A, Town\\ $^2$Univ B, City}} $^3$Lab C\\ $^4$Lab D}}
+\maketitle
+Body.
+\end{document}
