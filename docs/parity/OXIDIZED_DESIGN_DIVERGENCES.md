@@ -27813,9 +27813,11 @@ superscript its text opens with where that prints it (`\textsuperscript{*}`'s `*
 shows that mark no more — a superscript of its own (`\lx@frontmatter@keepsup`), one shown for no entry, or the
 glyph's token of a mark formula not yet rewritten (revtex's `$^{1,\star}$` keeps its `1`); with no `mark` the page set
 the note's default dagger beside the name's star ("Observatory*†", since round 1; 93a wrote these as affiliations).
-A made item starts after its mark (`plan::block_span_tokens`): past the mark's closing shift and spaces, the entry's own
-switches its own (`$^1$\it`, `\small`, `\color{red}`, `\textit{…}`: the font Layout event before the first Name has no
-span, and the item lost the switch); anything else between, or no balanced run so, and it starts at its ink as before.
+A made item starts after its mark (`plan::block_span_tokens`): past the mark's closing shift and spaces, every command
+between the mark and its ink with the groups it takes is its own — its switches (`$^1$\it`, `\small`, `\color{red}`,
+`\textit{…}`: the font Layout event before the first Name has no span, and the item lost the switch), a strut, a skip,
+a box —, but a line break or an alignment token; a letter outside a group, a break, an alignment token between, or no
+balanced run so, and it starts at its ink as before.
 A cell's font event is no names-line evidence (`labels::later_line_is_names`): each cell opens in the alignment's font,
 so the lexer's change between two cells' runs is a reset as often as a switch (`\begin{tabular}{c}Ann Able$^1$\\
 $^1$\it Univ X,\\ \bf Dept Y\\ City Z\end{tabular}` read an author "City Z"). The re-part cuts no author from a row of
@@ -27842,7 +27844,8 @@ ink): `batch92e::observer_reads_a_note_by_the_ink_test`, `batch92e::kernel_thank
 `author_names_tabular_names_row_after_a_comma`, `author_names_tabular_row_end_star_and_skip`,
 `raw_class_affil_runs_inside_one_author`; catalog `author_names_tabular_person_row_continued_stays` (the font-parted
 persons of 1009.1429 in a `tabular`: each row its own unmarked entry now, declined as `Ann Able\\ Bob Baker`).
-Known residual: a range legend line (`$^{1-2}$Univ X`) is read as no one's (the block's), 93a's too.
+Known residual: a range legend line (`$^{1-2}$Univ X`) is read as no one's (the block's), 93a's too (RED catalog repro
+`author_names_range_legend_is_the_blocks`, round 7).
 Probes (the review's n/, g/, t/ sets and 57 siblings; pdflatex 0 errors, 0 errors and 0 warnings each): the legend,
 range, symbol+number and switch siblings as pdflatex prints them; one mark per legend note in the HTML; `u01_four_rows`
 (`$^1$Univ X,\\ Dept Y\\ City Z`) back to 93a's one creator, the price of the person check. Witnesses (59 papers):
@@ -27852,6 +27855,50 @@ team a creator), the tip's. Census against round 5 (the three populations): chan
 1301.3953 (94b r2's in-block entries per mark, the tip's), no word lost or added, none written-different, rc/E/F/W
 unchanged. Scorer (3,000 sample, `run_94a_r6`): tiers identical to round 5's — 5,732 of 5,838 (98.18 %), marks path
 95.49 %, `article` 96.52 %, readability 24 papers; 10 papers' creators differ, 9 a note's mark, 2107.11510 the tip's.
+
+Round 7 (review rev94a r6's blocker and should-fixes; on 94b r3). An unlabelled run contact's run ends at the contact of
+its role before it (`Resolver::ends_a_run`, `run_from`, in both `record_run` and `new_run`): in a block, any Contact event
+of the role, labelled or not; from the API, a call a printed mark labels (`api:leading-mark`, `api:withsup-mark`, a
+legend too) — such an entry waits for its label, so its owner holds no role yet and the walk back to "one holding the
+role" (Perl Base_Utility.pool.ltxml:520-536) reached past it. Today's API bounds its walk the same way
+(`frontmatter_api.rs` `marked_at`: a pending stub whose `_bymark`, `_plainmarks` or `_picturemarks` labels it, not a
+legend's own walk), so the re-part no longer admits the API's over-reach (`repart::plan`'s `owner:annotate:run`
+admission). A call's `label=` sets no bound (authblk's `\author[1]{Ann}\author{Bob}\affil[1]{Univ X}\affil{Univ Y}`
+prints Univ Y under both, 2605.25017), and with no name made since the bounding contact the bound is none — every
+author of the run answered, the contact the whole run's (authblk's `\affil{Univ Z}` after every author's marked line,
+ptephy's `\affil{}{Univ Z}`, 77n r5 review probes r01, t02; `ANN ABLE$^1$ and BOB BAKER \affil{$^1$Univ A}
+\affil{Univ B}` gives Univ B to both, the tip's). `\author{ANN ABLE$^1$ \affil{$^1$Univ A} BOB BAKER \affil{Univ B}}`
+in a class printing `\affil` in place gave Ann Univ B too (r6); IEEEtran's `annotate=new` `\IEEEauthorblockA{Univ Y}`
+after `\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}}\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ X}` gave Ann Univ Y
+since 63e, and a marked block's unmarked name (`Ann Able$^1$ and Bob Baker`) the next block's affiliation. Perl reads no
+IEEE mark (`\IEEEauthorrefmark` empty, IEEEtran.cls.ltxml:154; one creator) and its `new` entries carry no printed-mark
+label in the bindings that use it, so no KNOWN_PERL_ERRORS entry. On 94b r3 a class's in-place `[opt]{arg}` setter read
+inside the names (`\affil[1]{Univ A}` in `\author{ANN ABLE\textsuperscript{1} …}`) found no author printing its key —
+the queue already taken by the flush — and stayed the class's own print inside Bob Baker's name; its key now also
+matches the marks of the flush's digested authors (`queue_digest::digested_authors_requesting`). A legend of several
+symbols (`$^{**}$`, `$^{\dagger\dagger}$`, `\textsuperscript{**}`) shows its printed mark (`apply::show_legend_mark`:
+no one glyph, so the note's leading superscript where it prints the label's symbols; r6 left no `mark`, "Bob Baker**
+†"). A mark taken from a name's superscript is taken from its text nodes (`dom::take_sup_marks`, also
+`hide_answered_marks`): a font inside it stays (`\textsuperscript{\textbf{2,*}}` kept `<sup><text
+font="bold">2</text></sup>`; r6 set the content and dropped the bold). A mark formula's token taken updates its `tex=`
+(`apply::drop_spelling`: `{}^{1,\star}` → `{}^{1}`), and a token whose spelling the source does not show leaves the
+formula whole. The person check's price, accepted: bold person rows over unmarked institution rows in a `tabular`
+(`\textbf{Ann Able}\\ Univ X\\ \textbf{Bob Baker}\\ Univ Y`) stay today's one creator (93a's; round 5 wrote two;
+catalog repro `author_names_tabular_bold_person_rows_stay`), against its gains (`p01`'s "San Diego" and `p05`'s "Hong
+Kong" rows no longer invented authors). Guards `perfect_kernel_batch94a` (+3:
+`an_ieee_affiliation_block_after_a_marked_block_is_the_next_names`, `a_legend_of_several_symbols_shows_its_mark`,
+`a_names_mark_taken_keeps_its_font`; three rows in `an_affil_after_a_run_of_names_is_the_runs`). Repros `raw_class_affil_run_ends_at_a_labelled_entry`,
+`raw_class_affil_run_after_a_marked_name`, `raw_class_affil_run_ends_at_labelled_entries`,
+`ieee_affil_block_after_a_marked_block`, `ieee_affil_block_after_a_marked_block_of_two`,
+`author_names_legend_of_several_symbols_shows_its_mark`, `author_names_legend_mark_taken_keeps_its_font`; catalog
+`author_names_range_legend_is_the_blocks` (RED), `author_names_tabular_bold_person_rows_stay`. Probes (the review's a/,
+ie/, l/, p/, sw/ sets, g/, n/, t/, h/ again, 31 siblings; pdflatex 0 errors, 0 errors and 0 warnings each): the run,
+IEEE and several-symbol rows as pdflatex prints them, one mark per legend note in the HTML; a01-a03, a09, a11, a18 and
+every other probe the tip's. Witnesses (35 papers, 1805.12376's `main.tex` among them, its five owners kept): creators
+and E/W/F the tip's. Census against the tip (94b r3; the three populations, 270 / 1,500 / 500): changed 0 / 0 / 0, rc/E/F/W
+the tip's (2404.03434's 0 against 22 pgf errors in one census run is noise: 22 on both binaries alone). Scorer (3,000
+sample, `run_94a_r7`): tiers identical to 94b r3's — 5,732 of 5,838 (98.18 %), readability 24 papers; against round 6, 4
+papers' creators differ, each 94b r3's (0910.5837, 1105.1753, 2303.16316, quant-ph0606237).
 
 ### 932. aa's sole `\institute` is every author's unless the class's `\inst{n}` picks it, as llncs's (Perl: inst_support's `affiliation:1`, which no author requests; the first author's by the prefix-stripped fallback)
 
@@ -27924,7 +27971,8 @@ caption, or other markup — is in doubt: an in-place setter's call stays the cl
 `name={#1}`, review rev94b B2, wrote "\hbox{\@textsuperscript{1}}" and "a" as contact names). The
 observer reads such an affiliation as the API attaches it (94a r6): the rehearsal binds a rerouted in-place setter
 (`\lx@class@contact@<name>` defined) to `\lx@fm@obs@affil@run`, a Contact event of `annotate=run`, which a names line
-gives every name of the run before it (`Resolver::record_run` within the line, rule `owner:annotate:run`), not the
+gives every name of the run before it back to the block's contact of its role before it, labelled or not
+(`Resolver::record_run` within the line, `Resolver::ends_a_run`, rule `owner:annotate:run`; OD #928 round 7), not the
 name beside it alone — ci2018's `JORGE RAMIREZ and EVGENY KRIVOSHEEV \affil{University of Trento} MARCOS BAEZ and …`
 (1805.12376) has all five authors their run's affiliation; repro `raw_class_affil_runs_inside_one_author`, guard
 `perfect_kernel_batch94a::an_affil_after_a_run_of_names_is_the_runs`.

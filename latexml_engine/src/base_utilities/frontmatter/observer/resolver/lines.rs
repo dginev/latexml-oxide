@@ -1100,11 +1100,14 @@ impl Resolver {
           // in place inside `\author`, rerouted to `\lx@add@affiliation[annotate=run]`: `JORGE RAMIREZ and EVGENY
           // KRIVOSHEEV \affil{University of Trento} MARCOS BAEZ and …`, ci2018, 1805.12376 —, the run's names of the
           // line as today's API attaches it (`Resolver::record_run`), not the name beside it alone)
+          // (the run ends at the block's contact of the role before it, labelled or not: a labelled one waits for its
+          // label, its owner holding no role yet — `ANN ABLE$^1$ \affil{$^1$Univ A} BOB BAKER \affil{Univ B}` gives
+          // Univ B to Bob alone, review rev94a r6 B1; `Resolver::ends_a_run`)
+          let role = contact_parts(event).0;
           let run: Vec<usize> = match event.annotate.as_deref() {
             Some(annotate)
               if event.label.is_none() && (annotate == "new" || annotate.starts_with("run")) =>
             {
-              let role = contact_parts(event).0;
               let run = if annotate == "new" {
                 self.new_run(&role)
               } else {
@@ -1114,6 +1117,7 @@ impl Resolver {
             },
             _ => Vec::new(),
           };
+          self.run_from.insert(role, self.out.creators.len());
           if run.len() > 1 {
             self.contact_event(index, event, &run, "owner:annotate:run");
           } else {

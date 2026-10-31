@@ -1,0 +1,20 @@
+% mechanism: the person check's price (OD #928 round 6-7, accepted by the main session): bold person rows in a
+%   `tabular` inside `\author`, each over its unmarked institution row, read as items on no structure the writer
+%   accepts (`repart::plan`'s person check over `Resolved::continued`), so today's one creator stays — round 5 wrote
+%   two creators. Its gains on the same check: `p01` ("San Diego") and `p05` ("Hong Kong") rows no longer invented
+%   authors. Catalog repro, no guard (the decline is `perfect_kernel_batch94a::a_person_in_a_tabular_row_is_no_item`'s
+%   path; sibling catalog `author_names_tabular_person_row_continued_stays`).
+% witness: review rev94a r6 p/s08_tab_bold_stack (the font-parted persons of 1009.1429)
+% oracle:  pdflatex 0 errors: "Ann Able (bold) / Univ X / Bob Baker (bold) / Univ Y"
+% engines: rust 93a, 94a r6, 94a r7: one creator, the tabular its name; rust 94a r5: Ann Able Univ X, Bob Baker Univ Y;
+%   perl: not run
+% expect:  0 errors, 0 warnings; Ann Able Univ X, Bob Baker Univ Y (two creators)
+% status:  RED (catalog, no guard; the accepted cost of the person check)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{\begin{tabular}{c}\textbf{Ann Able}\\ Univ X\\ \textbf{Bob Baker}\\ Univ Y\end{tabular}}
+\maketitle
+Body.
+\end{document}

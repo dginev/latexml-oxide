@@ -1,0 +1,26 @@
+% mechanism: an unlabelled in-place affiliation's run ends at the block's labelled contacts before it (OD #928 round 7,
+%   review rev94a r6 B1; `Resolver::ends_a_run`): a class's `\affil[1]{…}` prints its label as a superscript and waits
+%   for it, so the names before it are no names of the later `\affil{Univ C}`'s run; its key found among the flush's
+%   digested authors' marks (`queue_digest::digested_authors_requesting`, on 94b r3's `\lx@class@contact@optional`).
+% witness: review rev94a r6 a/a19_optlabel
+% oracle:  pdflatex 0 errors: "ANN ABLE1 and BOB BAKER2, 1Univ A, 2Univ B / CID COLE and DAN DOE, Univ C"
+% engines: rust 94b r2: CID COLE none; rust 94a r6: Univ C to all four; rust 94b r3: the `\affil[1]`, `\affil[2]` lines
+%   printed inside BOB BAKER's name (no queued author printing the key); perl: not run
+% expect:  0 errors, 0 warnings; ANN ABLE Univ A, BOB BAKER Univ B, CID COLE and DAN DOE Univ C; eager and
+%   --streaming the same
+% status:  RED (94a r6) -> GREEN (94a r7)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilopt.cls}
+\ProvidesClass{affilopt}
+\LoadClass{article}
+\def\author#1{\gdef\@author{#1}}
+\newcommand\affil[2][]{{\reset@font\small\unskip,\ \textsuperscript{#1}#2\endgraf}}
+\def\maketitle{\par{\Large\@title\par}{\noindent\@author\par}}
+\end{filecontents*}
+\documentclass{affilopt}
+\begin{document}
+\title{A Title}
+\author{ANN ABLE\textsuperscript{1} and BOB BAKER\textsuperscript{2} \affil[1]{Univ A} \affil[2]{Univ B} CID COLE and DAN DOE \affil{Univ C}}
+\maketitle
+Body.
+\end{document}

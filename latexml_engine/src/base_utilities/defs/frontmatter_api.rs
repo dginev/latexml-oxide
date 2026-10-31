@@ -718,6 +718,30 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
             } else {
               Vec::new()
             };
+            // (nor is an author made before a deferred contact of the role a printed mark labels (`_bymark`, or the
+            // marks it requested, `_plainmarks`/`_picturemarks`) new: the contact waits for its label, so its owner
+            // holds no role yet — a class's in-place `\affil` in `\author{ANN ABLE$^1$ \affil{$^1$Univ A} BOB BAKER
+            // \affil{Univ B}}` gave Ann Univ B too, IEEEtran's `\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ X}` gave
+            // the author above it the next block's `\IEEEauthorblockA{Univ Y}` (`annotate=new`; review rev94a r6 B1, the
+            // observer's `Resolver::ends_a_run`). Not a legend's own walk, the whole run's, nor a `label=`'s: authblk's
+            // `\author[1]{Ann}\author{Bob}\affil[1]{Univ X}\affil{Univ Y}` prints Univ Y under both (2605.25017). With no
+            // author made since that contact the bound is none: every author of the run is answered, the contact the
+            // whole run's — the walk below, 77n r5 review probes t02, r01.)
+            let marked_at = if (run_new || newonly) && !legend {
+              list
+                .iter()
+                .rposition(|e| {
+                  e.attr.get("role").map(String::as_str) == Some("pending")
+                    && ["_bymark", "_plainmarks", "_picturemarks"]
+                      .iter()
+                      .any(|key| e.attr.contains_key(*key))
+                    && matches!(e.content.first(),
+                      Some(TagContent::Entry(contact)) if contact.attr.get("role") == Some(&role))
+                })
+                .filter(|at| parent_indices.last().is_some_and(|last| last > at))
+            } else {
+              None
+            };
             let answered = |parent: &TagData| {
               parent
                 .attr
@@ -746,7 +770,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
                   let Some(&next_pi) = indices.last().filter(|_| newonly) else {
                     continue;
                   };
-                  if list.get(next_pi).is_some_and(|next| next.attr.contains_key(&has_role_key)) {
+                  if list.get(next_pi).is_some_and(|next| next.attr.contains_key(&has_role_key))
+                    || marked_at.is_some_and(|at| next_pi < at)
+                  {
                     break;
                   }
                   if reached_unanswered && list.get(next_pi).is_some_and(answered) {

@@ -145,7 +145,7 @@ fn hide_answered_marks(document: &mut Document, resolved: &Resolved) {
     if answered.is_empty() {
       continue;
     }
-    for mut sup in document.findnodes(
+    for sup in document.findnodes(
       "ltx:personname/ltx:sup[@_unanswered]",
       Some(&front.creators[j].node),
     ) {
@@ -154,10 +154,11 @@ fn hide_answered_marks(document: &mut Document, resolved: &Resolved) {
         .split(',')
         .filter(|m| !answered.contains(&unify(m)))
         .collect();
-      if kept.is_empty() {
+      if kept.is_empty()
+        || (kept.len() < shown.split(',').count()
+          && !dom::take_sup_marks(&sup, &|m| answered.contains(&unify(m))))
+      {
         document.remove_node(sup);
-      } else if kept.len() < shown.split(',').count() {
-        let _ = sup.set_content(&kept.join(","));
       }
     }
   }

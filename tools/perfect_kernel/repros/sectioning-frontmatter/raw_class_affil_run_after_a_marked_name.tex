@@ -1,0 +1,25 @@
+% mechanism: an unlabelled in-place affiliation's run ends at the block's labelled contact before it (OD #928 round 7,
+%   review rev94a r6 B1; `Resolver::ends_a_run`): the unmarked name beside the marked one, before the labelled entry,
+%   is no name of the later run.
+% witness: review rev94a r6 a/a14_marked_mixed (sibling a16: `ANN ABLE$^1$ and BOB BAKER$^1$ \affil{$^1$Univ A} CID
+%   COLE and DAN DOE \affil{Univ B}`)
+% oracle:  pdflatex 0 errors: "ANN ABLE1 and BOB BAKER, 1Univ A / CID COLE, Univ B"
+% engines: rust 94b r2: ANN ABLE Univ A, CID COLE Univ B; rust 94a r6: Univ B to all three; perl: not run
+% expect:  0 errors, 0 warnings; ANN ABLE Univ A, BOB BAKER none, CID COLE Univ B; eager and --streaming the same
+% status:  RED (94a r6) -> GREEN (94a r7)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilsinauthor.cls}
+\ProvidesClass{affilsinauthor}
+\LoadClass{article}
+\def\affilfont{\small}
+\def\author#1{\gdef\@author{#1}}
+\def\affil#1{\gdef\@affil{#1}\ifx\@affil\@empty\else{\reset@font\affilfont\unskip,\ #1\vphantom{gy}\endgraf}\fi}\affil{}
+\def\maketitle{\par{\Large\@title\par}{\noindent\@author\par}}
+\end{filecontents*}
+\documentclass{affilsinauthor}
+\begin{document}
+\title{A Title}
+\author{ANN ABLE$^1$ and BOB BAKER \affil{$^1$Univ A} CID COLE \affil{Univ B}}
+\maketitle
+Body.
+\end{document}

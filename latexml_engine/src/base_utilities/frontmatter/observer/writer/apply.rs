@@ -153,50 +153,76 @@ pub(super) fn make(
 /// "Observatory*†", k01's `Ann Able$^*$, Bob Baker\\ $^*$Equal contribution`).
 fn show_legend_mark(document: &mut Document, owner: &Node, note: &Node, label: &str) -> Result<()> {
   let unify = |m: &str| m.replace('\u{2217}', "*");
-  let glyphs: Vec<String> = mark_labels(label)
-    .iter()
-    .filter_map(|l| unanswered_mark_text(l))
-    .collect();
-  if glyphs.is_empty() {
-    return Ok(());
-  }
-  let printed = dom::segments(note, false)
+  let leading = dom::segments(note, false)
     .into_iter()
     .find_map(|seg| match seg {
       dom::Seg::Hidden(mark) if !dom::is(&mark, "ltx:tags") => Some(mark.get_content()),
       dom::Seg::Text(text) if text.get_content().trim().is_empty() => None,
       _ => Some(String::new()),
     })
-    .map(|m| m.trim().to_string())
-    .filter(|m| unify(m) == unify(&glyphs.join(",")));
+    .map(|m| m.trim().to_string());
+  let mut glyphs: Vec<String> = mark_labels(label)
+    .iter()
+    .filter_map(|l| unanswered_mark_text(l))
+    .collect();
+  // (a label of several symbols — `$^{**}$`, `$^{\dagger\dagger}$`, `\textsuperscript{**}` — is no one glyph: its mark
+  // is the note's leading superscript where that prints the label's symbols, each as its glyph; l04's `Bob Baker$^{**}$
+  // … $^{**}$Corresponding author` showed "Bob Baker** †", the default dagger — review rev94a r6 S1)
+  if glyphs.is_empty() {
+    let symbols = |m: &str| -> String {
+      m.chars()
+        .filter(|c| !c.is_whitespace())
+        .map(|c| unify(&unanswered_mark_text(&c.to_string()).unwrap_or_else(|| c.to_string())))
+        .collect()
+    };
+    match leading
+      .as_deref()
+      .filter(|m| !m.is_empty() && symbols(m) == symbols(label))
+    {
+      Some(m) => glyphs.push(m.to_string()),
+      None => return Ok(()),
+    }
+  }
+  let printed = leading.filter(|m| unify(m) == unify(&glyphs.join(",")));
   let mark = printed.unwrap_or_else(|| glyphs.join(","));
   let mut note = note.clone();
   document.set_attribute(&mut note, "mark", &mark)?;
   let shown: Vec<String> = glyphs.iter().map(|g| unify(g)).collect();
-  for mut sup in document.findnodes("ltx:personname//ltx:sup", Some(owner)) {
+  for sup in document.findnodes("ltx:personname//ltx:sup", Some(owner)) {
     let text = sup.get_content();
     let kept: Vec<&str> = text
       .split(',')
       .filter(|m| !shown.contains(&unify(m.trim())))
       .collect();
-    if kept.is_empty() {
+    if kept.is_empty()
+      || (kept.len() < text.split(',').count()
+        && !dom::take_sup_marks(&sup, &|m| shown.contains(&unify(m))))
+    {
       document.remove_node(sup);
-    } else if kept.len() < text.split(',').count() {
-      let _ = sup.set_content(&kept.join(","));
     }
   }
   // (a mark formula the name shows, not yet rewritten into its superscript — revtex's `Bob Baker$^{1,\star}$`: the
   // glyph's token taken, with the comma beside it, and a formula left with no mark taken whole)
-  for math in document.findnodes("ltx:personname//ltx:Math", Some(owner)) {
+  for mut math in document.findnodes("ltx:personname//ltx:Math", Some(owner)) {
     if !matches!(marks::read_formula(&math), marks::FormulaMarks::Marks(_)) {
       continue;
     }
-    let tokens = document.findnodes("descendant::ltx:XMTok", Some(&math));
+    let tokens: Vec<Node> = document
+      .findnodes("descendant::ltx:XMTok", Some(&math))
+      .into_iter()
+      .filter(|token| shown.contains(&unify(token.get_content().trim())))
+      .collect();
+    // (its `tex=` spelled without them too, `{}^{1,\star}` → `{}^{1}`: a token whose spelling the source does not show
+    // leaves the formula whole, both marks printed, rather than a `tex=` the formula no longer holds — review rev94a r6
+    // N2)
+    let mut tex = math.get_attribute("tex");
+    if let Some(spelled) = tex.as_mut()
+      && !tokens.iter().all(|token| drop_spelling(spelled, token))
+    {
+      continue;
+    }
     let mut taken = false;
     for token in &tokens {
-      if !shown.contains(&unify(token.get_content().trim())) {
-        continue;
-      }
       let comma = |node: Option<Node>| {
         node.filter(|n| dom::is(n, "ltx:XMTok") && n.get_content().trim() == ",")
       };
@@ -219,9 +245,62 @@ fn show_legend_mark(document: &mut Document, owner: &Node, note: &Node, label: &
         || matches!(marks::read_formula(&math), marks::FormulaMarks::Marks(scripts) if empty(&scripts)))
     {
       document.remove_node(math);
+    } else if taken && let Some(tex) = tex {
+      document.set_attribute(&mut math, "tex", &tex)?;
     }
   }
   Ok(())
+}
+
+/// `tex` without the spelling of a mark `token` of its formula, and the comma beside it: the control word its `name`
+/// spells (`\star`), else its text or the spellings of its glyph (`*`, `\ast` for `∗`). Whether it was found.
+fn drop_spelling(tex: &mut String, token: &Node) -> bool {
+  let text = token.get_content().trim().to_string();
+  let mut spellings: Vec<String> = token
+    .get_attribute("name")
+    .map(|name| s!("\\{name}"))
+    .into_iter()
+    .collect();
+  spellings.push(text.clone());
+  let glyphs: &[&str] = match text.as_str() {
+    "\u{2217}" | "*" => &["*", "\\ast"],
+    "\u{2020}" => &["\\dagger", "\\dag"],
+    "\u{2021}" => &["\\ddagger", "\\ddag"],
+    "\u{22C6}" => &["\\star"],
+    _ => &[],
+  };
+  spellings.extend(glyphs.iter().map(|g| g.to_string()));
+  for spelling in spellings.iter().filter(|s| !s.is_empty()) {
+    // (a control word ends where no letter follows: `\star` is not `\stare`)
+    let word =
+      spelling.starts_with('\\') && spelling.chars().nth(1).is_some_and(char::is_alphabetic);
+    let found = tex
+      .match_indices(spelling.as_str())
+      .map(|(at, _)| at)
+      .find(|&at| {
+        !word
+          || !tex[at + spelling.len()..]
+            .chars()
+            .next()
+            .is_some_and(char::is_alphabetic)
+      });
+    let Some(start) = found else {
+      continue;
+    };
+    let end = start + spelling.len();
+    let before = tex[..start].trim_end();
+    let after = tex[end..].trim_start();
+    let (from, to) = if before.ends_with(',') {
+      (before.len() - 1, end)
+    } else if after.starts_with(',') {
+      (start, tex.len() - after.len() + 1)
+    } else {
+      (start, end)
+    };
+    tex.replace_range(from..to, "");
+    return true;
+  }
+  false
 }
 
 /// The element whose text a contact prints: the innermost of the chain of only children `node` opens (a contact's

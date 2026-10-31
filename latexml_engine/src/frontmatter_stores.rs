@@ -1895,7 +1895,7 @@ fn optional_contact(name: &str, in_place: bool, opt: Tokens, arg: Tokens) -> Res
             }
           })
           .collect();
-        !queued_authors_requesting(&operand).is_empty()
+        !queued_authors_requesting(&operand).is_empty() || digested_authors_requesting(key)
       })
     {
       return Ok(decide(call(&s!("label={{{}}}", keys.join(",")), arg)));

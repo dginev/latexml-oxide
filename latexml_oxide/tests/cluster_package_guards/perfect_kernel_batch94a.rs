@@ -975,4 +975,143 @@ fn an_affil_after_a_run_of_names_is_the_runs() {
   ]);
   assert_eq!(reading.3, Value::from("written"));
   assert_eq!(default_mode_creators(tex), owned(xml));
+  // (the run ends at the block's contact of its role before it, labelled or not — review rev94a r6 B1,
+  // `Resolver::ends_a_run`, today's API `marked_at`: a labelled entry waits for its label, its owner holding no role yet,
+  // and r6 gave the later run's affiliation to the marked names before it too; a17, a14, a19)
+  for (tex, xml, shadow) in [
+    (
+      repro!("raw_class_affil_run_ends_at_a_labelled_entry.tex"),
+      &[
+        &["ANN ABLE", "affiliation=Univ A"][..],
+        &["BOB BAKER", "affiliation=Univ B"][..],
+      ][..],
+      &[
+        "C ANN ABLE [1] | line:names",
+        "  a Univ A | ruling1:request",
+        "C BOB BAKER [] | line:names",
+        "  a Univ B | owner:adjacent",
+      ][..],
+    ),
+    (
+      repro!("raw_class_affil_run_after_a_marked_name.tex"),
+      &[
+        &["ANN ABLE", "affiliation=Univ A"][..],
+        &["BOB BAKER"][..],
+        &["CID COLE", "affiliation=Univ B"][..],
+      ][..],
+      &[
+        "C ANN ABLE [1] | line:names",
+        "  a Univ A | ruling1:request",
+        "C BOB BAKER [] | line:names sep:word",
+        "C CID COLE [] | line:names",
+        "  a Univ B | owner:adjacent",
+      ][..],
+    ),
+    (
+      repro!("raw_class_affil_run_ends_at_labelled_entries.tex"),
+      &[
+        &["ANN ABLE", "affiliation=Univ A"][..],
+        &["BOB BAKER", "affiliation=Univ B"][..],
+        &["CID COLE", "affiliation=Univ C"][..],
+        &["DAN DOE", "affiliation=Univ C"][..],
+      ][..],
+      &[
+        "C ANN ABLE [1] | line:names",
+        "  a Univ A | ruling1:request",
+        "C BOB BAKER [2] | line:names sep:word",
+        "  a Univ B | ruling1:request",
+        "C CID COLE [] | line:names",
+        "  a Univ C | owner:annotate:run",
+        "C DAN DOE [] | line:names sep:word",
+        "  a Univ C | owner:annotate:run",
+      ][..],
+    ),
+  ] {
+    assert_reading(tex, Some(xml), shadow);
+    assert_eq!(default_mode_creators(tex), owned(xml));
+  }
+}
+
+/// An IEEEtran affiliation block's run (`annotate=new`, ieeetran_cls.rs) ends at the marked block before it (review
+/// rev94a r6 B1, the same rule as a raw class's in-place `\affil`): `\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ X}`
+/// waits for its label, so the author above it held no affiliation yet and `\IEEEauthorblockA{Univ Y}` reached her too
+/// (94b r2 and r6: Ann Able Univ Y and Univ X; i06); the run's names are those made after the marked block, so its
+/// unmarked name is no name of the next block's either (i07: Bob Baker none). Both the observer's walk
+/// (`Resolver::ends_a_run`) and today's API's (`frontmatter_api.rs` `marked_at`). Perl reads no mark here.
+#[test]
+fn an_ieee_affiliation_block_after_a_marked_block_is_the_next_names() {
+  let tex = repro!("ieee_affil_block_after_a_marked_block.tex");
+  let xml: &[&[&str]] = &[
+    &["Ann Able 1", "affiliation=Univ X"],
+    &["Bob Baker", "affiliation=Univ Y"],
+    &["Cid Cole", "affiliation=Univ Y"],
+  ];
+  assert_reading(tex, Some(xml), &[
+    "C Ann Able [1] | line:names",
+    "  a Univ X | api:leading-mark",
+    "C Bob Baker [] | line:names",
+    "  a Univ Y | api:annotate:new",
+    "C Cid Cole [] | line:names sep:word",
+    "  a Univ Y | api:annotate:new",
+  ]);
+  assert_eq!(default_mode_creators(tex), owned(xml));
+  let tex = repro!("ieee_affil_block_after_a_marked_block_of_two.tex");
+  let xml: &[&[&str]] = &[&["Ann Able 1", "affiliation=Univ X"], &["Bob Baker"], &[
+    "Cid Cole",
+    "affiliation=Univ Y",
+  ]];
+  assert_reading(tex, Some(xml), &[
+    "C Ann Able [1] | line:names",
+    "  a Univ X | api:leading-mark",
+    "C Bob Baker [] | line:names sep:word",
+    "C Cid Cole [] | line:names",
+    "  a Univ Y | api:annotate:new",
+  ]);
+  assert_eq!(default_mode_creators(tex), owned(xml));
+}
+
+/// A legend of several symbols written as a note shows its printed mark (review rev94a r6 S1,
+/// `apply::show_legend_mark`): `**` is no one glyph, so r6 left the note without a `mark` and the page set the default
+/// dagger beside the name's own `**` ("Bob Baker** †"); its mark is now the note's leading superscript, which prints
+/// the label's symbols, and the name shows it no more. Siblings on the path (`$^{\dagger\dagger}$`,
+/// `$^{\ddagger\ddagger}$`, `\textsuperscript{**}`, `$^{1,**}$`) were probed alike.
+#[test]
+fn a_legend_of_several_symbols_shows_its_mark() {
+  let tex = repro!("author_names_legend_of_several_symbols_shows_its_mark.tex");
+  assert_reading(tex, None, &[
+    "C Ann Able [*] | line:names",
+    "  n Equal contribution | ruling2:symbol-line",
+    "C Bob Baker [**] | line:names sep:comma",
+    "  n Corresponding author | ruling2:symbol-line",
+  ]);
+  let xml = default_mode_xml(tex);
+  assert_eq!(personnames(&xml), [
+    "<personname>Ann Able</personname>",
+    "<personname>Bob Baker</personname>",
+  ]);
+  assert_eq!(notes_with_marks(&xml), [
+    "mark=∗ ∗ Equal contribution",
+    "mark=∗∗ ∗∗ Corresponding author",
+  ]);
+}
+
+/// The mark a legend note shows, taken from the name's superscript, leaves the superscript's font (review rev94a r6 N1,
+/// `dom::take_sup_marks`, shared by `apply::show_legend_mark` and `hide_answered_marks`): r6 set the superscript's
+/// content to the marks kept, which dropped the `\textbf` inside it (`<sup>2</sup>`; 93a `<sup><text
+/// font="bold">2,*</text></sup>`).
+#[test]
+fn a_names_mark_taken_keeps_its_font() {
+  let tex = repro!("author_names_legend_mark_taken_keeps_its_font.tex");
+  assert_reading(tex, None, &[
+    "C Ann Able [2,*] | line:names",
+    "  n Corresponding author | api:leading-mark api:legend",
+    "C Bob Baker [1] | line:names sep:word",
+    "  a Univ X | api:leading-mark",
+  ]);
+  let xml = default_mode_xml(tex);
+  assert_eq!(personnames(&xml), [
+    "<personname>Ann Able<sup><text font=\"bold\">2</text></sup></personname>",
+    "<personname>Bob Baker<sup><text font=\"italic\">1</text></sup></personname>",
+  ]);
+  assert_eq!(notes_with_marks(&xml), ["mark=* * Corresponding author"]);
 }

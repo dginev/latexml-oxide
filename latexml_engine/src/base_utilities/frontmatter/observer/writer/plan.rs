@@ -530,9 +530,11 @@ pub(in crate::base_utilities::frontmatter::observer) fn span_tokens(
   // (where the group switches the entry keeps are read up to: its own start, or its mark's formula)
   let mut first = from;
   // (where the entry starts after its mark: past the math shift closing the mark's formula and the spaces after it —
-  // `$^{1}$Univ X`, whose Mark spans its script —, its own switches the entry's (`$^1$\it Univ X`, `$^1$\small`,
-  // `$^1$\color{red}`, `$^1$\textit{…}`: the font Layout event between them has no span; the made item began at its
-  // first Name and lost the switch, review rev94a r5 u03); `None` when anything else stands between)
+  // `$^{1}$Univ X`, whose Mark spans its script —, every command between them the entry's, with the groups it takes,
+  // but a line break or an alignment token: its switches (`$^1$\it Univ X`, `$^1$\small`, `$^1$\color{red}`,
+  // `$^1$\textit{…}`: the font Layout event between them has no span; the made item began at its first Name and lost
+  // the switch, review rev94a r5 u03), a strut, a skip, a box; `None` when a letter outside a group, a break or an
+  // alignment token stands between — review rev94a r6 N3)
   let lead = |mark_end: usize| -> Option<usize> {
     let between = content.get(mark_end..from)?;
     let skip = between

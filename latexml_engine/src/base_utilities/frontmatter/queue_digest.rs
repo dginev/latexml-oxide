@@ -781,6 +781,35 @@ pub fn queued_authors_requesting(operand: &[Token]) -> Vec<usize> {
   requesting_authors(&queued_author_marks(), operand)
 }
 
+/// Whether an author creator of the flush being digested — one digested before, or the one in progress — printed a mark
+/// requesting the affiliation label `key` (its `_plainmarks`, `_textmarks`, `_picturemarks`): a class's in-place
+/// `\affil[1]{Univ A}` inside `\author{ANN ABLE\textsuperscript{1} and BOB BAKER\textsuperscript{2} …}` runs while its
+/// authors digest, the queue already taken, so [`queued_authors_requesting`] sees none of them (review rev94a r6 a19,
+/// on 94b r3's `\lx@class@contact@optional`).
+pub fn digested_authors_requesting(key: &str) -> bool {
+  let labels = clean_frontmatter_labels(key, "affiliation");
+  !labels.is_empty()
+    && with_value("frontmatter", |v| match v {
+      Some(Stored::HashTagData(frontmatter)) => {
+        frontmatter.get("ltx:creator").is_some_and(|creators| {
+          creators
+            .iter()
+            .filter(|c| c.attr.get("role").map(String::as_str) == Some("author"))
+            .any(|c| {
+              ["_plainmarks", "_textmarks", "_picturemarks"]
+                .iter()
+                .any(|attr| {
+                  c.attr
+                    .get(*attr)
+                    .is_some_and(|marks| marks.split(',').any(|m| labels.iter().any(|l| l == m)))
+                })
+            })
+        })
+      },
+      _ => false,
+    })
+}
+
 /// The author creators queued and not yet digested.
 pub(in crate::base_utilities) fn queued_author_count() -> usize {
   with_value("frontmatter_raw", |v| match v {

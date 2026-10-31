@@ -1,0 +1,19 @@
+% mechanism: an `annotate=new` affiliation block's run ends at the marked block before it (OD #928 round 7, review
+%   rev94a r6 B1; the observer's `Resolver::ends_a_run`, today's API `frontmatter_api.rs` `marked_at`): IEEEtran's
+%   `\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ X}` waits for its label, so the author above it held no affiliation
+%   yet and the next block's `\IEEEauthorblockA{Univ Y}` (`annotate=new`, ieeetran_cls.rs) reached her too. Perl reads
+%   no mark here (`\IEEEauthorrefmark` empty, IEEEtran.cls.ltxml:154; one creator), so not its defect.
+% witness: review rev94a r6 ie/i06 (the marked blocks of 2406.11437, 2104.02493)
+% oracle:  pdflatex 0 errors: "Ann Able* / *Univ X / Bob Baker and Cid Cole / Univ Y"
+% engines: rust 94b r2, 94a r6: Ann Able Univ Y and Univ X; perl: one creator "Ann Able1Bob Baker and Cid Cole", both
+%   affiliations
+% expect:  0 errors, 0 warnings; Ann Able Univ X, Bob Baker and Cid Cole Univ Y; eager and --streaming the same
+% status:  RED (94a r6) -> GREEN (94a r7)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{A Title}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}}\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ X}\IEEEauthorblockN{Bob Baker and Cid Cole}\IEEEauthorblockA{Univ Y}}
+\maketitle
+Body.
+\end{document}

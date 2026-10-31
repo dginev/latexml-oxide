@@ -62,8 +62,9 @@ impl Resolver {
 
   /// The authors an `annotate=run[:<cap>]` contact reaches, as `frontmatter_api.rs` records its run: the run of the
   /// contact of the role before it while no author came since (the same count of authors), else the authors back from
-  /// the last to one holding the role, at most <cap> — and the run recorded for the next. Only a call today's attaches
-  /// at once records it: a mark-picked line (`_withsup`) waits for its label, and its run is not taken.
+  /// the last to one holding the role or made before the last contact of the role that bounds a run (`run_from`), at
+  /// most <cap> — and the run recorded for the next. Only a call today's attaches at once records it: a mark-picked
+  /// line (`_withsup`) waits for its label, and its run is not taken.
   pub(super) fn record_run(&mut self, annotate: &str, role: &str) -> Vec<usize> {
     let n = self.out.creators.len();
     let cap = annotate
@@ -75,7 +76,7 @@ impl Resolver {
       _ => {
         let mut run = Vec::new();
         for c in (0..n).rev() {
-          if !run.is_empty() && self.roles[c].iter().any(|r| r == role) {
+          if !run.is_empty() && self.ends_a_run(c, role) {
             break;
           }
           if cap.is_some_and(|cap| run.len() >= cap) {
@@ -607,6 +608,15 @@ impl Resolver {
         for c in run.unwrap_or_else(|| self.new_run(role)) {
           self.roles[c].push(role.to_string());
         }
+      }
+      // (a call a printed mark labels ends the run of a later unlabelled one at the names before it: it waits for its
+      // label, so its owners hold no role yet — IEEEtran's `\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ X}` before
+      // `\IEEEauthorblockN{Bob Baker and Cid Cole}\IEEEauthorblockA{Univ Y}`, review rev94a r6 B1; a legend too, as
+      // today's — not a call's `label=`, `Resolver::ends_a_run`)
+      if label_rule.starts_with("api:leading-mark") || label_rule == "api:withsup-mark" {
+        self
+          .run_from
+          .insert(role.to_string(), self.out.creators.len());
       }
       return;
     }

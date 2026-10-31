@@ -206,6 +206,41 @@ pub(super) fn segments(node: &Node, parted: bool) -> Vec<Seg> {
   out
 }
 
+/// The marks of a name's superscript that `taken` reads as shown elsewhere, taken from its text nodes, each element
+/// in it kept — a font wrapper inside it, `\textsuperscript{\textbf{2,*}}`: setting the superscript's content to the
+/// marks kept dropped the bold (review rev94a r6 N1) —, and a comma left at either end of what stays. Whether a mark
+/// is left.
+pub(super) fn take_sup_marks(sup: &Node, taken: &dyn Fn(&str) -> bool) -> bool {
+  fn texts(node: &Node, out: &mut Vec<Node>) {
+    for child in node.get_child_nodes() {
+      match child.get_type() {
+        Some(NodeType::TextNode) => out.push(child),
+        Some(NodeType::ElementNode) => texts(&child, out),
+        _ => {},
+      }
+    }
+  }
+  let mut nodes = Vec::new();
+  texts(sup, &mut nodes);
+  for node in &mut nodes {
+    let text = node.get_content();
+    let kept: Vec<&str> = text.split(',').filter(|m| !taken(m.trim())).collect();
+    if kept.len() < text.split(',').count() {
+      let _ = node.set_content(&kept.join(","));
+    }
+  }
+  let printed = |n: &Node| !n.get_content().trim().is_empty();
+  if let Some(first) = nodes.iter_mut().find(|n| printed(n)) {
+    let text = first.get_content();
+    let _ = first.set_content(text.trim_start().trim_start_matches(','));
+  }
+  if let Some(last) = nodes.iter_mut().rev().find(|n| printed(n)) {
+    let text = last.get_content();
+    let _ = last.set_content(text.trim_end().trim_end_matches(','));
+  }
+  nodes.iter().any(|n| !n.get_content().trim().is_empty())
+}
+
 /// Whether `node` is invisible ink, `\phantom`, `\hphantom`, `\vphantom` in text (`<ltx:text class="ltx_phantom">`):
 /// pdflatex prints a box of its argument's size and no ink, a space between the words beside it — no name's words
 /// (review rev94a r2 B-2: 0909.3056's `\phantom{agga}` after the name read as an author; `field_ink::in_phantom`).

@@ -73,17 +73,35 @@ impl Resolver {
   }
 
   /// The run an `annotate=new` entry of `role` reaches: back from the last author to one holding the role (Perl
-  /// Base_Utility.pool.ltxml:520-536).
+  /// Base_Utility.pool.ltxml:520-536), or made before the last contact of the role that bounds a run.
   pub(super) fn new_run(&self, role: &str) -> Vec<usize> {
     let mut run = Vec::new();
     for c in (0..self.out.creators.len()).rev() {
-      if !run.is_empty() && self.roles[c].iter().any(|r| r == role) {
+      if !run.is_empty() && self.ends_a_run(c, role) {
         break;
       }
       run.push(c);
     }
     run.reverse();
     run
+  }
+
+  /// Whether creator `c` ends the run of a later unlabelled contact of `role` walking back to it: it holds the role,
+  /// or it was made before the last contact of the role that bounds a run (`run_from`) — a block's contact, labelled
+  /// or not, or a call a printed mark labels, which waits for its label and so gives its owner no role yet: `\author{ANN
+  /// ABLE$^1$ \affil{$^1$Univ A} BOB BAKER \affil{Univ B}}` in a class printing `\affil` in place gave Ann Univ B
+  /// too, as IEEEtran's `\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}}\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ
+  /// X}\IEEEauthorblockN{Bob Baker and Cid Cole}\IEEEauthorblockA{Univ Y}` gave her Univ Y (review rev94a r6 B1). A
+  /// call's `label=` sets no bound: authblk's `\author[1]{Ann}\author{Bob}\affil[1]{Univ X}\affil{Univ Y}` prints
+  /// Univ Y under both (2605.25017). With no name made since that contact the bound is none: every author of the run
+  /// is answered, and the contact is the whole run's as today's gives it (authblk's `\author{Ann$^{1}$}\author{Bob$^{2}$}
+  /// \affil{$^1$Univ X}\affil{$^2$Univ Y}\affil{Univ Z}`, ptephy's `\affil{}{Univ Z}`; 77n r5 review probes r01, t02).
+  pub(super) fn ends_a_run(&self, c: usize, role: &str) -> bool {
+    self.roles[c].iter().any(|r| r == role)
+      || self
+        .run_from
+        .get(role)
+        .is_some_and(|from| c < *from && *from < self.out.creators.len())
   }
 
   /// A class's address list (OD #805): each address to the author it spells; else, when the list has one address per

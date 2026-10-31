@@ -290,6 +290,10 @@ struct Resolver {
   sequence_calls:   usize,
   /// the last `annotate=run` contact's role, the creators then, and the run it reached
   last_run:         Option<(String, usize, Vec<usize>)>,
+  /// per role, the creators made when the last contact of it that bounds a run was read — a block's, labelled or not;
+  /// a call's a printed mark labels: the names before it are no run's of a later unlabelled one (`record_run`,
+  /// `new_run`)
+  run_from:         HashMap<String, usize>,
   /// per creator: its contacts in the order they were attached (an affiliation, by its place among the
   /// affiliations; else a contact's), for [`Resolver::distribute_upfront`]
   order:            Vec<Vec<(bool, usize)>>,
@@ -409,6 +413,7 @@ impl Resolver {
       sequenced:        Vec::new(),
       sequence_calls:   0,
       last_run:         None,
+      run_from:         HashMap::default(),
       order:            Vec::new(),
       thenote:          TheNote {
         newaffil: true,
