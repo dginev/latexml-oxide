@@ -974,6 +974,33 @@ impl Walker {
         event.text = arg(4);
         self.event(event, d, nest);
       },
+      // Invisible ink (`\phantom`, `\hphantom`, `\vphantom`, math_common.rs; plain.tex/latex.ltx `\finph@nt`): pdflatex
+      // prints a box of its argument's size and no ink — a space as wide as the argument (a `\vphantom` none), the
+      // notes set inside it still read (2406.07529's `\vphantom{\thanks{Equal contribution.}}`). Its ink was a name:
+      // 0909.3056's and 1507.02405's `{R.~Caimmi}\footnote{…}\phantom{agga}` an author "agga", hep-th9806168's
+      // `J.S. Dowker\thanks{…} \phantom{a}and Klaus Kirsten` one name "aand Klaus Kirsten" (review rev94a r2 B-2).
+      "\\phantom" | "\\vphantom" | "\\lx@text@hphantom" | "\\lx@math@hphantom" => {
+        let width = match w.get_property("width").as_deref() {
+          Some(width) if cs != "\\vphantom" => width_property_em(d, width),
+          _ => None,
+        }
+        .unwrap_or(0.0);
+        let at = self.atoms.len();
+        if let Some(arg) = w.get_arg(1) {
+          self.walk(arg, nest.saturating_add(1));
+        }
+        let inside = self.atoms.split_off(at);
+        if width > 0.0 {
+          self.atoms.push(Atom::Space {
+            width,
+            fill: false,
+            span: box_span(d),
+          });
+        }
+        self.atoms.extend(inside.into_iter().filter(|atom| {
+          matches!(atom, Atom::Event(e) if matches!(e.kind, EventKind::Note | EventKind::Contact))
+        }));
+      },
       _ if w.is_math() || cs.contains("math") && w.get_body().ok().flatten().is_some() => {
         self.walk_math(d, w, nest)
       },

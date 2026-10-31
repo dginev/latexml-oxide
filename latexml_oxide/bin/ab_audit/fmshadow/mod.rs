@@ -179,6 +179,13 @@ fn text_without_marks(node: Node<'_, '_>) -> String {
           FmFormulaMarks::OnBase { base, .. } => out.push_str(&base),
           FmFormulaMarks::Other => walk(child, out),
         }
+      } else if is_ltx(child, "text")
+        && child
+          .attribute("class")
+          .is_some_and(|c| c.split_whitespace().any(|c| c == "ltx_phantom"))
+      {
+        // (invisible ink, `\phantom{agga}`: a space, no words — as the writer reads it, `dom::is_phantom`; 0909.3056)
+        out.push(' ');
       } else if is_ltx(child, "sup") && inside_a_word(child, &sup_letters(child)) {
         // (a lowercase superscript inside a word is the word's letters, no mark: `M\textsuperscript{c}Kernan`)
         out.push_str(&sup_letters(child));

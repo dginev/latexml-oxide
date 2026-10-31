@@ -675,6 +675,23 @@ fn classify_thanks_reads_funding_words_whole() {
     classify_thanks("These authors contributed equally"),
     "contribution"
   );
+  // (an equal share of advising is a phrase, its two words side by side: 2609.32870's "Equal advising." — and not a
+  // thanks to an advisor or a board's name, review rev94a r2 S1)
+  for share in [
+    "Equal advising.",
+    "Equal supervision",
+    "These authors advised equally",
+  ] {
+    assert_eq!(classify_thanks(share), "contribution", "{share}");
+  }
+  assert_eq!(
+    classify_thanks("I thank my advisor for equally generous support."),
+    "funding"
+  );
+  assert_eq!(
+    classify_thanks("Member of the Equal Opportunity Advisory Board."),
+    "note"
+  );
 }
 
 /// 78u: a note written inside a mark is taken out after it, the mark's labels left (2512.05464), and a mark holding

@@ -15,7 +15,7 @@ use super::{
   events::Event,
   ledger::{Entry, Outcome, SkipReason, with_ledger},
   policy::policy_for,
-  resolver::{Assoc, RCreator, Resolved, is_change_rule, ledger_inputs, resolve},
+  resolver::{Assoc, RCreator, Resolved, is_change_rule, ledger_inputs, mark_labels, resolve},
   *,
 };
 
@@ -96,12 +96,59 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
       s!("The frontmatter written from the observer's reading differs from it: {difference}")
     );
   }
+  if difference.is_none() {
+    hide_answered_marks(document, &resolved);
+  }
   let outcome = difference.map_or_else(|| "written".to_string(), |d| s!("written-different: {d}"));
   with_ledger(|ledger| ledger.writer = Some(outcome));
   Ok(())
 }
 
 /// The ink of a rehearsed piece, kept for the writer's checks.
+/// The marks today's name shows as no entry's (`show_unanswered_marks`' `ltx:sup`, marked `_unanswered`) that an item
+/// the writer wrote answers, taken from the name — as today's takes those its own entries answer: the writer's cut gave
+/// the entry its label (2510.24717's `<sup>5</sup>` on the names the block-line cut gave the Beijing Academy of
+/// Artificial Intelligence; `Bob Baker$^2$` over `{\small $~^2$ Univ of Colorado}`, the joined line today's held —
+/// review rev94a r2 S3). Each name read paired with the reading's (`plan::pair_names`), the labels of its items.
+fn hide_answered_marks(document: &mut Document, resolved: &Resolved) {
+  let front = dom::read(document);
+  let Some(pairs) = plan::pair_names(resolved, &front) else {
+    return;
+  };
+  let unify = |m: &str| m.replace('\u{2217}', "*");
+  for (i, j) in pairs {
+    let c = &resolved.creators[i];
+    let answered: Vec<String> = c
+      .affiliations
+      .iter()
+      .chain(&c.contacts)
+      .chain(&c.notes)
+      .filter_map(|a| a.label.as_deref())
+      .flat_map(mark_labels)
+      .filter_map(|label| unanswered_mark_text(&label))
+      .map(|m| unify(&m))
+      .collect();
+    if answered.is_empty() {
+      continue;
+    }
+    for mut sup in document.findnodes(
+      "ltx:personname/ltx:sup[@_unanswered]",
+      Some(&front.creators[j].node),
+    ) {
+      let shown = sup.get_content();
+      let kept: Vec<&str> = shown
+        .split(',')
+        .filter(|m| !answered.contains(&unify(m)))
+        .collect();
+      if kept.is_empty() {
+        document.remove_node(sup);
+      } else if kept.len() < shown.split(',').count() {
+        let _ = sup.set_content(&kept.join(","));
+      }
+    }
+  }
+}
+
 pub(super) fn piece_span(events: &[Event]) -> Option<(usize, usize)> {
   fn walk(events: &[Event], span: &mut Option<(usize, usize)>) {
     for event in events {

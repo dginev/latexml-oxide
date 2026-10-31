@@ -6822,13 +6822,10 @@ Text.
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let found = contacts(&xml);
-  // (Ann's `*`, whose legend line lands among Bob's affiliations, stays shown as printed: 65e `show_unanswered_marks`)
-  assert_element(
-    &xml,
-    "personname",
-    &[],
-    "<personname>Ann Able<sup xml:id=\"id1\">\u{2217}</sup></personname>",
-  );
+  // (Ann's `*`: its legend line is her note since the writer reads it (93a, OD #925), so the mark it answers is no
+  // longer shown — review rev94a r2 S3, `hide_answered_marks`; before, the line landed among Bob's affiliations and the
+  // mark stayed shown as printed, 65e `show_unanswered_marks`)
+  assert_element(&xml, "personname", &[], "<personname>Ann Able</personname>");
   // Ann holds her affiliation and her address alone: each address of the line goes to its author in order
   // (`email_line_calls`), the legend is not folded into Univ B. (Where the legend goes, an unmarked line placed by
   // position, is not pinned: it is not an affiliation.)
@@ -6836,7 +6833,7 @@ Text.
     found[0],
     vec![
       affiliation(" Univ A"),
-      "<contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">a@x.y</text></contact>".to_string()
+      "<contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">a@x.y</text></contact>".to_string()
     ],
     "{xml}"
   );
@@ -6848,8 +6845,8 @@ Text.
     bob,
     vec![
       &affiliation(" Univ B"),
-      // (id4: Ann's legend note, written since 93a, holds id3 — OD #925)
-      &"<contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id4\">b@x.y</text></contact>".to_string()
+      // (id3: Ann's legend note, written since 93a, holds id2 — OD #925; her shown mark, id1 before, taken in 94a r3)
+      &"<contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">b@x.y</text></contact>".to_string()
     ],
     "{xml}"
   );

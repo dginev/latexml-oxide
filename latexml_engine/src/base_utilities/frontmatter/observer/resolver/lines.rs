@@ -651,13 +651,52 @@ pub(super) fn is_name_remark(text: &str) -> bool {
 }
 
 /// Whether a text is the collaboration a name speaks for: "for" or "on behalf of" before a collaboration
-/// ([`is_collaboration`]: `for the Hall A DVCS collaboration`, 1502.03246).
+/// ([`is_collaboration`]: `for the Hall A DVCS collaboration`, 1502.03246; the article left out, `on behalf of ATLAS
+/// Collaboration`).
 pub(super) fn speaks_for(text: &str) -> bool {
   let lower = text.trim().to_lowercase();
   ["for ", "on behalf of "]
     .iter()
     .find_map(|p| lower.strip_prefix(p))
-    .is_some_and(is_collaboration)
+    .is_some_and(|rest| is_collaboration(rest) || is_collaboration(&s!("the {rest}")))
+}
+
+/// The name a piece holds before a remark on it, where one follows it: a bracket (`Bob Baker (MIT)`) or the
+/// collaboration it speaks for ([`speaks_for`]: `Bob Baker for the ATLAS Collaboration`, `… on behalf of the CMS
+/// Team`) — `None` when no remark follows a name. A name with its remark is a name: the classify helpers read the
+/// collaboration's word as an institution's, so `Ann Able and Bob Baker for the ATLAS Collaboration` gave Bob Baker to
+/// Ann Able as her affiliation (review rev94a r2 B-1; 1502.03246's `for the Hall A DVCS collaboration`).
+pub(in crate::base_utilities::frontmatter::observer) fn name_before_remark(
+  text: &str,
+) -> Option<&str> {
+  let t = text.trim();
+  // (ASCII lowercase keeps every byte where it was)
+  let lower = t.to_ascii_lowercase();
+  let bracket = t.find(['(', '[']);
+  let said = [" for ", " on behalf of "]
+    .iter()
+    .flat_map(|p| lower.match_indices(p).map(|(at, _)| at))
+    .filter(|&at| speaks_for(&t[at..]))
+    .min();
+  let at = [bracket, said].into_iter().flatten().min()?;
+  let name = t[..at].trim_end();
+  (!name.is_empty() && reads_as_names(name)).then_some(name)
+}
+
+/// Whether a piece may name a person, so that no item is made of it (review rev94a r2 B-1): it reads as names, or does
+/// once the remark after its name is set aside ([`name_before_remark`]), or its words before its first institution word
+/// are a full name of two words or more (`Bob Baker University` — a person and a place, or one place as `Johns
+/// Hopkins University` is: the page does not say, so today's stays).
+pub(in crate::base_utilities::frontmatter::observer) fn may_name_a_person(text: &str) -> bool {
+  if reads_as_names(text) || name_before_remark(text).is_some() {
+    return true;
+  }
+  let words: Vec<&str> = text.split_whitespace().collect();
+  let Some(first) = words.iter().position(|w| non_name_word(w)) else {
+    return false;
+  };
+  let head = words[..first].join(" ");
+  first >= 2 && name_count(&head) > 0
 }
 
 /// Whether a name is initials alone (`V.G.`, `A. B.`): each word a capital with at most one small letter and a dot.
@@ -952,10 +991,13 @@ impl Resolver {
         },
         // (an institution in a row of names is the affiliation of the name before it: `Chen Jia, SI-TECH Information
         // Technology`, 2406.02959; the classify helpers, `reads_as_affiliation`)
+        // (a name with a remark after it is no institution, whatever word the remark holds: `Ann Able and Bob Baker
+        // for the ATLAS Collaboration`, Bob Baker an author as today's — review rev94a r2 B-1)
         EventKind::Name
           if !made.is_empty()
             && reads_as_affiliation(&text_tokens(&event.text))
-            && !is_collaboration(&event.text) =>
+            && !is_collaboration(&event.text)
+            && name_before_remark(&event.text).is_none() =>
         {
           let c = *made.last().expect("a name");
           institution = Some((c, self.out.creators[c].affiliations.len()));
@@ -973,13 +1015,13 @@ impl Resolver {
           );
           last_sep = None;
         },
-        // (a piece after the word "and" that ends an institution and does not read as names is the institution's:
-        // `Department of Physics and Astronomy` — review rev94a B1; an author after it reads as names, `Univ X and Bob
-        // Baker`)
+        // (a piece after the word "and" that ends an institution and may name no person is the institution's:
+        // `Department of Physics and Astronomy` — review rev94a B1; an author after it may, `Univ X and Bob Baker`, `Univ
+        // X and Bob Baker for the CMS Collaboration`, r2 B-1)
         EventKind::Name
           if institution.is_some()
             && last_sep.is_some_and(|s| matches!(s.kind, EventKind::Sep(SepKind::Word(_))))
-            && !reads_as_names(&event.text) =>
+            && !may_name_a_person(&event.text) =>
         {
           if let Some((c, at)) = institution
             && let Some(affiliation) = self.out.creators[c].affiliations.get_mut(at)
@@ -989,14 +1031,14 @@ impl Resolver {
           }
           last_sep = None;
         },
-        // (a piece after an institution's comma that does not read as names is the institution's address, as today's
+        // (a piece after an institution's comma that may name no person is the institution's address, as today's
         // one affiliation: `Frank Schadt, Pforzheim University of Applied Sciences, Germany`, 1106.0130; `Ilse Fischer,
         // Institut für Mathematik der Universität Klagenfurt, Universitätsstrasse 65-67, A-9020 Klagenfurt, Austria`,
         // math0112263 — the street, the town and the country were authors)
         EventKind::Name
           if institution.is_some()
             && last_sep.is_some_and(|s| s.kind == EventKind::Sep(SepKind::Comma))
-            && !reads_as_names(&event.text) =>
+            && !may_name_a_person(&event.text) =>
         {
           if let Some((c, at)) = institution
             && let Some(affiliation) = self.out.creators[c].affiliations.get_mut(at)

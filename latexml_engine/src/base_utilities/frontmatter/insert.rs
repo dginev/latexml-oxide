@@ -662,6 +662,9 @@ fn show_unanswered_marks(document: &mut Document, answered: &HashSet<String>) ->
       let _ = sup.set_namespace(&namespace);
     }
     sup.append_text(&marks.join(","))?;
+    // (marked as shown for no entry: the observer's writer takes from it the marks an item it writes answers — review
+    // rev94a r2 S3)
+    sup.set_attribute("_unanswered", "true")?;
     personname.add_child(&mut sup)?;
   }
   Ok(())

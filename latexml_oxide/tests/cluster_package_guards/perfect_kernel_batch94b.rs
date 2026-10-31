@@ -64,14 +64,16 @@ fn body_text(xml: &str) -> String {
 #[test]
 fn a_raw_class_in_place_address_is_the_api() {
   let tex = repro!("raw_class_in_place_address_is_the_api.tex");
+  // (the marks the written addresses answer no longer shown on the names, as today's takes those its own entries answer
+  // — review rev94a r2 S3, `hide_answered_marks`; each address keeps the mark it prints)
   let xml: &[&[&str]] = &[
     &[
-      "Ann Able 1",
+      "Ann Able",
       "address=1 Univ A, Town, Country",
       "email=ann@a.edu",
     ],
-    &["Bob Baker 1", "address=1 Univ A, Town, Country"],
-    &["Cy Cole 2", "address=2 Univ B, City, Country"],
+    &["Bob Baker", "address=1 Univ A, Town, Country"],
+    &["Cy Cole", "address=2 Univ B, City, Country"],
   ];
   let reading = assert_reading(tex, Some(xml), &[
     "C Ann Able [1] | line:names",
@@ -104,13 +106,14 @@ fn a_raw_class_in_place_address_is_the_api() {
 #[test]
 fn a_raw_style_buffered_address_is_the_api() {
   let tex = repro!("raw_style_buffered_address_is_the_api.tex");
+  // (the answered marks no longer shown on the names — review rev94a r2 S3)
   let xml: &[&[&str]] = &[
     &[
-      "Ann Able 1,2",
+      "Ann Able",
       "address=1 Univ A, Town",
       "address=2 Univ B, City",
     ],
-    &["Bob Baker 3", "address=3 Lab C, Place"],
+    &["Bob Baker", "address=3 Lab C, Place"],
   ];
   let reading = assert_reading(tex, Some(xml), &[
     "C Ann Able [1,2] | line:names",

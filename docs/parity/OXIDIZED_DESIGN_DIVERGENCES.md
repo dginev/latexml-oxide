@@ -27576,7 +27576,7 @@ parted them otherwise — no creator pairs by name, so no item-wise operation ap
 — today's creators are written again from the reading, every written family alike (kernel, aa, llncs, revtex, ams).
 Each named reading creator is one `ltx:creator` (the attributes and font of today's creator whose name printed it)
 whose `ltx:personname` is the run of today's digested personname its words are (`repart::slice_name`: today's name
-cloned and cut to the run — its fonts, a link, a note set in it such as a `\footnotemark` kept, its ids given back; its
+cloned and cut to the run — its fonts and a note set in it such as a `\footnotemark` kept, its ids given back; its
 marks out; a layout's cells, rows and boxes unwrapped and their geometry dropped; a request no entry answers shown as
 `show_unanswered_marks` shows it, unless a kept note prints it) —, then its affiliations, contacts and notes, one per
 kind and text (the one a ruling decided kept, as `plan::wanted` reads them), placed by the writer's own print-order
@@ -27647,9 +27647,10 @@ article+marks census (1,445 papers; four more merged_creators Errors gone, 1607.
 written-different (measured on the pre-rebase base cc9dd91ed7; on 4529bfc899 the witnesses and the 41 census papers it
 re-parted read the same creators). Both populations were marked author lines only (`author_marks`): the unmarked
 comma-tail shape was not in them, and 94a carved it (`\author{John Smith, New York}` and its amsart, `University of
-…`, `	extbf{…}` twins — batch63's four guards red; the invented author "Astronomy"), which round 2 declines.
-Round 2 (review rev94a; census against the 94b binary on the marked sample 270 + article 1,500 and a seeded 500 of
-article/amsart papers whose `\author` holds commas and no marks, `who_uses.py` + an in-zip filter): none
+…`, `\textbf{…}` twins — batch63's four guards red; the invented author "Astronomy"), which round 2 declines.
+Round 2 (review rev94a; census against the 94b binary — which holds 94a's round 1, so its "unchanged" is against a
+re-parting base; round 3 measures against `93a-rel`, before any 94a — on the marked sample 270 + article 1,500 and a
+seeded 500 of article/amsart papers whose `\author` holds commas and no marks, `who_uses.py` + an in-zip filter): none
 written-different in any; rc/E/F/W unchanged on every changed paper; no word lost but the marks made affiliations no
 longer carry; written 34 → 33 / 123 → 129 / 9 → 7 (1502.03246, 1012.5400, astro-ph0608515 now pair by name: the
 collaboration their name's; 2509.26598, 2510.24717, 2605.27067 written, their joined institute lines cut). Guards
@@ -27660,6 +27661,58 @@ the re-part declines amsart's `Cat Cole, Pforzheim …`), `06::frontmatter_inst_
 `batch61::author_in_tabular_star_opens_no_alignment` (renamed). Residual: the old reader parts `[for the C and D
 groups]` at its "and" (square brackets; parentheses it keeps whole) — the reading does not, so the re-part declines and
 today's split stays.
+Round 3 (review rev94a r2: the re-part declines on any doubt — it never demotes a person's name to an item, never
+invents a creator, never puts a separator word inside a name). A name with a remark after it is a name: the resolver's
+`name_before_remark` (a bracket, or the collaboration it speaks for, `speaks_for` now with or without "the") keeps
+`Ann Able and Bob Baker for the ATLAS Collaboration` two authors — the classify helpers read "Collaboration" as an
+institution's word, so round 2 gave Bob Baker to Ann Able as her affiliation; an institution read in a row of names
+continues over "and" or a comma only into a piece that may name no person (`may_name_a_person`: `University of Toronto
+and Bob Baker for the CMS Collaboration` is Ann Able's institution and an author); the plan's "every name of today's
+that reads as names keeps one" reads a name with its remark set aside, and `whole_creators` makes no item of a creator
+of today's that may name a person — a name with a remark, or a full name of two words or more before an institution
+word (`Bob Baker University`, and so `Johns Hopkins University`, `Max Planck Institute`: the page does not say person or
+place, so today's stays). Invisible ink is no name's: the event lexer reads `\phantom`/`\hphantom`/`\vphantom` as a
+space as wide as its argument (none for `\vphantom`), the notes inside it still read (2406.07529's
+`\vphantom{\thanks{…}}`), and the writer's reading of today's XML (`dom::is_phantom`) and `ab_audit fmshadow` read its
+`ltx_phantom` text as a space — 0909.3056's and 1507.02405's `{R.~Caimmi}\footnote{…}\phantom{agga}` pair with
+today's one creator again (round 2 wrote a second creator of the phantom alone), hep-th9806168's `J.S. Dowker\thanks{…}
+\phantom{a}and Klaus Kirsten\thanks{…}` is written as two creators, each its note (pdflatex "Dowker∗ and Kirsten†";
+round 2's second name was "aand Klaus Kirsten"). Fail-safe: every written name is one name (`not_one_name`): it prints
+a word, and outside its brackets no "and", no `&`, and — unless the reading joined a qualifier or a reversed name into
+it (`Eve Ern — PhD`, `Robert W. Heath, Jr.`) — no comma or lone separator glyph. Siblings on the resolver path, one line
+each, read as names: `Ann Able for the ATLAS Collaboration, Bob Baker for the CMS Collaboration`; `Ann Able and Bob
+Baker on behalf of the ATLAS Collaboration`; `Ann Able, Bob Baker and Cat Cole for the CMS Collaboration`; `… for the
+XYZ Team`, `… on behalf of the ABC Consortium`, `… for the Theory Group`, `… on behalf of ATLAS Collaboration`; `Ann
+Able and Bob Baker (MIT)`; declined by the writer, today's kept: `Ann Able, Bob Baker University`, `Ann Able and Cat Cole
+Institute of Technology`, `John Hopkins, Johns Hopkins University`. A mark today's showed on a name for no entry of its
+own (`show_unanswered_marks`' `ltx:sup`, now marked `_unanswered`) is taken once an item the writer wrote answers it
+(`writer::hide_answered_marks`, each name paired with the reading's, its items' labels): 2510.24717's `5` on the names
+the block-line cut gave the Beijing Academy of Artificial Intelligence, 2308.11662's `2`, 2404.02078's `5 6 7`, a
+legend's `∗` on the starred names whose note it now is (2205.08811, 2606.01230) — the entry keeps the mark it prints.
+`classify_thanks` reads an equal share of advising as a phrase ("equal"/"equally" beside a word of advising,
+supervising or mentoring: 2609.32870's "Equal advising."), not "I thank my advisor for equally generous support"
+(funding) nor the "Equal Opportunity Advisory Board" (a note). A name holding a link is not written: the reading takes
+an `\orcidlink` for the creator's ORCID and an `\href` for a url contact, which the cut name keeps inside it, so the
+re-part is taken back or declines (2502.11619's `\orcidlink`s, its honest merged_creators Error). Recorded, not changed:
+an institution after an institution's comma is an affiliation of its own (`Department of Physics and Astronomy, Univ X`
+two, as `an_institution_continues_over_and` pins). Census against `93a-rel` (93a r1, no 94a), every paper whose
+creators differ read: the marked sample 270 — written 24 → 33, declined 31 → 22, 18 papers changed; article+marks
+1,500 — written 55 → 124, declined 370 → 305, 106 changed; the unmarked 500 — written 0 → 5, declined 64 → 53, 10
+changed; none written-different; Errors 5 fewer (merged_creators gone: 1909.05311, 1607.00911 ×3, 1906.04287,
+2510.12014, 2609.16841) and 2 more, both before this round (`int122z2-rel` the same) and both honest merged_creators of a
+creator today's merged and the re-part declined (2609.25685: an e-mail item today's joins; 2502.11619: the
+`\orcidlink`s); no word lost but separators ("and") and duplicated copies (93a r2's address-by-address e-mail
+placement, 2409.11430, 2410.18711, 2506.19548, 2510.10618) and joined lines cut. Against `int122z2-rel` (round 2,
+without 93a r2) the round changes the shown marks above (41 papers), the three phantom papers, and no creator's name
+or item else (the 5 others are 93a r2's e-mail placement). Scorer (3,000 sample, `run_94a_r3`): unchanged from round 2
+— structurally decided creators 5,732 of 5,838 (98.18 %; `run_93a_w4` 97.53 %), marks path 1,164 of 1,219 (95.49 %;
+92.53 %), `article` 748 of 775 (96.52 %; 92.39 %), readability 24 papers (26) — its tiers identical to round 2's. Guards
+`perfect_kernel_batch94a` (16); updated to the round's output (the answered mark taken): `batch93a::
+marked_lines_joined_today_are_cut_by_the_writer` (Cid Cole's `4`), `batch93a::
+a_legend_line_is_written_as_the_starred_names_note` (`*`), `batch94a::two_marked_groups_on_a_line_are_cut` (`2`),
+`batch94b::a_raw_class_in_place_address_is_the_api` and `a_raw_style_buffered_address_is_the_api` (each address keeps
+its printed mark), `batch77t::symbol_led_line_under_marked_names_is_not_every_names` (`*`; `‡`, answered by no line,
+stays), `batch61::marked_affiliation_wrappers_and_legends` (Ann Able's `∗`, her legend note's).
 
 ### 932. aa's sole `\institute` is every author's unless the class's `\inst{n}` picks it, as llncs's (Perl: inst_support's `affiliation:1`, which no author requests; the first author's by the prefix-stripped fallback)
 

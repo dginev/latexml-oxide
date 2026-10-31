@@ -75,11 +75,12 @@ pub(super) fn owned(rows: &[&[&str]]) -> Vec<Vec<String>> {
 fn marked_lines_joined_today_are_cut_by_the_writer() {
   let tex = repro!("author_block_marked_lines_joined_are_cut.tex");
   // (each entry made from its own ink, its mark out, as today's copies hold none — review rev94a S3; 94a made them
-  // from the mark on, `3 Univ Z`; pdflatex prints "3 Univ Z" under the names, the mark the entry's label)
+  // from the mark on, `3 Univ Z`; pdflatex prints "3 Univ Z" under the names, the mark the entry's label; and Cid Cole's
+  // `4`, which today's showed for no entry of its own, is taken once the cut answers it — review rev94a r2 S3)
   let xml: &[&[&str]] = &[
     &["Ann Able", "affiliation=Univ X", "affiliation=Univ Y"],
     &["Bob Baker", "affiliation=Univ Z"],
-    &["Cid Cole 4", "affiliation=Univ W"],
+    &["Cid Cole", "affiliation=Univ W"],
   ];
   let reading = assert_reading(tex, Some(xml), &[
     "C Ann Able [1,2] | line:names",
@@ -97,9 +98,10 @@ fn marked_lines_joined_today_are_cut_by_the_writer() {
 /// The writer's block-line cut for a legend line (ruling 2, `ruling2:symbol-line`): `\textsuperscript{*}Equal
 /// contribution` under names showing `*` is their legend note (2407.07614); today's old reader made it an affiliation
 /// of each. The writer makes a note of each starred name from the line's tokens, its mark kept in the note's text (the
-/// kernel's author note, `\lx@add@thanks`), and takes the affiliations. (The names' kept `*` is the old reader's split of
-/// the names, untouched by the writer; Univ Y, cut from today's joined line, is made from its own ink, its `2` out — a
-/// made affiliation carries no entry mark, review rev94a S3.)
+/// kernel's author note, `\lx@add@thanks`), and takes the affiliations. (The names' `*`, shown by today's for no entry
+/// of its own, is taken once the note answers it — review rev94a r2 S3, `hide_answered_marks`; the note keeps it in its
+/// text; Univ Y, cut from today's joined line, is made from its own ink, its `2` out — a made affiliation carries no
+/// entry mark, review rev94a S3.)
 #[test]
 fn a_legend_line_is_written_as_the_starred_names_note() {
   let tex = repro!("author_block_legend_line_is_written_as_a_note.tex");
@@ -118,12 +120,12 @@ fn a_legend_line_is_written_as_the_starred_names_note() {
     default_mode_creators(tex),
     owned(&[
       &[
-        "Ann Able *",
+        "Ann Able",
         "affiliation=Univ X",
         "note=* Equal contribution"
       ],
       &[
-        "Bob Baker *",
+        "Bob Baker",
         "affiliation=Univ Y",
         "note=* Equal contribution"
       ],

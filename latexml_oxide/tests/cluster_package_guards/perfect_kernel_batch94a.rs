@@ -349,14 +349,17 @@ fn a_bracket_after_a_mark_is_the_names() {
 /// Two marked institute groups on one line, one contact today, cut at their marks for the names requesting them, each
 /// made from its own ink — no mark in a made affiliation, as today's copies (review rev94a B3, S3): 94a read each line
 /// from its mark, whose formula's `$` the group closing after it left unbalanced, so the cut declined and the joined
-/// contact stayed — Ann Able and Cid Cole held "Univ X 2 Univ Y", Bob Baker nothing (2308.11662).
+/// contact stayed — Ann Able and Cid Cole held "Univ X 2 Univ Y", Bob Baker nothing (2308.11662). The mark `2` the cut
+/// answered is no longer shown on Bob Baker's and Cid Cole's names (`hide_answered_marks`: today's showed it for no
+/// entry of its own, `show_unanswered_marks`; pdflatex prints "Bob Baker2" over "2 Univ Y", the mark the entry's label
+/// — review rev94a r2 S3, as Ann Able's `1` was always taken).
 #[test]
 fn two_marked_groups_on_a_line_are_cut() {
   let tex = repro!("author_names_two_marked_groups_cut.tex");
   let xml: &[&[&str]] = &[
     &["Ann Able", "affiliation=Univ X"],
-    &["Bob Baker 2", "affiliation=Univ Y"],
-    &["Cid Cole 2", "affiliation=Univ X", "affiliation=Univ Y"],
+    &["Bob Baker", "affiliation=Univ Y"],
+    &["Cid Cole", "affiliation=Univ X", "affiliation=Univ Y"],
   ];
   let reading = assert_reading(tex, Some(xml), &[
     "C Ann Able [1] | line:names",
@@ -427,4 +430,85 @@ fn a_repart_that_reads_otherwise_is_taken_back() {
   let xml = default_mode_xml(tex);
   assert_eq!(xml.matches("<creator ").count(), 1, "{xml}");
   assert!(xml.contains("Univ X") && !xml.contains("Univ Q"), "{xml}");
+}
+
+/// A name with the collaboration it speaks for after it is a name (review rev94a r2 B-1, `name_before_remark`): `Ann
+/// Able and Bob Baker for the ATLAS Collaboration` is two authors, as today's — 94a r2 read "Collaboration" as an
+/// institution's word and gave Bob Baker to Ann Able as her affiliation, the re-part made of today's whole creator.
+#[test]
+fn a_name_speaking_for_a_collaboration_is_a_name() {
+  let tex = repro!("author_names_speaks_for_tail_is_a_name.tex");
+  let xml: &[&[&str]] = &[&["Ann Able"], &["Bob Baker for the ATLAS Collaboration"]];
+  let reading = assert_reading(tex, Some(xml), &[
+    "C Ann Able [] | line:names",
+    "C Bob Baker for the ATLAS Collaboration [] | line:names sep:word",
+  ]);
+  assert_eq!(reading.3, Value::from("same"));
+  assert_eq!(default_mode_creators(tex), owned(xml));
+}
+
+/// A full name before an institution word may be a person and a place, or one place (`Bob Baker University`, `Johns
+/// Hopkins University`): the re-part makes no item of a creator of today's that may name a person (review rev94a r2
+/// B-1, `whole_creators`, `may_name_a_person`), so it declines and today's two creators stay — 94a r2 demoted Bob
+/// Baker to Ann Able's affiliation.
+#[test]
+fn a_name_before_an_institution_word_stays_a_creator() {
+  let tex = repro!("author_names_person_before_institution_word_kept.tex");
+  let xml: &[&[&str]] = &[&["Ann Able"], &["Bob Baker University"]];
+  let reading = assert_reading(tex, Some(xml), &[
+    "C Ann Able [] | line:names",
+    "  a Bob Baker University | line:names classify:institution",
+  ]);
+  assert_eq!(reading.3, Value::from("declined: the creators' names"));
+  assert_eq!(default_mode_creators(tex), owned(xml));
+}
+
+/// An institution read in a row of names continues over "and" or a comma only into a piece that may name no person
+/// (review rev94a r2 B-1, `may_name_a_person`): `Ann Able, University of Toronto and Bob Baker for the CMS
+/// Collaboration` gives Ann Able her institution and leaves Bob Baker an author; the re-part writes it from today's
+/// three creators — 94a r2 gave Ann Able both pieces.
+#[test]
+fn an_institution_stops_at_a_person() {
+  let tex = repro!("author_names_institution_stops_at_a_person.tex");
+  let xml: &[&[&str]] = &[&["Ann Able", "affiliation=University of Toronto"], &[
+    "Bob Baker for the CMS Collaboration",
+  ]];
+  let reading = assert_reading(tex, Some(xml), &[
+    "C Ann Able [] | line:names",
+    "  a University of Toronto | line:names classify:institution",
+    "C Bob Baker for the CMS Collaboration [] | line:names sep:word",
+  ]);
+  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(default_mode_creators(tex), owned(xml));
+}
+
+/// Invisible ink is no name's (review rev94a r2 B-2: the `\phantom` arm of the event lexer, `dom::is_phantom`):
+/// `Ann Able\thanks{A} \phantom{a}and Bob Baker\thanks{B}` is two names parted by a space and "and", each its note —
+/// 94a r2 wrote a creator `<phantom>a</phantom>and Bob Baker`, today's one creator of both (hep-th9806168) —; and a
+/// `\phantom{agga}` after a name and its footnote is no author: the reading's one name pairs with today's, whose phantom
+/// reads as a space (0909.3056, 1507.02405 — 94a r2 a second creator of the phantom alone).
+#[test]
+fn phantom_ink_is_no_name() {
+  let tex = repro!("author_names_phantom_is_no_ink.tex");
+  let reading = assert_reading(tex, Some(&[&["Ann Able"], &["Bob Baker"]]), &[
+    "C Ann Able [] | line:names",
+    "  n A | note:adjacent",
+    "C Bob Baker [] | line:names sep:word",
+    "  n B | note:adjacent",
+  ]);
+  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(
+    default_mode_creators(tex),
+    owned(&[&["Ann Able", "note=A"], &["Bob Baker", "note=B"]])
+  );
+  let xml = default_mode_xml(tex);
+  assert!(!xml.contains("ltx_phantom"), "{xml}");
+  let tex = repro!("author_names_phantom_after_a_name_is_no_author.tex");
+  let reading = assert_reading(tex, None, &[
+    "C A. Able [] | line:names",
+    "  n Dept X, Univ Y email: a@b.org fax: 39-0 | note:adjacent",
+  ]);
+  assert_eq!(reading.3, Value::from("same"));
+  let xml = default_mode_xml(tex);
+  assert_eq!(xml.matches("<creator ").count(), 1, "{xml}");
 }

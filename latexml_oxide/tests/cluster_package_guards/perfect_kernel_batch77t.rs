@@ -232,24 +232,26 @@ Text.
   // the block's shared creator, awaiting that ruling; pdflatex prints † on all three names. Each name shows the marks
   // no line answered. Since 93a (OD #925) the `*` line is every name's showing `*`, Ann Able and Cat Cole, as ruling 2
   // reads it — never Bob Baker, who carries none; the old reader left it on the last name; each name's lines in print
-  // order since 92c r2, OD #923: the `*` line's copy had been appended after Ann Able's `†` line)
+  // order since 92c r2, OD #923: the `*` line's copy had been appended after Ann Able's `†` line; the `*` the writer's
+  // line answers is no longer shown on Ann Able's and Cat Cole's names, as today's takes a mark its own entries answer —
+  // review rev94a r2 S3, `hide_answered_marks`; Bob Baker's and Cat Cole's `‡`, which no line answers, stay)
   let program = affiliation("Program in Cognition, Univ A");
   assert_eq!(creators(&xml), [
     creator(
       true,
-      r#"Ann Able<sup xml:id="id1">*</sup>"#,
+      "Ann Able",
       &format!(
         "{} {program}",
-        affiliation(r#"<sup xml:id="id2">*</sup>Department of Computer Science, Univ A"#)
+        affiliation(r#"<sup xml:id="id1">*</sup>Department of Computer Science, Univ A"#)
       )
     ),
-    creator(false, r#"Bob Baker<sup xml:id="id3">‡</sup>"#, &program),
+    creator(false, r#"Bob Baker<sup xml:id="id2">‡</sup>"#, &program),
     creator(
       false,
-      r#"Cat Cole<sup xml:id="id4">*,‡</sup>"#,
+      r#"Cat Cole<sup xml:id="id3">‡</sup>"#,
       &format!(
         "{} {program}",
-        affiliation(r#"<sup xml:id="id5">*</sup>Department of Computer Science, Univ A"#)
+        affiliation(r#"<sup xml:id="id4">*</sup>Department of Computer Science, Univ A"#)
       )
     ),
   ]);

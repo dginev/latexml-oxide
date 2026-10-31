@@ -130,7 +130,8 @@ pub(super) enum Seg {
   Hidden(Node),
   /// a note set in the text: no text, but its own
   Note(Node),
-  /// the edge of a layout's part, or a line break (`Some`): a space between the words on its sides
+  /// the edge of a layout's part, or a line break or invisible ink (`Some`, [`is_phantom`]): a space between the words
+  /// on its sides
   Space(Option<Node>),
 }
 
@@ -183,7 +184,7 @@ pub(super) fn segments(node: &Node, parted: bool) -> Vec<Seg> {
             out.push(Seg::Note(child));
           } else if is(&child, "ltx:tags") {
             out.push(Seg::Hidden(child));
-          } else if is(&child, "ltx:break") {
+          } else if is(&child, "ltx:break") || is_phantom(&child) {
             out.push(Seg::Space(Some(child)));
           } else {
             let part = parted && LAYOUT_PARTS.iter().any(|q| is(&child, q));
@@ -203,6 +204,16 @@ pub(super) fn segments(node: &Node, parted: bool) -> Vec<Seg> {
   let mut out = Vec::new();
   walk(node, &mut out, parted);
   out
+}
+
+/// Whether `node` is invisible ink, `\phantom`, `\hphantom`, `\vphantom` in text (`<ltx:text class="ltx_phantom">`):
+/// pdflatex prints a box of its argument's size and no ink, a space between the words beside it — no name's words
+/// (review rev94a r2 B-2: 0909.3056's `\phantom{agga}` after the name read as an author; `field_ink::in_phantom`).
+pub(super) fn is_phantom(node: &Node) -> bool {
+  is(node, "ltx:text")
+    && node
+      .get_attribute("class")
+      .is_some_and(|c| c.split_whitespace().any(|c| c == "ltx_phantom"))
 }
 
 /// The text of [`segments`], as printed.

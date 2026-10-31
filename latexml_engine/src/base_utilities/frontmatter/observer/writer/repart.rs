@@ -2,7 +2,9 @@
 //! reading parts the names and today's (the old reader's) parted them otherwise, so that no creator pairs by name and
 //! no item-wise operation ([`super::plan`]) applies, today's creators are written again from the reading — each named
 //! reading creator one `ltx:creator` whose `ltx:personname` is the run of today's digested personname its words are
-//! ([`slice_name`]: its fonts, links and notes kept, its marks out), then its affiliations, contacts and notes in print
+//! ([`slice_name`]: its fonts and notes kept, its marks out; a name holding a link is not written — the reading takes an
+//! `\orcidlink` for the creator's ORCID and an `\href` for a url contact, which the cut name keeps inside it, so the
+//! fail-safe takes it back or the plan declines, review rev94a r2 S2), then its affiliations, contacts and notes in print
 //! order, and the author block's own on a nameless creator after them. An item is today's own, copied, where today's
 //! holds one of its kind and text anywhere among the creators; else, an affiliation or a line the reading takes for a
 //! legend (never a `\thanks` or `\footnote` of a name) made from the tokens of its entry, in today's name's font, an
@@ -10,28 +12,32 @@
 //!
 //! Only where the reading refines today's names, across a boundary the digested structure shows (the plan declines
 //! otherwise): every reading name is printed inside one of today's names — none is made of an item of today's, a url
-//! column, an institution row —; every name of today's that reads as names keeps one; an item the reading gives more
-//! authors than today's held it is a ruling's change; an institution the classify helpers read is made only of whole
-//! creators of today's, never carved from one name ([`whole_creators`]); no name or made item leaves a bracket open.
-//! Fail-safe, on the digested text: the new creators are built beside today's, and kept only when they read as the
-//! reading ([`super::plan::difference`] finds nothing), hold every word today's creators held, none duplicated — names
-//! and distinct items word for word, the only words left out or added the separators the blocks printed between names
-//! ("and", `SepKind::Word`) —, no made affiliation prints a mark ([`holds_mark`]) and no author keeping today's name
-//! loses the lead of an item the reading cut ([`dispossessed`]); anything else removes them and leaves today's
-//! (1909.05311, 2609.32870, 2609.33104, 2307.03384, 2308.10621, hep-lat0209026; declined: 1304.1574, 0811.3142's
-//! bracket in 94a; review rev94a).
+//! column, an institution row —; every name of today's that reads as names, or does once the remark after it is set
+//! aside, keeps one; an item the reading gives more authors than today's held it is a ruling's change; an institution
+//! the classify helpers read is made only of whole creators of today's none of which may name a person, never carved
+//! from one name ([`whole_creators`]: not `Bob Baker for the ATLAS Collaboration`, nor `Bob Baker University`); no name
+//! or made item leaves a bracket open. Fail-safe, on the digested text: the new creators are built beside today's, and
+//! kept only when they read as the reading ([`super::plan::difference`] finds nothing), every written name is one name
+//! — it prints a word, and no separator outside its brackets ([`not_one_name`]: no author of invisible ink, no two
+//! joined) —, they hold every word today's creators held, none duplicated — names and distinct items word for word, the
+//! only words left out or added the separators the blocks printed between names ("and", `SepKind::Word`) —, no made
+//! affiliation prints a mark ([`holds_mark`]) and no author keeping today's name loses the lead of an item the reading
+//! cut ([`dispossessed`]); anything else removes them and leaves today's (1909.05311, 2609.32870, 2609.33104,
+//! 2307.03384, 2308.10621, hep-lat0209026, hep-th9806168; declined: 1304.1574, 0811.3142's bracket in 94a; review
+//! rev94a, its r2 B-1 and B-2). On any doubt today's stays.
 
 use std::collections::BTreeMap;
 
 use super::{
   super::{
-    events::{EventKind, SepKind},
+    events::{EventKind, SepKind, is_separator_word},
     ledger::{Entry, Outcome},
-    resolver::{mark_labels, reads_as_names},
+    resolver::{mark_labels, may_name_a_person, name_before_remark, reads_as_names},
   },
   apply::{elements, make, place, reclaim_ids, subtree_ids},
   dom::{
-    Creator, Front, Kind, LAYOUT_PARTS, Seg, is, norm, read_creator, segments, words_without_marks,
+    Creator, Front, Kind, LAYOUT_PARTS, Seg, is, norm, read_creator, segments, text_without_marks,
+    words_without_marks,
   },
   plan::{
     Key, Made, Owner, Place, api_call, block_items, block_span_tokens, creator_items, difference,
@@ -57,14 +63,17 @@ enum Item {
 #[derive(Debug, Clone)]
 struct NewCreator {
   /// its index among the resolved creators (its owner in the reading's print order)
-  index: usize,
-  name:  String,
+  index:     usize,
+  name:      String,
   /// today's creator its name was printed in, and the run of that name's words it is (`personname_words`)
-  from:  (usize, (usize, usize)),
+  from:      (usize, (usize, usize)),
   /// the marks it requests that no entry answers, shown in its name as today's shows them (`show_unanswered_marks`)
-  marks: Vec<String>,
-  attrs: TagAttrs,
-  items: Vec<Item>,
+  marks:     Vec<String>,
+  /// the reading joined a qualifier into the name (`Robert W. Heath, Jr.`, `Eve Ern | PhD`) or wrote it surname first
+  /// (`Della Valle, M.`): the comma or the separator glyph before it is the name's
+  qualified: bool,
+  attrs:     TagAttrs,
+  items:     Vec<Item>,
 }
 
 /// The re-part of a paper's creators: the reading's creators and the author block's own items.
@@ -260,6 +269,7 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
     .iter()
     .map(|t| (personname_words(&t.node), 0))
     .collect();
+  let todays_texts: Vec<&str> = front.creators.iter().map(|t| t.name.as_str()).collect();
   let mut kept = vec![false; front.creators.len()];
   let mut parted: Vec<(usize, &RCreator)> = Vec::new();
   let mut runs: BTreeMap<usize, (usize, (usize, usize))> = BTreeMap::new();
@@ -305,11 +315,12 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
   }) {
     return declined(&s!("a one-word name parted at a comma: {}", c.name));
   }
-  if let Some(lost) = front
-    .creators
-    .iter()
-    .zip(&kept)
-    .find(|(t, kept)| !**kept && reads_as_names(&t.name))
+  // (a name with a remark after it is a name too: `Bob Baker for the ATLAS Collaboration`, `Bob Baker (MIT)` — review
+  // rev94a r2 B-1)
+  if let Some(lost) =
+    front.creators.iter().zip(&kept).find(|(t, kept)| {
+      !**kept && (reads_as_names(&t.name) || name_before_remark(&t.name).is_some())
+    })
   {
     return declined(&s!(
       "a name of today's the reading makes none: {}",
@@ -348,12 +359,12 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
         }
         // (an institution the classify helpers read from the words of a name is no boundary the page shows: amsart's
         // `\author{John Smith, University of Toronto}` is one creator as written, as Perl's; only an item today's held
-        // as whole creators of its own is made — review rev94a B1)
+        // as whole creators of its own, none of which may name a person, is made — review rev94a B1, r2 B-1)
         if assoc
           .rule
           .split_whitespace()
           .any(|t| t == "classify:institution")
-          && !whole_creators(&words(&assoc.text), &todays_names)
+          && !whole_creators(&words(&assoc.text), &todays_names, &todays_texts)
         {
           return declined(&s!("an institution read inside a name: {}", assoc.text));
         }
@@ -384,11 +395,16 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
     let Some(&from) = runs.get(&index) else {
       return declined(&s!("a name with no run: {name}"));
     };
+    let qualified = c
+      .rule
+      .split_whitespace()
+      .any(|t| t == "name:qualifier" || t == "name:reversed");
     creators.push(NewCreator {
       index,
       name,
       from,
       marks,
+      qualified,
       attrs,
       items,
     });
@@ -409,6 +425,31 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
   Some(Repart { creators, block, separators })
 }
 
+/// Whether a written name is no one name: it prints nothing, or, outside its brackets, a separator the blocks part
+/// names at — the word "and", an `&`, and, unless the reading joined a qualifier or a reversed name into it
+/// (`qualified`: `Robert W. Heath, Jr.`, `Eve Ern — PhD`), a comma or a separator glyph standing alone
+/// ([`is_separator_word`]). The re-part invents no author of invisible ink and joins no two (review rev94a r2 B-2:
+/// 0909.3056's and 1507.02405's `\phantom{agga}` an author, hep-th9806168's `\phantom{a}and Klaus Kirsten` one).
+fn not_one_name(text: &str, qualified: bool) -> bool {
+  let mut depth = 0i32;
+  let mut outside = String::new();
+  for c in text.chars() {
+    match c {
+      '(' | '[' => depth += 1,
+      ')' | ']' => depth -= 1,
+      _ if depth <= 0 => outside.push(c),
+      _ => {},
+    }
+  }
+  words(text).is_empty()
+    || outside.contains('&')
+    || (!qualified && outside.contains(','))
+    || outside.split_whitespace().any(|w| {
+      let w = w.trim_matches(|c: char| ",.;".contains(c));
+      w.eq_ignore_ascii_case("and") || (!qualified && is_separator_word(w))
+    })
+}
+
 /// Whether a text's brackets close: as many `(` as `)` and `[` as `]`, none closed before it opened.
 fn balanced(text: &str) -> bool {
   let (mut round, mut square) = (0i32, 0i32);
@@ -427,17 +468,21 @@ fn balanced(text: &str) -> bool {
   round == 0 && square == 0
 }
 
-/// Whether `item`'s words are the words of whole consecutive creators of today's (`names`, their personnames' words),
-/// the word "and" aside: a non-name creator today's printed apart (`John Smith` and `University of Toronto`), not words
-/// a name of today's held.
-fn whole_creators(item: &[String], names: &[(Vec<String>, usize)]) -> bool {
+/// Whether `item`'s words are the words of whole consecutive creators of today's (`names`, their personnames' words;
+/// `texts`, their names), the word "and" aside, none of which may name a person ([`may_name_a_person`]): a non-name
+/// creator today's printed apart (`John Smith` and `University of Toronto`), not words a name of today's held, nor a
+/// creator that is a name with a remark (`Bob Baker for the ATLAS Collaboration`) or a full name before an institution
+/// word (`Bob Baker University`) — review rev94a r2 B-1.
+fn whole_creators(item: &[String], names: &[(Vec<String>, usize)], texts: &[&str]) -> bool {
   let item: Vec<&String> = item.iter().filter(|w| *w != "and").collect();
   (0..names.len()).any(|from| {
     let mut joined: Vec<&String> = Vec::new();
-    for (name, _) in &names[from..] {
+    for (at, (name, _)) in names.iter().enumerate().skip(from) {
       joined.extend(name.iter().filter(|w| *w != "and"));
       if joined == item {
-        return true;
+        return !texts
+          .get(from..=at)
+          .is_some_and(|texts| texts.iter().any(|t| may_name_a_person(t)));
       }
       if !item.starts_with(&joined) {
         return false;
@@ -579,7 +624,7 @@ fn word_spans(text: &[char]) -> Vec<(usize, usize)> {
 }
 
 /// `into` (a new, empty `ltx:personname`) made the run `run` of the words of today's personname `from`, as its digested
-/// content printed it — its fonts, a link, a note set in the name kept (review rev94a S1, S2: a re-parted name set as
+/// content printed it — its fonts and a note set in the name kept (review rev94a S1, S2: a re-parted name set as
 /// a string took the end of the document's font, `fontsize="90%"` after a `\small` there, 1607.00911; and lost
 /// 1909.05311's `\footnotemark[1]`) — its marks out (as the reading has them), a layout's parts unwrapped (a name in a
 /// cell of a tabular, 2609.32870), the name's own leading and trailing punctuation (`Jr.`, a closing bracket) kept.
@@ -951,6 +996,16 @@ pub(super) fn apply(
         Vec::new()
       },
     };
+    // (one name each, printed: never a name of none, nor one holding a separator the blocks part names at — review
+    // rev94a r2 B-2)
+    if not_one_name(&text_without_marks(&personname), creator.qualified) {
+      DebugFeature!(
+        "frontmatter",
+        "FRONT writer: re-part wrote no one name: {}",
+        text_without_marks(&personname)
+      );
+      complete = false;
+    }
     // (a mark the name's own note prints is shown by it: `Daya Guo\footnotemark[1]`'s `*`, 1909.05311)
     let asterisk = |m: &str| m.replace('\u{2217}', "*");
     let shown: Vec<String> = in_name
@@ -1125,22 +1180,41 @@ mod tests {
   /// An item made of whole creators of today's, the word "and" aside — not of the words of one name (review rev94a B1).
   #[test]
   fn an_institution_is_made_of_whole_creators() {
-    let names: Vec<(Vec<String>, usize)> =
-      ["Ann Able", "Department of Physics", "Astronomy", "Univ X"]
-        .iter()
-        .map(|n| (words(n), 0))
-        .collect();
+    let texts = ["Ann Able", "Department of Physics", "Astronomy", "Univ X"];
+    let names: Vec<(Vec<String>, usize)> = texts.iter().map(|n| (words(n), 0)).collect();
     assert!(whole_creators(
       &words("Department of Physics and Astronomy, Univ X"),
-      &names
+      &names,
+      &texts
     ));
-    assert!(whole_creators(&words("Univ X"), &names));
-    assert!(!whole_creators(&words("Physics and Astronomy"), &names));
-    let one = vec![(words("Ann Able, Department of Physics and Astronomy"), 0)];
+    assert!(whole_creators(&words("Univ X"), &names, &texts));
+    assert!(!whole_creators(
+      &words("Physics and Astronomy"),
+      &names,
+      &texts
+    ));
+    let text = ["Ann Able, Department of Physics and Astronomy"];
+    let one = vec![(words(text[0]), 0)];
     assert!(!whole_creators(
       &words("Department of Physics and Astronomy"),
-      &one
+      &one,
+      &text
     ));
+    // (no creator of today's that may name a person: a name with a remark, a full name before an institution word —
+    // review rev94a r2 B-1)
+    for person in [
+      "Bob Baker for the ATLAS Collaboration",
+      "Bob Baker on behalf of the CMS Team",
+      "Bob Baker (MIT)",
+      "Bob Baker University",
+    ] {
+      let texts = ["Ann Able", person];
+      let names: Vec<(Vec<String>, usize)> = texts.iter().map(|n| (words(n), 0)).collect();
+      assert!(!whole_creators(&words(person), &names, &texts), "{person}");
+    }
+    let texts = ["Ann Able", "Harvard University"];
+    let names: Vec<(Vec<String>, usize)> = texts.iter().map(|n| (words(n), 0)).collect();
+    assert!(whole_creators(&words("Harvard University"), &names, &texts));
   }
 
   /// A text's brackets close, in order (review rev94a B2).
@@ -1153,6 +1227,26 @@ mod tests {
     assert!(!balanced("ZEUS collaborations)"));
     assert!(!balanced("a) b ("));
     assert!(balanced("[for the C and D groups]"));
+  }
+
+  /// A written name is one name: printed, no separator outside its brackets (review rev94a r2 B-2).
+  #[test]
+  fn a_written_name_is_one_name() {
+    assert!(!not_one_name("Klaus Kirsten", false));
+    assert!(!not_one_name(
+      "Ann Able (on behalf of the A and B teams)",
+      false
+    ));
+    assert!(!not_one_name("Robert W. Heath, Jr.", true));
+    assert!(!not_one_name("Eve Ern — PhD", true));
+    assert!(not_one_name("Eve Ern — Fay Fox", false));
+    assert!(not_one_name("Ann Able and Bob Baker, Jr.", true));
+    assert!(not_one_name("", false));
+    assert!(not_one_name(" ", false));
+    assert!(not_one_name("and Klaus Kirsten", false));
+    assert!(not_one_name("Ann Able & Bob Baker", false));
+    assert!(not_one_name("Ann Able, Bob Baker", false));
+    assert!(not_one_name("Ulderico Dardano - Silvana Rinauro", false));
   }
 
   #[test]

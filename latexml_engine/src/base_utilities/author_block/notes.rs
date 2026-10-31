@@ -16,13 +16,11 @@ pub(in crate::base_utilities) fn classify_thanks(text: &str) -> &'static str {
   let t = text.to_lowercase();
   if t.contains("correspond") {
     "correspondence"
-  // (an equal share of the work, contributed or advised: "Equal advising.", "equal supervision" — 2609.32870's legend
-  // line, a note as "Equal contribution" is, review rev94a S4)
-  } else if t.contains("equal")
-    && ["contribut", "advis", "supervis", "mentor"]
-      .iter()
-      .any(|w| t.contains(w))
-  {
+  // (an equal share of the work, contributed or advised: "Equal advising.", "equal supervision", "advised equally" —
+  // 2609.32870's legend line, a note as "Equal contribution" is, review rev94a S4; the share a phrase, the two words
+  // side by side: not "I thank my advisor for equally generous support", nor the "Equal Opportunity Advisory Board",
+  // review rev94a r2 S1)
+  } else if (t.contains("equal") && t.contains("contribut")) || equal_share(&t) {
     "contribution"
   } else if t.contains("now at") || t.contains("present address") || t.contains("current address") {
     "address"
@@ -31,6 +29,24 @@ pub(in crate::base_utilities) fn classify_thanks(text: &str) -> &'static str {
   } else {
     "note"
   }
+}
+
+/// Whether a lowercased note says an equal share of advising: "equal" or "equally" next to a word of advising,
+/// supervising or mentoring, either side ("equal advising", "supervised equally") — [`classify_thanks`].
+fn equal_share(text: &str) -> bool {
+  let words: Vec<&str> = text
+    .split(|c: char| !c.is_alphanumeric())
+    .filter(|w| !w.is_empty())
+    .collect();
+  let equal = |w: &str| w == "equal" || w == "equally";
+  let shared = |w: &str| {
+    ["advis", "supervis", "mentor"]
+      .iter()
+      .any(|p| w.starts_with(p))
+  };
+  words
+    .windows(2)
+    .any(|pair| (equal(pair[0]) && shared(pair[1])) || (shared(pair[0]) && equal(pair[1])))
 }
 
 /// Whether a lowercased word of a note names funding ([`classify_thanks`]): "support" and its forms ("supported",
