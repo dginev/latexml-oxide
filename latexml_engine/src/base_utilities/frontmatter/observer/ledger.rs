@@ -14,6 +14,7 @@ use latexml_core::{
 
 use super::{
   events::{EmailMeaning, Event, lex_events},
+  shadow::{FmShadow, fm_shadow_mode},
   *,
 };
 
@@ -120,9 +121,11 @@ pub(in crate::base_utilities) struct AuthorBlock {
   /// the frontmatter flushes (`digest_front_matter`) before the call: the queue the position is in (each flush
   /// empties it)
   pub epoch:          usize,
-  /// the frontmatter queue's length at the call, and the authors queued then
+  /// the frontmatter queue's length at the call, and the authors queued then — counted under the census only
+  /// (`FmShadow::On`), the dump ([`fm_shadow_json`](super::fm_shadow_json)) its only reader: a count of the queue per
+  /// author call is quadratic in the authors
   pub queue_position: usize,
-  pub authors_queued: usize,
+  pub authors_queued: Option<usize>,
   /// how the tokens got their positions, and the positions `start..end`
   pub stamp:          Stamp,
   pub range:          (usize, usize),
@@ -484,7 +487,7 @@ pub(in crate::base_utilities) fn record_author_call(
     keyvals: keyvals.map(|kv| kv.to_string()),
     epoch: 0,
     queue_position: queue_length(),
-    authors_queued: queued_author_count(),
+    authors_queued: (fm_shadow_mode() == FmShadow::On).then(queued_author_count),
     stamp: Stamp::Projected,
     range: (0, 0),
     tokens: stuff.clone(),

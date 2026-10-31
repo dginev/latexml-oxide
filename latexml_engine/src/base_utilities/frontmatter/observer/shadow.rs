@@ -438,7 +438,11 @@ pub fn fm_shadow_json() -> String {
           let _ = write!(
             out,
             ",\"epoch\":{},\"queue_position\":{},\"authors_queued\":{},\"stamp\":",
-            block.epoch, block.queue_position, block.authors_queued
+            block.epoch,
+            block.queue_position,
+            block
+              .authors_queued
+              .map_or_else(|| "null".to_string(), |n| n.to_string())
           );
           json_str(&mut out, block.stamp.name());
           out.push_str(",\"range\":");
