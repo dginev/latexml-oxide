@@ -271,23 +271,37 @@ The frontmatter costs 0.68–1.05 % of a median conversion and 0.5–0.9 % of fl
 **The observer writes nothing on 17 of the 18 measured papers.** Its cost is the ceiling for coordinating its phases:
 16.0 % at 975 creators, ≈0.05 % fleet-wide.
 
-### P10 — XPath compiled-expression cache (engine-wide)
+### P10 — XPath compiled-expression cache (engine-wide) — PILOT MEASURED, waits on a rust-libxml release
 
 `XPath::findnodes` (`latexml_core/src/common/xml.rs:215`) reaches rust-libxml's `node_evaluate` → `xmlXPathNodeEval`,
-which compiles the expression on every call. A document makes 15k–32k calls but uses only 57–63 distinct expressions.
-Cached compilation, measured by an `LD_PRELOAD` shim on 18 documents, saves 0.48–1.17 % of instructions (mean 0.79 %),
-with identical XML. Re-measured on 1004.1370: 6.551 → 6.486 G (−0.98 %).
+which compiles the expression on every call: a document makes 15k–32k calls of only 57–63 distinct expressions. The
+cache cannot live in latexml-oxide alone (rust-libxml keeps `Node::wrap` and `Object`'s document private), so the
+pilot adds `xpath::Expression` + `Context::*_compiled` evaluators to rust-libxml (local branch `perf-xpath-compiled`,
+`cf127c30`, on upstream main `c8a993a5`; tests + a counting leak test green) and, on branch `pk/96x` (`cea2797006`,
+`[patch.crates-io]` path, not mergeable until released), a table of compiled expressions in core `XPath` and in
+`PostDocument` (cap 1,024; a non-compiling expression keeps its string evaluation and its diagnostic).
+**Measured** (perf stat instructions:u vs `latexml_oxide.95c-rel`, 18 audit docs): **−0.86 % mean (−0.51 … −1.32 %),
+XML byte-identical on all 18** (an `LD_PRELOAD` shim of the same cache: −0.79 %). On 1601.01776: 18,211 compiled
+evaluations, 0 string evaluations, 61 context creations.
+Measured and NOT taken: post's per-call `XPathContext` (61 per document — no lever); `get_nodes_as_vec` upgrading the
+document once per result set (+0.005 %, noise).
+Landing: publish rust-libxml with `Expression`, drop the `[patch]`, require that version, full gates + byte-cmp A/B.
 
-The cache cannot live in latexml-oxide alone. rust-libxml keeps `Node::wrap` crate-private and `Object`'s document field
-private, so a compiled expression's result cannot be turned back into `Node`s from outside the crate. The lever is a
-rust-libxml change: a cache inside `Context` (the API unchanged), or a public compiled-expression type.
+### P11 — `_font` attribute traffic (engine-wide; sized, perf453c)
 
-### P11 — `_font` attribute traffic (engine-wide; sizing in progress)
-
-There are 254k–651k get/set calls of the private `_font` attribute per document, costing 95–290 M instructions inside
-libxml2 alone (1.1–2.3 %). The Rust-side wrapper cost is still unmeasured. A typed per-node store behind the
-Perl-shaped font methods (Perl `Document.pm` `setNodeFont`/`getNodeFont`) must preserve every reader of `_font`:
-XPath, XSLT, clones and the strip at finalization.
+All traffic of the private `_font` attribute costs **3.17 % of instructions pooled** over 16 docs (1.09 % on
+1910.01256 … 7.17 % on 2005.08745; 3.78 M calls): libxml2 `xmlGet/Has/SetProp` 1.23 % exact, rust-libxml's
+CString/String/xmlFree wrapper 0.87, the font-id parse 0.50 and format 0.17, `Font::to_hashable` on every set 0.39,
+the rest ≤0.12 each. Hot callers: `get_node_font` from `open_text` (`document.rs:3152`, `:3169`) 1.94 %,
+`set_node_font` from `open_element_at_with_box` (`:6609`) 0.62 %. Options, cleanest first:
+1. keep the attribute, make the READ cheap behind `get_node_font`/`has_node_font`/`get_node_language`
+   (borrowed value, parse from bytes, no CString/String/xmlFree) — needs a small rust-libxml read API; ≈1.2 %;
+2. the font id in libxml2's `xmlNode._private` (unused by rust-libxml) behind the Perl-shaped methods, with an explicit
+   font copy at the 12 raw attribute-copy sites and at the streaming spill — ≈2.5 %, output at risk at any missed site;
+3. a pointer-keyed side map — rejected (stale entries on node free/reuse, the `node_boxes` history).
+Sibling: `_autoopened` (2.93 M calls, 0.79 % with the wrapper); `document.rs:3511`, `:3555` allocate a String
+(`get_attribute(..).is_some()`) only to test presence. Dead code: `font_match_xpaths` (`common/font.rs:2335-2356`);
+stale comment `document.rs:1812-1813`.
 
 ### P8 — Lower-frequency global scans and lookup allocation
 
