@@ -604,7 +604,7 @@ enum Atom {
   Ink {
     text: String,
     span: Option<(u16, u16)>,
-    font: Option<String>,
+    font: Option<FontKey>,
     nest: u8,
   },
   Space {
@@ -618,18 +618,28 @@ enum Atom {
 /// The command a whatsit was made by.
 fn whatsit_cs(w: &Whatsit) -> String { w.get_definition().get_cs_name().into_owned() }
 
-/// The font of a text box, as a key telling fonts apart (its family, series, shape and size).
-fn font_key(d: &Digested) -> Option<String> {
-  d.get_font().ok().flatten().map(|font| {
-    format!(
-      "{:?}/{:?}/{:?}/{:?}",
-      font.get_family(),
-      font.get_series(),
-      font.get_shape(),
-      font.get_size()
-    )
-  })
+/// The font of a text box, as a key telling fonts apart: two keys are equal when the fonts' family, series, shape and
+/// size are (a size by its value: every NaN alike, `-0.0` not `0.0`), whatever else they carry. The box's own font,
+/// shared (no copy, no text made per box).
+#[derive(Debug, Clone)]
+pub(super) struct FontKey(Rc<Font>);
+
+impl PartialEq for FontKey {
+  fn eq(&self, other: &Self) -> bool {
+    let (a, b) = (&*self.0, &*other.0);
+    Rc::ptr_eq(&self.0, &other.0)
+      || (a.get_family() == b.get_family()
+        && a.get_series() == b.get_series()
+        && a.get_shape() == b.get_shape()
+        && match (a.get_size(), b.get_size()) {
+          (Some(x), Some(y)) => x.to_bits() == y.to_bits() || (x.is_nan() && y.is_nan()),
+          (x, y) => x.is_none() && y.is_none(),
+        })
+  }
 }
+
+/// The font of a text box, as a key telling fonts apart ([`FontKey`]).
+fn font_key(d: &Digested) -> Option<FontKey> { d.get_font().ok().flatten().map(FontKey) }
 
 /// Walk `d` in print order, collecting atoms.
 #[derive(Default)]

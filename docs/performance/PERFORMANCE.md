@@ -323,6 +323,21 @@ stale comment `document.rs:1812-1813`.
 
 ## Audit log (periodic passes; newest first)
 
+### 2026-10-31 — frontmatter overhead levers (batch 96p)
+
+Basis: the read-only perf audit perf453 (2026-10-31: frontmatter 0.68–1.05 % of a median conversion, 3.5–15.6 % on
+many-author papers, every stage linear or better up to 592 creators) and its 15 documents — many-author 2005.08745,
+2402.17260, 1707.07081, 2409.19633, 2407.00879, hep-ex0508047, 2201.11593, 1205.2739, 2603.24341, 2006.14918; median
+2005.03240, 2504.05250, 1601.01776, 1004.1370, 1812.02463. Measured with `perf stat -e instructions:u` (call graphs do
+not work on this host: Zen 5 has no LBR and the binary no frame pointers), release, `--preload=ar5iv.sty --nocomments`,
+median of 3 interleaved runs per document on its own core; each lever against the build before it (one lever per run).
+Noise floor (base against an identical build): ±0.1 % per document. Every lever leaves the output byte-identical: the
+15 documents eager and `--streaming`, and the 3,000-paper frontmatter sample (`fm_scorer/sample.txt`).
+
+| Lever | Removed | many-author: mean / max gain | median: mean / max | audit upper bound |
+|---|---|---|---|---|
+| L1 typed font key (`observer/events/mod.rs` `FontKey`) | a `format!("{:?}/{:?}/{:?}/{:?}")` String per text box the event lexer walks, and its clones per name run: the key is the box's `Rc<Font>`, compared by family, series, shape and size | 0.57 % / 1.76 % (1707.07081) | 0.01 % / 0.03 % (noise) | 0.19 % / 0.90 % (`font_key`'s own frames; the key's clones and comparisons in the lexer were outside it) |
+
 ### 2026-10-16 — pre-rerun tactical pass + memory-fuse audit (batch 68p)
 
 The memory-fuse change the audit proposed (address space against `RLIMIT_AS`) is PARKED, a settled

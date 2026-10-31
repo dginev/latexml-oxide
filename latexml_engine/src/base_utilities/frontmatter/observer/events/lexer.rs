@@ -11,7 +11,7 @@ pub(super) struct Lexer {
   pub(super) events: Vec<Event>,
   /// the name run being read: its characters with their spans, its font, its nest
   run:               Vec<(char, Option<(u16, u16)>)>,
-  run_font:          Option<String>,
+  run_font:          Option<FontKey>,
   run_nest:          u8,
   /// the spacing run since the last ink: items, width, fill, span
   gap_items:         usize,
@@ -21,7 +21,7 @@ pub(super) struct Lexer {
   /// the line has shown ink (a name, a mark, a contact) since its last break
   line_inked:        bool,
   /// the font of the last name run
-  last_font:         Option<String>,
+  last_font:         Option<FontKey>,
   /// the symbol mark being read (consecutive footnote-symbol characters and mark glyphs)
   symbol:            String,
   symbol_span:       Option<(u16, u16)>,
@@ -183,7 +183,7 @@ impl Lexer {
     &mut self,
     text: &str,
     span: Option<(u16, u16)>,
-    font: Option<String>,
+    font: Option<FontKey>,
     nest: u8,
   ) {
     for c in text.chars() {
