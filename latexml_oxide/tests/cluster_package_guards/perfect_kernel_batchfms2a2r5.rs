@@ -235,13 +235,14 @@ Text.
 /// \Mark{1}College … \IEEEcompsocthanksitem \Mark{2}College …}` was given whole to the authors of mark 1, 1802.03043).
 #[test]
 fn a_note_of_several_legends_is_no_one_labels() {
-  super::perfect_kernel_batchfms2a1::reading_only(|| {
-    assert_eq!(tuples(LEGENDS), [
+  assert_eq!(
+    super::perfect_kernel_batchfms2a1::held("Note univacityunivbtown", || tuples(LEGENDS)),
+    [
       "C Ann Able [1] | line:names",
       "C Bob Baker [2] | line:names sep:word",
       "  n Univ A, City. Univ B, Town. | note:adjacent",
-    ]);
-  });
+    ]
+  );
 }
 
 /// Item 1: a mark glued to the ink before it that labels as the leading mark does, a name right after it, opens the
@@ -317,37 +318,38 @@ fn a_gap_inside_an_accent_macro_is_the_names() {
 /// made before it, in the first alone (1703.09134).
 #[test]
 fn footnote_texts_are_the_notes_of_their_marks() {
-  super::perfect_kernel_batchfms2a1::reading_only(|| {
-    assert_eq!(tuples(NOTETEXTS), [
+  assert_eq!(
+    super::perfect_kernel_batchfms2a1::held("Note univacity", || tuples(NOTETEXTS)),
+    [
       "C Ann Able [*] | line:names",
       "  n Univ A, City. | note:footnotetext-mark",
       "C Bob Baker [†] | line:names sep:column",
       "  n Univ B, Town. | note:footnotetext-mark",
       "C Cat Cole [†] | line:names sep:column",
       "  n Univ B, Town. | note:footnotetext-mark",
-    ]);
-    assert_eq!(tuples(NOTETEXTS_BEFORE), [
-      "C Ann Able [*] | line:names",
-      "  n Univ A, City. | note:footnotetext-mark",
-      "C Bob Baker [*] | line:names sep:comma",
-      "C Cat Cole [†] | line:names sep:word",
-      "  n Univ B, Town. | note:footnotetext-mark",
-    ]);
-    // (the dump records each `\footnotetext` with its printed mark and the flushes before it)
-    let texts: Vec<(u64, String)> = dump(NOTETEXTS_BEFORE)["entries"]
-      .as_array()
-      .expect("entries")
-      .iter()
-      .filter(|e| e["kind"] == "notetext")
-      .map(|e| {
-        (
-          e["epoch"].as_u64().unwrap_or(9),
-          e["mark"].as_str().unwrap_or("").to_string(),
-        )
-      })
-      .collect();
-    assert_eq!(texts, [(0, "*".to_string()), (0, "†".to_string())]);
-  });
+    ]
+  );
+  assert_eq!(tuples(NOTETEXTS_BEFORE), [
+    "C Ann Able [*] | line:names",
+    "  n Univ A, City. | note:footnotetext-mark",
+    "C Bob Baker [*] | line:names sep:comma",
+    "C Cat Cole [†] | line:names sep:word",
+    "  n Univ B, Town. | note:footnotetext-mark",
+  ]);
+  // (the dump records each `\footnotetext` with its printed mark and the flushes before it)
+  let texts: Vec<(u64, String)> = dump(NOTETEXTS_BEFORE)["entries"]
+    .as_array()
+    .expect("entries")
+    .iter()
+    .filter(|e| e["kind"] == "notetext")
+    .map(|e| {
+      (
+        e["epoch"].as_u64().unwrap_or(9),
+        e["mark"].as_str().unwrap_or("").to_string(),
+      )
+    })
+    .collect();
+  assert_eq!(texts, [(0, "*".to_string()), (0, "†".to_string())]);
 }
 
 /// Item 5 (ams_support's residual): lines parted by a break inside a braced group or argument are one print unit, as
@@ -404,41 +406,42 @@ fn orcid_links_in_a_mark_and_an_email() {
 /// corresponding author's (`{hong3924.cs10, evan20010126.cs12, …}@nycu.edu.tw`, 2512.08223).
 #[test]
 fn unshown_labels_reversed_names_and_address_prints() {
-  super::perfect_kernel_batchfms2a1::reading_only(|| {
-    assert_eq!(tuples(UNSHOWN), [
-      "C Ann Able [] | line:names",
-      "  a Univ A, City | api:leading-mark label:unshown owner:annotate",
-      "C Bob Baker [] | line:names",
-      "  a Univ A, City | api:leading-mark label:unshown owner:annotate",
-    ]);
-    assert_eq!(tuples(REVERSED), [
+  assert_eq!(tuples(UNSHOWN), [
+    "C Ann Able [] | line:names",
+    "  a Univ A, City | api:leading-mark label:unshown owner:annotate",
+    "C Bob Baker [] | line:names",
+    "  a Univ A, City | api:leading-mark label:unshown owner:annotate",
+  ]);
+  assert_eq!(
+    super::perfect_kernel_batchfms2a1::held("the creators' names", || tuples(REVERSED)),
+    [
       "C Able, A. [] | line:names name:reversed",
       "C Baker, B. [] | line:names sep:comma name:reversed",
       "C Della Valle, C. [] | line:names sep:word name:reversed",
-    ]);
-    assert_eq!(tuples(CORRESPONDING), [
-      "C Ann Able [] | line:names",
-      "  a Univ A, City | line:unmarked R12:row-above",
-      "  n Corresponding author. | note:adjacent",
-      "C Bob Baker [] | line:names sep:comma",
-      "  a Univ A, City | line:unmarked R12:row-above",
-      "C Cat Cole [] | line:names sep:word",
-      "  a Univ A, City | line:unmarked R12:row-above",
-      "B email x1@example.org | owner:block ruling3:one-per-print",
-      "B email x2@example.org | owner:block ruling3:one-per-print",
-    ]);
-    // (an address list running on over the next line is one print: `E-mails: x1@…, \\ bob.baker@…` is in author order, not
-    // the corresponding author's first address, 2312.05446)
-    assert_eq!(tuples(ADDRESS_LINES), [
-      "C Ann Able [] | line:names",
-      "  a Univ A, City | line:unmarked R12:row-above",
-      "  c email x1@example.org | owner:order ruling3:one-per-print",
-      "C Bob Baker [] | line:names sep:word",
-      "  a Univ A, City | line:unmarked R12:row-above",
-      "  c email bob.baker@example.org | owner:spelled ruling3:one-per-print",
-      "  n Corresponding author | note:adjacent",
-    ]);
-  });
+    ]
+  );
+  assert_eq!(tuples(CORRESPONDING), [
+    "C Ann Able [] | line:names",
+    "  a Univ A, City | line:unmarked R12:row-above",
+    "  n Corresponding author. | note:adjacent",
+    "C Bob Baker [] | line:names sep:comma",
+    "  a Univ A, City | line:unmarked R12:row-above",
+    "C Cat Cole [] | line:names sep:word",
+    "  a Univ A, City | line:unmarked R12:row-above",
+    "B email x1@example.org | owner:block ruling3:one-per-print",
+    "B email x2@example.org | owner:block ruling3:one-per-print",
+  ]);
+  // (an address list running on over the next line is one print: `E-mails: x1@…, \\ bob.baker@…` is in author order, not
+  // the corresponding author's first address, 2312.05446)
+  assert_eq!(tuples(ADDRESS_LINES), [
+    "C Ann Able [] | line:names",
+    "  a Univ A, City | line:unmarked R12:row-above",
+    "  c email x1@example.org | owner:order ruling3:one-per-print",
+    "C Bob Baker [] | line:names sep:word",
+    "  a Univ A, City | line:unmarked R12:row-above",
+    "  c email bob.baker@example.org | owner:spelled ruling3:one-per-print",
+    "  n Corresponding author | note:adjacent",
+  ]);
 }
 
 /// The r5 shapes leave the XML byte-identical with the switch on and off (shadow only).

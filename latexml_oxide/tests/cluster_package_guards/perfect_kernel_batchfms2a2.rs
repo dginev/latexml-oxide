@@ -1022,7 +1022,8 @@ fn address_lists_in_author_order_and_collaborations() {
   );
 }
 
-/// The r3 shapes leave the XML byte-identical and clean under the census switch and in the default mode (the fleet's).
+/// The r3 shapes leave the XML byte-identical and clean under the census switch, in the default mode (the fleet's) and
+/// with the observer off.
 #[test]
 fn r3_shapes_leave_the_xml_unchanged() {
   for tex in [
@@ -1038,9 +1039,11 @@ fn r3_shapes_leave_the_xml_unchanged() {
       )
     };
     let (on_log, on_xml, ()) = run(Some(true));
-    // (the default, as the fleet runs: a written family's paper written there too)
+    // (the default, as the fleet runs: a written family's paper written there too — and the observer off, today's XML,
+    // which neither shape changes: review rev93a S3, against the default alone the check was a tautology)
     let (off_log, off_xml, ()) = run(None);
     assert_eq!(on_xml, off_xml, "{tex}");
+    assert_eq!(on_xml, run(Some(false)).1, "{tex}");
     assert_eq!(
       (error_count(&on_log), warning_count(&on_log)),
       (0, 0),

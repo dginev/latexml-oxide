@@ -259,15 +259,16 @@ Text.
 /// Peng Xu's). The unspelled link stays in the text (decision 2).
 #[test]
 fn a_notes_url_spelling_a_coauthor_is_theirs() {
-  super::perfect_kernel_batchfms2a1::reading_only(|| {
-    assert_eq!(tuples(URL), [
+  assert_eq!(
+    super::perfect_kernel_batchfms2a1::held("Contact(\"url\") httpswwwbobbakerorg", || tuples(URL)),
+    [
       "C Ann Able [] | line:names",
       "  n Univ A, City. The code is at https://example.org/code, Bob’s page https://www.bobbaker.org/ . | \
-     note:adjacent",
+   note:adjacent",
       "C Bob Baker [] | line:names sep:column",
       "  c url https://www.bobbaker.org/ | note:adjacent ruling4:inner-contact owner:spelled",
-    ]);
-  });
+    ]
+  );
 }
 
 /// A url printing an address group (local parts before one domain set as a link) is no co-author's by the first spelling
@@ -287,15 +288,18 @@ fn a_notes_address_group_url_is_no_coauthors() {
 /// would print them twice); now dropped, each address its speller's.
 #[test]
 fn a_notes_links_empty_it_once_every_name_is_read() {
-  super::perfect_kernel_batchfms2a1::reading_only(|| {
-    assert_eq!(tuples(EMPTIED), [
+  assert_eq!(
+    super::perfect_kernel_batchfms2a1::held("Contact(\"email\") annableexampleorg", || tuples(
+      EMPTIED
+    )),
+    [
       "C Ann Able [] | line:names",
       "  c email ann.able@example.org | note:adjacent ruling4:inner-contact",
       "C Bob Baker [] | line:names sep:column",
       "  c email bob.baker@example.org | note:adjacent ruling4:inner-contact owner:spelled",
       "D note ann.able@example.org, bob.baker@example.org | note:adjacent ruling4:emptied",
-    ]);
-  });
+    ]
+  );
 }
 
 /// Decision 2 of int66 (the lexer reads a name's edge glyphs as the marks they are): the formula `\|` (`∥`) is
@@ -313,6 +317,20 @@ fn a_names_mark_glyphs_are_marks() {
     "  a Univ C, Village | ruling2:symbol-line ruling1:parted",
     "  a Univ D, Hamlet | ruling1:request ruling1:parted",
   ]);
+  // (written since 93a, the kernel family: each line its own names', by its glyph — the old reader gave every line to
+  // every name; review rev93a S3, the XML pinned whole)
+  assert_eq!(
+    super::perfect_kernel_batch93a::default_mode_creators(GLYPHS),
+    super::perfect_kernel_batch93a::owned(&[
+      &["Ann Able ∥", "affiliation=∥ Univ A, City"],
+      &["Bob Baker ⋄", "affiliation=⋄ Univ B, Town"],
+      &[
+        "Cat Cole † ⋆",
+        "affiliation=† Univ C, Village",
+        "affiliation=⋆ Univ D, Hamlet"
+      ],
+    ])
+  );
 }
 
 /// Decision 2 of int66 (the lexer reads a separator glyph standing alone as the separator it is): a dot (2511.18580's
@@ -322,21 +340,36 @@ fn a_names_mark_glyphs_are_marks() {
 /// typed (2003.01448's `F.~M\"uller--S\'anchez`: the classify helpers read `--` as a hyphen, hep-ex9811040).
 #[test]
 fn a_separator_glyph_parts_names() {
-  super::perfect_kernel_batchfms2a1::reading_only(|| {
-    assert_eq!(tuples(SEPARATORS), [
-      "C Ann Able [] | line:names",
-      "C Bob Baker [] | line:names sep:word",
-      "C Cat Cole [] | line:names sep:word",
-      "C Dan Dole [] | line:names sep:column",
-      "  c email dan.dole@example.org | owner:adjacent",
-      "C Eve Ern PhD [1] | line:names name:qualifier sep:column",
-      "C The ABC Collaboration [] | line:names sep:column",
-      "  n Corresponding authors. | note:adjacent",
-      "C Fay Fox [] | line:names sep:word",
-      "C Gus Gill [] | line:names sep:comma",
-      "C Hal Müller--Sánchez [] | line:names sep:column",
-    ]);
-  });
+  assert_eq!(tuples(SEPARATORS), [
+    "C Ann Able [] | line:names",
+    "C Bob Baker [] | line:names sep:word",
+    "C Cat Cole [] | line:names sep:word",
+    "C Dan Dole [] | line:names sep:column",
+    "  c email dan.dole@example.org | owner:adjacent",
+    "C Eve Ern PhD [1] | line:names name:qualifier sep:column",
+    "C The ABC Collaboration [] | line:names sep:column",
+    "  n Corresponding authors. | note:adjacent",
+    "C Fay Fox [] | line:names sep:word",
+    "C Gus Gill [] | line:names sep:comma",
+    "C Hal Müller--Sánchez [] | line:names sep:column",
+  ]);
+  // (written since 94a, the names re-parted from the reading: the old reader joined the dotted and colon-led names; each
+  // name the run of today's digested personname its words are (94a r2's `slice_name`), so Eve Ern's keeps the em dash
+  // the kernel's OT1 `|` prints before her degree — review rev93a S3, the XML pinned whole)
+  assert_eq!(
+    super::perfect_kernel_batch93a::default_mode_creators(SEPARATORS),
+    super::perfect_kernel_batch93a::owned(&[
+      &["Ann Able"],
+      &["Bob Baker"],
+      &["Cat Cole"],
+      &["Dan Dole", "email=dan.dole@example.org"],
+      &["Eve Ern — PhD 1"],
+      &["The ABC Collaboration", "note=Corresponding authors."],
+      &["Fay Fox"],
+      &["Gus Gill"],
+      &["Hal Müller–Sánchez"],
+    ])
+  );
 }
 
 /// 1607.07280 (r6's revtex4_support sample, wrong): the mark a `\footnote[1]` shows on a name is the request an entry led
@@ -410,8 +443,9 @@ Text.
 /// revfms2a2_7 finding 6 — it was read as ruling 2's symbol line).
 #[test]
 fn a_mark_glyphs_legend_is_a_note() {
-  super::perfect_kernel_batchfms2a1::reading_only(|| {
-    assert_eq!(tuples(GLYPH_LEGEND), [
+  assert_eq!(
+    super::perfect_kernel_batchfms2a1::held("Affiliation univbtown", || tuples(GLYPH_LEGEND)),
+    [
       "C Ann Able [1,#] | line:names mark:after-comma",
       "  a Univ A, City. | ruling1:request",
       "  n authors contributed equally | ruling1:request",
@@ -421,8 +455,8 @@ fn a_mark_glyphs_legend_is_a_note() {
       "C Cat Cole [2,⋆] | line:names sep:comma",
       "  a Univ B, Town. | ruling1:request",
       "  n to whom correspondence should be addressed. | ruling1:request",
-    ]);
-  });
+    ]
+  );
 }
 
 const RUNAWAY_MARK: &str = r#"\documentclass{article}
@@ -462,7 +496,8 @@ fn a_runaway_note_mark_is_unwound() {
 }
 
 /// The r7 shapes leave the XML byte-identical under the census switch and in the default mode (the fleet's; shadow
-/// only, or written in both — the kernel family since 93a, OD #925) — but `FOOTNOTE_MARK`, a
+/// only, or written in both — the kernel family since 93a, OD #925), and byte-identical with the observer off where the
+/// writer holds the paper back (GLYPHS and SEPARATORS are written: their guards pin the XML) — but `FOOTNOTE_MARK`, a
 /// REVTeX paper the writer writes (FM S2b, `perfect_kernel_batchfms2b::footnote_marked_affiliations_go_to_their_names`).
 #[test]
 fn r7_shapes_leave_the_xml_unchanged() {
@@ -486,9 +521,16 @@ fn r7_shapes_leave_the_xml_unchanged() {
       )
     };
     let (on_log, on_xml, ()) = run(Some(true));
-    // (the default, as the fleet runs: a written family's paper written there too)
-    let (off_log, off_xml, ()) = run(None);
-    assert_eq!(on_xml, off_xml, "{tex}");
+    // (the default, as the fleet runs, writes as the census does; the observer off is today's XML, which a paper the
+    // writer holds back keeps — a written one, GLYPHS and SEPARATORS, differs from it by design and its guard pins its
+    // XML: review rev93a S3, against the default alone the check was a tautology for a written kernel shape)
+    let (default_log, default_xml, ()) = run(None);
+    assert_eq!(on_xml, default_xml, "{tex}");
+    if tex != GLYPHS && tex != SEPARATORS {
+      let (_, off_xml, ()) = run(Some(false));
+      assert_eq!(on_xml, off_xml, "{tex}");
+    }
+    let off_log = default_log;
     assert_eq!(
       (error_count(&on_log), warning_count(&on_log)),
       (0, 0),

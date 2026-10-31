@@ -146,21 +146,27 @@ Text.
 /// block's, are in source order; the second shape's homepage before the address line under it.
 #[test]
 fn a_creators_notes_and_contacts_are_in_source_order() {
-  super::perfect_kernel_batchfms2a1::reading_only(|| {
-    assert_eq!(tuples(ORDER), [
+  assert_eq!(
+    super::perfect_kernel_batchfms2a1::held("Contact(\"email\") annxorg", || tuples(ORDER)),
+    [
       "C Ann Able [] | line:names",
       "  c email ann@x.org | note:adjacent ruling4:inner-contact",
       "  n ann@x.org, zed@y.org | note:adjacent",
       "  n Second note. | note:adjacent",
       "C Bob Baker [] | line:names sep:column",
-    ]);
-    assert_eq!(tuples(ORDER_CONTACTS), [
+    ]
+  );
+  assert_eq!(
+    super::perfect_kernel_batchfms2a1::held("Contact(\"url\") httpswwwannableorg", || tuples(
+      ORDER_CONTACTS
+    )),
+    [
       "C Ann Able [] | line:names",
       "  c url https://www.annable.org/ | note:adjacent ruling4:inner-contact",
       "  c email ann.able@y.org | owner:spelled ruling3:one-per-print",
       "D note https://www.annable.org/ | note:adjacent ruling4:emptied",
-    ]);
-  });
+    ]
+  );
 }
 
 const OWNERLESS_ONE: &str = r#"\documentclass{article}
@@ -197,28 +203,37 @@ Text.
 /// is that author's. The note itself stays the block's (a sole author's).
 #[test]
 fn an_ownerless_notes_link_is_never_the_blocks() {
-  super::perfect_kernel_batchfms2a1::reading_only(|| {
-    assert_eq!(tuples(OWNERLESS_ONE), [
+  assert_eq!(
+    super::perfect_kernel_batchfms2a1::held("Contact(\"email\") annxorg", || tuples(OWNERLESS_ONE)),
+    [
       "C Ann Able [] | line:names",
       "  c email ann@x.org | owner:spelled ruling3:one-per-print",
       "C Bob Baker [] | line:names sep:column",
       "  c email bob@x.org | owner:spelled ruling3:one-per-print",
       "B thanks Code: https://example.org/proj/tool | note:address-line",
-    ]);
-    assert_eq!(tuples(OWNERLESS), [
+    ]
+  );
+  assert_eq!(
+    super::perfect_kernel_batchfms2a1::held("Contact(\"email\") annxorg", || tuples(OWNERLESS)),
+    [
       "C Ann Able [] | line:names",
       "  c email ann@x.org | owner:spelled ruling3:one-per-print",
       "  c url https://www.annable.org/ | note:address-line ruling4:inner-contact owner:spelled",
       "C Bob Baker [] | line:names sep:column",
       "  c email bob@x.org | owner:spelled ruling3:one-per-print",
       "B thanks Code: https://example.org/proj/tool, Ann’s page: https://www.annable.org/ | note:address-line",
-    ]);
-    assert_eq!(tuples(OWNERLESS_SOLE), [
+    ]
+  );
+  assert_eq!(
+    super::perfect_kernel_batchfms2a1::held("Contact(\"email\") annxorg", || tuples(
+      OWNERLESS_SOLE
+    )),
+    [
       "C Ann Able [] | line:names",
       "  c email ann@x.org | owner:spelled ruling3:one-per-print",
       "  n Code: https://github.com/annable/tool | note:address-line owner:sole-author",
-    ]);
-  });
+    ]
+  );
 }
 
 const HOMEPAGE: &str = r#"\documentclass{article}
@@ -241,12 +256,13 @@ Text.
 /// a_link_contact_carries_its_target` pins the target).
 #[test]
 fn a_notes_url_is_an_authors_only_as_their_page() {
-  super::perfect_kernel_batchfms2a1::reading_only(|| {
-    assert_eq!(tuples(HOMEPAGE), [
+  assert_eq!(
+    super::perfect_kernel_batchfms2a1::held("Contact(\"email\") dandole", || tuples(HOMEPAGE)),
+    [
       "C Ann Able [] | line:names",
       "  n Code: https://github.com/annable/tool . Pages: https://www.bobbaker.org/, \
-     https://sites.google.com/view/catcole, https://cole.github.io/project, https://example.org/~dole/index.html, \
-     https://example.org/dandole/talk.mp4, dan.dole . | note:adjacent",
+   https://sites.google.com/view/catcole, https://cole.github.io/project, https://example.org/~dole/index.html, \
+   https://example.org/dandole/talk.mp4, dan.dole . | note:adjacent",
       "C Bob Baker [] | line:names sep:column",
       "  c url https://www.bobbaker.org/ | note:adjacent ruling4:inner-contact owner:spelled",
       "C Cat Cole [] | line:names sep:column",
@@ -254,8 +270,8 @@ fn a_notes_url_is_an_authors_only_as_their_page() {
       "C Dan Dole [] | line:names sep:column",
       "  c url https://example.org/~dole/index.html | note:adjacent ruling4:inner-contact owner:spelled",
       "  c email dan.dole | note:adjacent ruling4:inner-contact owner:spelled",
-    ]);
-  });
+    ]
+  );
 }
 
 const JPCONF_CLASS: &str = include_str!(
@@ -368,6 +384,21 @@ fn a_glued_symbol_run_a_line_leads_with_is_one_mark() {
     "  a Univ A, City | ruling2:symbol-line ruling1:parted",
     "  a Univ B, Town | ruling1:request ruling1:parted",
   ]);
+  // (written since 93a, the kernel family: Bob Baker's `§†` the `$^{\S\dagger}$` line's alone — the old reader gave him
+  // Univ A and Univ C too; review rev93a S3, the XML pinned whole)
+  assert_eq!(
+    super::perfect_kernel_batch93a::default_mode_creators(GLUED),
+    super::perfect_kernel_batch93a::owned(&[
+      &["Ann Able §", "affiliation=Univ C, Village"],
+      &["Bob Baker §†", "affiliation=Univ D, Hamlet"],
+      &["Cat Cole †", "affiliation=Univ A, City"],
+      &[
+        "Dan Dole †⋆",
+        "affiliation=Univ A, City",
+        "affiliation=Univ B, Town"
+      ],
+    ])
+  );
 }
 
 const API_LEGEND: &str = r#"\documentclass[aps,prl]{revtex4-2}
@@ -412,15 +443,16 @@ Text.
 /// its legend ruling 1's (`ruling1:request`, the names showing it), not ruling 2's symbol line.
 #[test]
 fn a_text_mark_glyph_is_no_footnote_symbol() {
-  super::perfect_kernel_batchfms2a1::reading_only(|| {
-    assert_eq!(tuples(TEXT_GLYPH), [
+  assert_eq!(
+    super::perfect_kernel_batchfms2a1::held("Affiliation univacity", || tuples(TEXT_GLYPH)),
+    [
       "C Ann Able [1,#] | line:names",
       "  a Univ A, City. | ruling1:request",
       "  n Corresponding author. | ruling1:request",
       "C Bob Baker [1] | line:names sep:comma",
       "  a Univ A, City. | ruling1:request",
-    ]);
-  });
+    ]
+  );
 }
 
 fn name(text: &str) -> FmEvent {
@@ -466,7 +498,8 @@ fn an_unlabelled_entry_is_no_legend() {
 }
 
 /// The r8 shapes leave the XML byte-identical under the census switch and in the default mode (the fleet's; shadow
-/// only, or written in both — the kernel family since 93a, OD #925) — but `API_LEGEND`, a REVTeX
+/// only, or written in both — the kernel family since 93a, OD #925), and byte-identical with the observer off where the
+/// writer holds the paper back (GLUED is written: its guard pins the XML) — but `API_LEGEND`, a REVTeX
 /// paper the writer writes (FM S2b, `perfect_kernel_batchfms2b::a_marked_affiliation_is_cut_at_its_marks`).
 #[test]
 fn r8_shapes_leave_the_xml_unchanged() {
@@ -494,9 +527,16 @@ fn r8_shapes_leave_the_xml_unchanged() {
       )
     };
     let (on_log, on_xml, ()) = run(Some(true));
-    // (the default, as the fleet runs: a written family's paper written there too)
-    let (off_log, off_xml, ()) = run(None);
-    assert_eq!(on_xml, off_xml, "{tex}");
+    // (the default, as the fleet runs, writes as the census does; the observer off is today's XML, which a paper the
+    // writer holds back keeps — a written one, GLUED, differs from it by design and its guard pins its XML: review
+    // rev93a S3, against the default alone the check was a tautology for a written kernel shape)
+    let (default_log, default_xml, ()) = run(None);
+    assert_eq!(on_xml, default_xml, "{tex}");
+    if tex != GLUED {
+      let (_, off_xml, ()) = run(Some(false));
+      assert_eq!(on_xml, off_xml, "{tex}");
+    }
+    let off_log = default_log;
     assert_eq!(
       (error_count(&on_log), warning_count(&on_log)),
       (0, 0),

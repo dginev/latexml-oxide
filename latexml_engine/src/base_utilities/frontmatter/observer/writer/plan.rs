@@ -24,7 +24,7 @@ use super::{
     ledger::{ApiCall, Outcome, field_stamped},
     policy::TitleMarks,
     rehearsal::{Rehearsal, rehearse},
-    resolver::{addresses_in, split_pieces},
+    resolver::{addresses_in, spelled_name, split_pieces},
   },
   apply::text_leaf,
   dom::{Front, Kind, norm, orcid_id},
@@ -695,6 +695,8 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
   };
   let want = wanted(resolved);
   let have = held(front, &pairs);
+  // (the creators' names, by the resolved creator's index: whom an address spells)
+  let names: Vec<&str> = resolved.creators.iter().map(|c| c.name.as_str()).collect();
   let mut ops = Vec::new();
   let mut wanted_only: Vec<Key> = Vec::new();
   let mut held_only: Vec<Key> = Vec::new();
@@ -736,6 +738,18 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
     else {
       return Ok(declined("no item to copy"));
     };
+    // (an address today's holds on the creator it spells is that creator's: it is copied onto no other, whatever the
+    // reading — a reading that copies it is a defect the writer must not print, review rev93a B1: `$^\dagger$\texttt{\{ann,
+    // cat\}@x.org}` written onto both carriers, 2409.11430, 2506.19548)
+    if key.0 == Kind::Contact("email".into())
+      && let Some(speller) = spelled_name(&names, &wants[0].1.text)
+      && h.contains(&Owner::Creator(speller))
+      && added.iter().any(|o| *o != Owner::Creator(speller))
+    {
+      return Ok(declined(&s!(
+        "an address added beside the creator it spells: {key:?}, reading {w:?}, today's {h:?}"
+      )));
+    }
     for owner in added {
       if !wants.iter().any(|(o, a)| *o == owner && writes(a)) {
         return Ok(declined("an owner added by no ruling"));

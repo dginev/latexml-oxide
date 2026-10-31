@@ -163,20 +163,21 @@ fn a_name_is_its_printed_text() {
 /// links — the paper's video and data — stay in its text.
 #[test]
 fn a_notes_links_are_its_owners_by_spelling_or_as_its_only_link() {
-  super::perfect_kernel_batchfms2a1::reading_only(|| {
-    assert_eq!(tuples(INNER), [
+  assert_eq!(
+    super::perfect_kernel_batchfms2a1::held("Contact(\"email\") x1exampleorg", || tuples(INNER)),
+    [
       "C Ann Able [] | line:names",
       "  c email x1@example.org | note:adjacent ruling4:inner-contact",
       "  n Univ A, City. x1@example.org | note:adjacent",
       "C Bob Baker [] | line:names sep:column",
       "  c url https://www.bobbaker.org/ | note:adjacent ruling4:inner-contact owner:spelled",
       "  n Univ B, Town. The video is at https://example.org/video, the data at https://example.org/data, \
-     https://www.bobbaker.org/ . | note:adjacent",
+   https://www.bobbaker.org/ . | note:adjacent",
       "C Cat Cole [] | line:names sep:column",
       "  c url https://example.org/cat | note:adjacent ruling4:inner-contact",
       "  n Univ C. https://example.org/cat | note:adjacent",
-    ]);
-  });
+    ]
+  );
 }
 
 /// Decision 2 under a class printing no note marks (IEEEtran.cls:4756 `\def\thefootnote{}`, `Policy::unmarked_notes`): a
@@ -240,8 +241,11 @@ fn an_entrys_address_group_is_written_out_to_its_spellers() {
 /// was skipped and its `\thanks` lost.
 #[test]
 fn an_address_lists_lines_place_their_notes() {
-  super::perfect_kernel_batchfms2a1::reading_only(|| {
-    assert_eq!(tuples(ADDRESS_LIST), [
+  assert_eq!(
+    super::perfect_kernel_batchfms2a1::held("Contact(\"email\") bobbakerexampleorg", || tuples(
+      ADDRESS_LIST
+    )),
+    [
       "C Ann Able [] | line:names",
       "  a Univ A, City | line:unmarked R12:row-above",
       "  c email x1@example.org | owner:order ruling3:one-per-print",
@@ -249,8 +253,8 @@ fn an_address_lists_lines_place_their_notes() {
       "  a Univ A, City | line:unmarked R12:row-above",
       "  c email bob.baker@example.org | owner:spelled ruling3:one-per-print",
       "B thanks Corresponding author. | note:address-line",
-    ]);
-  });
+    ]
+  );
 }
 
 /// The llncs shapes, written since 92c (OD #923), whole: every creator's XML items in order (review rev92c S3 — they

@@ -27463,8 +27463,14 @@ fallback class's) takes `policy::UNDECLARED`, the kernel's reading unwritten, un
   `ruling2:uncarried owner:block`) is no ruling's owner decision: the writer keeps today's placement (`writer::writes`)
   — espcrc's `\address[ETHZ]{…}` after each name inside `\author` (hep-lat0409072), a numbered line under names
   printing no mark (1205.5573's shape).
-- Census mode and the default write alike (the guards' `*_leave_the_xml_unchanged` now compare the census switch with
-  the default mode, the fleet's: a written family's paper written in both).
+- The writer declines a copy of an e-mail address onto a creator while today's holds it on the creator it spells
+  (`plan::plan`, `resolver::spelled_name`: "an address added beside the creator it spells") — a reading that copies a
+  spelled address is a defect, never printed (review rev93a B1: `$^\dagger$\texttt{\{ann, cat\}@x.org}` was written
+  onto both carriers, 2409.11430, 2506.19548).
+- Census mode and the default write alike, and a paper the writer holds back keeps today's XML: the guards'
+  `*_leave_the_xml_unchanged` compare the census switch with the default mode and, but for a written shape, with the
+  observer off (`batchfms2a2r7` GLYPHS and SEPARATORS, `r8` GLUED are written, their XML pinned whole in their own
+  guards; review rev93a S3: against the default alone the check was a tautology for a written kernel shape).
 
 Scorer (the 3,000-paper sample, structurally decided creators exactly right; 92c → 93a, with OD #926-#927): the marks
 path 91.88 % → 92.53 % (1,120 → 1,128 of 1,219), `article` 92.00 % → 92.39 % (775), the classes under 20 creators
@@ -27487,9 +27493,11 @@ Guards `perfect_kernel_batch93a`; the guards pinning the old reader's kernel out
 (`batch77p::legend_line_is_no_name`, `legend_row_shares_the_institution`, `batch77t::
 symbol_led_line_under_marked_names_is_not_every_names`, `batch61::marked_affiliation_review_shapes` and
 `marked_affiliation_wrappers_and_legends`); the lexer's and resolver's guards of kernel shapes written before
-(`batchfms2a1`/`fms2a2`/`r5`-`r9`, `batch92e::kernel_thanks_constructor_text_is_ink`) run under
+(`batchfms2a1`/`fms2a2`, `batch92e::kernel_thanks_constructor_text_is_ink`) run under
 `batchfms2a1::reading_only`: the writer's outcome checked for its own defect only, a decline there one of the stage-7
-writer gaps (OPEN_ROWS).
+writer gaps (OPEN_ROWS). The `r5`-`r9` article shapes pin their outcome (review rev93a S3): each one the writer holds
+back under `batchfms2a1::held(<why>)`, the decline's first difference (`declined: Note univacity…`, `the creators'
+names`, …), a written one strict with its XML rows.
 
 ### 926. The writer cuts an author block's own lines: today's one affiliation joining several marked entries, or a legend line today's made an affiliation (Perl: the old reader's joined contact)
 
@@ -27499,10 +27507,12 @@ ModelBest.Inc \xspace$^5$ Renmin University of China \xspace$^6$ BUPT \xspace$^7
 entries each requested by its mark (2404.02078, 2509.24142) — or one legend line the reading takes for a note
 (`\textsuperscript{*}Equal contribution` under starred names, ruling 2: 2407.07614), each entry is made from its line's
 tokens (`block_line_tokens`: from the mark it opens with, the Mark event printed just before it with only spaces
-between — or the shift closing the mark's formula, `$^{1}$Univ X`, whose Mark spans its script: 94a, so `$^3$ Univ Z`
-now keeps its mark as its line prints it —, to its end, balanced as `piece_tokens` balances a cut piece, past the spaces
+between — or the shift closing the mark's formula, `$^{1}$Univ X`, whose Mark spans its script: 94a —, to its end, balanced as `piece_tokens` balances a cut piece, past the spaces
 before a group it closes) for the authors the reading gives it, an
-affiliation through `\lx@affiliation@withinst`, a legend as the kernel's author note, and today's item taken. Repros
+affiliation through `\lx@affiliation@withinst`, a legend as the kernel's author note, and today's item taken. A made
+affiliation carries no entry mark, as today's copies hold none (94a r2's rule for every made item, OD #928:
+`block_span_tokens` without the mark; `<sup>1</sup>Shanghai Jiao Tong University` was made with it, 2411.17237,
+2509.24142, 2311.16503); a made legend keeps its mark's ink. Repros
 sectioning-frontmatter/`author_block_marked_lines_joined_are_cut`, `author_block_legend_line_is_written_as_a_note`;
 guards `perfect_kernel_batch93a::marked_lines_joined_today_are_cut_by_the_writer`,
 `a_legend_line_is_written_as_the_starred_names_note`.
@@ -27528,12 +27538,36 @@ would have printed it.
   `Harvard University$^{*}$` under a starred name): aistats's `\aistatsaddress{Univ A$^*$ \And Univ B \And Univ A$^*$}`
   under names showing no `*` pairs each address with its column's name (the `*` another address line printed read as
   shown, so both went to the block; 77o).
+- **A block line's e-mail entry is one print of its addresses, each placed among its mark's carriers by
+  FIDELITY_CHARTER §4's chain** (`Resolver::print_address_owners`; review rev93a B1): the carrier it spells
+  (`owner:spelled`); else, the print one address per carrier that every spelled one agrees with, the carrier at its
+  place (`owner:order`, OD #805); else, when another address of the print spells its carrier, the block's
+  (`owner:block`); with none spelled, every carrier's, as ruling 2 gives the line. `$^\dagger$\texttt{\{ann,
+  cat\}@x.org}` under Ann Able† and Cat Cole† had been both addresses on both names once the kernel family was written
+  (2409.11430's ‡ and § groups, 2506.19548's `\{devesh, minesh\}@…`, 2410.18711's `$^{*}$Email: jtliu@…; wuxin\_1134@…;
+  wuzhenhua@…`); `$^{\dagger}$ \texttt{dawnkun1993@…, chenma@…}` is in author order, dawnkun1993 Xiaokun Zhang's
+  (2510.10618; the old reader left it to the block). Every form of the print alike: a braced group, a `,`/`;` list, an
+  `Email:` prefix, `\texttt`, `\href{mailto:…}`. (Inside a `\thanks` no such copy arises: a note's links go by
+  spelling, `answer_note_links`.)
+- **A raw class's store line no mark leads, right after one a mark leads, continues that entry** (`Resolver::api`,
+  `line:continued`; review rev93a S2): a store whose marks are no superscripts (`$*$`, `$\dagger$`) is handed on a
+  line a call (`\lx@add@store@affiliations`, `affiliation_calls`' plain branch), and each unmarked line was every
+  author's — quant-ph0101015's rspublic.cls `\affiliation{$*$Department …, \\ St. Louis MO 63130, USA \\ $\dagger$Blackett
+  Laboratory, …, \\ London SW7 2BZ, UK}` gave Bender "London" and Brody "St. Louis" once written. The mark's entry runs
+  on until the next mark (each line still its own contact), as one call's content is cut at its marks
+  (`mark_led_pieces`) and a block's unmarked line continues the entry above it; a line before the first mark stays
+  every author's.
 - Repros sectioning-frontmatter/`author_and_columns_number_their_own_lines`, `author_and_columns_share_one_list` (and
   77p's `author_symbol_carriers_stay_in_their_row`, `author_compound_legend_mark_names_its_carrier`,
   `author_email_sequence_more_addresses`); guards `perfect_kernel_batch93a::
   a_label_answered_in_several_columns_is_each_columns_own`, `a_compound_symbol_mark_names_the_names_carrying_all`,
   `an_order_list_agrees_with_every_spelled_address_of_the_block`, `a_trailing_mark_no_name_shows_leaves_the_line_unmarked`,
-  `an_unrequested_entry_keeps_todays_placement`.
+  `an_unrequested_entry_keeps_todays_placement`; for the marked print and the store line (93a r2), repros
+  `author_marked_email_group_goes_to_its_spellers`, `author_marked_email_list_unspelled_by_carrier_order`,
+  `raw_class_store_marked_line_runs_on` (with `raw_store_affiliation.cls`), guards `a_marked_email_print_goes_to_its_spellers`,
+  `a_marked_email_print_takes_the_chain_over_its_carriers`, `a_raw_store_marked_line_runs_on_until_the_next_mark`; and
+  the print order of a block's entries written onto a name (the tip's print-order pass, `apply::place`: 1910.02344,
+  2002.09131), repro `author_block_entries_keep_the_print_order`, guard `a_blocks_entries_are_written_in_print_order`.
 
 ### 928. The writer re-parts today's names from the reading where the reading refines them (Perl: the old reader's parting, no observer)
 

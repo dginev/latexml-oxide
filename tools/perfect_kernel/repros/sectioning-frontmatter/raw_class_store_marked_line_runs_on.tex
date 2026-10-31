@@ -1,0 +1,21 @@
+% mechanism: a raw class's affiliation store (`\def\affiliation#1{\gdef\@affiliation{#1}}`, printed under the names)
+%   whose lines its marks lead (`$*$`, `$\dagger$`: no superscripts, so the store's binding hands it on a line a call,
+%   `\lx@add@store@affiliations`): each mark's entry runs on over the unmarked lines after it until the next mark, as
+%   one call's content is cut at its marks and a block's unmarked line continues the entry above it
+%   (`Resolver::api` `line:continued`) — not each unmarked line every author's.
+% witness: quant-ph0101015 (rspublic.cls: Bender "St. Louis MO 63130", Brody and Meister "London SW7 2BZ")
+% oracle:  pdflatex 0 errors (with raw_store_affiliation.cls beside it): "Ann Able∗ , Bob Baker† and Cat Cole†" over
+%   "∗Department of Physics, Univ A, / City A 12345, Country A / †Laboratory B, Univ B, / City B 678, Country B"
+% engines: rust 92c: every line every author's; rust 93a: Ann Able also City B, Bob Baker and Cat Cole also City A
+% expect:  0 errors, 0 warnings; Ann Able Dept + City A, Bob Baker and Cat Cole Lab B + City B
+% status:  GREEN (93a r2)
+% preload: ar5iv.sty
+\documentclass{raw_store_affiliation}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{*}$, Bob Baker$^{\dagger}$ and Cat Cole$^{\dagger}$}
+\affiliation{$*$Department of Physics, Univ A, \\ City A 12345, Country A \\
+$\dagger$Laboratory B, Univ B, \\ City B 678, Country B \\}
+\maketitle
+Text.
+\end{document}

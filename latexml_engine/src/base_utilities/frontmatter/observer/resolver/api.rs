@@ -101,6 +101,7 @@ impl Resolver {
     events: &[Event],
     policy: &'static Policy,
   ) {
+    let led_line = self.led_line.take();
     // (the title gives no creator or contact; its marks are requests: aastex's `\title{…\altaffilmark{1}}`, whose
     // `\altaffiltext{1}{Based on observations …}` is the title's note, 0801.1670)
     if tag == "ltx:title" {
@@ -455,6 +456,22 @@ impl Resolver {
     } else if !keys.is_empty() {
       labels = keys.clone();
       label_rule = "api:ref-label";
+    } else if let Some((_, _, _, led)) = led_line.as_ref().filter(|(at, store, led_role, _)| {
+      // (a store's line no mark leads, right after one a mark leads: that entry's, run on — a raw class's
+      // `\affiliation{$*$Dept, Univ A, \\ City A \\ $\dagger$Lab B, Univ B, \\ City B}`, which the store's binding hands
+      // on a line a call (`\lx@add@store@affiliations`, its marks no superscripts), prints "∗Dept, Univ A, City A" and
+      // "†Lab B, Univ B, City B": each mark's entry runs on until the next mark, as a block's unmarked line continues the
+      // entry above it (`line:continued`) and one call's content is cut at its marks (`mark_led_pieces`) — review rev93a
+      // S2: quant-ph0101015's rspublic.cls, whose "London SW7 2BZ" went to every author)
+      *at + 1 == index
+        && tag == "ltx:contact"
+        && led_role == role
+        && attr_value(attrs, "_store") == Some(store.as_str())
+        && attr_value(attrs, "annotate") == Some("all")
+        && !withsup
+    }) {
+      labels = led.clone();
+      label_rule = "api:leading-mark line:continued";
     }
     // (an affiliation entry a symbol leads — a footnote symbol or a mark glyph — whose text names the corresponding
     // author or an equal contribution is that legend, a note of the names showing the mark, as a block's labelled line
@@ -520,6 +537,15 @@ impl Resolver {
       // `\lx@llncs@institute@sole`, OD #901 — decided once every name is read, `answer_pending`)
       let shares = label_rule == "api:labelseq" && attr_value(attrs, "_share") == Some("authors");
       let marked = events.iter().any(|e| e.kind == EventKind::Mark);
+      // (a store's line a mark leads, or one continuing it: the next unmarked line of the store continues it too)
+      if label_rule.starts_with("api:leading-mark")
+        && !split
+        && !legend
+        && tag == "ltx:contact"
+        && let Some(store) = attr_value(attrs, "_store").filter(|s| !s.is_empty())
+      {
+        self.led_line = Some((index, store.to_string(), role.to_string(), labels.clone()));
+      }
       if !text.is_empty() {
         self.pending.push((labels, false, Assoc {
           rule: if legend {

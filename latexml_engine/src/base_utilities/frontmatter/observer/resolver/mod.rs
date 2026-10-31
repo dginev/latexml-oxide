@@ -304,6 +304,9 @@ struct Resolver {
   compound:         Vec<usize>,
   /// while an API call's marked entries are resolved one by one (`mark_led_pieces`)
   splitting:        bool,
+  /// the last API call when it was a store's line a mark leads (its ledger index, its `_store=`, role and labels): the
+  /// store's next line, unmarked, continues it (`Resolver::api`, `line:continued`)
+  led_line:         Option<(usize, String, String, Vec<String>)>,
   /// the pending entries ruling 1 labels by a leading mark that today's attaches where its `annotate=` puts it, with
   /// those authors (`distribute_upfront` reads today's pile with them)
   piled:            Vec<(usize, Vec<usize>)>,
@@ -404,6 +407,7 @@ impl Resolver {
       parted:           Vec::new(),
       compound:         Vec::new(),
       splitting:        false,
+      led_line:         None,
       piled:            Vec::new(),
       empty_piled:      Vec::new(),
       annotated:        Vec::new(),
@@ -479,17 +483,11 @@ impl Resolver {
   /// an address spells it: the digested name's accents dropped (`Ștefan Ciobâcă` "stefan", "ciobaca", 2001.09649's
   /// `stefan.ciobaca@`), as the old reader's source reading drops the accent commands.
   fn spelled(&self, address: &str, candidates: &[usize]) -> Option<usize> {
-    if lists_local_parts(address) {
-      return None;
-    }
-    let keys: Vec<NameKeys> = candidates
+    let names: Vec<&str> = candidates
       .iter()
-      .map(|&c| NameKeys::of(&text_tokens(&base_letters(&self.out.creators[c].name))))
+      .map(|&c| self.out.creators[c].name.as_str())
       .collect();
-    match spelled_owners(&keys, address).as_slice() {
-      [one] => Some(candidates[*one]),
-      _ => None,
-    }
+    spelled_name(&names, address).map(|one| candidates[one])
   }
 
   /// The one candidate whose note names them the corresponding author, else the block.
@@ -508,6 +506,26 @@ impl Resolver {
       [one] if candidates.len() > 1 => (Some(*one), "owner:corresponding"),
       _ => (None, "owner:block"),
     }
+  }
+}
+
+/// The one of `names` an address spells (`spelled_owners`), if one — none for a list of local parts the address reader
+/// could not part (`lists_local_parts`); each name read by its base letters ([`base_letters`]), as an address spells it
+/// ([`Resolver::spelled`]; the writer's check of an address today's holds on the creator it spells, `writer::plan`).
+pub(in crate::base_utilities::frontmatter::observer) fn spelled_name(
+  names: &[&str],
+  address: &str,
+) -> Option<usize> {
+  if lists_local_parts(address) {
+    return None;
+  }
+  let keys: Vec<NameKeys> = names
+    .iter()
+    .map(|name| NameKeys::of(&text_tokens(&base_letters(name))))
+    .collect();
+  match spelled_owners(&keys, address).as_slice() {
+    [one] => Some(*one),
+    _ => None,
   }
 }
 

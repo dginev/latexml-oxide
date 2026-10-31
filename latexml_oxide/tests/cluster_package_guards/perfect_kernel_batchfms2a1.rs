@@ -20,17 +20,39 @@ use serde_json::Value;
 pub(super) fn parsed(json: &str) -> Value {
   let value: Value = serde_json::from_str(json).unwrap_or_else(|e| panic!("{e}: {json}"));
   if let Some(outcome) = value["writer"].as_str() {
-    let reading_only = READING_ONLY.with(Cell::get);
-    assert!(
-      matches!(outcome, "same" | "written") || (reading_only && outcome.starts_with("declined: ")),
-      "the writer's outcome for a written family's paper: {outcome}"
-    );
+    match HELD.with(Cell::get) {
+      Some(why) => assert!(
+        outcome.starts_with(&format!("declined: {why}")),
+        "the writer's outcome for a written family's paper held back for {why}: {outcome}"
+      ),
+      None => {
+        let reading_only = READING_ONLY.with(Cell::get);
+        assert!(
+          matches!(outcome, "same" | "written")
+            || (reading_only && outcome.starts_with("declined: ")),
+          "the writer's outcome for a written family's paper: {outcome}"
+        );
+      },
+    }
   }
   value
 }
 
 thread_local! {
   static READING_ONLY: Cell<bool> = const { Cell::new(false) };
+  static HELD: Cell<Option<&'static str>> = const { Cell::new(None) };
+}
+
+/// Run a guard of a written family's paper the writer holds back, its outcome pinned: `declined: <why>…`, the first
+/// difference no writer operation explains (`writer::plan::difference`), today's XML kept — so the guard's reading is
+/// the observer's and its XML today's, and a change of either outcome (written, or held back for another difference)
+/// fails it (review rev93a S3: a guard of the kernel family written that accepted `declined` or `written` alike pinned
+/// no XML).
+pub(super) fn held<R>(why: &'static str, guard: impl FnOnce() -> R) -> R {
+  HELD.with(|h| h.set(Some(why)));
+  let value = guard();
+  HELD.with(|h| h.set(None));
+  value
 }
 
 /// Run a guard of the lexer's or the resolver's reading of a kernel `\author` shape (`article`) with the writer's
