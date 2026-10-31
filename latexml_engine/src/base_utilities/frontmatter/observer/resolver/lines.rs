@@ -683,11 +683,12 @@ pub(in crate::base_utilities::frontmatter::observer) fn name_before_remark(
   (!name.is_empty() && reads_as_names(name)).then_some(name)
 }
 
-/// Whether a piece may name a person, so that no item is made of it (review rev94a r2 B-1): it reads as names, or does
-/// once the remark after its name is set aside ([`name_before_remark`]), or its words before its first institution word
-/// are a full name of two words or more (`Bob Baker University` — a person and a place, or one place as `Johns
-/// Hopkins University` is: the page does not say, so today's stays).
-pub(in crate::base_utilities::frontmatter::observer) fn may_name_a_person(text: &str) -> bool {
+/// Whether a piece may name a person, so that the shadow reading continues no institution into it (review rev94a r2
+/// B-1): it reads as names, or does once the remark after its name is set aside ([`name_before_remark`]), or its words
+/// before its first institution word are a full name of two words or more (`Bob Baker University` — a person and a
+/// place, or one place as `Johns Hopkins University` is). A word reading: it shapes the reading's `classify:institution`
+/// items only, which license no writer operation (`writer::repart::by_words`, review rev94a r3).
+pub(super) fn may_name_a_person(text: &str) -> bool {
   if reads_as_names(text) || name_before_remark(text).is_some() {
     return true;
   }

@@ -267,30 +267,33 @@ fn default_mode_xml(tex: &str) -> String {
   xml
 }
 
-/// The word "and" after an institution read in a row of names continues it (review rev94a B1): `Ann Able, Department of
-/// Physics and Astronomy, Univ X` gives Ann Able "Department of Physics and Astronomy" and "Univ X" — 94a made an author
-/// "Astronomy" of the word after the "and". The re-part writes it: what it makes, today's whole creators (each piece of
-/// the line was a creator of today's old reader), no name's words carved.
+/// The word "and" after an institution read in a row of names continues it in the reading (review rev94a B1): `Ann
+/// Able, Department of Physics and Astronomy, Univ X` gives Ann Able "Department of Physics and Astronomy" and "Univ
+/// X" — 94a made an author "Astronomy" of the word after the "and". The reading's institutions are the classify
+/// helpers' (`classify:institution`), word evidence that licenses no item of today's creators (review rev94a r3,
+/// `repart::structural`): the re-part declines and today's four creators stay, as 93a's — round 2 wrote them, the
+/// accepted price of the rule.
 #[test]
 fn an_institution_continues_over_and() {
   let tex = repro!("author_names_reparted_institution_and_continues.tex");
-  let xml: &[&[&str]] = &[&[
-    "Ann Able",
-    "affiliation=Department of Physics and Astronomy",
-    "affiliation=Univ X",
-  ]];
+  let xml: &[&[&str]] = &[
+    &["Ann Able"],
+    &["Department of Physics"],
+    &["Astronomy"],
+    &["Univ X"],
+  ];
   let reading = assert_reading(tex, Some(xml), &[
     "C Ann Able [] | line:names",
     "  a Department of Physics and Astronomy | line:names classify:institution",
     "  a Univ X | line:names classify:institution",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from("declined: the creators' names"));
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 
 /// The re-part makes no item of words today's held inside one name (review rev94a B1): amsart's `\author{Ann Able,
 /// Department of Physics and Astronomy}` is one creator as written, as Perl's — the classify helpers' institution is no
-/// boundary the page shows, so the re-part declines (`whole_creators`) and today's name stays (the standing record of
+/// boundary the page shows, so the re-part declines (`repart::by_words`) and today's name stays (the standing record of
 /// perfect_kernel_batch63's `John Smith, University of Toronto`).
 #[test]
 fn an_institution_inside_a_name_is_not_carved() {
@@ -448,8 +451,9 @@ fn a_name_speaking_for_a_collaboration_is_a_name() {
 }
 
 /// A full name before an institution word may be a person and a place, or one place (`Bob Baker University`, `Johns
-/// Hopkins University`): the re-part makes no item of a creator of today's that may name a person (review rev94a r2
-/// B-1, `whole_creators`, `may_name_a_person`), so it declines and today's two creators stay — 94a r2 demoted Bob
+/// Hopkins University`): an institution the classify helpers read from a creator's words is no structural evidence,
+/// so no item is made of it (review rev94a r3, `repart::structural`; r2 B-1's word check `whole_creators` is gone):
+/// the writer gives the creator back (`repart::concede`, `same`) and today's two creators stay — 94a r2 demoted Bob
 /// Baker to Ann Able's affiliation.
 #[test]
 fn a_name_before_an_institution_word_stays_a_creator() {
@@ -459,18 +463,20 @@ fn a_name_before_an_institution_word_stays_a_creator() {
     "C Ann Able [] | line:names",
     "  a Bob Baker University | line:names classify:institution",
   ]);
-  assert_eq!(reading.3, Value::from("declined: the creators' names"));
+  assert_eq!(reading.3, Value::from("same"));
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 
 /// An institution read in a row of names continues over "and" or a comma only into a piece that may name no person
-/// (review rev94a r2 B-1, `may_name_a_person`): `Ann Able, University of Toronto and Bob Baker for the CMS
-/// Collaboration` gives Ann Able her institution and leaves Bob Baker an author; the re-part writes it from today's
-/// three creators — 94a r2 gave Ann Able both pieces.
+/// (review rev94a r2 B-1, `may_name_a_person`, the shadow reading's): `Ann Able, University of Toronto and Bob Baker
+/// for the CMS Collaboration` reads Ann Able's institution and Bob Baker an author — 94a r2 gave Ann Able both pieces.
+/// The institution is the classify helpers' (word evidence), so no item is made of today's creator "University of
+/// Toronto" (review rev94a r3, `repart::structural`): the writer gives it back (`repart::concede`, `same`) and today's
+/// three creators stay, as 93a's.
 #[test]
 fn an_institution_stops_at_a_person() {
   let tex = repro!("author_names_institution_stops_at_a_person.tex");
-  let xml: &[&[&str]] = &[&["Ann Able", "affiliation=University of Toronto"], &[
+  let xml: &[&[&str]] = &[&["Ann Able"], &["University of Toronto"], &[
     "Bob Baker for the CMS Collaboration",
   ]];
   let reading = assert_reading(tex, Some(xml), &[
@@ -478,7 +484,7 @@ fn an_institution_stops_at_a_person() {
     "  a University of Toronto | line:names classify:institution",
     "C Bob Baker for the CMS Collaboration [] | line:names sep:word",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from("same"));
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 
@@ -511,4 +517,70 @@ fn phantom_ink_is_no_name() {
   assert_eq!(reading.3, Value::from("same"));
   let xml = default_mode_xml(tex);
   assert_eq!(xml.matches("<creator ").count(), 1, "{xml}");
+}
+
+/// A creator of today's becomes an item of another creator only on structural evidence — the reading's item answers a
+/// mark, is a labelled line or row, or came from an API call (review rev94a r3, `repart::structural`): the classify
+/// helpers' institution read from a creator's words licenses no item: the writer gives the creator back
+/// (`repart::concede`), its reading today's (`same`), and today's creators stay, as 93a's. `Ann Able and Bob Baker for the Pierre Auger Observatory` (94a r3: Bob Baker Ann
+/// Able's affiliation, "Observatory" an institution word; review r3 p11, p24-p26 its siblings) and `Ann Able, Bob
+/// Baker, and the PE11 team of {\it Kepler} WG\#1` (94a r3: the team Bob Baker's affiliation; p33-p35), the team's
+/// name in its italic as today's digested it.
+#[test]
+fn a_creator_becomes_an_item_only_on_structure() {
+  let tex = repro!("author_names_creator_item_needs_structure.tex");
+  let xml: &[&[&str]] = &[&["Ann Able"], &[
+    "Bob Baker for the Pierre Auger Observatory",
+  ]];
+  let reading = assert_reading(tex, Some(xml), &[
+    "C Ann Able [] | line:names",
+    "  a Bob Baker for the Pierre Auger Observatory | line:names classify:institution",
+  ]);
+  assert_eq!(reading.3, Value::from("same"));
+  assert_eq!(default_mode_creators(tex), owned(xml));
+  let tex = repro!("author_names_team_of_stays_a_creator.tex");
+  let xml: &[&[&str]] = &[&["Ann Able"], &["Bob Baker"], &[
+    "the PE11 team of Kepler WG#1",
+  ]];
+  let reading = assert_reading(tex, Some(xml), &[
+    "C Ann Able [] | line:names",
+    "C Bob Baker [] | line:names sep:comma",
+    "  a the PE11 team of Kepler WG#1 | line:names classify:institution",
+  ]);
+  assert_eq!(reading.3, Value::from("same"));
+  assert_eq!(default_mode_creators(tex), owned(xml));
+  assert_eq!(personnames(&default_mode_xml(tex)), [
+    "<personname>Ann Able</personname>",
+    "<personname>Bob Baker</personname>",
+    "<personname>the PE11 team of <text font=\"italic\">Kepler</text> WG#1</personname>",
+  ]);
+}
+
+/// Where the shadow reading took one whole creator of today's for another's affiliation from its words alone, the
+/// writer gives the creator back (`repart::concede`) and writes what the structure shows (review rev94a r3): `…, Bob
+/// Baker$^1$, and the PE11 team of {\it Kepler} WG\#1\\ {$^*$} Affiliations …` keeps the team a creator of its own,
+/// and the `$^*$` line, today's item on the team, goes to Ann Able, who shows its mark (1109.6488's García; the `1`
+/// no line answers stays shown, as pdflatex prints "Ann Able*,1") — 94a r3 made the team Bob Baker's affiliation; a
+/// decline alone would leave the line on the team.
+#[test]
+fn a_creator_read_by_its_words_is_given_back() {
+  let tex = repro!("author_names_word_read_creator_conceded.tex");
+  let reading = assert_reading(tex, None, &[
+    "C Ann Able [*,1] | line:names",
+    "  a Affiliations are given at the end of the paper | ruling2:symbol-line",
+    "C Bob Baker [1] | line:names sep:comma",
+    "  a the PE11 team of Kepler WG#1 | line:names classify:institution",
+  ]);
+  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(
+    default_mode_creators(tex),
+    owned(&[
+      &[
+        "Ann Able 1",
+        "affiliation=* Affiliations are given at the end of the paper"
+      ],
+      &["Bob Baker 1"],
+      &["the PE11 team of Kepler WG#1"],
+    ])
+  );
 }

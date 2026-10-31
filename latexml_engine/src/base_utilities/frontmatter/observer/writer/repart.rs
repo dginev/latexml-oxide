@@ -13,10 +13,12 @@
 //! Only where the reading refines today's names, across a boundary the digested structure shows (the plan declines
 //! otherwise): every reading name is printed inside one of today's names — none is made of an item of today's, a url
 //! column, an institution row —; every name of today's that reads as names, or does once the remark after it is set
-//! aside, keeps one; an item the reading gives more authors than today's held it is a ruling's change; an institution
-//! the classify helpers read is made only of whole creators of today's none of which may name a person, never carved
-//! from one name ([`whole_creators`]: not `Bob Baker for the ATLAS Collaboration`, nor `Bob Baker University`); no name
-//! or made item leaves a bracket open. Fail-safe, on the digested text: the new creators are built beside today's, and
+//! aside, keeps one; an item the reading gives more authors than today's held it is a ruling's change; a creator of
+//! today's becomes an item only on structural evidence — the item answers a mark, is a labelled line or row, or came
+//! from an API call ([`structural`]) —, and no item read from its words alone is made ([`by_words`]: the classify
+//! helpers' institution, neither carved from one name, `John Smith, University of Toronto`, nor made of creators
+//! printed apart, `Bob Baker for the Pierre Auger Observatory` — review rev94a r3); no name or made item leaves a
+//! bracket open. Fail-safe, on the digested text: the new creators are built beside today's, and
 //! kept only when they read as the reading ([`super::plan::difference`] finds nothing), every written name is one name
 //! — it prints a word, and no separator outside its brackets ([`not_one_name`]: no author of invisible ink, no two
 //! joined) —, they hold every word today's creators held, none duplicated — names and distinct items word for word, the
@@ -32,7 +34,7 @@ use super::{
   super::{
     events::{EventKind, SepKind, is_separator_word},
     ledger::{Entry, Outcome},
-    resolver::{mark_labels, may_name_a_person, name_before_remark, reads_as_names},
+    resolver::{mark_labels, name_before_remark, reads_as_names},
   },
   apply::{elements, make, place, reclaim_ids, subtree_ids},
   dom::{
@@ -269,7 +271,6 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
     .iter()
     .map(|t| (personname_words(&t.node), 0))
     .collect();
-  let todays_texts: Vec<&str> = front.creators.iter().map(|t| t.name.as_str()).collect();
   let mut kept = vec![false; front.creators.len()];
   let mut parted: Vec<(usize, &RCreator)> = Vec::new();
   let mut runs: BTreeMap<usize, (usize, (usize, usize))> = BTreeMap::new();
@@ -327,6 +328,24 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
       lost.0.name
     ));
   }
+  // (a creator of today's the reading makes no name of becomes an item only on structural evidence — an entry a mark
+  // labels, a labelled line or row, an API call ([`structural`]): a made item without it — an unmarked line, a legend
+  // no mark labels — may hold no word of one, nor be held by one; the classify helpers' items, the word readings, were
+  // given back or are declined below ([`concede`], [`by_words`]) — review rev94a r3)
+  let unkept: Vec<&Vec<String>> = todays_names
+    .iter()
+    .zip(&kept)
+    .filter(|((name, _), kept)| !**kept && !name.is_empty())
+    .map(|((name, _), _)| name)
+    .collect();
+  let takes_a_creator = |assoc: &Assoc| {
+    let text = words(&assoc.text);
+    !structural(assoc)
+      && !text.is_empty()
+      && unkept
+        .iter()
+        .any(|name| find_run(name, 0, &text).is_some() || find_run(&text, 0, name).is_some())
+  };
   // (the labels the reading's entries answer)
   let answered: Vec<String> = resolved
     .creators
@@ -357,16 +376,17 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
         if !balanced(&assoc.text) {
           return declined(&s!("an item whose brackets do not close: {}", assoc.text));
         }
-        // (an institution the classify helpers read from the words of a name is no boundary the page shows: amsart's
-        // `\author{John Smith, University of Toronto}` is one creator as written, as Perl's; only an item today's held
-        // as whole creators of its own, none of which may name a person, is made — review rev94a B1, r2 B-1)
-        if assoc
-          .rule
-          .split_whitespace()
-          .any(|t| t == "classify:institution")
-          && !whole_creators(&words(&assoc.text), &todays_names, &todays_texts)
-        {
-          return declined(&s!("an institution read inside a name: {}", assoc.text));
+        // (an item read from its words alone — the classify helpers' institution — is no boundary the page shows, so
+        // none is made: amsart's `\author{John Smith, University of Toronto}` is one creator as written, as Perl's —
+        // review rev94a B1 —, and today's creators the classify helpers read as an institution stay creators — r3)
+        if by_words(assoc) {
+          return declined(&s!("an item read from its words alone: {}", assoc.text));
+        }
+        if takes_a_creator(assoc) {
+          return declined(&s!(
+            "a creator of today's made an item on no structural evidence: {}",
+            assoc.text
+          ));
         }
       }
       items.push(item);
@@ -419,6 +439,12 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
     let Some(item) = item_source(&key, assoc, &todays) else {
       return declined(&s!("a block item with nothing to write it from: {key:?}"));
     };
+    if matches!(item, Item::Make { .. }) && (by_words(assoc) || takes_a_creator(assoc)) {
+      return declined(&s!(
+        "a creator of today's made a block item on no structural evidence: {}",
+        assoc.text
+      ));
+    }
     block.push(item);
   }
   let separators = blocks.into_iter().flat_map(separator_words).collect();
@@ -468,28 +494,90 @@ fn balanced(text: &str) -> bool {
   round == 0 && square == 0
 }
 
-/// Whether `item`'s words are the words of whole consecutive creators of today's (`names`, their personnames' words;
-/// `texts`, their names), the word "and" aside, none of which may name a person ([`may_name_a_person`]): a non-name
-/// creator today's printed apart (`John Smith` and `University of Toronto`), not words a name of today's held, nor a
-/// creator that is a name with a remark (`Bob Baker for the ATLAS Collaboration`) or a full name before an institution
-/// word (`Bob Baker University`) — review rev94a r2 B-1.
-fn whole_creators(item: &[String], names: &[(Vec<String>, usize)], texts: &[&str]) -> bool {
-  let item: Vec<&String> = item.iter().filter(|w| *w != "and").collect();
-  (0..names.len()).any(|from| {
-    let mut joined: Vec<&String> = Vec::new();
-    for (at, (name, _)) in names.iter().enumerate().skip(from) {
-      joined.extend(name.iter().filter(|w| *w != "and"));
-      if joined == item {
-        return !texts
-          .get(from..=at)
-          .is_some_and(|texts| texts.iter().any(|t| may_name_a_person(t)));
-      }
-      if !item.starts_with(&joined) {
-        return false;
-      }
+/// The reading the writer writes from: the shadow reading, but where it took one whole creator of today's — no name of
+/// the reading printed in it — for another creator's affiliation from its words alone ([`by_words`]), that creator
+/// given back, in print order after the name holding it, as today's printed it apart (`conceded`). A word reading never
+/// demotes a creator of today's, a person or a team (`Bob Baker for the Pierre Auger Observatory`, 1109.6488's `the
+/// PE11 team of {\it Kepler} WG\#1`), while what the structure shows still applies: 1109.6488's `*` legend is García's
+/// note, the name showing its mark (review rev94a r3). An item made of several of today's creators or carved from one
+/// stays the reading's, and the re-part declines it ([`by_words`]).
+pub(super) fn concede(resolved: &Resolved, front: &Front) -> Resolved {
+  let names: Vec<Vec<String>> = front
+    .creators
+    .iter()
+    .map(|t| personname_words(&t.node))
+    .collect();
+  let named: Vec<Vec<String>> = resolved
+    .creators
+    .iter()
+    .map(|c| words(&c.name))
+    .filter(|w| !w.is_empty())
+    .collect();
+  let mut free: Vec<bool> = names
+    .iter()
+    .map(|name| {
+      !name.is_empty()
+        && !named
+          .iter()
+          .any(|reading| find_run(name, 0, reading).is_some())
+    })
+    .collect();
+  let mut out = resolved.clone();
+  let mut at = 0;
+  while at < out.creators.len() {
+    let mut given = Vec::new();
+    if !out.creators[at].name.trim().is_empty() {
+      let source = out.creators[at].source;
+      out.creators[at].affiliations.retain(|a| {
+        if !by_words(a) || a.label.is_some() {
+          return true;
+        }
+        let text = words(&a.text);
+        let Some(j) = (0..names.len()).find(|&j| free[j] && names[j] == text) else {
+          return true;
+        };
+        free[j] = false;
+        given.push(RCreator {
+          name: a.text.clone(),
+          rule: "line:names conceded".into(),
+          source: a.source.map_or(source, |(index, _)| index),
+          ..RCreator::default()
+        });
+        false
+      });
     }
-    false
-  })
+    let count = given.len();
+    for (k, creator) in given.into_iter().enumerate() {
+      out.creators.insert(at + 1 + k, creator);
+    }
+    at += 1 + count;
+  }
+  out
+}
+
+/// Whether a reading's item was read from its words alone: a rule of the classify helpers (`classify:institution`, a
+/// piece of a row of names `reads_as_affiliation` takes for an institution).
+fn by_words(assoc: &Assoc) -> bool {
+  assoc
+    .rule
+    .split_whitespace()
+    .any(|t| t.starts_with("classify:"))
+}
+
+/// Whether a reading's item rests on structural evidence, so that a creator of today's may become it: it answers a mark
+/// or is a labelled line or row (its label), or it came from an API call (`\affil`, `\address`, `\institute`,
+/// `\email`, …) — and no word-based rule read it ([`by_words`]). A creator printed apart and read as an institution by
+/// its words is no item (`John Smith` and `University of Toronto`; `Bob Baker for the Pierre Auger Observatory`):
+/// person or place, the digested structure does not say, so today's stays (review rev94a r3).
+fn structural(assoc: &Assoc) -> bool {
+  !by_words(assoc)
+    && (assoc
+      .label
+      .as_deref()
+      .is_some_and(|l| l.chars().any(|c| !c.is_whitespace()))
+      || assoc
+        .source
+        .is_some_and(|(index, _)| api_call(index).is_some()))
 }
 
 /// The words of a creator's personname, its marks out, a layout's cells parting words.
@@ -1175,46 +1263,28 @@ fn dispossessed(today: &[Creator], built: &[Creator]) -> Option<String> {
 mod tests {
   use super::*;
 
-  /// A name's words found as a run of today's name's words, from where the last name found ended; a name longer than
-  /// what is left is none (it panicked, slicing past the end).
-  /// An item made of whole creators of today's, the word "and" aside — not of the words of one name (review rev94a B1).
+  /// A creator of today's becomes an item only on structural evidence: a label, an API call; never a classify rule
+  /// (review rev94a r3).
   #[test]
-  fn an_institution_is_made_of_whole_creators() {
-    let texts = ["Ann Able", "Department of Physics", "Astronomy", "Univ X"];
-    let names: Vec<(Vec<String>, usize)> = texts.iter().map(|n| (words(n), 0)).collect();
-    assert!(whole_creators(
-      &words("Department of Physics and Astronomy, Univ X"),
-      &names,
-      &texts
-    ));
-    assert!(whole_creators(&words("Univ X"), &names, &texts));
-    assert!(!whole_creators(
-      &words("Physics and Astronomy"),
-      &names,
-      &texts
-    ));
-    let text = ["Ann Able, Department of Physics and Astronomy"];
-    let one = vec![(words(text[0]), 0)];
-    assert!(!whole_creators(
-      &words("Department of Physics and Astronomy"),
-      &one,
-      &text
-    ));
-    // (no creator of today's that may name a person: a name with a remark, a full name before an institution word —
-    // review rev94a r2 B-1)
-    for person in [
-      "Bob Baker for the ATLAS Collaboration",
-      "Bob Baker on behalf of the CMS Team",
-      "Bob Baker (MIT)",
-      "Bob Baker University",
-    ] {
-      let texts = ["Ann Able", person];
-      let names: Vec<(Vec<String>, usize)> = texts.iter().map(|n| (words(n), 0)).collect();
-      assert!(!whole_creators(&words(person), &names, &texts), "{person}");
-    }
-    let texts = ["Ann Able", "Harvard University"];
-    let names: Vec<(Vec<String>, usize)> = texts.iter().map(|n| (words(n), 0)).collect();
-    assert!(whole_creators(&words("Harvard University"), &names, &texts));
+  fn an_item_rests_on_structure() {
+    let assoc = |label: Option<&str>, rule: &str| Assoc {
+      role:   "affiliation".into(),
+      text:   "University of Toronto".into(),
+      label:  label.map(str::to_string),
+      rule:   rule.into(),
+      source: None,
+      target: None,
+    };
+    assert!(structural(&assoc(Some("1"), "mark:parted")));
+    assert!(!structural(&assoc(Some(" "), "mark:parted")));
+    assert!(!structural(&assoc(None, "line:names classify:institution")));
+    assert!(!structural(&assoc(
+      Some("1"),
+      "line:names classify:institution"
+    )));
+    assert!(!structural(&assoc(None, "line:unmarked R12:row-above")));
+    assert!(by_words(&assoc(None, "line:names classify:institution")));
+    assert!(!by_words(&assoc(Some("1"), "mark:parted")));
   }
 
   /// A text's brackets close, in order (review rev94a B2).
@@ -1249,6 +1319,8 @@ mod tests {
     assert!(not_one_name("Ulderico Dardano - Silvana Rinauro", false));
   }
 
+  /// A name's words found as a run of today's name's words, from where the last name found ended; a name longer than
+  /// what is left is none (it panicked, slicing past the end).
   #[test]
   fn a_name_is_found_as_a_run_of_words() {
     let today = words("Ann Able, Bob Baker");

@@ -64,6 +64,9 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
     return Ok(());
   };
   let mut front = dom::read(document);
+  // (a whole creator of today's the reading made an item from its words alone is a creator again, as today's: no word
+  // reading licenses a writer operation — review rev94a r3, OD #928)
+  let resolved = repart::concede(&resolved, &front);
   // (today's names parted otherwise than the reading's: the creators written again from the reading, when what is
   // written holds every word today's held — the re-part, OD #928)
   if let Some(repart) = repart::plan(&resolved, &front)

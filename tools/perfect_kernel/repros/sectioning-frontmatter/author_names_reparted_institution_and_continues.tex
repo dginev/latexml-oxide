@@ -1,15 +1,17 @@
 % mechanism: the observer's names line (OD #928, review rev94a B1): the word "and" after an institution the classify
 %   helpers read in a row of names continues the institution, unless what follows reads as names (`Univ X and Bob
 %   Baker`): `Department of Physics and Astronomy` is one affiliation, not "Department of Physics" and an author
-%   "Astronomy". Today's old reader prints four creators, each piece apart; the re-part writes the one name and its
-%   institutions, made of whole creators of today's (no name's words carved).
+%   "Astronomy" (the shadow reading). Today's old reader prints four creators, each piece apart; the institutions are
+%   the classify helpers' (word evidence), so the writer makes no item of today's creators (review rev94a r3,
+%   `repart::structural`): the re-part declines and the four stay, as 93a's (round 2 wrote them).
 % witness: review rev94a syn s6_dept_and (the invented author "Astronomy"); 1304.1574 (`Computer Science and
 %   Engineering` inside an entry)
 % oracle:  pdflatex 0 errors: "Ann Able, Department of Physics and Astronomy, Univ X"
 % engines: rust 93a: four creators Ann Able / Department of Physics / Astronomy / Univ X; rust 94a: Ann Able
 %   "Department of Physics" and an author "Astronomy" holding "Univ X" (94b the same); perl: not run
-% expect:  0 errors, 0 warnings; Ann Able, affiliations "Department of Physics and Astronomy" and "Univ X"
-% status:  RED (94a) -> GREEN (94a r2)
+% expect:  0 errors, 0 warnings; reading: Ann Able, affiliations "Department of Physics and Astronomy" and "Univ X";
+%   XML: today's four creators, as 93a
+% status:  RED (94a) -> GREEN (94a r2; r4 the XML 93a's, the reading kept)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

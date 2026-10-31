@@ -228,7 +228,7 @@ pub use labels::{addresses_in, mark_labels};
 use labels::{text_tokens, *};
 use lines::*;
 pub(in crate::base_utilities::frontmatter::observer) use lines::{
-  may_name_a_person, name_before_remark, reads_as_names,
+  name_before_remark, reads_as_names,
 };
 
 /// The entry a line ended with, which an unmarked line under it continues: a labelled entry (its place in

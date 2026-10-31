@@ -150,8 +150,9 @@ they stay for stages 3–5.
    **94a, OD #928**: `writer::repart` writes the creators again from the reading where it refines today's names, each
    name the run of today's digested personname it is (round 2: its fonts and notes kept), each item today's copied or
    made from its entry's tokens (no entry mark), only across a boundary the digested structure shows, kept only when it reads as the
-   reading and holds every word today's held (round 3: declining on any doubt — no person's name made an item, no
-   creator of invisible ink, no separator inside a written name); marks path 92.53 % → 94.50 %, `article` 92.39 % → 95.48 %; left
+   reading and holds every word today's held (round 3: declining on any doubt — no creator of invisible ink, no
+   separator inside a written name; round 4: a creator of today's made an item only on structural evidence, a mark, a
+   labelled line or row, an API call — never a word reading, a whole creator so read given back); marks path 92.53 % → 94.50 %, `article` 92.39 % → 95.48 %; left
    1304.1574 — **94b, OD #937**: an in-block `\affil{$^1$…}` reads its leading Mark as its label, 2405.08158 and
    1602.05576 —), raw files' in-place contact setters (**94b, OD #936**: the API's when the file's code prints the
    argument as a title-page line or appends it to its `\author`'s store), the scorer's source reading (11), other

@@ -27610,11 +27610,12 @@ item of today's — a url column, an institution row, `Google DeepMind` under sy
 today's that reads as names (`reads_as_names`) keeps one (a prefix-marked `$^2$Bob Baker` the reading made an
 affiliation: 61); a one-word name parted from a shared name at a comma is the given name of a name written surname
 first (`Smith, Jr., John`: 61's ACM shape); an item the reading gives more authors than today's held it is a ruling's
-change (`writer::writes`: a role or note line under a row given to every name, 77t's rank 15); an institution the
-classify helpers read (`classify:institution`) is made only of whole creators of today's (`whole_creators`: article's
-`John Smith` + `University of Toronto`), never carved from the words of one personname (amsart's `\author{John Smith,
-University of Toronto}` is one creator as written, as Perl's: batch63; `Ann Able, Department of Physics and
-Astronomy`); a name or made item whose brackets do not close is declined. The reading itself parts no name inside an
+change (`writer::writes`: a role or note line under a row given to every name, 77t's rank 15); a creator of today's
+becomes an item of another only on structural evidence — the reading's item answers a mark or is a labelled line or
+row (its label), or came from an API call (`repart::structural`; round 4) — and no item read from its words alone is
+made (`repart::by_words`: the classify helpers' `classify:institution` is never carved from one personname — amsart's
+`\author{John Smith, University of Toronto}` is one creator as written, as Perl's: batch63 —, and a whole creator of
+today's it took is given back, `repart::concede`); a name or made item whose brackets do not close is declined. The reading itself parts no name inside an
 open `(`/`[` (the lexer's `open`: a comma or "and" there is the bracket's — 0811.3142's `(on behalf of the H1 and ZEUS
 collaborations)`), reads a bracket or a collaboration a name speaks for after it as that name's remark
 (`is_name_remark`, `speaks_for`: `for the Hall A DVCS collaboration`, 1502.03246, the name's as today's), and continues
@@ -27670,17 +27671,15 @@ the re-part declines amsart's `Cat Cole, Pforzheim …`), `06::frontmatter_inst_
 `batch61::author_in_tabular_star_opens_no_alignment` (renamed). Residual: the old reader parts `[for the C and D
 groups]` at its "and" (square brackets; parentheses it keeps whole) — the reading does not, so the re-part declines and
 today's split stays.
-Round 3 (review rev94a r2: the re-part declines on any doubt — it never demotes a person's name to an item, never
-invents a creator, never puts a separator word inside a name). A name with a remark after it is a name: the resolver's
+Round 3 (review rev94a r2: the re-part declines on any doubt — it invents no creator and puts no separator word inside a
+name; its word checks against demoting a person, `whole_creators` and the writer's use of `may_name_a_person`, are
+replaced in round 4 by the structural rule). A name with a remark after it is a name: the resolver's
 `name_before_remark` (a bracket, or the collaboration it speaks for, `speaks_for` now with or without "the") keeps
 `Ann Able and Bob Baker for the ATLAS Collaboration` two authors — the classify helpers read "Collaboration" as an
 institution's word, so round 2 gave Bob Baker to Ann Able as her affiliation; an institution read in a row of names
 continues over "and" or a comma only into a piece that may name no person (`may_name_a_person`: `University of Toronto
 and Bob Baker for the CMS Collaboration` is Ann Able's institution and an author); the plan's "every name of today's
-that reads as names keeps one" reads a name with its remark set aside, and `whole_creators` makes no item of a creator
-of today's that may name a person — a name with a remark, or a full name of two words or more before an institution
-word (`Bob Baker University`, and so `Johns Hopkins University`, `Max Planck Institute`: the page does not say person or
-place, so today's stays). Invisible ink is no name's: the event lexer reads `\phantom`/`\hphantom`/`\vphantom` as a
+that reads as names keeps one" reads a name with its remark set aside (a decline only). Invisible ink is no name's: the event lexer reads `\phantom`/`\hphantom`/`\vphantom` as a
 space as wide as its argument (none for `\vphantom`), the notes inside it still read (2406.07529's
 `\vphantom{\thanks{…}}`), and the writer's reading of today's XML (`dom::is_phantom`) and `ab_audit fmshadow` read its
 `ltx_phantom` text as a space — 0909.3056's and 1507.02405's `{R.~Caimmi}\footnote{…}\phantom{agga}` pair with
@@ -27722,6 +27721,38 @@ a_legend_line_is_written_as_the_starred_names_note` (`*`), `batch94a::two_marked
 `batch94b::a_raw_class_in_place_address_is_the_api` and `a_raw_style_buffered_address_is_the_api` (each address keeps
 its printed mark), `batch77t::symbol_led_line_under_marked_names_is_not_every_names` (`*`; `‡`, answered by no line,
 stays), `batch61::marked_affiliation_wrappers_and_legends` (Ann Able's `∗`, her legend note's).
+Round 4 (review rev94a r3; main-session decision: every frontmatter decision from the digested representation, never a
+word list). The rule: a creator of today's becomes an item of another creator only on structural evidence — the
+reading's item answers a mark or is a labelled line or row (a label), or came from an API call (`\affil`, `\address`,
+`\institute`, `\email`, …) (`repart::structural`). A word reading never licenses a writer operation: the classify
+helpers' `classify:institution` (`reads_as_affiliation` on a piece of a row of names) is no evidence, so round 2's and
+3's word checks are gone (`whole_creators`, and `may_name_a_person` in the writer); each review round had found another
+shape they let through — `for the Pierre Auger Observatory`, `on behalf of the IceCube Neutrino Observatory`, `for the
+Max Planck Institute`, `the PE11 team of {\it Kepler} WG\#1` (1109.6488), `the Fermi-LAT Collaboration members at SLAC`
+— each a person or a team made another author's affiliation. The writer writes from the reading with each whole
+creator of today's that the reading took for an item by its words given back as a creator, in print order after the
+name that held it (`repart::concede`, rule `line:names conceded`): today's creators stay, and what the structure shows
+still applies — 1109.6488's `$^*$` line goes to García, who shows its mark. An item read by its words that is carved
+from one name, or made of several of today's creators, is declined (`repart::by_words`); a made item without structural
+evidence that holds a word of a creator of today's no reading name is printed in, or is held by one, is declined. The
+resolver keeps its word readings for the shadow (`name_before_remark`: a name with a remark read as a name, also the
+plan's decline-only lost-name check; `may_name_a_person`: the names line's institution continuation), and none of them
+licenses a writer operation. The price, the papers round 3 wrote that round 4 does not (census against `93a-rel` and
+round 3, the same three populations): article+marks 1511.05175 (`Computer Science Department`, `Rutgers University`),
+2109.05016 (`Charles University`, `Faculty of Mathematics`, `Physics`), unmarked 0910.0732 (`University of Oxford`),
+1306.0810 (`Guido Boella: University of Turin`, a person round 3 demoted), 2304.03860 (`Faculté des sciences exactes`)
+— each 93a's creators again (and the scorer's 1912.03042, below); 1109.6488 written still, the team a creator; the marked sample unchanged; written 33 / 122
+/ 2 of 270 / 1,500 / 500 (round 3: 33 / 124 / 5), none written-different, rc/E/F/W unchanged. The probes' shapes go
+back to 93a: article `John Smith, University of Toronto` (and `New York`, `Ann Able \and Bob Baker, Univ A`, `Ann
+Able, Bob Baker, New York`, `Ann Able, Department of Physics and Astronomy, Univ X` — four creators, "Astronomy"
+among them, today's old reader's), `Bob Baker for the Pierre Auger Observatory` two creators. Scorer (3,000 sample):
+unchanged from round 3 — structurally decided creators 5,732 of 5,838 (98.18 %), marks path 1,164 of 1,219
+(95.49 %), `article` 748 of 775 (96.52 %), readability 24 papers; one paper's creators differ, 1912.03042 (`Jane Lange
+\vspace{8pt} \\ \hspace{6pt} {\small {\sl Stanford University}}` in an `\and` column: round 3 made today's creator
+"Stanford University" her affiliation from an unmarked line, `line:unmarked R12:row-above`, no label — today's again; its
+tier not checkable either way). Guards `perfect_kernel_batch94a` (18: `a_creator_becomes_an_item_only_on_structure`,
+`a_creator_read_by_its_words_is_given_back`); updated to 93a's XML, the reading kept: `an_institution_continues_over_and`,
+`an_institution_stops_at_a_person`; repart unit test `an_item_rests_on_structure` (for `whole_creators`'s).
 
 ### 932. aa's sole `\institute` is every author's unless the class's `\inst{n}` picks it, as llncs's (Perl: inst_support's `affiliation:1`, which no author requests; the first author's by the prefix-stripped fallback)
 
