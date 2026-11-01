@@ -1,0 +1,21 @@
+% mechanism: a footnote symbol on a name (`Ann Able$^{*}$`, the corresponding author's) numbers no affiliation: the run
+%   is still AASTeX 6's group, every `\affiliation` after it each author's (`annotate=run`; aas_support_sty.rs
+%   `\affiliation`, `relocate::run_names_show_a_mark`). The sibling of
+%   aastex_sup_names_over_unlabelled_lines_are_no_group.tex.
+% witness: 2403.06760 (aastex631, unmarked names over shared lines, "K. Ieki 1, 46"); review rev97cd F1
+% oracle:  pdflatex with 2403.06760's own aastex631.cls (TL 2025 ships none) 0 errors: "Ann Able*1, 2 and Bob Baker1, 2
+%   / 1 Uni One / 2 Uni Two"
+% engines: rust 97f r1: as expected; rust 97d: Ann Able Uni One only; perl: Bob Baker both, Ann Able none
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker each Uni One and Uni Two
+% status:  GREEN (97f r1, r2)
+\documentclass{aastex631}
+\begin{document}
+\title{T}
+\author{Ann Able$^{*}$}
+\author{Bob Baker}
+\affiliation{Uni One}
+\affiliation{Uni Two}
+\begin{abstract}A.\end{abstract}
+\section{Intro}
+Text.
+\end{document}

@@ -1,0 +1,26 @@
+% mechanism: REVTeX `\address` lines led by a macro standing for a mark (`\edef\UA{$^{1}$ }`, `\address{\UA Uni One}`)
+%   under names carrying such macros after their names (`Ann Able\UA$^,$\UB, Bob Baker\UB, …`) are labelled by the
+%   mark (`label={affiliation:1}`, the macro off the line) and go to the names requesting it (revtex4_support_sty.rs
+%   `group_or_marked_affiliation`, `relocate::leading_macro_mark`; user ruling R1, 2026-11-01). The sibling of
+%   revtex_macro_marked_addresses_after_commas_go_to_the_block.tex.
+% witness: hep-ph0301204's shape with the marks before the commas; main session 2026-11-01 (review rev97e)
+% oracle:  pdflatex (TL 2025, revtex4) 0 errors: "Ann Able1 ,2 , Bob Baker2 , Cat Cole1 / 1 Uni One and / 2 Uni Two"
+% engines: rust 97d r1: as expected, the lines "1 Uni One", "2 Uni Two"; perl: one creator
+% expect:  0 errors, 0 warnings; Ann Able Uni One and Uni Two, Bob Baker Uni Two, Cat Cole Uni One
+% status:  GREEN (97f r2)
+\documentclass{revtex4}
+\begin{document}
+\newcounter{univ_counter}
+\setcounter{univ_counter} {0}
+\addtocounter{univ_counter} {1}
+\edef\UA{$^{\arabic{univ_counter}}$ } \addtocounter{univ_counter} {1}
+\edef\UB{$^{\arabic{univ_counter}}$ } \addtocounter{univ_counter} {1}
+\title{T}
+\author{Ann Able\UA$^,$\UB, Bob Baker\UB, Cat Cole\UA}
+\address{\UA Uni One}
+\address{\UB Uni Two}
+\begin{abstract}A.\end{abstract}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

@@ -778,6 +778,238 @@ pub fn interleaved_group_shares_the_mark(content: &Tokens) -> bool {
   group_shares_the_mark(content, true)
 }
 
+/// Do the names of the run an affiliation continues request affiliations by their marks — a superscript or mark
+/// command after the name (`Ann Able$^{1}$`, `\textsuperscript{1}`; `marked_after_name`) that is no footnote symbol
+/// (`Ann Able$^{*}$`, the corresponding author's, requests none)? The run is the authors queued before the
+/// affiliations that end the queue, back to the affiliation before them. AASTeX 5's `\altaffilmark{1}` requests an
+/// `\altaffiltext` (label `altaffil:1`), no affiliation: a line its number labels goes by it (aas_support_sty.rs
+/// `\affiliation`, [`leading_line_label`]), and an unlabelled line stays with the row (user ruling R1, 2026-11-01:
+/// 1210.4079's `Pavel\altaffilmark{1} and D. P. Clemens` over two `\affil` lines of one address). A binding whose group
+/// rule is `annotate=run` declares `annotate=new` for a run whose names do request affiliations, as a convention may not
+/// give them an unlabelled line as a group (1202.0629's `$^{n}$` names over unnumbered lines; aas_support_sty.rs).
+pub fn run_names_show_a_mark() -> bool {
+  let numbered = |name: &Tokens| {
+    marked_after_name(name)
+      && author_mark_operands(name.unlist_ref())
+        .iter()
+        .any(|operand| !is_symbol_mark(operand))
+  };
+  let mut any = false;
+  for_run_names(|name| any |= numbered(name));
+  any
+}
+
+/// The key of the mark a macro stands for: a macro without parameters whose body leads with a superscript mark
+/// (`\edef\MSU{$^{1}$ }`, hep-ph0301204's names and `\address` lines; [`leading_line_label`]).
+fn macro_mark(t: &Token) -> Option<String> {
+  if t.get_catcode() != Catcode::CS {
+    return None;
+  }
+  let def = lookup_definition(t).ok()??;
+  if !def.is_expandable()
+    || def
+      .get_parameters()
+      .is_some_and(|p| !p.get_parameters().is_empty())
+  {
+    return None;
+  }
+  let Some(ExpansionBody::Tokens(body)) = def.get_expansion() else {
+    return None;
+  };
+  match leading_line_label(body)? {
+    (label, false, _) => Some(label),
+    _ => None,
+  }
+}
+
+/// A line led by a macro that stands for a mark (`macro_mark`: `\address{\MSU Moscow State University, …}`): the
+/// mark's key and the line without the macro.
+pub fn leading_macro_mark(content: &Tokens) -> Option<(String, Tokens)> {
+  let tokens = content.unlist_ref();
+  let at = tokens.iter().position(|t| *t != T_SPACE!())?;
+  let key = macro_mark(&tokens[at])?;
+  let rest = tokens[at + 1..]
+    .iter()
+    .copied()
+    .skip_while(|t| *t == T_SPACE!())
+    .collect();
+  Some((key, Tokens::new(rest)))
+}
+
+/// Do the names of the run an affiliation continues carry macro marks (`macro_mark`), and does one lead a name — before
+/// its first letter, or right after a comma: a mark written after the comma (`M.~Osipenko,\MSU$^,$\INFNGE\ G.~Ricco,\INFNGE\ …`,
+/// hep-ph0301204), which the comma split puts on the next name, so no name's own marks can be read? The run as
+/// [`run_names_show_a_mark`] reads it.
+pub fn run_names_macro_marks() -> (bool, bool) {
+  let (mut marked, mut leading) = (false, false);
+  for_run_names(|name| {
+    let tokens = name.unlist_ref();
+    let first_letter = tokens
+      .iter()
+      .position(|t| t.get_catcode() == Catcode::LETTER)
+      .unwrap_or(tokens.len());
+    for (i, t) in tokens.iter().enumerate() {
+      if macro_mark(t).is_some() {
+        marked = true;
+        // (before the name's first letter, or right after a comma: one `\author` call queues its whole list)
+        let after_comma =
+          tokens[..i].iter().rev().find(|t| **t != T_SPACE!()) == Some(&T_OTHER!(","));
+        leading |= i < first_letter || after_comma;
+      }
+    }
+  });
+  (marked, leading)
+}
+
+/// Calls `each` on every name of the run an affiliation continues (`queued_name`: the name, not the call around it):
+/// the authors queued before the affiliations that end the queue, back to the affiliation before them.
+fn for_run_names(mut each: impl FnMut(&Tokens)) {
+  with_value("frontmatter_raw", |v| {
+    if let Some(Stored::FrontmatterRaw(queue)) = v {
+      queue
+        .iter()
+        .rev()
+        .skip_while(|entry| entry.0 != "ltx:creator")
+        .take_while(|entry| {
+          !(entry.0 == "ltx:contact"
+            && entry.1.get("role").map(String::as_str) == Some("affiliation"))
+        })
+        .filter(|entry| entry.0 == "ltx:creator")
+        .for_each(|entry| each(&queued_name(&entry.2)));
+    }
+  });
+}
+
+/// A mark's printed number or letters as a label key: its letters and digits only (`1`, `{1}`, `\hbox{ }2` → `2`);
+/// a mark of neither, its spelling (`*`).
+fn mark_key(text: &str) -> String {
+  let key = alphanumeric_key(text);
+  if key.is_empty() {
+    text.trim().to_string()
+  } else {
+    key
+  }
+}
+
+fn alphanumeric_key(text: &str) -> String {
+  let mut key = String::new();
+  let mut chars = text.chars().peekable();
+  while let Some(c) = chars.next() {
+    if c == '\\' {
+      // (a control word, `\hbox`, is no part of the mark)
+      while chars.next_if(|c| c.is_ascii_alphabetic()).is_some() {}
+    } else if c.is_alphanumeric() {
+      key.push(c);
+    }
+  }
+  key
+}
+
+/// The label an affiliation line leads with, whether it was typed by hand, and the line without it: a superscript
+/// mark (`$^{1}$`, `$^1$`, `\textsuperscript{1}`) or a hand-printed number (`1 Univ A`, `2) Univ B`, `3. Univ C`),
+/// behind the spaces and the font and size switches it is set in (`\scriptsize 2) Osservatorio …`, kept). `None` for a
+/// line leading with neither (user ruling R2, 2026-11-01: a hand-printed leading number is a label wherever the names
+/// request numbers).
+pub fn leading_line_label(content: &Tokens) -> Option<(String, bool, Tokens)> {
+  let tokens = content.unlist_ref();
+  let mut at = 0;
+  while let Some(t) = tokens.get(at) {
+    let switch = t.get_catcode() == Catcode::CS && t.with_str(|s| MARK_SWITCHES.contains(&s));
+    if *t == T_SPACE!() || switch {
+      at += 1;
+    } else {
+      break;
+    }
+  }
+  let prefix = &tokens[..at];
+  let rebuilt = |label: String, typed: bool, from: usize| {
+    let mut rest = prefix.to_vec();
+    rest.extend(
+      tokens[from..]
+        .iter()
+        .copied()
+        .skip_while(|t| *t == T_SPACE!()),
+    );
+    (!label.is_empty()).then(|| (label, typed, Tokens::new(rest)))
+  };
+  let first = *tokens.get(at)?;
+  // (a superscript: `$^{1}$`, `\textsuperscript{1}`)
+  if first.get_catcode() == Catcode::MATH && tokens.get(at + 1) == Some(&T_SUPER!()) {
+    let (operand, next) = sup_operand_at(tokens, at + 2)?;
+    if tokens
+      .get(next)
+      .is_none_or(|t| t.get_catcode() != Catcode::MATH)
+    {
+      return None;
+    }
+    return rebuilt(
+      mark_key(Tokens::new(operand).untex_string().as_ref()),
+      false,
+      next + 1,
+    );
+  }
+  if first == T_CS!("\\textsuperscript") {
+    let (operand, next) = sup_operand_at(tokens, at + 1)?;
+    return rebuilt(
+      mark_key(Tokens::new(operand).untex_string().as_ref()),
+      false,
+      next,
+    );
+  }
+  // (a number typed by hand, followed by `)`, `.` or a space)
+  let digit = |t: &Token| {
+    t.get_catcode() == Catcode::OTHER && t.with_str(|s| s.chars().all(|c| c.is_ascii_digit()))
+  };
+  let digits = tokens[at..].iter().take_while(|t| digit(t)).count();
+  if digits == 0 {
+    return None;
+  }
+  let label: String = tokens[at..at + digits]
+    .iter()
+    .map(ToString::to_string)
+    .collect();
+  match tokens.get(at + digits) {
+    Some(t) if *t == T_OTHER!(")") || *t == T_OTHER!(".") => rebuilt(label, true, at + digits + 1),
+    Some(t) if *t == T_SPACE!() => rebuilt(label, true, at + digits),
+    _ => None,
+  }
+}
+
+/// The marks the queued authors' names show, as label keys (`mark_key`): the items of AASTeX 5's `\altaffilmark{…}`
+/// (which request `altaffil:` labels), and those of their superscripts (`affiliation:` labels).
+pub fn queued_name_marks() -> (Vec<String>, Vec<String>) {
+  with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => {
+      let (mut altaffil, mut sup) = (Vec::new(), Vec::new());
+      for entry in queue.iter().filter(|entry| entry.0 == "ltx:creator") {
+        let tokens = entry.2.unlist_ref();
+        for (i, t) in tokens.iter().enumerate() {
+          if *t == T_CS!("\\altaffilmark")
+            && let Some((operand, _)) = sup_operand_at(tokens, i + 1)
+          {
+            altaffil.extend(
+              Tokens::new(operand)
+                .untex_string()
+                .as_ref()
+                .split(',')
+                .map(mark_key)
+                .filter(|key| !key.is_empty()),
+            );
+          }
+        }
+        sup.extend(
+          superscript_scripts(&entry.2.to_string())
+            .concat()
+            .iter()
+            .map(|m| mark_key(m)),
+        );
+      }
+      (altaffil, sup)
+    },
+    _ => (Vec::new(), Vec::new()),
+  })
+}
+
 fn group_shares_the_mark(content: &Tokens, alternating: bool) -> bool {
   let mut marks: Vec<String> = superscript_scripts(&content.to_string()).concat();
   marks.dedup();

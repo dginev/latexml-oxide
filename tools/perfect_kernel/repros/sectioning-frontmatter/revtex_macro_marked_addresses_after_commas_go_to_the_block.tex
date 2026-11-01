@@ -1,0 +1,30 @@
+% mechanism: REVTeX `\address` lines led by a macro standing for a mark (`\edef\UA{$^{1}$ }`, `\address{\UA Uni One}`)
+%   under names carrying such macros are no group's (user ruling R1, 2026-11-01: marks win): written after the commas
+%   (`Ann Able,\UA$^,$\UB\ Bob Baker,…`) the comma split puts each mark on the next name, so no name's marks can be
+%   read and the lines go to the block, once (revtex4_support_sty.rs `group_or_marked_affiliation`,
+%   `relocate::leading_macro_mark`, `run_names_macro_marks`, declared `label={addresses:block}`). The names keep the
+%   misplaced marks (a SYNC_STATUS row 97f residual: the comma split).
+% witness: hep-ph0301204 (revtex4, CLAS: 213 names `M.~Osipenko,\MSU$^,$\INFNGE\ G.~Ricco,\INFNGE\ …` over 38
+%   `\address{\MSU Moscow State University, …}`: 97d r1 and 97f r1 every author all 38, 8,094 affiliations; base
+%   all 38 on the last author); main session 2026-11-01 (review rev97e)
+% oracle:  pdflatex (TL 2025, revtex4) 0 errors: "Ann Able,1 ,2 Bob Baker,2 Cat Cole,1 / 1 Uni One and / 2 Uni Two"
+% engines: rust 97f r1 and 97d r1: Ann Able both, "1 , 2 Bob Baker" Uni Two, "2 Cat Cole" Uni One (the misplaced marks'
+%   owners; the 38-line paper every author all 38); perl: one creator
+% expect:  0 errors, 0 warnings; the block (a nameless creator) Uni One and Uni Two, once; no name an affiliation
+% status:  RED (97f r1) -> GREEN (97f r2)
+\documentclass{revtex4}
+\begin{document}
+\newcounter{univ_counter}
+\setcounter{univ_counter} {0}
+\addtocounter{univ_counter} {1}
+\edef\UA{$^{\arabic{univ_counter}}$ } \addtocounter{univ_counter} {1}
+\edef\UB{$^{\arabic{univ_counter}}$ } \addtocounter{univ_counter} {1}
+\title{T}
+\author{Ann Able,\UA$^,$\UB\ Bob Baker,\UB\ Cat Cole,\UA}
+\address{\UA Uni One}
+\address{\UB Uni Two}
+\begin{abstract}A.\end{abstract}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

@@ -1,15 +1,16 @@
 % mechanism: names marked with `\altaffilmark{N}` (a request for `\altaffiltext{N}`, label `altaffil:N`) over
-%   `\affil{$^{N}$…}` lines (label `affiliation:N`): the two label spaces never meet, so the lines go by the group rule
-%   (`annotate=run`, every author each line) — Perl's and 97d's `annotate=new` had given each to the last author only.
-%   Unsupported (a cross-label rule; SYNC_STATUS row 97f).
+%   `\affil{$^{N}$…}` lines (label `affiliation:N`): the two label spaces never met. A line's leading label N that a
+%   queued `\altaffilmark` requests now labels it `altaffil:N` at the call (aas_support_sty.rs `\affiliation`,
+%   `relocate::leading_line_label`, `queued_name_marks`; user rulings R1/R2, 2026-11-01: a mark outranks a convention).
 % witness: 1808.01089 (aastex, `\author{Horace Zhang\altaffilmark{1}}…\affil{$^1$ Department of Physics…}`),
-%   astro-ph0105133 (aastex, `Yu-Qing Lou \altaffilmark{1,\hbox{ }2}`); dev giant-list census M3
+%   astro-ph0105133 (aastex, `Yu-Qing Lou \altaffilmark{1,\hbox{ }2}`), 1911.09695, 2006.10291, 1203.1623, 1503.02933,
+%   1604.05346, 1612.02554, 1302.2646, astro-ph0702360, 1105.5884, astro-ph0607224; dev giant-list census M3
 % oracle:  pdflatex (TL 2025, emulateapj) 0 errors: "Ann Able1 , Bob Baker2,3 , and Cat Cole2 / 1 Uni One / 2 Uni Two /
 %   3 Uni Three"
-% engines: rust 97f: each author all three; rust 97d: Ann Able and Bob Baker Uni One, Cat Cole all three; perl: Cat
+% engines: rust 97f r1: each author all three; rust 97d: Ann Able and Bob Baker Uni One, Cat Cole all three; perl: Cat
 %   Cole all three
 % expect:  0 errors, 0 warnings; Ann Able Uni One, Bob Baker Uni Two and Uni Three, Cat Cole Uni Two
-% status:  RED (97f), no guard
+% status:  RED (97f r1) -> GREEN (97f r2)
 \documentclass{emulateapj}
 \begin{document}
 \title{T}

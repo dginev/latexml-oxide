@@ -4,11 +4,15 @@
 //! 1512.08197, 2201.02056: 385, 377 and 472 names one creator each); `unwrap_alignment_environment`
 //! (author_block/separators.rs) now peels the declarations around the alignment environment and the spacing after it.
 //! AASTeX's `\affiliation` is REVTeX's (`group_or_marked_affiliation`, revtex4_support_sty.rs): the group rule
-//! (`annotate=run`, 2403.06760), a line its marks own by its marks (astro-ph0611722). Each guard converts its repro
+//! (`annotate=run`, 2403.06760) for names requesting no affiliation by a mark, `annotate=new` under `$^{N}$` names
+//! (1202.0629), a line its marks own by its marks (astro-ph0611722), a line's leading label (a mark or a hand-printed
+//! number) to the names requesting it, `\altaffilmark{N}` ones too (1810.01941, 1808.01089), a line holding only an
+//! e-mail an author's e-mail (astro-ph0408475). Each guard converts its repro
 //! under `tools/perfect_kernel/repros/sectioning-frontmatter/` from the binary, eager and `--streaming`, asserts the same
 //! XML both ways, no Error and no Warning, and every creator (name and contacts in order). One guard per path: a
 //! declaration environment, a declaration group (and bare declarations, and what stays wrapped), spacing after the
-//! close (both unwrapping sites), the AASTeX group rule, and its marked lines.
+//! close (both unwrapping sites), the AASTeX group rule, its marked lines, line labels, unlabelled lines under marked
+//! names, e-mail lines, and REVTeX address lines led by a macro mark (hep-ph0301204).
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch84b::creators,
@@ -182,5 +186,154 @@ fn aastex6_marked_affiliations_go_to_the_names_showing_the_mark() {
     vec!["Ann Able 1,2", "affiliation=Uni One", "affiliation=Uni Two"],
     vec!["Bob Baker 1", "affiliation=Uni One"],
     vec!["Cat Cole 2", "affiliation=Uni Two"],
+  ]);
+}
+
+/// A line's leading label goes to the names requesting it (review rev97cd F1; user rulings R1/R2, 2026-11-01): a
+/// hand-printed number under `\altaffilmark{N}` names (`\affil{1 Uni One}`, 1810.01941; 97f r1 gave every author every
+/// line, 39 -> 364 affiliations there), a `$^{N}$` mark under them (`\affil{$^{1}$Uni One}`, 1808.01089 and eleven
+/// more), each entry of one `\affil` block of such lines, its `\email` the spelled author's (1610.06611, 1503.02933),
+/// and a hand-printed number under `$^{N}$` names (`\affil{2) Uni Two}`, 0909.0058) — `leading_line_label`,
+/// `queued_name_marks`, aas_support_sty.rs `\affiliation`.
+#[test]
+fn aastex_affil_line_labels_go_to_the_names_requesting_them() {
+  let xml = both_ways(repro!("aastex_typed_affil_numbers_are_labels"));
+  assert_eq!(creators(&xml), [
+    vec!["Ann Able", "affiliation=Uni One"],
+    vec!["Bob Baker", "affiliation=Uni One"],
+    vec!["Cat Cole", "affiliation=Uni One", "affiliation=Uni Two"],
+  ]);
+  let xml = both_ways(repro!("aastex_altaffilmark_names_marked_affil_lines"));
+  assert_eq!(creators(&xml), [
+    vec!["Ann Able", "affiliation=Uni One"],
+    vec!["Bob Baker", "affiliation=Uni Two", "affiliation=Uni Three"],
+    vec!["Cat Cole", "affiliation=Uni Two"],
+  ]);
+  let xml = both_ways(repro!(
+    "aastex_altaffilmark_names_one_affil_block_of_labelled_lines"
+  ));
+  assert_eq!(creators(&xml), [
+    vec!["Ann Able", "affiliation=Uni One Dept X"],
+    vec!["Bob Baker", "affiliation=Uni Two", "email=bbaker@uni.edu"],
+    vec![
+      "Cat Cole",
+      "affiliation=Uni One Dept X",
+      "affiliation=Uni Two"
+    ],
+  ]);
+  let xml = both_ways(repro!("aastex_sup_names_typed_affil_numbers_are_labels"));
+  assert_eq!(creators(&xml), [
+    vec!["Ann Able 1", "affiliation=1 Uni One"],
+    vec!["Bob Baker 1", "affiliation=1 Uni One"],
+    vec![
+      "Cat Cole 1,2",
+      "affiliation=1 Uni One",
+      "affiliation=Uni Two"
+    ],
+  ]);
+}
+
+/// Unlabelled lines under marked names (`relocate::run_names_show_a_mark`): `\altaffilmark` names request
+/// `\altaffiltext`s, no affiliations, so the lines stay with the row (1210.4079), as under a footnote symbol alone
+/// (`Ann Able$^{*}$`, 2403.06760's group); `$^{N}$` names request affiliations, so their run is no group —
+/// `annotate=new`, 97d's result (1202.0629; 97f r1 31 -> 247 affiliations).
+#[test]
+fn aastex_unlabelled_lines_under_marked_names() {
+  let xml = both_ways(repro!("aastex_altaffilmark_names_share_unlabelled_lines"));
+  assert_eq!(creators(&xml), [
+    vec![
+      "Ann Able",
+      "affiliation=Uni One",
+      "affiliation=Main Street 5",
+      "altaffiliation=Current address: Lab X",
+    ],
+    vec![
+      "Bob Baker",
+      "affiliation=Uni One",
+      "affiliation=Main Street 5"
+    ],
+  ]);
+  let xml = both_ways(repro!("aastex_symbol_marked_names_share_affil_lines"));
+  assert_eq!(creators(&xml), [
+    vec!["Ann Able *", "affiliation=Uni One", "affiliation=Uni Two"],
+    vec!["Bob Baker", "affiliation=Uni One", "affiliation=Uni Two"],
+  ]);
+  let xml = both_ways(repro!(
+    "aastex_sup_names_over_unlabelled_lines_are_no_group"
+  ));
+  assert_eq!(creators(&xml), [
+    vec!["Ann Able 1", "affiliation=Uni One"],
+    vec!["Bob Baker 1", "affiliation=Uni One"],
+    vec!["Cat Cole 1,2", "affiliation=Uni One", "affiliation=Uni Two"],
+  ]);
+}
+
+/// An `\affil` holding only an e-mail is an e-mail, not an affiliation (review rev97cd F3): unmarked, the author's it
+/// spells (`\affil{e-mail: kangx@uni.edu}`, astro-ph0408475; 97f r1 an affiliation of every author), marked, the
+/// author's requesting the mark (`\affil{$^*$ Email: bbaker@uni.edu}` under `Bob Baker\altaffilmark{2,*}`, 1808.01089);
+/// the label is the contact's name.
+#[test]
+fn aastex_affil_holding_only_an_email_is_an_authors_email() {
+  let xml = both_ways(repro!("aastex_affil_email_line_is_its_authors_email"));
+  assert_eq!(creators(&xml), [
+    vec!["Xu Kang 1", "affiliation=Uni One", "email=kangx@uni.edu"],
+    vec!["Yi Jing 1", "affiliation=Uni One"],
+    vec!["Hu Mo 2", "affiliation=Uni Two"],
+  ]);
+  assert_eq!(
+    xml
+      .matches(r#"<contact name="e-mail: " role="email">kangx@uni.edu</contact>"#)
+      .count(),
+    1,
+    "{xml}"
+  );
+  let xml = both_ways(repro!(
+    "aastex_affil_marked_email_line_is_the_marked_authors"
+  ));
+  assert_eq!(creators(&xml), [
+    vec!["Ann Able", "affiliation=Uni One"],
+    vec!["Bob Baker", "affiliation=Uni Two", "email=bbaker@uni.edu"],
+  ]);
+  assert_eq!(
+    xml
+      .matches(r#"<contact name="Email: " role="email">bbaker@uni.edu</contact>"#)
+      .count(),
+    1,
+    "{xml}"
+  );
+}
+
+/// REVTeX `\address` lines led by a macro standing for a mark (`\edef\UA{$^{1}$ }`, `\address{\UA Uni One}`) under
+/// names carrying such macros (`leading_macro_mark`, `run_names_macro_marks`; user ruling R1): written after the
+/// commas, the marks land on the next names, so the lines are the block's, once (hep-ph0301204: 213 names had all 38
+/// addresses each, 8,094 affiliations); written after the names, each line goes to the names its mark labels.
+#[test]
+fn revtex_macro_marked_address_lines_are_no_group() {
+  let xml = both_ways(repro!(
+    "revtex_macro_marked_addresses_after_commas_go_to_the_block"
+  ));
+  let all = creators(&xml);
+  assert_eq!(all.last().unwrap(), &[
+    "affiliation=Uni One",
+    "affiliation=Uni Two"
+  ]);
+  assert_eq!(
+    all
+      .iter()
+      .flatten()
+      .filter(|c| c.starts_with("affiliation="))
+      .count(),
+    2,
+    "{all:?}"
+  );
+  let xml = both_ways(repro!("revtex_macro_marked_addresses_go_by_their_marks"));
+  assert_eq!(creators(&xml), [
+    vec![
+      "Ann Able 1 , 2",
+      "affiliation=Uni One",
+      "affiliation=Uni Two"
+    ],
+    vec!["Bob Baker 2", "affiliation=Uni Two"],
+    vec!["Cat Cole 1", "affiliation=Uni One"],
   ]);
 }

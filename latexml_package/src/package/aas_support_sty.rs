@@ -171,15 +171,107 @@ LoadDefinitions!({
   // Various contact information attaches to previous \author
   // AASTeX 6 (revtex-derived): an affiliation is REVTeX's (revtex4_support_sty.rs `group_or_marked_affiliation`):
   // every preceding author's that has none yet (`\author{Ann Able and Bob Baker}\affiliation{Univ}` gives it to both;
-  // 63e), and each further one before a new author the same run's (`annotate=run`) — aastex631.cls's `\author{K. Ieki}
-  // \author{…}\affiliation{U1}\affiliation{U2}` prints "K. Ieki 1, 2" (2403.06760, 1804.01623, 2001.01892) — unless it
-  // leads with a mark no group shares, which goes to the authors showing it: the AASTeX 5 `\author{Ann
-  // Able\altaffilmark{1}}\author{Bob Baker\altaffilmark{2}}\affil{$^1$Univ A}\affil{$^2$Univ B}` (1808.01089,
-  // astro-ph0611722, astro-ph0105133). Perl's `\lx@add@affiliation{#1}` (aas_support.sty.ltxml:118) gave each to the
-  // last author only. AASTeX 7 is unchanged: aastex701.cls:7370 `\affil@error` stops the run when an author has no
-  // affiliation, so its authors never share a run.
+  // 63e), each further one before a new author the same run's (`annotate=run`) — aastex631.cls's `\author{K. Ieki}
+  // \author{…}\affiliation{U1}\affiliation{U2}` prints "K. Ieki 1, 2" (2403.06760, 1804.01623, 2001.01892) — and a line
+  // that leads with a mark no group shares goes by its marks, to the authors showing the same mark (`\author{Ann
+  // Able$^{1,2}$}…\affil{$^1$Univ A}`, astro-ph0611722, 0910.4381). Marks outrank that convention (user rulings R1/R2,
+  // 2026-11-01), declared at this call so the frontmatter observer reads the same:
+  // - a line's leading label, a mark or a hand-printed number (`\affil{1 Instituto …}`, `\affil{\scriptsize 2)
+  //   Osservatorio …}`, `\affil{$^1$ Department of Physics…}`: `relocate::leading_line_label`), that a queued AASTeX 5
+  //   `\altaffilmark{N}` requests is labelled `altaffil:N`, the label off the line, and goes to the names requesting it
+  //   (1810.01941, astro-ph0108212, 1808.01089's Horace Zhang, astro-ph0105133, 1911.09695 and eight more: round 1's
+  //   `annotate=run` gave every author every line, 39 -> 364 affiliations in 1810.01941; 97d line 1 to all, the rest to
+  //   the last author);
+  // - a hand-printed number a queued `$^{N}$` requests is that mark (0909.0058), and the line goes by the marked rule;
+  // - an unlabelled line under `$^{N}$` names, which request affiliations by their marks, is declared `annotate=new`
+  //   (`relocate::run_names_show_a_mark`; 1202.0629: each line every author's still without one, the later ones the
+  //   last author's, 97d's result — a stopgap until the observer's one placement order); under `\altaffilmark` names
+  //   (which ask for `\altaffiltext`s, 1210.4079) or a footnote symbol alone, the row's group (`annotate=run`).
+  // Perl's `\lx@add@affiliation{#1}` (aas_support.sty.ltxml:118) gave each to the last author only. AASTeX 7 is
+  // unchanged: aastex701.cls:7370 `\affil@error` stops the run when an author has no affiliation, so its authors never
+  // share a run.
+  // A line holding only an e-mail (`\affil{e-mail: kangx@shao.ac.cn}`, astro-ph0408475; `\affil{$^*$ Email: …}`,
+  // 1808.01089) is no affiliation: the e-mail of the author its mark or its address names, as the class's e-mails apart
+  // from the names are placed (`placed_email_line_calls`).
   DefMacro!("\\affiliation{}", sub[(content)] {
-    revtex4_support_sty::group_or_marked_affiliation(content)
+    let mut content = content;
+    // (a block of `\\` lines, each entry led by a label a queued `\altaffilmark` requests, an unlabelled line the
+    // entry's before it: each entry labelled so — 1610.06611's one `\affil{$^{1}$ Jet Propulsion Laboratory … \\
+    // $^{2}$ Space Radiation Laboratory … \\ …}`, astro-ph0108212's `\affil{\scriptsize 5) Space Telescope Science
+    // Institute, … \\ Affiliated with …}`)
+    let lines: Vec<&[Token]> = revtex4_support_sty::split_top_level_lines(content.unlist_ref())
+      .into_iter()
+      .filter(|line| line.iter().any(|t| *t != T_SPACE!()))
+      .collect();
+    let (altaffil, sup) = queued_name_marks();
+    let mut entries: Vec<(String, Vec<Token>)> = Vec::new();
+    for line in &lines {
+      let line = Tokens::new(line.to_vec());
+      match leading_line_label(&line) {
+        // (one entry: no further mark on the line, `\affil{$^1$Univ A, $^2$Univ B}`, 0909.3044)
+        Some((label, _, rest))
+          if altaffil.contains(&label) && !sup.contains(&label) && content_marks(&rest).is_empty() =>
+        {
+          entries.push((label, rest.unlist()));
+        },
+        Some(_) => {
+          entries.clear();
+          break;
+        },
+        None => match entries.last_mut() {
+          Some((_, entry)) => {
+            entry.push(T_CS!("\\\\"));
+            entry.extend(line.unlist());
+          },
+          None => break,
+        },
+      }
+    }
+    if !entries.is_empty() {
+      let mut calls = Vec::new();
+      for (label, rest) in entries {
+        let rest = Tokens::new(rest);
+        // (a marked e-mail line, `\affil{$^*$ Email: gaoyang25@…}` under `Yang Gao\altaffilmark{2, 3, *}`: the e-mail
+        // of the author the address names, 1808.01089)
+        if let Some(placed) = placed_email_line_calls(&rest, &Tokens::new(Vec::new()))? {
+          calls.extend(placed.unlist());
+          continue;
+        }
+        // (an e-mail set in the line is one author's, not each holder's: `take_placed_line_emails`, 1503.02933)
+        let (rest, emails) = take_placed_line_emails(&rest)?;
+        let keyvals = mouth::tokenize_internal(TeXString::assembled(s!("label={{altaffil:{label}}}")));
+        calls.extend(Invocation!(T_CS!("\\lx@add@affiliation"), vec![Some(keyvals), Some(rest)]).unlist());
+        calls.extend(emails.unlist());
+      }
+      return Ok(Tokens::new(calls));
+    }
+    match leading_line_label(&content).filter(|_| lines.len() <= 1) {
+      None => {
+        if let Some(calls) = placed_email_line_calls(&content, &Tokens::new(Vec::new()))? {
+          return Ok(calls);
+        }
+      },
+      Some((label, typed, rest)) => {
+        // (a marked e-mail line, `\affil{$^*$ Email: gaoyang25@…}` under `Yang Gao\altaffilmark{2, 3, *}`: the e-mail
+        // of the author the mark or the address names, 1808.01089)
+        let mark = if typed {
+          Tokens::new(Vec::new())
+        } else {
+          mouth::tokenize_internal(TeXString::assembled(label.clone()))
+        };
+        if let Some(calls) = placed_email_line_calls(&rest, &mark)? {
+          return Ok(calls);
+        }
+        // (a hand-printed number a queued `$^{N}$` requests: that mark, 0909.0058)
+        if typed && sup.contains(&label) {
+          let mut marked = mouth::tokenize_internal(TeXString::assembled(s!("$^{{{label}}}$"))).unlist();
+          marked.extend(rest.unlist());
+          content = Tokens::new(marked);
+        }
+      },
+    }
+    let annotate = if run_names_show_a_mark() { "new" } else { "run" };
+    revtex4_support_sty::group_or_marked_affiliation(content, annotate)
   });
   DefMacro!("\\altaffiliation{}", "\\lx@add@altaffiliation{#1}");
   DefMacro!("\\affil",            "\\affiliation");

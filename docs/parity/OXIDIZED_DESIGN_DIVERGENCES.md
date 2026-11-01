@@ -29094,8 +29094,41 @@ asks for: the block's, as any such line).
   there): a mark-led line no group shares goes to the names showing its mark (`\lx@add@affiliation@marked`), any other
   to the group before it with `annotate=run` — every `\affiliation` after a run of `\author` calls, before the next
   `\author`, is each one's (aastex62.cls:278-292 loads revtex4-1, whose `\move@AU\move@AF` file the run). It was
-  `annotate=new`, which gave a run's second line to its last author only. AASTeX 7 is unaffected in practice:
-  aastex701.cls:7370 `\affil@error` stops on an author without an affiliation, so its authors never share a run.
+  `annotate=new`, which gave a run's second line to its last author only. Under marks (user rulings R1 and R2, 2026-11-01: a
+  convention never gives a line to an author whose own marks request that role, and never outranks a mark; a
+  hand-printed leading number is a label wherever the names request numbers), aas_support_sty.rs's `\affiliation`
+  reads the call's line and declares the result at the call, so the frontmatter observer reads the same attributes:
+  - a line's leading label — a superscript (`$^{1}$`, `\textsuperscript{1}`) or a hand-printed number (`1 Univ A`,
+    `2) Univ B`, `3. Univ C`, behind the font switches it is set in; `relocate::leading_line_label`) — that a queued
+    `\altaffilmark{N}` requests (`relocate::queued_name_marks`) labels the line `altaffil:N`
+    (`\lx@add@affiliation[label={altaffil:N}]`, the label off the line), so it goes to the names requesting it: AASTeX
+    5's `\altaffilmark` names over `\affil{$^{N}$…}` or `\affil{N …}` lines, whose two label spaces never met; one
+    `\affil` holding a block of `\\` lines is read entry by entry (a labelled line opens one, an unlabelled line
+    continues it: 1610.06611, astro-ph0108212), an entry holding only an e-mail is an e-mail (below), and an `\email`
+    set in an entry is the spelled author's, not each holder's (`take_placed_line_emails`, 1503.02933);
+  - a hand-printed number a queued `$^{N}$` requests is that mark (`$^{N}$` written for it), and the line goes by
+    REVTeX's marked-line rule;
+  - an unlabelled line goes by REVTeX's group rule (`annotate=run`) unless the run's names request affiliations by
+    `$^{N}$` marks (`relocate::run_names_show_a_mark`: no footnote symbol alone, no `\altaffilmark`, which asks for an
+    `\altaffiltext`), when the call declares `annotate=new` (97d's result: each line every author's still without one,
+    the later ones the last author's) — no group sharing every line. That is a stopgap: R1 gives such a line to no
+    marked author, which the observer's one placement order ("marks before convention", the next refactor stage)
+    decides.
+  AASTeX 7 is unaffected in practice: aastex701.cls:7370 `\affil@error` stops on an author without an affiliation, so
+  its authors never share a run.
+- **REVTeX's own call** (`group_or_marked_affiliation`, both bindings): a line led by a macro standing for a mark
+  (`\edef\MSU{$^{1}$ }`, `\address{\MSU Moscow …}`: `relocate::leading_macro_mark`) under names carrying such macros
+  (`relocate::run_names_macro_marks`) is no group's (R1): labelled by its mark (`label={affiliation:1}`, the macro off
+  the line), or, where a mark leads a name — written after the comma (`M.~Osipenko,\MSU$^,$\INFNGE\ G.~Ricco,…`), so
+  the comma split put each on the next name — the block's, once (`label={addresses:block}`). hep-ph0301204 (CLAS, 213
+  names, 38 addresses): every author all 38 (8,094 affiliations; base all 38 on the last author; Perl one merged
+  creator) → the 38 once on the block.
+- **An AASTeX `\affil` holding only an e-mail** (`\affil{e-mail: kangx@shao.ac.cn}`, a labelled or bare address, no
+  e-mail command; `\affil{$^*$ Email: x@y}` too, its mark kept for the placement) is no affiliation:
+  `placed_email_line_calls` (author_block/email_block_calls.rs) makes each address `\lx@add@contact@placed[role=email]`,
+  the label its `name` — placed as a class's e-mails apart from the names are (`placed_contact_owner`: the author
+  requesting the mark, the author the address spells, the only author of the group, else the block's shared creator,
+  #159). Perl: an affiliation of the last author (aas_support.sty.ltxml:118).
 
 **Why.** Perl (revtex4_support.sty.ltxml:46) makes one creator of each `\author` call: the 2015 BESIII template
 (`\author{\begin{small}\begin{center} names \\ \vspace{0.2cm} (BESIII Collaboration)\\ {\it $^{1}$ aff\\ …}
@@ -29111,23 +29144,42 @@ name (381 of 418, 374 of 412; the rest are the sub-labels below and two repeated
 377, 483 of 483. 2403.06760: K. Ieki, M. Miura,
 M. B. Smy, K. Scholberg gain institute 46; 1804.01623: C. G. Tinney gains 13; 2001.01892: four authors gain their
 second institute; astro-ph0611722 (`\affil{$^1$INAOE…}` under `M. Chavez$^{1,2}$, …`): each author its own institutes,
-where each had "1INAOE" only.
+where each had "1INAOE" only. Round 2 (review rev97cd F1, F3): of the 14 papers whose marked names had taken every
+`\affil` line in round 1 (1810.01941 39 → 364 affiliations, 1202.0629 31 → 247, astro-ph0108212 22 → 130, 1911.09695
+17 → 77, 2006.10291 16 → 70, 0909.0058 15 → 63, 1203.1623, 1503.02933, 1604.05346, 1612.02554, 1302.2646,
+astro-ph0702360, 1105.5884, astro-ph0607224), 13 now give every author exactly the lines its marks name (97d: line 1
+to every author, all the others to the last), 1202.0629 (bare lines) is 97d's XML; 1808.01089 and astro-ph0105133
+each author its marked institutes, Yang Gao his e-mail; 1210.4079 and 1506.04015 keep round 1's (the row's lines under
+`\altaffilmark` names); 2403.06760, 1804.01623, astro-ph0611722 and 0910.4381 keep round 1's XML; astro-ph0408475:
+X. Kang holds kangx@shao.ac.cn (97d: G. Börner's affiliation; round 1 every author's), each author its marked
+institutes.
 
-A/B (11,333 papers: popint125a_s10k + the census aas family + wrapped blocks): 76 changed, E and F unchanged, no creator merged or lost. Scorer: the 3,000 sample D3 per creator 98.18 → 98.23 %, lost-words 0; the dev subset the change reaches (1,042 papers) 77.65 → 97.96 % per creator.
+A/B (11,333 papers: popint125a_s10k + the census aas family + wrapped blocks): 76 changed, E and F unchanged, no creator merged or lost. Scorer: the 3,000 sample D3 per creator 98.18 → 98.23 %, lost-words 0; the dev subset the change reaches (1,042 papers) 77.65 → 97.96 % per creator. Round 2, the same population against round 1's 97d binary: 97 changed, E 22,031 → 22,031, F 58 → 59 (2311.05131, a load timeout: alone rc=0, F=0), 0 creators merged or lost, no address held by more creators (`fm_checks`); the affiliation-growth flags are the three BESIII-shaped splits and 1612.09425 (5 → 12, every author its marks' lines out of one `\affil` block); the word drops are lines no longer repeated on every author and the labels taken off the lines. Scorer unchanged (3,000 sample 98.23 %, lost-words 0; dev subset 97.96 %, astro-ph0408475 every creator ok).
 
 **Left** (SYNC_STATUS row "97f"): sub-labelled marks (`$^{48A,48C}$` against `$^{48}$ (A)…; (B)…; (C)…`, 33 names a
 BESIII paper) stay in the name and go by their digits, the entries on a nameless creator (RED
-`author_sub_labelled_marks_read_as_digits`; the ruling deferred); `\altaffilmark{N}` names over `\affil{$^{N}$…}` lines
-(1808.01089, astro-ph0105133) meet no label, so each line is the run's — every author each line (97d: the last author
-all, the others the first; RED `aastex_altaffilmark_names_marked_affil_lines`); aa's `\and` pieces never read a
+`author_sub_labelled_marks_read_as_digits`; the ruling deferred); unlabelled lines under `$^{N}$` names
+(1202.0629) go by `annotate=new`, not by R1; an `\altaffilmark{1$\dagger$}` request keeps its spelled `$` and
+matches no label (`\author{Ann Able\altaffilmark{1$\dagger$} and Bob Baker\altaffilmark{1}}\affil{$^1$Uni One}`: Ann
+Able none, 2006.10291's N. Fraija); hep-ph0301204's names keep the marks the comma split moved onto them ("1 , 2 G. Ricco") and three
+mark-only pieces stay creators; aa's `\and` pieces never read a
 collaboration (2206.00684; RED `aa_collaboration_heading_before_colon_is_a_name`); a `{\it $^{1}$ aff\\ $^{2}$ aff\\ }`
 group's entries keep their `\\` as a trailing `<break/>` and a leading space (97d the same). Guards
-`perfect_kernel_batch97f` (five); changed: `perfect_kernel_batchfms2a2` (four readings' rule tag `api:annotate:new` →
+`perfect_kernel_batch97f` (nine; round 2's `aastex_affil_line_labels_go_to_the_names_requesting_them`,
+`aastex_unlabelled_lines_under_marked_names`, `aastex_affil_holding_only_an_email_is_an_authors_email`,
+`revtex_macro_marked_address_lines_are_no_group`); changed: `perfect_kernel_batchfms2a2` (four readings' rule tag `api:annotate:new` →
 `api:annotate:run`: `fuzzy_labels_by_surname_and_with_their_macros`, `emulateapj_title_marks_print_the_given_number`,
 `a_footnote_text_the_title_shows_is_the_titles_note`, `a_corresponding_author_list_names_each_author`; owners
 unchanged). Repros sectioning-frontmatter/`author_size_environment_around_center_splits`,
 `author_size_group_around_center_splits`, `author_center_then_spacing_splits`,
-`aastex6_consecutive_authors_share_affiliations`, `aastex6_marked_affiliations_go_by_marks` (RED → GREEN).
+`aastex6_consecutive_authors_share_affiliations`, `aastex6_marked_affiliations_go_by_marks`,
+`aastex_typed_affil_numbers_are_labels`, `aastex_altaffilmark_names_marked_affil_lines`,
+`aastex_altaffilmark_names_one_affil_block_of_labelled_lines`,
+`aastex_sup_names_typed_affil_numbers_are_labels`, `aastex_sup_names_over_unlabelled_lines_are_no_group`,
+`aastex_affil_email_line_is_its_authors_email`, `aastex_affil_marked_email_line_is_the_marked_authors` (RED → GREEN),
+`revtex_macro_marked_addresses_after_commas_go_to_the_block` (RED → GREEN),
+`aastex_symbol_marked_names_share_affil_lines`, `aastex_altaffilmark_names_share_unlabelled_lines`,
+`revtex_macro_marked_addresses_go_by_their_marks` (GREEN).
 
 ### 948. Every remaining observer-writer family is written in one batch (ijcai, inst_support, iopart, jheppub, jinstpub, jcappub, jpconf, sv_support and every binding owning `\author` with no declaration); a block line's letters are read as printed, a re-parted entry keeps today's role, a letter-spaced name's word space is no gap, an e-mail's corresponding owner is one of the authors it is printed for, a name read as an entry is never written onto an author; an elsarticle key is answered by its keys alone, and a name the re-part makes that names no person declines (Perl: the old reader's output, no observer)
 

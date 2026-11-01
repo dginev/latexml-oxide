@@ -224,6 +224,83 @@ pub(in crate::base_utilities) fn line_labelled_emails(
   }
 }
 
+/// A class's affiliation line that holds only e-mail addresses — behind its label, `e-mail: kangx@shao.ac.cn`, or a bare
+/// `x@y` (`line_labelled_emails`, `line_is_email`) —, made the class's e-mails apart from the names: each address a
+/// `\lx@add@contact@placed[role=email]`, the label its `name`, placed as such a contact is (the author the address
+/// spells, …, else the block's; `placed_contact_owner`), `mark` the operand of the mark the line led with (`$^*$`, the
+/// author requesting it first). `None` for any other line, a line of the class's own e-mail
+/// commands too (those make their contacts themselves). AASTeX's `\affil{e-mail: kangx@shao.ac.cn}` after `\author{X.
+/// Kang$^{1,2}$, …}` (astro-ph0408475) is X. Kang's e-mail, not an affiliation of the authors.
+pub fn placed_email_line_calls(line: &Tokens, mark: &Tokens) -> Result<Option<Tokens>> {
+  let (label, addresses) = match line_labelled_emails(line)? {
+    Some((label, addresses)) if addresses.iter().all(|address| address.call.is_none()) => (
+      label,
+      addresses
+        .into_iter()
+        .map(|address| address.address)
+        .collect(),
+    ),
+    Some(_) => return Ok(None),
+    None if line_is_email(line) => (None, vec![line.clone()]),
+    None => return Ok(None),
+  };
+  let mut calls = Vec::new();
+  for address in addresses {
+    let mut keyvals = mouth::tokenize_internal("role=email").unlist();
+    if let Some(label) = &label {
+      keyvals.extend(mouth::tokenize_internal(",name=").unlist());
+      keyvals.push(T_BEGIN!());
+      keyvals.extend(label.unlist_ref().iter().copied());
+      keyvals.push(T_SPACE!());
+      keyvals.push(T_END!());
+    }
+    calls.extend(
+      Invocation!(T_CS!("\\lx@add@contact@placed"), vec![
+        Some(Tokens::new(keyvals)),
+        Some(mark.clone()),
+        Some(address)
+      ])
+      .unlist(),
+    );
+  }
+  Ok(Some(Tokens::new(calls)))
+}
+
+/// A class's affiliation line without the e-mail commands written in it, and those e-mails as the class's e-mails apart
+/// from the names (`placed_email_line_calls`: the author the address spells, …, else the block's): an address set in a
+/// line that goes to several authors by its label is one author's, not each holder's (`\affil{$^1$ Key Laboratory …,
+/// Nanjing 210008, China\email{zhangqm@pmo.ac.cn}}`, 1503.02933: Q. M. Zhang's, not the five authors' of line 1).
+pub fn take_placed_line_emails(line: &Tokens) -> Result<(Tokens, Tokens)> {
+  let tokens = line.unlist_ref();
+  let (mut kept, mut calls) = (Vec::new(), Vec::new());
+  let mut i = 0;
+  while i < tokens.len() {
+    let t = tokens[i];
+    if t.get_catcode() == Catcode::CS && is_email_command(&t)? {
+      let mut j = i + 1;
+      while tokens.get(j) == Some(&T_SPACE!()) {
+        j += 1;
+      }
+      if tokens.get(j) == Some(&T_OTHER!("["))
+        && let Some(close) = tokens[j..].iter().position(|t| *t == T_OTHER!("]"))
+      {
+        j += close + 1;
+      }
+      if let Some((address, next)) = sup_operand_at(tokens, j)
+        && let Some(placed) =
+          placed_email_line_calls(&Tokens::new(address), &Tokens::new(Vec::new()))?
+      {
+        calls.extend(placed.unlist());
+        i = next;
+        continue;
+      }
+    }
+    kept.push(t);
+    i += 1;
+  }
+  Ok((Tokens::new(kept), Tokens::new(calls)))
+}
+
 /// The phrases by which a note or a line names the corresponding author ([`names_correspondence`]).
 static CORRESPONDENCE_PHRASE: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
   Regex::new(concat!(
