@@ -122,14 +122,14 @@ listed with its PDF evidence.
 
 | # | Question | Recommendation | Status |
 |---|---|---|---|
-| R1 | May a convention give an unmarked item to a name whose marks request items of that role? | Never for items printed apart from the block; in-block lines under the names stay with the row | open |
-| R2 | Pairing by position | Hand-printed numbers count everywhere (#918); bare position only under a declared `labelseq` | open |
-| R3 | Does a class convention ever outrank a mark? | No (a class's printed numbering is a label) | open |
-| R4 | Must every difference from today's output still carry a change tag, or does the ruled order license it, with the comparator kept as the census gate? | The ruled order licenses it (Stage 3 onward) | open |
+| R1 | May a convention give an unmarked item to a name whose marks request items of that role? | Never for items printed apart from the block; in-block lines under the names stay with the row | **RULED 2026-11-01: marks win** (FIDELITY_CHARTER §4) |
+| R2 | Pairing by position | Hand-printed numbers count everywhere (#918); bare position only under a declared `labelseq` | **RULED 2026-11-01: printed numbers only** |
+| R3 | Does a class convention ever outrank a mark? | No (a class's printed numbering is a label) | **RULED 2026-11-01: no** (with R1) |
+| R4 | Must every difference from today's output still carry a change tag, or does the ruled order license it, with the comparator kept as the census gate? | The ruled order licenses it (Stage 3 onward) | **RULED 2026-11-01: the ruled order licenses** |
 | R5 | The fallback when the reading is uncertain | The old reader until Stage 7, then the reading with the uncertain text whole | open |
 | R6 | BESIII sub-labels: does `48A` request sub-entry (A) of entry 48? | — | deferred |
 | R7 | revtex `\collaboration` / `\affiliation{(… Collaboration)}`: a contact (Perl's aastex) or a creator (Perl's revtex)? | — | open |
-| R8 | Contact order within a creator | Print order (97d D1 chose it) | open |
+| R8 | Contact order within a creator | Print order (97d D1 chose it) | **RULED 2026-11-01: print order** |
 | R9 | PoS/JHEP one `\@author` across calls: lift the difficulty deferral for Stage 4b? | — | open |
 
 ## Interaction with bundle int126a
