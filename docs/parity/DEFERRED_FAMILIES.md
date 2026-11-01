@@ -92,6 +92,20 @@ recovery cases are recorded here with their witnesses. Each OPEN_ROWS row named 
     pdflatex prints them in the first page's footnote (`\@adminfootnotes`, amsart.cls:655-658). Repro
     `amsart_keywords_before_maketitle_set_after_late_abstracts` (86i r4 review probe n9); int117a, 86i r3 and r4
     alike. No content lost; no corpus witness.
+- **Pathological authoring** (user 2026-11-01: "pathologically bad authoring markup, where recovery is impossible
+  without breaking the more frequent cases … catalog such pathological cases and defer them"). Each case is the
+  markup, why recovering it would break the frequent well-formed case, and its witness. No recovery is added. Each
+  gets a RED repro once one is written. The frontmatter scorer excludes a witness here only for its lost-words shapes;
+  every other violation still counts.
+  - Prose typed in math: `\author{Shaomin Chen\\ $On~behalf~of~E949~Collaboration$}`. The remark prints as math
+    italic letters. Reading math letters as words or a collaboration remark would re-read every formula in a title or
+    a name line. The XML keeps the math, so the text is not lost. Witness hep-ex0409064.
+  - A circled letter as an at-sign: `ajentzen\textcircled{\texttt{a}}cuhk.edu.cn`. Taking `\textcircled{a}` for `@`
+    would turn every circled-letter mark into an e-mail separator. The text is kept as printed. Witness 2302.03286.
+  - An accent command plus a combining accent on one letter: `Alle\'́e`, a source typo printing a doubled acute.
+    Witness 1908.06645.
+  - An unbalanced `\hspace{` in the author line swallows the next author. Perl reads it the same way; reported by the
+    dev lost-words census and not yet reproduced. Witness 1605.04229.
 - **FM-14** a class setter that builds the kernel's `\@author` from its stores (jfpc.cls:188-191; 1503.05530).
 - **FM-15** vmsta 2018+ `\author@optarg` names made by `\csname`; a replayed `\maketitle` prints the author line
   and the e-mail line twice (1806.03850, 1810.09667, 2012.03249).
