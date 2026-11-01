@@ -121,10 +121,14 @@ pub const KERNEL: Policy = Policy {
 /// S2b).
 pub const UNDECLARED: Policy = Policy {
   name: "undeclared",
-  written: false,
+  written: true,
   cite: "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); OD #925",
   ..KERNEL
 };
+
+/// The binding an API call is given when its setter's expansion went unobserved (`ledger::watch_unwritten_setters`):
+/// no family's, so not written whatever `UNDECLARED` says ([`family_written`]).
+pub const UNOBSERVED_BINDING: &str = "unobserved";
 
 /// The owner name the ledger gives the kernel's `\author` (`ledger::meaning_owner`, `ledger::policy_binding`).
 pub const KERNEL_BINDING: &str = "kernel";
@@ -183,8 +187,12 @@ pub fn has_entry(binding: &str) -> bool { declared(binding).is_some() }
 
 /// Whether the family of the binding `binding` is written ([`Policy::written`]): the kernel's (its own blocks, [`KERNEL`]),
 /// or a binding with a declaration of its own that is written (any of its hooks) — what an API call a setter of the
-/// binding made is written under (`ledger::ApiCall::binding`, `writer::unwritten_calls`); `UNDECLARED` for any other.
+/// binding made is written under (`ledger::ApiCall::binding`, `writer::unwritten_calls`); `UNDECLARED` for any other
+/// but [`UNOBSERVED_BINDING`], whose calls no family is known to have made: never written.
 pub fn family_written(binding: &str) -> bool {
+  if binding == UNOBSERVED_BINDING {
+    return false;
+  }
   match declared(binding) {
     Some(d) => d.iter().any(|p| p.written),
     None => undeclared(binding).written,
@@ -242,7 +250,7 @@ mod tests {
   };
 
   #[test]
-  fn a_declaration_is_read_and_an_undeclared_family_takes_the_kernel_unwritten() {
+  fn a_declaration_is_read_and_an_undeclared_family_takes_the_kernel() {
     assert_eq!(
       policy_for("synthetic_binding", "\\lx@add@author@split").name,
       "undeclared"
@@ -268,12 +276,14 @@ mod tests {
       "undeclared"
     );
     assert!(policy_for("kernel", "\\lx@add@authors@adaptive").written);
-    assert!(!policy_for("undeclared_binding", "\\lx@add@authors@append").written);
-    // (a setter's family, any hook's declaration: an API call's, `ledger::ApiCall::binding` — 95b r3)
+    // (every family written since 97e: an undeclared binding's blocks too)
+    assert!(policy_for("undeclared_binding", "\\lx@add@authors@append").written);
+    // (a setter's family, any hook's declaration: an API call's, `ledger::ApiCall::binding` — 95b r3; an unobserved
+    // call is no family's, never written)
     assert!(family_written("kernel"));
     assert!(family_written("synthetic_binding"));
-    assert!(!family_written("undeclared_binding"));
-    assert!(!family_written("unobserved"));
+    assert!(family_written("undeclared_binding"));
+    assert!(!family_written(UNOBSERVED_BINDING));
     // (a declaration again for a hook replaces the earlier in its place: a binding loaded again)
     declare_frontmatter_conventions(&APPEND_HOOK);
     assert_eq!(

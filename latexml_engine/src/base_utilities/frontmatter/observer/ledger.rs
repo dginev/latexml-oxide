@@ -484,7 +484,7 @@ fn setter_binding(cs: &Token) -> Option<String> {
 
 /// The binding an API call is given when its setter's expansion went unobserved ([`watch_unwritten_setters`]): no
 /// family's — not written (`policy::family_written`).
-const UNOBSERVED: &str = "unobserved";
+const UNOBSERVED: &str = policy::UNOBSERVED_BINDING;
 
 /// At a written family's block: observe the frontmatter setters' expansions from now on ([`ApiCall::binding`]) when one
 /// of them is defined and an unwritten family's ([`setter_binding`]: svjour3's `\institute` beside authblk's
