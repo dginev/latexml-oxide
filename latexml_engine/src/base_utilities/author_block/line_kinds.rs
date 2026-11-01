@@ -687,6 +687,56 @@ pub(in crate::base_utilities) fn makes_its_creator(name: &[Token]) -> Result<boo
   Ok(false)
 }
 
+/// A name making its creator itself ([`makes_its_creator`]) with the marks after that command moved into its argument,
+/// where they label the creator it makes, not the empty one the author block's `\lx@add@author` around it would make of
+/// them — `\speaker{Lukas Nellen}$^a$` is `\speaker{Lukas Nellen$^a$}` (1508.03930; Perl gives the outer creator the
+/// marks and its affiliations, unnamed) —, and `extra` (a [`placed_label`] call) put there after them. Only marks move:
+/// a name or a note after the command stays where it is.
+pub(in crate::base_utilities) fn marks_into_own_creator(
+  name: Tokens,
+  extra: Vec<Token>,
+) -> Result<Tokens> {
+  let v = name.unlist_ref();
+  for (at, t) in v.iter().enumerate() {
+    if t.get_catcode() != Catcode::CS || !makes_its_creator(std::slice::from_ref(t))? {
+      continue;
+    }
+    let open = at + 1 + leading_spacing_end(&v[at + 1..]);
+    if v
+      .get(open)
+      .is_none_or(|t| t.get_catcode() != Catcode::BEGIN)
+    {
+      break;
+    }
+    let end = skip_group(v, open);
+    if end <= open + 1
+      || v
+        .get(end - 1)
+        .is_none_or(|t| t.get_catcode() != Catcode::END)
+    {
+      break;
+    }
+    let tail = &v[end..];
+    let marks = spacing_end(tail) > 0
+      && visible_name_text(tail).trim().is_empty()
+      && author_mark_position(&Tokens::new(tail.to_vec())).is_some();
+    if !marks && extra.is_empty() {
+      break;
+    }
+    let mut out = v[..end - 1].to_vec();
+    if marks {
+      out.extend(tail[..spacing_end(tail)].iter().copied());
+    }
+    out.extend(extra);
+    out.push(v[end - 1]);
+    if !marks {
+      out.extend(tail.iter().copied());
+    }
+    return Ok(Tokens::new(out));
+  }
+  Ok(name)
+}
+
 /// The label of the author `author` of a block (an index among its names) that a contact placed on it after the names
 /// are made reaches it by, `labels` holding those given so far: a new one, `author:placed<N>` (counted over the
 /// document, so no two blocks share one; `author:` so no misprefixed institute label's number reaches it), given to the

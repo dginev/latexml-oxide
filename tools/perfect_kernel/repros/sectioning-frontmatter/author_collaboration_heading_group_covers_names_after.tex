@@ -6,7 +6,7 @@
 % oracle:  pdflatex (TL 2025) 0 errors: "XYZ Collaboration", "Ann Able / Univ A", "Bob Baker / Univ B" side by side
 % engines: rust 97b: three creators, "XYZ Collaboration" one; perl: not run
 % expect:  0 errors, 0 warnings; two creators, Ann Able (Univ A) and Bob Baker (Univ B), each with
-%   `<contact role="collaboration">XYZ Collaboration</contact>`
+%   `<contact role="collaboration">XYZ Collaboration</contact>` before the affiliation, as the heading prints above
 % status:  RED (97b) -> GREEN (97d)
 % preload: ar5iv.sty
 \documentclass{article}

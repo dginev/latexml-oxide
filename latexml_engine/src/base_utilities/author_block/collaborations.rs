@@ -8,19 +8,32 @@ use super::*;
 
 /// The command a names-line piece read as a collaboration is wrapped in ([`collaboration_split`]), for the author block's
 /// reader to make its contact ([`Collaborations`]); `\lx@author@collaboration[k]{…}` in a group's lines, `k` the names
-/// of the group before it. Defined as its text (`author_macros.rs`), so a reader that does not know it prints the piece
+/// of the group after it. Defined as its text (`author_macros.rs`), so a reader that does not know it prints the piece
 /// where it stood.
 pub(in crate::base_utilities) fn collaboration_wrapper() -> Token {
   T_CS!("\\lx@author@collaboration")
 }
 
+/// What frames a collaboration's name on the line ([`collaboration_core`]): nothing, a bare "the" before it, or more —
+/// "for", "on behalf of", "representing", brackets, dashes.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub(in crate::base_utilities) enum Framing {
+  /// the name alone: `\textit{WIDE Consortium}` (2501.13770), `\center BESIII Collaboration` (2212.06489)
+  Unframed,
+  /// a bare "the": `the ATLAS Collaboration`, `The Robotics Group`
+  The,
+  /// "for", "on behalf of", "representing", brackets or dashes: `On Behalf Of The ATLAS Collaboration` (0910.2149),
+  /// `Representing the BES Collaboration` (hep-ex0011032), `(XYZ Collaboration)`, `-- QCDSF-UKQCD Collaboration --`
+  Framed,
+}
+
 /// `text` without what frames a collaboration's name — a list's "and", brackets, dashes (`-- QCDSF-UKQCD Collaboration
-/// --`, hep-ph0502212), "for", "on behalf of", "the" — and whether any did; and whether brackets held a name opening with
-/// "The" (`(The Nearby Supernova Factory)`, 1511.01102).
-fn collaboration_core(text: &str) -> (String, bool, bool) {
+/// --`, hep-ph0502212), "for", "on behalf of", "representing", "the" — and what framed it ([`Framing`]); and whether
+/// brackets held a name opening with "The" (`(The Nearby Supernova Factory)`, 1511.01102).
+fn collaboration_core(text: &str) -> (String, Framing, bool) {
   let dash = |c: char| matches!(c, '-' | '–' | '—');
   let mut t = text.trim().to_string();
-  let (mut framed, mut the_in_brackets) = (false, false);
+  let (mut framing, mut the_in_brackets) = (Framing::Unframed, false);
   loop {
     let before = t.clone();
     for p in ["and ", "And ", "& "] {
@@ -32,17 +45,21 @@ fn collaboration_core(text: &str) -> (String, bool, bool) {
       && ((t.starts_with('(') && t.ends_with(')')) || (t.starts_with('[') && t.ends_with(']')))
     {
       t = t[1..t.len() - 1].trim().to_string();
-      framed = true;
+      framing = Framing::Framed;
       the_in_brackets |= t.get(..4).is_some_and(|p| p.eq_ignore_ascii_case("the "));
     }
     if t.starts_with(dash) && t.ends_with(dash) {
       t = t.trim_matches(dash).trim().to_string();
-      framed = true;
+      framing = Framing::Framed;
     }
-    for p in ["for ", "on behalf of ", "the "] {
+    for p in ["for ", "on behalf of ", "representing ", "the "] {
       if t.get(..p.len()).is_some_and(|q| q.eq_ignore_ascii_case(p)) {
         t = t[p.len()..].trim_start().to_string();
-        framed = true;
+        framing = framing.max(if p == "the " {
+          Framing::The
+        } else {
+          Framing::Framed
+        });
         break;
       }
     }
@@ -50,7 +67,7 @@ fn collaboration_core(text: &str) -> (String, bool, bool) {
       break;
     }
   }
-  (t, framed, the_in_brackets)
+  (t, framing, the_in_brackets)
 }
 
 /// A word without the punctuation around it, lowercased (as [`word_forms`] reads it).
@@ -66,41 +83,52 @@ fn collaboration_word(word: &str) -> bool {
   COLLABORATION_WORDS.contains(&bare.as_str()) || TEAM_WORDS.contains(&bare.as_str())
 }
 
-/// Whether the visible text of an author-line piece or line names a collaboration, a team or a consortium and no
-/// person: its name ends with a collaboration word ([`COLLABORATION_WORDS`]: `XYZ Collaboration`, `for the ATLAS, CDF,
-/// CMS and D0 Collaborations`, 1311.7305) or with a team word ([`TEAM_WORDS`]) the line frames — "the", "for", "on
-/// behalf of", brackets: `and the GAPS Team`, 1708.04166 — or a names line lists with "and" (`listed`: `and LHD
-/// experimental group`, 1711.07097), and no word before it names an institution (`The ATLAS Collaboration Office`,
-/// `Theory Group, Department of Physics` stay affiliations); or brackets hold a name opening with "The" that no word
-/// names an institution in (`(The Nearby Supernova Factory)`, 1511.01102). A name the collaboration follows is a name
-/// and its remark ([`collaboration_split`]), no collaboration: `Bob Baker for the ATLAS Collaboration`; nor is a
-/// surname holding such a word (`M.~Huertas-Company`, 1212.4143: "Company" no collaboration's).
+/// Whether the visible text of an author-line piece names a collaboration, a team or a consortium and no person: its
+/// name ends with a collaboration word ([`COLLABORATION_WORDS`]: `XYZ Collaboration`, `for the ATLAS, CDF, CMS and D0
+/// Collaborations`, 1311.7305) or with a team word ([`TEAM_WORDS`]) the line frames — "the", "for", "on behalf of",
+/// brackets: `and the GAPS Team`, 1708.04166 — or a names line lists with "and" (`listed`: `and LHD experimental group`,
+/// 1711.07097), and no word before it names an institution (`The ATLAS Collaboration Office`, `Theory Group, Department
+/// of Physics` stay affiliations); or brackets hold a name opening with "The" that no word names an institution in
+/// (`(The Nearby Supernova Factory)`, 1511.01102). A name the collaboration follows is a name and its remark
+/// ([`collaboration_split`]), no collaboration: `Bob Baker for the ATLAS Collaboration`; nor is a surname holding such a
+/// word (`M.~Huertas-Company`, 1212.4143: "Company" no collaboration's).
 pub fn reads_as_collaboration(text: &str, listed: bool) -> bool {
+  collaboration_framing(text, listed, false).is_some()
+}
+
+/// Whether a line of its own under or over the names names a collaboration ([`reads_as_collaboration`]), and how its
+/// name is framed: a team word's only by more than a bare "the" (`for the GAPS Team`, `(The Robotics Group)`) — `The
+/// Robotics Group`, `the Applied Mathematics Group` under a name are its institution's, an affiliation.
+pub fn collaboration_line_framing(text: &str) -> Option<Framing> {
+  collaboration_framing(text, false, true)
+}
+
+/// [`reads_as_collaboration`] (`line` false) and [`collaboration_line_framing`] (`line` true): how the collaboration a
+/// piece or line names is framed, `None` when it names none.
+fn collaboration_framing(text: &str, listed: bool, line: bool) -> Option<Framing> {
   if text.contains('@') {
-    return false;
+    return None;
   }
-  let (core, framed, the_in_brackets) = collaboration_core(text);
+  let (core, framing, the_in_brackets) = collaboration_core(text);
   let lower = core.to_lowercase();
   if [" for ", " on behalf of "]
     .iter()
     .any(|p| lower.contains(p))
     || core.contains(['(', '['])
   {
-    return false;
+    return None;
   }
   let words: Vec<&str> = core.split_whitespace().collect();
-  let Some(last) = words.last() else {
-    return false;
-  };
+  let last = words.last()?;
   if words.len() > 12 {
-    return false;
+    return None;
   }
   let before = &words[..words.len() - 1];
   if before
     .iter()
     .any(|w| non_name_word(w) && !collaboration_word(w))
   {
-    return false;
+    return None;
   }
   // (a name, not a sentence or a person's: a lowercase word only right before the collaboration word, `LHD experimental
   // group` — not `Monica Brigida\\on behalf of the \emph{Fermi}-LAT Collaboration`, whose line break the text does
@@ -110,16 +138,22 @@ pub fn reads_as_collaboration(text: &str, listed: bool) -> bool {
       && w.chars().next().is_some_and(char::is_lowercase)
       && at + 1 != before.len()
   }) {
-    return false;
+    return None;
   }
   let head = bare_word(last);
   if COLLABORATION_WORDS.contains(&head.as_str()) {
-    return true;
+    return Some(framing);
   }
   if TEAM_WORDS.contains(&head.as_str()) {
-    return framed || listed;
+    let framed = if line {
+      framing == Framing::Framed
+    } else {
+      framing != Framing::Unframed
+    };
+    return (framed || listed).then_some(framing);
   }
-  the_in_brackets && !before.is_empty() && !words.iter().any(|w| non_name_word(w))
+  (the_in_brackets && !before.is_empty() && !words.iter().any(|w| non_name_word(w)))
+    .then_some(framing)
 }
 
 /// Whether a piece of a names line names a collaboration beside the names ([`reads_as_collaboration`]) the way a line
@@ -127,7 +161,8 @@ pub fn reads_as_collaboration(text: &str, listed: bool) -> bool {
 /// part from the names is no collaboration of theirs: revtex's `\collaboration{Fermilab Lattice, HPQCD, and MILC
 /// Collaborations}` (2412.18491, its `\author{#1}`) one collaboration, no name "Fermilab Lattice".
 pub fn reads_as_listed_collaboration(text: &str, listed: bool) -> bool {
-  reads_as_collaboration(text, listed) && (listed || collaboration_core(text).1)
+  reads_as_collaboration(text, listed)
+    && (listed || collaboration_core(text).1 != Framing::Unframed)
 }
 
 /// Whether a collaboration's text ends with a colon, a heading over the names after it (`Tam\'as Cs\"org\H{o}$^{4}$,
@@ -137,8 +172,82 @@ pub fn collaboration_heads(text: &str) -> bool { text.trim_end().ends_with(':') 
 /// Whether a line of an author block, a line of its own, names a collaboration ([`reads_as_collaboration`], a team word
 /// framed): `(XYZ Collaboration)` under the names (2410.11607), `on behalf of the LHCb collaboration` (1905.11825).
 pub(in crate::base_utilities) fn collaboration_line(line: &Tokens) -> bool {
-  author_mark_position(line).is_none()
-    && reads_as_collaboration(&visible_name_text(line.unlist_ref()), false)
+  collaboration_line_reading(line).is_some()
+}
+
+/// How the collaboration a line of an author block names is framed ([`collaboration_line_framing`]), `None` for a line
+/// naming none or marked.
+pub(in crate::base_utilities) fn collaboration_line_reading(line: &Tokens) -> Option<Framing> {
+  if author_mark_position(line).is_some() {
+    return None;
+  }
+  collaboration_line_framing(&visible_name_text(line.unlist_ref()))
+}
+
+/// Whether a line of an author block that names a collaboration unframed ([`Framing::Unframed`]) is an institution,
+/// the line under it (`next`) its address going on — a place, no e-mail, link, mark or collaboration of its own: an
+/// employer's line (`\textit{WIDE Consortium}\\ \.Zabbar\\ Malta`, 2501.13770, as the next column's `\textit{ACURRAENT
+/// UG}\\ Frankfurt (Oder)\\ Germany`), an affiliation as before. A framed one is the collaboration whatever follows
+/// (`On Behalf Of The ATLAS Collaboration \\ University of Wisconsin`, 0910.2149).
+pub(in crate::base_utilities) fn collaboration_line_before(
+  line: &Tokens,
+  next: Option<&Tokens>,
+) -> bool {
+  match collaboration_line_reading(line) {
+    None => false,
+    Some(Framing::Unframed) => !next.is_some_and(|next| {
+      author_mark_position(next).is_none()
+        && !prints_nothing(next)
+        && !line_is_email(next)
+        && !is_link_line(next)
+        && !collaboration_line(next)
+    }),
+    Some(_) => true,
+  }
+}
+
+/// A line of an author block ending in "and" or "&" and the line under it, joined when together they name one
+/// collaboration ([`collaboration_line`]): `the \textit{Fermi} Pulsar Search Consortium and \\ the \textit{Fermi} Pulsar
+/// Timing Consortium` (1210.5341) is one collaboration, not the affiliation "… Search Consortium and" beside the
+/// collaboration "… Timing Consortium". The line break prints as a space.
+pub(in crate::base_utilities) fn joined_collaboration(
+  line: &Tokens,
+  next: &Tokens,
+) -> Option<Tokens> {
+  let text = visible_name_text(line.unlist_ref());
+  let text = text.trim_end();
+  let ends_with_and = text == "and"
+    || text.ends_with(" and")
+    || text.ends_with('&')
+    || line.unlist_ref().iter().rev().find(|t| !is_spacing(t)) == Some(&T_CS!("\\&"));
+  if !ends_with_and || author_mark_position(next).is_some() {
+    return None;
+  }
+  let mut v = line.unlist_ref()[..spacing_end(line.unlist_ref())].to_vec();
+  v.push(T_SPACE!());
+  let next = next.unlist_ref();
+  v.extend(next[leading_spacing_end(next)..].iter().copied());
+  let joined = Tokens::new(v);
+  collaboration_line(&joined).then_some(joined)
+}
+
+/// Where a heading's collaboration goes in a name's tokens ([`Collaborations::author`]): before the first note or mark
+/// command the name carries, as the heading prints above the name and its notes' marks (`G.~Antchev\footnote{INRNE-BAS,
+/// …}` under `for the TOTEM Collaboration:`, 1204.5689), and after the name's words, which the readers that place a
+/// later address by the name's words read first (iopart's `\ead{awest@…}` after `\author{ACME Collaboration: … A~D~West$^3$,
+/// E~P~West$^1$}`, 1612.09318: a contact before the name read as its first words, the address no one's; after them
+/// its words are no name's, [`visible_name_text`] reading no `\lx@add@contact`).
+pub(in crate::base_utilities) fn heading_place(name: &[Token]) -> usize {
+  let mut depth = 0i32;
+  for (at, t) in name.iter().enumerate() {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      Catcode::CS if depth == 0 && (is_name_annotation(t) || is_footnote_mark(t)) => return at,
+      _ => {},
+    }
+  }
+  name.len()
 }
 
 /// Whether a names-line piece reads as one person's name: by its shape, or marked after the name and no institution or
@@ -218,10 +327,45 @@ fn name_and_remark(piece: &Tokens) -> Option<(Tokens, Tokens)> {
     if reads_as_collaboration(&visible_name_text(remark.unlist_ref()), false)
       && reads_as_one_name(&name)
     {
-      return Some((name, remark));
+      return Some(name_takes_annotations(name, remark));
     }
   }
   None
+}
+
+/// A name and its collaboration remark with the name's annotations the remark holds moved onto the name — a note
+/// reference, a footnote, a `\thanks` (`is_name_annotation`, `is_footnote_mark`) and its arguments: `Jan Fiete
+/// Grosse-Oetringhaus (for the ALICE\fnref{col1} Collaboration)` (1408.0414, 1408.5384) is the name's `\fnref`, which
+/// in the contact asked for a label no creator answers (two `Warning:unexpected:annotation`).
+fn name_takes_annotations(name: Tokens, remark: Tokens) -> (Tokens, Tokens) {
+  let v = remark.unlist_ref();
+  let (mut kept, mut moved) = (Vec::with_capacity(v.len()), Vec::new());
+  let mut i = 0;
+  while i < v.len() {
+    let t = v[i];
+    if t.get_catcode() != Catcode::CS || !(is_name_annotation(&t) || is_footnote_mark(&t)) {
+      kept.push(t);
+      i += 1;
+      continue;
+    }
+    let start = i;
+    i += 1;
+    if v.get(i) == Some(&T_OTHER!("["))
+      && let Some(close) = v[i..].iter().position(|u| *u == T_OTHER!("]"))
+    {
+      i += close + 1;
+    }
+    while v.get(i).is_some_and(|u| u.get_catcode() == Catcode::BEGIN) {
+      i = skip_group(v, i);
+    }
+    moved.extend_from_slice(&v[start..i.min(v.len())]);
+  }
+  if moved.is_empty() {
+    return (name, remark);
+  }
+  let mut named = name.unlist();
+  named.extend(moved);
+  (Tokens::new(named), Tokens::new(kept))
 }
 
 /// The collaboration a piece opens with before a colon and the name after it: `Euclid Collaboration: Y.~Fu\inst{…}`
@@ -314,7 +458,7 @@ fn names_and_collaborations(
   // — no person "Fermilab Lattice")
   let marked_line = joined.iter().any(|(_, piece)| marked_after_name(piece));
   let listed_alone = |text: &str| {
-    !collaboration_core(text).1
+    collaboration_core(text).1 == Framing::Unframed
       && text
         .split_whitespace()
         .last()
@@ -432,8 +576,9 @@ pub(in crate::base_utilities) fn collaboration_split(
   Some(out)
 }
 
-/// The collaboration a piece wrapped by [`collaboration_split`] holds, and the names of its group before it when the
-/// wrapper says (`[k]`); `None` for any other piece.
+/// The collaboration a piece wrapped by [`collaboration_split`] holds, and the names of its group after it when the
+/// wrapper says (`[k]`, counted from the group's end, which the names of a group joined before it leave as it is);
+/// `None` for any other piece.
 pub(in crate::base_utilities) fn unwrapped_collaboration(
   piece: &Tokens,
 ) -> Option<(Tokens, Option<usize>)> {
@@ -443,10 +588,10 @@ pub(in crate::base_utilities) fn unwrapped_collaboration(
     return None;
   }
   let mut i = start + 1;
-  let mut before = None;
+  let mut after = None;
   if v.get(i) == Some(&T_OTHER!("[")) {
     let close = v[i..].iter().position(|t| *t == T_OTHER!("]"))? + i;
-    before = Tokens::new(v[i + 1..close].to_vec())
+    after = Tokens::new(v[i + 1..close].to_vec())
       .to_string()
       .trim()
       .parse()
@@ -460,13 +605,14 @@ pub(in crate::base_utilities) fn unwrapped_collaboration(
   v[end..]
     .iter()
     .all(|t| *t == T_SPACE!())
-    .then(|| (Tokens::new(v[i + 1..end - 1].to_vec()), before))
+    .then(|| (Tokens::new(v[i + 1..end - 1].to_vec()), after))
 }
 
-/// A collaboration wrapped for a group's lines, `k` the names of the group before it ([`unwrapped_collaboration`]).
-pub(in crate::base_utilities) fn collaboration_in_lines(text: Tokens, before: usize) -> Tokens {
+/// A collaboration wrapped for a group's lines, `after` the names of the group after it ([`unwrapped_collaboration`]):
+/// none for a line under the names.
+pub(in crate::base_utilities) fn collaboration_in_lines(text: Tokens, after: usize) -> Tokens {
   let mut v = vec![collaboration_wrapper(), T_OTHER!("[")];
-  v.extend(mouth::tokenize_internal(TeXString::assembled(before.to_string())).unlist());
+  v.extend(mouth::tokenize_internal(TeXString::assembled(after.to_string())).unlist());
   v.push(T_OTHER!("]"));
   v.push(T_BEGIN!());
   v.extend(text.unlist());
@@ -546,13 +692,14 @@ fn collaboration_key(text: &Tokens) -> String {
     .join(" ")
 }
 
-/// The contact a collaboration makes on the last `covers` authors made (`annotate=N`, Base_Utility.pool.ltxml:519): the
-/// names it covers counted where it is read ([`Collaborations`]), where aastex's `\collaboration` reaches the authors
-/// before it that carry none (`annotate=new`, aas_support.sty.ltxml:126).
-fn collaboration_contact_call(text: &Tokens, covers: usize) -> Result<Vec<Token>> {
+/// The contact a collaboration makes (Base_Utility.pool.ltxml:517-521): on the last `covers` authors made
+/// (`annotate=N`), the names it covers counted where it is read ([`Collaborations`]) — `Some(1)` the creator being made,
+/// read in its content —; with `None`, on every author before it that carries no collaboration yet (`annotate=new`, as
+/// aastex's `\collaboration` reaches them, aas_support.sty.ltxml:126).
+fn collaboration_contact_call(text: &Tokens, covers: Option<usize>) -> Result<Vec<Token>> {
+  let annotate = covers.map_or_else(|| s!("new"), |covers| covers.max(1).to_string());
   let keyvals = mouth::tokenize_internal(TeXString::assembled(s!(
-    "role=collaboration,annotate={}",
-    covers.max(1)
+    "role=collaboration,annotate={annotate}"
   )));
   Ok(
     Invocation!(T_CS!("\\lx@add@contact"), vec![
@@ -564,88 +711,107 @@ fn collaboration_contact_call(text: &Tokens, covers: usize) -> Result<Vec<Token>
 }
 
 /// The collaborations of an author call, read in the order its entries are made ([`collaboration_split`],
-/// [`collaboration_line`]). One after names — a piece of the names line, a line under them — covers the names of its
-/// `\and` group made since the group's last collaboration (`… and the GAPS Team`, 1708.04166; `(XYZ Collaboration)`
-/// under the names, 2410.11607; `J.~Zapatero$^{5}$ (The MAGIC Collaboration), A.~Falcone$^{30}`, 0910.4381: the 144
-/// names before it, not the six after); one before any name of its group, a heading, every name after it in the call
-/// (`\center BESIII Collaboration\\~\\ M.~Ablikim$^{1}$, …`, 2212.06489; `\small H.E.S.S. Collaboration \and
-/// H.~Abdalla \inst{…} \and …`, 1912.05868), once when the same collaboration closes them (`… J.~Zu$^{68,55}$ (BESIII
-/// Collaboration)`).
+/// [`collaboration_line`]), each contact made where the collaboration prints among the creator's other contacts (they
+/// render in document order, LaTeXML-structure-xhtml.xsl:795). One after names — a piece of the names line, a line under
+/// them — covers the names of its `\and` group made since the group's last collaboration (`… and the GAPS Team`,
+/// 1708.04166; `(XYZ Collaboration)` under the names, 2410.11607; `J.~Zapatero$^{5}$ (The MAGIC Collaboration),
+/// A.~Falcone$^{30}`, 0910.4381: the 144 names before it, not the six after), read where it stands — under the names,
+/// in the last name's content at its line's place (`Ann Able \\ for the XYZ Collaboration \\ Univ X`: the
+/// collaboration, then the institution; 0910.2149, hep-ex0011032). One before any name of its group, a heading, is
+/// every name's after it in the call, made in each name's content right after the name (`\center BESIII
+/// Collaboration\\~\\ M.~Ablikim$^{1}$, …`, 2212.06489; `\small H.E.S.S. Collaboration \and H.~Abdalla \inst{…} \and
+/// …`, 1912.05868), once when the same collaboration closes them (`… J.~Zu$^{68,55}$ (BESIII Collaboration)`); one no
+/// name comes after, a trailing `\and` group, every name's before it that carries none (`annotate=new`). A new `\and`
+/// group starts its own count: a collaboration after another covers its names only within one group (rev97cd D4).
 #[derive(Default)]
 pub(in crate::base_utilities) struct Collaborations {
   /// the names of the group made since its last collaboration
-  uncovered: usize,
-  /// a heading, with the names made since it
-  heading:   Option<(Tokens, usize)>,
-  /// the last collaboration made, by [`collaboration_key`], and the names it covered
-  last:      Option<(String, usize)>,
+  uncovered:     usize,
+  /// the headings over the names to come
+  headings:      Vec<Tokens>,
+  /// the names made since the headings were read
+  heading_names: usize,
+  /// the last collaboration made in the group, by [`collaboration_key`], and the names it covered
+  last:          Option<(String, usize)>,
 }
 
 impl Collaborations {
-  /// An author made.
-  pub(in crate::base_utilities) fn author(&mut self) {
+  /// An author made: the contacts its headings make on it, for its content right after its name.
+  pub(in crate::base_utilities) fn author(&mut self) -> Result<Vec<Token>> {
     self.uncovered += 1;
-    if let Some((_, names)) = self.heading.as_mut() {
-      *names += 1;
+    self.heading_names += 1;
+    let mut calls = Vec::new();
+    for heading in &self.headings {
+      calls.extend(collaboration_contact_call(heading, Some(1))?);
     }
+    Ok(calls)
   }
 
   /// A collaboration read where it stands: the contact calls it makes now.
   pub(in crate::base_utilities) fn read(&mut self, text: Tokens) -> Result<Vec<Token>> {
     let key = collaboration_key(&text);
     let heads = collaboration_heads(&visible_name_text(text.unlist_ref()));
-    let mut calls = Vec::new();
+    let heading_of = |headings: &[Tokens]| {
+      headings
+        .iter()
+        .position(|heading| collaboration_key(heading) == key)
+    };
     if self.uncovered == 0 || heads {
       // (the same collaboration again, with no name between, once; one right after another, no name between, covers its
       // names too — `… I.C. Luhmann$^7$, the ASDEX Upgrade Team and the EUROfusion MST1 Team$^*$`, 1603.09150)
       match &self.last {
-        Some((last, _)) if *last == key && !heads => return Ok(calls),
-        Some((_, covers)) if !heads && self.heading.is_none() => {
+        Some((last, _)) if *last == key && !heads => return Ok(Vec::new()),
+        Some((_, covers)) if !heads && self.headings.is_empty() => {
           let covers = *covers;
-          calls.extend(collaboration_contact_call(&text, covers)?);
+          let calls = collaboration_contact_call(&text, Some(covers))?;
           self.last = Some((key, covers));
           return Ok(calls);
         },
         _ => {},
       }
-      if self
-        .heading
-        .as_ref()
-        .is_some_and(|(heading, _)| collaboration_key(heading) == key)
-      {
-        return Ok(calls);
+      if heading_of(&self.headings).is_some() {
+        return Ok(Vec::new());
       }
-      // (a heading over the names to come — one before it closed by it)
-      if let Some((heading, names)) = self.heading.take() {
-        calls.extend(collaboration_contact_call(&heading, names)?);
+      // (a heading over the names to come; the ones before it closed once names came under them)
+      if self.heading_names > 0 {
+        self.headings.clear();
       }
-      self.heading = Some((text, 0));
+      self.headings.push(text);
+      self.heading_names = 0;
       self.uncovered = 0;
-      return Ok(calls);
+      return Ok(Vec::new());
     }
-    // (the heading's own name closing its names: one contact, on every name since the heading)
-    let covers = match self.heading.take() {
-      Some((heading, names)) if collaboration_key(&heading) == key => names,
-      heading => {
-        self.heading = heading;
-        self.uncovered
-      },
-    };
-    calls.extend(collaboration_contact_call(&text, covers)?);
+    // (the heading's own name closing its names: they carry it already)
+    if let Some(at) = heading_of(&self.headings) {
+      self.headings.remove(at);
+      self.last = Some((key, self.heading_names));
+      self.uncovered = 0;
+      return Ok(Vec::new());
+    }
+    let covers = self.uncovered;
+    let calls = collaboration_contact_call(&text, Some(covers))?;
     self.uncovered = 0;
     self.last = Some((key, covers));
     Ok(calls)
   }
 
-  /// A new `\and` group of the call: the names after it are no longer the last group's.
-  pub(in crate::base_utilities) fn close_group(&mut self) { self.uncovered = 0; }
+  /// A new `\and` group of the call: the names after it are no longer the last group's, nor is a collaboration after
+  /// them the last one's companion (rev97cd D4: `… \\ (ATLAS Collaboration) \\ … \and CMS Collaboration \\ Cid Cole …`
+  /// heads the names after it, not Ann's and Bob's).
+  pub(in crate::base_utilities) fn close_group(&mut self) {
+    self.uncovered = 0;
+    self.last = None;
+  }
 
-  /// The call read to its end: a heading covers the names made since it (with none, the last author).
+  /// The call read to its end: a heading no name came after covers every name before it that carries no collaboration
+  /// yet (`\author{Ann Able \and Bob Baker \and The XYZ Collaboration}`, `annotate=new`).
   pub(in crate::base_utilities) fn finish(&mut self) -> Result<Vec<Token>> {
-    let calls = match self.heading.take() {
-      Some((heading, names)) => collaboration_contact_call(&heading, names)?,
-      None => Vec::new(),
-    };
+    let mut calls = Vec::new();
+    if self.heading_names == 0 {
+      for heading in &self.headings {
+        calls.extend(collaboration_contact_call(heading, None)?);
+      }
+    }
     *self = Self::default();
     Ok(calls)
   }

@@ -1,0 +1,25 @@
+% mechanism: a note reference inside a name's collaboration remark (`\fnref`, `\footnote`, `\thanks`: any name
+%   annotation, `is_name_annotation`) is the name's, moved out of the contact onto the name (`name_takes_annotations`,
+%   author_block/collaborations.rs; OXIDIZED_DESIGN_DIVERGENCES #946): in the contact it asked for a label no creator
+%   answers.
+% witness: 1408.0414, 1408.5384 (elsarticle, `\author{Jan Fiete Grosse-Oetringhaus (for the ALICE\fnref{col1}
+%   Collaboration)}`: 97d r1 two `Warning:unexpected:annotation` "Orphaned frontmatter annotation … label=fn:col1",
+%   the collaboration after the address)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able (for the XYZ Collaboration)1", "Univ X", the footnote "1 A list of
+%   members is at the end."
+% engines: rust 97b: the name "Ann Able (for the XYZ Collaboration)"; rust 97d r1: 2 Warnings, address before the
+%   collaboration; perl: not run
+% expect:  0 errors, 0 warnings; one creator Ann Able: collaboration "(for the XYZ Collaboration)", address Univ X, the
+%   note
+% status:  RED (97d r1) -> GREEN (97d r2)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Ann Able (for the XYZ\fnref{c1} Collaboration)}
+\fntext[c1]{A list of members is at the end.}
+\address{Univ X}
+\end{frontmatter}
+Body.
+\end{document}

@@ -834,3 +834,62 @@ fn linebreak_option_gap_kept_between_lines() {
     plain(r"A \\ U \\ B")
   );
 }
+
+#[test]
+fn collaboration_and_team_words_stay_non_name_words() {
+  // (a collaboration's or team's head word reads as no name wherever `non_name_word` is asked — the recognizer's
+  // "no institution word before the head" test excepts exactly these; rev97cd D7)
+  for word in COLLABORATION_WORDS.iter().chain(TEAM_WORDS) {
+    assert!(NON_NAME_WORDS.contains(word), "{word}");
+    assert!(non_name_word(word), "{word}");
+  }
+}
+
+#[test]
+fn a_line_frames_a_team_by_more_than_the() {
+  // (a team or group word on a line of its own names a collaboration only framed by more than a bare "the" — `The
+  // Robotics Group` under a name is its institution; a collaboration word by "the" too; rev97cd D2)
+  assert_eq!(collaboration_line_framing("The Robotics Group"), None);
+  assert_eq!(
+    collaboration_line_framing("the Applied Mathematics Group"),
+    None
+  );
+  assert_eq!(
+    collaboration_line_framing("for the GAPS Team"),
+    Some(Framing::Framed)
+  );
+  assert_eq!(
+    collaboration_line_framing("(The Data Group)"),
+    Some(Framing::Framed)
+  );
+  assert_eq!(
+    collaboration_line_framing("WIDE Consortium"),
+    Some(Framing::Unframed)
+  );
+  assert_eq!(
+    collaboration_line_framing("the ATLAS Collaboration"),
+    Some(Framing::The)
+  );
+  assert_eq!(
+    collaboration_line_framing("Representing the BES Collaboration"),
+    Some(Framing::Framed)
+  );
+  assert_eq!(
+    collaboration_line_framing("On Behalf Of The ATLAS Collaboration"),
+    Some(Framing::Framed)
+  );
+  // (a piece of a names line: "the" frames it, `…, the ASDEX Upgrade Team and the EUROfusion MST1 Team`, 1603.09150)
+  assert!(reads_as_collaboration("the ASDEX Upgrade Team", false));
+}
+
+#[test]
+fn a_contact_call_in_a_name_is_no_name_text() {
+  setup();
+  // (a heading's collaboration made in a name's content, after its words: no part of them — read, "WestXYZ" spelled no
+  // address, 1612.09318's `awest@` went to no one; rev97cd r2)
+  let headed = tk(
+    r"\lx@author@withsup{C~West$^1$\lx@add@contact[role=collaboration,annotate=1]{XYZ Collaboration}}",
+  );
+  assert_eq!(visible_name_text(headed.unlist_ref()), "C West");
+  assert_eq!(spelled_owners(&[NameKeys::of(&headed)], "cwest@x.edu"), [0]);
+}

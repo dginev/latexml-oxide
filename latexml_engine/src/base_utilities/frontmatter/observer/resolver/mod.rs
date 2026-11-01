@@ -405,6 +405,9 @@ struct Resolver {
   /// the affiliation texts of API calls that print line breaks (their ledger index, the text, the text with its lines:
   /// [`events_lined_text`]), where `take_out_entry_addresses` reads a line's end (brief 95c r2 B2)
   lined:            Vec<(usize, String, String)>,
+  /// the collaborations an unframed line names that an address line under it may still make an institution's (the
+  /// creator, its contact: [`Resolver::attach`], `collaboration_line_before`)
+  unframed:         Vec<(usize, usize)>,
 }
 
 /// A note's link placed once every name of the document is read (`Resolver::answer_note_links`; main-session decisions
@@ -490,6 +493,7 @@ impl Resolver {
       note_texts:       Vec::new(),
       continued:        Vec::new(),
       lined:            Vec::new(),
+      unframed:         Vec::new(),
     }
   }
 
@@ -522,19 +526,28 @@ impl Resolver {
 
   fn attach(&mut self, owner: Option<usize>, mut assoc: Assoc, note: bool) {
     // (an unlabelled line of the block that names a collaboration is its owners' collaboration, as today's reader makes
-    // it — `(XYZ Collaboration)` under the names, 2410.11607; `reads_as_collaboration`, OXIDIZED_DESIGN_DIVERGENCES
-    // #946 —, not a class's affiliation command holding one: revtex's `\affiliation{(WA98 Collaboration)}`, 0708.2630)
-    if !note
+    // it — `(XYZ Collaboration)` under the names, 2410.11607; `collaboration_line_framing`, OXIDIZED_DESIGN_DIVERGENCES
+    // #946 —, not a class's affiliation command holding one: revtex's `\affiliation{(WA98 Collaboration)}`, 0708.2630;
+    // a team's only framed by more than "the", `The Robotics Group` an institution's)
+    let line_affiliation = !note
       && owner.is_some()
       && assoc.role == "affiliation"
       && assoc.label.is_none()
-      && assoc.rule.starts_with("line:")
-      && reads_as_collaboration(&assoc.text, false)
-    {
+      && assoc.rule.starts_with("line:");
+    let framing = line_affiliation
+      .then(|| collaboration_line_framing(&assoc.text))
+      .flatten();
+    if framing.is_some() {
       assoc.role = "collaboration".into();
     }
     match owner {
       Some(at) => {
+        // (an address line under an unframed one naming a collaboration makes that one an institution's, its address
+        // going on: `\textit{WIDE Consortium}\\ \.Zabbar\\ Malta`, 2501.13770 — as today's reader,
+        // `collaboration_line_before`)
+        if line_affiliation && framing.is_none() {
+          self.institution_after_all(at);
+        }
         let creator = &mut self.out.creators[at];
         if note {
           creator.notes.push(assoc);
@@ -544,12 +557,44 @@ impl Resolver {
             self.order[at].push((true, creator.affiliations.len()));
             creator.affiliations.push(assoc);
           } else {
+            if framing == Some(Framing::Unframed) {
+              self.unframed.push((at, creator.contacts.len()));
+            }
             self.order[at].push((false, creator.contacts.len()));
             creator.contacts.push(assoc);
           }
         }
       },
       None => self.out.block.push(assoc),
+    }
+  }
+
+  /// The unframed collaboration just attached to creator `at`, an institution's after all: its line an affiliation
+  /// again, the address line under it going on (`Resolver::attach`).
+  fn institution_after_all(&mut self, at: usize) {
+    let Some(&(false, contact)) = self.order[at].last() else {
+      return;
+    };
+    let Some(slot) = self.unframed.iter().position(|u| *u == (at, contact)) else {
+      return;
+    };
+    self.unframed.remove(slot);
+    let creator = &mut self.out.creators[at];
+    if contact + 1 != creator.contacts.len() {
+      return;
+    }
+    let mut assoc = creator.contacts.remove(contact);
+    assoc.role = "affiliation".into();
+    if let Some(order) = self.order[at].last_mut() {
+      *order = (true, creator.affiliations.len());
+    }
+    creator.affiliations.push(assoc);
+    if let Some(role) = self.roles[at]
+      .iter_mut()
+      .rev()
+      .find(|r| *r == "collaboration")
+    {
+      *role = "affiliation".into();
     }
   }
 

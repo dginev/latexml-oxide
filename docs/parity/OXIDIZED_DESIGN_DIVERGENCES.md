@@ -28957,14 +28957,22 @@ names and becomes the contact Perl's aastex binding makes of `\collaboration{n}{
 
 - **Recognition** (`reads_as_collaboration`, from the piece's words, by the existing `NON_NAME_WORDS` machinery): its
   name ends with a collaboration word (`COLLABORATION_WORDS`: collaboration(s), consortium/consortia) or with a team word
-  (`TEAM_WORDS`: team(s), group(s), experiment(s)) the line frames — "the", "for", "on behalf of", brackets, dashes — or
-  a names line lists with "and" (`… and LHD experimental group$^{2}$`, 1711.07097); no word before it names an
+  (`TEAM_WORDS`: team(s), group(s), experiment(s)) the line frames — "the", "for", "on behalf of", "representing",
+  brackets, dashes (`Framing`) — or a names line lists with "and" (`… and LHD experimental group$^{2}$`, 1711.07097); on
+  a line of its own a team word only by more than a bare "the" (`collaboration_line_framing`: `The Robotics Group`, `the
+  Applied Mathematics Group` under a name are its institution's); an unframed one whose address goes on under it is an
+  employer's line, an affiliation (`collaboration_line_before`: 2501.13770's `\textit{WIDE Consortium}\\ \.Zabbar\\
+  Malta`, as the next column's `\textit{ACURRAENT UG}\\ Frankfurt (Oder)`); a line ending in "and" or "&" and the line
+  under it that together name one are one line (`joined_collaboration`: 1210.5341's `the \textit{Fermi} Pulsar Search
+  Consortium and \\ the \textit{Fermi} Pulsar Timing Consortium` one contact); no word before it names an
   institution (`The ATLAS Collaboration Office, CERN`, `Theory Group, Department of …` stay affiliations; an unframed
   `Machine Learning Group` line too, 2205.00756); a lowercase word only right before the collaboration word (no sentence,
   and no name the text runs into: 0907.0548's `Monica Brigida\\on behalf of the \emph{Fermi}-LAT Collaboration`).
   Brackets holding a name opening with "The" and no institution word are one too (`(The Nearby Supernova Factory)`,
   1511.01102). A name the collaboration follows is a name and its remark (`name_and_remark`: `J.~Zapatero$^{5}$ (The
-  MAGIC Collaboration)`, 0910.4381; `Bob Baker for the ATLAS Collaboration`); a heading before a colon is one too
+  MAGIC Collaboration)`, 0910.4381; `Bob Baker for the ATLAS Collaboration`), the name's annotations the remark holds
+  moved onto the name (`name_takes_annotations`: 1408.0414's `(for the ALICE\fnref{col1} Collaboration)`, whose
+  `\fnref` in the contact asked for a label no creator answers); a heading before a colon is one too
   (`heading_and_name`: `Euclid Collaboration: Y.~Fu…`). The pieces the names split parted are put together first
   (`names_and_collaborations`: `for the XYZ` + `ABC Collaborations`; `ATLAS`, `CDF`, `CMS` and `D0 Collaborations`,
   1311.7305). A piece the commas alone part from the names is none (`reads_as_listed_collaboration`: framed or listed
@@ -28987,9 +28995,25 @@ names and becomes the contact Perl's aastex binding makes of `\collaboration{n}{
   (2212.06489's `\center BESIII Collaboration\\~\\ … J.~Zu$^{68,55}$ (BESIII Collaboration)`), as does one ending in a
   colon (`Tam\'as Cs\"org\H{o}$^{4}$, for the TOTEM Collaboration:\\ G.~Antchev …`, 1204.5689); one right after
   another, no name between, covers the same names (`… I.C. Luhmann$^7$, the ASDEX Upgrade Team and the EUROfusion MST1
-  Team$^*$`, 1603.09150). The contact's text is
+  Team$^*$`, 1603.09150), within one `\and` group (`close_group` forgets the last: a collaboration opening the next
+  group heads its own names); a trailing `\and` group naming only a collaboration, marked or not, covers every name before
+  it that carries none (`annotate=new`, `Collaborations::finish`). The contact's text is
   the piece as written, without the layout around it and the affiliation marks on it (a footnote symbol it shows
   stays).
+- **Order.** Each contact is made where its collaboration prints among the creator's other contacts (they render in
+  document order, LaTeXML-structure-xhtml.xsl:795): a line under the names in the last name's content at its line's
+  place (0910.2149's `On Behalf Of The ATLAS Collaboration \\ University of Wisconsin` the collaboration, then the
+  institution; hep-ex0011032), a names-line piece after the name before it, a heading's in each name's content
+  (`annotate=1`) after the name's words and before the notes it carries (`heading_place`: 1204.5689's
+  `G.~Antchev\footnote{INRNE-BAS…}` under `for the TOTEM Collaboration:`), after the whole name when the name makes its
+  creator itself. The kernel's `\lx@add@contact` in a creator's content is no name text (`visible_name_text`): its words
+  ran into the name's last ("WestXYZ") and iopart's `\ead{awest@…}`, placed by the names' words, went to a nameless
+  creator (1612.09318).
+- **A name making its creator itself** (PoS's `\speaker`, `\lx@add@creator[role=speaker]`) takes the marks after it into
+  that creator's content (`marks_into_own_creator`), and as the call's one name its e-mail lines by a label of its own
+  (`placed_label`), in print order: 1508.03930's `\speaker{Lukas Nellen}$^a$ for the HAWC collaboration$^b$` gives the
+  speaker his affiliation and e-mail (97b: the pseudo-creator "for the HAWC collaboration"; Perl a nameless author), the
+  `$^b$` line no author's mark answers the block's; 1708.04166's and 1211.0751's speakers their affiliations.
 - **The observer's reading agrees** (resolver/lines.rs `names_line_events`, resolver/mod.rs `attach`), so the writer
   compares like with like: a names-line piece or a name's remark reading as a collaboration is a `collaboration` contact
   on the line's names since its last one, its mark no name's; an unlabelled line of the block reading as one is the
@@ -29028,6 +29052,21 @@ sectioning-frontmatter/`author_collaboration_line_welded_into_last_name` (RED �
 `author_names_for_two_collaborations_is_one_contact`, `author_name_bracketed_collaboration_covers_names_before`,
 `aastex_collaboration_line_under_names_is_a_contact`, `author_collaboration_heading_group_covers_names_after`,
 `author_team_and_group_lines_stay_affiliations`, `author_collaboration_heading_colon_outside_groups`.
+
+**Round 2** (review rev97cd). Guards `perfect_kernel_batch97d` (seven more: `collaboration_line_is_made_where_it_prints`,
+`unframed_collaboration_with_its_address_and_the_team_stay_affiliations`, `collaboration_broken_after_and_is_one_contact`,
+`collaboration_opening_an_and_group_heads_its_names`, `trailing_collaboration_group_covers_every_name`,
+`pos_speakers_marks_and_addresses_are_his`, `a_remarks_note_reference_is_the_names`,
+`a_headings_contact_leaves_the_names_words`), engine unit tests `collaboration_and_team_words_stay_non_name_words`,
+`a_line_frames_a_team_by_more_than_the`, `a_contact_call_in_a_name_is_no_name_text`; changed:
+`collaboration_heading_and_its_closing_piece_are_one_contact` (the heading's text, "XYZ Collaboration", first) and
+`collaboration_heading_group_covers_the_names_after_it` (the heading's contact before the affiliation). Repros
+sectioning-frontmatter/`author_collaboration_line_keeps_its_print_order`,
+`author_unframed_collaboration_with_address_stays_affiliation`, `author_collaboration_broken_after_and_is_one_contact`,
+`author_collaboration_after_and_heads_its_own_group`, `author_trailing_collaboration_group_covers_every_name`,
+`pos_speaker_marked_with_collaboration_keeps_his_contacts`, `elsarticle_collaboration_remark_note_reference_is_the_names`,
+`iopart_collaboration_heading_keeps_the_names_words` (RED → GREEN); `author_team_piece_mark_labels_its_own_line` RED catalog (a team piece's own mark labels a line no author
+asks for: the block's, as any such line).
 
 ### 948. Every remaining observer-writer family is written in one batch (ijcai, inst_support, iopart, jheppub, jinstpub, jcappub, jpconf, sv_support and every binding owning `\author` with no declaration); a block line's letters are read as printed, a re-parted entry keeps today's role, a letter-spaced name's word space is no gap, an e-mail's corresponding owner is one of the authors it is printed for, a name read as an entry is never written onto an author (Perl: the old reader's output, no observer)
 

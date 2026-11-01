@@ -29,7 +29,10 @@ pub(in crate::base_utilities) fn visible_name_text(tokens: &[Token]) -> String {
             i += 1;
           }
         }
-        let annotation = is_name_annotation(&t);
+        // (and the kernel's own contact call a creator's content holds, a heading's collaboration after the name or a
+        // link line's URL, OXIDIZED_DESIGN_DIVERGENCES #946: its keyvals and text are no name's — read, they ran into
+        // the name's last word, "WestXYZ", and the address spelling A~D~West went to no one, 1612.09318)
+        let annotation = is_name_annotation(&t) || t == T_CS!("\\lx@add@contact");
         i += 1;
         // an accent's spaces before its letter are not text (`Plech\' a\v{c}`, cond-mat9705101; tex.web §1123
         // `\accent` skips them)

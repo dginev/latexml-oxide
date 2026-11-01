@@ -1,0 +1,22 @@
+% mechanism: a line ending in "and" or "&" and the line under it that together name one collaboration are one line
+%   (`joined_collaboration`, author_block/collaborations.rs; OXIDIZED_DESIGN_DIVERGENCES #946): one contact holding both
+%   names, the line break a space. Review rev97cd D3.
+% witness: 1210.5341 (`L. Guillemot$^1$, on behalf of the \textit{Fermi} LAT Collaboration, \\ the \textit{Fermi}
+%   Pulsar Search Consortium and \\ the \textit{Fermi} Pulsar Timing Consortium`: 97d r1 the affiliation "… Search
+%   Consortium and" and the collaboration "… Timing Consortium"; 97b one affiliation)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 , on behalf of the XYZ Collaboration,", "the ABC Search Consortium
+%   and", "the ABC Timing Consortium", "1 Univ A"
+% engines: rust 97d r1: affiliation "the ABC Search Consortium and" beside the collaboration "the ABC Timing
+%   Consortium"; perl: not run
+% expect:  0 errors, 0 warnings; one creator, Ann Able: collaboration "on behalf of the XYZ Collaboration",
+%   collaboration "the ABC Search Consortium and the ABC Timing Consortium", affiliation Univ A
+% status:  RED (97d r1) -> GREEN (97d r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, on behalf of the XYZ Collaboration, \\ the ABC Search Consortium and \\ the ABC Timing
+Consortium \\ $^1$Univ A}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,18 @@
+% mechanism: an `\and` group that is only a collaboration's name after every name of the call covers each name before it
+%   that carries no collaboration yet (`Collaborations::finish`, `annotate=new` as aastex's `\collaboration`,
+%   aas_support.sty.ltxml:126; OXIDIZED_DESIGN_DIVERGENCES #946), marked or not. Review rev97cd D5 (main-session rule).
+% witness: none real (the reviewer's probes p10, p11); 97d r1 gave it to the last name with marks, kept it an author
+%   without
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able / Univ X", "Bob Baker / Univ Y", "The XYZ Collaboration" side by side
+% engines: rust 97d r1: a third creator "The XYZ Collaboration"; perl: three creators
+% expect:  0 errors, 0 warnings; two creators, Ann Able (Univ X) and Bob Baker (Univ Y), each with `<contact
+%   role="collaboration">The XYZ Collaboration</contact>` after its institution, as it prints after them
+% status:  RED (97d r1) -> GREEN (97d r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \\ Univ X \and Bob Baker \\ Univ Y \and The XYZ Collaboration}
+\maketitle
+Body.
+\end{document}

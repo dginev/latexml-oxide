@@ -1,0 +1,20 @@
+% mechanism: a collaboration opening an `\and` group heads that group's names, never a companion of the last group's
+%   collaboration (`Collaborations::close_group` clears the last one; author_block/collaborations.rs;
+%   OXIDIZED_DESIGN_DIVERGENCES #946). Review rev97cd D4 (synthetic).
+% witness: none real (the reviewer's probe q01); the rule "one collaboration right after another shares the same names"
+%   is 1603.09150's (`…, the ASDEX Upgrade Team and the EUROfusion MST1 Team$^*$`)
+% oracle:  pdflatex (TL 2025) 0 errors: two columns, "Ann Able1 , Bob Baker2 / (ATLAS Collaboration) / 1 Univ A / 2 Univ
+%   B" and "CMS Collaboration / Cid Cole3 , Dan Dee3 / 3 Univ C"
+% engines: rust 97d r1: CMS Collaboration on Ann Able and Bob Baker, none on Cid Cole and Dan Dee; perl: not run
+% expect:  0 errors, 0 warnings; four creators: Ann Able and Bob Baker with (ATLAS Collaboration), Cid Cole and Dan Dee
+%   with CMS Collaboration, each with the institute its mark names
+% status:  RED (97d r1) -> GREEN (97d r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$ \\ (ATLAS Collaboration) \\ $^{1}$Univ A \\ $^{2}$Univ B \and CMS Collaboration
+\\ Cid Cole$^{3}$, Dan Dee$^{3}$ \\ $^{3}$Univ C}
+\maketitle
+Body.
+\end{document}

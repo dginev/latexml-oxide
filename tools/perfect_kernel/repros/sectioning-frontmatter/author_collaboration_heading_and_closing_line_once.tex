@@ -10,9 +10,10 @@
 %   Collaboration)", then the two institutes and the lettered note
 % engines: rust 97b: creators "XYZ Collaboration" and "A. Able, B. Baker, C. Cole (XYZ Collaboration)" (every
 %   institute its), `Error:frontmatter:merged_creators`; perl: not run
-% expect:  0 errors, 0 warnings; three creators, each with `<contact role="collaboration">(XYZ Collaboration)</contact>`
-%   and the institutes its marks name: A. Able — One; B. Baker — Two + "Also at Laboratory A"; C. Cole — One + Two
-% status:  RED (97b) -> GREEN (97d)
+% expect:  0 errors, 0 warnings; three creators, each with `<contact role="collaboration">XYZ Collaboration</contact>`
+%   (the heading's, first, as it prints above the names) and the institutes its marks name: A. Able — One; B. Baker —
+%   Two + "Also at Laboratory A"; C. Cole — One + Two
+% status:  RED (97b) -> GREEN (97d; the heading's text and place since 97d r2)
 % preload: ar5iv.sty
 \documentclass[aps,prd]{revtex4-1}
 \begin{document}
