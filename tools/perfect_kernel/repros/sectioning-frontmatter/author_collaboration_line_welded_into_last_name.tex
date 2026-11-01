@@ -1,0 +1,38 @@
+% status:  RED
+% witness: 2410.11607 (dev20k; BESIII template, revtex4-1: ONE `\author{…}` holding 636 names, each with its
+%          superscript marks `M.~Ablikim$^{1}$, M.~N.~Achasov$^{4,c}$, …`, then `\\ (BESIII Collaboration)\\`, then an
+%          `{\it $^{1}$ Institute …\\ … }` block of numbered institutes and the lettered `$^{a}$ Also at …` notes, all
+%          inside the same call). Holdout10k shape `name:unmatched` (2026-10-31, int123a): 52 papers, 2,189 of 3,147 wrong
+%          creators — 2404.06718, 2201.02056, 1507.02068, 1512.08197 (the next four largest) are holdout papers, unread.
+% oracle:  pdflatex (TL 2025): the three marked names on one line, "(XYZ Collaboration)", then the institutes and the
+%          note, each with its mark — the names are three people, each owning the institutes its marks name.
+% engines: rust int123a and 95b r3 at THIS size (3 names): three creators, the marks' affiliations right, but the
+%          collaboration line glued into the last person: `<personname>C. Cole<break/> (XYZ Collaboration)</personname>`
+%          (RED for that). The witness's own failure — the whole 636-name list as one creator — does NOT reproduce here:
+%          its trigger is one non-name-shaped piece (author_marked_list_lowercase_particle_merges.tex). The weld copies
+%          Perl's (Base_Utility.pool.ltxml:700-701) and waits on the collaboration ruling (OPEN_ROWS.md:810); after a
+%          names-split fix the witness still ends `J. Zu<break/>(BESIII Collaboration)`.
+% expect:  0 errors, 0 warnings; three creators, each its own name, in order, with the affiliations its marks name:
+%          Ann Able — Institute of One; Bob Baker — University of Two + "Also at Laboratory A"; Cid Cole — Institute of
+%          One + University of Two; "(XYZ Collaboration)" in no person's name (the collaboration, as its own item).
+\documentclass[aps,prd,twocolumn]{revtex4-1}
+\begin{document}
+\title{A Measurement of Something}
+\author{
+	A.~Able$^{1}$, B.~Baker$^{2,a}$, C.~Cole$^{1,2}$
+	\\
+	\vspace{0.2cm}
+	(XYZ Collaboration)\\
+	\vspace{0.2cm} {\it
+		$^{1}$ Institute of One, Town 100000, Country\\
+		$^{2}$ University of Two, City 200000, Country\\
+}
+		\vspace{0.2cm}
+		$^{a}$ Also at Laboratory A, Village 300000, Country\\
+}
+\begin{abstract}
+An abstract.
+\end{abstract}
+\maketitle
+Body text.
+\end{document}
