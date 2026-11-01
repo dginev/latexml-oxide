@@ -1,0 +1,35 @@
+% mechanism: a declaration environment (`\begin{small}`, latex.ltx `\begingroup\small`) around the alignment
+%   environment that wraps a whole author block goes with it: the block's names, `\\` lines and marks split as written
+%   (`unwrap_alignment_environment`, author_block/separators.rs; OXIDIZED_DESIGN_DIVERGENCES #947). The size it sets
+%   is dropped with the wrapper; spacing after `\end{center}` (`\vspace{0.4cm}`) goes too. The
+%   collaboration line under the names is their contact (97d, OD #946).
+% witness: 1507.02068 (385 names), 1512.08197 (377), 2201.02056 (472) — the 2015 BESIII author template
+%   (`\author{\begin{small}\begin{center} names \\ (BESIII Collaboration)\\ {\it $^{1}$ aff\\ …}\end{center}
+%   \vspace{0.4cm}\end{small}}`, revtex4-1), each one creator holding an inline-block; dev giant-list census M1
+% oracle:  pdflatex (TL 2025) 0 errors: "A. Able1 , B. Baker2,a , C. Cole1 / (XYZ Collaboration) / 1 Uni One, City /
+%   2 Uni Two, Town / a Also at Lab Three"
+% engines: rust 97d: one creator holding the whole block; perl: one creator (revtex4_support.sty.ltxml:46, one author
+%   per `\author`), 0 errors
+% expect:  0 errors, 0 warnings; three creators: A. Able (Uni One, City), B. Baker (Uni Two, Town; Also at Lab Three),
+%   C. Cole (Uni One, City), each with the collaboration "(XYZ Collaboration)"
+% status:  RED (97d) -> GREEN (97f)
+\documentclass[prd,twocolumn]{revtex4-1}
+\begin{document}
+\title{T}
+\author{
+  \begin{small}
+    \begin{center}
+      A.~Able$^{1}$, B.~Baker$^{2,a}$, C.~Cole$^{1}$
+      \\ \vspace{0.2cm} (XYZ Collaboration)\\
+      \vspace{0.2cm} {\it
+        $^{1}$ Uni One, City\\
+        $^{2}$ Uni Two, Town\\
+        $^{a}$ Also at Lab Three\\ }
+    \end{center}
+    \vspace{0.4cm}
+  \end{small}
+}
+\affiliation{}
+\maketitle
+Text.
+\end{document}

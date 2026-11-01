@@ -1,0 +1,35 @@
+% mechanism: a group opening with declarations (`{\small …}`) around the alignment environment that wraps a whole author
+%   block goes with it, as a declaration environment does (`unwrap_alignment_environment`, author_block/separators.rs;
+%   OXIDIZED_DESIGN_DIVERGENCES #947). Siblings on the same path (the guard's): bare declarations before the
+%   environment (`\author{\small\bfseries \begin{center}…\end{center}}`), nested declaration environments around
+%   `flushleft` (`\begin{footnotesize}\begin{itshape}\begin{flushleft}…`). Kept as before: a declaration wrapper with
+%   no alignment environment inside (`\author{\begin{small}A.~Able$^{1}$, … \\ $^{1}$ Uni One\end{small}}`, the size on
+%   each name), and a command that prints before the environment (`\newcommand\lead{Zed Zorn, }`, `\author{\lead
+%   \begin{center}…`: Zed Zorn a creator).
+% witness: 1507.02068, 1512.08197, 2201.02056 (the BESIII template's `{small}` environment; this is its group form);
+%   dev giant-list census M1 (job tmp giant/rep/besE.tex)
+% oracle:  pdflatex (TL 2025) 0 errors: "A. Able1 , B. Baker2,a , C. Cole1 / (XYZ Collaboration) / 1 Uni One, City /
+%   2 Uni Two, Town / a Also at Lab Three" (each sibling the same; the `\lead` one opens "Zed Zorn,")
+% engines: rust 97d: one creator, `Error:frontmatter:merged_creators` once the `center` is gone; perl: one creator,
+%   0 errors
+% expect:  0 errors, 0 warnings; three creators, as author_size_environment_around_center_splits.tex
+% status:  RED (97d) -> GREEN (97f)
+\documentclass[prd,twocolumn]{revtex4-1}
+\begin{document}
+\title{T}
+\author{
+  {\small
+    \begin{center}
+      A.~Able$^{1}$, B.~Baker$^{2,a}$, C.~Cole$^{1}$
+      \\ \vspace{0.2cm} (XYZ Collaboration)\\
+      \vspace{0.2cm} {\it
+        $^{1}$ Uni One, City\\
+        $^{2}$ Uni Two, Town\\
+        $^{a}$ Also at Lab Three\\ }
+    \end{center}
+  }
+}
+\affiliation{}
+\maketitle
+Text.
+\end{document}

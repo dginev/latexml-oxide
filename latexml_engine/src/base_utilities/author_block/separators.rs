@@ -697,43 +697,103 @@ pub(in crate::base_utilities) fn literal_and() -> SplitDelim {
 /// lines and marks split as written (`\author{\begin{center}Ann Able$^{1}$, Bob Baker$^{2}$ \\ $^1$Univ A
 /// ...\end{center}}`). One inside a piece — a `{center}` affiliation under the names — stays whole
 /// (`split_tokens_delimited`; 2609.01563, 17357). Nested wrappers unwrap in turn.
+///
+/// The declarations around such an environment go with it ([`is_wrapping_declaration`]): a declaration environment
+/// (latex.ltx `\begin{small}` is `\begingroup\small`), a group opening with declarations (`{\small …}`), or bare
+/// declarations before it (`\small\bfseries\begin{center}…`) — the 2015 BESIII template's
+/// `\author{\begin{small}\begin{center} names \\ (BESIII Collaboration)\\ {\it $^{1}$ aff\\ …}\end{center}
+/// \vspace{0.4cm}\end{small}}` (1507.02068's 385 names, 1512.08197's 377, 2201.02056's 472) had stayed one creator.
+/// The size or font they set is dropped with them (OXIDIZED_DESIGN #947). They are peeled only on the way to an
+/// alignment environment: a declaration wrapper with no alignment environment inside keeps its declarations on the
+/// names as before (`\author{\begin{small}Ann Able$^{1}$ \\ $^{1}$Univ A\end{small}}`), and a command that prints
+/// (`\lead\begin{center}…`) is no declaration. After a wrapper's close only spacing may follow ([`only_spacing`]: that
+/// template's `\vspace{0.4cm}` after `\end{center}`).
 pub(in crate::base_utilities) fn unwrap_alignment_environment(tokens: Tokens) -> Tokens {
-  let mut toks = tokens.unlist();
+  let v = tokens.unlist_ref();
+  // (each unwrapping keeps a span of the one before: the span as of the last alignment environment unwrapped, the
+  // declarations peeled past it with no alignment environment inside staying)
+  let (mut lo, mut hi) = (0, v.len());
+  let mut committed: Option<(usize, usize)> = None;
   loop {
-    let start = toks.iter().take_while(|t| **t == T_SPACE!()).count();
+    let toks = &v[lo..hi];
+    let start = leading_wrapping_declarations_end(toks);
     let end = toks.len() - toks.iter().rev().take_while(|t| **t == T_SPACE!()).count();
-    if start >= end || toks[start] != T_CS!("\\begin") {
+    if start >= end {
       break;
     }
-    let stream: VecDeque<Token> = toks[start + 1..end].iter().copied().collect();
-    let Some(span) = environment_closes_ahead(&stream) else {
-      break;
-    };
-    let name_end = (start + 2..end)
-      .find(|&k| toks[k].get_catcode() == Catcode::END)
-      .unwrap_or(start + 1);
-    let name: String = toks[start + 2..name_end]
-      .iter()
-      .map(|t| t.to_string())
-      .collect();
-    // The environment must end where the tokens do, its `\end{name}` the last thing.
-    if start + 1 + span != end || !matches!(name.as_str(), "center" | "flushleft" | "flushright") {
+    let ends_block = |close: usize| close <= end && only_spacing(&toks[close..end]);
+    if toks[start] == T_CS!("\\begin") {
+      let stream: VecDeque<Token> = toks[start + 1..end].iter().copied().collect();
+      let Some(span) = environment_closes_ahead(&stream) else {
+        break;
+      };
+      let name_end = (start + 2..end)
+        .find(|&k| toks[k].get_catcode() == Catcode::END)
+        .unwrap_or(start + 1);
+      let name: String = toks[start + 2..name_end]
+        .iter()
+        .map(|t| t.to_string())
+        .collect();
+      let close = start + 1 + span;
+      let alignment = matches!(name.as_str(), "center" | "flushleft" | "flushright");
+      // The environment must end the block, its `\end{name}` the last thing that prints.
+      if !ends_block(close) || !(alignment || is_wrapping_declaration(&s!("\\{name}"))) {
+        break;
+      }
+      let end_cs = (name_end + 1..close)
+        .rev()
+        .find(|&k| toks[k] == T_CS!("\\end"))
+        .unwrap_or(close);
+      (lo, hi) = (lo + name_end + 1, lo + end_cs);
+      if alignment {
+        committed = Some((lo, hi));
+      }
+    } else if toks[start].get_catcode() == Catcode::BEGIN && ends_block(skip_group(toks, start)) {
+      // a group around the block: its declarations are peeled at the next turn
+      let close = skip_group(toks, start);
+      (lo, hi) = (lo + start + 1, lo + close - 1);
+    } else {
       break;
     }
-    let end_cs = (name_end + 1..end)
-      .rev()
-      .find(|&k| toks[k] == T_CS!("\\end"))
-      .unwrap_or(end);
-    toks = toks[name_end + 1..end_cs].to_vec();
   }
-  Tokens::new(toks)
+  match committed {
+    Some((lo, hi)) => Tokens::new(v[lo..hi].to_vec()),
+    None => tokens,
+  }
+}
+
+/// The declarations that may wrap an alignment environment around an author block ([`unwrap_alignment_environment`]),
+/// as a command or as an environment's name: the font and size declarations of [`NAME_TEXT_COMMANDS`] (not the
+/// commands among them that take their text as an argument, `\textbf`, `\emph`) and the paragraph layout ones.
+fn is_wrapping_declaration(cs: &str) -> bool {
+  (NAME_TEXT_COMMANDS.contains(&cs) && !cs.starts_with("\\text") && cs != "\\emph")
+    || matches!(
+      cs,
+      "\\centering" | "\\raggedright" | "\\raggedleft" | "\\noindent" | "\\par"
+    )
+}
+
+/// Where the spaces, spacing ([`leading_spacing_end`]) and wrapping declarations ([`is_wrapping_declaration`]) that open
+/// `v` end.
+fn leading_wrapping_declarations_end(v: &[Token]) -> usize {
+  let mut i = 0;
+  loop {
+    i += leading_spacing_end(&v[i..]);
+    match v.get(i) {
+      Some(t) if t.get_catcode() == Catcode::CS && t.with_str(is_wrapping_declaration) => i += 1,
+      _ => return i,
+    }
+  }
 }
 
 /// An alignment environment (`center`, `flushleft`, `flushright`) that opens after the names and ends the block is
 /// layout too: it starts a line of its own, its content the lines under the names — `\author{Ann Able and Bob Baker
 /// \begin{center}Department of Physics and Astronomy\end{center}}` prints the department centred under both names, read
 /// as `… Bob Baker \\ Department …`, every name's of the row (R12; 2609.01563, 2609.17357, 2609.33831 — it had been kept
-/// whole inside the last personname). One opening the block is [`unwrap_alignment_environment`]'s.
+/// whole inside the last personname). One opening the block is [`unwrap_alignment_environment`]'s. Spacing after its
+/// `\end{…}` is no line ([`only_spacing`]: `…\end{center}\vspace{2mm}}`); an `\end{small}` there is none — it
+/// closes an environment opened before the names (2012.14750's `\author{\author{Author list} \begin{small}
+/// \begin{center}…\end{center}\vspace{0.6cm}\end{small}}`, whose `\begin{small}` a names line had kept open).
 pub(in crate::base_utilities) fn trailing_alignment_environment_as_lines(tokens: Tokens) -> Tokens {
   let toks = tokens.unlist();
   let end = toks.len() - toks.iter().rev().take_while(|t| **t == T_SPACE!()).count();
@@ -761,13 +821,18 @@ pub(in crate::base_utilities) fn trailing_alignment_environment_as_lines(tokens:
       .iter()
       .map(|t| t.to_string())
       .collect();
-    if start + 1 + span != end || !matches!(name.as_str(), "center" | "flushleft" | "flushright") {
+    // (only spacing follows its close: `\end{center}\vspace{2mm}`)
+    let close = start + 1 + span;
+    if close > end
+      || !only_spacing(&toks[close..end])
+      || !matches!(name.as_str(), "center" | "flushleft" | "flushright")
+    {
       continue;
     }
-    let end_cs = (name_end + 1..end)
+    let end_cs = (name_end + 1..close)
       .rev()
       .find(|&k| toks[k] == T_CS!("\\end"))
-      .unwrap_or(end);
+      .unwrap_or(close);
     let mut out = toks[..start].to_vec();
     out.push(T_CS!("\\\\"));
     out.extend_from_slice(&toks[name_end + 1..end_cs]);

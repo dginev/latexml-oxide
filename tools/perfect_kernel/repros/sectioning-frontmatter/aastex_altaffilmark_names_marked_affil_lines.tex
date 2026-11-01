@@ -1,0 +1,25 @@
+% mechanism: names marked with `\altaffilmark{N}` (a request for `\altaffiltext{N}`, label `altaffil:N`) over
+%   `\affil{$^{N}$…}` lines (label `affiliation:N`): the two label spaces never meet, so the lines go by the group rule
+%   (`annotate=run`, every author each line) — Perl's and 97d's `annotate=new` had given each to the last author only.
+%   Unsupported (a cross-label rule; SYNC_STATUS row 97f).
+% witness: 1808.01089 (aastex, `\author{Horace Zhang\altaffilmark{1}}…\affil{$^1$ Department of Physics…}`),
+%   astro-ph0105133 (aastex, `Yu-Qing Lou \altaffilmark{1,\hbox{ }2}`); dev giant-list census M3
+% oracle:  pdflatex (TL 2025, emulateapj) 0 errors: "Ann Able1 , Bob Baker2,3 , and Cat Cole2 / 1 Uni One / 2 Uni Two /
+%   3 Uni Three"
+% engines: rust 97f: each author all three; rust 97d: Ann Able and Bob Baker Uni One, Cat Cole all three; perl: Cat
+%   Cole all three
+% expect:  0 errors, 0 warnings; Ann Able Uni One, Bob Baker Uni Two and Uni Three, Cat Cole Uni Two
+% status:  RED (97f), no guard
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{Ann Able\altaffilmark{1}}
+\author{Bob Baker\altaffilmark{2,3}}
+\author{Cat Cole\altaffilmark{2}}
+\affil{$^{1}$Uni One}
+\affil{$^{2}$Uni Two}
+\affil{$^{3}$Uni Three}
+\begin{abstract}A.\end{abstract}
+\section{Intro}
+Text.
+\end{document}

@@ -815,13 +815,13 @@ fn fuzzy_labels_by_surname_and_with_their_macros() {
   );
   assert_eq!(tuples(&resolved(AAS_CORRESPONDENT, Some("ar5iv.sty"))), [
     "C Ann Able [] | line:names",
-    "  a Univ A | api:annotate:new",
+    "  a Univ A | api:annotate:run",
     "C Bob Baker [] | line:names",
-    "  a Univ B | api:annotate:new",
+    "  a Univ B | api:annotate:run",
     "  c correspondent Bob Baker | api:label ruling1:fuzzy-label",
     "  c email bbaker@y.org | api:label ruling1:fuzzy-label",
     "C Sanhueza, Patricio [] | line:names",
-    "  a Univ C | api:annotate:new",
+    "  a Univ C | api:annotate:run",
   ]);
 }
 
@@ -1343,9 +1343,9 @@ fn emulateapj_title_marks_print_the_given_number() {
     ),
     [
       "C Ann Able [] | line:names",
-      "  a Univ A | api:annotate:new",
+      "  a Univ A | api:annotate:run",
       "C Bob Baker [2] | line:names sep:comma",
-      "  a Univ A | api:annotate:new",
+      "  a Univ A | api:annotate:run",
       "  n Sloan Fellow | note:footnotetext-mark",
     ]
   );
@@ -1464,7 +1464,7 @@ fn a_footnote_text_the_title_shows_is_the_titles_note() {
     }),
     [
       "C Ann Able [2] | line:names",
-      "  a Univ A | api:annotate:new",
+      "  a Univ A | api:annotate:run",
       "  n Sloan Fellow | note:footnotetext-mark",
       "B note Based on observations. | note:footnotetext-mark api:title-note owner:title",
     ]
@@ -1489,13 +1489,13 @@ fn a_corresponding_author_list_names_each_author() {
       )),
       [
         "C Ann Able [] | line:names".to_string(),
-        "  a Univ A | api:annotate:new".to_string(),
+        "  a Univ A | api:annotate:run".to_string(),
         correspondent.clone(),
         "C Bob Baker [] | line:names".to_string(),
-        "  a Univ B | api:annotate:new".to_string(),
+        "  a Univ B | api:annotate:run".to_string(),
         correspondent,
         "C Cy Cole [] | line:names".to_string(),
-        "  a Univ C | api:annotate:new".to_string(),
+        "  a Univ C | api:annotate:run".to_string(),
       ],
       "{list}"
     );

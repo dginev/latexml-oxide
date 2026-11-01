@@ -1,0 +1,33 @@
+% mechanism: spacing after the `\end{center}` that closes a whole author block is no part of the block, so the
+%   environment still ends it and unwraps (`unwrap_alignment_environment`, author_block/separators.rs, `only_spacing`;
+%   OXIDIZED_DESIGN_DIVERGENCES #947). Siblings (the guard's, `trailing_alignment_environment_as_lines`): a `center`
+%   after the names followed by spacing (`\author{Ann Able and Bob Baker \begin{center}Department of
+%   Physics\end{center}\vspace{2mm}}`) is still the line under both names; an `\end{small}` there is no spacing — it
+%   closes what opened before the names (2012.14750's `\author{\author{Author list} \begin{small}\begin{center}…
+%   \end{center}\vspace{0.6cm}\end{small}}` stays as before, no Error).
+% witness: 1507.02068, 1512.08197, 2201.02056 (the BESIII template's `\end{center}\vspace{0.4cm}`); dev giant-list
+%   census M1 (job tmp giant/rep/besF.tex)
+% oracle:  pdflatex (TL 2025) 0 errors: "A. Able1 , B. Baker2,a , C. Cole1 / (XYZ Collaboration) / …"; the sibling
+%   "Ann Able and Bob Baker / Department of Physics"
+% engines: rust 97d: one creator holding the block; the sibling "Bob Baker Department of Physics" one personname;
+%   perl: one creator each, 0 errors
+% expect:  0 errors, 0 warnings; three creators, as author_size_environment_around_center_splits.tex; the sibling two,
+%   each with the affiliation "Department of Physics"
+% status:  RED (97d) -> GREEN (97f)
+\documentclass[prd,twocolumn]{revtex4-1}
+\begin{document}
+\title{T}
+\author{
+    \begin{center}
+      A.~Able$^{1}$, B.~Baker$^{2,a}$, C.~Cole$^{1}$
+      \\ \vspace{0.2cm} (XYZ Collaboration)\\
+      \vspace{0.2cm} {\it
+        $^{1}$ Uni One, City\\
+        $^{2}$ Uni Two, Town\\
+        $^{a}$ Also at Lab Three\\ }
+    \end{center}\vspace{0.4cm}
+}
+\affiliation{}
+\maketitle
+Text.
+\end{document}

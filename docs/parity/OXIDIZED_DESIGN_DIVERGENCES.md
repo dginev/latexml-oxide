@@ -29068,6 +29068,67 @@ sectioning-frontmatter/`author_collaboration_line_keeps_its_print_order`,
 `iopart_collaboration_heading_keeps_the_names_words` (RED → GREEN); `author_team_piece_mark_labels_its_own_line` RED catalog (a team piece's own mark labels a line no author
 asks for: the block's, as any such line).
 
+### 947. The declarations around an author block's alignment environment go with it, and spacing after its close is no part of the block; AASTeX's `\affiliation` is REVTeX's (Perl: one creator per `\author`, the block kept whole; aastex's affiliation the last author's)
+
+**What** (brief 97f; dev giant-list census M1, M3). Two author-block readings.
+
+- **The wrapper around a whole-block alignment environment** (`unwrap_alignment_environment`, author_block/
+  separators.rs). The environment that wraps a whole author block or an `\and` group (`center`, `flushleft`,
+  `flushright`, already read through) is now found through the declarations around it: a declaration environment
+  (`\begin{small}`, latex.ltx `\begingroup\small`; any font or size switch of `NAME_TEXT_COMMANDS` that takes no
+  argument, and `\centering`/`\raggedright`/`\raggedleft`/`\noindent`/`\par`: `is_wrapping_declaration`), a group
+  opening with them (`{\small …}`), bare ones before it (`\small\bfseries\begin{center}…`), and leading spacing
+  (`leading_spacing_end`). After the wrapper's `\end{…}` only spacing may follow (`only_spacing`:
+  `\end{center}\vspace{0.4cm}`); the same holds for an environment set under the names
+  (`trailing_alignment_environment_as_lines`: `… Bob Baker \begin{center}Department of Physics\end{center}\vspace{2mm}`).
+  Not `prints_nothing`, which passes an `\end{…}` closing what opened before the names: 2012.14750's
+  `\author{\author{Author list} \begin{small}\begin{center}…\end{center}\vspace{0.6cm}\end{small}}` then left its
+  `\begin{small}` open in a names line (two Errors; it stays as in 97d).
+  The declarations are peeled only on the way to an alignment environment: a declaration wrapper with none inside keeps
+  its declarations on the names as before (`\author{\begin{small}Ann Able$^{1}$ \\ $^{1}$Univ A\end{small}}`, each
+  name `fontsize="90%"`), and a command that prints (`\lead\begin{center}…`) is no declaration. The size or font such a
+  wrapper set is dropped with it — a cosmetic loss (the names and their contacts are the content; `90%` on a
+  personname is no semantic markup), against one creator holding an `<inline-block>` of the whole list.
+- **AASTeX's `\affiliation`** (aas_support_sty.rs, also `\affil` and, through revtex's `\replace@command`, `\address`)
+  is REVTeX's call (`group_or_marked_affiliation`, factored out of revtex4_support_sty.rs's `\affiliation`, unchanged
+  there): a mark-led line no group shares goes to the names showing its mark (`\lx@add@affiliation@marked`), any other
+  to the group before it with `annotate=run` — every `\affiliation` after a run of `\author` calls, before the next
+  `\author`, is each one's (aastex62.cls:278-292 loads revtex4-1, whose `\move@AU\move@AF` file the run). It was
+  `annotate=new`, which gave a run's second line to its last author only. AASTeX 7 is unaffected in practice:
+  aastex701.cls:7370 `\affil@error` stops on an author without an affiliation, so its authors never share a run.
+
+**Why.** Perl (revtex4_support.sty.ltxml:46) makes one creator of each `\author` call: the 2015 BESIII template
+(`\author{\begin{small}\begin{center} names \\ \vspace{0.2cm} (BESIII Collaboration)\\ {\it $^{1}$ aff\\ …}
+\end{center}\vspace{0.4cm}\end{small}}`) is one creator in Perl and was one in 97d — 758 of the 861 wrong creators of
+the twelve dev papers with more than 50 scored creators. The names split as their marks say (97a, OD #943), the
+collaboration line their contact (97d, OD #946). Perl's aastex `\affiliation{#1}` (aas_support.sty.ltxml:118) is the
+last author's; pdflatex with aastex631 prints "K. Ieki 1, 46" for `\author{K. Ieki}\author{…}\affiliation{U1}
+\affiliation{U2}` (2403.06760).
+
+**Witnesses** 97d → 97f: 1507.02068 1 → 419 creators (418 names and the nameless one below), 1512.08197 1 → 413,
+2201.02056 1 → 520, 0 Errors each; every name whose marks are plain numbers or letters holds the affiliations its marks
+name (381 of 418, 374 of 412; the rest are the sub-labels below and two repeated names); scored 0 → 382 of 385, 375 of
+377, 483 of 483. 2403.06760: K. Ieki, M. Miura,
+M. B. Smy, K. Scholberg gain institute 46; 1804.01623: C. G. Tinney gains 13; 2001.01892: four authors gain their
+second institute; astro-ph0611722 (`\affil{$^1$INAOE…}` under `M. Chavez$^{1,2}$, …`): each author its own institutes,
+where each had "1INAOE" only.
+
+A/B (11,333 papers: popint125a_s10k + the census aas family + wrapped blocks): 76 changed, E and F unchanged, no creator merged or lost. Scorer: the 3,000 sample D3 per creator 98.18 → 98.23 %, lost-words 0; the dev subset the change reaches (1,042 papers) 77.65 → 97.96 % per creator.
+
+**Left** (SYNC_STATUS row "97f"): sub-labelled marks (`$^{48A,48C}$` against `$^{48}$ (A)…; (B)…; (C)…`, 33 names a
+BESIII paper) stay in the name and go by their digits, the entries on a nameless creator (RED
+`author_sub_labelled_marks_read_as_digits`; the ruling deferred); `\altaffilmark{N}` names over `\affil{$^{N}$…}` lines
+(1808.01089, astro-ph0105133) meet no label, so each line is the run's — every author each line (97d: the last author
+all, the others the first; RED `aastex_altaffilmark_names_marked_affil_lines`); aa's `\and` pieces never read a
+collaboration (2206.00684; RED `aa_collaboration_heading_before_colon_is_a_name`); a `{\it $^{1}$ aff\\ $^{2}$ aff\\ }`
+group's entries keep their `\\` as a trailing `<break/>` and a leading space (97d the same). Guards
+`perfect_kernel_batch97f` (five); changed: `perfect_kernel_batchfms2a2` (four readings' rule tag `api:annotate:new` →
+`api:annotate:run`: `fuzzy_labels_by_surname_and_with_their_macros`, `emulateapj_title_marks_print_the_given_number`,
+`a_footnote_text_the_title_shows_is_the_titles_note`, `a_corresponding_author_list_names_each_author`; owners
+unchanged). Repros sectioning-frontmatter/`author_size_environment_around_center_splits`,
+`author_size_group_around_center_splits`, `author_center_then_spacing_splits`,
+`aastex6_consecutive_authors_share_affiliations`, `aastex6_marked_affiliations_go_by_marks` (RED → GREEN).
+
 ### 948. Every remaining observer-writer family is written in one batch (ijcai, inst_support, iopart, jheppub, jinstpub, jcappub, jpconf, sv_support and every binding owning `\author` with no declaration); a block line's letters are read as printed, a re-parted entry keeps today's role, a letter-spaced name's word space is no gap, an e-mail's corresponding owner is one of the authors it is printed for, a name read as an entry is never written onto an author; an elsarticle key is answered by its keys alone, and a name the re-part makes that names no person declines (Perl: the old reader's output, no observer)
 
 Beyond Perl (FM S2b, OD #837; user decision 2026-11-01: every remaining family through its gate in one batch). The

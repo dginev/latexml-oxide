@@ -110,23 +110,7 @@ LoadDefinitions!({
   // reading honours: today's run, not the marks — FM S2b, 63i review r2; a line holding several marked entries is a
   // marked list, cut by its marks however today's places it, and so are the lines of names given after an affiliation
   // that came before the first `\author`: 2209.05548's empty `\affiliation{}`, 2510.16137, 2412.01183)
-  DefMacro!("\\affiliation{}", sub[(content)] {
-    let marked = leads_with_mark(&content);
-    let grouped = marked && queued_group_shares_the_mark(&content);
-    let declared_grouped =
-      grouped && content_marks(&content).len() == 1 && interleaved_group_shares_the_mark(&content);
-    let attr = Some(mouth::tokenize_internal(if declared_grouped {
-      "annotate=run,_grouped=true"
-    } else {
-      "annotate=run"
-    }));
-    let cs = if marked && !grouped {
-      T_CS!("\\lx@add@affiliation@marked")
-    } else {
-      T_CS!("\\lx@add@affiliation")
-    };
-    Ok(Invocation!(cs, vec![attr, Some(content)]))
-  });
+  DefMacro!("\\affiliation{}", sub[(content)] { group_or_marked_affiliation(content) });
   // revtex4-1.cls:2147-2250, the internals of `\affiliation` (`\move@AU\move@AF\begingroup … \@affiliation`,
   // :2206-2211): `\move@AU`/`\move@AF` file the pending authors and affiliations, which the frontmatter API attaches
   // at once, and `\@affiliation{…}` (:2213) closes the group and records the affiliation. A class that redefines
@@ -1018,4 +1002,26 @@ fn split_top_level_lines(tokens: &[Token]) -> Vec<&[Token]> {
   }
   items.push(&tokens[start..]);
   items
+}
+
+/// REVTeX's `\affiliation{…}` call: a mark-led line no group shares goes to the authors showing its
+/// marks (`\lx@add@affiliation@marked`), any other to the group before it (`annotate=run`), declared `_grouped=true`
+/// to the frontmatter observer when one mark is the group's. AASTeX's `\affiliation`/`\affil` is the same call
+/// (aas_support_sty.rs: aastex6x is REVTeX 4.1 underneath, aastex62.cls:278-292).
+pub(crate) fn group_or_marked_affiliation(content: Tokens) -> Result<Tokens> {
+  let marked = leads_with_mark(&content);
+  let grouped = marked && queued_group_shares_the_mark(&content);
+  let declared_grouped =
+    grouped && content_marks(&content).len() == 1 && interleaved_group_shares_the_mark(&content);
+  let attr = Some(mouth::tokenize_internal(if declared_grouped {
+    "annotate=run,_grouped=true"
+  } else {
+    "annotate=run"
+  }));
+  let cs = if marked && !grouped {
+    T_CS!("\\lx@add@affiliation@marked")
+  } else {
+    T_CS!("\\lx@add@affiliation")
+  };
+  Ok(Invocation!(cs, vec![attr, Some(content)]))
 }

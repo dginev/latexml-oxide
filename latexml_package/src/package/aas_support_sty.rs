@@ -2,7 +2,7 @@ use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 
 use crate::{
   engine::latex_constructs::{after_float, before_float_ex},
-  package::{deluxetable_sty, subcaption_sty::subcaption_width_props},
+  package::{deluxetable_sty, revtex4_support_sty, subcaption_sty::subcaption_width_props},
   prelude::*,
 };
 
@@ -169,9 +169,18 @@ LoadDefinitions!({
 
 
   // Various contact information attaches to previous \author
-  // AASTeX 6 (revtex-derived): an affiliation is every preceding author's that has none yet (`\author{Ann Able and Bob
-  // Baker}\affiliation{Univ}` gives it to both), as revtex's is (`annotate=new`; 63e).
-  DefMacro!("\\affiliation{}",    "\\lx@add@affiliation[annotate=new]{#1}");
+  // AASTeX 6 (revtex-derived): an affiliation is REVTeX's (revtex4_support_sty.rs `group_or_marked_affiliation`):
+  // every preceding author's that has none yet (`\author{Ann Able and Bob Baker}\affiliation{Univ}` gives it to both;
+  // 63e), and each further one before a new author the same run's (`annotate=run`) — aastex631.cls's `\author{K. Ieki}
+  // \author{…}\affiliation{U1}\affiliation{U2}` prints "K. Ieki 1, 2" (2403.06760, 1804.01623, 2001.01892) — unless it
+  // leads with a mark no group shares, which goes to the authors showing it: the AASTeX 5 `\author{Ann
+  // Able\altaffilmark{1}}\author{Bob Baker\altaffilmark{2}}\affil{$^1$Univ A}\affil{$^2$Univ B}` (1808.01089,
+  // astro-ph0611722, astro-ph0105133). Perl's `\lx@add@affiliation{#1}` (aas_support.sty.ltxml:118) gave each to the
+  // last author only. AASTeX 7 is unchanged: aastex701.cls:7370 `\affil@error` stops the run when an author has no
+  // affiliation, so its authors never share a run.
+  DefMacro!("\\affiliation{}", sub[(content)] {
+    revtex4_support_sty::group_or_marked_affiliation(content)
+  });
   DefMacro!("\\altaffiliation{}", "\\lx@add@altaffiliation{#1}");
   DefMacro!("\\affil",            "\\affiliation");
   DefMacro!("\\authoraddr{}",     "\\lx@add@address{#1}");
