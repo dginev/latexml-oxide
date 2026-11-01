@@ -73,10 +73,36 @@ LoadDefinitions!({
   // and one no author cites is placed as OXIDIZED_DESIGN #159 places orphans (a sole author's, the i-th author's in a
   // grid, else shared below them all), not the last author's alone (63g/63h review; repros
   // sectioning-frontmatter/svjour3_epj_one_institute_shared, svjour3_two_institutes_pair_by_position).
-  DefMacro!(
-    "\\lx@sv@institute@ Until:\\at Until:\\done",
-    "\\ifx.#2.\\lx@sv@institute@unlabelled{#1}\\else\\lx@add@affiliation[label={fuzzy:#1}]{\\lx@sv@institute@marks\\lx@sv@institute@piece{#2}}\\fi"
-  );
+  // A labelled piece's text before `\at` is the name it is the institute of (its `fuzzy:` label), and svjour3 prints
+  // it, the address on the line after (svjour3.cls:506 `\def\at{\\\let\and=\iand}`): kept so, the line before the
+  // address, when it prints a word no queued author's name prints ([`queued_author_name_prints`]: "Contact author:",
+  // 1711.01894; "Corresponding author", 2107.13864; a fuller name than the author line's, 1705.01399), which had been
+  // lost (Perl the same: sv_support.sty.ltxml:45-47; OXIDIZED_DESIGN_DIVERGENCES #952) — a piece printing only its
+  // author's name adds nothing the names do not hold.
+  DefMacro!("\\lx@sv@institute@ Until:\\at Until:\\done", sub[(name, address)] {
+    // (decided as `\institute` is read, the authors before it queued; an environment written whole there is no part of
+    // the line — `\begin{acknowledgements}…\end{acknowledgements} T. Ara\'ujo Lima \at …`, 2008.12867, whose text
+    // would be an `<ltx:acknowledgements>` inside a contact, malformed — and stays lost, as before)
+    let line = Tokens::new(without_environments(name.unlist_ref()));
+    let mut named = Vec::new();
+    if !address.is_empty() && !queued_author_name_prints(&line) {
+      // (without the spacing and a line break the piece opens with, the layout's: `\and\\ Name \at …`)
+      named = line
+        .unlist_ref()
+        .iter()
+        .copied()
+        .skip_while(|t| *t == T_SPACE!() || *t == T_CS!("\\\\"))
+        .collect();
+      while named.last() == Some(&T_SPACE!()) {
+        named.pop();
+      }
+      named.push(T_CS!("\\\\"));
+    }
+    Ok(Invocation!(
+      "\\ifx.#2.\\lx@sv@institute@unlabelled{#1}\\else\\lx@add@affiliation[label={fuzzy:#1}]{\\lx@sv@institute@marks#3\\lx@sv@institute@piece{#2}}\\fi",
+      vec![Some(name), Some(address), Some(Tokens::new(named))]
+    ))
+  });
   // A labelled piece's text, without the `\at` sentinel `\lx@sv@institute` appended (the `Until:\done` part keeps it):
   // `\at` is `\relax` here, but a document may define its own (`\newcommand\at[2]{\left.#1\right|_{#2}}`, allowed as
   // `\relax` counts as undefined), which then ran at the affiliation's end with its arguments missing (svjour3
@@ -498,3 +524,64 @@ LoadDefinitions!({
     "\\let\\thanksref\\lx@sv@institute@thanksref"
   );
 });
+
+/// `tokens` without the environments written whole in them, each `\begin{…}` through its matching `\end{…}` and that
+/// command's argument; an environment opened and not closed there is kept (its `\end` comes after the piece:
+/// `\institute{\begin{itemize}\item[✉] Ann Able \at \item[1] Univ X \end{itemize}}`, 2305.05902, 2306.07927,
+/// 2312.14898, 2605.09054, whose `\begin` kept there balances the list).
+fn without_environments(tokens: &[Token]) -> Vec<Token> {
+  // the index after the `\end{…}` matching the `\begin` at `at`, if the tokens hold it
+  let environment_end = |at: usize| -> Option<usize> {
+    let mut depth = 0usize;
+    let mut i = at;
+    while i < tokens.len() {
+      if tokens[i] == T_CS!("\\begin") {
+        depth += 1;
+      } else if tokens[i] == T_CS!("\\end") {
+        depth -= 1;
+        if depth == 0 {
+          let mut j = i + 1;
+          while tokens.get(j) == Some(&T_SPACE!()) {
+            j += 1;
+          }
+          if tokens
+            .get(j)
+            .is_some_and(|u| u.get_catcode() == Catcode::BEGIN)
+          {
+            let mut level = 0usize;
+            while j < tokens.len() {
+              match tokens[j].get_catcode() {
+                Catcode::BEGIN => level += 1,
+                Catcode::END => {
+                  level -= 1;
+                  if level == 0 {
+                    return Some(j + 1);
+                  }
+                },
+                _ => {},
+              }
+              j += 1;
+            }
+            return None;
+          }
+          return Some(i + 1);
+        }
+      }
+      i += 1;
+    }
+    None
+  };
+  let mut out = Vec::with_capacity(tokens.len());
+  let mut i = 0;
+  while i < tokens.len() {
+    if tokens[i] == T_CS!("\\begin")
+      && let Some(end) = environment_end(i)
+    {
+      i = end;
+      continue;
+    }
+    out.push(tokens[i]);
+    i += 1;
+  }
+  out
+}

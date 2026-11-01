@@ -262,12 +262,14 @@ fn a_glued_mark_opens_the_next_entry() {
 /// Item 1: a `\footnotemark` inside a mark is a mark of its own after it (`Kui Wu\inst{3\footnotemark[1]}` printed
 /// "31", parted into 3 and 1, so Kui Wu had Peking University, entry 1 — 2404.09857): its footnote's, never a
 /// numbered affiliation's; the parted reading is ruling 1's (`ruling1:parted`), and the footnote's text after
-/// `\maketitle` is the name's note by its mark.
+/// `\maketitle` is the name's note by its mark. Today's reads it so too since batch 98b (`\inst`'s request takes its
+/// notes out of the operand and runs them after it, OXIDIZED_DESIGN_DIVERGENCES #951): Bob Baker has Univ B, the mark
+/// a footnote mark in his name.
 #[test]
 fn a_footnotemark_inside_a_mark_is_its_own() {
-  // (written family since 92c, held back: the footnote's text after `\maketitle` sits outside every creator, which no
-  // writer operation moves — OPEN_ROWS "written-family writer gaps")
-  assert_eq!(tuples_held(LLNCS, "Affiliation univbtown"), [
+  // (written family since 92c, held back: today's `\footnotemark` note sits in the personname, which the writer reads
+  // as no note of the creator — OPEN_ROWS "written-family writer gaps")
+  assert_eq!(tuples_held(LLNCS, "Note equalcontribution"), [
     "C Ann Able [1] | line:names",
     "  a Univ A, City | api:labelseq",
     "C Bob Baker [2,*] | line:names",

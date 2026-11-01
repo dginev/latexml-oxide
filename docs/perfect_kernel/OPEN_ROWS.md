@@ -516,7 +516,7 @@ Each class is a silent content or markup loss unless marked otherwise; each land
 
 | # | finding | witnesses | state | next step |
 |---|---|---|---|---|
-| 1 | `\IEEEmembership` dropped from the author line | 2201.01230, 2306.15457, 2408.09035 | **DONE 63l** (KPE #534) — name-line grades are membership contacts | residual: grades after names misread past a `\\` stay dropped (row 13) |
+| 1 | `\IEEEmembership` dropped from the author line | 2201.01230, 2306.15457, 2408.09035 | **DONE 63l** (KPE #534) — name-line grades are membership contacts | residual: grades after names misread past a `\\` stay dropped (row 13); a line holding only the last name's grade is that name's, and authblk's `\author` reads the grades too (98b, OD #950) |
 | 2 | merged creators: `{\ and}`, `\ddag~and` | 1508.01140, nlin0101056 | **DONE 63l** (KPE #532) | — |
 | 2b | merged creators: acmart comma list in one `\author` (`Error:frontmatter:merged_creators`) | 2212.06542 | **FIXED 63x** (KPE #549; HF2) | acmart `\author` binding: split a comma-separated name list (PDF prints them as one block) |
 | 3 | eqnarray/align row holding only `\label` dropped with its number | 1011.4399, 1305.3072, hep-th9412215, hep-ph0208046 | **DONE 63j** (KPE #526) | nit: a kept eqnarray row takes a following unnumbered `&=&` row as its continuation |

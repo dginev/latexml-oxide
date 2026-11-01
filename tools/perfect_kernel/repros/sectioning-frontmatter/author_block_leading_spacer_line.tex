@@ -5,10 +5,11 @@
 %          University of X). The leading spacer line is the block's spacing, Ann Able its names line
 % oracle:  pdflatex 0 errors: one centred column, a blank line, Ann Able, University of X, a blank line, Bob Baker,
 %          University of Y
-% engines: rust int114a = no creator (both authors dropped); rust 85a r3, r4 = Bob Baker holding University of Y, Ann
-%          Able, University of X
+% engines: rust int114a = no creator (both authors dropped); rust 85a r3, r4, int126a = Bob Baker holding University of
+%          Y, Ann Able, University of X; rust 98b = a line before the block's first that prints nothing is no names
+%          line (author_block/dispatch.rs, the unmarked branch)
 % expect:  0 errors, 0 warnings; two creators, each with its own line
-% status:  RED (int114a, 85a r3, 85a r4)
+% status:  RED (int114a, 85a r3, 85a r4, int126a) -> GREEN (98b) — perfect_kernel_batch98b::leading_spacer_lines_are_no_names_line
 % preload: ar5iv.sty
 \documentclass{article}
 \title{T}

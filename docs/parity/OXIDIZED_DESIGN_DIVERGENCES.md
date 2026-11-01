@@ -1629,7 +1629,9 @@ name-empty author creators, moving any contacts they carry to the preceding real
 author (a `\footnotemark`-note keeps a personname non-empty, so real authors with a
 marker — 2507.06670 "Yu Zhang" — are untouched). Same-host Perl 0.8.8 emits the same
 empty creators (SHARED-FAILURE); Rust surpasses. Guard:
-`06_cluster_frontmatter::frontmatter_ieee_membership_no_phantom`.
+`06_cluster_frontmatter::frontmatter_ieee_membership_no_phantom`. When no named author is
+left to take them, the first nameless creator carrying any keeps them all (#949), never
+dropping a printed word.
 
 **(f) Multiple `\textsuperscript{n}Affil` on one space-separated affiliation line.** A
 marker-led affiliation line may carry several numbered institutions with only spaces
@@ -25900,9 +25902,9 @@ over an institution whose head noun leads it (`Bob B. Baker \\ Imperial College,
 (`author_block_uniform_gaps_hide_a_wider_gap`); a name line carrying a note or an address after a wide space stays a
 line (`author_block_name_line_with_trailing_text`, int114a's reading); an organisation's name after a gap, with a
 line under it, opens an author as a name does (`University of X \\ \\ Google DeepMind \\ London, UK`; only words
-tell them apart; `author_block_organisation_after_a_gap`); a block opening with a line that prints only `\ ` reads
-it as an empty names line, and `coalesce_empty_creators` appends its lines after the next creator's own
-(solv-int9710025, pre-existing; `author_block_leading_spacer_line`). Witnesses 1702.01413, 0801.1297, 1608.08479,
+tell them apart; `author_block_organisation_after_a_gap`). (A block opening with a line that prints only `\ ` read
+it as an empty names line, and `coalesce_empty_creators` appended its lines after the next creator's own —
+solv-int9710025, `author_block_leading_spacer_line` — GREEN since 98b, #949.) Witnesses 1702.01413, 0801.1297, 1608.08479,
 2201.06821, 1509.03383, 1709.07791, 1908.10448, 2408.11742, gr-qc9906006 (its repro red since 64w), 1702.07694,
 1701.05964, 2004.03971, 2503.11250, 1504.05438, 2604.18394, 1901.06146. Repros
 `sectioning-frontmatter/author_block_{next_name_after_a_spacer_line, next_name_under_its_institution,
@@ -29346,3 +29348,130 @@ an_address_beside_an_institution_keeps_the_institution}` under `held`, `an_unmar
 `mnras_block_line_dotless_i_cut`, `appolb_reparted_entries_keep_address_role`, `jfm_letter_spaced_name_is_one_name`,
 `svjour3_at_pieces_joined_are_not_written`, `elsarticle_key_labelled_address_is_no_mark`,
 `svjour_collaboration_heading_is_no_creator`.
+
+### 949. A line before an author block's first that prints nothing is no names line, and a nameless creator's lines are the block's when no named author is left to take them (Perl: the spacer line an empty name, every line under it an affiliation)
+
+**What** (brief 98b; dev lost-words census mechanism B). Two readings, one per stage.
+
+- **The unmarked branch of the author-block reader** (author_block/dispatch.rs, `leading_spacer`): a `\\`-piece before
+  the block's first printing line that prints nothing — a tie, a control space, an empty group, a size or font switch
+  alone, its line-break option (`{}~\\[0mm]~\\ \large Ann Able\\ …`; `prints_nothing`), but no environment's
+  `\begin`/`\end` — is the block's spacing, not its names line. It had been read as a names line whose name printed
+  nothing, every printing line under it that nameless creator's.
+- **`coalesce_empty_creators`** (frontmatter/insert.rs) moves a nameless creator's contacts and notes to the named
+  author before it, else the first after it. When none is left (a block of affiliation lines alone; a name written
+  inside `\IEEEmembership{…}`), the first nameless creator carrying any keeps them all — the block's own creator
+  (#159), `<ltx:personname/>` over the lines, as Perl. It had removed it with them: no creator and no Warning. A
+  removed creator's other printing child is reported (`Warning:unexpected:frontmatter`); none is known to occur.
+
+**Why.** FIDELITY_CHARTER §4 "No printed frontmatter word is lost": the census's 8 papers whose whole author block was
+dropped. Perl 0.8.8 keeps the lines but names no one (`<personname/>` and every line an affiliation, "Ann Able"
+among them); ours names the author.
+
+**Witnesses** (int126a: no creator → the author and its lines): 0812.2273, 0901.1754, 1706.10067 (`\IEEEauthorblockN{~\\
+[-0.4ex]\large …}`: three authors), hep-lat0105010, hep-lat9207028, math0306336; solv-int9710025 (the `\ ` spacer of
+#900's RED `author_block_leading_spacer_line`: Ann Able's lines no longer after Bob Baker's); the nameless holder:
+1804.00021 (`\authorblockA{…}` with its names commented out), 2203.14581 (`~\IEEEmembership{Shasha Mei}`, with #950).
+
+**Left:** an affiliation-only `\IEEEauthorblockA{Center X, University of X\\ …}` is kept but parted into contacts at the
+commas of its first line (the names-line split reads into the command's group); the words are all kept.
+
+**Guards** `perfect_kernel_batch98b::{leading_spacer_lines_are_no_names_line, nameless_block_keeps_its_lines}`; repros
+sectioning-frontmatter/`author_block_leading_spacer_lines_are_no_names_line` (RED → GREEN),
+`author_block_leading_spacer_line` (RED since 85a r3 → GREEN), class-bindings/
+`ieeetran_affiliation_block_without_names_is_the_blocks` (RED → GREEN).
+
+### 950. IEEEtran's grades are read under authblk's `\author` too, a line holding only the last name's grade is that name's, and `\IEEEpeerreviewmaketitle` is `\relax` outside the peer-review modes (Perl: every grade dropped; `\IEEEpeerreviewmaketitle` is `\maketitle` in every mode)
+
+**What** (brief 98b; census mechanism C). ieeetran_cls.rs.
+
+- **authblk** (a document's `\usepackage{authblk}`; the IEEEtaes and IEEEoj stubs load it) replaces the binding's
+  `\author`, so each grade reached `\lx@IEEE@membership@drop`. IEEEtran's binding now hooks authblk's load
+  (`\AddToHook{package/authblk/after}`): authblk's `\author` is kept as `\lx@IEEE@AB@author`, and `\author` reads the
+  grades of its names as the binding's own does (`name_memberships`, `block_name_memberships`, only while
+  `\IEEEmembership` is the class's) before handing the names to authblk's, the optional label exactly as written (an
+  empty `\author[]{…}` is no unlabelled `\author`: dropped, 2005.04149's, 2105.12254's and 2312.15778's addresses were
+  welded into the affiliation). Conference mode
+  still swallows them (`\lx@IEEE@membership`; pdflatex errs on an `\IEEEmembership` in authblk's `\author` there, an
+  invalid probe).
+- **A grade alone on the line after its name** (`and~Jussi Haapola,\\~\IEEEmembership{Member,~IEEE,}\thanks{…}`,
+  2202.10869): `grade_only_line` — one `\IEEEmembership{…}`, else only spacing and notes — keeps the names line open
+  across that `\\`, so the grade is the last name's, as any other; read as a line of the block it was dropped.
+- **`\IEEEpeerreviewmaketitle`**: IEEEtran.cls:4920-4932, the peer-review modes' repeated title page, `\relax` in every
+  other mode. Perl IEEEtran.cls.ltxml:135 lets it to `\maketitle` in every mode, so a call before `\title` (1909.01874)
+  flushed the frontmatter without its title.
+
+**Why.** FIDELITY_CHARTER §4: pdflatex prints every grade with its name (6 census papers); Perl drops them all
+(IEEEtran.cls.ltxml:143, "nothing for now").
+
+**Witnesses** (int126a → 98b): 1803.04687, 2208.04191, 2307.05035 (`\author[1]{Hani Saleh,~\IEEEmembership{Senior
+Member,~IEEE,}}`), 2505.19506 (IEEEtaes), 2506.05637 (IEEEoj), 2202.10869 (`\IEEEoverridecommandlockouts` in
+conference mode): each author its grade as `contact role="membership"`; 1909.01874: the title and both authors (the
+title had been "I. Nomenclature", no creator).
+
+**Guards** `perfect_kernel_batch98b::{authblk_author_reads_ieee_grades, authblk_labelled_author_reads_its_grade,
+peerreviewmaketitle_outside_peerreview_is_relax}`; repros class-bindings/`ieeetran_authblk_membership_grades`,
+`ieeetran_authblk_labelled_author_grade`, `ieeetran_peerreviewmaketitle_outside_peerreview_is_relax` (RED → GREEN),
+`ieeetran_authblk_empty_label_authors_share_the_lines` (GREEN; RED on the batch's first build).
+
+### 951. A note inside an `\inst{…}` is the note of the name it is printed on (Perl: the note's text read as a label, the note lost)
+
+**What** (brief 98b; census mechanism D). `\lx@request@frontmatter@annotation` (defs/frontmatter_api.rs), which
+llncs's, inst_support's (aa's) and sv_support's `\inst` are, parts its operand as a name's `$^{…}$` mark is parted
+(`split_mark_notes`, `\lx@sup@request@affiliation`): the labels are requested from the rest, `\fnmsep` read as the
+comma it prints (llncs.cls:896), and the notes — `\thanks{…}`, `\footnote{…}`, `\footnotemark[…]`, a macro making
+one — run after the request, in the name, the note of the author it is printed on (aa.cls:759-760 and llncs.cls:894
+set the operand in a superscript, so its `\thanks` runs there).
+
+**Why.** FIDELITY_CHARTER §4: `\inst{1,3,\thanks{NSF … Fellow}}` lost the note (4 census papers); Perl the same
+(aa.cls.ltxml:50, the whole operand the label).
+
+**Witnesses** (int126a → 98b): aa 2303.08174 (5 notes), 2311.02521, 2601.20473 (the note, and the institute no longer
+on a nameless creator); llncs 1808.09829. 2404.09857's `Kui Wu\inst{3\footnotemark[1]}` shape: the author has
+institute 3 (it had been on a nameless creator), the mark a footnote mark in the name (the observer declines it: a
+note in a personname is no note of the creator to the writer, `perfect_kernel_batchfms2a2r5::
+a_footnotemark_inside_a_mark_is_its_own`, its decline reason re-pinned).
+
+**Guards** `perfect_kernel_batch98b::thanks_inside_inst_is_the_authors_note`; repros class-bindings/
+`aa_thanks_inside_inst_is_the_authors_note`, `llncs_thanks_inside_inst_is_the_authors_note` (RED → GREEN).
+
+### 952. svjour3's text before `\at` is kept where it prints a word no author's name does (Perl: only the institute's owner label)
+
+**What** (brief 98b; census mechanism E). sv_support_sty.rs `\lx@sv@institute@`: a labelled piece's text before
+`\at` (its `fuzzy:` owner label, unchanged) is the affiliation's first line, a line break before the address, as
+svjour3 prints it (svjour3.cls:506 `\def\at{\\\let\and=\iand}`, in the institute footnote) — when it prints a word
+no queued author's name prints (`queued_author_name_prints`, author_block/affiliations.rs: each word a word of a name,
+an initial of one, or "and" between names, accents aside): "Contact author:", "Corresponding author", a fuller name
+than the author line's, an institution written before `\at` (2010.12315, 2208.01887). A piece printing only its
+authors' names adds nothing and stays as before, so the svjour3 writer's declines (#948) and the readings are
+unchanged. Decided as `\institute` is read; with no author queued yet (`\institute` before `\author`) the text is
+kept. An environment written whole there is left out (`without_environments`: 2008.12867's `{acknowledgements}`, whose
+`<ltx:acknowledgements>` in a contact is malformed — its text stays lost, RED
+`svjour3_institute_environment_before_at_is_lost`, pathological authoring, deferred); one only opened there is kept
+(2305.05902, 2306.07927, 2312.14898, 2605.09054: `\institute{\begin{itemize}\item[✉] Name \at \item[1] … \end{itemize}}`,
+whose kept `\begin` balances the list — Errors 8 → 2, 4 → 1, 5 → 1, 14 → 1).
+
+**Why.** FIDELITY_CHARTER §4 (3 census papers); "Duplicates the author printed stay duplicated" (§2). Perl
+sv_support.sty.ltxml:45-47 keeps only the label.
+
+**Witnesses** (int126a → 98b): 1711.01894 ("Contact author: Erwan Le Merrer" over the address), 2107.13864 (the
+affiliation and address now on Xin-long Luo; the address had been on a nameless creator), 1705.01399 ("Leonardo
+Anjoletto Ferreira", "Reinaldo Augusto da Costa Bianchi", "Paulo Eduardo Santos"); unchanged: 2609.05466, 1506.02396,
+1908.03628, 2007.09912 (declined), 0807.2295, 2405.17600, 1201.0008 (written).
+
+**Guards** `perfect_kernel_batch98b::svjour3_text_before_at_is_kept`; changed:
+`perfect_kernel_batchfms2a2::fuzzy_labels_by_surname_and_with_their_macros` (the reading's entry "Corresponding author:
+B. M. Baker Univ B"), `perfect_kernel_batch66h::svjour3_institute_with_document_at_macro` (no author: "A.
+Bensoussan" the line before "Center for Risk"); repro class-bindings/`svjour3_institute_text_before_at_is_kept` (RED →
+GREEN).
+
+**Batch 98b's A/B** (#949-#952; `pop98b.tsv`, 843 papers: the census witnesses, every popint125a_s10k paper of
+IEEEtran/IEEEtaes/IEEEoj with authblk or calling `\IEEEpeerreviewmaketitle` (496), aa/llncs with a `\thanks` inside
+`\inst{…}`, svjour/svjour3 with `\at`, an `\author` opening with a spacer, and the same shapes among the census
+index's 32,550 papers with `\author`) against int126a: 59 changed, all in the frontmatter and all better (`fm_checks.py`:
+no creator merged or lost, no word type lost, no address shared wider; three papers grow affiliations from none),
+E 1,836 → 1,810 (4 better, none worse), F 7 → 7; 2302.07562's word loss is its load (the B side killed at 210 s; alone
+both binaries 132 s, the same IfLimit Fatal and 16,313 words). The dev census's 171 papers rescored: lost-words papers
+125 → 101, 22 of its REAL ones and 2210.13927 (a grade past a break) fixed, none newly flagged; 0901.1754's last lost
+word ("ℬ-module" in its abstract) is the scorer's. The 3,000 sample: D3 98.49 % per creator and 98.10 % per paper,
+readability 22 papers, as int126a (one XML change, a math parse deep in 2311.18400's appendix).

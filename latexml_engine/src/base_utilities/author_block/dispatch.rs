@@ -1070,7 +1070,11 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
       let mut gap = false;
       let mut leading_empty = 0usize;
       for piece in pieces {
-        if spacing_end(piece.unlist_ref()) == 0 {
+        // (a line before the block's first that prints nothing — a tie, a control space, an empty group: `~\\ Ann
+        // Able \\ …`, 0901.1754, hep-lat0105010, math0306336; `{}\\[0mm] Meijiao Guan\\ …`, 0812.2273; `{}~\\~\\
+        // \large{\sc Jun Nishimura}…`, hep-lat9207028; `\ \\ Ann Able …`, solv-int9710025 — is the block's spacing,
+        // no names line, [`prints_nothing`]; not an environment's `\begin`/`\end`, which the block's lines go on inside)
+        if spacing_end(piece.unlist_ref()) == 0 || (lines.is_empty() && leading_spacer(&piece)) {
           gap = !lines.is_empty();
           leading_empty += usize::from(lines.is_empty());
           continue;
@@ -1838,4 +1842,14 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
     }
   }
   Ok(Tokens::new(calls))
+}
+
+/// Whether `piece`, a line before an author block's first, is only the block's spacing: it prints nothing
+/// ([`prints_nothing`]) and opens or closes no environment.
+fn leading_spacer(piece: &Tokens) -> bool {
+  prints_nothing(piece)
+    && !piece
+      .unlist_ref()
+      .iter()
+      .any(|t| *t == T_CS!("\\begin") || *t == T_CS!("\\end"))
 }

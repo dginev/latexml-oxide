@@ -72,7 +72,8 @@ fn revtex_email_redressed_over_sanitize_url() {
 }
 
 /// svjour3's `\institute` sentinel `\at` is not the affiliation's text, so a document's own `\at` macro does not run
-/// there (1404.4148 and 8 more: Fatal Stomach:Recursion).
+/// there (1404.4148 and 8 more: Fatal Stomach:Recursion). The name before `\at`, which no author line prints here, is
+/// the entry's first line, as svjour3 prints it (batch 98b, OXIDIZED_DESIGN_DIVERGENCES #952).
 #[test]
 fn svjour3_institute_with_document_at_macro() {
   let (log, xml) = convert_counted(include_str!(
@@ -81,7 +82,7 @@ fn svjour3_institute_with_document_at_macro() {
   assert_eq!((error_count(&log), fatal_count(&log)), (0, 0), "{log}");
   assert_eq!(xml.matches(r#"role="affiliation""#).count(), 1, "{xml}");
   assert!(
-    xml.contains(r#"role="affiliation">Center for Risk</contact>"#),
+    xml.contains(r#"role="affiliation">A. Bensoussan<break/>Center for Risk</contact>"#),
     "{xml}"
   );
 }

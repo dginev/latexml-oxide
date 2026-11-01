@@ -230,34 +230,44 @@ fn respell_emails(document: &mut Document) -> Result<()> {
 /// witness 1510.02728 (`\author{Sani,~\IEEEmembership{…} Vosoughi,~\IEEEmembership{…}%
 /// \thanks{…NSF…}}`), where the note must land on the last real author, as a contact did;
 /// and an author's metadata (OXIDIZED_DESIGN #479: an AASTeX 7 `\email` after an `\author` whose name prints nothing).
+///
+/// A coalesce never drops a printed word: when no named author is left to take a nameless creator's annotations (a
+/// block of affiliation lines alone, IEEEtran's `\authorblockA{…}` with no `\authorblockN`, 1804.00021; a name
+/// written inside `\IEEEmembership{…}`, 2203.14581), the first nameless creator that carries any stays with every one
+/// of them, the block's own creator — Perl's `<ltx:personname/>` over the lines (OXIDIZED_DESIGN_DIVERGENCES #159's
+/// block owner, #949). Any other printing child of a removed creator is reported (`Warning:unexpected:frontmatter`), never
+/// silently lost.
 fn coalesce_empty_creators(document: &mut Document) -> Result<()> {
   let creators = document.findnodes("//ltx:creator[@role='author']", None);
   let mut to_remove: Vec<Node> = Vec::new();
   let mut last_real: Option<Node> = None;
   // Annotations (contacts + notes) of leading empties (before any real author), held
-  // until the first real one.
+  // until the first real one; and the first of those empties that carries any, which keeps them all when no real
+  // one follows.
   let mut orphan_annotations: Vec<Node> = Vec::new();
+  let mut orphan_holder: Option<Node> = None;
   for creator in creators {
     if creator_personname_empty(document, &creator) {
-      let annotations: Vec<Node> = creator
-        .get_child_nodes()
-        .into_iter()
-        .filter(|c| {
-          c.get_type() == Some(NodeType::ElementNode)
-            && with(document::get_node_qname(c), |q| {
-              q == "ltx:contact" || q == "ltx:note" || q == "ltx:rdf"
-            })
-        })
-        .collect();
+      let annotations = creator_annotations(&creator);
       if let Some(ref mut prev) = last_real {
         if !annotations.is_empty() {
           document.append_clone(prev, annotations)?;
         }
+        to_remove.push(creator);
+      } else if orphan_holder.is_none() && !annotations.is_empty() {
+        // (kept for now: the holder of the leading empties' annotations, if no real author takes them)
+        orphan_holder = Some(creator);
       } else {
         orphan_annotations.extend(annotations);
+        to_remove.push(creator);
       }
-      to_remove.push(creator);
     } else {
+      if let Some(holder) = orphan_holder.take() {
+        // (the holder's own annotations first, in the order they stood)
+        let held = creator_annotations(&holder);
+        orphan_annotations.splice(0..0, held);
+        to_remove.push(holder);
+      }
       if !orphan_annotations.is_empty() {
         let mut first = creator.clone();
         document.append_clone(&mut first, std::mem::take(&mut orphan_annotations))?;
@@ -265,10 +275,52 @@ fn coalesce_empty_creators(document: &mut Document) -> Result<()> {
       last_real = Some(creator);
     }
   }
+  // (no named author took the leading empties' annotations: the holder keeps them all, the block's creator)
+  if let Some(mut holder) = orphan_holder
+    && !orphan_annotations.is_empty()
+  {
+    document.append_clone(&mut holder, orphan_annotations)?;
+  }
   for creator in to_remove {
+    // (what else a removed creator prints, no annotation moved with it, is reported: a coalesce never drops a word
+    // silently)
+    for child in creator.get_child_nodes() {
+      if child.get_type() != Some(NodeType::ElementNode) {
+        continue;
+      }
+      let qname = document::get_node_qname(&child);
+      if with(qname, |q| {
+        !matches!(q, "ltx:personname" | "ltx:contact" | "ltx:note" | "ltx:rdf")
+      }) && !child.get_content().trim().is_empty()
+      {
+        Warn!(
+          "unexpected",
+          "frontmatter",
+          s!(
+            "A nameless author's {} was dropped with it: {}",
+            with(qname, |q| q.to_string()),
+            child.get_content().trim()
+          )
+        );
+      }
+    }
     document.remove_node(creator);
   }
   Ok(())
+}
+
+/// A creator's annotations, the children a coalesce moves: its `<ltx:contact>`, `<ltx:note>` and `<ltx:rdf>` elements.
+fn creator_annotations(creator: &Node) -> Vec<Node> {
+  creator
+    .get_child_nodes()
+    .into_iter()
+    .filter(|c| {
+      c.get_type() == Some(NodeType::ElementNode)
+        && with(document::get_node_qname(c), |q| {
+          q == "ltx:contact" || q == "ltx:note" || q == "ltx:rdf"
+        })
+    })
+    .collect()
 }
 
 /// Redistribute a mis-piled contact block back to its authors (surpass-Perl).

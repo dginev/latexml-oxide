@@ -797,7 +797,9 @@ fn api_affiliation_parts_by_its_marks() {
 /// Item 1b: a `fuzzy:` label that spells no name whole answers the creators its names' surnames name (today's OD #159
 /// reading: `A. Able \at …`, `Corresponding author: B. M. Baker \at …`; 2011.14024, 2403.19676, 2106.12864), and a
 /// fuzzy label holding a macro is read with the macro written out — aastex's `\email` after `\correspondingauthor`
-/// labels it `fuzzy:\lx@aas@correspondent` (2506.07978: it spelled no one and went to the block).
+/// labels it `fuzzy:\lx@aas@correspondent` (2506.07978: it spelled no one and went to the block). A piece's text before
+/// `\at` that prints a word no name does is the entry's first line, as svjour3 prints it ("Corresponding author: B. M.
+/// Baker", batch 98b, OXIDIZED_DESIGN_DIVERGENCES #952; 2107.13864), one printing only a name none.
 #[test]
 fn fuzzy_labels_by_surname_and_with_their_macros() {
   assert_eq!(
@@ -810,7 +812,7 @@ fn fuzzy_labels_by_surname_and_with_their_macros() {
       "  a Univ A | api:label ruling1:fuzzy-label fuzzy:surname",
       "  c email ann@x.org | api:label api:inner-contact ruling1:fuzzy-label fuzzy:surname owner:inner-email owner:spelled",
       "C Bob M. Baker [] | line:names",
-      "  a Univ B | api:label ruling1:fuzzy-label fuzzy:surname",
+      "  a Corresponding author: B. M. Baker Univ B | api:label ruling1:fuzzy-label fuzzy:surname",
     ]
   );
   assert_eq!(tuples(&resolved(AAS_CORRESPONDENT, Some("ar5iv.sty"))), [

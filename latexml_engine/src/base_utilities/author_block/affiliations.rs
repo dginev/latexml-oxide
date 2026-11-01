@@ -418,6 +418,44 @@ pub(in crate::base_utilities) fn queued_name(entry: &Tokens) -> Tokens {
   entry.clone()
 }
 
+/// Whether the queued authors' names (`queued_name`) print every word `text` prints — each word one of a name's, or
+/// an initial of one, accents aside (`visible_name_text`), or the word "and" between names: `text` then prints no
+/// word the authors do not. True for a `text` printing no word; else false when no author is queued. svjour3's
+/// `\institute{F. Author \at …}` piece names its authors before the address (`sv_support_sty.rs`): a piece writing
+/// only their names adds nothing to the XML (`B. Baker, and C. Cole \at …`, batch 63's piece naming two), one writing
+/// more (`\textit{Contact author:} Erwan {Le Merrer}`, 1711.01894; `Xin-long Luo, Corresponding author`, 2107.13864;
+/// the whole name `Leonardo Anjoletto Ferreira` of `Leonardo A. Ferreira`, 1705.01399) prints words no name does.
+pub fn queued_author_name_prints(text: &Tokens) -> bool {
+  let words = |tokens: &Tokens| -> Vec<String> {
+    resolver::base_letters(&visible_name_text(tokens.unlist_ref()))
+      .split(|c: char| !c.is_alphanumeric())
+      .filter(|w| !w.is_empty())
+      .map(str::to_lowercase)
+      .collect()
+  };
+  let written = words(text);
+  if written.is_empty() {
+    return true;
+  }
+  let names: Vec<String> = with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => queue
+      .iter()
+      .filter(|entry| {
+        entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
+      })
+      .flat_map(|entry| words(&queued_name(&entry.2)))
+      .collect(),
+    _ => Vec::new(),
+  });
+  !names.is_empty()
+    && written.iter().all(|w| {
+      w == "and"
+        || names
+          .iter()
+          .any(|o| o == w || (w.chars().count() == 1 && o.starts_with(w.as_str())))
+    })
+}
+
 /// The keys ([`NameKeys`]) of each queued author's name ([`queued_name`]), in queue order (the n-th digests
 /// with `author:n`).
 pub(in crate::base_utilities) fn queued_author_name_keys() -> Vec<NameKeys> {

@@ -285,7 +285,11 @@ LoadDefinitions!({
   def_macro_noop("\\IEEEdisplaynontitleabstractindextext")?;
   def_macro_noop("\\IEEEdisplaynotcompsoctitleabstractindextext")?;
   def_macro_noop("\\IEEEcompsoctitleabstractindextext")?;
-  Let!("\\IEEEpeerreviewmaketitle", "\\maketitle");
+  // IEEEtran.cls:4920-4932: the repeated title page of the peer-review modes; any other mode defines it `\relax`, so a
+  // call before `\title` (1909.01874's journal paper) makes no title page there, and the title stays the
+  // `\maketitle`'s (Perl IEEEtran.cls.ltxml:135 lets it to `\maketitle` in every mode, which flushed the frontmatter
+  // before the title was given: no `<ltx:title>`; OXIDIZED_DESIGN_DIVERGENCES #950).
+  RawTeX!(r"\ifCLASSOPTIONpeerreview\let\IEEEpeerreviewmaketitle\maketitle\else\def\IEEEpeerreviewmaketitle{\relax}\fi");
   // IEEEtran.cls:6278-6288 lets the conference-mode lock-outs go (`\IEEEmembership` prints again).
   DefMacro!("\\IEEEoverridecommandlockouts", "\\global\\let\\iflx@IEEE@lockouts@overridden\\iftrue");
   RawTeX!(r"\newif\iflx@IEEE@lockouts@overridden");
@@ -365,6 +369,36 @@ LoadDefinitions!({
     };
     Ok(Invocation!(target, vec![Some(body)]))
   }, locked => true);
+  // authblk's `\author` (a document's `\usepackage{authblk}`; the IEEEtaes and IEEEoj stubs load it) replaces the one
+  // above, so its names reach the frontmatter with each grade still `\IEEEmembership`, dropped
+  // (`\lx@IEEE@membership@drop`): every author's printed grade lost (1803.04687, 2202.10869, 2208.04191, 2307.05035,
+  // 2505.19506, 2506.05637; Perl the same, IEEEtran.cls.ltxml:143). Once authblk is loaded, its `\author` reads the
+  // grades of its names as this one does (`name_memberships`, `block_name_memberships`) and then adds the authors as
+  // authblk does — conference mode still swallowing them (`\lx@IEEE@membership`; OXIDIZED_DESIGN_DIVERGENCES #950).
+  DefMacro!("\\lx@IEEE@authblk@author[]{}", sub[(label, body)] {
+    let body = if class_membership()? {
+      if body.to_string().contains("authorblockN") {
+        block_name_memberships(body)
+      } else {
+        Tokens::new(name_memberships(body.unlist()))
+      }
+    } else {
+      body
+    };
+    // (its optional label exactly as written, an empty one too: authblk's `\author[]{…}` is no unlabelled `\author`,
+    // 2005.04149, 2105.12254)
+    let mut call = vec![T_CS!("\\lx@IEEE@AB@author")];
+    if let Some(label) = label {
+      call.push(T_OTHER!("["));
+      call.extend(label.unlist());
+      call.push(T_OTHER!("]"));
+    }
+    call.push(T_BEGIN!());
+    call.extend(body.unlist());
+    call.push(T_END!());
+    Ok(Tokens::new(call))
+  });
+  RawTeX!(r"\AddToHook{package/authblk/after}{\global\let\lx@IEEE@AB@author\author\global\let\author\lx@IEEE@authblk@author}");
 
   // IEEEkeywords environment (Perl PR #2767: digestion-based capture). Each block is printed where it stands
   // (IEEEtran.cls:5286-5292 sets "Index Terms—" and the body in place), so a paper's several blocks are all its keywords
@@ -1292,6 +1326,12 @@ fn name_memberships(tokens: Vec<Token>) -> Vec<Token> {
       if t == T_CS!("\\and") {
         in_names = true;
         names_start = i + 1;
+      } else if t == T_CS!("\\\\") && in_names && grade_only_line(&tokens[i + 1..line_end(i + 1)]) {
+        // (a line holding only the last name's grade, its notes aside, is that name's: `and~Jussi
+        // Haapola,\\~\IEEEmembership{Member,~IEEE,}\thanks{…}`, 2202.10869 — the break no part of the names, the grade
+        // read as any other, and lost had the line been read as the block's)
+        i += 1;
+        continue;
       } else if t == T_CS!("\\\\") {
         in_names = in_names
           && names_continue(
@@ -1399,6 +1439,55 @@ fn name_memberships(tokens: Vec<Token>) -> Vec<Token> {
     i += 1;
   }
   out
+}
+
+/// Whether `line` holds one `\IEEEmembership{…}` and else only spacing and authors' notes (`\thanks{…}`,
+/// `\footnote{…}`): a grade on the line after its name ([`name_memberships`]).
+fn grade_only_line(line: &[Token]) -> bool {
+  let spacing = |t: &Token| *t == T_SPACE!() || *t == T_ACTIVE!('~') || *t == T_CS!("\\par");
+  let group_end = |from: usize| -> Option<usize> {
+    let mut at = from;
+    while line.get(at).is_some_and(|t| *t == T_SPACE!()) {
+      at += 1;
+    }
+    if line.get(at).is_none_or(|t| t.code != Catcode::BEGIN) {
+      return None;
+    }
+    let mut level = 0usize;
+    for (j, t) in line.iter().enumerate().skip(at) {
+      match t.code {
+        Catcode::BEGIN => level += 1,
+        Catcode::END => {
+          level -= 1;
+          if level == 0 {
+            return Some(j + 1);
+          }
+        },
+        _ => {},
+      }
+    }
+    None
+  };
+  let mut grades = 0;
+  let mut i = 0;
+  while i < line.len() {
+    let t = &line[i];
+    if spacing(t) {
+      i += 1;
+    } else if *t == T_CS!("\\IEEEmembership")
+      || *t == T_CS!("\\thanks")
+      || *t == T_CS!("\\footnote")
+    {
+      grades += usize::from(*t == T_CS!("\\IEEEmembership"));
+      match group_end(i + 1) {
+        Some(end) => i = end,
+        None => return false,
+      }
+    } else {
+      return false;
+    }
+  }
+  grades == 1
 }
 
 /// `tokens` without the full stop or semicolon that closes them right after a grade: one at the top level that only

@@ -834,8 +834,26 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // Typically would \let\inst to this, and used within creator's content
   // to identify contacts to include.
   // Can provide the prefix to distinguish different sets of labels
+  // A note the operand holds is no label: the class prints the operand in a superscript (`\def\inst#1{\unskip$^{#1}$}`,
+  // llncs.cls:894, aa.cls:759-760), so its `\thanks` runs there, the note of the name it is printed on — read after the
+  // request, as a name's `$^{…}$` mark reads one (`\lx@sup@request@affiliation`, [`split_mark_notes`]); `\fnmsep`
+  // (llncs.cls:896 `\unskip$^,$`) is the comma it prints. `\inst{2,\thanks{NASA Sagan Fellow}}` (aa 2303.08174,
+  // 2311.02521, 2601.20473; llncs 1808.09829) had requested the note's text as a label and lost it (Perl the same,
+  // aa.cls.ltxml:50; OXIDIZED_DESIGN_DIVERGENCES #951).
   DefPrimitive!("\\lx@request@frontmatter@annotation[]{}", sub[(prefix, label)] {
     let prefix = prefix.as_ref().map(ToString::to_string).unwrap_or_default();
+    let (label, notes) = match split_mark_notes(label.unlist_ref()) {
+      Some((mark, notes)) => (
+        Tokens::new(
+          mark
+            .into_iter()
+            .map(|t| if t == T_CS!("\\fnmsep") { T_OTHER!(",") } else { t })
+            .collect(),
+        ),
+        Some(Tokens::new(notes)),
+      ),
+      None => (label, None),
+    };
     // (keyed by the operand's printed text: FIDELITY_CHARTER §4, refactor stage 4, OXIDIZED_DESIGN_DIVERGENCES #919;
     // none while a label's own operand is read)
     if reading_label() {
@@ -845,6 +863,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       &label,
       if prefix.is_empty() { "LABEL" } else { &prefix })?;
     add_annotation_labels(label.join(","), false, pictured);
+    if let Some(notes) = notes {
+      unread(notes);
+    }
   });
 
   // \lx@set@frontmatter@label Internal to digesting annotation contents.
