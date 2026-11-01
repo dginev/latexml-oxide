@@ -440,18 +440,28 @@ Text.
 
 /// Review revfms2a2_7 finding 6 (main-session decision 3 on r7): a mark the resolver parts from a line's text (`#`,
 /// `split_text_marks`) is a footnote symbol only when its characters are `\@fnsymbol`'s — `#` is a mark of no such kind,
-/// its legend ruling 1's (`ruling1:request`, the names showing it), not ruling 2's symbol line.
+/// its legend ruling 1's (`ruling1:request`, the names showing it), not ruling 2's symbol line. Written since 97c (the
+/// writer cuts a block entry by its whole span, OD #945; it had declined, "Univ A, City." and the legend one affiliation
+/// of both names): the XML pinned whole, the legend Ann's note.
 #[test]
 fn a_text_mark_glyph_is_no_footnote_symbol() {
+  assert_eq!(tuples(TEXT_GLYPH), [
+    "C Ann Able [1,#] | line:names",
+    "  a Univ A, City. | ruling1:request",
+    "  n Corresponding author. | ruling1:request",
+    "C Bob Baker [1] | line:names sep:comma",
+    "  a Univ A, City. | ruling1:request",
+  ]);
   assert_eq!(
-    super::perfect_kernel_batchfms2a1::held("Affiliation univacity", || tuples(TEXT_GLYPH)),
-    [
-      "C Ann Able [1,#] | line:names",
-      "  a Univ A, City. | ruling1:request",
-      "  n Corresponding author. | ruling1:request",
-      "C Bob Baker [1] | line:names sep:comma",
-      "  a Univ A, City. | ruling1:request",
-    ]
+    super::perfect_kernel_batch93a::default_mode_creators(TEXT_GLYPH),
+    super::perfect_kernel_batch93a::owned(&[
+      &[
+        "Ann Able",
+        "affiliation=Univ A, City.",
+        "note=# Corresponding author."
+      ],
+      &["Bob Baker", "affiliation=Univ A, City."],
+    ])
   );
 }
 
@@ -499,7 +509,7 @@ fn an_unlabelled_entry_is_no_legend() {
 
 /// The r8 shapes leave the XML byte-identical under the census switch and in the default mode (the fleet's; shadow
 /// only, or written in both — the kernel family since 93a, OD #925), and byte-identical with the observer off where the
-/// writer holds the paper back (GLUED is written: its guard pins the XML) — but `API_LEGEND`, a REVTeX
+/// writer holds the paper back (GLUED and, since 97c, TEXT_GLYPH are written: their guards pin the XML) — but `API_LEGEND`, a REVTeX
 /// paper the writer writes (FM S2b, `perfect_kernel_batchfms2b::a_marked_affiliation_is_cut_at_its_marks`).
 #[test]
 fn r8_shapes_leave_the_xml_unchanged() {
@@ -532,7 +542,7 @@ fn r8_shapes_leave_the_xml_unchanged() {
     // rev93a S3, against the default alone the check was a tautology for a written kernel shape)
     let (default_log, default_xml, ()) = run(None);
     assert_eq!(on_xml, default_xml, "{tex}");
-    if tex != GLUED {
+    if tex != GLUED && tex != TEXT_GLYPH {
       let (_, off_xml, ()) = run(Some(false));
       assert_eq!(on_xml, off_xml, "{tex}");
     }

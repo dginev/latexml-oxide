@@ -199,8 +199,9 @@ LoadDefinitions!({
   //      (witness 2606.19939). Upstream makes a single affiliation = the whole
   //      block attached to every \inst{1} author (duplicating it) while \inst{2}+
   //      get nothing (reproduces identically in Perl LaTeXML 0.8.8). The shared
-  //      \lx@add@affiliations parser handles this: it splits on \quad/\qquad/\\
-  //      and extracts each superscript as the affiliation label \inst{N} links to.
+  //      \lx@add@affiliations parser (`affiliation_calls`) handles this: it splits on
+  //      \quad/\qquad/\\ and extracts each superscript as the affiliation label
+  //      \inst{N} links to; a line no mark labels stays the sole institute (97c, below).
   // So: clear, then \and-split (a), one affiliation (b) — shared by every author when no
   // `\inst` number picks it (85b, below) — UNLESS there is no \and AND superscript
   // markers are present (c) -- the only shape that needs the multi-parser.
@@ -210,7 +211,23 @@ LoadDefinitions!({
     "\\ifx\\lx@llncs@inner@institute\\@empty\\expandafter\\@firstofone\\else\\expandafter\\@gobble\\fi\
      {\\lx@clear@frontmatter{ltx:contact}[role=affiliation]\\lx@llncs@institute@dispatch{#1}}");
   DefMacro!("\\lx@llncs@institute@split{}", "\\lx@splitting{\\lx@llncs@affiliation}{\\and}{#1}");
-  DefMacro!("\\lx@llncs@institute@sup{}",   "\\lx@add@affiliations[labelseq={affiliation}]{#1}");
+  // (shape (c)'s entries are labelled by their marks; one no mark labels, its first line before them (`\institute{Univ
+  // A, Town \\ \textsuperscript{*}Equal contribution}`), is the sole institute llncs.cls:868-886 prints unnumbered
+  // under every name, as `\lx@llncs@institute@sole` reads it — it had gone to the last author alone, dev20k 2603.18089,
+  // 2608.22772, 2207.13038, 2609.31726, 1905.07852; repro sectioning-frontmatter/llncs_institute_legend_line_shared)
+  DefMacro!("\\lx@llncs@institute@sup{}", sub[(body)] {
+    dequeue_front_matter("ltx:contact", &[("role", "affiliation")]);
+    Ok(Tokens::new(affiliation_calls(
+      Some(mouth::tokenize_internal("labelseq={affiliation}")),
+      None,
+      Some(mouth::tokenize_internal(
+        "labelseq={affiliation},_share={authors},_markpiece={true}",
+      )),
+      body,
+      true,
+      true,
+    )?))
+  });
   DefMacro!("\\lx@llncs@institute@dispatch{}", sub[(body)] {
     let has_and = position_of(&body, &[T_CS!("\\and")]).is_some();
     // The markers \lx@add@affiliations keys its superscript-label branch on (a `\let` alias of one too).

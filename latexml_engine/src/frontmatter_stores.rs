@@ -5862,6 +5862,7 @@ fn author_tail_calls(at_maketitle: bool) -> Result<Vec<Token>> {
   affiliation_calls(
     Some(attr),
     Some(marked),
+    None,
     tail,
     queued_creators_have_marks(),
     authors_queued,
@@ -6106,6 +6107,7 @@ LoadDefinitions!({
     Ok(Tokens::new(affiliation_calls(
       Some(attr),
       Some(marked),
+      None,
       stuff,
       numbered || queued_creators_have_marks(),
       true,
@@ -6123,6 +6125,7 @@ LoadDefinitions!({
     Ok(Tokens::new(affiliation_calls(
       Some(attr),
       Some(marked),
+      None,
       stuff,
       queued_creators_have_marks(),
       true,

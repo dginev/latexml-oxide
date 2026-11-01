@@ -194,7 +194,10 @@ fn marks_pick(commands: &[RawFrontmatter], authors: &[usize], at: usize) -> Resu
   // (a shown mark's number other than 1: the one institute is several, numbered by hand, `{1} Univ A \\ {2} Univ B`
   // under `Ann Able$^{1,2}$ \and Bob Baker$^{2}$` — no one institute of every author; a 1 alone may be its only one,
   // 2607.02596)
-  let several = |label: &String| numbered(label) && !label.ends_with(":1");
+  // (not for a piece of an institute its marks split, `_markpiece=true`: the numbers shown by hand label its other
+  // pieces — llncs's `\institute{Skoltech, Moscow, Russia \\ $^1$Aeronet, $^2$ADASE}`, 1905.07852)
+  let piece = commands[at].1.get("_markpiece").map(String::as_str) == Some("true");
+  let several = |label: &String| !piece && numbered(label) && !label.ends_with(":1");
   for author in authors {
     let tokens = outside_notes(commands[*author].2.unlist_ref());
     let mut shown = author_mark_operands(&tokens);

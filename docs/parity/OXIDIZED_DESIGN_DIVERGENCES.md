@@ -28877,3 +28877,67 @@ repros sectioning-frontmatter/`aa_mail_printing_copy_keeps_its_label`, `aa_mail_
 `aa_mail_repeated_address_stays_labelled`, `raw_package_note_label_before_a_link_names_it`,
 `author_marked_list_keeps_its_printed_separators` (RED → GREEN), `author_marked_email_piece_is_no_person` (RED →
 GREEN).
+
+### 945. An affiliation the reading already has reaches its author: a block entry is cut by its whole span, llncs's one institute cut at its marks stays every author's, svproc's `\institute` is sv_support's (Perl: no observer, the names line split at its "and"; llncs's whole institute on the first author; svproc's per author through OmniBus's inst_support)
+
+**What** (brief 97c; the dev20k census of `own:aff_missing`, 364 creators in 119 papers). Three mechanisms in which the
+reading or the binding was already right and a span, a share rule or an override discarded it.
+
+- **A block entry's span** (observer/resolver/blocks.rs `labelled_entries`). A mark-led entry of a names block whose
+  words an inner `and` or comma parts into several events took its first event's span alone, so the writer's cut
+  (writer/plan.rs `span_tokens`: the span's letters must be the entry's key) failed — "a block line does not cut" — and
+  the whole line stayed the first mark's name's: `\author{Ann Able$^{1}$ Bob Baker$^{3}$\\ $^{1}$Univ of Science and
+  Technology~~~~$^{3}$Univ C}` gave Ann "Univ of Science and Technology 3Univ C", Bob nothing. The span is now its first
+  event's start to its last ink's end, as a joined name's (`joined_single_name`). Witnesses 2111.07950, 1503.06795,
+  2504.05692 (its nameless extra creator gone), 2008.02300, 2404.01856; 2212.01433, 2608.06741 (W1b, the same cause).
+  The cut now acts where the reading parted an entry wrongly and the decline had hidden it: a digit mark glued inside a
+  word (`$^1$NLP$^2$CT Lab, Univ X`, 2603.20851) is the word's in the reading too (events/lexer.rs `glue_in_word_marks`,
+  as today's `rewrite_in_word_superscripts`), so the paper is declined as before (its key keeps the 2, today's not) —
+  only when the source glues it (`glued_in_source`: nothing but the mark's math shifts between it and the names), so a
+  mark after a `\break` still opens the next entry (`\address{{$^1$… Russia\break $^2$Nuclear …}}`, hep-ph9809222,
+  whose three addresses the first reading made one of every author; its article twin, both entries one of Ann in 97b, is
+  now each name's).
+- **llncs's one `\institute` cut at its marks** (llncs_cls.rs `\lx@llncs@institute@sup`, shape (c): no `\and`, a
+  superscript in it). Its split (author_block/affiliations.rs `affiliation_calls`) labels every entry by its mark and
+  dropped the call's `labelseq`, so the line no mark labels (`\institute{Univ A, Town \\ \textsuperscript{*}Equal
+  contribution}`) was an unlabelled affiliation of the last author, where llncs.cls:868-886 prints it unnumbered under
+  every name. The call now passes `labelseq=affiliation,_share=authors,_markpiece=true` for an entry with no mark and no
+  footnote symbol leading it (`unmarked_attr`), which `\lx@llncs@institute@sole`'s rule shares (`share_row_contacts`,
+  OD #901; the reading's `api:share:authors`). `_markpiece`: a number an author shows by hand other than 1 does not make
+  such a piece "several institutes" (`marks_pick`, `share_unpicked`) — it labels a sibling piece (`\institute{Skoltech,
+  Moscow, Russia\\ $^1$Aeronet, $^2$ADASE\\ \mailsc}`, 1905.07852, whose shared line had been Ann's today and the block's
+  in the reading, the writer then declining and its e-mails lost). Perl puts the whole institute, legend included, on
+  the first author (KNOWN_PERL_ERRORS #1195's fallback). Witnesses 2603.18089, 2608.22772 (its e-mails moved from a
+  nameless creator to their authors), 2207.13038, 2609.31726, 1905.07852.
+- **svproc** (latexml_contrib svproc_cls.rs). The contrib binding defined `\institute` as a document `<note
+  role=institute>` (since the 2026-05-21 parity import, no witness), overriding sv_support's split, so no author held an
+  affiliation. It no longer does: sv_support's `\institute` stands, split at `\and`, each piece answered by `\inst{n}`,
+  as Perl's (no svproc binding: OmniBus's inst_support, inst_support.sty.ltxml:36-38). An `\email` in a piece inherits
+  its label, as svjour3's (2409.01900's address list on every `\inst{1}` author, as Perl). Witnesses 2101.04527,
+  2504.04157, 2206.03859, 1911.11805, 2409.01900.
+
+**Measured** (97b → 97c). Bundle population int125a, 28,354 papers: 70 changed (50 in the frontmatter), Errors and
+Fatals equal once the timeouts are rerun alone, no creator merged or lost, no frontmatter word lost (`fm_checks.py`: the
+marks' digits and letters left the names, 13 papers); llncs with `\institute` 686 papers, 1 changed (1910.10296); svproc
+17 of 17 changed (21 with the `styles/svproc` copies): 16 gain their authors' affiliations. Scorer, the 3,000 sample:
+archival 98.18 → 98.36 %, lost-words papers 0 → 0, R2 papers 7 → 5. The dev census's 146 `aff_missing` papers: 81
+creators right that were not (18 papers), none the other way.
+
+**Left.** (a) Two group-wrapped entry lines do not cut: `\author{Ann Able$^{1}$ \quad Bob Baker$^{2}$ \quad Cy
+Cole$^{3}$ \\ \textnormal{$^{1}$Univ A \quad $^{2}$Univ B} \\ \textnormal{$^{3}$Univ C}}` gives Ann "Univ A 2Univ B" (one
+such line cuts; 2609.38081, W1b's third witness). (b) llncs's legend line before the institute: `\institute{
+\textsuperscript{*}Equal contribution \\ Univ A, Town}` — the unmarked line continues the legend entry, Ann's
+"Equal contributionUniv A, Town", Bob none (97b the same). (c) svproc's sole institute (no `\and`) is sv_support's
+unlabelled piece, the block's (OD #159), with an `\email` in it: `\author{Ann Able \and Bob Baker}\institute{Univ A,
+Town A\\ \email{ann@x.org}}` puts the address on the block's creator, where the document note had left it Ann's (Perl
+both on Ann); 1705.10638, 2010.10850, 2207.12084, 2307.06258 (each address had gone to the last author, spelling no
+one). Under svproc's numbered institutes the authors' hand-typed `${}^{1}$` answer no piece in today's sv_support path
+(the reading answers them; sv_support is no written family), so 2608.25509's two institutes are the block's and three
+of its five addresses lost or moved off their authors. (d) The in-word digit's paper is still declined (its key). (e) A
+legend no rule reads as one, "†Project lead", is an affiliation of its mark's names, where 97b had folded the whole
+legend line into one affiliation (2609.18514, 2609.19719: `classify_thanks` knows no project role). Guards `perfect_kernel_batch97c` (five); changed:
+`perfect_kernel_batchfms2a2r8::a_text_mark_glyph_is_no_footnote_symbol` (the writer writes it now, the legend Ann's
+note: its XML pinned) and `r8_shapes_leave_the_xml_unchanged` (TEXT_GLYPH written, as GLUED); repros
+sectioning-frontmatter/`block_entry_of_several_words_is_cut_whole`, `llncs_institute_legend_line_shared`,
+`llncs_institute_hand_numbered_lines_shared`, `svproc_copy/svproc_institute_per_author`,
+`block_mark_after_a_break_opens_an_entry` (RED → GREEN).

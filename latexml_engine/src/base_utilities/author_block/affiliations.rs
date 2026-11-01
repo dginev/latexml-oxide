@@ -5,14 +5,17 @@ use super::*;
 /// The `\lx@add@affiliation` calls for an affiliation list: one per line or `\and`-separated
 /// entry, each with its superscript marker as its label when the list has markers (Perl
 /// Base_Utility.pool.ltxml:742-753, the body of `\lx@add@affiliations` after its dequeue). `attr`
-/// is passed to each entry, `marked_attr` instead when the list has markers and `marks_are_labels`.
-/// `authors_queued` says every author is queued, so an unmarked line may be placed by the marks: an
-/// address run by its authors' positions, another line with the affiliation before it. An `\author`
-/// call's tail (`author_tail_calls`) may come before later authors, and then its unmarked lines are
-/// its own creators' rows, as each was before.
+/// is passed to each entry, `marked_attr` instead when the list has markers and `marks_are_labels` — and there
+/// `unmarked_attr`, when given, to an entry no mark labels (no mark in it, no footnote symbol leading it): llncs's one
+/// `\institute`'s `labelseq=affiliation,_share=authors`, its first line every author's as the class prints it (shape
+/// (c), `\lx@llncs@institute@sup`). `authors_queued` says every author is queued, so an unmarked line may be placed by
+/// the marks: an address run by its authors' positions, another line with the affiliation before it. An `\author`
+/// call's tail (`author_tail_calls`) may come before later authors, and then its unmarked lines are its own creators'
+/// rows, as each was before.
 pub fn affiliation_calls(
   attr: Option<Tokens>,
   marked_attr: Option<Tokens>,
+  unmarked_attr: Option<Tokens>,
   stuff: Tokens,
   marks_are_labels: bool,
   authors_queued: bool,
@@ -120,9 +123,25 @@ pub fn affiliation_calls(
     *entry = trim_trailing_separator(std::mem::take(entry));
   }
   for entry in marked_entries {
-    let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(Tokens::new(
-      entry
-    ))]);
+    // (an entry no mark labels, in a list whose caller says how such an entry is placed: as that call places it, not
+    // labelled by a mark — llncs's `\institute{Univ A, Town \\ \textsuperscript{*}Equal contribution}`, whose `Univ A,
+    // Town` went to the last author alone, every author's in pdflatex: dev20k 2603.18089, 2608.22772, 2207.13038,
+    // 2609.31726, 1905.07852)
+    let entry = Tokens::new(entry);
+    if let Some(unmarked) = &unmarked_attr
+      && author_mark_position(&entry).is_none()
+      && !starts_with_footnote_symbol(&entry)
+    {
+      calls.extend(
+        Invocation!(T_CS!("\\lx@add@affiliation"), vec![
+          Some(unmarked.clone()),
+          Some(entry)
+        ])
+        .unlist(),
+      );
+      continue;
+    }
+    let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(entry)]);
     calls.extend(
       Invocation!(T_CS!("\\lx@add@affiliation"), vec![
         marked_attr.clone(),

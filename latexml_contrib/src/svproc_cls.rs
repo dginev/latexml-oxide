@@ -67,12 +67,11 @@ LoadDefinitions!({
     "\\toctitle{}",
     "\\@add@frontmatter{ltx:note}[role=toctitle]{#1}"
   );
-  DefMacro!(
-    "\\institute{}",
-    "\\@add@frontmatter{ltx:note}[role=institute]{#1}"
-  );
-  // \inst{N}, the superscript marker keyed to numbered affiliations, is the
-  // kernel's `\providecommand\inst[1]{\textsuperscript{#1}}` (sect05.rs).
+  // (no `\institute` of its own: sv_support's stands, splitting it at `\and` into numbered affiliations the `\inst{n}`
+  // marks answer, as Perl's — no svproc binding, OmniBus's inst_support `\institute`, inst_support.sty.ltxml:36-38; a
+  // document `<note role=institute>` here held them all in no author: dev20k 2101.04527, 2504.04157, 2206.03859,
+  // 1911.11805, 2409.01900, repro sectioning-frontmatter/svproc_institute_per_author)
+  // (`\inst{N}`, the superscript marker keyed to those affiliations, is sv_support's too)
   // svproc.cls L240-245 defines \frontmatter / \mainmatter / \backmatter as
   // page-numbering + \@mainmatter-flag toggles (`\pagenumbering{Roman}` etc.).
   // All three are pure page-layout — moot in our HTML paradigm — so Perl

@@ -296,7 +296,11 @@ fn bracket_depth(open: u8, c: char) -> u8 {
 
 /// A lowercase mark glued on both sides inside a word is the word's letters, not a mark between two names: `James
 /// M\textsuperscript{c}Kernan` is one name, "James McKernan" (math0610203). A Name, a Mark of one or two lowercase
-/// letters set with no space before or after it, and a Name are one Name.
+/// letters set with no space before or after it, and a Name are one Name. So is a mark of digits glued so, as today's
+/// reads it (`rewrite_in_word_superscripts`, 77n r4: no mark list, no "and" after it): `$^1$NLP$^2$CT Lab, Univ X` is
+/// the lab "NLP²CT Lab" (2603.20851, 2605.30274; `I$^2$R`, `DM$^3$L`, 2603.04869, 2604.00800), not entries "NLP" and
+/// "CT Lab, Univ X" — which the writer, cutting a block entry by its whole span (OD #945), would have written — when
+/// it stands glued in the source too ([`glued_in_source`]).
 fn glue_in_word_marks(events: Vec<Event>) -> Vec<Event> {
   let mut out: Vec<Event> = Vec::with_capacity(events.len());
   let mut events = events.into_iter().peekable();
@@ -306,8 +310,10 @@ fn glue_in_word_marks(events: Vec<Event>) -> Vec<Event> {
       && !event.symbol
       && !event.space_before
       && !event.space_after
-      && (1..=2).contains(&letters.chars().count())
-      && letters.chars().all(char::is_lowercase)
+      && ((1..=2).contains(&letters.chars().count()) && letters.chars().all(char::is_lowercase)
+        || (1..=3).contains(&letters.chars().count())
+          && letters.chars().all(|c| c.is_ascii_digit())
+          && glued_in_source(out.last(), &event, events.peek()))
       && out.last().is_some_and(|e| {
         e.kind == EventKind::Name && e.text.chars().next_back().is_some_and(char::is_alphabetic)
       })
@@ -325,6 +331,23 @@ fn glue_in_word_marks(events: Vec<Event>) -> Vec<Event> {
     out.push(event);
   }
   out
+}
+
+/// Whether a digit mark stands in the source between the names around it with nothing but its own math shifts (or
+/// none) between them, as `rewrite_in_word_superscripts` reads a superscript inside a word: `NLP$^2$CT`, `I$^2$R` —
+/// not `Russia\break $^2$Nuclear` (hep-ph9809222's revtex `\address`, a line break before the next entry's mark,
+/// which TeX's spaces leave unseen).
+fn glued_in_source(before: Option<&Event>, mark: &Event, after: Option<&Event>) -> bool {
+  match (
+    before.and_then(|e| e.span),
+    mark.span,
+    after.and_then(|e| e.span),
+  ) {
+    (Some((_, end)), Some((start, stop)), Some((next, _))) => {
+      start <= end.saturating_add(1) && next <= stop.saturating_add(1)
+    },
+    _ => false,
+  }
 }
 
 /// A character printing nothing: the zero-width space, non-joiner and joiner, the word joiner and the byte-order mark.

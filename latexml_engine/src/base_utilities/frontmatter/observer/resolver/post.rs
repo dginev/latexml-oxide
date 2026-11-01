@@ -971,7 +971,8 @@ impl Resolver {
     let live = self.live();
     let mut inner_emails: Vec<(Vec<usize>, Assoc)> = Vec::new();
     let mut shared_emails: Vec<Assoc> = Vec::new();
-    let unpicked = self.share_unpicked(&live);
+    let unpicked = self.share_unpicked(&live, false);
+    let piece_unpicked = self.share_unpicked(&live, true);
     // (each block line entry's `\and` column, and per label the columns of a block whose lines hold an entry of it:
     // a label with entries in two columns labels each column's own names — `Ann Able$^\dagger$ … \\ $^\dagger$ Univ A
     // \and Cat Cole$^\dagger$ \\ $^\dagger$ Univ C` gives Univ C to Cat Cole alone, as pdflatex sets each column apart;
@@ -1012,8 +1013,8 @@ impl Resolver {
     for (at, (labels, symbol, assoc)) in pending.into_iter().enumerate() {
       // (a class's one institute no `\inst{n}` picks is every author's, its e-mail lines placed each by the chain:
       // `share_unpicked`, `answer_shared_emails`)
-      if let Some(&(_, marked)) = self.shared.iter().find(|(p, _)| *p == at)
-        && unpicked
+      if let Some(&(_, marked, piece)) = self.shared.iter().find(|(p, ..)| *p == at)
+        && (if piece { piece_unpicked } else { unpicked })
         && !marked
       {
         if assoc.role == "email" {
@@ -1072,7 +1073,7 @@ impl Resolver {
       // the block's, as the binding declares (llncs_cls.rs `\lx@llncs@institute@sole`, aa_cls.rs
       // `\lx@aa@institute@sole`; astro-ph0305539's shape, perfect_kernel_batch63's 63i guard, its aa twin in
       // perfect_kernel_batch92c))
-      if self.shared.iter().any(|(p, _)| *p == at) {
+      if self.shared.iter().any(|(p, ..)| *p == at) {
         owners.retain(|&c| {
           self
             .class_requests
@@ -1467,8 +1468,10 @@ impl Resolver {
   /// shows the class's own request of a number (`\inst{1}`, `\inst{2}`: [`Resolver::class_requests`]; `\inst{*}`, an
   /// empty `\inst{}`, a hand-typed `$^{1}$` and a paper's mark macro pick nothing: 2207.04574, 2604.20229, 2607.02596,
   /// 1804.05870), and no name shows a number other than 1 by hand (`Ann Able$^{1,2}$`: the one institute is several,
-  /// numbered by hand). An entry holding a mark of its own is picked too (`answer_pending`, 2608.21425).
-  fn share_unpicked(&self, live: &[usize]) -> bool {
+  /// numbered by hand) — unless `piece`, the entry one piece of an institute its marks split (llncs's
+  /// `\institute{Univ A \\ $^1$Lab B, $^2$Lab C}`, `_markpiece=true`), whose hand-typed numbers label its other pieces
+  /// (1905.07852). An entry holding a mark of its own is picked too (`answer_pending`, 2608.21425).
+  fn share_unpicked(&self, live: &[usize], piece: bool) -> bool {
     let number = |label: &str| {
       let bare = unprefixed(label).unwrap_or(label);
       !bare.is_empty() && bare.bytes().all(|b| b.is_ascii_digit())
@@ -1478,11 +1481,12 @@ impl Resolver {
         .class_requests
         .iter()
         .any(|(o, l)| *o == c && number(l))
-        || self.out.creators[c].requests.iter().any(|r| {
-          number(r)
-            && unprefixed(r).unwrap_or(r) != "1"
-            && !self.class_requests.iter().any(|(o, l)| *o == c && l == r)
-        })
+        || !piece
+          && self.out.creators[c].requests.iter().any(|r| {
+            number(r)
+              && unprefixed(r).unwrap_or(r) != "1"
+              && !self.class_requests.iter().any(|(o, l)| *o == c && l == r)
+          })
     })
   }
 

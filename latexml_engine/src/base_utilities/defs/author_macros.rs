@@ -126,7 +126,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // optional attributes place it (apa7's unnumbered list, `annotate=all`).
   DefMacro!("\\lx@add@affiliation@marked[]{}", sub[(attr, stuff)] {
     if affiliation_is_marked(&stuff) {
-      Ok(Tokens::new(affiliation_calls(None, None, stuff, true, true)?))
+      Ok(Tokens::new(affiliation_calls(None, None, None, stuff, true, true)?))
     } else {
       Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr, Some(stuff)]))
     }
@@ -138,7 +138,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (`shared_affiliation_calls`).
   DefMacro!("\\lx@add@affiliation@shared[]{}", sub[(attr, stuff)] {
     if affiliation_is_marked(&stuff) {
-      Ok(Tokens::new(affiliation_calls(None, None, stuff, true, true)?))
+      Ok(Tokens::new(affiliation_calls(None, None, None, stuff, true, true)?))
     } else {
       Ok(Tokens::new(shared_affiliation_calls(attr, stuff)?))
     }
@@ -403,7 +403,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
 
   DefMacro!("\\lx@add@affiliations[]{}", sub[(attr, stuff)] {
     dequeue_front_matter("ltx:contact", &[("role", "affiliation")]);
-    Ok(Tokens::new(affiliation_calls(attr, None, stuff, true, true)?))
+    Ok(Tokens::new(affiliation_calls(attr, None, None, stuff, true, true)?))
   });
 
   DefMacro!("\\lx@date@received@name", "Received~");

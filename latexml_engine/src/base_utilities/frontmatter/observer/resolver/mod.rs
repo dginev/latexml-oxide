@@ -390,8 +390,10 @@ struct Resolver {
   /// (`answer_pending`: a `_share=authors` entry only the class's `\inst{n}` picks)
   class_requests:   Vec<(usize, String)>,
   /// the pending entries (their place in `pending`) a `_share=authors` call made (llncs's one `\institute`, no `\and`
-  /// in it: every author's unless the class's `\inst{n}` picks it), and whether the entry holds a mark of its own
-  shared:           Vec<(usize, bool)>,
+  /// in it: every author's unless the class's `\inst{n}` picks it), whether the entry holds a mark of its own, and
+  /// whether it is a piece its institute's marks split it into (`_markpiece=true`: the numbers shown by hand label the
+  /// other pieces, not it — [`Resolver::share_unpicked`])
+  shared:           Vec<(usize, bool, bool)>,
   /// the pending entries of a numbered call (`labelseq=`) whose content holds marks of its own, which no split read
   /// (`answer_pending`: its number is no reading of those marks, so an owner found by a hand mark is not ruling 1's)
   marked_entries:   Vec<usize>,

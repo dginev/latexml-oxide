@@ -626,9 +626,10 @@ impl Resolver {
           .extend(first_pending..self.pending.len());
       }
       if shares {
+        let piece = attr_value(attrs, "_markpiece") == Some("true");
         self
           .shared
-          .extend((first_pending..self.pending.len()).map(|at| (at, marked)));
+          .extend((first_pending..self.pending.len()).map(|at| (at, marked, piece)));
       }
       // (a run today's records for a call it attaches at once — revtex's symbol-led `\affiliation{$^\flat$…}` —, which an
       // unmarked line after it continues: 1303.7097's `\affiliation{CONICET La Plata, …}`, every name's)

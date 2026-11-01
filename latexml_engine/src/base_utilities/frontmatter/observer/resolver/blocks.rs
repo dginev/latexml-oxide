@@ -656,7 +656,23 @@ impl Resolver {
       let text = events_text(&entry.events)
         .trim_start_matches(|c: char| ")]-.:".contains(c) || c.is_whitespace())
         .to_string();
-      let span = entry.events.first().and_then(|e| e.span);
+      // (the entry's span is its every event's, its first's start to its last ink's end, as a joined name's
+      // (`joined_single_name`): the writer cuts the entry by it, its letters the entry's text — an entry of several
+      // events, its words split at an inner `and` or comma, was its first piece's span alone, so the cut failed ("a block
+      // line does not cut") and the whole line went to the first mark's name: `$^{1}$Univ of Science and
+      // Technology~~~~$^{3}$Univ C`, dev20k 2111.07950, 1503.06795, 2504.05692, 2008.02300, 2404.01856)
+      let span = match (
+        entry.events.first().and_then(|e| e.span),
+        entry
+          .events
+          .iter()
+          .rev()
+          .find(|e| inked(e))
+          .and_then(|e| e.span),
+      ) {
+        (Some((start, _)), Some((_, end))) if end >= start => Some((start, end)),
+        (first, _) => first,
+      };
       // (an entry a `\footnotemark` leads: what a name's footnote mark answers, `mark:footnote` — 1607.07280)
       let footnote = entry
         .events
