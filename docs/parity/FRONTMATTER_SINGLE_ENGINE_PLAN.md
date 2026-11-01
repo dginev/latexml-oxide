@@ -161,6 +161,21 @@ These become Group scopes: `_group`/`_marks` (`place.rs:129-137`), `frontmatter_
 - **Raw-class stores** come before the model: a coverage gap (the dev lost-words census family A; FIDELITY_CHARTER
   §4 "No printed frontmatter word is lost").
 
+**Counter-example triage (user 2026-11-01).** Every counter-example a review or census finds is a test of the shared
+segmentation and reassembly algorithm, and is first classed:
+- **(a) Missing generality over TeX constructs.** The same printed thing in another spelling:
+  - a mark after a spacing nucleus (`${\,\!}^1`, `{}^1`, `\mbox{${\ }^{1}$}`);
+  - a one-argument line wrapper (`\centerline{…}`);
+  - a digit run with a sub-letter (`23A`);
+  - an environment name or `\item[…]` argument that prints nothing.
+
+  Fix it once, in the step it belongs to (Cut, Kind, Group, Link) or in the API, through a reader both engines share.
+  Never as a per-shape exception in one binding.
+- **(b) Authoring that contradicts the macros' own assumptions.** Give it a RED repro and a witness in
+  DEFERRED_FAMILIES.md "Pathological authoring". No recovery.
+
+Briefs and review reports class each counter-example (a) or (b).
+
 **Residuals by step** (2026-11-01 mechanism map over SYNC, OPEN_ROWS, the plan's rulings, the reviews and the dev
 lost-words census; classes deduplicated, paper counts from different censuses):
 
