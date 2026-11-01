@@ -3,8 +3,30 @@
 //! Shared by elsart.cls and elsarticle.cls
 use crate::prelude::*;
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own): the kernel's reading,
+/// written (97e, OD #948), for the `\author[keys]{…}` of elsarticle, elsart and the classes keeping this binding's
+/// (autart, entics, arxbj): their title prints its notes in the body's arabic `\thefootnote` (elsarticle.cls:819, :836
+/// `\gdef\thefootnote{\arabic{footnote}}`, no `\@fnsymbol` in its `\maketitle`; elsart.cls v2.18 :1107-1108
+/// `\xarabic{footnote}` for the authors' notes), so `M.~Pesce-Rollins\footnotemark[1]` shows "1", not the kernel's "∗";
+/// and an `\address[key]`/`\affiliation[key]` key is never printed — the class prints the entry's place, `\theaffn`
+/// (elsarticle.cls:656-662), `\theaddress` (elsart.cls :1135-1164) —, so no footnote's mark answers it (`keyed_labels`;
+/// 1108.0201's `\address[*]{current address}`, which pdflatex prints "bb current address" and no author requests); the
+/// authors' keys do, and a mark typed by hand, as keys in order spell the places printed (0907.5014)
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "elsart",
+  binding: "elsart_support_core.sty",
+  title_marks: FmTitleMarks::Body,
+  keyed_labels: true,
+  written: true,
+  cite: "elsarticle.cls:656-662, :819, :836; elsart.cls v2.18 :1107-1108, :1135-1164; OD #948 (1108.0201)",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 #[rustfmt::skip]
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   // Frontmatter environment (Perl PR #2767)
   DefPrimitive!(T_CS!("\\begin{frontmatter}"), None, None);
   DefPrimitive!(T_CS!("\\end{frontmatter}"), None, None);

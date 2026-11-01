@@ -83,6 +83,13 @@ pub struct Policy {
   /// the author's address block) nor REVTeX's (the author's footnote): there the address is the call's current
   /// author's, as the binding routes it
   pub email_in_place:   bool,
+  /// a call's `label=` is a key, never printed: the class prints the entry's place in its list instead
+  /// (elsarticle.cls:656-662 `\theaffn`, elsart.cls v2.18 :1135-1164 `\theaddress`), so no footnote's mark answers it,
+  /// a symbol's neither (FIDELITY_CHARTER §4 R1: an author whose keys request affiliations takes none by another route;
+  /// 1108.0201's `\address[*]{current address}` under `M.~Pesce-Rollins\footnotemark[1]`) — an author's own keys
+  /// (`annotations=` of `\author[a,b]`) and a mark typed by hand do, the places keys in order spell (0907.5014's
+  /// `Denes Molnar$^{a,b}$`)
+  pub keyed_labels:     bool,
   /// the observer writes this family's frontmatter (FM S2b, `writer/`): the family passed its per-family gate — its own
   /// seeded classified-precision sample ≥ 95 % right and its unclassified rate < 0.5 % (main-session decision at int63,
   /// OXIDIZED_DESIGN_DIVERGENCES #837 "S2a.2 r5 at landing"); what differs between its output and the observer's
@@ -111,14 +118,15 @@ pub const KERNEL: Policy = Policy {
   and_word:         false,
   unmarked_notes:   false,
   email_in_place:   false,
+  keyed_labels:     false,
   written:          true,
   cite:             "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); FIDELITY_CHARTER §4; OD #925",
 };
 
 /// The conventions of a binding owning the `\author` meaning that declares none of its own (JHEP.cls, aas_support.sty,
-/// elsart_support_core.sty, …), or of a meaning no binding owns (the document's own, a file read raw, the fallback
-/// class's): the kernel's reading, written — the family passed its gate (OD #837 S2b) in 97e's one-batch gate (OD
-/// #948); a binding failing its own declares `written: false`.
+/// sn-jnl.cls, …; elsart_support_core.sty declares its own since 97e r2), or of a meaning no binding owns (the
+/// document's own, a file read raw, the fallback class's): the kernel's reading, written — the family passed its gate
+/// (OD #837 S2b) in 97e's one-batch gate (OD #948); a binding failing its own declares `written: false`.
 pub const UNDECLARED: Policy = Policy {
   name: "undeclared",
   written: true,

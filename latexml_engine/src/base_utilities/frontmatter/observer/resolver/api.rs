@@ -620,6 +620,11 @@ impl Resolver {
           ..assoc
         }));
       }
+      // (a key its class never prints labels it: no footnote's mark answers it, `answer_pending` — elsarticle's
+      // `\address[*]{current address}`, 1108.0201)
+      if label_rule == "api:label" && policy.keyed_labels {
+        self.keyed.extend(first_pending..self.pending.len());
+      }
       if marked && label_rule == "api:labelseq" {
         self
           .marked_entries

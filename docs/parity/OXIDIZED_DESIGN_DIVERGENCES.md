@@ -29068,7 +29068,7 @@ sectioning-frontmatter/`author_collaboration_line_keeps_its_print_order`,
 `iopart_collaboration_heading_keeps_the_names_words` (RED → GREEN); `author_team_piece_mark_labels_its_own_line` RED catalog (a team piece's own mark labels a line no author
 asks for: the block's, as any such line).
 
-### 948. Every remaining observer-writer family is written in one batch (ijcai, inst_support, iopart, jheppub, jinstpub, jcappub, jpconf, sv_support and every binding owning `\author` with no declaration); a block line's letters are read as printed, a re-parted entry keeps today's role, a letter-spaced name's word space is no gap, an e-mail's corresponding owner is one of the authors it is printed for, a name read as an entry is never written onto an author (Perl: the old reader's output, no observer)
+### 948. Every remaining observer-writer family is written in one batch (ijcai, inst_support, iopart, jheppub, jinstpub, jcappub, jpconf, sv_support and every binding owning `\author` with no declaration); a block line's letters are read as printed, a re-parted entry keeps today's role, a letter-spaced name's word space is no gap, an e-mail's corresponding owner is one of the authors it is printed for, a name read as an entry is never written onto an author; an elsarticle key is answered by its keys alone, and a name the re-part makes that names no person declines (Perl: the old reader's output, no observer)
 
 Beyond Perl (FM S2b, OD #837; user decision 2026-11-01: every remaining family through its gate in one batch). The
 flip: `written: true` in `ijcai_sty.rs`, `inst_support_sty.rs`, `iopart_support_sty.rs`, `jheppub_sty.rs`,
@@ -29095,15 +29095,17 @@ against pdflatex with `score_tiers.py`, archival = the structurally decided crea
 | jpconf | 58, 8.6 % | 3 | 5/6 → 6/6 | 53 | 86/88 → 86/88 | none | ON |
 | ijcai | 72, 25.0 % | 9 | 56/58 → 58/58 | 64 | 216/226 → 220/226 | none | ON |
 | undeclared: aas_support | 384, 3.6 % | 110 | 273/379 → 371/379 | 1,097 | 3,540/3,922 → 3,719/3,922 | none (1805.02689 scorer: an `\altaffiltext` e-mail) | ON |
-| undeclared: elsart_support_core (elsarticle; OmniBus's elsart, arxbj) | 392, 2.3 % | 47 | 385/413 → 409/413 | 903 | 3,053/3,110 → 3,085/3,110 | 1108.0201 (below); 1411.2807 scorer | ON |
+| undeclared: elsart_support_core (elsarticle; OmniBus's elsart, arxbj) | 392, 2.3 % | 47 | 385/413 → 409/413 | 903 | 3,053/3,110 → 3,085/3,110 | 1108.0201 (fixed in r2, below); 1411.2807 scorer | ON |
 | undeclared: JHEP.cls | 122, 71.3 % | 7 | 7/15 → 15/15 | 172 | 239/282 → 239/282 | none | ON |
-| undeclared: webofc.cls | 30, 23.3 % | 1 | 4/4 → 4/4 | 22 | 58/64 → 57/64 | 1702.03664 (below) | ON |
+| undeclared: webofc.cls | 30, 23.3 % | 1 | 4/4 → 4/4 | 22 | 58/64 → 57/64 | 1702.03664 (declined in r2, below) | ON |
 | undeclared: the rest (sn-jnl 1.1 %, imsart 5.3 %, interact 4.2 %, ecai 10 %, cas-dc, cas-sc, pasj, epl, spie, PoS, dgruyter, …) | 289, 1.7 % | 29 | 11/20 → 20/20 | 464 | 595/611 → 601/611 | none | ON |
 
-- **Unclassified above the 0.5 % rule**, as for aa (3.2 %), llncs (5.4 %), the kernel (19.4 %) and 95b's IEEEtran
-  (9.3 %) when written (#922, #925, #942): an unclassified row is an item the writer may decline, not the paper.
-  JHEP.cls's 71.3 % (names parted otherwise than today's, block e-mails) is almost all declined: its dev archival is
-  unchanged, its A/B changed 7 papers, each right by the source. Strictly applied, the rule passes jinstpub alone.
+- **The gate, as the user settled it (2026-11-01, after review rev97e)**: a seeded precision sample ≥ 95 % right, no
+  lost words, E/F not rising, and every worse creator read against pdflatex; the "unclassified < 0.5 %" part is
+  waived, and every family stays on. The unclassified rates above stand as measured — an unclassified row is an item
+  the writer may decline, not the paper, as for aa (3.2 %), llncs (5.4 %), the kernel (19.4 %) and 95b's IEEEtran
+  (9.3 %) when written (#922, #925, #942); JHEP.cls's 71.3 % (names parted otherwise than today's, block e-mails) is
+  almost all declined: its dev archival is unchanged, its A/B changed 7 papers, each right by the source.
 - **Precision of what changed, against pdflatex**: the A/B's changed creators 1,271/1,747 → 1,719/1,747 right (451 better, 3 worse); dev (the 4,252 dev papers of these families, before = int125b) 8,840/9,668 → 9,289/9,668 (453 better, 4 worse). The worse
   creators, each read: 1108.0201 (elsarticle, below: real); 1702.03664 (webofc: "Eleni Petrakou for CAPP/IBS" parted into
   the person, now right, and a creator "for CAPP/IBS", below); the rest scorer limits, each right by the source and the
@@ -29159,20 +29161,51 @@ as the merged creator did).
   `svjour3_name_only_piece_shares_the_next_institute`; since sv_support is written, `keep_as_today` no longer covers
   these calls.
 
+**Review rev97e (r2): two holes of the flip, fixed.**
+- *An elsarticle key is answered by keys alone, and its title's marks are arabic* (B1): elsart_support_core.sty
+  declares conventions of its own (`elsart_support_core_sty.rs` `FRONTMATTER_CONVENTIONS`, "elsart": the kernel's
+  reading, written) for elsarticle, elsart and the classes keeping its `\author` (autart, entics, arxbj).
+  `title_marks: Body` — elsarticle's `\maketitle` sets no `\@fnsymbol` (elsarticle.cls:819, :836
+  `\gdef\thefootnote{\arabic{footnote}}`; elsart.cls v2.18 :1107-1108 `\xarabic`), so a `\footnotemark[1]` reads
+  "1", not the kernel's "∗". `keyed_labels` (a new `Policy` field) — the key of `\address[key]`/`\affiliation[key]` is
+  never printed (the class prints the entry's place: `\theaffn`, elsarticle.cls:656-662; `\theaddress`, elsart.cls
+  :1135-1164), so an entry it labels (`api:label`) answers no footnote's mark, a symbol's neither — the symbol-line
+  route of ruling 2 is closed to it (`resolver::post::answer_pending`, `keyed`; FIDELITY_CHARTER §4 R1). The authors'
+  keys (`annotations=`) answer it, and so does a mark typed by hand: keys in order spell the places the class prints
+  (`Denes Molnar$^{a,b}$` under `\address[a]{…}\address[b]{…}` prints "a,b" over "a …", "b …", 0907.5014; a first
+  version answering keys alone left it, 1101.5562 and 2609.03753 unwritten). 1108.0201's `\address[*]{current address}`, which pdflatex prints "bb current address"
+  and no `\author[*]` requests, had gone to `M.~Pesce-Rollins\footnotemark[1]` (her `[6]` requests her affiliation):
+  now the block's, as in 97c. The cost of the arabic marks: a `\footnotetext[n]` after `\maketitle` now pairs with the
+  name's "n", as pdflatex prints it, and today's holds that note only after the writer runs, so the paper is declined
+  whole — 1108.0201 itself, and 0909.2782, whose e-mails r1 had split onto their authors (pre-existing in every family:
+  `article` under `\renewcommand\thefootnote{\fnsymbol{footnote}}` declines alike; SYNC row "97e r2 residuals"). Of the other bindings labelling an
+  entry by a key (`label={#1}`): cas-dc rewrites its keys to the letters cas prints (`cas_labelled_entry`), so a mark
+  matches the print; the rest own their `\author` and stay `UNDECLARED` (imsart, ecai, ceurart, icml, sn-jnl, bmcart,
+  beilstein, interspeech, vmsta, quantumarticle; not audited for printed keys — SYNC).
+- *A name the re-part would make that names no person declines* (S1; `writer::repart::plan`,
+  `resolver::names_no_person`): a reading's name not one of today's whole names that is a remark on a name (a bracket,
+  what a name speaks for — `for`, `on behalf of`, `representing` —, whatever follows) or a collaboration's name (`the …
+  team`, one ending in "collaboration(s)" or "consortium") leaves today's: svjour's and elsart's own `\and` pieces
+  never reach the author block's collaboration reader (OD #946), so `(BES Collaboration)\\ \\ M.~Ablikim\inst{1}`
+  (0710.5369, hep-ex0605103), `{The WASA-at-COSY Collaboration}\\[2ex]P.~Adlarson` (1805.08173) and webofc's `Eleni
+  Petrakou\inst{1}\fnsep\thanks{…} for CAPP/IBS` (1702.03664) had made the phrase a creator of its own once the
+  person's name was parted. Each paper as 97c: the phrase in the first name; hep-ex0605103's names keep their marks
+  again (`M. Ablikim$^{1}$`), as in 97c.
+
 **Required witness 2608.25509** (svproc, 97c's regression): every affiliation on its authors as pdflatex prints them
 (Gautier 1, 2; Guillermit 1; Porez 2; Rousset 1; Chablat 2); the two spelled addresses on Porez and Chablat, the three
 initials addresses (`ngr@`, `ygt@`, `frt@`) the block's, spelling no one.
 
 Left (SYNC row "97e"): 1509.06963 (jcappub, the census's F1 example) declined — its last two marks are `\textit{5}`
-and the cut cannot explain the sixth piece; 1108.0201 (elsarticle under the kernel conventions: `\footnotemark[1]`
-read as `*`, so the unrequested `\address[*]{current address}` went to M. Pesce-Rollins; elsarticle prints arabic
-title marks); collaborations and `for X` phrases parted into creators of their own (`(BES Collaboration)` 0710.5369,
-hep-ex0605103; `The WASA-at-COSY Collaboration` 1805.08173; `for the Belle II …` 2009.04166; `for CAPP/IBS`
-1702.03664) — the persons' names now right, the phrase OD #946's (97d) to make a contact; svjour3's name-only
+and the cut cannot explain the sixth piece; 1108.0201 and the collaborations and `for X` phrases parted into creators
+of their own (0710.5369, hep-ex0605103, 1805.08173, 2009.04166 `for the Belle II …`, 1702.03664) fixed in r2 (above:
+declined, today's kept; the contact OD #946's); svjour3's name-only
 institute piece (Ann Able's shared Univ A, RED as before).
 Guards `perfect_kernel_batch97e::{jcappub_is_written, jheppub_family_is_written, sv_support_is_written,
 inst_support_is_written, a_block_line_with_accents_is_cut, a_reparted_entry_keeps_todays_address_role,
-a_letter_spaced_name_is_one_name, an_entry_naming_another_author_is_not_written}`, the policy unit test `a_declaration_is_read_and_an_undeclared_family_takes_the_kernel`;
+a_letter_spaced_name_is_one_name, an_entry_naming_another_author_is_not_written,
+an_elsarticle_key_answers_no_footnote_mark, a_collaboration_heading_is_no_creator}`, the unit tests
+`writer::repart::tests::a_collaboration_or_a_remark_names_no_person` and `a_declaration_is_read_and_an_undeclared_family_takes_the_kernel`;
 guards updated to the written output (each read against its pdflatex oracle): `batch61::{author_marks_link_their_affiliations,
 informs_author_marks_link_affiliations, informs_class_api, marked_affiliation_review_shapes}`,
 `batch63::{svjour3_at_piece_naming_several_authors, svjour3_name_only_piece_keeps_the_institute_shared}`,
@@ -29186,4 +29219,5 @@ an_address_beside_an_institution_keeps_the_institution}` under `held`, `an_unmar
 `jinstpub_marked_affiliation_pieces_written`, `svproc_institute_email_list_written`,
 `svproc_hand_marks_institutes_written`, `ws_procs_address_lines_written`, `mnras_block_line_accent_cut`,
 `mnras_block_line_dotless_i_cut`, `appolb_reparted_entries_keep_address_role`, `jfm_letter_spaced_name_is_one_name`,
-`svjour3_at_pieces_joined_are_not_written`.
+`svjour3_at_pieces_joined_are_not_written`, `elsarticle_key_labelled_address_is_no_mark`,
+`svjour_collaboration_heading_is_no_creator`.

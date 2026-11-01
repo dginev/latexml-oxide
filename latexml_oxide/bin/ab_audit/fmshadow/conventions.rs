@@ -9,9 +9,9 @@
 use latexml_contrib::{jcappub_sty, jinstpub_sty, jpconf_cls};
 use latexml_engine::base_utilities::{FmConventions, fm_conventions_among, fm_resolve_with};
 use latexml_package::package::{
-  aa_cls, acmart_cls, ams_support_sty, authblk_sty, book_cls, ieeetran_cls, ijcai_sty,
-  inst_support_sty, iopart_support_sty, jheppub_sty, llncs_cls, mn2e_support_sty, report_cls,
-  revtex4_support_sty, sv_support_sty,
+  aa_cls, acmart_cls, ams_support_sty, authblk_sty, book_cls, elsart_support_core_sty,
+  ieeetran_cls, ijcai_sty, inst_support_sty, iopart_support_sty, jheppub_sty, llncs_cls,
+  mn2e_support_sty, report_cls, revtex4_support_sty, sv_support_sty,
 };
 
 use super::*;
@@ -36,6 +36,7 @@ pub const DECLARED: &[&FmConventions] = &[
   &ijcai_sty::FRONTMATTER_CONVENTIONS,
   &acmart_cls::FRONTMATTER_CONVENTIONS,
   &mn2e_support_sty::FRONTMATTER_CONVENTIONS,
+  &elsart_support_core_sty::FRONTMATTER_CONVENTIONS,
 ];
 
 /// The conventions for a block of `binding` and `hook`, as the conversion's `policy_for` read the declarations.

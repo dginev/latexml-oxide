@@ -292,3 +292,71 @@ fn an_entry_naming_another_author_is_not_written() {
   );
   assert_eq!(default_mode_creators(tex), xml, "the default mode");
 }
+
+/// An elsarticle key never prints and its title's marks are arabic (`elsart_support_core_sty.rs`'s declaration:
+/// `keyed_labels`, `title_marks: Body`; `resolver::post` `answer_pending`'s `keyed`): `\address[*]{current address}`,
+/// which no `\author[*]` requests and pdflatex prints "c current address", is the block's, not the author whose
+/// `\footnotemark[1]` the kernel's marks printed "∗" — his `[b]` requests his affiliation, and his mark prints "1"
+/// (FIDELITY_CHARTER §4 R1; 1108.0201, review rev97e B1); a mark typed by hand still answers a key, the place the class
+/// prints when keys are in order (`Cy Cole$^{a}$`, 0907.5014). 97e r1 gave Bob Baker the line.
+#[test]
+fn an_elsarticle_key_answers_no_footnote_mark() {
+  let tex = repro!("elsarticle_key_labelled_address_is_no_mark.tex");
+  let (xml, _, _, writer) = assert_reading(
+    tex,
+    Some(&[
+      &["Ann Able", "address=Univ A, Town A"],
+      // (the footnote mark's tags read in the name, "1" — the kernel's marks printed "∗")
+      &[
+        "Bob Baker 1 footnote 1 1 footnote 1",
+        "address=Univ B, Town B",
+      ],
+      &["Cy Cole a", "address=Univ A, Town A"],
+      &["address=current address"],
+    ]),
+    &[
+      "C Ann Able [a] | line:names",
+      "  a Univ A, Town A | api:label ruling1:request",
+      "C Bob Baker [b,1] | line:names",
+      "  a Univ B, Town B | api:label ruling1:request",
+      "C Cy Cole [a] | line:names",
+      "  a Univ A, Town A | api:label ruling1:request",
+      "B address current address | api:label label:unrequested owner:block",
+    ],
+  );
+  // (written: the reading's items as today's, each placed by its key or the hand mark)
+  assert_eq!(writer, "written", "the writer's outcome");
+  assert_eq!(default_mode_creators(tex), xml, "the default mode");
+}
+
+/// A name the reading parts out that names no person is no creator the writer makes (`writer::repart::plan`,
+/// `resolver::names_no_person`): svjour's `\author{(XYZ Collaboration)\\ \\ Ann Able\inst{1} \and …}` — the heading
+/// over the names, which the reading reads as a name of its own — declines the re-part, today's kept (0710.5369,
+/// hep-ex0605103, 1805.08173; the remark `… for CAPP/IBS`, 1702.03664, the predicate's unit test; review rev97e S1).
+/// 97e r1 made "(XYZ Collaboration)" a creator. A collaboration the names list parts by its separators stays an entry
+/// of it (`\and The ABC Collaboration\thanks{…}: Fay Fox`, 2407.21626:
+/// `perfect_kernel_batchfms2a2r7::a_separator_glyph_parts_names`). The collaboration's contact (OD #946) is the author
+/// block's reader's.
+#[test]
+fn a_collaboration_heading_is_no_creator() {
+  let tex = repro!("svjour_collaboration_heading_is_no_creator.tex");
+  let (xml, _, _, writer) = assert_reading(
+    tex,
+    Some(&[
+      &["(XYZ Collaboration) Ann Able", "affiliation=Univ A, Town A"],
+      &["Bob Baker", "affiliation=Univ B, Town B"],
+    ]),
+    &[
+      "C (XYZ Collaboration) [] | line:names",
+      "C Ann Able [1] | line:names",
+      "  a Univ A, Town A | api:labelseq",
+      "C Bob Baker [2] | line:names",
+      "  a Univ B, Town B | api:labelseq",
+    ],
+  );
+  assert!(
+    writer.as_str().is_some_and(|w| w.starts_with("declined: ")),
+    "the writer's outcome: {writer}"
+  );
+  assert_eq!(default_mode_creators(tex), xml, "the default mode");
+}

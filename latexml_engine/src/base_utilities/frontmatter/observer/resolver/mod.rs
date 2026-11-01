@@ -266,7 +266,7 @@ pub use labels::{address_take_out, addresses_in, mark_labels};
 use labels::{text_tokens, *};
 use lines::*;
 pub(in crate::base_utilities::frontmatter::observer) use lines::{
-  may_name_a_person, name_before_remark, reads_as_names,
+  NoPerson, may_name_a_person, name_before_remark, names_no_person, reads_as_names,
 };
 
 /// A block's events as the resolver reads them (`Resolver::block`): an ORCID link's name, an IEEE ordinal, a mark
@@ -394,6 +394,9 @@ struct Resolver {
   /// whether it is a piece its institute's marks split it into (`_markpiece=true`: the numbers shown by hand label the
   /// other pieces, not it — [`Resolver::share_unpicked`])
   shared:           Vec<(usize, bool, bool)>,
+  /// the pending entries (their place in `pending`) a call labelled by a key its class never prints
+  /// (`Policy::keyed_labels`, elsarticle's `\address[*]{…}`): no footnote's mark answers them (`answer_pending`)
+  keyed:            Vec<usize>,
   /// the pending entries of a numbered call (`labelseq=`) whose content holds marks of its own, which no split read
   /// (`answer_pending`: its number is no reading of those marks, so an owner found by a hand mark is not ruling 1's)
   marked_entries:   Vec<usize>,
@@ -489,6 +492,7 @@ impl Resolver {
       fn_requests:      Vec::new(),
       class_requests:   Vec::new(),
       shared:           Vec::new(),
+      keyed:            Vec::new(),
       marked_entries:   Vec::new(),
       note_texts:       Vec::new(),
       continued:        Vec::new(),

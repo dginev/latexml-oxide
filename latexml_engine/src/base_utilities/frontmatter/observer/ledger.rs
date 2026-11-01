@@ -519,8 +519,8 @@ fn watch_unwritten_setters() {
 
 /// The family of the document class: the first of its bindings that declared conventions, in load order (aa.cls
 /// before the aa_support.sty and inst_support.sty it loads; sv_support.sty under svjour3.cls), else the class's own
-/// `\author` binding (elsarticle's elsart_support_core.sty, undeclared), else the kernel's (a class whose bindings
-/// read no `\author` of their own: OmniBus, the kernel's gate, OD #925).
+/// `\author` binding (a class whose bindings declare none, its `\author` an undeclared support file's), else the
+/// kernel's (a class whose bindings read no `\author` of their own: OmniBus, the kernel's gate, OD #925).
 fn class_family() -> String {
   CLASS_BINDINGS
     .with(|c| {

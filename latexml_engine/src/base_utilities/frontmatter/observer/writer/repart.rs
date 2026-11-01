@@ -38,8 +38,8 @@ use super::{
     events::{EventKind, SepKind, is_separator_word},
     ledger::{Entry, Outcome},
     resolver::{
-      label_matches, mark_labels, mark_requests, may_name_a_person, name_before_remark,
-      read_events, reads_as_names,
+      NoPerson, label_matches, mark_labels, mark_requests, may_name_a_person, name_before_remark,
+      names_no_person, read_events, reads_as_names,
     },
   },
   apply::{elements, make, place, reclaim_ids, subtree_ids},
@@ -345,6 +345,25 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
         .any(|t| norm(&t.name) == norm(&c.name))
     {
       return declined(&s!("a name whose brackets do not close: {}", c.name));
+    }
+    // (nor a name of the reading's own that names no person: a remark after a name — `… for CAPP/IBS`, 1702.03664 —, or
+    // a collaboration on a line of its own over the names, parted from the name under it by the line alone, no
+    // separator the names line prints — `(BES Collaboration)\\ \\ M.~Ablikim\inst{1}`, 0710.5369, hep-ex0605103;
+    // `{The WASA-at-COSY Collaboration}\\[2ex]P.~Adlarson`, 1805.08173: the heading made a creator of its own once the
+    // name was parted, review rev97e S1 — today's stays. A collaboration the names list parts by its separators is one
+    // of its entries, as the old reader and Perl read it: `\and The ABC Collaboration\thanks{…}: Fay Fox`, 2407.21626)
+    let no_person = match names_no_person(&c.name) {
+      Some(NoPerson::Remark) => true,
+      Some(NoPerson::Collaboration) => !c.rule.split_whitespace().any(|t| t.starts_with("sep:")),
+      None => false,
+    };
+    if no_person
+      && !front
+        .creators
+        .iter()
+        .any(|t| norm(&t.name) == norm(&c.name))
+    {
+      return declined(&s!("a name naming no person: {}", c.name));
     }
   }
   // (a one-word name parted from today's name at a comma is the given name of a name written surname first, `Smith,
@@ -1751,6 +1770,39 @@ mod tests {
       }])
       .makes_block_items()
     );
+  }
+
+  /// A name the reading made that names no person — a remark after a name, a collaboration — is no creator the
+  /// re-part makes (review rev97e S1: 0710.5369, hep-ex0605103, 1805.08173, 1702.03664); a person's name, or one a
+  /// collaboration word ends only inside a word, is (1212.4143's `Huertas-Company`).
+  #[test]
+  fn a_collaboration_or_a_remark_names_no_person() {
+    for text in [
+      "(BES Collaboration)",
+      "for CAPP/IBS",
+      "on behalf of the ATLAS Collaboration",
+    ] {
+      assert_eq!(names_no_person(text), Some(NoPerson::Remark), "{text}");
+    }
+    for text in [
+      "The WASA-at-COSY Collaboration",
+      "the MAST Team",
+      "XYZ Consortium",
+    ] {
+      assert_eq!(
+        names_no_person(text),
+        Some(NoPerson::Collaboration),
+        "{text}"
+      );
+    }
+    for text in [
+      "Ann Able",
+      "M. Huertas-Company",
+      "Bob Forbes",
+      "Cy Collaborationist",
+    ] {
+      assert_eq!(names_no_person(text), None, "{text}");
+    }
   }
 
   /// A text's brackets close, in order (review rev94a B2).

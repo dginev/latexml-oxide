@@ -588,6 +588,48 @@ pub(in crate::base_utilities::frontmatter::observer) fn name_before_remark(
   (!name.is_empty() && reads_as_names(name)).then_some(name)
 }
 
+/// What a name the reading made names instead of a person ([`names_no_person`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(in crate::base_utilities::frontmatter::observer) enum NoPerson {
+  /// a remark on the name before it ([`is_name_remark`]: a bracket, the collaboration it speaks for) or what it speaks
+  /// for, whatever it is (`Eleni Petrakou\inst{1}\fnsep\thanks{…} for CAPP/IBS`, the class's comma before it,
+  /// 1702.03664; `(BES Collaboration)` over the names, 0710.5369, hep-ex0605103)
+  Remark,
+  /// a collaboration's name ([`is_collaboration`], or one ending in a collaboration word): `{The WASA-at-COSY
+  /// Collaboration}\\[2ex]P.~Adlarson`, 1805.08173
+  Collaboration,
+}
+
+/// Whether a name the reading made names no person, and what it names ([`NoPerson`]). Read only to decline
+/// (`writer::repart::plan`, review rev97e S1): a collaboration is a contact on the names it covers, no creator
+/// (FIDELITY_CHARTER §4, user ruling 2026-11-01, OD #946), which the writer does not make.
+pub(in crate::base_utilities::frontmatter::observer) fn names_no_person(
+  text: &str,
+) -> Option<NoPerson> {
+  let t = text.trim();
+  let lower = t.to_lowercase();
+  let last = lower
+    .split_whitespace()
+    .last()
+    .map(|w| w.trim_matches(|c: char| !c.is_alphanumeric()));
+  if is_name_remark(t)
+    || ["for ", "on behalf of ", "representing "]
+      .iter()
+      .any(|p| lower.starts_with(p))
+  {
+    Some(NoPerson::Remark)
+  } else if is_collaboration(t)
+    || matches!(
+      last,
+      Some("collaboration" | "collaborations" | "consortium")
+    )
+  {
+    Some(NoPerson::Collaboration)
+  } else {
+    None
+  }
+}
+
 /// Whether a piece may name a person, so that the shadow reading continues no institution into it (review rev94a r2
 /// B-1): it reads as names, or does once the remark after its name is set aside ([`name_before_remark`]), or its words
 /// before its first institution word are a full name of two words or more (`Bob Baker University` — a person and a

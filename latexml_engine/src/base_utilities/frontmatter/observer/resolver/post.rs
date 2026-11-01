@@ -1164,6 +1164,29 @@ impl Resolver {
           })
         });
       }
+      // (an entry a key labels that its class never prints answers no footnote's mark, a symbol's neither: elsarticle
+      // prints 1108.0201's `\address[*]{current address}` as its place, "bb current address", so
+      // `M.~Pesce-Rollins\footnotemark[1]`, whose `[6]` requests her affiliation, takes none of it (FIDELITY_CHARTER §4
+      // R1, `Policy::keyed_labels`). A mark
+      // typed by hand still asks for it: the class prints its entries' places, which keys in order spell —
+      // `Denes Molnar$^{a,b}$` under `\address[a]{…}\address[b]{…}` prints "a,b" over "a …", "b …" (0907.5014))
+      if self.keyed.contains(&at) {
+        owners.retain(|&c| {
+          labels.iter().any(|label| {
+            let asked = self.out.creators[c]
+              .requests
+              .iter()
+              .filter(|r| label_matches(r, label))
+              .count();
+            let by_footnote = self
+              .fn_requests
+              .iter()
+              .filter(|(o, r)| *o == c && label_matches(r, label))
+              .count();
+            asked > by_footnote
+          })
+        });
+      }
       owners.sort_unstable();
       // (a numbered affiliation answers no request a `\footnotemark` made: that number is its footnote's — `Kui
       // Wu\inst{3\footnotemark[1]}` is not Peking University's, `\institute`'s first entry, 2404.09857; a symbol line
