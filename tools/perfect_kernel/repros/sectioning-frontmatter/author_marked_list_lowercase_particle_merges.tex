@@ -1,20 +1,22 @@
-% status:  RED
+% status:  RED (int123a, 95b r3) -> GREEN (97a)
 % witness: 2410.11607 (dev20k; BESIII one-`\author` list under revtex4-1, 672 marked names — name 160 `N.~in der Wiesche`
-%          merges all 672 into one creator; the full witness with only `in`→`van` gives 672 creators). Holdout10k
+%          merged all 672 into one creator; 97a: 672 named creators, each with the affiliations its marks name). Holdout10k
 %          (2026-10-31, int123a): shape `name:unmatched`, 52 papers / 2,189 of 3,147 wrong creators (cause per paper unmeasured).
+%          hep-ex9611002 (dev, REVTeX 3 `E.~M.~Aitala,$^9$ …`): one creator -> 70.
 % oracle:  pdflatex (TL 2025, -no-shell-escape): 0 `!`; prints "A. Able1 , B. in der Baker2 , C. Cole1",
 %          "(XYZ Collaboration)", then the two institutes.
 % engines: rust int123a, 95b r3 = ONE creator `<personname>A. Able, B. in der Baker, C. Cole<break/>(XYZ
 %          Collaboration)</personname>` holding both institutes, 0 errors / 0 warnings (silent: `flag_merged_creators`
-%          uses the same all-or-nothing `name_count`); Perl 0.8.8 = one creator too (revtex4_support.sty.ltxml:46 adds
+%          used the same all-or-nothing `name_count`); Perl 0.8.8 = one creator too (revtex4_support.sty.ltxml:46 adds
 %          `\author` whole) — PERL-ORIGIN, but Perl's kernel marked branch splits a marked line at every comma
-%          (Base_Utility.pool.ltxml:706-708). Mechanism: `author_block/dispatch.rs:510` `split_names` →
-%          `split_author_line_cautious` (names_split.rs:47-58) splits only if every comma part is `name_shaped`
-%          (name_text.rs:390-416, `NAME_PARTICLES` :194-197 lacks `in`). Without the collaboration line the observer's
-%          writer repairs the small case; in the witness it cannot (field stamps overflow, token.rs:840-842).
+%          (Base_Utility.pool.ltxml:708). Cause: `split_author_line_cautious` (names_split.rs) split only if every comma part
+%          is `name_shaped` (name_text.rs, `NAME_PARTICLES` lacks `in`). Fix 97a (OXIDIZED_DESIGN_DIVERGENCES #943): a names
+%          line whose every piece carries its own mark after the name and none reads as an affiliation is a list
+%          (`marked_names`). Rust 97a: the three creators below, 0 errors / 0 warnings, eager and `--streaming`.
 % expect:  0 errors, 0 warnings; three creators in order — A. Able (Institute of One), B. in der Baker (University of
-%          Two), C. Cole (Institute of One); the collaboration line in no person's name (see
-%          author_collaboration_line_welded_into_last_name.tex).
+%          Two), C. Cole (Institute of One). The collaboration line stays welded into the last name as today's weld puts it
+%          (`C. Cole<break/>(XYZ Collaboration)`, pinned, not a target: author_collaboration_line_welded_into_last_name.tex,
+%          OPEN_ROWS.md:810). Guard `perfect_kernel_batch97a::marked_list_with_an_unknown_name_shape_is_a_list`.
 \documentclass[aps,prd,twocolumn]{revtex4-1}
 \begin{document}
 \title{A Title}

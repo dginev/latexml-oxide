@@ -377,6 +377,18 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     });
   });
 
+  // Rust-only: how many marked names a names line kept whole as one creator holds, when two or more
+  // (`split_author_line_cautious`), for `flag_merged_creators` to report the merge (batch 97a, OXIDIZED_DESIGN_DIVERGENCES
+  // #943). Only on a creator, as `\lx@author@placed@label`.
+  DefPrimitive!("\\lx@author@merged@names{}", sub[(names)] {
+    let names = names.to_string();
+    with_pending_entry_attr(move |attr| {
+      if attr.get("role").map(String::as_str) != Some("pending") {
+        attr.insert("_mergednames".to_string(), names);
+      }
+    });
+  });
+
   DefMacro!("\\lx@add@affiliations[]{}", sub[(attr, stuff)] {
     dequeue_front_matter("ltx:contact", &[("role", "affiliation")]);
     Ok(Tokens::new(affiliation_calls(attr, None, stuff, true, true)?))

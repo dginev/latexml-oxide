@@ -42,17 +42,63 @@ pub fn split_author_line(line: Tokens) -> Vec<Tokens> {
 
 /// [`split_author_line`] for a binding whose `\author` Perl reads as one author (aastex, amsart, revtex, an IEEE
 /// block, a labelled authblk `\author`): its names line splits only where it reads as two or more names
-/// ([`name_count`]: `Klemens Fellner and Bao Quoc Tang`), and otherwise stays one author as written (`John Smith,
-/// Max Planck Institute for Mathematics`; a name the shape test cannot read).
+/// ([`name_count`]: `Klemens Fellner and Bao Quoc Tang`) or as a list by its marks ([`marked_names`]), and otherwise
+/// stays one author as written (`John Smith, Max Planck Institute for Mathematics`; a name the shape test cannot read).
+/// A line kept whole two or more of whose pieces are marked names carries their count (`\lx@author@merged@names`), for
+/// [`flag_merged_creators`] to report the merge the marks contradict.
 pub(in crate::base_utilities) fn split_author_line_cautious(line: Tokens) -> Vec<Tokens> {
   // (a byline's "by" before the names is no name: `\author{by T. Gisiger and M. B. Paranjape}`, hep-ph9507223,
   // hep-ph9404319)
   let line = without_leading_by(&line).unwrap_or(line);
   if separated_name_count(&line) >= 2 {
-    split_author_line(line)
-  } else {
-    // (one name too opens with the "and" before it: jheppub's `\author[a,2]{and Fourth}`)
-    vec![without_leading_and(&line).unwrap_or(line)]
+    return split_author_line(line);
+  }
+  let pieces = split_author_line(line.clone());
+  let marked = marked_names(&pieces);
+  if pieces.len() >= 2 && marked == pieces.len() {
+    return pieces;
+  }
+  // (the names a whole-line group holds counted inside it: `{\bf A.~Able$^{1}$, B.~in der Baker, C.~Cole$^{1}$}`)
+  let marked = match whole_line_group(&line) {
+    Some((_, inner)) if pieces.len() == 1 => marked_names(&split_author_line(inner)),
+    _ => marked,
+  };
+  // (one name too opens with the "and" before it: jheppub's `\author[a,2]{and Fourth}`)
+  let line = without_leading_and(&line).unwrap_or(line);
+  if marked < 2 {
+    return vec![line];
+  }
+  let mut merged = vec![T_CS!("\\lx@author@merged@names"), T_BEGIN!()];
+  merged.extend(mouth::tokenize_internal(TeXString::assembled(marked.to_string())).unlist());
+  merged.push(T_END!());
+  merged.extend(line.unlist());
+  vec![Tokens::new(merged)]
+}
+
+/// How many pieces of a names line ([`split_author_line`]) are marked names: each carrying its own mark after the name
+/// ([`marked_after_name`]), none reading as an affiliation ([`reads_as_affiliation`]). When every piece of two or more
+/// is one, the line is a list of names by its marks: `A.~Able$^{1}$, B.~in der Baker$^{2}$, C.~Cole$^{1}$` is three
+/// authors, as pdflatex prints them, whatever their names' shape (`in` is no particle [`name_count`] knows, and one such
+/// name made the BESIII list of 672 one author: 2410.11607; hep-ex9611002). This is Perl's marked branch, which splits a
+/// marked names line at every comma (Base_Utility.pool.ltxml:708, `SplitTokens($line, T_OTHER(','))`), read as
+/// cautiously as the marks allow: a piece without its mark (`Surname, I.\altaffilmark{1}`, 1903.10014), or one reading
+/// as an institution (`John Smith$^{1}$, Bell Labs`; `M.~Huertas-Company\altaffilmark{1}`, 1212.4143, by its "Company"),
+/// leaves the line to the shape test, and the count, a lower bound of the names it holds, to the merge report. The
+/// resolver reads it alike (`joined_single_name` joins no names with marks between them).
+fn marked_names(pieces: &[Tokens]) -> usize {
+  pieces
+    .iter()
+    .filter(|piece| marked_after_name(piece) && !reads_as_affiliation(piece))
+    .count()
+}
+
+/// Whether the names a wrapper or group holds read as two or more, by their shape ([`separated_name_count`]) or as a
+/// list by their marks ([`marked_names`]): `{\bf A.~Able$^{1}$, B.~in der Baker$^{2}$}` is two names in the group, as
+/// `A.~Able$^{1}$, B.~in der Baker$^{2}$` is two on the line.
+fn reads_as_name_list(names: &Tokens) -> bool {
+  separated_name_count(names) >= 2 || {
+    let pieces = split_author_line(names.clone());
+    pieces.len() >= 2 && marked_names(&pieces) == pieces.len()
   }
 }
 
@@ -154,10 +200,11 @@ fn split_author_names(line: Tokens) -> Vec<(Vec<Token>, Tokens)> {
   }
   // A line that is one group (`{\bf Daniel Boyanovsky, Da- Shin Lee}`, hep-th9212083; `{\bf Jianfei Ma$^{2}$,
   // \enspace Emmanuele Chersoni$^{2}$, …}`, 2608.16650; with no declarations, mnras's `\newauthor{…}` group in
-  // 2409.07518, 2312.07625) is the same when what it holds reads as two or more names: each name in the group and its
-  // declarations. A group holding one name together (`\author{{Smith, Jr., John}}`) reads as none.
+  // 2409.07518, 2312.07625) is the same when what it holds reads as two or more names, by their shape or by their marks
+  // ([`reads_as_name_list`]): each name in the group and its declarations. A group holding one name together
+  // (`\author{{Smith, Jr., John}}`) reads as none.
   if let Some((declarations, inner)) = whole_line_group(&line)
-    && separated_name_count(&inner) >= 2
+    && reads_as_name_list(&inner)
   {
     let inner_split = split(marks_before_glued_commas(space_parted_names(
       spaced_name_separators(inner),
@@ -625,7 +672,7 @@ fn names_in_wrapper(delimiter: &[Token], piece: &Tokens) -> Vec<(Vec<Token>, Tok
   } else {
     Vec::new()
   };
-  if separated_name_count(&Tokens::new(names.to_vec())) < 2 {
+  if !reads_as_name_list(&Tokens::new(names.to_vec())) {
     return unchanged();
   }
   // a piece of marks and notes only is the name's before it, as after the wrapper (`Chia-Hsun Chuang,\thanks{…}

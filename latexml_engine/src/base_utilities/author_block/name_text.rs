@@ -612,7 +612,7 @@ fn names_marked_alike(names: &Tokens, line: &Tokens) -> bool {
 /// Whether a name carries a mark after it, outside its notes: a superscript or mark command
 /// ([`is_affiliation_mark`]: IEEEtran's `\IEEEauthorrefmark`) or aastex's `\altaffilmark` after its first letter
 /// (`Bob Baker$^{2}$`; not `$^{2}$Univ B`).
-fn marked_after_name(name: &Tokens) -> bool {
+pub(in crate::base_utilities) fn marked_after_name(name: &Tokens) -> bool {
   let outside = outside_notes(name.unlist_ref());
   let Some(first_letter) = outside
     .iter()
@@ -1276,6 +1276,16 @@ pub(in crate::base_utilities) fn flag_merged_creators(document: &mut Document) -
       n if n >= 2 => n,
       n => n.max(name_count(&personname_text(&person, true))),
     };
+    // (and a names line kept whole two or more of whose pieces are marked names, `A.~Able$^{1}$, B.~in der Baker,
+    // C.~Cole$^{1}$`: the merge its marks contradict, whatever its names' shape — the count of marked names the cautious
+    // split left on it, `\lx@author@merged@names`, 1903.10014, 1212.4143; a creator the writer made again from the
+    // reading carries none. OXIDIZED_DESIGN_DIVERGENCES #943)
+    let names = names.max(
+      creator
+        .get_attribute("_mergednames")
+        .and_then(|n| n.parse().ok())
+        .unwrap_or(0),
+    );
     if names >= 2 {
       Error!(
         "frontmatter",

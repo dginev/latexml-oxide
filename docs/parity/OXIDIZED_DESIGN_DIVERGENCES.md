@@ -15168,8 +15168,9 @@ per-class rule:
   of aa, aastex, amsart, emulateapj, llncs and revtex papers): " and " in 6-15% by class, a comma in 5-30%, `\\` in
   0.5-15%, the amsart `\\` ones mostly "Name \\ affiliation" — so these classes take the full parse, not a names-only
   split. Their names line splits only where it reads as two or more names (`split_author_line_cautious`: `Klemens
-  Fellner and Bao Quoc Tang`); otherwise it stays one author as written, as in Perl (`John Smith, Max Planck Institute
-  for Mathematics`, `John Smith, University of Toronto`, a name the shape test cannot read). The article `\author`
+  Fellner and Bao Quoc Tang`) or where each of its pieces carries its own mark after the name (#943); otherwise it
+  stays one author as written, as in Perl (`John Smith, Max Planck Institute for Mathematics`, `John Smith, University
+  of Toronto`, a name the shape test cannot read). The article `\author`
   splits at every comma, as it always has, and so does a raw class's own `\author` (`\lx@add@authors@adaptive`,
   2309.03769's dan2e.sty). inst/llncs (names only, the institutes apart) split each `\and` piece with `\lx@add@author@split` (comma,
   " and ", " \& "); an empty piece gives no author there. An IEEE block's `\IEEEauthorblockA` goes to its last
@@ -28762,3 +28763,55 @@ class-bindings/`ieeetran_entry_addresses_written`, `ieeetran_entry_address_of_it
 (repros `mnras_entry_number_of_no_name_stays_in_the_block`, `ieeetran_entry_number_of_no_name_stays_in_the_block`), the
 comparator's block row in `fmshadow::tests::an_entry_the_reading_cut_its_addresses_out_of_is_classified`; RED catalog
 repro `authblk_label_opening_with_a_command` (`\author[$\dagger$1]`, as int124b: SYNC).
+
+### 943. A per-author class's marked names line is a list by its marks; a line its marks do not cover stays whole and its marked names are a reported merge (Perl: the binding's `\author` kept whole, its kernel marked branch splits at every comma)
+
+**What.** The per-author bindings' cautious split (`split_author_line_cautious`, author_block/names_split.rs: aastex,
+amsart, revtex, an IEEE block, a labelled authblk `\author`) splits a names line where it reads as two or more names
+(`name_count`, 63e) or, now, where each of its two or more pieces (`split_author_line`) carries its own mark after the
+name (`marked_after_name`) and none reads as an affiliation (`reads_as_affiliation`): `marked_names`. A wrapper or a
+whole-line group holding the names reads the same way (`reads_as_name_list`, the gate of `names_in_wrapper` and of the
+whole-line group's descent). `name_count` needs every comma part `name_shaped`, so one name of a shape it does not know
+(`N.~in der Wiesche`: `in` is no `NAME_PARTICLES` word; `P. v. Brentano`, `Benjamin Rouillé d'Orfeuil`, `J.J.M. in 't
+Zand`) made a whole marked list one creator, silently — 2410.11607's 672 BESIII names (dev), the holdout's
+`name:unmatched` shape (52 papers, 2,189 creators on int123a). Perl 0.8.8 keeps the revtex `\author` whole
+(revtex4_support.sty.ltxml:46), so the merge is PERL-ORIGIN; Perl's own kernel marked branch splits a marked names line
+at every comma (Base_Utility.pool.ltxml:708, `SplitTokens($line, T_OTHER(','))`), which this reads as cautiously as the
+marks allow. The resolver already reads it so (`joined_single_name` joins no names with marks between them).
+
+**The merge report.** A line the marks do not cover — a piece without its mark (`A.~Able$^{1}$, B.~in der Baker,
+C.~Cole$^{1}$`; reversed names `Surname, I.\altaffilmark{1}`, 1903.10014), or one reading as an affiliation (`and the
+XYZ Team`; `M.~Huertas-Company\altaffilmark{1}`, 1212.4143, whose "Company" is a `NON_NAME_WORDS` word) — stays one
+creator as before; when two or more of its pieces are marked names (counted inside a whole-line group too) the line
+carries their count (Rust-only `\lx@author@merged@names{N}`, author_macros.rs, setting `_mergednames` on the creator)
+and `flag_merged_creators` raises `Error:frontmatter:merged_creators` ("One author holds N names", N the marked names,
+a lower bound). A creator the observer's writer makes again from its reading carries no count (`creator_attributes`
+copies no `_` attribute): a line it re-parts raises nothing.
+
+**Census** (95b r3 → 97a, `--preload=ar5iv.sty --nocomments`; the populations hold no holdout id): revtex marked
+one-`\author` papers (`who_uses.py --class 'revtex*' --glob --feature author_marks --and --nauthor 1`, 771 converted):
+759 byte-identical, 12 changed, E 527 → 527, F 2 → 2, no word lost — 2003.03705 2 → 492 creators, 2307.12736 2 → 625,
+2401.13225 2 → 650 (BESIII), nucl-ex0410037 1 → 14, hep-ph9710228 1 → 3, and seven whose writer re-part gave way to the
+kernel split their name-shaped siblings take (0903.4816, 1104.4729, 1309.6958, 2210.16528, cond-mat0007048: the same
+creators with the marks shown as printed and `before`; 1310.0383, 1809.06333: `before` and ids only). aastex marked
+papers (294): 291 identical, 1010.1733 1 → 59, 1706.03320 1 → 11, astro-ph0408436 1 → 13, and two new
+`merged_creators` Errors, both real merges kept as before (1212.4143, 1903.10014). amsart marked papers (235): all
+byte-identical. IEEE blocks with marks (`--term cs:IEEEauthorblockN --feature author_marks`, 674): 668 identical,
+2201.10426 1 → 4 creators (each its affiliation and e-mail), 2204.09839 1 → 6, three the kernel split their name-shaped
+siblings take (2509.10689 shows its `1\textsuperscript{st}` ordinal and marks as printed; 1509.06333, 1901.07422
+`before`), and two new reported merges kept as before: 1012.4815 (an `\IEEEauthorblockN` left open over its
+`\IEEEauthorblockA`s, the last piece reading as an institution), 2508.04092 (two names without a mark). Where today's
+token split replaces the writer's re-part, the marks a name prints stay shown on it (the kernel's convention for the
+name-shaped list too) — the writer's re-part hides them. Dev witnesses: 2410.11607 1 named creator → 672 (30 sampled against pdflatex: each name and the
+affiliations its answered marks name), hep-ex9611002 1 → 70 (REVTeX 3, `E.~M.~Aitala,$^9$`); of the 17 dev revtex
+papers with ≥ 20 marks in one `\author`, the other 15 (1903.04164, 1706.04100, hep-ex0312016, 1311.5347,
+nucl-ex9903010, 0708.2014, …) byte-identical. Frontmatter scorer (the whole 3,000 sample, `fm_scorer/run_97a` against
+the base binary): three papers' output changed — 1311.0586 (aastex, 1 → 7 creators), 2604.10787 (IEEEtran, the marked
+`1\textsuperscript{st} … $^\dagger$` block 1 → 3 creators; its block with an unmarked name stays one), 2311.14729
+(`before` only); D3 98.18 % → 98.18 % (6,044 of 6,156), lost-words papers 0 → 0.
+
+**Left.** In 2410.11607: the `75A,75C` marks (institute 75's `(A)…; (B)…` parts) unanswered, their institutes one
+nameless creator; the collaboration line welded into the last name (OPEN_ROWS.md:810 ruling); a mark-covered list with a
+`NON_NAME_WORDS` word in a surname stays whole (F3, the word lists). Guards `perfect_kernel_batch97a` (three); repros
+sectioning-frontmatter/`author_marked_list_lowercase_particle_merges` (RED → GREEN),
+`author_marked_list_with_an_unmarked_name_is_a_reported_merge`, `author_marked_names_beside_a_team_are_a_reported_merge`.
