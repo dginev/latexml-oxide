@@ -458,7 +458,7 @@ pub(in crate::base_utilities) fn author_binding() -> String { meaning_owner(AUTH
 /// conventions (`\documentstyle{revtex}`'s revtex3_support.sty, loaded by revtex.sty after the article class, whose
 /// `\address` is REVTeX's under the revtex4_support.sty it loads: cond-mat0505458, cond-mat9803141, hep-ph9909393 —
 /// 95b r3's scorer run); else the owner, as a block's is keyed ([`policy_binding`]: a package binding declaring none
-/// and loading none that does, the document's own definition — `UNDECLARED`, not written).
+/// and loading none that does, the document's own definition — `UNDECLARED`, written since 97e).
 fn setter_binding(cs: &Token) -> Option<String> {
   // (a robust setter's body is its `\cs␣`'s: `state::watch_frontmatter_setters`)
   let n = cs.with_cs_name(|name| {

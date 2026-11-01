@@ -322,13 +322,12 @@ fn iopart_ead_corresponding_author_legend() {
     creator(
       false,
       "Bob Baker",
+      // (97e, iopart written: the `$^*$` line the legend of Bob Baker's mark, a correspondence note — FIDELITY_CHARTER §4
+      // ruling 2, as pdflatex prints it under the addresses)
       &format!(
         "{univ_a} {} {}",
         email("id1", "zq77@x.org"),
-        contact(
-          "affiliation",
-          " Author to whom any correspondence should be addressed."
-        )
+        r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1">∗</sup> Author to whom any correspondence should be addressed.</note>"#
       )
     ),
     creator(false, "Cat Cole", &univ_a),
@@ -621,19 +620,18 @@ fn iopart_ead_corresponding_author_of_another_group() {
   assert_eq!(creators(&xml), [
     creator(true, "A. Bal", ""),
     creator(false, "C. Cole", &contact("affiliation", "KIT, Karlsruhe")),
+    // (97e, iopart written: the `$^*$` line the legend of B. Maier's mark, a correspondence note; zq1@ the block's still,
+    // the corresponding step looking within the `\ead`'s group, `resolver::post::answer_sequence`)
     creator(
       false,
-      r#"B. Maier<sup xml:id="id1">*</sup>"#,
+      "B. Maier",
       &format!(
         "{} {}",
         contact("affiliation", "ICL, London"),
-        contact(
-          "affiliation",
-          r#"<sup xml:id="id2">∗</sup> Author to whom any correspondence should be addressed."#
-        )
+        r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id1"><sup xml:id="id1.1">∗</sup> Author to whom any correspondence should be addressed.</note>"#
       )
     ),
-    block(&email("id3", "zq1@kit.edu")),
+    block(&email("id2", "zq1@kit.edu")),
   ]);
 }
 
@@ -648,19 +646,19 @@ fn iopart_ead_corresponding_author_not_under_its_mark() {
   assert_eq!(creators(&xml), [
     creator(true, "Ann Able", &univ_b),
     creator(false, "Bob Baker", &univ_b),
+    // (97e, iopart written: the `$^*$` line the legend of Cat Cole's mark, a correspondence note; zq77@ the block's
+    // still, the corresponding step looking among the requesters of the entry it prints under,
+    // `resolver::post::answer_sequence`)
     creator(
       false,
       "Cat Cole",
       &format!(
         "{} {}",
         contact("affiliation", " Univ A, Town"),
-        contact(
-          "affiliation",
-          " Author to whom any correspondence should be addressed."
-        )
+        r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id1"><sup xml:id="id1.1">∗</sup> Author to whom any correspondence should be addressed.</note>"#
       )
     ),
-    block(&email("id1", "zq77@x.org")),
+    block(&email("id2", "zq77@x.org")),
   ]);
 }
 

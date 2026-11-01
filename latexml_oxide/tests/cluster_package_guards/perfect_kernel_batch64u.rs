@@ -496,12 +496,18 @@ fn osa_email_line_forms() {
       "<creator role=\"author\">\n    <personname>A. Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact>\n    <contact name=\"Email: \" role=\"email\">able@x.org</contact>\n  </creator>",
     ]
   );
-  let xml = convert_clean(&doc(
-    "S. Longhi",
-    "Dipartimento di Fisica, Politecnico di Milano, Italy (stefano.longhi@polimi.it)",
-    "",
-  ));
-  assert!(!xml.contains("role=\"email\""), "{xml}");
+  // (an address the `\address` entry prints in parentheses: since 97e — opex3's family, `UNDECLARED`, written — taken
+  // out of the entry, an e-mail of the author it spells, the take-out of OD #938; before, kept in the affiliation)
+  assert_eq!(
+    creators(&convert_clean(&doc(
+      "S. Longhi",
+      "Dipartimento di Fisica, Politecnico di Milano, Italy (stefano.longhi@polimi.it)",
+      "",
+    ))),
+    vec![
+      "<creator role=\"author\">\n    <personname>S. Longhi</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dipartimento di Fisica, Politecnico di Milano, Italy</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">stefano.longhi@polimi.it</contact>\n  </creator>",
+    ]
+  );
 }
 
 /// 64u: an OSA `\address` whose entries are separated by blank lines is one line per entry (1109.5493, 1002.3196).

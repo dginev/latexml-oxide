@@ -21,7 +21,7 @@ macro_rules! repro {
 
 /// The XML's creators of `tex` converted in the default mode (no shadow switch: the fleet's), with no Error or Warning.
 #[track_caller]
-fn default_mode_creators(tex: &str) -> Vec<Vec<String>> {
+pub(super) fn default_mode_creators(tex: &str) -> Vec<Vec<String>> {
   let (log, xml, ()) = convert_with_setup_then(
     tex,
     Some("ar5iv.sty"),
@@ -34,7 +34,7 @@ fn default_mode_creators(tex: &str) -> Vec<Vec<String>> {
 
 /// The family guards: the reading written (the writer's outcome `written`), and the default mode writing the same.
 #[track_caller]
-fn assert_written(tex: &str, xml: &[&[&str]], shadow: &[&str]) {
+pub(super) fn assert_written(tex: &str, xml: &[&[&str]], shadow: &[&str]) {
   let (written, _, _, writer) = assert_reading(tex, Some(xml), shadow);
   assert_eq!(writer, "written", "the writer's outcome");
   assert_eq!(default_mode_creators(tex), written, "the default mode");
@@ -348,14 +348,16 @@ fn an_entry_number_no_name_shows_stays_in_the_block() {
   assert_eq!(default_mode_creators(tex), written, "the default mode");
 }
 
-/// An item an unwritten family's call made is not written (95b r3): svjour3's `\institute` (sv_support.sty's setter,
-/// `written: false`) beside authblk's written `\author` (2609.05466). The reading still numbers the names before `\at`
-/// as entry 1 (authblk's `\AB@thenote`, `api:labelseq ruling1:thenote`) and gives it to every author, as it did when 95b
-/// wrote it ("N. Cuellar" an affiliation of all four authors); the call's setter is recorded
-/// (`ledger::ApiCall::binding`), so the writer keeps each of its items as today's holds it (`writer::keep_as_today`):
-/// every institute item in the block, as int124b, and says so (`declined: …`, not `same`). One guard for the rule's
-/// outcomes: the paper left as today's, a paper written in its other items (iopart's `\address`), and a written
-/// family's setter in a binding declaring none still written (REVTeX 3's `\address`).
+/// An item an unwritten family's call made is not written (95b r3): svjour3's `\institute` (sv_support.sty's setter)
+/// beside authblk's written `\author` (2609.05466). The reading still numbers the names before `\at` as entry 1
+/// (authblk's `\AB@thenote`, `api:labelseq ruling1:thenote`) and gives it to every author, as it did when 95b wrote it
+/// ("N. Cuellar" an affiliation of all four authors). Since 97e sv_support is written, so the call is no unwritten
+/// family's: the paper is declined whole and today's kept — every institute item in the block, as int124b — because
+/// the name-only entry is held where no operation moves it (the plan's final check, `declined: Affiliation aable: …`;
+/// the writer also declines an affiliation spelling an author's name it would give an author, `writer::plan`). The
+/// `keep_as_today` rule still holds for a call no family is known to have made (`policy::UNOBSERVED_BINDING`). One
+/// guard for the outcomes: the paper left as today's, a paper written in its other items (iopart's `\address`), and a
+/// written family's setter in a binding declaring none still written (REVTeX 3's `\address`).
 #[test]
 fn an_unwritten_familys_call_is_kept_as_today() {
   let tex = repro!("svjour3_institute_names_at_with_authblk.tex");
@@ -384,23 +386,25 @@ fn an_unwritten_familys_call_is_kept_as_today() {
     ],
   );
   assert_eq!(
-    writer, "declined: an unwritten family's items kept as today's",
+    writer,
+    "declined: Affiliation aable: reading [Creator(0), Creator(1), Creator(2)], written [Block]",
     "the writer's outcome"
   );
   assert_eq!(default_mode_creators(tex), written, "the default mode");
   // (the sibling setter, iopart's `\address` (iopart_support.sty's) beside authblk's take-out: the paper is written in
-  // its written family's items — Ann Able's e-mail cut out of her entry — and the iopart item stays Bob Baker's, as
-  // today's holds it, where 95b r2 moved it to Ann Able by its leading mark)
+  // its written family's items — Ann Able's e-mail cut out of her entry; since 97e iopart is written too, so its item is
+  // Ann Able's by its leading mark `$^1$`, her authblk label, where 95b r3 kept it Bob Baker's as today's held it)
   let tex = repro!("iopart_address_with_authblk_kept_as_today.tex");
   let (written, _, _, writer) = assert_reading(
     tex,
     Some(&[
-      &["Ann Able", "affiliation=Univ X, Town.", "email=ann@x.org"],
       &[
-        "Bob Baker",
+        "Ann Able",
+        "affiliation=Univ X, Town.",
+        "email=ann@x.org",
         "affiliation=1 Lab Z, Village",
-        "affiliation=Univ Y, City",
       ],
+      &["Bob Baker", "affiliation=Univ Y, City"],
     ]),
     &[
       "C Ann Able [1] | line:names",

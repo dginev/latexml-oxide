@@ -1763,7 +1763,9 @@ fn svjour3_at_institutes_link_by_surname_in_any_order() {
 /// 63h: a name-only svjour3 institute piece (`\institute{A. Able \and B. Baker \at Univ A}`; 1406.4834, 1603.00632,
 /// 1709.00485, 2311.02489, 2208.03119) pairs nothing by position: the institute stays shared, as at 63g (63h review r2).
 /// The name-only piece "A. Able" pinned as a shared affiliation (at 63g it sat on the last author) is the known residual of
-/// RED svjour3_name_only_piece_shares_the_next_institute: turning that green updates this guard.
+/// RED svjour3_name_only_piece_shares_the_next_institute: turning that green updates this guard. Since 97e (sv_support
+/// written) the `\at` piece is Bob Baker's, the institute's e-mail Ann Able's, whom it spells; the name-only piece stays
+/// the block's (Ann Able's Univ A, pdflatex's "A. Able · B. Baker" over "Univ A", is the RED residual's).
 /// Repro sectioning-frontmatter/svjour3_name_only_piece_keeps_the_institute_shared.
 #[test]
 fn svjour3_name_only_piece_keeps_the_institute_shared() {
@@ -1772,9 +1774,9 @@ fn svjour3_name_only_piece_keeps_the_institute_shared() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_name_only_piece_keeps_the_institute_shared.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able</personname></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
-      "<creator role=\"author\"><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">A. Able</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A </contact><contact name=\"E-mail: \" role=\"email\">ann@a.org</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"E-mail: \" role=\"email\">ann@a.org</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A </contact></creator>",
+      "<creator role=\"author\"><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">A. Able</contact></creator>",
     ],
   );
 }
@@ -1796,7 +1798,8 @@ fn elsarticle_lettered_addresses_no_one_cites_stay_shared() {
 }
 
 /// 63h: an svjour3 `\at` piece naming several authors (`Olivier Augereau, Koichi Kise, and Motoi Iwata \at …`,
-/// 1811.03214; 1001.2544) is every one of theirs. Repro sectioning-frontmatter/svjour3_at_piece_naming_several_authors.
+/// 1811.03214; 1001.2544) is every one of theirs; since 97e (sv_support written) the piece's e-mail is Carl Cole's, whom
+/// it spells, no longer the block's. Repro sectioning-frontmatter/svjour3_at_piece_naming_several_authors.
 #[test]
 fn svjour3_at_piece_naming_several_authors() {
   assert_creators(
@@ -1806,8 +1809,7 @@ fn svjour3_at_piece_naming_several_authors() {
     &[
       "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B </contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B </contact></creator>",
-      "<creator role=\"author\"><contact name=\"E-mail: \" role=\"email\">carl@b.org</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B </contact><contact name=\"E-mail: \" role=\"email\">carl@b.org</contact></creator>",
     ],
   );
 }

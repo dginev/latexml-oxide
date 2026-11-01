@@ -39,6 +39,25 @@ impl Lexer {
     self.gap_fill || self.gap_items >= 2 || (self.gap_items == 1 && self.gap_width > INTERWORD)
   }
 
+  /// Whether the pending gap is the word space of letter-spaced text: one spacing item narrower than a quad after a
+  /// run of letters each set apart (two or more single letters, the run's last word one letter, with or without its
+  /// period) — jfm's `F\ls I\ls R\ls S\ls T\ns A.\ns L\ls A\ls S\ls T` (jfm.cls:1024-1025, `\ls` `\kern.15em`, `\ns`
+  /// `\kern.5em`) spells one name, its `\ns` the space between its words (1510.04254, 1403.3574, astro-ph0406083: each
+  /// name read as two or three). Initials (`A. B. C.`) are no letter-spaced run: their letters carry periods.
+  fn letter_spaced_word_space(&self) -> bool {
+    if self.gap_fill || self.gap_items != 1 || self.gap_width >= 1.0 {
+      return false;
+    }
+    let text: String = self.run.iter().map(|(c, _)| *c).collect();
+    let words: Vec<&str> = text.split(' ').filter(|w| !w.is_empty()).collect();
+    let letter = |w: &str| w.chars().count() == 1 && w.chars().all(char::is_alphabetic);
+    let Some(last) = words.last() else {
+      return false;
+    };
+    let last_letter = letter(last) || letter(last.trim_end_matches('.'));
+    last_letter && words.iter().filter(|w| letter(w)).count() >= 2
+  }
+
   fn clear_gap(&mut self) {
     self.gap_items = 0;
     self.gap_width = 0.0;
@@ -233,7 +252,7 @@ impl Lexer {
         {
           last.space_after = true;
         }
-        if self.gap_is_separator() || self.run.is_empty() {
+        if (self.gap_is_separator() && !self.letter_spaced_word_space()) || self.run.is_empty() {
           self.flush_run();
           self.flush_gap();
         } else {

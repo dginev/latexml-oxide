@@ -8,7 +8,7 @@
 //! had and cites the OXIDIZED_DESIGN_DIVERGENCES entry or the witness it reproduces. The kernel's own blocks (`\author`
 //! still LaTeXML's, under `article` or any class whose bindings declare none) take [`KERNEL`] (Perl's `@authorsplits`
 //! reading, Base_Utility.pool.ltxml:676-700), written (OD #925); a binding owning `\author` that declares none takes the
-//! same reading unwritten, `UNDECLARED`, until its family passes its own gate.
+//! same reading, `UNDECLARED`, written since every remaining family passed its gate in one batch (97e, OD #948).
 
 use std::rc::Rc;
 
@@ -117,8 +117,8 @@ pub const KERNEL: Policy = Policy {
 
 /// The conventions of a binding owning the `\author` meaning that declares none of its own (JHEP.cls, aas_support.sty,
 /// elsart_support_core.sty, …), or of a meaning no binding owns (the document's own, a file read raw, the fallback
-/// class's): the kernel's reading, not written — the observer writes a family only once its own gate passed (OD #837
-/// S2b).
+/// class's): the kernel's reading, written — the family passed its gate (OD #837 S2b) in 97e's one-batch gate (OD
+/// #948); a binding failing its own declares `written: false`.
 pub const UNDECLARED: Policy = Policy {
   name: "undeclared",
   written: true,

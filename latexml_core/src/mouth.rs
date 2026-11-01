@@ -437,7 +437,7 @@ fn eight_bit_input_char(byte: char) -> Option<char> {
 
 /// The single character `\<current encoding><cs>` typesets, if it is a
 /// `\DeclareTextSymbol` glyph (a primitive with a one-character string body).
-fn text_symbol_char(cs: &Token) -> Option<char> {
+pub fn text_symbol_char(cs: &Token) -> Option<char> {
   use crate::definition::PrimitiveBody;
   // `\cf@encoding` is the current font's encoding (a computed macro here).
   let encoding = lookup_font()?.get_encoding()?.to_string();

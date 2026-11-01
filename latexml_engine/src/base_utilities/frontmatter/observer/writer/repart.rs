@@ -184,6 +184,19 @@ fn item_source(key: &Key, assoc: &Assoc, todays: &BTreeMap<Key, Node>) -> Option
   if let Some(node) = todays.get(key) {
     return Some(Item::Copy(node.clone()));
   }
+  // (a made affiliation takes the role every affiliation of today's holds, when they agree — appolb's and the
+  // ws-procs classes' `\address` lines are `address` contacts, inst_support's markup —, else the reading's: 1501.05548,
+  // 0710.5369, 0809.3340, cond-mat0311409, whose re-parted entries were `affiliation`s)
+  let todays_role = {
+    let roles: BTreeSet<String> = todays
+      .iter()
+      .filter(|((kind, _), _)| *kind == Kind::Affiliation)
+      .filter_map(|(_, node)| node.get_attribute("role"))
+      .collect();
+    (roles.len() == 1)
+      .then(|| roles.into_iter().next())
+      .flatten()
+  };
   let made = match key.0 {
     Kind::Affiliation => Made::Affiliation,
     // (a line of the block read as a legend; a note of a name, `\thanks`, `\footnote`, is today's own, never remade)
@@ -208,7 +221,10 @@ fn item_source(key: &Key, assoc: &Assoc, todays: &BTreeMap<Key, Node>) -> Option
   };
   Some(Item::Make {
     made,
-    role: assoc.role.clone(),
+    role: match made {
+      Made::Affiliation => todays_role.unwrap_or_else(|| assoc.role.clone()),
+      Made::Legend => assoc.role.clone(),
+    },
     tokens,
     label: assoc.label.clone(),
   })

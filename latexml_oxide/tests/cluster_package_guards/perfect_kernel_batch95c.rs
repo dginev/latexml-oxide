@@ -266,8 +266,8 @@ fn an_email_call_of_several_addresses_is_decided_by_spelling() {
 /// G6 (2410.00275): elsarticle's `\author{Javier Martínez-López}\ead{javier.martinez@…}` keeps its address — today's
 /// respell (`insert::respell_emails`) reads each name by its base letters, as an address spells it, so the address
 /// spells its holder before Carlos Javier Navarro; after `\author{Ann Able, Bob Baker}` (one call, two people)
-/// `\ead{aable@x.org}` still goes to Ann Able, as batch81's AASTeX case. An unwritten family: today's output, the
-/// reading alike.
+/// `\ead{aable@x.org}` still goes to Ann Able, as batch81's AASTeX case. Today's output, the reading alike: the writer's
+/// outcome `same` since 97e writes elsarticle's family (`UNDECLARED`).
 #[test]
 fn an_email_spelling_its_accented_holder_is_not_respelled() {
   let tex = repro!("elsarticle_ead_spelling_its_accented_holder_stays.tex");
@@ -298,7 +298,7 @@ fn an_email_spelling_its_accented_holder_is_not_respelled() {
     "C Bob Baker [] | line:names sep:comma",
     "  a Univ X | api:annotate:run",
   ]);
-  assert_eq!(reading.3, Value::Null);
+  assert_eq!(reading.3, Value::from("same"));
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 

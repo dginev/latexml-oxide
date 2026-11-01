@@ -135,7 +135,20 @@ impl Resolver {
           .as_slice()
         {
           [only] => (Some(*only), "owner:only-author"),
-          _ => self.corresponding(&all),
+          // (the corresponding author among the authors the address is printed for: its call's group — iopart's
+          // `\ead` belongs to the `\author` group it follows, iopart.cls:225-231, 2311.17496 — and, printed under a
+          // labelled entry, that entry's requesters — iopart.cls:363, `\ead` under `$^2$ Univ B`, 2407.14305,
+          // 2311.07087; `perfect_kernel_batch78f`'s r2 rulings: B. Maier, of another group, and Cat Cole, requesting
+          // 1 and `*`, are neither the owner)
+          live_group => {
+            let under = self.entry_printed_before(&assoc);
+            let candidates: Vec<usize> = live_group
+              .iter()
+              .copied()
+              .filter(|c| under.as_ref().is_none_or(|holders| holders.contains(c)))
+              .collect();
+            self.corresponding(&candidates)
+          },
         },
       };
       self.attach(
@@ -149,6 +162,44 @@ impl Resolver {
         false,
       );
     }
+  }
+
+  /// The creators holding the labelled affiliation entry the call that made `assoc` is printed under: the entry made by
+  /// the call just before it, when a labelled entry follows the call too (the address set among the entries, as
+  /// iopart's `\ead` under its `\address`, not in a list after them all, as jheppub's `\emailAdd` lines) — the
+  /// authors an address printed under it is for.
+  fn entry_printed_before(&self, assoc: &Assoc) -> Option<Vec<usize>> {
+    let (call, _) = assoc.source?;
+    let labelled_at = |index: usize| {
+      self
+        .out
+        .creators
+        .iter()
+        .flat_map(|c| c.affiliations.iter().chain(&c.notes))
+        .chain(&self.out.block)
+        .any(|a| a.label.is_some() && a.source.is_some_and(|(i, _)| i == index))
+    };
+    let latest = call.checked_sub(1).filter(|&before| labelled_at(before))?;
+    let later = self
+      .out
+      .creators
+      .iter()
+      .flat_map(|c| c.affiliations.iter().chain(&c.notes))
+      .chain(&self.out.block)
+      .any(|a| a.label.is_some() && a.source.is_some_and(|(i, _)| i > call));
+    if !later {
+      return None;
+    }
+    Some(
+      (0..self.out.creators.len())
+        .filter(|&c| {
+          self.out.creators[c]
+            .affiliations
+            .iter()
+            .any(|a| a.label.is_some() && a.source.is_some_and(|(index, _)| index == latest))
+        })
+        .collect(),
+    )
   }
 
   /// The e-mail calls a document's own note makes with a binding's meaning (`ltx:pubnote`, `Resolver::api`; one the

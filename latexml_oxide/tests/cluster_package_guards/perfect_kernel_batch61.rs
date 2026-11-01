@@ -6236,7 +6236,9 @@ $\argmax_x f$.
     &xml,
     "creator",
     &["role=\"author\""],
-    "<creator role=\"author\"><personname>Ann Author</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept A, Univ A, ann@a.edu</contact></creator>",
+    // (97e: informs4's family written — the address the entry prints taken out, an e-mail of the author it spells: the
+    // take-out, OD #938)
+    "<creator role=\"author\"><personname>Ann Author</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept A, Univ A</contact><contact name=\"Email:\u{a0}\" role=\"email\">ann@a.edu</contact></creator>",
   );
   assert_element(
     &xml,
@@ -6367,10 +6369,12 @@ Text.
         "<creator {sep}role=\"author\"><personname>Zhengzhong You</personname>{}</creator>",
         affiliation("Univ B")
       ),
+      // (97e: informs4's family written — the `*` line the legend of Lijun Wei's mark, a correspondence note)
       format!(
-        "<creator {sep}role=\"author\"><personname>Lijun Wei</personname>{}{}</creator>",
+        "<creator {sep}role=\"author\"><personname>Lijun Wei</personname>{}<note \
+         class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" role=\"thanks\" \
+         xml:id=\"id1\"><sup xml:id=\"id1.1\">∗</sup>Corresponding author</note></creator>",
         affiliation("Univ E"),
-        affiliation("Corresponding author")
       ),
       format!(
         "<creator {sep}role=\"author\"><personname>Zhou Xu</personname>{}</creator>",
@@ -7024,7 +7028,9 @@ Text.
       "{ann}"
     );
   }
-  // One address under an affiliation two authors share continues it, as printed (round 3: each author got it).
+  // One address under an affiliation two authors share continues it, as printed (round 3: each author got it); since 97e
+  // (iopart written) the address is taken out of the entry, an e-mail of the author it spells (FIDELITY_CHARTER §4,
+  // the take-out of OD #938).
   assert_eq!(
     contacts(
       r"\documentclass{iopart}
@@ -7038,8 +7044,12 @@ Text.
 \end{document}"
     ),
     vec![
-      creator(false, "Ann Able", &affiliation(" Univ A<break/>ann@x.y")),
-      creator(true, "Bob Baker", &affiliation(" Univ A<break/>ann@x.y")),
+      creator(
+        false,
+        "Ann Able",
+        &format!("{}{}", affiliation(" Univ A"), email("ann@x.y"))
+      ),
+      creator(true, "Bob Baker", &affiliation(" Univ A")),
       creator(true, "Cy Dee", &affiliation(" Univ B"))
     ]
   );
@@ -7071,9 +7081,9 @@ Text.
   );
   // Rounds 4-5. An address claims an author only where the list says whose it is: under an affiliation of a list
   // that puts addresses under its affiliations, one address of its one author's. Several under one author's
-  // affiliation, or one under an affiliation several share, continue it, as printed (the global email count had made
-  // a creator with no name for `bob2@x.y`; by order among a shared mark's authors, 2609.06094's addresses went to
-  // the wrong ones).
+  // affiliation, or one under an affiliation several share, continued it, as printed, until 97e wrote iopart: each is
+  // now taken out, an e-mail of the author it spells (the global email count had made a creator with no name for
+  // `bob2@x.y`; by order among a shared mark's authors, 2609.06094's addresses went to the wrong ones).
   let iopart = |authors: &str, addresses: &str| {
     contacts(&format!(
       "\\documentclass{{iopart}}\n\\begin{{document}}\n\\title{{T}}\n\\author{{{authors}}}\n{addresses}\n\\maketitle\nText.\n\\end{{document}}"
@@ -7091,15 +7101,16 @@ Text.
         "Ann Able",
         &format!("{}{}", affiliation(" Univ A"), email("ann@x.y"))
       ),
+      // (97e, iopart written: the shared entry's addresses taken out, each an e-mail of the author it spells)
       creator(
         true,
         "Bob Baker",
-        &affiliation(" Univ B<break/>bob@x.y<break/>cy@x.y")
+        &format!("{}{}", affiliation(" Univ B"), email("bob@x.y"))
       ),
       creator(
         true,
         "Cy Dee",
-        &affiliation(" Univ B<break/>bob@x.y<break/>cy@x.y")
+        &format!("{}{}", affiliation(" Univ B"), email("cy@x.y"))
       )
     ]
   );
@@ -7114,10 +7125,16 @@ Text.
         "Ann Able",
         &format!("{}{}", affiliation(" Univ A"), email("ann@x.y"))
       ),
+      // (97e, iopart written: both addresses taken out, Bob Baker's, whom each spells)
       creator(
         true,
         "Bob Baker",
-        &affiliation(" Univ B<break/>bob@x.y<break/>bob2@x.y")
+        &format!(
+          "{}{}{}",
+          affiliation(" Univ B"),
+          email("bob@x.y"),
+          email("bob2@x.y")
+        )
       )
     ]
   );
@@ -7799,12 +7816,15 @@ fn author_marks_link_their_affiliations() {
     creators(include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_symbol_mark_links_its_affiliation.tex"
     )),
+    // (97e: informs4's family, `UNDECLARED`, written — the `*` line is the legend of Bob Baker's symbol mark, a
+    // correspondence note of his, as pdflatex prints it under the names: FIDELITY_CHARTER §4 ruling 2)
     vec![
       creator("", "Ann Able", &affiliation("Univ A")),
       creator(
         "before=\"\u{2003}\u{2003}\" ",
-        "Bob Baker<sup>*</sup>",
-        &affiliation("Corresponding author")
+        "Bob Baker",
+        "<note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" \
+         role=\"thanks\"><sup>∗</sup>Corresponding author</note>"
       ),
     ]
   );

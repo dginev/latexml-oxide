@@ -27,7 +27,9 @@ use super::{
     ledger::{ApiCall, Outcome, field_stamped},
     policy::TitleMarks,
     rehearsal::{Rehearsal, rehearse},
-    resolver::{addresses_in, listed_addresses, mark_labels, spelled_name, split_pieces},
+    resolver::{
+      addresses_in, base_letters, listed_addresses, mark_labels, spelled_name, split_pieces,
+    },
   },
   apply::text_leaf,
   dom::{Front, Kind, norm, orcid_id},
@@ -787,6 +789,93 @@ pub(in crate::base_utilities::frontmatter::observer) fn entry_font_tokens(
   Tokens::new(out)
 }
 
+/// Whether `text` prints `name` (`writes_the_name`) somewhere inside it, as an initial or word of the name before its
+/// last word: its words parted at spaces, periods and a capital glued to a small letter (`Y. XuInstitute`, the
+/// `\at` of svjour3 printing nothing between a name and its institute).
+fn prints_the_name(text: &str, name: &str) -> bool {
+  let mut parted = String::new();
+  let mut before: Option<char> = None;
+  for c in base_letters(text).chars() {
+    if c.is_uppercase() && before.is_some_and(char::is_lowercase) {
+      parted.push(' ');
+    }
+    parted.push(c);
+    before = Some(c);
+  }
+  let words: Vec<&str> = parted
+    .split(|c: char| c.is_whitespace() || c == '.' || c == '~' || c == ',')
+    .filter(|w| !w.is_empty())
+    .collect();
+  let of = name.split_whitespace().count().max(2);
+  (0..words.len()).any(|end| {
+    (2..=of.min(end + 1)).any(|n| writes_the_name(&words[end + 1 - n..=end].join(" "), name))
+  })
+}
+
+/// Whether `text` writes `name` and nothing else: its words, accents folded and periods dropped, each a word of the
+/// name or the initial of one, in the name's order, the last the name's last ("A. Able", "Ann Able" for Ann Able; not
+/// "Johns Hopkins University" for anyone).
+fn writes_the_name(text: &str, name: &str) -> bool {
+  let words = |t: &str| -> Vec<String> {
+    base_letters(t)
+      .split(|c: char| c.is_whitespace() || c == '.' || c == '~')
+      .filter(|w| !w.is_empty())
+      .map(str::to_lowercase)
+      .collect()
+  };
+  let (written, of) = (words(text), words(name));
+  if written.is_empty() || written.len() > of.len() || written.last() != of.last() {
+    return false;
+  }
+  let mut at = 0;
+  written.iter().all(|w| {
+    let found = of[at..]
+      .iter()
+      .position(|o| o == w || (w.chars().count() == 1 && o.starts_with(w.as_str())));
+    found.is_some_and(|i| {
+      at += i + 1;
+      true
+    })
+  })
+}
+
+/// The text a text-symbol command prints: LaTeX's `\DeclareTextSymbol` glyph for the current encoding (`\OT1\i`: core
+/// `mouth::text_symbol_char`, latex.ltx's `\i`, `\ss`, `\o`, `\ae`), else its meaning or its robust form's (`\i` is
+/// `\protect\i␣`), a primitive whose body is that text (plain_base.rs; Perl plain_base.pool.ltxml:108, 531
+/// `DefPrimitiveI`).
+fn text_symbol(t: &Token) -> Option<String> {
+  if let Some(c) = mouth::text_symbol_char(t) {
+    return Some(c.to_string());
+  }
+  // (OT1's glyphs are `\chardef`s, `\OT1\i` slot 16: decoded through the encoding's font map, as the glyph prints)
+  let encoding = lookup_font()?
+    .get_encoding()
+    .map_or_else(|| "OT1".to_string(), |e| e.to_string());
+  let glyph = T_CS!(s!(
+    "\\{}{}",
+    encoding.trim(),
+    t.with_cs_name(ToString::to_string)
+  ));
+  if let Some(defn) = lookup_register_definition(&glyph)
+    && matches!(defn.register_type(), Some(RegisterType::CharDef))
+    && let Some(code) = defn.value_of(Vec::new())
+  {
+    return font_decode(code.value_of() as i32, Some(encoding.trim()), None)
+      .0
+      .map(String::from);
+  }
+  let name = t.with_cs_name(ToString::to_string);
+  [T_CS!(name.clone()), T_CS!(s!("{name} "))]
+    .iter()
+    .find_map(|cs| match lookup_meaning(cs) {
+      Some(Stored::Primitive(p)) => match p.replacement {
+        Some(PrimitiveBody::String(text)) => Some(with(text, ToString::to_string)),
+        _ => None,
+      },
+      _ => None,
+    })
+}
+
 /// [`block_span_tokens`] on a block's `content`, its first token at position `base`: `mark` the span of the Mark
 /// event printed last before the entry, `labelled` whether the entry is an in-block contact's entry read from its
 /// leading marks (`events::labelled_entries`, which checks with it at the reading that the writer can cut each entry),
@@ -805,13 +894,19 @@ pub(in crate::base_utilities::frontmatter::observer) fn span_tokens(
 ) -> Option<Tokens> {
   let at = |p: u16| usize::from(p).checked_sub(base);
   let (mut from, to) = (at(start)?, at(end)?);
+  // (the span's printed letters against the key's, accents folded on both sides: an accent command prints its
+  // letter accented — `Ca\~nada`, the key's "cañada" —, a text symbol its own letter — `Astrof{\'\i}sica`, `\ss`, `\o`
+  // —; 1009.1371, 2401.03603's `H\"ugel`)
   let letters: String = content
     .get(from..to)?
     .iter()
-    .filter(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
-    .map(|t| t.with_str(ToString::to_string))
+    .filter_map(|t| match t.get_catcode() {
+      Catcode::LETTER | Catcode::OTHER => Some(t.with_str(ToString::to_string)),
+      Catcode::CS => text_symbol(t),
+      _ => None,
+    })
     .collect();
-  if key.is_some_and(|key| norm(&letters) != key) {
+  if key.is_some_and(|key| base_letters(&norm(&letters)) != base_letters(key)) {
     return None;
   }
   let mut floor = 0;
@@ -1475,6 +1570,46 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
     let (added, removed) = (minus(&w, &h), minus(&h, &w));
     if added.is_empty() && removed.is_empty() {
       continue;
+    }
+    // (an affiliation that is one of the paper's own names, given to an author: a name the reading took for an entry —
+    // svjour3's `\institute{A. Able \and B. Baker \at Univ X}`, whose name-only piece "A. Able" the `\and`-list numbers
+    // as entry 1 and gives every author, 2609.05466; the faithful link is RED
+    // `svjour3_name_only_piece_shares_the_next_institute` —: the paper is declined, today's kept)
+    if key.0 == Kind::Affiliation
+      && let Some((_, a)) = wants.first()
+    {
+      let given: Vec<usize> = added
+        .iter()
+        .filter_map(|o| match o {
+          Owner::Creator(c) => Some(*c),
+          Owner::Block => None,
+        })
+        .collect();
+      if !given.is_empty() && names.iter().any(|name| writes_the_name(&a.text, name)) {
+        return Ok(declined(&s!(
+          "an affiliation spelling an author's name: {:?}",
+          a.text
+        )));
+      }
+      // (an entry the reading gives by the name it prints (`fuzzy:surname`, svjour3's `\at`) that prints the name of an
+      // author it does not give it to — `\institute{Z. Peng \and W. Yin \at Univ A \\ Y. Xu \at Univ B \\ M. Yan \at
+      // Univ C}`, its `\\`-parted pieces one entry given W. Yin by its surname, 1506.02396, 1908.03628, 2007.09912: the
+      // reading took several authors' pieces for one. Only such an entry: a name in any other entry is no evidence — an
+      // IEEE entry naming its own owners, `S. Sharma, Y. Kulkarni … are with …`, 2405.17600; a street, `5720 S Ellis Ave`
+      // beside an author S. Ellis, 1201.0008)
+      let owned_by = |o: usize| w.contains(&Owner::Creator(o));
+      if !given.is_empty()
+        && wants.iter().all(|(_, a)| rule_has(a, "fuzzy:surname"))
+        && names
+          .iter()
+          .enumerate()
+          .any(|(o, name)| !owned_by(o) && prints_the_name(&a.text, name))
+      {
+        return Ok(declined(&s!(
+          "an affiliation printing another author's name: {:?}",
+          a.text
+        )));
+      }
     }
     if wants.is_empty() {
       held_only.push(key);

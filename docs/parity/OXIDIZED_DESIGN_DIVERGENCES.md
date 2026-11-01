@@ -27502,6 +27502,8 @@ writer gaps (OPEN_ROWS). The `r5`-`r9` article shapes pin their outcome (review 
 back under `batchfms2a1::held(<why>)`, the decline's first difference (`declined: Note univacity…`, `the creators'
 names`, …), a written one strict with its XML rows.
 
+Since 97e (#948) `UNDECLARED` is written too: every binding owning `\author` with no declaration of its own.
+
 ### 926. The writer cuts an author block's own lines: today's one affiliation joining several marked entries, or a legend line today's made an affiliation (Perl: the old reader's joined contact)
 
 `plan::cut_block_lines`: where today's holds one affiliation whose text is several of the reading's entries joined,
@@ -28941,3 +28943,123 @@ note: its XML pinned) and `r8_shapes_leave_the_xml_unchanged` (TEXT_GLYPH writte
 sectioning-frontmatter/`block_entry_of_several_words_is_cut_whole`, `llncs_institute_legend_line_shared`,
 `llncs_institute_hand_numbered_lines_shared`, `svproc_copy/svproc_institute_per_author`,
 `block_mark_after_a_break_opens_an_entry` (RED → GREEN).
+
+### 948. Every remaining observer-writer family is written in one batch (ijcai, inst_support, iopart, jheppub, jinstpub, jcappub, jpconf, sv_support and every binding owning `\author` with no declaration); a block line's letters are read as printed, a re-parted entry keeps today's role, a letter-spaced name's word space is no gap, an e-mail's corresponding owner is one of the authors it is printed for, a name read as an entry is never written onto an author (Perl: the old reader's output, no observer)
+
+Beyond Perl (FM S2b, OD #837; user decision 2026-11-01: every remaining family through its gate in one batch). The
+flip: `written: true` in `ijcai_sty.rs`, `inst_support_sty.rs`, `iopart_support_sty.rs`, `jheppub_sty.rs`,
+`sv_support_sty.rs` (latexml_package), `jinstpub_sty.rs`, `jcappub_sty.rs`, `jpconf_cls.rs` (latexml_contrib) and
+`policy::UNDECLARED` — every binding owning `\author` that declares none (aas_support, elsart_support_core under
+elsarticle and OmniBus's elsart/arxbj, JHEP, sn-jnl, cas-dc/cas-sc, webofc, epl, interact, spie, PoS, informs4,
+ecai, opex3, …, a document's own `\author`). An API call whose setter's expansion went unobserved
+(`ledger::watch_unwritten_setters`) stays no family's and unwritten (`policy::UNOBSERVED_BINDING`). No family was
+flipped back.
+
+**The gate, per family** (census: `LATEXML_FM_SHADOW=1` with the unwritten base 97c over `census/who_uses.py`
+populations, the undeclared bindings capped at 400/400/600, `ab_audit fmshadow`; A/B: the stratified
+`popint125a_s10k` plus those populations, 12,857 papers, 97c → 97e; the A/B's changed papers and the dev subset scored
+against pdflatex with `score_tiers.py`, archival = the structurally decided creators exactly right):
+
+| family (binding) | census papers, unclassified | A/B changed | A/B creators right 97c → 97e | dev papers | dev archival int125b → 97e | worse, read | verdict |
+|---|---|---:|---|---:|---|---|---|
+| sv_support (svjour, svjour3, svmult, svproc) | 399, 10.8 % | 105 | 466/505 → 490/505 | 336 | 373/449 → 437/449 | none (1711.10599 scorer: a `\star` legend line) | ON |
+| inst_support (ws-procs*, ws-ijmp*, appolb, egpubl, aprim10, jfm, rspublic, ias) | 189, 14.3 % | 78 | 0/168 → 168/168 | 516 | 1/174 → 113/174 | jfm's letter-spaced names (fixed) | ON |
+| iopart_support | 339, 6.2 % | 34 | 56/129 → 128/129 | 296 | 671/683 → 680/683 | none (1306.1933, 1802.10379 scorer: right by the source) | ON |
+| jheppub | 216, 4.5 % | 12 | 4/17 → 17/17 | 216 | 0/17 → 17/17 | none | ON |
+| jcappub | 99, 4.9 % | 0 | — | 83 | 8/26 → 19/26 | none | ON |
+| jinstpub | 49, 0.0 % | 0 | — | 30 | 0/16 → 16/16 | none | ON |
+| jpconf | 58, 8.6 % | 3 | 5/6 → 6/6 | 53 | 86/88 → 86/88 | none | ON |
+| ijcai | 72, 25.0 % | 9 | 56/58 → 58/58 | 64 | 216/226 → 220/226 | none | ON |
+| undeclared: aas_support | 384, 3.6 % | 110 | 273/379 → 371/379 | 1,097 | 3,540/3,922 → 3,719/3,922 | none (1805.02689 scorer: an `\altaffiltext` e-mail) | ON |
+| undeclared: elsart_support_core (elsarticle; OmniBus's elsart, arxbj) | 392, 2.3 % | 47 | 385/413 → 409/413 | 903 | 3,053/3,110 → 3,085/3,110 | 1108.0201 (below); 1411.2807 scorer | ON |
+| undeclared: JHEP.cls | 122, 71.3 % | 7 | 7/15 → 15/15 | 172 | 239/282 → 239/282 | none | ON |
+| undeclared: webofc.cls | 30, 23.3 % | 1 | 4/4 → 4/4 | 22 | 58/64 → 57/64 | 1702.03664 (below) | ON |
+| undeclared: the rest (sn-jnl 1.1 %, imsart 5.3 %, interact 4.2 %, ecai 10 %, cas-dc, cas-sc, pasj, epl, spie, PoS, dgruyter, …) | 289, 1.7 % | 29 | 11/20 → 20/20 | 464 | 595/611 → 601/611 | none | ON |
+
+- **Unclassified above the 0.5 % rule**, as for aa (3.2 %), llncs (5.4 %), the kernel (19.4 %) and 95b's IEEEtran
+  (9.3 %) when written (#922, #925, #942): an unclassified row is an item the writer may decline, not the paper.
+  JHEP.cls's 71.3 % (names parted otherwise than today's, block e-mails) is almost all declined: its dev archival is
+  unchanged, its A/B changed 7 papers, each right by the source. Strictly applied, the rule passes jinstpub alone.
+- **Precision of what changed, against pdflatex**: the A/B's changed creators 1,271/1,747 → 1,719/1,747 right (451 better, 3 worse); dev (the 4,252 dev papers of these families, before = int125b) 8,840/9,668 → 9,289/9,668 (453 better, 4 worse). The worse
+  creators, each read: 1108.0201 (elsarticle, below: real); 1702.03664 (webofc: "Eleni Petrakou for CAPP/IBS" parted into
+  the person, now right, and a creator "for CAPP/IBS", below); the rest scorer limits, each right by the source and the
+  print — 1306.1933 (`$^{1}$…//$^{2}$…` cut at its marks, the scorer reading the `//`), 1411.2807 (`a$\_$zeifman@`
+  taken out of its `\address`), 1802.10379 (`O.~Dupr\'e $^{1,2}$ A.~Benoit` parted into the two authors the print
+  shows), 1711.10599 (a `$^\star$` fellowship line, an entry as before), 1805.02689 (an `\altaffiltext{*}` e-mail on its
+  author).
+- **No lost words** (`fm_checks.py`): one "lost" creator, 0803.0820's merged "Paloma Quiroga Departamento de Física…"
+  parted into its four authors; word types lost only marks (digits, letters: `hep-ex0605103` "a b c d", `1510.03108`
+  "b c d e") moved out of the names, e-mail label words and separators cut with their addresses (`2409.11263`
+  "Affiliation", `nucl-th0412024` "amp", `1411.2807`/`2510.03422` the `\_` spacing of `a\_zeifman`, `taekwon\_hong`),
+  as the take-out's (#938).
+- **E/F**: the whole population on the binary one scope-narrowing before the last (12,816 papers, 442 changed): E 24,828
+  → 24,826, F 66 → 66, no paper worse in E or F; every paper any round changed (452) on the final binary: E 686 → 684, F
+  4 → 4. 2311.05131 (841 warnings) and 1111.1264 (an allocation failure under the 8 GB cap) vary run to run on either
+  binary (a wall-clock Fatal, E 20/23), noise.
+
+**Scorer** (the 3,000 sample, `fm_scorer/run_97e` against `run_97c` rescored with the same `score_tiers.py`): D3
+6,054 → 6,059 of 6,156 structurally decided creators exactly right (98.34 % → 98.42 %; per paper 98.01 %), 5 better
+(1701.05122's three, 1902.02872, 2007.07422), 0 worse; papers with lost words 0 → 0; R2 papers 5 → 6, the sixth
+2105.09506 (Minglang Yin parted from George Em Karniadakis, whose unparted entries `1 … 2 … 3 …` now he alone holds,
+as the merged creator did).
+
+**Mechanisms the flip exposed, fixed in the writer and the reading:**
+- *A block line's letters are read as printed* (`writer::plan::span_tokens`): the source span's letters against the
+  reading's key, accents folded on both sides (`resolver::base_letters`); an accent command adds none, a text symbol
+  its own — latex.ltx's glyph for the current encoding (core `mouth::text_symbol_char`, now public; OT1's are
+  `\chardef`s, decoded through the encoding's font map, `font_decode`), else a primitive printing it (`\i`, `\ss`,
+  `\o`; Perl plain_base.pool.ltxml:108, 531). Before, `Ca\~nada` gave "Canada" against the key's "cañada" and the cut
+  declined: 1009.1371 (73 creators, every one wrong), 2401.03603 (`H\"ugel`, `Astrof\'{\i}sica`).
+- *A re-parted entry keeps today's role* (`writer::repart::item_source`): a made affiliation takes the role every
+  affiliation of today's holds when they agree — appolb's and the ws-procs classes' `\address` lines are `address`
+  contacts — else the reading's (1501.05548, 0710.5369, 0809.3340, cond-mat0311409 had theirs made `affiliation`s).
+- *A letter-spaced name's word space is no gap* (`events::lexer::letter_spaced_word_space`): one spacing item
+  narrower than a quad after two or more single letters, the run's last word one letter, is the name's word space —
+  jfm's `\ls` (`\kern.15em`) and `\ns` (`\kern.5em`, jfm.cls:1024-1025): 1510.04254, 1403.3574, astro-ph0406083, each
+  name read as two or three and re-parted. Initials (`A. B. C.`) carry periods and are no letter-spaced run.
+- *An e-mail's corresponding owner is one of the authors it is printed for* (`resolver::post::answer_sequence`): the
+  corresponding step of a class's address list looks within the call's group (iopart's `\ead` belongs to the `\author`
+  group it follows, iopart.cls:225-231) and, an address set among the entries, among the requesters of the entry just
+  before it (`Resolver::entry_printed_before`; iopart.cls:363) — `perfect_kernel_batch78f`'s r2 rulings, which the
+  reading had not kept (2311.17496, 2407.14305, 2311.07087); jheppub's `\emailAdd` list, after every entry, keeps the
+  paper-wide step (1901.08773).
+- *A name read as an entry is never written onto an author* (`writer::plan::{writes_the_name, prints_the_name}`): an
+  affiliation the reading gives an author declines the paper, today's kept, when it writes one of the paper's names
+  and nothing else (initials or words of the name in order, its last word the name's: svjour3's `\institute{A. Able
+  \and B. Baker \at Univ X}`, whose name-only piece the `\and`-list numbers as entry 1, 2609.05466), or, given by the
+  name it prints (`fuzzy:surname`, svjour3's `\at`), prints the name of an author it is not given to (words parted at a
+  capital glued to a small letter, `Y. XuInstitute`: the `\\`-parted `\at` pieces read as one entry, 1506.02396,
+  1908.03628, 2007.09912). A name in any other entry is no evidence: IEEE's `S. Sharma, Y. Kulkarni … are with the
+  Walker Department` (2405.17600) names its own owners, `5720 S Ellis Ave` (1201.0008) is a street beside an author S.
+  Ellis, `Johns Hopkins University` (0807.2295) an institution — each a false decline of an earlier, wider rule. The faithful link stays RED
+  `svjour3_name_only_piece_shares_the_next_institute`; since sv_support is written, `keep_as_today` no longer covers
+  these calls.
+
+**Required witness 2608.25509** (svproc, 97c's regression): every affiliation on its authors as pdflatex prints them
+(Gautier 1, 2; Guillermit 1; Porez 2; Rousset 1; Chablat 2); the two spelled addresses on Porez and Chablat, the three
+initials addresses (`ngr@`, `ygt@`, `frt@`) the block's, spelling no one.
+
+Left (SYNC row "97e"): 1509.06963 (jcappub, the census's F1 example) declined — its last two marks are `\textit{5}`
+and the cut cannot explain the sixth piece; 1108.0201 (elsarticle under the kernel conventions: `\footnotemark[1]`
+read as `*`, so the unrequested `\address[*]{current address}` went to M. Pesce-Rollins; elsarticle prints arabic
+title marks); collaborations and `for X` phrases parted into creators of their own (`(BES Collaboration)` 0710.5369,
+hep-ex0605103; `The WASA-at-COSY Collaboration` 1805.08173; `for the Belle II …` 2009.04166; `for CAPP/IBS`
+1702.03664) — the persons' names now right, the phrase OD #946's (97d) to make a contact; svjour3's name-only
+institute piece (Ann Able's shared Univ A, RED as before).
+Guards `perfect_kernel_batch97e::{jcappub_is_written, jheppub_family_is_written, sv_support_is_written,
+inst_support_is_written, a_block_line_with_accents_is_cut, a_reparted_entry_keeps_todays_address_role,
+a_letter_spaced_name_is_one_name, an_entry_naming_another_author_is_not_written}`, the policy unit test `a_declaration_is_read_and_an_undeclared_family_takes_the_kernel`;
+guards updated to the written output (each read against its pdflatex oracle): `batch61::{author_marks_link_their_affiliations,
+informs_author_marks_link_affiliations, informs_class_api, marked_affiliation_review_shapes}`,
+`batch63::{svjour3_at_piece_naming_several_authors, svjour3_name_only_piece_keeps_the_institute_shared}`,
+`batch64u::osa_email_line_forms`, `batch77n::ecai_institute_note_and_and_split`,
+`batch78f::{iopart_ead_corresponding_author_legend, iopart_ead_corresponding_author_of_another_group,
+iopart_ead_corresponding_author_not_under_its_mark}`, `batch95b::an_unwritten_familys_call_is_kept_as_today`,
+`batch95c::an_email_spelling_its_accented_holder_is_not_respelled`; the aas reading guards the writer declines held
+(`batchfms2a2::{a_footnote_text_the_title_shows_is_the_titles_note, an_entry_the_title_requests_is_the_titles_note,
+an_address_beside_an_institution_keeps_the_institution}` under `held`, `an_unmarked_line_under_a_run_of_names_rows_is_every_names`
+`reading_only`). Repros class-bindings/`jcappub_marked_affiliation_lines_written`, `jheppub_marked_affiliations_written`,
+`jinstpub_marked_affiliation_pieces_written`, `svproc_institute_email_list_written`,
+`svproc_hand_marks_institutes_written`, `ws_procs_address_lines_written`, `mnras_block_line_accent_cut`,
+`mnras_block_line_dotless_i_cut`, `appolb_reparted_entries_keep_address_role`, `jfm_letter_spaced_name_is_one_name`,
+`svjour3_at_pieces_joined_are_not_written`.

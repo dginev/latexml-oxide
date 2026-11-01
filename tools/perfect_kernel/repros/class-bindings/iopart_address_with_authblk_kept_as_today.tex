@@ -9,7 +9,9 @@
 % expect:  0 errors, 0 warnings; 95b r3: the authblk take-out written (Ann Able "Univ X, Town." and ann@x.org, OD
 %          #938), iopart's `\address` item kept as today's holds it (Bob Baker's) — an unwritten family's call is
 %          not written, the paper's other items are
-% status:  RED (95b r2) -> GREEN (95b r3) — perfect_kernel_batch95b::an_unwritten_familys_call_is_kept_as_today
+% status:  RED (95b r2) -> GREEN (95b r3) — perfect_kernel_batch95b::an_unwritten_familys_call_is_kept_as_today;
+%          97e: iopart written, the `\address` item Ann Able's by its leading mark (her authblk label 1), as the guard
+%          now pins
 % preload: ar5iv.sty
 \documentclass[12pt]{iopart}
 \usepackage{authblk}

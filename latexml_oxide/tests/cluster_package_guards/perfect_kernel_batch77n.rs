@@ -389,18 +389,25 @@ fn amsppt_footnotetext_after_names_is_the_last_names() {
 }
 
 /// ecai.cls 2020's `\author{A\institute{…} \and B$^1$}` (2008.02735): two authors, the `\institute` Ann Able's
-/// affiliation.
+/// affiliation. Since 97e (ecai's family, `UNDECLARED`, written) the braced address group `{ann, bob}@uni.edu` is
+/// written out and taken out of the entry, each address an e-mail of the author it spells (OD #938).
 #[test]
 fn ecai_institute_note_and_and_split() {
   let xml = convert_repro!("author_ecai_institute_notes_and.tex");
   assert_no_merged_names(&xml);
+  let email =
+    |address: &str| format!(r#"<contact name="email: " role="email">{address}</contact>"#);
   assert_eq!(creators(&xml), [
     creator(
       true,
       "Ann Able",
-      &affiliation("Univ A, City, email: {ann, bob}@uni.edu")
+      &format!("{} {}", affiliation("Univ A, City"), email("ann@uni.edu"))
     ),
-    creator(false, r#"Bob Baker<sup xml:id="id1">1</sup>"#, ""),
+    creator(
+      false,
+      r#"Bob Baker<sup xml:id="id1">1</sup>"#,
+      &email("bob@uni.edu")
+    ),
   ]);
 }
 

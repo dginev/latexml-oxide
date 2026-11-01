@@ -1,0 +1,20 @@
+% witness: 1506.02396 (svjour3, `\institute{Z. Peng \and W. Yin\at UCLA … \\ Y. Xu\at IMA … \\ M. Yan\at MSU …}`: the
+%          `\\`-parted pieces one entry, which the reading gives W. Yin by its surname), 1908.03628 (an entry printing
+%          two other authors' names); 2609.05466 (the name-only piece "N. Cuellar" the `\and`-list numbers as entry 1)
+% oracle:  pdflatex (TL 2025, 1506.02396's svjour3.cls): "Ann Able · Bob Baker · Cy Cole", then "A. Able · C. Cole",
+%          "Univ A, Town A", "B. Baker", "Univ B, Town B"
+% engines: rust 97c = every institute item the block's (not written); 97e r3 = the joined entry written onto Cy Cole
+%          ("Univ A, Town A B. Baker Univ B, Town B")
+% expect:  0 errors, 0 warnings; the writer declines (an entry printing another author's name), today's kept; the
+%          faithful link (both lines' authors) is the RED svjour3_name_only_piece_shares_the_next_institute's
+% status:  RED (97e r3) -> GREEN (97e) — perfect_kernel_batch97e::an_entry_naming_another_author_is_not_written
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker \and Cy Cole}
+\institute{A. Able \and C. Cole \at Univ A, Town A \\
+B. Baker \at Univ B, Town B}
+\maketitle
+Body.
+\end{document}

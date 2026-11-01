@@ -17,6 +17,8 @@ use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
 use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
 use serde_json::Value;
 
+use super::perfect_kernel_batchfms2a1::{held, reading_only};
+
 /// Convert `tex` (with `preload`) under the shadow switch, asserting a clean conversion: the dump's `resolved`.
 pub(super) fn resolved(tex: &str, preload: Option<&str>) -> Value {
   let (log, _, json) = convert_with_setup_then(
@@ -94,7 +96,7 @@ fn article(preamble: &str, author: &str) -> Vec<String> {
 /// `‡Univ B` (today all of it is one contact on Cat Cole).
 #[test]
 fn symbol_lines_go_to_their_carriers() {
-  super::perfect_kernel_batchfms2a1::reading_only(|| {
+  reading_only(|| {
     let names_line = r"\author{Ann Able$^{\dag}$ \and Bob Baker$^{\ddag}$ \and Cat Cole$^{\dag}$\\";
     for lines in [
       r"\dag Univ A\\ \ddag Univ B}",
@@ -122,7 +124,7 @@ fn symbol_lines_go_to_their_carriers() {
 /// creator is made (today's token reading).
 #[test]
 fn user_mark_macro_marks_request_affiliations() {
-  super::perfect_kernel_batchfms2a1::reading_only(|| {
+  reading_only(|| {
     assert_eq!(
       article(
         r"\newcommand*{\affmark}[1][*]{\textsuperscript{#1}}",
@@ -268,7 +270,7 @@ fn iopart_ead_goes_to_the_author_it_spells() {
 /// `\hspace{1em}and\hspace{1em}` a separator.
 #[test]
 fn sync_row_shapes_46_53_66() {
-  super::perfect_kernel_batchfms2a1::reading_only(|| {
+  reading_only(|| {
     assert_eq!(
       article(
         "",
@@ -363,7 +365,7 @@ fn sync_row_shapes_62_64_authblk() {
   );
   // (authblk written since 95b, OD #942: the unrequested `$^3$Z` the block's, today's on both — the writer declines)
   assert_eq!(
-    super::perfect_kernel_batchfms2a1::held("Affiliation z", || article(
+    held("Affiliation z", || article(
       r"\usepackage{authblk}",
       "\\author{Ann$^1$ and Bob$^2$}\n\\affil{$^1$X}\n\\affil{$^3$Z}"
     )),
@@ -661,7 +663,7 @@ fn contact_roles_follow_the_call_and_the_address() {
 /// (2507.05750).
 #[test]
 fn marks_mid_line_and_trailing_label_entries() {
-  super::perfect_kernel_batchfms2a1::reading_only(|| {
+  reading_only(|| {
     assert_eq!(
       article(
         "",
@@ -833,7 +835,7 @@ const AAS_CORRESPONDENT: &str = "\\documentclass{aastex701}\n\\begin{document}\n
 /// the name showing the mark — a legend's mark is a symbol, a mark glyph of no `\@fnsymbol` kind too, 2401.00056.)
 #[test]
 fn glued_marks_part_by_the_marks_shown() {
-  super::perfect_kernel_batchfms2a1::reading_only(|| {
+  reading_only(|| {
     assert_eq!(
       article(
         "",
@@ -873,7 +875,7 @@ fn glued_marks_part_by_the_marks_shown() {
 /// ownership by evidence; 1908.04020, 2304.00435), else stays with the note's author.
 #[test]
 fn a_notes_email_goes_by_spelling() {
-  super::perfect_kernel_batchfms2a1::reading_only(|| {
+  reading_only(|| {
     assert_eq!(
       article(
         "\\usepackage{hyperref}",
@@ -897,7 +899,7 @@ fn a_notes_email_goes_by_spelling() {
 /// 2507.03885: the second address was a creator) — each an e-mail of the line's names by the owner chain.
 #[test]
 fn addresses_in_a_names_line_are_emails() {
-  super::perfect_kernel_batchfms2a1::reading_only(|| {
+  reading_only(|| {
     assert_eq!(
       article(
         "\\def\\email{\\hfill\\small\\sc}\n\\def\\name{\\normalsize\\bf}",
@@ -1289,9 +1291,11 @@ fn a_prefixed_symbol_label_keeps_its_prefix() {
 #[test]
 fn an_entry_the_title_requests_is_the_titles_note() {
   assert_eq!(
-    tuples_of(
-      "\\documentclass{aastex631}\n\\begin{document}\n\\title{T\\altaffilmark{1}}\n\\author{Ann Able\\altaffilmark{2}}\n\\author{Bob Baker\\altaffilmark{3}}\n\\altaffiltext{1}{Based on observations.}\n\\altaffiltext{2}{Univ A}\n\\altaffiltext{3}{Univ B}\n\\maketitle\nText.\n\\end{document}\n",
-    ),
+    held("Note basedonobservations", || {
+      tuples_of(
+        "\\documentclass{aastex631}\n\\begin{document}\n\\title{T\\altaffilmark{1}}\n\\author{Ann Able\\altaffilmark{2}}\n\\author{Bob Baker\\altaffilmark{3}}\n\\altaffiltext{1}{Based on observations.}\n\\altaffiltext{2}{Univ A}\n\\altaffiltext{3}{Univ B}\n\\maketitle\nText.\n\\end{document}\n",
+      )
+    }),
     [
       "C Ann Able [altaffil:2] | line:names",
       "  c altaffiliation Univ A | api:label ruling1:request",
@@ -1363,9 +1367,13 @@ fn an_unmarked_line_under_a_run_of_names_rows_is_every_names() {
       ["altaffil:1", "altaffil:2", "altaffil:1"],
     ),
   ] {
-    let tuples = tuples_of(&format!(
-      "\\documentclass{{aastex}}\n\\begin{{document}}\n\\title{{T}}\n\\author{{{author}}}\n\\altaffiltext{{1}}{{Univ A}}\n\\altaffiltext{{2}}{{Univ B}}\n\\maketitle\nText.\n\\end{{document}}\n"
-    ));
+    // (aas_support is written since 97e: the writer declines these, a difference no operation explains — a reading
+    // guard)
+    let tuples = reading_only(|| {
+      tuples_of(&format!(
+        "\\documentclass{{aastex}}\n\\begin{{document}}\n\\title{{T}}\n\\author{{{author}}}\n\\altaffiltext{{1}}{{Univ A}}\n\\altaffiltext{{2}}{{Univ B}}\n\\maketitle\nText.\n\\end{{document}}\n"
+      ))
+    });
     let unmarked = format!("  a {line} | line:unmarked-joined R12:row-above");
     let alt = |univ: &str| format!("  c altaffiliation {univ} | api:label ruling1:request");
     assert_eq!(
@@ -1404,9 +1412,11 @@ fn an_address_beside_an_institution_keeps_the_institution() {
     )
   };
   assert_eq!(
-    tuples_of(
-      "\\documentclass{aastex}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^1$, Bob Baker$^2$, and Cy Cole$^1$ \\\\\n\\small\n1. University A, City; Ann's email: ann@a.edu \\\\\n2. University B, Town; bob@b.edu}\n\\maketitle\nText.\n\\end{document}\n",
-    ),
+    held("Affiliation 1universityacity", || {
+      tuples_of(
+        "\\documentclass{aastex}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^1$, Bob Baker$^2$, and Cy Cole$^1$ \\\\\n\\small\n1. University A, City; Ann's email: ann@a.edu \\\\\n2. University B, Town; bob@b.edu}\n\\maketitle\nText.\n\\end{document}\n",
+      )
+    }),
     [
       "C Ann Able [1] | line:names".to_string(),
       joined.to_string(),
@@ -1439,9 +1449,11 @@ fn an_address_beside_an_institution_keeps_the_institution() {
 #[test]
 fn a_footnote_text_the_title_shows_is_the_titles_note() {
   assert_eq!(
-    tuples_of(
-      "\\documentclass{emulateapj}\n\\begin{document}\n\\title{T\\footnotemark[1]}\n\\footnotetext[1]{Based on observations.}\n\\author{Ann Able \\footnotemark[2]}\n\\footnotetext[2]{Sloan Fellow}\n\\affil{Univ A}\n\\maketitle\nText.\n\\end{document}\n",
-    ),
+    held("Note basedonobservations", || {
+      tuples_of(
+        "\\documentclass{emulateapj}\n\\begin{document}\n\\title{T\\footnotemark[1]}\n\\footnotetext[1]{Based on observations.}\n\\author{Ann Able \\footnotemark[2]}\n\\footnotetext[2]{Sloan Fellow}\n\\affil{Univ A}\n\\maketitle\nText.\n\\end{document}\n",
+      )
+    }),
     [
       "C Ann Able [2] | line:names",
       "  a Univ A | api:annotate:new",
