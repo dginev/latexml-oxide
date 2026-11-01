@@ -132,6 +132,8 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   frontmatter note): `\offprints{\email{x}}` whose only content became a contact leaves no "Send offprint requests to:"
   shell; a note whose remainder still informs stays with its printed label (`\offprints{O. Kochukhov, \email{…}}` reads
   "Send offprint requests to: O. Kochukhov," — the address is in the author list).
+- **A collaboration or team named in the author line is a contact on its authors** (2026-11-01): `\author{A$^1$, B$^2$ and the GAPS Team}`, a `(XYZ Collaboration)` line under the names, BESIII's `\author{\center BESIII Collaboration\\ … (BESIII Collaboration)}` — the names split into their creators and the collaboration is a `<contact role="collaboration">` on every name of the line it covers (Perl's aastex convention, aas_support.sty.ltxml:126 `\collaboration` → `\lx@add@contact[role=collaboration]`), not a creator of its own and not welded into the last name (dev census M4: 1708.04166, 1711.07097, 1311.7305, 1905.11825, hep-ph0502212; 2212.06489).
+- **An address no author's name spells, in a boxed author block, is a block-level contact** (2026-11-01): a shared `contact@lab.org` line in a `tabular`/`minipage` block goes to no person and invents no nameless creator; it is kept once at the block level (dev census M1, 2605.09461).
 - **A second `\maketitle` keeps the latest title** (2026-10-01); multi-contribution volumes are deferred (KPE #1026).
 
 ## 5. Bindings and shipped copies
@@ -154,6 +156,7 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
 - **One binding per class or package family** supports the union of its versions' features; a feature is validated
   against the version that defines it (2026-10-09).
 - **A stub loads the real dependencies** its original `\RequirePackage`s (2026-10-12).
+- **A shipped copy is routed to the binding whose command set it defines** (2026-11-01): a renamed copy of a binding's style (`arxiv2025.sty`, `icml2021_oppo.sty` defining the icml binding's `\icmlauthor`/`\icmlaffiliation`) is read through that binding, not raw — the binding owns markup and typography (dev census M9; 2502.01411, 2209.13569).
 
 ## 6. Diagnostics
 
