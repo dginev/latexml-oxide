@@ -1,4 +1,4 @@
-% status:  GREEN (97a)
+% status:  GREEN (97a: one creator, the merge reported) -> GREEN (97d: a list and its collaboration)
 % witness: synthetic, the second path the marked-list reading leaves to the shape test (a piece reading as an
 %          affiliation); census witnesses in OXIDIZED_DESIGN_DIVERGENCES #943.
 % oracle:  pdflatex (TL 2025, -no-shell-escape): 0 `!`; prints "A. ABLE1 , B. IN DER BAKER2 , AND THE XYZ TEAM", the
@@ -7,8 +7,11 @@
 %          it as names). Rust 97a: "the XYZ Team" reads as an affiliation (`reads_as_affiliation`: "team" is a non-name
 %          word), so the line is no marked list (`marked_names`) and stays one creator, as today; its two marked names
 %          are the merge their marks contradict: one `Error:frontmatter:merged_creators` ("One author holds 2 names").
-% expect:  1 error (`frontmatter:merged_creators`, 2 names), 0 warnings; one creator as today.
-%          Guard `perfect_kernel_batch97a::marked_names_beside_an_affiliation_are_a_reported_merge`.
+%          Rust 97d: the team is the names' collaboration (FIDELITY_CHARTER §4, user ruling 2026-11-01;
+%          `collaboration_split`, OXIDIZED_DESIGN_DIVERGENCES #946), the two marked names a list by their marks.
+% expect:  0 errors, 0 warnings; two creators, A. Able (Institute of One) and B. in der Baker (University of Two), each
+%          with `<contact role="collaboration">the XYZ Team</contact>`.
+%          Guard `perfect_kernel_batch97a::marked_names_beside_a_team_are_a_list_and_its_collaboration`.
 \documentclass{amsart}
 \begin{document}
 \title{A Title}

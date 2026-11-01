@@ -152,22 +152,24 @@ fn an_entry_of_several_pieces_is_written_whole() {
 
 /// What today's name held besides the name moves to where the reading puts it — but a remark on the name stays the
 /// name's: the line under it, `{\footnotesize for the Example collaboration}`, is the collaboration the name speaks
-/// for (`is_name_remark`; review rev94a S6), one personname as today's and Perl's (1502.03246: 94a made it an
-/// affiliation); and `\and` columns whose last is a line of marked entries over an e-mail line, each piece a creator
+/// for (`is_name_remark`; review rev94a S6), one personname in the reading (1502.03246: 94a made it an affiliation) and
+/// the name's collaboration contact in today's since batch 97d (OXIDIZED_DESIGN_DIVERGENCES #946; the reading's line
+/// under the name, resolver/blocks.rs, not yet — so the writer holds today's back); and `\and` columns whose last is a line of marked entries over an e-mail line, each piece a creator
 /// of today's (2308.10621): the legend is the starred names' note, the entry the line under it continues read on over
 /// the break (`line:continued`), each item in print order.
 #[test]
 fn what_a_name_held_is_written_where_the_reading_puts_it() {
   let tex = repro!("author_names_reparted_a_line_under_the_name.tex");
   let xml: &[&[&str]] = &[&[
-    "Ann Able for the Example collaboration",
+    "Ann Able",
+    "collaboration=for the Example collaboration",
     "affiliation=Univ X, Sometown, Country",
   ]];
   let reading = assert_reading(tex, Some(xml), &[
     "C Ann Able for the Example collaboration [1] | line:names name:remark",
     "  a Univ X, Sometown, Country | ruling1:request",
   ]);
-  assert_eq!(reading.3, Value::from("same"));
+  assert_eq!(reading.3, Value::from("declined: the creators' names"));
   assert_eq!(default_mode_creators(tex), owned(xml));
   let tex = repro!("author_names_reparted_columns_with_a_continued_line.tex");
   // (the continued line's list sharing the domain each an e-mail of the name it spells, Lab Y keeping its words — 95c,
@@ -331,18 +333,26 @@ fn an_institution_inside_a_name_is_not_carved() {
 }
 
 /// Inside an open bracket a comma or the word "and" is the bracket's (review rev94a B2, the lexer's `open`): `Cid Cole
-/// (for the ATLAS and CMS Collaborations)` is one name, as today's old reader reads it — 94a made "CMS
-/// Collaborations)" an author (0811.3142's `(on behalf of the H1 and ZEUS collaborations)`).
+/// (for the ATLAS and CMS Collaborations)` is one name and its remark — 94a made "CMS Collaborations)" an author
+/// (0811.3142's `(on behalf of the H1 and ZEUS collaborations)`) —, the remark the collaboration of the names before it
+/// since batch 97d, today's and the reading's alike (OXIDIZED_DESIGN_DIVERGENCES #946).
 #[test]
 fn a_bracket_holds_its_and() {
   let tex = repro!("author_names_reparted_brackets_hold_and.tex");
-  let xml: &[&[&str]] = &[&["Ann Able"], &["Bob Baker"], &[
-    "Cid Cole (for the ATLAS and CMS Collaborations)",
-  ]];
+  let collaboration = "collaboration=(for the ATLAS and CMS Collaborations)";
+  let xml: &[&[&str]] = &[
+    &["Ann Able", collaboration],
+    &["Bob Baker", collaboration],
+    &["Cid Cole", collaboration],
+  ];
+  let read = "  c collaboration (for the ATLAS and CMS Collaborations) | line:names collaboration";
   let reading = assert_reading(tex, Some(xml), &[
     "C Ann Able [] | line:names",
+    read,
     "C Bob Baker [] | line:names sep:comma",
-    "C Cid Cole (for the ATLAS and CMS Collaborations) [] | line:names sep:word",
+    read,
+    "C Cid Cole [] | line:names sep:word",
+    read,
   ]);
   assert_eq!(reading.3, Value::from("same"));
   assert_eq!(default_mode_creators(tex), owned(xml));
@@ -350,17 +360,20 @@ fn a_bracket_holds_its_and() {
 
 /// A bracket after a name, its mark between, is a remark on the name (review rev94a B2, `is_name_remark`; the
 /// collaboration a name speaks for is one too, 1502.03246): `Ann Able$^1$ (on behalf of the A and B teams)` one name,
-/// whose mark requests Univ X — 94a wrote the authors "(on behalf of the A" and "B teams)".
+/// whose mark requests Univ X — 94a wrote the authors "(on behalf of the A" and "B teams)" —, the remark its
+/// collaboration since batch 97d (OXIDIZED_DESIGN_DIVERGENCES #946).
 #[test]
 fn a_bracket_after_a_mark_is_the_names() {
   let tex = repro!("author_names_reparted_bracket_after_a_mark.tex");
   let xml: &[&[&str]] = &[&[
-    "Ann Able (on behalf of the A and B teams)",
+    "Ann Able",
+    "collaboration=(on behalf of the A and B teams)",
     "affiliation=Univ X",
   ]];
   let reading = assert_reading(tex, Some(xml), &[
-    "C Ann Able (on behalf of the A and B teams) [1] | line:names name:qualifier",
+    "C Ann Able [1] | line:names",
     "  a Univ X | ruling1:request",
+    "  c collaboration (on behalf of the A and B teams) | line:names collaboration",
   ]);
   assert_eq!(reading.3, Value::from("same"));
   assert_eq!(default_mode_creators(tex), owned(xml));
@@ -453,15 +466,20 @@ fn a_repart_that_reads_otherwise_is_taken_back() {
 }
 
 /// A name with the collaboration it speaks for after it is a name (review rev94a r2 B-1, `name_before_remark`): `Ann
-/// Able and Bob Baker for the ATLAS Collaboration` is two authors, as today's — 94a r2 read "Collaboration" as an
-/// institution's word and gave Bob Baker to Ann Able as her affiliation, the re-part made of today's whole creator.
+/// Able and Bob Baker for the ATLAS Collaboration` is two authors — 94a r2 read "Collaboration" as an institution's
+/// word and gave Bob Baker to Ann Able as her affiliation, the re-part made of today's whole creator —, the collaboration
+/// both names' contact since batch 97d (OXIDIZED_DESIGN_DIVERGENCES #946).
 #[test]
 fn a_name_speaking_for_a_collaboration_is_a_name() {
   let tex = repro!("author_names_speaks_for_tail_is_a_name.tex");
-  let xml: &[&[&str]] = &[&["Ann Able"], &["Bob Baker for the ATLAS Collaboration"]];
+  let collaboration = "collaboration=for the ATLAS Collaboration";
+  let xml: &[&[&str]] = &[&["Ann Able", collaboration], &["Bob Baker", collaboration]];
+  let read = "  c collaboration for the ATLAS Collaboration | line:names collaboration";
   let reading = assert_reading(tex, Some(xml), &[
     "C Ann Able [] | line:names",
-    "C Bob Baker for the ATLAS Collaboration [] | line:names sep:word",
+    read,
+    "C Bob Baker [] | line:names sep:word",
+    read,
   ]);
   assert_eq!(reading.3, Value::from("same"));
   assert_eq!(default_mode_creators(tex), owned(xml));
@@ -488,20 +506,34 @@ fn a_name_before_an_institution_word_stays_a_creator() {
 /// (review rev94a r2 B-1, `may_name_a_person`, the shadow reading's): `Ann Able, University of Toronto and Bob Baker
 /// for the CMS Collaboration` reads Ann Able's institution and Bob Baker an author — 94a r2 gave Ann Able both pieces.
 /// The institution is the classify helpers' (word evidence), so no item is made of today's creator "University of
-/// Toronto" (review rev94a r3, `repart::structural`): the writer gives it back (`repart::concede`, `same`) and today's
-/// three creators stay, as 93a's.
+/// Toronto" (review rev94a r3, `repart::structural`) and today's three creators stay, as 93a's — each with the
+/// collaboration since batch 97d, the reading's two names theirs, so the writer holds today's back (OD #946).
 #[test]
 fn an_institution_stops_at_a_person() {
   let tex = repro!("author_names_institution_stops_at_a_person.tex");
-  let xml: &[&[&str]] = &[&["Ann Able"], &["University of Toronto"], &[
-    "Bob Baker for the CMS Collaboration",
-  ]];
+  let collaboration = "collaboration=for the CMS Collaboration";
+  let xml: &[&[&str]] = &[
+    &["Ann Able", collaboration],
+    &["University of Toronto", collaboration],
+    &["Bob Baker", collaboration],
+  ];
+  let read = "  c collaboration for the CMS Collaboration | line:names collaboration";
   let reading = assert_reading(tex, Some(xml), &[
     "C Ann Able [] | line:names",
     "  a University of Toronto | line:names classify:institution",
-    "C Bob Baker for the CMS Collaboration [] | line:names sep:word",
+    read,
+    "C Bob Baker [] | line:names sep:word",
+    read,
   ]);
-  assert_eq!(reading.3, Value::from("same"));
+  // (today's three creators each carry the collaboration, the reading's two: the writer holds today's back, batch 97d)
+  assert!(
+    reading
+      .3
+      .as_str()
+      .is_some_and(|outcome| outcome.starts_with("declined: Contact(\"collaboration\")")),
+    "{:?}",
+    reading.3
+  );
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 

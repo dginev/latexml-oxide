@@ -520,7 +520,19 @@ impl Resolver {
     self.out.creators.len() - 1
   }
 
-  fn attach(&mut self, owner: Option<usize>, assoc: Assoc, note: bool) {
+  fn attach(&mut self, owner: Option<usize>, mut assoc: Assoc, note: bool) {
+    // (an unlabelled line of the block that names a collaboration is its owners' collaboration, as today's reader makes
+    // it — `(XYZ Collaboration)` under the names, 2410.11607; `reads_as_collaboration`, OXIDIZED_DESIGN_DIVERGENCES
+    // #946 —, not a class's affiliation command holding one: revtex's `\affiliation{(WA98 Collaboration)}`, 0708.2630)
+    if !note
+      && owner.is_some()
+      && assoc.role == "affiliation"
+      && assoc.label.is_none()
+      && assoc.rule.starts_with("line:")
+      && reads_as_collaboration(&assoc.text, false)
+    {
+      assoc.role = "collaboration".into();
+    }
     match owner {
       Some(at) => {
         let creator = &mut self.out.creators[at];

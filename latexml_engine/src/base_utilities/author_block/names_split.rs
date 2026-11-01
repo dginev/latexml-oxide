@@ -81,7 +81,9 @@ pub(in crate::base_utilities) fn split_author_line_cautious(line: Tokens) -> Vec
 /// of the binding's own separator (`\lx@author@sep`, `\lx@author@conj`: the space revtex's carries) — the line's printed
 /// ", " and " and " are kept (hep-ph9710228, `J. P. B. C. de Melo$^a$ , H. W. L. Naus$^b$ and T. Frederico$^c$`; brief
 /// 97b part D). A separator that is no plain text (`\and`, a macro) leaves the binding's.
-fn with_printed_separators(pieces: Vec<(Vec<Token>, Tokens)>) -> Vec<Tokens> {
+pub(in crate::base_utilities) fn with_printed_separators(
+  pieces: Vec<(Vec<Token>, Tokens)>,
+) -> Vec<Tokens> {
   pieces
     .into_iter()
     .enumerate()
@@ -191,7 +193,7 @@ fn separated_name_count(line: &Tokens) -> usize {
 /// for the first). An empty piece — between ", " and " and " in "A, B, and C" — names no one and is dropped, before a
 /// wrapper is put back on the pieces: kept, it became an empty creator that took a copy of every affiliation given to
 /// all the authors (`annotate=new`) and merged it onto B.
-fn split_author_names(line: Tokens) -> Vec<(Vec<Token>, Tokens)> {
+pub(in crate::base_utilities) fn split_author_names(line: Tokens) -> Vec<(Vec<Token>, Tokens)> {
   // Name-level separators: comma, the literal word " and " ("Alice and Bob"), " \& " (`Zheng Zheng \& Jordi
   // Miralda-Escud\'e`, astro-ph0201275; 0908.0757) with its ties, and the `\and` family inside a wrapper; an "and" or
   // `\&` with no space token beside it (`\break and`, svmult's `and\\`) and a comma in a mark's math are written so

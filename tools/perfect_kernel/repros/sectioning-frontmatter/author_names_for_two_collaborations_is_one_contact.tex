@@ -1,0 +1,25 @@
+% mechanism: a collaboration the names speak for, written after the last name ("for", "on behalf of"), is one contact
+%   on the names it covers, its own "and" no separator: the pieces the names split parted (`for the XYZ`, `ABC
+%   Collaborations`; `ATLAS`, `CMS`, `D0 Collaborations`) are put together again before it is read
+%   (`names_and_collaborations`, author_block/collaborations.rs; OXIDIZED_DESIGN_DIVERGENCES #946). Siblings on the
+%   same path, one line each: unmarked `Ann Able and Bob Baker for the ATLAS Collaboration` (repro
+%   author_names_speaks_for_tail_is_a_name); `Ann Able, Bob Baker (for the H1 and ZEUS collaborations)` (0809.3509;
+%   repro author_names_reparted_brackets_hold_and); `{\slshape Stefanie Adomeit$^1$, Reinhild Yvonne Peters$^{2,3}$ for
+%   the ATLAS, CDF, CMS and D0 Collaborations}` (1311.7305, inside a whole-line group); mnras's `A. Able,$^{1}$ …, and
+%   C. Cole,$^{1}$ for the XYZ Collaboration`.
+% witness: dev census M4 (job tmp devnames/rep/c3.tex); 1311.7305 (desyproc, one creator holding both names, silent)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 , Bob Baker2 for the XYZ and ABC Collaborations" over "1 Univ A /
+%   2 Univ B"
+% engines: rust 97b: four creators, Ann Able, Bob Baker, "for the XYZ", "ABC Collaborations"; perl: two, "Bob Baker for
+%   the XYZABC Collaborations"
+% expect:  0 errors, 0 warnings; two creators, Ann Able (Univ A) and Bob Baker (Univ B), each with
+%   `<contact role="collaboration">for the XYZ and ABC Collaborations</contact>`
+% status:  RED (97b) -> GREEN (97d)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$ for the XYZ and ABC Collaborations\\ $^1$Univ A\\ $^2$Univ B}
+\maketitle
+Body.
+\end{document}

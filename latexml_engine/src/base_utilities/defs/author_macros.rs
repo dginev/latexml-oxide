@@ -389,6 +389,11 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     });
   });
 
+  // Rust-only: a collaboration an author line names (`collaboration_split`, batch 97d, OXIDIZED_DESIGN_DIVERGENCES
+  // #946), which the author block's reader makes a `contact role="collaboration"` of; read by no reader, it prints
+  // where it stood.
+  DefMacro!("\\lx@author@collaboration[]{}", "#2");
+
   // Rust-only: the separator a per-author class's names line prints before this name, which the cautious split parted
   // it at (`split_author_line_cautious`; hep-ph9710228's ", " and " and "), for the creator's `before` in place of the
   // binding's (`place.rs`; brief 97b part D). Only on a creator.

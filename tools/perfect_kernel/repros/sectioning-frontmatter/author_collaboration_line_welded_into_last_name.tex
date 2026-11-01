@@ -1,4 +1,3 @@
-% status:  RED
 % witness: 2410.11607 (dev20k; BESIII template, revtex4-1: ONE `\author{…}` holding 636 names, each with its
 %          superscript marks `M.~Ablikim$^{1}$, M.~N.~Achasov$^{4,c}$, …`, then `\\ (BESIII Collaboration)\\`, then an
 %          `{\it $^{1}$ Institute …\\ … }` block of numbered institutes and the lettered `$^{a}$ Also at …` notes, all
@@ -8,13 +7,18 @@
 %          note, each with its mark — the names are three people, each owning the institutes its marks name.
 % engines: rust int123a and 95b r3 at THIS size (3 names): three creators, the marks' affiliations right, but the
 %          collaboration line glued into the last person: `<personname>C. Cole<break/> (XYZ Collaboration)</personname>`
-%          (RED for that). The witness's own failure — the whole 636-name list as one creator — does NOT reproduce here:
-%          its trigger is one non-name-shaped piece (author_marked_list_lowercase_particle_merges.tex). The weld copies
-%          Perl's (Base_Utility.pool.ltxml:700-701) and waits on the collaboration ruling (OPEN_ROWS.md:810); after a
-%          names-split fix the witness still ends `J. Zu<break/>(BESIII Collaboration)`.
-% expect:  0 errors, 0 warnings; three creators, each its own name, in order, with the affiliations its marks name:
-%          Ann Able — Institute of One; Bob Baker — University of Two + "Also at Laboratory A"; Cid Cole — Institute of
-%          One + University of Two; "(XYZ Collaboration)" in no person's name (the collaboration, as its own item).
+%          — Perl's weld (Base_Utility.pool.ltxml:700-701) copied. The witness's own failure, the whole 636-name list as
+%          one creator, was a non-name-shaped piece (author_marked_list_lowercase_particle_merges.tex, 97a).
+%          rust 97d: the line is a collaboration of the names above it (`collaboration_line` at the weld,
+%          author_block/dispatch.rs; FIDELITY_CHARTER §4, user ruling 2026-11-01; OXIDIZED_DESIGN_DIVERGENCES #946).
+%          Siblings on the same path, one line each: article `\author{\large A. Able$^{1}$, B. Baker$^2$ and C.
+%          Cole$^{1,2}$ \\[1em] -- XYZ Collaboration -- \\[1em] \small $^1$ Univ A \\ \small $^2$ Univ B}`
+%          (hep-ph0502212's QCDSF-UKQCD line, dashes); `… and C~Cole$^2$\\ on behalf of the LHCb collaboration\\ …`
+%          (1905.11825, jpconf; 97b "C Coleon behalf of the LHCb collaboration").
+% expect:  0 errors, 0 warnings; three creators, each its own name, in order, with the affiliations its marks name and
+%          `<contact role="collaboration">(XYZ Collaboration)</contact>`: A. Able — Institute of One; B. Baker —
+%          University of Two + "Also at Laboratory A"; C. Cole — Institute of One + University of Two
+% status:  RED (int123a) -> GREEN (97d)
 \documentclass[aps,prd,twocolumn]{revtex4-1}
 \begin{document}
 \title{A Measurement of Something}

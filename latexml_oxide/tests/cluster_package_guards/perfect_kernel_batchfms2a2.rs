@@ -987,7 +987,8 @@ fn prefix_marks_on_a_sole_line_and_a_sole_authors_orphans() {
 
 /// Item 3 (the largest buckets' resolver defects): a list with one address per author that every spelled address
 /// agrees with is in author order (FIDELITY_CHARTER §4, 2026-10-21; `{qkv, riven, …}@zju.edu.cn`, 2603.19610,
-/// 2512.22629); "the MAST Team" among the names is an author (1609.09534, astro-ph0509500).
+/// 2512.22629); "the MAST Team" among the names is the names' collaboration since batch 97d (1609.09534,
+/// astro-ph0509500; OXIDIZED_DESIGN_DIVERGENCES #946; an author before).
 #[test]
 fn address_lists_in_author_order_and_collaborations() {
   assert_eq!(
@@ -1018,9 +1019,10 @@ fn address_lists_in_author_order_and_collaborations() {
     [
       "C Ann Able [1] | line:names",
       "  a Univ A | ruling1:request",
+      "  c collaboration the MAST Team | line:names collaboration",
       "C Bob Baker [1] | line:names sep:comma",
       "  a Univ A | ruling1:request",
-      "C the MAST Team [] | line:names sep:word",
+      "  c collaboration the MAST Team | line:names collaboration",
     ]
   );
 }
@@ -1352,7 +1354,7 @@ fn emulateapj_title_marks_print_the_given_number() {
 /// FM S2b aas census: an unmarked institution under a run of names rows — each directly under the one before, no line
 /// between answering it — is every name's of the run (user ruling R12: `A$^{1}$, B$^{2}$\\ C$^{3}$\\ Univ` gives Univ to
 /// all three, as today's splitter does); 1511.01102's four rows of `\altaffilmark`ed names over `(The Nearby Supernova
-/// Factory)`. Red: the line went to the last row's names alone.
+/// Factory)`, every name's collaboration since batch 97d. Red: the line went to the last row's names alone.
 #[test]
 fn an_unmarked_line_under_a_run_of_names_rows_is_every_names() {
   for (author, line, marks) in [
@@ -1367,6 +1369,12 @@ fn an_unmarked_line_under_a_run_of_names_rows_is_every_names() {
       ["altaffil:1", "altaffil:2", "altaffil:1"],
     ),
   ] {
+    // (a line naming a collaboration is the names' collaboration since batch 97d, OXIDIZED_DESIGN_DIVERGENCES #946)
+    let kind = if line.starts_with('(') {
+      "c collaboration"
+    } else {
+      "a"
+    };
     // (aas_support is written since 97e: the writer declines these, a difference no operation explains — a reading
     // guard)
     let tuples = reading_only(|| {
@@ -1374,7 +1382,7 @@ fn an_unmarked_line_under_a_run_of_names_rows_is_every_names() {
         "\\documentclass{{aastex}}\n\\begin{{document}}\n\\title{{T}}\n\\author{{{author}}}\n\\altaffiltext{{1}}{{Univ A}}\n\\altaffiltext{{2}}{{Univ B}}\n\\maketitle\nText.\n\\end{{document}}\n"
       ))
     });
-    let unmarked = format!("  a {line} | line:unmarked-joined R12:row-above");
+    let unmarked = format!("  {kind} {line} | line:unmarked-joined R12:row-above");
     let alt = |univ: &str| format!("  c altaffiliation {univ} | api:label ruling1:request");
     assert_eq!(
       tuples,

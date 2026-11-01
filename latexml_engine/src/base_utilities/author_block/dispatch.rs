@@ -59,13 +59,21 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
   // A per-author class binding's `\author` (aastex, amsart, revtex, an IEEE block, a labelled authblk `\author`),
   // which Perl reads as one author, splits its names only where they read as names (63e); a raw class's own
   // `\author` (`\lx@add@authors@adaptive`, 2309.03769's dan2e.sty) splits as the article `\author` does.
+  // A collaboration or team the line names beside its names is read out of them, for the contact it makes on the names
+  // it covers (`collaboration_split`, [`Collaborations`]; FIDELITY_CHARTER §4, user ruling 2026-11-01): `… and the GAPS
+  // Team` (1708.04166), `… J.~Zu$^{68,55}$ (BESIII Collaboration)` (2212.06489).
   let split_names = |line: Tokens| {
-    if cautious {
+    if let Some(pieces) = collaboration_split(&line, cautious) {
+      pieces
+    } else if cautious {
       split_author_line_cautious(line)
     } else {
       split_author_line(line)
     }
   };
+  // (the rows of more names a names line goes on with, split as an unmarked names line is)
+  let split_more =
+    |line: Tokens| collaboration_split(&line, false).unwrap_or_else(|| split_author_line(line));
   // LaTeX-faithful `\author` REPLACES (the last call wins); a raw class that
   // redefined `\author` to call it once per author appends instead (56fl).
   if replace {
@@ -252,7 +260,7 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
               // `Gus Gray\IEEEauthorrefmark{1}, …, Ida Ivy,~\IEEEmembership{Fellow,~IEEE,}\\ Jon Jay, … and~Kim
               // Key` (2408.02464) is five authors, not Ida Ivy's name welded to the next line's.
               last_names = Some(line.clone());
-              for author in split_author_line(line) {
+              for author in split_more(line) {
                 entries.push((AuthorLineKind::Author, author));
               }
             } else if entries.len() > group_start
@@ -299,6 +307,14 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
               // (a line that prints nothing is no entry: `\large{~~}`, 2609.05430; a blank line's `\par`, 2606.00747;
               // `\tt\small` before a `\quad`, 2103.00887)
               if prints_nothing(&line) {
+                continue;
+              }
+              // (a line naming a collaboration is no part of the entry above it: the collaboration of the names above
+              // it, a contact on them — `\\ (XYZ Collaboration)\\` under the names, 2410.11607; `\\ on behalf of the
+              // LHCb collaboration`, 1905.11825; `\\[1em] -- QCDSF-UKQCD Collaboration --`, hep-ph0502212 — not
+              // welded into the last name, Base_Utility.pool.ltxml:701; [`Collaborations`])
+              if collaboration_line(&line) {
+                entries.push((AuthorLineKind::Collaboration, line));
                 continue;
               }
               // (an address the line above leaves unfinished goes on here: `{\tt yoshikawa.masashi.yh8@}\\{\tt
@@ -354,7 +370,8 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
                   || (entries[continued].0 == AuthorLineKind::Author
                     && unmarked_institution_line(&line))
                   || under_email
-                  || entries[continued].0 == AuthorLineKind::Link)
+                  || entries[continued].0 == AuthorLineKind::Link
+                  || entries[continued].0 == AuthorLineKind::Collaboration)
               {
                 if labelled.is_none()
                   && entries[continued].0 == AuthorLineKind::Author
@@ -388,7 +405,7 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
                   .is_some_and(unmarked_institution_line)
               {
                 last_names = Some(line.clone());
-                for author in split_author_line(line) {
+                for author in split_more(line) {
                   entries.push((AuthorLineKind::Author, author));
                 }
                 continue;
@@ -405,7 +422,7 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
                 && space_parts_names(&delimiter, &entries[continued].1, &line)
               {
                 last_names = Some(line.clone());
-                for author in split_author_line(line) {
+                for author in split_more(line) {
                   entries.push((AuthorLineKind::Author, author));
                 }
                 continue;
@@ -430,7 +447,7 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
                 // Baker, \\ Cat Cole, Dan Dee, \\ Eve Eck$^{1}$`: the first line's symbol mark is no affiliation mark;
                 // 2411.13503, 2410.07701, 2401.05566, 2510.11639, 2304.07193).
                 last_names = Some(line.clone());
-                for author in split_author_line(line) {
+                for author in split_more(line) {
                   entries.push((AuthorLineKind::Author, author));
                 }
               } else {
@@ -539,6 +556,33 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
             }
           },
         }
+      }
+    }
+    // The collaborations read out of the names ([`collaboration_split`]) are contacts, no authors; so is a line of the
+    // call that names one where an author stands, a heading over the names (`\center BESIII Collaboration\\~\\
+    // M.~Ablikim$^{1}$, …`, 2212.06489), while the call holds a name besides ([`Collaborations`]).
+    for (kind, line) in entries.iter_mut() {
+      if *kind == AuthorLineKind::Author
+        && let Some((text, _)) = unwrapped_collaboration(line)
+      {
+        *kind = AuthorLineKind::Collaboration;
+        *line = text;
+      }
+    }
+    let headings: Vec<usize> = entries
+      .iter()
+      .enumerate()
+      .filter(|(_, (kind, line))| *kind == AuthorLineKind::Author && collaboration_line(line))
+      .map(|(at, _)| at)
+      .collect();
+    if entries
+      .iter()
+      .filter(|(kind, _)| *kind == AuthorLineKind::Author)
+      .count()
+      > headings.len()
+    {
+      for at in headings {
+        entries[at].0 = AuthorLineKind::Collaboration;
       }
     }
     // A name line's trailing address is the name's email (`\name Ann Able$^{1}$ \email ann@uni.edu`, 2502.14381).
@@ -661,9 +705,15 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
       }
     }
     let mut author_at = 0;
+    let mut collaborations = Collaborations::default();
     for (index, (kind, mut line, email)) in entries.into_iter().enumerate() {
+      if group_starts.contains(&index) {
+        collaborations.close_group();
+      }
       match kind {
+        AuthorLineKind::Collaboration => calls.extend(collaborations.read(line)?),
         AuthorLineKind::Author => {
+          collaborations.author();
           correspondence_mark = None;
           let mut content = Invocation!(T_CS!("\\lx@author@withsup"), vec![Some(line)]).unlist();
           content.extend(std::mem::take(&mut placed_calls[author_at]));
@@ -885,6 +935,7 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
         },
       }
     }
+    calls.extend(collaborations.finish()?);
   } else {
     // No superscript markers. Split into author GROUPS on the \and family /
     // \quad only — NOT comma (author_group_splits). Within a group, the first
@@ -909,6 +960,8 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
     // (the names line of the last group pushed, as written: the `\hspace`-before-`\\` branch below reads the lines
     // after it with it)
     let mut last_names_line: Option<Tokens> = None;
+    // (the groups read as a collaboration's heading, waiting for the names they are over)
+    let mut headings: Vec<Tokens> = Vec::new();
     for (delimiter, block) in split_tokens_delimited(stuff, author_group_splits()) {
       spaced &= delimiter
         .first()
@@ -1100,6 +1153,50 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
         last_names_line = Some(names_line.clone());
         affils.splice(0..0, std::mem::take(&mut links));
         let mut names = split_names(names_line);
+        // (a group that is only a collaboration's name, before names of the call's — `\small H.E.S.S. Collaboration
+        // \and H.~Abdalla \inst{…} \and …`, 1912.05868 — is a heading over them, [`Collaborations`])
+        if affils.is_empty() && names.len() == 1 && collaboration_line(&names[0]) {
+          headings.append(&mut names);
+          continue;
+        }
+        // (the collaborations among the names, and a line under them naming one, are the group's lines, each a
+        // contact on the names before it, [`Collaborations`]: `… and the GAPS Team`; `(The Nearby Supernova Factory)`
+        // under the names, 1511.01102 — every name's affiliation since 82r)
+        let mut named = Vec::with_capacity(names.len());
+        let mut collaboration_lines = Vec::new();
+        for name in names {
+          match unwrapped_collaboration(&name) {
+            Some((text, _)) => collaboration_lines.push(collaboration_in_lines(text, named.len())),
+            None => named.push(name),
+          }
+        }
+        names = named;
+        if !names.is_empty() {
+          for line in affils.iter_mut() {
+            if collaboration_line(line) {
+              *line = collaboration_in_lines(line.clone(), names.len());
+            }
+          }
+        }
+        // (over a group of names; else each the author it was, where it stood: `\author{The ATLAS Collaboration \and
+        // CERN}` keeps both as written)
+        if names.iter().any(|name| {
+          name_count(&visible_name_text(name.unlist_ref())) >= 1 || marked_after_name(name)
+        }) {
+          collaboration_lines.splice(
+            0..0,
+            headings
+              .drain(..)
+              .map(|heading| collaboration_in_lines(heading, 0)),
+          );
+        } else {
+          pairs.extend(
+            headings
+              .drain(..)
+              .map(|heading| (vec![heading], Vec::new())),
+          );
+        }
+        affils.splice(0..0, collaboration_lines);
         if names.is_empty() {
           names.push(Tokens::default());
         }
@@ -1107,6 +1204,16 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
       }
       blocks.push((spaced, pairs));
       spaced = true;
+    }
+    // (a heading no names came after: an author, as the call names it)
+    if !headings.is_empty() {
+      blocks.push((
+        false,
+        headings
+          .into_iter()
+          .map(|heading| (vec![heading], Vec::new()))
+          .collect(),
+      ));
     }
     // Names parted by horizontal space alone share the address lines under them, as names parted by a comma do in
     // one group: `Yuxi Fu \ \ \ Han Zhu \\ BASICS, Shanghai Jiao Tong University` gives the address to both, as
@@ -1241,6 +1348,10 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
       let opens = group == 0 || row_starts.get(group).copied().unwrap_or(true);
       row_firsts.push(if opens { *first } else { row_firsts[group - 1] });
     }
+    // (each group's first name, and the collaborations of the groups' lines, each with the names before it in the
+    // block and its group, [`Collaborations`])
+    let group_firsts: Vec<usize> = spans.iter().map(|(first, ..)| *first).collect();
+    let mut collaboration_events: Vec<(usize, usize, Tokens)> = Vec::new();
     for (group, (first, last, affils)) in spans.into_iter().enumerate() {
       let kept_apart = apart.get(group).copied().unwrap_or(false);
       // (the names a line under a group kept apart from the names before it prints under: its whole row — an
@@ -1347,6 +1458,10 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
       for line in &affils {
         let this_line = line_at;
         line_at += 1;
+        if let Some((text, before)) = unwrapped_collaboration(line) {
+          collaboration_events.push((first + before.unwrap_or(last - first + 1), group, text));
+          continue;
+        }
         let (line, annotations) = if cautious {
           take_author_annotations(line)
         } else {
@@ -1508,7 +1623,27 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
         bodies[last].extend(annotations);
       }
     }
-    for (body, after) in bodies.into_iter().zip(after_bodies) {
+    let mut collaborations = Collaborations::default();
+    let made = bodies.len();
+    for (at, (body, after)) in bodies.into_iter().zip(after_bodies).enumerate() {
+      // (a collaboration after the last names of the group before; then the group's own over its names)
+      let (events, firsts) = (&collaboration_events, &group_firsts);
+      let read_at = |heading: bool| -> Vec<Tokens> {
+        events
+          .iter()
+          .filter(|(pos, group, _)| *pos == at && (firsts[*group] == at) == heading)
+          .map(|(.., text)| text.clone())
+          .collect()
+      };
+      for text in read_at(false) {
+        calls.extend(collaborations.read(text)?);
+      }
+      if group_firsts.contains(&at) {
+        collaborations.close_group();
+      }
+      for text in read_at(true) {
+        calls.extend(collaborations.read(text)?);
+      }
       calls.extend(
         Invocation!(T_CS!("\\lx@add@author"), vec![
           keyvals.clone(),
@@ -1516,8 +1651,13 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
         ])
         .unlist(),
       );
+      collaborations.author();
       calls.extend(after);
     }
+    for (_, _, text) in collaboration_events.iter().filter(|(pos, ..)| *pos >= made) {
+      calls.extend(collaborations.read(text.clone())?);
+    }
+    calls.extend(collaborations.finish()?);
     for link in block_links {
       let owner = if replace {
         LinkOwner::Block

@@ -358,7 +358,9 @@ fn parenthesized_superscript_marks_label_affiliations() {
 /// Rank 15 (rev77t finding 5): a line that reads as an affiliation by a role or contact word only — "research",
 /// "Collaboration", "Professor" —, or that names the corresponding author, is no unmarked institution line: not given
 /// to every author (review probes r4, r6, r8). It stays where the 77t base put it, welded into the last name (the
-/// Perl-identical continuation, KNOWN_PERL_ERRORS #446); each author's marked line is theirs.
+/// Perl-identical continuation, KNOWN_PERL_ERRORS #446) — but a line naming a collaboration, `for the ATLAS
+/// Collaboration`, which is the names' collaboration since batch 97d (OXIDIZED_DESIGN_DIVERGENCES #946); each author's
+/// marked line is theirs.
 #[test]
 fn role_and_note_lines_are_no_unmarked_institution() {
   for line in [
@@ -369,18 +371,31 @@ fn role_and_note_lines_are_no_unmarked_institution() {
     let xml = article_author(&format!(
       r"Ann Able$^{{1}}$, Bob Baker$^{{2}}$\\ {line}\\ $^{{1}}$Univ A\\ $^{{2}}$Univ B"
     ));
-    assert_eq!(
-      creators(&xml),
+    let expected = if line.ends_with("Collaboration") {
+      let collaboration = format!(r#"<contact role="collaboration">{line}</contact> "#);
+      [
+        creator(
+          true,
+          "Ann Able",
+          &format!("{collaboration}{}", affiliation("Univ A")),
+        ),
+        creator(
+          false,
+          "Bob Baker",
+          &format!("{collaboration}{}", affiliation("Univ B")),
+        ),
+      ]
+    } else {
       [
         creator(true, "Ann Able", &affiliation("Univ A")),
         creator(
           false,
           &format!("Bob Baker<break/>{line}"),
-          &affiliation("Univ B")
+          &affiliation("Univ B"),
         ),
-      ],
-      "{line}"
-    );
+      ]
+    };
+    assert_eq!(creators(&xml), expected, "{line}");
   }
 }
 

@@ -7,8 +7,9 @@
 % engines: rust 93a: the name "Ann Ablefor the Example collaboration"; rust 94a: Ann Able, affiliations "for the
 %   Example collaboration" and Univ X; perl: "Ann Ablefor the Example collaboration", "[1ex] Univ X", "Sometown",
 %   "Country" creators
-% expect:  0 errors, 0 warnings; Ann Able for the Example collaboration (one personname, its fonts), Univ X
-% status:  GREEN (94a r2)
+% expect:  0 errors, 0 warnings; Ann Able, Univ X, `<contact role="collaboration">for the Example collaboration</contact>`
+%   (FIDELITY_CHARTER §4, user ruling 2026-11-01; OXIDIZED_DESIGN_DIVERGENCES #946); the reading still one personname (resolver/blocks.rs), the writer declined
+% status:  GREEN (94a r2; 97d the line the name's collaboration)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

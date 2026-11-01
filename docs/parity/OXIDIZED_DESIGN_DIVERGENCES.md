@@ -28948,6 +28948,87 @@ sectioning-frontmatter/`block_entry_of_several_words_is_cut_whole`, `llncs_insti
 `llncs_institute_hand_numbered_lines_shared`, `svproc_copy/svproc_institute_per_author`,
 `block_mark_after_a_break_opens_an_entry` (RED → GREEN).
 
+### 946. A collaboration or team named in the author line is a `contact role="collaboration"` on the names it covers, no creator and no part of a name (Perl: a piece of the names, welded into the last name, or a creator; aastex's `\collaboration` alone a contact)
+
+**What** (brief 97d; FIDELITY_CHARTER §4, user ruling 2026-11-01). An author call's collaboration is read out of its
+names and becomes the contact Perl's aastex binding makes of `\collaboration{n}{name}`
+(aas_support.sty.ltxml:126, `\lx@add@contact[role=collaboration,annotate=new]`), on the names it covers
+(author_block/collaborations.rs, wired into `add_authors_calls_sectioned`, dispatch.rs).
+
+- **Recognition** (`reads_as_collaboration`, from the piece's words, by the existing `NON_NAME_WORDS` machinery): its
+  name ends with a collaboration word (`COLLABORATION_WORDS`: collaboration(s), consortium/consortia) or with a team word
+  (`TEAM_WORDS`: team(s), group(s), experiment(s)) the line frames — "the", "for", "on behalf of", brackets, dashes — or
+  a names line lists with "and" (`… and LHD experimental group$^{2}$`, 1711.07097); no word before it names an
+  institution (`The ATLAS Collaboration Office, CERN`, `Theory Group, Department of …` stay affiliations; an unframed
+  `Machine Learning Group` line too, 2205.00756); a lowercase word only right before the collaboration word (no sentence,
+  and no name the text runs into: 0907.0548's `Monica Brigida\\on behalf of the \emph{Fermi}-LAT Collaboration`).
+  Brackets holding a name opening with "The" and no institution word are one too (`(The Nearby Supernova Factory)`,
+  1511.01102). A name the collaboration follows is a name and its remark (`name_and_remark`: `J.~Zapatero$^{5}$ (The
+  MAGIC Collaboration)`, 0910.4381; `Bob Baker for the ATLAS Collaboration`); a heading before a colon is one too
+  (`heading_and_name`: `Euclid Collaboration: Y.~Fu…`). The pieces the names split parted are put together first
+  (`names_and_collaborations`: `for the XYZ` + `ABC Collaborations`; `ATLAS`, `CDF`, `CMS` and `D0 Collaborations`,
+  1311.7305). A piece the commas alone part from the names is none (`reads_as_listed_collaboration`: framed or listed
+  with "and"; revtex's `\collaboration{Fermilab Lattice, HPQCD, and MILC Collaborations}`, 2412.18491, stays one
+  creator, as Perl's `\author{#1}` makes it; nor is an unframed collaboration listed with "and" after unmarked names,
+  which may be the whole line's one name: `\collaboration{Fermilab Lattice and MILC Collaborations}`, 1211.0751,
+  1411.1651), and beside a collaboration piece every other piece must read as one name (`Content \& Services Team`,
+  2109.03031). The plural and `experiment` forms are added to `NON_NAME_WORDS`.
+- **Where.** A piece of a names line (`collaboration_split`, before the cautious and the kernel split; the piece carried
+  as `\lx@author@collaboration{…}`, defined as its text for a reader that does not know it); a line of the block under
+  the names (`collaboration_line`, at the weld site of the marked block — Base_Utility.pool.ltxml:700-701 welded it into
+  the last name — and among an unmarked block's lines); an unmarked line of the marked block where an author stands, or
+  an `\and` group that is only a collaboration, before names of the call (a heading). A per-author class's line is read
+  so only when every other piece reads as one name, by its shape or its mark (97a's list by its marks); a call naming
+  only a collaboration keeps it the author it is (`\author{The ATLAS Collaboration}`).
+- **Coverage** (`Collaborations`; `annotate=N`, the names counted where it is read): one after names covers the names of
+  its `\and` group made since the group's last collaboration (the names before a bracketed remark, not those after it:
+  0910.4381's 144 MAGIC names, not the six of other teams — Perl's `annotate=new`, the authors before it that carry
+  none, kept to the call); a heading every name after it in the call, once when the same collaboration closes them
+  (2212.06489's `\center BESIII Collaboration\\~\\ … J.~Zu$^{68,55}$ (BESIII Collaboration)`), as does one ending in a
+  colon (`Tam\'as Cs\"org\H{o}$^{4}$, for the TOTEM Collaboration:\\ G.~Antchev …`, 1204.5689); one right after
+  another, no name between, covers the same names (`… I.C. Luhmann$^7$, the ASDEX Upgrade Team and the EUROfusion MST1
+  Team$^*$`, 1603.09150). The contact's text is
+  the piece as written, without the layout around it and the affiliation marks on it (a footnote symbol it shows
+  stays).
+- **The observer's reading agrees** (resolver/lines.rs `names_line_events`, resolver/mod.rs `attach`), so the writer
+  compares like with like: a names-line piece or a name's remark reading as a collaboration is a `collaboration` contact
+  on the line's names since its last one, its mark no name's; an unlabelled line of the block reading as one is the
+  owners' collaboration — not a class's affiliation command holding one (revtex's `\affiliation{(WA98 Collaboration)}`,
+  0708.2630, an affiliation of today's and the reading's alike). Probes 97b → 97d writer outcomes: the team piece, the bracketed remark, the speaks-for tail, the
+  line under marked names `same`; the heading shapes, `for the XYZ` + `ABC Collaborations` and a remark line under one
+  name (resolver/blocks.rs, batch 97c's) and a colon heading `declined: the creators' names`, today's XML kept — the
+  reading does not split `JLQCD Collaboration: S.~Aoki$^1$` (hep-lat0212039: today's names keep revtex's visible marks
+  where the writer had re-parted them), as it cannot tell it from one inside a box today's keeps whole
+  (`\parbox{\textwidth}{\Large{ MAGIC Collaboration: K.~Abe$^{1}$, …}}`, 2601.03873, which the writer re-parts). The
+  reader's colon is the line's own, outside every group (`MeerKLASS Collaboration\thanks{Corresponding authors:}:
+  Matilde …`, 2407.21626: cut inside the note, the pieces' braces did not close — a Fatal the A/B found).
+
+**Why.** Perl keeps the piece in the names: one creator for 1708.04166's 15 names `… and the GAPS Team`, the line
+welded into the last name for 2410.11607's `\\ (BESIII Collaboration)\\`, `Bob Baker for the XYZABC Collaborations` for
+`Bob Baker$^{2}$ for the XYZ and ABC Collaborations`; 97a's list by its marks read the piece as an affiliation and kept
+the whole line one creator with `Error:frontmatter:merged_creators` (2212.06489, 582 names). Dev witnesses 97b → 97d:
+2212.06489 3 creators + 1 Error → 582 named (+ the 97a nameless one), each with the BESIII contact, 0 Errors;
+1708.04166 2 → 16; 1711.07097 1 (+1 Error) → 11; 1311.7305 1 → 2; 1905.11825 and hep-ph0502212 the line out of the
+last name; 0910.4381 1 (149 names) → 150, its six unseparated non-MAGIC names one reported merge; 1511.01102 the line
+every name's affiliation → their collaboration.
+
+**Left.** aa's own `\and` split (`\lx@splitting`, aa_cls.rs) and the IEEE block reader read no collaboration (`\small
+H.E.S.S. Collaboration \and …`, 1912.05868; `\IEEEauthorblockN{J.K. de Jong\IEEEauthorrefmark{2}for the MINOS
+collaboration.}`, 1111.2718); a lone `\author{The ATLAS and CMS Collaborations}` under svjour3 stays two creators (RED
+`author_collaboration_name_with_and_stays_one`); the reading's heading over later lines and its line under one name
+(resolver/blocks.rs). Guards `perfect_kernel_batch97d` (nine); changed, to the contact: `perfect_kernel_batch94a` (five:
+`what_a_name_held_is_written_where_the_reading_puts_it`, `a_bracket_holds_its_and`, `a_bracket_after_a_mark_is_the_names`,
+`a_name_speaking_for_a_collaboration_is_a_name`, `an_institution_stops_at_a_person`), `perfect_kernel_batch97a` (three;
+`marked_names_beside_an_affiliation_are_a_reported_merge` now `marked_names_beside_a_team_are_a_list_and_its_collaboration`,
+no Error), `perfect_kernel_batchfms2a2` (two readings: `address_lists_in_author_order_and_collaborations`,
+`an_unmarked_line_under_a_run_of_names_rows_is_every_names`), `perfect_kernel_batch77t::
+role_and_note_lines_are_no_unmarked_institution` (its "for the ATLAS Collaboration" line). Repros
+sectioning-frontmatter/`author_collaboration_line_welded_into_last_name` (RED → GREEN),
+`author_names_line_team_piece_is_a_collaboration`, `author_collaboration_heading_and_closing_line_once`,
+`author_names_for_two_collaborations_is_one_contact`, `author_name_bracketed_collaboration_covers_names_before`,
+`aastex_collaboration_line_under_names_is_a_contact`, `author_collaboration_heading_group_covers_names_after`,
+`author_team_and_group_lines_stay_affiliations`, `author_collaboration_heading_colon_outside_groups`.
+
 ### 948. Every remaining observer-writer family is written in one batch (ijcai, inst_support, iopart, jheppub, jinstpub, jcappub, jpconf, sv_support and every binding owning `\author` with no declaration); a block line's letters are read as printed, a re-parted entry keeps today's role, a letter-spaced name's word space is no gap, an e-mail's corresponding owner is one of the authors it is printed for, a name read as an entry is never written onto an author (Perl: the old reader's output, no observer)
 
 Beyond Perl (FM S2b, OD #837; user decision 2026-11-01: every remaining family through its gate in one batch). The

@@ -14,9 +14,9 @@
 %          line whose every piece carries its own mark after the name and none reads as an affiliation is a list
 %          (`marked_names`). Rust 97a: the three creators below, 0 errors / 0 warnings, eager and `--streaming`.
 % expect:  0 errors, 0 warnings; three creators in order — A. Able (Institute of One), B. in der Baker (University of
-%          Two), C. Cole (Institute of One). The collaboration line stays welded into the last name as today's weld puts it
-%          (`C. Cole<break/>(XYZ Collaboration)`, pinned, not a target: author_collaboration_line_welded_into_last_name.tex,
-%          OPEN_ROWS.md:810). Guard `perfect_kernel_batch97a::marked_list_with_an_unknown_name_shape_is_a_list`.
+%          Two), C. Cole (Institute of One), each with `<contact role="collaboration">(XYZ Collaboration)</contact>` since
+%          97d (the line had been welded into the last name; author_collaboration_line_welded_into_last_name.tex,
+%          OXIDIZED_DESIGN_DIVERGENCES #946). Guard `perfect_kernel_batch97a::marked_list_with_an_unknown_name_shape_is_a_list`.
 \documentclass[aps,prd,twocolumn]{revtex4-1}
 \begin{document}
 \title{A Title}

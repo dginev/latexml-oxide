@@ -529,7 +529,9 @@ pub(super) fn name_continues_at_gap(name: &str) -> bool {
 }
 
 /// Whether a names line's piece is a collaboration listed among the authors (`and the MAST Team`, 1609.09534; `and the
-/// VVDS team`, astro-ph0509500): "the" before a team, collaboration, consortium or group's name — an author, as today's.
+/// VVDS team`, astro-ph0509500): "the" before a team, collaboration, consortium or group's name — no institution of the
+/// name before it; the names line reads it as their collaboration (`reads_as_collaboration`, OXIDIZED_DESIGN_DIVERGENCES
+/// #946; an author before batch 97d).
 pub(super) fn is_collaboration(text: &str) -> bool {
   let t = text.trim().to_lowercase();
   let t = t.strip_prefix("and ").unwrap_or(&t).trim();
@@ -757,6 +759,17 @@ impl Resolver {
     // the institution a names line read as the affiliation of the name before (`classify:institution`): its creator and
     // place, which the pieces after it continue
     let mut institution: Option<(usize, usize)> = None;
+    // (the names a collaboration of the line covers start here in `made`, and whether the piece just read was one, whose
+    // mark is no name's: OXIDIZED_DESIGN_DIVERGENCES #946)
+    let mut uncovered = 0usize;
+    let mut after_collaboration = false;
+    // (the names the last collaboration covered, which one right after it covers too; a heading waiting for the names
+    // after it, with where they start)
+    let mut last_covered: Vec<usize> = Vec::new();
+    let mut heading: Option<(String, usize)> = None;
+    let listed = |sep: Option<&Event>| {
+      sep.is_some_and(|s| matches!(&s.kind, EventKind::Sep(SepKind::Word(word)) if word.eq_ignore_ascii_case("and") || word == "&"))
+    };
     let split_rule = |sep: Option<&Event>| match sep.map(|e| &e.kind) {
       Some(EventKind::Sep(SepKind::Comma)) => "line:names sep:comma",
       Some(EventKind::Sep(SepKind::Word(_))) => "line:names sep:word",
@@ -872,6 +885,34 @@ impl Resolver {
           }
           last_sep = None;
         },
+        // (a collaboration among the names, or a remark on a name naming one, is a contact on the names of the line
+        // since its last collaboration, no name and no part of one — `… and the GAPS Team`, `J.~Zapatero$^{5}$ (The
+        // MAGIC Collaboration)`, as today's reader reads it: `collaboration_split`, OXIDIZED_DESIGN_DIVERGENCES #946)
+        EventKind::Name
+          if !made.is_empty() && reads_as_listed_collaboration(&event.text, listed(last_sep)) =>
+        {
+          let text = event
+            .text
+            .trim()
+            .trim_end_matches(':')
+            .trim_end()
+            .to_string();
+          if collaboration_heads(&event.text) {
+            heading = Some((text, made.len()));
+          } else {
+            let covered = made[uncovered.min(made.len())..].to_vec();
+            let covered = if covered.is_empty() {
+              last_covered.clone()
+            } else {
+              covered
+            };
+            self.collaboration(index, event, &covered, &text);
+            last_covered = covered;
+          }
+          uncovered = made.len();
+          after_collaboration = true;
+          last_sep = None;
+        },
         // (a qualifier after a comma is the name's: `Robert W. Heath, Jr.`, `Matthew Nokleby, Student Member, IEEE`,
         // printed after the name, comma-separated — name_text.rs `is_name_qualifier`; 1106.5253, 1203.0695)
         // (and so is a remark on the name after it, a bracket or a collaboration it speaks for: `Ann Able$^1$ (on
@@ -954,15 +995,27 @@ impl Resolver {
         },
         EventKind::Name => {
           institution = None;
+          after_collaboration = false;
           let requests = [std::mem::take(&mut waiting), block_requests.to_vec()].concat();
-          let c = self.new_creator(
-            event.text.clone(),
-            split_rule(last_sep),
-            index,
-            requests,
-            group,
-          );
+          // (a name and the collaboration it speaks for: `Bob Baker for the ATLAS Collaboration`, the name's alone — not a
+          // heading before a colon, `JLQCD Collaboration: S.~Aoki$^1$` (hep-lat0212039), which the reading cannot tell
+          // from one inside a box today's keeps whole, `\parbox{\textwidth}{\Large{ MAGIC Collaboration: K.~Abe$^{1}$, …}}`
+          // (2601.03873), its names the writer's to re-part)
+          let remark = name_before_remark(&event.text).and_then(|name| {
+            let rest = event.text.trim()[name.len()..].trim();
+            reads_as_collaboration(rest, false).then(|| (name.to_string(), rest.to_string()))
+          });
+          let name = remark
+            .as_ref()
+            .map_or_else(|| event.text.clone(), |(name, _)| name.clone());
+          let c = self.new_creator(name, split_rule(last_sep), index, requests, group);
           made.push(c);
+          if let Some((_, rest)) = &remark {
+            let covered = made[uncovered.min(made.len())..].to_vec();
+            self.collaboration(index, event, &covered, rest);
+            last_covered = covered;
+            uncovered = made.len();
+          }
           self
             .fn_requests
             .extend(std::mem::take(&mut waiting_fn).into_iter().map(|l| (c, l)));
@@ -1057,6 +1110,10 @@ impl Resolver {
             }
           }
           let class = is_class_request(event);
+          // (a mark on a collaboration is no name's: `… and LHD experimental group$^{2}$`, 1711.07097)
+          if after_collaboration && !to_next {
+            continue;
+          }
           if to_next {
             if footnote {
               waiting_fn.extend(labels.iter().cloned());
@@ -1131,6 +1188,13 @@ impl Resolver {
     for note in waiting_notes {
       self.note(index, note, made.last().copied(), "note:adjacent");
     }
+    // (a heading over the names after it: those of the line)
+    if let Some((text, from)) = heading
+      && let Some(first) = events.first()
+    {
+      let covered = made[from.min(made.len())..].to_vec();
+      self.collaboration(index, first, &covered, &text);
+    }
     if !waiting.is_empty()
       && let Some(&c) = made.last()
     {
@@ -1146,5 +1210,24 @@ impl Resolver {
         .extend(waiting_parted.into_iter().map(|l| (c, l)));
     }
     NamesLine { creators: made }
+  }
+
+  /// A collaboration a names line reads (`reads_as_collaboration`): a `collaboration` contact on each creator it
+  /// covers, as today's reader gives it (`Collaborations`, OXIDIZED_DESIGN_DIVERGENCES #946).
+  fn collaboration(&mut self, index: usize, event: &Event, covered: &[usize], text: &str) {
+    for &c in covered {
+      self.attach(
+        Some(c),
+        Assoc {
+          role:   "collaboration".into(),
+          text:   text.to_string(),
+          label:  None,
+          rule:   "line:names collaboration".into(),
+          source: Some((index, event.span)),
+          target: None,
+        },
+        false,
+      );
+    }
   }
 }

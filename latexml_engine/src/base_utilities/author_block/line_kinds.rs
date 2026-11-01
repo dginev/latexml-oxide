@@ -13,6 +13,9 @@ pub(in crate::base_utilities) enum AuthorLineKind {
   /// A line that is only a link ([`is_link_line`]): a URL contact, or an affiliation when the link prints an institution
   /// ([`is_url_line`], [`url_contact_call`]).
   Link,
+  /// A collaboration the block names ([`collaboration_split`], [`collaboration_line`]): a contact on the names it
+  /// covers ([`Collaborations`]).
+  Collaboration,
 }
 
 /// The creator a link line of an author block goes to ([`url_contact_call`]).

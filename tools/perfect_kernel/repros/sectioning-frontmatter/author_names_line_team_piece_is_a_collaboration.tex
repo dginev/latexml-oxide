@@ -1,0 +1,25 @@
+% mechanism: a collaboration or team listed in a per-author class's names line is a `contact role="collaboration"` on
+%   the names it covers (FIDELITY_CHARTER §4, user ruling 2026-11-01; `collaboration_split`, author_block/
+%   collaborations.rs; OXIDIZED_DESIGN_DIVERGENCES #946), as aastex's `\collaboration` makes one (Perl
+%   aas_support.sty.ltxml:126). A team word (team, group, experiment) names one where the line frames it ("the",
+%   "for", "on behalf of", brackets) or lists it with "and"; the names beside it then split as the marks say (97a).
+%   Sibling on the same path (the guard's): `Ann Able$^{1}$, Bob Baker$^{2}$ and LHD experimental group$^{1}$`
+%   (1711.07097, a marked piece listed with "and": its mark dropped from the contact).
+% witness: 1708.04166 (PoS, `… R. Smareglia$^9$ and the GAPS Team`, 15 names one creator, silent); 1711.07097
+%   (revtex4-1, `… L.N. Vyacheslavov$^{6}$ and LHD experimental group$^{2}$`, 11 names one creator + the merge Error);
+%   dev census M4 (job tmp devnames/rep/c4.tex)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 , Bob Baker2 and the GAPS Team" over "1 Univ A / 2 Univ B"
+% engines: rust 97b: three creators, "the GAPS Team" one (the writer's re-part; the LHD sibling: one creator holding
+%   all, `Error:frontmatter:merged_creators`, "LHD experimental group" an affiliation's owner); perl: one creator
+% expect:  0 errors, 0 warnings; two creators, Ann Able (Univ A) and Bob Baker (Univ B), each with
+%   `<contact role="collaboration">the GAPS Team</contact>`
+% status:  RED (97b) -> GREEN (97d)
+% preload: ar5iv.sty
+\documentclass[aps,prd]{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$ and the GAPS Team}
+\affiliation{$^1$Univ A\\ $^2$Univ B}
+\maketitle
+Body.
+\end{document}

@@ -7,8 +7,9 @@
 % engines: rust 93a: Ann Able (on behalf of the A and B teams) Univ X; rust 94b: Ann Able Univ X and authors "(on
 %   behalf of the A", "B teams)"; perl (review syn s7_marked_paren): one creator "Ann Able (on behalf of the AB teams)"
 %   Univ X
-% expect:  0 errors, 0 warnings; Ann Able (on behalf of the A and B teams), affiliation Univ X
-% status:  RED (94a) -> GREEN (94a r2)
+% expect:  0 errors, 0 warnings; Ann Able, affiliation Univ X, `<contact role="collaboration">(on behalf of the A and B
+%   teams)</contact>` (FIDELITY_CHARTER §4, user ruling 2026-11-01; OXIDIZED_DESIGN_DIVERGENCES #946)
+% status:  RED (94a) -> GREEN (94a r2; 97d the remark her collaboration)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}
