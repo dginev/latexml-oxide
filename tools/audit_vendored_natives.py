@@ -220,7 +220,7 @@ AUDITED = {
         "-- e.g. MiKTeX -- not a build-time one, so it does not avoid the static "
         "link.) Attributed in THIRD-PARTY-NOTICES 3.2; static LGPL -> relink 3.5."
     ),
-    "libxml": (("0.3.21", "0.3.22"),
+    "libxml": (("0.3.21", "0.3.22", "0.3.23"),
         "Binds libxml2 -- (c) Daniel Veillard, MIT -- whom the crate's own 'MIT' "
         "field does not name as holder. Linked via pkg-config + rustc-link-lib "
         "rather than compiled here, and STATIC on every release leg "
@@ -232,7 +232,10 @@ AUDITED = {
         "unchanged. 0.3.21 -> 0.3.22 diffed 2026-10-13 (registry sources): build.rs "
         "and src/wrapper.h (the bindgen header) byte-identical, Rust-only changes "
         "(the HTML well-formedness error handler removed from c_helpers.rs), license "
-        "field 'MIT' unchanged."
+        "field 'MIT' unchanged. 0.3.22 -> 0.3.23 diffed 2026-10-31 (git tags v0.3.22..v0.3.23 "
+        "of KWARC/rust-libxml, our release): build.rs and src/wrapper.h byte-identical, no C "
+        "source, Rust-only changes (xpath::Expression, Node::with_property, the wrapper's "
+        "stack name copies and in-place value reads), license field 'MIT' unchanged."
     ),
     "libxslt": ("0.1.5",
         "Binds libxslt/libexslt -- (c) Daniel Veillard, MIT -- same shape as libxml "
