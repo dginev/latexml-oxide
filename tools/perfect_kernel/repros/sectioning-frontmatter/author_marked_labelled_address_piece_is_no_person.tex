@@ -1,0 +1,20 @@
+% The sibling of rev97a S1 that 97b's "an address and no name" test leaves (review rev97b S2): a marked address piece
+% led by its label word, `E-mail: b.baker@two.edu$^{*}$` (1504.06050's `Email:` line, appolb), still reads as a marked
+% name, since "E-mail:" has letters (names_split.rs:173-179 `only_addresses`); a marked URL piece
+% `www.two.edu/~baker$^{*}$` the same, holding no `@`.
+% witness: synthetic (rev97b S2; the line shape of 1504.06050)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): 0 `!`; prints "A. Able1 , B. in der Baker2 , E-mail: b.baker@two.edu∗"
+% engines: rust int125b, 97b = THREE creators, the third `<personname>E-mail: b.baker@two.edu<sup>*</sup></personname>`
+% expect:  the labelled address piece is no marked name: one creator as for a bare address
+%          (author_marked_email_piece_is_no_person), its two marked names a reported merge
+%          (`Error:frontmatter:merged_creators`); fix: a leading label word ending in `:` is skipped, and a URL-shaped
+%          word counts as an address
+% status:  RED (97b)
+\documentclass{revtex4-2}
+\begin{document}
+\title{A Title}
+\author{A.~Able$^{1}$, B.~in der Baker$^{2}$, E-mail: b.baker@two.edu$^{*}$}
+\affiliation{$^{1}$Institute of One}
+\maketitle
+Body text.
+\end{document}

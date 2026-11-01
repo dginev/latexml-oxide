@@ -9,8 +9,10 @@
 %          skdoc.cls).
 % oracle:  pdflatex 1 error (the deliberate `\undefinedthing`): "B:see 1", "G:me@x.org"; no "sec:intro", no "mailto:".
 % engines: rust 77i r3: `<pubnote>sec:intro</pubnote>`, `<pubnote name="mailto:">me@x.org</pubnote>`.
-% expect:  0 errors, 0 warnings; `<pubnote>me@x.org</pubnote>` the only pubnote; no "sec:intro" note, no "mailto:".
-% status:  RED (77i r3) -> GREEN (77i r4)
+% expect:  0 errors, 0 warnings; `<pubnote name="G:">me@x.org</pubnote>` the only pubnote (97b: the label printed
+%          right before the store's printed occurrence, the link's text, is its name); no "sec:intro" note, no
+%          "mailto:".
+% status:  RED (77i r3) -> GREEN (77i r4; expectation 97b)
 \begin{filecontents*}[overwrite]{rclabkey.cls}
 \ProvidesClass{rclabkey}
 \LoadClass{article}

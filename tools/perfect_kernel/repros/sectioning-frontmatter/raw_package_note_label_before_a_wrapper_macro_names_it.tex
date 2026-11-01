@@ -1,0 +1,33 @@
+% A raw package's store printed through a macro the document's own package defines: `Correspondence:
+% \mymailto{\@corremail}` with `\newcommand{\mymailto}[1]{\href{mailto:#1}{#1}}`. 97b reads a store's label before its
+% printed occurrence, but knows which arguments print only for the commands its table names (frontmatter_stores.rs
+% `argument_of`, `PRINTED_ARGUMENTS`), so it never reaches the label through the wrapper and "Correspondence:" is
+% printed nowhere. The same for `\hyperlink{corr}{\@corremail}` and `{\color{black}\@corremail}` (review rev97b S1,
+% probes q2, q8). Parameter types cannot decide it (`\url` and `\href`'s target are both Semiverbatim, one prints).
+% witness: synthetic (rev97b S1); the shape of 2506.10896 (acl2023.sty) through a wrapper
+% oracle:  pdflatex 0 errors: "T", "Ann Able", "Correspondence: ann@x.org", "Text."
+% engines: rust int125b, 97b = <note role="email">ann@x.org</note>, "Correspondence" nowhere
+% expect:  0 errors, 0 warnings; <note role="email">Correspondence: ann@x.org</note>, as with a bare `\href`
+%          (raw_package_note_label_before_a_link_names_it); fix: a raw-file macro with parameters is read through its
+%          body (its `#n` printed where its body prints it), `\hyperlink`'s 2nd and `\hyperref[…]`'s argument print,
+%          a `\color` inside the store's group is layout
+% status:  RED (97b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{corrmailw.sty}
+\newcommand{\corremail}[1]{\gdef\@corremail{#1}}
+\gdef\@corremail{}
+\newcommand{\mymailto}[1]{\href{mailto:#1}{#1}}
+\def\@maketitle{{\Large\bfseries \@title\par}\vskip 1em {\large\@author\par}
+  \ifx\@corremail\empty\else
+    \vskip 1em \parbox{\textwidth}{\centering \itshape Correspondence: \mymailto{\@corremail}}
+  \fi\vskip 1em}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{corrmailw}
+\title{T}\author{Ann Able}\corremail{ann@x.org}
+\begin{document}
+\maketitle
+Text.
+\end{document}

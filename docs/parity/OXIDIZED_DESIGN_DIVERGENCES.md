@@ -28840,7 +28840,7 @@ item's label, or left in place.
   `email: x` beside `\mail{x}`) — the entry is given back whole (writer/mod.rs `give_back_entries`), as int123a held it.
 - **A K11 store's label** (frontmatter_stores.rs). The label reader (`ClassReaders::label_in`, `line_label_before`)
   skips an occurrence of the store inside an argument TeX does not typeset (`in_unprinted_argument`, `argument_of`, by
-  the `PRINTED_ARGUMENTS` / `UNPRINTED_ARGUMENTS` tables: `\href`'s target, a `\write`'s text) and walks back through
+  the `PRINTED_ARGUMENTS` / `UNPRINTED_ARGUMENTS` tables: `\href`'s target) and walks back through
   the commands that print the store alone (`\href`'s text, `\textcolor`'s, now in `PRINTED_ARGUMENTS`), so
   acl2023.sty:186's `Correspondence: \href{mailto:\@corremail}{\textcolor{black}{\@corremail}}` reads "Correspondence:"
   (2506.10896). The same walk passes a `\parbox`'s printed argument (its width, a `[t]` before it, unprinted), so
