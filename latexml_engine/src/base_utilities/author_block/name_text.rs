@@ -34,6 +34,16 @@ pub(in crate::base_utilities) fn visible_name_text(tokens: &[Token]) -> String {
         // the name's last word, "WestXYZ", and the address spelling A~D~West went to no one, 1612.09318)
         let annotation = is_name_annotation(&t) || t == T_CS!("\\lx@add@contact");
         i += 1;
+        // an environment's `\begin{…}`/`\end{…}` prints no word, its name no more than an item's label does
+        // (`\begin{itemize}\item[\Letter] Bob Baker`, svjour3's `\institute` before `\at`, 2305.05902: "itemize" read
+        // as a word of the line, the rev98b review's pe1)
+        if t == T_CS!("\\begin") || t == T_CS!("\\end") {
+          while tokens.get(i) == Some(&T_SPACE!()) {
+            i += 1;
+          }
+          i = skip_group(tokens, i);
+          continue;
+        }
         // an accent's spaces before its letter are not text (`Plech\' a\v{c}`, cond-mat9705101; tex.web §1123
         // `\accent` skips them)
         if t.with_str(|s| ACCENT_COMMANDS.contains(&s)) {

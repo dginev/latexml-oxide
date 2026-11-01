@@ -426,27 +426,11 @@ pub(in crate::base_utilities) fn queued_name(entry: &Tokens) -> Tokens {
 /// more (`\textit{Contact author:} Erwan {Le Merrer}`, 1711.01894; `Xin-long Luo, Corresponding author`, 2107.13864;
 /// the whole name `Leonardo Anjoletto Ferreira` of `Leonardo A. Ferreira`, 1705.01399) prints words no name does.
 pub fn queued_author_name_prints(text: &Tokens) -> bool {
-  let words = |tokens: &Tokens| -> Vec<String> {
-    resolver::base_letters(&visible_name_text(tokens.unlist_ref()))
-      .split(|c: char| !c.is_alphanumeric())
-      .filter(|w| !w.is_empty())
-      .map(str::to_lowercase)
-      .collect()
-  };
-  let written = words(text);
+  let written = printed_words(text);
   if written.is_empty() {
     return true;
   }
-  let names: Vec<String> = with_value("frontmatter_raw", |v| match v {
-    Some(Stored::FrontmatterRaw(queue)) => queue
-      .iter()
-      .filter(|entry| {
-        entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
-      })
-      .flat_map(|entry| words(&queued_name(&entry.2)))
-      .collect(),
-    _ => Vec::new(),
-  });
+  let names: Vec<String> = queued_author_name_words().into_iter().flatten().collect();
   !names.is_empty()
     && written.iter().all(|w| {
       w == "and"
@@ -454,6 +438,46 @@ pub fn queued_author_name_prints(text: &Tokens) -> bool {
           .iter()
           .any(|o| o == w || (w.chars().count() == 1 && o.starts_with(w.as_str())))
     })
+}
+
+/// How many queued authors' names (`queued_name`) `text` spells whole: each author whose name's words (as
+/// [`queued_author_name_prints`] reads them) stand together, in order, among the words `text` prints. svjour3's
+/// `\institute{\begin{itemize}\item[\Letter] Ann Able \\ \email{…} \item[] Bob Baker \\ \email{…} \at \item[1]
+/// Univ X …}` names its list's authors before the one `\at` (2312.14898): two or more names it no one by.
+pub fn queued_author_names_spelled(text: &Tokens) -> usize {
+  let written = printed_words(text);
+  queued_author_name_words()
+    .into_iter()
+    .filter(|name| {
+      !name.is_empty()
+        && written
+          .windows(name.len())
+          .any(|run| run == name.as_slice())
+    })
+    .count()
+}
+
+/// The words `tokens` print as a name-shape test reads them ([`visible_name_text`]), accents aside, lowercased.
+fn printed_words(tokens: &Tokens) -> Vec<String> {
+  resolver::base_letters(&visible_name_text(tokens.unlist_ref()))
+    .split(|c: char| !c.is_alphanumeric())
+    .filter(|w| !w.is_empty())
+    .map(str::to_lowercase)
+    .collect()
+}
+
+/// Each queued author's name ([`queued_name`]) as its [`printed_words`], in queue order.
+fn queued_author_name_words() -> Vec<Vec<String>> {
+  with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => queue
+      .iter()
+      .filter(|entry| {
+        entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
+      })
+      .map(|entry| printed_words(&queued_name(&entry.2)))
+      .collect(),
+    _ => Vec::new(),
+  })
 }
 
 /// The keys ([`NameKeys`]) of each queued author's name ([`queued_name`]), in queue order (the n-th digests

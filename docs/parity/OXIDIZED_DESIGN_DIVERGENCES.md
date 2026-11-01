@@ -29410,18 +29410,25 @@ an_address_beside_an_institution_keeps_the_institution}` under `held`, `an_unmar
 
 ### 949. A line before an author block's first that prints nothing is no names line, and a nameless creator's lines are the block's when no named author is left to take them (Perl: the spacer line an empty name, every line under it an affiliation)
 
-**What** (brief 98b; dev lost-words census mechanism B). Two readings, one per stage.
+**What** (brief 98b; dev lost-words census mechanism B). Two readings, one per stage, and a later block's.
 
-- **The unmarked branch of the author-block reader** (author_block/dispatch.rs, `leading_spacer`): a `\\`-piece before
-  the block's first printing line that prints nothing — a tie, a control space, an empty group, a size or font switch
-  alone, its line-break option (`{}~\\[0mm]~\\ \large Ann Able\\ …`; `prints_nothing`), but no environment's
-  `\begin`/`\end` — is the block's spacing, not its names line. It had been read as a names line whose name printed
+- **The unmarked branch of the author-block reader** (author_block/dispatch.rs, `spacer_line`, the one predicate for
+  every line of the block, in any position, and for whether a line break opens it): a `\\`-piece that prints nothing —
+  empty, spacing alone, a tie, a control space, an empty group, a size or font switch alone, its line-break option
+  (`{}~\\[0mm]~\\ \large Ann Able\\ …`; `prints_nothing`), but no environment's `\begin`/`\end` — is the block's
+  spacing (a gap between lines), not a line; before the first printing line, not its names line. It had been read as a names line whose name printed
   nothing, every printing line under it that nameless creator's.
 - **`coalesce_empty_creators`** (frontmatter/insert.rs) moves a nameless creator's contacts and notes to the named
   author before it, else the first after it. When none is left (a block of affiliation lines alone; a name written
   inside `\IEEEmembership{…}`), the first nameless creator carrying any keeps them all — the block's own creator
   (#159), `<ltx:personname/>` over the lines, as Perl. It had removed it with them: no creator and no Warning. A
   removed creator's other printing child is reported (`Warning:unexpected:frontmatter`); none is known to occur.
+- **A later block a line break opens** — after an author separator, its first line printing nothing as above or empty
+  (`\author{Ann Able \and ~\\ University of X}`, `… \and \\ University of X`) — whose first line is an institution
+  (`reads_as_institution`) has no names: an empty names line over its lines, which `coalesce_empty_creators` keeps on
+  the names before it, as Perl and int126a read the tie (round 2: the leading-spacer reading made it a creator named
+  "University of X", the rev98b review's pb1; pb6's empty piece had been read so before). Round 2 also reads a
+  spacer line after the first printing line by `spacer_line` (it had been a line only when empty or spacing alone).
 
 **Why.** FIDELITY_CHARTER §4 "No printed frontmatter word is lost": the census's 8 papers whose whole author block was
 dropped. Perl 0.8.8 keeps the lines but names no one (`<personname/>` and every line an affiliation, "Ann Able"
@@ -29435,8 +29442,10 @@ among them); ours names the author.
 **Left:** an affiliation-only `\IEEEauthorblockA{Center X, University of X\\ …}` is kept but parted into contacts at the
 commas of its first line (the names-line split reads into the command's group); the words are all kept.
 
-**Guards** `perfect_kernel_batch98b::{leading_spacer_lines_are_no_names_line, nameless_block_keeps_its_lines}`; repros
+**Guards** `perfect_kernel_batch98b::{leading_spacer_lines_are_no_names_line, nameless_block_keeps_its_lines,
+institution_after_and_and_a_break_is_no_name}`; repros
 sectioning-frontmatter/`author_block_leading_spacer_lines_are_no_names_line` (RED → GREEN),
+`author_block_institution_after_and_spacer_line`, `author_block_institution_after_and_line_break` (RED → GREEN, round 2),
 `author_block_leading_spacer_line` (RED since 85a r3 → GREEN), class-bindings/
 `ieeetran_affiliation_block_without_names_is_the_blocks` (RED → GREEN).
 
@@ -29477,8 +29486,10 @@ peerreviewmaketitle_outside_peerreview_is_relax}`; repros class-bindings/`ieeetr
 
 **What** (brief 98b; census mechanism D). `\lx@request@frontmatter@annotation` (defs/frontmatter_api.rs), which
 llncs's, inst_support's (aa's) and sv_support's `\inst` are, parts its operand as a name's `$^{…}$` mark is parted
-(`split_mark_notes`, `\lx@sup@request@affiliation`): the labels are requested from the rest, `\fnmsep` read as the
-comma it prints (llncs.cls:896), and the notes — `\thanks{…}`, `\footnote{…}`, `\footnotemark[…]`, a macro making
+(`split_mark_notes`, `\lx@sup@request@affiliation`): the labels are requested from the rest, `\fnmsep` read as a
+comma — the one it prints there under aa (aa.cls:807-808, an `\hbox` in `\inst`'s math); under llncs it is a pdflatex
+error there (llncs.cls:894-896, its `$^,$` inside `\inst`'s `$^{…}$`; the rev98b review's pdx4), an invalid input
+read the same —, and the notes — `\thanks{…}`, `\footnote{…}`, `\footnotemark[…]`, a macro making
 one — run after the request, in the name, the note of the author it is printed on (aa.cls:759-760 and llncs.cls:894
 set the operand in a superscript, so its `\thanks` runs there).
 
@@ -29506,9 +29517,26 @@ authors' names adds nothing and stays as before, so the svjour3 writer's decline
 unchanged. Decided as `\institute` is read; with no author queued yet (`\institute` before `\author`) the text is
 kept. An environment written whole there is left out (`without_environments`: 2008.12867's `{acknowledgements}`, whose
 `<ltx:acknowledgements>` in a contact is malformed — its text stays lost, RED
-`svjour3_institute_environment_before_at_is_lost`, pathological authoring, deferred); one only opened there is kept
-(2305.05902, 2306.07927, 2312.14898, 2605.09054: `\institute{\begin{itemize}\item[✉] Name \at \item[1] … \end{itemize}}`,
-whose kept `\begin` balances the list — Errors 8 → 2, 4 → 1, 5 → 1, 14 → 1).
+`svjour3_institute_environment_before_at_is_lost`, pathological authoring, deferred).
+
+**A list opened there** (2305.05902, 2306.07927, 2312.14898, 2605.09054: `\institute{\begin{itemize}\item[✉] Name \\
+\email{…} \at \item[1] … \end{itemize}}`) is structure, no word of the line: an environment's `\begin{…}`/`\end{…}` prints
+no word in `visible_name_text` (author_block/name_text.rs), the text every name-shape test reads, as an item's
+`\item[…]` label already printed none ("itemize" had kept a line printing only a queued name); and the list's commands
+(`list_structure`, sv_support_sty.rs) are left out of the `fuzzy:` owner label (whose `\begin` opened the list in the label's digestion,
+an Error). The affiliation keeps the structure explicitly: the list's `\begin` when the address closes it, with the
+piece's last `\item[…]` when the address opens with no item of its own; none of its commands when the address does
+not close it; and an `\end` the piece did not open (`\begin{itemize}\item A \at X \and \item B \at Y \end{itemize}`) is
+dropped. A kept line's `\email` calls stay with the label, which files them (kept in the line too, they were filed
+twice). A list whose items spell two or more queued names whole before its one `\at` (`queued_author_names_spelled`,
+author_block/affiliations.rs; 2312.14898's seven names) is a list of its authors, no one's: its owner label names no
+one (`fuzzy:` empty), its `\email` calls are in the affiliation, each answered by the author it spells, and the list is
+placed as an orphan (#159: shared, below the authors); the surname reading had given it the last name's alone. Names a
+comma or "and" parts, outside a list, stay each their own owner (`Paulo Rezeck and Hector Azp\'urua \at …`,
+2202.12391; 1404.4148, 2108.10893, 2305.05654: the rule without the list condition moved their institute to the block).
+Errors int126a → 98b → 98b r2: 2305.05902 5 → 1 → 0, 2312.14898 4 → 1 → 0, 2306.07927 8 → 2 → 0, 2605.09054 14 → 1 →
+0; 2305.05902's and 2312.14898's lists the block's, 2306.07927's and 2605.09054's (the later names inside the address,
+after the first `\at`) the first author's, as int126a.
 
 **Why.** FIDELITY_CHARTER §4 (3 census papers); "Duplicates the author printed stay duplicated" (§2). Perl
 sv_support.sty.ltxml:45-47 keeps only the label.
@@ -29518,11 +29546,12 @@ affiliation and address now on Xin-long Luo; the address had been on a nameless 
 Anjoletto Ferreira", "Reinaldo Augusto da Costa Bianchi", "Paulo Eduardo Santos"); unchanged: 2609.05466, 1506.02396,
 1908.03628, 2007.09912 (declined), 0807.2295, 2405.17600, 1201.0008 (written).
 
-**Guards** `perfect_kernel_batch98b::svjour3_text_before_at_is_kept`; changed:
+**Guards** `perfect_kernel_batch98b::{svjour3_text_before_at_is_kept, svjour3_list_before_at_is_structure}`; changed:
 `perfect_kernel_batchfms2a2::fuzzy_labels_by_surname_and_with_their_macros` (the reading's entry "Corresponding author:
 B. M. Baker Univ B"), `perfect_kernel_batch66h::svjour3_institute_with_document_at_macro` (no author: "A.
-Bensoussan" the line before "Center for Risk"); repro class-bindings/`svjour3_institute_text_before_at_is_kept` (RED →
-GREEN).
+Bensoussan" the line before "Center for Risk"); repros class-bindings/`svjour3_institute_text_before_at_is_kept` (RED →
+GREEN), `svjour3_institute_list_before_at_names_its_author`, `svjour3_institute_list_before_at_names_several_authors`
+(RED on int126a and 98b → GREEN, round 2).
 
 **Batch 98b's A/B** (#949-#952; `pop98b.tsv`, 843 papers: the census witnesses, every popint125a_s10k paper of
 IEEEtran/IEEEtaes/IEEEoj with authblk or calling `\IEEEpeerreviewmaketitle` (496), aa/llncs with a `\thanks` inside
@@ -29533,4 +29562,9 @@ E 1,836 → 1,810 (4 better, none worse), F 7 → 7; 2302.07562's word loss is i
 both binaries 132 s, the same IfLimit Fatal and 16,313 words). The dev census's 171 papers rescored: lost-words papers
 125 → 101, 22 of its REAL ones and 2210.13927 (a grade past a break) fixed, none newly flagged; 0901.1754's last lost
 word ("ℬ-module" in its abstract) is the scorer's. The 3,000 sample: D3 98.49 % per creator and 98.10 % per paper,
-readability 22 papers, as int126a (one XML change, a math parse deep in 2311.18400's appendix).
+readability 22 papers, as int126a (one XML change, a math parse deep in 2311.18400's appendix). Round 2 against 98b
+(`pop98b2.tsv`, the same 843): 4 changed, all frontmatter, the four itemize papers above; E 1,810 → 1,805, F 7 → 7,
+none worse; `fm_checks.py`: no creator merged or lost, no address shared wider, no word type lost, no growth flag
+(words −30: the names lines kept twice). `pop98b2w.tsv` (1,202: every svjour* and `author_tabular` paper of the
+census, 1,000 seeded `\author` papers of its 30k sample), for the shared predicates (`visible_name_text`,
+`spacer_line`): 0 changed.

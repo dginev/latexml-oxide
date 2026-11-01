@@ -1057,10 +1057,9 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
       // So is a line that prints nothing ([`spacing_end`]: `\author[2]{\vspace{2mm}\\O.~Ennis, U.~Chauhan, …}`,
       // 2504.09158, read as the name with the names below it its affiliation).
       let pieces = split_tokens(block, author_line_breaks());
-      let opens_with_break = pieces.len() > 1
-        && pieces
-          .first()
-          .is_some_and(|l| spacing_end(l.unlist_ref()) == 0);
+      // (whether the block opens with a line that prints nothing, as the loop below reads one: a leading spacer line
+      // too, `\and ~\\ University of X`, the rev98b review's pb1)
+      let opens_with_break = pieces.len() > 1 && pieces.first().is_some_and(spacer_line);
       // (and by line, whether a line that prints nothing stood before it, a gap between the lines above and the next
       // author's: `\\ \vspace{0.1cm}\\`, `\\ \\`, [`name_groups`])
       // (a block a line break opens: whether a gap stands before its first line too, two empty pieces, `Ann Able
@@ -1070,11 +1069,11 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
       let mut gap = false;
       let mut leading_empty = 0usize;
       for piece in pieces {
-        // (a line before the block's first that prints nothing — a tie, a control space, an empty group: `~\\ Ann
-        // Able \\ …`, 0901.1754, hep-lat0105010, math0306336; `{}\\[0mm] Meijiao Guan\\ …`, 0812.2273; `{}~\\~\\
-        // \large{\sc Jun Nishimura}…`, hep-lat9207028; `\ \\ Ann Able …`, solv-int9710025 — is the block's spacing,
-        // no names line, [`prints_nothing`]; not an environment's `\begin`/`\end`, which the block's lines go on inside)
-        if spacing_end(piece.unlist_ref()) == 0 || (lines.is_empty() && leading_spacer(&piece)) {
+        // (a line that prints nothing, in any position — a tie, a control space, an empty group: `~\\ Ann Able \\ …`,
+        // 0901.1754, hep-lat0105010, math0306336; `{}\\[0mm] Meijiao Guan\\ …`, 0812.2273; `{}~\\~\\ \large{\sc Jun
+        // Nishimura}…`, hep-lat9207028; `\ \\ Ann Able …`, solv-int9710025 — is the block's spacing, no line,
+        // [`spacer_line`])
+        if spacer_line(&piece) {
           gap = !lines.is_empty();
           leading_empty += usize::from(lines.is_empty());
           continue;
@@ -1199,6 +1198,16 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
         lines = names;
         gaps = names_gaps;
         spaced = false;
+      } else if opens_with_break
+        && !blocks.is_empty()
+        && lines.first().is_some_and(reads_as_institution)
+      {
+        // (a block a line break opens after the names before it, its first line an institution, has no names: its
+        // lines are those names', the nameless creator's lines kept on them by `coalesce_empty_creators`, as Perl
+        // reads it — not an author named by the institution: `\author{Ann Able \and ~\\ University of X}`, `… \and
+        // \\ University of X`, the rev98b review's pb1, pb6; [`spacer_line`] reads the opening line)
+        lines.insert(0, Tokens::default());
+        gaps.insert(0, false);
       }
       // A link line printing a URL is no name ([`prints_a_url`]; a linked name is one, 2608.24427): one opening the
       // block goes with the lines under its names
@@ -1844,12 +1853,15 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
   Ok(Tokens::new(calls))
 }
 
-/// Whether `piece`, a line before an author block's first, is only the block's spacing: it prints nothing
-/// ([`prints_nothing`]) and opens or closes no environment.
-fn leading_spacer(piece: &Tokens) -> bool {
-  prints_nothing(piece)
-    && !piece
-      .unlist_ref()
-      .iter()
-      .any(|t| *t == T_CS!("\\begin") || *t == T_CS!("\\end"))
+/// Whether `piece`, a `\\`-line of an author block, is only the block's spacing, wherever it stands — the one
+/// predicate the block's lines and whether a line break opens the block are read by: empty or spacing alone
+/// ([`spacing_end`]), or printing nothing ([`prints_nothing`]) and opening or closing no environment (an environment's
+/// `\begin`/`\end`, which the block's lines go on inside).
+fn spacer_line(piece: &Tokens) -> bool {
+  spacing_end(piece.unlist_ref()) == 0
+    || (prints_nothing(piece)
+      && !piece
+        .unlist_ref()
+        .iter()
+        .any(|t| *t == T_CS!("\\begin") || *t == T_CS!("\\end")))
 }

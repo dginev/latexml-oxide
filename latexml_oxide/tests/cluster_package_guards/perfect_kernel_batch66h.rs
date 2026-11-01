@@ -72,8 +72,10 @@ fn revtex_email_redressed_over_sanitize_url() {
 }
 
 /// svjour3's `\institute` sentinel `\at` is not the affiliation's text, so a document's own `\at` macro does not run
-/// there (1404.4148 and 8 more: Fatal Stomach:Recursion). The name before `\at`, which no author line prints here, is
-/// the entry's first line, as svjour3 prints it (batch 98b, OXIDIZED_DESIGN_DIVERGENCES #952).
+/// there (1404.4148 and 8 more: Fatal Stomach:Recursion). The name before `\at` is the entry's first line, no author
+/// being queued to print it (batch 98b, OXIDIZED_DESIGN_DIVERGENCES #952): the repro has no `\maketitle`; with one,
+/// pdflatex prints "A. Bensoussan" over "Center for Risk" (2 errors, the document's `\at` in svjour3's place; the
+/// rev98b review's g2).
 #[test]
 fn svjour3_institute_with_document_at_macro() {
   let (log, xml) = convert_counted(include_str!(

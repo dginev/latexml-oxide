@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use crate::prelude::*;
 
 /// The Springer classes' bold vectors, the two forms their `\vec` takes (KNOWN_PERL_ERRORS #1143): `\lx@sv@vec@mathbf`
@@ -79,28 +81,98 @@ LoadDefinitions!({
   // 1711.01894; "Corresponding author", 2107.13864; a fuller name than the author line's, 1705.01399), which had been
   // lost (Perl the same: sv_support.sty.ltxml:45-47; OXIDIZED_DESIGN_DIVERGENCES #952) — a piece printing only its
   // author's name adds nothing the names do not hold.
+  // A list the piece opens (`\institute{\begin{itemize}\item[\Letter] Shiqiang~Du \\ \email{…} \at \item[1] Key
+  // Laboratory … \end{itemize}}`, 2305.05902, 2306.07927, 2312.14898, 2605.09054) is the list's structure — its
+  // `\begin{…}`, `\end{…}` and each `\item[…]` — and the words in it. The keep test reads the line as every name-shape
+  // test does ([`queued_author_name_prints`] through `visible_name_text`, where an environment's name and an item's
+  // label print no word: "itemize" had kept a line printing only a queued name, the rev98b review's pe1); only the
+  // words name the owner (`fuzzy:`; the `\begin` in the label had opened the list in the label's digestion, an
+  // Error); the structure the affiliation holds is kept explicitly: the
+  // list's `\begin` when the address closes it, with the item the address goes on in when the address opens with no
+  // `\item` of its own, and an `\end` the piece did not open is dropped (`\begin{itemize}\item Ann Able \at Univ X
+  // \and \item Bob Baker \at Univ Y \end{itemize}`: each piece its own affiliation, balanced).
   DefMacro!("\\lx@sv@institute@ Until:\\at Until:\\done", sub[(name, address)] {
     // (decided as `\institute` is read, the authors before it queued; an environment written whole there is no part of
     // the line — `\begin{acknowledgements}…\end{acknowledgements} T. Ara\'ujo Lima \at …`, 2008.12867, whose text
     // would be an `<ltx:acknowledgements>` inside a contact, malformed — and stays lost, as before)
-    let line = Tokens::new(without_environments(name.unlist_ref()));
-    let mut named = Vec::new();
-    if !address.is_empty() && !queued_author_name_prints(&line) {
-      // (without the spacing and a line break the piece opens with, the layout's: `\and\\ Name \at …`)
-      named = line
-        .unlist_ref()
-        .iter()
-        .copied()
-        .skip_while(|t| *t == T_SPACE!() || *t == T_CS!("\\\\"))
-        .collect();
-      while named.last() == Some(&T_SPACE!()) {
-        named.pop();
-      }
-      named.push(T_CS!("\\\\"));
+    let mut line = without_environments(name.unlist_ref());
+    let mut address = address.unlist();
+    let opens = line.iter().any(|t| *t == T_CS!("\\begin"));
+    let closes = closes_an_environment(&address);
+    // (an `\end` left in the line closes nothing the piece opened; a list the address does not close is none the
+    // affiliation holds, nor are its items)
+    let dropped: Vec<Range<usize>> = list_structure(&line)
+      .into_iter()
+      .filter(|(command, _)| *command == T_CS!("\\end") || !(opens && closes))
+      .map(|(_, range)| range)
+      .collect();
+    line = without_ranges(&line, &dropped);
+    if !opens && closes {
+      let ends: Vec<Range<usize>> = unopened_ends(&address);
+      address = without_ranges(&address, &ends);
     }
+    let structure = list_structure(&line);
+    let ranges: Vec<Range<usize>> = structure.iter().map(|(_, range)| range.clone()).collect();
+    let words = without_ranges(&line, &ranges);
+    let mut named = Vec::new();
+    if !address.is_empty() {
+      if !queued_author_name_prints(&Tokens::new(line.clone())) {
+        // (without the spacing and a line break the piece opens with, the layout's: `\and\\ Name \at …`; and without
+        // its `\email` calls, which the label files — kept here they were filed twice, 2312.14898)
+        named = split_email_calls(&line)
+          .0
+          .into_iter()
+          .skip_while(|t| *t == T_SPACE!() || *t == T_CS!("\\\\"))
+          .collect();
+        while named.last() == Some(&T_SPACE!()) {
+          named.pop();
+        }
+        named.push(T_CS!("\\\\"));
+      } else {
+        for (command, range) in &structure {
+          if *command == T_CS!("\\begin") {
+            named.extend_from_slice(&line[range.clone()]);
+          }
+        }
+        let opens_item = address
+          .iter()
+          .find(|t| **t != T_SPACE!())
+          .is_some_and(|t| *t == T_CS!("\\item"));
+        if !opens_item
+          && let Some((_, range)) = structure
+            .iter()
+            .rev()
+            .find(|(command, _)| *command == T_CS!("\\item"))
+        {
+          named.extend_from_slice(&line[range.clone()]);
+        }
+      }
+    }
+    // (a list whose items spell two or more queued names whole before its one `\at` is a list of its authors, no one's:
+    // its owner label names no one (`fuzzy:` empty), so the affiliation is placed as an orphan is (#159: shared below
+    // the authors), and its `\email` calls, no label's now, are in it, each answered by the author it spells — the
+    // surname reading gave the list to the last name's alone, 2312.14898's Bissyandé. Names a comma or "and" parts,
+    // no list's, are each their own owner as before: `Paulo Rezeck and Hector Azp\'urua \at …`, 2202.12391; 1404.4148,
+    // 2108.10893, 2305.05654)
+    if !address.is_empty()
+      && !structure.is_empty()
+      && queued_author_names_spelled(&Tokens::new(line.clone())) > 1
+    {
+      named.extend(split_email_calls(&words).1);
+      return Ok(Invocation!(
+        "\\lx@add@affiliation[label={fuzzy:}]{\\lx@sv@institute@marks#1\\lx@sv@institute@piece{#2}}",
+        vec![Some(Tokens::new(named)), Some(Tokens::new(address))]
+      ));
+    }
+    // (the name as written where it holds no list command)
+    let label = if dropped.is_empty() && structure.is_empty() {
+      name.clone()
+    } else {
+      Tokens::new(words)
+    };
     Ok(Invocation!(
-      "\\ifx.#2.\\lx@sv@institute@unlabelled{#1}\\else\\lx@add@affiliation[label={fuzzy:#1}]{\\lx@sv@institute@marks#3\\lx@sv@institute@piece{#2}}\\fi",
-      vec![Some(name), Some(address), Some(Tokens::new(named))]
+      "\\ifx.#2.\\lx@sv@institute@unlabelled{#1}\\else\\lx@add@affiliation[label={fuzzy:#4}]{\\lx@sv@institute@marks#3\\lx@sv@institute@piece{#2}}\\fi",
+      vec![Some(name), Some(Tokens::new(address)), Some(Tokens::new(named)), Some(label)]
     ))
   });
   // A labelled piece's text, without the `\at` sentinel `\lx@sv@institute` appended (the `Until:\done` part keeps it):
@@ -584,4 +656,131 @@ fn without_environments(tokens: &[Token]) -> Vec<Token> {
     i += 1;
   }
   out
+}
+
+/// The list structure in `tokens`, each command with the tokens it spans: `\begin{…}` and `\end{…}` with their
+/// argument, `\item` with its optional label (`\item [\textsuperscript{1}]`, spaces before it skipped as LaTeX's
+/// `\@ifnextchar` skips them).
+fn list_structure(tokens: &[Token]) -> Vec<(Token, Range<usize>)> {
+  // the index after the spaces from `at`
+  let past_spaces = |mut at: usize| {
+    while tokens.get(at) == Some(&T_SPACE!()) {
+      at += 1;
+    }
+    at
+  };
+  let mut structure = Vec::new();
+  let mut i = 0;
+  while i < tokens.len() {
+    let t = tokens[i];
+    let end = if t == T_CS!("\\begin") || t == T_CS!("\\end") {
+      let at = past_spaces(i + 1);
+      if tokens
+        .get(at)
+        .is_some_and(|u| u.get_catcode() == Catcode::BEGIN)
+      {
+        group_end(tokens, at)
+      } else {
+        i + 1
+      }
+    } else if t == T_CS!("\\item") {
+      let at = past_spaces(i + 1);
+      if tokens.get(at) == Some(&T_OTHER!("[")) {
+        // (the `]` outside braces: `\item[{[a]}]`)
+        let mut depth = 0usize;
+        let mut j = at + 1;
+        while j < tokens.len() && !(depth == 0 && tokens[j] == T_OTHER!("]")) {
+          match tokens[j].get_catcode() {
+            Catcode::BEGIN => depth += 1,
+            Catcode::END => depth = depth.saturating_sub(1),
+            _ => {},
+          }
+          j += 1;
+        }
+        (j + 1).min(tokens.len())
+      } else {
+        i + 1
+      }
+    } else {
+      i += 1;
+      continue;
+    };
+    structure.push((t, i..end));
+    i = end;
+  }
+  structure
+}
+
+/// The index after the brace group opening at `at`, or the end of `tokens` when it is not closed.
+fn group_end(tokens: &[Token], at: usize) -> usize {
+  let mut level = 0usize;
+  for (j, t) in tokens.iter().enumerate().skip(at) {
+    match t.get_catcode() {
+      Catcode::BEGIN => level += 1,
+      Catcode::END => {
+        level = level.saturating_sub(1);
+        if level == 0 {
+          return j + 1;
+        }
+      },
+      _ => {},
+    }
+  }
+  tokens.len()
+}
+
+/// The `\end{…}` commands in `tokens` that close no `\begin` of theirs: the environment a piece before opened.
+fn unopened_ends(tokens: &[Token]) -> Vec<Range<usize>> {
+  let mut depth = 0usize;
+  let mut ends = Vec::new();
+  for (command, range) in list_structure(tokens) {
+    if command == T_CS!("\\begin") {
+      depth += 1;
+    } else if command == T_CS!("\\end") {
+      if depth == 0 {
+        ends.push(range);
+      } else {
+        depth -= 1;
+      }
+    }
+  }
+  ends
+}
+
+/// Whether `tokens` close an environment opened before them (an `\end{…}` no `\begin` of theirs matches).
+fn closes_an_environment(tokens: &[Token]) -> bool { !unopened_ends(tokens).is_empty() }
+
+/// `tokens` without those in `ranges`.
+fn without_ranges(tokens: &[Token], ranges: &[Range<usize>]) -> Vec<Token> {
+  (0..tokens.len())
+    .filter(|i| !ranges.iter().any(|range| range.contains(i)))
+    .map(|i| tokens[i])
+    .collect()
+}
+
+/// `tokens` without their `\email{…}` calls, and the calls.
+fn split_email_calls(tokens: &[Token]) -> (Vec<Token>, Vec<Token>) {
+  let mut rest = Vec::with_capacity(tokens.len());
+  let mut calls = Vec::new();
+  let mut i = 0;
+  while i < tokens.len() {
+    if tokens[i] == T_CS!("\\email") {
+      let mut at = i + 1;
+      while tokens.get(at) == Some(&T_SPACE!()) {
+        at += 1;
+      }
+      if tokens
+        .get(at)
+        .is_some_and(|u| u.get_catcode() == Catcode::BEGIN)
+      {
+        let end = group_end(tokens, at);
+        calls.extend_from_slice(&tokens[i..end]);
+        i = end;
+        continue;
+      }
+    }
+    rest.push(tokens[i]);
+    i += 1;
+  }
+  (rest, calls)
 }

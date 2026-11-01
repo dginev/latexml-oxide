@@ -8,7 +8,9 @@
 //! converts its repro under `tools/perfect_kernel/repros/` from the binary, eager and `--streaming`, asserts the same
 //! XML both ways, no Error and no Warning, and every creator (name and contacts in order). One guard per path: the
 //! leading spacer lines (one author; two after a gap), the nameless block's holder, the authblk list and labelled
-//! paths, the peer-review title, the `\inst` request (aa's and llncs's author lines), the svjour3 piece.
+//! paths, the peer-review title, the `\inst` request (aa's and llncs's author lines), the svjour3 piece; and (round 2,
+//! the rev98b review) a list opened before svjour3's `\at`, its structure no word of the line and several names in it
+//! no one's, and a later block a line break opens over an institution, no names.
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch84b::creators,
@@ -113,8 +115,9 @@ fn authblk_author_reads_ieee_grades() {
       &["Cat Cole", "membership=Fellow, IEEE"],
     ])
   );
-  assert!(
-    xml.contains("A. Able, B. Bell and C. Cole are with the University of X."),
+  assert_eq!(
+    author_note(&xml, "Cat Cole"),
+    "A. Able, B. Bell and C. Cole are with the University of X.",
     "{xml}"
   );
 }
@@ -278,4 +281,71 @@ fn svjour3_text_before_at_is_kept() {
       &["Cat Cole", "affiliation=University of Z"],
     ])
   );
+}
+
+/// A list opened before svjour3's `\at` (2305.05902, 2306.07927, 2605.09054; 98b: the line "∗ Bob Baker" kept for the
+/// word "itemize", 1 Error) is structure, no word of the line: the name's author holds the list, whose `\begin` is kept
+/// as the address closes it; one naming two or more authors before its one `\at` (2312.14898; int126a and 98b: the
+/// list on the last name's alone, 98b its address twice) names no one, each address its author's and the list shared.
+/// Distinct from [`svjour3_text_before_at_is_kept`]: the list commands, not the line's words, and the several names.
+#[test]
+fn svjour3_list_before_at_is_structure() {
+  let xml = both_ways(repro!(
+    "class-bindings",
+    "svjour3_institute_list_before_at_names_its_author"
+  ));
+  assert_eq!(
+    creators(&xml),
+    owned(&[&["Ann Able 1"], &[
+      "Bob Baker 1,2",
+      "affiliation=1 item 1 University of X 2 item 2 University of Y"
+    ],])
+  );
+  assert_eq!(xml.matches("<itemize").count(), 1, "{xml}");
+  let xml = both_ways(repro!(
+    "class-bindings",
+    "svjour3_institute_list_before_at_names_several_authors"
+  ));
+  assert_eq!(
+    creators(&xml),
+    owned(&[
+      &["Ann Able 1", "email=ann@x.edu"],
+      &["Bob Baker 2", "email=bob@y.edu"],
+      &["affiliation=1 item 1 University of X 2 item 2 University of Y"],
+    ])
+  );
+  assert_eq!(xml.matches("<itemize").count(), 1, "{xml}");
+  // (the list on the block's creator, #159's shared orphan holder: no name of its own)
+  assert_eq!(xml.matches("<creator ").count(), 3, "{xml}");
+  assert_eq!(xml.matches("<personname").count(), 2, "{xml}");
+}
+
+/// A block a line break opens after an author separator, its first line an institution (`\author{Ann Able \and ~\\
+/// University of X}`, `… \and \\ University of X`: the rev98b review's pb1, pb6; 98b: a creator "University of X" for
+/// both, int126a for pb6), has no names: its line is Ann Able's. Distinct from
+/// [`leading_spacer_lines_are_no_names_line`]: a later block, its first line no name.
+#[test]
+fn institution_after_and_and_a_break_is_no_name() {
+  for (name, tex) in [
+    (
+      "pb1",
+      repro!(
+        "sectioning-frontmatter",
+        "author_block_institution_after_and_spacer_line"
+      ),
+    ),
+    (
+      "pb6",
+      repro!(
+        "sectioning-frontmatter",
+        "author_block_institution_after_and_line_break"
+      ),
+    ),
+  ] {
+    assert_eq!(
+      creators(&both_ways(tex)),
+      owned(&[&["Ann Able", "affiliation=University of X"]]),
+      "{name}"
+    );
+  }
 }

@@ -837,7 +837,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // A note the operand holds is no label: the class prints the operand in a superscript (`\def\inst#1{\unskip$^{#1}$}`,
   // llncs.cls:894, aa.cls:759-760), so its `\thanks` runs there, the note of the name it is printed on — read after the
   // request, as a name's `$^{…}$` mark reads one (`\lx@sup@request@affiliation`, [`split_mark_notes`]); `\fnmsep`
-  // (llncs.cls:896 `\unskip$^,$`) is the comma it prints. `\inst{2,\thanks{NASA Sagan Fellow}}` (aa 2303.08174,
+  // is a comma: the one aa prints there (aa.cls:807-808, an `\hbox` in `\inst`'s math); under llncs, a pdflatex error
+  // there (llncs.cls:894-896, its `$^,$` inside `$^{…}$`; the rev98b review's pdx4), read the same. `\inst{2,\thanks{NASA Sagan Fellow}}` (aa 2303.08174,
   // 2311.02521, 2601.20473; llncs 1808.09829) had requested the note's text as a label and lost it (Perl the same,
   // aa.cls.ltxml:50; OXIDIZED_DESIGN_DIVERGENCES #951).
   DefPrimitive!("\\lx@request@frontmatter@annotation[]{}", sub[(prefix, label)] {
