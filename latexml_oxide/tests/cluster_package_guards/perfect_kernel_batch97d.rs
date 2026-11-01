@@ -236,8 +236,9 @@ fn collaboration_heading_group_covers_the_names_after_it() {
 /// What names no collaboration stays as it was: a team or group line unframed under a name (`Machine Learning Group`,
 /// 2205.00756; `Google Brain Team`) is its affiliation; a collaboration word before an institution's (`The ATLAS
 /// Collaboration Office, CERN`) an affiliation; a surname holding an institution's word (aastex
-/// `M.~Huertas-Company\altaffilmark{1}`, 1212.4143) no collaboration — its line one creator as 97a leaves it (pinned,
-/// not a target: the SYNC 97a row's `NON_NAME_WORDS` surname residual).
+/// `M.~Huertas-Company\altaffilmark{1}`, 1212.4143) no collaboration. Since 97f the synthetic line parts at its
+/// `\altaffilmark` labels, each name with its own line; the real 1212.4143 (`\author` lines unmarked) is still one
+/// creator (the SYNC 97a row's `NON_NAME_WORDS` surname residual).
 #[test]
 fn team_words_and_company_surnames_name_no_collaboration() {
   let xml = both_ways(repro!("author_team_and_group_lines_stay_affiliations"));
@@ -256,8 +257,10 @@ fn team_words_and_company_surnames_name_no_collaboration() {
                  B.~Baker\\altaffilmark{2}}\n\\altaffiltext{1}{Univ A}\n\\altaffiltext{2}{Univ B}\n\\maketitle\nBody.\n\
                  \\end{document}\n";
   let xml = both_ways(company);
+  // 97f: aastex's `\altaffilmark` labels part the names, each with the line its mark requests (pdflatex prints two).
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>M. Huertas-Company, B. Baker</personname> <contact name="Alternate Affiliation: " role="altaffiliation">Univ A</contact> <contact name="Alternate Affiliation: " role="altaffiliation">Univ B</contact> </creator>"#
+    r#"<creator role="author"> <personname>M. Huertas-Company</personname> <contact name="Alternate Affiliation: " role="altaffiliation">Univ A</contact> </creator>"#,
+    r#"<creator role="author"> <personname>B. Baker</personname> <contact name="Alternate Affiliation: " role="altaffiliation">Univ B</contact> </creator>"#,
   ]);
 }
 
