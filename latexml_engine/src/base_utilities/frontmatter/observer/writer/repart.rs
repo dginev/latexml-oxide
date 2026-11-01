@@ -1682,6 +1682,7 @@ mod tests {
         queue_position: 0,
         after_block:    None,
         inside:         false,
+        binding:        None,
         attrs:          String::new(),
         parent:         parent.into(),
         content:        Tokens::new(Vec::new()),

@@ -243,18 +243,22 @@ pub(super) fn creator_items(c: &RCreator) -> Vec<(Key, &Assoc)> {
     items.push(((Kind::Affiliation, norm(&a.text)), a));
   }
   for a in &c.contacts {
-    let key = match a.role.as_str() {
-      "note" | "thanks" => (Kind::Note, norm(&a.text)),
-      "orcid" => (Kind::Contact("orcid".into()), norm(orcid_id(&a.text))),
-      role => (Kind::Contact(role.to_string()), norm(&a.text)),
-    };
-    items.push((key, a));
+    items.push((contact_key(a), a));
   }
   for a in &c.notes {
     items.push(((Kind::Note, norm(&a.text)), a));
   }
   items.retain(|(key, _)| !key.1.is_empty());
   items
+}
+
+/// A resolved creator's contact `a` as the comparison keys it ([`creator_items`]).
+pub(super) fn contact_key(a: &Assoc) -> Key {
+  match a.role.as_str() {
+    "note" | "thanks" => (Kind::Note, norm(&a.text)),
+    "orcid" => (Kind::Contact("orcid".into()), norm(orcid_id(&a.text))),
+    role => (Kind::Contact(role.to_string()), norm(&a.text)),
+  }
 }
 
 /// The author block's own items, as the comparison keys them ([`wanted`]).
@@ -268,7 +272,10 @@ pub(super) fn block_items(resolved: &Resolved) -> Vec<(Key, &Assoc)> {
 }
 
 /// Today's items: (owner, kind, text) with the node and whether it may move (`dom::Item::movable`).
-fn held(front: &Front, pairs: &BTreeMap<usize, usize>) -> BTreeMap<Key, Vec<(Owner, Node, bool)>> {
+pub(super) fn held(
+  front: &Front,
+  pairs: &BTreeMap<usize, usize>,
+) -> BTreeMap<Key, Vec<(Owner, Node, bool)>> {
   let mut out: BTreeMap<Key, Vec<(Owner, Node, bool)>> = BTreeMap::new();
   // (an item of no text is no content to place, a named creator's as a nameless one's: today's empty contact of an
   // `\email{}`, an endnote mark's empty note — the comparison reads none, and the paper was held back for it)

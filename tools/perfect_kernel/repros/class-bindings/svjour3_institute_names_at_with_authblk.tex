@@ -6,9 +6,12 @@
 %          95b r2 = wrong: the author block is authblk's (written), so svjour3's `\institute` reading is written though
 %          svjour3 passed no gate — "A. Able" (the names before `\at`, numbered as entry 1, `api:labelseq
 %          ruling1:thenote`) an affiliation of all three, Univ X on Bob Baker only, Univ Y on Cid Cole
-% expect:  0 errors, 0 warnings; Ann Able and Bob Baker Univ X, ann@x.org Ann Able's; Cid Cole Univ Y, cid@y.org; no
-%          name piece an affiliation
-% status:  RED (catalog, no guard; SYNC row "a non-written family's API call written under a written author block")
+% expect:  0 errors, 0 warnings; 95b r3: an item an unwritten family's call made is not written (the call's setter is
+%          sv_support.sty's, `ledger::ApiCall::binding`): every institute item as int124b holds it, in the block ("A.
+%          Able" with them, as int124b), none on a named creator; the writer's outcome `declined: an unwritten family's
+%          items kept as today's`. The print's reading (the names before `\at` the entry's carriers, each address its
+%          speller's) is svjour3's own binding's to read (SYNC row "svjour3 `\at` reading")
+% status:  RED (95b, 95b r2) -> GREEN (95b r3) — perfect_kernel_batch95b::an_unwritten_familys_call_is_kept_as_today
 % preload: ar5iv.sty
 \documentclass[smallextended]{svjour3}
 \usepackage{authblk}

@@ -347,3 +347,92 @@ fn an_entry_number_no_name_shows_stays_in_the_block() {
   assert_eq!(writer, "same", "the writer's outcome");
   assert_eq!(default_mode_creators(tex), written, "the default mode");
 }
+
+/// An item an unwritten family's call made is not written (95b r3): svjour3's `\institute` (sv_support.sty's setter,
+/// `written: false`) beside authblk's written `\author` (2609.05466). The reading still numbers the names before `\at`
+/// as entry 1 (authblk's `\AB@thenote`, `api:labelseq ruling1:thenote`) and gives it to every author, as it did when 95b
+/// wrote it ("N. Cuellar" an affiliation of all four authors); the call's setter is recorded
+/// (`ledger::ApiCall::binding`), so the writer keeps each of its items as today's holds it (`writer::keep_as_today`):
+/// every institute item in the block, as int124b, and says so (`declined: …`, not `same`). One guard for the rule's
+/// outcomes: the paper left as today's, a paper written in its other items (iopart's `\address`), and a written
+/// family's setter in a binding declaring none still written (REVTeX 3's `\address`).
+#[test]
+fn an_unwritten_familys_call_is_kept_as_today() {
+  let tex = repro!("svjour3_institute_names_at_with_authblk.tex");
+  let (written, _, _, writer) = assert_reading(
+    tex,
+    Some(&[&["Ann Able"], &["Bob Baker"], &["Cid Cole"], &[
+      "affiliation=A. Able",
+      "affiliation=Univ X, Town",
+      "email=ann@x.org",
+      "affiliation=Univ Y, City",
+      "email=cid@y.org",
+    ]]),
+    &[
+      "C Ann Able [1] | line:names",
+      "  a A. Able | api:labelseq ruling1:thenote",
+      "  c email ann@x.org | api:label api:inner-contact ruling1:fuzzy-label fuzzy:surname owner:inner-email \
+       owner:spelled",
+      "C Bob Baker [1] | line:names sep:column",
+      "  a A. Able | api:labelseq ruling1:thenote",
+      "  a Univ X, Town | api:label ruling1:fuzzy-label fuzzy:surname",
+      "C Cid Cole [1] | line:names sep:column",
+      "  a A. Able | api:labelseq ruling1:thenote",
+      "  a Univ Y, City | api:label ruling1:fuzzy-label fuzzy:surname",
+      "  c email cid@y.org | api:label api:inner-contact ruling1:fuzzy-label fuzzy:surname owner:inner-email \
+       owner:spelled",
+    ],
+  );
+  assert_eq!(
+    writer, "declined: an unwritten family's items kept as today's",
+    "the writer's outcome"
+  );
+  assert_eq!(default_mode_creators(tex), written, "the default mode");
+  // (the sibling setter, iopart's `\address` (iopart_support.sty's) beside authblk's take-out: the paper is written in
+  // its written family's items — Ann Able's e-mail cut out of her entry — and the iopart item stays Bob Baker's, as
+  // today's holds it, where 95b r2 moved it to Ann Able by its leading mark)
+  let tex = repro!("iopart_address_with_authblk_kept_as_today.tex");
+  let (written, _, _, writer) = assert_reading(
+    tex,
+    Some(&[
+      &["Ann Able", "affiliation=Univ X, Town.", "email=ann@x.org"],
+      &[
+        "Bob Baker",
+        "affiliation=1 Lab Z, Village",
+        "affiliation=Univ Y, City",
+      ],
+    ]),
+    &[
+      "C Ann Able [1] | line:names",
+      "  a Univ X, Town. | api:label ruling1:request ruling3:address-out",
+      "  a Lab Z, Village | api:leading-mark",
+      "  c email ann@x.org | api:label ruling1:request owner:entry-address owner:spelled",
+      "C Bob Baker [2] | line:names",
+      "  a Univ Y, City | api:label ruling1:request",
+    ],
+  );
+  assert_eq!(writer, "written", "the writer's outcome");
+  assert_eq!(default_mode_creators(tex), written, "the default mode");
+  // (a written family's setter in a binding declaring none: REVTeX 3's `\address`, revtex3_support.sty's, loaded by
+  // revtex.sty after the article class, is the family of the revtex4_support.sty its load loaded (`ledger::LOADED`) —
+  // read as an unwritten family's, every entry stayed on every name: cond-mat0505458 and six more on the scorer run)
+  let tex = repro!("revtex3_address_of_a_written_family_written.tex");
+  let (written, _, _, writer) = assert_reading(
+    tex,
+    Some(&[
+      &["Ann Able 1", "address=1 Univ X, Town"],
+      &["Bob Baker 1", "address=1 Univ X, Town"],
+      &["Cy Cole 2", "address=2 Univ Y, City"],
+    ]),
+    &[
+      "C Ann Able [1] | line:names",
+      "  a Univ X, Town | api:leading-mark api:split-by-marks",
+      "C Bob Baker [1] | line:names sep:comma",
+      "  a Univ X, Town | api:leading-mark api:split-by-marks",
+      "C Cy Cole [2] | line:names sep:word",
+      "  a Univ Y, City | api:leading-mark api:split-by-marks",
+    ],
+  );
+  assert_eq!(writer, "written", "the writer's outcome");
+  assert_eq!(default_mode_creators(tex), written, "the default mode");
+}

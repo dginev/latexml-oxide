@@ -1,0 +1,25 @@
+% witness: 2609.05466's class (an unwritten family's setter beside authblk's written `\author`), its sibling setter:
+%          iopart's `\address` (iopart_support.sty, `written: false`); the census's iopart papers shipping authblk
+%          (2108.03328, 2402.00347) do not load it in their main file
+% oracle:  pdflatex with 2108.03328's iopart.cls (TL lacks it): 0 errors; the page prints "A title", then "1" and
+%          "Lab Z, Village" (authblk's names and affiliations print nowhere under iopart's title)
+% engines: rust int124b = Ann Able "Univ X, Town. Email: ann@x.org", Bob Baker "1Lab Z, Village" and "Univ Y, City"
+%          (iopart's unmarked-address convention, the last name's); rust 95b r2 = the reading written for the iopart
+%          call too: "1Lab Z, Village" moved to Ann Able by its leading mark (`api:leading-mark`)
+% expect:  0 errors, 0 warnings; 95b r3: the authblk take-out written (Ann Able "Univ X, Town." and ann@x.org, OD
+%          #938), iopart's `\address` item kept as today's holds it (Bob Baker's) — an unwritten family's call is
+%          not written, the paper's other items are
+% status:  RED (95b r2) -> GREEN (95b r3) — perfect_kernel_batch95b::an_unwritten_familys_call_is_kept_as_today
+% preload: ar5iv.sty
+\documentclass[12pt]{iopart}
+\usepackage{authblk}
+\begin{document}
+\title{A title}
+\author[1]{Ann Able}
+\author[2]{Bob Baker}
+\affil[1]{Univ X, Town. Email: ann@x.org}
+\affil[2]{Univ Y, City}
+\address{$^1$Lab Z, Village}
+\maketitle
+Text.
+\end{document}

@@ -9,17 +9,22 @@
 //! (`give_back_addresses`: 2102.08148's Hongyun Yu keeps today's entry while the other authors' are cut), the names
 //! re-parted only where every word today's held is kept (`repart`), and a difference of the plan no operation explains
 //! (the ledger's `declined: …`) leaves every item the plan would write as today's. So a paper the comparison reports
-//! unclassified may still be written in its other items.
+//! unclassified may still be written in its other items. An item an unwritten family's call made — the call's setter
+//! a binding not `written` (`ledger::ApiCall::binding`: svjour3's `\institute` beside authblk's `\author`, 2609.05466) —
+//! is never written: it stays as today's holds it ([`keep_as_today`]), the paper's other items written, or the paper
+//! declined whole where a written item depends on its reading (a re-part, a creator it made).
 //!
 //! What is written comes from the tokens the document queued: a cut entry's pieces from its call's content, mapped by
 //! the spans of a stamped rehearsal of it ([`plan`]), digested as today's digests an entry ([`apply`]). By default (the
 //! fleet's) and under the census switch (`LATEXML_FM_SHADOW=1`), for a paper whose author blocks are all a written
 //! family's; switched off (`=0`), nothing of it runs (`shadow::FmShadow`).
 
+use std::collections::{BTreeMap, BTreeSet};
+
 use super::{
   events::Event,
   ledger::{Entry, Outcome, SkipReason, with_ledger},
-  policy::policy_for,
+  policy::{family_written, policy_for},
   resolver::{
     Assoc, RCreator, Resolved, in_source_order, is_change_rule, ledger_inputs, mark_labels, resolve,
   },
@@ -65,6 +70,175 @@ fn written_resolution() -> Option<Resolved> {
   })
 }
 
+/// The API calls the writer leaves as today's output holds them: each made by a frontmatter setter whose binding's
+/// family is not written (`ledger::ApiCall::binding`, [`family_written`]), whatever the author block's family —
+/// svjour3's `\institute` (sv_support.sty's) under authblk's written `\author`, whose reading numbered the names before
+/// svjour3's `\at` as entry 1 and gave them to every author (2609.05466; 95b r3).
+fn unwritten_calls() -> BTreeSet<usize> {
+  with_ledger(|ledger| {
+    ledger
+      .entries
+      .iter()
+      .filter_map(|entry| match entry {
+        Entry::Api(call) if call.binding.as_deref().is_some_and(|b| !family_written(b)) => {
+          Some(call.index)
+        },
+        _ => None,
+      })
+      .collect()
+  })
+}
+
+/// The reading `resolved` with every item the calls `unwritten` made ([`unwritten_calls`]) as today's `front` holds it:
+/// their take-outs and write-outs given back (the entry whole, the e-mail call one contact: [`give_back_addresses`]),
+/// then each item of such a text — any call's: one item per text — owned as today's owns it, none where today's holds
+/// none, so no operation writes it; the paper's other items are still written — with whether the reading wanted any of
+/// them otherwise (its owners, a take-out, a write-out, a dropped note: the writer's outcome says it declined them).
+/// `None` — the paper declined whole, today's kept — where the reading's names do not pair with today's (the re-part
+/// writes every item from the reading) or an unwritten call made a creator: a written item would depend on the
+/// unwritten reading.
+fn keep_as_today(
+  resolved: &Resolved,
+  front: &dom::Front,
+  unwritten: &BTreeSet<usize>,
+) -> Option<(Resolved, bool)> {
+  let from = |a: &Assoc| {
+    a.source
+      .is_some_and(|(index, _)| unwritten.contains(&index))
+  };
+  if resolved
+    .creators
+    .iter()
+    .any(|c| unwritten.contains(&c.source))
+  {
+    return None;
+  }
+  let (taken, kept_taken): (Vec<_>, Vec<_>) = resolved.taken.iter().cloned().partition(|t| {
+    t.source
+      .is_some_and(|(index, _)| unwritten.contains(&index))
+  });
+  let (listed, kept_listed): (Vec<_>, Vec<_>) = resolved
+    .listed
+    .iter()
+    .cloned()
+    .partition(|l| from(&l.whole));
+  let mut otherwise = !taken.is_empty() || !listed.is_empty();
+  let mut out = give_back_addresses(
+    &Resolved {
+      taken,
+      listed,
+      ..resolved.clone()
+    },
+    &dom::Front::default(),
+    true,
+  );
+  out.taken = kept_taken;
+  out.listed = kept_listed;
+  let mut keys: BTreeMap<plan::Key, Assoc> = BTreeMap::new();
+  for c in out.creators.iter().filter(|c| !c.name.trim().is_empty()) {
+    for (key, a) in plan::creator_items(c) {
+      if from(a) {
+        keys.entry(key).or_insert_with(|| a.clone());
+      }
+    }
+  }
+  for (key, a) in plan::block_items(&out) {
+    if from(a) {
+      keys.entry(key).or_insert_with(|| a.clone());
+    }
+  }
+  // (a note the reading dropped, ruling 4: today's note kept where today's holds it)
+  for a in out.dropped.iter().filter(|a| from(a)) {
+    let key = (dom::Kind::Note, dom::norm(&a.text));
+    if !key.1.is_empty() {
+      otherwise = true;
+      keys.entry(key).or_insert_with(|| a.clone());
+    }
+  }
+  if keys.is_empty() {
+    return Some((out, otherwise));
+  }
+  let pairs = plan::pair_names(&out, front)?;
+  let have = plan::held(front, &pairs);
+  let todays = |key: &plan::Key| -> Vec<Owner> {
+    let mut owners: Vec<Owner> = have
+      .get(key)
+      .into_iter()
+      .flatten()
+      .map(|(owner, ..)| *owner)
+      .collect();
+    owners.sort();
+    owners.dedup();
+    owners
+  };
+  // (the reading's owners of each such text, as the comparison reads them: whether it wanted them otherwise)
+  let mut wanted: BTreeMap<&plan::Key, Vec<Owner>> = BTreeMap::new();
+  for (i, c) in out
+    .creators
+    .iter()
+    .enumerate()
+    .filter(|(_, c)| !c.name.trim().is_empty())
+  {
+    for (key, _) in plan::creator_items(c) {
+      if let Some((key, _)) = keys.get_key_value(&key) {
+        wanted.entry(key).or_default().push(Owner::Creator(i));
+      }
+    }
+  }
+  for (key, _) in plan::block_items(&out) {
+    if let Some((key, _)) = keys.get_key_value(&key) {
+      wanted.entry(key).or_default().push(Owner::Block);
+    }
+  }
+  otherwise |= keys.keys().any(|key| {
+    let mut owners = wanted.get(key).cloned().unwrap_or_default();
+    owners.sort();
+    owners.dedup();
+    owners != todays(key)
+  });
+  let keyed = |key: plan::Key| keys.contains_key(&key);
+  for c in &mut out.creators {
+    c.affiliations
+      .retain(|a| !keyed((dom::Kind::Affiliation, dom::norm(&a.text))));
+    c.contacts.retain(|a| !keyed(plan::contact_key(a)));
+    c.notes
+      .retain(|a| !keyed((dom::Kind::Note, dom::norm(&a.text))));
+  }
+  out
+    .block
+    .retain(|a| !keyed((dom::Kind::of_block(&a.role), dom::norm(&a.text))));
+  out.dropped.retain(|a| !from(a));
+  for (key, assoc) in keys {
+    // (today's placement owns it, not the reading's mark: no answered mark is hidden for it, `hide_answered_marks`)
+    let assoc = Assoc { label: None, ..assoc };
+    for owner in todays(&key) {
+      let slots = match (owner, &key.0) {
+        (Owner::Block, _) => &mut out.block,
+        (Owner::Creator(i), dom::Kind::Affiliation) => &mut out.creators[i].affiliations,
+        (Owner::Creator(i), dom::Kind::Note) => &mut out.creators[i].notes,
+        (Owner::Creator(i), dom::Kind::Contact(_)) => &mut out.creators[i].contacts,
+      };
+      insert_in_source_order(slots, assoc.clone());
+    }
+  }
+  Some((out, otherwise))
+}
+
+/// Insert `assoc` among `items` before the first whose source is past its own (`resolver::in_source_order`'s order),
+/// the others left in their order.
+fn insert_in_source_order(items: &mut Vec<Assoc>, assoc: Assoc) {
+  let place = |a: &Assoc| {
+    a.source
+      .map(|(index, span)| (index, span.map_or((1, 0), |(start, _)| (0, start))))
+  };
+  let at = place(&assoc).and_then(|mine| {
+    items
+      .iter()
+      .position(|a| place(a).is_some_and(|theirs| theirs > mine))
+  });
+  items.insert(at.unwrap_or(items.len()), assoc);
+}
+
 /// At the end of `insert_frontmatter`: write the observer's reading of a written family's paper where it differs from
 /// today's by the writer's operations alone; else leave the document as it is.
 pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Document) -> Result<()> {
@@ -75,6 +249,24 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
     return Ok(());
   };
   let mut front = dom::read(document);
+  // (an item an unwritten family's call made is not written: it stays as today's holds it, the paper's other items
+  // written — or, where a written item would depend on its reading, the paper declined whole; 95b r3)
+  let unwritten = unwritten_calls();
+  let mut unwritten_kept = false;
+  let resolved = if unwritten.is_empty() {
+    resolved
+  } else {
+    let Some(kept) = keep_as_today(&resolved, &front, &unwritten) else {
+      with_ledger(|ledger| {
+        if ledger.writer.is_none() {
+          ledger.writer = Some("declined: an unwritten family's call beside a re-part".to_string());
+        }
+      });
+      return Ok(());
+    };
+    unwritten_kept = kept.1;
+    kept.0
+  };
   // (a whole creator of today's the reading made an item from its words alone is a creator again, as today's, with the
   // ink it printed: no word reading licenses a writer operation — review rev94a r3, r4 B1, OD #928; its ink in doubt,
   // nothing is written)
@@ -147,8 +339,13 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
     with_ledger(|ledger| match before {
       None if ledger.writer.is_some() => {},
       None => {
+        // (an unwritten family's items kept as today's, nothing else to write: declined, not `same` — the reading's
+        // reading of them is not hidden)
         ledger.writer = Some(match &kept_whole {
           Some(d) => s!("declined: {d}"),
+          None if unwritten_kept => {
+            "declined: an unwritten family's items kept as today's".to_string()
+          },
           None => "same".to_string(),
         })
       },

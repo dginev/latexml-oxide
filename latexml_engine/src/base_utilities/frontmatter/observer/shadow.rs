@@ -8,6 +8,8 @@
 
 use std::{cell::Cell, fmt::Write as _, sync::OnceLock};
 
+use latexml_core::definition::origin::watch_frontmatter_setter_calls;
+
 use super::{
   events::{EmailMeaning, Event, EventKind, SepKind, lex_events, with_block_content},
   ledger::{Entry, Outcome, SkipReason, Stamp, reset_ledger, stamped_block_tokens, with_ledger},
@@ -81,6 +83,9 @@ pub fn reset_fm_shadow() {
   reset_ledger();
   ledger::reset_author_owner();
   rehearsal::reset_rehearsing();
+  // (no frontmatter setter watched until a written family's block finds an unwritten one's defined:
+  // `ledger::watch_unwritten_setters`)
+  watch_frontmatter_setter_calls(None);
 }
 
 /// The flush's part (`digest_front_matter`, before the queue is digested): rehearse and lex each author block not
@@ -388,6 +393,10 @@ pub fn fm_shadow_json() -> String {
               .map_or("null".to_string(), |b| b.to_string()),
             call.inside
           );
+          if let Some(binding) = &call.binding {
+            out.push_str(",\"binding\":");
+            json_str(&mut out, binding);
+          }
           out.push_str(",\"attrs\":");
           json_str(&mut out, &call.attrs);
           if !call.parent.is_empty() {

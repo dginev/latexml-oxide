@@ -185,17 +185,43 @@ thread_local! {
   static STAND_IN_OWN_CODE: Cell<bool> = const { Cell::new(false) };
   static STAND_IN_LOADER_OWN_CODE: Cell<bool> = const { Cell::new(false) };
   static STAND_IN_BASE_CLASS: Cell<bool> = const { Cell::new(false) };
-  static SETTER_WATCH: Cell<bool> = const { Cell::new(false) };
+  /// Which setter watches are on: [`COPY_DEFAULT_WATCH`], [`FRONTMATTER_WATCH`] (one flag, read at every macro call).
+  static SETTER_WATCH: Cell<u8> = const { Cell::new(0) };
 }
 
-/// Are frontmatter setter calls observed ([`watch_setter_calls`])? Read at every macro call, so a flag.
-pub fn setter_watch() -> bool { SETTER_WATCH.with(|c| c.get()) }
+/// [`watch_setter_calls`]' watch: a stand-in copy stored a default of the setters' fields.
+const COPY_DEFAULT_WATCH: u8 = 1;
+/// [`watch_frontmatter_setter_calls`]' watch: the frontmatter observer's.
+const FRONTMATTER_WATCH: u8 = 2;
+
+/// Are frontmatter setter calls observed ([`watch_setter_calls`], [`watch_frontmatter_setter_calls`])? Read at every
+/// macro call, so a flag.
+pub fn setter_watch() -> bool { SETTER_WATCH.with(|c| c.get()) != 0 }
+
+/// Is [`watch_frontmatter_setter_calls`]' watch on?
+pub fn frontmatter_watch() -> bool { SETTER_WATCH.with(|c| c.get()) & FRONTMATTER_WATCH != 0 }
+
+/// Is [`watch_setter_calls`]' watch on?
+pub fn copy_default_watch() -> bool { SETTER_WATCH.with(|c| c.get()) & COPY_DEFAULT_WATCH != 0 }
 
 /// Observe the calls of the setters `names` from now on (`state::note_setter_call`): a stand-in's copy stored a
 /// default of their field, which the document's own call replaces whatever its value.
 pub fn watch_setter_calls(names: &[&str]) {
   crate::state::watch_setters(names);
-  SETTER_WATCH.with(|c| c.set(true));
+  SETTER_WATCH.with(|c| c.set(c.get() | COPY_DEFAULT_WATCH));
+}
+
+/// Observe the expansions of the frontmatter setters `names` for this conversion (`state::note_setter_call`,
+/// `state::open_frontmatter_setter`: whose expansion an entry the frontmatter API queues was made in — latexml_engine's
+/// observer ledger), or stop observing them (`None`).
+pub fn watch_frontmatter_setter_calls(names: Option<&[&str]>) {
+  crate::state::watch_frontmatter_setters(names.unwrap_or_default());
+  SETTER_WATCH.with(|c| {
+    c.set(match names {
+      Some(_) => c.get() | FRONTMATTER_WATCH,
+      None => c.get() & !FRONTMATTER_WATCH,
+    })
+  });
 }
 
 /// Is a binding that stands in for an author's file loading ([`StandInLoadGuard`]), itself or a file it loads?
@@ -296,7 +322,8 @@ pub fn reset_copy_provides() {
   STAND_IN_OWN_CODE.with(|c| c.set(false));
   STAND_IN_LOADER_OWN_CODE.with(|c| c.set(false));
   STAND_IN_BASE_CLASS.with(|c| c.set(false));
-  SETTER_WATCH.with(|c| c.set(false));
+  // (the frontmatter observer's watch is its own, set at its reset: `watch_frontmatter_setter_calls`)
+  SETTER_WATCH.with(|c| c.set(c.get() & FRONTMATTER_WATCH));
   COPY_PROVIDES.with(|c| c.set(0));
   COPY_PROVIDES_STACK.with(|s| s.borrow_mut().clear());
 }

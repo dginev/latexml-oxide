@@ -28568,7 +28568,8 @@ MNRAS family (`mn2e_support_sty.rs`, mn2e/mnras/mn; mnras.cls:1072-1079) — bot
 OmniBus; its one wrong sample creator, 2308.13695, the reading gets wrong too). The writer declines per item, each
 declined item left as today's output holds it (`writer` module docs): an entry whose address take-out today's does not
 print so is given back whole (2102.08148's Hongyun Yu keeps today's entry while the other authors' are cut), and a plan
-difference no operation explains (the ledger's `declined: …`) leaves every item of the plan as today's.
+difference no operation explains (the ledger's `declined: …`) leaves every item of the plan as today's. No item an
+unwritten family's call made is written: the call's setter, not the author block, decides (95b r3, below).
 
 **Mechanisms.**
 - `owner:entry-address` is a change tag (`resolver::CHANGE_TAGS`), as #938 names it: the writer writes every owner the
@@ -28607,6 +28608,43 @@ difference no operation explains (the ledger's `declined: …`) leaves every ite
 - The comparator's take-out reading (`compare::taken_out_rule`) explains the block's rows as a creator's: today's
   block entry cut by the reading, with the shadow's cut entry it leaves, is one classified row (2106.15893's
   `\affil[$\star$]{… corresponding author: michaela.benz@…}`, written, was unclassified).
+- An unwritten family's call is not written (95b r3). The writer required every author block's family `written`, not
+  every API call's: 2609.05466 (svjour3 with authblk loaded) holds authblk's `\author` and svjour3's
+  `\institute{N. Cuellar \and A. Pereira \and I. F. M. Menezes \at Pontifical Catholic University … \and A. Cunha~Jr
+  \at National Laboratory …}`, which the reading, under authblk's conventions, numbers as entry 1 before `\at`
+  (`api:labelseq ruling1:thenote`), and 95b wrote "N. Cuellar" onto all four authors. Each API call now records the
+  binding of the frontmatter setter whose expansion made it (`ledger::ApiCall::binding`). The setters are `\email`,
+  `\emailAdd`, `\institute`, `\address`, `\affil`, `\affiliation` and the stores' contact setters `\ead`,
+  `\emailaddr`, `\affaddr`, `\department`, `\institution` (`ledger::FRONTMATTER_SETTERS`; not `\inst`, a mark
+  request, whose inst_support.sty would watch every aa paper). A call is noted once its arguments are read
+  (`Expandable::invoke`): the innermost setter whose expansion is still being read, by `gullet::input_unread_since`
+  (`state::open_frontmatter_setter`), a robust setter's `\cs␣` too. The binding is the setter's owner as
+  `note_binding_load` records it (OD #922), when that owner declared conventions (authblk's `\affil`, also under the raw
+  pnas-new.cls that loads it, 1706.06282 and 2212.01357; sv_support.sty's `\institute`; aa.cls's own `\institute`).
+  It is the class's family (`ledger::class_family`) when the owner is the kernel, a raw file's setter rerouted in place
+  (OD #936, the kernel's gate, OD #925: 94b's `a_raw_class_in_place_address_is_the_api`) or a class binding declaring
+  none (revtex4-2.cls's). That family is the first class binding to declare conventions, else the class's own `\author`
+  binding (elsarticle's elsart_support_core.sty), else the kernel's. Another binding declaring none takes the family of
+  the first binding its load loaded that declares (`ledger::LOADED`: `\documentstyle{revtex}`'s revtex3_support.sty,
+  loaded by revtex.sty after the article class, is REVTeX's under the revtex4_support.sty it loads — cond-mat0505458,
+  cond-mat9803141, hep-ph9909393, cond-mat0209515, hep-th0503100, hep-th9507063, nlin0207050 lost their written
+  addresses on the scorer run without it). Any other owner keys a block's way: undeclared, not written. Each item of a call whose family is not written (`policy::family_written`) stays as today's holds it
+  (`writer::keep_as_today`): its take-out and write-out are given back, and each item of its text is owned as today's
+  owns it, none where today's holds none. The paper's other items are written: `iopart_address_with_authblk_kept_as_today`,
+  authblk's take-out written beside iopart's `\address`. The whole paper is declined where a written item would depend
+  on the unwritten reading: the names do not pair with today's (the re-part writes every item), or the call made a
+  creator. The ledger says `declined: an unwritten family's items kept as today's` where the reading wanted them
+  otherwise.
+  The watch costs every macro call, so it starts only at a written family's block that finds an unwritten family's
+  setter defined (`ledger::watch_unwritten_setters`); calls made before then are `unobserved`, not written. Unwatched,
+  the expansion path costs +0.02-0.05 % instructions (1106.2670, 1103.4425; base noise ±0.03 %).
+  Not observed, so written under a written block as before: a binding's other commands (`\thanks`,
+  `\IEEEauthorblockA`, elsarticle's `\cortext`), and a raw class's stores handed on at `\maketitle`
+  (`frontmatter_stores::harvest_stores`, where no setter's expansion is open; SYNC row "unobserved frontmatter calls").
+  Census (default mode; the five populations above, 3,697 papers, and the 419 authblk papers under other classes):
+  against the int125a build the one byte-changed paper is 2609.05466 (creators now int124b's); no paper 95b r2 wrote is
+  left as today's. Guard `perfect_kernel_batch95b::an_unwritten_familys_call_is_kept_as_today` (repros
+  class-bindings/`svjour3_institute_names_at_with_authblk`, RED in 95b r2, and `iopart_address_with_authblk_kept_as_today`).
 - Considered and dropped: an entry the call labels with a footnote symbol (`\affil[*]{Equal contribution}`) as a legend
   note like a symbol-led one (`api:legend`): seven sample papers' `\affil[*]{Corresponding author, …}` lost their
   affiliation and e-mail (2206.08826, 2403.17178, 2409.13995, 2503.00537, 2603.05201, 2608.03927, 2106.04144); such an

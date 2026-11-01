@@ -181,6 +181,16 @@ pub fn declare_frontmatter_conventions(conventions: &'static Policy) {
 /// Whether a binding declared conventions of its own (the class fallback's test, `ledger::policy_binding`).
 pub fn has_entry(binding: &str) -> bool { declared(binding).is_some() }
 
+/// Whether the family of the binding `binding` is written ([`Policy::written`]): the kernel's (its own blocks, [`KERNEL`]),
+/// or a binding with a declaration of its own that is written (any of its hooks) — what an API call a setter of the
+/// binding made is written under (`ledger::ApiCall::binding`, `writer::unwritten_calls`); `UNDECLARED` for any other.
+pub fn family_written(binding: &str) -> bool {
+  match declared(binding) {
+    Some(d) => d.iter().any(|p| p.written),
+    None => undeclared(binding).written,
+  }
+}
+
 /// Whether a binding declared that its class's `\email` prints in place ([`Policy::email_in_place`], any of its hooks).
 pub fn declares_email_in_place(binding: &str) -> bool {
   declared(binding).is_some_and(|d| d.iter().any(|p| p.email_in_place))
@@ -259,6 +269,11 @@ mod tests {
     );
     assert!(policy_for("kernel", "\\lx@add@authors@adaptive").written);
     assert!(!policy_for("undeclared_binding", "\\lx@add@authors@append").written);
+    // (a setter's family, any hook's declaration: an API call's, `ledger::ApiCall::binding` — 95b r3)
+    assert!(family_written("kernel"));
+    assert!(family_written("synthetic_binding"));
+    assert!(!family_written("undeclared_binding"));
+    assert!(!family_written("unobserved"));
     // (a declaration again for a hook replaces the earlier in its place: a binding loaded again)
     declare_frontmatter_conventions(&APPEND_HOOK);
     assert_eq!(
