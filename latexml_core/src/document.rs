@@ -6371,7 +6371,7 @@ impl Document {
 
   pub fn has_node_font(&self, node: &Node) -> bool {
     match xml::closest_element(node) {
-      Some(element) => element.with_attribute(c"_font", |_| ()).is_some(),
+      Some(element) => element.has_attribute("_font"),
       _ => false,
     }
   }

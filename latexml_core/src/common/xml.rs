@@ -198,7 +198,8 @@ pub struct XPath {
 const COMPILED_XPATH_LIMIT: usize = 1024;
 
 /// `xpath` compiled, from `compiled` or compiled now; `None` when it does not compile (its string evaluation then
-/// reports it as before) or `compiled` is full.
+/// reports it as before — compiling it a second time, so libxml2's stderr line prints twice: PERFORMANCE.md P10) or
+/// `compiled` is full.
 pub fn compiled_xpath<'a>(
   compiled: &'a mut HashMap<Box<str>, Expression>,
   xpath: &str,

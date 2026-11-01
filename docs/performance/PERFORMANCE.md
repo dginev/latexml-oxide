@@ -278,7 +278,9 @@ which compiles the expression on every call: a document makes 15k–32k calls of
 cache cannot live in latexml-oxide alone (rust-libxml keeps `Node::wrap` and `Object`'s document private), so
 rust-libxml 0.3.23 adds `xpath::Expression` + `Context::*_compiled` (KWARC/rust-libxml#223), and core `XPath` and
 `PostDocument` keep a table of compiled expressions (`compiled_xpath`, cap `COMPILED_XPATH_LIMIT` = 1,024; a
-non-compiling expression keeps its string evaluation and its diagnostic). Measured alone (perf stat instructions:u vs
+non-compiling expression keeps its string evaluation and its Error; open nit (rev96x): nothing is cached for it, so
+each call compiles it twice and libxml2 prints its stderr line twice (`\lxRDFa[ancestor::ltx:section[]…`: 2 → 4 lines,
+same Errors, same XML) — cache the failure (`Result<Expression, XPathError>` under the cap) and return it). Measured alone (perf stat instructions:u vs
 `95c-rel`, 18 audit docs): −0.86 % mean (−0.51 … −1.32 %), XML byte-identical. Measured and NOT taken: post's per-call
 `XPathContext` (61 per document — no lever); `get_nodes_as_vec` upgrading the document once per result set (+0.005 %,
 noise).
@@ -316,6 +318,9 @@ wrapping elements only). Left, each with its basis (exact call counts × gdb-ste
   0.72 % of String copies, 2.56 M calls — a borrowed name read (additive API) on the latexml side.
 * `Node::_wrap`'s `NodeMap` probe + `Rc` clone on every traversal step (5.27 M hits, 0.48 %): a `_private` back-pointer
   would remove the probe, but collides with P11 option 2 — design decision, not taken.
+* `_autoopened` presence tests (`document.rs` ~:3540, ~:3584, `get_attribute("_autoopened").is_some()`) copy the value
+  into a `String` only to test it exists: 2.93 M calls, 0.79 % with the wrapper (perf453c basis); `has_attribute` is
+  allocation-free on 0.3.23 — a one-lever run, measured alone.
 * `set_property` 2.14 % is libxml2's own `xmlSetNsProp` (frees and re-creates the text child): no wrapper lever.
 Method: call counts by hardware breakpoints on each wrapper function's out-of-line entry (`perf stat -e
 mem:ADDR:x`, ASLR off) cross-checked against an `LD_PRELOAD` count of libxml2's property calls, instructions per call
