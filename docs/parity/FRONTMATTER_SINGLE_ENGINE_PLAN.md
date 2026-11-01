@@ -99,14 +99,98 @@ findings become their acceptance witnesses.
   the requester skip (ruling R1), the `fm:` labels and the emitter (superseding #837's S2b writer), and per-call
   positions.
 
+## The structure model (user-accepted 2026-11-01)
+
+A block is read in four steps, and a fifth writes it. Each residual belongs to the step where it first goes wrong: a cut
+error that shows downstream as a wrong owner is a **Cut** residual.
+
+| Step | Question | Today |
+|---|---|---|
+| **Cut** | Where does a printed piece end? | about 9 readers per signal family: old reader (3A), observer lexer and `lines.rs`, writer `cut`/`repart.rs`, binding pre-splitters, scorer |
+| **Kind** | What is the piece: person, affiliation, address, e-mail, note, collaboration, remark, spacer? | inventoried (FRONTMATTER_DIGESTED_REFACTOR.md 3B-3E), not unified; two `reads_as_names` (`author_block/marks.rs:106` on tokens, `observer/resolver/lines.rs:381` on text), three collaboration word lists |
+| **Group** | Which entries form a unit: `\and` column, names row, run, collaboration group, the block? | 14 sites with four meanings (owner, scope, positional domain, temporal run). Both engines model it inside (`resolver/mod.rs:311,313` `group`/`column`; `author_block/line_kinds.rs:23-33` `LinkOwner::Group`); it is lost at the API (`annotate=N`) and in the observer's output (`Resolved{creators,block}` `resolver/mod.rs:85-88`, writer `Owner{Creator,Block}` `writer/plan.rs:41`) |
+| **Link** | Which entry, group or block owns each item? | ruled (steps 1→4 above), **run by neither engine**: both apply step 3 → 1 → 2 (`insert.rs:89-92`: `distribute_upfront_contacts` → `relocate_annotations` → `respell_emails`; `resolver/mod.rs:765-774`: `distribute_upfront` → `answer_pending` → `answer_sequence` → `respell_emails` → `sole_author_takes_the_block`); about 10 owner chains, each with its own order |
+| **Emit** | Is the reading written? | the writer gates each family and declines whole papers on one unexplained difference (W3) |
+
+**Signals are read once.** Today a mark is read by about 17 mechanisms in 6 representations (tokens, source strings,
+macro bodies, digested ink, events, DOM); a line break by about 8; `\and`, comma/"and", wide space, label key, brace
+depth and spacer line by 5-9 each, with a witnessed disagreement for most pairs. The target: one read into the events,
+every step consuming them; the scorer adopts the same signals (R13).
+
+**Data model: two trees and a map.**
+- **Names:** Block → Group* → Entry. Groups nest: an `\and` column holds names rows, and a row holds runs; a
+  collaboration group sits inside a column.
+- **Prints:** Block → Section → Item → inner Item. A section (ijcai `\affiliations`, REVTeX `\affiliation` lines,
+  amsart address blocks) is where items are cut and kinded; it owns nothing. The inner item (a note's contact, an
+  entry's inner e-mail) never inherits its parent's owner (C1, #917); a sub-item carries BESIII's `(A)` (R6).
+- **Link:** Item → Owner ∈ {Entry, Group, Block}, decided in the ruled order. A Group is also a **scope**, the
+  candidate set for steps 2 and 3 ("the group's only author", spelling within a group).
+
+**One fan-out, `expand(owner)`, at the flush.** It turns an owner into members:
+- Entry → itself.
+- Group → its live members in print order. For an item printed apart from the names, members whose own marks
+  request that role are skipped: R1, applied at expansion and never baked into membership.
+- Block → the item stays once at block level (#159).
+
+It is emitted as Perl's label fan-out: each member requests `fm:g<k>`, the item carries `label=fm:g<k>`, and
+`relocate_annotations` clones per target (Perl `Base_Utility.pool.ltxml:891-900`), keeping today's per-target dedup
+(`relocate.rs:23-33,353-369`). `share_row_contacts` already works this way with `row:shared`/`row:atN`
+(`shared_row.rs:96-154`), so no new insert machinery is needed.
+
+**What collapses into a Group owner:**
+- `_share=authors`;
+- `annotate=all/N/new/run[:N]`, in both engines (`frontmatter_api.rs:621-826`, `resolver/api.rs:48-100`);
+- REVTeX/aastex's group rule and `_grouped` (`revtex4_support_sty.rs:1013`, `relocate.rs:769-1013`);
+- the collaborations' `annotate=N/new` (`collaborations.rs:699-712`);
+- R12 rows (`dispatch.rs:802,1733`, `LinkOwner::Group`, the observer's `R12:row-above`);
+- relocate's fuzzy multi-owner (`relocate.rs:236-271`);
+- authblk's `TheNote` runs;
+- the `fm:block` shared creator.
+
+These become Group scopes: `_group`/`_marks` (`place.rs:129-137`), `frontmatter_group_first`
+(`author_block/affiliations.rs:497`) and `Policy::call_is_group`.
+
+**What does not fit:**
+- **Positional pairing** (`insert.rs:290`, `relocate.rs:272-283`, the observer's `distribute_upfront`) is 1:1, not a
+  fan-out. It stays a step-3 convention yielding Entry owners, legal only as a declared sequence (R10).
+- **Runs are temporal:** membership depends on call order and on step-1 answers. This works only with the R1 skip
+  inside `expand`.
+- **One block across calls** (PoS/JHEP, R9; appending raw classes) needs a declared block boundary (Stage 4b
+  `appends`).
+- **A collaboration's Kind** (R7) must be settled before Group.
+- **Raw-class stores** come before the model: a coverage gap (the dev lost-words census family A; FIDELITY_CHARTER
+  §4 "No printed frontmatter word is lost").
+
+**Residuals by step** (2026-11-01 mechanism map over SYNC, OPEN_ROWS, the plan's rulings, the reviews and the dev
+lost-words census; classes deduplicated, paper counts from different censuses):
+
+| Step | Classes | Pathological, deferred |
+|---|---|---|
+| Cut | 19 | 2 |
+| Kind | 18 | 2 |
+| Group | 6 | 0 |
+| Link | 11 | 0 |
+| Emit | 5 | 0 |
+
+The five classes that cost the most papers, pathological cases excluded:
+1. Raw-class and document stores (Kind/coverage): 69 of 101 real lost-words papers.
+2. Emit, writer gate shut or whole-paper declines: 29 + 5 papers.
+3. Old-reader cuts the writer cannot override (M1, W2, M5, M7, Cut): 29 papers.
+4. Convention before marks, and label inheritance (F1, C1, Link order): 21 papers.
+5. IEEE block grades and `\thanks` contents (Kind): 11 papers.
+
+Group residuals are few and mostly synthetic. Group costs complexity (14 sites) rather than papers, which is why it
+is unified in Stages 1-3 rather than given a stage of its own. The four pathological ones are in DEFERRED_FAMILIES.md
+"Pathological authoring" (and "Names stacked under names").
+
 ## Stages (each one payload-writer batch; each lands alone)
 
 | # | Stage | Effort / risk | Output | Acceptance witnesses |
 |---|---|---|---|---|
 | 0 | **Measure and fence.** Per-family writer outcomes and `SkipReason` counts in `ab_audit fmshadow`; a drift guard failing on any new `\lx@add@*` emission in `author_block/`; audit item 2's switches for `insert.rs:290`, `:141`, `relocate.rs:753-816`, `shared_row.rs:54`, `place.rs:42`; a census of unobserved giant lists | EASY, none | byte-identical on `popint125a_s10k` | 2012.14750, 1507.02068, 1512.08197, 2201.02056, 2007.02542 (observed or not) |
-| 1 | **One placement order in the reading.** Reorder `resolver/mod.rs:700-714` into steps 1→4 (`distribute_upfront` into step 3); the requester skip (R1) in `resolver/api.rs:48/:75`; hand-printed numbers on every entry; change tags so the writer writes them | MED, medium | F1's 14 go by their marks | 1810.01941, 1202.0629, astro-ph0108212, 1911.09695, 2006.10291, 0909.0058, 1203.1623, 1503.02933, 1604.05346, 1612.02554, 1302.2646, astro-ph0702360, 1105.5884, astro-ph0607224; 1808.01089, astro-ph0105133; astro-ph0408475. Must not move: amsart grid 1302.1274, 1610.05835, 2204.13910, 2205.05923, 2507.07513, 2311.04097; 0903.2366, 2303.09899; 2403.06760, 1804.01623, 2001.01892, astro-ph0611722, 0910.4381; C1's seven |
+| 1 | **One placement order in the reading.** **and one structure.** Reorder `resolver/mod.rs:765-774` (and `insert.rs:89-92` with it) into steps 1→4 (`distribute_upfront` into step 3); Group owners carried in `Resolved` and the writer's `Owner` (Entry, Group, Block); the requester skip (R1) in `resolver/api.rs:48/:75`; hand-printed numbers on every entry; change tags so the writer writes them | MED, medium | F1's 14 go by their marks | 1810.01941, 1202.0629, astro-ph0108212, 1911.09695, 2006.10291, 0909.0058, 1203.1623, 1503.02933, 1604.05346, 1612.02554, 1302.2646, astro-ph0702360, 1105.5884, astro-ph0607224; 1808.01089, astro-ph0105133; astro-ph0408475. Must not move: amsart grid 1302.1274, 1610.05835, 2204.13910, 2205.05923, 2507.07513, 2311.04097; 0903.2366, 2303.09899; 2403.06760, 1804.01623, 2001.01892, astro-ph0611722, 0910.4381; C1's seven |
 | 2 | **Step 3 declared, one vocabulary.** `owner=sequence` → `annotate=sequence`, `_share=authors` → `annotate=share` (aliases kept); `new` → `run` where the class groups (quantumarticle first; check acmart, ieeetran, sv, rmaa, aguplus, czipreprint, apa6, kluwer, ws_procl against their class code); elsarticle declares body title marks; `\IEEEauthorrefmark` into IEEEtran's declaration | EASY-MED, low-medium | per flipped class, against pdflatex | 1108.0201; a quantumarticle `\author{A}\author{B}\affiliation{X}\affiliation{Y}` paper |
-| 3 | **Owners at the flush.** Owner table built at `place.rs:403` (after `shadow_flush`, before `share_row_contacts`), consumed in `frontmatter_api.rs:472-800`; `relocate.rs` matches `fm:` exactly; `fm:` items skip `insert.rs:290`, `:141`, relocate's held/group rules and the inner-e-mail inheritance; the writer's Copy/Remove become no-ops for them; switch `owner_table` | HARD, high. **From here ownership has one home** | print order; declined papers get the reading's owners | C1's seven (2101.04527, 2206.03859, 1911.11805, 2102.01452, 2404.15833, 2505.18180, 2507.18248) without the writer; F1's 14; 1009.1371; 2212.06489 (table size); 2103.04797; 1303.7097; 0911.5235 |
+| 3 | **Owners at the flush.** Owner table built at `place.rs:403`, a Group owner emitted through `expand` (`fm:g<k>` on the item and on each member, R1 at expansion) (after `shadow_flush`, before `share_row_contacts`), consumed in `frontmatter_api.rs:472-800`; `relocate.rs` matches `fm:` exactly; `fm:` items skip `insert.rs:290`, `:141`, relocate's held/group rules and the inner-e-mail inheritance; the writer's Copy/Remove become no-ops for them; switch `owner_table` | HARD, high. **From here ownership has one home** | print order; declined papers get the reading's owners | C1's seven (2101.04527, 2206.03859, 1911.11805, 2102.01452, 2404.15833, 2505.18180, 2507.18248) without the writer; F1's 14; 1009.1371; 2212.06489 (table size); 2103.04797; 1303.7097; 0911.5235 |
 | 4a | **In-block items and new kinds from the reading.** The writer's segmentation (`cut` `plan.rs:463`, legends, roles, write-out, `cut_entry_addresses` `:1429`, `block_span_tokens` `:542` with 97e's fold) becomes queue rewrites; new kinds: boxed e-mail items, collaboration contacts, block-level contacts; the ledger's `inside` calls dequeued | HARD, high | pinned output of `batch97a/97d/97f` changes, each with its PDF evidence | names M1 (2605.09461, 2507.07465, 2609.36484, 2603.10436, 2608.20401); W2 (2410.09484, 2507.05173, 2105.11228, 1009.4816, 2512.19748); W3 (2503.10804, 1903.03238, 2512.20289); 0910.2149, hep-ex0011032, 2501.13770, 1210.5341; 1508.03930, 1603.09150, 1509.06963, 2007.02542, 0909.3044; BESIII `40A` (R6) |
 | 4b | **Names from the reading.** `writer/repart.rs` moves to the flush; `insert.rs:97` becomes a read-back Warning; a binding `appends` declaration for PoS/JHEP's one `\@author` (`jhep_cls.rs:183`, PoS.cls:666) | HARD, high | `merged_creators` Errors must not rise | M7 (2412.03072, 1901.08289, 2510.01161); M8 (1409.4999, 2501.09580); M5 (2107.12423, 2603.24245, 2003.04668, 2101.00440, 1708.03035, 2402.14804); 2105.09506; 1711.04132 |
 | 5 | **The old engine becomes the fallback.** Positions per call (`ledger.rs:67-69`), so giant lists are observed; the old passes run only without a table; the writer's DOM operations, `keep_as_today` and `Policy.written` deleted | MED, medium | unobserved papers only | 2012.14750; the giant lists Stage 0 finds unobserved |
@@ -131,6 +215,11 @@ listed with its PDF evidence.
 | R7 | revtex `\collaboration` / `\affiliation{(… Collaboration)}`: a contact (Perl's aastex) or a creator (Perl's revtex)? | — | open |
 | R8 | Contact order within a creator | Print order (97d D1 chose it) | **RULED 2026-11-01: print order** |
 | R9 | PoS/JHEP one `\@author` across calls: lift the difficulty deferral for Stage 4b? | — | open |
+| R10 | amsart's upfront N·m grid and numbered institutes equal to the authors: a declared sequence under R2, or bare position? | A declared sequence where the class's own code pairs them (Stage 1's "must not move" witnesses) | open |
+| R11 | Does the R1 requester skip apply inside a Group owner at expansion, including in-block lines under the row? | At expansion, for items printed apart from the names; in-block lines under the row stay the row's (R1's exemption) | open |
+| R12 | A Group in the XML: Perl's clones only, or also a group id in the provenance attribute? | Clones only, as Perl does; the id is a later beyond-Perl option | open |
+| R13 | Should the scorer read the ruled signals (symbol marks as labels, break kinds) so that its disagreements read as converter defects? | Yes, one signal reading shared by converter and scorer | open |
+| R14 | Emit: decline per item or per paper (W3)? | Per item: write what the reading explains, fall back for the rest | open |
 
 ## Interaction with bundle int126a
 
@@ -139,4 +228,5 @@ listed with its PDF evidence.
 - 97d's `collaborations.rs` is the last ownership rule allowed into the old reader; Stage 0's fence enforces that.
 - 97f's M1 unwrap (`author_block/separators.rs:711-768`) is fallback-reader work. It stays until Stage 5.
 - 97f r2's F1 and F3 are stopgaps that Stage 1 generalizes.
+- 97f r2 also adds `\lx@add@contact@placed` emissions in `author_block/email_block_calls.rs` (`placed_email_line_calls`, `take_placed_line_emails`): Stage 0's fence baselines them as stopgaps (rev126a N2).
 - SV1 (svproc's override deleted) returns in Stage 6, after Stage 3 gives inner e-mails the chain at the API.
