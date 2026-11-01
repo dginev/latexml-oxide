@@ -1,0 +1,33 @@
+% A raw package's history box (`\historybox`, medima's `\else \receivedhead~\@received;\space \fi` shape) is printed by
+% a title macro (`\titlebox`) that the refused `\maketitle` reaches through a measuring box and that an uncalled
+% `\preprinttitle` calls too, so it never grows into the title page (every caller title-page code): the dates' labels
+% are read in any code the title page reaches (frontmatter_stores.rs `labelled_api`), and each date is named as printed.
+% Before, no label was read: the dates had their role's default, then none (95d-r2, review rev95d-r2 B).
+% witness: 2311.02753 (jasr.sty:449-466 `\elsarthistorybox`, printed by `\MaketitleBox`, also called by `\getSpaceLeft`'s
+%          `\setbox0=\vbox{…}` and the uncalled `\pprintMaketitle`, jasr.sty:305-309, :507)
+% oracle:  pdflatex 0 errors: "T", "Ann Able", "Received 1 May 2020; Accepted 2 June 2020;", "Text."
+% engines: rust 95d-r2base = 0 errors, "Received ", "Accepted " (the defaults); rust 95d-r2 = 0 errors, both unnamed
+% expect:  0 errors, 0 warnings; <ltx:date name="Received" role="received">, <ltx:date name="Accepted" role="accepted">
+% status:  RED (95d-r2) -> GREEN (95d-r3)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{histbox.sty}
+\let\@received\@empty\let\@accepted\@empty
+\def\received#1{\gdef\@received{#1}}
+\def\accepted#1{\gdef\@accepted{#1}}
+\def\receivedhead{Received}
+\def\acceptedhead{Accepted}
+\gdef\historybox{{\rm
+  \ifx\@received\@empty\relax\else \receivedhead~\@received;\space \fi
+  \ifx\@accepted\@empty\relax\else \acceptedhead~\@accepted;\space \fi}}
+\long\def\titlebox{\@title\par\elsauthors\par{\itshape\historybox}\par}
+\long\def\measuretitle{\global\setbox0=\vbox{\titlebox}}
+\long\def\preprinttitle{\titlebox}
+\def\maketitle{\measuretitle\unvbox0}
+\end{filecontents*}
+\documentclass{elsarticle}
+\usepackage{histbox}
+\begin{document}
+\begin{frontmatter}\title{T}\author{Ann Able}
+\received{1 May 2020}\accepted{2 June 2020}\end{frontmatter}
+Text.
+\end{document}

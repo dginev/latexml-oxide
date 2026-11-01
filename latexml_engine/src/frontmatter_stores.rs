@@ -42,8 +42,10 @@
 //! prints a mark before its pure store (`table_setter_stores`: astlb.cls's `\email`, 1202.2889; OD #941). A raw package's
 //! setter's own `\@<name>` is a store only when code that never runs here reads it
 //! (`ClassReaders::read_where_nothing_runs`: rlj.sty's `\@keywords`, read by an uncalled `\makeCover`, 2605.31044);
-//! a date or classification is named only by a label its title page prints, in a branch's `\else` too (medima.sty's
-//! `\finalformhead~\@finalform`), else unnamed (OD #940).
+//! a date or classification is named only by a label the code its title page reaches prints, in a branch's `\else` too
+//! (medima.sty's `\finalformhead~\@finalform`), or before the test (`Received: \ifx…\else\@received\fi`), a phrase
+//! ending at a `;` or `,` (pazha2.cls's `…; revised \@revised`), else by its role's default only where that word is
+//! printed right before the store (wiley2sp.cls's `\receivedname`), else unnamed (OD #940).
 use std::collections::VecDeque;
 
 use latexml_core::{
@@ -919,6 +921,68 @@ impl ClassReaders {
       }
     }
     None
+  }
+
+  /// Is the default name of the date or classification `api` makes (`\lx@date@<role>@name`, `\lx@classification@name`:
+  /// "Received~", "Classification:~") the word a raw file's macro prints right before `store` — its letters, case and a
+  /// trailing colon aside ([`text_right_before`])? Where no label is read ([`labelled_api`]), the role's default stands
+  /// only then (FIDELITY_CHARTER: a role's default stands only where the class prints that label; review rev95d-r2).
+  fn prints_default_name_before(&self, store: &Token, api: &str) -> bool {
+    let default = if api.starts_with("\\lx@add@classification") {
+      T_CS!("\\lx@classification@name")
+    } else {
+      let Some(role) = api
+        .split_once("role=")
+        .and_then(|(_, rest)| rest.split([',', ']']).next())
+      else {
+        return false;
+      };
+      T_CS!(&s!("\\lx@date@{role}@name"))
+    };
+    let Some(word) = parameterless_body(&default).map(|body| {
+      alphanumerics(
+        &body
+          .unlist_ref()
+          .iter()
+          .map(Token::to_string)
+          .collect::<String>(),
+      )
+      .to_lowercase()
+    }) else {
+      return false;
+    };
+    if word.is_empty() {
+      return false;
+    }
+    let Some(readers) = self.readers.get(&store.get_cs_name()) else {
+      return false;
+    };
+    readers.iter().any(|cs| {
+      let Some(body) = parameterless_or_any_body(&T_CS!(&with(*cs, ToString::to_string))) else {
+        return false;
+      };
+      let body = body.unlist_ref();
+      body.iter().enumerate().any(|(at, t)| {
+        if t != store
+          || body[..at]
+            .iter()
+            .rev()
+            .find(|b| b.get_catcode() != Catcode::SPACE)
+            .is_some_and(|b| cs_in(b, WRITERS))
+        {
+          return false;
+        }
+        let text = text_right_before(body, at).to_lowercase();
+        let text =
+          text.trim_end_matches(|c: char| c.is_whitespace() || matches!(c, ':' | ',' | ';'));
+        text.strip_suffix(word.as_str()).is_some_and(|before| {
+          !before
+            .chars()
+            .next_back()
+            .is_some_and(char::is_alphanumeric)
+        })
+      })
+    })
   }
 
   /// Does the class print `store` — its title page or a page style ([`ClassReaders::printed`])? A store left at the
@@ -2863,18 +2927,33 @@ fn labelled_api(name: &str, api: &str, store: &Token, readers: &ClassReaders) ->
     );
     assign_value(&s!("lx_store_deferred_{name}"), true, Some(Scope::Global));
   };
+  // (a date's or a classification's label is read in any code the title page reaches, grown into it or not: jasr.sty's
+  // `\receivedhead~\@received` is in `\elsarthistorybox`, which its `\MaketitleBox` prints, a macro its uncalled
+  // `\pprintMaketitle` calls too, 2311.02753; review rev95d-r2)
+  let label = readers.title_page_label(store).or_else(|| {
+    named
+      .is_none()
+      .then(|| readers.label_in(store, &readers.printed))
+      .flatten()
+  });
   let Some(StoreLabel {
     reader,
     part,
     text,
     in_argument,
-  }) = readers.title_page_label(store)
+  }) = label
   else {
     if named.is_some() && readers.read_by_the_title_page(store) {
       deferred(&unnamed);
       return unnamed;
     }
     if named.is_some() {
+      return api.to_string();
+    }
+    // (no label read: the role's default stands where its word is the text the class prints right before the store —
+    // wiley2sp.cls:296-302's `\receivedname\ignorespaces\@received`, `\def\receivedname{{\normalfont Received:}\ }`,
+    // which the line reader takes for a value (1211.4450, 1306.2559) —, else the date has no name)
+    if readers.prints_default_name_before(store, api) {
       return api.to_string();
     }
     // (the unnamed call, for `\maketitle`'s reads of the store too, `store_api`)
@@ -5116,9 +5195,10 @@ fn balanced(toks: &[Token]) -> bool {
 }
 
 /// The label in the line before `body[at]` ([`ClassReaders::title_page_label`]; a line starts at a line break, a group's
-/// or an environment's edge, another value, or a branch's `\else`/`\or`): the start of the label's tokens, the
-/// end of what a deposit takes out with it (past `body[at]` when the label is in the store's own group, else the start
-/// of that group), and the label's text.
+/// or an environment's edge, another value, or a branch's `\else`/`\or` — the whole test's start when the branch holds
+/// no label before the store; a phrase, at a `.`, `!`, `?`, `;` or `,`): the start of the label's tokens, the end of
+/// what a deposit takes out with it (past `body[at]` when the label is in the store's own group, else the start of that
+/// group; past the test's `\fi` when the label is before the test), and the label's text.
 fn line_label_before(body: &[Token], at: usize) -> Option<(usize, usize, Tokens, bool)> {
   let is_value = |t: &Token| {
     t.get_catcode() == Catcode::CS
@@ -5144,6 +5224,8 @@ fn line_label_before(body: &[Token], at: usize) -> Option<(usize, usize, Tokens,
   let mut in_argument = false;
   // (past the group last skipped, which starts at `k` while it is the item before)
   let mut group_past: Option<usize> = None;
+  // (the conditional whose branch holds the store alone, the label before it: its opening and the index past its `\fi`)
+  let mut conditional: Option<(usize, usize)> = None;
   // (an implicit `\bgroup` or `\egroup`, `\let` to a brace, opens or closes a group as one does: the store's own group
   // in `\insert\footins\bgroup\footnotesize Keywords: \@keywords\par\egroup`, 86g r3 review probe i3)
   let group_catcode = |t: &Token| {
@@ -5217,6 +5299,20 @@ fn line_label_before(body: &[Token], at: usize) -> Option<(usize, usize, Tokens,
       // exactly when the store has a value (2104.10903, 2307.16262; review rev95d B2) — `\maketitle`'s run of the title
       // page still checks the label prints right before the store (`verify_title_page_labels`)
       Catcode::CS if cs_in(&t, &["\\else", "\\or"]) => {
+        // — unless the branch holds no label before the store: then the label is printed before the whole test,
+        // `Received: \ifx\@received\@empty--\else\@received\fi` "Received:", and the test leaves the title page with
+        // it (its `\fi` included), the store's branch being the one printed when the store has a value (review
+        // rev95d-r2)
+        let mut inner = LabelText::default();
+        if conditional.is_none()
+          && label_items(&body[k..end.min(at)], 0, &mut inner).is_some()
+          && !inner.has_text()
+          && let Some((open, past)) = enclosing_conditional(body, k - 1, at)
+        {
+          conditional = Some((open, past));
+          k = open;
+          continue;
+        }
         start = k;
         break;
       },
@@ -5250,33 +5346,184 @@ fn line_label_before(body: &[Token], at: usize) -> Option<(usize, usize, Tokens,
       start += body[start..end].iter().position(|b| *b == T_OTHER!("]"))? + 1;
     }
   }
-  let label_end = if end == at + 1 { at } else { end };
+  let mut label_end = if end == at + 1 { at } else { end };
+  if let Some((open, past)) = conditional {
+    label_end = label_end.min(open);
+    end = past;
+  }
   // The label is the phrase printed right before the store: a sentence before it in the same line stays where it is
-  // (`\footnote{Funded. KW: \@keywords}`, review probe `fnm`: "KW:", the footnote keeps "Funded.").
+  // (`\footnote{Funded. KW: \@keywords}`, review probe `fnm`: "KW:", the footnote keeps "Funded."), and so does a
+  // clause before a `;` or a `,` — pazha2.cls:166-167's `Received \@submitted; revised \@revised; accepted
+  // \@accepted` names the revised date "revised" (2408.01858, 2607.07582; review rev95d-r2).
   let mut depth = 0i32;
   let mut phrase = start;
+  // (where the deposit's part starts: the phrase, or the `;` or `,` joining its clause to the one before, which leaves
+  // with it — the title page keeps no "; ;" of the dates it hands on)
+  let mut part = start;
+  // (a store right after a `;` or `,` has no label of its own: the separator ends the clause before it —
+  // iaus.cls's `{\itshape Proceedings IAU Symposium No. \@volume, \@pubyear}`, 0707.3527)
+  let mut after_separator = false;
   for j in start..label_end {
     match body[j].get_catcode() {
       Catcode::BEGIN => depth += 1,
       Catcode::END => depth -= 1,
       Catcode::OTHER
         if depth == 0
-          && body[j].with_str(|c| matches!(c, "." | "!" | "?"))
+          && body[j].with_str(|c| matches!(c, "." | "!" | "?" | ";" | ","))
           && body
             .get(j + 1)
             .is_some_and(|b| b.get_catcode() == Catcode::SPACE) =>
       {
         let next = skip_spaces(body, j + 1);
+        let separator = body[j].with_str(|c| matches!(c, ";" | ","));
         if next < label_end {
           phrase = next;
+          part = if separator { j } else { next };
+        } else {
+          after_separator = separator;
         }
       },
       _ => {},
     }
   }
-  let start = phrase;
-  let label = label_only_begin_code(&body[start..label_end])?;
-  Some((start, end, label, in_argument))
+  if after_separator {
+    return None;
+  }
+  let label = label_only_begin_code(&body[phrase..label_end])?;
+  Some((part, end, label, in_argument))
+}
+
+/// The text `body` prints right before `body[at]` ([`ClassReaders::prints_default_name_before`]): its characters back
+/// to the first code that is no text — a branch's `\else`, another store, a primitive —, font and layout commands
+/// passed over (a layout command's braced arguments too: `\hspace{1.5mm}`), a brace read as a word's edge, an explicit space (`~`, `\ `) read as one, and a parameterless macro of
+/// a raw file's read as its own characters (wiley2sp.cls:296 `\def\receivedname{{\normalfont Received:}\ }`).
+fn text_right_before(body: &[Token], at: usize) -> String {
+  // (the open brace of the group a close brace at `body[k]` ends)
+  let group_open = |k: usize| -> Option<usize> {
+    let mut depth = 0usize;
+    for j in (0..=k).rev() {
+      match body[j].get_catcode() {
+        Catcode::END => depth += 1,
+        Catcode::BEGIN => {
+          depth -= 1;
+          if depth == 0 {
+            return Some(j);
+          }
+        },
+        _ => {},
+      }
+    }
+    None
+  };
+  let mut pieces: Vec<String> = Vec::new();
+  let mut k = at;
+  let mut read = 0;
+  while k > 0 && read < 64 {
+    k -= 1;
+    read += 1;
+    let t = &body[k];
+    match t.get_catcode() {
+      Catcode::SPACE => pieces.push(" ".to_string()),
+      Catcode::LETTER | Catcode::OTHER => pieces.push(t.to_string()),
+      Catcode::ACTIVE if *t == T_ACTIVE!('~') => pieces.push(" ".to_string()),
+      // (a layout command's braced arguments print nothing — rose_v01.cls:259's `\text{Received}\hspace{1.5mm}
+      // \@received`, 0907.2032 —; any other brace bounds a word: `\vskip 2.5mm{\footnotesize Received:` prints "2.5mm"
+      // and "Received:")
+      Catcode::END => {
+        // (the argument groups ending here, back to the command they follow)
+        let mut first = group_open(k);
+        while let Some(o) = first {
+          let b = skip_spaces_back(body, o);
+          if b > 0 && body[b - 1].get_catcode() == Catcode::END {
+            first = group_open(b - 1);
+            continue;
+          }
+          let mut cs = b;
+          if cs > 0 && body[cs - 1] == T_OTHER!("*") {
+            cs -= 1;
+          }
+          if cs > 0
+            && LAYOUT_ARGS
+              .iter()
+              .any(|(name, _)| cs_in(&body[cs - 1], &[name]))
+          {
+            k = cs - 1;
+          }
+          break;
+        }
+        pieces.push(" ".to_string());
+      },
+      Catcode::BEGIN => pieces.push(" ".to_string()),
+      Catcode::CS if *t == T_CS!("\\ ") || *t == T_CS!("\\space") => pieces.push(" ".to_string()),
+      Catcode::CS if cs_in(t, LAYOUT) || cs_in(t, STYLED) => {},
+      Catcode::CS => match lookup_meaning(t) {
+        Some(Stored::Expandable(defn)) if defn.get_origin() == DefinitionOrigin::File => {
+          match parameterless_body(t) {
+            Some(expansion) => pieces.push(
+              expansion
+                .unlist_ref()
+                .iter()
+                .filter(|e| matches!(e.get_catcode(), Catcode::LETTER | Catcode::OTHER))
+                .map(Token::to_string)
+                .collect(),
+            ),
+            None => break,
+          }
+        },
+        _ => break,
+      },
+      _ => break,
+    }
+  }
+  pieces.iter().rev().map(String::as_str).collect()
+}
+
+/// The index of the first of the spaces `body[..i]` ends with (`i` when none).
+fn skip_spaces_back(body: &[Token], mut i: usize) -> usize {
+  while i > 0 && body[i - 1].get_catcode() == Catcode::SPACE {
+    i -= 1;
+  }
+  i
+}
+
+/// The conditional whose `\else` or `\or` is `body[branch]` and whose branch from there holds `body[at]`
+/// ([`line_label_before`]): the index of its opening `\if…` (its `\unless` prefix too) and the index past its `\fi`,
+/// the two in one brace level — `None` when either is not in `body`.
+fn enclosing_conditional(body: &[Token], branch: usize, at: usize) -> Option<(usize, usize)> {
+  let mut depth = 0usize;
+  let mut open = None;
+  for j in (0..branch).rev() {
+    match conditional_kind(&body[j]) {
+      Some(ConditionalType::Fi) => depth += 1,
+      Some(ConditionalType::If) if depth == 0 => {
+        open = Some(j);
+        break;
+      },
+      Some(ConditionalType::If) => depth -= 1,
+      _ => {},
+    }
+  }
+  let mut open = open?;
+  if open > 0
+    && matches!(
+      conditional_kind(&body[open - 1]),
+      Some(ConditionalType::Unless)
+    )
+  {
+    open -= 1;
+  }
+  let mut depth = 0usize;
+  for j in at + 1..body.len() {
+    match conditional_kind(&body[j]) {
+      Some(ConditionalType::If) => depth += 1,
+      Some(ConditionalType::Fi) if depth == 0 => {
+        return balanced(&body[open..=j]).then_some((open, j + 1));
+      },
+      Some(ConditionalType::Fi) => depth -= 1,
+      _ => {},
+    }
+  }
+  None
 }
 
 /// Does a keywords setter's body only typeset its label and its argument (layout, label material and `#1`, read as

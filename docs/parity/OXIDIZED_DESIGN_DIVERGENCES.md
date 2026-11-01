@@ -28553,11 +28553,27 @@ the unnamed `published` date was replaced by the unnamed `communicated` one. A l
 too (`line_label_before`): medima.sty:322-347 prints each date in the `\else` branch of its emptiness test,
 `\ifx\@finalform\@empty\relax\else \finalformhead~\@finalform\\ \fi`, and the head macro the file defined is read as
 its text ("Received in final form", "Available online"; `\maketitle`'s run of the title page still checks it prints
-there, `verify_title_page_labels`). A date or classification whose label is not read has no name (`name={}`), never
-its role's default the class does not print (FIDELITY_CHARTER 2026-10-30): 95d named medima's final-form date
-"Revised " (2104.10903, 2307.16262); ujp.sty's `\pacs` (1906.11531, under revtex4), printed as `\udkpacs~\udkpacsnum`
-("PACS" through a macro that reads the store), is unnamed, not "Classification: ". The bindings' own calls keep their
-defaults (revtex4_support, aipproc). A raw package's setter's own `\@<name>` is rerouted only when code that never runs here reads it, or no macro does
+there, `verify_title_page_labels`); when that branch holds no label before the store, the label is the one before
+the whole test, which leaves the title page with it, `\fi` included (`Received: \ifx\@received\@empty--\else
+\@received\fi` is "Received:", no "Received: –" left; `enclosing_conditional`). A label phrase ends at a `;` or a `,`
+as at a sentence's end, and the separator leaves with its clause: pazha2.cls:166-167's `Received \@submitted; revised
+\@revised; accepted \@accepted` names the dates "revised" and "accepted" (2408.01858, 2607.07582); a store right after
+a separator has no label of its own (iaus.cls's `Proceedings IAU Symposium No. \@volume, \@pubyear`, 0707.3527: no
+"\@volume," label read). A date's or
+classification's label is read in any code the title page reaches (`ClassReaders::printed`), not only the code grown
+into it: jasr.sty:449-466's `\elsarthistorybox` is printed by `\MaketitleBox`, which its uncalled `\pprintMaketitle`
+calls too (:507), so it never grows (2311.02753, "Received"). Where no label is read, the role's default name
+(`\lx@date@<role>@name`, `\lx@classification@name`) stands only when its word is the text a raw file's macro prints
+right before the store (`ClassReaders::prints_default_name_before`, `text_right_before`: case and a trailing colon
+aside, a parameterless macro read as its characters) — wiley2sp.cls:296-302's `\receivedname\ignorespaces\@received`,
+`\def\receivedname{{\normalfont Received:}\ }` (1211.4450, 1306.2559: "Received "), zaa.cls:513-515's
+`\AtEndDocument` hook `Received \rm\@received` (1902.07328), rose_v01.cls:259-260's `\text{Received}\hspace{1.5mm}
+\@received` and `\text{revised}\hspace{1.5mm}\@revised` (0907.2032; a layout command's braced arguments print nothing)
+—; otherwise the date or
+classification has no name (`name={}`), never a role's default the class does not print (FIDELITY_CHARTER
+2026-10-30): 95d named medima's final-form date "Revised " (2104.10903, 2307.16262); ujp.sty's `\pacs` (1906.11531,
+under revtex4), printed as `\udkpacs~\udkpacsnum` ("PACS" through a macro that reads the store), is unnamed, not
+"Classification: ". The bindings' own calls keep their defaults (revtex4_support, aipproc). A raw package's setter's own `\@<name>` is rerouted only when code that never runs here reads it, or no macro does
 (`store_setter_body`, `ClassReaders::read_where_nothing_runs`): a macro reached from the title page's roots, a refused
 definition (`\lx@dropped@<name>`) or a page style. rlj.sty:73's `\@keywords`, read only by the `\makeCover` 2605.31044
 comments out, was invented as keywords (ycviu.sty's history dates too, read only by an `\articleinfobox` its title page
@@ -28573,9 +28589,15 @@ uncalled cover macro's store stays an item (RED `raw_class_store_only_an_uncalle
 A store no macro reads is still rerouted (astlb.cls:361-372 prints `\@shorttitle` only in a running head its top level
 sets, 1202.2889's `<toctitle>`); rule (a)'s other store keeps its title-page-only test. Repros sectioning-frontmatter/
 `raw_package_history_dates_are_the_frontmatter_dates` (medima's shape),
-`raw_package_store_a_document_macro_prints_stays_in_the_body`, `raw_package_dates_printed_in_the_body_stay_there`; guards
+`raw_package_store_a_document_macro_prints_stays_in_the_body`, `raw_package_dates_printed_in_the_body_stay_there`,
+`raw_class_dates_in_one_line_are_named_by_their_clauses`, `raw_package_history_box_a_shared_title_macro_prints_is_named`,
+`raw_class_date_labelled_before_its_emptiness_test_is_named`, RED `raw_package_store_no_macro_reads_is_no_item` (a
+package's store nothing reads is still an invented item, review rev95d-r2 probe qn); guards
 `perfect_kernel_batch95d::raw_package_date_stores_are_the_frontmatter_dates` (elsarticle, an unlabelled date, article),
-`perfect_kernel_batch95d::raw_package_store_other_code_prints_stays_where_it_prints`.
+`perfect_kernel_batch95d::raw_package_store_other_code_prints_stays_where_it_prints`,
+`perfect_kernel_batch95d::{raw_class_dates_in_one_line_are_named_by_their_clauses,
+raw_package_history_box_a_shared_title_macro_prints_is_named, a_date_labelled_before_its_emptiness_test_is_named,
+a_date_with_no_label_read_keeps_its_default_only_where_printed}`.
 
 ### 941. A table setter that prints a mark before its pure store is a store; the mark still prints (Perl: OmniBus's `\email`, the class unread)
 
