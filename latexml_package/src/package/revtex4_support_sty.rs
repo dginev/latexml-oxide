@@ -998,6 +998,12 @@ pub(crate) fn group_or_marked_affiliation(content: Tokens, annotate: &str) -> Re
   // \centerline{$^{2}$LAFEX…}…}`, 75 institutes under ~600 names `V.M.~Abazov,$^{33}$`, read as one unlabelled
   // block and copied onto every author by the group rule — 9.45 MB of XML, 377,251 words, hep-ex0409040; hep-ex0612013)
   let content = wrapped_lines_as_lines(&content).unwrap_or(content);
+  // (a mark spelled otherwise is the mark it prints, as the shared reader of a line's leading label reads it,
+  // `relocate::spaced_mark_at` — on a spacing nucleus, in `\( … \)`, in a box of its own: `${\,\!}^1$Department of
+  // Applied Mathematics and Statistics\\ and ${\,\!}^2$Department of Physics \& Astronomy, \\ The Johns Hopkins
+  // University` read as `$^1$` lines, each author their departments — 2112.13115, where the fail-safe below had sent both departments unread to
+  // the block; `\mbox{${\ }^{1}$} Department of Physics …`, 0807.4407; review rev98e S2)
+  let content = spaced_marks_as_marks(&content).unwrap_or(content);
   // (a line led by a macro standing for a mark, `\address{\MSU Moscow …}` with `\edef\MSU{$^{1}$ }`, under names
   // carrying such macros: no group's (user ruling R1, 2026-11-01: marks win) — labelled by its mark, the macro off the
   // line; the block's, once, where a mark leads a name (written after the comma, `M.~Osipenko,\MSU …`, so the comma
@@ -1018,12 +1024,19 @@ pub(crate) fn group_or_marked_affiliation(content: Tokens, annotate: &str) -> Re
     ]));
   }
   let marked = leads_with_mark(&content);
-  // (the fail-safe, FRONTMATTER_SINGLE_ENGINE_PLAN "The structure model" step 4: a block holding more than one label
-  // the names request that no mark leads — its labelled lines not read as lines, `\address{\parbox{\linewidth}{$^{1}$Univ
-  // A\\ $^{2}$Univ B}}`, or led by a mark this reader does not see, `\( ^{1} \)Univ A \\ \( ^{2} \)Univ B` — is no one
-  // entry a group shares: it lands once at the block, `addresses:block` (OD #159), never a copy on each author of the
-  // group; declared `_unsplit=true`, so the frontmatter observer still reads its lines by their own marks)
-  if !marked && run_names_show_a_mark() && requested_marks_held(&content) > 1 {
+  // (the fail-safe, FRONTMATTER_SINGLE_ENGINE_PLAN "The structure model" step 4: a block of two or more lines led by
+  // labels the names request that this reader cannot cut into those lines — set in a box or an environment,
+  // `\address{\parbox{\linewidth}{$^{1}$Univ A\\ $^{2}$Univ B}}`, 0911.3234's `\begin{tabular}{c}…` — is no one entry a
+  // group shares: it lands once at the block, `addresses:block` (OD #159), never a copy on each author
+  // of the group; declared `_unsplit=true`, so the frontmatter observer still reads its lines by their own marks. Marks
+  // inside one line's text, `Joint Institute, \textsuperscript{1}Univ A and \textsuperscript{2}Univ B, City` printed once
+  // under both names, are no such block: the group's entry, a copy on each, as the PDF prints it for both; review rev98e
+  // S2)
+  if !marked
+    && run_names_show_a_mark()
+    && requested_marks_held(&content) > 1
+    && requested_mark_lines(&content) > 1
+  {
     let keyvals = mouth::tokenize_internal("label={addresses:block},_unsplit=true");
     return Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![
       Some(keyvals),

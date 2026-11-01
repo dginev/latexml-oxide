@@ -110,6 +110,24 @@ pub(in crate::base_utilities) fn note_body(content: Tokens) -> Tokens {
 pub fn leads_with_mark(content: &Tokens) -> bool {
   // (past a leading font switch or group: `\affiliation{\it $^1$ Key Laboratory …}`, 0808.2763)
   let switch = |t: &Token| MARK_SWITCHES.iter().any(|cs| *t == T_CS!(*cs));
+  // (a mark spelled otherwise — `${\,\!}^1$`, `\( ^{1} \)`, `\mbox{${\ }^{1}$}` — as the shared reader reads it,
+  // `relocate::spaced_mark_at`: 2112.13115, 0807.4407)
+  let all = content.unlist_ref();
+  if let Some(lead) = all
+    .iter()
+    .position(|t| *t != T_SPACE!() && *t != T_BEGIN!() && *t != T_CS!("\\noindent") && !switch(t))
+    && let Some((operand, _)) = spaced_mark_at(all, lead)
+  {
+    return operand
+      .iter()
+      .find(|t| **t != T_BEGIN!() && **t != T_SPACE!() && !switch(t))
+      .is_some_and(|t| {
+        t.to_string()
+          .chars()
+          .next()
+          .is_some_and(char::is_alphanumeric)
+      });
+  }
   let tokens: Vec<&Token> = content
     .unlist_ref()
     .iter()

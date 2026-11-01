@@ -1264,7 +1264,11 @@ pub(super) fn surname_owners(creators: &[RCreator], letters: &str) -> Vec<usize>
 /// note's mark, `$^{1{\rm a}}$`, 1904.02582), as long as one piece is known. The most known pieces win, then the fewest
 /// pieces: a symbol run spelling known labels is parted into them before it stands alone as one piece (`†♮♯` under
 /// entries `†`, `♮`, `♯`: `$^{\dagger\natural\sharp}$`, 1004.1402). A combining mark is part of the character before
-/// it, never parted from it (`\~{x}`'s `x̃` is no `x` and a `̃`, review rev92b_r2 B1). A label holding a backslash is
+/// it, never parted from it (`\~{x}`'s `x̃` is no `x` and a `̃`, review rev92b_r2 B1). A run of digits is one number,
+/// parted into its digits only under single-digit numbering — every number `known` holds one digit, as the names' side
+/// of `part_glued_labels` reads a number —: BESIII's sub-lettered `23A` under entries numbered 1 to 70 is `23` and `A`,
+/// never `2`, `3` and `A` (2007.02542, 36 sub-lettered authors each the institutes 2 and 3; 1507.02068's `48A`,
+/// 2411.07730, 2606.14105; review rev98e B1). A label holding a backslash is
 /// a call's label as its source spells it, not as it prints: only what it spells before its first command is read, as
 /// the labels that part (authblk's `\author[3\authfn{2}]{…}`, which prints `3†`, is `3` — 2405.16051: parted whole,
 /// its command's letters were labels and its argument the `2` of `\affil[1,2,4]`; `\author[1\thanks{…}]{…}` is `1`,
@@ -1290,6 +1294,13 @@ pub(super) fn parted_label(label: &str, known: &[String], symbols: bool) -> Opti
     return None;
   }
   let at = |i: usize| chars.get(i).map_or(label.len(), |(b, _)| *b);
+  // (a cut between two digits only under single-digit numbering)
+  let single_digit = known
+    .iter()
+    .filter(|k| !k.is_empty() && k.chars().all(|c| c.is_ascii_digit()))
+    .all(|k| k.len() == 1);
+  let digit_at = |i: usize| chars.get(i).is_some_and(|(_, c)| c.is_ascii_digit());
+  let cuts = |i: usize| single_digit || i == 0 || i == n || !(digit_at(i - 1) && digit_at(i));
   // best[i]: the fewest pieces covering label[..i], with how many are known, and the piece before
   let mut best: Vec<Option<(usize, usize, usize)>> = vec![None; n + 1];
   best[0] = Some((0, 0, 0));
@@ -1297,7 +1308,7 @@ pub(super) fn parted_label(label: &str, known: &[String], symbols: bool) -> Opti
     let Some((count, hits, _)) = best[i] else {
       continue;
     };
-    for j in i + 1..=n {
+    for j in (i + 1..=n).filter(|&j| cuts(j)) {
       let piece = &label[at(i)..at(j)];
       let is_known = known.iter().any(|k| k == piece);
       let is_symbol = symbols && piece.chars().all(|c| !c.is_alphanumeric());

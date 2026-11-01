@@ -1276,7 +1276,7 @@ fn cell_tokens(content: &[Token], from: usize, tokens: &Tokens) -> Option<Tokens
 /// change, none of which today's holds anywhere, in one run of consecutive lines whose texts joined are today's item's;
 /// anything else is left to the final check, which declines. A line of the run whose label no name requests
 /// (`label:unrequested owner:block`, `ruling2:uncarried owner:block`) is a piece of the cut too, made once for the block
-/// — a labelled item nobody answers goes to the block (FRONTMATTER_SINGLE_ENGINE_PLAN's placement order), never to the
+/// with its printed label, as a legend is (label text is markup, never dropped: review rev98e S1) — a labelled item nobody answers goes to the block (FRONTMATTER_SINGLE_ENGINE_PLAN's placement order), never to the
 /// holders of the joined item — where another line of the run is so decided: one printed label no name carries had
 /// declined the whole paper, today's numbered list one contact on each holder of its first label (2007.02542's
 /// BESIII list, 143 holders of mark 1 each the list, 347 authors none; `$^{1}$ Univ A\\$^{b}$ Also at …` in one `{\it
@@ -1356,7 +1356,12 @@ fn cut_block_lines(
     }
     let Some(pieces) = run
       .iter()
-      .map(|(index, span, key, _)| block_line_tokens(*index, *span, &key.1, key.0 == Kind::Note))
+      // (with its mark where the mark is the line's only key left: a legend's, whose text keeps its mark's ink, and a
+      // line no name answers, whose printed label is markup never dropped — FIDELITY_CHARTER: label text is markup;
+      // the `b` of `$^{b}$ Also at …` kept on the block, review rev98e S1)
+      .map(|(index, span, key, blocks)| {
+        block_line_tokens(*index, *span, &key.1, key.0 == Kind::Note || *blocks)
+      })
       .collect::<Option<Vec<Tokens>>>()
     else {
       DebugFeature!("frontmatter", "FRONT writer: a block line does not cut");

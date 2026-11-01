@@ -29195,7 +29195,41 @@ A/B (11,333 papers: popint125a_s10k + the census aas family + wrapped blocks): 7
   rev94b r3 B2). 2007.02542 (BESIII, 491 names over one `{\it $^{1}$ …\\ … $^{l}$ …\\}` group, labels 23, 24, 51 and
   63 requested by no name — the names ask `23A`, `63A,63C`): the writer had declined the whole paper, the holders of
   mark 1 (143) each the whole numbered list as one contact and 347 authors none; now every author the lines its marks
-  name (714 affiliations, 80 distinct; 114,629 → 19,006 words), the four unrequested lines once on the block.
+  name (714 affiliations, 80 distinct; 114,629 → 19,006 words), the four unrequested lines once on the block. Such a
+  line keeps its printed label (`b Also at …`, the mark's `<sup>` kept as a legend's is: label text is markup, never
+  dropped — review rev98e S1, ruling tentative, the user away).
+- **A sub-lettered mark goes by its number** (review rev98e B1; resolver/labels.rs `parted_label`, post.rs
+  `part_glued_labels`): a run of digits is one number, cut into its digits only under single-digit numbering (every
+  number the other side holds one digit, as the names' side already read an all-digit mark: 2103.10685's `12` under
+  entries 1-4), so BESIII's `23A` under institutes numbered 1 to 70 is `23` and `A`, never `2`, `3` and `A`; and an
+  entry's own leading printed number is never parted (`$^{23}$ (A)INFN Laboratori Nazionali di Frascati …; (B)INFN
+  Sezione di Perugia …` is no line of the names marked 2 or 3; 2207.06713's `$^{15}$` stays the block's as before). The
+  name gets the whole numbered line; its `(A)` part stays a sub-entry of it (R6, tentative: sub-items at Stage 4a), and
+  the unanswered `A` stays in the name. 98e's writer cut had applied the wrong reading: 2007.02542's 36 sub-lettered
+  authors each two wrong institutes (R. Baldini Ferroli `23A` → Beihang and Beijing Petrochemical; S. A. Cetin `51B` →
+  IHEP and Carnegie Mellon) where 98a gave them none; 1507.02068's `48A` read `4`, `8` on 98a too.
+- **The fail-safe fires only for a block of labelled lines** (review rev98e S2; `relocate::requested_mark_lines`): two
+  or more lines — the block's own and those of the boxes, groups and environments it sets them in, split at every
+  `\\` — led by labels the names request, past spaces, font switches, `\noindent`/`\nonumber`, box openers and an
+  environment's opener with its own arguments (`\begin{tabular}{c}`: 0911.3234 once on the block), a mark the binding
+  does not cut included. Marks inside one line's text are no such block: `\affiliation{Joint Institute,
+  \textsuperscript{1}Univ A and \textsuperscript{2}Univ B, City}`, printed once under both names, is the group's entry,
+  a copy on each (FIDELITY_CHARTER; 97b, 98a), where 98e r1 had made it a nameless block. **A mark spelled
+  otherwise is the mark it prints**, read by one shared reader of a line's leading printed label
+  (`relocate::spaced_mark_at`, used by `notes::leads_with_mark`, `leading_line_label` — so REVTeX's, AASTeX's, sv's and
+  IEEEtran's token readers alike — and by `requested_mark_lines`): a superscript on a spacing nucleus (`${\,\!}^{1}$`,
+  `${}^1$`, `${\ }^{1}$`, `$~^{1}$`), the script braced whole (`${^1}$`), one in `\( … \)` (`\( ^{1} \)`), and a box holding only a mark
+  (`\mbox{${\ }^{1}$}`). Where such a mark leads a REVTeX/AASTeX block, `spaced_marks_as_marks` (at the head of
+  `group_or_marked_affiliation`, after the line wrappers) writes each such mark of a label the names request as
+  `$^{1}$`, so the binding's marked list cuts the block by its marks as a `$^{1}$` block's; such a mark in a block none
+  leads stays as written (`${}^{3}$He`). 2112.13115 (`${\,\!}^1$Department of Applied Mathematics and Statistics\\ and
+  ${\,\!}^2$Department of Physics \& Astronomy, \\ The Johns Hopkins University…`): 98a both departments one contact on
+  each author, 98e r1 none (the block's) — now Eyink both departments and Jafari Applied Mathematics (the second line's
+  printed `and` stays at its head, as the marked list keeps a line's text before its mark); 0807.4407, 1211.5032 each
+  author its lines; `\( ^{1} \)` lines go by their marks with the marks off their text, as `$^{1}$` lines (they had
+  gone to the observer's cut of the fail-safe's `_unsplit` block, the marks kept). The observer reads a digested
+  formula's marks from its own structure (`observer::marks`); a nucleus formula is no Mark event there (98e r1's
+  `_unsplit` cut never fired on 2112.13115 or 0807.4407) — open, SYNC_STATUS row "int126a review".
 
 A/B (98e against 98a, 1,730 papers: the 652 the bundle A/B changed, the 1,073 popint125a revtex/aastex papers with
 `groupedaddress` or an `\address`/`\affiliation`/`\affil` led by a line wrapper, the brief's keep list): 10 changed (the
@@ -29211,8 +29245,8 @@ Scorer (the 3,000 sample against 98a): D3 per creator 98.49 → 98.54 % (6,062 �
 2 → 2, readability violations 22 → 22.
 
 **Left** (SYNC_STATUS row "97f"): sub-labelled marks (`$^{48A,48C}$` against `$^{48}$ (A)…; (B)…; (C)…`, 33 names a
-BESIII paper) stay in the name and go by their digits, the entries on a nameless creator (RED
-`author_sub_labelled_marks_read_as_digits`; the ruling deferred); unlabelled lines under `$^{N}$` names
+BESIII paper) stay in the name, the name given the whole numbered entry since round 3's review fix (it went by its
+digits before; repro `author_sub_labelled_marks_read_as_digits`, the part-entry ruling deferred); unlabelled lines under `$^{N}$` names
 (1202.0629) go by `annotate=new`, not by R1; an `\altaffilmark{1$\dagger$}` request keeps its spelled `$` and
 matches no label (`\author{Ann Able\altaffilmark{1$\dagger$} and Bob Baker\altaffilmark{1}}\affil{$^1$Uni One}`: Ann
 Able none, 2006.10291's N. Fraija); hep-ph0301204's names keep the marks the comma split moved onto them ("1 , 2 G. Ricco") and three
@@ -29233,18 +29267,28 @@ unchanged). Repros sectioning-frontmatter/`author_size_environment_around_center
 `aastex_affil_email_line_is_its_authors_email`, `aastex_affil_marked_email_line_is_the_marked_authors` (RED → GREEN),
 `revtex_macro_marked_addresses_after_commas_go_to_the_block` (RED → GREEN),
 `aastex_symbol_marked_names_share_affil_lines`, `aastex_altaffilmark_names_share_unlabelled_lines`,
-`revtex_macro_marked_addresses_go_by_their_marks` (GREEN). Round 3 left (SYNC_STATUS row "int126a review"): a cut
-block line no name requests keeps no printed label on the block (`b Also at …` prints as "Also at …", as a made
-affiliation holds none); a leading mark set in a box of its own or after a spacing nucleus (`\mbox{${\ }^{1}$}`,
-`${^1}$`) and an `&&`/`\nonumber` line in an affiliation stay one block entry; BESIII's sub-labelled names (`$^{63A,63C}$`)
-go by their digits as before (2007.02542: 36 names). Round 3 guards `perfect_kernel_batch98e`
+`revtex_macro_marked_addresses_go_by_their_marks` (GREEN). Round 3 left (SYNC_STATUS row "int126a review"): an
+`&&`/`\nonumber` line in an affiliation (eqnarray residue, pdflatex's `Misplaced alignment tab`) keeps the block one
+entry (2208.09667, 2308.02280: pathological — defer); a block of numbered lines set in a `\parbox` or `tabular` lands
+once at the block, never cut (pathological — defer: one `\affiliation` is one institution); BESIII's sub-labelled names keep the mark in the name and get the whole numbered line,
+not its lettered part (R6). Round 3 guards `perfect_kernel_batch98e`
 (`line_wrapped_address_lines_go_by_their_marks`, `an_unsplit_labelled_address_block_lands_once_at_the_block`,
-`a_block_line_no_name_requests_goes_once_to_the_block`); repros class-bindings/
+`a_block_line_no_name_requests_goes_once_to_the_block`; review rev98e's `a_sub_lettered_mark_goes_by_its_number`,
+`the_fail_safe_fires_only_for_labelled_lines`, `a_mark_on_a_spacing_nucleus_leads_its_line`, and the resolver unit
+test `glued_labels_part_into_known_ones`; changed: `a_block_line_no_name_requests_goes_once_to_the_block` keeps the
+`b`, `perfect_kernel_batchfms2a2r4::spacing_before_a_mark_parts_the_entries` now pins the written XML's reading, cut
+by the binding); repros class-bindings/
 `revtex_centerline_address_lines_go_by_their_marks`, `revtex_boxed_address_lines_go_by_their_marks`,
 `aastex_centerline_affiliation_lines_go_by_their_marks`, `revtex_unsplit_labelled_address_block_lands_once`,
 `revtex_block_line_no_name_requests_goes_to_the_block` (RED → GREEN), `revtex_address_lines_by_their_marks`,
-`revtex_block_lines_all_answered`, `revtex_block_lines_every_label_requested` (GREEN controls); the writer's
-`the_writer_never_writes_a_nameless_creator` asserts the exception.
+`revtex_block_lines_all_answered`, `revtex_block_lines_every_label_requested` (GREEN controls),
+`revtex_sub_lettered_mark_goes_by_its_number`, `revtex_sub_lettered_mark_every_line_answered`,
+`revtex_nucleus_marks_lead_their_lines`, `revtex_boxed_nucleus_marks_lead_their_lines`,
+`revtex_marks_inside_one_line_are_the_groups_entry`, `revtex_tie_nucleus_marks_lead_their_lines` (RED → GREEN),
+`revtex_braced_script_marks_lead_their_lines`,
+`revtex_unread_mark_lines_go_by_their_marks`, `revtex_parbox_affiliation_lines_land_once`,
+`revtex_tabular_affiliation_lines_land_once` (GREEN); the writer's `the_writer_never_writes_a_nameless_creator` asserts
+the exception.
 
 ### 948. Every remaining observer-writer family is written in one batch (ijcai, inst_support, iopart, jheppub, jinstpub, jcappub, jpconf, sv_support and every binding owning `\author` with no declaration); a block line's letters are read as printed, a re-parted entry keeps today's role, a letter-spaced name's word space is no gap, an e-mail's corresponding owner is one of the authors it is printed for, a name read as an entry is never written onto an author; an elsarticle key is answered by its keys alone, and a name the re-part makes that names no person declines (Perl: the old reader's output, no observer)
 

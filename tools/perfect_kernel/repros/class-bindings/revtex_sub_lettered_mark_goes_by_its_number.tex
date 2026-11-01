@@ -1,0 +1,35 @@
+% mechanism: glued labels parted by the marks the other side shows (resolver/labels.rs `parted_label`, post.rs
+%   `part_glued_labels`): a run of digits is one number under multi-digit numbering — `23A` is `23` and `A`, never
+%   `2`, `3` and `A` — and a line's own leading printed number (`$^{23}$`) is never parted; the line no name requests
+%   (`$^{b}$`) goes once to the block with its printed label (writer/plan.rs `cut_block_lines`).
+% witness: 2007.02542 (BESIII: 36 sub-lettered authors, `Baldini Ferroli$^{23A}$`, each the institutes 2 and 3 under
+%   98e), 1507.02068 (`48A`), 2411.07730, 2606.14105; review rev98e B1 (sub2), S1
+% oracle:  pdflatex (TL 2025, revtex4-1) 0 errors: "A. One1 , B. Two2,a , C. Three3 , D. Four23A / (X Collaboration) /
+%   1 Alpha University, Beijing / 2 Beta Institute, Rome / 3 Gamma Lab, Paris / 23 (A)Zeta Lab, Turin; (B)Eta Lab,
+%   Milan / a Also at Delta College, Oslo / b Also at Eps College, Bergen"
+% engines: rust 98e: D. Four the lines 2, 3 and 23, B. Two and C. Three the 23 line too, the block "Also at Eps …"
+%   without its `b`; perl: one creator
+% expect:  0 errors, 0 warnings; D. Four the 23 line alone (its `(A)` a sub-entry: R6, Stage 4a), B. Two and C. Three
+%   not; the block (a nameless creator) "b Also at Eps College, Bergen" once
+% status:  RED (98e) -> GREEN (98e r2)
+% preload: ar5iv.sty
+\documentclass[aps,prd,superscriptaddress]{revtex4-1}
+\begin{document}
+\title{T}
+\author{
+		\begin{center}
+	A.~One$^{1}$, B.~Two$^{2,a}$, C.~Three$^{3}$, D.~Four$^{23A}$
+	\\
+		\vspace{0.2cm}
+		(X Collaboration)\\
+		\vspace{0.2cm} {\it
+	$^{1}$ Alpha University, Beijing\\$^{2}$ Beta Institute, Rome\\$^{3}$ Gamma Lab, Paris\\$^{23}$ (A)Zeta Lab, Turin; (B)Eta Lab, Milan\\
+		\vspace{0.2cm}
+		$^{a}$ Also at Delta College, Oslo\\$^{b}$ Also at Eps College, Bergen\\
+		}\end{center}
+		\vspace{0.4cm}
+}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

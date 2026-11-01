@@ -658,18 +658,12 @@ impl Resolver {
       .iter()
       .flat_map(|c| c.requests.iter().filter(|r| !special(r)).map(|r| bare(r)))
       .collect();
-    // (an entry's number is parted into digits only under single-digit numbering — every other numbered entry label
-    // one digit, and every numbered mark the names show —, the mirror of the names' side above: MNRAS's
+    // (an entry's number is never parted: a line's own leading printed number is one label — MNRAS's
     // `$^{15}$The Inter-University Institute …` under names marked up to 18, none marked 15, stays in the block as it
-    // prints, never the entry of every name marked 1 or 5, 2207.06713; a symbol compound parts as before)
+    // prints, never the entry of every name marked 1 or 5, 2207.06713; BESIII's `$^{23}$ (A)INFN Laboratori Nazionali
+    // di Frascati …; (B)INFN Sezione di Perugia …` is no line of the names marked 2 or 3, 2007.02542, review rev98e B1;
+    // a symbol compound parts as before)
     let digits = |l: &String| !l.is_empty() && l.chars().all(|c| c.is_ascii_digit());
-    let single_digit_names = shown.iter().filter(|l| digits(l)).all(|l| l.len() == 1);
-    let single_digit_entries_but = |own: &str| {
-      entry_labels
-        .iter()
-        .filter(|l| l.as_str() != own && digits(l))
-        .all(|l| l.len() == 1)
-    };
     let mut compound = Vec::new();
     for (at, (labels, _, assoc)) in self.pending.iter_mut().enumerate() {
       // (only a label a printed mark gave: never a class's numbering, `labelseq` — `\institute{… \and …}`'s 12th
@@ -689,7 +683,7 @@ impl Resolver {
         let b = bare(&label);
         if !special(&label)
           && !shown.contains(&b)
-          && (!digits(&b) || (single_digit_names && single_digit_entries_but(&b)))
+          && !digits(&b)
           && let Some(parts) = parted_label(&b, &shown, false)
         {
           // (a compound of distinct footnote symbols names the names carrying them all, as the line prints it beside

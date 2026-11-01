@@ -6,8 +6,11 @@
 //! `tools/perfect_kernel/repros/class-bindings/` from the binary, eager and `--streaming`, asserts the same XML both
 //! ways, no Error and no Warning, and every creator (name and contacts in order). One guard per path: a one-argument
 //! line wrapper is a line (`relocate::wrapped_lines_as_lines`, at REVTeX's and AASTeX's call), the fail-safe of the
-//! group rule (a block of several requested labels its lines unread lands once at the block), and the writer's cut of
-//! a block's lines placing a line no name requests once at the block (`writer/plan.rs` `cut_block_lines`).
+//! group rule (a block of two or more lines led by requested labels its reader cannot cut lands once at the block),
+//! the writer's cut of a block's lines placing a line no name requests once at the block with its printed label
+//! (`writer/plan.rs` `cut_block_lines`); round 2 (review rev98e): a mark on a spacing nucleus leads its line
+//! (`relocate::spaced_marks_as_marks`, 2112.13115, 0807.4407), and a sub-lettered mark goes by its number
+//! (`resolver/labels.rs` `parted_label`, 2007.02542, 1507.02068).
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch84b::creators,
@@ -96,6 +99,113 @@ fn an_unsplit_labelled_address_block_lands_once_at_the_block() {
   assert_eq!(creators(&xml), [vec!["A. One 1"], vec!["B. Two 2"], vec![
     "affiliation=1 Alpha University, Beijing 2 Beta Institute, Rome"
   ],]);
+  // (the same under `\affiliation` without `groupedaddress`, in a `\parbox` — review rev98e S2's fs3 — and in a
+  // `tabular`, its opener past, 0911.3234)
+  for tex in [
+    repro!("revtex_parbox_affiliation_lines_land_once"),
+    repro!("revtex_tabular_affiliation_lines_land_once"),
+  ] {
+    assert_eq!(creators(&both_ways(tex)), [
+      vec!["Ann Able 1"],
+      vec!["Bob Baker 2"],
+      vec!["affiliation=1 Univ A, Town 2 Univ B, City"],
+    ]);
+  }
+}
+
+/// The fail-safe fires only for a block of two or more lines led by labels the names request (review rev98e S2): lines
+/// led by a mark in `\( … \)` are read by the shared reader of a line's leading label (`relocate::spaced_mark_at`), each
+/// author its line, as `$^{1}$` lines are (review N1's shape; the coordinator's 2026-11-01 directive: one reader, not a
+/// fallback to the observer); marks inside one line's text (`Joint Institute, \textsuperscript{1}Univ A and
+/// \textsuperscript{2}Univ B, City`) are no such block, but the group's one entry, a copy on each author (97b, 98a).
+#[test]
+fn the_fail_safe_fires_only_for_labelled_lines() {
+  let xml = both_ways(repro!("revtex_unread_mark_lines_go_by_their_marks"));
+  assert_eq!(creators(&xml), [
+    vec!["Ann Able 1", "affiliation=Univ A, Town"],
+    vec!["Bob Baker 2", "affiliation=Univ B, City"],
+  ]);
+  let xml = both_ways(repro!("revtex_marks_inside_one_line_are_the_groups_entry"));
+  let line = "affiliation=Joint Institute, 1 Univ A and 2 Univ B, City";
+  assert_eq!(creators(&xml), [vec!["Ann Able 1", line], vec![
+    "Bob Baker 2",
+    line
+  ]]);
+}
+
+/// A mark set on a spacing nucleus leads its line as `$^{1}$` does (`relocate::spaced_marks_as_marks`, review rev98e
+/// S2): `${\,\!}^1$…\\ and ${\,\!}^2$…` cut by its marks, each author its departments (2112.13115), and a box holding
+/// only such a mark, `\mbox{${\ }^{1}$}` (0807.4407), and spacing unbraced, `$~^{1}$` (1211.5032).
+#[test]
+fn a_mark_on_a_spacing_nucleus_leads_its_line() {
+  let xml = both_ways(repro!("revtex_nucleus_marks_lead_their_lines"));
+  assert_eq!(creators(&xml), [
+    vec![
+      "Ann Able 1 , 2",
+      "email=able@x.edu",
+      "affiliation=Department of Mathematics",
+      "affiliation=and Department of Physics, The Univ, City, USA",
+    ],
+    vec![
+      "Bob Baker 1",
+      "email=baker@x.edu",
+      "affiliation=Department of Mathematics",
+    ],
+  ]);
+  let xml = both_ways(repro!("revtex_boxed_nucleus_marks_lead_their_lines"));
+  assert_eq!(creators(&xml), [
+    vec!["Ann Able 1", "affiliation=Univ A, Town"],
+    vec!["Bob Baker 2", "affiliation=Univ B, City"],
+  ]);
+  // (the script braced whole, `${^1}$`: 2208.09667's lines after its first)
+  let xml = both_ways(repro!("revtex_braced_script_marks_lead_their_lines"));
+  assert_eq!(creators(&xml), [
+    vec!["Ann Able 1", "affiliation=Univ A, Town"],
+    vec!["Bob Baker 2", "affiliation=Univ B, City"],
+  ]);
+  // (spacing unbraced, `$~^{1}$`: 1211.5032)
+  let xml = both_ways(repro!("revtex_tie_nucleus_marks_lead_their_lines"));
+  assert_eq!(creators(&xml), [
+    vec!["Ann Able 1", "affiliation=Univ A, Town"],
+    vec![
+      "Bob Baker 1,2",
+      "affiliation=Univ A, Town",
+      "affiliation=Univ B, City",
+    ],
+  ]);
+}
+
+/// A sub-lettered mark goes by its number (review rev98e B1): `23A` under multi-digit numbering is `23` and `A`, never
+/// `2`, `3` and `A`, and the `$^{23}$` line is never parted into `2` and `3` — D. Four the 23 line alone (its `(A)` a
+/// sub-entry, R6), B. Two and C. Three not (2007.02542, 1507.02068); with a line no name requests, it goes once to the
+/// block with its printed `b` (S1), and without one the same reading.
+#[test]
+fn a_sub_lettered_mark_goes_by_its_number() {
+  let collaboration = "collaboration=(X Collaboration)";
+  let mut expected = vec![
+    vec![
+      "A. One",
+      collaboration,
+      "affiliation=Alpha University, Beijing",
+    ],
+    vec![
+      "B. Two",
+      collaboration,
+      "affiliation=Beta Institute, Rome",
+      "affiliation=Also at Delta College, Oslo",
+    ],
+    vec!["C. Three", collaboration, "affiliation=Gamma Lab, Paris"],
+    vec![
+      "D. Four 23A",
+      collaboration,
+      "affiliation=(A)Zeta Lab, Turin; (B)Eta Lab, Milan",
+    ],
+  ];
+  let xml = both_ways(repro!("revtex_sub_lettered_mark_every_line_answered"));
+  assert_eq!(creators(&xml), expected);
+  expected.push(vec!["affiliation=b Also at Eps College, Bergen"]);
+  let xml = both_ways(repro!("revtex_sub_lettered_mark_goes_by_its_number"));
+  assert_eq!(creators(&xml), expected);
 }
 
 /// The writer's cut of an author block's own lines: a line whose label no name requests (`$^{b}$`) goes once to the
@@ -119,8 +229,9 @@ fn a_block_line_no_name_requests_goes_once_to_the_block() {
   let xml = both_ways(repro!(
     "revtex_block_line_no_name_requests_goes_to_the_block"
   ));
+  // (the line keeps its printed `b`: label text is markup, never dropped — review rev98e S1)
   assert_eq!(creators(&xml), [a.clone(), b.clone(), c.clone(), vec![
-    "affiliation=Also at Eps College, Bergen"
+    "affiliation=b Also at Eps College, Bergen"
   ],]);
   let xml = both_ways(repro!("revtex_block_lines_all_answered"));
   assert_eq!(creators(&xml), [a.clone(), b.clone(), c.clone()]);

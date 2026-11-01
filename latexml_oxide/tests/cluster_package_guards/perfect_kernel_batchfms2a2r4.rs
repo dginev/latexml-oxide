@@ -33,9 +33,6 @@ fn dump_as(tex: &str, held: Option<&str>) -> Value {
 /// then its `a` affiliations, `c <role>` contacts, `n` notes; `B <role>` the block's, `D <role>` what was dropped.
 fn tuples(tex: &str) -> Vec<String> { tuples_in(&dump(tex)) }
 
-/// [`tuples`] of a written family's paper the writer holds back, its reading never written (`declined: <why>`).
-fn tuples_held(tex: &str, why: &str) -> Vec<String> { tuples_in(&dump_as(tex, Some(why))) }
-
 fn tuples_in(dump: &Value) -> Vec<String> {
   let resolved = dump["resolved"].clone();
   let mut out = Vec::new();
@@ -307,25 +304,22 @@ fn a_sole_authors_annotations_before_it() {
 /// join the marked entries of one call, nor end one (2112.13115: `${\,\!}^1$Dept A\\ and ${\,\!}^2$Dept B`).
 #[test]
 fn spacing_before_a_mark_parts_the_entries() {
-  // (written family, held back: the writer does not cut today's one contact at its `{\,\!}^{2}` mark — OPEN_ROWS
-  // "written-family writer gaps"; today's XML keeps "1Department of Mathematics and 2Department of Physics, …" once on
-  // the block, REVTeX's fail-safe for a block of two requested labels no mark it reads leads — on both before 98e, the
-  // group rule's copies — and the reading its lines by their marks, `_unsplit=true`)
+  // (today's XML the reading: REVTeX's binding reads a mark on a spacing nucleus as the mark it prints and cuts the
+  // block by its marks, `relocate::spaced_marks_as_marks` — review rev98e S2; before, 98e r1 sent the block unread
+  // once to the block (`_unsplit=true`, the writer holding it back), and 98a copied it whole onto each author)
   assert_eq!(
-    tuples_held(
-      &revtex(
-        "\\author{Ann Able${\\,\\!}^{1,2}$}\n\\author{Bob Baker${\\,\\!}^1$}\n\\affiliation{${\\,\\!}^1$Department of Mathematics\\\\ and ${\\,\\!}^2$Department of Physics, Univ A, City}"
-      ),
-      "Affiliation departmentofmathematics"
-    ),
+    tuples(&revtex(
+      "\\author{Ann Able${\\,\\!}^{1,2}$}\n\\author{Bob Baker${\\,\\!}^1$}\n\\affiliation{${\\,\\!}^1$Department of Mathematics\\\\ and ${\\,\\!}^2$Department of Physics, Univ A, City}"
+    )),
     // (no zero-width space in a name or an entry: the lexer reads none as ink, and a name keeps no piece printing no
-    // letter or digit — review revfms2a2_4 finding 6, FM S2a.2 r5)
+    // letter or digit — review revfms2a2_4 finding 6, FM S2a.2 r5; the second line's printed `and` stays with it, as
+    // the binding's marked list keeps a line's text before its mark)
     [
       "C Ann Able [1,2] | line:names",
-      "  a Department of Mathematics | api:leading-mark api:split-by-marks",
-      "  a Department of Physics, Univ A, City | api:leading-mark api:split-by-marks",
+      "  a Department of Mathematics | api:leading-mark",
+      "  a and Department of Physics, Univ A, City | api:withsup-mark",
       "C Bob Baker [1] | line:names",
-      "  a Department of Mathematics | api:leading-mark api:split-by-marks",
+      "  a Department of Mathematics | api:leading-mark",
     ]
   );
 }

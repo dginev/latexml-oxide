@@ -1,0 +1,20 @@
+% mechanism: the fail-safe of REVTeX's group rule (revtex4_support_sty.rs `group_or_marked_affiliation`,
+%   `relocate::requested_mark_lines`): two lines led by requested labels inside a `\parbox` the reader cannot cut land
+%   once at the block, never a copy on each author.
+% witness: review rev98e S2 (fs3); the class of hep-ex0409040
+% oracle:  pdflatex (TL 2025, revtex4) 0 errors: "Ann Able1 and Bob Baker2 / 1 Univ A, Town / 2 Univ B, City"
+% engines: rust 98a: the whole on each; 98e: once at the block
+% expect:  0 errors, 0 warnings; the names none, the block (a nameless creator) the two lines once
+% status:  GREEN (98e) for the fail-safe (once at the block); the per-author cut RED, pathological — defer (author abuse,
+%   review rev98e / the coordinator's directive (b): one `\affiliation` holds one institution, REVTeX's own
+%   assumption, and a box or table of numbered lines in it contradicts it; no recovery)
+% preload: ar5iv.sty
+\documentclass[aps,prl]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\affiliation{\parbox{\linewidth}{$^{1}$Univ A, Town\\ $^{2}$Univ B, City}}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

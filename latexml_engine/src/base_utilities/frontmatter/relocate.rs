@@ -917,8 +917,8 @@ pub fn mark_spelling_printed(text: &str) -> String {
 }
 
 /// The label an affiliation line leads with, whether it was typed by hand, and the line without it: a superscript
-/// mark (`$^{1}$`, `$^1$`, `\textsuperscript{1}`) or a hand-printed number (`1 Univ A`, `2) Univ B`, `3. Univ C`),
-/// behind the spaces and the font and size switches it is set in (`\scriptsize 2) Osservatorio …`, kept). `None` for a
+/// mark (`$^{1}$`, `$^1$`, `\textsuperscript{1}`, or spelled otherwise, `spaced_mark_at`: `${}^{1}$`, `\( ^{1} \)`) or a
+/// hand-printed number (`1 Univ A`, `2) Univ B`, `3. Univ C`), behind the spaces and the font and size switches it is set in (`\scriptsize 2) Osservatorio …`, kept). `None` for a
 /// line leading with neither (user ruling R2, 2026-11-01: a hand-printed leading number is a label wherever the names
 /// request numbers).
 pub fn leading_line_label(content: &Tokens) -> Option<(String, bool, Tokens)> {
@@ -944,6 +944,14 @@ pub fn leading_line_label(content: &Tokens) -> Option<(String, bool, Tokens)> {
     (!label.is_empty()).then(|| (label, typed, Tokens::new(rest)))
   };
   let first = *tokens.get(at)?;
+  // (a superscript spelled otherwise — on a spacing nucleus, in `\( … \)`, in a box of its own: `spaced_mark_at`)
+  if let Some((operand, next)) = spaced_mark_at(tokens, at) {
+    return rebuilt(
+      mark_key(Tokens::new(operand).untex_string().as_ref()),
+      false,
+      next,
+    );
+  }
   // (a superscript: `$^{1}$`, `\textsuperscript{1}`)
   if first.get_catcode() == Catcode::MATH && tokens.get(at + 1) == Some(&T_SUPER!()) {
     let (operand, next) = sup_operand_at(tokens, at + 2)?;
@@ -1167,6 +1175,303 @@ pub fn wrapped_lines_as_lines(content: &Tokens) -> Option<Tokens> {
     out.extend(line);
   }
   Some(Tokens::new(out))
+}
+
+/// The spacing a superscript's empty nucleus may hold, which prints no glyph: the spacing commands
+/// (`email_block_calls::is_spacing`), `\!` and `\negthinspace` (`${\,\!}^{1}$`, 2112.13115).
+fn is_nucleus_spacing(t: &Token) -> bool {
+  is_spacing(t) || *t == T_CS!("\\!") || *t == T_CS!("\\negthinspace")
+}
+
+/// The token readers' one reading of a superscript mark spelled other than `$^{1}$`/`\textsuperscript{1}` at `at`, as the
+/// digested formula prints it — a superscript on a spacing nucleus, `${\,\!}^{1}$`, `${}^1$`, `${\ }^{1}$`, `$~^{1}$`
+/// (2112.13115, 1211.5032), the script braced whole, `${^1}$`, one in `\( … \)` with or without one, `\( ^{1} \)`, or a
+/// box holding only a mark,
+/// `\mbox{${\ }^{1}$}` (0807.4407): the mark's operand and where the mark ends; `None` for any other token there (a
+/// plain `$^{1}$` included, which every reader reads already). Shared by `notes::leads_with_mark`,
+/// [`leading_line_label`], [`requested_mark_lines`] and [`spaced_marks_as_marks`] (review rev98e S2: one reader of
+/// the line's leading printed label, not a spelling per binding).
+pub(in crate::base_utilities) fn spaced_mark_at(
+  tokens: &[Token],
+  at: usize,
+) -> Option<(Vec<Token>, usize)> {
+  let past_spaces = |mut i: usize| {
+    while tokens.get(i) == Some(&T_SPACE!()) {
+      i += 1;
+    }
+    i
+  };
+  let t = tokens.get(at)?;
+  if LINE_BOXES.iter().any(|cs| *t == T_CS!(*cs)) {
+    let open = past_spaces(at + 1);
+    if tokens.get(open)?.get_catcode() != Catcode::BEGIN {
+      return None;
+    }
+    let end = skip_group(tokens, open);
+    let inner = tokens.get(open + 1..end.checked_sub(1)?)?;
+    let inner_at = inner.iter().position(|t| *t != T_SPACE!())?;
+    let (operand, next) = spaced_mark_at(inner, inner_at).or_else(|| {
+      // (a box holding a plain mark: `\mbox{$^{1}$}`)
+      (inner[inner_at].get_catcode() == Catcode::MATH
+        && inner.get(inner_at + 1) == Some(&T_SUPER!()))
+      .then(|| sup_operand_at(inner, inner_at + 2))
+      .flatten()
+      .filter(|(_, next)| {
+        inner
+          .get(*next)
+          .is_some_and(|t| t.get_catcode() == Catcode::MATH)
+      })
+      .map(|(operand, next)| (operand, next + 1))
+    })?;
+    return inner[next..]
+      .iter()
+      .all(|t| *t == T_SPACE!())
+      .then_some((operand, end));
+  }
+  let inline = *t == T_CS!("\\(");
+  if t.get_catcode() != Catcode::MATH && !inline {
+    return None;
+  }
+  let open = past_spaces(at + 1);
+  // (`\( ^{1} \)`: no nucleus needed)
+  if inline && tokens.get(open) == Some(&T_SUPER!()) {
+    let (operand, next) = sup_operand_at(tokens, open + 1)?;
+    let close = past_spaces(next);
+    return (tokens.get(close) == Some(&T_CS!("\\)"))).then_some((operand, close + 1));
+  }
+  // (the whole script braced, `${^1}$`: 2208.09667, 2308.02280's lines after their first)
+  if tokens
+    .get(open)
+    .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+  {
+    let end = skip_group(tokens, open);
+    let inner = tokens.get(open + 1..end.checked_sub(1)?)?;
+    let sup = inner.iter().position(|t| *t != T_SPACE!());
+    if let Some(sup) = sup
+      && inner[sup] == T_SUPER!()
+    {
+      let (operand, next) = sup_operand_at(inner, sup + 1)?;
+      let close = past_spaces(end);
+      let closes = |t: &Token| {
+        if inline {
+          *t == T_CS!("\\)")
+        } else {
+          t.get_catcode() == Catcode::MATH
+        }
+      };
+      return (inner[next..].iter().all(|t| *t == T_SPACE!())
+        && tokens.get(close).is_some_and(closes))
+      .then_some((operand, close + 1));
+    }
+  }
+  // (the nucleus: a group of spacing, `{\,\!}`, `{}`, or spacing unbraced, `$~^{1}$`, `$\,^{1}$`, 1211.5032)
+  let end = if tokens.get(open)?.get_catcode() == Catcode::BEGIN {
+    let end = skip_group(tokens, open);
+    if !tokens
+      .get(open + 1..end.checked_sub(1)?)?
+      .iter()
+      .all(is_nucleus_spacing)
+    {
+      return None;
+    }
+    end
+  } else {
+    let spacing = tokens[open..]
+      .iter()
+      .take_while(|t| is_nucleus_spacing(t))
+      .count();
+    if spacing == 0 {
+      return None;
+    }
+    open + spacing
+  };
+  let sup = past_spaces(end);
+  if tokens.get(sup) != Some(&T_SUPER!()) {
+    return None;
+  }
+  let (operand, next) = sup_operand_at(tokens, sup + 1)?;
+  let close = past_spaces(next);
+  tokens
+    .get(close)
+    .is_some_and(|t| {
+      if inline {
+        *t == T_CS!("\\)")
+      } else {
+        t.get_catcode() == Catcode::MATH
+      }
+    })
+    .then_some((operand, close + 1))
+}
+
+/// An affiliation block whose labels are superscripts spelled otherwise (`spaced_mark_at`: set on a spacing nucleus, in
+/// `\( … \)`, in a box of their own) (`${\,\!}^1$Department of Applied
+/// Mathematics …\\ and ${\,\!}^2$Department of Physics …`, 2112.13115; `\mbox{${\ }^{1}$} Department of Physics …`,
+/// 0807.4407), written with the plain marks they print, `$^{1}$`, so its lines are read by their marks as a `$^{1}$`
+/// block's are (review rev98e S2): when such a mark leads the block, each such mark of a label the names request.
+/// `None` otherwise — a nucleus mark later in a line of a block no such mark leads stays as written (`${}^{3}$He`).
+pub fn spaced_marks_as_marks(content: &Tokens) -> Option<Tokens> {
+  let tokens = content.unlist_ref();
+  let switch = |t: &Token| MARK_SWITCHES.iter().any(|cs| *t == T_CS!(*cs));
+  let lead = tokens.iter().position(|t| {
+    *t != T_SPACE!() && *t != T_BEGIN!() && *t != T_CS!("\\noindent") && !switch(t)
+  })?;
+  spaced_mark_at(tokens, lead)?;
+  let (_, requested) = queued_name_marks();
+  let requests = |operand: &[Token]| {
+    let mut mark = vec![T_MATH!(), T_SUPER!(), T_BEGIN!()];
+    mark.extend_from_slice(operand);
+    mark.extend([T_END!(), T_MATH!()]);
+    let marks = content_marks(&Tokens::new(mark));
+    !marks.is_empty() && marks.iter().all(|m| requested.contains(&mark_key(m)))
+  };
+  let mut out: Vec<Token> = Vec::with_capacity(tokens.len());
+  let mut changed = false;
+  let mut i = 0;
+  while i < tokens.len() {
+    if let Some((operand, next)) = spaced_mark_at(tokens, i)
+      && requests(&operand)
+    {
+      out.extend([T_MATH!(), T_SUPER!(), T_BEGIN!()]);
+      out.extend(operand);
+      out.extend([T_END!(), T_MATH!()]);
+      changed = true;
+      i = next;
+    } else {
+      out.push(tokens[i]);
+      i += 1;
+    }
+  }
+  changed.then(|| Tokens::new(out))
+}
+
+/// How many lines of an affiliation block lead with a superscript mark of a label the names request — its own lines and
+/// those of the boxes, groups and environments it sets them in, split at every `\\` (`\parbox{\linewidth}{$^{1}$Univ
+/// A\\ $^{2}$Univ B}`: 2; `\begin{tabular}{c} $^{1}$…\\ $^{2}$…\end{tabular}`, 0911.3234), past the spaces, font
+/// switches, `\noindent`/`\nonumber`, box openers and an environment's opener with its own arguments before the mark; a mark the
+/// binding's readers do not read leads a line too (`\( ^{1} \)Univ A`). The labelled lines of a multi-line block, as
+/// against marks inside one line's text (`Joint Institute, \textsuperscript{1}Univ A and \textsuperscript{2}Univ B`:
+/// 0), which is one entry its group shares (review rev98e S2).
+pub fn requested_mark_lines(content: &Tokens) -> usize {
+  let tokens = content.unlist_ref();
+  let (_, requested) = queued_name_marks();
+  let switch = |t: &Token| MARK_SWITCHES.iter().any(|cs| *t == T_CS!(*cs));
+  let skippable = |t: &Token| {
+    *t == T_SPACE!()
+      || *t == T_BEGIN!()
+      || *t == T_CS!("\\noindent")
+      || *t == T_CS!("\\nonumber")
+      || *t == T_CS!("\\par")
+      || switch(t)
+  };
+  let mut starts = vec![0];
+  starts.extend(
+    tokens
+      .iter()
+      .enumerate()
+      .filter(|(_, t)| t.defined_as(&T_CS!("\\\\")))
+      .map(|(i, _)| i + 1),
+  );
+  starts
+    .into_iter()
+    .filter(|&start| {
+      let mut i = start;
+      loop {
+        while tokens.get(i).is_some_and(skippable) {
+          i += 1;
+        }
+        // (a box the line is set in: `\parbox[t]{\linewidth}{…}`, `\mbox{…}`, `\hbox{…}`, an environment
+        // `\begin{tabular}{c}` — past its opener; 0911.3234's two labelled lines in a `tabular`)
+        match tokens.get(i) {
+          Some(t) if *t == T_CS!("\\begin") => {
+            i += 1;
+            while tokens.get(i) == Some(&T_SPACE!()) {
+              i += 1;
+            }
+            let name_end = skip_group(tokens, i);
+            let name: String = tokens
+              .get(i + 1..name_end.saturating_sub(1))
+              .unwrap_or_default()
+              .iter()
+              .map(ToString::to_string)
+              .collect();
+            i = name_end;
+            // (the environment's own arguments: latex.ltx `tabular`/`array` [pos]{cols}, `tabular*` {width}[pos]{cols},
+            // `minipage` [pos]{width}; any other none, its first group the line's)
+            let groups = match name.as_str() {
+              "tabular" | "array" | "minipage" => 1,
+              "tabular*" => 2,
+              _ => 0,
+            };
+            let mut taken = 0;
+            while taken < groups {
+              while tokens.get(i) == Some(&T_SPACE!()) {
+                i += 1;
+              }
+              match tokens.get(i) {
+                Some(t) if t.get_catcode() == Catcode::BEGIN => {
+                  i = skip_group(tokens, i);
+                  taken += 1;
+                },
+                Some(t) if *t == T_OTHER!("[") => {
+                  while tokens.get(i).is_some_and(|t| *t != T_OTHER!("]")) {
+                    i += 1;
+                  }
+                  i += 1;
+                },
+                _ => break,
+              }
+            }
+          },
+          Some(t) if *t == T_CS!("\\parbox") || *t == T_CS!("\\minipage") => {
+            i += 1;
+            if tokens.get(i) == Some(&T_OTHER!("[")) {
+              while tokens.get(i).is_some_and(|t| *t != T_OTHER!("]")) {
+                i += 1;
+              }
+              i += 1;
+            }
+            while tokens.get(i) == Some(&T_SPACE!()) {
+              i += 1;
+            }
+            i = skip_group(tokens, i);
+          },
+          Some(t) if LINE_BOXES.iter().any(|cs| *t == T_CS!(*cs)) => i += 1,
+          _ => break,
+        }
+      }
+      let Some(t) = tokens.get(i) else {
+        return false;
+      };
+      let operand = if let Some((operand, _)) = spaced_mark_at(tokens, i) {
+        Some(operand)
+      } else if t.get_catcode() == Catcode::MATH
+        && tokens
+          .get(i + 1..)
+          .and_then(|rest| rest.iter().find(|t| **t != T_SPACE!()))
+          == Some(&T_SUPER!())
+      {
+        let sup = i
+          + 1
+          + tokens[i + 1..]
+            .iter()
+            .take_while(|t| **t == T_SPACE!())
+            .count();
+        sup_operand_at(tokens, sup + 1).map(|(operand, _)| operand)
+      } else if *t == T_CS!("\\textsuperscript") {
+        sup_operand_at(tokens, i + 1).map(|(operand, _)| operand)
+      } else {
+        None
+      };
+      operand.is_some_and(|operand| {
+        let mut mark = vec![T_MATH!(), T_SUPER!(), T_BEGIN!()];
+        mark.extend(operand);
+        mark.extend([T_END!(), T_MATH!()]);
+        content_marks(&Tokens::new(mark))
+          .iter()
+          .any(|m| requested.contains(&mark_key(m)))
+      })
+    })
+    .count()
 }
 
 fn group_shares_the_mark(content: &Tokens, alternating: bool) -> bool {

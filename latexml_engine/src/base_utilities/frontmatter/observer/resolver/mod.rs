@@ -1116,6 +1116,17 @@ mod tests {
       Some(vec!["1".into(), "2".into()])
     );
     assert_eq!(parted_label("\\dag", &known(&["1"]), true), None);
+    // a run of digits is one number under multi-digit numbering: BESIII's sub-lettered `23A` is `23` and `A`, never
+    // `2`, `3` and `A` (2007.02542), and `48A` with no entry 48 parts into nothing (1507.02068; review rev98e B1)
+    assert_eq!(
+      parted_label("23A", &known(&["1", "2", "3", "23", "a"]), true),
+      Some(vec!["23".into(), "A".into()])
+    );
+    assert_eq!(parted_label("48A", &known(&["4", "8", "12"]), true), None);
+    assert_eq!(
+      parted_label("12A", &known(&["1", "2"]), true),
+      Some(vec!["1".into(), "2".into(), "A".into()])
+    );
   }
 
   /// FM S2a.2 r5 (review revfms2a2_4 finding 5): an annotation made before the authors that is a note (`api:note`) is
