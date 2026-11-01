@@ -1,0 +1,20 @@
+% mechanism: the fail-safe of REVTeX's group rule (revtex4_support_sty.rs `group_or_marked_affiliation`,
+%   `relocate::requested_marks_held`; FRONTMATTER_SINGLE_ENGINE_PLAN "The structure model" step 4): a block holding
+%   more than one label the names request, no mark leading it and its lines not read as lines (a `\parbox`), is no
+%   entry a group shares — it lands once at the block (`label={addresses:block}`, OD #159), never a copy per author.
+% witness: the class of hep-ex0409040 and hep-ex0612013 (D0, every author the whole block); review revab126
+% oracle:  pdflatex (TL 2025, revtex4-1) 0 errors: "A. One,1 and B. Two2 / 1 Alpha University, Beijing / 2 Beta
+%   Institute, Rome"
+% engines: rust 98a: each creator the parbox as one affiliation; perl: B. Two alone
+% expect:  0 errors, 0 warnings; the names no affiliation, the block (a nameless creator) the two lines once
+% status:  RED (98a) -> GREEN (98e)
+% preload: ar5iv.sty
+\documentclass[aps,prl,groupedaddress]{revtex4-1}
+\begin{document}
+\title{T}
+\author{A.~One,$^{1}$ and~B.~Two$^{2}$}
+\address{\parbox{\linewidth}{$^{1}$Alpha University, Beijing\\ $^{2}$Beta Institute, Rome}}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

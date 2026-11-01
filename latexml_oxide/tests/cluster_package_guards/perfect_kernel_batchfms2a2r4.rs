@@ -308,7 +308,9 @@ fn a_sole_authors_annotations_before_it() {
 #[test]
 fn spacing_before_a_mark_parts_the_entries() {
   // (written family, held back: the writer does not cut today's one contact at its `{\,\!}^{2}` mark — OPEN_ROWS
-  // "written-family writer gaps"; today's XML keeps "1Department of Mathematics and 2Department of Physics, …" on both)
+  // "written-family writer gaps"; today's XML keeps "1Department of Mathematics and 2Department of Physics, …" once on
+  // the block, REVTeX's fail-safe for a block of two requested labels no mark it reads leads — on both before 98e, the
+  // group rule's copies — and the reading its lines by their marks, `_unsplit=true`)
   assert_eq!(
     tuples_held(
       &revtex(

@@ -194,12 +194,14 @@ LoadDefinitions!({
   // 1808.01089) is no affiliation: the e-mail of the author its mark or its address names, as the class's e-mails apart
   // from the names are placed (`placed_email_line_calls`).
   DefMacro!("\\affiliation{}", sub[(content)] {
-    let mut content = content;
+    // (lines set with one-argument line wrappers, `\affil{\centerline{$^{1}$Univ A}\centerline{$^{2}$Univ B}}`, are
+    // those lines, read below as `\\` lines are: `relocate::wrapped_lines_as_lines`, REVTeX's call the same)
+    let mut content = wrapped_lines_as_lines(&content).unwrap_or(content);
     // (a block of `\\` lines, each entry led by a label a queued `\altaffilmark` requests, an unlabelled line the
     // entry's before it: each entry labelled so — 1610.06611's one `\affil{$^{1}$ Jet Propulsion Laboratory … \\
     // $^{2}$ Space Radiation Laboratory … \\ …}`, astro-ph0108212's `\affil{\scriptsize 5) Space Telescope Science
     // Institute, … \\ Affiliated with …}`)
-    let lines: Vec<&[Token]> = revtex4_support_sty::split_top_level_lines(content.unlist_ref())
+    let lines: Vec<&[Token]> = split_top_level_lines(content.unlist_ref())
       .into_iter()
       .filter(|line| line.iter().any(|t| *t != T_SPACE!()))
       .collect();

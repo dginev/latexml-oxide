@@ -415,14 +415,19 @@ impl Resolver {
     }
     // an entry of several marked entries (`\affiliation{$^{*}$Univ A,\\$^{+}$Univ B}`): each entry by its own leading
     // mark, as ruling 1 reads the marks (cond-mat0510562, 1612.09425, 1809.03738, hep-ph0408045, 2509.08362,
-    // 1506.00848: the whole went to the first mark's carriers)
+    // 1506.00848: the whole went to the first mark's carriers) — a block a binding's fail-safe sent to the block
+    // unread (`_unsplit=true`: REVTeX's `group_or_marked_affiliation`, its leading mark one the binding does not see,
+    // `\( ^{1} \)Univ A \\ \( ^{2} \)Univ B`) too, its pieces by their own marks, not by that label
+    let unsplit = attr_value(attrs, "_unsplit") == Some("true");
     if !split
       && tag != "ltx:creator"
-      && attr_value(attrs, "label").is_none_or(str::is_empty)
+      && (unsplit || attr_value(attrs, "label").is_none_or(str::is_empty))
       && attr_value(attrs, "labelseq").is_none_or(|s| s.is_empty() || !policy.label_sequence)
     {
       let pieces = mark_led_pieces(events);
       if !pieces.is_empty() {
+        let unlabelled = without_key(&without_key(attrs, "label"), "_unsplit");
+        let attrs = if unsplit { unlabelled.as_str() } else { attrs };
         self.splitting = true;
         for piece in pieces {
           self.api(index, tag, role, attrs, &piece, policy);

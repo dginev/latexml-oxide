@@ -1,0 +1,37 @@
+% mechanism: a one-argument line wrapper is a line (revtex4_support_sty.rs `group_or_marked_affiliation`,
+%   `relocate::wrapped_lines_as_lines`): an `\address` block set line by line with `\centerline{…}` (plain.tex
+%   `\line{\hss#1\hss}`, a box as wide as the line) is those lines, each by its own leading label, as the same block
+%   written with `\\` (revtex_address_lines_by_their_marks) is.
+% witness: hep-ex0409040 and hep-ex0612013 (revtex4 `groupedaddress`, D0: ~600 names `V.M.~Abazov,$^{33}$` over
+%   `\address{\centerline{$^{1}$Universidad de Buenos Aires…}…}`, 75 and 82 institutes): 98a every creator the whole
+%   block as one affiliation (377,251 and 428,795 words; 9.45 MB of XML), 97b the block once on the last author;
+%   review revab126 (q1)
+% oracle:  pdflatex (TL 2025, revtex4-1) 0 errors: "A. One,1 B. Two,2 and C. Three3 / (X Collaboration) / 1 Alpha
+%   University, Beijing / 2 Beta Institute, Rome / 3 Gamma Lab, Paris"
+% engines: rust 98a: each creator the three lines as one affiliation; 97b: C. Three alone; perl: C. Three alone
+% expect:  0 errors, 0 warnings; A. One Alpha University, B. Two Beta Institute, C. Three Gamma Lab, each the
+%   collaboration
+% status:  RED (98a) -> GREEN (98e)
+% preload: ar5iv.sty
+\documentclass[aps,prl,groupedaddress]{revtex4-1}
+\begin{document}
+\title{T}
+\author{
+A.~One,$^{1}$
+B.~Two,$^{2}$
+and~C.~Three$^{3}$
+\\
+\vskip 0.30cm
+\centerline{(X Collaboration)}
+\vskip 0.30cm
+}
+\address{
+\centerline{$^{1}$Alpha University, Beijing}
+\centerline{$^{2}$Beta Institute,
+                  Rome}
+\centerline{$^{3}$Gamma Lab, Paris}
+}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

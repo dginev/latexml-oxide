@@ -928,6 +928,7 @@ pub(super) fn apply(document: &mut Document, front: &Front, plan: &Plan) -> Resu
       template,
       before,
       label,
+      ..
     } = op
       && let Some(owner) = owner_node(document, *who)?
     {

@@ -27465,7 +27465,8 @@ kernel's reading unwritten, until its family passes its own gate
   skipped today's (`plan::wanted`): a note printing only a superscript or a box (`\thanks{\textsuperscript{}}`, the
   observer's note of ink in doubt, OD #916) held the paper back.
 - An entry the reading leaves to the block because no name requests its label (`label:unrequested owner:block`,
-  `ruling2:uncarried owner:block`) is no ruling's owner decision: the writer keeps today's placement (`writer::writes`)
+  `ruling2:uncarried owner:block`) is no ruling's owner decision: the writer keeps today's placement (`writer::writes`;
+  as a line of a block-line cut whose other lines a ruling decided it is cut too, once for the block: #947 round 3)
   — espcrc's `\address[ETHZ]{…}` after each name inside `\author` (hep-lat0409072), a numbered line under names
   printing no mark (1205.5573's shape).
 - The writer declines a copy of an e-mail address onto a creator while today's holds it on the creator it spells
@@ -28175,7 +28176,7 @@ of single words no one requests (`\address[c, d]{…}`) is a key list, in doubt,
 author block's own where today's holds no nameless creator — the re-part's block included — is declined whole,
 today's output kept, with a Warning naming the block's ledger entry; a copy of today's item a ruling gives the block
 (an address no author spells: `owner:inner-email`, `ruling3:written-out`; 1811.05243, 1812.02463, 2403.14668,
-2501.11467) stays the block's — over every item the invariant had left 2105.11343, 2107.09414 and 2508.05637 with
+2501.11467) stays the block's, and so does a cut block line no name requests (#947 round 3, 2007.02542) — over every item the invariant had left 2105.11343, 2107.09414 and 2508.05637 with
 today's shared e-mail (`Op::made_for`, `Repart::makes_block_items`). S3 a kept class body's call of a rerouted setter is
 `\lx@class@contact@dispatch@<name>` (round 5; a braced `\lx@class@contact@dispatch{<name>}` until then), one token at
 the call site, which expands to the class's definition while the setter means the reroute
@@ -29162,6 +29163,53 @@ institutes.
 
 A/B (11,333 papers: popint125a_s10k + the census aas family + wrapped blocks): 76 changed, E and F unchanged, no creator merged or lost. Scorer: the 3,000 sample D3 per creator 98.18 → 98.23 %, lost-words 0; the dev subset the change reaches (1,042 papers) 77.65 → 97.96 % per creator. Round 2, the same population against round 1's 97d binary: 97 changed, E 22,031 → 22,031, F 58 → 59 (2311.05131, a load timeout: alone rc=0, F=0), 0 creators merged or lost, no address held by more creators (`fm_checks`); the affiliation-growth flags are the three BESIII-shaped splits and 1612.09425 (5 → 12, every author its marks' lines out of one `\affil` block); the word drops are lines no longer repeated on every author and the labels taken off the lines. Scorer unchanged (3,000 sample 98.23 %, lost-words 0; dev subset 97.96 %, astro-ph0408475 every creator ok).
 
+**Round 3 (98e; bundle int126a's A/B blocker, review revab126): a block the marks cannot split lands once.**
+- **A one-argument line wrapper is a line** (`relocate::wrapped_lines_as_lines`, called at the head of
+  `group_or_marked_affiliation` and of aas_support_sty.rs's `\affiliation`, before either reads a leading label): a
+  block line set as `\centerline{…}`, `\leftline{…}` or `\rightline{…}` (latex.ltx:16403-16406, each a box as wide as
+  the line) is a line of its own, and an `\mbox{…}`/`\hbox{…}` is one when it is the whole line between `\\` — or,
+  side by side, where marks lead the first box and another (a box no mark leads goes on with the entry before it, a
+  space between) — written as `\\` lines, each then read by its own label as the same block typed with `\\` is. Only
+  where a wrapped line leads with a mark (`\address{\centerline{Univ A}}` keeps its wrapper); the wrapper's alignment
+  is dropped with it. The D0 lists (`\address{\centerline{$^{1}$Universidad de Buenos Aires…}\centerline{$^{2}$…}…}`
+  under ~600 `V.M.~Abazov,$^{33}$` names): 98a every creator the whole 75-institute block (hep-ex0409040 6,379 →
+  377,251 words, 9.45 MB of XML; hep-ex0612013 7,895 → 428,795), 97b the block once on the last author; now each
+  author its own institute (607 of 607 and 576 of 576 creators one affiliation each, 75 and 82 distinct; 10,085 and
+  11,807 words). Also 1412.5812 (`\mbox{$^{1}$…}\mbox{$^{2}$…}…\mbox{Russian Academy…}`), 0911.2853
+  (`\mbox{$^a$…}\\ \mbox{Blegdamsvej…}\\ …`).
+- **The group rule's fail-safe** (FRONTMATTER_SINGLE_ENGINE_PLAN "The structure model" step 4): a block holding more
+  than one label the names request (`relocate::requested_marks_held`) that no mark this reader sees leads
+  (`leads_with_mark`), under names requesting affiliations by marks (`run_names_show_a_mark`), is no one entry a group
+  shares: it lands once at the block (`label={addresses:block}`, #159), never `annotate=run`'s copy on each author.
+  The call declares `_unsplit=true`, and the observer reads such a block's lines by their own marks all the same
+  (`resolver::api`, the mark split of an entry of several marked entries), so the writer cuts it where it can
+  (`\affiliation{\( ^{1} \)Univ A, City\\ \({}^{2}\)Univ B, Town}`: each author its line, as before). Where neither
+  reader parts it, it stays once on the block: 0807.4407 (`\mbox{${\ }^{1}$} Department …`), 2208.09667 and
+  2308.02280 (`\affiliation{&&${^1}$ Department …\nonumber\\$^{2}$ …}`), each author the whole block before.
+- **A cut block line no name requests goes to the block** (writer/plan.rs `cut_block_lines`): an entry the reading
+  leaves to the block for a label no name requests (`label:unrequested owner:block`, `ruling2:uncarried
+  owner:block`) is a piece of a block-line cut whose other lines a ruling decided, made once for the block — a
+  labelled item nobody answers goes to step 4 of the placement order, never to the holders of the joined item; a run
+  of such lines alone keeps today's placement (`writer::writes`, #925). Such a piece is the block's by that order, not
+  by doubt: `Op::Make`'s `unanswered` takes it out of the nameless-creator invariant (`writes_a_nameless_creator`,
+  rev94b r3 B2). 2007.02542 (BESIII, 491 names over one `{\it $^{1}$ …\\ … $^{l}$ …\\}` group, labels 23, 24, 51 and
+  63 requested by no name — the names ask `23A`, `63A,63C`): the writer had declined the whole paper, the holders of
+  mark 1 (143) each the whole numbered list as one contact and 347 authors none; now every author the lines its marks
+  name (714 affiliations, 80 distinct; 114,629 → 19,006 words), the four unrequested lines once on the block.
+
+A/B (98e against 98a, 1,730 papers: the 652 the bundle A/B changed, the 1,073 popint125a revtex/aastex papers with
+`groupedaddress` or an `\address`/`\affiliation`/`\affil` led by a line wrapper, the brief's keep list): 10 changed (the
+papers named above, 2006.12914's whole-line `\mbox` and 2306.17718's ids aside), E 1,568 → 1,559 (2208.09667 6 → 1,
+2308.02280 5 → 1: the `&&` block's `Stray alignment "&"` Error once, as the source holds it, not once per copy), F 0 → 0; no creator merged or lost, no address held by
+more creators, no frontmatter grown (`fm_checks`); the word drops are the copies gone; hep-ph0301204, 1810.01941,
+astro-ph0108212, astro-ph0408475, astro-ph0105133, 2206.00684, 0910.4381, 0909.3044, 1804.01623, 2006.10291,
+2403.06760, astro-ph0611722, the BESIII lists 2411.07730, 2606.14105, 1507.02068, 1512.08197, 2201.02056, 2212.06489
+and the bundle review's growth papers (1607.00017, 0806.2911, 1712.07118, 2010.05066, 1403.3120, 0704.1713,
+1506.00848, 1801.05601, 2007.08102, 0810.3850) byte-identical to 98a.
+Scorer (the 3,000 sample against 98a): D3 per creator 98.49 → 98.54 % (6,062 → 6,065 of 6,155), per paper 98.10 →
+98.19 %; 2312.10790 `block_copied` → every creator right, 1405.6489 `block_copied` → `aff_at_block`; lost-words papers
+2 → 2, readability violations 22 → 22.
+
 **Left** (SYNC_STATUS row "97f"): sub-labelled marks (`$^{48A,48C}$` against `$^{48}$ (A)…; (B)…; (C)…`, 33 names a
 BESIII paper) stay in the name and go by their digits, the entries on a nameless creator (RED
 `author_sub_labelled_marks_read_as_digits`; the ruling deferred); unlabelled lines under `$^{N}$` names
@@ -29185,7 +29233,18 @@ unchanged). Repros sectioning-frontmatter/`author_size_environment_around_center
 `aastex_affil_email_line_is_its_authors_email`, `aastex_affil_marked_email_line_is_the_marked_authors` (RED → GREEN),
 `revtex_macro_marked_addresses_after_commas_go_to_the_block` (RED → GREEN),
 `aastex_symbol_marked_names_share_affil_lines`, `aastex_altaffilmark_names_share_unlabelled_lines`,
-`revtex_macro_marked_addresses_go_by_their_marks` (GREEN).
+`revtex_macro_marked_addresses_go_by_their_marks` (GREEN). Round 3 left (SYNC_STATUS row "int126a review"): a cut
+block line no name requests keeps no printed label on the block (`b Also at …` prints as "Also at …", as a made
+affiliation holds none); a leading mark set in a box of its own or after a spacing nucleus (`\mbox{${\ }^{1}$}`,
+`${^1}$`) and an `&&`/`\nonumber` line in an affiliation stay one block entry; BESIII's sub-labelled names (`$^{63A,63C}$`)
+go by their digits as before (2007.02542: 36 names). Round 3 guards `perfect_kernel_batch98e`
+(`line_wrapped_address_lines_go_by_their_marks`, `an_unsplit_labelled_address_block_lands_once_at_the_block`,
+`a_block_line_no_name_requests_goes_once_to_the_block`); repros class-bindings/
+`revtex_centerline_address_lines_go_by_their_marks`, `revtex_boxed_address_lines_go_by_their_marks`,
+`aastex_centerline_affiliation_lines_go_by_their_marks`, `revtex_unsplit_labelled_address_block_lands_once`,
+`revtex_block_line_no_name_requests_goes_to_the_block` (RED → GREEN), `revtex_address_lines_by_their_marks`,
+`revtex_block_lines_all_answered`, `revtex_block_lines_every_label_requested` (GREEN controls); the writer's
+`the_writer_never_writes_a_nameless_creator` asserts the exception.
 
 ### 948. Every remaining observer-writer family is written in one batch (ijcai, inst_support, iopart, jheppub, jinstpub, jcappub, jpconf, sv_support and every binding owning `\author` with no declaration); a block line's letters are read as printed, a re-parted entry keeps today's role, a letter-spaced name's word space is no gap, an e-mail's corresponding owner is one of the authors it is printed for, a name read as an entry is never written onto an author; an elsarticle key is answered by its keys alone, and a name the re-part makes that names no person declines (Perl: the old reader's output, no observer)
 

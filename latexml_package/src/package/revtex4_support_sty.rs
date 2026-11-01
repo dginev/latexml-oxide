@@ -984,33 +984,20 @@ fn preprint_printed() -> bool {
   }
 }
 
-/// The items of `tokens` separated by `\\` at its top level, outside every group and `\begin`…`\end` environment.
-pub(crate) fn split_top_level_lines(tokens: &[Token]) -> Vec<&[Token]> {
-  let (mut items, mut start, mut depth, mut envs) = (Vec::new(), 0, 0usize, 0usize);
-  for (i, t) in tokens.iter().enumerate() {
-    match t.get_catcode() {
-      Catcode::BEGIN => depth += 1,
-      Catcode::END => depth = depth.saturating_sub(1),
-      _ if *t == T_CS!("\\begin") => envs += 1,
-      _ if *t == T_CS!("\\end") => envs = envs.saturating_sub(1),
-      _ if depth == 0 && envs == 0 && t.defined_as(&T_CS!("\\\\")) => {
-        items.push(&tokens[start..i]);
-        start = i + 1;
-      },
-      _ => {},
-    }
-  }
-  items.push(&tokens[start..]);
-  items
-}
-
 /// REVTeX's `\affiliation{…}` call: a mark-led line no group shares goes to the authors showing its
 /// marks (`\lx@add@affiliation@marked`), any other to the group before it (`annotate=<annotate>`, REVTeX's `run`),
 /// declared `_grouped=true` to the frontmatter observer when one mark is the group's. AASTeX's `\affiliation`/`\affil`
 /// is the same call (aas_support_sty.rs: aastex6x is REVTeX 4.1 underneath, aastex62.cls:278-292), `annotate=new`
 /// under `$^{N}$` names. A line led by a macro standing for a mark under names carrying such macros goes by its mark,
-/// or to the block (hep-ph0301204, below).
+/// or to the block (hep-ph0301204, below). Lines set with one-argument line wrappers are those lines
+/// (`relocate::wrapped_lines_as_lines`: `\address{\centerline{$^{1}$Univ A}\centerline{$^{2}$Univ B}}`, hep-ex0409040,
+/// hep-ex0612013), and a block holding several labels the names request whose lines are not read so lands once at the
+/// block, never a copy on each author of the group (below).
 pub(crate) fn group_or_marked_affiliation(content: Tokens, annotate: &str) -> Result<Tokens> {
+  // (a one-argument line wrapper is a line: the D0 lists' `\address{\centerline{$^{1}$Universidad de Buenos Aires…}
+  // \centerline{$^{2}$LAFEX…}…}`, 75 institutes under ~600 names `V.M.~Abazov,$^{33}$`, read as one unlabelled
+  // block and copied onto every author by the group rule — 9.45 MB of XML, 377,251 words, hep-ex0409040; hep-ex0612013)
+  let content = wrapped_lines_as_lines(&content).unwrap_or(content);
   // (a line led by a macro standing for a mark, `\address{\MSU Moscow …}` with `\edef\MSU{$^{1}$ }`, under names
   // carrying such macros: no group's (user ruling R1, 2026-11-01: marks win) — labelled by its mark, the macro off the
   // line; the block's, once, where a mark leads a name (written after the comma, `M.~Osipenko,\MSU …`, so the comma
@@ -1031,6 +1018,18 @@ pub(crate) fn group_or_marked_affiliation(content: Tokens, annotate: &str) -> Re
     ]));
   }
   let marked = leads_with_mark(&content);
+  // (the fail-safe, FRONTMATTER_SINGLE_ENGINE_PLAN "The structure model" step 4: a block holding more than one label
+  // the names request that no mark leads — its labelled lines not read as lines, `\address{\parbox{\linewidth}{$^{1}$Univ
+  // A\\ $^{2}$Univ B}}`, or led by a mark this reader does not see, `\( ^{1} \)Univ A \\ \( ^{2} \)Univ B` — is no one
+  // entry a group shares: it lands once at the block, `addresses:block` (OD #159), never a copy on each author of the
+  // group; declared `_unsplit=true`, so the frontmatter observer still reads its lines by their own marks)
+  if !marked && run_names_show_a_mark() && requested_marks_held(&content) > 1 {
+    let keyvals = mouth::tokenize_internal("label={addresses:block},_unsplit=true");
+    return Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![
+      Some(keyvals),
+      Some(content)
+    ]));
+  }
   let grouped = marked && queued_group_shares_the_mark(&content);
   let declared_grouped =
     grouped && content_marks(&content).len() == 1 && interleaved_group_shares_the_mark(&content);

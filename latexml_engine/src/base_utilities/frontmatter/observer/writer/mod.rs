@@ -532,7 +532,8 @@ fn take_out_again(
 /// ([`decline_nameless`]). A copy of today's item a ruling gives the block — an address no author spells
 /// (`owner:inner-email`, `ruling3:written-out`: 1811.05243, 1812.02463, 2403.14668, 2501.11467; 2105.11343, 2107.09414,
 /// 2508.05637, which the invariant over every item had left with today's shared e-mail) — is the block's by that
-/// ruling, not by doubt ([`plan::Op::made_for`], `repart::Repart::makes_block_items`).
+/// ruling, not by doubt ([`plan::Op::made_for`], `repart::Repart::makes_block_items`); so is a cut block line no name
+/// requests (`plan::Op::Make`'s `unanswered`: a labelled item nobody answers goes to the block, 2007.02542).
 fn writes_a_nameless_creator(owners: impl IntoIterator<Item = Owner>, front: &dom::Front) -> bool {
   front.nameless.is_empty() && owners.into_iter().any(|owner| owner == Owner::Block)
 }
@@ -624,7 +625,8 @@ pub(super) fn piece_span(events: &[Event]) -> Option<(usize, usize)> {
 /// no name requests its label (`label:unrequested owner:block`, `ruling2:uncarried owner:block`): its tag says how its
 /// label was read, and no ruling decided an owner, so today's placement stays (OD #925: the kernel `\author`'s
 /// `\address` inside it, espcrc's after each name — 78s's `espcrc_addressmark_key_not_printed`, hep-lat0409072 —, a
-/// numbered line under names printing no mark, 77n's `parbox_names_split_and_drop_the_box`, 1205.5573).
+/// numbered line under names printing no mark, 77n's `parbox_names_split_and_drop_the_box`, 1205.5573) — except as a
+/// piece of a block-line cut whose other lines a ruling decided (`plan::cut_block_lines`, 2007.02542).
 pub(super) fn writes(assoc: &Assoc) -> bool {
   let unowned = |tag: &str| assoc.rule.contains(tag);
   is_change_rule(&assoc.rule)
@@ -661,19 +663,24 @@ mod tests {
       }],
     };
     assert!(!writes_a_nameless_creator([Owner::Block], &nameless));
-    // (only an item made from the queued tokens counts: a copy of today's, a written-out address, a removal and a role
-    // set make none — `Op::made_for`)
-    let make = |owner| Op::Make {
+    // (only an item made from the queued tokens counts: a copy of today's, a cut block line no name requests — the
+    // block's by the placement order, 98e —, a written-out address, a removal and a role set make none — `Op::made_for`)
+    let make = |owner, unanswered| Op::Make {
       owner,
       made: plan::Made::Affiliation,
       tokens: Tokens::new(Vec::new()),
       template: node.clone(),
       before: None,
       label: None,
+      unanswered,
     };
-    assert_eq!(make(Owner::Block).made_for(), Some(Owner::Block));
-    assert_eq!(make(Owner::Creator(1)).made_for(), Some(Owner::Creator(1)));
+    assert_eq!(make(Owner::Block, false).made_for(), Some(Owner::Block));
+    assert_eq!(
+      make(Owner::Creator(1), false).made_for(),
+      Some(Owner::Creator(1))
+    );
     for op in [
+      make(Owner::Block, true),
       Op::Copy {
         from: node.clone(),
         to:   Owner::Block,

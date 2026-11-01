@@ -1021,6 +1021,154 @@ pub fn queued_name_marks() -> (Vec<String>, Vec<String>) {
   })
 }
 
+/// How many of the marks the queued authors' names show as superscripts (`queued_name_marks`) `content` prints, each
+/// once: the labelled lines an affiliation block holds for the names (`\address{\parbox{\linewidth}{$^{1}$Univ A\\
+/// $^{2}$Univ B}}`: 2).
+pub fn requested_marks_held(content: &Tokens) -> usize {
+  let (_, requested) = queued_name_marks();
+  let mut held: Vec<String> = Vec::new();
+  for mark in content_marks(content) {
+    let key = mark_key(&mark);
+    if requested.contains(&key) && !held.contains(&key) {
+      held.push(key);
+    }
+  }
+  held.len()
+}
+
+/// The items of `tokens` separated by `\\` at its top level, outside every group and `\begin`…`\end` environment.
+pub fn split_top_level_lines(tokens: &[Token]) -> Vec<&[Token]> {
+  let (mut items, mut start, mut depth, mut envs) = (Vec::new(), 0, 0usize, 0usize);
+  for (i, t) in tokens.iter().enumerate() {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ if *t == T_CS!("\\begin") => envs += 1,
+      _ if *t == T_CS!("\\end") => envs = envs.saturating_sub(1),
+      _ if depth == 0 && envs == 0 && t.defined_as(&T_CS!("\\\\")) => {
+        items.push(&tokens[start..i]);
+        start = i + 1;
+      },
+      _ => {},
+    }
+  }
+  items.push(&tokens[start..]);
+  items
+}
+
+/// LaTeX's line macros, each call a line of its own whatever stands beside it: a box as wide as the line
+/// (latex.ltx:16403-16406 `\def\@@line{\hb@xt@\hsize}`, `\centerline[1]{\@@line{\hss#1\hss}}`, `\leftline`,
+/// `\rightline`; plain.tex:575-577 the same through `\line`, which LaTeX makes the picture command).
+const LINE_MACROS: [&str; 3] = ["\\centerline", "\\leftline", "\\rightline"];
+/// The boxes a line may be set in (latex.ltx `\mbox`, the primitive `\hbox`): a line only when one is the whole line, as
+/// two set side by side are one line — unless marks lead them, the first and another, which part the entries as they
+/// part them on one line, a box no mark leads going on with the entry before it (`\mbox{$^{1}$Univ A}\mbox{$^{2}$Univ
+/// B,}\mbox{Town}`, 1412.5812).
+const LINE_BOXES: [&str; 2] = ["\\mbox", "\\hbox"];
+
+/// The lines a line of an affiliation block sets with one-argument line wrappers ([`LINE_MACROS`]: one line each;
+/// [`LINE_BOXES`]: one box that is the whole line, or boxes marks lead), each the wrapper's argument; `None` for a line
+/// holding anything else beside them but spacing.
+fn wrapped_line_pieces(line: &[Token]) -> Option<Vec<Vec<Token>>> {
+  let mut pieces: Vec<&[Token]> = Vec::new();
+  let mut boxed = false;
+  let mut i = 0;
+  loop {
+    while i < line.len() && (line[i] == T_CS!("\\par") || line[i] == T_CS!("\\noindent")) {
+      i += 1;
+    }
+    let past = i + leading_spacing_end(&line[i..]);
+    if past > i {
+      i = past;
+      continue;
+    }
+    let Some(t) = line.get(i) else {
+      break;
+    };
+    let line_macro = LINE_MACROS.iter().any(|cs| *t == T_CS!(*cs));
+    let line_box = LINE_BOXES.iter().any(|cs| *t == T_CS!(*cs));
+    if !line_macro && !line_box {
+      return None;
+    }
+    let mut open = i + 1;
+    while line.get(open) == Some(&T_SPACE!()) {
+      open += 1;
+    }
+    if line
+      .get(open)
+      .is_none_or(|t| t.get_catcode() != Catcode::BEGIN)
+    {
+      return None;
+    }
+    let end = skip_group(line, open);
+    if end > line.len() || line[end - 1].get_catcode() != Catcode::END {
+      return None;
+    }
+    pieces.push(&line[open + 1..end - 1]);
+    boxed |= line_box;
+    i = end;
+  }
+  if pieces.is_empty() {
+    return None;
+  }
+  if !boxed || pieces.len() == 1 {
+    return Some(pieces.into_iter().map(<[Token]>::to_vec).collect());
+  }
+  // (boxes side by side: entries where marks lead them, a box no mark leads the entry before it, a space between)
+  let leads: Vec<bool> = pieces
+    .iter()
+    .map(|piece| leads_with_mark(&Tokens::new(piece.to_vec())))
+    .collect();
+  if !leads[0] || leads.iter().filter(|lead| **lead).count() < 2 {
+    return None;
+  }
+  let mut entries: Vec<Vec<Token>> = Vec::new();
+  for (piece, lead) in pieces.into_iter().zip(leads) {
+    match entries.last_mut() {
+      Some(entry) if !lead => {
+        entry.push(T_SPACE!());
+        entry.extend_from_slice(piece);
+      },
+      _ => entries.push(piece.to_vec()),
+    }
+  }
+  Some(entries)
+}
+
+/// An affiliation block whose lines are set with one-argument line wrappers (`\address{\centerline{$^{1}$Univ A}
+/// \centerline{$^{2}$Univ B}}`, the D0 author lists of hep-ex0409040 and hep-ex0612013; `\mbox{$^{1}$Univ A}\\ …`)
+/// written as the lines they print, `\\` between them — so its lines are read as lines, each by its leading label —
+/// when a wrapped line leads with a mark ([`leads_with_mark`]); `None` otherwise (`\address{\centerline{Univ A}}` keeps
+/// its wrapper). The wrapper's alignment is dropped with it, as a `\\` line's is none.
+pub fn wrapped_lines_as_lines(content: &Tokens) -> Option<Tokens> {
+  let mut lines: Vec<Vec<Token>> = Vec::new();
+  let mut labelled = false;
+  let mut unwrapped = false;
+  for line in split_top_level_lines(content.unlist_ref()) {
+    match wrapped_line_pieces(line) {
+      Some(pieces) => {
+        unwrapped = true;
+        labelled |= pieces
+          .iter()
+          .any(|piece| leads_with_mark(&Tokens::new(piece.clone())));
+        lines.extend(pieces);
+      },
+      None => lines.push(line.to_vec()),
+    }
+  }
+  if !unwrapped || !labelled {
+    return None;
+  }
+  let mut out: Vec<Token> = Vec::new();
+  for (at, line) in lines.into_iter().enumerate() {
+    if at > 0 {
+      out.push(T_CS!("\\\\"));
+    }
+    out.extend(line);
+  }
+  Some(Tokens::new(out))
+}
+
 fn group_shares_the_mark(content: &Tokens, alternating: bool) -> bool {
   let mut marks: Vec<String> = superscript_scripts(&content.to_string()).concat();
   marks.dedup();

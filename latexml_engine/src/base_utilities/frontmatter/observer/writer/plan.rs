@@ -60,14 +60,16 @@ pub(super) enum Op {
   /// today's item taken away
   Remove { node: Node },
   /// an item made from the queued `tokens` for `owner` — before `before`, the item of today's it replaces there; a
-  /// legend's `label` the mark its note shows
+  /// legend's `label` the mark its note shows; `unanswered`, a piece of a cut labelled line no name answers, the
+  /// block's by the placement order (a labelled item nobody answers goes to the block), not by doubt
   Make {
-    owner:    Owner,
-    made:     Made,
-    tokens:   Tokens,
-    template: Node,
-    before:   Option<Node>,
-    label:    Option<String>,
+    owner:      Owner,
+    made:       Made,
+    tokens:     Tokens,
+    template:   Node,
+    before:     Option<Node>,
+    label:      Option<String>,
+    unanswered: bool,
   },
   /// today's contact given the reading's role
   Role { node: Node, role: String },
@@ -96,11 +98,13 @@ pub(super) enum Op {
 impl Op {
   /// The owner an operation makes an item for from the queued tokens (`writer::writes_a_nameless_creator`) — none for
   /// a copy of today's item (one a ruling gives the block: an address no author spells, `owner:inner-email`,
-  /// `ruling3:written-out`), a written-out address, a removal, a role set.
+  /// `ruling3:written-out`), a cut line no name answers (`Op::Make`'s `unanswered`: the placement order gives it the
+  /// block, 2007.02542), a written-out address, a removal, a role set.
   pub(super) fn made_for(&self) -> Option<Owner> {
     match self {
-      Op::Make { owner, .. } => Some(*owner),
-      Op::Copy { .. }
+      Op::Make { owner, unanswered: false, .. } => Some(*owner),
+      Op::Make { .. }
+      | Op::Copy { .. }
       | Op::WriteOut { .. }
       | Op::Remove { .. }
       | Op::Role { .. }
@@ -1270,7 +1274,13 @@ fn cell_tokens(content: &[Token], from: usize, tokens: &Tokens) -> Option<Tokens
 /// takes for a note (`\textsuperscript{*}Equal contribution`, ruling 2: 2407.07614) — each entry made from its line's
 /// tokens for the authors the reading gives it, today's item taken. Only entries the reading decided by a ruling's
 /// change, none of which today's holds anywhere, in one run of consecutive lines whose texts joined are today's item's;
-/// anything else is left to the final check, which declines.
+/// anything else is left to the final check, which declines. A line of the run whose label no name requests
+/// (`label:unrequested owner:block`, `ruling2:uncarried owner:block`) is a piece of the cut too, made once for the block
+/// — a labelled item nobody answers goes to the block (FRONTMATTER_SINGLE_ENGINE_PLAN's placement order), never to the
+/// holders of the joined item — where another line of the run is so decided: one printed label no name carries had
+/// declined the whole paper, today's numbered list one contact on each holder of its first label (2007.02542's
+/// BESIII list, 143 holders of mark 1 each the list, 347 authors none; `$^{1}$ Univ A\\$^{b}$ Also at …` in one `{\it
+/// …}` group). A run of such lines alone keeps today's placement (`writer::writes`).
 fn cut_block_lines(
   want: &BTreeMap<Key, Vec<(Owner, &Assoc)>>,
   have: &BTreeMap<Key, Vec<(Owner, Node, bool)>>,
@@ -1278,8 +1288,18 @@ fn cut_block_lines(
   held_only: &mut Vec<Key>,
   ops: &mut Vec<Op>,
 ) {
-  // (the reading's entries no item of today's holds, each one span of one block, by a ruling's change, in print order)
-  let mut lines: Vec<(usize, (u16, u16), Key)> = wanted_only
+  // (the reading's entries no item of today's holds, each one span of one block, by a ruling's change or the block's for
+  // a label no name requests — `unanswered`, which no run of its own cuts —, in print order)
+  let unanswered = |o: &Owner, a: &Assoc| {
+    *o == Owner::Block
+      && [
+        "label:unrequested owner:block",
+        "ruling2:uncarried owner:block",
+      ]
+      .iter()
+      .any(|tag| a.rule.contains(tag))
+  };
+  let mut lines: Vec<(usize, (u16, u16), Key, bool)> = wanted_only
     .iter()
     .filter(|key| !matches!(key.0, Kind::Contact(_)))
     .filter_map(|key| {
@@ -1293,10 +1313,13 @@ fn cut_block_lines(
           .iter()
           .any(|tag| a.rule.contains(tag))
       };
+      let blocks = wants.iter().all(|(o, a)| unanswered(o, a));
       wants
         .iter()
-        .all(|(_, a)| writes(a) && one_line(a) && a.source == Some((index, Some(span))))
-        .then(|| (index, span, key.clone()))
+        .all(|(o, a)| {
+          (writes(a) || unanswered(o, a)) && one_line(a) && a.source == Some((index, Some(span)))
+        })
+        .then(|| (index, span, key.clone(), blocks))
     })
     .collect();
   lines.sort();
@@ -1326,20 +1349,20 @@ fn cut_block_lines(
     }) else {
       continue;
     };
-    let run: Vec<(usize, (u16, u16), Key)> = lines[run].to_vec();
-    // (one line alone is today's item under another kind only: a legend)
-    if run.len() == 1 && run[0].2.0 != Kind::Note {
+    let run: Vec<(usize, (u16, u16), Key, bool)> = lines[run].to_vec();
+    // (one line alone is today's item under another kind only: a legend; and a run of the block's lines alone stays)
+    if (run.len() == 1 && run[0].2.0 != Kind::Note) || run.iter().all(|line| line.3) {
       continue;
     }
     let Some(pieces) = run
       .iter()
-      .map(|(index, span, key)| block_line_tokens(*index, *span, &key.1, key.0 == Kind::Note))
+      .map(|(index, span, key, _)| block_line_tokens(*index, *span, &key.1, key.0 == Kind::Note))
       .collect::<Option<Vec<Tokens>>>()
     else {
       DebugFeature!("frontmatter", "FRONT writer: a block line does not cut");
       continue;
     };
-    for ((_, _, key), tokens) in run.iter().zip(pieces) {
+    for ((_, _, key, blocks), tokens) in run.iter().zip(pieces) {
       let made = if key.0 == Kind::Note {
         Made::Legend
       } else {
@@ -1356,15 +1379,16 @@ fn cut_block_lines(
             .find(|(o, ..)| o == owner)
             .map(|(_, n, _)| n.clone()),
           label: assoc.label.clone(),
+          unanswered: *blocks,
         });
       }
     }
     for (_, node, _) in holds {
       ops.push(Op::Remove { node: node.clone() });
     }
-    let keys: Vec<&Key> = run.iter().map(|(_, _, key)| key).collect();
+    let keys: Vec<&Key> = run.iter().map(|(_, _, key, _)| key).collect();
     wanted_only.retain(|k| !keys.contains(&k));
-    lines.retain(|(_, _, k)| !keys.contains(&k));
+    lines.retain(|(_, _, k, _)| !keys.contains(&k));
     held_only.retain(|k| *k != whole);
   }
 }
@@ -1737,6 +1761,7 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
             .find(|(o, ..)| o == owner)
             .map(|(_, n, _)| n.clone()),
           label: assoc.label.clone(),
+          unanswered: false,
         });
       }
       wanted_only.retain(|k| k != key);
@@ -1776,12 +1801,13 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
     }
     for (owner, assoc) in wants {
       ops.push(Op::Make {
-        owner:    *owner,
-        made:     Made::Legend,
-        tokens:   call.content.clone(),
-        template: holds[0].1.clone(),
-        before:   None,
-        label:    assoc.label.clone(),
+        owner:      *owner,
+        made:       Made::Legend,
+        tokens:     call.content.clone(),
+        template:   holds[0].1.clone(),
+        before:     None,
+        label:      assoc.label.clone(),
+        unanswered: false,
       });
     }
     for (_, node, _) in holds {
