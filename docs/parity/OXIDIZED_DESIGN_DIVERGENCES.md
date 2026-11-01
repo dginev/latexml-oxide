@@ -28914,8 +28914,12 @@ reading or the binding was already right and a span, a share rule or an override
 - **svproc** (latexml_contrib svproc_cls.rs). The contrib binding defined `\institute` as a document `<note
   role=institute>` (since the 2026-05-21 parity import, no witness), overriding sv_support's split, so no author held an
   affiliation. It no longer does: sv_support's `\institute` stands, split at `\and`, each piece answered by `\inst{n}`,
-  as Perl's (no svproc binding: OmniBus's inst_support, inst_support.sty.ltxml:36-38). An `\email` in a piece inherits
-  its label, as svjour3's (2409.01900's address list on every `\inst{1}` author, as Perl). Witnesses 2101.04527,
+  as Perl's (no svproc binding: OmniBus's inst_support, inst_support.sty.ltxml:36-38). On sv_support's split alone an
+  `\email` in a piece inherits its label, as svjour3's and Perl's (2409.01900's address list on every `\inst{1}`
+  author) — against FIDELITY_CHARTER §4, which gives an address to the author it spells (review rev97cd C1: 2101.04527,
+  2206.03859, 1911.11805, 2102.01452, 2404.15833, 2505.18180, 2507.18248 each had an address on a non-owner on 97c
+  alone). It lands only with OD #948 (sv_support observer-written), whose writer places each address by its spelling:
+  on 97c + 97e none of the seven shares an address and each gains its affiliations (base: none). Witnesses 2101.04527,
   2504.04157, 2206.03859, 1911.11805, 2409.01900.
 
 **Measured** (97b → 97c). Bundle population int125a, 28,354 papers: 70 changed (50 in the frontmatter), Errors and
