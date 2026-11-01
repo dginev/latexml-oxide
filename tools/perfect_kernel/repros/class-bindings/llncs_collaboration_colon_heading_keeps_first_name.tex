@@ -1,0 +1,22 @@
+% witness: 2206.00684 (aa, `\author{GRAVITY+ Collaboration\thanks{…}: R.~Abuter\inst{8} \and …}`); the colon printed
+%          after the heading parts it from the first name, as 2407.21626's `\and The ABC Collaboration\thanks{…}: Fay
+%          Fox` is parted by the `\and` before it; siblings: aa (2206.00684's class), svjour (`\and` list, same reading)
+% oracle:  pdflatex (TL 2025 llncs.cls): "XYZ Collaboration⋆ : Ann Able1 and Bob Baker2", "1", "2"
+% engines: rust 97b/97c = "XYZ Collaboration | Ann Able | Bob Baker" (the heading re-parted); int126a (97e r2) =
+%          "XYZ Collaboration: Ann Able | Bob Baker" (the writer declined: "a name naming no person", read only by the
+%          separator before the heading, which the first piece has none of — review rev126a B1)
+% expect:  0 errors, 0 warnings; the writer writes: "XYZ Collaboration" (its note), "Ann Able" (Univ A), "Bob Baker"
+%          (Univ B)
+% status:  RED (int126a) -> GREEN (98a) — perfect_kernel_batch98a::a_collaboration_heading_a_separator_parts_is_an_entry
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{XYZ Collaboration\thanks{Corresponding author: Ann Able}: Ann Able\inst{1}
+\and Bob Baker\inst{2}}
+\institute{Univ A \and Univ B}
+\maketitle
+\begin{abstract}A.\end{abstract}
+\section{Intro}
+Text.
+\end{document}

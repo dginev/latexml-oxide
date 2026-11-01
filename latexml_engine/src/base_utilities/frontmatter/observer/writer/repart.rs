@@ -351,10 +351,19 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
     // separator the names line prints — `(BES Collaboration)\\ \\ M.~Ablikim\inst{1}`, 0710.5369, hep-ex0605103;
     // `{The WASA-at-COSY Collaboration}\\[2ex]P.~Adlarson`, 1805.08173: the heading made a creator of its own once the
     // name was parted, review rev97e S1 — today's stays. A collaboration the names list parts by its separators is one
-    // of its entries, as the old reader and Perl read it: `\and The ABC Collaboration\thanks{…}: Fay Fox`, 2407.21626)
+    // of its entries, as the old reader and Perl read it, a separator before it or after it, the next name's: `\and The
+    // ABC Collaboration\thanks{…}: Fay Fox`, 2407.21626; the first piece, none before it, `\author{GRAVITY+
+    // Collaboration\thanks{…}: R.~Abuter\inst{8} \and …}`, 2206.00684 — its colon is printed, review rev126a B1)
+    let parted_by_sep = |c: &RCreator| c.rule.split_whitespace().any(|t| t.starts_with("sep:"));
     let no_person = match names_no_person(&c.name) {
       Some(NoPerson::Remark) => true,
-      Some(NoPerson::Collaboration) => !c.rule.split_whitespace().any(|t| t.starts_with("sep:")),
+      Some(NoPerson::Collaboration) => {
+        !parted_by_sep(c)
+          && !resolved.creators[index + 1..]
+            .iter()
+            .find(|next| !next.name.trim().is_empty())
+            .is_some_and(parted_by_sep)
+      },
       None => false,
     };
     if no_person

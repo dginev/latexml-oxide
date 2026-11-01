@@ -29149,7 +29149,11 @@ where each had "1INAOE" only. Round 2 (review rev97cd F1, F3): of the 14 papers 
 17 → 77, 2006.10291 16 → 70, 0909.0058 15 → 63, 1203.1623, 1503.02933, 1604.05346, 1612.02554, 1302.2646,
 astro-ph0702360, 1105.5884, astro-ph0607224), 13 now give every author exactly the lines its marks name (97d: line 1
 to every author, all the others to the last), 1202.0629 (bare lines) is 97d's XML; 1808.01089 and astro-ph0105133
-each author its marked institutes, Yang Gao his e-mail; 1210.4079 and 1506.04015 keep round 1's (the row's lines under
+each author its marked institutes, Yang Gao his e-mail (astro-ph0105133's `Yu-Qing Lou \altaffilmark{1,\hbox{ }2}`: the
+observer's request labels are the items as they print, as the binding's `mark_key` reads them — one helper,
+`relocate::mark_spelling_printed` —, where splitting at the space had requested `altaffil:\hbox` and a bare `2` and Lou
+and Fan lost Academia Sinica in the combined bundle; review rev126a B3, 98a, guard
+`perfect_kernel_batch98a::a_control_word_in_an_altaffilmark_list_is_no_label`); 1210.4079 and 1506.04015 keep round 1's (the row's lines under
 `\altaffilmark` names); 2403.06760, 1804.01623, astro-ph0611722 and 0910.4381 keep round 1's XML; astro-ph0408475:
 X. Kang holds kangx@shao.ac.cn (97d: G. Börner's affiliation; round 1 every author's), each author its marked
 institutes.
@@ -29277,7 +29281,8 @@ as the merged creator did).
 **Review rev97e (r2): two holes of the flip, fixed.**
 - *An elsarticle key is answered by keys alone, and its title's marks are arabic* (B1): elsart_support_core.sty
   declares conventions of its own (`elsart_support_core_sty.rs` `FRONTMATTER_CONVENTIONS`, "elsart": the kernel's
-  reading, written) for elsarticle, elsart and the classes keeping its `\author` (autart, entics, arxbj).
+  reading, written) for elsarticle, elsart and the classes keeping its `\author` (entics, arxbj; not autart, which
+  loads OmniBus and its own `\address`, `autart_cls.rs`, and only this binding's keyword markup).
   `title_marks: Body` — elsarticle's `\maketitle` sets no `\@fnsymbol` (elsarticle.cls:819, :836
   `\gdef\thefootnote{\arabic{footnote}}`; elsart.cls v2.18 :1107-1108 `\xarabic`), so a `\footnotemark[1]` reads
   "1", not the kernel's "∗". `keyed_labels` (a new `Policy` field) — the key of `\address[key]`/`\affiliation[key]` is
@@ -29286,7 +29291,8 @@ as the merged creator did).
   route of ruling 2 is closed to it (`resolver::post::answer_pending`, `keyed`; FIDELITY_CHARTER §4 R1). The authors'
   keys (`annotations=`) answer it, and so does a mark typed by hand: keys in order spell the places the class prints
   (`Denes Molnar$^{a,b}$` under `\address[a]{…}\address[b]{…}` prints "a,b" over "a …", "b …", 0907.5014; a first
-  version answering keys alone left it, 1101.5562 and 2609.03753 unwritten). 1108.0201's `\address[*]{current address}`, which pdflatex prints "bb current address"
+  version answering keys alone left it, 1101.5562 and 2609.03753 unwritten). Not handled (rare): old elsart's proofing switch prints the key itself
+  (`\if@Elproofing \def\@eltag{#4}`, elsart.cls v2.12 :1026; v2.19 :1178), where `keyed_labels` is wrong. 1108.0201's `\address[*]{current address}`, which pdflatex prints "bb current address"
   and no `\author[*]` requests, had gone to `M.~Pesce-Rollins\footnotemark[1]` (her `[6]` requests her affiliation):
   now the block's, as in 97c. The cost of the arabic marks: a `\footnotetext[n]` after `\maketitle` now pairs with the
   name's "n", as pdflatex prints it, and today's holds that note only after the writer runs, so the paper is declined
@@ -29303,7 +29309,13 @@ as the merged creator did).
   (0710.5369, hep-ex0605103), `{The WASA-at-COSY Collaboration}\\[2ex]P.~Adlarson` (1805.08173) and webofc's `Eleni
   Petrakou\inst{1}\fnsep\thanks{…} for CAPP/IBS` (1702.03664) had made the phrase a creator of its own once the
   person's name was parted. Each paper as 97c: the phrase in the first name; hep-ex0605103's names keep their marks
-  again (`M. Ablikim$^{1}$`), as in 97c.
+  again (`M. Ablikim$^{1}$`), as in 97c. A collaboration's name declines only when the line alone parts it: a
+  separator the names line prints before it or after it (the next name's) makes it an entry of the list, as the old
+  reader and Perl read it — `\author{GRAVITY+ Collaboration\thanks{…}: R.~Abuter\inst{8} \and …}` (aa, 2206.00684),
+  the first piece, has none before it and its colon after it; read by the separator before alone, int126a declined it
+  and wrote "GRAVITY+ Collaboration: R. Abuter" as one name (review rev126a B1, 98a; guard
+  `perfect_kernel_batch98a::a_collaboration_heading_a_separator_parts_is_an_entry`, with svjour's `{The XYZ
+  Collaboration}\\[2ex]Ann Able`, which still declines).
 
 **Required witness 2608.25509** (svproc, 97c's regression): every affiliation on its authors as pdflatex prints them
 (Gautier 1, 2; Guillermit 1; Porez 2; Rousset 1; Chablat 2); the two spelled addresses on Porez and Chablat, the three

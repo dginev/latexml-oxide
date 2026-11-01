@@ -854,9 +854,18 @@ impl Walker {
       },
       "\\lx@fm@obs@request" => {
         let prefix = raw(1).trim().to_string();
+        // (each item as it prints, its control words and braces no part of it — the binding's own key,
+        // `relocate::mark_key`: `\altaffilmark{1,\hbox{ }2}` requests `altaffil:2`, astro-ph0105133, review rev126a
+        // B3 —; an item printing nothing else keeps its spelling, `\dag`, as the key does)
         let labels: Vec<String> = raw(2)
           .split(',')
-          .map(str::trim)
+          .map(|label| {
+            let printed = mark_spelling_printed(label);
+            match printed.trim() {
+              "" => label.trim().to_string(),
+              printed => printed.to_string(),
+            }
+          })
           .filter(|label| !label.is_empty())
           .map(|label| {
             if prefix.is_empty() {

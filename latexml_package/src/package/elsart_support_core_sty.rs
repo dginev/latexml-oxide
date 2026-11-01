@@ -6,13 +6,16 @@ use crate::prelude::*;
 /// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
 /// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own): the kernel's reading,
 /// written (97e, OD #948), for the `\author[keys]{…}` of elsarticle, elsart and the classes keeping this binding's
-/// (autart, entics, arxbj): their title prints its notes in the body's arabic `\thefootnote` (elsarticle.cls:819, :836
+/// (entics, arxbj; not autart, which loads OmniBus and its own `\address`, autart_cls.rs, and only this binding's keyword
+/// markup): their title prints its notes in the body's arabic `\thefootnote` (elsarticle.cls:819, :836
 /// `\gdef\thefootnote{\arabic{footnote}}`, no `\@fnsymbol` in its `\maketitle`; elsart.cls v2.18 :1107-1108
 /// `\xarabic{footnote}` for the authors' notes), so `M.~Pesce-Rollins\footnotemark[1]` shows "1", not the kernel's "∗";
 /// and an `\address[key]`/`\affiliation[key]` key is never printed — the class prints the entry's place, `\theaffn`
 /// (elsarticle.cls:656-662), `\theaddress` (elsart.cls :1135-1164) —, so no footnote's mark answers it (`keyed_labels`;
 /// 1108.0201's `\address[*]{current address}`, which pdflatex prints "bb current address" and no author requests); the
-/// authors' keys do, and a mark typed by hand, as keys in order spell the places printed (0907.5014)
+/// authors' keys do, and a mark typed by hand, as keys in order spell the places printed (0907.5014). Not handled (rare):
+/// old elsart's proofing switch prints the key itself (`\if@Elproofing \def\@eltag{#4}`, elsart.cls v2.12 :1026), where
+/// `keyed_labels` is wrong
 pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   name: "elsart",
   binding: "elsart_support_core.sty",

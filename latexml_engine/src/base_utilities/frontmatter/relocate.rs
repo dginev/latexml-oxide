@@ -892,17 +892,28 @@ fn mark_key(text: &str) -> String {
 }
 
 fn alphanumeric_key(text: &str) -> String {
-  let mut key = String::new();
+  mark_spelling_printed(text)
+    .chars()
+    .filter(|c| c.is_alphanumeric())
+    .collect()
+}
+
+/// What a mark's spelling prints: the spelling without its control words and its braces, no part of the mark (`\hbox{
+/// }2` → ` 2`) — the one reading of a written mark the binding's keys (`mark_key`) and the frontmatter observer's
+/// request labels (`observer::events`, `\lx@request@frontmatter@annotation`) share: astro-ph0105133's `Yu-Qing Lou
+/// \altaffilmark{1,\hbox{ }2}` requests `altaffil:1` and `altaffil:2`, never a label `\hbox` (review rev126a B3).
+pub fn mark_spelling_printed(text: &str) -> String {
+  let mut printed = String::new();
   let mut chars = text.chars().peekable();
   while let Some(c) = chars.next() {
     if c == '\\' {
       // (a control word, `\hbox`, is no part of the mark)
       while chars.next_if(|c| c.is_ascii_alphabetic()).is_some() {}
-    } else if c.is_alphanumeric() {
-      key.push(c);
+    } else if c != '{' && c != '}' {
+      printed.push(c);
     }
   }
-  key
+  printed
 }
 
 /// The label an affiliation line leads with, whether it was typed by hand, and the line without it: a superscript
