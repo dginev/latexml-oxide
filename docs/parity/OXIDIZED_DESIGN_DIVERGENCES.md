@@ -28798,8 +28798,8 @@ papers (294): 291 identical, 1010.1733 1 → 59, 1706.03320 1 → 11, astro-ph04
 `merged_creators` Errors, both real merges kept as before (1212.4143, 1903.10014). amsart marked papers (235): all
 byte-identical. IEEE blocks with marks (`--term cs:IEEEauthorblockN --feature author_marks`, 674): 668 identical,
 2201.10426 1 → 4 creators (each its affiliation and e-mail), 2204.09839 1 → 6, three the kernel split their name-shaped
-siblings take (2509.10689 shows its `1\textsuperscript{st}` ordinal and marks as printed; 1509.06333, 1901.07422
-`before`), and two new reported merges kept as before: 1012.4815 (an `\IEEEauthorblockN` left open over its
+siblings take (2509.10689 shows its `1\textsuperscript{st}` ordinal and marks as printed; 1509.06333, 1712.07369,
+1901.07422 `before`), and two new reported merges kept as before: 1012.4815 (an `\IEEEauthorblockN` left open over its
 `\IEEEauthorblockA`s, the last piece reading as an institution), 2508.04092 (two names without a mark). Where today's
 token split replaces the writer's re-part, the marks a name prints stay shown on it (the kernel's convention for the
 name-shaped list too) — the writer's re-part hides them. Dev witnesses: 2410.11607 1 named creator → 672 (30 sampled against pdflatex: each name and the

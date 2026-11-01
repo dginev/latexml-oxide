@@ -1,0 +1,20 @@
+% status:  RED (rev97a S1, synthetic)
+% witness: synthetic; no census paper's changed creators hold an `@` (review rev97a, 2026-10-31).
+% oracle:  pdflatex (TL 2025, -no-shell-escape): 0 `!`; prints "A. Able1 , B. in der Baker2 , b.baker@two.edu∗" —
+%          two people and an address.
+% engines: rust 95b r3 = ONE creator holding the line, 0 errors. Rust 97a = THREE creators, the third
+%          `<personname>b.baker@two.edu<sup>*</sup></personname>`: `names_split.rs` `marked_names` counts a piece that
+%          `reads_as_affiliation` declines as a marked name, and `author_block/marks.rs:116-119` declines any text
+%          holding `@` — an address made a person (invented semantics; no word lost).
+% expect:  the address piece is no marked name, so the line is no marked list: one creator as 95b r3, with its two
+%          marked names reported (`Error:frontmatter:merged_creators`); the same for a URL, an ORCID or a marked
+%          place name the shape test reads as a name. Fix: in `marked_names`, a piece the e-mail reader would take
+%          (visible `@`) is not a name.
+\documentclass{revtex4-2}
+\begin{document}
+\title{A Title}
+\author{A.~Able$^{1}$, B.~in der Baker$^{2}$, b.baker@two.edu$^{*}$}
+\affiliation{$^{1}$Institute of One}
+\maketitle
+Body text.
+\end{document}
