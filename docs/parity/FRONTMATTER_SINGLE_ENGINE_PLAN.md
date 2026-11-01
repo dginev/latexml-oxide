@@ -1,0 +1,142 @@
+# Frontmatter: one ownership engine, one placement order (living plan)
+
+**Why.** The user's direction (2026-11-01): "keep evolving our design of the Frontmatter API until it can accommodate
+all variations used in arXiv. Prioritize refactoring to a better model of a single ownership engine, unified machinery
+and API, unified placement order inside the API." This decides item 9 of
+[`FRONTMATTER_ARCHITECTURE_AUDIT_2026-10-28.md`](FRONTMATTER_ARCHITECTURE_AUDIT_2026-10-28.md). The plan below comes
+from a read-only design study (2026-11-01). Its stages are the frontmatter batches after bundle int126a. Per-shape
+findings become their acceptance witnesses.
+
+## The diagnosis
+
+- **Two ownership engines decide the same things.**
+  - The old one: the author-block reader (`base_utilities/author_block/`, ≈14.2k lines) plus the insert-time passes
+    (`frontmatter/insert.rs:88-99`, `relocate.rs`, `place.rs`, `shared_row.rs`).
+  - The new one: the observer (`frontmatter/observer/`: lexer, ledger, resolver ≈7.7k, writer ≈6.4k).
+- **The observer only patches.**
+  - Since 97e its writer has the last word for every family. But it rewrites the old reader's DOM after insert
+    (`insert.rs:97`), and only where a closed set of operations explains each difference (`writer/plan.rs:57-95`).
+  - It can build only two kinds of item from tokens: affiliations and legends (`plan.rs:46-53`).
+  - When it declines, the old reader's output stands. So every capability the writer cannot express has to be built
+    in the old reader too: 97d's collaborations live in `author_block/collaborations.rs` and again in
+    `resolver/lines.rs:533-595`.
+- **Rules that exist twice** (old reader / observer):
+
+  | Rule | Old reader | Observer |
+  |---|---|---|
+  | respell e-mails | `insert.rs:141` | `post.rs:541` |
+  | amsart upfront grid | `insert.rs:290` | `post.rs:402` |
+  | label matching | `relocate.rs:72-120` | `labels.rs:196` |
+  | annotate walk | `defs/frontmatter_api.rs:620-800` | `resolver/api.rs:48-133,600-760` |
+  | author order | `place.rs:42,152` | `post.rs:110` |
+  | corresponding author | `email_block_calls.rs:251`, `place.rs:206` | `resolver/mod.rs:566`, `post.rs:1649` |
+  | shared institute | `shared_row.rs:54-160` | `post.rs:969,1525,1551` |
+  | an entry's inner e-mail | `frontmatter_api.rs:530-560` (inherits the entry's label: rev97cd C1) | `post.rs:1616` (the charter's chain) |
+  | revtex group rule | `relocate.rs:769-816` | `_grouped` hint |
+  | collaborations | `author_block/collaborations.rs` | `lines.rs` + `mod.rs` attach |
+  | leading mark as label | `author_macros.rs:127`, `revtex4_support_sty.rs:1006` | `api:leading-mark` |
+  | marked names split | `names_split.rs` | `lines.rs:467` |
+- **Binding-private splits.**
+  - In the core bindings: llncs (`llncs_cls.rs:134-261`), aa (`aa_cls.rs:64-100`, `\lx@add@author@split` never
+    reaches the collaboration reader: 2206.00684), sv_support (`sv_support_sty.rs:79-143`, an inner `\email` inherits
+    the piece's label: C1), inst_support, webofc, revtex/aastex `group_or_marked_affiliation` (a binding deciding
+    "marks or run" by token tests: F1).
+  - Contrib parsers: ptephy, osa_journal, epl, eptcs, aistats, interspeech, gretsi, l_aa, apa7, cpc_hepnp (≈3.9k
+    lines).
+  - Duplicated primitives: group end ×3, skip spaces ×3, argument readers ×6, spacing tests ×5, top-level splits ×3,
+    footnote-symbol tests ×6, leading-mark tests ×3, e-mail line parsers ×6.
+- **`annotate=` modes stand in for evidence.** About 95 calls choose a mode: `run` 42, `new` 35, `all` 16, `last`,
+  `N`. Only the `@marked` calls and `group_or_marked_affiliation` test marks before the convention; every other call
+  applies its convention even where marks decide (the F1 class). Some `new` calls are classes that group:
+  quantumarticle.cls:1164-1170 adds each `\affiliation` to every author of `\@authorgroup`, REVTeX's `run`. The
+  `annotate={N}` counts in `dispatch.rs:751,1614`, `collaborations.rs:554`, `line_kinds.rs:751` and
+  `frontmatter_stores.rs:5856` are the old reader's own decisions encoded as counts.
+
+## The target model
+
+- **Engine.** Rehearsal and lexer → resolver (one placement order) → **emitter at the flush** → Perl's queue, digest,
+  insert and `relocateAnnotations`.
+  - The writer's DOM operations retire. `writer/dom.rs` stays for the comparator and a read-back check.
+  - The old reader is frozen as the fallback producer, for blocks never observed (`observer/ledger.rs:67-80`) and for
+    the emitter's declines. In the end it is Perl's `\lx@add@authors` (`Base_Utility.pool.ltxml:687-727`) plus the
+    cautious split.
+- **API (Perl's calls unchanged).**
+  - Reserved owner labels `fm:<k>` ride on Perl's own keys: `annotations={fm:k}` on a creator, `label={fm:k1,fm:k2}`
+    on a contact (several owners clone, as in Perl), `fm:block` for the block (OD #159's orphan path). `relocate.rs`
+    matches them exactly, as it does `author:N`.
+  - An owner table generalizes `owner=sequence` (`frontmatter_api.rs:504-519`, `place.rs:42`).
+  - `annotate=` keeps Perl's `''`/N/`all`/`new`, ours `run[:N]`, and gains `sequence` and `share` (replacing
+    `owner=sequence` and `_share=authors`). It means step 3 only.
+  - Retire `_grouped`, `_markpiece` and `Policy.written`.
+  - Institute lists go through Perl's `\lx@add@affiliations[…]` with a `split=` key; one block per binding `\author`
+    (`\lx@add@authors@list`).
+- **The placement order, for every item** (affiliation, address, e-mail, note, collaboration, ORCID, URL):
+  - **0. What the item is.** One item per printed entry; marked lists cut at their marks; addresses taken out
+    (OD #938); emptied notes dropped (#916). An annotation inside a name's own ink is that name's candidate.
+  - **1. Labels and marks.**
+    - The item's labels: `label=`, `labelseq=`, its `\label`, its leading printed mark, a hand-printed leading number
+      when names request numbers.
+    - The names' requests: shown marks, `annotations=`, `author:N`, `fuzzy:<name>`.
+    - Matching: exact → prefix-stripped (Perl `Base_Utility.pool.ltxml:891-900`) → glued-label parting → fuzzy
+      surname. Every requester gets a copy.
+    - For an e-mail, its own label gives the candidates and spelling picks within them. A label inherited from an
+      enclosing entry is not evidence (#917). A labelled item nobody answers goes to step 4, never to a convention.
+  - **2. Spelling.** An e-mail or URL spelling exactly one live author as printed; base letters confirm an owner and
+    never pick one (#420). A contact opening with one author's whole name. A note naming one creator.
+  - **3. The declared convention,** for undecided items only: the binding's `annotate=`, plus the block conventions in
+    `Policy`:
+    - an unmarked line under the names row is that row's (R12);
+    - an entry's only carrier takes its inner e-mail;
+    - a sole author takes everything;
+    - a collaboration covers its `\and` group since the last one, or a heading covers the names after it.
+  - **4. The block,** kept once at block level (#159; the 2026-11-01 boxed-block ruling).
+  - **Order within a creator:** print order.
+- **What a binding declares:** only what printing cannot tell. That is the rehearsal vocabulary
+  (`observer/rehearsal.rs:244-277`), `email_in_place`, `title_marks`, section markers, the `Policy` block conventions,
+  and a per-command `annotate=`. Nothing for steps 1, 2 or 4.
+- **Perl's shape.** Steps 1 and 3 are Perl's own (`Base_Utility.pool.ltxml:503-536`, `:891-900`, `:736-740`). Step 4's
+  keep-on-block is OD #159. These go beyond Perl and need OD entries: step 2, leading marks as labels on every call,
+  the requester skip (ruling R1), the `fm:` labels and the emitter (superseding #837's S2b writer), and per-call
+  positions.
+
+## Stages (each one payload-writer batch; each lands alone)
+
+| # | Stage | Effort / risk | Output | Acceptance witnesses |
+|---|---|---|---|---|
+| 0 | **Measure and fence.** Per-family writer outcomes and `SkipReason` counts in `ab_audit fmshadow`; a drift guard failing on any new `\lx@add@*` emission in `author_block/`; audit item 2's switches for `insert.rs:290`, `:141`, `relocate.rs:753-816`, `shared_row.rs:54`, `place.rs:42`; a census of unobserved giant lists | EASY, none | byte-identical on `popint125a_s10k` | 2012.14750, 1507.02068, 1512.08197, 2201.02056, 2007.02542 (observed or not) |
+| 1 | **One placement order in the reading.** Reorder `resolver/mod.rs:700-714` into steps 1→4 (`distribute_upfront` into step 3); the requester skip (R1) in `resolver/api.rs:48/:75`; hand-printed numbers on every entry; change tags so the writer writes them | MED, medium | F1's 14 go by their marks | 1810.01941, 1202.0629, astro-ph0108212, 1911.09695, 2006.10291, 0909.0058, 1203.1623, 1503.02933, 1604.05346, 1612.02554, 1302.2646, astro-ph0702360, 1105.5884, astro-ph0607224; 1808.01089, astro-ph0105133; astro-ph0408475. Must not move: amsart grid 1302.1274, 1610.05835, 2204.13910, 2205.05923, 2507.07513, 2311.04097; 0903.2366, 2303.09899; 2403.06760, 1804.01623, 2001.01892, astro-ph0611722, 0910.4381; C1's seven |
+| 2 | **Step 3 declared, one vocabulary.** `owner=sequence` → `annotate=sequence`, `_share=authors` → `annotate=share` (aliases kept); `new` → `run` where the class groups (quantumarticle first; check acmart, ieeetran, sv, rmaa, aguplus, czipreprint, apa6, kluwer, ws_procl against their class code); elsarticle declares body title marks; `\IEEEauthorrefmark` into IEEEtran's declaration | EASY-MED, low-medium | per flipped class, against pdflatex | 1108.0201; a quantumarticle `\author{A}\author{B}\affiliation{X}\affiliation{Y}` paper |
+| 3 | **Owners at the flush.** Owner table built at `place.rs:403` (after `shadow_flush`, before `share_row_contacts`), consumed in `frontmatter_api.rs:472-800`; `relocate.rs` matches `fm:` exactly; `fm:` items skip `insert.rs:290`, `:141`, relocate's held/group rules and the inner-e-mail inheritance; the writer's Copy/Remove become no-ops for them; switch `owner_table` | HARD, high. **From here ownership has one home** | print order; declined papers get the reading's owners | C1's seven (2101.04527, 2206.03859, 1911.11805, 2102.01452, 2404.15833, 2505.18180, 2507.18248) without the writer; F1's 14; 1009.1371; 2212.06489 (table size); 2103.04797; 1303.7097; 0911.5235 |
+| 4a | **In-block items and new kinds from the reading.** The writer's segmentation (`cut` `plan.rs:463`, legends, roles, write-out, `cut_entry_addresses` `:1429`, `block_span_tokens` `:542` with 97e's fold) becomes queue rewrites; new kinds: boxed e-mail items, collaboration contacts, block-level contacts; the ledger's `inside` calls dequeued | HARD, high | pinned output of `batch97a/97d/97f` changes, each with its PDF evidence | names M1 (2605.09461, 2507.07465, 2609.36484, 2603.10436, 2608.20401); W2 (2410.09484, 2507.05173, 2105.11228, 1009.4816, 2512.19748); W3 (2503.10804, 1903.03238, 2512.20289); 0910.2149, hep-ex0011032, 2501.13770, 1210.5341; 1508.03930, 1603.09150, 1509.06963, 2007.02542, 0909.3044; BESIII `40A` (R6) |
+| 4b | **Names from the reading.** `writer/repart.rs` moves to the flush; `insert.rs:97` becomes a read-back Warning; a binding `appends` declaration for PoS/JHEP's one `\@author` (`jhep_cls.rs:183`, PoS.cls:666) | HARD, high | `merged_creators` Errors must not rise | M7 (2412.03072, 1901.08289, 2510.01161); M8 (1409.4999, 2501.09580); M5 (2107.12423, 2603.24245, 2003.04668, 2101.00440, 1708.03035, 2402.14804); 2105.09506; 1711.04132 |
+| 5 | **The old engine becomes the fallback.** Positions per call (`ledger.rs:67-69`), so giant lists are observed; the old passes run only without a table; the writer's DOM operations, `keep_as_today` and `Policy.written` deleted | MED, medium | unobserved papers only | 2012.14750; the giant lists Stage 0 finds unobserved |
+| 6 | **Binding-private splits retire,** one binding per batch by reach: llncs, aa, sv_support (svproc's override goes: SV1 returns), inst_support, webofc onto `\lx@add@authors@list` / `\lx@add@affiliations[split=…]`; `group_or_marked_affiliation` → `annotate=run`; the contrib parsers onto declarations | EASY-MED each | per binding, reach-complete A/B | 2206.00684, 1912.05868, 2512.08803; 2608.25509 + C1's svproc papers; 2610.23498; 2203.01270; 0910.4381 |
+| 7 | **The fallback becomes Perl's.** `author_block/` shrinks to `Base_Utility.pool.ltxml:687-727`, the cautious split and a `frontmatter::classify` module; the API's Rust-only attach modes go | MED, low | Stage 5's residual unobserved papers | — |
+
+Checks at every stage: `ab_audit fmshadow --re-resolve` on every family's census first, then the A/B (stratified
+subset plus the reach), `fm_checks.py` (it flags shared addresses and affiliation growth), the review's `cr.py` /
+`order.py`, the 3,000-sample D3 (no drop), the dev subsets, the gates. Every guard whose pinned output changes is
+listed with its PDF evidence.
+
+## Rulings
+
+| # | Question | Recommendation | Status |
+|---|---|---|---|
+| R1 | May a convention give an unmarked item to a name whose marks request items of that role? | Never for items printed apart from the block; in-block lines under the names stay with the row | open |
+| R2 | Pairing by position | Hand-printed numbers count everywhere (#918); bare position only under a declared `labelseq` | open |
+| R3 | Does a class convention ever outrank a mark? | No (a class's printed numbering is a label) | open |
+| R4 | Must every difference from today's output still carry a change tag, or does the ruled order license it, with the comparator kept as the census gate? | The ruled order licenses it (Stage 3 onward) | open |
+| R5 | The fallback when the reading is uncertain | The old reader until Stage 7, then the reading with the uncertain text whole | open |
+| R6 | BESIII sub-labels: does `48A` request sub-entry (A) of entry 48? | — | deferred |
+| R7 | revtex `\collaboration` / `\affiliation{(… Collaboration)}`: a contact (Perl's aastex) or a creator (Perl's revtex)? | — | open |
+| R8 | Contact order within a creator | Print order (97d D1 chose it) | open |
+| R9 | PoS/JHEP one `\@author` across calls: lift the difficulty deferral for Stage 4b? | — | open |
+
+## Interaction with bundle int126a
+
+- 97c, 97d (r2), 97e and 97f (r2) all land before Stage 1, since they touch `blocks.rs`, `api.rs`, `mod.rs`,
+  `lines.rs` and `post.rs`. Stage 0 can start at once.
+- 97d's `collaborations.rs` is the last ownership rule allowed into the old reader; Stage 0's fence enforces that.
+- 97f's M1 unwrap (`author_block/separators.rs:711-768`) is fallback-reader work. It stays until Stage 5.
+- 97f r2's F1 and F3 are stopgaps that Stage 1 generalizes.
+- SV1 (svproc's override deleted) returns in Stage 6, after Stage 3 gives inner e-mails the chain at the API.
