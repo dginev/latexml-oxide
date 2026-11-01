@@ -28815,3 +28815,65 @@ nameless creator; the collaboration line welded into the last name (OPEN_ROWS.md
 `NON_NAME_WORDS` word in a surname stays whole (F3, the word lists). Guards `perfect_kernel_batch97a` (three); repros
 sectioning-frontmatter/`author_marked_list_lowercase_particle_merges` (RED → GREEN),
 `author_marked_list_with_an_unmarked_name_is_a_reported_merge`, `author_marked_names_beside_a_team_are_a_reported_merge`.
+
+### 944. A take-out removes what it read and nothing else TeX prints: aa's `\mail` labelled as its copy prints it, an emptied entry's label kept, a store's label read before its printed occurrence, a marked split's separators kept (Perl: `\mail` always "Correspondence to " as an address; no take-out, no K11, no marked split)
+
+**What** (brief 97b; the int125b A/B's `fm_checks.py` losses against int123a). One principle over four mechanisms: a
+take-out keeps every printed word of what it removes that is neither the item's value nor the label it took — as the
+item's label, or left in place.
+
+- **aa `\mail`** (aa_support_sty.rs). Perl labels it `\lx@add@address[name={\mailname}]` under every copy
+  (aa_support.sty.ltxml:118-119). The copy the paper ships decides, read off its code: a copy naming `\mailname` (aa.cls
+  v4.03-v7.0, `\footnotetext[0]{\kern-\bibindent\mailname\ \ignorespaces\@mail}`, 1005.3784 :272, :466-468) keeps the
+  label; one without it (v8 on, `\newcommand*\mail[1]{\renewcommand*\aa@mail{#1}}`, read by nothing: 2007.14739
+  :965-966) prints neither the address nor a label, and the item has none (`name={}`, FIDELITY_CHARTER §4). No copy
+  shipped: Perl's label. `\mailname`'s `\it` is in a group, as aa.cls's `{\it Correspondence to\/}`: Perl's unbraced
+  `\it` set every frontmatter item after `\mail` in italic (2012.11607's names and affiliations, the date); its text and
+  trailing space stay Perl's.
+- **The writer's take-out of an entry it empties** (observer/writer/plan.rs `cut_entry_addresses`, `holder_label`).
+  95c cut an affiliation-kind entry printing only addresses and named each e-mail contact by the label word the cut took,
+  else the class default, so the `\mail` holder's "Correspondence to " was printed nowhere (1005.3784, 0805.1001, …).
+  The emptied entry's own `name` now goes to its contacts, before the cut's label word (0805.1001's
+  `\mail{e-mail: …}`: "Correspondence to e-mail: "), unless it is its role's default (`get_frontmatter_name`:
+  1506.05709's "Affiliation: " is no printed label). Where no contact would carry it — every address of the entry
+  already an e-mail contact of its owner, from another print (1005.3784's `\institute{… \email{x}}`, astro-ph0107243's
+  `email: x` beside `\mail{x}`) — the entry is given back whole (writer/mod.rs `give_back_entries`), as int123a held it.
+- **A K11 store's label** (frontmatter_stores.rs). The label reader (`ClassReaders::label_in`, `line_label_before`)
+  skips an occurrence of the store inside an argument TeX does not typeset (`in_unprinted_argument`, `argument_of`, by
+  the `PRINTED_ARGUMENTS` / `UNPRINTED_ARGUMENTS` tables: `\href`'s target, a `\write`'s text) and walks back through
+  the commands that print the store alone (`\href`'s text, `\textcolor`'s, now in `PRINTED_ARGUMENTS`), so
+  acl2023.sty:186's `Correspondence: \href{mailto:\@corremail}{\textcolor{black}{\@corremail}}` reads "Correspondence:"
+  (2506.10896). The same walk passes a `\parbox`'s printed argument (its width, a `[t]` before it, unprinted), so
+  jpsj2.cls:789-818's `KEYWORDS:\hskip.5em\parbox[t]{330\p@}{\@kword}` names the keywords "KEYWORDS:", the class's
+  printed label, where they had the role's default "Keywords: " (416 of the int125a bundle population's papers,
+  0704.0082, 0809.3084, cond-mat0605318; FIDELITY_CHARTER §4), and an off-table store printed as `G:\href{mailto:\@vg}{\@vg}`
+  is named "G:" (guard `perfect_kernel_batch77i::store_label_is_printed_text_not_a_link_target_or_key`, unnamed before). A note store's label (`\lx@add@frontmatter{ltx:note}`: `corremail`, `corraddress`, `fundinginfo`,
+  `authornote`) now leads the note's text, as a token register's note's does (`toks_store`): the schema's `ltx:note`
+  has no `name` (LaTeXML-meta.rnc:27-35). It is checked by `verify_title_page_labels` as a date's is. Before, a labelled
+  note store was handed on unlabelled and its emptiness test (`\ifx\@corremail\empty\else … \fi`) left the title page
+  with it, taking the label.
+- **The marked-list split** (author_block/names_split.rs `with_printed_separators`). 97a's split of a per-author
+  class's names line by its marks gave each creator the binding's `before` (revtex: the kernel's space), so
+  hep-ph9710228's `de Melo$^a$ , Naus$^b$ and Frederico$^c$` printed "and" nowhere. Each piece after the first now
+  carries the separator printed before it (`\lx@author@printed@before`, author_macros.rs, `_printedbefore`), which
+  place.rs's creator punctuation takes over `\lx@author@sep`/`\lx@author@conj`; a separator that is no plain text
+  (`\and`, a macro) leaves the binding's. A piece that is an address and no name is no marked name (`marked_names`,
+  `only_addresses`: review rev97a S1), so `A.~Able$^{1}$, B.~in der Baker$^{2}$, b.baker@two.edu$^{*}$` is one creator
+  and a reported merge; a name with its e-mail command beside it (imsart's `\snm{Dalmasso}\textsuperscript{1,}\ead{…}`,
+  2107.03920; emulateapj's `\authoremail{…}`, astro-ph9812176) is still one.
+
+**Left.** A line the names' shape splits (63e) keeps the binding's `before` (`\author{Ann Able, Bob Baker and Cat Cole}`
+under revtex4: before="  ", as int123a); the writer's re-part writes no `before`. Two prints of one address with two
+labels — `\institute{… email: x}` and `\mail{x}`, the institute's run cut first by key order — keep one contact and one
+label (95c's order). A store-affiliation e-mail legend after empty-math spacing lines is one affiliation of the last name
+(2508.08560, RED `store_affiliation_email_legend_after_spacing_lines`). A label part the deposit takes out of the first
+place its tokens stand: jpsj2.cls prints its keywords line in five option branches, the first (two-column) not the one
+run, so the printed "KEYWORDS:" stays in the body beside the name (int125b the same, beside "Keywords: "). Guards
+`perfect_kernel_batch97b` (five); changed, to the printed label or separator: `perfect_kernel_batch97a::
+marked_list_with_an_unknown_name_shape_is_a_list` (before ", ", amsart's ", and "),
+`raw_class_stores_reroute_to_frontmatter::jpsj2_stores_become_frontmatter` ("KEYWORDS:"),
+`perfect_kernel_batch77i::store_label_is_printed_text_not_a_link_target_or_key` ("G:");
+repros sectioning-frontmatter/`aa_mail_printing_copy_keeps_its_label`, `aa_mail_storing_copy_has_no_label`,
+`aa_mail_repeated_address_stays_labelled`, `raw_package_note_label_before_a_link_names_it`,
+`author_marked_list_keeps_its_printed_separators` (RED → GREEN), `author_marked_email_piece_is_no_person` (RED →
+GREEN).

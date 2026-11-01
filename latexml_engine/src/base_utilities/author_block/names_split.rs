@@ -53,10 +53,11 @@ pub(in crate::base_utilities) fn split_author_line_cautious(line: Tokens) -> Vec
   if separated_name_count(&line) >= 2 {
     return split_author_line(line);
   }
-  let pieces = split_author_line(line.clone());
+  let separated = rejoin_name_qualifiers_keeping_separators(split_author_names(line.clone()));
+  let pieces: Vec<Tokens> = separated.iter().map(|(_, name)| name.clone()).collect();
   let marked = marked_names(&pieces);
   if pieces.len() >= 2 && marked == pieces.len() {
-    return pieces;
+    return with_printed_separators(separated);
   }
   // (the names a whole-line group holds counted inside it: `{\bf A.~Able$^{1}$, B.~in der Baker, C.~Cole$^{1}$}`)
   let marked = match whole_line_group(&line) {
@@ -75,6 +76,62 @@ pub(in crate::base_utilities) fn split_author_line_cautious(line: Tokens) -> Vec
   vec![Tokens::new(merged)]
 }
 
+/// The names a per-author class's line splits into by its marks ([`split_author_line_cautious`], [`marked_names`]),
+/// each after the first led by the separator printed before it (`\lx@author@printed@before{, }`, `{ and }`), which the creator's `before` holds instead
+/// of the binding's own separator (`\lx@author@sep`, `\lx@author@conj`: the space revtex's carries) — the line's printed
+/// ", " and " and " are kept (hep-ph9710228, `J. P. B. C. de Melo$^a$ , H. W. L. Naus$^b$ and T. Frederico$^c$`; brief
+/// 97b part D). A separator that is no plain text (`\and`, a macro) leaves the binding's.
+fn with_printed_separators(pieces: Vec<(Vec<Token>, Tokens)>) -> Vec<Tokens> {
+  pieces
+    .into_iter()
+    .enumerate()
+    .map(
+      |(i, (delimiter, name))| match printed_separator(&delimiter) {
+        Some(text) if i > 0 => {
+          let mut out = vec![T_CS!("\\lx@author@printed@before"), T_BEGIN!()];
+          out.extend(text.chars().map(|c| {
+            if c == ' ' {
+              T_SPACE!()
+            } else {
+              T_OTHER!(&c.to_string())
+            }
+          }));
+          out.push(T_END!());
+          out.extend(name.unlist());
+          Tokens::new(out)
+        },
+        _ => name,
+      },
+    )
+    .collect()
+}
+
+/// The text a names line's separator ([`split_author_names`]'s delimiter) prints, a space on each side (a comma's after
+/// it alone, which the piece's trimming took, as [`rejoin_name_qualifiers`] puts it back): `,` ", ", ` and ` " and ",
+/// `~\&~` " & " — `None` for one holding any other command, or no text.
+fn printed_separator(delimiter: &[Token]) -> Option<String> {
+  let mut text = String::new();
+  for t in delimiter {
+    match t.get_catcode() {
+      Catcode::LETTER | Catcode::OTHER => text.push_str(&t.to_string()),
+      Catcode::SPACE => text.push(' '),
+      Catcode::ACTIVE if t.with_str(|s| s == "~") => text.push(' '),
+      Catcode::CS if *t == T_CS!("\\ ") => text.push(' '),
+      Catcode::CS if *t == T_CS!("\\&") => text.push('&'),
+      _ => return None,
+    }
+  }
+  let core = text.split_whitespace().collect::<Vec<_>>().join(" ");
+  if core.is_empty() {
+    return None;
+  }
+  Some(if core.starts_with(',') {
+    s!("{core} ")
+  } else {
+    s!(" {core} ")
+  })
+}
+
 /// How many pieces of a names line ([`split_author_line`]) are marked names: each carrying its own mark after the name
 /// ([`marked_after_name`]), none reading as an affiliation ([`reads_as_affiliation`]). When every piece of two or more
 /// is one, the line is a list of names by its marks: `A.~Able$^{1}$, B.~in der Baker$^{2}$, C.~Cole$^{1}$` is three
@@ -88,8 +145,24 @@ pub(in crate::base_utilities) fn split_author_line_cautious(line: Tokens) -> Vec
 fn marked_names(pieces: &[Tokens]) -> usize {
   pieces
     .iter()
-    .filter(|piece| marked_after_name(piece) && !reads_as_affiliation(piece))
+    .filter(|piece| {
+      marked_after_name(piece)
+        && !reads_as_affiliation(piece)
+        // (a piece that is an address and no name — `b.baker@two.edu$^{*}$`, which `reads_as_affiliation` declines —
+        // is no marked name: the line is no list by its marks, its marked names a reported merge; review rev97a S1,
+        // brief 97b. A name with its e-mail command beside it, `\snm{Dalmasso}\textsuperscript{1,}\ead{…@…}` (imsart,
+        // 2107.03920) or `C.~Vignali\altaffilmark{1} \authoremail{…@…}` (emulateapj, astro-ph9812176), is one.)
+        && !only_addresses(&visible_name_text(piece.unlist_ref()))
+    })
     .count()
+}
+
+/// Whether `text` holds an address and no word beside it but addresses (letters only of a word holding an `@`).
+fn only_addresses(text: &str) -> bool {
+  text.contains('@')
+    && text
+      .split_whitespace()
+      .all(|w| w.contains('@') || !w.chars().any(char::is_alphabetic))
 }
 
 /// Whether the names a wrapper or group holds read as two or more, by their shape ([`separated_name_count`]) or as a

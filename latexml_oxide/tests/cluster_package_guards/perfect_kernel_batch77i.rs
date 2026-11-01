@@ -436,13 +436,20 @@ fn assert_two_creators(xml: &str, flat: &str) {
 
 /// r3 review finding 1 (a), (b): a store used as a cross-reference key (`\ref{\@vb}`, pdflatex "see 1") is not
 /// printed and not handed on; a store printed as `\href{mailto:\@vg}{\@vg}`'s text is, without the URL argument's
-/// "mailto:" as its name (TeX's run of the title page does not print it before the store).
+/// "mailto:" as its name (TeX's run of the title page does not print it before the store) — named by the label printed
+/// before the link, "G:" (pdflatex "G:me@x.org"; batch 97b reads the label before the store's printed occurrence,
+/// through the link: unnamed before).
 #[test]
 fn store_label_is_printed_text_not_a_link_target_or_key() {
   let (xml, flat) = convert_clean(include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/store_label_is_printed_text_not_a_link_target_or_key.tex"
   ));
-  assert_element(&xml, "pubnote", &[], r#"<pubnote>me@x.org</pubnote>"#);
+  assert_element(
+    &xml,
+    "pubnote",
+    &[],
+    r#"<pubnote name="G:">me@x.org</pubnote>"#,
+  );
   assert_eq!(flat.matches("<pubnote").count(), 1, "{xml}");
   assert!(!flat.contains("sec:intro<"), "{xml}");
   assert!(!flat.contains("mailto:"), "{xml}");

@@ -101,7 +101,7 @@ fn keep_as_today(
   resolved: &Resolved,
   front: &dom::Front,
   unwritten: &BTreeSet<usize>,
-) -> Option<(Resolved, bool)> {
+) -> Result<Option<(Resolved, bool)>> {
   let from = |a: &Assoc| {
     a.source
       .is_some_and(|(index, _)| unwritten.contains(&index))
@@ -111,7 +111,7 @@ fn keep_as_today(
     .iter()
     .any(|c| unwritten.contains(&c.source))
   {
-    return None;
+    return Ok(None);
   }
   let (taken, kept_taken): (Vec<_>, Vec<_>) = resolved.taken.iter().cloned().partition(|t| {
     t.source
@@ -131,7 +131,7 @@ fn keep_as_today(
     },
     &dom::Front::default(),
     true,
-  );
+  )?;
   out.taken = kept_taken;
   out.listed = kept_listed;
   let mut keys: BTreeMap<plan::Key, Assoc> = BTreeMap::new();
@@ -156,9 +156,11 @@ fn keep_as_today(
     }
   }
   if keys.is_empty() {
-    return Some((out, otherwise));
+    return Ok(Some((out, otherwise)));
   }
-  let pairs = plan::pair_names(&out, front)?;
+  let Some(pairs) = plan::pair_names(&out, front) else {
+    return Ok(None);
+  };
   let have = plan::held(front, &pairs);
   let todays = |key: &plan::Key| -> Vec<Owner> {
     let mut owners: Vec<Owner> = have
@@ -221,7 +223,7 @@ fn keep_as_today(
       insert_in_source_order(slots, assoc.clone());
     }
   }
-  Some((out, otherwise))
+  Ok(Some((out, otherwise)))
 }
 
 /// Insert `assoc` among `items` before the first whose source is past its own (`resolver::in_source_order`'s order),
@@ -256,7 +258,7 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
   let resolved = if unwritten.is_empty() {
     resolved
   } else {
-    let Some(kept) = keep_as_today(&resolved, &front, &unwritten) else {
+    let Some(kept) = keep_as_today(&resolved, &front, &unwritten)? else {
       with_ledger(|ledger| {
         if ledger.writer.is_none() {
           ledger.writer = Some("declined: an unwritten family's call beside a re-part".to_string());
@@ -275,7 +277,7 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
   // again on the authors its call's placement gives it — the take-out and the write-out are the plan's,
   // `take_out_again`: 2308.10621; 2109.07363, brief 95e)
   let taken_out = resolved.clone();
-  let resolved = give_back_addresses(&resolved, &dom::Front::default(), true);
+  let resolved = give_back_addresses(&resolved, &dom::Front::default(), true)?;
   let Some(resolved) = repart::concede(&resolved, &front) else {
     with_ledger(|ledger| {
       if ledger.writer.is_none() {
@@ -307,7 +309,7 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
     listed: Vec::new(),
     ..resolved
   };
-  let resolved = take_out_again(&resolved, &taken_out, &front);
+  let resolved = take_out_again(&resolved, &taken_out, &front)?;
   let mut before = plan::difference(&resolved, &front);
   let mut planned = plan::plan(&resolved, &front)?;
   // (the fail-safe of the write-out: where the plan cannot write a call's e-mails out address by address, each call
@@ -383,15 +385,19 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
 /// is the writer's to write, never a difference that would decline the paper.
 /// With `all`, every e-mail call the reading wrote out address by address is given back too ([`give_back_listed`]);
 /// else they stay written out, the plan's to write (its fail-safe in [`write_observed_frontmatter`]).
-fn give_back_addresses(resolved: &Resolved, front: &dom::Front, all: bool) -> Resolved {
-  let out = give_back_entries(resolved, front, all);
-  if all { give_back_listed(&out) } else { out }
+fn give_back_addresses(resolved: &Resolved, front: &dom::Front, all: bool) -> Result<Resolved> {
+  let out = give_back_entries(resolved, front, all)?;
+  Ok(if all { give_back_listed(&out) } else { out })
 }
 
-/// The entries of [`give_back_addresses`].
-fn give_back_entries(resolved: &Resolved, front: &dom::Front, all: bool) -> Resolved {
+/// The entries of [`give_back_addresses`]. An entry the take-out empties whose own printed label no e-mail contact made
+/// of it would carry — every address of it already an e-mail contact of its owner, another print's — is given back too:
+/// aa's `\mail{x}` holder "Correspondence to " (aa.cls v7.0 `\footnotetext[0]{\mailname\ \@mail}`) beside the same
+/// address in an `\institute` (astro-ph0107243's `email: faraggiana@ts.astro.it`, 1005.3784's `\email`) prints that
+/// label nowhere else (brief 97b: a take-out removes what it read, and nothing else the class prints).
+fn give_back_entries(resolved: &Resolved, front: &dom::Front, all: bool) -> Result<Resolved> {
   if resolved.taken.is_empty() {
-    return resolved.clone();
+    return Ok(resolved.clone());
   }
   let names: Vec<&str> = resolved.creators.iter().map(|c| c.name.as_str()).collect();
   let spells = plan::spells_one_of(&names);
@@ -428,7 +434,24 @@ fn give_back_entries(resolved: &Resolved, front: &dom::Front, all: bool) -> Reso
           || (item.key == original && cut_to(item).as_deref() == Some(stripped.as_str()))
       })
     };
-    if holds && !all {
+    let label_lost = || -> Result<bool> {
+      if !stripped.is_empty()
+        || resolved
+          .creators
+          .iter()
+          .flat_map(|c| &c.contacts)
+          .any(|a| a.source == taken.source && a.rule.contains("owner:entry-address"))
+      {
+        return Ok(false);
+      }
+      for item in items.iter().filter(|item| item.key == original) {
+        if plan::holder_label(&item.node)?.is_some() {
+          return Ok(true);
+        }
+      }
+      Ok(false)
+    };
+    if holds && !all && !label_lost()? {
       continue;
     }
     for creator in &mut out.creators {
@@ -451,7 +474,7 @@ fn give_back_entries(resolved: &Resolved, front: &dom::Front, all: bool) -> Reso
       }
     }
   }
-  out
+  Ok(out)
 }
 
 /// The reading `resolved` with each e-mail call printing several addresses alone that it wrote out address by address
@@ -486,14 +509,18 @@ fn give_back_listed(resolved: &Resolved) -> Resolved {
 /// ([`give_back_addresses`]) and its e-mail calls written out address by address — when the re-part's reading
 /// `resolved` is `taken_out` with every take-out and write-out given back (no creator conceded); else `resolved`,
 /// nothing taken out, each call one contact (the fail-safe, as today's holds it).
-fn take_out_again(resolved: &Resolved, taken_out: &Resolved, front: &dom::Front) -> Resolved {
+fn take_out_again(
+  resolved: &Resolved,
+  taken_out: &Resolved,
+  front: &dom::Front,
+) -> Result<Resolved> {
   let whole = Resolved {
     taken: Vec::new(),
     listed: Vec::new(),
-    ..give_back_addresses(taken_out, &dom::Front::default(), true)
+    ..give_back_addresses(taken_out, &dom::Front::default(), true)?
   };
   if (taken_out.taken.is_empty() && taken_out.listed.is_empty()) || *resolved != whole {
-    return resolved.clone();
+    return Ok(resolved.clone());
   }
   give_back_addresses(taken_out, front, false)
 }

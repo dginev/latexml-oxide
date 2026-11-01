@@ -1,0 +1,26 @@
+% aa's `\mail{x}` under a copy of aa.cls that only stores it (v8 on: `\newcommand*\mail[1]{\renewcommand*\aa@mail{#1}}`,
+% which nothing reads; this file's stand-in) prints neither the address nor a label: the binding reads the copy's code
+% (aa_support_sty.rs: no `\mailname` in it) and gives the address no label (`name={}`), as FIDELITY_CHARTER §4 keeps an
+% item the class prints with no label; the e-mail contact it becomes has the class's e-mail default, as int125b's.
+% Perl labels it "Correspondence to " under every copy.
+% witness: 2007.14739 (:965-966), 2012.11607, 2606.29508; census: 297 of the 434 aa `\mail` papers ship such a copy
+% oracle:  pdflatex 0 errors: "T", "A. Smith", "Univ. X, Y", "Body." — no address, no "Correspondence"
+% engines: rust int123a = <contact name="Correspondence to " role="address"> (invented); rust int125b = <contact
+%          name="Email: " role="email">; perl = the int123a contact
+% expect:  0 errors, 0 warnings; <contact name="Email: " role="email">smith@x.org</contact> (no italic from
+%          `\mailname`), no "Correspondence" anywhere
+% status:  GREEN (97b; a twin of aa_mail_printing_copy_keeps_its_label)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aa.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{aa}[2020/01/01 v9.4 stand-in]
+\LoadClass{article}
+\def\institute#1{\gdef\@institute{#1}}\def\@institute{}
+\newcommand*\mail[1]{\renewcommand*\aa@mail{#1}}\newcommand*\aa@mail{}
+\def\@maketitle{{\Large\@title\par}\@author\par\@institute\par}
+\end{filecontents*}
+\documentclass{aa}
+\begin{document}
+\title{T}\author{A. Smith}\institute{Univ. X, Y}\mail{smith@x.org}\date{Received 2010}
+\maketitle
+Body.
+\end{document}

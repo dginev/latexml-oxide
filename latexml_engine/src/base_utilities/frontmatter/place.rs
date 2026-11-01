@@ -585,14 +585,28 @@ pub fn digest_front_matter() -> Result<()> {
     }
   });
   for (index, use_conjunction) in updates {
-    let separator = DigestText!(Tokens!(if use_conjunction {
-      T_CS!("\\lx@author@conj")
-    } else {
-      T_CS!("\\lx@author@sep")
-    }))?;
-    // `\lx@author@conj` may digest to \hskip Whatsits (\qquad) — extract
-    // text-or-spaces (see \lx@author@prefix note in the previous port).
-    let text = digested_to_text(&separator)?;
+    // (the separator the names line printed before it, where a per-author class's line was split there:
+    // `\lx@author@printed@before`, brief 97b part D — else the binding's)
+    let printed = with_value("frontmatter", |v| match v {
+      Some(Stored::HashTagData(frnt)) => frnt
+        .get("ltx:creator")
+        .and_then(|l| l.get(index))
+        .and_then(|entry| entry.attr.get("_printedbefore").cloned()),
+      _ => None,
+    });
+    let text = match printed {
+      Some(text) => text,
+      None => {
+        let separator = DigestText!(Tokens!(if use_conjunction {
+          T_CS!("\\lx@author@conj")
+        } else {
+          T_CS!("\\lx@author@sep")
+        }))?;
+        // `\lx@author@conj` may digest to \hskip Whatsits (\qquad) — extract
+        // text-or-spaces (see \lx@author@prefix note in the previous port).
+        digested_to_text(&separator)?
+      },
+    };
     with_value_mut("frontmatter", |val_opt| {
       if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
         && let Some(entry) = frnt.get_mut("ltx:creator").and_then(|l| l.get_mut(index))

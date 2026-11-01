@@ -1,0 +1,29 @@
+% aa's `\mail{x}` (a printing copy: "Correspondence to: x") whose address the institute prints too, with `\email`: the
+% take-out of the `\mail` entry would make no contact — the address already is one —, so its "Correspondence to" would
+% be printed nowhere; the writer gives that entry back whole (writer/mod.rs `give_back_entries`), the item as int123a
+% held it, beside the e-mail contact.
+% witness: 1005.3784 (`\institute{… \email{james.difrancesco@…}}`, `\mail{james.difrancesco@…}`), astro-ph0107243
+%          (the institute's `email: faraggiana@ts.astro.it`)
+% oracle:  pdflatex 0 errors: "T", "A. Smith", "Univ. X, Y", "e-mail: smith@x.org", "Body.", footnote
+%          "Correspondence to: smith@x.org"
+% engines: rust int123a = both contacts; rust int125b = the e-mail contact alone, "Correspondence" nowhere
+% expect:  0 errors, 0 warnings; <contact name="Correspondence to " role="address">, the affiliation, and
+%          <contact name="Email: " role="email"> (typewriter)
+% status:  RED (int125b) -> GREEN (97b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aa.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{aa}[2010/01/01 v7.0 stand-in]
+\LoadClass{article}
+\def\mailname{{\it Correspondence to\/}:}
+\def\email#1{{e-mail: \tt#1}}
+\def\institute#1{\gdef\@institute{#1}}\def\@institute{}
+\def\mail#1{\gdef\@mail{#1}}\def\@mail{}
+\def\@maketitle{{\Large\@title\par}\@author\par\@institute\par
+  \if!\@mail!\else\footnotetext[0]{\mailname\ \ignorespaces\@mail}\fi}
+\end{filecontents*}
+\documentclass{aa}
+\begin{document}
+\title{T}\author{A. Smith}\institute{Univ. X, Y \\ \email{smith@x.org}}\mail{smith@x.org}\date{Received 2010}
+\maketitle
+Body.
+\end{document}

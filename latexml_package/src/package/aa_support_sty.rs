@@ -1,7 +1,10 @@
 //! aa_support.sty — Astronomy & Astrophysics journal support
 //! Perl: aa_support.sty.ltxml — 469 lines
 //! Shared by aa.cls and aa.sty
-use crate::prelude::*;
+use crate::{
+  prelude::*,
+  shipped_class::{class_code_contains, shipped_class_text},
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -129,8 +132,21 @@ LoadDefinitions!({
   DefMacro!("\\rnotname", "(RN)");
   DefMacro!("\\headnote{}", "\\lx@add@pubnote[role={note},name={}]{#1}");
   DefMacro!("\\dedication{}", "\\lx@add@pubnote[role=dedication,name={}]{#1}");
-  DefMacro!("\\mailname", "\\it Correspondence to \\/");
-  DefMacro!("\\mail {}", "\\lx@add@address[name={\\mailname}]{#1}");
+  // The italic in a group, as aa.cls's `{\it Correspondence to\/}`: Perl's `\it Correspondence to \/`
+  // (aa_support.sty.ltxml:118) left the name's `\it` on the address and on every frontmatter item after it (the date,
+  // 2012.11607's names and affiliations); the text, its space after it, Perl's.
+  DefMacro!("\\mailname", "{\\it Correspondence to\\/}\\ ");
+  // Labelled as the paper's copy prints it (FIDELITY_CHARTER §4; OXIDIZED_DESIGN_DIVERGENCES #944): aa.cls v4.03-v7.0
+  // print `\footnotetext[0]{\kern-\bibindent\mailname\ \ignorespaces\@mail}`, `\mailname` = `{\it Correspondence
+  // to\/}:` (1005.3784's v7.0 :272, :466-468; 0805.1001's v6.1 :264, :457-459; 129 of 434 `\mail` papers); the later
+  // copies only store it (`\newcommand*\mail[1]{\renewcommand*\aa@mail{#1}}`, 2007.14739's :965-966, which nothing
+  // reads; 297 papers, 2012.11607, 2606.29508) and print neither the address nor a label, so the item has none. Read
+  // off the copy's code, not its version; no copy shipped (1209.2606), Perl's label (aa_support.sty.ltxml:118-119).
+  if shipped_class_text("aa")?.is_some_and(|text| !class_code_contains(&text, "\\mailname")) {
+    DefMacro!("\\mail {}", "\\lx@add@address[name={}]{#1}");
+  } else {
+    DefMacro!("\\mail {}", "\\lx@add@address[name={\\mailname}]{#1}");
+  }
   DefMacro!("\\doi{}", "\\lx@add@pubnote[role=doi]{#1}");
   DefMacro!("\\DOI{}", "\\lx@add@pubnote[role=doi]{#1}");
   DefMacro!("\\received{}", "\\lx@add@date[role=received]{#1}");

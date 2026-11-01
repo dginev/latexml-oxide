@@ -1328,13 +1328,15 @@ pub(super) fn spells_one_of<'a>(names: &'a [&'a str]) -> impl Fn(&str) -> bool +
 /// when it keeps nothing), and held under its new key from here on, so that the re-assignment that follows copies the
 /// cut item. Every holder of the item must cut so, or none is. The addresses cut, by their keys: each with the item it
 /// printed in, its wrapper and its label word, for the e-mail contacts the reading wants that today's holds nowhere
-/// (`Op::Address`) — and its place in print order, the order they are made in (brief 95c r2 S1).
+/// (`Op::Address`) — and its place in print order, the order they are made in (brief 95c r2 S1). An item the cut
+/// empties is removed, and its own printed label goes to its addresses' contacts, before the label word the cut took
+/// ([`holder_label`], brief 97b).
 fn cut_entry_addresses(
   want: &BTreeMap<Key, Vec<(Owner, &Assoc)>>,
   have: &mut BTreeMap<Key, Vec<(Owner, Node, bool)>>,
   names: &[&str],
   ops: &mut Vec<Op>,
-) -> BTreeMap<Key, PrintedIn> {
+) -> Result<BTreeMap<Key, PrintedIn>> {
   let spells = spells_one_of(names);
   let email = Kind::Contact("email".into());
   let mailed = |a: &str| want.contains_key(&(email.clone(), norm(a)));
@@ -1364,7 +1366,17 @@ fn cut_entry_addresses(
     };
     have.remove(&key);
     for ((owner, node, movable), cut) in holds.iter().zip(&cuts) {
+      let holder = if cut.key.is_empty() {
+        holder_label(node)?
+      } else {
+        None
+      };
       for run in &cut.runs {
+        let name = match (&holder, &run.label) {
+          (Some(holder), Some(label)) => Some(s!("{holder} {label}")),
+          (Some(holder), None) => Some(holder.clone()),
+          (None, label) => label.clone(),
+        };
         for (address, wrapper) in &run.addresses {
           let seq = printed_in.len();
           printed_in
@@ -1373,7 +1385,7 @@ fn cut_entry_addresses(
               address: address.clone(),
               template: node.clone(),
               wrapper: wrapper.clone(),
-              name: run.label.clone(),
+              name: name.clone(),
               seq,
             });
         }
@@ -1392,7 +1404,26 @@ fn cut_entry_addresses(
       }
     }
   }
-  printed_in
+  Ok(printed_in)
+}
+
+/// The label today's affiliation item `node` prints before its text, which a take-out that empties it keeps on the
+/// e-mail contacts made of it (brief 97b: a take-out removes what it read, and nothing else the class prints): its
+/// `name`, without its trailing space — aa's `\mail` holder `Correspondence to ` (`\lx@add@address[name={\mailname}]`,
+/// aa_support_sty.rs; aa.cls v7.0 `\footnotetext[0]{\mailname\ \@mail}`, 1005.3784, 0805.1001, 1102.1556) —, none
+/// when it is its role's default, which no class printed ("Affiliation: ", 1506.05709) or it has none.
+pub(super) fn holder_label(node: &Node) -> Result<Option<String>> {
+  let Some(name) = node
+    .get_attribute("name")
+    .filter(|name| !name.trim().is_empty())
+  else {
+    return Ok(None);
+  };
+  let role = node.get_attribute("role").unwrap_or_default();
+  if get_frontmatter_name(None, "ltx:contact", &role)?.as_deref() == Some(name.as_str()) {
+    return Ok(None);
+  }
+  Ok(Some(name.trim_end().to_string()))
 }
 
 /// An address [`cut_entry_addresses`] cut out of today's affiliation: as written out, the item it printed in (the
@@ -1426,7 +1457,7 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
   let names: Vec<&str> = resolved.creators.iter().map(|c| c.name.as_str()).collect();
   let mut ops = Vec::new();
   // today's affiliations printing the addresses the reading took out of them: cut in place, held under what they keep
-  let printed_in = cut_entry_addresses(&want, &mut have, &names, &mut ops);
+  let printed_in = cut_entry_addresses(&want, &mut have, &names, &mut ops)?;
   let mut wanted_only: Vec<Key> = Vec::new();
   let mut held_only: Vec<Key> = Vec::new();
   let keys: Vec<Key> = want

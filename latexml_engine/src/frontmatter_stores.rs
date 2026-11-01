@@ -905,6 +905,7 @@ impl ClassReaders {
             .rev()
             .find(|b| b.get_catcode() != Catcode::SPACE)
             .is_some_and(|b| cs_in(b, WRITERS))
+          || in_unprinted_argument(body, at)
         {
           continue;
         }
@@ -1797,8 +1798,9 @@ fn class_author_stores() -> Vec<Token> {
 }
 
 /// The commands whose braced argument is printed where they stand — LaTeX's text faces and boxes, an e-mail link
-/// (ae100prg.cls:185 `\address{E-mail: \mailto{#1}}`) — with the number of arguments before it they do not print (a
-/// link's target, a parbox's width).
+/// (ae100prg.cls:185 `\address{E-mail: \mailto{#1}}`), a colour (acl2023.sty:186 `\textcolor{black}{\@corremail}`,
+/// 2506.10896) — with the number of arguments before it they do not print (a link's target, a parbox's width, a colour's
+/// name).
 const PRINTED_ARGUMENTS: &[(&str, usize)] = &[
   ("\\textbf", 0),
   ("\\textit", 0),
@@ -1821,7 +1823,71 @@ const PRINTED_ARGUMENTS: &[(&str, usize)] = &[
   ("\\url", 0),
   ("\\href", 1),
   ("\\parbox", 1),
+  ("\\textcolor", 1),
 ];
+
+/// The open brace of the group whose close brace is `body[close]`.
+fn group_open(body: &[Token], close: usize) -> Option<usize> {
+  let mut depth = 0usize;
+  for j in (0..=close).rev() {
+    match body[j].get_catcode() {
+      Catcode::END => depth += 1,
+      Catcode::BEGIN => {
+        depth = depth.checked_sub(1)?;
+        if depth == 0 {
+          return Some(j);
+        }
+      },
+      _ => {},
+    }
+  }
+  None
+}
+
+/// The command a braced group opening at `body[open]` is an argument of ([`PRINTED_ARGUMENTS`],
+/// [`UNPRINTED_ARGUMENTS`]), and whether the command prints it: `(the command's index, printed)` — the place of the group
+/// among the braced arguments right before it (spaces between, an optional `[…]` before the first passed over). `None`
+/// when no such command reads it.
+fn argument_of(body: &[Token], open: usize) -> Option<(usize, bool)> {
+  let mut k = skip_spaces_back(body, open);
+  let mut place = 0usize;
+  while k > 0 && body[k - 1].get_catcode() == Catcode::END {
+    k = skip_spaces_back(body, group_open(body, k - 1)?);
+    place += 1;
+  }
+  if k > 0 && body[k - 1] == T_OTHER!("]") {
+    k = skip_spaces_back(
+      body,
+      body[..k - 1].iter().rposition(|t| *t == T_OTHER!("["))?,
+    );
+  }
+  let command = body[..k]
+    .last()
+    .filter(|t| t.get_catcode() == Catcode::CS)?;
+  if let Some((_, unprinted)) = PRINTED_ARGUMENTS
+    .iter()
+    .find(|(cs, _)| command.with_str(|s| s == *cs))
+  {
+    return (place <= *unprinted).then_some((k - 1, place == *unprinted));
+  }
+  (place == 0 && cs_in(command, UNPRINTED_ARGUMENTS)).then_some((k - 1, false))
+}
+
+/// Is `body[at]` inside an argument a command does not print ([`argument_of`]) — the target of `\href{mailto:\@x}{\@x}`
+/// (acl2023.sty:186, 2506.10896), a `\write`'s text —, at any depth: TeX does not typeset it, so it has no label before
+/// it to read (brief 97b).
+fn in_unprinted_argument(body: &[Token], at: usize) -> bool {
+  let mut depth = 0usize;
+  for j in (0..at).rev() {
+    match body[j].get_catcode() {
+      Catcode::END => depth += 1,
+      Catcode::BEGIN if depth > 0 => depth -= 1,
+      Catcode::BEGIN if argument_of(body, j).is_some_and(|(_, printed)| !printed) => return true,
+      _ => {},
+    }
+  }
+  false
+}
 
 /// The primitives that read a braced text without printing it: the log, a write, a mark, a special.
 const UNPRINTED_ARGUMENTS: &[&str] = &[
@@ -2916,6 +2982,13 @@ fn labelled_api(name: &str, api: &str, store: &Token, readers: &ClassReaders) ->
     // 2026-10-30, never a role name the class does not print; review rev95d B2) — the defaults stay the bindings'
     // own calls', revtex4_support's and aipproc's)
     (None, named_call(api, ""))
+  } else if api.starts_with("\\lx@add@frontmatter{ltx:note}") {
+    // (a note's printed label leads it, as the class prints it (FIDELITY_CHARTER §4) — in its text, as a token
+    // register's note's does (`toks_store`): the schema's `ltx:note` has no `name` (LaTeXML-meta.rnc:27-35).
+    // acl2023.sty:184-187's `\ifx\@corremail\empty\else … Correspondence: \href{mailto:\@corremail}{…\@corremail}\fi`,
+    // whose test leaves the title page with the store, took "Correspondence:" with it, printed nowhere (2506.10896,
+    // brief 97b); unlabelled, the table's call)
+    (None, api.to_string())
   } else {
     return api.to_string();
   };
@@ -2986,6 +3059,10 @@ fn labelled_api(name: &str, api: &str, store: &Token, readers: &ClassReaders) ->
   }
   let call = match named {
     Some(head) => s!("{head}{label}}}]{{#1}}"),
+    None if api.starts_with("\\lx@add@frontmatter{ltx:note}") => {
+      // (`\space`: the call's text is tokenized up to `#1`, where a trailing source space is no token)
+      api.replacen("{#1}", &s!("{{{label}\\space #1}}"), 1)
+    },
     None => named_call(api, &label),
   };
   assign_value(
@@ -5226,6 +5303,9 @@ fn line_label_before(body: &[Token], at: usize) -> Option<(usize, usize, Tokens,
   let mut group_past: Option<usize> = None;
   // (the conditional whose branch holds the store alone, the label before it: its opening and the index past its `\fi`)
   let mut conditional: Option<(usize, usize)> = None;
+  // (the store is printed alone by the commands passed so far, each with what it prints nothing of:
+  // `\href{mailto:\@corremail}{\textcolor{black}{\@corremail}}`, acl2023.sty:186 — the line goes on before them, brief 97b)
+  let mut wrapped = false;
   // (an implicit `\bgroup` or `\egroup`, `\let` to a brace, opens or closes a group as one does: the store's own group
   // in `\insert\footins\bgroup\footnotesize Keywords: \@keywords\par\egroup`, 86g r3 review probe i3)
   let group_catcode = |t: &Token| {
@@ -5264,13 +5344,20 @@ fn line_label_before(body: &[Token], at: usize) -> Option<(usize, usize, Tokens,
       Catcode::BEGIN => {
         // the store's own group: the line goes on before it when the group holds only layout before the store
         let mut inner = LabelText::default();
-        if end == at + 1 && label_items(&body[k..at], 0, &mut inner).is_some() && !inner.has_text()
+        if (end == at + 1 || wrapped)
+          && label_items(&body[k..end.min(at)], 0, &mut inner).is_some()
+          && !inner.has_text()
         {
           end = k - 1;
           k -= 1;
           if k > 0 && (cs_in(&body[k - 1], STYLED) || cs_in(&body[k - 1], LAYOUT)) {
             end = k - 1;
             k -= 1;
+          } else if let Some((command, true)) = argument_of(body, k) {
+            // (the printed argument of a command that prints nothing else: a link's text, a colour's)
+            end = command;
+            k = command;
+            wrapped = true;
           }
           continue;
         }

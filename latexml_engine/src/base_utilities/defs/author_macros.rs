@@ -389,6 +389,18 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     });
   });
 
+  // Rust-only: the separator a per-author class's names line prints before this name, which the cautious split parted
+  // it at (`split_author_line_cautious`; hep-ph9710228's ", " and " and "), for the creator's `before` in place of the
+  // binding's (`place.rs`; brief 97b part D). Only on a creator.
+  DefPrimitive!("\\lx@author@printed@before{}", sub[(separator)] {
+    let separator = separator.to_string();
+    with_pending_entry_attr(move |attr| {
+      if attr.get("role").map(String::as_str) != Some("pending") {
+        attr.insert("_printedbefore".to_string(), separator);
+      }
+    });
+  });
+
   DefMacro!("\\lx@add@affiliations[]{}", sub[(attr, stuff)] {
     dequeue_front_matter("ltx:contact", &[("role", "affiliation")]);
     Ok(Tokens::new(affiliation_calls(attr, None, stuff, true, true)?))

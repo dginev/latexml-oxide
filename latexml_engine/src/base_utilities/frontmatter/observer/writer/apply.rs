@@ -642,7 +642,8 @@ pub(super) fn leaf_text(leaf: &Node) -> String {
 
 /// `copy`, a copy of today's affiliation an address printed in, made the e-mail contact printing `address` alone: the
 /// contact's own attributes `role` and its e-mail label `name` — the label word printed before the address (`E-mail: `,
-/// as an e-mail line's label names its contacts, `author_block::labelled_emails`: 1911.11406, brief 95c r2 B5), else
+/// as an e-mail line's label names its contacts, `author_block::labelled_emails`: 1911.11406, brief 95c r2 B5), after
+/// the label of the item the cut emptied (`plan::holder_label`: aa's "Correspondence to", 1005.3784, brief 97b), else
 /// the class's (as `\lx@add@email` gives it) —, its content the address in a copy of `wrapper`, when one: the link or
 /// font it printed in (`<ltx:ref href="mailto:…">`, `<ltx:text font="typewriter">`, `<ltx:emph>`, r2 B4, r3 F1) — whole
 /// when the cut took it whole (down to its innermost element holding the address), else its font alone: the element

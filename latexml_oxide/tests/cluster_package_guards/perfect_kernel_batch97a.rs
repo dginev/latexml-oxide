@@ -56,18 +56,20 @@ fn both_ways(tex: &str, errors: usize) -> (String, String) {
 /// revtex's one `\author` holding a marked list, one name of a shape the cautious test does not read (`B.~in der
 /// Baker`: `in` is no particle it knows): three creators, each with the institutes its marks name, where the line was
 /// one creator holding both, silently (2410.11607's 672 BESIII names, one `N.~in der Wiesche` among them; hep-ex9611002).
+/// Each creator after the first is led by the separator the line prints (", ", batch 97b; the binding's space before).
 /// The collaboration line stays welded into the last name, as today's weld puts it (pinned, not a target:
 /// author_collaboration_line_welded_into_last_name.tex). The list in one group (`{\bf …}`, the whole-line group's
 /// descent, `reads_as_name_list`) is the same three. The same list under amsart, whose block has no marked line (the
-/// unmarked block's names-and-lines path), is three creators too, each with the address its mark names.
+/// unmarked block's names-and-lines path), is three creators too, each with the address its mark names, the last led by
+/// the ", and " the line prints (batch 97b; amsart's " and " before).
 #[test]
 fn marked_list_with_an_unknown_name_shape_is_a_list() {
   let tex = repro!("author_marked_list_lowercase_particle_merges");
   let (_, xml) = both_ways(tex, 0);
   assert_eq!(creators(&xml), [
     r#"<creator role="author"> <personname>A. Able</personname> <contact name="Affiliation: " role="affiliation"> Institute of One</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>B. in der Baker</personname> <contact name="Affiliation: " role="affiliation"> University of Two</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>C. Cole<break/>(XYZ Collaboration)</personname> <contact name="Affiliation: " role="affiliation"> Institute of One</contact> </creator>"#,
+    r#"<creator before=", " role="author"> <personname>B. in der Baker</personname> <contact name="Affiliation: " role="affiliation"> University of Two</contact> </creator>"#,
+    r#"<creator before=", " role="author"> <personname>C. Cole<break/>(XYZ Collaboration)</personname> <contact name="Affiliation: " role="affiliation"> Institute of One</contact> </creator>"#,
   ]);
   let grouped = tex.replace(
     r"\author{A.~Able$^{1}$, B.~in der Baker$^{2}$, C.~Cole$^{1}$\\",
@@ -77,8 +79,8 @@ fn marked_list_with_an_unknown_name_shape_is_a_list() {
   let (_, xml) = both_ways(&grouped, 0);
   assert_eq!(creators(&xml), [
     r#"<creator role="author"> <personname>A. Able</personname> <contact name="Affiliation: " role="affiliation"> Institute of One</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>B. in der Baker</personname> <contact name="Affiliation: " role="affiliation"> University of Two</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname><text font="bold" xml:id="id1">C. Cole<break/></text>(XYZ Collaboration)</personname> <contact name="Affiliation: " role="affiliation"> Institute of One</contact> </creator>"#,
+    r#"<creator before=", " role="author"> <personname>B. in der Baker</personname> <contact name="Affiliation: " role="affiliation"> University of Two</contact> </creator>"#,
+    r#"<creator before=", " role="author"> <personname><text font="bold" xml:id="id1">C. Cole<break/></text>(XYZ Collaboration)</personname> <contact name="Affiliation: " role="affiliation"> Institute of One</contact> </creator>"#,
   ]);
   let amsart = "\\documentclass{amsart}\n\\begin{document}\n\\title{A Title}\n\\author{A.~Able$^{1}$, B.~in der \
                 Baker$^{2}$, and C.~Cole$^{1}$}\n\\address{$^{1}$ Institute of One; $^{2}$ University of \
@@ -87,7 +89,7 @@ fn marked_list_with_an_unknown_name_shape_is_a_list() {
   assert_eq!(creators(&xml), [
     r#"<creator role="author"> <personname>A. Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Address: " role="address"><sup xml:id="id2"><text font="italic" xml:id="id2.1">1</text></sup> Institute of One</contact> </creator>"#,
     r#"<creator before=", " role="author"> <personname>B. in der Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">2</text></sup></personname> <contact name="Address: " role="address"><sup xml:id="id4"><text font="italic" xml:id="id4.1">2</text></sup> University of Two</contact> </creator>"#,
-    r#"<creator before=" and " role="author"> <personname>C. Cole<sup xml:id="id5"><text font="italic" xml:id="id5.1">1</text></sup></personname> <contact name="Address: " role="address"><sup xml:id="id6"><text font="italic" xml:id="id6.1">1</text></sup> Institute of One</contact> </creator>"#,
+    r#"<creator before=", and " role="author"> <personname>C. Cole<sup xml:id="id5"><text font="italic" xml:id="id5.1">1</text></sup></personname> <contact name="Address: " role="address"><sup xml:id="id6"><text font="italic" xml:id="id6.1">1</text></sup> Institute of One</contact> </creator>"#,
   ]);
 }
 

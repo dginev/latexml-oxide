@@ -1136,10 +1136,20 @@ pub(in crate::base_utilities) fn without_leading_and(line: &Tokens) -> Option<To
 pub(in crate::base_utilities) fn rejoin_name_qualifiers(
   pieces: Vec<(Vec<Token>, Tokens)>,
 ) -> Vec<Tokens> {
-  let mut out: Vec<Tokens> = Vec::with_capacity(pieces.len());
+  rejoin_name_qualifiers_keeping_separators(pieces)
+    .into_iter()
+    .map(|(_, name)| name)
+    .collect()
+}
+
+/// [`rejoin_name_qualifiers`], each name with the separator written before it (none for the first).
+pub(in crate::base_utilities) fn rejoin_name_qualifiers_keeping_separators(
+  pieces: Vec<(Vec<Token>, Tokens)>,
+) -> Vec<(Vec<Token>, Tokens)> {
+  let mut out: Vec<(Vec<Token>, Tokens)> = Vec::with_capacity(pieces.len());
   for (delimiter, piece) in pieces {
     let unseen = only_marks_and_notes(piece.unlist_ref());
-    match out.last_mut() {
+    match out.last_mut().map(|(_, name)| name) {
       Some(name) if unseen || is_name_qualifier(&visible_name_text(piece.unlist_ref())) => {
         let mut joined = name.clone().unlist();
         if !unseen {
@@ -1153,7 +1163,7 @@ pub(in crate::base_utilities) fn rejoin_name_qualifiers(
         joined.extend(piece.unlist());
         *name = Tokens::new(joined);
       },
-      _ => out.push(piece),
+      _ => out.push((delimiter, piece)),
     }
   }
   out

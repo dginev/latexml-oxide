@@ -33,7 +33,9 @@ fn jpsj2_stores_become_frontmatter() {
     &xml,
     "keywords",
     &[],
-    r##"<keywords name="Keywords: ">electrons, phonons</keywords>"##,
+    // (jpsj2.cls:817-818's printed label `KEYWORDS:\hskip.5em\parbox[t]{330\p@}{\@kword}`, read through the parbox:
+    // batch 97b; the role's default before)
+    r##"<keywords name="KEYWORDS:">electrons, phonons</keywords>"##,
   );
   latexml::util::test::assert_element(
     &xml,
