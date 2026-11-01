@@ -1,0 +1,17 @@
+% RED (review rev97e S3, synthetic; batch 97d's names-line collaboration reader): a comma list whose names each carry
+% their own parenthesised remark is annotated name by name, so the collaboration remark is the one name's that prints
+% it — `Ann Able (Univ X), Bob Baker (for the ATLAS Collaboration)` gives Ann the ATLAS contact too, as the per-call
+% coverage rule (the names of the call since the last collaboration, Perl's annotate=new; 0910.4381) reads a trailing
+% remark; Ann's own remark shows the list is per name.
+% oracle:  pdflatex 0 errors: "Ann Able (Univ X), Bob Baker (for the ATLAS Collaboration)"
+% engines: rust 97d-int126a = Ann and Bob both hold `(for the ATLAS Collaboration)` (Ann keeps "(Univ X)" in her
+%          name); rust 97b = two creators, each remark inside its name
+% expect:  0 errors, 0 warnings; Ann Able with the affiliation "Univ X" and no collaboration; Bob Baker with the
+%          collaboration contact "for the ATLAS Collaboration"
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able (Univ X), Bob Baker (for the ATLAS Collaboration)}
+\maketitle
+Text.
+\end{document}
