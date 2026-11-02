@@ -8674,7 +8674,8 @@ pub use sect04::kernel_chapter_with_warning;
 mod sect05;
 pub use sect05::note_title_page_part;
 pub(crate) use sect05::{
-  SpeculativeRun, replay_class_begin_code, speculative_title_page_run, title_page_deposit_tokens,
+  SpeculativeRun, class_author_reader_body, keep_class_author_reader, replay_class_begin_code,
+  speculative_isolated_run, speculative_title_page_run, title_page_deposit_tokens,
   title_page_print_tokens, title_page_replay_tokens,
 };
 mod reference_math_slots;

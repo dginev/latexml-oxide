@@ -298,6 +298,11 @@ pub(crate) fn load() -> Result<()> {
     // `inPreamble` (tex_paragraph.rs).
     // Raw `#`-bearing `\AtBeginDocument` chunks (see `at_document_hook`) run
     // first — before the L3 hook that holds the later, `#`-free raw chunks.
+    // (what the hooks below define is a class default for the unclaimed-text net, frontmatter_stores.rs
+    // `note_document_hooks`)
+    if first_begin {
+      crate::frontmatter_stores::note_document_hooks(true);
+    }
     if first_begin && let Some(ops) = lookup_tokens("@at@begin@document@rawparam") {
       local_state_unlocked(false);
       let r = digest(ops);
@@ -323,6 +328,9 @@ pub(crate) fn load() -> Result<()> {
       let r = digest(ops);
       expire_state_unlocked();
       boxes.push(r?);
+    }
+    if first_begin {
+      crate::frontmatter_stores::note_document_hooks(false);
     }
     // The begin-document hooks have run (their tests of `\chapter` got TeX's answer): a `\chapter` the class left
     // undefined reads LaTeXML's chapter from here, with one Warning (OXIDIZED_DESIGN #734).

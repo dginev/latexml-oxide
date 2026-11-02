@@ -29612,3 +29612,81 @@ none worse; `fm_checks.py`: no creator merged or lost, no address shared wider, 
 (words −30: the names lines kept twice). `pop98b2w.tsv` (1,202: every svjour* and `author_tabular` paper of the
 census, 1,000 seeded `\author` papers of its 30k sample), for the shared predicates (`visible_name_text`,
 `spacer_line`): 0 changed.
+
+### 953. A raw class's store that only its own title-page code prints, which no frontmatter owner claims, is a note of the author block (Perl: lost)
+
+**What** (brief 98c; the unclaimed-text net, stages A1 and A2; FIDELITY_CHARTER §4 "No printed frontmatter word is
+lost"). At `\maketitle` the candidates are the control sequences the class's title-page code reads
+(frontmatter_stores.rs `net_candidates`: `live_read_order` over the code that runs, from its refused `\maketitle`, its
+`\@maketitle`, its own `\@author` and the refused `{abstract}` begin code), never a run's text, so what a class
+hard-codes (a letterhead, "Received …", a copyright line) is no candidate. A candidate is a store a setter of a raw
+file's or of the document's writes and no macro of the format's, the pools' or the bindings' does
+(`stores_raw_code_writes`: not latex.ltx's scratch `\@tempa`, `\toks@`, which smfart.cls's title page reads, 2206.03779;
+not a shorthand the document only defines, 2609.05055's `\newcommand\SL{\mathrm{SL}}`): a parameterless macro the
+document made (`DefinitionOrigin::Document`; not a raw file's default, not a replayed class setter's store, not one the
+begin-document hooks made, `note_document_hooks`) or a token register whose contents differ from those it had when the
+raw files before it loaded (`note_raw_register_defaults`); its value holds text of its own (`holds_text`: a character
+the code that runs typesets, not `\markboth`'s argument nor a font switch's robust wrapper — oasics.cls:544's
+`\@titlerunning`); not blank, not a store K11 or the kernel owns (`frontmatter_owned_stores`), not one holding such a
+store, not `\jobname` (the engine's), not an internal `\lx@…`. What the title page prints of them is decided by the
+existing sentinel runs (`before_title_page_runs`, joined to K11's runs, which a run the net's sentinels end is made
+again without them), a register given its sentinel as `\reg={…}` (`sentinel_definitions`), the refused begin codes run
+after the title page in a run of their own (`net_begin_code_tokens`: in the environment, `\@currenvir` set, its `\end`
+given and gobbled, read from a mouth of its own, `speculative_isolated_run`); a begin code that reaches a raw macro with
+a delimited parameter collects its body and is not run (`collects_its_body`: smfart.cls:510 `\@getgenabstext#1\end #2`,
+nrc1.cls:1558; run alone they read on to the document's end, 2206.03779 and 1910.12640 timed out). Each candidate
+printed and typeset by no kept deposit or replay is handed on (`hand_net_stores`) as
+`\lx@annotate@frontmatter{ltx:creator}{ltx:note}[role=note,label=addresses:block,_net=<name>]`: the block's shared
+nameless creator below the authors (#159), a sole author's own. When the frontmatter is placed (insert.rs
+`keep_unclaimed_net_notes`) a note line (split at `ltx:break`/`ltx:p`) is kept only with 3 or more distinct content
+words (the scorer's: letter runs of 2+ outside its stop words, digit runs of 3+, accents dropped) that neither the
+document's text set so far (the frontmatter, the deposit) nor the class's own code in the store holds — the raw macros
+that name the store and those its value reads, two deep (`net_class_text`: e-jc.sty:100-101's "Submitted: …; Accepted:
+…" around 2410.15356's dates; smfart.cls's `\keywordsname` "Key words and phrases", set by its captions when babel
+selects the language in the document, 2206.11835) —; a note left with no line goes, with a nameless creator it empties.
+Each kept note raises `Warning:frontmatter:unclaimed` ("The title page prints N line(s) of \<store> that no frontmatter
+field holds: kept as a note of the author block").
+
+**The class's own `\@author`** (sect05.rs `keep_class_author_reader`): after each raw class or package loaded, its
+`\@author` is kept (a state value, not a meaning: `ClassReaders::survey` reads every raw macro) when it is a reader — it
+reads a raw file's, a binding's or the document's macro, or a token register — and the file's own `\author` does not
+define `\@author`; the speculative run of the whole title page (`title_page_print_tokens`) prints it
+(`\lx@class@author@reader`), as pdflatex does. The kernel's `\author` (Perl latex_constructs.pool.ltxml:1076-1079
+`\def\@author{#2}`) or a binding's (authblk_sty.rs, under oasics.cls) replaces it, though it is the only code printing
+copernicus.cls:1329-1352's `\AB@affillist`. Kept at the raw load rather than in the kernel's `\author`: under the
+authblk binding the kernel's `\author` never runs (1709.00722). A K11 off-table store printed there is K11's as before;
+its author-block rows are not handed on when they only repeat the names (`repeats_creator_names`, which now reads commas
+and "and" between the names as separators).
+
+**Why.** FIDELITY_CHARTER §4 (user 2026-11-01): printed frontmatter text that no owner claims is written at the block as
+a note with a counted Warning, only for lines of several unmatched words. Perl drops every such store (no binding, its
+`\@maketitle` relaxed, latex_constructs.pool.ltxml:1105); a surpass.
+
+**Witnesses** (98c0 → 98c): copernicus 0712.1312, 1203.6297, 1405.5752 (`\AB@affillist`, 3-7 lines), esapub2005
+1401.4706, oasics 1709.00722 (under the authblk binding), sig-alternate 1206.6940 (`\tntoks`, `\tntokstwo`), 1601.00073,
+1805.02241, sigkddExp 2601.20031, sig-alt-full cs0405006 (`\tntoks`, printed by the refused `{abstract}` begin code),
+aaskaiid.sty 2606.24738, 2606.25049, 2606.25830 (`\email@toks`), bullsrsl 2405.12817, 2603.08101, astro-ph0106091,
+2607.26558; memsait astro-ph0102098, astro-ph9909366 (`\@opening`, whose value holds the document's `\title` and
+`\author`: digested as the note's content they make the title and creators, and the note is left empty). Not reached:
+2310.11002 (its `\AB@affillist` is read by authblk.sty's own `\@author`, which the authblk binding replaces: routing,
+batch R), raa (1404.3644 …: the deposit dropped for the kernel's `\end{flushleft}\endgroup` error, R0), cccconf
+(1702.07637: its title page is printed by `\keywords`/`\section`, deferred), 1-2-word losses (below the threshold).
+
+**Guards** `perfect_kernel_batch98c::{an_affiliation_list_only_the_class_author_prints_is_a_note_of_the_block,
+a_title_note_register_only_the_class_abstract_prints_is_a_note,
+a_store_the_frontmatter_holds_or_the_class_owns_is_no_note}`; repros
+sectioning-frontmatter/`net_affiliation_list_printed_only_by_the_class_author_is_a_block_note`,
+`net_title_note_register_printed_only_by_the_class_abstract_is_a_note` (RED → GREEN),
+`net_store_the_frontmatter_holds_or_the_class_owns_is_no_note` (negative).
+
+**Batch 98c's A/B** (`pop98c.tsv`, 3,914 papers: the census's family A, every popint125a `rawcls` paper, 500 seeded
+others) against its base: 27 changed, E 1,494 → 1,494, F 10 → 9 (1203.4558, a wall-clock load), no word loss,
+`fm_checks.py` clean (no creator merged or lost, no address shared wider, no growth flag); 21 papers raise the Warning
+(23 notes), every note read against pdflatex (the scorer's pages-1-2 text, the source for three thesis covers): all
+document text — affiliations, title notes, e-mails, funding, a thesis's field and chair (ucbthesis 1908.08926, ucthesis
+math-ph0412032, SCIS2020cn 2206.01007) —, none of it class boilerplate. Of the other 6 changed papers, memsait's two
+gain their title and creators (no note left), and 4 differ only in timing-bound math Warnings (1203.4558, 1309.5800,
+2410.24003, 2502.05244; 1203.4558's base side a wall-clock timeout). The census's 171 papers rescored: lost-words papers
+103 → 87 (16 fixed, 3 fewer, none newly flagged). Instructions: +0.1 % on raw-class papers the net leaves alone,
++0.5-0.7 % on the witnesses (`perf stat -e instructions:u`, 2110.07616, gr-qc0609124, 0712.1312, 1709.00722).
+

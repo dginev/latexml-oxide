@@ -97,6 +97,192 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   write_observed_frontmatter(document)?;
   // (the authors as written: a name the writer re-parted holds one person, OD #928)
   flag_merged_creators(document)?;
+  // (the unclaimed-text net's notes: their lines no frontmatter field and no text already set holds)
+  keep_unclaimed_net_notes(document)?;
+  Ok(())
+}
+
+/// The words a note line counts for [`keep_unclaimed_net_notes`] (the frontmatter scorer's, fm_scorer/score_tiers.py
+/// `content_words`): its letter runs of two letters or more outside the stop words and its digit runs of three or more,
+/// folded — accents dropped ([`resolver::base_letters`]), lower-cased.
+fn net_content_words(text: &str) -> Vec<String> {
+  const STOPWORDS: &[&str] = &[
+    "a", "an", "the", "of", "and", "or", "in", "on", "at", "for", "to", "from", "by", "with",
+    "via", "de", "la", "le", "les", "du", "des", "del", "della", "di", "da", "do", "dos", "das",
+    "e", "y", "et", "und", "von", "van", "der", "den", "zu", "im", "am", "al", "el", "en", "is",
+    "are", "be", "as", "this", "that", "its", "it", "we", "our", "their", "his", "her", "no",
+    "not",
+  ];
+  let folded = resolver::base_letters(text).to_lowercase();
+  let mut words = Vec::new();
+  let mut run = String::new();
+  let mut letters = false;
+  let flush = |run: &mut String, letters: bool, words: &mut Vec<String>| {
+    let keep = if letters {
+      run.len() >= 2 && !STOPWORDS.contains(&run.as_str())
+    } else {
+      run.len() >= 3
+    };
+    if keep {
+      words.push(std::mem::take(run));
+    } else {
+      run.clear();
+    }
+  };
+  for c in folded.chars() {
+    let kind = if c.is_ascii_lowercase() {
+      Some(true)
+    } else if c.is_ascii_digit() {
+      Some(false)
+    } else {
+      None
+    };
+    if kind != Some(letters) && !run.is_empty() {
+      flush(&mut run, letters, &mut words);
+    }
+    if let Some(kind) = kind {
+      letters = kind;
+      run.push(c);
+    }
+  }
+  if !run.is_empty() {
+    flush(&mut run, letters, &mut words);
+  }
+  words
+}
+
+/// The text of `node` without what the nodes `skip` hold.
+fn text_outside(node: &Node, skip: &[Node], out: &mut String) {
+  for child in node.get_child_nodes() {
+    if child.get_type() == Some(NodeType::ElementNode) {
+      if !skip.contains(&child) {
+        text_outside(&child, skip, out);
+        out.push(' ');
+      }
+    } else {
+      out.push_str(&child.get_content());
+    }
+  }
+}
+
+/// A note's lines ([`keep_unclaimed_net_notes`]): what stands between its `ltx:break`s, each `ltx:p` apart, with the
+/// break that ends it.
+fn net_note_lines(parent: &Node, lines: &mut Vec<(Vec<Node>, String)>) {
+  let mut line: (Vec<Node>, String) = (Vec::new(), String::new());
+  for child in parent.get_child_nodes() {
+    let element = child.get_type() == Some(NodeType::ElementNode);
+    if element && child.get_name() == "break" {
+      line.0.push(child);
+      lines.push(std::mem::take(&mut line));
+    } else if element && child.get_name() == "p" {
+      if !line.0.is_empty() {
+        lines.push(std::mem::take(&mut line));
+      }
+      net_note_lines(&child, lines);
+    } else {
+      line.1.push_str(&child.get_content());
+      line.1.push(' ');
+      line.0.push(child);
+    }
+  }
+  if !line.0.is_empty() {
+    lines.push(line);
+  }
+}
+
+/// Remove the `ltx:break`s a note starts or ends with, blank text aside (the lines [`keep_unclaimed_net_notes`] took out
+/// leave them: `\\AB@affillist` starts with its `\\\\`).
+fn trim_edge_breaks(document: &mut Document, note: &Node) {
+  let blank =
+    |n: &Node| n.get_type() != Some(NodeType::ElementNode) && n.get_content().trim().is_empty();
+  for from_end in [false, true] {
+    loop {
+      let mut children = note.get_child_nodes();
+      if from_end {
+        children.reverse();
+      }
+      match children.into_iter().find(|n| !blank(n)) {
+        Some(edge)
+          if edge.get_type() == Some(NodeType::ElementNode) && edge.get_name() == "break" =>
+        {
+          document.remove_node(edge);
+        },
+        _ => break,
+      }
+    }
+  }
+}
+
+/// The unclaimed-text net's notes (frontmatter_stores.rs `hand_net_stores`: what a raw class's title page prints of a
+/// store no frontmatter owner claims, OXIDIZED_DESIGN_DIVERGENCES #953), once the frontmatter is placed: a note line
+/// (split at `ltx:break` and `ltx:p`, [`net_note_lines`]) is kept whole only when it holds 3 or more distinct content
+/// words ([`net_content_words`]) that neither the frontmatter nor the text set before it holds — the whole document's
+/// text but the net's notes: the deposit's paragraphs, the creators (`\AB@names` repeats the names), the abstract —
+/// else it goes; a note left without a line goes, with a nameless creator it leaves empty. Each kept note is reported
+/// (FIDELITY_CHARTER §4: printed text no owner claims, kept beside the frontmatter, counted).
+fn keep_unclaimed_net_notes(document: &mut Document) -> Result<()> {
+  let notes = document.findnodes("//ltx:note[@_net]", None);
+  if notes.is_empty() {
+    return Ok(());
+  }
+  let Some(root) = document.get_document().get_root_element() else {
+    return Ok(());
+  };
+  let mut claimed_text = String::new();
+  text_outside(&root, &notes, &mut claimed_text);
+  let claimed: HashSet<String> = net_content_words(&claimed_text).into_iter().collect();
+  for mut note in notes {
+    let store = note.get_attribute("_net").unwrap_or_default();
+    // (and the words of the class's own code in the store, frontmatter_stores.rs `net_class_text`)
+    let class: HashSet<String> =
+      net_content_words(&lookup_string(&s!("lx_net_class_text_{store}")))
+        .into_iter()
+        .collect();
+    let mut lines = Vec::new();
+    net_note_lines(&note, &mut lines);
+    let mut kept = 0usize;
+    for (nodes, text) in lines {
+      let mut unmatched: Vec<String> = net_content_words(&text)
+        .into_iter()
+        .filter(|word| !claimed.contains(word) && !class.contains(word))
+        .collect();
+      unmatched.sort();
+      unmatched.dedup();
+      if unmatched.len() >= 3 {
+        kept += 1;
+        continue;
+      }
+      for node in nodes {
+        document.remove_node(node);
+      }
+    }
+    // (the breaks left at either end of a kept line's run, and the paragraphs left empty)
+    for p in document.findnodes(".//ltx:p", Some(&note)) {
+      if element_nodes(&p).is_empty() && p.get_content().trim().is_empty() {
+        document.remove_node(p);
+      }
+    }
+    let creator = note.get_parent();
+    if kept == 0 {
+      document.remove_node(note);
+      if let Some(creator) = creator
+        && creator.get_name() == "creator"
+        && element_nodes(&creator).is_empty()
+      {
+        document.remove_node(creator);
+      }
+      continue;
+    }
+    trim_edge_breaks(document, &note);
+    note.remove_attribute("_net").ok();
+    Warn!(
+      "frontmatter",
+      "unclaimed",
+      s!(
+        "The title page prints {kept} line(s) of \\{store} that no frontmatter field holds: kept as a note of the author block"
+      )
+    );
+  }
   Ok(())
 }
 

@@ -113,6 +113,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // address's `_` and `~` are characters, not a script and a tie.
   DefKeyVal!("Frontmatter", "property", "Semiverbatim");
   DefKeyVal!("Frontmatter", "content", "Semiverbatim");
+  // Rust-only: the store an unclaimed-text net note was handed on from (frontmatter_stores.rs `hand_net_stores`), read
+  // where the note is placed (insert.rs `keep_unclaimed_net_notes`; OXIDIZED_DESIGN_DIVERGENCES #953).
+  DefKeyVal!("Frontmatter", "_net", "Semiverbatim");
 
   // Rust-only: `\lx@label@ref{<key>}`, the label a binding recorded for `key` once later input was read
   // ([`set_label_ref`]: cas's `\stmRef`, which LaTeX reads from the `.aux` of the run before), nothing for one never

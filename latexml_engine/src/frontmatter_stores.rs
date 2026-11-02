@@ -46,6 +46,12 @@
 //! (medima.sty's `\finalformhead~\@finalform`), or before the test (`Received: \ifx…\else\@received\fi`), a phrase
 //! ending at a `;` or `,` (pazha2.cls's `…; revised \@revised`), else by its role's default only where that word is
 //! printed right before the store (wiley2sp.cls's `\receivedname`), else unnamed (OD #940).
+//!
+//! The unclaimed-text net (98c, OD #953; FIDELITY_CHARTER §4): any other store the class's title-page code reads that
+//! the document set, that the title page prints and no kept run typeset, is a note of the author block, kept only for
+//! lines of 3 or more words no frontmatter field holds (`net_candidates`, `hand_net_stores`; insert.rs
+//! `keep_unclaimed_net_notes`): copernicus's `\AB@affillist`, read only by its own `\@author` (sect05.rs
+//! `keep_class_author_reader`; 0712.1312), sig-alternate's `\tntoks`, read only by its refused `{abstract}` (1206.6940).
 use std::collections::VecDeque;
 
 use latexml_core::{
@@ -3448,7 +3454,12 @@ fn live_read_order(roots: &[Token], blocked: &[Token], executed: bool) -> Vec<Sy
       continue;
     }
     walk.order.push(root.get_cs_name());
-    if let Some(body) = file_body(root) {
+    let body = if *root == T_CS!(CLASS_AUTHOR_ROOT) {
+      crate::latex_constructs::class_author_reader_body()
+    } else {
+      file_body(root)
+    };
+    if let Some(body) = body {
       walk.visit(&body, 0);
     }
   }
@@ -3511,12 +3522,18 @@ fn sentinel(i: usize, kind: Sentinel) -> String {
 /// The sentinel `i` of `kind` as it is looked for in a run's lower-cased text.
 fn sentinel_found(i: usize, kind: Sentinel) -> String { sentinel(i, kind).to_lowercase() }
 
-/// `\def<store>{<sentinel i>}` for each store, the `i`-th its index.
+/// `\def<store>{<sentinel i>}` for each store, the `i`-th its index; `<store>={<sentinel i>}` for a token register (the
+/// unclaimed-text net's: sig-alternate.cls:1374-1398 `\tntoks`).
 fn sentinel_definitions(stores: &[Token], kind: Sentinel) -> Vec<Token> {
   let mut defs = Vec::new();
   for (i, store) in stores.iter().enumerate() {
-    defs.push(T_CS!("\\def"));
-    defs.push(*store);
+    if is_token_register(store) {
+      defs.push(*store);
+      defs.push(T_OTHER!("="));
+    } else {
+      defs.push(T_CS!("\\def"));
+      defs.push(*store);
+    }
     defs.push(T_BEGIN!());
     defs.extend(mouth::tokenize_internal(TeXString::assembled(sentinel(i, kind))).unlist());
     defs.push(T_END!());
@@ -3558,7 +3575,22 @@ fn sentinel_runs(
   build: &dyn Fn(&[Token]) -> Tokens,
   aborted_printed_nothing: bool,
 ) -> Result<Option<(String, String)>> {
-  use crate::latex_constructs::{SpeculativeRun, speculative_title_page_run};
+  sentinel_runs_with(
+    stores,
+    build,
+    aborted_printed_nothing,
+    &crate::latex_constructs::speculative_title_page_run,
+  )
+}
+
+/// [`sentinel_runs`] made by `run` (`speculative_title_page_run`, or `speculative_isolated_run`).
+fn sentinel_runs_with(
+  stores: &[Token],
+  build: &dyn Fn(&[Token]) -> Tokens,
+  aborted_printed_nothing: bool,
+  speculative_title_page_run: &dyn Fn(Tokens) -> Result<crate::latex_constructs::SpeculativeRun>,
+) -> Result<Option<(String, String)>> {
+  use crate::latex_constructs::SpeculativeRun;
   let letters =
     match speculative_title_page_run(build(&sentinel_definitions(stores, Sentinel::Letters)))? {
       SpeculativeRun::Printed(text) => text,
@@ -3860,22 +3892,34 @@ fn rerouted_names() -> Vec<String> {
 /// Before them, the value of each rerouted store the document never set that is still undefined
 /// (`decide_unset_nulls`). When no run can be made (a journal is open), or the deposit's or the replay's ended in a Fatal
 /// of its own (`sentinel_runs`), `lx_sentinel_ran` stays false and the stores' readers are walked instead
-/// (`live_read_order`, `evaluated_switch`).
+/// (`live_read_order`, `evaluated_switch`). The unclaimed-text net's candidates (`net_candidates`) join the same
+/// runs, after K11's stores (`lx_sentinel_net_printed`, `_deposit`, `_replay`; with the refused begin codes' run,
+/// `net_begin_code_tokens`); a run their sentinels make fail is made again without them, and the net then decides
+/// nothing.
 pub fn before_title_page_runs() -> Result<()> {
   if lookup_bool("lx_depositing_class_maketitle") || lookup_bool("lx_replaying_class_setter") {
     return Ok(());
   }
   assign_value("lx_sentinel_ran", false, Some(Scope::Global));
+  assign_value("lx_net_ran", false, Some(Scope::Global));
   let rerouted = rerouted_names();
   let offtable = if lookup_bool("lx_offtable_handed") {
     Vec::new()
   } else {
     offtable_candidates()
   };
-  if rerouted.is_empty() && offtable.is_empty() {
+  // (the unclaimed-text net's candidates: [`net_candidates`])
+  let mut net = if lookup_bool("lx_net_handed") {
+    Vec::new()
+  } else {
+    net_candidates()
+  };
+  if rerouted.is_empty() && offtable.is_empty() && net.is_empty() {
     return Ok(());
   }
-  decide_unset_nulls(&rerouted)?;
+  if !rerouted.is_empty() || !offtable.is_empty() {
+    decide_unset_nulls(&rerouted)?;
+  }
   let off_stores: Vec<Token> = offtable.iter().map(|(_, store, _)| *store).collect();
   let mut stores = off_stores.clone();
   for name in &rerouted {
@@ -3884,8 +3928,18 @@ pub fn before_title_page_runs() -> Result<()> {
       stores.push(store);
     }
   }
-  if stores.is_empty() {
+  // (K11's runs are made when it has stores; the net's candidates join the same runs, after them)
+  let k11 = !stores.is_empty();
+  if !k11 && net.is_empty() {
     return Ok(());
+  }
+  let mut all = stores.clone();
+  let mut off_and_net = off_stores.clone();
+  for store in &net {
+    if !all.contains(store) {
+      all.push(*store);
+      off_and_net.push(*store);
+    }
   }
   use crate::latex_constructs::{
     title_page_deposit_tokens, title_page_print_tokens, title_page_replay_tokens,
@@ -3897,13 +3951,25 @@ pub fn before_title_page_runs() -> Result<()> {
       "No speculative run of the class's title page could be made or kept (an assignment journal is open, or the run could not be undone): what it prints is read off its code"
     );
   };
-  let Some((printed, letters)) = sentinel_runs(&stores, &title_page_print_tokens, true)? else {
+  let Some((mut printed, mut letters)) = sentinel_runs(&all, &title_page_print_tokens, true)?
+  else {
     no_run();
     return Ok(());
   };
+  // (a run the net's sentinels ended — it printed nothing — is made again for K11's stores alone, as before the net)
+  if k11 && !net.is_empty() && letters.is_empty() {
+    net.clear();
+    all.clone_from(&stores);
+    off_and_net.clone_from(&off_stores);
+    let Some(run) = sentinel_runs(&all, &title_page_print_tokens, true)? else {
+      no_run();
+      return Ok(());
+    };
+    (printed, letters) = run;
+  }
   // (the confirming check with the document's own values: one more run when a store found printed has a plain value)
   let printed = if printed.split(',').any(|name| {
-    stores
+    all
       .iter()
       .find(|t| t.with_str(|cs| cs == name))
       .and_then(parameterless_body)
@@ -3913,7 +3979,7 @@ pub fn before_title_page_runs() -> Result<()> {
   }) {
     match crate::latex_constructs::speculative_title_page_run(title_page_print_tokens(&[]))? {
       crate::latex_constructs::SpeculativeRun::Printed(real) => {
-        confirmed_printed(&stores, &printed, &letters, &real)
+        confirmed_printed(&all, &printed, &letters, &real)
       },
       _ => printed,
     }
@@ -3922,43 +3988,552 @@ pub fn before_title_page_runs() -> Result<()> {
   };
   DebugFeature!(
     "frontmatter",
-    "FRONT title-page sentinels: printed [{printed}] of {} candidate stores",
-    stores.len()
+    "FRONT title-page sentinels: printed [{printed}] of {} candidate stores; the letters run: {letters}",
+    all.len()
   );
-  let (mut deposit, mut replay) = (String::new(), String::new());
-  if !off_stores.is_empty() {
-    match sentinel_runs(&off_stores, &title_page_deposit_tokens, false)? {
+  // (the deposit's and the replay's runs, over K11's off-table stores and the net's candidates; one that cannot be
+  // made or kept with the net's is made again without them, and the net decides nothing)
+  let typeset_runs = |stores: &[Token]| -> Result<Option<(String, String)>> {
+    let (mut deposit, mut replay) = (String::new(), String::new());
+    if stores.is_empty() {
+      return Ok(Some((deposit, replay)));
+    }
+    match sentinel_runs(stores, &title_page_deposit_tokens, false)? {
       Some((list, _)) => deposit = list,
-      None => {
-        no_run();
-        return Ok(());
-      },
+      None => return Ok(None),
     }
     if title_page_replay_tokens(&[]).is_some() {
       let replay_tokens =
         |defs: &[Token]| title_page_replay_tokens(defs).unwrap_or_else(|| Tokens::new(Vec::new()));
-      match sentinel_runs(&off_stores, &replay_tokens, false)? {
+      match sentinel_runs(stores, &replay_tokens, false)? {
         Some((list, _)) => replay = list,
+        None => return Ok(None),
+      }
+    }
+    Ok(Some((deposit, replay)))
+  };
+  let (deposit, replay) = match typeset_runs(&off_and_net)? {
+    Some(lists) => lists,
+    None if !net.is_empty() && k11 => {
+      net.clear();
+      match typeset_runs(&off_stores)? {
+        Some(lists) => lists,
         None => {
           no_run();
           return Ok(());
         },
       }
+    },
+    None => {
+      no_run();
+      return Ok(());
+    },
+  };
+  // (each list split between K11's stores and the net's)
+  let of = |list: &str, among: &[Token]| -> String {
+    list
+      .split(',')
+      .filter(|name| among.iter().any(|t| t.with_str(|cs| cs == *name)))
+      .collect::<Vec<_>>()
+      .join(",")
+  };
+  if k11 {
+    for (run, list) in [
+      ("printed", of(&printed, &stores)),
+      ("deposit", of(&deposit, &off_stores)),
+      ("replay", of(&replay, &off_stores)),
+    ] {
+      assign_value(
+        &s!("lx_sentinel_{run}"),
+        Stored::String(pin(list)),
+        Some(Scope::Global),
+      );
+    }
+    assign_value("lx_sentinel_ran", true, Some(Scope::Global));
+  }
+  if !net.is_empty() {
+    let mut net_printed = of(&printed, &net);
+    // (A2: what the refused begin codes of the frontmatter environments print, [`net_begin_code_tokens`])
+    if net_begin_code_tokens(&[]).is_some()
+      && let Some((list, _)) = sentinel_runs_with(
+        &net,
+        &|defs: &[Token]| net_begin_code_tokens(defs).unwrap_or_default(),
+        false,
+        &crate::latex_constructs::speculative_isolated_run,
+      )?
+    {
+      for name in list.split(',').filter(|n| !n.is_empty()) {
+        if !net_printed.split(',').any(|n| n == name) {
+          if !net_printed.is_empty() {
+            net_printed.push(',');
+          }
+          net_printed.push_str(name);
+        }
+      }
+    }
+    for (run, list) in [
+      ("printed", net_printed),
+      ("deposit", of(&deposit, &net)),
+      ("replay", of(&replay, &net)),
+    ] {
+      assign_value(
+        &s!("lx_sentinel_net_{run}"),
+        Stored::String(pin(list)),
+        Some(Scope::Global),
+      );
+    }
+    assign_value("lx_net_ran", true, Some(Scope::Global));
+  }
+  Ok(())
+}
+
+/// The unclaimed-text net (FIDELITY_CHARTER §4 "No printed frontmatter word is lost"; OXIDIZED_DESIGN_DIVERGENCES
+/// #953): the stores a raw class's title page reads that no owner claims — K11's table and off-table stores are
+/// claimed ([`frontmatter_owned_stores`]) — and that only its own title-page code prints. Candidates are stores, never a
+/// run's text, so what a class hard-codes (a letterhead, "Received …", a copyright line) is never one: each control
+/// sequence the class's title-page code reads (`live_read_order` from the roots, the code that runs) — its refused
+/// `\maketitle`, its `\@maketitle`, its own `\@author` the kernel's replaced ([`CLASS_AUTHOR_ROOT`], sect05.rs
+/// `keep_class_author_reader`: copernicus.cls:1329-1352's `\AB@affillist`, 0712.1312, 1401.4706, 1709.00722) and the
+/// begin codes of its refused frontmatter environments (`\lx@dropped@abstract`: sig-alternate.cls:736-790 prints
+/// `\the\tntoks`, 1206.6940, cs0405006) — whose value the document made since the raw file loaded
+/// ([`net_value_changed`]); not the kernel's fields, an internal of ours (`\lx@…`), nor a store holding a claimed one
+/// (the claimed store's sentinel would not reach the run through it). What the title page prints of them is decided by
+/// the sentinel runs ([`before_title_page_runs`]), and what is printed and no kept run typeset becomes a note of the
+/// author block ([`hand_net_stores`]), kept only where it holds words no frontmatter field holds
+/// (`base_utilities::frontmatter::insert`, `keep_unclaimed_net_notes`).
+fn net_candidates() -> Vec<Token> {
+  let mut roots: Vec<Token> = Vec::new();
+  for cs in ["\\lx@dropped@maketitle", "\\@maketitle"] {
+    let root = T_CS!(cs);
+    if file_body(&root).is_some() {
+      roots.push(root);
     }
   }
-  for (run, list) in [
-    ("printed", printed),
-    ("deposit", deposit),
-    ("replay", replay),
-  ] {
+  if crate::latex_constructs::class_author_reader_body().is_some() {
+    roots.push(T_CS!(CLASS_AUTHOR_ROOT));
+  }
+  roots.extend(net_begin_codes().into_iter().map(|(code, _)| code));
+  if roots.is_empty() {
+    return Vec::new();
+  }
+  let owned = frontmatter_owned_stores();
+  let mut out: Vec<Token> = Vec::new();
+  let reads = live_read_order(&roots, &owned, true);
+  let mut scratch: Option<FxHashSet<SymStr>> = None;
+  DebugFeature!(
+    "frontmatter",
+    "FRONT net roots [{}] read [{}]",
+    roots
+      .iter()
+      .map(ToString::to_string)
+      .collect::<Vec<_>>()
+      .join(","),
+    reads
+      .iter()
+      .map(|r| with(*r, ToString::to_string))
+      .collect::<Vec<_>>()
+      .join(",")
+  );
+  for name in reads {
+    let cs = T_CS!(&with(name, ToString::to_string));
+    // (nor the job's name, a primitive's value the engine sets: core_interface.rs `install_jobname`, raa.cls's
+    // manuscript line, 2110.11117)
+    if owned.contains(&cs)
+      || roots.contains(&cs)
+      || out.contains(&cs)
+      || cs.with_str(|n| n.starts_with("\\lx@") || n == "\\jobname")
+    {
+      continue;
+    }
+    if net_value_changed(&cs, &owned)
+      && net_value(&cs).is_some_and(|value| holds_text(&value))
+      && scratch
+        .get_or_insert_with(stores_raw_code_writes)
+        .contains(&cs.get_cs_name())
+    {
+      out.push(cs);
+    }
+  }
+  DebugFeature!(
+    "frontmatter",
+    "FRONT net candidates: [{}]",
+    out
+      .iter()
+      .map(ToString::to_string)
+      .collect::<Vec<_>>()
+      .join(",")
+  );
+  out
+}
+
+/// The root the net's walk ([`live_read_order`]) reads the class's own `\@author` reader under (sect05.rs
+/// `keep_class_author_reader`), a name with no meaning.
+const CLASS_AUTHOR_ROOT: &str = "\\lx@class@@author";
+
+/// The refused begin codes of the frontmatter environments whose class code the kernel replays (sect05.rs
+/// `replay_class_begin_code`: `{abstract}`), as a raw file defined them, of no parameters: what the class prints
+/// when the document opens one — sig-alternate.cls:736-790's `\insert\footins{…\the\tntoks}`, its title note.
+/// A begin code that collects its body is not run (it reads ahead to its `\end`, which a run of it alone does not
+/// have: [`collects_its_body`]).
+fn net_begin_codes() -> Vec<(Token, &'static str)> {
+  ["abstract"]
+    .into_iter()
+    .map(|env| (T_CS!(&s!("\\lx@dropped@{env}")), env))
+    .filter(|(cs, _)| {
+      matches!(lookup_meaning(cs), Some(Stored::Expandable(ref d))
+        if d.get_origin() == DefinitionOrigin::File
+          && d.get_parameters().is_none_or(|p| p.get_parameters().is_empty())
+          && matches!(d.get_expansion(), Some(ExpansionBody::Tokens(_))))
+        && !collects_its_body(cs)
+    })
+    .collect()
+}
+
+/// Does the code of `cs` reach a macro a raw file defined with a delimited parameter — one that reads the input up to a
+/// delimiter (smfart.cls:510 `\@getgenabstext#1\end #2`, nrc1.cls:1558 `\NRC@gather@body#1\end`, wds10.sty:539
+/// `\pickup#1\end#2`), the environment's body up to its `\end`, past a run's own input (2206.03779, 1910.12640)?
+fn collects_its_body(cs: &Token) -> bool {
+  live_read_order(&[*cs], &[], false).into_iter().any(|name| {
+    matches!(lookup_meaning(&T_CS!(&with(name, ToString::to_string))), Some(Stored::Expandable(ref d))
+      if d.get_origin() == DefinitionOrigin::File
+        && d.get_parameters().is_some_and(|p| p.get_parameters().iter().any(|q| !undelimited(q))))
+  })
+}
+
+/// A speculative run of the refused begin codes ([`net_begin_codes`]) after `inject` (the sentinel definitions), with
+/// notes, labels and index entries as the title page's run has them (`title_page_print_tokens`); `None` when there are
+/// none. Their `\insert`s reach the run's text as the title page's do. The run's group is not closed here: a begin code
+/// leaves its own groups open for its end code (frontiersFPHY.cls:520 `\begingroup`), and the run closes what is left
+/// open (`speculative_title_page_run`), as the replay of one does (sect05.rs `replay_dropped_class_code`); it reads from
+/// a mouth of its own (`speculative_isolated_run`), so a begin code that collects its body up to its `\end` meets the
+/// end of the run's input, not the document (smfart.cls:506-520; 2206.03779).
+fn net_begin_code_tokens(inject: &[Token]) -> Option<Tokens> {
+  let codes = net_begin_codes();
+  if codes.is_empty() {
+    return None;
+  }
+  let mut run =
+    mouth::tokenize_internal(r"{\let\thanks\@firstofone\let\label\@gobble\let\index\@gobble")
+      .unlist();
+  run.extend_from_slice(inject);
+  // (each with an empty body and its `\end`, which ends nothing here: a begin code collecting its body up to its
+  // `\end` finds it — smfart.cls:506-520 `\@getgenabstext#1\end #2`, 2206.03779 — as pdflatex's empty environment
+  // would give it)
+  run.extend(mouth::tokenize_internal(r"\let\end\@gobble").unlist());
+  for (code, env) in codes {
+    // (in the environment, as `\begin` puts the code there: latex.ltx `\begin` `\def\@currenvir{#1}`)
+    run.extend(mouth::tokenize_internal(r"\def\@currenvir").unlist());
+    run.push(T_BEGIN!());
+    run.extend(ExplodeText!(env));
+    run.push(T_END!());
+    run.push(code);
+    run.push(T_CS!("\\par"));
+    run.push(T_CS!("\\end"));
+    run.push(T_BEGIN!());
+    run.extend(ExplodeText!(env));
+    run.push(T_END!());
+  }
+  Some(Tokens::new(run))
+}
+
+/// Does a store's value hold text of its own — a character the code that runs typesets ([`executed_code`]: not a
+/// definition's body nor a running head's argument)? A value that is only code prints no text of its own: oasics.cls:544
+/// `\titlerunning` stores `{\let\footnote\@gobble\markboth{#1}{#1}}`, a font switch's robust wrapper `\protect\itshape`
+/// (1709.00722, 2206.03779); a sentinel in its place would read as printed.
+fn holds_text(value: &Tokens) -> bool {
+  executed_code(value.unlist_ref())
+    .iter()
+    .any(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
+}
+
+/// The stores a setter of a raw file's or of the document's writes — a definition's or a `\let`'s name, a token
+/// register it names, in a macro's body (copernicus.cls's `\affil` `\xdef\AB@affillist{…}`, sig-alternate.cls's
+/// `\titlenote` `\global\tntoks={#1}`) — that no macro of the format's, the pools' or the bindings' writes: theirs are
+/// scratch stores (latex.ltx's `\@tempa`, `\toks@`: smfart.cls's title page reads `\toks@` through
+/// `\uppercasenonmath`, 2206.03779), and a macro the document only defines (`\newcommand\SL{\mathrm{SL}}`, which
+/// 2609.05055's title prints) is a shorthand, no store a setter fills. The net's candidates ([`net_candidates`]).
+fn stores_raw_code_writes() -> FxHashSet<SymStr> {
+  const WRITERS_OF_NAMES: &[&str] = &[
+    "\\def",
+    "\\gdef",
+    "\\edef",
+    "\\xdef",
+    "\\let",
+    "\\protected@edef",
+    "\\protected@xdef",
+    "\\g@addto@macro",
+  ];
+  let mut raw: FxHashSet<SymStr> = FxHashSet::default();
+  let mut ours: FxHashSet<SymStr> = FxHashSet::default();
+  for (_, stored) in current_meanings_where(|stored| matches!(stored, Stored::Expandable(_))) {
+    let Stored::Expandable(d) = stored else {
+      continue;
+    };
+    let Some(ExpansionBody::Tokens(body)) = d.get_expansion() else {
+      continue;
+    };
+    let written = if matches!(
+      d.get_origin(),
+      DefinitionOrigin::File | DefinitionOrigin::Document
+    ) {
+      &mut raw
+    } else {
+      &mut ours
+    };
+    let body = body.unlist_ref();
+    for (i, t) in body.iter().enumerate() {
+      if t.get_catcode() != Catcode::CS {
+        continue;
+      }
+      if cs_in(t, WRITERS_OF_NAMES)
+        && let Some(name) = body.get(i + 1)
+        && name.get_catcode() == Catcode::CS
+      {
+        written.insert(name.get_cs_name());
+      } else if is_token_register(t) {
+        written.insert(t.get_cs_name());
+      }
+    }
+  }
+  raw.retain(|name| !ours.contains(name));
+  raw
+}
+
+/// Is `cs` a token register?
+fn is_token_register(cs: &Token) -> bool {
+  matches!(lookup_meaning(cs), Some(Stored::Register(ref r)) if matches!(r.register_type, RegisterType::Tokens))
+}
+
+/// The value the net hands on of the store `cs`: a parameterless macro's body, a token register's contents.
+fn net_value(cs: &Token) -> Option<Tokens> {
+  if is_token_register(cs) {
+    return cs.with_str(|name| match lookup_register_quiet(name) {
+      Some(RegisterValue::Tokens(value)) => Some(value),
+      _ => None,
+    });
+  }
+  parameterless_body(cs)
+}
+
+/// Did the document make the value of the store `cs` since the raw file that defined it loaded, and is it not blank?
+/// A macro's definition is the document's (`DefinitionOrigin::Document`: a class setter it called, in the preamble
+/// or the body), not one a raw file made (its default; a replayed class setter's store, read as the class's) nor one
+/// the begin-document hooks made (`note_document_hooks`: a class's `\AtBeginDocument{\gdef\@journal{…}}`); a token
+/// register's contents differ from those it had when the last raw file before it loaded (`note_raw_register_defaults`;
+/// empty for one the document allocated). A store whose value holds a store a frontmatter owner claims (`owned`) is not
+/// the net's.
+fn net_value_changed(cs: &Token, owned: &[Token]) -> bool {
+  match lookup_meaning(cs) {
+    Some(Stored::Expandable(d)) => {
+      if d.get_origin() != DefinitionOrigin::Document
+        || d
+          .get_parameters()
+          .is_some_and(|p| !p.get_parameters().is_empty())
+      {
+        return false;
+      }
+      let Some(ExpansionBody::Tokens(body)) = d.get_expansion() else {
+        return false;
+      };
+      if is_blank(body) || body.unlist_ref().iter().any(|t| owned.contains(t)) {
+        return false;
+      }
+      let hook_made = cs.with_str(|name| match lookup_value(&s!("lx_net_hook_{name}")) {
+        Some(Stored::Expandable(made)) => Rc::ptr_eq(&made, &d),
+        _ => false,
+      });
+      !hook_made
+    },
+    Some(Stored::Register(r)) if matches!(r.register_type, RegisterType::Tokens) => {
+      let Some(value) = net_value(cs) else {
+        return false;
+      };
+      if is_blank(&value) || value.unlist_ref().iter().any(|t| owned.contains(t)) {
+        return false;
+      }
+      let default = cs.with_str(
+        |name| match lookup_value(&s!("lx_net_toks_default_{name}")) {
+          Some(Stored::Tokens(default)) => default,
+          _ => Tokens::default(),
+        },
+      );
+      default.unlist_ref() != value.unlist_ref()
+    },
+    _ => false,
+  }
+}
+
+thread_local! {
+  /// The Document-origin definitions before the begin-document hooks ran (`note_document_hooks`), by address.
+  static NET_HOOKS_BEFORE: std::cell::RefCell<FxHashSet<usize>> =
+    std::cell::RefCell::new(FxHashSet::default());
+}
+
+/// Around the begin-document hooks (sect02.rs `\begin{document}`): before them (`before`), the Document-origin
+/// definitions that exist; after them, each one they made is recorded as the hooks' (`lx_net_hook_<name>`), a class
+/// default for the net (`net_value_changed`).
+pub fn note_document_hooks(before: bool) {
+  if !lookup_bool("lx_net_raw_loaded") {
+    return;
+  }
+  let address = |stored: &Stored| match stored {
+    Stored::Expandable(d) => Some(Rc::as_ptr(d).cast::<()>() as usize),
+    _ => None,
+  };
+  let made = current_meanings_where(
+    |stored| matches!(stored, Stored::Expandable(d) if d.get_origin() == DefinitionOrigin::Document),
+  );
+  if before {
+    let set: FxHashSet<usize> = made.iter().filter_map(|(_, m)| address(m)).collect();
+    NET_HOOKS_BEFORE.with(|c| *c.borrow_mut() = set);
+    return;
+  }
+  let set = NET_HOOKS_BEFORE.with(|c| std::mem::take(&mut *c.borrow_mut()));
+  for (key, meaning) in made {
+    if address(&meaning).is_some_and(|a| !set.contains(&a)) {
+      let name = with(key, ToString::to_string);
+      assign_value(&s!("lx_net_hook_{name}"), meaning, Some(Scope::Global));
+    }
+  }
+}
+
+/// After a raw class or package loaded: the contents of each token register not yet recorded, its raw default for the
+/// net ([`net_value_changed`]).
+fn note_raw_register_defaults() {
+  assign_value("lx_net_raw_loaded", true, Some(Scope::Global));
+  let registers = current_meanings_where(
+    |stored| matches!(stored, Stored::Register(r) if matches!(r.register_type, RegisterType::Tokens)),
+  );
+  for (key, _) in registers {
+    let name = with(key, ToString::to_string);
+    let record = s!("lx_net_toks_default_{name}");
+    if lookup_value(&record).is_some() {
+      continue;
+    }
+    let value = match lookup_register_quiet(&name) {
+      Some(RegisterValue::Tokens(value)) => value,
+      _ => Tokens::default(),
+    };
+    assign_value(&record, Stored::Tokens(value), Some(Scope::Global));
+  }
+}
+
+/// The text of the class's own code in each of the net's stores `stores` (for `keep_unclaimed_net_notes`, insert.rs:
+/// words the document did not give are not its unclaimed text): the characters of the raw files' macros that name the
+/// store — its setter's own text around the argument, e-jc.sty:100-101 `\def\the@dateline{Submitted:
+/// \ignorespaces#1; Accepted: …\copy@right}` (2410.15356), a language's captions that set it, smfart.cls's
+/// `\def\keywordsname{Key words and phrases}` run by babel's `\selectlanguage` in the document (2206.11835, 2609.17377)
+/// — and of the raw macros the store's value reads, two deep (`\copy@right`'s class default).
+fn net_class_text(stores: &[SymStr]) -> Vec<String> {
+  let letters = |body: &[Token], out: &mut String| {
+    let mut param = false;
+    for t in body {
+      match t.get_catcode() {
+        Catcode::PARAM => param = true,
+        Catcode::LETTER | Catcode::OTHER if !std::mem::take(&mut param) => {
+          t.with_str(|c| out.push_str(c));
+        },
+        _ => {
+          param = false;
+          out.push(' ');
+        },
+      }
+    }
+    out.push(' ');
+  };
+  let setters = current_meanings_where(
+    |stored| matches!(stored, Stored::Expandable(d) if d.get_origin() == DefinitionOrigin::File),
+  );
+  stores
+    .iter()
+    .map(|key| {
+      let store = T_CS!(&with(*key, ToString::to_string));
+      let mut out = String::new();
+      for (_, setter) in &setters {
+        if let Stored::Expandable(d) = setter
+          && let Some(ExpansionBody::Tokens(body)) = d.get_expansion()
+          && body.unlist_ref().contains(&store)
+        {
+          letters(body.unlist_ref(), &mut out);
+        }
+      }
+      let mut seen: Vec<Token> = Vec::new();
+      let mut reads: Vec<(Token, usize)> = net_value(&store)
+        .map(|v| v.unlist_ref().iter().map(|t| (*t, 0)).collect())
+        .unwrap_or_default();
+      while let Some((t, depth)) = reads.pop() {
+        if t.get_catcode() != Catcode::CS || seen.contains(&t) || depth >= 2 {
+          continue;
+        }
+        seen.push(t);
+        if let Some(body) = file_body(&t) {
+          letters(body.unlist_ref(), &mut out);
+          reads.extend(body.unlist_ref().iter().map(|b| (*b, depth + 1)));
+        }
+      }
+      out
+    })
+    .collect()
+}
+
+/// The net's hand-on at `\maketitle` (`\lx@store@untypeset`, after the title-page deposit and replay): each candidate
+/// ([`net_candidates`]) the title page prints (`lx_sentinel_net_printed`, [`before_title_page_runs`]) that no kept title-page
+/// run typeset (`lx_sentinel_net_deposit`, `lx_sentinel_net_replay`), in the order the title page prints them, as a note of the author
+/// block — `\lx@annotate@frontmatter{ltx:creator}{ltx:note}[role=note,label=addresses:block,_net=<name>]{<value>}`, the
+/// shared nameless creator below the authors (OXIDIZED_DESIGN_DIVERGENCES #159) — its value read as the class's code
+/// reads it. Its lines that only repeat what the frontmatter holds are taken out when it is placed
+/// (`keep_unclaimed_net_notes`). Once per document; without a run, nothing (the net decides by TeX's output only).
+fn hand_net_stores() -> Result<Vec<Digested>> {
+  if lookup_bool("lx_net_handed") || !lookup_bool("lx_net_ran") {
+    return Ok(Vec::new());
+  }
+  assign_value("lx_net_handed", true, Some(Scope::Global));
+  let mut typeset: Vec<SymStr> = Vec::new();
+  if lookup_bool("lx_title_page_deposit_kept") {
+    typeset.extend(sentinel_list("net_deposit"));
+  }
+  if lookup_bool("lx_title_page_replay_kept") {
+    typeset.extend(sentinel_list("net_replay"));
+  }
+  let mut calls: Vec<Token> = Vec::new();
+  let handed: Vec<SymStr> = sentinel_list("net_printed")
+    .into_iter()
+    .filter(|key| !typeset.contains(key))
+    .collect();
+  let class_text = net_class_text(&handed);
+  for (key, class_text) in handed.into_iter().zip(class_text) {
+    let name = with(key, ToString::to_string);
+    let cs = T_CS!(&name);
+    let Some(value) = net_value(&cs) else {
+      continue;
+    };
+    let bare = name.trim_start_matches('\\');
     assign_value(
-      &s!("lx_sentinel_{run}"),
-      Stored::String(pin(list)),
+      &s!("lx_net_class_text_{bare}"),
+      Stored::String(pin(class_text)),
       Some(Scope::Global),
     );
+    calls.extend(
+      mouth::tokenize_internal(TeXString::assembled(s!(
+        "\\lx@annotate@frontmatter{{ltx:creator}}{{ltx:note}}[role=note,label=addresses:block,_net={bare}]"
+      )))
+      .unlist(),
+    );
+    calls.push(T_BEGIN!());
+    calls.extend(value.unlist());
+    calls.push(T_END!());
+    Info!(
+      "frontmatter",
+      s!("{name}"),
+      s!(
+        "The class's title page prints {name}, which no frontmatter field holds and no title-page run here typeset: it is handed on as a note of the author block"
+      )
+    );
   }
-  assign_value("lx_sentinel_ran", true, Some(Scope::Global));
-  Ok(())
+  if calls.is_empty() {
+    return Ok(Vec::new());
+  }
+  Ok(vec![digest_store_calls(calls)?])
 }
 
 /// Silent-loss 77h/23b: the value a rerouted store the document never set, still undefined, takes in the title-page
@@ -4242,8 +4817,16 @@ fn walked_title_page_reads() -> (Vec<SymStr>, FxHashSet<SymStr>) {
 /// twice; a store the title page prints only under a switch that is off — a `\newif` (aiaa-tc.cls:199-200
 /// `\aiaa@conference` under `[handcarry]`), a class's own boolean (sigplanconf.cls:1118, 1603.03011's "nnnnnnn.nnnnnnn"
 /// placeholder DOI) — or only in a box or a running head is not printed and not handed on. Perl drops them all (no
-/// binding, its `\@maketitle` relaxed, latex_constructs.pool.ltxml:1105).
+/// binding, its `\@maketitle` relaxed, latex_constructs.pool.ltxml:1105). Then the unclaimed-text net's stores, the
+/// ones no owner claims ([`hand_net_stores`]).
 fn hand_untypeset_stores() -> Result<Vec<Digested>> {
+  let mut out = hand_offtable_stores()?;
+  out.extend(hand_net_stores()?);
+  Ok(out)
+}
+
+/// K11's part of [`hand_untypeset_stores`]: its off-table stores.
+fn hand_offtable_stores() -> Result<Vec<Digested>> {
   if lookup_string("lx_offtable_stores").is_empty() || lookup_bool("lx_offtable_handed") {
     return Ok(Vec::new());
   }
@@ -4311,7 +4894,14 @@ fn hand_untypeset_stores() -> Result<Vec<Digested>> {
         mouth::tokenize_internal(r"\lx@add@authors@adaptive").unlist(),
         "the document's authors",
       )
-    } else if in_author && names_store.is_some() && has_creator {
+    } else if in_author
+      && names_store.is_some()
+      && has_creator
+      && !(!matches!(
+        lookup_value(&s!("lx_offtable_label_{name}")),
+        Some(Stored::Tokens(_))
+      ) && repeats_creator_names(value, &creator_words))
+    {
       // (after the names, which make the creators these rows annotate)
       rows.extend(
         mouth::tokenize_internal(TeXString::assembled(s!(
@@ -4418,7 +5008,8 @@ fn creator_name_words() -> Vec<FxHashSet<String>> {
 }
 
 /// Does the store value `value` only repeat the creators' names — is every line of it (split at `\and`, `\\`,
-/// `\newline` and `\par`) plain text, characters and spaces only, each of whose words is a word of a creator's name,
+/// `\newline` and `\par`, commas and the word "and" between names) plain text, characters and spaces only, each of whose
+/// words is a word of a creator's name,
 /// and does it name every creator (each creator's words are among its words: `creators`, [`creator_name_words`])? A
 /// cover's author list that holds only the names (nowfnt.cls:803-806 `\maintitleauthorlist`, "AUTHORS FOR COVER
 /// PAGE": 2308.02698) is a duplicate of the creators, a print flourish of the cover (the page-furniture ruling); one
@@ -4434,6 +5025,8 @@ fn repeats_creator_names(value: &Tokens, creators: &[FxHashSet<String>]) -> bool
   let mut text = String::new();
   for t in value.unlist_ref() {
     match t.get_catcode() {
+      // (the commas between the names)
+      Catcode::OTHER if *t == T_OTHER!(",") => text.push(' '),
       Catcode::LETTER | Catcode::OTHER => text.push_str(&t.to_string()),
       Catcode::SPACE | Catcode::ACTIVE => text.push(' '),
       Catcode::BEGIN | Catcode::END => {},
@@ -4441,7 +5034,11 @@ fn repeats_creator_names(value: &Tokens, creators: &[FxHashSet<String>]) -> bool
       _ => return false,
     }
   }
-  let words: FxHashSet<&str> = text.split_whitespace().collect();
+  // (and the conjunction before the last, as `\and` is: "Ann Able and Bob Baker")
+  let words: FxHashSet<&str> = text
+    .split_whitespace()
+    .filter(|word| !matches!(*word, "and" | "&"))
+    .collect();
   !words.is_empty()
     && words
       .iter()
@@ -6386,6 +6983,8 @@ LoadDefinitions!({
   // (latexml_core/src/binding/content.rs).
   DefPrimitive!("\\lx@class@loaded@raw{}", sub[(cls)] {
     let cls = cls.to_string();
+    note_raw_register_defaults();
+    crate::latex_constructs::keep_class_author_reader();
     reroute_raw_class_stores(&cls)?;
     reroute_in_place_contact_setters(&cls)?;
   });
@@ -6475,6 +7074,8 @@ LoadDefinitions!({
   // (`reroute_in_place_contact_setters`; 11lomcon.sty, hep-ph0312288).
   DefPrimitive!("\\lx@package@loaded@raw{}", sub[(sty)] {
     let sty = sty.to_string();
+    note_raw_register_defaults();
+    crate::latex_constructs::keep_class_author_reader();
     if !in_a_raw_class_read() {
       reroute_raw_package_stores(&sty)?;
     }

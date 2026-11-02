@@ -1514,6 +1514,13 @@ pub(crate) fn load() -> Result<()> {
   // LaTeX's `\maketitle` as a speculative run of the class's title page runs it (`title_page_print_tokens`): its
   // `\@maketitle`, in a group (article.cls:191-207, its `\\thanks` gobbled by the run).
   DefMacro!("\\lx@print@maketitle", r"\begingroup\@maketitle\endgroup");
+  // …with the class's own `\@author` that the kernel's or a binding's `\author` replaced (`keep_class_author_reader`),
+  // locally: pdflatex's title page prints that one.
+  DefPrimitive!("\\lx@class@author@reader", {
+    if let Some(reader) = lookup_value(CLASS_AUTHOR_READER) {
+      assign_meaning(&T_CS!("\\@author"), reader, Some(Scope::Local));
+    }
+  });
 
   // Doesn't produce anything (we're already inserting frontmatter),
   // But, it does make the various frontmatter macros into no-ops.
@@ -4774,6 +4781,77 @@ fn filled_boxes(body: &[Token]) -> Vec<String> {
   boxes
 }
 
+/// After a raw class or package loaded (frontmatter_stores.rs `\lx@class@loaded@raw`, `\lx@package@loaded@raw`): the
+/// `\@author` it left, kept ([`CLASS_AUTHOR_READER`]) for the speculative run of the class's whole title page
+/// ([`title_page_print_tokens`]), when it is a reader a raw file defined — a parameterless macro whose body reads a
+/// control sequence a raw file, a binding or the document defined, or a token register — and the file's own `\author`
+/// (refused by the lock, `\lx@dropped@author`, or its own) does not define `\@author` itself
+/// (`\def\author#1{\gdef\@author{#1}}` keeps the names there, which the kernel's value is). The kernel's `\author`
+/// (sect05.rs, Perl latex_constructs.pool.ltxml:1076-1079 `\def\@author{#2}`) or a binding's (authblk_sty.rs) then
+/// replaces it, though it is the only code that prints the class's affiliation list: copernicus.cls:1329-1352
+/// `\renewcommand\@author{\AB@names\AB@affillist}` (0712.1312, 1401.4706), oasics.cls:628-635 under the authblk
+/// binding (1709.00722). A default value — `\def\@author{}`, LaTeX's "No \author given" warning — reads nothing and is
+/// not kept. The unclaimed-text net's (OXIDIZED_DESIGN_DIVERGENCES #953).
+pub(crate) fn keep_class_author_reader() {
+  let author = T_CS!("\\@author");
+  let Some(Stored::Expandable(d)) = lookup_meaning(&author) else {
+    return;
+  };
+  if d.get_origin() != DefinitionOrigin::File
+    || d
+      .get_parameters()
+      .is_some_and(|p| !p.get_parameters().is_empty())
+  {
+    return;
+  }
+  let Some(ExpansionBody::Tokens(body)) = d.get_expansion() else {
+    return;
+  };
+  let reads = body.unlist_ref().iter().any(|t| {
+    t.get_catcode() == Catcode::CS
+      && match lookup_meaning(t) {
+        Some(Stored::Expandable(e)) => matches!(
+          e.get_origin(),
+          DefinitionOrigin::File | DefinitionOrigin::Binding | DefinitionOrigin::Document
+        ),
+        Some(Stored::Register(r)) => matches!(r.register_type, RegisterType::Tokens),
+        _ => false,
+      }
+  });
+  if !reads {
+    return;
+  }
+  for setter in ["\\lx@dropped@author", "\\author"] {
+    if let Some(Stored::Expandable(setter)) = lookup_meaning(&T_CS!(setter))
+      && setter.get_origin() == DefinitionOrigin::File
+      && let Some(ExpansionBody::Tokens(setter)) = setter.get_expansion()
+      && defined_stores(setter.unlist_ref()).contains(&author)
+    {
+      return;
+    }
+  }
+  assign_value(
+    CLASS_AUTHOR_READER,
+    Stored::Expandable(d),
+    Some(Scope::Global),
+  );
+}
+
+/// The state holding the class's `\@author` reader ([`keep_class_author_reader`]): a value, not a meaning, so the raw
+/// files' code (frontmatter_stores.rs `ClassReaders::survey`) does not read it as one more macro of theirs.
+pub(crate) const CLASS_AUTHOR_READER: &str = "lx_class_author_reader";
+
+/// The token body of the class's `\@author` reader ([`keep_class_author_reader`]), if one was kept.
+pub(crate) fn class_author_reader_body() -> Option<Tokens> {
+  match lookup_value(CLASS_AUTHOR_READER) {
+    Some(Stored::Expandable(d)) => match d.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => Some(body.clone()),
+      _ => None,
+    },
+    _ => None,
+  }
+}
+
 /// The control sequences a body defines with `\def`, `\gdef`, `\edef` or `\xdef` (the targets the lock's drop gives an
 /// empty definition, state.rs).
 fn defined_stores(body: &[Token]) -> Vec<Token> {
@@ -4924,6 +5002,11 @@ pub(crate) fn title_page_print_tokens(inject: &[Token]) -> Tokens {
     r"{\let\thanks\@firstofone\let\label\@gobble\let\index\@gobble\let\lx@maketitle@body\lx@print@maketitle",
   )
   .unlist();
+  // (the class's own `\@author` the kernel's or a binding's replaced, which pdflatex's title page prints:
+  // [`keep_class_author_reader`])
+  if lookup_value(CLASS_AUTHOR_READER).is_some() {
+    run.push(T_CS!("\\lx@class@author@reader"));
+  }
   if !class_maketitle {
     run.extend(
       mouth::tokenize_internal(
@@ -4978,6 +5061,19 @@ pub(crate) enum SpeculativeRun {
 /// other Fatal is the run's alone — the document never makes it, and a sentinel value may cause it —, discarded with
 /// its diagnostics (an Info says so): [`SpeculativeRun::Aborted`].
 pub(crate) fn speculative_title_page_run(tokens: Tokens) -> Result<SpeculativeRun> {
+  speculative_run(tokens, false)
+}
+
+/// [`speculative_title_page_run`] reading from a mouth of its own: code that reads ahead past `tokens` — an
+/// environment's begin code collecting its body up to its `\end` (smfart.cls:506-520 `\@getgenabstext#1\end #2`) —
+/// meets the end of its input, never the document's text. The unclaimed-text net's run of the refused begin codes
+/// (frontmatter_stores.rs `net_begin_code_tokens`).
+pub(crate) fn speculative_isolated_run(tokens: Tokens) -> Result<SpeculativeRun> {
+  speculative_run(tokens, true)
+}
+
+/// [`speculative_title_page_run`], in a mouth of its own when `isolated` ([`speculative_isolated_run`]).
+fn speculative_run(tokens: Tokens, isolated: bool) -> Result<SpeculativeRun> {
   let Some(journal) = begin_assignment_journal() else {
     return Ok(SpeculativeRun::Unavailable);
   };
@@ -5007,7 +5103,13 @@ pub(crate) fn speculative_title_page_run(tokens: Tokens) -> Result<SpeculativeRu
     Stored::VecDigested(Vec::new()),
     Some(Scope::Global),
   );
-  let result = with_origin(DefinitionOrigin::File, || digest(tokens));
+  let result = if isolated {
+    reading_from_mouth(Mouth::default(), || {
+      with_origin(DefinitionOrigin::File, || digest(tokens))
+    })
+  } else {
+    with_origin(DefinitionOrigin::File, || digest(tokens))
+  };
   let inserts = take_deposit_inserts();
   let unwound = reading_from_mouth(Mouth::default(), || {
     new_local_box_list();
