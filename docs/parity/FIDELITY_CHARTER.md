@@ -97,6 +97,10 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   that evidence: spelling decides among them, as above (1204.1484: `montaldo@`, `piu@` under Caddeo's call).
 - **The marks shown on a name are its requests for labelled affiliations**; a name's label is the name alone
   (2026-10-21, rank 93).
+- **All asterisks are one label key** (2026-11-02, user: "all asterisks are the same key, they are visually identical
+  to readers"): `*`, `\ast`, `\textasteriskcentered`, ∗ U+2217, ⁎ U+204E, ✱ U+2731 and ＊ U+FF0A key the same label, for a
+  name's request and a line's label alike (`clean_frontmatter_labels`); the printed glyph stays as written. Labels key by
+  what a reader sees, not by the TeX spelling.
 - **"Deceased" is an annotation on the author, of the same kind as "Corresponding author"** (2026-11-02): a legend
   line `$^\dagger$Deceased` is a note of the names carrying its symbol, never an affiliation, read by the shared kind
   reader (`classify_thanks`) alongside correspondence, contribution and address change.
